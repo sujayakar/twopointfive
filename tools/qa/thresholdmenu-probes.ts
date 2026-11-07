@@ -5,13 +5,13 @@
 // THE FAMILY ITSELF IS GONE (2026-11-06): thresholdmenu-rows and thresholdmenu-held walked the threshold's page behind X, 5, 4 (hold the door until I say ·
 // step in once it goes quiet · clear from outside) and the held page of what next. The page has had neither since the squad game build of 10-16
 // (b6c0aff1, where the rule enters this history already on): 'clear from outside' is one plain order on the tools' row 4 (DOORTOOLS.outsidePlain, by the maintainer's words quoted at it in
-// src/game/doortools.ts), and both probes asked for the pages as they were (`pagesAsTheyWere` below) to have anything to walk. Row 4 as each stand has it is
-// orderkeys-high's, doormenu-rows' and doortools-menu's; the order behind it is threshold-probes.ts's and doortest-check.ts's; the calls that still live on
-// the old page are calls-probes.ts's, which asks for it by `pagesAsTheyWere` itself.
+// src/game/doortools.ts), and both probes asked for the pages as they were to have anything to walk. Row 4 as each stand has it is
+// orderkeys-high's, doormenu-rows' and doortools-menu's; the order behind it is threshold-probes.ts's and doortest-check.ts's. The calls that lived on the
+// old page (calls-menu, calls-leave, calls-held, calls-rally) went 2026-11-07 with `pagesAsTheyWere`: both rows it wrote are settled.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
-const { DOORTOOLS, THR_PAGE } = await import(`${ROOT}/src/game/doortools.ts`);
+const { DOORTOOLS, TOOLS_PAGE } = await import(`${ROOT}/src/game/doortools.ts`);
 const { ORDERS, WORD_HEAD } = await import(`${ROOT}/src/game/orders.ts`);
 const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
@@ -78,7 +78,8 @@ type Rig = Awaited<ReturnType<typeof stage>>;
 /** where the order is given in a scenario: a door, the face of it the squad works from, and a spot for the commander off the opening's line on that face */
 interface Spot { door: string; sam: number[]; held: boolean }
 /** The door this scenario's rows are given on: the nearest entry of a room that still holds a living defender (the room fight's own model) — else the nearest
- *  door at all — that X on the cursor opens on from a spot off its line, and where both forms of the order are live. Found once a scenario (the search steps
+ *  door at all — that X on the cursor opens on from a spot off its line, and where the door tools' 'clear from outside' is live (it asked the threshold's own
+ *  page for its two forms until 2026-11-07: the menu has one plain order on the tools' row 4). Found once a scenario (the search steps
  *  the game: every run after it is staged afresh and goes straight to the spot). */
 const SPOTS = new Map<string, Spot | string>();
 async function spotOf(E: any): Promise<Spot | string> { if (!SPOTS.has(E.id)) SPOTS.set(E.id, await findSpot(await stage(E, 1))); return SPOTS.get(E.id)!; }
@@ -96,26 +97,19 @@ async function findSpot(R: Rig): Promise<Spot | string> {
         const p = [c.at[0] + out[0] * back + lx * lat, 0, c.at[2] + out[1] * back + lz * lat];
         if (g.col.nav.isBlocked(p[0], p[2]) || g.col.solidBlocked([p[0], 1.1, p[2]], [c.at[0] + out[0] * 0.7, 1.1, c.at[2] + out[1] * 0.7])) continue;
         const ok = await quiet(() => R.place(p, c.d)); if (!ok) continue;
-        const M = await quiet(() => { const m = R.openX(); if (m) { R.digit(5); R.digit(4); } return R.O.menu; });
-        const pg = M && M.target.door === c.d && M.page === THR_PAGE ? R.read() : null; if (R.O.menu) R.O.close();
-        const forms = pg?.rows.filter(r => r.id === 'thresholdHold' || r.id === 'threshold') ?? [];
-        if (forms.length === 2 && forms.every(r => !r.why)) return { door: c.d.def.name, sam: p, held: c.held };
+        const M = await quiet(() => { const m = R.openX(); if (m) R.digit(5); return R.O.menu; });
+        const pg = M && M.target.door === c.d && M.page === TOOLS_PAGE ? R.read() : null; if (R.O.menu) R.O.close();
+        const forms = pg?.rows.filter(r => r.id === 'thresholdHold') ?? [];
+        if (forms.length === 1 && !forms[0].why) return { door: c.d.def.name, sam: p, held: c.held };
         if (forms.length) why.push(`${c.d.def.name}: ${forms.map(r => r.why).find(Boolean)}`);
       } } }
-  return `no door found where X opens on it and both forms are live${why.length ? ` (${[...new Set(why)].slice(0, 4).join(' · ')})` : ''}`;
+  return `no door found where X opens on it and 'clear from outside' is live${why.length ? ` (${[...new Set(why)].slice(0, 4).join(' · ')})` : ''}`;
 }
 /** a scenario staged afresh with the commander on the spot and the cursor on the door */
 async function at(E: any, seed: number, spot: Spot) { const R = await stage(E, seed), d = R.g.doors.byName(spot.door); const on = await quiet(() => R.place(spot.sam, d)); return { R, d, on }; }
 const opOn = (R: Rig, d: any) => R.D.ops.find((o: any) => o.kind === 'threshold' && o.door === d) ?? null;
 const beatsOf = (op: any) => (op?.beats ?? []).map((b: any) => b.what as string);
 
-/** THE PAGES AS THEY WERE, AND THE DOOR AS IT WAS. The SHIPPED stand has no threshold page and no held page: 'clear from outside' is one plain order on the
- *  tools' row 4 (DOORTOOLS.outsidePlain, a FROZEN_HOLDS row), and there the lead TRIES a door nobody knew was locked and the order ends, 'found shut', before
- *  a jamb is manned (DOORTOOLS.testDoor, another: the office's server door is such a door). doortest-check.ts and openhand-check.ts hold those two rules.
- *  A probe about the two pages or the stage behind them (calls-probes.ts) asks for both as they were before its first stand-up — under 'shipped' no
- *  stand-up writes the table again, the frozen stand has both off already — and `guarded` puts the table back, so the next probe of the run gets its
- *  stand's own menu. */
-export const pagesAsTheyWere = () => { DOORTOOLS.outsidePlain = false; DOORTOOLS.testDoor = false; };
 const FIRST = 'stack cover fallIn hold tools';   // (a door's first page, by row id)
 
 export { stage, at, spotOf, opOn, beatsOf, rowsOf, textOf, quiet, guarded, family, FIRST };

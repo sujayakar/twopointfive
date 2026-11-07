@@ -17,7 +17,7 @@
 // here is red when something is not. `--frames 0` = no game is stepped (no module needed): only what a START leaves behind is seen.
 // Three missions at once (`--at-once N`): each start is a process of its own with its own folder, about ten seconds of one core a row.
 import { spawn, spawnSync } from 'node:child_process';
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
 const say = (s = '') => process.stdout.write(s + '\n');
@@ -68,29 +68,45 @@ async function rowOf(m: typeof missions[number]): Promise<Row> {
 async function againOf(m: typeof missions[number]): Promise<Row> {
   const row: Row = { ...m, ended: 'DID NOT RUN', lacks: '', start: '', beside: '', end: '' };
   const out = resolve(KEEP, m.id); mkdirSync(out, { recursive: true });
-  const before = missions[(missions.indexOf(m) + missions.length - 1) % missions.length].id;
+  // (the missions before it on the list, nearest first: start.ts stands the first of them the game stands for this many players)
+  const at = missions.indexOf(m), before = missions.map((_, i) => missions[(at + missions.length - 1 - i) % missions.length].id).filter(id => id !== m.id).slice(0, SEATS > 1 ? missions.length : 1).join(',');
   const r = await runLater('bun', ['run', '--preload', './tools/blitz/expose.ts', 'tools/blitz/start.ts', '--mission', m.id, '--out', out, ...(SEATS > 1 ? ['--seats', String(SEATS)] : []), '--again', '--played', String(FRAMES), '--between', before], FRAMES > 0 ? { ...ENV, TPS_GAME: 'rust' } : ENV);
-  const refusal = r.out.split('\n').find(l => /^start\.ts: the game refused/.test(l));
-  if (refusal) { row.ended = 'refused'; row.lacks = `the game refuses it for ${SEATS} players`; return row; }
-  const said = r.out.split('\n').find(l => /^start\.ts: stood again/.test(l));
+  // (a mission the game refuses is refused at its FIRST start, before anything is stood: a refusal after `stood on the page's stand` is a red)
+  const L = r.out.split('\n'), first = L.findIndex(l => /^start\.ts: .* stood on the page's stand/.test(l)), refusal = L.findIndex(l => /^start\.ts: the game refused/.test(l));
+  if (refusal >= 0 && first < 0) { row.ended = 'refused'; row.lacks = `the game refuses it for ${SEATS} players`; return row; }
+  const said = L.find(l => /^start\.ts: stood again/.test(l));
   if (r.code !== 0 || !said) { row.lacks = r.out.trim().split('\n').filter(l => !/^the call surface/.test(l)).slice(-3).join(' · ').slice(0, 300); return row; }
-  row.beside = /then (\S+) (stood|asked for and refused)/.exec(said)?.[2] === 'stood' ? `after ${before}` : `${before} refused`;
+  const stoodBetween = /, then (\S+) stood/.exec(said)?.[1];
+  row.beside = stoodBetween ? `after ${stoodBetween}` : 'NOTHING STOOD BETWEEN';
+  // (a carried name nothing classes that a game changed: left as it is by a start, and named so that it gets its row — tools/qa/fresh.ts)
+  const unlisted = L.find(l => /classed by nothing/.test(l)); if (unlisted) row.lacks = unlisted.replace(/^start\.ts: /, '').slice(0, 400);
   // OPEN, AND FORGIVEN BY NAME HERE: a mission's start writes its team's numbers into the process's knob tables, each kind into its own (a room
   // clear is staged by the night breach's code, so into that table and its own), and no start puts back a table it does not write: a mission
-  // stood after one of another kind finds that kind's numbers as left. So for each row, the tables its own start does NOT write are let differ;
-  // the ones it does write are held like any path. (The mend is a mission's numbers on the Game: rust/game_start/README.md, the team's start.)
+  // stood after one of another kind finds that kind's numbers as left. So for each row, the TEAM'S keys of the tables its own start does NOT
+  // write are let differ, and nothing else of them; the tables it does write are held like any path. (The mend is a mission's numbers on the
+  // Game: rust/game_start/README.md, the team's start.)
   const kind = /[?&](roomclear|nightbreach|rescue|quiet)\b/.exec(m.link)?.[1] ?? 'nightbreach', writes = kind === 'roomclear' ? ['roomclear', 'nightbreach'] : [kind];
   const others = ['roomclear', 'nightbreach', 'rescue'].filter(k => !writes.includes(k));
-  const known = resolve(out, 'known-row.txt'); writeFileSync(known, others.map(k => `^g\\.(k\\.${k}\\.|m\\.${k}\\.applied)\tthe ${k} missions' team numbers in the process's knob table, as the last mission that wrote them left them: this mission's start does not write that table (OPEN: start-levels.ts againOf)\n`).join(''));
+  const known = resolve(out, 'known-row.txt'); writeFileSync(known, others.map(k => `^g\\.(k\\.${k}\\.(sam_at|sam_yaw|ops_at|ops_yaw|squad|seed)\\b|m\\.${k}\\.applied\\b)\tthe ${k} missions' team numbers in the process's knob table, as the last mission that wrote them left them: this mission's start does not write that table (OPEN: start-levels.ts againOf)\n`).join(''));
   const d = await runLater('bun', ['run', 'tools/blitz/diff.ts', resolve(out, 'c1.bin'), resolve(out, 'again.bin'), '--blocks', resolve(out, 's0.bin'), resolve(out, 'again-s.bin'), '--out', resolve(out, 'diff-again.tsv'), '--canon-file', 'tools/blitz/canon.txt', '--known', `tools/blitz/known-again.txt,${known}`, '--live', '--show', '4']);
-  row.start = unknownOf(d.out.split('\n').find(l => /^\d+ paths differ/.test(l))); row.end = /(\d+) known/.exec(d.out)?.[1] ?? '';
-  row.ended = row.start === 'did not run' ? 'DID NOT RUN' : row.start === '0' ? 'yes' : 'NOT EQUAL';
+  let line = d.out.split('\n').find(l => /^\d+ paths differ/.test(l));
+  // THE BLOCK, byte for byte, with one thing let be: in the part that holds the POSES, a row the first start had not made (every byte of it zero
+  // there). A clip's pose at its first frame is a memo kept in that part, filled as clips are first used (src/game/character.ts AT0: a pure
+  // function of the clip), so a game stood after another has rows the first lacked. A byte that differs where the first start HAS one is a red.
+  if (line && !/; block 0 bytes/.test(line) && existsSync(resolve(out, 'parts.txt'))) {
+    const a = readFileSync(resolve(out, 's0.bin')), b = readFileSync(resolve(out, 'again-s.bin')), P = readFileSync(resolve(out, 'parts.txt'), 'utf8').split('\n').map(l => l.split('\t')).find(c => c[0] === 'poses');
+    let memo = 0, other = a.length === b.length ? 0 : 1;
+    if (!other) for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) { if (P && i >= +P[1] && i < +P[1] + +P[2] && a[i] === 0) memo++; else other++; }
+    if (!other && memo) { line = line.replace(/; block \d+ bytes/, '; block 0 bytes'); row.end = `${memo} bytes of pose rows the first start had not made`; }
+  }
+  row.start = unknownOf(line); row.end = [/(\d+) known/.exec(d.out)?.[1] ?? '', row.end].filter(Boolean).join(' · ');
+  row.ended = row.start === 'did not run' ? 'DID NOT RUN' : row.start === '0' && stoodBetween ? 'yes' : 'NOT EQUAL';
   return row;
 }
 if (AGAIN) {
   const todo = missions.filter(m => !ONLY.length || ONLY.includes(m.id)), rows: Row[] = new Array(todo.length); let next = 0;
   const worker = async () => { for (;;) { const i = next++; if (i >= todo.length) return; const row = rows[i] = await againOf(todo[i]);
-    say(`${row.id}\t${row.file}\t${row.ended === 'yes' ? 'EQUAL' : row.ended === 'refused' ? 'refused by the game' : 'RED'}\t${row.ended === 'refused' ? '' : `${row.beside}\tnot known ${row.start}\tthe process's ${row.end}`}${row.ended === 'yes' || row.ended === 'refused' ? '' : `\t${row.lacks}`}`); } };
+    say(`${row.id}\t${row.file}\t${row.ended === 'yes' ? 'EQUAL' : row.ended === 'refused' ? 'refused by the game' : 'RED'}\t${row.ended === 'refused' ? '' : `${row.beside}\tnot known ${row.start}\tthe process's ${row.end}`}${row.ended === 'refused' || !row.lacks ? '' : `\t${row.lacks}`}`); } };
   await Promise.all(Array.from({ length: Math.min(AT_ONCE, todo.length) }, worker));
   const equal = rows.filter(r => r.ended === 'yes').length, refused = rows.filter(r => r.ended === 'refused').length, red = rows.length - equal - refused;
   say(); say(`${equal} of ${rows.length - refused} missions start a second time in one process as they did the first${FRAMES > 0 ? ` (after ${FRAMES} frames of the first game and of the mission before it on the list` : ' (no game stepped'}, die seed 20942${SEATS > 1 ? `, ${SEATS} seats` : ''})${refused ? `; ${refused} the game refuses` : ''}${red ? `; ${red} RED` : ''}.`);

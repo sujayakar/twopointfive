@@ -142,9 +142,9 @@ export async function snowAirCheck(o: { verbose?: boolean } = {}): Promise<boole
     // ---- text
     { const read = (f: string) => readFileSync(resolve(ROOT, 'src/render/shaders', f), 'utf8'); const step = read('particles.wgsl'); const pts = readFileSync(resolve(ROOT, 'src/render/particles.ts'), 'utf8');
       const cfg = /struct GrainCfg \{ a: vec4f, b: vec4f, c: vec4f, d: vec4f, e: vec4f, f: vec4f, g: vec4f \};/.test(step) && /makeBuffer\(device, 112, [^)]*'particleGrains'\)/.test(pts) && /grainCfg = new Float32Array\(28\)/.test(pts);
-      const gate = /fn snowOneAir\(\) -> bool \{ if \(SNOW_GRAINS\) \{ return grain\.f\.x > 0\.5 && grain\.b\.w > 0\.5; \} return false; \}/.test(step);
-      const air = /fn snowAir\(p: vec3f, free: vec3f\) -> vec3f \{\s*if \(SNOW_GRAINS\) \{[\s\S]{0,400}let A = airAt\(p\.xz\);[\s\S]{0,300}smoothstep\(grain\.g\.x,[\s\S]{0,200}return mix\(low, free, b\);\s*\}\s*return free;/.test(step);
-      const flake = /if \(SNOW_GRAINS\) \{ if \(snowNow\(\) && snowOneAir\(\)\) \{ vAir = snowAir\(p\.pos, vAir\); \} \}/.test(step);
+      const gate = /fn snowOneAir\(\) -> bool \{ if \(lv\(SNOW_GRAINS\)\) \{ return grain\.f\.x > 0\.5 && grain\.b\.w > 0\.5; \} return false; \}/.test(step);
+      const air = /fn snowAir\(p: vec3f, free: vec3f\) -> vec3f \{\s*if \(lv\(SNOW_GRAINS\)\) \{[\s\S]{0,400}let A = airAt\(p\.xz\);[\s\S]{0,300}smoothstep\(grain\.g\.x,[\s\S]{0,200}return mix\(low, free, b\);\s*\}\s*return free;/.test(step);
+      const flake = /if \(lv\(SNOW_GRAINS\)\) \{ if \(snowNow\(\) && snowOneAir\(\)\) \{ vAir = snowAir\(p\.pos, vAir\); \} \}/.test(step);
       const skip = /rnd\(p\.seed, 500u \+ kk\) < grain\.f\.w \* smoothstep\(grain\.f\.y,/.test(step) && /if \(!skips\) \{ pool\.parts\[slot\]\.age = p\.life; return; \}/.test(step);
       const born = /wispRec && ok && !puffRec && snowOneAir\(\)\) \{ let Aq = airAt\(q2\); ok = Aq\.w > 0\.5 && rnd\(seed, 400u\) < smoothstep\(grain\.f\.y,/.test(step) && /wispRec && ok && !puffRec && !snowOneAir\(\)\) \{ ok = rnd\(seed, 200u \+ t\) < wispGust/.test(step);
       const dies = /snowOneAir\(\) && \(\(p\.color >> 16u\) & 255u\) != 0u && length\(airAt\(p\.pos\.xz\)\.xy\) < grain\.g\.w \* grain\.f\.y/.test(step);

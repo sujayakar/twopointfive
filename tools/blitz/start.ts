@@ -12,7 +12,7 @@
 // mission list (scene/scenarioList.ts): the level file the page loads for it (the look's, scene/look.ts lookLevelFile) and the link a click on the
 // row loads (scenarios.ts scenarioQuery), both written to DIR/mission.txt for the Rust side. No tick is run.
 // `--again [--played N] [--between <id>]`: the same start made a second time in this process, after N frames of the first game (and, with
-// `--between`, after that other mission was stood and played N frames too): again.bin, again-s.bin.
+// `--between a,b`, after the first of those missions the game stands was stood and played N frames too): again.bin, again-s.bin.
 // (THIS IS THE TYPESCRIPT START: the harness's word, which by default makes a stood game a puppet of the Rust module (tools/blitz/word.ts), is put off
 // before the harness is first imported, on every path)
 // (but `--again --played N` STEPS the first game, and only the Rust game steps: that run is asked for with TPS_GAME=rust in front, and says so)
@@ -24,7 +24,7 @@ import { resolve } from 'node:path';
 const argv = process.argv.slice(2), arg = (n: string, d: string) => { const i = argv.indexOf(n); return i < 0 ? d : argv[i + 1]; };
 const say = (s = '') => process.stdout.write(s + '\n');
 const outDir = arg('--out', ''), SEED = +arg('--seed', '20942'), SEATS = +arg('--seats', '1'), SCN = arg('--scenario', ''), MISSION = arg('--mission', '');
-let file = argv[0], spec: any = null, LINK = arg('--link', ''), BETWEEN: { file: string; link: string } | null = null;
+let file = argv[0], spec: any = null, LINK = arg('--link', ''), BETWEEN: { id: string; file: string; link: string }[] = [];
 if (STAND !== 'shipped') { say(`start.ts: the stand is '${STAND}': the Rust start is the page's, so this compare is too`); process.exit(64); }
 if (MISSION || argv.includes('--missions')) {
   const { ROOT } = await import('../qa/headless.ts');   // (the page's stand on the switches: the look decides which file of a level the page loads)
@@ -33,7 +33,7 @@ if (MISSION || argv.includes('--missions')) {
   if (!MISSION) { for (const e of ALL_MISSIONS) { const r = row(e); say(`${r.id}\t${r.file}\t${r.link}\t${r.listed ? 'listed' : 'off the list'}`); } process.exit(0); }
   const e = ALL_MISSIONS.find((m: any) => m.id === MISSION); if (!e) { say(`start.ts: no mission '${MISSION}' (start.ts --missions lists them)`); process.exit(64); }
   const r = row(e); file = r.file; LINK = r.link;
-  { const id = arg('--between', ''), b = id ? ALL_MISSIONS.find((m: any) => m.id === id) : null; if (id && !b) { say(`start.ts: no mission '${id}' to stand between`); process.exit(64); } if (b) BETWEEN = row(b); }
+  for (const id of arg('--between', '').split(',').filter(Boolean)) { const b = ALL_MISSIONS.find((m: any) => m.id === id); if (!b) { say(`start.ts: no mission '${id}' to stand between`); process.exit(64); } BETWEEN.push({ id, ...row(b) }); }
   if (outDir) { mkdirSync(outDir, { recursive: true }); writeFileSync(`${outDir}/mission.txt`, `${file}\n${LINK}\n`); }
 }
 if (!file || (file.startsWith('--') && !MISSION) || !outDir) { say("start.ts <level file> --out DIR [--seed N] [--scenario <kind> [--squad N] [--deal N]] · start.ts --mission <id> --out DIR · start.ts --missions"); process.exit(64); }
@@ -77,11 +77,17 @@ say(`start.ts: ${path} stood on the page's stand, die seed ${SEED}${SEATS > 1 ? 
 // again-s.bin. A game's state lives on the Game and a start writes all of it, so the second start is the first start; what differs between c1.bin
 // and again.bin is something the process kept from a game before (tools/qa/fresh.ts is what puts it back; tools/blitz/start-levels.ts --again holds it).
 if (argv.includes('--again')) {
-  const N = +arg('--played', '0'), play = (w: any) => { for (let i = 0; i < N; i++) w.step(1 / 60); };
+  (await import('node:fs')).rmSync(`${outDir}/parts.txt`, { force: true });
+  const N = +arg('--played', '0'), play = (w: any) => { if (N > 0) w.steps(N, 1 / 60); };
   play(W);
-  let between = '';
-  if (BETWEEN) { const at = resolve(ROOT, 'levels', BETWEEN.file), O = await stood(at, BETWEEN.link, true); if (O) play(O); between = O ? `, then ${arg('--between', '')} stood${N ? ' and played as long' : ''}` : `, then ${arg('--between', '')} asked for and refused by the game`; }
-  const W2 = await stood(); taken(W2.game, 'again.bin', 'again-s.bin');
+  // (the game between: the first of the list the game stands for this many players)
+  let between = BETWEEN.length ? `, then none of ${BETWEEN.map(b => b.id).join(', ')} stood (each refused by the game)` : '';
+  for (const b of BETWEEN) { const O = await stood(resolve(ROOT, 'levels', b.file), b.link, true); if (!O) continue; play(O); between = `, then ${b.id} stood${N ? ' and played as long' : ''}`; break; }
+  const W2 = await stood(path, LINK, true); if (!W2) { say('start.ts: THE SECOND START WAS REFUSED by the game that stood the first'); process.exit(1); }
+  taken(W2.game, 'again.bin', 'again-s.bin');
+  // (where the block's parts lie, for the reader of the two blocks: the module's own map, when a module is in the process)
+  { const H = W2.game.rustHost, X = H?.F?.X; if (X?.face_part_addr) { const base = X.state_addr(0) >>> 0; writeFileSync(`${outDir}/parts.txt`, H.F.NAMES.map((n: string, i: number) => `${n}\t${(X.face_part_addr(0, i) >>> 0) - base}\t${X.face_part_len(i)}`).join('\n') + '\n'); } }
+  { const U = [...(await import('../qa/fresh.ts')).FRESH.unlisted]; if (U.length) say(`start.ts: changed since the first start and classed by nothing (left as they are: tools/qa/fresh.ts): ${U.join(', ')}`); }
   say(`start.ts: stood again in the same process${N ? ` after ${N} frames of the first game` : ''}${between}: state in ${outDir}/again.bin`);
 }
 process.exit(0);

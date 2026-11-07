@@ -83,7 +83,7 @@ const SPLASH_W: f32 = 0.006;     // a splash ring's own line width (m): DRAWN ma
 const SPLASH_FILL: f32 = 0.056; // the light of a ring's own line over that of its whole 9 cm cell lit for the ring's life (RAIN_SCALE's floor; measured: tools/qa/rainscale-check.ts)
 const SPLASH_GAIN: f32 = 0.05;  // the same for the crown a drop throws up where it lands (a ring growing over 60 ms on outdoor ground)
 
-fn outdoorsXZ(p: vec2f) -> bool { if (WX_KINDS) { if (frame.cardCfg.y != 0u) { return !wxRoofed(p); } } let I = frame.weatherC; let A = frame.weatherD; return (p.x < I.x || p.y < I.y || p.x > I.z || p.y > I.w) && (p.x < A.x || p.y < A.y || p.x > A.z || p.y > A.w); }   // outside the interior footprint AND outside the annex (the stair tower: a ray ending on its floor is under a roof — its column is not cut out of passing rays, being three metres of air against the facade)
+fn outdoorsXZ(p: vec2f) -> bool { if (lv(WX_KINDS)) { if (frame.cardCfg.y != 0u) { return !wxRoofed(p); } } let I = frame.weatherC; let A = frame.weatherD; return (p.x < I.x || p.y < I.y || p.x > I.z || p.y > I.w) && (p.x < A.x || p.y < A.y || p.x > A.z || p.y > A.w); }   // outside the interior footprint AND outside the annex (the stair tower: a ray ending on its floor is under a roof — its column is not cut out of passing rays, being three metres of air against the facade)
 /** PARTICLE RAIN (experiment, game/rainFx.ts): the share of the lattice's streaks / splash rings KEPT at ground point p — 1 outside the particle layer's disc (frame.weatherE: centre xz,
  *  radius, the share it takes), 1 − that share inside its inner 70 %, eased between over the rim the recycler thins its births across (particles.wgsl emit's taper). weatherE.w 0 =
  *  no particle layer anywhere: 1 exactly, and the callers below then multiply by nothing (their untouched statements run). */
@@ -389,7 +389,7 @@ fn wxAirMarch(ro: vec3f, rd: vec3f, tSurf: f32, jit: f32) -> vec4f {
 fn main(@builtin(global_invocation_id) gid: vec3u) {
   let odims = textureDimensions(outVol);
   if (gid.x >= odims.x || gid.y >= odims.y) { return; }
-  var wxAirOn = false; if (WX_VOL) { if (WX_KINDS) { wxAirOn = frame.cardCfg.w != 0u; } }   // (a weather's air is marched whatever the two switches say: the men's eyes are cut by it)
+  var wxAirOn = false; if (WX_VOL) { if (lv(WX_KINDS)) { wxAirOn = frame.cardCfg.w != 0u; } }   // (a weather's air is marched whatever the two switches say: the men's eyes are cut by it)
   if ((frame.flags & (FLAG_VOLUMETRICS | FLAG_SMOKE)) == 0u && !wxAirOn) { textureStore(outVol, gid.xy, vec4f(0.0, 0.0, 0.0, 1.0)); textureStore(outReact, gid.xy, vec4f(0.0, 1.0, 0.0, 0.0)); return; }   // (smoke transmittance 1: nothing to blur)
   let froxel = (frame.flags & FLAG_FROXEL_VOL) != 0u;   // Phase 2b: the haze is the froxel volume's (froxel.wgsl); this pass keeps the smoke march (lit from the froxels' J) and the rain (see the file head)
   let vdiv = u32(frame.lossyCfg.y);   // 2, or 4 (lossy option): each texel marches through one full-res pixel of its vdiv×vdiv block, interleaved by texel parity as before (×1 at vdiv 2)
@@ -594,7 +594,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   // smoke's own light is seen through about half of the air in front of the surface, and the air's through about half of the smoke — from the play camera most of a
   // ray's air lies ABOVE a plume standing on the ground, so neither is laid wholly behind the other.
   var Tair = 1.0;
-  if (WX_VOL) { if (WX_KINDS) { if (frame.cardCfg.w != 0u) {
+  if (WX_VOL) { if (lv(WX_KINDS)) { if (frame.cardCfg.w != 0u) {
     let aw = wxAirMarch(ro, rd, tSurf, jitterS);
     inscatter = inscatter * mix(1.0, aw.a, 0.5) + aw.rgb * (0.5 + 0.5 * T);
     Tair = aw.a;
@@ -655,7 +655,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
       var nSteps = 0u; var Ld = vec3f(0.0); var tA = 0.0; var dtD = 0.0;                       // the sun's
       var delta = 0.0; var Dl = 0.0; var thA = 0.0; var thB = 0.0; var smokeNear = false;    // a lamp's
       if (dirL) {
-        if (WX_VOL) { if (WX_KINDS) { if (frame.cardCfg.w != 0u) { continue; } } }   // (a weather is in: the sun in the air — the building's haze with it — is wxAirMarch's)
+        if (WX_VOL) { if (lv(WX_KINDS)) { if (frame.cardCfg.w != 0u) { continue; } } }   // (a weather is in: the sun in the air — the building's haze with it — is wxAirMarch's)
         // A directional light (the daytime variant's sun — the moon carries volumetric 0): no source to sample toward and no falloff, so a plain jittered
         // march of the view ray with one shadow ray toward the light per step — the same ∫ E·phase·haze dt the equi-angular loop below estimates for a
         // lamp; the forward-scattering phase makes window shafts glow looking up-sun and go quiet down-sun. The haze is the building's dust, not weather:
@@ -756,7 +756,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         // the open-air pieces of the stretch, front to back, then ONE rainAlong a piece (the compile: DXC — Chrome's compiler on Windows — inlines every call, and the
         // four calls this took were four copies of the streak walk and its light loop; the pieces and their order are what the calls had)
         var seg: array<vec2f, 5>; var nSeg = 0u;
-        if (WX_KINDS && frame.cardCfg.y != 0u) {
+        if (lv(WX_KINDS) && frame.cardCfg.y != 0u) {
           // WEATHER KINDS (a kind picked: the footprints are the level's own roofs, up to four — the compound, the barracks): the stretch minus EVERY roof's
           // column, walked front to back — what is left is at most five pieces of open air (the yard between the house and its sheds rains; the rooms stay dry)
           var col: array<vec2f, 4>;   // each roof's column along the ray (x ≥ y = none: an empty footprint, or the ray misses it)

@@ -211,7 +211,7 @@ fn slotOf3(w0: Window, w1: Window, wr: Window, t: u32) -> u32 {
  *  lattice rain by) and inside the world's rim. The recycler's disc is thrown over everything; births and drifting drops are kept to this. */
 fn rainOutdoors(p: vec2f) -> bool {
   let I = frame.weatherC; let A = frame.weatherD;
-  if (WX_KINDS) { if (frame.cardCfg.y != 0u && wxRoofed(p)) { return false; } }   // (weather kinds: the level's third / fourth roof)
+  if (lv(WX_KINDS)) { if (frame.cardCfg.y != 0u && wxRoofed(p)) { return false; } }   // (weather kinds: the level's third / fourth roof)
   return (p.x < I.x || p.y < I.y || p.x > I.z || p.y > I.w) && (p.x < A.x || p.y < A.y || p.x > A.z || p.y > A.w)
       && p.x > WORLD_MIN.x + 0.25 && p.y > WORLD_MIN.z + 0.25 && p.x < WORLD_MAX.x - 0.25 && p.y < WORLD_MAX.z - 0.25;
 }
@@ -246,7 +246,7 @@ fn rainRoofed(P: vec3f) -> bool {
   let I = frame.weatherC; let A = frame.weatherD; let q = P.xz;
   let inI = q.x >= I.x && q.y >= I.y && q.x <= I.z && q.y <= I.w;
   let inA = q.x >= A.x && q.y >= A.y && q.x <= A.z && q.y <= A.w;
-  var inX = false; if (WX_KINDS) { if (frame.cardCfg.y != 0u) { inX = wxRoofed(q); } }
+  var inX = false; if (lv(WX_KINDS)) { if (frame.cardCfg.y != 0u) { inX = wxRoofed(q); } }
   return (inI || inA || inX) && P.y < CEIL_Y + 0.05;
 }
 /** SNOW OVER A WALL'S FACE (the maintainer, playing the pass on his GPU, 10-15: "the snow renders on top of the character but not on top of the wall"). The rain's
@@ -271,27 +271,27 @@ fn flakeUnder(p: vec2f, d: f32) -> bool { return wxRoofed(p) && wxRoofed(p + vec
 fn flakeHidden(P: vec3f) -> bool {
   let q = P.xz;
   if (snowPast() <= 0.0 && !(q.x > WORLD_MIN.x + 0.25 && q.y > WORLD_MIN.z + 0.25 && q.x < WORLD_MAX.x - 0.25 && q.y < WORLD_MAX.z - 0.25)) { return true; }   // (with the snow falling past the rim, the ground's last quarter metre shows it as the rest does)
-  if (SNOW_UNDER) { if (P.y > CEIL_Y + 0.05 || !flakeUnder(q, FLAKE_WALL_IN)) { return false; } return P.y <= CEIL_Y - 0.05 || flakeUnder(q, FLAKE_TOP_IN); }
+  if (lv(SNOW_UNDER)) { if (P.y > CEIL_Y + 0.05 || !flakeUnder(q, FLAKE_WALL_IN)) { return false; } return P.y <= CEIL_Y - 0.05 || flakeUnder(q, FLAKE_TOP_IN); }
   if (P.y > CEIL_Y - 0.05) { return false; }
   var r = flakeRectIn(frame.weatherC, q) || flakeRectIn(frame.weatherD, q);
-  if (WX_KINDS) { if (frame.cardCfg.y != 0u) { r = r || flakeRectIn(wxRect(frame.cardCfg.y), q) || flakeRectIn(wxRect(frame.cardCfg.z), q); } }
+  if (lv(WX_KINDS)) { if (frame.cardCfg.y != 0u) { r = r || flakeRectIn(wxRect(frame.cardCfg.y), q) || flakeRectIn(wxRect(frame.cardCfg.z), q); } }
   return r;
 }
 // the rain kind's constants shared by the step (particles.wgsl rainStep) and the splat (particles_draw.wgsl rainVertex / rainFragment)
 /** is this frame a snow level's — the rain kind's particles are FLAKES (game/snowFx.ts)? The page was opened on a level built for snow (the prelude's WX_SNOW: every
  *  flake statement is dead code on any other page) AND no rain is falling: a snow level's weather hands rain 0, and the office standing in for a level file that failed
  *  to load rains as it always did, drop for drop. */
-fn snowNow() -> bool { return WX_SNOW && frame.weatherA.x <= 0.0; }
+fn snowNow() -> bool { return lv(WX_SNOW) && frame.weatherA.x <= 0.0; }
 /** … and is this rain-kind particle a WISP of blowing snow (game/snowFx.ts SNOWWISPS — the prelude's SNOW_WISPS: dead code on every other page)? It is filed with
  *  aspect 2 (every drop and flake: 1). A wisp's numbers: em.rainCfgC.yzw = × the air's speed, the streak's weight, × the light (the refraction's slots — a snow level's
  *  refraction is off, nothing else reads them there); its colour word = stretch s ÷ 2, meander m/s ÷ 4, gust patch m ÷ 32. */
-fn wispIs(aux: u32) -> bool { return SNOW_WISPS && snowNow() && unpack2x16float(aux).x > 1.5 && unpack2x16float(aux).x < 2.5; }
+fn wispIs(aux: u32) -> bool { return lv(SNOW_WISPS) && snowNow() && unpack2x16float(aux).x > 1.5 && unpack2x16float(aux).x < 2.5; }
 /** … or a GRAIN of blown snow near the view (game/snowFx.ts SNOWGRAINS — the prelude's SNOW_GRAINS: dead code on every other page)? Filed with aspect 3. A grain
  *  is not born and spent like a flake: its slot lives as long as a flake's, and in that time the grain is picked up off the ground, flies a second or two on the
  *  air field (render/airField.ts) and lies again, over and over (particles.wgsl grainStep). What it keeps between frames, in the rows a flake does not use:
  *  spin = the age its flight began (under 0: on the ground, nothing drawn), omg = the age it ends (f32 bits), ori = how many tries it has had (its dice),
  *  omgZ = what the splat shows of its light this frame, 0‥1 (f32 bits: its weight × its fade in and out × the radius' rim). */
-fn grainIs(aux: u32) -> bool { return SNOW_GRAINS && snowNow() && unpack2x16float(aux).x > 2.5; }
+fn grainIs(aux: u32) -> bool { return lv(SNOW_GRAINS) && snowNow() && unpack2x16float(aux).x > 2.5; }
 // (how long a dash a grain is drawn as is live: game/snowFx.ts SNOWGRAINS shutter / dash / tail → grain.e → packed into the grain by its step — particles_draw.wgsl grainVertex)
 const GRAIN_MIN_PX: f32 = 0.6;       // half-width floor on screen (thinner than this it is drawn this wide and dimmed by as much) …
 const GRAIN_MAX_PX: f32 = 1.6;       // … and ceiling: fine snow is never a blob, however near the lens

@@ -47,7 +47,6 @@ const check = (ok, what, detail) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} —
     check(K.fixed === true && K.tween === true && K.hz === 60, 'the page opens with the fixed step and the drawing between ticks on', `FIXEDSTEP.on ${K.fixed} at ${K.hz} Hz · TWEEN.on ${K.tween} · the die's seed ${K.seed}`);
     // the engine's own render, a few frames, a man walking
     await page.evaluate(() => { window.__menu.close(); window.__input.keys.add('KeyW'); window.__pauseLoop = false; });
-    await page.evaluate(() => window.__cut && window.__cut.programs && Promise.race([window.__cut.programs.ready, new Promise(r => setTimeout(r, 400000))]).then(() => 0)).catch(() => {});
     await run(page, REAL); await page.evaluate(() => window.__engine.device.queue.onSubmittedWorkDone());
     let o = await take(page), s = said(o);
     check(o.frames.length >= REAL && s.dts.length === 1 && Math.abs(s.dts[0] - 1 / 60) < 1e-6 && s.hung > 0 && cons.length === 0, `the engine's own render: ${REAL} live frames drawn under both switches, every update 1/60 s, no console or GPU error`, s.text + (cons.length ? ' ✗ ' + cons.slice(0, 3).join(' ✗ ') : ''));

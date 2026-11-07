@@ -69,6 +69,7 @@ import { ENTRY } from './entrypoints';
 import { SILENT } from './silent';
 import { PAIR } from './pairorders';
 import { RESCUE } from './rescue';
+import { tableNotes } from '../math/side';
 import { DIGIN, HAULHOME } from './digin';
 import { PRESSURE } from './pressure';
 import { LANES } from './lanes';
@@ -589,8 +590,11 @@ export function knobsPlayed(): Record<string, object> { const R = knobRegistry()
 export function knobsCopy(names?: readonly string[]): Record<string, Record<string, unknown>> {
   const out: Record<string, Record<string, unknown>> = {};
   for (const [k, T] of Object.entries(knobsNamed(names))) out[k] = copyOf(T, NOT_KNOBS[k]) as Record<string, unknown>;
+  // (a module's note of where a table's numbers came from is copied with the table, beside its keys and never among them: math/side.ts tableNote)
+  for (const n of tableNotes()) { const s = out[n.table] as { [NOTES]?: unknown[] } | undefined; if (s) (s[NOTES] ??= []).push(n.get()); }
   return out;
 }
+const NOTES: unique symbol = Symbol('the notes of a table');
 /** the live value `a` made equal to the copy `b`, IN PLACE where both are plain objects or both arrays (whoever holds the live object or array still holds
  *  it); otherwise a fresh copy of `b` is what goes in its place */
 function backValue(a: unknown, b: unknown): unknown {
@@ -608,6 +612,8 @@ function putBack(dst: Record<string, unknown>, src: Record<string, unknown>, ski
 export function knobsBack(copy: Record<string, Record<string, unknown>>): void {
   const tuned = FINDTUNED.on;
   for (const [k, T] of Object.entries(knobRegistry())) { const s = copy[k]; if (s) putBack(T as Record<string, unknown>, s, NOT_KNOBS[k]); }
+  // (and each table's note with it: a table put back under a note that names another level would not be written by the next start there)
+  { const at: Record<string, number> = {}; for (const n of tableNotes()) { const had = (copy[n.table] as { [NOTES]?: unknown[] } | undefined)?.[NOTES], i = at[n.table] ?? 0; at[n.table] = i + 1; if (had && i < had.length) n.set(had[i] as never); } }
   if (FINDTUNED.on !== tuned) findMeStarts();   // (host/findme.ts: its rows are not picked off the switch where they are read, so a copy that moves the switch moves their starts with it — a check that boots the page's switches and puts its copy back is not left turning the view the page's way)
 }
 

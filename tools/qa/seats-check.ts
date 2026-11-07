@@ -1,44 +1,40 @@
 // TWO PLAYERS IN ONE GAME (src/game/seats.ts; `standUp({ seats: 2 })`): is the second seat a second player — his own man, his own pair, his own record — in a
-// squad mission played from two seats' records, and is a game of one seat the game it always was?
-//   bun run tools/qa/seats-check.ts                  every line below; exit 0 = all pass, 1 = one failed (named). Run it on both stands (TPS_PROFILE=shipped).
-//   SEATS_BREAK=1 bun run tools/qa/seats-check.ts    the red path: every seat's view answers the FIRST seat's record (SEAT_ASKS.shared) — one player in two bodies;
-//                                                    `men`, `walk`, `orders`, `fog`, `host` and `down` must FAIL
-//   SEATS_ASK_BREAK=1 bun run tools/qa/seats-check.ts   the asks' red path: one more ask of the Game's own player is made inside every tick of the fights (from
-//                                                    this file, on the door walk's tick); every `fight` and `long` line must FAIL, naming it
-// The mission is the room clear with the four (the page's `?roomclear&squad4`: fog of war up). THE SCRIPT (men … twice) is played under SEAT_ASKS.strict: the
-// Game's own field of a seat's name (g.player, g.orders …), asked anywhere in a tick of a game of two, THROWS — so each of those lines also says no code it
-// ran asked "the player" of nobody's. THE FIGHTS are held to LESS than that since 2026-11-05, and the reason is below (KNOWN_ASKS): strict is off for them,
-// every such ask is counted by the place it is made, and a place that is not a named, known one fails the line.
+// squad mission played from two seats' records, and is a game of one seat the game it always was? The game that steps is the Rust game (the harness
+// stands it: tools/blitz/PLAY.md), and every tick here is `Game.stepSeats(dt, [record, record])`, as a game server's and a client's is.
+//   bun run tools/qa/seats-check.ts                  every line below; exit 0 = all pass, 1 = one failed (named)
+//   SEATS_BREAK=1 bun run tools/qa/seats-check.ts    the red path: the second seat's tick runs on the FIRST seat's record — one player's hands in two
+//                                                    bodies; `walk`, `orders` and `ahead` must FAIL
+// The mission is the room clear with the four (the page's `?roomclear&squad4`: fog of war up).
+// THE WORD a line holds a game to (`word` below) is the game's own: its die's count and the hash of every part of its block, what a networked game's
+// machines compare (src/net/step.ts netWord). It sees where every body, door and thing is, not a seat's aim or a man's mind (docs/agents/net.md).
 // WHAT IS HELD:
-//   one       a game of one seat: its seat's view IS the Game, the seat owns nothing apart, and `player` is the plain field it always was (the run digests of
-//             one seat against the build before this file are tools/qa/playthrough.ts's, PT_DIGEST=1: not asked here)
+//   one       a game of one seat: its seat's view IS the Game, the seat owns nothing apart, and `player` is the plain field it always was
 //   men       two seats: two men with two ids standing apart on the floor, the four dealt two a seat, each seat's order book holding its own two and no other
 //   walk      each man walks by his own record: one east, one west, at once
 //   orders    a seat's order reaches its own pair and nobody else's: seat 1 taps the squad key on a door with his cursor (keys and cursor in HIS record) and his
 //             two have that door; seat 0's two are as they were — then the other way round
 //   fog       the fog of war is the team's: its eyes are both men's and all four teammates'
-//   down      one player down is not the end: the mission runs on, the other man still walks, the downed man's pair still stands; both down ends it
+//   down      one player down is not the end: the mission runs on, the other man still walks, the downed man's pair still stands; both down ends it.
+//             RED TODAY: the tools cannot hit the second seat's man (the line says why)
 //   host      outside a tick the Game's own `player` (what a HUD, a camera, a panel ask) is the seat this host shows, Game.localSeat; inside one it throws
 //   fight     both players walk at the nearest enemy and fire for 40 s of the room clear and 30 s of the night breach, a key of the game's pressed every
-//             second and a half: it runs to its end, it was a fight (somebody went down), and every ask of the Game for "the player" in it was made at a
-//             place KNOWN_ASKS names (the line lists each with its count; an ask anywhere else FAILS it)
-//   long      the same hands for 150 s of the room clear on another die, and on the compound: the same rule. (The 40 s and 30 s fights reached none of
-//             the known places until the belief rule moved the room clear onto one; these two reach more of them)
-//   tables    over all of the above (math/side.ts watchViewKeys): a named table keyed by the game was asked under a seat's VIEW only if it is listed as a
-//             seat's own (seats.ts SEAT_TABLES), and no listed one was asked under the Game itself — a world table read through a view finds no row, a
-//             seat's read through the Game finds the first player's, and neither throws. (One listed table may be asked under the Game in a FIGHT: the
-//             one a known ask reads, TABLES_BEHIND_ASKS — the same fault, held on the fight's own line)
+//             second and a half: it runs to its end and it was a fight (somebody went down)
+//   long      the same hands for 150 s of the room clear on another die, and on the compound
+//   tables    over all of the above (math/side.ts watchViewKeys): a named table of the picture's side keyed by the game was asked under a seat's VIEW only
+//             if it is listed as a seat's own (seats.ts SEAT_TABLES), and no listed one was asked under the Game itself
 //   word      `?seats=2` in an address is two seats (seatsOfSearch: what standGame reads), no word is one
-//   rollback  a moment mid-fight is taken (rollback.ts takeSnapshot), ninety ticks are played from both seats' kept records, the moment is put back: the state is
-//             the moment's to the bit, and the same records play the same ninety ticks, bit for bit — and moving seat 1's man moves the state's word
-//   twice     the whole script played again in a fresh game ends on the same state, to the bit
+//   rollback  a moment mid-fight is taken (savestate.ts SNAPS.take: the Rust game kept), ninety ticks are played from both seats' kept records, the moment
+//             is put back: the word is the moment's, and the same records play the same ninety ticks, word for word
+//   twice     the whole script played again in a fresh game ends on the same word
 //   ahead     a look ahead (walkahead.ts walkAhead: one seat's man walked through records the game has not had, on a copy of him) lands where the whole game
 //             then puts him from the same records, tick by tick and to the bit (a walk, a sprint, a crouch walk, a coast, from a seat marked remote; and again from
-//             the middle of the sprint); the game's state word, the seat and the records are as they were — it writes nothing; no
-//             record answers where he stands, and so does a man who is down. Prints what it costs beside a whole tick
-//   twin      a firefight played twice in fresh games — plain, and with a look ahead for both seats before every tick (the last eight records, throws and
-//             rounds in flight among them) — is the same game: the state's word the same every second and at the end
+//             the middle of the sprint); the game's word, the seat and the records are as they were; no record answers where he stands, and so does a
+//             man who is down. Prints what it costs beside a whole tick
+//   twin      a firefight played twice, each in a fresh process — plain, and with a look ahead for both seats before every tick (the last eight records, throws and
+//             rounds in flight among them) — is the same game: the word the same every second and at the end
 //   refuses   a mission written round one commander (the hostage rescue) refuses a game of two, in words
+// NOT HELD HERE ANY MORE (2026-11-07): the count of asks of the Game for "the player" inside a tick (the TypeScript tick's, gone with it). The three
+// kinds of fault a game of two had (docs/agents/net.md, the known seat faults) are the Rust game's to hold: tools/blitz/coop-check.ts.
 import { readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 const { SEAT_ASKS, SEAT_TABLES, men, seatsOfSearch } = await import(`${ROOT}/src/game/seats.ts`);
@@ -47,7 +43,8 @@ const { sampleCmd, cmdText, cmdFromText } = await import(`${ROOT}/src/game/cmd.t
 const { Input } = await import(`${ROOT}/src/game/input.ts`);
 const { FollowCamera } = await import(`${ROOT}/src/game/camera.ts`);
 const { startFromQuery, startScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`);
-const { takeSnapshot, restoreSnapshot, stateHash, stateDiff } = await import(`${ROOT}/src/game/rollback.ts`);
+const { SNAPS } = await import(`${ROOT}/src/game/savestate.ts`);
+const CROSSING = await import(`${ROOT}/src/game/crossing.ts`);
 const { walkAhead } = await import(`${ROOT}/src/game/walkahead.ts`);
 const { WALL_STATS } = await import(`${ROOT}/src/game/wallbreak.ts`);
 const { hitPlayer } = await import(`${ROOT}/src/game/combat.ts`);
@@ -56,12 +53,23 @@ const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
-const BREAK = process.env.SEATS_BREAK === '1', ASK_BREAK = process.env.SEATS_ASK_BREAK === '1', DT = 1 / 60, shipped = process.env.TPS_PROFILE === 'shipped';
+const BREAK = process.env.SEATS_BREAK === '1', DT = 1 / 60;
+/** the game's own word for where it stands (the head says what it sees) */
+const word = (g: any): string => { const W = g.stateWords?.(); if (!W) throw new Error('seats-check: the game stood here answers no state words (no Rust game steps it)'); return [W.die, ...Array.from(W.parts as ArrayLike<number>)].map(x => x.toString(36)).join('.'); };
+/** one tick on both seats' records, and what a headless host does round it (tools/qa/seats-run.ts tick) */
+const tick = (g: any, c: any[]): void => { g.stepSeats(DT, BREAK ? [c[0], c[0]] : c); g.engine.lights.update(DT, g.time); g.engine.world.dynamics = g.dynBoxes; g.engine.world.upload(); };
 let fails = 0;
 const verdict = (ok: boolean, label: string, detail: string) => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
-console.log(`=== seats-check: two players in one game (src/game/seats.ts) · ${shipped ? 'shipped' : 'frozen'} stand${BREAK ? ' · SEATS_BREAK: every view answers the first seat' : ''}${ASK_BREAK ? ' · SEATS_ASK_BREAK: one more ask of the Game\'s own player in every tick of a fight' : ''} ===`);
+console.log(`=== seats-check: two players in one game (src/game/seats.ts)${BREAK ? ' · SEATS_BREAK: the second seat runs on the first seat\'s record' : ''} ===`);
 const flat = (a: ArrayLike<number>, b: ArrayLike<number>) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const at = (p: ArrayLike<number>) => `(${p[0].toFixed(1)}, ${p[2].toFixed(1)})`;
+
+// ---- a fight in a process of its own (`--fight '<json>'`): what `fight`, `twin` and `long` below hold to each other. A game stood after another in one
+// process does not start as the first did (found 2026-11-07 with tools/mp/words-diff.ts: the modules holdfire, nvg, kit and guards carry something of the
+// last game into the next one's start), so two games that are to be the same game are each stood in a fresh process.
+if (process.argv[2] === '--fight') { const [q, secs, ahead, seed, level] = JSON.parse(process.argv[3]); const log = console.log; console.log = () => {};
+  let F: unknown; try { F = await fight(q, secs, ahead, seed, level); } catch (e) { F = { ticks: 0, down: 0, hurt: 0, err: String((e as Error)?.stack ?? e).split('\n').slice(0, 4).join(' | '), words: [] }; }
+  log('SEATSFIGHT ' + JSON.stringify(F)); process.exit(0); }
 
 // ---- one
 {
@@ -85,7 +93,7 @@ async function stand(seats = 2): Promise<Play> {
     const p = h.v.player.char.pos, dx = h.goal[0] - p[0], dz = h.goal[2] - p[2], d = Math.hypot(dx, dz); if (d < 0.25) return;
     const { fwd, right } = h.cam.planarBasis(), a = (dx * fwd[0] + dz * fwd[2]) / d, b = (dx * right[0] + dz * right[2]) / d, T = 0.3827;
     if (a > T) I.keys.add('KeyW'); if (a < -T) I.keys.add('KeyS'); if (b > T) I.keys.add('KeyD'); if (b < -T) I.keys.add('KeyA'); };
-  const step = () => { for (const h of hands) drive(h); g.seats[1].hand(sampleCmd(v1, I1, cam1, W.canvas)); W.step(DT); cam1.update(DT, v1.followPos(), v1.aimPoint); I1.endFrame(); };
+  const step = () => { for (const h of hands) drive(h); tick(g, hands.map(h => sampleCmd(h.v, h.I, h.cam, W.canvas))); for (const h of hands) { h.cam.update(DT, h.v.followPos(), h.v.aimPoint); h.I.endFrame(); } };
   const cmds = () => hands.map(h => cmdFromText(cmdText(sampleCmd(h.v, h.I, h.cam, W.canvas))));
   return { W, g, hands, step, run: (secs: number) => { for (let i = 0; i < Math.round(secs * 60); i++) step(); }, cmds };
 }
@@ -125,43 +133,15 @@ async function play(quiet: boolean): Promise<any> {
     say(g.fogOfWar.active && want.every(id => ids.has(id)) && new Set(want).size === want.length, "fog: the fog of war's eyes are both men's and every teammate's",
       `fog on ${g.fogOfWar.active} · eyes ${[...ids].join(', ')} · wanted ${want.join(', ')}`); }
   // ---- rollback
-  { const tick = (c: any[]) => { g.stepSeats(DT, c); g.engine.lights.update(DT, g.time); g.engine.world.dynamics = g.dynBoxes; g.engine.world.upload(); };
-    h0.goal = [v0.player.char.pos[0], 0, v0.player.char.pos[2] + 3]; h1.goal = [v1.player.char.pos[0], 0, v1.player.char.pos[2] - 3]; run(0.5);
-    const S = takeSnapshot(g), hash0 = stateHash(g), N = 90, kept: any[][] = [], ref: string[] = [];
-    for (let i = 0; i < N; i++) { const c = P.cmds(); kept.push(c.map(x => cmdFromText(cmdText(x)))); tick(c); ref.push(stateHash(g)); }
-    restoreSnapshot(S); const back = stateHash(g) === hash0;
-    let same = -1; for (let i = 0; i < N; i++) { tick(kept[i]); if (stateHash(g) !== ref[i]) { same = i; break; } }
-    const pl = v1.player.char; pl.pos[0] += 0.01; const moved = stateHash(g) !== ref[N - 1]; pl.pos[0] -= 0.01; const again = stateHash(g) === ref[N - 1];
+  { h0.goal = [v0.player.char.pos[0], 0, v0.player.char.pos[2] + 3]; h1.goal = [v1.player.char.pos[0], 0, v1.player.char.pos[2] - 3]; run(0.5);
+    const S = SNAPS.take(g), w0 = word(g), N = 90, kept: any[][] = [], ref: string[] = [];
+    for (let i = 0; i < N; i++) { const c = P.cmds(); kept.push(c.map(x => cmdFromText(cmdText(x)))); tick(g, c); ref.push(word(g)); }
+    const went = ref[N - 1] !== w0;
+    SNAPS.put(S); const back = word(g) === w0;
+    let same = -1; for (let i = 0; i < N; i++) { tick(g, kept[i]); if (word(g) !== ref[i]) { same = i; break; } }
     h0.goal = h1.goal = null;
-    say(back && same < 0 && moved && again, 'rollback: a moment of a game of two is put back to the bit, and the same records play the same ticks',
-      `put back to the bit ${back} · ${N} ticks from the kept records ${same < 0 ? 'the same, bit for bit' : `DIFFER at tick ${same}`} · seat 1's man a centimetre over moves the state's word ${moved}, and back ${again}`); }
-  // ---- ahead
-  { run(0.3); const seat = g.seats[1], man = v1.player.char, N = 46, now = performance.now.bind(performance), cv = P.W.canvas;
-    { const w = v1.player.wall; if (w) { h1.goal = [man.pos[0] + w.n[0] * 1.5, 0, man.pos[2] + w.n[2] * 1.5]; run(1.2); h1.goal = null; run(0.3); } }   // (the page's stand: the walk before this left him with his back on a wall — a hold is not a walk of his own, so he steps off it first)
-    // the records a client would have sent and not had answered: a walk, a sprint, C and a crouch walk the other way, Shift in the crouch, a coast — from a seat the
-    // game does not trust (`remote`: with the record check on, each view is worked out again from its pose, about where the man then stands)
-    const held = (i: number): string[] => i < 12 ? ['KeyD'] : i < 26 ? ['KeyD', 'KeyW', 'ShiftLeft'] : i < 38 ? ['KeyA', 'KeyS'] : i < 42 ? ['KeyA', 'KeyS', 'ShiftLeft'] : [];
-    const recs: any[] = [], I = h1.I, moves = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ShiftLeft', 'KeyC'];
-    for (let i = 0; i < N; i++) { for (const k of moves) I.keys.delete(k); for (const k of held(i)) I.keys.add(k); if (i === 26) { I.keys.add('KeyC'); I.pressed.add('KeyC'); } recs.push(cmdFromText(cmdText(sampleCmd(v1, I, h1.cam, cv)))); I.pressed.delete('KeyC'); }
-    for (const k of moves) I.keys.delete(k);
-    const was = seat.remote; seat.remote = true;
-    const p0 = [...man.pos], text0 = recs.map(cmdText).join('|'), hash0 = stateHash(g), had = seat.cmd, path: number[][] = [];
-    const none = walkAhead(seat, [], DT), stays = flat(none.pos, p0) === 0 && none.pos !== man.pos;
-    let t = now(); const A = walkAhead(seat, recs, DT, path); const aheadMs = now() - t;
-    t = now(); for (let i = 0; i < 20; i++) walkAhead(seat, recs.slice(0, 8), DT); const eightMs = (now() - t) / 20;
-    const pure = stateHash(g) === hash0 && seat.cmd === had && recs.map(cmdText).join('|') === text0 && flat(man.pos, p0) === 0;
-    const still = cmdFromText(cmdText(sampleCmd(v0, h0.I, h0.cam, cv)));
-    const tick = (c: any[]) => { g.stepSeats(DT, c); g.engine.lights.update(DT, g.time); g.engine.world.dynamics = g.dynBoxes; g.engine.world.upload(); };
-    let worst = 0, off = -1, ran = false, low = false, went = 0, B: any = null, pureB = true; const pathB: number[][] = [], MID = 20; t = now();
-    for (let i = 0; i < N; i++) {
-      if (i === MID) { const h = stateHash(g); B = walkAhead(seat, recs.slice(MID), DT, pathB); pureB = stateHash(g) === h && v1.player.sprinting; }   // (a second look, begun in the middle of the sprint: what the game last did with him is a run)
-      tick([still, recs[i]]); if (i >= MID) { const q = pathB[i - MID], e = Math.hypot(q[0] - man.pos[0], q[1] - man.pos[1], q[2] - man.pos[2]); if (e > 0 && off < 0) off = i; worst = Math.max(worst, e); }
-      const d = Math.hypot(path[i][0] - man.pos[0], path[i][1] - man.pos[1], path[i][2] - man.pos[2]); if (d > 0 && off < 0) off = i; worst = Math.max(worst, d); went = Math.max(went, flat(man.pos, p0)); ran ||= v1.player.sprinting; low ||= v1.player.crouch; }
-    const fullMs = (now() - t) / N; seat.remote = was;
-    const yaw = Math.max(Math.abs(A.aimYaw - man.aimYaw), Math.abs(B.aimYaw - man.aimYaw)), hips = Math.max(Math.abs(A.bodyYaw - man.bodyYaw), Math.abs(B.bodyYaw - man.bodyYaw)), same = worst === 0 && yaw === 0 && hips === 0 && A.crouch === v1.player.crouch && B.crouch === A.crouch && A.vel[0] === man.vel[0] && A.vel[2] === man.vel[2] && B.vel[0] === man.vel[0] && B.vel[2] === man.vel[2];
-    say(went > 0.3 && ran && low && A.free && B.free && same && path.length === N && pure && pureB && stays, 'ahead: a look ahead lands where the whole game puts the man, to the bit, and writes nothing',
-      `${N} records ahead (a walk, a sprint, a crouch walk back, a coast), and the last ${N - MID} again from the middle of the sprint${v1.player.rifleUp ? ', the rifle in his hands' : ''}: the whole game from the same records took him ${went.toFixed(3)} m out · he ran ${ran}, he crouched ${low} · apart at the worst tick ${worst === 0 ? '0' : `${(worst * 1000).toExponential(2)} mm (first at record ${off})`} · his aim ${yaw === 0 ? '0' : yaw.toExponential(2)} rad off, his hips ${hips === 0 ? '0' : hips.toExponential(2)} · the game's word, the seat and the records as they were ${pure} · no record answers where he stands ${stays}`
-      + `\n    cost here: ${N} records ahead ${aheadMs.toFixed(2)} ms · 8 records ${eightMs.toFixed(3)} ms · a whole tick ${fullMs.toFixed(2)} ms`); }
+    say(back && same < 0 && went, 'rollback: a moment of a game of two is put back, and the same records play the same ticks',
+      `the word moved over ${N} ticks ${went} · put back to the moment's word ${back} · ${N} ticks from the kept records ${same < 0 ? 'the same, word for word' : `DIFFER at tick ${same}`}`); }
   // ---- host
   { const was = g.localSeat; let inTick = 'no throw';
     g.localSeat = g.seats[1]; const his = g.player === v1.player && g.followPos() === v1.player.char.pos && g.orders === v1.orders;
@@ -171,7 +151,11 @@ async function play(quiet: boolean): Promise<any> {
       `shown seat 1: the Game's player, camera and order book are his ${his} · shown seat 0: his ${mine} · asked inside a tick: ${inTick}`); }
   // ---- down
   { run(0.2); const end0 = String(g.roomClear.state), stage0 = String(g.mission.stage);
+    // (RED TODAY, 2026-11-07, and the tools' call surface's to mend: a rule a tool calls with a SEAT'S VIEW crosses to the Rust game as the seat that
+    //  stands on the Game, so the hit meant for seat 1's man lands on seat 0's. The line is right as written for a surface that runs the rule as the seat
+    //  whose view it is handed)
     for (let i = 0; i < 8 && !v1.player.down; i++) hitPlayer(v1, [1, 0, 0]);
+    const wrongMan = !v1.player.down && !!v0.player.down;
     const dn = walkAhead(g.seats[1], [cmdFromText(cmdText(sampleCmd(v1, h1.I, h1.cam, P.W.canvas)))], DT), lies = !!v1.player.down && !dn.free && flat(dn.pos, v1.player.char.pos) === 0;
     const down1 = !!v1.player.down, up0 = !v0.player.down, p = [...v0.player.char.pos], pair = v1.orders.squad().filter((m: any) => m.state !== 'dead').length;
     h0.goal = [p[0] - 2, 0, p[2] + 1]; run(2.5); h0.goal = null;
@@ -179,135 +163,106 @@ async function play(quiet: boolean): Promise<any> {
     for (let i = 0; i < 8 && !v0.player.down; i++) hitPlayer(v0, [1, 0, 0]);
     run(0.5); const over = String(g.roomClear.state) === 'wiped' || g.mission.stage === 'failed';
     say(end0 === 'live' && down1 && up0 && on && walked > 0.5 && pairAfter === pair && over && lies, 'down: one player down is not the end, both down is',
-      `a look ahead answers the downed man where he lies ${lies} · before: room clear ${end0}, mission ${stage0} · seat 1's man down ${down1}, seat 0's up ${up0} · 2.5 s on: room clear ${on ? 'live' : 'ENDED'}, seat 0's man walked ${walked.toFixed(2)} m, the downed man's pair ${pairAfter} of ${pair} still up · both down: ${over ? `ended (${g.roomClear.state})` : 'STILL LIVE'}`); }
-  return g;
+      `${wrongMan ? "THE HIT HANDED SEAT 1'S VIEW DOWNED SEAT 0'S MAN (a tool's call does not cross as the seat whose view it is handed) · " : ''}a look ahead answers the downed man where he lies ${lies} · before: room clear ${end0}, mission ${stage0} · seat 1's man down ${down1}, seat 0's up ${up0} · 2.5 s on: room clear ${on ? 'live' : 'ENDED'}, seat 0's man walked ${walked.toFixed(2)} m, the downed man's pair ${pairAfter} of ${pair} still up · both down: ${over ? `ended (${g.roomClear.state})` : 'STILL LIVE'}`); }
+  return word(g);
 }
 
-SEAT_ASKS.strict = true; SEAT_ASKS.shared = BREAK; watchViewKeys();
-let first: any = null;
+SEAT_ASKS.strict = true; watchViewKeys();   // (strict: the TypeScript accessors of a seat's fields throw inside a tick: the `host` line's)
+let first: string | null = null;
 try { first = await play(false); } catch (e) { verdict(false, 'the script ran to its end', String((e as Error)?.stack ?? e).split('\n').slice(0, 6).join('\n    ')); }
-// ---- twice   (the state's own word, rollback.ts stateHash with `own`: the one that stands between two games of one process)
-if (first) { let second: any = null, why = ''; try { second = await play(true); } catch (e) { why = String(e); }
-  const a = stateHash(first, false, true), b = second ? stateHash(second, false, true) : why;
-  verdict(a === b, 'twice: the same script in a fresh game ends on the same state, to the bit', `${a} | ${b}${second && a !== b ? ` · ${(stateDiff(first, second, 6, false, true) as string[]).join(' | ')}` : ''}`); }
-// ---- the asks a fight makes of the Game for a seat's own field
-// WHAT A FIGHT IS HELD TO, AND WHY IT IS LESS THAN IT WAS (2026-11-05). Until then a fight ran under `strict`: one ask of the Game's own player anywhere in a
-// tick ended it, and the line read "a firefight asks the Game for no 'the player'". That was never true. The fights are 40 s and 30 s on one die and did not
-// reach the places below, lines from 10-16 to 11-02 (found by twenty fights of 150 s over ten floors: a floor of what there is, not all of it); the belief
-// rule (BELIEF.on, on in the page) walked the room clear onto the first of them at tick 2324, and the line threw on the page's stand. src/game is frozen until
-// the Rust swap, so none is mended in TypeScript: each row is a line for the port (rebuild/rust-sim/port/blitz/after-swap.md), which must hand that place the
-// right seat. So a fight is now played to its end with strict OFF (which is also what lets `twin` hold a whole fight again), every ask counted by the place it
-// is made (seats.ts SEAT_ASKS.sites: three frames a place), each frame named by its function so a row outlives a line moving. A place is KNOWN when one of its
-// three frames is a row's function (so a row lets by every ask made under that function: the price of a short list), IMPLIED when all three are helpers that
-// read the player of the Game they are handed (such a place always comes with a shallower one that names who handed it over), and anything else FAILS.
-// In the page a bare ask does not throw: it answers the FIRST seat's. So every row is the second player read as the first.
-// NOT HELD HERE, found the same day and of other kinds (docs/agents/net.md, the known seat faults): a seat's own module that sweeps every man of the floor
-// (doortools.ts slingTick), and a budget counted with one player (17 men against the picture's 16: game.ts drawMen throws on a full floor).
-const KNOWN_ASKS: { at: string; wanted: string }[] = [
-  { at: 'game/morale.ts seenBy', wanted: "sightGain is handed the Game: the bar for 'plainly in his eyes' is priced off the first player's light, crouch, motion and kit. The view of the man he has in mind (facedView)" },
-  { at: 'game/runner.ts closeFoe', wanted: 'the same call, for the nearest enemy plainly in a runner\'s eyes. facedView' },
-  { at: 'game/runner.ts foes', wanted: "a runner's enemies hold the first player only (g.player.down, g.player.char). facedMan, or every man up" },
-  { at: 'game/doorpath.ts own', wanted: "this.g.orders.of(his man): the first seat's order book for any walker. His own seat's (seats.ts orderOf). On the page's floor no answer differed in 1,070 asks (an entry from a stack has no corners left on its order); on the barracks one does: a man of seat 1 sent through a door with two corners left does not take them (die 3, tick 5499), and the Rust door walk, stepped as his seat, does" },
-  { at: 'game/doorpath.ts drop', wanted: 'the same book, as a door walk is given up. orderOf' },
-  { at: 'game/wallreact.ts beyond', wanted: "his own side's ground beyond a wall is the first seat's squad and man (g.orders.squad(), g.player). teamSquad and men" },
-  { at: 'game/coverfire.ts charOf', wanted: "'player' is the first seat's man. The man meant (facedMan / manOf)" },
-  { at: 'game/lanes.ts closeFight', wanted: "a foe of 'player' is the first seat's man. teams.ts foeChar" },
-  { at: 'game/doorblast.ts splinter', wanted: "the sleeping bodies a splintered leaf wakes count the first seat's man only. men(g)" },
-  { at: 'game/frag.ts samCue', wanted: "a grenade's warning to a player near it is worked out for the first seat's man only. Every man up (eachSeat)" },
-  { at: 'game/qrf.ts clearOfFoes', wanted: "a response team is not stood up at the first seat's man's elbow; the second's is not asked. men(g)" },
-  { at: 'game/dialogue.ts radioLive', wanted: "the radio is live while the first seat's man is up. allDown(g)" },
-  { at: 'game/morale.ts drive', wanted: "hearingCheck is handed the Game: a boot on a door (doorforce.ts doorForceHear) is heard off the first seat's man. The view of the man he has in mind" },
-  { at: 'game/roomfight.ts tickMove', wanted: "the same call from the room fight's walk: a colleague's fire is placed off the first seat's man (guards.ts colleagueFirePos). The view of the man he has in mind" },
-  { at: 'game/snowBreath.ts updateSnowBreath', wanted: "breath in the cold is the first seat's man's only, asked every tick of a snow floor. Every man (eachSeat)" },
-  { at: 'game/snowTracks.ts updateSnowTracks', wanted: "tracks in the snow are the first seat's man's only, asked every tick of a snow floor. Every man (eachSeat)" },
-  { at: 'game/snatch.ts tick', wanted: "the snatch's own tick (teamOf, lose, snatchout.ts tick / bound / who) reads g.player, g.orders and g.act: a mission written round one commander, which seats.ts refuses a game of two. Its tick still runs on its floor under any other mission" },
-];
-/** a seat's own table that a known ask reads under the Game: guards.ts playerGroundVel's, behind sightGain handed the Game (the `tables` line lets it by in a fight only) */
-const TABLES_BEHIND_ASKS = ['guards.groundTrack'];
-/** read the player of the Game they are handed: right under a seat's view, and never the first to be handed a bare one */
-const ASK_HELPERS = ['game/guards.ts sightGain', 'game/guards.ts motionFactor', 'game/guards.ts playerGroundVel', 'game/kitload.ts loadOn', 'game/kitload.ts loadSeen', 'game/guards.ts hearingCheck', 'game/guards.ts colleagueFirePos', 'game/doorforce.ts doorForceHear', 'game/snatchout.ts who', 'game/snatchout.ts mover', 'game/snatchout.ts bound'];
-const SRC = new Map<string, string[]>(), NOT_A_NAME = new Set(['if', 'for', 'while', 'switch', 'catch', 'return', 'else', 'do', 'function', 'with']);
-/** the function a line of a file under src/ sits in: the nearest above it of a top-level function, a top-level arrow constant or a class's method */
-function fnAt(file: string, line: number): string {
-  let L = SRC.get(file); if (!L) { try { L = readFileSync(`${ROOT}/src/${file}`, 'utf8').split('\n'); } catch { L = []; } SRC.set(file, L); }
-  for (let i = Math.min(line, L.length) - 1; i >= 0; i--) { const t = L[i];
-    let m = /^(?:export\s+)?(?:async\s+)?function\s*\*?\s*([A-Za-z_$][\w$]*)/.exec(t); if (m) return m[1];
-    m = /^(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*(?::\s*[^=]+)?=>/.exec(t); if (m) return m[1];
-    m = /^ {2}(?:(?:private|public|protected|static|async|override|get|set)\s+)*([A-Za-z_$][\w$]*)\s*(?:<[^>]*>)?\(/.exec(t);
-    if (m && !NOT_A_NAME.has(m[1]) && /\)\s*(?::\s*\S.*)?\{/.test(t.slice(m.index + m[0].length - 1))) return m[1]; }
-  return '?';
-}
-/** a place as seats.ts kept it (`field @ file:line:col < file:line:col < file:line:col`) → its field and its frames as `file function` */
-function placeOf(site: string): { field: string; frames: string[] } {
-  const [field, rest] = site.split(' @ ');
-  return { field, frames: (rest ?? '').split(' < ').map(f => { const m = /^(?:.*[\\/]src[\\/])?(\S+?\.ts):(\d+):\d+$/.exec(f.trim()); return m && !/[\\/]tools[\\/]/.test(f) ? `${m[1]} ${fnAt(m[1], +m[2])}` : f.trim().replace(/^.*[\\/](tools[\\/])/, '$1').replace(/:\d+:\d+$/, ''); }) };
-}
-/** every fight's asks, by known row · the places nothing names */
-const askRows = new Map<string, number>();
-function judgeAsks(sites: Map<string, number>): { known: string[]; implied: number; odd: string[] } {
-  const known = new Map<string, number>(), odd = new Map<string, number>(); let implied = 0;
-  for (const [site, n] of sites) { const P = placeOf(site), row = KNOWN_ASKS.find(k => P.frames.includes(k.at));
-    if (row) { known.set(row.at, (known.get(row.at) ?? 0) + n); askRows.set(row.at, (askRows.get(row.at) ?? 0) + n); }
-    else if (P.frames.length > 0 && P.frames.every(f => ASK_HELPERS.includes(f))) implied += n;
-    else { const k = `${P.field} @ ${P.frames.join(' < ')}`; odd.set(k, (odd.get(k) ?? 0) + n); } }
-  return { known: [...known].map(([at, n]) => `${at.replace(/^game\//, '')} ${n}`), implied, odd: [...odd].map(([k, n]) => `${n} × ${k}`) };
-}
-// ---- fight   (a fresh game each: both men walk at the nearest enemy and fire, a key of the game's pressed every second and a half — strict off, the asks counted)
-async function fight(query: string, secs: number, ahead = false, seed = 9, level: string | null = null): Promise<{ ticks: number; down: number; hurt: number; err: string; words: string[]; asks: Map<string, number> }> {
+// ---- twice
+if (first !== null) { let second = ''; try { second = await play(true); } catch (e) { second = String(e); }
+  verdict(first === second, 'twice: the same script in a fresh game ends on the same word', first === second ? `${first.slice(0, 60)}…` : `${first.slice(0, 80)} | ${second.slice(0, 80)}`); }
+
+// ---- ahead   (a game of two with NO teammates on the floor: a look ahead holds everybody else where the tick has them, so a teammate who steps into his
+// way is the game's to say and no look's. Both looks are held: the Rust rule a tool's call crosses to, and the TypeScript body the page runs on its copy)
+{ Math.random = mulberry32(0xc0de); const W: any = await standUp({ seed: 9, seats: 2 }), g = W.game; const r = startFromQuery(g, 'roomclear&squad=0');
+  if (r.why) verdict(false, 'ahead: a look ahead lands where the whole game puts the man, to the bit, and writes nothing', `the game without teammates did not start: ${r.why}`);
+  else {
+    for (const st of g.seats) st.remote = true;   // (as a networked game's seats are from its start: each view is worked out again from its pose)
+    const v0 = g.seats[0].view, v1 = g.seats[1].view, I1: any = Input.detached(), cam1: any = new FollowCamera(); cam1.aspect = W.cam.aspect; cam1.target = [...v1.player.char.pos]; cam1.rebuild(); I1.mouseX = 800; I1.mouseY = 500;
+    const hands = [{ v: v0, I: W.input, cam: W.cam }, { v: v1, I: I1, cam: cam1 }], cv = W.canvas, now = performance.now.bind(performance);
+    const lens = () => { for (const h of hands) { h.cam.update(DT, h.v.followPos(), h.v.aimPoint); h.I.endFrame(); } };
+    for (let i = 0; i < 110; i++) { tick(g, hands.map(h => cmdFromText(cmdText(sampleCmd(h.v, h.I, h.cam, cv))))); lens(); }
+    const seat = g.seats[1], man = v1.player.char, N = 46, MID = 20, moves = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ShiftLeft', 'KeyC'];
+    // the records a client would have sent and not had answered: a walk, a sprint, C and a crouch walk the other way, Shift in the crouch, a coast
+    const held = (i: number): string[] => i < 12 ? ['KeyD'] : i < 26 ? ['KeyD', 'KeyW', 'ShiftLeft'] : i < 38 ? ['KeyA', 'KeyS'] : i < 42 ? ['KeyA', 'KeyS', 'ShiftLeft'] : [];
+    const recs: any[] = []; for (let i = 0; i < N; i++) { for (const k of moves) I1.keys.delete(k); for (const k of held(i)) I1.keys.add(k); if (i === 26) { I1.keys.add('KeyC'); I1.pressed.add('KeyC'); } recs.push(cmdFromText(cmdText(sampleCmd(v1, I1, cam1, cv)))); I1.pressed.delete('KeyC'); }
+    for (const k of moves) I1.keys.delete(k);
+    const still = cmdFromText(cmdText(sampleCmd(v0, W.input, W.cam, cv)));
+    /** the look by the TypeScript body, as a page runs it (no call surface there: crossing.ts) */
+    const body = (cmds: any[], path?: number[][]): any => { const S = CROSSING.RUST_SURFACE; CROSSING.setSurface(null); try { return walkAhead(seat, cmds, DT, path as never); } finally { CROSSING.setSurface(S); } };
+    const p0 = [...man.pos], text0 = recs.map(cmdText).join('|'), w0 = word(g), pathR: number[][] = [], pathT: number[][] = [];
+    const none = walkAhead(seat, [], DT), stays = flat(none.pos, p0) === 0 && none.pos !== man.pos;
+    let t = now(); const A = walkAhead(seat, recs, DT, pathR as never); const crossedMs = now() - t;
+    t = now(); const T = body(recs, pathT); const bodyMs = now() - t;
+    const pure = word(g) === w0 && recs.map(cmdText).join('|') === text0 && flat(man.pos, p0) === 0;
+    let worstR = 0, worstT = 0, off = -1, ran = false, low = false, went = 0, B: any = null, Bt: any = null, pureB = true; const pathB: number[][] = [], pathBt: number[][] = []; t = now();
+    for (let i = 0; i < N; i++) {
+      if (i === MID) { const w = word(g); B = walkAhead(seat, recs.slice(MID), DT, pathB as never); Bt = body(recs.slice(MID), pathBt); pureB = word(g) === w && v1.player.sprinting; }   // (a second look, begun in the middle of the sprint)
+      tick(g, [still, recs[i]]); lens();
+      const e = (q: number[]) => Math.hypot(q[0] - man.pos[0], q[1] - man.pos[1], q[2] - man.pos[2]);
+      const dR = Math.max(e(pathR[i]), i >= MID ? e(pathB[i - MID]) : 0), dT = Math.max(e(pathT[i]), i >= MID ? e(pathBt[i - MID]) : 0);
+      if ((dR > 0 || dT > 0) && off < 0) off = i; worstR = Math.max(worstR, dR); worstT = Math.max(worstT, dT); went = Math.max(went, flat(man.pos, p0)); ran ||= v1.player.sprinting; low ||= v1.player.crouch; }
+    const fullMs = (now() - t) / N;
+    const end = (L: any) => Math.abs(L.aimYaw - man.aimYaw) === 0 && Math.abs(L.bodyYaw - man.bodyYaw) === 0 && L.crouch === v1.player.crouch && L.vel[0] === man.vel[0] && L.vel[2] === man.vel[2];
+    const same = worstR === 0 && worstT === 0 && end(A) && end(T) && end(B) && end(Bt);
+    verdict(went > 0.3 && ran && low && A.free && T.free && B.free && Bt.free && same && pathR.length === N && pathT.length === N && pure && pureB && stays, 'ahead: a look ahead lands where the whole game puts the man, to the bit, and writes nothing',
+      `${N} records ahead (a walk, a sprint, a crouch walk back, a coast), and the last ${N - MID} again from the middle of the sprint, each by the Rust rule and by the TypeScript body: the whole game from the same records took him ${went.toFixed(3)} m out · he ran ${ran}, he crouched ${low} · apart at the worst tick: the Rust rule ${(worstR * 1000).toExponential(2)} mm, the TypeScript body ${(worstT * 1000).toExponential(2)} mm${off >= 0 ? ` (first at record ${off})` : ''} · his aim, his hips, his crouch and his speed at the end as each look said ${end(A) && end(T) && end(B) && end(Bt)} · the game's word and the records as they were ${pure}, and from the middle ${pureB} · no record answers where he stands ${stays}`
+      + `\n    cost here: ${N} records ahead ${crossedMs.toFixed(2)} ms crossed to the Rust rule, ${bodyMs.toFixed(2)} ms by the TypeScript body · a whole tick ${fullMs.toFixed(2)} ms`); } }
+
+// ---- the fights: both players walk at the nearest enemy and fire, a key of the game's every second and a half (tools/qa/seats-run.ts has the same hands)
+async function fight(query: string, secs: number, ahead = false, seed = 9, level: string | null = null): Promise<{ ticks: number; down: number; hurt: number; err: string; words: string[] }> {
   for (const k of Object.keys(WALL_STATS)) if (typeof WALL_STATS[k] === 'number') WALL_STATS[k] = 0;   // (a tally of the process's: coverfire.ts keeps where it stood when a game began, in the game's state — two games of one process start level only from a level tally)
-  const asks = new Map<string, number>();
-  Math.random = mulberry32(0xc0de); const W: any = await standUp({ seed, seats: 2, ...(level ? { level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${level}.json`, 'utf8'))) } : {}) }), g = W.game; const r = startFromQuery(g, query); if (r.why) return { ticks: 0, down: 0, hurt: 0, err: r.why, words: [], asks };
-  if (ASK_BREAK) { const dp = g.doorPath, tick0 = dp.tick.bind(dp); dp.tick = (dt: number) => { void g.player; return tick0(dt); }; }   // (the red path: an ask no row names, made inside the tick)
+  Math.random = mulberry32(0xc0de); const W: any = await standUp({ seed, seats: 2, ...(level ? { level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${level}.json`, 'utf8'))) } : {}) }), g = W.game; const r = startFromQuery(g, query); if (r.why) return { ticks: 0, down: 0, hurt: 0, err: r.why, words: [] };
   const v0 = g.seats[0].view, v1 = g.seats[1].view, I1: any = Input.detached(), cam1: any = new FollowCamera(); cam1.aspect = W.cam.aspect; cam1.target = [...v1.player.char.pos]; cam1.rebuild();
   const hands: any[] = [{ v: v0, I: W.input, cam: W.cam, held: null }, { v: v1, I: I1, cam: cam1, held: null }];
   const KEYS = ['KeyG', 'KeyF', 'KeyE', 'KeyQ', 'KeyB', 'KeyC', 'KeyR', 'KeyV', 'KeyT', 'KeyH', 'KeyN', 'KeyX', 'KeyZ', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Space', 'Tab'];
   const foes0 = g.guards.filter((x: any) => x.state !== 'dead' && !(x.unit && x.team === 'operative')).length; let i = 0, err = ''; const words: string[] = [], late: any[][] = [[], []];
-  SEAT_ASKS.strict = false; SEAT_ASKS.sites = asks;
-  try {
-    for (; i < Math.round(secs * 60) && !err; i++) {
-      hands.forEach((h, hi) => { const I = h.I; for (const k of ['KeyW', 'KeyA', 'KeyS', 'KeyD']) I.keys.delete(k);
-        const p = h.v.player.char.pos, foe = g.guards.filter((x: any) => x.state !== 'dead' && x.team !== 'operative').sort((a: any, b: any) => flat(a.char.pos, p) - flat(b.char.pos, p))[0];
-        const t = foe ? foe.char.pos : [p[0] + Math.sin(i / 200 + hi) * 8, 0, p[2] + Math.cos(i / 200 + hi) * 8], dx = t[0] - p[0], dz = t[2] - p[2], d = Math.hypot(dx, dz) || 1;
-        const { fwd, right } = h.cam.planarBasis(), a = (dx * fwd[0] + dz * fwd[2]) / d, b = (dx * right[0] + dz * right[2]) / d, T = 0.3827;
-        if (d > 3) { if (a > T) I.keys.add('KeyW'); if (a < -T) I.keys.add('KeyS'); if (b > T) I.keys.add('KeyD'); if (b < -T) I.keys.add('KeyA'); }
-        const [sx, sy, front] = h.cam.project([t[0], 1.2, t[2]], W.canvas.clientWidth, W.canvas.clientHeight); if (front) { I.mouseX = sx; I.mouseY = sy; }
-        const ph = (i + hi * 37) % 240; if (ph > 120 && ph < 200) { I.buttons |= 1; if (ph === 121) I.clicked |= 1; } else I.buttons &= ~1;
-        if ((i + hi * 53) % 90 === 0) { const k = KEYS[Math.floor((i + hi * 53) / 90) % KEYS.length]; I.keys.add(k); I.pressed.add(k); h.held = k; } else if ((i + hi * 53) % 90 === 6 && h.held) { I.keys.delete(h.held); h.held = null; } });
-      if (ahead) hands.forEach((h, hi) => { const q = late[hi]; q.push(cmdFromText(cmdText(sampleCmd(h.v, h.I, h.cam, W.canvas)))); if (q.length > 8) q.shift(); walkAhead(g.seats[hi], q, DT); });
-      try { g.seats[1].hand(sampleCmd(v1, I1, cam1, W.canvas)); W.step(DT); if (i % 60 === 59) words.push(stateHash(g, false, true)); cam1.update(DT, v1.followPos(), v1.aimPoint); I1.endFrame(); } catch (e) { err = String((e as Error)?.stack ?? e).split('\n').slice(0, 5).join(' | '); }
-    }
-  } finally { SEAT_ASKS.strict = true; SEAT_ASKS.sites = null; }
-  return { ticks: i, hurt: g.guards.filter((x: any) => x.state === 'dead').length + men(g).filter((m: any) => m.down).length, down: foes0 - g.guards.filter((x: any) => x.state !== 'dead' && !(x.unit && x.team === 'operative')).length, err, words, asks };
+  for (; i < Math.round(secs * 60) && !err; i++) {
+    hands.forEach((h, hi) => { const I = h.I; for (const k of ['KeyW', 'KeyA', 'KeyS', 'KeyD']) I.keys.delete(k);
+      const p = h.v.player.char.pos, foe = g.guards.filter((x: any) => x.state !== 'dead' && x.team !== 'operative').sort((a: any, b: any) => flat(a.char.pos, p) - flat(b.char.pos, p))[0];
+      const t = foe ? foe.char.pos : [p[0] + Math.sin(i / 200 + hi) * 8, 0, p[2] + Math.cos(i / 200 + hi) * 8], dx = t[0] - p[0], dz = t[2] - p[2], d = Math.hypot(dx, dz) || 1;
+      const { fwd, right } = h.cam.planarBasis(), a = (dx * fwd[0] + dz * fwd[2]) / d, b = (dx * right[0] + dz * right[2]) / d, T = 0.3827;
+      if (d > 3) { if (a > T) I.keys.add('KeyW'); if (a < -T) I.keys.add('KeyS'); if (b > T) I.keys.add('KeyD'); if (b < -T) I.keys.add('KeyA'); }
+      const [sx, sy, front] = h.cam.project([t[0], 1.2, t[2]], W.canvas.clientWidth, W.canvas.clientHeight); if (front) { I.mouseX = sx; I.mouseY = sy; }
+      const ph = (i + hi * 37) % 240; if (ph > 120 && ph < 200) { I.buttons |= 1; if (ph === 121) I.clicked |= 1; } else I.buttons &= ~1;
+      if ((i + hi * 53) % 90 === 0) { const k = KEYS[Math.floor((i + hi * 53) / 90) % KEYS.length]; I.keys.add(k); I.pressed.add(k); h.held = k; } else if ((i + hi * 53) % 90 === 6 && h.held) { I.keys.delete(h.held); h.held = null; } });
+    try { const cmds = hands.map(h => cmdFromText(cmdText(sampleCmd(h.v, h.I, h.cam, W.canvas))));
+      if (ahead) hands.forEach((_h, hi) => { const q = late[hi]; q.push(cmds[hi]); if (q.length > 8) q.shift(); walkAhead(g.seats[hi], q, DT); });
+      tick(g, cmds); if (i % 60 === 59) words.push(word(g)); for (const h of hands) { h.cam.update(DT, h.v.followPos(), h.v.aimPoint); h.I.endFrame(); } } catch (e) { err = String((e as Error)?.stack ?? e).split('\n').slice(0, 5).join(' | '); }
+  }
+  return { ticks: i, hurt: g.guards.filter((x: any) => x.state === 'dead').length + men(g).filter((m: any) => m.down).length, down: foes0 - g.guards.filter((x: any) => x.state !== 'dead' && !(x.unit && x.team === 'operative')).length, err, words };
 }
-/** a fight's line: it ran to its end, it was a fight, and it asked the Game for a seat's field only where a row says so */
-function fightLine(name: string, q: string, secs: number, F: { ticks: number; down: number; hurt: number; err: string; asks: Map<string, number> }) {
-  const J = judgeAsks(F.asks);
-  verdict(!F.err && F.ticks === secs * 60 && (BREAK || F.hurt > 0) && J.odd.length === 0, `${name} (${q}): ${secs} s of both players in a firefight asks the Game for "the player" only where a known row says so`,
-    F.err ? `after ${F.ticks} ticks: ${F.err}` : `${F.ticks} ticks · ${F.hurt} men down in it, ${F.down} of them the other side's · known asks: ${J.known.join(', ') || 'none met'}${J.implied ? ` (and ${J.implied} inside the helpers they call)` : ''}${J.odd.length ? ` · ASKED AT A PLACE NO ROW NAMES: ${J.odd.join(' | ')}` : ''}`);
+/** a fight's line: it ran to its end and it was a fight */
+function fightLine(name: string, q: string, secs: number, F: { ticks: number; down: number; hurt: number; err: string }) {
+  verdict(!F.err && F.ticks === secs * 60 && (BREAK || F.hurt > 0), `${name} (${q}): ${secs} s of both players in a firefight runs to its end`,
+    F.err ? `after ${F.ticks} ticks: ${F.err}` : `${F.ticks} ticks · ${F.hurt} men down in it, ${F.down} of them the other side's`);
 }
-const NONE = () => ({ ticks: 0, down: 0, hurt: 0, err: 'did not run', words: [] as string[], asks: new Map<string, number>() });
-const rawAtScript = new Set<string>(VIEW_KEYS.raw);   // (what the script, under strict, asked under the Game: the fights add to it from here)
+const NONE = () => ({ ticks: 0, down: 0, hurt: 0, err: 'did not run', words: [] as string[] });
+/** a fight in a fresh process (the head of this file's `--fight`) */
+const apart = (q: string, secs: number, ahead = false, seed = 9, level: string | null = null): ReturnType<typeof NONE> => {
+  const r = Bun.spawnSync([process.execPath, 'run', import.meta.path, '--fight', JSON.stringify([q, secs, ahead, seed, level])], { env: process.env, stdout: 'pipe', stderr: 'pipe' });
+  const out = new TextDecoder().decode(r.stdout), l = out.split('\n').find(x => x.startsWith('SEATSFIGHT '));
+  return l ? JSON.parse(l.slice(11)) : { ...NONE(), err: `the fight's process said nothing (exit ${r.exitCode}): ${new TextDecoder().decode(r.stderr).trim().split('\n').slice(-2).join(' | ').slice(0, 300)}` }; };
 for (const [q, secs] of [['roomclear&squad4', 40], ['nightbreach', 30]] as const) {
-  let F = NONE(); try { F = await fight(q, secs); } catch (e) { F.err = String(e); }
+  const F = apart(q, secs);
   fightLine('fight', q, secs, F);
-  // ---- twin   (the same fight again in a fresh game, a look ahead for both seats before every tick)
-  { let T = NONE(); try { T = await fight(q, secs, true); } catch (e) { T.err = String(e); }
+  // ---- twin   (the same fight again in a fresh process, a look ahead for both seats before every tick)
+  { const T = apart(q, secs, true);
     let part = -1; for (let k = 0; k < Math.max(F.words.length, T.words.length); k++) if (F.words[k] !== T.words[k]) { part = k; break; }
     verdict(!F.err && !T.err && F.words.length === secs && part < 0, `twin (${q}): the fight with a look ahead for both seats every tick is the same game`,
-      T.err ? `after ${T.ticks} ticks: ${T.err}` : part < 0 ? `${T.words.length} seconds, the state's word the same at each · it ends on ${T.words[T.words.length - 1]}` : `THE GAMES PART in second ${part + 1}: ${F.words[part]} | ${T.words[part]}`); }
+      T.err ? `after ${T.ticks} ticks: ${T.err}` : part < 0 ? `${T.words.length} seconds, the game's word the same at each` : `THE GAMES PART in second ${part + 1}`); }
 }
-// ---- long   (two and a half minutes each, on another die and on another floor: where more of the known places are)
+// ---- long   (two and a half minutes each, on another die and on another floor)
 for (const [q, secs, seed, level] of [['roomclear&squad4', 150, 5, null], ['roomclear&squad4', 150, 3, 'compound']] as const) {
-  let F = NONE(); try { F = await fight(q, secs, false, seed, level); } catch (e) { F.err = String(e); }
+  const F = apart(q, secs, false, seed, level);
   fightLine('long', `${q}, ${level ?? 'the page\'s own floor'}, die ${seed}`, secs, F);
 }
-{ const unmet = KNOWN_ASKS.filter(k => !askRows.has(k.at)).map(k => k.at.replace(/^game\//, ''));
-  console.log(`  (the known rows, asks over every fight above: ${KNOWN_ASKS.filter(k => askRows.has(k.at)).map(k => `${k.at.replace(/^game\//, '')} ${askRows.get(k.at)}`).join(', ') || 'none met'}${unmet.length ? ` · not met on this stand: ${unmet.join(', ')}` : ''})`); }
 // ---- tables   (over everything above: the script, the firefights)
-{ const seen = [...VIEW_KEYS.seen].sort(), odd = seen.filter((n: string) => !SEAT_TABLES.includes(n)), rawAll = [...VIEW_KEYS.raw].filter((n: string) => SEAT_TABLES.includes(n)).sort();
-  const behind = rawAll.filter((n: string) => !rawAtScript.has(n) && TABLES_BEHIND_ASKS.includes(n)), raw = rawAll.filter((n: string) => !behind.includes(n));   // (a known ask's own table, first asked under the Game in a fight: the same fault, counted on the fight's line)
+{ const seen = [...VIEW_KEYS.seen].sort(), odd = seen.filter((n: string) => !SEAT_TABLES.includes(n)), raw = [...VIEW_KEYS.raw].filter((n: string) => SEAT_TABLES.includes(n)).sort();
   verdict(odd.length === 0 && raw.length === 0 && seen.length > 0, "tables: a table keyed by the game is a seat's (asked under a view) or the world's (asked under the Game), never both",
-    `${seen.length} asked under a view, each listed as a seat's: ${seen.join(', ') || 'none'}${odd.length ? ` · NOT A SEAT'S, ASKED UNDER A VIEW: ${odd.join(', ')}` : ''}${raw.length ? ` · A SEAT'S, ASKED UNDER THE GAME: ${raw.join(', ')}` : ''}${behind.length ? ` · a seat's, asked under the Game behind a known ask of a fight: ${behind.join(', ')}` : ''} · ${VIEW_KEYS.raw.size} asked under the Game`); }
+    `${seen.length} asked under a view, each listed as a seat's: ${seen.join(', ') || 'none'}${odd.length ? ` · NOT A SEAT'S, ASKED UNDER A VIEW: ${odd.join(', ')}` : ''}${raw.length ? ` · A SEAT'S, ASKED UNDER THE GAME: ${raw.join(', ')}` : ''} · ${VIEW_KEYS.raw.size} asked under the Game`); }
 // ---- word
 { const got = [seatsOfSearch('?roomclear&squad4&seats=2'), seatsOfSearch('?roomclear'), seatsOfSearch('?seats=9'), seatsOfSearch('?seats=0'), seatsOfSearch('?xseats=2'), seatsOfSearch(null)];
   verdict(got.join(',') === '2,1,2,1,1,1', 'word: the address says how many seats (?seats=2), and no word is one', `seats=2 → ${got[0]} · none → ${got[1]} · seats=9 → ${got[2]} · seats=0 → ${got[3]} · another word → ${got[4]} · no address → ${got[5]}`); }

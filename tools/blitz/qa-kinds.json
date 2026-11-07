@@ -9,10 +9,6 @@
 "word": "ts",
 "why": "calls the tick's rules between ticks and wraps a rule's tick (kind iv-a)"
 },
-"tools/qa/coop-check.ts": {
-"word": "none",
-"why": "it holds two TypeScript engines (bun and node) to each other bit for bit, and node has no bridge preload: a check of the TypeScript tick's arithmetic"
-},
 "tools/qa/exact-check.ts": {
 "word": "none",
 "why": "it holds the game's own maths under bun to the same under node, and node has no bridge preload: a check of the TypeScript tick's arithmetic"
@@ -174,9 +170,6 @@
 "RECAP.on=false",
 "RECAP.live=false"
 ],
-"depot-run": [
-"ROOMCLEAR.pairOnly=true"
-],
 "disarm": [
 "HOLD.stripFirst=false",
 "STALK.on=false",
@@ -196,10 +189,6 @@
 ],
 "fog-filed": [
 "FOG.things=false"
-],
-"fresh-start": [
-"SAMESTART.on=false",
-"ROOMCLEAR.fresh=false"
 ],
 "guidewords": [
 "WORDS.guide=false",
@@ -380,42 +369,6 @@
 "kittree-sponge": [
 "OWNBLOW.on=false",
 "KITDEAL.stealth=false"
-],
-"lineoffire-behind": [
-"CLEARLINE.holdStep=false"
-],
-"lineoffire-corridor": [
-"CLEARLINE.holdStep=false",
-"CLEARLINE.cover=false"
-],
-"lineoffire-edge": [
-"CLEARLINE.holdStep=false"
-],
-"lineoffire-entry": [
-"CLEARLINE.holdStep=false",
-"FRAG.defenders=false",
-"CLEARLINE.inEntry=false"
-],
-"lineoffire-far": [
-"CLEARLINE.holdStep=false"
-],
-"lineoffire-holdstep": [
-"CLEARLINE.holdStep=false"
-],
-"lineoffire-mate": [
-"CLEARLINE.holdStep=false"
-],
-"lineoffire-off": [
-"CLEARLINE.holdStep=false"
-],
-"lineoffire-planted": [
-"CLEARLINE.holdStep=false"
-],
-"lineoffire-still": [
-"CLEARLINE.holdStep=false"
-],
-"lineoffire-walk": [
-"CLEARLINE.holdStep=false"
 ],
 "noknife": [
 "STALK.on=false",
@@ -821,7 +774,6 @@
 "breaks-determinism": "the scan for writes by name: it writes the game's fields between ticks (kind ii)",
 "breaks-furniture": "the scan for writes by name: it writes the game's fields between ticks (kind ii)",
 "breaks-look": "the scan for writes by name: it writes the game's fields between ticks (kind ii)",
-"breaks-off": "the scan for writes by name: it writes the game's fields between ticks (kind ii)",
 "breaks-overflow": "the scan for writes by name: it writes the game's fields between ticks (kind ii)",
 "breaks-wall": "the scan for writes by name: it writes the game's fields between ticks (kind ii)",
 "charmats-cast": "a look: red on the Rust game by input alone (a cast man's cloth tint with the switch off), kind i",
@@ -1022,9 +974,7 @@
 "lasers",
 "marksight",
 "outerwall-hard",
-"outerwall-inside",
 "outerwall-live",
-"outerwall-off",
 "outerwall-reset",
 "outerwall-rooms",
 "outerwall-sam",
@@ -1087,7 +1037,6 @@
 "wallcharge-cost",
 "wallcharge-hold",
 "wallcharge-menu",
-"wallcharge-off",
 "wallcharge-refusals",
 "wallcharge-reset",
 "wallcharge-sam",
@@ -1175,7 +1124,6 @@
 "breaks-determinism": "ii",
 "breaks-furniture": "ii",
 "breaks-look": "ii",
-"breaks-off": "ii",
 "breaks-overflow": "ii",
 "breaks-shapes": "ii",
 "breaks-studs": "ii",
@@ -1189,11 +1137,7 @@
 "burst-whole": "iii",
 "burstglass": "iii",
 "by-eye": "iv-a",
-"calls-held": "iii",
 "calls-lastseen": "iii",
-"calls-leave": "iii",
-"calls-menu": "iii",
-"calls-rally": "iii",
 "calls-shipped": "iii",
 "calmtorch": "iii",
 "camspace": "0",
@@ -1252,7 +1196,6 @@
 "consulate-run": "i",
 "consulate-stage": "iii",
 "controls-behind": "iii",
-"cornerlead-corners": "iii",
 "cornerlead-lead": "iii",
 "corpse": "iii",
 "corridor": "0",
@@ -1299,7 +1242,6 @@
 "decals-sites": "iv-a",
 "defuse": "iii",
 "depot-doors": "iii",
-"depot-home": "iii",
 "depot-level": "ii",
 "depot-openings": "iii",
 "depot-run": "iii",
@@ -1342,7 +1284,6 @@
 "doorforce": "iii",
 "doorlook": "iii",
 "doormenu-drawn": "iii",
-"doormenu-knobs": "iii",
 "doormenu-man": "iii",
 "doormenu-open": "iii",
 "doormenu-rows": "iii",
@@ -1361,7 +1302,6 @@
 "doortools-firstman": "iii",
 "doortools-lights": "iii",
 "doortools-menu": "iii",
-"doortools-outside": "iii",
 "doze": "iii",
 "draworder": "ii",
 "editor-doc": "iv-b",
@@ -1375,7 +1315,6 @@
 "enemysquads-stage": "iv-a",
 "entrypoints-count": "ii",
 "entrypoints-known": "ii",
-"entrypoints-off": "iv-a",
 "everygone": "iv-a",
 "evictpop": "iv-a",
 "far-refix": "iii",
@@ -1443,7 +1382,6 @@
 "frameholds-sam": "iv-a",
 "frameholds-tools": "iv-a",
 "frameholds-wedge": "iii",
-"fresh-start": "ii",
 "friendlyfire": "iv-b",
 "friends": "iv-b",
 "furnblast-break": "iii",
@@ -1523,7 +1461,6 @@
 "gunwall": "iii",
 "halftwice": "iii",
 "handleside-men": "iii",
-"handleside-off": "iii",
 "handleside-spots": "iii",
 "handleside-tools": "iii",
 "handring": "iv-a",
@@ -1604,7 +1541,6 @@
 "kickglass": "iii",
 "kickrubble-edge": "iv-a",
 "kickrubble-left": "iv-a",
-"kickrubble-off": "iv-a",
 "kickrubble-offman": "iv-a",
 "kickrubble-pool": "iv-a",
 "kickrubble-quiet": "iv-a",
@@ -1771,7 +1707,6 @@
 "oneway-deal": "ii",
 "oneway-leaf": "iv-a",
 "oneway-men": "iii",
-"oneway-off": "ii",
 "oneway-player": "iii",
 "oneway-read": "i",
 "oneway-save": "ii",
@@ -1795,9 +1730,7 @@
 "orders-one": "iii",
 "orders-seams": "iii",
 "orders-stack": "iii",
-"orderui-door": "iii",
 "orderui-four": "iii",
-"orderui-hud": "iii",
 "orderui-keys": "iii",
 "ownblow": "iii",
 "owncharge-door": "iii",
@@ -1829,7 +1762,6 @@
 "pairup-grip": "iii",
 "pairup-hands": "iii",
 "pairup-hunted": "iii",
-"pairup-identity": "iv-a",
 "pairup-one-eye": "iv-a",
 "pairup-rejoin": "iii",
 "pairup-stay": "iii",
@@ -1963,7 +1895,6 @@
 "roomfight-flank": "iii",
 "roomfight-friends": "iii",
 "roomfight-nextroom": "iii",
-"roomfight-off": "iii",
 "roomfight-orders": "iii",
 "roomfight-sight": "iii",
 "roomfit-cleared": "iii",
@@ -2201,7 +2132,6 @@
 "threshold-grenade": "iii",
 "threshold-hand": "iii",
 "threshold-hold": "iii",
-"threshold-identity": "iii",
 "threshold-last": "iii",
 "threshold-leaf": "iii",
 "threshold-pair": "iii",
@@ -2361,7 +2291,6 @@
 "glasshouse": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "hourwx-air": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "oneway-deal": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
-"oneway-off": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "oneway-save": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "owncharge-kit": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "rowset": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",

@@ -7,10 +7,7 @@
 //   cut      the case as the build stands it: pieces drawn cut and met cut by every ray
 //   plain    the SAME pieces with their cut record taken off (Box.cut = undefined: each is its whole fitted box) — same count, same places: the difference is the cut alone
 //   none     no test pieces at all (the synthetic pool only): what the pieces themselves cost, cut or not
-//   ship     (the calm case, a build with the two program sets — render/cutSwap.ts, the default) the frame as it SHIPS: with nothing cut alive it dispatches the boot's
-//            programs, which have no cut rule — its row against `offText` is the claim 'a calm room pays nothing' (Δ 0 by construction: the same programs);
-//            `cut` there PINS the set with the rule (what a room pays while a piece is alive, and what every frame paid before the swap)
-//   offText  the tracing pipelines with CUT_BOXES false (pinned under the two-set build; recompiled through __hotCommon under ?cutprograms=boot; the calm case only) — the price of the branch in the ray test when no box is cut.
+//   offText  the tracing pipelines with CUT_BOXES false (recompiled through __hotCommon; the calm case only) — the price of the branch in the ray test when no box is cut.
 //            (the g-buffer, the probe, composite's side ray keep the boot's text: a build booted with ?nocutboxes is the whole truth — run() there prints the same table
 //            with `plain` only, and tools/qa/cut-cost-run.cjs alternates two such pages frame by frame)
 //   gate     (opt-in: run({ gate: true }), the calm case) the tracing pipelines recompiled with the per-box bit test put BEHIND a frame-level word that is always 0
@@ -121,25 +118,16 @@
   async function text(mode) {
     if (mode === true) mode = 'on'; else if (mode === false) mode = 'off';
     if (!cutOn()) return 'this build was booted without the switch: its text is the off text';
-    const P = C().programs;
-    if (P && P.swap) {   // A CALM ROOM PAYS NOTHING (render/cutSwap.ts): this build holds BOTH sets of the tracing programs — pin one (or, 'ship', leave the frame's own rule: the cut set only while a cut piece a ray can meet is alive)
-      if (mode === 'gate') throw new Error("cut-cost: the 'gate' text is a test of the one-set build — boot with ?cutprograms=boot for it");
-      if (!(await P.ready)) console.error('cut-cost: the second set of programs did not compile — every config below runs the boot programs', P.info);
-      P.force = mode === 'on' ? 'cut' : mode === 'off' ? 'base' : null; textMode = mode; await settle();
-      return mode;
-    }
-    if (mode === 'ship') mode = 'on';   // (the one-set build ships its boot text: the rule in every ray program)
     if (textMode === null) textMode = 'on';
     if (textMode === mode) return mode;
-    const cfg = C().mod.cutConfig; const t0 = performance.now(); const swapWas = cfg.swap; cfg.swap = false;
-    cfg.on = mode !== 'off'; let r; try { r = await window.__hotCommon(mode === 'gate' ? await gatedCommon() : ''); } finally { cfg.on = true; cfg.swap = swapWas; }   // (the CPU keeps the boot's switch: only the prelude built inside the swap reads the other value)
+    const cfg = C().mod.cutConfig; const t0 = performance.now(); 
+    cfg.on = mode !== 'off'; let r; try { r = await window.__hotCommon(mode === 'gate' ? await gatedCommon() : ''); } finally { cfg.on = true; }   // (the CPU keeps the boot's switch: only the prelude built inside the swap reads the other value)
     textMode = mode; await settle();
     if (r && !r.ok) console.error('cut-cost: the hot swap failed', JSON.stringify(r.failed));
     const msg = `${mode} text in ${(performance.now() - t0).toFixed(0)} ms${r && !r.ok ? ' — FAILED' : ''}`; console.log('cut-cost   ' + msg);
     return msg;
   }
   const CONFIG = {
-    ship:    async () => { await hidePool(false); restore(); await text('ship'); },
     cut:     async () => { await hidePool(false); restore(); await text(true); },
     plain:   async () => { await hidePool(false); strip(); await text(true); },
     none:    async () => { restore(); await hidePool(true); await text(true); },
@@ -264,7 +252,7 @@
     const e = E(); const t0 = performance.now(); const out = { when: new Date().toISOString(), on: cutOn(), adapter: e.gpu?.adapterInfo ?? null, preset: window.__quality?.current ?? null, res: `${e.width}×${e.height} → ${e.outWidth ?? e.width}×${e.outHeight ?? e.height}`, timer: !!e.timer.enabled, rounds, n, warm, cases: {} };
     const rows = [];
     for (const name of cases) {
-      const c0 = await stage(name, opts[name] ?? {}); console.log(`cut-cost ${name}: staged, ${c0.cutStatics + c0.cutDynamics} cut boxes, ${c0.planes} planes, ${c0.dynamics} dynamic boxes`); const configs = !cutOn() ? ['plain'] : name === 'calm' ? (swap ? (C().programs?.swap ? ['ship', 'cut', 'offText'] : opts.gate ? ['cut', 'offText', 'gate'] : ['cut', 'offText']) : ['cut']) : name === 'pool' || name === 'worst' ? ['cut', 'plain', 'none'] : ['cut', 'plain'];
+      const c0 = await stage(name, opts[name] ?? {}); console.log(`cut-cost ${name}: staged, ${c0.cutStatics + c0.cutDynamics} cut boxes, ${c0.planes} planes, ${c0.dynamics} dynamic boxes`); const configs = !cutOn() ? ['plain'] : name === 'calm' ? (swap ? (opts.gate ? ['cut', 'offText', 'gate'] : ['cut', 'offText']) : ['cut']) : name === 'pool' || name === 'worst' ? ['cut', 'plain', 'none'] : ['cut', 'plain'];
       const cen = doCensus && cutOn() && name !== 'calm' ? census(opts.census ?? {}) : null;
       const r = await ab(configs, { rounds, n, warm });
       out.cases[name] = { counts: c0, staged: STAGED[name] ?? null, census: cen, configs: r };
@@ -275,7 +263,7 @@
           direct: fmt(s.passes.direct), gather: fmt(s.passes.gather), reflect: fmt(s.passes.reflect), rc: fmt(Object.entries(s.passes).filter(([k]) => /^rc/.test(k)).reduce((a, [, v]) => a + v, 0)), gbuffer: fmt(s.passes.gbuffer) });
       }
     }
-    await text(C()?.programs?.swap ? 'ship' : true); restore(); await hidePool(false); C()?.clear();
+    await text(true); restore(); await hidePool(false); C()?.clear();
     out.secs = +((performance.now() - t0) / 1000).toFixed(1); out.res = `${e.width}×${e.height} → ${e.outWidth ?? e.width}×${e.outHeight ?? e.height}`;
     out.table = rows; window.__ccLast = out;
     console.log(`cut-cost · switch ${out.on ? 'ON' : 'off'} · ${out.preset} ${out.res} · ${out.adapter ?? ''} · ${out.secs} s`);
