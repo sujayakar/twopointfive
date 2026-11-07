@@ -335,7 +335,7 @@ export function updateSnowFx(g: Game, dt: number, cam: FollowCamera) {
 function markKicks(g: Game, st: SnowState, Pp: Particles, room: number, size: number, sizeJit: number, cx: number, cz: number, R: number): number {
   const T = g.snowTracks; if (!T) return 0;
   if (!T.kicks.length) { st.kickQ.length = 0; st.kickSeen = T.kicked; return 0; }   // (nearly every frame)
-  if (lookConfig.on && lookConfig.puffs > 0 && T.kicked >= st.kickSeen) bootKicks((g.engine as unknown as { powder?: Parameters<typeof bootKicks>[0] }).powder, T.kicks, st.kickSeen, lookConfig.puffs);   // (THE LOOK PROTOTYPE: each NEW kick's puff of powder, below — before the book takes the kicks as seen)
+  if (lookConfig.puffs > 0 && T.kicked >= st.kickSeen) bootKicks((g.engine as unknown as { powder?: Parameters<typeof bootKicks>[0] }).powder, T.kicks, st.kickSeen, lookConfig.puffs);   // (THE LOOK PROTOTYPE: each NEW kick's puff of powder, below — before the book takes the kicks as seen)
   const Q = kicksDue(T, st); st.kickQ = Q; st.kickSeen = T.kicked;
   if (!Q.length) return 0;
   const K = SNOWTRACKS, near = R * 0.7; let filed = 0, recs = 0;
