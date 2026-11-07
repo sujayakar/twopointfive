@@ -282,6 +282,7 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
     crate::game::game_stand_lights(g);   // the lamps the fixtures feed, as rows in the list's order (rust/sim/src/lights.rs); a fixture's authored bit is said by its `add` now
     crate::civilians::spawn_civilians(g);   // after the shift, whose construction and dice they must not disturb
     g.fog_of_war = crate::fogofwar::fog_of_war_new(g);
+    g.fog_picture = crate::fogofwar::FogPicture::blank();
     g.quiet = crate::quiet::quiet_mission_new(g);
     g.rails = crate::rails::rails_new(g);
     g.lesson = crate::lesson::lesson_new(g);
