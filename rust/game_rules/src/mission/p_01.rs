@@ -323,78 +323,41 @@ pub fn send_rack_check(g: &mut crate::game::Game) {
     crate::dialogue::handler_beat(g, crate::dialogue::HandlerBeat::Rack, Some(2.6));
 }
 
-/// Where the HUD's objective marker points; None: nothing to point at, or the tour is running. (mission.ts objectivePos)
-pub fn objective_pos(g: &mut crate::game::Game) -> Option<V3> {
+/// THE MISSION'S ONE LINE AND ITS PLACE, as they stand now, and whose they are: a level's program while it runs, a lesson's step over its own scenario,
+/// a charge's overlay, the man to take alive, the room clear, the rescue, the night breach by itself, and else the stealth mission's own stages.
+/// None while a show runs. A read: the HUD's view of it is `view::MissionView`, and nothing of it is kept.
+pub fn objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::view::MissionView> {
+    use crate::view::{MissionOf, MissionView};
+    if (g.quiet_utility || g.touring) && !g.mission_in_tour { return None; }
+    let of = |of: MissionOf, text: String, pos: Option<V3>| Some(MissionView { of, text, pos });
+    if let Some(o) = crate::director::director_objective(g) { return of(MissionOf::Script, format!("objective ▸ {}", o.text), o.pos); }
+    if let Some(o) = crate::lesson::lesson_objective(g, seat) { return of(MissionOf::Lesson, o.text, o.pos); }
+    if let Some(o) = crate::defuse::defuse_objective(g, seat) { return of(MissionOf::Defuse, o.text, o.pos); }
+    if let Some(o) = crate::snatch::snatch_objective(g, seat) { return of(MissionOf::Snatch, o.text, o.pos); }
+    if let Some(o) = crate::roomclear::room_clear_scenario_objective(g, seat) { return of(MissionOf::Roomclear, crate::par::par_objective(g, &o.text), o.pos); }
+    if let Some(o) = crate::rescue::rescue_objective(g, seat) { return of(MissionOf::Rescue, o.text, o.pos); }
+    if let Some(o) = crate::nightbreach::night_breach_objective(g) { return of(MissionOf::Nightbreach, o.text, o.pos); }
+    of(MissionOf::Stages, stage_words(g, seat), stage_place(g, seat))
+}
+
+/// the stealth mission's own place, by its stage
+fn stage_place(g: &Game, seat: &crate::seats::SeatRef) -> Option<V3> {
     use crate::game::MissionStage;
-    if (g.quiet_utility || g.touring) && !g.mission_in_tour {
-        return None;
-    }
-    if let Some(o) = crate::director::director_objective(g) {
-        return o.pos;
-    }
-    if let Some(o) = crate::lesson::lesson_objective(g) {
-        return o.pos;
-    }
-    if let Some(o) = crate::snatch::snatch_objective(g) {
-        return o.pos;
-    }
-    if let Some(o) = crate::defuse::defuse_objective(g) {
-        return o.pos;
-    }
-    if let Some(o) = crate::roomclear::room_clear_scenario_objective(g) {
-        return o.pos;
-    }
-    if let Some(o) = crate::rescue::rescue_objective(g) {
-        return o.pos;
-    }
-    if let Some(o) = crate::nightbreach::night_breach_objective(g) {
-        return o.pos;
-    }
-    let s = g.mission.stage;
-    if s == MissionStage::Exfil {
-        let p = player_pos(g, &crate::seats::here(g));
-        if let Some(x) = crate::quiet::nearest_exit(g, p) {
-            return Some(match crate::doors::doors_by_name(g, &x.door) {
-                Some(d) => g.dr[d].frame_centre,
-                None => crate::quiet::exit_point(&x, Some(0.0)),
-            });
-        }
-    }
-    match s {
-        MissionStage::Infiltrate => door_centre(g, &g.level.mission.entry_door.clone()),
+    match g.mission.stage {
+        MissionStage::Infiltrate => door_centre(g, &g.level.mission.entry_door),
         MissionStage::Drive => Some(g.level.mission.rack.front),
-        MissionStage::Exfil => door_centre(g, &g.level.mission.exfil_door.clone()),
+        // (a quiet mission: the nearest of its ways out)
+        MissionStage::Exfil => match crate::quiet::nearest_exit(g, player_pos(g, seat)) {
+            Some(x) => Some(door_centre(g, &x.door).unwrap_or_else(|| crate::quiet::exit_point(&x, Some(0.0)))),
+            None => door_centre(g, &g.level.mission.exfil_door),
+        },
         _ => None,
     }
 }
 
-/// The HUD's one objective line; empty while the tour runs. (mission.ts objectiveText)
-pub fn objective_text(g: &mut crate::game::Game) -> String {
+/// the stealth mission's own words, by its stage
+fn stage_words(g: &Game, seat: &crate::seats::SeatRef) -> String {
     use crate::game::MissionStage;
-    if (g.quiet_utility || g.touring) && !g.mission_in_tour {
-        return String::new();
-    }
-    if let Some(o) = crate::director::director_objective(g) {
-        return format!("objective ▸ {}", o.text);
-    }
-    if let Some(o) = crate::lesson::lesson_objective(g) {
-        return o.text;
-    }
-    if let Some(o) = crate::defuse::defuse_objective(g) {
-        return o.text;
-    }
-    if let Some(o) = crate::snatch::snatch_objective(g) {
-        return o.text;
-    }
-    if let Some(o) = crate::roomclear::room_clear_scenario_objective(g) {
-        return crate::par::par_objective(g, &o.text);
-    }
-    if let Some(o) = crate::rescue::rescue_objective(g) {
-        return o.text;
-    }
-    if let Some(o) = crate::nightbreach::night_breach_objective(g) {
-        return o.text;
-    }
     let s = g.mission.stage;
     let drive_t = g.mission.drive_t;
     let n = js::num_str(g.level.mission.rack.index + 1.0);
@@ -412,18 +375,11 @@ pub fn objective_text(g: &mut crate::game::Game) -> String {
         MissionStage::Drive if drive_t >= 0.0 => format!("objective ▸ pulling the drive… {}%", drive_percent(drive_t)),
         MissionStage::Drive => format!("objective ▸ pull the drive from rack {} (press Space in front of it, then stay on it)", n),
         MissionStage::Exfil => String::from("objective ▸ get out through the fire exit"),
+        // (the run's clock and its counts stand still once it is done)
         MissionStage::Done => {
-            let key = g.mission.serial;
-            if let Some(t) = g.m.mission.done_line.get(key) {
-                return t.clone();
-            }
-            let d = crate::chronicle::debrief_of(g, &crate::seats::here(g));
+            let d = crate::chronicle::debrief_of(g, seat);
             let mut t = format!("mission complete — {}", crate::game::fmt_clock(g.mission.stats.elapsed));
-            if !d.grade.is_empty() {
-                t.push_str(" · ");
-                t.push_str(&d.grade);
-            }
-            g.m.mission.done_line.set(key, t.clone());
+            if !d.grade.is_empty() { t.push_str(" · "); t.push_str(&d.grade); }
             t
         }
         _ => String::from("mission failed — press enter to restart"),
@@ -513,7 +469,6 @@ mod tests {
     fn the_tour_has_no_objective() {
         let mut g = game();
         g.touring = true;
-        assert!(objective_pos(&mut g).is_none());
-        assert_eq!(objective_text(&mut g), "");
+        assert!(objective(&g, &crate::seats::here(&g)).is_none());
     }
 }

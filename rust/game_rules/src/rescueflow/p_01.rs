@@ -158,7 +158,7 @@ pub fn rescue_flow_lookable(g: &mut crate::game::Game, k: &mut crate::rescueflow
 }
 
 /// (rescueflow.ts RescueFlow.open)
-pub fn rescue_flow_open(g: &mut crate::game::Game, o: &crate::scene_scenarios::RouteOpening) -> bool {
+pub fn rescue_flow_open(g: &crate::game::Game, o: &crate::scene_scenarios::RouteOpening) -> bool {
     match door_of(g, o) {
         None => true,
         Some(d) => m::abs(crate::doors::door_angle(g, d)) > 0.5,
@@ -862,7 +862,7 @@ pub fn rescue_flow_boxes(g: &mut crate::game::Game) {
 }
 
 /// (rescueflow.ts RescueFlow.word)
-pub fn rescue_flow_word(g: &mut crate::game::Game, k: &crate::rescueflow::Known) -> String {
+pub fn rescue_flow_word(g: &crate::game::Game, k: &crate::rescueflow::Known) -> String {
     let shut = k.o.kind == crate::scene_scenarios::RouteOpeningKind::Door && !rescue_flow_open(g, &k.o);
     let w = match k.state {
         OpenState::Hot => {
@@ -886,8 +886,8 @@ pub fn rescue_flow_word(g: &mut crate::game::Game, k: &crate::rescueflow::Known)
     String::from(w)
 }
 
-/// The objective line's tail: the openings behind Sam and what is known of each, and any hot one still ahead of him. (rescueflow.ts RescueFlow.line)
-pub fn rescue_flow_line(g: &mut crate::game::Game) -> String {
+/// The objective line's tail: the openings behind Sam and what is known of each, and any hot one still ahead of him.
+pub fn rescue_flow_line(g: &crate::game::Game) -> String {
     let mut behind: Vec<String> = Vec::new();
     let mut ahead: Vec<String> = Vec::new();
     for at in 0..g.rescue.flow.known.len() {

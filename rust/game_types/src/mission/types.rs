@@ -28,19 +28,5 @@ impl TallyK {
     }
 }
 
-/// the state this module keeps at its top level
-#[derive(Clone, Debug)]
-pub struct MissionMod {
-    /// (src/game/mission.ts:174 doneLine)
-    pub done_line: JsMap<u32, String>,
-}
-impl MissionMod {
-    pub fn blank() -> Self {
-        MissionMod {
-            done_line: JsMap::new(),
-        }
-    }
-}
-
 /// (src/game/mission.ts:62 DOWN_CARD_SECS)
 pub const DOWN_CARD_SECS: f64 = 2.6;

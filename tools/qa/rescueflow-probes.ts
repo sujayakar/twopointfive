@@ -33,6 +33,8 @@ const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
 type Said = { t: number; who: string; text: string };
 /** everything any man says from here on (Game.say is the one mouth) */
 function ears(T: any): Said[] { const g = T.game, said: Said[] = [], say0 = g.say.bind(g); g.say = (gd: any, text: string, radio?: boolean) => { said.push({ t: g.time, who: gd.callsign, text }); return say0(gd, text, radio); }; return said; }
+/** the rescue's own row on the Rust game's record (the mission's line, g.view.mission): a line that asks it while the row is another's fails by this throw */
+const rescueRow = (T: any): string => { const m = T.game.view.mission; if (m?.of !== 'rescue') throw new Error(`the row is not the rescue's (it is ${m?.of ?? 'a show'}'s)`); return m.text; };
 const flowLog = (T: any) => T.R.log.filter((l: any) => l.what.startsWith('flow:')).map((l: any) => l.what);
 const strips = (T: any) => T.game.dynBoxes.filter((b: any) => Math.abs(b.c[1] - 0.012) < 1e-6 && b.h[1] === 0.008);
 const INSIDE = (p: number[], B: { x0: number; x1: number; z0: number; z1: number }) => p[0] > B.x0 && p[0] < B.x1 && p[2] > B.z0 && p[2] < B.z1;
@@ -111,7 +113,7 @@ export const flowPass = guarded(async () => {
     const hold = flowLog(T).some((w: string) => w.startsWith('flow:corridor'));
     walk(T, [22.75, 0, 14]); walk(T, [22.75, 0, 11.2]); walk(T, [24.6, 0, 11.2]); T.secs(3);
     const L = flowLog(T).filter((w: string) => /^flow:(take|pass|queue|corridor)/.test(w));
-    F.verdict(!hold && L.length === 0 && R.ops.every((o: any) => orderOf(T, o) === 'fallIn') && !R.objective().text.includes('behind you'), 'round by the lobby and the cubicles, out of the east doorway to the hostage room\'s door: no corridor hold, nothing passed, nobody sent back', `corridor hold ${hold} · ${L.join(' · ') || 'no takes, no passes'} · '${R.objective().text}'`);
+    F.verdict(!hold && L.length === 0 && R.ops.every((o: any) => orderOf(T, o) === 'fallIn') && !rescueRow(T).includes('behind you'), 'round by the lobby and the cubicles, out of the east doorway to the hostage room\'s door: no corridor hold, nothing passed, nobody sent back', `corridor hold ${hold} · ${L.join(' · ') || 'no takes, no passes'} · '${rescueRow(T)}'`);
   }
   return F.done();
 });
@@ -120,19 +122,19 @@ export const flowStates = guarded(async () => {
   const F = family('rescue-flow-states: what the player is shown of each opening');
   { const T = await rig(12, { doorMan: 'inside', roamers: 0 }); const R = T.R, g = T.game; T.secs(0.3);
     const s0 = strips(T); const amber = (b: any) => b.emissive[0] > b.emissive[2] * 4 && b.emissive[1] > 0.3;
-    F.verdict(s0.length === 4 && s0.every((b: any) => (b.flags & 2) !== 0) && !R.objective().text.includes('behind you'), 'staged: a strip on the floor at each of the four openings, each a NoShadow box (no ray, no light meter, no guard sees it); nothing is behind Sam yet', `${s0.length} strips at x ${s0.map((b: any) => b.c[0].toFixed(1)).sort().join(', ')} · objective '${R.objective().text}'`);
+    F.verdict(s0.length === 4 && s0.every((b: any) => (b.flags & 2) !== 0) && !rescueRow(T).includes('behind you'), 'staged: a strip on the floor at each of the four openings, each a NoShadow box (no ray, no light meter, no guard sees it); nothing is behind Sam yet', `${s0.length} strips at x ${s0.map((b: any) => b.c[0].toFixed(1)).sort().join(', ')} · objective '${rescueRow(T)}'`);
     let heldSeen = '', blue = false, words = '';
     walk(T, [8.2, 0, 11.2]); walk(T, [13.5, 0, 11.2], 1.55, () => {
-      if (R.flow.stateOf('conference') === 'held') { heldSeen = R.objective().text; const b = strips(T).find((x: any) => Math.abs(x.c[0] - 9.6) < 0.1); blue = !!b && b.emissive[2] > b.emissive[0] * 3;
+      if (R.flow.stateOf('conference') === 'held') { heldSeen = rescueRow(T); const b = strips(T).find((x: any) => Math.abs(x.c[0] - 9.6) < 0.1); blue = !!b && b.emissive[2] > b.emissive[0] * 3;
         const w = g.orders.hud().status.map((r: any) => r.opts.map((o: any) => o.text).join(' ')).join(' | '); if (!/covering conference room/.test(words)) words = w; } });   // (his row WHILE he is on the cover: at Sam's walk he is done and catching up before Sam is at the far end of this leg, the opening still reading held)
     F.verdict(heldSeen.includes('behind you ▸ conf held') && blue && /covering conference room/.test(words), 'the conference room while a man covers it: HELD — a blue strip, the objective line, his row in the squad block', `objective '${heldSeen}' · strip blue ${blue} · squad block '${words}'`);
     walk(T, [24.6, 0, 11.2]); T.secs(7);
-    const txt = R.objective().text, st = R.flow.route.map((o: any) => `${o.id} ${R.flow.stateOf(o.id)}`);
+    const txt = rescueRow(T), st = R.flow.route.map((o: any) => `${o.id} ${R.flow.stateOf(o.id)}`);
     const sv = strips(T).find((x: any) => Math.abs(x.c[0] - 17.6) < 0.1), cw = strips(T).find((x: any) => Math.abs(x.c[0] - 15.75) < 0.1);
     F.verdict(/server shut/.test(txt) && R.flow.stateOf('server') === 'unknown' && amber(sv) && R.flow.stateOf('cubicles-w') === 'looked' && !amber(cw) && /cub W looked/.test(txt) && /cub E looked/.test(txt),
       'behind Sam at the hostage room: the cubicles\' doorways LOOKED (pale), the server room\'s door never opened — unknown, shown as shut (amber)', `'${txt}' · ${st.join(' · ')}`);
     T.secs(12);
-    F.verdict(R.flow.stateOf('conference') === 'unknown' && /conf unknown/.test(R.objective().text), 'a look goes stale: ten seconds with no eyes on it and the conference room is unknown again', `'${R.objective().text}'`);
+    F.verdict(R.flow.stateOf('conference') === 'unknown' && /conf unknown/.test(rescueRow(T)), 'a look goes stale: ten seconds with no eyes on it and the conference room is unknown again', `'${rescueRow(T)}'`);
   }
   { // one of theirs in the conference room, seen through the glass: hot, and held for as long as he is
     const T = await rig(5, { doorMan: 'inside', roamers: 2, setSecs: 999 }); const R = T.R, g = T.game, said = ears(T); T.secs(0.3);
@@ -141,8 +143,8 @@ export const flowStates = guarded(async () => {
     T.secs(5);
     const J = [...R.flow.jobs.keys()][0], held = J ? orderOf(T, J) === 'cover' && dist(J.char.pos, [9.0, 0, 11.55]) < 1.2 : false;
     const red = (() => { const b = strips(T).find((x: any) => Math.abs(x.c[0] - 9.6) < 0.1); return !!b && b.emissive[0] > b.emissive[1] * 5; })();
-    F.verdict(!!man && man.state !== 'dead' && R.flow.stateOf('conference') === 'hot' && red && held && said.some(s => s.text === 'contact left — holding.') && /HOT/.test(R.objective().text),
-      'one of theirs seen in the conference room through its glass: HOT — a red strip, the objective line, and the man covering it stays on it', `roamer in the conference room: ${man?.callsign} ${man?.state} · state ${R.flow.stateOf('conference')} · red ${red} · still covering five seconds on ${held} · said ${said.filter(s => /contact|holding/.test(s.text)).map(s => s.text).join(', ')} · '${R.objective().text}' · ${T.shots.operative ?? 0} team rounds`);
+    F.verdict(!!man && man.state !== 'dead' && R.flow.stateOf('conference') === 'hot' && red && held && said.some(s => s.text === 'contact left — holding.') && /HOT/.test(rescueRow(T)),
+      'one of theirs seen in the conference room through its glass: HOT — a red strip, the objective line, and the man covering it stays on it', `roamer in the conference room: ${man?.callsign} ${man?.state} · state ${R.flow.stateOf('conference')} · red ${red} · still covering five seconds on ${held} · said ${said.filter(s => /contact|holding/.test(s.text)).map(s => s.text).join(', ')} · '${rescueRow(T)}' · ${T.shots.operative ?? 0} team rounds`);
     if (man && man.state !== 'dead') killGuard(g, man, [1, 0, 0], false, 'shot', 'player');
     const done = T.secs(6, () => R.flow.jobs.size === 0);
     F.verdict(done && R.flow.stateOf('conference') !== 'hot' && R.ops.every((o: any) => o.state === 'dead' || orderOf(T, o) === 'fallIn'), 'he is dead: the room is hot no longer and the man catches up', `state ${R.flow.stateOf('conference')} · orders ${R.ops.map((o: any) => orderOf(T, o)).join(' / ')} · ${flowLog(T).filter((w: string) => /hold|done|hot/.test(w)).join(' · ')}`);
@@ -162,8 +164,8 @@ export const flowStates = guarded(async () => {
     walk(T, [14.0, 0, 11.2]); T.secs(1);
     const after = flowLog(T).filter((w: string) => w.startsWith('flow:take:conference')).length;
     const b = strips(T).find((x: any) => Math.abs(x.c[0] - 9.6) < 0.1), green = !!b && b.emissive[1] > b.emissive[0] * 4 && b.emissive[1] > b.emissive[2] * 2;
-    F.verdict(cleared === 'cleared' && backOut && after === before && green && /conf clear/.test(R.objective().text), 'the room walked through is CLEARED (green); back in the corridor the man rejoins, and passing a cleared room sends nobody to cover it',
-      `state after the walk ${cleared} · corridor job ended ${backOut} · covers of it after ${after - before} · green ${green} · '${R.objective().text}'`);
+    F.verdict(cleared === 'cleared' && backOut && after === before && green && /conf clear/.test(rescueRow(T)), 'the room walked through is CLEARED (green); back in the corridor the man rejoins, and passing a cleared room sends nobody to cover it',
+      `state after the walk ${cleared} · corridor job ended ${backOut} · covers of it after ${after - before} · green ${green} · '${rescueRow(T)}'`);
   }
   { // a hot room goes cold: the man leaves it unseen, Sam walks the room — not HOT for ever
     const T = await rig(5, { doorMan: 'inside', roamers: 2, setSecs: 999 }); const R = T.R, g = T.game; T.secs(0.3);
@@ -173,7 +175,7 @@ export const flowStates = guarded(async () => {
     if (man) { man.hold = true; man.char.pos[0] = 33; man.char.pos[2] = 21.5; if (man.char.bones.chest) { man.char.bones.chest[0] = 33; man.char.bones.chest[2] = 21.5; } }   // (out of the room, out of everybody's sight: the far end of the break room)
     walk(T, [9.6, 0, 8.6], 2); walk(T, [6.0, 0, 6.0], 2.5); walk(T, [12.0, 0, 6.0], 2.5); T.secs(1);
     const st = R.flow.stateOf('conference');
-    F.verdict(!!man && wasHot && flowLog(T).includes('flow:cold:conference') && st !== 'hot' && !/conf HOT/.test(R.objective().text), 'a hot room the team then walks through and finds empty goes cold (and can be cleared)', `was hot ${wasHot} · after the walk ${st} · ${flowLog(T).filter((w: string) => /hot|cold|cleared/.test(w)).join(' · ')} · man ${man?.state} at ${man?.char.pos.map((x: number) => x.toFixed(1))} · '${R.objective().text}'`);
+    F.verdict(!!man && wasHot && flowLog(T).includes('flow:cold:conference') && st !== 'hot' && !/conf HOT/.test(rescueRow(T)), 'a hot room the team then walks through and finds empty goes cold (and can be cleared)', `was hot ${wasHot} · after the walk ${st} · ${flowLog(T).filter((w: string) => /hot|cold|cleared/.test(w)).join(' · ')} · man ${man?.state} at ${man?.char.pos.map((x: number) => x.toFixed(1))} · '${rescueRow(T)}'`);
   }
   return F.done();
 });

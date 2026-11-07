@@ -10,8 +10,8 @@ import type { InteractRow } from './overlay';
 /** is the corner panel the three things: his ring's rule on, and not under the tour's puppet (its list is the list as it was) */
 export const cornerOn = (puppet: boolean): boolean => HANDRING.corner && HANDRING.on && !puppet;
 
-/** The objective line in its parts (null: none). The line's own word ends on '▸' ('objective ▸ …', 'training 2/7 ▸ …' — game/mission.ts objectiveText,
- *  lesson.ts): `label` is that word, `note` what stands in front of it (a par or a clock), `text` the rest. A line with no such word (a run's end:
+/** The objective line in its parts (null: none). The line's own word ends on '▸' ('objective ▸ …', 'training 2/7 ▸ …' — the Rust game's
+ *  `mission::objective`, in the view): `label` is that word, `note` what stands in front of it (a par or a clock), `text` the rest. A line with no such word (a run's end:
  *  'structure taken · …', 'mission failed — …') is all text, under no label. */
 export function objectiveParts(line: string): { label: string; note: string; text: string } | null {
   if (!line.trim()) return null; const cut = line.indexOf('▸'); if (cut < 0) return { label: '', note: '', text: line.trim() };
