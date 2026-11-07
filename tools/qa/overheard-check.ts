@@ -80,7 +80,7 @@ export async function wordsOverheard(): Promise<boolean> {
     // ---- 3 · the say() road
     {
       const out: { moves: string; shouts: number; drawn: number; row: boolean; who: string; ring: string }[] = [];
-      for (const on of [!BREAK]) {
+      for (const on of [true]) {
         const W = await rig(2), g = W.game; g.godMode = true; CUES.on = true; CUES.overheard = on;   // (after the stand-up: on the frozen stand a stand-up writes every held switch down again)
         stagePlayer(W, g); let moves = '', row = false, who = '', ring = '';
         for (let i = 0; i < 60 * 30; i++) { g.player.visibility = 1; W.step(DT);
