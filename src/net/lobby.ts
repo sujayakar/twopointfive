@@ -18,6 +18,9 @@ import { bare } from '../scene/scenarioList';
 
 export const COOP = {
   on: typeof window !== 'undefined' && typeof window.addEventListener === 'function',
+  /** why nobody can host or join a game on this build, in a player's words ('' = they can). Every door of the Co-op screen says it (ui/coop.ts `lobby`).
+   *  It stands while the game server and the page in a game are moved onto the game as it steps now, and goes with the last step of that move. */
+  down: 'Co-op can’t be played on this build yet. You can still play every mission on your own.',
   /** players in a co-op game, and the teammates the two of them bring between them */
   seats: 2, squad: 4,
   /** how often a waiting page asks the control plane how its game is, and how long it waits for a server before it says so (the control plane's own clock
