@@ -7,9 +7,6 @@
 //!                                here (the list is a step's output: a second export must not hand them again).
 //!   face_puppet_warm(h)          the every-tick export with every row and field sent as if it had changed (what the memo holds is spoiled first): a
 //!                                host applies it to a puppet that already holds that state, to run the every-tick path once over everything
-//!   face_puppet_spoil(h)         the NEXT every-tick export sends every row and field as if it had changed. For a host that wrote a field into the game
-//!                                by its path (`face_write`): the memo still holds what was sent BEFORE that write, so a rule that then puts the field
-//!                                back to that value leaves nothing to send, and the host's copy keeps what the host wrote
 //!   face_puppet_drop(h)          the memo of a game that is gone
 //!   face_reserve(n)              room asked for and given back, so that no step has to grow the memory to find it
 use std::cell::RefCell;
@@ -54,11 +51,6 @@ pub extern "C" fn face_puppet(h: u32, start: u32) {
 pub extern "C" fn face_puppet_warm(h: u32) {
     let b = export(h, false, true);
     super::out(b);
-}
-
-#[no_mangle]
-pub extern "C" fn face_puppet_spoil(h: u32) {
-    MEMO.with(|m| m.borrow_mut().entry(h).or_default().all = true);
 }
 
 #[no_mangle]

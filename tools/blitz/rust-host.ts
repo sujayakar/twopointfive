@@ -192,7 +192,8 @@ export class RustHost {
   inHook(): boolean { return this.dispatching; }
   surfaceCall(row: number, bytes: Uint8Array): Uint8Array { const X = this.F.X; this.scanFlush(); this.busy++; try { { const hb: Uint8Array = this.B.hostHalf(this.g, this.B.reg, this.lastCmds ?? []); this.F.hand(hb, (p, n) => X.face_host_half(this.h, p, n)); this.viewLive(); }   /* (a rule that crosses reads the cursor and the cameras: they come with the host's half, and the tool has moved them since the tick) */ this.F.hand(bytes, (p, n) => X.face_call(this.h, row, p, n)); const out = this.F.outView().slice(); this.applyStep(); this.dispatch(); return out; } finally { this.busy--; if (this.lastChanged || OFF.has('skipwalk')) this.scanRebase(); } }   /* (a crossing whose apply changed nothing and sent no event left the puppet as the walk last saw it: no second walk. `RH_OFF=skipwalk` walks as before.) */
   /** what the tool wrote since the walk last looked goes to the Rust game */
-  private scanFlush(): void { if (this.audit || !this.h) return; this.tapsOn?.sweep(); this.blockBack(); if (process.env.TPS_GAME_SCAN === '0') return; const t = now(); if (!this.scan) { this.scan = this.B.makeScan(this.g, this.B.reg, (b: Uint8Array) => { this.poked++; this.F.hand(b, (p, n) => this.F.X.face_write(this.h, p, n)); }, (q: string) => this.count(`scan: ${q}`)); this.scan.rebase(); } else this.scan.flush(); this.T.scan += now() - t; }
+  private scanFlush(): void { if (this.audit || !this.h) return; this.tapsOn?.sweep(); this.blockBack(); if (process.env.TPS_GAME_SCAN === '0') return; const t = now(); if (!this.scan) { this.scan = this.B.makeScan(this.g, this.B.reg, (b: Uint8Array) => { this.F.hand(b, (p, n) => this.F.X.face_write(this.h, p, n)); }, (q: string) => { if (q !== 'game::Game.cmd_buf') this.poked++; this.count(`scan: ${q}`); }); this.scan.rebase(); } else this.scan.flush(); this.T.scan += now() - t;
+    if (this.poked) { this.poked = 0; if (!OFF.has('pokesync') && !this.inApply) { this.pokeSyncs++; this.applyStep(); } } }
   /** STAND-IN (belongs with the scan: a write by name of a field that lives in the block): WHAT THE TOOL WROTE INTO rust/sim's BLOCK. A door's swing and latch, a man's place and the die live in the block (the puppet's objects read and
    *  write its copy of it: `d.vel = 2`, `d.latched = false`), and no walk of the schema's fields meets them. After every apply the puppet's copy IS the
    *  Rust game's; where a part of it differs as a tick opens or a call is about to cross, the tool (or TypeScript run on the puppet) wrote it, and that
@@ -204,12 +205,16 @@ export class RustHost {
     for (const P of this.partsAt) { if (P.name === 'poses' || P.off + P.len > n) continue; const a = mine.subarray(P.off, P.off + P.len); if (A.buf(a).equals(A.buf(theirs.subarray(P.off, P.off + P.len)))) continue;
       theirs.set(a, P.off); this.blockWrites.set(P.name, (this.blockWrites.get(P.name) ?? 0) + 1); this.count(`the block: ${P.name} written on the puppet since the last apply (handed to the Rust game)`); } }
   private inApply = false;
-  // STAND-IN (belongs in the generated poke: a write by path spoils the memo's row of that path): A FIELD THE TOOL WROTE AND A RULE THEN PUT BACK. The
-  // walk pokes the tool's value into the Rust game; the every-tick export's memo still holds what the puppet was sent before the tool wrote. Where a
-  // rule then sets the field to that old value (the soak crouches the player by name and calls `startGrab`, which stands him up) nothing differs from
-  // the memo, nothing is sent, and the puppet keeps the tool's value for good: the soak read "crouch true while holding" off the puppet with the Rust
-  // game's player standing. After a walk that poked anything the next every-tick export sends every row (`face_puppet_spoil`). `RH_OFF=spoil`: as before.
-  private poked = 0; spoils = 0;
+  // STAND-IN (belongs in the generated poke: a write by path brings the memo's row of that path up to date): A FIELD THE TOOL WROTE AND A RULE THEN PUT
+  // BACK. The walk pokes the tool's value into the Rust game; the every-tick export's memo still holds what the puppet was SENT before the tool wrote.
+  // Where a rule then sets the field to that old value (the soak crouches the player by name and calls `startGrab`, which stands him up) nothing differs
+  // from the memo, nothing is sent, and the puppet keeps the tool's value for good: the soak read "crouch true while holding" off the puppet with the
+  // Rust game's player standing. So a walk that poked is followed at once by one every-tick export and apply: it carries exactly the poked fields (the
+  // puppet holds them already) and leaves the memo holding them. The record of the tick (`Game.cmd_buf`, which the game's own update writes on the
+  // puppet before every step and the walk reads as a write) does not count: it goes with the host's half. `RH_OFF=pokesync`: as before.
+  // (MY WRONG TURN: sending EVERY row after a poke. The record is poked every tick, so every export was the long one, and the soak's seed 7 parted at
+  // tick 1322 with the host's half differing from 1244.)
+  private poked = 0; pokeSyncs = 0;
   /** an apply moved the puppet: that is what the next walk is held to */
   scanRebase(): void { if (!this.scan) return; const t = now(); this.scan.rebase(); this.T.scan += now() - t; }
 
@@ -231,7 +236,7 @@ export class RustHost {
     // (hung as fields no walk of the game's own keys meets: rollback.ts `stateHash` walks them, and a stand's word must not change for being a puppet)
     hang(g, 'stepSeats', function (dt: number, cmds: readonly any[]) { H.step(dt, cmds); });
     hang(g, 'rustHost', H); hang(g, 'rustSurface', H); B.surfaceHost(H); (globalThis as any).__tpsCall.inHook = () => H.inHook(); { const up = g.update; hang(g, 'update', function (this: any, ...a: any[]) { H.busy++; BUSY.n++; try { return up.apply(this, a); } finally { H.busy--; BUSY.n--; H.scanRebase(); } }); } H.taps(g);
-    if (process.env.TPS_GAME_SAY) process.on('exit', () => { const L = [...H.calls].sort((a, b) => b[1] - a[1]).slice(0, 60); process.stderr.write(`rust-host: ${H.k} ticks; scan ${(H.T.scan / Math.max(1, H.k)).toFixed(2)} ms a tick; ${H.spoils} every-row exports after a walk that poked; ${H.asksRefused} asks refused; ${JSON.stringify(H.scan?.stats?.() ?? null)}\n` + L.map(([n, c]) => `  ${c} ${n}\n`).join('')); });
+    if (process.env.TPS_GAME_SAY) process.on('exit', () => { const L = [...H.calls].sort((a, b) => b[1] - a[1]).slice(0, 60); process.stderr.write(`rust-host: ${H.k} ticks; scan ${(H.T.scan / Math.max(1, H.k)).toFixed(2)} ms a tick; ${H.pokeSyncs} exports after a walk that poked; ${H.asksRefused} asks refused; ${JSON.stringify(H.scan?.stats?.() ?? null)}\n` + L.map(([n, c]) => `  ${c} ${n}\n`).join('')); });
     if (o.out) for (const f of ['writeback.txt', 'gives.txt']) writeFileSync(`${o.out}/${f}`, '');
     return H; }
   private startDue = false;
@@ -450,7 +455,6 @@ export class RustHost {
   /** THE FILTERED APPLY: the listed fields of what changed since the last one, and the step's out events */
   applyStep(): void {
     const g = this.g, X = this.F.X, B = this.B, t0 = now(), made0 = MADE.n; let t = t0; this.mBefore = g.mission;
-    if (this.poked) { this.poked = 0; if (X.face_puppet_spoil && !OFF.has('spoil')) { X.face_puppet_spoil(this.h); this.spoils++; } }
     X.face_puppet(this.h, 0); const blob = this.F.outView(); this.stepBytes += blob.length; this.T.exportStep += now() - t;
     t = now(); const R = B.applyGame(g, blob, B.reg, { hooks: B.hooks, puppet: { ...this.pup, start: false } }); const el = now() - t; this.T.applyStep += el; if (el > this.worstApply) this.worstApply = el; this.missionRef = g.mission;   // (a mission the Rust game wrote is no start of a new game: only one a tool wrote behind it is)
     this.lastChanged = R.changed !== false || !!R.out?.length; if (R.out?.length) for (const e of R.out) this.outQ.push(e);
