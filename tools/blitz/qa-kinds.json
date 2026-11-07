@@ -211,13 +211,6 @@
 "packside": [
 "PACKSIDE.on=false"
 ],
-"rails": [
-"AUTOPILOT.plain=false",
-"AUTOPILOT.restack=false",
-"CMDRING.goals=false",
-"STALK.key=false",
-"FOG.eyes=5"
-],
 "smokebreak": [
 "SMOKEBREAK.on=false"
 ],
@@ -588,7 +581,6 @@
 "ammowall": "iii",
 "asideclear": "iii",
 "attention": "iv-a",
-"attention-spot": "iii",
 "attentionway": "iv-c",
 "attract": "i",
 "audio-hold": "iii",
@@ -1012,7 +1004,6 @@
 "kitdeal-run": "ii",
 "kitdeal-screen": "0",
 "kitload": "iii",
-"kitpack": "iii",
 "kitpaste-cases": "0",
 "kitpaste-fit": "0",
 "kitstealth": "iii",
@@ -1265,7 +1256,6 @@
 "quiet-start": "iii",
 "quietfog": "iv-a",
 "radiohome": "ii",
-"rails": "iv-a",
 "rainbook": "iv-c",
 "rainscale": "0",
 "rainwalls": "iv-b",

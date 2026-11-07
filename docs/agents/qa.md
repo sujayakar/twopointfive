@@ -814,7 +814,7 @@ but synthetic writes still work.
     off a frame of play), not built. THE FIRST CUT TOOK THE BASE AT THE STAGING (Game.restartEncounter's last
     act) and was wrong twice, both found by review: every tutorial threw on its first tick (the walk met the beat context's showcase-only `view`
     getter with the program live: the authored gate lets a program by because an authored save STOPS it first) — `TPS_PROFILE=shipped bun run
-    tools/qa/rails-check.ts` and `lesson-run.ts tut-road` are the checks that see it, the save's own did not; and the chain's stale limit
+    tools/qa/lesson-run.ts tut-road` is the check that sees it, the save's own did not; and the chain's stale limit
     (`WALK_AGAIN` × the base's count) counted the game before its first tick (24,058 objects on the compound, 27,875 a tick later), so a fight forced
     a whole walk in play two saves sooner than no base did. From the first tick: five saves, one every 30 s, over a fight that kills ten men in
     150 s with him stood still are all takes since (32,452 to 34,653 objects held). MEASURED 11-03, this box (4 cores), one seed, fresh process each, a scratch script (three squad missions,
@@ -829,7 +829,7 @@ but synthetic writes still work.
     the first save is a take since it and to the bit a whole take of its moment, it loads and plays on, a restart gives the next run its own, the
     run and its loads are those of a run with no base, `warm` made before the first tick keeps and changes nothing, and with autosave off no base is
     taken; (5b) reads the first save's kind from what its run's first tick left on the shelf. The tutorials are NOT in it: run
-    `TPS_PROFILE=shipped bun run tools/qa/rails-check.ts` after a change to when a take is made.
+    `TPS_PROFILE=shipped bun run tools/qa/lesson-run.ts tut-road` after a change to when a take is made.
     `PORT=5199 node tools/qa/savebase-page.cjs` (two boots, about five minutes each; needs no `?mute`: that flag makes the page a script's and the
     brief goes): behind the brief with the first tick not run the code has been warmed once and nothing kept, Enter, the first tick leaves the base,
     the first save a take since (one whole walk later is let by); `?savebase=0` = nothing warmed, no base, the first save WHOLE; it prints what each
