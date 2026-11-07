@@ -12884,21 +12884,6 @@ impl DefuseK {
 }
 impl Default for DefuseK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/par.ts:24 PAR, src/game/par.ts:24)
-#[derive(Clone, Copy, Debug)]
-pub struct ParK {
-    pub on: bool,
-}
-impl ParK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ParK {
-            on: false,
-        }
-    }
-}
-impl Default for ParK { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/game/kit.ts:1170 ISSUE, src/game/kit.ts:1170)
 #[derive(Clone, Copy, Debug)]
 pub struct IssueK {
@@ -14115,10 +14100,6 @@ pub fn page_defuse() -> DefuseK {
     crate::knobs::DefuseK { on: true, work_secs: 6.0, reach: 1.3, marker_m: 5.0, shift: 0.45, start_m: 1.2, lethal_m: 5.0, wound_m: 9.0, radius: 3.5, power: 1.0, warn_secs: 10.0 }
 }
 
-pub fn page_par() -> ParK {
-    crate::knobs::ParK { on: true }
-}
-
 pub fn page_issue() -> IssueK {
     crate::knobs::IssueK { on: true, whole: true, picked: true }
 }
@@ -14395,7 +14376,6 @@ pub struct Knobs {
     pub lesson: LessonK,
     pub snatch: SnatchK,
     pub defuse: DefuseK,
-    pub par: ParK,
     pub issue: IssueK,
     pub verdict: VerdictK,
     pub unseen: UnseenK,
@@ -14644,7 +14624,6 @@ impl Knobs {
             lesson: page_lesson(),
             snatch: page_snatch(),
             defuse: page_defuse(),
-            par: page_par(),
             issue: page_issue(),
             verdict: page_verdict(),
             unseen: page_unseen(),

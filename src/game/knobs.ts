@@ -92,7 +92,6 @@ import { SEENWALK } from './seenwalk';
 import { HOLDFIRE } from './holdfire';
 import { PAIRUP } from './pairup';
 import { LESSON } from './lesson';
-import { PAR } from './par';
 import { VERDICT } from './verdict';
 import { SNATCH } from './snatch';
 import { DEFUSE } from './defuse';
@@ -550,7 +549,7 @@ export function knobRegistry(): Record<string, object> {
     // the team's own rules that no other list named (found by tools/qa/knobs-check.ts), and the two scenarios' own tables
     SNEAK, PAIRUP, SPOTTED, NIGHTBREACH, ROOMCLEAR, LESSON, SNATCH, DEFUSE,
     // a room clear against a clock (the Rust game keeps it, rust/game_rules/src/par). A SETTLED row, on: nothing reads it any more, on either side
-    PAR, ISSUE,
+    ISSUE,
     // how a run went, said at its end (verdict.ts): reads only — off = no verdict, the end card as it was
     VERDICT,
     // a squad nobody has found sneaks when Sam sneaks (unseen.ts): who is low, how fast, how loud, and whose round is held

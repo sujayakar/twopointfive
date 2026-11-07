@@ -12,7 +12,7 @@
 //      teammate lost before the end is counted and priced; a restart starts over; a run that is wiped has no result
 //   5. the clock moves nobody: two games on one die, the same orders and keys, the level as it is and the same level WITHOUT ITS BLOCK, digest for
 //      digest every half second while the run is on (at the end the game with the clock says its line, and the two logs differ by it) — and without
-//      the block nothing is armed and the row is the room clear's own. (`PAR.on` is a settled row, on: there is no switch to ask.)
+//      the block nothing is armed and the row is the room clear's own. (There is no switch to ask.)
 //   (the clock has no slice of its own in a save any more: it is the Rust game's state, and a kept game holds it with the rest)
 //   PAR_BREAK=1  every game is stood on the level without its block, where the lines above want a clock: the check must FAIL (exit 1) — the proof that it can
 // exit 0 = all hold · 1 = one does not

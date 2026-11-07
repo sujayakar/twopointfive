@@ -333,7 +333,7 @@ export interface LessonData {
 
 /** A PAR (game/par.ts): the level's room clear run AGAINST A CLOCK. The clock runs from the squad's first order (or Sam's first stride off his start) to the
  *  room clear's 'taken'; every teammate lost adds `lossSecs`; the total is held against three times, best first (gold < silver < bronze, seconds). The par only
- *  READS the game: a level with the block plays the same run with it switched off (PAR.on). Only beside a `roomClear`. */
+ *  READS the game: a level with the block plays the same run as one without it. Only beside a `roomClear`. */
 export interface ParData { gold: number; silver: number; bronze: number; lossSecs: number }
 /** A MISSION'S OWN ISSUE (game/kit.ts kitIssue): kit this level hands the squad whatever the machine keeps, with no visit to the loadout screen. `members` is
  *  keyed by the man's place on the roster ('0' = you, '1'‥'4' = the teammates in order); each record is the FIELDS THAT DIFFER from his issue card (kit.ts
