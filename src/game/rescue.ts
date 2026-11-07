@@ -43,7 +43,7 @@
 //
 // Nothing here runs unless start() was called: tick() returns on its first line, and with the scenario off the game is the game as it was.
 import './seats';
-import { SideSet } from '../math/side';
+import { SideSet, tableNote } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { Door } from './doors';
@@ -148,6 +148,7 @@ export const RESCUE = {
 };
 /** the team start RESCUE.samAt / samYaw / opsAt were last written from (start()) */
 let applied: TeamStart | null = OFFICE_RESCUE.team;   // (the knobs above ARE the bundled office's: a knob moved by hand before the first start on the office stays moved)
+tableNote('RESCUE', () => applied, v => { applied = v; });   // (a copy of the knob tables put back puts this back with them: math/side.ts)
 
 /** WHO STANDS WHERE is level data (scene/scenarios.ts RescueData — Level.scenarios.rescue): the hostage room and its
  *  doors, the marks of everybody the scenario stands on the floor, the team's start, the route's openings. Rescue.data is the one place it is read from. */
