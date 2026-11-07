@@ -11,6 +11,7 @@ import { sim, type SimExports } from './sim';
 import { simPart, simRoom, P_LIGHTS, type SimState } from './state';
 import type { Vec3 } from '../math/vec';
 import type { RtLight } from '../render/lights';
+import { RUST_PASS, RUST_SURFACE } from '../game/crossing';
 
 /** THE COLUMNS OF THE PART in rust/sim/src/lights.rs COLS' order. Where each stands is the module's word, read once. */
 export const LIGHT_COLS = ['n', 'rows', 'beacons', 'cameras', 'lasers', 'mains', 'since', 'until', 'restored_at', 'fix_t', 'blind_until', 'factor', 'stagger', 'base', 'hand', 'bits',
@@ -128,10 +129,6 @@ export class LaserMachine {
   constructor(readonly slot: number, protected readonly st: SimState) {}
   get lastTripAt(): number { return this.st.d[C.las_last + this.slot]; }
   get trips(): number { return this.st.w[C.las_trips + this.slot]; }
-  /** drawn length this frame (a leaf, a body, a chair in the beam cuts the picture of it short) */
-  get cut(): number { return this.st.d[C.las_cut + this.slot]; }
-  /** how far the SENSOR's beam reaches this frame */
-  get sense(): number { return this.st.d[C.las_sense + this.slot]; }
   get deadCalled(): boolean { return (this.st.w[C.las_bits + this.slot] & LB.dead) !== 0; }
   /** something is breaking it right now (the trip fires on the edge) */
   get held(): boolean { return (this.st.w[C.las_bits + this.slot] & LB.held) !== 0; }
@@ -152,7 +149,7 @@ export class LightHome {
     columns(); st.keep(LIGHTS_BIT, 'lights'); this.mains = new Mains(st); this.in(LIGHT_IN.fresh, null);
   }
   /** A FIXTURE MORE (the level as it is built; the kit picture's own lamp) */
-  add(def: FixtureDef): Fixture {
+  add(def: FixtureDef): Fixture { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('LightHome.add', this, [def]); if (__r !== RUST_PASS) return __r as any; } }
     const st = this.st, n = st.w[C.n];
     if (n >= LIGHT_CAPS.targets) throw new Error(`a level of more than ${LIGHT_CAPS.targets} light fixtures got past game/levelfit.ts`);
     st.w[C.n] = n + 1;
@@ -227,12 +224,6 @@ export class LightHome {
     if (broken !== null) this.in(broken ? LIGHT_IN.break : LIGHT_IN.mend, t);
     if (until !== null) this.in(LIGHT_IN.blind, t, until);
   }
-  /** A WALL SWITCH'S CIRCUIT flipped (lights.rs flip) */
-  flip(targets: readonly Fixture[], on: boolean, time: number, strike: boolean): void {
-    const slot = this.st.bind(), ids = new Uint32Array(X.memory.buffer, X.lights_ids(), targets.length);
-    for (let i = 0; i < targets.length; i++) ids[i] = targets[i].i;
-    X.lights_flip(slot, on ? 1 : 0, time, strike ? 1 : 0, targets.length);
-  }
   /** ONE TICK (lights.rs step). → LIGHT_EV bits. */
   step(time: number, dt: number, near: boolean, fumble: number, emissiveScale: number): number {
     return X.lights_step(this.st.bind(), time, dt, near ? 1 : 0, fumble, emissiveScale);
@@ -246,24 +237,6 @@ export class LightHome {
       if (role === ROW_BIT.area) l.peakIntensity = i;
       else if (role === ROW_BIT.beacon) l.dir = [d[C.dx + r], d[C.dy + r], d[C.dz + r]];
     }
-  }
-  /** a camera before its picture (lights.rs camera_pan), and its cone to what the picture reads. → CAM bits. */
-  cameraPan(slot: number, cone: RtLight, dt: number, live: boolean, cones: boolean): number {
-    const out = X.camera_pan(this.st.bind(), slot, dt, live ? 1 : 0, cones ? 1 : 0);
-    if (cone.row !== undefined) { const st = this.st, d = st.d, r = cone.row; cone.enabled = (st.w[C.row_bits + r] & ROW_BIT.on) !== 0; cone.pos = [d[C.x + r], d[C.y + r], d[C.z + r]]; cone.dir = [d[C.dx + r], d[C.dy + r], d[C.dz + r]]; }
-    return out;
-  }
-  /** …and after it (lights.rs camera_see). → CAM bits. */
-  cameraSee(slot: number, time: number, dt: number, visible: boolean, gain: number, p: Vec3, suspicion: number, alarm: number): number {
-    return X.camera_see(this.st.bind(), slot, time, dt, visible ? 1 : 0, gain, p[0], p[1], p[2], suspicion, alarm);
-  }
-  /** a tripwire before what is in its beam (lights.rs laser_open). → LASER bits. */
-  laserOpen(slot: number): number {
-    return X.laser_open(this.st.bind(), slot);
-  }
-  /** …and after it (lights.rs laser_close). → LASER bits. */
-  laserClose(slot: number, time: number, live: boolean, cut: number, sense: number, held: boolean): number {
-    return X.laser_close(this.st.bind(), slot, time, live ? 1 : 0, cut, sense, held ? 1 : 0);
   }
   /** where a column stands in the block, for a check (`st.d` or `st.w` by WORD_COLS) */
   col(name: Col): number { return C[name]; }

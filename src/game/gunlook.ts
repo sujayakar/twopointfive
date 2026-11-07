@@ -12,6 +12,7 @@
 import type { Vec3 } from '../math/vec';
 import type { WeaponDef, GunModelId } from './weapons';
 import type { MuzzleFxKey } from './effects';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 export const GUNLOOK = {
   on: false,
@@ -20,13 +21,9 @@ export const GUNLOOK = {
    *  Off (`?nogunshells`, a recording from before the key): the row's one length whatever goes in, and the whole tube booked at its end, as before. */
   shells: true,
 };
-/** `GUNSHELLS_BREAK=1` (tools/qa/gunreload-check.ts): the key is never on — a tube gun's reload is the row's one length again, and the check's lines fail */
-const SHELLS_BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.GUNSHELLS_BREAK ?? '') === '1'; } catch { return false; } })();
 const BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.GUNLOOK_BREAK ?? '') === '1'; } catch { return false; } })();
 /** the switch, as every reader asks it (GUNLOOK_BREAK=1: off whatever the table says) */
 export const gunLookOn = (): boolean => GUNLOOK.on && !BREAK;
-/** …and the shells key under it */
-export const gunShellsOn = (): boolean => GUNLOOK.on && !BREAK && GUNLOOK.shells && !SHELLS_BREAK;
 /** what a row has of its own, while the switch is on — null: its stand-in fields (rig, report.voice, muzzleFx) are the gun */
 export const gunOwn = (def: WeaponDef): NonNullable<WeaponDef['own']> | null => gunLookOn() ? def.own ?? null : null;
 /** the voice its report is played with (combat.ts fireWeapon) */
@@ -198,7 +195,7 @@ export interface GunLook { hand: GunModelId | null; long: GunModelId | null; sid
    *  that draws it with the can on): rigProps.ts leaves the can off — a bare barrel to the same muzzle on the long gun, nothing ahead of the slide on the pistol */
   bareLong?: boolean; bareSide?: boolean }
 /** … from the rows he carries: the one in his hands and the other one (null: none) */
-export function gunLookOf(into: GunLook | null, inHands: WeaponDef | null, other: WeaponDef | null, third: WeaponDef | null = null): GunLook | null {
+export function gunLookOf(into: GunLook | null, inHands: WeaponDef | null, other: WeaponDef | null, third: WeaponDef | null = null): GunLook | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('gunLookOf', undefined, [into, inHands, other, third]); if (__r !== RUST_PASS) return __r as any; } }
   if (!gunLookOn()) return null;
   const L = into ?? { hand: null, long: null, side: null }; L.hand = inHands?.own?.model ?? null; L.long = null; L.side = null; L.bareLong = false; L.bareSide = false;
   for (const d of [third, other, inHands]) { if (!d) continue; const m = d.own?.model ?? null, bare = !m && !d.suppressed && (d.rig === 'sc20k' || d.rig === 'pistol');   // (bare: the two groups that draw a can, on a row that says it has none)

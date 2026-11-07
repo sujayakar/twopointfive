@@ -41,6 +41,7 @@ import { WEAPONS, type WeaponId } from './weapons';
 import { SLOTS, bigOf, kitGun, kitIssuedShown, kitRows, kitSide, type MemberKit } from './kit';
 import { clamp } from '../math/vec';
 import { SideMap } from '../math/side';
+import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 /** a card's two scores, each 0‥1: 1 = nothing on him */
 export interface KitLoad { mob: number; con: number }
@@ -99,7 +100,7 @@ export function loadShare(i: number, m: MemberKit, field: string): KitLoad | nul
   return c[0] || c[1] ? { mob: c[0], con: c[1] } : null;
 }
 /** MEMBER i's TWO SCORES for the card `m`: 1 less what every row his card HAS takes (kit.ts kitRows: a count on a row that is switched off weighs nothing) */
-export function loadOf(i: number, m: MemberKit): KitLoad {
+export function loadOf(i: number, m: MemberKit): KitLoad { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('loadOf', undefined, [i, m]); if (__r !== RUST_PASS) return __r as any; } }
   let mob = 0, con = 0;
   for (const r of kitRows(i)) { const s = loadShare(i, m, r.field); if (s) { mob += s.mob; con += s.con; } }
   return { mob: clamp(1 - mob, 0, 1), con: clamp(1 - con, 0, 1) };
@@ -107,11 +108,11 @@ export function loadOf(i: number, m: MemberKit): KitLoad {
 /** THE REFERENCE for member i: his own card AS ISSUED, as the kit rules stand and as a team of `n` is dealt it (kit.ts kitIssuedShown: the issue shared out
  *  over three or four; `n` left out = the team the loadout screen shows) — the man the game was tuned on. A card that scores what his issue scores is ×1
  *  on all three, exactly */
-export function loadRef(i: number, n?: number): KitLoad { return loadOf(i, kitIssuedShown(i, n)); }
+export function loadRef(i: number, n?: number): KitLoad { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('loadRef', undefined, [i, n]); if (__r !== RUST_PASS) return __r as any; } } return loadOf(i, kitIssuedShown(i, n)); }
 /** (two sums of the same things in another order may differ in their last bit: a score within a hair of his reference IS it — ×1 exactly) */
 const snap = (x: number, r: number): number => (Math.abs(x - r) < 1e-9 ? r : x);
 /** what member i wears with the card `m` on him: its scores beside his reference's — null with the pouches rule off (nobody is weighed: the header) */
-export function loadWorn(i: number, m: MemberKit, n?: number): KitWorn | null {
+export function loadWorn(i: number, m: MemberKit, n?: number): KitWorn | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('loadWorn', undefined, [i, m, n]); if (__r !== RUST_PASS) return __r as any; } }
   if (!SLOTS.on) return null;
   const L = loadOf(i, m), R = loadRef(i, n); return { mob: snap(L.mob, R.mob), con: snap(L.con, R.con), refMob: R.mob, refCon: R.con };
 }
@@ -148,10 +149,8 @@ export function loadPace(g: Game, gd: Guard, speed: number): number {
 /** the speed he would be doing with his issue on him, for the question "is this step a walk's or a run's" (asked of the pace he was ASKED for, not of
  *  what his card made of it; a hair under, so that the walk's most times his factor does not read as a run; his speed itself for a man with nothing weighed.
  *  Asked wherever a rule reads a teammate's speed against a pace: a footfall's level, the leaf he shoulders at a run — game.ts) */
-export function loadGait(g: Game, who: Guard | 'player', speed: number): number { const w = loadOn(g, who), k = w ? loadPaceK(w) : 1; return k === 1 ? speed : speed / k - 1e-6; }   // (×1 — his issue on him — is his speed itself: the build as it was)
+export function loadGait(g: Game, who: Guard | 'player', speed: number): number { return goneWithTick('loadGait') as any; }   // (×1 — his issue on him — is his speed itself: the build as it was)
 /** × the notice this man builds in an eye that has him (`'player'` or a guard: 1 for a man with nothing weighed on him) */
 export function loadSeen(g: Game, who: Guard | 'player'): number { const w = loadOn(g, who); return w ? loadSeenK(w) : 1; }
 /** × a footfall's level, his */
-export function loadHeard(g: Game, who: Guard | 'player'): number { const w = loadOn(g, who); return w ? loadHeardK(w) : 1; }
-/** × what a low crossing under an eye costs this man in that eye's notice (sneak.ts crossCost: its price is rate × time — his shape, over his pace) */
-export function loadCross(g: Game, who: Guard | 'player'): number { const w = loadOn(g, who); return w ? loadSeenK(w) / loadPaceK(w) : 1; }
+export function loadHeard(g: Game, who: Guard | 'player'): number { return goneWithTick('loadHeard') as any; }

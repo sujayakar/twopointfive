@@ -26,6 +26,7 @@ import type { Level } from '../scene/level';
 import type { NavGrid, StaticCollision } from '../scene/collision';
 import { BoxFlag } from '../scene/boxes';
 import { DOORWAY, type Doors, type Door } from './doors';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 export type SwingWhy = 'authored' | 'folds' | 'outside' | 'plan' | 'room' | 'hostages' | 'mission' | 'lock' | 'stands open' | 'floor' | 'wider' | 'leaf room';
 export interface SwingDeal { door: string; swing: 1 | -1; why: SwingWhy; /** the room / floor it opens into, in words, where the rule names one */ into?: string;
@@ -112,7 +113,7 @@ const LEAF_MAN = 0.3, LEAF_STEP = 0.1, LEAF_WIN = 4, LEAF_REST = 1.84, LEAF_CUT 
  *  between knee and shoulder as the nav grid asks it. Cheap for nearly every door: a leaf with free floor all the way round it shuts nothing off, and only
  *  one without is flooded. The other doors of the level count as open, so the figure is all the floor that is reached only past this leaf, a next room with no
  *  other way in among it. −1 = no floor a man can stand on at the doorway on that face. */
-export function leafCut(col: StaticCollision, d: Door, s: 1 | -1): number {
+export function leafCut(col: StaticCollision, d: Door, s: 1 | -1): number { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('leafCut', undefined, [col, d, s]); if (__r !== RUST_PASS) return __r as any; } }
   const stop = s > 0 ? d.maxAuth : -d.minAuth; if (stop < 0.9) return 0;
   const c = d.def.closedDir, W = d.def.width, ux = Math.cos(c), uz = Math.sin(c), nx = -uz * s, nz = ux * s, [hx, hz] = d.def.hinge, cx = hx + ux * W / 2, cz = hz + uz * W / 2;
   const NA = Math.round(2 * LEAF_WIN / LEAF_STEP) + 1, NP = Math.round(LEAF_WIN / LEAF_STEP), N = NA * NP, known = new Int8Array(N).fill(-1), q: [number, number, number] = [0, 0, 0];
@@ -138,7 +139,7 @@ export function leafCut(col: StaticCollision, d: Door, s: 1 | -1): number {
   return best;
 }
 /** Whether a leaf swung open on face `s`, as far as it rests, meets nothing of the level on its way (the same statics, at three spots along the leaf) */
-export function leafSwings(col: StaticCollision, d: Door, s: 1 | -1): boolean {
+export function leafSwings(col: StaticCollision, d: Door, s: 1 | -1): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('leafSwings', undefined, [col, d, s]); if (__r !== RUST_PASS) return __r as any; } }
   const stop = Math.min(s > 0 ? d.maxAuth : -d.minAuth, LEAF_REST), c = d.def.closedDir, W = d.def.width, [hx, hz] = d.def.hinge, q: [number, number, number] = [0, 0, 0];
   for (let a = 0.5; a <= stop + 1e-9; a += 0.1) for (const t of [0.35, 0.7, 1]) { const x = hx + Math.cos(c + s * a) * W * t, z = hz + Math.sin(c + s * a) * W * t; q[0] = x; q[1] = 0; q[2] = z;
     if (col.collideCircle(q, 0.03, 0.25, 1.5, 1) && Math.hypot(q[0] - x, q[2] - z) > 0.005) return false; }
@@ -146,7 +147,7 @@ export function leafSwings(col: StaticCollision, d: Door, s: 1 | -1): boolean {
 }
 
 /** Deal every door of the level its side (Door.setSwing) and say why. `col`: the level's statics, for the 'leaf room' rule (absent: that rule says nothing). */
-export function dealSwings(level: Level, doors: Doors, nav: NavGrid | null, col: StaticCollision | null = null): SwingDeal[] {
+export function dealSwings(level: Level, doors: Doors, nav: NavGrid | null, col: StaticCollision | null = null): SwingDeal[] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('dealSwings', undefined, [level, doors, nav, col]); if (__r !== RUST_PASS) return __r as any; } }
   const S = level.scenarios, rooms = S?.roomClear?.rooms ?? [], plans = [...(level.breach ? [level.breach] : []), ...(level.clearPlans ?? [])];
   let fl: ReturnType<typeof floors> | null | undefined;   // (flooded on the first door that gets as far as asking)
   const toward = (d: Door, r: Rect | undefined): 1 | -1 | 0 => r ? sideOf(d, ...mid(r)) : 0;

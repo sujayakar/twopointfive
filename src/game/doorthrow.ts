@@ -28,16 +28,14 @@
 //                              His eyes are the player's own: no white. God mode changes none of it (a stun is not a hit).
 //       a civilian             the blow, and alarmed by it as by a noise at the door; the stamp only keeps a leaf from throwing her every frame.
 // By behaviour, never by hit points: nothing here hurts or kills anybody, and no rule of the mission is read or written (a stunned Sam fails nothing here).
-import { isManId, viewOfId } from './seats';
+import { viewOfId } from './seats';
 import type { Game, Guard } from './game';
-import { DOORTHROW, MAN_FOLDED, MAN_BRACED, MAN_CALM, MAN_HELD, type DoorContact, type DoorStrike } from './doors';
-import { v3, type Vec3 } from '../math/vec';
-import { SAMSTUN, samStaggered, staggerPlayer } from './samstun';
-import { endGuardScript } from './squad';
-import { toAlarmed } from './civilians';
-import { giveStartle as giveStart } from './startle';
-import { isHostile, type Team } from './teams';
-import { word } from './belief';
+import { DOORTHROW, MAN_FOLDED, MAN_BRACED, MAN_CALM, MAN_HELD } from './doors';
+import { samStaggered } from './samstun';
+import './squad';
+import './civilians';
+import './startle';
+import { type Team } from './teams';
 
 /** QA: since the last reset — defenders a leaf opened into them startled · men thrown by a shouldered leaf · by a boot · of those, put on a knee · and
  *  frames a leaf carried a man */
@@ -56,58 +54,8 @@ export function doorMan(g: Game, who: number): number {
   const until = Math.max(gd.staggerUntil, gd.dazzledUntil), side = gd.civ ? 3 : sideOf(gd.team);   // (−1: never folded — not 'just up' in a game's first seconds)
   return side | (now < until ? MAN_FOLDED : 0) | (gd.held ? MAN_BRACED | MAN_HELD : until >= 0 && now < until + T.again ? MAN_BRACED : 0) | (side === 3 || (side === 2 && gd.state !== 'alert' && gd.state !== 'search') ? MAN_CALM : 0);
 }
-/** whose leaf it was, for the teams' own table (nobody the game knows: no foe's) */
-const teamOf = (g: Game, id: number): Team | null => isManId(id) ? 'player' : manOf(g, id)?.team ?? null;
 
-/** game.ts updateDoors, right after the leaves are stepped (Sam's own place is settled by the caller, as after any leaf that moved him) */
-export function doorThrowAfter(g: Game, contacts: DoorContact[]): void {
-  if (!DOORTHROW.on) return;
-  for (const c of contacts) {
-    if (!c.moved && !c.struck) continue;
-    if (c.moved) DOORTHROW_STATS.carried++;
-    { const mine = viewOfId(g, c.who); if (mine) { if (c.struck && c.struck.tier !== 'open') throwSam(mine, c.struck); continue; } }
-    const gd = manOf(g, c.who); if (!gd || gd.state === 'dead') continue;
-    if (c.moved) { const p = gd.char.pos; g.col.collideCircle(p, 0.3, 0.2, 1.5); g.col.clampToWorld(p, 0.3); gd.char.update(0); }   // (he has no walk this frame to keep him out of the wall the leaf carried him at: the statics are asked here, and his bones re-baked where he now is)
-    if (c.struck) { if (c.struck.tier === 'open') startleMan(g, gd, c.struck); else throwMan(g, gd, c.struck); }
-  }
-}
 
-const count = (s: DoorStrike) => { if (s.tier === 'boot') DOORTHROW_STATS.kicked++; else DOORTHROW_STATS.pushed++; if (s.floor) DOORTHROW_STATS.floored++; };
 
-/** a leaf merely opened into him */
-function startleMan(g: Game, gd: Guard, s: DoorStrike): void {
-  if (gd.held) return;
-  const T = DOORTHROW, at = s.door.frameCentre, door: Vec3 = [at[0], 0, at[2]];
-  if (gd.civ) { toAlarmed(g, gd, 'noise', door, false); return; }
-  const by = teamOf(g, s.by); if (!by || !isHostile(by, gd.team) || (gd.team !== 'guard' && gd.team !== 'hostile')) return;   // (Sam's men know whose door it is)
-  if (gd.state === 'patrol') {
-    if (gd.script) endGuardScript(gd, 'suspicious');
-    gd.state = 'suspicious'; gd.reactT = Math.max(gd.reactT, T.startle); gd.searchT = 0; gd.path = []; gd.pathGoal = null; gd.stallRef = null; gd.weapon.burst = null;
-    if (!T.jolt || !giveStart(g, gd, door, T.startle)) gd.char.anim.flinch();   // (the shared start: he jolts toward the door, his gun down for the beat — startle.ts; its own switch is not asked, this rule's is)
-    DOORTHROW_STATS.startled++;
-  }
-  if (gd.state === 'suspicious') { gd.lastKnown = door; gd.awareness = Math.max(gd.awareness, T.wary); }
-}
 
-function throwMan(g: Game, gd: Guard, s: DoorStrike): void {
-  if (gd.held) return;
-  const T = DOORTHROW, hard = s.tier === 'boot', secs = hard ? T.kickSecs : T.pushSecs, c = gd.char, away: Vec3 = [s.dir[0], 0, s.dir[1]], at = s.door.frameCentre, until = g.time + secs;
-  c.anim.hitFrom(away); g.audio.play('bodyHit', v3.add(c.pos, [0, 1.1, 0]), hard ? 0.8 : 0.55, { rate: hard ? 0.9 : 1.05 });
-  gd.staggerUntil = Math.max(gd.staggerUntil, until); count(s);
-  if (gd.civ) { toAlarmed(g, gd, 'noise', [at[0], 0, at[2]], false); return; }
-  if (gd.script) endGuardScript(gd, gd.state === 'patrol' ? 'suspicious' : gd.state === 'search' ? 'search' : gd.state === 'alert' ? 'alert' : 'suspicious');   // (choreography ends where he stands, as a ring ends it)
-  gd.dazzledUntil = Math.max(gd.dazzledUntil, until); gd.dazzledAt = v3.copy(at); gd.reactT = Math.max(gd.reactT, secs); gd.weapon.burst = null;
-  gd.path = []; gd.pathGoal = null; gd.stallRef = null; gd.speed = 0; c.vel = [0, 0, 0];
-  if (s.floor) gd.doorDownUntil = Math.max(gd.doorDownUntil, until);
-  const by = teamOf(g, s.by);
-  if (by && isHostile(by, gd.team)) { gd.awareness = Math.max(gd.awareness, T.aware); if (gd.state !== 'alert' || !gd.lastKnown) word(g, gd, [at[0], 0, at[2]]); }   // (a foe's leaf: he comes back alert toward the doorway — his own side's only folds him)
-}
 
-function throwSam(g: Game, s: DoorStrike): void {
-  const pl = g.player, hard = s.tier === 'boot', secs = hard ? DOORTHROW.kickSecs : DOORTHROW.pushSecs; if (pl.down || g.puppet) return;
-  if (!SAMSTUN.on) { pl.staggerUntil = Math.max(pl.staggerUntil, g.time + secs); count(s); return; }   // (the player's fold is switched off: the clock only)
-  staggerPlayer(g, secs, [s.dir[0], 0, s.dir[1]]);
-  g.audio.play('bodyHit', v3.add(pl.char.pos, [0, 1.1, 0]), hard ? 0.8 : 0.55, { rate: hard ? 0.9 : 1.05 });
-  if (s.floor) pl.crouch = true;
-  count(s);
-}

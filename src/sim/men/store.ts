@@ -77,14 +77,6 @@ export class MenStore {
     const a = S.d, au = S.u, b = this.d, bu = this.u;
     for (let c = 0; c < MEN_AT.length; c++) { if (c < NF) b[this.b8 + MEN_AT[c] + to] = a[S.b8 + MEN_AT[c] + from]; else if (MEN_AT[c] !== MEN_GEN) bu[this.b4 + MEN_AT[c] + to] = au[S.b4 + MEN_AT[c] + from]; }
   }
-  /** a word that names the man in row `r` for as long as he stands there: never 0, so a column of zeros is "nobody" */
-  handleOf(r: number): number { return (this.u[this.gens + r] << 8 | r) >>> 0; }
-  /** the row a handle names: whoever holds a handle to a man who has left is told so, by name */
-  rowOf(h: number): number {
-    const r = h & 255, g = h >>> 8, now = this.u[this.gens + r];
-    if (g !== now) throw new Error(`a stale handle to a man: row ${r} is at generation ${now}, the handle was taken at ${g}`);
-    return r;
-  }
   /** how many men stand here now (for a check and a panel) */
   get standing(): number { const u = this.u, g = this.gens; let n = 0; for (let r = 0; r < MEN_ROWS; r++) n += u[g + r] & 1; return n; }
 }

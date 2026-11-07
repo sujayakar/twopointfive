@@ -31,6 +31,7 @@
 import { Vec3, v3 } from '../math/vec';
 import { SmokeSystemLike } from '../smoke/types';
 import type { Sparks } from './sparks';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** A transient light an effect wants fired (LightSet.flash: history-free, so 1–8 frames of very bright light leave nothing behind). */
 export interface FxLight { pos: Vec3; color: Vec3; intensity: number; range: number; ttl: number; radius?: number; }
@@ -227,7 +228,7 @@ export function spawnShot(smoke: SmokeSystemLike, sp: Sparks | null, muzzle: Vec
  */
 /** `o.sparkCount`: how many CPU sparks to fly instead of bang.sparkCount — the GPU particle path (game/particleFx.ts bangFx) throws the visible fragments itself and
  *  asks only for the few that carry smoke trails (their emitters ride CPU spark positions); absent = the authored count, untouched. */
-export function spawnBurst(smoke: SmokeSystemLike, sp: Sparks | null, at: Vec3, seed: number, o?: { sparkCount?: number }): FxLight {
+export function spawnBurst(smoke: SmokeSystemLike, sp: Sparks | null, at: Vec3, seed: number, o?: { sparkCount?: number }): FxLight { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('spawnBurst', undefined, [smoke, sp, at, seed, o]); if (__r !== RUST_PASS) return __r as any; } }
   const B = bang; const rnd = (k: number) => { const t = Math.sin(seed * 37.31 + k * 91.7) * 43758.5453; return t - Math.floor(t); };
   const dens = B.density * B.densityGain, temp = B.temp * B.tempGain;
   // a can lying on the floor: axis mostly horizontal, yaw wherever it came to rest, tilted a little because floors are not billiard tables

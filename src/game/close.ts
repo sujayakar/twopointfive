@@ -28,14 +28,15 @@
 // DETERMINISM: no dice, no wall clock. Everything here runs off Sam's own position and the men's, inside the frame's usual order (rows → act → update).
 // (src/game is one import cycle: nothing below uses another game module's export at module load.)
 import { SideMap, GameSideMap } from '../math/side';
-import { Vec3, v3, wrapAngle, approachAngle, clamp, smoothstep } from '../math/vec';
-import type { Game, Guard, Interactable, Verb } from './game';
-import { canStand, grabVariant } from './player';
-import { civilianSeated, civiliansShown, SIT_ADVANCE } from './civilians';
+import { Vec3, wrapAngle, clamp, smoothstep } from '../math/vec';
+import type { Game, Guard } from './game';
+import { canStand } from './player';
+import { civilianSeated, civiliansShown } from './civilians';
 import type { ReadyKind } from './character';
-import { handworkOn, samWork } from './handwork';
-import { STALK, stalkBeginM, stalkClickOnly, stalkCould, stalkTell, stalkWait } from './stalk';
-import { TAPSTEP, tapHeld } from './tapstep';
+import './handwork';
+import './stalk';
+import './tapstep';
+import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
 
 const DEGR = Math.PI / 180;
 export const CLOSE = {
@@ -151,8 +152,6 @@ function stateOf(g: Game): State { let s = STATE.get(g); if (!s) { s = { t: -1, 
 
 // ------------------------------------------------------------ the windows
 const arc = (id: CloseId, kind: CloseKind, mid: number, half: number, reach: number, grab: boolean, strike: boolean): CloseWindow => ({ id, kind, mid, half, cosHalf: Math.cos(half), reach, grab, strike });
-/** has he a seat at all — down in it or on his way down (doze.ts: a seat somebody else took away is a man awake) */
-export function closeHasSeat(g: Game, gd: Guard): boolean { return !!SEATED.get(g)?.has(gd); }
 /** Is this man sitting (the late worker at his desk — civilians.ts — or a staff man sat down by closeSeat)? */
 export function closeSeated(g: Game, gd: Guard): boolean { return gd.civ ? civilianSeated(gd) : !!SEATED.get(g)?.get(gd)?.down; }
 /** THE TABLE: the windows round one man as he is now (standing / seated, staff / civilian). The rear arc of a standing man is the build's own gate. */
@@ -197,7 +196,7 @@ export function closeSubject(g: Game, gd: Guard): boolean {
   return true;
 }
 /** WHAT SAM COULD DO TO THIS MAN FROM `p` — the one test the rows, the click, the picture and the ready pose share. */
-export function closeAt(g: Game, gd: Guard, p: ArrayLike<number>): CloseOffer {
+export function closeAt(g: Game, gd: Guard, p: ArrayLike<number>): CloseOffer { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('closeAt', undefined, [g, gd, p]); if (__r !== RUST_PASS) return __r as any; } }
   const pl = g.player, gp = gd.char.pos; const dx = p[0] - gp[0], dz = p[2] - gp[2]; const dist = Math.hypot(dx, dz);
   const bearing = wrapAngle(Math.atan2(dx, dz) - gd.char.bodyYaw);
   const win = windowAt(closeWindows(g, gd), bearing);
@@ -219,146 +218,24 @@ export function closeAt(g: Game, gd: Guard, p: ArrayLike<number>): CloseOffer {
 }
 /** the move a window makes of a click / a grab: its kind */
 /** the two-button blow is live (CLOSE.lethal, the switch on, no show running): left = the knife, right = the knockout */
-export function closeLethal(g: Game): boolean { return CLOSE.on && CLOSE.lethal && !g.touring; }
-/** THE RIGHT BUTTON, TAPPED OR HELD (CLOSE.rmbHold; game.ts, once a frame). `on` = the rule is up and his hands are empty and free; `near` = a man is in
- *  reach; `choke` = …and the choke is his to be given (the grab is offered on him); `dropped` = the page took the button away (a blur, the pause card).
- *  'press' = the knockout as it was, on the press's own frame (the rule off, or a man in reach who can only be struck: his side, his front, a civilian —
- *  nothing to choose between, so nothing to wait for); 'tap' = a press let go inside `rmbTapSecs` (the knockout, the quick one); 'hold' = a press that
- *  has stayed down that long with the choke on offer. A press made out of reach waits `rmbWaitSecs` more for him to walk into it. */
-export function closeRmb(g: Game, on: boolean, down: boolean, hit: boolean, dt: number, near: boolean, choke: boolean, dropped: boolean): 'press' | 'tap' | 'hold' | null {
-  const S = stateOf(g);
-  if (!on) { S.rmbT = -1; return hit ? 'press' : null; }
-  if (hit) { if (near && !choke) { S.rmbT = -1; return 'press'; } S.rmbT = 0; }
-  if (S.rmbT < 0) return null;
-  if (dropped) { S.rmbT = -1; return null; }
-  if (!down) { const tap = S.rmbT < CLOSE.rmbTapSecs; S.rmbT = -1; return tap ? 'tap' : null; }
-  S.rmbT += dt; if (S.rmbT < CLOSE.rmbTapSecs) return null;
-  if (choke) { S.rmbT = -1; return 'hold'; }
-  if (near || S.rmbT > CLOSE.rmbTapSecs + CLOSE.rmbWaitSecs) { S.rmbT = -1; return near ? 'press' : null; }
-  return null;
-}
+export function closeLethal(g: Game): boolean { return goneWithTick('closeLethal') as any; }
 /** …and there is no knife (CLOSE.noKnife, the switch on, no show running): the right click is the knockout, the left click no blow */
-export function closeBare(g: Game): boolean { return CLOSE.on && CLOSE.noKnife && !g.touring; }
+export function closeBare(g: Game): boolean { return goneWithTick('closeBare') as any; }
 /** the windows are live: the switch on and no show running (under a show Sam's hands are the build's: one way in, from behind) */
 export function closeLive(g: Game): boolean { return CLOSE.on && !g.touring; }
-/** a blow landed (player.ts updateTakedown): the tally */
-export function closeBlow(lethal: boolean) { if (lethal) CLOSE_STATS.blows.knife++; else CLOSE_STATS.blows.knockout++; }
 export function closeKindOf(o: CloseOffer | null): CloseKind { return o?.win?.kind ?? 'behind'; }
 
-// ------------------------------------------------------------ the rows (player.ts buildInteractables calls this for every living man in place of its own block)
-type RowFn = (base: Interactable, verb: Verb, text: string, hints?: string, over?: Partial<Interactable>) => Interactable;
-type OfferFn = (it: Interactable, verbs: Interactable[]) => void;
-/** One staff man's marker and rows with the switch on. Behind him the wording is the build's own (Space grabs, the click takes him down); from a side or the
- *  front there is no Space row — one line says what the click does. The marker carries the way in (`close`) so the click that follows makes the move the row offered. */
-export function closeRows(g: Game, gd: Guard, p: ArrayLike<number>, busy: boolean, row: RowFn, offer: OfferFn) {
-  const pl = g.player; const gp = gd.char.pos;
-  const far = Math.hypot(p[0] - gp[0], p[2] - gp[2]);
-  if (far >= 2.4) {   // (STALK.low: a press begins the creep from further off than any row reaches — the one line that says so is shown out to there, and nothing else is)
-    if (STALK.on && STALK.low && !busy && far < stalkBeginM() && stalkCould(g, gd)) offer({ kind: 'guard', pos: v3.add(gp, [0, 1.35, 0]), line1: 'guard', line2: sneakHint(), inReach: false, off: false, guard: gd }, []);
-    return;
-  }
-  const o = closeAt(g, gd, p); const kind = closeKindOf(o); const seated = closeSeated(g, gd);
-  const alert = gd.state === 'alert';
-  const where = !o.win ? '' : o.win.kind === 'front' ? ' · facing you' : o.win.kind === 'side' ? ' · side on' : '';
-  const it: Interactable = { kind: 'guard', pos: v3.add(gp, [0, seated ? 1.05 : 1.35, 0]), line1: `guard${alert ? ' · alert' : seated ? ' · seated' : ''}${alert ? '' : where}`, line2: o.why, inReach: o.can, off: false, guard: gd, close: kind };
-  const sneak = STALK.on && !busy && stalkCould(g, gd);   // (stalk.ts: the left button held on him walks Sam in to the grab)
-  if (sneak && !o.can) it.line2 = sneakHint();   // (STALK.key: the hold walks him in, the row's key grabs)
-  const verbs: Interactable[] = [];
-  if (o.can && !busy) {
-    const empty = pl.holstered, gun = grabVariant(g) === 'gun';
-    // what the left click does from here, as the hint beside the Space row (or as the one line where there is no Space row)
-    const bare = closeBare(g), two = closeLethal(g) || bare;   // (no knife: the right click is the knockout whatever `lethal` says, and no line names a blade)
-    // (a tutorial mission's step holds the right button, or the hands' key, shut: no line names one that would do nothing. The right button is the gate's
-    //  own sum — rails.ts ACTS: `alt` and `menu` are the two actions that own it — and both questions are `hushes`, so a broken frame names them all)
-    const rmb = !(g.rails.hushes('alt') && g.rails.hushes('menu')), away = !g.rails.hushes('hands');
-    const choke = CLOSE.rmbHold && rmb && o.grab && !gd.civ && (bare || closeLethal(g)) && g.rails.offers('grab') ? '  ·  RMB  hold to choke him' : '';   // (CLOSE.rmbHold: the same button kept down is the choke)
-    const click = !o.strike ? '' : !empty ? (away && (rmb || !bare) ? `E  ${pl.rifleUp ? 'sling it' : 'holster'} for the ${bare ? 'knockout' : two ? 'knife / the knockout' : `LMB ${kind === 'behind' || kind === 'seat' ? 'takedown' : 'strike'}`}` : '')
-      : (two && sneak) || bare ? (rmb ? `RMB  knock him out${choke}` : '')   // (behind him the left button is the stalk's: it grabs him)
-      : two ? `LMB  knife — lethal${rmb ? `  ·  RMB  knock him out${choke}` : ''}`
-      : kind === 'behind' ? 'LMB  takedown — silent' : kind === 'seat' ? 'LMB  put him out where he sits — silent' : kind === 'side' ? 'LMB  strike — quiet' : `LMB  strike — he gets a sound out`;
-    const only = stalkClickOnly(g) && !gd.civ;   // (stalk.ts: the held click is the one way to him — no row grabs a staff man)
-    if (o.grab && only) verbs.push({ ...it, verb: undefined, running: false, progress: undefined, inReach: true,
-      line2: empty ? `LMB  hold to grab him${two && o.strike && rmb ? `  ·  RMB  knock him out${choke}` : ''}` : `E  ${pl.rifleUp ? 'sling it' : 'holster'}, then hold LMB to grab him` });
-    else if (o.grab) {
-      const text = kind === 'seat' ? (gun ? 'haul him out of the chair — pistol to his head' : 'haul him out of the chair')
-        : gun ? 'grab him — pistol to his head' : pl.rifleUp ? 'grab him — the rifle goes on your back' : 'grab him';
-      verbs.push(row(it, 'grab', text, click));
-    } else if (o.strike) verbs.push({ ...it, verb: undefined, running: false, progress: undefined, line2: `${click ? click + '  ·  ' : ''}${o.win?.grab ? "you can't grab him while he's onto you" : 'the grab is from behind'}`, inReach: true });
-    noteBest(g, o);
-  }
-  offer(it, verbs);
-}
-/** the line that says what the held click does (STALK.key: the hold walks him in, the row's key grabs) */
-const sneakHint = (): string => STALK.drag ? 'LMB  press and drag to sneak up on him' : STALK.key ? 'LMB  hold to sneak up on him' : 'LMB  hold to sneak up and grab him';   // (STALK.drag: the mouse is the stick)
-/** this frame's best offer: the nearest man Sam could do something to (what the ready pose is taken from) */
-function noteBest(g: Game, o: CloseOffer) { const S = stateOf(g); if (S.t !== g.time) { S.t = g.time; S.best = null; } if (!S.best || o.dist < S.best.dist) S.best = o; }
-/** A civilian's gate with the windows on (player.ts keeps her rows and their wording): is Sam in her window, and near enough */
-export function closeCivGate(g: Game, gd: Guard, p: ArrayLike<number>): { behind: boolean; near: boolean; kind: CloseKind } {
-  const gp = gd.char.pos; const b = wrapAngle(Math.atan2(p[0] - gp[0], p[2] - gp[2]) - gd.char.bodyYaw); const w = windowAt(closeWindows(g, gd), b);
-  return { behind: !!w, near: !!w && Math.hypot(p[0] - gp[0], p[2] - gp[2]) < w.reach, kind: w?.kind ?? 'behind' };
-}
-/** a civilian Sam could take right now, for the ready pose (player.ts's civilian block reports the row it made) */
-export function closeCivOffer(g: Game, gd: Guard, p: ArrayLike<number>) { const o = closeAt(g, gd, p); if (o.can) noteBest(g, o); }
 
 // ------------------------------------------------------------ the ready pose (once a frame, after the rows: player.ts buildInteractables' tail)
 /** Sam's body says he is in reach: which pose, and what the hand is going for. null = none (nobody in reach, the hands are busy, the rifle is up).
  *  'strike' = the hand on the knife (any side) · 'grab' = behind him: the hand on the knife, and the free arm reaching for his neck · 'seat' = behind a chair · 'grabGun' = behind
  *  him with the pistol up (the free hand only; from any other side a pistol says nothing: the click there is a round). */
-export function closeReady(g: Game): { kind: ReadyKind; at: Vec3 } | null {
-  const pl = g.player; if (!CLOSE.on || !CLOSE.ready || g.touring) return null;
-  const S = stateOf(g); const o = S.t === g.time ? S.best : null; if (!o || !o.can) return null;
-  if (pl.down || pl.holding || pl.takedown || pl.dragging || pl.kick || pl.picking || pl.wanding || pl.rifleUp || pl.canisterSel && !pl.holstered) return null;
-  if (samWork(g) || pl.coding && handworkOn('work')) return null;   // hands at work on a thing (handwork.ts: a charge, the drive, the lever, a keypad): they stay on it — a click there lets go of the work or does nothing, it throws no blow, so the pose promises none
-  if (pl.wall) return null;   // back to the wall: his arms are the wall hold's — the row still offers the move, the pose says nothing (neither close layer runs on the wall)
-  const gd = o.guard; const neck = gd.char.bones.neck ?? gd.char.bones.head; const at: Vec3 = neck ? [neck[0], neck[1], neck[2]] : [gd.char.pos[0], gd.char.pos[1] + (o.win?.kind === 'seat' ? 1.1 : 1.45), gd.char.pos[2]];
-  const kind = closeKindOf(o);
-  if (pl.pistolUp) return o.grab ? { kind: 'grabGun', at } : null;   // the pistol stays on him; only the free hand says anything
-  if (!o.grab) return { kind: 'strike', at };
-  if (CLOSE.handsLow && pl.crouch && kind !== 'seat' && at[1] - gd.char.pos[1] > CLOSE.handsLowNeckM) return { kind: 'strike', at };   // (crouched under a man on his feet: the hand on the knife says it — no open hand held up over his own head; a man low himself keeps the level reach)
-  return { kind: kind === 'seat' ? 'seat' : 'grab', at };
-}
+export function closeReady(g: Game): { kind: ReadyKind; at: Vec3 } | null { return goneWithTick('closeReady') as any; }
 /** THE MODE: the man Sam is close to (the nearest living one inside `modeM` with nothing solid between; once in, kept out to `modeOutM`), or null. Not with the
  *  rifle up, sprinting, down, with a man in his arm or a body in tow, at a lock or with his hands at work on a thing (handwork.ts), under a show. Read after `closeTick` has run this frame. */
 export function closeMode(g: Game): Guard | null { return STATE.get(g)?.mode ?? null; }
-function modeNow(g: Game, S: State): Guard | null {
-  const pl = g.player; S.modeD = Infinity;
-  if (!CLOSE.on || !CLOSE.mode || g.touring || pl.down || pl.holding || pl.dragging || pl.kick || pl.picking || pl.wanding || pl.rifleUp || pl.sprinting || pl.wall) return null;
-  if (samWork(g) || pl.coding && handworkOn('work')) return null;   // hands at work on a thing, as at a lock: the carriage would take them off it
-  const p = pl.char.pos; let best: Guard | null = null, bd = Infinity;
-  for (const gd of [...g.guards, ...civiliansShown(g)]) {
-    if (!closeSubject(g, gd)) continue;
-    const gp = gd.char.pos; const d = Math.hypot(p[0] - gp[0], p[2] - gp[2]);
-    if (d >= (gd === S.mode ? CLOSE.modeOutM : CLOSE.modeM) || d >= bd) continue;
-    if (!clearBetween(g, gp, p)) continue;
-    best = gd; bd = d;
-  }
-  S.modeD = bd; return best;
-}
 /** once a frame after the rows are built (and once more after the switch goes off, to let go of the poses) */
-export function closeTick(g: Game) {
-  const pl = g.player, an = pl.char.anim; const S = stateOf(g);
-  const r = closeReady(g);
-  // (stalk.ts STALK.tell: behind a man he could stalk the pose is the distance's — the arm coming up and the body coming out of the crouch as he closes, the
-  // grab's own reach at a part weight; a chair's haul keeps its own pose, and whatever stands the tell down in reach — hands at work, the switch — stands this down)
-  const T = STALK.on && CLOSE.ready && r?.kind !== 'seat' && !samWork(g) && !(pl.coding && handworkOn('work')) ? stalkTell(g) : null, best = S.t === g.time ? S.best : null;
-  // (in reach of ANOTHER man the tell is that man's, as it was)
-  if (T && (!r || !best || best.guard === T.gd)) { an.ready = 'grab'; an.readyAt = T.at; an.readyUp = CLOSE.reachUp ? 1 : 0; an.readyAmt = T.reach; an.rise = T.rise; an.low = T.low; if (T.low > 0) { const L = an.lowShape; L[0] = STALK.lowDrop; L[1] = STALK.lowBack; L[2] = STALK.lowLean; } }
-  else { an.ready = r ? r.kind : null; an.readyAt = r ? r.at : null; an.readyUp = r && CLOSE.reachUp ? 1 : 0; an.readyAmt = 1; an.rise = 0; an.low = 0; }
-  // (stalk.ts STALK.corner: lying in wait on a wall he is coiled — sunk a little, both hands up, more as the man comes)
-  const CW = STALK.on && CLOSE.ready && !r && closeBare(g) ? stalkWait(g) : null;   // (bare hands only: with a knife the pose's right hand is on the hilt, and the wait can only grab)
-  if (CW) { an.ready = 'grab'; an.readyAt = CW.at; an.readyUp = 0; an.readyAmt = CW.reach; an.coil = CW.coil; }
-  else { const H = pl.holding;   // (…and he comes up out of it THROUGH the step in, not in its first frame)
-    if (H && H.from && H.phase === 'grab' && an.coil > 0) { H.coil0 ??= an.coil; an.coil = STALK.cornerRise > 0 ? H.coil0 * (1 - smoothstep(0, STALK.cornerRise, H.t)) : 0; } else an.coil = 0; }
-  // (stalk.ts STALK.low: his hands are down wherever the carriage would raise them, and a stalk's grab is the spring up out of the low creep)
-  { const H = pl.holding, low = STALK.on && STALK.low; an.handsDown = low && closeBare(g) ? STALK.lowHands : 0;
-    an.wide = low && STALK.wide && closeBare(g) && !H ? (TAPSTEP.on && pl.crouch ? 1 : Math.min(1, an.low / Math.max(0.05, STALK.wideBy))) : 0; if (an.wide) { const Ws = an.wideShape; Ws[0] = STALK.wideOut; Ws[1] = STALK.wideDown; Ws[2] = STALK.wideFwd; Ws[3] = STALK.wideLead; an.widePole = STALK.widePole; if (STALK.heft) { Ws[0] = STALK.heftOut; Ws[1] = STALK.heftDown; Ws[2] = STALK.heftFwd; Ws[3] = STALK.heftLead; an.widePole = STALK.heftPole; const Hs = an.heftShape; Hs[0] = STALK.heftTwist; Hs[1] = STALK.heftSwing; Hs[2] = STALK.heftSide; Hs[3] = STALK.heftLean; Hs[4] = STALK.heftDip; Hs[5] = STALK.heftSurge; } } an.heft = STALK.heft ? 1 : 0;   // (STALK.wide: closing on a man, his arms come out wide and low with the sink — `an.low` is 0 where the tell was stood down for another man)
-      // (bare hands: with a knife the right hand's hover by the hilt is the carriage's own)
-    an.spring = low && H && H.from && H.phase === 'grab' && H.coil0 === undefined ? Math.max(1, STALK.lowSpring * (STALK.lowWind > 0 ? smoothstep(0, STALK.lowWind, H.t) : 1)) : 0; }   // (…a rate that winds up over `lowWind` s: he leaves the floor slowly and arrives fast, where a plain ease would jump in its first frame)
-  if (r) CLOSE_STATS.readyFrames++;
-  const m = pl.takedown ? S.mode : modeNow(g, S); S.mode = m;   // (a blow under way keeps the mode it was thrown in: the stance does not let go mid-swing)
-  an.creep = !!m || tapHeld(g); if (!tapHeld(g)) an.tapU = -1;   // (tapstep.ts: the steps stand in the held stride, a man near or not)
-  if (m) { const ch = m.char.bones.chest; an.creepAt = ch ? [ch[0], ch[1], ch[2]] : [m.char.pos[0], m.char.pos[1] + 1.2, m.char.pos[2]]; CLOSE_STATS.modeFrames++; } else an.creepAt = null;
-}
+export function closeTick(g: Game): void { return crossToRust('closeTick', undefined, [g]) as any; }
 /** THE DARK (guards.ts sightGain, Sam only): how much of the build's near-sight floor — a shape inside 1.8 m of him is seen whatever the light — this man has
  *  for Sam right now. 1 = all of it = the build (always with the switch off). With the switch on it goes by the light on Sam: nothing under `darkAt` of his
  *  meter, all of it from `litAt`; a man who is hunting keeps all of it, and inside `touchM` it is whole (he walks into you). */
@@ -370,15 +247,8 @@ export function closeNearK(g: Game, gd: Guard, dist: number): number {
   return k;
 }
 
-// ------------------------------------------------------------ lining up: where Sam stands for a strike
-/** Where Sam stands to strike from a side / the front / over a chair — on his own bearing off the man, `strikeDist` (`seatDist`) out — and the way he faces (at him). */
-export function closeStation(gd: Guard, kind: CloseKind, bearing: number): { pos: Vec3; yaw: number } {
-  const gp = gd.char.pos; const a = gd.char.bodyYaw + bearing; const r = kind === 'seat' ? CLOSE.seatDist : CLOSE.strikeDist;
-  const pos: Vec3 = [gp[0] + Math.sin(a) * r, 0, gp[2] + Math.cos(a) * r];
-  return { pos, yaw: Math.atan2(gp[0] - pos[0], gp[2] - pos[2]) };
-}
 /** the fall's hearing level for a way in (+ his shout if he was onto Sam) */
-export function closeNoise(kind: CloseKind, wasAlert: boolean): number { return CLOSE.noise[kind] + (wasAlert ? CLOSE.alertNoise : 0); }
+export function closeNoise(kind: CloseKind, wasAlert: boolean): number { return goneWithTick('closeNoise') as any; }
 /** the tallies (player.ts startTakedown / startGrab report what they made) */
 export function closeTook(g: Game, gd: Guard, what: 'take' | 'grab', kind: CloseKind, bearing: number, dist: number) { (what === 'take' ? CLOSE_STATS.takes : CLOSE_STATS.grabs)[kind]++; note(g, gd, what, kind, bearing, dist); }
 
@@ -413,7 +283,7 @@ function labelOf(g: Game, w: CloseWindow): string {
 }
 /** THE WINDOWS TO DRAW this frame (ui/overlay.ts; the probes): every window of every man within `modeM` of Sam, cut by walls, with its words and its state.
  *  Nothing while Sam's hands are on somebody, he is down, or the switch / the marks are off. Reads only — safe to call from the HUD. */
-export function closeMarks(g: Game): CloseMark[] {
+export function closeMarks(g: Game): CloseMark[] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('closeMarks', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
   const out: CloseMark[] = []; const pl = g.player;
   if (!CLOSE.on || !CLOSE.marks || pl.down || pl.holding || pl.takedown || pl.dragging) return out;
   const p = pl.char.pos, K = CLOSE;
@@ -447,7 +317,7 @@ const SIT_CLIP = { clip: 'Sitting_Idle_Loop', loop: true, rate: 1, in: 0.7, out:
 const calm = (gd: Guard) => gd.state === 'patrol' && gd.awareness < 0.3 && !gd.held && !gd.script;
 /** Sit a calm staff man down on a mark (default: where he stands, facing as he faces). He keeps his eyes and ears (the seat's own rule; doze.ts shuts or dulls them for the man it sat there); the moment he is anything but calm he is
  *  up and the AI has him as it would have. False if he cannot be sat (not calm, dead, a civilian, a unit of the response). */
-export function closeSeat(g: Game, gd: Guard, at?: ArrayLike<number>, face?: number): boolean {
+export function closeSeat(g: Game, gd: Guard, at?: ArrayLike<number>, face?: number): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('closeSeat', undefined, [g, gd, at, face]); if (__r !== RUST_PASS) return __r as any; } }
   if (gd.civ || gd.unit || gd.state === 'dead' || !calm(gd)) return false;
   const M = seatedOf(g); const prev = M.get(gd); if (prev && !at) return true;   // (already in a chair, or on his way down into it: he stays in that one)
   M.set(gd, { at: at ? [at[0], 0, at[2]] : [gd.char.pos[0], 0, gd.char.pos[2]], face: face ?? gd.char.bodyYaw, hold: prev ? prev.hold : gd.hold, down: false });
@@ -455,24 +325,11 @@ export function closeSeat(g: Game, gd: Guard, at?: ArrayLike<number>, face?: num
   return true;
 }
 /** up out of the chair (the clip fades on its own `out`; his hold flag as it was) */
-export function closeUnseat(g: Game, gd: Guard, back = false) {
+export function closeUnseat(g: Game, gd: Guard, back = false) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('closeUnseat', undefined, [g, gd, back]); if (__r !== RUST_PASS) return __r as any; } }
   const M = seatedOf(g), st = M.get(gd); if (!st) return;
   M.delete(gd); gd.hold = st.hold; if (gd.char.anim.act?.clip === SIT_CLIP.clip) gd.char.anim.act = null;
   if (back && st.down && gd.state !== 'dead') { gd.char.pos[0] = st.at[0]; gd.char.pos[2] = st.at[2]; }   // (stood up by hand — the panel: up where he sat down from. The seat walked his root SIT_ADVANCE on, and sitting him again must not walk him on again)
   CLOSE_STATS.unseats++; note(g, gd, 'unseat', null);
-}
-/** once a frame BEFORE the guards (game.ts): the seated men kept on their marks while calm, stood up when not. Nothing with nobody seated. */
-export function closeSeatTick(g: Game, dt: number) {
-  const M = SEATED.get(g); if (!M || !M.size) return;
-  for (const [gd, st] of M) {
-    if (!g.guards.includes(gd) || !calm(gd) || !CLOSE.on) { closeUnseat(g, gd); continue; }
-    const c = gd.char; c.bodyYaw = approachAngle(c.bodyYaw, st.face, 3 * dt);
-    const settled = Math.abs(wrapAngle(c.bodyYaw - st.face)) < 0.35;
-    const tx = st.at[0] + Math.sin(st.face) * SIT_ADVANCE, tz = st.at[2] + Math.cos(st.face) * SIT_ADVANCE; const k = 1 - Math.exp(-5 * dt);
-    if (settled) { c.pos[0] += (tx - c.pos[0]) * k; c.pos[2] += (tz - c.pos[2]) * k; c.anim.act = { ...SIT_CLIP }; }
-    gd.speed = 0; c.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null;
-    st.down = settled && c.anim.actShown > 0.5;
-  }
 }
 /** everybody up, the frame's memory gone (resetGuards / restartEncounter: the men are new objects) */
 /** the man the mode is held on, for a checkpoint (savestate.ts PlayerSnap.heldGait rides with it, SAVETIMELINE.holds): the mode lets go further out than it takes

@@ -13,7 +13,7 @@
 import type { Vec3 } from '../math/vec';
 import type { MuzzleFxKey } from './effects';
 import { GEAR, GEAR_NAMES, GEAR_MAG } from './gear';   // (a leaf: the issue kit's switch — read only inside the getters of Sam's two rows below, never as this module loads)
-import { RELOAD } from './autoreload';   // (a leaf: one switch table, read only inside startReload — never as this module loads)
+import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 export type WeaponId = 'fiveseven' | 'guard9mm' | 'aks74u' | 'ak74m' | 'akms' | 'fn2000' | 'm870' | 'mk12' | 'mp7' | 'mk46' | 'm1014' | 'hk45' | 'g18' | 'pkm' | 'mk18bare' | 'g19bare';
 export type FireMode = 'semi' | 'auto' | 'burst';
@@ -370,10 +370,8 @@ export class Firearm {
   /** A TUBE GUN FED A SHELL AT A TIME (startReload's / planFeed's `shells`; null: every reload as it always was): the seconds on the reload's clock at which a
    *  shell is IN the gun, how many are, whether one begun with nothing in the gun goes straight into the chamber, and whether its end runs the bolt */
   private shellT: readonly number[] | null = null; private shellI = 0; private shellPort = false; feedPull = false;
-  /** a shell at a time is how the reload under way (or the beat planned on this gun) puts its rounds in */
-  get shellFed() { return this.shellT !== null; }
   /** the beat the reload under way (or the next plain one) runs on */
-  get reloadRow(): WeaponDef['reload'] { return this.beat ?? this.def.reload; }
+  get reloadRow(): WeaponDef['reload'] { return goneWithTick('Firearm.reloadRow') as any; }
   shotsFired = 0;
   /** a guard's burst in progress (guards.ts burstTrigger; only ever non-null on a row with a BurstSpec) — see BurstState */
   burst: BurstState | null = null;
@@ -393,15 +391,10 @@ export class Firearm {
     this.mode = def.modes[0];
   }
   get name() { return this.def.name; }
-  /** Z: the selector to its next position (SEMI → AUTO → SEMI on the FN2000); a one-position row just says what it is. Ends any AUTO string. Returns the new mode. */
-  cycleMode(): FireMode { const M = this.def.modes; this.mode = M[(M.indexOf(this.mode) + 1) % M.length]; this.autoIdx = 0; return this.mode; }
   /** automatic under a held trigger right now: the selector on AUTO and the row has the sear for it */
   get automatic() { return this.mode === 'auto' && !!this.def.auto; }
   /** the extra cone the NEXT round of the current AUTO string is drawn with (0 for its first round, or in SEMI) */
-  get autoSpread() { const A = this.def.auto; return A && this.mode === 'auto' ? Math.min(A.spreadCap, A.spreadPerRound * this.autoIdx) : 0; }
-  /** book one round of the string (player.ts, after fire()) / let the string lapse once the trigger has been up auto.resetAfter (called every frame with the trigger's state) */
-  autoFired() { this.autoIdx++; this.autoSince = 0; }
-  autoIdle(dt: number, triggerDown: boolean) { this.autoSince += dt; if (!triggerDown && this.autoSince > (this.def.auto?.resetAfter ?? 0)) this.autoIdx = 0; }
+  get autoSpread(): number { return goneWithTick('Firearm.autoSpread') as any; }
   /** never runs out of spares (the guards): a reload always has a full magazine to seat */
   get bottomless() { return !Number.isFinite(this.def.spareMags); }
   get reloading() { return this.reloadT >= 0; }
@@ -412,7 +405,7 @@ export class Firearm {
   /** Fullest-first view of the spare mags (for the HUD). */
   spareSorted() { return [...this.spare].sort((a, b) => b - a); }
 
-  fire(): boolean {
+  fire(): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Firearm.fire', this, []); if (__r !== RUST_PASS) return __r as any; } }
     if (!this.canFire()) return false;
     this.chamber = 0; this.shotsFired++;
     if (this.infinite && this.mag !== null) this.chamber = 1;                          // bottomless magazine: always feeds, never empties
@@ -423,86 +416,14 @@ export class Firearm {
   /** the most a seated magazine may hold right now by the row's rule (rearm's): all of it on a topped-up row (Sam's 10 under the one up the pipe), one short of it
    *  while a round is chambered on a row that racks its chambered round OUT of the magazine (a guard's twelve all told, never thirteen) */
   get magRoom() { return this.def.magCapacity - (this.def.topUp ? 0 : this.chamber); }
-  /** Begin a reload if it makes sense (have a spare that improves things). Returns false if refused. */
-  startReload(ev: ReloadEvents = {}, beat?: WeaponDef['reload'], cues?: readonly number[], shells?: { times: readonly number[]; port: boolean }): boolean {
-    if (this.reloading) return false;
-    if (shells) {   // (a shell at a time: nothing comes out of the gun — each goes in at its own moment, and a chamber with nothing in it is filled at the beat's `rack`)
-      if (!shells.times.length && !(this.chamber === 0 && (this.mag ?? 0) > 0)) return false;   // nothing to feed, and no round in the tube to chamber
-      this.reloadT = 0; this.stage = 2; this.ev = ev; this.beat = beat ?? null; this.cues = cues && cues.length ? cues : null; this.cueI = 0;
-      this.planShells(shells.times, shells.port); return true;
-    }
-    if (this.spare.length === 0 && !this.bottomless && !(RELOAD.lastMag && this.chamber === 0 && (this.mag ?? 0) > 0)) return false;   // (…but the last magazine seated under an empty chamber — a reload broken off before the rack — is one: it comes out, goes back in and is racked. autoreload.ts RELOAD.lastMag)
-    const best = Math.min(this.spare.length ? Math.max(...this.spare) : this.bottomless || !RELOAD.lastMag ? this.def.magCapacity : this.mag ?? 0, this.magRoom);   // (RELOAD.lastMag, nothing spare on a row that counts its magazines = the last-magazine case just above: the one in the gun goes back in, and nothing is fed)
-    if (this.mag !== null && this.mag >= best && this.chamber === 1) return false;   // nothing to gain
-    this.reloadT = 0; this.stage = 0; this.ev = ev; this.beat = beat ?? null; this.cues = cues && cues.length ? cues : null; this.cueI = 0;
-    this.feedN = Math.max(0, best - (this.mag ?? 0)); this.feedPort = this.chamber === 0 && !this.mag;
-    return true;
-  }
-  cancelReload() { this.reloadT = -1; this.stage = 0; this.beat = null; this.cues = null; this.shellT = null; }
-  private planShells(times: readonly number[], port: boolean) {
-    this.mag ??= 0; this.shellT = times; this.shellI = 0; this.shellPort = port && this.chamber === 0 && this.mag === 0;
-    this.feedN = times.length; this.feedPort = this.chamber === 0 && this.mag === 0; this.feedPull = this.chamber === 0 && !this.shellPort;
-  }
-  /** A man whose reload is a beat of his own and not this clock (a teammate, a defender: gunreload.ts feedBegin) feeds a shell at a time on `row`: the plan is
-   *  kept here for his ticks (feedTo), `reloadRow` is that row, and rearm() — how his beat ends — forgets it */
-  planFeed(row: WeaponDef['reload'], times: readonly number[], port: boolean) { this.beat = row; this.planShells(times, port); }
-  /** …his beat has come to `t` seconds: the shells due by then are in the gun (`free`, his: none of his spares counted — they are bottomless by his beat —
-   *  and the first one is the round he may fire, so a beat that is dropped part way leaves him a gun that shoots: every one of his fire sites asks only
-   *  whether there is a round in it). The weapon's own clock (update) books the same way, out of what the man carries. */
-  feedTo(t: number, free = true) { if (this.shellT) while (this.shellI < this.shellT.length && t >= this.shellT[this.shellI]) { this.feedShell(this.shellPort, free); this.shellI++; } }
-  /** ONE SHELL into the gun — the chamber if `port` and there is nothing in the gun at all, else the tube — out of the fewest loose ones he carries (`free`:
-   *  nothing is taken from what he carries, and an empty chamber takes it whatever is in the tube). False: no room, or none left. */
-  feedShell(port = false, free = false): boolean {
-    const tube = this.mag ?? 0, toPort = this.chamber === 0 && (free || (port && tube === 0));
-    if (!toPort && tube >= this.def.magCapacity) return false;
-    if (!free && !this.bottomless) {
-      let bi = -1; for (let i = 0; i < this.spare.length; i++) if (this.spare[i] > 0 && (bi < 0 || this.spare[i] <= this.spare[bi])) bi = i;
-      if (bi < 0) return false;
-      if (--this.spare[bi] === 0) this.spare.splice(bi, 1);
-    }
-    if (toPort) { this.chamber = 1; this.mag = tube; } else this.mag = tube + 1;
-    return true;
-  }
+  cancelReload() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Firearm.cancelReload', this, []); if (__r !== RUST_PASS) return __r as any; } } this.reloadT = -1; this.stage = 0; this.beat = null; this.cues = null; this.shellT = null; }
   /** A full magazine seated and a round chambered (the row's way: topped up or racked out of it), any reload or burst forgotten — how a guard's reload beat ends
    *  (guards.ts) and how the QA probes stand a man up with a fresh gun. */
-  rearm() { this.cancelReload(); this.burst = null; this.autoIdx = 0; this.chamber = 1; this.mag = this.def.magCapacity - (this.def.topUp ? 0 : 1); }
+  rearm() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Firearm.rearm', this, []); if (__r !== RUST_PASS) return __r as any; } } this.cancelReload(); this.burst = null; this.autoIdx = 0; this.chamber = 1; this.mag = this.def.magCapacity - (this.def.topUp ? 0 : 1); }
   /** no magazine holding more than the row's magazine does NOW — for a row whose size is read off a switch (gear.ts: Sam's pistol, 15 under the issue kit, 10
    *  without): thrown off on a running game, the rounds over are put away. Nothing where everything fits, so a row whose size never moves is never touched. */
-  fit() { const cap = this.def.magCapacity; if (this.mag !== null && this.mag > this.magRoom) this.mag = this.magRoom; for (let i = 0; i < this.spare.length; i++) if (this.spare[i] > cap) this.spare[i] = cap; }
+  fit() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Firearm.fit', this, []); if (__r !== RUST_PASS) return __r as any; } } const cap = this.def.magCapacity; if (this.mag !== null && this.mag > this.magRoom) this.mag = this.magRoom; for (let i = 0; i < this.spare.length; i++) if (this.spare[i] > cap) this.spare[i] = cap; }
 
-  update(dt: number) {
-    if (!this.reloading) return;
-    this.reloadT += dt;
-    const t = this.reloadT, R = this.beat ?? this.def.reload;
-    this.feedTo(t, false);   // (a shell at a time: booked before it is heard, the same frame — its time IS its sound's, gunreload.ts shellPlan)
-    if (this.cues) while (this.cueI < this.cues.length && t >= this.cues[this.cueI]) this.ev.cue?.(this.cueI++);
-    if (this.stage < 1 && t >= (R.out ?? R.dur)) {
-      // magazine out: empties are dropped on the floor, partials go back to storage (nothing to do if the well is already empty,
-      // e.g. a reload that was cancelled by sprinting after the old magazine came out)
-      if (this.mag !== null) {
-        const out = this.mag; const dropped = out === 0;
-        if (!dropped && !this.bottomless) this.spare.push(out);
-        this.mag = null; this.ev.magOut?.(out, dropped);
-      }
-      this.stage = 1;
-    }
-    if (this.stage < 2 && t >= (R.in_ ?? R.dur)) {
-      // fullest spare goes in (a bottomless row always has a full one to hand) — holding no more than the row's rule allows over a chambered round (magRoom: a
-      // non-topUp row reloaded with one up the pipe seats one short, exactly what rearm() loads, instead of a thirteenth round and a negative `spent`; the round
-      // it cannot seat goes back to storage on a row that counts its spares — none does today, every non-topUp row is bottomless)
-      let got: number;
-      if (this.spare.length) { let bi = 0; for (let i = 1; i < this.spare.length; i++) if (this.spare[i] > this.spare[bi]) bi = i; got = this.spare.splice(bi, 1)[0] ?? 0; }
-      else got = this.bottomless ? this.def.magCapacity : 0;
-      this.mag = Math.min(got, this.magRoom);
-      if (got > this.mag && !this.bottomless) this.spare.push(got - this.mag);
-      this.stage = 2; this.ev.magIn?.(this.mag);
-    }
-    if (this.stage < 3 && t >= (R.rack ?? R.dur)) {
-      if (this.chamber === 0 && this.mag !== null && this.mag > 0) { this.mag--; this.chamber = 1; this.ev.rack?.(); }
-      this.stage = 3;
-    }
-    if (t >= R.dur) { this.reloadT = -1; this.stage = 0; this.beat = null; this.cues = null; this.shellT = null; this.ev.done?.(); }
-  }
 }
 
 /** Sam's sidearm: the Five-seveN row plus the rail light's switch (L). Every `pl.pistol.*` site reads this. */
@@ -535,13 +456,11 @@ export class Rifle extends Firearm {
   left(a: RifleAttachment): number { return a === 'ring' ? this.rings : a === 'cam' ? this.cams : this.shells; }
   /** its slot digit pressed again with it in the hands (player.ts): the next attachment goes on the right button, the last back to the first — ring ⇄ 40 mm.
    *  Returns what is up now. */
-  cycleAttachment(): RifleAttachment | null { const n = this.attachments.length; this.attIdx = n ? (this.attIdx + 1) % n : -1; return this.attachment; }
+  cycleAttachment(): RifleAttachment | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Rifle.cycleAttachment', this, []); if (__r !== RUST_PASS) return __r as any; } } const n = this.attachments.length; this.attIdx = n ? (this.attIdx + 1) % n : -1; return this.attachment; }
 }
 
 /** OCP: pistol-mounted emitter that knocks out electronics briefly; recharges. */
 export class Ocp {
   charge = 1; readonly rechargePerSec = 0.28; readonly cost = 1;
   ready() { return this.charge >= this.cost - 1e-3; }
-  use(): boolean { if (!this.ready()) return false; this.charge = 0; return true; }
-  update(dt: number) { this.charge = Math.min(1, this.charge + dt * this.rechargePerSec); }
 }

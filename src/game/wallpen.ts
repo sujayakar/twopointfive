@@ -54,6 +54,7 @@ import { WALLS } from './wallbreak';
 import type { Game } from './game';
 import type { Character } from './character';
 import type { WeaponDef } from './weapons';
+import { RUST_PASS, RUST_SURFACE, crossToRust } from './crossing';
 
 /** the stuffs a round goes through */
 export type ThinStuff = 'drywall' | 'wood' | 'fabric' | 'cardboard' | 'foliage';
@@ -140,7 +141,7 @@ export function thinThing(g: Game, index: number): { stuff: ThinStuff; thick: nu
 export interface ThinToll { stuff: ThinStuff; take: number; eOut: number; /** metres of the round's path inside the box */ thru: number }
 /** What thing `index` takes from a round of energy `e` meeting it at `at` flying `d` (unit) — or null: the round is spent in it (not a thin thing, too long a
  *  path through, too little left). Pure: fireWeapon's path and the line-of-fire question read this one function. */
-export function thinToll(g: Game, index: number, at: Vec3, d: Vec3, e: number): ThinToll | null {
+export function thinToll(g: Game, index: number, at: Vec3, d: Vec3, e: number): ThinToll | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('thinToll', undefined, [g, index, at, d, e]); if (__r !== RUST_PASS) return __r as any; } }
   const T = thingAt(g, index); if (!T) return null; const b = T.b;
   if (Math.min(b.h[0], b.h[2]) * 2 > WALLPEN.thinMax[T.stuff] || (b.cut !== undefined && cutConfig.on && b.cut.length > 0 && !shapeCut(b))) return null;   // (a piece broken off a wall is no thin thing; a box that says its SHAPE is the thing it was, and lineBox below gives the round its way through the shaped solid)
   const s = lineBox(at, d, b); if (!s || s.t1 <= 0) return null;
@@ -206,7 +207,7 @@ type StaticHit = { t: number; index: number; n: Vec3 } | null;
  *  the caller's old straight line stands, untouched. `first` = the caller's own col.raycast(from, dir, range) if it has one; `nth0` = panes its arm is already
  *  through (glasspen.ts armThroughGlass). PURE: nothing is filed until commitWalls / commitCrossings — a body on the near side stops the round before the wall
  *  ever hears of it. */
-export function thinPath(g: Game, from: Vec3, dir: Vec3, range: number, energy: number, first?: StaticHit, nth0 = 0): ThinPath | null {
+export function thinPath(g: Game, from: Vec3, dir: Vec3, range: number, energy: number, first?: StaticHit, nth0 = 0): ThinPath | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('thinPath', undefined, [g, from, dir, range, energy, first, nth0]); if (__r !== RUST_PASS) return __r as any; } }
   let hit: StaticHit = first === undefined ? g.col.raycast(from, dir, range) : first; if (!hit) return null;
   const glass = glassPenLive(g); let segs: RoundSeg[] | null = null; const cross: PaneCross[] = [], walls: WallCross[] = [];
   let o = from, d = dir, t0 = 0, e = energy;
@@ -255,7 +256,7 @@ export interface ThinLine { walls: WallCross[]; panes: number; e: number }
  *  there through at least one thin thing (and whatever panes) · null = it is stopped, or only glass stands in it (the glass rule's own question), or the rule
  *  is not live. The flight asked is the round's own (thinPath): the answer is yes exactly when the round fired down that line arrives. `short`: metres short
  *  of `to` the line ends (a man's own depth). Reads only. */
-export function thinLine(g: Game, from: Vec3, to: Vec3, energy: number, short = 0.3, first?: { t: number; index: number; n: Vec3 } | null): ThinLine | 'clear' | null {
+export function thinLine(g: Game, from: Vec3, to: Vec3, energy: number, short = 0.3, first?: { t: number; index: number; n: Vec3 } | null): ThinLine | 'clear' | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('thinLine', undefined, [g, from, to, energy, short, first]); if (__r !== RUST_PASS) return __r as any; } }
   if (!wallPenLive(g)) return null;
   const d = v3.sub(to, from), L = v3.len(d), reach = L - short; if (reach <= 1e-3) return 'clear';
   const dir = v3.scale(d, 1 / L); const hit = first === undefined ? g.col.raycast(from, dir, reach) : first; if (!hit) return 'clear';
@@ -267,11 +268,7 @@ export function thinLine(g: Game, from: Vec3, to: Vec3, energy: number, short = 
 /** the hardest round any gun in the game fires (a place judged as cover is judged against that: nobody picking it knows which gun will be laid on it) */
 export function topEnergy(): number { return Math.max(GLASSPEN.defaultEnergy, ...Object.values(GLASSPEN.energy), ...Object.values(GLASSPEN.byClass)); }
 /** how far a round of `energy` flies from `from` along `dir` (unit), `range` at most: to the first thing that STOPS it (the rule not live: the first thing) */
-export function flightLen(g: Game, from: Vec3, dir: Vec3, range: number, energy: number): number {
-  const first = g.col.raycast(from, dir, range); if (!first) return range;
-  if (!wallPenLive(g)) return first.t;
-  const P = thinPath(g, from, dir, range, energy, first); return P ? P.len : first.t;
-}
+export function flightLen(g: Game, from: Vec3, dir: Vec3, range: number, energy: number): number { return crossToRust('flightLen', undefined, [g, from, dir, range, energy]) as any; }
 
 /** fireWeapon: the round STOPPED in something a weaker or shallower round would have gone through (counted for the panel and the checks; nothing else) */
 export function spentInWall(g: Game, index: number) { if (thingAt(g, index)) WALLPEN_STATS.spent++; }
@@ -281,5 +278,3 @@ export function wallPenSummary(g: Game): string {
   const st = WALLPEN_STATS;
   return `rounds through thin walls and doors ${WALLPEN.on ? (wallPenLive(g) ? 'ON' : 'on — inert while a showcase runs') : 'off (a round stops in the first thing it meets)'} ▸ ${st.crossed} crossed (${st.leaves} door leaves) · ${st.spent} spent in one${LOG.length ? ` · last: ${LOG[LOG.length - 1]}` : ''}`;
 }
-/** QA: the last crossings filed, oldest first */
-export function wallPenLog(): readonly string[] { return LOG; }

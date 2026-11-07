@@ -28,7 +28,7 @@ export const DOOR_SIZE = {
 };
 /** what the frame takes of the hole: the leaf's hinge line stands this far inside the hole's start, its tip this far short of the end */
 export const JAMB_FACE = 0.02;
-export const DOOR_GAP = DOOR_SIZE.gap, LEAF_W = DOOR_SIZE.gap - 2 * JAMB_FACE, DOOR_HEAD = DOOR_SIZE.head, LEAF_H = DOOR_SIZE.head - 0.04;
+export const LEAF_W = DOOR_SIZE.gap - 2 * JAMB_FACE, DOOR_HEAD = DOOR_SIZE.head, LEAF_H = DOOR_SIZE.head - 0.04;
 
 const r4 = (v: number) => Math.round(v * 1e4) / 1e4;
 /** is a hole `w` metres wide a door slot — wider than a real door, no wider than a drawn one? */
