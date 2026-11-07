@@ -152,6 +152,8 @@ impl Play {
 
     /// The cursor on the place `at` (chest height), held there as the camera moves.
     pub fn point_at(&mut self, at: [f64; 2]) { self.cursor = Some([at[0], 1.2, at[1]]); }
+    /// The same, at any height: the cursor is laid on that point of the world, and the ray from the camera goes through it to whatever it meets first.
+    pub fn cursor_on(&mut self, at: [f64; 3]) { self.cursor = Some(at); }
     /// A mouse button goes down and stays down.
     pub fn press(&mut self, b: Button) { let i = &mut self.g.tab.input[self.host.input]; i.buttons = ((i.buttons as u32) | b as u32) as f64; i.clicked = ((i.clicked as u32) | b as u32) as f64; }
     /// …and comes up.
