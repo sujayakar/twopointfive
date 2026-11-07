@@ -78,6 +78,7 @@ import { Game } from './game/game';
 import { SQUADTHROW, SQUADTHROW_STATS, squadThrowPlan, squadThrowPlans } from './game/squadthrow';
 import { AUTOPILOT, AUTOPILOT_STATS, autoPick } from './game/autopilot';
 import { PLANLAY, PLANLAY_STATS, laySummary, laySend, layClear } from './game/planlay';
+import { thinIs, thinAirOf } from './game/thinline';
 import { PAIRUP, PAIRUP_STATS, pairUpApply, pairUpSummary } from './game/pairup';
 import { SILENT, squadSilent } from './game/silent';
 import { DESTRUCTION, FURNBLAST, RUBBLE, BLAST_PACE } from './game/destructionSwitch';
@@ -1389,7 +1390,7 @@ function squadFlagsAndHooks(q: URLSearchParams, engine: Engine, game: Game) {
   (window as any).__orders = game.orders;   // squad orders (game/orders.ts): .give(id, target?, who?) / .targetAt(p) / .who / .cycleWho() / .address(gd) / .open(target?) / .pick(i?) / .turn(page) / .pageBack() / .close() / .menu (.page: null = the first page, 'tools' = a door's tools) / .log / .knobs
   // FOG OF WAR (game/fogofwar.ts — a try at the Door Kickers rule): on under the room-clear flag, ?fow (or ?fogofwar) forces it on and ?nofow (?nofogofwar) off; the renderer's pass
   // reads the game's FogFrame through engine.fogFrame. __fow = the object: .on, .knobs, .eyes, .seen(guard), .drawn(guard), .hiddenChars, .stats, .summary()
-  engine.fogFrame = game.fogOfWar.frame;
+  engine.fogFrame = game.fogOfWar.frame; engine.beams = { is: thinIs, airOf: thinAirOf };
   // ?squad4[=seed]: the FOUR-MAN SQUAD (nightbreach.ts NIGHTBREACH.squad — a red pair and a blue pair where the playtests stage the one pair) in the room clear;
   // beside ?nightbreach it is that playtest with four instead. Without it both stage the pair exactly as they always did. The hostage rescue stages its own pair
   // (rescue.ts), so beside ?rescue the flag changes nothing: the rescue wins and says so.
