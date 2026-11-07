@@ -33,6 +33,11 @@ interface St { on: Guard | null }
 const STATE = new SideMap<Game, St>('samlook.STATE');
 const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
 
+/** his head is his own to turn */
+function free(g: Game): boolean {
+  const pl = g.player;
+  return !pl.down && !pl.sprinting && !pl.holding && !pl.takedown && !pl.kick && !pl.picking && !pl.wanding && !pl.coding && !pl.wall && !pl.dragging && !pl.doorMove && !pl.breakerMove && !g.touring && !g.puppet && pl.char.anim.upper !== 'aim';
+}
 /** metres to a man his head could go to (Infinity: not one) — `deg` = how far round from his body's facing, 180 = anywhere */
 function reach(g: Game, gd: Guard, maxM: number, deg: number): number {
   if (!closeSubject(g, gd)) return Infinity;

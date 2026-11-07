@@ -63,7 +63,7 @@
 //   · `pins` is 0 (the game's own men never had to be held), and the console said nothing.
 //
 //   node tools/qa/kitview-levels.cjs    env: PORT (5199) · QUALITY (verylow) · WARM (6) · SCALE (2) · LEVEL (comma list of level names; default: every
-//       levels/<name>.json with a block AND `office`, the bundled office — its block is levels/office.scenarios.ts, read through bun — the look twins left to
+//       levels/<name>.json with a block (`office`, the bundled office, among them) — the look twins left to
 //       the page: it opens a level in its default look) · WAY (1-based; default: each of the block's) · LOOK=plain (the file as named, not its look twin)
 //       · KIND (roomclear | nightbreach | rescue | quiet | solo: the mission asked for; default: the level's own first of those — the bundled OFFICE: every
 //         kind its one block serves, a run each: the room clear, the rescue, the night breach). `KIND=solo LEVEL=<name>` is the plain night ON THAT FILE
@@ -121,8 +121,6 @@ const SAM = ['weapon', 'light', 'smoke', 'bangs', 'frags', 'charges', 'wand', 'c
 // the level-ways: every level file with a block (a look twin is the page's to open: `<name>-gwot` is asked about only by name)
 const asked = (process.env.LEVEL || '').split(',').map(s => s.trim().replace(/\.json$/, '')).filter(Boolean);
 const names = asked.length ? asked : [...fs.readdirSync(DIR).filter(f => f.endsWith('.json') && !f.endsWith('-gwot.json') && !f.includes('.lint.') && f !== 'office.json').map(f => f.slice(0, -5)), 'office'].sort();
-/** the bundled office's scenario data is code (levels/office.scenarios.ts): read through bun, the repo's own runner */
-const officeScenarios = () => { try { return JSON.parse(require('child_process').execFileSync('bun', ['-e', `import { OFFICE_SCENARIOS as S } from ${JSON.stringify(path.join(DIR, 'office.scenarios.ts'))}; console.log(JSON.stringify(S));`], { encoding: 'utf8' })); } catch (e) { console.log(`(the office's scenarios could not be read through bun: ${String(e).slice(0, 160)})`); return {}; } };
 /** THE MISSION'S OWN LINK (no leading '?'): the mission list's row of that kind on that level (none: a row of the kind's own size) deployed with `n` teammates, built
  *  by the two functions the start page builds it with (scene/scenarios.ts scenarioQuery, game/loadout.ts squadSearch) — through bun, the repo's own runner. The
  *  solo night's is `solo` (ui/missions.ts SOLO_KEY). A link that cannot be built is no run: the tool stops (exit 1). */
@@ -135,7 +133,7 @@ const missionQuery = (name, kind, n) => { if (kind === 'solo') return name === '
   catch (e) { console.log(`kitview-levels: the mission's own link for ${name} (${kind}, ${n}) could not be built through bun: ${String(e).slice(0, 300)}`); process.exit(1); } };
 const WAYS = [];
 for (const name of names) { let S;
-  if (name === 'office') S = officeScenarios(); else { try { S = JSON.parse(fs.readFileSync(path.join(DIR, `${name}.json`), 'utf8')).scenarios || {}; } catch { continue; } }
+  try { S = JSON.parse(fs.readFileSync(path.join(DIR, `${name}.json`), 'utf8')).scenarios || {}; } catch { continue; }
   const K = S.kitView; if (!K || !Array.isArray(K.ways)) continue;
   // (the bundled office's ONE block is staged by three kinds of mission, each from its own start: by default each is run — a rescue and the night breach stage way 1)
   const first = S.roomClear ? 'roomclear' : S.rescue ? 'rescue' : S.nightBreach ? 'nightbreach' : S.quiet ? 'quiet' : 'solo';

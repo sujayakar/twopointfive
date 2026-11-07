@@ -69,7 +69,10 @@ export interface Stood {
   W: Headless; warnings: string[];
   /** one tick on the seats' records (src/net/step.ts), the state word folded after it */
   step(cmds: PlayerCmd[]): void;
-  /** the chained state word after the last tick (game/digest.ts rawBits) */
+  /** a run of steps between which the caller reads nothing of `W.game` begins / ends (src/net/step.ts netQuiet): the copy this process holds is brought
+   *  up to the game as the run ends, and `ended()` and anything read off `W.game` are of that moment */
+  quiet(on: boolean): void;
+  /** the chained state word after the last tick (src/net/step.ts netWord) */
   word(): string;
   /** how the mission ended, by the game's own verdict (game/verdict.ts): null while it is being played */
   ended(): Outcome | null;
@@ -77,6 +80,7 @@ export interface Stood {
 }
 
 export async function standRecipe(recipe: Recipe): Promise<Stood> {
+  process.env.RH_QUIET = '1';   // (the host's quiet run is asked for by name, tools/blitz/rust-host.ts quietBegin: a networked game's machines step in them)
   const { recipeWhy } = await import(`${ROOT}/src/net/wire.ts`);
   { const why = recipeWhy(recipe) || levelWhy((recipe as { levelFile?: string }).levelFile); if (why) throw new Error(`no networked game can be stood from this recipe: ${why}`); }   // (…a recipe a server sent names its level the same way)
   const { rerun } = await import('../qa/rerun.ts');
@@ -86,12 +90,12 @@ export async function standRecipe(recipe: Recipe): Promise<Stood> {
   if (R.refuse || !R.W) throw new Error(`the game could not be stood from its recipe: ${R.refuse}`);
   const W = R.W, g = W.game;
   { const S = g.sensors as object; if (Object.hasOwn(S, 'read')) delete (S as { read?: unknown }).read; }   // (the re-run serves the sensors off its tape; this game answers its own, SENSE.cpu)
-  const { netStep, netSeats } = await import(`${ROOT}/src/net/step.ts`), { rawBits, RAW_BITS_SEED } = await import(`${ROOT}/src/game/digest.ts`), { activeScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`);
+  const { netStep, netSeats, netWord, netQuiet, NET_WORD_SEED } = await import(`${ROOT}/src/net/step.ts`), { activeScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`);
   if (activeScenario(g) !== recipe.scenario) throw new Error(`the recipe's mission (${recipe.scenario}) did not come up here (${activeScenario(g) ?? 'none'} is up): ${(R.report?.warnings ?? []).find((w: string) => w.includes('did not start')) ?? 'another build or level than the recipe\'s'}`);
   netSeats(g);
-  let word: number = RAW_BITS_SEED;
+  let word: number = NET_WORD_SEED;
   const out: Stood = { W, warnings: R.report?.warnings ?? [], ticks: 0,
-    step(cmds) { netStep(g, W.engine, cmds); word = rawBits(g, word); out.ticks++; },
+    step(cmds) { netStep(g, W.engine, cmds); word = netWord(g, word); out.ticks++; }, quiet: on => netQuiet(g, on),
     word: () => word.toString(36), ended: () => { const V = g.verdict.result; return V ? { won: V.won, end: V.word, why: V.why } : null; } };
   return out;
 }

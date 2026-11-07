@@ -117,7 +117,6 @@ async function one(seed: number, arm: Arm, cap: number, verbose: boolean, levelF
   const { DEVICE_DEFAULTS } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-  const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
   const { outThrough } = await import(`${ROOT}/src/game/quiet.ts`);
   let closeLethal: (g: any) => boolean = () => false; try { closeLethal = (await import(`${ROOT}/src/game/close.ts`)).closeLethal ?? closeLethal; } catch { /* a build from before the two-button blow */ }
@@ -132,7 +131,7 @@ async function one(seed: number, arm: Arm, cap: number, verbose: boolean, levelF
   try {
     Math.random = seeded(0x9137 + seed * 7919);   // (playthrough.ts's own seeding, solo-night.ts's: a seed is the same dice there and here)
     const file = levelFile.includes('/') ? resolve(levelFile) : resolve(ROOT, 'levels', levelFile);
-    const levelOf = (): any => { const data = parseLevelData(readFileSync(file, 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); };
+    const levelOf = (): any => { const data = parseLevelData(readFileSync(file, 'utf8')); return loadLevel(data); };
     hush(); const W: any = await standUp({ uploadEvery: 4, level: levelOf() }); unhush();
     g = W.game; const I = W.input, cam = W.cam;
     g.godMode = false; g.tune.chaos = 0.5;

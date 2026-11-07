@@ -3325,44 +3325,12 @@
  },
  {
   "path": "Weather & wind ▸ Wind",
-  "kind": "toggle",
-  "label": "wind: vents",
-  "title": "the level's HVAC diffusers blow at all (levels/office.json vents[]: six in the office — two over papered cubicle desks, the middle aisle, the corridor by the server door, the break room, the server room's cold aisle; on the mains, so a blackout spins them down; two cycle slowly)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Weather & wind ▸ Wind",
   "kind": "slider",
   "label": "wind: vent speed ×",
   "min": 0,
   "max": 3,
   "step": 0.05,
   "title": "× every vent's authored face speed (2‥2.8 m/s: an office diffuser; the air halves by its reach and is gone by 2.5 × it, a fifth of the face speed on the floor under a ceiling one). 3 = a wind tunnel (default 1)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Weather & wind ▸ Wind",
-  "kind": "toggle",
-  "label": "wind: storm outdoors",
-  "title": "the weather's wind (the rows above) moves the outdoor air: smoke popped in the lot drifts downwind, dust off the facade goes with it, the moths shelter in a gale — nothing inside the two roofed footprints but what comes through an open door",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Weather & wind ▸ Wind",
-  "kind": "toggle",
-  "label": "wind: door gusts",
-  "title": "an exterior door standing open in the storm lets a gust in along its inward normal ∝ how far the leaf is open × how square the wind stands to that face (a third of it whatever the bearing) — reach 2.2 m: the plume by the open fire exit leans into the room",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Weather & wind ▸ Wind",
-  "kind": "toggle",
-  "label": "wind: gusts",
-  "title": "every source × (1 ± amp) on a slow value noise of the game clock (deterministic — nobody's dice): vents ± 0.25, the storm ± 0.35. Off = dead steady jets",
   "def": false,
   "extra": ""
  },

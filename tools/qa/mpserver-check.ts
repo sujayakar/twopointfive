@@ -1,7 +1,7 @@
 // THE GAME SERVER, CHECKED (src/net/, tools/mp/; docs/agents/net.md): a server process and scripted clients over REAL WebSockets on this machine, plus the
 // input rule on its own. Not game code: it starts processes and reads what they print.
 //   bun run tools/qa/mpserver-check.ts                    every line below
-//   MPSERVER_BREAK=1 bun run tools/qa/mpserver-check.ts   the red path: the seated client flips the last bit of its own man's place after tick 90 — the lines
+//   MPSERVER_BREAK=1 bun run tools/qa/mpserver-check.ts   the red path: the seated client steps one record with another walk key than the server ran after tick 90 — the lines
 //                                                         that hold its state words against the server's must FAIL
 //   --setup '{"scenario":"?rescue","seed":3}'             another mission (default: the four-man room clear in the office, seed 7)
 // THE LINES:

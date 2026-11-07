@@ -158,7 +158,9 @@ export function gunTurn(turn: Guard[], first: Guard): Guard[] {
 export function gunLast(men: Guard[]): Guard[] { return goneWithTick('gunLast') as any; }
 /** roomfight.ts: the gap between a blinded defender's rounds fired where the room was — the staging's own for a gun that fires automatic, the gun's own
  *  rate for one that fires a round a pull (a dealt pistol is not emptied at a carbine's rate) */
-export function gunBlindGap(gd: Guard, every: number): number { return goneWithTick('gunBlindGap') as any; }
+export function gunBlindGap(gd: Guard, every: number): number {
+  const d = gd.weapon.def; return GUNROLES.on && !BREAK && !d.modes.includes('auto') ? Math.max(every, d.cd) : every;
+}
 /** cover.ts tick(): what an opening `d` metres off is worth to HIM over another man, for his gun — the far one to a long gun, the near one to a pistol alone
  *  or a room gun (half as much). On the deal's own scale; 0 for a rifle, and with the switch off. */
 export function gunLane(gd: Guard, d: number, reach: number): number { return goneWithTick('gunLane') as any; }

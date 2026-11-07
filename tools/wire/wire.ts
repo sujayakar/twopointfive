@@ -1,0 +1,75 @@
+// THE WIRE'S TABLE: what the page reads of the Rust game. `tools/blitz/schema.json` declares it, `tools/wire/fields.json` says which of it goes every tick, and a person changes them with this tool. Nothing here reads the game's TypeScript or the Rust types: a state only Rust uses needs no line in the table at all.
+//   bun run tools/wire/wire.ts gen [--check]                                        write puppet.rs, puppet-apply.ts, puppet-lists.json, out-dispatch.ts and the stamp · --check: exit 1 where a file would change
+//   bun run tools/wire/wire.ts add <mod::Type.field> --ty <type> [--ts <name>] [--expr <e>] [--start-only]    a field the page reads; refused if nothing the page runs reads that name
+//   bun run tools/wire/wire.ts add-struct <mod::Type> <field:type,...>              a struct of the table, new: its line on the wire and its write by path
+//   bun run tools/wire/wire.ts drop <mod::Type.field>...                            fields off the wire · --file <list> takes the names one a line
+//   tools/blitz/rust.sh rust bun run tools/wire/cost.ts [address]                   what a tick's export and apply cost now, on the page's list
+// An enum arm needs nothing: an arm the table does not know goes out as the tag 0xffff, and the page keeps what it had.
+import { execFileSync } from 'node:child_process';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+const ROOT = join(import.meta.dir, '../..'), BLITZ = join(ROOT, 'tools/blitz'), HERE = import.meta.dir, SCHEMA = join(BLITZ, 'schema.json'), FIELDS = join(HERE, 'fields.json');
+const die = (s: string): never => { console.error(`wire: ${s}`); process.exit(1); };
+const rustFile = (name: string): string => { const hits = readdirSync(join(ROOT, 'rust')).map(c => join(ROOT, 'rust', c, 'src', name)).filter(existsSync); if (hits.length !== 1) die(`${name} is in ${hits.length} crates`); return hits[0]; };
+const read = (p: string) => readFileSync(p, 'utf8'), readJ = (p: string) => JSON.parse(read(p));
+const fnv = (s: string) => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193) >>> 0; return h >>> 0; };
+// THE STATE WORDS: a hash of the whole game, a word a part, for two machines of one networked game to compare. What a host hands in and differs by machine is left out, and so is what is only a step's output
+const HOSTS_OWN = new Set(['out', 'cmd_buf', 'local_seat', 'view_proj', 'puppet', 'm_per_px', 'taps', 'seat', 'tab.camera', 'tab.input', 'tab.cmd_seat', 'engine.settings', 'engine.view_focus', 'engine.effective_scale', 'engine.sharp_on']);
+function stateWords(io: string): string { const fieldsOf = (path: string): string[] => { const l = io.split('\n').find(x => x.startsWith(`impl Io for ${path} {`)) ?? die(`no line for ${path}`) as never, w = l.slice(0, l.indexOf(' fn r(')); return [...w.matchAll(/self\.([a-z_0-9]+)\.w\(o\)/g)].map(m => m[1]); };
+  const P: [string, string][] = []; const push = (name: string, ex: string) => { if (!HOSTS_OWN.has(name)) P.push([name, ex]); };
+  for (const f of fieldsOf('crate::game::Game')) { if (f === 'm') for (const x of fieldsOf('crate::game::Mods')) push(`m.${x}`, `g.m.${x}`); else if (f === 'engine') for (const x of fieldsOf('crate::host_api::HostApi')) push(`engine.${x}`, `g.engine.${x}`); else push(f, `g.${f}`); }
+  const ex = io.slice(io.indexOf('pub fn export(g: &crate::game::Game)')), end = ex.indexOf('o.b }'); for (const m of ex.slice(0, end).matchAll(/\bg\.([a-z_0-9.]+)\.w\(&mut o\)/g)) push(m[1], `g.${m[1]}`);
+  // A SEAT'S SET BY SEAT, wherever it lies: on Game for the seat standing there (which differs by machine), in `cmd_seat[k].own` for the rest. A word a key of the set, all seats in their order
+  const setKeys = fieldsOf('crate::seats::SeatSet').filter(k => k !== 'seat' && !HOSTS_OWN.has(k)), inSet = new Set(fieldsOf('crate::seats::SeatSet')); for (let i = P.length - 1; i >= 0; i--) if (inSet.has(P[i][0])) P.splice(i, 1);
+  for (const k of setKeys) P.push([`seats.${k}`, `{ for s in g.tab.cmd_seat.ids() { if s == g.seat { g.${k}.w(o); } else if let Some(x) = &g.tab.cmd_seat[s].own { x.${k}.w(o); } } }`]);
+  const L = ['//! A hash of the whole game, a word a part, for two machines of one networked game to compare. Written by tools/wire/wire.ts from the lines of the wire. Left out: what a host hands in and differs by machine, and what is only a step\'s output.', 'use crate::io::{Io, W};', 'use alloc::vec::Vec;', `pub const STATE_NAMES: [&str; ${P.length}] = [${P.map(p => JSON.stringify(p[0])).join(', ')}];`,
+    'fn word(b: &[u8]) -> u32 { let mut h: u64 = 0xcbf29ce484222325 ^ (b.len() as u64); let mut c = b.chunks_exact(8); for x in &mut c { let mut a = [0u8; 8]; a.copy_from_slice(x); h = (h ^ u64::from_le_bytes(a)).wrapping_mul(0x100000001b3); h ^= h >> 29; } for x in c.remainder() { h = (h ^ *x as u64).wrapping_mul(0x100000001b3); } (h ^ (h >> 32)) as u32 }',
+    '/// `o` and `out` are kept by the caller, so that a call grows nothing once they have reached their size', 'pub fn state_words(g: &crate::game::Game, o: &mut W, out: &mut Vec<u32>) { out.clear();', ...P.map(p => `    o.b.clear(); ${p[1].startsWith('{') ? p[1] : `${p[1]}.w(o);`} out.push(word(&o.b));`), '    o.b.clear(); }', ''];
+  return L.join('\n'); }
+/** every generated file, and the stamp both halves carry */
+function gen(check: boolean): void { const T = mkdtempSync(join(tmpdir(), 'wire-')); mkdirSync(join(T, 'bridge'));
+  const S0 = read(SCHEMA); writeFileSync(join(T, 'bridge/schema.json'), S0);
+  execFileSync(process.execPath, ['run', join(HERE, 'puppetgen.cjs'), T, FIELDS, ROOT], { stdio: ['ignore', 'pipe', 'inherit'] });
+  const S = readJ(join(T, 'bridge/schema.json')); delete S.layout;
+  const O = { 'bridge/puppet-apply.ts': join(BLITZ, 'puppet-apply.ts'), 'bridge/puppet-lists.json': join(BLITZ, 'puppet-lists.json'), 'bridge/out-dispatch.ts': join(BLITZ, 'out-dispatch.ts'), 'puppet.rs': rustFile('puppet.rs') } as Record<string, string>;
+  const words = JSON.stringify(S) + Object.keys(O).map(k => read(join(T, k))).join(''); const layout = fnv(words); S.layout = layout;
+  const ioP = rustFile('io.rs'), io0 = read(ioP), io1 = io0.replace(/\npub const LAYOUT: u32 = \d+;\n?/, '').trimEnd() + `\npub const LAYOUT: u32 = ${layout};\n`;
+  const swP = join(ROOT, 'rust/game/src/state_words.rs'); const out: [string, string][] = [[SCHEMA, JSON.stringify(S)], [ioP, io1], [swP, stateWords(io1)], ...Object.entries(O).map(([k, p]) => [p, read(join(T, k))] as [string, string])];
+  let moved = 0; for (const [p, t] of out) { const was = existsSync(p) ? read(p) : ''; if (was === t) continue; moved++; if (check) console.log(`wire: ${p.slice(ROOT.length + 1)} would change`); else writeFileSync(p, t); }
+  rmSync(T, { recursive: true, force: true }); console.log(`wire: ${moved ? `${moved} files ${check ? 'differ' : 'written'}` : 'no file changes'}; layout ${layout}`); if (check && moved) process.exit(1); }
+const camel = (x: string) => x.replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase());
+const parseQ = (q: string) => { const m = q.match(/^([a-z_0-9]+)::([A-Za-z_0-9]+)\.([a-z_0-9_]+)$/); if (!m) die(`${q}: write it module::Type.field`); return { mod: m![1], name: m![2], f: m![3], path: `crate::${m![1]}::${m![2]}` }; };
+const edit = (t: string, a: string | RegExp, b: string, what: string) => { const n = t.replace(a, b); if (n === t) die(`${what}: its line on the wire is not of a form this tool knows`); return n; };
+function linesOf(io: string[], kind: 'Io' | 'Poke', path: string): number { const h = `impl ${kind} for ${path} {`; const k = io.findIndex(l => l.startsWith(h)); if (k < 0) die(`${path} has no ${kind} line on the wire`); return k; }
+/** every source file the page or a tool runs, and whether one reads this name */
+function readers(name: string): string[] { const out: string[] = [], re = new RegExp(`(\\.|\\?\\.)${name}\\b(?!\\s*=[^=>])|\\['${name}'\\]|\\b${name}\\s*[,}]`); const walk = (d: string) => { for (const e of readdirSync(d)) { const p = join(d, e); if (statSync(p).isDirectory()) walk(p); else if (/\.tsx?$/.test(e) && re.test(read(p))) out.push(p.slice(ROOT.length + 1)); } }; walk(join(ROOT, 'src')); return out; }
+function widthOf(ty: string): string { const W: Record<string, number> = { f64: 8, f32: 4, u32: 4, i32: 4, usize: 4, bool: 1, u8: 1, i8: 1, u16: 2, i16: 2 }; return W[ty] !== undefined ? `${W[ty]} bytes when it moves` : 'its encoded bytes when it moves'; }
+function add(q: string, ty: string, ts: string | undefined, expr: string | undefined, startOnly: boolean): void { const { mod, name, f, path } = parseQ(q); const S = readJ(SCHEMA), T = S.types[path]; if (!T || T.k !== 'struct') die(`${path} is no struct of the table: \`wire add-struct\` first`);
+  if (T.fields.some((x: any) => x.rust === f)) die(`${q} is already on the wire`);
+  const tsName = ts ?? camel(f), R = readers(tsName); if (!R.length) die(`nothing under src/ reads '.${tsName}'. A state only Rust uses needs no line in the table: it is a field in Rust and nothing more. If the page is about to read it, write the reader first, or give the name it reads with --ts.`);
+  const row: any = { rust: f, ty, ts: tsName }; if (expr) row.expr = expr; T.fields.push(row);
+  const ioP = rustFile('io.rs'), io = read(ioP).split('\n'), k = linesOf(io, 'Io', path); let l = io[k];
+  l = edit(l, ' } fn r(i: &mut R) -> Self {', ` self.${f}.w(o); } fn r(i: &mut R) -> Self {`, q);
+  l = l.includes(' s } fn ri(') ? edit(l, ' s } fn ri(', ` s.${f} = Io::r(i); s } fn ri(`, q) : edit(l, ', } } fn ri(', `, ${f}: Io::r(i), } } fn ri(`, q);
+  l = edit(l, / \} \}$/, ` self.${f}.ri(i); } }`, q); io[k] = l;
+  const p = linesOf(io, 'Poke', path); io[p] = edit(io[p], ' k => panic!', ` ${T.fields.length - 1} => self.${f}.poke(i), k => panic!`, q); writeFileSync(ioP, io.join('\n'));
+  writeFileSync(SCHEMA, JSON.stringify(S)); const L = readJ(FIELDS), before = L.pageTick.length; for (const k2 of startOnly ? ['atStartOnly'] : ['everyTick', 'pageTick']) if (!L[k2].includes(`${mod}::${name}.${f}`)) L[k2].push(`${mod}::${name}.${f}`); writeFileSync(FIELDS, JSON.stringify(L, null, 0)); gen(false);
+  console.log(`wire: ${q} is on the page's list (${startOnly ? 'at a start only' : `${before} fields a tick, now ${L.pageTick.length}`}): it costs ${widthOf(ty)}. It is read by ${R.slice(0, 3).join(', ')}${R.length > 3 ? ` and ${R.length - 3} more` : ''}. Build the module, then \`tools/wire/cost.ts\` says what a tick costs now.`); }
+function addStruct(path0: string, fields: string): void { const m = path0.match(/^([a-z_0-9]+)::([A-Za-z_0-9]+)$/); if (!m) die(`${path0}: write it module::Type`); const path = `crate::${m![1]}::${m![2]}`, S = readJ(SCHEMA); if (S.types[path]) die(`${path} is already in the table`);
+  const F = fields.split(',').map(x => { const i = x.indexOf(':'); return { rust: x.slice(0, i).trim(), ty: x.slice(i + 1).trim(), ts: camel(x.slice(0, i).trim()) }; }); S.types[path] = { k: 'struct', mod: m![1], name: m![2], fields: F }; writeFileSync(SCHEMA, JSON.stringify(S));
+  const ioP = rustFile('io.rs'), t = read(ioP).replace(/\npub const LAYOUT: u32 = \d+;\n?/, '').trimEnd(); const w = F.map(x => `self.${x.rust}.w(o);`).join(' '), r = F.map(x => `s.${x.rust} = Io::r(i);`).join(' '), ri = F.map(x => `self.${x.rust}.ri(i);`).join(' '), arms = F.map((x, i) => `${i} => self.${x.rust}.poke(i),`).join(' ');
+  writeFileSync(ioP, `${t}\nimpl Io for ${path} { fn w(&self, o: &mut W) { ${w} } fn r(i: &mut R) -> Self { let mut s = Self::default(); ${r} s } fn ri(&mut self, i: &mut R) { ${ri} } }\nimpl Poke for ${path} { fn poke(&mut self, i: &mut R) { match u16::r(i) { 0xffff => self.ri(i), ${arms} k => panic!("bridge: no field {} of ${m![2]}", k) } } }\n`); gen(false); console.log(`wire: ${path} is in the table, with ${F.length} fields`); }
+function drop(Q: string[]): void { const S = readJ(SCHEMA), L = readJ(FIELDS), ioP = rustFile('io.rs'), io = read(ioP).split('\n'), index = new Map<string, number>(); io.forEach((l, i) => { const m = l.match(/^impl (Io|Poke) for (crate::[A-Za-z_0-9:]+) \{/); if (m) index.set(`${m[1]} ${m[2]}`, i); }); const set = new Set(Q); let n = 0, listed = 0;
+  const lineOf = (kind: string, path: string) => { const k = index.get(`${kind} ${path}`); if (k === undefined) die(`${path} has no ${kind} line on the wire`); return k!; };
+  for (const q of Q) { const { f, path } = parseQ(q), T = S.types[path]; if (!T) die(`${path} is no type of the table`); const at = T.fields.findIndex((x: any) => x.rust === f); if (at < 0) die(`${q} is not on the wire`); T.fields.splice(at, 1); n++;
+    const k = lineOf('Io', path); let l = io[k]; for (const [a, b] of [[` self.${f}.w(o);`, ''], [` s.${f} = Io::r(i);`, ''], [` ${f}: Io::r(i),`, ''], [` self.${f}.ri(i);`, '']]) l = l.split(a).join(b); if (new RegExp(`\\b${f}\\b`).test(l)) die(`${q}: its line on the wire is not of a form this tool knows`); io[k] = l;
+    const p = lineOf('Poke', path); let i2 = 0; io[p] = io[p].replace(` ${at} => self.${f}.poke(i),`, '').replace(/ \d+ => self\.([a-z_0-9]+)\.poke\(i\),/g, (_, x) => ` ${i2++} => self.${x}.poke(i),`); }
+  for (const k of ['everyTick', 'pageTick', 'atStartOnly']) { const b = L[k].length; L[k] = L[k].filter((x: string) => !set.has(x)); listed += b - L[k].length; } S.knobSettled = (S.knobSettled ?? []).filter((x: string) => !set.has(x));
+  writeFileSync(ioP, io.join('\n')); writeFileSync(SCHEMA, JSON.stringify(S)); writeFileSync(FIELDS, JSON.stringify(L, null, 0)); gen(false); console.log(`wire: ${n} fields off the wire (${listed} list rows)`); }
+const A = process.argv.slice(2), opt = (n: string) => { const i = A.indexOf(n); return i < 0 ? undefined : A[i + 1]; };
+switch (A[0]) { case 'gen': gen(A.includes('--check')); break;
+  case 'add': add(A[1], opt('--ty') ?? die('add: --ty') as never, opt('--ts'), opt('--expr'), A.includes('--start-only')); break;
+  case 'add-struct': addStruct(A[1], A[2]); break;
+  case 'drop': { const f = opt('--file'); drop(f ? read(f).split('\n').map(x => x.trim()).filter(Boolean) : A.slice(1)); break; }
+  default: console.error(read(import.meta.path).split('\n').slice(0, 7).join('\n')); process.exit(64); }

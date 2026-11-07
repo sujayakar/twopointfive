@@ -385,7 +385,7 @@ export class GlassBreak {
     return changed;
   }
   /** a stun charge went off at `at` (glass.ts updateGlass, off the 'bang' event): a blast at bangPower */
-  bang(at: Vec3, who: number): number { return goneWithTick('GlassBreak.bang') as any; }
+  bang(at: Vec3, who: number): number { return this.blast(at, { radius: GLASSBREAK.blastM, power: GLASSBREAK.bangPower, who }); }
 
   // ---------------------------------------------------------------- a burst's view of the glass (frag.ts: fragments are stopped by glass that stands, and by none that the blast took)
   private viewOf: { kind: 'blown' | 'wary' | 'counted'; from: Vec3; size: GlassBlastOpts } | null = null;

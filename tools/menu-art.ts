@@ -248,12 +248,11 @@ function levelOf(file: string): { d: Data; file: string } {
   const look = file.replace(/\.json$/, '-gwot.json'), f = existsSync(join(ROOT, 'levels', look)) ? look : file;
   return { d: JSON.parse(readFileSync(join(ROOT, 'levels', f), 'utf8')) as Data, file: f };
 }
-async function officeTeams(): Promise<NonNullable<Data['scenarios']>> { const m = await import('../levels/office.scenarios') as { OFFICE_SCENARIOS: NonNullable<Data['scenarios']> }; return m.OFFICE_SCENARIOS; }
 
 async function render(m: Mission, O: Opts): Promise<Cam> {
   const file = m.scenario?.level ?? 'office.json', { d } = levelOf(file), pin: Pin = { ...(PIN[m.id] ?? {}), ...(O.set[m.id] ?? {}) }, M: Mood = { ...(MOODS[m.group ?? 'raids'] ?? NIGHT), ...pin } as Mood;
   const S = new Scene(), lampsAll = (pin.lamps ?? 'all') === 'all'; men.length = 0; spots.length = 0; areas.length = 0; seed = hash(m.id);
-  const sc = file === 'office.json' ? await officeTeams() : d.scenarios ?? {}, kind = m.scenario?.kind;
+  const sc = d.scenarios ?? {}, kind = m.scenario?.kind;
   // the level: boxes, door leaves (a few ajar: light through an opening door), furniture
   const lit = new Map<string, number[]>(); for (const s of d.switchables ?? []) if (s.on !== false || lampsAll) for (const id of s.boxes) lit.set(id, s.baseEmissive ?? [8, 7.6, 7]);
   const dark = new Set<string>(); for (const s of d.switchables ?? []) if (s.on === false && !lampsAll) for (const id of s.boxes) dark.add(id);

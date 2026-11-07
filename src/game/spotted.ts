@@ -54,7 +54,7 @@ import type { Vec3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import './teams';
 import { underSilence, squadSilent } from './silent';
-import './guards';
+import { lightEstimateAt } from './guards';
 import { PAIRUP, keptOn } from './pairup';
 import './combat';
 import './sneak';
@@ -122,8 +122,11 @@ export const SPOTTED_STATS = { wary: 0, caught: 0, calm: 0, slips: 0, freezes: 0
 /** what changed, newest last (QA; the panel's summary) */
 export const SPOTTED_LOG: { t: number; who: string; to: SpottedMode; what: string | null; of: string | null }[] = [];
 
+const flat = (a: ArrayLike<number>, b: ArrayLike<number>) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const NONE: never[] = [];
 export { shotLine as spottedShotLine };
+/** the meter's reading for a man knelt at `q` (the CPU's direct light — what a teammate's own meter falls back on) */
+const litAt = (g: Game, q: ArrayLike<number>) => g.visibilityOf(lightEstimateAt(g, [q[0], 0.9, q[2]]));
 const live = (g: Game, gd: Guard) => SPOTTED.on && underSilence(g, gd) && gd.state !== 'dead';
 
 // ------------------------------------------------------------ what the rest of the game asks (each a return on its first line with the switch off)
@@ -143,8 +146,43 @@ function set(g: Game, gd: Guard, M: Man, to: SpottedMode, of: Guard | null) {
   M.mode = to; M.since = g.time; M.spot = null; M.what = null; M.askT = -1; M.trail = false; M.eyes = null; M.told = false; M.realT = -1; SPOTTED_STATS[to]++;
   SPOTTED_LOG.push({ t: g.time, who: gd.callsign, to, what: null, of: of?.callsign ?? null }); if (SPOTTED_LOG.length > 200) SPOTTED_LOG.splice(0, 100);
 }
+/** candidate spots round `p`, nearest first: on the floor, a straight walk from where he stands, off every doorway and off Sam */
+function* ring(g: Game, p: Vec3, maxM: number): Generator<Vec3> {
+  const nav = g.col.nav, sam = g.player.char.pos;
+  for (let r = 0.8; r <= maxM + 1e-6; r += 0.8) for (let k = 0; k < 12; k++) {
+    const a = k * Math.PI / 6 + r * 0.7, q: Vec3 = [p[0] + Math.sin(a) * r, 0, p[2] + Math.cos(a) * r];
+    if (nav.isBlocked(q[0], q[2]) || !nav.walkable(p, q) || flat(q, sam) < 0.9) continue;
+    if (g.doors.list.some(d => flat(q, d.frameCentre) < 1.0)) continue;
+    yield q;
+  }
+}
+/** between Sam's gun and the man it may be on (a lane a hand wider than a body) */
+function inSamsLine(g: Game, q: Vec3, h: Guard): boolean {
+  const a = g.player.char.pos, b = h.char.pos, dx = b[0] - a[0], dz = b[2] - a[2], L = Math.hypot(dx, dz); if (L < 0.5) return false;
+  const al = ((q[0] - a[0]) * dx + (q[2] - a[2]) * dz) / L, side = Math.abs((q[0] - a[0]) * dz - (q[2] - a[2]) * dx) / L;
+  return al > 0 && al < L + 1 && side < 0.7;
+}
 /** a round from a man stood at `q` to a body at `hp` (chest or head height `y`), stopped a body's breadth short of it as guards.ts clearShot stops */
-function shotLine(g: Game, q: ArrayLike<number>, hp: ArrayLike<number>, y: number): boolean { return goneWithTick('shotLine') as any; }
+function shotLine(g: Game, q: ArrayLike<number>, hp: ArrayLike<number>, y: number): boolean {
+  const dx = hp[0] - q[0], dz = hp[2] - q[2], L = Math.hypot(dx, dz); if (L < 0.5) return true; const k = (L - 0.3) / L;
+  return !g.col.shotBlocked([q[0], 1.35, q[2]], [q[0] + dx * k, 1.35 + (y - 1.35) * k, q[2] + dz * k]);
+}
+/** CAUGHT: following with no SHOT on the man who has them (a wall between them, or a desk he can see over and not shoot over) → the nearest spot that has
+ *  one, off Sam's own line of fire and never nearer the man than a few strides */
+function cover(g: Game, gd: Guard, M: Man) {
+  const K = SPOTTED, h = M.by, p = gd.char.pos; if (!K.step || !h || h.state === 'dead') { M.spot = null; M.what = null; return; }
+  // a shot from q: nothing solid on the line, and nobody of ours standing in it (the room fight's own lane test — with Sam between him and the man his gun
+  // stays down, so a line THROUGH Sam is no line)
+  const hp = h.char.pos, chest: Vec3 = [hp[0], 1.2, hp[2]], masked = (q: ArrayLike<number>) => !!g.fight?.friendInLine([q[0], 1.4, q[2]], chest, gd);
+  const shot = (q: ArrayLike<number>) => (shotLine(g, q, hp, 1.2) || shotLine(g, q, hp, 1.6)) && !masked(q);
+  if (M.what === 'step' && M.spot && shot(M.spot) && !inSamsLine(g, M.spot, h)) return;   // (on his way to it, or on it)
+  if (shot(p)) { M.spot = null; M.what = null; return; }
+  let best: Vec3 | null = null, bs = Infinity;
+  for (const q of ring(g, p, K.stepM)) { if (!shot(q) || inSamsLine(g, q, h) || flat(q, hp) < 2.5) continue;
+    const cost = flat(p, q) + (litAt(g, q) >= K.litAt ? 1.5 : 0); if (cost < bs) { bs = cost; best = q; } }
+  if (best) SPOTTED_STATS.steps++;
+  M.spot = best; M.what = best ? 'step' : null;
+}
 /** ASKED FOR (an order layer whose stalk on `foe` has just been blown — the man roused with this teammate a pace or two from his back): go on and take him
  *  by hand, turned to him or not. The same hands, the same limits (inside `takeM`, an alert man only from contact distance, nothing solid between, not with
  *  the floor loud in his ears or a quiet gun in his hands). True: his hands are going on (the caller leaves his feet to spottedFeet). Nothing in this file

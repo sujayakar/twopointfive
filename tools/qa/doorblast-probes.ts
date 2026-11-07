@@ -25,7 +25,6 @@ const { order } = await import(`${ROOT}/src/game/squad.ts`);
 const { doorPt } = await import(`${ROOT}/src/game/doortools.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
 
 const DT = 1 / 60;
 type V3 = [number, number, number];
@@ -39,7 +38,7 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
 }
 const DEFAULTS = { ...JSON.parse(JSON.stringify(DOORBLAST)), on: true };   // (the family is about the switch ON: headless.ts stands every other tool up with it off, and probes.ts puts the knob tables back between probes — so each probe here turns it on for itself)
 const guarded = (fn: () => Promise<boolean>) => async () => { DOORBLAST.on = true; try { return await fn(); } catch (e) { console.log(`- FAIL — the probe threw\n    ${e instanceof Error ? e.stack : String(e)}`); return false; } finally { Object.assign(DOORBLAST, JSON.parse(JSON.stringify(DEFAULTS))); } };
-const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); };
+const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); };
 
 async function rig(seed = 7, level?: string) {
   Math.random = seeded(seed);

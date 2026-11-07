@@ -1,7 +1,7 @@
 // Guard AI: hearing (the same propagation the mixer uses), vision (the player's light-meter irradiance, marched through smoke), patrol / suspicious / alert / search state machine, path following, torch handling, and their barks.
 // (Split out of game.ts mechanically: plain functions taking the Game as their first argument; Game keeps one-line delegators for
 //  anything other files call.)
-import { men, eachSeat, orderOf, ordersOf, viewOfBody } from './seats';
+import { men, eachSeat, orderOf, ordersOf, viewOfBody, seatCount } from './seats';
 import { SideMap, SideSet, GameSideMap, rollbackVar, rollbackRoot } from '../math/side';
 import { openingStart } from './opening';
 import { Vec3, v3, clamp, damp, lerp, smoothstep, DEG } from '../math/vec';
@@ -17,7 +17,7 @@ import { Door } from './doors';
 import { rigLightPose, rigTorchPos, torchCarryDir, torchCarryWant, torchLightDef, RIG, sc20kLightPose } from './rigProps';
 import { radioHand, swapHeld } from './handwork';
 import './mission';
-import { chronAlarm, chronRadio } from './chronicle';
+import { chronLost, chronAlarm, chronRadio } from './chronicle';
 import './combat';
 import { lensClear } from './lighting';
 import './gunwall';
@@ -30,14 +30,14 @@ import { conditionCalm } from './condition';
 import './runner';
 import './darkdoor';
 import './netquiet';
-import { pairSmoke, fightLive, lampGlare, ROOMFIGHT } from './roomfight';
+import { pairSmoke, fightLive, lampGlare, closeLane, ROOMFIGHT } from './roomfight';
 import { isOffice, temperamentOf } from './dialogue';
 import { WORDS, w, wg } from './words';
 import './cues';
 import { SQUADNET } from './squadnet';
 import './suppression';
 import './aim';
-import { spokenName } from './teams';
+import { isHostile, spokenName } from './teams';
 import type { Team } from './teams';
 import type { WeaponId } from './weapons';
 import { nvgSight, nvgDark } from './nvg';
@@ -62,7 +62,7 @@ import './coverfire';
 import { startleTorch } from './startle';
 import './doorforce';
 import './glass';
-import './glasspen';
+import { shotEnergy } from './glasspen';
 import { kitPistol } from './kit';
 import './gunslots';   // (called inside startReloadBeat only)
 import { hourLight, moonLight } from './hours';
@@ -272,6 +272,14 @@ export function nearKnownBody(g: Game, p: Vec3, r = 4): Guard | null {
  *  it ('picked' — or so they read it; found by a hand on the lever). Plain doors say nothing. */
 export function doorTamper(d: Door): 'forced' | 'picked' | null { return !d.def.locked ? null : d.lockBroken ? 'forced' : !d.locked ? 'picked' : null; }
 
+/** The alert chase is over without him: down to 'search' from where he stands — awareness under the alert threshold (re-alerting takes a fresh sighting or sound,
+ *  or alert ↔ search flapped every reactT), every chase clock zeroed for the next one, and the line if there is one. */
+export function dropToSearch(g: Game, gd: Guard, bark: string | null) {
+  gd.state = 'search'; gd.searchT = 0; gd.awareness = Math.min(gd.awareness, 0.8); gd.searchPlan = null;
+  resetChase(gd); gd.path = []; gd.pathGoal = null;   // (the chase's path is not the search's: he sweeps from where he stands, then deals himself the hiding places round the fix — searchPlanFor)
+  if (bark) g.say(gd, bark);
+  chronLost(g, gd);   // the debrief's row: he lost you
+}
 /** Every clock the alert chase keeps, back to a fresh chase: how near he has got to the fix and how long without getting nearer (and which fix that was), how long
  *  without covering ground, how long without eyes on him, how long his line of fire has been blocked, and the side-step's memory of which way went nowhere.
  *  Called entering 'alert', on every fresh sight of Sam, leaving for 'search' — and by the QA probes staging an alert man (tools/qa/probes.ts armAlert). */
@@ -286,19 +294,60 @@ export function resetChase(gd: Guard) { { const __s = RUST_SURFACE; if (__s) { c
  *  it), so the alert branch reads `blocked` and takes him round through the door instead of planting him on the corridor emptying magazines into the pane. */
 /** Where a man's line of fire is judged FROM (clearShot; the carbine probes measure the muzzle against the same point): the gun shoulder — fixed to the body,
  *  so the answer does not swing with a muzzle still coming round — shifted, for a shouldered long gun, by the carriage's own inboard hold. */
-export function shotOrigin(c: Character): Vec3 { return goneWithTick('shotOrigin') as any; }
-export function clearShot(g: Game, c: Character, to: Vec3): boolean { return crossToRust('clearShot', undefined, [g, c, to]) as any; }
+export function shotOrigin(c: Character): Vec3 {
+  // The pistol at arm's length: the gun shoulder — fixed to the body, so the answer does not swing with a muzzle still coming round (once it is on,
+  // shoulder → target is the round's line give or take the arm). A shouldered LONG gun: the trigger-hand wrist itself, which IS on the bore wherever the
+  // maintainer's carriage puts it (anchor between chest and shoulder, held inboard) — re-deriving that geometry from outside drifted 9–11 cm off the real
+  // bore; and the swing concern is the aim model's now (aim.ts gates the round on a settled track), not this line's.
+  if (c.anim.longGun && c.bones.handR) return v3.copy(c.bones.handR);
+  return c.bones.upperArmR ?? v3.add(c.pos, [0, 1.4, 0]);
+}
+export function clearShot(g: Game, c: Character, to: Vec3): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('clearShot', undefined, [g, c, to]); if (__r !== RUST_PASS) return __r as any; } }
+  const from = shotOrigin(c);   // (see shotOrigin: the gun shoulder for the pistol, the trigger-hand wrist on the bore for a long gun)
+  const d = v3.sub(to, from); const L = v3.len(d); if (L < 0.35) return true;   // (pressed against him: nothing can be in between)
+  return !g.col.shotBlocked(from, v3.mad(from, d, (L - 0.3) / L), 0.02, shotEnergy(g, c));   // (GLASS PENETRATION, glasspen.ts: with rounds going through glass the panes across the line are judged by what HIS gun's round has for them — off: undefined, the solid walk)   // 0.3: the body's own breadth round the aim point — anything nearer than that is him, not cover   // (shotBlocked, not segmentBlocked: a pane between them is no shot — see above)
+}
 
+// ------------------------------------------------------------ muzzle discipline: nobody points a pistol at a colleague — it goes to the low ready until the line is clear
+/** metres off a living colleague's body axis inside which a line of aim counts as ON him (widened for a man on the move by MUZZLE_LEAD_SECS of his pace, capped:
+ *  the gun comes down for a man about to walk into the line, not as he meets it); how far past the aim point the line still counts (a man standing just beyond
+ *  the spot being covered is being pointed at too); the reach of 'straight ahead' when there is no point to aim at; and the beat a cleared line stays down before
+ *  the gun comes back up (so a man crossing does not flick it down-up-down) */
+const MUZZLE_CLEAR_M = 0.35, MUZZLE_LEAD_SECS = 0.3, MUZZLE_LEAD_MAX_M = 0.4, MUZZLE_PAST_M = 1.0;
 /** QA hook: set `log` and the alert branch's footwork round a colleague in the line (lineStep: the geometry, each candidate step and what became of it; the
  *  branch the fight took this frame; what the statics and the colleagues pushed back) says what it did, per man per frame (tools/qa: soak --trace, the scrum probe) */
 export const LINE_DEBUG: { log: ((gd: Guard, s: string) => void) | null } = { log: null };
 
+/** where a colleague stands against the aim segment `from` → `to`: t = how far along it his axis projects (0 at the shoulder, 1 at the point), e = his signed
+ *  offset from it (metres, along the flat unit square off the line (−dz, dx)/L — the same side basis lineStep steps along), d = his distance from it in 3D (the
+ *  axis runs soles to crown about his pelvis, so a line over a kneeling man or under one on a desk measures clear), clear = the clearance he is owed
+ *  (MUZZLE_CLEAR_M, more for a man on the move) */
+function lineGeom(from: Vec3, to: Vec3, o: Guard): { t: number; e: number; d: number; clear: number } | null {
+  const dx = to[0] - from[0], dy = to[1] - from[1], dz = to[2] - from[2]; const L2 = dx * dx + dz * dz; if (L2 < 1e-4) return null;
+  const h = o.char.bones.hips ?? o.char.pos; const ax = h[0], az = h[2];
+  const t = ((ax - from[0]) * dx + (az - from[2]) * dz) / L2;
+  const px = from[0] + dx * t, pz = from[2] + dz * t, py = from[1] + dy * t;
+  const L = Math.sqrt(L2); const e = ((ax - from[0]) * -dz + (az - from[2]) * dx) / L;
+  const y0 = o.char.pos[1] + 0.05, y1 = o.char.bones.headTop?.[1] ?? o.char.pos[1] + 1.75; const ddy = py < y0 ? y0 - py : py > y1 ? py - y1 : 0;
+  const clear = MUZZLE_CLEAR_M + Math.min(MUZZLE_LEAD_MAX_M, MUZZLE_LEAD_SECS * Math.hypot(o.char.vel[0], o.char.vel[2]));
+  return { t, e, d: Math.hypot(px - ax, pz - az, ddy), clear };
+}
 /** A living colleague standing in this man's line of aim: the segment from his gun shoulder to `to` (and MUZZLE_PAST_M beyond it) passing within the man's
  *  clearance of his body axis. The nearest such man along the line, or null. The INTENDED line (shoulder → the point he means to cover), not this frame's
  *  muzzle: a gun still swinging round onto its mark, or already lowered, answers the same. `except`: one man the caller has already answered for by better
  *  geometry than this — the colleague in Sam's arm, when the shooter stands behind the pair and the round stops in Sam a body's breadth short of him (the
  *  standoff's flankShot): the 'just beyond the point' rule assumes nothing solid AT the point, and there Sam is. */
-export function colleagueInLine(g: Game, gd: Guard, to: Vec3, except: Guard | null = null): Guard | null { return goneWithTick('colleagueInLine') as any; }
+export function colleagueInLine(g: Game, gd: Guard, to: Vec3, except: Guard | null = null): Guard | null {
+  const c = gd.char; const from = c.bones.upperArmR ?? v3.add(c.pos, [0, 1.4, 0]);
+  const L = Math.hypot(to[0] - from[0], to[2] - from[2]); if (L < 0.01) return null; const tMax = 1 + MUZZLE_PAST_M / L;
+  let best: Guard | null = null, bt = Infinity; const near = gd.team === 'operative' && !!gd.unit && fightLive(g);   // (the team in a room fight: roomfight.ts ROOMFIGHT.closeLane)
+  for (const o of g.guards) {
+    if (o === gd || o === except || o.state === 'dead' || !o.char.alive || isHostile(gd.team, o.team)) continue;   // (teams: an ENEMY in the line is no reason to lower the gun — he is what it is up for; his own side and neutrals are colleagues)
+    const G = lineGeom(from, to, o); if (!G || G.t < 0 || G.t > tMax || G.t >= bt || G.d > (near ? closeLane(G.clear, G.t, L) : G.clear)) continue;   // behind his shoulder, further off than the point (and its margin), or simply clear of it
+    bt = G.t; best = o;
+  }
+  return best;
+}
 /** the point MUZZLE_REACH_M out along where his gun is being held (aim yaw / pitch) from the gun shoulder — or where that line meets the floor, if it does first (a
  *  low carry pools a few metres out: the line ends there, it does not run on under the men beyond): what 'ahead' means for a man covering nothing in particular */
 export function aimAhead(c: Character): Vec3 { return goneWithTick('aimAhead') as any; }
@@ -1178,7 +1227,7 @@ export function rollcallState(g: Game): Rollcall {
 }
 /** A silent man is being looked for right now — somebody walks his route, or the net has asked for him and is about to send somebody: the floor's alarm level
  *  holds meanwhile (updateEscalation does not step down under it; the QA soak's clock invariant knows the same rule). */
-export function stillLooking(g: Game): boolean { return goneWithTick('stillLooking') as any; }
+export function stillLooking(g: Game): boolean { return rollcallState(g).stage === 'asked' || g.guards.some(x => x.state !== 'dead' && x.task?.kind === 'checkOn'); }
 
 // ------------------------------------------------------------ room clearing (squad.ts Clearing / RoomClear, plans in level.ts)
 /** seconds within which a room the pair has called clear is not sent round again in the same lockdown — unless the new fix is inside it */
@@ -1329,7 +1378,7 @@ export function spawnUnit(g: Game, o: UnitOpts): Guard { { const __s = RUST_SURF
   if (!g.tune.teams) throw new Error('spawnUnit: sides are switched off (Game.tune.teams) — no unit may be spawned');
   if (o.team === 'player') throw new Error("spawnUnit: the 'player' side is the player alone — spawn an 'operative' for a man on his side");
   if (o.team === 'civilian') throw new Error("spawnUnit: civilians are not units — civilians.ts stands them up from the level's civilians block (Game.civilians)");
-  const chars = 1 + g.guards.length;
+  const chars = seatCount(g) + g.guards.length;   // (a man a seat, and everybody else who stands)
   const cap = Math.max(MAX_CHARACTERS, Math.min(o.budget ?? 0, MAX_SKINNED));
   if (chars + 1 > cap) throw new Error(cap > MAX_CHARACTERS ? `spawnUnit: ${chars} characters already stand (the player + ${g.guards.length} guards/units) and this caller's budget is ${cap} — despawn a unit or reset the guards first`
     : `spawnUnit: ${chars} characters already stand (the player + ${g.guards.length} guards/units) and the shadow-capsule budget is ${MAX_CHARACTERS} (scene/boxes.ts BoxWorld.addCharacterCapsules) — despawn a unit or reset the guards first`);

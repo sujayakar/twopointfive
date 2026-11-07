@@ -55,16 +55,9 @@ pub fn fresh_way_of(dice_seed: f64, n: f64) -> f64 {
 }
 
 /// WHO STANDS WHERE, a pure function of (seed, attempt)   (roomclear.ts placeDefenders)
-pub fn place_defenders(seed: f64, attempt: Option<f64>, s: Option<&crate::roomclear::PlaceDefendersS>) -> Vec<crate::roomclear::Placement> {
+/// The rooms are the level's own (`level.scenarios.roomClear`), handed in: this module holds no level's rooms of its own.
+pub fn place_defenders(seed: f64, attempt: Option<f64>, s: &crate::roomclear::PlaceDefendersS) -> Vec<crate::roomclear::Placement> {
     let attempt = attempt.unwrap_or(1.0);
-    let office;
-    let s = match s {
-        Some(s) => s,
-        None => {
-            office = crate::roomclear::PlaceDefendersS { rooms: crate::roomclear::structure().rooms };
-            &office
-        }
-    };
     let authored = seed == 0.0 && attempt <= 1.0;
     let word = m::imul(js::to_i32(seed), 0x9E3779B1u32 as i32) ^ m::imul(js::to_i32(attempt), 0x85EBCA6Bu32 as i32);
     // the TypeScript's mulberry32(word): crate::dice::Die is the same stream, made and spent in this call
@@ -487,7 +480,7 @@ pub fn room_clear_scenario_budget(g: &mut crate::game::Game) -> Option<f64> {
         Some(s) if s.max_men.map_or(false, js::truthy) => s.rooms.iter().fold(0.0, |k, r| k + r.garrison),
         _ => 0.0,
     };
-    if n > 5.0 { Some(5.0 + n) } else { None }
+    if n > 5.0 { Some(crate::seats::seat_count(g) + 4.0 + n) } else { None }   // (a man a seat, the four and its men)
 }
 
 /// the line the staging says   (roomclear.ts:270 layout.stagedLine)
@@ -620,7 +613,7 @@ pub fn room_clear_scenario_deal(g: &mut crate::game::Game) -> Vec<crate::nightbr
     g.room_clear.seed = seed;
     g.room_clear.attempt = 1.0;
     let rooms = room_clear_scenario_structure(g).expect("the room clear dealt on a level with no structure").rooms;
-    let placement = place_defenders(seed, Some(1.0), Some(&crate::roomclear::PlaceDefendersS { rooms }));
+    let placement = place_defenders(seed, Some(1.0), &crate::roomclear::PlaceDefendersS { rooms });
     let drill = room_clear_scenario_drill_room(g).map(|r| r.id);
     let marks = placement
         .iter()
@@ -1037,7 +1030,7 @@ mod tests {
             (3.9, 1.5, "a11,a42,b23,c04,c15,c26,d07,d18,d39"),
         ];
         for (seed, attempt, line) in want {
-            let got: Vec<String> = place_defenders(seed, Some(attempt), Some(&s)).iter().map(|p| format!("{}{}{}", p.room, p.mark, &p.name[6..])).collect();
+            let got: Vec<String> = place_defenders(seed, Some(attempt), &s).iter().map(|p| format!("{}{}{}", p.room, p.mark, &p.name[6..])).collect();
             assert_eq!(got.join(","), line, "seed {} attempt {}", seed, attempt);
         }
     }

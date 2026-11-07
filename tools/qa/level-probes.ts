@@ -171,8 +171,10 @@ export async function levelRoundtrip() {
   verdict(JSON.stringify(canonicalLevelData(JSON.parse(t1))) === JSON.stringify(canonicalLevelData(D0)), 'plain JSON.parse of the file gives the canonical data back');
   // key order independence: a copy with every record's keys reversed serializes to the same bytes and digest (the one ordered MAP, materials, keeps its
   // authored palette order by design — its entries are reversed inside, not the map itself)
-  { const shuffle = (v: any, keepOrder = false): any => Array.isArray(v) ? v.map(x => shuffle(x)) : v && typeof v === 'object' ? Object.fromEntries((keepOrder ? Object.entries(v) : Object.entries(v).reverse()).map(([k, x]) => [k, shuffle(x, k === 'materials')])) : v;
-    const Ds = shuffle(D0); verdict(serializeLevelData(Ds) === t1 && levelDataDigest(Ds) === levelDataDigest(D0), 'key order does not matter: a key-reversed copy serializes and hashes identically (materials keep their palette order by design)'); }
+  // (… and the `scenarios` block, which the office's file carries like any level's: canonicalLevelData orders its container's keys and carries each block as
+  //  written, levelData.ts KEYS.scenarios, so the copy's block is reversed at the container and not inside)
+  { const shuffle = (v: any, keepOrder = false): any => Array.isArray(v) ? v.map(x => shuffle(x)) : v && typeof v === 'object' ? Object.fromEntries((keepOrder ? Object.entries(v) : Object.entries(v).reverse()).map(([k, x]) => [k, k === 'scenarios' && x && typeof x === 'object' ? Object.fromEntries(Object.entries(x).reverse()) : shuffle(x, k === 'materials')])) : v;
+    const Ds = shuffle(D0); verdict(serializeLevelData(Ds) === t1 && levelDataDigest(Ds) === levelDataDigest(D0), 'key order does not matter: a key-reversed copy serializes and hashes identically (materials keep their palette order by design, and the scenarios block is carried as written: inside it the order of a table by name is data)'); }
   // forward compatibility of the drill plans (typed by reference to level.ts, handled generically): a breach plan GROWN the way the breach-drill lane grows it —
   // aside → retreat, per-man flows, targets as records, a next-door stack, two more lines — must validate, serialize with nothing dropped (known keys first,
   // new ones after), parse back equal, and come out of loadLevel on Level.breach field for field

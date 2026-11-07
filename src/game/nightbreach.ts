@@ -33,12 +33,12 @@
 //
 // With the flag off none of this runs: Game.update's one call into tick() returns on its first line, and BreachDrill without `live` is the show's drill as it was.
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load — the knobs are a plain literal.)
-import { stageMen, allDown, eachSeat, firstOf } from './seats';
+import { stageMen, allDown, eachSeat, firstOf, seatCount, floorRoom } from './seats';
 import { rollbackVar } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import type { Game, Guard, PairId } from './game';
 import { BreachDrill, type BreachLive } from './breach';
-import { spawnUnit, despawnUnit } from './guards';
+import { spawnUnit, despawnUnit, MAX_SKINNED } from './guards';
 import './character';   // (read inside the tick only: HOLD.oneFacing)
 import { order } from './squad';
 import './combat';
@@ -48,9 +48,11 @@ import { teamStartsFallenIn } from './startfile';
 import { issueStage } from './issue';   // (type-only game imports: a level that issues its own wall charges — scenarios.roomClear.wallCharges)
 import { picketMarks, postPicket } from './pressure';
 import { gunDeal } from './gunroles';   // (called inside the staging only)
-import type { TeamStart } from '../scene/scenarios';
+import type { TeamStart, NightBreachData } from '../scene/scenarios';
+import { sameTeamStart } from '../scene/scenarios';
 import type { SquadSize } from './loadout';
-import { OFFICE_SCENARIOS } from '../../levels/office.scenarios';   // (plain literals with type-only imports: safe at the top of the game's import cycle)
+import officeData from '../../levels/office.json' with { type: 'json' };   // (the bundled level's own file: its scenarios block is where these knobs start from. JSON, so safe at the top of the game's import cycle)
+const OFFICE_BREACH = (officeData as unknown as { scenarios: { nightBreach: NightBreachData } }).scenarios.nightBreach;
 import { holdFireDrill } from './holdfire';   // (called inside order() only)
 import { WORDS } from './words';   // (a leaf: the dialogue pass's one switch)
 import { RUST_PASS, RUST_SURFACE } from './crossing';
@@ -72,7 +74,7 @@ export const NIGHTBREACH = {
   loudBoot: true,
   /** where Sam stands when it is staged, and the way he faces: the LEVEL's (scene/scenarios.ts TeamStart — start() writes the team start of the level it stages
    *  on here; these are the office's until it has: beside the pair on the approach marks, in the cubicles' south aisle, facing east down it) */
-  samAt: [...OFFICE_SCENARIOS.nightBreach.team.sam] as Vec3, samYaw: OFFICE_SCENARIOS.nightBreach.team.samYaw,
+  samAt: [...OFFICE_BREACH.team.sam] as Vec3, samYaw: OFFICE_BREACH.team.samYaw,
   /** how many teammates are staged: 2 = the pair, exactly as it always was · 4 = the FOUR-MAN SQUAD (?squad4): a RED pair and a BLUE pair (SQUAD4 below), each
    *  man's pair in his papers (Guard.unit.pair; orders.ts men() is the one place to ask for the squad, a pair or a man). Red is the first pair: F's drill on the
    *  breach plan's door is theirs, Blue stands by behind them until ordered; the order menu goes to all four, a pair or one man (orders.ts `who`: T).
@@ -119,7 +121,7 @@ export interface NightBreachLayout { name: string; defenders(): NightBreachMark[
   readonly budget?: number; }
 
 /** the team start NIGHTBREACH.samAt / samYaw were last written from (start()) */
-let applied: TeamStart | null = OFFICE_SCENARIOS.nightBreach.team;   // (the knobs above ARE the office's: a knob moved by hand before the first start on the office stays moved)
+let applied: TeamStart | null = OFFICE_BREACH.team;   // (the knobs above ARE the bundled office's: a knob moved by hand before the first start on the office stays moved)
 rollbackVar('nightbreach.applied', () => applied, v => { applied = v; });   // (asked again by every staging, a restart inside a tick among them)
 
 export type NightBreachState = 'off' | 'staged' | 'stacking' | 'set' | 'going' | 'inside' | 'clear' | 'failed' | 'recalled';
@@ -156,9 +158,9 @@ export class NightBreach {
 
   /** the team start in force: the layout's, else the level's own for the night breach (Level.scenarios.nightBreach) */
   private teamOf(layout: NightBreachLayout | null): TeamStart | undefined { return layout?.team ?? this.g.level.scenarios?.nightBreach?.team; }
-  /** Sam's start knobs take the layout's team start — once per team-start OBJECT (a knob moved by hand since stays moved). Asked by start() and again by every
+  /** Sam's start knobs take the layout's team start — once per team start, by its content: scenarios.ts sameTeamStart (a knob moved by hand since stays moved). Asked by start() and again by every
    *  staging: a layout may hand another start from one staging to the next (the room clear's ways in), and another Game's start may have written the knobs since. */
-  private applyTeam(layout: NightBreachLayout | null) { const T = this.teamOf(layout); if (T && T !== applied) { applied = T; NIGHTBREACH.samAt = [...T.sam] as Vec3; NIGHTBREACH.samYaw = T.samYaw; } }
+  private applyTeam(layout: NightBreachLayout | null) { const T = this.teamOf(layout); if (T && !sameTeamStart(T, applied)) { applied = T; NIGHTBREACH.samAt = [...T.sam] as Vec3; NIGHTBREACH.samYaw = T.samYaw; } }
   /** why it cannot start right now (null = it can) — `layout`: the bigger floor it would be started on */
   canStart(layout: NightBreachLayout | null = null): string | null {
     const g = this.g, T = this.teamOf(layout);
@@ -225,7 +227,7 @@ export class NightBreach {
     const g = this.g, P = g.level.breach ?? null, K = NIGHTBREACH, NB = g.level.scenarios?.nightBreach, T = this.teamOf(this.layout);
     this.drill?.end(); this.drill = null; this.ops = []; this.hostiles = [];
     if (K.roomLights && NB?.lights) g.setGroup(NB.lights, true);   // (off = as authored — the restart has just put the room back as the night has it: the office's break room, two vending machines)
-    const n = K.squad, four = n > 2, budget = four ? Math.max(SQUAD4_BUDGET, this.layout?.budget ?? 0) : this.layout?.budget;   // (three is the four less its last man: the same budget, the same roster)
+    const n = K.squad, four = n > 2, budget = four ? Math.max(SQUAD4_BUDGET - 1 + seatCount(g), this.layout?.budget ?? 0) : this.layout?.budget;   // (three is the four less its last man: the same budget, the same roster)
     // where the teammates stand: the layout's own marks (a level whose structure brings its team start), else the breach plan's approach marks — and the way they face
     const mark = (i: number): Vec3 => { const p = this.layout?.team?.ops?.[i] ?? P?.from?.[i] ?? P?.stack[i] ?? T?.ops?.[i]; if (!p) throw new Error(`no mark for teammate ${i + 1} (the level's team start, or its breach plan)`); return p; };
     const yaw = (this.layout?.team ?? T)?.opsYaw ?? Math.PI / 2;
@@ -238,6 +240,9 @@ export class NightBreach {
     if (!this.layout && !P) throw new Error('no breach plan');
     this.marks = this.layout?.defenders() ?? P!.hostiles.map(h => ({ pos: h.pos, aimAt: h.aimAt }));
     const posted = this.layout ? picketMarks(g, this.marks, K.samAt) : this.marks;   // (hard, a structure of rooms: the first room's two do not share one flash — pressure.ts PRESSURE.picket; the same array when off)
+    // (THE FLOOR HOLDS SIXTEEN WITH EVERY SEAT COUNTED: the team stands first, then as many defenders, in the order of their marks, as that leaves
+    //  room for. A game of one has room for every garrison a level may hold; a game of two on a full floor stands one defender fewer.)
+    posted.length = Math.min(posted.length, Math.max(0, floorRoom(g, MAX_SKINNED)));
     this.marks = posted;
     posted.forEach((h, i) => { const gd = spawnUnit(g, { team: 'hostile', pos: h.pos, yaw: v3.yawTo(h.pos, h.aimAt), name: h.name ?? `Tango ${i + 1}`, light: K.defLights, budget }); this.hostiles.push(gd); gd.hold = true; gd.pinned = true; if (h.picket) postPicket(gd, h.picket); });
     this.live = { orders: 0, lights: K.opLights, loudBoot: K.loudBoot, stun: K.stun }; this.bangTaken = false; this.bangBy = null;

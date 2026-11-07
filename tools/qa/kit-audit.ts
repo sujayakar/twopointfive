@@ -15,7 +15,6 @@ import { cardWords, comesBare } from './kitdeal-check.ts';
 const K = await import(`${ROOT}/src/game/kit.ts`);
 const { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { squadChoices, rosterOf } = await import(`${ROOT}/src/game/loadout.ts`);
-const { OFFICE_SCENARIOS } = await import(`${ROOT}/levels/office.scenarios.ts`) as { OFFICE_SCENARIOS: any };
 
 const DEAL = !process.argv.includes('--deal=off'), MORE = DEAL && !process.argv.includes('--more=off');
 type Card = Record<string, any>;
@@ -40,7 +39,7 @@ out.push('', '## Every mission', '', '| Mission | Kind | Its own team | Sizes of
 const notes: string[] = [];
 K.kitTeam(1); K.kitLoadout('issued'); const partner = line(K.KIT.members[1]);   // (one man alone, as issued)
 for (const s of ALL_MISSIONS as any[]) {
-  const file = s.level ?? 'office.json', d = JSON.parse(readFileSync(resolve(ROOT, 'levels', file), 'utf8')), sc = d.scenarios ?? (file === 'office.json' ? OFFICE_SCENARIOS : {}), rc = sc.roomClear ?? {}, doors: any[] = d.doors ?? [];   // (the office's block is levels/office.scenarios.ts, attached at load)
+  const file = s.level ?? 'office.json', d = JSON.parse(readFileSync(resolve(ROOT, 'levels', file), 'utf8')), sc = d.scenarios ?? {}, rc = sc.roomClear ?? {}, doors: any[] = d.doors ?? [];
   const sizes = (squadChoices(s) as { n: number; ok: boolean }[]).filter(c => c.ok).map(c => (c.n ? `+${c.n}` : 'alone')).join(' ');
   const block = sc.issue?.members as Record<string, Card> | undefined;
   const own = [block ? `issue block: ${Object.entries(block).map(([i, c]) => `${MEN[+i]} ${JSON.stringify(c)}`).join('; ')}${!Object.keys(block).length ? '(names nobody: every man in the plain issue)' : ''}` : '', typeof rc.wallCharges === 'number' && rc.wallCharges > 0 ? `${rc.wallCharges} wall charge${rc.wallCharges === 1 ? '' : 's'} of its own` : ''].filter(Boolean).join(' · ') || 'none';

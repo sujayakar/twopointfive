@@ -1759,6 +1759,7 @@ export class DoorTools {
     this.blow(c); for (const o of also) this.blow(o);
   }
   private nearest(of: (c: SetCharge) => boolean = () => true): SetCharge | null { const p = this.g.player.char.pos; return this.set.filter(of).sort((a, b) => flat(a.door.frameCentre, p) - flat(b.door.frameCentre, p))[0] ?? null; }
+  private arrived(op: DoorOp, gd: Guard) { return !!op.mine.get(gd)?.arrived; }
   private end(op: DoorOp, why: string) {
     const i = this.ops.indexOf(op); if (i < 0) return; this.ops.splice(i, 1);
     this.defuse(op); this.offLock(op); if (op.bangHeld) { op.bangHeld = false; this.refund(op.frag ? 'frag' : 'bang'); }
@@ -2147,6 +2148,34 @@ export class DoorTools {
    *  a word, not on a gate with other doors, not given to hold: those are Sam's) */
   private lastCall(op: DoorOp): boolean {
     return DOORTOOLS.thrLast && op.kind === 'threshold' && !op.onWord && !op.word && !op.gate && !op.thrHold && this.g.rescue.lastWarning(op.door);
+  }
+  /** … heard with a man on his jamb and another still more than `thrLastM` short of his mark: the stack is made with who is there (the stack phase then waits
+   *  on nobody). If the man still walking is the LEAD — the latch jamb's, who opens it — the door is handed to the jamb man who is on his mark (as when a lead
+   *  drops: open() boots it from wherever its lead stands). A late man whose mark is the OTHER jamb, and who has not passed the opening yet, takes the lead's
+   *  wall instead — the first free place behind him, `bangFile` apart, clear of Sam and of men who are not this order's — so nobody walks across a door that
+   *  is about to open; with no floor there he keeps his mark (and is no thrower from down the wall: thrThrower) */
+  private lastStack(op: DoorOp) {
+    const g = this.g, K = DOORTOOLS, d = op.door, W = d.def.width, name = doorWords(d);
+    const on = (m: Guard) => { const P = op.post.get(m); return !!P && flat(m.char.pos, P.pos) <= 0.6; }, off2 = (m: Guard) => { const P = op.post.get(m); return !!P && !this.arrived(op, m) && flat(m.char.pos, P.pos) > K.thrLastM; };
+    let lead = op.lead, handed = false;
+    if (!on(lead)) { if (!off2(lead)) return;
+      const sub = op.men.filter(m => m !== lead && m.state !== 'dead' && !!op.post.get(m)?.lead && on(m)).sort((a, b) => flat(a.char.pos, d.frameCentre) - flat(b.char.pos, d.frameCentre))[0]; if (!sub) return;
+      lead = sub; handed = true; }
+    const late = op.men.filter(m => m !== lead && m.state !== 'dead' && !this.arrived(op, m) && !!op.post.get(m));
+    if (!late.length || late.some(m => !off2(m))) return;   // (a man a step from his mark is waited for as ever)
+    op.lastStack = true; op.lead = lead;
+    const L = op.post.get(lead)!, aL = alongOf(d, L.pos), dir = aL > W / 2 ? 1 : -1, off = offOf(d, L.pos, op.side), watch: Vec3 = [d.frameCentre[0], 1.05, d.frameCentre[2]];
+    const others = [g.orders.samStood, ...g.guards.filter(x => (g.orders.sams ? x.team === 'operative' : g.orders.mine(x)) && x.state !== 'dead' && !op.men.includes(x)).map(x => x.char.pos)];
+    const free = (c: Vec3, gd: Guard) => !g.col.nav.isBlocked(c[0], c[2]) && !g.col.solidBlocked([L.pos[0], 0.45, L.pos[2]], [c[0], 0.45, c[2]]) && !op.men.some(m => m !== gd && flat(op.post.get(m)?.pos ?? m.char.pos, c) < 0.7) && !others.some(p => flat(p, c) < 0.7) && stackRoomKeeps(g, d, op.side, c);
+    for (const gd of late) { const P = op.post.get(gd)!, a = alongOf(d, gd.char.pos);
+      if ((alongOf(d, P.pos) > W / 2) === (aL > W / 2)) continue;   // (his mark is on the lead's wall already)
+      if (dir > 0 ? a < -0.2 : a > W + 0.2) continue;   // (past the opening already, on his own wall: he goes on to his jamb)
+      let q: Vec3 | null = null;
+      for (let j = 1; j <= 4 && !q; j++) { const c = doorPt(d, aL + dir * j * K.bangFile, off, op.side); if (free(c, gd)) q = c; }
+      if (!q) continue;
+      const Q: Post = { ...P, pos: q, face: L.face, stackSide: L.stackSide, lead: false }; op.post.set(gd, Q);
+      this.assign(op, gd, { post: q, face: Q.face, watch, stance: 'highReady', upper: 'none', move: { stance: 'none', upper: 'aim' }, stackSide: Q.stackSide, going: `stacking · ${name}`, there: `stacked · ${name}` }); }
+    this.beat(op, `last warning · not waiting for ${late.map(m => m.callsign).join(', ')}${handed ? ` · the door is ${lead.callsign}'s` : ''}`); g.say(lead, 'no time. going.');
   }
   private toThreshold(op: DoorOp) {
     const g = this.g, K = DOORTOOLS, d = op.door, W = d.def.width, nav = g.col.nav, name = doorWords(d), t = g.time, lead = op.lead, light = this.lights ?? NIGHTBREACH.opLights;

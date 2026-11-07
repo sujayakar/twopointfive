@@ -278,7 +278,8 @@ pub struct NightbreachMod {
 impl NightbreachMod {
     pub fn blank() -> Self {
         NightbreachMod {
-            applied: Some(crate::scene_scenarios::TeamStart { sam: [9.6, 0.0, 20.3], sam_yaw: 1.5707963267948966, ops: None, ops_yaw: None }),
+            // (the team's start the knob table holds as it is made: a start whose level names another writes its own over the knobs)
+            applied: { let k = crate::knobs::page_nightbreach(); Some(crate::scene_scenarios::TeamStart { sam: k.sam_at, sam_yaw: k.sam_yaw, ops: None, ops_yaw: None }) },
         }
     }
 }

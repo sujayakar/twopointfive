@@ -113,11 +113,11 @@ import type { StickyCam } from './stickycam';
 import './stickycam';
 import { lightSwitchReset } from './lightswitch';
 import './handwork';
-import { toggleDrag, teleportPlayer, settleSpot, freeHeld, takeKey, pickHover } from './player';
+import { throwCount, toggleDrag, teleportPlayer, settleSpot, freeHeld, takeKey, pickHover } from './player';
 import type { WallHold, Hold } from './player';
 import { escapeInteract, backableInteract } from './interact';
 import { slotSetupOpen, slotSetupShut } from './slotsetup';
-import { loadTactics, tacticsReset } from './tactics';
+import { loadTactics, tacticsSummary, tacticsReset } from './tactics';
 import { lanesReset } from './lanes';
 import { pictureReset } from './picture';
 import './darkfoe';
@@ -1295,6 +1295,9 @@ export class Game {
   /** panel / console: the aim-settle model — Sam's track and cone with its terms, then every alert man's (or the nearest at rest): track, Sam's bearing rate
    *  across him, his cone and its terms, whether he is braking for a shot, his last round (aim.ts aimSummary) */
   aimSummary(): string { return aimSummary(this); }
+  /** panel / console: the pursuit tactics — flanking plans (who presses, who flanks, phase), lone men holding an angle, kill-zone doorways with their seconds
+   *  left, men on a doorway drill (tactics.ts tacticsSummary); '' when nothing is up */
+  tacticsSummary(): string { return tacticsSummary(this); }
   /** panel / console: the needs — per man his needs and their levels or the trip he is on (about to go / walking / there / coming back), the floor's slot (needs.ts needsSummary) */
   needsSummary(): string { return needsSummary(this); }
   /** panel / console: the civilians — each one's state, what frightened her, whom she is running to / has told (civilians.ts civiliansSummary) */
@@ -1639,6 +1642,7 @@ export class Game {
 
 
   dropThrowable(kind: ThrowKind, p: Vec3) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.dropThrowable', this, [kind, p]); if (__r !== RUST_PASS) return __r as any; } } return dropThrowable(this, kind, p); }
+  throwCount(kind: ThrowKind) { return throwCount(this, kind); }
 
 
 

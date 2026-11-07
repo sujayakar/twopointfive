@@ -65,7 +65,6 @@ export async function secondWay(o: { levels?: string[]; walls?: boolean; nolists
   process.env.TPS_PROFILE = 'shipped';   // (before the harness is imported: it reads its stand as it loads)
   const { standUp, ROOT } = await import('./headless.ts');
   const { DIGIN } = await import(`${ROOT}/src/game/digin.ts`);
-  const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
@@ -90,7 +89,7 @@ export async function secondWay(o: { levels?: string[]; walls?: boolean; nolists
   try {
     for (const file of LEVELS) {
       const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8'));
-      const load = () => isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data);
+      const load = () => loadLevel(data);
       const lvl0 = load(), entries = byLevel.get(file) ?? [];
       const queries: string[] = entries.length ? entries.map((e: any) => scenarioQuery(e).slice(1).split('&').filter((k: string) => !k.startsWith('levelFile=')).join('&'))
         : [lvl0.scenarios?.roomClear ? 'roomclear&squad4' : lvl0.scenarios?.rescue ? 'rescue' : ''];

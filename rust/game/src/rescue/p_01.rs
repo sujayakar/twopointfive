@@ -447,8 +447,8 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
             team: crate::teams::Team::Hostile, pos: c.mark.pos, yaw: Some(v3::yaw_to(c.mark.pos, c.mark.aim_at)),
             name: Some(c.name.clone()), light: Some(false), budget: Some(budget), ..crate::guards::UnitOpts::zeroed()
         })?;
-        g.gd[gd].hold = true;
-        g.gd[gd].pinned = true;
+        crate::control::set_hold(g, gd, true, "rescue");
+        crate::control::set_pinned(g, gd, true, "rescue");
         g.rescue.hostiles.push(gd);
         g.rescue.defs.set(gd, Def {
             role: c.role, in_room: c.in_room, mark: DefMark { pos: c.mark.pos, aim_at: c.mark.aim_at },
@@ -489,22 +489,22 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
         let row = if squad > 2.0 { crate::nightbreach::squad4().get(i).cloned() } else { None };
         let opts = match row {
             Some(r) => {
-                let n = 2.0 + g.guards.len() as f64;
+                let n = crate::seats::seat_count(g) + 1.0 + g.guards.len() as f64;   // (a man a seat, this new teammate, everyone standing)
                 crate::guards::UnitOpts {
                     team: crate::teams::Team::Operative, pos: at[i], yaw: Some(yaw), name: Some(r.name), light: Some(false),
                     pair: Some(r.pair), tint: Some(r.tint), tint2: Some(r.tint2),
-                    budget: Some(m::max(crate::nightbreach::SQUAD4_BUDGET, n)), ..crate::guards::UnitOpts::zeroed()
+                    budget: Some(m::max(crate::nightbreach::p_01::squad4_budget(g), n)), ..crate::guards::UnitOpts::zeroed()
                 }
             }
             None => crate::guards::UnitOpts {
                 team: crate::teams::Team::Operative, pos: at[i], yaw: Some(yaw),
                 name: Some(String::from(if i == 0 { "Blue One" } else { "Blue Two" })), light: Some(false),
-                budget: Some(2.0 + g.guards.len() as f64), ..crate::guards::UnitOpts::zeroed()
+                budget: Some(crate::seats::seat_count(g) + 1.0 + g.guards.len() as f64), ..crate::guards::UnitOpts::zeroed()
             },
         };
         let gd = crate::guards::spawn_unit(g, &opts)?;
-        g.gd[gd].hold = true;
-        g.gd[gd].pinned = true;
+        crate::control::set_hold(g, gd, true, "rescue");
+        crate::control::set_pinned(g, gd, true, "rescue");
         g.gd[gd].trained = true;
         g.rescue.ops.push(gd);
         i += 1;

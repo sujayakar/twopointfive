@@ -102,6 +102,7 @@ const STALE = 0.25;
 /** module-wide counters and the last few endings, for the check and the panel */
 export const ATTENTION_STATS = { taken: 0, looks: 0, lent: 0, released: 0, broken: 0, spent: 0, worn: 0 };
 export const ATTENTION_LOG: { t: number; who: string; what: string; kind: DrawKind; secs: number; nth: number }[] = [];
+function log(g: Game, gd: Guard, what: string, H: { kind: DrawKind; secs: number; nth: number }) { ATTENTION_LOG.push({ t: g.time, who: gd.callsign, what, kind: H.kind, secs: H.secs, nth: H.nth }); if (ATTENTION_LOG.length > 48) ATTENTION_LOG.shift(); }
 
 // ---------------------------------------------------------------- what he says (placeholder lines — the writing pass is the maintainer's)
 /** the second taking inside the memory (instead of 'huh?'), the one that is no look at all, the hold broken by a man at the edge of his eye, and — for a side
@@ -140,6 +141,11 @@ export function attentionSideK(g: Game, gd: Guard, p: Vec3): number {
  *  `noises` = × a footfall / × every other small noise at his ear while it stands (headphones: the lender's numbers). It holds only a calm man on his own
  *  business, shows as any hold does, and a real thing — a noise that makes him look, a glimpse, a step — takes it from the screen like any other. */
 export function attentionLend(g: Game, gd: Guard, at: Vec3, o: { ears?: number; noises?: number } = {}): void { return crossToRust('attentionLend', undefined, [g, gd, at, o]) as any; }
+function end(g: Game, gd: Guard, why: string) {
+  const M = mem(gd), H = M.hold; if (!H) return;
+  M.hold = null; if (why === 'done') ATTENTION_STATS.released++; else if (why !== 'over') ATTENTION_STATS.broken++;
+  log(g, gd, why, H);
+}
 
 // ---------------------------------------------------------------- showing it (ui/attentionviz.ts draws exactly this list; the check reads it)
 /** one man's held attention as the floor shows it: a thread from his feet to the place and a ring there, `left` of it still to run (1 while he walks to it or

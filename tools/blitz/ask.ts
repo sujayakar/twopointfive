@@ -10,14 +10,39 @@ export const ASK = { label: 0, can: 1, only: 2, valid: 3, when: 4, gone: 5, word
 const TARGET = 'crate::orders::OrderTarget', MEN = 'Vec<GuardId>', OPTS = 'Option<crate::orders::GiveOpts>';
 const DEC = new TextDecoder();
 
-export type AskFn = (kind: number, row: number, seat: number, bytes: Uint8Array) => Uint8Array;
+/** A number is the face's refusal (`face_ask` answered it: 1 no such order row, 2 no such seat, 3 no such question): no index was taken in the Rust game */
+export type AskFn = (kind: number, row: number, seat: number, bytes: Uint8Array) => Uint8Array | number;
 class Answer { p = 0; dv: DataView; constructor(readonly b: Uint8Array) { this.dv = new DataView(b.buffer, b.byteOffset, b.byteLength); }
   u8() { return this.b[this.p++]; } u32() { const v = this.dv.getUint32(this.p, true); this.p += 4; return v; }
   str() { const L = this.u32(); const s = DEC.decode(this.b.subarray(this.p, this.p + L)); this.p += L; return s; }
   optStr() { return this.u8() ? this.str() : null; } }
 
-export function installAsks(g: any, knobs: Record<string, unknown>, ask: AskFn, reapply: () => void, handFirst: () => void = () => {}) {
+const ASK_NAMES = Object.keys(ASK);
+const strBytes = (s: string) => { const u = new TextEncoder().encode(s), o = new Uint8Array(4 + u.length); new DataView(o.buffer).setUint32(0, u.length, true); o.set(u, 4); return o; };
+const someBytes = (s: string) => { const t = strBytes(s), o = new Uint8Array(1 + t.length); o[0] = 1; o.set(t, 1); return o; };
+/** what a closure reads as "nothing", question by question: the label is the row's own name, no man can, none fit, the row is not offered and is gone, an order through it is refused */
+export function askNothing(kind: number, name: string): Uint8Array {
+  switch (kind) {
+    case ASK.label: return strBytes(name);
+    case ASK.can: return someBytes('not available');
+    case ASK.only: return new Uint8Array(4);
+    case ASK.valid: return Uint8Array.of(1);
+    case ASK.when: return Uint8Array.of(0);
+    case ASK.gone: return Uint8Array.of(1);
+    case ASK.word: return Uint8Array.of(0);
+    case ASK.mark: return strBytes('');
+    case ASK.given: return new Uint8Array(0);
+    default: return someBytes('not available');
+  } }
+
+export function installAsks(g: any, knobs: Record<string, unknown>, ask0: AskFn, reapply: () => void, handFirst: () => void = () => {}) {
   const bk = bookOf(g); if (!bk) throw new Error('ask: this game has never been exported, so no row has an ID: export it once first');
+  // A REFUSAL IS ANSWERED HERE: the puppet holds a row the Rust game has not got (or a seat, or a question it has no arm for). One console line a row
+  const refused = { n: 0, rows: {} as Record<string, string> };
+  const ask = (kind: number, row: number, seat: number, b: Uint8Array): Uint8Array => { const a = ask0(kind, row, seat, b); if (typeof a !== 'number') return a; refused.n++;
+    const d = a === 1 ? (bk.listOf('OrdersOrderDefId') as any[])[row] : undefined, name = String(d?.name ?? d?.id ?? ''), key = `${a}/${a === 2 ? seat : row}`;
+    if (!refused.rows[key]) { refused.rows[key] = `${ASK_NAMES[kind] ?? kind}${name ? ` of '${name}'` : ''}`; console.warn(`the Rust game has no ${a === 2 ? `seat ${seat}` : a === 3 ? `question ${kind}` : `order row ${row}${name ? ` ('${name}')` : ''}`}: '${ASK_NAMES[kind] ?? kind}' answered as nothing`); }
+    return askNothing(kind, name); };
   const rowId = (d: object) => bk.idOf('OrdersOrderDefId', d), seatId = (s: object) => bk.idOf('SeatId', s), rows = () => bk.listOf('OrdersOrderDefId') as any[], guards = () => bk.listOf('GuardId') as any[];
   const bytes = (...p: [string, unknown][]) => exportPart(g, knobs, p);
   /** whose menu: the seat whose squad is `S`, or that lists the row (a label is asked with no S) */
@@ -40,4 +65,4 @@ export function installAsks(g: any, knobs: Record<string, unknown>, ask: AskFn, 
   const give = (S: any, id: string, t?: any, who?: any, o?: any): string | null => { handFirst(); const a = new Answer(ask(ASK.give, 0, seatOfS(S), bytes(['String', id], ['Option<' + TARGET + '>', t], ['Option<crate::orders::Who>', who], [OPTS, o]))); reapply(); return a.optStr(); };
   /** every seat's `S.give` goes to the Rust game from here on, so what prices an order (orders.ts: the floor the team has seen) is Rust's and need not be on the puppet */
   const routeGive = () => { for (const s of g.seats) { const S = s.view.orders; S.give = (id: string, t?: any, who?: any, o?: any) => give(S, id, t ?? S.targetAt(g.aimPoint), who, o); } };
-  after(); return { after, give, routeGive }; }
+  after(); return { after, give, routeGive, refused }; }
