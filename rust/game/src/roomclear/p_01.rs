@@ -459,7 +459,7 @@ pub fn room_clear_scenario_budget(g: &mut crate::game::Game) -> Option<f64> {
         Some(s) if s.max_men.map_or(false, js::truthy) => s.rooms.iter().fold(0.0, |k, r| k + r.garrison),
         _ => 0.0,
     };
-    if n > 5.0 { Some(crate::seats::seat_count(g) + 4.0 + n) } else { None }   // (a man a seat, the four and its men)
+    if n > 5.0 { Some(crate::seats::budget_with_seats(g, 1.0 + 4.0 + n)) } else { None }   // (a man a seat, the four and its men)
 }
 
 /// the line the staging says   (roomclear.ts:270 layout.stagedLine)
