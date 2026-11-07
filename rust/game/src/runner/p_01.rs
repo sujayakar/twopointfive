@@ -45,7 +45,7 @@ pub fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::runner::LineKin
     let mut pool = l.say;
     pool.extend(extra.unwrap_or_default());
     let n = pool.len() as f64;
-    let at = js::rem(m::floor(crate::dice::draw_of(g, "runner::bark#1", gd) * n), n) as usize;
+    let at = js::rem(m::floor(crate::math_dice::sim_random(g) * n), n) as usize;
     crate::game::game_say(g, gd, &pool[at], Some(false), Some(true), None);
 }
 

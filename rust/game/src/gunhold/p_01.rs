@@ -612,7 +612,7 @@ pub fn bark(g: &mut crate::game::Game, gd: GuardId, k: &mut crate::gunhold::Know
     };
     let pool = gun_hold_pool(g, gd, kind);
     let n = pool.len() as f64;
-    let was = &pool[js::rem(m::floor(crate::dice::draw_of(g, "gunhold::bark#1", gd) * n), n) as usize];
+    let was = &pool[js::rem(m::floor(crate::math_dice::sim_random(g) * n), n) as usize];
     let said = now_of(was);
     crate::game::game_say(g, gd, &said, Some(radio), None, None);
     true
@@ -673,7 +673,7 @@ fn drop_path(g: &mut Game, gd: GuardId) {
 /// `now + GUNHOLD.peekEvery * (0.6 + 0.8 * simRandom())`
 fn next_peek(g: &mut Game, now: f64) -> f64 {
     let every = g.k.gunhold.peek_every;
-    now + every * (0.6 + 0.8 * crate::dice::draw_world(g, "gunhold::next_peek#1"))
+    now + every * (0.6 + 0.8 * crate::math_dice::sim_random(g))
 }
 
 /// This man's feet while the pistol is known in the hold; None = the ring as ever. (gunhold.ts gunHoldFeet)
@@ -713,7 +713,7 @@ fn feet(g: &mut Game, gd: GuardId, dt: f64, p: &crate::guards::Pair, s: GuardsSt
     if !g.m.gunhold.states.has(s) {
         let r0 = g.k.gunhold.react[0];
         let r1 = g.k.gunhold.react[1];
-        let go_t = now + r0 + crate::dice::draw_of(g, "gunhold::feet#1", gd) * (r1 - r0);
+        let go_t = now + r0 + crate::math_dice::sim_random(g) * (r1 - r0);
         g.m.gunhold.states.set(
             s,
             St {

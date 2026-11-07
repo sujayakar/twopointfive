@@ -46,7 +46,7 @@ fn say(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, tex
 pub fn line(g: &mut crate::game::Game, gd: GuardId, pool: &[String]) {
     let last = mem(g, gd).line;
     let n = pool.len() as f64;
-    let mut i = js::rem(m::floor(crate::dice::draw_of(g, "attention::line#1", gd) * n), n) as i32;
+    let mut i = js::rem(m::floor(crate::math_dice::sim_random(g) * n), n) as i32;
     if pool.len() > 1 && i == last { i = (i + 1) % pool.len() as i32; }
     mem(g, gd).line = i;
     say(g, gd, &pool[i as usize]);

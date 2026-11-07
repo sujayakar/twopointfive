@@ -306,7 +306,7 @@ pub fn rollcall_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::guards
 /// Seconds to the next check, jittered: a die.   (guards.ts rollcallInterval)
 pub fn rollcall_interval(g: &mut crate::game::Game) -> f64 {
     let secs = if escalation_of(g) >= 1.0 { ROLLCALL_ALARMED_SECS } else { ROLLCALL_CALM_SECS };
-    secs * (1.0 + (crate::dice::draw_world(g, "guards::rollcall_interval#1") * 2.0 - 1.0) * ROLLCALL_JITTER)
+    secs * (1.0 + (crate::math_dice::sim_random(g) * 2.0 - 1.0) * ROLLCALL_JITTER)
 }
 /// Who calls the check: a living man with his hands free for the radio, one on his route for choice.   (guards.ts radioCaller)
 pub fn radio_caller(g: &mut crate::game::Game) -> Option<GuardId> {

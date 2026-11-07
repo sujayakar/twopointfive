@@ -42,8 +42,8 @@ pub fn fire_shell(g: &mut crate::game::Game, shooter: CharId, target: V3, is_pla
     let mut i = 1.0;
     while i < p.n {
         shell.i = i;
-        let r = p.cone * m::sqrt(crate::dice::draw_body(g, "shotgun::fire_shell#1", shooter));
-        let a = crate::dice::draw_body(g, "shotgun::fire_shell#2", shooter) * m::PI * 2.0;
+        let r = p.cone * m::sqrt(crate::math_dice::sim_random(g));
+        let a = crate::math_dice::sim_random(g) * m::PI * 2.0;
         let x = r * m::cos(a);
         let y = r * m::sin(a);
         let dir = v3::normalize([d0[0] + ax[0] * x + ay[0] * y, d0[1] + ax[1] * x + ay[1] * y, d0[2] + ax[2] * x + ay[2] * y]);

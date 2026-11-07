@@ -57,11 +57,11 @@ pub fn throwables_spawn(g: &mut crate::game::Game, kind: crate::throwables::Item
     let restitution = if can { c.restitution } else if frag { f.restitution } else if kind == ItemKind::Mag { 0.25 } else if rifle { r.restitution } else if ring { rg.restitution } else if shell { s.restitution } else { 0.22 };
     let friction = if can { c.friction } else if kind == ItemKind::Pistol || kind == ItemKind::Torch { 0.5 } else if rifle { r.friction } else if ring { rg.friction } else if frag { f.friction } else if shell { s.friction } else { 0.35 };
     // the dice, one at a time and in this order
-    let yaw = crate::dice::draw_world(g, "throwables::throwables_spawn#1") * m::PI;
-    let spin = (crate::dice::draw_world(g, "throwables::throwables_spawn#2") - 0.5) * 14.0;
-    let tumble = crate::dice::draw_world(g, "throwables::throwables_spawn#3") * 6.28;
-    let way = if crate::dice::draw_world(g, "throwables::throwables_spawn#4") < 0.5 { -1.0 } else { 1.0 };
-    let tumble_rate = way * (7.0 + crate::dice::draw_world(g, "throwables::throwables_spawn#5") * 9.0);
+    let yaw = crate::math_dice::sim_random(g) * m::PI;
+    let spin = (crate::math_dice::sim_random(g) - 0.5) * 14.0;
+    let tumble = crate::math_dice::sim_random(g) * 6.28;
+    let way = if crate::math_dice::sim_random(g) < 0.5 { -1.0 } else { 1.0 };
+    let tumble_rate = way * (7.0 + crate::math_dice::sim_random(g) * 9.0);
     let life = if kind == ItemKind::Mag { 40.0 } else if ring { rg.life } else if shell { s.life } else { 60.0 };
     let heading = v3::yaw_of(vel);
     let serial = g.items.serial;

@@ -181,11 +181,11 @@ pub fn drop_from_hand(g: &mut crate::game::Game, c_2: CharId, kind: crate::comba
         None => { let or = v3::add(g.ch[c_2].pos, [0.0, 1.0, 0.0]); bone_or(g, c_2, crate::character::Bone::HandR, or) }
     };
     let vel = g.ch[c_2].vel;
-    let r0 = crate::dice::draw_body(g, "combat::drop_from_hand#1", c_2);
+    let r0 = crate::math_dice::sim_random(g);
     let v0 = vel[0] * 0.6 + dir[0] * 1.1 + (r0 - 0.5) * 0.6;
-    let r1 = crate::dice::draw_body(g, "combat::drop_from_hand#2", c_2);
+    let r1 = crate::math_dice::sim_random(g);
     let v1 = 0.9 + r1 * 0.6;
-    let r2 = crate::dice::draw_body(g, "combat::drop_from_hand#3", c_2);
+    let r2 = crate::math_dice::sim_random(g);
     let v2 = vel[2] * 0.6 + dir[2] * 1.1 + (r2 - 0.5) * 0.6;
     let item_kind = match kind {
         DropFromHandKind::Pistol => crate::throwables::ItemKind::Pistol,

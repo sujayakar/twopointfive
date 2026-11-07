@@ -238,7 +238,7 @@ pub fn hearing_check(g: &mut crate::game::Game, gd: GuardId, ear: Option<f64>, e
                 }
             } else if g.gd[gd].state != S::Alert || g.gd[gd].last_known.is_none() || prop.direct || g.time - g.gd[gd].last_seen_t > 1.0 {
                 let err = if prop.direct { 0.0 } else { m::min(4.0, 0.6 + d_loud * 0.08) * (1.3 - 0.3 * carry) };
-                let a = crate::dice::draw_of(g, "guards::hearing_check#1", gd) * m::PI * 2.0;
+                let a = crate::math_dice::sim_random(g) * m::PI * 2.0;
                 let cand: V3 = [e.pos[0] + m::cos(a) * err, 0.0, e.pos[2] + m::sin(a) * err];
                 if !placed {
                     let reachable = !crate::scene_collision::nav_grid_is_blocked(g, cand[0], cand[2]) && {
@@ -250,7 +250,7 @@ pub fn hearing_check(g: &mut crate::game::Game, gd: GuardId, ear: Option<f64>, e
             }
             g.gd[gd].witness.heard.loud_at = g.gd[gd].last_known;   // what the report came to in his head, written or not: the room fight's evidence reads it
             if calm {
-                let late = 0.25 + m::min(1.2, d_loud / 25.0) + crate::dice::draw_of(g, "guards::hearing_check#2", gd) * 0.4;
+                let late = 0.25 + m::min(1.2, d_loud / 25.0) + crate::math_dice::sim_random(g) * 0.4;
                 g.gd[gd].react_t = m::max(g.gd[gd].react_t, late);
             }
             if calm && unannounced(g, at_e) && !(kick && crate::frag::own_noise(g, gd, e.who)) {

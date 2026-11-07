@@ -27,7 +27,7 @@ pub fn flat(a: V3, b: V3) -> f64 {
 
 /// a roll of the game's die inside a range. (buddy.ts pick)
 pub fn pick(g: &mut crate::game::Game, r: [f64; 2]) -> f64 {
-    r[0] + crate::dice::draw_world(g, "buddy::pick#1") * (r[1] - r[0])
+    r[0] + crate::math_dice::sim_random(g) * (r[1] - r[0])
 }
 
 /// (buddy.ts alive)

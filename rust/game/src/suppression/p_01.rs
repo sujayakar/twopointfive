@@ -224,7 +224,7 @@ pub fn sup_bark(g: &mut crate::game::Game, gd: GuardId, moment: crate::suppressi
     }
     if pool.is_empty() { return false; }
     let n = pool.len() as f64;
-    let mut i = js::rem(m::floor(crate::dice::draw_of(g, "suppression::sup_bark#1", gd) * n), n) as usize;
+    let mut i = js::rem(m::floor(crate::math_dice::sim_random(g) * n), n) as usize;
     if pool.len() > 1 && g.m.suppression.last_line.get(gd).map(|l| l.as_str()) == Some(pool[i]) {
         i = (i + 1) % pool.len();
     }
@@ -414,7 +414,7 @@ pub fn head_down(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> crate::supp
     if g.gd[gd].sup.v >= g.k.suppression.pinned {
         if !g.gd[gd].sup.latched && g.gd[gd].sup.down_t <= 0.0 {
             let span = g.k.suppression.head_down;
-            let drawn = span[0] + crate::dice::draw_of(g, "suppression::head_down#1", gd) * (span[1] - span[0]);
+            let drawn = span[0] + crate::math_dice::sim_random(g) * (span[1] - span[0]);
             g.gd[gd].sup.down_t = drawn;
         }
         g.gd[gd].sup.latched = true;

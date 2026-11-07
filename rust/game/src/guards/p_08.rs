@@ -533,7 +533,7 @@ pub fn burst_trigger(g: &mut crate::game::Game, gd: GuardId, dt: f64, aim_at: V3
     }
     if g.fa[w].burst.is_none() {
         if !start_ok || g.gd[gd].fire_cd > 0.0 || round_past_colleague(g, gd, aim_at, except, None) { return; }
-        let n = v3::clamp(spec.min + m::floor(crate::dice::draw_of(g, "guards::burst_trigger#1", gd) * (spec.max - spec.min + 1.0)), spec.min, spec.max);
+        let n = v3::clamp(spec.min + m::floor(crate::math_dice::sim_random(g) * (spec.max - spec.min + 1.0)), spec.min, spec.max);
         let mut off: Option<V3> = None;
         let opening = g.fa[w].bursts == 0.0 || g.time - g.fa[w].last_burst_t > SUPPRESS_FIRST_LAPSE;
         let wide = g.tune.suppress_first && opening && {
@@ -555,9 +555,9 @@ pub fn burst_trigger(g: &mut crate::game::Game, gd: GuardId, dt: f64, aim_at: V3
                 (Some(a), Some(b)) => if a.t <= b.t { 1.0 } else { -1.0 },
                 (Some(_), None) => 1.0,
                 (None, Some(_)) => -1.0,
-                (None, None) => if crate::dice::draw_of(g, "guards::burst_trigger#2", gd) < 0.5 { 1.0 } else { -1.0 },
+                (None, None) => if crate::math_dice::sim_random(g) < 0.5 { 1.0 } else { -1.0 },
             };
-            let out = SUPPRESS_FIRST_OFF_M + crate::dice::draw_of(g, "guards::burst_trigger#3", gd) * SUPPRESS_FIRST_JITTER_M;
+            let out = SUPPRESS_FIRST_OFF_M + crate::math_dice::sim_random(g) * SUPPRESS_FIRST_JITTER_M;
             off = Some([px * side * out, SUPPRESS_FIRST_UP_M, pz * side * out]);
         }
         g.fa[w].burst = Some(crate::weapons::BurstState { left: n, n, next_t: 0.0, idx: 0.0, t: g.time, off });
@@ -602,7 +602,7 @@ pub fn burst_trigger(g: &mut crate::game::Game, gd: GuardId, dt: f64, aim_at: V3
     b.next_t = spec.interval;
     if let Some(live) = g.fa[w].burst.as_mut() { *live = b; }
     if b.left <= 0.0 || crate::weapons::firearm_rounds_ready(g, w) == 0.0 {
-        let gap = (spec.gap_min + crate::dice::draw_of(g, "guards::burst_trigger#4", gd) * (spec.gap_max - spec.gap_min)) * mods.gap;
+        let gap = (spec.gap_min + crate::math_dice::sim_random(g) * (spec.gap_max - spec.gap_min)) * mods.gap;
         burst_end(g, gd, w, gap);
         if crate::weapons::firearm_rounds_ready(g, w) == 0.0 { start_reload_beat(g, gd); }
     }

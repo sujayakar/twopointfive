@@ -472,7 +472,7 @@ pub fn door_force(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<cra
         let mo = crate::suppression::guard_fire_mods(g, gd);
         let row = g.m.weapons.weapons.get(def).unwrap();
         let (r, cd, jitter) = (row.ai_spread, row.cd, row.cd_jitter);
-        let die = crate::dice::draw_of(g, "doorforce::door_force#1", gd);
+        let die = crate::math_dice::sim_random(g);
         g.gd[gd].fire_cd = (cd + die * jitter) * mo.gap;
         let hands = (r.base + m::max(0.0, dist - r.range_from) * r.range_k) * (match g.gd[gd].skill { Some(sk) => sk.spread_k, None => 1.0 });
         let opts = if g.tune.aim_model {

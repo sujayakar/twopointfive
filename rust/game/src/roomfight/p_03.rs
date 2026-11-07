@@ -157,14 +157,14 @@ pub fn room_fight_rally(g: &mut crate::game::Game, d: RoomfightDefId) {
     if g.tab.roomfight_def[d].rally_at.is_nan() {
         let t = g.time + pick(g, skill.rally);
         g.tab.roomfight_def[d].rally_at = t;
-        let go = crate::dice::draw_def(g, "roomfight::room_fight_rally#1", d) < skill.rally_chance * g.k.roomfight.rally_k;
+        let go = crate::math_dice::sim_random(g) < skill.rally_chance * g.k.roomfight.rally_k;
         g.tab.roomfight_def[d].rally_go = go;
         return;
     }
     if g.time < g.tab.roomfight_def[d].rally_at { return; }
     if !g.tab.roomfight_def[d].rally_go {
         g.tab.roomfight_def[d].rally_at = g.time + 6.0;
-        let go = crate::dice::draw_def(g, "roomfight::room_fight_rally#2", d) < skill.rally_chance * g.k.roomfight.rally_k;
+        let go = crate::math_dice::sim_random(g) < skill.rally_chance * g.k.roomfight.rally_k;
         g.tab.roomfight_def[d].rally_go = go;
         return;
     }

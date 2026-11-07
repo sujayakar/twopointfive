@@ -28,8 +28,8 @@ fn ev_mag_out(g: &mut Game, id: FirearmId, dropped: bool) {
             if dropped {
                 let h = g.ch[ch].bones.get(crate::character::Bone::HandL).copied().unwrap_or(g.ch[ch].pos);
                 let at = [h[0], m::max(0.3, h[1]), h[2]];
-                let r0 = crate::dice::draw_world(g, "weapons::ev_mag_out#1");
-                let r1 = crate::dice::draw_world(g, "weapons::ev_mag_out#2");
+                let r0 = crate::math_dice::sim_random(g);
+                let r1 = crate::math_dice::sim_random(g);
                 spawn_mag(g, ch, at, [(r0 - 0.5) * 0.6, -0.2, (r1 - 0.5) * 0.6], fill, crate::throwables::ItemBounce::Mag);
             }
         }
@@ -45,8 +45,8 @@ fn ev_mag_out(g: &mut Game, id: FirearmId, dropped: bool) {
                 let h = g.ch[ch].bones.get(crate::character::Bone::HandR).copied().unwrap_or(g.ch[ch].pos);
                 let d = g.ch[ch].gun_dir;
                 let at = [h[0] - d[0] * 0.1, m::max(0.3, h[1] - 0.05), h[2] - d[2] * 0.1];
-                let r0 = crate::dice::draw_world(g, "weapons::ev_mag_out#3");
-                let r1 = crate::dice::draw_world(g, "weapons::ev_mag_out#4");
+                let r0 = crate::math_dice::sim_random(g);
+                let r1 = crate::math_dice::sim_random(g);
                 let drop = feed.as_ref().and_then(|f| f.drop);
                 let bounce = crate::throwables::ItemBounce::MagRate { belt: drop == Some(5.0) };
                 spawn_mag(g, ch, at, [(r0 - 0.5) * 0.6, -0.3, (r1 - 0.5) * 0.6], drop.unwrap_or(3.0), bounce);

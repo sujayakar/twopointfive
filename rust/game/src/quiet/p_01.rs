@@ -354,9 +354,9 @@ pub fn quiet_mission_deal_one(g: &mut crate::game::Game, q: &crate::scene_scenar
     let sets = q.patrols.as_ref().map(|p| p.len());
     match g.quiet.pin {
         None => {
-            crate::dice::draw_world(g, "quiet::quiet_mission_deal_one#1");
-            crate::dice::draw_world(g, "quiet::quiet_mission_deal_one#2");
-            crate::dice::draw_world(g, "quiet::quiet_mission_deal_one#3");
+            crate::math_dice::sim_random(g);
+            crate::math_dice::sim_random(g);
+            crate::math_dice::sim_random(g);
             crate::quiet::QuietDeal { start: 0.0, spot: 0.0, patrol: if sets.map_or(false, |n| n > 0) { 0.0 } else { -1.0 } }
         }
         Some(pin) => pinned_deal(crate::math_dice::mulberry32(pin_seed(pin) as f64), q.starts.len(), q.spots.len(), sets),

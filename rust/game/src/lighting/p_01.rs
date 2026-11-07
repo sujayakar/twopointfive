@@ -181,7 +181,7 @@ pub fn set_blackout(g: &mut crate::game::Game, seconds: f64, cause: crate::light
         }
         if g.gd[gd].state == crate::game::GuardState::Patrol {
             g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.34);
-            g.gd[gd].react_t = 1.0 + crate::dice::draw_world(g, "lighting::set_blackout#1");
+            g.gd[gd].react_t = 1.0 + crate::math_dice::sim_random(g);
         }
         let d = v3::dist(g.ch[g.gd[gd].ch].pos, g.level.breaker.pos);
         if d < bd
