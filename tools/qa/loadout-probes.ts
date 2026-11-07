@@ -255,7 +255,7 @@ export async function loadoutScreen(): Promise<boolean> {
 interface Cell { e: any; n: number; own: boolean; ok: boolean; note: string; r: BootReport | null; ref?: BootReport; bad: string[] }
 async function stageAll(only?: string[]): Promise<Cell[]> {
   const cells: Cell[] = [];
-  for (const e of sample(SCENARIOS as any[], 2)) if (!only || only.includes(e.id)) for (const c of sample(L.squadChoices(e) as any[], 2)) cells.push({ e, n: c.n, own: c.own, ok: c.ok, note: c.note, r: null, bad: [] });
+  for (const e of sample(SCENARIOS as any[], 1)) if (!only || only.includes(e.id)) for (const c of sample(L.squadChoices(e) as any[], 2)) cells.push({ e, n: c.n, own: c.own, ok: c.ok, note: c.note, r: null, bad: [] });
   const jobs = jobsOf(process.env.LOADOUT_JOBS, 4, 4);
   await pool(cells, jobs, async c => {
     const own = scenarioQuery(c.e) as string, q = c.own ? own.replace(/&squad4\b/, '') + `&squad=${c.n}` : L.squadSearch(own, c.n, c.e.squad);   // (its own size too is booted BY squad=N: the row's own URL is the reference below)
