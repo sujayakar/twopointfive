@@ -200,7 +200,8 @@ import { ANYTIME } from './scene/collision';
 import { knobRegistry, knobsCopy, knobsBack } from './game/knobs';   // (last on purpose: every game module above is already loaded, so this import changes nobody's load order)
 import type { Gpu } from './gpu/device';
 import { RENDER_PASSES } from './gpu/timer';
-import { PLAYTAPE, tapeFromUrl } from './replay/engineplay';
+import { PLAYTAPE, tapeFromUrl, tapeMapUrl } from './replay/engineplay';
+import { GAME_PAGE } from './replay/format';
 import { NETPLAY, NET_JOIN, netFromUrl, netKeyed, netLeave } from './net/page';
 import { netRows } from './ui/netrows';
 import { COOP } from './net/lobby';
@@ -224,6 +225,9 @@ boot.expose();
 
 async function main() {
   const q = new URLSearchParams(location.search);
+  // A REPLAY'S ADDRESS ON A GAME PAGE THAT PLAYS NO TAPES (replay/format.ts GAME_PAGE) is the map viewer's, which draws the file's trace: this window goes there
+  // before anything boots. A served file, and a build with no viewer page, get a plain card
+  if (q.has(PLAYTAPE) && !GAME_PAGE.playsTapes) { const to = tapeMapUrl(q); if (to === null) throw Object.assign(new Error('this address has no game on this build'), { name: 'NoGameHere' }); location.replace(to); return; }
   // THE KEPT PAGE (gpu/keep.ts, host/keeppage.ts): the tab's own page keeps the GPU device and shows the game in a frame of this address, so a mission start —
   // a load of that frame — compiles no shader this visit has compiled already. A shell boots nothing more; ?keeppage=0 = every load a whole page, as it was
   const keep = keepPageBoot(q, ownPage(q), kitViewOn);   // (a run of any kind keeps its own page: host/runpage.ts; the Team & kit picture draws with its page's device, on a lease beside it)
@@ -233,9 +237,6 @@ async function main() {
   // anything is built. With no WebAssembly (a browser whose policy turns this site's JIT off) it is the card below; anything else is a fault of the build
   // THE RUST GAME IS THE PAGE'S GAME (host/rustgame.ts): its module is fetched and compiled here, before anything has asked for the simulation's, and handed to
   // src/sim as the one instance, so `__ready` waits on it behind the boot card. There is no other game.
-  // (THE ONLY GAME. A tape played back stepped the TypeScript tick, which is gone, and its own path onto the Rust game is not here yet: that address gets a
-  // plain card before anything boots. A co-op game's page is the Rust game's: src/net/page.ts)
-  if (q.has(PLAYTAPE)) throw Object.assign(new Error('this address has no game on this build yet'), { name: 'NoGameHere' });
   const rustGame = await import('./host/rustgame');
   await rustGame.rustBoot();
   { const no = simWhyNot(); if (no) { console.info(simSay()); throw noWasm() ? new NoWasmError(no) : new Error(`the Rust simulation did not start: ${no}`); } }
@@ -1064,7 +1065,7 @@ async function main() {
     modelErrFrame();   // (?modelerr: a return on its first line otherwise)
     perfrec.cpuUpdate = loop.updateMs;
     // a par run just ended (game/par.ts): this machine's best for THIS run — level file, way in, squad size, difficulty — is filed here, the page's side,
-    // and its words ride the result where this page shows it (the end row, the card, the debrief). Never under a sandbox flag (god mode, no AI, unlimited ammo): that time is not a record —
+    // and its words ride the result where this page shows it (the card, the debrief). Never under a sandbox flag (god mode, no AI, unlimited ammo): that time is not a record —
     // and the flag counts if it was on at ANY frame while the clock ran (`parCheat`), not only on the frame the result appears.
     if (!tape && !net && !kitViewOn) { const R = game.par.result();
       if (!game.par.started) parCheat = false; else if (game.godMode || !game.aiEnabled || game.infiniteAmmo) parCheat = true;
@@ -1143,12 +1144,13 @@ async function main() {
     };
     requestAnimationFrame(settleStep);
   };
+  // THE FIRST PLAYED FRAME IS AN ORDINARY ONE, ON EVERY ROAD STRAIGHT TO PLAY (a mission's card, a benchmark's address): the Rust game is started, its apply and its tick run once here, before the loop's first frame, and not where the first frame would pay for them (host/rustgame.ts rustWarm). Not behind the title (a pick is a page load, and an idle title's attract stages by name first), a show, a networked game's machine (it starts by its server's clock) or a replay (it stands from its tape). ?rustwarm=0: the first frame pays.
+  if (!openStartCard && !net && !tape && !demo.active && q.get('rustwarm') !== '0') rustGame?.rustWarm({ input, cam, canvas });
   if (openStartCard) { brief?.off(); menu.open('start');
     if (START_PAGE.on) { if (openMissionsIfAsked() && !startPage()) openStartPage(); }   // (ui/startpage.ts: the one page was put up by the boot card — `?loadout=` included; left on the list across a load: the page again)
     else if (missionsBusy() || !loadoutFromQuery(q)) openMissionsIfAsked(); } else if (brief && briefGo) briefSettle(brief); else card.off();   // (?loadout=<mission id>: that mission's loadout screen over the card — ui/loadout.ts; else the mission list if the page was left on it. A screen the visitor opened off the boot card meanwhile stays the one that is up)
   loading.style.display = 'none';   // (the backdrop went before the first frame in the old boot too; the card is over the canvas until Start, and ?paused / a script that only __shot()s must not keep it)
   boot.mark('interactive'); boot.span('toInteractive', 0, performance.now()); gpuStory.stage = '';
-  if (brief?.held) rustGame?.rustWarm({ input, cam, canvas });   // (?rust=1: the Rust game started, its apply and its tick run once behind the same card: host/rustgame.ts rustWarm)
   if (brief?.held) game.saves.warm(game);   // (the save's code run once behind a brief that is up and not yet started, where a stall is nobody's — after the boot's own marks, which it is no part of: game/savestate.ts SAVETIMELINE.base)
   setTimeout(() => bootLine(), 5000);   // (the line prints at 'GPU ready'; a paused / hidden page that renders nothing still gets it, first-frame columns blank)
   // (START ON FIRST FRAME SHADERS, on where a person sits and off on a page a script drives: the card above is live while the later set still compiles and its passes draw their stand-ins. A script's
@@ -1287,7 +1289,7 @@ function sfxSwitches() { const q = new URLSearchParams(location.search); SFX_TAB
 function pageMuted(): boolean { return new URLSearchParams(location.search).has('mute') || (() => { try { return localStorage.getItem('twopointsix.testMute') === '1'; } catch { return false; } })(); }
 /** the audio engine, the test-rig mute, and the gesture that starts it */
 function pageAudio(game: Game) {
-  const audio = new AudioEngine(game.col); game.audio = audio;   // col includes the door leaves as dynamic occluders
+  const audio = new AudioEngine(game.ask); game.audio = audio;   // (the box world as it stands, its door leaves with it)
   audio.scoreSet = setlistOfQuery(location.search);   // the level's own music (audio/setlist.ts): which pieces of the score this page's level plays, in their order (as the URL names it; the frame loop says it again from the running game at every new mission)
   sfxSwitches();   // every sound as it was before they were redone · every redone one, the ones he picked the old of too (audio.ts SFX_TABLE; the mixer only: no rule reads it)
   // test-rig mute: '?mute' or localStorage twopointsix.testMute=1 (set once in the automation browser's profile) keeps this page silent —

@@ -226,7 +226,7 @@ pub fn waits(g: &mut crate::game::Game, op: DoorOpId) -> bool {
 
 /// This man of the order is on his mark with his hands his own. (showwhy.ts standsFree)
 pub fn stands_free(g: &crate::game::Game, seat: &crate::seats::SeatRef, op: DoorOpId, gd: GuardId) -> bool {
-    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].script.is_none() || g.time < g.gd[gd].dazzled_until {
+    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].script.is_none() || crate::control::man::blind(g, gd) {
         return false;
     }
     let a = match crate::orders::squad_orders_of(g, seat, gd) {

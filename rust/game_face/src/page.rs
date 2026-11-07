@@ -272,8 +272,7 @@ pub extern "C" fn face_back(h: u32, k: u32) -> u32 {
             unsafe { core::ptr::copy_nonoverlapping(block.as_ptr(), sim::state::addr(slot) as *mut u8, block.len().min(block_len())); }
             let mut g = g.clone();
             game::io::set_slot(&mut g, slot);
-            // (the box world's copy in rust/sim stands outside the block and is the abandoned moment's: written whole again as the next tick opens, as the
-            //  TypeScript's is after a snapshot is put back: boxMirror.ts `putBacks`)
+            // (the box world's copy in rust/sim stands outside the block and is the abandoned moment's: written whole again, below)
             g.col.mirror.put_backs = -1.0;
             Some(g)
         }
@@ -283,6 +282,9 @@ pub extern "C" fn face_back(h: u32, k: u32) -> u32 {
     let Some(mut g) = made else { return 0 };
     // (the serial counter never goes back in a game: what was dealt after the save is still held on the host's side, and a number means one thing)
     g.serial_next = g.serial_next.max(serial_next);
+    // (…and the box world's copy with it: it stands again, of this moment, before anybody asks)
+    game::scene_collision::unstand(&mut g);
+    game::scene_collision::stands(&mut g);
     super::with(h, |x| { x.g = g; x.cmd = None; x.cmds = None; x.after.clear(); x.drawn.cut(); });
     crate::memo::forget(h);
     1
@@ -312,6 +314,7 @@ pub extern "C" fn face_stand(k: u32, slot: usize) -> u32 {
     });
     let Some(mut g) = made else { return 0 };
     g.serial_next = g.serial_next.max(SERIAL_SEEN.with(|s| s.get()));
+    game::scene_collision::unstand(&mut g);   // (whatever rows its copy says it wrote were another slot's, or another moment's)
     let h = super::put(super::Held::new(g));
     crate::memo::forget(h);
     h

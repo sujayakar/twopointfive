@@ -387,7 +387,7 @@ export class Breaks {
   }
   /** the pool took a resting piece's slot: it crumbles into a few chips of its own material where it lay (glass: game/shards.ts's own crumble, when it has one) */
   evicted(c: Chunk) {
-    messEvicted(this.g, c);   // (picture only: the mark it leaves where it lay — floormess.ts CHAOS.mess, nothing with the rule off)
+    if (!c.glass) messEvicted(this.g, c.box.c, c.box.h, c.box.yaw, c.box.rot, c.mat?.mat, c.kind);   // (picture only: the mark it leaves where it lay — floormess.ts CHAOS.mess, nothing with the rule off)
     if (!cutBoxesOn()) return;
     if (c.glass) { (this.g as unknown as { shards?: { evicted?(c: Chunk): void } }).shards?.evicted?.(c); return; }
     if (EVICT.on) this.dissolve(c); else this.crumble(c, BREAKS.crumbleChips, 0.35);

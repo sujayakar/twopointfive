@@ -242,7 +242,6 @@ pub struct BigkitStats {
     pub hammers_out: i32,
     pub hammers_in: i32,
     pub sam_walks: i32,
-    pub sam_other: i32,
 }
 
 /// (src/game/bigkit.ts:63 TAIL)

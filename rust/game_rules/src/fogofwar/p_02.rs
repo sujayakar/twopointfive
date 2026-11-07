@@ -104,7 +104,7 @@ struct Job { gd: GuardId, chest: V3, pairs: Vec<(String, crate::fogofwar::FogEye
 
 /// Once a frame after everybody has moved; asked outside a tick, the pass stands the copy of the box world for itself. (FogOfWar.update)
 pub fn fog_of_war_update(g: &mut crate::game::Game, dt: f64) {
-    if g.col.mirror.live { fog_of_war_pass(g, dt); } else { crate::scene_collision::window(g, &mut |g| fog_of_war_pass(g, dt)); }
+    if crate::scene_collision::standing(g) { fog_of_war_pass(g, dt); } else { crate::scene_collision::window(g, &mut |g| fog_of_war_pass(g, dt)); }
 }
 
 /// The eyes, then seen or not for every man off the team, then the doors. (FogOfWar.pass)
@@ -148,7 +148,7 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
             let gd = g.guards[i];
             i += 1;
             if eyes.len() as f64 >= cap { break; }
-            if !fog_of_war_on_team(g, gd) || is_dead(g, gd) || g.time < g.gd[gd].dazzled_until { continue; }
+            if !fog_of_war_on_team(g, gd) || is_dead(g, gd) || crate::control::man::blind(g, gd) { continue; }
             let e = match crate::wandorder::mate_wand_eye(g, gd) {
                 Some(e) => e,
                 None => { let c = g.gd[gd].ch; fog_of_war_eye_of(g, c) }
@@ -207,7 +207,7 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if fog_of_war_on_team(g, gd) && !is_dead(g, gd) && g.time >= g.gd[gd].dazzled_until {
+        if fog_of_war_on_team(g, gd) && !is_dead(g, gd) && !crate::control::man::blind(g, gd) {
             let c = g.gd[gd].ch;
             g.fog_of_war.mates.push(c);
         }
@@ -450,13 +450,10 @@ fn judge(g: &mut crate::game::Game, gd: GuardId, lines: &JsMap<GuardId, bool>, v
     }
 }
 
-/// A man as an eye: off his head, looking between his chest and his head. (FogOfWar.eyeOf)
+/// A man as an eye: off his head, looking where he looks (`gaze_of`). (FogOfWar.eyeOf)
 pub fn fog_of_war_eye_of(g: &crate::game::Game, c_2: CharId) -> crate::fogofwar::FogEye {
     let pos = bone_or(g, c_2, crate::character::Bone::Head, 1.65);
-    let look = if g.k.fog.cone { gaze_of(g, c_2) } else {
-        let hd = crate::character::character_head_dir(g, c_2);
-        v3::normalize(v3::lerp3(g.ch[c_2].chest_dir, hd, 0.5))
-    };
+    let look = gaze_of(g, c_2);
     let p = g.ch[c_2].pos;
     let y = if g.ch[c_2].alive { EYE_STAND + (EYE_CROUCH - EYE_STAND) * m::min(1.0, m::max(0.0, g.ch[c_2].anim.crouch)) } else { EYE_CROUCH };
     crate::fogofwar::FogEye { id: g.ch[c_2].id, pos, look, at: [p[0], p[1] + y, p[2]], fov: None, near: None, wand: None }
@@ -571,7 +568,7 @@ pub fn fog_of_war_tell_calls(g: &mut crate::game::Game, dt: f64) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if fog_of_war_on_team(g, gd) && !is_dead(g, gd) && g.time >= g.gd[gd].dazzled_until && g.gd[gd].held.is_none() { mates.push(gd); }
+        if fog_of_war_on_team(g, gd) && !is_dead(g, gd) && !crate::control::man::blind(g, gd) && g.gd[gd].held.is_none() { mates.push(gd); }
     }
     // contact: the first teammate, in list order, with one of them in his eyes
     for &gd in mates.iter() {

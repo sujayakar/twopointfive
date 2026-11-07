@@ -345,12 +345,6 @@ pub fn game_drop_throwable(g: &mut crate::game::Game, kind: crate::game::ThrowKi
 /// (game.ts Game.throwCount)
 pub fn game_throw_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, kind: crate::game::ThrowKind) -> f64 { crate::player::throw_count(g, seat, kind) }
 
-/// (game.ts Game.objectivePos)
-pub fn game_objective_pos(g: &mut crate::game::Game) -> Option<V3> { crate::mission::objective_pos(g) }
-
-/// (game.ts Game.objectiveText)
-pub fn game_objective_text(g: &mut crate::game::Game) -> String { crate::mission::objective_text(g) }
-
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -133,14 +133,7 @@ pub struct StaticCollision {
     pub boxes: Vec<BoxId>,
     pub mirror: crate::scene_box_mirror::BoxMirror,
     pub windowed: bool,
-    pub stamp: Vec<i32>,
-    pub stamp_id: f64,
-    pub cell_stamp: Vec<i32>,
-    pub seg_cells: Vec<i32>,
     pub tilted_at: Vec<f64>,
-    pub trig_yaw: Vec<f64>,
-    pub trig_cos: Vec<f64>,
-    pub trig_sin: Vec<f64>,
     pub pane_rule: Option<crate::scene_collision::PaneRule>,
     pub pane_rows: Option<crate::scene_collision::PaneRows>,
     pub glass_walkable: Option<crate::scene_collision::GlassWalkable>,
@@ -161,14 +154,7 @@ impl StaticCollision {
             boxes: Vec::new(),
             mirror: crate::scene_box_mirror::BoxMirror::blank(),
             windowed: false,
-            stamp: Vec::new(),
-            stamp_id: 0.0,
-            cell_stamp: alloc::vec![0; 1120],
-            seg_cells: alloc::vec![0; 1120],
             tilted_at: Vec::new(),
-            trig_yaw: Vec::new(),
-            trig_cos: Vec::new(),
-            trig_sin: Vec::new(),
             pane_rule: None,
             pane_rows: None,
             glass_walkable: None,
@@ -883,44 +869,6 @@ impl Raycast {
     }
 }
 impl Default for Raycast { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/scene/collision.ts:866 raycastAsk ->, src/scene/collision.ts:866)
-#[derive(Clone, Copy, Debug)]
-pub struct RaycastAsk {
-    pub t: f64,
-    pub index: f64,
-    pub n: V3,
-}
-impl RaycastAsk {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RaycastAsk {
-            t: 0.0,
-            index: 0.0,
-            n: [0.0; 3],
-        }
-    }
-}
-impl Default for RaycastAsk { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/scene/collision.ts:884 raycastHere ->, src/scene/collision.ts:884)
-#[derive(Clone, Copy, Debug)]
-pub struct RaycastHere {
-    pub t: f64,
-    pub index: f64,
-    pub n: V3,
-}
-impl RaycastHere {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RaycastHere {
-            t: 0.0,
-            index: 0.0,
-            n: [0.0; 3],
-        }
-    }
-}
-impl Default for RaycastHere { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]

@@ -60,7 +60,7 @@ pub fn rescue_clock(g: &mut crate::game::Game, dt: f64) {
     if g.rescue.t0.is_nan() || rescue_over(g) { return; }
     if let Some(a) = g.rescue.act.clone() {
         let by = a.by;
-        if g.gd[by].state == crate::game::GuardState::Dead || g.time < g.gd[by].dazzled_until || g.time < g.gd[by].stagger_until || g.gd[by].held.is_some() || g.gd[a.victim].state == crate::game::GuardState::Dead {
+        if g.gd[by].state == crate::game::GuardState::Dead || crate::control::man::blind(g, by) || crate::control::man::staggered(g, by) || g.gd[by].held.is_some() || g.gd[a.victim].state == crate::game::GuardState::Dead {
             rescue_end_act(g);
             rescue_note(g, "act:broken");
             return;
@@ -113,7 +113,7 @@ pub fn rescue_clock(g: &mut crate::game::Game, dt: f64) {
         g.rescue.resolve = m::min(g.rescue.resolve, m::max(0.0, 1.0 - g.k.rescue.second_hostage_secs / g.rescue.resolve_secs));
     }
     g.rescue.cap_by = Some(cap);
-    if g.time < g.gd[cap].dazzled_until || g.time < g.gd[cap].stagger_until { return; }
+    if crate::control::man::blind(g, cap) || crate::control::man::staggered(g, cap) { return; }
     g.rescue.resolve = m::min(1.0, g.rescue.resolve + dt / g.rescue.resolve_secs);
     let r = g.rescue.resolve;
     rescue_set_step(g, if r >= 0.8 { RescueStep::AboutTo } else if r >= 0.4 { RescueStep::Counting } else { RescueStep::Shouting });
@@ -359,22 +359,22 @@ pub fn rescue_state(g: &crate::game::Game) -> crate::rescue::RescueState {
     if g.rescue.t0.is_nan() { RescueState::Staged } else { RescueState::Running }
 }
 
-/// the HUD's objective line and marker while it is up: the room, and how far the captor's clock has got, never in seconds   (rescue.ts Rescue.objective)
-pub fn rescue_objective(g: &mut crate::game::Game) -> Option<crate::rescue::RescueObjective> {
+/// the HUD's objective line and marker while it is up: the room, and how far the captor's clock has got, never in seconds
+pub fn rescue_objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::rescue::RescueObjective> {
     if !g.rescue.active { return None; }
     let pos: Option<V3> = rescue_bounds(g).map(|r| [(r.x0 + r.x1) / 2.0, 0.0, (r.z0 + r.z1) / 2.0]);
     if let Some(r) = g.rescue.result.clone() {
         let text = if r.state == RescueResultState::Rescued {
             alloc::format!("{} — {} · press shift+enter to restart", if r.grade == RescueResultGrade::Clean { "clean" } else { "costly" }, r.why)
         } else {
-            alloc::format!("failed — {} · press {} to restart", r.why, if g.pl[g.player].down { "enter" } else { "shift+enter" })
+            alloc::format!("failed — {} · press {} to restart", r.why, if g.pl[seat.player].down { "enter" } else { "shift+enter" })
         };
         return Some(RescueObjective { text, pos: None });
     }
     let hs = g.rescue.hostages.clone();
     let alive = standing(g, &hs).len();
     if !g.rescue.secured_at.is_nan() || g.rescue.ending.lead.is_some() {
-        let o = crate::rescueend::rescue_end_objective(g);
+        let o = crate::rescueend::rescue_end_objective(g, seat);
         let text = if !g.rescue.t0.is_nan() && g.rescue.step != RescueStep::Stopped {
             alloc::format!("{} · the captor is {}", o.text, g.rescue.step.as_str())
         } else {

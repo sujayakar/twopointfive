@@ -2,7 +2,7 @@
 //! these hold what is true of all of them: drawing a game changes nothing of it, what is drawn between two ticks stands between them, and nothing is drawn
 //! through a cut. `hold draw` draws every frame of a set of plays and says what it cost.
 use game_draw::{want, Drawn};
-use game_start::play::{words, Opts, Play};
+use game_start::play::{Opts, Play};
 
 const ALL: u32 = u32::MAX;
 fn office(seed: u32) -> Play { Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed, ..Default::default() }) }
@@ -21,7 +21,7 @@ fn drawing_a_game_is_no_part_of_it() {
             p.g.god_mode = true;
             p.frame();
             if draw { let focus = p.g.aim_point; d.take(&p.g, ALL); d.frame(&p.g, 0.5, focus); d.frame(&p.g, 1.0, focus); }
-            words(&mut p.g)
+            p.words()
         }).collect::<Vec<_>>()
     };
     let (plain, drawn) = (played(false), played(true));

@@ -128,7 +128,10 @@ const LOW_PITCH = 24 * Math.PI / 180, HIGH_PITCH = 55 * Math.PI / 180;
 export { FIXEDSTEP, snapDt, planTicks } from './fixedstep';
 import { FIXEDSTEP, planTicks } from './fixedstep';
 
-export function stepFrame(ctx: LoopCtx, dt: number): void {
+/** A FRAME IS ONE WINDOW ON THE BOX WORLD'S COPY (scene/collision.ts `window`): what the page asks of it — the marks and the dress step behind a tick, the camera, the
+ *  sound, the HUD — is asked of a copy proven once and not once a question, and a tick inside the frame has it proven again (`writes`). A frame that asks nothing proves nothing. */
+export function stepFrame(ctx: LoopCtx, dt: number): void { ctx.game.col.window(() => stepFrameIn(ctx, dt)); }
+function stepFrameIn(ctx: LoopCtx, dt: number): void {
   const { game, input, cam, view } = ctx;
   ctx.time += dt;
   const frozen = ctx.frozen();   // paused / start card: the world holds still, the picture stays live behind the card, hotkeys are off — unless attract mode has let the world go behind the start card
@@ -191,10 +194,10 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
     let demoPos: Vec3 | null, attractPos: Vec3 | null;
     // the camera's own step: come round a spectated man, the pitch ease, the follow — once a frame on the frame's dt, or (the fixed step) once a TICK on the tick's:
     // the input record takes its view from this camera (cmd.ts sampleCmd), so a camera eased by the display's frame time would make two displays two games
-    const camStepIn = (cdt: number, dp: Vec3 | null, ap: Vec3 | null, tick: boolean): Vec3 | null => {
+    const camStep = (cdt: number, dp: Vec3 | null, ap: Vec3 | null, tick: boolean): Vec3 | null => {
       const ds: DirectorFrame | null = frozen ? null : D.showing ? D.frame : null;
       const shot: Vec3 | null = dp ?? (ds ? ds.look : null) ?? ap, follow = game.followPos();   // a scripted look-at: the tour's / the level script's pinned shot / attract mode's
-      const spect = !shot && game.spectate >= 0; if (spect) cam.autoYaw(cdt, follow, (a, b) => game.col.segmentBlocked(a, b)); cam.easeYaw(cdt, spect);   // spectating a guard: come round to the side he can be seen from,
+      const spect = !shot && game.spectate >= 0; if (spect) cam.autoYaw(cdt, follow, (a, b) => game.ask.blocked(a, b)); cam.easeYaw(cdt, spect);   // spectating a guard: come round to the side he can be seen from,
       const want = spect && cam.desiredDistance < 12 ? LOW_PITCH : HIGH_PITCH; if (!ds || ds.handedOver) cam.pitch += (want - cam.pitch) * Math.min(1, cdt * 3);   // and drop to a low three-quarter angle up close (from the usual height the ceiling panels sit between the eye and a man six metres off) — a showcase's shots key the pitch themselves (until it hands over: then the follow camera is the player's again)
       const ld = shot || game.spectate >= 0 ? null : ctx.lead?.() ?? null;   // (his own man drawn ahead of the tick: the look-at goes with him)
       const led = (p: Vec3): Vec3 => ld ? [p[0] + ld.by[0], p[1] + ld.by[1], p[2] + ld.by[2]] : p;
@@ -205,13 +208,13 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
       const mine = !!auto && AUTOVIEW.on && !frozen && !shot && viewFree() && follow === game.player.char.pos && autoFree(game);
       if (mine) {
         if (!(auto!.base > 0)) autoBegin(auto!, cam);   // (kept on from an earlier visit: the zoom as the page opened is the hand's own)
-        const S = autoRead(auto!, game, input, cdt), look = autoFrame(auto!, S, cam, cdt), yaw = turnGoal(auto!, S, cam, cdt, (a, b) => game.col.segmentBlocked(a, b));
+        const S = autoRead(auto!, game, input, cdt), look = autoFrame(auto!, S, cam, cdt), yaw = turnGoal(auto!, S, cam, cdt, (a, b) => game.ask.blocked(a, b));
         if (ctx.behindAuto && ctx.behind != null && (S.shown || S.hold || !S.free)) ctx.behind = null;   // (a turn of its own under way ends where it is the moment it could not have begun)
         const eased = AUTOCAM.turnCap > 0;
         if (Math.abs(auto!.turnV) > AUTOCAM.turnSeen) auto!.turnT = 0;   // (an eased turn or swing is seconds long: `gap` is counted from where the view is seen to stop, or the next would begin the moment this one is ended — the last of its settling, too slow to see, is not waited out)
         else if (yaw != null && ctx.behind == null && !auto!.sway && !auto!.swayV) { ctx.behind = yaw; ctx.behindAuto = true; auto!.turnT = 0; AUTOCAM_STATS.turns++; if (!eased) carryOn(); }   // (his aim goes round with the view, as the double tap's does — in a quick turn; an eased one is slow enough for the hand to follow, as the sway is. Never begun across a lean of the sway's: that comes home first)
         // …and the sway (AUTOCAM.sway): a slow lean of the yaw round the hand's own, toward the fight and the way he moves — not while a turn of another kind is under way
-        if (ctx.behind != null) swayDrop(auto!); else { const t = autoSway(auto!, S, cam, cdt, (a, b) => game.col.segmentBlocked(a, b)); if (t) { cam.rotate(t); AUTOCAM_STATS.swayed += Math.abs(t); } }
+        if (ctx.behind != null) swayDrop(auto!); else { const t = autoSway(auto!, S, cam, cdt, (a, b) => game.ask.blocked(a, b)); if (t) { cam.rotate(t); AUTOCAM_STATS.swayed += Math.abs(t); } }
         const at: Vec3 = led(hs ? [look[0] + hs[0], look[1], look[2] + hs[2]] : look);
         if (tick) cam.step(cdt, at, null); else cam.update(cdt, at, null);
         return shot;
@@ -222,9 +225,6 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
       if (tick) cam.step(cdt, at, aim); else cam.update(cdt, at, aim);
       return shot;
     };
-    /** …inside one window on the box world's copy (scene/collision.ts): the camera's own lines of a frame (the spectator's side, the turn, the sway) are asked
-     *  between ticks, and one proof of the copy serves them all; a frame that asks none proves nothing */
-    const camStep = (cdt: number, dp: Vec3 | null, ap: Vec3 | null, tick: boolean): Vec3 | null => game.col.window(() => camStepIn(cdt, dp, ap, tick));
     if (!fixed) {
       if (ctx.fixed) { ctx.fixed.acc = 0; ctx.fixed.drift = 0; ctx.fixed.owed = null; if (!frozen && ctx.fixed.orbit) { cam.rotate(ctx.fixed.orbit); ctx.fixed.orbit = 0; } }   // (a hand's turn the fixed step still owed a tick)
       ctx.ticks = frozen ? 0 : 1;

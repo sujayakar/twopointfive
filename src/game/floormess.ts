@@ -11,10 +11,9 @@
 // drops it before any mark play laid, and a checkpoint carries it like any decal. Nothing here keeps state of its own (a film that is "already there" is read
 // off the decal list), draws from the game's die, or reads the wall clock: where a mark goes and how it looks is a hash of where it is.
 // (src/game is one import cycle: CHAOS is read inside the calls only.)
-import { Vec3, quat } from '../math/vec';
+import { Vec3, Quat, quat } from '../math/vec';
 import { Box, BoxFlag } from '../scene/boxes';
 import type { Game } from './game';
-import type { Chunk } from './debris';
 import { hash01 } from './debris';
 import { lookDecal } from './lookDecals';
 import { CHAOS, chaosOf } from './destruction';
@@ -127,9 +126,9 @@ export function messOpened(g: Game, rect: [number, number, number, number]) {
   for (const s of [1, -1]) patch(g, cx + (alongX ? 0 : s * (half + F.out)), cz + (alongX ? s * (half + F.out) : 0), F.radius + F.perMetre * len, F.strength, s > 0 ? 3 : 4);
 }
 
-/** The debris pool took a resting chunk's slot (breakTable.ts evicted): the crushed mark of it where it lay. */
-export function messEvicted(g: Game, c: Chunk) {
-  if (!on(g) || c.glass) return; const K = CHAOS.mess, R = K.rubble, D = g.decals, b = c.box;
+/** The debris pool took a resting chunk's slot: the crushed mark of it where it lay. The Rust game tells this by value (its out event `MessEvicted`), since the slot is taken before the host reads it. */
+export function messEvicted(g: Game, c: Vec3, h: Vec3, yaw: number, rot: Quat | null | undefined, mat: string | null | undefined, kind: string) {
+  if (!on(g)) return; const K = CHAOS.mess, R = K.rubble, D = g.decals, b = { c, h, yaw, rot };
   const long = Math.max(b.h[0], b.h[1], b.h[2]); if (long < R.least) return;
   const x = b.c[0], z = b.c[2], rad = Math.max(R.min, Math.min(R.max, long * R.grow));
   // what it lay on: the level under it (a chunk on a desk marks the desk), a prop's top rides the prop
@@ -139,7 +138,7 @@ export function messEvicted(g: Game, c: Chunk) {
   else if (st && st.index < 1e6 && st.n[1] > 0.9) y = from[1] - st.t;
   else if (b.c[1] > 0.6) return;   // (nothing under it that a look down finds, and it is not on the floor: no mark in the air)
   if (y > b.c[1] + 0.02 || b.c[1] - y > long + 0.25) return;
-  const want = c.mat?.mat ?? c.kind, look = want === 'wood' || want === 'cardboard' || want === 'fabric' || want === 'paper' || want === 'carpet' || want === 'plant' ? MESS_LOOK.splinter : MESS_LOOK.grit;
+  const want = mat ?? kind, look = want === 'wood' || want === 'cardboard' || want === 'fabric' || want === 'paper' || want === 'carpet' || want === 'plant' ? MESS_LOOK.splinter : MESS_LOOK.grit;
   for (const d of D.list) { const l = lookOf(d); if ((l === MESS_LOOK.grit || l === MESS_LOOK.splinter) && Math.abs(d.pos[1] - y) < 0.04 && Math.hypot(d.pos[0] - x, d.pos[2] - z) < R.crowd * Math.min(rad, d.radius)) { MESS_STATS.crowded++; return; } }
   // long along the way the piece lay: its longest axis as it came to rest (a chunk's pose is its `rot`), laid flat
   const il = b.h[0] >= b.h[1] && b.h[0] >= b.h[2] ? 0 : b.h[1] >= b.h[2] ? 1 : 2, ax: Vec3 = [il === 0 ? 1 : 0, il === 1 ? 1 : 0, il === 2 ? 1 : 0];

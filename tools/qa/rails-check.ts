@@ -75,7 +75,7 @@ export async function railsCheck(): Promise<boolean> {
       verdict(!R.why && !!L?.rails && faults.length === 0, 'the level starts and its lesson block is whole', `${R.why ?? 'started'} · ${L?.steps.length ?? 0} steps · ${faults.length ? faults.join(' · ') : 'no faults'}`);
       R.run(0.5); const p0 = [...g.player.char.pos], n0 = g.orders.log.length; R.command(YARD); R.run(0.3);
       const start = g.level.scenarios.roomClear.team.sam;
-      verdict(!g.rails.live && !g.lesson.data && !g.lesson.objective() && !g.playerInvisible && flat(p0, start) < 0.6 && g.orders.log.length === n0 + 1 && !(g.director.run && !g.director.run.ended),
+      verdict(!g.rails.live && !g.lesson.data && !!g.view.mission && g.view.mission.of !== 'lesson' && !g.playerInvisible && flat(p0, start) < 0.6 && g.orders.log.length === n0 + 1 && !(g.director.run && !g.director.run.ended),
         'switch off: the level is its mission alone — no lesson, the player on the floor at the file\'s start, the command key orders the squad at once, no program',
         `live ${g.rails.live} · lesson ${g.lesson.data ? 'live' : 'none'} · the player ${flat(p0, start).toFixed(2)} m from the start · orders ${n0} → ${g.orders.log.length} · program ${g.director.run && !g.director.run.ended ? 'running' : 'none'}`); }
     // ---- 3, 4, 5

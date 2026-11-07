@@ -43,7 +43,7 @@ export async function wallsafeCheck(scns = FRESH): Promise<boolean> {
   try {
     for (const scn of scns) {
       console.log(`  — ${scn}`);
-      const R = await rig(scn, 5), g = R.game, C = R.C, pl = g.player, col = g.col; R.kit();
+      const R = await rig(scn, 5), g = R.game, C = R.C, col = g.col; let pl = g.player; R.kit();   // (`pl` is taken again after every restart: a restart makes the player's man anew, and the man held from before it is no longer the game's)
       const src = (W: any): Vec3 => wallPt(W, 0, 0.5, 1.1), lined = (W: any, q: number[]) => !col.solidBlocked(src(W), [q[0], 1.1, q[2]]);
       /** a free place on the charge's side `d` metres from it with a line to it (along the wall either way, straight back, or between), not within 0.8 m of `not` */
       const place = (W: any, d: number, not: number[][] = []): Vec3 | null => { const k = Math.SQRT1_2 * d;
@@ -102,7 +102,7 @@ export async function wallsafeCheck(scns = FRESH): Promise<boolean> {
         const pS2 = place(W, 0.5 * r.reach, [pA, pB, pM]), pN = pS2 && place(W, 0.3 * r.reach, [pA, pB, pM, pS2]);
         if (!pS2 || !pN) { line(false, `${name}: room for Sam inside the reach`, `at ${f2(0.5 * r.reach)} m: ${pS2 ? 'yes' : 'NO'} · a man at ${f2(0.3 * r.reach)} m: ${pN ? 'yes' : 'NO'}`); continue; }
         /** the squad's own charge on that wall: the floor put back, the men gathered at it, the wall's order to all, armed (null, and a line, where it does not come about) */
-        const squadSets = (): any => { g.restartEncounter(); R.step(5); R.kit(); for (const h of R.hostiles) if (h.state !== 'dead') far(h, 0);
+        const squadSets = (): any => { g.restartEncounter(); R.step(5); pl = g.player; R.kit(); for (const h of R.hostiles) if (h.state !== 'dead') far(h, 0);
           R.gather(wallPt(W, 0, 2.4) as Vec3, 40); const tAt = wallPt(W, 0, 0) as Vec3, n0 = C.ops.length, why = R.O.give(WALL_ORDER, wallTarget(g, tAt, { kind: 'floor', at: R.O.freeSpot(tAt) ?? tAt }), 'all'), op = C.ops[C.ops.length - 1];
           if (why || C.ops.length === n0 || !op) { line(false, `${name}: the squad takes the wall's order on wall ${W.index}`, `refused: ${why}`); return null; }
           if (!(R.until(() => op.phase === 'armed' || !C.ops.includes(op), 90) && op.phase === 'armed')) { line(false, `${name}: the squad's charge on wall ${W.index} is armed`, `phase '${op.phase}'${op.ended ? `, ended '${op.ended}'` : ''}`); return null; }

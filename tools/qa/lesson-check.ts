@@ -21,6 +21,8 @@ const { LESSON, checkLesson, lessonLine } = await import(`${ROOT}/src/game/lesso
 const { STALK } = await import(`${ROOT}/src/game/stalk.ts`);
 const { CLOSE } = await import(`${ROOT}/src/game/close.ts`);
 const { RAILS } = await import(`${ROOT}/src/game/rails.ts`);
+/** the lesson's own row on the Rust game's record of the mission's line */
+const lessonRow = (g: any) => g.view.mission?.of === 'lesson' ? g.view.mission : null;
 const names = process.argv.slice(2).filter(a => !a.startsWith('--')).map(a => a.replace(/\.json$/, ''));
 const list: string[] = names.length ? names : [...new Set((LESSON_MISSIONS as any[]).map(e => String(e.level).replace(/\.json$/, '')))];
 let fails = 0, checks = 0;
@@ -114,7 +116,7 @@ for (const name of list) {
     verdict(entryOfQuery(q)?.id === e.id, `'${e.title}': its link reads back to its own row`, q);
     LESSON.on = true;
     { const W = await stand(), g = W.game; const r = await quiet(() => startFromQuery(g, q)); await quiet(() => { for (let i = 0; i < 30; i++) W.step(1 / 60); });
-      const o = g.lesson.objective(), line = g.objectiveText();
+      const o = lessonRow(g), line = g.objectiveText();
       verdict(!r.why && !!r.spec && !!o && g.lesson.i === 0 && line === o.text && line.includes(line0), `'${e.title}': starts, and the objective row is the lesson's first step`, r.why ?? line);
       if (e.squad === 0 && e.kind === 'quiet') {   // (a quiet run alone saves checkpoints: the lesson's place among its steps rides in the file)
         // (a tutorial mission's saves are its authored checkpoints, taken by the frame with the level's program stopped for the snapshot — rails.ts: the
@@ -127,17 +129,17 @@ for (const name of list) {
             const no = kept ? g.saves.loadInStep(g, kept.key) : `no checkpoint was kept when step ${k + 1} came up`; if (no) why = String(no); await quiet(() => { for (let i = 0; i < 3; i++) W.step(1 / 60); }); }
           else { const snap = W.snapshot('lesson-check', true); g.lesson.i = 0; await quiet(() => { W.restore(snap); for (let i = 0; i < 3; i++) W.step(1 / 60); }); }
         } catch (x) { why = String((x as Error).message); }
-        verdict(!why && g.lesson.i >= k && !!g.lesson.objective()?.text.includes(`${g.lesson.i + 1}/${L.steps.length}`), `'${e.title}': a checkpoint carries the step that is up (saved on step ${k + 1}, loaded on step ${g.lesson.i + 1})`, why); }
+        verdict(!why && g.lesson.i >= k && !!lessonRow(g)?.text.includes(`${g.lesson.i + 1}/${L.steps.length}`), `'${e.title}': a checkpoint carries the step that is up (saved on step ${k + 1}, loaded on step ${g.lesson.i + 1})`, why); }
       g.lesson.i = Math.min(1, L.steps.length - 1);   // (the check's own hand again: every row is restarted from a step that is NOT the first)
       // a restart BETWEEN FRAMES: before the lesson's next tick the step it still holds is the last run's — neither a checkpoint nor the row may carry it
-      { let snapI = -1, row = ''; await quiet(() => { g.restartEncounter(); if (!g.lesson.data) startFromQuery(g, q); snapI = g.lesson.data ? g.lesson.snapshot().i : -2; row = g.lesson.objective()?.text ?? ''; });
+      { let snapI = -1, row = ''; await quiet(() => { g.restartEncounter(); if (!g.lesson.data) startFromQuery(g, q); snapI = g.lesson.data ? g.lesson.snapshot().i : -2; row = lessonRow(g)?.text ?? ''; });
         verdict(snapI === 0 && row.includes(line0) && !g.lesson.finished, `'${e.title}': straight after a restart, before any frame, a checkpoint would file step 1 and the row reads step 1 (not the last run's step)`, `snapshot step ${snapI + 1} · row "${row}"`); }
       await quiet(() => { for (let i = 0; i < 30; i++) W.step(1 / 60); });
-      verdict(g.lesson.i === 0 && !!g.lesson.objective()?.text.includes(line0), `'${e.title}': a restart puts the lesson back on its first step`, g.lesson.summary()); }
+      verdict(g.lesson.i === 0 && !!lessonRow(g)?.text.includes(line0), `'${e.title}': a restart puts the lesson back on its first step`, g.lesson.summary()); }
     LESSON.on = false;
     { const W = await stand(), g = W.game; const r = await quiet(() => startFromQuery(g, q)); await quiet(() => { for (let i = 0; i < 30; i++) W.step(1 / 60); });
       const line = g.objectiveText();
-      verdict(!r.why && !g.lesson.objective() && !g.lesson.data && !!line && !line.startsWith('training'), `'${e.title}': with the switch off it is its mission alone`, line); }
+      verdict(!r.why && !!g.view.mission && g.view.mission.of !== 'lesson' && !g.lesson.data && !!line && !line.startsWith('training'), `'${e.title}': with the switch off it is its mission alone`, line); }
     LESSON.on = true;
   }
 }

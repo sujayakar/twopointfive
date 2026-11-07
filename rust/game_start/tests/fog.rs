@@ -2,7 +2,8 @@
 //! left out) is the game's, and every machine of one game holds it the same. The picture's block (`g.fog_picture`: a lamp's kept glow, the list kept for a
 //! viewer's draw with the fog off) is one machine's, made from the game every tick.
 //! These tests hold the line between them: nothing in the game reads the picture's block.
-use game_start::play::{Opts, Play};
+use game_start::play::{parting, Opts, Play};
+use game_start::scene::{Axis, Scene};
 
 const SEEDS: [u32; 3] = [5, 6, 7];
 const LEVEL: &str = "office.json";
@@ -10,13 +11,6 @@ const LINK: &str = "?levelFile=office.json&roomclear&squad4";
 
 /// the office's room clear under the fog, as a click on its row starts it
 fn office(seed: u32) -> Play { Play::mission(LEVEL, LINK, &Opts { seed, ..Default::default() }) }
-
-/// every part of the game's state, a word a part
-fn words(p: &mut Play) -> Vec<u32> {
-    let (mut w, mut out) = (game::io::W::new(), Vec::new());
-    game::state_words::state_words(&mut p.g, &mut w, &mut out);
-    out
-}
 
 /// what a host does to its game between two steps
 #[derive(Clone, Copy, PartialEq)]
@@ -29,17 +23,10 @@ fn played(seed: u32, host: Host, frames: usize) -> Vec<Vec<u32>> {
         // (a viewer's page raises the switch once; a host whose block is made anew raises it again each frame, as it would have to)
         if host != Host::Plain { p.g.fog_picture.viewer = true; }
         p.frame();
-        let row = words(&mut p);
+        let row = p.words();
         if host == Host::PictureMadeAnew { p.g.fog_picture = game::fogofwar::FogPicture::blank(); }
         row
     }).collect()
-}
-
-/// the first frame at which two games differ, and the parts of the state that do
-fn parting(a: &[Vec<u32>], b: &[Vec<u32>]) -> Option<(usize, String)> {
-    let k = a.iter().zip(b).position(|(x, y)| x != y)?;
-    let parts: Vec<&str> = game::state_words::STATE_NAMES.iter().zip(a[k].iter().zip(&b[k])).filter(|(_, (x, y))| x != y).map(|(n, _)| *n).collect();
-    Some((k, parts.join(", ")))
 }
 
 /// THE RULE: the picture's block is made from the game and read by nothing in it. A game whose block is thrown away after every frame is, in
@@ -81,6 +68,49 @@ fn a_viewer_watching_is_no_part_of_the_game() {
     }
 }
 
+/// what the fog's pass draws from, of a game as it stands
+fn fog_of(p: &Play) -> game_draw::fog::Fog {
+    let mut d = game_draw::Drawn::default();
+    d.take(&p.g, game_draw::want::fog);
+    assert_eq!(d.fog.len(), 1);
+    d.fog[0]
+}
+
+/// A yard of fifty-four lamps, more than the lit fog's block holds, two players standing 25 m apart in it under the fog. (No level of the game has so
+/// many lamps under its fog: the office, the most, has 31 of the block's 48.)
+fn lamp_yard(seed: u32) -> Play {
+    let mut s = Scene::new("lamp yard");
+    for i in 0..9 { for j in 0..6 { s.bulb(4.0 + 3.0 * i as f64, 3.0 + 4.0 * j as f64); } }
+    s.room("shed", 10.0, 10.0, 18.0, 16.0).door("shed-yard", Axis::X, 16.0, 13.4).door("shed-side", Axis::Z, 18.0, 12.4).defender("shed", [12.25, 12.25], "shed-yard");
+    s.team([8.0, 21.0], std::f64::consts::PI, &[[7.0, 22.0], [9.0, 22.0]]);
+    let mut p = Play::scene(&s, &Opts { seed, seats: 2, squad: 2, ..Default::default() });
+    p.g.fog_of_war.on = true;
+    let second = p.g.seats[1];
+    game::seats::with_seat(&mut p.g, second, &mut |g| game::game::game_teleport_player(g, [28.0, 0.0, 6.0]));
+    p
+}
+
+/// THE RULE: two machines of one game of two players, each showing its own player's seat, hold the same game, with more lamps in the level than the
+/// lit fog's block holds. Their pictures differ (each block has the lamps nearest the man its machine shows); the state does not.
+/// A FAILURE MEANS: what one machine draws has got into the state both compare. (Tried: with the picture's block put back among the state's words it
+/// is red at frame 0 on the first seed, in `fog_picture`.)
+#[test]
+fn two_machines_that_show_different_seats_hold_the_same_game() {
+    for s in SEEDS {
+        let run = |k: usize| {
+            let mut p = lamp_yard(s);
+            let rows: Vec<Vec<u32>> = (0..120).map(|_| { p.net_frame(k); p.words() }).collect();
+            let f = fog_of(&p);
+            (rows, f.light_count as usize, f.lights)
+        };
+        let (mine, n, my_lamps) = run(0);
+        let (theirs, m, their_lamps) = run(1);
+        assert!(n == m && n == game_draw::fog::LIGHTS, "seed {s}: the yard has not filled the block: {n} and {m} lamps of {}", game_draw::fog::LIGHTS);
+        assert!(my_lamps != their_lamps, "seed {s}: the two machines' blocks are the same lamps: nothing here differs by the shown seat");
+        if let Some((k, parts)) = parting(&mine, &theirs) { panic!("seed {s}: the machine that shows the second seat parts from the one that shows the first at frame {k} in {parts}"); }
+    }
+}
+
 /// THE RULE: what the fog's pass draws from is made of a game that stands (rust/game_draw `fog`) and is no state of it: on while the fog is, an eye for
 /// each the game has, every lamp the team knows lit, and the same of the same game however often it is asked.
 /// A FAILURE MEANS: a page draws no fog, or draws it from other eyes than the game sees by.
@@ -89,20 +119,17 @@ fn the_fogs_section_says_what_the_game_has() {
     for s in SEEDS {
         let mut p = office(s);
         p.run(1.0);
-        let mut d = game_draw::Drawn::default();
-        d.take(&p.g, 1);
-        let f = d.fog[0];
-        assert_eq!((d.fog.len(), f.on), (1, 1), "seed {s}: a second in, the section does not say the fog is on");
+        let f = fog_of(&p);
+        assert_eq!(f.on, 1, "seed {s}: a second in, the section does not say the fog is on");
         assert_eq!(f.count as usize, p.g.fog_of_war.eyes.len(), "seed {s}: the section's eyes are not the game's");
         assert_eq!([f.eyes[0], f.eyes[2]], [p.g.fog_of_war.eyes[0].at[0] as f32, p.g.fog_of_war.eyes[0].at[2] as f32], "seed {s}: the first eye is somewhere else");
         assert!(f.light_count > 0, "seed {s}: the office's lamps are lit and the lit fog has none");
         assert_eq!(f.thin_count as usize, p.g.engine.world.statics.len(), "seed {s}: the thin statics are of another list");
-        let before = words(&mut p);
-        d.take(&p.g, 1);
-        assert_eq!(d.fog[0], f, "seed {s}: the same game drawn twice is drawn two ways");
-        assert_eq!(before, words(&mut p), "seed {s}: drawing the game changed it");
+        let before = p.words();
+        assert_eq!(fog_of(&p), f, "seed {s}: the same game drawn twice is drawn two ways");
+        assert_eq!(before, p.words(), "seed {s}: drawing the game changed it");
         p.g.fog_of_war.on = false;
-        d.take(&p.g, 1);
-        assert_eq!((d.fog[0].on, d.fog[0].count), (0, 0), "seed {s}: the fog is off and the section says on");
+        let f = fog_of(&p);
+        assert_eq!((f.on, f.count), (0, 0), "seed {s}: the fog is off and the section says on");
     }
 }

@@ -77,7 +77,8 @@ import { PLAYER_ID } from './consts';
 import { seatsStand, seatManId, standMen, spotBeside, manById, isManId, eachSeat } from './seats';
 import { doorMan } from './doorthrow';
 import './mission';
-import { objectivePos, objectiveText } from './mission';
+import { NO_VIEW, type TickView } from '../view/seatview';
+import type { WorldAsk } from '../view/worldask';
 import { Chronicle, chronInterrogated } from './chronicle';
 import { hiddenProps, irBeams } from './combat';
 import { irViewer, irMade } from './irlaser';
@@ -284,7 +285,7 @@ export const BODY_DOOR_PARTICLES = [RAG.pelvis, RAG.spine, RAG.head, RAG.kneeL, 
 
 // ---------------------------------------------------------------- player
 /** the query tables the world is asked aside with (Game.aside): scratch of the host's, in no snapshot */
-class AsideOwn extends HostOwned { s?: object; q?: object; w?: object; lens?: FollowCamera }
+export class AsideOwn extends HostOwned { s?: object; q?: object; w?: object; lens?: FollowCamera }
 export class Player extends PlayerCols {
   char: Character;
   crouch = false; aimHeld = false; lastFireT = -10; fireCd = 0; backpedal = false; sprinting = false; /** Shift held in a crouch this frame (player.ts CROUCHRUN): the fast crouch walk — set where `sprinting` is, false wherever that is not reached */ dash = false;
@@ -1665,8 +1666,22 @@ export class Game {
 
 
 
-  objectivePos() : Vec3 | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.objectivePos', this, []); if (__r !== RUST_PASS) return __r as any; } } return objectivePos(this); }
-  objectiveText() : string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.objectiveText', this, []); if (__r !== RUST_PASS) return __r as any; } } return objectiveText(this); }
+  /** WHAT THE HUD IS TOLD (src/view/seatview.ts): the Rust game's own answer, handed over by the host that steps this game. A read */
+  get view(): TickView { return this.viewAsk?.() ?? NO_VIEW; }
+  /** the host's: asks the Rust game for its view (src/host/rustgame.ts in a page, tools/blitz/rust-host.ts in bun) */
+  viewAsk: (() => TickView) | null = null;
+  /** THE BOX WORLD, ASKED (src/view/worldask.ts) by whoever draws, hears or points: the Rust game's answer where one steps this game (the host sets `askHost`), and
+   *  this page's own copy of the level where none does (a workbench's floor, the moment before the first start) */
+  readonly ask: WorldAsk = {
+    blocked: (a, b) => this.askHost ? this.askHost.blocked(a, b) : this.col.segmentBlocked(a, b),
+    solid: (a, b) => this.askHost ? this.askHost.solid(a, b) : this.col.solidBlocked(a, b),
+    ray: (o, d, max) => this.askHost ? this.askHost.ray(o, d, max) : this.col.raycast(o, d, max),
+    hear: (from, to) => this.askHost ? this.askHost.hear(from, to) : this.col.sound.propagate(from, to),
+    together: f => this.askHost ? f() : this.col.window(f),
+  };
+  askHost: WorldAsk | null = null;
+  objectivePos(): Vec3 | null { return this.view.mission?.pos ?? null; }
+  objectiveText(): string { return this.view.mission?.text ?? ''; }
 
 }
 

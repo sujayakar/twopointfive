@@ -54,8 +54,8 @@ pub fn own(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
     alive(g, d)
         && g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Hold
         && g.gd[gd].held.is_none()
-        && g.time >= g.gd[gd].dazzled_until
-        && g.time >= g.gd[gd].stagger_until
+        && !crate::control::man::blind(g, gd)
+        && !crate::control::man::staggered(g, gd)
         && g.tab.roomfight_def[d].rally_at != m::INF
 }
 

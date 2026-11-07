@@ -132,6 +132,31 @@ impl Play {
             match at { Some(k) => self.spoke[k] = (gd, b.t, b.text.clone()), None => self.spoke.push((gd, b.t, b.text.clone())) }
         }
     }
+    /// ONE FRAME OF A NETWORKED MACHINE THAT SHOWS THE SEAT `shown`: it is handed every seat's command and steps on them all, so two machines' games
+    /// get the same hands and only the shown seat differs. Each seat's command is sampled from its own Input through its own camera (idle, unless
+    /// a test writes them). Between frames the first seat stands on the game, for the test to read.
+    pub fn net_frame(&mut self, shown: usize) {
+        let seats = self.g.seats.clone();
+        let canvas = self.host.canvas;
+        let cmds: Vec<game::cmd::PlayerCmd> = seats.iter().map(|&s| {
+            let (input, cam) = (self.g.tab.cmd_seat[s].input, self.g.tab.cmd_seat[s].cam);
+            game::seats::with_seat(&mut self.g, s, &mut |g| game::cmd::sample_cmd(g, input, cam, canvas, None))
+        }).collect();
+        game::seats::show_seat(&mut self.g, seats[shown]);
+        game::game::game_step_seats(&mut self.g, DT, &cmds);
+        let now = self.g.time;
+        game::render_lights::light_set_update(&mut self.g, DT, now);
+        game::host_api::host_world_upload(&mut self.g);
+        game::seats::show_seat(&mut self.g, seats[0]);
+        self.g.out.clear();
+        self.frames += 1;
+    }
+    /// Every part of the game's state, a word a part (`game::state_words::STATE_NAMES` names them): what two machines of one game must agree on.
+    pub fn words(&mut self) -> Vec<u32> {
+        let (mut w, mut out) = (game::io::W::new(), Vec::new());
+        game::state_words::state_words(&mut self.g, &mut w, &mut out);
+        out
+    }
     /// Run `secs` of game time.
     pub fn run(&mut self, secs: f64) { for _ in 0..(secs * 60.0).round() as usize { self.frame(); } }
     /// Run until `p` holds, for at most `secs`: the seconds it took, or None if it never held. `p` is asked before the first frame and after
@@ -207,6 +232,11 @@ impl Play {
         let s = self.g.seats[seat];
         game::seats::with_seat(&mut self.g, s, &mut |g| { let at = g.ch[g.pl[g.player].ch].pos; game::game::game_teleport_player(g, [at[0] + metres, 0.0, at[2]]); });
     }
+    /// A PLAYER IS SET DOWN at a place of the floor (the same teleport).
+    pub fn seat_stands(&mut self, seat: usize, at: [f64; 2]) {
+        let s = self.g.seats[seat];
+        game::seats::with_seat(&mut self.g, s, &mut |g| game::game::game_teleport_player(g, [at[0], 0.0, at[1]]));
+    }
     /// where a seat's player stands
     pub fn seat_at(&mut self, seat: usize) -> [f64; 2] { let s = self.g.seats[seat]; game::seats::with_seat(&mut self.g, s, &mut |g| { let p = g.ch[g.pl[g.player].ch].pos; [p[0], p[2]] }) }
     /// A MAN GOES DOWN by combat's own call (`killGuard`: shot, by `by`'s hand), for a test of what follows a death and not of the shot.
@@ -254,8 +284,14 @@ impl Play {
     pub fn par_counts(&self) -> (i32, i32) { (self.g.stats.par.started, self.g.stats.par.finished) }
     /// … and the finished run (None: not taken yet, or wiped).
     pub fn par_result(&self) -> Option<game::par::ParResult> { game::par::par_result_now(&self.g).cloned() }
+    /// where a defuse level's charges are, in the file's order
+    pub fn charges(&self) -> Vec<[f64; 2]> { self.g.level.scenarios.as_ref().and_then(|s| s.defuse.as_ref()).map_or(Vec::new(), |d| d.devices.iter().map(|x| [x.pos[0], x.pos[2]]).collect()) }
     /// the objective row, as a HUD is given it
-    pub fn objective(&mut self) -> String { game::mission::objective_text(&mut self.g) }
+    pub fn objective(&self) -> String { self.view().mission.map_or(String::new(), |m| m.text) }
+    /// WHAT A HUD IS TOLD of the game as it stands (`view::tick_view`: the record the page draws, asked of the game and never kept by it)
+    pub fn view(&self) -> game::view::TickView { self.view_of(0) }
+    /// …and what another player's HUD is told (0 = the first)
+    pub fn view_of(&self, seat: usize) -> game::view::TickView { game::view::tick_view(&self.g, &game::seats::seat(&self.g, self.g.seats[seat])) }
     /// the lines on the game's log now, oldest first (it keeps the last five)
     pub fn log(&self) -> Vec<&str> { self.g.messages.iter().map(|m| m.text.as_str()).collect() }
     /// how the room clear ended and when, on the game's clock (None: it is on)
@@ -319,13 +355,13 @@ impl Play {
     pub fn sam_light(&self) -> f64 { self.g.pl[self.g.player].visibility }
     /// how fast he is moving over the floor, metres a second
     pub fn speed(&self, gd: GuardId) -> f64 { let v = self.g.ch[self.g.gd[gd].ch].vel; (v[0] * v[0] + v[2] * v[2]).sqrt() }
-    /// is he down low (crouched or lower: what a man does behind cover, or with a grenade near)
     /// Can he not see: a flash or a blast has his eyes for now.
     pub fn blind(&self, gd: GuardId) -> bool { self.g.time < self.g.gd[gd].dazzled_until }
 
     /// The spot the rounds past him have sent him to, while he is on his way or about to go (the suppression rule's cover spot); `None`: not sent.
     pub fn sent_to_cover(&self, gd: GuardId) -> Option<[f64; 2]> { self.g.gd[gd].sup.cover.map(|p| [p[0], p[2]]) }
 
+    /// is he down low (crouched or lower: what a man does behind cover, or with a grenade near)
     pub fn low(&self, gd: GuardId) -> bool { self.g.ch[self.g.gd[gd].ch].anim.crouch_target >= 0.5 }
     /// is he in the stack's stance (set on a door)
     pub fn stacked(&self, gd: GuardId) -> bool { self.g.ch[self.g.gd[gd].ch].anim.stance == game::character::Stance::Stack }
@@ -343,15 +379,12 @@ pub fn nudge(seed: u32, k: u32) -> f64 {
     x as f64 / 2_147_483_648.0 - 1.0
 }
 
+/// The first frame at which two games' words differ, and the parts of the state that do.
+pub fn parting(a: &[Vec<u32>], b: &[Vec<u32>]) -> Option<(usize, String)> {
+    let k = a.iter().zip(b).position(|(x, y)| x != y)?;
+    let parts: Vec<&str> = game::state_words::STATE_NAMES.iter().zip(a[k].iter().zip(&b[k])).filter(|(_, (x, y))| x != y).map(|(n, _)| *n).collect();
+    Some((k, parts.join(", ")))
+}
+
 /// metres between two places in plan
 pub fn dist(a: [f64; 2], b: [f64; 2]) -> f64 { ((a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2)).sqrt() }
-
-/// every part of the game's state, a word a part (game::state_words), but for the box mirror's own record, which holds addresses
-pub fn words(g: &mut Game) -> Vec<u32> {
-    let (mut w, mut out) = (game::io::W::new(), Vec::new());
-    let mirror = core::mem::take(&mut g.col.mirror);
-    game::state_words::state_words(g, &mut w, &mut out);
-    g.col.mirror = mirror;
-    out.extend(crate::block::part_hashes(0));
-    out
-}

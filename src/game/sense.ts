@@ -177,13 +177,14 @@ simTenant({ name: 'smoke', bit: 16,
 /** THE GRID'S OWN NUMBERS as rust/sim/src/bricks.rs has them (tools/qa/smokegrid-check.ts reads that file and is red where one differs): seconds a step, and
  *  the state row's layout for whoever reads it: doubles in the head, emitters and doubles an emitter, bricks, cells a brick, m³ a cell, and where in the head
  *  the book of the smoke is kept (let out · given back with thin bricks, and what the wind carried over the plan's edge · refused for want of a brick) */
-export const GRID = { step: 0.1, head: 8, emitters: 64, emit: 7, bricks: 160, cells: 128, vol: 0.125, out: 4, given: 5, lost: 6,
+export const GRID = { step: 0.1, head: 6, emitters: 64, emit: 7, bricks: 512, cells: 128, vol: 0.125, out: 4, given: 5,
   /** …the plan in squares (the head), a square's side (m), and the light that comes round (glow.rs), a number a square metre: the most metres it holds,
    *  the height it is read at, and where its four columns start: the lamps' light · the bounce · the way open toward +x · toward +z */
-  nbx: 2, nbz: 3, side: 2, glowMax: 2048, chest: 1.2, glowD: 8 + 64 * 7 + 160 * 2, glowB: 8 + 64 * 7 + 160 * 2 + 2048, glowX: 8 + 64 * 7 + 160 * 2 + 2 * 2048,
-  glowZ: 8 + 64 * 7 + 160 * 2 + 3 * 2048,
-  /** …after them the word of the lamps the plan was last swept whole under, and then, last, the cells: a brick's after another's */
-  glowLamps: 8 + 64 * 7 + 160 * 2 + 4 * 2048, rho: 8 + 64 * 7 + 160 * 2 + 4 * 2048 + 1 };
+  nbx: 2, nbz: 3, side: 2, glowMax: 2048, chest: 1.2, glowD: 6 + 64 * 7 + 512 * 2, glowB: 6 + 64 * 7 + 512 * 2 + 2048, glowX: 6 + 64 * 7 + 512 * 2 + 2 * 2048,
+  glowZ: 6 + 64 * 7 + 512 * 2 + 3 * 2048,
+  /** …after them the word of the lamps the plan is swept under, where the sweep is and how much of it is still to go quickly, and then, last, the cells:
+   *  a brick's after another's */
+  glowLamps: 6 + 64 * 7 + 512 * 2 + 4 * 2048, rho: 6 + 64 * 7 + 512 * 2 + 4 * 2048 + 3 };
 /** THE LIGHT MODEL'S FIELD as the estimate of the light on a man takes it (guards.ts lightEstimateAt): a game's own smoke with a grid standing. The grid
  *  holds the light that comes round; the smoke answers what dims a lamp on its way (the grid's cells, and the blobs where the grid cannot answer). */
 export type LightField = CpuSmoke & { grid: SmokeGrid };

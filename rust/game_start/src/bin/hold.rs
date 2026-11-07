@@ -172,7 +172,7 @@ fn drawn(dir: &str, r: &Run) -> Result<String, String> {
     for k in 0..frames {
         while next < hand.at.len() && hand.at[next].0 <= k { let _ = act(&mut p, &hand.at[next].1); next += 1; }
         p.frame();
-        let before = if k % 60 == 0 { Some(game_start::play::words(&mut p.g)) } else { None };
+        let before = if k % 60 == 0 { Some(p.words()) } else { None };
         let mut between = 0.0;
         for (i, (_, want)) in DRAWN.iter().enumerate() {
             let t = std::time::Instant::now();
@@ -195,7 +195,7 @@ fn drawn(dir: &str, r: &Run) -> Result<String, String> {
         men = men.max(d[5].men.men.len());
         let h = d[3].boxes.head[0];
         if h.count as usize != d[3].boxes.geo.len() || h.visible as usize + h.visible_cut as usize != d[3].boxes.visible.len() { return Err(format!("frame {}: the boxes' head does not say what their lists hold", k)); }
-        if let Some(b) = before { if b != game_start::play::words(&mut p.g) { return Err(format!("frame {}: drawing the game changed it", k)); } }
+        if let Some(b) = before { if b != p.words() { return Err(format!("frame {}: drawing the game changed it", k)); } }
     }
     let said: Vec<String> = DRAWN.iter().map(|x| x.0).chain(["between ticks"]).zip(&cost).map(|(n, c)| format!("{n} {:.0} ({:.0})", c.0 / frames as f64, c.1)).collect();
     Ok(format!("{} frames · at most {} boxes, {} lights, {} men · microseconds a frame, mean (worst): {}", frames, boxes, lights, men, said.join(", ")))
