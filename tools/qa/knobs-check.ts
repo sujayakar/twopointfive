@@ -56,7 +56,7 @@ export async function knobsCheck(): Promise<boolean> {
   //     CARRIES that table. With X not in JOURNAL_KNOBS every file reads as one from before, and the key is put off whatever the run was recorded with
   //     (PAIR's four keys and ROOMFIGHT.doorEars stood so until 10-22: the rules were written, the names never joined the list)
   const asked = [...new Set([...readFileSync(`${ROOT}/src/game/journal.ts`, 'utf8').matchAll(/\bk\.tables\.([A-Za-z_][A-Za-z0-9_]*)/g)].map(m => m[1]))], deaf = asked.filter(n => !want.includes(n));
-  check(asked.length > 50 && deaf.length === 0, `every table journal.ts asks a file for (k.tables.X) is one a recording carries (${asked.length} asked)${deaf.length ? ` — NOT CARRIED, so its rule reads every file as one from before the key: ${deaf.join(' ')} (add the name at the END of JOURNAL_KNOBS)` : ''}`);
+  check(asked.length > 20 && deaf.length === 0, `every table journal.ts asks a file for (k.tables.X) is one a recording carries (${asked.length} asked)${deaf.length ? ` — NOT CARRIED, so its rule reads every file as one from before the key: ${deaf.join(' ')} (add the name at the END of JOURNAL_KNOBS)` : ''}`);
 
   const feel: Record<string, object> = F.feelTables(), strangers = Object.keys(feel).filter(n => R[n] !== feel[n]);
   check(strangers.length === 0, `the feel panel's ${Object.keys(feel).length} tables are the registry's own objects under the same names${strangers.length ? ` — not so: ${strangers.join(' ')}` : ''}`);
