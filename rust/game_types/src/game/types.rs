@@ -2311,6 +2311,8 @@ pub struct Guard {
     pub god: bool,
     pub held: Option<crate::game::GuardHeld>,
     pub bubble: Option<crate::game::GuardBubble>,
+    /// lines he said in the same frame as the one on his bubble, shown after it, oldest first
+    pub bubble_next: Vec<crate::game::GuardBubble>,
     pub found: bool,
     pub down_kind: Option<crate::game::DownKind>,
     pub down_by: Option<crate::game::DownBy>,
@@ -2453,6 +2455,7 @@ impl Guard {
             god: false,
             held: None,
             bubble: None,
+            bubble_next: Vec::new(),
             found: false,
             down_kind: None,
             down_by: None,
