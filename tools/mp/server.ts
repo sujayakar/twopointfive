@@ -48,7 +48,7 @@ async function recipeOfSetup(setup: Setup): Promise<Recipe> {
 let stood, recipe: Recipe;
 try {
   recipe = asked.recipe ?? await recipeOfSetup({ search: String(asked.scenario ?? ''), seed: Number(asked.seed), ...(asked.knobs ? { tables: asked.knobs } : {}) });
-  stood = await standRecipe(recipe);
+  stood = await standRecipe(recipe); stood.begin();   // (the Rust game's start is made here, before anybody is let in: the first tick of the fight then costs a tick)
 } catch (e) { console.error(`server.ts: ${(e as Error).message}`); process.exit(1); }
 for (const w of stood.warnings) say(`note: ${w}`);
 const seatsN = stood.W.game.seats.length as number;

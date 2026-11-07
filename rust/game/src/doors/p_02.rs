@@ -44,11 +44,6 @@ fn drive_kind_num(k: crate::doors::DoorDriveKind) -> f64 {
 /// A box's row (`Box.*`, scene/boxes.ts:66). Skeleton 5 has `g.col.boxes: Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].c`. Once the table is back, the body is that row (and a leaf is a made box: notes)
 fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
-/// a column of this door   (doors.ts Door.g)
-pub fn door_g(g: &mut crate::game::Game, id: DoorId, k: f64) -> f64 { col(g, id, k as usize) }
-/// (doors.ts Door.p)
-pub fn door_p(g: &mut crate::game::Game, id: DoorId, k: f64, v: f64) { set_col(g, id, k as usize, v) }
-
 /// (doors.ts Door.angle)
 pub fn door_angle(g: &mut crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::doors::ANGLE) }
 /// (doors.ts Door.angle)
@@ -98,8 +93,6 @@ pub fn door_pick(g: &mut crate::game::Game, id: DoorId) -> f64 { col(g, id, ::si
 /// (doors.ts Door.pick)
 pub fn door_set_pick(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::PICK, v) }
 /// (doors.ts Door.picking)
-pub fn door_picking(g: &mut crate::game::Game, id: DoorId) -> bool { col(g, id, ::sim::doors::PICKING) != 0.0 }
-/// (doors.ts Door.picking)
 pub fn door_set_picking(g: &mut crate::game::Game, id: DoorId, v: bool) { set_flag(g, id, ::sim::doors::PICKING, v) }
 /// (doors.ts Door.pickIdle)
 pub fn door_pick_idle(g: &mut crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::doors::PICK_IDLE) }
@@ -121,8 +114,6 @@ pub fn door_set_rattle_t(g: &mut crate::game::Game, id: DoorId, v: f64) { set_co
 pub fn door_guard_t(g: &mut crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::doors::GUARD_T) }
 /// (doors.ts Door.guardT)
 pub fn door_set_guard_t(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::GUARD_T, v) }
-/// the keyed men this leaf is passing through: a bit per contact id, as a number   (doors.ts Door.passers)
-pub fn door_passers(g: &mut crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::doors::PASSERS) }
 /// (doors.ts Door.passers)
 pub fn door_set_passers(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::PASSERS, v) }
 
@@ -135,8 +126,6 @@ pub fn door_swing(g: &mut crate::game::Game, id: DoorId) -> f64 {
 pub fn door_dealt(g: &mut crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::doors::DEALT) }
 /// (doors.ts Door.dealt)
 pub fn door_set_dealt(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::DEALT, v) }
-/// (doors.ts Door.outward)
-pub fn door_outward(g: &mut crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::doors::OUTWARD) }
 /// (doors.ts Door.outward)
 pub fn door_set_outward(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::OUTWARD, v) }
 /// (doors.ts Door.clearway)
@@ -207,15 +196,9 @@ pub fn door_rests_to(g: &mut crate::game::Game, id: DoorId) -> bool {
     door_swept(g, id) && !door_latched(g, id) && door_angle(g, id) == 0.0 && door_vel(g, id) == 0.0
 }
 /// (doors.ts Door.solidT)
-pub fn door_solid_t(g: &mut crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::doors::SOLID_T) }
-/// (doors.ts Door.solidT)
 pub fn door_set_solid_t(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::SOLID_T, v) }
 /// (doors.ts Door.pressT)
-pub fn door_press_t(g: &mut crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::doors::PRESS_T) }
-/// (doors.ts Door.pressT)
 pub fn door_set_press_t(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::PRESS_T, v) }
-/// (doors.ts Door.openT)
-pub fn door_open_t(g: &mut crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::doors::OPEN_T) }
 /// (doors.ts Door.openT)
 pub fn door_set_open_t(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::OPEN_T, v) }
 /// (doors.ts Door.mirrored)
@@ -626,6 +609,10 @@ pub fn doors_there(g: &mut crate::game::Game, contacts: &[crate::doors::DoorCont
 /// the hand-over's tables in rust/sim (its `def` is the first field of `Io`, `repr(C)`): it keeps the function that lends them private, and hands out their address
 fn step_io() -> &'static mut ::sim::doors::Io {
     unsafe { &mut *(::sim::doors::addr(0) as *mut ::sim::doors::Io) }
+}
+/// the same hand-over, to read
+fn step_io_read() -> &'static ::sim::doors::Io {
+    unsafe { &*(::sim::doors::addr(0) as *const ::sim::doors::Io) }
 }
 /// the step's hand-over written (the level's doors, the contacts, the rules' numbers) and the step taken: how many noises it listed   (doors.ts Doors.handOver)
 pub fn doors_hand_over(g: &mut crate::game::Game, dt: f64, contacts: &[crate::doors::DoorContact], slot: f64) -> f64 {

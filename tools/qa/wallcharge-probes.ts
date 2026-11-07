@@ -1,5 +1,5 @@
 // The 'wallcharge' probes (src/game/wallcharge.ts — the door charge's twin on a partition wall), run as their own program:
-//   bun run tools/qa/wallcharge-probes.ts [all | menu | squad | sam | refusals | trigger | reset | off | hold] [--scn block-squads,compound-four,warehouse-four] [--verbose]
+//   bun run tools/qa/wallcharge-probes.ts [all | menu | squad | sam | refusals | trigger | reset | hold | cost | standoff] [--scn block-squads,compound-four,warehouse-four] [--verbose]
 // Headless = the Proxy device: nothing is drawn. Each family runs on every scenario of --scn (a squad of four on a level with partitions). The module only runs
 // under the destruction goal's switch (destructionSwitch.ts DESTRUCTION.on), which these probes raise themselves, at the page's chaos 0.5.
 //   (menu)      X on a partition: the floor's rows with row 5 'wall tools ▸', and behind it row 3 'breach the wall · uses both charges' — X, 5, 3: the door charge's own
@@ -18,16 +18,15 @@
 //   (hold)      no stand-off post of any wall place is in a doorway where the floor has four marks out of one (a place that has not is dealt the marks as
 //               without the rule — the rule's own fallback — and only such a place may show one; OFFFRAME_BREAK=1 must fail), none at the foot of a hole already in that wall; in through a wall into a room with doors
 //               of its own, each door a point has a line to is one man's to hold, his gun on it (WALLCHARGE.doors off: every gun on the room, as it was);
-//   (off)       WALLCHARGE.on false: a wall's menu IS the floor's, the order is refused, no Space row, input and tick do nothing — and a played half-minute with
-//               the switch on and nobody using it digests exactly as with it off; the same with the destruction's own switch down.
+// 2026-11-07: the family 'off' (the module's switch or the destruction's down = the build without the module, and a played half-minute digest for digest) is
+// deleted: both are settled rules, and every line of it asked the build without them. Sam alone no longer has his own charges written off: he stands as the
+// page stands him.
 import { standUp, ROOT } from './headless.ts';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 const WC = await import(`${ROOT}/src/game/wallcharge.ts`);
 const { WALLCHARGE, WALLCHARGE_DEFAULTS, wallAt, wallPt, wallOff, wallAlong, WALL_ORDER } = WC;
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
-const { OWNCHARGE } = await import(`${ROOT}/src/game/owncharge.ts`);
-const { OWNBLOW } = await import(`${ROOT}/src/game/ownblow.ts`);
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { WALLS } = await import(`${ROOT}/src/game/wallbreak.ts`);
 const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
@@ -56,16 +55,17 @@ function family(title: string): { verdict: Verdict; note: (s: string) => void; d
     done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
 }
 const DT_DEFAULTS = JSON.parse(JSON.stringify(DOORTOOLS));
-let ownWas: boolean | null = null;   // (owncharge.ts's switch as it stood before a rig of Sam alone held it off: put back with the other knobs)
-const restoreKnobs = () => { Object.assign(WALLCHARGE, JSON.parse(JSON.stringify(WALLCHARGE_DEFAULTS))); Object.assign(DOORTOOLS, JSON.parse(JSON.stringify(DT_DEFAULTS))); if (ownWas !== null) { OWNCHARGE.on = ownWas; ownWas = null; } };
+/** the wall charge's table as the stand has it (the page's values: the module's own defaults are the build before each settled row, and laying them back was a refused write a row) */
+const WALLCHARGE_STOOD = JSON.parse(JSON.stringify(WALLCHARGE));
+const restoreKnobs = () => { Object.assign(WALLCHARGE, JSON.parse(JSON.stringify(WALLCHARGE_STOOD))); Object.assign(DOORTOOLS, JSON.parse(JSON.stringify(DT_DEFAULTS))); };
 const entryOf = (id: string): any => SCENARIOS.find((e: any) => e.id === id);
 const levelOfFile = (file: string): any => loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')));
 const quiet = async <T>(fn: () => T | Promise<T>): Promise<T> => { if (VERBOSE) return await fn(); const l = console.log, e = console.error, w = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = l; console.error = e; console.warn = w; } };
 
 /** One game on a scenario's level. `squad`: the scenario started (the four on the floor) — false: the level with Sam alone. `still`: the other side deaf, blind
- *  and held where it stands (the mechanics under test, not the fight). `sw` / `wc`: the destruction's switch / this module's. */
-async function rig(scn: string, seed: number, o: { squad?: boolean; still?: boolean; sw?: boolean; wc?: boolean; chaos?: number } = {}) {
-  restoreKnobs(); Math.random = seeded(0x9137 + seed * 7919); DESTRUCTION.on = o.sw ?? true; WALLCHARGE.on = o.wc ?? true;
+ *  and held where it stands (the mechanics under test, not the fight). */
+async function rig(scn: string, seed: number, o: { squad?: boolean; still?: boolean; chaos?: number } = {}) {
+  restoreKnobs(); Math.random = seeded(0x9137 + seed * 7919); DESTRUCTION.on = true; WALLCHARGE.on = true;
   const E = entryOf(scn); if (!E) throw new Error(`no scenario '${scn}'`);
   const W: any = await quiet(() => standUp(E.level ? { level: levelOfFile(E.level) } : {})); const game = W.game, input = W.input;
   game.godMode = true; game.tune.chaos = o.chaos ?? 0.5;
@@ -73,11 +73,10 @@ async function rig(scn: string, seed: number, o: { squad?: boolean; still?: bool
   const said: string[] = [], spoke: { who: string; text: string }[] = [];
   { const msg = game.msg.bind(game); game.msg = (t: string) => { said.push(t); msg(t); }; const say = game.say.bind(game); game.say = (gd: any, t: string, ...r: any[]) => { spoke.push({ who: gd?.callsign ?? '?', text: t }); return say(gd, t, ...r); }; }
   const O = game.orders, D = game.doorTools, C = game.wallCharge;
-  OWNBLOW.on = false;   // (ownblow.ts, on on the shipped stand: these lines press the squad's key on a charge set by hand, as they were written; ownblow-check holds the row and raises the switch itself. restoreKnobs puts it back)
-  // (A MAN ALONE: these lines were written on the door tools' own bag, which a man alone had whatever his kit card said. With charges of his own — owncharge.ts,
-  // on on the shipped stand — he carries his card's and nothing else, which owncharge-check holds; here the switch is held off and the bag put back as it stood,
-  // so the lines still ask what they asked: the wall's row, the setting, the blast. restoreKnobs puts the switch back, as the runner does after the probe.)
-  if (!(o.squad ?? true) && OWNCHARGE.on) { ownWas = true; OWNCHARGE.on = false; D.alone(DOORTOOLS.charges); C.setCarried(null); }
+  // (until 2026-11-07 the rig wrote OWNBLOW.on off here, for lines that press the squad's key on a charge set by hand: a settled rule, the write was refused)
+  // (A MAN ALONE: the door tools' bag is put as a man alone had it, and nothing is carried. Until 2026-11-07 his own charges' switch was written off here, a settled
+  // row: the write was refused, so these lines have run on the page's side since the fold.)
+  if (!(o.squad ?? true)) { D.alone(DOORTOOLS.charges); C.setCarried(null); }
   const staged: number | null = C.carried; if (C.carried !== null) C.setCarried(null);   // (the kit's slots rule — on on the shipped stand — issues no wall charge and has staged that count: these lines ask about the whole-bag rule they were written on. A restart stages the kit's count again; wallcharge-cost holds that)
   const still = () => { for (const gd of game.guards) if (gd.team !== 'operative') { gd.hold = true; gd.pinned = true; gd.heardUpTo = 1e12; if (gd.flashlight) gd.flashlight.enabled = false; } };
   const R = { W, game, input, O, D, C, said, spoke, scn, staged,
@@ -458,34 +457,6 @@ async function probeReset(scn: string): Promise<boolean> {
   return F.done();
 }
 
-// ================================================================ off
-async function probeOff(scn: string): Promise<boolean> {
-  const F = family(`wallcharge-off: the switch off (either one) is the build without the module (${scn})`);
-  const P = partitions(await rig(scn, 3))[0]; if (!P) { F.verdict(false, 'a partition', 'none found'); return F.done(); }   // (the place, found with the module live; the level is the same in every rig below)
-  for (const [label, o] of [['WALLCHARGE.on false', { wc: false }], ['the destruction\'s switch down', { sw: false }], ['chaos 0', { chaos: 0 }]] as [string, any][]) {
-    const R = await rig(scn, 3, o); const { O, D, C, game } = R;
-    R.gather(P.near, 75, P.p); const t = O.targetAt(P.p), mW = R.menuOn(P.p, true), mF = (() => { O.open({ kind: 'floor', at: t.at }); R.step(2); const ids = O.menu?.rows.map((r: any) => r.id).join(' '); O.close(); return ids; })();
-    const why = O.give(WALL_ORDER, t, 'all'); R.step(3);
-    game.teleportPlayer(wallPt(P.W, 0, 0.55)); R.aim(P.top); const row = game.interactables.find((r: any) => r.kind === 'wall');
-    C.set.push({ wall: P.W, t: game.time, by: 'probe', paid: 0 }); R.press('KeyF'); R.step(3); const blown = C.stats.blown, hole = (o.sw === false || o.chaos === 0) ? false : !!C.holeAt(P.W);
-    F.verdict(!t.wall && mW?.ids === mF && !/wall/i.test(mW?.ids ?? '') && !!why && C.ops.length === 0 && !row && blown === 0 && !hole && D.charges === DOORTOOLS.charges && !O.defs.some((d: any) => d.id === WALL_ORDER),
-      `${label}: the wall's target is plain floor, its menu the floor's, the order unknown, no Space row, F does nothing, the rows are not registered`, `target.wall ${!!t.wall} · menu "${mW?.ids}" vs floor "${mF}" · give: ${why} · row ${row ? 'OFFERED' : 'none'} · blown ${blown}`);
-  }
-  // a played half-minute with the module on and nobody using it digests as with it off
-  const run = async (o: any) => { const R = await rig(scn, 21, { still: false, ...o }); const { O, game } = R; let h = '';
-    const tick = (n: number) => { for (let i = 0; i < n; i++) { R.step(); if (i % 30 === 0) h = hashDigest(digestGame(game, true)) + h.slice(0, 24); } };
-    Math.random = seeded(0x51ed);
-    tick(60); O.give('fallIn', O.targetAt(game.player.char.pos), 'all'); tick(240);
-    R.W.cursorAt(P.p); tick(60); O.give('move', O.targetAt(P.p), 'all'); tick(600); O.give('hold', O.targetAt(game.player.char.pos), 'all'); tick(600);
-    return h; };
-  const on = await run({}), off = await run({ wc: false });
-  F.verdict(on === off, 'twenty-six played seconds (fall in, a move ordered onto a wall\'s foot, a hold; everyone live) with the module on and unused = with it off, digest for digest', `on ${on.slice(0, 16)} · off ${off.slice(0, 16)}`);
-  const dOn = await run({ sw: false }), dOff = await run({ sw: false, wc: false });
-  F.verdict(dOn === dOff, 'the same with the destruction\'s switch down', `on ${dOn.slice(0, 16)} · off ${dOff.slice(0, 16)}`);
-  return F.done();
-}
-
-
 // ================================================================ hold (the room after the entry; where the order's marks may be)
 const segNear = (q: number[], a: number[], b: number[]): number => { const dx = b[0] - a[0], dz = b[2] - a[2], L = dx * dx + dz * dz, k = L > 1e-9 ? Math.max(0, Math.min(1, ((q[0] - a[0]) * dx + (q[2] - a[2]) * dz) / L)) : 0; return Math.hypot(q[0] - a[0] - dx * k, q[2] - a[2] - dz * k); };
 
@@ -671,7 +642,7 @@ async function probeStandoff(scn: string): Promise<boolean> {
   return F.done();
 }
 
-const FAMILIES: Record<string, (scn: string) => Promise<boolean>> = { menu: probeMenu, squad: probeSquad, sam: probeSam, refusals: probeRefusals, trigger: probeTrigger, reset: probeReset, off: probeOff, hold: probeHold, cost: probeCost, standoff: probeStandoff };
+const FAMILIES: Record<string, (scn: string) => Promise<boolean>> = { menu: probeMenu, squad: probeSquad, sam: probeSam, refusals: probeRefusals, trigger: probeTrigger, reset: probeReset, hold: probeHold, cost: probeCost, standoff: probeStandoff };
 export { rig, partitions, structure, family, chargePt, FAMILIES, SCNS, f2, at, flat, VERBOSE, restoreKnobs };
 
 /** probes.ts's door in (family 'wallcharge'): one family on one map, the switches, the knobs and the dice put back as they were found */

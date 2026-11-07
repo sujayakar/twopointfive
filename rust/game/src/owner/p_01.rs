@@ -59,9 +59,6 @@ pub fn has_him(g: &mut crate::game::Game, gd: GuardId, rules: f64) -> bool {
     crate::sim_men_store::man_owner(g, c) & js::to_u32(rules) != 0
 }
 
-/// Does nothing: the TypeScript check's registration (tools/qa/owner-check.ts), which nothing in the game reads and no Rust part calls (blitz/enemies.md). (owner.ts ownerWitness)
-pub fn owner_witness<G: Clone + core::fmt::Debug>(g: &mut crate::game::Game, name: crate::owner::OwnerRule, says: &mut dyn FnMut(&mut crate::game::Game, GuardId, G) -> bool, at_read: Option<bool>) {}
-
 #[cfg(test)]
 mod tests {
     use super::*;

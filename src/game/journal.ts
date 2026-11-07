@@ -819,6 +819,14 @@ export class SessionRecorder {
     if (any) { this.inputs.push([f, rec]); this.bytes += 12 + (rec.k ? 10 + rec.k.length * 8 : 0) + (rec.p ? 8 + rec.p.length * 8 : 0) + (rec.m ? 40 : 0) + (rec.c !== undefined ? 6 : 0) + (rec.b !== undefined ? 6 : 0) + (rec.w !== undefined ? 10 : 0); }
     g.sensors.beginFrame();
   }
+  /** Game.update's last statement: close the sensors' frame, digest on the beat, count the frame */
+  frameEnd(): void {
+    if (this.state !== 'recording' || !this.inUpdate) return;
+    this.inUpdate = false; this.g.sensors.endFrame();
+    if ((this.frame + 1) % JOURNAL_DIGEST_EVERY === 0) { this.digests.push([this.frame, digestGame(this.g, true)]); this.bytes += 3000; }
+    this.frame++;
+    if (this.stopAfterNext !== null) this.finish(this.stopAfterNext);
+  }
   private begin(): void {
     const g = this.g;
     this.save = saveState(g, { label: 'session journal', kind: 'harness' });
@@ -865,6 +873,32 @@ export class SessionPlayer {
   private dtI = 0; private dtLeft = 0; private viewI = 0; private camI = 0; private inputI = 0;
   private buttons = 0; private mouse: [number, number] = [0, 0]; private keys: string[] = [];
   constructor(readonly file: SessionFile) { this.dtLeft = file.dt.length ? file.dt[0][0] : 0; }
+  get frames() { return this.file.frames; }
+  applyFrame(f: number, input: Input, cam: FollowCamera, view: View): number {
+    const F = this.file;
+    // dt
+    while (this.dtLeft <= 0 && this.dtI + 1 < F.dt.length) { this.dtI++; this.dtLeft = F.dt[this.dtI][0]; }
+    const dt = F.dt[this.dtI]?.[1] ?? 1 / 60; this.dtLeft--;
+    // canvas
+    while (this.viewI < F.view.length && F.view[this.viewI][0] <= f) { const r = F.view[this.viewI++]; view.clientWidth = r[1]; view.clientHeight = r[2]; view.width = r[3]; view.height = r[4]; }
+    // camera
+    let camTouched = false;
+    while (this.camI < F.cam.length && F.cam[this.camI][0] <= f) {
+      const r = F.cam[this.camI++]; const mask = r[1]; let j = 2; camTouched = true;
+      for (let i = 0; i < 8; i++) if (mask & (1 << i)) { const x = r[j++]; if (i < 3) cam.target[i] = x; else if (i === 3) cam.yaw = x; else if (i === 4) cam.pitch = x; else if (i === 5) cam.distance = x; else if (i === 6) cam.aspect = x; else cam.fov = x; }
+    }
+    if (camTouched) cam.rebuild();
+    // input: this frame's record if there is one; the edge sets are this frame's alone either way
+    let rec: InputRec | null = null;
+    while (this.inputI < F.input.length && F.input[this.inputI][0] <= f) { const [rf, r] = F.input[this.inputI++]; if (rf === f) rec = r; }
+    if (rec?.k) this.keys = rec.k; if (rec?.b !== undefined) this.buttons = rec.b; if (rec?.m) this.mouse = [rec.m[0], rec.m[1]];
+    input.keys.clear(); for (const k of this.keys) input.keys.add(k);
+    input.pressed.clear(); for (const k of rec?.p ?? []) input.pressed.add(k);
+    input.clicked = rec?.c ?? 0; input.buttons = this.buttons; input.mouseX = this.mouse[0]; input.mouseY = this.mouse[1]; input.wheel = rec?.w ?? 0;
+    return dt;
+  }
+  /** the digests by frame, for the comparison after each update */
+  digestAt(f: number): GameDigest | null { const d = this.digestMap ??= new Map(this.file.digests.map(([k, v]) => [k, v])); return d.get(f) ?? null; }
   private digestMap: Map<number, GameDigest> | null = null;
 }
 

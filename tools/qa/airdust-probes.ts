@@ -11,14 +11,13 @@
 //                  unchanged, and with every door shut airTrans is what the leak-under-every-roof rule gives wherever the line stays clear of a roof's edge
 //   airdust-save   a checkpoint carries it: saved with the door open, loaded into the same game and into a fresh one, the field is the saved one cell for cell,
 //                  and ten more seconds leave all three with the same field
-//   airdust-off    the switch off (the frozen stand's default, the page's ?flatfog): the field is the leak under every roof, nothing moves when a door opens,
-//                  no checkpoint slice is written, and airTrans is exactly the old rule's number
+//   airdust-off    with no weather picked the dust is inert (until 2026-11-07 it also asked the switch off, 'the leak under every roof, as it was': the dust in
+//                  the rooms is a settled rule, and those three lines went)
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { standUp, ROOT } from './headless.ts';
 const K = await import(`${ROOT}/src/game/weatherKinds.ts`);
 const WX = await import(`${ROOT}/src/game/weather.ts`);
-const { AIRDUST } = await import(`${ROOT}/src/game/airDust.ts`);
 const { AIR_CELL, AIR_W, AIR_H } = await import(`${ROOT}/src/scene/airGrid.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
@@ -33,15 +32,14 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
 }
 const levelOf = (name: string) => loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', `${name}.json`), 'utf8')));
-/** a game born in `kind` on `level` with the switch as asked — written AFTER the stand-up (the frozen stand pins it off as it builds the Game) and the field
- *  seeded again under it; left as asked (each probe puts the table back when it is done: `kept`) */
-async function born(on: boolean, kind: string | null = 'dust', level = 'records'): Promise<any> {
+/** a game born in `kind` on `level`, the field seeded again once it stands */
+async function born(kind: string | null = 'dust', level = 'records'): Promise<any> {
   const log = console.log; console.log = () => {};
-  K.WEATHER_BOOT.kind = kind; AIRDUST.on = on;
-  try { const W = await standUp({ level: levelOf(level) }); W.game.aiEnabled = false; AIRDUST.on = on; W.game.airDust.reseed(); return W; } finally { K.WEATHER_BOOT.kind = null; console.log = log; }
+  K.WEATHER_BOOT.kind = kind;
+  try { const W = await standUp({ level: levelOf(level) }); W.game.aiEnabled = false; W.game.airDust.reseed(); return W; } finally { K.WEATHER_BOOT.kind = null; console.log = log; }
 }
 function run(W: any, secs: number) { for (let i = 0; i < Math.round(secs / DT); i++) W.step(DT); }
-async function kept(fn: () => Promise<boolean>): Promise<boolean> { const was = AIRDUST.on; try { return await fn(); } finally { AIRDUST.on = was; } }
+const kept = (fn: () => Promise<boolean>): Promise<boolean> => fn();   // (it kept the dust's switch as it found it, while a probe could write it)
 function hold(d: any, open: boolean) { d.angle = open ? (d.maxA > 0.5 ? Math.min(d.maxA, 1.5) : Math.max(d.minA, -1.5)) : 0; d.vel = 0; d.latched = !open; d.quietT = open ? -3600 : 10; d.closing = false; d.place(); }
 /** the outside door the probes work: the first exterior one with a roofed room on one side and the open on the other, and the point `m` metres in from its
  *  threshold (negative = out in the open) */
@@ -63,7 +61,7 @@ function maxDiff(a: Float64Array, b: Float64Array) { let m = 0; for (let i = 0; 
 // ---------------------------------------------------------------- airdust-shut
 export const airShut = () => kept(async () => {
   const F = family('airdust-shut: a shut level holds the leak, the open air 1, and stands still');
-  const W = await born(true), g = W.game, A = g.airDust, w = g.weather, leak = w.fog.leak;
+  const W = await born(), g = W.game, A = g.airDust, w = g.weather, leak = w.fog.leak;
   for (const d of g.doors.list) hold(d, false);
   A.reseed(); run(W, 1);
   let roofed = 0, atLeak = 0, bad = 0, open = 0, openBad = 0, mx = 0;
@@ -82,7 +80,7 @@ export const airShut = () => kept(async () => {
 // ---------------------------------------------------------------- airdust-door
 export const airDoor = () => kept(async () => {
   const F = family('airdust-door: the dust comes in at an open door, and clears when it is shut');
-  const W = await born(true), g = W.game, A = g.airDust, leak = g.weather.fog.leak;
+  const W = await born(), g = W.game, A = g.airDust, leak = g.weather.fog.leak;
   for (const d of g.doors.list) hold(d, false);
   A.reseed(); run(W, 1);
   const D = doorOf(g), near = D.at(0.75), mid = D.at(2.5), far = D.at(5);
@@ -96,14 +94,14 @@ export const airDoor = () => kept(async () => {
   F.verdict(open[0] > leak + 0.15 && open[0] > open[1] && open[1] >= open[2] && open[1] > before[1] + 0.02, 'eight seconds open: thick on the threshold, thinning into the room',
     `shares at 0.75 / 2.5 / 5 m in: ${open.map(f3).join(' / ')} (were ${before.map(f3).join(' / ')})`);
   // a second game given the same doors agrees bit for bit
-  { const W2 = await born(true), g2 = W2.game; for (const d of g2.doors.list) hold(d, false); g2.airDust.reseed(); run(W2, 1);
+  { const W2 = await born(), g2 = W2.game; for (const d of g2.doors.list) hold(d, false); g2.airDust.reseed(); run(W2, 1);
     const D2 = doorOf(g2); hold(D2.d, true); for (let i = 0; i < 8 / DT; i++) { hold(D2.d, true); W2.step(DT); }
     const m = maxDiff(fieldOf(g), fieldOf(g2));
     F.verdict(m === 0, 'two games given the same doors hold the same field, bit for bit', `largest difference over ${AIR_W * AIR_H} cells: ${m}`); }
   hold(D.d, false); for (let i = 0; i < 60 / DT; i++) { hold(D.d, false); W.step(DT); }
   const shut = [A.shareAt(near[0], near[2]), A.shareAt(mid[0], mid[2])];
   // a level of many doors: the LAST outside door of the list moving is seen like the first (the leaves' signature is a hash of every pose, not a running sum)
-  { const W3 = await born(true, 'dust', 'compound'), g3 = W3.game, A3 = g3.airDust, lk = g3.weather.fog.leak; for (const d of g3.doors.list) hold(d, false); A3.reseed(); run(W3, 1);
+  { const W3 = await born('dust', 'compound'), g3 = W3.game, A3 = g3.airDust, lk = g3.weather.fog.leak; for (const d of g3.doors.list) hold(d, false); A3.reseed(); run(W3, 1);
     const D3 = doorOf(g3, true), idx = g3.doors.list.indexOf(D3.d), p3 = D3.at(0.75), b3 = A3.shareAt(p3[0], p3[2]);
     for (let i = 0; i < 6 / DT; i++) { hold(D3.d, true); W3.step(DT); }
     const o3 = A3.shareAt(p3[0], p3[2]);
@@ -115,7 +113,7 @@ export const airDoor = () => kept(async () => {
 // ---------------------------------------------------------------- airdust-breach
 export const airBreach = () => kept(async () => {
   const F = family('airdust-breach: a wall that is no longer there lets the dust in');
-  const W = await born(true), g = W.game, A = g.airDust, leak = g.weather.fog.leak;
+  const W = await born(), g = W.game, A = g.airDust, leak = g.weather.fog.leak;
   for (const d of g.doors.list) hold(d, false);
   A.reseed(); run(W, 1);
   // a stretch of outside wall: from the open, well to one side of the door, a ray into the building
@@ -136,7 +134,7 @@ export const airBreach = () => kept(async () => {
 // ---------------------------------------------------------------- airdust-eyes
 export const airEyes = () => kept(async () => {
   const F = family('airdust-eyes: the men\'s eyes are cut by the field');
-  const W = await born(true), g = W.game, A = g.airDust, f = g.weather.fog;
+  const W = await born(), g = W.game, A = g.airDust, f = g.weather.fog;
   for (const d of g.doors.list) hold(d, false);
   A.reseed(); run(W, 1);
   const D = doorOf(g), a = D.at(0.6), b = D.at(6), o1 = D.at(-2), o2 = D.at(-9);
@@ -154,7 +152,7 @@ export const airEyes = () => kept(async () => {
 // ---------------------------------------------------------------- airdust-save
 export const airSave = () => kept(async () => {
   const F = family('airdust-save: a checkpoint carries the field');
-  const W = await born(true), g = W.game, A = g.airDust;
+  const W = await born(), g = W.game, A = g.airDust;
   const D = doorOf(g); for (let i = 0; i < 5 / DT; i++) { hold(D.d, true); W.step(DT); }
   const snap = A.snapshot(), was = fieldOf(g);
   F.verdict(!!snap && snap.s.length > 0 && typeof snap.stat === 'string', 'the slice lists the cells off the leak and the openings', `${snap ? snap.s.length / 2 : 0} cells, ${snap ? snap.stat.length : 0} hex digits of openings, ${JSON.stringify(snap ?? null).length} bytes`);
@@ -163,7 +161,7 @@ export const airSave = () => kept(async () => {
   run(W, 3);   // (the game moves on …)
   loadState(g, file); const same = maxDiff(was, fieldOf(g));   // (… and is put back)
   F.verdict(same === 0, 'loaded into the same game: the saved field, cell for cell', `largest difference ${same}`);
-  const W2 = await born(true), g2 = W2.game; loadState(g2, file); const fresh = maxDiff(was, fieldOf(g2));
+  const W2 = await born(), g2 = W2.game; loadState(g2, file); const fresh = maxDiff(was, fieldOf(g2));
   F.verdict(fresh === 0, 'loaded into a fresh game: the saved field, cell for cell', `largest difference ${fresh}`);
   run(W, 10); run(W2, 10); const later = maxDiff(fieldOf(g), fieldOf(g2));
   F.verdict(later === 0, 'ten seconds on, the two games still agree bit for bit', `largest difference ${later}`);
@@ -172,15 +170,7 @@ export const airSave = () => kept(async () => {
 
 // ---------------------------------------------------------------- airdust-off
 export const airOff = () => kept(async () => {
-  const F = family('airdust-off: the switch off = the leak under every roof, as it was');
-  const W = await born(false), g = W.game, A = g.airDust, w = g.weather, f = w.fog;
-  let bad = 0; for (let iz = 0; iz < AIR_H; iz++) for (let ix = 0; ix < AIR_W; ix++) { const v = A.s[ix + iz * AIR_W]; if (v !== (w.underRoof((ix + 0.5) * AIR_CELL, (iz + 0.5) * AIR_CELL) ? f.leak : 1)) bad++; }
-  F.verdict(!A.live && bad === 0, 'the field is the leak under every roof and 1 in the open', `live ${A.live} · cells off that: ${bad}`);
-  const a = fieldOf(g), D = doorOf(g); for (let i = 0; i < 5 / DT; i++) { hold(D.d, true); W.step(DT); }
-  F.verdict(maxDiff(a, fieldOf(g)) === 0 && A.snapshot() === null && !saveState(g, { label: 'off', kind: 'harness', force: true })?.air, 'an open door moves nothing, and no checkpoint slice is written', `moved ${maxDiff(a, fieldOf(g))} · snapshot ${JSON.stringify(A.snapshot())}`);
-  const old = (p: number[], q: number[]) => { let leak = 0; for (let i = 0; i < 4; i++) { const t = (i + 0.5) / 4; leak += w.underRoof(p[0] + (q[0] - p[0]) * t, p[2] + (q[2] - p[2]) * t) ? f.leak : 1; } return Math.exp(-K.fogTau(f, p, q) * leak / 4); };
-  let off = 0, n = 0; for (let k = 0; k < 400; k++) { const p = [((k * 37) % 400) / 10, 1.6, ((k * 91) % 280) / 10], q = [((k * 53 + 17) % 400) / 10, 1.1, ((k * 29 + 5) % 280) / 10]; n++; if (WX.airTrans(g, p as any, q as any) !== old(p, q)) off++; }
-  F.verdict(off === 0, 'airTrans is exactly the old rule\'s number', `${n} lines across the level, ${off} differ`);
-  const N = await born(true, null); F.verdict(!N.game.airDust.live && N.game.airDust.snapshot() === null && N.game.airDust.shareAt(20, 14) === 1, 'no weather picked: inert whatever the switch', N.game.airDust.summary());
+  const F = family('airdust-off: with no weather picked the dust is inert');
+  const N = await born(null); F.verdict(!N.game.airDust.live && N.game.airDust.snapshot() === null && N.game.airDust.shareAt(20, 14) === 1, 'no weather picked: inert', N.game.airDust.summary());
   return F.done();
 });

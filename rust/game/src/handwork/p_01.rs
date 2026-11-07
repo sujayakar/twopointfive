@@ -391,12 +391,6 @@ pub fn swap_held(g: &mut crate::game::Game, gd: GuardId, held: Option<crate::han
     })
 }
 
-/// Is a swap running on him: 0..1 through it, -1 none. (handwork.ts swapping)
-pub fn swapping(g: &mut crate::game::Game, gd: GuardId) -> f64 {
-    let c = g.gd[gd].ch;
-    crate::character::anim_swap_info(g, c).a
-}
-
 /// The torch on his belt while the sidearm is out: at the front of the right hip, lens down, dark. (handwork.ts beltTorch)
 pub fn belt_torch(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<BoxId>) {
     let Some(hp) = g.ch[c_2].bones.get(crate::character::Bone::Hips).copied() else { return };

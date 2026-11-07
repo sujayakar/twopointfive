@@ -25,7 +25,4 @@ pub mod null_audio {
     /// (src/game/audio_iface.ts:13 nullAudio.play)
     pub fn play() { todo!() }
 
-    /// (src/game/audio_iface.ts:13 nullAudio.footstep)
-    pub fn footstep() { todo!() }
-
 }

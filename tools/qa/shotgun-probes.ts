@@ -1,6 +1,6 @@
 // The 'shotgun' family (game/shotgun.ts — the M870 breaching shotgun: weapons.ts row 'm870', a shell = nine pellets through combat.ts fireWeapon; the lock rule;
 // doortools.ts toGun / gunStep; kit.ts 'shotgun'), run through probes.ts:
-//   bun run tools/qa/probes.ts shotgun | shotgun-range | shotgun-door | shotgun-card | shotgun-identity
+//   bun run tools/qa/probes.ts shotgun | shotgun-range | shotgun-door | shotgun-card
 // PASS / FAIL each, all headless. Nothing here looks at a picture: how the gun is drawn, the nine holes and their bursts, and what a shell sounds like are untested.
 //   shotgun-range     THE CURVE: kill chance of ONE shell by range, standing man, 400 shells a range — the bore dead on his chest ('still'), and off a
 //                     teammate's hands as the room fight fires it ('hands': aiSpread × the operative's spreadK). Near certain inside a room, poor down a
@@ -8,38 +8,33 @@
 //   shotgun-door      a LOCKED door under the usual entry orders with the lead carrying one (his loadout card): open and clear and bang and clear — the lock
 //                     shot off from beside the frame (the man OUTSIDE the opening, where the boot's spot is square in front of the leaf), the leaf in, the
 //                     order going on as after the boot (the can, the entry), against the same seed with the boot; only the second man carrying one: he
-//                     shoots it; SHOTGUN.on false: the boot; a steel door: refused in the same words, no shell spent; you: a shell at the latch opens it,
-//                     one at the hinge side does not. WITH THE GLASS PARTS ON (GLASSPARTS=on, as the page ships) the manager's stack stands off its
-//                     sidelight, on the hinge side (orders.ts behindGlass): the gun man then takes the lock from his own side of the frame — every check
-//                     here holds either way, and 'never in the opening, never in front of a pane' is the one that was red before he did
-//                     ONE ORDER TAKES THE DOOR in all of the above: the page's door rule (DOORTOOLS.testDoor — the order halts at a door found locked,
-//                     the same row again takes it) is held off by rig() on every stand, and asked by its own rows: the halt, then the same row SHOOTS it
+//                     shoots it; a steel door: halted at, then refused in the same words, no shell spent; you: a shell at the latch opens it,
+//                     one at the hinge side does not. The manager's stack stands off its sidelight, on the hinge side (orders.ts behindGlass): the
+//                     gun man takes the lock from his own side of the frame.
+//                     THE ROW IS GIVEN TWICE in every run, as a player gives it: the page's door rule (DOORTOOLS.testDoor) halts an order at a door
+//                     found locked, and the same row again takes it. Every line is asked of that second order; two lines ask the halt itself.
 //   shotgun-card      the loadout card offers it — a teammate's Weapon row and your Guns row step to 'shotgun', a stored card keeps it, the card's words
 //                     name it, staging hands that man the m870 row (and nobody else), yours rides in slot 2 with no ring launcher and comes off for a
 //                     showcase; no order is on a digit above 5 and the door tools' page is the same four rows
-//   shotgun-identity  NOBODY CARRIES ONE: twenty seconds of the room clear's manager door under open and clear digest to the frozen word — one word with the
-//                     glass parts off (e6188f6, the build before this file), another with them on (c2ab777: glass's rule stands that stack elsewhere,
-//                     so it is another run) — and nothing of shotgun.ts ran (its counters all nought). The words are the FROZEN stand's: on the page's
-//                     stand (TPS_PROFILE=shipped) none is asked; on every stand the same run with SHOTGUN.on false must digest to the same word
+// SINCE 2026-11-07 the gun's switch, the door rule and the glass parts are settled and nothing here writes them. Until then rig() held the door rule OFF
+// (the file was written when one order took a locked door): every run of shotgun-door now gives the row twice instead. Out: 'SHOTGUN.on false: the same
+// stack boots it', the SHOTGUN.ownSide block (it was asked only with the glass parts off), 'a STEEL door locked against them: refused as before' (the
+// first give is no longer refused: the next line asks the halt and the refusal), and the probe shotgun-identity (frozen words of the old stand, and
+// 'the same word with the gun switched off').
 import { standUp, ROOT } from './headless.ts';
 import { toolsRow4 } from './order-keys.ts';
-import { asProbe, asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
+import { asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
-const { SHOTGUN, SHOTGUN_STATS, SHOTGUN_LAST, breachSpot, lockPoint, pelletDrops } = await import(`${ROOT}/src/game/shotgun.ts`);
+const { SHOTGUN_STATS, SHOTGUN_LAST, breachSpot, lockPoint, pelletDrops } = await import(`${ROOT}/src/game/shotgun.ts`);
 const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
 const { KIT, KIT_MEMBERS, SLOTS, kitDefault, kitRows, kitSet, kitStep, kitSanitize, kitWords, kitGun, kitPlayer, kitShow } = await import(`${ROOT}/src/game/kit.ts`);
 const { FIGHT_SKILL } = await import(`${ROOT}/src/game/roomfight.ts`);
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
-const { harnessProfile } = await import(`${ROOT}/src/host/profile.ts`);
-const { COVER } = await import(`${ROOT}/src/game/cover.ts`);
 const { GLASSPEN, glassPenLive } = await import(`${ROOT}/src/game/glasspen.ts`);
-const { GLASSFX } = await import(`${ROOT}/src/game/glass.ts`);
 const { GUNWALL } = await import(`${ROOT}/src/game/gunwall.ts`);
 /** glass's stack rule is live in this game (orders.ts behindGlass answers; off, every place is as the walls leave it) */
 const glassRule = (g: any): boolean => glassPenLive(g) && GLASSPEN.stackEyes > 0;
-const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
-const hashStr = (s: string): number => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } return h >>> 0; };
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -50,10 +45,9 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
   console.log(`\n=== ${title} ===`); let all = true;
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
 }
-const SG_DEFAULTS = JSON.parse(JSON.stringify(SHOTGUN));
 const zero = () => { for (const k of Object.keys(SHOTGUN_STATS)) SHOTGUN_STATS[k] = 0; };
-/** every probe leaves the card table and this module's knobs as it found them, pass, fail or throw */
-const guarded = (fn: () => Promise<boolean>) => async () => { const was = KIT.members.map((m: any) => ({ ...m })), on = KIT.on, rule = SLOTS.on, test = DOORTOOLS.testDoor; try { return await fn(); } finally { KIT.on = on; SLOTS.on = rule; DOORTOOLS.testDoor = test; was.forEach((m: any, i: number) => (KIT.members[i] = m)); Object.assign(SHOTGUN, JSON.parse(JSON.stringify(SG_DEFAULTS))); } };
+/** every probe leaves the card table as it found it, pass, fail or throw */
+const guarded = (fn: () => Promise<boolean>) => async () => { const was = KIT.members.map((m: any) => ({ ...m })), on = KIT.on, rule = SLOTS.on; try { return await fn(); } finally { KIT.on = on; SLOTS.on = rule; was.forEach((m: any, i: number) => (KIT.members[i] = m)); } };
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 /** a door's own axes: metres along hinge → latch, and out from the frame line on face `side` */
 const along = (d: any, p: number[]) => { const th = d.def.closedDir; return (p[0] - d.def.hinge[0]) * Math.cos(th) + (p[2] - d.def.hinge[1]) * Math.sin(th); };
@@ -63,19 +57,13 @@ const off = (d: any, p: number[], side: number) => { const th = d.def.closedDir;
 const SAM: Record<string, number[]> = { manager: [24.0, 0, 11.2], stairwell: [7.5, 0, 17.6] };
 
 /** One game under a seed with the room clear staged (the pair: NB.ops; `cards`: member → fields written on his loadout card BEFORE the staging, so the staging
- *  hands him his gun), Sam by `door`, in god mode and dark.
- *  ONE ORDER TAKES THE DOOR: every staging of this file was written to that — the row given, the stack made, the lock booted or shot. The page's stand has
- *  since put a rule in front of it (DOORTOOLS.testDoor, doortools.ts haltAt: the order HALTS at a door found locked — 'found shut' — and the same row given
- *  again takes it), under which every run here ended at the handle with nothing asked. So the switch is this file's own premise: OFF in every game stood
- *  here, whatever the stand, unless the staging asks for it (`test`: the rows that are about the halt). Written after the game is stood (the frozen stand
- *  pins the row at stand-up; it is read as the order runs, never at stand-up) and put back by guarded(). */
-async function rig(seed: number, o: { door?: string; cards?: Record<number, Record<string, unknown>>; stage?: boolean; glass?: boolean; test?: boolean } = {}) {
+ *  hands him his gun), Sam by `door`, in god mode and dark. */
+async function rig(seed: number, o: { door?: string; cards?: Record<number, Record<string, unknown>>; stage?: boolean } = {}) {
   for (let i = 0; i < KIT_MEMBERS; i++) KIT.members[i] = { ...kitDefault(i), ...(o.cards?.[i] ?? {}) };
   SLOTS.on = false;   // (the free rows: a card written here is the gun and nothing given up for it — under the pouches rule the staging would fit it back inside his pouches: a teammate's shotgun would stay home, and yours would cost your launcher rounds; the runner puts the rule back after the probe)
   Math.random = seeded(seed);
   const W: any = await standUp(); const game = W.game, RC = game.roomClear, NB = game.nightBreach, O = game.orders, D = game.doorTools;
-  DOORTOOLS.testDoor = !!o.test;
-  game.godMode = true; if (o.glass) GLASSFX.on = GLASSPEN.on = true;   // (glass: rounds pass panes and the stack's rule answers in this game — run() puts both switches back)
+  game.godMode = true;
   const why = o.stage === false ? null : RC.start(seed);
   const seen = new Set<any>();
   const R = { W, game, input: W.input, RC, NB, O, D, why, t0: 0, shots: [] as { t: number; who: number; pos: number[] }[], bangs: 0, kicks: 0,
@@ -162,18 +150,15 @@ export const shotgunRange = guarded(async () => {
 export const shotgunDoor = guarded(async () => {
   const { verdict, done } = family('shotgun-door: a locked door under open and clear / bang and clear with a breaching shotgun in the stack — and in your hands');
   const SEED = 8;   // (a seed on which the pair lives through the room behind the door either way: what the fight does after it is the room fight's dice, not this probe's)
-  /** `knobs`: over SHOTGUN's defaults · `glass`: glass's rule live for this run whatever the stand-up · `sam`: you, stood here instead of the rig's place ·
-   *  `test`: the page's door rule ON for this run (DOORTOOLS.testDoor — rig): the row is given, the order halts at the handle ('found shut'), and the SAME ROW
-   *  is given again; everything measured below is then of that second order, and `halt` is what the first one left */
-  const run = async (kind: 'openClear' | 'bangClear', cards: Record<number, Record<string, unknown>>, o: { knobs?: Record<string, unknown>; glass?: boolean; sam?: number[]; test?: boolean } = {}) => {
-    Object.assign(SHOTGUN, JSON.parse(JSON.stringify(SG_DEFAULTS)), o.knobs ?? {}); zero();
-    const sw = { fx: GLASSFX.on, pen: GLASSPEN.on }; try { return await ran(kind, cards, o); } finally { GLASSFX.on = sw.fx; GLASSPEN.on = sw.pen; }
-  };
-  const ran = async (kind: 'openClear' | 'bangClear', cards: Record<number, Record<string, unknown>>, o: { glass?: boolean; sam?: number[]; test?: boolean }) => {
-    const R = await rig(SEED, { door: 'manager', cards, glass: o.glass, test: o.test }); if (o.sam) { R.game.teleportPlayer(o.sam); R.step(5); } const d = R.door('manager'); const side = R.game.doors.side(d, R.game.player.char.pos) as 1 | -1;
+  /** `sam`: you, stood here instead of the rig's place. THE ROW IS GIVEN TWICE (the page's door rule, DOORTOOLS.testDoor): the row is given, the order
+   *  halts at the handle ('found shut'), and the SAME ROW is given again; everything measured below is of that second order, and `halt` is what the
+   *  first one left */
+  const run = async (kind: 'openClear' | 'bangClear', cards: Record<number, Record<string, unknown>>, o: { sam?: number[] } = {}) => { zero(); return await ran(kind, cards, o); };
+  const ran = async (kind: 'openClear' | 'bangClear', cards: Record<number, Record<string, unknown>>, o: { sam?: number[] }) => {
+    const R = await rig(SEED, { door: 'manager', cards }); if (o.sam) { R.game.teleportPlayer(o.sam); R.step(5); } const d = R.door('manager'); const side = R.game.doors.side(d, R.game.player.char.pos) as 1 | -1;
     const locked0 = d.locked && d.latched; let w = R.give(kind, 'manager'), op = R.op;
     let halt: { w: string | null; ended: string; beats: string; shells: number; kicks: number; shut: boolean; halted: number } | null = null;
-    if (o.test) { R.until(() => !!op?.ended, 60); R.step(30);
+    { R.until(() => !!op?.ended, 60); R.step(30);
       halt = { w, ended: String(op?.ended), beats: R.beats(op), shells: SHOTGUN_STATS.shells, kicks: R.kicks + R.D.stats.kicks, shut: d.latched && d.locked && !d.lockBroken, halted: R.D.stats.halted };
       w = R.give(kind, 'manager'); op = R.D.ops[0] ?? null; }
     // where the man who opens it stood when it gave, and how far the leaf's own sweep and the opening were from him
@@ -202,19 +187,17 @@ export const shotgunDoor = guarded(async () => {
   { const g2 = await run('openClear', { 2: { weapon: 'shotgun' } });
     verdict(!isNaN(g2.shotT) && isNaN(g2.kickT) && g2.spot?.who === g2.R.ops[1].callsign && g2.R.ops[1].weapon.def.id === 'm870' && g2.R.ops[0].weapon.def.id !== 'm870' && !isNaN(g2.goT) && (g2.spot?.mate ?? 0) >= 0.45,
       'only the SECOND man carries one: he takes the lock with it from a spot of his own (not from inside the lead, who keeps his rifle and his jamb), and the entry goes', `shot by ${g2.spot?.who}, ${f2(g2.spot?.mate ?? NaN)} m from the lead, ${(g2.spot?.along ?? NaN) < 0 ? `${f2(-(g2.spot?.along ?? NaN))} m past the hinge edge` : `${f2((g2.spot?.along ?? NaN) - g2.W)} m past the latch edge`}, ${f2(g2.spot?.off ?? NaN)} m off the wall, frames in front of the leaf ${g2.inOpening}, his place behind glass ${g2.spot?.glazed} (${g2.R.ops[1].callsign} has the ${g2.R.ops[1].weapon.def.id}, lead ${g2.R.ops[0].callsign} the ${g2.R.ops[0].weapon.def.id}) · ${g2.R.beats(g2.op)}`); }
-  { const off = await run('openClear', { 1: { weapon: 'shotgun' } }, { knobs: { on: false } });
-    verdict(isNaN(off.shotT) && !isNaN(off.kickT) && off.spot?.shells === 0 && off.stats.locks === 0 && off.d.lockBroken, 'SHOTGUN.on false: the same stack boots it, as before (no shell fired at the door)', `kick at ${f2(off.kickT)} s · shells before it opened ${off.spot?.shells} · locks ${off.stats.locks}`); }
-  // THE PAGE'S DOOR RULE ON (DOORTOOLS.testDoor, doortools.ts haltAt — on in the page; held off for every staging above, which is one order taking the door:
-  // rig). What a player does there: the row, the halt at the handle, the same row again — and with the gun in the stack that second order SHOOTS the lock.
-  { const t = await run('openClear', { 1: { weapon: 'shotgun' } }, { test: true }), h = t.halt!;
+  // THE PAGE'S DOOR RULE (DOORTOOLS.testDoor, doortools.ts haltAt). What a player does there: the row, the halt at the handle, the same row again — and
+  // with the gun in the stack that second order SHOOTS the lock.
+  { const t = await run('openClear', { 1: { weapon: 'shotgun' } }), h = t.halt!;
     console.log(`    the door rule on · the row: ${h.beats}\n    the door rule on · the same row again: ${t.R.beats(t.op)}`);
     verdict(t.locked0 && !h.w && h.ended === 'found shut' && h.halted === 1 && h.shells === 0 && h.kicks === 0 && h.shut,
       'THE PAGE\'S DOOR RULE ON (DOORTOOLS.testDoor), the lead carrying the M870: open and clear HALTS at the locked manager\'s door — the handle tried, the order over \'found shut\', no shell and no boot spent on it, the lock whole', `given: ${h.w ?? 'taken'} · ended: ${h.ended} · halts ${h.halted} · shells ${h.shells} · kicks ${h.kicks} · still locked and latched ${h.shut}`);
     verdict(!t.w && !!t.op && !isNaN(t.shotT) && isNaN(t.kickT) && t.d.lockBroken && t.spot?.shells === 1 && t.stats.locks === 1 && t.R.D.stats.kicks === 0 && t.R.D.stats.shot === 1 && t.inOpening === 0 && !isNaN(t.goT) && t.crossed >= 1,
       '… and the SAME ROW given again takes it with the gun, not the boot: one shell, the lock broken, nobody in front of the leaf, and the entry goes', `given again: ${t.w ?? 'taken'} · shotgun beat at ${f2(t.shotT)} s, kick beat ${f2(t.kickT)} · shells into the lock ${t.spot?.shells}, locks ${t.stats.locks} · door tools: shot ${t.R.D.stats.shot}, kicks ${t.R.D.stats.kicks} · frames in front of the leaf ${t.inOpening} · go at ${f2(t.goT)} s, crossed ${t.crossed} · ended: ${t.op?.ended ?? 'still on'} · the pair: ${t.R.ops.map((x: any) => x.state).join(', ')}`); }
   // GLASS'S RULE LIVE at this door (orders.ts behindGlass — the sidelight by the latch jamb files both men on the hinge side, and every spot of the list is in
-  // front of that pane): he shoots it from his own side. Turned on here by name, so the gate asks it whatever the stand-up; under GLASSPARTS=on the loop above has too.
-  { const boot = await run('openClear', {}, { glass: true }), gun = await run('openClear', { 1: { weapon: 'shotgun' } }, { glass: true }), g2 = await run('openClear', { 2: { weapon: 'shotgun' } }, { glass: true });
+  // front of that pane): he shoots it from his own side.
+  { const boot = await run('openClear', {}), gun = await run('openClear', { 1: { weapon: 'shotgun' } }), g2 = await run('openClear', { 2: { weapon: 'shotgun' } });
     const hingeSide = (r: typeof gun) => !!r.spot && r.spot.along < -0.05 && r.spot.off > 0.4;
     verdict(gun.glass && !isNaN(gun.shotT) && isNaN(gun.kickT) && gun.spot?.shells === 1 && hingeSide(gun) && gun.inOpening === 0 && !gun.spot?.glazed && gun.shotT - gun.stacked < boot.kickT - boot.stacked,
       'GLASS ON, the lead carrying it: the lock is shot off from HIS OWN SIDE of the frame — past the hinge edge, never in front of the leaf, not in a line of fire through the sidelight — with one shell, and sooner after \'stacked\' than the boot',
@@ -222,19 +205,9 @@ export const shotgunDoor = guarded(async () => {
     verdict(g2.glass && !isNaN(g2.shotT) && isNaN(g2.kickT) && g2.spot?.who === g2.R.ops[1].callsign && hingeSide(g2) && g2.inOpening === 0 && !g2.spot?.glazed && (g2.spot?.mate ?? 0) >= 0.45,
       'GLASS ON, only the second man carrying it: the same — from the hinge side, out from behind the lead, never across the opening',
       `${g2.spot?.who} ${f2(-(g2.spot?.along ?? NaN))} m past the hinge edge, ${f2(g2.spot?.off ?? NaN)} m off the wall, ${f2(g2.spot?.mate ?? NaN)} m from the lead · frames in front of the leaf ${g2.inOpening} · behind glass ${g2.spot?.glazed} · ${f2(g2.shotT - g2.stacked)} s after 'stacked'`); }
-  // SHOTGUN.ownSide (off as shipped): a man whose mark is on the hinge side takes the lock from that side with no glass in it at all
-  // (you a stride further back than the other runs stand you: there you are ON his hinge-side spots, and he goes round you to the list's — the run above)
-  { const BACK = [23.2, 0, 12.6]; const was = await run('openClear', { 2: { weapon: 'shotgun' } }, { sam: BACK }), own = await run('openClear', { 2: { weapon: 'shotgun' } }, { knobs: { ownSide: true }, sam: BACK });
-    if (was.glass) console.log('    (SHOTGUN.ownSide: the glass parts are on in this stand-up, where he shoots from his own side already — asked with them off)');
-    else verdict(!own.glass && !isNaN(own.shotT) && isNaN(own.kickT) && (own.spot?.along ?? 0) < -0.05 && own.inOpening === 0 && own.shotT - own.stacked < was.shotT - was.stacked && (own.spot?.mate ?? 0) >= 0.45,
-      'SHOTGUN.ownSide on, the glass parts out of it: the second man (his mark on the hinge side) shoots the lock from that side — he no longer walks across the front of the leaf to the latch side, and the leaf is in sooner',
-      `own side: ${f2(-(own.spot?.along ?? NaN))} m past the hinge edge, frames in front of the leaf ${own.inOpening}, ${f2(own.shotT - own.stacked)} s after 'stacked' · as shipped: frames in front of the leaf ${was.inOpening}, ${f2(was.shotT - was.stacked)} s`); }
-  { Object.assign(SHOTGUN, JSON.parse(JSON.stringify(SG_DEFAULTS))); zero();
-    const R = await rig(3, { door: 'stairwell', cards: { 1: { weapon: 'shotgun' } } }); const d = R.door('stairwell'); const w = R.give('openClear', 'stairwell'); R.until(() => !!R.op?.ended, 40);
-    verdict(!!d.def.steel && d.latched && !d.lockBroken && SHOTGUN_STATS.shells === 0 && (!!w || /steel/.test(R.op?.ended ?? '')), 'a STEEL door locked against them: refused as before, no shell spent on it', `give: ${w} · ended: ${R.op?.ended} · shells ${SHOTGUN_STATS.shells} · latched ${d.latched}`);
-    // (the page's door rule on: the menu does not read a lock for them — the row is taken, the handle tried, and the refusal is the same row's the second time)
-    zero(); const T = await rig(3, { door: 'stairwell', cards: { 1: { weapon: 'shotgun' } }, test: true }); const d2 = T.door('stairwell'); const w1 = T.give('openClear', 'stairwell'); T.until(() => !!T.op?.ended, 40); const e1 = T.op?.ended; T.step(30); const w2 = T.give('openClear', 'stairwell'); T.step(120);
-    verdict(!!d2.def.steel && !w1 && e1 === 'found shut' && !!w2 && /steel/.test(w2) && d2.latched && !d2.lockBroken && SHOTGUN_STATS.shells === 0 && T.kicks === 0, 'the page\'s door rule on, the same steel door: the order halts at the handle, the same row again is refused as steel — no shell and no boot either time', `given: ${w1 ?? 'taken'} · ended: ${e1} · given again: ${w2} · shells ${SHOTGUN_STATS.shells} · kicks ${T.kicks} · latched ${d2.latched}`); }
+  // (a steel door: the menu does not read a lock for them — the row is taken, the handle tried, and the refusal is the same row's the second time)
+  { zero(); const T = await rig(3, { door: 'stairwell', cards: { 1: { weapon: 'shotgun' } } }); const d2 = T.door('stairwell'); const w1 = T.give('openClear', 'stairwell'); T.until(() => !!T.op?.ended, 40); const e1 = T.op?.ended; T.step(30); const w2 = T.give('openClear', 'stairwell'); T.step(120);
+    verdict(!!d2.def.steel && !w1 && e1 === 'found shut' && !!w2 && /steel/.test(w2) && d2.latched && !d2.lockBroken && SHOTGUN_STATS.shells === 0 && T.kicks === 0, 'a STEEL door locked against them: the order halts at the handle, the same row again is refused as steel — no shell and no boot either time', `given: ${w1 ?? 'taken'} · ended: ${e1} · given again: ${w2} · shells ${SHOTGUN_STATS.shells} · kicks ${T.kicks} · latched ${d2.latched}`); }
   // where the man with the gun would stand at every lock of the level (shotgun.ts breachSpot): beside the frame wherever the wall leaves room
   { const R = await rig(3, {}); const g = R.game; const rows: string[] = []; let beside = 0, front = 0, none = 0;
     for (const d of g.doors.list) { if (!d.def.locked || d.def.steel) continue; for (const side of [1, -1] as const) { const sp = breachSpot(g, d, side), lp = lockPoint(d, side);
@@ -243,7 +216,7 @@ export const shotgunDoor = guarded(async () => {
     console.log(`    ${rows.join('\n    ')}`);
     verdict(beside >= 1 && beside >= front, 'the spot is beside the frame at most faces of the level\'s locked doors (in front of the leaf, or the boot, only where a wall or furniture leaves no room)', `beside ${beside} · in front ${front} · none ${none}`); }
   // you: slot 2, the muzzle by the lock
-  { Object.assign(SHOTGUN, JSON.parse(JSON.stringify(SG_DEFAULTS))); zero();
+  { zero();
     const R = await rig(7, { stage: false }); const d = R.door('storage');   // (the plain night: the storage room's door stands locked and latched)
     const side = 1 as const, th = d.def.closedDir, H = d.def.hinge, Wd = d.def.width; const pt = (a: number, b: number): number[] => [H[0] + Math.cos(th) * a - Math.sin(th) * side * b, 0, H[1] + Math.sin(th) * a + Math.cos(th) * side * b];
     const P = pt;   // (the corridor face: +z of the manager's frame line)
@@ -315,43 +288,4 @@ export const shotgunCard = guarded(async () => {
   return done();
 });
 
-// ---------------------------------------------------------------- nobody carries one
-/** the digest folded every half second over `secs` of the room clear's manager door under open and clear (seed 3), nobody's card touched, and which of the
- *  harness's two glass stand-ups the game is (`mix`: neither — a part switched by hand) — tools/qa/shotgun-probes.ts --identity prints both for whatever tree
- *  and environment it runs in */
-export async function identityWord(secs = 20): Promise<{ word: string; glass: 'on' | 'off' | 'mix' }> {
-  const R = await rig(3, { door: 'manager' }); R.give('openClear', 'manager'); let word = '0';
-  for (let f = 1; f <= secs * 60; f++) { R.step(); if (f % 30 === 0) word = hashStr(word + hashDigest(digestGame(R.game, true))).toString(16); }
-  const T = R.game.tune, parts = GLASSFX.on && T.glassBreak !== false;   // (under the master switch off nothing of glass runs, whatever its rows say)
-  return { word, glass: glassRule(R.game) && parts && T.glassShards !== false ? 'on' : !glassPenLive(R.game) && !parts ? 'off' : 'mix' };
-}
-/** TWO WORDS, because they are two runs: with the glass parts off (the harness's stand-up) the pair splits on the manager's jambs and the word is e6188f6's, the
- *  build before the gun; with them on (GLASSPARTS=on: the page as shipped) glass's rule files both men on the hinge side, off the sidelight, and the same twenty
- *  seconds are a different entry — its word is c2ab777's, the one build with glass in and the gun not yet (the same on 0ee0094, glass and gear both in). */
-/** RE-FROZEN 10-14 on 297c0667. The first words (off 1217e864 = e6188f6's, on e8635080 = c2ab777's) stood until the doors became real size (7a0e39c3: every
- *  level file exported again with 0.86 m leaves — level data, which no stand holds off): d546af02, its parent, still reads 1217e864, and from it on the glass-off
- *  word is 42535089. The words below are taken with COVER.backKeep held off, as this probe now holds it: that switch (81ef0af8) is on in the module with no row
- *  in FROZEN_HOLDS, and with it on the frozen stand reads 60731ea6 / 2a2baaea. The glass-on word's movers were not bisected; the last row (the gun's switch off:
- *  the same word) is what says the gun changes nothing on this tree. */
-const IDENTITY = { off: '42535089', on: 'c96c0542' };
-/** the stand the frozen words were taken on, for the probe and for the tool that prints a word to freeze: on the frozen stand COVER.backKeep is held off (a
- *  newer rule those words were not taken under), and put back after */
-async function asFrozen<T>(fn: () => Promise<T>): Promise<T> { const bk = COVER.backKeep; if (harnessProfile() === 'frozen') COVER.backKeep = false; try { return await fn(); } finally { COVER.backKeep = bk; } }
-export const shotgunIdentity = guarded(() => asFrozen(async () => {
-  const { verdict, done } = family('shotgun-identity: with nobody carrying one, a run is the run it was');
-  zero(); const { word, glass } = await identityWord();
-  // (THE FROZEN WORDS ARE THE FROZEN STAND'S: both were taken on it, and the page's stand — TPS_PROFILE=shipped — plays every newer rule that stand holds off (src/host/profile.ts FROZEN_HOLDS);
-  //  asked there the row was red by construction and said nothing of the gun. That stand gets the next row alone.)
-  if (harnessProfile() !== 'frozen') console.log(`    (the page's stand: no word was frozen on it — now ${word}, glass parts ${glass}; asked against the same run with the gun switched off, below)`);
-  else if (glass === 'mix') console.log(`    (a glass part switched by hand: neither frozen word is this run's — now ${word})`);
-  else verdict(word === IDENTITY[glass], `twenty seconds of open and clear on the locked manager's door (seed 3, every card as issued) digest to the frozen word — ${glass === 'on' ? 'the glass parts ON (GLASSPARTS=on: the stack off the sidelight)' : 'the glass parts off'} — re-frozen 10-14 after the doors became real size`, `now ${word} · frozen ${IDENTITY[glass]}`);
-  verdict(Object.values(SHOTGUN_STATS).every(n => n === 0), 'and nothing of shotgun.ts ran: no shell, no pellet, no lock', JSON.stringify(SHOTGUN_STATS));
-  // … and on whatever stand and tree this is: the same twenty seconds with the gun's rule switched off are the same run, word for word (no frozen word needed —
-  // a word that has moved under this row with this one still green was moved by something else than the gun)
-  { SHOTGUN.on = false; const off = await identityWord(); SHOTGUN.on = SG_DEFAULTS.on;
-    verdict(off.word === word && off.glass === glass, 'SHOTGUN.on false, the same twenty seconds: the same word — with nobody carrying one the switch changes nothing of the run', `on ${word} · off ${off.word}`); }
-  return done();
-}));
-
-if (import.meta.main && process.argv.includes('--identity')) { const { word, glass } = await asProbe('shotgun-identity', () => asFrozen(() => identityWord()));   /* (the word as the probe of that name reads it: the kit cards held as they were, and the frozen words' own stand) */ console.log(`${word} (glass parts ${glass})`); process.exit(0); }
-if (import.meta.main) process.exit(exitCode(await asProbes({ 'shotgun-range': shotgunRange, 'shotgun-door': shotgunDoor, 'shotgun-card': shotgunCard, 'shotgun-identity': shotgunIdentity }, wanted())));   // (`bun run tools/qa/shotgun-probes.ts [name …]`: the file's probes alone, each as the runner runs it)
+if (import.meta.main) process.exit(exitCode(await asProbes({ 'shotgun-range': shotgunRange, 'shotgun-door': shotgunDoor, 'shotgun-card': shotgunCard }, wanted())));   // (`bun run tools/qa/shotgun-probes.ts [name …]`: the file's probes alone, each as the runner runs it)

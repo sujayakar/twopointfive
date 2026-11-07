@@ -1,12 +1,13 @@
 //! The compiler's own reading of what the game never runs.
 //!
 //! `prep` writes a copy of rust/ in which every item of a body file is private to the crate, unless its name
-//! stands in the crates that use the game (rust/game_face, rust/game_run).
+//! stands in another crate under rust/ (the page's face, the runner, the crate that stands a level natively with
+//! its binaries and tests: every one of them is a root, found by listing rust/, never by a list kept here).
 //! With the crate's `allow(dead_code)` lifted, `cargo check` on that copy names every function, constant and
 //! static that nothing live reaches: the generated call surface, the wire and the tables stay public, so
 //! what they reach is live. Checked with `--tests`, the unit tests are live too, so what only a test uses
-//! stays; checked without, it is named. `apply` deletes what the check named from the real body files,
-//! never an item inside a test module.
+//! stays; checked without, it is named. `apply` deletes what the check named from the real body files
+//! (inside a test module too: a helper no test uses).
 //!
 //! A line of the copy is the same line of the real file: `prep` changes words inside lines, never their count.
 
@@ -36,10 +37,7 @@ fn is_test_mod(m: &syn::ItemMod) -> bool {
     m.attrs.iter().any(|a| a.path().is_ident("cfg") && a.meta.require_list().map(|l| l.tokens.to_string().contains("test")).unwrap_or(false))
 }
 
-fn is_body(p: &Path) -> bool {
-    let n = p.file_name().and_then(|n| n.to_str()).unwrap_or("");
-    (n.starts_with("p_") || n.starts_with("b_")) && n.ends_with(".rs")
-}
+use crate::dead::is_body;
 
 /// `pub` -> `pub(crate)` on every item of a body file whose name is not in `keep`, and on its own `pub use`s.
 /// An item whose name IS in `keep` stays as it is and is told to the compiler as used (`#[allow(dead_code)]`, which
@@ -138,8 +136,13 @@ pub fn prep(root: &Path, scratch: &Path) -> Result<String, String> {
     // names that make an item live from outside the crate's own non-test code
     let mut keep: HashSet<String> = HashSet::new();
     let mut users = Vec::new();
-    crate::dead::rs_files(&root.join("rust/game_face"), &mut users);
-    crate::dead::rs_files(&root.join("rust/game_run"), &mut users);
+    // EVERY crate under rust/ but the game itself is a root: the page's face, the runner, the crate that stands a level
+    // natively with its binaries and its tests, and whatever comes after them. A name one of them spells keeps the item.
+    let mut crates: Vec<PathBuf> = std::fs::read_dir(root.join("rust")).map(|rd| rd.flatten().map(|e| e.path()).filter(|p| p.is_dir() && p.join("Cargo.toml").exists() && p.file_name().map(|n| n != "game").unwrap_or(false)).collect()).unwrap_or_default();
+    crates.sort();
+    for c in &crates {
+        crate::dead::rs_files(c, &mut users);
+    }
     for p in &users {
         if let Ok(t) = std::fs::read_to_string(p) {
             idents(&t, &mut keep);
@@ -157,7 +160,12 @@ pub fn prep(root: &Path, scratch: &Path) -> Result<String, String> {
             out = privatise(&out, &keep);
         } else if name == "mod.rs" {
             // a module hands its parts on to the crate, not to the world
-            out = out.lines().map(|l| if l.starts_with("pub use p_") || l.starts_with("pub use b_") { l.replacen("pub use", "pub(crate) use", 1) } else { l.to_string() }).collect::<Vec<_>>().join("\n") + "\n";
+            // (`pub use p_01::*;`, `pub use base::*;`: a part whose file is a body file)
+            let dir = p.parent().map(|d| d.to_path_buf()).unwrap_or_default();
+            out = out.lines().map(|l| {
+                let part = l.strip_prefix("pub use ").and_then(|r| r.split("::").next()).unwrap_or("");
+                if !part.is_empty() && is_body(&dir.join(format!("{part}.rs"))) && dir.join(format!("{part}.rs")).exists() { l.replacen("pub use", "pub(crate) use", 1) } else { l.to_string() }
+            }).collect::<Vec<_>>().join("\n") + "\n";
         }
         if out.contains("dead_code") {
             out = out.replace("#![allow(dead_code)]", "").replace("#[allow(dead_code)]", "").replace("dead_code, ", "").replace(", dead_code", "");
@@ -167,7 +175,7 @@ pub fn prep(root: &Path, scratch: &Path) -> Result<String, String> {
             std::fs::write(p, out).map_err(|e| format!("cannot write {}: {e}", p.display()))?;
         }
     }
-    Ok(format!("the private copy is {} ({n} files changed in it; {} names kept public for rust/game_face and rust/game_run)", to.display(), from_users))
+    Ok(format!("the private copy is {} ({n} files changed in it; {} names kept public for the {} other crates under rust/: {})", to.display(), from_users, crates.len(), crates.iter().filter_map(|c| c.file_name().and_then(|n| n.to_str())).collect::<Vec<_>>().join(", ")))
 }
 
 #[derive(Default)]
@@ -250,7 +258,8 @@ pub fn apply(root: &Path, named: &Named, write: bool) -> Result<Applied, String>
         let want: HashSet<(usize, &str)> = list.iter().map(|(l, n, _)| (*l, n.as_str())).collect();
         let mut hit: HashSet<(usize, String)> = HashSet::new();
         let mut cut: Vec<(std::ops::Range<usize>, String, &'static str, bool)> = Vec::new();
-        fn walk<'a>(items: &'a [syn::Item], src: &str, want: &HashSet<(usize, &str)>, hit: &mut HashSet<(usize, String)>, cut: &mut Vec<(std::ops::Range<usize>, String, &'static str, bool)>) {
+        // (the last word of a cut: is it an item a `mod.rs` may hand on by name; never one of a test module)
+        fn walk<'a>(items: &'a [syn::Item], src: &str, want: &HashSet<(usize, &str)>, hit: &mut HashSet<(usize, String)>, cut: &mut Vec<(std::ops::Range<usize>, String, &'static str, bool)>, in_test: bool) {
             for it in items {
                 let (ident, kind): (Option<&syn::Ident>, &'static str) = match it {
                     syn::Item::Fn(x) => (Some(&x.sig.ident), "function"),
@@ -265,7 +274,7 @@ pub fn apply(root: &Path, named: &Named, write: bool) -> Result<Applied, String>
                     let key = (line_of(src, id.span().byte_range().start), id.to_string());
                     if want.contains(&(key.0, key.1.as_str())) {
                         hit.insert(key.clone());
-                        cut.push((it.span().byte_range(), key.1, kind, kind == "function"));
+                        cut.push((it.span().byte_range(), key.1, kind, !in_test));
                     }
                     continue;
                 }
@@ -294,16 +303,17 @@ pub fn apply(root: &Path, named: &Named, write: bool) -> Result<Applied, String>
                             cut.extend(inner);
                         }
                     }
-                    syn::Item::Mod(m) if !is_test_mod(m) => {
+                    // (a test module too: what the check with the tests calls dead there is a helper no test uses)
+                    syn::Item::Mod(m) => {
                         if let Some((_, inner)) = &m.content {
-                            walk(inner, src, want, hit, cut);
+                            walk(inner, src, want, hit, cut, in_test || is_test_mod(m));
                         }
                     }
                     _ => {}
                 }
             }
         }
-        walk(&f.items, &src, &want, &mut hit, &mut cut);
+        walk(&f.items, &src, &want, &mut hit, &mut cut, false);
         for (line, name, msg) in list {
             if !hit.contains(&(*line, name.clone())) {
                 out.listed.push(format!("{file}:{line} {name}: {msg}"));
@@ -314,14 +324,13 @@ pub fn apply(root: &Path, named: &Named, write: bool) -> Result<Applied, String>
         }
         cut.sort_by_key(|c| std::cmp::Reverse(c.0.start));
         let mut s = src.clone();
-        for (r, name, kind, free_fn) in cut {
+        for (r, name, kind, handed_on) in cut {
             let lr = item_lines(&s, r);
             let n = s[lr.clone()].lines().count();
             s.replace_range(lr, "");
             out.lines += n;
             out.deleted.push((format!("{module}::{name}"), kind.to_string(), n));
-            let _ = free_fn;
-            if kind != "method" && kind != "impl" {
+            if handed_on && kind != "method" && kind != "impl" {
                 let part = path.file_stem().and_then(|n| n.to_str()).unwrap_or("").to_string();
                 modrs.entry(path.parent().unwrap().join("mod.rs")).or_default().insert((name, part));
             }

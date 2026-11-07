@@ -38,7 +38,7 @@ let stood: Stood | null = null, standing = false, stoodMs = 0, closed = false;
 const down: (f: () => void) => void = onWay(WAY, (f: () => void) => f(), roll);   // (what comes down the socket, its close too, in the order it came)
 /** the longest wait between two messages down once the game ran (ms), and when the last one came */
 let gapMax = 0, gapAt = 0, stalledOnce = false;
-const take = (text: string): void => down(() => { const t = performance.now(); if (gapAt && client.confirmed > 60) gapMax = Math.max(gapMax, t - gapAt); gapAt = t; client.message(text, t); if (client.welcome && !stood && !standing) { standing = true; const t0 = performance.now(); standRecipe(client.welcome.recipe).then(s => { stood = s; stoodMs = performance.now() - t0; if (client.seat >= 0) { s.W.game.localSeat = s.W.game.seats[client.seat]; client.ready(); } }, e => { console.error(`bot.ts: ${(e as Error).message}`); process.exit(1); }); } });
+const take = (text: string): void => down(() => { const t = performance.now(); if (gapAt && client.confirmed > 60) gapMax = Math.max(gapMax, t - gapAt); gapAt = t; client.message(text, t); if (client.welcome && !stood && !standing) { standing = true; const t0 = performance.now(); standRecipe(client.welcome.recipe).then(s => { stood = s; stoodMs = performance.now() - t0; if (client.seat >= 0) s.W.game.localSeat = s.W.game.seats[client.seat]; s.begin(); stoodMs = performance.now() - t0; if (client.seat >= 0) client.ready(); }, e => { console.error(`bot.ts: ${(e as Error).message}`); process.exit(1); }); } });
 ws.onopen = () => client.hello();
 ws.onmessage = (ev: { data: unknown }) => take(String(ev.data));
 ws.onclose = () => down(() => { closed = true; });

@@ -13,9 +13,11 @@ const ROOT = join(import.meta.dir, '../..'), BLITZ = join(ROOT, 'tools/blitz'), 
 const die = (s: string): never => { console.error(`wire: ${s}`); process.exit(1); };
 const rustFile = (name: string): string => { const hits = readdirSync(join(ROOT, 'rust')).map(c => join(ROOT, 'rust', c, 'src', name)).filter(existsSync); if (hits.length !== 1) die(`${name} is in ${hits.length} crates`); return hits[0]; };
 const read = (p: string) => readFileSync(p, 'utf8'), readJ = (p: string) => JSON.parse(read(p));
+/** fields.json as it is kept: a name a line and no indent, so an add or a drop shows as its own rows in a diff and nothing else moves */
+const writeFields = (L: unknown) => writeFileSync(FIELDS, JSON.stringify(L, null, 1).replace(/^ +/gm, ''));
 const fnv = (s: string) => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193) >>> 0; return h >>> 0; };
 // THE STATE WORDS: a hash of the whole game, a word a part, for two machines of one networked game to compare. What a host hands in and differs by machine is left out, and so is what is only a step's output
-const HOSTS_OWN = new Set(['out', 'cmd_buf', 'local_seat', 'view_proj', 'puppet', 'm_per_px', 'taps', 'seat', 'tab.camera', 'tab.input', 'tab.cmd_seat', 'engine.settings', 'engine.view_focus', 'engine.effective_scale', 'engine.sharp_on']);
+const HOSTS_OWN = new Set(['m.owner', 'out', 'cmd_buf', 'local_seat', 'view_proj', 'puppet', 'm_per_px', 'taps', 'seat', 'tab.camera', 'tab.input', 'tab.cmd_seat', 'engine.settings', 'engine.view_focus', 'engine.effective_scale', 'engine.sharp_on']);
 function stateWords(io: string): string { const fieldsOf = (path: string): string[] => { const l = io.split('\n').find(x => x.startsWith(`impl Io for ${path} {`)) ?? die(`no line for ${path}`) as never, w = l.slice(0, l.indexOf(' fn r(')); return [...w.matchAll(/self\.([a-z_0-9]+)\.w\(o\)/g)].map(m => m[1]); };
   const P: [string, string][] = []; const push = (name: string, ex: string) => { if (!HOSTS_OWN.has(name)) P.push([name, ex]); };
   for (const f of fieldsOf('crate::game::Game')) { if (f === 'm') for (const x of fieldsOf('crate::game::Mods')) push(`m.${x}`, `g.m.${x}`); else if (f === 'engine') for (const x of fieldsOf('crate::host_api::HostApi')) push(`engine.${x}`, `g.engine.${x}`); else push(f, `g.${f}`); }
@@ -25,17 +27,21 @@ function stateWords(io: string): string { const fieldsOf = (path: string): strin
   for (const k of setKeys) P.push([`seats.${k}`, `{ for s in g.tab.cmd_seat.ids() { if s == g.seat { g.${k}.w(o); } else if let Some(x) = &g.tab.cmd_seat[s].own { x.${k}.w(o); } } }`]);
   const L = ['//! A hash of the whole game, a word a part, for two machines of one networked game to compare. Written by tools/wire/wire.ts from the lines of the wire. Left out: what a host hands in and differs by machine, and what is only a step\'s output.', 'use crate::io::{Io, W};', 'use alloc::vec::Vec;', `pub const STATE_NAMES: [&str; ${P.length}] = [${P.map(p => JSON.stringify(p[0])).join(', ')}];`,
     'fn word(b: &[u8]) -> u32 { let mut h: u64 = 0xcbf29ce484222325 ^ (b.len() as u64); let mut c = b.chunks_exact(8); for x in &mut c { let mut a = [0u8; 8]; a.copy_from_slice(x); h = (h ^ u64::from_le_bytes(a)).wrapping_mul(0x100000001b3); h ^= h >> 29; } for x in c.remainder() { h = (h ^ *x as u64).wrapping_mul(0x100000001b3); } (h ^ (h >> 32)) as u32 }',
-    '/// `o` and `out` are kept by the caller, so that a call grows nothing once they have reached their size', 'pub fn state_words(g: &crate::game::Game, o: &mut W, out: &mut Vec<u32>) { out.clear();', ...P.map(p => `    o.b.clear(); ${p[1].startsWith('{') ? p[1] : `${p[1]}.w(o);`} out.push(word(&o.b));`), '    o.b.clear(); }', ''];
+    '/// `o` and `out` are kept by the caller, so that a call grows nothing once they have reached their size', '/// With the first seat standing on Game, as inside a tick: which seat a machine shows then moves no word', 'pub fn state_words(g: &mut crate::game::Game, o: &mut W, out: &mut Vec<u32>) { out.clear(); crate::seats::on_first_bare(g, &mut |g: &mut crate::game::Game| {', ...P.map(p => `    o.b.clear(); ${p[1].startsWith('{') ? p[1] : `${p[1]}.w(o);`} out.push(word(&o.b));`), '    o.b.clear(); }); }', ''];
   return L.join('\n'); }
 /** every generated file, and the stamp both halves carry */
 function gen(check: boolean): void { const T = mkdtempSync(join(tmpdir(), 'wire-')); mkdirSync(join(T, 'bridge'));
   const S0 = read(SCHEMA); writeFileSync(join(T, 'bridge/schema.json'), S0);
   execFileSync(process.execPath, ['run', join(HERE, 'puppetgen.cjs'), T, FIELDS, ROOT], { stdio: ['ignore', 'pipe', 'inherit'] });
   const S = readJ(join(T, 'bridge/schema.json')); delete S.layout;
+  // (the stamp is of what the two halves read of each other's bytes. `knobSettled` is no part of that: which settings a page's walk leaves out)
+  const settled = S.knobSettled; delete S.knobSettled;
   const O = { 'bridge/puppet-apply.ts': join(BLITZ, 'puppet-apply.ts'), 'bridge/puppet-lists.json': join(BLITZ, 'puppet-lists.json'), 'bridge/out-dispatch.ts': join(BLITZ, 'out-dispatch.ts'), 'puppet.rs': rustFile('puppet.rs') } as Record<string, string>;
-  const words = JSON.stringify(S) + Object.keys(O).map(k => read(join(T, k))).join(''); const layout = fnv(words); S.layout = layout;
+  const words = JSON.stringify(S) + Object.keys(O).map(k => read(join(T, k))).join(''); const layout = fnv(words); S.layout = layout; S.knobSettled = settled;
   const ioP = rustFile('io.rs'), io0 = read(ioP), io1 = io0.replace(/\npub const LAYOUT: u32 = \d+;\n?/, '').trimEnd() + `\npub const LAYOUT: u32 = ${layout};\n`;
   const swP = join(ROOT, 'rust/game/src/state_words.rs'); const out: [string, string][] = [[SCHEMA, JSON.stringify(S)], [ioP, io1], [swP, stateWords(io1)], ...Object.entries(O).map(([k, p]) => [p, read(join(T, k))] as [string, string])];
+  // THE TOOL NEVER WRITES A TYPE. The game's types are source a person edits (each module's types.rs, knobs.rs, ids.rs); this list of files is all gen touches, and the two Rust files it makes in whole declare none.
+  const made = new Set([SCHEMA, ioP, swP, ...Object.values(O)]); for (const [p, t] of out) { if (!made.has(p)) die(`${p.slice(ROOT.length + 1)}: gen writes no file off its list`); if (p.endsWith('.rs') && p !== ioP && /^\s*(pub(\([a-z]+\))?\s+)?(struct|enum|union)\s/m.test(t)) die(`${p.slice(ROOT.length + 1)}: a generated file declares a type; the game's types are written by hand`); }
   let moved = 0; for (const [p, t] of out) { const was = existsSync(p) ? read(p) : ''; if (was === t) continue; moved++; if (check) console.log(`wire: ${p.slice(ROOT.length + 1)} would change`); else writeFileSync(p, t); }
   rmSync(T, { recursive: true, force: true }); console.log(`wire: ${moved ? `${moved} files ${check ? 'differ' : 'written'}` : 'no file changes'}; layout ${layout}`); if (check && moved) process.exit(1); }
 const camel = (x: string) => x.replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase());
@@ -54,7 +60,7 @@ function add(q: string, ty: string, ts: string | undefined, expr: string | undef
   l = l.includes(' s } fn ri(') ? edit(l, ' s } fn ri(', ` s.${f} = Io::r(i); s } fn ri(`, q) : edit(l, ', } } fn ri(', `, ${f}: Io::r(i), } } fn ri(`, q);
   l = edit(l, / \} \}$/, ` self.${f}.ri(i); } }`, q); io[k] = l;
   const p = linesOf(io, 'Poke', path); io[p] = edit(io[p], ' k => panic!', ` ${T.fields.length - 1} => self.${f}.poke(i), k => panic!`, q); writeFileSync(ioP, io.join('\n'));
-  writeFileSync(SCHEMA, JSON.stringify(S)); const L = readJ(FIELDS), before = L.pageTick.length; for (const k2 of startOnly ? ['atStartOnly'] : ['everyTick', 'pageTick']) if (!L[k2].includes(`${mod}::${name}.${f}`)) L[k2].push(`${mod}::${name}.${f}`); writeFileSync(FIELDS, JSON.stringify(L, null, 0)); gen(false);
+  writeFileSync(SCHEMA, JSON.stringify(S)); const L = readJ(FIELDS), before = L.pageTick.length; for (const k2 of startOnly ? ['atStartOnly'] : ['everyTick', 'pageTick']) if (!L[k2].includes(`${mod}::${name}.${f}`)) L[k2].push(`${mod}::${name}.${f}`); writeFields(L); gen(false);
   console.log(`wire: ${q} is on the page's list (${startOnly ? 'at a start only' : `${before} fields a tick, now ${L.pageTick.length}`}): it costs ${widthOf(ty)}. It is read by ${R.slice(0, 3).join(', ')}${R.length > 3 ? ` and ${R.length - 3} more` : ''}. Build the module, then \`tools/wire/cost.ts\` says what a tick costs now.`); }
 function addStruct(path0: string, fields: string): void { const m = path0.match(/^([a-z_0-9]+)::([A-Za-z_0-9]+)$/); if (!m) die(`${path0}: write it module::Type`); const path = `crate::${m![1]}::${m![2]}`, S = readJ(SCHEMA); if (S.types[path]) die(`${path} is already in the table`);
   const F = fields.split(',').map(x => { const i = x.indexOf(':'); return { rust: x.slice(0, i).trim(), ty: x.slice(i + 1).trim(), ts: camel(x.slice(0, i).trim()) }; }); S.types[path] = { k: 'struct', mod: m![1], name: m![2], fields: F }; writeFileSync(SCHEMA, JSON.stringify(S));
@@ -66,7 +72,7 @@ function drop(Q: string[]): void { const S = readJ(SCHEMA), L = readJ(FIELDS), i
     const k = lineOf('Io', path); let l = io[k]; for (const [a, b] of [[` self.${f}.w(o);`, ''], [` s.${f} = Io::r(i);`, ''], [` ${f}: Io::r(i),`, ''], [` self.${f}.ri(i);`, '']]) l = l.split(a).join(b); if (new RegExp(`\\b${f}\\b`).test(l)) die(`${q}: its line on the wire is not of a form this tool knows`); io[k] = l;
     const p = lineOf('Poke', path); let i2 = 0; io[p] = io[p].replace(` ${at} => self.${f}.poke(i),`, '').replace(/ \d+ => self\.([a-z_0-9]+)\.poke\(i\),/g, (_, x) => ` ${i2++} => self.${x}.poke(i),`); }
   for (const k of ['everyTick', 'pageTick', 'atStartOnly']) { const b = L[k].length; L[k] = L[k].filter((x: string) => !set.has(x)); listed += b - L[k].length; } S.knobSettled = (S.knobSettled ?? []).filter((x: string) => !set.has(x));
-  writeFileSync(ioP, io.join('\n')); writeFileSync(SCHEMA, JSON.stringify(S)); writeFileSync(FIELDS, JSON.stringify(L, null, 0)); gen(false); console.log(`wire: ${n} fields off the wire (${listed} list rows)`); }
+  writeFileSync(ioP, io.join('\n')); writeFileSync(SCHEMA, JSON.stringify(S)); writeFields(L); gen(false); console.log(`wire: ${n} fields off the wire (${listed} list rows)`); }
 const A = process.argv.slice(2), opt = (n: string) => { const i = A.indexOf(n); return i < 0 ? undefined : A[i + 1]; };
 switch (A[0]) { case 'gen': gen(A.includes('--check')); break;
   case 'add': add(A[1], opt('--ty') ?? die('add: --ty') as never, opt('--ts'), opt('--expr'), A.includes('--start-only')); break;

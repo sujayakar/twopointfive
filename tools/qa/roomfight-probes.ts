@@ -7,30 +7,30 @@
 //                       door meets his shoulder — sixteen seeds each: the unwatched entry drops him without a round coming back far more often
 //   roomfight-nextroom  a defender posted in the corridor outside: with a fight in the break room he can hear (real rounds) he comes; with none he stands; with
 //                       gunfire where his side has nobody he stays too
-//   roomfight-sight     a teammate fires at a defender he has a lit, smoke-free sight of — and not at one in the dark, nor at a lit one through smoke (the
+//   roomfight-sight     a teammate fires at a defender he has a lit, smoke-free sight of — and not at a lit one through smoke (the
 //                       renderer's answer planted on the pair's key), nor at one behind his back
-//   roomfight-eyes      ROOMFIGHT.sights: a teammate with his rifle in the shoulder sees a man along his aim that the eye between chest and head leaves out;
-//                       nothing he saw before is lost; the other side's eye and anybody's reading of Sam are as they were (ROOMFIGHT_EYES_BREAK=1 = the red path)
+//   roomfight-eyes      ROOMFIGHT.sights: a teammate with his rifle in the shoulder sees every man along his aim with a clear line; the entry dip and its
+//                       eyes (ROOMFIGHT_EYES_BREAK=1 = the red path: the dip's eyes are left down)
 //   roomfight-friends   the night breach at its default over fifteen seeds with Sam idle, and eight with Sam (god mode) walked into the room behind the charge:
 //                       no teammate's round passes within a body's breadth of Sam or of the other teammate; and nothing in those runs was staged — the drill
 //                       fired no round of its own (BreachDrill.rounds 0, no eyes / shot / guaranteed beat), every defender down was dropped by a round
 //   roomfight-duel      the even meeting: one teammate, one defender, both roused, face to face in the same light, twenty-four seeds — the teammate wins
 //                       clearly more often than not, and the defender still wins some (lethality is the same both ways)
-//   roomfight-off       ROOMFIGHT.on false = the night breach as its branch had it (the staged exchange fires again); with no unit on the floor the module
-//                       is not live and ten seeded seconds of the night game digest the same with the switch either way
 // Headless there is no renderer: the light on a man is the CPU estimate of the direct light (guards.ts lightEstimateAt), the smoke between two men is clear unless
 // a probe plants the segment's answer, and nothing here says anything about what the picture shows.
+// 2026-11-07, SETTLED SWITCHES ARE NOT WRITTEN HERE. Gone: roomfight-off whole (ROOMFIGHT.on false); of roomfight-eyes the lines with ROOMFIGHT.sights off or
+// sightsFoe on ('switch off (as before)', 'nothing he saw before is lost', 'his reading of Sam is the same with the switch on and off', and both lines of the
+// other side's eye); of roomfight-sight the dark run ('the room dark and no weapon light: not a round' — the bare-eyes rule, asked with the goggles put off:
+// nvg.ts took it away). The two rig pins are out as well: where a probe has a lone teammate open fire by himself, the fight is BEGUN by the hold-fire rule's
+// own stamp (holdfire.ts holdFireDrill) where the rule was written off; and roomfight-nextroom no longer has rounds stop in the door leaf (WALLPEN.on).
 import { standUp, ROOT } from './headless.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { ROOMFIGHT, FIGHT_SKILL } = await import(`${ROOT}/src/game/roomfight.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
-const { NVG } = await import(`${ROOT}/src/game/nvg.ts`);
 const { spawnUnit, engage, canSeeChar } = await import(`${ROOT}/src/game/guards.ts`);
 const { order } = await import(`${ROOT}/src/game/squad.ts`);
 const { fireWeapon, detonateStun, killGuard } = await import(`${ROOT}/src/game/combat.ts`);
-const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
-const { HOLDFIRE } = await import(`${ROOT}/src/game/holdfire.ts`);
-const { WALLPEN } = await import(`${ROOT}/src/game/wallpen.ts`);
+const { holdFireDrill } = await import(`${ROOT}/src/game/holdfire.ts`);
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -42,12 +42,10 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
 }
 const KNOBS0 = { ...ROOMFIGHT }, SKILL0 = JSON.parse(JSON.stringify(FIGHT_SKILL, (_k, v) => v === Infinity ? '∞' : v), (_k, v) => v === '∞' ? Infinity : v), NB0 = { ...NIGHTBREACH };
 const restore = () => { Object.assign(ROOMFIGHT, KNOBS0); for (const k of ['operative', 'hostile'] as const) Object.assign(FIGHT_SKILL[k], JSON.parse(JSON.stringify(SKILL0[k], (_k, v) => v === Infinity ? '∞' : v), (_k, v) => v === '∞' ? Infinity : v)); Object.assign(NIGHTBREACH, NB0); };
-/** a probe whose staging has teammates open fire by themselves: floor() puts the unfound squad's hold off AFTER each stand-up (the stand-up writes the switch:
- *  on under shipped, and on the frozen stand with TPS_HOLDFIRE=1 — a pin written before it is written over) */
+/** a probe whose staging has teammates open fire by themselves: floor() begins the fight by the hold-fire rule's own stamp after each stand-up (the squad is
+ *  no longer unfound: holdfire.ts holdFireDrill). It put the rule off until 2026-11-07 */
 let noHold = false;
-/** a probe that fires at a door leaf or a partition AS A BACKSTOP stages with rounds stopping there (wallpen.ts off, as on the frozen stand) */
-let noThin = false;
-const guarded = (fn: () => Promise<boolean>) => async () => { const hold = HOLDFIRE.on, thin = WALLPEN.on; try { return await fn(); } finally { restore(); HOLDFIRE.on = hold; noHold = false; WALLPEN.on = thin; noThin = false; } };
+const guarded = (fn: () => Promise<boolean>) => async () => { try { return await fn(); } finally { restore(); noHold = false; } };
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const wrap = (a: number) => { a = (a + Math.PI) % (2 * Math.PI); if (a <= 0) a += 2 * Math.PI; return a - Math.PI; };
 const up = (l: any[]) => l.filter(x => x.state !== 'dead').length;
@@ -85,7 +83,7 @@ function tracker(W: any) {
  *  civilians / response team / devices, a fresh encounter — then whoever the probe spawns. Sam is parked dark at his spawn in the cubicles. */
 async function floor(seed: number, o: { lit?: boolean; chaos?: number } = {}) {
   Math.random = seeded(seed);
-  const W: any = await standUp(); const g = W.game; if (noHold) HOLDFIRE.on = false; if (noThin) WALLPEN.on = false;
+  const W: any = await standUp(); const g = W.game; if (noHold) holdFireDrill(g);
   for (const gd of g.guards) { gd.flashlight.enabled = false; g.engine.lights.remove(gd.flashlight); }
   g.guards = []; g.tune.civilians = false; g.tune.qrf = false; g.tune.devices = false; g.tune.chaos = o.chaos ?? 0;
   g.restartEncounter();
@@ -198,7 +196,6 @@ export const roomfightFlank = guarded(async () => {
 // ================================================================ next room: the men next door hear it
 export const roomfightNextRoom = guarded(async () => {
   const { verdict, done } = family('roomfight-nextroom: a defender next door comes to a fight he can hear, and only to one');
-  noThin = true;   // (the fight is staged as a teammate's rounds INTO the break room's wooden west door, for the noise: with rounds through thin walls on — the shipped stand — they come through the leaf past the two men inside, which opens a lane on that door (lanes.ts: rounds passing a living man), and nobody walks over alone to a fight at a lane's guns. That is the two rules together, and wallmen-check's and the lanes' own business; this probe asks what he does about a fight he HEARS)
   const SEEDS = [51, 52, 53, 54, 55, 56, 57, 58];
   const post = [33.6, 0, 11.1];
   const run = async (seed: number, mode: 'fight' | 'quiet' | 'elsewhere') => {
@@ -245,13 +242,9 @@ export const roomfightSight = guarded(async () => {
     const los = !g.col.segmentBlocked([A[0], 1.6, A[2]], [B[0], 1.1, B[2]]);
     return { R, g, op, h, key, rounds: R.T.by.operative ?? 0, dead: h.state === 'dead', killer: h.killerId === op.char.id, light, meter, los, trans: g.fight.trans.get(key) };
   };
-  // the dark run is the BARE-EYES rule (light gates the trigger): with the team's goggles on, a man with no light burning has his tubes down and
-  // does see the defender in the dark — that half is nvg-probes.ts nvg-sight's claim, so the goggles come off for this one run
-  const bare = async () => { const was = NVG.on; NVG.on = false; try { return await run({ lit: false }); } finally { NVG.on = was; } };
-  const lit = await run({ lit: true }), dark = await bare(), smoke = await run({ lit: true, smoke: 0.12 }), thin = await run({ lit: true, smoke: 0.9 }), back = await run({ lit: true, back: true });
-  verdict(lit.los && dark.los, 'the two stand five metres apart in the break room with nothing between them', `line clear: ${lit.los}`);
+  const lit = await run({ lit: true }), smoke = await run({ lit: true, smoke: 0.12 }), thin = await run({ lit: true, smoke: 0.9 }), back = await run({ lit: true, back: true });
+  verdict(lit.los, 'the two stand five metres apart in the break room with nothing between them', `line clear: ${lit.los}`);
   verdict(lit.dead && lit.killer && lit.rounds > 0 && lit.rounds <= 6, 'lit (the room\'s tubes on), in his view, clear air: he fires and the man goes down to his rounds', `light on the defender ${f2(lit.light)} · meter ${f2(lit.meter)} · rounds ${lit.rounds} · down ${lit.dead} by him ${lit.killer}`);
-  verdict(!dark.dead && dark.rounds === 0 && dark.light < lit.light, 'the same pair with the room dark and no weapon light: five seconds, not a round', `light on the defender ${f2(dark.light)} · meter ${f2(dark.meter)} · rounds ${dark.rounds}`);
   verdict(!smoke.dead && smoke.rounds === 0 && smoke.trans !== undefined && smoke.trans < 0.3, 'lit, but smoke between them (the renderer\'s answer for the pair\'s segment planted at 0.12): not a round', `transmittance read ${f2(smoke.trans ?? NaN)} on ${smoke.key} · meter ${f2(smoke.meter)} · rounds ${smoke.rounds}`);
   verdict(thin.dead && thin.rounds > 0, 'thin smoke (0.9) only slows the sight of him: he still fires', `meter ${f2(thin.meter)} · rounds ${thin.rounds} · down ${thin.dead}`);
   verdict(!back.dead && back.rounds === 0, 'lit, clear air, but behind his back (out of his cone): not a round', `meter ${f2(back.meter)} · rounds ${back.rounds}`);
@@ -287,33 +280,19 @@ export const roomfightEyes = guarded(async () => {
     return out; };
   const seen = (m: Map<number, boolean>) => [...m].filter(([, v]) => v).map(([d]) => d), show = (m: Map<number, boolean>) => { const s = seen(m); return s.length ? `${s[0]}° to ${s[s.length - 1]}° (${s.length} of ${m.size} bearings with a line)` : 'nothing'; };
   const BREAK = !!process.env.ROOMFIGHT_EYES_BREAK;
-  ROOMFIGHT.sights = false; ROOMFIGHT.sightsFoe = false; const off = fan(op);
-  ROOMFIGHT.sights = !BREAK; const on = fan(op);
+  const on = fan(op);
   const CONE = ROOMFIGHT.sightsDeg, near = (m: Map<number, boolean>) => [...m].filter(([d]) => Math.abs(d) <= CONE);
-  verdict(near(off).length >= 6 && near(off).some(([, v]) => !v), `switch off (as before): within ${CONE}° of his own aim there is a bearing with a clear line that he does not see`, `sees ${show(off)} · unseen within ${CONE}° of the aim: ${near(off).filter(([, v]) => !v).map(([d]) => d + '°').join(' ') || 'none'}`);
-  verdict(near(on).every(([, v]) => v), `switch on: every bearing within the sights' cone (${CONE}° of his aim) with a clear line is seen`, `sees ${show(on)}`);
+  verdict(near(on).length >= 6 && near(on).every(([, v]) => v), `every bearing within the sights' cone (${CONE}° of his aim) with a clear line is seen`, `sees ${show(on)}`);
   verdict(CONE <= FIGHT_SKILL.operative.sectorDeg, 'the sights\' cone sits inside the sector his gun watches (a man seen along his sights is never a surprise to him)', `cone ${CONE}° · sector ${FIGHT_SKILL.operative.sectorDeg}°`);
-  verdict([...off].every(([d, v]) => !v || on.get(d) === true), 'and nothing he saw before is lost (the old eye is still his)', `${seen(off).length} bearings before, ${seen(on).length} now`);
   // the entry dip (character.ts MOVES.entry, shipped off): dipped past a friend, the bore fails the sights test and he is back to the old eye; MOVES.entryEyes
   // (shipped off) has canSeeChar read his gun line with the dip's own pitch put back. Asked of canSeeChar itself, on the man staged above.
   { const CH = await import(`${ROOT}/src/game/character.ts`), keep = { ...CH.MOVES }, deg = (r: number) => (r * 57.2958).toFixed(0) + '°';
-    try { ROOMFIGHT.sights = true; CH.MOVES.on = 1; CH.MOVES.entry = 1; CH.MOVES.entryEyes = 0; c.anim.dip = 1; for (let i = 0; i < 60; i++) c.update(1 / 60);
+    try { CH.MOVES.on = 1; CH.MOVES.entry = 1; CH.MOVES.entryEyes = 0; c.anim.dip = 1; for (let i = 0; i < 60; i++) c.update(1 / 60);
       const pitch = Math.asin(c.gunDir[1]), lift0 = c.anim.sightsLift, d0 = fan(op);
       CH.MOVES.entryEyes = BREAK ? 0 : 1; for (let i = 0; i < 2; i++) c.update(1 / 60); const lift1 = c.anim.sightsLift, d1 = fan(op);
       verdict(c.anim.longShown === 'shoulder' && pitch < -0.45 && lift0 === 0 && near(d0).some(([, v]) => !v), 'the entry dip, as built: his muzzle down past a friend, he is back to the old eye (a bearing inside the sights\' cone goes unseen again)', `bore ${deg(pitch)} · carriage ${c.anim.longShown} · sees ${show(d0)} · unseen within ${CONE}° of the aim: ${near(d0).filter(([, v]) => !v).map(([d]) => d + '°').join(' ') || 'none'}`);
       verdict(lift1 > 0.4 && near(d1).every(([, v]) => v) && [...d0].every(([d, v]) => !v || d1.get(d) === true), 'the entry dip with eyes up (MOVES.entryEyes): canSeeChar reads his gun line with the dip put back — every bearing inside the sights\' cone is seen, nothing lost', `lift ${deg(lift1)} · sees ${show(d1)}`);
     } finally { Object.assign(CH.MOVES, keep); c.anim.dip = 0; for (let i = 0; i < 60; i++) c.update(1 / 60); } }
-  // Sam is read through the old eye whatever the switch says (the stealth game's sighting as it was)
-  { const was = g.playerInvisible; g.playerInvisible = false; ROOMFIGHT.sights = false; const p0 = fan(op, true); ROOMFIGHT.sights = true; const p1 = fan(op, true); g.playerInvisible = was;
-    verdict(seen(p0).length > 0 && JSON.stringify([...p0]) === JSON.stringify([...p1]), 'his reading of Sam is the same with the switch on and off', `Sam seen at ${show(p0)} either way`); }
-  // the other side: a defender with his long gun in the shoulder — `sights` does not touch him, `sightsFoe` does
-  { const h = R.spawn('hostile', [B[0], 0, B[2]], A, { name: 'Tango 2' }); h.dazzledUntil = 0; R.plant = () => { op.dazzledUntil = g.time + 5; h.dazzledUntil = 0; };   // (a fresh man: the first was shot by the teammate in the part above, and these two lines had never run)
-    const hc = h.char, shouldered = () => hc.anim.longShown === 'shoulder' && hc.gunDir[0] * Math.sin(hc.aimYaw) + hc.gunDir[2] * Math.cos(hc.aimYaw) > 0.866;
-    g.events.push({ kind: 'shot', pos: [B[0], 0, B[2]], time: g.time, loud: true, level: 1.0, who: op.char.id }); R.until(shouldered, 6);
-    ROOMFIGHT.sights = false; ROOMFIGHT.sightsFoe = false; const f0 = fan(h); ROOMFIGHT.sights = true; const f1 = fan(h); ROOMFIGHT.sightsFoe = true; const f2 = fan(h);
-    if (!shouldered()) verdict(false, 'the other side is staged: the defender brings his gun to the shoulder', `carriage ${hc.anim.longShown}`);
-    else { verdict(JSON.stringify([...f0]) === JSON.stringify([...f1]), 'a defender with his gun in the shoulder sees the same with the teammates\' switch on and off', `sees ${show(f0)}`);
-      verdict(seen(f2).length >= seen(f0).length && [...f0].every(([d, v]) => !v || f2.get(d) === true), 'and his own switch (sightsFoe, shipped off) only ever adds to what he sees', `off ${seen(f0).length} bearings · on ${seen(f2).length}`); } }
   return done();
 });
 
@@ -419,20 +398,5 @@ export const roomfightOrders = guarded(async () => {
     R.plant = null; g.restartEncounter(); const st = g.fight.stats;
     verdict(fought && !g.fight.live && g.fight.blindFire === true && st.opRounds === 0 && g.fight.log.length === 0 && g.fight.trans.size === 0, 'restartEncounter drops the module\'s memory (stats, log, smoke answers, roster) and puts blind fire back to its default', `fought ${fought} · after: live ${g.fight.live} · blindFire ${g.fight.blindFire} · rounds ${st.opRounds} · log ${g.fight.log.length} · smoke keys ${g.fight.trans.size}`);
   }
-  return done();
-});
-
-// ================================================================ off: the switch, and nothing without units
-export const roomfightOff = guarded(async () => {
-  const { verdict, done } = family('roomfight-off: the switch puts the staged night breach back; with no unit on the floor the module is not there');
-  { ROOMFIGHT.on = false; const R = await breach(12, { blindFire: false }); const { NB, g } = R;
-    R.step(60); R.press(); R.until(() => NB.state === 'set', 30); R.step(120); R.press(); R.until(() => NB.drill.phase === 'done', 45);
-    const beats: string[] = NB.drill.beats.map((b: any) => b.what);
-    verdict(!g.fight.live && NB.drill.rounds[0] + NB.drill.rounds[1] > 0 && beats.some(b => b.startsWith('shot')) && g.fight.stats.opRounds === 0, 'ROOMFIGHT.on false: the branch\'s staged exchange runs (the drill\'s own rounds and beats) and the module does nothing',
-      `live ${g.fight.live} · drill rounds ${NB.drill.rounds.join('+')} · module rounds ${g.fight.stats.opRounds} · ${NB.summary()}`);
-    NB.stop(); ROOMFIGHT.on = true; }
-  { const run = async (on: boolean) => { ROOMFIGHT.on = on; Math.random = seeded(5); const W: any = await standUp(); Math.random = seeded(77); let live = false; for (let i = 0; i < 600; i++) { W.step(DT); live ||= W.game.fight.live; } return { d: JSON.stringify(digestGame(W.game, true)), live }; };
-    const a = await run(true), b = await run(false); ROOMFIGHT.on = true;
-    verdict(a.d === b.d && !a.live && !b.live, 'the night game with no unit on the floor: never live, and ten seeded seconds digest the same with the switch on or off', `digest ${a.d.length} chars · ${a.d === b.d ? 'equal' : 'DIFFERENT'} · live ${a.live}/${b.live}`); }
   return done();
 });

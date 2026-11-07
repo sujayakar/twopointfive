@@ -1,26 +1,36 @@
 // The 'orderui' family (game/orders.ts — the squad's command menu as a PRESS menu, and WHO an order goes to with four teammates in two pairs: NIGHTBREACH.squad
 // = 4, the page's ?squad4), run through probes.ts:
-//   bun run tools/qa/probes.ts orderui | orderui-four | orderui-hud | orderui-door | orderui-keys
+//   bun run tools/qa/probes.ts orderui | orderui-four | orderui-block | orderui-half | orderui-keys
 // PASS / FAIL each, all headless (the Game of headless.ts under the room clear's staging, Sam in god mode and planted dark, the defenders kept dazzled: this
 // family is about who is ordered and how, not the fight). Every order is given THROUGH THE INPUT as a keyboard and mouse would write it — the harness cursor on a
 // world point, then one-frame presses of X / the middle button / T / B / a digit / the wheel / a click / Space — and the rig counts the keys and buttons DOWN on
 // every frame: where a probe says "nothing held" that count never left zero. Nothing here looks at a picture: the colours, the ring on the target and how the
 // menu reads on the page are checked as data, never drawn.
-//   orderui-four   the same order (move there, one spot) given four times on four fresh floors — to the squad (X, then its digit), to the red pair (T; the middle
-//                  button, the wheel, the middle button again), to the blue pair (T twice; X, then Space) and to one man (T with the cursor on him; the quick key B) — and
-//                  each time only the addressed men take it and go; the others have no order and stay (started fallen in, START.fallIn: they keep that one
-//                  order and stay with Sam); the HUD named who before the order was given
-//   orderui-hud    what the panel says with four: the squad block's label / colour / marks for each choice of T, what B and X would do on what the cursor is on,
-//                  the open menu's who row and header, T stepping the element while the menu is up, a menu opened on a teammate, the mark on the target, and
-//                  the wheel as the element switch behind its knob
-//   orderui-door   a door tool to one pair: 'open and clear' given to red is worked by red alone — blue is in nobody's order and stays; and with blue stacked on
-//                  the same door first, red's order leaves blue's alone (what the two pairs then do at one door is printed, not judged: that is the pairs' part)
+//   orderui-four   'move there' on one spot given to the squad (X, then its digit): every man takes it and goes, nothing held; the HUD named who before the
+//                  order was given
+//   orderui-block  the squad block with everyone addressed: the header says GOLD, each man has a row in his pair's colour with what he is doing, and an order
+//                  given to everyone changes what each row says (ORDERBLOCK_BREAK=1: the order is never given)
+//   orderui-half   a door tool to one half, as the page plays: Shift and the squad's key kept down on a door (the ring is one whole pair's), its
+//                  'open and clear' wedge: that pair alone is in the door order and goes in, the other two keep the order they had and stay on Sam's side of the
+//                  door (ORDERHALF_BREAK=1: the key kept down without Shift)
 //   orderui-keys   what the menu takes of the frame's input, and what it never takes: Sam walks on with it up (frozen on its target), a digit with no row does
-//                  nothing, B is dead while it is up; THE LEFT BUTTON IS ALWAYS HIS TRIGGER (a click with the menu up: the menu goes, no order, he fires —
-//                  and behind ORDERS.clickGives the click gives the row and fires nothing); a right click is used up; the frame the menu opens on takes
+//                  nothing, B is dead while it is up; THE LEFT BUTTON IS ALWAYS HIS TRIGGER (a click with the menu up: the menu goes, no order, he fires); a right click is used up; the frame the menu opens on takes
 //                  nothing else (X with a digit: the list is up, no order); two digits in one frame give one order and neither is a slot; a menu opened
 //                  on one man goes away when he goes down, and so does a pair's when the pair is down — never on to everybody else; T on a man twice in
 //                  the one-pair squad is back to all; a restart takes it down
+// DELETED 2026-11-07, AS LINES THAT ASKED A BUILD FROM BEFORE TWO SETTLED RULES (the rig held CMDRING.wholeSquad and CMDRING.only off to ask them: an order
+// to a part of the squad stepped with T, the menu's own keys and the middle button, "as the menu was built"; both rules are settled on and took those away;
+// `probes.ts qonly` and wholesquad-check have the page's):
+//   orderui-four, for the red pair, the blue pair and one man each: 'before the order the HUD says who it will go to' · '"move there" goes to … and to nobody
+//     else' · 'they go to the spot; the rest stay with Sam' · 'no key or button was down on any frame' (the three stagings went with them)
+//   orderui-hud, the whole probe: 'no menu, everyone addressed … T's choices' · 'T steps GOLD → RED → BLUE → GOLD' · 'the cursor on a door: B would stack on
+//     it, X opens the menu on it; on a teammate … T would address him' · 'the menu up on a door with red addressed: a who row in red' · 'the mark for the
+//     page's ring sits on that door, in red' · 'T with the menu up steps who it goes to' · 'a man addressed with T stays the choice after the menu closes' ·
+//     'no key or button was down on any frame of this'
+//   orderui-door, the whole probe: 'T, X on the door, 5, 1: "open and clear" is taken by the red pair' · 'red works the door and goes in; blue was never in
+//     the door order' · 'no key or button was down on any frame' · 'blue stacked on the door (T twice, B), then "open and clear" (X, 5, 1) to red'
+// 2026-11-07: the rig no longer holds CMDRING.wholeSquad and CMDRING.only off (both settled on: the lines are asked of the menu as the page has it), and the
+// two lines behind knobs that are settled off went: 'ORDERS.wheelElement on' (orderui-hud) and 'ORDERS.clickGives on' (orderui-keys).
 import { standUp, ROOT } from './headless.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`);
@@ -53,8 +63,6 @@ async function rig(seed: number, o: { squad?: 2 | 4; sam?: number[] } = {}) {
   reset(); Object.assign(NIGHTBREACH, { squad: o.squad ?? 4 });
   Math.random = seeded(seed);
   const W: any = await standUp(); const game = W.game, input = W.input; const RC = game.roomClear, NB = game.nightBreach, O = game.orders, D = game.doorTools;
-  (await import(`${ROOT}/src/game/cmdring.ts`)).CMDRING.wholeSquad = false;   // (these lines step who the orders go to with T, the wheel and the cursor, outside plan mode, as the menu was built: the rule that only plan mode picks a part of the squad is held off here and has its own lines, wholesquad-check)
-  (await import(`${ROOT}/src/game/cmdring.ts`)).CMDRING.only = false;   // (the menu's own keys and the middle button, as these lines were written: `probes.ts qonly` has the page's, where the ring carries every order)
   game.godMode = true;
   const why = RC.start(seed);
   const R = { W, game, input, RC, NB, O, D, why,
@@ -99,17 +107,11 @@ const inFile = (O: any, m: any) => { const a = O.of(m); return a?.order === 'fal
 
 // ---------------------------------------------------------------- the same order to the squad, to red, to blue, to one man
 export const orderuiFour = guarded(async () => {
-  const { verdict, done } = family('orderui-four: one order to the squad, to red, to blue and to one man — a press each, nothing held, and only the addressed men go');
+  const { verdict, done } = family('orderui-four: one order to the squad — a press, nothing held, and every man goes');
   const K = ORDERS;
   const CASES: { name: string; tag: string; tone: string; want: number[]; address(R: any): void; give(R: any): void; how: string }[] = [
     { name: 'the squad', tag: 'GOLD', tone: 'gold', want: [0, 1, 2, 3], how: 'X pressed on the spot, then 1',
       address: () => {}, give: R => { R.cursor(SPOT); R.press(K.key); R.step(20); R.press('Digit1'); } },
-    { name: 'the red pair', tag: 'RED', tone: 'red', want: [0, 1], how: 'T · the middle button on the spot, the wheel down a row and back, the middle button again',
-      address: R => { R.cursor(SPOT); R.press(K.whoKey); }, give: R => { R.cursor(SPOT); R.mmb(); R.step(20); R.wheel(60); R.wheel(-60); R.mmb(); } },
-    { name: 'the blue pair', tag: 'BLUE', tone: 'blue', want: [2, 3], how: 'T twice · X pressed on the spot, then Space',
-      address: R => { R.cursor(SPOT); R.press(K.whoKey); R.press(K.whoKey); }, give: R => { R.cursor(SPOT); R.press(K.key); R.step(20); R.press('Space'); } },
-    { name: 'one man (Blue Two)', tag: 'Blue Two', tone: 'blue', want: [3], how: 'T with the cursor on him · the quick key B on the spot',
-      address: R => { R.on(R.ops[3]); R.press(K.whoKey); }, give: R => { R.cursor(SPOT); R.press(K.quickKey); } },
   ];
   for (const c of CASES) {
     const R = await rig(21); const { O } = R; const ops = R.ops; const p0 = ops.map((m: any) => [...m.char.pos]);
@@ -137,94 +139,54 @@ export const orderuiFour = guarded(async () => {
   return done();
 });
 
-// ---------------------------------------------------------------- what the panel says
-export const orderuiHud = guarded(async () => {
-  const { verdict, done } = family('orderui-hud: the panel always says who the next order goes to, and what it would be about');
-  const R = await rig(22); const { O, game: g } = R; const ops = R.ops; const K = ORDERS; const d = R.door('breakroom_w');
-  const txt = (st: any) => st ? `"${st.label}" (${st.tone}) · ${st.opts.map((o: any) => `${o.key ? `[${o.key}] ` : ''}${o.text}${o.tone ? ` (${o.tone})` : ''}`).join(' | ')}` : 'no block';
-  const opt = (st: any, key: string) => st?.opts.find((o: any) => o.key === key)?.text ?? null;
-  // closed, everyone
-  R.cursor(SPOT); R.step(2); const s0 = R.status();
-  verdict(s0?.label === head('GOLD') && s0.tone === 'gold' && s0.opts.slice(0, 4).map((o: any) => o.tone).join() === 'red,red,blue,blue' && s0.opts.slice(0, 4).every((o: any, i: number) => o.text.startsWith(`${ops[i].callsign} · `)) && opt(s0, 'T') === 'who · [GOLD] · red · blue' && opt(s0, 'B') === 'move there · that spot' && opt(s0, 'X') === 'orders · that spot',
-    'no menu, everyone addressed, the cursor on open floor: GOLD, each man in his pair\'s colour with what he is doing, what B and X would do there, T\'s choices', txt(s0));
-  // T: red, blue
-  R.press(K.whoKey); const s1 = R.status(); R.press(K.whoKey); const s2 = R.status(); R.press(K.whoKey); const s3 = R.status();
-  const mk = (st: any) => st.opts.slice(0, 4).map((o: any) => o.text.slice(0, 1)).join('');
-  verdict(s1?.label === head('RED') && s1.tone === 'red' && mk(s1) === '▸▸··' && opt(s1, 'T') === 'who · gold · [RED] · blue' && s2?.label === head('BLUE') && s2.tone === 'blue' && mk(s2) === '··▸▸' && opt(s2, 'T') === 'who · gold · red · [BLUE]' && s3?.label === head('GOLD'),
-    'T steps GOLD → RED → BLUE → GOLD: the label, its colour and a mark on each addressed man follow', `${txt(s1)}\n    ${txt(s2)}\n    then "${s3?.label}"`);
-  // the cursor on a door / on a man
-  R.cursor(d.frameCentre); R.step(2); const sD = R.status(); R.on(ops[2]); R.step(2); const sM = R.status();
-  verdict(/^stack up · .*door$/.test(opt(sD, 'B') ?? '') && /^orders · .*door$/.test(opt(sD, 'X') ?? '') && opt(sM, 'B') === 'fall in · Blue One alone' && opt(sM, 'X') === 'orders · Blue One alone' && opt(sM, 'T') === 'who · Blue One (under the cursor)',
-    'the cursor on a door: B would stack on it, X opens the menu on it; on a teammate: both are his alone, and T would address him', `door: [B] ${opt(sD, 'B')} · [X] ${opt(sD, 'X')}\n    man: [B] ${opt(sM, 'B')} · [X] ${opt(sM, 'X')} · [T] ${opt(sM, 'T')}`);
-  // the menu up on the door, to red
-  R.cursor(SPOT); R.press(K.whoKey); R.cursor(d.frameCentre); R.press(K.key); R.step(10);
-  const m1 = O.hud().menu, mark1 = O.mark(), men1 = names(O.menu?.men ?? []);
-  verdict(!!m1 && m1.rows[0].label === 'orders to RED · 2 men' && m1.rows[0].tone === 'red' && m1.rows[0].opts[0].key === 'T' && m1.rows[0].opts[0].text === 'gold · [RED] · blue' && /^on .*door$/.test(m1.rows[1].label) && m1.rows[1].opts[0].key === '1' && m1.primary === 1 && m1.rows[m1.rows.length - 1].kind === 'cancel' && m1.cancel === 'close — no order' && /middle click/.test(m1.hint) && men1 === 'Red One + Red Two' && O.hud().status.length === 0,
-    'the menu up on a door with red addressed: a who row in red (with T\'s choices), the orders under what they are about, its own hint and cancel words — in place of the squad block', m1 ? `"${m1.rows[0].label}" (${m1.rows[0].tone}) [T] ${m1.rows[0].opts[0].text} · "${m1.rows[1].label}": ${m1.rows.slice(1, -1).map((r: any) => `${r.opts[0].key} ${r.opts[0].text}`).join(' · ')} · hint "${m1.hint}" · cancel "${m1.cancel}" · to ${men1}` : 'no menu');
-  verdict(!!mark1 && mark1.tone === 'red' && /^RED → .*door$/.test(mark1.text) && dist(mark1.at, d.frameCentre) < 0.05, 'the mark for the page\'s ring sits on that door, in red, with who and what', mark1 ? `"${mark1.text}" (${mark1.tone}) at (${f2(mark1.at[0])}, ${f2(mark1.at[2])}) · door at (${f2(d.frameCentre[0])}, ${f2(d.frameCentre[2])})` : 'no mark');
-  // T while it is up: the element steps, the menu stays on its target
-  R.cursor(SPOT); R.press(K.whoKey); const m2 = O.hud().menu, men2 = names(O.menu?.men ?? []), t2 = O.menu?.target;
-  R.on(ops[0]); R.press(K.whoKey); const m3 = O.hud().menu, men3 = names(O.menu?.men ?? []), t3 = O.menu?.target;
-  verdict(m2?.rows[0].label === 'orders to BLUE · 2 men' && m2.rows[0].tone === 'blue' && men2 === 'Blue One + Blue Two' && t2?.kind === 'door' && t2.door === d && m3?.rows[0].label === 'orders to Red One' && m3.rows[0].tone === 'red' && m3.rows[0].opts[0].text === '[Red One] · gold' && men3 === 'Red One' && t3?.kind === 'door' && t3.door === d,
-    'T with the menu up steps who it goes to (blue; then, with the cursor on Red One, him alone) and the menu stays up on its door', `"${m2?.rows[0].label}" to ${men2} · then "${m3?.rows[0].label}" [T] ${m3?.rows[0].opts[0].text} to ${men3} · target ${t3?.kind} ${t3?.door?.def.name}`);
-  R.press('Escape'); const whoKept = O.who;
-  // a menu opened ON a teammate, everyone standing as the choice
-  R.cursor(SPOT); R.press(K.whoKey); const backAll = O.who;   // (T off a man, with one man standing: back to everyone)
-  R.on(ops[2]); R.press(K.key); R.step(5); const m4 = O.hud().menu, men4 = names(O.menu?.men ?? []), ids4 = (O.menu?.rows ?? []).map((r: any) => r.id).join(' '); R.press('Escape');
-  // (one man's menu: fall in, hold, the word — and, SILENT.on, 'go silent' between them, the whole squad's row on whoever's menu it is given from)
-  const want4 = SILENT.on ? 'fallIn hold silent go' : 'fallIn hold go';
-  verdict(whoKept === 0 && backAll === 'all' && m4?.rows[0].label === 'orders to Blue One' && m4.rows[0].tone === 'blue' && men4 === 'Blue One' && ids4 === want4 && m4.rows[1].label === 'on Blue One alone' && O.who === 'all' && O.log.length === 0,
-    'a man addressed with T stays the choice after the menu closes, and T again is everyone; X pressed ON a teammate is a menu for him alone, and leaves the standing choice as it was', `after Esc: who ${whoKept} · T: ${backAll} · on Blue One: "${m4?.rows[0].label}" (${m4?.rows[0].tone}) "${m4?.rows[1].label}" rows ${ids4} to ${men4} · standing choice ${O.who} · orders logged ${O.log.length}`);
-  // the wheel as RoN's element switch, behind its knob
-  ORDERS.wheelElement = true;
-  R.cursor(SPOT); R.press(K.key); R.step(5); const hint = O.hud().menu?.hint; R.wheel(60); const w1 = O.who, sel1 = O.menu?.sel; R.wheel(60); const w2 = O.who; R.wheel(-60); const w3 = O.who; R.press('Digit4'); const lw = R.last();
-  ORDERS.wheelElement = false;
-  verdict(w1 === 'red' && sel1 === 0 && w2 === 'blue' && w3 === 'red' && /wheel: who/.test(hint ?? '') && lw?.order === 'hold' && lw.who.join(' + ') === 'Red One + Red Two', 'ORDERS.wheelElement on: with the menu up the wheel steps who (down: red, blue; up: back to red) and leaves the highlight; the digit then gives the order to them', `wheel: ${w1} → ${w2} → ${w3} · highlight ${sel1} · hint "${hint}" · ${line(lw)}`);
-  verdict(R.held === 0 && !g.player.down, 'no key or button was down on any frame of this', `most down at once: ${R.held}`);
+// ---------------------------------------------------------------- what the squad block says with everyone addressed (the page's Q ring; 2026-11-07)
+/** ORDERBLOCK_BREAK=1, the red path: the order of the second line is never given, so no row can come to say it */
+export const orderuiBlock = guarded(async () => {
+  const { verdict, done } = family('orderui-block: with everyone addressed the squad block names each man in his pair\'s colour with what he is doing');
+  const BREAK = process.env.ORDERBLOCK_BREAK === '1', K = ORDERS;
+  const R = await rig(22); const ops = R.ops;
+  const txt = (st: any) => st ? `"${st.label}" (${st.tone}) · ${st.opts.slice(0, 4).map((o: any) => `${o.text}${o.tone ? ` (${o.tone})` : ''}`).join(' | ')}` : 'no block';
+  const rows = (st: any): any[] => (st?.opts ?? []).slice(0, 4), named = (r: any[]) => r.length === 4 && r.every((o: any, i: number) => o.text.startsWith(`${ops[i].callsign} · `) && o.text.length > `${ops[i].callsign} · `.length);
+  const tones = ops.map((m: any) => /^Red/.test(m.callsign) ? 'red' : 'blue').join();
+  R.cursor(SPOT); R.step(2); const s0 = R.status(), r0 = rows(s0);
+  verdict(ops.length === 4 && s0?.label === head('GOLD') && s0.tone === 'gold' && named(r0) && r0.map((o: any) => o.tone).join() === tones,
+    'no ring up, everyone addressed: the header says the orders go to GOLD, in gold, and each of the four has a row in his pair\'s colour that names him and says what he is doing', txt(s0));
+  const was = r0.map((o: any) => o.text);
+  if (!BREAK) { R.cursor(SPOT); R.press(K.key); R.step(20); R.press('Digit1'); } R.step(30);
+  const s1 = R.status(), r1 = rows(s1), l = R.last();
+  verdict(l?.order === 'move' && l.who.length === 4 && named(r1) && r1.every((o: any, i: number) => o.text !== was[i]) && r1.map((o: any) => o.tone).join() === tones && s1?.label === head('GOLD'),
+    '"move there" given to everyone: each man\'s row now says something else than it did, in the same colour, and the header still says GOLD', `${line(l)} · before: ${was.join(' | ')} · after: ${txt(s1)}`);
   return done();
 });
 
-// ---------------------------------------------------------------- a door tool to one pair
-export const orderuiDoor = guarded(async () => {
-  const { verdict, done } = family('orderui-door: a door tool given to one pair is that pair\'s — the pair you address is the pair that works the door');
-  const K = ORDERS;
-  { // red alone opens and clears; blue has nothing to do with it
-    const R = await rig(23, { sam: SAM_W }); const { O, D, game: g } = R; const ops = R.ops, d = R.door('breakroom_w'), sam = g.player.char; const p0 = ops.map((m: any) => [...m.char.pos]);
-    // (START.fallIn: blue starts on Sam's 'fall in' and has come up the aisle to him by the door — so "never had an order" is, there, "never any order but the
-    //  one it started on", and "where it stood" is in the file behind Sam: counted every frame, with the frames a blue man was on the room's side of the door)
-    const fallen = !!START.fallIn, wasB = [2, 3].map(i => O.of(ops[i])); let blueOther = 0, blueAcross = 0;
-    let blueInOp = 0, blueOrdered = 0, opMen = ''; R.post = () => { for (const op of D.ops) { if (!opMen) opMen = names(op.men); if (op.men.includes(ops[2]) || op.men.includes(ops[3])) blueInOp++; } if (O.has(ops[2]) || O.has(ops[3])) blueOrdered++;
-      [2, 3].forEach((i, k) => { if (!kept(O, ops[i], wasB[k])) blueOther++; if (sideOf(d, ops[i].char.pos) !== sideOf(d, sam.pos)) blueAcross++; }); };
-    R.cursor(SPOT); R.press(K.whoKey); const who = O.who;
-    R.cursor(d.frameCentre); R.press(K.key); R.step(15); const tools = O.hud().menu?.rows.find((r: any) => r.opts[0]?.key === '5'); R.press('Digit5'); const page = O.menu?.page, row = O.hud().menu?.rows.find((r: any) => r.opts[0]?.key === '1'); R.press('Digit1'); const l = R.last();
-    R.step(2); const started = D.ops.length;
-    const ended = R.until(() => D.ops.length === 0, 40); R.step(60);
-    const op = D.done[D.done.length - 1]; const side0 = sideOf(d, sam.pos); const inRoom = ops.map((m: any) => m.state !== 'dead' && sideOf(d, m.char.pos) !== side0);
-    const blueMoved = [2, 3].map(i => dist(ops[i].char.pos, p0[i]));
-    verdict(who === 'red' && /^door tools ▸/.test(tools?.opts[0].text ?? '') && page === 'tools' && /^open and clear/.test(row?.opts[0].text ?? '') && l?.order === 'openClear' && l.who.join(' + ') === 'Red One + Red Two' && started === 1 && opMen === 'Red One + Red Two',
-      'T, X on the door, 5 (the door tools\' page), 1: "open and clear" is taken by the red pair, and the door order that starts has red in it and nobody else', `who ${who} · row 5 "${tools?.opts[0].text}" → page ${page} · row 1 "${row?.opts[0].text}" · ${line(l)} · the door order's men: ${opMen || '—'}`);
-    const blueOwn = blueOther === 0 && (fallen ? blueAcross === 0 && [2, 3].every(i => inFile(O, ops[i])) : blueOrdered === 0 && blueMoved.every(x => x < 0.9));
-    verdict(ended && inRoom[0] && inRoom[1] && !inRoom[2] && !inRoom[3] && blueInOp === 0 && blueOwn,
-      fallen ? 'red works the door and goes in; blue was never in the door order, never had an order but the fall in it started on, and stays with Sam, in the file behind him — outside, on no frame on the room\'s side of the door'
-        : 'red works the door and goes in; blue was never in the door order, never had an order, and stays where it stood, outside', `ended ${ended} (${op?.phase ?? '—'}) · through the door: ${ops.map((m: any, i: number) => `${m.callsign} ${inRoom[i] ? 'in' : 'out'}`).join(', ')} · frames blue was in the door order ${blueInOp}, had an order ${blueOrdered} · blue moved ${blueMoved.map(f2).join(' / ')} m`
-        + (fallen ? ` · frames blue had any other order than the fall in it started on ${blueOther}, was on the room's side of the door ${blueAcross} · at the end: ${[2, 3].map(i => `${ops[i].callsign} ${f2(dist(ops[i].char.pos, sam.pos))} m from Sam, ${f2(dist(ops[i].char.pos, d.frameCentre))} m from the door on Sam's side, ${inFile(O, ops[i]) ? 'on his mark' : 'OFF his mark'}, "${O.statusOf(ops[i])}"`).join(' · ')}` : ''));
-    verdict(R.held === 0, 'no key or button was down on any frame', `most down at once: ${R.held}`);
-  }
-  { // blue stacked on the door first, then red sent through it: red's order is red's, blue's stays blue's
-    const R = await rig(24, { sam: SAM_W }); const { O, D, game: g } = R; const ops = R.ops, d = R.door('breakroom_w'), sam = g.player.char;
-    R.cursor(SPOT); R.press(K.whoKey); R.press(K.whoKey); const who1 = O.who;
-    R.cursor(d.frameCentre); R.press(K.quickKey); const l1 = R.last();
-    const set = R.until(() => [2, 3].every(i => O.of(ops[i])?.arrived), 25); R.step(30);
-    R.cursor(SPOT); R.press(K.whoKey); R.press(K.whoKey); const who2 = O.who;
-    R.cursor(d.frameCentre); R.press(K.key); R.step(15); R.press('Digit5'); const why = O.menu ? O.menu.why[O.menu.rows.findIndex((r: any) => r.id === 'openClear')] : 'no menu'; R.press('Digit1'); const l2 = R.last(); R.step(2);
-    const opMen = D.ops[0] ? names(D.ops[0].men) : '', blueKept = [2, 3].every(i => O.of(ops[i])?.order === 'stack');
-    const given = l2?.order === 'openClear';
-    verdict(who1 === 'blue' && l1?.order === 'stack' && l1.who.join(' + ') === 'Blue One + Blue Two' && set && who2 === 'red' && (given ? l2.who.join(' + ') === 'Red One + Red Two' && opMen === 'Red One + Red Two' && blueKept : !!why && O.log.length === 1 && blueKept),
-      'blue stacked on the door (T twice, B), then "open and clear" (X, 5, 1) to red on the same door: it is red\'s alone — or refused with a reason — and blue keeps its own order either way', `${line(l1)} · set ${set} · then to ${who2}: ${given ? `${line(l2)} · the door order's men: ${opMen}` : `refused: "${why}"`} · blue still stacked: ${blueKept}`);
-    // what the two pairs then do at the one door — printed, not judged here (the pairs' behaviour is its own part)
-    const ended = R.until(() => D.ops.length === 0, 40); R.step(60); const side0 = sideOf(d, sam.pos);
-    console.log(`    (not judged) after it: ended ${ended} (${D.done[D.done.length - 1]?.phase ?? '—'}) · ${ops.map((m: any) => `${m.callsign} ${m.state === 'dead' ? 'down' : sideOf(d, m.char.pos) !== side0 ? 'in the room' : 'outside'}, "${O.statusOf(m)}"`).join(' · ')}`);
-  }
+// ---------------------------------------------------------------- a door tool to one half (the page's Q ring; 2026-11-07)
+/** ORDERHALF_BREAK=1, the red path: the key is kept down WITHOUT Shift, so the ring is everyone's and the door order is all four's */
+export const orderuiHalf = guarded(async () => {
+  const { verdict, done } = family('orderui-half: a door tool given to one half of the squad is worked by that half alone');
+  const BREAK = process.env.ORDERHALF_BREAK === '1';
+  const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`); const KEY: string = CMDRING.key;
+  const R = await rig(23, { sam: SAM_W }); const { O, D, input: I, game: g } = R; const ops = R.ops, d = R.door('breakroom_w'), sam = g.player.char;
+  // the cursor where the squad's key reads that door
+  const c = d.frameCentre, th = d.def.closedDir; let on = false;
+  search: for (const y of [c[1], 0.05, 1.0, 1.8]) for (const k of [0, 0.35, -0.35]) { R.cursor([c[0] - Math.sin(th) * k, y, c[2] + Math.cos(th) * k]); R.step(2); const t = O.targetUnder(I, R.W.cam, R.W.canvas); if (t.kind === 'door' && t.door === d) { on = true; break search; } }
+  const was = new Map<any, any>(ops.map((m: any) => [m, O.of(m)])), side0 = sideOf(d, sam.pos);
+  // Shift and the key kept down until the ring is up: it is one whole pair's (the nearer); its 'open and clear' wedge by its digit; then every key let go
+  if (!BREAK) I.keys.add('ShiftLeft'); I.keys.add(KEY); I.pressed.add(KEY); const ring = R.until(() => !!O.cmdRing, 1.5);
+  const part: any[] = [...(O.menu?.part ?? [])], pair = part.length === 2 && O.pairOf(part[0]) !== null && O.pairOf(part[0]) === O.pairOf(part[1]);
+  const pick = (re: RegExp): string | null => { const x = (O.ringView()?.wedges ?? []).find((y: any) => re.test(y.text)); if (!x) return null; I.pressed.add(`Digit${x.key}`); R.step(); R.step(3); return x.text; };
+  const wedges = (O.ringView()?.wedges ?? []).map((y: any) => `${y.key} ${y.text}`).join(' | '), w = ring ? pick(/^open and clear/) : null; I.keys.clear(); R.step(4); if (O.cmdRing) { O.cmdRing = null; O.close(); R.step(2); }
+  const l = R.last(), op = D.ops[0] ?? null, rest = ops.filter((m: any) => !part.includes(m));
+  verdict(on && ring && pair && !!w && l?.order === 'openClear' && l.who.join(' + ') === names(part) && !!op && op.men.length === 2 && op.men.every((m: any) => part.includes(m)),
+    'Shift and the squad\'s key kept down on a door: the ring is one whole pair\'s; its "open and clear" wedge: the order is that pair\'s, and the door order that starts has that pair in it and nobody else',
+    `the cursor on the door ${on} · the ring ${ring ? 'up' : 'NOT up'} for ${names(part) || 'nobody'} · the wedges: ${wedges} · given '${w}' · ${line(l)} · the door order's men: ${op ? names(op.men) : 'no door order'}`);
+  // worked by that half alone: the other two keep the order they had and are on no frame across the door
+  let other = 0, across = 0, inOp = 0;
+  R.post = () => { for (const m of rest) { if (O.of(m) !== was.get(m)) other++; if (sideOf(d, m.char.pos) !== side0) across++; } for (const x of D.ops) if (rest.some((m: any) => x.men.includes(m))) inOp++; };
+  const ended = !!op && R.until(() => !D.ops.includes(op), 60); R.step(60); R.post = null;
+  const inRoom = ops.map((m: any) => m.state !== 'dead' && sideOf(d, m.char.pos) !== side0);
+  verdict(ended && op.ended === 'in' && part.length === 2 && part.every((m: any) => inRoom[ops.indexOf(m)]) && rest.length === 2 && other === 0 && across === 0 && inOp === 0,
+    'that pair works the door and goes in; the other two were never in a door order, keep the order they had, and are on no frame on the room\'s side of the door',
+    `ended '${op?.ended ?? '—'}' · through the door: ${ops.map((m: any, i: number) => `${m.callsign} ${inRoom[i] ? 'in' : 'out'}`).join(', ')} · the other two (${names(rest) || 'nobody'}): frames on another order ${other}, frames across the door ${across}, frames in a door order ${inOp}`);
   return done();
 });
 
@@ -244,11 +206,6 @@ export const orderuiKeys = guarded(async () => {
   const gun = g.player.gunInHand(), n0 = gun?.shotsFired ?? NaN;
   input.clicked |= 1; input.buttons |= 1; R.step(); input.buttons &= ~1; R.step(20); const n1 = gun?.shotsFired ?? NaN, gone1 = O.menu === null, log1 = O.log.length;
   verdict(!!gun && gone1 && log1 === 0 && n1 === n0 + 1, 'a left click with the menu up is Sam\'s shot: the menu goes away, no order is given, a round is fired', gun ? `menu gone ${gone1} · orders logged ${log1} · rounds fired ${n0} → ${n1}` : 'Sam has no gun in hand: the check did not run');
-  // … and behind the knob it is the pick instead
-  ORDERS.clickGives = true;
-  R.cursor(SPOT); R.press(K.key); R.step(5); input.clicked |= 1; input.buttons |= 1; R.step(); input.buttons &= ~1; R.step(20); const n2 = gun?.shotsFired ?? NaN, lPick = R.last();
-  ORDERS.clickGives = false;
-  verdict(lPick?.order === 'move' && lPick.who.length === 4 && O.menu === null && n2 === n1, 'ORDERS.clickGives on: the click gives the highlighted row and fires nothing', `${line(lPick)} · rounds fired ${n1} → ${n2}`);
   // a right click is used up by the menu
   R.cursor(SPOT); R.press(K.key); R.step(5); input.clicked |= 4; O.input(DT, input, W.cam, W.canvas); const rGone = O.menu === null, rBit = (input.clicked & 4) !== 0; R.step();
   verdict(rGone && !rBit, 'a right click with the menu up closes it and is taken out of the frame (not the OCP, not the ring)', `menu gone ${rGone} · the click still in the frame's input: ${rBit}`);

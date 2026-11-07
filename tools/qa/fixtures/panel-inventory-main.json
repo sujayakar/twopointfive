@@ -1285,11 +1285,11 @@
  {
   "path": "Volumetrics ▸ Beams & haze",
   "kind": "slider",
-  "label": "CAP: lights per smoke step / haze ray (0 = off)",
-  "min": 0,
+  "label": "CAP: lights per smoke step / haze ray",
+  "min": 1,
   "max": 6,
   "step": 1,
-  "title": "volumetric worst-case cap (renderer v3 Phase 0): at most K lights get a shadow ray per smoke-march step (the first K, in order of their unshadowed bound on that stretch of the ray, that reach the step) / per haze view ray (the K beams with the largest unshadowed in-scatter, sharing a step budget by it), the rest dropped — and the smoke march walks each domain's own stretch of the ray with a bounded per-stretch shortlist instead of the hull of all of them at the finest voxel. 0 = OFF: the pass exactly as it was (bit-identical). Set by the quality preset (ultra 6 · high 4 · medium 3 · low / verylow 2); a value moved here sticks until the next preset change",
+  "title": "the volumetric worst-case cap: at most K lights get a shadow ray per smoke-march step (the first K, in order of their unshadowed bound on that stretch of the ray, that reach the step) / per haze view ray (the K beams with the largest unshadowed in-scatter, sharing a step budget by it), the rest dropped. THE lever on what the march costs. Set by the quality preset (high 4 · medium, low and very low 2); a value moved here sticks until the next preset change",
   "def": false,
   "extra": ""
  },
@@ -1300,7 +1300,7 @@
   "min": 1,
   "max": 3,
   "step": 1,
-  "title": "with the cap on: each traced light's shadow ray + self-shadow march is refreshed every N march steps and reused between (a step is 8 cm of a 5.5 cm-voxel plume). 2 on every preset (1 = every step: nothing visible gained, a third dearer at ultra); 3 starts to comb shadow edges inside a plume",
+  "title": "each traced light's shadow ray + self-shadow march is refreshed every N march steps and reused between (a step is 8 cm of a 5.5 cm-voxel plume). 2 on every preset (1 = every step: nothing visible gained, a third dearer); 3 starts to comb shadow edges inside a plume",
   "def": false,
   "extra": ""
  },
@@ -1311,7 +1311,7 @@
   "min": 1,
   "max": 3,
   "step": 0.1,
-  "title": "with the cap on: the smoke march step in voxels of the domain being walked (1.5 = as ever; 2+ combs the shadow edges inside a plume — low / verylow only)",
+  "title": "the smoke march step in voxels of the domain being walked (1.5 on high, medium and low; 2+ combs the shadow edges inside a plume: very low only)",
   "def": false,
   "extra": ""
  },
@@ -1332,145 +1332,6 @@
   "extra": ""
  },
  {
-  "path": "Volumetrics ▸ Froxels",
-  "kind": "toggle",
-  "label": "froxel volumetrics",
-  "title": "renderer v3 Phase 2b (render/froxels.ts + shaders/froxel.wgsl): the haze beams and the smoke are lit PER FROXEL of a camera-frustum voxel grid — a per-cluster light list, the k strongest lights there shadow-rayed, the estimate accumulated over frames with reprojection and integrated front to back — and every pixel reads what lies in front of its surface with one fetch (cubic across the screen); the smoke keeps its per-pixel density march but is LIT from the froxels' J volume; the 2D pass keeps that march + the rain. Cost is per froxel, flat in how many beams cross a pixel. Off = the per-pixel volumetric march exactly as it was (?nofroxel)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Froxels",
-  "kind": "slider",
-  "label": "grid rows (H)",
-  "min": 24,
-  "max": 180,
-  "step": 1,
-  "title": "froxel rows over the screen (columns follow the aspect); the volumes are re-made and the history restarts on change. Preset: ultra 180 · high 135 · medium 108 · low 80 · verylow 64",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Froxels",
-  "kind": "slider",
-  "label": "depth slices (D)",
-  "min": 8,
-  "max": 128,
-  "step": 4,
-  "title": "slices in distance along the pixel ray between near and far, thickening exponentially (curve). Preset: ultra 56 · high 64 · medium 48 · low 32 · verylow 24",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Froxels",
-  "kind": "slider",
-  "label": "shadowed lights per froxel (k)",
-  "min": 0,
-  "max": 6,
-  "step": 1,
-  "title": "of the lights the cluster cull says can reach a froxel, the k with the largest UNSHADOWED in-scatter at its sample point get a shadow ray (+ smoke transmittance / self-shadow); the rest are dropped — never credited unshadowed. Preset: 5 / 4 / 3 / 2 / 2. 0 = ambient-lit smoke only",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Froxels",
-  "kind": "slider",
-  "label": "shadow rays for the strongest light",
-  "min": 1,
-  "max": 3,
-  "step": 1,
-  "title": "per froxel, its strongest haze light gets this many shadow rays at equal-weight depth strata of its lit chord (unbiased; a light sheet thinner than a slice crawls at 1/N the amplitude). Preset: ultra 3 · high / medium 2 · low / verylow 1",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Froxels",
-  "kind": "slider",
-  "label": "history weight",
-  "min": 0,
-  "max": 0.98,
-  "step": 0.01,
-  "title": "exponential accumulation of the injected volume with reprojection into last frame's (0.9 ≈ 10 frames); the reprojected history is clamped to the box of its four neighbours across the screen, so a beam that moved or switched cannot trail (0.93 default; halved where it had to clamp). 0 = every frame stands alone (the jitter shows)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Froxels",
-  "kind": "slider",
-  "label": "near floor (m)",
-  "min": 0.1,
-  "max": 10,
-  "step": 0.1,
-  "title": "distance along the pixel ray of the first slice boundary — a floor: the boundary used is max(this, camera height − 8 m), since nothing lit hangs above 8 m and a camera 17 m up would otherwise spend a third of its slices on open air",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Froxels",
-  "kind": "slider",
-  "label": "far (m)",
-  "min": 20,
-  "max": 120,
-  "step": 1,
-  "title": "distance of the last slice boundary: nothing is injected past it, and a surface farther off reads the whole column",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Froxels",
-  "kind": "slider",
-  "label": "slice curve a",
-  "min": 0,
-  "max": 4,
-  "step": 0.1,
-  "title": "slice thickness grows e^a from the first slice to the last (2 with 64 slices from the follow camera's ~9 m near to 56 m: 0.25 m at the near end, ~0.55 m at 20 m, 2 m at the far end); 0 = uniform",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Froxels",
-  "kind": "toggle",
-  "label": "sharp fetch (trilinear, no B-spline)",
-  "title": "the per-pixel fetch across the screen: off = a cubic B-spline over the froxels (four taps, C² — no crease where froxels meet, half a froxel softer), on = plain trilinear (one tap, sharper, the grid shows as facets along a beam edge)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Froxels",
-  "kind": "slider",
-  "label": "lookup depth bias (slices)",
-  "min": 0,
-  "max": 2,
-  "step": 0.05,
-  "title": "the per-pixel fetch reads this many slices NEARER than the surface (default 0): a knob against what was injected in the far part of a surface's own froxel (a beam just behind a wall top) bleeding onto it — each notch costs that much of the last slice of scatter in front of EVERY surface (0.75 took a fifth of a beam lying along a floor)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Froxels",
-  "kind": "toggle",
-  "label": "split timing (measure)",
-  "title": "time cull+inject / temporal / integrate as three GPU passes (volInject · volTemporal · volInteg in the read-out) instead of the one 'volFroxel' beside the 2D pass's 'volumetrics' — measurement only",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Froxels",
-  "kind": "buttons",
-  "label": "history",
-  "title": "",
-  "def": false,
-  "extra": "[restart froxel history — the next frame accumulates from its own estimate (what a grid change does)]"
- },
- {
-  "path": "Volumetrics ▸ Froxels",
-  "kind": "text",
-  "label": "",
-  "title": "",
-  "def": false,
-  "extra": "grid 0×0×0 = 0.00 M froxels · smoke J 0 · clusters 0 · 0.0 M"
- },
- {
   "path": "Volumetrics ▸ Smoke solver",
   "kind": "text",
   "label": "",
@@ -1486,17 +1347,6 @@
   "max": 1.5,
   "step": 0.25,
   "title": "a brick whose air is slow steps every p-th frame (1, 2 or 4: the Smoke pool section's \"calm: wait\" row is the longest) with the dt it sat out added on: between two steps you see, its smoke never moves more than this many voxels. A source wakes what it reaches, and a brick never waits longer than any of its 26 neighbours. 0 = every brick in view every frame (out of view the \"calm: far, cells\" row still holds; \"calm: wait\" 1 = nothing ever waits)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Smoke solver",
-  "kind": "slider",
-  "label": "plume: lights lit per step (0 = J only)",
-  "min": 0,
-  "max": 6,
-  "step": 1,
-  "title": "the froxel-lit smoke march lights the K strongest lights on each stretch per step ITSELF — exact cone edge, a shadow ray, the step's own self-shadow — and the froxel J volume then carries only the ambient (docs/internal/smoke-look.md: through J a torch lit every billow of a plume alike, and a plume top under a lamp or a panel was lit through a slice lattice fixed to the screen — banding in motion; +0.1‥0.2 ms with a plume filling a sixth of the frame at high). 0 = every light through J, the march as it was; presets ultra 4 · high 3 · medium 2 · low / verylow 0",
   "def": false,
   "extra": ""
  },

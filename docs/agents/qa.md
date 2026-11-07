@@ -114,8 +114,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   red path: `1` a tool on 7 (the family's older word; red on both stands), `four` the door tools' fourth row on 6 (`orderkeys-high`; red on both), `free`
   every free row's deed refuses (`orderkeys-give`: 23 FAIL on the page's stand; green on the old one, where no free row is on a digit this walk presses, so
   the judgement it breaks is never asked there). `picker-start` boots three pages at a time, not its 42 at once (`PICKER_JOBS=n`):
-  `tools/qa/pool.ts` is the pool that `picker`, `coop-check`, `dress-check`, `loadout-stage` and `weather-ident` share in place of a copy each (results in order;
-  after a case throws no further case is started; `jobsOf` reads a word or a flag the same way for all five: a number under one is one, no number is the
+  `tools/qa/pool.ts` is the pool that `picker`, `dress-check`, `loadout-stage` and `weather-ident` share in place of a copy each (results in order;
+  after a case throws no further case is started; `jobsOf` reads a word or a flag the same way for all four: a number under one is one, no number is the
   tool's default). Other tools still keep a loop of their own.
   THE SOAK'S FOUR OLD KINDS on the page's stand were its own readings: the arm hold's knife is wanted only where the close-in rule has one (`closeBare`), a ring
   that stays stands by itself with the key up and no press in hand (`ring.free`), and the cancel row is the list's, never a ring's (`listOpen`). A ring is held
@@ -360,6 +360,29 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   page's side, a stored card from before the tree, moved into `kittree-rows`, which is green; `mate40` lost its "no order, or not a tree" line;
   `KITTREE_BREAK=1` is kittree.ts's own hook and still fails `rows`, 9 lines). THE DOOR-TOOLS RIG'S PIN IS OUT (`doortools-probes.ts rig` wrote
   `OWNBLOW.on` off for 25 probes; refused, so nothing moved but the tags): a line of those probes that fails now reads as the page's side.
+  A CHECK STAGES AS THE GAME IS PLAYED: A ROW MADE BY HAND NEVER REACHES THE RUST GAME (2026-11-07; `tools/qa/charge-rig.ts`). The game object a check
+  holds is the tools' COPY of the game. A row made on it by hand is a write that is never sent: `C.set.push({ wall, … })` then `C.blow`, `D.set.push`,
+  `walls.openCells`, a box's flags or `stuff` or the fog's records written after `standUp`, a `splice`. The Rust game then does nothing with it (a wall
+  charge opened no hole; before the Rust side counted such writes as "not sent" the next call trapped, `wallcharge/p_02.rs`). A HOOK wrapped on the copy
+  (`onRelease`, `onChange`, a `crossed` list) is never called by the Rust tick either: read state (`Debris.list`, the stats tables, `walls.changes`). What
+  crosses: keys and rows (`game.selectVerb` and the key in `W.input.pressed`), `SquadOrders.give`, `Destruction.blast`, `WallBreak.round`, and level data
+  changed BEFORE `standUp` (the hung charge's bare wall is a floor stood with the board taken off in the data). For a wall charge: `samSets` (Sam's row at
+  the wall's foot, the cursor on the wall's FACE a metre up — its top edge is no pick), `samBlows` (his own action on 'blow the charge' from out of its
+  blast: the squad's key is not his charge's, ownblow.ts), `samBreach` (both), `squadBreach` (the order to all, then the squad's key once armed). Each
+  says which step did not come about. Read on the Rust game: `holebase`, `underfoot` and `outerwall-sam` went from no hole to ALL PASS; `holesnow`,
+  `menclear` and `hungcharge` pass the lines that only wanted a hole. A red after a hand-made row or a wrapped hook is the CHECK's: its expected-red
+  row is `is: 'stale'`, never a fault listed for the game. STILL BY HAND (to move): wallsafe, wallkill, wallshot, wallkeep, pall, mess, wallfurn, the
+  wall charge probes' trigger / reset / hold / standoff, and standfire's sightings (`fog.recs.set`).
+  ROWS OF THE RUST GAME ARE PRINTED FROM A RUN, AND THE LIST IS FIVE TABLES (2026-11-07; `tools/qa/red-rows.ts`, `expected-red.ts RED_TABLES`).
+  `bun run tools/qa/probes.ts <family> > run.txt 2>&1; bun run tools/qa/red-rows.ts run.txt` prints a row for every red probe whose failing lines
+  are all the page's own side (nothing refused by the fold, no line under the "other side" note): 'real' with the place where the Rust game
+  panicked, 'open' where the check threw on a function that went with the tick, 'maybe' with the count and the first failing line otherwise. It
+  writes NO row for a probe that still writes a settled row (a comment line names the rows instead: clear the check first), because a row over
+  a check's own stale red would hide a real one behind it. It cannot tell a line that asks a build from before a settled rule (those are deleted,
+  not listed): read each row before keeping it. A row made so carries `rust: true`, reads "ON THE RUST GAME" in the runner's table, and the
+  `LIST_READ_ON` line is printed only where an older row is in the table. The tables: `older` (the 41 rows in `expected-red.ts`, read on the
+  TypeScript game) and one file a group of check families, `expected-red-world.ts`, `-kit.ts`, `-doors.ts`, `-stealth.ts`, so that four hands-over
+  do not meet in one file; `holds-check` (8) is red on a name in two tables. A row changes no verdict, as ever.
   EVERY RUN OF A STAND AS IT OPENS IS READ AGAINST THE LIST OF EXPECTED REDS, FOLDED OR NOT (2026-11-07; `probes.ts`). The runner had read a folded
   probe's red against no row; since the deletion that was every probe of every run with no word, so nothing read the list on the named build:
   no EXPECTED RED / NEW RED / GREEN AGAIN, and a break word's closing line could not say whether it bit (`holds-check` (9), red by it). The
@@ -539,9 +562,9 @@ plus a clean typecheck — the harness cannot see rendering, the light meter, sm
 
 ## Driving the app headlessly (Browser pane / any automation)
 
-`src/main.ts` exposes hooks on `window`: `__game __engine __cam __demo __input __smoke __menu __audio __quality __marks __particles __weather __findme __glass __wet __froxel __rt __mark __save __sharp __civ __sdfrig __wind __qrf __needs __destr __taa __dn __attract __stage __meshTrace __boot __ready __perfrec __journal __replay __prewarm __anim __killGuard __readout`
+`src/main.ts` exposes hooks on `window`: `__game __engine __cam __demo __input __smoke __menu __audio __quality __marks __particles __weather __findme __glass __wet __rt __mark __save __sharp __civ __sdfrig __wind __qrf __needs __destr __taa __dn __attract __stage __meshTrace __boot __ready __perfrec __journal __replay __prewarm __anim __killGuard __readout`
 (+ since the rebuild, the squad game's: `__orders __roomclear __nightbreach __rescue __scenarios __picks __doortools __doors __doorblast __fight __wallcharge __glassbreak __director __pair __wounds __hour __fow __extra`)
-(+ the hot-swap hooks `__hotVol __hotRestir __hotFroxel __hotDenoise __hotReflect __hotGather`: recompile a pass from source WITH its real preludes — prefer them to `__wgsl` for the big kernels;
+(+ the hot-swap hooks `__hotVol __hotRestir __hotDenoise __hotReflect __hotGather`: recompile a pass from source WITH its real preludes — prefer them to `__wgsl` for the big kernels;
 `__hotCommon(src?, variant?)` swaps an edited common.wgsl / `TRACE_VARIANT` into EVERY tracing pipeline at once — the ray-traversal lab's hook, see the *Stratified gather directions + the trace lab* bullet)
 (+ URL flags `?sharp` / `?nosharp` / `?noiq` / `?gbaa` / `?nomv` from the image-quality program),
 `__runFrames(n, dt=1/60, keys=[], draw=true)` (fixed-step frames with synthetic keys held; `draw` false = only the burst's last step is drawn, the others pack the world as a draw would and go on — what a script on the software adapter wants, and NOT a check of the drawn-every-step path: the GPU's senses then answer once a burst), `__mouse(x, y, buttons?)`,

@@ -1,16 +1,13 @@
 // Half-resolution (quarter with the lossy volQuarter option: frame.lossyCfg.y is the divisor) volumetrics: (a) thin haze lit by spot/point lights with ray-traced shadows (visible beams),
 // (b) ray-marched smoke domains lit by the same lights (shadow rays + self-shadowing) and by the RC mean radiance, (c) the weather's rain / splashes / sky flash.
 // Output: rgb = in-scattered radiance, a = transmittance toward the surface.
-// Under FLAG_FROXEL_VOL (renderer v3 Phase 2b) the haze beams live in the froxel volume (froxel.wgsl; composite fetches them per pixel) and this pass keeps
-// (b) — the smoke's per-pixel density march, its plume too fine for a froxel — but LIT FROM THE FROXELS: one fetch of their source-radiance volume J per
-// step where it used to spend K shadow rays + self-shadow marches + the ambient's wall test (smokeMarchJ), and (c) the rain. Flag off = every line below
-// runs as it always did. Prelude: scene + lighting_common + vol_common (phaseHG / hazeAt / max3 / coneInterval / the masked smoke samplers).
+// ONE MARCH ON EVERY TIER: a tier differs by numbers alone (the pass's size, the beams' steps, lights a step, the shadow refresh, the step length; ui/quality.ts).
+// Prelude: scene + lighting_common + vol_common (phaseHG / hazeAt / max3 / coneInterval / the masked smoke samplers).
 @group(1) @binding(0) var gDepth: texture_depth_2d;
 @group(1) @binding(1) var diceTex: texture_3d<f32>;
 @group(1) @binding(2) var outVol: texture_storage_2d<rgba16float, write>;
 @group(1) @binding(3) var outReact: texture_storage_2d<rgba16float, write>;   // .g = the SMOKE-ONLY transmittance of the pixel's ray (post.wgsl's smoke diffusion: haze must not blur what is far away);   // luminance of what (c) below added — rain streaks, splash crowns, a stroke's lit sky — attenuated as composited: the TAAU resolve's reactive input (0 = nothing this texel)
-@group(1) @binding(4) var smokeJ: texture_3d<f32>;   // the froxels' smoke source radiance (froxel.wgsl injectJ: rgb = Σ lights E·vis·selfshadow·phase + the walled ambient, at texel centres; a = 1 where a live domain is near) — FLAG_FROXEL_VOL only
-@group(1) @binding(5) var<uniform> placeBuf: PlaceBuf;   // THE LOOK PROTOTYPE: the place field (render/placeField.ts; place_common.wgsl is pasted in front of this kernel). Zeros = none, on every other page, and never read there
+@group(1) @binding(4) var<uniform> placeBuf: PlaceBuf;   // THE LOOK PROTOTYPE: the place field (render/placeField.ts; place_common.wgsl is pasted in front of this kernel). Zeros = none, on every other page, and never read there
 /** THE AIR'S LIGHT IS SHOWN BY ITS PLACE, AS A SURFACE'S IS (the look page by day, under the one exposure model; the maintainer on his GPU, 11-02, midday, a
  *  smoke grenade in a room: "weird that smoke looks black indoors but white outside"). By day a room's light is thousands of times under the yard's and
  *  the composite shows each place's SURFACES by the place's gain; what the air scatters toward the eye was added after it with no gain at all, so smoke lit
@@ -32,33 +29,16 @@ fn airShow(X: vec3f, l: f32) -> f32 {
   return lookShowBy(vec3f(l), g).x / l;
 }
 
-fn smokeSelfShadow(P: vec3f, L: vec3f) -> f32 {
-  var od = 0.0; let ds = 0.18;
-  for (var i = 1; i <= 4; i++) { od += smokeDensityAt(P + L * (f32(i) - 0.3) * ds); }
-  return exp(-od * ds * 6.0);
-}
-
-// ---- Phase-0 worst-case caps (docs/internal/renderer-v3.md §2: the smoke march and the beams were the field's #1 variance source) ----
-// frame.volCfg.x = K, the most lights any one march step (smoke) / any one view ray (haze beams) spends shadow rays on — the K strongest by UNSHADOWED
-// contribution there, the rest dropped (never credited unshadowed: a torch behind a wall must not glow in the smoke this side of it). K = 0 is the switch
-// OFF: every line of the K > 0 paths is bypassed and the pass runs exactly the code it always ran (ui/quality.ts presets: ultra 6 · high 4 · medium 3 ·
-// low / verylow 2; RenderSettings.volLightCap). With K > 0 the smoke march also (1) walks each live domain's OWN stretch of the ray front to back (merged
-// where they overlap) at that domain's step, instead of one march across the hull of all of them at the finest voxel any of them has — two canisters ten
-// metres apart no longer cost the empty air between them at 3 cm steps — and (2) keeps a bounded shortlist (the 16 lights with the largest unshadowed
-// bound on THIS stretch) instead of falling back to scoring every light in the level per step once more than 16 pass the bound (44 lights × 112 steps
-// per ray was the 25 ms frame). Everything else — thresholds, phase, self-shadowing, the transmittance early-out — is the estimator as it was.
+// ---- the worst-case caps (docs/internal/renderer-v3.md §2: the smoke march and the beams were the field's #1 variance source) ----
+// frame.volCfg.x = K, the most lights any one march step (smoke) / any one view ray (haze beams) spends shadow rays on: the K strongest by UNSHADOWED
+// contribution there, the rest dropped (never credited unshadowed: a torch behind a wall must not glow in the smoke this side of it). Every tier runs K ≥ 1
+// (ui/quality.ts presets: high 4 · medium, low and very low 2; RenderSettings.volLightCap, which the engine keeps at 1 or more). The smoke march (1) walks each
+// live domain's OWN stretch of the ray front to back (merged where they overlap) at that domain's step, so two canisters ten metres apart do not cost the empty
+// air between them at 3 cm steps, and (2) keeps a bounded shortlist (the 16 lights with the largest unshadowed bound on THIS stretch) and never scores every
+// light in the level per step (44 lights × 112 steps per ray was the 25 ms frame).
 const VOL_KMAX: u32 = 6u;
-// THE K = 0 MARCH (no quality row ships it: every tier's caps.volK is 2 or more) is compiled only into its own twin (passes.ts volK0Pipe, built the first frame
-// settings.volLightCap is 0): the boot's program carries false here, so the compile — DXC, Chrome's compiler on Windows, ~1.3 s of it — does not pay for a march no tier runs.
-const VOL_K0: bool = false;
-// THE FROXEL-LIT SMOKE MARCH (smokeMarchJ: the medium, low and very low presets) likewise: the boot's program (passes.ts pVol) is compiled with false here — the classic tiers'
-// march, beams and rain — and the froxel tiers draw through its twin with true (pVolF, a LATER pipeline; the engine raises FrameFlags.FroxelVol only once it is in).
-const VOL_FROXEL_MARCH: bool = true;
-const MARCH_REFRESH_W: f32 = 0.02; // … and a light's shadow ray + self-shadow are refreshed (every `every` steps) only at steps whose weight T·(1 − e^−σΔ) in the pixel exceeds this — deep in the core and out in the thin skin the last answer stands (each slot is traced at least once a stretch)
-const MARCH_DIR_TMAX: f32 = 30.0;  // … and a shadow ray toward a DIRECTIONAL light (the moon, the breach's sun: evalLight says 1e6 m) stops at 30 m: from anywhere smoke can be (under 3.5 m) a ray climbing at 15° or more has cleared this level's 8 m of roof by then — nothing beyond can shadow it, and the walk to the world's rim was the moon's whole price
-const MARCH_MINOR_K: f32 = 0.04;     // smokeMarchJ's per-step lights: one whose unshadowed irradiance at a step is under this share of the stronger ones' there spends no shadow ray and no self-shadow taps (docs/internal/smoke-look.md §2: the moon's 80 m ray from every lit step of a lamp-lit plume was a fifth of the pass)
-const VOL_RAY_STEPS: u32 = 160u;   // K > 0: march steps one view ray may spend over ALL its smoke stretches (each ≤ 112 as the hull march was; eight thin gun-smoke domains in a row no longer make 8 × 42)
-// (the masked smoke samplers the K > 0 paths use — smokeTransIn / smokeSelfShadowIn / smokeDomainsNear — live in vol_common.wgsl: the froxel kernels share them; smokeDensityIn itself in common.wgsl)
+const VOL_RAY_STEPS: u32 = 160u;   // march steps one view ray may spend over ALL its smoke stretches (each ≤ 112 as the hull march was; eight thin gun-smoke domains in a row no longer make 8 × 42)
+// (the masked smoke samplers the march uses, smokeTransIn / smokeSelfShadowIn / smokeDomainsNear, live in vol_common.wgsl; smokeDensityIn itself in smoke_read.wgsl)
 
 // (coneInterval — the ray's stretch inside a spot's cone — lives in vol_common.wgsl with the other shared helpers)
 
@@ -190,143 +170,6 @@ fn splashAt(P: vec3f) -> f32 {
   return (1.0 - smoothstep(0.0, w, d)) * (1.0 - age / 0.06) * keepE;
 }
 
-// (b′) FLAG_FROXEL_VOL: the smoke march of the K > 0 path — the same per-domain stretches front to back, the same step (never finer than ~3 texels across at that
-// distance), the same masked density sample, energy-conserving step and 3 % early-out — with the lighting of each lit step read from the froxels' J volume on
-// this pixel's ray (uv is the pixel's: every step projects to it), half a slice nearer than the step (see the fetch), instead of evaluated there. → (in-scatter,
-// transmittance).
-fn smokeMarchJ(ro: vec3f, rd: vec3f, tSurf: f32, jitter: f32, uv: vec2f) -> vec4f {
-  var inscatter = vec3f(0.0); var T = 1.0;
-  let invRd = safeInv(rd);
-  var ivA: array<vec3f, 8>; var ivM: array<u32, 8>; var niv = 0u;   // (tEnter, tExit, voxel) + domain bit per live domain the ray crosses before the surface, sorted by tEnter
-  for (var i = 0u; i < frame.numSmoke; i++) {
-    let sd = smoke[i];
-    if (sd.live == 0u) { continue; }
-    let tb = isectBounds(ro, invRd, sd.origin, sd.origin + sd.voxel * vec3f(sd.dims));
-    if (!(tb.x <= tb.y && tb.y > 0.0 && tb.x < tSurf)) { continue; }
-    let a = max(tb.x, 0.0);
-    var j = niv;
-    while (j > 0u && ivA[j - 1u].x > a) { ivA[j] = ivA[j - 1u]; ivM[j] = ivM[j - 1u]; j--; }
-    ivA[j] = vec3f(a, min(tb.y, tSurf), sd.voxel); ivM[j] = 1u << i; niv++;
-  }
-  if (niv == 0u) { return vec4f(inscatter, T); }
-  var m = 0u;                                                        // merge overlapping stretches in place (finest voxel wins, domain bits OR)
-  for (var i = 1u; i < niv; i++) {
-    if (ivA[i].x <= ivA[m].y) { ivA[m].y = max(ivA[m].y, ivA[i].y); ivA[m].z = min(ivA[m].z, ivA[i].z); ivM[m] |= ivM[i]; }
-    else { m++; ivA[m] = ivA[i]; ivM[m] = ivM[i]; }
-  }
-  let nInt = m + 1u;
-  var rayBudget = VOL_RAY_STEPS;
-  let D = f32(frame.froxelB.z);
-  let stepVox = select(1.5, f32(frame.volCfg.z) * 0.1, frame.volCfg.z > 0u);
-  let texelRad = 2.0 * frame.post.w * frame.lossyCfg.y / frame.screen.y;
-  let tCut = 0.02 + 0.02 * jitter;   // the opaque early-out, dithered round its old 3 %: a fixed threshold dropped what lay behind it at a different step from one pixel to the next — one more contour
-  let Kc = min(smokeMarchLights(), VOL_KMAX);   // (vol_common.wgsl) LIGHTS lit per step by this march itself, J then carrying the ambient alone: 0 = the J-lit march exactly as it was
-  let every = max(frame.volCfg.y, 1u);           // their shadow ray + self-shadow refreshed every `every` steps and reused between — the K > 0 march's own rule, on its fixed phase: the 8 × 8
-                                                 // pixels of a workgroup trace at the SAME steps (a per-pixel phase dithers the stale edge but splits the SIMD lanes: measured dearer than
-                                                 // tracing twice as often; a per-frame phase halves the rays but flickers a shadow edge ±1 level at a 4-frame period in motion — both tried, §2)
-  for (var ii = 0u; ii < nInt && !smokeMarchDone(T, tCut); ii++) {
-    let t0 = ivA[ii].x; let t1 = ivA[ii].y; let vox = ivA[ii].z; let onMask = ivM[ii];
-    let span = t1 - t0;
-    if (span <= 0.0 || rayBudget == 0u) { continue; }
-    // The LIGHTS on this stretch, per step (settings.smokeMarchLights = Kc > 0; docs/internal/smoke-look.md). The froxels' J volume stands 15 cm across and a whole
-    // slice deep (0.6 m at the follow distance): a torch entering a plume through it lights every billow alike — cone edge, the leaf's shadow and above all the plume's
-    // OWN shadow along the beam become one trilinear ramp (the flat, over-bright blob) — and worse, J point-samples that steep self-shadowed light field once per slice, so
-    // a plume top under a lamp head or a ceiling panel is lit through a lattice fixed to the SCREEN: a world point's brightness swings ±2‥4 % as the camera or the plume
-    // moves it through the slices (the 'screen-space banding' two lanes could not find in stills — it only exists in motion). So with Kc > 0 injectJ writes the AMBIENT
-    // alone into J (smooth over metres: the grid holds it) and the Kc strongest lights by unshadowed bound on the stretch (the K > 0 march's exact culls: range, the
-    // 0.03 floor, the cone, the panel's facing; the K-th+1 dropped as that march always dropped it) are lit per step here — evalLight, a shadow ray every `every` steps,
-    // the step's own 4-tap self-shadow, the phase: the pre-froxel plume, with the froxels still carrying the haze and the ambient.
-    var cc: array<u32, VOL_KMAX>; var ccb: array<f32, VOL_KMAX>; var ncc = 0u; var nearMask = 0u;
-    if (Kc > 0u) {
-      let A = ro + rd * t0; let B = ro + rd * t1;
-      nearMask = onMask | smokeDomainsNear(min(A, B), max(A, B), 0.75);                  // what a self-shadow tap ≤ 0.7 m off the stretch toward a light can lie in
-      for (var i = 0u; i < frame.numLights; i++) {
-        let li = lights[i]; let mc = max3(li.color); let kind = lightKind(li);
-        var bound = mc;                                                                   // (directional: no falloff, no cone — the K > 0 march's own rule)
-        var mu = dot(rd, -li.dir); var r2d2 = 0.0;                                        // (for the rank below: where the lamp stands against the eye's ray, and how wide it is from there)
-        if (kind != 2u) {
-          let tc = clamp(dot(li.pos - ro, rd), t0, t1); let dv = ro + rd * tc - li.pos; let d2 = dot(dv, dv);
-          if (d2 > li.range * li.range) { continue; }
-          bound = mc / max(d2, li.radius * li.radius);
-          mu = dot(rd, -dv) * inverseSqrt(max(d2, 1e-6)); r2d2 = li.radius * li.radius / max(d2, 1e-4);
-          if (bound < 0.03) { continue; }
-          if (!(lightReaches(i, A) || lightReaches(i, B) || lightReaches(i, (A + B) * 0.5))) { continue; }   // walled off from the whole stretch (reach.ts, as injectJ / the cull test it): a bright lamp behind the wall must not take a slot from a light that does reach the plume
-          if (kind == 1u && li.cosOuter > 0.0) { let ci = coneInterval(ro, rd, li.pos, li.dir, li.cosOuter); if (max(ci.x, t0) >= min(ci.y, t1)) { continue; } }
-          else if (kind == 3u) { if (dot(A - li.pos, li.dir) <= 0.0 && dot(B - li.pos, li.dir) <= 0.0) { continue; } }
-        } else if (bound < 0.03) { continue; }
-        // THE K KEPT ARE THE K THAT CAN SEND THE EYE THE MOST. With a lamp behind smoke glowing through it (vol_common.wgsl smokeAheadLobe), a lamp the eye looks
-        // toward through the stretch outranks a brighter one off to the side: the bound, raised by what the narrow lobe sends from the stretch's nearest point to the
-        // lamp, over the wide lobe's own value sideways (0.0587) so the two scales meet. With the row at 0 the rank IS the bound, as it always was.
-        let rank = bound * (1.0 + smokeAheadW() * smokeAheadLobe(mu, r2d2) * (1.0 / 0.0587));
-        if (ncc == Kc && rank <= ccb[Kc - 1u]) { continue; }
-        var p = min(ncc, Kc - 1u);
-        while (p > 0u && ccb[p - 1u] < rank) { ccb[p] = ccb[p - 1u]; cc[p] = cc[p - 1u]; p--; }
-        ccb[p] = rank; cc[p] = i; ncc = min(ncc + 1u, Kc);
-      }
-    }
-    let creaseK = smokeCreaseK(); var creaseC = 1.0; var creaseAt = 0xffffffffu;   // (the lab's creases row, vol_common.wgsl smokeCreaseIn: the soft light's own shade, asked every `every` steps like a light's)
-    var visBits = 0u; var validBits = 0u; var knownBits = 0u; var selfC: array<f32, VOL_KMAX>;   // per light slot: visible from the last step that traced it, is that fresh, was it ever traced on this stretch, its self-shadow there
-    let dtStep = max(vox * stepVox, min(0.0825, t0 * texelRad * 3.0));
-    // A FIXED step for the stretch — never coarser than a quarter of it (the old four-step floor), never finer than the 112-step cap allows — so the sample lattice
-    // t0 + (k + u)·dt only ever SLIDES with the stretch's ends, its last step PARTIAL (covering, and sampled inside, just what is left). The old `dt = span ∕ steps`
-    // re-spaced every sample each time span ∕ dtStep crossed an integer, and the stretch mostly ends on the surface behind the plume: that drew the iso-contours of the
-    // surface's depth across every lit plume — regular bands about a step of depth apart, fixed to the camera, stepping over the smoke as the view moved
-    // (docs/internal/render-defects-0812.md §2). Both dt regimes vary continuously with span; only the count jumps, and a step born at the far end is born empty.
-    let dt = max(min(dtStep, span * 0.25), span * (1.0 / 112.0));
-    let steps = min(u32(ceil(span / dt - 1e-4)), rayBudget);
-    rayBudget -= steps;
-    for (var s = 0u; s < steps; s++) {
-      let ta = t0 + f32(s) * dt;                                   // this step's near end
-      let len = min(dt, t1 - ta);                                  // (the last one: whatever is left of the stretch)
-      if (len <= 0.0) { break; }
-      let t = ta + len * jitter;                                   // the sample, stratified inside the (partial) step
-      if ((s % every) == 0u) { validBits = 0u; }                   // (per-step lights: every shadow answer is at most `every` steps old, lit steps or not)
-      let X = ro + rd * t;
-      let dens = fogSmoke(smokeDensityIn(X, onMask), X);
-      if (dens == 0.0 && spgHole) { let hop = u32(clamp((smokeClearRun(X, rd) - 1e-3) / dt, 0.0, 4096.0)); if (hop > 0u) { if ((s % every) + hop >= every) { validBits = 0u; } rayBudget += min(hop, steps - 1u - s); s += hop; continue; } }
-      if (dens > 0.002) {
-        let sigT = dens * 6.0;
-        let sigS = sigT * 0.92;
-        let stepT = exp(-sigT * len);
-        let wStep = T * (1.0 - stepT);                             // this step's weight in the pixel (what a shading error here can move it by): rays are spent where it shows
-        var Lin = textureSampleLevel(smokeJ, linSamp, vec3f(uv, (froxelSlice(t) - 0.5) / D), 0.0).xyz;   // J sits at texel centres (s = k + ½ ↔ w = s/D exactly; its texels span screen uv 0‥1 by construction) — read half a slice NEARER on purpose: the texel a floor-hugging plume's lowest samples share with the floor has its centre under the slab, every light occluded, and read exactly its weight on the samples sharing its slice would be at least half (all of it at the slab); shifted, that texel's weight there never passes ½ (the sun's terraces are a different defect: injectJ's depth strata)
-        if (creaseK > 0.0) { if (creaseAt == 0xffffffffu || s - creaseAt >= every) { creaseC = smokeCreaseIn(X, onMask | nearMask, creaseK); creaseAt = s; } Lin *= creaseC; }
-        var Lin2 = vec3f(0.0); var LinA = vec3f(0.0); let msGain = smokeMsGain();       // the multiple-scattering octave's light (vol_common.wgsl smokeMsGain; the ambient J stays in the single lobe — it is diffuse already)
-        var eSeen = 0.0;                                           // unshadowed irradiance of the lights already lit at this step, strongest bound first
-        for (var c = 0u; c < ncc; c++) {                           // + the lights this march lights itself (none when Kc = 0): the K > 0 march's inner loop statement for statement, plus the minor-light rule
-          let li = lights[cc[c]];
-          let ev = evalLight(li, X, vec3f(0.0));
-          if (!ev.ok || max3(ev.E) < 0.03) { continue; }
-          let e = max3(ev.E);
-          if (e < MARCH_MINOR_K * eSeen) {                         // a MINOR light beside what already lights this step (the moon under a sodium head: 0.9 against 65): no ray, no taps —
-            Lin += ev.E * phaseHG(dot(rd, ev.L), 0.35) * select(1.0, selfC[0], (visBits & 1u) != 0u);   // credited with the strongest light's self-shadow while that one is lit here; in its SHADOW credited plainly
-            Lin2 += ev.E * phaseHG(dot(rd, ev.L), SMOKE_MS_G) * select(1.0, sqrt(selfC[0]), (visBits & 1u) != 0u);   // (the multiple-scattering octave: half as forward, √ the self-shadow) (no ray of its own — a hair of leak, never a plume gone black where the moon is all the light there is: wave-4 review)
-            continue;                                              // (bounded: under 4 % of the step's UNSHADOWED light; alone in the dark it is nobody's minor and gets the full treatment)
-          }
-          eSeen += e;
-          let bit = 1u << c;
-          if ((validBits & bit) == 0u && (wStep > MARCH_REFRESH_W || (knownBits & bit) == 0u)) {   // due AND worth it: a step that can move the pixel by less than MARCH_REFRESH_W (thin haze at the skin, the
-            let vis = !occluded(X, ev.L, min(ev.dist.x - li.radius - 0.02, MARCH_DIR_TMAX), (li.owner & 0xffu) << 8u);   // core behind opaque smoke) keeps the last answers; each slot is traced at least once a stretch —
-            visBits = select(visBits & ~bit, visBits | bit, vis); validBits |= bit; knownBits |= bit;                   // the light's own carrier never shadows its beam; the moon / sun ray ends past the roofs
-            if (vis) { selfC[c] = smokeSelfShadowIn(X, ev.L, nearMask); }
-          }
-          if ((visBits & bit) == 0u) { continue; }
-          Lin += ev.E * phaseHG(dot(rd, ev.L), 0.35) * selfC[c];
-          Lin2 += ev.E * phaseHG(dot(rd, ev.L), SMOKE_MS_G) * sqrt(selfC[c]);
-          LinA += smokeAheadE(ev.E, dot(rd, ev.L), li.radius, ev.dist.x) * smokeAheadT(selfC[c]);   // (the light a lamp BEHIND the sample sends nearly straight on, vol_common.wgsl smokeAheadT: the smoke is a fifth as thick to it; nothing with the row at 0)
-        }
-        if (LOOK) { let pk = airShow(X, luminance(Lin)); Lin *= pk; Lin2 *= pk; LinA *= pk; }   // (THE LOOK PROTOTYPE: the step's light as its place shows it, airShow above; never compiled in off the look page)
-        inscatter += T * Lin * sigS * (1.0 - stepT) / max(sigT, 1e-4);
-        inscatter += msGain * sqrt(T) * Lin2 * (sigS / max(sigT, 1e-4)) * (1.0 - sqrt(stepT));   // the octave to the eye through half the extinction: √T of the way in, (1 − √stepT) of this step (σs/2 ÷ σt/2 = the same albedo)
-        inscatter += smokeAheadW() * smokeAheadT(T) * LinA * (sigS / max(sigT, 1e-4)) * (1.0 - smokeAheadT(stepT));   // + a lamp behind the smoke, glowing through it (0 with the row at 0)
-        T *= stepT;
-        if (smokeMarchDone(T, tCut)) { break; }
-      }
-    }
-  }
-  return vec4f(inscatter, T);
-}
-
 // ---- (w) THE WEATHER'S AIR (const WX_VOL — render/frame.ts weatherVolConfig; common.wgsl wxAir is the field): a picked weather's dust / fog marched along the
 // pixel's ray through the layer it stands in (the ground to WX_TOP over the ceiling plane), front to back, energy-conserving:
 //   extinction   σ(X) = wxAir — the open air's own density, a room's share of it under a roof, nothing over a roof; × the drifting banks (picture only)
@@ -334,7 +177,7 @@ fn smokeMarchJ(ro: vec3f, rd: vec3f, tSurf: f32, jitter: f32, uv: vec2f) -> vec4
 //   sun, moon    every directional light (a stroke of lightning is one) through a shadow ray — a wall, a man, a smoke plume cuts its own shape out of the
 //                lit air — and the phase below: looking up-sun the air glows, down-sun it is quiet
 // Under a roof a directional light that lights the building's thin haze (volumetric > 0: the sun) lights haze AND weather together by the statement the haze march
-// always used for it (hazeAt carries the weather's share: common.wgsl wxHazeK) — that march and the froxels' stand down for directional lights while a weather is
+// always used for it (hazeAt carries the weather's share: common.wgsl wxHazeK) — that march stands down for directional lights while a weather is
 // in, so the sun in the air has one owner at every tier. The lamps' and torches' cones keep their own march (the same field through hazeAt).
 // → (in-scatter toward the eye, transmittance of the air to the surface).
 const WX_STEP: f32 = 0.75;      // the march's step it aims for (m) …
@@ -391,7 +234,6 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   if (gid.x >= odims.x || gid.y >= odims.y) { return; }
   var wxAirOn = false; if (WX_VOL) { if (lv(WX_KINDS)) { wxAirOn = frame.cardCfg.w != 0u; } }   // (a weather's air is marched whatever the two switches say: the men's eyes are cut by it)
   if ((frame.flags & (FLAG_VOLUMETRICS | FLAG_SMOKE)) == 0u && !wxAirOn) { textureStore(outVol, gid.xy, vec4f(0.0, 0.0, 0.0, 1.0)); textureStore(outReact, gid.xy, vec4f(0.0, 1.0, 0.0, 0.0)); return; }   // (smoke transmittance 1: nothing to blur)
-  let froxel = (frame.flags & FLAG_FROXEL_VOL) != 0u;   // Phase 2b: the haze is the froxel volume's (froxel.wgsl); this pass keeps the smoke march (lit from the froxels' J) and the rain (see the file head)
   let vdiv = u32(frame.lossyCfg.y);   // 2, or 4 (lossy option): each texel marches through one full-res pixel of its vdiv×vdiv block, interleaved by texel parity as before (×1 at vdiv 2)
   let full = min(gid.xy * vdiv + vec2u(gid.y & 1u, gid.x & 1u) * (vdiv / 2u), vec2u(frame.screen) - 1u);
   let depth = textureLoad(gDepth, full, 0);
@@ -401,18 +243,18 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   var rd = Pfar - ro; var tSurf = length(rd); rd /= tSurf;
   if (depth >= 1.0) { tSurf = min(tSurf, 200.0); }
   let jitter = ign(vec2f(gid.xy));
-  let jitterS = fract(jitter + f32(frame.frameIdx & 63u) * 0.61803399);   // the smoke march's start offset: the same texel dither, ROTATED by the golden ratio each frame — a fixed per-texel offset left its
-                                                                             // error as a still grain the resolve could never average out and that slid over the plume with the camera; rotated, a still view
-                                                                             // converges smooth and a moving one carries fine temporal noise the resolve damps (the rain and the flag-off haze march keep `jitter`)
+  let jitterS = fract(jitter + f32(frame.frameIdx & 63u) * 0.61803399);   // the weather's air march's start offset: the same texel dither, ROTATED by the golden ratio each frame, so a still view converges
+                                                                             // smooth under the resolve and a moving one carries fine temporal noise it damps. The smoke march, the rain and the haze march
+                                                                             // start at `jitter`, fixed per texel, as high's march always has (the froxel-lit march the tiers under high drew until 2026-11-07
+                                                                             // started at the rotated one: docs/agents/render.md, ONE FOG MARCH ON EVERY TIER, what went with it)
   let invRd = safeInv(rd);
   var inscatter = vec3f(0.0);
   var T = 1.0;
 
   // ---- (b) smoke first (it attenuates what is behind it; haze contribution is mostly in front/around, error is small) ----
   let volK = min(frame.volCfg.x, VOL_KMAX);
-  if (VOL_FROXEL_MARCH && froxel && (frame.flags & FLAG_SMOKE) != 0u && frame.numSmoke > 0u) { let sm = smokeMarchJ(ro, rd, tSurf, jitterS, pix * frame.invScreen); inscatter = sm.rgb; T = sm.a; }   // (b′) froxel-lit smoke march (above)
-  if (!froxel && (frame.flags & FLAG_SMOKE) != 0u && frame.numSmoke > 0u && volK > 0u) {
-    // (K > 0) the capped march: per-domain stretches front to back, a bounded per-stretch shortlist, the K strongest lights a step (see VOL_KMAX above)
+  if ((frame.flags & FLAG_SMOKE) != 0u && frame.numSmoke > 0u) {
+    // the capped march: per-domain stretches front to back, a bounded per-stretch shortlist, the K strongest lights a step (see VOL_KMAX above)
     var ivA: array<vec3f, 8>; var ivM: array<u32, 8>; var niv = 0u; // (tEnter, tExit, voxel) + domain bit per live domain the ray crosses before the surface, sorted by tEnter
     for (var i = 0u; i < frame.numSmoke; i++) {
       let sd = smoke[i];
@@ -470,13 +312,13 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         rayBudget -= steps;
         let dt = span / f32(steps);
         var t = t0 + dt * jitter;
-        let creaseK = smokeCreaseK(); var creaseC = 1.0; var creaseAt = 0xffffffffu;   // (the lab's creases row: vol_common.wgsl smokeCreaseIn, as in smokeMarchJ)
+        let creaseK = smokeCreaseK(); var creaseC = 1.0; var creaseAt = 0xffffffffu;   // (the lab's creases row: vol_common.wgsl smokeCreaseIn)
         var visBits = 0u; var validBits = 0u; var selfC: array<f32, 16>;   // per shortlist slot: was the light visible from the last step that traced it, is that known, and its self-shadow there
         let every = max(frame.volCfg.y, 1u);                            // trace each light's shadow ray + self-shadow every `every` steps (1 = each step; 2 = alternate steps reuse the last answer — one step is 8 cm of a 5.5 cm-voxel plume)
         for (var s = 0u; s < steps; s++) {
           let X = ro + rd * t;
           if ((s % every) == 0u) { validBits = 0u; }                                             // every light's shadow answer is at most `every` steps old, lit steps or not
-          let dens = fogSmoke(smokeDensityIn(X, onMask), X);
+          let dl = dustDensity(X, onMask, true); let dens = fogSmoke(dl.d, X); let dTint = dustTintOf(dl);
           if (dens == 0.0 && spgHole) { let hop = u32(clamp((smokeClearRun(X, rd) - 1e-3) / dt, 0.0, 4096.0)); if (hop > 0u) { if ((s % every) + hop >= every) { validBits = 0u; } rayBudget += min(hop, steps - 1u - s); s += hop; t += f32(hop + 1u) * dt; continue; } }
           if (dens > 0.002) {
             let sigT = dens * 6.0;
@@ -506,7 +348,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
               if ((validBits & bit) == 0u) {
                 let vis = !occluded(X, ev.L, ev.dist.x - li.radius - 0.02, (li.owner & 0xffu) << 8u);   // the light's own carrier never shadows its beam
                 visBits = select(visBits & ~bit, visBits | bit, vis); validBits |= bit;
-                if (vis) { selfC[c] = smokeSelfShadowIn(X, ev.L, nearMask); }
+                if (vis) { if (dl.dust > 0.0) { selfC[c] = smokeSelfShadowLook(X, ev.L, nearMask); } else { selfC[c] = smokeSelfShadowIn(X, ev.L, nearMask); } }
               }
               if ((visBits & bit) == 0u) { continue; }
               Lin += ev.E * phaseHG(dot(rd, ev.L), 0.35) * selfC[c];
@@ -515,75 +357,14 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
             }
             let stepT = exp(-sigT * dt);
             if (LOOK) { let pk = airShow(X, luminance(Lin)); Lin *= pk; Lin2 *= pk; LinA *= pk; }   // (THE LOOK PROTOTYPE: the step's light as its place shows it, airShow above; never compiled in off the look page)
-            inscatter += T * Lin * sigS * (1.0 - stepT) / max(sigT, 1e-4);   // energy-conserving integration over the step
-            inscatter += msGain * sqrt(T) * Lin2 * (sigS / max(sigT, 1e-4)) * (1.0 - sqrt(stepT));   // + the octave through half the extinction (vol_common.wgsl smokeMsGain)
+            inscatter += dTint * (T * Lin * sigS * (1.0 - stepT) / max(sigT, 1e-4));   // energy-conserving integration over the step
+            inscatter += dTint * (msGain * sqrt(T) * Lin2 * (sigS / max(sigT, 1e-4)) * (1.0 - sqrt(stepT)));   // + the octave through half the extinction (vol_common.wgsl smokeMsGain)
             inscatter += smokeAheadW() * smokeAheadT(T) * LinA * (sigS / max(sigT, 1e-4)) * (1.0 - smokeAheadT(stepT));   // + a lamp behind the smoke, glowing through it (0 with the row at 0)
             T *= stepT;
             if (smokeMarchDone(T, 0.03)) { break; }                                       // (0.01 as ever elsewhere; whatever lies behind 3 % transmittance is under an 8-bit step of black smoke)
           }
           t += dt;
         }
-      }
-    }
-  }
-  if (VOL_K0 && !froxel && (frame.flags & FLAG_SMOKE) != 0u && frame.numSmoke > 0u && volK == 0u) {   // K = 0: the march exactly as it was (in its own twin: VOL_K0 above)
-    var t0 = 1e30; var t1 = -1e30; var vox = 1.0;
-    for (var i = 0u; i < frame.numSmoke; i++) {
-      let sd = smoke[i];
-      if (sd.live == 0u) { continue; }
-      let tb = isectBounds(ro, invRd, sd.origin, sd.origin + sd.voxel * vec3f(sd.dims));
-      if (tb.x <= tb.y && tb.y > 0.0 && tb.x < tSurf) { t0 = min(t0, max(tb.x, 0.0)); t1 = max(t1, min(tb.y, tSurf)); vox = min(vox, sd.voxel); }
-    }
-    if (t1 > t0) {
-      // per-ray light shortlist: a light whose unshadowed irradiance cannot reach the in-scatter threshold (0.03) anywhere on
-      // [t0, t1] — bounded from its closest approach to the segment — is dropped for every step of the march. Exact culling
-      // (the bound is never below what evalLight can return), and it turns ~34 evaluations per step into a handful.
-      var cand: array<u32, 16>; var nc = 0u; var everyLight = false;   // set when the shortlist overflows: fall back to walking every light
-      if (!everyLight) {
-        for (var i = 0u; i < frame.numLights; i++) {
-          let li = lights[i]; let mc = max(li.color.x, max(li.color.y, li.color.z));
-          var keep = false;
-          if (lightKind(li) == 2u) { keep = mc >= 0.03; }
-          else {
-            let tc = clamp(dot(li.pos - ro, rd), t0, t1); let dv = ro + rd * tc - li.pos; let d2 = dot(dv, dv);
-            keep = d2 <= li.range * li.range && mc / max(d2, li.radius * li.radius) >= 0.03;
-          }
-          if (keep) { if (nc < 16u) { cand[nc] = i; nc++; } else { everyLight = true; } }
-        }
-      }
-      let nLoop = select(nc, frame.numLights, everyLight);
-      let span = t1 - t0;
-      let steps = clamp(u32(span / (vox * 1.5)) + 1u, 4u, 112u);
-      let dt = span / f32(steps);
-      var t = t0 + dt * jitter;
-      for (var s = 0u; s < steps; s++) {
-        let X = ro + rd * t;
-        let dens = fogSmoke(smokeDensityAt(X), X);
-        if (dens > 0.002) {
-          let sigT = dens * 6.0;             // extinction (1/m) per unit density (domain densityScale already applied)
-          let sigS = sigT * 0.92;
-          var Lin = diceMeanRadianceWalled(X);   // ambient: mean radiance (isotropic phase → radiance directly), never interpolated through a wall (lighting_common)
-          var Lin2 = vec3f(0.0); var LinA = vec3f(0.0); let msGain = smokeMsGain();   // the multiple-scattering octave (vol_common.wgsl smokeMsGain)
-          for (var k = 0u; k < nLoop; k++) {
-            let li = lights[select(cand[min(k, 15u)], k, everyLight)];
-            let ev = evalLight(li, X, vec3f(0.0));
-            if (!ev.ok || max(ev.E.x, max(ev.E.y, ev.E.z)) < 0.03) { continue; }   // below this a light adds nothing you can see in smoke; the test is what keeps the per-step cost bounded now that panels reach across the floor
-            if (occluded(X, ev.L, ev.dist.x - li.radius - 0.02, (li.owner & 0xffu) << 8u)) { continue; }   // the light's own carrier never shadows its beam
-            let ssh = smokeSelfShadow(X, ev.L);
-            Lin += ev.E * phaseHG(dot(rd, ev.L), 0.35) * ssh;
-            Lin2 += ev.E * phaseHG(dot(rd, ev.L), SMOKE_MS_G) * sqrt(ssh);
-            LinA += smokeAheadE(ev.E, dot(rd, ev.L), li.radius, ev.dist.x) * smokeAheadT(ssh);   // (the light a lamp BEHIND the sample sends nearly straight on, vol_common.wgsl smokeAheadT: the smoke is a fifth as thick to it; nothing with the row at 0)
-          }
-          let stepT = exp(-sigT * dt);
-          // energy-conserving integration over the step (+ the octave through half the extinction)
-          if (LOOK) { let pk = airShow(X, luminance(Lin)); Lin *= pk; Lin2 *= pk; LinA *= pk; }   // (THE LOOK PROTOTYPE: the step's light as its place shows it, airShow above; never compiled in off the look page)
-          inscatter += T * Lin * sigS * (1.0 - stepT) / max(sigT, 1e-4);
-          inscatter += msGain * sqrt(T) * Lin2 * (sigS / max(sigT, 1e-4)) * (1.0 - sqrt(stepT));
-          inscatter += smokeAheadW() * smokeAheadT(T) * LinA * (sigS / max(sigT, 1e-4)) * (1.0 - smokeAheadT(stepT));   // + a lamp behind the smoke, glowing through it (0 with the row at 0)
-          T *= stepT;
-          if (smokeMarchDone(T, 0.01)) { break; }
-        }
-        t += dt;
       }
     }
   }
@@ -600,53 +381,50 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     Tair = aw.a;
   } } }
   // ---- (a) haze beams ----
-  // (K > 0: everything below is scaled by the smoke's transmittance T in front of it — behind 3 % of it, a beam or a rain streak is under an 8-bit step, so the
+  // (everything below is scaled by the smoke's transmittance T in front of it — behind 3 % of it, a beam or a rain streak is under an 8-bit step, so the
   // ray that ended inside a thick plume spends nothing more)
-  let behindSmoke = (volK > 0u || froxel) && T < 0.03;
-  if (!froxel && (frame.flags & FLAG_VOLUMETRICS) != 0u && frame.hazeDensity > 0.0 && !behindSmoke) {
+  let behindSmoke = T < 0.03;
+  if ((frame.flags & FLAG_VOLUMETRICS) != 0u && frame.hazeDensity > 0.0 && !behindSmoke) {
     let sigS = frame.hazeDensity; // scattering coefficient of the thin uniform haze (1/m); extinction ignored
-    // (K > 0) at most K local beams a ray: rank every eligible spot / point light by its UNSHADOWED in-scatter along this ray (∫ E dt of a 1/d² source over
+    // at most K local beams a ray: rank every eligible spot / point light by its UNSHADOWED in-scatter along this ray (∫ E dt of a 1/d² source over
     // the stretch inside its sphere ∧ cone = peak × (θB − θA) / D — the equi-angular integral the loop below estimates), keep the K largest in a 64-bit
-    // mask, and let the loop skip the rest. Directional lights (the daytime sun) are always kept. K = 0: the mask is all ones and the loop is what it was.
-    var selLo = 0xffffffffu; var selHi = 0xffffffffu;
+    // mask, and let the loop skip the rest. Directional lights (the daytime sun) are always kept.
+    var selLo = 0u; var selHi = 0u;
     var bI: array<u32, VOL_KMAX>; var bS: array<f32, VOL_KMAX>; var bN: array<u32, VOL_KMAX>; var nb = 0u;   // the ray's K beams: light slot, unshadowed score, step budget
-    if (volK > 0u) {
-      selLo = 0u; selHi = 0u;
-      for (var i = 0u; i < frame.numLights; i++) {
-        let li = lights[i];
-        if (li.volumetric <= 0.0) { continue; }
-        if (lightKind(li) == 2u) { if (i < 32u) { selLo |= 1u << i; } else { selHi |= 1u << (i - 32u); } continue; }
-        let tb = isectBounds(ro, invRd, li.pos - vec3f(li.range), li.pos + vec3f(li.range));
-        let ta = max(tb.x, 0.0); let tbb = min(tb.y, tSurf);
-        if (ta >= tbb) { continue; }
-        let oc = ro - li.pos; let bq = dot(oc, rd); let cq = dot(oc, oc) - li.range * li.range;
-        let disc = bq * bq - cq; if (disc <= 0.0) { continue; }
-        let sq = sqrt(disc);
-        var s0 = max(-bq - sq, ta); var s1 = min(-bq + sq, tbb);
-        if (lightKind(li) == 1u) { let ci = coneInterval(ro, rd, li.pos, li.dir, li.cosOuter); s0 = max(s0, ci.x); s1 = min(s1, ci.y); }
-        if (s0 >= s1) { continue; }
-        if ((li.kind & (LIGHT_FOG_SEEN | LIGHT_FOG_UNSEEN)) != 0u) {   // (the three points asked in turn through ONE lightFogK call: DXC inlines each call it meets)
-          var fk: array<f32, 3>;
-          for (var q = 0u; q < 3u; q++) { fk[q] = lightFogK(li, ro + rd * select(select(s1, 0.5 * (s0 + s1), q == 1u), s0, q == 0u), vec3f(0.0)); }
-          if (max(fk[0], max(fk[1], fk[2])) <= 0.002) { continue; }
-        }   // (a beam the fog of war's class cuts along this ray takes none of the K places)
-        let delta = dot(li.pos - ro, rd);
-        let Dl = max(length(ro + rd * delta - li.pos), max(li.radius, 1e-3));
-        let score = max3(li.color) * li.volumetric * (atan((s1 - delta) / Dl) - atan((s0 - delta) / Dl)) / Dl;
-        if (nb < volK) { bI[nb] = i; bS[nb] = score; nb++; continue; }
-        var w = 0u; for (var q = 1u; q < volK; q++) { if (bS[q] < bS[w]) { w = q; } }
-        if (score > bS[w]) { bI[w] = i; bS[w] = score; }
-      }
-      // the ray's beam STEP budget, dealt by score: one beam alone keeps volSteps as ever; several share 1.5 × volSteps in proportion to their unshadowed
-      // in-scatter (never under 4 each) — the dominant beam stays as smooth as it was, the faint ones crossing it get a coarser (jittered) estimate of little light
-      var sumS = 0.0; for (var q = 0u; q < nb; q++) { sumS += bS[q]; }
-      for (var q = 0u; q < nb; q++) {
-        let i = bI[q]; if (i < 32u) { selLo |= 1u << i; } else { selHi |= 1u << (i - 32u); }
-        bN[q] = clamp(u32(1.5 * f32(frame.volSteps) * bS[q] / max(sumS, 1e-9) + 0.5), 4u, frame.volSteps);
-      }
+    for (var i = 0u; i < frame.numLights; i++) {
+      let li = lights[i];
+      if (li.volumetric <= 0.0) { continue; }
+      if (lightKind(li) == 2u) { if (i < 32u) { selLo |= 1u << i; } else { selHi |= 1u << (i - 32u); } continue; }
+      let tb = isectBounds(ro, invRd, li.pos - vec3f(li.range), li.pos + vec3f(li.range));
+      let ta = max(tb.x, 0.0); let tbb = min(tb.y, tSurf);
+      if (ta >= tbb) { continue; }
+      let oc = ro - li.pos; let bq = dot(oc, rd); let cq = dot(oc, oc) - li.range * li.range;
+      let disc = bq * bq - cq; if (disc <= 0.0) { continue; }
+      let sq = sqrt(disc);
+      var s0 = max(-bq - sq, ta); var s1 = min(-bq + sq, tbb);
+      if (lightKind(li) == 1u) { let ci = coneInterval(ro, rd, li.pos, li.dir, li.cosOuter); s0 = max(s0, ci.x); s1 = min(s1, ci.y); }
+      if (s0 >= s1) { continue; }
+      if ((li.kind & (LIGHT_FOG_SEEN | LIGHT_FOG_UNSEEN)) != 0u) {   // (the three points asked in turn through ONE lightFogK call: DXC inlines each call it meets)
+        var fk: array<f32, 3>;
+        for (var q = 0u; q < 3u; q++) { fk[q] = lightFogK(li, ro + rd * select(select(s1, 0.5 * (s0 + s1), q == 1u), s0, q == 0u), vec3f(0.0)); }
+        if (max(fk[0], max(fk[1], fk[2])) <= 0.002) { continue; }
+      }   // (a beam the fog of war's class cuts along this ray takes none of the K places)
+      let delta = dot(li.pos - ro, rd);
+      let Dl = max(length(ro + rd * delta - li.pos), max(li.radius, 1e-3));
+      let score = max3(li.color) * li.volumetric * (atan((s1 - delta) / Dl) - atan((s0 - delta) / Dl)) / Dl;
+      if (nb < volK) { bI[nb] = i; bS[nb] = score; nb++; continue; }
+      var w = 0u; for (var q = 1u; q < volK; q++) { if (bS[q] < bS[w]) { w = q; } }
+      if (score > bS[w]) { bI[w] = i; bS[w] = score; }
+    }
+    // the ray's beam STEP budget, dealt by score: one beam alone keeps volSteps as ever; several share 1.5 × volSteps in proportion to their unshadowed
+    // in-scatter (never under 4 each) — the dominant beam stays as smooth as it was, the faint ones crossing it get a coarser (jittered) estimate of little light
+    var sumS = 0.0; for (var q = 0u; q < nb; q++) { sumS += bS[q]; }
+    for (var q = 0u; q < nb; q++) {
+      let i = bI[q]; if (i < 32u) { selLo |= 1u << i; } else { selHi |= 1u << (i - 32u); }
+      bN[q] = clamp(u32(1.5 * f32(frame.volSteps) * bS[q] / max(sumS, 1e-9) + 0.5), 4u, frame.volSteps);
     }
     for (var i = 0u; i < frame.numLights; i++) {
-      if (((select(selHi, selLo, i < 32u) >> (i & 31u)) & 1u) == 0u) { continue; }   // not among this ray's K (all ones when K = 0)
+      if (((select(selHi, selLo, i < 32u) >> (i & 31u)) & 1u) == 0u) { continue; }   // not among this ray's K
       let li = lights[i];
       if (li.volumetric <= 0.0) { continue; }
       // ONE MARCH for the sun and for a lamp (the compile: DXC — Chrome's compiler on Windows — inlines each call it meets; the two marches were two copies of the shadow
@@ -679,16 +457,16 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         var s0 = max(-bq - sq, ta); var s1 = min(-bq + sq, tbb);
         if (lightKind(li) == 1u) { let ci = coneInterval(ro, rd, li.pos, li.dir, li.cosOuter); s0 = max(s0, ci.x); s1 = min(s1, ci.y); }
         if (s0 >= s1) { continue; }
-        // smoke on this beam's shadow paths at all? K = 0: whenever any domain is live (as ever). K > 0: only if some live domain's box comes within reach of the
+        // smoke on this beam's shadow paths at all? Only if some live domain's box comes within reach of the
         // box spanned by the light and this stretch of the beam — every shadow segment from a step X toward the light lies inside it (exact, conservative)
         smokeNear = frame.numSmoke > 0u;
-        if (smokeNear && volK > 0u) { let PA = ro + rd * s0; let PB = ro + rd * s1; smokeNear = smokeDomainsNear(min(li.pos, min(PA, PB)), max(li.pos, max(PA, PB)), 0.0) != 0u; }
+        if (smokeNear) { let PA = ro + rd * s0; let PB = ro + rd * s1; smokeNear = smokeDomainsNear(min(li.pos, min(PA, PB)), max(li.pos, max(PA, PB)), 0.0) != 0u; }
         // equi-angular sampling: distributes samples ∝ 1/d² to the light, so the bright region near the source is not undersampled
         delta = dot(li.pos - ro, rd);
         Dl = max(length(ro + rd * delta - li.pos), max(li.radius, 1e-3));   // match evalLight's 1/max(d², r²) core so samples near the lamp head are not wasted
         thA = atan((s0 - delta) / Dl); thB = atan((s1 - delta) / Dl);
-        var maxSteps = frame.volSteps;                                          // K > 0: this beam's share of the ray's step budget (bN); K = 0: volSteps as ever
-        if (volK > 0u) { for (var q = 0u; q < nb; q++) { if (bI[q] == i) { maxSteps = bN[q]; } } }
+        var maxSteps = frame.volSteps;                                          // this beam's share of the ray's step budget (bN)
+        for (var q = 0u; q < nb; q++) { if (bI[q] == i) { maxSteps = bN[q]; } }
         nSteps = clamp(u32((thB - thA) / 0.11) + 3u, 4u, maxSteps);
       }
       var acc = vec3f(0.0);
@@ -713,11 +491,11 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         }
         if (dark) { continue; }
         var st = 1.0;
-        // (the sun: the smoke over 6 m toward it whenever a domain is live; a lamp: K = 0 whenever a domain is live, K > 0 only when some live domain is anywhere near the light
+        // (the sun: the smoke over 6 m toward it whenever a domain is live; a lamp: only when some live domain is anywhere near the light
         // ∪ this beam stretch, and then only through the domains the shadow segment crosses — both exact)
         if (select(smokeNear, frame.numSmoke > 0u, dirL)) {
           let dS = select(min(ev.dist.x, 6.0), 6.0, dirL);
-          if (!dirL && volK > 0u) { st = smokeTransIn(X, ev.L, dS); } else { st = smokeTransmittance(X, ev.L, dS); }
+          if (!dirL) { st = smokeTransIn(X, ev.L, dS); } else { st = smokeTransmittance(X, ev.L, dS); }
         }
         let hz = hazeAt(X);
         if (dirL) { acc += li.color * (st * hz); }
@@ -729,7 +507,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
       if (dirL) { inscatter += acc * (dtD * phaseHG(dot(rd, Ld), 0.45) * sigS * li.volumetric) * T; continue; }
       acc /= f32(nSteps);
       var beam = acc * sigS * li.volumetric * T;
-      if (wxAirOn) { beam *= Tair; }   // (… and through the weather's air above them: beams stand low in the layer, the camera above it — and the froxel tiers' beams take the same factor in composite; no weather = the statement as it was, not a ×1)
+      if (wxAirOn) { beam *= Tair; }   // (… and through the weather's air above them: beams stand low in the layer, the camera above it; no weather = the statement as it was, not a ×1)
       inscatter += beam;
     }
   }

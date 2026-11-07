@@ -74,12 +74,6 @@ fn crossed_hook(g: &mut Game, x: &PaneCross, who: f64) {
 /// the switch kept per machine: browser storage, and the rows it wrote are settled (glasspen.ts loadGlassPen)
 pub fn load_glass_pen(g: &mut crate::game::Game) {}
 
-/// the panel's save to browser storage (glasspen.ts saveGlassPen)
-pub fn save_glass_pen(g: &mut crate::game::Game) {}
-
-/// the harness's stand-up put the switch off; the row is settled on (glasspen.ts glassPenHarness)
-pub fn glass_pen_harness(g: &mut crate::game::Game) {}
-
 // ---------------------------------------------------------------- the switch, a round's energy
 
 /// the one gate: no showcase running (glasspen.ts glassPenLive)
@@ -152,16 +146,6 @@ pub fn glass_toll_sig(g: &mut crate::game::Game) -> f64 {
 pub fn add_hole(g: &mut crate::game::Game, bi: f64, p: V3) {
     state_of(g).rev += 1.0;
     crate::glassbreak::glass_break_asking(g, &mut |_g: &mut Game, s: f64, _w: f64| ::sim::pen::add_hole(s as usize, js::to_u32(bi), p));
-}
-
-/// how many through-holes pane `bi` carries (glasspen.ts holeCount)
-pub fn hole_count(g: &mut crate::game::Game, bi: f64) -> f64 {
-    if untouched(g) { return 0.0; }
-    let s = g.sim;
-    for r in 0..::sim::panes::hole_rows(s) as usize {
-        if ::sim::panes::hole_bi(s, r) as f64 == bi { return ::sim::panes::hole_n(s, r) as f64; }
-    }
-    0.0
 }
 
 // ---------------------------------------------------------------- the toll
@@ -368,17 +352,6 @@ pub fn glass_on_line(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
     let mut panes: Vec<crate::scene_collision::SegmentBlockedPanesItem> = Vec::new();
     crate::scene_collision::segment_blocked(g, a, b, Some(0.02), Some(0.0), Some(&mut panes));
     !panes.is_empty()
-}
-
-/// panel / console line (glasspen.ts glassPenSummary)
-pub fn glass_pen_summary(g: &mut crate::game::Game) -> String {
-    let word = if glass_pen_live(g) { "ON" } else { "on — inert while a showcase runs" };
-    let st = &g.stats.glasspen;
-    let last = match g.m.glasspen.states.as_ref().and_then(|s| s.log.last()) { Some(l) => format!(" · last: {}", l), None => String::new() };
-    format!(
-        "rounds through glass {} ▸ {} panes crossed ({} by a hole, {} muzzle-past) · {} rounds spent in a pane{}",
-        word, st.crossed, st.via_hole, st.via_arm, st.spent, last,
-    )
 }
 
 #[cfg(test)]

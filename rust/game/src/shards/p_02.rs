@@ -40,28 +40,6 @@ fn to_landing(f: GlassShardsFallOf) -> GlassShardsLandingFall { GlassShardsLandi
 /// `b.x` of a Box: the row of a box. Skeleton 5 has `g.col.boxes` as a `Vec<BoxId>` and no table of rows.
 fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
-/// The landings waiting, for a tool.   (shards.ts GlassShards.pending)
-pub fn glass_shards_pending(g: &mut crate::game::Game) -> Vec<crate::shards::Pending> {
-    use crate::sim_fallshome::{FallSound, FallStoreLandingKey as K};
-    let n = crate::sim_fallshome::fall_store_waiting(g);
-    let mut out = Vec::new();
-    let mut i = 0.0;
-    while i < n {
-        let r = crate::sim_fallshome::fall_store_landing(g, i, None);
-        let v = |k: K| r.get(k).copied().unwrap_or(0.0);
-        out.push(Pending { t: v(K::T), pos: [v(K::X), v(K::Y), v(K::Z)], name: if js::truthy(v(K::Name)) { FallSound::GlassShatter } else { FallSound::GlassTinkle }, gain: v(K::Gain), rate: v(K::Rate), amount: v(K::Amount), who: v(K::Who), event: v(K::Event) });
-        i += 1.0;
-    }
-    out
-}
-
-/// m² of glass in each ½ m cell, a copy.   (shards.ts GlassShards.litter)
-pub fn glass_shards_litter(g: &mut crate::game::Game) -> JsMap<crate::Num, f64> {
-    let mut out = JsMap::new();
-    for [ix, iz, a] in crate::sim_fallshome::fall_store_cells(g) { out.set(crate::Num(cell_name(ix, iz)), a); }
-    out
-}
-
 /// The shards' books; the ghost is a chunk in no pool (the pool's glass hook is calls by name).   (shards.ts GlassShards.constructor)
 pub fn glass_shards_new(g: &mut crate::game::Game) -> crate::shards::GlassShards {
     let bf = crate::scene_boxes::box_flag();
@@ -719,12 +697,6 @@ pub fn glass_shards_sound(g: &mut crate::game::Game, name: &str, pos: V3, gain: 
     crate::audio_iface::game_audio_like_play(g, name, Some(v3::copy(pos)), Some(gain + owed), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
 }
 
-/// 0‥1: how much glass lies under `pos`.   (shards.ts GlassShards.underfoot)
-pub fn glass_shards_underfoot(g: &mut crate::game::Game, pos: V3) -> f64 {
-    let a = crate::sim_fallshome::fall_store_at(g, pos[0], pos[2]);
-    if js::truthy(a) { m::min(1.0, a / g.k.shards.crunch_full) } else { 0.0 }
-}
-
 /// A footfall on litter crunches, is louder, and grinds the glass down. Elsewhere `level` back untouched.   (shards.ts GlassShards.step)
 pub fn glass_shards_step(g: &mut crate::game::Game, pos: V3, level: f64) -> f64 {
     if !crate::sim_fallshome::fall_store_any(g) || !shards_live(g) { return level; }
@@ -815,16 +787,6 @@ pub fn glass_shards_clear(g: &mut crate::game::Game) {
     g.shards.sounds_this_frame = 0.0;
 }
 
-/// Births alive or waiting.   (shards.ts GlassShards.live)
-pub fn glass_shards_live(g: &mut crate::game::Game) -> f64 { g.shards.live_est + g.shards.deferred_n }
-
-/// Glass plates in the pool now.   (shards.ts GlassShards.plateCount)
-pub fn glass_shards_plate_count(g: &mut crate::game::Game) -> f64 {
-    let mut n = 0.0;
-    for c in g.destr.debris.list.iter() { if g.tab.debris_chunk[*c].glass.is_some() { n += 1.0; } }
-    n
-}
-
 /// The albedo of the static under `p`, or a neutral floor.   (shards.ts GlassShards.underAlbedo)
 pub fn glass_shards_under_albedo(g: &mut crate::game::Game, p: V3) -> V3 {
     let hit = crate::scene_collision::raycast(g, [p[0], p[1] + 0.05, p[2]], [0.0, -1.0, 0.0], p[1] + 0.6);
@@ -837,17 +799,6 @@ pub fn glass_shards_note(g: &mut crate::game::Game, s: &str) {
     let line = alloc::format!("{} {}", js::to_fixed(g.time, 2), s);
     g.shards.log.push(line);
     if g.shards.log.len() > 60 { g.shards.log.remove(0); }
-}
-
-/// One line for the panel.   (shards.ts GlassShards.summary)
-pub fn glass_shards_summary(g: &mut crate::game::Game) -> String {
-    let cells = crate::sim_fallshome::fall_store_cells(g);
-    let mut lit = 0.0;
-    for c in cells.iter() { lit += c[2]; }
-    let (live, plates) = (shards_live(g), glass_shards_plate_count(g));
-    let s = &g.stats.shards;
-    alloc::format!("{}{} · {} fragments → {} plates ({} now, {} broke, {} crumbled, {} refused) + {} particles in {} emits (~{} live of {}, {} trimmed) · {} sounds, {} heard, {} crunches · litter {} cm² in {} cells",
-        if live { "live" } else { "inert" }, if g.shards.hooked { " (release hook)" } else { "" }, s.fragments, s.plates, js::num_str(plates), s.breaks, s.crumbled, s.plates_refused, s.born, s.emits, js::num_str(g.shards.live_est), js::num_str(g.k.shards.live_cap), s.trimmed, s.sounds, s.events, s.crunches, js::to_fixed(lit * 1e4, 0), cells.len())
 }
 
 /// A hand test: a fragment of `area` m² let go at `at`, thrown along `dir`.   (shards.ts GlassShards.test)

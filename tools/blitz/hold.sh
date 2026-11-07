@@ -5,6 +5,8 @@
 # host's half of every tick (h<k>.bin), the driver's ordered record (between.txt, gives.txt, hostwrites.txt, meter.txt), a checkpoint put back
 # (L<k>.bin), and post.txt: a line a tick, `k die_n die_s time <a hash of each of the block's 13 parts>`, taken while the Rust game was in step with
 # the TypeScript game on that run. The runner steps the game and compares its own die and block to that line after EVERY tick.
+# HOLD_DIRS=<folder>: each run's folder is left there as it was held (its start made again where it was), under the run's name: for a run of the
+# native runner by hand (`--keep` writes the Rust game's whole states, n<k>.bin), or to keep it anew for this tree's wire (keep.sh).
 # Exit: 0 every run the same series · 1 a run parted (its name and first tick are printed) · 2 a run panicked · 3 could not run, or a run's start could not be made again.
 # What a kept run cannot see: state of the game outside the block and the die (the path diff needed the TypeScript's whole states), and a change of
 # the wire UNSEEN (c1.bin is read by the import as generated when the run was kept: command.txt names the tree). So:
@@ -33,17 +35,18 @@ fresh() { local D=$1 c e M n a=()
   mkdir "$D/fresh" || return 1
   eval "env TPS_GAME=none $e bun run --preload ./tools/blitz/expose.ts tools/blitz/$side \"\$M\" --out \"\$D/fresh\" --start-only \"\${a[@]}\"" > "$D/fresh.log" 2>&1
   [ -s "$D/fresh/c1.bin" ] && [ -s "$D/fresh/s0.bin" ] && [ -s "$D/fresh/h1.bin" ] || { WHY="the start did not stand here: $(grep -a -m1 'rror' "$D/fresh.log" | cut -c1-220)"; return 1; }
+  [ -s "$D/h1.bin" ] || { WHY="it holds no host's half of tick 1"; return 1; }
   n=$(( $(stat -c %s "$D/fresh/h1.bin") - $(stat -c %s "$D/h1.bin") ))
   [ "$n" -ge 0 ] && cmp -s -n "$(stat -c %s "$D/h1.bin")" "$D/h1.bin" "$D/fresh/h1.bin" || { WHY="the host's half of a tick changed shape, not only grew at its end"; return 1; }
   if [ "$n" -gt 0 ]; then tail -c "$n" "$D/fresh/h1.bin" > "$D/fresh/tail"; for h in "$D"/h[0-9]*.bin; do cat "$D/fresh/tail" >> "$h"; done; fi
-  HOW="the start made again here, layout $LAY; $(cmp -s "$D/s0.bin" "$D/fresh/s0.bin" && echo "its block the kept one" || echo "ITS BLOCK NOT THE KEPT ONE"); the host's half $n bytes longer"
+  HOW="the start made again here, layout $LAY; $( [ ! -e "$D/s0.bin" ] && echo "no start was kept" || { cmp -s "$D/s0.bin" "$D/fresh/s0.bin" && echo "its block the kept one" || echo "ITS BLOCK NOT THE KEPT ONE"; } ); the host's half $n bytes longer"
   cp "$D/fresh/c1.bin" "$D/fresh/s0.bin" "$D/"; [ "$(stat -c %s "$D/fresh/knobs.bin")" = "$(stat -c %s "$D/knobs.bin" 2>/dev/null)" ] || cp "$D/fresh/knobs.bin" "$D/"
   rm -rf "$D/fresh"; }
 for f in $( [ -d "$1" ] && find "$1" -name '*.tar.zst' | sort || echo "$1" ); do
   D=$(mktemp -d) || exit 3; tar --zstd -xf "$f" -C "$D" || { echo "hold.sh: cannot read $f"; rm -rf "$D"; exit 3; }
   HOW=; if [ "$(cat "$D/layout.txt" 2>/dev/null)" != "$LAY" ]; then fresh "$D" || { echo "$(basename "$f" .tar.zst): NOT HELD: its start is of another layout of the wire and cannot be made again: $WHY (exit 3)"; [ 3 -gt $W ] && W=3; rm -rf "$D"; continue; }; fi
   "$R" "$D" "$(cat "$D/ticks.txt")" > "$D/rust.log" 2>&1; r=$?
-  echo "$(basename "$f" .tar.zst): $( [ $r = 0 ] && echo "the same over $(cat "$D/ticks.txt") ticks" || grep -a 'FIRST PARTED\|^PANIC' "$D/rust.log" | head -1 | cut -c1-160 ) (exit $r; $(sed -n 1p "$D/command.txt" 2>/dev/null)${HOW:+; $HOW})"
-  [ $r -gt $W ] && W=$r; rm -rf "$D"
+  echo "$(basename "$f" .tar.zst): $( [ $r = 0 ] && echo "the same over $(cat "$D/ticks.txt") ticks" || grep -a 'FIRST PARTED\|^PANIC' "$D/rust.log" | head -1 | cut -c1-160 ) (exit $r; $(sed -n 1p "$D/command.txt" 2>/dev/null)${HOW:+; $HOW})$(grep -a -m1 '^VERDICT' "$D/rust.log" | sed 's/^/ · /')"
+  [ $r -gt $W ] && W=$r; if [ -n "$HOLD_DIRS" ]; then mkdir -p "$HOLD_DIRS" && rm -rf "$HOLD_DIRS/$(basename "$f" .tar.zst)" && mv "$D" "$HOLD_DIRS/$(basename "$f" .tar.zst)"; else rm -rf "$D"; fi
 done
 exit $W

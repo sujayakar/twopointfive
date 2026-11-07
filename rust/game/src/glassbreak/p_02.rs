@@ -771,36 +771,6 @@ pub fn glass_break_row_state(g: &mut crate::game::Game, s: f64, r: f64) -> crate
     }
 }
 
-/// a tool's question: which pieces of this pane are held, a set of piece ids (glassbreak.ts GlassBreak.heldSet)
-pub fn glass_break_held_set(g: &mut crate::game::Game, without: Option<f64>, bi: f64) -> JsSet<crate::Num> {
-    let without = without.unwrap_or(-1.0);
-    let w = ::sim::panes::held_bits(g.sim, js::to_u32(bi), js::to_i32(without));
-    let mut out = JsSet::new();
-    for k in 0..(GP_MAX_SITES * GP_FRAGS_PER_SITE) as usize {
-        if w[k >> 5] >> (k & 31) & 1 != 0 { out.add(Num(k as f64)); }
-    }
-    out
-}
-
-/// world point → pane-local (u, v), the frame of a pane in hand (glassbreak.ts GlassBreak.toUV)
-pub fn glass_break_to_uv(g: &mut crate::game::Game, x: V3, bi: f64) -> [f64; 2] {
-    let v = glass_break_geom(g, bi);
-    glass_break_uv(g, v, x)
-}
-
-/// pane-local (u, v, w across the thickness) → world (glassbreak.ts GlassBreak.toWorld)
-pub fn glass_break_to_world(g: &mut crate::game::Game, u: f64, v: f64, w: Option<f64>, bi: f64) -> V3 {
-    let f = glass_break_geom(g, bi);
-    glass_break_world(g, f, u, v, w)
-}
-
-/// the pane's unit normal = the direction of pane-local +w (glassbreak.ts GlassBreak.normalOf)
-pub fn glass_break_normal_of(g: &mut crate::game::Game, bi: f64) -> V3 {
-    let f = glass_break_geom(g, bi);
-    let yaw = seam_box(g, f.box_).yaw;
-    normal_on(yaw, f.u_axis)
-}
-
 /// a burst's reckoning, for a tool: is the glass of pane bi at x on its way out (glassbreak.ts GlassBreak.goingAt)
 pub fn glass_break_going_at(g: &mut crate::game::Game, bi: f64, x: V3) -> bool {
     glass_break_see_through(g, GlassBreakSeeThroughView::Blown, [0.0, 0.0, 0.0], GlassBlastOpts::zeroed(), &mut |g| glass_break_rule_open(g, bi, x))

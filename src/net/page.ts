@@ -3,7 +3,7 @@
 // HOW IT STANDS THE GAME: as the engine replay stands a tape's (replay/recipestand.ts) — a networked game is a run tape written live. The page says hello, takes
 // the server's RECIPE from the welcome, and is first sent to the recipe's own address with its seed, so the boot is that game's boot; then main.ts lays the
 // recipe's knob tables and kit over this machine's at each point of the boot, exactly where it does for a replay. Once the game stands every seat is refereed
-// (step.ts netSeats) and the server is told `ready`.
+// (step.ts netStand) and the server is told `ready`.
 // WHO STEPS THE GAME: this file, through the loop's `tick` seam (host/loop.ts LoopCtx.tick). On each tick of the page the player's input is sampled into a
 // record (game/cmd.ts sampleCmd, off the page's own camera) and SENT; the game itself is stepped only through the ticks the server has confirmed, each on the
 // records the server decided, by step.ts netStep — the one tick every machine runs. So this page's game is the server's to the bit, and its state word is held
@@ -37,7 +37,7 @@ import type { Recipe } from './wire';
 import { NET, recipeWhy } from './wire';
 import { FORESEE, Foresee } from './foresee';
 import { onWay, wayOff, type Way } from './delay';
-import { netStep, netSeats, netWord, netQuiet, netWhole, wordTick, NET_WORD_SEED, type StepHost } from './step';
+import { netStep, netStand, netWord, netQuiet, netWhole, wordTick, NET_WORD_SEED, type StepHost } from './step';
 import { myName, setSeatNames } from '../host/names';
 
 /** the address's words: the server's WebSocket address, the game's id, the seat's key (read once, then kept for the tab under KEEP) */
@@ -193,7 +193,7 @@ export class NetPlay {
   attach(h: NetHost): void {
     const g = h.game, c = this.client;
     if (activeScenario(g) !== this.recipe?.scenario || g.seats.length !== c.welcome?.seats) { this.alone = h; this.refuse = CANT_PLAY; this.close(); this.say(this.refuse); return; }   // (…and plays on as its own game under the words: tick below)
-    this.host = h; netSeats(g);
+    this.host = h; netStand(g);
     if (c.seat >= 0) g.localSeat = g.seats[c.seat];   // (the seat this page plays is the one it shows — game/seats.ts: its man under the camera, its HUD, its record sampled; a watcher keeps the first. The simulation never reads it)
     const restart = g.restart.bind(g);   // (the player's restart: inside a tick — a key in a record — it is every machine's; from OUTSIDE one — a card's button — it is this page's alone, so not this page's to do)
     g.restart = said => { if (this.stepping) restart(said); else this.pass('You can’t restart a co-op game from here.'); };

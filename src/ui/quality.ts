@@ -176,20 +176,20 @@ type Lossy = { gatherThird: boolean; rcHalfRate: boolean; volQuarter: boolean; f
  *  volEvery is 2 everywhere, ultra included: refreshing every traced light's shadow ray each 8 cm step bought nothing visible in the crops and cost ultra a third of
  *  its march (torture take: K 6 / every 1 = 22 ms vs 15 at every 2, 1777×1000); 3 starts to comb. (08-12: the classic tiering first shipped ultra / high at every 1 —
  *  the loud minute at high measured volumetrics 9.9 → 7.1 ms mean, 14.7 → 10.3 p95 going back to K 4 / every 2, so those are the values again; the per-pixel PATH,
- *  which was the visible difference, stays.) */
-export interface Caps { volK: number; volEvery: number; volStep: number; births: number; debris: number; rain: number; marchLights: number; vol: 'classic' | 'froxel' }   // vol: 'classic' = the PER-PIXEL volumetric march for haze AND smoke, every kept light shadow-rayed every step (the pre-v3 look the maintainer picked side by side on 08-12: 'this looks better … let's get the smoke better and we can ship') — ultra / high; 'froxel' = the froxel haze + the K-lit smoke march (renderer v3 P2b) — medium and below, where the millisecond it saves is the point   // marchLights = settings.smokeMarchLights: lights the froxel-lit smoke march lights per step itself, J keeping the ambient (docs/internal/smoke-look.md — ultra 4 / high 3 / medium 2 / low+verylow 0 = the J-lit march as it was)   // debris = settings.debrisCap: the destruction lane's rigid-debris pool (game/debris.ts) — 64 ultra / high, 32 below: the stage-2 chaos budget (64 tumbling casters +2 ms at high, no boil)   // rain = settings.particleRainCount (the particle rain's cap on drops alive at once, game/rainFx.ts — inert while settings.particleRain is off): 6000 / 4000 / 2500 / 1500 / 800
+ *  which was the visible difference, stays.)
+ *  ONE MARCH ON EVERY TIER (2026-11-07; the maintainer's pick from stills of both): haze and smoke are marched per pixel on every preset, by one program, and a tier
+ *  differs by numbers alone. Medium and low run high's march (the pass at half size, its 20 beam steps, its shadow refresh and step length) with TWO lights a step
+ *  where high has four: on the cloud's NVIDIA card that read 13.70 ms a frame on medium against 13.22 with the froxel grid it replaces and 14.73 at four lights,
+ *  9.08 against 8.86 and 10.45 on low. Lights a step is the lever: half the steps or a slower shadow refresh moved a frame by under 0.2 ms, and a quarter-size
+ *  march was SLOWER. Very low, the floor, keeps its own small rows (quarter size, 8 steps, a longer step). The froxel grid that lit the haze and the smoke under high,
+ *  the SMOKE KEEP switch that chose between the two and their Tab rows went with it. */
+export interface Caps { volK: number; volEvery: number; volStep: number; births: number; debris: number; rain: number }   // debris = settings.debrisCap: the destruction lane's rigid-debris pool (game/debris.ts) — 64 ultra / high, 32 below: the stage-2 chaos budget (64 tumbling casters +2 ms at high, no boil)   // rain = settings.particleRainCount (the particle rain's cap on drops alive at once, game/rainFx.ts — inert while settings.particleRain is off): 6000 / 4000 / 2500 / 1500 / 800
 /** ReSTIR DI per tier (renderer v3 Phase 2a; settings.restirRays / restirSpatial / restirHistory — engine.ts words them): the SAME estimator scaled by shadow rays per pixel,
  *  spatial taps and history cap — ultra 4/5 · high 4/3 · medium 4/2 · low 3/2 · verylow 2/1, cap 20 everywhere. Measured in the stress minute (docs/internal/p2a-restir.md):
  *  direct 13.2 → 7.1 ms at ultra 2133×1200, 5.95 → 3.16 at high 1368×770 (9.3 → 5.1 at 1777×1000), 3.96 → 1.98 medium, 2.08 → 0.98 low, 0.87 → 0.45 verylow; rays 6
  *  (a second fresh candidate + the final ray) bought ultra nothing (13.1 → 12.7) and rays 5 cost it +3.5 for spatial reuse everywhere — so no tier runs them; they stay on
  *  the Tab slider. */
 export interface RestirTier { rays: number; spatial: number; history: number; held: number; motionMin: number; motionTaps: number }   // held = settings.heldRays: the HYBRID estimator's K (direct-quality lane, docs/internal/direct-quality.md — carried lights bypass the reservoirs and take K stratified rays per leader at the pixels they reach; 0 = off, the transient stratum as it was) · motionMin / motionTaps = settings.restirMotionMin / restirMotionTaps: the direct-motion lane's per-tier trade under a CAMERA PAN (docs/internal/direct-motion.md §2 — the reservoir memory a fast-moving pixel keeps, as a fraction of `history`, and the spatial taps it takes meanwhile): the light's edge and the lit floor want the memory cut to nothing at every tier (−26‥47 % pan flow), the dark floor under a dozen distant panels wants it kept below high (3–4 rays and 2 taps a pixel cannot stand in for it: floor 0.1 there = +26 % medium / +57 % low), and six taps while moving buy most of that back — so ultra 0.1 · 6, high 0.1 · 0 (its own 3 taps run at every cut pixel through the young rule anyway; 3 → 6 bought −6 % more at the edge for +0.4 ms of moving frames — the Tab row has it), medium 0.2 · 6, low 0.5 · 6, verylow 1.0 · 6 (no cut at all: at 2 rays and 1 tap a pixel every cut lost the dark floor more than it won the edge, the taps alone −4‥35 % everywhere); settings.restirMotion itself (the switch) is not a preset's business
-/** froxel volumetrics per tier (renderer v3 Phase 2b, render/froxels.ts — settings.froxelH / froxelD / froxelK / froxelHistory): grid rows (W follows the aspect) × depth slices, shadow-rayed
- *  lights per froxel, history weight. The same kernels on every tier, scaled — every tier's froxel is ~7–9 of its own pixels across (a beam edge reads alike on all of them):
- *  ultra 180 × 56 · 5 — high 135 × 64 · 4 — medium 108 × 48 · 3 — low 80 × 32 · 2 — verylow 64 × 24 · 2 (ultra measured 2.36 ms p95 in the gate minute at 180 × 64 · 6 against its 2.0 budget:
- *  a seventh fewer slices and one light fewer per froxel, not coarser froxels — the beam edge is what shows). Memory (3 haze volumes + the half-res smoke J + transient + clusters,
- *  rgba16f): ultra ≈ 86 MB · high 56 · medium 27 · low 10 · verylow 5. */
-export interface FroxelTier { h: number; d: number; k: number; hist: number; topRays: number /* depth strata (shadow rays) for each froxel's strongest light, 1‥3 */ }
 /** per-preset TAAU knobs (engine settings taauPhases / taauClipGamma / taauSharpen — engine.ts RenderSettings.taau): the deeper the upscale, the longer the jitter cycle (finer sample coverage
  *  of each output pixel), the looser the clip (fewer samples per output pixel per frame to judge history by) and the firmer the sharpen */
 type Taau = { phases: number; clipGamma: number; sharpen: number };
@@ -213,7 +213,7 @@ export const IQ_OFF: IqTier = { sharp: false, decouple: false, gbaa: false, hist
 export const IQ_C3J: IqTier = { sharp: true, decouple: true, gbaa: true, histSharp: 0.5 };
 // (The SDF character rig has no tier: the fitted round cones are every ray's character test at every preset — measured free, −0.3 … +0.5 ms at high, docs/internal/sdf-characters.md §8 —
 // and its two extras, the smooth-union closest hit in reflections and the drawn character shadows, are rows no preset touches: engine settings sdfRigSmooth / charSoftShadow.)
-export interface Preset { restir: RestirTier; rt: RtTier; dn: Dn; iq: IqTier /* the resolve configuration for the tier (IMAGE-QUALITY program: sharp direct + decoupled jitter + GBAA + the history de-blur — IqTier above; ?sharp / ?nosharp / ?noiq force it for the visit) */; scale: number /* the render scale the preset starts at UNDER TAAU, relative to its cap (ultra 1.0 = TAA only … verylow 0.5 = a 2× upscale per axis); with TAAU off every preset starts at 1.0 as before — maxH is the preset's OUTPUT resolution either way; the ladder / the Tab slider trim below it */; taau: Taau; maxH: number; volSteps: number; rc: { nx: number; ny: number; nz: number }; rcCoarse?: { nx: number; ny: number; nz: number } /* the row's cache grid with ONE CACHE GRID off (rcGridOf below the table) */; smokeOwn?: boolean /* the floor's row: SMOKE KEEP leaves this row's smoke alone (withSmoke below the table), and FIRE SMOKE SHED draws an open fire without its smoke on it (fireSmokeOf) */; cascades: number; rbIters: number; mesh: boolean | 'near'; cards: boolean; lossy: Lossy; caps: Caps; froxel: FroxelTier; }   // cards = settings.torchBounceCards (the carried spots' footprints as analytic one-bounce emitters, docs/internal/perf-2026-08-10.md: +0.13 ms gather at high, +0.27 at ultra, and the torch's first bounce off a wall comes back at its physical level instead of 4–15 % of it — a LOOK change, so on where it was eyeballed: ultra + high); ds = direct-light shadow samples [strongest light, other leaders, adaptive stop] — measured: 8/4/3 → 1/1/2 halves the direct pass (7.2 → 3.8 ms at 1600×1000), so the cheaper presets spend fewer rays as well as fewer pixels; hist = settings.directHistory (temporal reuse of the direct estimate: 0.5 = the default ≈ 2 frames, 0.7 ≈ 3 — verylow leans on it to hide its one-ray penumbra grain)
+export interface Preset { restir: RestirTier; rt: RtTier; dn: Dn; iq: IqTier /* the resolve configuration for the tier (IMAGE-QUALITY program: sharp direct + decoupled jitter + GBAA + the history de-blur — IqTier above; ?sharp / ?nosharp / ?noiq force it for the visit) */; scale: number /* the render scale the preset starts at UNDER TAAU, relative to its cap (ultra 1.0 = TAA only … verylow 0.5 = a 2× upscale per axis); with TAAU off every preset starts at 1.0 as before — maxH is the preset's OUTPUT resolution either way; the ladder / the Tab slider trim below it */; taau: Taau; maxH: number; volSteps: number; rc: { nx: number; ny: number; nz: number }; rcCoarse?: { nx: number; ny: number; nz: number } /* the row's cache grid with ONE CACHE GRID off (rcGridOf below the table) */; smokeOwn?: boolean /* the floor's row: FIRE SMOKE SHED draws an open fire without its smoke on it (fireSmokeOf) */; cascades: number; rbIters: number; mesh: boolean | 'near'; cards: boolean; lossy: Lossy; caps: Caps; }   // cards = settings.torchBounceCards (the carried spots' footprints as analytic one-bounce emitters, docs/internal/perf-2026-08-10.md: +0.13 ms gather at high, +0.27 at ultra, and the torch's first bounce off a wall comes back at its physical level instead of 4–15 % of it — a LOOK change, so on where it was eyeballed: ultra + high); ds = direct-light shadow samples [strongest light, other leaders, adaptive stop] — measured: 8/4/3 → 1/1/2 halves the direct pass (7.2 → 3.8 ms at 1600×1000), so the cheaper presets spend fewer rays as well as fewer pixels; hist = settings.directHistory (temporal reuse of the direct estimate: 0.5 = the default ≈ 2 frames, 0.7 ≈ 3 — verylow leans on it to hide its one-ray penumbra grain)
 const RC_WHOLE = [1, 1, 1, 1] as const;   // every cascade level whole every frame
 const ALL_OFF: Lossy = { gatherThird: false, rcHalfRate: false, volQuarter: false, fireflyK: 0, rcPeriods: RC_WHOLE };
 const FIREFLY_K = 4;   // the bound every preset but ultra runs the gather with (was the engine-wide default)
@@ -240,10 +240,10 @@ export const PRESETS: Record<QualityName, Preset> = {
   // medium 3/10 · 3/16 · 1, low 2/8 · 3/12 · 1, verylow 2/8 · 2/8 · 1 — the same pipeline scaled; the clamp / edge-stop knobs are engine defaults shared by every tier.
   // scale + taau (renderer v3 phase 1): under TAAU each preset renders FEWER pixels than its cap and resolves up to it — ultra 1.0 (temporal AA only, no upscale) · high 0.77 (0.59× the
   // pixels) · medium 0.67 (0.45×) · low 0.6 (0.36×) · verylow 0.5 (0.25×); jitter cycle 8 where the ratio is mild, 16 for the deep upscales; clip γ 1.0 → 1.25 and sharpen 0.2 → 0.5 likewise.
-  high:    { restir: { rays: 4, spatial: 3, history: 20, held: 4, motionMin: 0.35, motionTaps: 6 }, rt: { on: true, div: 2, rays: 1, maxRough: 0.45, atrous: 3 }, dn: { shIters: 3, shCap: 12, giIters: 4, giCap: 24, spIters: 1 }, iq: IQ_C3J, scale: 0.77, taau: { phases: 8,  clipGamma: 1.0,  sharpen: 0.25 }, maxH: 1000, volSteps: 20, rc: { nx: 40, ny: 4, nz: 28 }, cascades: 4, rbIters: 4, mesh: 'near', cards: true, lossy: { gatherThird: true, rcHalfRate: false, volQuarter: false, fireflyK: FIREFLY_K, rcPeriods: RC_WHOLE }, caps: { volK: 4, volEvery: 2, volStep: 1.5, births: 384, debris: 64, rain: 4000, marchLights: 3, vol: 'classic' }, froxel: { h: 135, d: 64, k: 4, hist: 0.93, topRays: 2 } },
-  medium:  { restir: { rays: 4, spatial: 2, history: 20, held: 4, motionMin: 0.2, motionTaps: 6 }, rt: { on: true, div: 3, rays: 1, maxRough: 0.35, atrous: 3 }, dn: { shIters: 3, shCap: 10, giIters: 3, giCap: 16, spIters: 1 }, iq: IQ_C3J, scale: 0.67, taau: { phases: 16, clipGamma: 1.1,  sharpen: 0.4 }, maxH: 900,  volSteps: 14, rc: { nx: 40, ny: 4, nz: 28 }, cascades: 4, rbIters: 3, mesh: false, cards: false, lossy: { gatherThird: true, rcHalfRate: false, volQuarter: true, fireflyK: FIREFLY_K, rcPeriods: [1, 1, 2, 4] }, caps: { volK: 3, volEvery: 2, volStep: 1.5, births: 256, debris: 32, rain: 2500, marchLights: 2, vol: 'froxel' }, froxel: { h: 108, d: 48, k: 3, hist: 0.93, topRays: 2 } },
-  low:     { restir: { rays: 3, spatial: 2, history: 20, held: 3, motionMin: 0.5, motionTaps: 6 }, rt: RT_OFF, dn: { shIters: 2, shCap: 8, giIters: 3, giCap: 12, spIters: 1 }, iq: IQ_C3J, scale: 0.6,  taau: { phases: 16, clipGamma: 1.2,  sharpen: 0.5 }, maxH: 720,  volSteps: 10, rc: { nx: 40, ny: 4, nz: 28 }, rcCoarse: { nx: 32, ny: 3, nz: 22 }, cascades: 4, rbIters: 3, mesh: false, cards: false, lossy: { gatherThird: true, rcHalfRate: false, volQuarter: true, fireflyK: FIREFLY_K, rcPeriods: [1, 2, 3, 6] }, caps: { volK: 2, volEvery: 2, volStep: 2.0, births: 192, debris: 32, rain: 1500, marchLights: 0, vol: 'froxel' }, froxel: { h: 80, d: 32, k: 2, hist: 0.93, topRays: 1 } },
-  verylow: { restir: { rays: 2, spatial: 1, history: 20, held: 2, motionMin: 1.0, motionTaps: 6 }, rt: RT_OFF, dn: { shIters: 2, shCap: 8, giIters: 2, giCap: 8, spIters: 1 }, iq: IQ_C3J, scale: 0.5,  taau: { phases: 16, clipGamma: 1.25, sharpen: 0.5 }, maxH: 600,  volSteps: 8,  rc: { nx: 40, ny: 4, nz: 28 }, rcCoarse: { nx: 32, ny: 3, nz: 22 }, smokeOwn: true, cascades: 4, rbIters: 3, mesh: false, cards: false, lossy: { gatherThird: true, rcHalfRate: false, volQuarter: true, fireflyK: FIREFLY_K, rcPeriods: [1, 2, 4, 8] }, caps: { volK: 2, volEvery: 2, volStep: 2.0, births: 128, debris: 32, rain: 800, marchLights: 0, vol: 'froxel' }, froxel: { h: 64, d: 24, k: 2, hist: 0.93, topRays: 1 } },
+  high:    { restir: { rays: 4, spatial: 3, history: 20, held: 4, motionMin: 0.35, motionTaps: 6 }, rt: { on: true, div: 2, rays: 1, maxRough: 0.45, atrous: 3 }, dn: { shIters: 3, shCap: 12, giIters: 4, giCap: 24, spIters: 1 }, iq: IQ_C3J, scale: 0.77, taau: { phases: 8,  clipGamma: 1.0,  sharpen: 0.25 }, maxH: 1000, volSteps: 20, rc: { nx: 40, ny: 4, nz: 28 }, cascades: 4, rbIters: 4, mesh: 'near', cards: true, lossy: { gatherThird: true, rcHalfRate: false, volQuarter: false, fireflyK: FIREFLY_K, rcPeriods: RC_WHOLE }, caps: { volK: 4, volEvery: 2, volStep: 1.5, births: 384, debris: 64, rain: 4000 } },
+  medium:  { restir: { rays: 4, spatial: 2, history: 20, held: 4, motionMin: 0.2, motionTaps: 6 }, rt: { on: true, div: 3, rays: 1, maxRough: 0.35, atrous: 3 }, dn: { shIters: 3, shCap: 10, giIters: 3, giCap: 16, spIters: 1 }, iq: IQ_C3J, scale: 0.67, taau: { phases: 16, clipGamma: 1.1,  sharpen: 0.4 }, maxH: 900,  volSteps: 20, rc: { nx: 40, ny: 4, nz: 28 }, cascades: 4, rbIters: 3, mesh: false, cards: false, lossy: { gatherThird: true, rcHalfRate: false, volQuarter: false, fireflyK: FIREFLY_K, rcPeriods: [1, 1, 2, 4] }, caps: { volK: 2, volEvery: 2, volStep: 1.5, births: 256, debris: 32, rain: 2500 } },
+  low:     { restir: { rays: 3, spatial: 2, history: 20, held: 3, motionMin: 0.5, motionTaps: 6 }, rt: RT_OFF, dn: { shIters: 2, shCap: 8, giIters: 3, giCap: 12, spIters: 1 }, iq: IQ_C3J, scale: 0.6,  taau: { phases: 16, clipGamma: 1.2,  sharpen: 0.5 }, maxH: 720,  volSteps: 20, rc: { nx: 40, ny: 4, nz: 28 }, rcCoarse: { nx: 32, ny: 3, nz: 22 }, cascades: 4, rbIters: 3, mesh: false, cards: false, lossy: { gatherThird: true, rcHalfRate: false, volQuarter: false, fireflyK: FIREFLY_K, rcPeriods: [1, 2, 3, 6] }, caps: { volK: 2, volEvery: 2, volStep: 1.5, births: 192, debris: 32, rain: 1500 } },
+  verylow: { restir: { rays: 2, spatial: 1, history: 20, held: 2, motionMin: 1.0, motionTaps: 6 }, rt: RT_OFF, dn: { shIters: 2, shCap: 8, giIters: 2, giCap: 8, spIters: 1 }, iq: IQ_C3J, scale: 0.5,  taau: { phases: 16, clipGamma: 1.25, sharpen: 0.5 }, maxH: 600,  volSteps: 8,  rc: { nx: 40, ny: 4, nz: 28 }, rcCoarse: { nx: 32, ny: 3, nz: 22 }, smokeOwn: true, cascades: 4, rbIters: 3, mesh: false, cards: false, lossy: { gatherThird: true, rcHalfRate: false, volQuarter: true, fireflyK: FIREFLY_K, rcPeriods: [1, 2, 4, 8] }, caps: { volK: 2, volEvery: 2, volStep: 2.0, births: 128, debris: 32, rain: 800 } },
 };
 /** ONE SMOKE SOLVE (settings.oneSmokeSolve, default on, `?onesolve=0`; off = each preset's own `rbIters`, as it was: ultra 5, high 4, the rest 3). A sight line through smoke
  *  (a defender's eye to the player, the room fight's pairs, a camera's: game/sensors.ts → render/shaders/probe.wgsl kind 1) is the optical depth of the SOLVER's density along the
@@ -259,7 +259,7 @@ export function rbItersOf(p: Preset, one: boolean): number { return one ? PRESET
  *  and 0.95 ms where the fire is the only smoke — the same at every preset, and fixed: the render scale does not shrink it. Against the model's rungs that is 3.5 to 6.5 %
  *  of high and 6 to 11 % of medium, which the scale pays; 11 to 20 % of low, which the scale pays where other smoke already runs and cannot where the fire is the only smoke
  *  (a machine that only just holds low goes to the floor beside such a fire); and 17 to 32 % of verylow, whose whole per-pixel part is 1.0 model-ms on the scale floor: it
- *  cannot be paid there. So the rung that keeps its own smoke (`smokeOwn`: verylow, the floor, where the smoke is the last thing the ladder sheds — SMOKE KEEP below) draws the
+ *  cannot be paid there. So the floor's rung (`smokeOwn`: verylow) draws the
  *  fire without its smoke; every rung above keeps it and the scale pays. NOT a game rule: the source is look-only and its foot is over a standing man's head (the fire's notes:
  *  lines at 1.7 m and under kept all their light with the plume and without), but in the page a sight line over 1.9 m beside a fire reads the plume on low and up and none on
  *  verylow. None of it timed on a GPU.
@@ -282,28 +282,6 @@ export function fireSmokeFor(name: QualityName, shed: boolean, auto: boolean, no
  *  NOT make the read right: the meter still blends the cells around the man, some of them inside the wall beside him (docs/agents/render.md, BOUNCE WALLS 'not mended').
  *  Price: low and verylow trace 2.1 × the probes at their own refresh periods — in the cost model their fixed part 1.9 → 2.4 and 1.4 → 1.9 model-ms. */
 export const rcGridOf = (p: Preset, one: boolean) => one || !p.rcCoarse ? p.rc : p.rcCoarse;
-/** SMOKE KEEP (settings.smokeKeep, default 1, `?smokekeep=0|1|2`, Tab ▸ Frame; 0 = every preset's own smoke rows, as it was). The maintainer, with auto on medium (10-23): 'a ton
- *  of the smoke became very blocky … the smoke looks so sick in our game that i'd rather we keep it closer to high but then tradeoff other things in the frame budget'. The
- *  blocks are the quarter-size march (`lossy.volQuarter`: one march texel under 4 × 4 internal pixels, where high's half-size march has 2 × 2); under it medium and below also
- *  light the march with fewer lights a step and, on low and verylow, a longer step that combs a plume's shadow edges. 1 = on medium and low the SMOKE's rows are the better of
- *  its own and high's — the march at half size, high's lights a step (`caps.volK`, `caps.marchLights`), its shadow refresh and step length — on the preset's own path (the
- *  froxel haze stays: beams are not the smoke); everything else on the rung is still shed, and the ladder's render scale pays the difference. 2 = high's whole volumetric path
- *  too (`caps.vol` 'classic', high's beam steps): the smoke exactly as high draws it, at the preset's pixel count. The solver's iterations (`rbIters`) are not a look row: ONE SMOKE SOLVE above.
- *  A row with `smokeOwn` keeps its smoke at 1 and 2: verylow, the floor — the rung with nothing beneath it to pay, so the smoke is the LAST thing the ladder sheds.
- *  Every reader takes the preset through withSmoke — the rows put on, the live preset and the cost tables — so 0 is the ladder as it was, prices included. */
-export const SMOKE_KEEP_DEFAULT = 1;
-/** settings.smokeKeep from a setting or a ?smokekeep= word: 0 ('0', 'off', 'false') · 2 · anything else that is said 1; nothing said = the default */
-export function smokeKeepOf(v: number | string | null | undefined): number {
-  if (v === null || v === undefined) return SMOKE_KEEP_DEFAULT;
-  if (typeof v === 'string') return v === '2' ? 2 : v === '0' || v === 'off' || v === 'false' ? 0 : 1;
-  return Math.max(0, Math.min(2, Math.round(v) || 0));
-}
-export function withSmoke(p: Preset, keep: number): Preset {
-  if (!(keep > 0) || p.smokeOwn) return p;
-  const H = PRESETS.high, K = p.caps, HK = H.caps, classic = keep >= 2 && HK.vol === 'classic';
-  return { ...p, volSteps: classic ? Math.max(p.volSteps, H.volSteps) : p.volSteps, lossy: { ...p.lossy, volQuarter: p.lossy.volQuarter && H.lossy.volQuarter },
-    caps: { ...K, volK: Math.max(K.volK, HK.volK), volEvery: Math.min(K.volEvery, HK.volEvery), volStep: Math.min(K.volStep, HK.volStep), marchLights: Math.max(K.marchLights, HK.marchLights), vol: classic ? 'classic' : K.vol } };
-}
 /** ?nortreflect (main.ts): the RT reflections held OFF for this visit whatever preset auto or a menu applies — the by-hand Tab row still works. Module state, so every Quality instance
  *  and every apply() honours it. */
 export const rtVeto = { on: false };
@@ -313,8 +291,6 @@ export const sharpForce: { v: boolean | null } = { v: null };
 export const iqForce = { off: false };
 /** ?gbaa: GBAA + the TAA's jitter off forced for the visit whatever the presets place (main.ts sets it, apply() honours it after the tier's own taau rows) */
 export const gbaaForce = { on: false };
-/** ?nofroxel: the per-pixel volumetric march at every tier for the visit; ?froxel: the froxel path even at ultra / high (the A/B against the classic smoke those tiers ship) */
-export const froxelVeto = { on: false }; export const froxelForce = { on: false };
 /** the render scale a preset starts at on THIS engine: its TAAU scale with the resolve on, 1.0 without it (the old behaviour, ?notaau) */
 export const startScale = (p: Preset, taauOn: boolean) => taauOn ? p.scale : 1.0;
 
@@ -333,7 +309,7 @@ export const startScale = (p: Preset, taauOn: boolean) => taauOn ? p.scale : 1.0
 // (×0.95), 4/2/2 ≈ 2.15 (×0.745 — the adaptive stop 3 → 2 is most of it), 1/1/2 = 1 (×0.53).
 // So, per pixel at equal pixel count (ultra = 1): high 0.77 · medium 0.72 · low 0.63 · verylow 0.55; fixed (ultra/high = 1): medium 0.63 · low/verylow 0.33 on their coarse cache grid (0.38 / 0.30 of ultra's on the one grid).
 // The lead re-measures per-preset pass timings at one fixed scale and corrects REF / FACTOR; everything downstream follows.
-export const REF = { direct: 9.8, softblur: 3.3, gather: 6.6, temporal: 1.0, vol20: 0.8, vol2D: 0.3, froxelHigh: 0.8, bloom: 0.2, rc: 3.0, probe: 0.2, mpx: 1.777, taau: 0.25, reflect: 1.3, sharp: 1.7, gbaa: 0.15, mesh: 0.13, meshNearDirect: 0.12 };   // mesh: the skin + refit pass with the men on the floor (a fixed 0.13 ms at high AND ultra, M4 Max); meshNearDirect: what high's near-only walk + the self-shadow add to the direct rays in a lit-men view (docs/internal/render-defects-0812.md §1)   // gbaa: the copy + blend pass at high's 1777×1000 output (image-quality.md §3), per output pixel   // sharp: 'sharpU' + 'compS' at high's 1777×1000 OUTPUT in the calm cubicles still (0.92 + 0.79 ms serialized, M4 Max, docs/internal/sharp-direct.md §2) — scales with the preset's output pixels like the resolve   // reflect: the RT reflections (trace + their denoise chain) per REF.mpx INTERNAL pixels at a ÷2 target, 1 ray, on a lino-heavy view (docs/internal/p4-materials.md §2); ×(1 + 0.58 (rays − 1)), × (2/div)² for other divisors   // vol2D / froxelHigh (renderer v3 phase 2b, froxel volumetrics ON — the default): the 2D pass keeps only the smoke march + rain (≈0.3 ms at REF.mpx in the gate minute, per pixel, ÷4 under volQuarter) and 'volFroxel' is a FIXED ≈0.8 ms at high's 240×135×64 grid, k 4 + the strongest light's second stratum, scaling with froxels × (k + strata + 1) — measured docs/internal/p2b-froxels.md §2; vol20 stays for the march (froxelVol off)   // taau: the resolve at high's 1777×1000 OUTPUT (renderer v3 phase 1; measured 0.24 ms there, 0.34 at ultra's 2133×1200, serialized, M4 Max) — it scales with the preset's output pixels (maxH²), not with the render scale, so the model files it under 'fixed'
+export const REF = { direct: 9.8, softblur: 3.3, gather: 6.6, temporal: 1.0, vol20: 0.8, bloom: 0.2, rc: 3.0, probe: 0.2, mpx: 1.777, taau: 0.25, reflect: 1.3, sharp: 1.7, gbaa: 0.15, mesh: 0.13, meshNearDirect: 0.12 };   // mesh: the skin + refit pass with the men on the floor (a fixed 0.13 ms at high AND ultra, M4 Max); meshNearDirect: what high's near-only walk + the self-shadow add to the direct rays in a lit-men view (docs/internal/render-defects-0812.md §1)   // gbaa: the copy + blend pass at high's 1777×1000 output (image-quality.md §3), per output pixel   // sharp: 'sharpU' + 'compS' at high's 1777×1000 OUTPUT in the calm cubicles still (0.92 + 0.79 ms serialized, M4 Max, docs/internal/sharp-direct.md §2) — scales with the preset's output pixels like the resolve   // reflect: the RT reflections (trace + their denoise chain) per REF.mpx INTERNAL pixels at a ÷2 target, 1 ray, on a lino-heavy view (docs/internal/p4-materials.md §2); ×(1 + 0.58 (rays − 1)), × (2/div)² for other divisors   // taau: the resolve at high's 1777×1000 OUTPUT (renderer v3 phase 1; measured 0.24 ms there, 0.34 at ultra's 2133×1200, serialized, M4 Max) — it scales with the preset's output pixels (maxH²), not with the render scale, so the model files it under 'fixed'
 export const FACTOR = { third: 0.485, quarter: 0.375, halfRate: 0.6, cards: 1.055,
   restir: { 6: 1.0, 5: 0.8, 4: 0.52, 3: 0.45, 2: 0.42 } as Record<number, number> };   // restir: the estimator's direct pass ÷ REF.direct (the leader/tail pass at 8/4/3 it replaced), by rays per pixel (docs/internal/p2a-restir.md: cubicles at high 7.1 → 3.55 / 2.97 / 2.54 ms; the stress minute 0.50–0.55 at every tier; 5 and 6 from the ultra takes)
 /** the v3 denoiser's tiers in the model (docs/internal/p3-denoise.md §2, calm still, serialized, M4 Max): the SHADOW client costs ≈ (0.85 + 0.30 × iterations) ms per internal Mpx —
@@ -350,28 +326,24 @@ export function presetCost(p: Preset, oneGrid = true) {   // oneGrid: settings.o
   const direct = REF.direct * (FACTOR.restir[p.restir.rays] ?? 1);   // priced by the estimator's rays per pixel (a count off the table is priced as 6's)
   const gather = REF.gather * (L.gatherThird ? FACTOR.third : 1) * (p.cards ? FACTOR.cards : 1), temporal = REF.temporal * (L.gatherThird ? FACTOR.third : 1) * dnGiFactor(p.dn.giIters);
   const softblur = REF.softblur * dnShadowFactor(p.dn.shIters);   // (the v3 denoiser is the engine default: its shadow client files under 'softblur', its gather-grid clients under 'temporal', both tiered by iterations)
-  const classicVol = p.caps.vol === 'classic';   // (08-12: ultra / high run the per-pixel march for haze and smoke — priced per pixel at vol20 × volSteps/20 with no froxel term; the froxel tiers keep the 2D smoke+rain pass + the fixed froxel term)
-  const vol = (classicVol ? REF.vol20 * (p.volSteps / 20) : REF.vol2D) * (L.volQuarter ? FACTOR.quarter : 1);   // (froxels on: the 2D pass = smoke march + rain; the beams' cost is the fixed froxel term below — a smaller error than the model's own on this pass)
-  const F = p.froxel, FH = PRESETS.high.froxel;
-  const froxel = classicVol ? 0 : REF.froxelHigh * (F.h / FH.h) ** 2 * (F.d / FH.d) * ((F.k + F.topRays + 1) / (FH.k + FH.topRays + 1));   // 'volFroxel' (0 on the classic tiers): ∝ froxels (rows² at a fixed aspect × slices) × shadow rays per lit froxel
+  const vol = REF.vol20 * (p.volSteps / 20) * (L.volQuarter ? FACTOR.quarter : 1);   // the per-pixel march for haze and smoke, by the beams' steps and the pass's size (lights a step are not priced: the reference frame is a calm one, and what a plume under many lamps costs is the worst-case caps' business)
   const rc = REF.rc * (probesOf(p, oneGrid) / probesOf(PRESETS.high)) * (p.cascades / 4) * (L.rcHalfRate ? FACTOR.halfRate : 1) * rcPeriodsFactor(L.rcPeriods);
   const taau = REF.taau * (p.maxH / PRESETS.high.maxH) ** 2;   // the resolve at this preset's output size (with TAAU off the machine simply measures a smaller fixed part; the ratios stay close)
   const sharp = p.iq.sharp && p.scale < 1 ? (REF.sharp + (p.iq.gbaa ? REF.gbaa : 0)) * (p.maxH / PRESETS.high.maxH) ** 2 : 0;   // sharp direct's output-size kernels ('sharpU' + 'compS') where the preset places it (Preset.sharp): per OUTPUT pixel like the resolve, live only where the preset renders below its cap (docs/internal/sharp-direct.md §2)
   const reflect = p.rt.on ? REF.reflect * (1 + 0.58 * Math.max(0, p.rt.rays - 1)) * (2 / Math.max(1, p.rt.div)) ** 2 : 0;   // RT reflections ('reflect' + 'rdenoise'): per pixel of the reflection target, roughly linear in rays past the first
   const mesh = p.mesh ? REF.mesh + (p.mesh === 'near' ? REF.meshNearDirect : 0) : 0;   // mesh-traced character shadows: the refit pass (+ high's near-only share of the direct rays; ultra's every-ray walk was measured inside its direct REF)
-  const pixel = direct + softblur + gather + temporal + vol + REF.bloom + reflect, fixed = rc + REF.probe + taau + froxel + sharp + mesh;
-  return { pixel, fixed, passes: { direct, softblur, gather, temporal, volumetrics: vol, volFroxel: froxel, bloom: REF.bloom, reflect, rc, probe: REF.probe, taau, sharp, mesh } };
+  const pixel = direct + softblur + gather + temporal + vol + REF.bloom + reflect, fixed = rc + REF.probe + taau + sharp + mesh;
+  return { pixel, fixed, passes: { direct, softblur, gather, temporal, volumetrics: vol, bloom: REF.bloom, reflect, rc, probe: REF.probe, taau, sharp, mesh } };
 }
-/** the table for another setting of the two switches that move a preset's price: ONE CACHE GRID off prices low and verylow on their coarse grid, SMOKE KEEP 0 / 2 the smoke
- *  rows as each preset has them / on high's path (both off = the table as it was) */
+/** the table for either setting of the switch that moves a preset's price: ONE CACHE GRID off prices low and verylow on their coarse grid */
 type CostTable = Record<QualityName, ReturnType<typeof presetCost>>;
 const costTables = new Map<string, CostTable>();
-export function costTable(oneGrid = true, smokeKeep = SMOKE_KEEP_DEFAULT): CostTable {
-  const keep = smokeKeepOf(smokeKeep), key = `${oneGrid ? 1 : 0}/${keep}`;
-  let t = costTables.get(key); if (!t) { t = Object.fromEntries(QUALITY_NAMES.map(n => [n, presetCost(withSmoke(PRESETS[n], keep), oneGrid)])) as CostTable; costTables.set(key, t); }
+export function costTable(oneGrid = true): CostTable {
+  const key = oneGrid ? '1' : '0';
+  let t = costTables.get(key); if (!t) { t = Object.fromEntries(QUALITY_NAMES.map(n => [n, presetCost(PRESETS[n], oneGrid)])) as CostTable; costTables.set(key, t); }
   return t;
 }
-/** the table of the page as it opens: one cache grid, SMOKE KEEP 1 */
+/** the table of the page as it opens: one cache grid */
 export const COST = costTable();
 
 export interface Plan { preset: QualityName; scale: number; predicted: number; note: string }
@@ -381,8 +353,8 @@ export interface Plan { preset: QualityName; scale: number; predicted: number; n
  *  (PLAN_BUDGET_MS: 15 ms ≈ a presented 50–55 fps once the render passes, the CPU and vsync slop are added). Order of preference: high → medium → low at full scale; low
  *  with the scale solved for the budget (never under the floor); verylow at full scale; verylow solved down to the floor; and if even that misses, verylow at the floor
  *  flagged 'below target' (the runtime ladder has nothing cheaper either). */
-export function plan(gpuMs: number, fixedMs: number, cur: QualityName, effNow: number, cssH: number, dpr: number, budgetMs = PLAN_BUDGET_MS, taauOn = true, oneGrid = true, smokeKeep = SMOKE_KEEP_DEFAULT): Plan {
-  const table = costTable(oneGrid, smokeKeep);   // (the grid and the smoke rows the presets run: settings.oneCacheGrid, settings.smokeKeep)
+export function plan(gpuMs: number, fixedMs: number, cur: QualityName, effNow: number, cssH: number, dpr: number, budgetMs = PLAN_BUDGET_MS, taauOn = true, oneGrid = true): Plan {
+  const table = costTable(oneGrid);   // (the grid the presets run: settings.oneCacheGrid)
   const pixelMs = Math.max(0.5, gpuMs - fixedMs); const c0 = table[cur];
   const capOf = (p: Preset) => Math.min(1, p.maxH / Math.max(1, cssH * dpr));                            // the effective scale that preset's cap gives this window at render scale 1.0
   const fixedOf = (name: QualityName) => fixedMs * (table[name].fixed / c0.fixed);
@@ -459,13 +431,13 @@ export class Quality {
     const costOf = (c: ReturnType<typeof presetCost>, maxH: number, scale: number) => c.fixed + c.pixel * mpx(maxH, scale) / REF.mpx;
     // the CURRENT preset priced as it is being rendered — the live scale (climbed above the start or cut below it), the live lossy divisors, the live cap — not as its rows say
     const pc = PRESETS[cur]; const live: Preset = cur === this.current ? this.livePreset(cur) : pc;
-    const one = this.oneGrid(), table = costTable(one, this.smokeKeep());   // (the grid and the smoke rows the presets run: ONE CACHE GRID, SMOKE KEEP)
+    const one = this.oneGrid(), table = costTable(one);   // (the grid the presets run: ONE CACHE GRID)
     const curCost = costOf(cur === this.current ? presetCost(live, one) : table[cur], live.maxH, cur === this.current ? S.renderScale : startScale(pc, taauOn));
-    const nextCost = this.shed && this.shedOn() ? presetCost({ ...withSmoke(PRESETS[next], this.smokeKeep()), iq: { ...PRESETS[next].iq, sharp: false } }, one) : table[next];   // (SHARP SHED: the shed stays across the hop, so the next preset is priced as it will run)
+    const nextCost = this.shed && this.shedOn() ? presetCost({ ...PRESETS[next], iq: { ...PRESETS[next].iq, sharp: false } }, one) : table[next];   // (SHARP SHED: the shed stays across the hop, so the next preset is priced as it will run)
     return costOf(nextCost, PRESETS[next].maxH, startScale(PRESETS[next], taauOn)) / Math.max(0.1, curCost);
   }
   /** preset `cur` (the current one) as it is being rendered: the live lossy divisors, cap and scale over its rows (scale + iq.sharp as they are: presetCost prices sharp direct by `iq.sharp && scale < 1`) */
-  private livePreset(cur: QualityName): Preset { const S = this.engine.settings; const pc = withSmoke(PRESETS[cur], this.smokeKeep()); return { ...pc, lossy: { ...pc.lossy, gatherThird: !!S.gatherThird, volQuarter: !!S.volQuarter, rcHalfRate: !!S.rcHalfRate }, maxH: S.maxInternalHeight || pc.maxH, scale: S.renderScale, iq: { ...pc.iq, sharp: !!S.sharpDirect && S.taau !== false } }; }
+  private livePreset(cur: QualityName): Preset { const S = this.engine.settings; const pc = PRESETS[cur]; return { ...pc, lossy: { ...pc.lossy, gatherThird: !!S.gatherThird, volQuarter: !!S.volQuarter, rcHalfRate: !!S.rcHalfRate }, maxH: S.maxInternalHeight || pc.maxH, scale: S.renderScale, iq: { ...pc.iq, sharp: !!S.sharpDirect && S.taau !== false } }; }
   /** the climb is allowed at all this visit: false where the address holds a tier (`?quality=`, or `?adapt=0` alone: visit below) — 'pins a preset' means the rows the harnesses and A/B pages measure stay put; a preset pinned from a MENU
    *  keeps the climb (spending a roomy machine's headroom is what it is for), and settings.ladderClimb is the by-hand switch either way */
   climbAllowed = true;
@@ -554,25 +526,15 @@ export class Quality {
     this.lastChange = `auto: starting at ${this.current}${sc !== null ? ` ×${this.engine.settings.renderScale.toFixed(2)}` : ''}${onLadder(remembered) ? ' (this machine\'s last pick)' : ''} — calibrating`;
   }
 
-  /** the smoke's rows of a preset, written to the settings: the march's size, its lights a step, shadow refresh and step length, the beam steps and the volumetric path — the ONE
-   *  writer, for a preset put on (apply) and for SMOKE KEEP moved by hand (resmoke) */
+  /** the smoke's rows of a preset, written to the settings: the march's size, its lights a step, shadow refresh and step length, the beam steps */
   private putSmoke(p: Preset) {
     const S = this.engine.settings, K = p.caps;
-    S.volSteps = p.volSteps; S.volQuarter = p.lossy.volQuarter; S.volLightCap = K.volK; S.volShadowEvery = K.volEvery; S.volStepVoxels = smokeLookStep(K.volStep) /* the look page marches a shorter step in proportion: render/smokeLook.ts */; S.smokeMarchLights = K.marchLights;
-    S.froxelVol = froxelVeto.on ? false : froxelForce.on ? true : K.vol === 'froxel';   // the tier's volumetric path (Caps.vol above; ?nofroxel / ?froxel force it for the visit)
-  }
-  /** SMOKE KEEP moved by hand (the Tab row): the current preset's smoke rows put on again, nothing else of the preset touched. A 'volumetrics ¼ → ½' rung the climb had
-   *  standing is forgotten with it (the rows just written are the preset's start: undoing that rung later would put the march back at quarter size under a kept smoke). */
-  resmoke() {
-    if (!(this.current in PRESETS)) return;
-    this.putSmoke(withSmoke(PRESETS[this.current], this.smokeKeep())); this.climbed = this.climbed.filter(st => st.kind !== 'vol');
+    S.volSteps = p.volSteps; S.volQuarter = p.lossy.volQuarter; S.volLightCap = K.volK; S.volShadowEvery = K.volEvery; S.volStepVoxels = smokeLookStep(K.volStep) /* the look page marches a shorter step in proportion: render/smokeLook.ts */;
   }
   /** ONE CACHE GRID as the engine has it (a stub engine without the setting counts as on — the default) */
   private oneGrid(): boolean { return this.engine.settings.oneCacheGrid !== false; }
   private oneSolve(): boolean { return this.engine.settings.oneSmokeSolve !== false; }
   private fireShed(): boolean { return this.engine.settings.fireSmokeShed !== false; }
-  /** SMOKE KEEP as the engine has it, 0 ‥ 2 (a stub engine without the setting counts as the default) */
-  private smokeKeep(): number { return smokeKeepOf(this.engine.settings.smokeKeep); }
   /** The label for menus: 'auto (high)' or the pinned preset. */
   get label() { return this.auto ? `auto (${this.current})` : this.current; }
 
@@ -592,7 +554,7 @@ export class Quality {
 
   apply(name: QualityName) {
     if (!(name in PRESETS)) throw new Error(`Quality.apply: no preset is called '${name}' (the presets: ${QUALITY_NAMES.join(', ')})`);   // (an untyped caller: the console, a harness script written when there was an ultra)
-    const p = withSmoke(PRESETS[name], this.smokeKeep()); const S = this.engine.settings; this.current = name; this.lastCut = null; this.upTrial = null;   // (a preset put on is nobody's cut to judge; SMOKE KEEP: its smoke rows are the better of its own and high's)
+    const p = PRESETS[name]; const S = this.engine.settings; this.current = name; this.lastCut = null; this.upTrial = null;   // (a preset put on is nobody's cut to judge)
     const sc = startScale(p, S.taau !== false);   // (a stub engine without the setting counts as TAAU on — the default)
     S.renderScale = sc; S.maxInternalHeight = p.maxH; this.maxScale = sc;
     S.taauPhases = p.taau.phases; S.taauClipGamma = p.taau.clipGamma; S.taauSharpen = p.taau.sharpen;   // the resolve's per-tier knobs (Tab ▸ Frame rows move them by hand until the next preset)
@@ -607,9 +569,8 @@ export class Quality {
     S.giFireflyK = L.fireflyK;   // the gather's relative firefly bound, the same way (lossyCfg.w; the Tab ▸ Indirect light slider is the by-hand row)
     S.meshShadows = !!p.mesh; S.meshShadowsNear = p.mesh === 'near';   // mesh-traced character shadows: ultra every ray (measured free at 2133×1200: direct 17.4 / 17.9 / 17.1 ms off / on / off), high for NEAR receivers only (the contact seam between a limb and its proxy's shadow: +0.13 ms mesh pass + a bounded share of the direct rays — docs/internal/render-defects-0812.md §1), the rest off; the engine still ANDs meshShadowsAvailable; the pause-menu / Tab rows are the by-hand switch
     S.torchBounceCards = p.cards; // torch bounce cards: ultra + high (docs/internal/perf-2026-08-10.md — cheap everywhere, placed where the look was checked); Tab ▸ Indirect light is the by-hand switch
-    const K = p.caps; this.putSmoke(p);   // the smoke's rows — the march's size, lights a step, shadow refresh, step length, the beam steps, the volumetric path (putSmoke: one writer with the Tab row's resmoke)
+    const K = p.caps; this.putSmoke(p);   // the smoke's rows — the march's size, lights a step, shadow refresh, step length, the beam steps (putSmoke)
     // the worst-case caps (Caps above): the volumetric march / beams …
-    const F = p.froxel; S.froxelH = F.h; S.froxelD = F.d; S.froxelK = F.k; S.froxelHistory = F.hist; S.froxelTopRays = F.topRays;    // … the froxel volume's grid / lights per froxel / history (FroxelTier above; settings.froxelVol itself is not the preset's: ?nofroxel / the Tab row own it) …
     S.particleBirths = K.births;                                                                           // … GPU particle births a frame (engine.render hands it to Particles.prepare; the queue carries the rest) …
     S.debrisCap = K.debris;                                                                                // … the destruction lane's rigid-debris pool (game/debris.ts reads it live: a full pool demotes new break-offs to particles) …
     S.particleRainCount = K.rain;                                                                          // … the particle rain's drop cap (rainFx.ts; nothing runs while settings.particleRain is off) …
@@ -637,13 +598,13 @@ export class Quality {
     c.t += rawDt; c.dts.push(rawDt);
     const tm = this.engine.timer;
     if (tm.enabled && tm.results.size) {
-      let fixed = 0; for (const [k, v] of tm.results) if (/^rc |^probe$|^smoke$|^taau$|^volFroxel$|^sharpU$|^compS$|^gbaa$|^mesh$|^air$|^powder$|^diceRing$|^fogSight$|^place$/.test(k)) fixed += v;   // per-probe / per-voxel / per-froxel / per-character work: does not shrink with resolution (nor does the TAAU resolve: it runs at the OUTPUT size, which the render scale leaves alone — and neither do sharp direct's two output-size kernels; 'mesh' = the mesh shadows' skin + refit)
+      let fixed = 0; for (const [k, v] of tm.results) if (/^rc |^probe$|^smoke$|^taau$|^sharpU$|^compS$|^gbaa$|^mesh$|^air$|^powder$|^diceRing$|^fogSight$|^place$/.test(k)) fixed += v;   // per-probe / per-voxel / per-character work: does not shrink with resolution (nor does the TAAU resolve: it runs at the OUTPUT size, which the render scale leaves alone — and neither do sharp direct's two output-size kernels; 'mesh' = the mesh shadows' skin + refit)
       c.gpu.push(tm.total(RENDER_PASSES)); c.fixed.push(fixed);
     }
     if (c.dts.length >= 54 || c.t > 3) this.decide();
   }
   /** The pure decision (module-level `plan`), kept on the instance for the console: `__quality.plan(58, 9, 'high', 1, 900, 2)`. */
-  plan(gpuMs: number, fixedMs: number, cur: QualityName, effNow: number, cssH: number, dpr: number, budgetMs = PLAN_BUDGET_MS): Plan { return plan(gpuMs, fixedMs, cur, effNow, cssH, dpr, budgetMs, this.engine.settings.taau !== false, this.oneGrid(), this.smokeKeep()); }
+  plan(gpuMs: number, fixedMs: number, cur: QualityName, effNow: number, cssH: number, dpr: number, budgetMs = PLAN_BUDGET_MS): Plan { return plan(gpuMs, fixedMs, cur, effNow, cssH, dpr, budgetMs, this.engine.settings.taau !== false, this.oneGrid()); }
   private decide() {
     const c = this.calib; c.done = true;
     const med = (a: number[]) => { const b = [...a].sort((x, y) => x - y); return b.length ? b[Math.floor(b.length / 2)] : NaN; };

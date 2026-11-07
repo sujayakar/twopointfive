@@ -919,7 +919,7 @@ fn wipePage(@builtin(global_invocation_id) gid: vec3u) {
 }
 
 // ------------------------------------------------------------------ boxes: ≤ 8 BOUNDS for the readers that clip rays before they march (never storage, never a limit on the smoke)
-// The marchers, the froxel cull and the shadow rays start from `smoke: array<SmokeBound, 8>` (common.wgsl): boxes to clip against, bounds round wherever renderable bricks are:
+// The marchers and the shadow rays start from `smoke: array<SmokeBound, 8>` (common.wgsl): boxes to clip against, bounds round wherever renderable bricks are:
 // bricks are binned into plan tiles, each tile keeps the box of its bricks, and the tiles are merged greedily into at most four boxes a level. More plumes than boxes = looser boxes
 // (rays walk some empty page entries), never lost smoke.
 struct DomOut { origin: vec3f, voxel: f32, pad0: vec3u, live: u32, dims: vec3u, pad1: u32, show: f32, readSkip: f32, pad3: f32, pad4: f32 };   // = common.wgsl SmokeBound

@@ -33,7 +33,7 @@
 //
 // With the flag off none of this runs: Game.update's one call into tick() returns on its first line, and BreachDrill without `live` is the show's drill as it was.
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load — the knobs are a plain literal.)
-import { stageMen, allDown, eachSeat, firstOf, seatCount, floorRoom } from './seats';
+import { stageMen, allDown, eachSeat, firstOf, budgetWithSeats, floorRoom } from './seats';
 import { rollbackVar } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import type { Game, Guard, PairId } from './game';
@@ -227,7 +227,7 @@ export class NightBreach {
     const g = this.g, P = g.level.breach ?? null, K = NIGHTBREACH, NB = g.level.scenarios?.nightBreach, T = this.teamOf(this.layout);
     this.drill?.end(); this.drill = null; this.ops = []; this.hostiles = [];
     if (K.roomLights && NB?.lights) g.setGroup(NB.lights, true);   // (off = as authored — the restart has just put the room back as the night has it: the office's break room, two vending machines)
-    const n = K.squad, four = n > 2, budget = four ? Math.max(SQUAD4_BUDGET - 1 + seatCount(g), this.layout?.budget ?? 0) : this.layout?.budget;   // (three is the four less its last man: the same budget, the same roster)
+    const n = K.squad, four = n > 2, budget = four ? Math.max(budgetWithSeats(g, SQUAD4_BUDGET), this.layout?.budget ?? 0) : this.layout?.budget;   // (three is the four less its last man: the same budget, the same roster)
     // where the teammates stand: the layout's own marks (a level whose structure brings its team start), else the breach plan's approach marks — and the way they face
     const mark = (i: number): Vec3 => { const p = this.layout?.team?.ops?.[i] ?? P?.from?.[i] ?? P?.stack[i] ?? T?.ops?.[i]; if (!p) throw new Error(`no mark for teammate ${i + 1} (the level's team start, or its breach plan)`); return p; };
     const yaw = (this.layout?.team ?? T)?.opsYaw ?? Math.PI / 2;

@@ -173,12 +173,6 @@ pub fn startle_propose(g: &crate::game::Game, gd: GuardId) -> Option<crate::game
     if s.run.is_some() { s.script } else { None }
 }
 
-/// THE BODY'S SEAM, as one call: the rule's state moved, then what it wants.   (startle.ts startleScript)
-pub fn startle_script(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::game::GuardScript> {
-    startle_transition(g, gd);
-    startle_propose(g, gd)
-}
-
 /// The beat is over: he draws (the fight as it was, from here) or he runs.   (startle.ts choose)
 pub fn choose(g: &mut crate::game::Game, gd: GuardId) {
     let now = g.time;

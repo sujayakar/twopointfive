@@ -40,7 +40,7 @@ const SHOTS: [number, number][] = [[0.1, 0.1], [0.11, 0.1], [0.12, 0.11], [-0.5,
 
 async function stage(seed: number) {
   Math.random = seeded(seed);
-  const W = await standUp(); const { game, engine } = W; floatPartition(game);
+  const W = await standUp({ dress: true }); const { game, engine } = W; floatPartition(game);
   engine.particles = new Particles(fake('device'), fake('sceneLayout')); engine.settings.gpuParticles = true;
   game.godMode = true; game.player.visibility = 0.02; game.tune.chaos = 0.5; game.tune.glassBreak = true; game.tune.glassShards = true; resetStats();
   for (let i = 0; i < 5; i++) W.step(DT);
@@ -210,7 +210,7 @@ export async function volley(root: string, seed: number) {
   const { digestGame } = await import(`${root}/src/game/digest.ts`); const { tread } = await import(`${root}/src/game/floor.ts`);
   try {
     Math.random = seeded(seed);
-    const W = await H.standUp(); const { game, engine } = W; floatPartition(game);
+    const W = await H.standUp({ dress: true }); const { game, engine } = W; floatPartition(game);
     engine.particles = new PMr.Particles(H.fake('device'), H.fake('sceneLayout')); engine.settings.gpuParticles = true;
     game.godMode = true; game.player.visibility = 0.02; game.tune.chaos = 0.5; game.tune.glassBreak = true; game.tune.glassShards = true;
     for (let i = 0; i < 5; i++) W.step(DT);

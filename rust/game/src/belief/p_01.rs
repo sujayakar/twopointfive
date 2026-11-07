@@ -45,17 +45,13 @@ pub fn fix_is_sight(g: &mut crate::game::Game, gd: GuardId) -> bool {
 /// Where his own eyes have the man, for the rules that ask only that of a man on a post. (belief.ts eyesFix)
 pub fn eyes_fix(g: &mut crate::game::Game, gd: GuardId, pt: V3) -> Option<V3> {
     let lk = g.gd[gd].last_known?;
-    // Rule off, `lk !== pt` asks identity; here by value, for a caller with no Def in hand (none today: the callers ask `eyes_fix_def`).
-    let his = fix_is_sight(g, gd);
-    if his { Some(lk) } else { None }
+    if fix_is_sight(g, gd) { Some(lk) } else { None }
 }
 
-/// `eyesFix(gd, D.pt)` asked of a defender's own Def, as every caller asks it. Rule off, `lk !== pt` is an IDENTITY (roomfight.ts:880 can make a fix
-/// with D.pt's very numbers that is not D.pt): the Def knows whether his fix is its watched point (`def_fix_is_pt`, the stamp), and the numbers do not.
+/// The same, asked of a defender by his row of the room fight.
 pub fn eyes_fix_def(g: &mut crate::game::Game, gd: GuardId, d: RoomfightDefId) -> Option<V3> {
-    let lk = g.gd[gd].last_known?;
-    let his = fix_is_sight(g, gd);
-    if his { Some(lk) } else { None }
+    let pt = g.tab.roomfight_def[d].pt;
+    eyes_fix(g, gd, pt)
 }
 
 /// Where his gun goes with no man to shoot at: his eyes this very tick, else his duty, else his belief. (belief.ts gunPoint)
@@ -68,10 +64,8 @@ pub fn gun_point(g: &mut crate::game::Game, gd: GuardId) -> Option<V3> {
 /// A report that reaches him outside his ears and eyes places his belief. (belief.ts word)
 pub fn word(g: &mut crate::game::Game, gd: GuardId, at: V3) {
     let now = g.time;
-    let man = &mut g.gd[gd];
-    man.last_known = Some(at);
-    man.fix_stamp = man.fix_stamp.wrapping_add(1); // a fresh object in the TypeScript: always a new fix
-    man.word_t = now;
+    crate::mind::fix(g, gd, Some(at), "belief"); // a fresh object in the TypeScript: always a new fix
+    g.gd[gd].word_t = now;
 }
 
 /// What he hears of `at` or before does not write over a word. (belief.ts wordStands)

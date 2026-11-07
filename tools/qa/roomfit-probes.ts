@@ -90,7 +90,7 @@ export const roomfitCleared = guarded(async () => {
 
 /** the office under a seed, the night breach's squad staged (two, or four), the defenders kept dazzled */
 async function rig(seed: number, squad: 2 | 4) {
-  Object.assign(NIGHTBREACH, NB_DEFAULTS, { blindFire: false, squad });
+  Object.assign(NIGHTBREACH, NB_DEFAULTS, { squad });
   Math.random = seeded(seed);
   const W: any = await standUp(); const game = W.game, NB = game.nightBreach, O = game.orders, input = W.input; game.godMode = true;
   const why = NB.start(); const heard = new WeakSet<any>();

@@ -48,7 +48,7 @@ import { lastStandHint } from './laststand';
 import { w } from './words';   // (a leaf: the dialogue pass's one switch)
 import { SAMESTART } from './samestart';   // (a leaf: every mission starts the same way on every try)
 import { RUST_PASS, RUST_SURFACE } from './crossing';
-import { seatCount } from './seats';   // (how many players' men stand: every budget of characters counts it)
+import { budgetWithSeats } from './seats';   // (how many players' men stand: every budget of characters counts it)
 
 /** The scenario's knobs (Tab ▸ Sandbox ▸ Room clear, __roomclear.knobs; read at the next staging). */
 export const ROOMCLEAR = {
@@ -252,7 +252,7 @@ export class RoomClearScenario {
   constructor(private g: Game) {
     const self = this;
     this.layout = { name: 'room clear', defenders: () => this.deal(), staged: () => this.onStaged(),
-      get budget() { const n = self.structure?.maxMen ? self.structure.rooms.reduce((k, r) => k + r.garrison, 0) : 0; return n > 5 ? seatCount(self.g) + 4 + n : undefined; },   // (a structure with maxMen: a man a seat, the four and its men)
+      get budget() { const n = self.structure?.maxMen ? self.structure.rooms.reduce((k, r) => k + r.garrison, 0) : 0; return n > 5 ? budgetWithSeats(self.g, 1 + 4 + n) : undefined; },   // (a structure with maxMen: a man a seat, the four and its men)
       get team() { return self.startNow() ?? undefined; },   // (the structure's own start, where it gives one: a level with no breach plan has no approach marks to stand the team on — or the other way in this start took, ROOMCLEAR.way)
       stagedLine: () => `room clear. ${this.placement.length} armed enemies hold ${this.rooms.length} rooms: ${this.rooms.map(r => r.def.name).join(', ')}. ${!this.g.nightBreach.noDrill ? `Press F to stack up on the ${this.drillRoom()?.name ?? 'door'}, or X for orders (door tools on any door)` : this.g.nightBreach.ops.length ? 'X for your orders (door tools on any door)' : "You're alone"}` };   // (noDrill: a level with no breach plan, or a loadout of fewer than two — game/loadout.ts)
   }

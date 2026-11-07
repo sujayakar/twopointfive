@@ -267,53 +267,6 @@ pub fn event_text(g: &mut crate::game::Game, e: &crate::chronicle::ChronEvent) -
     }
 }
 
-/// `PIN[kind]`: the table's own row of a kind.
-fn pin_of(p: &PIN, kind: ChronKind) -> Option<&PINDown> {
-    match kind {
-        ChronKind::Down => p.down.as_ref(),
-        ChronKind::Shot => p.shot.as_ref(),
-        ChronKind::Blackout => p.blackout.as_ref(),
-        ChronKind::Heard => p.heard.as_ref(),
-        ChronKind::Objective => p.objective.as_ref(),
-        ChronKind::Grab => p.grab.as_ref(),
-        ChronKind::Ocp => p.ocp.as_ref(),
-        ChronKind::Thrown => p.thrown.as_ref(),
-        ChronKind::Radio => p.radio.as_ref(),
-        ChronKind::Spotted => p.spotted.as_ref(),
-        ChronKind::Contact => p.contact.as_ref(),
-        ChronKind::Lost => p.lost.as_ref(),
-        ChronKind::Calm => p.calm.as_ref(),
-        ChronKind::Alarm => p.alarm.as_ref(),
-        ChronKind::LightShot => p.light_shot.as_ref(),
-        ChronKind::Interrogated => p.interrogated.as_ref(),
-        ChronKind::KeyTaken => p.key_taken.as_ref(),
-        ChronKind::Ko => p.ko.as_ref(),
-        ChronKind::Kill => p.kill.as_ref(),
-        ChronKind::BodyFound => p.body_found.as_ref(),
-        ChronKind::DoorKicked => p.door_kicked.as_ref(),
-        ChronKind::LockPicked => p.lock_picked.as_ref(),
-        ChronKind::Hit => p.hit.as_ref(),
-        ChronKind::NeedBreak => p.need_break.as_ref(),
-        ChronKind::CivilianSpotted => p.civilian_spotted.as_ref(),
-        ChronKind::CivilianReported => p.civilian_reported.as_ref(),
-        ChronKind::CivilianComplied => p.civilian_complied.as_ref(),
-        ChronKind::CivilianKO => p.civilian_ko.as_ref(),
-        ChronKind::CivilianKilled => p.civilian_killed.as_ref(),
-        ChronKind::CameraSpotted => p.camera_spotted.as_ref(),
-        ChronKind::CameraAlarm => p.camera_alarm.as_ref(),
-        ChronKind::LaserTripped => p.laser_tripped.as_ref(),
-        ChronKind::DeviceDown => p.device_down.as_ref(),
-        ChronKind::CodeLearned => p.code_learned.as_ref(),
-        ChronKind::CodeEntered => p.code_entered.as_ref(),
-        ChronKind::Checkpoint => p.checkpoint.as_ref(),
-    }
-}
-
-/// Does this row get a pin on the floor map (an alarm going down does not).   (chronicle.ts pinned)
-pub fn pinned(e: &crate::chronicle::ChronEvent) -> bool {
-    pin_of(&pin(), e.kind).is_some() && !(e.kind == ChronKind::Alarm && !on(&e.data, "up"))
-}
-
 #[cfg(test)]
 mod tests {
     //! Expected strings printed by the TypeScript's own eventText, pinned and String(x) under bun. Rows that reach gear_text or a door's name are
@@ -459,49 +412,4 @@ mod tests {
         for (x, want) in rows { assert_eq!(js::num_str(x), want); }
     }
 
-    #[test]
-    fn pins_are_the_typescript_pins() {
-        let rows: Vec<(ChronKind, bool, bool)> = vec![
-        (ChronKind::Objective, false, false),
-        (ChronKind::Spotted, true, true),
-        (ChronKind::Contact, false, false),
-        (ChronKind::Heard, false, false),
-        (ChronKind::Lost, false, false),
-        (ChronKind::Calm, false, false),
-        (ChronKind::Alarm, true, false),
-        (ChronKind::Radio, false, false),
-        (ChronKind::Shot, false, false),
-        (ChronKind::LightShot, true, true),
-        (ChronKind::Ocp, true, true),
-        (ChronKind::Blackout, true, true),
-        (ChronKind::Thrown, false, false),
-        (ChronKind::Grab, false, false),
-        (ChronKind::Interrogated, false, false),
-        (ChronKind::KeyTaken, false, false),
-        (ChronKind::Ko, true, true),
-        (ChronKind::Kill, true, true),
-        (ChronKind::BodyFound, true, true),
-        (ChronKind::DoorKicked, true, true),
-        (ChronKind::LockPicked, true, true),
-        (ChronKind::Hit, false, false),
-        (ChronKind::Down, true, true),
-        (ChronKind::NeedBreak, false, false),
-        (ChronKind::CivilianSpotted, true, true),
-        (ChronKind::CivilianReported, true, true),
-        (ChronKind::CivilianComplied, false, false),
-        (ChronKind::CivilianKO, true, true),
-        (ChronKind::CivilianKilled, true, true),
-        (ChronKind::CameraSpotted, true, true),
-        (ChronKind::CameraAlarm, true, true),
-        (ChronKind::LaserTripped, true, true),
-        (ChronKind::DeviceDown, false, false),
-        (ChronKind::CodeLearned, false, false),
-        (ChronKind::CodeEntered, false, false),
-        (ChronKind::Checkpoint, false, false),
-        ];
-        for (kind, with_up, without) in rows {
-            assert_eq!(pinned(&row(kind, "hall", vec![("up", B(true))])), with_up);
-            assert_eq!(pinned(&row(kind, "hall", vec![])), without);
-        }
-    }
 }

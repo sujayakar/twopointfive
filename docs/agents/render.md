@@ -175,6 +175,50 @@ row on his machine is the answer, and the word puts the count back on any machin
   (a moved frame on the plain program until the twin landed) is gone with `restirMReady`. `shaderrows-check` holds that a moved frame runs the one program
   with its taps packed. Boot texts 115 to 113; both compile in Chromium's compiler with no warning. **NOT MEASURED: what the untaken branches cost a still
   frame on a real GPU** (the old twin run at rest measured +0.2 ms of direct at High on the M4 Max, most of it the flow this writing skips). **Never seen on a GPU.**
+- **ONE FOG MARCH ON EVERY TIER (2026-11-07; the maintainer's pick on a card, "Per-pixel, two lights a step", from stills of both ways and the cloud
+  card's numbers).** WHAT IT WAS: high marched haze and smoke per pixel (`volumetrics.wgsl`, its "classic" march). Medium, low and very low lit the
+  haze through a camera-frustum froxel grid (`render/froxels.ts`, `shaders/froxel.wgsl`: five kernels, three volumes and the smoke's own) and marched
+  the smoke with a second march lit from that grid (`smokeMarchJ`, in a twin program `volFroxel`); SMOKE KEEP (`settings.smokeKeep`, `withSmoke`)
+  chose how much of high's smoke a tier kept; a third march with no light cap (`VOL_K0`) had a twin of its own that no tier ran. A player on high and
+  one on medium saw fog made by different code, and the ladder hopped between the two in play. WHAT IT IS: ONE program, `vol`, on every tier, and a
+  tier differs by its rows alone (`ui/quality.ts` PRESETS): high as it was (half size, 20 beam steps, 4 lights a step, refresh 2, step 1.5); MEDIUM
+  AND LOW = HIGH'S MARCH WITH 2 LIGHTS A STEP; very low, the floor, its own small rows (quarter size, 8 steps, 2 lights, step 2.0).
+  GONE: `render/froxels.ts`, `shaders/froxel.wgsl`, `smokeMarchJ`, the K = 0 march and every `volK > 0` branch (the engine keeps the cap at 1 or
+  more; a settings table no preset has written, 0, is read as high's 4), `volFroxel` and `volK0`, `FrameFlags.FroxelVol` (bit 29 free), the Frame's
+  `froxelA/B/C` (THE FRAME BLOCK IS 48 BYTES SHORTER: every member after `volCfg` moved 12 words down, `FRAME_BYTES` 31168, `FRAME_HEAD_BYTES` 928;
+  `prevCam.w` and `volCfg.w` bits 8‥11 are free), the composite's binding 11 and the particles' binding 4 (the three after it renumbered), `Caps.vol`,
+  `Caps.marchLights`, `FroxelTier`, SMOKE KEEP with `?smokekeep`, `withSmoke`, `Quality.resmoke` and its Tab row, `?froxel`, `?nofroxel`, `__froxel`,
+  `__hotFroxel`, the debugger's Froxels section and 'plume: lights lit per step' row, the sweep's `froxel` and `marchLights` rows,
+  tools/qa/froxel-ab.js and froxel-scenes.js, the froxel ghost proof in rfix-proofs.ts. UNREAD, LEFT FOR THE RUST SIDE TO DROP WITH ITS COPY of the
+  settings table (a field leaves both sides in one Rust batch): `smokeKeep`, `smokeMarchLights`, `froxelVol`, `froxelH`, `froxelD`, `froxelK`,
+  `froxelHistory`, `froxelNear`, `froxelFar`, `froxelCurve`, `froxelTopRays`, `froxelSharp`, `froxelBias`. The smoke lab's 'lamps that light each
+  step' row moves `volLightCap` now (it moved `smokeMarchLights`, which high never read).
+  WHAT MOVES FOR A PLAYER. HIGH: nothing. Its smoke march is the same text line for line, and the haze's `volK > 0` wrappers are unwrapped with K
+  never under 1. MEDIUM AND LOW: beams and smoke are marched per pixel, as high's are, with two lights a step: a beam's edge is the pixel's own (no
+  froxel a dozen pixels wide, no fourteen frames of froxel history behind a camera cut), and a plume is lit by its two strongest lamps a step where
+  the froxel-lit march lit it by three (SMOKE KEEP's rows) over the grid's soft light. The smoke march starts at a dither fixed per texel, as high's
+  always has; the froxel-lit one started at one rotated each frame. VERY LOW: the same per-pixel march at its own rows where it had the froxel grid
+  at 64 × 24 and a plume lit by the grid alone.
+  THE COST, on the cloud's NVIDIA card (A10G, the tree before, one page, a rainy dusk with a smoke can thrown, time frozen, three seconds a row,
+  2026-11-07): MEDIUM 13.22 ms a frame with the froxel grid, 13.70 with this (+3.6 %), 14.73 with four lights; LOW 8.86, 9.08 (+2.5 %), 10.45.
+  Lights a step is the lever: half the steps or a refresh every 4 moved a frame by under 0.2 ms, and A QUARTER-SIZE MARCH READ SLOWER than the half
+  (14.81 against 14.73 on medium, 11.18 against 10.45 on low, at four lights), which is why medium and low are not at quarter size; very low still
+  is, by its old row, and the ladder's model prices a quarter-size march at × 0.375 (`FACTOR.quarter`), which that card does not bear out.
+  THE LADDER'S MODEL (`presetCost`): the march is priced per pixel on every tier (`REF.vol20` by the beam steps and the size; lights a step are not
+  priced), the froxels' fixed term is gone: medium's per-pixel part 13.5 to 14.0 model-ms and its fixed part 3.8 to 3.4, low 11.7 to 12.2 and 2.4
+  to 2.3. Where auto lands on a machine moves with that; no machine has run it.
+  THE COMPILE: six pipelines and two modules fewer (the title's boot is 35 modules and 100 pipelines), and the froxel-lit twin was the page's
+  dearest program alone (10.7 s on that card against 7.0 for the one left).
+  WHAT WENT WITH THE FROXEL-LIT MARCH AND WAS NOT CARRIED OVER (each would change which steps of HIGH's march trace a ray, so each is a picture call
+  nobody has made; the text is in git before this commit, `volumetrics.wgsl smokeMarchJ`): a start rotated each frame (`jitterS`: a still view
+  converges smooth under the resolve); `MARCH_DIR_TMAX` (a shadow ray toward the sun or the moon stops at 30 m: "the moon's whole price");
+  `MARCH_MINOR_K` (a light under 4 % of the stronger ones at a step spends no ray); `MARCH_REFRESH_W` (a shadow answer is refreshed only at steps
+  that weigh in the pixel). The first three are the likely next cut in what the march costs on every tier.
+  CHECKS: `bun run tools/qa/probes.ts ladder` (six lines of the rows in the ladder's self-test; `FOGROWS_BREAK=1` fails two);
+  `tools/qa/shaderrows-check.ts` (one program, no twin, no froxel kernel asked for; a frame with no cap said draws with the cap at 4);
+  `frame-layout.ts`; `dust-look-check.ts` and the looks probe (the one march's read of the dust); `shaderinline-check` (floors 35 and 100).
+  NOT SEEN: THE SOFTWARE ADAPTER DRAWS NO SMOKE, so no frame with smoke in it was drawn here on the new path; frames without smoke were (the plain
+  page at medium, staged: 93 of 93 pipelines, no GPU error). No Mac has drawn it. Nobody has looked at medium, low or very low in motion.
 - **ONE SET OF RAY PROGRAMS (2026-11-07; the maintainer's yes on the shader survey's row for it).** The page compiled every program that traces
   boxes TWICE: the boot's without the cut rule, then a second set with it in the background after every boot, swapped in while a cut piece a ray
   could meet was alive (`render/cutSwap.ts`, "a calm room pays nothing"). There is ONE set now, with the rule in (`scenePrelude()` carries
@@ -428,7 +472,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   booted with 4 pairs at medium; low, verylow and medium applied in turn each left 4; with the setting put off and the same three applied, 3 each; back on, 4; a canister solved
   six frames at `stats.rbPairs` 4 with no GPU or page error. The `?onesolve=0` word itself was not opened on a page (one line beside `?onegrid=0`, read before the first
   preset). Never timed or seen on a GPU.
-- **The smoke keeps high's look down the ladder** (10-23; `settings.smokeKeep` 0 | 1 | 2, 1 in the page and the workbench, `?smokekeep=0|1|2`, Tab ▸ Frame 'smoke under
+- **The smoke keeps high's look down the ladder** (GONE SINCE 2026-11-07: the switch, its Tab row, `?smokekeep`, `withSmoke` and `Quality.resmoke` went with the froxel path, and medium and low carry high's march in their own rows: ONE FOG MARCH ON EVERY TIER above. `settings.smokeKeep` is unread and leaves with the Rust side's copy of the table. What follows is the rule as it was) (10-23; `settings.smokeKeep` 0 | 1 | 2, 1 in the page and the workbench, `?smokekeep=0|1|2`, Tab ▸ Frame 'smoke under
   high'). The maintainer, with auto on medium: "a ton of the smoke became very blocky … the smoke looks so sick in our game that i'd rather we keep it closer to high but
   then tradeoff other things in the frame budget". WHAT WAS BLOCKY: under high the march ran at quarter size (`lossy.volQuarter`: one march texel under 4 × 4 internal
   pixels; high's half-size march has 2 × 2), lit by fewer lights a step (medium 3 / 2, low and verylow 2 / 0 = `caps.volK` / `caps.marchLights`, high 4 / 3) and on low and
@@ -466,7 +510,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   `fullRateDomains` went with the boxes. Measure with `tools/qa/stress-scene.js` (`await import('/qa/stress-scene.js')`
   → `__stress.setup()` / `.record(n)` / `.ab(applyA, applyB)` / `.caps(on)` / `.table(r)`, serialized frames, orbiting camera) and `__hotVol(src?)` (recompile
   volumetrics.wgsl from disk — the dev server serves src/render/shaders under /qa/shader/ — and swap the pipeline in without rebooting a staged scene).
-- **Froxel volumetrics** (renderer v3 Phase 2b) — `settings.froxelVol` per tier (`quality.ts Caps.vol`: ultra / high 'classic', medium and below 'froxel'), `?nofroxel` / `?froxel` force either; `settings.smokeMarchLights`; `__froxel`, `__hotFroxel` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
+- **Froxel volumetrics** (GONE SINCE 2026-11-07, deleted whole: ONE FOG MARCH ON EVERY TIER above. The `settings.froxel*` fields and `smokeMarchLights` are unread and leave with the Rust side's copy of the table) (renderer v3 Phase 2b) — `settings.froxelVol` per tier (`quality.ts Caps.vol`: ultra / high 'classic', medium and below 'froxel'), `?nofroxel` / `?froxel` force either; `settings.smokeMarchLights`; `__froxel`, `__hotFroxel` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 - **Lossy options** (engine settings, default OFF in `defaultSettings`, switched ON by the presets as above; `LOSSY:` rows in the
   Tab panel for A/B; `checkerDirect` and `dimRays`, which only the old estimator read, went with it 2026-11-07): `gatherThird` / `volQuarter` (gather at 1/3, volumetrics at 1/4 res: `passes.setDivisors`, divisors
   in `frame.lossyCfg.xy`), `rcHalfRate` (`rc.halfRate`: uppers even frames, c0 + bake odd). `engine.render` mirrors the booleans every
@@ -568,7 +612,7 @@ row on his machine is the answer, and the word puts the count back on any machin
 - **The scene group's binding 11 is the fog of war's sight table, and `evalLight` asks it (10-14, `FOG.full` — `stealth.md`).** `common.wgsl`: `evalLight` =
   `evalLightRaw` (the old body) × `lightFogK` for a light whose kind word carries bit 25 / 26 (none while the rule or the fog is off: one `and` a light);
   `evalLightTrue` = the light as it is, for the game's readings (`probe.wgsl` alone). A NEW PLACE THAT WORKS A LIGHT OUT WITHOUT `evalLight` MUST MULTIPLY BY
-  `lightFogK` (today: the glints in `reflect.wgsl` ≡ `reflect_p5.wgsl`, `cards.wgsl`, `froxel.wgsl`, the march's K-beam pick) — `probes.ts fog-full` reads the
+  `lightFogK` (today: the glints in `reflect.wgsl` ≡ `reflect_p5.wgsl`, `cards.wgsl`, the march's K-beam pick) — `probes.ts fog-full` reads the
   text for these and fails on any other file calling `evalLightRaw`. `fogSeenAt` walks the grid, so the VERTEX stage uses `fogSeenBins`. The table is a 58 KB (41 KB until 10-24, when the fog took five eyes; `FOG.eyes`, `docs/agents/stealth.md`)
   uniform (the 5th of 12 a stage may bind with the composite group's) written as storage by `fogsight.wgsl` at the head of the frame, bound through a second
   scene group (`sceneBGPlain`, a zero stand-in at 11). Sampled textures: the composite stage is at 15 of 16 (13 + the smoke atlas + the smoke page — the note
@@ -865,8 +909,17 @@ row on his machine is the answer, and the word puts the count back on any machin
   lookSurface` and `snow.wgsl` ask the module's own `GBUF_SNOW`. A page draws with its level's own (`GBuffer.init`: `snowLookConfig.surface` picks) and
   asks for the other through the later lane without keeping it: a page is one level for its whole life, and the ask is for the visit's next one. So the
   kept page still compiles nothing at any level, the program a level draws with is the size it was, and a visit's first page compiles three programs
-  more (`gbufBoxesSnow`, `gbufBoxesCutSnow`, and `gbufSnow`, the hills, which is of the snow's module). The men's `cold` (look.wgsl lookMan) stays a
-  read of the level word. THE RULE IT LEAVES: a level's switch is a branch where the code is small, and a second program asked for on every page where
+  more (`gbufBoxesSnow`, `gbufBoxesCutSnow`, and `gbufSnow`, the hills, which is of the snow's module), and a fourth for the men (below).
+  **THE MEN'S PROGRAM COMES IN THE TWO WRITINGS TOO, and that was the lost device.** `look.wgsl lookMan` had `let cold = lv(SNOW_SURF) &&
+  snowCfg.p[1].z > 0.5;` (a snow level's men are cold in the face). On the look's page that one line lost the device on the software adapter the first
+  time the men were drawn: the adapter's GPU process exits on signal 11. Placed with a page read that draws unstaged (the men in frame; a staged
+  `draw-equal` view on the Rust build has them out of frame, which is why three reads here were clean): no pass working, the device lives; the g-buffer
+  pass alone, lost; in it the men's pipeline alone, lost, the boxes', the cut boxes' and the down pass clean; and with the line as `false`, as
+  `lv(SNOW_SURF)` alone or as the `snowCfg` read alone, clean. So it is the short-circuit of those two uniform reads in that fragment program, nothing of
+  size or memory. `cold` asks `GBUF_SNOW` now and `gbufSkin` has its `gbufSkinSnow` (`GBuffer.prepareSkin`: the level's own awaited, the other through
+  the later lane, the two asked in one order on every level, which `levelset-check` reads), so NO text of the g-buffer's module asks the level word for the snow's surface, and every one of its programs on a level without snow
+  is the text it was before the level word existed. (`LevelSw.SNOW_SURF` still rides in the word and no shader asks it.) After it: the same unstaged
+  read of the look's page draws two frames and keeps its device, and the snow level under `?look`, which lost its device here too, runs 150 s clean. THE RULE IT LEAVES: a level's switch is a branch where the code is small, and a second program asked for on every page where
   it is heavy; never a constant of a text a level's start would compile again. The card's numbers above are the branch form's: the second and third
   level's load stands (the texts a level asks for are still the visit's), the 0.1 ms is gone with the branch.
   **Checks:** `bun run tools/qa/levelset-check.ts` (the page's boot recorded under the title's switches and a snow level's, rows as written and as the
@@ -881,7 +934,9 @@ row on his machine is the answer, and the word puts the count back on any machin
   `fogofwarPre` under play, and their cut twins after them (the maintainer, 10-27: "i think we shouldn't do truly lazy compilation where then have
   stutters during gameplay"). They are asked for once the boot's own are in, behind the start: not on the start card's count, and the load's record (`made`, frozen at the
   boot's end) does not count them. While one compiles it is one of the LATER set's (`gpu/device.ts laterHold`, taken in `FogPass.program` and
-  `FogSight.program`): a brief's Start, `__ready` and auto quality's measure wait for it, where a program made at first use was counted by nobody. 104 KB pasted for the three, 143 for the cut
+  `FogSight.program`): a brief's Start, `__ready` and auto quality's measure wait for it, where a program made at first use was counted by nobody.
+  The look's loose snow (`render/powderField.ts powderWarm`, on the look's page alone) is asked for there too: its step was made the first frame a snow
+  level stood its powder, the one program a snow level under `?look` still compiled at its start. 104 KB pasted for the three, 143 for the cut
   twins. `tools/qa/pageboot.ts` asks for them as the page does, so the size and compile tools read them. A pass that gains a program of its own asks
   for it in `warmFirstUse`. Still made at first use: whatever a `?word` trial builds, the save picture's, the debug views'.
   **A trap for `draw-equal.cjs`:** against a tree from before this, the squad view DIFFERS at both checkpoints (a quarter of the pixels, at the men's
@@ -913,6 +968,45 @@ row on his machine is the answer, and the word puts the count back on any machin
   3.7 | 4.3 · gatherTrace 3.7 | 4.1 · froxelInjectJ 3.6 | 4.0 · reflect 2.9 | 3.4. A brief's Start waits for every program (`docs/agents/menus.md`),
   so for a player the whole sum is the wait. What follows from the table: one set of ray programs is half of it; then the march, three writings of one
   kernel (vol, volFroxel, volDust) and over a third of what is left. On the software adapter the tool's milliseconds are that adapter's and say nothing.
+- **The dust's look is part of the march's text, not a third march program (2026-11-07; `shaders/dust_look.wgsl`, `shaders/volumetrics.wgsl`, `engine.ts
+  smokeDrawWords`).** The march was three programs of one kernel: `vol` (the classic tiers'), `volFroxel` (with the froxel-lit smoke march) and `volDust`,
+  which was `volFroxel`'s text with five statements swapped at eleven sites by string (`render/dustLookVol.ts`, deleted), compiled on every page and
+  chosen by the frame while some brick of smoke held dust. It was the dearest program of the page to build (10.0 s alone on the cloud card, the table
+  above), a third of the march's sum, and until it was in dust was drawn as plain smoke. Now the two lit marches are WRITTEN with the dust's statements
+  (`let dl = dustDensity(X, onMask, true); let dens = fogSmoke(dl.d, X); let dTint = dustTintOf(dl);`, the tint on both in-scatter terms, the dust's
+  self-shadow where `dl.dust > 0`), and `dustDensity` opens on `if (!dustAlive())`: the march's own masked read, no tint, `dust` 0. `dustAlive` is bit 1 of
+  `frame.sideCfg.z`, beside the smoke lab's streak bit, raised by `SmokeBinding.dusty` (never with `?nodustlook`: `smoke.ts` asks `DUST_DRAW` there now).
+  So with no dust alive every sample's density is the read it was, the tint is exactly 1 (`1 + 0 / max(d, 1e-6)`, and a product by exactly 1 is exact
+  however a compiler orders it) and the self-shadow is the plain one: the picture of a frame without dust cannot move by arithmetic. With dust alive the
+  statements run are the twin's own. What changes for a player: dust is dust from its first frame (no wait for a later program), and on a classic tier a
+  dust frame runs `vol` where it ran the froxel text with the froxel march not taken (the same classic march, read off the same text). The K = 0 march
+  (its own program, no row ships it) still draws dust as plain smoke. PASTED SIZE (`shaderinline-check`, with the cut test's text): vol 337 to 364 KB,
+  volFroxel 421 to 474 (it is what volDust was, 470, and four more for the test), volDust's 470 gone; the three together 1,228 to 838 KB. The budget row
+  for the march is 400 (was 382; 395 on the look's page) and volDust's row is out. CHECKS: `tools/qa/dust-look-check.ts` pins the statements and the
+  plain read as text (the wallbreak family's looks probe runs the same pin), `shaderrows-check` reads that both programs carry the look and that no
+  `volDust` is asked for, `fog-air` that the dust's drawn density still goes through `fogSmoke`. NOT READ: the smoke solver does not run on the software
+  adapter (five storage textures in a stage), so no frame with smoke or dust in it was drawn here before or after; frames without smoke were, and are
+  PIXEL-EQUAL to the tree before (`draw-equal`, office-night and firefight at high, both checkpoints). ON THE CLOUD NVIDIA CARD (A10G, Vulkan; the named
+  tree `5dbe0d75` against it with the fold, the benchmark on two boxes of one kind): first load's shaders 21.9 s to 20.9 s, 100 of 100 programs on both
+  (the fold is one fewer and the look page's mend one more), the last program ready on both the froxel march at 20.9 s; the volumetrics pass 3.2 ms on
+  both and every row's GPU ms inside the spread, so the bit costs a frame nothing that reads. A second is inside what two boxes differ by (1.5 s that
+  morning); what is not is the sum: every program alone, driver's cache off, 108 programs and 70.5 s of one compiler thread where the morning's tree was
+  128 and 140.9 s (the ray programs' one set, the composite and this). Dearest alone now: volFroxel 10.7 s, vol 7.0, particlesUpdate 6.9, restir 5.0,
+  composite 4.8, compositeS 4.6, gatherTrace 4.1, froxelInjectJ 3.9, reflect 3.4. The second and third loads of that pair read 10.3 and 7.3 s on the
+  named tree and 3.7 and 3.2 s with the fold; nothing in the fold touches the programs that were built again there (the particle update, the composite),
+  so that is the box's driver cache and no result of this.
+  WHY THE MARCH IS STILL TWO PROGRAMS, MEASURED (OVERTAKEN THE SAME DAY: the froxel-lit march and its twin are deleted, ONE FOG MARCH ON EVERY TIER above, and the one program left is the cheaper of the two) (the same card, the hour after; the one-program form is a commit kept off the build, `Render: the
+  march is one program for every tier`). With `const VOL_FROXEL_MARCH` gone and the one text compiled once, a frame taking the froxel-lit march by
+  `FrameFlags.FroxelVol` alone: 107 programs and 61.4 s alone where the fold left 108 and 70.5 s (the one march 10.0 s alone). But the wait a person
+  sits through first is the boot's set, and on that card it ends when the march does: `?firstframe=1`, 92 programs in 17.6 s with the two programs (the
+  boot's march 7.0 s alone, last in at 17.6 s) and in 19.7 s with the one (10.0 s alone, last in at 19.6 s); every program waited for, 99 in 19.1 s
+  against 98 in 18.2 s. One run each, on boxes that differ by a second or two, so read the direction and not the tenths: the one program takes about
+  nine seconds off the sum and about a second off the whole set, and puts two or three on the first wait, because the boot then holds the dearer
+  text. (The benchmark of the one-program form landed on a box of the slower kind, 42.1 s to its first start, so it says nothing of the load; its
+  volumetrics pass read 3.1 ms against 3.2, so the one text costs a frame at high nothing that reads.) That is what the twin was made for (2026-10-26), and it still holds. So the twin stays until the march itself is cheaper to build, or the
+  froxel-lit smoke march is a program of its own beside the classic one (its result feeds the rain and the beams in `main`, so that is a pass with a
+  target between, not a move of text). What the table says to try first, unmeasured: the march is asked for 1.7 s into the boot and needs 7 s alone, yet
+  is the last program in at 17 to 19 s; where the compile queue is off (everywhere but Windows) nothing asks for the dearest program first.
 - **Windows: why the shader wait came back on every load, and the compile queue (2026-10-26, measured on a Windows machine: RTX 3080, a 16-thread desktop CPU,
   Chrome 155, a 4K 240 Hz display at 150 %).** Chrome on Windows runs WebGPU on D3D12 and compiles with DXC (`use_dxc` is on; FXC, `--disable-dawn-features=use_dxc`,
   had not finished the boot after 16 minutes). DXC inlines every call, so the big kernels are 5–25 s each (fgather's `main` grows from 95 KB of WGSL to ~680 KB inlined:

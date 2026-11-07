@@ -4,9 +4,8 @@
 //   bun run tools/qa/probes.ts sidedoor | sidedoor-marks | sidedoor-feet | sidedoor-fight
 // All headless (headless.ts's Game under the room clear's staging): nothing here looks at a picture — how a man stands on a mark that is not a wall's is unseen.
 //   sidedoor-marks   geometry: neither jamb of that face has floor; the marks the men work out for one to four of them are on free floor, a clear walk from
-//                    the doorway's front, off the line of the opening, a body's room apart, the stand-off's clear of a charge's backblast; ORDERS.workOut off
-//                    = no marks, as it was; marks authored for the face (the hostage rescue's) still win; every door face of the office that HAS jamb floor
-//                    is dealt the same marks with the switch on and off
+//                    the doorway's front, off the line of the opening, a body's room apart, the stand-off's clear of a charge's backblast; marks authored
+//                    for the face (the hostage rescue's) still win
 //   sidedoor-feet    the rows on that face, by four and by the pair, the room beyond kept blind (feet, not the fight): stack up, open and clear, bang and
 //                    clear, breach with a charge, hold the door / step in, clear from outside — each is taken, and each entry ends 'in' with every man it
 //                    sent across the frame line and nobody left in the opening; and from the manager's side (jamb floor, the keypad's lock): the boot
@@ -79,8 +78,6 @@ export const sidedoorMarks = guarded(async () => {
   const latch = jamb(W + K.jambPast), hinge = jamb(-K.jambPast);
   verdict(nav.isBlocked(latch[0], latch[2]) && nav.isBlocked(hinge[0], hinge[2]) && !O.doorMarks.some((m: any) => m.door === d), 'the cause: from the server room neither jamb of the side door has floor (the corner on the latch side, the cart on the hinge side), and the room clear authors no marks for the face',
     `latch jamb ${at(latch)} blocked ${nav.isBlocked(latch[0], latch[2])} · hinge jamb ${at(hinge)} blocked ${nav.isBlocked(hinge[0], hinge[2])} · authored marks on it: ${O.doorMarks.filter((m: any) => m.door === d).length}`);
-  ORDERS.workOut = false; const off = [1, 2, 3, 4].map(n => O.stackPosts(d, side, men.slice(0, n))), offSo = D.standoffPosts(d, side, 4), offWhy = O.whyNot(O.defs.find((x: any) => x.id === 'openClear'), { kind: 'door', at: d.frameCentre, door: d, side }, men); ORDERS.workOut = true;
-  verdict(off.every((p: any) => p === null) && offSo === null && !!offWhy, 'ORDERS.workOut off: no stack and no stand-off on that face, the rows greyed — as it was', `stack ${off.map((p: any) => p === null ? 'none' : p.length).join(' / ')} · stand-off ${offSo === null ? 'none' : offSo.length} · open and clear: "${offWhy}"`);
   const rows: string[] = []; let ok = true;
   const front = [d.frameCentre[0] - Math.sin(d.def.closedDir) * side * K.jambOut, 0.45, d.frameCentre[2] + Math.cos(d.def.closedDir) * side * K.jambOut];
   const good = (P: number[][]) => P.every(p => !nav.isBlocked(p[0], p[2]) && offOf(d, p) * side > 0 && (alongOf(d, p) < -0.2 || alongOf(d, p) > W + 0.2) && !g.col.solidBlocked(front, [p[0], 0.45, p[2]]))
@@ -101,12 +98,6 @@ export const sidedoorMarks = guarded(async () => {
   const au = O.stackPosts(d, side, men.slice(0, 2)), auS = D.standoffPosts(d, side, 2); O.doorMarks.pop();
   verdict(!!au && au.every((x: any, i: number) => dist(x.pos, SIDE_MARKS.stack[i]) < 1e-6) && !!auS && auS.every((x: any, i: number) => dist(x.pos, SIDE_MARKS.standoff[i]) < 1e-6), 'marks authored for the face are still the ones used (the hostage rescue\'s pair)', `stack ${au?.map((x: any) => at(x.pos)).join(' ')} · stand-off ${auS?.map((x: any) => at(x.pos)).join(' ')}`);
   // every face that has jamb floor: the same marks, switch on or off
-  let faces = 0, same = 0, moved = 0, nulls: string[] = []; const sig = (P: any) => P === null ? 'null' : P.map((x: any) => `${at(x.pos)}${x.lead ? '*' : ''}${x.group ?? ''}`).join(' ');
-  g.teleportPlayer([9.6, 0, 20.3]); R.step(2);
-  for (const o of g.doors.list) for (const s of [1, -1] as const) for (const n of [1, 2, 4]) { if (o === d && s === side) continue; faces++;
-    ORDERS.workOut = false; const a = [sig(O.stackPosts(o, s, men.slice(0, n))), sig(D.standoffPosts(o, s, n))]; ORDERS.workOut = true; const b = [sig(O.stackPosts(o, s, men.slice(0, n))), sig(D.standoffPosts(o, s, n))];
-    if (a[0] === b[0] && a[1] === b[1]) same++; else { nulls.push(`${o.def.name} ${s > 0 ? '+' : '−'} for ${n}: ${a.join(' | ')}  →  ${b.join(' | ')}`); if (!O.workedMarks(o, s).jambless || a.some((x, i) => x !== b[i] && x !== 'null')) moved++; } }
-  verdict(moved === 0, 'every other door face of the office: where the walls gave marks they are the same marks; the switch only adds marks where there were none', `${same} of ${faces} (door, face, men) the same${nulls.length ? `\n    ${nulls.join('\n    ')}` : ''}`);
   return done();
 });
 
@@ -118,8 +109,7 @@ export const sidedoorFeet = guarded(async () => {
   // on in the page) the board has no 'outside' row: that order is thresholdHold's, asked above it in the list. (The case asked whyNot of a row that is not
   // there and threw; the throw failed the second line too.) Where an entry order halts at a door found locked (DOORTOOLS.testDoor, on in the page) open and
   // clear from the keypad's side tries it, says the lock and holds: the boot is the player's next word, and doortest-check.ts's to hold.
-  // Both rules are read off the game each case has just stood up (a stand-up writes the table by the stand and by a word given by hand).
-  // SIDEFEET_BREAK=1 = the red path of both: each rule is read the other way round.
+  // SIDEFEET_BREAK=1 = the red path of both: the check asks for the board and the entry as they were before the two rules.
   const BREAK = process.env.SIDEFEET_BREAK === '1'; let ran = 0;
   const CASES: [string, 2 | 4][] = [['stack', 4], ['openClear', 4], ['bangClear', 4], ['charge', 4], ['thresholdHold', 4], ['outside', 4], ['stack', 2], ['openClear', 2], ['bangClear', 2], ['charge', 2], ['thresholdHold', 2], ['outside', 2]];
   for (const [id, squad] of CASES) {
@@ -127,7 +117,7 @@ export const sidedoorFeet = guarded(async () => {
       const R = await rig(3, { squad, blind: ['manager'] }); const { O, D } = R; const d = R.door(DOOR), room = R.room('manager'), n = squad;
       R.empty('server'); R.place(AISLE);
       const def = O.defs.find((x: any) => x.id === id);
-      if (id === 'outside' && !!DOORTOOLS.outsidePlain !== BREAK) { const there = !!def; ok &&= !there; rows.push(`outside by ${n}: ${there ? 'THE BOARD HAS THE ROW and it was passed over  ← FAIL' : `no such row on this board: 'clear from outside' is ${toolsRow4(DOORTOOLS)}'s, row 4 of the tools`}`); continue; }
+      if (id === 'outside' && !BREAK) { const there = !!def; ok &&= !there; rows.push(`outside by ${n}: ${there ? 'THE BOARD HAS THE ROW and it was passed over  ← FAIL' : `no such row on this board: 'clear from outside' is ${toolsRow4(DOORTOOLS)}'s, row 4 of the tools`}`); continue; }
       if (!def) { ok = false; rows.push(`${id} by ${n}: THE BOARD HAS NO SUCH ROW  ← FAIL`); continue; }
       ran++;
       const t = O.targetAt(d.frameCentre), grey = O.whyNot(def, O.forMen(t, R.up), R.up);
@@ -157,7 +147,7 @@ export const sidedoorFeet = guarded(async () => {
     const lines: string[] = []; { const say = R.game.say.bind(R.game); R.game.say = (gd: any, text: string, ...r: any[]) => { lines.push(text); return say(gd, text, ...r); }; }
     const why = R.give('openClear', DOOR); R.step(2); const op = D.ops.find((o: any) => o.door === d); R.until(() => !D.ops.includes(op), 70); R.step(60);
     const sent = op ? [...op.pod.keys()] : [], kicked = !!op?.beats.some((b: any) => /kick/.test(b.what)) || d.lockBroken;
-    const tries = !!DOORTOOLS.testDoor !== BREAK, said = lines.some(l => /lock/.test(l));
+    const tries = !BREAK, said = lines.some(l => /lock/.test(l));
     if (tries) verdict(why === null && !!op && op.ended === 'found shut' && said && !d.lockBroken && d.locked && (op.crossed.size ?? 0) === 0, 'from the manager\'s office (the keypad\'s side: locked against the team) open and clear is taken, the door is tried, the lock is said and the men hold on it: nobody in, the lock whole (the boot is the next word\'s)', `give → ${why} · locked ${d.locked}`
       + ` · lock broken ${d.lockBroken} · "${lines.filter(l => /lock|kick/.test(l)).join('" "')}" · ended '${op?.ended}' · sent in ${sent.length}, crossed ${op?.crossed.size}`);
     else verdict(why === null && !!op && op.ended === 'in' && kicked && sent.every((m: any) => op.crossed.has(m) || m.state === 'dead'), 'from the manager\'s office (the keypad\'s side: locked against the team) open and clear boots it and goes in', `give → ${why} · lock broken ${d.lockBroken} · "${lines.filter(l => /lock|kick/.test(l)).join('" "')}" · ended '${op?.ended}' · sent in ${sent.length}, crossed ${op?.crossed.size}`); }

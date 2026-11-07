@@ -3,41 +3,35 @@
 // open. With the rule the question he is still owed keeps what went before the newest too, and where the newest has nothing to say to him the one before it
 // is asked, exactly as a row alone is asked.
 //
-//   bun run tools/qa/everygone-check.ts            the warehouse's crate line (wallreact-probes.ts wallreactCrate) with the furniture rule ON and the lived-in
-//                                                  rooms in, so the blast files both rows on either stand, and the rule raised by the check itself
-//   TPS_PROFILE=shipped …                          the same on the stand the page opens on
-//   EVERYGONE_BREAK=1 …                            the rule never switched on and the same lines asked: must fail
+//   bun run tools/qa/everygone-check.ts            the warehouse's crate line (wallreact-probes.ts wallreactCrate) with the lived-in rooms in, so the blast
+//                                                  files both rows
+// A settled rule, as the furniture rule it stands on is: nothing here writes either or asks the game without it. Until 2026-11-07 the same stage was run
+// again with the rule off (he kneels on in the open: the fault, as it was), and there were lines for the stand, a recording from before the key and the
+// page's off flag. EVERYGONE_BREAK was the rule never switched on: it is gone with them, and the check has no red path of its own now.
 import { ROOT } from './headless.ts';
 import { wallreactCrate, rig } from './wallreact-probes.ts';
 const { WALLREACT } = await import(`${ROOT}/src/game/wallreact.ts`);
-const { FURNBLAST, DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
 const { PLAYER_ID, NOBODY_ID } = await import(`${ROOT}/src/game/consts.ts`);
 const { LIVED } = await import(`${ROOT}/src/scene/lived.ts`);
-const PROFILE = await import(`${ROOT}/src/host/profile.ts`), { FROZEN_HOLDS } = PROFILE;
-const JOURNAL = await import(`${ROOT}/src/game/journal.ts`);
 const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);
 
 export async function everygoneCheck(): Promise<boolean> {
-  const BREAK = process.env.EVERYGONE_BREAK === '1', RULE = !BREAK, LEVEL = 'warehouse';
-  console.log(`\n=== everygone: a man beside a blast is asked about every thing it took, not the newest row alone (${LEVEL})${BREAK ? ' — EVERYGONE_BREAK: the rule never on' : ''} ===`);
+  const LEVEL = 'warehouse';
+  console.log(`\n=== everygone: a man beside a blast is asked about every thing it took, not the newest row alone (${LEVEL}) ===`);
   let all = true; const verdict = (ok: boolean, label: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
-  const knobs0 = knobsCopy(), furn0 = FURNBLAST.on, rule0 = WALLREACT.everyGone, on0 = WALLREACT.on, destr0 = DESTRUCTION.on, rnd0 = Math.random; let stood: boolean | null = null;
+  const knobs0 = knobsCopy(), rnd0 = Math.random;
   type Seen = { on: boolean; rows: number; moved: number; hidden: boolean; open: boolean; near: boolean };
-  // (the furniture that files the second row is the lived-in rooms' — a row of the frozen stand's holds — so on that stand the stage is stood up with them in)
+  // (the furniture that files the second row is the lived-in rooms': the stage is stood up with them in)
   const lived0 = LIVED.on;
-  const run = async (rule: boolean, quiet: boolean) => { let got: Seen | null = null; const log = console.log; if (quiet) console.log = () => { }; LIVED.on = true;
-    try { const ok = await wallreactCrate(LEVEL, undefined, { onOnly: quiet, stage: () => { if (stood === null) stood = WALLREACT.everyGone; FURNBLAST.on = true; WALLREACT.everyGone = rule; }, seen: x => { if (x.on) got = x; } }); return { ok, got: got as Seen | null }; }
-    finally { console.log = log; FURNBLAST.on = furn0; WALLREACT.everyGone = rule0; LIVED.on = lived0; WALLREACT.on = on0; DESTRUCTION.on = destr0; Math.random = rnd0; } };   // (everything the rig it drives leaves set)
-  const A = await run(RULE, false), B = await run(false, true);
-  // the stand: held off where every frozen digest was recorded, on as the page opens, and the row that says so
-  { const word = process.env.TPS_EVERYGONE, shipped = process.env.TPS_PROFILE === 'shipped', want = word !== undefined ? word === '1' : shipped, row = FROZEN_HOLDS['WALLREACT.everyGone'];
-    verdict(stood === want && typeof row === 'string' && /TPS_EVERYGONE=1/.test(row), `the stand: ${want ? 'on, as the page opens' : 'held off, as every frozen digest was recorded'}; FROZEN_HOLDS carries the row and its word`, `after the stand-up: ${stood} · TPS_EVERYGONE ${word ?? 'unset'} · TPS_PROFILE ${process.env.TPS_PROFILE ?? 'unset'} · row ${JSON.stringify(row)}`); }
+  const run = async () => { let got: Seen | null = null; LIVED.on = true;
+    try { const ok = await wallreactCrate(LEVEL, undefined, { seen: x => { if (x.on) got = x; } }); return { ok, got: got as Seen | null }; }
+    finally { LIVED.on = lived0; Math.random = rnd0; } };
+  const A = await run();
   verdict(!!A.got && A.got.rows >= 2 && A.got.open && A.got.near, 'the staging: the one blast files two rows beside him (within WALLREACT.nearM of his feet) — his crate, then the furniture round it — he is open, and there is cover within a run', A.got ? `rows beside him ${A.got.rows} · open ${A.got.open} · cover within a run ${A.got.near}` : 'the crate line was not asked on this floor');
-  verdict(A.ok && !!A.got && A.got.moved > 1 && A.got.hidden, 'with the rule: he leaves where the crate was for somewhere he is hidden again', A.got ? `moved ${A.got.moved.toFixed(1)} m · hidden ${A.got.hidden} · the crate line ${A.ok ? 'passes' : 'FAILS'}` : '—');
-  verdict(!!B.got && B.got.rows >= 2 && B.got.moved < 0.5 && !B.got.hidden, 'without it, on the same stage: he kneels on in the open (the fault, as it was — the staging tells the two apart)', B.got ? `moved ${B.got.moved.toFixed(1)} m · hidden ${B.got.hidden} · rows ${B.got.rows}` : '—');
+  verdict(A.ok && !!A.got && A.got.moved > 1 && A.got.hidden, 'he leaves where the crate was for somewhere he is hidden again', A.got ? `moved ${A.got.moved.toFixed(1)} m · hidden ${A.got.hidden} · the crate line ${A.ok ? 'passes' : 'FAILS'}` : '—');
   // THE QUESTION'S OWN BOOK (rows handed to the module as the feed hands them): the things behind the newest are bounded, the one beside him is never the one
   // let go, each keeps its own doer and its own breach, one row is one thing
-  try { const R = await rig(LEVEL, 8, true); WALLREACT.everyGone = RULE; const g = R.g, wr: any = R.wr(), D = R.defs()[0], p = D.gd.char.pos;
+  try { const R = await rig(LEVEL, 8); const g = R.g, wr: any = R.wr(), D = R.defs()[0], p = D.gd.char.pos;
     const row = (k: number, at: number[], who: number) => ({ serial: 90000 + k, t: g.time, kind: 'cover', id: -1, cause: 'blast', who, rect: [at[0] + 0.3 * k, at[2] + 0.8, at[0] + 0.3 * k + 0.2, at[2] + 1.0], opened: [], dead: false });
     const things = (gd: any) => { const P = wr.pend.find((x: any) => x.gd === gd); return P ? [P, ...(P.also ?? [])] : []; };
     wr.pend.length = 0; const N = WALLREACT.goneMax + 3; wr.take(row(0, p, PLAYER_ID)); for (let k = 1; k < N; k++) wr.take(row(k, p, NOBODY_ID));
@@ -62,16 +56,8 @@ export async function everygoneCheck(): Promise<boolean> {
         wr.take(seg(0, -2.0, -1.4)); wr.take(seg(1, 1.4, 2.0)); const two = wr.breaches.length - n0; wr.take(seg(2, -1.5, 1.5));
         const T3 = things(D.gd), live = T3.every((x: any) => x.b && wr.breaches.includes(x.b));
         verdict(two === 2 && wr.breaches.length - n0 === 1 && T3.length === 3 && live, 'three rows of one wall beside him, the third growing two breaches into one: three things, and the breach each is about is the one that is left', `breaches after two rows ${two}, after the third ${wr.breaches.length - n0} · things ${T3.length} · every thing's breach still in the book ${live}`);
-        p[0] = at0[0]; p[2] = at0[2]; wr.pend.length = 0; } }
-    // a recording from before the key replays with the rule off; one that carries it plays as it says (journal.ts applyKnobs)
-    { const snap = () => JSON.parse(JSON.stringify(JOURNAL.knobsSnapshot(g)));
-      WALLREACT.everyGone = true; const old = snap(); delete old.tables.WALLREACT.everyGone; JOURNAL.applyKnobs(g, old); const without = WALLREACT.everyGone;
-      const own2 = snap(); own2.tables.WALLREACT.everyGone = true; JOURNAL.applyKnobs(g, own2); const withIt = WALLREACT.everyGone;
-      verdict(without === false && withIt === true, 'a recording from before the key replays with the rule off; one that carries it on plays with it on', `applyKnobs with no key → ${without} · with the key on → ${withIt}`); }
-    // the page's own boot: on with no flag, ?everygone=0 puts it off, another flag leaves it on
-    { PROFILE.pageSwitches(new URLSearchParams('')); const a = WALLREACT.everyGone; PROFILE.pageSwitches(new URLSearchParams('everygone=0')); const b = WALLREACT.everyGone; PROFILE.pageSwitches(new URLSearchParams('nofurnblast')); const c = WALLREACT.everyGone;
-      verdict(a === true && b === false && c === true, 'the page\'s boot (pageSwitches): no flag → on · ?everygone=0 → off · another flag leaves it on', `'' → ${a} · 'everygone=0' → ${b} · 'nofurnblast' → ${c}`); } }
-  finally { knobsBack(knobs0); FURNBLAST.on = furn0; WALLREACT.everyGone = rule0; LIVED.on = lived0; WALLREACT.on = on0; DESTRUCTION.on = destr0; Math.random = rnd0; }   // (pageSwitches and applyKnobs wrote every table: each back as this check found it)
+        p[0] = at0[0]; p[2] = at0[2]; wr.pend.length = 0; } } }
+  finally { knobsBack(knobs0); LIVED.on = lived0; Math.random = rnd0; }
   console.log(`=== everygone: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
 }
