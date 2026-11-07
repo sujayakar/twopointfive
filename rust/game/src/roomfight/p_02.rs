@@ -201,8 +201,8 @@ pub fn room_fight_stop(g: &mut crate::game::Game) {
     for d in g.fight.defs.clone() {
         let (gd, mode, pinned0) = { let D = &g.tab.roomfight_def[d]; (D.gd, D.mode, D.pinned0) };
         if mode == DefMode::Move && g.gd[gd].script.is_some() && !is_dead(g, gd) { crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Alert)); }
-        if mode == DefMode::Free && !is_dead(g, gd) { g.gd[gd].hold = true; }
-        g.gd[gd].pinned = pinned0;
+        if mode == DefMode::Free && !is_dead(g, gd) { crate::control::set_hold(g, gd, true, "roomfight"); }
+        crate::control::set_pinned(g, gd, pinned0, "roomfight");
     }
     for d in g.fight.defs.clone() { let gd = g.tab.roomfight_def[d].gd; g.gd[gd].skill = None; }
     for o in g.fight.ops.clone() { let x = g.tab.roomfight_op[o].gd; g.gd[x].skill = None; }
@@ -362,7 +362,7 @@ pub fn room_fight_tick_def(g: &mut crate::game::Game, d: RoomfightDefId, dt: f64
     if mode == DefMode::Free { room_fight_tick_free(g, d); return; }
     if g.gd[gd].script.is_some() && crate::director::director_lesson_runs(g) { g.tab.roomfight_def[d].staged = Some(true); return; }
     if g.tab.roomfight_def[d].staged == Some(true) {
-        g.tab.roomfight_def[d].staged = Some(false); g.gd[gd].hold = true;
+        g.tab.roomfight_def[d].staged = Some(false); crate::control::set_hold(g, gd, true, "roomfight");
         if v3::dist_xz(pos_of(g, gd), g.tab.roomfight_def[d].station) > 1.5 {
             g.fight.defs.retain(|&x| x != d);
             room_fight_note(g, Some(gd), "left on a new post by the lesson's script"); return;
@@ -376,7 +376,7 @@ pub fn room_fight_tick_def(g: &mut crate::game::Game, d: RoomfightDefId, dt: f64
         g.gd[gd].skill = None; g.fight.defs.retain(|&x| x != d);
         room_fight_note(g, Some(gd), "let off his post by somebody else: not this module's man"); return;
     }
-    g.gd[gd].pinned = true;
+    crate::control::set_pinned(g, gd, true, "roomfight");
     let dazzled = g.time < g.gd[gd].dazzled_until;
     room_fight_evidence(g, d, dt);
     if !dazzled { room_fight_choose_watch(g, d); room_fight_apply_watch(g, d, dt); }
@@ -705,7 +705,7 @@ pub fn room_fight_break_off(g: &mut crate::game::Game, d: RoomfightDefId) {
     if let Some(b) = best {
         let now_pos = g.ch[c].pos;
         { let D = &mut g.tab.roomfight_def[d]; D.mode = DefMode::Move; D.move_kind = DefMoveKind::Fallback; D.came_by = Some(b.door); D.move_t = 0.0; D.stall_at = now_pos; D.stall_t = 0.0; }
-        g.gd[gd].pinned = false;
+        crate::control::set_pinned(g, gd, false, "roomfight");
         let speed = g.tune.guard_chase + 0.3;
         crate::squad::order(g, gd, crate::squad::OrderPatch { goal: Some(Some(b.spot)), speed: Some(Some(speed)), face: Some(None), strafe: Some(Some(false)), aim_at: Some(None), upper: Some(Some(crate::character::UpperMode::Aim)), stance: Some(Some(crate::character::Stance::None)), crouch: Some(Some(false)), ..Default::default() });
         g.fight.stats.fell_back += 1.0;
@@ -718,7 +718,7 @@ pub fn room_fight_break_off(g: &mut crate::game::Game, d: RoomfightDefId) {
     if let Some(p) = crate::suppression::cover_from(g, gd, threat) {
         let now_pos = g.ch[c].pos;
         { let D = &mut g.tab.roomfight_def[d]; D.mode = DefMode::Move; D.move_kind = DefMoveKind::Cover; D.came_by = None; D.move_t = 0.0; D.stall_at = now_pos; D.stall_t = 0.0; }
-        g.gd[gd].pinned = false;
+        crate::control::set_pinned(g, gd, false, "roomfight");
         let speed = g.tune.guard_chase;
         crate::squad::order(g, gd, crate::squad::OrderPatch { goal: Some(Some(p)), speed: Some(Some(speed)), face: Some(None), strafe: Some(Some(false)), aim_at: Some(None), upper: Some(Some(crate::character::UpperMode::Aim)), stance: Some(Some(crate::character::Stance::None)), crouch: Some(Some(true)), ..Default::default() });
         g.fight.stats.took_cover += 1.0;
