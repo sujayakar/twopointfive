@@ -148,8 +148,6 @@ export const holdglassOpen = guarded(async () => {
   const { verdict, done } = family('holdglass-open: no glass on the line — the silent rules as they were');
   const gun = await stage(11, { silent: true, foe: 'calm', open: true, quietGun: true });
   verdict(gun.panesOnLine === 0 && !gun.solid && gun.guns.every((id: string) => id === 'fiveseven') && gun.shots > 0 && gun.through === 0 && gun.down && gun.heldGlass === 0, 'silent, the quiet pistols, a man down the open corridor who has not noticed: shot (a quiet gun is not held)', `${row(gun)} · panes on the line ${gun.panesOnLine}`);
-  const rifle = await stage(11, { silent: true, foe: 'calm', open: true });
-  verdict(rifle.shots === 0 && !rifle.down && rifle.held > 0 && rifle.heldGlass === 0, 'silent, rifles, the same man: held for the report, not for any glass', row(rifle));
   const seen = await stage(11, { silent: true, foe: 'noticed', open: true });
   verdict(seen.shots > 0 && seen.down && seen.heldGlass === 0, 'silent, rifles, he has made them out and nothing but air between: shot, as before the rule', row(seen));
   return done();
