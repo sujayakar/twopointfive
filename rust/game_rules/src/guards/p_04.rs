@@ -337,7 +337,7 @@ pub fn can_see(g: &mut crate::game::Game, gd: GuardId) -> crate::guards::CanSee 
 /// standoff's pair, the floor, a civilian's eye, the sneak's reading of a defender.
 pub fn look_of(g: &crate::game::Game, c: CharId) -> V3 { crate::fogofwar::gaze_of(g, c) }
 
-/// canSee against any man `pc`; a teammate with his long gun in the shoulder also sees an AI man along his sights.   (guards.ts canSeeChar)
+/// canSee against any man `pc`.   (guards.ts canSeeChar)
 pub fn can_see_char(g: &mut crate::game::Game, gd: GuardId, pc: CharId, is_player: bool) -> crate::guards::CanSeeChar {
     let c = g.gd[gd].ch;
     let eye = match g.ch[c].bones.get(crate::character::Bone::Head) {
@@ -346,30 +346,11 @@ pub fn can_see_char(g: &mut crate::game::Game, gd: GuardId, pc: CharId, is_playe
     };
     let look = look_of(g, c);
     let range = reach_for(g, &crate::seats::here(g), gd, pc, is_player, eye);
-    let mut e = crate::guards::Eye { pos: eye, look, range, half_deg: g.k.guard_eye.half_deg, near_m: g.k.guard_eye.near_m, near_deg: g.k.guard_eye.near_deg, v_half_deg: None };
+    let e = crate::guards::Eye { pos: eye, look, range, half_deg: g.k.guard_eye.half_deg, near_m: g.k.guard_eye.near_m, near_deg: g.k.guard_eye.near_deg, v_half_deg: None };
     let through = eye_through(g, gd);
     let blind = crate::control::man::blind(g, gd) || crate::pairorders::pair_gripped(g, gd) || crate::doze::doze_asleep(g, gd);
     let smoke_trans = g.gd[gd].smoke_trans;
     let mut r = eye_contact(g, e, pc, is_player, blind, smoke_trans, Some(through));
-    // ROOMFIGHT.sights on, sightsFoe off: the eye along the sights is an operative's alone
-    if !r.in_cone && r.dist < e.range && !is_player && g.gd[gd].team == crate::teams::Team::Operative && crate::roomfight::fight_live(g) {
-        let gun_yaw = crate::character::character_gun_yaw(g, c);
-        let (ax, az) = (m::sin(gun_yaw), m::cos(gun_yaw));
-        let gun_dir = g.ch[c].gun_dir;
-        let mut lv = gun_dir[0] * ax + gun_dir[2] * az;
-        let lift = g.ch[c].anim.sights_lift;
-        if lift > 0.0 {
-            let gh = m::hyp2(gun_dir[0], gun_dir[2]);
-            if gh > 1e-6 { lv *= m::cos(lift) - gun_dir[1] / gh * m::sin(lift); }
-        }
-        if g.ch[c].anim.long_shown == Some(crate::character::LongStance::Shoulder) && !crate::character::anim_at_well(g, c) && lv > SIGHTS_COS {
-            e.look = [ax, 0.0, az];
-            e.half_deg = m::min(e.half_deg, g.k.roomfight.sights_deg);
-            let blind = crate::control::man::blind(g, gd) || crate::pairorders::pair_gripped(g, gd) || crate::doze::doze_asleep(g, gd);
-            let smoke_trans = g.gd[gd].smoke_trans;
-            r = eye_contact(g, e, pc, false, blind, smoke_trans, Some(through));
-        }
-    }
     if !is_player && r.visible && crate::roomfight::pair_smoke(g, c, pc) < 0.3 { r.visible = false; }
     crate::guards::CanSeeChar { visible: r.visible, dist: r.dist, in_cone: r.in_cone }
 }
