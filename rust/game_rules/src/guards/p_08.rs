@@ -113,7 +113,7 @@ pub fn light_estimate_at(g: &mut crate::game::Game, p: V3, skip_owner: Option<&m
     };
     let moon = moon.unwrap_or(g.k.sense.moon);
     let leave = leave.unwrap_or(0.0);
-    if g.col.mirror.live {
+    if crate::scene_collision::standing(g) {
         light_estimate_in(g, p, lend(&mut skip_owner), steady_only, field, moon, leave)
     } else {
         crate::scene_collision::window(g, &mut |g: &mut Game| light_estimate_in(g, p, lend(&mut skip_owner), steady_only, field.as_deref_mut(), moon, leave))

@@ -440,8 +440,8 @@ pub fn box_world_build_ray_grid(g: &mut crate::game::Game, n: f64) {
 }
 
 /// Is this box's record a shape's and no break's? (boxes.ts shapeCut)
-pub fn shape_cut(g: &mut crate::game::Game, b: BoxId) -> bool {
-    let x = bx(g, b);
+pub fn shape_cut(g: &crate::game::Game, b: BoxId) -> bool {
+    let x = &g.tab.boxes[b];
     x.shaped == Some(true) && x.cut.is_some()
 }
 
