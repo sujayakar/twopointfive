@@ -21,7 +21,7 @@ const { parseLevelData, validateLevelData } = await import(`${ROOT}/src/scene/le
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 
 const J = (x: unknown) => JSON.stringify(x);
-const BROKEN = process.env.ISSUEWHOLE_BREAK === '1', FILE = 'tut-road.json';
+const BROKEN = process.env.ISSUEWHOLE_BREAK === '1', FILE = 'tut-quiet.json';
 const hushed = async <T>(fn: () => Promise<T> | T): Promise<T> => { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
 const TEXT = readFileSync(resolve(ROOT, 'levels', FILE), 'utf8'), text = () => TEXT;
 const held = (g: any) => { const pl = g.player, rf = pl.rifle; return { rings: rf.rings, cams: rf.attachments.includes('cam') ? rf.cams : 0, wand: !!pl.wand, smoke: pl.canisters, stun: pl.flashbangs, frags: pl.frags, shells: rf.shells, load: rf.attachment as string }; };

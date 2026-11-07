@@ -17,7 +17,7 @@
 //   work-held       the squad's fire held and a defender who has noticed nobody stood in plain sight of the panel: the man sent still throws the breaker (his
 //                   partner's gun on that man, no round fired), his footfalls turn nobody at the panel, and the moment that man notices he is the squad's to shoot again. Asserts the fault with
 //                   WORK.heldPass off (his muzzle stays on the man, the mains stay on); WORKHELD_BREAK=1 leaves the rule off for the rule's own lines: must fail
-//   work-walk       a quiet level as two (levels/lights-out.json): the partner throws the breaker on order, a defender is sent to the panel, Sam calls 'fall in'
+//   work-walk       a quiet level as two (levels/bazaar.json): the partner throws the breaker on order, a defender is sent to the panel, Sam calls 'fall in'
 //                   and walks on the way that man is coming. Asserts the fault with WORK.offWalk off (the follower waits for the man's back ON the man's
 //                   walk and is walked into: the alarm) and the rule with it on (he goes on after Sam, low, nobody roused, the mains put back by the man
 //                   sent); WORKWALK_BREAK=1 leaves the rule off for the rule's own lines: must fail
@@ -219,7 +219,7 @@ export const workWalk = () => keep(async () => {
   const WAY = [[9.3, 16.7], [9.3, 14.8], [8.7, 12.1], [9.0, 9.3], [11.0, 8.0], [13.7, 7.4], [16.1, 7.4], [17.0, 8.5], [17.1, 10.0], [17.3, 12.5], [17.7, 14.6]];
   try {
     const arm = async (rule: boolean) => {
-      const R = await rig(g => startFromQuery(g, '?levelFile=lights-out.json&quiet&squad=1').why, true, 2, 'lights-out'); const { g, O, W } = R, pl = g.player, b: any = O.squad()[0];
+      const R = await rig(g => startFromQuery(g, '?levelFile=bazaar.json&quiet&squad=1').why, true, 2, 'bazaar'); const { g, O, W } = R, pl = g.player, b: any = O.squad()[0];
       SNEAK.on = true; SPOTTED.on = true; WORK.offWalk = rule; g.godMode = true;
       const asked = (h: any) => { const w = WORK.offWalk; WORK.offWalk = true; try { return workComing(g, b, h); } finally { WORK.offWalk = w; } };   // (the geometry, whichever way the key is)
       let at = [...WAY[0]], seg = 0, along = 0;
@@ -274,9 +274,9 @@ export const workFour = () => keep(async () => {
 
 export const workObjective = () => keep(async () => {
   console.log('\n=== work-objective: the partner of a quiet mission takes the thing ===');
-  const R = await rig(g => startFromQuery(g, '?levelFile=lights-out.json&quiet&squad=1').why, true, 2, 'lights-out');
+  const R = await rig(g => startFromQuery(g, '?levelFile=bazaar.json&quiet&squad=1').why, true, 2, 'bazaar');
   const { g, O } = R; const ops: any[] = O.squad(), Wd = quietWords(g);
-  verdict(!R.why && ops.length === 1 && !!Wd, 'staged: a quiet mission (levels/lights-out.json) with one partner', `refusal ${R.why} · partner ${ops.map(o => o.callsign).join(', ')} · thing "${Wd?.thing}" in "${Wd?.holder}" (${Wd?.place})`);
+  verdict(!R.why && ops.length === 1 && !!Wd, 'staged: a quiet mission (levels/bazaar.json) with one partner', `refusal ${R.why} · partner ${ops.map(o => o.callsign).join(', ')} · thing "${Wd?.thing}" in "${Wd?.holder}" (${Wd?.place})`);
   if (!Wd || !ops.length) return;
   const rf = g.level.mission.rack.front;
   verdict(g.mission.stage !== 'drive' && !g.work.things().some((x: any) => x.kind === 'objective'), 'before the objective is to take it, the holder is no thing to work (as Sam\'s own row)', `stage ${g.mission.stage} · things ${g.work.things().map((x: any) => x.name).join(', ')}`);
@@ -455,7 +455,7 @@ export const workDefuse = () => keep(async () => {
     verdict(!after.some((s: string) => /charge is safe|it's (already|gone)/.test(s)) && WORK_STATS.done === done0 && WORK_STATS.moot === moot0 + 1, 'he says nothing of the charge, no job is counted done, and his job ended as moot', `said after: ${after.join(' | ') || 'nothing'} · done +${WORK_STATS.done - done0} · moot +${WORK_STATS.moot - moot0}`);
     verdict(!g.work.onDevice(0) && !g.work.things().some((x: any) => x.kind === 'device'), 'nobody is left at it, and the charge is no longer a thing to work', `at it ${g.work.onDevice(0)?.gd?.callsign ?? 'nobody'} · things ${g.work.things().map((x: any) => x.name).join(', ') || 'none'}`); }
   // (c) the same on a quiet mission as two: the partner's hands in the holder, then Sam down — he neither takes it nor says it is 'already gone'
-  { const R = await rig(g => startFromQuery(g, '?levelFile=lights-out.json&quiet&squad=1').why, true, 2, 'lights-out'); const { g, O } = R, rf = g.level.mission.rack.front, A = g.level.mission.serverRoom;
+  { const R = await rig(g => startFromQuery(g, '?levelFile=bazaar.json&quiet&squad=1').why, true, 2, 'bazaar'); const { g, O } = R, rf = g.level.mission.rack.front, A = g.level.mission.serverRoom;
     let spot: number[] | null = null;
     for (let x = A.x0 + 0.5; x < A.x1 && !spot; x += 0.4) for (let z = A.z0 + 0.5; z < A.z1 && !spot; z += 0.4) if (!g.col.nav.isBlocked(x, z) && flat([x, 0, z], rf) > 1.6) spot = [x, 0, z];
     g.teleportPlayer(spot ?? [(A.x0 + A.x1) / 2, 0, (A.z0 + A.z1) / 2]); R.step(30); R.gather(8);

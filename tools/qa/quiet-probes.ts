@@ -1,6 +1,6 @@
 // The 'quiet' family (THE QUIET MISSION on any level — game/quiet.ts; data scene/scenarios.ts QuietData), run through probes.ts:
 //   bun run tools/qa/probes.ts quiet | quiet-data | quiet-start | quiet-run | quiet-pair | quiet-checkpoint | quiet-own
-// PASS / FAIL each, all headless on levels/vault.json and the bundled office. Nothing here looks at a picture or hears a sound.
+// PASS / FAIL each, all headless on levels/bazaar.json and the bundled office. Nothing here looks at a picture or hears a sound.
 //   quiet-data        the file validates; broken blocks are refused by name; the block against the built floor is clean and a start moved into a wall is caught;
 //                     the office (no block) refuses a quiet start with the reason and stays the plain night
 //   quiet-start       alone: Sam on the dealt start, the dealt patrol set on the list and the other routes' men off it, the level's devices and civilians live,
@@ -48,7 +48,7 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
 const guarded = (fn: () => Promise<boolean>) => async () => { try { return await fn(); } catch (e) { console.log(`- FAIL — the probe threw\n    ${e instanceof Error ? e.stack : String(e)}`); return false; } };
 const hushed = async <T>(fn: () => Promise<T> | T): Promise<T> => { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-const DT = 1 / 60, FILE = 'vault.json';
+const DT = 1 / 60, FILE = 'bazaar.json';
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const at = (p: number[]) => `(${p[0].toFixed(1)}, ${p[2].toFixed(1)})`;
 const text = () => readFileSync(resolve(ROOT, 'levels', FILE), 'utf8');
@@ -111,7 +111,7 @@ export const quietStart = guarded(async () => {
   const W = await stand(3), g = W.game, L = g.level, Q = L.scenarios.quiet;
   const authored = JSON.stringify({ spawn: L.playerSpawn, mission: L.mission }), flags0 = [PAIRUP.on, PAIR.on, SNEAK.on, SPOTTED.on, SILENT.on, SILENT.start, HOSTILE.guard.operative];
   const r = await start(W, '?quiet=7'), d = g.quiet.deal, S = Q.starts[d.start], P = Q.spots[d.spot], set: string[] = Q.patrols[d.patrol], on = manned(g);
-  F.verdict(!r.why && g.quiet.active && activeScenario(g) === 'quiet' && runningScenario(g, FILE)?.entry?.id === 'vault-quiet', '?quiet=7 starts unrefused as the list\'s own row', `${r.why ?? 'started'} · ${g.quiet.summary()} · row ${runningScenario(g, FILE)?.entry?.id}`);
+  F.verdict(!r.why && g.quiet.active && activeScenario(g) === 'quiet' && runningScenario(g, FILE)?.entry?.id === 'bazaar-quiet', '?quiet=7 starts unrefused as the list\'s own row', `${r.why ?? 'started'} · ${g.quiet.summary()} · row ${runningScenario(g, FILE)?.entry?.id}`);
   F.verdict(flat(g.player.char.pos, S.sam) < 0.05 && Math.abs(g.player.char.bodyYaw - S.samYaw) < 1e-6 && !g.guards.some((x: any) => x.unit) && g.quiet.ops.length === 0, 'Sam stands on the dealt start facing its way, alone', `start ${d.start} '${S.name}' ${at(S.sam)} · Sam ${at(g.player.char.pos)} yaw ${g.player.char.bodyYaw.toFixed(2)}`);
   F.verdict(on.length === set.length && set.every(n => on.includes(n)) && g.guards.every((x: any) => x.state === 'patrol' && !x.hold && !x.pinned), 'the dealt patrol set is on the floor as on a plain night (patrolling, nobody posted or held) and the other routes\' men are off the list',
     `set ${d.patrol} [${set.join(', ')}] · on the floor [${on.join(', ')}] of routes [${L.routes.map((x: any) => x.name).join(', ')}]`);
@@ -182,7 +182,7 @@ export const quietPair = guarded(async () => {
   const W = await stand(5), g = W.game, Q = g.level.scenarios.quiet;
   const flags0 = [PAIRUP.on, PAIR.on, SNEAK.on, SPOTTED.on, SILENT.on, SILENT.start, HOSTILE.guard.operative];
   const r = await start(W, '?quiet=2&squad=1'), d = g.quiet.deal, S = Q.starts[d.start], m = g.quiet.ops[0];
-  F.verdict(!r.why && g.quiet.ops.length === 1 && !!m && m.team === 'operative' && !!m.unit && flat(m.char.pos, g.player.char.pos) < 2.5 && g.col.nav.walkable(g.player.char.pos, m.char.pos) && runningScenario(g, FILE)?.entry?.id === 'vault-quiet',
+  F.verdict(!r.why && g.quiet.ops.length === 1 && !!m && m.team === 'operative' && !!m.unit && flat(m.char.pos, g.player.char.pos) < 2.5 && g.col.nav.walkable(g.player.char.pos, m.char.pos) && runningScenario(g, FILE)?.entry?.id === 'bazaar-quiet',
     '?quiet&squad=1 starts as the list\'s own row with ONE operative staged beside Sam on floor he can walk to', `${r.why ?? 'started'} · ${g.quiet.summary()} · partner ${m ? at(m.char.pos) : '—'}, ${m ? flat(m.char.pos, g.player.char.pos).toFixed(2) : '—'} m from Sam at ${at(S.sam)} · row ${runningScenario(g, FILE)?.entry?.id}`);
   W.step(DT); W.step(DT);
   F.verdict(PAIRUP.on && PAIR.on && SNEAK.on && SPOTTED.on && SILENT.on && squadSilent(g) && HOSTILE.guard.operative && HOSTILE.operative.guard, 'the pair rules are on for this run, the squad is silent from the first frame, and the shift is hostile to the partner (he is no colleague of theirs)',
