@@ -6,7 +6,7 @@
 // NOT here (no GPU, and a harness compiles nothing): that the WGSL compiles (tools/qa/wgsl-compile.cjs), and the picture.
 //   bun run tools/qa/splitrays-check.ts                        exit 0 = every line passed, 1 = one failed
 //   SPLITRAYS_BREAK=1 bun run tools/qa/splitrays-check.ts      `light` is read with a second call site of the light loop written into it: must FAIL
-import { readFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { readFileSync, readdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ROOT } from './headless.ts';
@@ -44,13 +44,10 @@ export async function splitraysCheck(): Promise<boolean> {
     const lay = /label: 'gatherSplit', entries: \[[^\]]*?\{ binding: (\d+), visibility: CS, buffer: \{ type: 'storage' \} \},\n\s*\] \}\);/.exec(passes);
     line(v4 * 16 === SPLIT_TEXEL_BYTES && rec + 2 * slots === v4 && bind === Number(lay?.[1]) && rays + 2 === slots && !/constants: \{[^}]*RAYS/.test(passes),
       'the points\' buffer is one layout in the shader and in the engine: a texel\'s words, its header and two words a point, a slot for each ray and the two mirror rays, the binding', `RAYS ${rays} + 2 = ${slots} slots · GX_V4 ${v4} × 16 B = ${v4 * 16} (engine ${SPLIT_TEXEL_BYTES}) · ${rec} + 2 × ${slots} = ${rec + 2 * slots} · binding ${bind} (passes.ts ${lay?.[1] ?? 'not found'})`); }
-  // ---- THE LAST KERNEL IN TWO WRITINGS (render/gatherSplit.ts): gather_split_common.wgsl is the gather's, gather_common.wgsl the reflection passes'. They are one
-  //      text but for the light loop (directAtPoint and what it is written with), so a change to the staging or the take-back made in one file only is named here
-  { const A = wgslDecls(readFileSync(`${dir}/gather_split_common.wgsl`, 'utf8')), B = wgslDecls(readFileSync(`${dir}/gather_common.wgsl`, 'utf8'));
-    const LOOP = /^fn (directAtPoint|directOnScreen|directAt)\(/, sq = (d: string) => d.replace(/\s+/g, ''), a = A.filter(d => !LOOP.test(d)).map(sq), b = B.filter(d => !LOOP.test(d)).map(sq);
-    const onlyA = a.filter(d => !b.includes(d)), onlyB = b.filter(d => !a.includes(d)), name = (d: string) => /^(?:fn|const|var(?:<[^>]*>)?|struct)(\w+)/.exec(d)?.[1] ?? d.slice(0, 24);
-    line(a.length > 6 && onlyA.length === 0 && onlyB.length === 0 && A.some(d => /^fn directAtPoint\(/.test(d)) && B.some(d => /^fn directAtPoint\(/.test(d)),
-      'the gather\'s common text and the reflection passes\' are one text but for the light loop: every other declaration is in both, word for word', `${a.length} declarations beside the light loop · only the gather's: ${onlyA.map(name).join(' ') || 'none'} · only the reflections': ${onlyB.map(name).join(' ') || 'none'}`); }
+  // ---- ONE WRITING of the light loop (render/gatherSplit.ts): the gather is made from gather_common.wgsl, the file the reflection pass is made from, and no second copy stands beside it
+  { const gs = readFileSync(`${ROOT}/src/render/gatherSplit.ts`, 'utf8'), ps = readFileSync(`${ROOT}/src/render/passes.ts`, 'utf8'), files = readdirSync(dir).filter(f => /^gather.*common.*\.wgsl$/.test(f));
+    line(/import gatherCommonSrc from '\.\/shaders\/gather_common\.wgsl'/.test(gs) && /import gatherCommonSrc from '\.\/shaders\/gather_common\.wgsl'/.test(ps) && files.length === 1 && files[0] === 'gather_common.wgsl',
+      'the gather and the reflection pass are made from one gather_common.wgsl, and no other gather common file is in the shaders folder', files.join(', ')); }
   // ---- a refused buffer is heard outside the machine (a GPU too small for the buffer draws no bounce light, and did not choose that)
   { const RP = await import(`${ROOT}/src/cloud/report.ts`), heard: any[] = [], was = console.error, said: string[] = []; console.error = (...a: unknown[]) => { said.push(a.map(String).join(' ')); };
     let threw = false;
