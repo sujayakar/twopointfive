@@ -235,9 +235,9 @@ async function main() {
   // anything is built. With no WebAssembly (a browser whose policy turns this site's JIT off) it is the card below; anything else is a fault of the build
   // THE RUST GAME IS THE PAGE'S GAME (host/rustgame.ts): its module is fetched and compiled here, before anything has asked for the simulation's, and handed to
   // src/sim as the one instance, so `__ready` waits on it behind the boot card. There is no other game.
-  // (THE ONLY GAME. A co-op game hosted or joined and a tape played back each stepped the TypeScript tick, which is gone, and their own paths onto the Rust game are
-  // not here yet: those three addresses get a plain card before anything boots)
-  if ([NETPLAY, NET_JOIN, PLAYTAPE].some(k => q.has(k))) throw Object.assign(new Error('this address has no game on this build yet'), { name: 'NoGameHere' });
+  // (THE ONLY GAME. A tape played back stepped the TypeScript tick, which is gone, and its own path onto the Rust game is not here yet: that address gets a
+  // plain card before anything boots. A co-op game's page is the Rust game's: src/net/page.ts)
+  if (q.has(PLAYTAPE)) throw Object.assign(new Error('this address has no game on this build yet'), { name: 'NoGameHere' });
   const rustGame = await import('./host/rustgame');
   await rustGame.rustBoot();
   { const no = simWhyNot(); if (no) { console.info(simSay()); throw noWasm() ? new NoWasmError(no) : new Error(`the Rust simulation did not start: ${no}`); } }
@@ -1840,5 +1840,5 @@ FATAL.tell = (r, card) => {
   try { setTimeout(once, 1500); void fetch('/qa/commit', { cache: 'no-store' }).then(x => x.ok ? x.text() : '').then(t => once(t.trim()), () => once()); } catch { once(); }
 };
 
-main().catch(e => { console.error(e); if (kitViewOn) kitViewFatal(); if ((e as Error)?.name === 'NoGameHere') showFatal("This link opens a co-op game or a replay, and this build can't play those yet. You can still play every mission on your own from the title."); else if (e instanceof NoWasmError) showFatal(NO_WASM_WORDS, { report: { message: e.message.slice(0, 400), stage: 'wasm' } }); else if ((e as Error)?.name === 'RustGameError') showFatal((e as Error).message, { report: { message: (e as Error).message.slice(0, 400), stage: 'rust game' } });   // (?rust=1: the Rust game's own failure, in its plain words: host/rustgame.ts)
+main().catch(e => { console.error(e); if (kitViewOn) kitViewFatal(); if ((e as Error)?.name === 'NoGameHere') showFatal("This link opens a replay, and this build can't play those yet. You can still play every mission from the title."); else if (e instanceof NoWasmError) showFatal(NO_WASM_WORDS, { report: { message: e.message.slice(0, 400), stage: 'wasm' } }); else if ((e as Error)?.name === 'RustGameError') showFatal((e as Error).message, { report: { message: (e as Error).message.slice(0, 400), stage: 'rust game' } });   // (?rust=1: the Rust game's own failure, in its plain words: host/rustgame.ts)
   else showFatalError(e); readyReject(e); });
