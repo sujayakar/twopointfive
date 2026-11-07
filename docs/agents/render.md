@@ -143,7 +143,11 @@ row on his machine is the answer, and the word puts the count back on any machin
   (the shadow client). Each was proven exact when it went in and on in every preset since; their off sides, `globalSkipped`, `globalMissesY`, the six settings, frame
   flags and debugger rows are gone. Free frame-flag bits: `bun run tools/qa/frame-layout.ts` prints them (eleven). **BOTH CHANGE SHADER TEXT** (the tracers are
   in every ray program): all 121 boot texts and the four made on first use (fog of war's two, the sight table, the trace lab) compile in Chromium's compiler with no
-  warning. Whether the picture is the same to the pixel is draw-equal's to say: see the line under this one when it is written. **Never seen on a GPU.**
+  warning. **THE PICTURE IS THE SAME TO THE PIXEL** where it was looked at: `tools/qa/draw-equal.cjs` on the real page, software adapter, the
+  tree before the two against the tree after (958d04a8 against 5ae91c56, both on the Rust game of step 1632): four views (office-night, squad-cast, weather,
+  firefight), two pinned frames each at 640 by 360, all eight EQUAL. What that did not look at: the Rust page of that step drew fewer men than the views ask for
+  (three of the four were "not clean" on BOTH trees for that: no defender in frame, one torch, no muzzle light), a moving camera, glass, the look page, and any
+  GPU's own compiler. **Never seen on a GPU.**
 - **TRIALS NO TIER TURNED ON ARE GONE (2026-11-07; the cleanup's rule: a switch nothing sets is deleted, a switch everything sets is plain code).** Each was a
   debugger row or an address word only: no preset, no weather, no sweep row and no mission set it. **The drawn soft character shadow** (`charSoftShadow` and its six
   rows, the smooth-union march, `render/rigDebug.ts`, `__rigTrace`): `sdfrig.wgsl` is the round-cone primitive alone and `frame.rigCfg` holds two bits (64 self
