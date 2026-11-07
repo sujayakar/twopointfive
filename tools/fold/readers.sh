@@ -9,6 +9,10 @@
 # 2. `mut` goes back on every function that can write past the compiler's sight (`sim::` behind the slot, a static, a cell) and on
 #    whatever calls one, and the checks run once more.
 # --reads FILE also writes the rows of the call surface (tools/blitz/calls.json) whose function cannot write the game, by key.
+# That file is this program's output and nobody types into it. A row that reads BY CONTRACT, not by the compiler (it takes `&mut Game`
+# and puts back what it takes), is in tools/blitz/reads-contract.json beside it, kept by hand, each row with its contract's sentence and
+# the check that holds it; the host reads both. When this pass proves such a row the report says so under PROVED NOW: the row is then
+# in the file written here, and it leaves the contract file.
 # It edits rust/game's body files in place: run it on a tree with no changes of its own there.
 # Exit: 0 done · 3 could not run · 4 an error the program could not place (the tree is put back as it was).
 cd "$(dirname "$0")/../.." || exit 64
@@ -22,11 +26,13 @@ back() { git checkout -q -- rust/game/src; }
 n=0
 # check the game, then the crates that use it, until nothing is named; $1 = a word for the log
 settle() {
-  # (the game is checked twice: as the game, and with its unit tests, where a function under #[cfg(test)] or a test's own call shows)
-  for crate in game game+tests game_run game_face; do
+  # (the game is checked twice: as the game, and with its unit tests, where a function under #[cfg(test)] or a test's own call shows;
+  #  then every other crate under rust/ that names it, with all its targets: each of them is a user of the game)
+  OTHERS=$(for c in rust/*/; do b=$(basename "$c"); [ -f "$c/Cargo.toml" ] && [ "$b" != game ] && grep -qE '^\s*game\s*=' "$c/Cargo.toml" && echo "$b"; done)
+  for crate in game game+tests $OTHERS; do
     while :; do
       n=$((n + 1))
-      T=; [ $crate = game_face ] && T="--target wasm32-unknown-unknown"; [ $crate = game+tests ] && T="--tests"
+      T="--all-targets"; [ $crate = game ] && T=; [ $crate = game+tests ] && T="--tests"; [ $crate = game_face ] && T="--all-targets --target wasm32-unknown-unknown"
       ( cd rust/${crate%+tests} && cargo check $T --message-format=json > "$S/diag-$n.json" 2> "$S/check-$n.log" ) && break
       echo "check $n ($1, $crate): $(grep -c '"level":"error"' "$S/diag-$n.json") errors"
       "$FOLD" readers-restore --state "$S/state.txt" --diag "$S/diag-$n.json"; r=$?
