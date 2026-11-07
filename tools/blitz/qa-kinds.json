@@ -433,10 +433,6 @@
 "packside": [
 "PACKSIDE.on=false"
 ],
-"pellets-identity": [
-"GLASSPEN.on=false",
-"GLASSFX.on=false"
-],
 "qrf-element": [
 "RESPONSE.on=false"
 ],
@@ -1841,7 +1837,6 @@
 "peek-sight": "iii",
 "pellets-arm": "iv-a",
 "pellets-energy": "iv-a",
-"pellets-identity": "iv-a",
 "pellets-red": "iv-a",
 "pellets-rule": "iv-a",
 "perf-cards": "0",
