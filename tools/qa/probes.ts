@@ -3339,7 +3339,6 @@ if (on('planlay', 'squadorders', 'all')) await run('planlay', async () => (await
 if (on('shotgun-range', 'shotgun', 'all')) await run('shotgun-range', async () => (await import('./shotgun-probes.ts')).shotgunRange());
 if (on('shotgun-door', 'shotgun', 'all')) await run('shotgun-door', async () => (await import('./shotgun-probes.ts')).shotgunDoor());
 if (on('shotgun-card', 'shotgun', 'all')) await run('shotgun-card', async () => (await import('./shotgun-probes.ts')).shotgunCard());
-if (on('shotgun-identity', 'shotgun', 'all')) await run('shotgun-identity', async () => (await import('./shotgun-probes.ts')).shotgunIdentity());
 // ---------------------------------------------------------------- a shot does not cost a man his corner, and the man who has seen most of the room goes in first (cornerlead-probes.ts;
 // doortools.ts DOORTOOLS.cornerOwed / collapse / leadSeen, floorseen.ts): a handful of held rooms' doors entered with the three off and as shipped. The full count: bun run tools/qa/cornerlead-probes.ts
 if (on('cornerlead-corners', 'cornerlead', 'all')) await run('cornerlead-corners', async () => (await import('./cornerlead-probes.ts')).cornerleadCorners());
@@ -3414,7 +3413,7 @@ let glassBannerPending: { f0: number } | null = null;
   if (gtRan && which === 'glasstune') familyBanner('glasstune', FAILED.length - f0); }
 // ---------------------------------------------------------------- A LOAD OF SHOT AND A PANE (pellets-probes.ts; glasspen.ts 'the shell rule', rebuild/gear-and-glass/pellets.md): 'pellets' = the family — one
 // crossing at the arm point for a pressed shell, pellets through and pellets stopped marked by the one rule (+ the 1 / 4 / 8 m table), the M870's own through-glass value,
-// the two identities against 0ee0094, and the red paths
+// and the red paths (the two identities against 0ee0094 went with the glass parts' off side, 2026-11-07)
 { const pf = async (name: string, fn: string) => { if (on(name, 'pellets', 'all')) await run(name, async () => ((await import('./pellets-probes.ts')) as any)[fn]()); };
   await pf('pellets-arm', 'pelletsArm'); await pf('pellets-rule', 'pelletsRule'); await pf('pellets-energy', 'pelletsEnergy');
   await pf('pellets-red', 'pelletsRed'); }
