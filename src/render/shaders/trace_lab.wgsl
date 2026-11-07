@@ -199,15 +199,16 @@ fn pcz() { for (var i = 0u; i < 24u; i++) { pc[i] = 0u; } }
 fn pcflush() { for (var i = 0u; i < 21u; i++) { if (pc[i] != 0u) { atomicAdd(&outBuf[16u + i], pc[i]); } } }
 fn P_(k: u32) { pc[k - 16u] += 1u; }
 
-fn gridCellProf(ci: u32, ya: f32, yb: f32, run: ptr<function, u32>, gskip: bool, ycull: bool, shrink: f32) -> CellWalk {
+fn gridCellProf(ci: u32, ya: f32, yb: f32, run: ptr<function, u32>) -> CellWalk {
   var w: CellWalk; w.start = 0u; w.end = 0u; w.qlo = 0u; w.qhi = 255u;
   P_(P_CELLS);
   if (*run > 0u) { *run = *run - 1u; P_(P_CELL_RUNSKIP); return w; }
   let w0 = gridCells[GRID_CB + 2u * ci];
-  let dist = select(0u, w0 >> 24u, gskip);
+  let dist = w0 >> 24u;
   if (dist > 0u) { *run = dist - 1u; P_(P_CELL_RUNSKIP); return w; }
-  var m = 0xffffffu; var need = 1u;
-  if (ycull) { w.qlo = gridYq(min(ya, yb) + shrink); w.qhi = gridYq(max(ya, yb) - shrink); m = gridSliceMask(min(w.qlo, w.qhi), max(w.qlo, w.qhi)); need = select(1u, m, w.qlo > w.qhi); }
+  let shrink = scene.grid.y;
+  w.qlo = gridYq(min(ya, yb) + shrink); w.qhi = gridYq(max(ya, yb) - shrink);
+  let m = gridSliceMask(min(w.qlo, w.qhi), max(w.qlo, w.qhi)); let need = select(1u, m, w.qlo > w.qhi);
   if ((w0 & m) < need) { P_(P_CELL_MASKREJ); return w; }
   let w1 = gridCells[GRID_CB + 2u * ci + 1u];
   w.start = w1 & 0xffffffu;
@@ -221,16 +222,14 @@ fn occludedProf(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> bool {
   let tb = isectBounds(ro, invRd, WORLD_MIN, WORLD_MAX);
   if (tb.x > tb.y || tb.y < 0.0) { P_(P_ANS_MISS); return false; }
   let tmax = min(tmaxIn, tb.y);
-  let gskip = (frame.flags & FLAG_GRID_SKIP) != 0u; let ycull = (frame.flags & FLAG_GRID_YCULL) != 0u; let fast = gskip || ycull; let axisFast = (frame.flags & FLAG_AXIS_BOX) != 0u;
-  let slabs = (frame.flags & FLAG_GRID_SLABS) != 0u; let shrink = select(0.0, scene.grid.y, slabs);
   let yEnd = ro.y + rd.y * tmax;
   let pEnd = vec3f(ro.x + rd.x * tmax, yEnd, ro.z + rd.z * tmax);
   let sLo = min(ro, pEnd); let sHi = max(ro, pEnd);
   for (var g = 0u; g < scene.numGlobals; g++) {
-    if (globalSkipped(g, sLo, sHi, ycull, slabs)) { P_(P_GLOB_SKIP); continue; }
+    if (globalOutside(g, sLo, sHi)) { P_(P_GLOB_SKIP); continue; }
     P_(P_GLOB_TEST);
     let bi = scene.globals[g >> 2u][g & 3u];
-    let r = isectBox(ro, rd, boxGeo[bi], tmax, bi, invRd, axisFast);
+    let r = isectBox(ro, rd, boxGeo[bi], tmax, bi, invRd);
     if (r.x >= 0.0) { P_(P_ANS_GLOBAL); return true; }
   }
   var run = 0u;
@@ -250,16 +249,15 @@ fn occludedProf(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> bool {
     iters++;
     let ci = u32(cell.y * GRID_W + cell.x);
     var cw: CellWalk;
-    if (fast) { cw = gridCellProf(ci, ro.y + rd.y * max(tCell - tBack, t0), yEnd, &run, gskip, ycull, shrink); }
-    else { cw.start = gridCells[ci]; cw.end = gridCells[ci + 1u]; cw.qlo = 0u; cw.qhi = 255u; }
+    cw = gridCellProf(ci, ro.y + rd.y * max(tCell - tBack, t0), yEnd, &run);
     for (var k = cw.start; k < cw.end; k++) {
       P_(P_ITEMS);
-      let gi = gridItem(k, cw, ycull); if (gi < 0) { P_(P_ITEM_YCULL); continue; }
+      let gi = gridItem(k, cw); if (gi < 0) { P_(P_ITEM_YCULL); continue; }
       let bi = u32(gi);
       let b = boxGeo[bi];
       if (skipsOwner(boxOwner(b), skipOwner)) { P_(P_ITEM_OWNER); continue; }
       P_(P_SLAB); if ((b.flags & BOX_ROT) != 0u) { P_(P_SLAB_ROT); } else if (b.rot != ROT_IDENTITY) { P_(P_SLAB_YAW); }
-      let r = isectBox(ro, rd, b, tmax, bi, invRd, axisFast);
+      let r = isectBox(ro, rd, b, tmax, bi, invRd);
       if (r.x >= 0.0) { P_(P_SLAB_HIT); P_(P_ANS_GRID); pc[P_EXIT_ITER_SUM - 16u] += iters; return true; }
     }
     if (tNext.x < tNext.y) { tCell = tNext.x; tNext.x += tDelta.x; cell.x += stp.x; tBack = tDelta.x * slack; }
@@ -295,17 +293,15 @@ fn traceClosestProf(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> Hit {
   var tmax = min(tmaxIn, tb.y);
   hit.t = tmax;
   var code = 0.0; var found = false; var ansG = false;
-  let gskip = (frame.flags & FLAG_GRID_SKIP) != 0u; let ycull = (frame.flags & FLAG_GRID_YCULL) != 0u; let fast = gskip || ycull; let axisFast = (frame.flags & FLAG_AXIS_BOX) != 0u;
-  let slabs = (frame.flags & FLAG_GRID_SLABS) != 0u; let shrink = select(0.0, scene.grid.y, slabs);
   let yFar = ro.y + rd.y * tmax;
   let pEnd = vec3f(ro.x + rd.x * tmax, yFar, ro.z + rd.z * tmax);
   let sLo = min(ro, pEnd); let sHi = max(ro, pEnd);
   for (var g = 0u; g < scene.numGlobals; g++) {
-    if (globalSkipped(g, sLo, sHi, ycull, slabs)) { P_(P_GLOB_SKIP); continue; }
+    if (globalOutside(g, sLo, sHi)) { P_(P_GLOB_SKIP); continue; }
     P_(P_GLOB_TEST);
     let bi = scene.globals[g >> 2u][g & 3u];
     let b = boxGeo[bi];
-    let r = isectBox(ro, rd, b, hit.t, bi, invRd, axisFast);
+    let r = isectBox(ro, rd, b, hit.t, bi, invRd);
     if (r.x >= 0.0 && r.x < hit.t) { hit.t = r.x; hit.idx = i32(bi); code = r.y; found = true; ansG = true; }
   }
   var run = 0u; var iters = 0u;
@@ -324,15 +320,14 @@ fn traceClosestProf(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> Hit {
     iters++;
     let ci = u32(cell.y * GRID_W + cell.x);
     var cw: CellWalk;
-    if (fast) { cw = gridCellProf(ci, ro.y + rd.y * max(tCell - tBack, t0), ro.y + rd.y * hit.t, &run, gskip, ycull, shrink); }
-    else { cw.start = gridCells[ci]; cw.end = gridCells[ci + 1u]; cw.qlo = 0u; cw.qhi = 255u; }
+    cw = gridCellProf(ci, ro.y + rd.y * max(tCell - tBack, t0), ro.y + rd.y * hit.t, &run);
     for (var k = cw.start; k < cw.end; k++) {
       P_(P_ITEMS);
-      let gi = gridItem(k, cw, ycull); if (gi < 0) { P_(P_ITEM_YCULL); continue; }
+      let gi = gridItem(k, cw); if (gi < 0) { P_(P_ITEM_YCULL); continue; }
       let bi = u32(gi); let b = boxGeo[bi];
       if (skipsOwner(boxOwner(b), skipOwner)) { P_(P_ITEM_OWNER); continue; }
       P_(P_SLAB); if ((b.flags & BOX_ROT) != 0u) { P_(P_SLAB_ROT); } else if (b.rot != ROT_IDENTITY) { P_(P_SLAB_YAW); }
-      let r = isectBox(ro, rd, b, hit.t, bi, invRd, axisFast);
+      let r = isectBox(ro, rd, b, hit.t, bi, invRd);
       if (r.x >= 0.0 && r.x < hit.t) { P_(P_SLAB_HIT); hit.t = r.x; hit.idx = i32(bi); code = r.y; found = true; ansG = false; }
     }
     if (tNext.x < tNext.y) { tCell = tNext.x; tNext.x += tDelta.x; cell.x += stp.x; tBack = tDelta.x * slack; }

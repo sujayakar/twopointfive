@@ -492,7 +492,7 @@ fn shAtrous(@builtin(global_invocation_id) gid: vec3u, @builtin(workgroup_id) wi
   // tile pass-through: no hint anywhere within the whole chain's reach of this tile → nothing here can differ from its input (softblur.wgsl's argument
   // carries over: WITH the hint prior the strength term below is 0 for every pixel further than the chain's travel from a hint) — copy through (FINAL: × U).
   // Without the prior every lit pixel filters at every stride, the mask would draw tile seams, and the host does not build it (passes.ts).
-  if (prior && (frame.flags & FLAG_SOFT_TILESKIP) != 0u && (textureLoad(saMask, vec2i(wid.xy), 0).x & 256u) != 0u) {
+  if (prior && (textureLoad(saMask, vec2i(wid.xy), 0).x & 256u) != 0u) {
     shEmit(pc, 1u, cB.xyz, cB.a, sh.y); shEmit(pc, 0u, cA.xyz, cA.a, sh.x); textureStore(saShOut, pc, sh);
     return;
   }

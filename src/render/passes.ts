@@ -50,7 +50,7 @@ import { OutlinePass, type OutlineFrame } from './outline';   // THE OUTLINE IN 
 
 const CS = GPUShaderStage.COMPUTE, FS = GPUShaderStage.FRAGMENT;
 
-// THE SHADOW CLIENT'S TILE PASS-THROUGH (FrameFlags.SoftTileSkip; softtile.wgsl builds the mask from the per-tile hint flags the denoiser's pack writes). A hint moves at
+// THE SHADOW CLIENT'S TILE PASS-THROUGH (softtile.wgsl builds the mask from the per-tile hint flags the denoiser's pack writes). A hint moves at
 // most a pass's stride in px, so after the à-trous chain whose strides sum to `travelPx` only pixels within that Chebyshev distance of a hint-carrying pixel can differ
 // from their input; pixels of tiles t apart are >= 8(t-1)+1 px apart, hence a whole 8x8 tile passes the chain through once its tile distance to the nearest
 // hint-holding tile reaches
@@ -1247,7 +1247,7 @@ export class LightingPasses implements CutSwappable {
   }
 
   /** Measurement aid (console: `await __engine.passes.softTileStats()`): reads back the tile mask of the last frame rendered with
-   *  settings.softTileSkip on and reports the threshold it was built with, the fraction of 8x8 tiles the whole chain passes through (≈ the
+   *  the tile pass-through and reports the threshold it was built with, the fraction of 8x8 tiles the whole chain passes through (≈ the
    *  fraction of the chain's per-pixel work saved; a retired tile costs one broadcast texel load + a 2-texel copy per step) and the tile
    *  count per distance 0 .. skipT (the scan saturates at skipT: "at least that far"). */
   async softTileStats(): Promise<{ tiles: number; skipT: number; skipped: number; byDistance: number[]; steps: { stride: number; ownT: number }[] } | null> {
@@ -1354,7 +1354,7 @@ export class LightingPasses implements CutSwappable {
       // other ping-pong buffer once pack has read it and receives the final result.
       this.dParity ^= 1; const hp = this.dParity;
       const T = skipThreshold(dnTravel(this.den.knobs.shIters)); this.lastSkipT = T;
-      const tileDist = ((frameFlags & FrameFlags.SoftTileSkip) && this.den.knobs.shPrior) ? () => { p.setPipeline(this.pTileDist.get(T) ?? this.pTileDist.get(this.skipTs[this.skipTs.length - 1])!); p.setBindGroup(1, this.bgTileDist!); p.dispatchWorkgroups(Math.ceil(this.tw / 8), Math.ceil(this.th / 8)); } : null;
+      const tileDist = this.den.knobs.shPrior ? () => { p.setPipeline(this.pTileDist.get(T) ?? this.pTileDist.get(this.skipTs[this.skipTs.length - 1])!); p.setBindGroup(1, this.bgTileDist!); p.dispatchWorkgroups(Math.ceil(this.tw / 8), Math.ceil(this.th / 8)); } : null;
       this.den.encodeShadow(p, sceneBG, {
         depth: g.depthView, normal: g.normalView, vel: g.velView, S: this.dSView, U: this.dUView, cur: this.dPView, shared: this.dnSharedView,
         hvIn: [this.dHView[0][1 - hp], this.dHView[1][1 - hp]], hvOut: [this.dHView[0][hp], this.dHView[1][hp]], hmIn: this.dnHmView[1 - hp], hmOut: this.dnHmView[hp], hgIn: this.dnHgView[1 - hp], hgOut: this.dnHgView[hp],
