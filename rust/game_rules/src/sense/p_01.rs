@@ -249,7 +249,7 @@ pub fn cpu_smoke_blobs_along(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
     if g.cpu_smoke.blobs.is_empty() {
         return 1.0;
     }
-    if g.col.mirror.live {
+    if crate::scene_collision::standing(g) {
         cpu_smoke_blobs_ask(g, a, b)
     } else {
         crate::scene_collision::window(g, &mut |g: &mut crate::game::Game| cpu_smoke_blobs_ask(g, a, b))
