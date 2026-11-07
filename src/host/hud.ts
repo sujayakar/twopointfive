@@ -7,7 +7,7 @@ import type { FollowCamera } from '../game/camera';
  *  points, width / height the backing store in device px) */
 export interface View { clientWidth: number; clientHeight: number; width: number; height: number; }
 
-/** a showcase's chapter list for the timeline (game/demo.ts chapters(), game/director.ts chapters()) */
+/** a showcase's chapter list for the timeline (game/director.ts chapters()) */
 export interface Chapters { list: { title: string; dur: number }[]; i: number; frac: number; }
 
 export interface HudLike {
