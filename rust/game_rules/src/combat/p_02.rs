@@ -320,7 +320,7 @@ pub fn player_props(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
                         None => if crate::character::anim_throw_time(g, c) >= crate::character::THROW_RELEASE { None } else { Some(ks) },
                     }
                 } else { None }
-            } else if crate::game::game_throw_count(g, ks) > 0.0 { Some(ks) } else { None }
+            } else if crate::game::game_throw_count(g, &crate::seats::here(g), ks) > 0.0 { Some(ks) } else { None }
         }
         _ => None,
     };
@@ -342,7 +342,7 @@ pub fn player_props(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
     let mut show = crate::kitanim::KitShowV { pistol_in_hand: pistol_now, rifle: rifle_now, held: held_now, knife: knife_now };
     let kit = crate::kitanim::kit_show(g, &mut show);
     let crate::kitanim::KitShowV { pistol_in_hand, rifle, held, knife } = show;
-    let lens_up = crate::kitanim::kit_gun_up(g);
+    let lens_up = crate::kitanim::kit_gun_up(g, &crate::seats::here(g));
     let fit = !g.touring;
     g.ch[c].anim.grip_can = fit && held.is_some();
     let big_s = crate::bigkit::big_carried(g, crate::bigkit::BigCarriedC { id: g.ch[c].id });

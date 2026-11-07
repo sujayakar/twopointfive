@@ -165,10 +165,10 @@ fn ai_spread_of(g: &crate::game::Game, gd: GuardId) -> crate::weapons::AiSpread 
 }
 
 /// The man he is firing at, Sam's body if nobody: `foeChar(g, gd) ?? g.player.char`.
-fn foe_or_player(g: &crate::game::Game, gd: GuardId) -> CharId {
+fn foe_or_player(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> CharId {
     match crate::teams::foe_char(g, gd) {
         Some(c) => c,
-        None => g.pl[g.player].ch,
+        None => g.pl[seat.player].ch,
     }
 }
 
@@ -177,7 +177,7 @@ pub fn guard_terms(g: &mut crate::game::Game, gd: GuardId, extra: f64) -> crate:
     let p = g.k.aim.guard;
     let c = g.gd[gd].ch;
     let s = ai_spread_of(g, gd);
-    let tc = foe_or_player(g, gd);
+    let tc = foe_or_player(g, &crate::seats::here(g), gd);
     let range = v3::dist(g.ch[c].pos, g.ch[tc].pos);
     let k = match &g.gd[gd].skill {
         Some(x) => x.spread_k,
@@ -211,7 +211,7 @@ pub fn guard_round(g: &mut crate::game::Game, gd: GuardId, extra: f64, gated: Op
 pub fn hands_cone(g: &mut crate::game::Game, gd: GuardId, extra: f64) -> f64 {
     if !g.tune.aim_model {
         let s = ai_spread_of(g, gd);
-        let tc = foe_or_player(g, gd);
+        let tc = foe_or_player(g, &crate::seats::here(g), gd);
         let tv = g.ch[tc].vel;
         return s.base + m::min(s.move_cap, m::hyp2(tv[0], tv[2]) * s.move_k) + m::max(0.0, v3::dist(g.ch[g.gd[gd].ch].pos, g.ch[tc].pos) - s.range_from) * s.range_k + extra;
     }

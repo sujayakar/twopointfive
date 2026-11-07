@@ -216,7 +216,7 @@ pub fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p: crate:
 /// Every frame for a man carrying a standoff record: is it still one? The pair when it stands.   (guards.ts standoffUpkeep)
 pub fn standoff_upkeep(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::guards::Pair> {
     let s = g.gd[gd].standoff?;
-    let p = pair_of(g);
+    let p = pair_of(g, &crate::seats::here(g));
     let pair = g.tab.guards_standoff[s].pair;
     let why = if g.quiet_utility || g.gd[gd].hold || g.gd[gd].pinned || !g.ai_enabled {
         Some("off")
@@ -279,7 +279,7 @@ pub fn hostage_hit_bark(g: &mut crate::game::Game, shooter: GuardId, victim: Gua
 
 /// Panel / QA: one line per man in a standoff. Text only; `{:.n}` stands for toFixed (they differ on an exact tie).   (guards.ts standoffSummary)
 pub fn standoff_summary(g: &mut crate::game::Game) -> String {
-    let p = pair_of(g);
+    let p = pair_of(g, &crate::seats::here(g));
     let mut parts: Vec<String> = Vec::new();
     let mut i = 0;
     while i < g.guards.len() {
@@ -353,7 +353,7 @@ pub fn can_see_char(g: &mut crate::game::Game, gd: GuardId, pc: CharId, is_playe
         None => v3::add(g.ch[c].pos, [0.0, 1.65, 0.0]),
     };
     let look = look_of(g, c);
-    let range = reach_for(g, gd, pc, is_player, eye);
+    let range = reach_for(g, &crate::seats::here(g), gd, pc, is_player, eye);
     let mut e = crate::guards::Eye { pos: eye, look, range, half_deg: g.k.guard_eye.half_deg, near_m: g.k.guard_eye.near_m, near_deg: g.k.guard_eye.near_deg, v_half_deg: None };
     let through = eye_through(g, gd);
     let blind = g.time < g.gd[gd].dazzled_until || crate::pairorders::pair_gripped(g, gd) || crate::doze::doze_asleep(g, gd);
@@ -395,10 +395,10 @@ fn reach_of(k: &crate::knobs::GuardEyeK, lit: f64) -> f64 {
 }
 
 /// …for the man `pc` in this man's view.   (guards.ts reachFor)
-pub fn reach_for(g: &crate::game::Game, gd: GuardId, pc: CharId, is_player: bool, eye: V3) -> f64 {
+pub fn reach_for(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, pc: CharId, is_player: bool, eye: V3) -> f64 {
     if g.touring { return g.k.guard_eye.range; }
     if is_player {
-        let vis = g.pl[g.player].visibility;
+        let vis = g.pl[seat.player].visibility;
         return eye_reach(g, vis);
     }
     let t = match g.ch[pc].bones.get(crate::character::Bone::Chest) { Some(b) => *b, None => g.ch[pc].pos };

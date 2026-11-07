@@ -476,7 +476,7 @@ pub fn role_of_man(g: &mut crate::game::Game, gd: GuardId) -> Option<TacticsRole
 }
 
 /// Is the man this guard is after ARMED, as far as he can know   (tactics.ts armedIntruder)
-pub fn armed_intruder(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn armed_intruder(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
     match g.gd[gd].foe {
         Some(crate::game::Foe::Player) => {}
         foe => return foe.is_some(),
@@ -489,7 +489,7 @@ pub fn armed_intruder(g: &crate::game::Game, gd: GuardId) -> bool {
     if shots > 0.0 && last_shot_t >= 0.0 && now - last_shot_t < ARMED_SHOT_SECS {
         return true;
     }
-    let player = g.player;
+    let player = seat.player;
     let last_fire_t = g.pl[player].last_fire_t;
     if last_fire_t >= 0.0 && now - last_fire_t < ARMED_SHOT_SECS && last_t >= 0.0 && now - last_t < ARMED_SHOT_SECS && last_t >= last_fire_t - 1.0 {
         return true;
@@ -705,7 +705,7 @@ pub fn tactics_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<
             return move_lone_row(g, gd, l, dt);
         }
     }
-    let applies = armed_intruder(g, gd) && flat(pos_of(g, gd), fix) > LONE_FIGHT_M && !crate::teams::foe_down(g, gd) && (alone(g, gd) || row.is_some());
+    let applies = armed_intruder(g, &crate::seats::here(g), gd) && flat(pos_of(g, gd), fix) > LONE_FIGHT_M && !crate::teams::foe_down(g, gd) && (alone(g, gd) || row.is_some());
     if !applies {
         if row.is_some() {
             s(g).lone.delete(gd);

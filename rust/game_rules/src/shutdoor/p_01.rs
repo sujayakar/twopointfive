@@ -151,8 +151,8 @@ pub fn walk(g: &mut crate::game::Game, gd: GuardId, p: V3) -> f64 {
 }
 
 /// Was he taken from Sam's file (or from another door of this order's, taken from the file for that one). (shutdoor.ts fromFile)
-pub fn from_file(g: &crate::game::Game, gd: GuardId) -> bool {
-    let a = match crate::orders::squad_orders_of(g, gd) { Some(a) => a, None => return false };
+pub fn from_file(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
+    let a = match crate::orders::squad_orders_of(g, seat, gd) { Some(a) => a, None => return false };
     let row = &g.tab.orders_assignment[a];
     row.post.is_none() || (row.order == SHUT_ID && g.m.shutdoor.jobs.get(gd).map_or(false, |j| j.back))
 }
@@ -167,7 +167,7 @@ pub fn plan(g: &mut crate::game::Game, d: DoorId, men: &[GuardId]) -> crate::shu
     let sam_at = g.ch[g.pl[g.player].ch].pos;
     let sam = crate::orders::side_of(g, d, sam_at);
     for &gd in men {
-        let want = if from_file(g, gd) {
+        let want = if from_file(g, &crate::seats::here(g), gd) {
             sam
         } else {
             let at = pos_of(g, gd);
@@ -457,7 +457,7 @@ pub fn order_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders
         Plan::Text(why) => return Some(why),
         Plan::Arm1(p) => (p.gd, p.spot),
     };
-    let back = from_file(g, gd);
+    let back = from_file(g, &crate::seats::here(g), gd);
     send(g, gd, d, spot);
     let now = g.time;
     g.m.shutdoor.jobs.set(gd, Job { door: d, spot, back, phase: JobPhase::Go, t0: now, t: now, pulls: 0.0, moved: 0.0, near: None });

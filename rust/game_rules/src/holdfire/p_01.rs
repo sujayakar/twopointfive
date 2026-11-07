@@ -14,13 +14,13 @@ fn fresh() -> State {
 
 /// This view's row, made if missing.   (holdfire.ts stateOf)
 pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::holdfire::State {
-    let key = crate::seats::view_key(g);
+    let key = crate::seats::view_key(g, &crate::seats::here(g));
     g.m.holdfire.states.get_or_insert_with(key, fresh)
 }
 
 /// Which player's squad this is.   (holdfire.ts leadOf)
-pub fn lead_of(g: &crate::game::Game) -> PlayerId {
-    g.player
+pub fn lead_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> PlayerId {
+    seat.player
 }
 
 /// A teammate under orders.   (holdfire.ts mate)
@@ -29,8 +29,8 @@ pub fn mate(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// The squad's living men.   (holdfire.ts living)
-pub fn living(g: &crate::game::Game) -> Vec<GuardId> {
-    let mut men = crate::orders::squad_orders_squad(g);
+pub fn living(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<GuardId> {
+    let mut men = crate::orders::squad_orders_squad(g, seat);
     men.retain(|&gd| g.gd[gd].state != crate::game::GuardState::Dead);
     men
 }
@@ -59,16 +59,16 @@ pub fn hold_fire_found(g: &crate::game::Game, men: &[GuardId]) -> Option<String>
 }
 
 /// A door order of the squad is being worked, or a rescue's clock is running. Waiting is not working.   (holdfire.ts working)
-pub fn working(g: &crate::game::Game) -> bool {
+pub fn working(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let dead = crate::game::GuardState::Dead;
-    if g.door_tools.ops.iter().any(|&id| {
+    if seat.door_tools.ops.iter().any(|&id| {
         let op = &g.tab.doortools_door_op[id];
         let waits = matches!(op.phase, crate::doortools::Phase::Place | crate::doortools::Phase::Standoff | crate::doortools::Phase::Armed);
         !op.on_word && !(op.kind == crate::doortools::DoorToolKind::Charge && waits) && op.men.iter().any(|&m| g.gd[m].state != dead)
     }) {
         return true;
     }
-    if g.wall_charge.ops.iter().any(|&id| {
+    if seat.wall_charge.ops.iter().any(|&id| {
         let op = &g.tab.wallcharge_wall_op[id];
         let waits = matches!(op.phase, crate::wallcharge::Phase::Place | crate::wallcharge::Phase::Standoff | crate::wallcharge::Phase::Armed);
         !waits && op.men.iter().any(|&m| g.gd[m].state != dead)
@@ -90,11 +90,11 @@ pub fn working(g: &crate::game::Game) -> bool {
 
 /// His shot or his order has started the fight. A stamp from a roster that is gone, or from ahead of the clock, is no lift.   (holdfire.ts holdFireLifted)
 pub fn hold_fire_lifted(g: &mut crate::game::Game) -> bool {
-    let key = crate::seats::view_key(g);
+    let key = crate::seats::view_key(g, &crate::seats::here(g));
     if let Some(lift_t) = g.m.holdfire.states.get(key).map(|s| s.lift_t) {
         if lift_t > f64::NEG_INFINITY {
             let gone = g.time < lift_t || {
-                let squad = crate::orders::squad_orders_squad(g);
+                let squad = crate::orders::squad_orders_squad(g, &crate::seats::here(g));
                 match g.m.holdfire.states.get(key) {
                     Some(s) => !squad.iter().any(|gd| s.cast.contains(gd)),
                     None => true,
@@ -113,17 +113,17 @@ pub fn hold_fire_lifted(g: &mut crate::game::Game) -> bool {
             }
         }
     }
-    working(g)
+    working(g, &crate::seats::here(g))
 }
 
 /// The hold comes off: a stamp still running is extended, one fight, one count.   (holdfire.ts lift)
 pub fn lift(g: &mut crate::game::Game, why: crate::holdfire::LiftWhy, what: &str, by: PlayerId, loud: Option<bool>) {
     let loud = loud.unwrap_or(false);
-    if !crate::orders::squad_orders_active(g) {
+    if !crate::orders::squad_orders_active(g, &crate::seats::here(g)) {
         return;
     }
     hold_fire_lifted(g);
-    let cast = crate::orders::squad_orders_squad(g);
+    let cast = crate::orders::squad_orders_squad(g, &crate::seats::here(g));
     let (now, secs) = (g.time, g.k.holdfire.lift_secs);
     let s = state_of(g);
     let was = s.lift_t > f64::NEG_INFINITY && now - s.lift_t < secs;
@@ -145,21 +145,21 @@ pub fn lift(g: &mut crate::game::Game, why: crate::holdfire::LiftWhy, what: &str
 
 /// A round has left a gun: a player's starts the fight for his squad.   (holdfire.ts holdFireShot)
 pub fn hold_fire_shot(g: &mut crate::game::Game, shooter: CharId) {
-    let lead = lead_of(g);
+    let lead = lead_of(g, &crate::seats::here(g));
     if shooter != g.pl[lead].ch {
         return;
     }
-    let by = lead_of(g);
+    let by = lead_of(g, &crate::seats::here(g));
     lift(g, LiftWhy::Shot, "a round of his own", by, None);
 }
 
 /// An order has been given: one that means fire starts the fight, a waiting one when it goes, 'go loud' only to a squad that was silent.   (holdfire.ts holdFireOrder)
 pub fn hold_fire_order(g: &mut crate::game::Game, id_2: &str, o: Option<crate::holdfire::HoldFireOrderO>) {
     let o = o.unwrap_or_default();
-    if o.silent == Some(true) && id_2 == crate::holdfire::LOUD_ORDER && !crate::silent::squad_silent(g) {
+    if o.silent == Some(true) && id_2 == crate::holdfire::LOUD_ORDER && !crate::silent::squad_silent(g, &crate::seats::here(g)) {
         let by = match o.by {
             Some(by) => by,
-            None => lead_of(g),
+            None => lead_of(g, &crate::seats::here(g)),
         };
         lift(g, o.why.unwrap_or(LiftWhy::Order), id_2, by, Some(true));
         return;
@@ -169,19 +169,19 @@ pub fn hold_fire_order(g: &mut crate::game::Game, id_2: &str, o: Option<crate::h
     }
     let by = match o.by {
         Some(by) => by,
-        None => lead_of(g),
+        None => lead_of(g, &crate::seats::here(g)),
     };
     lift(g, o.why.unwrap_or(LiftWhy::Order), id_2, by, None);
 }
 
 /// Asked before an order's row is issued: is this 'go loud' told to a squad that is silent right now.   (holdfire.ts holdFireSilent)
-pub fn hold_fire_silent(g: &crate::game::Game, id_2: &str) -> bool {
-    id_2 == crate::holdfire::LOUD_ORDER && crate::silent::squad_silent(g)
+pub fn hold_fire_silent(g: &crate::game::Game, seat: &crate::seats::SeatRef, id_2: &str) -> bool {
+    id_2 == crate::holdfire::LOUD_ORDER && crate::silent::squad_silent(g, seat)
 }
 
 /// The lift that stands is his 'go loud'; the sneak's hold holds nobody either.   (holdfire.ts holdFireLoud)
 pub fn hold_fire_loud(g: &mut crate::game::Game) -> bool {
-    let key = crate::seats::view_key(g);
+    let key = crate::seats::view_key(g, &crate::seats::here(g));
     let loud_t = match g.m.holdfire.states.get(key) {
         Some(s) => s.loud_t,
         None => return false,
@@ -201,17 +201,17 @@ pub fn hold_fire_loud(g: &mut crate::game::Game) -> bool {
 pub fn hold_fire_drill(g: &mut crate::game::Game, by: Option<PlayerId>) {
     let by = match by {
         Some(by) => by,
-        None => lead_of(g),
+        None => lead_of(g, &crate::seats::here(g)),
     };
     lift(g, LiftWhy::Drill, "go", by, None);
 }
 
 /// Is this loud teammate under the hold this frame.   (holdfire.ts held)
 pub fn held(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    if !mate(g, gd) || !crate::orders::squad_orders_active(g) || hold_fire_lifted(g) {
+    if !mate(g, gd) || !crate::orders::squad_orders_active(g, &crate::seats::here(g)) || hold_fire_lifted(g) {
         return false;
     }
-    let men = living(g);
+    let men = living(g, &crate::seats::here(g));
     !men.is_empty() && hold_fire_found(g, &men).is_none()
 }
 
@@ -262,20 +262,20 @@ pub fn hold_fire_glass_held(g: &mut crate::game::Game) {
 
 /// A fresh encounter: nothing lifted.   (holdfire.ts holdFireReset)
 pub fn hold_fire_reset(g: &mut crate::game::Game) {
-    let key = crate::seats::view_key(g);
+    let key = crate::seats::view_key(g, &crate::seats::here(g));
     g.m.holdfire.states.delete(key);
 }
 
 /// The panel's and the checks' line.   (holdfire.ts holdFireSummary)
 pub fn hold_fire_summary(g: &mut crate::game::Game) -> String {
-    let n = if crate::orders::squad_orders_active(g) { living(g).len() } else { 0 };
+    let n = if crate::orders::squad_orders_active(g, &crate::seats::here(g)) { living(g, &crate::seats::here(g)).len() } else { 0 };
     if n == 0 {
         return String::from("no squad");
     }
     let lifted = hold_fire_lifted(g);
-    let men = living(g);
+    let men = living(g, &crate::seats::here(g));
     let found = hold_fire_found(g, &men);
-    let key = crate::seats::view_key(g);
+    let key = crate::seats::view_key(g, &crate::seats::here(g));
     let secs = g.k.holdfire.lift_secs;
     let head = if let Some(found) = found {
         alloc::format!("found ({})", found)
