@@ -681,7 +681,6 @@ pub fn squad_orders_sync(g: &mut crate::game::Game) -> Vec<GuardId> {
         for gd in g.orders.asg.keys() {
             if !squad.contains(&gd) { squad_orders_drop(g, gd); }
         }
-        crate::planlay::lay_fresh(g);
     }
     let stands = match g.orders.who {
         Who::Num(k) => g.orders.roster.get(k as usize).map_or(true, |&gd| g.gd[gd].state != crate::game::GuardState::Dead),

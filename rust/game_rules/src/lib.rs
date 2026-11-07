@@ -165,7 +165,6 @@ pub mod par;
 pub mod particle_fx;
 pub mod peeksight;
 pub mod picture;
-pub mod planlay;
 pub mod planmode;
 pub mod player;
 pub mod posehome;
