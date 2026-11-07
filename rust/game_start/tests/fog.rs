@@ -100,6 +100,9 @@ fn two_machines_that_show_different_seats_hold_the_same_game() {
         let run = |k: usize| {
             let mut p = lamp_yard(s);
             let rows: Vec<Vec<u32>> = (0..120).map(|_| { p.net_frame(k); p.words() }).collect();
+            // (as the machine that shows this seat asks)
+            let seats = p.g.seats.clone();
+            game::seats::show_seat(&mut p.g, seats[k]);
             let f = fog_of(&p);
             (rows, f.light_count as usize, f.lights)
         };
