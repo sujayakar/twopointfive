@@ -74,7 +74,7 @@ export async function snowSparkleCheck(o: { verbose?: boolean } = {}): Promise<b
   for (const f of files) {
     let t = readFileSync(resolve(SH, f), 'utf8');
     t = t.split('\n').map(l => /\/\/.*THE LOOK PROTOTYPE/.test(l) && /\bLOOK\b/.test(l.replace(/\/\/.*$/, '')) ? '' : l).join('\n');   // (the look prototype's own lines, each tagged in its comment and behind LOOK in its code: live only on its page — shaders/look.wgsl. It reads and writes the mark's fourth level, alpha 0, and is not this check's)
-    if (BREAK) { t = t.replace(/if \(SNOW_SPARKLE\) \{/g, '{'); if (f === 'common.wgsl') t = t.replace(CARELESS[0], CARELESS[1]); }
+    if (BREAK) { t = t.replace(/if \(lv\(SNOW_SPARKLE\)\) \{/g, '{'); if (f === 'common.wgsl') t = t.replace(CARELESS[0], CARELESS[1]); }
     text[f] = t;
   }
   const code = (line: string) => line.replace(/\/\/.*$/, '');
@@ -94,21 +94,22 @@ export async function snowSparkleCheck(o: { verbose?: boolean } = {}): Promise<b
       const page = /SNOW_LOOK\.sparkle = q\.get\('snowsparkle'\) !== '0';/.test(readFileSync(resolve(ROOT, 'src/host/profile.ts'), 'utf8'));   // (read, not run: pageSwitches writes every switch the page has)
       const mod = /export const SNOW_LOOK = \{[^}]*\bsparkle: false\b[^}]*\}/.test(readFileSync(resolve(ROOT, 'src/game/weatherKinds.ts'), 'utf8'));
       const reg = !!KN.JOURNAL_KNOBS && (KN.JOURNAL_KNOBS as readonly string[]).includes('SNOW_LOOK');
-      const cfgWas = FR.snowLookConfig.sparkle; FR.snowLookConfig.sparkle = false; const p0 = FR.scenePrelude(); FR.snowLookConfig.sparkle = true; const p1 = FR.scenePrelude(); FR.snowLookConfig.sparkle = cfgWas;
-      const word = /const SNOW_SPARKLE: bool = false;/.test(p0) && /const SNOW_SPARKLE: bool = true;/.test(p1) && p0.replace('const SNOW_SPARKLE: bool = false;', '') === p1.replace('const SNOW_SPARKLE: bool = true;', '');
+      // (the switch reaches the shaders as a bit of the frame block's level word, render/frame.ts LevelSw: the shader TEXT is the same with it on or off)
+      const cfgWas = FR.snowLookConfig.sparkle; FR.snowLookConfig.sparkle = false; const p0 = FR.scenePrelude(), w0 = FR.levelSwitches(); FR.snowLookConfig.sparkle = true; const p1 = FR.scenePrelude(), w1 = FR.levelSwitches(); FR.snowLookConfig.sparkle = cfgWas;
+      const word = p0 === p1 && /const SNOW_SPARKLE: u32 = 64u;/.test(p1) && FR.LevelSw.SNOW_SPARKLE === 64 && (w0 & 64) === 0 && (w1 ^ w0) === 64;
       const boot = /snowLookConfig\.sparkle = SNOW_LOOK\.on && SNOW_LOOK\.sparkle;/.test(readFileSync(resolve(ROOT, 'src/main.ts'), 'utf8'));
       const env = /'TPS_SNOWSPARKLE'/.test(readFileSync(resolve(ROOT, 'src/host/standEnv.ts'), 'utf8'));
       verdict(up.stood === true && down.stood === false && unsaid.stood === (prof === 'shipped') && /TPS_SNOWSPARKLE=1/.test(row) && page && mod && reg && word && boot && env,
-        'stands — the switch\'s words on this stand', `${prof} stand · TPS_SNOWSPARKLE=1 → ${up.stood}, =0 → ${down.stood}, not said → ${unsaid.stood} (${prof === 'shipped' ? 'the page: on' : 'frozen: off'}) · FROZEN_HOLDS row: ${row ? `'${row.slice(0, 40)}…'` : 'NONE'} · the page's boot reads ?snowsparkle=0 and is on without it: ${page} · off in the module: ${mod} · its table rides in the journal's registry: ${reg} · the stand's word is a listed name: ${env} · the prelude's word follows snowLookConfig.sparkle and is the only text that differs: ${word} · main.ts raises it only with the surface: ${boot}`); }
+        'stands — the switch\'s words on this stand', `${prof} stand · TPS_SNOWSPARKLE=1 → ${up.stood}, =0 → ${down.stood}, not said → ${unsaid.stood} (${prof === 'shipped' ? 'the page: on' : 'frozen: off'}) · FROZEN_HOLDS row: ${row ? `'${row.slice(0, 40)}…'` : 'NONE'} · the page's boot reads ?snowsparkle=0 and is on without it: ${page} · off in the module: ${mod} · its table rides in the journal's registry: ${reg} · the stand's word is a listed name: ${env} · the frame's level word follows snowLookConfig.sparkle in its one bit, and no shader text differs: ${word} · main.ts raises it only with the surface: ${boot}`); }
 
     // ---- mark: the snow mark under either switch, the term × it, and only fresh snow
-    { const both = /\bSNOW_GLOW \|\| SNOW_SPARKLE\b/g;
+    { const both = /\blv\(SNOW_GLOW\) \|\| lv\(SNOW_SPARKLE\)/g;
       const gb = codeOf('gbuffer.wgsl'), sn = codeOf('snow.wgsl');
-      const writers = /if \(SNOW_GLOW \|\| SNOW_SPARKLE\) \{ o\.normal\.a = sb\.amt \* 0\.6667; \}/.test(gb) && /o\.normal = vec4f\(n \* 0\.5 \+ 0\.5, select\(1\.0, 1\.0 - o\.normal\.a, SNOW_GLOW \|\| SNOW_SPARKLE\)\);/.test(gb) && /o\.normal = vec4f\(s\.n \* 0\.5 \+ 0\.5, select\(1\.0, 0\.3333, SNOW_GLOW \|\| SNOW_SPARKLE\)\);/.test(sn);
+      const writers = /if \(lv\(SNOW_GLOW\) \|\| lv\(SNOW_SPARKLE\)\) \{ o\.normal\.a = sb\.amt \* 0\.6667; \}/.test(gb) && /o\.normal = vec4f\(n \* 0\.5 \+ 0\.5, select\(1\.0, 1\.0 - o\.normal\.a, lv\(SNOW_GLOW\) \|\| lv\(SNOW_SPARKLE\)\)\);/.test(gb) && /o\.normal = vec4f\(s\.n \* 0\.5 \+ 0\.5, select\(1\.0, 0\.3333, lv\(SNOW_GLOW\) \|\| lv\(SNOW_SPARKLE\)\)\);/.test(sn);
       const only = (gb.match(/SNOW_SPARKLE/g) ?? []).length === 2 && (gb.match(both) ?? []).length === 2 && (sn.match(/SNOW_SPARKLE/g) ?? []).length === 1 && (sn.match(both) ?? []).length === 1 && !/snowSparkle/.test(gb + sn);
       const lines = compCode.split('\n'); const at = (re: RegExp) => lines.findIndex(l => re.test(l));
-      const iOpen = at(/^    if \(SNOW_GLOW \|\| SNOW_SPARKLE\) \{\s*$/), iSa = at(/let sa = snowGlowAmt\(textureLoad\(gNormal, sPix, 0\)\.a\);/), iMen = at(/if \(sa > 0\.0 && \(\(id >> 28u\) & 3u\) == 0u\) \{/);
-      const iSp = at(/^        if \(SNOW_SPARKLE\) \{ sparkle = snowSparkleL \* \(sa \* snowSparkleFresh\(textureLoad\(gMat, sPix, 0\)\.x\)\); \}\s*$/);
+      const iOpen = at(/^    if \(lv\(SNOW_GLOW\) \|\| lv\(SNOW_SPARKLE\)\) \{\s*$/), iSa = at(/let sa = snowGlowAmt\(textureLoad\(gNormal, sPix, 0\)\.a\);/), iMen = at(/if \(sa > 0\.0 && \(\(id >> 28u\) & 3u\) == 0u\) \{/);
+      const iSp = at(/^        if \(lv\(SNOW_SPARKLE\)\) \{ sparkle = snowSparkleL \* \(sa \* snowSparkleFresh\(textureLoad\(gMat, sPix, 0\)\.x\)\); \}\s*$/);
       const order = iOpen > 0 && iSa === iOpen + 1 && iMen === iSa + 1 && iSp > iMen && iSp <= iMen + 3;
       const freshFn = /fn snowSparkleFresh\(rough: f32\) -> f32 \{ return smoothstep\(SNOW_SPARKLE_ROUGH\.x, SNOW_SPARKLE_ROUGH\.y, rough\) \* \(1\.0 - smoothstep\(SNOW_SPARKLE_ROUGH\.z, SNOW_SPARKLE_ROUGH\.w, rough\)\); \}/.test(comp);
       const fresh = (r: number) => ss(ROUGH[0], ROUGH[1], r) * (1 - ss(ROUGH[2], ROUGH[3], r));
@@ -130,13 +131,13 @@ export async function snowSparkleCheck(o: { verbose?: boolean } = {}): Promise<b
           if (/^\s*var sparkle = vec3f\(0\.0\);\s*$/.test(c)) return;   // (the pixel's sum, declared zero: every other line that touches it is counted below)
           if (/^\s*(\/\*\*|\*[ \/])/.test(line)) return;   // (a block comment's line)
           if (!TERM.test(c)) return;
-          uses++; if (!(/^\s*if \(SNOW_SPARKLE\) \{/.test(c) && balanced(c))) bad.push(`${f}:${i + 1}`);
+          uses++; if (!(/^\s*if \(lv\(SNOW_SPARKLE\)\) \{/.test(c) && balanced(c))) bad.push(`${f}:${i + 1}`);
         }); }
       const defs = files.filter(f => /^fn snowSparkle\w*\(/m.test(text[f]));
       const fn = comp.slice(comp.indexOf('fn snowGlow('), comp.indexOf('\n}\n', comp.indexOf('fn snowGlow(')));
-      const calledUnder = /^    if \(SNOW_GLOW \|\| SNOW_SPARKLE\) \{\s*$/m.test(compCode) && (compCode.match(/\bsnowGlow\(/g) ?? []).length === 2;   // (its definition and its one call, inside that block)
-      const glowAsWas = /^    if \(!SNOW_GLOW\) \{ continue; \}/m.test(fn) && /^        if \(SNOW_GLOW\) \{ let lE = luminance\(Ed\); let lI = luminance\(Ei\); dif \+= albedo \* \(glow \+ Ei \* \(SNOW_GLOW_SHADE - vec3f\(1\.0\)\) \* \(lI \/ max\(lE \+ lI, 1e-5\)\)\) \* \(sa \/ PI\); \}/m.test(comp);
-      const quick = /if \(SNOW_SPARKLE\) \{ snowSparkleL = vec3f\(0\.0\); fac = snowSparkleFacet\(P, N, z\); if \(!SNOW_GLOW && fac\.w <= 0\.0\) \{ return vec3f\(0\.0\); \} \}/.test(fn);
+      const calledUnder = /^    if \(lv\(SNOW_GLOW\) \|\| lv\(SNOW_SPARKLE\)\) \{\s*$/m.test(compCode) && (compCode.match(/\bsnowGlow\(/g) ?? []).length === 2;   // (its definition and its one call, inside that block)
+      const glowAsWas = /^    if \(!lv\(SNOW_GLOW\)\) \{ continue; \}/m.test(fn) && /^        if \(lv\(SNOW_GLOW\)\) \{ let lE = luminance\(Ed\); let lI = luminance\(Ei\); dif \+= albedo \* \(glow \+ Ei \* \(SNOW_GLOW_SHADE - vec3f\(1\.0\)\) \* \(lI \/ max\(lE \+ lI, 1e-5\)\)\) \* \(sa \/ PI\); \}/m.test(comp);
+      const quick = /if \(lv\(SNOW_SPARKLE\)\) \{ snowSparkleL = vec3f\(0\.0\); fac = snowSparkleFacet\(P, N, z\); if \(!lv\(SNOW_GLOW\) && fac\.w <= 0\.0\) \{ return vec3f\(0\.0\); \} \}/.test(fn);
       verdict(bad.length === 0 && uses >= 5 && defs.length === 1 && defs[0] === 'composite.wgsl' && calledUnder && glowAsWas && quick,
         'dead — every sparkle statement in the shaders stands behind SNOW_SPARKLE', bad.length ? `not one whole guarded statement: ${bad.join(', ')}` : `${uses} lines name the term outside its own functions and numbers, each one whole \`if (SNOW_SPARKLE) { … }\` statement · the term is defined in ${defs.join(', ') || 'NO FILE'} · the light loop is called only under SNOW_GLOW || SNOW_SPARKLE (both off: not at all): ${calledUnder} · with the glow off the loop adds none of the glow's terms and the pixel's diffuse is as it was: ${glowAsWas} · the sparkle alone leaves a pixel with no facet before the stencil is read: ${quick}`); }
 
@@ -165,13 +166,13 @@ export async function snowSparkleCheck(o: { verbose?: boolean } = {}): Promise<b
       const fogKnows = /snowSparkle|SNOW_SPARKLE/.test(codeOf('fogofwar.wgsl'));
       const a = comp.indexOf('fn snowGlow('); const fn = comp.slice(a, comp.indexOf('\n}\n', a));
       const iReach = fn.search(/if \(!lightReaches\(i, P\)\) \{ continue; \}\s*\n\s*let li = lights\[i\];\s*\n\s*let ev = evalLight\(li, P, vec3f\(0\.0\)\);\s*(?:\/\/[^\n]*)?\n\s*if \(!ev\.ok\) \{ continue; \}/);
-      const flash = 'if (SNOW_SPARKLE) { if (fac.w > 0.0 && c > 0.0) { let k = mix(ev.E, vec3f(w), SNOW_SPARKLE_WHITEN) * (snowSparkleLobe(fac.xyz, ev.L, V) * smoothstep(0.0, SNOW_SPARKLE_EDGE, c)); if (broad) { kB += k * SNOW_SPARKLE_BROAD; } else { kS += k; } } }';
-      const iFlash = fn.indexOf(flash), iOut = fn.indexOf('if (SNOW_SPARKLE) { snowSparkleL = (kS * vis.x + kB * vis.y) * (fac.w * SNOW_SPARKLE_GAIN); }'), iVis = fn.search(/let vis = clamp\(S \/ max\(U, vec2f\(1e-4\)\), vec2f\(0\.0\), vec2f\(1\.0\)\) \*/), iShade = fn.indexOf('if (S.x <= 0.0 && S.y <= 0.0) { return vec3f(0.0); }'), iZero = fn.indexOf('snowSparkleL = vec3f(0.0);');
+      const flash = 'if (lv(SNOW_SPARKLE)) { if (fac.w > 0.0 && c > 0.0) { let k = mix(ev.E, vec3f(w), SNOW_SPARKLE_WHITEN) * (snowSparkleLobe(fac.xyz, ev.L, V) * smoothstep(0.0, SNOW_SPARKLE_EDGE, c)); if (broad) { kB += k * SNOW_SPARKLE_BROAD; } else { kS += k; } } }';
+      const iFlash = fn.indexOf(flash), iOut = fn.indexOf('if (lv(SNOW_SPARKLE)) { snowSparkleL = (kS * vis.x + kB * vis.y) * (fac.w * SNOW_SPARKLE_GAIN); }'), iVis = fn.search(/let vis = clamp\(S \/ max\(U, vec2f\(1e-4\)\), vec2f\(0\.0\), vec2f\(1\.0\)\) \*/), iShade = fn.indexOf('if (S.x <= 0.0 && S.y <= 0.0) { return vec3f(0.0); }'), iZero = fn.indexOf('snowSparkleL = vec3f(0.0);');
       const inLoop = iReach > 0 && iFlash > iReach && iVis > iFlash && iOut > iVis && iZero > 0 && iZero < iShade && iShade < iReach;
       const writes = (compCode.match(/\bsnowSparkleL =/g) ?? []).length, sums = (compCode.match(/\bk[SB] \+=/g) ?? []).length;
       const own = ['snowSparkleFacet', 'snowSparkleLobe', 'snowSparkleFresh', 'snowSparkleHash'].map(n => { const s = comp.indexOf(`fn ${n}(`); return s < 0 ? 'occluded' : comp.slice(s, comp.indexOf('\n', comp.indexOf('{', s)) < 0 ? undefined : (comp.indexOf('\n}\n', s) < 0 ? undefined : comp.indexOf('\n}\n', s))); }).join('\n');
       const noRay = !/occluded|shadowSample|traceRay|trace\(|textureLoad|textureSample|lights\[/.test(own.split('\n').map(code).join('\n'));
-      const added = (compCode.match(/if \(SNOW_SPARKLE\) \{ spec \+= sparkle; color \+= sparkle \* glassT; \}/g) ?? []).length, touched = (compCode.match(/\bsparkle\b/g) ?? []).length;
+      const added = (compCode.match(/if \(lv\(SNOW_SPARKLE\)\) \{ spec \+= sparkle; color \+= sparkle \* glassT; \}/g) ?? []).length, touched = (compCode.match(/\bsparkle\b/g) ?? []).length;
       verdict(iComp > 0 && iFog > iComp && !fogKnows && inLoop && writes === 2 && sums === 2 && noRay && added === 1 && touched === 5,   // (five since the look prototype: its powder dims the facets under it, one guarded line more)
         'fog — the flash is under the fog of war, under the reach masks and evalLight, and under the direct pass\'s own shadows', `passes.ts encodes the fog of war's pass over hdr AFTER the composite: ${iComp > 0 && iFog > iComp} · fogofwar.wgsl names the term: ${fogKnows} · the flash is scored in snowGlow's loop after lightReaches and evalLight as they stand, on the lit side only (c > 0), and leaves × the stencil's shadow ratio per class; a stencil in full shade leaves it zero: ${inLoop} · the hand-over is written in ${writes} places (zeroed, then the sum) and the sums in ${sums} · the term's own functions read no texture, no light and trace nothing: ${noRay} · added to the pixel in ${added} place, as light (never × the albedo), and the pixel's sum is touched on ${touched} lines`); }
 
