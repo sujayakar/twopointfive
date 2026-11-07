@@ -432,8 +432,17 @@ export class RustHost {
     // by a call that crossed), holds only the fields of the every-tick list: his rifle's rows, his kit, read `undefined` to whatever reads the puppet
     // next. The puppet takes the whole state at once.)
     if (MADE.n !== made0 && !this.audit) this.applyWhole('the apply made a man');
-    this.newRun();
+    this.newRun(); this.newClear();
   }
+  // STAND-IN (belongs in the schema: `Game.clearing` a row with an ID, or a serial the importer reads): A ROOM CLEAR ENDED AND ANOTHER BEGAN INSIDE ONE
+  // TICK. The TypeScript makes a new `Clearing` (squad.ts) and a reader knows a clear began by that identity (tools/qa/soak.ts:1760
+  // `game.clearing !== last`: its respite and its one scheduled interrupt hang on it); the bridge carries the clear as a value under `Game.clearing`,
+  // so the apply wrote the new clear's fields into the object that stood. A clear whose own clock (`total`) went back is another clear: the puppet is
+  // given a new object of the same class.
+  private clearRef: any = null; private clearT = 0;
+  private newClear(): void { const g = this.g, c = g.clearing;
+    if (c && c === this.clearRef && typeof c.total === 'number' && c.total < this.clearT - 1e-9 && !OFF.has('newclear')) { g.clearing = Object.assign(Object.create(Object.getPrototypeOf(c)), c); this.count('a room clear began as another ended: the puppet\'s record made anew'); }
+    this.clearRef = g.clearing; this.clearT = typeof g.clearing?.total === 'number' ? g.clearing.total : 0; }
   // STAND-IN (belongs in the importer: the record as a row, or a restart's out event): THE RUST GAME BEGAN ITS MISSION AGAIN (the player's own restart
   // inside the tick, Enter once down or Shift+Enter; a `restartEncounter` that crossed). The TypeScript's restart makes a new mission RECORD, and that
   // identity is how everything outside the tick knows a run began (the save controller's `missionRef`: a fresh run, an empty shelf; a driver's own
@@ -642,6 +651,7 @@ export class RustHost {
     if (this.keeps() && X.face_saves_asked) { const asked = X.face_saves_asked(this.h); if ((asked & 1) && g.saves) { g.saves.due = this.F.outText(); this.count('the tick asked for a save in memory to be put back (Enter once down)'); }
       // (the same call puts the Rust game's flag of a restart's camera cut down; the puppet's own update takes the cut on its next frame, as the TypeScript's does)
       if (asked & 2) this.cutDue = true; }
+    if (TICKS_DIR && DUMP_AT.has(k)) { X.face_export(this.h); writeFileSync(`${TICKS_DIR}/rust-t${k}.bin`, this.F.outView()); }
     this.o.afterStep?.(this);
     // (RH_HALF=<ticks, comma>: the host's half of those ticks, a line a field's value, for two runs to be held to each other by `diff`)
     if (process.env.RH_HALF?.split(',').includes(String(k))) halfSay(B, g, cmds, k);
@@ -768,7 +778,7 @@ export async function standRust(g: any, word: string): Promise<RustHost | null> 
     // the file in: not the saved moment to the bit, and no game could be held to it tick for tick.
     if (!OFF.has('keep')) B.SNAPS.own = true;
     // (the trace under `ts`: the same line a game, its ticks counted round the TypeScript tick itself)
-    if (TICKS_DIR) { const F = loadFace(), file = ticksFile(word), was = g.stepSeats, gave: string[] = []; let k = 0; writeFileSync(file, ''); const B = await bridge(); g.stepSeats = function (this: any, ...a: any[]) { let half: Uint8Array | null = null; try { if (!k) { g.sim.settle(g); B.exportGame(g, B.reg); const O = g.orders, was2 = O?.give; if (was2) hang(O, 'give', function (this: any, id: string, ...r: any[]) { gave.push(`${k + 1}:${id}`); return was2.call(this, id, ...r); }); }   /* (the bridge's book, as the host's start makes it) */ half = B.hostHalf(g, B.reg, a[1]); } catch { /* a game the bridge has no book for yet */ } if (half && process.env.RH_HALF?.split(',').includes(String(k + 1))) halfSay(B, g, a[1], k + 1); const r = was.apply(this, a); const w: Uint32Array = g.sim.w; if (SAY_FN) sayLine(word, g, k + 1); tickLine(F, file, ++k, g.dice?.n, new Uint8Array(w.buffer, w.byteOffset, w.byteLength), half, gave.join(',')); return r; }; }
+    if (TICKS_DIR) { const F = loadFace(), file = ticksFile(word), was = g.stepSeats, gave: string[] = []; let k = 0; writeFileSync(file, ''); const B = await bridge(); g.stepSeats = function (this: any, ...a: any[]) { let half: Uint8Array | null = null; try { if (!k) { g.sim.settle(g); B.exportGame(g, B.reg); const O = g.orders, was2 = O?.give; if (was2) hang(O, 'give', function (this: any, id: string, ...r: any[]) { gave.push(`${k + 1}:${id}`); return was2.call(this, id, ...r); }); }   /* (the bridge's book, as the host's start makes it) */ half = B.hostHalf(g, B.reg, a[1]); } catch { /* a game the bridge has no book for yet */ } if (half && process.env.RH_HALF?.split(',').includes(String(k + 1))) halfSay(B, g, a[1], k + 1); const r = was.apply(this, a); const w: Uint32Array = g.sim.w; if (SAY_FN) sayLine(word, g, k + 1); if (DUMP_AT.has(k + 1)) { g.sim.settle(g); writeFileSync(`${TICKS_DIR}/ts-t${k + 1}.bin`, B.exportGame(g, B.reg)); } tickLine(F, file, ++k, g.dice?.n, new Uint8Array(w.buffer, w.byteOffset, w.byteLength), half, gave.join(',')); return r; }; }
     if (process.env.RH_TRACE) { const rec = traceRec(word), was = g.stepSeats; g.stepSeats = function (this: any, ...a: any[]) { rec.k++; if (SITES) site(rec); if (CAP_AT && (rec.k & 31) === 0 && Date.now() > CAP_AT) process.exit(143); return was.apply(this, a); }; }
     return null; }
   if (word !== 'rust' && word !== 'audit') throw new Error(`TPS_GAME=${word}: rust (the Rust game steps), audit, or ts (the same stand, the TypeScript tick)`);
@@ -794,6 +804,9 @@ function timed(H: RustHost): void {
 function halfSay(B: any, g: any, cmds: readonly any[], k: number): void { const A = B.A; for (const [ty, v] of B.hostHalfParts(g, cmds) as [string, any][]) { if (ty === 'u32') { process.stderr.write(`half ${k} u32 ${v}\n`); continue; } const b: Uint8Array = B.exportPart(g, B.reg, [[ty, v]]); process.stderr.write(`half ${k} part ${ty} ${b.length} bytes ${Buffer.from(b).toString('hex')}\n`); const offs: number[] = []; for (let i = 0; i < b.length; i += 8) offs.push(i);
       for (const x of A.locate(b, offs, null, true, ty, ty.split('::').pop())) { let f = NaN; try { f = new DataView(b.buffer, b.byteOffset + x.off, 8).getFloat64(0, true); } catch { /* the last bytes */ } process.stderr.write(`half ${k} ${x.path} ${f}\n`); } } }
 const TICKS_DIR = process.env.RH_TICKS ?? '';
+/** RH_DUMP=<ticks, comma> (with RH_TICKS): the whole state as those ticks return, `<folder>/<word>-t<k>.bin`: the TypeScript game's export under `ts`, the
+ *  Rust game's own under `rust` (tools/blitz/diff.ts holds the two to each other, a path a line) */
+const DUMP_AT = new Set((process.env.RH_DUMP ?? '').split(',').filter(Boolean).map(Number));
 // ---- RH_SAY=<an expression of g> (with RH_TICKS): beside the tick lines, a line a tick of what THE TOOL WOULD READ: the expression's value on the game
 // under `ts`, on the puppet once the step's apply and dress step are done under `rust` (`<folder>/<word>-say.txt`). Two plays whose die and block are equal
 // and whose `say` lines differ show a read of the puppet that is not the TypeScript game's. `RH_SAY=digest`: src/game/digest.ts's digest of the game, hashed;

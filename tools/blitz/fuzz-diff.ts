@@ -14,7 +14,9 @@ if (!dir) { console.error('fuzz-diff.ts <folder> [--json]'); process.exit(64); }
 const read = (f: string): string[] => existsSync(`${dir}/${f}`) ? readFileSync(`${dir}/${f}`, 'utf8').split('\n') : [];
 // (a tick written twice is a tick a kept game stood again in: its last line is the game as that update left it)
 const last = (L: string[]): string[] => { const out: string[] = []; for (const l of L) { if (!l) continue; const k = l.slice(0, l.indexOf(' ')); if (out.length && out[out.length - 1].startsWith(k + ' ')) out[out.length - 1] = l; else out.push(l); } return out; };
-const T = last(read('ts-run.txt')), R = last(read('rust-run.txt')), TL = read('ts.log'), RL = read('rust.log');
+// (the host names a side's file by the tool's own words: `<word>-run.txt`, or `<word>-<a word of the command>.txt`)
+const side = (w: string): string => { const fs = require('node:fs') as typeof import('node:fs'); const L = fs.existsSync(dir) ? fs.readdirSync(dir).filter(f => f.startsWith(`${w}-`) && f.endsWith('.txt') && !/-say\.txt$/.test(f)) : []; return L.includes(`${w}-run.txt`) ? `${w}-run.txt` : L[0] ?? `${w}-run.txt`; };
+const T = last(read(side('ts'))), R = last(read(side('rust'))), TL = read('ts.log'), RL = read('rust.log');
 if (!T.length || !R.length) { const why = `fuzz-diff: ${!T.length ? 'the TypeScript side' : 'the Rust side'} wrote no tick (${dir}); its log ends: ${(T.length ? RL : TL).filter(Boolean).slice(-3).join(' / ').slice(0, 500)}`; if (asJson) console.log(JSON.stringify({ dir, ran: false, why, kind: /panicked/.test(RL.join('\n')) ? 'a panic' : 'a throw in the host' })); else console.log(why); process.exit(3); }
 // a line: `<k> <die> <half>|<gives> <part hashes…>`
 // (--but-panes: the block's last part, the glass panes, is left out of the compare: the TypeScript's snapshot does not put a broken pane back whole, PLAY.md)
