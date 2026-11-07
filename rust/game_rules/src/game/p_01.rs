@@ -44,7 +44,6 @@ pub fn new_mission(t0: f64) -> crate::game::Mission {
         alarm_on: false,
         sweep_at: -1.0,
         spotted_t: -100.0,
-        debrief: false,
         down_card_at: -1.0,
         hands_on: false,
         stats: crate::game::MissionStats {
