@@ -201,11 +201,11 @@ async function runSeed(seed: number): Promise<SeedReport> {
   const rngGame = mulberry32(seed * 7919 + 13);      // the game's own dice (reactT jitter, spread, ragdoll twist…)
   const rng = mulberry32(seed * 104729 + 71);       // the schedule's
   Math.random = rngGame;
-  if (process.env.SOAK_DIFFICULTY) (await import(`${ROOT}/src/game/difficulty.ts`)).setDifficulty(process.env.SOAK_DIFFICULTY as any, false);   // SOAK_DIFFICULTY=hard: the player's difficulty laid before the game is stood (tools/blitz/fuzz.sh --hard)
   if (process.env.SOAK_DESTR === '1') (await import(`${ROOT}/src/game/destructionSwitch.ts`)).DESTRUCTION.on = true;   // SOAK_DESTR=1: THE destruction switch as the page has it (walls and cover come apart, charges throw the furniture) — off, the soak as it always ran
   if (process.env.SOAK_DESTR === '0') (await import(`${ROOT}/src/game/destructionSwitch.ts`)).DESTRUCTION.on = false;   // SOAK_DESTR=0: … and held OFF where the stand raised it (TPS_PROFILE=shipped): the page under ?nodestruction
   const W = await standUp();
   const { game, level, input } = W;
+  if (process.env.SOAK_DIFFICULTY) (await import(`${ROOT}/src/game/difficulty.ts`)).setDifficulty(process.env.SOAK_DIFFICULTY as any, false);   // SOAK_DIFFICULTY=hard: the player's difficulty laid once the game is stood, before its first tick (the stand lays Standard itself; tools/blitz/fuzz.sh --hard)
   if (CARBINES !== 'none') game.tune.carbineGuards = CARBINES;
   if (TACTICS_ARG === 'off') game.tune.tactics = false;   // (--tactics off: the chase as it was, for an A/B against the same seed)
   woundMod.WOUND.on = WOUNDS_ARG === 'on';

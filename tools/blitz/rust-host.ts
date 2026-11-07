@@ -419,16 +419,27 @@ export class RustHost {
   // holds it to the list by identity (the soak's `selector-highlight`; the scripted player's own highlight). The bridge carries `Game.hover` as a value,
   // so the apply leaves a row of its own beside the list. Put back on the list's row here. Belongs in the schema: `hover` a reference into `nearby`.
   private hoverRow(): void { const g = this.g, hv = g.hover, N = g.nearby; if (!hv || !Array.isArray(N) || N.includes(hv) || OFF.has('hoverrow')) return; const r = N[g.player?.nearSel ?? 0]; if (r && r.kind === hv.kind && r.verb === hv.verb) g.hover = r; }
-  private after(R: any): void { this.asks?.after(); this.took(R); this.hoverRow(); this.visApplied = this.g.player?.visibility; this.hoverApplied = this.g.hover; this.dieRef = this.g.dice?.n; this.clockRef = this.clock(); this.putRef = this.B.PUT_BACKS.n; if (!this.tookRow) this.savesRef = this.g.chronicle?.counts?.saves ?? 0; }
+  private after(R: any): void { this.asks?.after(); this.took(R); this.hoverRow(); this.visApplied = this.g.player?.visibility; this.hoverApplied = this.g.hover; this.dieRef = this.g.dice?.n; this.clockRef = this.clock(); this.putRef = this.B.PUT_BACKS.n; if (!this.startDue) this.loadsRef = this.g.chronicle?.counts?.loads ?? 0; if (!this.tookRow) this.savesRef = this.g.chronicle?.counts?.saves ?? 0; }
   private copyBlock(): void { const t = now(), mine = this.tsBlock(), theirs = this.rustBlock(); mine.set(theirs.subarray(0, mine.length)); if (this.audit) this.lastBlock = mine.slice(); this.T.block += now() - t; }
   /** THE FILTERED APPLY: the listed fields of what changed since the last one, and the step's out events */
   applyStep(): void {
-    const g = this.g, X = this.F.X, B = this.B, t0 = now(); let t = t0;
+    const g = this.g, X = this.F.X, B = this.B, t0 = now(), made0 = MADE.n; let t = t0;
     X.face_puppet(this.h, 0); const blob = this.F.outView(); this.stepBytes += blob.length; this.T.exportStep += now() - t;
     t = now(); const R = B.applyGame(g, blob, B.reg, { hooks: B.hooks, puppet: { ...this.pup, start: false } }); const el = now() - t; this.T.applyStep += el; if (el > this.worstApply) this.worstApply = el;
     if (R.out?.length) for (const e of R.out) this.outQ.push(e);
     this.after(R); this.copyBlock(); this.steps++; this.nest += now() - t0;
+    // (STAND-IN, belongs in the importer (a made row is filled whole): A MAN THE APPLY MADE, the Rust game having restarted or spawned (inside its tick, or
+    // by a call that crossed), holds only the fields of the every-tick list: his rifle's rows, his kit, read `undefined` to whatever reads the puppet
+    // next. The puppet takes the whole state at once.)
+    if (MADE.n !== made0 && !this.audit) this.applyWhole('the apply made a man');
+    this.newRun();
   }
+  // STAND-IN (belongs in the importer: the record as a row, or a restart's out event): THE RUST GAME BEGAN ITS MISSION AGAIN (the player's own restart
+  // inside the tick, Enter once down or Shift+Enter; a `restartEncounter` that crossed). The TypeScript's restart makes a new mission RECORD, and that
+  // identity is how everything outside the tick knows a run began (the save controller's `missionRef`: a fresh run, an empty shelf; a driver's own
+  // `game.mission !== before`). The apply wrote the fields into the record that stood, so the puppet is given a new one here.
+  private newRun(): void { const g = this.g, m = g.mission; if (!m || m !== this.missionRef || m.t0 === this.t0Ref || OFF.has('newrun')) return;
+    g.mission = { ...m, stats: { ...m.stats } }; this.missionRef = g.mission; this.t0Ref = m.t0; this.count('the Rust game began its mission again: the puppet\'s mission record made anew'); }
   /** THE WHOLE APPLY: every field the bridge carries (a field the Rust game owns and TypeScript cannot hold, the box mirror among them, is kept beside the
    *  object as an echo: tools/blitz/IMPORT.md) */
   applyWhole(why: string): Uint8Array { const r = this.applyWholeNow(why); this.scanRebase(); return r; }
@@ -656,17 +667,11 @@ export class RustHost {
   private tail(dt: number, k: number): Uint8Array | null {
     const g = this.g, X = this.F.X; let t = now();
     // ---- the apply
-    const made0 = MADE.n; this.applyStep();
+    this.applyStep();
     let rust: Uint8Array | null = null;
     if (this.audit) rust = this.applyWhole('audit');
-    // (STAND-IN, belongs in the importer (a made row is filled whole): A MAN THE STEP'S APPLY MADE, the Rust game having restarted or spawned inside its tick, holds only the fields of the every-tick list: his rifle's
-    // rows, his kit, read `undefined` to whatever reads the puppet next. The puppet takes the whole state at once.)
-    else { const why = MADE.n !== made0 ? 'the apply made a man' : this.wholeOwed(k); if (why) this.applyWhole(why); }
-    // STAND-IN (belongs in the importer: the record as a row, or a restart's out event): THE RUST GAME BEGAN ITS MISSION AGAIN INSIDE THE TICK (the player's own restart: Enter once down, Shift+Enter). The TypeScript's restart makes a new
-    // mission RECORD, and that identity is how everything outside the tick knows a run began (the save controller's `missionRef`: a fresh run, an empty
-    // shelf; a driver's own `game.mission !== before`). The apply wrote the fields into the record that stood, so the puppet is given a new one here.
+    else { const why = this.wholeOwed(k); if (why) this.applyWhole(why); }
     if (this.cutDue) { this.cutDue = false; g.restartCut = true; }
-    { const m = g.mission; if (m && m === this.missionRef && m.t0 !== this.t0Ref && !OFF.has('newrun')) { g.mission = { ...m, stats: { ...m.stats } }; this.count('the Rust game restarted inside its tick: the puppet\'s mission record made anew'); } }
     this.dispatch();
     // ---- the dress step: what the tick does that has no Rust body and a reader of the puppet needs
     // (THE AUTOSAVE is the host's and decides off the frame as it now stands, so it runs here, on the puppet. Its one write into the game is the
