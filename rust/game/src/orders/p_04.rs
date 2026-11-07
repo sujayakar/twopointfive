@@ -705,5 +705,5 @@ pub fn squad_orders_sam_stopped(g: &mut crate::game::Game) -> bool {
 /// A man's order goes, and with it the pin the fight seam put on him. (orders.ts drop)
 pub fn squad_orders_drop(g: &mut crate::game::Game, gd: GuardId) {
     g.orders.asg.delete(gd);
-    if g.orders.ours.delete(gd) { g.gd[gd].pinned = false; }
+    if g.orders.ours.delete(gd) { crate::control::set_pinned(g, gd, false, "orders"); }
 }

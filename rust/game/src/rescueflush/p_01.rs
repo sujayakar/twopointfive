@@ -234,7 +234,7 @@ pub fn rescue_flush_send(g: &mut crate::game::Game, h: GuardId, goal: crate::res
     let via: &[V3] = via.unwrap_or(&[]);
     let f = fight_def_of(g, h);
     crate::rescue::rescue_let_go(g, h);
-    g.gd[h].hold = false; g.gd[h].pinned = false;
+    crate::control::set_hold(g, h, false, "rescueflush"); crate::control::set_pinned(g, h, false, "rescueflush");
     if let Some(d) = f {
         let time = g.time;
         let r = &mut g.tab.roomfight_def[d];
