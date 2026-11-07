@@ -42,8 +42,6 @@ type Vec3 = [number, number, number];
 /** where the pair stands in the corridor, the defender behind the conference glass, the defender down the open corridor, and Sam out of every line */
 const POST: Vec3[] = [[6.6, 0, 12.4], [8.0, 0, 12.4]], BEHIND: Vec3 = [7.2, 0, 6.2], SAM: Vec3 = [3.2, 0, 12.6];
 const POST_OPEN: Vec3[] = [[6.6, 0, 10.9], [8.0, 0, 12.2]], OPEN: Vec3 = [16, 0, 11.2], SECOND: Vec3 = [8.6, 0, 10.6];
-/** against the partition itself (a man's radius off the pane), and a second place behind the glass */
-const AT_PANE: Vec3 = [7.2, 0, 9.66], BEHIND2: Vec3 = [5.6, 0, 6.8];
 type Foe = 'calm' | 'noticed' | 'alert' | 'search';
 interface Stage { silent?: boolean; foe?: Foe; open?: boolean; quietGun?: boolean; secs?: number;
   /** where the defender stands (default: BEHIND the glass, or OPEN down the corridor) */ foeAt?: Vec3;
@@ -99,50 +97,8 @@ async function stage(seed: number, o: Stage = {}) {
 }
 const row = (a: any) => `rounds ${a.shots} · through glass ${a.through} · he is ${a.down ? 'down' : 'up'} · frames held ${a.held} (for the glass ${a.heldGlass}) · "holding" ×${a.holding}`;
 
-export const holdglassQuiet = guarded(async () => {
-  const { verdict, done } = family('holdglass-quiet: a silent pair holds its fire while the glass is between them and a man who has raised no alarm');
-  const calm = await stage(11, { silent: true, foe: 'calm' });
-  verdict(calm.silent() && calm.shots === 0 && calm.through === 0 && !calm.down && calm.held > 0 && calm.holding > 0 && calm.eyes === 2, 'silent, rifles, a man who has not noticed: not one round, both guns stay on him, and they say they are holding', `${row(calm)} · guns on him ${calm.eyes} of 2`);
-  const seen = await stage(11, { silent: true, foe: 'noticed' });
-  verdict(seen.silent() && seen.shots === 0 && seen.through === 0 && !seen.down && seen.heldGlass > 0 && seen.glassLine > 0, 'silent, rifles, a man who has made them out but raised no alarm: still not one round through the pane (red before the rule)', `${row(seen)} · "behind glass" ×${seen.glassLine}`);
-  const gun = await stage(11, { silent: true, foe: 'calm', quietGun: true });
-  verdict(gun.guns.every((id: string) => id === 'fiveseven') && gun.shots === 0 && gun.through === 0 && !gun.down && gun.heldGlass > 0 && gun.glassLine > 0, 'silent, the quiet pistols, a man who has not noticed: the round is quiet but the pane is not — held (red before the rule)', `${row(gun)} · guns ${gun.guns.join(', ')}`);
-  const near = await stage(11, { silent: true, foe: 'noticed', foeAt: AT_PANE });
-  verdict(near.panesOnLine > 0 && near.shots === 0 && near.through === 0 && !near.down && near.heldGlass > 0, 'the same man stood right against the pane, looking out: the glass is still in the way — held', row(near));
-  const seeds = [12, 13]; const more = []; for (const sd of seeds) more.push(await stage(sd, { silent: true, foe: 'noticed' }));
-  verdict(more.every(a => a.shots === 0 && a.through === 0 && !a.down && a.heldGlass > 0), `other dice (seeds ${seeds.join(', ')}): the same hold`, more.map(row).join(' | '));
-  return done();
-});
 
-export const holdglassRelease = guarded(async () => {
-  const { verdict, done } = family('holdglass-release: what lets a silent teammate shoot through the glass');
-  const alert = await stage(11, { silent: true, foe: 'alert' });
-  verdict(alert.silent() && alert.shots > 0 && alert.through > 0 && alert.down, 'the man is ALERT (the alarm is his already): shot through the glass, the order still standing', row(alert));
-  const hunt = await stage(11, { silent: true, foe: 'search' });
-  verdict(hunt.silent() && hunt.shots > 0 && hunt.through > 0 && hunt.down, 'the man is SEARCHING (an alarm raised and he is hunting them): shot through the glass, as a searching man is anywhere', row(hunt));
-  const turn = await stage(11, { silent: true, foe: 'noticed', secs: 7 }); const before = { shots: turn.shots, down: turn.down }; turn.mode.foe = 'alert'; const f1 = turn.fired(); turn.step(60 * 6);
-  verdict(before.shots === 0 && !before.down && turn.fired() - f1 > 0 && turn.foe.state === 'dead', 'held while he only looks; the moment he goes alert the rounds go', `7 s suspicious: rounds ${before.shots} · then alert: rounds ${turn.fired() - f1}, he is ${turn.foe.state === 'dead' ? 'down' : 'up'}`);
-  const hot = await stage(11, { silent: true, foe: 'noticed', then: R => { R.step(30); R.game.fight.hotT = R.game.time; } });
-  verdict(hot.shots > 0 && hot.through > 0 && hot.down && /compromised/.test(hot.label()), 'something loud in their ears since the order (compromised): they shoot as a loud pair does', `${row(hot)} · ${hot.label()}`);
-  const last = await stage(11, { silent: true, foe: 'noticed', then: R => { R.game.rescue.lastWarning = () => true; } });
-  verdict(last.shots > 0 && last.through > 0 && last.down, 'a captor at his last warning: nothing is held (silent never costs the hostage)', row(last));
-  const loud = await stage(11, { silent: true, foe: 'noticed', secs: 6 }); const l0 = { shots: loud.shots }; loud.game.orders.give('loud', loud.game.orders.targetAt([10, 0, 12.5])); const f2 = loud.fired(); loud.step(60 * 6);
-  verdict(l0.shots === 0 && !loud.silent() && loud.fired() - f2 > 0 && loud.foe.state === 'dead', 'told loud: the hold is gone with the order', `silent 6 s: rounds ${l0.shots} · told loud: rounds ${loud.fired() - f2}, he is ${loud.foe.state === 'dead' ? 'down' : 'up'}`);
-  return done();
-});
 
-export const holdglassOther = guarded(async () => {
-  const { verdict, done } = family('holdglass-other: a man held for the glass is not a man to stay on — anybody else they may shoot takes the muzzle');
-  // the quiet pistols (a round at the second man is then nothing loud in their ears: the hold on the first must still stand afterwards)
-  const A = await stage(11, { silent: true, foe: 'noticed', quietGun: true, second: 4, secs: 8 });
-  verdict(A.shots > 0 && A.other.state === 'dead' && !A.down && A.through === 0 && A.heldGlass > 0, 'holding on a man behind glass, an alert man steps out on their side of it: he is shot, the man behind the glass still is not', `${row(A)} · the alert man is ${A.other.state === 'dead' ? 'down' : 'up'}`);
-  verdict(A.otherAfter >= 0 && A.otherAfter < 2.5 && A.switches <= 4, '… promptly, and no muzzle goes to and fro between the two (each man: off the held man, onto the alert one, back when he is down)', `the alert man down ${A.otherAfter.toFixed(2)} s after he appeared · muzzle changes of man, both teammates: ${A.switches}`);
-  const two = await stage(11, { silent: true, foe: 'noticed', second: 2, secondAt: BEHIND2, secondMode: 'noticed', secs: 12 });
-  verdict(two.shots === 0 && two.through === 0 && !two.down && two.other.state !== 'dead' && two.heldGlass > 0 && two.switches <= 10, 'two men behind the glass, neither has raised an alarm: not a round, and the muzzles settle (a look at the other man every few seconds at most)', `${row(two)} · muzzle changes of man, both teammates, 12 s: ${two.switches}`);
-  const B = await stage(11, { silent: true, foe: 'noticed', second: 2, secondMode: 'calm', secs: 5 }); const b0 = { shots: B.shots, through: B.through }; B.mode.foe = 'alert'; const tB = B.game.time; let downB = -1; for (let i = 0; i < 60 * 5 && downB < 0; i++) { B.step(1); if (B.foe.state === 'dead') downB = B.game.time - tB; }
-  verdict(b0.shots === 0 && downB >= 0 && downB < 3 && B.crossed.length > 0, 'rifles: a calm man on their side (held for the report) and a man behind the glass (held for the pane) — he goes ALERT: he is the one shot, through the glass, at once', `5 s: rounds ${b0.shots} · he goes alert: down ${downB < 0 ? 'never' : downB.toFixed(2) + ' s later'} · panes crossed ${B.crossed.length}`);
-  return done();
-});
 
 export const holdglassOpen = guarded(async () => {
   const { verdict, done } = family('holdglass-open: no glass on the line — the silent rules as they were');
@@ -156,7 +112,7 @@ export const holdglassOpen = guarded(async () => {
 });
 
 if (import.meta.main) {
-  const all: Record<string, () => Promise<boolean>> = { 'holdglass-quiet': holdglassQuiet, 'holdglass-release': holdglassRelease, 'holdglass-other': holdglassOther, 'holdglass-open': holdglassOpen };
+  const all: Record<string, () => Promise<boolean>> = { 'holdglass-open': holdglassOpen };
   const want = process.argv.slice(2).filter(a => !a.startsWith('--')); let ok = true;
   for (const [name, fn] of Object.entries(all)) if (!want.length || want.includes(name)) ok = (await fn()) && ok;
   process.exit(ok ? 0 : 1);

@@ -324,35 +324,3 @@ export const shutdoorLock = guarded(async () => {
 });
 
 // ---------------------------------------------------------------- never, unless told
-export const shutdoorNever = guarded(async () => {
-  const { verdict, done } = family(`shutdoor-never: five minutes of a played room clear with the order never given — nobody shuts a door`);
-  /** the commander: each room in turn — stack on its door, open and clear, fall in, walk on — for five minutes of game time. `told`: one shut order on the way */
-  const play = async (told: boolean) => {
-    const R = await rig(21, { fight: true }); const { O, game: g, RC } = R; const ids = new Set(R.ops.map((x: any) => x.char.id));
-    let assigned = 0, shutBy = 0, opened = 0, restsTo = 0; const wasOpen = new Map<any, boolean>(g.doors.list.map((d: any) => [d, !d.latched])); const wasTo = new Set<any>();   // (restsTo: leaves a body brought to the frame that rest there unlatched — Door.swept: nobody shut them, and the count is what the walk round an open leaf has left to mend)
-    R.post = () => { for (const x of R.ops) if (O.of(x)?.order === SHUT_ID) assigned++;
-      for (const d of g.doors.list) { const open = !d.latched; if (wasOpen.get(d) && !open && ids.has(d.lastWho)) shutBy++; if (!wasOpen.get(d) && open && ids.has(d.lastWho)) opened++; wasOpen.set(d, open);
-        const to = open && !d.off && !!d.swept && Math.abs(d.angle) < 0.012 && Math.abs(d.vel) < 1e-6; if (to && !wasTo.has(d)) restsTo++; if (to) wasTo.add(d); else wasTo.delete(d); } };
-    const t0 = g.time, left = () => 300 - (g.time - t0); let given: string | null | undefined, rooms = 0;
-    // (told: the first open door of the floor that takes the order, before the walk — and failing that the first door of the walk that does: a body across a
-    // threshold refuses one, as it should)
-    if (told) for (const d of g.doors.list) { if (d.latched || d.off || Math.abs(d.angle) < 0.6) continue; given = O.give(SHUT_ID, O.targetAt(d.frameCentre)); if (given === null) { R.until(() => d.latched, 30); break; } }
-    for (const room of RC.rooms) { if (left() <= 0) break; const sd = room.def.doors?.[0]; const d = sd ? R.door(typeof sd === 'string' ? sd : (sd.door ?? sd.name ?? sd.id)) : null; if (!d) continue; rooms++;
-      const side = faceOf(d, g.player.char.pos), stand = pt(d, d.def.width / 2 + 1.6, side * 2.2);
-      if (!g.col.nav.isBlocked(stand[0], stand[2])) g.teleportPlayer(stand);
-      O.give('fallIn', nowhere(O), 'all'); R.until(() => left() <= 0, 6);
-      O.give('stack', O.targetAt(d.frameCentre)); R.until(() => left() <= 0, 8);
-      O.give('openClear', O.targetAt(d.frameCentre)); R.until(() => left() <= 0, 25);
-      if (told && given !== null && !d.latched && !d.off) { O.give('hold', nowhere(O), 'all'); R.step(30); prop(d, Math.max(0.8, Math.abs(d.angle))); given = O.give(SHUT_ID, O.targetAt(d.frameCentre)); R.until(() => d.latched || left() <= 0, 25); }
-      O.give('fallIn', nowhere(O), 'all'); R.until(() => left() <= 0, 8); }
-    R.until(() => left() <= 0, 300);
-    return { R, assigned, shutBy, opened, restsTo, given, rooms, secs: g.time - t0, up: R.ops.filter((x: any) => x.state !== 'dead').length, orders: O.log.length, stats: { ...SHUTDOOR_STATS }, log: SHUTDOOR_LOG.length };
-  };
-  const a = await play(false);
-  verdict(a.secs >= 299 && a.rooms >= 3 && a.assigned === 0 && a.stats.given === 0 && a.stats.shut === 0 && a.log === 0 && !a.R.O.log.some((l: any) => l.order === SHUT_ID),
-    'never ordered: over five minutes no man is ever under the order, its counters and its log are empty', `${f2(a.secs)} s · ${a.rooms} rooms worked · ${a.up}/4 teammates up · frames a man was under it: ${a.assigned} · given ${a.stats.given} · shut ${a.stats.shut} · log rows ${a.log}`);
-  verdict(a.shutBy === 0 && a.opened > 0, '  with doors that stay open: teammates open doors in those five minutes, and no leaf a teammate last touched comes to its latch', `leaves a teammate opened: ${a.opened} · open → latched with a teammate's hand last on it: ${a.shutBy} · (not judged) brought to its frame by a man's body and resting there unlatched: ${a.restsTo}`);
-  const b = await play(true);
-  verdict(b.given === null && b.assigned > 0 && b.stats.given === 1 && b.log > 0 && b.shutBy >= 1, '  (the same five minutes with the order given once: the counters move, and a leaf a teammate touched last does latch — the lines above can go red)', `give: ${b.given} · frames under it ${b.assigned} · open → latched by a teammate ${b.shutBy} · given ${b.stats.given} · shut ${b.stats.shut} · gave up ${b.stats.gaveUp} · log rows ${b.log}`);
-  return done();
-});

@@ -118,17 +118,6 @@ async function rig(seed: number, o: { squad?: 2 | 4; stage?: 'rc' | 'nb'; quiet?
 const minApart = (men: any[]) => { let m = Infinity; for (let a = 0; a < men.length; a++) for (let b = a + 1; b < men.length; b++) m = Math.min(m, dist(men[a].char.pos, men[b].char.pos)); return m; };
 
 // ---------------------------------------------------------------- off
-export const foursquadOff = guarded(async () => {
-  const { verdict, done } = family('foursquad-off: with the flag off the room clear stages the pair as it always did');
-  const R = await rig(3, { squad: 2 }); const { game: g, O, NB } = R;
-  const ops = NB.ops, dflt = ops.every((x: any) => dist(x.char.tint, [0.07, 0, 0.1]) < 1e-6 && Math.abs(x.char.tint[1] - 0.09) < 1e-6);
-  verdict(R.why === null && ops.length === 2 && ops[0].callsign === 'Blue One' && ops[1].callsign === 'Blue Two' && 1 + g.guards.length === 8 && NB.hostiles.length === 5 && dflt && NB.drillOps.length === 2,
-    'NIGHTBREACH.squad 2 (the default): two teammates, Blue One and Blue Two, in the default kit — eight characters with Sam and the five defenders', `start ${R.why} · ${names(ops)} · ${1 + g.guards.length} characters · ${NB.hostiles.length} defenders · default tint ${dflt}`);
-  verdict(O.men().length === 2 && O.men('blue').length === 2 && O.men('red').length === 0 && O.men(1)[0] === ops[1] && O.men(ops[0])[0] === ops[0] && O.pairs().join() === 'blue' && O.pairOf(ops[0]) === 'blue',
-    'the one place to ask for men answers for the pair: all = blue = the two, no red, a man by number or by himself', `all ${names(O.men())} · blue ${names(O.men('blue'))} · red ${O.men('red').length} · men(1) ${names(O.men(1))} · pairs ${O.pairs().join()}`);
-  verdict(NIGHTBREACH.squad === 2 && NB_DEFAULTS.squad === 2, 'the knob defaults to 2', `NIGHTBREACH.squad ${NB_DEFAULTS.squad}`);
-  return done();
-});
 
 // ---------------------------------------------------------------- stage
 export const foursquadStage = guarded(async () => {

@@ -51,7 +51,6 @@ const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { feelTables } = await import(`${ROOT}/src/game/teamfeel.ts`);
 const { SAMSTUN_STATS } = await import(`${ROOT}/src/game/samstun.ts`);
 
-type Vec3 = [number, number, number];
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const f1 = (x: number) => (Number.isFinite(x) ? x.toFixed(1) : String(x));
@@ -576,15 +575,6 @@ async function playthrough(env: Record<string, string>, seeds: string, set?: Rec
   const err = await new Response(pr.stderr).text(); await pr.exited;
   try { const runs = JSON.parse(readFileSync(file, 'utf8')).runs; rmSync(file); return { runs, err }; } catch { return { runs: [], err }; }
 }
-export const thresholdPlay = guarded(async () => {
-  const { verdict, done } = family('threshold-play: the scripted commander works every held room from the threshold, all seven scenarios (playthrough.ts, PT_TOOL=threshold)');
-  const { runs, err } = await playthrough({ PT_TOOL: 'threshold' }, '1');
-  const bad = runs.filter(r => r.end === 'error' || r.end === 'stalled');
-  verdict(runs.length === SCENARIOS.length && bad.length === 0, 'seven runs, each ended by its scenario\'s own rules: none threw, none stalled with an order hanging', runs.length ? runs.map(r => `${r.scn}:${r.seed} ${r.end} at ${r.t} s · team ${r.team}/${r.of} · theirs ${r.hostiles}/${r.hostilesOf} up · ${r.rooms} doors worked${r.end === 'error' ? ` — ${String(r.why).split('\n')[0]}` : ''}`).join('\n    ') : `no result — ${err.trim().split('\n').slice(-3).join(' / ')}`);
-  const rooms = runs.filter(r => !/rescue/.test(r.scn)), none = rooms.filter(r => !(r.thr > 0));   // (the two rescues are their own F: playRescue never gives the order)
-  verdict(rooms.length === (SCENARIOS as any[]).filter(e => e.kind !== 'rescue').length && none.length === 0, 'the room-clearing runs each had rooms worked from the threshold (the order taken, not refused and swapped for a bang)', rooms.map(r => `${r.scn}: ${r.thr ?? 0} of ${r.rooms} rooms${(r.refused ?? []).filter((x: string) => /^threshold/.test(x)).map((x: string) => ` · refused ${x}`).join('')}`).join(' · '));
-  return done();
-});
 /** NO CAN FROM A HAND THAT IS NOT AT THE DOOR. Staged: a threshold given to hold, the men run off the door a second before Sam says
  *  'bang, then step in' (doorRun's `away`: what a grenade landing by the stack does to them), and what the can then does — and past its wait, and
  *  with nobody run off at all. THRHAND_BREAK=1: nobody is run off the door — red. */

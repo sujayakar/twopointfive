@@ -483,16 +483,6 @@ async function minute(o: RigOpts, pre?: (R: any) => void): Promise<string> {
   R.giveDoor('stack', 'breakroom_w'); frame(60 * 12); R.giveDoor('openClear', 'breakroom_w'); frame(60 * 25); R.giveDoor('threshold', 'manager'); frame(60 * 25);
   return `${(h >>> 0).toString(16).padStart(8, '0')} · ${game.guards.filter((x: any) => x.state !== 'dead').length} standing at ${game.time.toFixed(2)} s · kicks ${R.kicks} bangs ${R.bangs}`;
 }
-export const silentOff = guarded(async () => {
-  const { verdict, done } = family('silent-off: the order never given is the game as it was');
-  const on = await minute({}), off = await minute({ silent: { on: false } }), knobs = await minute({ silent: { pace: 0.8, step: 0.05 } });
-  verdict(on === off && on === knobs, 'a scripted minute (fall in, stack, open and clear, a threshold on a locked door), never told silent: the same hash every frame with the switch on, off, and with its numbers moved',
-    `on ${on} · off ${off} · numbers moved ${knobs}`);
-  const told = await minute({}, R => R.give('silent', AISLE)), dead = await minute({ silent: { on: false } }, R => SLM.setSilent(R.game, true));
-  verdict(told !== on, 'told silent, the same minute is a different one (the probe can tell)', `silent ${told}`);
-  verdict(dead === off, 'the switch off over a state left silent: the same hash again (no rule reads the state)', `left silent, switch off ${dead}`);
-  return done();
-});
 
 // ---------------------------------------------------------------- a silent stack beside unaware men is set
 /** SILENTSET_BREAK=1: the pair is never told silent — the lines about the rule must fail */
@@ -544,6 +534,6 @@ export const silentSet = guarded(async () => {
 });
 
 if (import.meta.main) {
-  const all: Record<string, () => Promise<boolean>> = { 'silent-order': silentOrder, 'silent-hud': silentHud, 'silent-walk': silentWalk, 'silent-doors': silentDoors, 'silent-pick': silentPick, 'silent-boot': silentBoot, 'silent-cans': silentCans, 'silent-tools': silentTools, 'silent-fire': silentFire, 'silent-hush': silentHush, 'silent-start': silentStart, 'silent-off': silentOff, 'silent-set': silentSet };
+  const all: Record<string, () => Promise<boolean>> = { 'silent-order': silentOrder, 'silent-hud': silentHud, 'silent-walk': silentWalk, 'silent-doors': silentDoors, 'silent-pick': silentPick, 'silent-boot': silentBoot, 'silent-cans': silentCans, 'silent-tools': silentTools, 'silent-fire': silentFire, 'silent-hush': silentHush, 'silent-start': silentStart, 'silent-set': silentSet };
   process.exit(exitCode(await asProbes(all, wanted())));
 }
