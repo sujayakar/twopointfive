@@ -24,7 +24,7 @@ done
 bun run tools/blitz/fuzz-diff.ts "$OUT"; CODE=$?
 L=; for k in $(echo $DUMPS | tr ',' ' '); do [ -s "$OUT/ts-t$k.bin" ] && [ -s "$OUT/rust-t$k.bin" ] && L=$k; done
 if [ -n "$L" ]; then
-  bun run tools/blitz/diff.ts "$OUT/ts-t$L.bin" "$OUT/rust-t$L.bin" --canon-file tools/blitz/canon.txt --known tools/blitz/known.txt --show 40 > "$OUT/end-diff.txt" 2>&1
+  bun run tools/blitz/diff.ts "$OUT/ts-t$L.bin" "$OUT/rust-t$L.bin" --canon "$(cat tools/blitz/canon.txt),FirearmId" --known tools/blitz/known.txt --show 40 > "$OUT/end-diff.txt" 2>&1
   echo "the whole states as tick $L returned (the latest both sides kept): $(head -1 "$OUT/end-diff.txt" | cut -c1-300)"
 fi
 rm -f "$OUT"/*-t[0-9]*.bin

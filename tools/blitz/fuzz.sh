@@ -23,7 +23,7 @@ bun run tools/blitz/fuzz-diff.ts "$OUT"; CODE=$?
 # the dice; what a man was told, a talk's record, a module's own books are not in them, and a call that ran in TypeScript on the puppet and never reached
 # the Rust game leaves both equal for minutes. Kept as end-diff.txt; the two states are deleted.
 if [ -s "$OUT/ts-t$LAST.bin" ] && [ -s "$OUT/rust-t$LAST.bin" ]; then
-  bun run tools/blitz/diff.ts "$OUT/ts-t$LAST.bin" "$OUT/rust-t$LAST.bin" --canon-file tools/blitz/canon.txt --known tools/blitz/known.txt --show 40 > "$OUT/end-diff.txt" 2>&1
+  bun run tools/blitz/diff.ts "$OUT/ts-t$LAST.bin" "$OUT/rust-t$LAST.bin" --canon "$(cat tools/blitz/canon.txt),FirearmId" --known tools/blitz/known.txt --show 40 > "$OUT/end-diff.txt" 2>&1
   echo "the whole states as tick $LAST returned: $(head -1 "$OUT/end-diff.txt" | cut -c1-300)"
 fi
 rm -f "$OUT"/*-t[0-9]*.bin
