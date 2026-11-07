@@ -574,7 +574,7 @@ pub fn civilian_down(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: boo
 
 /// a point in her open view, with a clear line (civilians.ts civPointInView)
 pub fn civ_point_in_view(g: &mut crate::game::Game, gd: GuardId, p: V3, range: f64) -> bool {
-    let c = g.gd[gd].ch; let eye = bone_or(g, c, Bone::Head, 1.65); let look = g.ch[c].chest_dir; let e = eye_of(g, gd);
+    let c = g.gd[gd].ch; let eye = bone_or(g, c, Bone::Head, 1.65); let look = crate::guards::look_of(g, c); let e = eye_of(g, gd);
     let to = v3::sub(p, eye); let l = v3::len(to); if l > range { return false; } if m::hyp2(to[0], to[2]) < 0.3 { return true; }
     if v3::dot([look[0], 0.0, look[2]], v3::normalize([to[0], 0.0, to[2]])) < m::cos(m::max(45.0, e.half_deg) * v3::DEG) { return false; }
     !crate::scene_collision::segment_blocked(g, eye, p, None, None, None)
@@ -707,7 +707,7 @@ fn notice_cowering(g: &mut Game, cv: GuardId, cid: CivId, c: CharId, dt: f64) {
 /// a downed civilian in this man's open view (civilians.ts bodyInViewOf)
 pub fn body_in_view_of(g: &mut crate::game::Game, o: GuardId, cv: GuardId) -> bool {
     let oc = g.gd[o].ch; let cc = g.gd[cv].ch;
-    let eye = bone_or(g, oc, Bone::Head, 1.65); let look = g.ch[oc].chest_dir;
+    let eye = bone_or(g, oc, Bone::Head, 1.65); let look = crate::guards::look_of(g, oc);
     let body = match g.ch[cc].bones.get(Bone::Hips) { Some(p) => *p, None => g.ch[cc].pos };
     let to = v3::sub(body, eye); if v3::len(to) > 12.0 { return false; }
     if m::hyp2(to[0], to[2]) > 0.4 && v3::dot([look[0], 0.0, look[2]], v3::normalize([to[0], 0.0, to[2]])) < m::cos(60.0 * v3::DEG) { return false; }

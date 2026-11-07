@@ -619,7 +619,7 @@ pub fn body_seen(g: &mut crate::game::Game, gd: GuardId, o: GuardId, around: Opt
     let oc = g.gd[o].ch;
     let pos = g.ch[c].pos;
     let eye = bone_or(g, c, crate::character::Bone::Head, v3::add(pos, [0.0, 1.65, 0.0]));
-    let look = g.ch[c].chest_dir;
+    let look = crate::guards::look_of(g, c);
     let body = bone_or(g, oc, crate::character::Bone::Hips, g.ch[oc].pos);
     let to = v3::sub(body, eye);
     let dist = v3::len(to);

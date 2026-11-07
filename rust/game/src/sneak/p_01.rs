@@ -201,12 +201,11 @@ pub fn lit_at(g: &mut crate::game::Game, c_2: &mut crate::sneak::Crumb, low: boo
 pub fn eye_for(g: &mut crate::game::Game, h: GuardId, wide: f64) -> crate::guards::Eye {
     let c = g.gd[h].ch;
     let pos = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(&b) => b, None => v3::add(g.ch[c].pos, [0.0, 1.65, 0.0]) };
-    let chest_dir = g.ch[c].chest_dir;
-    let head_dir = crate::character::character_head_dir(g, c);
+    let look = crate::guards::look_of(g, c);
     let k = g.k.guard_eye;
     crate::guards::Eye {
         pos,
-        look: v3::normalize(v3::lerp3(chest_dir, head_dir, 0.5)),
+        look,
         range: k.range,
         half_deg: m::min(180.0, k.half_deg + wide),
         near_m: k.near_m,

@@ -66,11 +66,8 @@ pub fn pair_in_view(g: &mut crate::game::Game, gd: GuardId, p: &crate::guards::P
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
     let eye = bone(g, c, crate::character::Bone::Head).unwrap_or_else(|| v3::add(pos, [0.0, 1.65, 0.0]));
-    let chest_dir = g.ch[c].chest_dir;
-    let head_dir = crate::character::character_head_dir(g, c);
-    let look = v3::lerp3(chest_dir, head_dir, 0.5);
-    let ll = js::or(m::hyp2(look[0], look[2]), 1.0);
-    let (lx, lz) = (look[0] / ll, look[2] / ll);
+    let look = crate::guards::look_of(g, c);
+    let (lx, lz) = (look[0], look[2]);
     let pl = g.player;
     let pc = g.pl[pl].ch;
     let hc = g.gd[p.held].ch;
