@@ -29,7 +29,7 @@ export const faceFile = (profile: FaceProfile): string => join(CRATE, `target/wa
 /** the release profile's file (the mission loop through wasm and the simulation's build name it) */
 export const FACE_WASM = faceFile('release');
 /** the crates the module is made from (tools/sim/build.ts FILE_MODULES holds this list to the crate's own lock) */
-export const FACE_CRATES = ['prim', 'sim', 'game_types', 'game_wire', 'game_rules', 'game', 'game_run', 'game_start', 'game_face'] as const;
+export const FACE_CRATES = ['prim', 'sim', 'game_types', 'game_wire', 'game_rules', 'game', 'game_draw', 'game_run', 'game_start', 'game_face'] as const;
 
 /** the checked-in module and the hash of the sources it was built from */
 export const PREBUILT = join(CRATE, 'prebuilt/game_face.wasm'), PREBUILT_SOURCES = join(CRATE, 'prebuilt/SOURCES');
