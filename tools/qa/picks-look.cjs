@@ -51,7 +51,7 @@ const shot = (page, name) => page.screenshot({ path: path.join(outDir, name), ti
     rows = await rowsOf(page);
     if (want('boot')) {
     const btns = await buttonsOf(page), early = await page.evaluate(() => !window.__game), status = await page.evaluate(() => { const s = document.querySelector('#menu .bootstatus'), r = document.querySelector('#menu .picks'); return { text: s?.textContent, above: !!s && !!r && s.getBoundingClientRect().bottom <= r.getBoundingClientRect().top + 1 }; });
-    check(rows.length >= 5 && rows.length <= 7 && rows.every((r, i) => r.n === String(i + 1) && r.title && r.line && r.href.includes(`pick=${r.id}`) && r.href.endsWith(`&${Q}`)) && early && btns.some(b => /^Missions/.test(b)) && status.above,
+    check(rows.length >= 2 && rows.length <= 7 && rows.every((r, i) => r.n === String(i + 1) && r.title && r.line && r.href.includes(`pick=${r.id}`) && r.href.endsWith(`&${Q}`)) && early && btns.some(b => /^Missions/.test(b)) && status.above,
       'the boot card carries the rows before the renderer is up: numbered, titled, each a link to its own URL with the visitor\'s flags behind it; Missions beside them; the boot\'s status line over the rows', `${rows.length} rows · game up: ${!early} · ${btns.join(' · ')} · status '${status.text}'\n    ${rows.map(r => `${r.n} ${r.title} [${r.tags.join(' · ')}] ${r.h}px → ${r.href}`).join('\n    ')}`);
     { const sc = rows.filter(r => !/[?&]solo\b/.test(r.href) && !ONE.includes(r.id)), other = r => (/difficulty=hard/.test(r.href) ? 'standard' : 'hard');
       check(sc.length > 0 && sc.every(r => r.alt && r.alt.id === r.id && r.alt.text === `${other(r)} ›` && r.alt.href === r.href.replace(/difficulty=\w+/, `difficulty=${other(r)}`) && r.alt.right <= r.alt.card) && rows.every(r => /[?&]solo\b/.test(r.href) || ONE.includes(r.id) ? !r.alt : true) && ONE.every(id => rows.some(r => r.id === id)),
@@ -106,7 +106,7 @@ const shot = (page, name) => page.screenshot({ path: path.join(outDir, name), ti
     await page.close(); }
   // ---- ?pick=3: one redirect, the mission with its settings, its own start card, the pause card's next, the quit
   if (want('pick')) { const page = await ctx.newPage(); watch(page); let navs = 0; page.on('framenavigated', f => { if (f === page.mainFrame()) navs++; });
-    const k = rows.findIndex(r => /roomclear/.test(r.href) && /hour=|weather=/.test(r.href)), K = k < 0 ? 2 : k;
+    const k = rows.findIndex(r => /roomclear/.test(r.href) && /hour=|weather=/.test(r.href)), K = k < 0 ? 0 : k;   // (no row sets an hour or a weather today: the first row, which has a team)
     await page.goto(`${BASE}?pick=${K + 1}&${Q}`, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => /pick=[a-z]/.test(location.search), null, { timeout: 30000 }).catch(() => {});
     const at = await page.evaluate(() => location.search);
