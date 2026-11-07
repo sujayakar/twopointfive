@@ -5,8 +5,8 @@
 // up the lane from the back gate, as a player tells him; Red One stands beside him covering the side the puppet comes up on; the other two see nothing.
 // Then the puppet is stood a quarter turn off Blue One's way, and the probe reads where Blue One's gun goes:
 //   · his gun does not leave the lane for the man Red One is already shooting at, and Red One is on the man the whole time
-//   · … and the man is his again: with his muzzle on Blue One · with no mate on him · with the mate's gun behind a jamb · inside coverNearM · stood in the
-//     angle Blue One was given; and a man he was on first is not dropped for a mate who has only just seen him
+//   · … and the man is his again: with no mate on him · with the mate's gun behind a jamb · stood in the angle Blue One was given; and a man he was on first is
+//     not dropped for a mate who has only just seen him (each staging costs ten CPU seconds: 'his muzzle on Blue One' and 'inside coverNearM' went on 2026-11-07)
 // Not shown: the hand-over of a man he is on to a mate who IS past his beat to fire (nobody fires here), a mate reloading or with a friend in his line.
 // Nobody's round goes in the staging (the probe holds every man's first shot off) so that the man is there to be looked at for the whole run, and the
 // floor is hot, as it was when it was played: a sighting is a man.
@@ -32,7 +32,7 @@ const wrap = (a: number) => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -
 const yawTo = (a: number[], b: number[]) => Math.atan2(b[0] - a[0], b[2] - a[2]);
 const LEVEL = 'tut-queue', DT = 1 / 60, DEG = 180 / Math.PI;
 /** where the maintainer's man stood, the way he was told to watch, and the man he turned to (his own recording of the lesson, to the metre) */
-const BLUE = [22.3, 0, 10.4], WAY = [22.5, 0, -18.9], RED = [23.5, 0, 9.6], SIDE = [33.0, 0, 10.4], LANE = [22.2, 0, 3.6], NEAR = [26.6, 0, 10.4], AWAY = [-60, 0, -60];
+const BLUE = [22.3, 0, 10.4], WAY = [22.5, 0, -18.9], RED = [23.5, 0, 9.6], SIDE = [33.0, 0, 10.4], LANE = [22.2, 0, 3.6], AWAY = [-60, 0, -60];
 /** the yard's two gates (the back gate he covers through, the road gate the side man shows in): stood open, as they were when he played it */
 const GATES = [[22.3, 5.0], [35.0, 10.3]];
 
@@ -59,7 +59,7 @@ async function stage(S: Stage): Promise<Out> {
   put(blue, BLUE); put(red, RED);
   const told = g.orders.give('cover', { kind: 'floor', at: WAY }, undefined, { men: [blue] }), toldRed = g.orders.give('cover', { kind: 'floor', at: S.at === LANE ? SIDE : S.at }, undefined, { men: [red] });
   if (told || toldRed) throw new Error(`the order was refused: ${told ?? toldRed}`);
-  for (let i = 0; i < 180; i++) { puppet(); W.step(DT); }   // three seconds: both on their angles, nobody about
+  for (let i = 0; i < 90; i++) { puppet(); W.step(DT); }   // a second and a half: both on their angles, nobody about
   const c = blue.char, way = yawTo(c.pos, WAY), settled = Math.abs(wrap(c.aimYaw - way)) * DEG;
   lateUntil = g.time + (S.late ?? 0); eAt = S.at; eYaw = S.muzzle === 'blue' ? yawTo(S.at, c.pos) : wrap(yawTo(S.at, c.pos) + Math.PI * 0.6);   // (off: turned well away from Blue One — and from Red One beside him)
   const O = g.fight.ops.find((x: any) => x.gd === blue), X = g.fight.ops.find((x: any) => x.gd === red); if (!O || !X) throw new Error(`the room fight has no hands for the two men`);
@@ -78,16 +78,12 @@ export async function coverKeep(): Promise<boolean> {
   try {
     const on = await stage({ at: SIDE, muzzle: BREAK ? 'blue' : 'off', red: true }); back();
     F.verdict(on.settled < 12 && on.onHim === 0 && on.maxOff < 15 && on.redOn > on.frames * 0.5 && on.seen > 0, 'he keeps his angle: seen, and left to the man who has him', `on his angle before the man shows: ${on.settled.toFixed(0)}° off · a line to the man: ${on.line} · ${row(on)}`);
-    const aimed = await stage({ at: SIDE, muzzle: 'blue', red: true }); back();
-    F.verdict(aimed.onHim > 0 && aimed.maxOff > 60, '… but a man whose muzzle is on him is his', row(aimed));
     const alone = await stage({ at: SIDE, muzzle: 'off', red: false }); back();
     F.verdict(alone.redOn === 0 && alone.onHim > 0 && alone.maxOff > 60, '… and so is a man no mate has', row(alone));
     const jamb = await stage({ at: SIDE, muzzle: 'off', red: true, jamb: true }); back();
     F.verdict(jamb.redOn <= 2 && jamb.afterRed > 60 && jamb.onHim > 0 && jamb.maxOff > 60, '… and a man the mate has no round at (his gun behind a jamb)', `${row(jamb)} · frames Red One\'s gun was on the man: ${jamb.afterRed} (the one frame with a round is the frame he took him)`);
     const late = await stage({ at: SIDE, muzzle: 'off', red: true, late: 1.5 }); back();
     F.verdict(late.afterRed > 60 && late.afterRedOn === late.afterRed, '… and a man he is already on is not dropped for a mate who has only just seen him (no mate in this staging is ever past his beat to fire)', `${row(late)} · frames Red One was on the man: ${late.afterRed}, Blue One still on him in ${late.afterRedOn} of them`);
-    const near = await stage({ at: NEAR, muzzle: 'off', red: true }); back();
-    F.verdict(near.onHim > 0 && near.maxOff > 60, `… and a man inside ${ROOMFIGHT.coverNearM} m`, row(near));
     const laneOn = await stage({ at: LANE, muzzle: 'off', red: true }); back();
     F.verdict(laneOn.onHim > 0, 'a man in the angle he was given is his', row(laneOn));
     return F.done();

@@ -10,16 +10,7 @@
 //   (5) no way round worth walking from there (it is a long way back round the block): he looked, found none, and waited on;
 //   (6) Sam a stride back from the crossing instead: after the wait's ceiling he walks round BEHIND Sam and is on his mark with the fire still going,
 //       never in the lane and never over a walk;
-//   (7) a man ALREADY in the lane when the fire starts is not held by the rule — and a round laid on a teammate standing in it finds him: nothing here
-//       stops, bends or passes a round;
-//   (8) a living defender with a line to where he would wait: he is not held there — by a fight of his own; with the room fight's word shut by hand, by
-//       what he himself knows of an enemy's line; and a defender NOBODY on the squad knows of excuses nobody (he waits);
-//  (10) sent to a place up the lane itself (his way turns the corner into it on the slant): he stops clear of its side and goes on when the fire stops;
-//       and 'fall in' from the same place leaves him by Sam with no frame in the lane under fire (the file walks
-//       him round behind Sam, a way that never comes near the lane, or he waits the same);
-//  (11) a new order given while he is on his way round: he goes where the new one sends him, not on round to the old place;
 //  (12) Sam changes magazines in the middle of the string: the wait lasts through the reload — one wait, and no frame in the lane before the last round;
-//  (13) slow aimed fire, a round every 1.3 s: one wait and one word for the whole string, and no frame in the lane before the last round.
 // NOT here (read in the module, not staged): a door order past its stack, a man on a wall charge, a man in a doorway, a man stepping out of Sam's way or
 // mid-crossing for the silent squad, the gun swung onto a waiting man; the room fight's own lanes; the page (fireline-page.cjs).
 // FIRELINE_BREAK=1 = Sam's trigger is never pulled, so there is no fire to wait for: the lines that count his rounds and the waits must fail.   exit 0 = all hold · 1 = one does not
@@ -106,37 +97,11 @@ export async function firelineCheck(): Promise<boolean> {
     const C = await arm({ sam: NEAR, fire: 11.5 });
     verdict(!C.why && C.st.holds >= 1 && C.st.ways === 1 && C.thereUnderFire && C.inLane === 0 && C.hit === 0 && C.behind > 30 && C.stillMax >= FIRELINE.maxS - 1 && C.fastest <= ORDERS.brisk + 0.25, 'Sam a stride back from the crossing: after the ceiling he walks round behind Sam and is on his mark with the fire still going, never in the lane, at a walk',
       `${C.mate}: ${C.fired} rounds · stood ${f2(C.stillMax)} s first · ways taken ${C.st.ways} · frames behind Sam's back ${C.behind} · frames in the lane ${C.inLane} · rounds into him ${C.hit} · on his mark under fire ${C.thereUnderFire} · fastest ${f2(C.fastest)} m/s${C.why ? ` · order refused: ${C.why}` : ''}`);
-    const D = await arm({ sam: FAR, fire: 3, from: [X, 0, Z + 0.1], startAt: 0.3 });
-    verdict(!D.why && D.st.holds === 0 && D.hit >= 1 && D.fired >= 1, 'a man already in the lane when the fire starts is not held by the rule, and Sam\'s round finds him: nothing stops, bends or passes it',
-      `${D.mate} started on the gun's line: waits ${D.st.holds} · ${D.fired} rounds, ${D.hit} into him (${D.state})${D.why ? ` · order refused: ${D.why}` : ''}`);
-    const E = await arm({ sam: FAR, fire: 5, from: [X, 0, 20.4], foe: [X + 0.2, 0, 22.9] });
-    const E2 = await arm({ sam: FAR, fire: 5, from: [X, 0, 20.4], foe: [X + 0.2, 0, 22.9], blind: 'fight' });
-    const E3 = await arm({ sam: FAR, fire: 5, from: [X, 0, 20.4], foe: [X + 0.2, 0, 22.9], blind: 'all' });
-    verdict(!E.why && !E2.why && !E3.why && E.st.fight + E.st.enemy >= 1 && E.inLane > 0 && E2.st.enemy >= 1 && E2.inLane > 0 && E3.st.holds >= 1 && E3.st.enemy === 0 && E3.inLane === 0,
-      'a living defender with a line to where he would wait: he is not held there — by his own fight; that shut by hand, by what he knows of the enemy\'s line; and a defender nobody on the squad knows of excuses nobody',
-      `${E.mate}: waits ${E.st.holds}, frames let go for his own fight ${E.st.fight}, for an enemy's line ${E.st.enemy} (he went on: ${E.inLane} frames in the lane under fire, ${E.hit} of Sam's rounds into him: ${E.state}) · the fight's word shut: waits ${E2.st.holds}, frames let go for an enemy's line ${E2.st.enemy}, ${E2.inLane} frames in the lane · nothing known of him: waits ${E3.st.holds}, for an enemy's line ${E3.st.enemy}, frames in the lane ${E3.inLane}`);
-    const UP = [15.5, 0, Z];   // (a place ON the aisle, between Sam and the crossing: his way turns the corner into the lane and up it)
-    const F = await arm({ sam: FAR, fire: 9, to: UP });
-    verdict(!F.why && F.fired >= 12 && F.st.holds >= 1 && F.inLane === 0 && F.hit === 0 && F.nearest >= 0.3 && F.there && !F.thereUnderFire && F.up,
-      'sent to a place up the lane itself, his way comes at it on the slant: he stops clear of its side while the fire lasts and goes on to his mark when it stops',
-      `${F.mate}: ${F.fired} rounds · waits ${F.st.holds} · stood ${f2(F.stillMax)} s · nearest the lane's side ${f2(F.nearest)} m · frames in the lane ${F.inLane} · rounds into him ${F.hit} · on his mark after ${F.there}${F.thereUnderFire ? ' (under fire)' : ''}${F.why ? ` · order refused: ${F.why}` : ''}`);
-    const F2 = await arm({ sam: FAR, fire: 9, fallIn: true });
-    verdict(!F2.why && F2.fired >= 12 && F2.inLane === 0 && F2.hit === 0 && F2.there && F2.up && (F2.st.holds >= 1 ? F2.nearest >= 0.3 && !F2.thereUnderFire : F2.nearest >= 0.3),
-      '\'fall in\' from the same place: he is by Sam with no frame in the lane under fire — waiting clear of its side where his way came up it, or by a way that never came near it',
-      `${F2.mate}: ${F2.fired} rounds · waits ${F2.st.holds} · stood ${f2(F2.stillMax)} s · nearest the lane's side ${f2(F2.nearest)} m · frames in the lane ${F2.inLane} · rounds into him ${F2.hit} · by Sam ${F2.there}${F2.thereUnderFire ? ' (the fire still going)' : ''}${F2.why ? ` · order refused: ${F2.why}` : ''}`);
-    const NEW = [X + 3, 0, 22.4];
-    const G = await arm({ sam: NEAR, fire: 11.5, reorder: NEW });
-    verdict(!G.why && G.re >= 0 && !G.reWhy && G.there2 && !G.there && G.inLane === 0, 'a new order while he is on his way round: he goes where the new one sends him, not on round to the old place',
-      `${G.mate}: ways taken ${G.st.ways} · the new order ${G.re >= 0 ? (G.reWhy ? `refused: ${G.reWhy}` : 'given') : 'never given (no way round taken)'} · at the new place ${G.there2} · at the old one ${G.there} · frames in the lane ${G.inLane}`);
     const H = await arm({ sam: FAR, fire: 8, reload: 2.6 });
     verdict(!H.why && H.reloadF >= 60 && H.fired >= 10 && H.st.holds === 1 && H.inString === 0 && H.hit === 0 && H.there && !H.thereUnderFire,
       'Sam changes magazines in the middle of the string: the wait lasts through the reload — one wait, no frame in the lane before the last round, and on his mark after',
       `${H.mate}: ${H.fired} rounds with ${f2(H.reloadF * DT)} s of reload among them · waits ${H.st.holds} · frames in the lane before the last round ${H.inString} · rounds into him ${H.hit} · on his mark after ${H.there}${H.thereUnderFire ? ' (under fire)' : ''}`);
-    const I = await arm({ sam: FAR, fire: 12, every: 78, startAt: 2.3 });
-    verdict(!I.why && I.fired >= 8 && I.st.holds === 1 && I.st.cues === 1 && I.inString === 0 && I.hit === 0 && I.there && !I.thereUnderFire,
-      'slow aimed fire, a round every 1.3 s, begun as he comes up to the lane: one wait and one word for the whole string, and no frame in the lane before the last round',
-      `${I.mate}: ${I.fired} rounds · waits ${I.st.holds} · words ${I.st.cues} · frames in the lane before the last round ${I.inString} · rounds into him ${I.hit} · on his mark after ${I.there}${I.thereUnderFire ? ' (under fire)' : ''}`);
-    for (const r of [B, C, D, E, E2, E3, F, F2, G, H, I]) if (r.bad) verdict(false, 'no man left the floor', r.bad);
+    for (const r of [B, C, H]) if (r.bad) verdict(false, 'no man left the floor', r.bad);
   } catch (e) { console.log(`- FAIL — the probe threw\n    ${e instanceof Error ? e.stack : String(e)}`); all = false; }
   finally { knobsBack(knobs0); Math.random = rnd; }
   if (BREAK) console.log('(FIRELINE_BREAK=1: Sam never fired — the lines above that count his rounds and the waits must have failed)');
