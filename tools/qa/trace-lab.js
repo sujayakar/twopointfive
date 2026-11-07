@@ -84,7 +84,7 @@
       }
       return { passes: per, union, sum };
     },
-    PASSES: ['direct', 'gather', 'rc c0', 'rc c1', 'rc c2', 'rc c3', 'volFroxel', 'volumetrics', 'reflect', 'particles', 'softblur', 'temporal'],
+    PASSES: ['direct', 'gather', 'rc c0', 'rc c1', 'rc c2', 'rc c3', 'volumetrics', 'reflect', 'particles', 'softblur', 'temporal'],
     /** interleaved K-variant A/B: rounds × (for each variant, in a rotating order: apply(v) → warm → n frames), pooled → per-pass medians per variant + union/sum medians + text */
     async ab(apply, variants, opts = {}) {
       const { rounds = 3, n = 30, warm = 8, still = true, passes = TL.PASSES } = opts;
@@ -371,7 +371,7 @@
             TL.mx.status = `${p} ${sc} ab`;
             const r = await TL.ab(TL.applyConfig, configs, { rounds, n, warm: 8 });
             const pick = (k) => (r.per[k] || []).map(x => x && x.med);
-            TL.mx.results[p].scenes[sc] = { info, aa: aa && aa.aaPct, clean: aa && aa.clean, union: r.union.map(x => x && x.med), unionP25: r.union.map(x => x && x.p25), unionP75: r.union.map(x => x && x.p75), direct: pick('direct'), gather: pick('gather'), rcSum: pick('rcSum'), froxel: pick('volFroxel'), reflect: pick('reflect'), particles: pick('particles'), text: r.text };
+            TL.mx.results[p].scenes[sc] = { info, aa: aa && aa.aaPct, clean: aa && aa.clean, union: r.union.map(x => x && x.med), unionP25: r.union.map(x => x && x.p25), unionP75: r.union.map(x => x && x.p75), direct: pick('direct'), gather: pick('gather'), rcSum: pick('rcSum'), reflect: pick('reflect'), particles: pick('particles'), text: r.text };
             TL.mx.log.push(`${p} ${sc}: union ${r.union.map(x => x && x.med.toFixed(2)).join(' / ')} (aa ${aa && aa.aaPct} %)`);
           } catch (e) { TL.mx.results[p].scenes[sc] = { error: String(e.message || e).slice(0, 300) }; TL.mx.log.push(`${p} ${sc}: ERROR ${String(e.message || e).slice(0, 120)}`); }
           await TL.save(`trace-matrix${tag ? '-' + tag : ''}-${p}`, { preset: p, configs, configNotes: configs.map(c => TL.CONFIGS[c]), rounds, n, ...TL.mx.results[p] }).catch(() => {});
