@@ -362,6 +362,7 @@ fn readers_main(cmd: &str, args: &[String]) -> ! {
     let mut state = std::env::temp_dir().join("fold-readers.txt");
     let mut diag: Option<String> = None;
     let mut taint = false;
+    let mut soften = false;
     let mut bare: Option<String> = None;
     let mut reads: Option<String> = None;
     let mut it = args.iter();
@@ -373,6 +374,7 @@ fn readers_main(cmd: &str, args: &[String]) -> ! {
             "--state" => state = PathBuf::from(val()),
             "--diag" => diag = Some(val()),
             "--taint" => taint = true,
+            "--soften" => soften = true,
             "--bare" => bare = Some(val()),
             x => {
                 eprintln!("fold {cmd}: no option {x}");
@@ -385,7 +387,7 @@ fn readers_main(cmd: &str, args: &[String]) -> ! {
         std::process::exit(3)
     };
     match cmd {
-        "readers-demote" => match readers::demote(&root, &state) {
+        "readers-demote" => match readers::demote(&root, &state, soften) {
             Ok(s) => println!("fold: {s}"),
             Err(e) => fail(e),
         },
@@ -394,10 +396,13 @@ fn readers_main(cmd: &str, args: &[String]) -> ! {
             match readers::restore(&root, &state, text.as_deref(), taint) {
                 Ok(r) => {
                     println!("fold: `mut` put back on {} parameters the compiler named{}, {} that write past the compiler's sight, {} more by the calls; {} stay `&`", r.by_error, if r.coarse > 0 { format!(" ({} of them a whole file at a time: an error with no function to place it on)", r.coarse) } else { String::new() }, r.by_taint, r.by_calls, r.left);
+                    if r.soft_back + r.soft_left > 0 {
+                        println!("fold: {} reads spelled as writes needed their `mut` after all; {} stay shared", r.soft_back, r.soft_left);
+                    }
                     for u in r.unplaced.iter().take(12) {
                         println!("  an error this program could not place: {u}");
                     }
-                    std::process::exit(if r.by_error + r.by_taint + r.by_calls > 0 { 10 } else if r.unplaced.is_empty() { 0 } else { 4 });
+                    std::process::exit(if r.by_error + r.by_taint + r.by_calls + r.soft_back > 0 { 10 } else if r.unplaced.is_empty() { 0 } else { 4 });
                 }
                 Err(e) => fail(e),
             }

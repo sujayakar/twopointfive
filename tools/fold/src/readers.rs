@@ -118,42 +118,256 @@ fn save_state(path: &Path, s: &BTreeSet<String>) {
     let _ = std::fs::write(path, s.iter().cloned().collect::<Vec<_>>().join("\n") + "\n");
 }
 
-/// Every `&mut T` parameter of a body function becomes `&T`. The state file lists what was demoted.
-pub fn demote(root: &Path, state: &Path) -> Result<String, String> {
+/// Where the files are kept as they were before the pass: every text the pass writes is made from these.
+fn orig_dir(state: &Path) -> PathBuf {
+    state.parent().unwrap_or(Path::new(".")).join("orig")
+}
+fn soft_path(state: &Path) -> PathBuf {
+    state.with_extension("soft")
+}
+
+/// The body files as they were before the pass: (where the file is, its path from rust/game, its text then).
+fn pristine(root: &Path, state: &Path) -> Result<Vec<(PathBuf, String, String)>, String> {
+    let game = root.join("rust/game");
+    let dir = orig_dir(state);
+    let mut out = Vec::new();
+    for (path, rel, _) in bodies(root) {
+        let t = std::fs::read_to_string(dir.join(&rel)).map_err(|e| format!("no copy of {rel} from before the pass ({e}): run readers-demote first"))?;
+        out.push((game.join(&rel), rel, t));
+        let _ = path;
+    }
+    Ok(out)
+}
+
+/// A read spelled as a write, and its shared twin.
+const SOFT: &[(&str, &str)] = &[
+    (".as_mut()", ".as_ref()"),
+    (".get_mut(", ".get("),
+    (".iter_mut()", ".iter()"),
+    (".last_mut()", ".last()"),
+    (".first_mut()", ".first()"),
+    (".values_mut()", ".values()"),
+    (".as_deref_mut()", ".as_deref()"),
+    ("&mut ", "&"),
+    ("ref mut ", "ref "),
+];
+
+/// `src` with every comment, string and character blanked, byte for byte, so a word is looked for in code alone.
+fn code_only(src: &str) -> Vec<u8> {
+    let b = src.as_bytes();
+    let mut o = b.to_vec();
+    let mut i = 0;
+    let blank = |o: &mut Vec<u8>, from: usize, to: usize| {
+        for k in from..to.min(o.len()) {
+            if o[k] != b'\n' {
+                o[k] = b' ';
+            }
+        }
+    };
+    while i < b.len() {
+        if b[i] == b'/' && i + 1 < b.len() && b[i + 1] == b'/' {
+            let e = src[i..].find('\n').map(|j| i + j).unwrap_or(b.len());
+            blank(&mut o, i, e);
+            i = e;
+        } else if b[i] == b'/' && i + 1 < b.len() && b[i + 1] == b'*' {
+            let mut depth = 1;
+            let mut j = i + 2;
+            while j < b.len() && depth > 0 {
+                if b[j] == b'/' && j + 1 < b.len() && b[j + 1] == b'*' {
+                    depth += 1;
+                    j += 2;
+                } else if b[j] == b'*' && j + 1 < b.len() && b[j + 1] == b'/' {
+                    depth -= 1;
+                    j += 2;
+                } else {
+                    j += 1;
+                }
+            }
+            blank(&mut o, i, j);
+            i = j;
+        } else if b[i] == b'r' && i + 1 < b.len() && (b[i + 1] == b'"' || b[i + 1] == b'#') && (i == 0 || !(b[i - 1].is_ascii_alphanumeric() || b[i - 1] == b'_')) {
+            // a raw string: r"…", r#"…"#
+            let mut j = i + 1;
+            let mut hashes = 0;
+            while j < b.len() && b[j] == b'#' {
+                hashes += 1;
+                j += 1;
+            }
+            if j < b.len() && b[j] == b'"' {
+                let close = format!("\"{}", "#".repeat(hashes));
+                let e = src[j + 1..].find(&close).map(|k| j + 1 + k + close.len()).unwrap_or(b.len());
+                blank(&mut o, i, e);
+                i = e;
+            } else {
+                i += 1;
+            }
+        } else if b[i] == b'"' {
+            let mut j = i + 1;
+            while j < b.len() && b[j] != b'"' {
+                j += if b[j] == b'\\' { 2 } else { 1 };
+            }
+            blank(&mut o, i, j + 1);
+            i = j + 1;
+        } else if b[i] == b'\'' {
+            // a character (`'x'`, `'\n'`), not a lifetime (`'a`)
+            if i + 2 < b.len() && b[i + 1] == b'\\' {
+                let e = src[i + 2..].find('\'').map(|k| i + 2 + k + 1).unwrap_or(b.len());
+                blank(&mut o, i, e);
+                i = e;
+            } else if let Some(c) = src[i + 1..].chars().next() {
+                let e = i + 1 + c.len_utf8();
+                if e < b.len() && b[e] == b'\'' {
+                    blank(&mut o, i, e + 1);
+                    i = e + 1;
+                } else {
+                    i += 1;
+                }
+            } else {
+                i += 1;
+            }
+        } else {
+            i += 1;
+        }
+    }
+    o
+}
+
+/// One read spelled as a write: where it stands in the text from before the pass.
+struct Site {
+    off: usize,
+    len: usize,
+    to: &'static str,
+    line: usize,
+}
+
+/// The sites of a body file: inside a function's body or one of the file's own `macro_rules!`, never in a test module.
+fn sites_of(src: &str, file: &syn::File) -> Vec<Site> {
+    let mut ranges: Vec<std::ops::Range<usize>> = Vec::new();
+    fn walk(items: &[syn::Item], ranges: &mut Vec<std::ops::Range<usize>>) {
+        for it in items {
+            match it {
+                syn::Item::Fn(f) => ranges.push(f.block.span().byte_range()),
+                syn::Item::Impl(x) => {
+                    for ii in &x.items {
+                        if let syn::ImplItem::Fn(f) = ii {
+                            ranges.push(f.block.span().byte_range());
+                        }
+                    }
+                }
+                syn::Item::Macro(m) if m.ident.is_some() => ranges.push(it.span().byte_range()),
+                syn::Item::Mod(m) if !is_test_mod(m) => {
+                    if let Some((_, inner)) = &m.content {
+                        walk(inner, ranges);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    walk(&file.items, &mut ranges);
+    let code = code_only(src);
+    let mut out = Vec::new();
+    for r in ranges {
+        let text = &code[r.clone()];
+        for (from, to) in SOFT {
+            let pat = from.as_bytes();
+            let mut i = 0;
+            while i + pat.len() <= text.len() {
+                if &text[i..i + pat.len()] == pat {
+                    let at = r.start + i;
+                    // (`ref mut` is a word of its own, not the end of one; `&'a mut` is not `&mut`)
+                    let word_ok = !from.starts_with("ref") || at == 0 || !(code[at - 1].is_ascii_alphanumeric() || code[at - 1] == b'_');
+                    if word_ok {
+                        out.push(Site { off: at, len: pat.len(), to, line: line_of(src, at) });
+                    }
+                    i += pat.len();
+                } else {
+                    i += 1;
+                }
+            }
+        }
+    }
+    out.sort_by_key(|s| s.off);
+    out.dedup_by_key(|s| s.off);
+    out
+}
+
+fn soft_key(rel: &str, off: usize) -> String {
+    format!("{rel}|{off}")
+}
+
+/// The file as the pass has it now: its text from before, with each parameter in `demoted` made `&` and each site in `soft`
+/// made its shared twin. Words change inside their lines; no line is added or lost.
+fn render(src: &str, file: &syn::File, rel: &str, demoted: &BTreeSet<String>, soft: &BTreeSet<String>) -> String {
+    let mut edits: Vec<(usize, usize, &str)> = Vec::new();
+    for f in fns_of(src, file) {
+        for (_, p, at, is_mut) in ref_params(f.sig) {
+            if is_mut && demoted.contains(&key(rel, &f.name, f.ord, &p)) {
+                // `&mut T` loses `mut ` ; `&'a mut T` keeps the blank after its lifetime
+                let rest = &src[at..];
+                let ws = rest.len() - rest.trim_start().len();
+                if rest[ws..].starts_with("mut") {
+                    let after = &rest[ws + 3..];
+                    let ws2 = after.len() - after.trim_start().len();
+                    edits.push((at + ws, 3 + ws2, ""));
+                }
+            }
+        }
+    }
+    if !soft.is_empty() {
+        for s in sites_of(src, file) {
+            if soft.contains(&soft_key(rel, s.off)) {
+                edits.push((s.off, s.len, s.to));
+            }
+        }
+    }
+    edits.sort_by_key(|e| std::cmp::Reverse(e.0));
+    let mut out = src.to_string();
+    for (at, len, to) in edits {
+        out.replace_range(at..at + len, to);
+    }
+    out
+}
+
+/// Every `&mut T` parameter of a body function becomes `&T`; with `soften`, every read spelled as a write becomes its
+/// shared twin too. The files as they were are kept beside the state file, which lists what was changed.
+pub fn demote(root: &Path, state: &Path, soften: bool) -> Result<String, String> {
     let mut demoted: BTreeSet<String> = BTreeSet::new();
+    let mut soft: BTreeSet<String> = BTreeSet::new();
+    let dir = orig_dir(state);
+    let _ = std::fs::remove_dir_all(&dir);
     let mut files = 0;
     for (path, rel, src) in bodies(root) {
+        let keep = dir.join(&rel);
+        if let Some(d) = keep.parent() {
+            std::fs::create_dir_all(d).map_err(|e| format!("cannot make {}: {e}", d.display()))?;
+        }
+        std::fs::write(&keep, &src).map_err(|e| format!("cannot write {}: {e}", keep.display()))?;
         let file = syn::parse_file(&src).map_err(|e| format!("{rel} does not parse: {e}"))?;
-        let mut cuts: Vec<usize> = Vec::new();
         for f in fns_of(&src, &file) {
-            for (_, p, at, is_mut) in ref_params(f.sig) {
+            for (_, p, _, is_mut) in ref_params(f.sig) {
                 if is_mut {
-                    cuts.push(at);
                     demoted.insert(key(&rel, &f.name, f.ord, &p));
                 }
             }
         }
-        if cuts.is_empty() {
-            continue;
-        }
-        cuts.sort();
-        let mut s = src.clone();
-        for at in cuts.into_iter().rev() {
-            // `& mut T` or `&mut T`: the word and the blank after it
-            // (`&mut T` loses `mut ` ; `&'a mut T` keeps the blank after its lifetime)
-            let rest = &s[at..];
-            let ws = rest.len() - rest.trim_start().len();
-            if rest[ws..].starts_with("mut") {
-                let after = &rest[ws + 3..];
-                let ws2 = after.len() - after.trim_start().len();
-                s.replace_range(at + ws..at + ws + 3 + ws2, "");
+        if soften {
+            for s in sites_of(&src, &file) {
+                soft.insert(soft_key(&rel, s.off));
             }
         }
-        std::fs::write(&path, s).map_err(|e| format!("cannot write {rel}: {e}"))?;
-        files += 1;
+        let now = render(&src, &file, &rel, &demoted, &soft);
+        if now != src {
+            if syn::parse_file(&now).is_err() {
+                return Err(format!("{rel} would not parse after the pass's edits"));
+            }
+            std::fs::write(&path, now).map_err(|e| format!("cannot write {rel}: {e}"))?;
+            files += 1;
+        }
     }
     save_state(state, &demoted);
-    Ok(format!("{} `&mut` parameters made `&` in {files} body files", demoted.len()))
+    save_state(&soft_path(state), &soft);
+    Ok(format!("{} `&mut` parameters made `&`{} in {files} body files", demoted.len(), if soften { format!(" and {} reads spelled as writes made shared", soft.len()) } else { String::new() }))
 }
 
 /// The names a call's argument is rooted in: `g`, `&mut g.x`, `g.tab[i].y`, `*g` are all `g`.
@@ -321,16 +535,33 @@ pub struct Restored {
     /// parameters put back a whole file at a time, where an error could not be placed on a function
     pub coarse: usize,
     pub left: usize,
+    /// softened sites made `mut` again, and how many still stand
+    pub soft_back: usize,
+    pub soft_left: usize,
 }
 
 /// Put `mut` back where the compiler's errors (`diag`, cargo's JSON) and the calls say. With `taint`, also on
 /// every function that can write past the compiler's sight and on every function that calls one.
 pub fn restore(root: &Path, state: &Path, diag: Option<&str>, taint: bool) -> Result<Restored, String> {
     let mut demoted = load_state(state);
-    let files = bodies(root);
+    let mut soft = load_state(&soft_path(state));
+    let files = pristine(root, state)?;
     let parsed: Vec<syn::File> = files.iter().map(|(_, rel, src)| syn::parse_file(src).map_err(|e| format!("{rel} does not parse: {e}"))).collect::<Result<_, _>>()?;
     let mut back: BTreeSet<String> = BTreeSet::new();
-    let mut out = Restored { by_error: 0, by_calls: 0, by_taint: 0, unplaced: Vec::new(), coarse: 0, left: 0 };
+    let mut out = Restored { by_error: 0, by_calls: 0, by_taint: 0, unplaced: Vec::new(), coarse: 0, left: 0, soft_back: 0, soft_left: 0 };
+    // the softened sites that still stand, by file and line
+    let mut soft_at: HashMap<(usize, usize), Vec<String>> = HashMap::new();
+    if !soft.is_empty() {
+        for (fi, (_, rel, src)) in files.iter().enumerate() {
+            for st in sites_of(src, &parsed[fi]) {
+                let k = soft_key(rel, st.off);
+                if soft.contains(&k) {
+                    soft_at.entry((fi, st.line)).or_default().push(k);
+                }
+            }
+        }
+    }
+    let mut soft_back: BTreeSet<String> = BTreeSet::new();
     // every function, by file
     let all: Vec<Vec<FnAt>> = files.iter().zip(parsed.iter()).map(|((_, _, src), f)| fns_of(src, f)).collect();
     let rel_ix: HashMap<&str, usize> = files.iter().enumerate().map(|(i, (_, rel, _))| (rel.as_str(), i)).collect();
@@ -377,6 +608,31 @@ pub fn restore(root: &Path, state: &Path, diag: Option<&str>, taint: bool) -> Re
             // the place the error names, in backticks: `*g`, `g.time`, `s.list`
             let named: Vec<String> = msg.split('`').skip(1).step_by(2).flat_map(|t| idents_in(t).into_iter().take(1)).collect();
             let mut placed = false;
+            // 0. a softened site on a line the error points at (its own, a note's, the macro's own text): the site is `mut` again,
+            //    and that is the whole answer to this error for this round
+            if !soft_at.is_empty() {
+                let notes = v["message"]["children"].as_array().map(|c| c.iter().flat_map(|c| c["spans"].as_array().cloned().unwrap_or_default()).collect::<Vec<_>>()).unwrap_or_default();
+                let mut at: Vec<(usize, usize)> = Vec::new();
+                for sp in spans.iter().chain(notes.iter()) {
+                    for one in [sp, outer(sp)] {
+                        if let Some(&fj) = rel_ix.get(in_game(one["file_name"].as_str().unwrap_or(""))) {
+                            let (a, b) = (one["line_start"].as_u64().unwrap_or(0) as usize, one["line_end"].as_u64().unwrap_or(0) as usize);
+                            for l in a..=b.max(a) {
+                                at.push((fj, l));
+                            }
+                        }
+                    }
+                }
+                for k in at.iter().filter_map(|k| soft_at.get(k)).flatten() {
+                    if !soft_back.contains(k) {
+                        soft_back.insert(k.clone());
+                    }
+                    placed = true;
+                }
+                if placed {
+                    continue;
+                }
+            }
             if let Some(&fi) = rel_ix.get(file) {
                 if let Some(f) = all[fi].iter().find(|f| f.lines.0 <= line && line <= f.lines.1) {
                     // (a parameter an earlier error of this round already put back is placed too)
@@ -385,6 +641,21 @@ pub fn restore(root: &Path, state: &Path, diag: Option<&str>, taint: bool) -> Re
                     if hit.is_empty() {
                         let in_span = idents_in(&shown);
                         hit = ps.iter().filter(|p| in_span.contains(p)).collect();
+                    }
+                    if hit.is_empty() && !soft_at.is_empty() {
+                        // the error is about a local, not a parameter: every softened site of the function is `mut` again
+                        let mut any = false;
+                        for l in f.lines.0..=f.lines.1 {
+                            if let Some(ks) = soft_at.get(&(fi, l)) {
+                                for k in ks {
+                                    soft_back.insert(k.clone());
+                                    any = true;
+                                }
+                            }
+                        }
+                        if any {
+                            continue;
+                        }
                     }
                     if hit.is_empty() {
                         hit = ps.iter().collect();
@@ -491,7 +762,8 @@ pub fn restore(root: &Path, state: &Path, diag: Option<&str>, taint: bool) -> Re
                 let mut v = vec![false; f.sig.inputs.len()];
                 for (i, p, _, is_mut) in ref_params(f.sig) {
                     let k = key(&files[fi].1, &f.name, f.ord, &p);
-                    v[i] = is_mut || back.contains(&k);
+                    // (`mut` as the pass has it now: written so before, and not made `&` since, or put back in this round)
+                    v[i] = is_mut && (!demoted.contains(&k) || back.contains(&k));
                 }
                 let e = asks.entry((m.clone(), f.name.clone())).or_insert_with(|| vec![false; v.len()]);
                 for (i, b) in v.iter().enumerate() {
@@ -535,35 +807,24 @@ pub fn restore(root: &Path, state: &Path, diag: Option<&str>, taint: bool) -> Re
         }
     }
 
-    // write the `mut`s back
-    for (fi, (path, rel, src)) in files.iter().enumerate() {
-        let mut ins: Vec<usize> = Vec::new();
-        for f in &all[fi] {
-            for (_, p, at, is_mut) in ref_params(f.sig) {
-                if !is_mut && back.contains(&key(rel, &f.name, f.ord, &p)) {
-                    ins.push(at);
-                }
-            }
-        }
-        if ins.is_empty() {
-            continue;
-        }
-        ins.sort();
-        let mut s = src.clone();
-        for at in ins.into_iter().rev() {
-            if s[at..].starts_with(' ') {
-                s.insert_str(at + 1, "mut ");
-            } else {
-                s.insert_str(at, "mut ");
-            }
-        }
-        std::fs::write(path, s).map_err(|e| format!("cannot write {rel}: {e}"))?;
-    }
+    // the files as the pass has them now
     for k in &back {
         demoted.remove(k);
     }
+    for k in &soft_back {
+        soft.remove(k);
+    }
+    for (fi, (path, rel, src)) in files.iter().enumerate() {
+        let now = render(src, &parsed[fi], rel, &demoted, &soft);
+        if std::fs::read_to_string(path).map(|t| t != now).unwrap_or(true) {
+            std::fs::write(path, now).map_err(|e| format!("cannot write {rel}: {e}"))?;
+        }
+    }
     out.left = demoted.len();
+    out.soft_back = soft_back.len();
+    out.soft_left = soft.len();
     save_state(state, &demoted);
+    save_state(&soft_path(state), &soft);
     Ok(out)
 }
 
