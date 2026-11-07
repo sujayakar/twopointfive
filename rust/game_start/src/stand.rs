@@ -112,6 +112,14 @@ pub fn host_of(g: &Game) -> Option<Host> {
     Some(Host { input, cam, canvas: canvas() })
 }
 
+/// is the level an address boots one of the look's places? The office and what is made of it are not, nor is an address that names no file   (scene/look.ts placeOfQuery)
+fn place_of(link: &str) -> bool {
+    let q = game::query::Query::parse(link);
+    let Some(f) = q.get("levelFile") else { return false };
+    let Some(name) = f.strip_suffix(".json") else { return false };
+    !(name == "office" || name.starts_with("office-"))
+}
+
 /// STAND A GAME on the level file `data` (the file's text, parsed).
 pub fn stand(data: &Json, assets: Assets, o: &StartOpts) -> Stood { stand_with(data, assets, o, &mut |_| {}) }
 
@@ -123,6 +131,8 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
     before(&mut g);
     born(o.slot);
     g.sim = o.slot;
+    // (a host that draws dresses the men for the place its address names: the page's own cast is picked by the same rule)
+    if o.dress { if let Some(l) = o.link.as_ref() { g.m.scene_look.look_place = place_of(l); } }
     let cast = if game::scene_look::look_dress(&mut g) { assets.cast_look.or(assets.cast) } else { assets.cast };
     let rig = gltf::character(&mut g, assets.mannequin, cast);
     // the rows that only dress the picture, as this host has them (game/dress.ts DRESS: up on a page, down on a host that draws nothing)

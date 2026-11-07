@@ -460,7 +460,6 @@ pub struct BreakTableStats {
     pub loose: i32,
     pub sheets: i32,
     pub carcasses: i32,
-    pub notched: i32,
 }
 
 /// (src/game/breakTable.ts:58 NEVER)

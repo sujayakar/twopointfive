@@ -11,6 +11,7 @@ pub mod air_sim;
 pub mod anim_characters;
 pub mod anim_gltf;
 pub mod anim_skeleton;
+pub mod ask;
 pub mod attention;
 pub mod audio_iface;
 pub mod autopilot;

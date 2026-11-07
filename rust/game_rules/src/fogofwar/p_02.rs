@@ -94,7 +94,7 @@ fn is_dead(g: &crate::game::Game, gd: GuardId) -> bool { g.gd[gd].state == crate
 
 /// Once a frame after everybody has moved; asked outside a tick, the pass stands the copy of the box world for itself. (FogOfWar.update)
 pub fn fog_of_war_update(g: &mut crate::game::Game, dt: f64) {
-    if g.col.mirror.live { fog_of_war_pass(g, dt); } else { crate::scene_collision::window(g, &mut |g| fog_of_war_pass(g, dt)); }
+    if crate::scene_collision::standing(g) { fog_of_war_pass(g, dt); } else { crate::scene_collision::window(g, &mut |g| fog_of_war_pass(g, dt)); }
 }
 
 /// The eyes, then seen or not for every man off the team, then the doors. (FogOfWar.pass)

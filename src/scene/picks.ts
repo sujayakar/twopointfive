@@ -63,14 +63,8 @@ const SOLO_KEY = 'solo';
 export const PICKS: Pick[] = [
   { id: 'compound', mission: 'compound-four',
     line: 'Start here, at night. The gate beside you is dark, the main gate is lit, and nobody holds the pantry.' },
-  { id: 'registry', mission: 'rescue-registry',
-    line: 'Two hostages and a captor who will not wait. Look through the glass before you go in.' },
-  { id: 'warehouse', mission: 'warehouse-four', oneDifficulty: true,
-    line: 'The hard one. The rooms make a ring, so if you fight at one door, someone will walk around behind you.' },
   { id: 'depot', mission: 'depot-four',
     line: 'A lit yard watched from the dark. The mains are behind the hut that has no door on the yard.' },
-  { id: 'barracks-day', mission: 'barracks-four', hour: 'midday',
-    line: "Two wings round a yard, by day. A gallery post watches the doors across it. The wash room is out of its sight." },
   { id: 'solo', mission: SOLO_ID,
     line: 'Alone in the office after dark. Reach the server room, pull the drive, leave by the fire exit.' },
 ];

@@ -52,10 +52,7 @@ pub fn room_of_light(g: &mut crate::game::Game, t: FixtureId) -> f64 {
 
 /// A ray at the level's own boxes, the leaves aside. (lightswitch.ts wallRay)
 pub fn wall_ray(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<crate::scene_collision::Raycast> {
-    let keep = core::mem::take(&mut g.col.dynamic_boxes);
-    let h = crate::scene_collision::raycast(g, ro, rd, tmax);
-    g.col.dynamic_boxes = keep;
-    h
+    crate::scene_collision::raycast_over(g, &crate::ask::Over::statics(), ro, rd, tmax)
 }
 
 /// A WALL under the ray: not glass, not a leaf, standing to above a door's head. (lightswitch.ts plateOn's `solid`)

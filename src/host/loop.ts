@@ -26,7 +26,6 @@
 // switch off there is no interpolation: off 60 Hz the men and the camera move at 60 a second on a display that draws more, and on a frame of two ticks or more (a display
 // under the tick rate, a hitch) a flash that lives one tick and was made in the frame's first is aged out by its second and never drawn (with it on, tween.ts draws it once).
 // The module's default is off = every statement below as it was; THE PAGE turns both on (host/profile.ts pageSwitches: ?fixedstep=0, ?tween=0).
-import { BACKKEY } from '../game/backkey';
 import type { Game } from '../game/game';
 import type { Input } from '../game/input';
 import type { FollowCamera } from '../game/camera';
@@ -125,33 +124,8 @@ export function showCaption(ctx: LoopCtx): { caption: string; sub: string; fade:
 
 const LOW_PITCH = 24 * Math.PI / 180, HIGH_PITCH = 55 * Math.PI / 180;
 
-/** the fixed step's knobs. `on`: the switch (off = the variable step, the loop as it was). `hz`: ticks a second. `snap` (s): a frame time within this of a whole number of
- *  refreshes of a common display is taken as exactly that (a 60 Hz display's 16.6‥16.8 ms frames are each ONE tick, never the 0-then-2 a raw accumulator beats out).
- *  `maxTicks`: the most ticks one frame may run (a hitch longer than that is dropped, not caught up). */
-export const FIXEDSTEP = { on: false, hz: 60, snap: 0.0004, maxTicks: 4 };
-const RATES = [50, 60, 72, 75, 90, 100, 120, 144, 165, 240];
-/** `dt` moved onto the nearest whole number (1‥3) of refreshes of a common display when it is within `tol` of one; otherwise as given */
-export function snapDt(dt: number, tol = FIXEDSTEP.snap): number {
-  let best = dt, err = tol;
-  for (const r of RATES) for (let m = 1; m <= 3; m++) { const e = Math.abs(dt - m / r); if (e < err) { err = e; best = m / r; } }
-  return best;
-}
-/** the pure plan: `acc` seconds owed + this frame's `dt` → whole ticks of 1 / hz to run now and what is owed after them.
- *  `drift` = the wall time the snap has put aside, leaking 1 % a frame: jitter round a true refresh sums to nothing and a display a hair off a listed rate (59.94 Hz) stays
- *  one tick a frame for good — but a display the list does not have (70 Hz snapping to 72, 85 to 82.5) builds half a tick of it inside half a second and gets it back
- *  as time, so the game's clock never runs steadily off the wall's. */
-export function planTicks(acc: number, dt: number, K: { hz: number; snap: number; maxTicks: number } = FIXEDSTEP, drift = 0): { ticks: number; acc: number; drift: number } {
-  const step = 1 / K.hz; dt = Math.max(0, dt);
-  let use = snapDt(dt, K.snap);
-  drift = drift * 0.99 + (dt - use);
-  if (Math.abs(drift) > step / 2) { use += drift; drift = 0; }
-  acc += use;
-  if (acc < 0) { drift += acc; acc = 0; }   // (time handed back that this frame cannot pay — a display a little FASTER than a listed rate, 170 Hz against 165: it stays owed; an accumulator under zero planned a frame of −1 ticks)
-  let ticks = Math.max(0, Math.floor(acc / step + 1e-6));
-  acc -= ticks * step; if (Math.abs(acc) < step * 1e-6) acc = 0;
-  if (ticks > K.maxTicks) { ticks = K.maxTicks; acc = 0; drift = 0; }
-  return { ticks, acc, drift };
-}
+export { FIXEDSTEP, snapDt, planTicks } from './fixedstep';
+import { FIXEDSTEP, planTicks } from './fixedstep';
 
 /** A FRAME IS ONE WINDOW ON THE BOX WORLD'S COPY (scene/collision.ts `window`): what the page asks of it — the marks and the dress step behind a tick, the camera, the
  *  sound, the HUD — is asked of a copy proven once and not once a question, and a tick inside the frame has it proven again (`writes`). A frame that asks nothing proves nothing. */
@@ -162,9 +136,9 @@ function stepFrameIn(ctx: LoopCtx, dt: number): void {
   const frozen = ctx.frozen();   // paused / start card: the world holds still, the picture stays live behind the card, hotkeys are off — unless attract mode has let the world go behind the start card
   const frozenKeys = frozen && input.pressed.size ? [...input.pressed] : null;   // (the hotkeys' look below: the recorder keys are read on a frozen frame too)
   if (frozen) { dt = 0; input.endFrame(); if (!ctx.tick) game.player.launchHeld = null; }   // (…and the launcher's button, if it was down as the card came up, is let go of unsent: the tick that follows the card would read 'the button came up' and send the round — player.ts)
-  if (frozen) ctx.thaw = true; else if (ctx.thaw) { ctx.thaw = false; if (BACKKEY.tab) input.pressed.add('Paused'); input.pressed.add('Thawed'); }   // (game/backkey.ts: the first tick after the card is told the card was up — a held list or arc is let go unsent IN the tick, where a recording has it)
+  if (frozen) ctx.thaw = true; else if (ctx.thaw) { ctx.thaw = false; input.pressed.add('Paused'); input.pressed.add('Thawed'); }   // (game/backkey.ts: the first tick after the card is told the card was up — a held list or arc is let go unsent IN the tick, where a recording has it)
   ctx.afterFreeze?.(frozen);
-  const auto = AUTOCAM.on ? (ctx.auto ??= autoCam()) : null;   // (the camera running itself, host/autocam.ts: nothing below asks it while the mode is off — host/findme.ts AUTOVIEW)
+  const auto = ctx.auto ??= autoCam();   // (the camera running itself: host/autocam.ts)
   if (!frozen && input.wheelCtrl && !game.rails.locks('zoom')) { cam.zoom(input.wheelCtrl); if (auto && AUTOVIEW.on) autoZoom(auto, cam, input.wheelCtrl); }                 // the camera's key + wheel (or a pinch) zooms; the plain wheel is Sam's walking pace (player.ts)
   const fixed = !frozen && FIXEDSTEP.on && !!ctx.fixedStep?.() && view.clientWidth > 0 && view.clientHeight > 0;
   const orbit = !frozen && input.orbitDX && !game.rails.locks('camera') ? ctrlTurn(input.orbitDX) : 0;       // hold the camera's key and move the mouse to orbit (Ctrl, or the Space bar while it is spare: host/keymap.ts camKey)
@@ -222,7 +196,7 @@ function stepFrameIn(ctx: LoopCtx, dt: number): void {
     const camStep = (cdt: number, dp: Vec3 | null, ap: Vec3 | null, tick: boolean): Vec3 | null => {
       const ds: DirectorFrame | null = frozen ? null : D.showing ? D.frame : null;
       const shot: Vec3 | null = dp ?? (ds ? ds.look : null) ?? ap, follow = game.followPos();   // a scripted look-at: the tour's / the level script's pinned shot / attract mode's
-      const spect = !shot && game.spectate >= 0; if (spect) cam.autoYaw(cdt, follow, (a, b) => game.col.segmentBlocked(a, b)); cam.easeYaw(cdt, spect);   // spectating a guard: come round to the side he can be seen from,
+      const spect = !shot && game.spectate >= 0; if (spect) cam.autoYaw(cdt, follow, (a, b) => game.ask.blocked(a, b)); cam.easeYaw(cdt, spect);   // spectating a guard: come round to the side he can be seen from,
       const want = spect && cam.desiredDistance < 12 ? LOW_PITCH : HIGH_PITCH; if (!ds || ds.handedOver) cam.pitch += (want - cam.pitch) * Math.min(1, cdt * 3);   // and drop to a low three-quarter angle up close (from the usual height the ceiling panels sit between the eye and a man six metres off) — a showcase's shots key the pitch themselves (until it hands over: then the follow camera is the player's again)
       const ld = shot || game.spectate >= 0 ? null : ctx.lead?.() ?? null;   // (his own man drawn ahead of the tick: the look-at goes with him)
       const led = (p: Vec3): Vec3 => ld ? [p[0] + ld.by[0], p[1] + ld.by[1], p[2] + ld.by[2]] : p;
@@ -233,13 +207,13 @@ function stepFrameIn(ctx: LoopCtx, dt: number): void {
       const mine = !!auto && AUTOVIEW.on && !frozen && !shot && viewFree() && follow === game.player.char.pos && autoFree(game);
       if (mine) {
         if (!(auto!.base > 0)) autoBegin(auto!, cam);   // (kept on from an earlier visit: the zoom as the page opened is the hand's own)
-        const S = autoRead(auto!, game, input, cdt), look = autoFrame(auto!, S, cam, cdt), yaw = turnGoal(auto!, S, cam, cdt, (a, b) => game.col.segmentBlocked(a, b));
+        const S = autoRead(auto!, game, input, cdt), look = autoFrame(auto!, S, cam, cdt), yaw = turnGoal(auto!, S, cam, cdt, (a, b) => game.ask.blocked(a, b));
         if (ctx.behindAuto && ctx.behind != null && (S.shown || S.hold || !S.free)) ctx.behind = null;   // (a turn of its own under way ends where it is the moment it could not have begun)
         const eased = AUTOCAM.turnCap > 0;
         if (Math.abs(auto!.turnV) > AUTOCAM.turnSeen) auto!.turnT = 0;   // (an eased turn or swing is seconds long: `gap` is counted from where the view is seen to stop, or the next would begin the moment this one is ended — the last of its settling, too slow to see, is not waited out)
         else if (yaw != null && ctx.behind == null && !auto!.sway && !auto!.swayV) { ctx.behind = yaw; ctx.behindAuto = true; auto!.turnT = 0; AUTOCAM_STATS.turns++; if (!eased) carryOn(); }   // (his aim goes round with the view, as the double tap's does — in a quick turn; an eased one is slow enough for the hand to follow, as the sway is. Never begun across a lean of the sway's: that comes home first)
         // …and the sway (AUTOCAM.sway): a slow lean of the yaw round the hand's own, toward the fight and the way he moves — not while a turn of another kind is under way
-        if (ctx.behind != null) swayDrop(auto!); else { const t = autoSway(auto!, S, cam, cdt, (a, b) => game.col.segmentBlocked(a, b)); if (t) { cam.rotate(t); AUTOCAM_STATS.swayed += Math.abs(t); } }
+        if (ctx.behind != null) swayDrop(auto!); else { const t = autoSway(auto!, S, cam, cdt, (a, b) => game.ask.blocked(a, b)); if (t) { cam.rotate(t); AUTOCAM_STATS.swayed += Math.abs(t); } }
         const at: Vec3 = led(hs ? [look[0] + hs[0], look[1], look[2] + hs[2]] : look);
         if (tick) cam.step(cdt, at, null); else cam.update(cdt, at, null);
         return shot;

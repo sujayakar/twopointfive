@@ -103,7 +103,7 @@ import type { Item, ItemKind } from './throwables';
 import { DOORWAY, driveOf, type DoorDrive } from './doors';
 import { slabSnapshot, slabRestore, type SlabSnap } from './doorblast';
 import { RAG_COUNT } from './ragdoll';
-import { Chronicle, chronCheckpoint, roomOf, MAX_EVENTS } from './chronicle';
+import { Chronicle, chronCheckpoint, MAX_EVENTS } from './chronicle';
 import type { ChronEvent, ChronCounts, ChronKind, ChronData } from './chronicle';
 import { missionLive } from './mission';
 import { attachFlashlight, rollcallState, escalationOf, forgetGuardClocks } from './guards';
@@ -164,6 +164,7 @@ import { seenReset } from './seenwalk';
 import { takeSnapshot, restoreSnapshot, type Snapshot } from './rollback';   // (called inside Checkpoints only)
 import { LIGHT_IN, MAINS } from '../sim/lightshome';
 import { goneWithTick } from './crossing';
+import { pageSay } from '../view/pagesaid';
 
 // ================================================================================================================================ the schema
 export const SAVE_VERSION = 1;
@@ -607,7 +608,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     blackout: { active: bo.active, until: infOut(bo.until), since: bo.since, permanent: bo.permanent, restoredAt: bo.restoredAt },
     flags: { aiEnabled: g.aiEnabled, godMode: g.godMode, infiniteAmmo: g.infiniteAmmo, playerInvisible: g.playerInvisible },
     player, guards, items, doors, props, propsTime: g.props.time, targets,
-    devices: g.devices?.snapshot() ?? null, mission: deepClone({ ...g.mission, driveT: -1, debrief: false }), chronicle,
+    devices: g.devices?.snapshot() ?? null, mission: deepClone({ ...g.mission, driveT: -1 }), chronicle,
     events: g.events.map(e => ({ kind: e.kind, pos: c3(e.pos), time: e.time, loud: e.loud, level: e.level, id: e.id, who: e.who, weapon: e.weapon, from: e.from ? c3(e.from) : undefined, to: e.to ? c3(e.to) : undefined, announced: e.announced, cause: e.cause, ...(e.ears ? { ears: [c3(e.ears[0]), c3(e.ears[1])] as [Vec3, Vec3] } : {}), ...(e.swAt ? { swAt: c3(e.swAt) } : {}) })),
     messages: g.messages.map(m => ({ text: m.text, t: m.t })),
     rollcall: { nextAt: R.nextAt, stage: R.stage, t0: R.t0, caller: gi(R.caller), missing: gi(R.missing), answered: R.answered, checks: R.checks },
@@ -682,7 +683,7 @@ export function loadState(g: Game, s: SaveState, opts: { label?: string } = {}) 
   g.destr?.walls?.restore(s.walls);   // the level first (holed walls, chewed cover: the statics re-cut, the nav grid re-baked) — everything below is placed in it
   g.destr?.furn?.restore(s.furn);     // …then the furniture a blast took: gone again, silently (its pieces are not filed — no debris is)
   try { applyState(g, s, prevLoads, prevSaves, opts); g.lesson?.restore(s.lesson); g.defuse?.restore(s.defuse); g.snatch?.restore(s.snatch); if (PLANLAY.on) layRestore(g, s.lay); ringRestore(g); g.fogOfWar?.restore(s.fog); }   // (…and a training lesson's place among its steps, lesson.ts: after the mission slice — a file without it, made with the lesson off, leaves the lesson stood down for that run)
-  catch (e) { g.restartEncounter(); g.messages.push({ text: `checkpoint failed to load (${(e as Error).message}) — encounter restarted`, t: g.time }); throw e; }   // (a file broken past the checks: never a half-poured encounter — the fresh one, and the reason)
+  catch (e) { g.restartEncounter(); pageSay(`checkpoint failed to load (${(e as Error).message}) — encounter restarted`); throw e; }   // (a file broken past the checks: never a half-poured encounter — the fresh one, and the reason)
 }
 function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number, opts: { label?: string }) {
   g.time = fin(s.time, g.time); g.eventSeq = s.eventSeq | 0; g.fxSeed = s.fxSeed | 0; g.ocpCooldown = fin(s.ocpCooldown); g.calledIn = !!s.calledIn; g.stoodDown = !!s.stoodDown; g.lightHome.in(LIGHT_IN.fix, null, fin(s.breakerFixT)); g.lastStingT = fin(s.lastStingT, -100);
@@ -808,7 +809,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
   if (g.qrf) { g.qrf.loudT = fin(s.qrf?.loudT, -1e9); responseWordRestore(g, s.qrf?.word); }   // (…and what was said on the net of where he is — qrf.ts RESPONSE.net; a file without it: nothing said yet)
   // ---- the mission and its chronicle
   { const M = s.mission; const stage: MissionStage = M.stage === 'drive' || M.stage === 'exfil' ? M.stage : 'infiltrate';   // (canLoad has refused 'failed' / 'done'; anything else unknown in a hand-made file is the start, not a guess)
-    g.mission = { stage, t0: fin(M.t0), driveT: -1, pulled: !!M.pulled, alarmOn: !!M.alarmOn, sweepAt: fin(M.sweepAt, -1), spottedT: fin(M.spottedT, -100), debrief: false, downCardAt: -1, handsOn: !!M.handsOn, stats: { ...M.stats } }; }
+    g.mission = { stage, t0: fin(M.t0), driveT: -1, pulled: !!M.pulled, alarmOn: !!M.alarmOn, sweepAt: fin(M.sweepAt, -1), spottedT: fin(M.spottedT, -100), downCardAt: -1, handsOn: !!M.handsOn, stats: { ...M.stats } }; }
   { const S = s.chronicle, C = new Chronicle();
     for (const e of S.events ?? []) { if (C.events.length >= MAX_EVENTS) break; C.events.push({ t: fin(e.t), kind: e.kind as ChronKind, room: e.room, pos: c3(e.pos), data: { ...(e.data as ChronData) } }); }
     C.dropped = S.dropped | 0; Object.assign(C.counts, S.counts ?? {}); for (const q of S.questioned ?? []) C.questioned.add(q);
@@ -845,7 +846,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
   updateTargets(g, 0);   // (every target's factor / light / emissive off the restored switches and blackout NOW: a checkpoint written in the dark loads dark on its first frame, not its second)
   updateFire(g, 0);      // (… and an open fire's lamp, its place and its coals as this clock has them: fire.ts)
   if (s.dice && g.dice) { g.dice.s = s.dice.s | 0; g.dice.n = fin(s.dice.n); g.dice.seed = fin(s.dice.seed) >>> 0; }   // the game's own die back where the file left it — LAST, after every construction draw the clean slate above made
-  if (s.kind !== 'harness') { chronCheckpoint(g, 'load', opts.label ?? s.label); g.messages.push({ text: `checkpoint loaded${s.label ? ` — ${s.label}` : ''}`, t: g.time }); if (g.messages.length > 5) g.messages.shift(); }   // (a harness restore is staging, not a checkpoint the player loaded: no row, no line, no load on the card)
+  if (s.kind !== 'harness') { chronCheckpoint(g, 'load', opts.label ?? s.label); pageSay(`checkpoint loaded${s.label ? ` — ${s.label}` : ''}`); }   // (a harness restore is staging, not a checkpoint the player loaded: no row, no line, no load on the card)
 }
 /** a dynamic box's local point / direction into the world (the inverse of what decals.ts stores for an attached mark: yaw about +Y, then the centre) */
 function localToWorld(b: Box, p: V3, point: boolean): Vec3 {
@@ -897,9 +898,8 @@ export interface SaveResult { ok: boolean; why?: string; info?: SlotInfo; bytes?
 export const SNAPS: { own: boolean; take: (g: Game, since?: Snapshot) => Snapshot; put: (s: Snapshot) => void } = { own: false, take: (g, since) => takeSnapshot(g, since), put: s => restoreSnapshot(s) };   // (named inside functions: nothing of rollback.ts is used as this module loads)
 let runSerial = 0;
 rollbackVar('savestate.runSerial', () => runSerial, v => { runSerial = v; });
-/** the room region a floor point is in, for the autosave's 'first time in a room' trigger and its label: on a quiet mission the LEVEL's own places (chronicle.ts
- *  roomOf with the level: a bazaar has no 'lobby'); on the plain night the table it always read; under SAVETIMELINE the level's own on every level */
-function roomHere(g: Game, p: Vec3): string { return roomOf(p, g.quiet?.active || SAVETIMELINE.on ? g.level : undefined); }   // (SAVETIMELINE: autosaves now land on every level — a lesson, a squad's mission — and each gets its OWN rooms; roomOf keeps the table for the office)
+/** the room the player stands in, for the autosave's 'first time in a room' trigger and its label: the game's word for it, the level's own name for the place */
+const roomHere = (g: Game): string => g.view.place;
 
 export class Checkpoints {
   store: SaveStore;
@@ -918,7 +918,7 @@ export class Checkpoints {
   stats = { requests: 0, autosaves: 0, manual: 0, harness: 0, loads: 0, dropped: 0, refused: 0, deferredFrames: 0, regretted: 0 };
   /** QA hook: every state written (autosave or not) is also handed here — the soak keeps them to reload from */
   onSaved: ((s: SaveState | null, info: SlotInfo | null) => void) | null = null;   // (s null: a save kept in memory has no file)
-  private missionRef: object | null = null; private stageRef: MissionStage = 'infiltrate'; private roomRef = ''; private dragRef: object | null = null;
+  private missionRef: object | null = null; private stageRef: MissionStage = 'infiltrate'; private roomRef: string | null = ''; private dragRef: object | null = null;
   /** the last autosave written, while it can still be regretted (key + game time) */
   private lastAuto: { key: string; t: number } | null = null;
   /** SAVETIMELINE — the saves kept in memory (a team on the floor); the HOST's hook for a picture of the save just written (it hands one back through
@@ -938,8 +938,8 @@ export class Checkpoints {
   private note(g: Game, what: string) { this.log.push({ t: g.time, what }); if (this.log.length > 40) this.log.splice(0, this.log.length - 40); }
   /** a loaded file's controller memory becomes ours (loadState) */
   adopt(a: AutosaveSnap | undefined, g: Game) {
-    this.missionRef = g.mission; this.stageRef = g.mission.stage; this.roomRef = roomHere(g, g.player.char.pos); this.dragRef = null; this.pending = null;
-    this.runId = a?.runId || this.runId || newRunId(); this.visited = new Set(a?.visited ?? []); this.visited.add(this.roomRef); this.quietT = fin(a?.quietT ?? 0); this.bodyFrom = null;
+    this.missionRef = g.mission; this.stageRef = g.mission.stage; this.roomRef = null; this.dragRef = null; this.pending = null;   // (roomRef: the room he came back in is read on the next tick, which the game has by then: visited, and no first entry)
+    this.runId = a?.runId || this.runId || newRunId(); this.visited = new Set(a?.visited ?? []); this.quietT = fin(a?.quietT ?? 0); this.bodyFrom = null;
     this.lastSaveT = g.time;   // (a load counts as a save for the gap: no autosave on the heels of coming back)
     this.shelf.last = null;   // (a file's load deals the floor again: the next save in memory is a whole take, not one since a snapshot of the floor that is gone — and a recording begins, and its replay, on such a load: the first save in memory of both is whole)
   }
@@ -984,9 +984,9 @@ export class Checkpoints {
     if (g.seats.length > 1) return;   // (a checkpoint holds one player today: a game of two takes none — runNo says why to whoever asks)
     const pl = g.player, m = g.mission;
     // a fresh run (boot, restartEncounter): fresh memory, a fresh id
-    if (m !== this.missionRef) { this.missionRef = m; this.stageRef = m.stage; this.runId = newRunId(); this.visited = new Set([roomHere(g, pl.char.pos)]); this.roomRef = roomHere(g, pl.char.pos); this.quietT = 0; this.pending = null; this.bodyFrom = null; this.dragRef = null; this.lastSaveT = -1e9; this.shelf.clear(); this.prime(g); this.hand = false; this.due = null; }   // (a save in memory is of ONE run: the objects it would be written back into are gone with it; and the run's base is taken — SAVETIMELINE.base)
+    if (m !== this.missionRef) { this.missionRef = m; this.stageRef = m.stage; this.runId = newRunId(); this.visited = new Set([roomHere(g)]); this.roomRef = roomHere(g); this.quietT = 0; this.pending = null; this.bodyFrom = null; this.dragRef = null; this.lastSaveT = -1e9; this.shelf.clear(); this.prime(g); this.hand = false; this.due = null; }   // (a save in memory is of ONE run: the objects it would be written back into are gone with it; and the run's base is taken — SAVETIMELINE.base)
     // what the keys asked for inside this step, now that the frame is whole: F5's save, and a bare Enter once down onto a save in memory
-    if (this.due) { const key = this.due; this.due = null; this.hand = false; const why = this.loadMem(g, key); if (why) g.msg(`checkpoint: ${why}`); return; }
+    if (this.due) { const key = this.due; this.due = null; this.hand = false; const why = this.loadMem(g, key); if (why) pageSay(`checkpoint: ${why}`); return; }
     if (g.rails?.live) {   // a tutorial mission (rails.ts): its checkpoints are authored — the triggers below, the every-step request and the save by hand all stand down
       this.pending = null; this.hand = false;
       if (this.authored) { const label = this.authored; this.authored = null;
@@ -996,7 +996,7 @@ export class Checkpoints {
         this.writeMem(g, 'auto', label, true); }
       return; }
     this.authored = null;
-    if (this.hand) { this.hand = false; const r = this.write(g, 'manual', 'by hand'); if (!r.ok) g.msg(`not saved: ${r.why}`); }
+    if (this.hand) { this.hand = false; const r = this.write(g, 'manual', 'by hand'); if (!r.ok) pageSay(`not saved: ${r.why}`); }
     // regret: the floor came down on him within regretSecs of the last autosave — that slot is marked, and the cards offer the one before it (checked ahead of the
     // live gate: the frame he drops is not live, and is exactly when it matters)
     if (this.lastAuto) {
@@ -1009,8 +1009,9 @@ export class Checkpoints {
     // (1) the mission moved on
     if (m.stage !== this.stageRef) { const was = this.stageRef; this.stageRef = m.stage; if (STAGE_RANK[m.stage] > STAGE_RANK[was] && m.stage !== 'done') { const W = quietWords(g); this.request(g, 'stage', m.stage === 'drive' ? (W ? `${W.place} reached` : 'server room reached') : m.stage === 'exfil' ? (W ? `${W.bare} taken` : 'the drive is out') : m.stage); } }   // (a quiet mission: the level's own words for its room and its thing — quiet.ts)
     // (2) a room region entered for the first time this run
-    const room = roomHere(g, pl.char.pos);
-    if (room !== this.roomRef) { this.roomRef = room; if (!this.visited.has(room)) { this.visited.add(room); this.request(g, 'room', room); } }
+    const room = roomHere(g);
+    if (this.roomRef === null) { this.roomRef = room; this.visited.add(room); }
+    else if (room !== this.roomRef) { this.roomRef = room; if (!this.visited.has(room)) { this.visited.add(room); this.request(g, 'room', room); } }
     // (3) a body hidden: hauled ≥ bodyHideM from where he took hold of it and let go of (not dropped by a sprint into a fight: the gates see to that)
     if (pl.dragging && pl.dragging !== this.dragRef) { this.dragRef = pl.dragging; const b = pl.dragging.char.ragdoll; this.bodyFrom = b ? [b.x[0], 0, b.x[2]] : v3.copy(pl.char.pos); }
     if (!pl.dragging && this.dragRef) { const body = this.dragRef as Guard; this.dragRef = null; const b = body.char.ragdoll; const at: Vec3 = b ? [b.x[0], 0, b.x[2]] : pl.char.pos; if (this.bodyFrom && v3.distXZ(at, this.bodyFrom) >= CKPT.bodyHideM) this.request(g, 'body', `${body.callsign}'s body moved`); this.bodyFrom = null; }
@@ -1142,7 +1143,7 @@ export class Checkpoints {
     Object.assign(this, host); Object.assign(g.tune, tune); Object.assign(g, flags); loadSandbox(g, false);
     g.chronicle.counts.loads = loads; g.chronicle.counts.saves = saves;
     this.pending = null; this.lastAuto = null; this.hand = false; this.due = null; this.lastSaveT = g.time;   // (a load counts as a save for the gap, as a file's does)
-    chronCheckpoint(g, 'load', e.info.label); g.messages.push({ text: `checkpoint loaded${e.info.label ? ` — ${e.info.label}` : ''}`, t: g.time }); if (g.messages.length > 5) g.messages.shift();
+    chronCheckpoint(g, 'load', e.info.label); pageSay(`checkpoint loaded${e.info.label ? ` — ${e.info.label}` : ''}`);
     this.stats.loads++; this.flash = { text: 'CHECKPOINT LOADED', t: g.time }; this.note(g, `loaded ${key.replace(KEY_PREFIX, '')}: ${e.info.label || '—'} (from memory)`);
     g.rails?.putBack();   // (a tutorial mission's program is functions half run, which no snapshot holds: rails.ts starts it again and sends the step's cue again)
     this.onPutBack?.(e.info);

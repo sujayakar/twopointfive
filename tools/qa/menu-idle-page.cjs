@@ -4,7 +4,7 @@
 //   node tools/qa/menu-idle-page.cjs      env: PORT (the dev server's, default 5199) · QUALITY (verylow) · WARM (frames still drawn after such a page goes up; the
 //   page's own is 90, the tool asks for 6) · REAL=1 (the engine's own render kept: a frame is seconds on this adapter, and the waits below are then too short)
 // (booted `?paused`, then the page's own loop let run with the smoke solver off: nothing here calls `__runFrames`, which the rule stands down for.)
-// the title draws · the start page stops the drawing after the warm frames, on both its steps · the figure is drawn there and says what a frame of it costs ·
+// the title draws · the start page stops the drawing after the warm frames, on both its steps ·
 // back on the title the level is drawn again · the options layer opened from the title the same, opened over a paused run still drawn · `?menurender` = drawn every frame as it was.
 // PASS / FAIL lines; exit 0 = all pass, 1 = a FAIL or a page error, 2 = the script died.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
@@ -48,17 +48,15 @@ const check = (ok, what, detail) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} —
   const button = async (page, word) => { await flowing(page); const all = await page.$$('#menu .actions button'); for (const b of all) if (new RegExp(word, 'i').test(await b.textContent() || '')) { await b.click(); return true; } return false; };
 
   { console.log('the page as it ships');
-    const { ctx, page } = await open('&oldfigure');   // (the standing figure's own frame cost is read below: `?oldfigure` keeps him on a mission whose level stages the team at its door instead — src/ui/kitView.ts; the level behind is hidden by the same rule either way)
+    const { ctx, page } = await open('');
     let d = await over(page, 4000);
     check(d.drawn > 0 && d.skipped === 0, 'the title shows the level: it is drawn', said(d));
     await flowing(page); await page.click('#menu .actions button.primary'); await page.waitForSelector('#missions.one.on');
     const went = await hiddenSoon(page); d = await over(page, 6000);
     check(went && d.drawn === 0 && d.skipped > 0, `the Mission step hides the level: after ${WARM} frames it is not drawn`, said(d));
-    await page.keyboard.press('Enter'); await page.waitForSelector('#missions .onefig canvas[data-fig]', { timeout: 240000 }).catch(() => {});
+    await page.keyboard.press('Enter'); const onKit = await page.waitForSelector('#missions.pane-loadout', { timeout: 60000 }).then(() => true, () => false);
     await page.waitForTimeout(5000); d = await over(page, 6000);
-    const fig = await page.evaluate(() => { const c = document.querySelector('#missions .onefig canvas'); return c ? { fig: c.getAttribute('data-fig'), ms: c.getAttribute('data-ms'), fps: c.getAttribute('data-fps'), w: c.width, h: c.height } : null; });
-    check(d.drawn === 0 && d.skipped > 0, 'Team & kit the same', said(d));
-    check(!!fig && !!fig.fig && +fig.ms >= 0 && (fig.fps === '30' || fig.fps === '20'), 'the figure is drawn there and says what a frame of it costs', fig ? `${fig.w} x ${fig.h} px · ${fig.ms} ms a frame · ${fig.fps} a second (this box, the software adapter beside it)` : 'no figure canvas');
+    check(onKit && d.drawn === 0 && d.skipped > 0, 'Team & kit the same', said(d));
     await page.keyboard.press('Escape'); await page.waitForTimeout(300); await page.keyboard.press('Escape');
     await page.waitForFunction(() => !document.querySelector('#missions.one.on'), null, { timeout: 30000 }).catch(() => {});
     d = await over(page, 5000);

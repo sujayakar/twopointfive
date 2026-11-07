@@ -31,7 +31,7 @@ const WORK = join(ROOT, 'rust'), CRATE = join(WORK, 'sim'), TARGET = join(WORK, 
  *  only makes the picture, and may round as the machine likes. 'both': exact by the standard and stateless, so either side may link it. A crate with no row
  *  here is red (`sides`): nothing joins the workspace without saying which it is. */
 type Side = 'gameplay' | 'dressing' | 'both';
-export const SIDES: Record<string, Side> = { prim: 'both', sim: 'gameplay', dress: 'dressing', game_types: 'gameplay', game_wire: 'gameplay', game_rules: 'gameplay', game: 'gameplay', game_run: 'gameplay', game_start: 'gameplay', game_face: 'gameplay' };   // (game: the simulation's tick as Rust · game_run: what a host does round a step · game_start: the game's own start, a level file's text in and a Game out · game_face: the module the page loads under ?rust=1 — tools/blitz/FACE.md)
+export const SIDES: Record<string, Side> = { prim: 'both', sim: 'gameplay', dress: 'dressing', game_types: 'gameplay', game_wire: 'gameplay', game_rules: 'gameplay', game: 'gameplay', game_draw: 'gameplay', game_run: 'gameplay', game_start: 'gameplay', game_face: 'gameplay' };   // (game: the simulation's tick as Rust · game_run: what a host does round a step · game_start: the game's own start, a level file's text in and a Game out · game_face: the module the page loads under ?rust=1 — tools/blitz/FACE.md)
 /** the modules the build makes: the crate each is the build of, every crate it is made from, the file its bytes go to, and the name its constants carry there */
 interface Mod { name: string; side: 'gameplay' | 'dressing'; crates: string[]; out: string; tag: string }
 export const MODULES: readonly Mod[] = [
@@ -42,7 +42,7 @@ export const MODULES: readonly Mod[] = [
  *  compiles it off its own thread (src/host/rustgame.ts) and the 6 MB rule below is not its; it is never checked in (tools/blitz/face-build.ts builds it for
  *  the dev server and the static build). Its row is here so that `sides` reads its crates like any other's. */
 export const FILE_MODULES: readonly Mod[] = [
-  { name: 'game_face', side: 'gameplay', crates: ['prim', 'sim', 'game_types', 'game_wire', 'game_rules', 'game', 'game_run', 'game_start', 'game_face'], out: 'rust/game_face/target/wasm32-unknown-unknown/release/game_face.wasm', tag: 'FACE' },
+  { name: 'game_face', side: 'gameplay', crates: ['prim', 'sim', 'game_types', 'game_wire', 'game_rules', 'game', 'game_draw', 'game_run', 'game_start', 'game_face'], out: 'rust/game_face/target/wasm32-unknown-unknown/release/game_face.wasm', tag: 'FACE' },
 ];
 /** the simulation's module (the one the crate rules and the powers' table are about) */
 const SIM = MODULES[0];
@@ -132,7 +132,8 @@ const RULES: readonly { re: RegExp; why: string; but?: string }[] = [
 const STATICS: Readonly<Record<string, string>> = {
   'sim/src/state.rs ALL': 'STATE · a block a game: the head and a part a family',
   'sim/src/lib.rs SCRATCH': 'SCRATCH · arguments and answers too many for a call\'s own parameters',
-  'sim/src/world.rs ALL': 'COPY · the box world, written by src/scene/boxMirror.ts and compared with the boxes as every tick opens; its stamps and lists are scratch of one question',
+  'sim/src/world.rs ASKING': 'SCRATCH · one question of the box world: what it has met, the cells it walked, the panes and statics it lists',
+  'sim/src/world.rs ALL': 'COPY · the box world, written by src/scene/boxMirror.ts and compared with the boxes as every tick opens',
   'sim/src/fog.rs EYES': 'SCRATCH · the eyes of one sight pass, handed over as the pass opens',
   'sim/src/clips.rs ALL': 'COPY · a character file\'s clips, authored data nothing writes after the file is loaded (src/anim/gltf.ts): copied in once by src/anim/skeleton.ts as a clip is first sampled, the same for every game and in no snapshot; tools/qa/pose-ident.ts reads every single back and samples each clip both ways',
   'sim/src/doors.rs IO': 'SCRATCH · one door step\'s hand-over: the level\'s doors, the contacts and the rules\' numbers written by the host before it asks, the answers read back after (the leaves\' own numbers are in the block)',

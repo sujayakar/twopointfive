@@ -941,7 +941,7 @@ export class Director {
         const f = o.strike ? Wx.strike(o.strike) : null;
         this.push({ beat: b.name, kind: 'stimulus', what: o.strike ? `stroke${f ? '' : ' (no storm)'}` : 'weather', data: { storm: +Wx.storm.toFixed(2), rain: +Wx.rainRate.toFixed(2), ...(o.seed !== undefined ? { seed: o.seed | 0 } : {}), ...(o.strike && f ? { distKm: +f.distKm.toFixed(2) } : {}) } });
       },
-      mission: on => { const S = showOnly('mission'); g.missionInTour = !!on; S.missionOn = !!on; if (on) { g.mission.sweepAt = -1; g.mission.debrief = false; } this.push({ beat: b.name, kind: 'note', what: `mission ${on ? 'live' : 'off'}` }); },
+      mission: on => { const S = showOnly('mission'); g.missionInTour = !!on; S.missionOn = !!on; if (on) { g.mission.sweepAt = -1; } this.push({ beat: b.name, kind: 'note', what: `mission ${on ? 'live' : 'off'}` }); },
       handover: (caption, sub = '') => { showOnly('handover'); this.handOver(R, caption, sub, b); },
       chaos: k => {   // the program's own destruction knob (destruction.ts Destruction.showChaos): read under the show's touring flag where the player's reads 0; restoreChaos nulls it as the program ends
         const S = showOnly('chaos'); if (!g.destr) return;

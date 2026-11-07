@@ -10,6 +10,7 @@
 //!            the writes, the rules the driver called and the meter in the driver's own order, in place of `give`, `write_before` and `meter`
 //!   the tick `step`
 //!   after    `write_after` (each line of hostwrites.txt for this tick) · the compare (`part_hashes`) · `lights` · `view` · `follow`
+pub mod command;
 use game::ids::Id;
 use game::io::Io;
 

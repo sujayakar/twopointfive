@@ -4,11 +4,10 @@
 //
 // This file is the reduction, with no page under it (ui/overlay.ts feeds it the rows it would have listed and draws what comes back;
 // handring-check asks it directly). Imports the rule's own table and types.
-import { HANDRING } from '../game/handring';
 import type { InteractRow } from './overlay';
 
-/** is the corner panel the three things: his ring's rule on, and not under the tour's puppet (its list is the list as it was) */
-export const cornerOn = (puppet: boolean): boolean => HANDRING.corner && HANDRING.on && !puppet;
+/** is the corner panel the three things: not under the tour's puppet (its list is the list as it was) */
+export const cornerOn = (puppet: boolean): boolean => !puppet;
 
 /** The objective line in its parts (null: none). The line's own word ends on '▸' ('objective ▸ …', 'training 2/7 ▸ …' — the Rust game's
  *  `mission::objective`, in the view): `label` is that word, `note` what stands in front of it (a par or a clock), `text` the rest. A line with no such word (a run's end:

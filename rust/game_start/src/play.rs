@@ -61,6 +61,8 @@ pub struct Play {
     /// every sound the game told its host to play (`audio.play`: its name, when, and where it was, None for a sound with no place). Footsteps
     /// are another call of the host's and are not kept.
     pub sounds: Vec<Sound>,
+    /// when the game told its host to open the end card, on the game's clock
+    pub end_cards: Vec<f64>,
     /// each man's last bubble heard: when it was said, and its words
     spoke: Vec<(GuardId, f64, String)>,
     /// where the hand's cursor points in the world, kept there as the camera moves (None: where the host left it)
@@ -79,7 +81,7 @@ fn start_by(data: &Json, room_clear: bool, link: Option<&str>, o: &Opts) -> Play
     let Stood { mut game, host, .. } = stand::stand(data, ch.assets(), &StartOpts { seed: o.seed, seats: o.seats, scenario, link: link.map(String::from), ..Default::default() });
     game.out.clear();
     HOLDS.with(|h| h.set(true));   // (only once a Play exists to put it down: a stand that panicked holds nothing)
-    let mut p = Play { g: game, host, frames: 0, said: Vec::new(), sounds: Vec::new(), cursor: None, spoke: Vec::new(), _one: one };
+    let mut p = Play { g: game, host, frames: 0, said: Vec::new(), sounds: Vec::new(), end_cards: Vec::new(), cursor: None, spoke: Vec::new(), _one: one };
     p.hear();
     p
 }
@@ -115,7 +117,13 @@ impl Play {
         let out = stand::frame(&mut self.g, &self.host, DT);
         self.frames += 1;
         let t = self.g.time;
-        for e in out { if let E::GameAudioLikePlay(p) = e { self.sounds.push(Sound { t, name: p.name.clone(), at: p.pos }); } }
+        for e in out {
+            match e {
+                E::GameAudioLikePlay(p) => self.sounds.push(Sound { t, name: p.name.clone(), at: p.pos }),
+                E::EndCard => self.end_cards.push(t),
+                _ => {}
+            }
+        }
         self.hear();
     }
     /// every man's bubble that is new since the last frame goes on `said`
@@ -234,6 +242,8 @@ impl Play {
         let s = self.g.seats[seat];
         game::seats::with_seat(&mut self.g, s, &mut |g| game::game::game_teleport_player(g, [at[0], 0.0, at[1]]));
     }
+    /// a man of the list set down at a place: a test of what he sees from there, where walking him is a test of his legs
+    pub fn man_stands(&mut self, gd: GuardId, at: [f64; 2]) { let c = self.g.gd[gd].ch; self.g.ch[c].pos[0] = at[0]; self.g.ch[c].pos[2] = at[1]; }
     /// where a seat's player stands
     pub fn seat_at(&mut self, seat: usize) -> [f64; 2] { let s = self.g.seats[seat]; game::seats::with_seat(&mut self.g, s, &mut |g| { let p = g.ch[g.pl[g.player].ch].pos; [p[0], p[2]] }) }
     /// A MAN GOES DOWN by combat's own call (`killGuard`: shot, by `by`'s hand), for a test of what follows a death and not of the shot.
@@ -295,6 +305,33 @@ impl Play {
     pub fn room_clear_end(&self) -> Option<(game::roomclear::RoomClearEnd, f64)> { self.g.room_clear.end.map(|e| (e, self.g.room_clear.end_at)) }
     /// the men of the other side who are up
     pub fn hostiles(&self) -> Vec<GuardId> { let at = self.sam_at(); self.hostiles_by(at) }
+    /// A ROUND FROM A MAN by combat's own call (`fire_weapon`, steady and with no spread) at a point of the floor, chest high.
+    pub fn man_fires_at(&mut self, gd: GuardId, at: [f64; 2]) {
+        let c = self.g.gd[gd].ch;
+        let o = game::combat::FireOpts { steady: Some(true), spread: Some(0.0), ..game::combat::FireOpts::zeroed() };
+        game::combat::fire_weapon(&mut self.g, c, [at[0], 1.2, at[1]], false, Some(&o));
+    }
+    /// A MAN GOES DOWN by combat's own call, in any of its ways (`quiet`: put out with no noise).
+    pub fn falls_as(&mut self, gd: GuardId, how: game::game::DownKind, quiet: bool, by: game::game::DownBy) { game::combat::kill_guard(&mut self.g, gd, [1.0, 0.0, 0.0], Some(quiet), Some(how), Some(by), None, None); }
+    /// the player of a seat takes a round's hit from the way `from_dir`, in his own seat, until he has none left (combat's `hit_player`: nobody fired it)
+    pub fn seat_goes_down(&mut self, seat: usize) {
+        let s = self.g.seats[seat];
+        game::seats::with_seat(&mut self.g, s, &mut |g| { while !g.pl[g.player].down { game::combat::hit_player(g, [1.0, 0.0, 0.0]); } });
+    }
+    /// is a seat's player down
+    pub fn seat_down(&mut self, seat: usize) -> bool { let s = self.g.seats[seat]; game::seats::with_seat(&mut self.g, s, &mut |g| g.pl[g.player].down) }
+    /// a seat's man's character id
+    pub fn seat_id(&mut self, seat: usize) -> f64 { let s = self.g.seats[seat]; game::seats::with_seat(&mut self.g, s, &mut |g| g.ch[g.pl[g.player].ch].id) }
+    /// a man's character id
+    pub fn id_of(&self, gd: GuardId) -> f64 { self.g.ch[self.g.gd[gd].ch].id }
+    /// THE RECAP, as the game keeps it. What the end card may show (None: somebody still plays, or nobody of ours went down) …
+    pub fn recap_card(&self) -> Option<game::deathrecap::DeathRecap> { game::deathrecap::recap_card(&self.g) }
+    /// … every one of ours lost so far this run, whoever still plays: never for a screen …
+    pub fn recap_deaths(&self) -> Vec<game::deathrecap::RecapDeath> { self.g.recap.deaths.iter().cloned().collect() }
+    /// … the squad's men lost, as the squad knows them …
+    pub fn recap_lost(&self) -> Vec<game::deathrecap::LostMan> { self.g.recap.lost_live.clone() }
+    /// … and the word a man has over his head of the cues' own (the recap's side call goes there; his own lines do not).
+    pub fn cue_over(&self, gd: GuardId) -> Option<String> { self.g.cues.bubbles.get(gd).map(|b| b.text.clone()) }
     /// Sam's teammates, in the order the game made them
     pub fn mates(&self) -> Vec<GuardId> { self.g.guards.iter().copied().filter(|&gd| self.g.gd[gd].team == game::teams::Team::Operative).collect() }
     /// every man of the game's list in a line, for a failure's message

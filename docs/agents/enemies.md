@@ -60,13 +60,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **Defender cues (10-07;** `src/game/cues.ts`, `Game.cues`, record rebuild/telegraphing/cues.md; the maintainer: "maybe we just need more
   telegraphing from the NPCs then"; `CUES.on` DEFAULT ON, Tab ▸ Sandbox ▸ 'Defender cues', `?nocues`, persisted `twopointsix.cues`; off = the strip and every line as they
   were, digest for digest). Three things, all for a ROOM FIGHT's defenders (team 'hostile' units while `fightLive`): (1) their radio lines reach the RADIO STRIP — `say()`
-  hands them to `cues.heard`, both overlays draw `stripRows(game)` (the cues' own row list: an undrawn row can no longer push a drawn one out of the five-row message ring;
+  hands them to `cues.heard`, the overlay draws `game.view.radio` (`cues::radio_rows`, the cues' own row list: an undrawn row can no longer push a drawn one out of the five-row message ring;
   `'radio: '` rows from `Game.msg` are filed as class 0, always drawn; `adopt()` on a checkpoint load); (2) the strip RANKS and RATE-LIMITS (classes 1 coming round / to help ·
   2 stood down · 3 holding on purpose · 4 the net knows · 5 fell back · 6 still alert — `CLASSES` regexes for the old lines, `LINES[kind].cls` for the new; dup 10 s, per-class
   gaps once two rows are up, ≤ 2 rows a class, a better class takes the worst row; one squelch a frame); (3) the SILENT decisions get a line (`LINES`: help, stay / stayOurs,
   huntOver, calm, cover, still, fellBack, planted / pinnedIn, squadHears / Copies / Stays / Quiet, + spoken surprised / flinch), read off `RoomFight.log` notes and each `Def`
   at the tail of `Game.update`. **THE FILE ONLY READS THE GAME: a cue is never put on `Guard.bubble` (the bark clocks read it and would move a die) — cue bubbles live in a
-  WeakMap behind `cues.bubbleOf(gd)` (both bubble UIs), no `Math.random`, nothing a digest reads.** Two say-site rewordings ride the switch and DO change bubble text (so the
+  WeakMap behind `cues_bubble_of` (the HUD is told it: `game.view.bubbles`), no `Math.random`, nothing a digest reads.** Two say-site rewordings ride the switch and DO change bubble text (so the
   frozen-digest probes pin `CUES.on` off: threshold-identity, nvg / irlaser `digestLines` — a new default-on switch, the list grows by this one): a unit's 'back to your posts'
   → "he's down — hold where you are", and tactics.ts names places through `dialogue.ts placeName` (a level's own rooms and its `scenarios.places` / 'outside the mess'; with the switch on
   `roomName` — the dialogue templates' noun — and two of rescue.ts's lines are the level's own too off the office, never 'the car park' / 'the corridor'; off = the office's
@@ -926,7 +926,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   arm on deals 4, 7, 8: a mate 0.5 m from the door). MENDED 2026-11-07 for the closing leaf: `digin hand_waits` holds a man with furniture while `doors_coming_home` says the leaf is still on its
   way (a pulled leaf from wide open takes about five seconds, and doors stay where they are left, so many doors he brings furniture to are open); he still lets go of a leaf a body has stopped on the clock, and a man who
   only came to shut it leaves on the clock as before (the pull finishes without him). No switch. Native: `rust/game_start/tests/offers.rs` (red before on the compound's bunk room: 'to cover', no wedge).
-  `DIGIN.shutOpen` (7 s, pushes home, pulls again, other doors) stays off: it overshot the barracks. Not measured: what this does to a tally of wedges or wins on any level. Never seen on a GPU, never played by a person;
+  `DIGIN.shutOpen` (7 s, pushes home, pulls again, other doors) stays off: it overshot the barracks. Measured with `hold`, before against after, all five hands, seeds 1 and 2, 240 s, standard difficulty, on compound, barracks and depot: 0 of 30 runs part, so wedges (compound 32, barracks 14, depot 0) and who is left standing are unchanged. Doors mostly start shut and men dig in before anyone has opened them, so these runs never reach the case; the bunk room in the test stages it. Hard not run. Never seen on a GPU, never played by a person;
   (2) nothing about which furniture he picks or where he pushes from.
 - **A calm guard with a long wait in the dark sits down and dozes (10-13)** (`src/game/doze.ts`, `DOZE.on`; page on, `?nodoze`; frozen stand off, `TPS_DOZE=1`;
   on the shipped stand `TPS_DOZE=0` puts it off; a `FROZEN_HOLDS` row; table in `knobs.ts` + `JOURNAL_KNOBS`, a recording from before the key replays with it

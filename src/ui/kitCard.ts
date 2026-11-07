@@ -16,9 +16,9 @@
 //
 // THE MOUSE does everything: a click on an arrow steps the row, on a set presses it, anywhere on the card takes the keys to it.
 // THE KEYS (no key is held, no digit is read): W / S or up / down move the highlighted row (the last 'row' is the sets), A / D or left / right change its
-// value (on the sets: pick one), Enter or Space confirm (a row: its next value; the sets: press the picked one), Esc hands back to whoever mounted the card
-// (opts.onBack). A host that routes keys itself calls card.key(e) — true = the card took it; W on the top row and S on the sets come back false, so a screen
-// can walk on to whatever it has above or below (the loadout screen does: ui/loadout.ts, which also gives no onBack, so Esc is the screen's). A host that does not gets them anyway: the card's element takes focus and listens (inside #menu, where
+// value (on the sets: pick one), Enter or Space confirm (a row: its next value; the sets: press the picked one), Esc is the card's only while a pop-up is open.
+// A host that routes keys itself calls card.key(e) — true = the card took it; W on the top row and S on the sets come back false, so a screen
+// can walk on to whatever it has above or below (the loadout screen does: ui/loadout.ts, and Esc is the screen's). A host that does not gets them anyway: the card's element takes focus and listens (inside #menu, where
 // game/input.ts lets keys through).
 //
 // COPY AND PASTE (the maintainer, 10-15: "we should have copy and paste for loadouts"): two buttons at the end of the sets' line and two keys, C and V (the
@@ -38,13 +38,11 @@ import { GUN_STATS, gunStats } from './gunStats';
 import { menuTheme } from './theme';
 import { kitIcon } from './kitIcons';
 import { kitNoise } from './kitNoise';
-import { KITLOAD, loadOf, loadRef, loadShare, type KitLoad } from '../game/kitload';
+import { loadOf, loadRef, loadShare, type KitLoad } from '../game/kitload';
 import { denseStyle } from './kitDense';
 type KitValue = KitRow['values'][number];
 
 export interface MemberCardOpts {
-  /** Esc on the card */
-  onBack?: () => void;
   /** a row or a set changed member i's card (the table is already written and kept) */
   onChange?: (i: number) => void;
   /** the card took the keys (a click on it, focus()) */
@@ -103,7 +101,7 @@ const liveCards = new Set<{ root: HTMLElement; draw: () => void }>();
 /** the bits of a KeyboardEvent the card reads (a probe hands a plain object) */
 export interface KeyLike { key: string; code?: string; repeat?: boolean; ctrlKey?: boolean; metaKey?: boolean; altKey?: boolean }
 export interface MemberCard {
-  el: HTMLElement; member: number;
+  el: HTMLElement;
   /** take the keys (the highlight shows) / give them up */
   focus(): void; blur(): void;
   /** the highlighted row: 0 … rows − 1, or rows = the sets */
@@ -368,14 +366,13 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
       pouch.title = c.big ? POUCH_TIP_BIG : POUCH_TIP;
       pouchN.textContent = `${c.used} / ${c.total}`;
       const sq = i > 0 && i <= kitTeam() ? squadCost() : null; squadN.textContent = sq ? `squad ${sq.used} / ${sq.total}` : '';
-      load.classList.toggle('off', !KITLOAD.on);
-      if (KITLOAD.on) { const L = loadOf(i, m), R = loadRef(i), row = cur < rows.length ? rows[cur] : null, S: KitLoad | null = row ? loadShare(i, m, row.field) : null, pct = (x: number) => `${Math.round(Math.min(1, Math.max(0, x)) * 1000) / 10}%`;
-        // (a row that carries none: what ONE MORE would take — the step the right arrow would make, weighed on a copy of the card; nothing where that step has no room)
-        let M: KitLoad | null = null; if (row && !S) { const p = kitPeek(i, row.field, 1); if (!p.why) { const c = { ...m } as MemberKit; if (row.set) row.set(c, p.value); else (c as unknown as Record<string, unknown>)[row.field] = p.value; const up = loadOf(i, c);   /* (a row with a setter of its own writes other fields: the Primary row's long gun is `weapon`) */ if (up.mob < L.mob || up.con < L.con) M = { mob: L.mob - up.mob, con: L.con - up.con }; } }
-        for (const b of bars) { const v = L[b.k], r = R[b.k], lo = Math.min(v, r), s = S?.[b.k] ?? 0, more = M?.[b.k] ?? 0;
-          b.fill.style.width = pct(lo); b.gain.style.left = pct(lo); b.gain.style.width = pct(Math.abs(v - r)); b.gain.classList.toggle('loss', v < r);
-          b.part.classList.toggle('more', !s && more > 0); b.part.style.left = pct(s ? v : v - more); b.part.style.width = pct(s ? Math.min(s, 1 - v) : more); b.part.style.display = s || more ? '' : 'none';
-          b.ref.style.left = pct(r); b.bar.setAttribute('data-score', v.toFixed(3)); b.bar.setAttribute('data-share', s.toFixed(3)); b.bar.setAttribute('data-more', more.toFixed(3)); } }
+      const L = loadOf(i, m), R = loadRef(i), row = cur < rows.length ? rows[cur] : null, S: KitLoad | null = row ? loadShare(i, m, row.field) : null, pct = (x: number) => `${Math.round(Math.min(1, Math.max(0, x)) * 1000) / 10}%`;
+      // (a row that carries none: what ONE MORE would take — the step the right arrow would make, weighed on a copy of the card; nothing where that step has no room)
+      let M: KitLoad | null = null; if (row && !S) { const p = kitPeek(i, row.field, 1); if (!p.why) { const c = { ...m } as MemberKit; if (row.set) row.set(c, p.value); else (c as unknown as Record<string, unknown>)[row.field] = p.value; const up = loadOf(i, c);   /* (a row with a setter of its own writes other fields: the Primary row's long gun is `weapon`) */ if (up.mob < L.mob || up.con < L.con) M = { mob: L.mob - up.mob, con: L.con - up.con }; } }
+      for (const b of bars) { const v = L[b.k], r = R[b.k], lo = Math.min(v, r), s = S?.[b.k] ?? 0, more = M?.[b.k] ?? 0;
+        b.fill.style.width = pct(lo); b.gain.style.left = pct(lo); b.gain.style.width = pct(Math.abs(v - r)); b.gain.classList.toggle('loss', v < r);
+        b.part.classList.toggle('more', !s && more > 0); b.part.style.left = pct(s ? v : v - more); b.part.style.width = pct(s ? Math.min(s, 1 - v) : more); b.part.style.display = s || more ? '' : 'none';
+        b.ref.style.left = pct(r); b.bar.setAttribute('data-score', v.toFixed(3)); b.bar.setAttribute('data-share', s.toFixed(3)); b.bar.setAttribute('data-more', more.toFixed(3)); }
       squadN.classList.toggle('full', !!sq && sq.used >= sq.total && c.used < c.total);   // (room in his own pouches and none in the squad's: the squad's count is why his arrows are dimmed, so it is the one lit)
     }
     const issuedShown = kitIssuedShown(i);   // (one deal a refresh, not one a row)
@@ -454,7 +451,7 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
     // (the dense card: Enter on a gun's tile opens its pop-up; open, the keys are the pop-up's — W S walk the gun and its things and stop at the ends, A D change, Enter on the gun or Esc shuts it)
     if (dense && (popAt ? back || (ok && cur < rows.length && isGun(rows[cur])) || (up && at === 0) || (down && at === S.length - 1) : ok && cur < rows.length && isGun(rows[cur]))) {
       seen.add(e); if (!e.repeat && (back || ok)) setPop(popAt ? null : rows[cur].field as GunSlot); return true; }
-    if (back) { if (!opts.onBack) return false; seen.add(e); if (!e.repeat) opts.onBack(); return true; }
+    if (back) return false;
     if (up && at === 0 || down && at === S.length - 1) { if (said) { said = null; draw(); } return false; }   // (an edge: the host's to walk on from)
     seen.add(e);
     if (e.repeat) return true;   // (a key held down is one press: nothing here repeats)
@@ -473,7 +470,7 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
   host.appendChild(root); draw();
   const me = { root, draw }; liveCards.add(me);
   const card: MemberCard = {
-    el: root, member: i,
+    el: root,
     focus() { setFocus(true, true); (root as { focus?: (o?: FocusOptions) => void }).focus?.({ preventScroll: true }); },
     blur() { said = null; setPop(null); setFocus(false, false); draw(); },
     at: () => cur, key,

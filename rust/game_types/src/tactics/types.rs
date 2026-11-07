@@ -691,7 +691,6 @@ pub struct TacticsStats {
     pub slices: i32,
     pub entries: i32,
     pub lone_entries: i32,
-    pub reroutes: i32,
 }
 
 /// (src/game/tactics.ts:64 TACTICS_DEFAULTS: a table nothing writes)

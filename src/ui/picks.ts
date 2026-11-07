@@ -26,7 +26,6 @@ import { weatherTitle } from '../game/weatherKinds';
 import { missionsBusy, missionList } from './missions';
 import { openLoadout, entryOfMission, type LoadoutScreen } from './loadout';
 import type { SquadSize } from '../game/loadout';
-import { kitPreviewIsOpen } from './kitPreview';
 import { menuTheme } from './theme';
 
 const LS = 'twopointsix.picks';         // the ids started on this machine
@@ -186,7 +185,7 @@ export function nextPickOf(search: string = typeof location !== 'undefined' ? lo
 // list and the loadout take their own keys first) and the focus is the card's (not the Tab panel's search box).
 if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
   window.addEventListener('keydown', e => {
-    if (!PICKS_UI.on || e.ctrlKey || e.metaKey || e.altKey || missionsBusy() || kitPreviewIsOpen()) return;
+    if (!PICKS_UI.on || e.ctrlKey || e.metaKey || e.altKey || missionsBusy()) return;
     const menu = document.getElementById('menu'); if (!menu || !menu.classList.contains('on')) return;
     const rows = [...menu.querySelectorAll<HTMLElement>('.picks .prow')]; if (!rows.length) return;
     const at = document.activeElement as HTMLElement | null; if (at && at !== document.body && !menu.contains(at)) return;

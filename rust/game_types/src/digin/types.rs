@@ -478,7 +478,6 @@ pub struct DiginStats {
     pub steady: i32,
     pub tried: i32,
     pub deep: i32,
-    pub bang_calls: i32,
     pub gathered: i32,
     pub gather_lost: i32,
     pub refuge: i32,

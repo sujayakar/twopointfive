@@ -24,7 +24,7 @@ const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { LASTSTAND, lastStandReport } = await import(`${ROOT}/src/game/laststand.ts`);
 const { digInPhase, digInWedged } = await import(`${ROOT}/src/game/digin.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
-const { stripRows } = await import(`${ROOT}/src/game/cues.ts`);
+const { stripRows } = await import('./heard.ts');
 const { placeIn } = await import(`${ROOT}/src/game/dialogue.ts`);
 const { runnerBreak, runnerOf } = await import(`${ROOT}/src/game/runner.ts`);
 

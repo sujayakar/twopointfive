@@ -196,7 +196,7 @@ pub extern "C" fn lines_ray_things(w: usize, a0: f64, a1: f64, a2: f64, r0: f64,
 }
 
 // ---- a circle against the box world (collide.rs)
-/// collision.ts collideCircle: 1 = it touched; where it ends is table 12 of the world (x, z)
+/// collision.ts collideCircle: 1 = it touched; where it ends is the world's table 12 (its question's scratch: x, z)
 #[no_mangle]
 pub extern "C" fn collide_circle(w: usize, px: f64, pz: f64, r: f64, y0: f64, y1: f64, iterations: u32) -> u32 {
     collide::circle(w, px, pz, r, y0, y1, iterations)

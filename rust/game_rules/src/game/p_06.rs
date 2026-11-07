@@ -30,8 +30,9 @@ pub fn game_step_seats(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     if cmds.len() != n { panic!("stepSeats: {} record(s) for {} seat(s)", cmds.len(), n); }
     // (inside a tick the Game's own fields of a seat's name answer the FIRST seat's, whoever this host shows: seats.ts seatsStand)
     // (bare: no seat's view is open while the world's own lines run)
-    if n == 1 { step_seats_on_first(g, dt, cmds); return; }
-    crate::seats::on_first_bare(g, &mut |g| step_seats_on_first(g, dt, cmds));
+    // (the verdict's tick comes last, with the first seat still standing, so the end it latches is the same on every machine: verdict.ts tick)
+    if n == 1 { step_seats_on_first(g, dt, cmds); crate::verdict::verdict_tick(g); return; }
+    crate::seats::on_first_bare(g, &mut |g| { step_seats_on_first(g, dt, cmds); crate::verdict::verdict_tick(g); });
 }
 
 /// The tick's lines, with the first seat on Game.   (game.ts stepSeats)
@@ -218,6 +219,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     if g.m.dress.dress.net { crate::squadnet::squad_net_tick(g); }
     if g.m.dress.dress.cues { crate::cues::cues_tick(g); }
     crate::teamtally::team_tally_tick(g);
+    crate::deathrecap::recap_tick(g);   // (last: it reads the frame as it ended, and moves nothing a rule reads)
     g.ticking = false;
     crate::scene_collision::tick_shut(g);
     g.m.rustknobs.rust_knobs.tick = false;   // (game.ts:1727, the finally)
