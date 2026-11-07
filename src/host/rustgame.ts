@@ -43,6 +43,8 @@ import { CLEANRESTART } from '../game/cleanrestart';
 import type { Snapshot } from '../game/rollback';
 import type { Game } from '../game/game';
 import { NO_VIEW, type TickView } from '../view/seatview';
+import { readCursorView, readTickView, readUnder, type CursorView } from '../view/read';
+import { CURSOR_DOUBLES, sampleCursor } from '../view/cursor';
 import { heardOf, type WorldAsk } from '../view/worldask';
 import { CharacterAnimator } from '../game/character';
 import { SkeletonInstance } from '../anim/skeleton';
@@ -59,7 +61,7 @@ import { OUT, OUT_HOST } from 'tps-bridge/out-dispatch';
 import { makePoke } from 'tps-bridge/poke';
 import { makeScan } from 'tps-bridge/scan';
 import { installAsks, askNothing } from 'tps-bridge/ask';
-import { crossing, readRecord, surfaceHost } from 'tps-bridge/surface';
+import { crossing, surfaceHost } from 'tps-bridge/surface';
 import LISTS from 'tps-bridge/puppet-lists.json';
 import SWITCHES from 'tps-bridge/switches.json';
 
@@ -307,7 +309,7 @@ export async function rustBoot(): Promise<void> {
   //  by the page's readers, are handed on as they are)
   { const raw = inst.exports as unknown as Record<string, unknown>, W: Record<string, unknown> = {}; for (const k of Object.keys(raw)) { const f = raw[k]; W[k] = typeof f === 'function' && k.startsWith('face_') ? guard(k, f as (...a: number[]) => number) : f; } X = W as unknown as Face; }
   MEM = X.memory; BUF = MEM.buffer;
-  for (const n of ['face_new_at', 'face_show_seat', 'face_puppet', 'face_host_half', 'face_step', 'face_ask', 'face_tick_view', 'face_line', 'face_ray', 'face_hear', 'face_probe_asks', 'face_poke', 'face_write', 'face_keep', 'face_back', 'face_loaded', 'face_saves_in', 'face_saves_asked']) if (typeof X[n] !== 'function') throw new RustGameError(`?rust=1: game_face.wasm has no ${n}: it was built from another tree (tools/blitz/face-build.ts builds this one's)`);
+  for (const n of ['face_new_at', 'face_show_seat', 'face_puppet', 'face_host_half', 'face_step', 'face_ask', 'face_tick_view', 'face_line', 'face_ray', 'face_hear', 'face_cursor_view', 'face_under', 'face_probe_asks', 'face_poke', 'face_write', 'face_keep', 'face_back', 'face_loaded', 'face_saves_in', 'face_saves_asked']) if (typeof X[n] !== 'function') throw new RustGameError(`?rust=1: game_face.wasm has no ${n}: it was built from another tree (tools/blitz/face-build.ts builds this one's)`);
   // (the module and this page's half of the bridge must be of one generation: a module of another reads garbage)
   if ((X.face_layout?.() >>> 0) !== SCHEMA.layout) throw new RustGameError(`?rust=1: game_face.wasm is of another generation than this page's bridge (its layout ${(X.face_layout?.() ?? 0) >>> 0}, the page's ${SCHEMA.layout}): the checkout's module is stale, tools/blitz/face-build.ts builds this one's`);
   // STAND-IN: EVERY CLASS OF THE SIMULATION'S FOLDERS GETS ITS OWN NAME BACK (tools/blitz/page-plugin.ts keeps each beside its class). The bridge tells
@@ -325,7 +327,7 @@ export async function rustBoot(): Promise<void> {
 /** what a slot of the save controller holds here in a snapshot's place: the number of a game kept in the module */
 interface KeptGame { game: Game; rust: number }
 let SETTLED_SAID = false;
-interface Held { /** how many applies there have been, the count the view was asked at, and the view */ applies: number; viewAt: number; view: TickView; told: number; toolScan: boolean; inRun: boolean; settings?: { flush(): void; rebase(): void; stats(): { settledLeft: number } & Record<string, unknown> } | null; g: Game; lastCmds: readonly PlayerCmd[] | null; kept: Set<number>; startKept: number; back: { label: string; loads: number; saves: number } | null; took: boolean; saves: number; shelfSig: string; doorKept: number[]; poke: ((obj: unknown, path: string | (string | number)[], value: unknown) => void) | null; watch: Watched[]; launch: unknown; putBacks: number; loads: number; h: number; slot: number; stale: string; uploaded: boolean; ctx: { p: number }; rows: unknown; inStep: boolean; side: { list: unknown[]; of: unknown; base: number }; asks: { after(): void; give(S: any, id: string, t?: any, who?: any, o?: any): string | null; refused: { n: number; rows: Record<string, string> } } | null; quiet: boolean; owed: number; quietDt: number }
+interface Held { /** how often the Rust game has been moved (an apply, a whole apply, a write into it), the count the view was asked at, and the view */ moved: number; viewAt: number; view: TickView; told: number; toolScan: boolean; inRun: boolean; settings?: { flush(): void; rebase(): void; stats(): { settledLeft: number } & Record<string, unknown> } | null; g: Game; lastCmds: readonly PlayerCmd[] | null; kept: Set<number>; startKept: number; back: { label: string; loads: number; saves: number } | null; took: boolean; saves: number; shelfSig: string; doorKept: number[]; poke: ((obj: unknown, path: string | (string | number)[], value: unknown) => void) | null; watch: Watched[]; launch: unknown; putBacks: number; loads: number; h: number; slot: number; stale: string; uploaded: boolean; ctx: { p: number }; rows: unknown; inStep: boolean; side: { list: unknown[]; of: unknown; base: number }; asks: { after(): void; give(S: any, id: string, t?: any, who?: any, o?: any): string | null; refused: { n: number; rows: Record<string, string> } } | null; quiet: boolean; owed: number; quietDt: number }
 let H: Held | null = null;
 const REG = { v: null as Record<string, object> | null };
 const reg = (): Record<string, unknown> => (REG.v ??= knobRegistry()) as Record<string, unknown>;
@@ -371,7 +373,7 @@ function grown(g: Game): void {
 export function rustAttach(g: Game): void {
   if (!X) throw new Error('rustAttach before rustBoot');
   const G = g as unknown as Record<string, any>;
-  H = { applies: 0, viewAt: -1, view: NO_VIEW, told: -1, toolScan: false, inRun: false, g, lastCmds: null, kept: new Set(), startKept: 0, back: null, took: false, saves: 0, shelfSig: '', doorKept: [], poke: null, watch: [], launch: null, putBacks: -1, loads: 0, h: 0, slot: -1, stale: 'the game was stood', uploaded: true, ctx: { p: 0 }, rows: null, inStep: false, side: { list: [], of: null, base: 0 }, asks: null, quiet: false, owed: 0, quietDt: 1 / 60 };
+  H = { moved: 0, viewAt: -1, view: NO_VIEW, told: -1, toolScan: false, inRun: false, g, lastCmds: null, kept: new Set(), startKept: 0, back: null, took: false, saves: 0, shelfSig: '', doorKept: [], poke: null, watch: [], launch: null, putBacks: -1, loads: 0, h: 0, slot: -1, stale: 'the game was stood', uploaded: true, ctx: { p: 0 }, rows: null, inStep: false, side: { list: [], of: null, base: 0 }, asks: null, quiet: false, owed: 0, quietDt: 1 / 60 };
   const held = H;
   G.stepSeats = (dt: number, cmds: readonly PlayerCmd[]) => step(held, dt, cmds);
   // (for a networked game, src/net/step.ts: a quiet run of steps, and the game's own words for its state, as `rustHashes` reads them by name for a check)
@@ -436,9 +438,14 @@ export function rustAttach(g: Game): void {
   // trap inside the question stops the game, and is no throw of the frame's (the frame goes on, or the panic card's key would never be read)
   g.viewAsk = () => { if (!held.h || held.stale || RUST_PANIC.dead) return held.view;
     try { settle(held); if (held.toolScan && !held.inRun && !held.inStep) scanFlush(held); tellShown(held);
-      if (held.viewAt !== held.applies) { call('face_tick_view', () => X!.face_tick_view(held.h)); const r = readRecord(g, 'crate::view::TickView', outBytes()); grown(g); held.view = r; held.viewAt = held.applies; }
+      if (held.viewAt !== held.moved) { call('face_tick_view', () => X!.face_tick_view(held.h)); const r = readTickView(outBytes()); grown(g); held.view = r; held.viewAt = held.moved; }
     } catch (e) { if (!RUST_PANIC.dead) throw e; }
     return held.view; };
+  // WHAT THE CURSOR IS ON, AND WHAT A POINT IS (src/view/cursor.ts): asked once a cursor, camera and moment of the game, kept till one of them moves
+  { const N = new Float64Array(CURSOR_DOUBLES), bytes = new Uint8Array(N.buffer); let at = -1, whose = -1, view: CursorView = { under: null };
+    const ask = <T>(f: () => T, none: () => T): T => { if (!held.h || held.stale || RUST_PANIC.dead) return none(); try { settle(held); if (held.toolScan && !held.inRun && !held.inStep) scanFlush(held); tellShown(held); const r = f(); grown(g); return r; } catch (e) { if (!RUST_PANIC.dead) throw e; return none(); } };
+    g.cursorAsk = (input, cam, canvas, seat = -1) => ask(() => { const moved = sampleCursor(N, input, cam, canvas); if (moved || at !== held.moved || whose !== seat) { at = -1; call('face_cursor_view', () => hand(bytes, p => X!.face_cursor_view(held.h, seat, p))); view = readCursorView(outBytes()); at = held.moved; whose = seat; } return view; }, () => view);
+    g.underAsk = (p, seat = -1) => ask(() => { call('face_under', () => X!.face_under(held.h, seat, p[0], p[1], p[2])); return readUnder(outBytes()); }, () => null); }
   // THE BOX WORLD ASKED (src/view/worldask.ts): the Rust game's, as its boxes stand. While none stands, or one is stopped, the page's own copy answers
   { const ask = rustAsk(held); Object.defineProperty(g, 'askHost', { configurable: true, enumerable: false, get: () => held.h && !held.stale && !RUST_PANIC.dead ? ask : null }); }
   // THE GAME'S OWN METHODS A TOOL OR A PANEL CALLS BETWEEN TICKS (`GAME_CROSSES`): run as TypeScript they move the puppet only, and the Rust game keeps
@@ -493,7 +500,7 @@ function start(S: Held): void {
     return no || outBytes().slice(); }, () => { if (RUST_PANIC.dead) return; try { grown(g); if (!S.inStep) apply(S, false); } catch (e) { if (!RUST_PANIC.dead) throw e; } });
   RUST_GAME.askRefused = S.asks.refused;
   // (the write by path: by the rows' IDs in this book too)
-  S.poke = makePoke(g, reg(), b => { S.viewAt = -1; call('face_write', () => hand(b, (p, n) => X!.face_write(S.h, p, n))); });
+  S.poke = makePoke(g, reg(), b => { S.moved++; call('face_write', () => hand(b, (p, n) => X!.face_write(S.h, p, n))); });
   // THE SETTINGS, written here by whatever writes them (a panel's row, a lever, a difficulty, an address word) and read by the Rust game: held to what the last walk saw, as a tick opens. A settled row is no setting and is not walked
   // A PAGE A TOOL DRIVES (`?paused`: its frames are stepped by a script, never by the clock) walks more than the settings: every carried field (the
   // scan's `every`: no reading of the tools' sources; about 32 ms a walk on the first tutorial, the software adapter's box, two a run of frames), so a
@@ -502,7 +509,7 @@ function start(S: Held): void {
   // rustToolsHold). THE RULE: what a script writes on the puppet BETWEEN its calls to step is carried into the game. A player's page pays none of
   // it: its walk is the settings', every sixteenth tick, as before.
   { const tools = TOOL_DRIVEN; 
-    const scan = makeScan(g, reg(), (b: Uint8Array) => { S.viewAt = -1; call('face_write', () => hand(b, (p, n) => X!.face_write(S.h, p, n))); }, tools ? (q: string) => { RUST_GAME.scan.wrote[q] = (RUST_GAME.scan.wrote[q] ?? 0) + 1; } : () => {}, !tools, tools ? { traps: true, every: true } : {}); scan.rebase(); S.settings = scan; S.toolScan = tools;
+    const scan = makeScan(g, reg(), (b: Uint8Array) => { S.moved++; call('face_write', () => hand(b, (p, n) => X!.face_write(S.h, p, n))); }, tools ? (q: string) => { RUST_GAME.scan.wrote[q] = (RUST_GAME.scan.wrote[q] ?? 0) + 1; } : () => {}, !tools, tools ? { traps: true, every: true } : {}); scan.rebase(); S.settings = scan; S.toolScan = tools;
   if (!SETTLED_SAID) { SETTLED_SAID = true; console.info(`rust=1: ${scan.stats().settledLeft} settled rows of the knob tables are the game's constants, and what a page writes to them does not reach it`); } }
   // (room asked for and given back once the game stands: the allocator keeps it, so a step seldom has to grow the memory, which detaches every view over it)
   part('asks');   // (the menu's questions, the write by path and the settings' first walk)
@@ -523,7 +530,7 @@ function after(S: Held): void {
   if (PF.on) { const n = performance.now(); PF.asks += n - tp; tp = n; }
   // STAND-IN: A DOOR'S KEPT CENTRE is a memo in two halves: the angle it was made for and its x and z are columns of the block (sim/doorshome.ts
   // posAngle, posX, posZ), the array `Door.posAt` an object's field that is on neither list of the filtered export. The puppet's array stays as the
-  // start left it, and doors.ts posAside (a look ahead between ticks) writes it back over the columns the Rust tick wrote: seen as doors at [0, 1, 0]
+  // start left it, and a look ahead between ticks wrote it back over the columns the Rust tick wrote: seen as doors at [0, 1, 0]
   // and the block's `doors` part parting from the TypeScript page's. After an apply the array is made from the columns. Belongs in the filtered export
   // (`doors::Door.pos_at`), or better in doors.ts: the array made from the columns where it is read.
   for (const dr of (G.doors?.list ?? []) as Record<string, any>[]) { const x = dr.g(DC.posX), z = dr.g(DC.posZ), at = dr.posAt; if (!Number.isNaN(dr.g(DC.posAngle)) && (at[0] !== x || at[2] !== z)) dr.posAt = [x, 1.0, z]; }
@@ -550,7 +557,7 @@ function handHost(S: Held): void { if (S.inStep || !S.lastCmds || !S.h) return; 
 /** THE FILTERED EXPORT ONTO THE PUPPET, its out events dispatched. Answers the ms of the export, the apply and the dispatch. */
 function apply(S: Held, first: boolean, then?: () => void): { ex: number; ap: number; out: number; bytes: number } {
   const g = S.g, G = g as unknown as Record<string, any>;
-  S.applies++;
+  S.moved++;
   handHost(S);
   let t = performance.now();
   tellShown(S); call('face_puppet', () => X!.face_puppet(S.h, first ? 1 : 0)); grown(g);
@@ -700,7 +707,7 @@ function shelfIn(S: Held): void {
 function whole(S: Held): void {
   const g = S.g, G = g as unknown as Record<string, any>, t = performance.now();
   handHost(S);
-  S.viewAt = -1;
+  S.moved++;
   call('face_export', () => X!.face_export(S.h)); grown(g);
   applyGame(g, outBytes(), reg(), { hooks: HOOKS });
   after(S);

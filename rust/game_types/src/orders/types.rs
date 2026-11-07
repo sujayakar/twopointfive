@@ -828,44 +828,6 @@ impl SquadOrdersReachedValueLock {
 }
 impl Default for SquadOrdersReachedValueLock { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: HoverKept, src/game/orders.ts:347)
-#[derive(Clone, Debug)]
-pub struct HoverKept {
-    pub hov: Option<crate::orders::HoverKeptHov>,
-    pub cam: Vec<f64>,
-}
-impl HoverKept {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoverKept {
-            hov: None,
-            cam: Vec::new(),
-        }
-    }
-}
-impl Default for HoverKept { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/orders.ts:347 HoverKept.hov, src/game/orders.ts:347)
-#[derive(Clone, Debug)]
-pub struct HoverKeptHov {
-    pub x: f64,
-    pub y: f64,
-    pub t: f64,
-    pub v: crate::orders::OrderTarget,
-}
-impl HoverKeptHov {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoverKeptHov {
-            x: 0.0,
-            y: 0.0,
-            t: 0.0,
-            v: crate::orders::OrderTarget::Floor(crate::orders::OrderTargetFloor::zeroed()),
-        }
-    }
-}
-impl Default for HoverKeptHov { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum TargetKind {
@@ -1571,39 +1533,6 @@ impl SquadOrdersGoalPart {
 }
 impl Default for SquadOrdersGoalPart { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/orders.ts:1225 hintView ->, src/game/orders.ts:1225)
-#[derive(Clone, Copy, Debug)]
-pub struct SquadOrdersHintView {
-    pub kind: crate::cmdring::RingHint,
-    pub x: f64,
-    pub y: f64,
-    pub zoom: f64,
-    pub held: bool,
-    pub press: bool,
-    pub tone: Option<crate::orders::Tone>,
-    pub seg: Option<[V3; 2]>,
-    pub ring: Option<crate::orders::SquadOrdersHintViewRing>,
-    pub glyph: bool,
-}
-impl SquadOrdersHintView {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SquadOrdersHintView {
-            kind: crate::cmdring::RingHint::Door,
-            x: 0.0,
-            y: 0.0,
-            zoom: 0.0,
-            held: false,
-            press: false,
-            tone: None,
-            seg: None,
-            ring: None,
-            glyph: false,
-        }
-    }
-}
-impl Default for SquadOrdersHintView { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/game/orders.ts:1225 SquadOrdersHintView.ring, src/game/orders.ts:1225)
 #[derive(Clone, Copy, Debug)]
 pub struct SquadOrdersHintViewRing {
@@ -2038,23 +1967,6 @@ pub enum SquadOrdersHoverWordsT {
     None(crate::orders::OrderTargetNone),
     Foe(crate::orders::OrderTargetFoe),
 }
-
-/// (TypeScript: inline at src/game/orders.ts:2583 hud ->, src/game/orders.ts:2583)
-#[derive(Clone, Debug)]
-pub struct SquadOrdersHud {
-    pub menu: Option<crate::orders::OrderHudMenu>,
-    pub status: Vec<crate::orders::OrderHudRow>,
-}
-impl SquadOrdersHud {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SquadOrdersHud {
-            menu: None,
-            status: Vec::new(),
-        }
-    }
-}
-impl Default for SquadOrdersHud { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:2619 mark ->, src/game/orders.ts:2619)
 #[derive(Clone, Debug)]

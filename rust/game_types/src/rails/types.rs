@@ -251,23 +251,6 @@ impl RailsOnWayS {
 }
 impl Default for RailsOnWayS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rails.ts:387 markUnder(canvas), src/game/rails.ts:387)
-#[derive(Clone, Copy, Debug)]
-pub struct RailsMarkUnderCanvas {
-    pub client_width: f64,
-    pub client_height: f64,
-}
-impl RailsMarkUnderCanvas {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RailsMarkUnderCanvas {
-            client_width: 0.0,
-            client_height: 0.0,
-        }
-    }
-}
-impl Default for RailsMarkUnderCanvas { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/game/rails.ts:394 orderRows(rows), src/game/rails.ts:394)
 #[derive(Clone, Debug)]
 pub struct RailsOrderRowsRowsItem {

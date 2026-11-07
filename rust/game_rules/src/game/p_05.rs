@@ -592,10 +592,9 @@ pub fn game_host_seat(g: &crate::game::Game) -> SeatId { g.local_seat.unwrap_or(
 
 /// The world asked aside: `fn_` leaves nothing on the game's scratch.   (game.ts aside)
 pub fn game_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
-    // (a fresh table each ask: game::AsideOwn kept only the lens. An empty table is a clean one, boxes.ts rayAside, collision.ts aside)
-    let mut ray_own = crate::scene_boxes::BoxWorldRayAsideOwn::zeroed();
+    // (a fresh table each ask: game::AsideOwn kept only the lens. An empty table is a clean one, collision.ts aside)
     let mut col_own = crate::scene_collision::AsideOwn::zeroed();
-    crate::scene_boxes::box_world_ray_aside(g, &mut ray_own, &mut |g| crate::scene_collision::aside(g, &mut col_own, &mut *fn_))
+    crate::scene_collision::aside(g, &mut col_own, fn_)
 }
 
 /// A lens of the host's to put a record's view on while it asks aside (cmd.ts loadLens): scratch, in no snapshot.   (game.ts asideLens)

@@ -37,7 +37,6 @@ const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`);
 const { RESCUE } = await import(`${ROOT}/src/game/rescue.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
 const { ORDERS, WORD_HEAD } = await import(`${ROOT}/src/game/orders.ts`);
-const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
 const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
@@ -122,8 +121,8 @@ async function rig(scn: Scn, seed = 33) {
     },
     /** what X would open on with the cursor at that pixel */
     pick(sx: number, sy: number): any { input.mouseX = sx; input.mouseY = sy; return O.targetUnder(input, W.cam, W.canvas); },
-    /** The same read before whole-squad orders fold a teammate into the squad: it still names the man under the cursor. */
-    under(sx: number, sy: number): any { input.mouseX = sx; input.mouseY = sy; return (O as any).targetUnderOf(input, W.cam, W.canvas); },
+    /** a teammate stands where the target says and his body is on that pixel: the squad itself, picked on him */
+    bodyAt(sx: number, sy: number, at: number[]): boolean { const ray = W.cam.ray(sx / CW, sy / CH); return O.squad().some((gd: any) => gd.state !== 'dead' && Math.hypot(gd.char.pos[0] - at[0], gd.char.pos[2] - at[2]) < 1e-3 && gd.char.rayHit(ray.ro, ray.rd, 200) >= 0); },
     /** every door of the level stood open and held there (the closer off, as the Director's doors.open(…, {hold}) does it) */
     openAll() { for (const d of game.doors.list) standOpen(d); R.step(4); },
     /** X pressed with the cursor at that pixel, a few frames with every key up: the panel's menu (or null) */
@@ -149,8 +148,8 @@ function sweep(R: Rig): Sweep {
         const L = R.look(d, q); if (!L) continue; if (!L.drawn) { S.hidden++; continue; }
         const t = R.pick(L.sx + SHIFT * R.CW, L.sy), ok = t.kind === 'door' && t.door === d;
         // what the rule gives to something else, each counted apart: a teammate under the cursor, Sam's own body, a door nearer the landing point
-        // (with whole-squad orders, CMDRING.wholeSquad, a teammate under the cursor is the squad itself and the target names no man, so the man is read a step earlier: orders.ts targetUnder)
-        if (!ok && L.man && t.kind === 'none' && (t.man || (CMDRING.wholeSquad && R.under(L.sx, L.sy).man))) { S.onMan++; continue; }
+        // (with orders going to the whole squad, a teammate under the cursor is the squad itself and the target names no man: it is still at his feet, and it is his only where his body is on the pixel picked)
+        if (!ok && L.man && t.kind === 'none' && (t.man || R.bodyAt(L.sx + SHIFT * R.CW, L.sy, t.at))) { S.onMan++; continue; }
         if (!ok && L.sam && t.kind !== 'door') { S.atSam++; continue; }
         if (!ok && t.kind === 'door' && L.at && R.O.targetAt(L.at).door === t.door) { S.other++; continue; }   // (nearer the landing point by doorPickM, as ever — a wrong door off the ray is a miss)
         if (!ok && t.kind === 'door' && L.leafOf === t.door) { S.leaf++; continue; }   // (another door's own leaf shows through this doorway and the cursor is on it: the leaf under the cursor is its door, before any doorway — orders.ts targetUnder)
@@ -281,11 +280,13 @@ export const doormenuMan = guarded(async () => {
         R.stand(p);
         const F0 = R.frame(d), side = Math.sign((p[0] - F0.c[0]) * F0.nx + (p[2] - F0.c[2]) * F0.nz) || 1, at = [F0.c[0] + F0.nx * side * 0.35, 0, F0.c[2] + F0.nz * side * 0.35];
         if (game.col.nav.isBlocked(at[0], at[2])) continue;
+        // (his chest will be drawn over the doorway from here if the pixel his chest will be on is that door with nobody on it: he is at Sam's feet while it is read, a man under a ray going by the bones a step gives him)
+        man.char.pos[0] = p[0]; man.char.pos[1] = 0; man.char.pos[2] = p[2]; R.step(2);
+        { const [bx, by, seen] = R.W.cam.project([at[0], 1.2, at[2]], CW, CH); if (!seen || R.pick(bx, by).kind !== 'door') continue; }
         man.char.pos[0] = at[0]; man.char.pos[1] = 0; man.char.pos[2] = at[2]; O.give('hold', { kind: 'none', at: [...game.player.char.pos] }, 'all'); R.step(3);   // (put there FIRST: a hold is where he stands — told to hold and then moved, he walks back to where he was told, and at a walk he is still inside the tolerance below when the cursor is read)
         if (Math.hypot(man.char.pos[0] - at[0], man.char.pos[2] - at[2]) > 0.4) continue;   // he walked off it
         const [sx, sy, front] = R.W.cam.project([man.char.pos[0], 1.2, man.char.pos[2]], CW, CH); if (!front) continue;
         const ray = R.W.cam.ray(sx / CW, sy / CH), t = man.char.rayHit(ray.ro, ray.rd, 200); if (!(t >= 0)) continue;
-        if (!O.doorOnRay(ray.ro, ray.rd)) continue;   // his chest is not drawn over the doorway from here: another spot
         // (something hides him from here — a wall, a leaf, another body nearer along the ray: another spot. Asked of the scene, not of the pick)
         if (game.col.segmentBlocked(ray.ro, [ray.ro[0] + ray.rd[0] * t, ray.ro[1] + ray.rd[1] * t, ray.ro[2] + ray.rd[2] * t])) continue;
         if ([game.player, ...game.guards].some((o: any) => { if (o === man || !o.char?.rayHit) return false; const u = o.char.rayHit(ray.ro, ray.rd, 200); return u >= 0 && u < t; })) continue;

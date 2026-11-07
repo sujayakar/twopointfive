@@ -426,12 +426,6 @@ export class Door {
   private posAt: Vec3 = [0, 1, 0];
   /** `p` is the kept centre from here on (the array itself: who holds it holds what he always got) */
   keptPos(p: Vec3): void { this.posAt = p; this.p(DC.posX, p[0]); this.p(DC.posZ, p[2]); }
-  /** `fn` asked aside (a question of the picture's — orders.ts hover): reading `pos` after a leaf has swung makes its kept centre anew; what each of `doors`
-   *  kept is put back after, so a game that is drawn keeps what the simulation's own reads left */
-  static posAside<T>(doors: readonly Door[], fn: () => T): T {
-    const a = doors.map(d => d.g(DC.posAngle)), p = doors.map(d => d.posAt);
-    try { return fn(); } finally { for (let i = 0; i < doors.length; i++) { doors[i].p(DC.posAngle, a[i]); doors[i].keptPos(p[i]); } }
-  }
   /** Static doorway centre (where the closed leaf's middle sits). */
   readonly frameCentre: Vec3;
   /** 'Closed enough' that using it means opening it (shared by use() and the HUD prompt). */
@@ -1071,6 +1065,4 @@ export class Doors {
 
   /** Leaf boxes, for registering as dynamic occluders with the collision layer. */
   leafBoxes(): Box[] { return this.list.map(d => d.box); }
-  /** `fn` asked aside of every door here (Door.posAside) */
-  posAside<T>(fn: () => T): T { return Door.posAside(this.list, fn); }
 }

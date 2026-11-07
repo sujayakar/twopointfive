@@ -144,6 +144,7 @@ export async function hoursTeam(): Promise<boolean> {
     const team = g.guards.filter((x: any) => x.team === 'operative' && x.unit);
     // the team told to stack on the front door, from the yard, Sam's own light on — which frees theirs (nvg.ts: 'your light'): what burns is then the light
     // rule's alone (guards.ts LIGHTS — off wherever the place itself reads lit)
+    W.step(1 / 60);   // (what a point is, is the Rust game's answer: it stands from the first step)
     const door = g.doors.byName('front'), O = g.orders; await quiet(() => O.give('stack', O.targetAt(door.frameCentre))); g.player.pistol.lightOn = true; g.player.rifle.lightOn = true;
     // (…and, where the page's wall rule is on, a light it holds off the wall at his muzzle is not a light the hour put out: a man is counted `walled` when
     //  that rule is what put his light out (guards.ts wallPutOut: the other light rules had it burning) and the check's own reading of his beam, after the

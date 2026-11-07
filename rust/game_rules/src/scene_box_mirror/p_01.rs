@@ -762,53 +762,37 @@ pub fn box_mirror_leaves(g: &mut crate::game::Game, dyn_: &[BoxId]) -> f64 {
     set as f64
 }
 
-/// THE FURNITURE'S PARTS, FOR A QUESTION THAT MEETS THEM: list THING_SET of the leaves. → does the copy stand.   (boxMirror.ts BoxMirror.things)
-pub fn box_mirror_things(g: &mut crate::game::Game, p: &crate::scene_box_mirror::Furniture) -> bool {
+/// THE FURNITURE'S PARTS, FOR A QUESTION THAT MEETS THEM: list THING_SET of the leaves, read of the game's things only where one was written since
+/// (`thing_wrote`). → does the copy stand.
+pub fn box_mirror_things(g: &mut crate::game::Game) -> bool {
     if !g.col.mirror.live {
         return false;
     }
     let writes = g.m.scene_box_mirror.things.n;
-    if g.col.mirror.things_at == writes && g.col.mirror.things_of.is_some() {
-        return g.col.mirror.things_ok; // (`thingsOf === P`: a game has one furniture; the marker says it was copied)
+    if g.col.mirror.things_at == writes {
+        return g.col.mirror.things_ok;
     }
     g.col.mirror.things_at = writes;
-    g.col.mirror.things_of = Some(Furniture::zeroed());
     g.col.mirror.things_ok = false;
     let c = g.col.mirror.caps;
-    if p.all.len() as f64 > c.things {
-        return false;
-    }
-    let mut parts = 0usize;
-    for t in &p.props {
-        parts += t.boxes.len();
-    }
-    if parts as f64 > c.leaves {
+    let (all, props) = (g.props.all.clone(), g.props.props.clone());
+    let parts: usize = props.iter().map(|&p| g.tab.props_prop[p].boxes.len()).sum();
+    if all.len() as f64 > c.things || parts as f64 > c.leaves {
         return false;
     }
     let cut_on = crate::scene_cut::cut_boxes_on(g);
     let base = THING_SET_ * c.leaves as usize;
     let every = g.col.mirror.things_all;
     let s = g.sim;
-    {
-        let o = world(s);
-        for (i, t) in p.all.iter().enumerate() {
-            let q = i * TH_;
-            o.thing[q] = t.x;
-            o.thing[q + 1] = t.z;
-            o.thing[q + 2] = t.yaw;
-            o.thing[q + 3] = t.radius;
-        }
+    for (i, &p) in all.iter().enumerate() {
+        let row = [crate::props::prop_x(g, p), crate::props::prop_z(g, p), crate::props::prop_yaw(g, p), g.tab.props_prop[p].radius];
+        world(s).thing[i * TH_..i * TH_ + 4].copy_from_slice(&row);
     }
     let mut at = 0usize;
-    for (r, t) in p.props.iter().enumerate() {
-        {
-            let o = world(s);
-            let q = r * TL_;
-            o.thing_live[q] = js::to_u32(t.id);
-            o.thing_live[q + 1] = at as u32;
-            o.thing_live[q + 2] = t.boxes.len() as u32;
-        }
-        for &b in &t.boxes {
+    for (r, &p) in props.iter().enumerate() {
+        let boxes = g.tab.props_prop[p].boxes.clone();
+        world(s).thing_live[r * TL_..r * TL_ + 3].copy_from_slice(&[js::to_u32(g.tab.props_prop[p].id), at as u32, boxes.len() as u32]);
+        for b in boxes {
             let kind = kind_of(g, b, cut_on);
             let row = base + at;
             if every || !leaf_same(g, s, row, b, kind) {
@@ -818,7 +802,7 @@ pub fn box_mirror_things(g: &mut crate::game::Game, p: &crate::scene_box_mirror:
         }
     }
     sim::world_leaves(s, THING_SET_, parts as u32);
-    sim::world_things(s, p.props.len() as u32);
+    sim::world_things(s, props.len() as u32);
     copied(g);
     g.col.mirror.things_all = false;
     g.col.mirror.things_ok = true;
@@ -826,13 +810,14 @@ pub fn box_mirror_things(g: &mut crate::game::Game, p: &crate::scene_box_mirror:
 }
 
 /// Part `at` of the copied list → its box.   (boxMirror.ts BoxMirror.thingBox)
-pub fn box_mirror_thing_box(g: &crate::game::Game, p: &crate::scene_box_mirror::Furniture, at: f64) -> Option<BoxId> {
-    let mut at = at;
-    for t in &p.props {
-        if at < t.boxes.len() as f64 {
-            return Some(t.boxes[at as usize]);
+pub fn box_mirror_thing_box(g: &crate::game::Game, at: f64) -> Option<BoxId> {
+    let mut at = at as usize;
+    for &p in &g.props.props {
+        let boxes = &g.tab.props_prop[p].boxes;
+        if at < boxes.len() {
+            return Some(boxes[at]);
         }
-        at -= t.boxes.len() as f64;
+        at -= boxes.len();
     }
     None
 }
@@ -1062,15 +1047,5 @@ mod tests {
         let t = box_mirror_tables(&mut g);
         assert_eq!(t.get(String::from("glass")), Some(&PANE_CAP));
         assert_eq!(t.keys().first().map(|k| k.as_str()), Some("boxes"));
-    }
-
-    #[test]
-    fn the_copied_list_names_a_part_by_where_it_stands() {
-        let mut g = game(0);
-        let thing = |ids: &[u32]| FurnitureThing { id: 0.0, x: 0.0, z: 0.0, yaw: 0.0, radius: 0.0, boxes: ids.iter().map(|&i| BoxId(i)).collect() };
-        let p = Furniture { all: Vec::new(), props: vec![thing(&[4, 5]), thing(&[]), thing(&[9])] };
-        assert_eq!(box_mirror_thing_box(&mut g, &p, 1.0), Some(BoxId(5)));
-        assert_eq!(box_mirror_thing_box(&mut g, &p, 2.0), Some(BoxId(9)));
-        assert_eq!(box_mirror_thing_box(&mut g, &p, 3.0), None);
     }
 }

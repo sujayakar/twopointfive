@@ -8,15 +8,15 @@
 // Lines 11 on are Sam's own hands on the same ring (CMDRING.hands, src/game/interact.ts): Space at a shut door.
 // CMDRING_BREAK=1 = the switches left off and the same lines asked: they must fail (the ones that hold are those that say 'as it was': the switch-off line,
 // the old keys' line, a tap of Space, and Space's own key off).
-// The last line (what the cursor is on is kept by the asker) is of the 'as it was' kind: it holds under CMDRING_BREAK too, where no hint is read.
-// HOVERKEPT_BREAK=1 = the order book itself is handed in as the store, so the answer is kept on it as it was before: the last line must fail.
+// The last line (what the cursor is on is a read: the Rust game says, and the order book keeps nothing of it) is of the 'as it was' kind: it holds under CMDRING_BREAK too, where no hint is read.
+// HOVERREAD_BREAK=1 = the answer is kept on the order book: the last line must fail.
 //   exit 0 = all hold · 1 = one does not
 import { standUp, ROOT } from './headless.ts';
 
 const CR: any = await import(`${ROOT}/src/game/cmdring.ts`);
 const AP: any = await import(`${ROOT}/src/game/autopilot.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
-const { ORDERS, hoverStore } = await import(`${ROOT}/src/game/orders.ts`);
+const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const IA: any = await import(`${ROOT}/src/game/interact.ts`);
 const { HANDRING } = await import(`${ROOT}/src/game/handring.ts`);
 const { CMDRING, CMDRING_STATS } = CR, { AUTOPILOT } = AP;
@@ -24,7 +24,7 @@ const { CMDRING, CMDRING_STATS } = CR, { AUTOPILOT } = AP;
 const DT = 1 / 60, HOLD = Math.ceil(CMDRING.tapSecs * 60) + 1, HOLD_SECS = 0.2;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
-const BREAK = process.env.CMDRING_BREAK === '1', HOVBREAK = process.env.HOVERKEPT_BREAK === '1';
+const BREAK = process.env.CMDRING_BREAK === '1', HOVBREAK = process.env.HOVERREAD_BREAK === '1';
 const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
 const { stateHash, stateDiff } = await import(`${ROOT}/src/game/rollback.ts`);
 
@@ -412,28 +412,26 @@ export async function cmdringCheck(): Promise<boolean> {
         CMDRING.hands = was; rest();
       }
     }
-    // the last line. what the cursor is on is kept by whoever reads the HUD, not on the order book (orders.ts HoverKept): two runs of one seed, one whose
-    // HUD lines and ring hint are read every frame (with the asker's own store; once more with none) and one never read — the digest is the same, the
-    // store holds the answer, and NO FIELD OF THE ORDER BOOK is another value after a read than before it (each own field: the same thing, and where it is
+    // the last line. what the cursor is on is a read of the Rust game's answer, kept on nothing of the order book's: two runs of one seed, one whose
+    // HUD lines and ring hint are read every frame and one never read — the digest is the same, the
+    // read has an answer, and NO FIELD OF THE ORDER BOOK is another value after a read than before it (each own field: the same thing, and where it is
     // a list or a record of plain values, the same values). The whole state is printed beside it, not judged here.
     {
       const plain = (v: any) => v === null || typeof v !== 'object';
       const shot = (O: any) => Object.keys(O).map(k => { const v = O[k]; return [k, v, v && typeof v === 'object' && Object.values(v).every(plain) ? JSON.stringify(v) : ''] as [string, unknown, string]; });
       const run = async (ask: boolean) => {
-        const Q = await rig(11), g = Q.game, O = Q.O, s = [...g.player.char.pos]; let asked = 0, keptN = 0, hinted = 0; const wrote = new Set<string>();
-        if (HOVBREAK) { O.hov = null; O.cam = []; }
-        const kept: any = HOVBREAK ? O : hoverStore();
+        const Q = await rig(11), g = Q.game, O = Q.O, s = [...g.player.char.pos]; let asked = 0, answered = 0, hinted = 0; const wrote = new Set<string>();
         for (let f = 0; f < 240; f++) {
           if (f % 40 === 0) { const a = f / 40; Q.W.cursorAt([s[0] + Math.sin(a) * 2.5, 0.04, s[2] + Math.cos(a) * 2.5]); }
           Q.step();
-          if (ask) { const was = shot(O); O.hud(kept); if (O.hintView(kept)) hinted++; O.hud(); asked++; if (kept.hov) keptN++;
+          if (ask) { const was = shot(O); O.hud(); if (O.hintView()) hinted++; const on = O.hover(); if (HOVBREAK) O.hov = on; asked++; if (on) answered++;
             const now = new Map(shot(O).map(r => [r[0], r])); for (const [k, v, j] of was) { const n = now.get(k); if (!n || n[1] !== v || n[2] !== j) wrote.add(k); } for (const k of now.keys()) if (!was.some(r => r[0] === k)) wrote.add(k); }
         }
-        return { g, d: JSON.stringify(digestGame(g, true)), h: stateHash(g, true, true) as string, asked, keptN, hinted, wrote: [...wrote] };
+        return { g, d: JSON.stringify(digestGame(g, true)), h: stateHash(g, true, true) as string, asked, answered, hinted, wrote: [...wrote] };
       };
       const a = await run(false), b = await run(true);
-      line(a.d === b.d && b.keptN > 200 && (BREAK || b.hinted > 200) && !b.wrote.length, 'the HUD and the ring\'s hint read every frame: the run is the same, and what the cursor is on is kept by the asker, not on the order book',
-        `digest ${a.d === b.d ? 'equal' : 'DIFFERS'} · read ${b.asked} frames against ${a.asked}, an answer kept on ${b.keptN}, a hint on ${b.hinted} · fields of the order book a read wrote: ${b.wrote.join(', ') || 'none'} · the whole state (not judged): ${a.h === b.h ? 'equal' : `differs elsewhere: ${(stateDiff(a.g, b.g, 1, true) as string[])[0] ?? '?'}`}`);
+      line(a.d === b.d && b.answered > 200 && (BREAK || b.hinted > 200) && !b.wrote.length, 'the HUD and the ring\'s hint read every frame: the run is the same, and what the cursor is on is a read, kept on nothing of the order book\'s',
+        `digest ${a.d === b.d ? 'equal' : 'DIFFERS'} · read ${b.asked} frames against ${a.asked}, an answer on ${b.answered}, a hint on ${b.hinted} · fields of the order book a read wrote: ${b.wrote.join(', ') || 'none'} · the whole state (not judged): ${a.h === b.h ? 'equal' : `differs elsewhere: ${(stateDiff(a.g, b.g, 1, true) as string[])[0] ?? '?'}`}`);
     }
   } finally { CMDRING.on = keep.on; CMDRING.hint = keep.hint; CMDRING.hands = keep.hands; CMDRING.stay = keep.stay; CMDRING.tapNow = keep.tapNow; CMDRING.holdSecs = keep.hold; AUTOPILOT.on = keep.ap; AUTOPILOT.restack = keep.restack; Math.random = keep.rnd; }
   console.log(fails ? `cmdring-check: ${fails} FAIL` : 'cmdring-check: ALL PASS');

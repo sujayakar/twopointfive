@@ -101,7 +101,8 @@ pub fn target_of(g: &mut crate::game::Game, o: &crate::planlay::LaidWhere) -> Op
         return Some(OrderTarget::Floor(OrderTargetFloor { at, wall: Some(w), thing: None, serial: 0 }));
     }
     if let (Some(LaidWhereFound::Thing), Some(pick)) = (o.found, o.pick) {
-        let w = crate::workthings::work_near(g, pick)?;
+        if g.work.cache.is_none() { crate::workthings::work_things_keep(g); }
+        let w = crate::workthings::work_near(g, &crate::seats::here(g), pick)?;
         return match w.target {
             OrderTarget::Floor(f) if f.thing.is_some() => Some(OrderTarget::Floor(f)),
             _ => None,
