@@ -7,6 +7,8 @@ section! {
     pub struct View {
         /// the tick this is of: sixtieths of a second on the game's clock
         pub tick: u32,
+        /// moves when the game is another than the one last drawn (a restart, a load, another seat): nothing is drawn or heard through it
+        pub stood: u32,
         /// the shown man's id
         pub man: u32,
         /// where he stands, and where the view follows (him, a man spectated, the squad from the sky)
@@ -28,7 +30,7 @@ section! {
     }
 }
 
-pub fn fill(g: &Game, out: &mut Vec<View>) {
+pub fn fill(g: &Game, stood: u32, out: &mut Vec<View>) {
     let f3 = |v: [f64; 3]| [v[0] as f32, v[1] as f32, v[2] as f32];
     let seat = g.local_seat.unwrap_or(g.seats[0]);
     let pl = game::seats::host_man(g);
@@ -38,6 +40,7 @@ pub fn fill(g: &Game, out: &mut Vec<View>) {
     let sky = if game::rails::rails_sky_on(g) { g.rails.sky.mid } else { None };
     out.push(View {
         tick: crate::tick(g),
+        stood,
         man: g.ch[ch].id as u32,
         at: f3(at),
         follow: f3(spectated.or(sky).unwrap_or(at)),

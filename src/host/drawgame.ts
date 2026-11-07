@@ -2,6 +2,7 @@
 // holds its number and nothing of it.
 import { FaceError, type Face, type Fetched } from './face';
 import { ALL, Drawn, drawRefused, type DrawFace } from '../draw/drawn';
+import { Commands } from '../draw/commands';
 import { HAND } from '../draw/hand';
 
 /** what a start is handed beside the level (rust/game_start/src/handed.rs PARTS) */
@@ -9,14 +10,16 @@ export interface Start { level: Uint8Array; words: string; mannequin: Uint8Array
 
 /** `face_start`'s flags: the rows that dress the picture are up · the game works its own senses out */
 const DRESS = 1, SENSES = 2;
-/** `face_step`'s: the box world listed · the lights' envelopes · a rails level's view */
-const LISTED = 1, LIGHTS = 2, VIEW = 4;
+/** `face_step`'s: the box world listed · the lights' envelopes · a rails level's view · the save controller */
+const LISTED = 1, LIGHTS = 2, VIEW = 4, SAVES = 8;
 
 export class DrawGame {
   readonly X: Face;
   readonly memory: WebAssembly.Memory;
   readonly drawn: Drawn;
   h = 0;
+  /** what a player or a panel does that is not input: the next step takes it */
+  readonly commands = new Commands();
   /** ticks stepped since the start, and ms of the last one by part */
   ticks = 0;
   readonly ms = { step: 0, draw: 0 };
@@ -31,6 +34,8 @@ export class DrawGame {
     this.hand = this.X.face_alloc(HAND.count * 8) >>> 0; this.keys = this.X.face_alloc(DrawGame.KEYS) >>> 0;
   }
 
+  private handed<T>(b: Uint8Array, f: (p: number, n: number) => T): T { const p = this.X.face_alloc(b.length) >>> 0; new Uint8Array(this.memory.buffer, p, b.length).set(b); try { return f(p, b.length); } finally { this.X.face_free(p, b.length); } }
+  private answer(): string { const p = this.X.face_out_ptr() >>> 0, n = this.X.face_out_len() >>> 0; return this.dec.decode(new Uint8Array(this.memory.buffer, p, n)); }
   /** a call that may stop on a panic: its words, with the file and line */
   private call<T>(what: string, f: () => T): T {
     try { return f(); } catch (e) {
@@ -43,6 +48,7 @@ export class DrawGame {
     const at = this.X.face_alloc(n) >>> 0, b = new Uint8Array(this.memory.buffer, at, n), d = new DataView(this.memory.buffer, at, n); let q = 4;
     d.setUint32(0, parts.length, true);
     for (const p of parts) { d.setUint32(q, p.length, true); b.set(p, q + 4); q += 4 + p.length; }
+    if (this.h) { this.X.face_drop(this.h); this.h = 0; }
     try { this.h = this.call('the start', () => this.X.face_start(at, n, -1, o.seed, o.seats ?? 1, DRESS | SENSES)); } finally { this.X.face_free(at, n); }
     if (!this.h) throw new FaceError('no room for another game in this module');
     this.ticks = 0; this.said = null;
@@ -56,9 +62,10 @@ export class DrawGame {
   /** ONE TICK on the hand as it stands: `keys` = the codes held, a line feed, the codes that went down */
   step(dt: number, keys: string): void {
     const t0 = performance.now();
+    if (this.commands.length) this.handed(this.commands.take(), (p, m) => { if (!this.call('a command', () => this.X.face_commands(this.h, p, m))) throw new Error(this.answer()); });
     const n = this.enc.encodeInto(keys, new Uint8Array(this.memory.buffer, this.keys, DrawGame.KEYS)).written;
     this.X.face_hand(this.h, 0, this.hand, HAND.count * 8, this.keys, n);
-    this.call('a tick', () => this.X.face_step(this.h, dt, LISTED | LIGHTS | VIEW));
+    this.call('a tick', () => this.X.face_step(this.h, dt, LISTED | LIGHTS | VIEW | SAVES));
     this.ticks++;
     const t1 = performance.now();
     this.draw();
@@ -76,5 +83,7 @@ export class DrawGame {
     this.draw();
   }
   private said: Float64Array | null = null;
+  /** a name that crosses by its number */
+  nameOf(i: number): string { this.X.face_draw_name(this.h, i); return this.answer(); }
   private draw(): void { this.call('drawing', () => this.drawn.take(this.h)); }
 }
