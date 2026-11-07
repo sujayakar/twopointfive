@@ -10,6 +10,7 @@
 //   bun run tools/blitz/page-decides.ts --why <file>:<function>[,…]  how the frame and the page reach it, and each act with its line
 //   bun run tools/blitz/page-decides.ts --hubs [n]      the largest branches of the frame's reach (to find a stand or a menu that is not yet a stop)
 //   bun run tools/blitz/page-decides.ts --doors         the deciding rows the page's own code walks in through, each with how many stand behind it
+//   bun run tools/blitz/page-decides.ts --unsent        the carried fields a function run every frame on the page reads and the page is not sent every tick
 //   bun run tools/blitz/page-decides.ts --check         exit 1 while a row is UNSORTED or sorted `decides` or `throws`, or a line of the sorts' file sorts
 //                                                       nothing, or sorts more rows than a person has read
 //   bun run tools/blitz/page-decides.ts --pin           write, on each line of the sorts' file that is not `decides`, how many rows it sorts now
@@ -85,6 +86,9 @@ const STEP = new Set(LISTS.step), START = new Set(LISTS.start);
 const CARRIED = new Map<string, string>(), CARRIED_NAMES = new Set<string>();
 for (const [q, T] of Object.entries(SCHEMA.types) as [string, any][]) { if (!T.fields) continue; const cls = T.cls ?? T.name, mod = q.replace(/^crate::/, '').split('::')[0];
   for (const F of T.fields) { const w = `${q.replace(/^crate::/, '')}.${F.rust}`, how = STEP.has(w) ? 'tick' : START.has(w) ? 'start' : 'whole'; const k = `${mod}::${cls}.${F.ts ?? F.rust}`, was = CARRIED.get(k); if (!was || how === 'tick' || (how === 'start' && was === 'whole')) CARRIED.set(k, how); CARRIED_NAMES.add(`${cls}.${F.ts ?? F.rust}`); } }
+/** `mod::Class.field` by the TypeScript's names → the field as the wire's table names it (`mod::Type.rust_field`), and the type it is a field of */
+const WIRE_OF = new Map<string, { q: string; type: string }>();
+for (const [q, T] of Object.entries(SCHEMA.types) as [string, any][]) { if (!T.fields) continue; const cls = T.cls ?? T.name, mod = q.replace(/^crate::/, '').split('::')[0]; for (const F of T.fields) { const k = `${mod}::${cls}.${F.ts ?? F.rust}`; if (!WIRE_OF.has(k)) WIRE_OF.set(k, { q: `${q.replace(/^crate::/, '')}.${F.rust}`, type: q }); } }
 const TOP = new Set<string>(); for (const [f, names] of Object.entries(SCHEMA.top ?? {}) as [string, string[]][]) for (const n of names) TOP.add(`${f}:${n}`);
 /** fields the schema calls scratch (a query's own working space), by the TypeScript's name */
 const SCRATCH = new Set<string>(); for (const q of Object.keys(SCHEMA.scratch ?? {})) { const i = q.lastIndexOf('.'), T = SCHEMA.types[`crate::${q.slice(0, i)}`], F = T?.fields?.find((x: any) => x.rust === q.slice(i + 1)); if (T && F) SCRATCH.add(`${q.split('::')[0]}::${T.cls ?? T.name}.${F.ts ?? F.rust}`); }
@@ -110,14 +114,14 @@ const CENSUS = new Map<string, number>(); { const f = join(import.meta.dir, 'del
 
 // ---- units: a function with a body, named by its file and its own name
 type Act = { kind: 'keeps' | 'overwrites' | 'says' | 'stores' | 'crosses'; what: string; line: number; loose?: boolean };
-interface Unit { id: string; file: string; name: string; line: number; lines: number; acts: Act[]; refs: Set<string>; loose: Set<string>; reads: Set<string>; answers: boolean; works: number; top: boolean; init: boolean; stub: string; timer: boolean; cls?: any; lit?: any; acc?: 'get' | 'set'; replaced?: boolean; callsOut: Map<string, number>; kept: Set<string> }
+interface Unit { id: string; file: string; name: string; line: number; lines: number; acts: Act[]; refs: Set<string>; loose: Set<string>; reads: Set<string>; readsQ: Set<string>; answers: boolean; works: number; top: boolean; init: boolean; stub: string; timer: boolean; cls?: any; lit?: any; acc?: 'get' | 'set'; replaced?: boolean; callsOut: Map<string, number>; kept: Set<string> }
 const UNITS = new Map<string, Unit>(), unitOfNode = new Map<any, Unit>();
 /** every class's members by name (with the class, for the question "could this value be one of those"), and every function written as a member of an
  *  object in the page's own code: for a call the checker resolves only to a type's member */
 const BY_NAME = new Map<string, Unit[]>(), LIT_BY_NAME = new Map<string, Unit[]>();
 const push = (m: Map<string, Unit[]>, k: string, u: Unit) => { if (!m.has(k)) m.set(k, []); m.get(k)!.push(u); };
 const mk = (node: any, file: string, name: string, top = false): Unit => { let id = `${file}:${name}`, n = 1; while (UNITS.has(id) && !top) id = `${file}:${name}#${++n}`; let u = UNITS.get(id);
-  if (!u) { const sf = node.getSourceFile(), a = sf.getLineAndCharacterOfPosition(node.getStart()).line + 1, b = sf.getLineAndCharacterOfPosition(node.getEnd()).line + 1; u = { id, file, name, line: a, lines: b - a + 1, acts: [], refs: new Set(), loose: new Set(), reads: new Set(), answers: false, works: 0, top, init: /\.\(fields\)$/.test(name), stub: '', timer: false, callsOut: new Map(), kept: new Set() }; UNITS.set(id, u); }
+  if (!u) { const sf = node.getSourceFile(), a = sf.getLineAndCharacterOfPosition(node.getStart()).line + 1, b = sf.getLineAndCharacterOfPosition(node.getEnd()).line + 1; u = { id, file, name, line: a, lines: b - a + 1, acts: [], refs: new Set(), loose: new Set(), reads: new Set(), readsQ: new Set(), answers: false, works: 0, top, init: /\.\(fields\)$/.test(name), stub: '', timer: false, callsOut: new Map(), kept: new Set() }; UNITS.set(id, u); }
   unitOfNode.set(node, u); return u; };
 const isFn = (n: any) => n.kind === SK.FunctionDeclaration || n.kind === SK.MethodDeclaration || n.kind === SK.Constructor || n.kind === SK.GetAccessor || n.kind === SK.SetAccessor || n.kind === SK.ArrowFunction || n.kind === SK.FunctionExpression;
 const nameOf = (n: any): string => n.name ? (n.name.text ?? n.name.getText()) : '';
@@ -279,7 +283,7 @@ for (const sf of files) {
         if (d.kind === SK.MethodSignature || (d.kind === SK.MethodDeclaration && !d.body) || d.kind === SK.PropertySignature) { /* a member of a type: the classes that fit the receiver, and the page's own objects with a function of the name */
           PENDING.push({ u, name: pname, recv: tids(under ? typeUnder(n.expression) : typeAt(n.expression)), runs: called || d.kind === SK.MethodSignature || !!(d.type && d.type.kind === SK.FunctionType), write: wr }); }
         if (t && writeKind(n) && SK.MethodDeclaration === d.kind) t.replaced = true;   // (a method given a new body on the object: the host hangs its own, src/host/rustgame.ts rustAttach)
-        const f = fieldOf(d); if (f) { if (wr || mutated(n)) noteWrite(u, f.key, n, under, f); else { if (carriedOf(f)) u.reads.add(f.key); if (STORED.has(`${f.file}:${f.key}`)) u.kept.add(`${f.file}:${f.key}`); } } }
+        const f = fieldOf(d); if (f) { if (wr || mutated(n)) noteWrite(u, f.key, n, under, f); else { if (carriedOf(f)) { u.reads.add(f.key); u.readsQ.add(`${rustModOf(f.file)}::${f.key}`); } if (STORED.has(`${f.file}:${f.key}`)) u.kept.add(`${f.file}:${f.key}`); } } }
       if (!decls.length && loosely(typeAt(n.expression))) { /* a name off a value nothing types */
         if (!OWN_NAMES.has(pname) && (called || (n.parent?.kind === SK.PropertyAccessExpression && (n.parent.name.text === 'call' || n.parent.name.text === 'bind' || n.parent.name.text === 'apply')))) { for (const c of BY_NAME.get(pname) ?? []) u.loose.add(c.id); for (const c of LIT_BY_NAME.get(pname) ?? []) u.loose.add(c.id); }
         const cands = FIELDS_BY_NAME.get(pname);
@@ -373,6 +377,25 @@ for (const why of (opt('--why') ?? '').split(',').filter(Boolean)) { const u = U
   for (const a of u.acts) console.log(`  ${u.file}:${a.line}  ${a.kind} ${a.loose ? '~' : ''}${a.what}`); if (u.reads.size) console.log(`  reads ${u.reads.size} carried fields: ${[...u.reads].slice(0, 12).join(', ')}`); const t = rustTwin(u); if (t) console.log(`  Rust has ${t}`); }
 if (opt('--why')) process.exit(0);
 
+if (flag('--unsent')) { /* WHAT THE PAGE'S CODE READS THAT THE PAGE IS NOT SENT. The bridge writes a field onto the page's copy every tick only if the wire's
+   table has it on the page's list (tools/wire/fields.json `pageTick`); a field on the every-tick list alone goes to a headless tool's host and not to a
+   page, where it keeps what the start left. A function the page runs that reads such a field reads a value that never moves. Named here: every such
+   field a function of the frame's reach (or one the census saw in a frame) reads, with its readers. NOT SEEN: a field read under a cast or by a
+   computed name; and A VALUE INSIDE A LIST, AN OPTION OR A MAP GOES WHOLE (tools/wire/puppetgen.cjs), so a field of a type that some carried field
+   holds that way is left out of this listing though its holder may itself be off the page's list: read `held in` beside each type before trusting a gap. */
+  const F = JSON.parse(readFileSync(join(ROOT, 'tools/wire/fields.json'), 'utf8')) as { everyTick: string[]; pageTick: string[]; atStartOnly: string[] }, PAGE = new Set(F.pageTick), EVERY = new Set(F.everyTick), ATSTART = new Set(F.atStartOnly);
+  // (the settings go both ways whole, a serial and the step's own extras are on both lists: puppetgen's `settingsQ`, `serialQ`, `stepAlso`)
+  const settings = new Set<string>(); { const K = SCHEMA.types['crate::knobs::Knobs']; const walkT = (ty: string) => { const T = SCHEMA.types[ty]; if (!T?.fields || settings.has(ty)) return; settings.add(ty); for (const x of T.fields) for (const m of String(x.ty).matchAll(/crate::[A-Za-z_0-9:]+/g)) walkT(m[0]); }; walkT('crate::knobs::Knobs'); walkT('crate::difficulty::DifficultyMod'); void K; }
+  const also = new Set<string>(SCHEMA.stepAlso ?? []);
+  /** a type some carried field holds inside a list, an option, a map or a tuple: its values go whole */
+  const heldWhole = new Map<string, string>(); for (const [q, T] of Object.entries(SCHEMA.types) as [string, any][]) for (const x of (T.fields ?? [])) { const ty = String(x.ty); if (!/^(Option|Vec|JsMap|JsSet|\[|\()/.test(ty) && !/alloc::boxed::Box<(Option|Vec)/.test(ty)) continue; for (const m of ty.matchAll(/crate::[A-Za-z_0-9:]+/g)) if (!heldWhole.has(m[0])) heldWhole.set(m[0], `${q.replace(/^crate::/, '')}.${x.rust}`); }
+  const rows = new Map<string, { how: string; readers: string[] }>();
+  for (const u of UNITS.values()) { const w = when(u); if (!w.startsWith('every frame')) continue; for (const k of u.readsQ) { const W = WIRE_OF.get(k); if (!W || PAGE.has(W.q) || also.has(W.q) || settings.has(W.type) || heldWhole.has(W.type)) continue; const F0 = (SCHEMA.types[W.type].fields as any[]).find(x => `${W.type.replace(/^crate::/, '')}.${x.rust}` === W.q); if (F0?.expr === 'B.serialOf(o)') continue; if (SCHEMA.types[String(F0?.ty)]?.fields) continue;   // (a struct held plainly is filtered by its own fields: reading the object is no read of a value)
+      const how = EVERY.has(W.q) ? 'every tick, to a tool\'s host only' : ATSTART.has(W.q) ? 'at a start only' : 'on no list (a whole apply only)'; if (!rows.has(W.q)) rows.set(W.q, { how, readers: [] }); rows.get(W.q)!.readers.push(u.id.replace(/^src\//, '')); } }
+  const by = new Map<string, number>(); for (const r of rows.values()) by.set(r.how, (by.get(r.how) ?? 0) + 1);
+  console.log(`${rows.size} fields that a function run every frame on the page reads and the page is not sent every tick: ${[...by].map(([k, n]) => `${n} ${k}`).join(' · ')}`);
+  for (const [q, r] of [...rows].sort((a, b) => a[1].how.localeCompare(b[1].how) || a[0].localeCompare(b[0]))) console.log(`${q}\t${r.how}\t${r.readers.length} readers\t${r.readers.slice(0, 4).join(', ')}${r.readers.length > 4 ? `, +${r.readers.length - 4}` : ''}`);
+  process.exit(0); }
 if (flag('--doors')) { /* THE DOORS: of the rows that decide, the ones the page's own code walks in through (its caller on the frame's road is no deciding row),
    each with how many deciding rows stand behind it. A door is one question the page asks: what a view of the game has to answer in its place. */
   const dec = new Map(rows.filter(r => r.sort === 'decides').map(r => [r.unit.id, r])), behind = new Map<string, number>();
