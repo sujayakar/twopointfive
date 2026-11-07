@@ -520,6 +520,10 @@ pub fn doors_there(g: &mut crate::game::Game, contacts: &[crate::doors::DoorCont
 fn step_io() -> &'static mut ::sim::doors::Io {
     unsafe { &mut *(::sim::doors::addr(0) as *mut ::sim::doors::Io) }
 }
+/// the same hand-over, to read
+fn step_io_read() -> &'static ::sim::doors::Io {
+    unsafe { &*(::sim::doors::addr(0) as *const ::sim::doors::Io) }
+}
 /// the step's hand-over written (the level's doors, the contacts, the rules' numbers) and the step taken: how many noises it listed   (doors.ts Doors.handOver)
 pub fn doors_hand_over(g: &mut crate::game::Game, dt: f64, contacts: &[crate::doors::DoorContact], slot: f64) -> f64 {
     let io = step_io();

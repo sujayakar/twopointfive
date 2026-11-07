@@ -18,6 +18,11 @@ const KEY: usize = crate::anim_skeleton::LAYER_KEY as usize;
 fn args() -> &'static mut [f64] {
     &mut ::sim::skeleton::bench().args
 }
+/// the same doubles, to read
+#[inline(always)]
+fn args_read() -> &'static [f64] {
+    &::sim::skeleton::bench_read().args
+}
 
 // ---- what stands between a body and the skeleton's calls
 

@@ -38,6 +38,10 @@ const MAX_PLANES_: usize = crate::scene_cut::MAX_CUT_PLANES as usize;
 fn world(w: usize) -> &'static mut sim::world::World {
     sim::world::world(w)
 }
+/// the same world, to read
+fn world_read(w: usize) -> &'static sim::world::World {
+    sim::world::world_read(w)
+}
 
 /// A box's row (Box.* in the TypeScript), by its ID. The one blocked step of this file.
 fn seam_box(g: &mut Game, b: BoxId) -> &mut SBox { &mut g.tab.boxes[b] }
