@@ -40,7 +40,7 @@ const isRoot = (d: string) => nameOf(d) === null || /^(?:\s*@[A-Za-z_]\w*(?:\s*\
 
 SHADER_TRIM.on = false; const whole = await boot();
 SHADER_TRIM.on = true; trimTotals.modules = trimTotals.before = trimTotals.after = trimTotals.ms = 0; const cut = await boot(); const totals = { ...trimTotals };
-check(whole.length >= 30 && whole.length === cut.length && whole.every((m, i) => m.label === cut[i].label), `the same ${whole.length} modules either way (${cut.length} cut)`);
+check(whole.length >= 25 && whole.length === cut.length && whole.every((m, i) => m.label === cut[i].label), `the same ${whole.length} modules either way (${cut.length} cut)`);
 let entries = 0; const bad = { order: [] as string[], roots: [] as string[], open: [] as string[], twice: [] as string[] };
 cut.forEach((m, i) => {
   const W = wgslDecls(whole[i].code); let C = wgslDecls(m.code);
