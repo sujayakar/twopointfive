@@ -72,7 +72,7 @@ export async function snowGlowCheck(o: { verbose?: boolean } = {}): Promise<bool
     let t = readFileSync(resolve(SH, f), 'utf8');
     t = t.split('\n').map(l => /\/\/.*THE LOOK PROTOTYPE/.test(l) && /\bLOOK\b/.test(l.replace(/\/\/.*$/, '')) ? '' : l).join('\n');   // (the look prototype's own lines, each tagged in its comment and behind LOOK in its code: live only on its page — shaders/look.wgsl. It reads and writes the mark's fourth level, alpha 0, and is not this check's)
     if (BREAK) {
-      t = t.replace(/if \(SNOW_GLOW(?: \|\| SNOW_SPARKLE)?\) \{/g, '{').replace(/select\(1\.0, ([^,()]+(?:\([^()]*\))?[^,()]*), SNOW_GLOW(?: \|\| SNOW_SPARKLE)?\)/g, '$1');
+      t = t.replace(/if \(lv\(SNOW_GLOW\)(?: \|\| lv\(SNOW_SPARKLE\))?\) \{/g, '{').replace(/select\(1\.0, ([^,()]+(?:\([^()]*\))?[^,()]*), lv\(SNOW_GLOW\)(?: \|\| lv\(SNOW_SPARKLE\))?\)/g, '$1');
       if (f === 'common.wgsl') t = t.replace('  r.E = li.color * (att * c); r.ok = true;\n', '  r.E = li.color * (att * c) + snowGlow(vec2i(0), P, N, 1.0, vec3f(0.0), vec3f(0.0)); r.ok = true;\n');
     }
     text[f] = t;
@@ -88,11 +88,12 @@ export async function snowGlowCheck(o: { verbose?: boolean } = {}): Promise<bool
       const page = /SNOW_LOOK\.glow = q\.get\('snowglow'\) !== '0';/.test(readFileSync(resolve(ROOT, 'src/host/profile.ts'), 'utf8'));   // (read, not run: pageSwitches writes every switch the page has)
       const mod = /export const SNOW_LOOK = \{[^}]*\bglow: false\b[^}]*\}/.test(readFileSync(resolve(ROOT, 'src/game/weatherKinds.ts'), 'utf8'));
       const reg = !!KN.JOURNAL_KNOBS && (KN.JOURNAL_KNOBS as readonly string[]).includes('SNOW_LOOK');
-      const cfgWas = FR.snowLookConfig.glow; FR.snowLookConfig.glow = false; const p0 = FR.scenePrelude(); FR.snowLookConfig.glow = true; const p1 = FR.scenePrelude(); FR.snowLookConfig.glow = cfgWas;
-      const word = /const SNOW_GLOW: bool = false;/.test(p0) && /const SNOW_GLOW: bool = true;/.test(p1) && p0.replace('const SNOW_GLOW: bool = false;', '') === p1.replace('const SNOW_GLOW: bool = true;', '');
+      // (the switch reaches the shaders as a bit of the frame block's level word, render/frame.ts LevelSw: the shader TEXT is the same with it on or off)
+      const cfgWas = FR.snowLookConfig.glow; FR.snowLookConfig.glow = false; const p0 = FR.scenePrelude(), w0 = FR.levelSwitches(); FR.snowLookConfig.glow = true; const p1 = FR.scenePrelude(), w1 = FR.levelSwitches(); FR.snowLookConfig.glow = cfgWas;
+      const word = p0 === p1 && /const SNOW_GLOW: u32 = 32u;/.test(p1) && FR.LevelSw.SNOW_GLOW === 32 && (w0 & 32) === 0 && (w1 ^ w0) === 32;
       const boot = /snowLookConfig\.glow = SNOW_LOOK\.on && SNOW_LOOK\.glow;/.test(readFileSync(resolve(ROOT, 'src/main.ts'), 'utf8'));
       verdict(up.stood === true && down.stood === false && unsaid.stood === (prof === 'shipped') && /TPS_SNOWGLOW=1/.test(row) && page && mod && reg && word && boot,
-        'stands — the switch\'s words on this stand', `${prof} stand · TPS_SNOWGLOW=1 → ${up.stood}, =0 → ${down.stood}, not said → ${unsaid.stood} (${prof === 'shipped' ? 'the page: on' : 'frozen: off'}) · FROZEN_HOLDS row: ${row ? `'${row.slice(0, 40)}…'` : 'NONE'} · the page's boot reads ?snowglow=0 and is on without it: ${page} · off in the module: ${mod} · its table rides in the journal's registry: ${reg} · the prelude's word follows snowLookConfig.glow and is the only text that differs: ${word} · main.ts raises it only with the surface: ${boot}`); }
+        'stands — the switch\'s words on this stand', `${prof} stand · TPS_SNOWGLOW=1 → ${up.stood}, =0 → ${down.stood}, not said → ${unsaid.stood} (${prof === 'shipped' ? 'the page: on' : 'frozen: off'}) · FROZEN_HOLDS row: ${row ? `'${row.slice(0, 40)}…'` : 'NONE'} · the page's boot reads ?snowglow=0 and is on without it: ${page} · off in the module: ${mod} · its table rides in the journal's registry: ${reg} · the frame's level word follows snowLookConfig.glow in its one bit, and no shader text differs: ${word} · main.ts raises it only with the surface: ${boot}`); }
 
     // ---- mark
     { const writers: string[] = [], badW: string[] = [], readers: string[] = [], badR: string[] = [];
@@ -101,8 +102,8 @@ export async function snowGlowCheck(o: { verbose?: boolean } = {}): Promise<bool
         const names = new Set<string>(); for (const m of text[f].matchAll(NAMES)) names.add(m[1]);
         text[f].split('\n').forEach((line, i) => { const c = code(line);
           const w = c.match(/\b\w+\.normal = vec4f\((.*)\);/);
-          if (w && !/textureLoad/.test(c)) { writers.push(`${f}:${i + 1}`); const one = /, 1\.0\)$/.test(`${w[1]})`), sw = /, select\(1\.0, [^,]+, SNOW_GLOW \|\| SNOW_SPARKLE\)\)$/.test(`${w[1]})`); if (!one && !(sw && (f === 'gbuffer.wgsl' || f === 'snow.wgsl'))) badW.push(`${f}:${i + 1}`); }
-          if (/\bo\.normal\.a\s*=/.test(c) && !/if \(SNOW_GLOW \|\| SNOW_SPARKLE\) \{ o\.normal\.a = sb\.amt \* 0\.6667; \}/.test(c)) badW.push(`${f}:${i + 1} (the mark)`);
+          if (w && !/textureLoad/.test(c)) { writers.push(`${f}:${i + 1}`); const one = /, 1\.0\)$/.test(`${w[1]})`), sw = /, select\(1\.0, [^,]+, lv\(SNOW_GLOW\) \|\| lv\(SNOW_SPARKLE\)\)\)$/.test(`${w[1]})`); if (!one && !(sw && (f === 'gbuffer.wgsl' || f === 'snow.wgsl'))) badW.push(`${f}:${i + 1}`); }
+          if (/\bo\.normal\.a\s*=/.test(c) && !/if \(lv\(SNOW_GLOW\) \|\| lv\(SNOW_SPARKLE\)\) \{ o\.normal\.a = sb\.amt \* 0\.6667; \}/.test(c)) badW.push(`${f}:${i + 1} (the mark)`);
           for (const n of names) for (const m of c.matchAll(new RegExp(`textureLoad\\(${n},`, 'g'))) {
             let e = m.index! + 'textureLoad('.length, depth = 1; while (e < c.length && depth > 0) { if (c[e] === '(') depth++; else if (c[e] === ')') depth--; e++; }   // the call's own closing bracket
             const sz = (c.slice(e).match(/^\.[xyzwrgba]+/) ?? [''])[0]; if (sz === '.xyz' || sz === '.rgb' || sz === '.xy') continue;
@@ -162,13 +163,13 @@ export async function snowGlowCheck(o: { verbose?: boolean } = {}): Promise<bool
       const reach = /if \(!lightReaches\(i, P\)\) \{ continue; \}\s*\n\s*let li = lights\[i\];\s*\n\s*let ev = evalLight\(li, P, vec3f\(0\.0\)\);/.test(fn);
       // THE LAMP'S OWN RANGE BEFORE THE TABLE (11-05; GLOWRANGE_BREAK=1 reads the term without the line and must fail): the walk's first statement is evalLight's first exit, written
       // as evalLightRaw writes it (the same subtraction, dot and square root, the same `>`; lightKind's own mask; a directional lamp has no range), so the lamps that pass are
-      // the lamps that passed. And the composite's other writing (shaders/compact) holds the term word for word
+      // the lamps that passed.
       const walk = process.env.GLOWRANGE_BREAK === '1' ? fn.replace(/\n[^\n]*if \(sqrt\(dot\(dq, dq\)\) > lights\[i\]\.range\)[^\n]*/, '') : fn;
       const first = /for \(var i = 0u; i < min\(frame\.numLights, 64u\); i\+\+\) \{\s*\n(?:\s*\/\/[^\n]*\n)*\s*if \(\(lights\[i\]\.kind & 255u\) != 2u\) \{ let dq = lights\[i\]\.pos - P; if \(sqrt\(dot\(dq, dq\)\) > lights\[i\]\.range\) \{ continue; \} \}[^\n]*\n\s*if \(!lightReaches\(i, P\)\)/.test(walk)
         && /fn lightKind\(li: Light\) -> u32 \{ return li\.kind & 255u; \}/.test(text['common.wgsl'])
         && /\n  let d = li\.pos - P; let dist2 = dot\(d, d\); let dist = sqrt\(dist2\);\s*\n\s*if \(dist > li\.range\) \{ return r; \}/.test(text['common.wgsl'].slice(text['common.wgsl'].indexOf('fn evalLightRaw(')));
       const termOf = (s: string) => { const a = s.indexOf('fn snowGlow('); return a < 0 ? '' : s.slice(a, s.indexOf('\n}\n', a)); };
-      const twin = termOf(readFileSync(resolve(SH, 'compact/composite.wgsl'), 'utf8')) === termOf(readFileSync(resolve(SH, 'composite.wgsl'), 'utf8')) && termOf(readFileSync(resolve(SH, 'composite.wgsl'), 'utf8')).length > 0;
+      const twin = termOf(readFileSync(resolve(SH, 'composite.wgsl'), 'utf8')).length > 0;   // (the composite has one writing: the term is there)
       const noRay = !/occluded|shadowSample|traceRay|trace\(/.test(fn.slice(0, fn.indexOf('\n}\n')).split('\n').map(code).join('\n'));
       const calls = (text['composite.wgsl'].split('\n').map(code).join('\n').match(/\bsnowGlow\(/g) ?? []).length - 1;   // (less the definition)
       verdict(iComp > 0 && iFog > iComp && !fogKnows && shadowed && reach && first && twin && noRay && calls === 1,

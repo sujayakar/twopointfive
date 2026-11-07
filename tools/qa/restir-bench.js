@@ -169,19 +169,6 @@
       void f0;
       return { tile, off: res, on: res2 };
     },
-    /** LIGHT METER independence: Sam's visibility (game.player.visibility, fed by the irradiance probe pass — its own light loop) at five staged spots, restir on vs off.
-     *  Guards parked (torches off) so only the level's static lights count; `settle` frames per spot for the probe's readback latency. → rows + max |Δ| */
-    async meter(settle = 40) {
-      const g = G(); const S = E().settings; const spots = [[23, 0, 16.3], [14.2, 0, 11.3], [27.0, 0, 6.6], [9, 0, 17], [20, 0, 31]];
-      B.stage('cubicles', { park: true, player: { pos: [23, 0, 16.3], yaw: 0, holstered: true, invisible: false } });
-      const read = async () => { const rows = []; for (const p of spots) { g.teleportPlayer([p[0], 0, p[2]]); window.__runFrames(settle, 1 / 60); await window.__perf.settle(); window.__runFrames(4, 1 / 60); await window.__perf.settle(); rows.push(+g.player.visibility.toFixed(4)); } return rows; };
-      S.restir = false; const off = await read();
-      S.restir = true; const on = await read();
-      S.restir = false; const off2 = await read();
-      S.restir = true;
-      let maxD = 0; for (let i = 0; i < spots.length; i++) maxD = Math.max(maxD, Math.abs(on[i] - off[i]), Math.abs(off2[i] - off[i]));
-      return { spots, off, on, offAgain: off2, maxAbsDelta: +maxD.toFixed(4) };
-    },
     /** deterministic capture for the OFF-identity check: fresh `?paused` boot assumed; parks everyone, resets clocks, steps n frames, hashes the RGBA readback (and posts the PNG as `name` if given) */
     async identityCapture(name = null, n = 24) {
       window.__menu?.close();
@@ -192,47 +179,10 @@
       E().render(window.__cam, 50, 1 / 60, false); await P.settle();
       const fr = await P.readback(); const hash = P.hash(fr);
       let posted = null; if (name) { try { posted = await P.png(name, fr); } catch (e) { posted = String(e); } }
-      return { hash, res: [E().width, E().height], flags: (E().settings.flags >>> 0).toString(16), restir: E().settings.restir, taau: E().settings.taau, posted };
+      return { hash, res: [E().width, E().height], flags: (E().settings.flags >>> 0).toString(16), taau: E().settings.taau, posted };
     },
     /** persist a result object as docs/perf/<name>.json through this lane's shot server (its /perf sink) */
     async save(name, obj) { const port = Number(window.__shotPort) || 5174; try { const r = await fetch(`http://localhost:${port}/perf?name=${encodeURIComponent(name)}`, { method: 'POST', body: JSON.stringify(obj), headers: { 'Content-Type': 'application/json' } }); return r.status; } catch (e) { return String(e); } },
-    /** THE STRESS MINUTE per preset (tools/qa/stress-scene.js), restir OFF vs ON interleaved in blocks over the same evolving scene, per frame: direct, softblur, Σ compute,
-     *  the UNION of compute intervals → { preset: { res, lights, off: stats, on: stats } }, saved as it goes (p2a-stress-<preset>). opts: { presets, blocks, per, scale (renderScale
-     *  override after the preset applies, e.g. 1.0 for the pre-TAAU pixel count), tag } */
-    async stressAll(opts = {}) {
-      const { presets = ['high', 'ultra', 'medium', 'low', 'verylow'], blocks = 4, per = 80, warm = 6, scale = null, tag = '' } = opts;
-      if (!window.__stress) await import('/qa/stress-scene.js');
-      const S = E().settings; const t = E().timer; const out = {};
-      const st = a => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y); const m = a.reduce((x, y) => x + y, 0) / a.length; const q = f => s[Math.min(s.length - 1, Math.floor(f * (s.length - 1)))]; return { n: a.length, mean: +m.toFixed(2), p50: +q(0.5).toFixed(2), p95: +q(0.95).toFixed(2), max: +s[s.length - 1].toFixed(2) }; };
-      for (const p of presets) {
-        window.__pauseLoop = true;
-        G().restartEncounter(); window.__menu?.close?.(); window.__runFrames(2, 1 / 60);
-        window.__quality.auto = false; window.__quality.apply(p); if (scale) S.renderScale = scale; window.__runFrames(4, 1 / 60);
-        if (window.__cam) window.__cam.pin = null;
-        S.restir = true;
-        const setupLine = await window.__stress.setup({ fight: false });
-        const pools = { off: { direct: [], softblur: [], sum: [], union: [] }, on: { direct: [], softblur: [], sum: [], union: [] } };
-        const cam = window.__cam; const SS = window.__stress;
-        for (let b = 0; b < blocks; b++) for (let vv = 0; vv < 2; vv++) {
-          const v = (b & 1) ? 1 - vv : vv; const key = v === 0 ? 'off' : 'on';
-          S.restir = v === 1;
-          for (let i = 0; i < per + warm; i++) {
-            cam.pin.yaw += SS.orbitDeg * DEG;
-            const before = t.resolved; window.__runFrames(1, 1 / 60); await SS.settle();
-            for (let k = 0; k < 50 && t.resolved === before; k++) await yieldTask();
-            if (i < warm || t.resolved === before) continue;
-            let sum = 0; for (const [k2, val] of t.lastFrame) if (!RENDER.includes(k2)) sum += val;
-            const P_ = pools[key]; P_.direct.push(t.lastFrame.get('direct') || 0); P_.softblur.push(t.lastFrame.get('softblur') || 0); P_.sum.push(sum); P_.union.push(t.unionMs(RENDER));
-          }
-        }
-        S.restir = true;
-        const shape = P_ => ({ direct: st(P_.direct), softblur: st(P_.softblur), sum: st(P_.sum), union: st(P_.union) });
-        out[p] = { res: [E().width, E().height], out: [E().outWidth ?? E().width, E().outHeight ?? E().height], scale: S.renderScale, lights: E().lights.activeCount, setup: setupLine, state: SS.state(), off: shape(pools.off), on: shape(pools.on), tier: { rays: S.restirRays, spatial: S.restirSpatial, history: S.restirHistory } };
-        window.__stressPart = out;
-        await B.save(`p2a-stress${tag ? '-' + tag : ''}-${p}`, out[p]);
-      }
-      return out;
-    },
     /** a w×h tile centred on world point p in INTERNAL pixels (dS / dU / any screen texture read with __perf.readTexture), clamped to the frame */
     tileAt(name, p, w = 300, h = 300) { const px = window.__perf.project(p); const e = E(); if (!px) return null; return { name, x: Math.max(0, Math.min(e.width - w, px[0] - (w >> 1))), y: Math.max(0, Math.min(e.height - h, px[1] - (h >> 1))), w, h }; },
     /** the same in OUTPUT pixels (the LDR readback's grid under TAAU: crops, tileLuma, __perf.temporalStats) */

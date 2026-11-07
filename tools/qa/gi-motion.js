@@ -15,7 +15,7 @@
 // + ×3 nearest crops of three consecutive frames round each tile and the max−min boil map, posted to this lane's shot sink; + the same under debug view 4 (indirect only)
 // and 3 (direct only) for attribution. Everything under whatever engine.settings hold (variants = settings bundles, __gim.apply).
 //   __gim.boot({ framing })        framing 'ref' = 1280×720 CSS at dpr 2 (high: 1368×770 → 1777×1000, every lane's reference) | 'maint' = the maintainer's window (high: 788×770 → 1024×1000)
-//   __gim.apply(name | {…})        settings bundle over the boot defaults ('main', 'old', 'B', 'C', 'BC', … VARIANTS)
+//   __gim.apply(name | {…})        settings bundle over the boot defaults ('main', 'old', 'A090', 'D1', … VARIANTS)
 //   __gim.s1(opts)                 run the scene → Seq (kept in __gim.seqs[key]); opts.view = 0 | 4 | 3 (composite / indirect only / direct only)
 //   __gim.metrics(seq)             per-tile numbers; __gim.crops(seq, tag) posts crops + boil maps + one annotated frame
 //   __gim.run(tag, { scenes, views, png })   fire-and-forget: apply → scenes × views → metrics + crops → docs/perf/gim-<tag>.json; poll __gim.busy / __gim.res[tag]
@@ -58,32 +58,27 @@
 
   // ------------------------------------------------------------------ variants: settings bundles over the boot defaults
   let S0 = null;
-  const OLD = { taau: false, restir: false, denoiser: 'legacy', froxelVol: false, rtReflect: false, detail: 0, renderScale: 1.0, sharpDirect: false, sharpDecouple: false, gbaa: false, taauHistSharp: 0 };   // THE OLD RENDERER (pre-v3 chain at native rows, FXAA, the resolve configuration off)
+  // (SINCE 2026-11-07 OLD keeps ReSTIR and the shared denoiser: the old estimator and denoiser are gone, so it is no longer the pre-v3 chain)
+  const OLD = { taau: false, froxelVol: false, rtReflect: false, detail: 0, renderScale: 1.0, sharpDirect: false, sharpDecouple: false, gbaa: false, taauHistSharp: 0 };   // THE OLD RENDERER (pre-v3 chain at native rows, FXAA, the resolve configuration off)
   const VARIANTS = {
     main: {}, old: OLD,
-    // B = the diffuse GI denoised at INTERNAL res (settings.giFullRes; B2 / B3 = fewer internal-res à-trous iterations, the cost tiers), C = young-history gather rays (×3 ultra / high, ×2 medium),
+    // (B, the diffuse GI denoised at internal res, and C, the young-history gather rays, are gone since 2026-11-07: no tier placed either)
     // A = what the headroom-aware climb settles on for an M4 Max at the maintainer's window (scale, then the gather's divisor — §A of the doc says which rung), and the unions
-    B: { giFullRes: true }, B3: { giFullRes: true, giFullIters: 3 }, B2: { giFullRes: true, giFullIters: 2 }, B1: { giFullRes: true, giFullIters: 1 },
-    C: { giYoungRays: 3 }, C2: { giYoungRays: 2 }, C4: { giYoungRays: 4 },
-    BC: { giFullRes: true, giYoungRays: 3 }, BC2: { giFullRes: true, giYoungRays: 2 }, B2C: { giFullRes: true, giFullIters: 2, giYoungRays: 3 }, B2C2: { giFullRes: true, giFullIters: 2, giYoungRays: 2 },
     A080: { renderScale: 0.80 }, A085: { renderScale: 0.85 }, A090: { renderScale: 0.90 }, A1: { renderScale: 1.0 }, A1g: { renderScale: 1.0, gatherThird: false }, A1gv: { renderScale: 1.0, gatherThird: false, volQuarter: false },
     g2: { gatherThird: false },   // the divisor alone at the tier's own scale (which buys more per ms: pixels or gather density?)
-    A085BC: { renderScale: 0.85, giFullRes: true, giYoungRays: 3 }, A1BC: { renderScale: 1.0, giFullRes: true, giYoungRays: 3 }, A1gBC: { renderScale: 1.0, gatherThird: false, giFullRes: true, giYoungRays: 3 },
     mainNoTaaMotion: { taauMotionAlpha: 0, taauSharpenMotion: 0 },   // (reference: how much of the motion flow is the resolve's motion terms letting the frame's own noise through)
-    // D = the diffuse client's follow-ups: the clamp-cut history length (dnGiClampCut) and the young-texel à-trous allowance (dnGiYoungWiden), alone and on top of B + C
-    D1: { dnGiClampCut: 1.0 }, D2: { dnGiYoungWiden: 2.0 }, CD1: { giYoungRays: 3, dnGiClampCut: 1.0 }, BCD: { giFullRes: true, giYoungRays: 3, dnGiClampCut: 1.0, dnGiYoungWiden: 2.0 }, BCD1: { giFullRes: true, giYoungRays: 3, dnGiClampCut: 1.0 }, BCD2: { giFullRes: true, giYoungRays: 3, dnGiYoungWiden: 2.0 },
+    // D = the diffuse client's follow-ups: the clamp-cut history length (dnGiClampCut) and the young-texel à-trous allowance (dnGiYoungWiden)
+    D1: { dnGiClampCut: 1.0 }, D2: { dnGiYoungWiden: 2.0 },
     // direct-side diagnostics (not this lane's files — attribution only): the leader / tail estimator instead of ReSTIR, the shadow client's occluder cue off
-    dLeader: { restir: false }, dNoMoveCue: { dnShadowMoveCap: 0 },
+    dNoMoveCue: { dnShadowMoveCap: 0 },
     // the FLOOR = what the old renderer's calm-in-motion look amounts to inside v3: the leader / tail estimator + the resolve without its motion terms
-    floor: { restir: false, taauMotionAlpha: 0.1, taauSharpenMotion: 0 },
     // the direct chain's and the resolve's own rows, retuned for motion (§2b's sweep): c3 = ReSTIR rows only, tOnly = the resolve's motion terms only, c4 = both
     c3: { restirHistory: 6, restirSpatialAll: true, restirPenRays: true },
     tOnly: { taauMotionAlpha: 0.25, taauSharpenMotion: 0.15 },
     c4: { restirHistory: 6, restirSpatialAll: true, restirPenRays: true, taauMotionAlpha: 0.25, taauSharpenMotion: 0.15 },
-    c4BC: { restirHistory: 6, restirSpatialAll: true, restirPenRays: true, taauMotionAlpha: 0.25, taauSharpenMotion: 0.15, giFullRes: true, giYoungRays: 3 },
     // DIRECT-LIGHT-IN-MOTION lane (docs/internal/direct-motion.md): settings.restirMotion's three levers over the boot defaults (which carry the motion-calm rows since 08-12) —
     // a = stochastic-bilinear reservoir reprojection, b = motion-scaled confidence, c = spatial reuse under motion; nc* = the same with the motion-calm rows OFF (quality.ts MOTION_CALM_OFF)
-    m0: { restirMotion: 0 }, ma: { restirMotion: 1 }, mad: { restirMotion: 1, restirMotionDither: true }, madb: { restirMotion: 3, restirMotionDither: true }, mb: { restirMotion: 2 }, mc: { restirMotion: 4 }, mab: { restirMotion: 3 }, mabc: { restirMotion: 7 },
+    m0: { restirMotion: 0 }, ma: { restirMotion: 1 }, mb: { restirMotion: 2 }, mc: { restirMotion: 4 }, mab: { restirMotion: 3 }, mabc: { restirMotion: 7 },
     calmOff: { restirMotion: 0, restirSpatialAll: false, restirPenRays: false, taauMotionAlpha: 0.4, taauSharpenMotion: 0.3 },
     ncA: { restirMotion: 1, restirSpatialAll: false, restirPenRays: false, taauMotionAlpha: 0.4, taauSharpenMotion: 0.3 }, ncAB: { restirMotion: 3, restirSpatialAll: false, restirPenRays: false, taauMotionAlpha: 0.4, taauSharpenMotion: 0.3 }, ncABC: { restirMotion: 7, restirSpatialAll: false, restirPenRays: false, taauMotionAlpha: 0.4, taauSharpenMotion: 0.3 },
     tA: { restirMotion: 1, restirSpatialAll: false, restirPenRays: false }, tAB: { restirMotion: 3, restirSpatialAll: false, restirPenRays: false }, tABC: { restirMotion: 7, restirSpatialAll: false, restirPenRays: false },   // (the resolve's calm terms kept, ReSTIR's calm pair off: is spatialAll still earning its 0.5 ms once the reprojection follows the surface?)
@@ -95,7 +90,7 @@
     for (const [k, val] of Object.entries({ ...v, ...extra })) { if (!(k in s)) throw new Error('unknown setting ' + k); s[k] = val; }
     return describe();
   }
-  function describe() { const s = S(); const e = E(); return { res: [e.width, e.height, e.outWidth, e.outHeight], q: window.__quality?.current, framing, scale: s.renderScale, gatherDiv: e.passes.gatherDiv, gw: e.passes.gw, gh: e.passes.gh, sharp: s.sharpDirect, sharpLive: e.sharpOn, taau: s.taau, restir: s.restir, dn: s.denoiser, froxel: s.froxelVol, rt: s.rtReflect, gbaa: s.gbaa ?? null, giFullRes: s.giFullRes ?? null, giYoungRays: s.giYoungRays ?? null, giFullLive: !!(e.passes.giFullOn && e.passes.giF && e.passes.giF.length === 2 && e.passes.giFullRanLast), dnGi: [s.dnGiIters, s.dnGiCap], grain: e.passes.grain, debugView: s.debugView, errs: (window.__errs || []).slice(0, 3) }; }   // (NB read straight after apply(): the engine's sizes / sharpLive / giFullLive catch up on the next frame — `run` records it again after the takes as appliedAfter)
+  function describe() { const s = S(); const e = E(); return { res: [e.width, e.height, e.outWidth, e.outHeight], q: window.__quality?.current, framing, scale: s.renderScale, gatherDiv: e.passes.gatherDiv, gw: e.passes.gw, gh: e.passes.gh, sharp: s.sharpDirect, sharpLive: e.sharpOn, taau: s.taau, restir: s.restir, dn: s.denoiser, froxel: s.froxelVol, rt: s.rtReflect, gbaa: s.gbaa ?? null, giYoungRays: s.giYoungRays ?? null, dnGi: [s.dnGiIters, s.dnGiCap], grain: e.passes.grain, debugView: s.debugView, errs: (window.__errs || []).slice(0, 3) }; }   // (NB read straight after apply(): the engine's sizes / sharpLive / giFullLive catch up on the next frame — `run` records it again after the takes as appliedAfter)
 
   // ------------------------------------------------------------------ projection + sampling
   /** world point → OUTPUT-frame pixel (sub-pixel, top-left origin, centres at .5) through the 4×4 column-major view-projection `vp` of the frame that was read back */

@@ -25,11 +25,9 @@
 // title's, which a second run of this file sizes. What a word on the address would add (a trial, `?look`) is in neither: `--setting look` lists that page.
 //   bun run tools/qa/shaderinline-check.ts [--top N] [--kernel <module>/<entry>] [--json out.json]      exit 0 = within the budget, 1 = not, or the boot did not finish
 //   bun run tools/qa/shaderinline-check.ts --setting title|snow|look                                    one page alone, listed and held to the table (pageboot.ts SETTINGS)
-//   TPS_COMPACTSHADERS=1 bun run tools/qa/shaderinline-check.ts   the same for the compact set (the row 'Compact shaders', src/ui/shaderrows.ts), against its own table
 //   SHADERINLINE_BREAK=1 bun run tools/qa/shaderinline-check.ts     one more call site is written into the biggest kernel, of the lightest function it reaches
 //                                                                    whose call site is a twentieth of it: must FAIL (it does not while that
 //                                                                    kernel's row has a twentieth to spare: the plain run names the row)
-//   TPS_SPLITRAYS=1 bun run tools/qa/shaderinline-check.ts        the same with the row 'Separate shadow rays' on: the gather's two programs, held to their own rows
 // --kernel prints every function pasted into that one kernel (copies, own size, the share, what one call site of it costs); --json writes the rows, and each module's text hash as
 // tools/qa/shader-count-page.cjs prints it (the real page's modules can be held against these).
 import { readFileSync, unlinkSync } from 'node:fs';
@@ -39,43 +37,22 @@ const { ROOT } = await import('./headless.ts');
 const { pageBoot, settingArg, SETTINGS } = await import('./pageboot.ts');
 type Stage = import('./pageboot.ts').Stage; type Mod = import('./pageboot.ts').Mod;
 const { wgslDecls } = await import(`${ROOT}/src/gpu/wgslTrim.ts`) as typeof import('../../src/gpu/wgslTrim');
-const { COMPACT } = await import(`${ROOT}/src/render/kernels.ts`) as typeof import('../../src/render/kernels');   // (the row 'Compact shaders': TPS_COMPACTSHADERS=1 in front sizes that set, against its own table below)
 
 /** KB of pasted WGSL a kernel may not pass, by `module / entry` (a cut-set module's `Cut` off its label), the first row that matches; the last is everyone else's */
-const BUDGET_TODAY: [RegExp, number][] = [
-  [/^composite(R|S|SR)? \/ (fs|cs)$/, 662],
-  [/^fgatherS? \/ mainGi$/, 800],
-  [/^fgatherS? \/ main$/, 741],
-  [/^volumetricsDust \/ main$/, 718],
-  [/^volumetrics \/ main$/, 667],
-  [/^reflectP5 \/ main$/, 640],
-  [/^particles \/ update$/, 562],
-  [/^direct \/ main$/, 430],   // (387 + an opening's light, 40 KB at the estimator's call sites: the portal's record and its ray past the opening 19, the hole's far rim 7, the sum over the pieces of its rectangle 14 (five pieces when this was counted, three since 11-05: the loop is one text either way); common.wgsl portalFlux, portalSeen, direct_common.wgsl shadowSample)
-  [/^restirM? \/ main$/, 380],   // (332 + the same 45 KB: 19, 7 and 19; restir asks the sum where it weighs a light and where it shades by it)
-  [/^reflect \/ main$/, 274],
-  [/^froxel \/ injectJ$/, 210],
-  [/^sharpUE? \/ main$/, 256],   // (230 + an opening's light, 23 KB: as direct's and restir's rows above)
-  [/^gbuffer(Cut)? \/ fsBox(Cut)?$/, 302],   // (… and its twin with the cut rule, the same text and the cut's test: 268 where fsBox is 267. It had no row, so the look's page read red against 200)
-  [/./, 200],
-];
-/** the same for THE COMPACT SET (the row 'Compact shaders' on: render/kernels.ts, the ten kernels written with one call site per heavy function), its own rows within a
- *  twentieth of what that set is. A second table, never today's rows lowered: both writings are in the tree while the row is on trial, and each is held to its own size */
-const BUDGET_COMPACT: [RegExp, number][] = [
-  [/^composite(R|S|SR)? \/ (fs|cs)$/, 403],
+const BUDGET: [RegExp, number][] = [
+  [/^gatherSplit \/ trace$/, 252],   // (the gather is two programs, render/gatherSplit.ts: its rays, then the light at what they hit)
+  [/^gatherSplit \/ light$/, 58],   // (113 before the gather took the reflections' one-loop writing of the light loop, 2026-11-07)
+  [/^composite(R|S|SR)? \/ (fs|cs)$/, 442],   // (403 until 2026-11-07: the snow's glow and sparkle are in every level's text now, asked by the frame's level word, 421 on the look's page)
   [/^volumetricsDust \/ main$/, 433],
   [/^volumetricsF? \/ main$/, 382],
   [/^particles \/ update$/, 356],
-  [/^restirM? \/ main$/, 336],   // (295 + an opening's light in this writing, 38 KB: as the table above)
-  [/^fgatherS? \/ mainGi$/, 299],
-  [/^direct \/ main$/, 282],   // (248 + an opening's light in this writing, 31 KB)
-  [/^reflectP5 \/ main$/, 253],
-  [/^fgatherS? \/ main$/, 230],
+  [/^restir \/ main$/, 336],   // (295 + an opening's light in this writing, 38 KB: as the table above)
   [/^froxel \/ injectJ$/, 210],
   [/^reflect \/ main$/, 204],
   [/^gbuffer(Cut)? \/ fsBox(Cut)?$/, 302],   // (… and its twin with the cut rule, the same text and the cut's test: 268 where fsBox is 267. It had no row, so the look's page read red against 200)
+  [/^gbuffer(Cut)?Snow \/ fsBox(Cut)?$/, 566],   // (the boxes' second writing, with the snow's surface in it: render/gbuffer.ts. 294 on the plain page; 468 and, with the cut rule, 539 on the look's. What a snow level always compiled, and under the look no setting here read it. Every page asks for it now, behind its boot where the level has no snow, so each of this tool's settings holds it)
   [/./, 200],
 ];
-const BUDGET = COMPACT.on ? BUDGET_COMPACT : BUDGET_TODAY;
 /** the cut test's own functions (common.wgsl: isectCut and the four planes it takes twice), and the KB one copy of the box test may carry of them */
 const CUT_TEST = ['isectCut', 'cutFour'], CUT_TEST_KB = 3.2, ROUND_TEST = ['isectRound'], TWIN_ROOM = 0.02;
 const BREAK = process.env.SHADERINLINE_BREAK === '1';
@@ -84,10 +61,6 @@ const opt = (k: string): string | null => { const i = argv.indexOf('--' + k); if
 const TOP = ((v: string | null) => { if (v === null) return Infinity; if (!/^[1-9]\d*$/.test(v)) { console.error(`--top needs a count, not '${v}'`); process.exit(1); } return Number(v); })(opt('top'));
 const KERNEL = opt('kernel'), JSON_OUT = opt('json');
 const say = console.log.bind(console);   // (the boot below is run with the console's own lines held back: a check's line is not one of those)
-// SEPARATE SHADOW RAYS (TPS_SPLITRAYS=1 in front: the row 'Separate shadow rays' on, src/render/gatherSplit.ts). The final gather is then two programs with rows of their own,
-// each within a twentieth of what it is, and the four megakernel gathers are not made: their rows go out with them for that run. With the row off this is the table above, untouched.
-{ const { SPLIT_RAYS } = await import(`${ROOT}/src/render/gatherSplit.ts`) as typeof import('../../src/render/gatherSplit');
-  if (SPLIT_RAYS.on) BUDGET.splice(0, BUDGET.length, [/^gatherSplitS? \/ trace$/, 252], [/^gatherSplit \/ light$/, 116], ...BUDGET.filter(([re]) => !re.source.startsWith('^fgatherS?'))); }
 let red = 0; const check = (ok: boolean, what: string) => { say(`${ok ? '- PASS' : '- FAIL'} — ${what}`); if (!ok) red++; };
 
 // ---- the page's boot over a recording stand-in (tools/qa/pageboot.ts), under one setting of the switches
@@ -169,9 +142,9 @@ for (const a of asked) for (const s of a.stages) {
 }
 const list = [...rows.values()].sort((a, b) => b.pasted - a.pasted || (`${a.module} ${a.entry} ${a.set}` < `${b.module} ${b.entry} ${b.set}` ? -1 : 1));
 check(lost.length === 0, `every pipeline's module and entry point were found in the recorded texts${lost.length ? ` — not so: ${lost.slice(0, 6).join(', ')}` : ''}`);
-{ // (a part of the page that fell out of this boot would leave the budget green on the rest: the card's own count is 118 pipelines, the cut set's 24)
+{ // (a part of the page that fell out of this boot would leave the budget green on the rest: the card's own count is 104 pipelines, the cut set's 23)
   const nBoot = asked.filter(a => a.set === 'boot').length, nCut = asked.length - nBoot;
-  check(mods.length >= 60 && nBoot >= 118 && nCut >= 24, `the recording is a whole boot: ${mods.length} modules (60 at least), ${nBoot} pipelines of the boot's set (118 at least), ${nCut} of the cut set's (24 at least)`); }
+  check(mods.length >= 54 && nBoot >= 102 && nCut >= 21, `the recording is a whole boot: ${mods.length} modules (54 at least), ${nBoot} pipelines of the boot's set (102 at least), ${nCut} of the cut set's (21 at least)`); }
 
 const kb = (n: number) => (n / 1024).toFixed(n < 10240 ? 1 : 0);
 /** the functions pasted more than once into a kernel, by the text their copies come to */

@@ -183,11 +183,11 @@ export async function snowGrainsCheck(o: { verbose?: boolean } = {}): Promise<bo
           if (block >= 0 && indent >= 0 && indent <= block) block = -1;
           if (/SNOW_GRAINS/.test(code) && /\{\s*$/.test(code)) { block = indent; return; }
           if (inGrain || block >= 0) return;
-          if (/\bgrain[A-Z]\w*\(|\bairAt\(|\bgrain\.[ab]\b|\bairTex\b|\bGRAIN_[A-Z]/.test(code) && !/SNOW_GRAINS/.test(code)) bad.push(`${f}:${i + 1}`);
+          if (/\bgrain[A-Z]\w*\(|\bairAt\(|\bgrain\.[ab]\b|\bairTex\b|\bGRAIN_[A-Z]/.test(code) && !/SNOW_GRAINS/.test(code) && !/^\s*if \(req\.act == RS_GRAIN\) \{/.test(code)) bad.push(`${f}:${i + 1}`);   // (the one shading call's grain line stands behind the step's own word, RS_GRAIN, which only grainStep, itself behind the switch, hands back: the constant does not cut it from a level with no snow)
         }); }
       const common = read('particles_common.wgsl'), sim = read('particles.wgsl');
-      const gate = /fn grainIs\(aux: u32\) -> bool \{ return SNOW_GRAINS && snowNow\(\) && /.test(common), rec = /let grainRec = SNOW_GRAINS && snowNow\(\) && rec\.posB\.y > 2\.5;/.test(sim);
-      const wisp = /fn wispIs\(aux: u32\) -> bool \{[^}\n]*SNOW_WISPS && snowNow\(\) && [\w.()]+ > 1\.5 && [\w.()]+ < 2\.5;/.test(common), wrec = /let wispRec = SNOW_WISPS && snowNow\(\) && rec\.posB\.y > 1\.5 && rec\.posB\.y < 2\.5;/.test(sim);
+      const gate = /fn grainIs\(aux: u32\) -> bool \{ return lv\(SNOW_GRAINS\) && snowNow\(\) && /.test(common), rec = /let grainRec = lv\(SNOW_GRAINS\) && snowNow\(\) && rec\.posB\.y > 2\.5;/.test(sim);
+      const wisp = /fn wispIs\(aux: u32\) -> bool \{[^}\n]*lv\(SNOW_WISPS\) && snowNow\(\) && [\w.()]+ > 1\.5 && [\w.()]+ < 2\.5;/.test(common), wrec = /let wispRec = lv\(SNOW_WISPS\) && snowNow\(\) && rec\.posB\.y > 1\.5 && rec\.posB\.y < 2\.5;/.test(sim);
       const calls = (sim.match(/\bgrainStep\(/g) ?? []).length + (read('particles_draw.wgsl').match(/\bgrainVertex\(/g) ?? []).length;
       const m = /const AIR_CELLS_PER_M\s*:\s*f32\s*=\s*([0-9.]+)\s*;/.exec(sim); const AF: any = await import(`${ROOT}/src/render/airField.ts`);
       verdict(bad.length === 0 && gate && rec && wisp && wrec && calls === 4 && !!m && Number(m[1]) === AF.AIR_RES,

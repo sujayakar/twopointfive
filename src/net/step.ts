@@ -16,15 +16,19 @@ export function netStep(g: Game, host: StepHost, cmds: readonly PlayerCmd[]): vo
   host.lights.update(dt, g.time); host.world.relist(); hudExpireBubbles(g);   // (the list alone: a tick is not a draw, and a server never draws — scene/boxes.ts relist; a page's next draw packs what it is handed)
 }
 /** WHAT THE HOST OF THE GAME THAT STEPS HANGS ON THE GAME OBJECT beside its `stepSeats` (src/host/rustgame.ts in the page, tools/blitz/rust-host.ts in bun):
- *    stateWords()   the game's own words for its state: its die's count of draws and the hash of every part of its block, in the block's own order
- *                   (where every body, door and thing is: not a seat's aim, a man's mind or an order book, which are said once they move something)
+ *    stateWords()   the game's own words for where things are, cheap enough for every tick: its die's count of draws and the hash of every part of its
+ *                   block, in the block's own order (every body, door and thing; not a seat's aim, a man's mind or an order book)
+ *    wholeWords()   the game's own words for the WHOLE of it, one a part (each field of the game, each module, each table), with what a host hands in
+ *                   left out. Milliseconds a call. `wholeNames()` names the parts. NOT IN THE ALARM YET (netWhole below says why)
  *    quietRun(on)   a run of steps between which none of the caller's code reads the game: nothing is brought across to the host's copy of the game
  *                   (what the picture, the HUD and a tool read) until the run ends, and then once. A walk of one tick is the same step as ever. */
 export interface StateWords { die: number; parts: ArrayLike<number>; }
-interface Stepper { stateWords?(): StateWords | null; quietRun?(on: boolean): void; }
+interface Stepper { stateWords?(): StateWords | null; wholeWords?(): ArrayLike<number> | null; wholeNames?(): string[]; quietRun?(on: boolean): void; }
 export const NET_WORD_SEED = 0x811C9DC5;
-/** THE STATE'S WORD after a tick, chained from the word before it (wire.ts: every `wordEvery` ticks it is the alarm). The game's own words, never a walk
- *  of the host's copy of it: inside a quiet run that copy is not the game */
+/** true for a tick (0-based) after which the server says its state word (wire.ts `wordEvery`) */
+export const wordTick = (t: number): boolean => (t + 1) % NET.wordEvery === 0;
+/** THE STATE'S WORD after a tick, chained from the word before it (wire.ts: after a word tick it is the alarm). The game's own words, never a walk of the
+ *  host's copy of it, which inside a quiet run is not the game. */
 export function netWord(g: Game, from: number): number {
   const W = (g as unknown as Stepper).stateWords?.();
   if (!W) throw new Error('netWord: no game steps here (a host hangs stateWords on the game beside stepSeats)');
@@ -32,6 +36,11 @@ export function netWord(g: Game, from: number): number {
   for (let i = 0; i < W.parts.length; i++) h = Math.imul(h ^ W.parts[i], 0x01000193) >>> 0;
   return h;
 }
+/** THE WHOLE GAME'S WORDS as they stand, with the parts' names: for whoever asks WHICH part two machines disagree on (tools/mp/words-diff.ts, a check).
+ *  They are the alarm netWord should fold on a word tick and does not yet: two machines of one game that agree on every tick still differ in some parts
+ *  (docs/agents/net.md lists them: a table in its process's import order, the modules' tables that follow whichever seat a machine shows, what a look
+ *  ahead in the tools leaves behind). Fold them the day words-diff says every part agrees. */
+export function netWhole(g: Game): { names: string[]; words: number[] } | null { const S = g as unknown as Stepper, A = S.wholeWords?.(); return A ? { names: S.wholeNames?.() ?? [], words: Array.from(A) } : null; }
 /** a quiet run of networked ticks begins / ends (a server between two state words, a client's walk of the ticks its server has confirmed) */
 export function netQuiet(g: Game, on: boolean): void { (g as unknown as Stepper).quietRun?.(on); }
 /** every seat of a networked game is refereed on every machine (wire.ts: the view is worked out again from the pose). Once, when the game is stood */

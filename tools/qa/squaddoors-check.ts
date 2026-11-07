@@ -1,15 +1,14 @@
 // A DOOR THE SQUAD WORKS IS SEEN (src/game/fogofwar.ts FOG.squadDoors) — the maintainer, 10-11: "if teammates open a door to clear a room while you're not
 // looking at it, their movement is visible, but it looks like they're walking through a closed door. we should be able to see actions that our squad takes."
 //
-//   bun run tools/qa/squaddoors-check.ts [level.json] [--doors N] [--seed N] [--verbose] [--trace]      (probes.ts squaddoors; SQUADDOORS_BREAK=1 = the staged teammate at the leaf is dazzled: must fail)
+//   bun run tools/qa/squaddoors-check.ts [level.json] [--doors N] [--seed N] [--verbose] [--trace]      (probes.ts squaddoors; SQUADDOORS_BREAK=1 = the rule left off: must fail)
 //   (--seed = the check's own dice, 1; --trace = --verbose + who stood at the doorway each time a leaf was drawn stale there)
 //
 // Played: a room clear with the four, the fog on, Sam stood at his start with his back to the door, 'open and clear' ordered on a door — under hard's cones
-// and under 'only my own eyes': no man walks past a leaf the picture still has shut.
+// and under 'only my own eyes', the rule off (the fault: men walk past a leaf the picture still has shut) and on (never).
 // Staged: a leaf opened with no teammate near stays as the picture had it; a teammate within reach with a line brings it up to date whichever way he faces;
-// one within reach behind a wall does not, nor one a metre past the reach with a line, nor a dazzled one at the leaf.
-// The rule is settled on: the check asks the page's side alone and no longer writes it. Until 2026-11-07 it also played each door with the rule off ('the
-// fault is there to fix'), staged 'the same with the switch off', and asked the frozen stand's word.
+// one within reach behind a wall does not, nor one a metre past the reach with a line, nor a dazzled one at the leaf; the switch off = only the fog's own
+// eyes; the stand's word.
 import { standUp, ROOT } from './headless.ts';
 import { standWall, wallBetween, type WallSpec } from './standwall.ts';
 import { readFileSync } from 'node:fs';
@@ -37,21 +36,30 @@ async function check(): Promise<boolean> {
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
   const { FOG } = await import(`${ROOT}/src/game/fogofwar.ts`);
+  const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
+  const { STAND_ENV } = await import(`${ROOT}/src/host/standEnv.ts`);
   const log = console.log;
   const quiet = async <T>(fn: () => T | Promise<T>): Promise<T> => { const e = console.error, w = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = e; console.warn = w; } };
   let fails = 0;
   const verdict = (ok: boolean, what: string, detail = '') => { if (!ok) fails++; log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}`); if (detail) log(`    ${detail}`); };
 
+  // ---- the stand's word (asked first: everything after sets the switch itself)
+  const frozen = !process.env.TPS_PROFILE || process.env.TPS_PROFILE === 'frozen', word = process.env.TPS_SQUADDOORS;
   const lvl = loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')));
   Math.random = dice(seed);
   const W: any = await quiet(() => standUp({ level: lvl })); const g = W.game; g.godMode = true;
+  { const want = frozen || word !== undefined ? word === '1' : true, row = FROZEN_HOLDS['FOG.squadDoors'];
+    verdict(FOG.squadDoors === want && typeof row === 'string' && /TPS_SQUADDOORS=1/.test(row) && STAND_ENV.includes('TPS_SQUADDOORS'),
+      frozen ? 'the frozen stand holds the rule off unless TPS_SQUADDOORS=1 (the cursor\'s ray meets a leaf as drawn), and the row is on the list of what separates the stands' : 'the shipped stand has the rule on, as the page does',
+      `after standUp: ${FOG.squadDoors} · TPS_SQUADDOORS ${word ?? 'unset'} · TPS_PROFILE ${process.env.TPS_PROFILE ?? 'unset'} · FROZEN_HOLDS['FOG.squadDoors'] ${row ?? '—'}`); }
+
   await quiet(() => startFromQuery(g, new URLSearchParams('roomclear&squad4')));
   const FW = g.fogOfWar; FW.on = true;
   const step = (n = 1) => { for (let i = 0; i < n; i++) W.step(DT); };
   await quiet(() => step(30));
   const spawn = [...g.player.char.pos] as number[];
   const mid = (d: any) => [d.def.hinge[0] + Math.cos(d.def.closedDir) * d.def.width / 2, d.def.hinge[1] + Math.sin(d.def.closedDir) * d.def.width / 2];
-  const fresh = (cone: boolean, own: boolean) => quiet(() => { Math.random = dice(seed); g.restartEncounter(); FW.on = true; FOG.cone = cone; FOG.own = own; step(30); });
+  const fresh = (cone: boolean, own: boolean, rule: boolean) => quiet(() => { Math.random = dice(seed); g.restartEncounter(); FW.on = true; FOG.cone = cone; FOG.own = own; FOG.squadDoors = rule; step(30); });
   const holdFoes = () => { for (const gd of g.guards) if (gd.team !== 'operative') { gd.hold = true; gd.pinned = true; gd.heardUpTo = 1e12; } };
   const samAway = (d: any) => { const [mx, mz] = mid(d), c = g.player.char; c.pos[0] = spawn[0]; c.pos[2] = spawn[2]; c.aimYaw = c.bodyYaw = Math.atan2(-(mx - spawn[0]), -(mz - spawn[2])); };
 
@@ -67,10 +75,10 @@ async function check(): Promise<boolean> {
       const k = 1 - 0.12 / L; if (!g.col.segmentBlocked(from, [from[0] + (p[0] - from[0]) * k, from[1] + (p[1] - from[1]) * k, from[2] + (p[2] - from[2]) * k])) return true; } }
     return false; };
   interface Tally { ordered: number; opened: number; stale: number; worst: number; at: number; atWorst: number; crossed: number; doors: string[] }
-  async function play(cone: boolean, own: boolean, names: string[]): Promise<Tally> {
+  async function play(cone: boolean, own: boolean, rule: boolean, names: string[]): Promise<Tally> {
     const T: Tally = { ordered: 0, opened: 0, stale: 0, worst: 0, at: 0, atWorst: 0, crossed: 0, doors: [] };
     for (const name of names) {
-      await fresh(cone, own);
+      await fresh(cone, own, rule);
       const d = g.doors.byName(name), men = g.orders.men('all'); if (!d || men.length < 2) continue;
       const side = g.doors.side(d, men[0].char.pos) >= 0 ? 1 : -1; samAway(d);
       const op: any = await quiet(() => g.doorTools.order('openClear', men, d, side)); if (typeof op === 'string') continue;
@@ -96,15 +104,17 @@ async function check(): Promise<boolean> {
   const all = g.doors.list.map((d: any) => d.def.name as string);
   // (the doors the order can be given on from the start, the first few: found once, with the fog's eyes as on standard)
   const names: string[] = [];
-  for (const name of all) { if (names.length >= nDoors) break; await fresh(false, false); const d = g.doors.byName(name), men = g.orders.men('all'); if (Math.abs(d.angle) > 0.05 || men.length < 2) continue;
+  for (const name of all) { if (names.length >= nDoors) break; await fresh(false, false, false); const d = g.doors.byName(name), men = g.orders.men('all'); if (Math.abs(d.angle) > 0.05 || men.length < 2) continue;
     const op: any = await quiet(() => g.doorTools.order('openClear', men, d, g.doors.side(d, men[0].char.pos) >= 0 ? 1 : -1)); if (typeof op !== 'string') names.push(name); }
   log(`${file}: 'open and clear' by the four on ${names.join(', ')} · Sam at his start, back to the door`);
   for (const [label, cone, own] of [['hard\'s cones', true, false], ['only my own eyes', false, true]] as const) {
-    const on = await play(cone, own, names);
-    if (verbose) for (const x of on.doors) log(`    ${x}`);
+    const off = await play(cone, own, false, names), on = await play(cone, own, !BREAK, names);
+    if (verbose) { for (const x of off.doors) log(`    off · ${x}`); for (const x of on.doors) log(`    on  · ${x}`); }
     const row = (t: Tally) => `${t.opened} doors opened · drawn stale with a man at the doorway ${t.at} frames, longest ${(t.atWorst / 60).toFixed(2)} s · in all ${t.stale} frames, longest ${(t.worst / 60).toFixed(2)} s · men through a leaf drawn shut ${t.crossed}`;
-    verdict(on.opened > 0 && on.crossed === 0 && on.atWorst <= 12, `${label}: no teammate walks through a leaf the picture has shut, and no leaf is drawn stale for more than a fifth of a second with a teammate at its doorway`,
-      row(on));
+    verdict(on.opened > 0 && on.crossed === 0 && on.atWorst <= 12, `${label}: with the rule no teammate walks through a leaf the picture has shut, and no leaf is drawn stale for more than a fifth of a second with a teammate at its doorway`,
+      `rule on:  ${row(on)}`);
+    log(`    rule off: ${row(off)}${off.crossed ? '' : '   (the fault did not show on these doors under this fog)'}`);
+    if (label === 'only my own eyes') verdict(off.crossed > 0 || off.worst > 30, 'only my own eyes, the rule off: the fault is there to fix (a leaf drawn shut while the men go through)', `longest stale ${(off.worst / 60).toFixed(2)} s · through a leaf drawn shut ${off.crossed}`);
   }
 
   // ---- staged: who brings a leaf up to date
@@ -114,7 +124,7 @@ async function check(): Promise<boolean> {
     const lineTo = (from: number[], p: number[]) => { const L = Math.hypot(p[0] - from[0], p[1] - from[1], p[2] - from[2]); if (L < 0.3) return true; const k = 1 - 0.12 / L; return !col.segmentBlocked(from, [from[0] + (p[0] - from[0]) * k, from[1] + (p[1] - from[1]) * k, from[2] + (p[2] - from[2]) * k]); };
     const nav = g.col.nav ?? g.nav; const walk = (x: number, z: number) => { const cx = Math.floor(x / nav.cell), cz = Math.floor(z / nav.cell); return cx >= 0 && cz >= 0 && cx < nav.W && cz < nav.H && !nav.blocked[cz * nav.W + cx]; };
     /** stage: the door opened by nobody, Sam away, the men where `place` puts the first of them (the rest far), facing `yaw` */
-    const stage = async (d: any, place: number[] | null, yaw = 0, wall: WallSpec | null = null, dazzled = false) => { await fresh(true, true); const men = g.orders.men('all'); samAway(d);
+    const stage = async (d: any, rule: boolean, place: number[] | null, yaw = 0, wall: WallSpec | null = null, dazzled = false) => { await fresh(true, true, rule); const men = g.orders.men('all'); samAway(d);
       const down = wall ? standWall(g, [wall]) : null;   // (a wall the level does not have, between him and the leaf: a box, met by the fog's eyes in either language — standwall.ts)
       await quiet(() => { for (let f = 0; f < 8; f++) { holdFoes(); samAway(d); if (f === 2) { d.angle = openA(d); d.vel = 0; }
         if (place) { const c = men[0].char; c.pos[0] = place[0]; c.pos[2] = place[1]; c.aimYaw = c.bodyYaw = yaw; if (dazzled) men[0].dazzledUntil = g.time + 5; }
@@ -126,7 +136,7 @@ async function check(): Promise<boolean> {
     const far = all.map((n: string) => g.doors.byName(n)).filter((d: any) => Math.abs(d.angle) < 0.05);
     let done = false;
     for (const d of far) {
-      const a = await stage(d, null); if (a.near < 4 || Math.abs(a.angle) < 0.3) continue;
+      const a = await stage(d, true, null); if (a.near < 4 || Math.abs(a.angle) < 0.3) continue;
       const [mx, mz] = mid(d), nx = -Math.sin(d.def.closedDir), nz = Math.cos(d.def.closedDir);
       // a place in front of the doorway with a line to the leaf, and one within reach with none
       let front: number[] | null = null, blind: number[] | null = null; const pts = leafPts(d, openA(d)).concat(leafPts(d, 0));
@@ -136,9 +146,10 @@ async function check(): Promise<boolean> {
         if (pts.every(q => !lineTo([p[0], HEAD, p[1]], q) && !lineTo([p[0], 1.75, p[1]], q) && !lineTo([p[0], 1.45, p[1]], q))) blind = p; }
       if (!front) continue;
       const awayYaw = Math.atan2(front[0] - mx, front[1] - mz);   // (his back to the door)
-      const b = await stage(d, front, awayYaw, null, BREAK);
-      verdict(a.held, `${d.def.name} opened with no teammate within four metres and Sam's back turned: the picture keeps the leaf where it had it`, `nearest teammate ${a.near.toFixed(1)} m · leaf at ${a.angle.toFixed(2)} rad · drawn as remembered ${a.held}`);
+      const b = await stage(d, !BREAK, front, awayYaw), c = await stage(d, false, front, awayYaw);
+      verdict(a.held, `${d.def.name} opened with no teammate within four metres and Sam's back turned: the picture keeps the leaf where it had it, rule on`, `nearest teammate ${a.near.toFixed(1)} m · leaf at ${a.angle.toFixed(2)} rad · drawn as remembered ${a.held}`);
       verdict(!b.held && b.near <= FOG.squadDoorsM, 'a teammate within reach of the leaf with a line to it, his back to it, under cones and own eyes: the leaf is drawn where it stands', `teammate ${b.near.toFixed(2)} m from the leaf · drawn as remembered ${b.held}`);
+      verdict(c.held, 'the same with the switch off: only the fog\'s own eyes bring a leaf up to date, as before', `teammate ${c.near.toFixed(2)} m from the leaf · drawn as remembered ${c.held}`);
       // (this door has no place within reach behind a wall of the level's: a wall is stood between a place in front of it and the leaf, the first that
       //  hides every point of the leaf from him by this check's own lines)
       let made: { p: number[]; wall: WallSpec } | null = null;
@@ -148,7 +159,7 @@ async function check(): Promise<boolean> {
         if (pts.every(q => !lineTo([p[0], HEAD, p[1]], q) && !lineTo([p[0], 1.75, p[1]], q) && !lineTo([p[0], 1.45, p[1]], q))) made = { p, wall }; down(); }
       const hid = blind ?? made?.p ?? null;
       if (!hid) verdict(false, 'a teammate within reach but with a wall between him and the leaf does not see it move', `${d.def.name}: no place within reach of the leaf behind a wall of the level's, and no wall stood before it hides the leaf`);
-      else { const e = await stage(d, hid, blind ? 0 : Math.atan2(hid[0] - mx, hid[1] - mz), blind ? null : made!.wall);
+      else { const e = await stage(d, true, hid, blind ? 0 : Math.atan2(hid[0] - mx, hid[1] - mz), blind ? null : made!.wall);
         verdict(e.held && e.near <= FOG.squadDoorsM, blind ? 'a teammate within reach but with a wall between him and the leaf does not see it move' : 'a teammate within reach with a wall stood between him and the leaf (this door has no place within reach behind a wall of the level\'s) does not see it move',
           `teammate ${e.near.toFixed(2)} m from the leaf at (${hid[0].toFixed(1)}, ${hid[1].toFixed(1)}) · drawn as remembered ${e.held}`); }
       // THE BOUND (the fog thread's read, 10-11): the rule reaches `squadDoorsM` and no further — a teammate a metre past it with a clear line, facing the
@@ -157,11 +168,11 @@ async function check(): Promise<boolean> {
       for (let ix = -32; ix <= 32 && !past; ix++) for (let iz = -32; iz <= 32 && !past; iz++) { const p = [mx + ix * 0.125, mz + iz * 0.125]; if (!walk(p[0], p[1])) continue;
         const reach = Math.min(...pts.map(q => Math.hypot(p[0] - q[0], p[1] - q[2]))); if (reach < FOG.squadDoorsM + 0.8 || reach > FOG.squadDoorsM + 1.3) continue;
         if (pts.some(q => lineTo([p[0], HEAD, p[1]], q))) past = p; }
-      if (past) { const f = await stage(d, past, Math.atan2(mx - past[0], mz - past[1]));
+      if (past) { const f = await stage(d, true, past, Math.atan2(mx - past[0], mz - past[1]));
         verdict(f.held && f.near > FOG.squadDoorsM, 'the bound: a teammate a metre past the reach with a clear line to the leaf, facing it, under own eyes, does not bring it up to date', `teammate ${f.near.toFixed(2)} m from the leaf (reach ${FOG.squadDoorsM} m) · drawn as remembered ${f.held}`); }
       else log('    (no floor a metre past the reach with a line to this leaf: the bound is not staged on this door)');
       // a blinded teammate is nobody's eyes: at the leaf, with the line the second check above had, dazzled
-      { const h = await stage(d, front, awayYaw, null, true);
+      { const h = await stage(d, true, front, awayYaw, null, true);
         verdict(h.held && h.near <= FOG.squadDoorsM, 'a dazzled teammate within reach of the leaf with a line to it does not bring it up to date', `teammate ${h.near.toFixed(2)} m from the leaf, dazzled · drawn as remembered ${h.held}`); }
       done = true; break;
     }

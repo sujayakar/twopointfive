@@ -349,16 +349,15 @@
   };
   /** POST a JSON result to this lane's shot server (docs/perf/<name>.json) */
   TL.save = async (name, obj) => { const r = await fetch(`http://localhost:${TL.shotPort}/perf?name=${encodeURIComponent(name)}`, { method: 'POST', body: JSON.stringify(obj) }); return r.status; };
-  /** THE SCENE MATRIX: for each preset, for each scene: stage → contention check → interleaved A/B of the named CONFIGS (each = { variant, strata }) → per-pass medians.
-   *  Fire-and-forget: progress in TL.mx.status, results in TL.mx.results (also POSTed as docs/perf/trace-matrix-<preset>.json per preset). On main the two configs are the
-   *  reference walk with iid / stratified gather directions (settings.gatherStrata); a traversal experiment adds { variant: N } rows once its V-suffixed walks exist. */
+  /** THE SCENE MATRIX: for each preset, for each scene: stage → contention check → interleaved A/B of the named CONFIGS (each = { variant }) → per-pass medians.
+   *  Fire-and-forget: progress in TL.mx.status, results in TL.mx.results (also POSTed as docs/perf/trace-matrix-<preset>.json per preset). On main the one config is the
+   *  reference walk; a traversal experiment adds { variant: N } rows once its V-suffixed walks exist. */
   TL.CONFIGS = {
-    ref:      { variant: 0, strata: false, note: 'the reference walk, iid gather directions' },
-    strata:   { variant: 0, strata: true, note: 'E8: tile-coherent stratified gather directions (settings.gatherStrata)' },
+    ref:      { variant: 0, note: 'the reference walk' },
   };
-  TL.applyConfig = async (name) => { const c = TL.CONFIGS[name]; if (!c) throw new Error('config ' + name); window.__gs.on = !!c.strata; if (window.__traceConfig.variant !== c.variant || TL.mxDirty) { await TL.use(c.variant); TL.mxDirty = false; } };
+  TL.applyConfig = async (name) => { const c = TL.CONFIGS[name]; if (!c) throw new Error('config ' + name); if (window.__traceConfig.variant !== c.variant || TL.mxDirty) { await TL.use(c.variant); TL.mxDirty = false; } };
   TL.matrix = (opts = {}) => {
-    const { presets = ['high'], scenes = ['B1', 'B3', 'B2', 'B5'], configs = ['ref', 'strata'], rounds = 3, n = 30, tag = '' } = opts;
+    const { presets = ['high'], scenes = ['B1', 'B3', 'B2', 'B5'], configs = ['ref'], rounds = 3, n = 30, tag = '' } = opts;
     TL.mx = { status: 'starting', results: {}, log: [] };
     (async () => {
       for (const p of presets) {

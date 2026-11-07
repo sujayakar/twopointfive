@@ -1,6 +1,6 @@
 // 'stalkdrag' — THE STICK (STALK.drag, src/game/stalk.ts `dragged`; fed by player.ts). The maintainer: "you click on the guy and then you can drag towards him
 // to move in that direction. like a joystick centered on the guy. that would make things feel more controlled than right now which feels automatic."
-//   bun run tools/qa/stalkdrag-check.ts        (also `probes.ts stalkdrag`)
+//   bun run tools/qa/stalkdrag-check.ts        (also `probes.ts stalkdrag`; run it on BOTH stands: TPS_PROFILE=shipped in front for the second)
 //   still     the press made on a man three metres ahead and the mouse left there: two seconds on Sam has not moved, and the stalk is still on.
 //   toward    the mouse dragged the whole way toward the man on the screen: Sam closes on him at the creep's top speed; half the way, about half of it.
 //   side      dragged across the screen: he goes across, not in, and keeps facing the man.
@@ -8,17 +8,18 @@
 //   outside   (game/input.ts's window listener, on a window of lists) the press held and the mouse taken off the view: followed while the stick is up
 //             (Game.update says so to the host's input every frame), let go of when the event says the button is up; with the stick down, nothing.
 //   off       the key down: the same press with the mouse left on him walks him in to reach, as it did.
-//   harness   down in the plain page, up in the lab (?sneaklab) and with ?stalkdrag=1, down in the lab with ?stalkdrag=0; rides a recording's tables.
-// The key is an OPEN row (down on the page): the check raises it itself for each part, and that write takes; `off` is the page's side. The settled rows
-// round it (the stalk, its key, no-knife, the disarm) are no longer written, and the stalk's orbit (STALK.orbit, settled on), which this card used to hold
-// off ("this card is of the stick's own way"), is as the page has it. The old stand's word and the recording from before the key are out of `harness`.
+//   harness   down on the frozen stand and in the plain page, up in the lab (?sneaklab) and with ?stalkdrag=1, down in the lab with ?stalkdrag=0; rides a
+//             recording's tables, and a recording from before the key replays with it down.
 // STALKDRAG_BREAK=1 = the key left down where still, toward, side and outside ask for it up: each must FAIL.   exit 0 = all hold · 1 = one does not
 // THE HARNESS HAS NO GPU and no hand on a mouse: the drag is written into the input as numbers. Nobody has felt it.
 import { standUp, ROOT } from './headless.ts';
 
-const { STALK, stalkOn } = await import(`${ROOT}/src/game/stalk.ts`);
+const { HOLD } = await import(`${ROOT}/src/game/character.ts`);
+const { CLOSE } = await import(`${ROOT}/src/game/close.ts`);
+const { STALK, stalkPolish, stalkOn } = await import(`${ROOT}/src/game/stalk.ts`);
 const PR = await import(`${ROOT}/src/host/profile.ts`);
 const JR = await import(`${ROOT}/src/game/journal.ts`);
+const { STAND_ENV } = await import(`${ROOT}/src/host/standEnv.ts`);
 
 const BREAK = process.env.STALKDRAG_BREAK === '1', DT = 1 / 60, EAST = Math.PI / 2, AT = [10.2, 0, 19.5];   // (the lobby's open floor)
 let allPass = true, found = false;
@@ -28,7 +29,8 @@ const up = () => !BREAK, f2 = (x: number) => x.toFixed(2);
 /** the lobby's floor, the rifleman facing east with Sam `gap` m behind him, crouched with empty hands, the rest parked; the press made on the man's chest */
 async function world(drag: boolean, gap = 3) {
   const W: any = await quiet(() => standUp({ seed: 11 } as any)), g = W.game;
-  STALK.drag = drag;   // (an open row: the stick as the part asks)
+  HOLD.dropGun = true; HOLD.disarm = true; CLOSE.on = true; CLOSE.noKnife = true; STALK.on = STALK.key = STALK.low = true; STALK.drag = drag; STALK.orbit = false; stalkPolish(true);   // (STALK.orbit down: this card is of the stick's own way; stalkorbit-check takes the stick round him)
+    // (the frozen stand's pins write them at every stand-up)
   g.godMode = true; g.aiEnabled = false; g.playerInvisible = true; g.player.slot = 'pistol'; g.player.holstered = true;
   g.tune.carbineGuards = 'reyes'; for (let i = 0; i < 5; i++) W.step(DT);
   const A = g.guards.find((x: any) => x.callsign === 'Reyes'), rest = g.guards.filter((x: any) => x !== A);
@@ -36,7 +38,7 @@ async function world(drag: boolean, gap = 3) {
   A.char.pos = [...AT]; A.char.bodyYaw = A.char.aimYaw = EAST; A.char.vel = [0, 0, 0]; A.path = []; A.pathGoal = null; A.hold = true; A.pinned = true; A.awareness = 0; A.heardUpTo = 1e12;
   W.cam.yaw = 0; W.cam.rebuild?.(); g.teleportPlayer([AT[0] - gap, 0, AT[2]]); g.player.crouch = true;
   const c = g.player.char, chest = () => [A.char.pos[0], 1.2, A.char.pos[2]];
-  const step = (n = 1) => { for (let i = 0; i < n; i++) { STALK.drag = drag; A.char.vel = [0, 0, 0]; W.step(DT); g.player.visibility = 0.02; } };
+  const step = (n = 1) => { for (let i = 0; i < n; i++) { STALK.drag = drag; STALK.orbit = false; A.char.vel = [0, 0, 0]; W.step(DT); g.player.visibility = 0.02; } };
   step(40); W.cursorAt(chest()); W.input.buttons |= 1; W.input.clicked |= 1; step(1);
   const mid = [W.input.mouseX, W.input.mouseY];
   /** the screen's way from Sam to the man, a unit vector in px */
@@ -108,23 +110,24 @@ async function outside() {
     `the game says the stick is up: ${wired} · followed over the panel ${off} · under a lock ${locked} · Shift let go ${shiftUp} · let go outside ${letGo}, the button up ${latch} · a press off the view ${panel} · the stick down: ${before} → ${downAt}`);
 }
 async function harness() {
-  console.log('\n=== harness: the lab and ?stalkdrag=1 have it, the page does not ===');
-  STALK.drag = found;
+  console.log('\n=== harness: the lab and ?stalkdrag=1 have it, the page and the frozen stand do not ===');
+  const shipped = process.env.TPS_PROFILE === 'shipped'; STALK.drag = shipped ? found : true;   // (the frozen stand's pin writes it down at every stand-up; the page's stand has it from the page's boot)
   const W: any = await quiet(() => standUp()), stood = STALK.drag;
   const snap = JSON.parse(JSON.stringify(JR.knobsSnapshot(W.game))), had = typeof snap.tables.STALK?.drag === 'boolean';
   STALK.drag = true; const snapUp = JSON.parse(JSON.stringify(JR.knobsSnapshot(W.game))); STALK.drag = false; JR.applyKnobs(W.game, snapUp); const kept = STALK.drag;
+  delete snap.tables.STALK.drag; STALK.drag = true; JR.applyKnobs(W.game, snap); const old = STALK.drag;
   const read = (q: string) => { STALK.drag = !STALK.drag; PR.pageSwitches(new URLSearchParams(q)); return STALK.drag; };
   const plainQ = read(''), lab = read('sneaklab'), labOff = read('sneaklab&stalkdrag=0'), asked = read('stalkdrag=1');
-  verdict(stood === false && !found && had && kept === true && !plainQ && lab && !labOff && asked,
-    'down as the harness stands up and in the plain page, up in the lab and with ?stalkdrag=1, down in the lab with ?stalkdrag=0; it rides a recording\'s tables',
-    `found ${found}, stood up ${stood} · in the tables ${had} · recorded up ${kept} · plain ${plainQ} · ?sneaklab ${lab} · ?sneaklab&stalkdrag=0 ${labOff} · ?stalkdrag=1 ${asked}`);
+  verdict(stood === false && !found && (STAND_ENV as string[]).includes('TPS_STALKDRAG') && had && kept === true && old === false && !plainQ && lab && !labOff && asked && !(PR.FROZEN_HOLDS as Record<string, string>)['STALK.drag'],
+    'down as the harness stands up and in the plain page (so no row of the two stands\' list), up in the lab and with ?stalkdrag=1, down in the lab with ?stalkdrag=0; it rides a recording\'s tables, and a recording from before it replays with it down',
+    `found ${found}, stood up ${stood} · in the tables ${had} · recorded up ${kept} · an old recording ${old} · plain ${plainQ} · ?sneaklab ${lab} · ?sneaklab&stalkdrag=0 ${labOff} · ?stalkdrag=1 ${asked}`);
 }
 
-/** the whole card (probes.ts 'stalkdrag'): true = every check passed. The open row is put back as it was found. */
+/** the whole card (probes.ts 'stalkdrag'): true = every check passed. The switches are put back as they were found. */
 export async function stalkdragCheck(): Promise<boolean> {
-  const drag0 = STALK.drag; allPass = true; found = STALK.drag;
-  try { await still(); await toward(); await side(); await stops(); await outside(); await off(); STALK.drag = drag0; await harness(); }
-  finally { STALK.drag = drag0; }
+  const hold = JSON.parse(JSON.stringify(HOLD)), close = JSON.parse(JSON.stringify(CLOSE)), stalk = { ...STALK }; allPass = true; found = STALK.drag;
+  try { await still(); await toward(); await side(); await stops(); await outside(); await off(); Object.assign(STALK, stalk); await harness(); }
+  finally { Object.assign(HOLD, hold); Object.assign(CLOSE, close); Object.assign(STALK, stalk); }
   console.log(`\n=== stalkdrag: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`); return allPass;
 }
 if (import.meta.main) process.exit((await stalkdragCheck()) ? 0 : 1);

@@ -1,6 +1,5 @@
 // Renderer orchestration: owns GPU resources and encodes the frame.
 import { Gpu, makeBuffer, PIPE_QUEUE, laterProgress } from './gpu/device';
-import { COMPACT } from './render/kernels';
 import { GpuTimer } from './gpu/timer';
 import { BoxWorld, BoxFlag, planBoxes, type Box, type DrawWait } from './scene/boxes';
 import { thinIs, thinAirOf } from './game/thinline';   // (a leaf: types only — which dynamic boxes are a laser's beam / a tracer's streak, for the reflections)
@@ -125,8 +124,6 @@ export class Engine {
   /** the unjittered camera moved since the last render (direct-motion lane: passes.restirMotionLive keys on it) */
   camMovedAny = false;
   private taauWas = false; private debugWas = 0;
-  /** GI in motion: frames left in which the young-history extra gather rays stand down after a cut / a wholesale history restart, and the denoiser core last frame ran with */
-  private giCutHold = 0; private dnWas: 'v3' | 'legacy' = 'v3';
   /** why the TAAU history was last dropped, and how many times (the Tab panel words it; QA counts it) */
   taaResets = 0; lastTaaReset = '';
   /** CUT BOXES: how many traceable cut boxes this frame's g-buffer draws WHOLE (its ray programs have no cut rule yet — render/cutSwap.ts), and how many were on screen last frame */
@@ -403,6 +400,11 @@ export class Engine {
     if (lookConfig.on) this.buildPlace();   // (THE LOOK PROTOTYPE: its two small programs are asked for with the boot's own, so the page's first frame has a live field. The page's rows are not read yet here, so a page with the shade row at 0 on its address compiles them unused. Until it is live no place takes a gain, composite.wgsl lookPlaceLevels, and a page that got it late would step)
   }
   /** THE LOOK PROTOTYPE's place field, made once (render/placeField.ts); a device that cannot make it is asked once and no more */
+  /** NOTHING IS COMPILED AT ITS FIRST USE. The fog of war's sight table and its pass made their programs the first frame a mission drew the fog: the title
+   *  never built them, so the first squad mission of a visit compiled three programs (and their cut twins after them) under play. The page asks for them
+   *  here, once its boot's own are in (main.ts, after the boot's freeze): they compile behind the start like the rest of the background set, nothing waits
+   *  for them, and on the kept page (gpu/keep.ts) a mission finds them made. A pass that gains a program of its own asks for it here too. */
+  warmFirstUse(): void { this.fogSight.warm(); this.passes.warmFog(); }
   private buildPlace(): void { if (this.place || this.placeDead) return; try { this.place = new PlaceField(this.device, this.rc.diceView); } catch (err) { console.warn('place field: not built on this device', err); this.placeDead = true; } }
 
   /** true once init() has resolved: every boot pipeline exists and render() may run */
@@ -667,9 +669,6 @@ export class Engine {
     this.passes.setFireLook(this.fireLook);
     this.passes.setFires(this.settings.debugView === 0 ? this.fires : null);   // the open fires' flames (game/fire.ts), behind the beams in the same uniform
     this.passes.setRt(this.settings.rtReflect, this.settings.rtReflectDiv);   // (likewise before resize: the reflection targets' divisor — pooled + re-made on change like the gather's — and the switch that first allocates them at all)
-    this.passes.setGi(this.settings.giResample !== 'off');   // (phase 5, likewise: the gather's reservoir pair exists from the first frame resampling is asked for — an off machine pays no memory)
-    this.passes.setGiFull(!!this.settings.giFullRes && this.settings.denoiser !== 'legacy', this.settings.giFullIters);   // (GI in motion, likewise before resize: the diffuse client's INTERNAL-res set exists from the first frame it is asked for; the v3 core only)
-    this.passes.setHitReuse(this.settings.rtHitReuse);      // (phase 5: the reflection pass's hit-record pair, made on first use the same way)
     this.resize();
     cam.aspect = this.width / this.height;
     cam.rebuild();
@@ -688,35 +687,31 @@ export class Engine {
     m4.copy(this.vpJ, cam.viewProj);
     if (jx !== 0 || jy !== 0) { const ax = 2 * jx / this.width, ay = -2 * jy / this.height; for (let c = 0; c < 4; c++) { const w = this.vpJ[c * 4 + 3]; this.vpJ[c * 4] += ax * w; this.vpJ[c * 4 + 1] += ay * w; } m4.invert(this.invVpJ, this.vpJ); }
     else m4.copy(this.invVpJ, cam.invViewProj);
-    let cutNow = false;   // (a cut this frame: the young-history extra gather rays stand down for it — every texel is young on a cut and the picture is being cut anyway; giCfg below)
+    let cutNow = false;   // (a cut this frame: nothing reprojects across it)
     if (!this.havePrev) { m4.copy(this.prevVpJ, this.vpJ); m4.copy(this.prevVpU, cam.viewProj); this.prevCamPos = v3.copy(cam.pos); this.prevCamFwd = v3.copy(cam.forward); this.havePrev = true; cutNow = true; if (taauOn) this.resetTaa('first frame'); }
     else {   // a cut nobody can reproject across: the eye jumped rooms (> 2.5 m between two renders — 150 m/s; the follow camera is damped, the tour / breach / attract cut) or swung > 30° at once
       const jump = v3.dist(cam.pos, this.prevCamPos), turn = v3.dot(cam.forward, this.prevCamFwd);
       if (jump > 2.5 || turn < 0.866) { cutNow = true; if (taauOn) this.resetTaa(jump > 2.5 ? `cut (${jump.toFixed(1)} m)` : 'cut (turn)'); else this.passes.dropRestirBeliefs(); }   // (resetTaa drops the ReSTIR tiles' light beliefs too; without TAAU that is all a cut needs from here)
     }
-    if (cutNow) this.giCutHold = Math.max(1, Math.round(this.settings.giYoungLen)) + 1; else if (this.giCutHold > 0) this.giCutHold--;   // (held until the histories a cut restarted are no longer 'young' by the gather's own test — else the whole grid asks on the frame the hold ends)
     { // INFRARED LIGHTS (lights.ts LightSet.ir, game/irlight.ts): in the list only while this frame's picture is the tube's — post.wgsl's own swap. The frame the
       // tube comes off, every screen history still holds rooms lit by them (the resolve's, the direct light's, the bounce's, the reflections', the reservoirs' —
       // in a tube frame they are steady lights like any torch): 'wrong wholesale', the case passes.restartHistories names — so no bare-eyed frame shows what only a tube saw.
-      // (Here, ahead of the young-history fold just below, so the hold that restart asks for is in THIS frame's giCfg.)
       const tube = this.settings.nvAmount > 0.5;
       if (!tube && this.lights.tube && this.lights.irSpell) this.passes.restartHistories('the goggles came off infrared light');
       if (!tube) this.lights.irSpell = false;
       this.lights.tube = tube;
     }
-    { const dn = this.settings.denoiser === 'legacy' ? 'legacy' : 'v3'; if (dn !== this.dnWas) { this.dnWas = dn; this.passes.youngHold = 6; } }   // (the denoiser switch this frame zeroes the diffuse moments in the encode below: fold it in now, not a frame late)
-    if (this.passes.youngHold > 0) { this.giCutHold = Math.max(this.giCutHold, Math.max(this.passes.youngHold, Math.round(this.settings.giYoungLen) + 1)); this.passes.youngHold = 0; }   // the same for a wholesale history restart the passes did (restartHistories, the denoiser switch, a keepHistories-off resize)
     const matSame = this.prevVpU.every((v, i) => v === cam.viewProj[i]);
     const camStill = taauOn && matSame;
     // the CAMERA's own motion this frame in output px (the look-at point and four points 3 m round it through the previous / current unjittered view-projection — an orbit leaves the
-    // look-at itself still): the motion-sharpen term of the final blit (taauSharpenMotion) and the direct-motion twin's switch below
+    // look-at itself still): the motion-sharpen term of the final blit (taauSharpenMotion) and the direct estimator's motion bits below
     let px = 0;
     if (this.havePrev && !matSame) {
       const prj = (m: ArrayLike<number>, q: Vec3): [number, number] | null => { const x = m[0] * q[0] + m[4] * q[1] + m[8] * q[2] + m[12], y = m[1] * q[0] + m[5] * q[1] + m[9] * q[2] + m[13], w = m[3] * q[0] + m[7] * q[1] + m[11] * q[2] + m[15]; return w > 1e-4 ? [x / w, y / w] : null; };
       for (const off of [[0, 0], [3, 0], [-3, 0], [0, 3], [0, -3]]) { const q: Vec3 = [cam.target[0] + off[0], cam.target[1], cam.target[2] + off[1]]; const a = prj(this.prevVpU, q), b = prj(cam.viewProj, q); if (a && b) px = Math.max(px, Math.hypot((b[0] - a[0]) * 0.5 * (this.outWidth || this.width), (b[1] - a[1]) * 0.5 * (this.outHeight || this.height))); }
     }
-    // the unjittered camera MOVED since the last render (TAAU or not; a cut is not motion): the direct-motion lane's twin ReSTIR program dispatches on these frames only. By displacement,
-    // not matrix equality — the follow camera's damping keeps nudging the f32 matrices for seconds after the picture has visibly settled, and the twin (+0.2 ms at high, its levers inert
+    // the unjittered camera MOVED since the last render (TAAU or not; a cut is not motion): the direct estimator's motion bits go up on these frames only. By displacement,
+    // not matrix equality — the follow camera's damping keeps nudging the f32 matrices for seconds after the picture has visibly settled, and the motion work (+0.2 ms at high, its levers inert
     // under a pixel's own 1 px/frame) would run all that while (review of 5a08434); 0.02 px a frame is far under anything either program does differently
     this.camMovedAny = this.havePrev && !cutNow && px > 0.02;
     let camMot = 0;
@@ -724,7 +719,7 @@ export class Engine {
     const t0 = performance.now();
     this.world.glassEnabled = this.settings.glass; this.world.glassFocus = cam.focus;   // (the pane list is nearest-to-the-look-at first, and empty with the experiment off)
     this.world.markingsEnabled = this.settings.markings;   // markings: off = every box uploads slot 0 and its plain albedo in the secondary row (the frame as it was)
-    this.world.rig = this.rigFit ? { r0: this.rigFit.r0, r1: this.rigFit.r1, kPad: RIG_KPAD * Math.max(1, this.settings.sdfRigK ?? 1), byOwner: this.rigFit.byOwner } : null;   // the SDF rig: the fit packed into this frame's proxy list at upload (r0 over the hand radius, r1 in misc's top byte, the cull sphere fitted + the smooth union's bulge at k ≥ 1 — never tighter than the k = 1 sphere: it is also the mesh shadows' broad phase at ultra, and a finger can reach a few cm past the forearm cone) — null = no fit attached: the list as the game wrote it
+    this.world.rig = this.rigFit ? { r0: this.rigFit.r0, r1: this.rigFit.r1, kPad: RIG_KPAD, byOwner: this.rigFit.byOwner } : null;   // the SDF rig: the fit packed into this frame's proxy list at upload (r0 over the hand radius, r1 in misc's top byte, the cull sphere fitted + the smooth union's bulge at k ≥ 1 — never tighter than the k = 1 sphere: it is also the mesh shadows' broad phase at ultra, and a finger can reach a few cm past the forearm cone) — null = no fit attached: the list as the game wrote it
     this.world.motionIds = this.settings.motionIds !== false;   // motion identity: keyed dynamic boxes hand the g-buffer last frame's index of their key (off = the bare index, the old rule)
     { const mt = Math.max(0.005, Math.min(0.2, this.settings.markingTexel)); if (this.settings.markings && mt !== this.world.markingTexel) this.world.repackMarkings(mt); }   // the base texel moved (the review page's A/B): every list repacked at the new lattice
     // THE PLANNERS' PACE (render/planPace.ts, render/steps.ts): this frame's allowance of planning, between the order the statics are drawn in (made
@@ -752,8 +747,6 @@ export class Engine {
     { const P = this.passes, on = lookConfig.on; P.gradeH = on ? lookConfig.gradeH : 0; P.gradeS = on ? lookConfig.gradeS : 0; P.gradeSat = on ? lookConfig.gradeSat : 1; P.gradeC = 1; this.lookGradeCfg = null;   // (THE LOOK PROTOTYPE's grading rows, post.wgsl agx)
       if (on && lookConfig.gradeC !== 1) { const zen = this.settings.skyZenith, hor = this.settings.skyHorizon, g = lookGrade(lookConfig.sky * lookSkyLum(zen, hor, 0.8), Math.PI * lookConfig.sky * lookSkyLum(zen, hor, 0.947), this.lights.lights, this.settings.exposure * lookConfig.gradeExp, lookConfig.gradeC); P.gradeC = g[0]; P.gradeP = g[1]; this.lookGradeCfg = lookGradeFrame(g, this.settings.exposure * lookConfig.gradeExp); } }
     this.glassLightMasks();   // (glass: which listed panes each light can reach at all → RtLight.glassMask, packed by the upload below; all 0 with the experiment off)
-    const restir = this.settings.restir || this.passes.restirStandsIn;   // (the estimator this frame's direct pass runs: the setting, or ReSTIR standing in while the old estimator — a LATER twin with the row 'Start on first frame shaders' on — is not in yet; the row off = the setting, always)
-    this.lights.dirMasks = restir;   // the moon's / sun's directional reach masks ride only with the ReSTIR estimator (render/reach.ts reachMaskForDirectional; the OFF path's rows stay as they were)
     this.lights.dayExp = lookConfig.lamps > 0 ? hourExp : 1; this.lights.dayAmount = lookConfig.lamps;   // (THE LOOK PROTOTYPE's real light values: render/photometry.ts)
     const numLights = this.lights.upload(time, this.dayLights, this.reach);
     let portal0 = 0; for (const l of this.dayLights) if ((l.slot ?? -1) >= 0 && (!portal0 || l.slot! + 1 < portal0)) portal0 = l.slot! + 1;   // (the list's first portal, + 1: frame.placeCfg.y, common.wgsl skyKeep)
@@ -775,10 +768,7 @@ export class Engine {
     const decalsOn = this.decalsOn;      // FrameFlags.Decals this frame (setting ∧ a list attached ∧ something in it)
     const partOn = this.particlesOn;     // FrameFlags.Particles this frame (setting ∧ a Particles attached): its emits are dealt slots and uploaded now, stepped after the cascades, drawn after the composite
     const rtOn = s.rtReflect;            // RT reflections this frame (frame.rtCfg.w = the divisor, 0 while off) — and Gloss is then held DOWN whatever settings.gloss says (the reflection pass covers the polished floors: rtReflect ⊃ gloss)
-    const giMode = s.giResample === 'full' ? 2 : s.giResample === 'temporal' ? 1 : 0;   // phase 5: the gather's reservoir resampling this frame (frame.p5Cfg.x; passes.setGi — mirrored above, before resize — makes / keeps its reservoir pair)
-    const rtP5Bits = (s.rtMeshHits && meshOn ? 1 : 0) | (s.rtHitReuse ? 2 : 0);   // phase 5: the reflection pass's bits (frame.p5Cfg.z) — any of them up dispatches the reflect_p5.wgsl variant, none = main's reflect.wgsl, the same program as before the phase
-    const rigBits = (s.sdfRigSmooth ? 2 : 0) | (s.charSoftShadow ? 4 : 0) | (s.charSoftShadow && s.charSoftAnalytic ? 8 : 0) | (s.charSoftSmooth ? 16 : 0) | (s.charSoftBroad ? 32 : 0) | (s.charSelfShadow ? 64 : 0) | (s.meshShadowsNear ? 128 : 0);   // the SDF character rig's EXTRAS this frame (frame.rigCfg.x: 2 smooth-union closest hit · 4/8/16/32 the soft character query · 64 character self-shadow · 128 mesh shadows near-only; bit 1 retired — the round cones themselves are unconditional)
-    this.passes.rtP5 = rtP5Bits !== 0 || (rigBits & 2) !== 0;   // (the rig's smooth closest hit rides in the same variant's tracer tail — reflect.wgsl stays main's program)
+    const rigBits = (s.charSelfShadow ? 64 : 0) | (s.meshShadowsNear ? 128 : 0);   // the SDF character rig's EXTRAS this frame (frame.rigCfg.x: 64 character self-shadow · 128 mesh shadows near-only; the bits under 64 are free — the round cones themselves are unconditional)
     this.particles?.prepare(dt, partOn, s.particleBirths);
     // froxel volumetrics (Phase 2b): the grid follows the preset's rows / slices and the window's aspect (a preset hop or a reshape re-makes it and restarts its history; the render scale never
     // touches it); a spell off lets the volumes go after ten seconds. FrameFlags.FroxelVol is up exactly while a grid is dispatched.
@@ -823,21 +813,20 @@ export class Engine {
     const fp: FrameParams = {
       viewProj: taauOn ? this.vpJ : cam.viewProj, invViewProj: taauOn ? this.invVpJ : cam.invViewProj, prevViewProj: taauOn ? this.prevVpJ : cam.prevViewProj,   // (TAAU off: the camera's own three, untouched — the old path bit for bit)
       camPos: cam.pos, camDir: cam.forward, time, dt, width: this.width, height: this.height,
-      frameIdx: this.frameIdx, numLights, flags: (s.flags & ~(FrameFlags.ReachMask | FrameFlags.TileCull | FrameFlags.SoftTileSkip | FrameFlags.CheckerDirect | FrameFlags.GridSkip | FrameFlags.GridYCull | FrameFlags.AxisBox | FrameFlags.GridSlabs | FrameFlags.Gloss | FrameFlags.MeshShadows | FrameFlags.Decals | FrameFlags.Particles | FrameFlags.Glass | FrameFlags.BounceCards | FrameFlags.DirectSeedHold | FrameFlags.GiAdaptiveHist | FrameFlags.FroxelVol | FrameFlags.Restir))
-        | (s.nvAmount > 0.001 ? FrameFlags.NightVision : 0) | (s.lightReach ? FrameFlags.ReachMask : 0) | (s.tileCull ? FrameFlags.TileCull : 0) | (s.softTileSkip ? FrameFlags.SoftTileSkip : 0) | (s.checkerDirect ? FrameFlags.CheckerDirect : 0)
-        | (s.gridSkip ? FrameFlags.GridSkip : 0) | (s.gridYCull ? FrameFlags.GridYCull : 0) | (s.axisBoxFast ? FrameFlags.AxisBox : 0) | (s.gridSlabs ? FrameFlags.GridSlabs : 0) | (s.gloss && !rtOn ? FrameFlags.Gloss : 0) | (meshOn ? FrameFlags.MeshShadows : 0)
-        | (decalsOn ? FrameFlags.Decals : 0) | (partOn ? FrameFlags.Particles : 0) | (s.glass ? FrameFlags.Glass : 0) | (cardSlots.length > 0 ? FrameFlags.BounceCards : 0) | (s.directSeedHold ? FrameFlags.DirectSeedHold : 0) | (s.giAdaptiveHistory ? FrameFlags.GiAdaptiveHist : 0)
-        | (froxOn ? FrameFlags.FroxelVol : 0) | (restir ? FrameFlags.Restir : 0) | (lookRoom ? FrameFlags.RcRoom : 0),
+      frameIdx: this.frameIdx, numLights, flags: (s.flags & ~(FrameFlags.ReachMask | FrameFlags.Gloss | FrameFlags.MeshShadows | FrameFlags.Decals | FrameFlags.Particles | FrameFlags.Glass | FrameFlags.BounceCards | FrameFlags.FroxelVol))
+        | (s.nvAmount > 0.001 ? FrameFlags.NightVision : 0) | (s.lightReach ? FrameFlags.ReachMask : 0)
+        | (s.gloss && !rtOn ? FrameFlags.Gloss : 0) | (meshOn ? FrameFlags.MeshShadows : 0)
+        | (decalsOn ? FrameFlags.Decals : 0) | (partOn ? FrameFlags.Particles : 0) | (s.glass ? FrameFlags.Glass : 0) | (cardSlots.length > 0 ? FrameFlags.BounceCards : 0)
+        | (froxOn ? FrameFlags.FroxelVol : 0) | (lookRoom ? FrameFlags.RcRoom : 0),
       shadeCfg: this.lookShadeCfg = shadeCfg, eyeCfg: this.lookEyeCfg = ((lookConfig.on ? lookExpoFrame(shadeCfg, lookConfig.shade, lookConfig.eyes, lookConfig.glare, hourExp) : null) ?? undefined),   // (the one exposure model, render/lookexpo.ts: w under 0 is composite.wgsl lookShadeGain's word; null = no shade row: no pixel takes a gain by its place)
       veilA: veil?.[0], veilB: veil?.[1], gradeCfg: lookConfig.on ? [this.lookGradeCfg?.[0] ?? 0, this.lookGradeCfg?.[1] ?? 0, 0, 0] : undefined,   // (z and w: spare. z was the read of the cache on this side of a wall, gone with the guess it served, composite.wgsl lookPlaceLevels; w the Room contrast row's)
-      exposure: lookConfig.on ? s.exposure * lookConfig.gradeExp : s.exposure,   // (THE LOOK PROTOTYPE's Exposure row: × the hour's own)   // tileCull / softTileSkip / gridSkip / gridYCull / axisBoxFast / gridSlabs / gloss / meshShadows / decals / gpuParticles / glass / torchBounceCards / directSeedHold / giAdaptiveHistory: the boolean settings are the single source of truth for their bits (frame.ts FrameFlags is the one table; the cards bit only while a card light is actually up, the decals bit only while a mark exists)
+      exposure: lookConfig.on ? s.exposure * lookConfig.gradeExp : s.exposure,   // (THE LOOK PROTOTYPE's Exposure row: × the hour's own)   // gloss / meshShadows / decals / gpuParticles / glass / torchBounceCards: the boolean settings are the single source of truth for their bits (frame.ts FrameFlags is the one table; the cards bit only while a card light is actually up, the decals bit only while a mark exists)
       skyZenith: lookConfig.on && lookConfig.sky !== 1 ? [s.skyZenith[0] * lookConfig.sky, s.skyZenith[1] * lookConfig.sky, s.skyZenith[2] * lookConfig.sky] : s.skyZenith, skyHorizon: lookConfig.on && lookConfig.sky !== 1 ? [s.skyHorizon[0] * lookConfig.sky, s.skyHorizon[1] * lookConfig.sky, s.skyHorizon[2] * lookConfig.sky] : s.skyHorizon, hazeDensity: lookConfig.on ? s.hazeDensity * lookConfig.air : s.hazeDensity,
       rcInterval0: this.rc.cfg.interval0, rcC0Dims: [this.rc.cfg.nx, this.rc.cfg.ny, this.rc.cfg.nz], rcNumCascades: this.rc.cfg.cascades, rcD0: this.rc.cfg.d0, rcFrameParity: this.frameIdx & 1,
       numSmoke: this.smoke.count, debugView: s.debugView, indirectScale: s.indirectScale, emissiveScale: s.emissiveScale * emissiveDayK(this.lights.dayExp, this.lights.dayAmount), volSteps: s.volSteps,
       capColor: s.capColor, post: [s.nvAmount, s.nvGain, s.hitFlash, Math.tan(cam.fov / 2)],
-      directCfg: [s.directSamplesTop, s.directSamplesOther, s.directBlurCap, s.directHistory * this.passes.directHistoryScale],   // (× ½ / ¾ on the two frames after the direct histories were resampled across a size change — passes.ts directCarryAge; 1 otherwise)
+      directCfg: [0, 0, s.directBlurCap, 0],   // (.z the penumbra filter's cap; the rest free)
       rcJitter: (s.flags & FrameFlags.Temporal) ? [0.1 + 0.8 * ((jk * 0.7548776662466927) % 1), 0.1 + 0.8 * ((jk * 0.5698402909980532) % 1)] : [0.5, 0.5],   // (jk: the frame's own point, or under the steady bounce's ring one of its few)
-      directAdaptiveMin: s.directAdaptiveMin,
       numTransient: numTransientNow,
       smokeDraw: this.smokeDrawWords(), powderDraw: lookConfig.on ? powderDrawWord() : 0,
       sides: lookSides || placeOn ? this.wallSides.words : null, sideCols: lookSides && this.wallSides.fits ? this.wallSides.cols : null,   // (THE LOOK PROTOTYPE's Walls have two sides row: lighting_common.wgsl diceTaps, diceFacePointBy)
@@ -845,7 +834,7 @@ export class Engine {
       lampCfg: lampK < 1 ? [lampK, lampK / emissiveDayK(this.lights.dayExp, this.lights.dayAmount), lookConfig.steady > 0 ? 1 : 0, Math.max(lookConfig.roomBright, 0.001)] : undefined,   // (.z: the Steady bounce row is up, lighting_common.wgsl dayBoundK · .w: the Room brightness row, composite.wgsl lookExpoGain)   // (common.wgsl lampFloorK, boxEmissiveRay)
       secMinE: s.secMinE * lampK,   // (by day a fixture is drawn at the hour's exposure × its night strength, render/photometry.ts, so the night's threshold is held at the same share of it: every lamp the night's cache carries, the day's does too)
       //   // R2 sequence over the octahedral texel: cascade direction aliasing becomes noise for the indirect temporal filter
-      lossyCfg: [this.passes.gatherDiv, this.passes.volDiv, s.dimRays ? Math.max(0, s.dimRaysBelow) * lampK : 0, Math.max(0, s.giFireflyK)],   // .w: the gather's relative firefly bound (0 = off)
+      lossyCfg: [this.passes.gatherDiv, this.passes.volDiv, 0, Math.max(0, s.giFireflyK)],   // .w: the gather's relative firefly bound (0 = off)
       cardSlots,
       weather: this.weather,   // rain / splashes / sky flash: drawn by the volumetric pass under FLAG_VOLUMETRICS (beams off = no weather on screen; the game side carries on)
       glassCfg: [Math.max(0, s.glassReflect), Math.max(0, s.glassTintDepth), Math.max(0, s.glassDust), s.glassRefract && s.glass ? Math.max(1, Math.min(3, s.glassIor || 1.5)) : 0],   // .w: refraction — the index of refraction while on (≥ 1), 0 = off (composite.wgsl glassRefractPath)
@@ -859,29 +848,22 @@ export class Engine {
       rtCfg: [Math.max(0, Math.min(1, s.rtMaxRough)), Math.max(0, Math.min(4, Math.round(s.rtRays))), Math.max(0, Math.min(1, s.rtAniso)) + 2 * Math.round(10 * Math.max(0, Math.min(1, s.wetBreakup ?? 0))), rtOn ? this.passes.rtDiv : 0],   // .z = the anisotropy 0‥1 + 2 × the wet ground's break-up in tenths (0 = .z is the anisotropy alone, as it always was)
         // .w = 0: the reflection pass is off this frame (nothing reads the rest then)
       matCfg: [Math.max(0, s.rtGlints), Math.max(0, s.rtStrength), 60, Math.max(0, Math.min(1, s.detail))],   // .w = the g-buffer's detail-layer amount (0 = fsBox as it was)
-      // phase 5 (ultra extras): the gather's resampling mode + its packed numbers, the reflection pass's mesh / hit-reuse bits — every field 0 = the passes as they were. The mesh bit rides only while
-      // the mesh-shadow trees are actually skinned this frame (meshOn): with meshShadows off / unavailable the reflections keep the capsules, as asked
-      p5Cfg: [giMode | (giMode && s.giResampleRevalidate ? 16 : 0), (Math.max(1, Math.min(4, Math.round(s.giResampleRays))) & 15) | ((Math.max(2, Math.min(64, Math.round(s.giResampleCap))) & 255) << 8) | ((Math.max(1, Math.min(8, Math.round(s.giResampleTaps))) & 15) << 16) | ((Math.max(2, Math.min(32, Math.round(s.giResampleRadius))) & 255) << 24),
-        rtP5Bits, firstTransientNow],
+      p5Cfg: [0, 0, 0, firstTransientNow],   // (.x‥.z free: the resampling gather's and the reflection twin's bits until 2026-11-07; .w = the first transient light's slot)
       jitter: [this.jitter[0], this.jitter[1], this.prevJitter[0], this.prevJitter[1]],
       markCfg: [s.markings ? this.world.markingTexel : 0, Math.max(0, Math.min(1, s.markingContrast)), Math.max(0, s.markingEmissive), s.markingReflect ? (s.markingReflPattern === false ? -1 : 1) * (1 + Math.max(0, Math.min(4, s.markingReflCone))) : 0],   // markings: .x 0 = off everywhere; .w 0 = not at reflection hits, else ±(1 + the traced-hit cone's lobe share) — negative = the analytic highlight left uniform (markings.wgsl markConeK / reflect.wgsl)
       sharpCfg: this.sharpOn ? [this.width, this.height, this.outWidth, this.outHeight] : [0, 0, 0, 0],   // sharp direct: the two sizes every twin kernel maps between (z 0 = off: every pass as it was)
-      sharpCfgB: [s.sharpEdgeRays ? 1 : 0, Math.max(0.05, s.sharpEdgeSpread), Math.max(0, s.sharpEdgeHintPx), Math.max(1e-4, s.sharpPlaneK)],   // its knobs (edge rays, edge spread, hard-hint width, plane k)
+      sharpCfgB: [0, 0, 0, Math.max(1e-4, s.sharpPlaneK)],   // its knob (w = the same-plane k; xyz free)
       sharpCfgC: [decouple ? this.jitter[0] : 0, decouple ? this.jitter[1] : 0,   // DECOUPLED JITTER: what every internal ↔ output texel map adds under it (0 = one raster jitter, the sharp path as it was)
         (Math.max(0, Math.min(3, Math.round(s.sharpSliver))) & 3) | ((Math.max(0, Math.min(3, Math.round(s.sharpDiag))) & 3) << 4) | ((Math.max(0, Math.min(64, Math.round(s.sharpSliverCap))) & 127) << 8) | (s.dnShadowOccl ? 1 << 15 : 0),   // .z = the SLIVER rule | diag paint << 4 | per-tile ray cap << 8 (sharp_direct.wgsl; 0 = the fallback as it was) — an exact small integer
         s.gbaaClamp ? 1 : 0],   // .w = GBAA's same-surface clamp (gbaa.wgsl; 0 = the blend as it was)
-      rigCfg: [rigBits, Math.max(4, Math.min(64, Math.round(s.charSoftSteps ?? 20))), Math.max(0.05, s.charSoftK ?? 1), Math.tan(Math.max(0.02, Math.min(5, s.charSoftMinDeg ?? 0.35)) * Math.PI / 180)],   // the SDF character rig: the extras' bits (0 = the plain round-cone loops) + the soft query's numbers
-      rigCfgB: [Math.max(0, Math.min(3, s.sdfRigK ?? 1)), Math.max(4, Math.min(64, Math.round(s.sdfRigSteps ?? 24))), 0.0015, 0.012],   // × the joint blend radii, closest-hit steps, its epsilon, the soft march's smallest step,
-      // GI in motion: the young-history ray multiplier (0 = off — the gather as it was: giYoungRays ≤ 1, the legacy denoiser (no history length to read), phase 5's resampling gather (its reservoirs
-      // carry their own confidence), or a cut this frame / the two after), the texel cap (fraction × the gather grid), the 'young' length
-      giCfg: (() => { const k = Math.max(1, Math.min(4, Math.round(s.giYoungRays))); const on = k > 1 && s.denoiser !== 'legacy' && giMode === 0 && this.giCutHold === 0 && (s.flags & FrameFlags.Temporal) !== 0 && s.dnGiCap >= 1; return on ? [k, Math.ceil(Math.max(0, Math.min(1, s.giYoungCap)) * this.passes.gw * this.passes.gh), Math.max(1, Math.min(s.giYoungLen, s.dnGiCap)), 0] : [0, 0, 0, 0]; })() as [number, number, number, number],   // (dnGiCap < 1 = the diffuse client keeps no history: every texel would read young every frame; and 'young' can never be more than the cap the stored length saturates at)
+      rigCfg: [rigBits, 0, 0, 0], rigCfgB: [0, 0, 0, 0],   // (.x the rig's two bits; the rest free: the soft shadow and smooth union trials' numbers until 2026-11-07)
     };
     this.froxelPrevNear = froxNear;
     this.passes.smokeSlots = fp.numSmoke;   // (what the shaders are told: 0 = no smoke march anywhere this frame, so the smoke diffusion's blur chain has no reader — passes.ts)
     writeFrame(this.frameData, fp);
     // (the look prototype's two tables are 30 KB of the block and change when a door comes to rest: they are sent when they have changed, the head every frame)
     this.device.queue.writeBuffer(this.frameBuf, 0, this.frameData, 0, sidesStamp >= 0 && sidesStamp !== this.sidesSent ? FRAME_BYTES : FRAME_HEAD_BYTES); if (sidesStamp >= 0) this.sidesSent = sidesStamp;
-    this.passes.edgeRays = !!s.sharpEdgeRays; this.passes.sliverRays = Math.round(s.sharpSliver) >= 1 && Math.round(s.sharpSliverCap) > 0;   // (either ray user picks the sharp kernel's traced variant)
+    this.passes.sliverRays = Math.round(s.sharpSliver) >= 1 && Math.round(s.sharpSliverCap) > 0;   // (the sliver rule picks the sharp kernel's traced variant)
     if (this.sharpOn) { writeFrameOut(this.frameDataOut, this.frameData, this.outWidth, this.outHeight, decouple ? { viewProj: cam.viewProj, invViewProj: cam.invViewProj, prevViewProj: this.prevVpU } : undefined); this.device.queue.writeBuffer(this.frameBufOut, 0, this.frameDataOut, 0, sidesStamp >= 0 && sidesStamp !== this.sidesSentOut ? FRAME_BYTES : FRAME_HEAD_BYTES); if (sidesStamp >= 0) this.sidesSentOut = sidesStamp; this.ensureSceneBGOut(); this.passes.sceneBGOut = this.sceneBGOut; }   // the OUTPUT frame block + its scene group for the output-size passes (decoupled: with the camera's own unjittered matrices — its raster stands still)
     else this.passes.sceneBGOut = null;
     const jitterRes: [number, number] = decouple ? [0, 0] : this.sharpOn ? [this.jitter[0] * this.outWidth / this.width, this.jitter[1] * this.outHeight / this.height] : this.jitter;   // the resolve reads the jitter in the pixels of the picture it resolves (the output's under sharp direct; none when the output raster is decoupled from the internal jitter)
@@ -924,23 +906,18 @@ export class Engine {
       }
       canvasView = this.offscreenTarget.createView();
     }
-    this.passes.directPasses = s.directPasses; this.passes.directHistory = s.directHistory; this.passes.debugView = s.debugView;
-    this.passes.volK0 = COMPACT.on && Math.round(s.volLightCap || 0) <= 0;   // (COMPACT SHADERS, render/kernels.ts: the compact volumetrics.wgsl keeps the K = 0 smoke march in its own twin, passes.ts volK0Pipe; today's kernel carries it itself)
-    this.passes.gatherStrata = !!s.gatherStrata;   // (stratified gather directions: which gather pipeline pair the encode takes this frame)
-    this.passes.glassRefract = !!(s.glassRefract && s.glass && this.world.glassList.length > 0);   // (glass refraction: composite's GLASS_REFRACT twin — only while there is a pane list to bend through; glass off / no panes = the module as it was)
-    { const P = this.passes; P.restirOn = restir; P.restirRays = s.restirRays; P.restirSpatial = s.restirSpatial; P.restirHistory = s.restirHistory; P.restirRadius = s.restirRadius; P.restirGradient = s.restirGradient; P.restirGradK = s.restirGradK; P.restirYoung = s.restirYoung; P.restirSpatialAll = s.restirSpatialAll; P.restirCoherent = s.restirCoherent; P.restirSampleHue = s.restirSampleHue; P.restirRatioRaw = s.restirRatioRaw; P.restirPermute = s.restirPermute; P.restirPenCap = s.restirPenCap; P.restirPenRays = s.restirPenRays; P.restirAudit = s.restirAudit; P.heldRays = s.heldRays; P.heldAdaptive = !!s.heldAdaptive; P.restirStableRetrace = !!s.restirStableRetrace; P.restirDimClass = s.restirDimClass || 0; P.restirHueSplit = s.restirHueSplit; P.restirKnownDark = s.restirKnownDark; P.restirJitter = this.jitter;
-      P.restirMotion = s.restirMotion; P.restirMotionLive = s.restirMotion > 0 && (this.camMovedAny || s.restirMotionStatic) && P.restirMReady; P.restirMotionV = s.restirMotionV; P.restirMotionMin = s.restirMotionMin; P.restirMotionPx = s.restirMotionPx; P.restirMotionDither = s.restirMotionDither; P.restirMotionTaps = s.restirMotionTaps;   // (MOTION: 0 = main's pipeline; passes.encode picks the RESTIR_MOTION twin otherwise)
-      if (restir) P.writeRestir(this.lights); }   // ReSTIR DI: the settings are the source of truth; the uniform (cfg + last frame's slot maps and light records, kept by lights.upload above) goes up every frame the pass runs
-    { // the denoiser: which core, and the v3 clients' knobs (the settings are the source of truth, mirrored like every other pass option)
-      this.passes.dnMode = s.denoiser === 'legacy' ? 'legacy' : 'v3';
+    this.passes.debugView = s.debugView;
+    this.passes.volK0 = Math.round(s.volLightCap || 0) <= 0;   // (volumetrics.wgsl keeps the K = 0 smoke march, which no preset runs, in a twin of its own: passes.ts volK0Pipe)
+    { const P = this.passes; P.restirRays = s.restirRays; P.restirSpatial = s.restirSpatial; P.restirHistory = s.restirHistory; P.restirRadius = s.restirRadius; P.restirGradient = s.restirGradient; P.restirGradK = s.restirGradK; P.restirYoung = s.restirYoung; P.restirSpatialAll = s.restirSpatialAll; P.restirPenCap = s.restirPenCap; P.restirPenRays = s.restirPenRays; P.restirAudit = s.restirAudit; P.heldRays = s.heldRays; P.heldAdaptive = !!s.heldAdaptive; P.restirStableRetrace = !!s.restirStableRetrace; P.restirDimClass = s.restirDimClass || 0; P.restirHueSplit = s.restirHueSplit; P.restirKnownDark = s.restirKnownDark; P.restirJitter = this.jitter;
+      P.restirMotion = s.restirMotion; P.restirMotionLive = s.restirMotion > 0 && (this.camMovedAny || s.restirMotionStatic); P.restirMotionV = s.restirMotionV; P.restirMotionMin = s.restirMotionMin; P.restirMotionPx = s.restirMotionPx; P.restirMotionTaps = s.restirMotionTaps;   // (MOTION: 0 = main's pipeline; passes.encode picks the RESTIR_MOTION twin otherwise)
+      P.writeRestir(this.lights); }   // ReSTIR DI: the settings are the source of truth; the uniform (cfg + last frame's slot maps and light records, kept by lights.upload above) goes up every frame the pass runs
+    { // the denoiser's clients' knobs (the settings are the source of truth, mirrored like every other pass option)
       const K = this.passes.den.knobs;
-      K.shIters = s.dnShadowIters; K.shCap = s.directHistory > 0 ? s.dnShadowCap : 0; K.shClampK = s.dnShadowClampK; K.shSigmaL = s.dnShadowSigmaL; K.shPrior = s.dnShadowPrior; K.shLitAlike = s.dnShadowLitAlike; K.shOccl = s.dnShadowOccl; K.shMoveCap = s.dnShadowMoveCap; K.shMoveThresh = s.dnShadowMoveThresh; K.shJump = s.dnShadowJump;
+      K.shIters = s.dnShadowIters; K.shCap = s.directHistory ? s.dnShadowCap : 0; K.shClampK = s.dnShadowClampK; K.shSigmaL = s.dnShadowSigmaL; K.shPrior = s.dnShadowPrior; K.shLitAlike = s.dnShadowLitAlike; K.shOccl = s.dnShadowOccl; K.shMoveCap = s.dnShadowMoveCap; K.shMoveThresh = s.dnShadowMoveThresh; K.shJump = s.dnShadowJump;
       K.giIters = s.dnGiIters; K.giCap = s.dnGiCap; K.giClampK = s.dnGiClampK; K.giSigmaL = s.dnGiSigmaL; K.giFast = s.dnGiFast; K.giFirefly = s.dnGiFirefly; K.giClampCut = s.dnGiClampCut; K.giYoungWiden = s.dnGiYoungWiden;
       K.spIters = s.dnSpecIters; K.spCap = s.dnSpecCap; K.spClampK = s.dnSpecClampK; K.spSigmaL = s.dnSpecSigmaL; K.spRough = s.dnSpecRough; K.spMaxRough = s.rtMaxRough; K.rfIters = s.rtAtrous; K.rfCap = s.rtHistory;   // (+ the reflection chain's per-pixel cutoff, its own iteration count and history cap)
       K.depthK = s.dnDepthK; K.normalPow = s.dnNormalPow; K.motionVectors = s.dnMotionVectors;   // (the g-buffer writes gVel on both the TAAU and the FXAA path: prev − now through frame.prevViewProj, jittered or not — consistent with the reprojection either way)
-      K.ratioHi = (fp.flags & (FrameFlags.TailChroma | FrameFlags.Restir)) ? 4 : 1;   // the ratio clamp's upper bound: shadowed ≤ unshadowed per channel, except the chroma-exact tail's single samples and the ReSTIR estimator's per-light hues (one warm light under a mixed U tops U's red channel legitimately)
-      if (this.passes.dnMode === 'v3' || rtOn) this.passes.den.writeParams({ gatherDiv: this.passes.gatherDiv, reflDiv: rtOn ? this.passes.rtDiv : 0, temporalFlag: (fp.flags & FrameFlags.Temporal) !== 0, shadowTemporal: s.directHistory > 0, historyScale: this.passes.directHistoryScale < 1 ? 0.5 : 1, cueUv: s.restir && (fp.flags & FrameFlags.Restir) !== 0, fullRes: this.passes.giFullOn });   // (the reflection chain is the v3 specular client under either core; + the internal-res diffuse chain's block while that path is wanted)
-      this.passes.youngOn = (fp.giCfg?.[0] ?? 0) > 1;   // (GI in motion: the gather's young-texel counter is zeroed each frame the multiplier is up)
+      this.passes.den.writeParams({ gatherDiv: this.passes.gatherDiv, reflDiv: rtOn ? this.passes.rtDiv : 0, temporalFlag: (fp.flags & FrameFlags.Temporal) !== 0, shadowTemporal: !!s.directHistory, historyScale: this.passes.directHistoryScale < 1 ? 0.5 : 1, cueUv: true });
     }
     // the particles' splat goes INTO the HDR target between the composite and the bloom (so hot sparks bloom and nothing has a history to smear); debug views keep the screen theirs.
     // Not timestamped: render-pass timings on Metal read as a frame (see CLAUDE.md) and would poison the HUD total and auto quality's calibration — particles.timeDraw opts in for a look

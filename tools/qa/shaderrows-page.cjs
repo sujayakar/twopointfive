@@ -1,21 +1,20 @@
-// THE SHADER ROWS ON THE REAL PAGE (src/ui/shaderrows.ts: Options > Graphics > Shaders — "Compact shaders", render/kernels.ts, and "Start on first frame shaders",
-// gpu/device.ts PIPE_QUEUE.later): headless Chromium on the software WebGPU adapter, the page's own boot. What each row switches is held headless by
-// tools/qa/shaderrows-check.ts on both stands; this is that the page itself boots with them, that the compact texts COMPILE there, and that the rows are on the screen.
+// THE SHADER ROW ON THE REAL PAGE (src/ui/shaderrows.ts: Options > Graphics > Shaders — "Start on first frame shaders", gpu/device.ts PIPE_QUEUE.later): headless
+// Chromium on the software WebGPU adapter, the page's own boot. What the row switches is held headless by tools/qa/shaderrows-check.ts; this is that the page itself
+// boots with it, and that the row is on the screen. (Compact shaders and Separate shadow rays were rows here until 2026-11-07: the page has their one writing now, and
+// their old words on an address do nothing.)
 //   PORT=5262 bun run tools/serve.ts &      then      node tools/qa/shaderrows-page.cjs [starts] [kept] [first]        (no word = all three)
-//   starts WHERE THE ROWS START since 2026-10-27: a PERSON'S browser (this tool's Chromium says a script drives it, and the first-frame row starts off there:
-//          the `starts`, `plain` and `kept` pages are opened with navigator.webdriver put to false) that has kept nothing opens the page with no word (medium: a tier that marches the froxels).
+//   starts WHERE THE ROW STARTS: a PERSON'S browser (this tool's Chromium says a script drives it, and the row starts off there: the `starts`, `plain` and `kept`
+//          pages are opened with navigator.webdriver put to false) that has kept nothing opens the page with no word (medium: a tier that marches the froxels).
 //          From the moment the start card is live (`__started`; a script's `__ready` waits for the later set too): the later set out or already in, frames drawn
 //          meanwhile with sharp direct standing in and the froxel flag held down, every later pipeline arrives, frames after it with the froxel flag up. Then the
-//          load is read: built with Compact shaders, Start on first frame shaders and Separate shadow rays (the split gather's layout is there, no megakernel
-//          gather is made), nothing failed, nothing kept, Options shows the three Enabled. Then the three words at 0 on the address: a load as it was (today's
-//          gather, no split, the start waited for every pipeline), Options shows the three Disabled (that its row says the address is setting it is
-//          shaderrows-check's `plain`: the page paints a row's words only while the row is picked). Then `driven`: the page as every page tool opens it, built
-//          without the first-frame row, every pipeline in when the start card is live, Options showing that row Disabled.
+//          load is read: built with the row, the gather's two programs there, nothing failed, nothing kept, Options shows the row Enabled. Then `plain`, the row's
+//          word at 0 on the address beside the two retired words: the start waited for every pipeline, Options shows the row Disabled. Then `driven`: the page as
+//          every page tool opens it, built without the row, every pipeline in when the start card is live, Options showing the row Disabled.
 //   kept   a browser that has kept nothing opens the page with no word and, WHILE THE RENDERER IS STILL COMPILING, opens Options > Graphics: the section Shaders is
-//          there with the three rows that start on Enabled; the first-frame row is turned off and kept off on this machine. The page is then loaded again with no
-//          word: it is built without the row (its start waited for every pipeline), nothing failed and nothing on the console; Options shows the row Disabled,
-//          Reset to defaults puts each back where it starts and takes the kept line away.
-//   first  ?firstframe=1 alone at high (today's kernels: the two other rows that start on are put off on its address), from `__started`: the later set out or in, frames meanwhile, every later pipeline arrives, frames after, no error.
+//          there with the row Enabled; it is turned off and kept off on this machine. The page is then loaded again with no word: it is built without the row (its
+//          start waited for every pipeline), nothing failed and nothing on the console; Options shows the row Disabled, Reset to defaults puts it back where it
+//          starts and takes the kept line away.
+//   first  ?firstframe=1 at high, from `__started`: the later set out or in, frames meanwhile, every later pipeline arrives, frames after, no error.
 //   exit 0 = all of it with no page or console error · 1 = otherwise.
 // THE COMPILE QUEUE (gpu/device.ts) is put OFF for these walks (`pipequeue=0` on every address): that is the page a Mac and every page tool get, each creation straight to the
 // browser, so the later set is not held back by anything and is only not WAITED for. QUEUE=1 in front leaves the queue on (the page a Windows browser gets: the later set then
@@ -28,7 +27,7 @@ const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftsha
 const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage textures \(5\) in the Compute stage/, NOISE_MAX = 80;
 const BANNER = /WebGPU is experimental|SwiftShader|powerPreference|fallback adapter|Failed to load resource/i;
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
-const LS = 'twopointsix.shaderrows', FROXEL_VOL = 536870912, ON3 = ['Compact shaders', 'Start on first frame shaders', 'Separate shadow rays'];
+const LS = 'twopointsix.shaderrows', FROXEL_VOL = 536870912, ON = ['Start on first frame shaders'];
 // in the page: the start card is live (main.ts `__started`): what a player has. `__ready` is later now: it waits for the later set of shaders too
 /** the start card is live (true), or the boot died (its card's words): a dead boot is not polled for forty minutes */
 const STARTED = () => { if (window.__started === true) return true; const f = document.getElementById('fatal'); return f && f.style.display === 'flex' ? `the boot died: ${String(f.textContent).trim().slice(0, 240)}` : false; };
@@ -63,7 +62,7 @@ const DRAW = async (n) => { const dev = window.__engine.device; const yieldMacro
   const laterWalk = async (page, errs, name, o) => {
     const at = await page.evaluate(STATE); log(`${name}: ready`, JSON.stringify(at));
     line(!at.fatal && at.pipes.failed === 0 && at.gpuInit === 0, `${name}: the page comes ready with no pipeline failed and no GPU error in its boot`, `${at.pipes.done} of ${at.pipes.total} pipelines, ${at.pipes.failed} failed, ${at.gpuInit} GPU errors${at.fatal ? ', fatal: ' + at.fatal : ''}`);
-    const outAtReady = at.frag === false && at.frox === false && (!o.compact || at.volF === false);
+    const outAtReady = at.frag === false && at.frox === false && at.volF === false;
     // (with the queue off nothing holds the later set back: this adapter compiles in the order it is asked and has had it in before the start resolved, every time so far —
     //  the start then shows only that it COUNTED and waited for fewer pipelines. With the queue on the set must still be out)
     if (QUEUE_ON || outAtReady) line(outAtReady, `${name}: it is ready with the later set still out`, `fragment composite ${at.frag}, froxel kernels ${at.frox}, volumetric twin ${at.volF}, ${at.queue} in the queue`);
@@ -87,46 +86,46 @@ const DRAW = async (n) => { const dev = window.__engine.device; const yieldMacro
     let opened = 'never looked';
     for (let i = 0; i < 600; i++) { opened = await page.evaluate(OPEN).catch(e => String(e).slice(0, 80)); if (!opened) break; await new Promise(r => setTimeout(r, 500)); }
     const early = opened ? null : await page.evaluate(ROWS, LS);
-    line(!!early && early.waiting && early.secs.includes('Shaders') && ON3.every(l => early.rows[l] === 'Enabled') && early.kept === null,
-      'kept: while the renderer is still compiling, Options > Graphics has the section Shaders with the three rows that start on Enabled and nothing kept', early ? JSON.stringify(early) : opened);
+    line(!!early && early.waiting && early.secs.includes('Shaders') && ON.every(l => early.rows[l] === 'Enabled') && early.kept === null,
+      'kept: while the renderer is still compiling, Options > Graphics has the section Shaders with the row Enabled and nothing kept', early ? JSON.stringify(early) : opened);
     if (early) {
       const f = await page.evaluate(FLIP, 'Start on first frame shaders'); const off = await page.evaluate(ROWS, LS);
-      line(!f && off.rows['Compact shaders'] === 'Enabled' && off.rows['Start on first frame shaders'] === 'Disabled' && off.kept === '{"firstFrame":false}', 'kept: the first-frame row turned off reads Disabled and is kept off on this machine; a row left where it starts is not written', f || JSON.stringify(off));
+      line(!f && off.rows['Start on first frame shaders'] === 'Disabled' && off.kept === '{"firstFrame":false}', 'kept: the row turned off reads Disabled and is kept off on this machine', f || JSON.stringify(off));
     }
     // (the first load is left while it is still booting: a fetch it had in flight dies with it and says so on the console. That is the leaving page's noise, not
     //  the next load's, so the page is emptied first and what was heard until then is dropped)
     await page.goto('about:blank'); errs.length = 0;
     await page.goto(url); await page.evaluate(async () => { await window.__ready; });
     await page.evaluate(DRAW, 2); const at = await page.evaluate(STATE), rows = await page.evaluate(() => window.__bench.deps.rows()); log('kept: ready', JSON.stringify(at), rows.join());
-    line(rows.join() === 'compactshaders,splitrays' && !at.fatal && at.pipes.failed === 0 && at.gpuInit === 0 && at.frag && at.frox && at.volF && errs.length === 0,
+    line(rows.join() === '' && !at.fatal && at.pipes.failed === 0 && at.gpuInit === 0 && at.frag && at.frox && at.volF && errs.length === 0,
       'kept: the next load is built without the row (its start waited for every pipeline: the fragment composite, the froxel kernels and the volumetric twin are in), with nothing failed and nothing on the console',
       `rows ${rows.join() || 'none'} · ${at.pipes.done} of ${at.pipes.total} pipelines, ${at.pipes.failed} failed · ${errs.slice(0, 3).join(' | ')}`);
     await page.evaluate(() => { window.__menu.open('pause'); });
     const o2 = await page.evaluate(OPEN), shown = o2 ? null : await page.evaluate(ROWS, LS);
-    line(!!shown && !shown.waiting && shown.secs.includes('Shaders') && shown.rows['Compact shaders'] === 'Enabled' && shown.rows['Start on first frame shaders'] === 'Disabled', 'kept: with the renderer up, Options > Graphics shows the row still Disabled', shown ? JSON.stringify(shown) : o2);
+    line(!!shown && !shown.waiting && shown.secs.includes('Shaders') && shown.rows['Start on first frame shaders'] === 'Disabled', 'kept: with the renderer up, Options > Graphics shows the row still Disabled', shown ? JSON.stringify(shown) : o2);
     const r = await page.evaluate(RESET), after = await page.evaluate(ROWS, LS);
-    line(!r && ON3.every(l => after.rows[l] === 'Enabled') && after.kept === null, 'kept: Reset to defaults puts each back where it starts and takes the kept line away', r || JSON.stringify(after));
+    line(!r && ON.every(l => after.rows[l] === 'Enabled') && after.kept === null, 'kept: Reset to defaults puts it back where it starts and takes the kept line away', r || JSON.stringify(after));
     await ctx.close();
   }
-  if (WALKS.includes('starts')) {   // where the rows start: three of them are a browser's with nothing kept and no word
+  if (WALKS.includes('starts')) {   // where the row starts: on, in a person's browser with nothing kept and no word
     const BUILT = () => { const P = window.__engine.passes, B = window.__boot, labels = (window.__shaderCount?.pipes ?? []).map(p => p.label);
-      return { rows: window.__bench.deps.rows(), split: !!P.lFGX, splitPipes: !!(P.pFGXs || P.pFGX), mega: !!(P.pFG || P.pFGs || P.pFGR || P.pFGRs), volF: P.volFReady, labels: labels.filter(l => /gather/i.test(l)), pipes: B.pipelines, kept: localStorage.getItem('twopointsix.shaderrows'), fatal: (document.querySelector('#fatal') || {}).textContent || '' }; };
+      return { rows: window.__bench.deps.rows(), split: !!P.lFGX, splitPipes: !!P.pFGX, mega: !!(P.pFG || P.pFGs || P.pFGR || P.pFGRs), volF: P.volFReady, labels: labels.filter(l => /gather/i.test(l)), pipes: B.pipelines, kept: localStorage.getItem('twopointsix.shaderrows'), fatal: (document.querySelector('#fatal') || {}).textContent || '' }; };
     for (const [name, words, want] of [['starts', '', true], ['plain', '&compactshaders=0&splitrays=0&firstframe=0', false]]) {
       const { ctx, page, errs } = await fresh(true);
       const url = `http://localhost:${PORT}/?paused&quality=medium&mute&gpuretry=0${words}${QUEUE}`; log(url);
       await page.goto(url);
       // (the default load starts on the first frame's shaders: looked at from the moment a player has it, the later set perhaps still out; then until all of it is in)
-      if (want) { await started(page); await laterWalk(page, errs, name, { compact: true, froxel: true }); }
+      if (want) { await started(page); await laterWalk(page, errs, name, { froxel: true }); }
       await page.evaluate(async () => { await window.__ready; });
       await page.evaluate(DRAW, 2); const at = await page.evaluate(BUILT), marks = await page.evaluate(() => window.__boot.marks); log(`${name}: ready`, JSON.stringify(at));
       line(!at.fatal && at.pipes.failed === 0 && errs.length === 0, `${name}: the page comes ready and draws two frames with no pipeline failed and nothing on the console`, `${at.pipes.done} of ${at.pipes.total} pipelines · ${errs.slice(0, 3).join(' | ')}`);
       line(want ? marks.laterReady >= marks.interactive : marks.laterReady === undefined, want ? 'starts: the boot\'s marks say when the last shader built behind the start was in (laterReady, at or after the start card)' : 'plain: with the row off there is no such mark', `interactive ${marks.interactive}, laterReady ${marks.laterReady}`);
-      line(want ? at.rows.join() === 'compactshaders,firstframe,splitrays' && at.split && at.splitPipes && !at.mega && at.kept === null : at.rows.length === 0 && !at.split && !at.splitPipes && at.mega && at.kept === null,
-        want ? 'starts: with nothing kept and no word the load is built with Compact shaders, Start on first frame shaders and Separate shadow rays (the split gather is there, no megakernel gather), and nothing is kept'
-          : 'plain: the three words at 0 are a load as it was (today\'s gather, nothing of the split, the start waited for every pipeline), and nothing is kept', JSON.stringify({ rows: at.rows, split: at.split, splitPipes: at.splitPipes, mega: at.mega, kept: at.kept, pipes: at.pipes.total }));
+      line((want ? at.rows.join() === 'firstframe' : at.rows.length === 0) && at.split && at.splitPipes && !at.mega && at.kept === null,
+        want ? 'starts: with nothing kept and no word the load is built with Start on first frame shaders (the gather\'s two programs are there, no one-kernel gather), and nothing is kept'
+          : 'plain: the row\'s word at 0 (and the two retired words beside it) is a load whose start waited for every pipeline; the gather is its two programs all the same, and nothing is kept', JSON.stringify({ rows: at.rows, split: at.split, splitPipes: at.splitPipes, mega: at.mega, kept: at.kept, pipes: at.pipes.total }));
       await page.evaluate(() => { window.__menu.open('pause'); });
       const o = await page.evaluate(OPEN), shown = o ? null : await page.evaluate(ROWS, LS), state = want ? 'Enabled' : 'Disabled';
-      line(!!shown && ON3.every(l => shown.rows[l] === state), `${name}: Options > Graphics shows the three ${state}`, shown ? JSON.stringify(shown.rows) : o);
+      line(!!shown && ON.every(l => shown.rows[l] === state) && !('Compact shaders' in shown.rows) && !('Separate shadow rays' in shown.rows), `${name}: Options > Graphics shows the row ${state}, and neither retired row`, shown ? JSON.stringify(shown.rows) : o);
       await ctx.close();
     }
     // … and the page as every page tool opens it (a script drives the browser): the first-frame row starts off, so `__started` and `__ready` are one moment
@@ -135,19 +134,19 @@ const DRAW = async (n) => { const dev = window.__engine.device; const yieldMacro
       await page.goto(url); await started(page);
       const at = await page.evaluate(STATE), rows = await page.evaluate(() => window.__bench.deps.rows());
       await page.evaluate(async () => { await window.__ready; }); await page.evaluate(DRAW, 2); const later = await page.evaluate(() => window.__boot.marks.laterReady);   // (read once `__ready` has resolved: with the row on the mark is there by then)
-      line(rows.join() === 'compactshaders,splitrays' && at.frag && at.frox && at.volF && later === undefined && !at.fatal && at.pipes.failed === 0 && errs.length === 0,
+      line(rows.join() === '' && at.frag && at.frox && at.volF && later === undefined && !at.fatal && at.pipes.failed === 0 && errs.length === 0,
         'driven: a browser a script drives is built without the first-frame row: when the start card is live every pipeline is in (the fragment composite, the froxel kernels, the volumetric twin), with nothing failed and nothing on the console',
         `rows ${rows.join() || 'none'} · ${at.pipes.done} of ${at.pipes.total} pipelines · fragment composite ${at.frag}, froxel kernels ${at.frox}, volumetric twin ${at.volF} · ${errs.slice(0, 3).join(' | ')}`);
       await page.evaluate(() => { window.__menu.open('pause'); });
       const o = await page.evaluate(OPEN), shown = o ? null : await page.evaluate(ROWS, LS);
-      line(!!shown && shown.rows['Start on first frame shaders'] === 'Disabled' && shown.rows['Compact shaders'] === 'Enabled' && shown.rows['Separate shadow rays'] === 'Enabled' && shown.kept === null, 'driven: Options > Graphics shows the first-frame row Disabled, the other two Enabled, nothing kept', shown ? JSON.stringify(shown) : o);
+      line(!!shown && shown.rows['Start on first frame shaders'] === 'Disabled' && shown.kept === null, 'driven: Options > Graphics shows the row Disabled, nothing kept', shown ? JSON.stringify(shown) : o);
       await ctx.close(); }
   }
   if (WALKS.includes('first')) {
     const { ctx, page, errs } = await fresh();
-    const url = `http://localhost:${PORT}/?paused&quality=high&mute&firstframe=1&compactshaders=0&splitrays=0${QUEUE}`; log(url);
+    const url = `http://localhost:${PORT}/?paused&quality=high&mute&firstframe=1${QUEUE}`; log(url);
     await page.goto(url); await started(page);
-    await laterWalk(page, errs, 'first', { compact: false, froxel: false });
+    await laterWalk(page, errs, 'first', { froxel: false });
     const kept = await page.evaluate(k => localStorage.getItem(k), LS);
     line(kept === null, 'first: the address\'s word is this visit\'s and is not kept', String(kept));
     await ctx.close();

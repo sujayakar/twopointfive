@@ -25,8 +25,7 @@ import { WIND_GPU_MAX } from '../smoke/types';
 import lightingCommon from './shaders/lighting_common.wgsl' with { type: 'text' };
 import particlesCommon from './shaders/particles_common.wgsl' with { type: 'text' };
 import windFieldSrc from './shaders/wind_field.wgsl' with { type: 'text' };   // THE wind field (game/wind.ts): the same text the smoke solver compiles — the update kernel's windAir sums it
-import { KERNELS } from './kernels';
-const particlesSrc = KERNELS.particles;   // (shaders/particles.wgsl, or its compact writing with that row on: render/kernels.ts)
+import particlesSrc from './shaders/particles.wgsl' with { type: 'text' };
 import particlesDrawSrc from './shaders/particles_draw.wgsl' with { type: 'text' };
 import { placeNone } from './placeField';
 import placeCommonSrc from './shaders/place_common.wgsl' with { type: 'text' };   // THE LOOK PROTOTYPE: a place and what it is shown by, pasted in front of the splat (as in front of the composite and every volumetric march, render/passes.ts)

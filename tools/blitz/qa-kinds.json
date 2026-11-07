@@ -95,12 +95,93 @@
 "checkpoint-turn": [
 "SAVETIMELINE.turn=false"
 ],
+"civilians-identity": [
+"CIV.greet=false"
+],
+"close-dark": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"CLOSE.dark=false"
+],
+"close-duo": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"NETQUIET.on=false",
+"CLOSE.dark=false",
+"CLOSE.on=false"
+],
+"close-grab": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"CLOSE.on=false"
+],
+"close-held": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"CLOSE.mode=false"
+],
+"close-marks": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"CLOSE.marks=true"
+],
+"close-melee": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"CLOSE.alertStrike=false",
+"CLOSE.lethal=false"
+],
+"close-mode": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false"
+],
+"close-offer": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false"
+],
+"close-rows": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"CLOSE.lethal=false",
+"CLOSE.on=false"
+],
+"close-seat": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false"
+],
+"close-tell": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"CLOSE.ready=false"
+],
+"close-windows": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false"
+],
 "deathrecap": [
 "RECAP.on=false",
 "RECAP.live=false"
 ],
 "depot-run": [
 "ROOMCLEAR.pairOnly=true"
+],
+"disarm": [
+"HOLD.stripFirst=false",
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"HOLD.disarm=false"
 ],
 "farcalm": [
 "GUARD_EYE.farCalm=false",
@@ -191,6 +272,12 @@
 "OWNBLOW.on=false",
 "HANDS.team=false"
 ],
+"handslow": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"CLOSE.handsLow=false"
+],
 "handwork-swap": [
 "HANDWORK.on=false",
 "HANDWORK.radio=false"
@@ -199,11 +286,19 @@
 "OWNBLOW.on=false",
 "HANDWORK.on=false"
 ],
+"haul": [
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"TAKEDOWN.haul=false"
+],
 "headmark": [
 "OWNBLOW.on=false"
 ],
-"holdglass-loud": [
-"HOLDFIRE.on=false"
+"heldclicks": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"CLOSE.heldClicks=false"
 ],
 "inhand": [
 "FOG.cone=true",
@@ -322,6 +417,13 @@
 "lineoffire-walk": [
 "CLEARLINE.holdStep=false"
 ],
+"noknife": [
+"STALK.on=false",
+"CLOSE.noKnife=false"
+],
+"noshield-staged": [
+"ISSUE.on=false"
+],
 "owncharge-door": [
 "OWNBLOW.on=false",
 "OWNCHARGE.on=false"
@@ -372,6 +474,20 @@
 "CMDRING.goals=false",
 "STALK.key=false",
 "FOG.eyes=5"
+],
+"reachup": [
+"STALK.on=false",
+"CLOSE.handsLow=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"CLOSE.reachUp=false"
+],
+"rmbhold": [
+"STALK.key=false",
+"STALK.on=false",
+"STALK.low=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false"
 ],
 "roomclear-ends": [
 "ROOMCLEAR.pairOnly=true",
@@ -501,6 +617,19 @@
 "stay-open-pass": [
 "DOORSTAY.on=false"
 ],
+"stealthpose-cable": [
+"STEALTHPOSE.nod=false",
+"STEALTHPOSE.on=false"
+],
+"stealthpose-creep": [
+"STALK.on=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"STEALTHPOSE.on=false"
+],
+"stealthpose-standdown": [
+"STEALTHPOSE.on=false"
+],
 "sticky-default": [
 "SLOTSETUP.on=false",
 "SLOTSETUP.pop=false",
@@ -547,6 +676,34 @@
 "GUNSLOTS.on=false",
 "QUIETFOG.wand=false",
 "WAND.on=false"
+],
+"sticky-ways": [
+"SLOTSETUP.on=false",
+"SLOTSETUP.pop=false",
+"TOLD.on=false",
+"TOLD.fogOff=false",
+"GUNSLOTS.on=false"
+],
+"takedown-beats": [
+"HOLD.disarm=false",
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"TAKEDOWN.haul=false",
+"TAKEDOWN.chokeBeats=false"
+],
+"takedown-kill": [
+"CLOSE.noKnife=false",
+"CLOSE.rmbHold=false",
+"TAKEDOWN.kill=false"
+],
+"takedown-lower": [
+"TAKEDOWN.haul=false",
+"TAKEDOWN.lower=false",
+"TAKEDOWN.on=false",
+"TAKEDOWN.chokeBeats=false"
+],
+"takedown-rules": [
+"TAKEDOWN.on=false"
 ],
 "threshold-doors": [
 "DOORTOOLS.wordNoCan=false"
@@ -865,9 +1022,7 @@
 "lasers",
 "marksight",
 "outerwall-hard",
-"outerwall-inside",
 "outerwall-live",
-"outerwall-off",
 "outerwall-reset",
 "outerwall-rooms",
 "outerwall-sam",
@@ -930,7 +1085,6 @@
 "wallcharge-cost",
 "wallcharge-hold",
 "wallcharge-menu",
-"wallcharge-off",
 "wallcharge-refusals",
 "wallcharge-reset",
 "wallcharge-sam",
@@ -1067,6 +1221,7 @@
 "civilians-comply": "iii",
 "civilians-determinism": "iii",
 "civilians-hearing": "iii",
+"civilians-identity": "iii",
 "civilians-phone": "iii",
 "civilians-scoring": "iii",
 "civilians-sight": "iii",
@@ -1076,6 +1231,7 @@
 "close-dark": "iii",
 "close-duo": "iv-b",
 "close-grab": "iii",
+"close-harness": "iii",
 "close-held": "iii",
 "close-marks": "iii",
 "close-melee": "iii",
@@ -1111,7 +1267,6 @@
 "cues-run": "iii",
 "cues-strip": "iv-b",
 "cutboxes-lines": "ii",
-"cutboxes-off": "ii",
 "cutboxes-pack": "ii",
 "cutboxes-ray": "ii",
 "cutboxes-record": "ii",
@@ -1119,7 +1274,6 @@
 "cutglass-determinism": "iii",
 "cutglass-gone": "iii",
 "cutglass-look": "iii",
-"cutglass-off": "iii",
 "cutglass-shape": "iii",
 "darkdoor": "iii",
 "darkfoe": "iii",
@@ -1300,9 +1454,7 @@
 "gearglass-pinned": "iii",
 "glass-blast": "iii",
 "glass-flags": "iii",
-"glass-lines": "iii",
 "glass-off": "iii",
-"glass-shot": "iii",
 "glass-sight": "iii",
 "glass-sound": "iii",
 "glassbreak-blast": "iv-a",
@@ -1329,7 +1481,6 @@
 "glassreal": "iv-a",
 "glasstune-blast": "iii",
 "glasstune-budget": "iii",
-"glasstune-off": "iii",
 "glasstune-rake": "iii",
 "glasstune-sound": "iii",
 "glasstune-spall": "iii",
@@ -1403,7 +1554,6 @@
 "hold-struggle": "iii",
 "holddrop": "iii",
 "holdfire": "iv-a",
-"holdglass-loud": "iv-a",
 "holdglass-open": "iv-a",
 "holdglass-other": "iv-a",
 "holdglass-quiet": "iv-a",
@@ -1451,7 +1601,6 @@
 "kickglass": "iii",
 "kickrubble-edge": "iv-a",
 "kickrubble-left": "iv-a",
-"kickrubble-off": "iv-a",
 "kickrubble-offman": "iv-a",
 "kickrubble-pool": "iv-a",
 "kickrubble-quiet": "iv-a",
@@ -1563,9 +1712,11 @@
 "moves-cast": "iv-a",
 "moves-dazzle": "0",
 "moves-entry": "0",
+"moves-gait": "0",
 "moves-game": "iv-b",
 "moves-hands": "iv-b",
 "moves-kept": "0",
+"moves-off": "0",
 "moves-react": "ii",
 "moves-recoil": "0",
 "moves-reload": "0",
@@ -1600,7 +1751,9 @@
 "nvg-fight": "iii",
 "nvg-lead": "iii",
 "nvg-loud": "iii",
+"nvg-off": "iii",
 "nvg-quiet": "iii",
+"nvg-rig": "iii",
 "nvg-sight": "iii",
 "off-hinges-after": "iii",
 "off-hinges-blast": "iii",
@@ -1835,7 +1988,6 @@
 "scrum": "iii",
 "sdfrig-fit": "0",
 "sdfrig-pack": "0",
-"sdfrig-presets": "0",
 "seenwalk": "iv-b",
 "selector-input": "iii",
 "selector-noise": "iii",
@@ -1986,6 +2138,7 @@
 "stayask": "iii",
 "stealthpose-cable": "ii",
 "stealthpose-creep": "ii",
+"stealthpose-harness": "ii",
 "stealthpose-idle": "ii",
 "stealthpose-rise": "ii",
 "stealthpose-standdown": "ii",
@@ -1998,6 +2151,7 @@
 "sticky-save": "ii",
 "sticky-take": "iv-a",
 "sticky-wand": "iii",
+"sticky-ways": "ii",
 "stripfirst": "iii",
 "sunglint": "0",
 "sup-hostage": "iii",
@@ -2018,9 +2172,13 @@
 "takecheck": "iii",
 "takedown-beats": "iii",
 "takedown-breathe": "iii",
+"takedown-harness": "ii",
+"takedown-kill": "iii",
 "takedown-lower": "iii",
 "takedown-moves": "iii",
+"takedown-off": "iii",
 "takedown-partner": "iii",
+"takedown-rules": "iii",
 "takedown-wall": "iii",
 "tapstep": "iii",
 "teampace": "iii",
@@ -2192,7 +2350,6 @@
 "airdust-off": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "breaks-studs": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "cutboxes-lines": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
-"cutboxes-off": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "cutboxes-pack": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "debrief-dom": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "debrief-doorname": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
@@ -2205,6 +2362,8 @@
 "owncharge-kit": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "rowset": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "solo-fog": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
+"stealthpose-harness": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
+"takedown-harness": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "words-doornames": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process",
 "work-harness": "seen red by the table and with QA_FOLD=1 on the TypeScript tick, one probe a process"
 }

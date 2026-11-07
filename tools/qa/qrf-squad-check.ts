@@ -24,6 +24,7 @@ const { requestQrf } = await import(`${ROOT}/src/game/qrf.ts`);
 const { DoorTools } = await import(`${ROOT}/src/game/doortools.ts`);
 const { SquadOrders } = await import(`${ROOT}/src/game/orders.ts`);
 const { inBounds } = await import(`${ROOT}/src/game/squad.ts`);
+const { SAMSTUN } = await import(`${ROOT}/src/game/samstun.ts`);
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60, BREAK = process.env.QRFSQUAD_BREAK === '1';
@@ -138,8 +139,8 @@ export async function qrfSquadCheck(): Promise<boolean> {
     line(!!far && far.length === 4 && worst < 1e-6, '(10) where Sam stands is not theirs to know: unseen on their rear man\'s stack mark, the four marks they are dealt are the ones dealt with him a street away', `marks dealt ${far?.length ?? 0} · furthest any mark moved with Sam stood on the rear man's ${isNaN(worst) ? '—' : worst.toFixed(3) + ' m'}`); }
 
   // ---- (12): their can and Sam
-  { // (a can on Sam, SAMSTUN.on, is settled on and no longer written here)
-    { const W = await called(46, [8, 0, 8], !BREAK); const { game } = W; const Q = game.qrf;
+  { const was = SAMSTUN.on;
+    try { const W = await called(46, [8, 0, 8], !BREAK); const { game } = W; const Q = game.qrf; SAMSTUN.on = true;   // (after the stand-up: the frozen stand holds it off)
       let at: Vec3 | null = null, banged = false, dazzled = 0, far = NaN;
       for (let f = 0; f < 60 * 90 && !(banged && game.time > (Q.log.find((l: any) => l.what === 'bang')?.t ?? 1e9) + 0.5); f++) {
         if (!at) hideSam(game); else { game.teleportPlayer(at); game.player.visibility = 0.02; game.playerInvisible = true; game.player.crouch = false; }
@@ -148,7 +149,7 @@ export async function qrfSquadCheck(): Promise<boolean> {
         if (beats(Q).includes('bang')) { banged = true; dazzled = Math.max(dazzled, game.player.dazzledUntil - game.time); const b = [...game.events].reverse().find((e: any) => e.kind === 'door' && e.loud && e.level === 1.0); if (b && at) far = Math.hypot(b.pos[0] - at[0], b.pos[2] - at[2]); }
       }
       line(banged && dazzled > 0.5, '(12) their can does to Sam what a can does to anyone: stood in the open in the room when it goes, he is dazzled', `the can went ${banged} · ${isNaN(far) ? '—' : far.toFixed(1) + ' m'} from him · dazzled ${dazzled.toFixed(1)} s`);
-    } }
+    } finally { SAMSTUN.on = was; } }
 
   console.log(`=== qrf-squad-check: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
