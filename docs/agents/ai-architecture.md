@@ -264,41 +264,46 @@ they share with the player's team from the start is `Assignment`, the limits and
 **A reaction**: something happens to an enemy and it takes him for a while (a grenade lands by him, a blast shakes
 him, rounds pass close). One file and one line.
 
-1. `rust/game/src/control/<name>.rs`, five things and nothing else (`control/duck.rs`, 41 lines, is one to copy):
-   `pub struct Row` what it keeps of one man (`pub type Row = ();` if nothing) · `transition(g, man, dt)` move
-   its own state · `propose(&Game, man) -> Option<Intent>` what it asks of him this tick, reading only ·
-   `commit(g, man, Outcome)` what his body made of it · `lost(g, man)` a higher rule took him.
-2. One line in `rules!` of `control/mod.rs`: `<name>: "the words that name it", Body;` or `Cover;`. Its place
-   in the list is its rank. `Body` rules are asked before he senses and hand him a script. `Cover` rules are
-   asked of a man whose state is Alert and who has no script of his own, and hand him `TakeCover` (down where
-   he is, or off to a spot). ALERT IS NOT "HAS A MAN TO FIGHT": a bang alone makes a man Alert, so a rule
-   that means "in a fight" asks for itself (`g.time - g.gd[man].last_seen_t`). RANK IT AS LOW AS IT CAN BE AND
-   STILL BE RIGHT: the rule that has a man is the only one that thinks about him that tick, so every rule
-   below it finds its own row stale when it gets him back.
+1. `rust/game_rules/src/control/<name>.rs`: `pub struct Rule; impl Reaction for Rule { … }` (`control/duck.rs`
+   is one to copy). Two things must be written: `type Ask` (what it asks of him: `GuardScript` or `TakeCover`)
+   and `propose(&Game, man) -> Option<Self::Ask>`, what it asks this tick, reading only. `type Row` is what it
+   keeps of one man (`()` if nothing). Three more have defaults that do nothing: `transition(g, man, dt)` move
+   its own state · `commit(g, man, Outcome)` what his body made of it · `lost(g, man)` a higher rule took him.
+2. One line in `rules!` of `control/mod.rs`: `<name>: "the words that name it";`. Its place in the list is its
+   rank. WHAT IT ASKS FOR IS WHERE IT IS ASKED: a rule whose `Ask` is `GuardScript` is asked before he senses
+   and hands him a script; one whose `Ask` is `TakeCover` is asked of a man whose state is Alert and who has no
+   script of his own (`TakeCover::down()`, or `TakeCover::to(spot, pace)`). ALERT IS NOT "HAS A MAN TO FIGHT":
+   a bang alone makes a man Alert, so a rule that means "in a fight" asks `man::saw_his_man_within(g, man,
+   secs)`. What a rule may ask of a man is `control/man.rs` (enemy, blind, staggered, held, in a standoff,
+   changing magazine, still): use those before his fields, and add the question that is missing there. RANK IT
+   AS LOW AS IT CAN BE AND STILL BE RIGHT: the rule that has a man is the only one that thinks about him that
+   tick, so every rule below it finds its own row stale when it gets him back.
 3. A test that is a fight: a file in `rust/game_start/tests/` that stands a few rooms and men, makes the thing
-   happen, and asserts the rule had him (`game::control::control_line`). `cargo test --release` there; no page.
+   happen, and asserts the rule had him (`Play::rule(man)`, and `Play::why(man)` in the failure's message).
+   `cargo test --release` there; no page.
    Write a control beside it (the same scene where the thing does not happen, or happens to a calm man), and
    break the rule once (`propose` returns `None`) to see the test go red.
 
 Worked example, held back until the dice are keyed: `control/reload_in_cover.rs` (a defender who runs dry kneels or
-goes to cover to change magazine), the line `reload_in_cover: "changing magazine in cover", Cover;`, and the test
+goes to cover to change magazine), the line `reload_in_cover: "changing magazine in cover";`, and the test
 `a_guard_who_runs_dry_in_the_open_kneels_to_change_magazine` in `tests/control.rs`.
 
 **An order**: a row of the squad's menu. One file and one line.
 
-1. `rust/game/src/orders/rows/<name>.rs` with `pub const ORDER: Row = Row { id, label, can, only, valid, issue,
-   tick, frame }`: its id on the menu and the functions the menu and the tick call (`orders/rows/mod.rs` says
-   what each is for). Two of them are the order. `issue` gives each man his task with
-   `squad_orders_assign(g, man, &SquadOrdersAssignA { order, post, face, stance, upper, crouch, going, there, .. })`:
+1. `rust/game_rules/src/orders/rows/<name>.rs` with `pub const ORDER: Row = Row { frame: Some(frame),
+   ..Row::new(ID, label, issue) }`: its id on the menu and the functions the menu and the tick call
+   (`orders/rows/mod.rs` says what each is for; `can`, `only`, `valid`, `tick` and `frame` are `None` unless
+   written). Two of them are the order. `issue` gives each man his task with
+   `rows::assign(g, &ORDER, man, SquadOrdersAssignA { post, face, stance, upper, crouch, going, there, .. })`:
    where he stands, which way he faces, how he carries his gun, and the two lines he says. `frame` runs once a
-   frame and is where the order puts its row on the menu once (`g.tab.orders_order_def.push(rows::def(&ORDER,
-   data))` then `squad_orders_register`), or takes it off.
+   frame and is where the order puts its row on the menu (`rows::list(g, &ORDER, data)`; listing again is the
+   same row), or takes it off (`rows::unlist`). The order's id is written once, in its `Row`.
 2. One line in `rows!` of `orders/rows/mod.rs`: `<name>;`.
 3. A test that is a fight, the same way, giving the order by the menu's own call (`Play::order`). IT MUST
    INCLUDE CONTACT: the men under the order meet an enemy and the test says who fell and when. A test of
    posture alone was green on an order that got two of four men killed (the pose trap, below).
 
-Worked examples: a whole small order is printed below ("take a knee", 42 lines, in this page only). In the
+Worked examples: a whole small order is printed below ("take a knee", in this page only). In the
 build: `orders/rows/shell40.rs` ("put a 40 mm shell there") with the two tests of `tests/orders.rs`; it shows
 the `Row` and the list but hands its three functions on to an older module, so it is not the one to copy.
 
@@ -339,48 +344,54 @@ arms of six enums. The rest of this section is the detail of each of these.
 
 ### The pieces in detail
 
-The list of reactions as it stands (`rust/game/src/control/`), with the held worked example's line last:
+The list of reactions as it stands (`rust/game_rules/src/control/`), with the held worked example's line last:
 
 ```rust
 // control/mod.rs: THE LIST. The order of the lines is the rank.
 rules! {
-    frag: "a live grenade", Body;
-    runner: "broke and ran", Body;
-    morale: "shaken by a blast", Body;
-    startle: "startled", Body;
-    duck: "head down under fire", Cover;
-    reload_in_cover: "changing magazine in cover", Cover;   // held: lands after the keyed draws
+    frag: "a live grenade";
+    runner: "broke and ran";
+    morale: "shaken by a blast";
+    startle: "startled";
+    duck: "head down under fire";
+    reload_in_cover: "changing magazine in cover";   // held: lands after the keyed draws
 }
 
 // control/reload_in_cover.rs: the whole rule
-pub struct Row { pub plan: Plan, pub t: f64 }                         // what it keeps of one man
-pub fn transition(g: &mut Game, gd: GuardId, dt: f64) { ... }         // decide once as the reload begins; notice he has arrived
-pub fn propose(g: &Game, gd: GuardId) -> Option<Intent> { ... }       // go to the spot, kneel, or None. Reads only.
-pub fn commit(g: &mut Game, gd: GuardId, o: Outcome) { ... }          // arrived / going nowhere
-pub fn lost(g: &mut Game, gd: GuardId) { ... }                        // something else took him
+pub struct Row { pub plan: Plan, pub t: f64 }                      // what it keeps of one man
+pub struct Rule;
+impl Reaction for Rule {
+    type Row = Row;
+    type Ask = TakeCover;                                          // so it is asked in his fight
+    fn transition(g: &mut Game, gd: GuardId, dt: f64) { ... }      // decide once as the reload begins; notice he has arrived
+    fn propose(g: &Game, gd: GuardId) -> Option<TakeCover> { ... } // go to the spot, kneel, or None. Reads only.
+    fn commit(g: &mut Game, gd: GuardId, o: Outcome) { ... }       // arrived / going nowhere
+    fn lost(g: &mut Game, gd: GuardId) { ... }                     // something else took him
+}
 ```
 
-A line names the rule's file, the words that name it, and the stage of a man's frame at which it is asked.
-`Body`: before he senses, and its intent is a script his whole body follows. `Cover`: asked at the top of
-`alert` (`guards/p_07.rs`), that is of a man whose state is Alert and whom no script has, before his reaction
-time and before his fight; its intent is `TakeCover`: down where he is or off to a spot crouched, gun lowered
-toward the danger, no round fired, hands free to change magazine. The line makes the rule's module, its id,
-the table of its rows (`g.ctl.rows.reload_in_cover`) and its place in the list. Nothing else names the rule:
-the commit that added the pilot is its file and one line.
+A line names the rule's file and the words that name it. The stage of a man's frame at which it is asked is the
+type of what it asks for, so a rule cannot answer out of its stage: the compiler refuses it. `GuardScript`:
+asked before he senses, and his whole body follows the script. `TakeCover`: asked at the top of `alert`
+(`guards/p_07.rs`), that is of a man whose state is Alert and whom no script has, before his reaction time and
+before his fight: down where he is or off to a spot crouched, gun lowered toward the danger, no round fired,
+hands free to change magazine. The line makes the rule's module, its id, the table of its rows
+(`g.ctl.rows.reload_in_cover`) and its place in the list. Nothing else names the rule: the commit that added
+the pilot is its file and one line.
 
-Four things the list does not yet do for a rule, each found by a reader who added one from this page alone:
-- **An intent of the wrong kind is dropped without a word.** A `Cover` rule that returns `Intent::Script`
-  (or the other way) is ignored: no panic, no record, not even "said no".
-- **`TakeCover` cannot say "hands idle".** Any `Cover` rule lets the reload run on, so a blinded man held
-  down by a rule finishes changing magazine.
-- **One unit test pins the first `Cover` rule by name** (`control/mod.rs`,
-  `the_games_list_is_the_order_update_guard_asked_them_in`): a rule ranked above `duck` must change it.
-- **The list holds 32 rules** (the "said no" record is 32 bits).
+Two things the list does not yet do for a rule:
+- **`TakeCover` cannot say "hands idle".** Any rule that asks for cover lets the reload run on. No rule has
+  needed it yet, so the word is not built: it is one field of `TakeCover` and one `if` at the reload's line of
+  `alert`, and it lands with the first rule that wants it and a fight that goes red without it.
+- **The list holds 32 rules** (the "said no" record is 32 bits). A 33rd stops the build with those words.
 
-What a rule reads of a man today, with no door: `dazzled_until` (is he blind: written by a flash, and also
-by a wall charge, a thrown door and the door tools, so it does not say WHAT blinded him), `last_seen_t` (when
-he last had his man in his eyes), `team` and `civ` (is he an enemy), `standoff` (has he a hostage in his arms),
-`pinned` and `hold_room` (through `control::set_pinned` / `set_hold` only), `reload_t`, `sup.cover`.
+What a rule asks of a man is `control/man.rs`, a line a question, each saying what it does NOT tell you:
+`enemy` (by the game's one table of who fights whom), `blind` (it does not say WHAT blinded him: a flash, a wall
+charge, a thrown door and the door tools all write it), `staggered`, `held`, `saw_his_man_within(secs)`,
+`in_a_standoff`, `changing_magazine`, `still`, `dead`. Not there yet, and read from his fields: `pinned` and
+`hold_room` (written through `control::set_pinned` / `set_hold` only), `sup.cover`. About sixty older lines of
+the game still ask "is he blind" of the field itself; they move to the question by a program, which is not
+written.
 
 Each man's `Control` says who has him, since when, and which rules were asked and said no. `control_line`
 prints it (`Alvarez: changing magazine in cover for 1.2 s · said no: a live grenade, ...`), and the native
@@ -400,10 +411,10 @@ to the guard's update and take `&mut Game`, so a rule cannot call them.)
 
 | to do this | call | file |
 |---|---|---|
-| make him more or less aware, or change his state | `mind::raise(g, man, floor, "my_rule")`, `cap`, `set`, `set_state` | `rust/game/src/mind.rs` |
-| tell him where his man is | `mind::fix(g, man, Some(at), "my_rule")` (a new fix), `fix_keep` (put back, not news) | `rust/game/src/mind.rs` |
+| make him more or less aware, or change his state | `mind::raise(g, man, floor, "my_rule")`, `cap`, `set`, `set_state` | `rust/game_rules/src/mind.rs` |
+| tell him where his man is | `mind::fix(g, man, Some(at), "my_rule")` (a new fix), `fix_keep` (put back, not news) | `rust/game_rules/src/mind.rs` |
 | hold him to his post or pin him | `control::set_hold(g, man, on, "my_rule")`, `set_pinned` | `control/mod.rs` |
-| draw from the die for him | `dice::draw_for(g, "my_rule::what", Who::Man(man))` | `rust/game/src/dice.rs` |
+| draw from the die for him | `dice::draw_for(g, "my_rule::what", Who::Man(man))` | `rust/game_rules/src/dice.rs` |
 
 Every old write of awareness and state (189), of his fix (54 calls now, and eight private one-line helpers
 gone) and of the two post flags (81) was moved to these by a program, so there is no second way in the body
@@ -411,7 +422,7 @@ files (the programs' `--check` is red on one), and each door keeps who last move
 `control_line` print it (`Alvarez: alert at 0.92 · alert since 3.0 s ago by roomfight (was patrol) · raised to
 0.92 by pressure 3.0 s ago · his fix by guards 0.4 s ago`).
 
-**An order is the same shape** (`rust/game/src/orders/rows/`). An order of the squad's menu is a `Row`: its id
+**An order is the same shape** (`rust/game_rules/src/orders/rows/`). An order of the squad's menu is a `Row`: its id
 and its `label`, `can`, `only`, `valid`, `issue`, `tick` and `frame` functions, in one file, and one line:
 
 ```rust
@@ -420,16 +431,15 @@ rows! {
     shell40;
 }
 // orders/rows/shell40.rs
-pub const ORDER: Row = Row { id: "shellThere", label, can: None, only: Some(only), valid: Some(valid), issue,
-                             tick: Some(squad40::turn_tick), frame: Some(squad40::squad40_tick) };
+pub const ORDER: Row = Row { only: Some(only), valid: Some(valid), tick: Some(squad40::turn_tick),
+                             frame: Some(squad40::squad40_tick), ..Row::new("shellThere", label, issue) };
 ```
 
 A whole order, as a reader who had only this page wrote it (it is printed here and is not in the game):
 
 ```rust
 // orders/rows/knee.rs  TAKE A KNEE: the men it is given to stop where they are and crouch, until their next order
-const ID: &str = "takeKnee";
-pub const ORDER: Row = Row { id: ID, label, can: None, only: None, valid: None, issue, tick: None, frame: Some(frame) };
+pub const ORDER: Row = Row { frame: Some(frame), ..Row::new("takeKnee", label, issue) };
 
 fn label(_: &mut Game, _: &OrderTarget) -> String { String::from("take a knee") }
 
@@ -437,8 +447,8 @@ fn issue(g: &mut Game, men: &[GuardId], _: &OrderTarget, _: Option<&GiveOpts>) -
     for &gd in men {
         let c = g.gd[gd].ch;
         let (p, face) = (g.ch[c].pos, g.ch[c].body_yaw);
-        crate::orders::squad_orders_assign(g, gd, &SquadOrdersAssignA {
-            order: String::from(ID), post: Some([p[0], 0.0, p[2]]), face: Some(face),
+        rows::assign(g, &ORDER, gd, SquadOrdersAssignA {
+            post: Some([p[0], 0.0, p[2]]), face: Some(face),
             stance: Some(Stance::None), upper: Some(UpperMode::Aim),   // gun up: see the pose trap
             crouch: Some(true),
             going: String::from("taking a knee"), there: String::from("on a knee"),
@@ -450,16 +460,13 @@ fn issue(g: &mut Game, men: &[GuardId], _: &OrderTarget, _: Option<&GiveOpts>) -
 
 /// its row goes on the menu once there is a squad to give it to
 fn frame(g: &mut Game) {
-    let listed = g.orders.defs.iter().any(|&d| g.tab.orders_order_def[d].id == ID);
-    if listed || !crate::orders::squad_orders_active(g) { return; }
-    let data = OrderDef { targets: vec![TargetKind::Floor, TargetKind::Door, TargetKind::None],
-                          ack: Some(Vec::from([String::from("taking a knee.")])), ..Default::default() };
-    let id = g.tab.orders_order_def.push(def(&ORDER, data));
-    crate::orders::squad_orders_register(g, id, None);
+    if rows::listed(g, &ORDER) || !crate::orders::squad_orders_active(g) { return; }
+    rows::list(g, &ORDER, OrderDef { targets: vec![TargetKind::Floor, TargetKind::Door, TargetKind::None],
+                                     ack: Some(Vec::from([String::from("taking a knee.")])), ..Default::default() });
 }
 ```
 
-Three things about an order that its file does not show:
+Two things about an order that its file does not show:
 - **The pose trap.** An order that crouches its men with the gun carried low (`Stance::LowReady`,
   `UpperMode::None`, the pattern the older orders show) gave men who knelt and did not fire for about three
   seconds at a defender they could see: on three seeds two of four fell, where the same men with no order, on
@@ -469,11 +476,9 @@ Three things about an order that its file does not show:
 - **`tick` does not run in a hot fight.** `squad_orders_tick` (`orders/p_05.rs`) skips a man who is Alert with
   no script until his fight has gone cold, so "once a frame for each man under the order" is true only out of
   contact; and the fight drops the order's crouch while it has him.
-- **The id is typed twice.** `Row.id` and the `order` of `SquadOrdersAssignA` are the same word written by
-  hand, and nothing ties them.
 
 `frame` runs once a frame after the menu's input and is where an order puts its row on the menu or takes it off
-(`rows::def(&ORDER, data)` makes the row from what only it knows: its page, its targets, its key). The older
+(`rows::list(g, &ORDER, data)` makes the row from what only it knows: its page, its targets, its key). The older
 orders are still arms of six enums in `orders/types.rs` with bodies in the matches of `orders/p_03.rs`; each
 enum has ONE arm, `Row`, through which every order written this way is called, so moving an older order
 deletes its arms and adds none. The 40 mm shell is moved (its five arms, six bodies, its line of the frame and
@@ -513,11 +518,12 @@ tests passed on three seeds, with a control each and a broken build that went re
 code, one line each in the two lists, 71 and 88 lines of test. The claim held for what compiles and runs
 natively and failed at its edges, and each edge is now said above: one pinned unit test, the wire's list of
 order ids, the pose trap, what Alert means, what a rank costs the rules below. The code was about a tenth of
-the work; learning those was the rest. What would make each a quarter of an hour is a list for the code, not
-for this page: `Intent` typed by stage, `TakeCover::down()` with a word for the hands, defaults for the empty
-functions, a small file of questions a rule may ask of a man (enemy, in contact, blind, stopped), a `Row` that
-lists itself on the menu, an assign that takes its id from the `Row`, and readers in the test's `Play`
-(`rule(man)`, `flash_lands`, `on_menu`, `red()`, `blue()`).
+the work; learning those was the rest. What would make each a quarter of an hour was a list for the code, not
+for this page, and it is built: what a rule asks for is typed by stage, `TakeCover::down()`, defaults for the
+empty functions, a small file of questions a rule may ask of a man (`control/man.rs`), a `Row` that lists
+itself on the menu and assigns under its own id, and readers in the test's `Play` (`rule(man)`, `why(man)`,
+`on_menu`, `red()`, `blue()`, and with the blinded man's mend `flash_lands` and `blind`). Left out on purpose:
+a word for the hands in `TakeCover`, until a rule needs it.
 
 ## 8. The tick as a schedule
 
@@ -710,8 +716,8 @@ Today they are one record and one word of the state, and two places cross the li
 ### Which field goes where
 
 `g.fog_of_war` keeps the name and becomes the team's record. The picture's block is a new part,
-`g.fog_pic: fogofwar::FogPicture`, named on the scratch list (`tools/blitz/schema.json`, `game::Game.fog_pic`)
-so it has no word of the state.
+`g.fog_picture: fogofwar::FogPicture`, a field of the game listed among the host's own (`HOSTS_OWN` of
+`tools/wire/wire.ts`), so it has no word of the state.
 
 | stays in `FogOfWar` (the team's; a word of the state) | why |
 |---|---|
@@ -734,11 +740,11 @@ so it has no word of the state.
 | `face_recs`, `full_stats` | a lamp's glow as last seen, which only `lamp_face` reads to paint `fog_emit`; the count of lights by class |
 | `viewer`, `bared`, `raw_list`, `raw_at` | a viewer's lifted draw |
 | `look_frames` | counted down and read by nothing; goes with the picture until it is deleted |
-| from `Game`: `fog_held`, `men_bare`, `men_all`, `men_statured` | what `game_fog_lift` keeps to hand back; become `fog_pic.held`, `.men_bare`, `.men_all`, `.men_statured` |
+| from `Game`: `fog_held`, `men_bare`, `men_all`, `men_statured` | what `game_fog_lift` keeps to hand back; become `fog_picture.held`, `.men_bare`, `.men_all`, `.men_statured` |
 
 ### Which function goes where
 
-`fogofwar/picture.rs` (new, the host's side; may read all of the game, writes only `g.fog_pic` and the
+`fogofwar/picture.rs` (new, the host's side; may read all of the game, writes only `g.fog_picture` and the
 renderer's own fields named below): `fog_of_war_lit_block`, `fog_of_war_lamp_take`, `fog_of_war_thin_block`,
 `fog_of_war_lamp_face`, `face_of`, `fog_of_war_face_seen`, `fog_of_war_faces_lift`, `fog_of_war_faces_back`,
 `fog_of_war_raw`, `fog_of_war_filter`, `fog_of_war_everybody`, `fog_of_war_page_look`, the tail of
@@ -761,7 +767,7 @@ Everything else stays the team's. Four cuts make the line clean:
    and the pass's own test "was I on last frame" reads `live`, not `frame.on` as it does now.
 3. **`hidden` and `air_hides` drop `!bared`.** Every caller found is a rule or a step of the tick (the AI's
    picture, aim, orders, markers, cues, props on the frame's list). A host reader that wants "as drawn now"
-   gets `picture::hidden_as_drawn` (`!fog_pic.bared && hidden`); none is known, so it is written only if the
+   gets `picture::hidden_as_drawn` (`!fog_picture.bared && hidden`); none is known, so it is written only if the
    grep at the time finds one.
 4. **The list before the fog cut it is kept by the picture.** The first lines of `fog_of_war_things`, under
    `viewer`, copy the frame's list into `raw_list`. They become `picture::keep_raw(g, &list)`, called by
@@ -788,18 +794,18 @@ pieces (`fixture_break`, keyed in the fixture range, so each gets a `thing_recs`
 rows). With `fixtures` down those rows are never made, the box table hands out other ids from there on, and
 the state parts from a host with the row up. The dressing check's five missions are the same with the rows
 down, so either none of them breaks a fixture out of the team's sight or this reading is wrong: the new test
-below plays it both ways and says which. If it parts, the fog's rule passes over the fixture range as it does
-the moths' (a broken lamp's pieces are then drawn live or not at all, never remembered).
+below plays it both ways and says which. A parting is REPORTED, not mended here: a networked game stands every
+machine with the dressing rows up, so the question only matters to a host that draws nothing.
 
 ### Order of work, and what proves each
 
 1. **The cuts, with every field where it is.** The four cuts above and the move of functions into
    `picture.rs`; the record and the wire are untouched. Proof: `hold check`, the same after every frame on all
-   72 runs, every word of the state compared.
-2. **The fields move**, by a program (`g.fog_of_war.X` to `g.fog_pic.X` for the second table, the four
-   fields of `Game`, the scratch row, the types made again). The fog's word and the part count change, so
-   `hold` cannot compare the trees whole: it gains `--but PART,…` (parts left out by name on both sides), and
-   the check is every other word the same on the 72 runs, plus the two-seat kept games.
+   120 runs, every part of the state compared.
+2. **The fields move**, by a program (`g.fog_of_war.X` to `g.fog_picture.X` for the second table, the four
+   fields of `Game`, the row of `HOSTS_OWN`, the types made again). The fog's word and the part count change, so
+   `hold` cannot compare the trees whole: `hold check --but fog_of_war` leaves that part out by name, and the
+   check is every other part the same on the 120 runs, plus the two-seat kept games.
 3. **`lamp_take` measures from the picture's own seat** (it already does; it is now out of state), and one
    native test stands two games of one seed on a level with more lamps than `FOG_LIGHTS`, one with a viewer
    set (and, where the start seats two, another seat shown), one without, and compares every state word
