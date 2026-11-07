@@ -20,7 +20,7 @@ import type { Game, Guard, Player } from './game';
 import type { Character } from './character';
 import type { SquadOrders, Assignment } from './orders';
 import { Seat } from './cmd';
-import { RAW, CAST_VIEW } from '../math/side';
+import { RAW, CAST_VIEW, SEAT_TABLES } from '../math/side';
 import { PLAYER_ID, NOBODY_ID } from './consts';
 import { Player as PlayerMan } from './game';
 import { railLightDef } from './rigProps';
@@ -57,10 +57,7 @@ export const SEAT_KEYS = ['seat', 'player', 'orders', 'doorTools', 'work', 'wall
   'viewProj', 'threatProximity', 'torchOnT'] as const;
 const IS_SEAT_KEY = new Set<PropertyKey>(SEAT_KEYS);
 
-/** THE NAMED SIDE TABLES THAT ARE A SEAT'S (keyed by the view they were handed: a row a player). A plain table handed a view that is not listed here is a
- *  mistake — world state forked in two — and tools/qa/seats-check.ts is red on it: such a table is a `GameSideMap`. */
-export const SEAT_TABLES: readonly string[] = ['blastFeel.STATE', 'blastLook.STATE', 'close.STATE', 'guards.groundTrack', 'holdfire.states', 'player.lightAt', 'rearwatch.books', 'samlook.STATE',
-  'showwhy.states', 'silent.seats', 'silent.states', 'squad40.states', 'squadsmoke.states', 'squadthrow.states', 'stalk.STATE', 'tapstep.STATE', 'unseen.states', 'wandorder.states'];
+export { SEAT_TABLES };
 
 type Rec = Record<PropertyKey, unknown>;
 
