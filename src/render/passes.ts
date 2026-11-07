@@ -158,14 +158,12 @@ export class LightingPasses {
    *  exactly as they were): each gives up a little accuracy for shadow rays. While any is on the encode takes restir.wgsl's RESTIR_TRADE twin, compiled on FIRST USE — a boot with the rows off compiles nothing new; until the twin exists the frame takes the plain program (which never reads the rows' bits). */
   heldAdaptive = false; restirStableRetrace = false; restirDimClass = 0;
   private restirTrade: GPUComputePipeline | null | undefined;   // undefined = never asked; null = compiling, or it failed (the plain program stays)
-  private restirTradeHot = false;   // a hot-swapped restir (hotSwapDirect: __hotRestir / __hotCommon) has no trade twin — the hot program is what runs, the rows stay without effect until a reload
   private restirTradePipe(): GPUComputePipeline | null {
-    if (this.restirTradeHot) return null;
     if (this.restirTrade === undefined) {
       this.restirTrade = null;
       const code = scenePrelude() + directCommonSrc + 'const RESTIR_TRADE: bool = true;\n' + restirSrc;
       this.device.createComputePipelineAsync({ label: 'restirT', layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lDirect, this.lRestir] }), compute: { module: makeShader(this.device, code, 'restirT'), entryPoint: 'main' } })
-        .then(p => { if (!this.restirTradeHot) this.restirTrade = p; }, e => reportErrorLine('render.restir.twin', '[restir] the trade twin did not compile — the rows stay without effect', e));
+        .then(p => { this.restirTrade = p; }, e => reportErrorLine('render.restir.twin', '[restir] the trade twin did not compile — the rows stay without effect', e));
     }
     return this.restirTrade;
   }
@@ -555,7 +553,7 @@ export class LightingPasses {
     const late = PIPE_QUEUE.later;
     const cpL = (desc: GPUComputePipelineDescriptor) => late ? laterPipelineAsync(device, desc) : cp(desc);
     const setL = <V,>(make: () => Promise<V | null>, filled: () => boolean, put: (v: V | null) => void) => {   // (`make` is run here, where the pipeline was always made: its module is created inside it, in the order it always was)
-      if (late) { void make().then(v => { if (v && !filled()) put(v); }); return; }   // (a place filled meanwhile — a retune, a hot swap — keeps what it was given: the text that arrives here is the boot's)
+      if (late) { void make().then(v => { if (v && !filled()) put(v); }); return; }   // (a place filled meanwhile keeps what it was given: the text that arrives here is the boot's)
       set(make(), put);
     };
     set(cp({ label: 'restir', layout: lay(sceneLayout, this.lDirect, this.lRestir), compute: { module: makeShader(device, pre + directCommonSrc + 'const RESTIR_TRADE: bool = false;\n' + restirSrc, 'restir'), entryPoint: 'main' } }), p => { this.pRestir = p; });   // (ONE program since 2026-11-07: the direct-motion lane's three levers are bits of its uniform, raised on the frames the camera moved)
@@ -578,29 +576,7 @@ export class LightingPasses {
       else set(renderPipelineAsync(device, desc()), p => { this.pComp = p; }); }
   }
 
-  /** Dev / measurement hook (main.ts __hotVol): rebuild the volumetric pipeline from `src` (a volumetrics.wgsl variant; the same prelude is prepended) so an
-   *  edited march can be A/B'd against a staged scene without a reboot. Resolves to the compiler's messages; the old pipeline stays if there is an error. */
-  async hotSwapVol(src: string): Promise<{ ok: boolean; messages: string[] }> {
-    const mod = this.device.createShaderModule({ code: scenePrelude() + lightingCommon + volCommon + placeCommonSrc + dustLookSrc + src, label: 'volumetrics-hot' });
-    const info = await mod.getCompilationInfo();
-    const messages = info.messages.map(m => `${m.type} ${m.lineNum}:${m.linePos} ${m.message}`);
-    if (info.messages.some(m => m.type === 'error')) return { ok: false, messages };
-    this.pVol = await this.device.createComputePipelineAsync({ label: 'vol-hot', layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lVol] }), compute: { module: mod, entryPoint: 'main' } });
-    return { ok: true, messages };
-  }
 
-  /** Dev / measurement hook (main.ts __hotReflect): rebuild a reflection pipeline from `src` (prelude + lighting_common + gather_common are prepended) — the phase-5 variant if the source
-   *  declares the hit-record bindings (reflect_p5.wgsl), else main's (reflect.wgsl). */
-  async hotSwapReflect(src: string): Promise<{ ok: boolean; messages: string[] }> {
-    const pre = scenePrelude() + lightingCommon + gatherCommonSrc + markingsSrc; const off = pre.split('\n').length - 1;
-    const mod = this.device.createShaderModule({ code: pre + src, label: 'reflect-hot' });
-    const info = await mod.getCompilationInfo();
-    const messages = info.messages.map(m => `${m.type} ${m.lineNum - off}:${m.linePos} ${m.message}`);
-    if (info.messages.some(m => m.type === 'error')) return { ok: false, messages };
-    const pipe = await this.device.createComputePipelineAsync({ label: 'reflect-hot', layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lRefl] }), compute: { module: mod, entryPoint: 'main' } });
-    this.pRefl = pipe;
-    return { ok: true, messages };
-  }
   /** RT reflections (engine.render mirrors settings.rtReflect / rtReflectDiv every frame): the switch the encode reads, and the reflection targets' divisor — a change re-makes THAT set (pooled,
    *  its histories resampled onto the new grid) and nothing else, exactly as a gather-divisor flip does. The targets exist whether or not the pass is on (like the gather's specular field). */
   setRt(on: boolean, div: number) {
@@ -622,65 +598,10 @@ export class LightingPasses {
     this.finishRealloc(R, `divisor → reflections /${div}`, t0);
     this.dropBindGroups();
   }
-  /** hotSwapGather's work: the gather's two pipelines again, from the given texts' helpers (a new common.wgsl, gather_common.wgsl, or a helper of fgather.wgsl reaches
-   *  them; `trace` and `light` themselves are gather_split.wgsl's, and the message says so). Both or neither. */
-  private async hotSwapSplit(src: string, common?: string): Promise<{ ok: boolean; messages: string[] }> {
-    const pre = scenePrelude() + lightingCommon, layout = this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lFGX!] });
-    const note = 'the gather is render/gatherSplit.ts\'s two programs, rebuilt from this text\'s helpers: an edit to `trace` or `light` is made in gather_split.wgsl';
-    let code: string; try { code = pre + splitGatherSrc(src, common); } catch (e) { return { ok: false, messages: [(e as Error).message] }; }
-    const mod = this.device.createShaderModule({ code, label: 'gatherSplit-hot' }), info = await mod.getCompilationInfo();
-    const messages = info.messages.map(m => `${m.type} ${m.lineNum}:${m.linePos} ${m.message}`);
-    if (info.messages.some(m => m.type === 'error')) return { ok: false, messages };
-    const cp = (label: string, entryPoint: string) => this.device.createComputePipelineAsync({ label, layout, compute: { module: mod, entryPoint } });
-    const pipes = await Promise.all([cp('gatherTrace-hot', 'trace'), cp('gatherLight-hot', 'light')]);
-    this.pFGX = pipes[0]; this.pFGL = pipes[1];
-    return { ok: true, messages: [note, ...messages] };
-  }
-  /** Dev / measurement hook (main.ts __hotGather): rebuild the gather's programs from an fgather.wgsl variant (its helpers) and, if given, a variant of the gather's own
-   *  common text (shaders/gather_common.wgsl). All three or none: a variant that fails to compile leaves the live ones as they were. */
-  async hotSwapGather(src: string, common?: string): Promise<{ ok: boolean; messages: string[] }> { return this.hotSwapSplit(src, common); }
   /** frames the RT-reflection set may stay allocated with the pass off before it goes back to the pool (setRt; review R1.1) */
   private static readonly RT_IDLE_FRAMES = 600;
   private rtIdle = 0;
-  /** The same for the direct-light pass (main.ts __hotRestir): a restir.wgsl variant against the staged scene — scene prelude AND
-   *  direct_common.wgsl prepended (pass `common` to swap that too). */
-  async hotSwapDirect(src: string, common: string = directCommonSrc): Promise<{ ok: boolean; messages: string[] }> {
-    this.restirTradeHot = true; this.restirTrade = undefined;   // (… nor a lighting-trade twin: built from the bundled text and prelude, it would shadow the hot program)
-    const trade = !/^const RESTIR_TRADE\b/m.test(src) ? 'const RESTIR_TRADE: bool = false;\n' : '';   // (the lighting trades' const: a hot text is the plain program unless it says otherwise)
-    const head = scenePrelude() + common + trade;
-    const mod = this.device.createShaderModule({ code: head + src, label: 'restir-hot' });
-    const info = await mod.getCompilationInfo();
-    const off = head.split('\n').length - 1;
-    const messages = info.messages.map(m => `${m.type} ${m.lineNum - off}:${m.linePos} ${m.message}`);
-    if (info.messages.some(m => m.type === 'error')) return { ok: false, messages };
-    this.pRestir = await this.device.createComputePipelineAsync({ label: 'restir-hot', layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lDirect, this.lRestir] }), compute: { module: mod, entryPoint: 'main' } });
-    return { ok: true, messages };
-  }
 
-  /** direct-quality lane (main.ts __hotSharp): a sharp_direct.wgsl variant against the staged scene — BOTH pipelines (tracer-free + traced) rebuilt from it, direct_common.wgsl prepended as passes builds them */
-  async hotSwapSharp(src: string, common: string = directCommonSrc): Promise<{ ok: boolean; messages: string[] }> {
-    const out: string[] = []; const ps: GPUComputePipeline[] = [];
-    for (const traced of [false, true]) {
-      const head = scenePrelude() + common + `const SLIVER_RAYS: bool = ${traced};\n`;
-      const mod = this.device.createShaderModule({ code: head + src, label: traced ? 'sharpUE-hot' : 'sharpU-hot' });
-      const info = await mod.getCompilationInfo(); const off = head.split('\n').length - 1;
-      out.push(...info.messages.map(m => `${traced ? 'traced' : 'plain'} ${m.type} ${m.lineNum - off}:${m.linePos} ${m.message}`));
-      if (info.messages.some(m => m.type === 'error')) return { ok: false, messages: out };
-      ps.push(await this.device.createComputePipelineAsync({ label: traced ? 'sharpUE-hot' : 'sharpU-hot', layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lSharpU] }), compute: { module: mod, entryPoint: 'main' } }));
-    }
-    this.pSharpU = ps[0]; this.pSharpUE = ps[1];
-    if (!this.pCompS) { const D = this.sharpDescs(); this.pCompS = this.device.createComputePipeline(D.compS); this.pTaauS = this.device.createComputePipeline(D.taauS); }
-    return { ok: true, messages: out };
-  }
-  /** … and a gbaa.wgsl variant (main.ts __hotGbaa) */
-  async hotSwapGbaa(src: string): Promise<{ ok: boolean; messages: string[] }> {
-    const head = scenePrelude(); const mod = this.device.createShaderModule({ code: head + src, label: 'gbaa-hot' });
-    const info = await mod.getCompilationInfo(); const off = head.split('\n').length - 1;
-    const messages = info.messages.map(m => `${m.type} ${m.lineNum - off}:${m.linePos} ${m.message}`);
-    if (info.messages.some(m => m.type === 'error')) return { ok: false, messages };
-    this.pGbaa = await this.device.createComputePipelineAsync({ label: 'gbaa-hot', layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lGbaa] }), compute: { module: mod, entryPoint: 'main' } });
-    return { ok: true, messages };
-  }
 
   /** (Re)build the ReSTIR reservoir pair for a w×h target: whole 8×8 tiles × 64 texels × 16 B, then one 16-B light-belief record per tile (restir.wgsl tileRecIndex), zero-filled by
    *  the API = no history and no beliefs anywhere (the first frame draws fresh candidates only). A size the pool returns to does not keep reservoirs — they are a frame's worth of

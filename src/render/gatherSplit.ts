@@ -19,14 +19,11 @@ export function splitRefused(line: string, data?: Record<string, unknown>): void
 export const SPLIT_TEXEL_BYTES = 15 * 16;
 
 let own: string | null = null;
-/** fgather.wgsl's module-scope declarations: the helpers, constants and bindings the two programs are written against. The build's own text is read once; a dev
- *  hook's variant (passes.ts hotSwapGather) is read as given, and an entry point it still carries is left out. */
-export function gatherHelpers(fgather: string = fgatherSrc): string {
-  if (fgather === fgatherSrc && own !== null) return own;
-  const text = wgslDecls(fgather).filter(d => !/^@compute\b/.test(d)).join('\n') + '\n'; if (fgather === fgatherSrc) own = text;
-  return text;
+/** fgather.wgsl's module-scope declarations: the helpers, constants and bindings the two programs are written against. The text is read once. */
+export function gatherHelpers(): string {
+  return own ??= wgslDecls(fgatherSrc).filter(d => !/^@compute\b/.test(d)).join('\n') + '\n';
 }
 /** the module both programs are made from, less the scene prelude and lighting_common the caller puts in front of every tracing module: entry points `trace` and `light` */
-export function splitGatherSrc(fgather: string = fgatherSrc, common: string = gatherCommonSrc): string {
-  return common + gatherHelpers(fgather) + splitSrc;
+export function splitGatherSrc(): string {
+  return gatherCommonSrc + gatherHelpers() + splitSrc;
 }

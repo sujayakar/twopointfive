@@ -182,21 +182,6 @@ export class RadianceCascades {
       computePipelineAsync(d, { label: 'rcC0', layout: this.plTrace, compute: { module: mod, entryPoint: 'rcC0' } }),
       computePipelineAsync(d, { label: 'rcDice', layout: this.plDice, compute: { module: mod, entryPoint: 'rcDice' } }) ]);
   }
-  /** Dev / measurement hook (tools/qa/trace-lab.js via main.ts __hotCommon): rebuild the three kernels from the CURRENT scene prelude (an edited common.wgsl / traversal variant under
-   *  test) + rc.wgsl as bundled — the trace kernels are common.wgsl's biggest customer after the direct pass. All three or none: the old pipelines stay if the module has an error. */
-  async hotSwap(src: string = rcSrc): Promise<{ ok: boolean; messages: string[] }> {
-    const d = this.device; const pre = scenePrelude() + lightingCommon; const off = pre.split('\n').length - 1;
-    const mod = d.createShaderModule({ code: pre + src, label: 'rc-hot' });
-    const info = await mod.getCompilationInfo();
-    const messages = info.messages.map(m => `${m.type} ${m.lineNum - off}:${m.linePos} ${m.message}`);
-    if (info.messages.some(m => m.type === 'error')) return { ok: false, messages };
-    [this.pipeUpper, this.pipeC0, this.pipeDice] = await Promise.all([
-      d.createComputePipelineAsync({ label: 'rcUpper-hot', layout: this.plTrace, compute: { module: mod, entryPoint: 'rcUpper' } }),
-      d.createComputePipelineAsync({ label: 'rcC0-hot', layout: this.plTrace, compute: { module: mod, entryPoint: 'rcC0' } }),
-      d.createComputePipelineAsync({ label: 'rcDice-hot', layout: this.plDice, compute: { module: mod, entryPoint: 'rcDice' } }) ]);
-    this.mod = mod;
-    return { ok: true, messages };
-  }
 
   intervalStart(n: number) { return this.cfg.interval0 * (Math.pow(4, n) - 1) / 3; }
 
