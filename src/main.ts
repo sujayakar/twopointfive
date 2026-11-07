@@ -200,7 +200,8 @@ import { ANYTIME } from './scene/collision';
 import { knobRegistry, knobsCopy, knobsBack } from './game/knobs';   // (last on purpose: every game module above is already loaded, so this import changes nobody's load order)
 import type { Gpu } from './gpu/device';
 import { RENDER_PASSES } from './gpu/timer';
-import { PLAYTAPE, tapeFromUrl } from './replay/engineplay';
+import { PLAYTAPE, tapeFromUrl, tapeMapUrl } from './replay/engineplay';
+import { GAME_PAGE } from './replay/format';
 import { NETPLAY, NET_JOIN, netFromUrl, netKeyed, netLeave } from './net/page';
 import { netRows } from './ui/netrows';
 import { COOP } from './net/lobby';
@@ -224,6 +225,9 @@ boot.expose();
 
 async function main() {
   const q = new URLSearchParams(location.search);
+  // A REPLAY'S ADDRESS ON A GAME PAGE THAT PLAYS NO TAPES (replay/format.ts GAME_PAGE) is the map viewer's, which draws the file's trace: this window goes there
+  // before anything boots. A served file, and a build with no viewer page, get a plain card
+  if (q.has(PLAYTAPE) && !GAME_PAGE.playsTapes) { const to = tapeMapUrl(q); if (to === null) throw Object.assign(new Error('this address has no game on this build'), { name: 'NoGameHere' }); location.replace(to); return; }
   // THE KEPT PAGE (gpu/keep.ts, host/keeppage.ts): the tab's own page keeps the GPU device and shows the game in a frame of this address, so a mission start —
   // a load of that frame — compiles no shader this visit has compiled already. A shell boots nothing more; ?keeppage=0 = every load a whole page, as it was
   const keep = keepPageBoot(q, ownPage(q), kitViewOn);   // (a run of any kind keeps its own page: host/runpage.ts; the Team & kit picture draws with its page's device, on a lease beside it)
@@ -233,9 +237,6 @@ async function main() {
   // anything is built. With no WebAssembly (a browser whose policy turns this site's JIT off) it is the card below; anything else is a fault of the build
   // THE RUST GAME IS THE PAGE'S GAME (host/rustgame.ts): its module is fetched and compiled here, before anything has asked for the simulation's, and handed to
   // src/sim as the one instance, so `__ready` waits on it behind the boot card. There is no other game.
-  // (THE ONLY GAME. A tape played back stepped the TypeScript tick, which is gone, and its own path onto the Rust game is not here yet: that address gets a
-  // plain card before anything boots. A co-op game's page is the Rust game's: src/net/page.ts)
-  if (q.has(PLAYTAPE)) throw Object.assign(new Error('this address has no game on this build yet'), { name: 'NoGameHere' });
   const rustGame = await import('./host/rustgame');
   await rustGame.rustBoot();
   { const no = simWhyNot(); if (no) { console.info(simSay()); throw noWasm() ? new NoWasmError(no) : new Error(`the Rust simulation did not start: ${no}`); } }

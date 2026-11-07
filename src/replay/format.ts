@@ -286,6 +286,9 @@ export function replayBlob(F: ReplayFile): { name: string; blob: Blob } {
  *  (ReplayKey's constructor, and its pageshow for a page handed back as it was left), so a replay reached later by another road finds none and goes to the
  *  game's own page. */
 export const CAME_FROM = 'twopointsix.replay.from';
+/** DOES THE GAME PAGE PLAY A RUN TAPE (engineplay.ts, `?playtape=`): asked by every road that would lead there — the end card's Replay (ui/replaykey.ts
+ *  engineUrl), the map viewer's 'Play in engine', the address itself (main.ts). While it does not, all of them are the map viewer's, which draws the file's trace. */
+export const GAME_PAGE = { playsTapes: false };
 type Slots = { currentEntry?: { key?: string } | null; entries?: () => { key: string }[]; traverseTo?: (key: string) => { committed?: Promise<unknown>; finished: Promise<unknown> } };
 const slots = (): Slots | null => { try { return (globalThis as { navigation?: Slots }).navigation ?? null; } catch { return null; } };
 /** this window goes to a replay page — never a new tab — leaving the mark its way back reads */
