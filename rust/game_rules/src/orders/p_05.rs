@@ -170,7 +170,7 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
                     && !squad_orders_in_frame(g, p)
                     && !(crate::doorway::doorway_lane(g, p, None).is_some() && (off.is_some() || crate::doorway::doorway_lane(g, slot, None).is_none()))
                     && !crate::scene_collision::solid_blocked(g, [p[0], 0.45, p[2]], [sam_pos[0], 0.45, sam_pos[2]], None)
-                    && !(crate::doorway::doorway_file(g) && squad_orders_on_top(g, &crate::seats::here(g), gd, a));
+                    && !squad_orders_on_top(g, &crate::seats::here(g), gd, a);
                 near_v = Some(v);
                 v
             };

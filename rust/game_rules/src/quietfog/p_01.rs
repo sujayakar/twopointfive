@@ -12,14 +12,9 @@ fn rung_of(v: Option<&str>) -> Option<QuietRung> {
     [QuietRung::Off, QuietRung::Team, QuietRung::Cones, QuietRung::Own].into_iter().find(|r| Some(r.as_str()) == v)
 }
 
-/// The solo night's row is one the lever is live on. (quietfog.ts soloFogRow)
-pub fn solo_fog_row(g: &crate::game::Game) -> bool {
-    true
-}
-
 /// A link is the solo night's own, to be read as a quiet row's: `solo` on it, nothing else staged by it. (quietfog.ts soloFogLink)
 pub fn solo_fog_link(g: &crate::game::Game, q: &crate::query::Query) -> bool {
-    solo_fog_row(g) && q.has("solo") && !not_solo().iter().any(|k| q.has(k))
+    q.has("solo") && !not_solo().iter().any(|k| q.has(k))
 }
 
 /// A quiet mission that hands out its cameras hands the player a wand as well. (quietfog.ts quietWand)

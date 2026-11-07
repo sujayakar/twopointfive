@@ -32,9 +32,6 @@ fn at_of(t: &crate::orders::OrderTarget) -> V3 {
     }
 }
 
-/// A TEAMMATE'S 40 MM WORKS IN THIS BUILD: settled on the page. (squad40.ts squad40Here)
-pub fn squad40_here(g: &crate::game::Game) -> bool { true }
-
 /// the launcher is under the gun in his hands: a long gun whose row has one. (squad40.ts tubeUp)
 pub fn tube_up(g: &crate::game::Game, gd: GuardId) -> bool {
     let d = g.fa[g.gd[gd].weapon].def;

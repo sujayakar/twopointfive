@@ -181,7 +181,6 @@ pub fn hearing_check(g: &mut crate::game::Game, gd: GuardId, ear: Option<f64>, e
         let heard_at: V3 = [prop.via[0], 0.0, prop.via[2]];
         let odd = e.kind == K::Shot
             || (e.kind == K::GuardShot
-                && crate::gunslots::quiet_heard(g)
                 && d_straight >= 0.1
                 && crate::guards::shot_relation(g, gd, shot_e(&e)) == crate::guards::ShotRelation::Threat);
         if odd && !gunfire && d < 7.0 * carry * m::max(0.3, e.level.unwrap_or(0.6) / 0.6) * ear + 0.5 {
