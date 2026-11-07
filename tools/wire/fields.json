@@ -12918,5 +12918,22 @@
 "deathrecap::Recap.all_down",
 "game::Game.stood",
 "game::Game.solo_card"
-]
+],
+"unsent": {
+"anim_characters::CharacterRenderer": "the page's renderer: the host fills its arrays and draws from them",
+"dress::DressModDRESS": "which parts of the dress step the page makes: the page's own switches",
+"game::Game.rig": "the men's rig, loaded once by the host",
+"game::GameTune": "settings: the page writes them and hands them over",
+"glassbreak::GlassBreak.sheet_list": "a memo of the level's glass, worked out by whoever asks",
+"orders::SquadOrders.cast": "which men a book of orders is for: made with the book",
+"props::Prop.id": "the thing's number: made with the thing",
+"scene_level::Level.breach": "the level's own data",
+"sim_itemshome::ItemStore": "where a column of the block lies: addresses, not state",
+"sim_lightshome::Fixture.i": "the fixture's number: made with the fixture",
+"sim_propshome::PropStore": "where a column of the block lies: addresses, not state",
+"sim_propshome::PropStoreO": "where a column of the block lies: addresses, not state",
+"weapons::Firearm.def": "the gun's own row of the weapons table: made with the gun",
+"weather_kinds::WeatherKindsModWEATHERBOOT": "the weather as the page booted",
+"wind::WindSource.name": "a wind's name: made with the wind"
+}
 }
