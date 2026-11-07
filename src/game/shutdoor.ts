@@ -29,6 +29,7 @@ import { frameOf, crossesDoor } from './guards';
 import { isHostile } from './teams';
 import { civiliansShown } from './civilians';
 import { RAG } from './ragdoll';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 export const SHUT_ID = 'shutDoor';
 /** the row it stands in for on the door tools' page (doortools.ts) */
@@ -85,7 +86,7 @@ function stands(g: Game, p: Vec3): boolean {
 /** THE PLACE d is shut from on face `side` (+1 = the CCW side of the closed leaf — orders.ts sideOf), as it stands now: the free floor nearest where its
  *  handle comes to, within reach of it and clear of the leaf's way shut by his body and the slack — beside the latch jamb before in front of the opening
  *  (off the line of whatever is beyond the door); a door in a corner: the nearest floor in front of its handle half, at the long reach. Null: none. */
-export function shutSpot(g: Game, d: Door, side: 1 | -1): Spot | null {
+export function shutSpot(g: Game, d: Door, side: 1 | -1): Spot | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('shutSpot', undefined, [g, d, side]); if (__r !== RUST_PASS) return __r as any; } }
   const W = d.def.width, hd = handleOf(d), ref = ptOf(d, W - K.handleIn, 0.2, side), pad = K.body + K.slack;
   const ok = (p: Vec3) => !inShutSwing(d, p[0], p[2], pad) && stands(g, p) && !walled(g, ref, p);
   const face = (p: Vec3) => Math.atan2(hd[0] - p[0], hd[2] - p[2]);

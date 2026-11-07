@@ -22,6 +22,7 @@ import type { Item } from './throwables';
 import type { Chunk } from './debris';
 import { snowFieldAt, type SnowField } from '../render/snowField';
 import { stampMark, pressGroove, pressClods, hash3, type SnowTracks } from './snowTracks';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** The marks' numbers (never seen on a GPU, never seen moving: the maintainer's to move; `__snow.marks` on the console, all LIVE — they reach the next mark).
  *  Authored data, not player switches. */
@@ -73,7 +74,7 @@ const lies = (field: SnowField, x: number, z: number) => snowFieldAt(field, x, z
 export function clearSnowMarks() { propSeen = new SideMap(); itemSeen = new SideMap(); chunkSeen = new SideMap(); }
 
 /** Once a frame, after the boots (game.ts stepSnowTracks; everything has moved): the things' marks. */
-export function updateSnowMarks(g: Game, T: SnowTracks, field: SnowField, dt: number) {
+export function updateSnowMarks(g: Game, T: SnowTracks, field: SnowField, dt: number) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('updateSnowMarks', undefined, [g, T, field, dt]); if (__r !== RUST_PASS) return __r as any; } }
   if (!(dt > 0)) return;
   const fog = g.fogOfWar, dark = fog && fog.active && !fog.bared ? (x: number, z: number) => !fog.spotSeen(x, z) : null;   // (null: no fog — everything is seen)
   propMarks(g, T, field, dark);

@@ -29,12 +29,12 @@
 // STATE: one SquadNet on the Game (rows, the men already called down, what is owed the ear this frame): in the rollback snapshot with everything else the
 // Game reaches. THIS FILE ONLY READS THE GAME, as cues.ts does.
 // CHECK: bun run tools/qa/squadnet-check.ts (probes.ts squadnet), both stands; SQUADNET_BREAK=1 must fail.
-import { teamSquad } from './seats';
+import './seats';
 import { clamp, type Vec3 } from '../math/vec';
-import type { Game, Guard } from './game';
+import type { Game } from './game';
 import type { AutoPick } from './autopilot';
-import type { Door } from './doors';
-import { doorCells } from './guards';   // (asked inside a call only)
+import './guards';   // (asked inside a call only)
+import { crossToRust, goneWithTick } from './crossing';
 
 export const SQUADNET = {
   /** a teammate's line said off your screen is drawn near you, the net clicks, and a teammate going down is called */
@@ -74,23 +74,7 @@ export class SquadNet {
   line() { this.stats.lines++; this.clickDue = true; }
 
   /** once a frame, after everybody has moved: who went down this frame, rows that have had their time, and the one sound owed */
-  tick() {
-    const g = this.g, K = SQUADNET, t = g.time;
-    if (t < this.lastT) this.reset(); this.lastT = t;
-    const squad = teamSquad(g);
-    if (this.down.length) this.down = this.down.filter(c => squad.some(gd => gd.callsign === c && gd.state === 'dead'));   // (a roster stood up again under the same names: its men have not been called)
-    for (const gd of squad) {
-      if (gd.state !== 'dead' || this.down.includes(gd.callsign)) continue;
-      this.down.push(gd.callsign);
-      if (!K.on || !this.seeded) continue;   // (down before the run was watched: a checkpoint's dead are not called again)
-      const p = gd.char.pos; this.rows.push({ text: `${gd.callsign} is down.`, at: [p[0], p[1], p[2]], t, dur: K.downSecs }); this.stats.downs++; this.downDue = true;
-    }
-    this.seeded = true;
-    if (this.rows.length && t - this.rows[0].t > this.rows[0].dur) this.rows = this.rows.filter(r => t - r.t <= r.dur);
-    if (this.downDue) { if (K.downGain > 0) g.audio.play('radio', null, K.downGain, { rate: K.downRate }); }
-    else if (this.clickDue && K.click > 0) g.audio.play('radio', null, K.click, { rate: K.clickRate });
-    this.clickDue = this.downDue = false;
-  }
+  tick(): void { return crossToRust('SquadNet.tick', this, []) as any; }
 }
 
 /** what a quick-key pick that is not a plain open adds: the end of the quick key's row, and the line the man who answers says in place of the row's own
@@ -107,28 +91,12 @@ export function whyWords(P: AutoPick): { row: string; ack: string } | null {
 /** the call a lead makes when an entry is over (doortools.ts): `left` = floor of the room its search was cut short of (0 where it ended by its own bar, and
  *  where the entry had no search of its own: open floor), `inside` = a living enemy stands in the room, `seen` = one of them the team has in sight. Null:
  *  nothing is said. */
-export function roomCall(g: Game, name: string, left: number, inside: boolean, seen: boolean): string | null {
-  if (!SQUADNET.clear) return inside ? null : `${name} clear.`;
-  const S = g.squadNet.stats;
-  if (!inside && left <= 0) { S.clears++; return `${name} clear.`; }
-  if (left > 0 && !seen) { S.quiets++; return `${name}${/[^s]s$/.test(name) ? ' are' : "'s"} quiet. we didn't see all of it.`; }   // ('bunks are quiet', 'server room's quiet')
-  return null;
-}
+export function roomCall(g: Game, name: string, left: number, inside: boolean, seen: boolean): string | null { return goneWithTick('roomCall') as any; }
 
 /** the call at the end of an entry into a room the mission has no name for (doortools.ts): `open` = open floor (a hall, a yard: nobody searches it), the
  *  rest as roomCall's, counted of the room fight's own flood. Null: nothing is said — and with the switch off nothing ever is, as it was. */
-export function plainCall(g: Game, open: boolean, left: number, inside: boolean, seen: boolean): string | null {
-  if (!SQUADNET.endCall) return null;
-  const call = open ? (seen ? null : 'clear so far.') : roomCall(g, 'room', left, inside, seen);   // (open floor: what they can see of it, and they say so)
-  if (call) g.squadNet.stats.ends++;
-  return call;
-}
+export function plainCall(g: Game, open: boolean, left: number, inside: boolean, seen: boolean): string | null { return goneWithTick('plainCall') as any; }
 
-/** does a man at p stand in that room of the room fight's (its flood of nav cells) — a doorway of the room's own counted: a man in its far door is in it */
-export function inFlood(g: Game, R: { cells: Set<number>; entries: { door: Door }[] }, p: Vec3): boolean {
-  const nav = g.col.nav, c = nav.idx(Math.floor(p[0] / nav.cell), Math.floor(p[2] / nav.cell)); if (R.cells.has(c)) return true;
-  const d = doorCells(g).get(c); return !!d && R.entries.some(e => e.door === d);
-}
 
 /** the pitch of a far line's row, in the view's pixels: two lines nearer than this in y are on the same row (ui/bubbles.ts tests by it too) */
 export const NET_ROW = 26;

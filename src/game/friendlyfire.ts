@@ -33,6 +33,7 @@ import { roundEnergy } from './glasspen';
 import { wallPenLive, thinLine } from './wallpen';
 import { foeChar } from './teams';
 import { watchYourFire } from './suppression';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 export const FRIENDLYFIRE = {
   on: false,
@@ -60,7 +61,7 @@ export function ffSide(sg: Guard | null): boolean { return !!sg && !sg.civ && !i
  *  teammate asking (never his own body). `on` = the man the round is for, when `to` is his chest: a round that cannot miss him (the whole cone inside his
  *  body where he stands) stops in him, and a friend beyond him is not in its way. Level geometry only between the muzzle and the friend — what the round
  *  goes through (glass, and a thin wall or a leaf while that rule is live) is no wall to this question either; furniture never is. */
-export function friendInCone(g: Game, self: Guard, muzzle: Vec3, to: Vec3, spread: number, def?: WeaponDef, on?: Character | null): 'player' | Guard | null {
+export function friendInCone(g: Game, self: Guard, muzzle: Vec3, to: Vec3, spread: number, def?: WeaponDef, on?: Character | null): 'player' | Guard | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('friendInCone', undefined, [g, self, muzzle, to, spread, def, on]); if (__r !== RUST_PASS) return __r as any; } }
   const K = FRIENDLYFIRE; if (!K.care || !ffLive(g) || !ffSide(self) || ffBroken()) return null;   // (`FRIENDLYFIRE_BREAK=1`, the check's and the measure's: the bodies without the care)
   let dx = to[0] - muzzle[0], dz = to[2] - muzzle[2]; const L = Math.hypot(dx, dz); if (L < 0.05) return null; dx /= L; dz /= L;
   const rise = (to[1] - muzzle[1]) / L, k = K.coneK * Math.max(0, spread);
@@ -98,7 +99,7 @@ export function ffUnpressed(g: Game, sg: Guard | null, muzzle: Vec3, to: Vec3, s
 function ffBroken(): boolean { return String((globalThis as any).process?.env?.FRIENDLYFIRE_BREAK ?? '') === '1'; }
 
 /** combat.ts fireWeapon, the PLAYER's round flown from `from` to where it stopped: every standing teammate it went close past says so (the man it went into says nothing) */
-export function ffPast(g: Game, from: Vec3, to: Vec3, into: Character | null) {
+export function ffPast(g: Game, from: Vec3, to: Vec3, into: Character | null) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('ffPast', undefined, [g, from, to, into]); if (__r !== RUST_PASS) return __r as any; } }
   const K = FRIENDLYFIRE; if (!K.words) return;
   const dx = to[0] - from[0], dy = to[1] - from[1], dz = to[2] - from[2], L2 = dx * dx + dy * dy + dz * dz; if (L2 < 1) return;
   for (const o of g.guards) { if (!ffBody(o) || o.char === into || o.held) continue;
@@ -107,8 +108,6 @@ export function ffPast(g: Game, from: Vec3, to: Vec3, into: Character | null) {
       if (Math.hypot(from[0] + dx * t - p[0], from[1] + dy * t - p[1], from[2] + dz * t - p[2]) > K.nearM) continue;
       if (watchYourFire(g, o)) FRIENDLYFIRE_STATS.said++; break; } }
 }
-/** roomfight.ts: its gate held a round for a friend in the cone that its own lane did not hold (counted) */
-export function ffHeld() { FRIENDLYFIRE_STATS.held++; }
 /** combat.ts: a round of Sam's side has gone into a man of Sam's side — counted (who fired, who was found; nothing else reads it) */
 export function ffNote(sg: Guard | null, isPlayer: boolean, intoSam: boolean) {
   const S = FRIENDLYFIRE_STATS; if (isPlayer) S.samOnMate++; else if (intoSam) S.mateOnSam++; else if (sg) S.mateOnMate++;

@@ -15,6 +15,7 @@ import type { GunModelId, WeaponId } from './weapons';
 import { drawnAs, paintOf } from '../scene/stuff';   // (no game module: the table of what a paint is made of)
 import { GEAR } from './gear';   // (a leaf — read only inside the box builders: which rifle and which goggles are DRAWN)
 import { packOf, sideBind, sideSkinned, sidePitch, sidePitched, chestJoint, type SidePlace } from './packside';   // (a leaf — called inside the box builders only: a long thing at the side of the pack he wears)
+import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 /** A stick-shaped part laid along a direction from an anchor point: it spans [l0, l1] metres along the direction; the box is
  *  `thick` (half width, sideways) × `tall` (half height). The box is fully oriented along the direction (Box.rot, see seg()). */
@@ -376,7 +377,7 @@ const NV_SWING = 0.018;
  *  onto the forehead (dim) when off. The offsets live in a head frame that is either yaw-only (G.followPitch 0) or the skull's full
  *  rotation (1); the boxes' own orientation is the flattened head yaw in both cases (boxes only yaw). */
 /** `k` (a flip under way — character.ts nvShown): the cluster part way between its two authored places, 0 up … 1 down; absent, 0 or 1 = the place `nv` names, as ever */
-export function gogglesBoxes(c: Character, nv: boolean, out: Box[], G: Rig['goggles'], meta?: MetaSink, k?: number) {
+export function gogglesBoxes(c: Character, nv: boolean, out: Box[], G: Rig['goggles'], meta?: MetaSink, k?: number) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('gogglesBoxes', undefined, [c, nv, out, G, meta, k]); if (__r !== RUST_PASS) return __r as any; } }
   const head = c.bones.head; if (!head) return;
   const f = headFlatForward(c);
   let fwd: Vec3 = f, up: Vec3 = [0, 1, 0], side: Vec3 = [f[2], 0, -f[0]];        // yaw-only frame (side = quat.yaw · +X, the figure's left; the triangle is symmetric so the sign is moot)
@@ -562,7 +563,7 @@ export function magBoxL(c: Character, out: Box[], kind: 'pistol' | 'rifle', fit 
 
 /** Held / worn props for one character as small boxes, appended to `out` (the frame's dynamic box list).
  *  Needs the character's bones, i.e. call after char.update(). */
-export function rigBoxes(c: Character, o: RigOpts, out: Box[], rig: Rig = RIG, meta?: RigNodeMeta[]) {
+export function rigBoxes(c: Character, o: RigOpts, out: Box[], rig: Rig = RIG, meta?: RigNodeMeta[]) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('rigBoxes', undefined, [c, o, out, rig, meta]); if (__r !== RUST_PASS) return __r as any; } }
   kitBoxes(c, o, out, rig, meta);
   if (o.big) bigBoxes(c, o.big, o.bigK ?? 0, out, rig, !!o.bigClear, meta);   // (the big slot's tool: after everything else of his — the motion keys of the parts above are their ordinals in his list)
 }
@@ -681,7 +682,7 @@ export function modelMuzzleAhead(id: GunModelId, rig: Rig = RIG): number | null 
 
 /** Sidearm in a thigh holster: barrel down the outside of the right thigh, grip up and to the rear (top of the slide facing forward). Same part
  *  boxes as the drawn gun (slide, grip, and the player's suppressor), just hung on the leg frame instead of the hand frame. */
-export function holsterBoxes(c: Character, out: Box[], parts: { slide: Seg; grip: Seg; suppressor?: Seg }, meta?: MetaSink, holsterRig?: Rig['holster']) {
+export function holsterBoxes(c: Character, out: Box[], parts: { slide: Seg; grip: Seg; suppressor?: Seg }, meta?: MetaSink, holsterRig?: Rig['holster']) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('holsterBoxes', undefined, [c, out, parts, meta, holsterRig]); if (__r !== RUST_PASS) return __r as any; } }
   const th = c.bones.thighR, kn = c.bones.shinR, hp = c.bones.hips; if (!th || !kn || !hp) return;
   curOwner = c.id & 0xff;   // (also called on its own for a body — stamp the boxes with THIS character, not whoever rigBoxes drew last)
   const down = v3.normalize(v3.sub(kn, th)); const fwd = c.forward();
@@ -704,7 +705,7 @@ const GRIP_HUNG: Adj = { off: [0, -0.024, 0.05], rot: [108, 0, 0] };
 /** The combat knife in the right fist (RIG.knife): handle through the fist, a stub guard, then the blade out of its thumb side with the lighter edge strip on
  *  the palm side — four traced boxes carrying the character's owner byte like the rest of his kit (his own shadow rays pass through them), none emissive.
  *  Where it ends up is entirely the hand's doing: character.ts holdLayer turns the fist so the blade lies across the held man's throat. */
-export function knifeBoxes(c: Character, out: Box[], K: Rig['knife'] = RIG.knife, meta?: MetaSink) {
+export function knifeBoxes(c: Character, out: Box[], K: Rig['knife'] = RIG.knife, meta?: MetaSink) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('knifeBoxes', undefined, [c, out, K, meta]); if (__r !== RUST_PASS) return __r as any; } }
   const hand = c.bones.handR; if (!hand) return;
   curOwner = c.id & 0xff;
   const H = c.handFrameR();
@@ -757,7 +758,7 @@ function heldCanBoxes(c: Character, kind: 'smoke' | 'flash' | 'frag', out: Box[]
 }
 
 /** GUNHAND.throwFree (gunhand.ts): the can of a throw off the FREE hand — in the left fist, as a fitted can is in the right (combat.ts guardKit, while it has not left him) */
-export function freeCanBoxes(c: Character, kind: 'smoke' | 'flash' | 'frag', out: Box[], meta?: RigNodeMeta[]) { curOwner = c.id & 0xff; heldCanBoxes(c, kind, out, RIG.can, meta, true, true); }
+export function freeCanBoxes(c: Character, kind: 'smoke' | 'flash' | 'frag', out: Box[], meta?: RigNodeMeta[]) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('freeCanBoxes', undefined, [c, kind, out, meta]); if (__r !== RUST_PASS) return __r as any; } } curOwner = c.id & 0xff; heldCanBoxes(c, kind, out, RIG.can, meta, true, true); }
 
 /** The carbine's group frame: the sidearm's hand frame (wrist, z along char.gunDir, y up out of the receiver) moved by the group adj onto the bore above the trigger. */
 function carbineFrame(c: Character, hand: Vec3, C: Rig['carbine']): { handF: Frame; g: Frame } { return pistolFrame(c, hand, C); }
@@ -869,8 +870,6 @@ function slingSwing(c: Character, cf: Frame, o: Vec3, z: Vec3): number {
   }
   return Math.min(F.max, a);
 }
-/** …asked from outside: the swing a front-slung rifle wants on this pose (the target kitanim.ts eases toward) */
-export function slingRestWant(c: Character): number { return slungBase(c, SLING_FRONT, true).want; }
 function sc20kFrame(c: Character, S: Rig['sc20k'], where: 'hand' | 'slung', front = false, rest?: number): { parent: Frame; g: Frame } {
   if (where === 'hand') { const { handF, g } = pistolFrame(c, c.bones.handR ?? c.muzzle, S); return { parent: handF, g }; }
   if (!front) { const side = packSide(c, 'rifle'); if (side) return { parent: side, g: side }; }   // (packside.ts: across a back that wears a pack it stands at the pack's left side instead)
@@ -886,7 +885,7 @@ function bareBarrel(can: Seg): Seg { return { ...can, thick: BARE_BARREL, tall: 
 /** Sam's SC-20K (see the Rig doc): eleven oriented boxes — the polymer hull, buttpad, grip, fore-end and foregrip; the darker can, box, rail and optic; the light body
  *  and its lens (lit with `lens`, zero = dark) — off the right hand ('hand') or across the back ('slung'). The support hand's grip point is a node of its own (no
  *  boxes) so the gizmo can drag it, as the carbine's is. Standalone-safe: stamps the boxes with THIS character. */
-export function sc20kBoxes(c: Character, out: Box[], S: Rig['sc20k'] = RIG.sc20k, where: 'hand' | 'slung' = 'hand', lens: Vec3 = [0, 0, 0], meta?: MetaSink, M: Rig['m4'] | null = null, kit?: KitDraw, fit = false, front = false, rest?: number, black = false) {
+export function sc20kBoxes(c: Character, out: Box[], S: Rig['sc20k'] = RIG.sc20k, where: 'hand' | 'slung' = 'hand', lens: Vec3 = [0, 0, 0], meta?: MetaSink, M: Rig['m4'] | null = null, kit?: KitDraw, fit = false, front = false, rest?: number, black = false) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('sc20kBoxes', undefined, [c, out, S, where, lens, meta, M, kit, fit, front, rest, black]); if (__r !== RUST_PASS) return __r as any; } }
   curOwner = c.id & 0xff;
   const fr = sc20kFrame(c, S, where, front, rest), parent = fr.parent; let g = fr.g;
   if (kit && where === 'hand' && c.bones.handR) {   // (kit handling: it rides the hand's own frame up over the shoulder, then goes down his back — or comes up off it — between the hand and the sling)
@@ -948,10 +947,7 @@ export function sc20kLightPose(c: Character, rig: Rig = RIG): { pos: Vec3; dir: 
   return { pos: v3.mad(l.o, l.z, L?.lens ? L.lensAhead ?? S.lightAhead : S.lightAhead), dir: g.z };
 }
 /** where a ring leaves it: the launcher port under the fore-end's nose, a hand under the bore just short of the can (launcher.ts fires from here along the aim) */
-export function sc20kLauncherMuzzle(c: Character, rig: Rig = RIG): Vec3 {
-  const S = rig.sc20k; const { g } = sc20kFrame(c, S, 'hand'); const f = applyAdj(g, S.fore.adj);
-  return v3.mad(v3.mad(f.o, f.z, S.fore.l1), f.y, -(S.fore.tall + 0.02));
-}
+export function sc20kLauncherMuzzle(c: Character, rig: Rig = RIG): Vec3 { return goneWithTick('sc20kLauncherMuzzle') as any; }
 /** The carbine's weapon light: at the lens part on the handguard, pointing down the bore — the light IS where the muzzle points. */
 export function carbineLightPose(c: Character, rig: Rig = RIG): { pos: Vec3; dir: Vec3 } {
   const C = rig.carbine; const { g } = carbineFrame(c, c.bones.handR ?? c.muzzle, C);
@@ -1071,7 +1067,7 @@ export function bigBackOf(hips: Vec3, mid: Vec3, thL: Vec3, thR: Vec3, uaL: Vec3
 /** The big slot's tool on a man (RigOpts.big; standalone-safe: stamps the boxes with THIS character): on his back (k 0), in his hands (1 — the hammer off the
  *  right fist's own frame, the shotgun off the right hand like the carbine it is drawn as), or carried between the two by `k`, as kit handling carries a gun.
  *  Traced boxes with his owner byte like the rest of his kit, none lit. */
-export function bigBoxes(c: Character, kind: 'hammer' | 'shotgun', k: number, out: Box[], rig: Rig = RIG, clear = false, meta?: MetaSink) {
+export function bigBoxes(c: Character, kind: 'hammer' | 'shotgun', k: number, out: Box[], rig: Rig = RIG, clear = false, meta?: MetaSink) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('bigBoxes', undefined, [c, kind, k, out, rig, clear, meta]); if (__r !== RUST_PASS) return __r as any; } }
   const b = c.bones; if (!(b.hips && b.spine2 && b.thighL && b.thighR && b.upperArmL && b.upperArmR)) return;
   curOwner = c.id & 0xff;
   const across = (): Frame => { const P = kind === 'hammer' ? BIGRIG.hammer.back : BIGRIG.shotgun.back, bk = bigBackOf(b.hips!, b.spine2!, b.thighL!, b.thighR!, b.upperArmL!, b.upperArmR!, P, clear ? bigClearOf(c, kind, rig) : 0);
@@ -1091,7 +1087,7 @@ export function bigBoxes(c: Character, kind: 'hammer' | 'shotgun', k: number, ou
 }
 /** A man's OWN long gun let go of for the big slot's tool: on its sling down his front (SLING_FRONT's place, swung onto his thighs as his pose asks), dark —
  *  the guards' carbine or the SC-20K. Standalone-safe. */
-export function hungBoxes(c: Character, weapon: 'carbine' | 'sc20k', out: Box[], rig: Rig = RIG, black = false, meta?: MetaSink) {
+export function hungBoxes(c: Character, weapon: 'carbine' | 'sc20k', out: Box[], rig: Rig = RIG, black = false, meta?: MetaSink) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('hungBoxes', undefined, [c, weapon, out, rig, black, meta]); if (__r !== RUST_PASS) return __r as any; } }
   if (weapon === 'sc20k') { sc20kBoxes(c, out, rig.sc20k, 'slung', [0, 0, 0], meta, rifleM4(rig), undefined, false, true, undefined, black); return; }
   curOwner = c.id & 0xff;
   carbineBoxes(c, out, rig.carbine, [0, 0, 0], meta, sc20kFrame(c, rig.sc20k, 'slung', true).g);

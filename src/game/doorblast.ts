@@ -23,10 +23,10 @@ import { men } from './seats';
 import { Vec3, v3, quat, clamp, lerp } from '../math/vec';
 import { BoxFlag } from '../scene/boxes';
 import { leafWrote, type BoxMirror } from '../scene/boxMirror';
-import { BOTH, noNumber } from '../scene/collision';
+import { noNumber } from '../scene/collision';
 import { EXACT } from '../math/exact';
 import { RUST, ruleRed } from '../sim/sim';
-import { SP, SLAB_STEPPED, SLAB_HOST, SLABS_STEPPED, slabIo, slabMem, slabDiff } from '../sim/slabshome';
+import { SP, SLAB_STEPPED, SLAB_HOST, SLABS_STEPPED, slabIo, slabMem } from '../sim/slabshome';
 import type { Game } from './game';
 import type { Door, DoorSlab } from './doors';
 import { wandDrop } from './wand';
@@ -35,6 +35,7 @@ import { FURN_BREAK } from './furnblast';
 import { hash01 } from './debris';
 import { gpuFx } from './particleFx';
 import { civiliansShown } from './civilians';
+import { RUST_PASS, RUST_SURFACE, crossToRust } from './crossing';
 
 /** the angle a door off its hinges reads as (doors.ts Door.off): wide open, whatever its own swing limits were */
 export const OFF_ANGLE = Math.PI / 2;   // (doors.ts Doors.update holds an off door at ±this, whatever is written onto it)
@@ -183,7 +184,7 @@ function settle(g: Game, d: Door, S: DoorSlab, T: SlabMet) {
 }
 
 /** THE DOORS' SIDE OF A BLAST (doors.ts Doors.blast is this): every leaf within `tearM` of `at` that the blast reaches by a line no wall is in comes off. */
-export function doorBlast(g: Game, at: Vec3, tearM: number, who: number): Door[] {
+export function doorBlast(g: Game, at: Vec3, tearM: number, who: number): Door[] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('doorBlast', undefined, [g, at, tearM, who]); if (__r !== RUST_PASS) return __r as any; } }
   const out: Door[] = []; if (!DOORBLAST.on || !(tearM > 0)) return out;
   DOORBLAST_STATS.blasts++;
   for (const { d, k } of doorBlastReach(g, at, tearM)) if (tearOff(g, d, at, who, k)) out.push(d);
@@ -232,7 +233,7 @@ function handsOff(g: Game, d: Door) {
 
 /** THE LEAF COMES OFF: out of its frame away from `from` (where the blast was), thrown `k` (0‥1) of DOORBLAST.speed; `who` is blamed for the crack of it and for
  *  the slam when it lands. False (and nothing done) with the switch off, for a steel door, and for one already off. */
-export function tearOff(g: Game, d: Door, from: Vec3, who: number, k = 1): boolean {
+export function tearOff(g: Game, d: Door, from: Vec3, who: number, k = 1): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('tearOff', undefined, [g, d, from, who, k]); if (__r !== RUST_PASS) return __r as any; } }
   const K = DOORBLAST; if (!K.on || d.off || d.def.steel) return false;
   const [hx, hz] = d.def.hinge, W = d.def.width, a = d.def.closedDir + d.angle, ux = Math.cos(a), uz = Math.sin(a);
   const cx = hx + ux * (W * 0.5 + 0.01), cz = hz + uz * (W * 0.5 + 0.01);
@@ -264,7 +265,7 @@ export function leafTough(): number { return Math.min(WALLS.tough.drywall ?? 6, 
 
 /** A ROUND MET A LEAF (DOORSHOT): dynamic box `index − 1e6`, at `hitP`, going `dir`, worth `w` of a wall cell's toll — WallBreak.round calls it for every
  *  round that stopped in, or went on through, a door leaf. Nothing with the switch off, for a steel door, for one off its hinges (its box is the rail). */
-export function leafRound(g: Game, index: number, who: number, hitP: Vec3, dir: Vec3, w: number) {
+export function leafRound(g: Game, index: number, who: number, hitP: Vec3, dir: Vec3, w: number) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('leafRound', undefined, [g, index, who, hitP, dir, w]); if (__r !== RUST_PASS) return __r as any; } }
   const K = DOORSHOT; if (!K.on) return;
   const b = g.col.dynamicBoxes[index - 1e6]; if (!b) return;
   const d = g.doors.list.find(x => x.box === b); if (!d || d.off || d.def.steel) return;
@@ -277,7 +278,7 @@ export function leafRound(g: Game, index: number, who: number, hitP: Vec3, dir: 
 
 /** THE LEAF GOES IN PIECES, the way a round travelling `dir` sends it; `who` is blamed for the crack of it and for what its pieces hit. False (and nothing
  *  done) with the switch off, for a steel door, and for one already off. `at`: where the round struck (the cuts fall by it; absent: by the door alone). */
-export function splinter(g: Game, d: Door, dir: Vec3, who: number, at?: Vec3): boolean {
+export function splinter(g: Game, d: Door, dir: Vec3, who: number, at?: Vec3): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('splinter', undefined, [g, d, dir, who, at]); if (__r !== RUST_PASS) return __r as any; } }
   const K = DOORSHOT; if (!K.on || d.off || d.def.steel) return false;
   const [hx, hz] = d.def.hinge, W = d.def.width, H = d.height, T = d.thick, a = d.def.closedDir + d.angle, ux = Math.cos(a), uz = Math.sin(a);
   const cx = hx + ux * (W * 0.5 + 0.01), cz = hz + uz * (W * 0.5 + 0.01), hw = d.leafH[0], albedo = d.box.albedo, yaw = d.box.yaw;
@@ -328,32 +329,7 @@ export function splinter(g: Game, d: Door, dir: Vec3, who: number, at?: Vec3): b
 
 /** Once a frame (Game.updateDoors, after Doors.update): every loose slab still moving is stepped and posed, in the order of their doors (the rows in the
  *  air are in that order: sim/slabshome.ts), each posed before the next is stepped. */
-export function doorSlabs(g: Game, dt: number) {
-  const T = g.doors.slabs, n = T.fly; if (n === 0) return;
-  const ids: number[] = []; for (let r = 0; r < n; r++) ids.push(T.doorAt(r));   // (by door: a slab that comes to rest gives its row up to the ones still in the air)
-  for (const i of ids) { const d = g.doors.list[i]; if (!d.off) continue; flySlab(g, d, dt); poseSlab(d); }
-}
-/** ONE SLAB'S STEP, WHEREVER IT IS TAKEN — in the Rust module over the slab's row in the game's block (RUST.slabs: rust/sim/src/slabs.rs), here over the
- *  same row, or both ways and compared (collision.ts BOTH) — and then what the step met SAID, in one place and after the step on both sides: the tallies,
- *  the slam for the floor to hear, the log line. The slam is said with the slab's own box out of the list, as the step runs (it was said in the middle of
- *  the step; whoever hears it and asks a line of the level is asked with the same boxes). */
-function flySlab(g: Game, d: Door, dt: number) {
-  const T = g.doors.slabs, r = T.rowOf(d.i); if (r < 0) return;
-  const W = slabThere(g, d);
-  let M: SlabMet | null = W === null ? null : BOTH.on ? stepBoth(g, d, r, dt, W) : stepThere(g, d, r, dt, W);
-  if (M === null) { SLABS_STEPPED.here++; M = stepHere(g, d, r, dt); }   // (slabThere said why, where the row is up)
-  const S = d.slab!, A = DOORBLAST_STATS;   // (its row, read as it stands: it moves on the next line if the slab came to rest)
-  if (S.rest) T.rest(d.i);
-  A.nudged += M.nudged; A.nudgeMax = Math.max(A.nudgeMax, M.nudgeMax); A.laid += M.laid;
-  if (M.landed) { A.landed++; const at: Vec3 = [M.lx, 0.1, M.lz]; withoutLeaf(g, d, () => g.doors.sound(d, 'bang', at, S.who, DOORBLAST.landLevel)); }
-  if (M.rested) { const p = S.p; note(g, `${d.def.name} slab at rest (${p[0].toFixed(2)}, ${p[2].toFixed(2)}) after ${S.t.toFixed(2)} s`); }
-}
-/** the step as this file takes it: the row read out, stepped, written back */
-function stepHere(g: Game, d: Door, r: number, dt: number): SlabMet {
-  const T = g.doors.slabs, S = T.load(r), M = nothingMet();
-  stepSlab(g, d, S, dt, M); T.save(r, S);
-  return M;
-}
+export function doorSlabs(g: Game, dt: number): void { return crossToRust('doorSlabs', undefined, [g, dt]) as any; }
 /** CAN THIS SLAB'S STEP RUN IN THE MODULE: the row on (the slabs' columns are in the game's block always); the game's own maths in Math's place; the box
  *  world's copy standing with the game's own leaves in it as they are now. → the copy to step over and which of its leaves is the slab's own box (−1: none
  *  of them), or null: this file steps, on the same columns. */
@@ -378,17 +354,6 @@ function stepThere(g: Game, d: Door, r: number, dt: number, W: { M: BoxMirror; b
   if (a !== SLAB_STEPPED) throw new Error(`the Rust module was asked to step row ${r} of the slabs, which is no slab in the air`);
   C.there++; if (q[P + SP.landed]) C.landed++; if (q[P + SP.rested]) C.rested++;
   return { landed: q[P + SP.landed] !== 0, lx: q[P + SP.landX], lz: q[P + SP.landZ], rested: q[P + SP.rested] !== 0, nudged: q[P + SP.nudged], nudgeMax: q[P + SP.nudgeMax], laid: q[P + SP.laid] };
-}
-/** …both ways (collision.ts BOTH): the module's step, then this file's from the same row, the two compared column for column and by what they met; the
- *  game goes on from this file's. */
-function stepBoth(g: Game, d: Door, r: number, dt: number, W: { M: BoxMirror; but: number; ask: number }): SlabMet {
-  const T = g.doors.slabs, before = T.bytes(), A = stepThere(g, d, r, dt, W);
-  const there = T.bytes(); T.put(before);
-  const B = stepHere(g, d, r, dt), here = T.bytes(), C = SLABS_STEPPED;
-  const bad = slabDiff(T, here, there, 2); for (const k of Object.keys(B) as (keyof SlabMet)[]) if (!Object.is(Number(A[k]), Number(B[k]))) bad.push(`met.${k} ${B[k]} | ${A[k]}`);
-  BOTH.asked++; C.asked++;
-  if (bad.length) { const say = `${d.def.name}'s slab, TypeScript | Rust: ${bad.join(' · ')}`; BOTH.differ++; C.differ++; if (!BOTH.first) BOTH.first = say; if (!C.first) C.first = say; }
-  return B;
 }
 
 /** the slab's rigid-ish flight: a plank with its foot on the floor — it translates, drags, topples about its foot onto the face `side` names, slams flat,
@@ -445,7 +410,7 @@ function pushOut(g: Game, d: Door, S: DoorSlab) {
 
 /** the slab's box (and the two handles on it) where the slab is: tilted by a quaternion while it topples; from the slam on an ordinary yaw-only box lying flat, so
  *  every yaw-only reader of the collision layer's dynamic list (bodies, the smoke bake) has it as what it is */
-export function poseSlab(d: Door) {
+export function poseSlab(d: Door) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('poseSlab', undefined, [d]); if (__r !== RUST_PASS) return __r as any; } }
   const R = d.slabs, r = R.rowOf(d.i); if (r < 0) return; const S = R.load(r), b = d.box, W = d.def.width, T = d.thick;   // (the row read out once)
   const ux = Math.cos(S.a), uz = Math.sin(S.a), lx = (W - 0.14) - (W * 0.5 + 0.01), ly = 1.0 - (d.height / 2 + 0.01), lz = T / 2 + 0.03;
   b.flags &= ~BoxFlag.SoundSeal; b.yaw = -S.a; leafWrote();   // (a leaf is written from here down: scene/boxMirror.ts)

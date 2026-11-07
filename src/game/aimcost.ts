@@ -36,6 +36,7 @@
 
 import { Vec3, v3, clamp } from '../math/vec';
 import { Box, copyBox, rayBox } from '../scene/boxes';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 export const AIMCOST = {
   /** a lamp breaks only to a round that meets it */
@@ -73,7 +74,7 @@ export interface RoundLeg { o: Vec3; d: Vec3; end: number }
 
 /** did a round flying these legs MEET a fixture — its point `pos`, its own boxes — under the real-hit rule?
  *  `stopped` = the round's flight ended in one of the fixture's boxes (the caller's own ray said so). */
-export function lampStruck(pos: Vec3, boxes: readonly (Box | undefined)[], stopped: boolean, legs: readonly RoundLeg[], bare = AIMCOST.bare, slack = AIMCOST.slack): boolean {
+export function lampStruck(pos: Vec3, boxes: readonly (Box | undefined)[], stopped: boolean, legs: readonly RoundLeg[], bare = AIMCOST.bare, slack = AIMCOST.slack): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('lampStruck', undefined, [pos, boxes, stopped, legs, bare, slack]); if (__r !== RUST_PASS) return __r as any; } }
   if (stopped) return true;
   const pad = AIMCOST.pad;
   for (const s of legs) {
@@ -106,13 +107,4 @@ export function legsNear(pos: Vec3, legs: readonly RoundLeg[]): number {
   return best;
 }
 
-/** the feet a man's hands still remember: the fastest he has gone, let go over `stopTau` (and to nothing: `stopBleed`) */
-export function feetHold(prev: number, speed: number, dt: number): number {
-  const kept = prev * Math.exp(-dt / Math.max(AIMCOST.stopTau, 1e-3)) - AIMCOST.stopBleed * dt;
-  const v = Math.max(speed, kept);
-  return Number.isFinite(v) && v > 1e-4 ? v : 0;
-}
 
-export function aimCostSummary(): string {
-  return `${AIMCOST.lamp ? `lamps: a real hit (bulb ${AIMCOST.bare} m)` : 'lamps: near is a hit'} · ${AIMCOST.move ? `moving ×${AIMCOST.moveK}, held ${AIMCOST.stopTau} s` : 'moving: as it was'} · lamps hit ${AIMCOST_STATS.lampHits}, passed near ${AIMCOST_STATS.lampNear}`;
-}

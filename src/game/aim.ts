@@ -18,12 +18,13 @@
 //            his shoot band and closes again on the beat (guards.ts, aimBrake), and Sam's ring blooms while he moves.
 //   Guard round = (row base + range term) × settle + target + shooter + suppression (+ burst growth); Sam's = base(stand / crouch) × settle + target + shooter
 //   + his suppression term (player.ts adds the two). The composition lives here (guardRound / playerAim); the fire sites only ask.
-import { Vec3, v3, clamp, lerp, wrapAngle, DEG } from '../math/vec';
-import { playerGroundVel } from './guards';
+import { Vec3, v3, clamp, lerp } from '../math/vec';
+import './guards';
 import type { Game, Guard } from './game';
 import type { FireOpts } from './combat';
-import { AIMCOST, feetHold } from './aimcost';   // (a leaf: a lamp needs a real hit, moving feet cost the shot)
-import { foeChar, foeDown } from './teams';
+import { AIMCOST } from './aimcost';   // (a leaf: a lamp needs a real hit, moving feet cost the shot)
+import { foeChar } from './teams';
+import { crossToRust, goneWithTick } from './crossing';
 
 /** screen-space reach of the auto-aim onto a MAN's chest, CSS px (player.ts updateAim; a light's is AIM.player.lightSnapPx, never more than this) */
 export const SNAP_PX = 60;
@@ -94,8 +95,6 @@ export const AIM_DEFAULTS: AimKnobs = JSON.parse(JSON.stringify(AIM));
  *  qrf.ts caps his reaction beats at reactCap seconds (a dazzle or a ring in the body still roots him its full length). */
 export const TRAINED = { settleK: 0.6, spreadK: 0.7, reactCap: 0.45 };
 
-/** seconds since the last real sighting under which he 'has him in sight now' (perception stamps lastSeenT the frame it sees him; scripts that fake sight stamp it a frame ahead) */
-const LOS_NOW = 0.05;
 
 /** Per shooter (Guard.aim / Player.aim): the track and what it is on, the bearing bookkeeping behind the target-motion term, and the last round's numbers for the
  *  panel / the QA soak. Dies with the Guard / Player (restart, resetGuards). */
@@ -127,14 +126,6 @@ export class AimState {
 /** remember the feet: speedSm eased toward the ground speed over tau */
 /** are the two aimcost.ts rules in force for this game? (never under a show: the tour, a showcase and the attract reel were staged without them) */
 const moveCost = (g: Game) => AIMCOST.move && !g.touring;
-const lampCost = (g: Game) => AIMCOST.lamp && !g.touring;
-/** (`hold` = the speed the REMEMBERED feet are fed: the player's is the lesser of the ground he covered and the pace he asked for, so a step the game
- *  takes for him — out round a corner, up to a keypad, a teleport — is not a sprint his hands remember) */
-function feedFeet(A: AimState, speed: number, dt: number, tau: number, on: boolean, hold = speed) {
-  A.speedSm += (speed - A.speedSm) * (1 - Math.exp(-dt / Math.max(tau, 1e-3)));
-  if (!Number.isFinite(A.speedSm) || A.speedSm < 1e-4) A.speedSm = 0;
-  A.moveSm = on ? feetHold(A.moveSm, hold, dt) : 0;
-}
 /** what the feet term reads for this shooter right now (m/s): his ground speed, or what he remembers doing over a walking pace if that is more */
 function feetOf(A: AimState, vel: readonly number[], steadyPace: number, on: boolean): number {
   const f = Math.max(Math.hypot(vel[0], vel[2]), A.speedSm - steadyPace);
@@ -146,22 +137,6 @@ export const AIM_HOOKS: { playerExternalK: (g: Game) => number } = { playerExter
 /** QA hook: set `log` and every reset / gate / brake decision says what it did */
 export const AIM_DEBUG: { log: ((s: string) => void) | null } = { log: null };
 
-/** Feed one frame of the target into the shooter's bookkeeping: the bearing (for the jump test — a new target) and the rate the target term reads, which is the
- *  TARGET's own velocity square to the line of sight over the range (rad/s), smoothed over tau — his motion, not the apparent sweep a shooter side-stepping round
- *  a planted man makes for himself (his own feet are the feet term's). Returns true if the bearing jumped (the rate zeroed, not fed the jump). */
-function feedTarget(A: AimState, from: Vec3, at: Vec3, vel: readonly number[], dt: number, jumpDeg: number, tau: number): boolean {
-  const dx = at[0] - from[0], dz = at[2] - from[2]; const dist = Math.hypot(dx, dz);
-  const brg = Math.atan2(dx, dz);
-  let jumped = false;
-  if (Number.isFinite(A.lastBearing) && Math.abs(wrapAngle(brg - A.lastBearing)) > jumpDeg * DEG) { jumped = true; A.bearingRate = 0; }
-  else {
-    const omega = dist > 1e-3 ? Math.abs(vel[0] * dz - vel[2] * dx) / dist / Math.max(dist, 0.5) : 0;   // |v ⟂ line| / range
-    A.bearingRate += (omega - A.bearingRate) * (1 - Math.exp(-dt / Math.max(tau, 1e-3)));
-  }
-  A.lastBearing = brg;
-  if (!Number.isFinite(A.bearingRate) || A.bearingRate < 0) A.bearingRate = 0;
-  return jumped;
-}
 
 // ================================================================ guards
 /** Once a frame per living, free, unscripted guard (guards.ts updateGuard, after perception and the state transitions, before the behaviour): the bearing to
@@ -169,42 +144,10 @@ function feedTarget(A: AimState, from: Vec3, at: Vec3, vel: readonly number[], d
  *  his bearing jumped; climbing while he is alert, past his reaction beat, not dazzled, has him now and the gun is within onDeg of him (capped on the move);
  *  draining with the gun off him; held through a blink. With the model off it rests at 0 and nothing reads it. SIDES (teams.ts): the target is his FOE — Sam
  *  for the staff, letter for letter what it was; a hostile AI man for a unit, keyed by who that is so a change of man is a track from nothing; no foe, no track. */
-export function trackGuard(g: Game, gd: Guard, dt: number) {
-  const A = gd.aim, P = AIM.guard, c = gd.char, pc = foeChar(g, gd);
-  A.braking = false;
-  if (!g.tune.aimModel || gd.state === 'dead') { A.clear(); return; }
-  if (!pc) { A.clear(); return; }   // (a unit with nobody yet: nothing to line up)
-  const speed = Math.hypot(c.vel[0], c.vel[2]); feedFeet(A, speed, dt, P.feetTau, moveCost(g));
-  const key = gd.foe === 'player' ? 'sam' : `u${pc.id}`;
-  if (A.tgtKey !== key) { if (A.tgtKey) { A.track = 0; A.lastBearing = NaN; A.bearingRate = 0; } A.tgtKey = key; }   // (a NEW man under the gun: acquire him from nothing — the staff's key is 'sam' from the first frame and never anything else)
-  const trunk = pc.bones.spine2 ?? pc.bones.hips ?? pc.pos;
-  const brg = Math.atan2(trunk[0] - c.pos[0], trunk[2] - c.pos[2]);
-  const tvel = gd.foe === 'player' ? playerGroundVel(g) : pc.vel;   // Sam's motion OVER THE GROUND (guards.ts, sampled once a frame), not the pace his keys command: held against a desk or a shut leaf with W down he is standing still, and reads so (review 08-10 #5: hugging a wall at a 'sprint' made every man miss)
-  const jumped = feedTarget(A, c.pos, trunk, tvel, dt, P.jumpDeg, P.rateTau);   // (a man held in his arm walks at the pair's pace, a teleport zeroes it and jumps the bearing)
-  if (gd.pinned && !gd.skill) { A.track = 1; return; }   // the beat put him there already on his mark (the tour's posts fire on cue; so does the harness's planted man)
-  const sinceSeen = g.time - gd.lastSeenT; const down = foeDown(g, gd);
-  if (jumped && A.track > 0) { AIM_DEBUG.log?.(`#${c.id} ${gd.callsign}: bearing jumped — track ${A.track.toFixed(2)} → 0`); A.track = 0; }
-  if (sinceSeen > P.memSecs || down) { if (A.track > 0) AIM_DEBUG.log?.(`#${c.id} ${gd.callsign}: ${down ? 'player down' : `out of sight ${sinceSeen.toFixed(2)} s`} — track ${A.track.toFixed(2)} → 0`); A.track = 0; return; }
-  if (sinceSeen >= LOS_NOW) return;   // a blink: hold what he has
-  const facingErr = Math.abs(wrapAngle(brg - c.gunYaw));   // (gunYaw: aimYaw — or, turning under weight (character.ts TURN), where the gun has got to)
-  const dist = v3.distXZ(c.pos, pc.pos);
-  const onTol = P.onDeg * DEG + Math.atan2(0.35, Math.max(dist, 0.3));   // 'the gun on him' widens by the angle half a body subtends: at arm's length a crouched man's trunk bone sits a hand off his root and 25° off the
-                                                                          // bearing the chest is turned to — measured to the degree, a man 0.7 m off in a doorway was never 'on' and never fired (soak seed 2, the QRF at its own door, 08-12); at 8 m it adds 2.5°
-  const on = gd.state === 'alert' && gd.reactT <= 0 && g.time >= gd.dazzledUntil && facingErr < onTol;
-  const cap = (moveCost(g) ? Math.max(speed, A.moveSm) > Math.min(P.stopToShoot, AIMCOST.plantAt) : speed > P.stopToShoot) ? P.movingTrackCap : 1;   // (aimcost.ts: his own plant-to-shoot bar, asked of the feet he REMEMBERS — out of a run he waits a third of a second longer; at a walk he shoots as ever, wider)
-  if (on) A.track = Math.min(cap, A.track + dt / (settleTime(P, dist) * (gd.skill ? gd.skill.settleK : gd.trained ? TRAINED.settleK : 1)));   // (a trained man lines up quicker: TRAINED)
-  else A.track = Math.max(0, Math.min(cap, A.track - P.loseRate * dt));
-}
-/** seconds to settle fully at this range: settleSecs at rangeRef and beyond, × dist / rangeRef nearer (the target fills the sights), floored at × nearK */
-function settleTime(P: { settleSecs: number; rangeRef: number; nearK: number }, dist: number): number {
-  return Math.max(P.settleSecs, 1e-3) * clamp(dist / Math.max(P.rangeRef, 0.1), P.nearK, 1);
-}
+export function trackGuard(g: Game, gd: Guard, dt: number): void { return crossToRust('trackGuard', undefined, [g, gd, dt]) as any; }
 
 /** The first-shot gate (the alert branch's single round, the START of a burst, the standoff's round): true with the model off. */
-export function aimReady(g: Game, gd: Guard): boolean { return !g.tune.aimModel || gd.aim.track >= AIM.guard.acquireMin - 1e-9; }
-/** The standoff's flank round only (guards.ts): under AIMCOST.move, are the feet he remembers still enough for a round threaded past his own man?
- *  True with the rule off — the round goes as it always did. */
-export function feetSettled(g: Game, gd: Guard): boolean { return !moveCost(g) || gd.aim.moveSm <= AIMCOST.flankAt; }
+export function aimReady(g: Game, gd: Guard): boolean { return goneWithTick('aimReady') as any; }
 /** the panel / marker tell: an alert man whose track on Sam has passed the gate */
 export function guardAcquired(g: Game, gd: Guard): boolean { return g.tune.aimModel && gd.state === 'alert' && gd.aim.track >= AIM.guard.acquireMin - 1e-9; }
 
@@ -221,32 +164,15 @@ function guardTerms(g: Game, gd: Guard, extra: number) {
 /** What to hand fireWeapon for this guard's round: with the model off, `{ spread: extra }` — the call as it always was (his row's hands are added inside); on, the
  *  whole cone composed here and `steady` so fireWeapon adds nothing of its own. `extra` = what the site already adds today (suppression's cone, a burst's growth).
  *  `gated`: whether the first-shot gate stood in front of this round (recorded for the soak). Stamps aim.lastShot. */
-export function guardRound(g: Game, gd: Guard, extra: number, gated = true): FireOpts {
-  if (!g.tune.aimModel) return { spread: extra };
-  const T = guardTerms(g, gd, extra);
-  gd.aim.lastShot = { t: g.time, track: gd.aim.track, spread: T.spread, speed: T.speed, gated, hands: T.hands, settle: T.settle, tgt: T.tgt, own: T.own };
-  return { spread: T.spread, steady: true };
-}
+export function guardRound(g: Game, gd: Guard, extra: number, gated = true): FireOpts { return crossToRust('guardRound', undefined, [g, gd, extra, gated]) as any; }
 /** The whole cone a guard's round is drawn from, for the burst's look down the bore past a colleague (guards.ts burstTrigger): the row's own line with the model
  *  off (the expression it always was), the model's composition on. `extra` = the burst's growth. */
-export function handsCone(g: Game, gd: Guard, extra: number): number {
-  if (!g.tune.aimModel) { const S = gd.weapon.def.aiSpread, tc = foeChar(g, gd) ?? g.player.char; return S.base + Math.min(S.moveCap, Math.hypot(tc.vel[0], tc.vel[2]) * S.moveK) + Math.max(0, v3.dist(gd.char.pos, tc.pos) - S.rangeFrom) * S.rangeK + extra; }   // (teams: off his foe — Sam's numbers for the staff, as fireWeapon's own line reads them)
-  return guardTerms(g, gd, extra).spread;
-}
+export function handsCone(g: Game, gd: Guard, extra: number): number { return goneWithTick('handsCone') as any; }
 /** Stop to shoot (the alert branch's closing run): model on, a free man with a line (`blocked` false), Sam inside the shoot band and in his sight this moment, not
  *  yet settled, and the gun about ready (or a burst already begun) → the caller brakes him to a standstill instead of running the path; the round goes when the
  *  track gets there and the run picks up again on the weapon's beat. Head-down / the shift to cover never reach the closing run; the standoff has its own feet. */
-export function aimBrake(g: Game, gd: Guard, dist: number, blocked: boolean): boolean {
-  const P = AIM.guard, A = gd.aim;
-  const brake = g.tune.aimModel && !gd.pinned && !blocked && dist <= P.shootBand && g.time - gd.lastSeenT < LOS_NOW && A.track < 1 && gd.reloadT < 0 && (gd.fireCd <= P.brakeLead || !!gd.weapon.burst);
-  if (brake && !A.braking) AIM_DEBUG.log?.(`#${gd.char.id} ${gd.callsign}: brakes to shoot at ${dist.toFixed(1)} m (track ${A.track.toFixed(2)}, fireCd ${gd.fireCd.toFixed(2)}, ${Math.hypot(gd.char.vel[0], gd.char.vel[2]).toFixed(2)} m/s)`);
-  A.braking = brake;
-  return brake;
-}
+export function aimBrake(g: Game, gd: Guard, dist: number, blocked: boolean): boolean { return crossToRust('aimBrake', undefined, [g, gd, dist, blocked]) as any; }
 
-/** metres of flight under which a round that stopped in geometry (well short of what it was sent at) went into the frame beside his own face — the least reach of
- *  the rule; further out it is HIS HALF of the line (below) */
-const BORE_FOUL_M = 1.2;
 /** Fed the round this guard has just let go (guards.ts, straight after fireWeapon: the guardShot event it pushed carries muzzle → where the round stopped): one
  *  that died well short of `aimAt` in geometry inside BORE_FOUL_M of the muzzle — or anywhere on his own half of the line — went into the jamb / the mullion /
  *  the leaf / the corner he stands at: the line his SHOULDER clears (clearShot) but his muzzle, that hand further out and round, does not. What stops a round on
@@ -255,52 +181,16 @@ const BORE_FOUL_M = 1.2;
  *  today's man mostly fires while still arriving and gets away with it; one who plants first and fires lined up plants on exactly these hair-lines and, without
  *  this, empties magazines into the frame — tools/qa aim-door-sweep found eleven such doorways at a hand off the muzzle, and one more, the conference door taken
  *  on the slant from four metres up the corridor, whose far jamb ate every round 1.6 m out until the reach was his half of the line rather than a fixed hand.) */
-export function noteBore(g: Game, gd: Guard, aimAt: Vec3) {
-  if (!g.tune.aimModel) return;
-  const e = g.events[g.events.length - 1]; if (!e || e.kind !== 'guardShot' || e.time !== g.time || !e.from || !e.to) return;
-  const A = gd.aim; const flew = v3.dist(e.from, e.to), wanted = v3.dist(e.from, aimAt);
-  if (flew < Math.min(Math.max(BORE_FOUL_M, 0.5 * wanted), wanted - 0.6)) {
-    if (A.fouled && v3.distXZ(A.fouled.pos, gd.char.pos) < 0.5) A.fouled.n++; else A.fouled = { n: 1, pos: v3.copy(gd.char.pos) };
-    AIM_DEBUG.log?.(`#${gd.char.id} ${gd.callsign}: round into the frame ${flew.toFixed(2)} m out (${A.fouled.n} from this spot)`);
-  } else A.fouled = null;
-}
+export function noteBore(g: Game, gd: Guard, aimAt: Vec3): void { return crossToRust('noteBore', undefined, [g, gd, aimAt]) as any; }
 /** Two rounds running into the frame from where he stands: that spot is no line, whatever the shoulder's ray says — the alert branch reads it as `blocked` (he
  *  closes / steps for a real one) until he is half a metre off it. False with the model off. */
-export function boreFouled(g: Game, gd: Guard): boolean {
-  const F = gd.aim.fouled; if (!g.tune.aimModel || !F) return false;
-  if (v3.distXZ(F.pos, gd.char.pos) > 0.5) { gd.aim.fouled = null; return false; }
-  return F.n >= 2;
-}
+export function boreFouled(g: Game, gd: Guard): boolean { return crossToRust('boreFouled', undefined, [g, gd]) as any; }
 
 // ================================================================ the player
 /** Once a frame (game.ts update, right after updateAim has said what the reticle is on): Sam's track on the man under it — or on nothing in particular ('free':
  *  a wall, a fixture) — reset when a NEW man comes under it (free → man, man → another; off a man onto the floor beside him it carries), capped at a sprint / on
  *  the move, quicker crouched; and the bearing rate of that man across his view. Rests at 0 with the model off or Sam down. */
-export function trackPlayer(g: Game, dt: number) {
-  const pl = g.player, A = pl.aim, P = AIM.player, c = pl.char;
-  if (!g.tune.aimModel || pl.down) { A.clear(); return; }
-  const gv = playerGroundVel(g); const speed = Math.hypot(gv[0], gv[2]); feedFeet(A, speed, dt, P.feetTau, moveCost(g), Math.min(speed, Math.hypot(c.vel[0], c.vel[2])));   // (his feet by the ground he actually covers — review 08-10 #5)
-  const tg = g.aimGuard && g.aimGuard.state !== 'dead' ? g.aimGuard : null;
-  const lt = !tg && lampCost(g) ? g.aimTarget : null;   // (aimcost.ts: a lamp under the reticle is a thing to settle on, like a man — `l<name>`; the rule off, a lamp is 'free' floor as it was)
-  const key = tg ? `g${tg.char.id}` : lt ? `l${lt.name}` : 'free';
-  if (key !== A.tgtKey) {
-    const back = key === A.lastMan && g.time - A.leftT < 0.35, was = A.tgtKey, had = A.track;
-    if (lt && !back) A.track = 0;   // a NEW lamp under it: settle on it from nothing
-    if (tg && !back) { if (A.track > 0) AIM_DEBUG.log?.(`Player: reticle onto #${tg.char.id} (${A.tgtKey || '—'} → ${key}) — track ${A.track.toFixed(2)} → 0`); A.track = 0; }   // a NEW man under it: acquire him from nothing
-    if (back && was.startsWith('l') && lampCost(g)) A.track = Math.max(A.track, A.leftTrack);   // straight back onto the one he just left — across a lamp that took the track to nothing on the way — he has what he had
-    // off a man onto the floor beside him: the track carries, and coming straight back to him keeps it. (aimcost.ts: off a lamp the same; and off a man
-    //  ONTO a lamp the man is remembered too — a reticle that crosses a lamp for a frame on its way back to him has not lost him)
-    if (was.startsWith('l') || was.startsWith('g') && (!tg || !!lt)) { A.lastMan = was; A.leftT = g.time; A.leftTrack = had; }
-    A.tgtKey = key; A.lastBearing = NaN; A.bearingRate = 0;
-  }
-  const T: Vec3 = tg ? (tg.char.bones.chest ?? v3.add(tg.char.pos, [0, 1.2, 0])) : lt ? lt.pos : g.aimPoint;   // the man's chest, else the point under the cursor
-  if (tg) {
-    if (feedTarget(A, c.pos, T, tg.char.vel, dt, P.jumpDeg, P.rateTau) && A.track > 0) { AIM_DEBUG.log?.(`Player: #${tg.char.id}'s bearing jumped — track → 0`); A.track = 0; }   // (the man's own feet across Sam's line: a body on the floor, a man planted, is no crossing target however Sam circles him)
-  } else { A.lastBearing = NaN; A.bearingRate = 0; }   // a wall does not run
-  const cap = pl.sprinting && speed > P.movingAbove ? P.sprintCap : speed > P.movingAbove ? P.walkCap : 1;   // (a 'sprint' into a wall covers no ground: no sprint cap for standing still)
-  const rate = (pl.crouch ? P.crouchK : 1) / settleTime(P, v3.distXZ(c.pos, T));
-  A.track = Math.min(cap, A.track + rate * dt);   // (on target whenever there is one: the reticle IS on him, or on the point; the caps do the rest)
-}
+export function trackPlayer(g: Game, dt: number): void { return crossToRust('trackPlayer', undefined, [g, dt]) as any; }
 /** Sam's cone under the model and his track (the overlay sizes and tints the ring off these): 0 / 1 with the model off, and under the tour's puppet (its scripted
  *  double-taps land, as suppression's term already has it). */
 export function playerAim(g: Game): { spread: number; track: number; base: number; settle: number; tgt: number; own: number } {
@@ -315,11 +205,7 @@ export function playerAim(g: Game): { spread: number; track: number; base: numbe
   return { spread: (base * settle + tgt + own) * kk, track: A.track, base, settle, tgt, own };
 }
 /** The one term Sam's fire sites add to their spread (player.ts, beside samSpread): 0 with the model off / under the puppet. Stamps aim.lastShot. */
-export function samAim(g: Game): number {
-  const R = playerAim(g); if (!g.tune.aimModel || g.puppet) return 0;
-  const pl = g.player; pl.aim.lastShot = { t: g.time, track: R.track, spread: R.spread, speed: Math.hypot(pl.char.vel[0], pl.char.vel[2]), gated: false, hands: R.base, settle: R.settle, tgt: R.tgt, own: R.own };
-  return R.spread;
-}
+export function samAim(g: Game): number { return crossToRust('samAim', undefined, [g]) as any; }
 
 // ================================================================ persistence (the two knob groups, one key, per machine — the way the crouch-speed slider is kept)
 const LS_KEY = 'twopointsix.aim';

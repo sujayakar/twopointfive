@@ -28,7 +28,7 @@
 //
 // With the flag off none of this runs: tick() returns on its first line and the layout seam is null. (src/game is one import cycle: the tables below are plain
 // literals, nothing here is built from another game module's exports at module load.)
-import { allDown } from './seats';
+import './seats';
 import { Vec3, v3 } from '../math/vec';
 import { mulberry32 } from '../math/dice';
 import type { Game, Guard } from './game';
@@ -38,15 +38,16 @@ import type { StructureRoom, StructureData, TeamStart, SquadData } from '../scen
 import { SQUAD_MAX_MEN } from '../scene/scenarios';
 import type { Door } from './doors';
 import { frameOf } from './guards';
-import { responseUp, responseTeam } from './qrf';   // (asked inside tick only: a raid's team still up)
+import { responseTeam } from './qrf';   // (asked inside tick only: a raid's team still up)
 import { OFFICE_SCENARIOS } from '../../levels/office.scenarios';   // (plain literals with type-only imports: safe at the top of the game's import cycle)
 import { inBounds } from './squad';
-import { squadsStage, squadsStop, squadsTick } from './enemysquads';
+import { squadsStage, squadsStop } from './enemysquads';
 import { squadDeal } from './squaddeal';
 import { difficultyHere } from './difficulty';
 import { lastStandHint } from './laststand';
-import { w, WORDS } from './words';   // (a leaf: the dialogue pass's one switch)
+import { w } from './words';   // (a leaf: the dialogue pass's one switch)
 import { SAMESTART } from './samestart';   // (a leaf: every mission starts the same way on every try)
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** The scenario's knobs (Tab ▸ Sandbox ▸ Room clear, __roomclear.knobs; read at the next staging). */
 export const ROOMCLEAR = {
@@ -109,7 +110,7 @@ const MARK_CLEAR_M = 0.45;
  *  watches one of its room's doors and has a line past the WALLS to the point it aims at, the men fit the character budget beside Sam and the pair, and at least
  *  one room has more than one way in. All of it is asked of the level as authored (statics, the props' rest places), never of where a leaf or a chair happens to be
  *  this frame: the staging puts both back. start() refuses on the first of them; probes.ts roomclear-data prints them all. */
-export function checkStructure(g: Game, S: { rooms: StructureRoom[]; team?: TeamStart; starts?: TeamStart[]; maxMen?: number; squads?: SquadData[] } | undefined = g.level.scenarios?.roomClear): string[] {
+export function checkStructure(g: Game, S: { rooms: StructureRoom[]; team?: TeamStart; starts?: TeamStart[]; maxMen?: number; squads?: SquadData[] } | undefined = g.level.scenarios?.roomClear): string[] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('checkStructure', undefined, [g, S]); if (__r !== RUST_PASS) return __r as any; } }
   if (!S) return ['this level has no room clear structure (its scenarios.roomClear block)'];
   const bad: string[] = [];
   const nav = g.col.nav;
@@ -155,7 +156,7 @@ export function checkStructure(g: Game, S: { rooms: StructureRoom[]; team?: Team
  *  asked again here, since a structure may reach the game without passing the validator: office.scenarios.ts, a probe's own): rally points and spawn points on
  *  floor a man can stand on, a rally inside one of its squad's rooms, spawns outside every room and joined on foot to the door they come by. Empty = sound; no
  *  squads block = nothing to say. */
-export function checkSquads(g: Game, S: { rooms: StructureRoom[]; maxMen?: number; squads?: SquadData[] }): string[] {
+export function checkSquads(g: Game, S: { rooms: StructureRoom[]; maxMen?: number; squads?: SquadData[] }): string[] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('checkSquads', undefined, [g, S]); if (__r !== RUST_PASS) return __r as any; } }
   const Q = S.squads; if (!Q?.length) return [];
   const bad: string[] = [], nav = g.col.nav, owner = new Map<string, string>(), ids = new Set<string>();
   const men = S.rooms.reduce((n, r) => n + r.garrison, 0), cap = S.maxMen ?? 5;
@@ -198,7 +199,7 @@ export function propGap(p: { home: [number, number, number]; hx: number; hz: num
 }
 /** the sight line a→b against the level's STATICS alone: col.segmentBlocked with the door leaves taken out for the one call (a leaf swung across a mark's line
  *  on a living floor is no fault of the structure's — the staging shuts every one of them) */
-export function wallBetween(g: Game, a: Vec3, b: Vec3): boolean {
+export function wallBetween(g: Game, a: Vec3, b: Vec3): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('wallBetween', undefined, [g, a, b]); if (__r !== RUST_PASS) return __r as any; } }
   const leaves = g.col.dynamicBoxes; g.col.dynamicBoxes = [];
   try { return g.col.segmentBlocked(a, b); } finally { g.col.dynamicBoxes = leaves; }
 }
@@ -208,21 +209,6 @@ export function doorPlan(g: Game, door: string): RoomClearPlan | null { return g
 
 export type RoomClearEnd = 'taken' | 'wiped';
 export type RoomClearState = 'off' | 'live' | RoomClearEnd;
-/** (words.ts) how long a room that came clear waits for others to be called with it */
-const CLEAR_SAY_SECS = 0.6;
-const listed = (a: string[], and: string) => a.length < 2 ? a.join('') : `${a.slice(0, -1).join(', ')} ${and} ${a[a.length - 1]}`;
-/** the one line for rooms that came clear together: a room the team has stood in is 'clear'; one it never entered — its men died somewhere else — is only known
- *  to have nobody left, and is said so ('mess clear · nobody left in store or comms room') */
-function clearWords(g: Game, rooms: StructureRoom[]): string {
-  // (the room is asked of its first FLOOR point: its middle is often a table, which is no room at all to cleared.ts and reads as known)
-  const stood = (r: StructureRoom) => {
-    const b = r.bounds;
-    for (let z = b.z0 + 0.25; z < b.z1; z += 0.5) for (let x = b.x0 + 0.25; x < b.x1; x += 0.5) { const id = g.cleared.roomAt([x, 0, z]); if (id) return g.cleared.isKnown(id); }
-    return true;
-  };
-  const ours = rooms.filter(stood).map(r => r.name), theirs = rooms.filter(r => !stood(r)).map(r => r.name);
-  return [ours.length ? `${listed(ours, 'and')} clear` : '', theirs.length ? `nobody left in ${listed(theirs, 'or')}` : ''].filter(Boolean).join(' · ');
-}
 /** one room as the scenario keeps it: its men, whether it is clear, and when it became so (game clock; NaN while it is held) */
 export interface RoomState { def: StructureRoom; defenders: Guard[]; cleared: boolean; clearedAt: number; }
 
@@ -281,7 +267,7 @@ export class RoomClearScenario {
   }
   /** Start it (`seed`: the placement to deal — written to the knob; absent = the knob as it stands). Already up, a different seed stages it again on that seed.
    *  Returns the reason when refused, or when the staging failed. */
-  start(seed?: number): string | null {
+  start(seed?: number): string | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('RoomClearScenario.start', this, [seed]); if (__r !== RUST_PASS) return __r as any; } }
     const want = seed !== undefined && Number.isFinite(seed) ? Math.floor(seed) : null;
     if (this.active) { if (want !== null) { ROOMCLEAR.seed = want; this.fresh = 0; if (want !== this.seed || this.wayNow() !== this.way) this.restage(); } return null; }   // (against the seed ON THE FLOOR, not the knob: the slider may already have been moved to it)
     const seed0 = ROOMCLEAR.seed, fresh0 = this.fresh;   // (written BEFORE the staging is asked for: the way in it is asked about is this start's, not the last one's — and put back if it is refused)
@@ -295,9 +281,9 @@ export class RoomClearScenario {
     return null;
   }
   /** Stop it: the night breach's stop — the cast gone, the shift back, a fresh night encounter. */
-  stop() { if (this.active) this.g.nightBreach.stop(); this.clear(); }
+  stop() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('RoomClearScenario.stop', this, []); if (__r !== RUST_PASS) return __r as any; } } if (this.active) this.g.nightBreach.stop(); this.clear(); }
   /** Stage it afresh (the knobs re-read; with `reroll` the next placement of the seed). */
-  restage() { if (this.active) this.g.nightBreach.restage(); }
+  restage() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('RoomClearScenario.restage', this, []); if (__r !== RUST_PASS) return __r as any; } } if (this.active) this.g.nightBreach.restage(); }
   private clear() { squadsStop(this.g); this.rooms = []; this.placement = []; this.end = null; this.endAt = NaN; this.endWhy = ''; this.endSay = 'team wiped'; this.pairSaid = this.entrySaid = this.teamSaid = false; this.obj = null; this.clearDue = []; this.clearAt = NaN; }
   private note(what: string) { this.log.push({ t: this.g.time, what }); if (this.log.length > 400) this.log.splice(0, 100); }
 
@@ -326,58 +312,9 @@ export class RoomClearScenario {
     this.note(`staged:${this.seed}/${this.attempt}`);
   }
 
-  /** Once a frame from Game.update, right after the night breach's own tick: the rooms' state and the two ends. A return on its first line while it is off. */
-  tick(_dt: number) {
-    if (!this.active) { if (this.rooms.length) this.clear(); return; }   // (stopped from under it — the night breach's own stop row, a staging that failed on a restart)
-    const g = this.g, nb = g.nightBreach, K = ROOMCLEAR;
-    if (!this.rooms.length || nb.hostiles.length !== this.placement.length) return;   // (between a despawn and the restage that answers it)
-    squadsTick(g);   // enemysquads.ts: each squad's contact, news, choice and men on the move (a return on its first line with none staged)
-    const live = nb.hostiles.filter(h => h.state !== 'dead' && !h.fled);   // (runner.ts, false with its switch off: a man who dropped it and ran holds nothing and is nobody left to take)
-    for (const R of this.rooms) {   // (kept after an end as well — the log stays true — but nothing more is said)
-      const c = !R.defenders.some(h => h.state !== 'dead' && !h.fled) && !live.some(h => !h.held && inBounds(h.char.pos, R.def.bounds));
-      if (c === R.cleared) continue;
-      R.cleared = c; R.clearedAt = c ? g.time : NaN; this.obj = null; this.note(`${c ? 'cleared' : 'lost'}:${R.def.id}`);
-      const left = this.rooms.filter(r => !r.cleared).length;
-      if (WORDS.on) {   // one line for the rooms that come clear within CLEAR_SAY_SECS of each other; a room lost again inside that beat was never called
-        const k = this.clearDue.indexOf(R.def);
-        if (c) { this.clearDue.push(R.def); if (!(this.clearAt >= g.time)) this.clearAt = g.time + CLEAR_SAY_SECS; }
-        else if (k >= 0) this.clearDue.splice(k, 1);
-        else if (K.announce && left > 0 && !this.end) g.msg(`${R.def.name} is held again`);
-      } else
-      if (K.announce && left > 0 && !this.end) g.msg(c ? `${R.def.name} clear — ${left} room${left > 1 ? 's' : ''} to go` : `${R.def.name} is held again`);
-    }
-    if (this.clearDue.length && !(this.clearAt > g.time)) {
-      const left = this.rooms.filter(r => !r.cleared).length, said = clearWords(g, this.clearDue); this.clearDue = []; this.clearAt = NaN;
-      if (K.announce && left > 0 && !this.end) g.msg(`${said} — ${left} room${left > 1 ? 's' : ''} to go`);
-    }
-    const pairUp = nb.ops.filter(o => o.state !== 'dead').length, play = !this.end && !allDown(g) && live.length > 0;
-    if (!this.pairSaid && pairUp === 0 && nb.ops.length) { this.pairSaid = true; this.note('pair:down'); if (!K.pairOnly && play) g.msg(`${nb.ops.length > 2 ? 'the whole squad is' : nb.ops.length > 1 ? 'both teammates are' : 'your teammate is'} down, so the rest is up to you`); }
-    if (!this.entrySaid && nb.state === 'failed') { this.entrySaid = true; if (pairUp > 0 && play) g.msg(`your point man is down at the door, so you'll have to take the ${this.drillRoom()?.name ?? 'room'} yourself`); }   // (the drill's entry is off with a man still up: he holds where he stands — nightbreach.ts)
-    if (this.end) return;
-    if (allDown(g)) this.finish('wiped', 'player down');   // (first: the last defender and Sam down inside one frame is no win — the mission has failed and the down card is coming)
-    else if (g.rails?.endsNow()) this.finish('taken', 'the mission is done');   // (a tutorial mission — rails.ts — is over when its last step is, whoever is still in a room)
-    else if (g.rails?.holdsEnd()) { if (pairUp === 0 && nb.ops.length && (K.pairOnly || g.rails.skyOn)) this.finish('wiped', nb.ops.length > 2 ? 'the squad down' : 'the pair down'); }   // …and not before it (the men of a later beat are not on the floor yet) — but a team that is all down has still lost
-    else if (live.length === 0 && !responseUp(g)) this.finish('taken', `${this.rooms.length} rooms clear, ${nb.ops.length ? `${pairUp} of ${nb.ops.length} teammates up` : 'alone'}`);
-    else if (K.pairOnly && pairUp === 0 && nb.ops.length) this.finish('wiped', nb.ops.length > 2 ? 'the squad down' : 'the pair down');
-    else if (live.length === 0 && !this.teamSaid) { this.teamSaid = true; this.obj = null; this.note('team-up'); if (K.announce) g.msg(`the rooms are clear, but ${responseTeam(g)} is still on the ground`); }   // (qrf.ts RESPONSE.raid: the place is not taken while the team it called is up — said once, and it stays on the objective row)
-  }
   /** A man the night breach adopted after the staging (stress.ts — extra enemies) is this structure's too: a row of the placement and a man of his room, so the
    *  room is not clear and the structure not taken while he is up. After nightBreach.adopt, the same frame (tick holds while the two lists differ in length). */
-  adopt(gd: Guard, p: Placement) { const R = this.rooms.find(r => r.def.id === p.room); if (!this.active || !R || R.defenders.includes(gd)) return; this.placement.push(p); R.defenders.push(gd); }
-  /** laststand.ts: a defender who has made his stand in another room is THAT room's man from now on — the one he left can clear behind him */
-  rehome(gd: Guard, room: string) {
-    const to = this.rooms.find(r => r.def.id === room); if (!this.active || !to || to.defenders.includes(gd)) return;
-    for (const R of this.rooms) { const i = R.defenders.indexOf(gd); if (i >= 0) R.defenders.splice(i, 1); }
-    to.defenders.push(gd); this.obj = null; this.note(`rehomed:${gd.callsign}>${room}`);
-  }
-  private finish(end: RoomClearEnd, why: string) {
-    this.end = end; this.endAt = this.g.time; this.endWhy = why; this.obj = null; this.note(`end:${end}`);
-    this.endSay = w(end === 'wiped' && allDown(this.g) && this.g.nightBreach.ops.some(o => o.state !== 'dead') ? 'player down' : 'team wiped', 'team wiped');
-    const loose = end === 'taken' && this.g.snatch?.active && this.g.snatch.owes ? this.g.snatch.objective()?.text.replace(/^objective ▸ /, '') : null;   // (a snatch level, snatch.ts: the house is the team's and the man is not — it is not over)
-    // (a defuse mission whose charge has gone off stays FAILED — defuse.ts: the house taken after that is said as what it is, never as a win)
-    if (end === 'taken' && this.g.defuse?.active && this.g.defuse.end === 'failed') { this.g.msg(`you took the house too late. a charge went off, so you still failed the mission. press Shift+Enter to restart`); return; }
-    this.g.msg(loose ? `structure taken — ${why}. it's not over yet: ${loose}` : end === 'taken' ? `structure taken — ${why}. press Shift+Enter to restart` : this.endSay === 'player down' ? 'the mission is over. press Enter to restart' : `team wiped — ${why}. press ${allDown(this.g) ? 'Enter' : 'Shift+Enter'} to restart`);
-  }
+  adopt(gd: Guard, p: Placement) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('RoomClearScenario.adopt', this, [gd, p]); if (__r !== RUST_PASS) return __r as any; } } const R = this.rooms.find(r => r.def.id === p.room); if (!this.active || !R || R.defenders.includes(gd)) return; this.placement.push(p); R.defenders.push(gd); }
 
   /** where it stands, in one word */
   get state(): RoomClearState { return !this.active ? 'off' : this.end ?? 'live'; }
@@ -387,7 +324,7 @@ export class RoomClearScenario {
   roomAt(p: Vec3): string | null { return this.structure?.rooms.find(r => inBounds(p, r.bounds))?.id ?? null; }
   /** The HUD's objective while it is up (mission.ts objectiveText / objectivePos; null = the mission's own): the rooms, ticked off as they clear, and a marker on
    *  the first room still held (none once it has ended). Worded when something changes, not every frame. */
-  objective(): { text: string; pos: Vec3 | null } | null {
+  objective(): { text: string; pos: Vec3 | null } | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('RoomClearScenario.objective', this, []); if (__r !== RUST_PASS) return __r as any; } }
     if (!this.active || !this.rooms.length) return null;
     const ticks = ROOMCLEAR.announce;
     const hint = this.end ? null : lastStandHint(this.g), hk = hint?.key ?? '';   // (laststand.ts, default off: the rooms the defenders' net has named — null with its switches off)

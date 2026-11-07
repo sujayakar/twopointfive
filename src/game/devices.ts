@@ -15,47 +15,37 @@
 // nearest calm man sent to look (a GuardTask 'device' — the rack errand's mechanism: it survives the suspicion decay, he walks there, looks round, talks himself
 // out of it), the floor going up a step (guards.ts raiseEscalation cause 'device'), the debrief's chronicle. Live play only (g.aiEnabled, not the tour's
 // quietUtility, tune.devices): under the tour they pan and glow and report nothing.
-import { men, eachSeat, nearestMan } from './seats';
-import { Vec3, v3, clamp, lerp, quat } from '../math/vec';
-import { Box, BoxFlag, makeBox, MKEY } from '../scene/boxes';
+import './seats';
+import { Vec3, v3, clamp, lerp } from '../math/vec';
 import type { DeviceDef } from '../scene/level';
 import { DEVICE_DEFAULTS } from '../scene/levelData';
 import type { RtLight } from '../render/lights';
 import type { Game, Guard, LightTarget } from './game';
 import type { Character } from './character';
 import type { Door } from './doors';
-import { Doors } from './doors';
-import { handworkOn, padHands } from './handwork';
-import { eyeContact, raiseEscalation, escalationOf } from './guards';
-import { loadSeen } from './kitload';
-import type { Eye } from './guards';
-import { beamBoxes } from './combat';
+import './doors';
+import './handwork';
+import './guards';
+import './kitload';
+import './guards';
+import './combat';
 import { chronicle, chronicleN, roomOf } from './chronicle';
-import { civilianBodies } from './civilians';
-import { hearPath, airTrans } from './weather';
-import { CameraMachine, LaserMachine, CAM, LASER } from '../sim/lightshome';
+import './civilians';
+import { CameraMachine, LaserMachine } from '../sim/lightshome';
 import type { SimState } from '../sim/state';
-import { word } from './belief';
+import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 type CameraDef = Extract<DeviceDef, { kind: 'camera' }>;
 type KeypadDef = Extract<DeviceDef, { kind: 'keypad' }>;
 type LaserDef = Extract<DeviceDef, { kind: 'laser' }>;
 
-// ---------------------------------------------------------------- knobs (the four on Game.tune are the panel's; these are the model's own)
-/** the LED: dim red idle, bright while the integrator holds anything, blinking fast once it has called him in; dark dead / blind / unpowered */
-const LED_IDLE: Vec3 = [1.6, 0.08, 0.05], LED_HOT: Vec3 = [14, 0.7, 0.3];
 /** the cone thrown into the haze by a live camera (tune.deviceCones): a faint red spot down its axis — a light slot apiece, no more */
 const CONE = { intensity: 1.1, color: [1, 0.12, 0.07] as Vec3, rangeK: 0.7, volumetric: 1.0, outerMaxDeg: 24, radius: 0.12 };   // (radius: a sized emitter — clamps 1/d² so the haze shows a beam leaving the lens, not a hot bead in front of it. Where it starts: rust/sim/src/lights.rs CONE_AHEAD)   // (a tell, not a floodlight: at 3+ it painted the whole end of the corridor orange — 08-09 page check)
-/** how near the beam's line a body's capsule surface / an item must come to break it (the beam is a few millimetres; the margin is the frame's stride at a sprint) */
-const BEAM_MARGIN = 0.02;
 /** the keypad: seconds to key the code in (four keys, evenly), how close he must stand to the door to be at its pad, the deny beep's worth to the hearing model */
 export const CODE_SECS = 1.2;
-const PAD_REACH = Doors.USE_REACH, DENY_LEVEL = 0.05;
 /** overhearing a code said aloud (dialogue.ts ambient 'pin' pair → overhear): within this many metres of PATH through the air as col.sound propagates it (round the
  *  corner, through the doorway) and at least this much of it carried (a shut door between them eats it) — the whistle's reach, the other way round */
 export const OVERHEAR = { pathM: 9, carry: 0.5 };
-/** control's man on the errand: how sharp he arrives (the rack's numbers) */
-const ERRAND = { awareness: 0.42, reactT: 1.0 };
 
 // ---------------------------------------------------------------- runtime records
 /** A CAMERA OF THE LEVEL: its own machine is in the module (sim/lightshome.ts CameraMachine, rust/sim/src/lights.rs camera_pan, camera_see: the pan, the integrator, the state, the last sighting), and these are the level's facts of it */
@@ -108,8 +98,6 @@ export class Devices {
   }
   /** the keypad on this door, if it is a keypad door */
   padOf(d: Door): KeypadRt | null { return this.padByDoor.get(d) ?? null; }
-  /** dialogue.ts ambient pairs: `speaker` has just said the code of `lockId` aloud (see overhear) — a method so the dialogue reaches it off Game without importing this file */
-  overhearSaid(g: Game, speaker: Guard, lockId: string): boolean { return overhear(g, speaker, lockId); }
   /** the keypad whose door stands nearest a floor point (dialogue.ts: the pad two men talking would mean; the one a questioned man gives up) — null on a level with none */
   padNear(p: Vec3): KeypadRt | null { let best: KeypadRt | null = null, bd = Infinity; for (const k of this.keypads) { const dd = v3.distXZ(k.door.frameCentre, p); if (dd < bd) { bd = dd; best = k; } } return best; }
   /** a fresh encounter: integrators, states, trip clocks, the log (the targets themselves are repaired by lighting.ts repairLights with every other fixture) */
@@ -119,7 +107,7 @@ export class Devices {
     return { cameras: this.cameras.map(c => ({ yaw: c.yaw, phase: c.phase, seen: c.seen, state: c.state, reportedAt: c.reportedAt, lastSeen: c.lastSeen ? v3.copy(c.lastSeen) : null, deadCalled: c.deadCalled })),
       lasers: this.lasers.map(l => ({ lastTripAt: l.lastTripAt, trips: l.trips, deadCalled: l.deadCalled, held: l.held })), log: this.log.map(r => ({ ...r })), radioCount: this.radioCount, seq: this.seq };
   }
-  restore(g: Game, s: DevicesSnap) {
+  restore(g: Game, s: DevicesSnap) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Devices.restore', this, [g, s]); if (__r !== RUST_PASS) return __r as any; } }
     this.reset();
     const f = (x: number, d = 0) => Number.isFinite(x) ? x : d;
     s.cameras?.forEach((C, i) => { const c = this.cameras[i]; if (!c || !C) return; c.put(f(C.yaw, c.def.yaw), f(C.phase), Math.max(0, f(C.seen)), C.state === 'suspect' || C.state === 'alarm' ? C.state : 'idle', f(C.reportedAt, -100), C.lastSeen ? v3.copy(C.lastSeen) : null, !!C.deadCalled); });
@@ -141,148 +129,17 @@ export class Devices {
 }
 /** powered, unbroken, not knocked out: the device works this frame (lighting.ts updateTargets has folded on / broken / the OCP / the mains into factor) */
 export function alive(t: LightTarget): boolean { return t.factor > 0.05 && !t.broken; }
-/** live play: devices SENSE (they are always drawn) — the AI on, not the tour's plumbing, the panel's switch */
-function sensing(g: Game): boolean { return g.aiEnabled && !g.quietUtility && !g.touring && g.tune.devices && !g.nightBreach?.active && !g.rescue?.active; }   // (touring as well as quietUtility: the tour's hold stop drops quietUtility with Sam lit on the lobby camera's marks — review, qrf.ts live() gates the same way; NOT the puppet — outside the tour a puppet is the QA harness walking him through a beam on purpose)
 
-// ---------------------------------------------------------------- the lens's exposure: sightGain's light × distance × crouch × smoke, nothing human
-/** Lit-seconds per second a camera's integrator fills at: the light on Sam through HIS meter (visibility^1.5, sightGain's own curve — dark is dark), the range
- *  falloff rescaled to the lens's reach (0.2 at its edge, full inside 3 m, as a man's), his crouch (a smaller shape on the monitor), the smoke between lens and
- *  chest (the same 0.3‥0.8 ramp). 1.0 = plainly lit, close, clear air. */
-export function lensGain(g: Game, dist: number, range: number, smokeTrans: number): number {
-  const light = g.player.visibility; const distF = clamp(1 - (dist - 3) / Math.max(1, range - 3), 0.2, 1);
-  return Math.pow(light, 1.5) * distF * (g.player.crouch ? 0.75 : 1) * clamp((smokeTrans - 0.3) / 0.5, 0, 1) * loadSeen(g, 'player');   // (kitload.ts: a lens is an eye — what he carries is the shape on the monitor too)
-}
 /** the lens's look direction at yaw / pitch (Character convention: forward = [sin yaw, 0, cos yaw]; pitch < 0 looks down) */
-export function lensDir(yaw: number, pitch: number): Vec3 { const cp = Math.cos(pitch); return [Math.sin(yaw) * cp, Math.sin(pitch), Math.cos(yaw) * cp]; }
+export function lensDir(yaw: number, pitch: number): Vec3 { return goneWithTick('lensDir') as any; }
 /** where a panning camera points at phase u (0‥1 round trip): eased there and back between the sweep's two yaws */
 export function sweepYaw(d: CameraDef, phase: number): number { if (!d.sweep) return d.yaw; const s = 0.5 - 0.5 * Math.cos(phase * Math.PI * 2); return lerp(d.sweep[0], d.sweep[1], s); }
 
-// ---------------------------------------------------------------- per frame
-/** After lighting.ts updateTargets (this frame's factor) and everybody's movement: pan the cameras, run their pictures, run the beams, call in the dead ones, key the
- *  code being entered. The boxes are drawn separately (deviceBoxes, into Game.dynBoxes). */
-export function updateDevices(g: Game, dt: number) {
-  const D = g.devices; if (!D) return;
-  const live = sensing(g);
-  for (const c of D.cameras) updateCamera(g, c, dt, live);
-  for (const l of D.lasers) updateLaser(g, l, dt, live && g.tune.lasers);
-  eachSeat(g, v => updateCoding(v, dt));
-}
 
-function updateCamera(g: Game, c: CameraRt, dt: number, live: boolean) {
-  const d = c.def, H = g.lightHome, m = H.cameraPan(c.slot, c.cone, dt, live, g.tune.deviceCones);   // (rust/sim/src/lights.rs: the pan, the cone, the feed dropping once, the picture emptying when it cannot see)
-  // dead: control notices the feed drop once, and somebody is sent to look at it
-  if ((m & CAM.down) && live) deviceDown(g, d.name, `camera ${c.index}`, d.pos);
-  if (!(m & CAM.ok) || !live) return;   // blind (the OCP) or unpowered: the integrator empties and it forgets it had reported — it comes back fresh
-  // the picture: the guards' eye test from the lens, then Sam's meter for how fast it fills
-  const pc = (g.seats.length === 1 ? g.player : nearestMan(g, d.pos) ?? men(g)[0]).char; const range = d.range ?? DEVICE_DEFAULTS.range; const half = (d.fovDeg ?? DEVICE_DEFAULTS.fovDeg) / 2;   // (the player in its picture: with two, the nearer one up — one at a time, as a guard has it)
-  const look = lensDir(c.yaw, d.pitch ?? DEVICE_DEFAULTS.pitch);
-  const E: Eye = { pos: d.pos, look, range, halfDeg: half, nearM: 0, nearDeg: half, vHalfDeg: half };
-  const tr = g.sensors.read(c.smokeKey); if (tr !== undefined) c.smokeTrans = tr;   // (sensors.ts — last answer for the lens → chest segment; headless it never answers and stays what it was — 1, or what a probe set)
-  const air = c.smokeTrans * airTrans(g, d.pos, pc.bones.chest ?? v3.add(pc.pos, [0, 1.1, 0]));   // (+ a picked weather's fog along the same line: weather.ts — × 1 exactly with none)
-  const vis = eyeContact(g, E, pc, true, false, air);
-  if (vis.inCone) g.sensors.askSegment(c.smokeKey, d.pos, pc.bones.chest ?? v3.add(pc.pos, [0, 1.1, 0]));   // asked only while the cone has him: the probe's 32 slots a frame are Sam's own meter's too (a level of many cameras must not starve it)
-  const gain = vis.visible ? lensGain(g, vis.dist, range, air) : 0;
-  // what it does about it: the module's, and the words on what it says
-  const r = H.cameraSee(c.slot, g.time, dt, vis.visible, gain, pc.pos, g.tune.cameraSuspicionSecs, g.tune.cameraAlarmSecs);
-  if (r & CAM.suspect) cameraSuspect(g, c);
-  if (r & CAM.alarm) cameraAlarm(g, c);
-}
-function cameraSuspect(g: Game, c: CameraRt) {
-  const where = roomOf(c.lastSeen!, g.level); const sent = sendToLook(g, c.lastSeen!, `camera ${c.index}`);
-  control(g, `camera ${c.index} has movement in the ${where}${sent ? ` — ${sent.callsign}, go and look` : ''}`);
-  chronDevice(g, 'cameraSpotted', { camera: c.def.name, n: c.index, sent: sent?.callsign }, c.lastSeen!);
-  g.devices.note(g, { device: c.def.name, what: 'suspicion', where, sent: sent?.callsign ?? null });
-}
-function cameraAlarm(g: Game, c: CameraRt) {
-  const p = c.lastSeen!; const where = roomOf(p, g.level);
-  control(g, `camera ${c.index}: that's him — the ${where}. all posts, the ${where}`);
-  g.alarm.pos[0] = p[0]; g.alarm.pos[1] = 0; g.alarm.pos[2] = p[2]; g.alarm.placed = true;   // the floor's fix is the picture's (the spokesman nearest it answers, the lockdown posts by it)
-  for (const gd of g.guards) if (gd.state !== 'dead' && !gd.held && !gd.unit) { word(g, gd, p); gd.awareness = Math.max(gd.awareness, 0.5); if (gd.state === 'patrol') { gd.state = 'suspicious'; gd.reactT = 0.8; gd.searchT = 0; gd.path = []; gd.pathGoal = null; } }   // everybody on the net has the fix and comes up sharp; nobody is 'alert' off a monitor (no eyes of their own on him yet)
-  raiseEscalation(g, escalationOf(g) >= 1 ? 2 : 1, null, 'device');
-  chronDevice(g, 'cameraAlarm', { camera: c.def.name, n: c.index }, p);
-  g.devices.note(g, { device: c.def.name, what: 'alarm', where, sent: null });
-}
 
-function updateLaser(g: Game, l: LaserRt, dt: number, live: boolean) {
-  const d = l.def, H = g.lightHome, m = H.laserOpen(l.slot);   // (rust/sim/src/lights.rs: the feed dropping once, and no beam at all with no power)
-  if ((m & LASER.down) && sensing(g)) deviceDown(g, d.name, `the ${roomOf(d.from, g.level)} beam`, d.from);
-  if (!(m & LASER.ok)) return;
-  // where the beam actually ENDS this frame: the first solid thing in it — a static, a leaf swung through it, a chair shoved into it (none of which are intruders).
-  // Beyond that point there is no beam: nothing past it can break it and nothing past it is drawn (one model — the picture and the sensor agree).
-  let reach = l.len; const wh = g.engine.world.raycast(v3.mad(d.from, l.dir, 0.03), l.dir, reach, BoxFlag.NoShadow); if (wh) reach = Math.min(reach, wh.t + 0.03);
-  const ph = g.props.raycast(d.from, l.dir, reach); if (ph) reach = Math.min(reach, ph.t);
-  // UNDER THE FOG OF WAR THE SENSOR ASKS THE FLOOR, NOT THE PICTURE (the fog thread's read, 10-11: a quiet mission under the fog is the first place the fog
-  // runs while devices sense). `world.raycast` walks the dynamics as handed to the picture, and the fog rewrites that list — a leaf or a chair that moved out of
-  // the team's sight is still where it was last seen there — so the alarm would have read the fog. The sensor's reach is taken off the statics and the leaves
-  // where they STAND (the collision's own ray) and the props; the drawn beam is left as it was. (Not asked there: loose debris and a
-  // dropped item, which the collision does not hold.) No fog = one reach, as it was.
-  let sense = reach;
-  if (live && g.fogOfWar.active) { sense = l.len; const sh = g.col.raycast(v3.mad(d.from, l.dir, 0.03), l.dir, sense); if (sh) sense = Math.min(sense, sh.t + 0.03);
-    const sp = g.props.raycast(d.from, l.dir, sense); if (sp) sense = Math.min(sense, sp.t); }
-  const end: Vec3 = v3.mad(d.from, l.dir, sense);
-  // what breaks it: Sam's body (any capsule — a shin beam meets his shins, a chest beam his chest unless he is under it), the body he is hauling, a canister he has
-  // thrown still in the air. Staff walk through their own beams (the system knows the shift); a dying man's gun clattering through it is nobody breaking in.
-  let who: string | null = null; let at: Vec3 | null = null; let cut = reach;
-  for (const pl of men(g)) { if (who) break;   // (any player's body, or the one any of them hauls)
-  if (!pl.down && !g.playerInvisible) { at = bodyBreaks(pl.char, d.from, end); if (at) who = 'player'; }
-  if (!who && pl.dragging) { at = bodyBreaks(pl.dragging.char, d.from, end); if (at) who = 'body'; } }
-  if (!who) { const back = Math.max(dt, 1 / 60); for (const it of g.items.items) { if (it.settled || (it.kind !== 'smoke' && it.kind !== 'flash' && it.kind !== 'frag')) continue; const prev: Vec3 = [it.pos[0] - it.vel[0] * back, it.pos[1] - it.vel[1] * back, it.pos[2] - it.vel[2] * back]; const q = segSegClosest(prev, it.pos, d.from, end); if (q.dist < it.radius + BEAM_MARGIN) { who = it.kind; at = q.onB; break; } } }   // (its flight over this frame, back-projected off its velocity: throwables.ts keeps no previous position; at least a 60 Hz stride so a paused-and-stepped frame still has a segment)
-  if (at) cut = Math.min(cut, v3.dist(d.from, at));
-  for (const o of g.guards) { if (o.state === 'dead') continue; const t = o.char.rayHit(d.from, l.dir, cut); if (t >= 0) cut = Math.min(cut, t); }   // (a man standing in it cuts the picture of it, without a word)
-  for (const o of civilianBodies(g)) { const t = o.char.rayHit(d.from, l.dir, cut); if (t >= 0) cut = Math.min(cut, t); }                             // (…and so does the cleaner crossing it: staff, to the system — no trip, but no beam drawn through her either; review G3.6)
-  // the trip: on the EDGE — something breaks it that was not breaking it last frame — and not again inside the cooldown; a man standing in a beam is one report (the module's)
-  if (H.laserClose(l.slot, g.time, live, cut, sense, !!who) & LASER.trip) laserTrip(g, l, who!, at!);
-}
 /** does any capsule of `c` cross the beam a→b: the point on the beam where it does, else null */
-export function bodyBreaks(c: Character, a: Vec3, b: Vec3): Vec3 | null {
-  if (!c.bones.hips) return null;
-  const h = c.bones.hips; if (v3.distXZ(h, v3.lerp(a, b, clamp(((h[0] - a[0]) * (b[0] - a[0]) + (h[2] - a[2]) * (b[2] - a[2])) / Math.max(1e-6, v3.distXZ(a, b) ** 2), 0, 1))) > 1.6) return null;   // (broad phase: his middle within a stride and a half of the line)
-  for (const k of c.capsules().caps) { const q = segSegClosest([k[0], k[1], k[2]], [k[4], k[5], k[6]], a, b); if (q.dist < k[3] + BEAM_MARGIN) return q.onB; }
-  return null;
-}
-function laserTrip(g: Game, l: LaserRt, who: string, at: Vec3) {
-  const d = l.def; const where = roomOf(at, g.level); const level = d.alarm ?? DEVICE_DEFAULTS.alarm;
-  g.audio.play('alarmChirp', d.from, 0.7);
-  if (who === 'player') g.player.noise = Math.max(g.player.noise, 0.3);   // (the meter shows him he did something — the chirp at the emitter is small, the radio is the noise that matters)
-  let sent: Guard | null = null;
-  if (level === 'alarm') {
-    control(g, `beam broken in the ${where} — that's an intruder. weapons out`);
-    g.alarm.pos[0] = at[0]; g.alarm.pos[1] = 0; g.alarm.pos[2] = at[2]; g.alarm.placed = true;
-    sent = sendToLook(g, at, 'the beam');
-    raiseEscalation(g, escalationOf(g) >= 1 ? 2 : 1, null, 'device');
-  } else {
-    sent = sendToLook(g, at, 'the beam');
-    control(g, `beam broken in the ${where}${sent ? ` — ${sent.callsign}, check it` : ' — somebody check it'}`);
-  }
-  chronDevice(g, 'laserTripped', { laser: d.name, by: who, level, sent: sent?.callsign }, at);
-  g.devices.note(g, { device: d.name, what: 'trip', where, sent: sent?.callsign ?? null });
-}
+export function bodyBreaks(c: Character, a: Vec3, b: Vec3): Vec3 | null { return goneWithTick('bodyBreaks') as any; }
 
-/** a camera / an emitter shot dead: control loses the feed and sends the nearest calm man to look at IT (the floor under it) — a dead camera is a fact about
- *  where you were a moment ago */
-function deviceDown(g: Game, name: string, spoken: string, pos: Vec3) {
-  g.sparks.emitBurst(pos, { count: 14, speed: 2.2, spread: 1.0, lift: 0.5, life: 0.5 }, (g.fxSeed++ * 7919) >>> 0);
-  const floor = g.col.nav.nearestFreePoint(pos[0], pos[2]) ?? [pos[0], 0, pos[2]];
-  const sent = sendToLook(g, floor, spoken);
-  control(g, `${spoken} just went dark${sent ? ` — ${sent.callsign}, get eyes on it` : ' — somebody get eyes on it'}`);
-  chronDevice(g, 'deviceDown', { device: name, sent: sent?.callsign }, floor);
-  g.devices.note(g, { device: name, what: 'dead', where: roomOf(floor, g.level), sent: sent?.callsign ?? null });
-}
-/** The nearest calm, free staff man is sent to `pos` on control's word: the rack errand's mechanism (mission.ts sendRackCheck) — a task that survives the suspicion
- *  decay, so he actually gets there, looks round for a few seconds and, finding nothing, goes back to his route. Null if everybody is busy with something louder. */
-export function sendToLook(g: Game, pos: Vec3, what: string): Guard | null {
-  void what;
-  const goal = g.col.nav.nearestFreePoint(pos[0], pos[2]) ?? v3.copy(pos);
-  let best: Guard | null = null, bd = Infinity;
-  for (const gd of g.guards) { if (gd.state !== 'patrol' || gd.hold || gd.task || gd.held || gd.script || gd.unit || gd.bodyDuty) continue; const dd = v3.dist(gd.char.pos, goal); if (dd < bd) { bd = dd; best = gd; } }
-  if (!best) return null;
-  best.task = { kind: 'device', pos: v3.copy(goal) }; best.lastKnown = v3.copy(goal); best.awareness = Math.max(best.awareness, ERRAND.awareness);
-  best.state = 'suspicious'; best.reactT = ERRAND.reactT; best.searchT = 0; best.path = []; best.pathGoal = null;
-  g.say(best, 'copy, control — on my way', true); g.audio.play('radio', best.char.bones.head ?? best.char.pos, 0.5);
-  return best;
-}
-/** control's voice on the net: the HUD's radio strip keys on the 'radio: ' prefix (qrf.ts control does the same) */
-function control(g: Game, text: string) { g.msg('radio: CONTROL — ' + text); g.audio.play('radio', null, 0.55); g.devices.radioCount++; chronicle(g, 'radio', { who: 'CONTROL', text }); }
 /** the debrief's rows (chronicle.ts words them): through the mission's own live gate like every hook */
 function chronDevice(g: Game, kind: 'cameraSpotted' | 'cameraAlarm' | 'laserTripped' | 'deviceDown' | 'codeLearned' | 'codeEntered', data: Record<string, string | number | boolean | undefined>, pos?: Vec3) {
   return kind === 'cameraSpotted' || kind === 'laserTripped' ? chronicleN(g, kind, 'devices', data, pos) : chronicle(g, kind, data, pos);   // (the score's counter moves with the run live, whether or not the capped timeline still takes the row — chronicle.ts chronicleN, review U9.2)
@@ -291,7 +148,7 @@ function chronDevice(g: Game, kind: 'cameraSpotted' | 'cameraAlarm' | 'laserTrip
 // ---------------------------------------------------------------- keypads: learning a code, keying it in
 /** Sam LEARNS the code for lock `lockId` (a keypad's name): off a questioned man (`how` 'told', game.ts interrogate on intel kind 'code') or overheard ('overheard').
  *  Idempotent; says so in the log once; one for the debrief. Returns whether it was news. */
-export function learnCode(g: Game, lockId: string, how: 'told' | 'overheard', from?: Guard | null): boolean {
+export function learnCode(g: Game, lockId: string, how: 'told' | 'overheard', from?: Guard | null): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('learnCode', undefined, [g, lockId, how, from]); if (__r !== RUST_PASS) return __r as any; } }
   const pl = g.player; if (pl.codes.has(lockId)) return false;
   const K = g.devices?.keypads.find(k => k.def.name === lockId); if (!K) return false;
   pl.codes.add(lockId);
@@ -300,107 +157,12 @@ export function learnCode(g: Game, lockId: string, how: 'told' | 'overheard', fr
   g.devices.note(g, { device: lockId, what: how === 'told' ? 'code' : 'overheard', where: roomOf(pl.char.pos, g.level), sent: from?.callsign ?? null });
   return true;
 }
-/** dialogue.ts ambient pairs: a man at `mouth` has just said the code of `lockId` out loud — Sam learns it iff it CARRIED to him: the propagation the mixer and the
- *  guards' ears use, from the speaker's mouth to Sam's head, within OVERHEAR.pathM of path and OVERHEAR.carry of it left (a wall or a shut door and he hears a
- *  murmur, not four digits). Returns whether he now knows it. */
-export function overhear(g: Game, speaker: Guard, lockId: string): boolean {
-  const pl = g.player; if (pl.down || pl.codes.has(lockId)) return pl.codes.has(lockId);
-  const mouth = speaker.char.bones.head ?? v3.add(speaker.char.pos, [0, 1.6, 0]); const ear = pl.char.bones.head ?? v3.add(pl.char.pos, [0, pl.crouch ? 1.0 : 1.6, 0]);
-  const prop = hearPath(g, mouth, ear);
-  if (prop.pathLen > OVERHEAR.pathM || prop.carry < OVERHEAR.carry) return false;
-  return learnCode(g, lockId, 'overheard', speaker) || pl.codes.has(lockId);
-}
 /** the digits as said / shown ('7-3-9-1') */
 export function spell(code: string): string { return code.split('').join('-'); }
 /** what a pad's door is called on the HUD ('side door', 'server door') */
 export function padDoorName(K: KeypadRt): string { return K.door.def.name === 'server_manager' ? 'side door' : `${K.door.def.name.replace(/_/g, ' ')} door`; }
-/** Is `d` a keypad door locked against Sam where he stands (the pad's face, latched, the bolt thrown) — and does he know its code? null = not a keypad matter (no pad,
- *  or the door is not against him from there). player.ts buildInteractables words the rows off it; startCoding checks it again. */
-export function padState(g: Game, d: Door, from: Vec3): { pad: KeypadRt; known: boolean } | null {
-  const K = g.devices?.padOf(d); if (!K) return null;
-  if (!g.doors.lockedOut(d, from)) return null;
-  return { pad: K, known: g.player.codes.has(d.lockId) };
-}
-/** The 'code' row: start keying it in — a sustained verb like the pick (interact.ts runningVerb 'code:<door>'): he stands at the pad, four keys go in over
- *  CODE_SECS (updateCoding), the pad takes it and the leaf comes off its bolt and swings like a keyed door's (Doors.use with the code as his key for that one turn:
- *  the small clack, the creak — nothing the floor minds two rooms off), and springs locked again behind him when the closer latches it. */
-export function startCoding(g: Game, d: Door): boolean {
-  const pl = g.player; const st = padState(g, d, pl.char.pos);
-  if (!st || !st.known || pl.coding || pl.down) return false;
-  pl.coding = d; pl.codeT = 0; pl.fHeld = true; pl.handWait = 0;
-  if (!handworkOn('work')) g.audio.play('padBeep', st.pad.def.pos, 0.5);   // the first key as his hand lands on it (handwork.ts: with hands at work on, every key beeps under his finger — padHands)
-  return true;
-}
-/** the 'nocode' row: the pad tried without the code — a deny tone at the plate, a hair on the meters, a word */
-export function denyPad(g: Game, d: Door) {
-  const K = g.devices?.padOf(d); if (!K) return;
-  g.audio.play('deny', K.def.pos, 0.45);
-  g.events.push({ kind: 'door', pos: [K.def.pos[0], 0, K.def.pos[2]], time: g.time, loud: false, level: DENY_LEVEL, who: g.player.char.id }); g.player.noise = Math.max(g.player.noise, DENY_LEVEL);
-  g.msg(`the ${padDoorName(K)} pad needs a code you don't have, but somebody on this floor knows it`);
-  g.devices.note(g, { device: K.def.name, what: 'deny', where: roomOf(g.player.char.pos, g.level), sent: null });
-}
 export function stopCoding(g: Game) { const pl = g.player; if (!pl.coding) return; pl.coding = null; pl.codeT = 0; }
-/** once a frame: the code going in — a key a quarter of the way each, the accept chirp and the door on the last; broken off if he steps out of reach of the pad's door,
- *  goes down, or the door stopped being against him (a colleague came through it) */
-function updateCoding(g: Game, dt: number) {
-  const pl = g.player; const d = pl.coding; if (!d) return;
-  const K = g.devices.padOf(d); const p = pl.char.pos;
-  const inReach = Math.min(v3.distXZ(d.pos, p), v3.distXZ(d.frameCentre, p)) < PAD_REACH + 0.25;
-  if (!K || pl.down || !inReach || pl.holding || pl.takedown) { stopCoding(g); return; }
-  if (!g.doors.lockedOut(d, p)) { stopCoding(g); return; }   // no longer against him: nothing to key
-  if (handworkOn('work')) pl.codeT += padHands(g, K, dt, CODE_SECS);   // (handwork.ts: his finger on the pad's own keys — the clock waits for the hand, each key beeps on its press)
-  else { const before = pl.codeT; pl.codeT += dt;
-    for (let k = 1; k < 4; k++) { const at = CODE_SECS * k / 4; if (before < at && pl.codeT >= at) g.audio.play('padBeep', K.def.pos, 0.5, { rate: 1 + 0.03 * k }); } }
-  if (pl.codeT < CODE_SECS) return;
-  // accepted
-  pl.coding = null; pl.codeT = 0;
-  g.audio.play('padOpen', K.def.pos, 0.6);
-  g.doors.use(d, p, g.player.char.id, new Set([d.lockId]));   // the code IS his key for this one turn: unlock clack (KEY_LEVEL) + the creak, and it swings away from him
-  g.msg(`${spell(K.def.code)} — the ${padDoorName(K)} takes it`);
-  chronDevice(g, 'codeEntered', { door: d.def.name }, d.frameCentre);
-  g.devices.note(g, { device: K.def.name, what: 'code', where: roomOf(p, g.level), sent: null });
-}
 
-// ---------------------------------------------------------------- drawing (into Game.dynBoxes, after the doors and props)
-const CAM_COL: Vec3 = [0.16, 0.17, 0.19], CAM_DARK: Vec3 = [0.05, 0.05, 0.06], PAD_COL: Vec3 = [0.22, 0.23, 0.25], EMIT_COL: Vec3 = [0.14, 0.14, 0.16];
-const GREEN: Vec3 = [0.3, 5, 0.6], RED: Vec3 = [5, 0.3, 0.15], AMBER: Vec3 = [5, 2.4, 0.2];
-export function deviceBoxes(g: Game, out: Box[]) {
-  const n0 = out.length;
-  deviceBoxesRaw(g, out);
-  for (let k = n0; k < out.length; k++) out[k].mkey = MKEY.device + (k - n0);   // MOTION IDENTITY by ordinal: a panning camera's body reprojects through its own last pose; a tripwire's beam / dot come and go with what cuts them, re-keying the boxes after them for a frame — the shape check in vsBox turns any such mismatch into 'did not move'
-}
-function deviceBoxesRaw(g: Game, out: Box[]) {
-  const D = g.devices; if (!D) return;
-  const dyn = BoxFlag.Dynamic, deco = BoxFlag.Dynamic | BoxFlag.NoShadow;
-  for (const c of D.cameras) {
-    const d = c.def; const ok = alive(c.target); const pitch = d.pitch ?? DEVICE_DEFAULTS.pitch; const look = lensDir(c.yaw, pitch);
-    // bracket to the wall / ceiling behind it (a short arm straight back along the rest yaw, level), the body pitched with the lens, the lens barrel, the LED on top
-    const back: Vec3 = [-Math.sin(d.yaw), 0, -Math.cos(d.yaw)];
-    out.push(makeBox({ c: v3.mad(d.pos, back, 0.16), h: [0.025, 0.025, 0.09], yaw: d.yaw, albedo: CAM_DARK, flags: dyn }));
-    const x = v3.normalize(v3.cross([0, 1, 0], look)); const y = v3.cross(look, x);
-    out.push(makeBox({ c: v3.mad(d.pos, look, -0.04), h: [0.055, 0.05, 0.1], yaw: c.yaw, rot: quat.fromBasis(x, y, look), albedo: CAM_COL, flags: dyn }));
-    out.push(makeBox({ c: v3.mad(d.pos, look, 0.075), h: [0.03, 0.03, 0.02], yaw: c.yaw, rot: quat.fromBasis(x, y, look), albedo: [0.02, 0.02, 0.025], flags: deco }));   // the lens: dark glass (the LED and the haze cone are the tells; a lit lens read as a pale square — 08-09 page check)
-    const hot = c.seen > 0.02; const blink = c.state !== 'idle' ? (Math.sin(g.time * 18) > 0 ? 1 : 0.15) : 1;
-    const led: Vec3 = !ok ? [0, 0, 0] : v3.scale(hot ? LED_HOT : LED_IDLE, blink * (hot ? clamp(0.4 + c.seen / Math.max(0.1, g.tune.cameraSuspicionSecs), 0.4, 1.6) : 1));
-    out.push(makeBox({ c: v3.add(v3.mad(d.pos, look, 0.02), v3.scale(y, 0.062)), h: [0.012, 0.008, 0.012], yaw: c.yaw, rot: quat.fromBasis(x, y, look), albedo: [0.05, 0, 0], emissive: led, flags: deco }));
-  }
-  for (const K of D.keypads) {
-    const d = K.def; const n = K.n; const yaw = d.yaw;
-    out.push(makeBox({ c: v3.mad(d.pos, n, 0.012), h: [0.045, 0.065, 0.012], yaw, albedo: PAD_COL, flags: deco }));   // the plate (a decal's depth: nobody's collision, no ray minds it)
-    out.push(makeBox({ c: v3.add(v3.mad(d.pos, n, 0.026), [0, -0.015, 0]), h: [0.03, 0.035, 0.003], yaw, albedo: [0.06, 0.06, 0.07], stuff: 'metal', flags: deco }));   // the key block (`stuff`: as its colour was drawn until 11-04, nobody chose it: scene/stuff.ts drawnAs)
-    const locked = K.door.locked && K.door.latched; const busy = men(g).some(pl => pl.coding === K.door);
-    const led: Vec3 = busy ? v3.scale(AMBER, Math.sin(g.time * 30) > 0 ? 1 : 0.2) : locked ? RED : GREEN;
-    out.push(makeBox({ c: v3.add(v3.mad(d.pos, n, 0.026), [0, 0.045, 0]), h: [0.012, 0.006, 0.003], yaw, albedo: [0.04, 0.04, 0.04], emissive: v3.scale(led, 0.5), flags: deco }));
-  }
-  for (const l of D.lasers) {
-    const d = l.def; const ok = alive(l.target); const yaw = v3.yawOf(l.dir);
-    // emitter and receiver: small housings at the two ends, backed off the beam so it leaves / enters their faces; the emitter's tell-tale LED
-    out.push(makeBox({ c: v3.mad(d.from, l.dir, -0.03), h: [0.03, 0.035, 0.03], yaw, albedo: EMIT_COL, flags: deco }));
-    out.push(makeBox({ c: v3.mad(d.to, l.dir, 0.03), h: [0.03, 0.035, 0.03], yaw, albedo: EMIT_COL, flags: deco }));
-    out.push(makeBox({ c: v3.add(v3.mad(d.from, l.dir, -0.03), [0, 0.043, 0]), h: [0.008, 0.005, 0.008], yaw, albedo: [0.05, 0, 0], emissive: ok ? (g.time - l.lastTripAt < 1.5 ? v3.scale(RED, Math.sin(g.time * 40) > 0 ? 2 : 0.2) : [1.5, 0.1, 0.05]) : [0, 0, 0], flags: deco }));
-    if (ok && l.cut > 0.05) beamBoxes(g, d.from, l.dir, l.cut, out, l.cut < l.len - 0.05);   // the beam itself: combat.ts's weapon-laser draw (thin emissive line, ≥ a pixel wide, the bead where it is cut short)
-  }
-}
 
 // ---------------------------------------------------------------- persistence of the panel's knobs (like qrf.ts / whistle.ts: per machine)
 const LS_KEY = 'twopointsix.devices';

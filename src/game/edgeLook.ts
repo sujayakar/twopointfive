@@ -36,6 +36,7 @@ import type { Game } from './game';
 import { hash01 } from './debris';
 import type { Chunk, FootBook, FootMan, FootKnobs } from './debris';
 import { lookDecal } from './lookDecals';
+import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 export const EDGE = {
   on: true,
@@ -123,26 +124,6 @@ export class EdgeLook {
   /** the level put back (Destruction.reset) */
   clear() { this.decor.clear(); this.dirty.clear(); this.blasted.clear(); this.todo.length = 0; this.held = false; this.rubble.length = 0; this.flying = 0; this.serial = 0; this.footBook = { shoves: 0, stats: { kicked: 0, offMan: 0, walled: 0, gaveUp: 0 } }; EDGE_STATS.decor = EDGE_STATS.rubble = EDGE_STATS.flying = 0; }
 
-  // ---------------------------------------------------------------- per frame
-  update(dt: number) {
-    // what the frame's box list can still take: last frame's dynamics less ours (g.dynBoxes still holds last frame's list here — the PICTURE's under fog of war, which
-    // can be longer than the game's own count by the things it remembers: the larger of the two is budgeted by)
-    this.room = frameRoom(this.g, this.last, EDGE.boxSlack) ?? this.room;
-    if (!this.held) try {
-      if (this.dirty.size) this.flush();
-      else if (this.todo.length) { for (const q of this.todo.splice(0, Math.max(1, EDGE.spread | 0))) this.shed(q.B, q.F, q.c, q.dir, false, q.blast); this.cap(); }
-    } catch (e) { this.fail(e); }
-    if (!this.flying) return;
-    let fl = 0;
-    for (const r of this.rubble) {
-      if (r.t >= r.T) continue;
-      r.t = Math.min(r.T, r.t + dt); const s = r.t / r.T, b = r.box;
-      b.c[0] = r.p0[0] + (r.p1[0] - r.p0[0]) * s; b.c[2] = r.p0[2] + (r.p1[2] - r.p0[2]) * s; b.c[1] = s >= 1 ? r.p1[1] : Math.max(r.p1[1], r.p0[1] + r.vy * r.t - 4.9 * r.t * r.t);
-      b.rot = s >= 1 ? r.q1 : quat.slerp(r.q0, r.q1, s * s);
-      if (s < 1) fl++;
-    }
-    this.flying = fl; EDGE_STATS.flying = fl;
-  }
   private last = 0;
   /** KICKED RUBBLE (game/destruction.ts, once a frame while RUBBLE.on — off, never called and nothing here differs): the fragments AT REST are shoved by the men's
    *  feet exactly as the pool's pieces are (Debris.feet over records of our own boxes, Debris.footStep sliding them: the floor they lie on, the walls, the
@@ -150,23 +131,10 @@ export class EdgeLook {
    *  shifts, lies where it fell. A record is made the first time a man comes within a stride and a half of a fragment at rest. */
   /** the boots' books for our fragments (Debris.feet's FootBook): our own shove count and counts, so the pool's pieces draw what they would with this look off */
   footBook: FootBook = { shoves: 0, stats: { kicked: 0, offMan: 0, walled: 0, gaveUp: 0 } };
-  feet(men: readonly FootMan[], K: FootKnobs, dt: number) {
-    if (!this.rubble.length) return;
-    const D = this.g.destr.debris; const list: Chunk[] = [];
-    for (const r of this.rubble) {
-      if (r.t < r.T) continue;
-      if (!r.foot) { const c = r.box.c; let near = false; for (const m of men) if (Math.abs(m.pos[0] - c[0]) < 1.5 && Math.abs(m.pos[2] - c[2]) < 1.5) { near = true; break; } if (!near) continue; r.foot = D.loose(r.box, 0.0007 * (((r.box.mkey ?? 0) & 0x7fffff) % 11)); }   // (its own height once a boot lays it flat: as shed the heap's flakes are staggered, so no two overlapping tops lie in one plane)
-      list.push(r.foot);
-    }
-    if (!list.length) return;
-    D.feet(men, K, list, this.footBook);
-    for (const c of list) { const slid = !c.rest; D.footStep(c, dt);
-      // a slab that casts a shadow and was slid to a tripwire's beam casts none from here on (shed()'s rule, kept true under the boots: a beam ends at the first shadow caster)
-      if (slid && !(c.box.flags & BoxFlag.NoShadow) && this.inBeam(c.box.c, Math.max(c.box.h[0], c.box.h[2]))) c.box.flags |= BoxFlag.NoShadow; }
-  }
+  feet(men: readonly FootMan[], K: FootKnobs, dt: number): void { return goneWithTick('EdgeLook.feet') as any; }
   private flush() { if (!this.dirty.size) return; for (const B of this.dirty.values()) this.rebuild(B); this.dirty.clear(); let n = 0; for (const l of this.decor.values()) n += l.length; EDGE_STATS.decor = n; }
   /** our pieces into the frame's dynamic list (after the lane's debris) */
-  boxes(out: Box[]) {
+  boxes(out: Box[]) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('EdgeLook.boxes', this, [out]); if (__r !== RUST_PASS) return __r as any; } }
     if (this.held) this.held = false; else try { this.flush(); } catch (e) { this.fail(e); }   // (a wall that opened this frame is dressed on the next: `dress`)
     let room = this.room, n = 0;
     for (const l of this.decor.values()) for (const b of l) { if (n >= room) break; out.push(b); n++; }
@@ -424,5 +392,4 @@ export class EdgeLook {
     } });
   }
 
-  summary(): string { const s = EDGE_STATS; return `edge look ${EDGE.on ? 'on' : 'off'} · standing ${s.decor}/${EDGE.maxDecor} · rubble ${s.rubble}/${EDGE.maxRubble} (${s.flying} falling) · scorch decals ${s.scorch} · capped ${s.capped}`; }
 }

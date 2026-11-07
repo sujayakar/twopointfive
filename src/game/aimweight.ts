@@ -14,8 +14,9 @@
 // build, the ring on the cursor. Never under a puppet or a show (their aims are scripted points), never for anybody but the player. No dice, no camera, no
 // pixels: every number is radians, seconds or metres off the Player's own state (`Player.aimw`), which rides a checkpoint while a swing is running.
 import type { Game, Player } from './game';
-import { Vec3, wrapAngle, clamp } from '../math/vec';
+import { Vec3, clamp } from '../math/vec';
 import { handlingOf } from './weapons';
+import { goneWithTick } from './crossing';
 
 export const AIMWEIGHT = { on: false,
   /** top rate the gun's heading turns at, rad/s, for a gun of handling 1 (the pistol); × handlingOf(the gun in his hands) */
@@ -77,30 +78,7 @@ export function aimSwing(w: { vel: number }, err: number, top: number, dt: numbe
   return err;
 }
 
-/** First thing in the player's update: this frame has not weighed his aim yet (a branch that drives his yaw itself — a sprint, a wall, a man in his arm —
- *  leaves it so, and the next weighted frame starts from rest). */
-export function aimWeighBegin(pl: Player): void { const w = pl.aimw; w.was = w.live; w.live = false; w.on = true; w.landed = true; w.err = 0; }
 
-/** The plain aim branch's step: turn `aimYaw` toward the bearing of the cursor's point. Returns false with the switch off (the caller keeps its own ease). */
-export function aimWeighTurn(g: Game, dt: number): boolean {
-  if (!can(g)) return false;
-  const pl = g.player, c = pl.char, w = pl.aimw, ap = g.aimPoint;
-  const dx = ap[0] - c.pos[0], dz = ap[2] - c.pos[2], d = Math.hypot(dx, dz);
-  if (!w.was) { w.vel = 0; w.r = d; w.y = ap[1]; }
-  w.live = true; AIMWEIGHT_STATS.steps++;
-  let err = 0;
-  if (d > 0.25 && dt > 0) {
-    const y0 = c.aimYaw, err0 = wrapAngle(Math.atan2(dx, dz) - y0);   // how far round the cursor is from the gun
-    err = aimSwing(w, err0, aimTop(pl), dt);
-    c.aimYaw = y0 + (err0 - err);   // (never wrapped here: his heading runs on unbroken, as the build's ease left it)
-  } else w.vel = 0;
-  const k = 1 - Math.exp(-Math.max(0, AIMWEIGHT.reach) * dt);
-  w.r += (d - w.r) * k; w.y += (ap[1] - w.y) * k;
-  w.landed = err === 0 && Math.abs(d - w.r) < 0.02;
-  if (w.landed) { w.r = d; w.y = ap[1]; }
-  w.err = err; w.on = Math.abs(err) * Math.max(d, 1) <= AIMWEIGHT.onM;
-  return true;
-}
 
 /** Where the gun points: the circle's world point — null when nothing is weighing his aim (the circle is the cursor's). */
 export function aimGunPoint(g: Game): Vec3 | null {
@@ -115,32 +93,8 @@ export function aimGunOn(g: Game): boolean { const w = g.player.aimw; return !(w
 /** What leaves the gun goes where the gun points. `tgt` = the point the build would have sent it at (a man's chest, a fixture, a launcher's lead on a walking
  *  man, level along the cursor's heading): handed back AS IT IS while the circle is on the cursor — the one test the HUD's circle shows — else turned about
  *  him by what the gun still has to swing, range and height kept (so a lead stays a lead, about the gun's heading). */
-export function aimWeighShot(g: Game, tgt: Vec3): Vec3 {
-  const pl = g.player, w = pl.aimw; if (!w.live || !AIMWEIGHT.on || w.on) return tgt;
-  const c = pl.char, dx = tgt[0] - c.pos[0], dz = tgt[2] - c.pos[2], cs = Math.cos(w.err), sn = Math.sin(w.err);   // (bearing − err: yaw is atan2(x, z))
-  AIMWEIGHT_STATS.offShots++;
-  return [c.pos[0] + dx * cs - dz * sn, tgt[1], c.pos[2] + dz * cs + dx * sn];
-}
+export function aimWeighShot(g: Game, tgt: Vec3): Vec3 { return goneWithTick('aimWeighShot') as any; }
 
-/** The launcher's release (player.ts; `up` = the button has come up with a load held and the rifle in his hands). Rounds go where the circle is, but a 40 mm
- *  flicked and tapped mid-swing went off the cursor with no arc ever drawn (a tap has no preview) — a grenade where he did not point. So a load let go of
- *  while the tube is still off the cursor is KEPT (the caller draws its arc, as under a held button) and sent the frame the circle is on the cursor, or after
- *  `launchWait` where the circle then is. Nothing weighing his aim, or the circle on the cursor: true at once, the build's own release. */
-export function aimWeighLaunch(g: Game, dt: number, up: boolean): boolean {
-  const w = g.player.aimw;
-  if (!up) { w.launchT = 0; return false; }
-  if (!w.live || !AIMWEIGHT.on || w.on || !(AIMWEIGHT.launchWait > 0)) { w.launchT = 0; return true; }
-  if ((w.launchT += dt) >= AIMWEIGHT.launchWait) { w.launchT = 0; return true; }
-  return false;
-}
-/** A load OWED (the button is up, the round waiting on the swing) on a frame the gun is DOWN — swinging past a wall or a jamb (gunwall.ts), a teammate in the
- *  line: nothing leaves a lowered gun and no arc is drawn, but the load is not dropped for it — the wait's clock runs on, and only its end lets go of it unsent
- *  (a press at a wall is still nothing: nothing is owed until the button has come up with the gun free). true = still owed. */
-export function aimWeighLaunchKeep(pl: Player, dt: number): boolean {
-  const w = pl.aimw; if (!(w.launchT > 0)) return false;
-  if ((w.launchT += dt) >= AIMWEIGHT.launchWait) { w.launchT = 0; return false; }
-  return true;
-}
 
 /** checkpoint slice: only while a swing is running (savestate.ts) */
 export function aimWeightSnapshot(pl: Player): number[] | undefined { const w = pl.aimw; return w.live && (w.vel !== 0 || !w.on) ? [w.vel, w.r, w.y] : undefined; }
@@ -149,8 +103,3 @@ export function aimWeightRestore(pl: Player, s: unknown): void {
   if (Array.isArray(s) && s.length === 3 && s.every(n => Number.isFinite(n))) { w.vel = s[0]; w.r = s[1]; w.y = s[2]; w.live = true; }
 }
 
-/** QA / the page's summary line */
-export function aimWeightSummary(g: Game): string {
-  const w = g.player.aimw; if (!AIMWEIGHT.on) return 'off';
-  return w.live ? (w.on ? 'on the cursor' : `swinging ${(w.vel * 180 / Math.PI).toFixed(0)}°/s`) : 'on · not weighing';
-}

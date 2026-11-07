@@ -17,16 +17,16 @@
 // build's, statement for statement. Nothing at module level uses another game module (the import cycle: tables are literals, the rest runs inside functions).
 import { Vec3, v3, quat } from '../math/vec';
 import { Box, makeBox, MKEY, wordOf } from '../scene/boxes';
-import { CutPlane, MAX_CUT_PLANES, cutBoxesOn, cutPrism, cutRecord, cutFit, cutThrough, cutToWorld, cutVerts } from '../scene/cut';
+import { CutPlane, MAX_CUT_PLANES, cutBoxesOn, cutPrism, cutRecord, cutFit, cutThrough, cutVerts } from '../scene/cut';
 import type { Game } from './game';
 import type { Chunk, ChunkKind, Debris } from './debris';
-import { hash01, supportAlong } from './debris';
+import { hash01 } from './debris';
 import { gpuFx, emitDust, PFX, type Surf } from './particleFx';
 import { doesOf, type DoesWord } from '../scene/materials';
 import { NOBODY_ID } from './consts';
 import { messEvicted } from './floormess';
 import { EVICT, DEBRIS } from './destructionSwitch';   // (the eviction pop's fix: a leaf module, no imports of its own)
-import { lookDecal } from './lookDecals';
+import { RUST_SURFACE } from './crossing';
 
 export type Mat = 'plasterboard' | 'masonry' | 'blockwork' | 'wood' | 'metal' | 'glass' | 'glassTough' | 'glassLam' | 'screen' | 'fabric' | 'paper' | 'cardboard' | 'tile' | 'plastic' | 'carpet' | 'plant';
 /** the piece shapes (§5.3): each is ONE box with a cut record. 'panel' = the uncut box */
@@ -372,7 +372,7 @@ export class Breaks {
     c.contact = { keepFloor: 0.55, keepWall: 0.8, rest: row.rest }; if (row.level > 0) c.level = row.level;
   }
   /** a piece's first hard touch (m/s along the surface normal): over its row's speed it breaks once more — queued, done in tick() (the pool is mid-step) */
-  landed(c: Chunk, speed: number) {
+  landed(c: Chunk, speed: number) { if (RUST_SURFACE?.tapFiring('Breaks.landed')) return RUST_SURFACE.tapAnswer() as any;
     if (!cutBoxesOn()) return; const m = c.mat; if (!m || m.gen > 0 || m.fixed) return;
     const a = BREAK[m.mat].again;
     const china = m.mat === 'plastic' && speed >= BREAKS.chinaLand && Math.max(c.box.h[0], c.box.h[1], c.box.h[2]) <= BREAKS.chinaMax;
@@ -380,7 +380,7 @@ export class Breaks {
     if (!this.queue.includes(c)) this.queue.push(c);
   }
   /** an impulse's kick on a piece (m/s): over its row's kick it breaks once more */
-  kicked(c: Chunk, kick: number) {
+  kicked(c: Chunk, kick: number) { if (RUST_SURFACE?.tapFiring('Breaks.kicked')) return RUST_SURFACE.tapAnswer() as any;
     if (!cutBoxesOn()) return; const m = c.mat; if (!m || m.gen > 0 || m.fixed) return;
     const a = BREAK[m.mat].again; if (!a || kick < a.kick) return;
     if (!this.queue.includes(c)) this.queue.push(c);
@@ -417,13 +417,6 @@ export class Breaks {
     BREAK_STATS.chips += n;
     if (row.dust > 0) emitDust(P, b.c, [0, 1, 0], Math.max(1, Math.round(row.dust * Math.max(0.5, Math.min(1.5, r / 0.25)))), { shape: 'puff', speed: PFX.dustSpeed * 0.6, speedJit: 0.5, lift: 0.05, life: PFX.dustLife, lifeJit: 0.3, size: PFX.dustSize, sizeJit: 0.35, posJit: Math.max(0.08, Math.min(0.3, r * 0.6)), color: v3.lerp(this.tint(row, m.paint, 0.6), [0.8, 0.79, 0.76], 0.4) });
   }
-  /** after the pool's step (Destruction.update): the breaks queued this frame */
-  tick() {
-    if (!this.queue.length) return;
-    const q = this.queue; this.queue = [];
-    if (!cutBoxesOn()) return;
-    for (const c of q) this.breakAgain(c);
-  }
 
   // ---------------------------------------------------------------- small and fine
   private tint(row: BreakRow, paint: Vec3, k: number): Vec3 { return v3.lerp(paint, coreOf(row, paint), k); }
@@ -456,46 +449,6 @@ export class Breaks {
     BREAK_STATS.refused++;
   }
 
-  // ---------------------------------------------------------------- level B
-  private breakAgain(c: Chunk) {
-    const D = this.debris; const i = D.list.indexOf(c); const m = c.mat; if (i < 0 || !m || m.gen > 0) return;
-    const row = BREAK[m.mat]; const a = row.again; const b = c.box;
-    const gone = !a || (m.mat === 'plastic' && Math.max(b.h[0], b.h[1], b.h[2]) <= BREAKS.chinaMax);
-    if (gone || D.moving > D.cap() / 2) {   // china, or the mayhem rule: straight into its particles, and its slot is free
-      D.list.splice(i, 1); this.crumble(c, [a ? a.chips + 4 : 8, a ? a.chips + 6 : 10], 1.2);
-      if (gone) BREAK_STATS.china++; else BREAK_STATS.mayhem++;
-      return;
-    }
-    // one plane through the piece: across its length, along it, or on its diagonal
-    const h = b.h; const thin = (h[0] <= h[1] && h[0] <= h[2] ? 0 : h[1] <= h[2] ? 1 : 2) as 0 | 1 | 2; const ua = (thin + 1) % 3, va = (thin + 2) % 3;
-    const lg = h[ua] >= h[va] ? ua : va, sh = lg === ua ? va : ua; const rel = this.rel(c); const r = (j: number) => hash01(rel * 1013 + j * 37 + 5);
-    const n: Vec3 = [0, 0, 0], at: Vec3 = [0, 0, 0];
-    if (a.how === 'across') { const t = (8 + 20 * r(1)) * RAD * (r(2) < 0.5 ? -1 : 1); n[lg] = Math.cos(t); n[sh] = Math.sin(t); at[lg] = (r(3) - 0.5) * 0.4 * h[lg]; }
-    else if (a.how === 'along') { const t = 7 * RAD * (r(1) * 2 - 1); n[sh] = Math.cos(t); n[lg] = Math.sin(t); at[sh] = (r(3) - 0.5) * 0.3 * h[sh]; }
-    else { const t = 12 * RAD * (r(1) * 2 - 1), d = Math.atan2(h[lg], h[sh]) * (r(2) < 0.5 ? -1 : 1) + t; n[lg] = Math.cos(d); n[sh] = Math.sin(d); }
-    const base = b.cut ?? [];
-    const halves = [cutRecord(h, [...base, cutThrough(at, n)]), cutRecord(h, [...base, cutThrough(at, [-n[0], -n[1], -n[2]])])];
-    if (halves[0].empty || halves[1].empty) return;   // (the plane missed what is left of it: it stays one piece)
-    D.list.splice(i, 1);
-    const rot = b.rot ?? quat.yaw(b.yaw); const nw = quat.rotate(rot, n);
-    for (let k = 0; k < 2; k++) {
-      const f = cutFit(h, halves[k].cut); const w = cutToWorld(f.off, b.yaw, b.rot); const sgn = k === 0 ? -1 : 1;
-      const box = makeBox({ c: [b.c[0] + w[0], b.c[1] + w[1], b.c[2] + w[2]], h: f.h, yaw: b.yaw, rot: [rot[0], rot[1], rot[2], rot[3]], albedo: v3.copy(b.albedo), ...wordOf(b) });
-      const sep = 0.35 + 0.5 * r(10 + k);
-      const v: Vec3 = [c.v[0] + nw[0] * sgn * sep, Math.max(c.v[1], 0) + 0.3 + 0.5 * r(12 + k), c.v[2] + nw[2] * sgn * sep];
-      const wv: Vec3 = [c.w[0] + (r(14 + k) - 0.5) * 5, c.w[1] + (r(16 + k) - 0.5) * 3, c.w[2] + (r(18 + k) - 0.5) * 5];
-      const got = D.spawnRaw('chunk', box, v, wv, c.who);
-      if (!got) { this.refuse(row, m.paint, box.c, v, c.who); continue; }
-      got.box.cut = f.cut; if (f.cut) got.box.cutCore = faceCore(row, m.paint); got.box.rough = b.rough; got.box.metal = b.metal;
-      this.tag(got, m.mat, 1, m.paint); got.sounded = true; got.age = Math.max(c.age, 1e-3); got.sfx = c.sfx; got.level = c.level;
-      BREAK_STATS.planes += f.cut?.length ?? 0;
-    }
-    this.chips(row, m.paint, b.c, [0, 1, 0], a.chips, 1.6, Math.max(h[lg], 0.04) * 0.5, c.who);
-    this.fines(row, m.paint, b.c, [0, 1, 0], 0.5);
-    if (row.puff > 0 && m.mat === 'tile' && !c.dress) this.g.destr.cellDust(b.c, [0, 1, 0], row.puff, 'drywall');   // (a piece that is dressing puts no smoke where the senses read it: the simulation's landing of it raised this puff — lands() above, debris.ts landings)
-    if (row.mark > 0 && c.box.c[1] - supportAlong(b, [0, 1, 0]) < 0.06) { const d = this.g.decals.add('chip', [b.c[0], b.c[1] - supportAlong(b, [0, 1, 0]) + 0.002, b.c[2]], [0, 1, 0], row.mark * (0.7 + 0.6 * r(20)), c.dress ? { look: true } : {}); if (c.dress) lookDecal(d); }   // (a dressing piece's mark is the picture's too: lookDecals.ts)   // (on the floor only: a desk top keeps its finish)
-    BREAK_STATS.again++;
-  }
 
   // ---------------------------------------------------------------- furniture: a plain piece takes its row's outline
   /** A PLAIN PIECE somebody else cut out of a thing (the furniture breaker's slats, slabs and plates) takes its row's broken outline where it is: a wooden slat a
@@ -733,5 +686,4 @@ export class Breaks {
     return out;
   }
 
-  summary(): string { const s = BREAK_STATS; return `breaks: shaped ${s.shaped} (${s.planes} planes, ${s.dropped} dropped) · plain ${s.plain} · heap ${s.heap} · again ${s.again} · crumbled ${s.crumbled} · refused ${s.refused} · mayhem ${s.mayhem} · ragged ends ${s.ragged} · load ${this.load()}`; }
 }

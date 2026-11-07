@@ -17,6 +17,7 @@
 import { SideMap, SideSet } from '../math/side';
 import type { Game, Guard } from './game';
 import { Vec3, v3 } from '../math/vec';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 export const OPENING = {
   /** the rule itself; false = the routes' first waypoints, as it always was */
@@ -49,7 +50,7 @@ function wayLen(g: Game, a: Vec3, b: Vec3): number {
 }
 
 /** where along his route a man who starts inside the clear radius is put, or null (he starts far enough off, or his whole lap is inside it) */
-export function openingSpot(g: Game, gd: Guard): { pos: Vec3; yaw: number; wp: number } | null {
+export function openingSpot(g: Game, gd: Guard): { pos: Vec3; yaw: number; wp: number } | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('openingSpot', undefined, [g, gd]); if (__r !== RUST_PASS) return __r as any; } }
   const spawn = g.level.playerSpawn, key = `${OPENING.clearM}|${OPENING.stepM}|${spawn[0]}|${spawn[2]}`, kept = spots.get(gd.route);
   if (kept?.key === key) return kept.at;
   const at = findSpot(g, gd); spots.set(gd.route, { key, at }); return at;
@@ -73,7 +74,7 @@ function findSpot(g: Game, gd: Guard): { pos: Vec3; yaw: number; wp: number } | 
 }
 
 /** Put the fresh shift on for the player's night (see the head). Idempotent: each man is looked at once. Returns how many were moved now. */
-export function openingStart(g: Game): number {
+export function openingStart(g: Game): number { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('openingStart', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
   if (!urlRead) readUrl();
   const show = g.quietUtility || (g.touring && !g.director?.handedOver);   // a show's own encounter (its men start from their marks) — not one it has handed to the player
   let moved = 0;

@@ -19,6 +19,7 @@
 import type { Game } from './game';
 import { Vec3, v3, clamp } from '../math/vec';
 import { cancelSustained } from './interact';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 export const SAMSTUN = { on: false,
   /** a dazzled player is also rooted for it, as a blinded AI man is */
@@ -35,7 +36,7 @@ export const SAMSTUN_STATS = { staggered: 0, dazzled: 0 };
 const live = (g: Game) => SAMSTUN.on && !g.player.down && !g.puppet && !g.touring;
 
 /** Fold the player for `secs` (the stamp is written whatever the switch says; what a stagger DOES to him is read below). `dir` = the way the blow came from → him. */
-export function staggerPlayer(g: Game, secs: number, dir: Vec3): void {
+export function staggerPlayer(g: Game, secs: number, dir: Vec3): void { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('staggerPlayer', undefined, [g, secs, dir]); if (__r !== RUST_PASS) return __r as any; } }
   const pl = g.player; if (!(secs > 0) || pl.down) return;
   pl.staggerUntil = Math.max(pl.staggerUntil, g.time + secs);
   pl.char.anim.hitFrom(dir); pl.hitFlash = 1; pl.fireCd = Math.max(pl.fireCd, secs); pl.sup.v = Math.max(pl.sup.v, 1); pl.sup.kick = Math.max(pl.sup.kick, 1);
@@ -65,13 +66,3 @@ export function samBlind(g: Game, now = g.time): number { if (!live(g)) return 0
 /** may his feet move? (player.ts asks before it reads the walk keys) */
 export function samRooted(g: Game, now = g.time): boolean { return samStaggered(g, now) || (SAMSTUN.blindRoots && samBlind(g, now) > 0.5); }
 
-/** player.ts, once a frame right after the down test, whatever state he is in (free, a man in his arm, a kick, a lock): what the two states show on him and keep true while they run */
-export function samStunPose(g: Game): void {
-  const pl = g.player, an = pl.char.anim;
-  if (!SAMSTUN.on) { if (pl.stunPosed) { an.clutch = 0; an.dazzle = null; pl.stunPosed = false; } return; }   // (thrown off mid-stun: what it put on him comes off; never on = nothing touched)
-  const blind = samBlind(g), stag = samStaggered(g); pl.stunPosed = stag || blind > 0;
-  an.clutch = stag && blind <= 0 ? 1 : 0;
-  if (blind > 0) { const dz = an.dazzle ?? (an.dazzle = { from: pl.char.pos, k: 0 }); dz.from = pl.dazzledAt ?? pl.char.pos; dz.k = Math.min(1, (pl.dazzledUntil - g.time) / 0.5); pl.sup.v = Math.max(pl.sup.v, blind); }
-  else if (an.dazzle) an.dazzle = null;
-  if (stag) pl.fireCd = Math.max(pl.fireCd, pl.staggerUntil - g.time);
-}

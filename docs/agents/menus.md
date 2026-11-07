@@ -1307,6 +1307,24 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   first-time player. (The Mission step's facts row wrote 'Defenders 11' as digits: since 10-23 no screen draws that cell, `MYSTERY`.) OPEN, for the menus' owners: a named kit a mission
   recommends (a field on its row, a mark on the Kit row's button) is not built for regular missions — only what the place asks is said. OPEN, for the
   squad mission's owner: its frame refuses the player's smoke and stun slots all mission, so of what he packs for himself only the frag is used.
+- **EIGHTEEN SWITCHES RULED SETTLED, TAKEN OFF THE PANELS (2026-11-07).** The port ruled these rows settled at their page value (project files
+  `rebuild/rust-sim/port/cleanup/OPEN-ROWS-RULING.md`); a row with a setter on the page could not be folded, so the setters go first. THIS CHANGE ALONE DOES NOT
+  SETTLE THEM: the rows turn `settled` in `tools/qa/switches.json`, and constants in the Rust game, in the fold this change travels with; until that is in
+  the tree a row here is still a switch its address word can put off, with no box to show it. Fifteen of them the Rust game branches on; the three snow
+  rows are read by the page's own snow code and by nothing in Rust, and their other side stays in that code until the rows are retired. Gone from the debugger
+  (`src/ui/bindings.ts`), fifteen boxes: 'running ▸ arms carried close' (`RUNARMS.on`); 'throw order ▸' a man walks to a throw, works his throw out, frag
+  where men can duck, a frag near you is your call, drawn on the ground (`SQUADTHROW.walk`, `lob`, `duck`, `samCall`, `draw`; THE switch 'teammates throw
+  frag / stun on order' stays); 'teammates ▸' slower than you, run with you, run for a reason, look where they walk (`TEAMPACE.on`, `follow`, `own`,
+  `walkAim`; 'no sprint to a stack' and 'pace themselves on you' stay, the maintainer's to try, and the pace's numbers stay); 'charge order: carried out
+  or answered' (`DOORTOOLS.chargeAnswer`); 'wall snap:' the rifle stacks, sprint into a wall to take it, heard on and off the wall, the take is unhurried
+  (`WALLSNAP.stack`, `pressRun`, `voice`, `slow`; 'wall snap: feel pass + rifle stack' and 'walk into a wall to take it' stay, and every number). Gone from
+  the scene tweak panel (`src/ui/sceneLayers.ts`), three switches: `Snow in one air`, `Things mark the snow` and `Blast marks` keep their layer, numbers,
+  status line and the blast's button, with no box (`SNOW_LOOK.oneAir`, `marks`, `blast`). The rows' address words and stand-up words are not this change's.
+  CHECKS: `scenetweak` 'oneair' now asks that the three layers have no switch and no longer puts one air off and on again, nor tells a blast with its
+  switch off (the off side is asked by nothing now); `scenetweak-page.cjs` step 4b the same, and its step 5 reads the wind sim, the one `mode` switch left,
+  for what `none` leaves on. `panel-inventory`: the same 5 reference rows missing before and after (none of the fifteen is in
+  its fixture). On the tree this was cut on, `scenetweak` is red on 4 lines before and after for the tree's own reasons (the blast button tells the Rust
+  game no blast, among them). Typechecks clean. Never seen on a GPU, and the panel was not opened in a browser for it.
 - **The scene tweak panel (`?tweak`, a ONE OFF tool, 10-15) is not the debugger and not a menu of the game's** (`src/ui/sceneTweak.ts` the panel and its
   bookkeeping, `src/ui/sceneLayers.ts` the list, `src/render/shaderTune.ts` the shader half; the maintainer on a night clip of the snow pass: "could you make
   a one off UI for tweaking a scene like this? i'm curious what all the "layers" are for the effects and what variables we can configure"). Any link with
@@ -1331,7 +1349,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   kept copy, the notes fresh, and 300 frames of the pass on two seeds with every picture-only number moved and every hand switch flipped: one digest. The page
   half: `node tools/qa/scenetweak-page.cjs` (software adapter: the DOM, real pipelines rebuilt and drawn with, a reload, a page without the word). Never seen
   on a GPU; nobody has judged a slider's reach by eye.
-  - THE SNOW AS IT STANDS SINCE ONE AIR AND THE BLAST (10-15, after-close step): `Snow in one air` is a layer with a switch and no numbers — `SNOW_LOOK.oneAir`,
+  - THE SNOW AS IT STANDS SINCE ONE AIR AND THE BLAST (10-15, after-close step): `Snow in one air` is a layer with a switch (NO SWITCH since 2026-11-07, as `Things mark the snow` and `Blast marks`: the bullet 'EIGHTEEN SWITCHES RULED SETTLED' above) and no numbers — `SNOW_LOOK.oneAir`,
     read every frame, so LIVE here (shown where the particle shaders were built to read the wind sim). It and `Wind sim` are `mode` switches (how the air
     runs, not layers to hide): `none` / `all` leave both be, the copied text names one that is off. WHAT NOTHING READS IS DIMMED (`TweakVar.idle` /
     `TweakLayer.idle`, asked each refresh; `readWhen` throws on a row it cannot find): with the SWITCH on, the Blown grains layer and the blast's `throwS` /
@@ -1354,7 +1372,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     switch on. `FLAKE_WALL_IN` is a ⟳ row of Falling flakes (the CPU's copy of it in snowFx.ts is a check's, nothing in the page reads it). The check's
     tenth verdict (`oneair`) and the page check's own cover these; headless, one air is never IN FORCE (no pool, no field): the in-force dimming is the
     software page's to prove (its verdict is red unless the page opened with one air in force).
-  - `Things mark the snow` (Ground; the snow goal's own layer, 10-15): the SNOWMARKS table, its switch `SNOW_LOOK.marks` live and a `mode` one; the mark's
+  - `Things mark the snow` (Ground; the snow goal's own layer, 10-15): the SNOWMARKS table, its switch `SNOW_LOOK.marks` live and a `mode` one (no switch since 2026-11-07); the mark's
     forming and kick numbers are SNOWTRACKS rows of Boot prints, the puff's motes WISP_MOTE_* rows of Blown wisps: all came by themselves. The panel step
     after it added only the layer's hover line and reaches held to what the comments say (0‥1 rows, whole-number rows); the check's `notes` verdict is now
     red on a layer with no hover line, so the next layer added by another hand cannot lack one.
