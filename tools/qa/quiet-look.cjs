@@ -8,7 +8,7 @@
 //   alone   ?levelFile=<level>&quiet=7 — up, alone, Sam on the dealt start, the dealt men on the floor, the objective in the level's words, the camera on him
 //   two     …&squad=1 — the same with ONE partner beside him
 // (the camera ON the dealt start from the first frame is quiet-probes' line: here it has had ninety frames, and the aim lead is in the number)
-// Exit 1 on a FAIL or a page error. The software adapter's smoke-pipeline console noise is passed over as tools/qa/missions-look.cjs does.
+// Exit 1 on a FAIL or a page error. The software adapter's smoke-pipeline console noise is passed over.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), path = require('path');
 const outDir = process.argv[2] || 'quiet-look', LEVEL = process.argv[3] || 'quiet-yard.json';

@@ -158,8 +158,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   nothing: it reads the quiet fog's own rows, so a frozen run of the solo night under the fog is `TPS_QUIETFOG=1 TPS_QUIETDEF=team TPS_STICKY=1
   TPS_QUIETWAND=1 TPS_SOLOFOG=1` (and the wand's own word) with `?solo` staged. Older checks that state the solo night as it was hold the switch
   down for that row or follow it (`missions-probes`, `loadout-probes`, `kitlent-check`, `quietfog-check`; `levers-probes` follows it). KNOWN, LEFT:
-  (1) the old start card's own Start (`?cards`, `ui/menu.ts`) closes the card over the plain page: a solo night with no fog, as it was; the starting
-  page's solo row is the fogged one. (2) `?solo&levelFile=<level>` is read as a solo night too and gets the fog, though the mission list has no such
+  (2) `?solo&levelFile=<level>` is read as a solo night too and gets the fog, though the mission list has no such
   row. (3) Alone, the rung 'own eyes' plays as 'cones' does. (4) `tools/qa/solo-night.ts`, the tour and the soak play a game stood up PLAIN: their
   tallies, on either stand, are of the solo night with every guard shown, not of the page's fogged one. (5) The kit note reads 'Alone on the office
   floor.' under the fog (`game/loadout.ts noteOf`), its old second half where it is off. Measured on the bundled office, one seed, both stands. Never

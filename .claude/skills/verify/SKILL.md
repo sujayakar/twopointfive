@@ -94,10 +94,7 @@ Surface: a WebGPU canvas app (GUI). Verification = load it in a WebGPU-capable b
 - **The page opens on the title**: Play › · Options · Controls (`src/ui/menu.ts`; W S walk the buttons, Enter = Play). Play
   opens the one starting page (`src/ui/startpage.ts`, two steps that each fit the window: MISSION = the missions as a text list, the
   briefing with its plan, a Setup rail of one row a setting; Enter → TEAM & KIT = who comes and what each carries; Enter = Deploy, Esc back). Options is its own screen (`src/ui/options.ts`: Graphics · Audio · Game · Controls; keys 1–4, Esc back),
-  also from the pause card. `?cards` = the older start card, which opens on the short list: six rows
-  (`src/scene/picks.ts PICKS`: compound, registry, warehouse, depot, barracks-day, solo), each a link that deploys
-  straight in with the kit as issued, and a **Missions** button for the mission list (`?cards&nopicks` = the card before the
-  short list). `?pick=<id>` redirects to that row's own URL.
+  also from the pause card. `?pick=<id>` redirects to that short-list row's own URL (`src/scene/picks.ts PICKS`).
 - **Missions list → Loadout → Deploy**: Missions (`src/ui/missions.ts`: the solo night + one row per `src/scene/scenarioList.ts
   SCENARIOS` entry; `H` / `J` step the sheet's Hour / Weather rows) → a pick opens the Loadout screen (`src/ui/loadout.ts`: how
   many teammates, none to four, each man's kit card, the Squad kit row) → Deploy is a PAGE LOAD of the mission's URL.

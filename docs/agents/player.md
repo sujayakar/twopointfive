@@ -1385,9 +1385,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   own stride would take 3.45), stand ([C] with Shift held stands him up into 4.70 m/s), off, harness. One seed: these are speeds on a flat floor. The
   debugger has the toggle and both numbers under Detection & movement; the sneak lab has them and the stride and lean. `close-stills.ts` has a scene
   `dash`. THE WORDS (the controls goal, same day): while the rule is on, Options ▸ Controls' Sprint row has the line "hold it while you're crouched
-  to stay low and move faster, but it's louder than walking" (`ui/options.ts sprintSmall`), and the controls list of the old start card (`?cards`,
-  the boot card of a URL that names a mission, the harness: `ui/menu.ts moveRowNow`) adds "and Shift while you're crouched to hurry (it's louder)";
-  the shipped start page and the load brief show no controls list. Off, both read as they did. `keybinds` has the line, both stands;
+  to stay low and move faster, but it's louder than walking" (`ui/options.ts sprintSmall`). Off, no line. `keybinds` has the line, both stands;
   `MOVEWORDS_BREAK=1` fails it. It asks the two functions, not the drawn rows. KNOWN: a screen already open keeps its words when the rule is
   flipped in the debugger or the sneak lab, until it is drawn again. Not seen on a page. NOT DONE: no sound of its own; teammates following a crouched Sam
   keep their sneak pace (they speed up only for a real sprint). Nobody has played it or seen it on a GPU.
