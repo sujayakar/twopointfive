@@ -63,8 +63,15 @@ fn main() {
             let hb = stand::host_new(&mut g);
             Some((g, hb))
         } else { None };
+        // (BLITZ_STATE=<file>: the game's state words as it stands and after every frame, a line each, for two processes to be held word by word: a state
+        //  word must mean the same in any process and on any machine)
+        let mut words = std::env::var("BLITZ_STATE").ok().map(|p| { use std::io::Write; let mut f = std::fs::File::create(&p).unwrap_or_else(|e| panic!("BLITZ_STATE {}: {}", p, e)); writeln!(f, "names {}", game::state_words::STATE_NAMES.join(" ")).unwrap(); f });
+        let (mut sw_o, mut sw) = (game::io::W::new(), Vec::<u32>::new());
+        let mut say_words = |g: &mut game::game::Game, k: usize| { if let Some(f) = words.as_mut() { use std::io::Write; game::state_words::state_words(g, &mut sw_o, &mut sw); let mut l = format!("{}", k); for w in &sw { l.push(' '); l.push_str(&format!("{:08x}", w)); } writeln!(f, "{}", l).unwrap(); } };
+        say_words(&mut s.game, 0);
         for k in 1..=frames {
             stand::frame(&mut s.game, &s.host, 1.0 / 60.0);
+            say_words(&mut s.game, k);
             if let Some((gb, hb)) = beside.as_mut() {
                 stand::frame(gb, hb, 1.0 / 60.0);
                 let (off, na, nb) = (block::parts_that_differ(0, 1), sim::state::state(0).dice.n, sim::state::state(1).dice.n);
