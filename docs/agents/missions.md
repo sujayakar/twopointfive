@@ -1176,17 +1176,22 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   - **NOT taught, on purpose** (a first prototype): waits on the word added to and taken off a stop (no place where they earn their keep was found), Shift + right click to chain stops,
     the ring by the right button kept down. **Nobody has played it and nothing of it has been seen on a GPU**: the software adapter draws the level and the mode's marks; how the night
     reads, how the plan's lines look over it, and whether nineteen lines feel like a mission or a list are a person's to say.
-- **A par clock on a room clear** (`src/game/par.ts`, `Game.par`; block `scenarios.par { gold, silver, bronze, lossSecs }`, docs/level-format.md *Scenarios*;
-  today `levels/killhouse.json` alone, row `killhouse-four` 'The kill house' in the list's 'On the clock' group, `untuned`): while that level's room clear is up the run
-  is timed from the first order, Sam's first stride off his start mark (`PAR_START_M` 1 m) or his first round or throw, to roomclear's 'taken'; every teammate
-  down at the end adds `lossSecs`; the total in WHOLE SECONDS AS SHOWN earns gold / silver / bronze / none (`medalOf`, `parResult` — pure). The clock leads the
-  objective row (`mission.ts objectiveText` → `par.objective`), the result is said once on the HUD log and is `g.par.result()`. THE MODULE READS ONLY: `PAR.on`
-  (knob registry; `?nopar`) off = the same run by digest, and a level without the block returns on every entry point's first line. One tick line in game.ts
-  after `updateMission`; a `par` slice in savestate (unreached today: no checkpoint with a squad on the floor). THE BEST TIME IS THE PAGE'S: main.ts files it
-  the frame the result first appears (`ui/parBest.ts`, localStorage, key = level file + way in + squad size + difficulty; never under god mode / no AI /
-  unlimited ammo) and hands its words to `par.best()`, which only rewords the line already said; the debrief has one 'par' cell. Bars are set from 24 shipped
-  seeds a way of play (`playthrough.ts` JSON: each run's `par`). `bun run tools/qa/par-check.ts` (`probes.ts par`; `PAR_BREAK=1` must fail). Numbers and the
-  calls left: rebuild/missions/new/killhouse.md. Never seen in a browser. ITS DOORS ARE NAMED FOR THEIR ROOMS
+- **A par clock on a room clear** (THE RUST GAME'S since 2026-11-07: `rust/game_rules/src/par/`, the record `Game.par`; block `scenarios.par { gold, silver,
+  bronze, lossSecs }`, docs/level-format.md *Scenarios*; today `levels/killhouse.json` alone, row `killhouse-four` 'The kill house' in the list's 'On the clock'
+  group, `untuned`): while that level's room clear is up the run is timed from the first thing ANYBODY does (a seat's first order, a player's first stride off
+  his start mark, `PAR_START_M` 1 m, or the first round or throw) to roomclear's 'taken'; every teammate down at the end adds `lossSecs`; the total in WHOLE
+  SECONDS AS SHOWN earns gold / silver / bronze / none (`medal_of`, `par_result`: pure). `par_tick` runs once a tick right after the mission's update, arms on a
+  new mission, files the result and says the line once on the log; the wire carries `live`, `t0` and `res` every tick. `src/game/par.ts` is the page's READ of that
+  record (no tick, no snapshot: a kept game carries the record with the rest), and still words the objective row from it (`mission.ts objectiveText` →
+  `par.objective`) until the HUD reads the game's own row (`par_objective`, which a check is answered by). `PAR.on` is a SETTLED row, on, and nothing reads
+  it any more: `?nopar` is gone, and a level without the block returns on the tick's first line. THE BEST TIME IS THE PAGE'S: main.ts files it the frame the result
+  first appears (`ui/parBest.ts`, localStorage, key = level file + way in + squad size + difficulty; never under god mode / no AI / unlimited ammo) and hands
+  its words to `par.best()`: they ride the end row, the card and the debrief's 'par' cell (`par.shown`), and no longer reword the log's line, which is the
+  game's and the same on every machine. A CHANGE OF PLAY, small: in a two-seat game the clock starts on EITHER seat's first move (each page used to time its own
+  seat). Checks: `cargo test --test par` in `rust/game_start` (5 rules, 3 seeds each beside a control: armed and waiting, an order starts it, a stride does and
+  a shuffle does not, the medal on whole seconds, the end files one result said once, with and without a man lost) and `bun run tools/qa/par-check.ts`
+  (`probes.ts par`; `PAR_BREAK=1`, the level stood without its block, must fail). Bars are set from 24 shipped seeds a way of play (`playthrough.ts` JSON: each run's `par`). Numbers and the calls
+  left: rebuild/missions/new/killhouse.md. Never seen in a browser, never run with two seats. ITS DOORS ARE NAMED FOR THEIR ROOMS
   (`tyres` `bunks` `radio` `store` `mess`, + `front`, `back` and `hall` = the door that cuts the corridor; they were n1 n2 n3 s4 s5 mid): an id is SAID and shown
   (orders.ts `doorIdWords`: 'holding · store door'), and the HUD has no compass. The rule for every level: a door is named for its room, no compass word in a name.
 - **One man to take alive on a room clear** (`src/game/snatch.ts`, `Game.snatch`, `__snatch`; block `scenarios.snatch { man, exits }`, docs/level-format.md
