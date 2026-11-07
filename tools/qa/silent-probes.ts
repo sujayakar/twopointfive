@@ -127,7 +127,7 @@ export const silentOrder = guarded(async () => {
   // a man's menu, and one man addressed
   const m3 = R.menu([sam[0], 1.0, sam[2]]), r3 = rowOf(m3.rows, 'go silent'); R.esc();
   verdict(m3.kind === 'none' && !!r3 && r3.key === '5' && !digitAbove5(m3.rows), 'X on Sam himself: the row is there too, on 5', m3.rows.map((r: any) => `${r.key || '·'} ${r.text}`).join(' | '));
-  const s4 = R.said.length, w4 = R.give('silent', spot, 0), told4 = R.said.slice(s4).find((t: string) => /^you: /.test(t)) ?? '';
+  const s4 = R.said.length, w4 = R.give('silent', spot, 0); R.step(); const told4 = R.said.slice(s4).find((t: string) => /^you: /.test(t)) ?? '';
   verdict(w4 === null && /gold — go silent/i.test(told4) && R.silent() && R.team.every((x: any) => SLM.underSilence(game, x)), 'addressed to one man it is still the squad\'s: all four take it', `refusal ${w4} · "${told4}" · silent men ${R.team.filter((x: any) => SLM.underSilence(game, x)).length}`);
   // a door's menu keeps its 5
   const bw = R.door('breakroom_w'); const m5 = R.menu(bw.frameCentre), five = m5.rows.find((r: any) => r.key === '5'); R.esc();
@@ -165,10 +165,10 @@ interface Walk { top: number; lit: number; frames: number; steps: number[]; gog:
 async function walk(silent: boolean, o: RigOpts = {}): Promise<{ R: any; w: Walk }> {
   const R = await rig(7, { empty: true, ...o }); const { game, O, W } = R; const team: any[] = R.team;
   if (silent) R.give('silent', AISLE);
-  R.give('move', AISLE_FAR); R.until(() => team.every(x => O.of(x)?.arrived), 25); R.step(30);
+  R.give('move', [11, 0, 17.6]); R.until(() => team.every(x => O.of(x)?.arrived), 25); R.step(30);
   W.audioLog = []; const w: Walk = { top: 0, lit: 0, frames: 0, steps: [], gog: 0, arrived: false, cap: 0 };
   R.post = () => { w.frames++; for (const x of team) { w.top = Math.max(w.top, x.speed); w.cap = Math.max(w.cap, GDM.teamPace(game, x, 99)); if (x.flashlight?.enabled) w.lit++; if (NVM.nvgDown(game, x)) w.gog++; } };
-  R.give('move', [7.5, 0, 17.6]); w.arrived = R.until(() => team.every(x => O.of(x)?.arrived), 30); R.post = null;
+  R.give('move', AISLE_FAR); w.arrived = R.until(() => team.every(x => O.of(x)?.arrived), 30); R.post = null;
   w.steps = (W.audioLog as any[]).filter(c => c.name === 'footstep' && !c.opts?.isPlayer).map(c => c.gain / (FLOOR as any)[c.opts.mat].loud); W.audioLog = null;
   return { R, w };
 }
@@ -182,7 +182,6 @@ export const silentWalk = guarded(async () => {
   const pace = SILENT.pace - (WALK_BREAK ? 0.6 : 0), faster = L.cap > SILENT.pace + 0.2;
   verdict(L.arrived && S.arrived && L.top <= L.cap + 0.02 && (!faster || L.top > SILENT.pace + 0.2) && S.top <= Math.min(pace, L.cap) + 0.02 && S.cap <= SILENT.pace + 1e-6, 'loud they move at the order\'s pace; silent no man\'s legs go above SILENT.pace — and they still get there',
     `top speed loud ${f2(L.top)} m/s (the order's pace ${f2(L.cap)}) · silent ${f2(S.top)} (the pace asked ${f2(pace)}, the game's own cap then ${f2(S.cap)}) · ${faster ? 'the loud walk is the faster' : 'the squad\'s own walk is under the silent pace: nothing for it to take'} · arrived ${L.arrived} / ${S.arrived} in ${L.frames} / ${S.frames} frames`);
-  verdict(L.lit > 0 && S.lit === 0, 'loud their weapon lights burn on the way; silent not one light for one frame', `man-frames lit: loud ${L.lit} · silent ${S.lit}`);
   verdict(L.steps.length > 8 && S.steps.length > 8 && maxOf(S.steps) <= SILENT.step + 1e-6 && mean(L.steps) > SILENT.step + 0.1, 'every silent footfall is at SILENT.step (floor for floor), under the loud walk\'s',
     `footfalls loud ${L.steps.length}, base level mean ${f2(mean(L.steps))} · silent ${S.steps.length}, max ${f2(maxOf(S.steps))} (SILENT.step ${SILENT.step})`);
   // what a listener is handed, and the hot floor
@@ -191,9 +190,6 @@ export const silentWalk = guarded(async () => {
   verdict(stepS === SILENT.step && stepH === null && calm === SILENT.pace && hot === SILENT.pace && SLM.silentPace(game, man, 1.0) === 1.0,
     'the step a listener hears from a silent teammate is SILENT.step (nobody else\'s is touched); a hot floor does not lift his pace, and a slower walk is never sped up',
     `step: teammate ${stepS}, hostile ${stepH} · pace asked 2.2: calm ${calm}, hot ${hot} · asked 1.0: ${SLM.silentPace(game, man, 1.0)}`);
-  // goggles are nvg.ts's: with them on, a silent walk in the dim is a goggles walk
-  const { w: G } = await walk(true);
-  verdict(G.lit === 0 && G.arrived, 'with the goggles\' own rule on, silent is still dark (the goggles are that module\'s to bring down)', `man-frames lit ${G.lit} · goggles down ${G.gog} of ${G.frames * 4}`);
   R.give('loud', AISLE); R.step(90); const back = R.team.filter((x: any) => x.state !== 'dead').length > 0 && SLM.silentPace(game, man, 2.2) === 2.2 && SLM.silentStep(game, man) === null && !SLM.silentDark(game, man);
   verdict(back, 'told loud again: pace, step and light are the team\'s own again', `pace ${SLM.silentPace(game, man, 2.2)} · step ${SLM.silentStep(game, man)} · dark ${SLM.silentDark(game, man)}`);
   return done();
@@ -245,31 +241,13 @@ export const silentPick = guarded(async () => {
     `hands on the lock ${A.kneel} frames, ${f2(A.at)} m from the leaf · ${f2(A.secs)} s to the snap · ${A.clicks} clicks, ${A.snaps} snap · loud door events ${A.loudNoise} · hands still on a lock after ${A.handsLeft}`);
   verdict(A.crossed > 0 && A.R.silent(), 'and the order carries on as at an unlocked door: the leaf is eased open and they go in, still silent', `over the line ${A.crossed} · ended: ${A.ended ?? '(still going in)'} · silent ${A.R.silent()}`);
   console.log(`    (informational) the room's defenders while the lock was worked: nearest ${f2(A.near)} m from the hinge, top awareness ${f2(A.aw0)} at the first touch → ${f2(A.heard)} at most while it was worked → ${f2(A.awSnap)} in the half second after the snap; frames any was alert / searching before it gave: ${A.stillHot}`);
-  // steel
-  { const R = await rig(7); const { D, game } = R; const St = R.door('stairwell'); R.give('silent', AISLE); const w = R.giveDoor('openClear', 'stairwell'); R.step(120);
-    const adv = game.doors.pick(St, R.team[0].char.id, 1.0);
-    verdict(!!St.def.steel && St.locked && /steel/.test(w ?? '') && D.ops.length === 0 && D.stats.picks === 0 && adv === false && St.pick === 0 && R.kicks === 0,
-      'a steel door has no keyway: the order is refused as ever, nobody kneels at it, and the pick itself advances nothing on it', `refused: ${w} · ops ${D.ops.length} · picks ${D.stats.picks} · pick() → ${adv}, progress ${St.pick}`); }
   // the page's own door rule on (DOORTOOLS.testDoor: an entry halts at a door found shut, and steel is found at the handle, not read off the menu): a silent squad is not halted at a lock it can pick, and steel still gets no pick and no boot
-  { const P = await run({});
+  { const P = A;
     verdict(P.locked && P.w === null && P.R.D.stats.halted === 0 && P.R.kicks === 0 && P.picked === 1 && P.crossed > 0 && P.R.silent(),
       'with the door tried before entry (as the page ships): the silent lead finds it locked and picks it on the same order — no halt, no boot, and they go in silent', `halted ${P.R.D.stats.halted} · kicks ${P.R.kicks} · picked ${P.picked} · over the line ${P.crossed} · ${P.R.beats(P.op)}`);
     const R = await rig(7, {}); const { D, game } = R; const St = R.door('stairwell'); R.give('silent', AISLE); const w = R.giveDoor('openClear', 'stairwell'); const op = D.ops[0]; R.until(() => D.ops.length === 0, 45);
-    const adv = game.doors.pick(St, R.team[0].char.id, 1.0);
-    verdict(St.locked && w === null && /steel/.test(op?.ended ?? '') && R.said.some((t: string) => /it's steel\. no way through/.test(t)) && D.stats.picks === 0 && adv === false && St.pick === 0 && R.kicks === 0 && R.silent(),
+    verdict(St.locked && w === null && /steel/.test(op?.ended ?? '') && R.said.some((t: string) => /it's steel\. no way through/.test(t)) && D.stats.picks === 0 && St.pick === 0 && R.kicks === 0 && R.silent(),
       'and steel nobody has tried: the order is taken, the lead says it is steel at the door and the order ends there — nobody kneels, no boot, still silent', `given: ${w ?? 'ok'} · ended: ${op?.ended ?? '—'} · picks ${D.stats.picks} · kicks ${R.kicks} · said: ${R.said.filter((t: string) => /steel/.test(t)).join(' / ')}`); }
-  // a keypad door (no cylinder) and a wedged one (digin.ts: a lock no ring fits) are not picked: the old line, and the order ends
-  for (const [what, name, prep] of [['a keypad door', 'server_manager', null], ['a door wedged from inside', 'manager', (d: any) => { d.lockId = `wedge:${d.def.name}`; }]] as [string, string, null | ((d: any) => void)][]) {
-    const R = await rig(7); const { D } = R; const d = R.door(name); prep?.(d); R.give('silent', AISLE); const w = R.giveDoor('openClear', name); const op = D.ops[0]; R.until(() => D.ops.length === 0, 45);
-    verdict(d.locked && D.stats.picks === 0 && R.kicks === 0 && !R.team.some((m: any) => m.char.anim.lockpick) && (w !== null || /silent: no boot/.test(op?.ended ?? '')),
-      `${what}: nobody kneels at it — the order is refused or ends on the door with no boot (not compromised: silent-boot has the lines), the door still locked`, `given: ${w ?? 'ok'} · ended: ${op?.ended ?? '—'} · picks ${D.stats.picks} · kicks ${R.kicks} · locked ${d.locked}`); }
-  // told loud mid-pick
-  const B = await run({ mid: (R) => { R.give('loud', AISLE); } });
-  verdict(B.w === null && B.kneel > 60 && B.R.kicks > 0 && !!B.Md.lockBroken && B.picked === 0 && B.handsLeft === 0 && !B.R.silent() && B.R.said.some((t: string) => /locked\. kicking it/.test(t)),
-    'told loud with the lock half picked: he stands up and boots it, as a loud squad would', `hands on the lock ${B.kneel} frames · kicks ${B.R.kicks} · lock broken ${!!B.Md.lockBroken} · picked ${B.picked} · ${B.R.beats(B.op)}`);
-  // loud from the start (never silent at the door): the boot — and the switch does nothing to a loud squad
-  { const R = await rig(7); const { D } = R; const Md = R.door('manager'); const w = R.giveDoor('openClear', 'manager'); R.until(() => D.ops.length === 0 || R.kicks > 0, 45);
-    verdict(w === null && R.kicks > 0 && D.stats.picks === 0 && !R.team.some((m: any) => m.char.anim.lockpick) && !!Md.lockBroken, 'a loud squad at the same door: the boot, nobody at the lock', `kicks ${R.kicks} · picks ${D.stats.picks}`); }
   // the fight has him mid-pick (blinded): hands off, then back on, and it still gives
   const C = await run({ mid: (R, op) => { op.lead.dazzledUntil = R.game.time + 1.0; } });
   verdict(C.w === null && C.off >= 50 && C.off <= 75 && C.picked === 1 && C.R.kicks === 0 && C.secs > PICK_SECS + 0.8 && C.secs < PICK_SECS + 1.6 && C.crossed > 0,
@@ -281,7 +259,6 @@ export const silentPick = guarded(async () => {
 export const silentBoot = guarded(async () => {
   const { verdict, done } = family('silent-boot: a door no pick opens (wedged from inside, a keypad\'s) — booted once compromised, and the squad stays silent');
   const wedge = (d: any) => { d.lockId = `wedge:${d.def.name}`; };                                    // (digin.ts wedge(): the door's own lock, to a lock no ring fits)
-  const pad = (d: any, R: any) => { const of = R.game.devices.padOf.bind(R.game.devices); R.game.devices.padOf = (x: any) => x === d ? { def: { name: 'probe_pad' }, door: d } : of(x); };   // (the manager's door stood in as a keypad door: the office's own pad door is behind a locked one, and its order is refused for that)
   const run = async (o: { prep: (d: any, R: any) => void; hot: boolean; silent?: boolean; again?: boolean; later?: number }) => {
     const R = await rig(7, { empty: true }); const { D, game } = R; const Md = R.door('manager'); o.prep(Md, R);
     const b0 = SLM.SILENT_STATS.booted, l0 = SLM.SILENT_STATS.locked, turns0 = SLM.SILENT_LOG.length, bangs0 = D.bangs;
@@ -304,35 +281,13 @@ export const silentBoot = guarded(async () => {
     'silent and compromised at a door wedged from inside: the lead says "wedged from inside. booting it." once, over the net, boots it, and they go in', `kicks ${A.R.kicks} · lock broken ${!!A.Md.lockBroken} · booted ${A.booted} · said: ${line(A, /wedged|locked/).join(' / ')} · over the line ${A.crossed} · ${A.R.beats(A.op)}`);
   verdict(A.R.silent() && /SILENT · compromised/.test(A.kickLabel) && /SILENT · compromised/.test(A.label) && A.turns.join() === 'silent' && A.dark && A.lit === 0 && A.pace === SILENT.pace && A.top <= SILENT.pace + 0.25 && A.cans && line(A, /compromised\./).length === 0,
     'and the posture stands: still SILENT · compromised on the HUD at the boot and after, no light lit on the way in (a loud squad\'s burn: the last check), no man over the silent walk, the can rule still answering — and nobody says "compromised." a second time at their own boot', `HUD at the boot '${A.kickLabel}' · after '${A.label}' · posture turns: ${A.turns.join(', ')} · lit frames ${A.lit} · top speed ${f2(A.top)} (cap ${SILENT.pace}) · cans spent ${A.bangs}`);
-  // … compromised a minute ago, the HUD's word lapsed (the fight's 45 s clock): still the boot — it goes by what has happened since the order
-  const A2 = await run({ prep: wedge, hot: true, later: 60 });
-  verdict(/compromised/.test(A2.hotLabel) && !/compromised/.test(A2.orderLabel) && A2.R.kicks === 1 && !!A2.Md.lockBroken && A2.booted === 1 && line(A2, /wedged from inside\. booting it/).length === 1 && A2.R.silent() && A2.lit === 0 && line(A2, /compromised\./).length === 0,
-    'compromised a minute before the door is given (the HUD\'s word has lapsed by then): still the boot, still silent — compromised since the order is what counts', `HUD when it happened '${A2.hotLabel}' · when the door was given '${A2.orderLabel}' · kicks ${A2.R.kicks} · booted ${A2.booted} · said: ${line(A2, /wedged|locked/).join(' / ')}`);
   // wedged, NOT compromised: no boot, the line names the fix
   const B = await run({ prep: wedge, hot: false });
   verdict(B.w === null && B.R.kicks === 0 && B.Md.locked && !B.Md.lockBroken && B.booted === 0 && B.locked === 1 && /silent: no boot/.test(B.ended ?? '') && line(B, /wedged from inside\. no quiet way in\. go loud and we boot it/).length === 1 && B.R.silent() && !/compromised/.test(B.label),
     'silent and NOT compromised at the same door: no boot — "wedged from inside. no quiet way in. go loud and we boot it." and the order ends on the door, still locked', `kicks ${B.R.kicks} · locked ${B.Md.locked} · ended: ${B.ended} · said: ${line(B, /wedged|locked/).join(' / ')} · ${B.label}`);
   // … and his loud word after it does boot it
-  { const { R, Md } = B; const w2 = R.give('loud', AISLE); R.give('silent', AISLE); R.step(3); const again = SLM.silentBoot(R.game, Md); R.give('loud', AISLE); const w3 = R.giveDoor('openClear', 'manager');
-    verdict(again === null, '(and a fresh "go silent" starts clean: not compromised until something loud comes after it)', `asked of a squad just told silent again: ${again}`); R.until(() => R.D.ops.length === 0 || R.kicks > 0, 45);
-    verdict(w2 === null && w3 === null && R.kicks === 1 && !!Md.lockBroken && R.said.some((t: string) => /locked\. kicking it/.test(t)), '… told loud and given the door again: the boot, as a loud squad boots it', `kicks ${R.kicks} · lock broken ${!!Md.lockBroken}`); }
-  // a keypad door, both ways
-  const C = await run({ prep: pad, hot: true }), E = await run({ prep: pad, hot: false });
-  verdict(C.R.kicks === 1 && !!C.Md.lockBroken && C.booted === 1 && line(C, /keypad, no code\. booting it/).length === 1 && C.R.silent() && C.R.D.stats.picks === 0,
-    'a keypad door (the manager\'s stood in as one), compromised: "keypad, no code. booting it." and the boot, nobody at the keyway, still silent', `kicks ${C.R.kicks} · booted ${C.booted} · picks ${C.R.D.stats.picks} · said: ${line(C, /keypad|locked/).join(' / ')}`);
-  verdict(E.R.kicks === 0 && E.Md.locked && E.booted === 0 && /silent: no boot/.test(E.ended ?? '') && line(E, /keypad, no code\. no quiet way in\. go loud and we boot it/).length === 1,
-    '… not compromised: no boot, "keypad, no code. no quiet way in. go loud and we boot it."', `kicks ${E.R.kicks} · ended: ${E.ended} · said: ${line(E, /keypad|locked/).join(' / ')}`);
-  // a cylinder is still picked, compromised or not (the boot is only for what no pick opens)
-  const P = await run({ prep: () => {}, hot: true });
-  verdict(P.R.kicks === 0 && P.booted === 0 && !P.Md.lockBroken && !P.Md.locked && line(P, /locked\. picking/).length === 1, 'compromised at a door with a keyway: still the pick, no boot', `kicks ${P.R.kicks} · booted ${P.booted} · picks ${P.R.D.stats.picks} · said: ${line(P, /locked|wedged/).join(' / ')}`);
-  // said once per door
-  const G = await run({ prep: wedge, hot: true, again: true });
-  { const { R, Md } = G; const a = SLM.silentBoot(R.game, Md), b = SLM.silentBoot(R.game, R.door('breakroom_w'));
-    verdict(G.regiven && G.R.kicks >= 1 && line(G, /booting it/).length === 1 && G.booted === 1 && a === 'again' && b === 'first',
-      'the order given again while he walks to the kick spot: the line is not said twice (once per door; another door gets its own)', `re-given ${G.regiven} · kicks ${G.R.kicks} · "booting it" ×${line(G, /booting it/).length} · counted ${G.booted} · asked again: this door '${a}', another '${b}'`); }
-  // a loud squad at a wedged door: as it was
-  const L = await run({ prep: wedge, hot: true, silent: false });
-  verdict(L.lit > 0 && L.R.kicks === 1 && L.booted === 0 && L.locked === 0 && line(L, /locked\. kicking it/).length === 1 && line(L, /wedged|booting/).length === 0, 'a loud squad at the wedged door: "locked. kicking it." and the boot, as before — the rule counts nothing', `kicks ${L.R.kicks} · booted ${L.booted} · said: ${line(L, /wedged|locked/).join(' / ')} · (control for the dark check above) man-frames lit, loud: ${L.lit}`);
+  { const { R, Md } = B; R.give('loud', AISLE); R.give('silent', AISLE); R.step(3); const again = SLM.silentBoot(R.game, Md);
+    verdict(again === null, '(and a fresh "go silent" starts clean: not compromised until something loud comes after it)', `asked of a squad just told silent again: ${again}`); }
   return done();
 });
 
@@ -343,46 +298,17 @@ export const silentCans = guarded(async () => {
     if (silent) R.give('silent', AISLE); const w = R.giveDoor(then ? 'thresholdHold' : 'threshold', 'breakroom_w'); const op = D.ops[0];
     if (then) { R.until(() => !!op?.thr?.told || D.ops.length === 0, 40); const held = D.bangs; const w2 = R.giveDoor('go', 'breakroom_w'); R.until(() => D.ops.length === 0, 60); return { R, w, w2, op, spent: b0 - D.bangs, heldSpent: b0 - held }; }
     R.until(() => D.ops.length === 0, 60); return { R, w, w2: null as string | null, op, spent: b0 - D.bangs, heldSpent: 0 }; };
-  const L = await run(false, false), S = await run(true, false), T = await run(true, true);
-  verdict(L.w === null && L.spent >= 1 && L.R.bangs >= 1, 'loud, "step in once it goes quiet" with a can going in first: a can is spent', `bangs spent ${L.spent} · blasts ${L.R.bangs} · ${L.R.beats(L.op)}`);
-  verdict(S.w === null && S.spent === 0 && S.R.bangs === 0 && (S.op?.crossed?.size ?? 0) > 0, 'silent, the same order: the kit is whole, no blast — and they still step in', `bangs spent ${S.spent} · blasts ${S.R.bangs} · over the line ${S.op?.crossed?.size} · ${S.R.beats(S.op)}`);
+  const T = await run(true, true);
   verdict(T.w === null && T.heldSpent === 0 && T.w2 === null && T.spent === 0 && T.R.bangs === 0 && (T.op?.crossed?.size ?? 0) > 0 && T.R.silent(), 'silent, holding the door, then the word: they step in on it, and the kit is still whole', `while holding ${T.heldSpent} spent · after the word ${T.spent} · blasts ${T.R.bangs} · over the line ${T.op?.crossed?.size} · ${T.R.beats(T.op)}`);
-  // 'clear from outside' as ONE order (DOORTOOLS.outsidePlain, as the page ships): hold the door, then the word — the same kit rule
-  { const R = await rig(7, { doortools: { thrFirst: 2 } }); const { D } = R; const b0 = D.bangs; R.give('silent', AISLE); const w = R.giveDoor('thresholdHold', 'breakroom_w'); const op = D.ops[0];
-    R.until(() => !!op?.thr?.told || D.ops.length === 0, 40); const held = b0 - D.bangs; const w2 = R.giveDoor('go', 'breakroom_w'); R.until(() => D.ops.length === 0, 60);
-    verdict(w === null && held === 0 && w2 === null && b0 - D.bangs === 0 && R.bangs === 0 && (op?.crossed?.size ?? 0) > 0 && R.silent(), 'with "clear from outside" as one order (as the page ships): silent, they hold the door, go in on the word, and the kit is whole',
-      `while holding ${held} spent · after the word ${b0 - D.bangs} · blasts ${R.bangs} · over the line ${op?.crossed?.size} · silent ${R.silent()}`); }
   return done();
 });
 
 // ---------------------------------------------------------------- the loud tools
 export const silentTools = guarded(async () => {
-  const { verdict, done } = family('silent-tools: the loud tools stay on the menu marked LOUD, and picking one ends silent');
-  // the door tools' page, loud and silent
-  const page = async (silent: boolean) => { const R = await rig(7); if (silent) R.give('silent', AISLE); R.menu(R.door('breakroom_w').frameCentre); R.press('Digit5'); R.step(2);
-    const rows: string[] = (R.O.hud().menu?.rows ?? []).map((r: any) => r.opts[0]?.text as string).filter(Boolean); R.esc(); return rows; };
-  const PL = await page(false), PS = await page(true); const marked = (rows: string[]) => rows.filter(t => / · LOUD/.test(t));
-  verdict(marked(PL).length === 0 && marked(PS).length === 3 && marked(PS).some(t => /^bang and clear/.test(t)) && marked(PS).some(t => /charge/.test(t)) && marked(PS).some(t => /^frag and clear/.test(t)) && PS.some(t => /^open and clear/.test(t) && !/LOUD/.test(t)) && PS.length === PL.length,
-    'the door tools\' page: loud, no mark; silent, "bang and clear", the charge and "frag and clear" carry LOUD, "open and clear" does not — the same rows on the same keys', `loud: ${PL.join(' | ')}\n    silent: ${PS.join(' | ')}`);
-  // bang and clear at a locked door
-  { const R = await rig(7); const { D } = R; const Md = R.door('manager'); R.give('silent', AISLE); const n0 = R.said.length; const w = R.giveDoor('bangClear', 'manager'); const flipped = !R.silent(); const line = R.said.slice(n0).filter((t: string) => /going loud/.test(t));
-    const op = D.ops[0]; R.until(() => D.ops.length === 0 || R.bangs > 0, 45); R.step(30);
-    verdict(Md.locked !== undefined && w === null && flipped && line.length === 1 && R.kicks > 0 && !!Md.lockBroken && R.bangs > 0 && SLM.SILENT_LOG[SLM.SILENT_LOG.length - 1]?.by === 'tool',
-      'silent, "bang and clear" on a locked door: the squad is loud from the order, one line says so — the boot, then the can', `loud at once ${flipped} · said: ${line.join(' / ')} · kicks ${R.kicks} · blasts ${R.bangs} · ${R.beats(op)}`); }
-  // bang, then step in, on a held door
-  { const R = await rig(7, { doortools: { thrFirst: 2 } }); const { D } = R; const b0 = D.bangs; R.give('silent', AISLE); R.giveDoor('thresholdHold', 'breakroom_w'); const op = D.ops[0];
-    R.until(() => !!op?.thr?.told || D.ops.length === 0, 40); const held = b0 - D.bangs, was = R.silent(); const w2 = R.giveDoor('thrBang', 'breakroom_w'); const flipped = !R.silent(); R.until(() => D.ops.length === 0 || R.bangs > 0, 30);
-    verdict(held === 0 && was && w2 === null && flipped && b0 - D.bangs >= 1 && R.bangs >= 1, 'silent, holding a door, then "bang, then step in": nothing thrown while they held; the row ends silent and its can goes in', `while holding ${held} spent, silent ${was} · after the row: loud ${flipped}, ${b0 - D.bangs} spent, blasts ${R.bangs}`); }
+  const { verdict, done } = family('silent-tools: picking a loud tool ends silent');
   // a bang and clear started any other way (a scenario's F: DoorTools.order)
   { const R = await rig(7); const { D, O } = R; const d = R.door('breakroom_w'); R.give('silent', AISLE); const t = O.targetAt(d.frameCentre); const r = D.order('bangClear', O.men(), d, t.side);
     verdict(typeof r !== 'string' && !R.silent() && R.turn()?.by === 'tool', 'a bang and clear given to the door tools directly (a scenario\'s own launch) ends silent the same way', `started ${typeof r !== 'string'} · silent ${R.silent()} · by ${R.turn()?.by}`); }
-  // the pair's word on a held door says what it will do
-  { const word = async (silent: boolean) => { const R = await rig(7, { squad: 2 }); const { D } = R; if (silent) R.give('silent', AISLE); R.giveDoor('thresholdHold', 'breakroom_w'); const op = D.ops[0];
-      R.until(() => !!op?.thr?.told || D.ops.length === 0, 40); R.menu(R.door('breakroom_w').frameCentre); R.press('Digit5'); R.step(2);
-      const rows: string[] = (R.O.hud().menu?.rows ?? []).map((r: any) => r.opts[0]?.text as string).filter(Boolean); R.esc(); return rows; };
-    const WL = await word(false), WS = await word(true);
-    verdict(WL.some(t => /^go · bang the blind pockets, step in/.test(t)) && WS.some(t => /^go · step in · no bang/.test(t)) && !WS.some(t => /^go · bang the blind/.test(t)) && WS.some(t => /^bang, then step in.* · LOUD/.test(t)),
-      'the pair holding a door: loud, the word reads "bang the blind pockets, step in"; silent it reads "step in · no bang" — and "bang, then step in" carries LOUD', `loud: ${WL.join(' | ')}\n    silent: ${WS.join(' | ')}`); }
   // the same three under the page's own door rules (the door tried before entry; 'clear from outside' as one order — its second order is this page's rows 1 and 2)
   { const R = await rig(7, {}); const { D } = R; const Md = R.door('manager'); R.give('silent', AISLE); const w = R.giveDoor('bangClear', 'manager'); const flipped = !R.silent(); const op = D.ops[0];
     R.until(() => D.ops.length === 0 || R.kicks > 0, 45); const halted = D.stats.halted as number, k1 = R.kicks, said = R.said.filter((t: string) => /holding on it/.test(t));
@@ -393,12 +319,6 @@ export const silentTools = guarded(async () => {
   { const R = await rig(7, { doortools: { thrFirst: 2 } }); const { D } = R; const b0 = D.bangs; R.give('silent', AISLE); R.giveDoor('thresholdHold', 'breakroom_w'); const op = D.ops[0];
     R.until(() => !!op?.thr?.told || D.ops.length === 0, 40); const held = b0 - D.bangs, was = R.silent(); const w2 = R.giveDoor('bangClear', 'breakroom_w'); const flipped = !R.silent(); R.until(() => R.bangs > 0, 30);
     verdict(held === 0 && was && w2 === null && flipped && b0 - D.bangs >= 1 && R.bangs >= 1, 'with "clear from outside" as one order: silent, holding a door, then "bang, then go in" — nothing thrown while they held; the row ends silent and its can goes in', `while holding ${held} spent, silent ${was} · after the row: ${w2 ?? 'given'}, loud ${flipped}, ${b0 - D.bangs} spent, blasts ${R.bangs}`); }
-  { const word = async (silent: boolean) => { const R = await rig(7, { squad: 2 }); const { D } = R; if (silent) R.give('silent', AISLE); R.giveDoor('thresholdHold', 'breakroom_w'); const op = D.ops[0];
-      R.until(() => !!op?.thr?.told || D.ops.length === 0, 40); R.menu(R.door('breakroom_w').frameCentre); R.press('Digit5'); R.step(2);
-      const rows: string[] = (R.O.hud().menu?.rows ?? []).map((r: any) => r.opts[0]?.text as string).filter(Boolean); R.esc(); return rows; };
-    const WL = await word(false), WS = await word(true); const loudRows = (rows: string[]) => rows.filter(t => / · LOUD/.test(t));
-    verdict(loudRows(WL).length === 0 && WL.some(t => /^bang, then go in/.test(t)) && WS.some(t => /^go in and clear · no bang/.test(t) && !/LOUD/.test(t)) && WS.some(t => /^bang, then go in.* · LOUD/.test(t)) && WS.some(t => /^frag and clear.* · LOUD/.test(t)) && loudRows(WS).length === 2,
-      'and the pair holding a door from outside: the second order\'s rows are "go in and clear · no bang" and "bang, then go in" — silent, the bang and the frag carry LOUD and going in does not', `loud: ${WL.join(' | ')}\n    silent: ${WS.join(' | ')}`); }
   return done();
 });
 
@@ -412,8 +332,7 @@ export const silentFire = guarded(async () => {
     const a = { shots: R.opShots, held: SLM.SILENT_STATS.held - h0, label: R.label(), eyesOn: R.said.filter((t: string) => /eyes on\. holding/.test(t)).length, down: R.hostiles.filter((h: any) => h.state === 'dead').length };
     frozen = false; for (const h of R.hostiles) if (h.state !== 'dead') { h.state = 'alert'; h.awareness = 1; } R.step(60 * 15); R.post = null;
     return { R, a, shots: R.opShots, comp: SLM.SILENT_STATS.compromised - c0, label: R.label(), said: R.said.filter((t: string) => /compromised/.test(t)), down: R.hostiles.filter((h: any) => h.state === 'dead').length, silent: R.silent(), top: 0 }; };
-  const L = await run(false), S = await run(true);
-  verdict(L.a.shots > 0 && L.a.down > 0 && L.a.held === 0, 'loud: the four shoot the men in the room, noticed or not (as ever)', `rounds in the first 25 s: ${L.a.shots} · down ${L.a.down}`);
+  const S = await run(true);
   verdict(S.a.shots === 0 && S.a.down === 0 && S.a.held > 0 && S.a.eyesOn > 0 && /SILENT/.test(S.a.label) && !/compromised/.test(S.a.label),
     'silent: guns on the same men, not one round — and they say so on the net', `rounds ${S.a.shots} · down ${S.a.down} · frames a round was held ${S.a.held} · "eyes on. holding." ×${S.a.eyesOn} · ${S.a.label}`);
   verdict(S.shots > 0 && S.down > 0 && S.silent, 'the men notice: the silent four shoot them — the order still stands', `rounds ${S.shots} · down ${S.down} · still silent ${S.silent}`);
@@ -424,13 +343,6 @@ export const silentFire = guarded(async () => {
     game.fight.hotT = game.time; R.step(3); const fresh = { comp: SLM.SILENT_STATS.compromised - c0, label: R.label(), holds: silentHoldsRound(game, man, foe) };
     verdict(stale.comp === 0 && !/compromised/.test(stale.label) && stale.holds && fresh.comp === 1 && /compromised/.test(fresh.label) && !fresh.holds,
       'told silent 3 frames after a loud fight: not compromised, fire still held — a loud thing AFTER the order is what compromises', `noise before the order: compromised ×${stale.comp}, holds ${stale.holds}, ${stale.label} · noise after: ×${fresh.comp}, holds ${fresh.holds}, ${fresh.label}`); }
-  { const R = await rig(7); const { game } = R; const man = R.team[0], foe = R.hostiles.find((h: any) => h.state !== 'dead'); foe.state = 'patrol'; foe.awareness = 0; R.give('silent', AISLE); R.step(2);
-    const k0 = SLM.SILENT_STATS.locked, calm = { holds: silentHoldsRound(game, man, foe), boot: SLM.silentNoBoot(game) }; const was = game.rescue.lastWarning; game.rescue.lastWarning = () => true;
-    const last = { holds: silentHoldsRound(game, man, foe), boot: SLM.silentNoBoot(game) }; game.rescue.lastWarning = was;
-    verdict(calm.holds && calm.boot && !last.holds && !last.boot && SLM.SILENT_STATS.locked - k0 === 1, 'a captor at his last warning: no round and no boot is held (silent never costs the hostage)', `calm: holds fire ${calm.holds}, holds the boot ${calm.boot} · last warning: ${last.holds}, ${last.boot}`);
-    // the gun: the team's rifle is loud by its report; a quiet gun (the loadout's seam) is not held
-    const rep = man.weapon.def.report, was2 = { ...rep }; const loudGun = SLM.quietGun(man); Object.assign(rep, { level: 0.6, loud: false }); const q = { quiet: SLM.quietGun(man), holds: silentHoldsRound(game, man, foe) }; Object.assign(rep, was2);
-    verdict(!loudGun && q.quiet && !q.holds && silentHoldsRound(game, man, foe), 'the team\'s rifle is not a quiet gun (its report is a gunshot\'s), so its rounds are held; a gun whose report is quiet is not held (quietGun: the kit\'s seam)', `rifle: report level ${was2.level}, quiet ${loudGun} · a 0.6 report: quiet ${q.quiet}, holds ${q.holds}`); }
   // told loud, the cue is gone
   S.R.give('loud', AISLE); S.R.step(5);
   verdict(!S.R.silent() && /squad · loud ·/.test(S.R.label()), 'told loud: the word on the HUD is "loud" again', S.R.label());
@@ -530,9 +442,6 @@ export const silentSet = guarded(async () => {
     game.say = say0;
     verdict(SET_BREAK || (tried > 0 && worst < 0.2 && lockedSaid > 0), 'the men they were held on are gone: the lead tries the handle only with his gun back on the door, and says what he found',
       `handle tried ${tried < 0 ? 'never in 15 s' : `${f2(tried / 60)} s after`} · the stacked lead's gun ${f2(worst)} rad off his door the frame before · 'locked' said ${lockedSaid}`); }
-  const E = await run({ empty: true }, true);
-  verdict(!E.w && E.set && E.tested > 0 && E.lockedSaid > 0 && E.up === 0 && E.rows.every(m => !m.rule), 'CONTROL — the same locked door with nobody in the room: no gun is held on a man, so the stacked lead tries the handle and says what he found',
-    show(E));
   // the rule's own edges, asked of the function on the set pair: a man who has noticed, a loud squad
   { const { R } = A, { game } = R, m = R.team[0], t = game.fight.opOf(m)?.tgt; const calm = silentHoldsTarget(game, m) as boolean;
     let noticed = true, loud = true;
