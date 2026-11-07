@@ -137,7 +137,7 @@ const pct = (a: number[], p: number) => { if (!a.length) return 0; const s = [..
 const r1 = (v: number) => +v.toFixed(1);
 const same = (a: unknown, b: unknown) => a === b || JSON.stringify(a) === JSON.stringify(b);
 const copy = <T>(v: T): T => (Array.isArray(v) ? [...v] : v) as T;
-const PRESET_LABEL: Record<string, string> = { verylow: 'very low', low: 'low', medium: 'medium', high: 'high', ultra: 'ultra' };
+const PRESET_LABEL: Record<string, string> = { verylow: 'very low', low: 'low', medium: 'medium', high: 'high' };
 
 /** the card's line under a table that has the g-buffer's column: what the two GPU columns are, and how far the new one is to be believed */
 export const GBUF_SAID = 'GPU ms counts the compute passes. g-buf ms is the g-buffer pass\'s own timing, and it isn\'t in GPU ms. On Apple GPUs it was checked on an M4 Max only.';

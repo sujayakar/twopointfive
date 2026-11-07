@@ -49,7 +49,7 @@ export async function splitraysCheck(): Promise<boolean> {
   { const A = wgslDecls(readFileSync(`${dir}/gather_split_common.wgsl`, 'utf8')), B = wgslDecls(readFileSync(`${dir}/gather_common.wgsl`, 'utf8'));
     const LOOP = /^fn (directAtPoint|directOnScreen|directAt)\(/, sq = (d: string) => d.replace(/\s+/g, ''), a = A.filter(d => !LOOP.test(d)).map(sq), b = B.filter(d => !LOOP.test(d)).map(sq);
     const onlyA = a.filter(d => !b.includes(d)), onlyB = b.filter(d => !a.includes(d)), name = (d: string) => /^(?:fn|const|var(?:<[^>]*>)?|struct)(\w+)/.exec(d)?.[1] ?? d.slice(0, 24);
-    line(a.length > 10 && onlyA.length === 0 && onlyB.length === 0 && A.some(d => /^fn directAtPoint\(/.test(d)) && B.some(d => /^fn directAtPoint\(/.test(d)),
+    line(a.length > 6 && onlyA.length === 0 && onlyB.length === 0 && A.some(d => /^fn directAtPoint\(/.test(d)) && B.some(d => /^fn directAtPoint\(/.test(d)),
       'the gather\'s common text and the reflection passes\' are one text but for the light loop: every other declaration is in both, word for word', `${a.length} declarations beside the light loop · only the gather's: ${onlyA.map(name).join(' ') || 'none'} · only the reflections': ${onlyB.map(name).join(' ') || 'none'}`); }
   // ---- a refused buffer is heard outside the machine (a GPU too small for the buffer draws no bounce light, and did not choose that)
   { const RP = await import(`${ROOT}/src/cloud/report.ts`), heard: any[] = [], was = console.error, said: string[] = []; console.error = (...a: unknown[]) => { said.push(a.map(String).join(' ')); };

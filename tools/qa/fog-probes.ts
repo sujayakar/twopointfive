@@ -821,7 +821,7 @@ export async function fogFull(): Promise<boolean> {
       && /if \(say\.z != say\.w\) \{[^}]*occludedTBoxes\(e\.xyz, [^;]*, say\.y, u32\(e\.w \+ 0\.5\), -1\.0\) < 0\.0; \}/.test(seen) && !/occludedTBoxes|fogSeenAt/.test(fnBody(common, 'fogSeenBins')) && !/occludedTBoxes/.test(fnBody(common, 'fogEyeSay'));
     const files: string[] = fs.readdirSync(dir).filter((f: string) => f.endsWith('.wgsl'));
     const raw = files.filter(f => f !== 'common.wgsl' && /evalLightRaw\(/.test(strip(rd(f)))), truth = files.filter(f => f !== 'common.wgsl' && /evalLightTrue\(/.test(strip(rd(f))));
-    const own = ['reflect.wgsl', 'reflect_p5.wgsl', 'cards.wgsl', 'froxel.wgsl'].filter(f => !/lightFogK\(/.test(strip(rd(f))));   // the places that work a light out for themselves (a glint, a torch's bounce card where its footprint falls, a beam through a froxel)
+    const own = ['reflect.wgsl', 'cards.wgsl', 'froxel.wgsl'].filter(f => !/lightFogK\(/.test(strip(rd(f))));   // the places that work a light out for themselves (a glint, a torch's bounce card where its footprint falls, a beam through a froxel)
     const frameTs: string = fs.readFileSync(`${ROOT}/src/render/frame.ts`, 'utf8'), up: string = fs.readFileSync(`${ROOT}/src/render/fogofwar.ts`, 'utf8'), fog = rd('fogofwar.wgsl'), sight = rd('fogsight.wgsl');
     const bins = (t: string, re: RegExp) => Number((t.match(re) ?? [])[1]);
     const vol = strip(rd('volumetrics.wgsl')), draw = strip(rd('particles_draw.wgsl')), smokeFn = fnBody(common, 'fogSmoke');

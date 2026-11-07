@@ -10,7 +10,6 @@ export const PASS_EXEMPT: readonly PassExempt[] = [
   { at: 'render/passes.ts', label: 'restartHistories', why: "an encoder of its own, submitted once when the histories are started over: not a frame's work" },
   { at: 'render/passes.ts', label: 'giFullSwitch', why: 'clears the full-size indirect histories on the one frame that grid is switched' },
   { at: 'render/passes.ts', label: 'rtRestart', why: 'clears the reflection histories on the one frame reflections are switched back on' },
-  { at: 'render/passes.ts', label: 'hitRestart', why: 'clears the reflection hit history on the one frame hit reuse is switched on' },
   { at: 'render/fogofwar.ts', label: 'fogofwarQa', why: "a check's readback of the fog pass, on an encoder of its own (qaRun): no frame runs it" },
   { at: 'render/savepic.ts', label: '', why: "the saved picture's one draw, on an encoder of its own, when a picture is asked for" },
   { at: 'render/rigDebug.ts', label: 'rigDbg', why: "a tool's ray walk read back to the page (the rig debugger), on an encoder of its own" },

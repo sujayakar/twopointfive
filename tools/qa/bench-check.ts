@@ -13,7 +13,7 @@ const GBUF_MS = 0.73;   // the fake page's g-buffer stamp, a frame (a drawn pass
 let red = 0; const check = (ok: boolean, w: string) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${w}`); if (!ok) red++; };
 
 /** a frame's cost on the fake machine, ms: the preset's own, less what the sweep's flipped row gives back, times how slow the machine is */
-const COST: Record<string, number> = { verylow: 6, low: 9, medium: 14, high: 22, ultra: 40 };
+const COST: Record<string, number> = { verylow: 6, low: 9, medium: 14, high: 22 };
 function page(o: { slow?: number; scene?: 'none' | 'short' | 'full' | 'calm'; timers?: boolean; awayDep?: boolean; settled?: boolean; hz?: number; rows?: string[]; stands?: number } = {}) {
   const slow = o.slow ?? 1, born = now;
   const S: any = { renderScale: 0.8, sharpDirect: true, rtReflect: true, rcPeriods: [1, 1, 2, 4], exposure: 1.5 };

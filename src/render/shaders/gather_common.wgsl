@@ -12,17 +12,6 @@ var<workgroup> wgCards: array<vec4f, 32>;
 var<workgroup> wgCardOf: array<i32, 64>;
 var<private> nC: u32;
 
-// ---- phase 5: world points and unit vectors packed into texel words (the gather's reservoirs — fgather.wgsl mainGi — and the reflection pass's hit records) ----
-// A point inside the traced world (WORLD_MIN‥MAX: 40 × 8.25 × 28 m) as 16 bits an axis (0.6 / 0.13 / 0.43 mm), a direction as an 8+8-bit octahedral (±1°).
-fn p5PackXZ(p: vec3f) -> u32 { let q = clamp((p.xz - WORLD_MIN.xz) / (WORLD_MAX.xz - WORLD_MIN.xz), vec2f(0.0), vec2f(1.0)); return u32(q.x * 65535.0 + 0.5) | (u32(q.y * 65535.0 + 0.5) << 16u); }
-fn p5PackYN(p: vec3f, n: vec3f) -> u32 { let qy = clamp((p.y - WORLD_MIN.y) / (WORLD_MAX.y - WORLD_MIN.y), 0.0, 1.0); let o = vec2u(clamp(octEncode(n) * 255.0 + 0.5, vec2f(0.0), vec2f(255.0))); return u32(qy * 65535.0 + 0.5) | (o.x << 16u) | (o.y << 24u); }
-fn p5UnpackPos(xz: u32, yn: u32) -> vec3f {
-  let q = vec3f(f32(xz & 0xffffu), f32(yn & 0xffffu), f32(xz >> 16u)) / 65535.0;
-  return WORLD_MIN + q * (WORLD_MAX - WORLD_MIN);
-}
-fn p5UnpackN(yn: u32) -> vec3f { return octDecode(vec2f(f32((yn >> 16u) & 255u), f32(yn >> 24u)) / 255.0); }
-fn p5PackOct16(n: vec3f) -> u32 { let o = vec2u(clamp(octEncode(n) * 255.0 + 0.5, vec2f(0.0), vec2f(255.0))); return o.x | (o.y << 8u); }
-fn p5UnpackOct16(v: u32) -> vec3f { return octDecode(vec2f(f32(v & 255u), f32((v >> 8u) & 255u)) / 255.0); }
 
 var<private> rngState: u32;
 fn rngInit(p: vec2u, f: u32) { rngState = (p.x * 1973u + p.y * 9277u + f * 26699u) | 1u; rngState = rngState ^ (rngState >> 15u); rngState *= 0x2c1b3c6du; rngState ^= rngState >> 12u; }
@@ -35,9 +24,6 @@ fn rnd() -> f32 { rngState = rngState * 747796405u + 2891336453u; var w = ((rngS
 // kernel the Metal compiler scheduled the light loop differently and ONE light pick in a thousand flipped — a different output cell at ultra in one view. The
 // reuse asks directAt's .w instead.)
 fn directAtPoint(P: vec3f, N: vec3f, ex: u32) -> vec3f { return directAt(P, N, ex, true).xyz; }
-// directAtPoint's ON-SCREEN half alone (phase 5 — the resampling gather's cheap revalidation of a stored sample point): the exact denoised direct light at P
-// if it is visible this frame (.w = 1), else nothing (.w = 0) — never the light loop.
-fn directOnScreen(P: vec3f, N: vec3f, ex: u32) -> vec4f { return directAt(P, N, ex, false); }
 // Both of the above, as ONE body (the compile, 2026-10-26: DXC — Chrome's shader compiler on Windows — inlines every call, and this body asked evalLight three
 // times and the shadow ray three times, so every caller paid for six inlined copies of the light and the tracer; a kernel that shades four hits paid for
 // twenty-four). The light walks are now the turns of ONE loop with ONE evalLight and ONE occluded: on screen, the transient slots and then the cards' lights,

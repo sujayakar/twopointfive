@@ -115,7 +115,7 @@ const QUEUE_LINE = 'const CUT_BOXES: bool = true;';   // what gpu/device.ts inst
 {
   const setting = SETTINGS[SETTING];
   SHADER_TRIM.on = false; const { mods: whole, asked, faults } = await pageBoot(SETTING); SHADER_TRIM.on = true;   // every module as written; the cuts are made here
-  check(faults.length === 0 && whole.length >= 60 && asked.some(a => a.set === 'cut'), `boot, ${setting} — the page's whole boot was recorded: ${whole.length} modules, the cut-box set among them`, faults.join(' · '));
+  check(faults.length === 0 && whole.length >= 58 && asked.some(a => a.set === 'cut'), `boot, ${setting} — the page's whole boot was recorded: ${whole.length} modules, the cut-box set among them`, faults.join(' · '));
   { const device = (await import('node:fs')).readFileSync(`${ROOT}/src/gpu/device.ts`, 'utf8'); check(device.includes(`desc.code.includes('${QUEUE_LINE}')`), `boot, ${setting} — the compile queue still finds a cut-set module by the line this check holds (\`${QUEUE_LINE}\`)`); }
   // the switch: shaderText hands out the trim's own cut with SHADER_FOLD down, the folded cut with it up, and the text whole with the trim off
   { let ok = true; const t0 = { ...trimTotals };

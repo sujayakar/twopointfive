@@ -29,7 +29,6 @@ import { reportErrorLine, reportWarningLine } from '../cloud/report';   // (the 
 import gatherCommonSrc from './shaders/gather_common.wgsl' with { type: 'text' };   // light / card staging, RNG, directAtPoint — the reflection passes' (the gather's own copy: render/gatherSplit.ts)
 import reflectSrc from './shaders/reflect.wgsl' with { type: 'text' };
 import markingsSrc from './shaders/markings.wgsl' with { type: 'text' };   // markings (scene/markings.ts): composite adds their emission at the primary hit, the reflection passes evaluate them at their hits
-import reflectP5Src from './shaders/reflect_p5.wgsl' with { type: 'text' };   // renderer v3 phase 5's variant of the reflection pass (mesh closest-hit + hit-lighting reuse); reflect.wgsl stays main's text so the pass every tier runs with the bits down is the same PROGRAM, not just the same statements (a kernel carrying the dormant code compiled to last-bit-different light picks on Metal)
 import bloomSrc from './shaders/bloom.wgsl' with { type: 'text' };
 import diffuseBlurSrc from './shaders/diffuse_blur.wgsl' with { type: 'text' };
 import postSrc from './shaders/post.wgsl' with { type: 'text' };
@@ -256,10 +255,6 @@ export class LightingPasses implements CutSwappable {
   private rtEverOn = false;
   /** the pass ran last frame (an off → on edge starts its histories clean: whatever they hold is radiance of some other minute whose depths may still validate) */
   private rtRanLast = false;
-  /** PHASE 5 — the reflection pass's HIT RECORDS (settings.rtHitReuse, engine mirrors it into `rtHitReuse`): per reflection texel last frame's {hit point, its normal, the lighting found there, count},
-   *  rgba32uint ping-pong on `hitParity` at the reflection grid; a 1×1 stand-in pair until first use (reflect.wgsl reads / writes them only while frame.p5Cfg.z bit 2 is up), re-made with the
-   *  reflection set, never carried (a record names a point in the world, not a pixel: cleared instead) */
-  reflHit: GPUTexture[] = []; reflHitView: GPUTextureView[] = []; rtHitReuse = false; private hitEverOn = false; private hitParity = 0; private hitRanLast = false;
   /** torch bounce cards (FrameFlags.BounceCards, default off): MAX_CARDS × 4 rgba32f rows written by cards.wgsl (one workgroup per nominated light) inside the 'gather'
    *  pass and read by fgather; `numCards` = how many the engine nominated this frame (0 = the builder is not dispatched and the gather touches nothing) */
   cards: GPUTexture; cardsView: GPUTextureView; numCards = 0;
@@ -358,9 +353,7 @@ export class LightingPasses implements CutSwappable {
     if (same) return;
     this.fireLookSet = true; this.device.queue.writeBuffer(this.beamBuf, FIRE_LOOK_AT, L.buffer, 0, FIRE_LOOK_FLOATS * 4);
   }
-  private lRefl: GPUBindGroupLayout; private pRefl!: GPUComputePipeline; private bgRefl: GPUBindGroup | null = null;   // main's reflection pass, untouched (every tier with the phase-5 bits down)
-  private lReflP5: GPUBindGroupLayout; private pReflP5: GPUComputePipeline | null = null; private bgReflP5: (GPUBindGroup | null)[] = [null, null];   // phase 5's variant (reflect_p5.wgsl): + the hit records, per parity (reads reflHit[1−p], writes reflHit[p]); dispatched instead while frame.p5Cfg.z ≠ 0 (`rtP5`, engine.render mirrors it)
-  rtP5 = false;
+  private lRefl: GPUBindGroupLayout; private pRefl!: GPUComputePipeline; private bgRefl: GPUBindGroup | null = null;   // the reflection pass
   /** STRATIFIED GATHER DIRECTIONS (settings.gatherStrata, ported from exp/trace-perf E8 — docs/internal/trace-perf.md §2.10): the gather's module compiled a second time behind
    *  `const GATHER_STRATA: bool = true` (its k-th ray drawn from stratum (k + frame) mod 4 — a whole 8×8 tile shares the stratum, so its rays walk the grid coherently: −13‥16 % of the
    *  gather pass at high, quality neutral or better). engine.render mirrors settings.gatherStrata into `gatherStrata`; the gather encode picks `trace`'s pipeline by it, so it flips live
@@ -478,10 +471,7 @@ export class LightingPasses implements CutSwappable {
       { binding: 12, visibility: CS, storageTexture: { access: 'write-only', format: 'rgba16float', viewDimension: '2d' } },   // out: the highlights (reflHi)
     ];
     this.beamBuf = device.createBuffer({ label: 'reflBeams', size: BEAM_BYTES, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
-    this.lRefl = device.createBindGroupLayout({ label: 'reflect', entries: reflEntries });   // (main's layout, entry for entry)
-    this.lReflP5 = device.createBindGroupLayout({ label: 'reflectP5', entries: [ ...reflEntries,   // + phase 5's hit records: last frame's read, this frame's written
-      { binding: 9, visibility: CS, texture: tex2d('uint') }, { binding: 10, visibility: CS, storageTexture: { access: 'write-only', format: 'rgba32uint', viewDimension: '2d' } },
-    ] });
+    this.lRefl = device.createBindGroupLayout({ label: 'reflect', entries: reflEntries });
     this.lTaau = device.createBindGroupLayout({ label: 'taau', entries: [
       { binding: 0, visibility: CS, texture: tex2d('float') },                 // hdr (internal)
       { binding: 1, visibility: CS, texture: tex2d('depth') },                 // g-buffer depth (internal)
@@ -641,8 +631,7 @@ export class LightingPasses implements CutSwappable {
     // twins no first frame draws with the default settings are not waited for — compiled after the boot in the queue's background lane, written in through the cut set's
     // patch (so a live cut set keeps them for when it goes) — and their pass takes the other twin until they are in: the motion twin of restir (restirM: pRestir, the
     // estimator as it was, while the camera moves in the first seconds), the gather's plain-pattern `trace` (gatherTrace: every preset runs the stratified one, settings.gatherStrata; a
-    // `?nogatherstrata` visit draws stratified rays until it is in), the dust twin (volDust: dust drawn as plain smoke, as when it does not compile) and phase 5's
-    // reflection twin (reflectP5: ultra's alone — main's reflection pass until it is in). The cut set's own build (T is not this) waits for everything as before; PIPE_QUEUE.later false (the row 'Start on first frame shaders' off) = the boot waits for these too, as it always did.
+    // `?nogatherstrata` visit draws stratified rays until it is in), the dust twin (volDust: dust drawn as plain smoke, as when it does not compile). The cut set's own build (T is not this) waits for everything as before; PIPE_QUEUE.later false (the row 'Start on first frame shaders' off) = the boot waits for these too, as it always did.
     const late = T === this && PIPE_QUEUE.later;
     const cpL = (desc: GPUComputePipelineDescriptor) => late ? laterPipelineAsync(device, desc) : cp(desc);
     const setL = <V,>(make: () => Promise<V>, key: string) => {   // (`make` is run here, where the pipeline was always made: its module is created inside it, in the order it always was)
@@ -658,7 +647,6 @@ export class LightingPasses implements CutSwappable {
       set(cp({ label: 'gatherLight', layout: layX, compute: { module: xMod, entryPoint: 'light' } }), p => { T.pFGL = p; });
     }
     set(cp({ label: 'reflect', layout: lay(sceneLayout, this.lRefl), compute: { module: mk(gatherCommonSrc + markingsSrc + reflectSrc, 'reflect'), entryPoint: 'main' } }), p => { T.pRefl = p; });   // (lighting_common + gather_common + markings ahead of it, as the gather)
-    setL(() => cpL({ label: 'reflectP5', layout: lay(sceneLayout, this.lReflP5), compute: { module: mk(gatherCommonSrc + markingsSrc + reflectP5Src, 'reflectP5'), entryPoint: 'main' } }), 'pReflP5');   // (phase 5's variant, its own module)
     set(cp({ label: 'cards', layout: lay(sceneLayout, this.lCards), compute: { module: makeShader(device, pre + cardsSrc, 'cards'), entryPoint: 'main' } }), p => { T.pCards = p; });
     // (PLAIN AIR, gpu/device.ts: a driver that stops on the march is handed shaders/vol_plain.wgsl under the pass's own label and none of the march's twins — one program
     // for every tier (the froxel tiers keep their beams, which are the froxel kernels'; their smoke is lit by the cache, not by J), dust drawn as plain smoke. The cut
@@ -767,14 +755,13 @@ export class LightingPasses implements CutSwappable {
    *  declares the hit-record bindings (reflect_p5.wgsl), else main's (reflect.wgsl). */
   async hotSwapReflect(src: string): Promise<{ ok: boolean; messages: string[] }> {
     cutSwap.hot();   // (CUT BOXES: a hot program has no cut rule — the boot set is pinned from here, render/cutSwap.ts)
-    const p5 = /@binding\(9\)\s*var\s+hitPrev/.test(src);
     const pre = scenePrelude() + lightingCommon + gatherCommonSrc + markingsSrc; const off = pre.split('\n').length - 1;
     const mod = this.device.createShaderModule({ code: pre + src, label: 'reflect-hot' });
     const info = await mod.getCompilationInfo();
     const messages = info.messages.map(m => `${m.type} ${m.lineNum - off}:${m.linePos} ${m.message}`);
     if (info.messages.some(m => m.type === 'error')) return { ok: false, messages };
-    const pipe = await this.device.createComputePipelineAsync({ label: p5 ? 'reflectP5-hot' : 'reflect-hot', layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, p5 ? this.lReflP5 : this.lRefl] }), compute: { module: mod, entryPoint: 'main' } });
-    if (p5) this.pReflP5 = pipe; else this.pRefl = pipe;
+    const pipe = await this.device.createComputePipelineAsync({ label: 'reflect-hot', layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lRefl] }), compute: { module: mod, entryPoint: 'main' } });
+    this.pRefl = pipe;
     return { ok: true, messages };
   }
   /** RT reflections (engine.render mirrors settings.rtReflect / rtReflectDiv every frame): the switch the encode reads, and the reflection targets' divisor — a change re-makes THAT set (pooled,
@@ -782,13 +769,13 @@ export class LightingPasses implements CutSwappable {
   setRt(on: boolean, div: number) {
     this.rtOn = on;
     div = div <= 1 ? 1 : div >= 3 ? 3 : 2;
-    // Off for RT_IDLE_FRAMES: the real set (refl + scratch + three history pairs, ~15–28 MB at high's grid, + phase 5's hit records) goes back to the pool and the 1×1 stand-ins return —
+    // Off for RT_IDLE_FRAMES: the real set (refl + scratch + three history pairs, ~15–28 MB at high's grid) goes back to the pool and the 1×1 stand-ins return —
     // else a machine auto-calibrated through high and settled on low kept them for the session AND resampled their histories on every resize (review R1.1). Re-made zeroed on the
     // next `true`, like the froxel volumes.
-    if (!on) { if (this.rtEverOn && ++this.rtIdle > LightingPasses.RT_IDLE_FRAMES) { this.rtEverOn = false; this.hitEverOn = false; this.rtIdle = 0; this.hitIdle = 0; if (this.width) { const t0 = performance.now(); const R = this.beginRealloc(); this.reallocRefl(R, this.rw, this.rh, false); this.finishRealloc(R, 'reflection targets let go', t0); this.dropBindGroups(); } return; } }
+    if (!on) { if (this.rtEverOn && ++this.rtIdle > LightingPasses.RT_IDLE_FRAMES) { this.rtEverOn = false; this.rtIdle = 0; if (this.width) { const t0 = performance.now(); const R = this.beginRealloc(); this.reallocRefl(R, this.rw, this.rh, false); this.finishRealloc(R, 'reflection targets let go', t0); this.dropBindGroups(); } return; } }
     else this.rtIdle = 0;
     const firstOn = on && !this.rtEverOn;   // the first frame the pass is wanted on this machine: the real target set replaces the 1×1 stand-in (an off machine — low / verylow / ?nortreflect — never pays the ~28 MB at high)
-    if (firstOn) { this.rtEverOn = true; if (this.rtHitReuse) this.hitEverOn = true; }   // (+ phase 5's hit records, if their reuse was already asked for while the pass was off)
+    if (firstOn) this.rtEverOn = true;
     if (div === this.rtDiv && !firstOn) return;
     this.rtDiv = div;
     if (!this.width) return;
@@ -819,11 +806,9 @@ export class LightingPasses implements CutSwappable {
   /** Dev / measurement hook (main.ts __hotGather): rebuild the gather's programs from an fgather.wgsl variant (its helpers) and, if given, a variant of the gather's own
    *  common text (shaders/gather_split_common.wgsl). All three or none: a variant that fails to compile leaves the live ones as they were. */
   async hotSwapGather(src: string, common?: string): Promise<{ ok: boolean; messages: string[] }> { return this.hotSwapSplit(src, common); }
-  /** frames a phase-5 set may stay allocated unused before it goes back to the pool (an ultra visit followed by a long spell on high: ~37 MB of reservoirs at ultra's grid, ~14 at high's) */
-  private static readonly P5_IDLE_FRAMES = 600;
   /** frames the RT-reflection set may stay allocated with the pass off before it goes back to the pool (setRt; review R1.1) */
   private static readonly RT_IDLE_FRAMES = 600;
-  private hitIdle = 0; private rtIdle = 0;
+  private rtIdle = 0;
   /** GI IN MOTION — the diffuse client at the internal resolution wanted this frame with `iters` à-trous iterations (engine.render mirrors settings.giFullRes / giFullIters before resize): the first
    *  `true` makes the internal-res set (pooled) and asks the denoiser for its pipelines (async: the gather-grid chain carries on for the frame or two until they exist); afterwards the set follows
    *  the internal size (reallocGiFull); GIF_IDLE_FRAMES off lets it go again. */
@@ -859,30 +844,6 @@ export class LightingPasses implements CutSwappable {
     }
     for (const t of [...oldHist, ...oldMom, ...oldFast]) this.drop(R, t);
     this.bgCompFG = null; this.bgCompS = null;
-  }
-  /** PHASE 5 — the reflection pass's hit-lighting reuse wanted this frame (engine.render mirrors settings.rtHitReuse before resize): the first `true` with the reflections ever on makes the real
-   *  hit-record pair at the reflection grid; afterwards it follows the reflection set (reallocRefl). The bit itself rides in frame.p5Cfg.z. */
-  setHitReuse(on: boolean) {
-    this.rtHitReuse = on;
-    if (!on || !this.rtOn) {   // (off, or the reflections themselves off: after a spell the real pair goes back to the pool, the 1×1 stand-ins return)
-      if (this.hitEverOn && ++this.hitIdle > LightingPasses.P5_IDLE_FRAMES) { this.hitEverOn = false; this.hitIdle = 0; const t0 = performance.now(); const R = this.beginRealloc(); this.reallocHit(R, this.rw, this.rh); this.finishRealloc(R, 'reflection hit records let go', t0); this.dropBindGroups(); }
-      return;
-    }
-    this.hitIdle = 0;
-    if (this.hitEverOn || !this.rtEverOn) return;
-    this.hitEverOn = true;
-    if (!this.rw) return;
-    const t0 = performance.now(); const R = this.beginRealloc();
-    this.reallocHit(R, this.rw, this.rh);
-    this.finishRealloc(R, `reflection hit records ${this.rw}×${this.rh}`, t0);
-    this.dropBindGroups();   // (the reflect groups name the pair)
-  }
-  /** the reflection pass's hit-record pair at (rw, rh) rgba32uint (a 1×1 stand-in pair until settings.rtHitReuse is first on with the reflections themselves on) — zeroed, never carried */
-  private reallocHit(R: Realloc, rw: number, rh: number) {
-    for (const t of this.reflHit) this.drop(R, t);
-    const real = this.hitEverOn && this.rtEverOn;
-    const w = real ? rw : 1, h = real ? rh : 1;
-    this.reflHit = [0, 1].map(i => this.take(R, real ? `reflHit${i}` : `reflHitNone${i}`, w, h, 'rgba32uint', SU())); this.reflHitView = this.reflHit.map(t => t.createView());
   }
   /** The same for the direct-light pass (main.ts __hotRestir): a restir.wgsl variant against the staged scene — scene prelude AND
    *  direct_common.wgsl prepended (pass `common` to swap that too), both of its pipelines replaced. */
@@ -1158,7 +1119,6 @@ export class LightingPasses implements CutSwappable {
       this.rw = rw; this.rh = rh;
       this.refl = this.take(R, 'reflNone', 1, 1, 'rgba16float', SU()); this.reflView = this.refl.createView(); this.reflScratch = this.refl; this.reflScratchView = this.reflView;
       this.reflHi = this.take(R, 'reflHiNone', 1, 1, 'rgba16float', SU()); this.reflHiView = this.reflHi.createView();   // (a texture of its own: the reflect layout writes both in one group)
-      this.reallocHit(R, rw, rh);   // (the 1×1 stand-in pair: the reflect layout names them whether or not anything is ever reused)
       this.bgCompFG = null; this.bgCompS = null; return;
     }
     this.rw = rw; this.rh = rh; const su = SU();
@@ -1170,7 +1130,6 @@ export class LightingPasses implements CutSwappable {
     this.reflFast = [0, 1].map(i => this.take(R, `reflFast${i}`, rw, rh, 'rgba16float', su)); this.reflFastView = this.reflFast.map(t => t.createView());
     if (carry && oldHist.length === 2 && oldMom.length === 2 && oldFast.length === 2) { for (let i = 0; i < 2; i++) { R.blits.push({ src: oldHist[i], dst: this.reflHist[i] }); R.blits.push({ src: oldMom[i], dst: this.reflMom[i] }); R.blits.push({ src: oldFast[i], dst: this.reflFast[i] }); } R.what.push('reflections'); }
     for (const t of [...oldHist, ...oldMom, ...oldFast]) this.drop(R, t);
-    this.reallocHit(R, rw, rh);   // phase 5's hit records ride with the set (real pair or 1×1 stand-ins; zeroed either way, never carried)
     this.bgCompFG = null; this.bgCompS = null;   // (both composites bind refl)
   }
   /** Settle a re-allocation: ONE compute pass — zero the reused storage targets (except the ones a resample overwrites whole), then the history resamples — submitted now, i.e. ahead
@@ -1195,7 +1154,7 @@ export class LightingPasses implements CutSwappable {
   /** bytes of the live target set (the pool's budget follows it) */
   targetBytes(): number {
     let n = 0;
-    for (const t of [...this.dS, ...this.dU, ...this.dP, this.tileFlag, this.tileDist, ...this.dH.flat(), ...this.dnShared, ...this.dnHm, ...this.dnHg, ...this.indHist, this.indirect, ...this.gi, this.spec, ...this.specHist, ...this.giMom, ...this.giFast, ...this.specMom, ...this.specFast, ...this.giF, ...this.giFHist, ...this.giFMom, ...this.giFFast, this.refl, this.reflScratch, this.reflHi, ...this.reflHist, ...this.reflMom, ...this.reflFast, ...this.reflHit, this.vol, this.volReact, this.ldr, this.hdr, this.react, ...this.bloomDown, ...this.bloomUp, ...this.taaHist, ...this.sharpE, this.sharpMask, this.hdrCopy]) if (t) n += texBytes({ label: t.label, size: [t.width, t.height], format: t.format, usage: t.usage });
+    for (const t of [...this.dS, ...this.dU, ...this.dP, this.tileFlag, this.tileDist, ...this.dH.flat(), ...this.dnShared, ...this.dnHm, ...this.dnHg, ...this.indHist, this.indirect, ...this.gi, this.spec, ...this.specHist, ...this.giMom, ...this.giFast, ...this.specMom, ...this.specFast, ...this.giF, ...this.giFHist, ...this.giFMom, ...this.giFFast, this.refl, this.reflScratch, this.reflHi, ...this.reflHist, ...this.reflMom, ...this.reflFast, this.vol, this.volReact, this.ldr, this.hdr, this.react, ...this.bloomDown, ...this.bloomUp, ...this.taaHist, ...this.sharpE, this.sharpMask, this.hdrCopy]) if (t) n += texBytes({ label: t.label, size: [t.width, t.height], format: t.format, usage: t.usage });
     return n;
   }
   /** Explicit restart of the screen-space temporal histories (both parities of the direct pair + their depth, the indirect, the specular): the next frame accumulates from its own raw
@@ -1205,7 +1164,7 @@ export class LightingPasses implements CutSwappable {
   restartHistories(reason = ''): void {
     if (!this.width) return;
     const enc = this.device.createCommandEncoder({ label: 'restartHistories' }); const p = enc.beginComputePass({ label: 'restartHistories' });
-    for (const t of [...this.dH.flat(), ...this.dnHm, ...this.dnHg, ...this.indHist, ...this.specHist, ...this.giMom, ...this.giFast, ...this.specMom, ...this.specFast, ...this.giFHist, ...this.giFMom, ...this.giFFast, ...this.reflHist, ...this.reflMom, ...this.reflFast, ...this.reflHit, ...this.taaHist]) this.ops.clear(p, t);   // (the v3 core's: a zeroed depth | length texel validates nothing = history length 0 everywhere — the internal-res GI set included; phase 5's reservoirs / hit records: a zero record is 'no sample')
+    for (const t of [...this.dH.flat(), ...this.dnHm, ...this.dnHg, ...this.indHist, ...this.specHist, ...this.giMom, ...this.giFast, ...this.specMom, ...this.specFast, ...this.giFHist, ...this.giFMom, ...this.giFFast, ...this.reflHist, ...this.reflMom, ...this.reflFast, ...this.taaHist]) this.ops.clear(p, t);   // (the v3 core's: a zeroed depth | length texel validates nothing = history length 0 everywhere — the internal-res GI set included; phase 5's reservoirs / hit records: a zero record is 'no sample')
     p.end();
     for (const b of this.resBuf) enc.clearBuffer(b);   // + the ReSTIR reservoirs and their tiles' light beliefs (zero = no sample, no history, nothing believed dark)
     this.device.queue.submit([enc.finish()]);
@@ -1257,12 +1216,11 @@ export class LightingPasses implements CutSwappable {
       { binding: 0, resource: g.depthView }, { binding: 1, resource: rc.diceView }, { binding: 2, resource: this.volView }, { binding: 3, resource: this.volReactView }, { binding: 4, resource: this.froxels.smokeJView }, { binding: 5, resource: { buffer: this.placeBuf ?? this.placeNone } },
     ] });
     this.volFroxView = this.froxels.smokeJView;
-    // RT reflections: the trace reads the g-buffer (+ its albedo / material targets), the denoised direct pair and the dice, writes refl; the phase-5 variant per hit-record parity p also reads reflHit[1−p] and writes reflHit[p]
+    // RT reflections: the trace reads the g-buffer (+ its albedo / material targets), the denoised direct pair and the dice, writes refl
     { const reflRes: GPUBindGroupEntry[] = [
         { binding: 0, resource: g.depthView }, { binding: 1, resource: g.normalView }, { binding: 2, resource: g.idView }, { binding: 3, resource: this.directView }, { binding: 4, resource: this.softView },
         { binding: 5, resource: rc.diceView }, { binding: 6, resource: this.reflView }, { binding: 7, resource: g.albedoView }, { binding: 8, resource: g.matView }, { binding: 11, resource: { buffer: this.beamBuf } }, { binding: 12, resource: this.reflHiView } ];
-      this.bgRefl = d.createBindGroup({ layout: this.lRefl, entries: reflRes });
-      for (let pz = 0; pz < 2; pz++) this.bgReflP5[pz] = d.createBindGroup({ layout: this.lReflP5, entries: [ ...reflRes, { binding: 9, resource: this.reflHitView[1 - pz] }, { binding: 10, resource: this.reflHitView[pz] } ] }); }
+      this.bgRefl = d.createBindGroup({ layout: this.lRefl, entries: reflRes }); }
     // final gather: trace + light → indirect (+ spec under FrameFlags.Gloss / glass); the denoiser's diffuse client → gi[0], which the composite reads (its group: ensureSplitBG)
     // bloom: down chain src→D0→D1→D2→D3→D4, up chain U3 = D3+tent(D4), U2 = D2+tent(U3), U1 = D1+tent(U2), U0 = D0+tent(U1) — src = the resolved picture (taaHist[p], per parity) under TAAU, else hdr;
     // the post pass reads the same source. (The `add` slot of a down group is unused by that entry point; hdrView merely fills it.)
@@ -1306,7 +1264,7 @@ export class LightingPasses implements CutSwappable {
   }
 
   /** Forget every cached bind group (they name texture views): rebuilt lazily on the next encode. Costs microseconds and touches no texture — NOT a history restart. */
-  private dropBindGroups() { this.bgFGX = null; this.bgDirect = this.bgVol = this.bgFxaa = null; this.bgRefl = null; this.bgReflP5 = [null, null]; this.bgTileDist = null; this.bgCompFG = null; this.bgBloomDown0 = []; this.bgBloomDown = []; this.bgBloomUp = []; this.bgPost = []; this.bgTaau = [null, null]; this.bgSharpU = null; this.bgCompS = null; this.bgTaauS = [null, null]; this.bgEdge = null; this.bgGbaa = null; this.den.dropBindGroups(); }
+  private dropBindGroups() { this.bgFGX = null; this.bgDirect = this.bgVol = this.bgFxaa = null; this.bgRefl = null; this.bgTileDist = null; this.bgCompFG = null; this.bgBloomDown0 = []; this.bgBloomDown = []; this.bgBloomUp = []; this.bgPost = []; this.bgTaau = [null, null]; this.bgSharpU = null; this.bgCompS = null; this.bgTaauS = [null, null]; this.bgEdge = null; this.bgGbaa = null; this.den.dropBindGroups(); }
   /** The g-buffer's targets or the radiance cache's dice volume were re-created (engine.resize / engine.rebuildRc): the bind groups naming their views must be rebuilt. The screen
    *  histories are untouched — after a cache rebuild the indirect's history simply converges on the refilled cache through its own clip + EMA (render/rc.ts owns what the cache
    *  itself does about a rebuild). This was `invalidate()`, which only ever did this much; the +6 ms 'invalidate' frames were the target re-creation in resize, now pooled. */
@@ -1458,17 +1416,13 @@ export class LightingPasses implements CutSwappable {
     }
     if (this.rtOn && !this.rtRanLast) { const p = enc.beginComputePass({ label: 'rtRestart' }); for (const t of [...this.reflHist, ...this.reflMom, ...this.reflFast]) this.ops.clear(p, t); p.end(); }   // switched (back) on: start the reflection histories clean
     this.rtRanLast = this.rtOn;
-    { const hitNow = this.rtOn && this.rtHitReuse && this.hitEverOn;   // phase 5: hit-lighting reuse switched (back) on — its records name hits of some other minute: start clean
-      if (hitNow && !this.hitRanLast) { const p = enc.beginComputePass({ label: 'hitRestart' }); for (const t of this.reflHit) this.ops.clear(p, t); p.end(); }
-      this.hitRanLast = hitNow; }
     if (this.rtOn) {
       // RT REFLECTIONS: the trace at the reflection grid ('reflect'), then the shared denoiser's specular client in per-pixel mode on that grid ('rdenoise'): temporal (refl → hist[p], mom[p],
       // fast[p]) → rfIters à-trous laid out so the LAST lands back in refl, which the composite reads (iteration i writes refl when (N−1−i) is even, the scratch otherwise).
       const rx = Math.ceil(this.rw / 8), ry = Math.ceil(this.rh / 8);
       { const p = enc.beginComputePass({ label: 'reflect', timestampWrites: ts('reflect') });
         p.setBindGroup(0, sceneBG);
-        if (this.rtP5 && this.pReflP5) { this.hitParity ^= 1; p.setPipeline(this.pReflP5); p.setBindGroup(1, this.bgReflP5[this.hitParity]!); }   // phase 5's variant (mesh hits / hit reuse wanted): its hit records read [1−p], write [p] (1×1 stand-ins while reuse itself is off)
-        else { p.setPipeline(this.pRefl); p.setBindGroup(1, this.bgRefl!); }                                                    // main's pass, the same program every tier ran before the phase
+        p.setPipeline(this.pRefl); p.setBindGroup(1, this.bgRefl!);
         p.dispatchWorkgroups(rx, ry); p.end(); }
       { this.rtParity ^= 1; const pz = this.rtParity;
         const N = Math.max(1, Math.min(4, Math.round(this.den.knobs.rfIters)));

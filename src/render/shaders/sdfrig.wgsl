@@ -16,7 +16,6 @@
 // Bits 0 = the plain round-cone loops everywhere; §2 / §3 then sit behind uniform branches nobody takes (they are compiled only into the modules that
 // name them — reflect_p5's tracer tail, the direct estimators' shadowSample, the rig debug kernel — and dropped from every other).
 fn rigBits() -> u32 { return u32(frame.rigCfg.x); }
-fn rigSmoothOn() -> bool { return (rigBits() & 2u) != 0u; }
 fn charSoftOn() -> bool { return (rigBits() & 4u) != 0u; }
 /** does light `li` take the soft character query? — every light with bit 32, else only the SHARP emitter class (a broad panel's character shadow is all penumbra: nothing there trails, and its disc dwarfs every limb) */
 fn charSoftFor(li: Light) -> bool { let b = rigBits(); return (b & 4u) != 0u && ((b & 32u) != 0u || !lightBroad(li)); }
@@ -94,46 +93,6 @@ fn raySphereSpan(ro: vec3f, rd: vec3f, ce: vec3f, ra: f32) -> vec2f {
   let s = sqrt(h); return vec2f(-b - s, -b + s);
 }
 
-// ---- §2 (ii) the closest hit on the SMOOTH UNION of a man's cones: entry through the closed-form cones inflated by the blend's bulge (a miss on all of them
-// is a miss on the union inside them), then a sphere trace of charSdf from just before it — Lipschitz-safe (polynomial smin of exact distances never
-// over-states the distance), bounded by rigCfgB.y steps and the cull sphere's exit. The normal is the field's gradient (tetrahedron differences).
-struct RigHit { t: f32, ch: i32 };
-fn rigNormal(base: u32, p: vec3f, kS: f32) -> vec3f {
-  let e = 0.002;
-  let k0 = vec3f(1.0, -1.0, -1.0); let k1 = vec3f(-1.0, -1.0, 1.0); let k2 = vec3f(-1.0, 1.0, -1.0); let k3 = vec3f(1.0, 1.0, 1.0);
-  // (the four taps through ONE charSdf call, summed in the same order: DXC — Chrome's compiler on Windows — inlines each call it meets)
-  var n = vec3f(0.0);
-  for (var q = 0u; q < 4u; q++) {
-    let k = select(select(select(k3, k2, q == 2u), k1, q == 1u), k0, q == 0u);
-    let t = k * charSdf(base, p + k * e, kS);
-    n = select(n + t, t, q == 0u);
-  }
-  return normalize(n);
-}
-fn rigClosest(ro: vec3f, rd: vec3f, tmax: f32, skipOwner: u32) -> RigHit {
-  var best: RigHit; best.t = tmax; best.ch = -1;
-  let kS = frame.rigCfgB.x; let steps = u32(clamp(frame.rigCfgB.y, 4.0, 64.0)); let eps = max(frame.rigCfgB.z, 2e-4);
-  let pad = RIG_KPAD * kS + eps;
-  for (var ch = 0u; ch < scene.numChars; ch++) {
-    let bs = scene.charBounds[ch];
-    if (!raySphere(ro, rd, bs.xyz, bs.w, best.t)) { continue; }
-    let base = ch * scene.capsPerChar;
-    if (skipsOwner(capsuleOwner(capsules[base]), skipOwner)) { continue; }
-    var t0 = best.t;
-    for (var s = 0u; s < RIG_SLOTS; s++) { let cp = capsules[base + s]; let t = isectRoundCone(ro, rd, cp.a, cp.b, cp.r + pad, coneRb(cp) + pad); if (t >= 0.0 && t < t0) { t0 = t; } }
-    if (t0 >= best.t) { continue; }
-    let tExit = min(raySphereSpan(ro, rd, bs.xyz, bs.w).y, best.t);
-    var t = max(t0 - eps, 0.0); var d = 1e9; var i = 0u;
-    loop {
-      if (i >= steps || t > tExit) { break; }
-      d = charSdf(base, ro + rd * t, kS);
-      if (d < eps) { break; }
-      t += d; i++;
-    }
-    if (d < eps || (i >= steps && d < 8.0 * eps)) { if (t < best.t) { best.t = t; best.ch = i32(ch); } }   // (out of steps a hair off the surface = the silhouette grazer: a hit)
-  }
-  return best;
-}
 
 // ---- §3 (iii) the character visibility factor of a shadow ray as a SOFT-SHADOW QUERY: along Po + L·t toward the light, the field's clearance h at distance t
 // against the light cone's radius there (tanHalf·t = the emitter's angular radius seen from the receiver × t): the smallest h ∕ (tanHalf·t) over the march,

@@ -21,7 +21,7 @@
   "label": "quality preset",
   "title": "resolution cap / scale, beam steps, cache probe density, smoke solver iterations (also ?quality=verylow|low|medium|high|ultra)",
   "def": false,
-  "extra": "auto / ultra / high / medium / low / verylow"
+  "extra": "auto / high / medium / low / verylow"
  },
  {
   "path": "Frame ▸ Quality & resolution",
@@ -2022,22 +2022,6 @@
  },
  {
   "path": "Materials ▸ RT reflections",
-  "kind": "toggle",
-  "label": "· ULTRA: characters as their MESH in reflections",
-  "title": "renderer v3 phase 5: a reflection ray that reaches a man walks his skinned triangle mesh to the NEAREST triangle (the mesh-shadow trees of the \"mesh-traced character shadows\" row — render/meshShadows.ts — which must be on: ultra carries it; off / unavailable = the round-cone proxies, cleanly) instead of hitting his 15 round cones, so a guard standing on the lobby stone mirrors as a mannequin — limbs, head, the rifle's silhouette is still boxes — not a blob of pills. Costs a fraction of a millisecond with four men in a polished room; nothing where nobody stands on a mirror. Off = traceClosest's round cones exactly as every other preset (or their smooth union, if that row is on)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Materials ▸ RT reflections",
-  "kind": "toggle",
-  "label": "· ULTRA: 2nd-ray decorrelation + hit-lighting reuse",
-  "title": "renderer v3 phase 5, for the 2-ray tier: (a) the second GGX-VNDF ray takes the first's ANTITHETIC azimuth (same radius on the sampling disc, the far side of the lobe) so the pair straddles the mirror image every frame instead of sometimes landing on one side; (b) each STATIC hit's lighting (direct + bounce irradiance, before the paint) is blended with last frame's record at this texel when the record's hit point lies within the lobe's own footprint on the same face — a short history keyed on where the ray WENT, not on the pixel, so the one-shadow-ray light pick at an off-screen hit stops flickering a rough mirror (a lit corridor wall in brushed steel, the ceiling in the wet lot); on-screen hits already carry this frame's settled light and are left alone; men are never reused (they walk). Off = every ray shaded fresh, the R2 pair as before. Debug view \"rt raw\" shows the pass's output as fetched",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Materials ▸ RT reflections",
   "kind": "text",
   "label": "",
   "title": "",
@@ -3002,31 +2986,12 @@
  },
  {
   "path": "Renderer fx ▸ SDF character rig",
-  "kind": "toggle",
-  "label": "(ii) smooth-union closest hit in reflections",
-  "title": "the reflection pass sees a man as the sphere-traced SMOOTH UNION of his round cones (a blend radius per joint, the field's gradient as the normal) — a mannequin in the lino instead of sausage links; rides the phase-5 reflection variant (ultra's mesh hits win when both are on). Off = the round cones' closest hit, as every other ray sees them",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Renderer fx ▸ SDF character rig",
   "kind": "slider",
   "label": "joint blend ×",
   "min": 0,
   "max": 2,
   "step": 0.05,
   "title": "× the per-joint smooth-union radii of render/sdfrig.ts RIG_K (knee / elbow ~4 / 3 cm, shoulder line 5, arms against the trunk 2): 1 = as authored, 0 = the plain union of the cones",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Renderer fx ▸ SDF character rig",
-  "kind": "slider",
-  "label": "closest-hit steps",
-  "min": 4,
-  "max": 64,
-  "step": 1,
-  "title": "sphere-trace step budget from the inflated-cone entry point (the trace ends within a millimetre or two in a handful; the budget only binds on silhouette grazers, which count as hits)",
   "def": false,
   "extra": ""
  },

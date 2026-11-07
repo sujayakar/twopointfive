@@ -19,7 +19,7 @@ export async function sunGlintCheck(): Promise<boolean> {
   const verdict = (ok: boolean, what: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };
   console.log(`\n=== sunglint: a smooth finish catches the sun${BRK ? ' (the rule off: must fail)' : ''} ===`);
   const read = (f: string) => readFileSync(resolve(ROOT, 'src/render/shaders', f), 'utf8'), src = (f: string) => readFileSync(resolve(ROOT, 'src', f), 'utf8');
-  const texts = [read('reflect.wgsl'), read('reflect_p5.wgsl')];
+  const texts = [read('reflect.wgsl')];
   const { scenePrelude, lookConfig, sunGlintConfig } = await import(`${ROOT}/src/render/frame.ts`);
   // 1. the prelude's word: true on the look's page with the switch up, false with the switch down, false off the look's page; the switch itself ships up, and
   //    its off word is wired: main.ts lowers it for ?nosunglint, a replay's visit keeps the word, and the look's page knows it for one of its own
