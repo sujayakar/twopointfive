@@ -426,23 +426,6 @@ impl RescueState {
     }
 }
 
-/// (TypeScript: inline at src/game/rescue.ts:155 SIDE_MARKS, src/game/rescue.ts:155)
-#[derive(Clone, Debug)]
-pub struct SIDEMARKS {
-    pub stack: Vec<V3>,
-    pub standoff: Vec<V3>,
-}
-impl SIDEMARKS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SIDEMARKS {
-            stack: Vec::new(),
-            standoff: Vec::new(),
-        }
-    }
-}
-impl Default for SIDEMARKS { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RescueRoomPointWhich {
@@ -569,14 +552,12 @@ pub struct RescueMod {
 impl RescueMod {
     pub fn blank() -> Self {
         RescueMod {
-            applied: Some(crate::scene_scenarios::TeamStart { sam: [7.6, 0.0, 13.4], sam_yaw: 0.9, ops: Some(alloc::vec![[6.6, 0.0, 14.25], [8.5, 0.0, 14.3]]), ops_yaw: None }),
+            // (the team's start the knob table holds as it is made: a start whose level names another writes its own over the knobs)
+            applied: { let k = crate::knobs::page_rescue(); Some(crate::scene_scenarios::TeamStart { sam: k.sam_at, sam_yaw: k.sam_yaw, ops: Some(k.ops_at.to_vec()), ops_yaw: None }) },
             door_orders: { let mut s = JsSet::new(); for w in ["openClear", "bangClear", "charge", "outside", "threshold"] { s.add(String::from(w)); } s },
         }
     }
 }
-
-/// (src/game/rescue.ts:155 SIDE_MARKS: a table nothing writes)
-pub fn side_marks() -> crate::rescue::SIDEMARKS { crate::rescue::SIDEMARKS { stack: alloc::vec![[20.85, 0.0, 7.55], [20.15, 0.0, 7.55]], standoff: alloc::vec![[20.5, 0.0, 7.55], [19.8, 0.0, 7.55]] } }
 
 /// (src/game/rescue.ts:156 NUMBER: a table nothing writes)
 pub fn number() -> Vec<String> { alloc::vec![String::from("no"), String::from("one"), String::from("two"), String::from("three"), String::from("four"), String::from("five"), String::from("six")] }

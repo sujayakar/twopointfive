@@ -92,6 +92,20 @@ pub fn wand_drop(g: &mut crate::game::Game, pl: PlayerId) {
     g.pl[pl].equip_t = m::max(g.pl[pl].equip_t, g.k.wand.stow_secs);
 }
 
+/// A line for the debugger. (wand.ts wandSummary)
+pub fn wand_summary(g: &mut crate::game::Game) -> String {
+    let pl = g.player;
+    let carried = if g.pl[pl].wand { "carried" } else { "not carried" };
+    let under = match g.pl[pl].wanding {
+        Some(w) => {
+            let state = if w.live { alloc::format!("live, {}°", js::to_fixed(w.pan * 180.0 / m::PI, 0)) } else { alloc::format!("feeding {} s", js::to_fixed(w.t, 1)) };
+            alloc::format!(" · under {} {}", g.dr[w.door].def.name, state)
+        }
+        None => String::new(),
+    };
+    alloc::format!("on · {}{} · looks {}, marked {}", carried, under, g.stats.wand.looks, g.stats.wand.marked)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

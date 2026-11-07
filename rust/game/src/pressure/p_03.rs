@@ -7,6 +7,9 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
+/// `+x.toFixed(2)`
+fn fixed2(x: f64) -> f64 { js::to_fixed(x, 2).parse::<f64>().unwrap_or(f64::NAN) }
+
 fn say_radio(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, Some(true), None, None); }
 /// `alive(X) && X.mode === 'hold'`   (standTo's holds)
 fn holds(g: &mut Game, x: RoomfightDefId) -> bool { alive(g, x) && g.tab.roomfight_def[x].mode == crate::roomfight::DefMode::Hold }
@@ -471,6 +474,46 @@ pub fn look_since(g: &mut crate::game::Game, gd: GuardId) -> Option<f64> {
     if on_look || st.out.as_ref().map_or(false, |o| o.iter().any(is_his)) { Some(st.look_t) } else { None }
 }
 
+/// the counts of this run, with the stock room fight's own beside them   (pressure.ts pressureStats)
+pub fn pressure_stats(g: &mut crate::game::Game) -> JsMap<String, f64> {
+    let s = match g.m.pressure.states.as_ref() { Some(st) => st.stats, None => new_stats() };
+    let f = &g.fight.stats;
+    let rows: [(&str, f64); 49] = [
+        ("pressFormed", s.press_formed), ("pressMen", s.press_men), ("pressSieges", s.press_sieges), ("pressConverge", s.press_converge),
+        ("pressWords", s.press_words), ("pressLone", s.press_lone), ("pressArrived", s.press_arrived), ("pressLate", s.press_late),
+        ("pressLanded", s.press_landed), ("pressCueFirst", s.press_cue_first), ("pressHeard", s.press_heard), ("pressLead", fixed2(s.press_lead)),
+        ("flankSent", s.flank_sent), ("flankSet", s.flank_set), ("flankArrived", s.flank_arrived), ("flankLate", s.flank_late),
+        ("flankLanded", s.flank_landed), ("flankCueFirst", s.flank_cue_first), ("flankHeard", s.flank_heard), ("flankLead", fixed2(s.flank_lead)),
+        ("fbPush", s.fb_push), ("fbLast", s.fb_last), ("fbEarly", s.fb_early), ("fbPlanted", s.fb_planted), ("fbFought", s.fb_fought), ("fbTold", s.fb_told),
+        ("warnCalls", s.warn_calls), ("warnStoodDown", s.warn_stood_down), ("warnHits", s.warn_hits), ("warnLead", fixed2(s.warn_lead)),
+        ("secondStood", s.second_stood), ("secondCalls", s.second_calls),
+        ("pairsTold", s.pairs_told), ("pairsWaited", s.pairs_waited), ("pairsWent", s.pairs_went),
+        ("stunMarked", s.stun_marked), ("stunHeld", s.stun_held), ("stunHeldIn", s.stun_held_in), ("stunLate", s.stun_late),
+        ("stunOff", s.stun_off), ("stunBangs", s.stun_bangs), ("stunEmpty", s.stun_empty), ("lastHeld", s.last_held),
+        ("lookCalled", s.look_called), ("lookMen", s.look_men), ("lookOff", s.look_off),
+        ("stockRallied", f.rallied), ("stockFellBack", f.fell_back), ("stockTookCover", f.took_cover),
+    ];
+    let mut out = JsMap::new();
+    for (k, v) in rows.iter() { out.set(String::from(*k), *v); }
+    out
+}
+
+/// a line for the debugger's panel. PRESSURE.press, flank and fallBack are settled on   (pressure.ts pressureSummary)
+pub fn pressure_summary(g: &mut crate::game::Game) -> String {
+    if !g.k.pressure.on { return String::from("off"); }
+    let second = g.k.pressure.second;
+    let st = match g.m.pressure.states.as_ref() { Some(st) => st, None => return String::from("on \u{b7} nothing yet") };
+    let s = st.stats;
+    alloc::format!(
+        "press + flank + fallBack{} \u{b7} {} live \u{b7} {} presses, {} words, {} round, {} fell back{}",
+        if second { " + second" } else { "" }, st.presses.len(), js::num_str(s.press_formed), js::num_str(s.press_words), js::num_str(s.flank_sent), js::num_str(s.fb_push + s.fb_last),
+        if second { alloc::format!(", {} stood", js::num_str(s.second_stood)) } else { String::new() },
+    )
+}
+
+/// the host's stored copy of the table: the page hands the Rust game its values, so nothing here   (pressure.ts loadPressure)
+pub fn load_pressure(g: &mut crate::game::Game) {}
+
 /// the shipped values back; dropping the stored copy is the host's   (pressure.ts resetPressure)
 pub fn reset_pressure(g: &mut crate::game::Game) {
     g.k.pressure = pressure_defaults();
@@ -479,3 +522,14 @@ pub fn reset_pressure(g: &mut crate::game::Game) {
 /// the host's stored copy of the table: nothing here   (pressure.ts savePressure)
 pub fn save_pressure(g: &mut crate::game::Game) {}
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// node's own +x.toFixed(2) for each
+    #[test]
+    fn fixed2_is_the_languages() {
+        assert_eq!(fixed2(0.125).to_bits(), 0.13f64.to_bits());
+        assert_eq!(fixed2(1.005).to_bits(), 1.0f64.to_bits());
+    }
+}

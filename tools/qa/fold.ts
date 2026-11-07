@@ -35,8 +35,8 @@
 //               there the fold stays off. A run so mixed reads its unfolded reds against the list of expected reds as ever, and names its folded
 //               reds apart; a red that is no probe's name (a family's banner) is read as before.
 //             · NOT HELD while off: an old branch object put back by reference after a look laid its replacement (the two share the row's cell).
-//   A FOLDED PROBE IS NOT THE STAND AS IT OPENS while a check still pins a settled row: the runner reads no folded probe's red against the list of
-//             expected reds (a run folded whole says so in one line).
+//   A FOLDED PROBE IS THE STAND AS IT OPENS since the TypeScript tick was deleted (a tool with no word stands the Rust game): the runner reads its red
+//             against the list of expected reds like any other (until 2026-11-07 it read a folded probe's red against no row).
 //   beside:   QA_VERDICTS=1 on a run WITHOUT the fold makes the runner (the outermost one) print `{"plain":{"probe":…,"red":…}}` after each probe, to lay
 //             the two runs side by side.
 // What it cannot hold, and says instead:

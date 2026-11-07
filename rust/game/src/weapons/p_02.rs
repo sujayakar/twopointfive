@@ -125,6 +125,12 @@ pub fn firearm_new(g: &mut crate::game::Game, def: &crate::weapons::WeaponDef) -
     g.fa.push(fa)
 }
 
+/// the row's full name (weapons.ts Firearm.name)
+pub fn firearm_name(g: &mut crate::game::Game, id: FirearmId) -> String {
+    let def = g.fa[id].def;
+    row(g, def).name.clone()
+}
+
 /// Z: the selector to its next position; ends any AUTO string; returns the new mode (weapons.ts Firearm.cycleMode)
 pub fn firearm_cycle_mode(g: &mut crate::game::Game, id: FirearmId) -> crate::weapons::FireMode {
     let def = g.fa[id].def;

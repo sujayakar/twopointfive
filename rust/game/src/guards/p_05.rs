@@ -79,6 +79,19 @@ pub fn lit_place(g: &mut crate::game::Game, gd: GuardId, a: Option<OrdersAssignm
     lit
 }
 
+/// LIGHTS.lookDark is off on the page: never (guards.ts looksIntoDark)
+pub fn looks_into_dark(g: &mut crate::game::Game, gd: GuardId, a: Option<OrdersAssignmentId>) -> bool {
+    false
+}
+
+/// what the rule itself last made of his place, while that reading is fresh (guards.ts placeLitSeen)
+pub fn place_lit_seen(g: &mut crate::game::Game, gd: GuardId) -> bool {
+    match g.m.guards.lit_seen.get(gd) {
+        Some(s) => g.time - s.t >= 0.0 && g.time - s.t < 0.5 + 1e-6 && s.lit,
+        None => false,
+    }
+}
+
 /// seven directions across a beam about `d`: its axis, four turned about the vertical, one tipped up and one down (guards.ts beamFan)
 pub fn beam_fan(d: V3) -> Vec<V3> {
     let mut out: Vec<V3> = Vec::new();
@@ -208,6 +221,27 @@ pub fn torch_low(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let low = beam_walled(g, hand, &fan, reach, low0);
     g.m.guards.torch_low_seen.set(gd, GuardsModTorchLowSeenValue { t, low });
     low
+}
+
+/// what TORCH.wallLow last made of his carry, while that reading is fresh (guards.ts torchLowSeenOf)
+pub fn torch_low_seen_of(g: &mut crate::game::Game, gd: GuardId) -> bool {
+    match g.m.guards.torch_low_seen.get(gd) {
+        Some(s) => g.time - s.t >= 0.0 && g.time - s.t <= 0.25 && s.low,
+        None => false,
+    }
+}
+
+/// what LIGHTS.wallOff last made of his beam, while that reading is fresh (guards.ts wallDarkSeen)
+pub fn wall_dark_seen(g: &mut crate::game::Game, gd: GuardId) -> bool {
+    match g.m.guards.wall_seen.get(gd) {
+        Some(s) => g.time - s.t >= 0.0 && g.time - s.t <= 0.25 && s.dark,
+        None => false,
+    }
+}
+
+/// did that reading put out a light the other rules had burning (guards.ts wallPutOut)
+pub fn wall_put_out(g: &mut crate::game::Game, gd: GuardId) -> bool {
+    wall_dark_seen(g, gd) && matches!(g.m.guards.wall_seen.get(gd), Some(s) if s.out == Some(true))
 }
 
 /// is this man's weapon light this rule's to decide (guards.ts lightRuled)

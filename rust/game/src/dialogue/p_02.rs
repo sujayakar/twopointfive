@@ -62,6 +62,8 @@ pub fn level_rects(g: &mut crate::game::Game) -> Option<Vec<crate::dialogue::Pla
     g.m.dialogue.own_rects = Some(r.clone());
     r
 }
+/// (dialogue.ts rectDist)
+pub fn rect_dist(r: &crate::dialogue::Rect, p: V3) -> f64 { rect_dist_of(r.x0, r.x1, r.z0, r.z1, p) }
 /// ownPlace with the rectangle's place in the list, the identity watchedPlace compares   (dialogue.ts ownPlace)
 fn own_place_at(g: &mut Game, p: V3) -> Option<(usize, OwnPlace)> {
     let r = level_rects(g)?;
@@ -231,6 +233,12 @@ pub fn keyed_door_on(g: &mut crate::game::Game, gd: GuardId) -> Option<DoorId> {
         if dd < bd { bd = dd; best = Some(d); }
     }
     best
+}
+/// …as the men call it, or null   (dialogue.ts keyedDoorOnRoute)
+pub fn keyed_door_on_route(g: &mut crate::game::Game, gd: GuardId) -> Option<String> {
+    let d = keyed_door_on(g, gd)?;
+    let name = g.dr[d].def.name.clone();
+    Some(door_name(g, &name))
 }
 /// coarse words for the seconds until the next radio check   (dialogue.ts etaWords)
 pub fn eta_words(secs: f64) -> String {
@@ -457,6 +465,15 @@ fn token_key(raw: &str) -> String {
     key.push(raw.as_bytes()[0].to_ascii_lowercase() as char);
     key.push_str(&raw[1..]);
     key
+}
+/// the tokens a text uses, as Token keys   (dialogue.ts tokensIn)
+pub fn tokens_in(text: &str) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    let mut i = 0;
+    while i < text.len() {
+        if let Some((end, raw)) = token_at(text, i) { out.push(token_key(raw)); i = end; } else { i += 1; }
+    }
+    out
 }
 /// expand {tokens} from the table ({Name} capitalises); null if any comes back empty   (dialogue.ts expand)
 pub fn expand(text: &str, tokens: &JsMap<String, Option<String>>) -> Option<String> {
@@ -742,6 +759,11 @@ mod tests {
         assert_eq!(expand("{code}", &t), None);
         assert_eq!(expand("{nobody}", &t), None);
         assert_eq!(expand("— {x y} {} { …", &t).as_deref(), Some("— {x y} {} { …"));
+    }
+    #[test]
+    fn tokens_in_lowers_first_letter() {
+        let got = tokens_in("{Room} {{padDoor} {no way} {}");
+        assert_eq!(got, vec![String::from("room"), String::from("padDoor")]);
     }
     #[test]
     fn names_and_numbers() {

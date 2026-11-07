@@ -439,6 +439,39 @@ pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt:
     statured
 }
 
+/// a push with no `body`   (game.ts:1845, :1848, :1849)
+fn smoke_push(g: &mut Game, pos: V3, dir: V3, speed: f64, radius: f64) {
+    crate::smoke_types::smoke_system_like_push(g, crate::smoke_types::SmokePush { pos, dir, speed, radius, ..Default::default() });
+}
+
+/// men moving through smoke push it. The tick does not call it: DRESS.wake, the picture's   (game.ts smokeWake)
+pub fn game_smoke_wake(g: &mut crate::game::Game, all: &[CharId]) {
+    use crate::character::Bone;
+    let stir = if g.m.render_frame.look_config.on { m::max(0.0, g.m.render_frame.look_config.stir) } else { 0.0 };
+    crate::smoke_types::smoke_system_like_set_stir(g, stir);
+    for &c in all.iter() {
+        let vel = g.ch[c].vel;
+        let sp = m::hyp2(vel[0], vel[2]);
+        let Some(h) = g.ch[c].bones.get(Bone::Hips).copied() else { continue; };
+        if sp < 0.25 { continue; }
+        let dirv: V3 = [vel[0] / sp, 0.05, vel[2] / sp];
+        if stir > 0.0 {
+            let t = crate::game::smoke_stir();
+            let (hx, hz) = (dirv[0], dirv[2]);
+            let top = h[1] + t.above; let mid = (top + t.foot) / 2.0;
+            crate::smoke_types::smoke_system_like_push(g, crate::smoke_types::SmokePush { pos: [h[0], mid, h[2]], dir: [hx, 0.0, hz], speed: sp, radius: t.body, body: Some(m::max(0.0, (top - t.foot) / 2.0 - t.body)), ..Default::default() });
+            let side = m::sin(2.0 * m::PI * g.ch[c].anim.phase);
+            if m::abs(side) > t.gap {
+                let k = m::sign(side);
+                smoke_push(g, [h[0] - hx * t.back, h[1] - t.low, h[2] - hz * t.back], [-hz * k, 0.0, hx * k], m::min(t.most, sp * t.kick * m::min(2.0, stir)), t.kick_r);
+            }
+            continue;
+        }
+        smoke_push(g, h, dirv, sp * 1.15, 0.3);
+        if let Some(chest) = g.ch[c].bones.get(Bone::Chest).copied() { smoke_push(g, chest, dirv, sp * 1.1, 0.26); }
+    }
+}
+
 /// characters → what each man wears (the renderer's own half is the picture's), and the frame's dynamic boxes handed to the world   (game.ts drawCharacters)
 pub fn game_draw_characters(g: &mut crate::game::Game, all: &[CharId], statured: bool) {
     g.men_all = all.to_vec(); g.men_statured = statured; g.men_bare = false;

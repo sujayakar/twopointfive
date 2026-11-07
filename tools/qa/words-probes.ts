@@ -294,9 +294,8 @@ export const wordsDoorNames = guarded(async () => {
     // ---- 2, 3 · the level files and the office
     WORDS.doors = !process.env.DOORNAMES_BREAK;
     const files: { file: string; L: any; office: boolean }[] = readdirSync(`${ROOT}/levels`).filter(f => f.endsWith('.json')).sort().map(file => ({ file, L: JSON.parse(readFileSync(`${ROOT}/levels/${file}`, 'utf8')), office: false }));
-    const OS = (await import(`${ROOT}/levels/office.scenarios.ts`)).OFFICE_SCENARIOS;
     for (let i = files.length - 1; i >= 0; i--) if (!Array.isArray(files[i].L.doors)) files.splice(i, 1);   // (a lint list, a look file: not a level)
-    for (const f of files) if (/^office/.test(f.file) && !f.L.scenarios) { f.L = { ...f.L, scenarios: OS }; f.office = true; }
+    for (const f of files) if (/^office/.test(f.file)) f.office = true;   // (the office and its relief: the game's own rule for them is dialogue.ts isOffice, by their routes)
     const bad: string[] = [], twins: string[] = [], owed: Record<string, string> = {}, places: Record<string, string> = {}, letters: Record<string, string> = {}; let written = 0, doorsN = 0;
     for (const { file, L, office } of files) {
       const ids: string[] = (L.doors ?? []).map((d: any) => d.name ?? d.id);

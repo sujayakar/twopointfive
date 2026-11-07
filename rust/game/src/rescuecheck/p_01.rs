@@ -104,6 +104,11 @@ pub fn rescue_check_say(g: &mut Game) {
     }
 }
 
+/// The check's and the debugger's timeline.   (rescuecheck.ts rescueCheckTimeline)
+pub fn rescue_check_timeline(g: &mut Game) -> Vec<RescueCheckEvent> {
+    match &g.m.rescuecheck.states { Some(st) => st.events.clone(), None => Vec::new() }
+}
+
 /// A staging, a restart.   (rescuecheck.ts rescueCheckReset)
 pub fn rescue_check_reset(g: &mut Game) { g.m.rescuecheck.states = None; }
 

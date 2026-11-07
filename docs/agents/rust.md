@@ -29,8 +29,8 @@ for (`src/json.rs`), so a record or a member the reader has no line for is found
 holds all of `levels/` to it). The records the game keeps as its own types are read by those types, a line a type (`src/records.rs`). `tools/blitz/start.sh <level file>` or `--mission <id>` holds the Rust start to the TypeScript start, path by path
 (`known-start.txt` is what may differ, each line with its reason), and with `--frames N` steps both starts in Rust and compares every frame.
 `rust/game_start/LEVELS.md` is the mission list row by row (written by `bun run tools/blitz/start-levels.ts --write`), and the README's "What
-stands between this and the page starting a level in Rust" is the list of what a page start still needs: first an address's words as a type
-(`startFromQuery` stops in Rust: a mission is started here by `start_scenario`), then the puppet's objects.
+stands between this and the page starting a level in Rust" is the list of what a page start still needs: first the page handing its address across (an address's words are a type of the
+game crate, `rust/game/src/query.rs`, every reader takes it, and `StartOpts.link` starts a mission by `start_from_query` as a click on its row does), then the puppet's objects.
 Checked: every row of the mission list (`LEVELS.md`: no path not known at the start, 300 frames in step with an idle hand, no path not known as
 they end; the office's four on a copy of its file with its scenarios written in), and the tests' scenes for 900 frames. Not checked: a mission
 started as the page starts it (from its address); a hand on the controls in those frames; two seats; a page starting a level this way (the page

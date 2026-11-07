@@ -33,6 +33,9 @@ fn send(g: &mut Game, s: &mut Stand, d: RoomfightDefId, spot: V3, at: f64, quiet
     if quiet { t.quiet += 1.0; }
 }
 
+/// `+x.toFixed(2)`
+fn fixed2(x: f64) -> f64 { js::to_fixed(x, 2).parse::<f64>().unwrap() }
+
 /// the die's seed off the room clear's seed and attempt
 fn fresh_seed(seed: f64, attempt: f64) -> f64 {
     ((m::imul(js::to_i32(seed), 0x9E3779B1u32 as i32) ^ m::imul(js::to_i32(attempt), 0x85EBCA6Bu32 as i32) ^ 0x1A575A4D) as i32) as f64
@@ -619,14 +622,75 @@ pub fn last_stand_hint(g: &mut crate::game::Game) -> Option<crate::laststand::Hi
     if !h.rooms.is_empty() || !h.spots.is_empty() { Some(h.clone()) } else { None }
 }
 
+/// The counts, each to two places, -1 for one not finite.   (laststand.ts lastStandStats)
+pub fn last_stand_stats(g: &mut crate::game::Game) -> JsMap<String, f64> {
+    let s = g.m.laststand.states.as_ref().map_or_else(new_stats, |st| st.stats);
+    let rows: [(&str, f64); 23] = [
+        ("t0", s.t0), ("up0", s.up0), ("checks", s.checks), ("answers", s.answers), ("silent", s.silent), ("lastMan", s.last_man), ("stands", s.stands),
+        ("gathered", s.gathered), ("sent", s.sent), ("arrived", s.arrived), ("short", s.short), ("met", s.met), ("diedOnWay", s.died_on_way), ("dropped", s.dropped),
+        ("quiet", s.quiet), ("noWay", s.no_way), ("moved", s.moved), ("digOrders", s.dig_orders), ("standT", s.stand_t), ("setT", s.set_t), ("setMen", s.set_men),
+        ("thumps", s.thumps), ("lines", s.lines),
+    ];
+    let mut r: JsMap<String, f64> = JsMap::new();
+    for (k, v) in rows { r.set(String::from(k), if v.is_finite() { fixed2(v) } else { -1.0 }); }
+    r
+}
+
+/// The endgame as it went, for the tallies and the probes.   (laststand.ts lastStandReport)
+pub fn last_stand_report(g: &mut crate::game::Game) -> crate::laststand::LastStandReport {
+    let stats = last_stand_stats(g);
+    let on = String::from(if g.k.laststand.regroup { "regroup+callOut" } else { "callOut" });
+    let cs = |g: &Game, a: Vec<RoomfightDefId>| -> Vec<String> { a.into_iter().map(|d| g.gd[g.tab.roomfight_def[d].gd].callsign.clone()).collect() };
+    let st = g.m.laststand.states.as_ref();
+    let s = st.and_then(|x| x.stand.as_ref());
+    let mut named: JsSet<String> = JsSet::new();
+    if let Some(st) = st {
+        for v in st.named.values() { named.add(v.clone()); }
+        for x in st.spots.values() { named.add(x.name.clone()); }
+    }
+    LastStandReport {
+        on,
+        stats,
+        room: s.and_then(|x| x.id.clone()),
+        in_: s.map_or_else(Vec::new, |x| cs(g, x.in_.keys())),
+        out: s.map_or_else(Vec::new, |x| cs(g, x.out.keys())),
+        moving: s.map_or_else(Vec::new, |x| cs(g, x.movers.iter().map(|y| y.d).collect())),
+        known: st.map_or_else(Vec::new, |x| cs(g, x.known.keys())),
+        named: named.keys(),
+        said: st.map_or_else(Vec::new, |x| x.said.clone()),
+    }
+}
+
+/// One line for the debugger's panel.   (laststand.ts lastStandSummary)
+pub fn last_stand_summary(g: &mut crate::game::Game) -> String {
+    let st = match g.m.laststand.states.as_ref() {
+        Some(st) if !st.stale => st,
+        _ => return String::from("on — waiting for the last few"),
+    };
+    let checks = st.stats.checks;
+    let mut line = alloc::format!("{} check{} · {} known up", checks, if checks == 1.0 { "" } else { "s" }, st.known.len());
+    if let Some(s) = &st.stand {
+        let place = if s.room.is_some() { alloc::format!("in {}", s.the) } else { String::from("each where he is") };
+        line.push_str(&alloc::format!(" · stand {}: {} in, {} coming, {} out{}", place, s.in_.len(), s.movers.len(), s.out.len(), if s.set_said { " · set" } else { "" }));
+    }
+    line
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // the language's own answers, printed by bun: +x.toFixed(2), and fresh's (Math.imul(seed | 0, 0x9E3779B1) ^ Math.imul(attempt | 0, 0x85EBCA6B) ^ 0x1A575A4D) | 0
+    #[test]
+    fn a_count_goes_to_two_places_as_the_language_rounds() {
+        for &(x, want) in FIXED2 { assert_eq!(fixed2(x).to_bits(), want.to_bits(), "+{}.toFixed(2)", x); }
+    }
 
     #[test]
     fn the_die_is_seeded_as_the_language_multiplies() {
         for &(seed, attempt, want) in SEEDS { assert_eq!(fresh_seed(seed, attempt).to_bits(), want.to_bits(), "{} {}", seed, attempt); }
     }
 
+    const FIXED2: &[(f64, f64)] = &[(0.125, 0.13), (0.375, 0.38), (1.005, 1.0), (2.675, 2.67), (-0.125, -0.13), (-0.001, -0.0), (123.456, 123.46), (0.0, 0.0), (37.5, 37.5), (9.995, 9.99), (1000000.125, 1000000.13)];
     const SEEDS: &[(f64, f64, f64)] = &[(0.0, 0.0, 441932365.0), (1.0, 1.0, 25946519.0), (12345.0, 2.0, -1330936078.0), (4294967295.0, 3.0, -363035837.0), (-7.0, 9.0, 57076647.0), (2147483648.0, 1.0, 532451366.0), (3.9, 2.9, -886660216.0), (987654321.0, 1000.0, -1273962284.0)];
 }

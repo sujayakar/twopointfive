@@ -129,6 +129,15 @@ pub fn check_rescue(g: &mut crate::game::Game, s: Option<&crate::scene_scenarios
     bad
 }
 
+/// A new one: the field initialisers, and its three helpers. (rescue.ts Rescue.constructor)
+pub fn rescue_new(g: &mut crate::game::Game) -> crate::rescue::Rescue {
+    let mut r = Rescue::blank();
+    r.flow = Box::new(crate::rescueflow::rescue_flow_new(g));
+    r.ending = crate::rescueend::rescue_end_new(g);
+    r.flush = crate::rescueflush::rescue_flush_new(g);
+    r
+}
+
 /// What the scenario takes from the level it stands on. (rescue.ts Rescue.data)
 pub fn rescue_data(g: &mut crate::game::Game) -> Option<crate::scene_scenarios::RescueData> {
     g.level.scenarios.as_ref().and_then(|c| c.rescue.clone())
@@ -364,6 +373,11 @@ pub fn rescue_face_of(g: &mut crate::game::Game, d: DoorId) -> f64 {
 /// One of the cast before he is spawned (rescue.ts stage's `cast`)
 struct CastRow { role: Role, in_room: bool, mark: crate::scene_scenarios::ScenarioMark, name: String }
 
+/// Everybody on his mark on the fresh encounter. (rescue.ts Rescue.stage)
+pub fn rescue_stage(g: &mut crate::game::Game) {
+    if let Err(e) = stage_tried(g) { panic!("{}", e); }
+}
+
 /// The staging; Err is the message of what the TypeScript's staging throws, spawnUnit's among them.
 fn stage_tried(g: &mut Game) -> Result<(), String> {
     let Some(s) = rescue_data(g) else { return Err(String::from("the level has no hostage rescue data")); };
@@ -475,17 +489,17 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
         let row = if squad > 2.0 { crate::nightbreach::squad4().get(i).cloned() } else { None };
         let opts = match row {
             Some(r) => {
-                let n = 2.0 + g.guards.len() as f64;
+                let n = crate::seats::seat_count(g) + 1.0 + g.guards.len() as f64;   // (a man a seat, this new teammate, everyone standing)
                 crate::guards::UnitOpts {
                     team: crate::teams::Team::Operative, pos: at[i], yaw: Some(yaw), name: Some(r.name), light: Some(false),
                     pair: Some(r.pair), tint: Some(r.tint), tint2: Some(r.tint2),
-                    budget: Some(m::max(crate::nightbreach::SQUAD4_BUDGET, n)), ..crate::guards::UnitOpts::zeroed()
+                    budget: Some(m::max(crate::nightbreach::p_01::squad4_budget(g), n)), ..crate::guards::UnitOpts::zeroed()
                 }
             }
             None => crate::guards::UnitOpts {
                 team: crate::teams::Team::Operative, pos: at[i], yaw: Some(yaw),
                 name: Some(String::from(if i == 0 { "Blue One" } else { "Blue Two" })), light: Some(false),
-                budget: Some(2.0 + g.guards.len() as f64), ..crate::guards::UnitOpts::zeroed()
+                budget: Some(crate::seats::seat_count(g) + 1.0 + g.guards.len() as f64), ..crate::guards::UnitOpts::zeroed()
             },
         };
         let gd = crate::guards::spawn_unit(g, &opts)?;

@@ -27,6 +27,9 @@ fn my_line(g: &Game, by: LeadsBy) -> String {
     }
 }
 
+/// The panel's keeping of its rows in the browser's storage: host work, nothing of the game's to do. (clearline.ts saveClearLine)
+pub fn save_clear_line(g: &mut crate::game::Game) {}
+
 /// His row of the rule's memory, made on first asking. (clearline.ts memOf)
 pub fn mem_of<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::clearline::Mem {
     g.m.clearline.mem.get_or_insert_with(gd, || Mem {
@@ -168,6 +171,40 @@ pub fn sam_moves(g: &mut crate::game::Game, secs: f64) -> bool {
         s.p = [f_pos[0], f_pos[2], t];
     }
     t - s.move_t < secs && t >= s.move_t
+}
+
+/// Is this man between the shove and his point on a door tool's order? Reads the door tools' record only. (clearline.ts entering)
+pub fn entering(g: &mut crate::game::Game, gd: GuardId) -> bool {
+    let Some(a) = crate::orders::squad_orders_of(g, gd) else { return false };
+    let found = g.door_tools.ops.iter().copied().find(|&o| {
+        let r = &g.tab.doortools_door_op[o];
+        r.men.contains(&gd) && r.mine.get(gd) == Some(&a)
+    });
+    let Some(op) = found else { return false };
+    let r = &g.tab.doortools_door_op[op];
+    if r.phase != crate::doortools::Phase::Enter {
+        return r.phase == crate::doortools::Phase::Toss
+            || r.phase == crate::doortools::Phase::Fuse
+            || r.phase == crate::doortools::Phase::Wait
+            || r.phase == crate::doortools::Phase::Pocket
+            || (r.phase == crate::doortools::Phase::Kick && r.kick.as_ref().map_or(false, |k| !k.pick.unwrap_or(false) && !k.t.is_nan()));
+    }
+    if r.queue.iter().any(|q| q.gd == gd) {
+        return true;
+    }
+    if !r.pod.has(gd) {
+        return false;
+    }
+    let on_pod = r.on_pod.has(gd);
+    let same = matches!(g.m.clearline.entered.get(gd), Some(e) if e.op == op);
+    if !same {
+        g.m.clearline.entered.set(gd, ClearlineModEnteredValue { op, a, past: false });
+    }
+    let e = g.m.clearline.entered.get_mut(gd).unwrap();
+    if on_pod || e.a != a {
+        e.past = true;
+    }
+    !e.past
 }
 
 /// Every body on the floor but his own, as a list: nothing between the generator's yields writes, so laying it out at once reads the same floor. (clearline.ts bodies)
@@ -697,6 +734,23 @@ fn fresh(g: &mut Game, gd: GuardId, tgt: GuardId, to: V3, a: OrdersAssignmentId,
         good_t: t,
         head: to[1] - chest_y > 0.2,
     }
+}
+
+/// The panel's line. (clearline.ts clearLineSummary)
+pub fn clear_line_summary(g: &mut crate::game::Game) -> String {
+    if !g.k.clearline.on {
+        return String::from("off");
+    }
+    let mut now: Vec<String> = Vec::new();
+    for i in 0..g.guards.len() {
+        let gd = g.guards[i];
+        if let Some(d) = live_doing(g, gd) {
+            now.push(alloc::format!("{} {}", g.gd[gd].callsign, d.what.as_str()));
+        }
+    }
+    let s = &g.stats.clearline;
+    let tail = if now.is_empty() { String::new() } else { alloc::format!(" · now: {}", now.join(", ")) };
+    alloc::format!("on · steps {} ({} up level) · cover {} · knee {} · said {}{}", s.steps, s.up, s.covers, s.kneels, s.cues, tail)
 }
 
 /// What a man is doing about it this moment. (clearline.ts clearLineOf)

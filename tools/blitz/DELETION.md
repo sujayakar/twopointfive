@@ -29,7 +29,7 @@ The simulation's folders are `src/game`, `src/anim`, `src/math`, `src/sim` and `
 | root | what it is | what a function it reaches keeps |
 |---|---|---|
 | the page | every file of `src/` outside the simulation's folders: the game's page, and the pages with no Rust game (the workbench with its viewer and editor, the replay viewer, the sound and music pages) | its body, and everything that body reaches. The page has no call surface: what it calls on the puppet runs as TypeScript |
-| the hosts | the files of `tools/` that a page or a host loads, found by following imports from the entry points in `HOST_ENTRIES` | its body. They run inside the host's own lines (a start, the apply, the out events, the dress step), where nothing crosses |
+| the hosts | the files of `tools/` that a page or a host loads, and THE TOOLS THAT PLAY WHOLE GAMES (the tallies' scripted player, the plain night's, the tour's, the soak's, the lessons' runner, with the watchers they load), found by following imports from the entry points in `HOST_ENTRIES` | its body. A host runs where nothing crosses (a start, the apply, the out events, the dress step); a tool that plays reads the puppet between ticks to choose its next key and to keep its record, as the page's HUD reads it |
 | the module | a simulation file's own top-level statements, and the names the bridge's schema reads through its window | all of it |
 | a file a tool writes | a simulation file whose first line says a tool writes it, never a hand (`src/sim/built.ts`, `src/sim/men/cols.ts`) | all of it: its own check reads the file's shape |
 | a tool | every other file of `tools/` (the checks) | with a row on the call surface: its signature, and the body becomes the crossing. The tick's own function with no row: its signature, which throws by name. Any other function with no row: its body |
@@ -141,17 +141,17 @@ Each is anchored on one line of the file as it stood, and the program stops with
 
 Tree `43d8a9cf4be7d603` (a hash of the simulation's files). Census: 2183 functions seen to run as TypeScript in 1539 plays of the Rust game.
 
-The simulation's folders hold 126856 lines before and 97024 after (29832 fewer). Of their 8383 functions (67040 lines of them):
+The simulation's folders hold 126856 lines before and 99114 after (27742 fewer). Of their 8383 functions (67040 lines of them):
 
 | class | functions | lines | what becomes of it |
 |---|---|---|---|
-| tick only | 2104 | 22672 | removed: nothing left standing reaches it |
-| crossing | 154 | 2516 | the name and signature stay, the body is the call of the Rust rule |
-| kept, on the surface | 581 | 5989 | the body stays and opens with the surface's guard: a tool's call between ticks crosses, a start's runs the TypeScript |
-| kept | 5355 | 34615 | the body stays: a start, the picture's step, a reader over the puppet, or a function the Rust game has no row for |
-| gone | 189 | 1248 | the signature stays and the body throws by name (`Game.stepSeats`, and a declaration an override that stays still needs) |
+| tick only | 1933 | 21376 | removed: nothing left standing reaches it |
+| crossing | 134 | 2137 | the name and signature stay, the body is the call of the Rust rule |
+| kept, on the surface | 601 | 6368 | the body stays and opens with the surface's guard: a tool's call between ticks crosses, a start's runs the TypeScript |
+| kept | 5564 | 36053 | the body stays: a start, the picture's step, a reader over the puppet, or a function the Rust game has no row for |
+| gone | 151 | 1106 | the signature stays and the body throws by name (`Game.stepSeats`, and a declaration an override that stays still needs) |
 
-Other declarations (classes as data, tables, types): 6717 stay, 523 go (576 lines).
+Other declarations (classes as data, tables, types): 6772 stay, 468 go (518 lines).
 
 ### What keeps the kept bodies
 
@@ -159,42 +159,42 @@ By the root at the end of the first chain of references found (a function many r
 
 | root | functions | lines |
 |---|---|---|
-| the page | 2602 | 19062 |
-| the census | 2218 | 13651 |
-| the hosts | 588 | 3189 |
-| a tool, and no Rust function to cross to | 518 | 4805 |
+| the page | 2354 | 17664 |
+| the census | 2041 | 12649 |
+| the hosts | 1258 | 7494 |
+| a tool, and no Rust function to cross to | 501 | 4716 |
+| the bridge | 6 | 35 |
 | the module | 6 | 6 |
-| the bridge | 5 | 34 |
 
 The files that root the most:
 
 | file | functions | lines |
 |---|---|---|
-| the census | 2218 | 13651 |
-| src/main.ts | 555 | 3891 |
-| src/ui/bindings.ts | 409 | 2082 |
-| src/host/kitView.ts | 209 | 1691 |
-| tools/blitz/puppet-apply.ts | 170 | 694 |
-| tools/blitz/import.ts | 127 | 1076 |
-| src/viewer/runtime.ts | 115 | 920 |
-| src/host/rustgame.ts | 104 | 877 |
-| src/host/rustdress.ts | 96 | 1201 |
-| src/replay/engineplay.ts | 96 | 616 |
-| tools/qa/headless.ts | 94 | 450 |
-| src/ui/lookpanel.ts | 81 | 1192 |
-| tools/mp/server.ts | 65 | 425 |
-| src/ui/overlay.ts | 56 | 291 |
-| tools/levels/records.ts | 50 | 270 |
+| the census | 2041 | 12649 |
+| src/main.ts | 473 | 3472 |
+| src/ui/bindings.ts | 372 | 1871 |
+| tools/qa/soak.ts | 345 | 2007 |
+| tools/qa/playthrough.ts | 211 | 1475 |
+| src/host/kitView.ts | 132 | 1172 |
+| tools/blitz/import.ts | 119 | 1026 |
+| tools/blitz/puppet-apply.ts | 113 | 476 |
+| src/viewer/runtime.ts | 111 | 899 |
+| src/host/rustgame.ts | 99 | 869 |
+| src/replay/engineplay.ts | 94 | 608 |
+| src/host/rustdress.ts | 83 | 1131 |
+| tools/qa/line-watch.ts | 74 | 556 |
+| src/ui/lookpanel.ts | 69 | 1126 |
+| tools/mp/server.ts | 58 | 391 |
+| tools/qa/headless.ts | 55 | 292 |
+| src/ui/overlay.ts | 52 | 283 |
+| tools/levels/records.ts | 49 | 252 |
+| tools/qa/tour.ts | 46 | 255 |
 | src/editor/paint.ts | 44 | 287 |
-| src/net/foresee.ts | 41 | 260 |
+| src/net/foresee.ts | 40 | 259 |
 | tools/qa/glassbreak-probes.ts | 37 | 201 |
 | src/ui/missions.ts | 36 | 107 |
 | src/ui/kitCard.ts | 36 | 133 |
-| tools/blitz/rust-host.ts | 35 | 156 |
 | src/host/loop.ts | 33 | 172 |
-| src/ui/loadout.ts | 33 | 110 |
-| tools/blitz/classes.ts | 31 | 163 |
-| src/host/autocam.ts | 30 | 115 |
 
 ### What the page runs every frame
 
@@ -243,7 +243,7 @@ The census's page plays ran 506 functions of the simulation's folders at least o
 
 ### A host's loose names the census did not see
 
-394 functions are named only loosely by the bridge's own files (a name read off a value typed `any`, or a type answered by shape) and were never seen to run in a play. With a row on the surface such a function crosses; with none it goes unless something else keeps it. If one of these places does mean that function, the call throws by name in the first play that reaches it. The first 60:
+327 functions are named only loosely by the bridge's own files (a name read off a value typed `any`, or a type answered by shape) and were never seen to run in a play. With a row on the surface such a function crosses; with none it goes unless something else keeps it. If one of these places does mean that function, the call throws by name in the first play that reaches it. The first 60:
 
 | function | class now | read at |
 |---|---|---|
@@ -251,116 +251,116 @@ The census's page plays ran 506 functions of the simulation's folders at least o
 | BreachDrill.advance (src/game/breach.ts) | deleted | tools/mp/server.ts:98 |
 | BreachDrill.charge (src/game/breach.ts) | deleted | tools/blitz/puppet-apply.ts:1856, tools/blitz/puppet-apply.ts:3644 |
 | BreachDrill.once (src/game/breach.ts) | deleted | tools/blitz/puppet-apply.ts:6631 |
-| BreachDrill.route (src/game/breach.ts) | deleted | tools/blitz/puppet-apply.ts:680, tools/blitz/puppet-apply.ts:1245 |
-| BreachDrill.say (src/game/breach.ts) | deleted | tools/blitz/puppet-apply.ts:7227, tools/blitz/puppet-apply.ts:7499 |
-| BreachDrill.tick (src/game/breach.ts) | deleted | tools/qa/headless.ts:244, tools/mp/server.ts:73, tools/mp/server.ts:98 |
-| Breaks.tick (src/game/breakTable.ts) | deleted | tools/qa/headless.ts:244, tools/mp/server.ts:73, tools/mp/server.ts:98 |
-| ClearedRooms.mark (src/game/cleared.ts) | gone | tools/blitz/export.ts:89, tools/blitz/import.ts:78, tools/blitz/puppet-apply.ts:1113 |
-| ClearedRooms.tick (src/game/cleared.ts) | deleted | tools/qa/headless.ts:244, tools/mp/server.ts:73, tools/mp/server.ts:98 |
+| BreachDrill.route (src/game/breach.ts) | deleted | tools/qa/soak.ts:986, tools/qa/soak.ts:987, tools/qa/soak.ts:1309 |
+| BreachDrill.say (src/game/breach.ts) | deleted | tools/qa/wallcharge-commander.ts:44, tools/qa/wallcharge-commander.ts:56, tools/qa/wallcharge-commander.ts:63 |
+| BreachDrill.tick (src/game/breach.ts) | deleted | tools/qa/headless.ts:244, tools/qa/playthrough.ts:780, tools/qa/playthrough.ts:810 |
+| Breaks.summary (src/game/breakTable.ts) | deleted | tools/qa/solo-night.ts:275 |
+| Breaks.tick (src/game/breakTable.ts) | deleted | tools/qa/headless.ts:244, tools/qa/playthrough.ts:780, tools/qa/playthrough.ts:810 |
+| ClearedRooms.mark (src/game/cleared.ts) | gone | tools/qa/playthrough.ts:1689, tools/qa/playthrough.ts:1691, tools/blitz/export.ts:89 |
+| ClearedRooms.tick (src/game/cleared.ts) | deleted | tools/qa/headless.ts:244, tools/qa/playthrough.ts:780, tools/qa/playthrough.ts:810 |
+| Clearing.cap (src/game/squad.ts) | deleted | tools/qa/soak.ts:183, tools/qa/soak.ts:906 |
 | Clearing.muster (src/game/squad.ts) | deleted | tools/blitz/puppet-apply.ts:4615 |
-| Clearing.say (src/game/squad.ts) | deleted | tools/blitz/puppet-apply.ts:7227, tools/blitz/puppet-apply.ts:7499 |
-| Clearing.tick (src/game/squad.ts) | deleted | tools/qa/headless.ts:244, tools/mp/server.ts:73, tools/mp/server.ts:98 |
+| Clearing.nextRoom (src/game/squad.ts) | deleted | tools/qa/soak.ts:167, tools/qa/soak.ts:168 |
+| Clearing.say (src/game/squad.ts) | deleted | tools/qa/wallcharge-commander.ts:44, tools/qa/wallcharge-commander.ts:56, tools/qa/wallcharge-commander.ts:63 |
+| Clearing.tick (src/game/squad.ts) | deleted | tools/qa/headless.ts:244, tools/qa/playthrough.ts:780, tools/qa/playthrough.ts:810 |
 | Cover.deal (src/game/cover.ts) | deleted | tools/blitz/puppet-apply.ts:1805, tools/blitz/puppet-apply.ts:2256 |
-| Cover.drop (src/game/cover.ts) | deleted | tools/blitz/puppet-apply.ts:1661 |
+| Cover.drop (src/game/cover.ts) | deleted | tools/qa/soak.ts:998, tools/qa/soak.ts:1008, tools/blitz/puppet-apply.ts:1661 |
 | Cover.facing (src/game/cover.ts) | deleted | tools/blitz/puppet-apply.ts:7702 |
-| Cover.free (src/game/cover.ts) | deleted | tools/blitz/puppet-apply.ts:1182, tools/blitz/puppet-apply.ts:1489, tools/blitz/puppet-apply.ts:4936 |
-| Cover.has (src/game/cover.ts) | gone | tools/blitz/export.ts:59, tools/blitz/export.ts:139, tools/blitz/export.ts:145 |
-| Cover.line (src/game/cover.ts) | deleted | tools/blitz/puppet-apply.ts:1894, tools/blitz/puppet-apply.ts:7479, tools/blitz/puppet-apply.ts:9081 |
-| Cover.spare (src/game/cover.ts) | deleted | tools/blitz/puppet-apply.ts:1122, tools/blitz/puppet-apply.ts:1626 |
-| Cover.tick (src/game/cover.ts) | deleted | tools/qa/headless.ts:244, tools/mp/server.ts:73, tools/mp/server.ts:98 |
+| Cover.line (src/game/cover.ts) | deleted | tools/qa/playthrough.ts:1723, tools/qa/lesson-run.ts:318, tools/blitz/puppet-apply.ts:1894 |
+| Cover.tick (src/game/cover.ts) | deleted | tools/qa/headless.ts:244, tools/qa/playthrough.ts:780, tools/qa/playthrough.ts:810 |
 | CpuSmoke.along (src/game/sense.ts) | gone | tools/blitz/puppet-apply.ts:3721, tools/blitz/puppet-apply.ts:8490 |
 | CpuSmoke.budget (src/game/sense.ts) | deleted | tools/blitz/puppet-apply.ts:9550 |
-| Cues.call (src/game/cues.ts) | deleted | tools/blitz/export.ts:62, tools/blitz/puppet-apply.ts:7631, tools/blitz/puppet-apply.ts:9536 |
-| Cues.tick (src/game/cues.ts) | crossing | tools/qa/headless.ts:244, tools/mp/server.ts:73, tools/mp/server.ts:98 |
+| Cues.tick (src/game/cues.ts) | crossing | tools/qa/headless.ts:244, tools/qa/playthrough.ts:780, tools/qa/playthrough.ts:810 |
 | Debris.feet (src/game/debris.ts) | deleted | tools/blitz/puppet-apply.ts:3294 |
 | Debris.land (src/game/debris.ts) | deleted | tools/blitz/puppet-apply.ts:1888, tools/blitz/puppet-apply.ts:3966, tools/blitz/puppet-apply.ts:7803 |
-| Debris.loose (src/game/debris.ts) | deleted | src/host/rustgame.ts:450, tools/blitz/export.ts:71 |
-| Debris.step (src/game/debris.ts) | deleted | tools/blitz/perturb.ts:83, tools/blitz/perturb.ts:84, tools/blitz/puppet-apply.ts:1533 |
+| Debris.loose (src/game/debris.ts) | deleted | src/host/rustgame.ts:450, tools/qa/playthrough.ts:225, tools/blitz/export.ts:71 |
+| Debris.step (src/game/debris.ts) | deleted | tools/blitz/perturb.ts:83, tools/blitz/perturb.ts:84, tools/qa/line-watch.ts:150 |
 | Debris.update (src/game/debris.ts) | deleted | tools/qa/headless.ts:243, tools/qa/headless.ts:246, tools/qa/headless.ts:247 |
-| Defuse.tick (src/game/defuse.ts) | deleted | tools/qa/headless.ts:244, tools/mp/server.ts:73, tools/mp/server.ts:98 |
+| Defuse.blow (src/game/defuse.ts) | deleted | tools/qa/playthrough.ts:986 |
+| Defuse.tick (src/game/defuse.ts) | deleted | tools/qa/headless.ts:244, tools/qa/playthrough.ts:780, tools/qa/playthrough.ts:810 |
 | Destruction.update (src/game/destruction.ts) | deleted | tools/qa/headless.ts:243, tools/qa/headless.ts:246, tools/qa/headless.ts:247 |
 | Director.lowerThird (src/game/director.ts) | deleted | tools/blitz/puppet-apply.ts:4760, tools/blitz/puppet-apply.ts:6615 |
 | Director.signal (src/game/director.ts) | crossing | tools/blitz/puppet-apply.ts:9270 |
-| Director.tick (src/game/director.ts) | deleted | tools/qa/headless.ts:244, tools/mp/server.ts:73, tools/mp/server.ts:98 |
+| Director.tick (src/game/director.ts) | deleted | tools/qa/headless.ts:244, tools/qa/playthrough.ts:780, tools/qa/playthrough.ts:810 |
 | DoorPath.advance (src/game/doorpath.ts) | deleted | tools/mp/server.ts:98 |
 | DoorPath.after (src/game/doorpath.ts) | deleted | tools/blitz/puppet-apply.ts:6303, tools/blitz/puppet-apply.ts:9699, tools/blitz/rust-host.ts:169 |
-| DoorPath.drop (src/game/doorpath.ts) | deleted | tools/blitz/puppet-apply.ts:1661 |
-| DoorPath.free (src/game/doorpath.ts) | deleted | tools/blitz/puppet-apply.ts:1182, tools/blitz/puppet-apply.ts:1489, tools/blitz/puppet-apply.ts:4936 |
+| DoorPath.drop (src/game/doorpath.ts) | deleted | tools/qa/soak.ts:998, tools/qa/soak.ts:1008, tools/blitz/puppet-apply.ts:1661 |
 | DoorPath.guns (src/game/doorpath.ts) | deleted | tools/blitz/puppet-apply.ts:1304, tools/blitz/puppet-apply.ts:5582 |
-| DoorPath.lay (src/game/doorpath.ts) | deleted | tools/blitz/puppet-apply.ts:2363, tools/blitz/puppet-apply.ts:9552, tools/blitz/puppet-apply.ts:9641 |
-| DoorPath.leaf (src/game/doorpath.ts) | deleted | tools/blitz/puppet-apply.ts:1903, tools/blitz/puppet-apply.ts:4464, tools/blitz/puppet-apply.ts:7136 |
-| DoorPath.leaves (src/game/doorpath.ts) | deleted | tools/blitz/scan.ts:21, tools/blitz/scan.ts:35, tools/blitz/scan.ts:38 |
-| DoorPath.move (src/game/doorpath.ts) | deleted | tools/blitz/puppet-apply.ts:2688 |
-| DoorPath.open (src/game/doorpath.ts) | deleted | tools/blitz/puppet-apply.ts:996, tools/blitz/puppet-apply.ts:3577, tools/blitz/puppet-apply.ts:3673 |
-| DoorPath.sent (src/game/doorpath.ts) | deleted | tools/blitz/puppet-apply.ts:1669, tools/blitz/puppet-apply.ts:4879, tools/blitz/puppet-apply.ts:5567 |
-| DoorPath.stand (src/game/doorpath.ts) | deleted | tools/blitz/puppet-apply.ts:4250, tools/blitz/puppet-apply.ts:8802, tools/blitz/puppet-apply.ts:9099 |
-| DoorPath.tick (src/game/doorpath.ts) | gone | tools/qa/headless.ts:244, tools/mp/server.ts:73, tools/mp/server.ts:98 |
-| DoorPath.total (src/game/doorpath.ts) | deleted | tools/blitz/puppet-apply.ts:2021, tools/blitz/puppet-apply.ts:5013 |
-| DoorPath.way (src/game/doorpath.ts) | deleted | tools/blitz/puppet-apply.ts:1543, tools/blitz/puppet-apply.ts:2141, tools/blitz/puppet-apply.ts:2551 |
-| DoorTools.arrived (src/game/doortools.ts) | deleted | tools/blitz/puppet-apply.ts:1100, tools/blitz/puppet-apply.ts:1252, tools/blitz/puppet-apply.ts:1340 |
+| DoorPath.summary (src/game/doorpath.ts) | deleted | tools/qa/solo-night.ts:275 |
+| DoorPath.tick (src/game/doorpath.ts) | gone | tools/qa/headless.ts:244, tools/qa/playthrough.ts:780, tools/qa/playthrough.ts:810 |
+| DoorPath.total (src/game/doorpath.ts) | deleted | tools/qa/playthrough.ts:1699, tools/qa/soak.ts:183, tools/qa/soak.ts:296 |
 | DoorTools.away (src/game/doortools.ts) | deleted | tools/blitz/puppet-apply.ts:9393 |
-| DoorTools.bang (src/game/doortools.ts) | deleted | tools/blitz/puppet-apply.ts:3944, tools/blitz/puppet-apply.ts:6480 |
+| DoorTools.bang (src/game/doortools.ts) | deleted | tools/qa/soak.ts:1168, tools/blitz/puppet-apply.ts:3944, tools/blitz/puppet-apply.ts:6480 |
 | DoorTools.flows (src/game/doortools.ts) | deleted | tools/blitz/puppet-apply.ts:1140 |
-| DoorTools.go (src/game/doortools.ts) | gone | tools/blitz/puppet-apply.ts:1155, tools/blitz/puppet-apply.ts:5426, tools/blitz/puppet-apply.ts:7575 |
-| DoorTools.input (src/game/doortools.ts) | deleted | tools/blitz/puppet-apply.ts:937, tools/blitz/puppet-apply.ts:2224, tools/blitz/puppet-apply.ts:4976 |
-| DoorTools.lastStack (src/game/doortools.ts) | deleted | tools/blitz/puppet-apply.ts:1074 |
+| DoorTools.go (src/game/doortools.ts) | gone | tools/qa/wallcharge-commander.ts:65, tools/qa/wallcharge-commander.ts:83, tools/blitz/puppet-apply.ts:1155 |
+| DoorTools.input (src/game/doortools.ts) | deleted | tools/qa/playthrough.ts:722, tools/qa/playthrough.ts:1690, tools/qa/lesson-run.ts:173 |
 | DoorTools.scan (src/game/doortools.ts) | deleted | tools/build.ts:16 |
 | DoorTools.short (src/game/doortools.ts) | deleted | tools/blitz/puppet-apply.ts:5026, tools/blitz/puppet-apply.ts:8607, tools/blitz/puppet-apply.ts:8999 |
-| DoorTools.step (src/game/doortools.ts) | deleted | tools/blitz/perturb.ts:83, tools/blitz/perturb.ts:84, tools/blitz/puppet-apply.ts:1533 |
+| DoorTools.step (src/game/doortools.ts) | deleted | tools/blitz/perturb.ts:83, tools/blitz/perturb.ts:84, tools/qa/line-watch.ts:150 |
+| DoorTools.tick (src/game/doortools.ts) | deleted | tools/qa/headless.ts:244, tools/qa/playthrough.ts:780, tools/qa/playthrough.ts:810 |
+| Doors.pick (src/game/doors.ts) | gone | tools/qa/tour.ts:125, tools/qa/tour.ts:149, tools/qa/tour.ts:390 |
+| Doors.pull (src/game/doors.ts) | crossing | tools/blitz/puppet-apply.ts:6041, tools/blitz/puppet-apply.ts:6055, tools/blitz/puppet-apply.ts:6183 |
+| Doors.update (src/game/doors.ts) | crossing | tools/qa/headless.ts:243, tools/qa/headless.ts:246, tools/qa/headless.ts:247 |
+| EdgeLook.feet (src/game/edgeLook.ts) | gone | tools/blitz/puppet-apply.ts:3294 |
+| EdgeLook.summary (src/game/edgeLook.ts) | deleted | tools/qa/solo-night.ts:275 |
+| EdgeLook.update (src/game/edgeLook.ts) | deleted | tools/qa/headless.ts:243, tools/qa/headless.ts:246, tools/qa/headless.ts:247 |
+| EntryPoints.mark (src/game/entrypoints.ts) | gone | tools/qa/playthrough.ts:1689, tools/qa/playthrough.ts:1691, tools/blitz/export.ts:89 |
+| EntryPoints.tick (src/game/entrypoints.ts) | gone | tools/qa/headless.ts:244, tools/qa/playthrough.ts:780, tools/qa/playthrough.ts:810 |
+| FallStore.due (src/sim/fallshome.ts) | deleted | tools/blitz/puppet-apply.ts:3383, tools/blitz/puppet-apply.ts:6697 |
 
 ### Kept, and never seen to run
 
-3754 of the 5937 functions that keep a body (26960 lines) were never seen to run as TypeScript in any play of the census. The checker reaches each from the page or a host, so it stays: most are what only a draw, a panel, the workbench or a start nobody played would run, and the rest are dead in practice. `delete-plan.tsv` has them (the `seen` column is empty): the list a cleanup with a real GPU would start from.
+3983 of the 6166 functions that keep a body (28777 lines) were never seen to run as TypeScript in any play of the census. The checker reaches each from the page or a host, so it stays: most are what only a draw, a panel, the workbench or a start nobody played would run, and the rest are dead in practice. `delete-plan.tsv` has them (the `seen` column is empty): the list a cleanup with a real GPU would start from.
 
 ### The checks that lost a function they called
 
 Nothing is restaged here: this is the list to fix forward from. `tools/blitz/delete-lost.tsv` has every row (a tool, a function, how the tool names it).
 
-- 150 files of tools/ name, by a reference the checker resolves, a function of the tick that the Rust game has no row for (189 functions). Each keeps its signature and throws by name when the check calls it.
-- 753 files read, off a game typed `any`, a name that matches a function which went. By name only: the file may mean another object's method of that name.
-- 244 files TEST for such a name (`g.f?.()`, `typeof g.f === 'function'`) at 1288 places: a check that takes the other branch quietly. These are the ones to read first.
+- 130 files of tools/ name, by a reference the checker resolves, a function of the tick that the Rust game has no row for (151 functions). Each keeps its signature and throws by name when the check calls it.
+- 698 files read, off a game typed `any`, a name that matches a function which went. By name only: the file may mean another object's method of that name.
+- 174 files TEST for such a name (`g.f?.()`, `typeof g.f === 'function'`) at 802 places: a check that takes the other branch quietly. These are the ones to read first.
 
 The files that name the most functions which now throw:
 
 | tool | functions that throw by name |
 |---|---|
-| tools/qa/bigslot-check.ts | kitSlingFront, kitInHand, samBig, hammerBlows, bigOutBy, bigWind, bigSwing, bigEquip … (10) |
-| tools/qa/rails-check.ts | Checkpoints.loadInStep, Rails.locksWall, Rails.gate, Rails.tick, stalkCould, Rails.stepEye, RoomFight.tickMove, Rails.runs … (9) |
-| tools/qa/wand-check.ts | SquadOrders.open, wandLens, wandOffered, wandFov, wandPanMax, wandEye, wandFits, wandFeedSecs |
-| tools/qa/fn2000-probes.ts | rifleSpread, ocpable, closeLethal, closeBare, kitReload, Firearm.autoSpread |
-| tools/qa/soak.ts | closeBare, CharacterAnimator.reloadShow, agitationOf, whistleMem, stillLooking, Firearm.reloadRow |
-| tools/qa/layer-ident.ts | beatOf, CharacterAnimator.tell, CharacterAnimator.nvFlip, CharacterAnimator.blow, CharacterAnimator.taken, CharacterAnimator.takenCancel |
-| tools/qa/sticky-check.ts | wandOffered, wandFits, stickyEyes, stickyBoxes, stickyRows |
-| tools/qa/sense-ident.ts | FogOfWar.handEyes, FogOfWar.sees, CpuSmoke.along, StaticCollision.tickOpen, StaticCollision.tickShut |
-| tools/qa/gunroles-check.ts | gunString, gunStringGap, gunLane, gunLast, gunBlindGap |
-| tools/qa/kitanim-probes.ts | kitSlingFront, kitInHand, kitCloseness, CharacterAnimator.reloadShow |
+| tools/qa/bigslot-check.ts | samBig, bigOutBy, bigWind, bigSwing, bigEquip, samBigTail, samBigLeft |
+| tools/qa/rails-check.ts | Checkpoints.loadInStep, Rails.locksWall, Rails.gate, Rails.tick, stalkCould, RoomFight.tickMove, Rails.runs |
+| tools/qa/fn2000-probes.ts | rifleSpread, ocpable, closeLethal, kitReload, Firearm.autoSpread |
 | tools/qa/bigmoves-strip.ts | bigOutBy, bigSwing, bigEquip, bigStow |
 | tools/qa/door-ident.ts | Doors.pick, StaticCollision.tickOpen, StaticCollision.tickShut, Doors.updateBoth |
 | tools/qa/gunslots-check.ts | rifleSpread, sideLocked, feedCues, beatOf |
 | tools/qa/handring-check.ts | handRingKeys, loneKey, pillBox, wedgeAt |
 | tools/qa/pane-ident.ts | GlassBreak.update, StaticCollision.tickOpen, StaticCollision.tickShut, GlassShards.update |
-| tools/qa/dialogue-probes.ts | heldTalk, samBeat, agitationOf, samStageOf |
+| tools/qa/layer-ident.ts | beatOf, CharacterAnimator.tell, CharacterAnimator.nvFlip, CharacterAnimator.takenCancel |
 | tools/qa/slab-ident.ts | StaticCollision.tickOpen, StaticCollision.tickShut, SlabStore.doorAt, slabDiff |
-| tools/qa/prop-ident.ts | StaticCollision.tickOpen, StaticCollision.tickShut, PropSystem.update, PropSystem.updateHere |
-| tools/qa/ai-probes.ts | colleagueInLine, aimAhead, doorLabel |
-| tools/qa/litman-probes.ts | RoomFight.short, RoomFight.funnelOf, RoomFight.holdShort |
-| tools/qa/wallcharge-probes.ts | SquadOrders.open, Cover.has, interactOrder |
+| tools/qa/gunroles-check.ts | gunString, gunStringGap, gunLane, gunLast |
+| tools/qa/sticky-check.ts | wandOffered, stickyBoxes, stickyRows |
 | tools/qa/netquiet-check.ts | mate, netQuietLook, netFeedAsked |
 | tools/qa/close-probes.ts | closeLethal, closeReady, closeNoise |
-| tools/qa/glassbreak-probes.ts | GlassBreak.bang, GlassBreak.update, Wind.stormWind |
 | tools/qa/segment-ident.ts | GlassBreak.update, StaticCollision.tickOpen, StaticCollision.tickShut |
 | tools/qa/devices-probes.ts | heldTalk, lensDir, bodyBreaks |
-| tools/qa/key-probes.ts | heldTalk, samBeat, agitationOf |
-| tools/qa/doorstay-probes.ts | Doors.hasCloser, handPress, Doors.passBit |
+| tools/qa/dialogue-probes.ts | heldTalk, samBeat, samStageOf |
+| tools/qa/sense-ident.ts | CpuSmoke.along, StaticCollision.tickOpen, StaticCollision.tickShut |
+| tools/qa/prop-ident.ts | StaticCollision.tickOpen, StaticCollision.tickShut, PropSystem.update |
 | tools/qa/doorbrisk-check.ts | teamWalk, teamWalkOf, teamSprinting |
 | tools/qa/pacing-check.ts | teamWalk, teamWalkOf, teamCap |
 | tools/qa/kitload-check.ts | loadGait, teamLegs, loadHeard |
 | tools/qa/condition-check.ts | conditionSup, guardFireMods, samSpread |
-| tools/qa/spotted-probes.ts | shotLine, spottedFeet, spottedKeen |
-| tools/qa/line-watch.ts | colleagueInLine, RoomFight.short |
-| tools/qa/standoff-probes.ts | colleagueInLine, pairOf |
-| tools/qa/discipline-probes.ts | colleagueInLine, pairOf |
 | tools/qa/stackview-check.ts | ClearedRooms.mark, DoorTools.go |
-| tools/qa/frag-probes.ts | lying, lyingShows |
+| tools/qa/litman-probes.ts | RoomFight.funnelOf, RoomFight.holdShort |
 | tools/qa/silent-probes.ts | Doors.pick, quietGun |
-| tools/qa/sticky-cover.ts | wandLens, wandFits |
+| tools/qa/wand-check.ts | wandOffered, wandFeedSecs |
+| tools/qa/enemysquads-probes.ts | mate, Cues.net |
+| tools/qa/quiet-pair.ts | closeLethal, outThrough |
+| tools/qa/ringflat-check.ts | SquadOrders.ringUp, SquadOrders.flatRing |
+| tools/qa/glassbreak-probes.ts | GlassBreak.update, Wind.stormWind |
+| tools/qa/frameholds-probes.ts | digInWedged, Doors.wedgeHolds |
+| tools/qa/gunhold-check.ts | pairOf, gunHoldPhase |
+| tools/qa/showwhy-check.ts | DoorTools.doorKeepers, DoorTools.go |
+| tools/qa/noshove-check.ts | DoorTools.doorKeepers, noShoveOwn |
+| tools/qa/key-probes.ts | heldTalk, samBeat |
+| tools/qa/ai-probes.ts | aimAhead, doorLabel |
+| tools/qa/words-probes.ts | doorLabel, gunHoldPool |
+| tools/qa/he40-probes.ts | shellMan, shellBodies |
+| tools/qa/workstow-check.ts | sideLocked, CharacterAnimator.workInfo |

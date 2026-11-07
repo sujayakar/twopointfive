@@ -38,6 +38,11 @@ pub fn squad_barricade(q: &crate::scene_scenarios::SquadData, rooms: &[crate::sc
     out
 }
 
+/// A row of the lesson group, the tutorial's missions.   (scenarios.ts lessonGroup)
+pub fn lesson_group(g_2: Option<&str>) -> bool {
+    g_2 == Some("tutorial")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -81,4 +86,10 @@ mod tests {
         assert!(squad_barricade(&squad(None, None), &rooms).is_empty());
     }
 
+    #[test]
+    fn only_the_tutorial_is_the_lesson_group() {
+        assert!(lesson_group(Some("tutorial")));
+        assert!(!lesson_group(Some("raids")));
+        assert!(!lesson_group(None));
+    }
 }

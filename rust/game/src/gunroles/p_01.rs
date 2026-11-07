@@ -54,6 +54,17 @@ fn held_row(g: &Game, gd: GuardId) -> &crate::weapons::WeaponDef {
     row(g, g.fa[g.gd[gd].weapon].def)
 }
 
+/// Whether a rule of guns is on: all settled on, on the page. (gunroles.ts useOn)
+pub fn use_on(g: &mut crate::game::Game, key: crate::gunroles::UseOnKey) -> bool {
+    true
+}
+
+/// The row of his primary: the long gun on its sling while the sidearm is out, his own while the big slot's shotgun is in his hands. (gunroles.ts gunPrimary)
+pub fn gun_primary(g: &mut crate::game::Game, gd: GuardId) -> crate::weapons::WeaponDef {
+    let d = primary_id(g, gd);
+    row(g, d).clone()
+}
+
 /// What his primary is for. (gunroles.ts gunRole)
 pub fn gun_role(g: &mut crate::game::Game, gd: GuardId) -> crate::gunroles::GunRole {
     let d = primary_id(g, gd);

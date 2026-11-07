@@ -44,6 +44,19 @@ pub fn rescue_flow_f(g: &mut crate::game::Game) -> Option<crate::scene_scenarios
     crate::rescue::rescue_data(g).and_then(|d| d.flow)
 }
 
+/// The level's openings. (rescueflow.ts RescueFlow.route)
+pub fn rescue_flow_route(g: &mut crate::game::Game) -> Vec<crate::scene_scenarios::RouteOpening> {
+    match rescue_flow_f(g) {
+        Some(f) => f.route,
+        None => Vec::new(),
+    }
+}
+
+/// (rescueflow.ts RescueFlow.constructor)
+pub fn rescue_flow_new(g: &mut crate::game::Game) -> crate::rescueflow::RescueFlow {
+    RescueFlow::blank()
+}
+
 /// A fresh staging: nothing known, nobody on a job. (rescueflow.ts RescueFlow.reset)
 pub fn rescue_flow_reset(g: &mut crate::game::Game) {
     let f = &mut g.rescue.flow;
@@ -73,6 +86,24 @@ pub fn rescue_flow_release(g: &mut crate::game::Game, men: &[GuardId]) {
     for &gd in men {
         g.rescue.flow.jobs.delete(gd);
     }
+}
+
+/// (rescueflow.ts RescueFlow.stateOf)
+pub fn rescue_flow_state_of(g: &mut crate::game::Game, id_2: &str) -> Option<crate::rescueflow::OpenState> {
+    g.rescue.flow.known.iter().find(|k| k.o.id == id_2).map(|k| k.state)
+}
+
+/// (rescueflow.ts RescueFlow.jobOf)
+pub fn rescue_flow_job_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::rescueflow::RescueFlowJobOf> {
+    let j = g.rescue.flow.jobs.get(gd)?;
+    Some(RescueFlowJobOf {
+        kind: match j.kind {
+            JobKind::Cover => RescueFlowJobOfKind::Cover,
+            JobKind::Corridor => RescueFlowJobOfKind::Corridor,
+        },
+        opening: j.o.id.clone(),
+        queued: j.chain.iter().map(|o| o.id.clone()).collect(),
+    })
 }
 
 /// Sample each region's floor and make a row per opening. (rescueflow.ts RescueFlow.build)

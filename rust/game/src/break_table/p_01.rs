@@ -336,10 +336,13 @@ mod tests {
     const OUTLINE: u64 = 0x0271d81e5c36523c;
     const WALL: u64 = 0x49add9f7ce54aa50;
     const RAGGED: u64 = 0xd985aa2a8a03a242;
+    const TABLE: u64 = 0xeb464685076bdf0d;
+
     struct Fold(u64);
     impl Fold {
         fn new() -> Self { Fold(0xcbf29ce484222325) }
         fn f(&mut self, x: f64) { assert!(x == x); self.0 = (self.0 ^ x.to_bits()).wrapping_mul(0x100000001b3); }
+        fn w(&mut self, s: &str) { self.f(s.len() as f64); for b in s.bytes() { self.f(b as f64); } }
         fn pts(&mut self, o: &[P2]) { self.f(o.len() as f64); for p in o { self.f(p[0]); self.f(p[1]); } }
     }
     /// `BREAK[mat]`, off the skeleton's rows (the test below holds them to the TypeScript's bits)
@@ -424,4 +427,21 @@ mod tests {
         assert_eq!(f.0, RAGGED);
     }
 
+    #[test]
+    fn the_table_matches_the_typescript_bits() {
+        let mut f = Fold::new();
+        for mat in [Mat::Plasterboard, Mat::Masonry, Mat::Blockwork, Mat::Wood, Mat::Metal, Mat::Glass, Mat::GlassTough, Mat::GlassLam, Mat::Screen, Mat::Fabric, Mat::Paper, Mat::Cardboard, Mat::Tile, Mat::Plastic, Mat::Carpet, Mat::Plant] {
+            let r = break_row(mat);
+            f.w(mat.as_str());
+            match r.core { Some(c) => { f.f(c[0]); f.f(c[1]); f.f(c[2]); } None => f.f(-1.0) }
+            f.f(r.pale.unwrap_or(-1.0));
+            f.f(r.cell.len() as f64);
+            for s in r.cell { f.w(s.as_str()); }
+            for x in [r.thick, r.span[0], r.span[1], r.slim[0], r.slim[1], r.tears[0], r.tears[1]] { f.f(x); }
+            match r.ragged { Some(g) => { f.f(g.deg[0]); f.f(g.deg[1]); f.f(g.bite); f.f(if g.grain == Some(true) { 1.0 } else { 0.0 }); } None => f.f(-1.0) }
+            match r.again { Some(a) => { f.f(a.land); f.f(a.kick); f.w(a.how.as_str()); f.f(a.chips); f.f(a.chance.unwrap_or(-1.0)); } None => f.f(-1.0) }
+            for x in [r.small.n, r.small.size[0], r.small.size[1], r.small.aspect[0], r.small.aspect[1], r.dust, r.sparks, r.puff, r.rest, r.level, r.mark] { f.f(x); }
+        }
+        assert_eq!(f.0, TABLE);
+    }
 }

@@ -60,6 +60,9 @@ pub fn hash01(x: f64) -> f64 {
     ((x >> 8) as f64) / 16777216.0
 }
 
+/// A new pool.   (debris.ts Debris.constructor)
+pub fn debris_new(g: &mut crate::game::Game) -> crate::debris::Debris { crate::debris::Debris::blank() }
+
 /// The pool's size on this tier; 64 without one.   (debris.ts Debris.cap)
 pub fn debris_cap(g: &mut crate::game::Game) -> f64 {
     let c = g.engine.settings.debris_cap;
@@ -840,6 +843,13 @@ pub fn debris_land(g: &mut crate::game::Game, c_2: DebrisChunkId, speed: f64) {
         let (time, level, who, ev) = (g.time, g.tab.debris_chunk[c].level, g.tab.debris_chunk[c].who, g.serial());
         g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Prop, pos: p, time, loud: false, level: Some(level), who: Some(who), serial: ev, ..crate::game::GameEvent::zeroed() });
     }
+}
+
+/// The panel's and QA's line.   (debris.ts Debris.summary)
+pub fn debris_summary(g: &mut crate::game::Game) -> String {
+    let (n, cap, moving) = (g.destr.debris.list.len(), debris_cap(g), debris_moving(g));
+    let s = g.destr.debris.stats;
+    alloc::format!("debris {}/{} ({} moving) · spawned {} · refused {} · evicted {} · landings {} · peak {}/{} moving", n, cap, moving, s.spawned, s.refused, s.evicted, s.landed, s.peak_live, s.peak_moving)
 }
 
 /// The box's half extent along world direction n.   (debris.ts supportAlong)

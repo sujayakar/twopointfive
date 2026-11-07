@@ -455,6 +455,23 @@ pub fn dark_foe_tick(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
+/// QA / the panel: what the rule has of a man (None = never asked of him).   (darkfoe.ts darkFoeOf)
+pub fn dark_foe_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::darkfoe::DarkFoeOf> {
+    g.m.darkfoe.state_of.get(gd).map(|s| crate::darkfoe::DarkFoeOf {
+        knows: s.knows,
+        word: s.word,
+        blind: s.blind,
+        ask: s.ask,
+        lit: s.lit,
+        against: s.against,
+        held: s.held,
+        blind_for: s.blind_for,
+        moves: s.moves,
+        since: s.since,
+        to: s.to,
+    })
+}
+
 /// The debug panel's line: what the rule has of each man it rules.   (darkfoe.ts darkFoeSummary)
 pub fn dark_foe_summary(g: &mut crate::game::Game) -> String {
     let mut men: Vec<String> = Vec::new();

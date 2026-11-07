@@ -11,19 +11,46 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 fn block_d(slot: usize) -> &'static mut [f64] {
     unsafe { core::slice::from_raw_parts_mut(::sim::state::addr(slot) as *mut f64, ::sim::state::LEN >> 3) }
 }
-/// The same doubles, to read.
-fn block_d_read(slot: usize) -> &'static [f64] {
-    unsafe { core::slice::from_raw_parts(::sim::state::addr(slot) as *const f64, ::sim::state::LEN >> 3) }
-}
 
 /// The module's scratch, as doubles from its first: what `f64()` reads at `wxScratch()`.   (weatherhome.ts wxOut's `m[a + i]`)
 fn scratch_d() -> &'static [f64] {
     unsafe { core::slice::from_raw_parts(::sim::sim_scratch() as *const f64, ::sim::sim_scratch_len()) }
 }
 
+/// Where column `c` stands, in bytes from the block's own start.   (weatherhome.ts wxAt)
+pub fn wx_at(g: &mut crate::game::Game, c_2: f64) -> f64 {
+    crate::sim_state::sim_part(crate::sim_state::P_WEATHER) + ::sim::weather::col(c_2 as u32) as f64
+}
+
+/// A column of the weather's table, read in place in the game's block.   (weatherhome.ts wxGet)
+pub fn wx_get(g: &mut crate::game::Game, st: crate::Opaque, c_2: f64) -> f64 {
+    let i = (js::to_u32(wx_at(g, c_2)) >> 3) as usize;
+    block_d(g.sim)[i]
+}
+
+/// A column of the weather's table, written in place in the game's block.   (weatherhome.ts wxSet)
+pub fn wx_set(g: &mut crate::game::Game, st: &mut crate::Opaque, c_2: f64, v: f64) {
+    let i = (js::to_u32(wx_at(g, c_2)) >> 3) as usize;
+    block_d(g.sim)[i] = v;
+}
+
 /// The module's scratch, as an index of doubles over its memory.   (weatherhome.ts wxScratch)
 pub fn wx_scratch() -> f64 {
     (::sim::sim_scratch() as usize >> 3) as f64
+}
+
+/// Rows of the roofs' table, of the thunder list, and the plan's size.   (weatherhome.ts wxCap)
+pub fn wx_cap(i: f64) -> f64 {
+    ::sim::weather_cap(i as u32) as f64
+}
+
+/// How many of `boxes` are roofs at all, by the rule roofsOf makes the table with.   (weatherhome.ts roofsCounted)
+pub fn roofs_counted(boxes: &[crate::sim_weatherhome::RoofsCountedBoxesItem], ceiling: f64) -> f64 {
+    ::sim::weather::roofs_begin();
+    for b in boxes {
+        ::sim::weather::roofs_box(b.c[0], b.c[1], b.c[2], b.h[0], b.h[1], b.h[2], ceiling);
+    }
+    ::sim::weather::roofs_seen() as f64
 }
 
 /// Copy `n` doubles from the scratch.   (weatherhome.ts wxOut)
@@ -39,6 +66,8 @@ pub fn wx_out(n: f64) -> Vec<f64> {
 }
 
 pub mod wx_knobs {
+    /// The body this line of the TypeScript has: nothing. rustknobs.ts:59 replaces it, and that needs `g` (notes, Skeleton).   (weatherhome.ts WX_KNOBS.here)
+    pub fn here() {}
 }
 
 #[cfg(test)]
@@ -74,4 +103,18 @@ mod tests {
         assert_eq!((wx_scratch() as usize) << 3, ::sim::sim_scratch() as usize);
     }
 
+    /// The centre and the half size reach the rule in their places, and the ceiling with them.
+    #[test]
+    fn roofs_counted_hands_each_box_over_in_order() {
+        let boxy = |c: [f64; 3], h: [f64; 3]| RoofsCountedBoxesItem { c: c.to_vec(), h: h.to_vec() };
+        let boxes = [
+            boxy([1.0, 3.0, 2.0], [0.5, 0.1, 0.5]),   // a slab at the ceiling
+            boxy([1.0, 3.0, 2.0], [0.1, 0.5, 0.5]),   // its x and y half sizes crossed: thin and tall
+            boxy([3.0, 1.0, 2.0], [0.5, 0.1, 0.5]),   // its x and y centre crossed: far below
+        ];
+        assert_eq!(roofs_counted(&boxes, 3.0), 1.0);
+        assert_eq!(roofs_counted(&boxes, 1.0), 1.0);
+        assert_eq!(roofs_counted(&boxes, 9.0), 0.0);
+        assert_eq!(roofs_counted(&[], 3.0), 0.0);
+    }
 }

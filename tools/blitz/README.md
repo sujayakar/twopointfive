@@ -90,7 +90,13 @@ tools/blitz/hold.sh runs/            # or one file; exit 0 = every run the same 
 A run that was in step can be kept as one file (about 3 MB): the start, the host's half of every tick, the driver's record and `post.txt`, the die's
 count and a hash of each part of the block after every tick. `hold.sh` steps the Rust game through it again on the runner alone and compares after every
 tick, with no TypeScript side. It sees the block and the die, not the paths of the game's own state (those needed the TypeScript's whole states), and it
-reads the start with the import as it is built: a change of the wire needs the runs kept again.
+reads the start with the import as it is built.
+
+A kept run outlives a change of the wire: its records, orders and series are not bound to it, only the start's bytes and the host's half of a
+tick are. `keep.sh` stamps a run with the wire's layout (`layout.txt`); where `hold.sh` meets a run of another layout, or of none, it stands the
+start again from this tree by the run's own command (`mission.ts` or `seats.ts --start-only` under `TPS_GAME=none`: the TypeScript start alone, no
+tick), plays the kept records on it and holds the kept series, and its line says so. Equal means the play did not change with nothing but the
+start made again; a parting at tick 1 means the start itself moved. What it cannot do is in the head of `hold.sh`.
 
 ## A game of two seats
 

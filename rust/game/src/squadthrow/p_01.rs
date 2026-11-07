@@ -343,6 +343,12 @@ pub fn roll_of(g: &mut crate::game::Game, kind: crate::squadthrow::SquadThrowKin
     if kind == SquadThrowKind::Frag { Some(g.k.squadthrow.frag_roll_k) } else { None }
 }
 
+/// his own throw is still in the air: the toss has to finish (squadthrow.ts tossing)
+pub fn tossing(g: &mut crate::game::Game, s: Option<&crate::squadthrow::State>, gd: GuardId) -> bool {
+    let t = s.and_then(|s| s.last.get(gd).copied()).unwrap_or(-1e9);
+    toss_window(g, t)
+}
+
 /// his hands are on something else: a charge, a door's handle or boot, a thing he works, a magazine (squadthrow.ts handsAtWork)
 pub fn hands_at_work(g: &mut crate::game::Game, gd: GuardId) -> bool {
     use crate::doortools::Phase as DoorPhase;

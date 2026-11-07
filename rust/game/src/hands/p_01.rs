@@ -24,6 +24,12 @@ fn hinge(g: &Game, d: DoorId) -> [f64; 2] { g.dr[d].def.hinge }
 
 // ------------------------------------------------------------------------------------------------ a body
 
+/// HANDS.on && HANDS.body, both settled on on the page. (hands.ts bodyOn)
+pub fn body_on(g: &mut crate::game::Game) -> bool { true }
+
+/// HANDS.on && HANDS.door, both settled on on the page. (hands.ts doorOn)
+pub fn door_on(g: &mut crate::game::Game) -> bool { true }
+
 /// His hands or feet are spoken for by something else: no door is worked by hand. (hands.ts handsBusy)
 pub fn hands_busy(g: &mut crate::game::Game) -> bool {
     let pl = g.player;
@@ -637,6 +643,42 @@ fn find_spot(g: &mut Game, d: DoorId, a0: f64, a1: f64, p: V3, need: f64, wall: 
         r += 0.1;
     }
     best
+}
+
+/// A limp body lying where the leaf would sweep on its way from a0 to a1. (hands.ts limpInSweep)
+pub fn limp_in_sweep(g: &mut crate::game::Game, d: DoorId, a0: f64, a1: f64) -> bool {
+    let h = hinge(g, d);
+    let reach = g.dr[d].def.width + 0.3;
+    let (thick, height) = (g.dr[d].thick, g.dr[d].height);
+    let mut q: V3 = [0.0, 0.0, 0.0];
+    for list in 0..2 {
+        let mut n = 0;
+        loop {
+            let of = if list == 0 { &g.guards } else { &g.civilians };
+            let Some(&gd) = of.get(n) else { break };
+            n += 1;
+            let c = g.gd[gd].ch;
+            if let Some(wound) = g.gd[gd].wound {
+                let at = if wound.pose == crate::wounds::WoundPose::Back {
+                    *g.ch[c].bones.get(crate::character::Bone::Hips).unwrap()
+                } else {
+                    g.ch[c].pos
+                };
+                if sweep_dist(g, d, a0, a1, at) < 0.3 + thick / 2.0 + 0.02 { return true; }
+            }
+            let Some(rag) = g.ch[c].ragdoll else { continue };
+            let mut i = 0.0;
+            while i < crate::ragdoll::RAG_COUNT {
+                let this = i;
+                i += 1.0;
+                crate::ragdoll::ragdoll_point(g, rag, this, Some(&mut q));
+                let r = rad(g, rag, this);
+                if q[1] - r > height || m::hyp2(q[0] - h[0], q[2] - h[1]) > reach { continue; }
+                if sweep_dist(g, d, a0, a1, q) < r + thick / 2.0 + 0.02 { return true; }
+            }
+        }
+    }
+    false
 }
 
 /// A 'push' / 'pull' / 'unlock' row performed on d: start working it by hand. False = not this way, the caller does what it always did. (hands.ts doorMoveBegin)

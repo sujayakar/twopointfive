@@ -54,6 +54,45 @@ pub fn net_quiet_pose(g: &mut crate::game::Game, gd: GuardId, dt: f64, eyes_on_f
     Some(crate::netquiet::NetQuietPose { aim: Some([at[0], 1.1, at[2]]), crouch: 0.0 })
 }
 
+/// QA: where the last man's rule would send this man now, and the arc from there or from where he stands. (netquiet.ts netQuietSpot)
+pub fn net_quiet_spot(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::netquiet::NetQuietSpot> {
+    let def = g.fight.defs.iter().copied().find(|&d| g.tab.roomfight_def[d].gd == gd)?;
+    let r = g.tab.roomfight_def[def].room?;
+    let to = low_spot(g, gd, r);
+    let entries = g.tab.roomfight_room[r].entries.clone();
+    let p = match to { Some(to) => to, None => g.ch[g.gd[gd].ch].pos };
+    let a = arc_at(g, &entries, p);
+    Some(crate::netquiet::NetQuietSpot { to, arc: a.arc, seen: a.seen })
+}
+
+/// QA: what the rule has of a man, None if never met. A copy of his row, as of this call. (netquiet.ts netQuietOf)
+pub fn net_quiet_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::netquiet::Mind> {
+    g.m.netquiet.state_of.get(gd).cloned()
+}
+
+/// 'net ▸ Tango 2 quiet ×2 · Tango 4 LAST low (arc 31°)': every living man with anything on him. (netquiet.ts netQuietSummary)
+pub fn net_quiet_summary(g: &mut crate::game::Game) -> String {
+    if !live(g) { return String::new(); }
+    const ACTS: [&str; 5] = ["", "LAST said", "LAST backing", "LAST low", "LAST"];
+    let mut men: Vec<String> = Vec::new();
+    for gd in g.guards.clone() {
+        if !ours(g, gd) { continue; }
+        let Some(n) = g.m.netquiet.state_of.get(gd) else { continue };
+        if !(n.quiet > 0.0 || n.last != NONE || n.whip_at.is_some()) { continue; }
+        let quiet = if js::truthy(n.quiet) { alloc::format!(" quiet ×{}", js::num_str(n.quiet)) } else { String::new() };
+        let act = if js::truthy(n.last) {
+            let arc = if n.last == LOW { alloc::format!(" (arc {}°)", js::num_str(m::round(n.arc / v3::DEG))) } else { String::new() };
+            alloc::format!(" {}{}", ACTS[n.last as usize], arc)
+        } else {
+            String::new()
+        };
+        let whip = if n.whip_at.is_some() { " whip" } else { "" };
+        men.push(alloc::format!("{}{}{}{}", g.gd[gd].callsign, quiet, act, whip));
+    }
+    let list = men.join(" · ");
+    alloc::format!("net ▸ {}", if list.is_empty() { "every man answered" } else { list.as_str() })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -89,4 +128,8 @@ mod tests {
         });
     }
 
+    #[test]
+    fn net_quiet_of_is_none_for_a_man_never_met() {
+        on_a_game(|g| { assert!(net_quiet_of(g, GuardId(0)).is_none()); });
+    }
 }

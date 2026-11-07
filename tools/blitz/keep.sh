@@ -5,4 +5,6 @@
 O=$1; F=$2; shift 2; [ -s "$O/post.txt" ] && [ -s "$O/c1.bin" ] || { echo "keep.sh: $O is no run of the loop"; exit 64; }
 mkdir -p "$(dirname "$F")"
 { echo "command: $*"; echo "tree: $(git rev-parse --short HEAD 2>/dev/null)"; echo "made: $(date -u +%Y-%m-%dT%H:%MZ)"; echo "result: $(grep -a '^DONE\|PARTED\|^PANIC' "$O/rust.log" 2>/dev/null | head -1 | cut -c1-200)"; } > "$O/command.txt"
-( cd "$O" && ls | grep -E '^(c1|s0|h[0-9]+|L[0-9]+|Ls[0-9]+|knobs)\.bin$|^(post|host|between|gives|hostwrites|meter|charges|ticks|case|call|die|command)\.txt$' | tar --zstd -cf - -T - ) > "$F"
+# (the layout of the wire the start's bytes are of: hold.sh makes the start again where its tree's is another)
+grep -o '"layout":[0-9]*' "$(dirname "$0")/schema.json" | cut -d: -f2 > "$O/layout.txt"
+( cd "$O" && ls | grep -E '^(c1|s0|h[0-9]+|L[0-9]+|Ls[0-9]+|knobs)\.bin$|^(post|host|between|gives|hostwrites|meter|charges|ticks|case|call|die|command|layout)\.txt$' | tar --zstd -cf - -T - ) > "$F"

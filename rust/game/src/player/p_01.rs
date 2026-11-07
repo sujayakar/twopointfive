@@ -17,6 +17,19 @@ fn def_of(g: &crate::game::Game, def: crate::weapons::WeaponId) -> &crate::weapo
 /// how long his line hangs over him before the man answers (player.ts samBeat)
 pub fn sam_beat(chars: f64) -> f64 { v3::clamp(0.7 + 0.018 * chars, 0.9, 1.4) }
 
+/// his collision circle's radius against the statics with his centre at `p` (player.ts playerBodyR)
+pub fn player_body_r(g: &mut crate::game::Game, p: V3) -> f64 { body_r(g, p) }
+
+/// the player's own push-out of the statics for a spot he is not standing on yet (player.ts settleSpot)
+pub fn settle_spot(g: &mut crate::game::Game, p: &mut V3) {
+    let y1 = if g.pl[g.player].crouch { 1.0 } else { 1.7 };
+    for _k in 0..4 {
+        let r = body_r(g, *p);
+        crate::scene_collision::collide_circle(g, p, r, 0.2, y1, Some(6.0));
+        if !crate::scene_collision::clamp_to_world(g, p, BODY_R) { break; }
+    }
+}
+
 /// he is as wide as his shoulders in a door frame: BODY_R narrows to DOOR_R on a doorway's middle line (player.ts bodyR)
 pub fn body_r(g: &mut crate::game::Game, p: V3) -> f64 {
     let fit = door_fit();

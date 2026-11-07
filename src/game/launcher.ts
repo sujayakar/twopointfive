@@ -97,7 +97,14 @@ export function arcSolve(g: Game, from: Vec3, target: Vec3, R: Ballistics): Thro
 
 /** Let one ring go from `from` at `target` off `shooter`'s launcher: it is in the air from this frame (Game.rings), the launcher's whoosh-thunk plays at the tube, and
  *  the room inside nine metres or so hears it go (a 'prop' event at the shooter, RING.launchNoise — not gunfire: nobody eighty metres off learns a thing). */
-export function fireRing(g: Game, shooter: Character, from: Vec3, target: Vec3): Ring { return crossToRust('fireRing', undefined, [g, shooter, from, target]) as any; }
+export function fireRing(g: Game, shooter: Character, from: Vec3, target: Vec3): Ring { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('fireRing', undefined, [g, shooter, from, target]); if (__r !== RUST_PASS) return __r as any; } }
+  const ring: Ring = { pos: v3.copy(from), vel: launchVel(from, target), age: 0, shooter, spin: simRandom() * Math.PI };
+  g.rings.push(ring);
+  g.audio.play('launcher', from, 0.8);
+  g.events.push({ kind: 'prop', pos: v3.copy(shooter.pos), time: g.time, loud: false, level: RING.launchNoise, who: shooter.id });
+  if (shooter === g.player.char) g.player.noise = Math.max(g.player.noise, RING.launchNoise);
+  return ring;
+}
 
 
 

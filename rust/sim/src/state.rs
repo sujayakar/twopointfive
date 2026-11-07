@@ -130,12 +130,6 @@ static mut ALL: [State; GAMES] = unsafe { core::mem::zeroed() };
 pub fn state(g: usize) -> &'static mut State {
     unsafe { &mut (*core::ptr::addr_of_mut!(ALL))[g] }
 }
-/// the block in slot `g`, TO READ: the same block `state` hands out to write. A caller takes it for a read and lets it go; held across a call
-/// that writes the same part it is as unsound as two `state`s of one slot held at once already are (one thread, and nothing checks either).
-#[inline(always)]
-pub fn state_read(g: usize) -> &'static State {
-    unsafe { &(*core::ptr::addr_of!(ALL))[g] }
-}
 /// where slot `g`'s block is (a byte address in the module's memory)
 pub fn addr(g: usize) -> usize {
     state(g) as *mut State as usize

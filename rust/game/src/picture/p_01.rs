@@ -1073,6 +1073,12 @@ pub fn picture_step(g: &mut crate::game::Game, gd: GuardId, key: u32, mark: V3, 
     Some(PictureStep { at, low })
 }
 
+/// the step he is on, if any (picture.ts pictureStepOf)
+pub fn picture_step_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::picture::PictureStepOf> {
+    let x = g.m.picture.states.as_ref()?.men.get(gd)?.step?;
+    Some(PictureStepOf { at: x.at, mark: x.mark, low: x.low })
+}
+
 // ---------------------------------------------------------------- showing it (the host's floor view; nothing of the tick calls these)
 /// whose picture the floor shows: the fighter nearest the aim point, None with the view not on the cursor (picture.ts pictureShown)
 pub fn picture_shown(g: &mut crate::game::Game) -> Option<GuardId> {

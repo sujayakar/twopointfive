@@ -8,3 +8,5 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
+/// BOUNDARY NO-OP (the picture's / the host's): (src/render/airField.ts:194 AirField.reset)
+pub fn air_field_reset(this: &mut crate::render_air_field::AirField) {}

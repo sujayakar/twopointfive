@@ -7,6 +7,20 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
+/// The doors' columns in the game's block: says how many doors there are and where the part starts; `home` is `g.sim`. (doorshome.ts DoorStore.constructor)
+pub fn door_store_new(g: &mut crate::game::Game, home: crate::Opaque, cap: f64) -> crate::sim_doorshome::DoorStore {
+    if cap > DOOR_CAP {
+        panic!("a level of {} doors: the game holds {} (sim/doorshome.ts DOOR_CAP, rust/sim/src/doors.rs CAP)", cap, DOOR_CAP);
+    }
+    let base = (js::to_u32(crate::sim_state::sim_part(crate::sim_state::P_DOORS)) >> 3) as f64;
+    DoorStore { base, stride: DOOR_CAP, home, cap }
+}
+
+/// The game's block as doubles, index as `base + K * stride + i`. A COPY of the whole block, by the skeleton's type: a write to it is lost. (doorshome.ts DoorStore.d)
+pub fn door_store_d(g: &mut crate::game::Game) -> Vec<f64> {
+    block_doubles(g.sim)
+}
+
 /// Where the doors' hand-over tables are and how much they hold, asked once. An index is a byte address / 8. (doorshome.ts doorIo)
 pub fn door_io(g: &mut crate::game::Game) -> crate::sim_doorshome::DoorIo {
     if let Some(io) = g.m.sim_doorshome.io {
@@ -22,6 +36,13 @@ pub fn door_io(g: &mut crate::game::Game) -> crate::sim_doorshome::DoorIo {
     let io = ask_io(x);
     g.m.sim_doorshome.io = Some(io);
     io
+}
+
+/// the block in slot `slot`, every word read as a double
+fn block_doubles(slot: usize) -> Vec<f64> {
+    let at = ::sim::state::state(slot) as *mut ::sim::state::State as *const f64;
+    // SAFETY: a block is 16-aligned, a whole number of doubles long (state.rs asserts both) and every byte of it is a number
+    unsafe { core::slice::from_raw_parts(at, ::sim::state::LEN / 8) }.to_vec()
 }
 
 /// how many doubles wide a table of column numbers is: the Rust of `Object.keys(T).length`, these tables being all doubles
@@ -59,6 +80,15 @@ mod tests {
     #[test]
     fn this_file_counts_as_the_module_does() {
         assert!(!module_disagrees());
+    }
+
+    #[test]
+    fn a_door_column_is_where_base_and_stride_say() {
+        let slot = 3;
+        let (k, i) = (dc().vel as usize, 5usize);
+        ::sim::state::state(slot).doors.c[k][i] = 1.25;
+        let base = ::sim::state::PARTS[crate::sim_state::P_DOORS as usize].off >> 3;
+        assert_eq!(block_doubles(slot)[base + k * DOOR_CAP as usize + i], 1.25);
     }
 
     #[test]

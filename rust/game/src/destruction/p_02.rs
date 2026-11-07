@@ -280,6 +280,11 @@ pub fn destruction_flags0(g: &mut crate::game::Game, i: f64) -> Option<f64> {
     crate::winbars::bar_flags0(g, i)
 }
 
+/// Be told of every blast. (The TypeScript's unsubscribe has no caller and no skeleton.)   (destruction.ts onBlast)
+pub fn destruction_on_blast(g: &mut crate::game::Game, fn_: crate::destruction::BlastListener) {
+    g.destr.blast_listeners.push(fn_);
+}
+
 /// Static `i` has lost what it stood on / hung from: a stack scatters, a screen dies, clutter drops. False = not one of ours.   (destruction.ts dropItem)
 pub fn destruction_drop_item(g: &mut crate::game::Game, i: f64, dirn: V3, who: Option<f64>, quiet: Option<bool>) -> bool {
     let who = who.unwrap_or(crate::consts::NOBODY_ID);
@@ -598,6 +603,14 @@ pub fn destruction_hide(g: &mut crate::game::Game, d: &crate::destruction::Destr
     crate::scene_collision::wrote(g);
     let (c, h) = { let x = seam_box(g, b); (x.c, x.h) };
     crate::smoke_types::smoke_system_like_obstacles_changed(g, c, m::hyp3(h[0], h[1], h[2]) + 0.6);
+}
+
+/// The escalated burst by hand at a point on an up-facing surface: effects only.   (destruction.ts testBurst)
+pub fn destruction_test_burst(g: &mut crate::game::Game, at: V3, surf: Option<crate::scene_materials::Surf>, albedo: Option<V3>) {
+    let surf = surf.unwrap_or(crate::scene_materials::Surf::Drywall);
+    let albedo = albedo.unwrap_or([0.82, 0.8, 0.76]);
+    let e = g.k.chaos.t_burst + 1.5;
+    destruction_burst(g, at, [0.0, -1.0, 0.0], [0.0, 1.0, 0.0], surf, albedo, e, 1.0, 0.0, None);
 }
 
 /// The escalated material burst on top of impactFx's, scaled by E and the rifle factor: what flies is the picture's, by what the box says it is made of.   (destruction.ts burst)

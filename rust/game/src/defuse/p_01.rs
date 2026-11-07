@@ -22,6 +22,9 @@ pub fn mmss(s: f64) -> String {
 /// A charge's planar normal as a vector.   (defuse.ts n3)
 pub fn n3(d: &crate::scene_scenarios::DefuseDevice) -> V3 { [d.n[0], 0.0, d.n[1]] }
 
+/// A fresh Defuse: the field initialisers are the whole of it.   (defuse.ts Defuse.constructor)
+pub fn defuse_new(g: &mut crate::game::Game) -> crate::defuse::Defuse { crate::defuse::Defuse::blank() }
+
 /// The block in force (None: not live).   (defuse.ts Defuse.data)
 pub fn defuse_data(g: &mut crate::game::Game) -> Option<crate::scene_scenarios::DefuseData> {
     let has = match g.level.scenarios.as_ref().and_then(|s| s.defuse.as_ref()) {
@@ -56,6 +59,11 @@ pub fn defuse_left(g: &mut crate::game::Game) -> f64 {
     let d = match defuse_data(g) { Some(d) => d, None => return 0.0 };
     if !defuse_started(g) { return d.secs; }
     d.secs - ((if g.defuse.t_end.is_nan() { g.time } else { g.defuse.t_end }) - g.defuse.t0)
+}
+
+/// Has the mission been won: every charge safe and the structure taken.   (defuse.ts Defuse.won)
+pub fn defuse_won(g: &mut crate::game::Game) -> bool {
+    defuse_active(g) && g.defuse.end == Some(DefuseEnd::Safe) && g.room_clear.end == Some(crate::roomclear::RoomClearEnd::Taken)
 }
 
 /// Changes when the list of live charges does.   (defuse.ts Defuse.key)
@@ -470,6 +478,19 @@ pub fn defuse_on_it(g: &mut crate::game::Game, i: f64) -> Option<String> {
     Some(format!("{} {}", g.gd[w.gd].callsign, if w.on { "on it" } else { "going" }))
 }
 
+/// A checkpoint's slice (None: not live, or not this run's).   (defuse.ts Defuse.snapshot)
+pub fn defuse_snapshot(g: &mut crate::game::Game) -> Option<crate::defuse::DefuseSnap> {
+    if defuse_data(g).is_none() || !defuse_mine(g) { return None; }
+    let ran = if defuse_started(g) { (if g.defuse.t_end.is_nan() { g.time } else { g.defuse.t_end }) - g.defuse.t0 } else { -1.0 };
+    let end = match g.defuse.end {
+        Some(DefuseEnd::Safe) => Some(DefuseSnapEnd::Safe),
+        Some(DefuseEnd::Failed) => Some(DefuseSnapEnd::Failed),
+        Some(DefuseEnd::Over) | None => None,
+    };
+    let sam = g.defuse.sam.map(|s| DefuseSnapSam { dev: s.dev, ran: g.time - s.t0 });
+    Some(DefuseSnap { ran, st: g.defuse.states.clone(), by: Some(g.defuse.safe_by.clone()), end, sam })
+}
+
 /// A checkpoint loaded; a file without the slice on a live level is a fresh clock, as on a restart.   (defuse.ts Defuse.restore)
 pub fn defuse_restore(g: &mut crate::game::Game, s: Option<&crate::defuse::DefuseSnap>) {
     let d = defuse_data(g);
@@ -519,6 +540,24 @@ pub fn defuse_note(g: &mut crate::game::Game, what: &str) {
     let t = g.time;
     g.defuse.log.push(DefuseLogItem { t, what: String::from(what) });
     if g.defuse.log.len() > 200 { g.defuse.log.drain(0..50); }
+}
+
+/// The debugger's one line on the mission.   (defuse.ts Defuse.summary)
+pub fn defuse_summary(g: &mut crate::game::Game) -> String {
+    let d = match defuse_data(g) { Some(d) => d, None => return String::from("no charges on this level") };
+    if !defuse_mine(g) { return String::from("staged"); }
+    let head = match g.defuse.end {
+        Some(e) => String::from(e.as_str()),
+        None => if defuse_started(g) { mmss(defuse_left(g)) } else { String::from("waiting on the first move") },
+    };
+    let rows: Vec<String> = d.devices.iter().enumerate().map(|(i, dev)| {
+        let st = g.defuse.states.get(i).map_or("undefined", |s| s.as_str());
+        match g.defuse.safe_by.get(i).and_then(|b| b.as_ref()).filter(|b| !b.is_empty()) {
+            Some(by) => format!("{} {} ({})", dev.id, st, by),
+            None => format!("{} {}", dev.id, st),
+        }
+    }).collect();
+    format!("{} · {}", head, rows.join(" · "))
 }
 
 /// player.ts buildInteractables.   (defuse.ts defuseRows)

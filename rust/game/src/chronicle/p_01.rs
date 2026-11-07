@@ -202,7 +202,22 @@ fn live_row_n(g: &mut Game, kind: ChronKind, count: ChronCountKey, data: RowData
 fn man_callsign(g: &Game, gd: GuardId) -> String { g.gd[gd].callsign.clone() }
 fn man_pos(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 
+// the skeleton's gap (notes.md, ## Skeleton)
+/// `Chronicle.recent` as the skeleton has it hands back a `&mut usize`, and no `usize` in `g` holds a found row's place
+fn seam_recent_slot<'g>(g: &'g mut Game, at: usize) -> Option<&'g mut usize> { todo!("needs: chronicle_recent to return Option<usize>: the row's place is worked out, not held") }
+
 // ------------------------------------------------------------ rooms
+
+/// The rooms of the level a run is on, for the debrief's map.   (chronicle.ts roomsOf)
+pub fn rooms_of(g: &mut crate::game::Game) -> Vec<crate::chronicle::RoomsOfItem> {
+    if crate::dialogue::is_office(g) {
+        return rooms().into_iter().map(|r| RoomsOfItem { name: r.name, x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1 }).collect();
+    }
+    match crate::dialogue::level_rects(g) {
+        Some(rects) => rects.iter().map(|r| RoomsOfItem { name: without_the(&r.name), x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1 }).collect(),
+        None => Vec::new(),
+    }
+}
 
 /// The room a floor point is in, by name; outside the building the side of it.   (chronicle.ts roomOf)
 pub fn room_of(g: &mut crate::game::Game, p: V3) -> String {
@@ -226,11 +241,38 @@ pub fn room_of(g: &mut crate::game::Game, p: V3) -> String {
     String::from("west side")
 }
 
+/// Inside the building's footprint.   (chronicle.ts indoors)
+pub fn indoors(p: V3) -> bool {
+    let b = crate::floor::building();
+    p[0] >= b.x0 && p[0] < b.x1 && p[2] >= b.z0 && p[2] < b.z1
+}
+
 // ------------------------------------------------------------ the record
+
+/// A row let go of first at the soft cap.   (chronicle.ts isChatter)
+pub fn is_chatter(g: &mut crate::game::Game, kind: crate::chronicle::ChronKind, data: &JsMap<String, Option<crate::chronicle::IsChatterDataValue>>) -> bool {
+    let load = matches!(data.get(String::from("what")), Some(Some(IsChatterDataValue::Text(s))) if s == "load");
+    g.m.chronicle.chatter.has(kind) || (kind == ChronKind::Checkpoint && !load)
+}
+
+/// All counters at nothing.   (chronicle.ts newCounts)
+pub fn new_counts() -> crate::chronicle::ChronCounts {
+    ChronCounts {
+        seen_up: 0.0, esc1: 0.0, esc2: 0.0, shots_near_men: 0.0, lights_shot: 0.0, ocps: 0.0, blackouts: 0.0, kicked: 0.0, picked: 0.0, intel: 0.0,
+        thrown: 0.0, grabs: 0.0, contacts: 0.0, heard: 0.0, radio: 0.0, civ_seen: 0.0, civ_reported: 0.0, civ_complied: 0.0, civ_ko: 0.0, civ_killed: 0.0,
+        devices: 0.0, hits: 0.0, down: false, down_by: String::new(), saves: 0.0, loads: 0.0,
+    }
+}
 
 /// The core append; `None` when the caps refuse it, else the row's place in `events`.   (chronicle.ts Chronicle.add)
 pub fn chronicle_add(g: &mut crate::game::Game, t: f64, kind: crate::chronicle::ChronKind, pos: V3, data: &JsMap<String, Option<crate::chronicle::ChronicleAddDataValue>>) -> Option<usize> {
     add_row(g, t, kind, pos, data_from_add(data))
+}
+
+/// The latest row of `kind` with this key within `win` seconds, looking back no further than 8 rows.   (chronicle.ts Chronicle.recent)
+pub fn chronicle_recent<'g>(g: &'g mut crate::game::Game, kind: crate::chronicle::ChronKind, key_name: &str, key: &crate::chronicle::ChronicleRecentKey, t: f64, win: f64) -> Option<&'g mut usize> {
+    let at = recent_at(&g.chronicle, kind, key_name, key, t, win)?;
+    seam_recent_slot(g, at)
 }
 
 /// The row a hearing event made, as its place in `events`.   (chronicle.ts Chronicle.heardRow)
@@ -771,6 +813,11 @@ pub fn summary_line(c_2: &crate::chronicle::RunCounts, score: f64, word: &str, b
     if state != SummaryLineState::Done { parts.push(String::from(if state == SummaryLineState::Down { "went down" } else { "run so far" })); }
     if c.sandbox { parts.push(String::from("sandbox flags on")); }
     format!("twopointsix — {}", parts.join(" · "))
+}
+
+/// One timeline row in words.   (chronicle.ts fmtEvent)
+pub fn fmt_event(g: &mut crate::game::Game, e: &crate::chronicle::ChronEvent) -> String {
+    format!("{} · {} · {}", fmt_mmss(e.t), e.room, event_text(g, e))
 }
 
 /// The name a door row's door was WRITTEN, asked when the row is read; `None`: the row reads its id's words.   (chronicle.ts doorWritten)

@@ -91,6 +91,14 @@ pub fn kit_nv_eye(g: &mut crate::game::Game) -> bool {
     if g.pl[p].nv { k > 0.0 } else { k >= 1.0 }
 }
 
+/// A pose has his hands off his own gun: the animator's word, or what the big tool's beat will say this frame.   (kitanim.ts handsOff)
+pub fn hands_off(g: &mut crate::game::Game, an: &crate::character::Anim) -> bool {
+    match &an.big_tool {
+        Some(b) if crate::bigkit::big_weighed(g) => crate::character::big_off(big_off_of(b)),
+        _ => an.hide_held_item,
+    }
+}
+
 /// `handsOff(pl.char.anim)` from inside this file: the stub's `an` cannot be lent beside `g`.
 fn hands_off_c(g: &mut crate::game::Game, c: CharId) -> bool {
     let b = g.ch[c].anim.big_tool.as_ref().map(big_off_of);
@@ -365,6 +373,31 @@ fn owed_word(want: crate::character::KitItem, sel: Option<crate::game::ThrowKind
     }
 }
 
+/// The longest a kit change can hold a gun's fire.   (kitanim.ts kitLockMax)
+pub fn kit_lock_max(kit: &crate::kitanim::KitLockMaxKIT) -> f64 {
+    // (the rifle on its back sling, then on the front one: its own three times)
+    fn t(fr: bool, row: &JsMap<crate::character::KitItem, f64>, it: crate::character::KitItem, f: f64) -> f64 {
+        if fr && it == crate::character::KitItem::Rifle { f } else { *row.get(it).unwrap() }
+    }
+    let mut mx = 0.0;
+    let rows: &[bool] = if kit.front.is_some() { &[false, true] } else { &[false] };
+    let (f_stow, f_reach, f_draw) = match kit.front {
+        Some(f) => (f.stow, f.reach, f.draw),
+        None => (0.0, 0.0, 0.0),
+    };
+    for &fr in rows {
+        for to in [crate::character::KitItem::Pistol, crate::character::KitItem::Rifle] {
+            let r = t(fr, &kit.reach, to, f_reach);
+            let d = t(fr, &kit.draw, to, f_draw);
+            mx = m::max(mx, r + d);
+            for from in [crate::character::KitItem::Pistol, crate::character::KitItem::Rifle, crate::character::KitItem::Can, crate::character::KitItem::Knife] {
+                mx = m::max(mx, (t(fr, &kit.stow, from, f_stow) + r + (if fr { 0.0 } else { kit.far }) + d) * kit.swap_k);
+            }
+        }
+    }
+    mx
+}
+
 /// What the drawer shows in his hands this frame: while a swap runs the hand's word replaces the slot's.   (kitanim.ts kitShow)
 pub fn kit_show(g: &mut crate::game::Game, v: &mut crate::kitanim::KitShowV) -> Option<crate::rig_props::KitDraw> {
     if !live(g) {
@@ -501,6 +534,19 @@ fn reload_plan(t: &BeatTable, row_dur: f64, long: bool, keeps: bool, racks: bool
     crate::kitanim::KitReload { kind, row, beat }
 }
 
+/// One line for the panel.   (kitanim.ts kitSummary)
+pub fn kit_summary(g: &mut crate::game::Game) -> String {
+    let s = &g.stats.kitanim;
+    let n = |k| s.reloads.get(k).copied().unwrap_or(0);
+    alloc::format!(
+        "on · {} swaps · reloads {} empty / {} dry / {} tactical",
+        s.swaps,
+        n(crate::kitanim::ReloadKind::Empty),
+        n(crate::kitanim::ReloadKind::Dry),
+        n(crate::kitanim::ReloadKind::Tactical),
+    )
+}
+
 /// A reload began on a kitReload plan: counted.   (kitanim.ts kitReloadNote)
 pub fn kit_reload_note(g: &mut crate::game::Game, kind: crate::kitanim::ReloadKind, secs: f64) {
     *g.stats.kitanim.reloads.get_or_insert_with(kind, || 0) += 1;
@@ -573,4 +619,28 @@ mod tests {
         }
     }
 
+    fn row_of(v: [f64; 4]) -> JsMap<crate::character::KitItem, f64> {
+        let mut t = JsMap::new();
+        t.set(crate::character::KitItem::Pistol, v[0]);
+        t.set(crate::character::KitItem::Rifle, v[1]);
+        t.set(crate::character::KitItem::Can, v[2]);
+        t.set(crate::character::KitItem::Knife, v[3]);
+        t
+    }
+
+    /// kitanim.ts kitLockMax over character.ts KIT, under bun, with its front row and without.
+    #[test]
+    fn lock_max_has_the_typescripts_bits() {
+        let mut kit = crate::kitanim::KitLockMaxKIT {
+            stow: row_of([0.3, 0.54, 0.26, 0.34]),
+            reach: row_of([0.17, 0.28, 0.16, 0.2]),
+            draw: row_of([0.26, 0.43, 0.2, 0.2]),
+            far: 0.28,
+            swap_k: 0.8,
+            front: Some(crate::kitanim::KitLockMaxKITFront { stow: 0.36, reach: 0.2, draw: 0.32 }),
+        };
+        assert_eq!(kit_lock_max(&kit).to_bits(), 0x3ff395810624dd30);
+        kit.front = None;
+        assert_eq!(kit_lock_max(&kit).to_bits(), 0x3ff395810624dd30);
+    }
 }

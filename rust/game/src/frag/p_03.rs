@@ -361,6 +361,18 @@ pub fn sam_cue(g: &mut crate::game::Game, l: usize, eye_at: V3) {
     crate::game::game_msg(g, "GRENADE — get clear");
 }
 
+/// The overlay's: every hostile grenade Sam has been cued on, where it lies and the seconds left.   (frag.ts fragMarks)
+pub fn frag_marks(g: &mut crate::game::Game) -> Vec<crate::frag::FragMarksItem> {
+    let cued: Vec<ItemId> = match g.m.frag.books.as_ref() { Some(b) => b.iter().filter(|l| l.cued).map(|l| l.it).collect(), None => return Vec::new() };
+    let mut out = Vec::new();
+    for it in cued {
+        if !crate::throwables::item_fired(g, it) {
+            out.push(crate::frag::FragMarksItem { at: crate::throwables::item_pos(g, it), left: crate::throwables::item_fuse(g, it) });
+        }
+    }
+    out
+}
+
 /// Where a player who has read the cue would go, off the nearest cued grenade with a line to him; None when none.   (frag.ts fragStepOff)
 pub fn frag_step_off(g: &mut crate::game::Game, speed: Option<f64>) -> Option<V3> {
     let speed = speed.unwrap_or(3.2);
@@ -414,6 +426,12 @@ pub fn deal_carriers(g: &mut crate::game::Game, was: Option<&crate::frag::DefBoo
         }
     }
     g.m.frag.def_books = Some(b);
+}
+
+/// Who on the defenders' side still carries a frag.   (frag.ts fragCarriers)
+pub fn frag_carriers(g: &mut crate::game::Game) -> Vec<GuardId> {
+    let Some(b) = g.m.frag.def_books.as_ref() else { return Vec::new() };
+    b.carriers.iter().filter(|c| c.frags > 0.0 && g.gd[c.gd].state != crate::game::GuardState::Dead).map(|c| c.gd).collect()
 }
 
 /// `FRAG_WHY[w]++`: why a throw was not looked for.

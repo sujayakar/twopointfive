@@ -325,6 +325,33 @@ pub fn send_rack_check(g: &mut crate::game::Game) {
     crate::dialogue::handler_beat(g, crate::dialogue::HandlerBeat::Rack, Some(2.6));
 }
 
+/// The run in numbers as plain rows, for the card and the QA probes. (mission.ts debriefRows)
+pub fn debrief_rows(s: &crate::game::MissionStats) -> Vec<[String; 2]> {
+    use crate::game::fmt_clock;
+    let row = |a: &str, b: String| [String::from(a), b];
+    let mut rows = vec![
+        row("time", fmt_clock(s.elapsed)),
+        row("alerts raised", js::num_str(s.alerts)),
+        row("times spotted", js::num_str(s.spotted)),
+        row("bodies found", js::num_str(s.bodies)),
+        row("shots fired", js::num_str(s.shots)),
+        row("knocked out (breathing) · killed", format!("{} · {}", js::num_str(s.knockouts), js::num_str(s.kills))),
+        row("blackout", String::from(if s.blackout { "used" } else { "no" })),
+    ];
+    if s.keys > 0.0 {
+        rows.push(row("keys taken off them", js::num_str(s.keys)));
+    }
+    if s.qrf >= 1.0 {
+        let at = fmt_clock(s.qrf_at);
+        let text = match s.qrf_who.as_deref().filter(|w| !w.is_empty()) {
+            Some(who) => format!("{} came in at {}{}", who, at, if s.qrf >= 2.0 { " · out under a lockdown" } else { "" }),
+            None => format!("QRF on the floor at {}{}", at, if s.qrf >= 2.0 { " · exfil under perimeter lockdown" } else { "" }),
+        };
+        rows.push(row("response team", text));
+    }
+    rows
+}
+
 /// Where the HUD's objective marker points; None: nothing to point at, or the tour is running. (mission.ts objectivePos)
 pub fn objective_pos(g: &mut crate::game::Game) -> Option<V3> {
     use crate::game::MissionStage;

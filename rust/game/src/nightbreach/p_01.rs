@@ -9,6 +9,9 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ---- private helpers
 
+/// The four-man squad's budget of characters: the seats' men, the four and the layout's five defenders (nightbreach.ts SQUAD4_BUDGET: ten in a game of one).
+pub(crate) fn squad4_budget(g: &crate::game::Game) -> f64 { SQUAD4_BUDGET - 1.0 + crate::seats::seat_count(g) }
+
 /// `T !== applied`, an identity of the level's own rows (a structure's team start, one of its other ways in, the night breach's own): here the row
 /// whole, by value. Another start with the same place for Sam is ANOTHER start in the TypeScript and writes the knobs again (a knob moved by hand
 /// since is put back), so every field is asked, not only the two the write copies. Two rows of one level alike in every field would still read as
@@ -88,7 +91,7 @@ fn stage_checked(g: &mut Game) -> Result<(), String> {
     let n = g.k.nightbreach.squad;
     let four = n > 2.0;
     let layout_budget = if layout.is_some() { crate::roomclear::room_clear_scenario_budget(g) } else { None };
-    let budget = if four { Some(m::max(SQUAD4_BUDGET, layout_budget.unwrap_or(0.0))) } else { layout_budget };
+    let budget = if four { Some(m::max(squad4_budget(g), layout_budget.unwrap_or(0.0))) } else { layout_budget };
     let yaw = team.as_ref().and_then(|s| s.ops_yaw).unwrap_or(m::PI / 2.0);
     if !four {
         for i in 0..core::cmp::min(2, n as usize) {
@@ -147,6 +150,10 @@ fn stage_checked(g: &mut Game) -> Result<(), String> {
             .map(|h| NightBreachMark { pos: h.pos, aim_at: h.aim_at, name: None, drill: None })
             .collect()
     };
+    // (THE FLOOR HOLDS SIXTEEN WITH EVERY SEAT COUNTED: the team stands first, then as many defenders, in the order of their marks, as that
+    //  leaves room for. A game of one has room for every garrison a level may hold, so it stands as ever; a game of two on a full floor
+    //  stands one defender fewer, where it stood seventeen and the picture held sixteen.)
+    let marks: Vec<NightBreachMark> = { let room = crate::seats::floor_room(g); marks.into_iter().take(m::max(0.0, room) as usize).collect() };
     g.night_breach.marks = marks.clone();
     for (i, h) in marks.iter().enumerate() {
         let name = match &h.name { Some(s) => s.clone(), None => format!("Tango {}", i + 1) };
@@ -286,6 +293,11 @@ fn all_taken(g: &mut Game) -> bool {
     true
 }
 
+/// How many of the list are up. (nightbreach.ts:402 up)
+fn up(g: &Game, l: &[GuardId]) -> usize {
+    l.iter().filter(|x| g.gd[**x].state != crate::game::GuardState::Dead).count()
+}
+
 /// endGuardScript's word for a man's own state. (nightbreach.ts:346)
 fn script_state(s: crate::game::GuardState) -> Option<crate::squad::EndGuardScriptState> {
     match s {
@@ -327,6 +339,11 @@ pub fn blind_turn(g: &mut crate::game::Game, h: GuardId, k: f64, b: &mut crate::
 pub fn night_breach_drill_ops(g: &mut crate::game::Game) -> Vec<GuardId> {
     if g.night_breach.no_drill { return Vec::new(); }
     g.night_breach.ops.iter().take(2).copied().collect()
+}
+
+/// A new one: its initialisers. (nightbreach.ts NightBreach.constructor)
+pub fn night_breach_new(g: &mut crate::game::Game) -> crate::nightbreach::NightBreach {
+    NightBreach::blank()
 }
 
 /// The team start in force. (nightbreach.ts NightBreach.teamOf)
@@ -447,6 +464,11 @@ pub fn night_breach_bench(g: &mut crate::game::Game) {
     benched.extend_from_slice(&staff);
     g.night_breach.benched = Some(benched);
     g.guards = g.guards.iter().filter(|x| g.gd[**x].unit.is_some()).copied().collect();
+}
+
+/// Everybody on his mark; a throw has only onEncounterRestart to go to, which uses stage_checked. (nightbreach.ts NightBreach.stage)
+pub fn night_breach_stage(g: &mut crate::game::Game) {
+    if let Err(e) = stage_checked(g) { panic!("{}", e); }
 }
 
 /// A place for a man of the second pair. (nightbreach.ts NightBreach.standBy)
@@ -729,6 +751,25 @@ pub fn night_breach_state(g: &mut crate::game::Game) -> crate::nightbreach::Nigh
         crate::breach::Phase::Enter | crate::breach::Phase::Clear => NightBreachState::Inside,
         _ => NightBreachState::Going,
     }
+}
+
+/// One line for the panel. (nightbreach.ts NightBreach.summary)
+pub fn night_breach_summary(g: &mut crate::game::Game) -> String {
+    if !g.night_breach.active { return String::from("night breach off"); }
+    let state = night_breach_state(g);
+    let (ops, hostiles) = (g.night_breach.ops.clone(), g.night_breach.hostiles.clone());
+    let blind = if js::truthy(g.night_breach.blind_rounds) { format!(" · {} blind rounds", g.night_breach.blind_rounds) } else { String::new() };
+    format!(
+        "night breach {} · orders {}/2 · team {}/{} up · defenders {}/{} up{} · staged ×{}",
+        state.as_str(),
+        live_of(g).orders,
+        up(g, &ops),
+        ops.len(),
+        up(g, &hostiles),
+        hostiles.len(),
+        blind,
+        g.night_breach.staged,
+    )
 }
 
 #[cfg(test)]

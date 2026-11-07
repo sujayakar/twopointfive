@@ -23,6 +23,25 @@ const K_ROUND_: u32 = K_ROUND as u32;
 const K_CUT_: u32 = K_CUT as u32;
 const K_WALK_: u32 = K_WALK as u32;
 const F_GLASS_: u32 = F_GLASS as u32;
+const GD_: usize = GD as usize;
+const GW_: usize = GW as usize;
+const G_SITE_: usize = G_SITE as usize;
+const G_SITES_: usize = G_SITES as usize;
+const G_DICE_AT_: usize = G_DICE_AT as usize;
+const GW_FLAGS_: usize = GW_FLAGS as usize;
+const GW_COLS_: usize = GW_COLS as usize;
+const GW_ROWS_: usize = GW_ROWS as usize;
+const GW_DSEED_: usize = GW_DSEED as usize;
+const GW_N_: usize = GW_N as usize;
+const GW_SEED_: usize = GW_SEED as usize;
+const GW_OPEN_: usize = GW_OPEN as usize;
+const GW_GOING_: usize = GW_GOING as usize;
+const GW_CRATER_: usize = GW_CRATER as usize;
+const GW_BITS_: usize = GW_BITS as usize;
+const G_GONE_: u32 = G_GONE as u32;
+const G_DICE_: u32 = G_DICE as u32;
+const G_RUN_: u32 = G_RUN as u32;
+const FRAGS_PER_SITE_: usize = FRAGS_PER_SITE as usize;
 const THING_SET_: usize = THING_SET as usize;
 const TH_: usize = TH as usize;
 const TL_: usize = TL as usize;
@@ -37,10 +56,6 @@ const MAX_PLANES_: usize = crate::scene_cut::MAX_CUT_PLANES as usize;
 #[inline]
 fn world(w: usize) -> &'static mut sim::world::World {
     sim::world::world(w)
-}
-/// the same world, to read
-fn world_read(w: usize) -> &'static sim::world::World {
-    sim::world::world_read(w)
 }
 
 /// A box's row (Box.* in the TypeScript), by its ID. The one blocked step of this file.
@@ -81,6 +96,11 @@ pub fn too_big(name: Option<&str>, why: &str) -> String {
         Some(n) if !n.is_empty() => format!("the level '{}' is too big to load: {}", n, why),
         _ => format!("this level is too big to load: {}", why),
     }
+}
+
+/// A SNAPSHOT WAS PUT BACK: no copy stands. A `Game` reaches only its own copy.   (boxMirror.ts mirrorsShut)
+pub fn mirrors_shut(g: &mut crate::game::Game) {
+    box_mirror_shut(g);
 }
 
 /// What kind of row a box is: rotated, round, cut.   (boxMirror.ts kindOf)
@@ -229,6 +249,19 @@ fn leaf_put(g: &mut Game, w: usize, at: usize, b: BoxId, kind: f64, cut_row: f64
     if (kind as u32) & K_CUT_ != 0 {
         planes_put(&mut o.cut, (cut_row * CUT_ROW) as usize, x);
     }
+}
+
+/// How much each table of the copy holds, by name.   (boxMirror.ts BoxMirror.tables)
+pub fn box_mirror_tables(g: &mut crate::game::Game) -> JsMap<String, f64> {
+    if g.col.mirror.caps.boxes == 0.0 {
+        box_mirror_boot(g); // (`!this.x && !simWhyNot()`: the module is linked here, and no table of it holds nothing)
+    }
+    let c = g.col.mirror.caps;
+    let mut t = JsMap::new();
+    for (k, v) in [("boxes", c.boxes), ("leaves", c.leaves), ("cuts", c.cuts), ("panes", c.panes), ("cells", c.cells), ("items", c.items), ("tilted", c.tilted), ("things", c.things), ("glass", c.glass), ("view", c.view)] {
+        t.set(String::from(k), v);
+    }
+    t
 }
 
 /// Reads what each table holds, and where the scratch and the senses' tables are.   (boxMirror.ts BoxMirror.boot)
@@ -537,6 +570,15 @@ pub fn box_mirror_glass_wrote(g: &mut crate::game::Game) {
     }
 }
 
+/// The glass itself was hung, or taken down, under a standing copy.   (boxMirror.ts BoxMirror.glassIs)
+pub fn box_mirror_glass_is(g: &mut crate::game::Game, g_2: Option<&crate::scene_box_mirror::PaneSource>) {
+    if !g.col.mirror.live {
+        return;
+    }
+    g.col.mirror.glass = g_2.cloned();
+    box_mirror_debt(g, OWE_GLASS);
+}
+
 /// A static's write is still owed.   (boxMirror.ts BoxMirror.owesBoxes)
 pub fn box_mirror_owes_boxes(g: &mut crate::game::Game) -> bool {
     ((g.col.mirror.owed as u32) & OWE_BOXES_) != 0
@@ -660,6 +702,79 @@ fn sheets_written(g: &mut Game, sh: Vec<f64>) {
     m[..sh.len()].copy_from_slice(&sh);
     sim::world_sheets(g.sim, sh.len() / 3);
     g.col.mirror.sheets_in = Some(sh);
+}
+
+/// One pane's row, `m` and `w` being its doubles and its words.
+fn pane_row(m: &mut [f64], w: &mut [u32], p: &PaneRow) {
+    let sites = &p.sites;
+    let ns = if sites.len() < G_SITES_ { sites.len() } else { G_SITES_ };
+    let dice = p.dice.as_ref();
+    w[0] = js::to_u32(p.bi);
+    w[GW_FLAGS_] = (if p.gone { G_GONE_ } else { 0 }) | (if dice.is_some() { G_DICE_ } else { 0 }) | (if p.run { G_RUN_ } else { 0 }) | ((ns as u32) << 8);
+    for i in 0..ns {
+        let q = i * G_SITE_;
+        let s = &sites[i];
+        let rho = &s.rho;
+        m[q] = s.u;
+        m[q + 1] = s.v;
+        m[q + 2] = s.rot;
+        m[q + 3] = rho[0];
+        m[q + 4] = rho[1];
+        m[q + 5] = rho[2];
+        m[q + 6] = rho[3];
+        m[q + 7] = s.rz;
+        m[q + 8] = s.merge;
+        w[GW_N_ + i] = js::to_u32(s.n);
+        w[GW_SEED_ + i] = js::to_u32(s.seed);
+    }
+    if let Some(d) = dice {
+        let q = G_DICE_AT_;
+        w[GW_COLS_] = js::to_u32(d.cols);
+        w[GW_ROWS_] = js::to_u32(d.rows);
+        w[GW_DSEED_] = js::to_u32(d.seed);
+        // (the last clump OUT in the order they go: `out` is what the rule answers by, and a clump is marked out before `next` counts it)
+        let mut last = d.next as usize;
+        while last < d.clumps.len() && d.out.get(d.clumps[last].k as usize) == Some(&1) {
+            last += 1;
+        }
+        m[q] = d.u;
+        m[q + 1] = d.v;
+        m[q + 2] = d.hu;
+        m[q + 3] = d.hv;
+        m[q + 4] = if last > 0 { d.clumps[last - 1].key } else { f64::NEG_INFINITY };
+        m[q + 5] = if last > 0 { d.clumps[last - 1].k } else { -1.0 };
+    }
+    // a bit a piece that is out (only the ids of the sites there are can be set), and a bit a piece queued to leave, with a bit a site whose crater is
+    let bits = ns * FRAGS_PER_SITE_;
+    let mut at = 0usize;
+    for k in 0..GW_BITS_ {
+        let mut x = 0u32;
+        let mut j = 0u32;
+        while j < 32 && at < bits {
+            if p.open.get(at) == Some(&1) {
+                x |= 1u32 << j;
+            }
+            j += 1;
+            at += 1;
+        }
+        w[GW_OPEN_ + k] = x;
+        w[GW_GOING_ + k] = 0;
+    }
+    let mut crater = 0i32;
+    for q in &p.pending {
+        let fid = q.fid;
+        w[GW_GOING_ + (js::to_u32(fid) >> 5) as usize] |= 1u32 << (js::to_i32(fid) & 31);
+        if js::rem(fid, FRAGS_PER_SITE) < SECTORS {
+            crater |= 1i32.wrapping_shl(js::to_i32(fid / FRAGS_PER_SITE) as u32);
+        }
+    }
+    w[GW_CRATER_] = crater as u32;
+}
+
+/// One pane's row, its doubles from `d` and its words from `o`.   (boxMirror.ts BoxMirror.pane)
+pub fn box_mirror_pane(g: &mut crate::game::Game, m: &mut Vec<f64>, w: &mut Vec<u32>, d: f64, o: f64, p: &crate::scene_box_mirror::PaneRow) {
+    let (d, o) = (d as usize, o as usize);
+    pane_row(&mut m[d..d + GD_], &mut w[o..o + GW_], p);
 }
 
 /// A burst's view was put on or taken off: the next question owes its rows written.   (boxMirror.ts BoxMirror.viewed)
@@ -809,6 +924,51 @@ pub fn box_mirror_thing_box(g: &mut crate::game::Game, p: &crate::scene_box_mirr
     None
 }
 
+/// THE CHECK'S QUESTION of the furniture's copy: how many of its rows are not the furniture now.   (boxMirror.ts BoxMirror.staleThings)
+pub fn box_mirror_stale_things(g: &mut crate::game::Game, p: &crate::scene_box_mirror::Furniture) -> f64 {
+    let cut_on = crate::scene_cut::cut_boxes_on(g);
+    let base = THING_SET_ * g.col.mirror.caps.leaves as usize;
+    let s = g.sim;
+    let mut bad = 0.0f64;
+    {
+        let o = world(s);
+        for (i, t) in p.all.iter().enumerate() {
+            let q = i * TH_;
+            if !is(o.thing[q], t.x) || !is(o.thing[q + 1], t.z) || !is(o.thing[q + 2], t.yaw) || !is(o.thing[q + 3], t.radius) {
+                bad += 1.0;
+            }
+        }
+    }
+    let mut at = 0usize;
+    for (r, t) in p.props.iter().enumerate() {
+        {
+            let o = world(s);
+            let q = r * TL_;
+            if o.thing_live[q] as f64 != t.id || o.thing_live[q + 1] != at as u32 || o.thing_live[q + 2] != t.boxes.len() as u32 {
+                bad += 1.0;
+            }
+        }
+        for &b in &t.boxes {
+            let kind = kind_of(g, b, cut_on);
+            if !leaf_same(g, s, base + at, b, kind) {
+                bad += 1.0;
+            }
+            at += 1;
+        }
+    }
+    bad
+}
+
+/// Where the glass the last line crossed is listed: which static.   (boxMirror.ts BoxMirror.glassBi)
+pub fn box_mirror_glass_bi(g: &mut crate::game::Game) -> f64 {
+    g.col.mirror.pane_bi
+}
+
+/// …and how far along the line it is entered.   (boxMirror.ts BoxMirror.glassT)
+pub fn box_mirror_glass_t(g: &mut crate::game::Game) -> f64 {
+    g.col.mirror.pane_t
+}
+
 /// May a rule of the module's step over this world now, with the game's own leaves in list 0 as they stand.   (boxMirror.ts BoxMirror.rules)
 pub fn box_mirror_rules(g: &mut crate::game::Game, dyn_: &[BoxId]) -> bool {
     {
@@ -861,6 +1021,32 @@ pub fn box_mirror_leaf_row(g: &mut crate::game::Game, i: f64) -> Vec<f64> {
 /// The game's own leaves are being placed box by box while what the rule answered is heard.   (boxMirror.ts BoxMirror.leavesTurned)
 pub fn box_mirror_leaves_turned(g: &mut crate::game::Game) {
     g.col.mirror.own_at = -1.0;
+}
+
+/// THE CHECK'S QUESTION: how many rows of the copy are not their box now: the statics, and list `set` of the leaves.   (boxMirror.ts BoxMirror.stale)
+pub fn box_mirror_stale(g: &mut crate::game::Game, boxes: &[BoxId], dyn_: &[BoxId], set: f64) -> f64 {
+    let cut_on = crate::scene_cut::cut_boxes_on(g);
+    let s = g.sim;
+    let was = g.col.mirror.boxes as usize;
+    let mut bad = if boxes.len() == was { 0.0f64 } else { 1.0 };
+    let mut i = 0usize;
+    while i < boxes.len() && i < was {
+        let kind = kind_at_copy(g, boxes[i], i, cut_on);
+        if !static_same(g, s, i, boxes[i], kind) {
+            bad += 1.0;
+        }
+        i += 1;
+    }
+    if set >= 0.0 {
+        let base = set as usize * g.col.mirror.caps.leaves as usize;
+        for i in 0..dyn_.len() {
+            let kind = kind_of(g, dyn_[i], cut_on);
+            if !leaf_same(g, s, base + i, dyn_[i], kind) {
+                bad += 1.0;
+            }
+        }
+    }
+    bad
 }
 
 #[cfg(test)]
@@ -929,6 +1115,59 @@ mod tests {
         assert_eq!(m[R_ROT_], 7.0);
         assert_eq!(m[R_CUT_], 7.0);
         assert_eq!(m[R_KIND_], 0.0);
+    }
+
+    /// the TypeScript's own bits: boxMirror.ts `pane` run under bun, EXACT on, over this pane
+    #[test]
+    fn a_panes_row_has_the_typescripts_bits() {
+        let mut g = game(0);
+        let mut open = vec![0u8; 672];
+        for i in [0usize, 3, 31, 32, 83, 84, 167, 168] {
+            open[i] = 1;
+        }
+        open[200] = 2;
+        let mut out = vec![0u8; 4];
+        out[2] = 1;
+        out[0] = 1;
+        let site = |u: f64, v: f64, rot: f64, n: f64, seed: f64, rho: [f64; 4], rz: f64, merge: f64| PaneSite { u, v, rot, n, seed, rho: rho.to_vec(), rz, merge };
+        let p = PaneRow {
+            bi: 1234.0,
+            gone: true,
+            run: true,
+            sites: vec![site(0.5, -0.25, 1.5, 7.0, 4294967295.0, [1.0, 2.0, 3.0, 4.0], 0.1, 0.2), site(1.0, 2.0, 3.0, 4.0, 5.0, [6.0, 7.0, 8.0, 9.0], 10.0, 11.0)],
+            open,
+            pending: [31.0, 96.0, 671.0, 95.0, 96.0 + 0.0].iter().map(|&fid| PaneRowPendingItem { fid }).collect(),
+            dice: Some(PaneDice {
+                u: 1.25,
+                v: 2.5,
+                cols: 3.0,
+                rows: 4.0,
+                seed: 99.0,
+                hu: 0.5,
+                hv: 0.75,
+                next: 1.0,
+                out,
+                clumps: vec![PaneDiceClumpsItem { k: 1.0, key: 0.125 }, PaneDiceClumpsItem { k: 2.0, key: 0.25 }, PaneDiceClumpsItem { k: 0.0, key: 0.5 }, PaneDiceClumpsItem { k: 3.0, key: 0.75 }],
+            }),
+        };
+        let (mut m, mut w) = (vec![0.0; GD_], vec![0u32; GW_]);
+        box_mirror_pane(&mut g, &mut m, &mut w, 0.0, 0.0, &p);
+        let words: [u32; 64] = [
+            0x4d2, 0x207, 3, 4, 0x63, 7, 4, 0, 0, 0, 0, 0, 0, 0xffffffff, 5, 0, 0, 0, 0, 0, 0, 0x80000009, 1, 0x180000, 0, 0, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0x80000000, 0, 0x80000000, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x80000000, 2,
+        ];
+        assert_eq!(&w[..], &words[..]);
+        let head: [u64; 18] = [
+            0x3fe0000000000000, 0xbfd0000000000000, 0x3ff8000000000000, 0x3ff0000000000000, 0x4000000000000000, 0x4008000000000000, 0x4010000000000000, 0x3fb999999999999a, 0x3fc999999999999a,
+            0x3ff0000000000000, 0x4000000000000000, 0x4008000000000000, 0x4018000000000000, 0x401c000000000000, 0x4020000000000000, 0x4022000000000000, 0x4024000000000000, 0x4026000000000000,
+        ];
+        for (i, &x) in head.iter().enumerate() {
+            assert_eq!(m[i].to_bits(), x, "double {}", i);
+        }
+        let dice: [u64; 6] = [0x3ff4000000000000, 0x4004000000000000, 0x3fe0000000000000, 0x3fe8000000000000, 0x3fe0000000000000, 0];
+        for (i, &x) in dice.iter().enumerate() {
+            assert_eq!(m[G_DICE_AT_ + i].to_bits(), x, "dice double {}", i);
+        }
     }
 
     /// the TypeScript's own answers: `followRow` under bun
@@ -1025,6 +1264,14 @@ mod tests {
         assert!(g.col.mirror.block.is_none());
         assert_eq!(world(0).panes_g, 0);
         assert_eq!(box_mirror_stale_panes(&mut g), 0.0);
+    }
+
+    #[test]
+    fn a_table_holds_what_the_module_says() {
+        let mut g = game(0);
+        let t = box_mirror_tables(&mut g);
+        assert_eq!(t.get(String::from("glass")), Some(&PANE_CAP));
+        assert_eq!(t.keys().first().map(|k| k.as_str()), Some("boxes"));
     }
 
     #[test]

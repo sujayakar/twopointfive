@@ -13,10 +13,6 @@ const AIR_CELL: f64 = crate::scene_air_grid::AIR_CELL;
 fn air(g: &Game) -> &'static mut ::sim::air::Air {
     &mut ::sim::weather::of(g.sim).air
 }
-/// The same table, to read.
-fn air_read(g: &Game) -> &'static ::sim::air::Air {
-    &::sim::weather::of_read(g.sim).air
-}
 
 /// The slot's tables, made if they are owed. (rust/sim/src/lib.rs air_of)
 fn plan(g: &mut Game) -> &'static mut ::sim::air::Plan {
@@ -43,6 +39,29 @@ pub fn said() -> Vec<f64> {
     crate::sim_weatherhome::wx_out(4.0)
 }
 
+/// One word of a run of numbers, for a check. (airDust.ts wordOf)
+pub fn word_of(d: &[f64], n: Option<f64>) -> f64 {
+    let n = n.unwrap_or(d.len() as f64) as usize;
+    let mut h = js::to_i32(2166136261.0);
+    for i in 0..n {
+        let bits = d[i].to_bits();
+        h = m::imul(h ^ (bits as u32 as i32), 16777619);
+        h = m::imul(h ^ ((bits >> 32) as u32 as i32), 16777619);
+    }
+    h as u32 as f64
+}
+
+/// The field, a copy for the asker; a writer goes to the block itself. (airDust.ts AirDust.s)
+pub fn air_dust_s(g: &mut crate::game::Game) -> Vec<f64> {
+    air(g).s.to_vec()
+}
+
+/// The men's eyes read the field this run. (airDust.ts AirDust.live)
+pub fn air_dust_live(g: &mut crate::game::Game) -> bool {
+    air_dust_ensure(g);
+    air_dust_on(g)
+}
+
 /// The field stands: built now if it is owed. (airDust.ts AirDust.ready)
 pub fn air_dust_ready(g: &mut crate::game::Game) {
     air_dust_ensure(g);
@@ -62,6 +81,46 @@ pub fn air_dust_leak(g: &mut crate::game::Game) -> f64 {
 pub fn air_dust_cells(g: &mut crate::game::Game) -> Vec<u32> {
     let n = air(g).n_cells as usize;
     plan(g).cells[..n].to_vec()
+}
+
+/// The edges with a roofed cell at either end, a copy for the asker. (airDust.ts AirDust.edges)
+pub fn air_dust_edges(g: &mut crate::game::Game) -> Vec<u32> {
+    let n = air(g).n_edges as usize;
+    plan(g).edges[..n].to_vec()
+}
+
+/// Where a table of the slot's stands: 0 the roofed cells · 1 the edges · 2 which cells are roofed · 3 the leaves across each edge. (airDust.ts AirDust.table)
+pub fn air_dust_table(g: &mut crate::game::Game, which: f64) -> f64 {
+    let stamp = g.sim_stamp;
+    ::sim::air_table(g.sim, stamp, js::to_u32(which)) as f64
+}
+
+/// `n` bytes of a table of the slot's, a copy for the asker. (airDust.ts AirDust.tableBytes)
+pub fn air_dust_table_bytes(g: &mut crate::game::Game, which: f64, n: f64) -> Vec<u8> {
+    let a = air_dust_table(g, which) as usize;
+    unsafe { core::slice::from_raw_parts(a as *const u8, n as usize) }.to_vec()
+}
+
+/// `n` bytes of a column of the weather's table, a copy for the asker. (airDust.ts AirDust.bytes)
+pub fn air_dust_bytes(g: &mut crate::game::Game, c_2: f64, n: f64) -> Vec<u8> {
+    let base = ::sim::weather::of(g.sim) as *const ::sim::weather::Weather as *const u8;
+    unsafe { core::slice::from_raw_parts(base.add(::sim::weather::col(js::to_u32(c_2))), n as usize) }.to_vec()
+}
+
+/// A new one, against the game as it stands; the caller stores it at `g.air_dust`. (airDust.ts AirDust.constructor)
+pub fn air_dust_new(g: &mut crate::game::Game) -> crate::air_dust::AirDust {
+    let (w, h) = (crate::scene_air_grid::air_w(), crate::scene_air_grid::air_h());
+    let (cap_w, cap_h) = (::sim::weather_cap(2) as f64, ::sim::weather_cap(3) as f64);
+    let min = crate::scene_world::world().min;
+    if cap_w != w || cap_h != h || AIR_CELL != 0.5 || min[0] != 0.0 || min[2] != 0.0 {
+        panic!("the dust's plan is {} × {}, and rust/sim/src/air.rs holds {} × {}", w, h, cap_w, cap_h);
+    }
+    air(g).s.fill(1.0); // (a block's zeros are no air at all)
+    let was = core::mem::replace(&mut g.air_dust, AirDust::blank());
+    if crate::weather::weather_kind(g).is_some() {
+        air_dust_ensure(g);
+    }
+    core::mem::replace(&mut g.air_dust, was)
 }
 
 /// The share at a spot of the plan; off the grid = the open air. (airDust.ts AirDust.shareAt)
@@ -145,6 +204,14 @@ pub fn air_dust_build(g: &mut crate::game::Game) {
     air_dust_send(g);
 }
 
+/// What a check holds a step of the field to: its tale's lines and open ways, and the field and its clocks as they stand. (airDust.ts AirDust.tale)
+pub fn air_dust_tale(g: &mut crate::game::Game, t: &[f64]) -> Vec<f64> {
+    let (acc, cur) = (air(g).acc, air(g).cur);
+    let stat: Vec<f64> = air_dust_bytes(g, crate::sim_weatherhome::wx().air_stat, n() * 2.0).iter().map(|&b| b as f64).collect();
+    let leaf: Vec<f64> = air_dust_table_bytes(g, 3.0, n() * 2.0).iter().map(|&b| b as f64).collect();
+    vec![t[0], t[2], t[3], acc, cur, word_of(&air(g).s[..], None), word_of(&stat, None), word_of(&leaf, None)]
+}
+
 /// The level as authored again. (airDust.ts AirDust.reset)
 pub fn air_dust_reset(g: &mut crate::game::Game) {
     air_dust_reseed(g);
@@ -226,3 +293,16 @@ pub fn air_dust_summary(g: &mut crate::game::Game) -> String {
     )
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The answers are the TypeScript function's own, run under bun.
+    #[test]
+    fn word_of_matches_the_typescript() {
+        assert_eq!(word_of(&[], None), 2166136261.0);
+        assert_eq!(word_of(&[1.5, -0.0, 0.1], None), 2148598732.0);
+        assert_eq!(word_of(&[1.0, 2.0, 3.0], Some(2.0)), 686159125.0);
+        assert_eq!(word_of(&[0.0, 1.0, 255.0, 17.0], None), 3844378981.0);
+    }
+}

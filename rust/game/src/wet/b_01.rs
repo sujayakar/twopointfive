@@ -184,5 +184,14 @@ pub fn age_prints(g: &mut crate::game::Game) {}
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/wet.ts:179 clearWetPrints)
 pub fn clear_wet_prints(g: &mut crate::game::Game) {}
 
+/// BOUNDARY NO-OP (the picture's / the host's): (src/game/wet.ts:183 wetInstance)
+pub fn wet_instance(g: &mut crate::game::Game, c_2: CharId, on: bool, out: &mut Vec<f32>, o: f64) {}
+
+/// BOUNDARY NO-OP (the picture's / the host's): (src/game/wet.ts:190 wetLineRow)
+pub fn wet_line_row(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<f32>, o: f64) {}
+
+/// BOUNDARY NO-OP (the picture's / the host's): (src/game/wet.ts:195 wetKnobs)
+pub fn wet_knobs(g: &mut crate::game::Game, out: &mut Vec<f32>, o: f64) {}
+
 /// BOUNDARY: the host's debug panel and `__wet.summary()` write this line (coats, prints, drips) at the swap; a headless run has no panel, so no line.   (src/game/wet.ts:204 wetSummary)
 pub fn wet_summary(g: &mut crate::game::Game) -> String { String::new() }

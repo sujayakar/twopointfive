@@ -148,6 +148,11 @@ pub fn breach_drill_say(g: &mut crate::game::Game, gd: GuardId, key: &str, text:
     }
 }
 
+/// New waypoints and the order onto the first.   (breach.ts BreachDrill.route)
+pub fn breach_drill_route(g: &mut crate::game::Game, gd: GuardId, wps: &mut Vec<V3>, pts: &[V3], patch: Option<crate::squad::OrderPatch>) {
+    route_on(g, gd, wps, pts, patch.unwrap_or_default());
+}
+
 /// Past a waypoint, on to the next; true when on the last and arrived.   (breach.ts BreachDrill.advance)
 pub fn breach_drill_advance(g: &mut crate::game::Game, gd: GuardId, wps: &mut Vec<V3>, pass: Option<f64>) -> bool {
     let pass = pass.unwrap_or(0.7);
@@ -158,6 +163,15 @@ pub fn breach_drill_advance(g: &mut crate::game::Game, gd: GuardId, wps: &mut Ve
         crate::squad::order(g, gd, OP { goal: Some(Some(wps[0])), ..Default::default() });
     }
     wps.len() <= 1 && g.gd[gd].script.as_ref().map_or(false, |s| s.arrived == Some(true))
+}
+
+/// Is a point inside the doorway's opening.   (breach.ts BreachDrill.inFunnel)
+pub fn breach_drill_in_funnel(g: &mut crate::game::Game, p: V3) -> bool {
+    let d = match breach_drill_door(g) { Some(d) => d, None => return false };
+    let [hx, hz] = g.dr[d].def.hinge;
+    let along_x = m::abs(m::sin(g.dr[d].def.closed_dir)) < 0.5;
+    let (u0, u, w) = if along_x { (hx, p[0], p[2] - hz) } else { (hz, p[2], p[0] - hx) };
+    u > u0 - 0.05 && u < u0 + g.dr[d].def.width + 0.05 && m::abs(w) < 0.9
 }
 
 /// A door pulled to and latched.

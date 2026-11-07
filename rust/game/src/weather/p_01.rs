@@ -11,13 +11,14 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// The weather's table in the game's block (rust/sim/src/weather.rs). Take it for one read, write or call: every accessor below is this.
 fn wx(g: &Game) -> &'static mut ::sim::weather::Weather { ::sim::weather::of(g.sim) }
-/// The same table, to read.
-fn wx_read(g: &Game) -> &'static ::sim::weather::Weather { ::sim::weather::of_read(g.sim) }
 
 /// `WX_KNOBS.here()`: the module's knobs as they stand, unless this tick has handed the list. rustknobs.ts:59 sets it and it needs `g`, which the skeleton's `here()` has not, so this is p_air_dust_01's line (notes, Skeleton; all the knobs, where the TypeScript writes the weather's).
 fn knobs_here(g: &mut Game) {
     if !g.m.rustknobs.rust_knobs.tick { crate::rustknobs::knobs_to_rust(g); }
 }
+
+/// `console.warn` as the weather stands up (after-snapshot.md: a line, no refusal). The skeleton has no console, so it says nothing yet (notes, Skeleton).
+fn seam_console_warn(_line: String) {}
 
 /// A box's row (Box.* in the TypeScript): the one seam left. Skeleton 5 has `g.col.boxes: Vec<BoxId>` and no table of Box rows; where the table comes back this is the one line `&mut g.<table>[b]`.
 fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
@@ -33,6 +34,9 @@ fn paint(g: &mut Game, b: BoxId, albedo: V3, flags: f64, rough: Option<f64>, ani
 
 /// `WEATHER_PRESETS[kind]`.
 fn preset(g: &Game, kind: crate::weather_kinds::WeatherKind) -> &crate::weather_kinds::WeatherPreset { g.m.weather_kinds.weather_presets.get(kind).unwrap() }
+
+/// `x.toFixed(d)` for the panel's line. (A tie on an exact binary value rounds to even here, up there: nothing reads this line but a person.)
+fn fixed(x: f64, d: usize) -> String { format!("{:.*}", d, x) }
 
 // ---- the file's free functions
 
@@ -50,6 +54,43 @@ pub fn roofs_of(g: &mut crate::game::Game, boxes: &[BoxId]) -> Vec<[f64; 4]> {
     for i in 0..n { out.push([v[i * 4], v[i * 4 + 1], v[i * 4 + 2], v[i * 4 + 3]]); }
     out
 }
+
+/// A ground slab a picked rain wets: the ground's top, drawn, not small, and some of it under open sky. (weather.ts openGround)
+pub fn open_ground(g: &mut crate::game::Game, b: BoxId, roofs: &[[f64; 4]]) -> bool {
+    let (c, h, flags) = (seam_box(g, b).c, seam_box(g, b).h, seam_box(g, b).flags);
+    let top = c[1] + h[1];
+    let f = crate::scene_boxes::box_flag();
+    let skip = js::to_i32(f.no_primary) | js::to_i32(f.glass) | js::to_i32(f.dynamic);
+    if !(top > -0.011 && top < 0.003) || h[0] * h[2] < 4.0 || (js::to_i32(flags) & skip) != 0 { return false; }
+    sky_over(g, b, roofs)
+}
+
+/// Of 25 spots over the box's rectangle, how many have no roof over them, counted no further than `enough`. (weather.ts skySpots)
+pub fn sky_spots(g: &mut crate::game::Game, b: BoxId, roofs: &[[f64; 4]], enough: f64, step: f64) -> f64 {
+    let (c, h, yaw) = (seam_box(g, b).c, seam_box(g, b).h, seam_box(g, b).yaw);
+    let cs = m::cos(yaw);
+    let sn = m::sin(yaw);
+    let mut n = 0.0;
+    for i in 0..5 {
+        for j in 0..5 {
+            let lx = h[0] * (i as f64 - 2.0) * step;
+            let lz = h[2] * (j as f64 - 2.0) * step;
+            let x = c[0] + cs * lx + sn * lz;
+            let z = c[2] - sn * lx + cs * lz;
+            if !roofs.iter().any(|r| crate::weather_kinds::in_rect(r, x, z)) {
+                n += 1.0;
+                if n >= enough { return n; }
+            }
+        }
+    }
+    n
+}
+
+/// Rain falls on SOME of it: a ground slab's test. (weather.ts skyOver)
+pub fn sky_over(g: &mut crate::game::Game, b: BoxId, roofs: &[[f64; 4]]) -> bool { sky_spots(g, b, roofs, 1.0, 0.45) >= 1.0 }
+
+/// Rain falls on MOST of it: the test of a thing laid for one place. (weather.ts skyOverMost)
+pub fn sky_over_most(g: &mut crate::game::Game, b: BoxId, roofs: &[[f64; 4]]) -> bool { sky_spots(g, b, roofs, 13.0, 0.4) >= 13.0 }
 
 /// A level that carries its own places: the office's footprints are not its building's. (weather.ts ownFloor)
 pub fn own_floor(g: &mut crate::game::Game) -> bool {
@@ -69,6 +110,9 @@ pub fn stroke_mean(s: &crate::weather::Stroke, a: f64, b: f64) -> f64 {
 /// Master switch, read. (weather.ts Weather.enabled)
 pub fn weather_enabled(g: &mut crate::game::Game) -> bool { g.weather.on }
 
+/// Master switch, set: tears down exactly as setEnabled(false) does. (weather.ts Weather.enabled)
+pub fn weather_set_enabled(g: &mut crate::game::Game, v: bool) { weather_set_enabled_2(g, v) }
+
 /// The weather the level was started in. (weather.ts Weather.kind)
 pub fn weather_kind(g: &mut crate::game::Game) -> Option<crate::weather_kinds::WeatherKind> { g.weather.kind_now }
 
@@ -77,6 +121,9 @@ pub fn weather_set_kind(g: &mut crate::game::Game, k: Option<crate::weather_kind
     g.weather.kind_now = k;
     wx(g).live = if k.is_some() { 1.0 } else { 0.0 };
 }
+
+/// The no-rain footprints in force. (weather.ts Weather.roofs)
+pub fn weather_roofs(g: &mut crate::game::Game) -> Vec<[f64; 4]> { g.weather.roof_rects.clone() }
 
 /// The footprints, into the table the rules read: its one writer. (weather.ts Weather.roofs)
 pub fn weather_set_roofs(g: &mut crate::game::Game, r: &[[f64; 4]]) {
@@ -152,6 +199,9 @@ pub fn weather_set_thunders_are(g: &mut crate::game::Game, l: &[crate::weather::
     for t in l { ::sim::weather::thunder_push(w, t.at, t.dist_km, t.bearing, t.loud); }
 }
 
+/// A thunder put on its way by hand. (weather.ts Weather.thunder)
+pub fn weather_thunder(g: &mut crate::game::Game, t: crate::weather::Thunder) { ::sim::weather::thunder_push(wx(g), t.at, t.dist_km, t.bearing, t.loud); }
+
 /// When the next stroke is due (game time). (weather.ts Weather.nextFlashAt)
 pub fn weather_next_flash_at(g: &mut crate::game::Game) -> f64 { wx(g).next_flash_at }
 
@@ -170,6 +220,52 @@ pub fn weather_last_bark_t(g: &mut crate::game::Game) -> f64 { wx(g).last_bark_t
 /// (weather.ts Weather.lastBarkT)
 pub fn weather_set_last_bark_t(g: &mut crate::game::Game, v: f64) { wx(g).last_bark_t = v; }
 
+/// The paint a box had before the wet lot darkened it, if it is one of those. (weather.ts Weather.dryPaint)
+pub fn weather_dry_paint(g: &mut crate::game::Game, b: BoxId) -> Option<[f64; 3]> {
+    for t in &g.weather.touched {
+        if t.box_ == b { return Some(t.albedo); }
+    }
+    None
+}
+
+/// The weather a new game is born in. Runs on `g.weather` (every method's path) and returns what the caller stores there. (weather.ts Weather.constructor)
+pub fn weather_new(g: &mut crate::game::Game) -> crate::weather::Weather {
+    g.weather = Weather::blank();
+    // g.sim.keep(WX_BIT, 'weather'): the slot's block stands already, so only the bit and its one check are left (as p_sim_lightshome_01's LightHome)
+    let bit = crate::sim_weatherhome::WX_BIT as u32;
+    let head = &mut ::sim::state::state(g.sim).head;
+    if head.homes & bit != 0 { panic!("two stores of the weather over one game's block: a part of a block is one store's"); }
+    head.homes |= bit;
+    {
+        let ceiling_y = crate::scene_world::world().ceiling_y;
+        let mut items: Vec<crate::sim_weatherhome::RoofsCountedBoxesItem> = Vec::new();
+        for b in level_boxes(g) {
+            let (c, h) = (seam_box(g, b).c, seam_box(g, b).h);
+            items.push(crate::sim_weatherhome::RoofsCountedBoxesItem { c: c.to_vec(), h: h.to_vec() });
+        }
+        let (has, most) = (crate::sim_weatherhome::roofs_counted(&items, ceiling_y), ::sim::weather::ROOFS as f64);
+        if has > most { seam_console_warn(format!("the level has {} ceiling slabs and the weather's table holds {}: the biggest {} are its roofs, and rain and wind pass the rest", has, most, most)); }
+    }
+    let l = legacy();
+    weather_set_storm(g, l.storm);
+    weather_set_rain_rate(g, l.rain);
+    weather_set_thunder_until(g, -1e9);
+    weather_set_next_flash_at(g, -1.0);
+    weather_set_last_bark_t(g, -1e9);
+    weather_set_die(g, 20260809.0);
+    weather_set_roofs(g, &[interior(), annex()]);
+    let boot = g.m.weather_kinds.weather_boot;
+    let born = match weather_level_kind(g) {
+        Some(k) => Some(k),
+        None => if boot.kind == Some(crate::weather_kinds::WeatherKind::Snow) { None } else { boot.kind },
+    };
+    if born.is_none() && own_floor(g) { weather_own_night(g); }
+    let wet = if weather_rain_rate(g) > 0.0 { 1.0 } else { 0.0 };
+    weather_set_wet(g, wet);
+    if born.is_some() { set_kind_at(g, born, false); } else { sync_roofs(g, false, false); }
+    g.weather.clone()
+}
+
 /// A level built for snow is born in the kind 'snow' and stays in it; None = any other level. (weather.ts Weather.levelKind)
 pub fn weather_level_kind(g: &mut crate::game::Game) -> Option<crate::weather_kinds::WeatherKind> {
     let name = crate::scene_level_load::level_name_of(g);
@@ -186,6 +282,9 @@ pub fn weather_own_night(g: &mut crate::game::Game) {
     let roofs = weather_own_roofs(g);
     weather_set_roofs(g, &roofs);
 }
+
+/// The level's own storm is in force, cut by the level's own roofs (WX_OWN.roofs). (weather.ts Weather.ownStorm)
+pub fn weather_own_storm(g: &mut crate::game::Game) -> bool { g.weather.own }
 
 /// Do the office's two rectangles fit this level's roofs (asked once). (weather.ts Weather.officeFit)
 pub fn weather_office_fit(g: &mut crate::game::Game) -> bool {
@@ -225,6 +324,9 @@ fn sync_roofs(g: &mut Game, tell_wind: bool, built: bool) {
     let roofs: Option<Vec<[f64; 4]>> = if g.weather.kind_now.is_some() || own { Some(g.weather.roof_rects.clone()) } else { None };
     crate::wind::wind_reroof(g, roofs.as_deref(), Some(own));
 }
+
+/// `roofs` are the level's own and in force. (weather.ts Weather.levelRoofs)
+pub fn weather_level_roofs(g: &mut crate::game::Game) -> bool { g.weather.kind_now.is_some() || g.weather.own }
 
 /// The level's own ceiling slabs as the no-rain footprints (roofs 0 / 1 exact, 2 / 3 as the Frame packs them). (weather.ts Weather.ownRoofs)
 pub fn weather_own_roofs(g: &mut crate::game::Game) -> Vec<[f64; 4]> {
@@ -275,6 +377,25 @@ fn set_kind_at(g: &mut Game, kind: Option<crate::weather_kinds::WeatherKind>, bu
     if built { crate::air_dust::air_dust_reseed(g); }
     crate::hours::hour_weather_changed(g);
     true
+}
+
+/// Can a checkpoint's weather be put in here? None, or the reason. (weather.ts Weather.refuses)
+pub fn weather_refuses(g: &mut crate::game::Game, s: Option<&crate::weather::WeatherSnap>) -> Option<String> {
+    let asked = s.and_then(|s| s.kind);
+    let k = if crate::weather_kinds::is_any_kind(g, asked) { asked } else { None };
+    let own = weather_level_kind(g);
+    if let Some(o) = own {
+        if k != own { return Some(format!("made in other weather ({}; this level is in {})", kind_words(k), o.as_str())); }
+    }
+    if g.m.weather_kinds.weather_boot.locked && k != g.weather.kind_now {
+        return Some(format!("made in other weather ({}; this page is in {}) — open the mission in that weather to load it", kind_words(k), kind_words(g.weather.kind_now)));
+    }
+    None
+}
+
+/// `k ?? 'the level\'s own'`.
+fn kind_words(k: Option<crate::weather_kinds::WeatherKind>) -> &'static str {
+    match k { Some(k) => k.as_str(), None => "the level's own" }
 }
 
 /// The footprints in force now, as underRoof reads them. (weather.ts Weather.roofsNow)
@@ -549,6 +670,9 @@ pub fn weather_play_thunder(g: &mut crate::game::Game, th: crate::weather::Thund
     }
 }
 
+/// Is the ground wet now, as this weather last judged it. (weather.ts Weather.groundWet)
+pub fn weather_ground_wet(g: &mut crate::game::Game) -> bool { g.weather.wet_on }
+
 /// The wet lot: the asphalt slab darkened and glossy, or everything put back. Idempotent both ways. (weather.ts Weather.setWet)
 pub fn weather_set_wet_2(g: &mut crate::game::Game, on: bool) {
     if on == g.weather.wet_on { return; }
@@ -598,6 +722,35 @@ pub fn weather_teardown(g: &mut crate::game::Game) {
     weather_set_rain_now(g, 0.0);
     if let Some(frame) = g.engine.weather.as_mut() { zero(frame); }
     crate::audio_iface::game_audio_like_rain(g, 0.0);
+}
+
+/// One line for the panel and the probes. (weather.ts Weather.summary)
+pub fn weather_summary(g: &mut crate::game::Game) -> String {
+    let mut out = String::new();
+    if g.weather.own { out.push_str(&format!("own roofs {} · ", g.weather.roof_rects.len())); }
+    if let Some(k) = g.weather.kind_now {
+        out.push_str(k.as_str());
+        if let Some(f) = g.weather.fog_spec { out.push_str(&format!(" fog σ{}/H{}", fixed(f.sigma, 3), f.h)); }
+        out.push_str(&format!(" cloud {} · ", fixed(weather_cloud(g), 2)));
+    }
+    if weather_enabled(g) {
+        if g.weather.suspended { out.push_str("held (day)"); } else { out.push_str(&format!("storm {}", fixed(weather_storm(g), 2))); }
+    } else {
+        out.push_str("off");
+    }
+    out.push_str(&format!(" · rain {} wet {} · ", fixed(weather_rain_rate(g), 2), fixed(weather_wet(g), 2)));
+    if let Some((t, light)) = g.weather.flash.as_ref().map(|f| (f.t, f.light)) {
+        let i = g.tab.light[light].intensity;
+        out.push_str(&format!("STROKE {} s I={}", fixed(t, 2), fixed(i, 1)));
+    } else {
+        out.push_str(&format!("next stroke in {} s", fixed(m::max(0.0, weather_next_flash_at(g) - g.time), 0)));
+    }
+    if let Some(th) = weather_thunders(g).first().copied() {
+        out.push_str(&format!(" · thunder in {} s ({} km)", fixed(th.at - g.time, 1), fixed(th.dist_km, 1)));
+    }
+    let st = &g.weather.stats;
+    out.push_str(&format!(" · {} strokes {} thunders {} remarks", st.flashes, st.thunders, st.barks));
+    out
 }
 
 #[cfg(test)]

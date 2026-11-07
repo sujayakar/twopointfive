@@ -132,7 +132,7 @@ pub fn marks_of(g: &mut crate::game::Game) -> Option<crate::qrf::Marks> {
 
 /// How many more men the floor can be given.   (qrf.ts roomFor)
 pub fn room_for(g: &mut crate::game::Game) -> f64 {
-    let n = (crate::guards::MAX_SKINNED - g.civilians.len() as f64) - 1.0 - g.guards.len() as f64;
+    let n = (crate::guards::MAX_SKINNED - g.civilians.len() as f64) - crate::seats::seat_count(g) - g.guards.len() as f64;
     if raid(g) {
         m::min(n, crate::scene_scenarios::SQUAD_MAX_MEN - g.night_breach.hostiles.len() as f64 - g.qrf.men.len() as f64)
     } else {
@@ -160,7 +160,239 @@ pub fn qrf_owns(g: &mut crate::game::Game, gd: GuardId) -> bool {
     g.qrf.men.contains(&gd) || g.qrf.perim.as_ref().map_or(false, |p| p.men.iter().any(|m| m.gd == gd))
 }
 
+/// One line for the panel and the probes.   (qrf.ts Qrf.summary)
+pub fn qrf_summary(g: &mut crate::game::Game) -> String {
+    if g.qrf.state == crate::qrf::QrfState::Idle {
+        let heard = if g.qrf.loud_t > -1e8 { alloc::format!(" · gunfire heard {} s ago", js::num_str(m::round(g.time - g.qrf.loud_t))) } else { String::new() };
+        let bodies = bodies_found(g);
+        let alarm = crate::guards::escalation_of(g);
+        return alloc::format!("QRF ▸ idle{} · bodies found {} · alarm {}", heard, js::num_str(bodies), js::num_str(alarm));
+    }
+    let left = if g.qrf.arrive_at > g.time { alloc::format!(" · door in {} s", js::num_str(m::ceil(g.qrf.arrive_at - g.time))) } else { String::new() };
+    let up = alive(g).len();
+    let q = &g.qrf;
+    let deployed = if q.state == crate::qrf::QrfState::Deployed {
+        let target = match &q.target { Some(t) => alloc::format!(" → {}", t.room), None => String::new() };
+        alloc::format!(" · {}/{} up · {}{} · bangs {} · lost {}", up, q.men.len(), q.phase.as_str(), target, js::num_str(q.bangs), js::num_str(q.lost))
+    } else {
+        String::new()
+    };
+    let perim = match &q.perim {
+        Some(p) => alloc::format!(" · PERIMETER {} ({} out: {} spawned, {} peeled)", p.state.as_str(), p.men.len(), js::num_str(p.spawned), js::num_str(p.peeled)),
+        None => String::new(),
+    };
+    let reason = q.reason.map_or("null", |r| r.as_str());
+    alloc::format!("QRF ▸ {} ({}){}{}{}", q.state.as_str(), reason, left, deployed, perim)
+}
+
 // ---------------------------------------------------------------- knobs kept per machine
+
+/// `?qrfsquad=0` on the page's address. The skeleton has no row for the address: the TypeScript's answer with no word.   (qrf.ts ownDrillAsked)
+pub fn own_drill_asked() -> bool { false }
+
+/// What this machine kept of the knobs. With no `g` the store cannot be reached, so this is the TypeScript's answer with no storage; this file's callers use `stored_tune_in`.   (qrf.ts storedTune)
+pub fn stored_tune() -> Option<JsMap<String, crate::qrf::StoredTuneRow>> { None }
+
+/// storeName's shape: `stored_tune` with what it needs, the store being reached through `g`. Nothing kept or junk in it: None.   (qrf.ts storedTune)
+fn stored_tune_in(g: &mut Game) -> Option<JsMap<String, crate::qrf::StoredTuneRow>> {
+    let raw = crate::savestate::save_store_get(g, TUNE_KEY)?;
+    if raw.is_empty() { return None; }
+    tune_rows(&raw)
+}
+
+/// `JSON.parse` as far as the two readers can tell: an object's booleans and numbers. Not JSON, or JSON of another shape (which reads no row): None.
+fn tune_rows(raw: &str) -> Option<JsMap<String, crate::qrf::StoredTuneRow>> {
+    let mut i = 0;
+    json_ws(raw, &mut i);
+    if raw.as_bytes().get(i) != Some(&b'{') { return None; }
+    let rows = json_object(raw, &mut i)?;
+    json_ws(raw, &mut i);
+    if i != raw.len() { return None; }
+    let mut out = JsMap::new();
+    for (k, v) in rows {
+        // (a later row of a name replaces the earlier, whatever its kind)
+        match v { Some(v) => { out.set(k, v); } None => { out.delete(k); } }
+    }
+    Some(out)
+}
+
+fn json_ws(s: &str, i: &mut usize) {
+    while matches!(s.as_bytes().get(*i), Some(b' ' | b'\t' | b'\n' | b'\r')) { *i += 1; }
+}
+
+/// At a `{`: its rows in order, a row of another kind than boolean or number as None. None = not JSON.
+fn json_object(s: &str, i: &mut usize) -> Option<Vec<(String, Option<crate::qrf::StoredTuneRow>)>> {
+    *i += 1;
+    let mut rows = Vec::new();
+    json_ws(s, i);
+    if s.as_bytes().get(*i) == Some(&b'}') { *i += 1; return Some(rows); }
+    loop {
+        json_ws(s, i);
+        let k = json_string(s, i)?;
+        json_ws(s, i);
+        if s.as_bytes().get(*i) != Some(&b':') { return None; }
+        *i += 1;
+        let v = json_value(s, i)?;
+        rows.push((k, v));
+        json_ws(s, i);
+        match *s.as_bytes().get(*i)? {
+            b',' => *i += 1,
+            b'}' => { *i += 1; return Some(rows); }
+            _ => return None,
+        }
+    }
+}
+
+/// One value: Some(Some(row)) a boolean or a number, Some(None) any other. None = not JSON.
+fn json_value(s: &str, i: &mut usize) -> Option<Option<crate::qrf::StoredTuneRow>> {
+    json_ws(s, i);
+    let b = s.as_bytes();
+    match *b.get(*i)? {
+        b'"' => json_string(s, i).map(|_| None),
+        b'{' => json_object(s, i).map(|_| None),
+        b'[' => {
+            *i += 1;
+            json_ws(s, i);
+            if b.get(*i) == Some(&b']') { *i += 1; return Some(None); }
+            loop {
+                json_value(s, i)?;
+                json_ws(s, i);
+                match *b.get(*i)? {
+                    b',' => *i += 1,
+                    b']' => { *i += 1; return Some(None); }
+                    _ => return None,
+                }
+            }
+        }
+        b't' => json_word(s, i, "true").map(|_| Some(crate::qrf::StoredTuneRow::Bool { v: true })),
+        b'f' => json_word(s, i, "false").map(|_| Some(crate::qrf::StoredTuneRow::Bool { v: false })),
+        b'n' => json_word(s, i, "null").map(|_| None),
+        _ => json_number(s, i).map(|v| Some(crate::qrf::StoredTuneRow::Num { v })),
+    }
+}
+
+fn json_word(s: &str, i: &mut usize, w: &str) -> Option<()> {
+    if s[*i..].starts_with(w) { *i += w.len(); Some(()) } else { None }
+}
+
+fn json_digits(b: &[u8], i: &mut usize) -> bool {
+    let at = *i;
+    while matches!(b.get(*i), Some(b'0'..=b'9')) { *i += 1; }
+    *i > at
+}
+
+/// JSON's number grammar, read to the nearest double as `JSON.parse` does (1e999 is Infinity, which `row_num` passes over).
+fn json_number(s: &str, i: &mut usize) -> Option<f64> {
+    let b = s.as_bytes();
+    let at = *i;
+    if b.get(*i) == Some(&b'-') { *i += 1; }
+    if b.get(*i) == Some(&b'0') { *i += 1; } else if !json_digits(b, i) { return None; }
+    if b.get(*i) == Some(&b'.') { *i += 1; if !json_digits(b, i) { return None; } }
+    if matches!(b.get(*i), Some(b'e' | b'E')) {
+        *i += 1;
+        if matches!(b.get(*i), Some(b'+' | b'-')) { *i += 1; }
+        if !json_digits(b, i) { return None; }
+    }
+    s[at..*i].parse::<f64>().ok()
+}
+
+/// At a `"`: the text, in JavaScript's UTF-16 units so a pair written as two escapes joins. None = not JSON.
+fn json_string(s: &str, i: &mut usize) -> Option<String> {
+    let b = s.as_bytes();
+    if b.get(*i) != Some(&b'"') { return None; }
+    *i += 1;
+    let mut out: Vec<u16> = Vec::new();
+    loop {
+        match *b.get(*i)? {
+            b'"' => { *i += 1; return Some(String::from_utf16_lossy(&out)); }
+            0..=0x1f => return None,
+            b'\\' => {
+                let e = *b.get(*i + 1)?;
+                *i += 2;
+                out.push(match e {
+                    b'"' => 34, b'\\' => 92, b'/' => 47, b'b' => 8, b'f' => 12, b'n' => 10, b'r' => 13, b't' => 9,
+                    b'u' => {
+                        let h = s.get(*i..*i + 4)?;
+                        if !h.bytes().all(|x| x.is_ascii_hexdigit()) { return None; }
+                        *i += 4;
+                        u16::from_str_radix(h, 16).ok()?
+                    }
+                    _ => return None,
+                });
+            }
+            _ => {
+                let c = s[*i..].chars().next()?;
+                *i += c.len_utf8();
+                let mut unit = [0u16; 2];
+                out.extend_from_slice(c.encode_utf16(&mut unit));
+            }
+        }
+    }
+}
+
+/// `typeof o[key] === 'boolean'`
+fn row_bool(o: &JsMap<String, crate::qrf::StoredTuneRow>, key: &str) -> Option<bool> {
+    match o.get(String::from(key)) { Some(crate::qrf::StoredTuneRow::Bool { v }) => Some(*v), _ => None }
+}
+
+/// `Number.isFinite(o[key])`
+fn row_num(o: &JsMap<String, crate::qrf::StoredTuneRow>, key: &str) -> Option<f64> {
+    match o.get(String::from(key)) { Some(crate::qrf::StoredTuneRow::Num { v }) if v.is_finite() => Some(*v), _ => None }
+}
+
+/// The response's knobs from the machine's memory, and the address's word over the squad row.   (qrf.ts loadQrfTune)
+pub fn load_qrf_tune(g: &mut crate::game::Game) {
+    if let Some(o) = stored_tune_in(g) {
+        if let Some(v) = row_bool(&o, "qrf") { g.tune.qrf = v; }
+        if let Some(v) = row_bool(&o, "perimeter") { g.tune.perimeter = v; }
+        if let Some(v) = row_bool(&o, "qrfSilent") { g.tune.qrf_silent = v; }
+        if let Some(v) = row_bool(&o, "qrfSquad") { g.tune.qrf_squad = v; }
+        if let Some(v) = row_num(&o, "qrfEta") { g.tune.qrf_eta = crate::v3::clamp(v, 15.0, 240.0); }
+        if let Some(v) = row_num(&o, "perimeterEta") { g.tune.perimeter_eta = crate::v3::clamp(v, 10.0, 180.0); }
+        if let Some(v) = row_num(&o, "qrfSize") { g.tune.qrf_size = crate::v3::clamp(m::round(v), 2.0, 4.0); }
+        if let Some(v) = row_num(&o, "perimeterSize") { g.tune.perimeter_size = crate::v3::clamp(m::round(v), 2.0, 4.0); }
+    }
+    if own_drill_asked() { g.tune.qrf_squad = false; }
+}
+
+/// A number as `JSON.stringify` writes it: as the template string does, and null if it is not finite.
+fn json_num(x: f64) -> String {
+    if x.is_finite() { js::num_str(x) } else { String::from("null") }
+}
+
+/// The row `saveQrfTune` stores, as `JSON.stringify` writes it.
+fn tune_json(t: &crate::game::GameTune, qrf_squad: bool) -> String {
+    alloc::format!(
+        "{{\"qrf\":{},\"qrfEta\":{},\"qrfSize\":{},\"perimeter\":{},\"perimeterEta\":{},\"perimeterSize\":{},\"qrfSilent\":{},\"qrfSquad\":{}}}",
+        t.qrf, json_num(t.qrf_eta), json_num(t.qrf_size), t.perimeter, json_num(t.perimeter_eta), json_num(t.perimeter_size), t.qrf_silent, qrf_squad
+    )
+}
+
+/// The knobs into the machine's memory; under the address's word the squad row's memory stays as it was.   (qrf.ts saveQrfTune)
+pub fn save_qrf_tune(g: &mut crate::game::Game) {
+    let qrf_squad = if own_drill_asked() {
+        stored_tune_in(g).and_then(|o| row_bool(&o, "qrfSquad")).unwrap_or(qrf_tune_defaults().qrf_squad)
+    } else {
+        g.tune.qrf_squad
+    };
+    let line = tune_json(&g.tune, qrf_squad);
+    crate::savestate::save_store_set(g, TUNE_KEY, &line);
+}
+
+/// The knobs back to what the game ships, and the machine's memory of them dropped.   (qrf.ts resetQrfTune)
+pub fn reset_qrf_tune(g: &mut crate::game::Game) {
+    let d = qrf_tune_defaults();
+    g.tune.qrf = d.qrf;
+    g.tune.qrf_eta = d.qrf_eta;
+    g.tune.qrf_size = d.qrf_size;
+    g.tune.perimeter = d.perimeter;
+    g.tune.perimeter_eta = d.perimeter_eta;
+    g.tune.perimeter_size = d.perimeter_size;
+    g.tune.qrf_silent = d.qrf_silent;
+    g.tune.qrf_squad = d.qrf_squad;
+    if own_drill_asked() { g.tune.qrf_squad = false; }
+    crate::savestate::save_store_remove(g, TUNE_KEY);
+}
 
 // ---------------------------------------------------------------- small shared helpers
 
@@ -485,6 +717,62 @@ pub fn response_words(g: &mut crate::game::Game) -> Option<crate::qrf::ResponseW
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_kept_row_reads_as_json_stringify_writes_it() {
+        let d = qrf_tune_defaults();
+        let mut t = crate::game::GameTune::zeroed();
+        t.qrf = d.qrf; t.qrf_eta = d.qrf_eta; t.qrf_size = d.qrf_size; t.perimeter = d.perimeter;
+        t.perimeter_eta = d.perimeter_eta; t.perimeter_size = d.perimeter_size; t.qrf_silent = d.qrf_silent;
+        // JSON.stringify(QRF_TUNE_DEFAULTS), with the squad row as the caller says
+        assert_eq!(tune_json(&t, false), r#"{"qrf":true,"qrfEta":75,"qrfSize":4,"perimeter":true,"perimeterEta":45,"perimeterSize":2,"qrfSilent":true,"qrfSquad":false}"#);
+        t.qrf_eta = f64::NAN;
+        assert!(tune_json(&t, true).contains(r#""qrfEta":null"#));
+    }
+
+    #[test]
+    fn a_row_of_the_wrong_kind_is_not_read() {
+        let mut o: JsMap<String, crate::qrf::StoredTuneRow> = JsMap::new();
+        o.set(String::from("qrf"), crate::qrf::StoredTuneRow::Num { v: 1.0 });
+        o.set(String::from("qrfEta"), crate::qrf::StoredTuneRow::Bool { v: true });
+        o.set(String::from("qrfSize"), crate::qrf::StoredTuneRow::Num { v: f64::INFINITY });
+        o.set(String::from("perimeter"), crate::qrf::StoredTuneRow::Bool { v: false });
+        o.set(String::from("perimeterEta"), crate::qrf::StoredTuneRow::Num { v: 30.0 });
+        assert_eq!(row_bool(&o, "qrf"), None);
+        assert_eq!(row_num(&o, "qrfEta"), None);
+        assert_eq!(row_num(&o, "qrfSize"), None);
+        assert_eq!(row_bool(&o, "perimeter"), Some(false));
+        assert_eq!(row_num(&o, "perimeterEta"), Some(30.0));
+        assert_eq!(row_bool(&o, "absent"), None);
+    }
+
+    #[test]
+    fn the_kept_row_reads_back_as_json_parse_reads_it() {
+        let o = tune_rows(r#" {"qrf":false, "qrfEta":37.5,"perimeterEta":null,"qrfSize":1e999,"qrfSilent":"yes","perimeter":[1,{"a":2}],"\u0071rfSquad":true} "#).unwrap();
+        assert_eq!(row_bool(&o, "qrf"), Some(false));
+        assert_eq!(row_num(&o, "qrfEta"), Some(37.5));
+        assert_eq!(row_num(&o, "perimeterEta"), None);
+        assert_eq!(row_num(&o, "qrfSize"), None);
+        assert_eq!(row_bool(&o, "qrfSilent"), None);
+        assert_eq!(row_bool(&o, "perimeter"), None);
+        assert_eq!(row_bool(&o, "qrfSquad"), Some(true));
+        // what the writer writes comes back
+        let d = qrf_tune_defaults();
+        let mut t = crate::game::GameTune::zeroed();
+        t.qrf_eta = d.qrf_eta;
+        let o = tune_rows(&tune_json(&t, true)).unwrap();
+        assert_eq!(row_num(&o, "qrfEta"), Some(75.0));
+        assert_eq!(row_bool(&o, "qrfSquad"), Some(true));
+    }
+
+    #[test]
+    fn junk_and_other_shapes_read_no_row() {
+        for raw in ["", "{", "{\"qrf\":tru}", "{\"qrf\":true,}", "{\"qrf\":01}", "{\"qrf\":true} x", "{'qrf':true}", "5", "null", "[true]", "\"qrf\""] {
+            assert!(tune_rows(raw).is_none(), "{}", raw);
+        }
+        let o = tune_rows(r#"{"qrf":true,"qrf":null}"#).unwrap();
+        assert_eq!(row_bool(&o, "qrf"), None);
+    }
 
     #[test]
     fn a_long_line_is_clipped_in_utf16_units() {

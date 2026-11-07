@@ -34,3 +34,5 @@ pub fn smoke_system_like_clear_all(g: &mut crate::game::Game) { if g.smoke_owned
 /// BOUNDARY NO-OP (the picture's / the host's): (src/smoke/types.ts:86 SmokeSystemLike.setWind)
 pub fn smoke_system_like_set_wind(g: &mut crate::game::Game, srcs: &[crate::smoke_types::WindGpuSource], relax: f64) {}
 
+/// BOUNDARY NO-OP (the picture's / the host's): (src/smoke/types.ts:89 SmokeSystemLike.setStir)
+pub fn smoke_system_like_set_stir(g: &mut crate::game::Game, amount: f64) {}

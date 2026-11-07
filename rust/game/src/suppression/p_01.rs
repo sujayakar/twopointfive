@@ -117,6 +117,12 @@ fn note_one(g: &mut Game, r: &Round, c: CharId, who: crate::condition::Man, held
     sup.src_t = now;
 }
 
+/// A checkpoint loaded puts the time back: the floor's clocks must not sit in the future.   (suppression.ts forgetSuppressionClocks)
+pub fn forget_suppression_clocks(g: &mut crate::game::Game) {
+    g.m.suppression.floor_line_t = None;
+    g.m.suppression.floor_bark_t = None;
+}
+
 /// Which held-back line outranks which.   (suppression.ts RANK)
 fn rank(moment: crate::suppression::SupMoment) -> i32 {
     match moment {
@@ -583,6 +589,47 @@ pub fn sam_spread(g: &mut crate::game::Game) -> f64 {
     } else {
         0.0
     }
+}
+
+/// `x.toFixed(2)`.   (suppressionSummary's f2)
+fn f2(x: f64) -> String { js::to_fixed(x, 2) }
+/// `x.toFixed(1)`.   (suppressionSummary's f1)
+fn f1(x: f64) -> String { js::to_fixed(x, 1) }
+
+/// Panel / QA: the player, then every living man with anything on him (or the nearest, at rest).   (suppression.ts suppressionSummary)
+pub fn suppression_summary(g: &mut crate::game::Game) -> String {
+    let (pv, pk) = (g.pl[g.player].sup.v, g.pl[g.player].sup.kick);
+    let kick = if pk > 0.01 { alloc::format!(" (kick {})", f2(pk)) } else { String::new() };
+    let mut parts: Vec<String> = vec![alloc::format!("Player {}{}", f2(pv), kick)];
+    let now = g.time;
+    let mut shown: Vec<GuardId> = Vec::new();
+    for &x in &g.guards {
+        if g.gd[x].state == crate::game::GuardState::Dead { continue; }
+        let s = &g.gd[x].sup;
+        if s.v >= 0.005 || s.cover.is_some() || s.down_t > 0.0 || now < s.cover_until { shown.push(x); }
+    }
+    if shown.is_empty() {
+        if let Some(n) = crate::game::game_nearest_living_guard(g, None, None) { shown = vec![n]; }
+    }
+    let flinch = g.k.suppression.flinch;
+    for gd in shown {
+        let s = g.gd[gd].sup;
+        let mut bits: Vec<String> = vec![alloc::format!("{} {}", g.gd[gd].callsign, f2(s.v))];
+        if let Some(cover) = s.cover {
+            bits.push(alloc::format!("→ cover ({}, {})", f1(cover[0]), f1(cover[2])));
+        } else if s.down_t > 0.0 || s.latched {
+            bits.push(alloc::format!("head-down {} s (pinned {} s)", f1(m::max(s.down_t, 0.0)), f1(s.pinned_t)));
+        } else if now < s.cover_until {
+            bits.push(alloc::format!("holding cover {} s", f1(s.cover_until - now)));
+        } else if s.v >= flinch {
+            bits.push(String::from("flinching"));
+        }
+        if js::truthy(s.displaces) {
+            bits.push(alloc::format!("{} shift{}", js::num_str(s.displaces), if s.displaces > 1.0 { "s" } else { "" }));
+        }
+        parts.push(bits.join(" "));
+    }
+    alloc::format!("suppression{} ▸ {}", if g.tune.suppression { "" } else { " (reactions OFF)" }, parts.join(" · "))
 }
 
 #[cfg(test)]

@@ -32,7 +32,6 @@ import { gpuFx } from './particleFx';
 import { SNOW_LOOK, snowLevel } from './weatherKinds';
 import { levelNameOf } from '../scene/levelLoad';
 import { civiliansShown } from './civilians';
-import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** The numbers (judged on software-rendered stills only, never seen moving — the maintainer's to move; `__snow.breath` on the console, live with the next breath).
  *  Authored data, not player switches. */
@@ -152,7 +151,7 @@ function mouthOf(c: Character): { pos: Vec3; dir: Vec3 } {
 }
 
 /** Once a frame, after the characters and the wind (game.ts, beside the rain / snow recycler). Picture only. */
-export function updateSnowBreath(g: Game, dt: number) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('updateSnowBreath', undefined, [g, dt]); if (__r !== RUST_PASS) return __r as any; } }
+export function updateSnowBreath(g: Game, dt: number) {
   const st = stateOf(g); const S = st.stats; const K = SNOWBREATH;
   const P: Particles | null = gpuFx(g);
   const why = !SNOW_LOOK.breath ? 'the switch is off' : !snowLevel(levelNameOf(g.level)) ? 'not a snow level' : '';

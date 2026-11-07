@@ -21,6 +21,23 @@ fn lines_of(kind: LineKind) -> LINESValue {
     lines().get(String::from(kind.as_str())).unwrap().clone()
 }
 
+/// this file's lines, every kind's or one kind's   (runner.ts runnerLines)
+pub fn runner_lines(kind: Option<crate::runner::LineKind>) -> Vec<String> {
+    let kinds: &[LineKind] = match kind {
+        Some(LineKind::Done) => &[LineKind::Done],
+        Some(LineKind::Mates) => &[LineKind::Mates],
+        None => &[LineKind::Done, LineKind::Mates],
+    };
+    let mut out = Vec::new();
+    for k in kinds {
+        let l = lines_of(*k);
+        out.extend(l.say);
+        out.extend(l.he.unwrap_or_default());
+        out.extend(l.they.unwrap_or_default());
+    }
+    out
+}
+
 /// one line of a kind from this man, shouted, never on the net   (runner.ts bark)
 pub fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::runner::LineKind) {
     let l = lines_of(kind);
@@ -819,6 +836,9 @@ pub fn drive(g: &mut crate::game::Game, gd: GuardId) {
     r.drive_t = now;
 }
 
+/// the script his body follows this frame, None = he is not this file's   (runner.ts runnerScript)
+pub fn runner_script(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::game::GuardScript> { runner_propose(g, gd) }
+
 /// WHAT IT WANTS OF HIM (a rule's second part, control/; it only reads): the same answer. Its state is moved by `runner_tick`.
 pub fn runner_propose(g: &crate::game::Game, gd: GuardId) -> Option<crate::game::GuardScript> {
     let now = g.time;
@@ -837,6 +857,31 @@ pub fn runner_nobody(g: &mut crate::game::Game, gd: GuardId) -> bool { g.gd[gd].
 /// speaks for nobody, from the shout   (runner.ts runnerMute)
 pub fn runner_mute(g: &mut crate::game::Game, gd: GuardId) -> bool { let rule = crate::owner::own().runner; crate::owner::has_him(g, gd, rule) }
 
+/// what the rule has of a man, for the checks   (runner.ts runnerOf)
+pub fn runner_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::runner::RunnerOf> {
+    g.m.runner.state_of.get(gd).map(|r| RunnerOf {
+        at: r.at, drive: r.drive, t: r.t, from: r.from, phase: r.phase, plan: r.plan, goal: r.goal, face: r.face, tries: r.tries, bare: r.bare, told: r.told,
+        mate: r.mate, drive_t: r.drive_t, stall: r.stall, bold: r.bold, unseen: r.unseen, is_out: r.is_out,
+    })
+}
+
+/// 'runner ▸ Tango 2 out (told 2) · Tango 5 say': every man it has on the floor   (runner.ts runnerSummary)
+pub fn runner_summary(g: &mut crate::game::Game) -> String {
+    let mut men: Vec<String> = Vec::new();
+    for gd in g.guards.iter() {
+        if let Some(r) = g.m.runner.state_of.get(*gd) {
+            let o = &g.gd[*gd];
+            let what = if o.state == crate::game::GuardState::Dead { "shot" } else { r.phase.as_str() };
+            let told = if js::truthy(r.told) { format!(" (told {})", r.told as i64) } else { String::new() };
+            men.push(format!("{} {}{}", o.callsign, what, told));
+        }
+    }
+    let list = if men.is_empty() { String::from("nobody has run") } else { men.join(" · ") };
+    let gone = g.stats.runner.gone;
+    let tail = if gone != 0 { format!(" · {} gone", gone) } else { String::new() };
+    format!("runner ▸ {}{}", list, tail)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -849,4 +894,15 @@ mod tests {
         assert_eq!(path_len([0.1, 0.0, 0.2], &path).to_bits(), 0x403131d9b6305e72);
     }
 
+    /// Object.values' order, each pool in its written order; `done` has no he or they
+    #[test]
+    fn lines_come_in_the_written_order() {
+        let all = runner_lines(None);
+        assert_eq!(all.len(), 8);
+        assert_eq!(all[0], "no. no, I'm done. I'm done!");
+        assert_eq!(all[3], "don't shoot — it's me! it's me!");
+        assert_eq!(all[7], "it's me! hold your fire — they're coming!");
+        assert_eq!(runner_lines(Some(LineKind::Done)).len(), 3);
+        assert_eq!(runner_lines(Some(LineKind::Mates)).len(), 5);
+    }
 }

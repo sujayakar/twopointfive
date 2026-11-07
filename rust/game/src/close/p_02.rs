@@ -61,3 +61,32 @@ pub fn close_reset(g: &mut crate::game::Game) {
     s.rmb_t = -1.0;
 }
 
+/// The debug panel's line on the close-in mode. `CLOSE.on` is settled on.   (close.ts closeSummary)
+pub fn close_summary(g: &mut crate::game::Game) -> String {
+    let now = g.time;
+    let s = state_of(g);
+    let (mode, mode_d) = (s.mode, s.mode_d);
+    let o = if s.t == now { s.best.clone() } else { None };
+    let in_mode = match mode {
+        Some(gd) => alloc::format!("in the mode on {} {} m", g.gd[gd].callsign, js::to_fixed(mode_d, 2)),
+        None => String::from("not in the mode"),
+    };
+    let best = match &o {
+        Some(o) => alloc::format!("{} {} {} m", g.gd[o.guard].callsign, close_kind_of(Some(o)).as_str(), js::to_fixed(o.dist, 2)),
+        None => String::from("\u{2014}"),
+    };
+    let (t, gr) = (g.stats.close.takes, g.stats.close.grabs);
+    let seated = g.m.close.seated.as_ref().map_or(0, |seated| seated.len());
+    alloc::format!(
+        "on \u{b7} {} \u{b7} now {} \u{b7} takes b{} s{} f{} c{} \u{b7} grabs b{} c{} \u{b7} seated {}",
+        in_mode,
+        best,
+        t[CloseKind::Behind as usize],
+        t[CloseKind::Side as usize],
+        t[CloseKind::Front as usize],
+        t[CloseKind::Seat as usize],
+        gr[CloseKind::Behind as usize],
+        gr[CloseKind::Seat as usize],
+        seated,
+    )
+}

@@ -7,6 +7,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
+/// The checks' counters back to nothing. (stickycam.ts stickyStatsReset)
+pub fn sticky_stats_reset(g: &mut crate::game::Game) {
+    let s = &mut g.stats.stickycam;
+    s.fired = 0; s.stuck = 0; s.dropped = 0; s.retired = 0; s.blind = 0; s.taken = 0;
+}
+
 /// The module's knobs as the launcher's flight reads them. (stickycam.ts B)
 pub fn b(g: &mut crate::game::Game) -> crate::launcher::Ballistics {
     let r = &g.k.sticky;
@@ -409,6 +415,22 @@ pub fn sending(g: &mut crate::game::Game, c: StickyCamId) -> bool {
     live.contains(&c) && g.fog_of_war.eyes.iter().any(|e| e.id == eye)
 }
 
+/// Where the HUD marks each of his stuck cameras and whether it sends, while the fog is live. (stickycam.ts stickyMarks)
+pub fn sticky_marks(g: &mut crate::game::Game) -> Vec<crate::stickycam::CamMark> {
+    let pl = g.player;
+    if !crate::fogofwar::fog_of_war_active(g) || g.fog_of_war.bared || g.pl[pl].cams.is_empty() { return no_marks(); }
+    let mut out: Vec<CamMark> = Vec::new();
+    for i in 0..g.pl[pl].cams.len() {
+        let c = g.pl[pl].cams[i];
+        if g.tab.stickycam_sticky_cam[c].vel.is_none() {
+            let at = cam_lens(g, c);
+            let sends = sending(g, c);
+            out.push(CamMark { at, sends });
+        }
+    }
+    out
+}
+
 /// A camera of his is still in the air. (stickycam.ts stickyFlying)
 pub fn sticky_flying(g: &mut crate::game::Game) -> bool {
     let pl = g.player;
@@ -423,6 +445,23 @@ pub fn sticky_left(g: &mut crate::game::Game, pl: PlayerId) -> f64 {
         if g.tab.stickycam_sticky_cam[*c].vel.is_some() { n += 1.0; }
     }
     m::min(n, g.k.sticky.carry)
+}
+
+/// The panel's line. (stickycam.ts stickySummary)
+pub fn sticky_summary(g: &mut crate::game::Game) -> String {
+    let pl = g.player;
+    let out = g.pl[pl].cams.iter().filter(|c| g.tab.stickycam_sticky_cam[**c].vel.is_none()).count();
+    let active = crate::fogofwar::fog_of_war_active(g);
+    let eyes = if active { g.fog_of_war.eyes.iter().filter(|e| e.id >= EYE_ID).count() } else { 0 };
+    let rf = g.pl[pl].rifle;
+    let tail = if active {
+        alloc::format!(" · {} lifting the fog", eyes)
+    } else if out != 0 {
+        String::from(" · no fog on this floor: nothing for them to show")
+    } else {
+        String::new()
+    };
+    alloc::format!("{} to send · {} out{}", js::num_str(g.fa[rf].cams), out, tail)
 }
 
 #[cfg(test)]

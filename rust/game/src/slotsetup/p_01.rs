@@ -22,6 +22,12 @@ fn digit_code(d: i32) -> String {
     alloc::format!("Digit{}", d)
 }
 
+/// `/^Digit[1-5]$/`
+fn is_digit_1_to_5(code: &str) -> bool {
+    let b = code.as_bytes();
+    b.len() == 6 && code.starts_with("Digit") && (b'1'..=b'5').contains(&b[5])
+}
+
 /// the gun of his named by the setup's word
 fn gun_of(g: &Game, pl: PlayerId, gun: SetupGun) -> FirearmId {
     match gun {
@@ -117,6 +123,37 @@ pub fn slot_setup_shut(g: &mut crate::game::Game) -> bool {
 /// the presses that put the next load on the launcher, in words (slotsetup.ts loadKeys)
 pub fn load_keys(g: &mut crate::game::Game) -> String {
     String::from("press 2, then 2")
+}
+
+/// where a kit's weapon light is worked, in words (slotsetup.ts lightKeys)
+pub fn light_keys(g: &mut crate::game::Game) -> String {
+    String::from("its gun's key again, then 3")
+}
+
+/// would this key, pressed now, be the setup's own? Nothing touched (slotsetup.ts slotSetupTakes)
+pub fn slot_setup_takes(g: &mut crate::game::Game, code: &str) -> bool {
+    if !is_digit_1_to_5(code) {
+        return false;
+    }
+    let pl = g.player;
+    let gun = match setup_gun(g, pl) {
+        Some(gun) => gun,
+        None => return false,
+    };
+    if code == digit_code(slot_digit(gun)) {
+        return true;
+    }
+    slot_setup_open(g) && setup_rows(g, pl, gun).iter().any(|r| code == digit_code(r.key as i32))
+}
+
+/// does the open setup run down by itself: never, it is a mode (slotsetup.ts clocked; SLOTSETUP.pop is on)
+pub fn clocked(g: &mut crate::game::Game) -> bool {
+    false
+}
+
+/// has the open setup's clock run out: it has none (slotsetup.ts lapsed; SLOTSETUP.pop is on)
+pub fn lapsed(g: &mut crate::game::Game, t: f64) -> bool {
+    false
 }
 
 /// presses of the launcher's own step from the load that is up to the next one he has any of; 0: none but the one up (slotsetup.ts loadSteps)

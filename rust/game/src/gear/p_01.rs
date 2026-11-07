@@ -17,9 +17,19 @@ pub fn plain_short(def: &crate::weapons::WeaponDef) -> String {
     def.short.clone()
 }
 
+/// The page's rule for the switch. `GEAR.on` is settled on, so `?oldgear` is not read and `q` is unused.   (gear.ts gearFromQuery)
+pub fn gear_from_query(g: &mut crate::game::Game, q: &crate::query::Query) {
+    g.k.gear.on = true;
+}
+
 /// The HUD tag of the rifle's first attachment. `GEAR.on` is settled on.   (gear.ts ringTag)
 pub fn ring_tag(g: &mut crate::game::Game) -> String {
     String::from("SPONGE")
+}
+
+/// The HUD tag of the rifle's second attachment, the 40 mm HE round. `GEAR.on` is settled on.   (gear.ts shellTag)
+pub fn shell_tag(g: &mut crate::game::Game) -> String {
+    String::from("HE")
 }
 
 /// A line written in the old kit's words, in the kit's words as issued. `GEAR.on` is settled on.   (gear.ts gearText)

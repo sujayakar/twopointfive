@@ -19,6 +19,11 @@ pub fn back_take(g: &mut crate::game::Game, input: InputId) -> bool {
     esc || tab
 }
 
+/// The name a hint row shows. (backkey.ts backName)
+pub fn back_name(g: &mut crate::game::Game) -> String {
+    String::from("Tab")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

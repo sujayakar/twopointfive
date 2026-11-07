@@ -158,9 +158,29 @@ pub fn same_value(a: Option<f64>, b: Option<f64>) -> bool {
     }
 }
 
+/// (sensors.ts Sensors.mode)
+pub fn sensors_mode(g: &mut crate::game::Game) -> crate::sensors::SensorMode {
+    g.sensors.s.mode
+}
+
+/// The frame being (or last) simulated in record / replay. (sensors.ts Sensors.frame)
+pub fn sensors_frame(g: &mut crate::game::Game) -> f64 {
+    g.sensors.s.frame
+}
+
 /// (sensors.ts Sensors.stats)
 pub fn sensors_stats(g: &mut crate::game::Game) -> crate::sensors::SensorStats {
     g.sensors.s.stats
+}
+
+/// Replay: the first divergence of the run. (sensors.ts Sensors.firstDivergence)
+pub fn sensors_first_divergence(g: &mut crate::game::Game) -> Option<crate::sensors::SensorDivergence> {
+    g.sensors.s.first_divergence.clone()
+}
+
+/// (sensors.ts Sensors.divergenceLog)
+pub fn sensors_divergence_log(g: &mut crate::game::Game) -> Vec<crate::sensors::SensorDivergence> {
+    g.sensors.s.divergence_log.clone()
 }
 
 /// Hand the sight lines to the game's own working (None = back to the probe); answers kept from before are dropped. (sensors.ts Sensors.setOwn)
@@ -172,6 +192,11 @@ pub fn sensors_set_own(g: &mut crate::game::Game, f: Option<crate::sensors::Sens
 /// A new encounter: no line's answer outlives the world it was worked out in. (sensors.ts Sensors.ownReset)
 pub fn sensors_own_reset(g: &mut crate::game::Game) {
     g.sensors.own_vals.clear();
+}
+
+/// The probe is always `g.probe` here: nothing swaps it, so `probe_of` holds nothing. (sensors.ts Sensors.constructor)
+pub fn sensors_new(g: &mut crate::game::Game) -> crate::sensors::Sensors {
+    crate::sensors::Sensors::blank()
 }
 
 /// Queue an irradiance query at `pos` under `key`; dropped in replay. (sensors.ts Sensors.ask)
@@ -290,6 +315,32 @@ pub fn sensors_segment(g: &mut crate::game::Game, key: &str, a: V3, b: V3, ask: 
     sensors_read(g, key)
 }
 
+/// A light meter: chest and head, the max of the two when both have finite answers. (sensors.ts Sensors.meterPair)
+pub fn sensors_meter_pair(g: &mut crate::game::Game, kc: &str, kh: &str, pc: V3, ph: V3, id_2: f64) -> Option<f64> {
+    sensors_ask(g, kc, pc, Some(id_2));
+    sensors_ask(g, kh, ph, Some(id_2));
+    let r1 = sensors_read(g, kc);
+    let r2 = sensors_read(g, kh);
+    match (r1, r2) {
+        (Some(r1), Some(r2)) if r1.is_finite() && r2.is_finite() => Some(m::max(r1, r2)),
+        _ => None,
+    }
+}
+
+/// The light on a point: ask (unless out of budget) and read. (sensors.ts Sensors.lightAt)
+pub fn sensors_light_at(g: &mut crate::game::Game, key: &str, pos: V3, skip_owner: Option<f64>, ask: Option<bool>) -> Option<f64> {
+    let skip_owner = skip_owner.unwrap_or(0.0);
+    if ask.unwrap_or(true) {
+        sensors_ask(g, key, pos, Some(skip_owner));
+    }
+    sensors_read(g, key)
+}
+
+/// The top of a simulated frame: record files reads under the new frame number; replay lays out what the recording delivered on it. (sensors.ts Sensors.beginFrame)
+pub fn sensors_begin_frame(g: &mut crate::game::Game) {
+    begin_frame(&mut g.sensors.s)
+}
+
 fn begin_frame(s: &mut SensorStream) {
     if s.mode == SensorMode::Live { return; }
     s.frame += 1.0;
@@ -364,6 +415,11 @@ fn enc_item(e: Option<SensorEnc>) -> Option<SensorRecItem> {
     }
 }
 
+/// The end of a simulated frame: record folds the frame's reads into the delta stream; replay counts what was delivered but never asked. (sensors.ts Sensors.endFrame)
+pub fn sensors_end_frame(g: &mut crate::game::Game) {
+    end_frame(&mut g.sensors.s)
+}
+
 fn end_frame(s: &mut SensorStream) {
     if s.mode == SensorMode::Live || !s.in_frame { return; }
     s.in_frame = false;
@@ -419,16 +475,31 @@ fn end_frame(s: &mut SensorStream) {
     }
 }
 
+/// File a record, with a running estimate of the stream as JSON. (sensors.ts Sensors.push)
+pub fn sensors_push(g: &mut crate::game::Game, r: &[Option<crate::sensors::SensorRecItem>]) {
+    push(&mut g.sensors.s, r)
+}
+
 fn push(s: &mut SensorStream, r: &[Option<SensorRecItem>]) {
     let is_k = matches!(r.first(), Some(Some(SensorRecItem::Text(t))) if t == "K");
     s.recs.push(r.to_vec());
     s.bytes += 3.0 + r.len() as f64 * if is_k { 3.0 } else { 7.0 };
 }
 
+/// (sensors.ts Sensors.diverge)
+pub fn sensors_diverge(g: &mut crate::game::Game, d: &crate::sensors::SensorDivergence) {
+    diverge(&mut g.sensors.s, d)
+}
+
 fn diverge(s: &mut SensorStream, d: &SensorDivergence) {
     s.stats.divergences += 1.0;
     if s.first_divergence.is_none() { s.first_divergence = Some(d.clone()); }
     if s.divergence_log.len() < 20 { s.divergence_log.push(d.clone()); }
+}
+
+/// Back to the plain probe. (sensors.ts Sensors.live)
+pub fn sensors_live(g: &mut crate::game::Game) {
+    live(&mut g.sensors.s)
 }
 
 fn live(s: &mut SensorStream) {
@@ -440,6 +511,11 @@ fn live(s: &mut SensorStream) {
 
 fn zero_stats(recs: f64) -> SensorStats {
     SensorStats { reads: 0.0, asks: 0.0, strays: 0.0, frames: 0.0, recs, divergences: 0.0, unasked: 0.0, unjournaled: 0.0 }
+}
+
+/// Start journaling: the next beginFrame is frame 0. (sensors.ts Sensors.record)
+pub fn sensors_record(g: &mut crate::game::Game) {
+    record(&mut g.sensors.s)
 }
 
 fn record(s: &mut SensorStream) {
@@ -457,12 +533,22 @@ fn record(s: &mut SensorStream) {
     s.stats = zero_stats(0.0);
 }
 
+/// The journal so far: the file's `sensors` block. (sensors.ts Sensors.journal)
+pub fn sensors_journal(g: &mut crate::game::Game) -> crate::sensors::SensorJournal {
+    journal(&g.sensors.s)
+}
+
 fn journal(s: &SensorStream) -> SensorJournal {
     SensorJournal {
         keys: s.keys.clone(),
         recs: s.recs.clone(),
         frames: if s.mode == SensorMode::Record { s.frame + if s.in_frame { 0.0 } else { 1.0 } } else { s.stats.frames },
     }
+}
+
+/// Rough size of the sensor stream as JSON so far. (sensors.ts Sensors.approxBytes)
+pub fn sensors_approx_bytes(g: &mut crate::game::Game) -> f64 {
+    g.sensors.s.bytes
 }
 
 /// Serve a recording: the next beginFrame is its frame 0. (sensors.ts Sensors.replay)
@@ -483,6 +569,11 @@ fn replay(s: &mut SensorStream, src: &SensorJournal) {
     s.first_divergence = None;
     s.divergence_log = Vec::new();
     s.stats = zero_stats(src.recs.len() as f64);
+}
+
+/// The panel's line. (sensors.ts Sensors.summary)
+pub fn sensors_summary(g: &mut crate::game::Game) -> String {
+    summary(&g.sensors.s)
 }
 
 fn summary(s: &SensorStream) -> String {
@@ -522,6 +613,76 @@ pub fn first(r: Option<&[f64]>) -> Option<f64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn enc_text(e: Option<SensorEnc>) -> String {
+        match e {
+            None => String::from("null"),
+            Some(SensorEnc::Num(x)) => format!("n{:016x}", x.to_bits()),
+            Some(SensorEnc::List(a)) => format!("l{:016x}", a[0].to_bits()),
+            Some(SensorEnc::Nan) => String::from("nan"),
+            Some(SensorEnc::Inf) => String::from("inf"),
+            Some(SensorEnc::Inf2) => String::from("-inf"),
+            Some(SensorEnc::V0) => String::from("-0"),
+        }
+    }
+
+    // each row: the value, then what the TypeScript's encodeValue and decodeValue give (bits off bun; a NaN's decoded bits are not compared)
+    #[test]
+    fn encoding_has_the_typescripts_bits() {
+        let fr = m::fround;
+        let rows: &[(f64, &str, u64)] = &[
+            (1.0, "n3ff0000000000000", 0x3ff0000000000000),
+            (0.5, "n3fe0000000000000", 0x3fe0000000000000),
+            (0.1, "l3fb999999999999a", 0x3fb999999999999a),
+            (fr(0.1), "n3fb999999999999a", 0x3fb99999a0000000),
+            (fr(0.7), "n3fe6666666666666", 0x3fe6666660000000),
+            (1234567.25, "n4132d6874ccccccd", 0x4132d68740000000),
+            (-1234567.25, "nc132d6874ccccccd", 0xc132d68740000000),
+            (33554436.0, "n4180000020000000", 0x4180000020000000),
+            (16777216.0, "n4170000000000000", 0x4170000000000000),
+            (0.25, "n3fd0000000000000", 0x3fd0000000000000),
+            (2.5, "n4004000000000000", 0x4004000000000000),
+            (9.5, "n4023000000000000", 0x4023000000000000),
+            (0.95, "l3fee666666666666", 0x3fee666666666666),
+            (fr(0.95), "n3fee666666666666", 0x3fee666660000000),
+            (99999.5, "n40f869f800000000", 0x40f869f800000000),
+            (fr(99999.99), "n40f869ffd70a3d71", 0x40f869ffe0000000),
+            (fr(1e-40), "n37a16c262777579c", 0x37a16c2000000000),
+            (fr(3.3e38), "n47ef087605722464", 0x47ef087600000000),
+            (1.401298464324817e-45, "n3696d601ad376ab9", 0x36a0000000000000),
+            (0.0, "n0000000000000000", 0),
+            (-0.0, "-0", 0x8000000000000000),
+            (f64::INFINITY, "inf", 0x7ff0000000000000),
+            (f64::NEG_INFINITY, "-inf", 0xfff0000000000000),
+            (1e300, "l7e37e43c8800759c", 0x7e37e43c8800759c),
+        ];
+        for (v, e, d) in rows {
+            let got = encode_value(Some(*v));
+            assert_eq!(enc_text(got), *e, "encode {}", v);
+            assert_eq!(decode_value(got).unwrap().to_bits(), *d, "decode {}", v);
+        }
+        assert_eq!(enc_text(encode_value(Some(f64::NAN))), "nan");
+        assert!(decode_value(encode_value(Some(f64::NAN))).unwrap().is_nan());
+        assert!(encode_value(None).is_none() && decode_value(None).is_none());
+    }
+
+    // 20,000 singles from a small generator, the encoded doubles folded by FNV-1a: the fold is the TypeScript's
+    #[test]
+    fn many_singles_encode_to_the_typescripts_fold() {
+        let (mut h, mut st) = (0xcbf29ce484222325u64, 12345u32);
+        for _ in 0..20000 {
+            st = st.wrapping_mul(1664525).wrapping_add(1013904223);
+            let v = f32::from_bits(st) as f64;
+            if !v.is_finite() || v == 0.0 { continue; }
+            let r = match encode_value(Some(v)) {
+                Some(SensorEnc::Num(r)) => r,
+                Some(SensorEnc::List(a)) => a[0],
+                _ => unreachable!(),
+            };
+            h = (h ^ r.to_bits()).wrapping_mul(0x100000001b3);
+        }
+        assert_eq!(format!("{:x}", h), "5f200f02baadbd6b");
+    }
 
     // what `g` adds to the stream: whose answers a read gets, and which asks stop before the picture. No path here reaches the probe's table or the game's smoke.
     #[test]

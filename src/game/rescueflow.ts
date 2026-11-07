@@ -113,6 +113,17 @@ export class RescueFlow {
     const k = this.known.find(x => x.o === o); if (!k) return false;
     return k.region.cleared || (!!k.held && !this.jobs.has(k.held));
   }
+  /** the men the flow may send: alive, falling in (unasked, or because Sam said so), not F's, not in a fight, not blind — the LAST in the file first */
+  private free(): Guard[] {
+    const g = this.g, out: [Guard, Assignment][] = [];
+    for (const gd of this.R.ops) {
+      if (gd.state === 'dead' || this.jobs.has(gd) || this.R.owns(gd) || g.time < gd.dazzledUntil) continue;
+      const A = g.orders.of(gd); if (!A || A.order !== 'fallIn') continue;
+      if ((!gd.script && gd.state === 'alert') || g.fight.engaged(gd)) continue;
+      out.push([gd, A]);
+    }
+    return out.sort((a, b) => b[1].follow - a[1].follow).map(x => x[0]);
+  }
   private take(gd: Guard, o: RouteOpening, chain: RouteOpening[], saidWait: boolean, leap: boolean) {
     const g = this.g, door = o.door ? g.doors.byName(o.door) ?? null : null;
     g.orders.newGroup();   // (his own: a 'set.' Sam's last order is waiting to call does not wait on this man's mark)

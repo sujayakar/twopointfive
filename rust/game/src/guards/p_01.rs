@@ -726,6 +726,24 @@ pub fn body_lit(g: &mut crate::game::Game, gd: GuardId, o: GuardId, eye: V3, dis
     vis >= bar
 }
 
+/// The switch and its numbers as this machine kept them: no storage on this side of the host, so the shipped values stand, the TypeScript's own path with none. (guards.ts loadBodyLight)
+pub fn load_body_light(g: &mut crate::game::Game) {}
+
+/// Keep the switch and its numbers on this machine: nothing to keep them in on this side of the host. (guards.ts saveBodyLight)
+pub fn save_body_light(g: &mut crate::game::Game) {}
+
+/// The switch on and the bar back to the shipped values; the machine's copy is the host's to drop. (guards.ts resetBodyLight)
+pub fn reset_body_light(g: &mut crate::game::Game) {
+    g.tune.body_light = true;
+    let d = crate::guards::body_light_defaults();
+    let b = &mut g.k.body_light;
+    b.lit = d.lit;
+    b.lit_near = d.lit_near;
+    b.near_m = d.near_m;
+    b.far_m = d.far_m;
+    b.smoke = d.smoke;
+}
+
 /// Panel and QA: what each unfound body on the floor reads now. It eases the meters, as the TypeScript's does. (guards.ts bodyLightSummary)
 pub fn body_light_summary(g: &mut crate::game::Game) -> String {
     let mut parts: Vec<String> = Vec::new();

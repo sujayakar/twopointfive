@@ -17,10 +17,6 @@ fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab
 fn slab_par() -> &'static mut [f64; sim::slabs::NPAR] {
     unsafe { &mut *(sim::slabs::addr(0) as *mut [f64; sim::slabs::NPAR]) }
 }
-/// the same doubles, to read
-fn slab_par_read() -> &'static [f64; sim::slabs::NPAR] {
-    unsafe { &*(sim::slabs::addr(0) as *const [f64; sim::slabs::NPAR]) }
-}
 
 /// Keeps a line of what the doors' blasts did. (doorblast.ts note)
 pub fn note(g: &mut crate::game::Game, s: &str) {
@@ -836,3 +832,40 @@ pub fn pose_slab(g: &mut crate::game::Game, d: DoorId) {
     }
 }
 
+/// A slab run on to where it lands and nothing of it kept: at most eight seconds of its step on its own row, with no memory of being wedged; its row and the tallies are put back. (doorblast.ts runOn)
+pub fn run_on(g: &mut crate::game::Game, d: DoorId) -> crate::sim_slabshome::SlabNow {
+    let i = g.dr[d].i;
+    let r = crate::sim_slabshome::slab_store_row_of(g, i);
+    let s = crate::sim_slabshome::slab_store_load(g, r);
+    if s.rest {
+        return s;
+    }
+    crate::scene_collision::window(g, &mut |g: &mut Game| {
+        let was = crate::sim_slabshome::slab_store_load(g, r);
+        let tally = g.m.sim_slabshome.slabs_stepped.clone();
+        let mut s = was;
+        s.wedged = Some(0.0);
+        match slab_there(g, d) {
+            Some(w) => {
+                crate::sim_slabshome::slab_store_save(g, r, s);
+                let mut i = 0;
+                while i < 480 && !s.rest {
+                    step_there(g, d, r, 1.0 / 60.0, w);
+                    s = crate::sim_slabshome::slab_store_load(g, r);
+                    i += 1;
+                }
+            }
+            None => {
+                let mut quiet = nothing_met();
+                let mut i = 0;
+                while i < 480 && !s.rest {
+                    step_slab(g, d, &mut s, 1.0 / 60.0, &mut quiet);
+                    i += 1;
+                }
+            }
+        }
+        crate::sim_slabshome::slab_store_save(g, r, was);
+        g.m.sim_slabshome.slabs_stepped = tally.clone();
+        s
+    })
+}

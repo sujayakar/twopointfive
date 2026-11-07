@@ -11,6 +11,8 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec, format};
 
 /// the truck's flank as the sentry sees it through the gateway (tut-road.script.ts:15)
 const TRUCK_FLANK: [V3; 4] = [[5.6, 1.35, 13.05], [5.6, 0.85, 13.4], [5.6, 1.5, 13.75], [5.6, 1.1, 13.2]];
+/// where the man in the hut's back room waits, and where he steps to (:19)
+const HUT_NOOK: V3 = [21.75, 0.0, 10.25];
 const HUT_MARK: V3 = [20.7, 0.0, 11.45];
 /// what the man behind the plank wall shoots at, blind, through the boards (:22)
 const HUT_WALL: [V3; 4] = [[18.3, 2.3, 9.83], [19.0, 2.2, 9.83], [19.6, 2.35, 9.83], [18.7, 2.4, 9.83]];
@@ -20,6 +22,8 @@ const HUT_END: [V3; 8] = [[22.53, 1.5, 10.6], [22.53, 2.1, 11.6], [22.53, 1.2, 1
 const BAGS_TOP: [V3; 10] = [[22.8, 1.42, 15.5], [23.3, 1.42, 15.5], [23.8, 1.42, 15.5], [24.3, 1.42, 15.5], [24.8, 1.42, 15.5], [25.3, 1.42, 15.5], [25.8, 1.42, 15.5], [26.3, 1.42, 15.5], [26.8, 1.42, 15.5], [27.2, 1.42, 15.5]];
 /// the roadblock's wall, the gun's face of it (:30)
 const WALL_FACE: [V3; 5] = [[27.8, 1.3, 15.37], [28.5, 1.7, 15.37], [29.1, 1.2, 15.37], [28.1, 1.9, 15.37], [28.8, 1.5, 15.37]];
+/// the last three: where each waits, where each stands once in by the gate (:34), what each shoots at (:35)
+const LAST_OUT: [V3; 3] = [[38.6, 0.0, 12.2], [38.6, 0.0, 16.4], [39.4, 0.0, 12.6]];
 const LAST_MEN: [V3; 3] = [[36.1, 0.0, 13.3], [35.4, 0.0, 15.3], [36.1, 0.0, 16.1]];
 const WALL_HEAD: [[V3; 2]; 3] = [[[28.0, 2.3, 15.5], [28.4, 2.25, 15.5]], [[28.8, 2.3, 15.5], [28.6, 2.2, 15.5]], [[29.3, 2.3, 15.5], [29.0, 2.25, 15.5]]];
 /// the gateway and the upper gate, chest high: where a held man looks (:37)

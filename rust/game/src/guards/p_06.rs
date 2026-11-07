@@ -145,6 +145,18 @@ pub fn pick_next_spot(g: &mut crate::game::Game, gd: GuardId) {
     crate::game::game_say(g, gd, &text, None, None, None);
 }
 
+/// One line for the panel: phase, the spot he is on, how many looked into, the top few by score with their readings.   (guards.ts searchSummary)
+pub fn search_summary(g: &mut crate::game::Game, gd: GuardId) -> String {
+    let p = match &g.gd[gd].search_plan { Some(p) => p, None => return String::new() };
+    let cur = if p.current >= 0.0 { p.spots.get(p.current as usize) } else { None };
+    let mut open: Vec<&crate::guards::SearchSpot> = p.spots.iter().filter(|s| !s.visited && !s.unreachable).collect();
+    js::sort_by(&mut open, |a, b| b.score - a.score);
+    let top: Vec<String> = open.iter().take(3).map(|s| alloc::format!("{}@{},{} d{}{} c{} p{} ={}", s.kind.as_str(), js::to_fixed(s.pos[0], 1), js::to_fixed(s.pos[2], 1), js::to_fixed(s.dark, 2), if s.e.is_none() { "?" } else { "" }, js::to_fixed(s.cover, 2), js::to_fixed(s.plaus, 2), js::to_fixed(s.score, 3))).collect();
+    let top = top.join(" · ");
+    let on = match cur { Some(c) => alloc::format!(" → {}@{},{}", c.kind.as_str(), js::to_fixed(c.pos[0], 1), js::to_fixed(c.pos[2], 1)), None => String::new() };
+    alloc::format!("search {}{} · {}/{} looked into · {} s since the fix · next: {}", p.phase.as_str(), on, js::num_str(p.visits), p.spots.len(), js::num_str(m::round(g.time - p.t0)), if top.is_empty() { "—" } else { &top })
+}
+
 /// The closed frame of a door: hinge, unit along the frame hinge → latch, unit normal (+ = CCW side), width.   (guards.ts frameOf)
 pub fn frame_of(g: &mut crate::game::Game, d: DoorId) -> crate::doorway::RelF {
     let def = &g.dr[d].def;

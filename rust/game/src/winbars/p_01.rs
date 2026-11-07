@@ -54,6 +54,26 @@ pub fn bar_at(g: &mut crate::game::Game, index: f64) -> bool {
     stands(seam_box(g, b).flags)
 }
 
+/// Every bar of this level that still stands, ascending.   (winbars.ts barsStanding)
+pub fn bars_standing(g: &mut crate::game::Game) -> Vec<f64> {
+    let n = built_boxes(g);
+    let mut out = Vec::new();
+    for i in 0..n {
+        let b = g.col.boxes[i];
+        if stands(seam_box(g, b).flags) { out.push(i as f64); }
+    }
+    out
+}
+
+/// The bars a round or a blast has taken, ascending.   (winbars.ts barsGone)
+pub fn bars_gone(g: &mut crate::game::Game) -> Vec<f64> {
+    let mut out = Vec::new();
+    if untouched(g) { return out; }
+    let s = g.sim;
+    for i in 0..::sim::panes::bars_gone(s) as usize { out.push(::sim::panes::bar_gone(s, i) as f64); }
+    out
+}
+
 /// The flags a bar this rule took was authored with, or None.   (winbars.ts barFlags0)
 pub fn bar_flags0(g: &mut crate::game::Game, index: f64) -> Option<f64> {
     if untouched(g) { return None; }
@@ -62,6 +82,12 @@ pub fn bar_flags0(g: &mut crate::game::Game, index: f64) -> Option<f64> {
         if ::sim::panes::bar_gone(s, i) as f64 == index { return Some(::sim::panes::bar_flags(s, i) as f64); }
     }
     None
+}
+
+/// Once, as the game is made: the line of fire's question and the blasts' list.   (winbars.ts bootBars)
+pub fn boot_bars(g: &mut crate::game::Game) {
+    g.col.fire_pass = Some(crate::scene_collision::FirePass::Bars);
+    crate::destruction::destruction_on_blast(g, crate::destruction::BlastListener::Bars);
 }
 
 /// A round would stop in bar `index`: hidden from the rest of its flight, nothing more until bars_settle.   (winbars.ts barMeet)
@@ -252,6 +278,39 @@ pub fn reset_bars(g: &mut crate::game::Game) {
     }
     ::sim::panes::bars_clear(s);
 }
+
+/// Can this file's slice be applied to this level? None = yes.   (winbars.ts barsCheck)
+pub fn bars_check(g: &mut crate::game::Game, s: Option<&crate::winbars::BarsSave>) -> Option<String> {
+    let s = s?;
+    if s.v != 1.0 { return Some(String::from("window bars: unknown slice")); }
+    let n = built_boxes(g) as f64;
+    let bar = js::to_i32(crate::scene_boxes::box_flag().bar);
+    for &i in &s.s {
+        let integer = i.is_finite() && m::floor(i) == i;
+        let bad = !integer || i < 0.0 || i >= n || {
+            let b = box_at(g, i);
+            (js::to_i32(seam_box(g, b).flags) & bar) == 0
+        };
+        if bad { return Some(format!("window bars: static {} is not a window's bar of this level", js::num_str(i))); }
+    }
+    None
+}
+
+/// Panel and console line.   (winbars.ts winBarsSummary)
+pub fn win_bars_summary(g: &mut crate::game::Game) -> String {
+    let up = bars_standing(g).len();
+    let gone = bars_gone(g).len();
+    let state = if bars_live(g) { "ON" } else { "on — inert while a showcase runs" };
+    let st = g.stats.winbars.clone();
+    let last = match g.m.winbars.log.last() {
+        Some(l) => format!(" · last: {}", l),
+        None => String::new(),
+    };
+    format!("window bars {} ▸ {} standing, {} gone · {} by a round, {} by a blast · {} pieces (+{} as chips){}", state, up, gone, st.by_round, st.by_blast, st.chunks, st.demoted, last)
+}
+
+/// QA: the last breaks filed, oldest first.   (winbars.ts winBarsLog)
+pub fn win_bars_log(g: &mut crate::game::Game) -> Vec<String> { g.m.winbars.log.clone() }
 
 #[cfg(test)]
 mod tests {

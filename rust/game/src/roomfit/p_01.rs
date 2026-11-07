@@ -7,6 +7,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
+/// The bearing's name of a yaw. (roomfit.ts compass)
+pub fn compass(yaw: f64) -> String {
+    let i = js::rem(js::rem(m::round(yaw / (m::PI / 4.0)), 8.0) + 8.0, 8.0);
+    crate::roomfit::compass_table().swap_remove(i as usize)
+}
+
 /// A row's words for a watch on a way that is no door's: the place by the level's own name, else what it is. (roomfit.ts wayWords)
 pub fn way_words(g: &mut crate::game::Game, at: V3, to: V3, yaw: f64) -> String {
     match crate::dialogue::watched_place(g, at, to) {
@@ -488,6 +494,17 @@ mod tests {
         ];
         for (p, a, b, bits) in cases {
             assert_eq!(off_line(p, a, b).to_bits(), bits);
+        }
+    }
+
+    #[test]
+    fn compass_names_as_the_typescript_does() {
+        let cases: [(f64, &str); 10] = [
+            (0.0, "south"), (0.4, "south-east"), (-0.4, "south-west"), (m::PI, "north"), (-m::PI, "north"),
+            (2.1, "north-east"), (-2.1, "north-west"), (7.5, "east"), (-7.5, "west"), (0.3926990816987241, "south"),
+        ];
+        for (yaw, name) in cases {
+            assert_eq!(compass(yaw), name);
         }
     }
 

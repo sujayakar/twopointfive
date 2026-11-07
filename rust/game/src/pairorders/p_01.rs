@@ -33,6 +33,31 @@ pub fn look_of(g: &mut Game, h: GuardId) -> [f64; 2] {
     if l > 1e-4 { [x / l, z / l] } else { let y = g.ch[c].body_yaw; [m::sin(y), m::cos(y)] }
 }
 
+/// The quiet orders for one partner; the squad orders' people and note are hung here   (PairOrders.constructor)
+pub fn pair_orders_new(g: &mut Game) -> crate::pairorders::PairOrders {
+    // (SquadOrdersPeople has no fields: being set is what orders' squad_orders_people_near and _ray test)
+    g.orders.people = Some(crate::orders::SquadOrdersPeople::zeroed());
+    g.orders.notes.push(crate::orders::OrderNoteFn::Pair);
+    crate::pairorders::PairOrders::blank()
+}
+
+/// S.notes: the status line while somebody waits on the mark   (pairorders.ts:166)
+pub(crate) fn pair_note(g: &mut Game) -> Vec<crate::orders::OrderNote> {
+    if !g.pair.seated { return Vec::new(); }
+    let w = pair_orders_waiting(g);
+    if w.is_empty() { return Vec::new(); }
+    let mut parts: Vec<String> = Vec::new();
+    for (gd, j) in w.iter() {
+        let call = g.gd[*gd].callsign.clone();
+        let foe = name_of(g, j.foe);
+        parts.push(match j.watcher {
+            Some(o) => { let who = name_of(g, o); format!("{} takes {} anyway ({} is watching)", call, foe, who) }
+            None => format!("{} takes {}{}", call, foe, if j.set { "" } else { " (not set)" }),
+        });
+    }
+    vec![crate::orders::OrderNote::Arm1(crate::orders::OrderNoteArm1 { key: String::from("F"), text: format!("mark · {}", parts.join(" · ")) })]
+}
+
 // ------------------------------------------------------------ who, what
 /// the rows are on the menu: the switch, a squad on the floor, and not more of it than a pair's orders are for   (PairOrders.up)
 pub fn pair_orders_up(g: &mut Game) -> bool {
@@ -1150,6 +1175,23 @@ pub fn pair_orders_dark_tick(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
         pair_orders_note(g, &n);
         crate::game::game_say(g, gd, "lit up here.", None, None, None);
     }
+}
+
+/// the state in one line   (PairOrders.summary)
+pub fn pair_orders_summary(g: &mut Game) -> String {
+    if !g.k.pair.on { return String::from("off"); }
+    if !pair_orders_up(g) { return format!("on · not offered (a squad of 1 to {} on the floor has them)", g.k.pair.max_squad); }
+    let rows: Vec<(GuardId, crate::pairorders::Job)> = g.pair.jobs.iter().map(|(gd, j)| (gd, *j)).collect();
+    let mut parts: Vec<String> = Vec::new();
+    for (gd, j) in rows.iter() {
+        let what = if j.mode == crate::pairorders::JobMode::Mark { if j.go { "going for" } else if j.set { "SET on" } else { "moving up on" } } else { "taking" };
+        let foe = name_of(g, j.foe);
+        parts.push(format!("{} {} {}", g.gd[*gd].callsign, what, foe));
+    }
+    let quiet = if pair_orders_quiet(g) { "quiet" } else { "loud" };
+    let jobs = if parts.is_empty() { String::from("no job") } else { parts.join(" · ") };
+    let s = &g.stats.pairorders;
+    format!("on · {} · {} · given {} · marks {} · taken {} · blown {}", quiet, jobs, s.given, s.marks, s.taken, s.blown)
 }
 
 #[cfg(test)]

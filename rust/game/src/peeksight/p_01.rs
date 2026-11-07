@@ -67,6 +67,16 @@ fn eye_at(own: crate::fogofwar::FogEye, p: V3, look: V3) -> crate::fogofwar::Fog
     crate::fogofwar::FogEye { id: own.id, pos: p, look, at: p, fov: None, near: None, wand: None }
 }
 
+/// A line for the debugger: PEEKSIGHT.on is settled on the page, so always "on".   (peeksight.ts peekSummary)
+pub fn peek_summary(g: &mut crate::game::Game) -> String {
+    let peeking = match g.pl[g.player].wall {
+        Some(w) if w.peek > 0.0 => alloc::format!(" · peeking {}%", js::to_i32(w.peek * 100.0)),
+        _ => String::new(),
+    };
+    let stats = &g.stats.peeksight;
+    alloc::format!("on{} · frames {}, stopped short {}", peeking, stats.frames, stats.short)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

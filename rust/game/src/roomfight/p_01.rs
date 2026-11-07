@@ -106,6 +106,11 @@ pub fn room_fight_sam_speed_of(g: &mut crate::game::Game, ch: CharId) -> f64 {
     m::INF
 }
 
+/// A new room fight: the class's field initialisers; its constructor only keeps `g`.   (roomfight.ts RoomFight.constructor)
+pub fn room_fight_new(g: &mut crate::game::Game) -> crate::roomfight::RoomFight {
+    crate::roomfight::RoomFight::blank()
+}
+
 /// May the module run at all: the AI, sides, and no show holding the floor (a tutorial's own program does not hold it).   (roomfight.ts RoomFight.on)
 pub fn room_fight_on(g: &mut crate::game::Game) -> bool {
     if !(g.ai_enabled && g.tune.teams && !g.touring && !g.quiet_utility && g.puppet.is_none()) { return false; }

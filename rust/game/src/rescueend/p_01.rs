@@ -13,6 +13,9 @@ pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 /// The player a row is built for and a press is read from.   (rescueend.ts who)
 pub fn who(g: &mut crate::game::Game) -> PlayerId { g.player }
 
+/// Nobody led, nobody counted.   (rescueend.ts RescueEnd.constructor)
+pub fn rescue_end_new(g: &mut crate::game::Game) -> crate::rescueend::RescueEnd { crate::rescueend::RescueEnd::blank() }
+
 /// A fresh staging: nobody led, nobody counted.   (rescueend.ts RescueEnd.reset)
 pub fn rescue_end_reset(g: &mut crate::game::Game) {
     let e = &mut g.rescue.ending;

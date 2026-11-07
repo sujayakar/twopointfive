@@ -130,6 +130,10 @@ pub fn row_move_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::ord
     }
     None
 }
+/// 'move'.tick (orders.ts:591)
+pub fn row_move_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
+    crate::roomfit::fit_tick(g, gd, a);
+}
 /// 'stack'.valid (orders.ts:592)
 pub fn row_stack_valid(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
     let (door, side) = match t { OrderTarget::Door(x) => (x.door, x.side), _ => return Err(None) };

@@ -69,6 +69,7 @@ export const RESCUECHECK = {
 type Phase = 'out' | 'there' | 'back';
 interface Out { gd: Guard; about: Guard; goal: Vec3; from: Vec3; phase: Phase; thereT: number; tries: number; stepT: number; heard0: number; calm: Calm }
 export interface RescueCheckEvent { t: number; what: 'check' | 'asks' | 'goes' | 'nobody' | 'there' | 'found' | 'empty' | 'home' | 'abort' | 'lost' | 'word' | 'kept'; who: string; why: string }
+type Cast = ReturnType<Game['rescue']['cast']>;
 interface State { nextAt: number; n: number; stage: 'idle' | 'called' | 'asked'; t0: number; caller: Guard | null; about: Guard | null; known: Set<Guard>;
   /** where a man who went out was going (he is looked for there, not on the post he left) */ where: Map<Guard, Vec3>;
   /** what a roamer has said of where he is going · the roamers whose letting-go this rule has seen */ worded: Map<Guard, 'noise' | 'door'>; kept: Set<Guard>; out: Out | null; events: RescueCheckEvent[] }
@@ -86,6 +87,8 @@ export function rescueCheckTimeline(g: Game): RescueCheckEvent[] { return STATES
 /** a staging, a restart (game.ts resetGuards) */
 export function rescueCheckReset(g: Game) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('rescueCheckReset', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } } STATES.delete(g); }
 
+/** nothing of the team in his eye since he learned of them (no learned time: in the last half minute) */
+const unseen = (g: Game, c: Cast[number]) => !(c.gd.lastSeenT > (isNaN(c.learnedAt) ? g.time - 30 : c.learnedAt - 1));
 
 
 

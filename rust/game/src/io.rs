@@ -5563,6 +5563,10 @@ pub fn stats_as_counted(g: &crate::game::Game) -> crate::game::Stats { let mut s
 
 
 impl Io for crate::Opaque { fn w(&self, _: &mut W) {} fn r(_: &mut R) -> Self { crate::Opaque } }
+// AN ADDRESS'S WORDS ARE NOT ON THE WIRE: the table declares the `URLSearchParams` arm of a `string | URLSearchParams` argument as holding nothing
+// (tools/blitz/schema.json, where it was `crate::Opaque`), and the TypeScript writes nothing for it. So this side writes nothing and reads no words:
+// a host that has an address hands its TEXT across (the `Text` arm), and the game reads the words itself (query.rs).
+impl Io for crate::query::Query { fn w(&self, _: &mut W) {} fn r(_: &mut R) -> Self { crate::query::Query::default() } }
 impl Poke for crate::Opaque {}
 impl Poke for crate::director::CondTest {}
 impl Poke for crate::director::BeatFrame {}
@@ -5595,4 +5599,4 @@ mod bridge_test {
     /// BRIDGE_BLOB=<a file of tools/blitz/export.ts> cargo test --lib bridge_round_trip
     #[test] fn bridge_round_trip() { let Ok(p) = std::env::var("BRIDGE_BLOB") else { return; }; let t = std::thread::Builder::new().stack_size(1 << 28).spawn(move || { let b = std::fs::read(&p).unwrap(); let g = super::import(&b); let c = super::export(&g); { let mut h = super::import(&b); super::import_into(&mut h, &b); assert!(super::export(&h) == b, "import_into differs"); } if let Ok(out) = std::env::var("BRIDGE_OUT") { std::fs::write(out, &c).unwrap(); } assert!(c == b, "the bytes differ: {} against {}, first at {:?}", c.len(), b.len(), c.iter().zip(b.iter()).position(|(x, y)| x != y)); }).unwrap(); t.join().unwrap(); }
 }
-pub const LAYOUT: u32 = 2871794000;
+pub const LAYOUT: u32 = 667403769;

@@ -178,6 +178,11 @@ pub fn game_escape(g: &mut crate::game::Game) -> bool {
     crate::orders::squad_orders_escape(g) || crate::player::launch_cancel(g) || crate::interact::escape_interact(g) || crate::slotsetup::slot_setup_shut(g)
 }
 
+/// is there anything the back key would back out of right now   (game.ts backable)
+pub fn game_backable(g: &mut crate::game::Game) -> bool {
+    g.orders.menu.is_some() || g.pl[g.player].launch_held.is_some() || crate::interact::backable_interact(g) || crate::slotsetup::slot_setup_open(g)
+}
+
 /// the light meter's mapping, irradiance → 0‥1 visibility   (game.ts visibilityOf)
 pub fn game_visibility_of(g: &mut crate::game::Game, e: f64) -> f64 {
     visibility_sum(g.tune.vis_slope, g.tune.vis_floor, e)

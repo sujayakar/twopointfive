@@ -343,6 +343,23 @@ pub fn silent_tick(g: &mut crate::game::Game) {
     if hot.is_some() { s.was = Some(true); }
 }
 
+/// the panel's one line   (silent.ts silentSummary)
+pub fn silent_summary(g: &mut crate::game::Game) -> String {
+    if !g.k.silent.on { return String::from("off"); }
+    let n = crate::orders::squad_orders_men(g, None, None).len();
+    let start = if g.k.silent.start { "silent" } else { "loud" };
+    if n == 0 { return alloc::format!("no squad · a new one starts {}", start); }
+    let key = crate::seats::view_key(g);
+    let word = if squad_silent(g) {
+        match g.m.silent.states.get(key) { Some(s) if s.hot => "SILENT · compromised", _ => "SILENT" }
+    } else { "loud" };
+    let lasted = match g.m.silent.states.get(key) {
+        Some(s) if s.since > 0.0 => alloc::format!(" for {} s", js::to_fixed(g.time - s.since, 0)),
+        _ => String::new(),
+    };
+    alloc::format!("{}{} · {} men · a new squad starts {}", word, lasted, n, start)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

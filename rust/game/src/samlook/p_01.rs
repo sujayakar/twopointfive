@@ -83,6 +83,12 @@ pub fn pick(g: &mut crate::game::Game) -> Option<GuardId> {
     best
 }
 
+/// The man his head is on, as of this frame's step; never makes a row.   (samlook.ts samLookMan)
+pub fn sam_look_man(g: &mut crate::game::Game) -> Option<GuardId> {
+    let pl = g.player;
+    g.m.samlook.state.get(pl).and_then(|s| s.on)
+}
+
 /// How much room one man asks of him: 0 past `slipFrom`, for a man onto him, and behind a man's back.   (samlook.ts slipOf)
 pub fn slip_of(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     if g.gd[gd].state == crate::game::GuardState::Alert { return 0.0; }

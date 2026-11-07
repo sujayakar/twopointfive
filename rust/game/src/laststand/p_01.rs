@@ -124,6 +124,9 @@ fn room_has(g: &mut Game, r: RoomfightRoomId, p: V3) -> bool {
 
 // ---------------------------------------------------------------- the skeleton's functions
 
+/// host work, nothing of the simulation: the debugger's panel keeping its rows in the browser's storage (laststand.ts saveLastStand)
+pub fn save_last_stand(g: &mut crate::game::Game) {}
+
 /// a new tally of the endgame (laststand.ts newStats)
 pub fn new_stats() -> crate::laststand::StateStats {
     StateStats {

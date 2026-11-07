@@ -726,6 +726,16 @@ pub fn wall_break_reset(g: &mut crate::game::Game, silent: Option<bool>) {
 
 
 
+/// One line of the walls' state, for the checks.   (wallbreak.ts WallBreak.summary)
+pub fn wall_break_summary(g: &mut crate::game::Game) -> String {
+    let v = wall_break_inventory(g);
+    let s = g.stats.wallbreak.clone();
+    alloc::format!(
+        "walls {} ({} m) · cover {} · touched {} · pieces {}/{} · ports {} holes {} cover cells {} ({} gone) · refused {} · serial {}",
+        v.walls, js::to_fixed(v.wall_m, 0), v.cover, v.touched, v.pieces, g.k.walls.max_pieces, s.ports, s.holes, s.cover_cells, s.cover_dead, s.refused, g.destr.walls.serial
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

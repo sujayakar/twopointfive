@@ -64,7 +64,11 @@ if (flag('--census-merge')) { const i = ARGV.indexOf('--census-merge'), rest = A
 /** the simulation's folders: where this program may delete */
 const SIM = /^src\/(game|anim|math|sim|scene)\//;
 /** THE ENTRY POINTS OF THE HOSTS in tools/: a file of tools/ is a host's when one of these, or a file of src/, loads it */
-const HOST_ENTRIES = ['tools/blitz/rust-host.ts', 'tools/blitz/page-plugin.ts', 'tools/serve.ts', 'tools/build.ts', 'tools/build-one.ts', 'tools/mp/server.ts', 'tools/mp/runner.ts'];
+// (… and THE TOOLS THAT PLAY WHOLE GAMES: the tallies' scripted player, the plain night's, the tour's, the soak's, the lessons' runner. Each stands a game,
+// steps it under the Rust host and READS THE PUPPET between ticks to decide its next key, as the page's HUD reads it: what such a tool names keeps its
+// body like a host's, where a check that calls one rule and looks at the answer keeps a signature. Entry points, not a list of functions.)
+const HOST_ENTRIES = ['tools/blitz/rust-host.ts', 'tools/blitz/page-plugin.ts', 'tools/serve.ts', 'tools/build.ts', 'tools/build-one.ts', 'tools/mp/server.ts', 'tools/mp/runner.ts',
+  'tools/qa/playthrough.ts', 'tools/qa/solo-night.ts', 'tools/qa/tour.ts', 'tools/qa/soak.ts', 'tools/qa/lesson-run.ts'];
 /** the bridge's files as the page names them (page-plugin.ts FILES): `tps-bridge/<name>` */
 const BRIDGE_ALIAS = /^tps-bridge\/(.*)$/;
 /** the module the stubs call (written by this program on `--write`) */
@@ -142,7 +146,7 @@ const implOf = (u: Unit): any => u.nodes.filter(n => bodyOf(n)).pop();
   const taps = new Map<string, any>(); for (const t of TAPS) taps.set(`${t.file}\n${t.key}`, t);
   let ng = 0, nt = 0;
   for (const u of UNITS) { const r = rows.get(`${u.file}\n${u.key}`); if (r && guards.has(r.id) && u.fnLike) { u.row = r; u.guard = guards.get(r.id); ng++; } const t = taps.get(`${u.file}\n${u.key}`); if (t && u.fnLike) { u.tap = t; nt++; } }
-  if (ng !== guards.size) { const got = new Set(UNITS.filter(u => u.guard).map(u => u.row.id)); console.error(`calls.json guards ${guards.size} functions and ${ng} were found by key: ${[...guards.keys()].filter(i => !got.has(i)).slice(0, 12).map(i => `${CALLS.rows[i].key} (${CALLS.rows[i].file})`).join(', ')}`); process.exit(2); }
+  if (ng !== guards.size) { const got = new Set(UNITS.filter(u => u.guard).map(u => u.row.id)); console.error(`calls.json guards ${guards.size} functions and ${ng} were found by key: ${[...guards.keys()].filter(i => !got.has(i)).slice(0, 12).map(i => { const r = CALLS.rows.find((x: any) => x.id === i); return `${r?.key} (${r?.file})`; }).join(', ')}`); process.exit(2); }
   const tapsHere = Object.values<any>(CALLS.taps ?? {}).reduce((a, l) => a + l.length, 0); if (nt < tapsHere) { const got = new Set(UNITS.filter(u => u.tap).map(u => u.tap.id)); console.error(`calls.json places ${tapsHere} taps and ${nt} were found by key: ${TAPS.filter(t => !got.has(t.id)).map(t => `${t.key} (${t.file})`).join(', ')}`); process.exit(2); } }
 
 // ---- references

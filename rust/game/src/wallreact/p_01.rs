@@ -78,6 +78,9 @@ pub fn wall_react_live(g: &mut Game) -> bool {
     g.m.wallreact.wall_react.unsub && g.ai_enabled && !g.quiet_utility && !g.touring
 }
 
+/// (wallreact.ts WallReact.fight): nothing to hand back: the reader reads g.fight
+pub fn wall_react_fight(g: &mut Game) {}
+
 /// (wallreact.ts WallReact.defOf)
 pub fn wall_react_def_of(g: &mut Game, gd: GuardId) -> Option<RoomfightDefId> {
     g.fight.defs.iter().copied().find(|d| g.tab.roomfight_def[*d].gd == gd)
@@ -1288,6 +1291,17 @@ pub fn wall_react_replan(g: &mut Game, team: crate::teams::Team, since: f64, men
         }
     }
     false
+}
+
+/// (wallreact.ts WallReact.summary)
+pub fn wall_react_summary(g: &mut Game) -> String {
+    let live = wall_react_live(g);
+    let list = breaches_of(g);
+    let walk = list.iter().filter(|b| g.tab.wallreact_breach[**b].walk).count();
+    let ops = list.iter().filter(|b| g.tab.wallreact_breach[**b].ops >= 0.0).count();
+    let s = &g.stats.wallreact;
+    format!("wall react {} · {} breaches ({} walk-through, team knows {}) · rows {} · rooms joined {} · moved: holding {}, fighting {}, team {} (nowhere {}) · watches {} · replans {}",
+        if live { "on" } else { "off" }, list.len(), walk, ops, s.rows, s.merged, s.moved_def, s.moved_ai, s.moved_op, s.no_cover, s.watches, s.replans)
 }
 
 #[cfg(test)]

@@ -35,6 +35,11 @@ pub fn floor_at(p: V3, s: Option<&crate::scene_level_data::SurfacesData>) -> cra
     FloorMat::Carpet
 }
 
+/// The material a footfall at `pos` is on for everyone who listens: the map's, or lino everywhere with the materials off. (floor.ts stepMat)
+pub fn step_mat(g: &mut crate::game::Game, pos: V3) -> crate::floor::FloorMat {
+    if g.tune.floor_materials { floor_of(g, pos) } else { FloorMat::Lino }
+}
+
 /// The material under a point on this game's level; a quiet mission's level that declares no surfaces is plain lino. (floor.ts floorOf)
 pub fn floor_of(g: &mut crate::game::Game, pos: V3) -> crate::floor::FloorMat {
     let l = &g.level;

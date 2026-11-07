@@ -205,11 +205,6 @@ static mut ALL: [World; WORLDS] = [BLANK; WORLDS];
 pub fn world(w: usize) -> &'static mut World {
     unsafe { &mut (*core::ptr::addr_of_mut!(ALL))[if w < WORLDS { w } else { 0 }] }
 }
-/// world `w`, to read
-#[inline(always)]
-pub fn world_read(w: usize) -> &'static World {
-    unsafe { &(*core::ptr::addr_of!(ALL))[if w < WORLDS { w } else { 0 }] }
-}
 
 impl World {
     /// a fresh id for one question's stamps (the TypeScript's `++stampId`); at the wrap every stamp is wiped so that no old one reads as this question's

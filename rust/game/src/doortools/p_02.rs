@@ -76,6 +76,91 @@ fn door_of(t: &crate::orders::OrderTarget) -> Option<(DoorId, f64)> {
         _ => None,
     }
 }
+/// S.recipients(t)
+fn recipients_of(g: &mut Game, t: &crate::orders::OrderTarget) -> Vec<GuardId> {
+    crate::orders::squad_orders_recipients(g, Some(t), None)
+}
+/// this.thresholdThen(what, men, t)
+fn then_now(g: &mut Game, what: crate::doortools::DoorToolsThresholdThenWhat, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> {
+    use crate::doortools::DoorToolsThresholdThenT as R;
+    use crate::orders::OrderTarget as T;
+    let r = match t {
+        T::Floor(x) => R::Floor(x.clone()),
+        T::Door(x) => R::Door(x.clone()),
+        T::None(x) => R::None(x.clone()),
+        T::Foe(x) => R::Foe(x.clone()),
+    };
+    match door_tools_threshold_then(g, what, men, Some(&r)) {
+        crate::doortools::DoorToolsThresholdThen::Text(s) => Some(s),
+        crate::doortools::DoorToolsThresholdThen::Arm1(()) => None,
+    }
+}
+/// this.thenOnWord(what, men, t)
+fn then_word(g: &mut Game, what: crate::doortools::DoorToolsThenOnWordWhat, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> {
+    match door_tools_then_on_word(g, what, men, t) {
+        crate::doortools::DoorToolsThenOnWord::Text(s) => Some(s),
+        crate::doortools::DoorToolsThenOnWord::Arm1(()) => None,
+    }
+}
+/// this.canThresholdThen(what, t, men)
+fn can_then(g: &mut Game, what: crate::doortools::DoorToolsCanThresholdThenWhat, t: &crate::orders::OrderTarget, men: &[GuardId]) -> crate::doortools::DoorToolsStackable {
+    use crate::doortools::{DoorToolsCanThresholdThen as C, DoorToolsCanThresholdThenT as R, DoorToolsStackable as V};
+    use crate::orders::OrderTarget as T;
+    let r = match t {
+        T::Floor(x) => R::Floor(x.clone()),
+        T::Door(x) => R::Door(x.clone()),
+        T::None(x) => R::None(x.clone()),
+        T::Foe(x) => R::Foe(x.clone()),
+    };
+    match door_tools_can_threshold_then(g, what, Some(&r), men) {
+        C::Text(s) => V::Text(s),
+        C::Bool(b) => V::Bool(b),
+    }
+}
+/// this.standoffFits(men, t, own)
+fn standoff_fits(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget, own: Option<bool>) -> crate::doortools::DoorToolsStackable {
+    use crate::doortools::{DoorToolsStackable as V, DoorToolsStandoffFits as F};
+    match door_tools_standoff_fits(g, men, t, own) {
+        F::Text(s) => V::Text(s),
+        F::Bool(b) => V::Bool(b),
+    }
+}
+/// this.startCharge(men, t, byHand)
+fn start_charge(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget, by_hand: Option<bool>) -> Option<String> {
+    match door_tools_start_charge(g, men, t, by_hand) {
+        crate::doortools::DoorToolsStartCharge::Text(s) => Some(s),
+        crate::doortools::DoorToolsStartCharge::Arm1(()) => None,
+    }
+}
+/// this.issue(kind, men, t, onWord)
+fn issue_kind(g: &mut Game, kind: crate::doortools::DoorToolKind, men: &[GuardId], t: &crate::orders::OrderTarget, on_word: bool) -> Option<String> {
+    match door_tools_issue(g, kind, men, t, Some(on_word)) {
+        crate::doortools::DoorToolsIssue::Text(s) => Some(s),
+        crate::doortools::DoorToolsIssue::Arm1(()) => None,
+    }
+}
+/// !!o?.onWord
+fn on_word_of(o: Option<&crate::orders::GiveOpts>) -> bool {
+    o.and_then(|o| o.on_word).unwrap_or(false)
+}
+/// who is behind the door, in the words a man says it in; None: nobody
+fn behind_words(g: &mut Game, who: Option<String>) -> Option<crate::doortools::DoorToolsStackable> {
+    let who = who.filter(|w| !w.is_empty())?;
+    let said = if who == "you" {
+        crate::words::wg(g, &String::from("you're behind that door."), &String::from("you are behind that door."))
+    } else {
+        format!("{} is behind that door.", who)
+    };
+    Some(crate::doortools::DoorToolsStackable::Text(said))
+}
+/// men.filter(m => on.has(m) || ops.some(o => o.men.includes(m)))
+fn men_in_ops(g: &mut Game, men: &[GuardId], on: &[GuardId], ops: &[DoorOpId]) -> Vec<GuardId> {
+    let mut out = Vec::new();
+    for &m in men {
+        if on.contains(&m) || ops.iter().any(|&o| g.tab.doortools_door_op[o].men.contains(&m)) { out.push(m); }
+    }
+    out
+}
 /// a string list of a row
 fn strs(xs: &[&str]) -> Vec<String> {
     xs.iter().map(|x| String::from(*x)).collect()
@@ -87,6 +172,251 @@ fn register(g: &mut Game, def: crate::orders::OrderDef, before: Option<&str>) {
 }
 
 // ---------------------------------------------------------------- the rows' functions: the arms of OrderLabel, OrderOnly, OrderValid, OrderIssue, OrderGone, called from orders' match: `Order<Field>::Door<Arm>` is `row_<arm>_<field>`, with the arguments the TypeScript calls the field with
+
+/// held(t)   (doortools.ts:806)
+fn row_held(g: &mut Game, t: &crate::orders::OrderTarget) -> bool {
+    let men = recipients_of(g, t);
+    door_tools_held_plain(g, t, &men)
+}
+/// known(t)   (doortools.ts:807)
+fn row_known(g: &mut Game, t: &crate::orders::OrderTarget) -> String {
+    if let Some((d, _)) = door_of(t) {
+        if door_tools_entry_verb(g, t) != crate::doortools::DoorToolsEntryVerb::Open {
+            return format!(" · {}", door_tools_shut_why(g, d));
+        }
+    }
+    String::new()
+}
+/// the entry rows' `only`: while they hold it from outside, the men holding   (doortools.ts:809, 813)
+pub(crate) fn row_held_or_all_only(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Vec<GuardId> {
+    if door_tools_held_plain(g, t, men) { door_tools_held_men(g, men, t) } else { men.to_vec() }
+}
+/// (doortools.ts:808)
+pub(crate) fn row_open_clear_label(g: &mut Game, t: &crate::orders::OrderTarget) -> String {
+    if row_held(g, t) { return String::from("go in and clear · no bang"); }
+    let verb = door_tools_entry_verb(g, t);
+    format!("{} and clear{}", verb.as_str(), row_known(g, t))
+}
+/// (doortools.ts:810)
+pub(crate) fn row_open_clear_valid(g: &mut Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> crate::doortools::DoorToolsStackable {
+    if door_tools_held_plain(g, t, men) { can_then(g, crate::doortools::DoorToolsCanThresholdThenWhat::Step, t, men) } else { door_tools_stackable(g, t, men) }
+}
+/// (doortools.ts:811)
+pub(crate) fn row_open_clear_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> {
+    if door_tools_held_plain(g, t, men) {
+        if on_word_of(o) { then_word(g, crate::doortools::DoorToolsThenOnWordWhat::Step, men, t) } else { then_now(g, crate::doortools::DoorToolsThresholdThenWhat::Step, men, t) }
+    } else {
+        issue_kind(g, crate::doortools::DoorToolKind::OpenClear, men, t, on_word_of(o))
+    }
+}
+/// (doortools.ts:812)
+pub(crate) fn row_bang_clear_label(g: &mut Game, t: &crate::orders::OrderTarget) -> String {
+    if row_held(g, t) { return format!("bang, then go in · {} left", g.door_tools.bangs); }
+    let head = if door_tools_entry_verb(g, t) == crate::doortools::DoorToolsEntryVerb::Open {
+        String::from("bang")
+    } else {
+        format!("{}, bang", door_tools_entry_verb(g, t).as_str())
+    };
+    format!("{} and clear · {} left", head, g.door_tools.bangs)
+}
+/// (doortools.ts:814)
+pub(crate) fn row_bang_clear_valid(g: &mut Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> crate::doortools::DoorToolsStackable {
+    if door_tools_held_plain(g, t, men) { return can_then(g, crate::doortools::DoorToolsCanThresholdThenWhat::Bang, t, men); }
+    if g.door_tools.bangs <= 0.0 { return crate::doortools::DoorToolsStackable::Text(String::from("no bangs left.")); }
+    let who = match door_of(t) { Some((d, side)) => door_tools_can_behind(g, d, side, men), None => None };
+    if let Some(said) = behind_words(g, who) { return said; }
+    door_tools_stackable(g, t, men)
+}
+/// (doortools.ts:818)
+pub(crate) fn row_bang_clear_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> {
+    if door_tools_held_plain(g, t, men) {
+        if on_word_of(o) { then_word(g, crate::doortools::DoorToolsThenOnWordWhat::Bang, men, t) } else { then_now(g, crate::doortools::DoorToolsThresholdThenWhat::Bang, men, t) }
+    } else {
+        issue_kind(g, crate::doortools::DoorToolKind::BangClear, men, t, on_word_of(o))
+    }
+}
+/// (doortools.ts:819)
+pub(crate) fn row_charge_label(g: &mut Game, t: &crate::orders::OrderTarget) -> String {
+    if door_of(t).is_some() && door_tools_loose_on(g, t) { return String::from("stand off · in behind the charge"); }
+    if let Some((d, _)) = door_of(t) {
+        if let Some(c) = door_tools_charge_on(g, d) {
+            return format!("blow the charge{}", door_tools_close_words(g, c));
+        }
+    }
+    format!("breach with a charge · {} left", g.door_tools.charges)
+}
+/// (doortools.ts:820)
+pub(crate) fn row_charge_gone(g: &mut Game, t: &crate::orders::OrderTarget) -> bool {
+    match door_of(t) {
+        Some((d, _)) => g.dr[d].def.steel.unwrap_or(false) && door_tools_charge_on(g, d).is_none(),
+        None => false,
+    }
+}
+/// (doortools.ts:821)
+pub(crate) fn row_charge_valid(g: &mut Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> crate::doortools::DoorToolsStackable {
+    use crate::doortools::DoorToolsStackable as V;
+    let Some((d, _)) = door_of(t) else { return V::Bool(false) };
+    if door_tools_loose_on(g, t) { return standoff_fits(g, men, t, Some(true)); }
+    if door_tools_charge_on(g, d).is_some() { return V::Bool(true); }
+    if g.dr[d].def.steel.unwrap_or(false) { return V::Text(String::from("steel. a charge won't cut it.")); }
+    let open = door_tools_known_open(g, d);
+    if open { return V::Text(String::from("it's open.")); }
+    if g.door_tools.charges <= 0.0 { return V::Text(String::from("no charges left.")); }
+    let on_it = g.door_tools.ops.iter().any(|&o| {
+        let op = &g.tab.doortools_door_op[o];
+        op.kind == crate::doortools::DoorToolKind::Charge && op.door == d && op.phase == crate::doortools::Phase::Place
+    });
+    if on_it { return V::Text(String::from("already on it.")); }
+    standoff_fits(g, men, t, None)
+}
+/// (doortools.ts:831)
+pub(crate) fn row_charge_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> {
+    let Some((d, _)) = door_of(t) else { return Some(String::from("no door")) };
+    if door_tools_loose_on(g, t) { return start_charge(g, men, t, Some(true)); }
+    if let Some(c) = door_tools_charge_on(g, d) {
+        door_tools_trigger(g, Some(c));
+        return None;
+    }
+    start_charge(g, men, t, None)
+}
+/// (doortools.ts:837)
+pub(crate) fn row_frag_clear_label(g: &mut Game, t: &crate::orders::OrderTarget) -> String {
+    format!("frag and clear · {} left", g.door_tools.frags)
+}
+/// (doortools.ts:838)
+pub(crate) fn row_frag_clear_valid(g: &mut Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> crate::doortools::DoorToolsStackable {
+    use crate::doortools::DoorToolsStackable as V;
+    if g.door_tools.frags <= 0.0 { return V::Text(String::from("no frags left.")); }
+    let hostage = g.rescue.hostages.iter().any(|&h| g.gd[h].state != crate::game::GuardState::Dead);
+    if hostage { return V::Text(String::from("not with hostages on the floor.")); }
+    let mate = match door_of(t) { Some((d, side)) => door_tools_frag_behind(g, d, side, men), None => None };
+    if let Some(said) = behind_words(g, mate) { return said; }
+    door_tools_stackable(g, t, men)
+}
+/// (doortools.ts:842)
+pub(crate) fn row_frag_clear_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> {
+    g.door_tools.frag_next = true;
+    let said = issue_kind(g, crate::doortools::DoorToolKind::BangClear, men, t, on_word_of(o));
+    g.door_tools.frag_next = false;
+    said
+}
+/// (doortools.ts:859)
+pub(crate) fn row_threshold_hold_label(g: &mut Game, t: &crate::orders::OrderTarget) -> String {
+    String::from(if row_held(g, t) { "clear from outside · holding it" } else { "clear from outside" })
+}
+/// (doortools.ts:860)
+pub(crate) fn row_threshold_hold_valid(g: &mut Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> crate::doortools::DoorToolsStackable {
+    use crate::doortools::{DoorToolsCanThreshold as C, DoorToolsStackable as V};
+    if door_tools_held_plain(g, t, men) { return V::Text(String::from("already holding it.")); }
+    match door_tools_can_threshold(g, t, men) {
+        C::Text(s) => V::Text(s),
+        C::Bool(b) => V::Bool(b),
+    }
+}
+/// (doortools.ts:860)
+pub(crate) fn row_threshold_hold_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> {
+    match door_tools_threshold_hold(g, men, t, Some(on_word_of(o))) {
+        crate::doortools::DoorToolsThresholdHold::Text(s) => Some(s),
+        crate::doortools::DoorToolsThresholdHold::Arm1(()) => None,
+    }
+}
+/// `w ? go · w : go`
+fn go_words(w: String) -> String {
+    if w.is_empty() { String::from("go") } else { format!("go · {}", w) }
+}
+/// (doortools.ts:902)
+pub(crate) fn row_go_small_label(g: &mut Game, t: &crate::orders::OrderTarget) -> String {
+    let men = recipients_of(g, t);
+    go_words(door_tools_stack_words(g, &men))
+}
+/// (doortools.ts:903)
+pub(crate) fn row_go_small_only(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Vec<GuardId> {
+    let mut on = JsSet::<GuardId>::new();
+    for x in door_tools_stack_waits(g, men) {
+        for m in x.men { on.add(m); }
+    }
+    let h = door_tools_frag_held(g, men);
+    men_in_ops(g, men, &on.keys(), &h)
+}
+/// (doortools.ts:904)
+pub(crate) fn row_go_small_valid(g: &mut Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> crate::doortools::DoorToolsStackable {
+    use crate::doortools::DoorToolsStackable as V;
+    if !door_tools_stack_waits(g, men).is_empty() || !door_tools_frag_held(g, men).is_empty() { V::Bool(true) } else { V::Text(String::from("nobody waiting.")) }
+}
+/// (doortools.ts:904)
+pub(crate) fn row_go_small_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> {
+    let only: Vec<crate::doortools::DoorToolsGoMenOnlyItem> = door_tools_stack_waits(g, men)
+        .into_iter()
+        .map(|x| crate::doortools::DoorToolsGoMenOnlyItem { stack: x.stack, men: x.men })
+        .collect();
+    door_tools_go_men(g, men, Some(&only))
+}
+/// (doortools.ts:909)
+pub(crate) fn row_go_big_label(g: &mut Game, t: &crate::orders::OrderTarget) -> String {
+    let men = recipients_of(g, t);
+    go_words(door_tools_waiting_words(g, &men))
+}
+/// (doortools.ts:910)
+pub(crate) fn row_go_big_only(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Vec<GuardId> {
+    let w = door_tools_waiting_men(g, men);
+    if !w.is_empty() { return w; }
+    let h = door_tools_frag_held(g, men);
+    men_in_ops(g, men, &[], &h)
+}
+/// (doortools.ts:911)
+pub(crate) fn row_go_big_valid(g: &mut Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> crate::doortools::DoorToolsStackable {
+    use crate::doortools::DoorToolsStackable as V;
+    if !door_tools_waiting_any(g, men).is_empty() || !door_tools_frag_held(g, men).is_empty() { V::Bool(true) } else { V::Text(String::from("nobody waiting.")) }
+}
+/// (doortools.ts:911)
+pub(crate) fn row_go_big_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> {
+    door_tools_go_men(g, men, None);
+    None
+}
+/// (doortools.ts:922)
+pub(crate) fn row_big_clear_label(g: &mut Game, t: &crate::orders::OrderTarget) -> String {
+    let men = recipients_of(g, t);
+    format!("{} and clear", door_tools_big_word(g, t, &men).as_str())
+}
+/// (doortools.ts:923)
+pub(crate) fn row_big_clear_gone(g: &mut Game, t: &crate::orders::OrderTarget) -> bool {
+    match door_of(t) {
+        Some((d, _)) => is_open(g, d) || g.dr[d].def.steel.unwrap_or(false),
+        None => false,
+    }
+}
+/// (doortools.ts:924)
+pub(crate) fn row_big_clear_valid(g: &mut Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> crate::doortools::DoorToolsStackable {
+    use crate::doortools::DoorToolsStackable as V;
+    let Some((d, side)) = door_of(t) else { return V::Bool(false) };
+    if is_open(g, d) { return V::Text(String::from("it's open.")); }
+    if g.dr[d].def.steel.unwrap_or(false) { return V::Text(String::from("steel. no way through.")); }
+    let mut carries = false;
+    for &m in men {
+        if crate::bigkit::carries_hammer(g, m) || (g.gd[m].state != crate::game::GuardState::Dead && crate::kit::kit_big(g, m) == crate::kit::BigKit::Shotgun) {
+            carries = true;
+            break;
+        }
+    }
+    if !carries { return V::Text(String::from("nobody here carries one.")); }
+    if crate::doors::door_locked(g, d) && g.dr[d].lock_id.starts_with("wedge:") {
+        let mut hammer = false;
+        for &m in men {
+            if crate::bigkit::carries_hammer(g, m) { hammer = true; break; }
+        }
+        if !hammer && door_tools_known_shut(g, d, side) {
+            return V::Text(crate::words::wg(g, &String::from("it's wedged. a shell won't open it."), &String::from("wedged. no shell shifts it.")));
+        }
+    }
+    door_tools_stackable(g, t, men)
+}
+/// (doortools.ts:930)
+pub(crate) fn row_big_clear_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> {
+    g.door_tools.big_next = true;
+    let said = issue_kind(g, crate::doortools::DoorToolKind::OpenClear, men, t, on_word_of(o));
+    g.door_tools.big_next = false;
+    said
+}
 
 // ---------------------------------------------------------------- the class
 

@@ -24,6 +24,17 @@ pub fn layable(g: &mut crate::game::Game, d: OrdersOrderDefId) -> bool {
     !opens && !def.free.unwrap_or(false) && !g.m.planlay.word_rows.has(def.id.clone())
 }
 
+/// Is something laid and waiting on the key. (planlay.ts layPending)
+pub fn lay_pending(g: &mut crate::game::Game) -> bool {
+    for i in 0..g.orders.lay.laid.len() {
+        let o = g.orders.lay.laid[i].clone();
+        if !lay_men(g, &o).is_empty() {
+            return true;
+        }
+    }
+    false
+}
+
 /// A man who is down is off the plan; an order nobody is left on is gone. (planlay.ts layPrune)
 pub fn lay_prune(g: &mut crate::game::Game) {
     let s = crate::orders::squad_orders_squad(g);
@@ -72,6 +83,20 @@ pub fn lay_men(g: &mut crate::game::Game, o: &crate::planlay::LaidOrder) -> Vec<
     men
 }
 
+/// Where a laid order is on the floor (None: fall in, hold). (planlay.ts layPoint)
+pub fn lay_point(g: &mut crate::game::Game, o: &crate::planlay::LaidOrder) -> Option<V3> {
+    if o.kind == crate::planlay::LaidOrderKind::Door {
+        let d = door_at(g, o.door)?;
+        let c = g.dr[d].frame_centre;
+        return Some([c[0], 0.0, c[2]]);
+    }
+    if o.kind == crate::planlay::LaidOrderKind::Floor {
+        Some([o.at[0], 0.0, o.at[2]])
+    } else {
+        None
+    }
+}
+
 /// A laid order's target as the menu would hand it to give() now (None: its door or man is gone). (planlay.ts targetOf)
 pub fn target_of(g: &mut crate::game::Game, o: &crate::planlay::LaidWhere) -> Option<crate::orders::OrderTarget> {
     use crate::orders::{OrderTarget, OrderTargetDoor, OrderTargetFloor, OrderTargetNone};
@@ -108,6 +133,11 @@ pub fn target_of(g: &mut crate::game::Game, o: &crate::planlay::LaidWhere) -> Op
         };
     }
     Some(OrderTarget::Floor(OrderTargetFloor { at, wall: None, thing: None, serial: 0 }))
+}
+
+/// `target_of`, for the other modules. (planlay.ts layTarget)
+pub fn lay_target(g: &mut crate::game::Game, o: &crate::planlay::LaidWhere) -> Option<crate::orders::OrderTarget> {
+    target_of(g, o)
 }
 
 /// Those callsigns off every laid order; one with nobody left is gone. Returns how many orders lost a name. (planlay.ts strike)
@@ -361,6 +391,51 @@ pub fn lay_clear(g: &mut crate::game::Game) {
     l.started = false;
     l.sending = false;
     l.restored_t = -1.0;
+}
+
+/// The HUD's line for the key while a plan waits. (planlay.ts layNote)
+pub fn lay_note(g: &mut crate::game::Game, key: &str) -> Vec<crate::planlay::LayNoteItem> {
+    if !lay_pending(g) {
+        return Vec::new();
+    }
+    let mut men: JsSet<GuardId> = JsSet::new();
+    for i in 0..g.orders.lay.laid.len() {
+        let o = g.orders.lay.laid[i].clone();
+        for m in lay_men(g, &o) {
+            men.add(m);
+        }
+    }
+    if men.is_empty() {
+        return Vec::new();
+    }
+    let who = crate::orders::squad_orders_who_words(g, Some(&men.keys()));
+    vec![crate::planlay::LayNoteItem { key: String::from(key), text: format!("go · {} on the plan", who) }]
+}
+
+/// The plan in one line, for the debugger. (planlay.ts laySummary)
+pub fn lay_summary(g: &mut crate::game::Game) -> String {
+    use crate::planlay::LaidOrderKind;
+    let mut rows: Vec<String> = Vec::new();
+    for i in 0..g.orders.lay.laid.len() {
+        let o = g.orders.lay.laid[i].clone();
+        let place = match o.kind {
+            LaidOrderKind::Door => {
+                let name = match door_at(g, o.door) {
+                    Some(d) => g.dr[d].def.name.clone(),
+                    None => String::from("?"),
+                };
+                format!(" door {}", name)
+            }
+            LaidOrderKind::Floor => format!(" {},{}", js::to_fixed(o.at[0], 1), js::to_fixed(o.at[2], 1)),
+            LaidOrderKind::None => String::new(),
+        };
+        rows.push(format!("{}: {}{}", o.who.join("+"), o.id, place));
+    }
+    let head = if rows.is_empty() { String::from("nothing laid") } else { rows.join(" · ") };
+    match &g.orders.lay.kept {
+        Some(kept) => format!("{} · kept {}", head, kept.len()),
+        None => head,
+    }
 }
 
 /// `g.doors.list[o.door ?? -1]`: nothing where the place is off the list.

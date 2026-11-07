@@ -185,7 +185,7 @@ program, and the run-time refusal with Sam unmoved).
 
 - **The Director = level scripting** (`src/game/director.ts`, docs/design/level-scripting.md M1, docs/internal/director.md; `Game.director`, `window.__director`): a level's SCRIPT is a
   plain function `(D: DirectorApi) => void` in `levels/<name>.script.ts` that imports NOTHING from src/ at run time (`import type` only — the API is injected); scene/level.ts attaches
-  the office's (`withOfficeScript`, a NON-ENUMERABLE `Level.script`: code, not level data). Define time = HANDLES by name (`D.mark(id, pos)` / `door` / `volume` / `route` / `plan('breach'
+  one (`withScript`, a NON-ENUMERABLE `Level.script`: code, not level data; `withOfficeScript`, which did it for the office, is gone with the office's script). Define time = HANDLES by name (`D.mark(id, pos)` / `door` / `volume` / `route` / `plan('breach'
   | room)` / `loadout(id, spec)` / `lightGroup` / `variant('daylight')`) + `D.program(name, P => …, {showcase, lowerThird, endVeil, endHold})` + `D.expect.*` + `D.systems.*` → the
   MANIFEST (`manifestOf`), LINTED against the level in the Game constructor (`lintManifest`: a missing door / volume / route / plan / group, a mark with no position, an unknown
   weapon, an unspawnable side, an undeclared beat, a NaN delay = an error → `armed` false, one console error, `start()` refused — the game plays on). Per program TRIGGERS

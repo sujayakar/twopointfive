@@ -7,6 +7,22 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
+/// The whistle's lines, for the QA soak.   (whistle.ts whistleLines)
+pub fn whistle_lines(g: &mut crate::game::Game, kind: Option<crate::whistle::WhistleLinesKind>) -> Vec<String> {
+    let kind = kind.unwrap_or(WhistleLinesKind::All);
+    let mut out: Vec<String> = Vec::new();
+    if kind != WhistleLinesKind::Twice {
+        out.extend(look_lines());
+        out.extend(look_foe());
+    }
+    if kind != WhistleLinesKind::Look {
+        out.extend(twice_lines());
+        out.push(twice_now()[0].clone());
+        out.extend(twice_foe());
+    }
+    out
+}
+
 /// What a new man's memory holds (the literal in whistle.ts mem).
 fn fresh_mem() -> WhistleMem {
     WhistleMem { responded_at: NEVER, responses: 0.0, searches: 0.0, cues: 0.0, glances: 0.0, glance_until: -1.0, glance_at: None, soft: false, soft_at: NEVER, last_look: -1.0, last_twice: -1.0 }
@@ -286,6 +302,55 @@ pub fn whistle_patrol_tick(g: &mut crate::game::Game, gd: GuardId) {
             g.ch[c].anim.look_yaw_extra = v3::clamp(v3::wrap_angle(to - g.ch[c].body_yaw), -max, max);
         }
     }
+}
+
+/// Keep the knobs on this machine: the game has no storage, which the TypeScript answers by doing nothing; a host that keeps them does it itself.   (whistle.ts saveWhistle)
+pub fn save_whistle(g: &mut crate::game::Game) {}
+
+/// Read the kept knobs back: no storage, so the shipped values stand, as in the TypeScript.   (whistle.ts loadWhistle)
+pub fn load_whistle(g: &mut crate::game::Game) {}
+
+/// The knobs back to the shipped values (the stored copy is the host's).   (whistle.ts resetWhistle)
+pub fn reset_whistle(g: &mut crate::game::Game) {
+    g.k.whistle = whistle_defaults();
+}
+
+/// The panel's line of what the whistle has done.   (whistle.ts whistleSummary)
+pub fn whistle_summary(g: &mut crate::game::Game) -> String {
+    let mut parts: Vec<String> = Vec::new();
+    let blown = blower(g).blown;
+    let rd = whistle_ready_in(g);
+    parts.push(if rd > 0.0 { alloc::format!("again in {} s", js::to_fixed(rd, 1)) } else { String::from("ready (V)") });
+    parts.push(alloc::format!("{} blown", js::num_str(blown)));
+    let mut at = 0;
+    while at < g.guards.len() {
+        let gd = g.guards[at];
+        at += 1;
+        let Some(row) = g.m.whistle.mem_of.get(gd).copied() else { continue };
+        if g.gd[gd].state == crate::game::GuardState::Dead { continue; }
+        let mut bits: Vec<String> = Vec::new();
+        if js::truthy(row.responses) {
+            let searches = if js::truthy(row.searches) { alloc::format!(" ({} search{})", js::num_str(row.searches), if row.searches > 1.0 { "es" } else { "" }) } else { String::new() };
+            let torch = if whistle_soft(g, gd) { ", torch" } else { "" };
+            bits.push(alloc::format!("answered {} s ago ×{}{}{}", js::to_fixed(g.time - row.responded_at, 0), js::num_str(row.responses), searches, torch));
+        }
+        if js::truthy(row.cues) { bits.push(alloc::format!("{} cue{}", js::num_str(row.cues), if row.cues > 1.0 { "s" } else { "" })); }
+        if js::truthy(row.glances) {
+            bits.push(alloc::format!("{} glance{}{}", js::num_str(row.glances), if row.glances > 1.0 { "s" } else { "" }, if g.time < row.glance_until { " (looking)" } else { "" }));
+        }
+        if !bits.is_empty() { parts.push(alloc::format!("{}: {}", g.gd[gd].callsign, bits.join(", "))); }
+    }
+    if let Some(l) = g.m.whistle.whistle_log.last() {
+        let heard = if l.hearers.is_empty() { String::from("nobody") } else { l.hearers.join("/") };
+        // (a blank callsign is no name: the TypeScript tests the strings for truth)
+        let what = match (l.answered.as_ref().filter(|s| !s.is_empty()), l.responder.as_ref().filter(|s| !s.is_empty())) {
+            (Some(a), _) => alloc::format!(" — {} {}", a, if l.search { "searches" } else { "looks" }),
+            (None, Some(r)) => alloc::format!(" — {} to answer", r),
+            (None, None) => String::new(),
+        };
+        parts.push(alloc::format!("last: heard by {}{}", heard, what));
+    }
+    alloc::format!("whistle ▸ {}", parts.join(" · "))
 }
 
 #[cfg(test)]

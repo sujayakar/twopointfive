@@ -180,6 +180,11 @@ pub fn finish_wounded(g: &mut crate::game::Game, gd: GuardId, dir: V3, by_player
     crate::game::game_msg(g, &text);
 }
 
+/// Every man down wounded right now. (wounds.ts woundedMen)
+pub fn wounded_men(g: &mut crate::game::Game) -> Vec<GuardId> {
+    g.guards.iter().copied().filter(|&x| g.gd[x].wound.is_some()).collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

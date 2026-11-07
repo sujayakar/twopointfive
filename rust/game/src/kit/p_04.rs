@@ -119,6 +119,35 @@ pub fn as_issued(g: &mut crate::game::Game, f: &mut dyn FnMut(&mut crate::game::
     g.m.kit.issuing = KitModIssuing::Bool(false);
 }
 
+/// Your stored charges on a visit with their rows off, as the store's raw card holds them.   (kit.ts keptOf)
+pub fn kept_of(g: &mut crate::game::Game, raw: Option<&JsMap<String, crate::kit::KitValue>>) -> Option<crate::kit::KitModKept0> {
+    let r = raw?;
+    let mut k = KitModKept0 { charges: None, walls: None };
+    k.charges = kept_count(r, "charges", CHARGES_MAX);
+    k.walls = kept_count(r, "walls", WALLS_MAX);
+    if k.charges.map_or(false, js::truthy) || k.walls.map_or(false, js::truthy) { Some(k) } else { None }
+}
+
+/// keptOf's `int(R[f], 1) && R[f] <= max`: the count if it holds
+fn kept_count(r: &JsMap<String, KitValue>, f: &str, max: f64) -> Option<f64> {
+    let v = r.get(String::from(f));
+    if !int(v, 1.0) { return None; }
+    match v { Some(KitValue::Num(n)) if *n <= max => Some(*n), _ => None }
+}
+
+/// What kitSave writes back of your own charges whose rows are off.   (kit.ts keptNow)
+pub fn kept_now(g: &mut crate::game::Game) -> crate::kit::KeptNow {
+    let mut k = KeptNow { charges: None, walls: None };
+    let kept = g.m.kit.kept0;
+    if let Some(c) = kept.and_then(|x| x.charges) {
+        if js::truthy(c) && !charge_row(g, 0.0) { k.charges = Some(c); }
+    }
+    if let Some(w) = kept.and_then(|x| x.walls) {
+        if js::truthy(w) && !wall_row(g, 0.0) { k.walls = Some(w); }
+    }
+    k
+}
+
 /// Every card back as issued.   (kit.ts kitReset; its kitSave is the host's)
 pub fn kit_reset(g: &mut crate::game::Game) {
     for i in 0..CARDS {
@@ -177,6 +206,15 @@ pub fn kit_you_nvg(g: &mut crate::game::Game, pl: PlayerId) -> bool {
 pub fn stealth_run(g: &mut crate::game::Game) -> bool {
     g.quiet.active || (g.m.kit.kit_solo.on && !team_on_floor(g))
 }
+
+/// The sponge rounds a mission of this kind hands you over your card.   (kit.ts kitRingsLent)
+pub fn kit_rings_lent(g: &mut crate::game::Game, stealth: bool, m: Option<&crate::kit::MemberKit>) -> f64 {
+    let lent = tree_up(g) && !stealth_on(g) && stealth && match m { None => true, Some(m) => tubed(g, m) };
+    if lent { g.k.kittree.lend } else { 0.0 }
+}
+
+/// The card is the tree.   (kit.ts kitTreeOn)
+pub fn kit_tree_on(g: &mut crate::game::Game) -> bool { tree_up(g) }
 
 /// Your card onto the fresh Player.   (kit.ts kitPlayer)
 pub fn kit_player(g: &mut crate::game::Game) {

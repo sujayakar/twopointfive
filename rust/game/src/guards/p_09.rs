@@ -148,6 +148,53 @@ pub fn reset_guards(g: &mut crate::game::Game) {
 pub fn escalation_of(g: &mut crate::game::Game) -> f64 {
     if g.quiet_utility { 0.0 } else { g.escalation }
 }
+/// (guards.ts escalationName)
+pub fn escalation_name(l: f64) -> String {
+    String::from(if l >= 2.0 { "lockdown" } else if l >= 1.0 { "heightened" } else { "calm" })
+}
+
+/// `g.level.routes[gd.routeI]?.name ?? guard n`: a man's name on the panel
+fn route_name(g: &Game, gd: GuardId) -> String {
+    match g.level.routes.get(g.gd[gd].route_i as usize) {
+        Some(r) => g.tab.route[*r].name.clone(),
+        None => format!("guard {}", js::num_str(g.ch[g.gd[gd].ch].id - 10.0)),
+    }
+}
+/// One line for the Tab panel: level, its clock, the episode, the lockdown duties, the radio check.   (guards.ts escalationSummary)
+pub fn escalation_summary(g: &mut crate::game::Game) -> String {
+    let lvl = g.escalation;
+    let mut s = format!("alarm level: {}{}", escalation_name(lvl), if g.quiet_utility && js::truthy(lvl) { " (tour: ignored)" } else { "" });
+    if lvl > 0.0 { s += &format!(" · {} s", js::num_str(m::max(0.0, m::ceil(g.escalation_t - g.time)))); }
+    if g.alarm.episode { s += " · episode running"; }
+    for &gd in &g.guards {
+        if g.gd[gd].state == GuardState::Dead { continue; }
+        if let Some(l) = g.gd[gd].leader { s += &format!(" · pair {} ▸ {}", route_name(g, l), route_name(g, gd)); }
+        if let Some(p) = &g.gd[gd].post { s += &format!(" · {} holds the {}", route_name(g, gd), p.name); }
+    }
+    let (stage, missing, next_at) = { let r = rollcall_state(g); (r.stage, r.missing, r.next_at) };
+    if stage != RollcallStage::Idle {
+        let what = if stage == RollcallStage::Called {
+            String::from("counting in")
+        } else {
+            format!("asking after {}", match missing { Some(x) => g.gd[x].callsign.as_str(), None => "?" })
+        };
+        s += &format!(" · radio check: {}", what);
+    } else if next_at >= 0.0 && !g.quiet_utility {
+        s += &format!(" · radio check in {} s", js::num_str(m::max(0.0, m::ceil(next_at - g.time))));
+    }
+    for &gd in &g.guards {
+        if g.gd[gd].state == GuardState::Dead { continue; }
+        if let Some(GuardTask::CheckOn(k)) = &g.gd[gd].task {
+            s += &format!(" · {} walks {}'s route ({} to go)", route_name(g, gd), g.gd[k.who].callsign, js::num_str(k.left));
+        }
+    }
+    s
+}
+/// The second panel line: what the pair is clearing right now, or nothing.   (guards.ts clearingSummary)
+pub fn clearing_summary(g: &mut crate::game::Game) -> String {
+    if g.clearing.is_some() { crate::squad::clearing_summary(g) } else { String::new() }
+}
+
 /// The living man best placed to radio something about `pos`: the nearest not mid-fight, else the nearest at all, never `except`.   (guards.ts spokesman)
 pub fn spokesman(g: &mut crate::game::Game, pos: Option<V3>, except: Option<GuardId>) -> Option<GuardId> {
     let mut best: Option<GuardId> = None;
@@ -719,6 +766,23 @@ pub fn plan_clears(g: &mut crate::game::Game, force: Option<bool>, cause: Option
 fn room_label(v: &[crate::scene_level::RoomClearPlan]) -> String {
     match &v[0].room { Some(r) => r.clone(), None => v[0].door.clone() }
 }
+/// Panel: the rooms still ahead of the pair and the ones called clear lately.   (guards.ts clearQueueSummary)
+pub fn clear_queue_summary(g: &mut crate::game::Game) -> String {
+    let mut parts: Vec<String> = Vec::new();
+    if let Some(c) = &g.clearing {
+        if c.stage != crate::squad::ClearStage::Done {
+            let ahead: Vec<String> = c.rooms.iter().skip(c.room_i as usize).map(|v| room_label(v)).collect();
+            parts.push(format!("clear queue: {}", ahead.join(" ▸ ")));
+        }
+    }
+    let mut entries: Vec<(String, f64)> = g.cleared_at.iter().map(|(k, t)| (k, *t)).collect();
+    js::sort_by(&mut entries, |x, y| y.1 - x.1);
+    let done: Vec<String> = entries.iter().map(|(k, t)| {
+        format!("{} ({} s ago{})", k, js::num_str(m::round(g.time - *t)), if g.time - *t < RECLEAR_SECS { ", holds" } else { "" })
+    }).collect();
+    if !done.is_empty() { parts.push(format!("cleared this lockdown: {}", done.join(", "))); }
+    parts.join(" · ")
+}
 /// Panel: 'clear nearest room now': the fix where the player stands, the floor locked down if it was not.   (guards.ts forceClear)
 pub fn force_clear(g: &mut crate::game::Game) {
     if g.quiet_utility { crate::game::game_msg(g, "no clear under the tour"); return; }
@@ -851,4 +915,10 @@ mod tests {
         assert_eq!(g.m.guards.rollcalls.as_ref().unwrap().checks, 1.0);
     }
 
+    #[test]
+    fn the_levels_have_their_names() {
+        assert_eq!(escalation_name(0.0), "calm");
+        assert_eq!(escalation_name(1.0), "heightened");
+        assert_eq!(escalation_name(2.0), "lockdown");
+    }
 }

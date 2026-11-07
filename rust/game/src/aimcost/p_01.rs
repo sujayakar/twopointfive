@@ -73,10 +73,22 @@ pub fn feet_hold(g: &mut crate::game::Game, prev: f64, speed: f64, dt: f64) -> f
     if v.is_finite() && v > 1e-4 { v } else { 0.0 }
 }
 
+/// The status line, on the page's branch of both switches (`AIMCOST.lamp`, `AIMCOST.move` are settled on). (aimcost.ts aimCostSummary)
+pub fn aim_cost_summary(g: &mut crate::game::Game) -> String {
+    let k = &g.k.aimcost;
+    alloc::format!("lamps: a real hit (bulb {} m) \u{b7} moving \u{d7}{}, held {} s \u{b7} lamps hit {}, passed near {}", js::num_str(k.bare), js::num_str(k.move_k), js::num_str(k.stop_tau), g.stats.aimcost.lamp_hits, g.stats.aimcost.lamp_near)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::aimcost::RoundLeg;
+
+    /// A blank game: its knob tables are at the page's values.
+    fn with_game(f: fn(&mut crate::game::Game)) {
+        let mut g = alloc::boxed::Box::new(crate::game::Game::blank());
+        f(&mut g);
+    }
 
     /// Expected bits and booleans are the TypeScript's own, run under bun with EXACT on.
     fn legs() -> [RoundLeg; 2] {
@@ -92,4 +104,54 @@ mod tests {
         assert_eq!(legs_near([1.0, 2.0, 3.0], &[]).to_bits(), 0x7ff0000000000000);
     }
 
+    #[test]
+    fn feet_hold_bits() { with_game(feet_hold_bits_on); }
+    fn feet_hold_bits_on(g: &mut crate::game::Game) {
+        for (prev, speed, dt, want) in [
+            (3.4, 0.0, 1.0 / 60.0, 0x4009ebfa068ec7e0u64),
+            (0.05, 0.0, 1.0 / 60.0, 0x3fa78e6262219693),
+            (2.5, 1.1, 1.0 / 120.0, 0x400385d40ffd852d),
+            (1.2, 1.5, 0.1, 0x3ff8000000000000),
+            (0.00011, 0.0, 0.016, 0),
+            (f64::INFINITY, 0.0, 0.1, 0),
+            (f64::NAN, 1.0, 0.1, 0),
+            (1.0, 0.0, 0.0, 0x3ff0000000000000),
+        ] {
+            assert_eq!(feet_hold(g, prev, speed, dt).to_bits(), want, "{prev} {speed} {dt}");
+        }
+    }
+
+    /// The bulb's own point only (no boxes, so rayBox's stub is not reached).
+    #[test]
+    fn lamp_struck_point() { with_game(lamp_struck_point_on); }
+    fn lamp_struck_point_on(g: &mut crate::game::Game) {
+        let l = legs();
+        let past = [1.25 + 0.6 * 7.4, 1.7, -3.1 + 0.8 * 7.4];
+        assert!(!lamp_struck(g, [3.1, 2.2, 1.9], &[], false, &l, None, None));
+        assert!(lamp_struck(g, [3.1, 2.2, 1.9], &[], true, &l, None, None));
+        assert!(lamp_struck(g, past, &[], false, &l, None, None));
+        assert!(!lamp_struck(g, past, &[], false, &l, None, Some(0.05)));
+        let one = &l[..1];
+        assert_eq!(lamp_struck(g, [1.35, 1.8, -3.1], &[], false, one, None, None), LAMP[0]);
+        assert_eq!(lamp_struck(g, [1.35, 1.8, -3.1], &[], false, one, Some(0.16), None), LAMP[1]);
+        assert_eq!(lamp_struck(g, [1.25 - 0.06, 1.7, -3.1 - 0.08], &[], false, one, None, None), LAMP[2]);
+        assert_eq!(lamp_struck(g, [1.25 - 0.6 * 0.2, 1.7, -3.1 - 0.8 * 0.2], &[], false, one, None, None), LAMP[3]);
+    }
+    const LAMP: [bool; 4] = [false, true, true, false];
+
+    /// A missing box is skipped. (A row's own cheap tests wait on the table of Box rows: notes, ## Skeleton.)
+    #[test]
+    fn lamp_struck_missing_box() { with_game(lamp_struck_missing_box_on); }
+    fn lamp_struck_missing_box_on(g: &mut crate::game::Game) {
+        let l = legs();
+        assert!(!lamp_struck(g, [30.0, 1.7, 30.0], &[None, None], false, &l, None, None));
+    }
+
+    #[test]
+    fn summary_reads_as_the_page() { with_game(summary_on); }
+    fn summary_on(g: &mut crate::game::Game) {
+        g.stats.aimcost.lamp_hits = 3;
+        g.stats.aimcost.lamp_near = 7;
+        assert_eq!(aim_cost_summary(g), "lamps: a real hit (bulb 0.12 m) \u{b7} moving \u{d7}2, held 0.35 s \u{b7} lamps hit 3, passed near 7");
+    }
 }

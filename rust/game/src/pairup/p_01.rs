@@ -33,6 +33,25 @@ pub fn put_back(name: &str) -> bool {
     false
 }
 
+/// The panel's line for the pair.   (pairup.ts pairUpSummary)
+pub fn pair_up_summary(g: &mut crate::game::Game) -> String {
+    let s = &g.stats.pairup;
+    summary_text(g.k.pairup.on, g.k.pair.on, g.k.sneak.on, g.k.spotted.on, s.rejoins, s.caught_off, s.finishes)
+}
+
+/// The line itself, from the switches and the counters it shows.
+fn summary_text(on: bool, pair: bool, sneak: bool, spotted: bool, rejoins: i32, caught_off: i32, finishes: i32) -> String {
+    let mut parts = Vec::new();
+    if pair { parts.push("orders"); }
+    if sneak { parts.push("sneak"); }
+    if spotted { parts.push("spotted"); }
+    if !on {
+        return if parts.is_empty() { String::from("off") } else { alloc::format!("off · parts on by their own switches: {}", parts.join(", ")) };
+    }
+    let parts = if parts.is_empty() { String::from("every part put back off") } else { parts.join(" + ") };
+    alloc::format!("on · {} · rules oneEye, hunted, rejoin, stay, word, hands · rejoins {} · jobs ended by caught {} · finished by hand {}", parts, rejoins, caught_off, finishes)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -60,4 +79,12 @@ mod tests {
         assert_eq!((g.k.pair.on, g.k.sneak.on, g.k.spotted.on), (true, true, true));
     }
 
+    /// The expected lines are what pairUpSummary printed under bun for the same switches and counters.
+    #[test]
+    fn the_summary_reads_as_the_typescript_prints_it() {
+        assert_eq!(summary_text(false, false, false, false, 0, 0, 0), "off");
+        assert_eq!(summary_text(false, true, false, true, 0, 0, 0), "off · parts on by their own switches: orders, spotted");
+        assert_eq!(summary_text(true, true, false, true, 2, 3, 4), "on · orders + spotted · rules oneEye, hunted, rejoin, stay, word, hands · rejoins 2 · jobs ended by caught 3 · finished by hand 4");
+        assert_eq!(summary_text(true, false, false, false, 2, 3, 4), "on · every part put back off · rules oneEye, hunted, rejoin, stay, word, hands · rejoins 2 · jobs ended by caught 3 · finished by hand 4");
+    }
 }

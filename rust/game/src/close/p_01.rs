@@ -342,6 +342,11 @@ pub fn close_ready(g: &mut crate::game::Game) -> Option<crate::close::CloseReady
     Some(CloseReady { kind: if kind == K::Seat { ReadyKind::Seat } else { ReadyKind::Grab }, at })
 }
 
+/// The man Sam is close to, as `close_tick` left it this frame. (close.ts closeMode)
+pub fn close_mode(g: &mut crate::game::Game) -> Option<GuardId> {
+    g.m.close.state.get(g.player).and_then(|s| s.mode)
+}
+
 /// Who holds the mode now: the nearest living man in range with nothing solid between. (close.ts modeNow)
 pub fn mode_now(g: &mut crate::game::Game, pl: PlayerId) -> Option<GuardId> {
     g.m.close.state.get_or_insert_with(pl, fresh_state).mode_d = m::INF;
@@ -499,6 +504,33 @@ pub fn close_took(g: &mut crate::game::Game, gd: GuardId, what: crate::close::Cl
     match what { crate::close::CloseTookWhat::Take => g.stats.close.takes[kind as usize] += 1, crate::close::CloseTookWhat::Grab => g.stats.close.grabs[kind as usize] += 1 }
     let what = match what { crate::close::CloseTookWhat::Take => crate::close::NoteWhat::Take, crate::close::CloseTookWhat::Grab => crate::close::NoteWhat::Grab };
     note(g, gd, what, Some(kind), Some(bearing), Some(dist));
+}
+
+/// How far out along a bearing the window runs before a wall or a leaf ends it, bisected. (close.ts clipReach)
+pub fn clip_reach(g: &mut crate::game::Game, gd: GuardId, a: f64, r0: f64, r1: f64) -> f64 {
+    let c = g.gd[gd].ch;
+    let gp = g.ch[c].pos;
+    let (s, co) = (m::sin(a), m::cos(a));
+    let at = |r: f64| -> V3 { [gp[0] + s * r, 0.0, gp[2] + co * r] };
+    if clear_between(g, &gp, &at(r1)) { return r1; }
+    if !clear_between(g, &gp, &at(r0)) { return r0; }
+    let (mut lo, mut hi) = (r0, r1);
+    for _ in 0..5 {
+        let mid = (lo + hi) / 2.0;
+        if clear_between(g, &gp, &at(mid)) { lo = mid; } else { hi = mid; }
+    }
+    lo
+}
+
+/// What a window says on the floor, by what Sam's hands hold. (close.ts labelOf)
+pub fn label_of(g: &mut crate::game::Game, w: crate::close::CloseWindow) -> String {
+    use crate::close::CloseKind as K;
+    let empty = g.pl[g.player].holstered;
+    String::from(match w.kind {
+        K::Front | K::Side => if empty { "STRIKE" } else { "STRIKE · HOLSTER FIRST" },
+        K::Seat => if empty { "HAUL OUT · TAKEDOWN" } else { "HAUL OUT" },
+        K::Behind => if empty { "GRAB · TAKEDOWN" } else { "GRAB" },
+    })
 }
 
 /// The windows to draw: none on the page, CLOSE.marks being off. (close.ts closeMarks)

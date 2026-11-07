@@ -53,6 +53,17 @@ fn took_there(g: &mut Game) {
     g.m.sim_fallshome.falls.there += 1.0;
 }
 
+/// The store over the game's block: its bit stands in the head, and neither list has told the floor of anything yet. (fallshome.ts FallStore.constructor)
+pub fn fall_store_new(g: &mut crate::game::Game, home: crate::Opaque) -> crate::sim_fallshome::FallStore {
+    let st = sim::state::state(g.sim);
+    let bit = FALL_BIT as u32;
+    debug_assert!(st.head.homes & bit == 0, "two stores of the falls over one game's block");
+    st.head.homes |= bit;
+    let base = (js::to_u32(crate::sim_state::sim_part(crate::sim_state::P_FALLS)) >> 3) as f64;
+    st.falls.last_event_t = [NEVER; sim::falls::NLIST];
+    FallStore { base, home }
+}
+
 
 /// Landings waiting in the glass's list. (fallshome.ts FallStore.waiting)
 pub fn fall_store_waiting(g: &mut crate::game::Game) -> f64 {
@@ -156,6 +167,11 @@ pub fn fall_store_clear(g: &mut crate::game::Game, list_only: Option<bool>, l: O
 pub fn fall_store_rule<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, what: &str, there: &mut dyn FnMut(&mut crate::game::Game) -> T, here: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
     took_there(g);
     there(g)
+}
+
+/// The replacer of the both-ways arm's JSON, the one tool nothing in Rust takes: an Opaque holds no number, so only the road that hands `v` back exists. (fallshome.ts nanSafe)
+pub fn nan_safe(_k: &str, v: crate::Opaque) -> crate::Opaque {
+    v
 }
 
 /// The cell (x, z) is in, or NCELLS where the world has no floor under it. (fallshome.ts cell)

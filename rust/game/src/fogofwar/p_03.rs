@@ -184,11 +184,11 @@ pub fn fog_of_war_full_block(g: &mut crate::game::Game) -> bool {
         let lit = fog_of_war_lamp_lit(g, t);
         let known = fog_of_war_lamp_known(g, t, lit);
         if known == lit {
-            if lit { fog_of_war_face_seen(g, t); }
+            if lit && g.k.fog.kept { fog_of_war_face_seen(g, t); }
             continue;
         }
         g.fog_of_war.full_stats.held += 1.0;
-        if lit || !(mains && down) { fog_of_war_lamp_face(g, t, Some(!lit)); }
+        if g.k.fog.kept && (lit || !(mains && down)) { fog_of_war_lamp_face(g, t, Some(!lit)); }
         if lit {
             if let Some(l) = light { g.tab.light[l].fog = Some(1.0); }
             for al in &areas { g.tab.light[al.light].fog = Some(1.0); }
@@ -685,6 +685,32 @@ pub fn fog_of_war_fired_on(g: &mut crate::game::Game, gd: GuardId) -> bool {
     }
 }
 
+/// The last sightings the HUD marks: each living enemy out of the picture now who was in it that recently.   (fogofwar.ts FogOfWar.lastSeen)
+pub fn fog_of_war_last_seen(g: &mut crate::game::Game) -> Vec<crate::fogofwar::FogOfWarLastSeenItem> {
+    let secs = if g.k.fog.last_seen > 0.0 { g.k.fog.last_seen } else { crate::told::told_last_seen(g) };
+    let mut out: Vec<FogOfWarLastSeenItem> = Vec::new();
+    if !fog_of_war_active(g) || g.fog_of_war.bared || !(secs > 0.0 || g.k.wand.mark_secs > 0.0) { return out; }
+    let mut i = 0;
+    while i < g.guards.len() {
+        let gd = g.guards[i];
+        i += 1;
+        let team = g.gd[gd].team;
+        if g.gd[gd].state == crate::game::GuardState::Dead
+            || !crate::teams::is_hostile(g, team, crate::teams::Team::Player)
+            || !g.fog_of_war.hidden_chars.has(g.gd[gd].ch)
+        {
+            continue;
+        }
+        let r = match g.fog_of_war.recs.get(gd).copied() { Some(r) => r, None => continue };
+        let at = match r.at { Some(at) => at, None => continue };
+        let age = g.time - r.t;
+        let wand_had = match r.wand_t { Some(w) => m::abs(r.t - w) < 0.5, None => false };
+        let life = if wand_had { m::max(secs, g.k.wand.mark_secs) } else { secs };
+        if age >= 0.0 && age < life { out.push(FogOfWarLastSeenItem { gd, at, age, life }); }
+    }
+    out
+}
+
 /// Left out of the picture this frame; false for everybody while the fog is off.   (fogofwar.ts FogOfWar.hidden)
 #[doc(hidden)] pub fn fog_of_war_hidden__body(g: &mut crate::game::Game, gd: GuardId) -> bool {
     !g.fog_of_war.bared && g.fog_of_war.hidden_chars.len() > 0 && g.fog_of_war.hidden_chars.has(g.gd[gd].ch)
@@ -757,6 +783,19 @@ pub fn fog_of_war_everybody(g: &mut crate::game::Game, all: &[CharId]) -> Vec<Ch
 /// This frame's list of boxes as it stood before the fog cut it: no viewer, the fog standing aside, or nothing kept for this frame = None.   (fogofwar.ts FogOfWar.raw)
 pub fn fog_of_war_raw(g: &mut crate::game::Game) -> Option<Vec<BoxId>> {
     if g.fog_of_war.viewer && fog_of_war_active(g) && g.fog_of_war.raw_at == g.fog_of_war.frame_no { Some(g.fog_of_war.raw_list.clone()) } else { None }
+}
+
+/// One line for the panel or the console.   (fogofwar.ts FogOfWar.summary)
+pub fn fog_of_war_summary(g: &mut crate::game::Game) -> String {
+    if !g.fog_of_war.on { return String::from("fog of war off"); }
+    if !fog_of_war_active(g) { return String::from("fog of war on — standing aside for the show"); }
+    let s = g.fog_of_war.stats;
+    let mut line = alloc::format!("fog of war on · {} eye{} · {}/{} seen, {} hidden", js::num_str(s.eyes), if s.eyes == 1.0 { "" } else { "s" }, js::num_str(s.seen), js::num_str(s.tested), js::num_str(s.hidden));
+    if js::truthy(s.smoke_hid) { line.push_str(&alloc::format!(" · smoke hid {}", js::num_str(s.smoke_hid))); }
+    let deg = field_deg(g);
+    if deg < 360.0 { line.push_str(&alloc::format!(" · {}° {}", js::num_str(deg), if g.k.fog.cone { "cone" } else { "field" })); }
+    if g.k.fog.own { line.push_str(" · your eyes only"); }
+    line
 }
 
 

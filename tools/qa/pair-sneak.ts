@@ -67,7 +67,6 @@ async function one(scn: string, seed: number, arm: Arm, cap: number, verbose: bo
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-  const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
   const { lightEstimateAt, canSeeChar } = await import(`${ROOT}/src/game/guards.ts`);
   const SIL = await import(`${ROOT}/src/game/silent.ts`);
   const { SILENT, SILENT_STATS, setSilent, squadSilent, silentCompromised } = SIL;
@@ -80,7 +79,7 @@ async function one(scn: string, seed: number, arm: Arm, cap: number, verbose: bo
   if (arm === 'pairmark') cap *= MARK.capK;
   if (arm === 'pairquiet') { const { KIT, SLOTS, kitPresetCard } = await import(`${ROOT}/src/game/kit.ts`); SLOTS.on = false; KIT.members[1] = kitPresetCard(1, 'quiet'); }   // (the kit screen's own Quiet set for the first teammate: nothing a player cannot pick)
   const E = SCENARIOS.find((e: any) => e.id === scn); if (!E) throw new Error(`no scenario '${scn}' — ${SCENARIOS.map((e: any) => e.id).join(', ')}`);
-  const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); };
+  const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); };
   const log = console.log, err = console.error, warn = console.warn; const hush = () => { console.log = console.error = console.warn = () => { }; }, unhush = () => { console.log = log; console.error = err; console.warn = warn; };
 
   Math.random = seeded(0x9137 + seed * 7919);   // (playthrough.ts's own seeding: a seed is the same placement and the same dice there and here)

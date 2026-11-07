@@ -22,4 +22,10 @@ pub mod null_audio {
     use crate::{ids::*, js::*, Quat, V3};
     #[allow(unused_imports)]
     use alloc::{string::String, vec::Vec};
+    /// (src/game/audio_iface.ts:13 nullAudio.play)
+    pub fn play() { todo!() }
+
+    /// (src/game/audio_iface.ts:13 nullAudio.footstep)
+    pub fn footstep() { todo!() }
+
 }

@@ -7,6 +7,11 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
+/// A guard rather than a player.   (condition.ts isGuard)
+pub fn is_guard(g: &mut crate::game::Game, m: crate::condition::Man) -> bool {
+    matches!(m, Man::Guard(_))
+}
+
 /// Is this man hurt now; `now` is the clock asked of, the game's by default.   (condition.ts isHurt)
 pub fn is_hurt(g: &mut crate::game::Game, m: crate::condition::Man, now: Option<f64>) -> bool {
     let now = now.unwrap_or(g.time);
@@ -44,6 +49,11 @@ pub fn condition_pace(g: &mut crate::game::Game, gd: GuardId, speed: f64) -> f64
 /// The fire his rounds are opened by: never less than `hurt_sup` on a hurt man.   (condition.ts conditionSup)
 pub fn condition_sup(g: &mut crate::game::Game, m: crate::condition::Man, v: f64) -> f64 {
     if is_hurt(g, m, None) { m::max(v, g.k.condition.hurt_sup) } else { v }
+}
+
+/// The score leaves this man's wariness at rest out of its tension: one of the player's own.   (condition.ts conditionCalm)
+pub fn condition_calm(g: &mut crate::game::Game, gd: GuardId) -> bool {
+    g.gd[gd].team == crate::teams::Team::Operative
 }
 
 /// What state a man is in, the stamps read as they stand.   (condition.ts conditionOf)

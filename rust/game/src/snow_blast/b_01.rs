@@ -8,6 +8,18 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
+/// BOUNDARY NO-OP (the picture's / the host's): (src/game/snowBlast.ts:96 owedOf)
+pub fn owed_of(b: &mut crate::snow_blast::SnowBlastShown, live: &[crate::snow_blast::Live]) {}
+
+/// BOUNDARY NO-OP (the picture's / the host's): (src/game/snowBlast.ts:114 attachSnowBlast)
+pub fn attach_snow_blast(g: &mut crate::game::Game) {}
+
+
+/// BOUNDARY NO-OP (the picture's / the host's): (src/game/snowBlast.ts:168 stepSnowBlast)
+pub fn step_snow_blast(g: &mut crate::game::Game, dt: f64) {}
+
+/// BOUNDARY NO-OP (the picture's / the host's): (src/game/snowBlast.ts:176 snowBlastFeed)
+pub fn snow_blast_feed(g: &mut crate::game::Game, c_2: &mut Vec<f32>) {}
 
 /// BOUNDARY NO-OP (dress, row DRESS.snow: a blast digs the drawn snow)   (snowBlast.ts:142 snowBlastAt)
 pub fn snow_blast_at(g: &mut crate::game::Game, at: &[f64], radius: f64) -> bool { false }

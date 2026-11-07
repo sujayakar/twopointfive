@@ -150,6 +150,11 @@ pub fn ff_unpressed(g: &mut crate::game::Game, sg: Option<GuardId>, muzzle: V3, 
     true
 }
 
+/// The check's and the measure's environment word; never set on the page. (friendlyfire.ts ffBroken)
+pub fn ff_broken() -> bool {
+    false
+}
+
 /// The PLAYER's round flown from `from` to where it stopped: every standing teammate it went close past says so. (friendlyfire.ts ffPast)
 pub fn ff_past(g: &mut crate::game::Game, from: V3, to: V3, into: Option<CharId>) {
     let dx = to[0] - from[0];

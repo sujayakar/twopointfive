@@ -28,6 +28,15 @@ fn text(s: &str) -> Option<ChronDeviceDataValue> { Some(ChronDeviceDataValue::Te
 fn opt_text(s: &Option<String>) -> Option<ChronDeviceDataValue> { s.as_ref().map(|x| ChronDeviceDataValue::Text(x.clone())) }
 fn bits_or(a: f64, b: f64) -> f64 { (js::to_i32(a) | js::to_i32(b)) as f64 }
 
+// ---------------------------------------------------------------- runtime records
+/// A camera of the level: its machine is rust/sim's row `slot`.   (devices.ts CameraRt)
+pub fn camera_rt_new(g: &mut crate::game::Game, slot: f64, st: crate::Opaque, def: &crate::devices::CameraDef2, index: f64, target: FixtureId, cone: LightId, smoke_key: &str) -> CameraRtId {
+    g.tab.devices_camera_rt.push(CameraRt { smoke_trans: 1.0, def: def.clone(), index, target, cone, smoke_key: String::from(smoke_key), slot, st })
+}
+/// A tripwire of the level: its machine is rust/sim's row `slot`.   (devices.ts LaserRt)
+pub fn laser_rt_new(g: &mut crate::game::Game, slot: f64, st: crate::Opaque, def: &crate::devices::LaserDef2, index: f64, target: FixtureId, dir: V3, len: f64) -> LaserRtId {
+    g.tab.devices_laser_rt.push(LaserRt { def: def.clone(), index, target, dir, len, slot, st })
+}
 /// Append a report to the capped log with its sequence number.   (devices.ts Devices.note)
 pub fn devices_note(g: &mut crate::game::Game, r: &crate::devices::DevicesNoteR) {
     g.devices.seq += 1.0;
@@ -43,6 +52,60 @@ pub fn devices_note(g: &mut crate::game::Game, r: &crate::devices::DevicesNoteR)
     let row = DeviceLogRow { seq: g.devices.seq, t: g.time, device: r.device.clone(), what, where_: r.where_.clone(), sent: r.sent.clone() };
     g.devices.log.push(row);
     if g.devices.log.len() > 48 { let over = g.devices.log.len() - 48; g.devices.log.drain(0..over); }
+}
+/// The level's cameras, tripwires and keypads from its list; cameras and emitters join the light targets.   (devices.ts Devices.constructor)
+pub fn devices_new(g: &mut crate::game::Game) -> crate::devices::Devices {
+    let mut this = Devices::blank();
+    let defs = g.level.devices.clone().unwrap_or_default();
+    let (mut ci, mut li) = (0.0_f64, 0.0_f64);
+    for dv in &defs {
+        match dv {
+            crate::scene_level::DeviceDef::Camera(d) => {
+                let dd = crate::scene_level_data::device_defaults();
+                let fix = crate::sim_lightshome::FixtureDef {
+                    name: d.name.clone(), group: d.group.clone().unwrap_or(dd.group.clone()), kind: crate::sim_lightshome::FixtureDefKind::Device, pos: v3::copy(d.pos), light: None, boxes: Vec::new(), base_emissive: [0.0, 0.0, 0.0], base_intensity: 0.0,
+                    on: true, broken: false, disabled_until: -1.0, fluorescent_flicker: false, factor: 1.0, mains: d.mains != Some(false), interactive: true, stagger: 1.4 + 0.3 * ci, area_lights: None, lens: None,
+                };
+                let target = crate::sim_lightshome::light_home_add(g, &fix);
+                g.targets.push(target);
+                let half = d.fov_deg.unwrap_or(dd.fov_deg) / 2.0;
+                let k = cone();
+                let lamp = g.tab.light.push(crate::render_lights::RtLight { name: format!("{}_cone", d.name), group: String::from("devices"), kind: 1.0, pos: v3::copy(d.pos), dir: [0.0, -1.0, 0.0], color: v3::copy(k.color), intensity: k.intensity, range: d.range.unwrap_or(dd.range) * k.range_k,
+                    inner_deg: m::max(1.0, m::min(half, k.outer_max_deg) - 6.0), outer_deg: m::min(half, k.outer_max_deg), radius: k.radius, volumetric: k.volumetric, owner: 0.0, enabled: false, fixture_box: -1.0, flicker: 0.0, ttl: -1.0, age: 0.0, peak_intensity: k.intensity, ..crate::render_lights::RtLight::zeroed() });
+                crate::render_lights::light_set_add(g, lamp);
+                let cone = lamp;
+                let slot = crate::sim_lightshome::light_home_camera(g, target, d.yaw, d.sweep, d.sweep_period.unwrap_or(dd.sweep_period), d.pitch.unwrap_or(dd.pitch), d.pos);
+                ci += 1.0;
+                let rt = camera_rt_new(g, slot, crate::Opaque, d, ci, target, cone, &format!("smokeCam{}", ci));
+                this.cameras.push(rt);
+            }
+            crate::scene_level::DeviceDef::Laser(d) => {
+                let dd = crate::scene_level_data::device_defaults();
+                let fix = crate::sim_lightshome::FixtureDef {
+                    name: d.name.clone(), group: d.group.clone().unwrap_or(dd.group.clone()), kind: crate::sim_lightshome::FixtureDefKind::Device, pos: v3::copy(d.from), light: None, boxes: Vec::new(), base_emissive: [0.0, 0.0, 0.0], base_intensity: 0.0,
+                    on: true, broken: false, disabled_until: -1.0, fluorescent_flicker: false, factor: 1.0, mains: d.mains != Some(false), interactive: true, stagger: 1.1 + 0.3 * li, area_lights: None, lens: None,
+                };
+                let target = crate::sim_lightshome::light_home_add(g, &fix);
+                g.targets.push(target);
+                let seg = v3::sub(d.to, d.from);
+                let len = v3::len(seg);
+                let slot = crate::sim_lightshome::light_home_laser(g, target, len);
+                li += 1.0;
+                let rt = laser_rt_new(g, slot, crate::Opaque, d, li, target, v3::scale(seg, 1.0 / m::max(len, 1e-6)), len);
+                this.lasers.push(rt);
+            }
+            crate::scene_level::DeviceDef::Keypad(d) => {
+                let door = match crate::doors::doors_by_name(g, &d.door) {
+                    Some(x) => x,
+                    None => panic!("keypad '{}': no door '{}'", d.name, d.door),
+                };
+                let k = KeypadRt { def: d.clone(), door, n: [m::sin(d.yaw), 0.0, m::cos(d.yaw)] };
+                this.keypads.push(k.clone());
+                this.pad_by_door.set(door, k);
+            }
+        }
+    }
+    this
 }
 /// The keypad on this door, if it is a keypad door.   (devices.ts Devices.padOf)
 pub fn devices_pad_of(g: &mut crate::game::Game, d: DoorId) -> Option<crate::devices::KeypadRt> {
@@ -61,6 +124,19 @@ pub fn devices_pad_near(g: &mut crate::game::Game, p: V3) -> Option<crate::devic
         if dd < bd { bd = dd; best = Some(i); }
     }
     best.map(|i| g.devices.keypads[i].clone())
+}
+/// For a checkpoint: each camera's pan, integrator and report state, each beam's counts and clocks, the log.   (devices.ts Devices.snapshot)
+pub fn devices_snapshot(g: &mut crate::game::Game) -> crate::devices::DevicesSnap {
+    use crate::sim_lightshome as h;
+    let mut cameras = Vec::new();
+    for c in g.devices.cameras.clone() {
+        cameras.push(DevicesSnapCamerasItem { yaw: h::camera_machine_yaw(g, c), phase: h::camera_machine_phase(g, c), seen: h::camera_machine_seen(g, c), state: h::camera_machine_state(g, c), reported_at: h::camera_machine_reported_at(g, c), last_seen: h::camera_machine_last_seen(g, c), dead_called: h::camera_machine_dead_called(g, c) });
+    }
+    let mut lasers = Vec::new();
+    for l in g.devices.lasers.clone() {
+        lasers.push(DevicesSnapLasersItem { last_trip_at: h::laser_machine_last_trip_at(g, l), trips: h::laser_machine_trips(g, l), dead_called: h::laser_machine_dead_called(g, l), held: h::laser_machine_held(g, l) });
+    }
+    DevicesSnap { cameras, lasers, log: g.devices.log.clone(), radio_count: g.devices.radio_count, seq: g.devices.seq }
 }
 /// `Number.isFinite(x) ? x : d`, restore's guard on what a save holds
 fn finite_or(x: f64, d: f64) -> f64 { if x.is_finite() { x } else { d } }
@@ -95,6 +171,32 @@ pub fn devices_reset(g: &mut crate::game::Game) {
     g.devices.radio_count = 0.0;
 }
 
+/// The panel's line: every camera's state and integrator, every beam's trips, the codes he knows.   (devices.ts Devices.summary)
+pub fn devices_summary(g: &mut crate::game::Game) -> String {
+    use crate::sim_lightshome as h;
+    let mut cams: Vec<String> = Vec::new();
+    for c in g.devices.cameras.clone() {
+        let (name, target) = (g.tab.devices_camera_rt[c].def.name.clone(), g.tab.devices_camera_rt[c].target);
+        let dark = if alive(g, target) { "" } else { " (dark)" };
+        let saw = if h::camera_machine_saw_this_frame(g, c) { " ◉" } else { "" };
+        cams.push(format!("{}{} {} {}s{}", name, dark, h::camera_machine_state(g, c).as_str(), js::to_fixed(h::camera_machine_seen(g, c), 2), saw));
+    }
+    let mut las: Vec<String> = Vec::new();
+    for l in g.devices.lasers.clone() {
+        let (name, target) = (g.tab.devices_laser_rt[l].def.name.clone(), g.tab.devices_laser_rt[l].target);
+        let dark = if alive(g, target) { "" } else { " (dark)" };
+        las.push(format!("{}{} ×{}", name, dark, js::num_str(h::laser_machine_trips(g, l))));
+    }
+    let pl = g.player;
+    let codes: Vec<String> = g.pl[pl].codes.iter().collect();
+    let (cams, las, codes) = (cams.join(" · "), las.join(" · "), codes.join(" "));
+    format!("devices ▸ {}{} | {} | codes [{}]",
+        if g.tune.devices { "" } else { "OFF · " },
+        if cams.is_empty() { "no cameras" } else { cams.as_str() },
+        if las.is_empty() { "no beams" } else { las.as_str() },
+        if codes.is_empty() { "—" } else { codes.as_str() })
+}
+
 /// Powered, unbroken, not knocked out: the device works this frame.   (devices.ts alive)
 pub fn alive(g: &mut crate::game::Game, t: FixtureId) -> bool {
     crate::sim_lightshome::fixture_factor(g, t) > 0.05 && !crate::sim_lightshome::fixture_broken(g, t)
@@ -116,6 +218,13 @@ pub fn lens_dir(yaw: f64, pitch: f64) -> V3 {
     let cp = m::cos(pitch);
     [m::sin(yaw) * cp, m::sin(pitch), m::cos(yaw) * cp]
 }
+/// Where a panning camera points at phase u: eased there and back between the sweep's two yaws.   (devices.ts sweepYaw)
+pub fn sweep_yaw(d: &crate::devices::CameraDef2, phase: f64) -> f64 {
+    let sw = match d.sweep { Some(x) => x, None => return d.yaw };
+    let s = 0.5 - 0.5 * m::cos(phase * m::PI * 2.0);
+    v3::lerp(sw[0], sw[1], s)
+}
+
 /// Pan the cameras, run their pictures, run the beams, key the code being entered.   (devices.ts updateDevices)
 pub fn update_devices(g: &mut crate::game::Game, dt: f64) {
     let live = sensing(g);
@@ -589,6 +698,22 @@ pub fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
     }
 }
 
+// ---------------------------------------------------------------- the panel's knobs (their storage is the host's: lights.md trap 12)
+/// `localStorage` is the host's: what it keeps arrives written in `g.tune`, so nothing here reads.   (devices.ts loadDeviceTune)
+pub fn load_device_tune(g: &mut crate::game::Game) {}
+/// `localStorage` is the host's: it keeps `g.tune`'s five rows if it keeps them.   (devices.ts saveDeviceTune)
+pub fn save_device_tune(g: &mut crate::game::Game) {}
+/// The five rows to their defaults; the removal from `localStorage` is the host's.   (devices.ts resetDeviceTune)
+pub fn reset_device_tune(g: &mut crate::game::Game) {
+    let d = device_tune_defaults();
+    let t = &mut g.tune;
+    t.devices = d.devices;
+    t.lasers = d.lasers;
+    t.camera_suspicion_secs = d.camera_suspicion_secs;
+    t.camera_alarm_secs = d.camera_alarm_secs;
+    t.device_cones = d.device_cones;
+}
+
 // ---------------------------------------------------------------- geometry
 /// Closest points between segments p and b: the distance and the point on b.   (devices.ts segSegClosest)
 pub fn seg_seg_closest(p0: V3, p1: V3, b0: V3, b1: V3) -> crate::devices::SegSegClosest {
@@ -663,6 +788,20 @@ mod tests {
             let r = lens_dir(b(*y), b(*p));
             assert_eq!([r[0].to_bits(), r[1].to_bits(), r[2].to_bits()], *o);
         }
+    }
+    #[test]
+    fn sweep_yaw_bits() {
+        let mut d = CameraDef2::zeroed();
+        d.yaw = 0.5;
+        assert_eq!(sweep_yaw(&d, 0.37), 0.5);
+        d.sweep = Some([-1.2, 0.8]);
+        let rows: &[(u64, u64)] = &[
+            (0x0000000000000000, 0xbff3333333333333),
+            (0x3fd0000000000000, 0xbfc999999999999c),
+            (0x3fd7ae147ae147ae, 0x3fdf02d1dd55735c),
+            (0x3feccccccccccccd, 0xbff024ef00ff2d86),
+        ];
+        for (ph, o) in rows { assert_eq!(sweep_yaw(&d, b(*ph)).to_bits(), *o); }
     }
     #[test]
     fn spell_digits() { assert_eq!(spell("7391"), "7-3-9-1"); }

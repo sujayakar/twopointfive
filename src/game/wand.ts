@@ -29,7 +29,7 @@ import type { Game, Player } from './game';
 import type { Door } from './doors';
 import type { Vec3 } from '../math/vec';
 import type { FogEye } from './fogofwar';
-import './fogofwar';
+import { FOG, fieldDeg } from './fogofwar';
 import { goneWithTick } from './crossing';
 
 export const WAND = {
@@ -87,7 +87,7 @@ export interface Wanding { door: Door; side: 1 | -1; t: number; pan: number; liv
 
 /** a door the wand goes under: shut HOME (a leaf standing ajar is a gap to look through, not a door to feed a cable under — and a leaf somebody starts to
  *  open ends the look within a frame or two, not a quarter radian later), on its hinges, not the steel fire door */
-export function wandFits(d: Door): boolean { return goneWithTick('wandFits') as any; }
+export function wandFits(d: Door): boolean { return !d.off && Math.abs(d.angle) < WAND.shutRad && !d.def.steel; }
 /** is 'look under it' on this door's rows for this player: the switch, the wand on him, a fog to look through, a door it fits */
 export function wandOffered(g: Game, pl: Player, d: Door): boolean { return goneWithTick('wandOffered') as any; }
 
@@ -96,14 +96,22 @@ export function wandOffered(g: Game, pl: Player, d: Door): boolean { return gone
 export function wandFeedSecs(squat = false): number { return goneWithTick('wandFeedSecs') as any; }
 
 /** the wedge in force, degrees */
-export function wandFov(): number { return goneWithTick('wandFov') as any; }
+export function wandFov(): number { return Math.min(170, Math.max(20, FOG.cone ? fieldDeg() : WAND.fovDeg)); }
 /** the most the lens turns off square, rad */
-export function wandPanMax(): number { return goneWithTick('wandPanMax') as any; }
+export function wandPanMax(): number { return Math.max(0, 90 - wandFov() * 0.5 - WAND.blindDeg) * Math.PI / 180; }
 
 /** where the lens is and the way it faces square on: the leaf's middle, `pastM` out of the face he is NOT on */
-export function wandLens(d: Door, side: 1 | -1): { pos: Vec3; yaw: number } { return goneWithTick('wandLens') as any; }
+export function wandLens(d: Door, side: 1 | -1): { pos: Vec3; yaw: number } {
+  const [hx, hz] = d.def.hinge, u = d.dir(), w = d.def.width * 0.5;
+  const nx = u[1] * side, nz = -u[0] * side;   // (doors.ts workSpot's normal, turned round: out of the leaf on the far side)
+  return { pos: [hx + u[0] * w + nx * WAND.pastM, WAND.eyeY, hz + u[1] * w + nz * WAND.pastM], yaw: Math.atan2(nx, nz) };
+}
 /** THE LENS AS ONE OF THE FOG'S EYES (fogofwar.ts update asks it in place of the player's own eye), or null while nobody is looking */
-export function wandEye(g: Game): FogEye | null { return goneWithTick('wandEye') as any; }
+export function wandEye(g: Game): FogEye | null {
+  const pl = g.player, W = pl.wanding; if (!W || !W.live || pl.down) return null;
+  const L = wandLens(W.door, W.side), a = L.yaw + W.pan;
+  return { id: pl.char.id, pos: L.pos, look: [Math.sin(a), 0, Math.cos(a)], at: L.pos, fov: wandFov(), near: 0, wand: true };
+}
 /** the look let go of with nothing said (a round into him, a blast, the door blown off its hinges, going down, a kick, a teleport: combat.ts, frag.ts,
  *  doorblast.ts, player.ts) — player.ts stopWand is the worded way out */
 export function wandDrop(pl: Player) {

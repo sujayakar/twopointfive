@@ -414,6 +414,33 @@ pub fn character_turn_weigh_ask(g: &mut crate::game::Game, id: CharId, dt: f64) 
     ch.tn = if js::truthy(c[0]) { Some(CharacterTn { body: c[1], aim: c[2], wb: c[3], wa: c[4], ib: c[5], ia: c[6], x: c[7], z: c[8] }) } else { None };
     ch.anim.turn_lead = c[9]; ch.body_yaw = c[10]; ch.aim_yaw = c[11];
 }
+/// The turn he is in the middle of, for a checkpoint: where his weight let him get to, its speeds, the wish, where he stood, the neck's lead. (Character.turnSnap)
+pub fn character_turn_snap(g: &mut crate::game::Game, id: CharId) -> Option<Vec<f64>> {
+    let c = &g.ch[id];
+    match c.tn {
+        Some(t) if c.ragdoll.is_none() => Some(vec![t.body, t.aim, t.wb, t.wa, t.ib, t.ia, t.x, t.z, c.anim.turn_lead]),
+        _ => None,
+    }
+}
+/// …and put back from a file, read as untrusted: nine finite numbers or nothing, the speeds held to what a turn can carry. (Character.turnPut)
+pub fn character_turn_put(g: &mut crate::game::Game, id: CharId, s: Option<&[f64]>) {
+    let s = match s { Some(s) if s.len() == 9 && s.iter().all(|v| v.is_finite()) => s, _ => return };
+    if g.ch[id].ragdoll.is_some() { return; }
+    let (wb, wa, lead) = (g.k.turn.body * 1.5, g.k.turn.aim * 1.5, g.k.turn.lead);
+    let c = &mut g.ch[id];
+    c.tn = Some(CharacterTn { body: s[0], aim: s[1], wb: v3::clamp(s[2], -wb, wb), wa: v3::clamp(s[3], -wa, wa), ib: s[4], ia: s[5], x: s[6], z: s[7] });
+    c.anim.turn_lead = v3::clamp(s[8], -lead, lead);
+    c.turn.on = true;
+}
+/// The loader's bake of a living man: posed where his weight had got him, his yaws then handed back as filed. (Character.bakeLoaded)
+pub fn character_bake_loaded(g: &mut crate::game::Game, id: CharId) {
+    let t = match g.ch[id].tn { Some(t) => t, None => { character_update(g, id, 0.0); return; } };
+    let (b, a) = (g.ch[id].body_yaw, g.ch[id].aim_yaw);
+    g.ch[id].body_yaw = t.body; g.ch[id].aim_yaw = t.aim;
+    character_update(g, id, 0.0);
+    g.ch[id].body_yaw = b; g.ch[id].aim_yaw = a;
+    if g.ch[id].tn.is_none() { character_update(g, id, 0.0); }
+}
 /// His yaws become the ones that were drawn, and no turn is carried on. (Character.turnDrop)
 pub fn character_turn_drop(g: &mut crate::game::Game, id: CharId) {
     let c = &mut g.ch[id];

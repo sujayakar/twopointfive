@@ -91,6 +91,11 @@ pub fn made_of(g: &mut crate::game::Game, stuff: crate::scene_stuff::BoxStuff, c
     colour
 }
 
+/// madeOf, where nobody chose the word. (stuff.ts drawnAs)
+pub fn drawn_as(g: &mut crate::game::Game, stuff: crate::scene_stuff::BoxStuff, colour: [f64; 3], finish: Option<crate::scene_stuff::MadeOfFinish>) -> [f64; 3] {
+    made_of(g, stuff, colour, finish)
+}
+
 /// The paint this array is, if anybody said so. (stuff.ts paintOf)
 pub fn paint_of(g: &mut crate::game::Game, albedo: Option<&[f64]>) -> Option<crate::scene_stuff::Paint> {
     match albedo {

@@ -11,3 +11,5 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/wetGround.ts:101 WetGround.follow)
 pub fn wet_ground_follow(g: &mut crate::game::Game) {}
 
+/// BOUNDARY NO-OP (the picture's / the host's): (src/game/wetGround.ts:113 WetGround.dry)
+pub fn wet_ground_dry(g: &mut crate::game::Game) {}

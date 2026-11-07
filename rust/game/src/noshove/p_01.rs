@@ -215,6 +215,12 @@ fn room(g: &mut Game, c: CharId, s: V3, fx: f64, fz: f64, ring: f64, side: f64) 
     t >= ring + g.ch[c].radius - 0.05
 }
 
+/// One line for a tool or the debugger. (noshove.ts noShoveSummary)
+pub fn no_shove_summary(g: &mut Game) -> String {
+    let t = &g.stats.noshove;
+    alloc::format!("no shove on · frames: round {}, short {}, squeezed past {}, stepped back {} · shoves kept out of the player's pace {}", t.round, t.short, t.through, t.back, t.not_walked)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

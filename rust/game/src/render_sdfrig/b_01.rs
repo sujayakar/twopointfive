@@ -8,3 +8,5 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
+/// BOUNDARY NO-OP (the picture's / the host's): (src/render/sdfrig.ts:181 fitRigCast)
+pub fn fit_rig_cast(g: &mut crate::game::Game, ch: RigId) {}

@@ -53,3 +53,17 @@ pub fn hands_cancel(g: &mut crate::game::Game) {
     g.pl[p].door_move = None;
 }
 
+/// One line for the debugger of what his hands are on. (hands.ts handsSummary)
+pub fn hands_summary(g: &mut crate::game::Game) -> String {
+    let p = g.player;
+    let (h, mv) = (g.pl[p].haul, g.pl[p].door_move);
+    let body = match h {
+        Some(h) => alloc::format!(" · body: {} {}", h.end.as_str(), h.phase.as_str()),
+        None => String::new(),
+    };
+    let door = match mv {
+        Some(mv) => alloc::format!(" · door: {}{}", if mv.open { "opening" } else { "shutting" }, if mv.goal.is_some() { " (stepping clear)" } else { "" }),
+        None => String::new(),
+    };
+    alloc::format!("on{}{}", body, door)
+}

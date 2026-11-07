@@ -51,6 +51,10 @@ pub fn anim_kick_door(g: &mut crate::game::Game, c: CharId, opts: Option<crate::
 }
 /// The kick is playing.   (character.ts kicking)
 pub fn anim_kicking(g: &mut crate::game::Game, c: CharId) -> bool { g.ch[c].anim.kick_t >= 0.0 }
+/// Which leg the kick in progress, or the last one, swings.   (character.ts kickingLeg)
+pub fn anim_kicking_leg(g: &mut crate::game::Game, c: CharId) -> crate::character::AnimKickingLeg {
+    match g.ch[c].anim.kick_leg { AnimKickLeg::Left => AnimKickingLeg::Left, AnimKickLeg::Right => AnimKickingLeg::Right }
+}
 /// Seconds into the kick, -1 when not kicking.   (character.ts kickTime)
 pub fn anim_kick_time(g: &mut crate::game::Game, c: CharId) -> f64 { g.ch[c].anim.kick_t }
 /// True for exactly the update in which the sole reached the door.   (character.ts kickImpact)
@@ -83,6 +87,11 @@ pub fn anim_cancel_tell(g: &mut crate::game::Game, c: CharId) {
     a.tell_t = -1.0;
     a.tell_shown = 0.0;
 }
+/// A tell is playing.   (character.ts telling)
+pub fn anim_telling(g: &mut crate::game::Game, c: CharId) -> bool { g.ch[c].anim.tell_t >= 0.0 }
+/// Which tell is playing, or played last.   (character.ts tellKind)
+pub fn anim_tell_kind(g: &mut crate::game::Game, c: CharId) -> crate::character::TellKind { g.ch[c].anim.tell_k }
+
 /// The update; every pose of a man stands in his game's block, so there is no stage to open.   (character.ts update)
 pub fn anim_update(g: &mut crate::game::Game, c: CharId, dt: f64) { anim_update_standing(g, c, dt); }
 

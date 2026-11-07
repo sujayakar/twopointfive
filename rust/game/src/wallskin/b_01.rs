@@ -28,6 +28,10 @@ type Rect = [f64; 4];
 fn into_b(b: &Bx, p: V3) -> V3 { let (cs, sn) = (m::cos(b.yaw), m::sin(b.yaw)); let (x, z) = (p[0] - b.c[0], p[2] - b.c[2]); [cs * x - sn * z, p[1] - b.c[1], sn * x + cs * z] }
 fn out_of_b(b: &Bx, l: V3) -> V3 { let (cs, sn) = (m::cos(b.yaw), m::sin(b.yaw)); [b.c[0] + cs * l[0] + sn * l[2], b.c[1] + l[1], b.c[2] - sn * l[0] + cs * l[2]] }
 
+/// A point in a box's own frame (its centre the origin, its yaw undone). (src/game/wallskin.ts:82 into)
+pub fn into(g: &mut crate::game::Game, b: BoxId, p: [f64; 3]) -> [f64; 3] { into_b(&g.tab.boxes[b], p) }
+/// … and back. (src/game/wallskin.ts:83 outOf)
+pub fn out_of(g: &mut crate::game::Game, b: BoxId, l: [f64; 3]) -> [f64; 3] { out_of_b(&g.tab.boxes[b], l) }
 /// (src/game/wallskin.ts:84 inside)
 pub fn inside(r: [f64; 4], u: f64, v: f64) -> bool { u > r[0] && u < r[1] && v > r[2] && v < r[3] }
 
@@ -81,6 +85,15 @@ pub fn standing(hu: f64, hv: f64, on: &[[f64; 4]], near: &[f64], open: &[Vec<[f6
 pub fn wall_skin_own(g: &mut crate::game::Game, j: f64) -> bool { g.destr.walls.fixture_boxes.has(crate::Num(j)) || g.destr.items.has(crate::Num(j)) }
 /// the breakable whose own box static k is, if wallbreak opens it
 fn brk_id(g: &Game, k: f64) -> Option<WallbreakBreakableId> { let b = g.destr.walls.owner.get(crate::Num(k)).copied()?; if g.tab.wallbreak_breakable[b].id == k { Some(b) } else { None } }
+fn brk_of(g: &Game, b: WallbreakBreakableId) -> Brk {
+    let r = &g.tab.wallbreak_breakable[b];
+    Brk { id: r.id, kind: r.kind, surf: String::from(r.surf.as_str()), box_: r.box_, nx: r.nx, ny: r.ny, nz: r.nz, yb: r.yb.clone(), open: r.open.clone(), slots: r.slots.clone(), live: r.live }
+}
+/// The breakable keyed k, when k is its own key. (wallbreak.ts:198, the second closure)
+pub fn wall_skin_brk(g: &mut crate::game::Game, k: f64) -> Option<crate::wallskin::Brk> { brk_id(g, k).map(|b| brk_of(g, b)) }
+/// The lane's list of breakables. (wallbreak.ts:198, the third closure)
+pub fn wall_skin_all(g: &mut crate::game::Game) -> Vec<crate::wallskin::Brk> { g.destr.walls.list.clone().into_iter().map(|b| brk_of(g, b)).collect() }
+
 // ---------------------------------------------------------------- the lane's books
 
 /// The authored statics that could be a sheet (drawn and nothing else, level, lightless) and those that are solid (met by rays and drawn, level, square).
@@ -128,6 +141,9 @@ pub fn wall_skin_clear(g: &mut crate::game::Game) {
     s.stats.capped = 0.0; s.stats.coarse = 0.0; s.stats.uncut = 0.0;
     wall_skin_count(g);
 }
+
+/// The rule put down for this level. Nothing calls it here: the TypeScript's caller is a `catch`. (src/game/wallskin.ts:156 WallSkin.fail)
+pub fn wall_skin_fail(g: &mut crate::game::Game, e: crate::Opaque) { wall_skin_clear(g); g.destr.walls.skins.failed = true; }
 
 /// (src/game/wallskin.ts:157 WallSkin.count)
 pub fn wall_skin_count(g: &mut crate::game::Game) {
@@ -183,6 +199,11 @@ pub fn wall_skin_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
 
 fn ax(x: f64) -> usize { x as usize }
 
+/// Where sheet `s`, thin along its own axis `t`, lies against authored solid `k`, or None. (src/game/wallskin.ts:186 WallSkin.seat)
+pub fn wall_skin_seat(g: &mut crate::game::Game, k: f64, s: BoxId, t: f64) -> Option<crate::wallskin::Seat> {
+    let w = g.tab.boxes[g.col.boxes[k as usize]].clone(); let s = g.tab.boxes[s].clone();
+    seat_of(g.k.wallskin.off, k, &w, &s, t)
+}
 fn seat_of(off: f64, k: f64, w: &Bx, s: &Bx, t: f64) -> Option<Seat> {
     let r = s.yaw - w.yaw; if m::abs(m::sin(2.0 * r)) > 1e-4 { return None; }
     let n = if m::abs(m::sin(r)) > 0.5 { 2.0 - t } else { t }; let u = 2.0 - n; let a = 2.0 - t;
@@ -247,6 +268,12 @@ pub fn wall_skin_skins_of(g: &mut crate::game::Game, b: &crate::edge_look::Break
 
 // ---------------------------------------------------------------- cutting one
 
+/// The open cells of breakable W behind a sheet lying on it at seat `q`, as rectangles on the sheet's face in its own frame (run axis `a`): the layer of
+/// cells at the face it lies on. (src/game/wallskin.ts:234 WallSkin.cells)
+pub fn wall_skin_cells(g: &mut crate::game::Game, s: BoxId, q: &crate::wallskin::Seat, w: &crate::edge_look::BreakLike, a: f64) -> Vec<[f64; 4]> {
+    let sb = g.tab.boxes[s].clone(); let wb = g.tab.boxes[w.box_].clone();
+    cells_of(&sb, q, &wb, w.nx, w.ny, w.nz, &w.yb, &w.open, a)
+}
 #[allow(clippy::too_many_arguments)]
 fn cells_of(s: &Bx, q: &Seat, w: &Bx, wnx: f64, wny: f64, wnz: f64, yb: &[f64], open: &[u8], a: f64) -> Vec<Rect> {
     let mut out: Vec<Rect> = Vec::new();

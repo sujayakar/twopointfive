@@ -32,6 +32,20 @@ fn lines_of(kind: LineKind) -> &'static Lines {
 /// his row as it stands, a copy to read: a writer writes the row
 fn now(g: &mut Game, gd: GuardId) -> Mind { *g.m.morale.state_of.get(gd).unwrap() }
 
+/// this file's lines, every kind's or one kind's (morale.ts moraleLines)
+pub fn morale_lines(g: &mut crate::game::Game, kind: Option<crate::morale::LineKind>) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    for (k, l) in LINES.iter() {
+        if let Some(want) = kind { if *k != want { continue; } }
+        for t in l.say { out.push(String::from(*t)); }
+        for t in l.now.unwrap_or(&[]) { if !l.say.contains(t) { out.push(String::from(*t)); } }
+        for pool in [l.dark, l.lit, l.he, l.they] {
+            for t in pool.unwrap_or(&[]) { out.push(String::from(*t)); }
+        }
+    }
+    out
+}
+
 /// one line of a kind from this man, unless he said one inside `barkSecs` (morale.ts bark)
 pub fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::morale::LineKind, radio: bool, force: Option<bool>) -> bool {
     let st = now(g, gd);

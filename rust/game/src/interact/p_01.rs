@@ -148,6 +148,37 @@ pub fn wedged(r: &crate::game::Interactable) -> bool {
     r.verb.is_some() && !r.running.unwrap_or(false) && r.kind != crate::game::InteractableKind::Cancel
 }
 
+/// `\s` of a JavaScript pattern, and what its `trim()` takes away
+fn js_space(c: char) -> bool {
+    matches!(c, '\t' | '\n' | '\u{b}' | '\u{c}' | '\r' | ' ' | '\u{a0}' | '\u{1680}' | '\u{2000}'..='\u{200a}' | '\u{2028}' | '\u{2029}' | '\u{202f}' | '\u{205f}' | '\u{3000}' | '\u{feff}')
+}
+
+/// what stands before the first `\s+<sep>\s+` of `s`: `s.split(/\s+<sep>\s+/)[0]`
+fn before_dash(s: &str, sep: fn(char) -> bool) -> &str {
+    for (i, c) in s.char_indices() {
+        if !js_space(c) { continue; }
+        let rest = s[i..].trim_start_matches(js_space);
+        let mut it = rest.chars();
+        if it.next().map_or(false, sep) && it.next().map_or(false, js_space) { return &s[..i]; }
+    }
+    s
+}
+
+/// a row's words as the panel has them, less its key and less what follows a dot (interact.ts rowWords)
+pub fn row_words(r: &crate::game::Interactable) -> String {
+    let s = r.line2.as_str();
+    let s = match s.strip_prefix("Space") {
+        Some(t) if t.starts_with(js_space) => t.trim_start_matches(js_space),
+        _ => s,
+    };
+    String::from(before_dash(s, |c| c == '·').trim_matches(js_space))
+}
+
+/// …and up to a dash: what its wedge says (interact.ts wedgeWords)
+pub fn wedge_words(r: &crate::game::Interactable) -> String {
+    String::from(before_dash(&row_words(r), |c| matches!(c, '—' | '–' | '-')))
+}
+
 /// the whistle has a wedge of the ring this frame (interact.ts whistleWedge)
 pub fn whistle_wedge(g: &mut Game) -> bool {
     let pl = g.player;
@@ -179,6 +210,32 @@ pub fn give(g: &mut Game, r: Option<&crate::game::Interactable>) {
     if r.kind == crate::game::InteractableKind::Cancel || !r.in_reach || r.verb.is_none() || r.running.unwrap_or(false) || crate::samstun::sam_staggered(g, None) { return; }
     crate::lightswitch::switch_let_go(g);
     g.act = Some(r.clone());
+}
+
+/// What his ring shows this frame; ui/cmdring.ts draws it, no rule reads it. (interact.ts handRingView)
+pub fn hand_ring_view(g: &mut Game) -> Option<crate::cmdring::RingView> {
+    let pl = g.player;
+    if !g.pl[pl].sel.open { return None; }
+    let (ax, ay, z, whistle) = match &g.pl[pl].sel.ring {
+        Some(r) => (r.ax, r.ay, r.z, r.whistle.unwrap_or(false)),
+        None => return None,
+    };
+    let count = g.k.cmdring.wedges;
+    let off_stands = crate::interact::state_off();
+    let mut wedges = Vec::new();
+    for (i, r) in g.nearby.iter().enumerate() {
+        if i as f64 >= count { break; }
+        if !wedged(r) { continue; }
+        let stands = off_stands.iter().any(|k| k == r.kind.as_str());
+        wedges.push(crate::cmdring::RingViewWedgesItem { key: (i + 1) as f64, text: wedge_words(r), off: (r.off && !stands) || !r.in_reach, opens: false });
+    }
+    if whistle_wedge(g) {
+        let off = crate::whistle::whistle_ready_in(g) > 0.0;
+        wedges.push(crate::cmdring::RingViewWedgesItem { key: count, text: String::from(WHISTLE_WEDGE), off, opens: false });
+    }
+    let near_sel = g.pl[pl].near_sel;
+    let lit = if whistle { count } else if g.hover.as_ref().map_or(false, wedged) && (near_sel as f64) < count { (near_sel + 1) as f64 } else { 0.0 };
+    Some(crate::cmdring::RingView { x: ax, y: ay, zoom: z, lit, tone: Some(String::from("hands")), caption: String::new(), wedges })
 }
 
 /// the digits his ring has a wedge on, a bit each, bit 1 the first (interact.ts handRingKeys)
@@ -506,6 +563,27 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
 mod tests {
     use super::*;
     use crate::game::{Interactable, InteractableKind};
+
+    fn row(line2: &str) -> Interactable { let mut r = Interactable::zeroed(); r.line2 = String::from(line2); r }
+
+    // (expected strings: what the TypeScript's own rowWords and wedgeWords give, run under bun)
+    #[test]
+    fn words_of_a_row() {
+        for (line2, rw, ww) in [
+            ("Space push", "push", "push"),
+            ("Space   grab · 2 m", "grab", "grab"),
+            ("Spacer push", "Spacer push", "Spacer push"),
+            ("Space\tcharge — too close: you · x", "charge — too close: you", "charge"),
+            ("  pick lock - slow · 3 ", "pick lock - slow", "pick lock"),
+            ("well-made · dash", "well-made", "well-made"),
+            ("a ·b · c", "a ·b", "a ·b"),
+            ("a –  b", "a –  b", "a"),
+            ("", "", ""),
+        ] {
+            assert_eq!(row_words(&row(line2)), rw, "{:?}", line2);
+            assert_eq!(wedge_words(&row(line2)), ww, "{:?}", line2);
+        }
+    }
 
     #[test]
     fn what_has_a_wedge() {

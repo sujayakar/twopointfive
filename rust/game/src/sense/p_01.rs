@@ -12,6 +12,23 @@ pub fn smoke_grid_new(g: &mut crate::game::Game, sim: crate::Opaque) -> crate::s
     crate::sense::SmokeGrid { clock: 0.0, pending: Vec::new(), stands: false, fed: false, sim }
 }
 
+/// Where the state row starts in the block, in doubles.   (sense.ts SmokeGrid.row0)
+pub fn smoke_grid_row0(g: &mut crate::game::Game) -> f64 {
+    (js::to_u32(crate::sim_state::sim_part(crate::sim_state::P_SMOKE)) >> 3) as f64 + 1.0
+}
+
+/// One double of the state row, by its place in it (GRID).   (sense.ts SmokeGrid.at)
+pub fn smoke_grid_at(g: &mut crate::game::Game, i: f64) -> f64 {
+    sim::state::state(g.sim).smoke.st[i as usize]
+}
+
+/// The state row as far as it is in use, for a read now: a copy, never kept.   (sense.ts SmokeGrid.row)
+pub fn smoke_grid_row(g: &mut crate::game::Game) -> Vec<f64> {
+    let p = &sim::state::state(g.sim).smoke;
+    let n = if p.live > 8 { (p.live - 8) >> 3 } else { 0 };
+    p.st[..n as usize].to_vec()
+}
+
 /// Is there smoke for a step to move: an emitter not yet taken, or a brick standing.   (sense.ts SmokeGrid.smoky)
 pub fn smoke_grid_smoky(g: &mut crate::game::Game) -> bool {
     !g.cpu_smoke.grid.as_ref().unwrap().pending.is_empty() || sim::state::state(g.sim).smoke.live as f64 > 8.0 + grid().rho * 8.0

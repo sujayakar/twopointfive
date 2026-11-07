@@ -230,7 +230,6 @@ if (import.meta.main && pinned('PT_POP')) EVICT.on = process.env.PT_POP === '1';
 if (process.env.PT_FURN === '0') FURNBLAST.on = false;   // PT_FURN=0 (with PT_DESTR=1): charges leave the furniture standing (the page's ?nofurnblast) — the A/B of game/furnblast.ts
 if (process.env.PT_STUNLIGHTS === 'old') { const L = (await import(`${ROOT}/src/game/destruction.ts`)).CHAOS.loud; L.stunFixtureM = L.fixtureBlastM; L.stunPanels = true; }   // PT_STUNLIGHTS=old: a stun charge puts the lights out like a blast again (destruction.ts CHAOS.loud.stunFixtureM / stunPanels at their old values) — the build before that rule, by digest
 const { installDustStandin } = await import('./dust-standin.ts');
-const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
 const { feelTables } = await import(`${ROOT}/src/game/teamfeel.ts`);
 const { openFloor } = await import(`${ROOT}/src/game/doortools.ts`);
 const { knobRegistry, knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);   // THE list of knob tables: what --set reaches and what a run puts back
@@ -269,7 +268,7 @@ const f1 = (x: number) => (Number.isFinite(x) ? x.toFixed(1) : '—');
 const at = (p: number[]) => `(${f1(p[0])}, ${f1(p[2])})`;
 const wrap = (a: number) => { a = (a + Math.PI) % (2 * Math.PI); if (a <= 0) a += 2 * Math.PI; return a - Math.PI; };
 const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync((f => existsSync(f) ? f : resolve(ROOT, 'levels', file))(resolve(ROOT, 'levels', lookLevelFile(file))), 'utf8'));   // (scene/look.ts: under TPS_LOOK=1 a level's file in the default look — the same boxes in other paint)
-  return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); };
+  return loadLevel(data); };
 async function quiet<T>(on: boolean, fn: () => T | Promise<T>): Promise<T> { if (!on) return await fn(); const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } }
 
 export const SMELLS = ['stuck', 'hung', 'overlap', 'doorway', 'flag', 'wall', 'snap', 'twitch', 'behind', 'block', 'unaware', 'friendly', 'wrongway'] as const;   // ('wrongway': something stood a door open on the side it does not open into and doors.ts turned it round — Door.mirrored; no opener does)

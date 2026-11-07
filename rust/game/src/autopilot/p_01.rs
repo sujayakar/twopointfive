@@ -12,6 +12,27 @@ pub fn in_sight(g: &mut crate::game::Game, o: GuardId) -> bool {
     if crate::fogofwar::fog_of_war_active(g) { crate::fogofwar::fog_of_war_seen(g, o) } else { crate::roomfight::room_fight_team_sees(g, o) }
 }
 
+/// An enemy the team has in sight in the room beyond that door.   (autopilot.ts contactBehind)
+pub fn contact_behind(g: &mut crate::game::Game, t: crate::orders::OrderTargetDoor, far: f64) -> bool {
+    let c = g.dr[t.door].frame_centre;
+    let mut i = 0;
+    while i < g.guards.len() {
+        let o = g.guards[i];
+        i += 1;
+        if g.gd[o].state == crate::game::GuardState::Dead { continue; }
+        let team = g.gd[o].team;
+        if !crate::teams::is_hostile(g, crate::teams::Team::Operative, team) { continue; }
+        let p = g.ch[g.gd[o].ch].pos;
+        let there = if js::truthy(far) {
+            crate::cleared::cleared_rooms_room_at(g, p) == far
+        } else {
+            crate::doortools::off_of(g, t.door, p, t.side) < 0.0 && v3::dist_xz(p, c) < g.k.autopilot.contact_m
+        };
+        if there && in_sight(g, o) { return true; }
+    }
+    false
+}
+
 /// The entries the squad would take on a door it is stacked on, first choice first. AUTOPILOT.plain is settled on: the key never picks a tool.   (autopilot.ts autoEntries)
 pub fn auto_entries(g: &mut crate::game::Game, t: crate::orders::OrderTargetDoor, shut: Option<bool>) -> crate::autopilot::AutoEntries {
     let why = if crate::silent::squad_silent(g) { crate::autopilot::AutoPickWhy::Silent } else { crate::autopilot::AutoPickWhy::Known };
@@ -163,3 +184,7 @@ pub fn auto_hint(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, p: O
     d.map(|d| crate::orders::squad_orders_label_of(g, d, &p.t))
 }
 
+/// Seconds the plan of that order-book row is drawn outside the order mode.   (autopilot.ts showSecsOf)
+pub fn show_secs_of(g: &mut crate::game::Game, row: crate::autopilot::ShowSecsOfRow, fresh: f64) -> f64 {
+    if row.auto == Some(true) { m::max(0.2, g.k.autopilot.show_secs) } else { fresh }
+}

@@ -312,6 +312,37 @@ pub fn destruction_fixture_round(g: &mut crate::game::Game, muzzle: V3, dir: V3,
     }
 }
 
+/// The panel's one line of what the lane has done.   (destruction.ts summary)
+pub fn destruction_summary(g: &mut crate::game::Game) -> String {
+    let inv = destruction_inventory(g);
+    let ps = match (crate::particle_fx::gpu_fx(g), &g.engine.particles) {
+        (true, Some(p)) => format!(" · particle impulses {} queued / {} merged / {} dropped, {} kicks", p.stats.imp_queued, p.stats.imp_merged, p.stats.imp_dropped, p.stats.kicked),
+        _ => String::new(),
+    };
+    let chaos = chaos_of(g);
+    let imp = if impulses_on(g) { "" } else { " (impulses off)" };
+    let mut heat = 0.0;
+    for &h in g.destr.heat.iter() { heat = m::max(heat, h as f64); }
+    let debris = crate::debris::debris_summary(g);
+    let s = &g.stats.destruction;
+    format!(
+        "chaos {}{} · heat max {} · {} · papers {} ({} sheets) · puffs {} (−{}) · knocks {} ({} demoted) · screens {} · tiles {} · fixtures {} (−{}) · decals {} · impulses bang {} / impact {} / thud {} (−{}), {} chunks kicked{} · index {}",
+        js::to_fixed(chaos, 2), imp, js::to_fixed(heat, 1), debris, s.destr_papers, s.destr_sheets, s.destr_puffs, s.destr_puffs_refused, s.destr_knocks, s.destr_knocks_demoted, s.destr_screens, s.destr_tiles,
+        s.destr_fixtures, s.destr_fixtures_refused, s.destr_decals, s.destr_imp_bang, s.destr_imp_impact, s.destr_imp_thud, s.destr_imp_thud_dropped, s.destr_debris_kicked, ps, inventory_json(&inv),
+    )
+}
+
+/// `JSON.stringify` of the inventory's counts, in the order its keys were first set.   (destruction.ts summary)
+fn inventory_json(inv: &JsMap<String, f64>) -> String {
+    let mut out = String::from("{");
+    for (k, v) in inv.iter() {
+        if out.len() > 1 { out.push(','); }
+        out.push_str(&format!("\"{}\":{}", k, v));
+    }
+    out.push('}');
+    out
+}
+
 /// The word a knocked thing's chunk is filed under, for clutter and binders.   (destruction.ts: `d.kind === 'binder' ? 'binder' : 'clutter'`, three sites)
 fn knock_kind(kind: DKind) -> crate::debris::ChunkKind {
     if kind == DKind::Binder { crate::debris::ChunkKind::Binder } else { crate::debris::ChunkKind::Clutter }
@@ -345,6 +376,16 @@ fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// What JSON.stringify writes of `{ screen: 3, clutter: 12 }`, and of nothing.
+    #[test]
+    fn the_inventory_writes_as_json() {
+        let mut inv: JsMap<String, f64> = JsMap::new();
+        assert_eq!(inventory_json(&inv), "{}");
+        inv.set(String::from("screen"), 3.0);
+        inv.set(String::from("clutter"), 12.0);
+        assert_eq!(inventory_json(&inv), "{\"screen\":3,\"clutter\":12}");
+    }
 
     /// Math.round(-0.3) is -0 and Math.floor(-0) is -0, and `${-0}` is "0": the square must be one key either way.
     #[test]

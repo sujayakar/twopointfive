@@ -33,6 +33,13 @@ fn has_data(g: &Game) -> bool {
     g.level.scenarios.as_ref().map_or(false, |s| s.snatch.is_some())
 }
 
+/// A new overlay with its van rule. (snatch.ts Snatch.constructor)
+pub fn snatch_new(g: &mut crate::game::Game) -> crate::snatch::Snatch {
+    let mut s = Snatch::blank();
+    s.out = Box::new(crate::snatchout::snatch_out_new(g));
+    s
+}
+
 /// This level's block. (snatch.ts Snatch.block)
 pub fn snatch_block(g: &mut crate::game::Game) -> Option<crate::scene_scenarios::SnatchData> {
     snatch_data(g)
@@ -445,6 +452,54 @@ pub fn snatch_objective(g: &mut crate::game::Game) -> Option<crate::snatch::Snat
         format!("objective ▸ take {} alive. he'll run for {} the moment it goes loud", name, n.exits[0].name)
     };
     Some(SnatchObjective { text, pos: Some(v3::copy(g.snatch.seen.unwrap_or(n.man.pos))) })
+}
+
+/// One line for the tally. (snatch.ts Snatch.summary)
+pub fn snatch_summary(g: &mut crate::game::Game) -> String {
+    let Some(gd) = g.snatch.man else { return String::from("snatch: none on this level") };
+    if !has_data(g) { return String::from("snatch: none on this level"); }
+    let civ = g.gd[gd].civ.unwrap();
+    let st = if let Some(end) = g.snatch.end {
+        if g.snatch.why.is_empty() { String::from(end.as_str()) } else { format!("{} ({})", end.as_str(), g.snatch.why) }
+    } else if g.snatch.tied {
+        String::from("tied")
+    } else if g.snatch.hands_up {
+        String::from("hands up")
+    } else {
+        String::from(g.cv[civ].state.as_str())
+    };
+    format!("snatch: {} · {} · turned {} · bolted {}", g.cv[civ].name, st, js::num_str(g.snatch.stats.turned), js::num_str(g.snatch.stats.bolted))
+}
+
+/// The overlay's slice of a checkpoint; None while he is not staged. (snatch.ts Snatch.snapshot)
+pub fn snatch_snapshot(g: &mut crate::game::Game) -> Option<crate::snatch::SnatchSnap> {
+    let m = g.snatch.man;
+    if !snatch_active(g) { return None; }
+    let m = m?;
+    let c = g.gd[m].ch;
+    let out = if crate::snatchout::snatch_out_ruled(g) { Some(crate::snatchout::snatch_out_snapshot(g)) } else { None };
+    let s = &g.snatch;
+    Some(SnatchSnap {
+        hands_up: s.hands_up,
+        tied: s.tied,
+        near_t: s.near_t,
+        alone_t: s.alone_t,
+        end: s.end,
+        why: s.why.clone(),
+        seen: s.seen.map(v3::copy),
+        fear: s.fear.map(v3::copy),
+        lost: s.lost.map(|l| match l {
+            SnatchLost::Gone => SnatchSnapLost::Gone,
+            SnatchLost::Dead => SnatchSnapLost::Dead,
+        }),
+        killer: s.killer.as_ref().map(|k| SnatchSnapKiller { side: k.side.clone(), who: k.who.clone() }),
+        times: SnatchSnapTimes { ran: s.times.ran, up: s.times.up, tied: s.times.tied, end: s.times.end },
+        stats: SnatchSnapStats { turned: s.stats.turned, bolted: s.stats.bolted },
+        last_exit: s.last_exit.clone(),
+        at: v3::copy(g.ch[c].pos),
+        yaw: g.ch[c].body_yaw,
+        out,
+    })
 }
 
 /// A load: stages him if the restart has not, stands him where the file had him, and puts the overlay's flags back. (snatch.ts Snatch.restore)

@@ -58,6 +58,11 @@ pub fn pair_of(g: &mut crate::game::Game) -> Option<crate::guards::Pair> {
     })
 }
 
+/// A checkpoint put the time back: the floor's bark clock must not sit in the future. (guards.ts forgetGuardClocks)
+pub fn forget_guard_clocks(g: &mut crate::game::Game) {
+    g.m.guards.floor_bark_t = None;
+}
+
 /// The pair in this man's open view: either body's chest or head inside his cone and range with nothing solid between. (guards.ts pairInView)
 pub fn pair_in_view(g: &mut crate::game::Game, gd: GuardId, p: &crate::guards::Pair) -> bool {
     if g.player_invisible || g.time < g.gd[gd].dazzled_until || g.gd[gd].smoke_trans < 0.3 || crate::pairorders::pair_gripped(g, gd) || crate::doze::doze_asleep(g, gd) {

@@ -7,6 +7,10 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
+/// Pin the framing, or with None release it and hand back the free camera's angles and zoom. (camera.ts FollowCamera.setPin)
+pub fn follow_camera_set_pin(g: &mut Game, id: CameraId, p: Option<FollowCameraSetPinP>) -> Option<FollowCameraPin> {
+    set_pin(&mut g.tab.camera[id], p)
+}
 fn set_pin(c: &mut FollowCamera, p: Option<FollowCameraSetPinP>) -> Option<FollowCameraPin> {
     let p = match p {
         Some(p) => p,
@@ -37,6 +41,10 @@ fn set_pin(c: &mut FollowCamera, p: Option<FollowCameraSetPinP>) -> Option<Follo
     c.pin
 }
 
+/// A drawn frame and a tick's follow, together. (camera.ts FollowCamera.update)
+pub fn follow_camera_update(g: &mut Game, id: CameraId, dt: f64, follow: V3, aim_point: Option<V3>) {
+    update(&mut g.tab.camera[id], dt, follow, aim_point)
+}
 fn update(c: &mut FollowCamera, dt: f64, follow: V3, aim_point: Option<V3>) {
     frame(c);
     step(c, dt, follow, aim_point);
@@ -83,6 +91,10 @@ fn frame(c: &mut FollowCamera) {
     };
 }
 
+/// The look-at without the kick or the pose. (camera.ts FollowCamera.focus)
+pub fn follow_camera_focus(g: &mut Game, id: CameraId) -> V3 {
+    focus(&g.tab.camera[id])
+}
 fn focus(c: &FollowCamera) -> V3 {
     match (&c.draw_held, c.kick_held) {
         (Some(h), _) => h.target,
@@ -91,6 +103,10 @@ fn focus(c: &FollowCamera) -> V3 {
     }
 }
 
+/// The blast's kick, in for the render. (camera.ts FollowCamera.kickIn)
+pub fn follow_camera_kick_in(g: &mut Game, id: CameraId) {
+    kick_in(&mut g.tab.camera[id])
+}
 fn kick_in(c: &mut FollowCamera) {
     let k = match c.kick {
         Some(k) if c.kick_held.is_none() => k,
@@ -101,6 +117,10 @@ fn kick_in(c: &mut FollowCamera) {
     rebuild(c);
 }
 
+/// The blast's kick, out again, keeping the matrix the frame was drawn with. (camera.ts FollowCamera.kickOut)
+pub fn follow_camera_kick_out(g: &mut Game, id: CameraId) {
+    kick_out(&mut g.tab.camera[id])
+}
 fn kick_out(c: &mut FollowCamera) {
     let t = match c.kick_held {
         Some(t) => t,
@@ -113,6 +133,10 @@ fn kick_out(c: &mut FollowCamera) {
     rebuild(c);
 }
 
+/// The picture's pose in for the frame's render; the tick's is kept. (camera.ts FollowCamera.drawIn)
+pub fn follow_camera_draw_in(g: &mut Game, id: CameraId, p: FollowCameraDrawInP) {
+    draw_in(&mut g.tab.camera[id], p)
+}
 fn draw_in(c: &mut FollowCamera, p: FollowCameraDrawInP) {
     if c.draw_held.is_some() {
         return;
@@ -125,6 +149,10 @@ fn draw_in(c: &mut FollowCamera, p: FollowCameraDrawInP) {
     rebuild(c);
 }
 
+/// The tick's pose put back, keeping the matrix the frame was drawn with. (camera.ts FollowCamera.drawOut)
+pub fn follow_camera_draw_out(g: &mut Game, id: CameraId) {
+    draw_out(&mut g.tab.camera[id])
+}
 fn draw_out(c: &mut FollowCamera) {
     let h = match c.draw_held {
         Some(h) => h,
@@ -204,6 +232,10 @@ fn auto_yaw_pick(from: f64, target: V3, blocked: &mut dyn FnMut(V3, V3) -> bool)
     best
 }
 
+/// Ease toward the autoYaw goal; told to stop, forget it. (camera.ts FollowCamera.easeYaw)
+pub fn follow_camera_ease_yaw(g: &mut Game, id: CameraId, dt: f64, on: bool) {
+    ease_yaw(&mut g.tab.camera[id], dt, on)
+}
 fn ease_yaw(c: &mut FollowCamera, dt: f64, on: bool) {
     if !on {
         c.yaw_goal = None;

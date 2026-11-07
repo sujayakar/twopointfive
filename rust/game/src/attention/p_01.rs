@@ -89,6 +89,12 @@ pub fn outside(g: &mut crate::game::Game, gd: GuardId, h: crate::attention::Hold
     off_cos(g, gd, h, p) < m::cos(g.k.attention.focus_deg * m::PI / 180.0)
 }
 
+/// Degrees a man at `p` stands off the thing that holds this man. (attention.ts attentionOffDeg)
+pub fn attention_off_deg(g: &mut crate::game::Game, gd: GuardId, p: V3) -> Option<f64> {
+    let h = attention_of(g, gd)?;
+    Some(m::acos(v3::clamp(off_cos(g, gd, h, p), -1.0, 1.0)) * 180.0 / m::PI)
+}
+
 /// × the rate at which this man's eye takes in a man standing at `p`. (attention.ts attentionSideK)
 pub fn attention_side_k(g: &mut crate::game::Game, gd: GuardId, p: V3) -> f64 {
     match attention_of(g, gd) {
@@ -443,6 +449,34 @@ pub fn attention_dwell(g: &mut crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].awareness = m::max(g.gd[gd].awareness, g.k.attention.floor);
     tell(g, gd, &mut h);
     true
+}
+
+/// One man's held attention as the floor shows it, for every man a hold is on. (attention.ts attentionMarks)
+pub fn attention_marks(g: &mut crate::game::Game) -> Vec<crate::attention::AttentionMark> {
+    if g.touring { return Vec::new(); }
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < g.guards.len() {
+        let gd = g.guards[i];
+        i += 1;
+        let Some(h) = attention_of(g, gd) else { continue };
+        if g.gd[gd].state == crate::game::GuardState::Dead || crate::fogofwar::fog_of_war_hidden(g, gd) { continue; }
+        let now = g.time;
+        let left = if h.mode == HoldMode::Lent { 1.0 } else { v3::clamp((if h.until < 0.0 { h.secs } else { h.until - now }) / m::max(1e-3, h.full), 0.0, 1.0) };
+        let pos = g.ch[g.gd[gd].ch].pos;
+        out.push(AttentionMark {
+            gd,
+            from: [pos[0], 0.05, pos[2]],
+            at: [h.at[0], 0.05, h.at[2]],
+            left,
+            mode: h.mode,
+            kind: h.kind,
+            ending: h.mode != HoldMode::Lent && h.until >= 0.0 && h.until - now <= g.k.attention.tell_secs,
+            worn: h.nth > 1,
+            walking: h.mode == HoldMode::Go && h.until < 0.0,
+        });
+    }
+    out
 }
 
 

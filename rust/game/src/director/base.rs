@@ -6,6 +6,13 @@ use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 
+/// INVENTED (director.ts:324 D.systems): a system the level turns on or off
+pub fn manifest_system(m: &mut crate::director::Manifest, name: &'static str, on: bool) { m.systems.set(name, on); }
+/// INVENTED (director.ts:854 q.flag, :899 c.flag): a flag of this run
+pub fn run_flag(g: &crate::game::Game, r: DirectorRunId, name: &str) -> Option<crate::director::Json> { g.tab.director_run[r].flags.get(String::from(name)).cloned().flatten() }
+/// INVENTED (director.ts:899 c.flag): a flag of this run set
+pub fn run_set_flag(g: &mut crate::game::Game, r: DirectorRunId, name: &str, v: crate::director::Json) { g.tab.director_run[r].flags.set(String::from(name), Some(v)); }
+
 // ---- what the by-hand scripts call: the verbs of a level script, which are closures of the TypeScript's D, P, c and q objects. No TypeScript function has these names.
 
 /// INVENTED: B.fn(ctx) at director.ts:586: the beat's frame before its first step. Body by hand, with the nine scripts
@@ -248,8 +255,20 @@ pub mod util {
     use crate::{ids::*, js::*, Quat, V3};
     #[allow(unused_imports)]
     use alloc::{string::String, vec::Vec};
+    /// (src/game/director.ts:331 UTIL.yawTo)
+    pub fn yaw_to(a: V3, b: V3) -> f64 { todo!() }
+
+    /// (src/game/director.ts:331 UTIL.distXZ)
+    pub fn dist_xz(a: V3, b: V3) -> f64 { todo!() }
+
+    /// (src/game/director.ts:332 UTIL.lerp)
+    pub fn lerp(a: V3, b: V3, t: f64) -> [f64; 3] { todo!() }
+
     /// (src/game/director.ts:332 UTIL.add)
     pub fn add(a: V3, b: V3) -> [f64; 3] { todo!() }
+
+    /// (src/game/director.ts:333 UTIL.ahead)
+    pub fn ahead(p: V3, yaw: f64, d: f64, y: Option<f64>) -> [f64; 3] { todo!() }
 
 }
 

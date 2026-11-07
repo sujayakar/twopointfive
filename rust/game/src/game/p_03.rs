@@ -80,6 +80,12 @@ pub fn game_rehand(g: &mut crate::game::Game) {
     crate::air_dust::air_dust_resend(g);
 }
 
+/// PICTURE ONLY, not translated: the snow's field and prints follow their switches for the g-buffer. Empty, as nothing in a rule reads them and the game's constructor calls this unguarded (game.ts:1102). (game.ts Game.syncSnowLook)
+pub fn game_sync_snow_look(g: &mut crate::game::Game) {}
+
+/// PICTURE ONLY, not translated: this frame's footfalls pressed into the snow for the g-buffer. Empty, as nothing in a rule reads them. (game.ts Game.stepSnowTracks)
+pub fn game_step_snow_tracks(g: &mut crate::game::Game, dt: f64) {}
+
 /// Asks the renderer's irradiance at a point under `key`. (game.ts Game.lightQuery; the tools' swap of this field is not carried)
 pub fn game_light_query(g: &mut crate::game::Game, key: &str, pos: V3, skip_owner: Option<f64>) {
     let skip_owner = skip_owner.unwrap_or(0.0);
@@ -96,3 +102,13 @@ pub fn game_light_forget(g: &mut crate::game::Game, key: &str) {
     crate::sensors::sensors_forget(g, key);
 }
 
+/// Which side each door opens into, as the deals stand now. (game.ts Game.doorSwings)
+pub fn game_door_swings(g: &mut crate::game::Game) -> Vec<crate::doorswing::SwingDeal> {
+    let deals = g.door_deals.clone();
+    crate::doorswing::swings_now(g, &deals)
+}
+
+/// How long a man of theirs has been at the panel, read. (game.ts Game.breakerFixT)
+pub fn game_breaker_fix_t(g: &mut crate::game::Game) -> f64 {
+    crate::sim_lightshome::mains_fix_t(g)
+}

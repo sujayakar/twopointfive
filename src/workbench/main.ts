@@ -151,7 +151,7 @@ async function main() {
       tree.append(r);
     };
     row(staged ? '○ the level alone (dismiss the figure)' : '● the level alone — no staged figure', 0, { on: false, dim: !staged && isLevelMode(mode), title: 'stand nobody in the level: Level / Materials render the level as ever; Characters / Effects go back to the studio', run: () => unstage() });
-    const officeDoc = (n => n === 'office' || n.startsWith('office-'))(app.ed.data.name);   // (scene/level.ts isOfficeFamily's rule) the staging scenes' marks are the OFFICE's coordinates: on any other document the man would stand wherever those metres fall
+    const officeDoc = (n => n === 'office' || n.startsWith('office-'))(app.ed.data.name);   // (the office's file, its relief and its texel variants) the staging scenes' marks are the OFFICE's coordinates: on any other document the man would stand wherever those metres fall
     for (const s of vui.scenes()) {
       if (s.staging && !officeDoc && !staged) continue;
       const open = expanded.has(s.id) || (isFigureMode(mode) && s.id === st.sceneId && actorOn()) || (!!staged && !!s.staging);   // (the level modes keep the studio scenes folded: there the tree is for staging)

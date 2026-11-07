@@ -128,11 +128,6 @@ static mut ALL: Table = Table {
 pub fn table() -> &'static mut Table {
     unsafe { &mut *core::ptr::addr_of_mut!(ALL) }
 }
-/// the clips' table, to read
-#[inline(always)]
-pub fn table_read() -> &'static Table {
-    unsafe { &*core::ptr::addr_of!(ALL) }
-}
 
 /// a clip of `tracks` tracks is about to be written: false = no room to write it (the host samples that clip itself). A clip left half written (its `end`
 /// never came) is dropped here: the table is never held shut by one.

@@ -144,6 +144,14 @@ pub fn thing_at(g: &mut crate::game::Game, index: f64) -> Option<crate::wallpen:
     Some(ThingAt { b, stuff })
 }
 
+/// What static (or leaf) `index` is to a round: its stuff and how thick it stands. (wallpen.ts thinThing)
+pub fn thin_thing(g: &mut crate::game::Game, index: f64) -> Option<crate::wallpen::ThinThing> {
+    let t = thing_at(g, index)?;
+    let h = seam_box(g, t.b).h;
+    let thick = m::min(h[0], h[2]) * 2.0;
+    if thick <= thin_max(g, t.stuff) { Some(ThinThing { stuff: t.stuff, thick }) } else { None }
+}
+
 /// What thing `index` takes from a round of energy `e` at `at` flying `d`; None = the round is spent in it. (wallpen.ts thinToll)
 pub fn thin_toll(g: &mut crate::game::Game, index: f64, at: V3, d: V3, e: f64) -> Option<crate::wallpen::ThinToll> {
     let t = thing_at(g, index)?;
@@ -367,6 +375,23 @@ pub fn flight_len(g: &mut crate::game::Game, from: V3, dir: V3, range: f64, ener
 pub fn spent_in_wall(g: &mut crate::game::Game, index: f64) {
     if thing_at(g, index).is_some() { g.stats.wallpen.spent += 1; }
 }
+
+/// Panel / console line. (wallpen.ts wallPenSummary)
+pub fn wall_pen_summary(g: &mut crate::game::Game) -> String {
+    let state = if wall_pen_live(g) { "ON" } else { "on \u{2014} inert while a showcase runs" };
+    let st = &g.stats.wallpen;
+    let last = match g.m.wallpen.log.last() {
+        Some(l) => format!(" \u{b7} last: {}", l),
+        None => String::new(),
+    };
+    format!(
+        "rounds through thin walls and doors {} \u{25b8} {} crossed ({} door leaves) \u{b7} {} spent in one{}",
+        state, st.crossed, st.leaves, st.spent, last,
+    )
+}
+
+/// QA: the last crossings filed, oldest first. (wallpen.ts wallPenLog)
+pub fn wall_pen_log(g: &mut crate::game::Game) -> Vec<String> { g.m.wallpen.log.clone() }
 
 #[cfg(test)]
 mod tests {

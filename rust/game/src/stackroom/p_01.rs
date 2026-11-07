@@ -476,6 +476,12 @@ pub fn stack_view_reach(g: &mut crate::game::Game, d: DoorId) -> f64 {
     if stack_view_open(g, d) { m::max(2.6, g.dr[d].def.width / 2.0 + g.k.stackroom.view_past + 0.7) } else { 2.6 }
 }
 
+/// QA: is this place in the view the rule measures   (stackroom.ts stackViewSees)
+pub fn stack_view_sees(g: &mut crate::game::Game, d: DoorId, side: f64, p: V3) -> bool {
+    let far = far_cells(g, d, side);
+    in_view(g, d, &far, p)
+}
+
 /// what the closures of stackViewFix closed over, and its memo of each hand's places
 struct ViewDeal<'a> {
     d: DoorId, side: f64, w: f64, jamb_out: f64, jamb_past: f64, front: V3,
@@ -794,6 +800,12 @@ pub fn stack_room_probe(g: &mut crate::game::Game, d: DoorId, side: f64) -> crat
         cells: match &f { Some(f) => f.cells.len() as f64, None => 0.0 },
         seed,
     }
+}
+
+/// the counters as one line   (stackroom.ts stackRoomSummary)
+pub fn stack_room_summary(g: &mut crate::game::Game) -> String {
+    let t = &g.stats.stackroom;
+    format!("stack rooms: {} of {} marks off the face's floor · dealt again {} other jamb, {} behind the file, {} back, {} floor, {} next room, {} squeezed, {} down the passage · {} no room · {} tucks/step-backs not taken · {} jamb men dealt again gave the door to the other jamb", t.off, t.asked, t.other, t.behind, t.rear, t.floor, t.next, t.squeezed, t.lane, t.none, t.kept, t.unled)
 }
 
 #[cfg(test)]

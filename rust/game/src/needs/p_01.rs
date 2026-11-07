@@ -83,6 +83,41 @@ pub fn mem<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::need
     g.m.needs.mem_of.get_or_insert_with(gd, blank_mem)
 }
 
+/// Read-only peek for the panel and the probes. (needs.ts needsMem)
+pub fn needs_mem(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::needs::NeedsMem> {
+    let r = g.m.needs.mem_of.get(gd)?;
+    Some(NeedsMem { needs: r.needs.clone(), trip: r.trip.clone(), last_back_at: r.last_back_at, trips: r.trips, cancels: r.cancels, shaken: r.shaken, dealt: r.dealt })
+}
+
+/// The trip this man is on, or None. (needs.ts needsTrip)
+pub fn needs_trip(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::needs::NeedsTrip> {
+    let t = g.m.needs.mem_of.get(gd)?.trip.as_ref()?;
+    Some(NeedsTrip {
+        kind: t.kind,
+        spot: t.spot.clone(),
+        phase: t.phase,
+        forced: t.forced,
+        t0: t.t0,
+        depart_at: t.depart_at,
+        left_at: t.left_at,
+        arrived_at: t.arrived_at,
+        dwell_until: t.dwell_until,
+        back_at: t.back_at,
+        wp: t.wp,
+        out_yaw: t.out_yaw,
+        watched: t.watched,
+        told: t.told,
+        partner: t.partner,
+        radio: t.radio,
+        reply_at: t.reply_at,
+        replied: t.replied,
+        necked: t.necked,
+        loop_i: t.loop_i,
+        line: t.line.clone(),
+        gap_before: t.gap_before,
+    })
+}
+
 /// When anybody last walked off; made if new. (needs.ts floor)
 pub fn floor<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::needs::NeedsModFloorOfValue {
     g.m.needs.floor_of.get_or_insert_with(|| NeedsModFloorOfValue { last_depart_at: -1e9 })
@@ -860,6 +895,73 @@ pub fn needs_set_level(g: &mut crate::game::Game, gd: GuardId, kind: crate::need
         }
         None => false,
     }
+}
+
+/// Keep the switch and the fairness knobs per machine. This crate has no browser storage: the TypeScript's "no storage, nothing to keep". (needs.ts saveNeeds)
+pub fn save_needs(g: &mut crate::game::Game) {}
+
+/// Read back what `save_needs` kept. Nothing is stored here: the TypeScript's "nothing stored, the shipped values stand". (needs.ts loadNeeds)
+pub fn load_needs(g: &mut crate::game::Game) {}
+
+/// The switch back on and the knobs back to the shipped values; no stored copy to drop. (needs.ts resetNeeds)
+pub fn reset_needs(g: &mut crate::game::Game) {
+    g.tune.needs = true;
+    let d = needs_defaults();
+    g.k.needs.rate_k = d.rate_k;
+    g.k.needs.max_away = d.max_away;
+    g.k.needs.announce_lead = d.announce_lead;
+    g.k.needs.dwell.set(NeedKind::Coffee, d.dwell.coffee);
+    g.k.needs.dwell.set(NeedKind::Smoke, d.dwell.smoke);
+    g.k.needs.dwell.set(NeedKind::Water, d.dwell.water);
+    g.k.needs.dwell.set(NeedKind::Stretch, d.dwell.stretch);
+}
+
+/// The panel's line: per man his needs and levels, or the trip he is on. (needs.ts needsSummary)
+pub fn needs_summary(g: &mut crate::game::Game) -> String {
+    if !g.tune.needs {
+        return key("needs ▸ off");
+    }
+    let mut parts: Vec<String> = Vec::new();
+    let mut away = 0;
+    let (now, rest_secs) = (g.time, g.k.needs.rest_secs);
+    for &gd in g.guards.iter() {
+        let Some(r) = g.m.needs.mem_of.get(gd) else { continue };
+        if g.gd[gd].state == GuardState::Dead || r.needs.is_empty() {
+            continue;
+        }
+        let cs = &g.gd[gd].callsign;
+        if let Some(t) = r.trip.as_ref() {
+            away += 1;
+            let s = match t.phase {
+                TripPhase::Telegraph => {
+                    let told = if !t.told {
+                        String::new()
+                    } else if t.radio {
+                        key(" (radioed)")
+                    } else {
+                        format!(" (told {})", t.partner.map_or("?", |p| g.gd[p].callsign.as_str()))
+                    };
+                    format!("about to go — {} in {} s{}", t.kind.as_str(), js::to_fixed(m::max(0.0, t.depart_at - now), 0), told)
+                }
+                TripPhase::Going => format!("walking to {}", t.spot.name),
+                TripPhase::Dwell => format!("at {}, {} s left", t.spot.name, js::to_fixed(m::max(0.0, t.dwell_until - now), 0)),
+                TripPhase::Returning => format!("coming back to wp{}", t.wp),
+            };
+            parts.push(format!("{} AWAY {}{}", cs, s, if t.forced { " [sent]" } else { "" }));
+        } else {
+            let mut full: Vec<Need> = r.needs.iter().copied().filter(|n| n.level >= 1.0).collect();
+            js::sort_by(&mut full, |a, b| b.level - a.level);
+            let levels: Vec<String> = r.needs.iter().map(|n| format!("{} {}", n.kind.as_str(), js::to_fixed(n.level, 2))).collect();
+            let waits = full.first().map_or(String::new(), |n| format!(" — waits for wp{}", n.wp));
+            let rests = if now - r.last_back_at < rest_secs { format!(" (rests {} s)", m::ceil(rest_secs - (now - r.last_back_at))) } else { String::new() };
+            parts.push(format!("{} {}{}{}", cs, levels.join(" "), waits, rests));
+        }
+    }
+    let gap = g.k.needs.floor_gap_secs - (now - floor(g).last_depart_at);
+    let frozen = if needs_live(g) && floor_calm(g) { "" } else { "FROZEN · " };
+    let men = if parts.is_empty() { key("nobody dealt yet") } else { parts.join(" | ") };
+    let gap_note = if gap > 0.0 { format!(" · floor gap {} s", m::ceil(gap)) } else { String::new() };
+    format!("needs ▸ {}{} · slot {}/{}{}", frozen, men, away, g.k.needs.max_away, gap_note)
 }
 
 #[cfg(test)]

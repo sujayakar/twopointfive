@@ -7,6 +7,13 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
+/// a point of a gun's model in the hand's own space (gunreload.ts g2w)
+pub fn g2w(p: V3, d: Option<V3>) -> V3 {
+    let d = d.unwrap_or([0.0, 0.0, 0.0]);
+    let o = group();
+    [p[0] + o[0] + d[0], p[1] + o[1] + d[1], p[2] + o[2] + d[2]]
+}
+
 /// a gun's row (`gun.def`), a copy that can be lent beside `g`
 fn gun_def(g: &Game, gun: FirearmId) -> crate::weapons::WeaponDef {
     g.m.weapons.weapons.get(g.fa[gun].def).unwrap().clone()
