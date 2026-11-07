@@ -1591,7 +1591,10 @@ export class Game {
     const looks = draw ? charLookFrame(this) : null;
     const sideOf = this.ch.cast ? charSides(this) : null;   // (the cast's placeholder colours go over by side — below; nothing with the mannequin loaded)
     const oneColourHits = (this.engine.settings.rtMeshHits && this.engine.settings.meshShadows) || this.engine.settings.sdfRigSmooth;   // mesh hits / the smooth union read ONE colour a man (proxy record 0): it then carries all of him, not his lower trunk   // CHARACTER MATERIALS (charLook.ts): null unless settings.charMats — then every man is his two tints, as ever
-    drawn.forEach((c, i) => {
+    // ONE MAN'S FAULT IS ONE MAN'S: a man who cannot be posed or handed over (a row with no rig behind it) is left out of this frame and SAID once by name
+    // in the console; the men after him are drawn. `n` counts the men handed over, so nobody's instance is left a hole.
+    let n = 0;
+    for (const c of drawn) { const i = n; try {
       if (this.ch.cast) {   // THE CAST (game/cast.ts): the parts this man wears + his own proxy fit (render/sdfrig.ts, cached per mask) — nothing here with the mannequin loaded
         c.parts = castParts(this, c);
         if (draw && this.rigFits) {
@@ -1600,7 +1603,7 @@ export class Game {
           if (f) this.rigFits.set(c.id & 0xff, drawnFit(c, f, statureOf(c))); else this.rigFits.delete(c.id & 0xff);
         }
       }
-      if (!draw) return;
+      if (!draw) continue;
       const po = sideOf && c.parts ? placeholderTints(sideOf(c)) : TINTS_AS_IS;   // the instance's two colours: his tint then his tint2 on the mannequin and on an operator; for a cast civilian / irregular the tint his side's TABLE reads for trousers, then for the top (charMaterials.ts placeholderTints)
       const tall = statured ? statureOf(c) : 1;   // (1 = the skeleton's own palette and proxies handed over, as ever)
       this.chars.setInstance(i, drawnJoints(c, tall), po & 1 ? c.tint2 : c.tint, po & 2 ? c.tint2 : c.tint, c.id, wetOn && (c.wet > 0 || c.beads > 0) ? (f, o) => { wetInstance(this, c, true, f, o); wetKnobs(f, o + 4); wetLineRow(c, f, o + 12); } : undefined, c.parts);
@@ -1608,8 +1611,9 @@ export class Game {
       let capAlb = v3.lerp(c.tint, [0.5, 0.5, 0.5], 0.3);
       if (wetOn && c.wet > 0) { const k = 1 - 0.35 * c.wet; capAlb = [capAlb[0] * k, capAlb[1] * k, capAlb[2] * k]; }   // his shadow proxies (what bounce rays and reflections see of him) darken with the coat like the fabric on screen
       const { caps, bound } = drawnCapsules(c, c.capsules(), tall); world.addCharacterCapsules(c.id, looks ? looks.proxies(c, wetOn && c.wet > 0 ? 1 - 0.35 * c.wet : 1, oneColourHits) : capAlb, caps, bound);   // (per slot: one colour per proxy — his head bounces as helmet and skin, his legs as trousers)
-    });
-    this.chars.finish(draw ? drawn.length : 0);
+      n++;
+    } catch (e) { manNotDrawn(this, c, e); } }
+    this.chars.finish(draw ? n : 0);
   }
   /** Scripts / probes / the tour: put the highlight on the row of `kind` (the one whose verb is `verb`, if given) in this frame's list, so the next Space tap does
    *  THAT — the by-hand equivalent of holding Space and scrolling to it. False if no such row is on offer right now. */
@@ -1651,3 +1655,16 @@ export class Game {
 
 }
 
+
+/** the men `drawMen` left out, each said once (game.ts drawMen): who, and the fault that kept him out of the picture */
+let NOT_DRAWN: WeakSet<object> | null = null;
+function manNotDrawn(g: Game, c: Character, e: unknown): void {
+  const said = (NOT_DRAWN ??= new WeakSet());
+  if (said.has(c)) return;
+  said.add(c);
+  const gd = g.guards.find(x => x.char === c), who = gd ? gd.callsign : c === g.player.char ? 'the player' : `man ${c.id}`;
+  const book = ((g as unknown as { menNotDrawn?: { who: string; id: number; why: string }[] }).menNotDrawn ??= []);
+  const why = String((e as { message?: string })?.message ?? e).slice(0, 300);
+  book.push({ who, id: c.id, why });
+  console.error(`${who} (id ${c.id}) cannot be posed and is NOT DRAWN: ${why}`);
+}
