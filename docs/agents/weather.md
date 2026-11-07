@@ -8,12 +8,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **The hour** (`src/game/hours.ts`; `?hour=dawn|midday|overcast|dusk` (+ `?sun=0‥1`), the mission sheet's Hour row / H key (ui/missions.ts — this visit's pick only, on the link it loads),
   Tab ▸ Frame ▸ Hour, `__hour` {set(id), sun(k), at(p), summary(), changed()}, harness `PT_HOUR` / `PT_SUN` on playthrough.ts, or `hour=` / `sun=` on the query handed to `scenarioRun.ts startFromQuery` — `hourFromQuery`, the same run as a boot at that hour by digest; ids stay dawn / midday / overcast / dusk, the sheet words `overcast` 'Grey day' so it is not taken for a weather): a level started at another time of day than the night it was
   authored for, with NO level-file change. `night` is no record at all — the game byte for byte (`probes.ts hours-night`; default-equals-base by run digest). `applyHour(g, id)` (standGame
-  calls it for the visit's `HOUR.id`; live both ways, reversible bit for bit): the level's moon disabled and a kind-2 SUN spliced in AT THE MOON'S INDEX (never last: 64 lights a frame),
+  calls it for the game's `stood.hour`; live both ways, reversible bit for bit): the level's moon disabled and a kind-2 SUN spliced in AT THE MOON'S INDEX (never last: 64 lights a frame),
   `buildDirReach` (since 11-05 the picture's keeper's, asked through the host: `engine.reach?.sun`, `render/reachKeep.ts`), sky / haze / exposure written to engine.settings, the OUTSIDE lamps (group 'exterior') on a photocell — as authored at dawn / dusk, out at midday / overcast, re-made after
-  every `resetLevelState` (`hourAfterReset`) — interiors as authored at every hour, and the night's storm held off (`HOUR.dry`; a picked weather kind is not the night's storm — next bullet). ONE MODEL: the page's probe meter
+  every `resetLevelState` (`hourAfterReset`) — interiors as authored at every hour, and the night's storm held off (`Game.stood.dry`; a picked weather kind is not the night's storm — next bullet). ONE MODEL: the page's probe meter
   already sees the sun (a light) and the sky (the bounce); the CPU stand-in `guards.ts lightEstimateAt` — headless always, and what the team's light / goggle rules read on every host — calls
   `hourLight(g, P, acc)`: the sun through one segment test (statics + door leaves) and the sky + one ground bounce through 23 rays per half-metre cell (cached per cell against the STATICS,
-  door leaves asked every call; no time in the cache, so checkpoint identity holds). `nvgPlaceLight` skips the hour's sun (already in the estimate). `HOUR.sun` / `setSunStrength(g, k)` =
+  door leaves asked every call; no time in the cache, so checkpoint identity holds). `nvgPlaceLight` skips the hour's sun (already in the estimate). `Game.stood.sun` / `setSunStrength(g, k)` =
   THE ONE NUMBER a weather dims under cloud (picture and stand-in read the same RtLight); the stand-in reads the LIVE `settings.skyZenith / skyHorizon`. `hourWorldChanged(g)` when statics
   change under a running game (a wall gone). Checkpoints carry `hour {id, sun}` only when not night (so the F10 journal does); `setDaylight` (the breach showcase) takes an hour out first and
   puts it back. `isDaylight(g)` stays FALSE under an hour (QRF, needs, civilians, weather gates unchanged). QA: `probes.ts hours` (night / light / restart / team / sheet).
@@ -53,7 +53,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   of reads. Seen only on the software adapter, in stills (his view restaged: the red streaks up-left of the tent with paint 1, none with 0); a still shows a streak dotted where
   the scatter lands on something bright — in motion under the temporal resolve that should average out, which nobody has seen.
 - **The weather over the hour** (`hours.ts underWeather`; `?hour=midday&weather=rain`, both rows of the mission sheet — Hour, then Weather — each key once on every link): three rules. THE
-  STORM: a picked weather (`Weather.kind`) always runs — rain at midday rains; with none picked an hour holds the level's own night storm off (`HOUR.dry`, the snapshot kept in `HourState.storm`
+  STORM: a picked weather (`Weather.kind`) always runs — rain at midday rains; with none picked an hour holds the level's own night storm off (`Game.stood.dry`, the snapshot kept in `HourState.storm`
   through a kind coming and going, `wasOff` = it was off when the hour came and stays off). CLOUD → THE LIGHT: `Weather.cloud` c takes light off the ground and moves the rest from the sun to the
   sky — Kasten & Czeplak's two fits: all of it on level open ground × `cloudSun(c)` = 1 − 0.75 c^3.4 (clear 1.00 · dust 0.99 · fog 0.78 · overcast 0.48 · rain 0.37 · downpour 0.25), the sky's
   share of it d0 + (1 − d0) c² (d0 = the hour's own share off its own numbers, `skyShare`). `cloudLight(def, c)` → [sun, sky] factors: the sun's goes through THE ONE NUMBER
@@ -67,7 +67,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   as it is in the air (`weather.ts loudLen`, `WX_SIM.loudDry`; rain still drowns small sounds through `hearPath`), and a stroke of lightning is in the light meter's CPU stand-in (`strokeLight` from
   `guards.ts lightEstimateAt`: the renderer's meter always read it, headless nobody did) — so rain / downpour runs no longer digest as the weather build's; the dry kinds do. QA: `probes.ts hourwx` (cloud / storm / save / query / air / sheet). Limits: the stand-in tests the sun with ONE hard ray (the widened disc's penumbra is the picture's alone — small once the
   sun is at 9 % under the cloud that widens it); the breach showcase's own day (`setDaylight`) ignores the cloud; the renderer's half of a weather is compiled at boot (a page is in its URL's weather).
-- **The level's own storm rains by the level's own roofs** (`weatherKinds.ts WX_OWN.roofs`, `weather.ts syncRoofs / ownStorm`: ON in the page — `?ownroofs=0` = as it was — OFF in the
+- **The level's own storm rains by the level's own roofs** (`weatherKinds.ts WX_OWN.roofs`, `weather.ts syncRoofs / ownStorm`: ON in the page, a settled row with no off word on the address since 11-07 — OFF in the
   module and on the frozen stand, `TPS_OWNROOFS=1`; a `FROZEN_HOLDS` row, in the knob registry and a journal's tables, a recording from before the key replays with it off; no Tab row).
   The maintainer, 10-11: "rain is busted on records office". With NO weather picked, the night storm of the bullet above was cut by the OFFICE's two rectangles on every level: on the
   records office the whole car park lies inside `INTERIOR`, so no rain was drawn on it, nobody there got wet, no storm wind blew, and rain showed only on the strip of ground outside the
@@ -78,8 +78,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   is in force), rainFx.ts's roofs. `Weather.levelRoofs` (a kind picked, or this rule in force) is THE one question 'are `roofs` the level's own'. `simLive` is NOT raised: hearing and
   sight through the air are as with no kind. A picked kind takes over and hands back (`setKind`); the switch is asked every frame and by `underRoof` / `restore` (a replay's knobs land
   after the Weather is made). main.ts raises the prelude's `WX_KINDS` on a page that is not the office family's (`look.ts placeOfQuery`: a `levelFile` of another name, `?level=local`
-  on another level) when the switch is on — the shaders read the third and fourth roof only under it, and the pipelines start compiling before the level is loaded, so the URL decides —
-  and says so in `WEATHER_BOOT.packed`: where it is false (the office family, `?ownroofs=0`) the rule stands down whatever the switch says later. A QUIET level's night is still DRY AND
+  on another level) when the switch is on, and on any page whose game stands under a level's own roofs once it is stood (`levelRoofs`) — the shaders read the third and fourth roof only under it, and that half is frame data now (`render/frame.ts levelSwitches`), so the picture follows the game and no rule of play asks what the shaders hold. THE ONE OTHER CHANGE THAT MADE (11-07): an editor document named `office` or `office-*` whose roofs are not the office's two now plays under its own roofs on a page (`?level=local`), as every headless game did; no shipped level's answer changes (`office.json` is the family's one level, and its roofs fit); nobody has seen it. A QUIET level's night is still DRY AND
   STILL (the quiet goal's `ownNight`, untouched). LIMITS, each also a picked weather's: three or four roofs = the storm WIND's record is their bounding box UNLESS `WX_OWN.wind` is on — the 'One wind field outdoors' bullet below (rain in the compound's and
   the barracks' yards, no storm wind there); a roof is a slab at ceiling height (the kit yard's 2.1 m covers are rained through in the picture); audio.ts's reverb, destruction.ts's
   ceiling tiles and glassbreak.ts still test the office's rectangle. `bun run tools/qa/ownroofs-check.ts` (`probes.ts ownroofs`, also under `weather`; passes on both stands;
@@ -99,7 +98,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   by daylight and cannot be switched off. (SINCE 11-07 the prelude's `const WX_KINDS`, `const WX_SNOW` and the seven `const SNOW_*` named anywhere in this
   file are BITS OF THE FRAME BLOCK'S LEVEL WORD, asked as `lv(WX_KINDS)`: `frame.ts LevelSw`, `docs/agents/render.md` "What a level raises is data". The
   tables main.ts raises are the same; "dead code" below now reads "a branch not taken".) The renderer's half sits behind the scene prelude's `const WX_KINDS` (`frame.ts weatherKindConfig`, raised at boot by
-  `?weather=`: off = dead code), so in the PAGE the weather is the URL's for its whole life (`WEATHER_BOOT.locked`: setKind refuses another, canLoad refuses a
+  `?weather=`: off = dead code), so in the PAGE the weather is the URL's for its whole life (`Game.stood.locked`: setKind refuses another, canLoad refuses a
   checkpoint made in another with the reason); headless a checkpoint / a journal's frame 0 carries its kind in (`WeatherSnap.kind`). Limits: wind.ts's storm record holds
   two rectangles (3–4 roofs = their bounding box: no storm wind in a yard — until `WX_OWN.wind`, the 'One wind field outdoors' bullet below), the native engine is not ported, audio.ts's reverb / destruction.ts / glassbreak.ts still test
   the office's rectangle. QA: `probes.ts wxkinds`, `playthrough.ts --set '{"WEATHER":{"kind":"fog"}}'` (or `weather=fog` in a query handed to scenarioRun.ts `startFromQuery`, which reads it headless too), `tools/qa/weather-look.cjs` (stills per level × weather × view).
@@ -277,9 +276,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   on anything. Switch `SNOW.on`: ON in the page (`?snow=0` = the pass under the weather any level has), OFF in the module and on the frozen stand (`TPS_SNOW=1`); a `FROZEN_HOLDS` row, a
   registry table, in the journal (`applyKnobs`: a file without the key replays with it off).
   - **Born in it.** `Weather`'s constructor asks `levelKind()` (the level's name: `levelLoad.ts levelNameOf`, a WeakMap filled by `loadLevel` — `Level` has no name field) before
-    `WEATHER_BOOT.kind`, and `setKind` REFUSES any other kind on such a level: no pick for the visit, `?weather=` word handed to a headless tool (`scenarioRun.ts`) or restored file takes
+    `Game.stood.weather`, and `setKind` REFUSES any other kind on such a level: no pick for the visit, `?weather=` word handed to a headless tool (`scenarioRun.ts`) or restored file takes
     the pass out of snow. `ui/missions.ts` hides the Weather row on a snow level's card and leaves `weather=` off its link. `main.ts`: a query whose `levelFile` is a snow level sets
-    `WEATHER_BOOT.kind = 'snow'`, `weatherKindConfig.on` and `snowConfig.on` (the prelude's `const WX_SNOW`) before the shaders are built. The word `'snow'` on the boot alone makes no
+    `Game.stood.weather = 'snow'`, `weatherKindConfig.on` and `snowConfig.on` (the prelude's `const WX_SNOW`) before the shaders are built. The word `'snow'` on the boot alone makes no
     snow (the level file failed to load and the office stands in: its own storm, and its rain is drawn as rain — a flake is `WX_SNOW` AND a frame with rain 0,
     `particles_common.wgsl snowNow()`), and on a PAGE (the kind locked) a level named `pass` loaded into a page opened on another level is not in
     snow either: no flake is in its shaders. The stand's word is read BEFORE the Game is built (`standup.ts`, beside `TPS_AIRDUST`): the Weather picks its kind in its constructor.

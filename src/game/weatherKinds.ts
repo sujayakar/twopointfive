@@ -141,16 +141,16 @@ export function unpackRect(w: number): Rect { w >>>= 0; return [(w & 255) * ROOF
 export const inRect = (r: readonly number[], x: number, z: number) => x >= r[0] && z >= r[1] && x <= r[2] && z <= r[3];
 
 // ---- the choice: on the URL only (not kept per machine — a plain URL is always the level as it is)
-/** the weather the NEXT Game is born in (null = as it is). Set before the game is stood up: main.ts from ?weather=, tools/qa/playthrough.ts from
- *  --set '{"WEATHER":{"kind":"fog"}}'. `locked` (the PAGE: raised by initWeather) = the weather is the URL's for the page's whole life — the renderer's half is a
- *  compile-time const fixed at boot (render/frame.ts weatherKindConfig), so Weather.setKind refuses any other kind and a checkpoint made in another weather is
- *  refused by canLoad; headless (never locked) a checkpoint / a journal's frame 0 puts its own kind in. */
-export const WEATHER_BOOT: { kind: WeatherKind | null; locked: boolean; packed: boolean } = { kind: null, locked: false, packed: true };   // (packed: the picture reads all four roofs — false only on a page whose shaders were compiled without the weather kinds' half, where WX_OWN then stands down: main.ts)
+/** THE PICK: the weather a Game stood with nothing said for it is born in (null = as it is), written by a tool before its stand-up; nothing writes it on a page. No rule
+ *  reads it and the bridge does not carry it: a game's own is Game.stood (stood.ts), and it is from there that `locked` (the weather is the address's for the life of the game)
+ *  has Weather.setKind refuse any other kind and canLoad refuse a checkpoint made in another weather. A game stood plain is not locked, so a checkpoint / a journal's frame 0
+ *  puts its own kind in. */
+export const WEATHER_BOOT: { kind: WeatherKind | null } = { kind: null };
 /** THE LEVEL'S OWN STORM RAINS BY THE LEVEL'S OWN ROOFS (weather.ts syncRoofs). With no weather picked the night storm cut its rain, its wet men, its wind and its
  *  rain bed by the OFFICE's two rectangles on every level — on a level whose building is another shape (the records office, the compound, the barracks) that left
  *  the open ground inside the office's footprint dry and still, and rained through whatever roof lay outside it. `roofs` true = such a level's storm is cut by its
  *  own ceiling slabs (roofsOf), exactly as a picked weather's is; the office and the levels built in its shell keep the two rectangles to the bit. ON in the page
- *  (`?ownroofs=0` = as it was), OFF in the module and on the frozen harness stand (`TPS_OWNROOFS=1`). Read every frame: it flips on a running game.
+ *  (a settled row, with no off word on the address), OFF in the module and on the frozen harness stand (`TPS_OWNROOFS=1`). Read every frame: it flips on a running game.
  *  `wind` (10-14, the maintainer of the pass: "ideally the snow particles and wisps all share a wind field too. and that could also integrate with the smoke
  *  system too?"): ONE WIND FIELD OUTDOORS, ROOF BY ROOF (wind.ts syncField, render/shaders/wind_field.wgsl windStormRoofs). The storm record held two rectangles,
  *  so a level of three or four roofs of its own handed it their BOUNDING BOX — on a level built round a yard (the pass, the compound) that box is the yard: flakes
@@ -164,12 +164,11 @@ export function weatherOfSearch(search: string | URLSearchParams): WeatherKind |
   const v = (typeof search === 'string' ? new URLSearchParams(search) : search).get(WEATHER_KEY);
   return isWeatherKind(v) ? v : null;
 }
-/** read ?weather= at boot; an unknown name is said once and boots the level as it is */
-export function initWeather(qs: URLSearchParams): WeatherKind | null {
+/** what an address asks of the weather, written nowhere; an unknown name is said once and boots the level as it is */
+export function weatherAsked(qs: URLSearchParams): WeatherKind | null {
   const v = qs.get(WEATHER_KEY);
   if (v !== null && v !== '' && !isWeatherKind(v) && v !== 'default') console.warn(`?weather=${v}: not a weather (${WEATHER_KINDS.join(' | ')}) — the level's own`);
-  WEATHER_BOOT.locked = true;
-  return WEATHER_BOOT.kind = isWeatherKind(v) ? v : null;
+  return weatherOfSearch(qs);
 }
 /** the query string `search` ('?a&b=c' or '') with the weather put on it (null = taken off) — every other flag kept, in order */
 export function weatherSearch(search: string, kind: WeatherKind | null): string {
