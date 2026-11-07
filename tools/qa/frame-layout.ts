@@ -57,7 +57,7 @@ const writers: [string, RegExp][] = [
   ['directCfg', /f\[(\d+)\] = p\.directCfg\[0\]/], ['lossyCfg', /f\[(\d+)\] = p\.lossyCfg\[0\]/], ['cardCfg', /u\[(\d+)\] = nc;/], ['cardSlots', /u\[(\d+) \+ k\] = k < nc/],
   ['weatherA', /f\[(\d+)\] = w\.rain;/], ['weatherB', /f\[(\d+)\] = w\.flash\[0\];/], ['weatherC', /f\[(\d+)\] = w\.interior\[0\];/], ['glassCfg', /f\[(\d+)\] = p\.glassCfg\[0\];/],
   ['weatherD', /f\[(\d+)\] = w\.annex\[0\];/], ['volCfg', /u\[(\d+)\] = p\.volCfg\[0\] >>> 0;/],
-  ['froxelA', /f\[(\d+)\] = p\.froxelA\[0\];/], ['froxelB', /u\[(\d+)\] = p\.froxelB\[0\] >>> 0;/], ['froxelC', /f\[(\d+)\] = p\.froxelC\[0\];/], ['prevCam', /f\[(\d+)\] = p\.prevCamPos\[0\];/],
+  ['prevCam', /f\[(\d+)\] = p\.prevCamPos\[0\];/],
   ['rtCfg', /f\[(\d+)\] = p\.rtCfg\[0\];/], ['matCfg', /f\[(\d+)\] = p\.matCfg\[0\];/],
   ['p5Cfg', /u\[(\d+)\] = p\.p5Cfg\[0\] >>> 0;/], ['jitter', /f\[(\d+)\] = p\.jitter\[0\];/], ['markCfg', /f\[(\d+)\] = p\.markCfg\[0\];/], ['sharpCfg', /f\[(\d+)\] = p\.sharpCfg\[0\];/], ['sharpCfgB', /f\[(\d+)\] = p\.sharpCfgB\[0\];/], ['sharpCfgC', /f\[(\d+)\] = p\.sharpCfgC\[0\];/],
   ['rigCfg', /f\[(\d+)\] = p\.rigCfg\[0\];/], ['rigCfgB', /f\[(\d+)\] = p\.rigCfgB\[0\];/],

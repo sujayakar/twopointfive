@@ -7,8 +7,7 @@
 //   silent-hud     the squad block's header says which of the two, in both states — and nothing with the switch off
 //   silent-walk    the same walk loud and silent: silent legs never above SILENT.pace, no light burning, every footfall at the silent level; a hot floor
 //                  does not lift the pace (a knob does); the step level a listener — Hard's defenders among them — is handed
-//   silent-doors   a locked door: loud boots it, silent (the pick switched off) says so and the order ends on it; an unlocked one is a hand on the leaf, not
-//                  a shoulder (a creak for the bash); a silent man's contact with a leaf is a quiet one
+//   silent-doors   an unlocked door is a hand on the leaf, not a shoulder (a creak for the bash); a silent man's contact with a leaf is a quiet one
 //   silent-pick    a silent squad at a locked door: the lead kneels at the keyway and picks it (the player's own pick: its seconds, its clicks, its snap),
 //                  then the entry goes on as at an unlocked door; a steel door is refused as ever; told loud mid-pick he stands up and boots it; blinded
 //                  mid-pick his hands come off and go back on; what the room's defenders made of the noise
@@ -203,12 +202,8 @@ export const silentWalk = guarded(async () => {
 // ---------------------------------------------------------------- doors
 export const silentDoors = guarded(async () => {
   const { verdict, done } = family('silent-doors: no boot by themselves, and a leaf eased open');
-  // the locked door, both ways
-  const run = async (silent: boolean, order: string) => { const R = await rig(7); const { D } = R; const Md = R.door('manager'); const locked = Md.locked, k0 = SLM.SILENT_STATS.locked;
-    if (silent) R.give('silent', AISLE); const w = R.giveDoor(order, 'manager'); const op = D.ops[0]; R.until(() => D.ops.length === 0 || R.kicks > 0, 45); R.step(30);
-    return { R, Md, locked, w, op, kicked: R.kicks > 0, broken: !!Md.lockBroken, ended: op?.ended as string | undefined, held: SLM.SILENT_STATS.locked - k0 }; };
-  const A = await run(false, 'openClear');
-  verdict(A.locked && A.w === null && A.kicked && A.broken, 'loud, a locked door, "open and clear": the lead boots it (as ever)', `kicks ${A.R.kicks} · lock broken ${A.broken} · ${A.R.beats(A.op)}`);
+  // (the locked door's line, 'loud … the lead boots it (as ever)', went 2026-11-07: it asked the squad of before the handle is tried and before the big slot's tools.
+  //  What a loud squad does at a lock is asked by doortools-probes.ts and frameholds-probes.ts.)
   // the unlocked door: the shove
   const shove = async (silent: boolean) => { const R = await rig(7, { empty: true }); const { D, W } = R; const d = R.door('breakroom_w');
     if (silent) R.give('silent', AISLE); W.audioLog = []; let top = 0; R.post = () => { top = Math.max(top, Math.abs(d.vel)); };

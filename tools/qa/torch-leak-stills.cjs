@@ -80,7 +80,7 @@ async function boot(port, name, o, errors) {
     return { roster, gi, pin: st.pin, guard: { pos: r3(gd.char.pos), bodyYaw: gd.char.bodyYaw, aimYaw: gd.char.aimYaw, state: gd.state, hold: gd.hold },
       torch: { enabled: !!fl.enabled, pos: r3(fl.pos), dir: r3(fl.dir), intensity: fl.intensity, innerDeg: fl.innerDeg, outerDeg: fl.outerDeg, range: fl.range, radius: fl.radius, owner: fl.owner },
       others: g.guards.filter((x, i) => i !== gi && x.flashlight.enabled).length, torchB: gj >= 0 ? { enabled: !!g.guards[gj].flashlight.enabled, pos: r3(g.guards[gj].flashlight.pos), dir: r3(g.guards[gj].flashlight.dir) } : null, cardsSetting: E.settings.torchBounceCards, playerPos: r3(g.player.char.pos), invisible: g.playerInvisible,
-      quality: window.__quality && window.__quality.current, auto: window.__quality && window.__quality.auto, settings: { renderScale: E.settings.renderScale, maxInternalHeight: E.settings.maxInternalHeight, taau: E.settings.taau, sharpDirect: E.settings.sharpDirect, sharpDecouple: E.settings.sharpDecouple, gbaa: E.settings.gbaa, heldRays: E.settings.heldRays, froxelVol: E.settings.froxelVol, debugView: E.settings.debugView } };
+      quality: window.__quality && window.__quality.current, auto: window.__quality && window.__quality.auto, settings: { renderScale: E.settings.renderScale, maxInternalHeight: E.settings.maxInternalHeight, taau: E.settings.taau, sharpDirect: E.settings.sharpDirect, sharpDecouple: E.settings.sharpDecouple, gbaa: E.settings.gbaa, heldRays: E.settings.heldRays, debugView: E.settings.debugView } };
   }, [ST, o, SCALE]);
   if (info.err) throw new Error(info.err);
   const out = { name, url, info, shots: {} };

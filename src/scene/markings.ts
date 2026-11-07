@@ -13,7 +13,7 @@
 //
 // This file also computes each marking's per-entry COVERAGE FRACTIONS (the mean the shader fades to; area-averaged over the box, the albedo the secondary
 // rays see — boxes.ts upload: GI energy right at zero ray cost) and its MEAN EMISSION (an emissive marking is a LIGHT: game.ts registers a one-sided
-// rectangular emitter for it exactly like an emissive fixture box, so ReSTIR shadows, froxel beams, the bounce and the light meter all see it).
+// rectangular emitter for it exactly like an emissive fixture box, so ReSTIR shadows, the beams, the bounce and the light meter all see it).
 import type { Vec3 } from '../math/vec';
 import { onExact } from '../math/exact';
 
