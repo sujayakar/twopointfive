@@ -89,6 +89,24 @@ Left: saves do not outlive the page (the store is the browser's, a few megabytes
 - **Not covered:** a panel's row that calls a method (it runs a rule on the puppet only), and a write to a field outside the list in
   `src/host/rustgame.ts` `watched` (the next apply may put the Rust game's value back over it).
 
+## A call from outside a tick
+
+The keys are in the input record and the Rust tick acts on them. A call made between ticks is another matter: a tool's `__orders.open()`, a panel's
+button. Run as TypeScript on the puppet it would build state the Rust game never sees, and the next question about that state names a row the Rust game
+has not got.
+
+- **The orders menu's own calls** (`open`, `close`, `turn`, `pageBack`, `pick`, `cycleWho`, `address`) cross to the Rust functions the tick itself runs,
+  by the call table (`tools/blitz/surface.ts` `crossing`; the page stands as a surface host): the writes made between ticks go first, then the host's half
+  (the cursor, the cameras), `face_call`, and the puppet takes the state again. Inside a tick, and while the puppet is the game (before a start, while
+  one is due), the method runs as it was. `__rust.crossed` counts them. `give` goes by its own line (above).
+- **A question about a row or a seat the Rust game has not got is refused, not indexed.** `face_ask` measures the row against the order table and the
+  seat against the seats before it asks, and answers 1 (no such row), 2 (no such seat) or 3 (no such question) with no bytes; an index past a table is a
+  panic, and a panic is the game lost. The host then asks by the Rust game's own row of the same id where there is one (a copy of a row), and otherwise
+  hands the row's closure "nothing": its label is its name, no man can, it is not offered, an order through it is refused. One console line a row;
+  `__rust.asksRefused`, `__rust.askRefused`.
+- The page's bundle carries the call table for this (about half a megabyte). `tools/blitz/page-plugin.ts` names the bridge's files: after a pull that
+  adds one, a running dev server must be started again.
+
 ## What a step costs, and what stands in the way
 
 Measured on the built page, software adapter, undrawn frames, 1,800 frames with no input after 600 to settle. The box was never quiet (the load average
