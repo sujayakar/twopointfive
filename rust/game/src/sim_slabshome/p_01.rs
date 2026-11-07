@@ -11,6 +11,10 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 fn cols(g: &Game) -> &'static mut ::sim::slabs::Slabs {
     &mut ::sim::state::state(g.sim).slabs
 }
+/// The same columns, to read.
+fn cols_read(g: &Game) -> &'static ::sim::slabs::Slabs {
+    &::sim::state::state_read(g.sim).slabs
+}
 
 /// Rows a and b change places in the moved columns; the `row` table is the caller's. (colstore.ts ColStore.swapCols with SLAB_F64, SWAPPED)
 fn swap_cols(s: &mut ::sim::slabs::Slabs, a: usize, b: usize) {

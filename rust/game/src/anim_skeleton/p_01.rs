@@ -282,11 +282,21 @@ fn pool_at(slot: usize) -> &'static mut [f32] {
     // (single.rs S is repr(transparent) over the single it stores)
     unsafe { core::slice::from_raw_parts_mut(data.as_mut_ptr() as *mut f32, data.len()) }
 }
+/// The same pool, to read.
+fn pool_at_read(slot: usize) -> &'static [f32] {
+    let data = &::sim::state::state_read(slot).poses.data;
+    unsafe { core::slice::from_raw_parts(data.as_ptr() as *const f32, data.len()) }
+}
 
 /// A pose's singles. Never hold two of these for one pose: a body that works on poses that may be one pose uses pool_at and spans.
 fn cols_at(slot: usize, p: Pose) -> &'static mut [f32] {
     let (s, n) = span_of(p);
     &mut pool_at(slot)[s..s + n]
+}
+/// A pose's singles, to read.
+fn cols_at_read(slot: usize, p: Pose) -> &'static [f32] {
+    let (s, n) = span_of(p);
+    &pool_at_read(slot)[s..s + n]
 }
 
 /// A pose's singles WHEREVER THEY ARE, as the TypeScript's `cols`: in the pool, or, for a pose of its own (a function's scratch, a ragdoll's: a plain
@@ -300,6 +310,17 @@ fn cols_of(g: &mut crate::game::Game, p: Pose) -> &'static mut [f32] {
         }
     }
     cols_at(g.sim, p)
+}
+
+/// A pose's singles wherever they are, to read.
+fn cols_of_read(g: &crate::game::Game, p: Pose) -> &'static [f32] {
+    if p.nodes != 0 && p.at >= Pose::LOOSE {
+        let n = ::sim::skeleton::singles(p.nodes as usize);
+        if let Some(r) = g.loose_poses.get((p.at - Pose::LOOSE) as usize) {
+            if r.nodes == p.nodes && r.floats.len() == n { return unsafe { core::slice::from_raw_parts(r.floats.as_ptr(), n) }; }
+        }
+    }
+    cols_at_read(g.sim, p)
 }
 
 /// A pose of `num_nodes` nodes, all zeros, OF ITS OWN: a row of `g.loose_poses`, as the TypeScript's `new Pose` is an array of its own. Only a pose
