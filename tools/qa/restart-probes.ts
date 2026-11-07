@@ -47,7 +47,7 @@ interface ArmOut { series: { f: number; d: any }[]; note: string; /** Game.time 
 
 /** One arm of one mission in THIS process (the child): see the head. `restart` = arm B; `clockAt` (arm A) = the Game.time to stage at (null: the stand-up's own 0). */
 async function arm(id: string, seed: number, play: number, quietFrames: number, raw: boolean, restart: boolean, clockAt: number | null): Promise<ArmOut> {
-  const { standUp } = await import('./headless.ts');
+  const { standUp, seedGame } = await import('./headless.ts');
   const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
   const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
@@ -73,9 +73,11 @@ async function arm(id: string, seed: number, play: number, quietFrames: number, 
   let note = '', t0 = g.time, seq0 = g.eventSeq;
   if (!restart) {   // ---- arm A: the fresh staging, at arm B's clock when one is given
     if (clockAt !== null) g.time = t0 = clockAt;
-    Math.random = seeded(STAGE_SEED); hush(stageFresh);
+    seedGame(g, seeded(STAGE_SEED), STAGE_SEED);   // (the game's own die, by the one helper: the game draws no Math.random)
+    hush(stageFresh);
   } else {          // ---- arm B: stage (the same staging as arm A's, die for die), play, restart
-    Math.random = seeded(STAGE_SEED); hush(stageFresh); const camFrom = camSnap();
+    seedGame(g, seeded(STAGE_SEED), STAGE_SEED);   // (the game's own die, by the one helper: the game draws no Math.random)
+    hush(stageFresh); const camFrom = camSnap();
     const pl0 = g.player, ammo0 = `${pl0.pistol.roundsReady ?? '?'}/${pl0.rifle.roundsReady ?? '?'}`; let door: any = null, doorHow = '', shots = 0;
     const frames = Math.round(play * 60), ev = new Set<unknown>();
     hush(() => { for (let f = 0; f < frames; f++) {
@@ -102,7 +104,8 @@ async function arm(id: string, seed: number, play: number, quietFrames: number, 
     // ---- the restart, as the page's cards and Shift+Enter make it
     input.keys.clear(); input.pressed.clear(); input.buttons = 0; input.clicked = 0; input.mouseX = 800; input.mouseY = 500;
     t0 = g.time; seq0 = g.eventSeq;
-    Math.random = seeded(STAGE_SEED); hush(() => g.restartEncounter());
+    seedGame(g, seeded(STAGE_SEED), STAGE_SEED);   // (the game's own die, by the one helper: the game draws no Math.random)
+    hush(() => g.restartEncounter());
     for (const [k, v] of Object.entries(camFrom)) cam[k] = Array.isArray(v) ? [...v] : v; cam.rebuild?.();
     if (process.env.RESTART_BREAK === '1' && g.props.props.length) { const p = g.props.props[0]; p.x += 0.4; p.asleep = false; }   // THE RED PATH: one thing a restart 'forgot' — a piece of furniture left 0.4 m off its mark — must FAIL naming `props`
   }
