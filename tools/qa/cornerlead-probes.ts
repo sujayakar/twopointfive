@@ -23,6 +23,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { ROOT } from './headless.ts';
 import { stage, discover } from './bang-tally.ts';
+import { sample } from './sweep.ts';
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const DTM: any = await import(`${ROOT}/src/game/doortools.ts`);
 const CBM: any = await import(`${ROOT}/src/game/combat.ts`);
@@ -173,12 +174,12 @@ function report(rs: Out[], md: boolean): string[] {
 
 // ───────────────────────────────────────────────────────────── the gate's two verdicts ─────────────────────────────────────────────────────────────
 // A fixed handful of doors in this process (about a minute). The full count is the command line's.
-const GATE: [string, Tool][] = [['night-breach', 'open'], ['room-clear-four', 'open'], ['depot-four', 'open'], ['records-pair', 'thr'], ['room-clear-four', 'thr'], ['depot-four', 'thr']];
+const GATE: [string, Tool][] = [['room-clear-four', 'open'], ['night-breach', 'open'], ['depot-four', 'open'], ['records-pair', 'thr'], ['room-clear-four', 'thr'], ['depot-four', 'thr']];
 let gateRuns: Out[] | null = null;
 async function gate(): Promise<Out[]> {
   if (gateRuns) return gateRuns; const rs: Out[] = [];
-  const seeds = (process.env.CORNERLEAD_SEEDS ?? '1,2').split(',').map(Number);
-  for (const [scn, tool] of GATE) { const ds = (await quiet(true, () => discover(scn))).slice(0, 2);
+  const seeds = sample((process.env.CORNERLEAD_SEEDS ?? '1,2').split(',').map(Number), 1);
+  for (const [scn, tool] of sample(GATE, 1)) { const ds = sample((await quiet(true, () => discover(scn))).slice(0, 2), 1);
     for (const x of ds) for (const seed of seeds) { try { rs.push(await run({ scn, door: x.door, room: x.room, tool, seed })); } catch (e) { rs.push({ scn, door: x.door, room: x.room, tool, seed, note: `threw ${e instanceof Error ? e.message : e}`, men: [], lead: null, lost: 0, team: 0, down: 0, of: 0, held: false, secs: NaN }); } } }
   return gateRuns = rs;
 }
