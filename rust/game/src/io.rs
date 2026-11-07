@@ -5513,7 +5513,7 @@ pub fn deal_closures(g: &mut crate::game::Game) {
             "pairDark" => { d.label = OrderLabel::Text { text: String::from("move there · hold in the dark") }; d.can = Some(OrderCan::PairDark); d.only = None; d.valid = None; d.issue = OrderIssue::PairDark; d.tick = Some(OrderTick::PairDark); d.gone = None; if let Some(s) = d.stands_in.as_mut() { s.when = OrderWhen::PairDark; } }
             "pairGo" => { d.label = OrderLabel::PairGo; d.can = None; d.only = Some(OrderOnly::PairGo); d.valid = Some(OrderValid::PairGo); d.issue = OrderIssue::PairGo; d.tick = None; d.gone = None; }
             "go" => { if small { d.label = OrderLabel::DoorGoSmall; d.only = Some(OrderOnly::DoorGoSmall); d.valid = Some(OrderValid::DoorGoSmall); d.issue = OrderIssue::DoorGoSmall; } else { d.label = OrderLabel::DoorGoBig; d.only = Some(OrderOnly::DoorGoBig); d.valid = Some(OrderValid::DoorGoBig); d.issue = OrderIssue::DoorGoBig; } }
-            other => if let Some(r) = rows::by_id(other) { let data = d.clone(); *d = rows::def(r, data); d.gone = None; },
+            other => { let Some(r) = rows::by_id(other) else { panic!("the order {} has no closures: it is neither an arm here nor a line of orders/rows", other) }; let data = d.clone(); *d = rows::def(r, data); d.gone = None; }
         }
     }
 }
