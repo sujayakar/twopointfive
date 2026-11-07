@@ -556,7 +556,7 @@ pub fn close_seat(g: &mut crate::game::Game, gd: GuardId, at: Option<&[f64]>, fa
         down: false,
     };
     seated_of(g).set(gd, st);
-    g.gd[gd].hold = true;
+    crate::control::set_hold(g, gd, true, "close");
     g.stats.close.seats += 1;
     note(g, gd, crate::close::NoteWhat::Seat, None, None, None);
     true
@@ -567,7 +567,7 @@ pub fn close_unseat(g: &mut crate::game::Game, gd: GuardId, back: Option<bool>) 
     let back = back.unwrap_or(false);
     let st = match seated_of(g).get(gd).copied() { Some(st) => st, None => return };
     seated_of(g).delete(gd);
-    g.gd[gd].hold = st.hold;
+    crate::control::set_hold(g, gd, st.hold, "close");
     let c = g.gd[gd].ch;
     if g.ch[c].anim.act.as_ref().map_or(false, |a| a.clip == sit_clip().clip) { g.ch[c].anim.act = None; }
     if back && st.down && g.gd[gd].state != crate::game::GuardState::Dead {

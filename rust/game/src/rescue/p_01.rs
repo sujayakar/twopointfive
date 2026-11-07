@@ -447,8 +447,8 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
             team: crate::teams::Team::Hostile, pos: c.mark.pos, yaw: Some(v3::yaw_to(c.mark.pos, c.mark.aim_at)),
             name: Some(c.name.clone()), light: Some(false), budget: Some(budget), ..crate::guards::UnitOpts::zeroed()
         })?;
-        g.gd[gd].hold = true;
-        g.gd[gd].pinned = true;
+        crate::control::set_hold(g, gd, true, "rescue");
+        crate::control::set_pinned(g, gd, true, "rescue");
         g.rescue.hostiles.push(gd);
         g.rescue.defs.set(gd, Def {
             role: c.role, in_room: c.in_room, mark: DefMark { pos: c.mark.pos, aim_at: c.mark.aim_at },
@@ -503,8 +503,8 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
             },
         };
         let gd = crate::guards::spawn_unit(g, &opts)?;
-        g.gd[gd].hold = true;
-        g.gd[gd].pinned = true;
+        crate::control::set_hold(g, gd, true, "rescue");
+        crate::control::set_pinned(g, gd, true, "rescue");
         g.gd[gd].trained = true;
         g.rescue.ops.push(gd);
         i += 1;

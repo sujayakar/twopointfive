@@ -201,8 +201,8 @@ pub fn breach_drill_start(g: &mut crate::game::Game) {
         g.gd[gd].awareness = 0.0;
         if g.gd[gd].last_known.is_some() { g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1); }
         g.gd[gd].last_known = None;
-        g.gd[gd].hold = false;
-        g.gd[gd].pinned = false;
+        crate::control::set_hold(g, gd, false, "breach");
+        crate::control::set_pinned(g, gd, false, "breach");
         g.gd[gd].react_t = 0.0;
         g.gd[gd].script = None;
         let fa = g.gd[gd].weapon;
