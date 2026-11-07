@@ -54,7 +54,7 @@ import { Vec3 } from '../math/vec';
 import { type Die } from '../math/dice';   // (dice kept in state carry their word on an object: a rollback snapshot holds it — a mulberry32 closure's it cannot)
 import type { Game, Guard } from './game';
 import type { Door } from './doors';
-import type { RoomFight } from './roomfight';
+import type { RoomFight, FightSkill } from './roomfight';
 import type { SquadData, StructureData, StructureRoom } from '../scene/scenarios';
 import { squadBarricade } from '../scene/scenarios';
 import { eyesFix } from './belief';
@@ -62,10 +62,11 @@ import './guards';
 import './chronicle';
 import './cues';
 import { inBounds } from './squad';
-import { PRESSURE } from './pressure';
+import { PRESSURE, run } from './pressure';
 import './lanes';
 import './digin';
 import './dialogue';
+import { wg } from './words';
 import { netFeedBody } from './netquietfeed';   // (a leaf: netquiet.ts itself is not to be imported from here — see that file's head)
 import { stayAskHere } from './stayask';   // (squads that stay in their rooms still miss a room that goes silent: read at staging and in netSend)
 import { claimMan, releaseMan, hasHim, ownerWitness, OWN } from './owner';
@@ -314,6 +315,13 @@ export function squadDrillWords(g: Game): string {
   const on = [K.drillNet && K.netK !== 1 && `let you commit first (× ${K.netK} net)`, K.drillNet && K.reinforceK !== 1 && `own men's beat × ${K.reinforceK}`, K.drillOwn && `no man fed into a lost room (mates up ${K.ownUp})`, K.drillAngles && 'hold their angles', K.drillReact && `quicker off the mark (× ${K.reactK})`, K.drillNerve && `steadier under a bang (× ${K.nerveK})`, K.drillFollow && !K.drillBack && 'pair follows the next entry', K.drillBack && 'pair gets back on its own doors', K.drillLook && PRESSURE.sweep && 'a pair goes to look when you go quiet'].filter(Boolean);
   return `${st.S.name}: hard = ${on.length ? on.join(' · ') : 'standard (no rule on here)'}${SQUADS.drillByMap && DRILL_AT[st.S.name] ? ' — this map\'s own set' : ''}`;
 }
+/** roomfight.ts: the defenders' row of FIGHT_SKILL as a drilled garrison has it (drillReact · drillNerve) — `base` itself, the same object, whenever
+ *  squadDrill is null or neither is on. (drillAngles is read where the wandering eye is rolled: roomfight.ts applyWatch) */
+export function squadSkill(g: Game, base: FightSkill): FightSkill {
+  const K = squadDrill(g); if (!K || !(K.drillReact || K.drillNerve)) return base;
+  const rk = K.drillReact ? K.reactK : 1, nk = K.drillNerve ? K.nerveK : 1, x = (r: [number, number], k: number): [number, number] => [r[0] * k, r[1] * k];
+  return { ...base, react: x(base.react, rk), surprise: x(base.surprise, rk), bangBreak: base.bangBreak * nk, daze: x(base.daze, nk) };   // (made per read: the table under it may be edited in place by a probe or the panel)
+}
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const alive = (gd: Guard) => gd.state !== 'dead' && !gd.fled;   // (runner.ts: a man who dropped it and ran is no man of his squad's any more)
@@ -429,6 +437,51 @@ function event(g: Game, Q: Squad, what: SquadEvent['what'], why: string, by: Gua
 export const mate = (m: Guard): string => goneWithTick('mate') as any;
 
 
+/** drillFollow's and drillBack's ears: a holding man hears the team go on somewhere else, and nobody of the pair (his mates on that door within `reach`) has one of them in sight */
+function movedOn(g: Game, Q: Squad, s: Sent, D: Def, reach: number): { at: Vec3; pair: Sent[] } | null {
+  const gd = s.gd, at = D.noiseAt;
+  if (!at || g.time - D.noiseT > 1 || g.time - (s.setT ?? s.t0) < 4 || g.time - gd.lastSeenT < 3 || !fit(g, gd)) return null;
+  if (flat(at, s.aim ?? gd.char.pos) < (squadDrill(g) ?? SQUADS).followM || lostRoomHas(g, s, at)) return null;
+  const pair = Q.sent.filter(x => x.role === 'flank' && x.phase === 'set' && x.hold && alive(x.gd) && fit(g, x.gd) && (x === s || flat(x.gd.char.pos, gd.char.pos) < reach));
+  return pair.some(x => g.time - x.gd.lastSeenT < 3) ? null : { at, pair };   // (his mate has a man in sight: nobody leaves)
+}
+/** A DRILLED GARRISON (SQUADS.drillBack): the door they hold has nobody behind it any more, and out here they are in the open on the way the team is
+ *  coming. Two things tell them: the squad they went round for has stopped answering (every man of it down: `backBeat` s of nothing on the net), or
+ *  `drillFollow`'s ears — the team heard going in somewhere else. Every man of the squad still holding that room's doors, nobody of the team in his sight,
+ *  goes back to the post he left (a scripted leg, his boots filed for the team's ears), and the room fight plants him there facing where they were last
+ *  heard. Said once on the net, by the man who knew. */
+function back(g: Game, Q: Squad, s: Sent, D: Def) {
+  const gd = s.gd, K = squadDrill(g) ?? SQUADS, gone = !!s.ally && s.ally.state === 'down';
+  let at: Vec3, pair: Sent[];
+  if (gone) {
+    s.goneT ??= g.time;
+    if (g.time - s.goneT < K.backBeat || g.time - (s.setT ?? s.t0) < 4 || !fit(g, gd)) return;
+    pair = Q.sent.filter(x => x.role === 'flank' && !x.back && x.hold && (x.phase === 'set' || x.phase === 'run') && alive(x.gd) && fit(g, x.gd));   // (a mate still on his way to that door turns round with him)
+    if (pair.some(x => g.time - x.gd.lastSeenT < 3)) return;   // (one of them has a man in sight: nobody leaves)
+    at = D.noiseAt ?? s.fixAt;
+  } else { const M = movedOn(g, Q, s, D, Infinity); if (!M) return; ({ at, pair } = M); }
+  const names: string[] = [], door = s.door ? s.door.def.name : 'the door';
+  for (const x of pair) {
+    const X = defOf(g, x.gd); if (!X || X.mode === 'free') continue;
+    x.phase = 'run'; x.back = true; x.hold = false; x.spot = x.from; x.door = null; x.way = undefined; x.tries = 0;
+    X.ev.fill(0); X.pt[0] = at[0]; X.pt[2] = at[2];   // (what he faces when he is planted again: where they were last heard, not the door he gave up)
+    run(g, X, x.from, null, 0.3); names.push(x.gd.callsign);
+  }
+  if (!names.length) return;
+  g.say(gd, gone ? `${Q.name}: ${s.ally!.name} ${wg("isn't", 'is not')} answering — back on our doors!` : `${Q.name}: they've left it — back on our doors!`, true);
+  event(g, Q, 'back', `${names.join(' and ')} leave${names.length > 1 ? '' : 's'} ${door}: ${gone ? `${s.ally!.name} is not answering` : `the team was heard ${flat(at, s.aim ?? gd.char.pos).toFixed(0)} m off, going on`}, ${(g.time - (s.setT ?? s.t0)).toFixed(1)} s after setting`, gd);
+}
+/** is that place in or within three metres of the room a holding man's door leads to (the room the team took): a noise in its other doorway, in the corridor
+ *  along its wall or heard a few metres off through the wall is still the fight for THAT room — the team working it from its other door has not moved on */
+function lostRoomHas(g: Game, s: Sent, at: Vec3): boolean {
+  if (!s.door) return false;
+  const F = g.fight, here = F.roomAt(s.gd.char.pos), p: Vec3 = [0, 0, 0];
+  for (const r of [0, 1.5, 3]) for (let k = 0; k < (r ? 8 : 1); k++) {
+    p[0] = at[0] + Math.cos(k * Math.PI / 4) * r; p[2] = at[2] + Math.sin(k * Math.PI / 4) * r;
+    const there = F.roomAt(p); if (there && there !== here && (there as Room).entries.some(e => e.door === s.door)) return true;
+  }
+  return false;
+}
 
 /** when a stun charge, or a door blown in, last reached this man's ears — as loud with a drop as gunfire is (a charge that fells the man behind the door is
  *  no silent drop). His Witness counts them and does not time them: the count is read once a frame for every man of a squad with the switch on (radioCheck),

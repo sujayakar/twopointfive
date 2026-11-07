@@ -133,6 +133,7 @@ export const STALK = {
 };
 /** tallies for the checks and the page's hook (begun = presses that took a man; out = why each ended without a grab) */
 export const STALK_STATS = { begun: 0, grabs: 0, corner: 0, out: { let: 0, far: 0, turned: 0, wall: 0, him: 0, hands: 0, keys: 0 }, last: '' };
+type Why = keyof typeof STALK_STATS.out;
 
 interface St { on: Guard | null; grab: Guard | null; t: number; /** on a wall with the button held and nothing in the way of a grab: he is lying in wait */ wait?: boolean; /** the button went down and has not come up or taken a man since: a stalk may begin */ armed?: boolean;
   /** STALK.drag: where on the screen (px) the press that began this stalk was made — the stick's middle */ stick?: [number, number] | null;
@@ -142,7 +143,15 @@ interface St { on: Guard | null; grab: Guard | null; t: number; /** on a wall wi
 const STATE = new SideMap<Game, St>('stalk.STATE');
 /** every key from birth and in one order: a restart's state is compared with an untouched level's, key for key, whatever order play reached them in */
 const fresh = (): St => ({ on: null, grab: null, t: -1, wait: false, armed: false, stick: null, orbitR: undefined, orbitT: undefined, orbitAsk: undefined, broke: null });
+function end(S: St, why: Why) { if (S.on) { S.armed = false; S.on = null; STALK_STATS.out[why]++; STALK_STATS.last = why; } S.orbitR = S.orbitT = undefined; S.orbitAsk = undefined; }
 
+/** are Sam's hands free for it at all (empty, and nothing else has him) */
+function hands(g: Game): boolean {
+  const pl = g.player;
+  return STALK.on && closeLive(g) && !g.puppet && pl.holstered && !pl.down && !pl.holding && !pl.takedown && !pl.dragging && !pl.kick && !pl.picking && !pl.wanding && !pl.wall && !pl.listOpen && able(g);
+}
+/** …and is the held click his to begin one with (no step of a tutorial mission has taken it) */
+const free = (g: Game): boolean => hands(g) && !shut(g);
 /** a tutorial mission's step has taken the stalk (rails.ts `shuts`, the frame's word `stalk`): no press begins one, from the floor or from a corner, and
  *  nothing that asks whether he could — the row's hint, the pose that tells — says he can. IT IS THE CLICK THAT IS TAKEN, NOT THE GRAB: the row's key
  *  still grabs a man he has walked up behind, with the stalk's own step in (`stalkKeyCan` asks `hands`), and where the click was the one way to a man

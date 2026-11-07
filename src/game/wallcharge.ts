@@ -49,7 +49,7 @@ import { SideMap } from '../math/side';
 import { holdFireOrder } from './holdfire';   // (called inside blow only)
 import { Vec3, v3, clamp, lerp } from '../math/vec';
 import type { Game, Guard, Interactable, Player } from './game';
-import type { OrderDef, OrderTarget, OrderNote, Assignment } from './orders';
+import type { OrderDef, OrderTarget, OrderNote, SquadOrders, Assignment } from './orders';
 import type { Box } from '../scene/boxes';
 import { BoxFlag } from '../scene/boxes';
 import { DOORTOOLS } from './doortools';
@@ -805,6 +805,8 @@ export class WallCharge {
     for (const gd of men) if (gd !== P.lead) this.standOff(op, gd);
     this.beat(op, `ordered · ${men.map(m => m.callsign).join(', ')} · ${P.lead.callsign} sets it`);
   }
+  /** the order by code (the console, a probe, the scripted commander): 'breach with a charge' on the wall at that point — null when given, else why not */
+  order(at: Vec3, who?: Parameters<SquadOrders['give']>[2]): string | null { const S = this.g.orders; return S.give(WALL_ORDER, S.targetAt(at), who); }
   private end(op: WallOp, why: string) {
     const i = this.ops.indexOf(op); if (i < 0) return; this.ops.splice(i, 1); this.beat(op, `end: ${why}`);
     if (WALLCHARGE.brace && (op.phase === 'place' || op.phase === 'standoff' || op.phase === 'armed')) { const S = this.g.orders, watch = wallPt(op.wall, 0, 0, WALLCHARGE.height);   // (ended before the blast turned them in — a dud, the charge gone, the module off: nobody is left with his back to that wall)

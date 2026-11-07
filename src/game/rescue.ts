@@ -284,6 +284,8 @@ export class Rescue {
   /** who has the pair: 'door' = F's entry on the hostage room is under way (the dynamic tempo stands aside — rescueflow.ts), 'free' otherwise. The men are the
    *  order menu's either way. */
   get mode(): 'free' | 'door' { return this.entry ? 'door' : 'free'; }
+  /** F's entry has this man right now: he is on one of its door orders (the flow leaves him be; the menu does not ask — any order takes him) */
+  owns(gd: Guard): boolean { const E = this.entry; return this.active && !!E && E.ops.some(e => e.ended === null && e.op.men.includes(gd)); }
   /** is this civilian one of the scenario's hostages (player.ts: no grab row on her) */
   isHostage(gd: Guard): boolean { return this.active && this.hostages.includes(gd); }
 
@@ -487,6 +489,15 @@ export class Rescue {
     const A = this.g.orders.of(op), SB = this.fromBounds;
     if (!A || !A.post || A.via.length || !SB || !this.serverOut || !inBounds(op.char.pos, SB) || inBounds(A.post, SB)) return;
     A.via = [v3.copy(this.serverOut)]; A.goal = A.via[0];
+  }
+  /** A man the scenario lets go of where he stands: handed to the order menu as its 'cover' (gun up on `look` — default the way he faces — until Sam says
+   *  otherwise; the room fight shoots for him through it). */
+  private post(op: Guard, look?: Vec3, door?: string) {
+    const p = op.char.pos, y = look ? v3.yawTo(p, look) : op.char.bodyYaw;
+    const watch: Vec3 = look ? [look[0], 1.1, look[2]] : [p[0] + Math.sin(y) * 4, 1.1, p[2] + Math.cos(y) * 4];
+    const words = door ? `covering ${door}` : 'holding';
+    this.g.orders.assign(op, { order: 'cover', post: [p[0], 0, p[2]], face: y, watch, stance: 'none', upper: 'aim', going: words, there: words });
+    const A = this.g.orders.of(op); if (A) this.auto.add(A);
   }
 
 

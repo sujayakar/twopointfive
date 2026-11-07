@@ -64,7 +64,11 @@ if (flag('--census-merge')) { const i = ARGV.indexOf('--census-merge'), rest = A
 /** the simulation's folders: where this program may delete */
 const SIM = /^src\/(game|anim|math|sim|scene)\//;
 /** THE ENTRY POINTS OF THE HOSTS in tools/: a file of tools/ is a host's when one of these, or a file of src/, loads it */
-const HOST_ENTRIES = ['tools/blitz/rust-host.ts', 'tools/blitz/page-plugin.ts', 'tools/serve.ts', 'tools/build.ts', 'tools/build-one.ts', 'tools/mp/server.ts', 'tools/mp/runner.ts'];
+// (… and THE TOOLS THAT PLAY WHOLE GAMES: the tallies' scripted player, the plain night's, the tour's, the soak's, the lessons' runner. Each stands a game,
+// steps it under the Rust host and READS THE PUPPET between ticks to decide its next key, as the page's HUD reads it: what such a tool names keeps its
+// body like a host's, where a check that calls one rule and looks at the answer keeps a signature. Entry points, not a list of functions.)
+const HOST_ENTRIES = ['tools/blitz/rust-host.ts', 'tools/blitz/page-plugin.ts', 'tools/serve.ts', 'tools/build.ts', 'tools/build-one.ts', 'tools/mp/server.ts', 'tools/mp/runner.ts',
+  'tools/qa/playthrough.ts', 'tools/qa/solo-night.ts', 'tools/qa/tour.ts', 'tools/qa/soak.ts', 'tools/qa/lesson-run.ts'];
 /** the bridge's files as the page names them (page-plugin.ts FILES): `tps-bridge/<name>` */
 const BRIDGE_ALIAS = /^tps-bridge\/(.*)$/;
 /** the module the stubs call (written by this program on `--write`) */

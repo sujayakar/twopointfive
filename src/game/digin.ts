@@ -43,8 +43,9 @@ import './guards';
 import './squad';
 import './pressure';
 import { squadsLive } from './enemysquads';
-import { w } from './words';
-import './orders';   // (call-time only: what a door is called — one name on one HUD)
+import { w, WORDS } from './words';
+import { doorWords } from './orders';   // (call-time only: what a door is called — one name on one HUD)
+import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import './gunroles';   // (call-time only)
 import './lanes';   // (call-time only: is this spot in a lane his side knows is covered)
 import './owner';
@@ -205,6 +206,11 @@ loadDigIn();
 // ---------------------------------------------------------------- the room fight, as much of it as this file reads (roomfight.ts keeps these private; mirrored)
 interface Entry { door: Door; at: Vec3; out: [number, number] }
 interface Room { id: number; cells: Set<number>; entries: Entry[] }
+interface Def {
+  gd: Guard; station: Vec3; room: Room | null; ev: number[]; watch: number; want: number; glanceNext: number; glanceUntil: number;
+  noiseAt: Vec3 | null; noiseT: number; noiseOut: boolean; mode: 'hold' | 'move' | 'free'; rallyAt: number; rallyGo: boolean; moveKind: 'fallback' | 'cover'; moveT: number; cameBy: Door | null; stallAt: Vec3; stallT: number;
+}
+interface Fight { g: Game; defs: Def[]; ops: { gd: Guard }[]; inRoom(R: Room | null, p: Vec3): boolean; freeNear(p: Vec3): Vec3 | null; note(gd: Guard | null, what: string): void }
 
 type Phase = 'idle' | 'think' | 'toRoom' | 'toProp' | 'haul' | 'toDoor' | 'shut' | 'wedge' | 'toCover' | 'set';
 interface Man { far: boolean; owe: number; haulBy: number; deep: boolean; look: Vec3 | null; triedDeep: boolean; gathered: boolean; gatherTo: Room | null; dugOnce: boolean; /** laststand.ts told him to (it says its own lines) */ ordered: boolean; phase: Phase; until: number; know: Vec3; knowT: number; room: Room | null; entry: number; brace: number; prop: Prop | null; stand: Vec3; rest: Vec3; scrapeT: number; setAt: number; spot: Vec3 | null; kept: boolean }
@@ -213,7 +219,19 @@ interface RoomSt { room: Room; expected: number; second: number; at: number; t0:
 interface St { men: WeakMap<Guard, Man>; rooms: Map<Room, RoomSt>; wedges: Map<Door, { keySide: 1 | -1; lockId: string; kicked: boolean; tried: boolean; byT: number }>; fix: { at: Vec3; t: number; room: Room | null; heard: boolean } | null; called: WeakSet<Guard>; used: Set<Prop>; away: Set<Door>; frameT: number; bangCall: number }
 const states = new GameSideMap<Game, St>('digin.states');
 
+const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
+const oneOf = <T>(a: T[]): T => a[Math.floor(simRandom() * a.length)] ?? a[0];
+const at = (p: Vec3, y: number): Vec3 => [p[0], y, p[2]];
+function log(F: Fight, gd: Guard | null, what: string) { DIGIN_LOG.push({ t: F.g.time, who: gd ? gd.callsign : '-', what }); if (DIGIN_LOG.length > 400) DIGIN_LOG.splice(0, 150); F.note(gd, `dig-in: ${what}`); }
 
+// ---------------------------------------------------------------- who can hear it (Sam and the living teammates: the cue is only a cue if it reaches them)
+function listeners(F: Fight): { gd: Guard | null; head: Vec3; vel: Vec3 }[] {
+  const g = F.g, out: { gd: Guard | null; head: Vec3; vel: Vec3 }[] = [];
+  for (const pl of men(g)) if (!pl.down) out.push({ gd: null, head: at(pl.char.pos, 1.6), vel: pl.char.vel });   // (every player who is up: seats.ts)
+  for (const O of F.ops) if (O.gd.state !== 'dead') out.push({ gd: O.gd, head: at(O.gd.char.pos, 1.6), vel: O.gd.char.vel });
+  return out;
+}
+function cue(F: Fight, R: RoomSt | null, kind: Cue) { if (!R || !isNaN(R.enteredAt)) return; R.cues.add(kind); if (isNaN(R.cueAt)) R.cueAt = F.g.time; }
 
 
 
@@ -228,6 +246,39 @@ interface Man { /** DIGIN.noticed: since when he has had them in his eyes withou
 
 
 
+/** once a frame: a room all set, the team's first step into a room that dug in, and wedges that have been booted */
+function watch(F: Fight, st: St) {
+  const g = F.g, S = DIGIN_STATS;
+  for (const [d, w] of st.wedges) if (!w.kicked && d.lockBroken) {                // the wedge found the hard way: the door that would not open IS the cue, if nothing came before it
+    w.kicked = true; S.kicked++;
+    for (const R of st.rooms.values()) if (R.room.entries.some(e => e.door === d)) cue(F, R, 'kick');
+  }
+  for (const [d, w] of st.wedges) if (!w.tried && !w.kicked && d.locked) {          // a hand on the handle from outside: the wedge found the quiet way, by whoever stands at the door
+    const c = d.frameCentre, by = listeners(F).find(L => flat(L.head, c) < 1.7 && g.doors.side(d, L.head) === d.keySide && Math.hypot(L.vel[0], L.vel[2]) < 0.4);
+    if (!by) { w.byT = NaN; continue; }
+    if (isNaN(w.byT)) w.byT = g.time;
+    if (g.time - w.byT < DIGIN.trySecs) continue;
+    w.tried = true; S.tried++;
+    const dn = doorWords(d);   // (words.ts: the line NAMES its door — a man within reach of two doors said 'door's blocked' of the one he was not stacked on)
+    if (WORDS.on && Math.abs(d.angle) > 0.05) { if (by.gd) oneOf(['', '']); }   // (a leaf standing open is no door to call wedged: the line is not said — his die is still drawn, the rule and its cue are as they were)
+    else if (by.gd) g.say(by.gd, oneOf(WORDS.on ? [`the ${dn} is blocked. something heavy behind it.`, `the ${dn} is wedged from inside. they know we're here.`] : ['door\'s blocked. something heavy behind it.', 'it\'s wedged from inside. they know we\'re here.']), true); else g.msg(WORDS.on ? `the ${dn} is wedged from inside` : 'the door is wedged from inside');
+    log(F, by.gd, `tries ${d.def.name}: wedged`);
+    for (const R of st.rooms.values()) if (R.room.entries.some(e => e.door === d)) cue(F, R, 'tried');
+  }
+  for (const R of st.rooms.values()) {
+    if (!isNaN(R.enteredAt)) continue;
+    const home = F.defs.filter(X => X.gd.state !== 'dead' && X.room === R.room), ph = (X: Def) => st.men.get(X.gd)?.phase ?? 'idle';
+    if (isNaN(R.readyAt) && home.length && home.every(X => ph(X) === 'set')) { R.readyAt = g.time; S.readyN++; S.knowToReady += g.time - R.t0; log(F, null, `room ${R.room.id} all set, ${(g.time - R.t0).toFixed(1)} s after the first word of them`); }
+    if (!listeners(F).some(L => F.inRoom(R.room, L.head))) continue;
+    R.enteredAt = g.time; S.entered++; S.knowToEntry += g.time - R.t0;
+    if (!isNaN(R.cueAt)) S.cueFirst++;
+    if (R.cues.has('radio')) S.cueRadio++; if (R.cues.has('shout')) S.cueShout++; if (R.cues.has('scrape')) S.cueScrape++; if (R.cues.has('tried')) S.cueTried++; if (R.cues.has('kick')) S.cueKick++;
+    const busy = home.filter(X => ['toProp', 'haul', 'toDoor', 'shut', 'wedge', 'think', 'toCover'].includes(ph(X))).length;
+    if (!isNaN(R.readyAt)) S.readyFirst++; else if (busy) S.halfReady++;
+    for (const e of R.room.entries) if (st.wedges.has(e.door) && !e.door.lockBroken && e.door.locked) S.wedgedAtEntry++;
+    log(F, null, `team into room ${R.room.id} ${(g.time - R.t0).toFixed(1)} s after its first word of them: cues ${[...R.cues].join('+') || 'none'}${isNaN(R.cueAt) ? '' : ' (first ' + (g.time - R.cueAt).toFixed(1) + ' s before)'}, ${home.filter(X => ph(X) === 'set').length}/${home.length} set, ${busy} still busy, ${R.wedged} wedged`);
+  }
+}
 
 
 /** laststand.ts: where his dig-in stands ('idle' = not at it) */
