@@ -3666,8 +3666,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
 ];
 
 /// each is of the type the list's reader takes it for
-#[cfg(test)]
-#[allow(dead_code)]
 fn typed(k: &Knobs) {
     let _: &f64 = &k.aim.guard.settle_secs;
     let _: &f64 = &k.aim.guard.range_ref;
@@ -7009,3 +7007,4 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.bigslot.stow_w;
     let _: &f64 = &k.bigslot.flow;
 }
+const _: fn(&Knobs) = typed;
