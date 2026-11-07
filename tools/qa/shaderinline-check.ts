@@ -22,9 +22,9 @@
 // a pipeline for are listed, not sized into the totals), and the switches a URL flag or a trial turns. The fold of constant switches is on, as on the page: a
 // branch a constant decides is not in the text, so a kernel's size follows the switches. The listing is the shipped stand's page on a snow level in its
 // weather (cut boxes, the glass fracture and the dust's look on, as main.ts puts them: tools/qa/pageboot.ts), and the budget is held to that page AND to the
-// title's, which a second run of this file sizes. What a word on the address would add (a trial) is in neither: `--setting smokelab` lists the smoke lab's page.
+// title's, which a second run of this file sizes. What a word on the address would add (a trial) is in neither:
 //   bun run tools/qa/shaderinline-check.ts [--top N] [--kernel <module>/<entry>] [--json out.json]      exit 0 = within the budget, 1 = not, or the boot did not finish
-//   bun run tools/qa/shaderinline-check.ts --setting title|snow|smokelab|nowalls                                    one page alone, listed and held to the table (pageboot.ts SETTINGS)
+//   bun run tools/qa/shaderinline-check.ts --setting title|snow|nowalls                                    one page alone, listed and held to the table (pageboot.ts SETTINGS)
 //   SHADERINLINE_BREAK=1 bun run tools/qa/shaderinline-check.ts     one more call site is written into the biggest kernel, of the lightest function it reaches
 //                                                                    whose call site is a twentieth of it: must FAIL (it does not while that
 //                                                                    kernel's row has a twentieth to spare: the plain run names the row)
