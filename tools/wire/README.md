@@ -5,7 +5,7 @@ Rust uses needs nothing here. This folder is only about what the page reads of t
 
 - `tools/blitz/schema.json` says how each carried type is written, `fields.json` says which fields go every tick, which go to the page and
   which go at a start only, and `out-events.json` lists the events the game sends out.
-- `wire.ts add` puts a field on the wire, and refuses a name nothing the page runs reads. `add-struct` adds a whole struct. `drop` takes
+- `wire.ts add` puts a field on the wire, and refuses a name nothing the page runs reads. `add-struct` adds a whole struct, `add-enum` a plain enum. `drop` takes
   fields off, and `drop-type` takes a type off once no field names it. An enum arm needs nothing: an arm the table doesn't know goes out as the tag 0xffff and the page keeps what it had.
 - `wire.ts gen` writes these files and no others: `rust/game/src/puppet.rs`, `rust/game/src/state_words.rs`, `rust/game/src/id_tables.rs`,
   `tools/blitz/puppet-apply.ts`,
