@@ -9,7 +9,7 @@ const argv = process.argv.slice(2); const [scn, seed, F] = argv[0].split(':'); c
 const { knobRegistry } = await import('../../src/game/knobs.ts'); const reg = knobRegistry();
 const { Game } = await import('../../src/game/game.ts'); const { play } = await import('../qa/playthrough.ts'); class Stop extends Error {}
 const WASM = arg('--wasm', new URL('../../rust/game_face/target/wasm32-unknown-unknown/release/game_face.wasm', import.meta.url).pathname);
-const X: any = new WebAssembly.Instance(new WebAssembly.Module(readFileSync(WASM)), {}).exports; const u8 = () => new Uint8Array(X.memory.buffer);
+const X: any = new WebAssembly.Instance(new WebAssembly.Module(readFileSync(WASM)), { env: { face_roll: () => 0 } }).exports; const u8 = () => new Uint8Array(X.memory.buffer);
 const hand = <T>(b: Uint8Array, f: (p: number, n: number) => T): T => { const p = X.face_alloc(b.length || 1); u8().set(b, p); try { return f(p, b.length); } finally { X.face_free(p, b.length || 1); } };
 const say = (x: string) => process.stdout.write(x + '\n'); let code = 0;
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);

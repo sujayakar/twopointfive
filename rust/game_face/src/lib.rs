@@ -224,10 +224,18 @@ pub extern "C" fn face_debug(h: u32) {
 pub extern "C" fn face_tap(h: u32, id: u32, on: u32) {
     with(h, |x| { if on != 0 { x.g.taps |= 1u64 << id; } else { x.g.taps &= !(1u64 << id); } });
 }
+#[cfg(target_arch = "wasm32")]
+#[link(wasm_import_module = "env")]
+extern "C" { fn face_roll() -> f64; }
+#[cfg(target_arch = "wasm32")]
+fn roll_of_the_host() -> f64 { unsafe { face_roll() } }
+#[cfg(not(target_arch = "wasm32"))]
+fn roll_of_the_host() -> f64 { 0.0 }
 /// # Safety
 /// `p`, `n` name bytes the host wrote into memory from face_alloc.
 #[no_mangle]
 pub unsafe extern "C" fn face_call(h: u32, f: u32, p: *const u8, n: usize) {
+    game::call_gen::HOST_ROLL = Some(roll_of_the_host);
     let b = bytes(p, n);
     let a = with(h, |x| game::call_gen::call(&mut x.g, f, b));
     out(a);
