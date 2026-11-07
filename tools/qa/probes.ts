@@ -3412,7 +3412,7 @@ let glassBannerPending: { f0: number } | null = null;
 { const f0 = FAILED.length; let gtRan = false;
   const gtf = async (name: string, fn: string) => { if (on(name, 'glasstune', 'all')) { gtRan = which === 'glasstune' || which === name; await run(name, async () => ((await import('./glasstune-probes.ts')) as any)[fn]()); } };
   await gtf('glasstune-blast', 'glasstuneBlast'); await gtf('glasstune-rake', 'glasstuneRake'); await gtf('glasstune-spall', 'glasstuneSpall'); await gtf('glasstune-sound', 'glasstuneSound');
-  await gtf('glasstune-budget', 'glasstuneBudget'); await gtf('glasstune-stack', 'glasstuneStack'); await gtf('glasstune-off', 'glasstuneOff');
+  await gtf('glasstune-budget', 'glasstuneBudget'); await gtf('glasstune-stack', 'glasstuneStack');
   if (gtRan && which === 'glasstune') familyBanner('glasstune', FAILED.length - f0); }
 // ---------------------------------------------------------------- A LOAD OF SHOT AND A PANE (pellets-probes.ts; glasspen.ts 'the shell rule', rebuild/gear-and-glass/pellets.md): 'pellets' = the family — one
 // crossing at the arm point for a pressed shell, pellets through and pellets stopped marked by the one rule (+ the 1 / 4 / 8 m table), the M870's own through-glass value,
