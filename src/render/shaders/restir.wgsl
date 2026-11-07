@@ -82,7 +82,7 @@
 //                a history validated somewhere else; full memory the moment it rests; (c, 1024) spatial reuse at every pixel whose motion exceeds ru.mot.z px, with at least cfg.y >> 8 taps
 //                there (spatialAll — and wider — where the history is being handed about anyway, nothing extra at rest). U, the beliefs, the hint, the held / transient strata are untouched by all three.
 //   The reservoir written for next frame is the TEMPORAL stage's (spatial output feeds shading only: no M inflation loop).
-// Kept from direct.wgsl: the tile light list (FLAG_TILECULL, verbatim), reach masks (a walled-off light is in U, never a candidate, dark in S), glass
+// Kept from direct.wgsl: the tile light list (the tile light list, verbatim), reach masks (a walled-off light is in U, never a candidate, dark in S), glass
 // transmit on the shaded sample, the owner byte, mesh shadows (inside occludedT), the sun / moon as an ordinary candidate (kind 2). The ray budget is
 // ru.cfg.x, per pixel, whatever the light count.
 const Z_RELEASE: f32 = 2.0;   // (see 'trailing edge' in phase 2)
@@ -297,35 +297,29 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
   }
   // (the barriers of the light-list block below order these writes before any lane reads wgBelief)
 
-  // ---- per-tile light list (FLAG_TILECULL) — as direct.wgsl ----
-  let tileCull = (frame.flags & FLAG_TILECULL) != 0u;
+  // ---- per-tile light list (the tile light list) — as direct.wgsl ----
   var nIter = nL;
-  if (tileCull) {
-    wgP[lidx] = vec4f(P, select(0.0, 1.0, live));
-    workgroupBarrier();
-    if (lidx < 8u) {
-      var mn = vec3f(1e30); var mx = vec3f(-1e30); var anyLive = 0.0;
-      for (var k = 0u; k < 8u; k++) { let q = wgP[lidx * 8u + k]; if (q.w > 0.0) { mn = min(mn, q.xyz); mx = max(mx, q.xyz); anyLive = 1.0; } }
-      wgRowMin[lidx] = vec4f(mn, anyLive); wgRowMax[lidx] = vec4f(mx, anyLive);
-    }
-    workgroupBarrier();
-    if (lidx < nL) {
-      var mn = vec3f(1e30); var mx = vec3f(-1e30); var anyLive = false;
-      for (var r = 0u; r < 8u; r++) { let a = wgRowMin[r]; if (a.w > 0.0) { mn = min(mn, a.xyz); mx = max(mx, wgRowMax[r].xyz); anyLive = true; } }
-      let keep = anyLive && lightReachesBox(wgLights[lidx], mn, mx);
-      wgKeep[lidx] = select(0u, 1u, keep);
-      var gm = 0u;
-      if (keep && (frame.flags & FLAG_GLASS) != 0u) { gm = glassPairMask(wgLights[lidx], mn, mx); }
-      wgGlass[lidx] = gm;
-    }
-    workgroupBarrier();
-    if (lidx == 0u) { var n = 0u; for (var i = 0u; i < nL; i++) { if (wgKeep[i] != 0u) { wgList[n] = i; n++; } } wgCount = n; }
-    workgroupBarrier();
-    nIter = wgCount;
-  } else {
-    if (lidx < nL) { wgGlass[lidx] = lightGlassMask(wgLights[lidx]); }
-    workgroupBarrier();
+  wgP[lidx] = vec4f(P, select(0.0, 1.0, live));
+  workgroupBarrier();
+  if (lidx < 8u) {
+    var mn = vec3f(1e30); var mx = vec3f(-1e30); var anyLive = 0.0;
+    for (var k = 0u; k < 8u; k++) { let q = wgP[lidx * 8u + k]; if (q.w > 0.0) { mn = min(mn, q.xyz); mx = max(mx, q.xyz); anyLive = 1.0; } }
+    wgRowMin[lidx] = vec4f(mn, anyLive); wgRowMax[lidx] = vec4f(mx, anyLive);
   }
+  workgroupBarrier();
+  if (lidx < nL) {
+    var mn = vec3f(1e30); var mx = vec3f(-1e30); var anyLive = false;
+    for (var r = 0u; r < 8u; r++) { let a = wgRowMin[r]; if (a.w > 0.0) { mn = min(mn, a.xyz); mx = max(mx, wgRowMax[r].xyz); anyLive = true; } }
+    let keep = anyLive && lightReachesBox(wgLights[lidx], mn, mx);
+    wgKeep[lidx] = select(0u, 1u, keep);
+    var gm = 0u;
+    if (keep && (frame.flags & FLAG_GLASS) != 0u) { gm = glassPairMask(wgLights[lidx], mn, mx); }
+    wgGlass[lidx] = gm;
+  }
+  workgroupBarrier();
+  if (lidx == 0u) { var n = 0u; for (var i = 0u; i < nL; i++) { if (wgKeep[i] != 0u) { wgList[n] = i; n++; } } wgCount = n; }
+  workgroupBarrier();
+  nIter = wgCount;
 
   let raysCfg = ru.cfg.x & 255u; let kSpatial = ru.cfg.y & select(0xffffffffu, 255u, RESTIR_MOTION); let mCap = f32(max(ru.cfg.z & 255u, 1u));   // (the MOTION program keeps a tap count for moving pixels in cfg.y bits 8‥11 — lever c; the host packs it only for that program)
   let heldK = (ru.cfg.x >> 8u) & 15u; let hybrid = heldK > 0u;   // HELD (header): K stratified rays for each of the two carried leaders at the pixel; 0 = the hybrid off — main's transient stratum, statement for statement
@@ -402,7 +396,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
     // ---- score every listed light unshadowed: U (exact, stored right here), the candidate stream, the temporal samples' targets now ----
     var U0 = vec3f(0.0); var U1 = vec3f(0.0);
     for (var s = 0u; s < nIter; s++) {
-      var i = s; if (tileCull) { i = wgList[s]; }
+      let i = wgList[s];
       let uP = rndPick(cohPick);                                   // the pick's draw for this light — taken for EVERY listed light, before any per-lane early-out, so the tile-shared stream stays in lockstep
       let li = wgLights[i];
       let ev = evalLightDirect(li, P, N);
