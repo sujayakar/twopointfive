@@ -18,6 +18,17 @@ fuzz of the solo night and of squad missions on Hard (`fuzz.sh`, `fuzz-squad.sh`
 maintainer played a tutorial and a few levels on his own machine. Not checked: co-op and tapes on the Rust game, a hosted build, most page checks of
 `tools/qa` on the new default, and nothing of it has been seen on a GPU by a tool.
 
+**A GAME CAN START IN RUST, AND A BEHAVIOUR HAS A TEST OF TEN LINES (2026-11-07).** `rust/game_start` is the start in Rust: a level file's text and the
+character's files in, a `Game` the tick runs out, through the game's own constructor (`game_new`, which had never run), with nothing made by
+TypeScript. Its scene builder WRITES A LEVEL FILE (rooms, doors, lamps, men, a room clear's block), so a test's scene goes in by the level format
+and there is one start. `cargo test` in `rust/game_start` stands scenes and holds five behaviours in about half a minute; `rust/game_start/README.md`
+is the how-to, with what the start does not carry yet (it refuses such a file by name: box shapes, civilians, devices, vents, daylight, the office's
+plans, most scenario kinds). `tools/blitz/start.sh <level file>` holds the Rust start to the TypeScript start of the same file, path by path
+(`known-start.txt` is what may differ, each line with its reason), and with `--frames N` steps both starts in Rust and compares every frame.
+Checked: `kit-yard.json` plain and with its room clear started, and the tests' four scenes: no path not known, the block equal to the byte, in
+step for 600 to 1,800 frames. Not checked: any other level; a page starting a level this way (the page still starts in TypeScript); nothing of it
+on a GPU.
+
 **The rows and the maths are NOT SWITCHES any more** (the bullet "Not switches", near the end, 2026-11-05). Every `TPS_RUST`, `TPS_RUST<ROW>`, `TPS_EXACT`,
 `?rust`, `?rust<row>` and `?noexact` in the bullets below is how that step was measured on its day. None of them is a word now: in a tool's environment
 one stops the tool by name, on an address one does nothing and says so in the console. What a check still needs of them is its own arm, `QA_HOLD`.
