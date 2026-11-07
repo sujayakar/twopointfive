@@ -8,6 +8,8 @@
 //   bun run tools/qa/panel-inventory.ts --write [--ref R]  (re)write the fixture from ref R (default HEAD) — only when a row is renamed ON PURPOSE
 //   --reword [map.json]                                    a row reworded ON PURPOSE: rewrite ONLY the fixture's missing rows, each from the live row of the same kind + label (map.json = { "old label": "new label" }
 //                                                          for a renamed one), every other fixture row left as it is (unlike --write, which re-freezes the lot and so holds rows other lanes added)
+//   --gone                                                 rows DELETED on purpose: the fixture's missing rows with no live row of their kind + label go out of the fixture
+//   --only labels.json                                     with --reword / --gone: only the rows whose labels the file lists (a JSON array), so another lane's missing row stays missing
 //   --print                                                dump the live inventory grouped by path
 import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
@@ -166,11 +168,18 @@ export async function panelInventory(argv: string[] = process.argv.slice(2)): Pr
     console.log(`\n  added: ${added.length} row(s) not in the reference`); for (const r of added) console.log('    + ' + show(r));
     // near-misses: for each missing row, the live row with the same kind + label (a range / tooltip / button reworded) — the usual slip
     if (missing.length) { console.log(`\n  MISSING: ${missing.length} reference row(s) with no equal in the live panel`); for (const r of missing) { console.log('    - ' + show(r)); const near = live.find(x => x.kind === r.kind && x.label === r.label && rowKey(x) !== rowKey(r)); if (near) console.log(`        nearest live: ${show(near)}\n        differs in:${near.min !== r.min || near.max !== r.max || near.step !== r.step ? ' range/step' : ''}${near.title !== r.title ? ' tooltip' : ''}${near.extra !== r.extra ? ' buttons/options' : ''}${near.def !== r.def ? ' revert-dot' : ''}`); } }
+    const onlyI = argv.indexOf('--only'); const only: Set<string> | null = onlyI >= 0 ? new Set(JSON.parse(readFileSync(argv[onlyI + 1], 'utf8')) as string[]) : null;   // (--only labels.json: --reword and --gone touch these labels' rows and no other lane's)
+    const goneI = argv.indexOf('--gone');
+    if (goneI >= 0 && !ref && missing.length) {   // rows DELETED on purpose: the fixture's missing rows with no live row of their kind + label go out of the fixture (a reworded row is --reword's)
+      const dead = missing.filter(r => (!only || only.has(r.label)) && !live.some(x => x.kind === r.kind && x.label === r.label));
+      for (const r of dead) { before.splice(before.indexOf(r), 1); console.log(`    out of the fixture: ${show(r)}`); }
+      writeFileSync(FIXTURE, JSON.stringify(before, null, 1) + '\n'); console.log(`  --gone: ${dead.length} fixture row(s) taken out, ${missing.length - dead.length} still missing`); const left = missing.filter(r => !dead.includes(r)); missing.length = 0; missing.push(...left);
+    }
     const rwI = argv.indexOf('--reword');
     if (rwI >= 0 && !ref && missing.length) {
       const mapPath = argv[rwI + 1] && !argv[rwI + 1].startsWith('--') ? argv[rwI + 1] : null; const ren: Record<string, string> = mapPath ? JSON.parse(readFileSync(mapPath, 'utf8')) : {};
       const pool = [...added]; let n = 0; const left: Row[] = [];
-      for (const r of missing) { const want = ren[r.label] ?? r.label; const i = pool.findIndex(x => x.kind === r.kind && x.label === want); if (i < 0) { left.push(r); continue; } const [x] = pool.splice(i, 1); const { adv: _a, ...row } = x; before[before.indexOf(r)] = row as Row; n++; console.log(`    reworded in the fixture: ${show(r)}  →  ${x.label}`); }
+      for (const r of missing) { if (only && !only.has(r.label)) { left.push(r); continue; } const want = ren[r.label] ?? r.label; const i = pool.findIndex(x => x.kind === r.kind && x.label === want); if (i < 0) { left.push(r); continue; } const [x] = pool.splice(i, 1); const { adv: _a, ...row } = x; before[before.indexOf(r)] = row as Row; n++; console.log(`    reworded in the fixture: ${show(r)}  →  ${x.label}`); }
       writeFileSync(FIXTURE, JSON.stringify(before, null, 1) + '\n'); console.log(`  --reword: ${n} fixture row(s) rewritten, ${left.length} still missing`); missing.length = 0; missing.push(...left);
     }
     const ok = missing.length === 0;

@@ -123,7 +123,7 @@ declare global {
     /** the RT-reflection + material knobs (renderer v3 phase 4) on the GAME page — the workbench's viewer Runtime is __vrt, not this */
     __rt?: KnobHook;
     /** shader hot-swap: volumetrics / restir / direct / reflect / gather / froxel / denoise from disk into the live page */
-    __hotVol?: HotSwapHook; __hotRestir?: HotSwapHook; __hotDirect?: HotSwapHook; __hotReflect?: HotSwapHook; __hotGather?: HotSwapHook; __hotFroxel?: HotSwapHook; __hotDenoise?: HotSwapHook;
+    __hotVol?: HotSwapHook; __hotRestir?: HotSwapHook; __hotReflect?: HotSwapHook; __hotGather?: HotSwapHook; __hotFroxel?: HotSwapHook; __hotDenoise?: HotSwapHook;
     /** the capture sink's port for this page's __shot / __png (default 5174; a lane's own sink on another) */
     __shotPort?: number;
 
