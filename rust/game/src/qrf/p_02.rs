@@ -11,16 +11,16 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 fn pos_of(g: &Game, x: GuardId) -> V3 { g.ch[g.gd[x].ch].pos }
 fn player_pos(g: &Game) -> V3 { g.ch[g.pl[g.player].ch].pos }
 fn char_id(g: &Game, x: GuardId) -> f64 { g.ch[g.gd[x].ch].id }
-fn nav_blocked(g: &mut Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }
+fn nav_blocked(g: &Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }
 fn arrived(g: &Game, x: GuardId) -> bool { g.gd[x].script.map_or(false, |s| s.arrived.unwrap_or(false)) }
 /// a string the TypeScript tests for truth: null and '' are both false
 fn word(s: &Option<String>) -> Option<&str> { s.as_deref().filter(|w| !w.is_empty()) }
 /// `!y.door || g.doors.byName(y.door)`
-fn way_open(g: &mut Game, y: &crate::scene_scenarios::ResponseWay) -> bool {
+fn way_open(g: &Game, y: &crate::scene_scenarios::ResponseWay) -> bool {
     match word(&y.door) { None => true, Some(d) => crate::doors::doors_by_name(g, d).is_some() }
 }
 /// `M.door ? g.doors.byName(M.door) : undefined`
-fn marks_door(g: &mut Game, mk: &crate::qrf::Marks) -> Option<DoorId> {
+fn marks_door(g: &Game, mk: &crate::qrf::Marks) -> Option<DoorId> {
     match word(&mk.door) { None => None, Some(d) => crate::doors::doors_by_name(g, d) }
 }
 /// a whole write of a man's fix (Guard.fix_stamp counts them)
@@ -437,7 +437,7 @@ pub fn tick_men(g: &mut crate::game::Game, dt: f64) {
         return;
     }
     match g.qrf.phase {
-        Phase::File => phase_file(g, &mut el),
+        Phase::File => phase_file(g, &el),
         Phase::Fan => if g.qrf.phase_t > ENTRY_HOLD { pick_target(g, &mut el, true); },
         Phase::Move => phase_move(g, &mut el, dt),
         Phase::Stack => phase_stack(g, &mut el),
@@ -658,7 +658,7 @@ pub fn man_down(g: &mut crate::game::Game) {
 
 // ---------------------------------------------------------------- entry
 /// One man through the doorway every FILE_GAP, each to his fan mark facing his sector.   (qrf.ts phaseFile)
-pub fn phase_file(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
+pub fn phase_file(g: &mut crate::game::Game, el: &Vec<GuardId>) {
     let due = m::min(el.len() as f64, m::floor(g.qrf.phase_t / FILE_GAP) + 1.0);
     let mk = marks_of(g).unwrap();
     while g.qrf.filed < due {
@@ -842,7 +842,7 @@ pub fn sweep_places(g: &mut crate::game::Game) -> Vec<crate::qrf::SweepPlacesIte
 }
 
 fn cr_at(p: V3) -> String { format!("({}, {})", js::num_str(p[0]), js::num_str(p[2])) }
-fn cr_free(g: &mut Game, p: V3) -> bool { !nav_blocked(g, p[0], p[2]) }
+fn cr_free(g: &Game, p: V3) -> bool { !nav_blocked(g, p[0], p[2]) }
 fn cr_walk(g: &mut Game, a: V3, b: V3) -> f64 { path_len(g, [a[0], 0.0, a[2]], [b[0], 0.0, b[2]]) }
 fn cr_apart(out: &mut Vec<String>, ps: &[V3], what: &str) {
     for i in 0..ps.len() {

@@ -65,7 +65,7 @@ pub fn stuns_of(g: &mut crate::game::Game, gd: GuardId) -> f64 {
 }
 
 /// Is any of it live: the switch on, not the tour, the AI on. (tactics.ts tacticsOn)
-pub fn tactics_on(g: &mut crate::game::Game) -> bool {
+pub fn tactics_on(g: &crate::game::Game) -> bool {
     g.tune.tactics && !g.quiet_utility && g.ai_enabled
 }
 
@@ -85,13 +85,13 @@ pub fn deg_apart(a: f64, b: f64) -> f64 {
 }
 
 /// A free man the tactics may move: alive, in the list, not held / choreographed / on his marks / pinned, not in the standoff. (tactics.ts freeMan)
-pub fn free_man(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn free_man(g: &crate::game::Game, gd: GuardId) -> bool {
     let o = &g.gd[gd];
     o.state != crate::game::GuardState::Dead && g.guards.contains(&gd) && o.held.is_none() && o.script.is_none() && !o.hold && !o.pinned && o.standoff.is_none()
 }
 
 /// Eyes on his man lately: he is fighting or chasing by sight, not working a fix. (tactics.ts inContact)
-pub fn in_contact(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn in_contact(g: &crate::game::Game, gd: GuardId) -> bool {
     g.time - g.gd[gd].last_seen_t < crate::guards::PIE_EYES_SECS
 }
 
@@ -132,7 +132,7 @@ pub fn sample_path(from: V3, path: &[V3], step: Option<f64>) -> Vec<V3> {
 }
 
 /// The nav cells a route runs through, widened `dilate` cells all round. (tactics.ts cellsOfPath)
-pub fn cells_of_path(g: &mut crate::game::Game, from: V3, path: &[V3], dilate: f64) -> JsSet<crate::Num> {
+pub fn cells_of_path(g: &crate::game::Game, from: V3, path: &[V3], dilate: f64) -> JsSet<crate::Num> {
     let cs = g.col.nav.cell;
     let (w, h) = (g.col.nav.w, g.col.nav.h);
     let mut out = JsSet::new();
@@ -157,7 +157,7 @@ pub fn cells_of_path(g: &mut crate::game::Game, from: V3, path: &[V3], dilate: f
 }
 
 /// The free cells within `r` of C whose bearing about C lies inside `half_deg` of `bearing`. (tactics.ts sectorCells)
-pub fn sector_cells(g: &mut crate::game::Game, c_2: V3, bearing: f64, r: f64, half_deg: f64) -> JsSet<crate::Num> {
+pub fn sector_cells(g: &crate::game::Game, c_2: V3, bearing: f64, r: f64, half_deg: f64) -> JsSet<crate::Num> {
     let cs = g.col.nav.cell;
     let (w, h) = (g.col.nav.w, g.col.nav.h);
     let mut out = JsSet::new();
@@ -231,7 +231,7 @@ pub fn point_short_of_end(from: V3, path: &[V3], rem: f64) -> V3 {
 }
 
 /// Blocked neighbours of the cell under p. (tactics.ts wallsAbout)
-pub fn walls_about(g: &mut crate::game::Game, p: V3) -> f64 {
+pub fn walls_about(g: &crate::game::Game, p: V3) -> f64 {
     let cs = g.col.nav.cell;
     let (w, h) = (g.col.nav.w, g.col.nav.h);
     let cx = m::floor(p[0] / cs);
@@ -259,7 +259,7 @@ pub fn walls_about(g: &mut crate::game::Game, p: V3) -> f64 {
 }
 
 /// The doorway whose middle lies within `r` of p (nearest such). (tactics.ts doorNear)
-pub fn door_near(g: &mut crate::game::Game, p: V3, r: Option<f64>) -> Option<DoorId> {
+pub fn door_near(g: &crate::game::Game, p: V3, r: Option<f64>) -> Option<DoorId> {
     let r = r.unwrap_or(DOOR_NEAR_M);
     let mut best = None;
     let mut bd = r;
@@ -274,7 +274,7 @@ pub fn door_near(g: &mut crate::game::Game, p: V3, r: Option<f64>) -> Option<Doo
 static DOOR_DIR: &[(&str, &str)] = &[("n", "north"), ("s", "south"), ("e", "east"), ("w", "west"), ("ext", "outside")];
 
 /// What a man calls a door on the net. (tactics.ts doorLabel)
-pub fn door_label(g: &mut crate::game::Game, d: DoorId) -> String {
+pub fn door_label(g: &crate::game::Game, d: DoorId) -> String {
     let n = g.dr[d].def.name.clone();
     let parts: Vec<&str> = n.split('_').collect();
     let last = parts[parts.len() - 1];
@@ -495,7 +495,7 @@ pub fn tactics_penalty(g: &mut crate::game::Game, gd: GuardId, goal: V3) -> Opti
 }
 
 /// The roster's role of a man, if any, for the panel / soak / probes. (tactics.ts tacticsRoleOf)
-pub fn tactics_role_of(g: &mut crate::game::Game, gd: GuardId) -> Option<String> {
+pub fn tactics_role_of(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     let st = g.m.tactics.states.as_ref()?;
     if let Some(&r) = st.roles.get(gd) { return Some(String::from(g.tab.tactics_role[r].kind.as_str())); }
     if let Some(x) = st.gates.get(gd) { return Some(format!("door:{}", x.role.as_str())); }
@@ -504,17 +504,17 @@ pub fn tactics_role_of(g: &mut crate::game::Game, gd: GuardId) -> Option<String>
 }
 
 /// His role. (tactics.ts roleRecord)
-pub fn role_record(g: &mut crate::game::Game, gd: GuardId) -> Option<TacticsRoleId> {
+pub fn role_record(g: &crate::game::Game, gd: GuardId) -> Option<TacticsRoleId> {
     g.m.tactics.states.as_ref()?.roles.get(gd).copied()
 }
 
 /// The live plans. (tactics.ts plansOf)
-pub fn plans_of(g: &mut crate::game::Game) -> Vec<TacticsPlanId> {
+pub fn plans_of(g: &crate::game::Game) -> Vec<TacticsPlanId> {
     match g.m.tactics.states.as_ref() { Some(st) => st.plans.clone(), None => Vec::new() }
 }
 
 /// The flanker's call: 'coming at him / them' only if there is somebody to come at. (tactics.ts flankCall)
-pub fn flank_call(g: &mut crate::game::Game, plan: TacticsPlanId, m: GuardId, place: &str) -> String {
+pub fn flank_call(g: &crate::game::Game, plan: TacticsPlanId, m: GuardId, place: &str) -> String {
     let who = if crate::teams::defender_words(g, m) { "them" } else { "him" };
     let mut since = f64::INFINITY;
     let members = g.tab.tactics_plan[plan].members.clone();
@@ -723,7 +723,7 @@ pub fn end_plan(g: &mut crate::game::Game, plan: TacticsPlanId, why: &str, reset
 }
 
 /// A member still fit to hold a role: free, alert, a fix, his man not down. (tactics.ts fitForRole)
-pub fn fit_for_role(g: &mut crate::game::Game, m: GuardId) -> bool {
+pub fn fit_for_role(g: &crate::game::Game, m: GuardId) -> bool {
     free_man(g, m)
         && g.gd[m].state == crate::game::GuardState::Alert
         && g.gd[m].last_known.is_some()

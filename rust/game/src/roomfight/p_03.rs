@@ -312,7 +312,7 @@ pub fn room_fight_speak(g: &mut crate::game::Game, o: RoomfightOpId, text: &str,
 }
 
 /// True of an enemy who is NOT this covering man's: off his ordered way, and a mate has him. (roomfight.ts coverPasses)
-pub fn room_fight_cover_passes(g: &mut crate::game::Game, o: RoomfightOpId, h: GuardId) -> bool {
+pub fn room_fight_cover_passes(g: &crate::game::Game, o: RoomfightOpId, h: GuardId) -> bool {
     let r = g.k.roomfight;
     let a = match crate::orders::squad_orders_of(g, g.tab.roomfight_op[o].gd) { Some(a) => a, None => return false };
     let (watch, post) = {

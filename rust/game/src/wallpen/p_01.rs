@@ -70,7 +70,7 @@ fn scatter(seed: f64, a: f64, d: V3) -> V3 {
 // ---------------------------------------------------------------- the skeleton's functions
 
 /// The one gate: no showcase running. (wallpen.ts wallPenLive)
-pub fn wall_pen_live(g: &mut crate::game::Game) -> bool { !g.touring }
+pub fn wall_pen_live(g: &crate::game::Game) -> bool { !g.touring }
 
 /// The thin level axis of a box in the world. (wallpen.ts thinN)
 pub fn thin_n(g: &mut crate::game::Game, b: BoxId) -> V3 {
@@ -85,7 +85,7 @@ pub fn face_n(g: &mut crate::game::Game, b: BoxId, p: V3) -> V3 {
 }
 
 /// Ceiling over the point; no interior cells built = everywhere. (wallpen.ts roofed)
-pub fn roofed(g: &mut crate::game::Game, x: f64, z: f64) -> bool {
+pub fn roofed(g: &crate::game::Game, x: f64, z: f64) -> bool {
     let Some(i) = &g.reach_interior else { return true };
     let w = crate::scene_world::world();
     let (cx, cz) = (m::floor(x - w.min[0]), m::floor(z - w.min[2]));
@@ -319,7 +319,7 @@ pub fn commit_walls(g: &mut crate::game::Game, walls: &[crate::wallpen::WallCros
 }
 
 /// The men's gate: the rule live. (wallpen.ts wallMenLive)
-pub fn wall_men_live(g: &mut crate::game::Game) -> bool { wall_pen_live(g) }
+pub fn wall_men_live(g: &crate::game::Game) -> bool { wall_pen_live(g) }
 
 /// Would a round of `energy` from `from` get to `to`: Clear, a ThinLine through thin things, or None. Reads only. (wallpen.ts thinLine)
 pub fn thin_line(g: &mut crate::game::Game, from: V3, to: V3, energy: f64, short: Option<f64>, first: Option<crate::wallpen::ThinLineFirst>) -> Option<crate::wallpen::ThinLine2> {
@@ -344,7 +344,7 @@ pub fn thin_line(g: &mut crate::game::Game, from: V3, to: V3, energy: f64, short
 }
 
 /// The hardest round any gun in the game fires. (wallpen.ts topEnergy)
-pub fn top_energy(g: &mut crate::game::Game) -> f64 {
+pub fn top_energy(g: &crate::game::Game) -> f64 {
     let k = &g.k.glasspen;
     let mut all: Vec<f64> = vec![k.default_energy];
     all.extend(k.energy.values().copied());

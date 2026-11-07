@@ -8,12 +8,12 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// A new lesson: nothing done, no run yet.   (lesson.ts Lesson.constructor)
-pub fn lesson_new(g: &mut crate::game::Game) -> crate::lesson::Lesson {
+pub fn lesson_new(g: &crate::game::Game) -> crate::lesson::Lesson {
     crate::lesson::Lesson::blank()
 }
 
 /// The lesson in force (None: not live).   (lesson.ts Lesson.data)
-pub fn lesson_data(g: &mut crate::game::Game) -> Option<crate::scene_scenarios::LessonData> {
+pub fn lesson_data(g: &crate::game::Game) -> Option<crate::scene_scenarios::LessonData> {
     let on_rails = match g.level.scenarios.as_ref().and_then(|s| s.lesson.as_ref()) {
         Some(l) if !l.steps.is_empty() => l.rails.is_some(),
         _ => return None,
@@ -29,17 +29,17 @@ pub fn lesson_data(g: &mut crate::game::Game) -> Option<crate::scene_scenarios::
 }
 
 /// The step that is up for the mission that is running: a fresh run is on its first step.   (lesson.ts Lesson.at)
-pub fn lesson_at(g: &mut crate::game::Game) -> f64 {
+pub fn lesson_at(g: &crate::game::Game) -> f64 {
     if run_is_mission(g) { g.lesson.i } else { 0.0 }
 }
 
 /// The index of the step that is up for the mission that is running.   (lesson.ts Lesson.index)
-pub fn lesson_index(g: &mut crate::game::Game) -> f64 {
+pub fn lesson_index(g: &crate::game::Game) -> f64 {
     lesson_at(g)
 }
 
 /// The step that is up, if any.   (lesson.ts Lesson.step)
-pub fn lesson_step(g: &mut crate::game::Game) -> Option<crate::scene_scenarios::LessonStep> {
+pub fn lesson_step(g: &crate::game::Game) -> Option<crate::scene_scenarios::LessonStep> {
     let l = lesson_data(g)?;
     let at = lesson_at(g);
     l.steps.into_iter().nth(at as usize)
@@ -127,7 +127,7 @@ pub fn lesson_advance(g: &mut crate::game::Game, l: &crate::scene_scenarios::Les
 }
 
 /// What a step that has just come up has seen: nothing, counted from now.   (lesson.ts Lesson.fresh)
-pub fn lesson_fresh(g: &mut crate::game::Game, back: Option<f64>) -> crate::lesson::StepSeen {
+pub fn lesson_fresh(g: &crate::game::Game, back: Option<f64>) -> crate::lesson::StepSeen {
     let back = back.unwrap_or(0.0);
     let ev = g.chronicle.events.len() as f64;
     let last_order = g.orders.log.last().map(|r| r.serial);
@@ -285,7 +285,7 @@ pub fn lesson_note(g: &mut crate::game::Game, s: &str) {
 }
 
 /// A step's line as the keys stand.   (lesson.ts lineOf)
-pub fn line_of(g: &mut crate::game::Game, t: &crate::scene_scenarios::LessonStep) -> String {
+pub fn line_of(g: &crate::game::Game, t: &crate::scene_scenarios::LessonStep) -> String {
     let line = filled(&t.blow_line).or(filled(&t.ring_line)).or(filled(&t.setup_line)).unwrap_or(t.line.as_str());
     String::from(line)
 }

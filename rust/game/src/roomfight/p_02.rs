@@ -49,13 +49,13 @@ pub fn room_fight_rate_on(g: &mut crate::game::Game, viewer: GuardId, target: Gu
     if st != crate::game::GuardState::Alert && st != crate::game::GuardState::Search && (known || g.time - room_fight_hot_of(g, viewer) < (if g.gd[viewer].team == crate::teams::Team::Operative { g.k.roomfight.team_hot } else { 10.0 })) { r * 2.2 } else { r }
 }
 /// is the floor hot in this teammate's ears.   (roomfight.ts hotFor)
-pub fn room_fight_hot_for(g: &mut crate::game::Game, gd: GuardId) -> bool { g.time - room_fight_hot_of(g, gd) < g.k.roomfight.team_hot }
+pub fn room_fight_hot_for(g: &crate::game::Game, gd: GuardId) -> bool { g.time - room_fight_hot_of(g, gd) < g.k.roomfight.team_hot }
 /// (roomfight.ts hotOf)
-pub fn room_fight_hot_of(g: &mut crate::game::Game, gd: GuardId) -> f64 { match op_id(g, gd) { Some(o) => m::max(g.tab.roomfight_op[o].hot_t, g.fight.hot_t), None => g.fight.hot_t } }
+pub fn room_fight_hot_of(g: &crate::game::Game, gd: GuardId) -> f64 { match op_id(g, gd) { Some(o) => m::max(g.tab.roomfight_op[o].hot_t, g.fight.hot_t), None => g.fight.hot_t } }
 /// (roomfight.ts opOf)
-pub fn room_fight_op_of(g: &mut crate::game::Game, gd: GuardId) -> Option<RoomfightOpId> { op_id(g, gd) }
+pub fn room_fight_op_of(g: &crate::game::Game, gd: GuardId) -> Option<RoomfightOpId> { op_id(g, gd) }
 /// this teammate's feet are held this frame.   (roomfight.ts short)
-pub fn room_fight_short(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn room_fight_short(g: &crate::game::Game, gd: GuardId) -> bool {
     if !g.fight.live { return false; }
     match op_id(g, gd) { Some(o) => { let s = g.tab.roomfight_op[o].short_t; g.time - s >= 0.0 && g.time - s < 0.25 } None => false }
 }
@@ -213,7 +213,7 @@ pub fn room_fight_smoke(g: &mut crate::game::Game) {
 }
 
 // ---------------------------------------------------------------- rooms
-fn cell_free(g: &mut Game, dc: &JsMap<crate::Num, DoorId>, x: f64, z: f64) -> bool {
+fn cell_free(g: &Game, dc: &JsMap<crate::Num, DoorId>, x: f64, z: f64) -> bool {
     let (w, h) = (g.col.nav.w, g.col.nav.h);
     if !(x >= 0.0 && z >= 0.0 && x < w && z < h) { return false; }
     let i = crate::scene_collision::nav_grid_idx(g, x, z);
@@ -278,14 +278,14 @@ pub fn room_fight_room_at(g: &mut crate::game::Game, p: V3) -> Option<RoomfightR
     Some(room)
 }
 /// (roomfight.ts inRoom)
-pub fn room_fight_in_room(g: &mut crate::game::Game, r: Option<RoomfightRoomId>, p: V3) -> bool {
+pub fn room_fight_in_room(g: &crate::game::Game, r: Option<RoomfightRoomId>, p: V3) -> bool {
     let r = match r { Some(r) => r, None => return false };
     let cell = g.col.nav.cell;
     let i = crate::scene_collision::nav_grid_idx(g, m::floor(p[0] / cell), m::floor(p[2] / cell));
     g.tab.roomfight_room[r].cells.has(crate::Num(i))
 }
 /// (roomfight.ts freeNear)
-pub fn room_fight_free_near(g: &mut crate::game::Game, p: V3) -> Option<V3> {
+pub fn room_fight_free_near(g: &crate::game::Game, p: V3) -> Option<V3> {
     if !crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { return Some([p[0], 0.0, p[2]]); }
     for r in [0.5, 1.0, 1.5] { for a in 0..8 {
         let a = a as f64;
@@ -413,7 +413,7 @@ pub fn room_fight_told(g: &mut crate::game::Game, gd: GuardId, at: V3) -> bool {
     true
 }
 /// the entry nearest a point, or -1.   (roomfight.ts entryToward)
-pub fn room_fight_entry_toward(g: &mut crate::game::Game, d: RoomfightDefId, at: V3) -> f64 {
+pub fn room_fight_entry_toward(g: &crate::game::Game, d: RoomfightDefId, at: V3) -> f64 {
     let (mut best, mut bd) = (-1.0, f64::INFINITY);
     for (i, e) in entries_of(g, g.tab.roomfight_def[d].room).iter().enumerate() { let q = flat(e.at, at); if q < bd { bd = q; best = i as f64; } }
     best
@@ -548,7 +548,7 @@ pub fn room_fight_blind(g: &mut crate::game::Game, d: RoomfightDefId, k: f64) {
     }
 }
 /// (roomfight.ts drilled)
-pub fn room_fight_drilled(g: &mut crate::game::Game) -> bool { drilled_on(g) }
+pub fn room_fight_drilled(g: &crate::game::Game) -> bool { drilled_on(g) }
 /// is the room lost, as far as he can tell.   (roomfight.ts lost)
 pub fn room_fight_lost(g: &mut crate::game::Game, d: RoomfightDefId) {
     let gd = g.tab.roomfight_def[d].gd; let c = g.gd[gd].ch;
@@ -587,7 +587,7 @@ pub fn room_fight_out_of_building(g: &mut crate::game::Game, p: V3) -> bool {
     roofed < 3
 }
 /// where the trouble is, as far as he knows.   (roomfight.ts threatOf)
-pub fn room_fight_threat_of(g: &mut crate::game::Game, d: RoomfightDefId) -> V3 {
+pub fn room_fight_threat_of(g: &crate::game::Game, d: RoomfightDefId) -> V3 {
     let gd = g.tab.roomfight_def[d].gd;
     if g.time - g.gd[gd].sight_t < 6.0 { return g.gd[gd].sight_pos; }
     if let Some(src) = g.gd[gd].sup.src { if g.time - g.gd[gd].sup.src_t < g.k.suppression.src_memory_secs { return src; } }

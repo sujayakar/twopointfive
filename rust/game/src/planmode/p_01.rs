@@ -8,12 +8,12 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// Shift + the key adds a goal: on Sam's own squad, and on a lesson only from the step that teaches it. (planmode.ts goalsOn)
-pub fn goals_on(g: &mut crate::game::Game) -> bool {
+pub fn goals_on(g: &crate::game::Game) -> bool {
     crate::orders::squad_orders_sams(g) && !crate::rails::rails_locks(g, "goal")
 }
 
 /// The squad as the goals it is on now: the men with nothing to do, and the rest by what they were sent to. (planmode.ts goalParts)
-pub fn goal_parts(g: &mut crate::game::Game) -> crate::planmode::GoalParts {
+pub fn goal_parts(g: &crate::game::Game) -> crate::planmode::GoalParts {
     let mut idle: Vec<GuardId> = Vec::new();
     let mut by: JsMap<String, Vec<GuardId>> = JsMap::new();
     for m in crate::orders::squad_orders_men(g, Some(crate::orders::SquadOrdersMenSel::All), None) {
@@ -100,7 +100,7 @@ pub fn goal_men(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> Op
 }
 
 /// Shift + the key kept down is the ring for those men. (planmode.ts goalRingOn)
-pub fn goal_ring_on(g: &mut crate::game::Game) -> bool {
+pub fn goal_ring_on(g: &crate::game::Game) -> bool {
     goals_on(g)
 }
 
@@ -133,7 +133,7 @@ pub fn plan_goal(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) {
 }
 
 /// Shift + the ring's key is the goal's own this frame, only where the ring has no hold to wait out. (planmode.ts goalShift)
-pub fn goal_shift(g: &mut crate::game::Game, input: InputId) -> bool {
+pub fn goal_shift(g: &crate::game::Game, input: InputId) -> bool {
     (crate::input::input_down(g, input, "ShiftLeft") || crate::input::input_down(g, input, "ShiftRight")) && goals_on(g) && !(g.k.cmdring.hold_secs > 0.0)
 }
 
@@ -166,7 +166,7 @@ fn target_at(t: &crate::orders::OrderTarget) -> V3 {
 }
 
 /// `G.every(m => S.of(m)?.door === door)`. (planmode.ts:45)
-fn every_on_door(g: &mut Game, men: &[GuardId], door: DoorId) -> bool {
+fn every_on_door(g: &Game, men: &[GuardId], door: DoorId) -> bool {
     for &m in men {
         let on = match crate::orders::squad_orders_of(g, m) {
             Some(a) => g.tab.orders_assignment[a].door == Some(door),

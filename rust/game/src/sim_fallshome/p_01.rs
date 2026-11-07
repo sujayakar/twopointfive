@@ -54,7 +54,7 @@ fn took_there(g: &mut Game) {
 }
 
 /// The store over the game's block: its bit stands in the head, and neither list has told the floor of anything yet. (fallshome.ts FallStore.constructor)
-pub fn fall_store_new(g: &mut crate::game::Game, home: crate::Opaque) -> crate::sim_fallshome::FallStore {
+pub fn fall_store_new(g: &crate::game::Game, home: crate::Opaque) -> crate::sim_fallshome::FallStore {
     let st = sim::state::state(g.sim);
     let bit = FALL_BIT as u32;
     debug_assert!(st.head.homes & bit == 0, "two stores of the falls over one game's block");
@@ -66,29 +66,29 @@ pub fn fall_store_new(g: &mut crate::game::Game, home: crate::Opaque) -> crate::
 
 
 /// Landings waiting in the glass's list. (fallshome.ts FallStore.waiting)
-pub fn fall_store_waiting(g: &mut crate::game::Game) -> f64 {
-    sim::state::state(g.sim).falls.n[sim::falls::L_GLASS]
+pub fn fall_store_waiting(g: &crate::game::Game) -> f64 {
+    sim::state::state_read(g.sim).falls.n[sim::falls::L_GLASS]
 }
 
 /// Landings waiting in list `l`. (fallshome.ts FallStore.waitingIn)
-pub fn fall_store_waiting_in(g: &mut crate::game::Game, l: f64) -> f64 {
-    sim::state::state(g.sim).falls.n[l as usize]
+pub fn fall_store_waiting_in(g: &crate::game::Game, l: f64) -> f64 {
+    sim::state::state_read(g.sim).falls.n[l as usize]
 }
 
 /// Has any glass been laid since the map was cleared. (fallshome.ts FallStore.any)
-pub fn fall_store_any(g: &mut crate::game::Game) -> bool {
-    sim::state::state(g.sim).falls.any != 0.0
+pub fn fall_store_any(g: &crate::game::Game) -> bool {
+    sim::state::state_read(g.sim).falls.any != 0.0
 }
 
 /// M² of glass in the cell under (x, z). (fallshome.ts FallStore.at)
-pub fn fall_store_at(g: &mut crate::game::Game, x: f64, z: f64) -> f64 {
+pub fn fall_store_at(g: &crate::game::Game, x: f64, z: f64) -> f64 {
     let k = cell(x, z);
-    if k == NCELLS { 0.0 } else { sim::state::state(g.sim).falls.litter[k as usize] }
+    if k == NCELLS { 0.0 } else { sim::state::state_read(g.sim).falls.litter[k as usize] }
 }
 
 /// The cells that hold glass: [cell x, cell z, m²], row by row. (fallshome.ts FallStore.cells)
-pub fn fall_store_cells(g: &mut crate::game::Game) -> Vec<[f64; 3]> {
-    let litter = &sim::state::state(g.sim).falls.litter;
+pub fn fall_store_cells(g: &crate::game::Game) -> Vec<[f64; 3]> {
+    let litter = &sim::state::state_read(g.sim).falls.litter;
     let mut out = Vec::new();
     for k in 0..sim::falls::NCELLS {
         if litter[k] != 0.0 {
@@ -99,9 +99,9 @@ pub fn fall_store_cells(g: &mut crate::game::Game) -> Vec<[f64; 3]> {
 }
 
 /// Landing i that waits in list `l`, by its columns' names. (fallshome.ts FallStore.landing)
-pub fn fall_store_landing(g: &mut crate::game::Game, i: f64, l: Option<f64>) -> JsMap<crate::sim_fallshome::FallStoreLandingKey, f64> {
+pub fn fall_store_landing(g: &crate::game::Game, i: f64, l: Option<f64>) -> JsMap<crate::sim_fallshome::FallStoreLandingKey, f64> {
     let l = l.unwrap_or(FALL_GLASS) as usize;
-    let p = &sim::state::state(g.sim).falls.p[l];
+    let p = &sim::state::state_read(g.sim).falls.p[l];
     let mut r = JsMap::default();
     for (key, col) in LANDING {
         r.set(key, p[col][i as usize]);
@@ -121,7 +121,7 @@ pub fn fall_store_schedule(g: &mut crate::game::Game, t: f64, x: f64, y: f64, z:
 /// The landings of list `l` whose time has come, in order: each one's glass laid and the floor told. (fallshome.ts FallStore.due)
 pub fn fall_store_due(g: &mut crate::game::Game, time: f64, level: f64, gap: f64, l: Option<f64>) -> Vec<crate::sim_fallshome::FallDue> {
     let Some(l) = list_of(l.unwrap_or(FALL_GLASS)) else { return none() };
-    if sim::state::state(g.sim).falls.n[l] == 0.0 {
+    if sim::state::state_read(g.sim).falls.n[l] == 0.0 {
         return none();
     }
     g.m.sim_fallshome.falls.dues += 1.0;
@@ -164,7 +164,7 @@ pub fn fall_store_clear(g: &mut crate::game::Game, list_only: Option<bool>, l: O
 }
 
 /// One rule: in Rust always the module's, so `here` is never run and this file's rules call the module directly. (fallshome.ts FallStore.rule)
-pub fn fall_store_rule<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, what: &str, there: &mut dyn FnMut(&mut crate::game::Game) -> T, here: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
+pub fn fall_store_rule<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, what: &str, there: &mut dyn FnMut(&mut crate::game::Game) -> T, here: &dyn FnMut(&mut crate::game::Game) -> T) -> T {
     took_there(g);
     there(g)
 }

@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// Live: a run is on and it really is the player playing. (mission.ts missionLive)
-pub fn mission_live(g: &mut crate::game::Game) -> bool {
+pub fn mission_live(g: &crate::game::Game) -> bool {
     let s = g.mission.stage;
     !g.quiet_utility && g.puppet.is_none() && s != crate::game::MissionStage::Done && s != crate::game::MissionStage::Failed
 }
@@ -49,7 +49,7 @@ fn rack_dist_plain(front: V3, half_w: f64, p: V3) -> f64 {
 }
 
 /// Out through the mission's exit, or any exit of a quiet mission. (mission.ts outNow)
-pub fn out_now(g: &mut crate::game::Game, p: V3) -> bool {
+pub fn out_now(g: &crate::game::Game, p: V3) -> bool {
     if crate::quiet::quiet_of(g) {
         let exits = crate::quiet::quiet_mission_exits(g);
         return exits.iter().any(|x| crate::quiet::out_through(x, p));
@@ -438,7 +438,7 @@ fn drive_percent(drive_t: f64) -> String {
 }
 
 /// `g.doors.byName(name)?.frameCentre ?? null` (mission.ts:150).
-fn door_centre(g: &mut Game, name: &str) -> Option<V3> {
+fn door_centre(g: &Game, name: &str) -> Option<V3> {
     crate::doors::doors_by_name(g, name).map(|d| g.dr[d].frame_centre)
 }
 

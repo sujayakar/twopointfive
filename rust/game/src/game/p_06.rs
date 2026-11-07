@@ -14,7 +14,7 @@ fn in_seat<R>(g: &mut Game, s: SeatId, mut f: impl FnMut(&mut Game) -> R) -> R {
 }
 
 /// the character of a seat's man
-fn man_char(g: &mut Game, s: SeatId) -> CharId { let pl = crate::cmd::seat_man(g, s); g.pl[pl].ch }
+fn man_char(g: &Game, s: SeatId) -> CharId { let pl = crate::cmd::seat_man(g, s); g.pl[pl].ch }
 
 /// game.ts `WEAPONS[id]`
 fn weapon_row(g: &Game, id: crate::weapons::WeaponId) -> &crate::weapons::WeaponDef { g.m.weapons.weapons.get(id).unwrap() }
@@ -422,7 +422,7 @@ pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt:
     //  goes its box joins the frame's rows, and the host's next listing frees it once it is on no list: boxes_frame_reset. Most fx rows live one frame
     //  (a charge's slab being placed, a stack's marker), so without this every such frame left a row for good.)
     // (game.ts:1818: his rig and a can in his fist are drawn where his drawn hands are: Box.dc / dh; the boxes themselves stay the simulation's)
-    if statured { crate::stature::drawn_boxes(g, all, &mut out, rig0 as f64); }
+    if statured { crate::stature::drawn_boxes(g, all, &out, rig0 as f64); }
     if !g.tune.tracers && js::truthy(g.tracers.live) { crate::tracers::tracers_clear(g); }
     let px = g.m_per_px;
     crate::tracers::tracers_update(g, dt, &mut out, Some(px));
@@ -451,7 +451,7 @@ pub fn game_draw_characters(g: &mut crate::game::Game, all: &[CharId], statured:
 }
 
 /// the world size of one drawn pixel at a camera's look-at depth, for a view of `canvas`'s height   (game.ts viewPx)
-pub fn game_view_px(g: &mut crate::game::Game, cam: crate::game::GameViewPxCam, canvas: crate::game::GameViewPxCanvas) -> f64 {
+pub fn game_view_px(g: &crate::game::Game, cam: crate::game::GameViewPxCam, canvas: crate::game::GameViewPxCanvas) -> f64 {
     let sharp_still = g.engine.sharp_on.unwrap_or(false) && g.engine.settings.sharp_decouple;
     view_px_sum(cam.distance, cam.fov, canvas.height, sharp_still, g.engine.effective_scale)
 }

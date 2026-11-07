@@ -18,7 +18,7 @@ fn target_at(t: &crate::orders::OrderTarget) -> V3 {
 }
 
 /// The squad's smoke canisters left this run. (squadsmoke.ts squadSmokeLeft)
-pub fn squad_smoke_left(g: &mut crate::game::Game) -> f64 {
+pub fn squad_smoke_left(g: &crate::game::Game) -> f64 {
     let key = crate::seats::view_key(g);
     match g.m.squadsmoke.states.get(key) { Some(s) => s.cans, None => 0.0 }
 }
@@ -82,7 +82,7 @@ pub fn run_clear(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
 }
 
 /// Has this man a hand for a throw right now. (squadsmoke.ts squadHandFree)
-pub fn squad_hand_free(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn squad_hand_free(g: &crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     !(g.gd[gd].state == crate::game::GuardState::Dead
         || g.ch[c].anim.lockpick

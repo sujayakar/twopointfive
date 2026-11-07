@@ -83,7 +83,7 @@ fn sweep_rest(g: &mut Game, id: RoomClearId, second: bool, t: f64) {
     sweep_begin(g, id, second, &list, t, rest_secs(&list));
 }
 
-fn on_his_script(g: &mut Game, gd: GuardId) -> bool {
+fn on_his_script(g: &Game, gd: GuardId) -> bool {
     g.guards.contains(&gd) && g.gd[gd].script.is_some() && g.gd[gd].state != crate::game::GuardState::Dead
 }
 
@@ -445,20 +445,20 @@ pub fn room_clear_end(g: &mut crate::game::Game, id: RoomClearId, state: Option<
 }
 
 /// False once there is nothing left to drive. (squad.ts RoomClear.intact)
-pub fn room_clear_intact(g: &mut crate::game::Game, id: RoomClearId) -> bool {
+pub fn room_clear_intact(g: &crate::game::Game, id: RoomClearId) -> bool {
     let (door, a, b) = (g.tab.squad_room_clear[id].door, g.tab.squad_room_clear[id].a, g.tab.squad_room_clear[id].b);
     door.is_some() && on_his_script(g, a) && match b { None => true, Some(b) => on_his_script(g, b) }
 }
 
 /// Rallied on the door after calling it, or long enough after that a man who cannot make his mark is not waited for. (squad.ts RoomClear.complete)
-pub fn room_clear_complete(g: &mut crate::game::Game, id: RoomClearId) -> bool {
+pub fn room_clear_complete(g: &crate::game::Game, id: RoomClearId) -> bool {
     let row = &g.tab.squad_room_clear[id];
     let tr = row.t_now - row.t_resolve;
     row.phase == RoomClearPhase::Resolve && (tr > 7.5 || (tr > 2.8 && row.done.has(String::from("#formup")) && row.a_home && row.b_home))
 }
 
 /// (squad.ts RoomClear.men)
-pub fn room_clear_men(g: &mut crate::game::Game, id: RoomClearId) -> Vec<GuardId> {
+pub fn room_clear_men(g: &crate::game::Game, id: RoomClearId) -> Vec<GuardId> {
     let row = &g.tab.squad_room_clear[id];
     match row.b { Some(b) => vec![row.a, b], None => vec![row.a] }
 }
@@ -808,7 +808,7 @@ pub fn room_centre(p: &crate::scene_level::RoomClearPlan) -> V3 {
 }
 
 /// Another door of the room the plan clears, for #2 to hold: the nearest to his point of domination, or None. (squad.ts nextDoorOf)
-pub fn next_door_of(g: &mut crate::game::Game, p: &crate::scene_level::RoomClearPlan) -> Option<DoorId> {
+pub fn next_door_of(g: &crate::game::Game, p: &crate::scene_level::RoomClearPlan) -> Option<DoorId> {
     let b = p.bounds?;
     let pod = match p.entry[1].last() { Some(x) => *x, None => p.stack[1] };
     let mut best = None;

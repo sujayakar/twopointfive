@@ -32,13 +32,13 @@ pub fn long_tuck(t: &mut Vec<f64>, gun_wall: f64) {
 }
 
 /// Is the stagger's fold up: `too` is the figure's own foldToo; while MOVES.fold is 0 the wounds switch raises it too. (character.ts foldOn)
-pub fn fold_on(g: &mut Game, too: Option<bool>) -> bool {
+pub fn fold_on(g: &Game, too: Option<bool>) -> bool {
     let too = too.unwrap_or(false);
     g.k.moves.clutch > 0.5 && (g.k.moves.fold > 0.5 || (g.k.moves.fold == 0.0 && (too || g.k.wound.on)))
 }
 
 /// One part of the motion pass: on? (character.ts mvOn)
-pub fn mv_on(g: &mut Game, k: crate::character::MvOnK) -> bool {
+pub fn mv_on(g: &Game, k: crate::character::MvOnK) -> bool {
     use crate::character::MvOnK;
     let t = &g.k.moves;
     let v = match k {

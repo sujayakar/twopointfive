@@ -10,7 +10,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 // ---------------------------------------------------------------- seams: what skeleton 5 still cannot give
 
 /// `b.owner` of a box made this frame: BoxId has no table of rows in skeleton 5.   (combat.ts:457)
-fn seam_box_owner(g: &mut Game, b: BoxId) -> f64 { g.tab.boxes[b].owner }
+fn seam_box_owner(g: &Game, b: BoxId) -> f64 { g.tab.boxes[b].owner }
 /// `b.mkey = k` of a box made this frame: the same.   (combat.ts:457)
 fn seam_box_set_mkey(g: &mut Game, b: BoxId, k: f64) { g.tab.boxes[b].mkey = Some(k); }
 
@@ -264,7 +264,7 @@ pub fn hand_props(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
 }
 
 /// Motion identity: every rig box from `n0` on gets its man's id and its ordinal among his boxes this frame. Owner 0 stays on the index rule.   (combat.ts rigKeys)
-pub fn rig_keys(g: &mut crate::game::Game, out: &mut Vec<BoxId>, n0: f64) {
+pub fn rig_keys(g: &mut crate::game::Game, out: &Vec<BoxId>, n0: f64) {
     let mut ord = hand_ord();
     let mut k = n0 as usize;
     while k < out.len() {
@@ -748,7 +748,7 @@ pub fn update_items(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// The attached solver's canister tuning, or None behind a stand-in without any.   (combat.ts smokeParams)
-pub fn smoke_params(g: &mut crate::game::Game) -> Option<crate::smoke_types::CanisterParams> {
+pub fn smoke_params(g: &crate::game::Game) -> Option<crate::smoke_types::CanisterParams> {
     g.smoke.params
 }
 

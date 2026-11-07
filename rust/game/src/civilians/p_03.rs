@@ -207,7 +207,7 @@ pub fn to_gone(g: &mut crate::game::Game, gd: GuardId, evac: bool) {
 }
 
 /// the free nav cell near her with the most wall about it, away from the fright; her own spot if nothing better (civilians.ts cornerSpot)
-pub fn corner_spot(g: &mut crate::game::Game, gd: GuardId) -> V3 {
+pub fn corner_spot(g: &crate::game::Game, gd: GuardId) -> V3 {
     use crate::scene_collision::{nav_grid_idx, nav_grid_walkable};
     let cid = g.gd[gd].civ.unwrap();
     let cs = g.col.nav.cell; let from = g.ch[g.gd[gd].ch].pos; let threat = g.cv[cid].cause_pos;
@@ -584,7 +584,7 @@ pub fn civ_point_in_view(g: &mut crate::game::Game, gd: GuardId, p: V3, range: f
 }
 
 /// living staff, free, on the shift's list (civilians.ts staffCalm)
-pub fn staff_calm(g: &mut crate::game::Game, o: GuardId) -> bool {
+pub fn staff_calm(g: &crate::game::Game, o: GuardId) -> bool {
     g.gd[o].state != GuardState::Dead && g.gd[o].team == Team::Guard && g.gd[o].held.is_none() && g.gd[o].script.is_none() && g.guards.contains(&o)
 }
 
@@ -784,7 +784,7 @@ pub fn hear_scream(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// a calm patrolling staff man with nothing on his hands or mind and no line in the air (civilians.ts chattyEnough)
-pub fn chatty_enough(g: &mut crate::game::Game, x: GuardId) -> bool {
+pub fn chatty_enough(g: &crate::game::Game, x: GuardId) -> bool {
     let up = match &g.gd[x].bubble { Some(b) => g.time - b.t < b.dur + 1.0, None => false };
     let man = &g.gd[x];
     man.team == Team::Guard && man.unit.is_none() && man.state == GuardState::Patrol && man.held.is_none() && man.script.is_none() && man.task.is_none() && man.body_duty.is_none() && !man.pinned && !man.hold && man.leader.is_none() && man.post.is_none() && man.awareness < 0.15 && !up && g.guards.contains(&x)
@@ -861,10 +861,10 @@ pub fn evacuation_check(g: &mut crate::game::Game) {
 }
 
 /// the switch and the fail rule, kept on the machine: the browser's storage is the host's, and with no storage the TypeScript's own try does nothing (civilians.ts saveCivTune)
-pub fn save_civ_tune(g: &mut crate::game::Game) {}
+pub fn save_civ_tune(g: &crate::game::Game) {}
 
 /// the stored switch and `?nocivilians`: the browser's storage and the address are the host's, which sets g.tune; with neither the TypeScript's own tries do nothing (civilians.ts loadCivTune)
-pub fn load_civ_tune(g: &mut crate::game::Game) {}
+pub fn load_civ_tune(g: &crate::game::Game) {}
 
 /// the switch flipped live (civilians.ts setCivilians)
 pub fn set_civilians(g: &mut crate::game::Game, on: bool) {

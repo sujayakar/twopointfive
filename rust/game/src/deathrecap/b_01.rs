@@ -10,7 +10,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/deathrecap.ts:169 sample)
-pub fn sample(g: &mut crate::game::Game) {}
+pub fn sample(g: &crate::game::Game) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/deathrecap.ts:185 take)
 pub fn take(g: &mut crate::game::Game, death: &crate::deathrecap::RecapDeath) {}
@@ -19,5 +19,5 @@ pub fn take(g: &mut crate::game::Game, death: &crate::deathrecap::RecapDeath) {}
 pub fn flush(g: &mut crate::game::Game, early: bool) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/deathrecap.ts:207 recapTick)
-pub fn recap_tick(g: &mut crate::game::Game) {}
+pub fn recap_tick(g: &crate::game::Game) {}
 

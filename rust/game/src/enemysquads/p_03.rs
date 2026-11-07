@@ -542,7 +542,7 @@ fn check_word(name: &str, salt: f64, phases: f64) -> u32 {
     (h ^ js::to_i32(m::floor(phases * 8388607.0))) as u32
 }
 /// The check's own dice, never the game's: seeded off the squad's name and its men's stride phases.   (enemysquads.ts checkDice)
-pub fn check_dice(g: &mut crate::game::Game, q: EnemysquadsSquadId, salt: Option<f64>) -> crate::math_dice::Die {
+pub fn check_dice(g: &crate::game::Game, q: EnemysquadsSquadId, salt: Option<f64>) -> crate::math_dice::Die {
     let salt = salt.unwrap_or(0.0);
     let mut phases = 0.0;
     for x in sq!(g, q).men.iter() {
@@ -552,7 +552,7 @@ pub fn check_dice(g: &mut crate::game::Game, q: EnemysquadsSquadId, salt: Option
     crate::math_dice::die_of(word as f64)
 }
 /// How long till the next check: a squad that has heard of the team counts its men oftener.   (enemysquads.ts checkBeat)
-pub fn check_beat(g: &mut crate::game::Game, q: EnemysquadsSquadId, die: &mut crate::math_dice::Die) -> f64 {
+pub fn check_beat(g: &crate::game::Game, q: EnemysquadsSquadId, die: &mut crate::math_dice::Die) -> f64 {
     let k = g.k.squads;
     let r = &sq!(g, q);
     let alert = if r.news_t > -100.0 || r.contact_t > -100.0 || r.wary == Some(true) { k.check_alert_k } else { 1.0 };
@@ -1664,7 +1664,7 @@ pub fn glimpse(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: GuardId) -> 
     false
 }
 /// The floor is quiet as far as this squad knows: only then is a call a thing with a length.   (enemysquads.ts callQuiet)
-pub fn call_quiet(g: &mut crate::game::Game, q: EnemysquadsSquadId) -> bool {
+pub fn call_quiet(g: &crate::game::Game, q: EnemysquadsSquadId) -> bool {
     let r = &sq!(g, q);
     if r.state == SquadState::Contact || r.state == SquadState::Alerted || !(r.contact_t <= -100.0) || !(r.news_t <= -100.0) {
         return false;

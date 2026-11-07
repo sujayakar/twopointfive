@@ -32,7 +32,7 @@ fn pos_of(g: &mut Game, gd: GuardId) -> V3 {
     g.ch[c].pos
 }
 
-fn id_of(g: &mut Game, gd: GuardId) -> f64 {
+fn id_of(g: &Game, gd: GuardId) -> f64 {
     let c = g.gd[gd].ch;
     g.ch[c].id
 }
@@ -55,7 +55,7 @@ pub fn fed(g: &mut crate::game::Game) -> bool {
 }
 
 /// the loud noises his ears have counted (netquiet.ts loudOf)
-pub fn loud_of(g: &mut crate::game::Game, gd: GuardId) -> f64 {
+pub fn loud_of(g: &crate::game::Game, gd: GuardId) -> f64 {
     let h = &g.gd[gd].witness.heard;
     h.shots + h.kick + h.bang
 }
@@ -489,7 +489,7 @@ pub fn noise_of(g: &mut crate::game::Game, gd: GuardId, d: Option<RoomfightDefId
 }
 
 /// on the noise now: the swing made and time left of it, and not low on his spot (netquiet.ts whipping)
-pub fn whipping(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn whipping(g: &crate::game::Game, gd: GuardId) -> bool {
     let Some(n) = g.m.netquiet.state_of.get(gd) else { return false };
     n.whip_at.is_some() && n.whip_in <= 0.0 && n.whip_t > 0.0 && !n.low
 }
@@ -726,7 +726,7 @@ pub fn sync_last_man(g: &mut crate::game::Game) {
 }
 
 /// at his post: holding his room, on nobody's scripted leg (netquiet.ts posted)
-pub fn posted(g: &mut crate::game::Game, gd: GuardId, d: RoomfightDefId) -> bool {
+pub fn posted(g: &crate::game::Game, gd: GuardId, d: RoomfightDefId) -> bool {
     g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Hold && g.gd[gd].hold && g.gd[gd].script.is_none()
 }
 

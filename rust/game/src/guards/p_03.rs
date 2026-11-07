@@ -8,12 +8,12 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// A bone of a body, if the body has it (the TypeScript's `c.bones.x`).
-fn bone(g: &mut Game, c: CharId, b: crate::character::Bone) -> Option<V3> {
+fn bone(g: &Game, c: CharId, b: crate::character::Bone) -> Option<V3> {
     g.ch[c].bones.get(b).copied()
 }
 
 /// Is the shield up: a living man in Sam's arm, Sam on his feet, in any phase of the hold. (guards.ts shieldUp)
-pub fn shield_up(g: &mut crate::game::Game) -> bool {
+pub fn shield_up(g: &crate::game::Game) -> bool {
     let p = g.player;
     let held = match &g.pl[p].holding {
         Some(h) => h.g,
@@ -30,7 +30,7 @@ pub fn shield_up(g: &mut crate::game::Game) -> bool {
 }
 
 /// The pair as the observers reason about it this frame; None when nobody is held. `key` is the hold's serial. (guards.ts pairOf)
-pub fn pair_of(g: &mut crate::game::Game) -> Option<crate::guards::Pair> {
+pub fn pair_of(g: &crate::game::Game) -> Option<crate::guards::Pair> {
     let p = g.player;
     if g.pl[p].holding.is_none() || !shield_up(g) {
         return None;
@@ -384,7 +384,7 @@ fn axis_measure(from: V3, to: V3, ax: f64, az: f64, y0: f64, y1: f64) -> f64 {
 }
 
 /// Metres between colleague `o`'s body axis and the segment `from` → `to`. (guards.ts axisToSegment)
-pub fn axis_to_segment(g: &mut crate::game::Game, from: V3, to: V3, o: GuardId) -> f64 {
+pub fn axis_to_segment(g: &crate::game::Game, from: V3, to: V3, o: GuardId) -> f64 {
     let c = g.gd[o].ch;
     let pos = g.ch[c].pos;
     let h = bone(g, c, crate::character::Bone::Hips).unwrap_or(pos);

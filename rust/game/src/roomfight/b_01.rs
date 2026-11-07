@@ -11,7 +11,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 // THE THREE INVENTED HELPERS OF A DEFENDER'S WATCHED POINT (sig.rs's doc lines are their rule). No job listed them; roomfight's own parts keep private
 // twins (p_02 / p_03 fix_is_pt, move_pt, cover_pt), and enemysquads p_04, buddy and powerout call these public ones, which were stubs.
 /// `gd.lastKnown === D.pt` (roomfight.ts:303)
-pub fn def_fix_is_pt(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
+pub fn def_fix_is_pt(g: &crate::game::Game, d: RoomfightDefId) -> bool {
     let def = &g.tab.roomfight_def[d];
     def.pt_stamp == Some(g.gd[def.gd].fix_stamp) && g.gd[def.gd].last_known == Some(def.pt)
 }

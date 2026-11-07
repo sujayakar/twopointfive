@@ -16,26 +16,26 @@ fn bounds_of(b: Grown) -> crate::scene_level::BreachPlanBounds { crate::scene_le
 fn rect_bounds(b: crate::scene_scenarios::Rect) -> crate::scene_level::BreachPlanBounds { crate::scene_level::BreachPlanBounds { x0: b.x0, x1: b.x1, z0: b.z0, z1: b.z1 } }
 fn say_radio(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, Some(true), None, None); }
 fn door_name(g: &Game, d: DoorId) -> String { g.dr[d].def.name.clone() }
-fn nav_idx(g: &mut Game, ix: f64, iz: f64) -> f64 { crate::scene_collision::nav_grid_idx(g, ix, iz) }
-fn nav_blocked(g: &mut Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }
+fn nav_idx(g: &Game, ix: f64, iz: f64) -> f64 { crate::scene_collision::nav_grid_idx(g, ix, iz) }
+fn nav_blocked(g: &Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }
 /// wayRound's and wayRound2's `cell`: no check of the grid's edges, as there
-fn cell_of(g: &mut Game, p: V3) -> f64 { let c = g.col.nav.cell; nav_idx(g, m::floor(p[0] / c), m::floor(p[2] / c)) }
+fn cell_of(g: &Game, p: V3) -> f64 { let c = g.col.nav.cell; nav_idx(g, m::floor(p[0] / c), m::floor(p[2] / c)) }
 fn in_grid(g: &Game, ix: f64, iz: f64) -> bool { ix >= 0.0 && iz >= 0.0 && ix < g.col.nav.w && iz < g.col.nav.h }
 fn room_has(g: &Game, t: RoomfightRoomId, i: f64) -> bool { g.tab.roomfight_room[t].cells.has(crate::Num(i)) }
 
 /// roomfight.ts: the defenders' row of FIGHT_SKILL as a drilled garrison has it (squadSkill): drillReact and drillNerve are off on the page, on every map
-pub fn squad_skill(g: &mut crate::game::Game, base: crate::roomfight::FightSkill) -> crate::roomfight::FightSkill { base }
+pub fn squad_skill(g: &crate::game::Game, base: crate::roomfight::FightSkill) -> crate::roomfight::FightSkill { base }
 
 /// (enemysquads.ts flat)
 pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 /// (enemysquads.ts pick)
 pub fn pick(g: &mut crate::game::Game, r: [f64; 2]) -> f64 { r[0] + crate::math_dice::sim_random(g) * (r[1] - r[0]) }
 /// a man who dropped it and ran is no man of his squad's any more (enemysquads.ts alive)
-pub fn alive(g: &mut crate::game::Game, gd: GuardId) -> bool { g.gd[gd].state != crate::game::GuardState::Dead && !g.gd[gd].fled }
+pub fn alive(g: &crate::game::Game, gd: GuardId) -> bool { g.gd[gd].state != crate::game::GuardState::Dead && !g.gd[gd].fled }
 /// (enemysquads.ts grown)
 pub fn grown(b: crate::scene_scenarios::Rect, m: f64) -> crate::enemysquads::Grown { Grown { x0: b.x0 - m, x1: b.x1 + m, z0: b.z0 - m, z1: b.z1 + m } }
 /// (enemysquads.ts roomOf)
-pub fn room_of(g: &mut crate::game::Game, q: EnemysquadsSquadId, p: V3, m: Option<f64>) -> Option<crate::scene_scenarios::StructureRoom> {
+pub fn room_of(g: &crate::game::Game, q: EnemysquadsSquadId, p: V3, m: Option<f64>) -> Option<crate::scene_scenarios::StructureRoom> {
     let m = m.unwrap_or(0.0);
     for r in g.tab.enemysquads_squad[q].rooms.iter() {
         let b = if js::truthy(m) { bounds_of(grown(r.bounds, m)) } else { rect_bounds(r.bounds) };
@@ -71,12 +71,12 @@ pub fn along(from: V3, path: &[V3], each: &mut dyn FnMut(V3, f64)) -> f64 {
 pub fn path_len(from: V3, path: &[V3]) -> f64 { along(from, path, &mut |_, _| {}) }
 
 /// out on a leg, or about to be sent, so not free to be sent anywhere else: `OWN.squadLeg` (enemysquads.ts squadLegOf)
-pub fn squad_leg_of(g: &mut crate::game::Game, q: EnemysquadsSquadId, gd: GuardId) -> bool {
+pub fn squad_leg_of(g: &crate::game::Game, q: EnemysquadsSquadId, gd: GuardId) -> bool {
     let x = &g.tab.enemysquads_squad[q];
     x.sent.iter().any(|s| s.gd == gd) || x.due.iter().any(|d| d.gd == gd)
 }
 /// his squad has heard and not yet said, he is about to go, on his way round, or looking for a man who does not answer: `OWN.squadWord` (enemysquads.ts squadWordOf)
-pub fn squad_word_of(g: &mut crate::game::Game, q: EnemysquadsSquadId, gd: GuardId) -> bool {
+pub fn squad_word_of(g: &crate::game::Game, q: EnemysquadsSquadId, gd: GuardId) -> bool {
     let x = &g.tab.enemysquads_squad[q];
     x.state == SquadState::Alerted || x.due.iter().any(|d| d.gd == gd)
         || x.sent.iter().any(|s| s.gd == gd && s.role == SentRole::Flank && s.phase != SentPhase::Loose)
@@ -180,9 +180,9 @@ pub fn squads_stop(g: &mut crate::game::Game) {
     g.m.enemysquads.ctx = None;
 }
 /// squads are on the floor in this game right now (enemysquads.ts squadsLive)
-pub fn squads_live(g: &mut crate::game::Game) -> bool { g.m.enemysquads.states.is_some() }
+pub fn squads_live(g: &crate::game::Game) -> bool { g.m.enemysquads.states.is_some() }
 /// the squad of a man: its record as the level wrote it and its men in staged order (enemysquads.ts squadOf)
-pub fn squad_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::enemysquads::SquadOf> {
+pub fn squad_of(g: &crate::game::Game, gd: GuardId) -> Option<crate::enemysquads::SquadOf> {
     let q = squad_id_of(g, gd)?;
     let x = &g.tab.enemysquads_squad[q];
     Some(SquadOf { def: x.def.clone(), men: x.men.clone() })
@@ -191,7 +191,7 @@ pub fn squad_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::enemysq
 fn squad_id_of(g: &Game, gd: GuardId) -> Option<EnemysquadsSquadId> { g.m.enemysquads.states.as_ref()?.of.get(gd).copied() }
 
 /// may his squad wedge this door (enemysquads.ts squadMayWedge)
-pub fn squad_may_wedge(g: &mut crate::game::Game, gd: GuardId, d: DoorId) -> bool {
+pub fn squad_may_wedge(g: &crate::game::Game, gd: GuardId, d: DoorId) -> bool {
     match squad_id_of(g, gd) { None => true, Some(q) => g.tab.enemysquads_squad[q].barricade.has(g.dr[d].def.name.clone()) }
 }
 /// where a man who gives ground goes, when his squad has a rally point he can reach in another of its rooms; None = the room fight's own answer (enemysquads.ts squadRally)
@@ -224,18 +224,18 @@ pub fn squad_rally(g: &mut crate::game::Game, gd: GuardId, threat: V3) -> Option
 }
 
 /// (enemysquads.ts defOf)
-pub fn def_of(g: &mut crate::game::Game, gd: GuardId) -> Option<RoomfightDefId> { g.fight.defs.iter().copied().find(|d| g.tab.roomfight_def[*d].gd == gd) }
+pub fn def_of(g: &crate::game::Game, gd: GuardId) -> Option<RoomfightDefId> { g.fight.defs.iter().copied().find(|d| g.tab.roomfight_def[*d].gd == gd) }
 /// his own wits about him: alive, not in Sam's arm, not blinded or reeling (enemysquads.ts fit)
 pub fn fit(g: &mut crate::game::Game, m: GuardId) -> bool {
     alive(g, m) && g.gd[m].held.is_none() && g.time >= g.gd[m].dazzled_until && g.time >= g.gd[m].stagger_until && !crate::owner::has_him(g, m, crate::owner::own().runner)
 }
 /// when this man was sent to look where the team was last put, or None. Words only (enemysquads.ts squadLookSince)
-pub fn squad_look_since(g: &mut crate::game::Game, gd: GuardId) -> Option<f64> {
+pub fn squad_look_since(g: &crate::game::Game, gd: GuardId) -> Option<f64> {
     let q = squad_id_of(g, gd)?;
     g.tab.enemysquads_squad[q].sent.iter().find(|x| x.gd == gd && x.role == SentRole::Look).map(|s| s.t0)
 }
 /// is this point in one of his squad's rooms; no squad = anywhere (enemysquads.ts inSquadRooms)
-pub fn in_squad_rooms(g: &mut crate::game::Game, gd: GuardId, p: V3) -> bool {
+pub fn in_squad_rooms(g: &crate::game::Game, gd: GuardId, p: V3) -> bool {
     match squad_id_of(g, gd) {
         None => true,
         Some(q) => g.tab.enemysquads_squad[q].rooms.iter().any(|r| p[0] >= r.bounds.x0 && p[0] <= r.bounds.x1 && p[2] >= r.bounds.z0 && p[2] <= r.bounds.z1),
@@ -266,7 +266,7 @@ pub fn tell(g: &mut crate::game::Game, d: RoomfightDefId, at: V3) {
     row.noise_at = Some(v3::copy(at)); row.noise_t = t; row.noise_out = true;
 }
 /// where the team is as far as the defenders know: these few seconds' sightings and loud things, never its true positions (enemysquads.ts teamKnown)
-pub fn team_known(g: &mut crate::game::Game) -> Vec<V3> {
+pub fn team_known(g: &crate::game::Game) -> Vec<V3> {
     let mut out = Vec::new();
     for d in g.fight.defs.clone() {
         let gd = g.tab.roomfight_def[d].gd;
@@ -432,7 +432,7 @@ fn ctx_lane(g: &mut Game, mouths: &[V3], p: V3) -> bool {
     for m0 in mouths { if flat(*m0, p) < mouth_m && ctx_open(g, *m0, p) { return true; } }
     false
 }
-fn ctx_dearer(g: &mut Game, cost: &mut JsMap<crate::Num, f64>, ix: f64, iz: f64, c: f64) {
+fn ctx_dearer(g: &Game, cost: &mut JsMap<crate::Num, f64>, ix: f64, iz: f64, c: f64) {
     if !in_grid(g, ix, iz) { return; }
     let i = crate::Num(nav_idx(g, ix, iz));
     if cost.get(i).copied().unwrap_or(1.0) < c { cost.set(i, c); }
@@ -531,7 +531,7 @@ pub fn way_round2(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &
     let RoundHot::Places { known: cap_known, ajar: cap_ajar } = x.hot.clone();
     let (rear, mouths) = (x.rear.clone(), x.mouths.clone());
     let mut ways: Vec<Way> = Vec::new();
-    fn dear0(g: &mut Game, x: &RoundCtx, d_room: Option<RoomfightRoomId>, ix: f64, iz: f64) -> f64 {
+    fn dear0(g: &Game, x: &RoundCtx, d_room: Option<RoomfightRoomId>, ix: f64, iz: f64) -> f64 {
         let i = crate::Num(nav_idx(g, ix, iz));
         let h = x.held.get(i).copied();
         m::max(x.cost.get(i).copied().unwrap_or(1.0), if h.is_some() && h != d_room { 5.0 } else { 1.0 })
@@ -627,7 +627,7 @@ pub fn event(g: &mut crate::game::Game, q: EnemysquadsSquadId, what: crate::enem
     if what == SquadEventWhat::Found { let men = g.tab.enemysquads_squad[q].men.clone(); crate::netquietfeed::net_feed_body(g, by, &men); }
 }
 /// the men who go: nearest the fight first, a man left in every room that had one (enemysquads.ts goers)
-pub fn goers(g: &mut crate::game::Game, h: &[RoomfightDefId], at: V3, k: f64) -> Vec<RoomfightDefId> {
+pub fn goers(g: &crate::game::Game, h: &[RoomfightDefId], at: V3, k: f64) -> Vec<RoomfightDefId> {
     let mut by: Vec<(RoomfightDefId, f64)> = h.iter().map(|d| { let gd = g.tab.roomfight_def[*d].gd; (*d, flat(pos_of(g, gd), at)) }).collect();
     js::sort_by(&mut by, |a, b| a.1 - b.1);
     let mut left: JsMap<Option<RoomfightRoomId>, f64> = JsMap::new();
@@ -642,7 +642,7 @@ pub fn goers(g: &mut crate::game::Game, h: &[RoomfightDefId], at: V3, k: f64) ->
     out
 }
 /// a mate's name in their mouths: 'Tango 8' is his number on their net; a man the level named keeps his name (enemysquads.ts mate)
-pub fn mate(g: &mut crate::game::Game, m: GuardId) -> String {
+pub fn mate(g: &crate::game::Game, m: GuardId) -> String {
     let cs = &g.gd[m].callsign;
     if let Some(n) = cs.strip_prefix("Tango ") {
         if !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()) {
@@ -652,11 +652,11 @@ pub fn mate(g: &mut crate::game::Game, m: GuardId) -> String {
     cs.clone()
 }
 /// (enemysquads.ts stayKey)
-pub fn stay_key(g: &mut crate::game::Game, gd: GuardId, room: &crate::enemysquads::StayKeyRoom) -> String { format!("{}|{}", g.ch[g.gd[gd].ch].id, room.name) }
+pub fn stay_key(g: &crate::game::Game, gd: GuardId, room: &crate::enemysquads::StayKeyRoom) -> String { format!("{}|{}", g.ch[g.gd[gd].ch].id, room.name) }
 /// × a squad's beats on the net: a drilled garrison's `netK`, read off the map's own rows (enemysquads.ts netK)
-pub fn net_k(g: &mut crate::game::Game) -> f64 { match squad_drill(g) { Some(k) if k.drill_net => k.net_k, _ => 1.0 } }
+pub fn net_k(g: &crate::game::Game) -> f64 { match squad_drill(g) { Some(k) if k.drill_net => k.net_k, _ => 1.0 } }
 /// × the beat of a hit squad's own men in its other rooms (enemysquads.ts ownK)
-pub fn own_k(g: &mut crate::game::Game) -> f64 { match squad_drill(g) { Some(k) if k.drill_net => k.reinforce_k, _ => 1.0 } }
+pub fn own_k(g: &crate::game::Game) -> f64 { match squad_drill(g) { Some(k) if k.drill_net => k.reinforce_k, _ => 1.0 } }
 /// how many rooms these men are in: `new Set(H.map(D => D.room)).size`
 fn rooms_held(g: &Game, h: &[RoomfightDefId]) -> usize {
     let mut seen: JsSet<Option<RoomfightRoomId>> = JsSet::new();
@@ -673,7 +673,7 @@ pub fn may_go(g: &mut crate::game::Game, q: EnemysquadsSquadId) -> bool {
 }
 
 /// the role of the first of this squad's men out on this fight, if any: `X.sent.find(near)` (decide's `near`)
-fn first_near(g: &mut Game, x: EnemysquadsSquadId, at: V3) -> Option<SentRole> {
+fn first_near(g: &Game, x: EnemysquadsSquadId, at: V3) -> Option<SentRole> {
     for i in 0..g.tab.enemysquads_squad[x].sent.len() {
         let (role, gd, fix_at) = { let s = &g.tab.enemysquads_squad[x].sent[i]; (s.role, s.gd, s.fix_at) };
         if role != SentRole::Reinforce && role != SentRole::Look && alive(g, gd) && flat(fix_at, at) < 12.0 { return Some(role); }

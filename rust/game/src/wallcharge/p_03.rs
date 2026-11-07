@@ -14,7 +14,7 @@ macro_rules! asg { ($g:expr, $a:expr) => { $g.tab.orders_assignment[$a] } }
 /// a truthy string that may be absent
 fn word_on(s: &Option<String>) -> bool { s.as_deref().map_or(false, |x| !x.is_empty()) }
 /// `S.of(gd) === op.mine.get(gd)`: `of` answers null and `get` undefined, so a man in neither is NOT the same
-fn still_mine(g: &mut Game, op: WallOpId, gd: GuardId) -> bool {
+fn still_mine(g: &Game, op: WallOpId, gd: GuardId) -> bool {
     let now = crate::orders::squad_orders_of(g, gd);
     match (now, o!(g, op).mine.get(gd).copied()) { (Some(a), Some(b)) => a == b, _ => false }
 }
@@ -374,7 +374,7 @@ pub fn wall_charge_spare_rear(g: &mut crate::game::Game, op: WallOpId) {
 }
 
 /// is a walk to the marks still worth waiting on   (wallcharge.ts WallCharge.waiting)
-pub fn wall_charge_waiting(g: &mut crate::game::Game, op: WallOpId, el: f64) -> bool {
+pub fn wall_charge_waiting(g: &crate::game::Game, op: WallOpId, el: f64) -> bool {
     let (cap, still) = (g.k.doortools.stack_cap, g.k.doortools.still_secs);
     if el >= cap { return false; }
     el < still || o!(g, op).men.iter().any(|&gd| {
@@ -690,7 +690,7 @@ pub fn wall_charge_blow_wait(g: &mut crate::game::Game, op: WallOpId) -> f64 {
     m::max(0.0, after - near / g.k.pace.max)
 }
 
-fn nav_free(g: &mut Game, q: V3) -> bool { !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) }
+fn nav_free(g: &Game, q: V3) -> bool { !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) }
 fn pod_has(p: &Pod) -> bool { p.watch.is_some() || p.hold.is_some() }
 
 /// behind the blast: the men nearest the hole first, each through its far mouth to a point of his own inside   (wallcharge.ts WallCharge.enter)

@@ -58,12 +58,12 @@ pub fn forget_meter(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// Are the civilians on the floor at all right now.   (civilians.ts civiliansOnFloor)
-pub fn civilians_on_floor(g: &mut crate::game::Game) -> bool {
+pub fn civilians_on_floor(g: &crate::game::Game) -> bool {
     !g.civilians.is_empty() && !g.quiet_utility && !g.touring && !crate::lighting::is_daylight(g)
 }
 
 /// The ones to draw and collide with this frame.   (civilians.ts civiliansShown)
-pub fn civilians_shown(g: &mut crate::game::Game) -> Vec<GuardId> {
+pub fn civilians_shown(g: &crate::game::Game) -> Vec<GuardId> {
     if !civilians_on_floor(g) { return crate::civilians::none(); }
     let mut out = Vec::new();
     for &cv in g.civilians.iter() { if g.cv[civ_of(g, cv)].state != CivState::Gone { out.push(cv); } }
@@ -84,7 +84,7 @@ pub fn civilian_bodies(g: &mut crate::game::Game) -> Vec<GuardId> {
 }
 
 /// Their door contacts: a standing civilian pushes a leaf like anybody.   (civilians.ts civilianDoorContacts)
-pub fn civilian_door_contacts(g: &mut crate::game::Game, contacts: &mut Vec<crate::doors::DoorContact>) {
+pub fn civilian_door_contacts(g: &crate::game::Game, contacts: &mut Vec<crate::doors::DoorContact>) {
     for cv in civilians_shown(g) {
         if g.gd[cv].state == crate::game::GuardState::Dead || g.gd[cv].held.is_some() { continue; }
         let c = g.gd[cv].ch;
@@ -269,7 +269,7 @@ pub fn pick(g: &mut crate::game::Game, gd: GuardId, pool: &[String]) -> String {
 pub fn away(g: &mut crate::game::Game) -> bool { !crate::dialogue::is_office(g) }
 
 /// What she tells the man she reaches, by cause.   (civilians.ts reportPool)
-pub fn report_pool(g: &mut crate::game::Game, cause: Option<&str>) -> Vec<String> {
+pub fn report_pool(g: &crate::game::Game, cause: Option<&str>) -> Vec<String> {
     let lines = crate::dialogue::civ_lines();
     let k = match cause { Some(c) if lines.report.has(String::from(c)) => c, _ => "sam" };
     let was = lines.report.get(String::from(k));
@@ -477,7 +477,7 @@ pub fn step_sound(g: &mut crate::game::Game, gd: GuardId, move_: f64) {
 
 // ---------------------------------------------------------------- perception
 /// Her eye this frame: busy at a task, scanning once frightened, else the walking-about eye.   (civilians.ts eyeOf)
-pub fn eye_of(g: &mut crate::game::Game, gd: GuardId) -> crate::knobs::CivKEye {
+pub fn eye_of(g: &crate::game::Game, gd: GuardId) -> crate::knobs::CivKEye {
     use crate::knobs::CivKEye;
     let st = g.cv[civ_of(g, gd)].state;
     if st != CivState::Work && st != CivState::Held {
@@ -640,21 +640,21 @@ pub fn civ_visibility(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> f64 {
 
 // ---------------------------------------------------------------- WORK: the loop and its tasks
 /// The task at her current mark.   (civilians.ts taskAt)
-pub fn task_at(g: &mut crate::game::Game, gd: GuardId) -> crate::scene_level::CivilianTask {
+pub fn task_at(g: &crate::game::Game, gd: GuardId) -> crate::scene_level::CivilianTask {
     let wp = g.gd[gd].wp;
     let cv = civ_of(g, gd);
     match g.cv[cv].def.tasks.as_ref().and_then(|t| t.get(wp)) { Some(t) => *t, None => crate::scene_level::CivilianTask::Stand }
 }
 
 /// Does this civilian shove the furniture this frame: not while calm.   (civilians.ts civilianPushesProps)
-pub fn civilian_pushes_props(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn civilian_pushes_props(g: &crate::game::Game, gd: GuardId) -> bool {
     let cv = match g.gd[gd].civ { Some(c) => c, None => return true };
     let st = g.cv[cv].state;
     st != CivState::Work && st != CivState::Startled && st != CivState::Gone
 }
 
 /// A civilian heading for / in his chair is no contact for the furniture.   (civilians.ts civilianSeated)
-pub fn civilian_seated(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn civilian_seated(g: &crate::game::Game, gd: GuardId) -> bool {
     let cv = match g.gd[gd].civ { Some(c) => c, None => return false };
     if g.cv[cv].state != CivState::Work { return false; }
     if g.cv[cv].seated { return true; }
@@ -980,7 +980,7 @@ pub fn path_metres(g: &mut crate::game::Game, from: V3, to: V3) -> crate::civili
 }
 
 /// May this man be run to and told.   (civilians.ts tellable)
-pub fn tellable(g: &mut crate::game::Game, o: GuardId) -> bool {
+pub fn tellable(g: &crate::game::Game, o: GuardId) -> bool {
     let x = &g.gd[o];
     x.state != crate::game::GuardState::Dead && x.team == crate::teams::Team::Guard && x.held.is_none() && x.script.is_none() && x.state != crate::game::GuardState::Alert && g.guards.contains(&o)
 }

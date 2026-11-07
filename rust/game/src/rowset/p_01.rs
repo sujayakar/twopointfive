@@ -11,7 +11,7 @@ fn own(e: &ScenarioEntry) -> bool { e.level.as_deref().is_some_and(|l| !l.is_emp
 
 /// The row whose own hour or weather a query is started in, or none: the first row of the query's level file that names one (THE HOUR IS THE
 /// LEVEL'S). (rowset.ts rowOfQuery)
-pub fn row_of_query(g: &mut Game, search: &RowOfQuerySearch) -> Option<ScenarioEntry> {
+pub fn row_of_query(g: &Game, search: &RowOfQuerySearch) -> Option<ScenarioEntry> {
     if !live(g) { return None; }
     let spec = crate::scene_scenario_list::spec_of_query(&match search {
         RowOfQuerySearch::Text(s) => crate::scene_scenario_list::SpecOfQuerySearch::Text(s.clone()),
@@ -22,7 +22,7 @@ pub fn row_of_query(g: &mut Game, search: &RowOfQuerySearch) -> Option<ScenarioE
 }
 
 /// The row's own hour and weather WRITTEN ONTO a query, over whatever it carried; answers what was put on. (rowset.ts rowSettings)
-pub fn row_settings(g: &mut Game, q: &mut Query) -> RowSettings {
+pub fn row_settings(g: &Game, q: &mut Query) -> RowSettings {
     let mut put = RowSettings::zeroed();
     let Some(e) = row_of_query(g, &RowOfQuerySearch::URLSearchParams(q.clone())) else { return put; };
     if let Some(hour) = e.hour { q.set("hour", hour.as_str()); put.hour = Some(hour); }

@@ -92,7 +92,7 @@ fn mk(aim: V3) -> OpFlow {
 pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// A drill, not yet started.   (breach.ts BreachDrill.constructor)
-pub fn breach_drill_new(g: &mut crate::game::Game, plan: &crate::scene_level::BreachPlan, a: GuardId, b: GuardId, hostiles: &[GuardId], opts: Option<crate::breach::BreachDrillNewOpts>) -> crate::breach::BreachDrill {
+pub fn breach_drill_new(g: &crate::game::Game, plan: &crate::scene_level::BreachPlan, a: GuardId, b: GuardId, hostiles: &[GuardId], opts: Option<crate::breach::BreachDrillNewOpts>) -> crate::breach::BreachDrill {
     let opts = opts.unwrap_or_default();
     let mut d = BreachDrill::blank();
     d.plan = plan.clone();

@@ -699,7 +699,7 @@ pub fn update_takedown(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// Which hold a grab made now would be to begin with.   (player.ts grabVariant)
-pub fn grab_variant(g: &mut crate::game::Game) -> crate::character::HoldVariant {
+pub fn grab_variant(g: &crate::game::Game) -> crate::character::HoldVariant {
     let p = g.player;
     if crate::game::player_pistol_up(g, p) { crate::character::HoldVariant::Gun } else { crate::character::HoldVariant::Arm }
 }

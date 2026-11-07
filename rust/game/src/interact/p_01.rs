@@ -94,7 +94,7 @@ pub fn empty_word(g: &mut Game, t: Option<&crate::interact::EmptyThing>) -> Stri
 }
 
 /// the movement keys down, a bit each (interact.ts moveMask)
-pub fn move_mask(g: &mut Game, input: InputId) -> f64 {
+pub fn move_mask(g: &Game, input: InputId) -> f64 {
     let mut mask = 0i32;
     for (i, k) in MOVE_KEYS.iter().enumerate() {
         if crate::input::input_down(g, input, k) { mask |= 1 << i; }
@@ -103,7 +103,7 @@ pub fn move_mask(g: &mut Game, input: InputId) -> f64 {
 }
 
 /// Which sustained verb is running right now, as an identity ('' = none). (interact.ts runningVerb)
-pub fn running_verb(g: &mut Game) -> String {
+pub fn running_verb(g: &Game) -> String {
     let pl = g.player;
     if let Some(d) = g.pl[pl].easing { return format!("ease:{}", g.dr[d].def.name); }
     if let Some(d) = g.pl[pl].picking { return format!("pick:{}", g.dr[d].def.name); }
@@ -149,7 +149,7 @@ pub fn wedged(r: &crate::game::Interactable) -> bool {
 }
 
 /// the whistle has a wedge of the ring this frame (interact.ts whistleWedge)
-pub fn whistle_wedge(g: &mut Game) -> bool {
+pub fn whistle_wedge(g: &Game) -> bool {
     let pl = g.player;
     if !ring_stays(g) || g.pl[pl].down || g.pl[pl].takedown.is_some() || crate::rails::rails_locks(g, "whistle") { return false; }
     let mut n = 0.0;
@@ -158,13 +158,13 @@ pub fn whistle_wedge(g: &mut Game) -> bool {
 }
 
 /// Sam's own ring is on (interact.ts ringMode)
-pub fn ring_mode(g: &mut Game) -> bool { g.puppet.is_none() }
+pub fn ring_mode(g: &Game) -> bool { g.puppet.is_none() }
 
 /// it is the ring that stays (interact.ts ringStays)
-pub fn ring_stays(g: &mut Game) -> bool { g.puppet.is_none() }
+pub fn ring_stays(g: &Game) -> bool { g.puppet.is_none() }
 
 /// a wedge's digit pressed this frame (interact.ts wedgeDigit)
-pub fn wedge_digit(g: &mut Game, input: InputId) -> bool {
+pub fn wedge_digit(g: &Game, input: InputId) -> bool {
     let mut d = 1;
     while d as f64 <= g.k.cmdring.wedges {
         if crate::input::input_hit(g, input, &format!("Digit{}", d)) { return true; }
@@ -182,7 +182,7 @@ pub fn give(g: &mut Game, r: Option<&crate::game::Interactable>) {
 }
 
 /// the digits his ring has a wedge on, a bit each, bit 1 the first (interact.ts handRingKeys)
-pub fn hand_ring_keys(g: &mut Game) -> f64 {
+pub fn hand_ring_keys(g: &Game) -> f64 {
     let mut keys = 0i32;
     let n = m::min(g.nearby.len() as f64, g.k.cmdring.wedges) as usize;
     for i in 0..n { if wedged(&g.nearby[i]) { keys |= 1 << (i + 1); } }
@@ -202,13 +202,13 @@ fn ring_free(g: &Game) -> bool {
 }
 
 /// his hands are on a choice or a verb (interact.ts handsBusy)
-pub fn hands_busy(g: &mut Game) -> bool {
+pub fn hands_busy(g: &Game) -> bool {
     let pl = g.player;
     (g.pl[pl].sel.open && !ring_free(g)) || g.pl[pl].sel.down_t >= 0.0 || !running_verb(g).is_empty()
 }
 
 /// is there anything here the back key would back out of (interact.ts backableInteract)
-pub fn backable_interact(g: &mut Game) -> bool {
+pub fn backable_interact(g: &Game) -> bool {
     let pl = g.player;
     g.pl[pl].sel.open || g.pl[pl].sel.down_t >= 0.0 || !running_verb(g).is_empty()
 }
@@ -255,7 +255,7 @@ pub fn close_selector(g: &mut Game, spent: bool) {
 }
 
 /// the point his ring stands on: the thing its first row is about where that is near him; else his own body (interact.ts ringSpot)
-pub fn ring_spot(g: &mut Game) -> V3 {
+pub fn ring_spot(g: &Game) -> V3 {
     let p = g.ch[g.pl[g.player].ch].pos;
     match g.nearby.iter().find(|r| wedged(r)) {
         Some(h) if v3::dist_xz(h.pos, p) <= RING_THING_M => h.pos,
@@ -264,7 +264,7 @@ pub fn ring_spot(g: &mut Game) -> V3 {
 }
 
 /// the ring put on its thing (`open`) and kept there. True: the hand has not moved the cursor since the last look. (interact.ts ringOnThing)
-pub fn ring_on_thing(g: &mut Game, r: &mut crate::cmdring::RingState, input: InputId, cam: CameraId, view: crate::host_hud::View, open: Option<bool>) -> bool {
+pub fn ring_on_thing(g: &Game, r: &mut crate::cmdring::RingState, input: InputId, cam: CameraId, view: crate::host_hud::View, open: Option<bool>) -> bool {
     let open = open.unwrap_or(false);
     let (mouse_x, mouse_y) = (g.tab.input[input].mouse_x, g.tab.input[input].mouse_y);
     if open {

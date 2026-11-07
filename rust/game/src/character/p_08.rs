@@ -293,7 +293,7 @@ pub fn anim_gaze_keep_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, dt: f6
     let code = ::sim::layers::gaze_keep(g_2 as usize, at) as f64;
     crate::anim_skeleton::layer_ran(g, code, c);
     gaze_cols_put(&mut g.ch[c].anim, args(), COLS);
-    args()[COLS + 4]
+    args_read()[COLS + 4]
 }
 
 /// The slot a rule of the character's that keeps no pose is asked in. (character.ts ruleSlot)
@@ -429,7 +429,7 @@ pub fn anim_mv_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: f64) {
 }
 
 /// The trunk's own frame off the joints of `fk`: across the shoulders to his left, up the spine, out of the chest. (character.ts trunkFrame)
-pub fn anim_trunk_frame(g: &mut crate::game::Game, c: CharId) -> crate::character::AnimTrunkFrame {
+pub fn anim_trunk_frame(g: &crate::game::Game, c: CharId) -> crate::character::AnimTrunkFrame {
     let an = &g.ch[c].anim;
     let (nd, fk) = (&an.nodes, &an.fk);
     let up = v3::normalize(v3::sub(fk.pos[nd.spine3], fk.pos[nd.hips]));

@@ -13,17 +13,17 @@ pub fn staff(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// A man of the room fight's on its own walk carries a script that is not choreography. (flinch.ts fightMan)
-pub fn fight_man(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn fight_man(g: &crate::game::Game, gd: GuardId) -> bool {
     g.fight.defs.iter().any(|&d| g.tab.roomfight_def[d].gd == gd)
 }
 
 /// Is the run asked of anybody on this floor now. (flinch.ts runOn)
-pub fn run_on(g: &mut crate::game::Game) -> bool {
+pub fn run_on(g: &crate::game::Game) -> bool {
     g.tune.suppression && g.ai_enabled && !g.touring && !g.quiet_utility
 }
 
 /// Does a hostile round that came only `s` m from its muzzle still count here. (flinch.ts flinchInside)
-pub fn flinch_inside(g: &mut crate::game::Game, s: f64) -> bool {
+pub fn flinch_inside(g: &crate::game::Game, s: f64) -> bool {
     s >= g.k.flinch.min_travel
 }
 
@@ -132,7 +132,7 @@ pub fn flinch_tick(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// QA: a man's seconds under close fire (0 = none on record). (flinch.ts flinchUnder)
-pub fn flinch_under(g: &mut crate::game::Game, gd: GuardId) -> f64 {
+pub fn flinch_under(g: &crate::game::Game, gd: GuardId) -> f64 {
     match g.m.flinch.state_of.get(gd) { Some(t) => t.under, None => 0.0 }
 }
 

@@ -119,7 +119,7 @@ pub fn heard_noise(g: &mut Game, src: V3, level: f64) -> Option<crate::digin::He
 }
 
 /// A cue reached the team, before they first stepped in. (digin.ts cue)
-pub fn cue(g: &mut Game, r: Option<&mut crate::digin::RoomSt>, kind: crate::digin::Cue) {
+pub fn cue(g: &Game, r: Option<&mut crate::digin::RoomSt>, kind: crate::digin::Cue) {
     let r = match r {
         Some(r) => r,
         None => return,
@@ -445,7 +445,7 @@ pub fn cover_spot(g: &mut Game, d: RoomfightDefId, m: crate::digin::Man, r: &cra
 }
 
 /// Off the door's line: every second living man of the room. (digin.ts wantsDeep)
-pub fn wants_deep(g: &mut Game, d: RoomfightDefId, r: &crate::digin::RoomSt) -> bool {
+pub fn wants_deep(g: &Game, d: RoomfightDefId, r: &crate::digin::RoomSt) -> bool {
     let me = g.tab.roomfight_def[d].gd;
     let mut at_ = 0usize;
     for id in r.men.iter() {
@@ -594,7 +594,7 @@ pub fn wedgeable(g: &mut Game, d: DoorId) -> bool {
 }
 
 /// Where his own ears last put them. (digin.ts heardAt)
-pub fn heard_at(g: &mut Game, d: RoomfightDefId, m: crate::digin::Man) -> V3 {
+pub fn heard_at(g: &Game, d: RoomfightDefId, m: crate::digin::Man) -> V3 {
     let row = &g.tab.roomfight_def[d];
     match row.noise_at {
         Some(at_) if row.noise_out && row.noise_t > m.know_t => at_,
@@ -605,7 +605,7 @@ pub fn heard_at(g: &mut Game, d: RoomfightDefId, m: crate::digin::Man) -> V3 {
 // ---------------------------------------------------------------- doors (DIGIN.shutOpen is settled off on the page: the rule folds away)
 
 /// The entry his hands are on or he is on his way to. (digin.ts doorOf)
-pub fn door_of(g: &mut Game, m: crate::digin::Man) -> f64 {
+pub fn door_of(g: &Game, m: crate::digin::Man) -> f64 {
     if m.brace >= 0.0 { m.brace } else { m.entry }
 }
 

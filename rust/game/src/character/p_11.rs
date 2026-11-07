@@ -37,7 +37,7 @@ fn door_cols_get(g: &mut Game, c: CharId) {
 /// doorCols.put off the bench (character.ts:3985)
 fn door_cols_put(g: &mut Game, c: CharId) {
     let s = &mut g.ch[c].anim.dp;
-    let (a, o) = (args(), COLS);
+    let (a, o) = (args_read(), COLS);
     s.w_l.x = a[o]; s.w_l.v = a[o + 1]; s.w_r.x = a[o + 2]; s.w_r.v = a[o + 3]; s.reach_ok = a[o + 4] != 0.0; s.right = a[o + 5] != 0.0;
 }
 
@@ -61,7 +61,7 @@ pub fn anim_door_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, l: cr
 // ---- handwork
 
 /// What the work hands are doing: the pose last fed, the shown weight, which hand, both hands? (character.ts workInfo)
-pub fn anim_work_info(g: &mut crate::game::Game, c: CharId) -> crate::character::AnimWorkInfo {
+pub fn anim_work_info(g: &crate::game::Game, c: CharId) -> crate::character::AnimWorkInfo {
     let k = &g.ch[c].anim.wk;
     crate::character::AnimWorkInfo { pose: k.last.clone(), w: k.shown, hand: k.main, two: k.two }
 }
@@ -78,7 +78,7 @@ pub fn anim_radio(g: &mut crate::game::Game, c: CharId, secs: f64) {
 }
 
 /// What the gun hand visibly holds: the rule's, unless a swap is running. (character.ts swapHeld)
-pub fn anim_swap_held(g: &mut crate::game::Game, c: CharId, rule: Option<crate::character::AnimCarry>) -> Option<crate::character::AnimCarry> {
+pub fn anim_swap_held(g: &crate::game::Game, c: CharId, rule: Option<crate::character::AnimCarry>) -> Option<crate::character::AnimCarry> {
     let s = g.ch[c].anim.sw;
     if s.t < 0.0 {
         if let (Some(r), Some(Some(cur))) = (rule, s.cur) {
@@ -92,12 +92,12 @@ pub fn anim_swap_held(g: &mut crate::game::Game, c: CharId, rule: Option<crate::
 }
 
 /// How far the swap's hand is at the torch on his belt this frame. (character.ts swapBelt)
-pub fn anim_swap_belt(g: &mut crate::game::Game, c: CharId) -> f64 {
+pub fn anim_swap_belt(g: &crate::game::Game, c: CharId) -> f64 {
     g.ch[c].anim.sw.belt
 }
 
 /// The swap's progress (-1: none), what it goes to, and whether one waits. (character.ts swapInfo)
-pub fn anim_swap_info(g: &mut crate::game::Game, c: CharId) -> crate::character::AnimSwapInfo {
+pub fn anim_swap_info(g: &crate::game::Game, c: CharId) -> crate::character::AnimSwapInfo {
     let s = &g.ch[c].anim.sw;
     crate::character::AnimSwapInfo {
         a: if s.t < 0.0 { -1.0 } else { s.t / s.dur },
@@ -176,7 +176,7 @@ fn work_cols_get(g: &mut Game, c: CharId) {
 /// workCols.put off the bench (character.ts:4056)
 fn work_cols_put(g: &mut Game, c: CharId) {
     let k = &mut g.ch[c].anim.wk;
-    let (a, o) = (args(), COLS);
+    let (a, o) = (args_read(), COLS);
     k.w_l.x = a[o]; k.w_l.v = a[o + 1]; k.w_r.x = a[o + 2]; k.w_r.v = a[o + 3]; k.ok_l = a[o + 4] != 0.0; k.ok_r = a[o + 5] != 0.0; k.main = if js::truthy(a[o + 6]) { 1.0 } else { 0.0 }; k.two = a[o + 7] != 0.0; k.shown = a[o + 8];
 }
 
@@ -423,7 +423,7 @@ fn big_cols_get(g: &mut Game, c: CharId) {
 /// bigCols.put off the bench (character.ts:4211)
 fn big_cols_put(g: &mut Game, c: CharId) {
     let an = &mut g.ch[c].anim;
-    let (a, o) = (args(), COLS);
+    let (a, o) = (args_read(), COLS);
     an.big_k = a[o]; an.big_under = a[o + 1] != 0.0; an.big_at_back = a[o + 2]; an.big_grab = a[o + 3];
 }
 
@@ -479,7 +479,7 @@ fn throw_cols_get(g: &mut Game, c: CharId) {
 /// throwCols.put off the bench (character.ts:4246)
 fn throw_cols_put(g: &mut Game, c: CharId) {
     let an = &mut g.ch[c].anim;
-    let (a, o) = (args(), COLS);
+    let (a, o) = (args_read(), COLS);
     an.thr_hang = a[o];
     an.thr_last = if js::truthy(a[o + 1]) { Some(crate::character::AnimThrLast { r: [a[o + 2], a[o + 3], a[o + 4]], l: [a[o + 5], a[o + 6], a[o + 7]] }) } else { None };
 }

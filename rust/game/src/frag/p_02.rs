@@ -157,7 +157,7 @@ fn seat_blast(g: &mut Game, b: &Burst, rep: &mut BlastReport) {
             if !g.pl[pl].down { rep.player = Some(BlastResult::Wounded); }
         }
     }
-    if rep.player == Some(BlastResult::Wounded) { crate::condition::condition_hurt(g, &mut crate::condition::Man::Player(pl)); }
+    if rep.player == Some(BlastResult::Wounded) { crate::condition::condition_hurt(g, &crate::condition::Man::Player(pl)); }
     if rep.player == Some(BlastResult::Wounded) || rep.player == Some(BlastResult::Stunned) {
         let st = g.k.frag.stagger;
         let secs = v3::lerp(st[0], st[1], v3::clamp(j.d / b.wound, 0.0, 1.0));
@@ -305,7 +305,7 @@ pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpe
                 g.gd[gd].path_goal = None;
                 g.gd[gd].path_goal_orbit = false;
                 g.gd[gd].speed = 0.0;
-                if r == BlastResult::Wounded { crate::condition::condition_hurt(g, &mut crate::condition::Man::Guard(gd)); }
+                if r == BlastResult::Wounded { crate::condition::condition_hurt(g, &crate::condition::Man::Guard(gd)); }
             }
             crate::character::anim_hit(g, c);
         }
@@ -425,7 +425,7 @@ struct RollBody {
     fuse: f64,
 }
 /// (frag.ts:475 slow)
-fn roll_slow(g: &mut Game, v: V3, bog: f64) -> bool {
+fn roll_slow(g: &Game, v: V3, bog: f64) -> bool {
     m::abs(v[1]) < 0.5 && m::hyp2(v[0], v[2]) < 0.35 + (if bog > 0.0 { crate::throwables::bog_stick(g, bog) } else { 0.0 })
 }
 /// The item step's own bounce and roll replayed on a copy for what is left of its fuse: nothing is moved or sounded. (frag.ts:472 rollOn's body)
@@ -545,7 +545,7 @@ pub fn rest_of_throw(g: &mut crate::game::Game, kind: crate::game::ThrowKind, fr
 }
 
 /// The height a grenade lying at y is judged from, less the lift: what it lies on. (frag.ts restY)
-pub fn rest_y(g: &mut crate::game::Game, y: f64) -> f64 {
+pub fn rest_y(g: &crate::game::Game, y: f64) -> f64 {
     m::max(0.05, y)
 }
 
@@ -618,7 +618,7 @@ pub fn leaf_dist(l: &[Vec<f64>], x: f64, z: f64) -> f64 {
 }
 
 /// A straight leg a → b comes within fleeDoorLeaf of a leaf, and nearer it than `ref_`. (frag.ts legByLeaf)
-pub fn leg_by_leaf(g: &mut crate::game::Game, l: &[Vec<f64>], a: V3, b: V3, ref_: f64) -> bool {
+pub fn leg_by_leaf(g: &crate::game::Game, l: &[Vec<f64>], a: V3, b: V3, ref_: f64) -> bool {
     let r = flat(a, b);
     let mut t = 0.25;
     while t < r + 0.25 {
@@ -814,7 +814,7 @@ fn door_near(g: &Game, k: &DoorDeal, x: f64, z: f64) -> bool {
     m::hyp2(x - k.at[0], z - k.at[2]) < k.d0 - g.k.frag.flee_door_dip || door_off_path(g, x, z, &k.wise.path) < k.path0 - 0.3
 }
 /// One straight leg: 0 clear, 1 a step of it is nearer the thing, 2 a leaf stands in it. (frag.ts:629 clear)
-fn door_clear(g: &mut Game, k: &DoorDeal, a: V3, b: V3, ref_: f64) -> i32 {
+fn door_clear(g: &Game, k: &DoorDeal, a: V3, b: V3, ref_: f64) -> i32 {
     let r = flat(a, b);
     let mut t = 0.25;
     while t < r + 0.25 {
@@ -825,7 +825,7 @@ fn door_clear(g: &mut Game, k: &DoorDeal, a: V3, b: V3, ref_: f64) -> i32 {
     if leg_by_leaf(g, &k.leaves, a, b, ref_) { 2 } else { 0 }
 }
 /// A point of the path lies on the door's own frame line, in the opening. (frag.ts:642 onFrame)
-fn door_on_frame(g: &mut Game, b: V3, x: DoorId) -> bool {
+fn door_on_frame(g: &Game, b: V3, x: DoorId) -> bool {
     let f = crate::guards::frame_of(g, x);
     if m::abs((b[0] - f.hx) * f.nx + (b[2] - f.hz) * f.nz) > 1e-4 { return false; }
     let al = (b[0] - f.hx) * f.ux + (b[2] - f.hz) * f.uz;

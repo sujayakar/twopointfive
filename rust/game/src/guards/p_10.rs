@@ -137,7 +137,7 @@ pub fn clear_lockdown(g: &mut crate::game::Game) {
 }
 
 /// How long a man's route is, round the loop.   (guards.ts routeLength)
-pub fn route_length(g: &mut crate::game::Game, gd: GuardId) -> f64 {
+pub fn route_length(g: &crate::game::Game, gd: GuardId) -> f64 {
     let Ok(ri) = usize::try_from(g.gd[gd].route_i) else { return 0.0; };   // (a unit's is -1)
     let Some(&r) = g.level.routes.get(ri) else { return 0.0; };
     let pts = &g.tab.route[r].points;
@@ -409,12 +409,12 @@ pub fn despawn_units(g: &mut crate::game::Game) {
 }
 
 /// The engagement on this game, done or not. A copy: re-ask for it to see it move.   (guards.ts engagementOf)
-pub fn engagement_of(g: &mut crate::game::Game) -> Option<crate::guards::Engagement> {
+pub fn engagement_of(g: &crate::game::Game) -> Option<crate::guards::Engagement> {
     g.m.guards.engagements.clone()
 }
 
 /// Name of the character with this id, for the record.   (guards.ts nameOfId)
-pub fn name_of_id(g: &mut crate::game::Game, id_2: f64) -> String {
+pub fn name_of_id(g: &crate::game::Game, id_2: f64) -> String {
     if let Some(pl) = crate::seats::man_by_id(g, id_2) { return crate::seats::player_name(g, pl); }
     for &x in g.guards.iter() {
         let c = g.gd[x].ch;
@@ -424,7 +424,7 @@ pub fn name_of_id(g: &mut crate::game::Game, id_2: f64) -> String {
 }
 
 /// A list's men still in the fight: alive, on the list, not fled.   (guards.ts endEngagement living)
-fn living_count(g: &mut Game, xs: &[GuardId]) -> f64 {
+fn living_count(g: &Game, xs: &[GuardId]) -> f64 {
     let mut n = 0.0;
     for &x in xs {
         if g.gd[x].state != crate::game::GuardState::Dead && g.guards.contains(&x) && !g.gd[x].fled { n += 1.0; }
@@ -458,7 +458,7 @@ pub fn end_engagement(g: &mut crate::game::Game, outcome: crate::guards::EndEnga
 }
 
 /// Is anybody of this list still in the fight?   (guards.ts tickEngagement living)
-fn living_any(g: &mut Game, xs: &[GuardId]) -> bool {
+fn living_any(g: &Game, xs: &[GuardId]) -> bool {
     for &x in xs {
         if g.gd[x].state != crate::game::GuardState::Dead && g.guards.contains(&x) && !g.gd[x].fled { return true; }
     }

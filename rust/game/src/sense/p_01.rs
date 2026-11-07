@@ -8,13 +8,13 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// The grid over a block.   (sense.ts SmokeGrid.constructor)
-pub fn smoke_grid_new(g: &mut crate::game::Game, sim: crate::Opaque) -> crate::sense::SmokeGrid {
+pub fn smoke_grid_new(g: &crate::game::Game, sim: crate::Opaque) -> crate::sense::SmokeGrid {
     crate::sense::SmokeGrid { clock: 0.0, pending: Vec::new(), stands: false, fed: false, sim }
 }
 
 /// Is there smoke for a step to move: an emitter not yet taken, or a brick standing.   (sense.ts SmokeGrid.smoky)
 pub fn smoke_grid_smoky(g: &mut crate::game::Game) -> bool {
-    !g.cpu_smoke.grid.as_ref().unwrap().pending.is_empty() || sim::state::state(g.sim).smoke.live as f64 > 8.0 + grid().rho * 8.0
+    !g.cpu_smoke.grid.as_ref().unwrap().pending.is_empty() || sim::state::state_read(g.sim).smoke.live as f64 > 8.0 + grid().rho * 8.0
 }
 
 /// An emitter is handed over for the next step; a game no step has reached keeps the latest.   (sense.ts SmokeGrid.emit)
@@ -61,7 +61,7 @@ pub fn smoke_grid_step(g: &mut crate::game::Game, dt: f64, lamps: bool, wind: Op
         }
         None => None,
     };
-    let gr = g.cpu_smoke.grid.as_mut().unwrap();
+    let gr = g.cpu_smoke.grid.as_ref().unwrap();
     let pending = gr.pending.clone();
     let mut st = gr.sim;
     let stands = crate::scene_collision::grid_step(g, &mut st, &pending, n, k, glow, wind_now.as_ref());
@@ -109,7 +109,7 @@ pub fn smoke_grid_along(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
 pub fn smoke_grid_glow_at(g: &mut crate::game::Game, p: V3) -> f64 {
     let gc = grid();
     let (nx, nz) = {
-        let d = &sim::state::state(g.sim).smoke.st;
+        let d = &sim::state::state_read(g.sim).smoke.st;
         (d[gc.nbx as usize] * gc.side, d[gc.nbz as usize] * gc.side)
     };
     if !(nx * nz <= gc.glow_max) {
@@ -127,7 +127,7 @@ pub fn smoke_grid_glow_at(g: &mut crate::game::Game, p: V3) -> f64 {
             continue;
         }
         if !crate::scene_collision::segment_blocked(g, p, [jx + 0.5, gc.chest, jz + 0.5], None, None, None) {
-            return sim::state::state(g.sim).smoke.st[(gc.glow_b + jz * nx + jx) as usize];
+            return sim::state::state_read(g.sim).smoke.st[(gc.glow_b + jz * nx + jx) as usize];
         }
     }
     0.0
@@ -192,7 +192,7 @@ pub fn cpu_smoke_emit(g: &mut crate::game::Game, e: &crate::smoke_types::SmokeEm
 }
 
 /// How many more emitters there is room for, off the game's own count.   (sense.ts CpuSmoke.budget)
-pub fn cpu_smoke_budget(g: &mut crate::game::Game) -> f64 {
+pub fn cpu_smoke_budget(g: &crate::game::Game) -> f64 {
     let k = g.k.sense.smoke;
     m::max(0.0, k.emitters - k.reserve - g.cpu_smoke.lives.len() as f64)
 }

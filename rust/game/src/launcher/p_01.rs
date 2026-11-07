@@ -109,7 +109,7 @@ pub fn arc_solve(g: &mut crate::game::Game, from: V3, target: V3, r: crate::laun
 }
 
 /// The point to send a ring at: the head of the man under the reticle, led by his ground velocity; else the fixture or world point the cursor names. (launcher.ts ringAimPoint)
-pub fn ring_aim_point(g: &mut crate::game::Game, from: V3) -> V3 {
+pub fn ring_aim_point(g: &crate::game::Game, from: V3) -> V3 {
     let puppet = g.puppet.as_ref().and_then(|p| p.target);
     let gd = match puppet {
         Some(t) if g.gd[t].state != crate::game::GuardState::Dead => Some(t),
@@ -251,7 +251,7 @@ pub fn update_rings(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// Velocity coming back off a surface: the normal share reversed × restitution, the slide × keepTangent. (launcher.ts bounceOff)
-pub fn bounce_off(g: &mut crate::game::Game, v: V3, n: V3) -> V3 {
+pub fn bounce_off(g: &crate::game::Game, v: V3, n: V3) -> V3 {
     let vn = v3::dot(v, n);
     let v_n = v3::scale(n, vn);
     let v_t = v3::sub(v, v_n);

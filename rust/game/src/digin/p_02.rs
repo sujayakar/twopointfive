@@ -246,7 +246,7 @@ pub fn away(g: &mut crate::game::Game, d: RoomfightDefId, m: crate::digin::Man, 
 }
 
 /// the room's doors after the one they are expected by: the second-likeliest first, then as authored   (digin.ts nextDoors)
-pub fn next_doors(g: &mut crate::game::Game, r: &crate::digin::RoomSt) -> Vec<f64> {
+pub fn next_doors(g: &crate::game::Game, r: &crate::digin::RoomSt) -> Vec<f64> {
     let n = g.tab.roomfight_room[r.room].entries.len();
     let mut v: Vec<f64> = (0..n).map(|i| i as f64).filter(|i| *i != r.expected).collect();
     let second = r.second;
@@ -801,7 +801,7 @@ pub fn dig_in_braced(g: &mut crate::game::Game, gd: GuardId, d: DoorId) -> bool 
 }
 
 /// the same question with nothing counted: `gd` is set on `d`, a door his room wedged   (digin.ts digInSetOn)
-pub fn dig_in_set_on(g: &mut crate::game::Game, gd: GuardId, d: DoorId) -> bool {
+pub fn dig_in_set_on(g: &crate::game::Game, gd: GuardId, d: DoorId) -> bool {
     let s = match g.m.digin.states.as_ref() { Some(s) => s, None => return false };
     if !s.wedges.has(d) { return false; }
     match s.men.get(gd) { Some(x) => x.phase == Phase::Set, None => false }
@@ -829,18 +829,18 @@ pub fn dig_in_release(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// laststand.ts: where his dig-in stands ('idle' = not at it)   (digin.ts digInPhase)
-pub fn dig_in_phase(g: &mut crate::game::Game, gd: GuardId) -> String {
+pub fn dig_in_phase(g: &crate::game::Game, gd: GuardId) -> String {
     let phase = g.m.digin.states.as_ref().and_then(|s| s.men.get(gd)).map_or(Phase::Idle, |x| x.phase);
     String::from(phase.as_str())
 }
 
 /// laststand.ts: the team has been in this room since somebody dug in there   (digin.ts digInEntered)
-pub fn dig_in_entered(g: &mut crate::game::Game, room: RoomfightRoomId) -> bool {
+pub fn dig_in_entered(g: &crate::game::Game, room: RoomfightRoomId) -> bool {
     match g.m.digin.states.as_ref().and_then(|s| s.rooms.get(room)) { Some(r) => !r.entered_at.is_nan(), None => false }
 }
 
 /// laststand.ts: this room's doors that stand wedged (not yet booted)   (digin.ts digInWedged)
-pub fn dig_in_wedged(g: &mut crate::game::Game, room: RoomfightRoomId) -> Vec<crate::digin::DigInWedgedItem> {
+pub fn dig_in_wedged(g: &crate::game::Game, room: RoomfightRoomId) -> Vec<crate::digin::DigInWedgedItem> {
     let s = match g.m.digin.states.as_ref() { Some(s) => s, None => return Vec::new() };
     let mut out = Vec::new();
     for e in g.tab.roomfight_room[room].entries.iter() {
@@ -850,7 +850,7 @@ pub fn dig_in_wedged(g: &mut crate::game::Game, room: RoomfightRoomId) -> Vec<cr
 }
 
 /// roomfight.ts applyWatch: a man set off the door's line rests his gun on the floor they must cross (writes `pt`)   (digin.ts digInLook)
-pub fn dig_in_look(g: &mut crate::game::Game, gd: GuardId, pt: &mut V3) {
+pub fn dig_in_look(g: &crate::game::Game, gd: GuardId, pt: &mut V3) {
     let m = match g.m.digin.states.as_ref().and_then(|s| s.men.get(gd)) { Some(x) => *x, None => return };
     if m.phase != Phase::Set || !m.deep { return; }
     let look = match m.look { Some(l) => l, None => return };
@@ -868,7 +868,7 @@ pub fn dig_in_stays(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// pressure.ts lastMan: he is SET on his door   (digin.ts digInSet)
-pub fn dig_in_set(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn dig_in_set(g: &crate::game::Game, gd: GuardId) -> bool {
     g.m.digin.states.as_ref().and_then(|s| s.men.get(gd)).map_or(false, |x| x.phase == Phase::Set)
 }
 

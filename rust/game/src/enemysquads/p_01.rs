@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// The net's ask runs on this floor: a floor whose every squad stays in its rooms.   (enemysquads.ts netAsks)
-pub fn net_asks(g: &mut crate::game::Game) -> bool {
+pub fn net_asks(g: &crate::game::Game) -> bool {
     match &g.m.enemysquads.states {
         Some(st) => st.stay_ask == Some(true),
         None => false,
@@ -16,7 +16,7 @@ pub fn net_asks(g: &mut crate::game::Game) -> bool {
 }
 
 /// Hard on a squads level: the table while harder defenders are on and squads are staged, with the map's own rows over it.   (enemysquads.ts squadDrill)
-pub fn squad_drill(g: &mut crate::game::Game) -> Option<crate::knobs::SquadsK> {
+pub fn squad_drill(g: &crate::game::Game) -> Option<crate::knobs::SquadsK> {
     let name = match &g.m.enemysquads.states { Some(st) => st.s.name.clone(), None => return None };
     if !g.k.pressure.on { return None; }
     let squads = g.k.squads;

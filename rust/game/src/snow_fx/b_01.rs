@@ -9,5 +9,5 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/snowFx.ts:232 updateSnowFx)
-pub fn update_snow_fx(g: &mut crate::game::Game, dt: f64, cam: CameraId) {}
+pub fn update_snow_fx(g: &crate::game::Game, dt: f64, cam: CameraId) {}
 

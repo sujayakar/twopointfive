@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// Seconds a stun can sits after it lands: FLASH.fuse in a room fight, else the night game's.   (combat.ts flashFuse)
-pub fn flash_fuse(g: &mut crate::game::Game) -> f64 {
+pub fn flash_fuse(g: &crate::game::Game) -> f64 {
     if crate::roomfight::fight_live(g) { g.k.flash.fuse } else { crate::effects::bang().fuse }
 }
 

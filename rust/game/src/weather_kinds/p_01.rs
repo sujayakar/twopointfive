@@ -35,7 +35,7 @@ pub fn is_weather_kind(s: Option<&str>) -> bool {
 }
 
 /// Is the level called `name` one built for snow, with the switch on? (weatherKinds.ts snowLevel)
-pub fn snow_level(g: &mut crate::game::Game, name: Option<&str>) -> bool {
+pub fn snow_level(g: &crate::game::Game, name: Option<&str>) -> bool {
     match name {
         Some(n) => !n.is_empty() && snow_levels().iter().any(|l| l == n),
         None => false,
@@ -43,7 +43,7 @@ pub fn snow_level(g: &mut crate::game::Game, name: Option<&str>) -> bool {
 }
 
 /// A kind a checkpoint may carry: one of the row's, or a level's own. (weatherKinds.ts isAnyKind)
-pub fn is_any_kind(g: &mut crate::game::Game, s: Option<crate::weather_kinds::WeatherKind>) -> bool {
+pub fn is_any_kind(g: &crate::game::Game, s: Option<crate::weather_kinds::WeatherKind>) -> bool {
     match s {
         Some(k) => g.m.weather_kinds.weather_presets.has(k),
         None => false,
@@ -51,7 +51,7 @@ pub fn is_any_kind(g: &mut crate::game::Game, s: Option<crate::weather_kinds::We
 }
 
 /// The kind's name for the mission list. (weatherKinds.ts weatherTitle)
-pub fn weather_title(g: &mut crate::game::Game, k: Option<crate::weather_kinds::WeatherKind>) -> String {
+pub fn weather_title(g: &crate::game::Game, k: Option<crate::weather_kinds::WeatherKind>) -> String {
     match k {
         Some(k) => g.m.weather_kinds.weather_presets.get(k).unwrap().title.clone(),
         None => String::from("As it is"),
@@ -59,7 +59,7 @@ pub fn weather_title(g: &mut crate::game::Game, k: Option<crate::weather_kinds::
 }
 
 /// The kind's line for the mission list. (weatherKinds.ts weatherWords)
-pub fn weather_words(g: &mut crate::game::Game, k: Option<crate::weather_kinds::WeatherKind>) -> String {
+pub fn weather_words(g: &crate::game::Game, k: Option<crate::weather_kinds::WeatherKind>) -> String {
     match k {
         Some(k) => g.m.weather_kinds.weather_presets.get(k).unwrap().words.clone(),
         None => String::from("the level's own weather, as it has always played"),

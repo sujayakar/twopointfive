@@ -62,7 +62,7 @@ pub fn log(g: &mut crate::game::Game, s: &str) {
 }
 
 /// A man this rule may have: a defender, up, on his own senses. (doorforce.ts defender)
-pub fn defender(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn defender(g: &crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     g.gd[gd].team != crate::teams::Team::Operative && g.gd[gd].state != crate::game::GuardState::Dead && g.ch[c].alive
 }

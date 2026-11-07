@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// The rate (1/s) Sam's hold layer lets go at once the controller has: slow out of a kill or a choke run to its end while he stands idle. (character.ts holdOutRate)
-pub fn hold_out_rate(g: &mut crate::game::Game, last: crate::character::HoldPose, speed: f64, busy: bool) -> f64 {
+pub fn hold_out_rate(g: &crate::game::Game, last: crate::character::HoldPose, speed: f64, busy: bool) -> f64 {
     out_rate(last, speed, busy, g.m.character.hold_show, &g.k.hold)
 }
 
