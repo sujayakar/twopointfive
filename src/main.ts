@@ -1382,7 +1382,7 @@ function worldHooks(engine: Engine, game: Game, audio: AudioEngine) {
 function squadFlagsAndHooks(q: URLSearchParams, engine: Engine, game: Game) {
   (window as any).__pairup = { get on() { return PAIRUP.on; }, set on(v: boolean) { PAIRUP.on = v; pairUpApply(!v); }, rules: PAIRUP, stats: PAIRUP_STATS, summary: pairUpSummary };   // the pair's one switch (game/pairup.ts): .on = true turns the three parts on
   (window as any).__pair = game.pair;   // quiet orders for one partner (game/pairorders.ts): .up / .mark() / .jobOf(gd) / .stage(foe) / .darkSpot(p) / .litAt(p) / .summary()
-  (window as any).__orders = game.orders;   // squad orders (game/orders.ts): .give(id, target?, who?) / .targetAt(p) / .who / .cycleWho() / .address(gd) / .open(target?) / .pick(i?) / .turn(page) / .pageBack() / .close() / .menu (.page: null = the first page, 'tools' = a door's tools) / .log / .summary() / .knobs
+  (window as any).__orders = game.orders;   // squad orders (game/orders.ts): .give(id, target?, who?) / .targetAt(p) / .who / .cycleWho() / .address(gd) / .open(target?) / .pick(i?) / .turn(page) / .pageBack() / .close() / .menu (.page: null = the first page, 'tools' = a door's tools) / .log / .knobs
   // FOG OF WAR (game/fogofwar.ts — a try at the Door Kickers rule): on under the room-clear flag, ?fow (or ?fogofwar) forces it on and ?nofow (?nofogofwar) off; the renderer's pass
   // reads the game's FogFrame through engine.fogFrame. __fow = the object: .on, .knobs, .eyes, .seen(guard), .drawn(guard), .hiddenChars, .stats, .summary()
   engine.fogFrame = game.fogOfWar.frame;
