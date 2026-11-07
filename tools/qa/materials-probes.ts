@@ -3,7 +3,7 @@
 //   materials-finish     the finish (rough / metal) through the level format: the office file carries it per material and per box, loadLevel resolves box over
 //                        material, an old file (no finish anywhere) loads to boxes without one, levelToData writes only what the paint does not say, the
 //                        validator trips on bad values; and Box → GPU word → back (matWord ⇄ common.wgsl boxFinish, ported)
-//   materials-presets    which presets switch the reflections on and with what (ultra ÷2 · 2 rays · ≤ 0.55 · 4, high ÷2 · 1 · ≤ 0.45 · 3, medium ÷3 · 1 · ≤ 0.35 · 3,
+//   materials-presets    which presets switch the reflections on and with what (high ÷2 · 1 · ≤ 0.45 · 3, medium ÷3 · 1 · ≤ 0.35 · 3,
 //                        low / verylow off), apply() writes exactly that, the ?nortreflect veto holds across apply()
 //   materials-frame      the engine writes rtCfg.w = the divisor with the switch on and 0 with it off, holds Gloss DOWN while on whatever settings.gloss says,
 //                        matCfg.w = the detail amount — read back off a real Engine's Frame bytes on the fake device; and settings aside, the first 624 bytes of the
@@ -90,7 +90,6 @@ export async function materialsFinish() {
 export async function materialsPresets() {
   console.log('\n=== materials-presets: which presets switch the reflections on, and with what ===');
   const P = PRESETS as Record<string, any>;
-  verdict(P.ultra.rt.on && P.ultra.rt.div === 2 && P.ultra.rt.rays === 2 && P.ultra.rt.maxRough === 0.55 && P.ultra.rt.atrous === 4, 'ultra: on, half-res target, 2 rays, finishes ≤ 0.55, 4 à-trous', JSON.stringify(P.ultra.rt));
   verdict(P.high.rt.on && P.high.rt.div === 2 && P.high.rt.rays === 1 && P.high.rt.maxRough === 0.45 && P.high.rt.atrous === 3, 'high: on, half-res target, 1 ray, finishes ≤ 0.45, 3 à-trous', JSON.stringify(P.high.rt));
   verdict(P.medium.rt.on && P.medium.rt.div === 3 && P.medium.rt.rays === 1 && P.medium.rt.maxRough === 0.35, 'medium: on, third-res target, 1 ray, finishes ≤ 0.35 (floors, screens, steel)', JSON.stringify(P.medium.rt));
   verdict(['low', 'verylow'].every(n => !P[n].rt.on), 'low / verylow: off (the finish table and the detail layer stay: they live in the g-buffer)', ['low', 'verylow'].map(n => `${n} ${P[n].rt.on}`).join(' · '));
@@ -105,17 +104,11 @@ export async function materialsPresets() {
     q.pin('low'); const offOk = engine.settings.rtReflect === false;
     q.pin('medium'); const md = { on: engine.settings.rtReflect, div: engine.settings.rtReflectDiv, rays: engine.settings.rtRays, maxR: engine.settings.rtMaxRough, at: engine.settings.rtAtrous };
     q.pin('high'); const hi = { on: engine.settings.rtReflect, div: engine.settings.rtReflectDiv, rays: engine.settings.rtRays, maxR: engine.settings.rtMaxRough, at: engine.settings.rtAtrous };
-    q.pin('ultra'); const ul = { on: engine.settings.rtReflect, div: engine.settings.rtReflectDiv, rays: engine.settings.rtRays, maxR: engine.settings.rtMaxRough, at: engine.settings.rtAtrous };
-    verdict(offOk && md.on && md.div === 3 && md.maxR === 0.35 && hi.on && hi.div === 2 && hi.rays === 1 && hi.maxR === 0.45 && hi.at === 3 && ul.on && ul.rays === 2 && ul.maxR === 0.55 && ul.at === 4, 'Quality.apply: low → off; medium / high / ultra → their blocks land in settings.rtReflect / rtReflectDiv / rtRays / rtMaxRough / rtAtrous', `medium ${JSON.stringify(md)} · high ${JSON.stringify(hi)} · ultra ${JSON.stringify(ul)}`);
+    verdict(offOk && md.on && md.div === 3 && md.maxR === 0.35 && hi.on && hi.div === 2 && hi.rays === 1 && hi.maxR === 0.45 && hi.at === 3, 'Quality.apply: low → off; medium / high → their blocks land in settings.rtReflect / rtReflectDiv / rtRays / rtMaxRough / rtAtrous', `medium ${JSON.stringify(md)} · high ${JSON.stringify(hi)}`);
     verdict(engine.settings.detail === 0.35, 'settings.detail defaults to 0.35 and no preset touches it', `detail ${engine.settings.detail}`);
     rtVeto.on = true; q.pin('medium'); q.pin('high'); const vetoed = engine.settings.rtReflect === false && engine.settings.rtReflectDiv === 2; rtVeto.on = false; q.pin('high'); const back = engine.settings.rtReflect === true;
     verdict(vetoed && back, '?nortreflect (rtVeto): high applies with the reflections held OFF (its divisor / rays still written); veto lifted → on again');
-    // renderer v3 phase 5: the ultra-only extras (Preset.p5) — on in ultra, P5_OFF everywhere else, and a hop off ultra puts them back
-    const p5of = () => ({ gi: engine.settings.giResample, rays: engine.settings.giResampleRays, mesh: engine.settings.rtMeshHits, reuse: engine.settings.rtHitReuse });
-    q.pin('ultra'); const u5 = p5of(); q.pin('high'); const h5 = p5of(); q.pin('ultra'); q.pin('medium'); const m5 = p5of(); q.pin('low'); const l5 = p5of(); q.pin('verylow'); const v5 = p5of();
-    verdict(u5.gi === 'temporal' && u5.rays === 2 && u5.mesh === true && u5.reuse === false, 'phase 5: ultra switches gather resampling (temporal, 2 fresh rays) and mesh hits ON, hit-lighting reuse OFF (measured no gain)', JSON.stringify(u5));
-    verdict([h5, m5, l5, v5].every(x => x.gi === 'off' && x.mesh === false && x.reuse === false), 'phase 5: high / medium / low / verylow carry all three OFF (their passes byte for byte as they were), including straight after an ultra visit', [h5, m5, l5, v5].map(x => JSON.stringify(x)).join(' · '));
-    verdict(QUALITY_NAMES.every((n: string) => P[n].p5 && ['off', 'temporal', 'full'].includes(P[n].p5.gi) && P[n].p5.giRays >= 1 && P[n].p5.giRays <= 4 && typeof P[n].p5.mesh === 'boolean' && typeof P[n].p5.reuse === 'boolean'), 'every preset carries a well-formed p5 block');   __teardownDom();
+    __teardownDom();
   }
   done('materials-presets');
 }
@@ -165,7 +158,7 @@ export async function materialsFrame() {
     viewProj: ident(1), invViewProj: ident(2), prevViewProj: ident(3), camPos: [20, 6, 14], camDir: [0, -0.7, -0.7], time: 12.5, dt: 1 / 60, width: 1777, height: 1000,
     frameIdx: 77, numLights: 33, flags: 0x1234abcd, exposure: 2, skyZenith: [0.01, 0.02, 0.05], skyHorizon: [0.04, 0.05, 0.08], hazeDensity: 0.035,
     rcInterval0: 1, rcC0Dims: [40, 4, 28], rcNumCascades: 4, rcD0: 6, rcFrameParity: 1, numSmoke: 2, debugView: 0, indirectScale: 0.35, emissiveScale: 1, volSteps: 20,
-    capColor: [0.01, 0.012, 0.016, 0.3], post: [0, 475, 0, 0.4], rcJitter: [0.3, 0.6], directCfg: [8, 4, 10, 0.5], directAdaptiveMin: 3, numTransient: 1, secMinE: 0.006,
+    capColor: [0.01, 0.012, 0.016, 0.3], post: [0, 475, 0, 0.4], rcJitter: [0.3, 0.6], directCfg: [8, 4, 10, 0.5], numTransient: 1, secMinE: 0.006,
     glassCfg: [1, 1, 1, 0], lossyCfg: [2, 2, 0, 4], cardSlots: [3, 5], weather: { ...noWeather(), rain: 0.5, wet: 1, flash: [0.1, 0.1, 0.2] },
     volCfg: [4, 2, 15, 0], froxelA: [0.5, 56, 2, 0.93], froxelB: [240, 135, 64, 4], froxelC: [0.1, 0.2, 0.3, 0], prevCamPos: [19, 6, 15], froxelPrevNear: 0.5,
     rtCfg: [0.45, 1, 0.7, 2], matCfg: [1, 1, 60, 0.35], p5Cfg: [17, 0x0a031402, 3, 0], jitter: [0.25, -0.125, 0.5, 0.375], markCfg: [0.025, 1, 1.5, 1],
@@ -182,7 +175,7 @@ export async function materialsFrame() {
   verdict(f[176] === 1368 && f[177] === 770 && f[178] === 1777 && f[179] === 1000 && f[180] === 1 && f[181] === Math.fround(0.3) && f[182] === 2.5 && f[183] === Math.fround(0.01), 'and sharpCfg @704 + sharpCfgB @720 (sharp direct: sizes, knobs)', `f[176..183] = ${Array.from(f.subarray(176, 184)).map(v => +v.toFixed(4)).join(', ')}`);
   verdict(f[184] === 0.25 && f[185] === -0.125 && f[186] === 0 && f[187] === 0, 'and sharpCfgC @736 (the decoupled jitter)', `f[184..187] = ${Array.from(f.subarray(184, 188)).join(', ')}`);
   verdict(f[188] === 45 && f[189] === 20 && f[190] === 1 && f[191] === Math.fround(0.006) && f[192] === 1 && f[193] === 24 && f[194] === Math.fround(0.0015) && f[195] === Math.fround(0.012), 'and rigCfg @752 + rigCfgB @768 (the SDF character rig: bits + soft-query numbers, blend / trace numbers)', `f[188..195] = ${Array.from(f.subarray(188, 196)).map(v => +v.toFixed(4)).join(', ')}`);
-  verdict(f[196] === 3 && f[197] === 9376 && f[198] === 4 && f[199] === 0, 'and giCfg @784 (GI in motion: young-history rays k, cap, young length)', `f[196..199] = ${Array.from(f.subarray(196, 200)).join(', ')}`);
+  verdict(f[196] === 3 && f[197] === 9376 && f[198] === 4 && f[199] === 0, 'and giCfg @784 (four free words since the young-history rays went: still written as given)', `f[196..199] = ${Array.from(f.subarray(196, 200)).join(', ')}`);
   verdict(f[200] === 0 && f[201] === 0 && f[202] === 0 && f[203] === 0 && f[204] === 0 && f[205] === 0 && f[206] === 0 && f[207] === 0, 'and weatherE @800 + weatherF @816 (particle rain\'s near-field disc + its v2 phase: zeros from a WeatherFrame that never rains particles) last', `f[200..207] = ${Array.from(f.subarray(200, 208)).join(', ')}`);
   verdict(f[208] === 0 && f[209] === 0 && f[210] === 0 && f[211] === 0, 'and shadeCfg @832 (the look prototype\'s shade row: zeros from a frame that gives none = the picture as it was)', `f[208..211] = ${Array.from(f.subarray(208, 212)).join(', ')}`);
   verdict(f[212] === 0 && f[213] === 0 && f[214] === 0 && f[215] === 0 && f[216] === 0 && f[217] === 0 && f[218] === 0 && f[219] === 0, 'and veilA @848 + veilB @864 (the look prototype\'s loose snow in the air: zeros from a frame that gives none = no powder)', `f[212..219] = ${Array.from(f.subarray(212, 220)).join(', ')}`);

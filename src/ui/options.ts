@@ -45,7 +45,6 @@ const TIERS: { v: 'auto' | QualityName; label: string; line: string }[] = [
   { v: 'low',     label: 'Low',      line: 'This is for thin laptops. It uses a lower internal resolution and coarser bounce light, with no ray-traced reflections. The light is still fully dynamic and nothing is baked.' },
   { v: 'medium',  label: 'Medium',   line: 'You get the same lighting, with the bounce light and the beams computed at reduced resolution and fewer shadow rays. Contact shadows are softer, but most people can\'t tell in motion.' },
   { v: 'high',    label: 'High',     line: 'This is the intended look, with ray-traced light and shadow, traced bounce light, volumetric beams and smoke, and reflections in polished floors and glass. It\'s the tier the game is tuned on.' },
-  { v: 'ultra',   label: 'Ultra',    line: 'This is the reference picture, with every shadow ray, characters shadowed by their real mesh and reflections at full rate. It\'s for desktop GPUs with headroom and costs roughly twice as much as High.' },
 ];
 
 /** THE KEYS, grouped by what the hand is doing: [key caps, what it does, the small print]. The flat list other readers take is ui/menu.ts CONTROLS: a key

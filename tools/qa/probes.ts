@@ -61,7 +61,7 @@
 //     particles: particles-determinism particles-off particles-queue particles-sites
 //     perf: ladder perf-cards perf-flags perf-texpool
 //     qrf: qrf-element qrf-gating qrf-limits qrf-perimeter qrf-reset qrf-timeline qrf-trigger qrf-wave qrfsquad response
-//     sdfrig: sdfrig-fit sdfrig-pack sdfrig-presets
+//     sdfrig: sdfrig-fit sdfrig-pack
 //     cast: cast-loader cast-file cast-fit cast-game cast-look cast-beam   (the look switch: both files, OFF = today's masks, one digest under either look;  a statured man's laser leaves his drawn muzzle;  the operators' and defenders' meshes: the loader's contract, the shipped file, each variant's proxy fit, the game on it)
 //     selector: selector-input selector-noise selector-rows selector-sustained
 //     selftest: selftest-fail selftest-fold selftest-holds selftest-knobs selftest-pass selftest-quiet selftest-side selftest-throw   (selftest-fold and selftest-side by their own names only)
@@ -2796,7 +2796,7 @@ if (on('rainwalls', 'weather', 'all')) await run('rainwalls', async () => (await
 if (on('bouncewalls', 'render', 'all')) await run('bouncewalls', async () => (await import('./bouncewalls-check.ts')).bounceWallsCheck());   // the bounce is never read through a wall off a man (the prelude's BOUNCE_WALLS, lighting_common.wgsl diceWalledPoint): the shader's rule held by its text, weighed for men stood by every level's walls
 if (on('ways', 'render', 'all')) await run('ways', async () => (await import('./ways-check.ts')).waysCheck());   // how a level is walked (scene/ways.ts levelWays; render/wear.ts `walked`, the look's page): WAYS_BREAK=1 fails its reader's line
 if (on('portal', 'render', 'all')) await run('portal', async () => (await import('./portal-check.ts')).portalCheck());   // daylight counted once (render/lights.ts LIGHT_PORTAL; common.wgsl skyThrough, the look's page): PORTAL_BREAK=1 leaves the bounce its sky
-if (on('sunglint', 'render', 'all')) await run('sunglint', async () => (await import('./sunglint-check.ts')).sunGlintCheck());   // a smooth finish catches the sun (the prelude's SUN_GLINT; rtGlints in the THREE reflection passes, reflect.wgsl, reflect_p5.wgsl and compact/reflect_p5.wgsl, held level): the word on the look's page and nowhere else, its off word wired, the sun a fifth candidate outside the lamps' contest and never unshadowed, and the lobe's arithmetic
+if (on('sunglint', 'render', 'all')) await run('sunglint', async () => (await import('./sunglint-check.ts')).sunGlintCheck());   // a smooth finish catches the sun (the prelude's SUN_GLINT; rtGlints in the two reflection passes, reflect.wgsl and reflect_p5.wgsl, held level): the word on the look's page and nowhere else, its off word wired, the sun a fifth candidate outside the lamps' contest and never unshadowed, and the lobe's arithmetic
 if (on('huesplit', 'render', 'all')) await run('huesplit', async () => (await import('./huesplit-check.ts')).hueSplitCheck());   // the estimator's hue split asks the belief the hue was summed by (restir.wgsl: the pixel's dark memory is moved after the shade; both writings held to that order by their text) and a one-ray model of a half shadow beside a far dim lamp of another colour: HUESPLIT_BREAK=1 moves the memory first, as it was, and must fail
 if (on('reflup', 'render', 'all')) await run('reflup', async () => (await import('./reflup-check.ts')).reflUpCheck());   // a reflection texel of another surface has no say (composite.wgsl upsampleRefl: the four texels round a pixel by depth and stored normal; REFLUP_BREAK=1 = the plain bilinear blend)
 if (on('highlights', 'render', 'all')) await run('highlights', async () => (await import('./highlights-check.ts')).highlightsCheck());   // the mirror and the highlights are two terms in two targets, both faded by the finish's roughness (reflect.wgsl outHi, common.wgsl rtHiFade, composite.wgsl upsampleHi; HIGHLIGHTS_BREAK=1 and PORTALMIRROR_BREAK=1 each fail)
@@ -3371,7 +3371,7 @@ let glassBannerPending: { f0: number } | null = null;
 { let cbRan = false; const f0 = FAILED.length;
   const cbf = async (name: string, fn: string) => { if (on(name, 'cutboxes', 'perf', 'all')) { cbRan = which === 'cutboxes' || which === name; await run(name, async () => ((await import('./cutboxes-probes.ts')) as any)[fn]()); } };
   await cbf('cutboxes-record', 'cutboxesRecord'); await cbf('cutboxes-ray', 'cutboxesRay'); await cbf('cutboxes-off', 'cutboxesOff'); await cbf('cutboxes-pack', 'cutboxesPack'); await cbf('cutboxes-lines', 'cutboxesLines');
-  if (on('splitrays', 'shaders', 'all')) await run('splitrays', async () => (await import('./splitrays-check.ts')).splitraysCheck());   // SEPARATE SHADOW RAYS (?splitrays=1): the gather as two programs — who reaches the light loop, the buffer's layout, what a load compiles with the row off and on; SPLITRAYS_BREAK=1 must fail
+  if (on('splitrays', 'shaders', 'all')) await run('splitrays', async () => (await import('./splitrays-check.ts')).splitraysCheck());   // THE GATHER IS TWO PROGRAMS: who reaches the light loop, the buffer's layout, what a load compiles; SPLITRAYS_BREAK=1 must fail
   if (cbRan && which === 'cutboxes') familyBanner('cutboxes', FAILED.length - f0);
 }
 // ---------------------------------------------------------------- glass BREAKING (game/glassbreak.ts, glassbreak-probes.ts): 'glassbreak' = the family — the switch-off identity, the chaos / tour / switch gate, the crack pattern by glass type, release by support, the release hook, the blast,
@@ -3438,7 +3438,7 @@ if (on('director-scheduler', 'director', 'all')) await run('director-scheduler',
 // ---------------------------------------------------------------- the SDF character rig (sdfrig-probes.ts): the fit off the mannequin, BoxWorld's packing of it, and that no preset switches it (no tier since the capsule cleanup)
 { let ran = false;
   const sf = async (name: string, fn: string) => { if (on(name, 'sdfrig', 'all')) { ran = true; await run(name, async () => ((await import('./sdfrig-probes.ts')) as any)[fn]()); } };
-  await sf('sdfrig-fit', 'sdfrigFit'); await sf('sdfrig-pack', 'sdfrigPack'); await sf('sdfrig-presets', 'sdfrigPresets');
+  await sf('sdfrig-fit', 'sdfrigFit'); await sf('sdfrig-pack', 'sdfrigPack');
   if (ran) familyBanner('sdfrig', (await import('./sdfrig-probes.ts')).sdfrigFailures()); }
 // ---------------------------------------------------------------- the cast (cast-probes.ts): the new character meshes — the loader against a synthetic file, the shipped cast.gltf, the per-variant fits, the game standing on it
 { let ran = false;

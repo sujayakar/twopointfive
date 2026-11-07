@@ -3,7 +3,6 @@
 // irradiance and its specular field at gather res). The WGSL is shaders/denoise.wgsl (one module, five entry points); this file owns its pipelines,
 // layouts, the small parameter uniform and a bind-group cache, and encodes a client's chain into an open compute pass with the texture views
 // render/passes.ts hands it (passes.ts owns every texture: they go through its pool / resample-on-resize machinery like the legacy histories).
-// settings.denoiser = 'legacy' never constructs a dispatch from here: passes.ts runs dtemporal / softblur / temporal / giblur exactly as before.
 import { makeBuffer, makeShader, computePipelineAsync, writeWordsIfChanged } from '../gpu/device';
 import { scenePrelude } from './frame';
 import denoiseSrc from './shaders/denoise.wgsl' with { type: 'text' };
@@ -11,7 +10,9 @@ import denoiseSrc from './shaders/denoise.wgsl' with { type: 'text' };
 const CS = GPUShaderStage.COMPUTE;
 /** à-trous strides by iteration (1-based i → STRIDES[i-1]); the shadow chain's total travel after N iterations = Σ = 2^N − 1 px */
 export const DN_STRIDES = [1, 2, 4, 8, 16];
-export const dnTravel = (iters: number) => DN_STRIDES.slice(0, Math.max(1, Math.min(5, Math.round(iters)))).reduce((a, b) => a + b, 0);
+/** the iteration count a chain runs for a knob's value (1 ‥ the stride table's length): the ONE clamp — the encoder, the tile mask's thresholds and the stats all ask here */
+export const dnIters = (iters: number) => Math.max(1, Math.min(DN_STRIDES.length, Math.round(iters)));
+export const dnTravel = (iters: number) => DN_STRIDES.slice(0, dnIters(iters)).reduce((a, b) => a + b, 0);
 
 /** Every knob of the three clients (engine settings dn* mirror into this each frame; ui/quality.ts presets place the per-tier ones). */
 export interface DenoiseKnobs {
@@ -35,7 +36,7 @@ export const defaultDenoiseKnobs = (): DenoiseKnobs => ({
   shIters: 3, shCap: 12, shClampK: 1.25, shSigmaL: 4, shPrior: true, shLitAlike: true, shOccl: true, shMoveCap: 3, shMoveThresh: 0.04, shJump: 0.5,
   giIters: 4, giCap: 24, giClampK: 1.0, giSigmaL: 4, giFast: 3, giFirefly: 0, giClampCut: 0, giYoungWiden: 0,
   spIters: 1, spCap: 16, spClampK: 1.0, spSigmaL: 2, spRough: 0.08, spVirtual: -1, spMaxRough: 0.45, rfIters: 3, rfCap: 32,
-  depthK: 0.004, normalPow: 12, motionVectors: true, ratioHi: 1,
+  depthK: 0.004, normalPow: 12, motionVectors: true, ratioHi: 4,   // ratioHi = direct_common.wgsl RATIO_HI, which sharp direct clamps by (tools/qa/frame-layout.ts holds the two equal)
 });
 
 /** What one shadow-chain encode needs (views named by role; passes.ts decides which of its textures play them this frame). */
@@ -58,25 +59,16 @@ export interface RadianceViews {
   /** à-trous targets: chain[i] for iteration i+1's OUTPUT (the last = where composite reads); the first iteration reads histOut (+ momOut for its variance) */
   chain: GPUTextureView[];
 }
-/** The diffuse client at the INTERNAL resolution (settings.giFullRes; encodeRadiance's `full`): `curFull` = the guided upsample's output (giUpsample wrote it this frame — the value each pixel
- *  accumulates), while RadianceViews.cur stays the RAW gather (the apron's statistics); `strides` = the à-trous strides at internal res (gdiv × 1, 2, 4, 8: the gather-grid chain's ground reach);
- *  `rawDiv` = the raw gather's divisor (2 | 3) the internal-res kernels map pixels ↔ texels with */
-export interface FullResGi { curFull: GPUTextureView; strides: number[]; rawDiv: number }
 
 export class Denoiser {
   knobs: DenoiseKnobs = defaultDenoiseKnobs();
-  private sent = [new Uint32Array(32), new Uint32Array(32), new Uint32Array(32)];   // what dnParams / dnParamsRefl / dnParamsFull hold (gpu/device.ts writeWordsIfChanged)
+  private sent = [new Uint32Array(32), new Uint32Array(32)];   // what dnParams / dnParamsRefl hold (gpu/device.ts writeWordsIfChanged)
   private params: GPUBuffer; private paramData = new ArrayBuffer(128); private pf = new Float32Array(this.paramData); private pu = new Uint32Array(this.paramData);   // struct DnParams in denoise.wgsl: seven vec4 + gi3 = 128 B
   /** the REFLECTION chain's copy of the parameters: the same block with its own divisor (flags.y = the reflection target's) and the per-pixel roughness mode up (sp2.w = the cutoff) */
   private paramsRefl: GPUBuffer;
-  /** the INTERNAL-RES diffuse chain's copy (settings.giFullRes): flags.y = 1 (its grid IS the internal one), gi2.w = the raw gather's divisor its kernels map pixels ↔ texels with (0 in the other two blocks) */
-  private paramsFull: GPUBuffer;
   private nearSamp: GPUSampler;
   private lPack: GPUBindGroupLayout; private lShTemp: GPUBindGroupLayout; private lShAtrous: GPUBindGroupLayout; private lGiTemp: GPUBindGroupLayout; private lSpecTemp: GPUBindGroupLayout; private lRadAtrous: GPUBindGroupLayout;
-  private lGiUp: GPUBindGroupLayout; private lGiTempF: GPUBindGroupLayout;
   private pPack!: GPUComputePipeline; private pShTemp!: GPUComputePipeline; private pGiTemp!: GPUComputePipeline; private pSpecTemp!: GPUComputePipeline;
-  /** the internal-res diffuse client's two pipelines (giUpsample, giTemporalF) + its à-trous stride variants: made on FIRST use, asynchronously (prepareFull) — a tier that never turns it on compiles nothing */
-  private pGiUp: GPUComputePipeline | null = null; private pGiTempF: GPUComputePipeline | null = null; private fullPending = false;
   private pShAtrous = new Map<string, GPUComputePipeline>(); private pRadAtrous = new Map<string, GPUComputePipeline>();
   private mod: GPUShaderModule; private layShAtrous: GPUPipelineLayout; private layRadAtrous: GPUPipelineLayout;
   /** bind groups by role key + the identities of the views in them; dropped wholesale when passes.ts re-makes its targets (dropBindGroups) */
@@ -88,7 +80,6 @@ export class Denoiser {
     const d = device;
     this.params = makeBuffer(d, this.paramData.byteLength, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'dnParams');
     this.paramsRefl = makeBuffer(d, this.paramData.byteLength, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'dnParamsRefl');
-    this.paramsFull = makeBuffer(d, this.paramData.byteLength, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'dnParamsFull');
     this.nearSamp = d.createSampler({ label: 'dnNearest', magFilter: 'nearest', minFilter: 'nearest' });
     const tex = (binding: number, sampleType: GPUTextureSampleType = 'unfilterable-float'): GPUBindGroupLayoutEntry => ({ binding, visibility: CS, texture: { sampleType, viewDimension: '2d' } });
     const dep = (binding: number): GPUBindGroupLayoutEntry => ({ binding, visibility: CS, texture: { sampleType: 'depth', viewDimension: '2d' } });
@@ -101,14 +92,10 @@ export class Denoiser {
     this.lShAtrous = d.createBindGroupLayout({ label: 'dnShAtrous', entries: [uni, dep(1), tex(2, 'float'), tex(50), tex(51), tex(52), tex(53, 'uint'), tex(54), tex(55), tex(56), tex(57, 'uint'), st16(60), st16(61), st16(62)] });
     this.lGiTemp = d.createBindGroupLayout({ label: 'dnGiTemporal', entries: [uni, dep(1), tex(2, 'float'), tex(3, 'float'), tex(5, 'float'), tex(70), tex(71, 'float'), tex(72, 'float'), tex(73, 'float'), st16(80), st16(81), st16(82)] });
     this.lSpecTemp = this.lGiTemp;   // (the specular entry point binds the same set: its fast pair carries the smoothed hit distance)
-    // the internal-res diffuse client: the guided upsample (raw gather + full-res guides → upOut) and its temporal step (giTemporal's set + the upsampled current @74)
-    this.lGiUp = d.createBindGroupLayout({ label: 'dnGiUpsample', entries: [uni, dep(1), tex(2, 'float'), tex(70), st16(84)] });
-    this.lGiTempF = d.createBindGroupLayout({ label: 'dnGiTemporalF', entries: [uni, dep(1), tex(2, 'float'), tex(3, 'float'), tex(5, 'float'), tex(70), tex(71, 'float'), tex(72, 'float'), tex(73, 'float'), tex(74), st16(80), st16(81), st16(82)] });
     this.lRadAtrous = d.createBindGroupLayout({ label: 'dnRadAtrous', entries: [uni, dep(1), tex(2, 'float'), tex(5, 'float'), tex(90), tex(91), tex(92, 'float'), st16(95)] });
     const lay = (l: GPUBindGroupLayout) => d.createPipelineLayout({ bindGroupLayouts: [sceneLayout, l] });
     this.layShAtrous = lay(this.lShAtrous); this.layRadAtrous = lay(this.lRadAtrous);
     this.layPack = lay(this.lPack); this.layShTemp = lay(this.lShTemp); this.layGiTemp = lay(this.lGiTemp); this.laySpecTemp = lay(this.lSpecTemp);
-    this.layGiUp = lay(this.lGiUp); this.layGiTempF = lay(this.lGiTempF);
     this.mod = makeShader(d, scenePrelude() + denoiseSrc, 'denoise');
   }
   /** Every pipeline the constructor used to build, compiled off the GPU process's main thread (gpu/device.ts): the four fixed kernels and the à-trous variants most frames use —
@@ -125,24 +112,6 @@ export class Denoiser {
     await Promise.all(jobs);
   }
   private layPack: GPUPipelineLayout; private layShTemp: GPUPipelineLayout; private layGiTemp: GPUPipelineLayout; private laySpecTemp: GPUPipelineLayout;
-  private layGiUp!: GPUPipelineLayout; private layGiTempF!: GPUPipelineLayout;
-  /** The internal-res diffuse client wanted with these à-trous `strides`: true once its two pipelines AND every stride variant of THIS set (first + mid, diffuse) exist — created here on the first
-   *  call that misses any, asynchronously (nothing compiles inside a frame's encode: passes.ts keeps the gather-grid chain until this says ready — a frame or two after first use, and again after
-   *  a divisor / iteration change asks for strides it has not seen). A compile that FAILED is not retried every frame (fullFailed latches; a hot-swap clears it). */
-  prepareFull(strides: number[]): boolean {
-    let ready = !!this.pGiUp && !!this.pGiTempF;
-    for (let i = 0; ready && i < strides.length; i++) if (!this.pRadAtrous.has(`${strides[i]}/${i === 0 ? 1 : 0}/0`)) ready = false;
-    if (ready) return true;
-    if (this.fullPending || this.fullFailed) return false;
-    this.fullPending = true;
-    const d = this.device, mod = this.mod; const jobs: Promise<unknown>[] = [];
-    if (!this.pGiUp) jobs.push(d.createComputePipelineAsync({ label: 'dnGiUpsample', layout: this.layGiUp, compute: { module: mod, entryPoint: 'giUpsample' } }).then(p => { if (this.mod === mod) this.pGiUp = p; }));
-    if (!this.pGiTempF) jobs.push(d.createComputePipelineAsync({ label: 'dnGiTemporalF', layout: this.layGiTempF, compute: { module: mod, entryPoint: 'giTemporalF', constants: { SPEC: 0 } } }).then(p => { if (this.mod === mod) this.pGiTempF = p; }));
-    strides.forEach((s, i) => { const first = i === 0; const key = `${s}/${first ? 1 : 0}/0`; if (!this.pRadAtrous.has(key)) jobs.push(d.createComputePipelineAsync({ label: `dnRadAtrous${key}`, layout: this.layRadAtrous, compute: { module: mod, entryPoint: 'radAtrous', constants: { STRIDE: s, FIRST: first ? 1 : 0, SPEC: 0 } } }).then(p => { if (this.mod === mod) this.pRadAtrous.set(key, p); })); });
-    Promise.all(jobs).then(() => { this.fullPending = false; }, (e) => { this.fullPending = false; this.fullFailed = true; console.warn('denoiser: the internal-res GI pipelines failed to compile — the gather-grid chain stays', e); });
-    return false;
-  }
-  private fullFailed = false;
   private async buildFixed(mod: GPUShaderModule = this.mod): Promise<[GPUComputePipeline, GPUComputePipeline, GPUComputePipeline, GPUComputePipeline]> {
     const d = this.device;
     const four = await Promise.all([
@@ -176,7 +145,7 @@ export class Denoiser {
     const messages = info.messages.map(m => `${m.type} ${m.lineNum - off}:${m.linePos} ${m.message}`);
     if (info.messages.some(m => m.type === 'error')) return { ok: false, messages };
     const four = await this.buildFixed(mod);   // built off the NEW module first; then the swap is one synchronous step (no frame sees a mix, overlapping swaps end on the last to install)
-    this.mod = mod; this.pShAtrous.clear(); this.pRadAtrous.clear(); this.pending.clear(); this.pGiUp = null; this.pGiTempF = null; this.fullFailed = false; this.fullPending = false; [this.pPack, this.pShTemp, this.pGiTemp, this.pSpecTemp] = four;   // (the à-trous variants re-make themselves lazily off the new module, as before)
+    this.mod = mod; this.pShAtrous.clear(); this.pRadAtrous.clear(); this.pending.clear(); [this.pPack, this.pShTemp, this.pGiTemp, this.pSpecTemp] = four;   // (the à-trous variants re-make themselves lazily off the new module, as before)
     return { ok: true, messages };
   }
   private shAtrous(stride: number, final: boolean, first: boolean): GPUComputePipeline {
@@ -194,7 +163,7 @@ export class Denoiser {
   dropBindGroups() { this.bgs.clear(); }
 
   /** Per frame, before the chains: the parameter uniform. `f`: which switches are up this frame (passes.ts knows the frame flags / settings). */
-  writeParams(f: { gatherDiv: number; reflDiv: number; temporalFlag: boolean; shadowTemporal: boolean; historyScale: number; cueUv: boolean; fullRes?: boolean }) {
+  writeParams(f: { gatherDiv: number; reflDiv: number; temporalFlag: boolean; shadowTemporal: boolean; historyScale: number; cueUv: boolean }) {
     const k = this.knobs, p = this.pf, u = this.pu;
     p[0] = k.shClampK; p[1] = Math.max(0, k.shCap); p[2] = k.shSigmaL; p[3] = Math.max(0.005, k.shMoveThresh);
     p[4] = k.depthK; p[5] = k.normalPow; p[6] = f.historyScale; p[7] = k.ratioHi;
@@ -205,17 +174,15 @@ export class Denoiser {
     u[24] = (k.motionVectors ? 1 : 0) | (f.temporalFlag ? 2 : 0) | (k.shLitAlike ? 4 : 0) | (f.shadowTemporal ? 8 : 0) | (k.shPrior ? 16 : 0) | (f.cueUv ? 32 : 0) | (k.shOccl ? 64 : 0);   // (64: the shadow client's occluded-light reading, denoise.wgsl occlScale; 32: the U textures' alpha holds ReSTIR's believed-visible luminance — the yardstick the shadow client's light-jump is measured against)
     u[25] = f.gatherDiv; u[26] = Math.max(0, Math.min(31, Math.round(k.shMoveCap))); u[27] = Math.max(0, Math.round(k.shJump * 1000));   // (flags.z = the moving history length; flags.w = the shadow client's light-jump threshold ‰, 0 = off)
     p[28] = Math.max(0, k.giClampCut); p[29] = Math.max(0, k.giYoungWiden); p[30] = 0; p[31] = 0;   // gi3 (GI in motion §D; 0 = off)
-    writeWordsIfChanged(this.device, this.params, 0, u, this.sent[0]);   // (the three blocks hold knobs and divisors: the same words frame after frame until a knob, a preset or a size moves)
+    writeWordsIfChanged(this.device, this.params, 0, u, this.sent[0]);   // (the two blocks hold knobs and divisors: the same words frame after frame until a knob, a preset or a size moves)
     // the reflection chain's copy: its own divisor, and the per-pixel roughness mode (sp2.w = the cutoff — texels rougher than it hold no term)
     if (f.reflDiv > 0) { p[23] = Math.max(0.02, Math.min(1, k.spMaxRough)); u[25] = f.reflDiv; p[17] = Math.max(0, k.rfCap); const g3x = p[28], g3y = p[29]; p[28] = 0; p[29] = 0; writeWordsIfChanged(this.device, this.paramsRefl, 0, u, this.sent[1]); p[23] = 0; u[25] = f.gatherDiv; p[17] = Math.max(0, k.spCap); p[28] = g3x; p[29] = g3y; }   // (+ its own history cap: the roughest finishes keep rfCap frames, a polish ~6 — denoise.wgsl capEff; the diffuse-only gi3 knobs zeroed in this block like gi2.w — every read of them sits behind !SPEC, insurance all the same)
-    // the internal-res diffuse chain's copy: its grid IS the internal one (flags.y = 1: fullPx / gatherTexel are the identity there) and gi2.w carries the RAW gather's divisor for the pixel ↔ texel maps
-    if (f.fullRes) { u[25] = 1; p[15] = f.gatherDiv; writeWordsIfChanged(this.device, this.paramsFull, 0, u, this.sent[2]); u[25] = f.gatherDiv; p[15] = 0; }
   }
 
-  private bg(key: string, layout: GPUBindGroupLayout, entries: GPUBindGroupEntry[], refl = false, full = false): GPUBindGroup {
-    key = (refl ? 'R' : full ? 'F' : 'G') + key;
+  private bg(key: string, layout: GPUBindGroupLayout, entries: GPUBindGroupEntry[], refl = false): GPUBindGroup {
+    key = (refl ? 'R' : 'G') + key;
     let g = this.bgs.get(key);
-    if (!g) { g = this.device.createBindGroup({ label: key, layout, entries: [{ binding: 0, resource: { buffer: refl ? this.paramsRefl : full ? this.paramsFull : this.params } }, ...entries] }); this.bgs.set(key, g); }
+    if (!g) { g = this.device.createBindGroup({ label: key, layout, entries: [{ binding: 0, resource: { buffer: refl ? this.paramsRefl : this.params } }, ...entries] }); this.bgs.set(key, g); }
     return g;
   }
   private ids = new WeakMap<object, number>(); private nextId = 1;
@@ -224,7 +191,7 @@ export class Denoiser {
   /** SHADOW chain into the open pass `p`: pack → (the caller's tileDistances between, via `tileDist`) → temporal → N à-trous, the last writing S = U × r̂ into v.S.
    *  `wx, wy` = the full-res 8×8 dispatch grid. Returns the dispatch count. */
   encodeShadow(p: GPUComputePassEncoder, sceneBG: GPUBindGroup, v: ShadowViews, wx: number, wy: number, tileDist: (() => void) | null): number {
-    const N = Math.max(1, Math.min(5, Math.round(this.knobs.shIters)));
+    const N = dnIters(this.knobs.shIters);
     let n = 0;
     p.setBindGroup(0, sceneBG);
     // pack: S, U → (ratio, hint) per class into cur[], (hints, lumU) into shared[0], per-tile hint flags
@@ -261,41 +228,30 @@ export class Denoiser {
   }
 
   /** RADIANCE chain (diffuse: spec = false; specular: true) into the open pass: temporal → N à-trous, the last writing v.chain[N−1]. `hx, hy` = the grid's 8×8 dispatch. `refl` = this is the
-   *  REFLECTION pass's chain (its own divisor + the per-pixel roughness mode, rfIters iterations) rather than the gather-res specular field's. `full` = the DIFFUSE client at the internal
-   *  resolution (FullResGi): its own parameter block, giTemporalF (v.cur = the raw gather for the statistics, full.curFull = the upsampled value), à-trous strides full.strides — the caller
-   *  ran encodeGiUpsample first and prepareFull() said ready. */
-  encodeRadiance(p: GPUComputePassEncoder, sceneBG: GPUBindGroup, v: RadianceViews, hx: number, hy: number, spec: boolean, refl = false, full: FullResGi | null = null): number {
+   *  REFLECTION pass's chain (its own divisor + the per-pixel roughness mode, rfIters iterations) rather than the gather-res specular field's. */
+  encodeRadiance(p: GPUComputePassEncoder, sceneBG: GPUBindGroup, v: RadianceViews, hx: number, hy: number, spec: boolean, refl = false): number {
     const iters = refl ? this.knobs.rfIters : spec ? this.knobs.spIters : this.knobs.giIters;
-    const N = Math.max(1, Math.min(v.chain.length, full ? full.strides.length : 5, Math.round(full ? v.chain.length : iters)));   // (full: the caller sized the chain to its own iteration count)
+    const N = Math.max(1, Math.min(v.chain.length, 5, Math.round(iters)));
     let n = 0;
     p.setBindGroup(0, sceneBG);
-    const tag = refl ? 'rf' : spec ? 'sp' : full ? 'gf' : 'gi';
-    p.setPipeline(spec ? this.pSpecTemp : full ? this.pGiTempF! : this.pGiTemp);
+    const tag = refl ? 'rf' : spec ? 'sp' : 'gi';
+    p.setPipeline(spec ? this.pSpecTemp : this.pGiTemp);
     const tEntries: GPUBindGroupEntry[] = [
       { binding: 1, resource: v.depth }, { binding: 2, resource: v.normal }, { binding: 3, resource: v.vel }, { binding: 5, resource: v.mat },
       { binding: 70, resource: v.cur }, { binding: 71, resource: v.histIn }, { binding: 72, resource: v.momIn }, { binding: 73, resource: v.fastIn },
       { binding: 80, resource: v.histOut }, { binding: 81, resource: v.momOut }, { binding: 82, resource: v.fastOut } ];
-    if (full) tEntries.push({ binding: 74, resource: full.curFull });
-    p.setBindGroup(1, this.bg(`${tag}T:${this.idOf(v.cur)}:${this.idOf(v.histIn)}:${this.idOf(v.histOut)}:${this.idOf(v.fastIn)}:${this.idOf(v.mat)}${full ? ':' + this.idOf(full.curFull) : ''}`, spec ? this.lSpecTemp : full ? this.lGiTempF : this.lGiTemp, tEntries, refl, !!full));
+    p.setBindGroup(1, this.bg(`${tag}T:${this.idOf(v.cur)}:${this.idOf(v.histIn)}:${this.idOf(v.histOut)}:${this.idOf(v.fastIn)}:${this.idOf(v.mat)}`, spec ? this.lSpecTemp : this.lGiTemp, tEntries, refl));
     p.dispatchWorkgroups(hx, hy); n++;
     let src = v.histOut;
     for (let i = 1; i <= N; i++) {
       const dst = v.chain[i - 1]; const first = i === 1;
-      p.setPipeline(this.radAtrous(full ? full.strides[i - 1] : DN_STRIDES[i - 1], first, spec));
+      p.setPipeline(this.radAtrous(DN_STRIDES[i - 1], first, spec));
       p.setBindGroup(1, this.bg(`${tag}A:${first ? 1 : 0}:${this.idOf(src)}:${this.idOf(dst)}:${this.idOf(v.momOut)}:${this.idOf(v.mat)}`, this.lRadAtrous, [
-        { binding: 1, resource: v.depth }, { binding: 2, resource: v.normal }, { binding: 5, resource: v.mat }, { binding: 90, resource: src }, { binding: 91, resource: v.momOut }, { binding: 92, resource: v.fastOut }, { binding: 95, resource: dst } ], refl, !!full));
+        { binding: 1, resource: v.depth }, { binding: 2, resource: v.normal }, { binding: 5, resource: v.mat }, { binding: 90, resource: src }, { binding: 91, resource: v.momOut }, { binding: 92, resource: v.fastOut }, { binding: 95, resource: dst } ], refl));
       p.dispatchWorkgroups(hx, hy); n++;
       src = dst;
     }
-    if (refl) this.stats.refl = n; else if (spec) this.stats.spec = n; else this.stats.gi = n + (full ? 1 : 0);   // (+ the upsample dispatch that preceded the internal-res chain)
+    if (refl) this.stats.refl = n; else if (spec) this.stats.spec = n; else this.stats.gi = n;
     return n;
-  }
-  /** The guided upsample of the raw gather to the internal grid (giUpsample) into the open pass: raw + full-res depth / normal → out. `wx, wy` = the internal 8×8 dispatch. */
-  encodeGiUpsample(p: GPUComputePassEncoder, sceneBG: GPUBindGroup, v: { depth: GPUTextureView; normal: GPUTextureView; raw: GPUTextureView; out: GPUTextureView }, wx: number, wy: number): number {
-    p.setBindGroup(0, sceneBG);
-    p.setPipeline(this.pGiUp!);
-    p.setBindGroup(1, this.bg(`gU:${this.idOf(v.raw)}:${this.idOf(v.out)}`, this.lGiUp, [ { binding: 1, resource: v.depth }, { binding: 2, resource: v.normal }, { binding: 70, resource: v.raw }, { binding: 84, resource: v.out } ], false, true));
-    p.dispatchWorkgroups(wx, wy);
-    return 1;
   }
 }

@@ -26,13 +26,13 @@ export const FINISH_PRESETS: readonly { key: string; label: string; rough?: numb
   { key: 'lino', label: 'lino', rough: 0.22, title: 'waxed lino (corridor / break room): panels + vending fronts as soft-edged rectangles hardening at the contact' },
   { key: 'metal', label: 'brushed metal', rough: 0.28, metal: true, title: 'brushed steel — shelving, the UPS, cart frames, lamp posts (F0 = the albedo, most of the diffuse gone)' },
   { key: 'screen', label: 'dark screen', rough: 0.08, title: 'monitor / TV / vending glass front: near-mirror over the picture' },
-  { key: 'laminate', label: 'laminate', rough: 0.5, title: 'laminate — printer, cooler, counter body, table top (rays on ultra only)' },
-  { key: 'wood', label: 'wood', rough: 0.55, title: 'varnished wood 0.55‥0.6 — borderline: rays only on ultra' },
+  { key: 'laminate', label: 'laminate', rough: 0.5, title: 'laminate — printer, cooler, counter body, table top (too rough for rays on any tier)' },
+  { key: 'wood', label: 'wood', rough: 0.55, title: 'varnished wood 0.55‥0.6 — too rough for rays on any tier' },
   { key: 'matte', label: 'matte wall', rough: 0.85, title: 'paint / render / tile / carpet: analytic highlights only, no ray on any tier' },
   { key: 'unset', label: 'unset', title: 'no finish authored = ROUGH_DEFAULT 1.0 (matte dielectric)' },
 ];
-/** roughness cut-offs of the ray-traced reflection tiers (ui/quality.ts RtTier.maxRough: ultra 0.55 · high 0.45 · medium 0.35; low / verylow trace nothing) */
-export const RT_TIERS: readonly { name: string; maxRough: number }[] = [{ name: 'ultra', maxRough: 0.55 }, { name: 'high', maxRough: 0.45 }, { name: 'medium', maxRough: 0.35 }];
+/** roughness cut-offs of the ray-traced reflection tiers (ui/quality.ts RtTier.maxRough: high 0.45 · medium 0.35; low / verylow trace nothing) */
+export const RT_TIERS: readonly { name: string; maxRough: number }[] = [{ name: 'high', maxRough: 0.45 }, { name: 'medium', maxRough: 0.35 }];
 /** what a roughness value MEANS for the picture: which tiers spend reflection rays on it (composite fades the term over the 0.12 under each cut-off) */
 export function traceHint(rough: number | undefined): string {
   const r = rough ?? ROUGH_DEFAULT; const tiers = RT_TIERS.filter(t => r <= t.maxRough).map(t => r > t.maxRough - 0.12 ? `${t.name} (fading)` : t.name);

@@ -61,7 +61,7 @@
     /** EVERY TIER in one boot, the same staged minute each (as tools/qa/v3-gate.js runAll): restartEncounter → apply the preset → __stress.setup({ fight }) →
      *  ab(march, froxel). opts: { presets, fight, blocks, per }. Start it un-awaited and poll `progress` / `results`; → { [preset]: ab result }. */
     async runAll(opts = {}) {
-      const { presets = ['high', 'ultra', 'medium', 'low', 'verylow'], fight = false, blocks = 6, per = 100 } = opts;
+      const { presets = ['high', 'medium', 'low', 'verylow'], fight = false, blocks = 6, per = 100 } = opts;
       const S = E().settings;
       F.results = {}; F.status = { phase: 'starting', preset: null, done: [] };
       for (const p of presets) {

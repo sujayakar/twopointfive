@@ -42,7 +42,7 @@ function modelCost(s: State, w: Win, base: Record<string, any>): number {
   const pc = withSmoke(PRESETS[s.preset], typeof base.smokeKeep === 'number' ? base.smokeKeep : 0);   // (a take from before SMOKE KEEP carries no such setting: its presets ran their own smoke rows)
   const live: Preset = { ...pc, lossy: { ...pc.lossy, gatherThird: s.gatherThird, volQuarter: s.volQuarter }, maxH: s.maxH, scale: s.scale, iq: { ...pc.iq, sharp: s.sharp && base.taau !== false } };
   const c = presetCost(live, base.oneCacheGrid === true); const rows = rowsOf(s, w); const mpx = rows * rows * (w.cssW / w.cssH) / 1e6;   // (a take from before ONE CACHE GRID carries no such setting: its low and verylow ran the coarse grid and are priced on it, as replay() has the ladder price them)
-  return (s.preset === 'high' || s.preset === 'ultra' ? 1 : MODEL.under) * (c.fixed + (MODEL.sharpK - 1) * c.passes.sharp + MODEL.extraFixed + c.pixel * mpx / REF.mpx);
+  return (s.preset === 'high' ? 1 : MODEL.under) * (c.fixed + (MODEL.sharpK - 1) * c.passes.sharp + MODEL.extraFixed + c.pixel * mpx / REF.mpx);
 }
 
 // ---- a stub engine on the recording's window ---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -444,14 +444,14 @@ function selftest(): boolean {
       let rebuilds = 0; const real = E.rebuildRc; E.rebuildRc = function (cfg: any) { rebuilds++; real.call(this, cfg); };
       const parked = new Set<string>(); E.prewarmRc = (cfgs: any[]) => { for (const c of cfgs) parked.add(`${c.nx}x${c.ny}x${c.nz}`); };
       const q: any = new Quality(E as never, { params: { rbIters: 4 } } as never); const seen: Record<string, string> = {};
-      for (const n of [...QUALITY_NAMES, ...[...QUALITY_NAMES].reverse()]) { q.apply(n); seen[n] = grid(); }   // (ultra down to verylow and back up: every step the ladder or a menu can take)
+      for (const n of [...QUALITY_NAMES, ...[...QUALITY_NAMES].reverse()]) { q.apply(n); seen[n] = grid(); }   // (high down to verylow and back up: every step the ladder or a menu can take)
       return { seen, rebuilds, parked: [...parked] };
     };
     const on = walk(ON), off = walk(false), fine = '40x4x28', coarse = '32x3x22';
     check(QUALITY_NAMES.every(n => on.seen[n] === fine), `every preset reads the one grid: ${QUALITY_NAMES.map(n => `${n} ${on.seen[n]}`).join(' · ')}`);
-    check(on.rebuilds === 0, `the cache is not rebuilt on any step from ultra down to verylow and back: ${on.rebuilds} rebuilds`);
+    check(on.rebuilds === 0, `the cache is not rebuilt on any step from high down to verylow and back: ${on.rebuilds} rebuilds`);
     check(on.parked.length === 1 && on.parked[0] === fine, `the boot parks no second grid: ${on.parked.join(', ')}`);
-    check(off.seen.low === coarse && off.seen.verylow === coarse && off.seen.ultra === fine && off.seen.high === fine && off.seen.medium === fine && off.rebuilds === 2 && off.parked.length === 2,
+    check(off.seen.low === coarse && off.seen.verylow === coarse && off.seen.high === fine && off.seen.medium === fine && off.rebuilds === 2 && off.parked.length === 2,
       `the switch off = the grids as they were: ${QUALITY_NAMES.map(n => `${n} ${off.seen[n]}`).join(' · ')}, ${off.rebuilds} rebuilds on the walk, ${off.parked.length} grids parked`);
     // the ladder prices the grid that runs: a 4.5 × machine's boot pick (61.1 ms at high, 25.0 of it fixed, 1440 × 900 at 2) on the ladder's own tables, and a live Quality's hop price
     const pick = (one: boolean) => { const r = plan(61.1, 25.0, 'high', 0.43, 900, 2, PLAN_BUDGET_MS, true, one); return `${r.preset} ×${r.scale.toFixed(2)}`; };
@@ -470,7 +470,7 @@ function selftest(): boolean {
     };
     const on = walk(ON), off = walk(false), bare = walk(undefined), H = PRESETS.high.rbIters;
     check(QUALITY_NAMES.every(n => on[n] === H), `every preset solves with high's ${H} pairs: ${QUALITY_NAMES.map(n => `${n} ${on[n]}`).join(' · ')}`);
-    check(QUALITY_NAMES.every(n => off[n] === PRESETS[n].rbIters) && off.ultra !== off.medium, `the switch off = the rows as they were: ${QUALITY_NAMES.map(n => `${n} ${off[n]}`).join(' · ')}`);
+    check(QUALITY_NAMES.every(n => off[n] === PRESETS[n].rbIters) && off.high !== off.medium, `the switch off = the rows as they were: ${QUALITY_NAMES.map(n => `${n} ${off[n]}`).join(' · ')}`);
     check(QUALITY_NAMES.every(n => bare[n] === H), 'a settings object with no such key (a tool\'s mock) solves as the page does');
   }
   console.log('\nThe floor rung sheds an open fire\'s smoke (settings.fireSmokeShed: the solver need not stay awake for a brazier on verylow; every rung above keeps it):');
@@ -507,7 +507,7 @@ function selftest(): boolean {
     const off = { medium: put('medium', 0).S, low: put('low', 0).S, verylow: put('verylow', 0).S };
     check(off.medium.volQuarter === true && off.medium.volLightCap === 3 && off.medium.smokeMarchLights === 2 && off.medium.volStepVoxels === 1.5 && off.low.volQuarter === true && off.low.volLightCap === 2 && off.low.smokeMarchLights === 0 && off.low.volStepVoxels === 2 && off.verylow.volQuarter === true && off.verylow.smokeMarchLights === 0 && off.verylow.volStepVoxels === 2,
       `0 = the rows as they were: medium quarter size, ${off.medium.volLightCap} / ${off.medium.smokeMarchLights} lights, step ${off.medium.volStepVoxels}; low and verylow quarter size, ${off.low.volLightCap} / ${off.low.smokeMarchLights} lights, step ${off.low.volStepVoxels}`);
-    check((['high', 'ultra'] as QualityName[]).every(n => diff(put(n, 0).S, put(n, 1).S).length === 0 && diff(put(n, 0).S, put(n, 2).S).length === 0), 'high and ultra are the same rows at 0, 1 and 2');
+    check((['high'] as QualityName[]).every(n => diff(put(n, 0).S, put(n, 1).S).length === 0 && diff(put(n, 0).S, put(n, 2).S).length === 0), 'high is the same rows at 0, 1 and 2');
     const two = under.map(n => put(n, 2).S);
     check(two.every(S => S.froxelVol === false && S.volSteps === H.volSteps && S.volQuarter === false), `2 = high's whole path under high: the per-pixel march, ${H.volSteps} beam steps (medium ${two[0].volSteps}, low ${two[1].volSteps})`);
     const px = (keep: number) => costTable(true, keep).medium.pixel, hop = (keep: number) => { const x = put('medium', keep); x.q.auto = true; return x.q.hopRatio('high') as number; };
