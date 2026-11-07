@@ -11,3 +11,6 @@ export function sample<T>(cases: readonly T[], n: number): T[] {
   return Array.from({ length: n }, (_, i) => cases[Math.round(i * (cases.length - 1) / (n - 1))]); }
 /** a count that is one thing in a sampled run and another in a whole one */
 export const swept = (sampled: number, whole: number): number => ALL ? whole : sampled;
+/** for loops inside loops: `const turn = everyNth(37); … if (!turn()) continue;` asks every 37th case met (take an `n` that shares no factor with the inner
+ *  loops' lengths, so that every axis is walked), all of them under QA_SWEEP=all */
+export function everyNth(n: number): () => boolean { let k = 0; return () => ALL || k++ % n === 0; }
