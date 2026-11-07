@@ -1,7 +1,7 @@
 # tools/fold — settled switch rows made constants of the Rust game
 
 Every rule of the game arrived as a yes-or-no row in a knob table. `tools/qa/switches.json` lists every row with its value on the
-page and its kind. A row of kind `settled` is a constant of the game: this program writes its value into the bodies of `rust/game`
+page and its kind. A row of kind `settled` is a constant of the game: this program writes its value into the bodies of the Rust game
 and deletes the side that can never run.
 
 ```sh
@@ -11,11 +11,27 @@ cargo run --release --manifest-path tools/fold/Cargo.toml -- --table rows.tsv   
 cargo run --release --manifest-path tools/fold/Cargo.toml -- --knobs knobs-dead.md --drop drop.txt   # every leaf of the tables no body reads; the settled rows among them, one a line
 ```
 
-Run it from the repository's root (or `--root DIR`). It reads `tools/qa/switches.json`, `rust/game/src/knobs.rs` (the tables at page
+Run it from the repository's root (or `--root DIR`). It reads `tools/qa/switches.json`, the game's `knobs.rs` (the tables at page
 values: a row's value is taken from there and must agree with the list, or the run stops) and every body file
-`rust/game/src/<module>/{p_NN,b_NN}.rs`. It writes only body files, and a module's `mod.rs` where that hands a deleted function on by
-name. It finds files by module folder, not by a list, so it can be run again after files move. A second run on its own output changes
-nothing.
+`<module>/{p_NN,b_NN}.rs` of the game's crates. It writes only body files, and a module's `mod.rs` where that hands a deleted function
+on by name. It finds files by module folder, not by a list, so it can be run again after files move. A second run on its own output
+changes nothing.
+
+## Where the game is
+
+No pass and no script here names a crate. `fold layout` lists `rust/` and says what it found (`src/layout.rs` has the rules):
+
+- the crate whose `src/knobs.rs` declares `struct Knobs` holds the tables;
+- the game's crates are that one and every plain library that depends on one of them, however far;
+- a crate that builds something to run (a `src/bin`, a `[[bin]]`, a `cdylib`) is a user of the game, and so is every crate that is
+  none of the game's: a name one of them spells keeps an item alive, and each is checked after a pass;
+- a body crate is one of the game's crates with body files: a file of a module folder under `src/` that is not `mod.rs`, `types.rs`
+  or `missing.rs`. A module has body files in one crate only, or the run stops and says which two.
+
+One crate today. When the game is split into crates the passes read the same listing: `fold layout bodies` (the body crates, a crate
+after the ones it depends on), `users` (the crates that use one), `body-src`, `knobs`, `page` (a crate that builds only a module for
+the page, checked for wasm). A check's output names a file from the folder of the crate the check ran in; `fold diag-from-root --diag
+FILE --in rust/<crate>` rewrites it so every file is named from the root, and the passes read only that.
 
 To settle a row, make it `settled` in `tools/qa/switches.json` (the page's hold of settled rows reads the same list) and run this
 again. `--settle FILE` (one `TABLE.row` a line) tries more rows without touching the list.
@@ -114,9 +130,9 @@ m's, `T::f(…)` a method of T; `x.f(…)` can keep a test and never dooms one),
 which TESTS go: what code goes after them is the compiler's reading again, so nothing a remaining test or the game reaches can go.
 The report gains a fourth list, DELETED WITH THE TESTS THAT WERE ITS ONLY USERS, with the tests.
 
-`never.sh` ends with ITS OWN PROOF: `cargo check --all-targets` in every crate under `rust/` (for wasm in `game_face`), and it stops
+`never.sh` ends with ITS OWN PROOF: `cargo check --all-targets` in every crate under `rust/` (for wasm in the page's module), and it stops
 red where one does not check. A kept run cannot stand in for this: it starts from exported bytes and never calls the functions that
-stand a level. Run `cargo test --lib` in `rust/game` after it.
+stand a level. Run `cargo test --lib` in each body crate (`fold layout bodies`) after it.
 
 ## Readers
 
@@ -159,6 +175,27 @@ wanted is found by the compiler's note on its signature; an error that fits noth
 (counted), so a run always ends. What it does not do: split a macro that is used for reads and for writes (one write through it keeps
 it `mut` for every user), or follow a read through the sim crate's own private accessors (a function of the sim that reads a
 `static mut` is tainted like one that writes it).
+
+## A field the TypeScript no longer declares
+
+A struct of the wire's table mirrors a TypeScript interface. When the interface loses a member, the mirror keeps the field: carried
+over the wire and read by nothing.
+
+```sh
+fold fields-gone --type root_settings::RenderSettings --ts src/settings.ts > gone.txt   # the list, by program: `mod::Type.field` a line
+bun run tools/wire/wire.ts drop --file gone.txt                                         # off the wire (table, io.rs, the page's half)
+fold fields-drop --file gone.txt --write                                                # out of the Rust source
+bun run tools/wire/wire.ts drop-type root_settings::RenderSettingsDenoiser              # a type whose last field went: off the wire,
+fold types-drop --file types.txt --write                                                # and out of the Rust source (`mod::Type` a line)
+```
+
+`fields-drop` (first named `knobs-drop`, for a table's rows) takes each field out of its struct, out of every literal and pattern of
+that struct, and deletes a statement that only sets it (`s.field = …;`) where the text itself says `s` is of the struct: a parameter
+of that type, a `let s: Type`, a `let s = Type { … }` or `Type::f(…)` with `f` a function of the type that hands back `Self`. It
+looks in the game's crates and the crates that use them. A read that is left is a compile error, which is the check: run `cargo check
+--all-targets` in every crate after it. A type only a dropped field used (an enum of a setting's words) goes with `wire.ts drop-type`
+and then `fold types-drop`: its declaration and its impls. `types-drop` writes nothing and says the places while anything still names
+the type.
 
 ## The report
 

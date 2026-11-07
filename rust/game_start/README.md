@@ -68,7 +68,9 @@ Metres, in the world a level must fit (40 by 28; x east, z south). The pieces ar
 
 A scene is one of two kinds, never both: a NIGHT (Sam and guards on routes, as a level's file has them) or a ROOM CLEAR (a team and posted
 defenders, started by the game's own `startScenario`). The room clear's staging takes every man who is not its own off the floor, so the builder
-refuses a scene that says both. A scene has at least one door (a level's mission names one).
+refuses a scene that says both. A scene has at least one door (a level's mission names one). A ROOM CLEAR IS REFUSED BY THE GAME (the start
+stops with the staging's own words, `roomclear/p_01.rs`) unless some room has more than one way in and every room has a defender: two rooms
+side by side with a door between them and a door each to the yard, a defender in each, is the smallest that stands (`tests/orders.rs yard()`).
 
 `scene.level_text()` is the level file. It can be saved under `levels/`, opened in the editor, and stood by the TypeScript start.
 
@@ -77,17 +79,21 @@ refuses a scene that says both. A scene has at least one door (a level's mission
 - **Stand:** `Play::scene(&scene, &opts)`, or `Play::level("kit-yard.json", room_clear, &opts)` for a file of `levels/`. `Play::mission("depot-gwot.json", "?levelFile=depot.json&roomclear&squad4", &opts)` starts a mission on a file from the words of its address, as a click on its row of the mission list does (the row's hour and weather, the fog of war, then the mission).
 - **Time:** `p.run(secs)`; `p.until(secs, |p| …)` answers how long it took, or `None`; `p.always(secs, |p| …)` answers `None`, or the second it
   first failed; `p.frame()` is one sixtieth.
-- **Who:** `p.guard("route name")`, `p.defender_at(mark)`, `p.mates()`, `p.roll()` (every man in a line, for a failure's message).
+- **Who:** `p.guard("route name")`, `p.defender_at(mark)`, `p.mates()` (the first two are the red pair, the last two the blue),
+  `p.roll()` (every man in a line, for a failure's message).
 - **Ask:** `p.at(man)`, `p.state(man)`, `p.awareness(man)`, `p.fix(man)`, `p.facing(man)`, `p.speed(man)`, `p.low(man)`, `p.stacked(man)`,
   `p.up(man)`, `p.sam_at()`, `p.sam_light()`, `p.frag_fuse()`, `p.floor()` (what stands on the level: round things, shaped boxes, trim, civilians, devices); `p.lines(man)` and `p.said` are every line a man spoke (read off the speech
   bubbles after each frame), `p.sounds` every sound the game asked its host to play.
 - **Do:** `p.order("stack", place, Who::Red)` is the order menu's own call; `p.frag_lands(place)` the sandbox's; `p.sam_fires_at(place, settle)`,
-  `p.point_at`, `p.press`, `p.key_down` move Sam as a player's hand does, through the host's Input.
+  `p.point_at`, `p.press`, `p.key_down` move Sam as a player's hand does, through the host's Input. An order pointed at Sam's own spot has a
+  target of no kind, and `move` is refused there: point it somewhere else. A flash has no call of its own yet: the sandbox's is
+  `game::game::game_drop_throwable(&mut p.g, game::game::ThrowKind::Flash, [x, 0.0, z])`.
 
 Three rules keep the tests honest and alive:
 
 1. **Ask through `play.rs`, not the game's fields.** When the AI's fields move, one reader follows and no test does. A test needs a new question:
-   add a reader.
+   add a reader. (`tests/control.rs` and `tests/orders.rs` break this where no reader stood yet: a man's reload, the rule that has him read
+   out of `control_line`, a module's own call. Do not copy that; add the reader.)
 2. **Do through the game's own calls.** An order by the menu's call, a shot by Sam's trigger, a grenade by the sandbox's call. Never a write to
    a man's awareness or a pushed event: that tests the test.
 3. **Hold a rule, not a run.** Several seeds, a control, and what a man DID (where he went, what he said), not the name of the script he was on.
@@ -185,7 +191,10 @@ that the picture, the sound, the HUD and the menus read (`src/host/rustgame.ts`,
     feature), and `face_start` stands a game inside the module from one run of handed bytes (`src/handed.rs`: the level file's text, the
     address's words, the character's files, the host's knob tables). `tools/blitz/start-module.ts` holds the game the module starts to the
     game the native start makes, mission by mission ("The module's start", below). Nothing plays a game started that way yet: item 13.
-12. **The team's start is the office's until a start says otherwise.** The rescue's and the night breach's knob tables are made holding the
+12. **A MISSION'S TEAM NUMBERS BELONG ON THE GAME, AND THE RUST START IS WHERE THAT LANDS.** Today they are written into the process's knob
+    tables, so a game whose start does not write a table finds it as the last mission left it: the one thing a second start in one process
+    still differs in ("A second start in one process", below, where the table forgives it by name). **The team's start is the office's until a
+    start says otherwise.** The rescue's and the night breach's knob tables are made holding the
     office's team start (`samAt`, `samYaw`, `opsAt`): the TypeScript reads them off `levels/office.json` as the module loads, the Rust holds
     them as the table's values (`knobs.rs`), and each keeps `applied`, the start the knobs were last written from, so that a start on a level
     that names another writes its own over them and a knob moved by hand stays moved. A game made in Rust is made before any level, so it
@@ -216,6 +225,7 @@ tools/blitz/start.sh depot-gwot.json --link '?levelFile=depot.json&roomclear&squ
 tools/blitz/start.sh --mission depot-four --frames 300               # a row of the mission list: its file, started from its link
 tools/blitz/start.sh rust/game_start/target/scenes/two-rooms.json --scenario roomclear --cpu --frames 900
 bun run tools/blitz/start-levels.ts --write                          # every mission, and LEVELS.md written from the result (--seats 2: as games of two)
+bun run tools/blitz/start-levels.ts --again                          # every mission stood a SECOND time in one process, held to its first start (below)
 ```
 
 1. `tools/blitz/start.ts` stands the file with the TypeScript start on the page's stand and exports the state over the bridge.
@@ -236,6 +246,33 @@ bun run tools/blitz/start-levels.ts --write                          # every mis
 
 Where things stand is [`LEVELS.md`](LEVELS.md). The tests' scenes are held the same way: the three of `tests/behaviour.rs`, each 0 paths not known
 and the block equal to the byte, 900 frames in step.
+
+## A second start in one process (`tools/blitz/start-levels.ts --again`)
+
+A game's state lives on the Game, and a start writes all of it. The Rust start does by its make: every `stand` begins from `Game::blank()`, and
+nothing of a game is kept outside it (`tests/start.rs` stands seed 1, 2, 1 in one slot and holds the third to the first; `tests/slots.rs` stands a
+game again in a slot four other games have used; `start-module.ts` holds the module's second and third start of every mission to the native one).
+
+The TypeScript start did not: what a module of `src/` keeps at its own top (a counter of the men's unit numbers, the tallies and logs the Rust game
+is handed as state, what a mission of another kind had staged) was the process's, and a second game found it as the first left it. `tools/qa/fresh.ts`
+is the mend, run by the harness's stand-up before every game: it puts back only what is known to be a game's (its header says how each is known:
+for a count, that the bridge's schema reads it into one of this game's own `…Stats` structs) and leaves a setting alone. This table is what keeps it. Each mission is stood, stepped with an idle hand, then THE MISSION BEFORE IT ON THE LIST (the
+nearest the game stands for that many players) is stood and stepped in the same process, then the mission is stood again; the second start is held
+to the first, rust/sim's block byte for byte and the state path for path, but for what `tools/blitz/known-again.txt` names with its reason (the Rust
+module's own memory and memos; no game's state) and, in the block's poses, a row the first start had not made (a clip's first pose, a memo).
+
+```bash
+bun run tools/blitz/start-levels.ts --again                 # 38 of 38 (300 frames each; the module must be built)
+bun run tools/blitz/start-levels.ts --again --seats 2       # 23 of 23, 15 the game refuses for two
+bun run tools/blitz/start-levels.ts --again --frames 0      # no game stepped (needs no module): only what a START leaves behind
+STANDFRESH_BREAK=1 bun run tools/blitz/start-levels.ts --again   # nothing put back: every row red
+```
+
+ONE THING IS OPEN, and the table forgives it by name, row by row: a mission's start writes its team's numbers (where Sam and the men stand, how
+many come) into the process's knob tables, and a game whose start does not write a table finds it as the last mission left it. No start here can
+tell a game's write to a knob table from a tool's, so a tool that runs missions of several kinds puts the tables back itself (`knobsCopy` /
+`knobsBack`, which carry each table's note of where its numbers came from). It ends when a mission's numbers live on the Game: item 12 of the list
+above.
 
 ## The module's start (`tools/blitz/start-module.ts`)
 
@@ -282,19 +319,26 @@ byte of each part. `check` reads the folder's own list of runs and its copies of
 of each run `the same after every frame`, or the first frame that differs and the names of the parts that differ in it
 (`FIRST DIFFERS AT FRAME 2181 (36.35 s) in guards, chars, dice`). It exits 0 only if every run is the same. Levels, hands, seeds and
 the length are arguments (`keep DIR --hand push --seed 1 --seed 2 --secs 60 depot:clear office`); with none it is 24 levels (14 as
-room clears) by every hand by seed 1, about 1.7 MB a run.
+room clears) by every hand by seed 1: 120 runs, about ten minutes on four cores and 1.7 MB a run (`--hand push --hand bangs
+--hand rest` is the 72 of the first proofs, six minutes).
 
 A hand is a few lines of what is done to the game from outside (`hands/*.hand`; the file's head in `src/bin/hold.rs` is its
-grammar). Three stand here, and each file says what it reaches and what it does not:
+grammar). Five stand here, and each file says what it reaches and what it does not:
 
 | hand | what it does | reaches |
 |---|---|---|
 | `push` | Sam unhurtable; every 6 s the squad is ordered to move to the nearest man who is not theirs; every 10 s Sam fires a round at him | the move order, doors, contact, the room fight on both sides, hunting, reloads, deaths |
 | `bangs` | Sam unhurtable; a frag and a flash land by the nearest such man, again every 9 s; the squad falls in | the body rules (running from a grenade, shaken by a blast), flashed men, blasts on doors and glass |
+| `doors` | Sam unhurtable; the squad stacks on the door nearest that man and is told to go, falls in, then a pair bangs its way in while the other holds the threshold | the stack order, the word to go, the door tools, entries and the room fight behind them |
+| `kit` | Sam unhurtable; the squad goes silent, closes, throws a flash and a frag on order, covers, goes loud, holds, falls in | silent and loud, the throws' page, cover, hold; smoke and the wand where a floor brings them |
 | `rest` | nothing | a floor at rest: patrols, sentries, lights, the level's own script |
 
+A run's line says how many of the hand's lines the game took, and names each line it NEVER took on that floor with the game's own
+reason (`NEVER DONE HERE: order shutDoor door all (it's shut)`), so a hand is not trusted for what it only names. On a floor with
+no squad the three hands that give orders do nothing but what Sam does himself.
+
 What a green check proves: on these floors, under these hands, the two builds played the same game part for part. What it does
-not: anything no hand reaches (the other orders, the door tools, a startled man, a player walking, a second seat), and anything that is not in the
+not: anything no hand reaches (charges, a pair's orders, the 40 mm, a startled man, a player walking, a second seat), and anything that is not in the
 state's words (what a host hands in: the cameras, the input). One part is left out for now: the box mirror's own record, which keeps
 addresses of rust/sim's tables (another in every native process); what it mirrors is compared as rust/sim's block, and the
 carve-out goes when the mirror keeps offsets. A change that is MEANT to change play is not judged here: that is the

@@ -162,16 +162,26 @@ again); a save asked from a panel while the card is up (it throws to the page's 
 
 ## A row the game makes at run time
 
-The start builds the page's game with the classes' own constructors, so every row has its picture half: a man's skeleton and its buffers, his
-animator's springs and node table, a gun's event list. None of that is the game's state and the bridge carries none of it. A row the tick makes later
-(a level's program stands three men at a roadblock, an alarm calls a team) reaches the page as its class's prototype and its carried fields, and
-nothing else. Such a man could not be posed: `headRot` and `capsules` threw, the dress step's `men` and `snowBreath` lines threw every tick, he was
-not drawn, and the poses the host owes the game for him were never worked out, so rounds fired at him did not land.
+The start builds the page's game with the classes' own constructors, so every row has its picture half: a man's skeleton instance with its rig,
+its scratch and the views over its joint data, his animator's cast record. None of that is the game's state and the bridge carries none of it. A
+row the tick makes later (a level's program stands three men at a roadblock, an alarm calls a team) reaches the page as its class's prototype and
+its carried fields, and nothing else. Such a man could not be posed: `headRot` and `capsules` threw, the dress step's `men` and `snowBreath` lines
+threw every tick, he was not drawn, and the poses the host owes the game for him were never worked out, so rounds fired at him did not land.
 
-`src/host/rustgame.ts` `madeHooks` is told of every made row by the apply (`hooks.made`). For a `Character` and a `Firearm` it builds a TWIN with
-the same constructor the start calls and the made row takes from it every field it lacks and the class of every part the apply made plain; nothing
-the apply wrote is overwritten and a man's columns row stays the game's. `window.__rust.made` counts made rows by class, `madeTook` what the twins
-gave, `madeThrew` a class whose twin could not be built, `madeLast[class]` the last made row and `madeAtRunTime(row)` answers for any row.
+THE PICTURE'S HALF IS ITS OWN FUNCTION, and one function serves the start and a made row: `SkeletonInstance.picture(ch)` and `PoseFK.picture()`
+(`src/anim/skeleton.ts`), `CharacterAnimator.picture()` (`src/game/character.ts`). Each builds only what follows from the rig and from the object's
+own carried fields, draws no die and writes no state field. The constructors call them; `madeHooks` (`src/host/rustgame.ts`) is told of every made
+row by the apply (`hooks.made`) and calls them on a made `Character`'s skeleton and animator. No second man is built. THE RULE FOR ANYTHING THE PAGE
+BUILDS FOR THE PICTURE WHILE A GAME IS LIVE: it must not draw the game's die or write its state (an earlier form built a twin with the whole
+constructor, whose animator draws a phase off the die: one draw a made man, and the page played another deal than its seed from there on).
+
+- A gun needs none: the one field a made `Firearm` lacks, `ev`, is read by nothing.
+- What a made man still lacks is the APPLY's to make right, for every class (the Library's `MADE-ROW-APPLY.md`): the class of a carried part (his
+  54 springs arrive as plain objects with the right values; `skel` is given its class in the hook, a stand-in), typed leaves as typed arrays, and
+  his seven named poses, which are not his pose set's and have no home in the block. No code the page runs calls a made man's springs or poses:
+  `Spring` is private to character.ts and the animator's update is the Rust tick's.
+- `window.__rust.made` counts made rows by class, `madeTook` the made rows given a picture half, `madeThrew` a class it could not be given to,
+  `madeLast[class]` the last made row and `madeAtRunTime(row)` answers for any row.
 
 `Game.drawMen` hands the men over one at a time: a man who throws there is left out of that frame, said once by name in the console and kept on
 `game.menNotDrawn`; the men after him are drawn.
