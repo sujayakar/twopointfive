@@ -107,26 +107,13 @@ pub fn tip_of(g: &crate::game::Game, c_2: CharId) -> Option<V3> {
 
 /// The host's book, made on first asking. No rule reads it.   (smokebreak.ts:110)
 fn book(g: &mut Game) -> &mut SmokeShown {
-    g.engine.host_books.get_or_insert_with(crate::host_api::HostBooks::default).smoke_break.get_or_insert_with(|| SmokeShown { men: JsMap::new(), frame: 0.0, threads: 0.0, records: 0.0 })
+    g.engine.host_books.get_or_insert_with(crate::host_api::HostBooks::default).smoke_break.get_or_insert_with(|| SmokeShown { men: JsMap::new(), threads: 0.0 })
 }
 
 /// `g.smoke.emit`: the real body (a `look` source: nothing to the game's own smoke), then the event for the host's solver.
 fn smoke_emit(g: &mut Game, e: &crate::smoke_types::SmokeEmitter) {
     crate::smoke_types::smoke_system_like_emit(g, e);
     crate::out_events::push_smoke_system_like_emit(g, e);
-}
-
-/// What the thread rides: the `at` of smokebreak.ts:135, which the host's solver asks every step and which stamps `beat`. `effects::Track` has no arm for it, so no thread is filed
-/// yet: with no track it would stand where he lit it for its 600 s and be filed again every `thread_gone` frames. notes.md, Out.
-fn seam_thread_track(c: CharId, gen: f64) -> Option<crate::effects::Track> {
-    None
-}
-
-/// A puff record's seed, off its own hash and never the game's die.   (smokebreak.ts:158)
-fn puff_seed(id: f64, outs: f64, left: f64, seed: f64) -> f64 {
-    let a = m::imul(js::to_i32(id + 1.0), js::to_i32(3266489917.0));
-    let b = m::imul(js::to_i32(outs * 16.0 + left + 1.0), js::to_i32(668265263.0));
-    mix((a ^ b ^ js::to_i32(seed)) as u32 as f64)
 }
 
 /// One smoking man's frame: everything of the loop's body after he is counted (a `continue` there is a return here).
@@ -162,31 +149,23 @@ fn smoke_one(g: &mut Game, gd: GuardId, c: CharId, dt: f64, mn: &mut Man, t: &mu
         t.draws += 1.0;
     }
     if hidden {
-        return; // (nothing live shows in the fog: the lights are the meter's and stay, the smoke is the picture's)
+        // (nothing live shows in the fog: the lights are the meter's and stay, the smoke is the picture's. The source asks whether he is seen and lets go; filed again when he is)
+        if let Some(h) = book(g).men.get_mut(crate::Num(id)) { h.thread = false; }
+        return;
     }
-    let drawing = crate::smoke_types::smoke_system_like_drawing(g);
     let k = g.k.smokebreak;
-    let frame = book(g).frame;
     let mut h = *book(g).men.get(crate::Num(id)).unwrap();
     // the thread off the end: one source that rides his hand for as long as he smokes
-    if drawing && h.thread && frame - h.beat > k.thread_gone {
-        h.thread = false; // (the solver has not asked after it: it let the thread go, whatever the reason)
-    }
-    if let (true, false, Some(tip), true) = (drawing, h.thread, tip, mn.t >= k.flame_at + k.flame) {
-        let gen = book(g).threads + 1.0;
-        if let Some(track) = seam_thread_track(c, gen) {
-            book(g).threads = gen;
-            let b = k.thread;
-            smoke_emit(g, &crate::smoke_types::SmokeEmitter {
-                pos: tip, dir: [0.0, 1.0, 0.0], speed: b.speed, radius: b.radius, min_voxels: Some(b.cells), density: b.density, temperature: b.temp, ttl: 600.0, age: 0.0,
-                kind: crate::smoke_types::SmokeEmitterKind::Breath, push: Some(b.push), jitter: Some(b.jitter), lattice: Some(crate::smoke_types::SmokeEmitterLattice::Fine),
-                confined: Some(true), look: Some(true), track_vel: Some(true), tint: Some(k.color), track: Some(track),
-                ..crate::smoke_types::SmokeEmitter::zeroed()
-            });
-            h.thread = true;
-            h.gen_ = gen;
-            h.beat = frame;
-        }
+    if let (false, Some(tip), true) = (h.thread, tip, mn.t >= k.flame_at + k.flame) {
+        let b = k.thread;
+        smoke_emit(g, &crate::smoke_types::SmokeEmitter {
+            pos: tip, dir: [0.0, 1.0, 0.0], speed: b.speed, radius: b.radius, min_voxels: Some(b.cells), density: b.density, temperature: b.temp, ttl: 600.0, age: 0.0,
+            kind: crate::smoke_types::SmokeEmitterKind::Breath, push: Some(b.push), jitter: Some(b.jitter), lattice: Some(crate::smoke_types::SmokeEmitterLattice::Fine),
+            confined: Some(true), look: Some(true), track_vel: Some(true), tint: Some(k.color), track: Some(crate::effects::Track::Cigarette { by: c }),
+            ..crate::smoke_types::SmokeEmitter::zeroed()
+        });
+        book(g).threads += 1.0;
+        h.thread = true;
     }
     // what he breathes out: after the lighting and after every draw, as the hand comes down
     let due = if js::truthy(was.up) && !js::truthy(now.up) { mn.t } else { -1.0 };
@@ -198,40 +177,17 @@ fn smoke_one(g: &mut Game, gd: GuardId, c: CharId, dt: f64, mn: &mut Man, t: &mu
         if mn.t >= out_at {
             mn.out_at = None;
             t.breaths += 1.0;
-            if drawing {
-                // the first answer of the `at` of smokebreak.ts:149, which cannot be anything but a place here. The later ones are the solver's: no arm in `effects::Track`, notes.md, Out.
-                let b = k.breath;
-                let a = mouth_of(g, c);
-                let v = g.ch[c].vel;
-                smoke_emit(g, &crate::smoke_types::SmokeEmitter {
-                    pos: a.pos, dir: [a.dir[0] * b.speed + v[0] * 0.3, a.dir[1] * b.speed, a.dir[2] * b.speed + v[2] * 0.3], speed: b.speed, radius: b.radius, min_voxels: Some(b.cells),
-                    density: b.density, temperature: b.temp, ttl: k.out, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Breath, push: Some(b.push), expand: Some(b.expand),
-                    attack: Some(b.attack), jitter: Some(b.jitter), lattice: Some(crate::smoke_types::SmokeEmitterLattice::Fine), confined: Some(true), look: Some(true), track_vel: Some(true),
-                    tint: Some(k.color), track: None,
-                    ..crate::smoke_types::SmokeEmitter::zeroed()
-                });
-            } else {
-                h.left = m::max(1.0, m::round(k.puffs.records));
-                h.gap = 0.0;
-            }
-        }
-    }
-    if h.left > 0.0 {
-        h.gap -= dt;
-        if h.gap <= 0.0 {
-            h.gap += k.out / m::max(1.0, m::round(k.puffs.records));
-            h.left -= 1.0;
-            let q = k.puffs;
+            // the first answer of the `at` of smokebreak.ts:149, which cannot be anything but a place here. The later ones are the solver's: no arm in `effects::Track`, notes.md, Out.
+            let b = k.breath;
             let a = mouth_of(g, c);
-            let seed = puff_seed(id, mn.outs, h.left, g.m.smokebreak.states.as_ref().unwrap().seed);
-            let n = crate::render_particles::particles_emit(g, crate::render_particles::PKind::Dust, a.pos, a.dir, m::max(1.0, m::round(q.count)), crate::render_particles::EmitOpts {
-                shape: Some(crate::render_particles::EmitShape::Cone), speed: q.speed, speed_jit: Some(0.35), spread: Some(q.spread), life: q.life, life_jit: Some(0.25), size: q.size,
-                size_jit: Some(0.3), pos_jit: Some(0.012), owner: Some(id), color: Some(k.color), steam: Some(v3::clamp(q.opacity, 0.0, 1.0)), seed: Some(seed),
-                ..crate::render_particles::EmitOpts::zeroed()
+            let v = g.ch[c].vel;
+            smoke_emit(g, &crate::smoke_types::SmokeEmitter {
+                pos: a.pos, dir: [a.dir[0] * b.speed + v[0] * 0.3, a.dir[1] * b.speed, a.dir[2] * b.speed + v[2] * 0.3], speed: b.speed, radius: b.radius, min_voxels: Some(b.cells),
+                density: b.density, temperature: b.temp, ttl: k.out, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Breath, push: Some(b.push), expand: Some(b.expand),
+                attack: Some(b.attack), jitter: Some(b.jitter), lattice: Some(crate::smoke_types::SmokeEmitterLattice::Fine), confined: Some(true), look: Some(true), track_vel: Some(true),
+                tint: Some(k.color), track: None,
+                ..crate::smoke_types::SmokeEmitter::zeroed()
             });
-            if n > 0.0 {
-                book(g).records += 1.0; // (the generated answer is 0.0: never counted on the Rust side. notes.md, Out)
-            }
         }
     }
     book(g).men.set(crate::Num(id), h);
@@ -256,7 +212,6 @@ pub fn update_smoke_break(g: &mut crate::game::Game, dt: f64) {
     ensure_state(g);
     let mut t = g.m.smokebreak.states.as_ref().unwrap().stats;
     t.frames += 1.0;
-    book(g).frame += 1.0;
     let mut men = 0.0;
     let mut i = 0;
     while i < g.guards.len() {
@@ -288,7 +243,7 @@ pub fn update_smoke_break(g: &mut crate::game::Game, dt: f64) {
         mn.live = true;
         men += 1.0;
         let id = g.ch[c].id;
-        book(g).men.get_or_insert_with(crate::Num(id), || SmokeShownMenValue { thread: false, gen_: 0.0, beat: 0.0, left: 0.0, gap: 0.0 });
+        book(g).men.get_or_insert_with(crate::Num(id), || SmokeShownMenValue { thread: false });
         smoke_one(g, gd, c, dt, &mut mn, &mut t);
         g.m.smokebreak.states.as_mut().unwrap().men.set(c, mn);
     }
