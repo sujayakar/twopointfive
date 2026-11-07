@@ -176,14 +176,15 @@ function panicPlan(S: Held): { way: 'checkpoint' | 'start' | 'reload'; key: stri
   if (!(A[''] > 0)) return { way: 'start', key: '', label: '', lost: D?.clock ?? 0 };
   return { way: 'reload', key: '', label: '', lost: D?.clock ?? 0 };
 }
-/** THE CARD, in the menu's own colours (index.html's `--m-` rows): the panic's words, what is lost, what Enter does */
+/** THE CARD, in the menu's own colours (index.html's `--m-` rows): the panic's words, what is lost, what Enter does. It stands over the HUD and UNDER the
+ *  pause card (`#menu`, 20), so Esc still brings that card up over it and its Restart is the way back to the start */
 function panicCard(S: Held): void {
   const D = RUST_PANIC.dead; if (!D) return;
   const P = panicPlan(S); RUST_PANIC.plan = { way: P.way, label: P.label, lost: P.lost };
   if (typeof document === 'undefined') return;
   let el = document.getElementById('rustpanic');
   if (!el) { el = document.createElement('div'); el.id = 'rustpanic';
-    el.style.cssText = 'position:absolute;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 55%, rgba(var(--m-base-rgb, 12,11,9),0.4), rgba(var(--m-base-rgb, 12,11,9),0.88) 70%);color:var(--m-text, #d8d2c4);font:13px/1.45 var(--m-font, system-ui, sans-serif);';
+    el.style.cssText = 'position:absolute;inset:0;z-index:19;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 55%, rgba(var(--m-base-rgb, 12,11,9),0.4), rgba(var(--m-base-rgb, 12,11,9),0.88) 70%);color:var(--m-text, #d8d2c4);font:13px/1.45 var(--m-font, system-ui, sans-serif);';
     (document.getElementById('app') ?? document.body).appendChild(el); }
   el.textContent = ''; el.style.display = 'flex';
   const card = document.createElement('div');
