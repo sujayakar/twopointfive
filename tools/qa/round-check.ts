@@ -295,14 +295,14 @@ export async function roundCheck(): Promise<boolean> {
           if (onSide !== onEnd && side !== onSide) kind++; if (side) sides++; else ends++;
           if (!h) corner++;
         } }
-      const cw = readFileSync(`${ROOT}/src/render/shaders/common.wgsl`, 'utf8'), lab = readFileSync(`${ROOT}/src/render/shaders/trace_lab.wgsl`, 'utf8'), count = (t: string, n: string) => t.split(n).length - 1;
+      const cw = readFileSync(`${ROOT}/src/render/shaders/common.wgsl`, 'utf8'), count = (t: string, n: string) => t.split(n).length - 1;
       const walk = cw.slice(cw.indexOf('fn isectBox('), cw.indexOf('fn boxNormalFromCode('));
       const text = walk.includes('if (ROUND_RAY) { if ((b.flags & GEO_ROUND) != 0u) { return isectRound(') && walk.includes('if (CUT_BOXES) { if ((b.flags & CUT_BITS) != 0u) { return isectCut(') && !walk.includes('if (ROUND_BOXES)')
         && walk.indexOf('if (ROUND_RAY)') < walk.indexOf('if (CUT_BOXES)')
         && cw.includes('const ROUND_RAY: bool = ROUND_BOXES && !ROUND_AS_CUT;') && cw.includes('const CUT_BITS: u32 = GEO_CUT | select(0u, GEO_ROUND, ROUND_AS_CUT);')
         && cw.includes('if (ROUND_AS_CUT) { return (flags & GEO_ROUND) != 0u && (code < 1.5 || code > 3.5); }')
-        && count(cw, 'if (ROUND_BOXES) { if (roundSideHit(boxGeo[u32(hit.idx)].flags, code)) { hit.n = roundNormalAt(') === 2 && count(lab, 'if (ROUND_BOXES) { if (roundSideHit(boxGeo[u32(hit.idx)].flags, code)) { hit.n = roundNormalAt(') === 1
-        && count(cw, 'code < ROUND_SIDE + 0.5) { hit.n') + count(lab, 'code < ROUND_SIDE + 0.5) { hit.n') === 0
+        && count(cw, 'if (ROUND_BOXES) { if (roundSideHit(boxGeo[u32(hit.idx)].flags, code)) { hit.n = roundNormalAt(') === 2
+        && count(cw, 'code < ROUND_SIDE + 0.5) { hit.n') === 0
         && readFileSync(`${ROOT}/src/main.ts`, 'utf8').includes("if (q.get('roundexact') === '1') roundConfig.exact = true;");
       const pre = (gpu: boolean, cutOn: boolean, exact: boolean, cut: boolean) => { cutConfig.on = cutOn; roundConfig.gpu = gpu; roundConfig.exact = exact; return /const ROUND_AS_CUT: bool = true;/.test(scenePrelude(cut) as string); };
       const consts = pre(true, true, false, true) && !pre(true, true, false, false) && !pre(true, true, true, true) && !pre(false, true, false, true) && !pre(true, false, false, true)
