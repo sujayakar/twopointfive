@@ -450,13 +450,10 @@ fn judge(g: &mut crate::game::Game, gd: GuardId, lines: &JsMap<GuardId, bool>, v
     }
 }
 
-/// A man as an eye: off his head, looking between his chest and his head. (FogOfWar.eyeOf)
+/// A man as an eye: off his head, looking where he looks (`gaze_of`). (FogOfWar.eyeOf)
 pub fn fog_of_war_eye_of(g: &crate::game::Game, c_2: CharId) -> crate::fogofwar::FogEye {
     let pos = bone_or(g, c_2, crate::character::Bone::Head, 1.65);
-    let look = if g.k.fog.cone { gaze_of(g, c_2) } else {
-        let hd = crate::character::character_head_dir(g, c_2);
-        v3::normalize(v3::lerp3(g.ch[c_2].chest_dir, hd, 0.5))
-    };
+    let look = gaze_of(g, c_2);
     let p = g.ch[c_2].pos;
     let y = if g.ch[c_2].alive { EYE_STAND + (EYE_CROUCH - EYE_STAND) * m::min(1.0, m::max(0.0, g.ch[c_2].anim.crouch)) } else { EYE_CROUCH };
     crate::fogofwar::FogEye { id: g.ch[c_2].id, pos, look, at: [p[0], p[1] + y, p[2]], fov: None, near: None, wand: None }
