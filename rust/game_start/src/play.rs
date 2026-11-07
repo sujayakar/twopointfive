@@ -344,13 +344,13 @@ impl Play {
     pub fn sam_light(&self) -> f64 { self.g.pl[self.g.player].visibility }
     /// how fast he is moving over the floor, metres a second
     pub fn speed(&self, gd: GuardId) -> f64 { let v = self.g.ch[self.g.gd[gd].ch].vel; (v[0] * v[0] + v[2] * v[2]).sqrt() }
-    /// is he down low (crouched or lower: what a man does behind cover, or with a grenade near)
     /// Can he not see: a flash or a blast has his eyes for now.
     pub fn blind(&self, gd: GuardId) -> bool { self.g.time < self.g.gd[gd].dazzled_until }
 
     /// The spot the rounds past him have sent him to, while he is on his way or about to go (the suppression rule's cover spot); `None`: not sent.
     pub fn sent_to_cover(&self, gd: GuardId) -> Option<[f64; 2]> { self.g.gd[gd].sup.cover.map(|p| [p[0], p[2]]) }
 
+    /// is he down low (crouched or lower: what a man does behind cover, or with a grenade near)
     pub fn low(&self, gd: GuardId) -> bool { self.g.ch[self.g.gd[gd].ch].anim.crouch_target >= 0.5 }
     /// is he in the stack's stance (set on a door)
     pub fn stacked(&self, gd: GuardId) -> bool { self.g.ch[self.g.gd[gd].ch].anim.stance == game::character::Stance::Stack }
