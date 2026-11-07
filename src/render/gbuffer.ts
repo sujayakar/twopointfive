@@ -367,8 +367,10 @@ export class GBuffer {
    *  object skinPipe() would otherwise make synchronously inside that frame. */
   async prepareSkin(fmt: GPUVertexFormat): Promise<void> {
     if (this.skinPipes.has(fmt)) return;
-    void laterRenderPipelineAsync(this.device, this.skinDesc(fmt, !snowLookConfig.surface));   // (the men's program in the other writing, for the visit's next level: init's note)
-    const p = await renderPipelineAsync(this.device, this.skinDesc(fmt));
+    // (the men's program in both writings, asked in one order on every level: the level's own awaited, the other for the visit's next level — init's note)
+    const snow = snowLookConfig.surface; let own: Promise<GPURenderPipeline> | null = null;
+    for (const w of [false, true]) { const d = this.skinDesc(fmt, w); if (w === snow) own = renderPipelineAsync(this.device, d); else void laterRenderPipelineAsync(this.device, d); }
+    const p = await own!;
     if (!this.skinPipes.has(fmt)) this.skinPipes.set(fmt, p);
   }
   /** the men's program, in the level's own writing of the module or the other (the constructor's note: a snow level's men are cold, look.wgsl lookMan) */

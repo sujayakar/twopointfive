@@ -873,7 +873,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   pass alone, lost; in it the men's pipeline alone, lost, the boxes', the cut boxes' and the down pass clean; and with the line as `false`, as
   `lv(SNOW_SURF)` alone or as the `snowCfg` read alone, clean. So it is the short-circuit of those two uniform reads in that fragment program, nothing of
   size or memory. `cold` asks `GBUF_SNOW` now and `gbufSkin` has its `gbufSkinSnow` (`GBuffer.prepareSkin`: the level's own awaited, the other through
-  the later lane), so NO text of the g-buffer's module asks the level word for the snow's surface, and every one of its programs on a level without snow
+  the later lane, the two asked in one order on every level, which `levelset-check` reads), so NO text of the g-buffer's module asks the level word for the snow's surface, and every one of its programs on a level without snow
   is the text it was before the level word existed. (`LevelSw.SNOW_SURF` still rides in the word and no shader asks it.) After it: the same unstaged
   read of the look's page draws two frames and keeps its device, and the snow level under `?look`, which lost its device here too, runs 150 s clean. THE RULE IT LEAVES: a level's switch is a branch where the code is small, and a second program asked for on every page where
   it is heavy; never a constant of a text a level's start would compile again. The card's numbers above are the branch form's: the second and third
