@@ -163,31 +163,6 @@ pub fn kit_slot_def(g: &mut crate::game::Game, i: f64, m: &crate::kit::MemberKit
     g.m.weapons.weapons.get(w).cloned()
 }
 
-/// The gun on member i's row `field` wears a suppressor.   (kit.ts kitRowCan)
-pub fn kit_row_can(g: &mut crate::game::Game, i: f64, m: &crate::kit::MemberKit, field: &str) -> bool {
-    if field == "weapon" {
-        return kit_gun_can(g, i, m);
-    }
-    if tree_up(g) {
-        return if field == "primary" {
-            m.weapon != KitWeapon::Pistol && kit_slot_can(g, m, crate::gunslots::GunSlot::Primary)
-        } else {
-            field == "secondary" && kit_slot_can(g, m, crate::gunslots::GunSlot::Secondary)
-        };
-    }
-    let w = if field == "primary" {
-        if m.weapon == KitWeapon::Pistol { None } else { crate::gunslots::pick_row(g, &m.primary, i == 0.0 || m.suppressed) }
-    } else if field == "secondary" {
-        crate::gunslots::pick_row(g, &m.secondary, i == 0.0 || m.suppressed)
-    } else {
-        None
-    };
-    match w {
-        Some(w) => g.m.weapons.weapons.get(w).unwrap().suppressed,
-        None => false,
-    }
-}
-
 /// A card's two picks are ones the table offers. Writes `m` and returns a copy of it.   (kit.ts gunsHome)
 pub fn guns_home(g: &mut crate::game::Game, m: &mut crate::kit::MemberKit) -> crate::kit::MemberKit {
     let none = crate::gunslots::NO_PRIMARY;
@@ -292,11 +267,6 @@ pub fn pouch_words(n: f64) -> String {
         return String::from("a pouch");
     }
     alloc::format!("{} pouches", js::num_str(n))
-}
-
-/// Which of a table's two most-a-man columns member i reads.   (kit.ts kindOf)
-pub fn kind_of(i: f64) -> crate::kit::KindOf {
-    if i == 0.0 { KindOf::You } else { KindOf::Mate }
 }
 
 /// Your card's long gun has the launcher under it.   (kit.ts tubed)

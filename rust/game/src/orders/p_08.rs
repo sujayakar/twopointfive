@@ -337,30 +337,6 @@ pub fn squad_orders_who_tag(g: &mut crate::game::Game) -> crate::orders::SquadOr
     SquadOrdersWhoTag { tag, one: false }
 }
 
-/// The panel's line for T: its choices in the order it steps them, the standing one in brackets.   (orders.ts SquadOrders.whoStrip)
-pub fn squad_orders_who_strip(g: &mut crate::game::Game) -> String {
-    let SquadOrdersWhoTag { tag, one } = squad_orders_who_tag(g);
-    let menu_man = matches!(g.orders.menu.as_ref().map(|x| &x.target), Some(OrderTarget::None(t)) if t.man.is_some());
-    let paired = squad_orders_paired(g);
-    if one && (paired || menu_man) {
-        return format!("[{}] · {}", tag, if paired { "gold" } else { "all" });
-    }
-    let mut out: Vec<String> = Vec::new();
-    if paired {
-        let mut names = vec![String::from("GOLD")];
-        for id in squad_orders_pairs(g) {
-            let sel = match id { crate::game::PairId::Red => SquadOrdersMenSel::Red, crate::game::PairId::Blue => SquadOrdersMenSel::Blue };
-            if !squad_orders_men(g, Some(sel), None).is_empty() { names.push(id.as_str().to_uppercase()); }
-        }
-        for x in names { out.push(if x == tag { format!("[{}]", x) } else { x.to_lowercase() }); }
-        return out.join(" · ");
-    }
-    let mut names = vec![String::from("all")];
-    for gd in squad_orders_men(g, None, None) { names.push(g.gd[gd].callsign.clone()); }
-    for x in names { out.push(if x == tag { format!("[{}]", x) } else { x }); }
-    out.join(" · ")
-}
-
 /// A target in the panel's words: what an order from the menu would be about.   (orders.ts SquadOrders.hoverWords)
 pub fn squad_orders_hover_words(g: &mut crate::game::Game, t: Option<&crate::orders::OrderTarget>) -> String {
     match t {
@@ -382,37 +358,6 @@ pub fn squad_orders_hover_words(g: &mut crate::game::Game, t: Option<&crate::ord
     }
 }
 
-
-/// Where the menu that is up is frozen, for a mark in the world: the point, a word for it, the addressed element's colour.   (orders.ts SquadOrders.mark)
-pub fn squad_orders_mark(g: &mut crate::game::Game) -> Option<crate::orders::SquadOrdersMark> {
-    if g.orders.cmd_ring.is_some() { return None; }
-    let (t, men) = match g.orders.menu.as_ref() { Some(x) => (x.target.clone(), x.men.clone()), None => return None };
-    let (at, text) = match &t {
-        OrderTarget::None(n) => {
-            let man = n.man?;
-            let p = man_pos(g, man);
-            ([p[0], 1.0, p[2]], g.gd[man].callsign.clone())
-        }
-        OrderTarget::Foe(f) => {
-            let p = man_pos(g, f.foe);
-            let who = squad_orders_who_tag(g).tag;
-            let what = squad_orders_hover_words(g, Some(&t));
-            ([p[0], 1.0, p[2]], format!("{} → {}", who, what))
-        }
-        OrderTarget::Door(d) => {
-            let who = squad_orders_who_tag(g).tag;
-            let what = squad_orders_hover_words(g, Some(&t));
-            ([d.at[0], 1.0, d.at[2]], format!("{} → {}", who, what))
-        }
-        OrderTarget::Floor(f) => {
-            let who = squad_orders_who_tag(g).tag;
-            let what = squad_orders_hover_words(g, Some(&t));
-            ([f.at[0], 0.03, f.at[2]], format!("{} → {}", who, what))
-        }
-    };
-    let tone = squad_orders_tone_of(g, &men);
-    Some(SquadOrdersMark { at, text, tone })
-}
 
 
 // ------------------------------------------------------------ ORDERS.propRound

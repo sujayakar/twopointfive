@@ -141,41 +141,6 @@ pub fn reset_civilians(g: &mut crate::game::Game) {
     spawn_civilians(g);
 }
 
-/// Why no autosave may be written on the civilians' account; None = they are no objection.   (civilians.ts civilianCompromise)
-pub fn civilian_compromise(g: &mut crate::game::Game) -> Option<String> {
-    if !civilians_on_floor(g) {
-        return None;
-    }
-    for cv in g.civilians.clone() {
-        if g.gd[cv].state == crate::game::GuardState::Dead || g.gd[cv].held.is_some() {
-            continue;
-        }
-        let c = &g.cv[g.gd[cv].civ.unwrap()];
-        if c.state == CivState::Startled {
-            return Some(format!("{} has glimpsed something", c.name));
-        }
-        if matches!(c.state, CivState::Alarmed | CivState::Flee | CivState::Report | CivState::Phone) {
-            let doing = match c.state {
-                CivState::Alarmed => String::from("frightened"),
-                CivState::Flee => format!("running for {}", c.target.as_ref().map_or("help", |t| t.name.as_str())),
-                CivState::Report => format!("telling {}", c.report_to.map_or("a guard", |o| g.gd[o].callsign.as_str())),
-                _ => String::from("on the phone to security"),
-            };
-            return Some(format!("{} is {}", c.name, doing));
-        }
-        if c.state == CivState::Cower && !c.reported && !c.complied && matches!(c.cause, Some(CivCause::Sam) | Some(CivCause::Gun) | Some(CivCause::Grabbed)) {
-            return Some(format!("{} is hiding from you and nobody knows yet", c.name));
-        }
-    }
-    let (kind, cv) = floor_of(g).pending.iter().find(|p| p.kind != PendKind::GreetReply && p.kind != PendKind::ComplyLine).map(|p| (p.kind, p.cv))?;
-    let news = match kind {
-        PendKind::OutsideCall => "news is about to reach control",
-        PendKind::ReportRadio => "report is about to go over the net",
-        _ => "word is about to move the floor",
-    };
-    Some(format!("{}'s {}", g.gd[cv].callsign, news))
-}
-
 /// A civilian of the usual make at her first mark, doing what she does there.   (civilians.ts makeCivilian)
 pub fn make_civilian(g: &mut crate::game::Game, def: &crate::scene_level::CivilianDef, i: f64) -> GuardId {
     let id = CIV_ID0 + i;

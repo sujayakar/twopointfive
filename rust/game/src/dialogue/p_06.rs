@@ -7,11 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// Every line of the needs talk: the QA soak's pool, radio lines expanded per callsign given. (dialogue.ts needsLines)
-pub fn needs_lines(g: &mut crate::game::Game, callsigns: Option<&[String]>) -> Vec<String> {
-    needs_lines_of(callsigns.unwrap_or(&[]))
-}
-
 fn needs_lines_of(callsigns: &[String]) -> Vec<String> {
     let l = crate::dialogue::needs_lines_table();
     let mut out: Vec<String> = Vec::new();
@@ -29,11 +24,6 @@ fn needs_lines_of(callsigns: &[String]) -> Vec<String> {
         }
     }
     out
-}
-
-/// Every civilian line and every line said about one: the QA soak's pool. (dialogue.ts civilianLines)
-pub fn civilian_lines(g: &mut crate::game::Game) -> Vec<String> {
-    civilian_lines_all()
 }
 
 fn civilian_lines_all() -> Vec<String> {

@@ -11,8 +11,3 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 
 
-/// A new ring of marks: the class's field initialisers (empty list, enabled, dirty, serial 0) with the device kept.   (src/render/decals.ts:145 Decals.constructor)
-/// BOUNDARY: the host makes the marks' storage buffer here at the swap (makeBuffer(device, DECAL_BYTES, STORAGE | COPY_DST, 'decals')) and keeps it; `buf` stays the blank's Opaque, which nothing in the sim reads.
-pub fn decals_new(g: &mut crate::game::Game, device: crate::Opaque) -> crate::render_decals::Decals {
-    crate::render_decals::Decals { device, ..crate::render_decals::Decals::blank() }
-}

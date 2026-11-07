@@ -162,11 +162,6 @@ pub fn camera_machine_yaw(g: &mut crate::game::Game, id: CameraRtId) -> f64 {
     lights(g).cam_yaw[cam_slot(g, id)]
 }
 
-/// the pan's phase 0‥1 (lightshome.ts CameraMachine.phase)
-pub fn camera_machine_phase(g: &mut crate::game::Game, id: CameraRtId) -> f64 {
-    lights(g).cam_phase[cam_slot(g, id)]
-}
-
 /// the integrator: lit-seconds of Sam in the picture (lightshome.ts CameraMachine.seen)
 pub fn camera_machine_seen(g: &mut crate::game::Game, id: CameraRtId) -> f64 {
     lights(g).cam_seen[cam_slot(g, id)]
@@ -191,11 +186,6 @@ pub fn camera_machine_reported_at(g: &mut crate::game::Game, id: CameraRtId) -> 
 pub fn camera_machine_last_seen(g: &mut crate::game::Game, id: CameraRtId) -> Option<V3> {
     let (l, s) = (lights(g), cam_slot(g, id));
     if l.cam_bits[s] & C_LAST != 0 { Some([l.cam_lx[s], l.cam_ly[s], l.cam_lz[s]]) } else { None }
-}
-
-/// (lightshome.ts CameraMachine.sawThisFrame)
-pub fn camera_machine_saw_this_frame(g: &mut crate::game::Game, id: CameraRtId) -> bool {
-    lights(g).cam_bits[cam_slot(g, id)] & C_SAW != 0
 }
 
 /// a dead camera has been called in, once per death (lightshome.ts CameraMachine.deadCalled)
@@ -480,11 +470,6 @@ pub fn light_home_flip(g: &mut crate::game::Game, targets: &[FixtureId], on: boo
         ids[i] = fix_i(g, t) as u32;
     }
     rs::flip(g.sim, on, time, strike, targets.len());
-}
-
-/// One tick. → LIGHT_EV bits. (lightshome.ts LightHome.step)
-pub fn light_home_step(g: &mut crate::game::Game, time: f64, dt: f64, near: bool, fumble: f64, emissive_scale: f64) -> f64 {
-    rs::step(g.sim, time, dt, near, fumble, emissive_scale) as f64
 }
 
 /// What the module worked out, to what the picture reads: a lamp's burning, and a beacon's turn. (lightshome.ts LightHome.paint)

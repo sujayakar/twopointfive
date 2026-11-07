@@ -23,19 +23,6 @@ fn cell_of(g: &mut Game, p: V3) -> f64 { let c = g.col.nav.cell; nav_idx(g, m::f
 fn in_grid(g: &Game, ix: f64, iz: f64) -> bool { ix >= 0.0 && iz >= 0.0 && ix < g.col.nav.w && iz < g.col.nav.h }
 fn room_has(g: &Game, t: RoomfightRoomId, i: f64) -> bool { g.tab.roomfight_room[t].cells.has(crate::Num(i)) }
 
-/// the panel's line: which of the drill's rules hard has on where the game stands ('' = no squads staged) (enemysquads.ts squadDrillWords)
-pub fn squad_drill_words(g: &mut crate::game::Game) -> String {
-    let name = match &g.m.enemysquads.states { Some(st) => st.s.name.clone(), None => return String::new() };
-    let k = match crate::enemysquads::squad_drill(g) { Some(k) => k, None => return format!("{}: standard squads", name) };
-    let mut on: Vec<String> = Vec::new();
-    if k.drill_net && k.net_k != 1.0 { on.push(format!("let you commit first (× {} net)", js::num_str(k.net_k))); }
-    if k.drill_net && k.reinforce_k != 1.0 { on.push(format!("own men's beat × {}", js::num_str(k.reinforce_k))); }
-    if k.drill_own { on.push(format!("no man fed into a lost room (mates up {})", js::num_str(k.own_up))); }
-    if k.drill_back { on.push(String::from("pair gets back on its own doors")); }
-    let rules = if on.is_empty() { String::from("standard (no rule on here)") } else { on.join(" · ") };
-    let own_set = if g.k.drill_at.rows.has(name.clone()) { " — this map's own set" } else { "" };
-    format!("{}: hard = {}{}", name, rules, own_set)
-}
 /// roomfight.ts: the defenders' row of FIGHT_SKILL as a drilled garrison has it (squadSkill): drillReact and drillNerve are off on the page, on every map
 pub fn squad_skill(g: &mut crate::game::Game, base: crate::roomfight::FightSkill) -> crate::roomfight::FightSkill { base }
 

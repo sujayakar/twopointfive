@@ -63,11 +63,6 @@ pub fn fog_of_war_page_look(g: &mut crate::game::Game) {
     g.fog_of_war.look_frames = 3.0;
 }
 
-/// `blank` is the field initialisers, and the TypeScript's constructor only keeps `g`. (FogOfWar constructor)
-pub fn fog_of_war_new(g: &mut crate::game::Game) -> crate::fogofwar::FogOfWar {
-    crate::fogofwar::FogOfWar::blank()
-}
-
 /// The switch, and no show running. (FogOfWar.active)
 pub fn fog_of_war_active(g: &mut crate::game::Game) -> bool {
     g.fog_of_war.on && !g.touring && !g.quiet_utility
