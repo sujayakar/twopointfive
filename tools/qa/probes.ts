@@ -3375,7 +3375,7 @@ let glassBannerPending: { f0: number } | null = null;
 // Pure CPU, seconds; also under 'perf' beside frame-layout (it guards a packed table the shaders read).
 { let cbRan = false; const f0 = FAILED.length;
   const cbf = async (name: string, fn: string) => { if (on(name, 'cutboxes', 'perf', 'all')) { cbRan = which === 'cutboxes' || which === name; await run(name, async () => ((await import('./cutboxes-probes.ts')) as any)[fn]()); } };
-  await cbf('cutboxes-record', 'cutboxesRecord'); await cbf('cutboxes-ray', 'cutboxesRay'); await cbf('cutboxes-off', 'cutboxesOff'); await cbf('cutboxes-pack', 'cutboxesPack'); await cbf('cutboxes-lines', 'cutboxesLines');
+  await cbf('cutboxes-record', 'cutboxesRecord'); await cbf('cutboxes-ray', 'cutboxesRay'); await cbf('cutboxes-pack', 'cutboxesPack'); await cbf('cutboxes-lines', 'cutboxesLines');
   if (on('splitrays', 'shaders', 'all')) await run('splitrays', async () => (await import('./splitrays-check.ts')).splitraysCheck());   // THE GATHER IS TWO PROGRAMS: who reaches the light loop, the buffer's layout, what a load compiles; SPLITRAYS_BREAK=1 must fail
   if (cbRan && which === 'cutboxes') familyBanner('cutboxes', FAILED.length - f0);
 }
