@@ -9,7 +9,7 @@
 //!
 //! The record (`Game.par`) is the game's: two machines of one game read the same clock, the same result and the same line. It moves nobody and
 //! ends nothing: on a level without the block it returns on the first line, and on one with it the game differs from the same run untimed only in
-//! this record and in the line it says at the end (and in the serials given after that line). There is no switch: `PAR.on` is a settled row, on.
+//! this record and in the line it says at the end (and in the serials given after that line). There is no switch.
 #![allow(unused_imports, unused_variables)]
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
