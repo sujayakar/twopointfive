@@ -235,7 +235,6 @@ pub struct CmdringStats {
     pub pages: i32,
     pub cancelled: i32,
     pub who: i32,
-    pub fired: i32,
     pub twice: i32,
 }
 

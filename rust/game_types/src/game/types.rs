@@ -3532,7 +3532,6 @@ pub struct Stats {
     pub doorblast: crate::doorblast::DoorblastStats,
     pub winbars: crate::winbars::WinbarsStats,
     pub destruction: crate::destruction::DestructionStats,
-    pub floormess: crate::floormess::FloormessStats,
     pub break_table: crate::break_table::BreakTableStats,
     pub wind: crate::wind::WindStats,
     pub glasspen: crate::glasspen::GlasspenStats,
