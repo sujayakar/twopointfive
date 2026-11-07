@@ -529,6 +529,17 @@ function after(S: Held): void {
  *  to the man undone by the long list). So before any apply that is not a tick's own the host's half is handed over first. */
 function handHost(S: Held): void { if (S.inStep || !S.lastCmds || !S.h) return; const hb = hostHalf(S.g, reg(), S.lastCmds); hand(hb, (p, n) => X!.face_host_half(S.h, p, n)); }
 /** THE FILTERED EXPORT ONTO THE PUPPET, its out events dispatched. Answers the ms of the export, the apply and the dispatch. */
+// STAND-IN: THE START LIST IN A GAME OF MORE THAN ONE SEAT. As imported, and until its first step, the Rust game holds EVERY seat's set in the seat's
+// row and the shown seat's on the Game too (the TypeScript's export writes a record of own fields for every seat; `seats::with_seat` puts that right
+// in the first step). The Game's fields of a seat's name (`orders`, `wallCharge`, `work` …) are accessors onto the shown seat's record
+// (game/seats.ts), so in that one blob the shown seat's order book is met twice, as `Game.orders` and as its row's, the same value in other bytes at
+// the two places, and the apply gives an object met a second time with other bytes a MADE one: the book and the wall charge came back as objects of
+// the schema's fields alone (no `notes`, no `fight`, `people` with no `ray`) and the HUD threw every frame. For the start apply's length the accessors
+// answer a scratch record: each seat's objects are reached once, by their own rows, and the Game's copy of the same set lands on nothing. Every later
+// apply is left alone: between ticks the Rust Game carries the set of the seat it was told is shown (`Game.local_seat`), which is the seat the
+// accessors answer. WHAT REMOVES IT: the apply holding "met again" by the decoded value and not by bytes that depend on the holder's list
+// (tools/blitz/import.ts), or the seat swap gone from the game (a squad passed by its id, no `with_seat`).
+function startSeated<T>(g: Game, f: () => T): T { const G = g as unknown as { seats?: readonly unknown[]; localSeat: unknown }; if (!G.seats || G.seats.length < 2) return f(); const shown = G.localSeat; G.localSeat = { own: {} }; try { return f(); } finally { G.localSeat = shown; } }
 function apply(S: Held, first: boolean): { ex: number; ap: number; out: number; bytes: number } {
   const g = S.g, G = g as unknown as Record<string, any>;
   handHost(S);
@@ -536,7 +547,7 @@ function apply(S: Held, first: boolean): { ex: number; ap: number; out: number; 
   call('face_puppet', () => X!.face_puppet(S.h, first ? 1 : 0)); grown(g);
   const blob = outBytes(), ex = performance.now() - t;
   t = performance.now();
-  const R = applyGame(g, blob, reg(), { hooks: HOOKS, puppet: { lists: lists(), start: first, rows: S.rows, ctx: S.ctx, slowTable: SLOW, vals: VALS } });
+  const ap1 = () => applyGame(g, blob, reg(), { hooks: HOOKS, puppet: { lists: lists(), start: first, rows: S.rows, ctx: S.ctx, slowTable: SLOW, vals: VALS } }), R = first ? startSeated(g, ap1) : ap1();
   if (!first) for (const k in R.made) if (R.made[k]) RUST_GAME.made[k] = (RUST_GAME.made[k] ?? 0) + R.made[k];   // (rows the game made at run time, by class: `__rust.made`)
   if (RUST_GAME.prof.on && !first) { const PF = RUST_GAME.prof, ph = R.phases ?? {}; PF.applyWalk += R.ms ?? 0; PF.applyRows += ph.makeRows ?? 0; PF.applyMain += ph.main ?? 0; PF.applyTables += ph.tables ?? 0; for (const k in ph) PF.phases[k] = (PF.phases[k] ?? 0) + ph[k]; }
   after(S);
