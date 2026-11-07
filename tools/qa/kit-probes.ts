@@ -249,8 +249,8 @@ export async function kitCard(): Promise<boolean> {
     await withDom('', async root => {
       const { memberCard } = await import(`${ROOT}/src/ui/kitCard.ts`);
       const hosts = Array.from({ length: KIT_MEMBERS }, (_x, i) => { const h = new El('DIV'); h.setAttribute('data-member', String(i)); root.appendChild(h); return h; });
-      let backs = 0, changes = 0;
-      const cards = hosts.map((h, i) => memberCard(h as unknown as HTMLElement, i, { onBack: () => { backs++; }, onChange: () => { changes++; } }));
+      let changes = 0;
+      const cards = hosts.map((h, i) => memberCard(h as unknown as HTMLElement, i, { onChange: () => { changes++; } }));
       const rowsOf = (i: number) => byCls(hosts[i], 'kc-row'), valOf = (i: number, f: string) => text(byCls(rowsOf(i).find(r => r.attrs['data-field'] === f)!, 'kc-val')[0]);
       F.verdict(hosts.every((h, i) => rowsOf(i).length === K.kitRows(i).length && rowsOf(i).every((r, k) => r.attrs['data-field'] === K.kitRows(i)[k].field && byCls(r, 'kc-val').length === 1 && byCls(r, 'kc-note').length === 1 && text(byCls(r, 'kc-note')[0]).length > 0 && byCls(r, 'kc-step').length === 2) && text(byCls(h, 'kc-title')[0]) === K.kitName(i).title),
         'five cards, each with its member\'s name and one line per row of his table: label, value, the two arrows, what the value changes', hosts.map((h, i) => `${text(byCls(h, 'kc-title')[0])}: ${rowsOf(i).map(r => `${text(byCls(r, 'kc-label')[0])} = ${text(byCls(r, 'kc-val')[0])}`).join(', ')}`).join(' | '));
@@ -275,8 +275,8 @@ export async function kitCard(): Promise<boolean> {
       const c4 = cards[4]; c4.focus(); for (let n = 0; n < K.kitRows(4).length; n++) c4.key(keyEv('s')); const onSets = c4.at(); c4.key(keyEv('d')); c4.key(keyEv('d')); c4.key(keyEv('Enter')); const setL = K.kitPresetOf(4); c4.key(keyEv('a')); c4.key(keyEv(' ')); const setQ4 = K.kitPresetOf(4); c4.key(keyEv('a')); c4.key(keyEv('Enter'));
       F.verdict(sets.length === 3 && setQ === 'quiet' && selQ && onSets === K.kitRows(4).length && setL === 'loud' && setQ4 === 'quiet' && K.kitPresetOf(4) === 'issued' && valOf(3, 'weapon') === 'pistol',
         'the sets are three buttons under the rows: a click presses one (and it shows as the card\'s set); by the keys, S past the last row, A / D to pick, Enter or Space to press', `teammate 3 by click: ${setQ} · teammate 4 by keys: ${setL}, then ${setQ4}, then issued`);
-      const b0 = backs; c4.key(keyEv('Escape')); const esc = backs - b0, handled = c4.key(keyEv('q'));
-      F.verdict(esc === 1 && handled === false, 'Esc hands back to whoever mounted the card; a key that is not the card\'s is left for the page', `Esc called back ${esc} time · 'q' handled: ${handled}`);
+      const esc = c4.key(keyEv('Escape')), handled = c4.key(keyEv('q'));
+      F.verdict(esc === false && handled === false, 'Esc and a key that is not the card\'s are left for the page', `Esc handled: ${esc} · 'q' handled: ${handled}`);
       // refresh: the table changed from outside (the loadout screen's own 'all quiet' button, say)
       K.kitPreset(1, 'loud'); const stale = valOf(1, 'suppressed'); c1.refresh(); const fresh = valOf(1, 'suppressed');
       F.verdict(fresh === 'off' && stale === 'on', 'refresh() redraws a card whose table was changed elsewhere', `suppressor shown '${stale}' → '${fresh}' after refresh`);
