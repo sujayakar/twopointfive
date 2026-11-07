@@ -26,7 +26,7 @@ const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftsha
 const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage textures \(5\) in the Compute stage/;
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
 fs.mkdirSync(outDir, { recursive: true });
-const BASE = `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute`;
+const BASE = `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&cards`;
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
   const R = { errors: [], noise: 0, notes: [] };

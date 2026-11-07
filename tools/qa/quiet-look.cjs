@@ -32,9 +32,9 @@ const ready = page => page.evaluate(async () => { await window.__ready; window._
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
   if (ONLY.includes('list')) { const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 }); watch(page, 'list');
-    await page.goto(BASE + '?' + Q);
-    await page.locator('#menu .actions button.primary').waitFor({ state: 'attached', timeout: 30000 });
-    await page.evaluate(() => document.querySelector('#menu .actions button.primary').click());
+    await page.goto(BASE + '?' + Q + '&cards');
+    await page.locator('#menu button', { hasText: 'Missions' }).waitFor({ state: 'attached', timeout: 30000 });
+    await page.evaluate(() => [...document.querySelectorAll('#menu button')].find(x => x.textContent === 'Missions').click());
     log('list: waiting for the page (about a minute and a half on the software adapter)');
     const fatal = await ready(page); if (fatal) report.errors.push('list fatal: ' + fatal);
     await page.waitForTimeout(400);

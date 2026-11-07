@@ -3,7 +3,7 @@
 // The maintainer, 10-19, after watching a first-time player: "having the loading screen make more sense (e.g. being a pre mission brief) that you then click
 // through rather than flashing the controls"; that player's own notes: "stay on loading screen longer, would like to read".
 //
-// Before this a page whose address names a mission booted behind the old start card (a grey Start, the notes, the whole
+// Before this a page whose address names a mission booted behind the OLD start card's look-alike (ui/menu.ts bootCard: a grey Start, the notes, the whole
 // controls list and the shader count) and the mission began under it the moment the boot was done: a list of keys up for as long as the machine took, gone
 // before it could be read. Now that page shows THE MISSION: its own words off the mission list (scene/scenarioList.ts: the heading it sits under, its title,
 // the place, the job in one line, the team as deployed, the approach; the defenders' count only under `?mystery=0`) beside THE MAP of its ground (the mission list's own map sheet — ui/missions.ts
@@ -26,6 +26,7 @@ import { MISSION_GROUPS } from '../scene/scenarios';
 import { PICKS_UI, pickOfQuery, pickQuitSearch } from '../scene/picks';
 import { SOLO_NIGHT, missionOf, missionOfQuery, drawMissionMap, teamWordsOf, leanWords, defendersShown, reopenMissionsAfterLoad, type Mission } from './missions';
 import { openOptions, closeOptions, optionsOpen } from './options';
+import { START_PAGE } from './startpage';
 import { menuTheme } from './theme';
 import { textZoom, rectZoom, TEXT_EVENT } from './textsize';
 
@@ -186,8 +187,8 @@ export function loadBrief(search: string = typeof location !== 'undefined' ? loc
   };
   const arm = (on: boolean) => { armed = on; root.classList.toggle('armed', on); go.setAttribute('aria-pressed', String(on)); };
   const leave = () => {   // BACK: the mission list, by a page load (this one is still booting) — the address a quit of this mission leaves (main.ts's own quit)
-    const s = location.search ?? '';
-    reopenMissionsAfterLoad();
+    const s = location.search ?? '', pick = PICKS_UI.on ? pickOfQuery(s) : null;
+    if (!pick || START_PAGE.on) reopenMissionsAfterLoad();
     location.assign(location.pathname + (PICKS_UI.on ? pickQuitSearch(s) : quitSearch(s)) + location.hash);
   };
   // THE KEYS are the brief's while it is up (first in line at the window: main.ts makes it before the game's Input exists, so no key of the game's, and no Esc

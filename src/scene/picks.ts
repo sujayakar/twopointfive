@@ -17,7 +17,7 @@
 // URL with the other `difficulty=` on it (pickHref's last argument). Both read back as the same pick (pickOfQuery), so 'next' and the quit work on either,
 // and 'next' carries a difficulty the player chose over the row's own on to the row after.
 //
-// THE SWITCH: `?nopicks` — the start page's order, the pause card and the boot are the build's as it was (PICKS_UI.on false: no 'next', no redirect).
+// THE SWITCH: `?nopicks` — the start card, the pause card and the boot are the build's as it was (PICKS_UI.on false: no rows, no 'next', no redirect).
 // Types and pure functions (the guarded read of the page's own query string aside): nothing here imports the game at run time or touches the DOM.
 import { scenarioQuery, type ScenarioEntry } from './scenarios';
 import { ALL_MISSIONS, SCENARIO_KEYS, quitSearch, specOfQuery } from './scenarioList';
@@ -75,9 +75,13 @@ export const PICKS: Pick[] = [
     line: 'Alone in the office after dark. Reach the server room, pull the drive, leave by the fire exit.' },
 ];
 
-/** the switch: off = the build as it was before the short list (the 'next' buttons, the ?pick= redirect) */
-export const PICKS_UI = { on: true };
-try { const q = new URLSearchParams(location.search); if (q.has('nopicks')) PICKS_UI.on = false; } catch { /* no page (the harness) */ }
+/** the switch: off = the build as it was before the short list (the start card's rows, the 'next' buttons, the ?pick= redirect) */
+export const PICKS_UI = { on: true,
+  /** A ROW OPENS ITS LOADOUT FIRST (the maintainer, 10-09, playing the list: 'how do i do the loadout? scenario goes straight to the game'): a click on a row
+   *  is that mission's loadout screen (ui/loadout.ts — team, kit, the squad kit row) and its Deploy is the page load; 'go ›' at the row's end is still
+   *  straight in. `?pickstraight` = false: a click starts the row, as it was (ui/picks.ts) */
+  loadout: true };
+try { const q = new URLSearchParams(location.search); if (q.has('nopicks')) PICKS_UI.on = false; if (q.has('pickstraight')) PICKS_UI.loadout = false; } catch { /* no page (the harness) */ }
 
 // ─────────────────────────────────────────────────────────────── a pick and the query string ───────────────────────────────────────────────────────────────
 export const PICK_KEY = 'pick';

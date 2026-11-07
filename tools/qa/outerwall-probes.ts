@@ -32,6 +32,8 @@ const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
+/** how an order ended: the game files an ended order on its `done` list as a record of its own, so the row a check held from before is not the one that says so */
+const endOf = (C: any, op: any): string | undefined => op.ended ?? [...(C.done ?? [])].reverse().find((d: any) => d.t0 === op.t0 && d.wall?.index === op.wall?.index)?.ended;
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
@@ -62,7 +64,7 @@ const quiet = async <T>(fn: () => T | Promise<T>): Promise<T> => { if (VERBOSE) 
 async function rig(scn: string, seed: number, o: { squad?: boolean; still?: boolean; chaos?: number } = {}) {
   restoreKnobs(); Math.random = seeded(0x9137 + seed * 7919); DESTRUCTION.on = true; WALLCHARGE.on = true;
   const E = entryOf(scn); if (!E) throw new Error(`no scenario '${scn}'`);
-  const W: any = await quiet(() => standUp(E.level ? { level: levelOfFile(E.level) } : {})); const game = W.game, input = W.input;
+  const W: any = await quiet(() => standUp(E.level ? { level: levelOfFile(E.level), dress: true } : { dress: true })   /* (the wall's pieces are the debris pool's, a dressing row: asked for) */); const game = W.game, input = W.input;
   // (until 2026-11-07 the rig wrote OWNBLOW.on off here, for lines that press the squad's key on a charge set by hand: a settled rule, the write was refused)
   game.godMode = true; game.tune.chaos = o.chaos ?? 0.5;
   if (o.squad ?? true) { const { why } = await quiet(() => startFromQuery(game, new URLSearchParams(scenarioQuery(E)))); if (why) throw new Error(`start refused — ${why}`); }
@@ -188,8 +190,8 @@ async function probeSquad(scn: string): Promise<boolean> {
   F.verdict(R.up.length === upBefore && R.up.every((m: any) => m.dazzledUntil <= game.time) && C.stats.backblast === 0, 'the squad stood off is unhurt', `${R.up.length}/${upBefore} up · backblast ${C.stats.backblast}`);
   const men = [...op.men]; const ended = R.until(() => !C.ops.includes(op), WALLCHARGE.enterCap + 6);
   const through = men.map((m: any) => ({ m, x: op.crossed.get(m), off: wallOff(W, m.char.pos), A: O.of(m) }));
-  F.verdict(ended && op.ended === 'in' && through.every(x => x.m.state === 'dead' || (x.x !== undefined && hole && Math.abs(x.x - hole.du) <= hole.half + 0.3 && x.off < -T)),
-    'the squad goes in THROUGH THE HOLE: every man crosses the wall\'s line inside the gap and ends past the far face; the order ends \'in\'', `${through.map(x => `${x.m.callsign} crossed at ${x.x === undefined ? '—' : f2(x.x)} m, ${f2(-x.off - T)} m in`).join(' · ')} · ended '${op.ended}' ${f2(game.time - tBlow)} s after the blast`);
+  F.verdict(ended && endOf(C, op) === 'in' && through.every(x => x.m.state === 'dead' || (x.x !== undefined && hole && Math.abs(x.x - hole.du) <= hole.half + 0.3 && x.off < -T)),
+    'the squad goes in THROUGH THE HOLE: every man crosses the wall\'s line inside the gap and ends past the far face; the order ends \'in\'', `${through.map(x => `${x.m.callsign} crossed at ${x.x === undefined ? '—' : f2(x.x)} m, ${f2(-x.off - T)} m in`).join(' · ')} · ended '${endOf(C, op)}' ${f2(game.time - tBlow)} s after the blast`);
   if (VERBOSE) console.log(`    beats: ${R.beats(op)}`);
   return F.done();
 }

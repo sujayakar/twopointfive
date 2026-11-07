@@ -47,7 +47,8 @@ const TIERS: { v: 'auto' | QualityName; label: string; line: string }[] = [
   { v: 'high',    label: 'High',     line: 'This is the intended look, with ray-traced light and shadow, traced bounce light, volumetric beams and smoke, and reflections in polished floors and glass. It\'s the tier the game is tuned on.' },
 ];
 
-/** THE KEYS, grouped by what the hand is doing: [key caps, what it does, the small print] */
+/** THE KEYS, grouped by what the hand is doing: [key caps, what it does, the small print]. The flat list other readers take is ui/menu.ts CONTROLS: a key
+ *  that changes is changed in both. */
 const WALL_WHAT = 'Back to the wall beside you', WALL_SMALL = 'slide along it and look around its end, then press Q or step away to let go';
 const E_WHAT = 'Holster or draw';
 /** the empty hands' own slot (game/handslot.ts; '0' is its row's cap in the build, shown as the key it is on: backtick): it heads the kit's rows, and E's row is gone */

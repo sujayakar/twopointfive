@@ -207,16 +207,16 @@ export async function pickerCard(): Promise<boolean> {
         onStart() {} };
       const menu = new Menu(deps);
       menu.setScenario({ current: () => runningScenario(g, null), quit: () => { quits++; quitScenario(g, false); menu.open('start'); } });   // (main.ts's quit minus its page glue: the URL, the camera cut)
-      // ---- the title
+      // ---- the start card
       menu.open('start');
-      // (the rows live on the mission list — ui/missions.ts, its own layer; the 'missions' family holds the list itself: every row, the sheet, the keys, a pick.
-      //  Here: the scenario rows' links and difficulty switch where they now live)
+      // (the rows left the start card for the mission list — ui/missions.ts, its own layer off the card's Missions button; the 'missions' family holds the list
+      //  itself: every row, the sheet, the keys, a pick. Here: the card's side of it, and the scenario rows' links and difficulty switch where they now live)
       const MS = await import(`${ROOT}/src/ui/missions.ts`);
       // (the list is every mission in its GROUPS' order — training, quiet alone, quiet as two, loud with the squad — not the squad table's: the model the rows are held against is the list's own)
       const L: any[] = MS.missionList().filter((m: any) => m.id !== MS.SOLO_NIGHT.id).map((m: any) => m.scenario);
       const mrowsOf = (r: El): Row[] => missionRows(r, MS.SOLO_NIGHT.id);
-      F.verdict(rowsOf(root).length === 0 && !!buttonOf(root, 'Play ›') && !buttonOf(root, 'Quit to scenarios'), "the title carries no scenario rows: Play is the way to them", buttons(root).map(b => b.textContent).join(' · '));
-      MS.openMissions();
+      F.verdict(rowsOf(root).length === 0 && !!buttonOf(root, 'Missions') && !!buttonOf(root, 'Start') && !buttonOf(root, 'Quit to scenarios'), "the start card carries no scenario rows of its own any more: a Missions button opens the list; the solo night's Start button is still there; no quit on the start card", buttons(root).map(b => b.textContent).join(' · '));
+      buttonOf(root, 'Missions')!.onclick!();
       const mroot: El = MS.currentMissions()!.root as any, rows = mrowsOf(mroot);
       F.verdict(rows.length === L.length && L.length === ALL.length && ALL.every((e: any) => L.includes(e)) && rows.every((r, i) => r.id === L[i].id && r.title === L[i].title), 'the mission list holds every entry of every table, in the list\'s order, by its title (beside the solo night)', rows.map(r => r.title).join(' · '));
       F.verdict(rows.every((r, i) => r.href === pickSearch(L[i], SEARCH) && r.href.startsWith(scenarioQuery(L[i])) && r.href.endsWith('quality=high&mute') && entryOfQuery(r.href) === L[i]), "each row is a link to its entry's own URL, the visitor's other flags kept", rows.map(r => r.href).join(' · '));
@@ -238,8 +238,8 @@ export async function pickerCard(): Promise<boolean> {
         F.verdict(back === 'standard' && nowS === 'standard' && eq(PRESSURE, PRESSURE_DEFAULTS) && eq(DIGIN, DIGIN_DEFAULTS), 'one press back on standard: both tables are the build\'s again, key for key', `lit: ${back} · tables read: ${nowS}`);
       }
       MS.closeMissions();
-      { bootCard(); const pb = buttonOf(root, 'Play ›');
-        F.verdict(!!pb && !pb.disabled, 'the boot card (up while the shaders compile) has Play, already live', pb ? pb.textContent : 'no Play'); }
+      { bootCard(); const mb = buttonOf(root, 'Missions'); mb?.onclick?.(); const b = MS.currentMissions() ? mrowsOf(MS.currentMissions()!.root as any) : []; MS.closeMissions();
+        F.verdict(!!mb && !mb.disabled && b.length === L.length && b.every((r, i) => r.href === rows[i].href), 'the boot card (up while the shaders compile) opens the same list, already live', `${b.length} rows`); }
       // ---- a scenario up: the pause card
       const SQ: any[] = SCENARIOS, SCN = SQ.find(e => e.squad === 4) ?? SQ[0];   // (the squad's table: the office's own four-man room clear, as this probe always started)
       const { why } = await quiet(() => startFromQuery(g, pickSearch(SCN, SEARCH)));
@@ -262,9 +262,9 @@ export async function pickerCard(): Promise<boolean> {
       menu.open('pause');
       await quiet(() => buttonOf(root, 'Quit to scenarios')!.onclick!());
       for (let i = 0; i < 5; i++) { g.player.visibility = 0.05; W.step(DT); }
-      { const r2 = buttons(root).filter(b => b.textContent === 'Play ›'), units = g.guards.filter((x: any) => x.unit).length;
+      { const r2 = buttons(root).filter(b => b.textContent === 'Missions'), units = g.guards.filter((x: any) => x.unit).length;
         F.verdict(quits === 1 && menu.mode === 'start' && r2.length === 1 && activeScenario(g) === null && units === 0 && NIGHTBREACH.squad === 2 && !g.fogOfWar.on, "'Quit to scenarios' pressed: the scenario is off, the start card (and its Missions button) is up again over the plain night",
-          `menu '${menu.mode}' with ${r2.length} Play button · scenario ${activeScenario(g) ?? 'none'} · ${units} units left · ${g.guards.length} of the shift back · squad knob ${NIGHTBREACH.squad} · fog ${g.fogOfWar.on ? 'on' : 'off'}`); }
+          `menu '${menu.mode}' with ${r2.length} Missions button · scenario ${activeScenario(g) ?? 'none'} · ${units} units left · ${g.guards.length} of the shift back · squad knob ${NIGHTBREACH.squad} · fog ${g.fogOfWar.on ? 'on' : 'off'}`); }
       // ---- no scenario: none of it
       menu.close(); menu.open('pause');
       F.verdict(!buttonOf(root, 'Quit to scenarios') && !!buttonOf(root, 'Restart encounter') && /paused<\/div>/.test(root.all(e => e.cls.has('head'))[0]?.innerHTML ?? ''), 'with no scenario up the pause card is the plain one', buttons(root).map(b => b.textContent).filter(t => !/^(Settings|Controls|Run so far)$/.test(t)).join(' · '));
@@ -275,8 +275,8 @@ export async function pickerCard(): Promise<boolean> {
         menu.setScenario({ current: () => runningScenario(g, null), quit: () => {}, refused: () => words });
         menu.open('start');
         const note = root.all(e => e.cls.has('refused'))[0]?.textContent ?? null;
-        F.verdict(!!r.why && activeScenario(g) === null && !g.fogOfWar.on && NIGHTBREACH.squad === 2 && g.guards.filter((x: any) => x.unit).length === 0 && !!note && note === words && !!buttonOf(root, 'Play ›'),
-          "a pick the game refuses (no AI) stages nothing, leaves fog off and the knob at the pair, and the title says why", `start() said: ${r.why} · the card: "${note}" · fog ${g.fogOfWar.on ? 'on' : 'off'} · knob ${NIGHTBREACH.squad}`);
+        F.verdict(!!r.why && activeScenario(g) === null && !g.fogOfWar.on && NIGHTBREACH.squad === 2 && g.guards.filter((x: any) => x.unit).length === 0 && !!note && note === words && !!buttonOf(root, 'Missions'),
+          "a pick the game refuses (no AI) stages nothing, leaves fog off and the knob at the pair, and the start card says why under its buttons", `start() said: ${r.why} · the card: "${note}" · fog ${g.fogOfWar.on ? 'on' : 'off'} · knob ${NIGHTBREACH.squad}`);
         menu.setScenario({ current: () => runningScenario(g, null), quit: () => {} }); menu.open('start');
         F.verdict(root.all(e => e.cls.has('refused')).length === 0, 'no refusal, no note', buttons(root).map(b => b.textContent).join(' · ')); }
     });

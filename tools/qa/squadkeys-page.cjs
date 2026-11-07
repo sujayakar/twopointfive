@@ -6,6 +6,7 @@
 //     sprint to another key reads that key on the part's row, cap and words; a menu given a key by hand has its three rows back, with no middle button;
 //   · `?goals=0`: no row for a part of the squad, and the hand-bound who row does not point at one;
 //   · `?qonly=0`: the six rows as they were;
+//   · the older card (`?cards`): its key list has the command key and the word's for a team, and no "who gets it".
 //   node tools/qa/squadkeys-page.cjs      env: PORT (the dev server's, default 5199) · SQUADKEYS_BREAK=1 (goals off on every page: must FAIL)
 // Options ▸ Game (the "Plan mode circles" row) needs the game stood up and is not drawn here: tools/qa/squadkeys-check.ts reads its guard.
 // PASS / FAIL lines, exit 1 on a FAIL or a page error.
@@ -52,6 +53,11 @@ let fails = 0; const check = (ok, label, detail = '') => { if (!ok) fails++; con
   // ── the older keys: as they were ──
   if (!BREAK) { const { ctx, page } = await fresh(); await page.goto(url('qonly=0'), { waitUntil: 'domcontentloaded' }); const S = await squad(page);
     check(S.rows.length === 6 && S.rows[0].what === 'Orders, on what the cursor is on' && S.rows[1].what === 'The usual order for that spot, at once' && S.rows[2].what === 'Who takes the next order' && S.rows[3].what === 'Go', '?qonly=0: the six rows as they were', say(S));
+    await ctx.close(); }
+  // ── the older card's key list ──
+  { const { ctx, page } = await fresh(); await page.goto(url('cards'), { waitUntil: 'domcontentloaded' }); await page.waitForSelector('#menu .controls .row', { timeout: 60000 });
+    const rows = await page.evaluate(() => [...document.querySelectorAll('#menu .controls .row')].map(r => [r.querySelector('.k').textContent, r.querySelector('.v').textContent])), team = rows.find(r => /with a team/.test(r[1]));
+    check(!!team && team[0] === 'Q · F' && /tap Q for the usual order/.test(team[1]) && /wheel/.test(team[1]) && /press F to send in everyone/.test(team[1]) && !rows.some(r => /who gets it|with the orders up/i.test(r[1])), "the older card: a team's keys are the command key and the word's, and nothing says who gets it", team ? `[${team[0]}] ${team[1]}` : 'no team row');
     await ctx.close(); }
   await browser.close();
   check(errors.length === 0, 'no page error', errors.join(' | ') || 'none');

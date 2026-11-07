@@ -22,7 +22,9 @@
 // deployed with the short list's settings still on it the page it loads is that pick's own URL (scene/picks.ts pickHref) — so the pause card's 'Next' and
 // the 'played' mark work as they did off the short list. Anything else is the mission list's own link for the row. Coming onto a short-list row puts ITS
 // hour on the Hour row; leaving it puts the player's own back (an hour picked by hand on a row is the player's from then on).
-// The page is looked at on the real build by tools/qa/startpage-look.cjs (its rows as data: picks-probes.ts picks-list). A page whose URL names a mission never opens it (that page is booting the mission).
+// THE SWITCH: START_PAGE.on — on for a real page, `?cards` = off: the start card with its short list, the Missions button and the loadout as a screen of its
+// own, as the build was. Off wherever there is no window to listen on (the harness's fake DOM): every older probe measures the cards as they were, and
+// the page is looked at on the real build by tools/qa/startpage-look.cjs (its rows as data: picks-probes.ts picks-list). A page whose URL names a mission never opens it (that page is booting the mission).
 // Plain DOM inside the mission list's own layer (#missions, which gets the class `one`), styles injected here once. Nothing at module level uses another
 // module's exports.
 import { PICKS, PICKS_UI, pickHref, pickEntry, pickSquad, pickOfQuery, namesMission, type Pick } from '../scene/picks';
@@ -42,6 +44,8 @@ import { mountKitGuide, type KitGuide } from './kitGuide';
 import { KIT_PLANS } from './kitPlan';
 import { kitPacks } from '../game/kit';
 
+export const START_PAGE = { on: typeof window !== 'undefined' && typeof window.addEventListener === 'function' };
+try { if (new URLSearchParams(location.search).has('cards')) START_PAGE.on = false; } catch { /* no page (the harness) */ }
 
 const CSS = `
 /* THE CALM PASS (the maintainer, 10-11: 'this is still really busy'). Two steps on one frame that each fit the window: MISSION (the rows · the plan · the
@@ -373,8 +377,8 @@ export interface StartPage { readonly missions: MissionsScreen; readonly loadout
 let page: StartPage | null = null;
 /** the one page, while it is up */
 export function startPage(): StartPage | null { return page && currentMissions() === page.missions ? page : null; }
-/** the page is this build's way in on this URL: the URL names nothing to play */
-export function startPageWanted(search: string = typeof location !== 'undefined' ? location.search ?? '' : ''): boolean { return !namesMission(search); }
+/** the page is this build's way in on this URL: the switch is on and the URL names nothing to play */
+export function startPageWanted(search: string = typeof location !== 'undefined' ? location.search ?? '' : ''): boolean { return START_PAGE.on && !namesMission(search); }
 
 /** the rows in the page's order: the list's groups in their order, each mission once, and INSIDE a group the short list's missions first, in play order,
  *  then the rest in the list's own (`first` 0: no row stands outside a group). ?nogroups (GROUPS_UI.on false): the short list's missions on top, in play
@@ -592,5 +596,5 @@ export function startPageFromQuery(search: string | URLSearchParams): StartPage 
   const q = typeof search === 'string' ? new URLSearchParams(search) : search, id = q.get('loadout');
   return id && missionList().some(m => m.id === id) ? openStartPage({ select: id, pane: 'loadout', squad: squadOfQuery(q, false) ?? undefined }) : null;
 }
-/** THE LIST: the one page (the title's Play, the pause card's Missions button, 'to scenarios') */
-export const openList = (opts: StartPageOpts = {}) => { openStartPage(opts); };
+/** THE LIST, whichever this build's is: the one page, else the mission list as a screen of its own (the pause card's Missions button, 'to scenarios') */
+export function openList(opts: StartPageOpts = {}) { if (START_PAGE.on) openStartPage(opts); else openMissions(); }

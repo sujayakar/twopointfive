@@ -9,7 +9,7 @@
 //   the hidden box in somebody else's frame game/input.ts keeps the keys in a text box nobody sees: a key aimed at it is no typing (host/keymap.ts typedInto), so
 //                  F7 (ui/replaykey.ts), F8 (main.ts) and the kit's copy and paste (ui/loadout.ts) are not dropped there; a real field still is
 //   the words      while Shift in a crouch is a fast crouch walk, Options' Sprint row (ui/options.ts sprintSmall) and the old start card's list
-//                  say what Shift does crouched and that it's louder; off, no line (the drawn rows are not asked)
+//                  (ui/menu.ts moveRowNow) say what Shift does crouched and that it's louder; off, both as they were (the drawn rows are not asked)
 //   the table      off in the module (a tool, the editor, the viewer: the build's keys whatever is kept); the page's boot turns it on · nothing rebound = every key is itself and every line of words comes back the same string · a row put on a key: that key gives the row's
 //                  own code, the key it left gives nothing, the names follow · a key another row has is a swap, and after 4,000 moves by a die no key has
 //                  two rows and no row a key that is not its own · the page's own keys are refused · no key · Reset · a kept table is cleaned as it is read ·
@@ -260,15 +260,15 @@ export async function keybindsCheck(): Promise<boolean> {
       verdict(!sink && area && named && input && select && bare && !div && !none && (edit || SB) && labelled && sites.every(s => s.ok) && !spelt.length,
         'the hidden text box of a framed page is no field: a key aimed at it is not typing, a real field still is, and F7, F8 and the kit\'s copy and paste ask that test',
         `the hidden box: typing ${sink} · a text area ${area}, one with another label ${named}, an input ${input}, a select ${select}, a text area that cannot say its label ${bare} · a div with the box's label ${div}, editable text ${edit} · no target ${none} · game/input.ts labels its box '${K.SINK_LABEL}' ${labelled} · ${sites.map(s => `${s.what} asks it ${s.ok}`).join(' · ')} · the three files that spell the test themselves name the same box: ${spelt.length ? `NOT ${spelt.join(', ')}` : 'yes'}`); }
-    // ---- the words for Shift say what it does in a crouch while CROUCHRUN is on (Options' row: ui/options.ts sprintSmall)
-    { const { CROUCHRUN, TWOGEARS } = await import(`${ROOT}/src/game/player.ts`), { sprintSmall } = await import(`${ROOT}/src/ui/options.ts`), was = { c: CROUCHRUN.on, t: TWOGEARS.on };
-      const WBRK = process.env.MOVEWORDS_BREAK === '1', got: string[] = []; let ok = true;
-      try { for (const gears of [false, true]) for (const run of [false, true]) { TWOGEARS.on = gears; CROUCHRUN.on = run && !WBRK; const small = sprintSmall();
+    // ---- the words for Shift say what it does in a crouch while CROUCHRUN is on (Options' row and the start page's list: ui/options.ts sprintSmall, ui/menu.ts moveRowNow)
+    { const { CROUCHRUN, TWOGEARS } = await import(`${ROOT}/src/game/player.ts`), { sprintSmall } = await import(`${ROOT}/src/ui/options.ts`), { moveRowNow } = await import(`${ROOT}/src/ui/menu.ts`), was = { c: CROUCHRUN.on, t: TWOGEARS.on };
+      const WBRK = process.env.MOVEWORDS_BREAK === '1', OLD = ['move · Shift sprint · C crouch · wheel = walking pace (slower is quieter)', 'move · Shift sprint · C crouch (slower and quiet)'], got: string[] = []; let ok = true;
+      try { for (const gears of [false, true]) for (const run of [false, true]) { TWOGEARS.on = gears; CROUCHRUN.on = run && !WBRK; const small = sprintSmall(), row = moveRowNow()[1], old = OLD[gears ? 1 : 0];
           const SAYS = ["while you're crouched", 'louder'], says = (t: string | undefined) => !!t && SAYS.every(w => t.includes(w)) && /Shift|hold it/.test(t);   // (what Shift does crouched, the key pressed, and that it is heard)
-          const good = run ? says(small) && /^hold it/.test(small!) : small === undefined;
-          ok &&= good; got.push(`${gears ? 'two gears' : 'the wheel'}, the fast crouch walk ${run ? 'on' : 'off'}: Options "${small ?? 'no line'}"${good ? '' : ' WRONG'}`); }
+          const good = run ? says(small) && /^hold it/.test(small!) && says(row) && row.startsWith(old.split(' · C crouch')[0]) : small === undefined && row === old;
+          ok &&= good; got.push(`${gears ? 'two gears' : 'the wheel'}, the fast crouch walk ${run ? 'on' : 'off'}: Options "${small ?? 'no line'}", the list "${row}"${good ? '' : ' WRONG'}`); }
       } finally { CROUCHRUN.on = was.c; TWOGEARS.on = was.t; }
-      verdict(ok, 'the words for Shift: with the fast crouch walk on, Options says what Shift does crouched; off, no line', got.join(' · ')); }
+      verdict(ok, 'the words for Shift: with the fast crouch walk on, Options and the start page\'s list say what Shift does crouched; off, both read as they did', got.join(' · ')); }
   } finally { K.setKeys({}); K.KEYMAP.letGo = false; K.KEYMAP.onlyWhen = null; K.KEYMAP.throwWhen = null; K.KEYMAP.on = false; K.KEYMAP.qFree = false; K.KEYMAP.qCmd = false; K.KEYMAP.setFree = false; K.KEYMAP.qOnly = false; K.KEYMAP.camSpace = false; K.KEYMAP.pinchOnly = false; K.KEYMAP.freeWhen = null; for (const n of stubs) delete G[n]; for (const k of ['localStorage', 'window', 'document'] as const) { if (had[k] === undefined) delete G[k]; else G[k] = had[k]; } }
   console.log(`=== keybinds: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
