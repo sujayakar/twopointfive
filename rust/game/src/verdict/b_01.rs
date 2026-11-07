@@ -38,7 +38,7 @@ pub fn loud_row(g: &crate::game::Game) -> bool {
 /// (verdict.ts Verdict.ended, under Verdict.live)
 pub fn verdict_ended(g: &crate::game::Game) -> Option<(bool, &'static str, String)> {
     use crate::scenario_run::ActiveScenario as K;
-    if !g.k.verdict.on || g.touring || g.quiet_utility || g.puppet.is_some() || g.mission_in_tour { return None; }
+    if g.touring || g.quiet_utility || g.puppet.is_some() || g.mission_in_tour { return None; }
     let kind = crate::scenario_run::active_scenario(g);
     let roomclear = kind == Some(K::Roomclear);
     // (defuse.ts Defuse.active, without its copy of the level's block: this pass is the running mission's, on a level with devices and rooms)

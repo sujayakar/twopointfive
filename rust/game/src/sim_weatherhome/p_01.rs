@@ -11,11 +11,6 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 fn block_d(slot: usize) -> &'static mut [f64] {
     unsafe { core::slice::from_raw_parts_mut(::sim::state::addr(slot) as *mut f64, ::sim::state::LEN >> 3) }
 }
-/// The same doubles, to read.
-fn block_d_read(slot: usize) -> &'static [f64] {
-    unsafe { core::slice::from_raw_parts(::sim::state::addr(slot) as *const f64, ::sim::state::LEN >> 3) }
-}
-
 /// The module's scratch, as doubles from its first: what `f64()` reads at `wxScratch()`.   (weatherhome.ts wxOut's `m[a + i]`)
 fn scratch_d() -> &'static [f64] {
     unsafe { core::slice::from_raw_parts(::sim::sim_scratch() as *const f64, ::sim::sim_scratch_len()) }

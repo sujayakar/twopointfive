@@ -11,15 +11,6 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// How many teammates, in the picker's words: 'you + the pair', 'solo' … (scenarioList.ts teamWords)
 pub fn team_words(e: crate::scene_scenario_list::TeamWordsE) -> String { crate::loadout::size_words(e.squad) }
 
-/// What a query string asks for, read as the page starts it: which scenario, how many teammates, which level file and seed; None when it names none.
-/// (scenarioList.ts specOfQuery)
-pub fn spec_of_query(search: &crate::scene_scenario_list::SpecOfQuerySearch) -> Option<crate::scene_scenario_list::ScenarioSpec> {
-    match search {
-        SpecOfQuerySearch::Text(s) => spec_of(&Query::parse(s)),
-        SpecOfQuerySearch::URLSearchParams(q) => spec_of(q),
-    }
-}
-
 /// What a query asks for, read as the page starts it: which scenario, how many teammates, which level file and seed; None when it names none.
 /// What every reader in the game that holds an address's words asks. (scenarioList.ts specOfQuery, of words already read)
 pub fn spec_of(q: &Query) -> Option<crate::scene_scenario_list::ScenarioSpec> {
