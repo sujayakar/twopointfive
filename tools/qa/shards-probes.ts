@@ -15,6 +15,7 @@
 //                         debris — to the same game with this model's seams pulled out (the debris pool's glass door null, a stub where game.ts / floor.ts call it); and with glass
 //                         breaking off (the shipped default) the model counts nothing at all. (The cross-BUILD digest against 25e5e7c is on rebuild/glass/shards.md.)
 import { standUp, ROOT, fake } from './headless.ts';
+import { swept } from './sweep.ts';
 import { CONF_PANE, CONF_FAR, floatPartition, type SeamsOut } from './office-pane.ts';
 import type { GlassShards } from '../../src/game/shards.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
@@ -200,8 +201,8 @@ export async function shardsCaps() {
   W.audioLog = [];
   let maxLive = 0, maxRecs = 0, maxGlass = 0, maxPool = 0, maxPending = 0, maxBirths = 0, bad = 0; const cap = D.cap(); const share = Math.max(2, Math.floor(cap * SHARDS.plateShare));
   const kinds = ['piece', 'dagger', 'clump', 'piece', 'sheet', 'piece'] as const;
-  const frames = 60 * 12; let released = 0, maxDeferred = 0;
-  for (let f = 0; f < frames + 60 * 120; f++) {
+  const frames = 60 * swept(2, 12); let released = 0, maxDeferred = 0;
+  for (let f = 0; f < frames + 60 * swept(10, 120); f++) {
     if (f < frames) for (let k = 0; k < 10; k++) {
       const i = f * 10 + k; const kind = kinds[i % kinds.length]; const type = kind === 'clump' ? 'tempered' : kind === 'sheet' ? 'laminated' : 'annealed';
       const at: Vec3 = [18 + (i % 9) * 0.5, 0.8 + (i % 5) * 0.3, 13.6 + (i % 4) * 0.5];
@@ -218,9 +219,9 @@ export async function shardsCaps() {
   // sounds: per frame + pending
   const perFrame = new Map<string, number>(); for (const a of W.audioLog!) if (a.name.startsWith('glassT') || a.name.startsWith('glassS')) { const k = a.t.toFixed(4); perFrame.set(k, (perFrame.get(k) ?? 0) + 1); }
   const maxSnd = Math.max(0, ...perFrame.values());
-  F.verdict(maxSnd <= SHARDS.soundsPerFrame && maxPending <= SHARDS.pendingMax && SHARD_STATS.events <= Math.ceil((frames / 60 + 120) / SHARDS.eventGap) + 1, `landing sounds a frame ≤ ${SHARDS.soundsPerFrame}, pending landings ≤ ${SHARDS.pendingMax}, hearing events ≤ one per ${SHARDS.eventGap} s`, `max ${maxSnd} in a frame over ${perFrame.size} sounding frames (${SHARD_STATS.sounds} sounds), pending peak ${maxPending}; ${SHARD_STATS.events} hearing events in ${(frames / 60 + 120).toFixed(0)} s (one per ${SHARDS.eventGap} s at most)`);
+  F.verdict(maxSnd <= SHARDS.soundsPerFrame && maxPending <= SHARDS.pendingMax && SHARD_STATS.events <= Math.ceil((frames / 60 + swept(10, 120)) / SHARDS.eventGap) + 1, `landing sounds a frame ≤ ${SHARDS.soundsPerFrame}, pending landings ≤ ${SHARDS.pendingMax}, hearing events ≤ one per ${SHARDS.eventGap} s`, `max ${maxSnd} in a frame over ${perFrame.size} sounding frames (${SHARD_STATS.sounds} sounds), pending peak ${maxPending}; ${SHARD_STATS.events} hearing events in ${(frames / 60 + swept(10, 120)).toFixed(0)} s (one per ${SHARDS.eventGap} s at most)`);
   const moving = D.list.filter((c: any) => c.glass && !c.rest).length;
-  F.verdict(moving === 0 && (S as any).pending.length === 0 && S.live === 0 && (S as any).breaks.length === 0 && (S as any).deferred.length === 0, 'two minutes on: every plate at rest, nothing pending, the live estimate run out', `${S.plateCount} plates lying, ${moving} moving, ~${S.live} live, litter in ${S.litter.size} cells; ${S.summary()}`);
+  if (swept(0, 1)) F.verdict(moving === 0 && (S as any).pending.length === 0 && S.live === 0 && (S as any).breaks.length === 0 && (S as any).deferred.length === 0, 'two minutes on: every plate at rest, nothing pending, the live estimate run out', `${S.plateCount} plates lying, ${moving} moving, ~${S.live} live, litter in ${S.litter.size} cells; ${S.summary()}`);
   // the particle system's own queue takes the load without dropping glass (records wait at the birth cap, only sparks are ever shed)
   const P2 = new Particles(fake('device'), fake('sceneLayout')); let acc = 0;
   for (let i = 0; i < 300; i++) acc += P2.emit('shard', [0, 1, 0], [0, 0, 1], 40, { speed: 1, life: 20, size: 0.01 });

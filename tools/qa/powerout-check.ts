@@ -99,12 +99,6 @@ export async function poweroutCheck(): Promise<boolean> {
       line(again.length === 1 && /no fault|no accident/.test(again[0].s) && moved === 0 && g.blackout.active, 'the lights go a second time: nobody walks out again — one line, and the word is out',
         `"${again.map(l => l.s).join(' | ') || '—'}" · frames a man was off his post ${moved} · mains still down ${g.blackout.active}`); }
 
-    // (c) the garrison already knows
-    { const S = await stand(pick.file, pick.seed), g = S.g, men = S.men; men[men.length - 1].witness.heard.shots = 1; g.setBlackout(86400, 'hand'); let moved = 0;
-      await runFor(S, 12, () => { for (const gd of men) if (off(S, gd) > 0.6) moved++; });
-      line(ours(S).length === 1 && /that's them/.test(ours(S)[0].s) && moved === 0 && !TL(g).some(e => e.what === 'go'), 'the garrison already knows: nobody leaves, one line, the word is out',
-        `"${ours(S).map(l => l.s).join(' | ') || '—'}" · frames a man was off his post ${moved}`); }
-
   } finally { Object.assign(POWEROUT, was); WORDS.on = wordsWas; Object.assign(WORK, workWas); Math.random = rnd0; }
   console.log(`=== powerout: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;

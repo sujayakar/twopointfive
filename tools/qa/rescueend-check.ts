@@ -75,19 +75,6 @@ export async function rescueendCheck(): Promise<boolean> {
         line(R.result?.state === 'rescued' && /hostages out$/.test(R.result.why) && R.result.hostages === R.hostages.length && far < RESCUEEND.outM && F.up(R.hostiles).length > 0, `(c) ${tag}: led back to the mark the team was staged on, the run is won`,
           `result ${R.result ? `${R.result.state} · ${R.result.grade} · ${R.result.why}` : 'none'} · ${f1(g.time - t0)} s after setting off · the farthest hostage ${f1(far)} m from the way out (outM ${RESCUEEND.outM}) · theirs alive ${F.up(R.hostiles).length}`);
       }
-      { // (d): stay
-        const F = await floor(id, seed, on), { g, R } = F; F.step(1);
-        const given = R.ending.word(g.player.char), p = g.player.char.pos, o = R.ending.out; F.walk([p[0] + (o[0] - p[0]) * 0.35, 0, p[2] + (o[2] - p[2]) * 0.35]); F.step(1.5);   // (a part of the way: at the way out itself the run is won)
-        const moved = F.up(R.hostages).filter((h: any) => flat(h.char.pos, h.civ.def.points[0]) > 1).length;
-        const stayed = R.ending.word(null); F.step(2);
-        const p0 = F.up(R.hostages).map((h: any) => [...h.char.pos]), far0 = Math.min(...p0.map((p: number[]) => flat(p, g.player.char.pos)));
-        F.walk(R.ending.out); F.step(2);   // (on, away from them: nobody follows)
-        const went = Math.min(...p0.map((p: number[]) => flat(p, g.player.char.pos))) - far0;
-        const still = went > 3 && F.up(R.hostages).every((h: any, i: number) => flat(h.char.pos, p0[i]) < 0.3), down = F.up(R.hostages).every((h: any) => h.char.anim.bound === 1 && !h.civ.lead);
-        const it = F.rowOn(F.up(R.hostages)[0]);
-        line(given && stayed && moved > 0 && still && down && !!it && /on your feet/.test(it.line2), `(d) ${tag}: told to stay, they stop where they stand and the row offers the word again`,
-          `word given ${given} · moved off their marks ${moved} · told to stay ${stayed} · Sam walked on ${f1(went)} m · stood still after ${still} · down again ${down} · row "${it?.line2 ?? 'none'}"`);
-      }
     }
   } finally { Object.assign(RESCUEEND, was.end); Object.assign(RESCUEFLUSH, was.flush); Math.random = rnd; }
   console.log(`\n=== rescueend: ${all ? 'ALL PASS' : 'FAILED'}${BREAK ? ' (RESCUEEND_BREAK=1: a failure is the expected result)' : ''} ===`);

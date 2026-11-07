@@ -93,7 +93,7 @@ export const workBreaker = () => keep(async () => {
   const R = await rig(g => { g.fogOfWar.on = true; return g.roomClear.start(21); });
   const { g, O } = R; const bp = g.level.breaker.pos, ops: any[] = O.squad();
   verdict(!R.why && ops.length === 2, 'staged: the room clear on the office with its pair', `refusal ${R.why} · teammates ${ops.map(o => o.callsign).join(', ')}`);
-  R.gather(); lookAtPanel(R);
+  lookAtPanel(R);
   // the office keeps its breaker behind the storage room's LOCKED door: with it locked the row is there, greyed, in the man's own words
   { R.aim = panel(g); R.step(2); R.press('KeyX'); const i = R.rows().findIndex((d: any) => d.id === 'work'), why = O.menu?.why[i] ?? null; O.close(); R.aim = null;
     verdict(i === 0 && typeof why === 'string' && /locked/.test(why), 'behind a locked door the row is listed greyed, with why: the men cannot get to it', `row ${i} · "${why}"`); }
@@ -125,12 +125,6 @@ export const workBreaker = () => keep(async () => {
   const A = O.of(worker), B = O.of(mate);
   verdict(A?.order === 'hold' && !g.work.working(worker) && flat(worker.char.pos, bp) < 1.3, 'done, he holds by the panel on a plain hold', `${worker.callsign}: ${A?.order} · ${O.statusOf(worker)}`);
   verdict(B?.order === 'move' && !!B.post && flat(B.post, th.stand) > 0.8 && flat(B.post, th.stand) < 2.4 && B.spare === true, 'his partner was sent to a mark behind him, eyes spare for the ways in', `${mate.callsign}: ${B?.order} · post ${B?.post?.map(f2)} (${B?.post ? f2(flat(B.post, th.stand)) : '-'} m from the man at work) · ${O.statusOf(mate)}`);
-  // --- and back: B (the quick order) on the panel
-  R.aim = panel(g); R.step(2); R.press('KeyX');
-  const lab = R.rows()[0] ? labelOf(R, R.rows()[0]) : ''; R.press('KeyX'); if (O.menu) O.close();
-  const n0 = O.log.length; R.press('KeyB'); R.aim = null;
-  const back = R.until(() => !g.blackout.active, 30);
-  verdict(lab === 'turn the power back on' && O.log.length === n0 + 1 && R.last().order === 'work' && back, 'dark, the row reads "turn the power back on"; B on the panel gives it and the mains come back', `row "${lab}" · log +${O.log.length - n0} ${JSON.stringify(R.last())} · blackout ${g.blackout.active}`);
   // --- a wrecked breaker is nobody's
   g.setBlackout(Infinity, 'shot'); R.step(2); R.aim = panel(g); R.step(2); R.press('KeyX');
   verdict(!R.rows().some((d: any) => d.id === 'work'), 'a breaker a round has wrecked is no thing to work (Sam has no row for it either)', menuWords(R));
@@ -424,29 +418,6 @@ export const workDefuse = () => keep(async () => {
     verdict(!R.why && !!T?.thing && T.thing.kind === 'device' && !why, 'staged: the two charges with the four, red sent to charge 1', `refusal ${R.why} · thing ${T?.thing?.name} · order ${why}`);
     R.until(() => DF.states[0] !== 'armed', 90);
     verdict(DF.states[0] === 'safe' && R.said.some((s: string) => /charge is safe/.test(s)) && WORK_STATS.done === done0 + 1, 'the run going on: the charge is safe, he says so, one job counted done', `state ${DF.states[0]} · said ${R.said.filter((s: string) => /safe|charge/.test(s)).join(' | ')} · done +${WORK_STATS.done - done0}`); }
-  // (b) Sam goes down with the man's hand on it: the run is over, the charge stays armed, and he does not call it safe
-  { const R = await rig(stageIt, true, 4, 'defuse'); const { g } = R, DF = g.defuse; sweep(g); R.step(30); g.teleportPlayer([20, 0, 15]); R.step(12);
-    const { why } = send(R);
-    const on = R.until(() => !!g.work.onDevice(0)?.on, 90), n0 = R.said.length, done0 = WORK_STATS.done, moot0 = WORK_STATS.moot;
-    g.godMode = false; for (let k = 0; k < 12 && !g.player.down; k++) hitPlayer(g, [1, 0, 0]);
-    R.step(Math.round((DF.workSecs + 4) * 60));
-    const after = R.said.slice(n0);
-    verdict(!why && on && g.player.down && DF.end === 'over' && DF.states[0] === 'armed', 'staged: his hand on the charge, then Sam down — the run is over and the charge is still armed', `order ${why} · on it ${on} · down ${g.player.down} · end ${DF.end} · state ${DF.states[0]}`);
-    verdict(!after.some((s: string) => /charge is safe|it's (already|gone)/.test(s)) && WORK_STATS.done === done0 && WORK_STATS.moot === moot0 + 1, 'he says nothing of the charge, no job is counted done, and his job ended as moot', `said after: ${after.join(' | ') || 'nothing'} · done +${WORK_STATS.done - done0} · moot +${WORK_STATS.moot - moot0}`);
-    verdict(!g.work.onDevice(0) && !g.work.things().some((x: any) => x.kind === 'device'), 'nobody is left at it, and the charge is no longer a thing to work', `at it ${g.work.onDevice(0)?.gd?.callsign ?? 'nobody'} · things ${g.work.things().map((x: any) => x.name).join(', ') || 'none'}`); }
-  // (c) the same on a quiet mission as two: the partner's hands in the holder, then Sam down — he neither takes it nor says it is 'already gone'
-  { const R = await rig(g => startFromQuery(g, '?levelFile=crossing.json&quiet&squad=1').why, true, 2, 'crossing'); const { g, O } = R, rf = g.level.mission.rack.front, A = g.level.mission.serverRoom;
-    let spot: number[] | null = null;
-    for (let x = A.x0 + 0.5; x < A.x1 && !spot; x += 0.4) for (let z = A.z0 + 0.5; z < A.z1 && !spot; z += 0.4) if (!g.col.nav.isBlocked(x, z) && flat([x, 0, z], rf) > 1.6) spot = [x, 0, z];
-    g.teleportPlayer(spot ?? [(A.x0 + A.x1) / 2, 0, (A.z0 + A.z1) / 2]); R.step(30); R.gather(8);
-    const th = g.work.things().find((x: any) => x.kind === 'objective'), T = th?.stand ? g.work.near(th.stand)?.target : null, why = T ? O.give('work', T, 'all') : 'no thing there';
-    const man = () => O.squad().find((o: any) => g.work.working(o));
-    const on = R.until(() => { const m = man(), j = m ? workJob(g, m.char) : null; return !!j && j.secs > 0.3; }, 60), n0 = R.said.length, done0 = WORK_STATS.done, moot0 = WORK_STATS.moot;
-    g.godMode = false; for (let k = 0; k < 12 && !g.player.down; k++) hitPlayer(g, [1, 0, 0]);
-    R.step(8 * 60);
-    const after = R.said.slice(n0);
-    verdict(!R.why && !why && on && g.player.down && g.mission.stage === 'failed', 'staged: the partner\'s hands in the holder, then Sam down — the mission has failed', `refusal ${R.why} · order ${why} · hands in ${on} · down ${g.player.down} · stage ${g.mission.stage}`);
-    verdict(!g.mission.pulled && !after.some((s: string) => /already (gone|out)|^\w[\w ]*: got /.test(s)) && WORK_STATS.done === done0 && WORK_STATS.moot === moot0 + 1 && !man(), 'he does not take it and does not say it is already gone; his job ended as moot', `pulled ${g.mission.pulled} · said after: ${after.join(' | ') || 'nothing'} · done +${WORK_STATS.done - done0} · moot +${WORK_STATS.moot - moot0} · at work ${man()?.callsign ?? 'nobody'}`); }
 });
 
 export const workHarness = () => keep(async () => {

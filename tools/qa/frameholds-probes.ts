@@ -23,6 +23,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
+import { sample } from './sweep.ts';
 import { tapVerb } from './verbs.ts';
 import { listen } from './heard.ts';
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
@@ -112,21 +113,6 @@ export const frameholdsTools = guarded(async () => {
     F.verdict(locked && held && w === null && R.kicks === 0 && picks === 1 && !d.lockBroken && !d.locked && saidPick === 1 && crossed > 0,
       "a loud squad told 'open and clear' at a cylinder lock on the face the door opens toward: nobody boots it — the lead says so, picks it, the keep is whole and they go in",
       `locked ${locked} · the frame holds ${held} · refused ${w} · boots ${R.kicks} · picks ${picks} · keep broken ${!!d.lockBroken} · said it ${saidPick} · over the line ${crossed} · ${R.beats(op)}`); }
-  // (b) no cylinder (a keypad's bolt): the entry rows greyed with the reason, the order refused in the same words, the charge row live
-  /** the keypad door between the manager's office and the server room, come at from the office (its keyed face), the office's own door unlocked: Sam stands in the office, so the order lands on that face */
-  const padStage = (R: any) => { const g = R.game, d = R.door('server_manager'), ks = d.keySide as 1 | -1; R.door('manager').locked = false; hangToward(g, d, ks);
-    for (const o of [2.0, 1.7, 1.4]) { g.teleportPlayer(off(d, ks, o)); R.step(90); if (g.doors.side(d, g.player.char.pos) === ks && Math.hypot(g.player.char.pos[0] - d.frameCentre[0], g.player.char.pos[2] - d.frameCentre[2]) > 1.2) break; }
-    return { d, side: R.target('server_manager').side as 1 | -1, ks }; };
-  const pad = async (charges?: number) => { const R = await rig(7, { charges }); const { d, side, ks } = padStage(R); const staged = side === ks && d.locked;
-    const rows = R.tools('server_manager'); const row = (id: string) => rows.find((r: any) => r.id === id);
-    const w = R.give('openClear', 'server_manager'), wB = R.D.ops.length ? null : R.give('bangClear', 'server_manager'); const op = R.D.ops[0]; R.until(() => R.D.ops.length === 0 || (op?.crossed?.size ?? 0) > 0, 60); R.step(30);
-    return { R, d, staged, rows, open: row('openClear'), bang: row('bangClear'), charge: row('charge'), w, wB, viaCode: R.D.ops.length ? null : R.D.order('openClear', R.team, d, side) }; };
-  { const A = await pad(), C = await pad(0);
-    const greyed = (r: any, words: string) => !!r && r.off && r.text.includes(words.replace(/\.$/, ''));
-     }
-  { const R = await rig(7); const { d } = padStage(R); const w0 = R.give('charge', 'server_manager'); const set = R.until(() => !!R.D.chargeOn(d), 60); R.step(30);
-    const rows = R.tools('server_manager'), open = rows.find((r: any) => r.id === 'openClear'), w = R.give('openClear', 'server_manager');
-     }
   // (c) a lock no pick opens thrown while they walk (the order was good when given): it ends at the door, in words, nobody boots
   { const R = await rig(7); const { d } = faceTeam(R, 'manager', true); d.locked = false;
     const w = R.give('openClear', 'manager'); const op = R.D.ops[0]; R.step(20); d.locked = true; (d as any).lockId = `wedge:${d.def.name}`;

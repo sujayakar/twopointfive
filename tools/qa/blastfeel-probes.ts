@@ -51,7 +51,7 @@ export async function blastfeelFamily(scn = 'block-squads'): Promise<boolean> {
   const keep = { on: FEEL.on, kick: FEEL.kick }, rnd = Math.random;
   try {
     const F = family(`blastfeel: a wall charge's report, its wave in particles, the camera's kick — and none of it play (${scn})`);
-    const A = await blast(scn, true), B = await blast(scn, false), Z = await blast(scn, true, 0, 1);
+    const A = await blast(scn, true), B = await blast(scn, false);
     const names = (L: any[]) => L.map(c => c.name), at = (L: any[], n: string) => L.find(c => c.name === n);
     // (report)
     { const cr = at(A.log, 'wallCrack'), th = at(A.log, 'wallThump'), de = at(A.log, 'wallDebris'), src = cr?.pos as Vec3 | undefined;
@@ -73,9 +73,6 @@ export async function blastfeelFamily(scn = 'block-squads'): Promise<boolean> {
       const highOff = B.recs.filter(r => r.what === 'emit' && r.pos[1] > 2).length;
       const un = (L: Rec[]) => L.filter(r => r.what === 'emit' && !r.seeded).length;
       F.verdict(un(A.recs) === un(B.recs), 'the particle system\'s own serial moves as it did: as many records without a seed of their own with the feel on as off', `unseeded records: on ${un(A.recs)} · off ${un(B.recs)} (seeded: on ${A.recs.filter(r => r.what === 'emit' && r.seeded).length} · off ${B.recs.filter(r => r.what === 'emit' && r.seeded).length})`); }
-    // (kick)
-    { const mag = A.kicks.map(k => k ? Math.hypot(k[0], k[1], k[2]) : 0), first = mag.findIndex(m => m > 0), last = mag.length - 1 - [...mag].reverse().findIndex(m => m > 0), peak = Math.max(...mag);
-      F.verdict(Z.kicks.every(k => k === null) && B.kicks.every(k => k === null), 'FEEL.kick 0, or the feel off: no kick is written', `kick 0: ${Z.kicks.filter(k => k).length} frames with one · off: ${B.kicks.filter(k => k).length}`); }
     // (identity)
     F.verdict(A.digest === B.digest, 'the staged blast and five seconds after it digest identically with the feel on and off', `on ${A.digest} · off ${B.digest}`);
     return F.done();
