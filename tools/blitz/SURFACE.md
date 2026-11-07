@@ -9,7 +9,7 @@ Written by surface.py. 1095 rows of `io::call`, 803 with a guard at load. What i
 - **takes no game: nothing to write** (7): `AimState.clear`, `Ocp.update`, `Ocp.use`, `RateCap.reset`, `RateCap.take`, `gpFragments`, `manifestOf`
 - **answers what its Rust function does not** (5): `Destruction.onBlast`, `Pose.copy`, `WallBreak.onChange`, `searchPlanFor`, `wallReactOf`
 - **a parameter only Rust has** (4): `blendPose`, `layerSlot`, `sampleClip`, `spawnShot`
-- **takes an opaque value** (2): `initWeather`, `quietFogStart`
+- **takes an address's words, which are not on the wire** (2): `initWeather`, `quietFogStart` (in Rust they take a `Query`, `rust/game/src/query.rs`; a host hands an address's TEXT across)
 
 ## Called with no game stood (the census's kind iv-b)
 
@@ -19,8 +19,6 @@ Written by surface.py. 1095 rows of `io::call`, 803 with a guard at load. What i
 |---|---|---|
 | knobsBack | src/game/knobs.ts |  |
 | knobsCopy | src/game/knobs.ts |  |
-| isOfficeFamily | src/scene/level.ts | with tick code |
-| withOfficeScript | src/scene/level.ts | with tick code |
 | canonicalLevelData | src/scene/levelData.ts |  |
 | freshId | src/scene/levelData.ts |  |
 | indexLevelData | src/scene/levelData.ts |  |
