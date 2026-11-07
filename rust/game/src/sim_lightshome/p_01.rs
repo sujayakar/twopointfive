@@ -17,6 +17,11 @@ use ::sim::lights::{
 fn lights(g: &Game) -> &'static mut Lights {
     &mut ::sim::state::state(g.sim).lights
 }
+/// the same part, to read
+#[inline(always)]
+fn lights_read(g: &Game) -> &'static Lights {
+    &::sim::state::state_read(g.sim).lights
+}
 /// a fixture's place in the columns
 #[inline(always)]
 fn fix_i(g: &Game, id: FixtureId) -> usize {

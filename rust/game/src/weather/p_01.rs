@@ -11,6 +11,8 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// The weather's table in the game's block (rust/sim/src/weather.rs). Take it for one read, write or call: every accessor below is this.
 fn wx(g: &Game) -> &'static mut ::sim::weather::Weather { ::sim::weather::of(g.sim) }
+/// The same table, to read.
+fn wx_read(g: &Game) -> &'static ::sim::weather::Weather { ::sim::weather::of_read(g.sim) }
 
 /// `WX_KNOBS.here()`: the module's knobs as they stand, unless this tick has handed the list. rustknobs.ts:59 sets it and it needs `g`, which the skeleton's `here()` has not, so this is p_air_dust_01's line (notes, Skeleton; all the knobs, where the TypeScript writes the weather's).
 fn knobs_here(g: &mut Game) {

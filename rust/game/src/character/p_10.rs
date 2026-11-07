@@ -18,6 +18,8 @@ const RD: usize = crate::character::RD_N as usize;
 
 /// the bench's `args`: a layer's own numbers from 0, its columns from COLS (`f64()` at `POSE_BENCH.args`). Never held across a call that may use the bench.
 fn args() -> &'static mut [f64; sim::skeleton::ARGS] { &mut sim::skeleton::bench().args }
+/// the same, to read
+fn args_read() -> &'static [f64; sim::skeleton::ARGS] { &sim::skeleton::bench_read().args }
 /// a boolean as the bench holds it
 fn b01(x: bool) -> f64 { if x { 1.0 } else { 0.0 } }
 /// BLOW_NO[style] (character.ts:1107)

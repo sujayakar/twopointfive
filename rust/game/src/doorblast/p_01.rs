@@ -17,6 +17,10 @@ fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab
 fn slab_par() -> &'static mut [f64; sim::slabs::NPAR] {
     unsafe { &mut *(sim::slabs::addr(0) as *mut [f64; sim::slabs::NPAR]) }
 }
+/// the same doubles, to read
+fn slab_par_read() -> &'static [f64; sim::slabs::NPAR] {
+    unsafe { &*(sim::slabs::addr(0) as *const [f64; sim::slabs::NPAR]) }
+}
 
 /// Keeps a line of what the doors' blasts did. (doorblast.ts note)
 pub fn note(g: &mut crate::game::Game, s: &str) {
