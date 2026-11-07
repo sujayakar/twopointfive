@@ -7595,7 +7595,15 @@
 "par::Par.fired0",
 "par::Par.t0",
 "par::Par.res",
-"game::Game.par"
+"game::Game.par",
+"deathrecap::LostMan.id",
+"deathrecap::LostMan.name",
+"deathrecap::LostMan.t",
+"deathrecap::LostMan.at",
+"deathrecap::LostMan.from",
+"deathrecap::LostMan.known_at",
+"deathrecap::Recap.lost_live",
+"game::Game.recap"
 ],
 "everyTickNotCarried": [
 {
@@ -12849,6 +12857,14 @@
 "par::Par.fired0",
 "par::Par.t0",
 "par::Par.res",
-"game::Game.par"
+"game::Game.par",
+"deathrecap::LostMan.id",
+"deathrecap::LostMan.name",
+"deathrecap::LostMan.t",
+"deathrecap::LostMan.at",
+"deathrecap::LostMan.from",
+"deathrecap::LostMan.known_at",
+"deathrecap::Recap.lost_live",
+"game::Game.recap"
 ]
 }
