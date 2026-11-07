@@ -81,7 +81,7 @@ async function arm(name: Arm, dump: string | null) {
   const particles = new Particles(S.device as never, engine.sceneLayout);   // (the page makes it beside the engine and waits for both: src/main.ts)
   let ready = false; const init = Promise.all([engine.init({ sharp: true, gbaa: true }), particles.init()]).then(() => { ready = true; });
   // THE LATER SET, by name: what the start may leave out with the row on (render/passes.ts traceJobs and init, render/froxels.ts). The dust twin only where it is drawn.
-  const LATER = ['composite', 'compositeR', 'compositeS', 'froxelCull', 'froxelInject', 'froxelInjectJ', 'froxelTemporal', 'froxelIntegrate',
+  const LATER = ['composite', 'froxelCull', 'froxelInject', 'froxelInjectJ', 'froxelTemporal', 'froxelIntegrate',
     ...(DUST_DRAW.on ? ['volDust'] : []), 'volFroxel'];
   const later = new Set(wantFirst ? LATER : []);
   for (let turn = 0; turn < 400 && !ready; turn++) { for (const a of S.asked) if (!a.done && !later.has(a.label)) a.let(); await tick(); }
