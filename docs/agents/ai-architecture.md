@@ -342,7 +342,9 @@ had a man), and what it does where it acts is for the mission tallies to judge.
 state: `rust/game_rules/src/guards/behave/{patrol,suspicious,alert,search}.rs`, each one function from what he
 senses (`Sensed`, settled before it is asked and written by no behaviour) to what he does (`Acts`: how fast his legs
 go, what his hands have up, where he aims, how low, gun lowered, slicing), which the pose reads and no behaviour
-does. `guards/p_07.rs` is the frame round them: incapable, lent, perceive, alertness, behave, pose.
+does. `guards/frame.rs` is the frame round them: incapable, lent, senses, alertness, behave, pose. What he senses is a
+file a sense (`guards/senses/`: his eyes on his man, where his man went, a colleague on the floor, the man he trails,
+a kicked lock), and the looks some module lays over his aim are a list (`guards/looks.rs`, a line a look).
 
 **What is NOT one file and one line today**, plainly. A new STATE of a man is an arm of `GuardState`, which many
 modules read, and one of `behave::act`. The room fight's defenders and operatives are still their own module, in no
