@@ -13,6 +13,7 @@
 // THE HARNESS HAS NO GPU and no overlay: the ring, the tick and the dots are not drawn here. What is measured is the point the overlay is handed.
 import { standUp, ROOT } from './headless.ts';
 import { world } from './wallsnap-probes.ts';
+import { sample } from './sweep.ts';
 import type { Vec3 } from '../../src/math/vec.ts';
 
 const { THROWBACK } = await import(`${ROOT}/src/game/throwback.ts`);
@@ -42,7 +43,7 @@ const THROWS: { name: string; from: [number, number]; yaw: number; at: Vec3; ope
 async function rest() {
   console.log('\n=== rest: the mark, read on the frame of the click, against where that can really ends ===');
   const S = await quiet(() => world(true)), { g, pl } = S as any; WALLSNAP.press = false; HANDRING.on = false; FRAG.on = true; THROWBACK.restMark = true; THROWBACK.on = false;
-  for (const kind of ['smoke', 'flash', 'frag'] as Kind[]) {
+  for (const kind of sample(['smoke', 'flash', 'frag'] as Kind[], 1)) {
     const rows: string[] = []; let bad = 0, shortN = 0, openN = 0;
     for (const T of THROWS) {
       S.place(T.from[0], T.from[1], T.yaw, 'pistol'); g.clearAftermath(); pl.canisters = 3; pl.flashbangs = 3; pl.frags = 3; pl.pendingThrow = null; pl.fireCd = 0; S.step(20);

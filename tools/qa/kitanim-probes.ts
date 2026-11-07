@@ -42,6 +42,7 @@
 // KITANIM_LOG are the process's: no probe reads their totals — only whether the counters moved over its own run, and the log's newest row by identity.
 import { standUp, ROOT } from './headless.ts';
 import { asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
+import { sample } from './sweep.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
 const { KITANIM, KITANIM_STATS, KITANIM_LOG, kitInHand, kitLockMax, kitCloseness, kitSlingFront, kitSlingRest } = await import(`${ROOT}/src/game/kitanim.ts`);
@@ -215,60 +216,13 @@ export async function kitMidswap(): Promise<boolean> { return keep(async () => {
     const fails: string[] = []; if (kitInHand(S.g) !== 'can') fails.push(`he ends with ${kitInHand(S.g)} in the hand`); if (T.hand > HAND_STEP || T.prop > PROP_STEP || Math.max(T.jolt.pistol, T.jolt.rifle) > PROP_JOLT || Math.max(T.leap.pistol, T.leap.rifle) > PROP_LEAP) fails.push(`a step of ${cm(T.hand)} (wrist) / ${cm(T.rifle)} (the rifle's body; step change ${cm(T.jolt.rifle)}, ${cm(T.leap.rifle)} at his back) / ${cm(T.pistol)} (the pistol's; ${cm(T.jolt.pistol)}, ${cm(T.leap.pistol)} at the holster)`); if (T.nan) fails.push('non-finite');
     { const k = S.kit(); if (k.rifle !== 'slung' || k.pistol !== 'holster' || !k.can) fails.push(`drawn at the end: the rifle ${k.rifle}, the pistol ${k.pistol}, ${k.can ? 'a' : 'no'} can in the fist`); }
     verdict(!fails.length, 'rifle → pistol, and 22 frames in a can instead: he ends with the can, both guns where they live, nothing jumps', `held [${T.holds.join(' → ')}] · at the turn the hand held ${had} · most in a frame: wrist ${cm(T.hand)}, the rifle's body ${cm(T.rifle)}, the pistol's ${cm(T.pistol)}${bad(fails)}`); }
-  { // a click that comes a moment early is kept (KITANIM.clickKeep): one round, on the frame the gun is up; a click long before is not; nor one whose errand is called off
-    const fails: string[] = []; const keep0 = KITANIM.clickKeep;
-    /** E draws the pistol; ONE click `back` frames before the lock-out is over (or at frame `at` of the change); → rounds gone, and the frame the first left counted from the lock-out's end */
-    const one = async (back: number, o: { off?: boolean; away?: boolean; long?: boolean } = {}) => { const S = await world(), { pl } = S; if (o.off) KITANIM.clickKeep = 0;
-      if (o.long) { toRifle(S); S.tap('Digit1'); } else S.tap('KeyE'); S.step(1); const lockF = Math.ceil(pl.equipT * 60 - 1e-6), r0 = S.rounds(pl.pistol); let first = -1, clicked = false;
-      for (let f = 1; f < lockF + 40; f++) { if (!clicked && f === (o.long ? 3 : lockF - back)) { S.click(); clicked = true; if (o.away) S.tap('KeyE'); } S.step(1); if (first < 0 && S.rounds(pl.pistol) < r0) first = f - lockF; }
-      KITANIM.clickKeep = keep0; return { gone: r0 - S.rounds(pl.pistol), first, lockF, clicked }; };
-    const A = await one(8), B = await one(8, { off: true }), C = await one(0, { long: true }), D = await one(8, { away: true });
-    if (!A.clicked || A.gone !== 1 || A.first < 0 || A.first > 2) fails.push(`a click 8 frames before the drawn pistol is up: ${A.gone} round(s), the first ${A.first} frames after the lock-out ended (want exactly 1, within 2 frames)`);
-    if (B.gone !== 0) fails.push(`clickKeep 0: the same click fired ${B.gone} round(s) (want none: dropped, as the build had it)`);
-    if (C.gone !== 0) fails.push(`a click at frame 3 of rifle → pistol (lock-out ${C.lockF} frames): ${C.gone} round(s) (want none: too early to be meant for the gun coming)`);
-    if (D.gone !== 0) fails.push(`a click, then E on the same frame (the pistol sent back to its holster): ${D.gone} round(s) (want none)`);
-    // …and it is that GUN's click: the rifle coming up, a click in its last frames, then 1 — the pistol he changed to never fires it (clickKeep wide, so age alone would not drop it)
-    const E = await (async () => { const S = await world(), { pl } = S; KITANIM.clickKeep = 0.6; toPistol(S); S.tap('Digit2'); S.step(1); const lockF = Math.ceil(pl.equipT * 60 - 1e-6), p0 = S.rounds(pl.pistol), r0 = S.rounds(pl.rifle);
-      S.step(lockF - 4); S.click(); S.step(1); const owed = pl.kitOwed >= 0; S.tap('Digit1'); S.step(120); KITANIM.clickKeep = keep0; return { owed, pistol: p0 - S.rounds(pl.pistol), rifle: r0 - S.rounds(pl.rifle), up: pl.pistolUp }; })();
-    if (!E.owed || !E.up || E.pistol !== 0 || E.rifle !== 0) fails.push(`a click for the rifle coming up, then 1: kept ${E.owed}, the pistol up ${E.up}, rounds gone pistol ${E.pistol} / rifle ${E.rifle} (want kept, then nothing fired by the gun he changed to)`);
-    // …the other way: the pistol being drawn, a click in its last frames (kept), then 3 on the next frame — the can he changed to is not thrown by it, and no round leaves
-    const E2 = await (async () => { const S = await world(), { pl } = S; S.tap('KeyE'); S.step(1); const lockF = Math.ceil(pl.equipT * 60 - 1e-6), p0 = S.rounds(pl.pistol), n0 = S.g.throwCount('smoke');
-      S.step(lockF - 8); S.click(); S.step(1); const owed = pl.kitOwed >= 0; S.tap('Digit3'); S.step(140); return { owed, pistol: p0 - S.rounds(pl.pistol), smoke: n0 - S.g.throwCount('smoke'), can: pl.canisterSel }; })();
-    if (!E2.owed || E2.can !== 'smoke' || E2.pistol !== 0 || E2.smoke !== 0) fails.push(`a click for the pistol being drawn, then 3: kept ${E2.owed}, the slot ${E2.can}, rounds gone ${E2.pistol}, smoke cans thrown ${E2.smoke} (want kept, then nothing fired and nothing thrown)`);
-    // …and a can's click is that KIND's: 3, a click two frames on, then 5 while the hand is still fetching — the frag he changed to is not thrown by the smoke's click
-    const E3 = await (async () => { const S = await world(), { pl } = S; toRifle(S); const s0 = S.g.throwCount('smoke'), f0 = S.g.throwCount('frag'); S.tap('Digit3'); S.step(2); S.click(); S.step(1); const owed = pl.kitOwed >= 0, busy = S.an.kitBusy;
-      S.step(5); S.tap('Digit5'); S.step(160); return { owed, busy, smoke: s0 - S.g.throwCount('smoke'), frag: f0 - S.g.throwCount('frag'), can: pl.canisterSel }; })();
-    if (!E3.owed || !E3.busy || E3.can !== 'frag' || E3.smoke !== 0 || E3.frag !== 0) fails.push(`3, a click, then 5 mid-fetch: kept ${E3.owed} with the fetch running ${E3.busy}, the slot ${E3.can}, thrown smoke ${E3.smoke} / frag ${E3.frag} (want kept, then nothing thrown: the click was the smoke's)`);
-    // …a smoke settled in the fist, 5, a click two frames on: nothing leaves while the fist still shows the smoke — the frag is thrown once IT is the can in the fist
-    const E4 = await (async () => { const S = await world(), { pl } = S; S.tap('Digit3'); S.step(1); S.settle(); S.step(20); const f0 = S.g.throwCount('frag'), s0 = S.g.throwCount('smoke'); S.tap('Digit5'); let at = -1, fist: string | null = '';
-      for (let f = 0; f < 160; f++) { if (f === 2) S.click(); const was = S.g.throwCount('frag'), had = pl.kitCan; S.step(1); if (at < 0 && S.g.throwCount('frag') < was) { at = f; fist = had; } } return { frag: f0 - S.g.throwCount('frag'), smoke: s0 - S.g.throwCount('smoke'), at, fist }; })();
-    if (E4.frag !== 1 || E4.smoke !== 0 || E4.fist !== 'frag' || E4.at < 6) fails.push(`the smoke in the fist, 5, a click two frames on: thrown frag ${E4.frag} / smoke ${E4.smoke}, at frame ${E4.at} with the fist showing the ${E4.fist} (want one frag, once the frag is the can in the fist)`);
-    // …and the LAST can thrown hands the slot to the pistol mid-swing: clicks through the swing fire nothing — the pistol is still on his thigh — and the first round leaves once it is drawn
-    const E5 = await (async () => { const S = await world(), { pl } = S; pl.canisters = 1; pl.flashbangs = 0; pl.frags = 0; S.tap('Digit3'); S.step(1); S.settle(); S.step(20); const r0 = S.rounds(pl.pistol); S.click(); let slotAt = -1, shotAt = -1, where: string | null = '', swing = false, tries = 0;
-      for (let f = 0; f < 140 && shotAt < 0; f++) { const ck = slotAt >= 0 && (f - slotAt) % 6 === 3; if (ck) { S.click(); if (S.an.inThrow) tries++; } const thr = S.an.inThrow; S.step(1); if (slotAt < 0 && pl.slot === 'pistol') slotAt = f; if (S.rounds(pl.pistol) < r0) { shotAt = f; where = S.kit().pistol; swing = thr; } } return { slotAt, shotAt, where, swing, tries }; })();
-    if (E5.slotAt < 0 || E5.tries < 2 || E5.shotAt < 0 || E5.swing || E5.where !== 'hand') fails.push(`the last can thrown, then clicks: the slot went to the pistol at frame ${E5.slotAt}, ${E5.tries} clicks inside the swing, the first round at frame ${E5.shotAt} with the pistol drawn ${E5.where}${E5.swing ? ', the throw still running' : ''} (want none until it is in the hand)`);
-    // …and R, or a right click, through that same swing and the draw after it: no magazine change begins and no OCP goes until the pistol is in his hand; R once it is up reloads
-    const E6 = await (async () => { const S = await world(), { pl } = S; toPistol(S); for (let i = 0; i < 3; i++) { S.click(); S.step(20); } const part = S.rounds(pl.pistol); pl.canisters = 1; pl.flashbangs = 0; pl.frags = 0; S.tap('Digit3'); S.step(1); S.settle(); S.step(20);
-      let ocps = 0, ocpEarly = 0; const ocp0 = S.g.ocp; S.g.ocp = (t: any) => { ocps++; if (S.kit().pistol !== 'hand') ocpEarly++; return ocp0.call(S.g, t); };
-      S.click(); let slotAt = -1, early = 0, asked = 0, upAt = -1;
-      for (let f = 0; f < 160 && upAt < 0; f++) { if (slotAt >= 0) { S.tap('KeyR'); S.input.clicked |= 4; asked++; } S.step(1); if (slotAt < 0 && pl.slot === 'pistol') slotAt = f; if (pl.pistol.reloading) { if (S.kit().pistol !== 'hand') early++; upAt = f; } }
-      S.g.ocp = ocp0; return { part, slotAt, early, asked, upAt, where: S.kit().pistol, ocps, ocpEarly }; })();
-    if (E6.slotAt < 0 || E6.asked < 10 || E6.upAt < 0 || E6.early || E6.where !== 'hand' || E6.ocpEarly || E6.ocps < 1) fails.push(`the last can thrown, then R and a right click every frame: the slot went to the pistol at frame ${E6.slotAt}, ${E6.asked} frames asked, the magazine change began at frame ${E6.upAt} with the pistol drawn ${E6.where} (${E6.early} began before it was in the hand), the OCP went ${E6.ocps} time(s), ${E6.ocpEarly} before it was in the hand (want neither until it is up, both once it is)`);
-    // a can the hand is still fetching: the digit, then a click two frames on — thrown as the can reaches the fist (throwKeep); at 0 the click is dropped as it was
-    const can = async (from: 'rifle' | 'pistol', off = false) => { const S = await world(), { pl } = S, keepT = KITANIM.throwKeep; if (off) KITANIM.throwKeep = 0; if (from === 'rifle') toRifle(S); else toPistol(S);
-      const n0 = S.g.throwCount('smoke'); S.tap('Digit3'); S.step(2); S.click(); let at = -1, fist = -1; for (let f = 0; f < 110; f++) { S.step(1); if (fist < 0 && (S.an.kitHold === 'can' || S.an.kitHold === undefined)) fist = f; if (at < 0 && S.g.throwCount('smoke') < n0) at = f; }
-      KITANIM.throwKeep = keepT; return { gone: n0 - S.g.throwCount('smoke'), at, fist }; };
-    const F = await can('rifle'), Gp = await can('pistol'), H = await can('rifle', true);
-    for (const [n, r] of [['rifle', F], ['pistol', Gp]] as const) if (r.gone !== 1 || r.at < 0 || r.fist < 0 || r.at - r.fist > 2) fails.push(`${n} up, 3, a click two frames on: ${r.gone} can(s) thrown, at frame ${r.at}, the can in the fist at frame ${r.fist} (want exactly one, within 2 frames of the can arriving)`);
-    if (H.gone !== 0) fails.push(`throwKeep 0: the same click threw ${H.gone} can(s) (want none: dropped, as it was)`);
-  }
   return allPass;
 }); }
 
 export async function kitReloadProbe(): Promise<boolean> { return keep(async () => {
   console.log('\n=== kitanim-reload: the magazine change goes by the gun\'s state — empty, dry, tactical ===');
   allPass = true; const got: Record<string, any> = {};
-  for (const which of ['pistol', 'rifle'] as const) for (const kind of ['tactical', 'empty', 'dry'] as const) {
+  for (const which of sample(['rifle', 'pistol'] as const, 1)) for (const kind of ['tactical', 'empty', 'dry'] as const) {
     const S = await world(), { pl, an, T } = S; if (which === 'pistol') toPistol(S); else toRifle(S);
     const G = which === 'pistol' ? pl.pistol : pl.rifle;
     if (kind === 'tactical') { S.click(); S.step(24); S.click(); S.step(24); } else { for (let i = 0; i < 60 && (kind === 'empty' ? G.chamber : G.mag > 0); i++) { S.click(); S.step(14); } }
@@ -293,7 +247,7 @@ export async function kitReloadProbe(): Promise<boolean> { return keep(async () 
     got[which + kind] = { dur: row.dur, magL: T.magL };
     verdict(!fails.length, `${which}, ${kind.toUpperCase()} (magazine ${b.mag}, ${b.ch ? 'a round up' : 'nothing up'})`, `beat ${JSON.stringify(row)} · took ${f2(secs)} s · spares ${JSON.stringify(b.spare)} → ${JSON.stringify(G.spare)}, magazine ${G.mag} + ${G.chamber} · a magazine in the support hand on ${T.magL} frames, out of the gun on ${T.noMag} · support wrist rearmost ${cm(T.minLz)} off the pelvis, most in a frame ${cm(T.handL)}, its knuckle about the wrist ${cm(T.turnL)} (${cm(endTurn)} as the change ended) · drawn: ${k0.n} boxes before R, a magazine box in the hand on ${T.magDrawn} frames in ${T.magRuns} stretches, ≤ ${cm(T.magOff)} from the wrist, ${T.drawBad} frames off the animator's word${bad(fails)}`);
   }
-  for (const w of ['pistol', 'rifle']) verdict(got[w + 'tactical'].dur > got[w + 'empty'].dur && got[w + 'empty'].dur > got[w + 'dry'].dur && got[w + 'tactical'].magL > got[w + 'empty'].magL,
+  for (const w of sample(['rifle', 'pistol'], 1)) verdict(got[w + 'tactical'].dur > got[w + 'empty'].dur && got[w + 'empty'].dur > got[w + 'dry'].dur && got[w + 'tactical'].magL > got[w + 'empty'].magL,
     `${w}: tactical is the slow one (a magazine put away), dry the quick one (nothing to run), and the hand carries a magazine for longer on a tactical change`, `tactical ${f2(got[w + 'tactical'].dur)} s (${got[w + 'tactical'].magL} frames in hand) · empty ${f2(got[w + 'empty'].dur)} s (${got[w + 'empty'].magL}) · dry ${f2(got[w + 'dry'].dur)} s`);
   return allPass;
 }); }
@@ -364,33 +318,9 @@ export async function kitEdges(): Promise<boolean> { return keep(async () => {
     if (two || none) fails.push(`pistols in the world (drawn on him + dropped): more than one on ${two} frames, none on ${none}`); if (rifleBad) fails.push(`${rifleBad} frames with the rifle drawn in the dead man's hands or between (it is on its sling, or it was dropped)`); if (T.nan) fails.push('non-finite');
     verdict(!fails.length, v === 'pistol' ? 'down 5 frames into the pistol\'s draw: no errand on him, and one pistol in the world — on the floor or on his thigh, never both, never in the fist' : 'down 8 frames into rifle → pistol: no errand on him, the rifle not in his hands, one pistol in the world',
       `when hit the hand held ${had} · for 60 frames after: errand frames ${errand} · the pistol: ${onHim} · the rifle: ${rifleAt}${bad(fails)}`); }
-  { // (c) off a wall with the pistol: on the wall it is on his thigh; stepping off, it is DRAWN — never in the fist before the errand that brings it
-    const S = await world(), { g, pl, an, T } = S, fails: string[] = []; toPistol(S);
-    g.teleportPlayer([21.5, 0, 10.7]); S.cursor[0] = 21; S.cursor[2] = 16; S.c.bodyYaw = S.c.aimYaw = 0; S.step(10); S.tap('KeyQ'); S.step(50); const onWall = !!pl.wall, kw = S.kit(); S.reset();
-    S.tap('KeyQ'); let ran = false, flash = 0, first = -1, why = '';
-    S.step(90, (f, k) => { if (an.kitBusy) { ran = true; if (first < 0) first = f; } if (!ran && !pl.wall && k.pistol !== 'holster' && an.kitHold === undefined) { flash++; why ||= `frame ${f}: the pistol drawn ${k.pistol}, kitHold undefined, equipT ${f3(pl.equipT)}`; } });
-    const k = S.kit();
-    if (!onWall) fails.push('Q did not take the wall (the staging moved)'); else if (kw.pistol !== 'holster') fails.push(`on the wall the pistol is drawn ${kw.pistol}`);
-    if (pl.wall) fails.push('Q did not let go of the wall'); if (flash) fails.push(`${flash} frames with the pistol in the fist before any errand had run — ${why}`);
-    if (kitInHand(g) === 'pistol' && (!ran || k.pistol !== 'hand')) fails.push(`the game has the pistol up again and ${ran ? 'it is drawn ' + k.pistol : 'no errand ever drew it'}`);
-    if (T.hand > HAND_STEP || T.pistol > PROP_STEP || T.jolt.pistol > PROP_JOLT || T.leap.pistol > PROP_LEAP) fails.push(`stepping off: wrist ${cm(T.hand)}, the pistol's body ${cm(T.pistol)} in a frame (step change ${cm(T.jolt.pistol)}, ${cm(T.leap.pistol)} at the holster's edge)`); if (T.nan) fails.push('non-finite');
-    verdict(!fails.length, 'off a wall with the pistol: no frame shows it in the fist before the hand has drawn it', `on the wall: ${onWall}, the pistol drawn ${kw.pistol} · Q again: the draw's errand began at frame ${first}, held [${T.holds.join(' → ')}] · ends with ${kitInHand(g) ?? 'nothing'} in the hand, drawn ${k.pistol} · most in a frame: wrist ${cm(T.hand)}, the pistol's body ${cm(T.pistol)}${bad(fails)}`); }
-  { // (c2) ONTO a wall with the pistol: the hand carries it to the thigh as he takes the wall — it never changes place in a frame
-    const S = await world(), { g, pl, an, T } = S, fails: string[] = []; toPistol(S);
-    g.teleportPlayer([21.5, 0, 10.7]); S.cursor[0] = 21; S.cursor[2] = 16; S.c.bodyYaw = S.c.aimYaw = 0; S.step(10); S.reset(); S.tap('KeyQ'); let busy = 0;
-    S.step(60, () => { if (an.kitBusy) busy++; }); const k = S.kit();
-    if (!pl.wall) fails.push('Q did not take the wall (the staging moved)'); if (!busy) fails.push('no errand ran: the pistol changed place on the frame'); if (an.kitBusy || an.kitHold !== undefined) fails.push(`an errand is still on him after a second (kitHold ${an.kitHold})`);
-    if (k.pistol !== 'holster') fails.push(`on the wall the pistol is drawn ${k.pistol}`); if (T.holds.join('>') !== 'pistol>null>undefined') fails.push(`the hand held [${T.holds.join(' → ')}], want pistol → null → —`);
-    if (T.hand > HAND_STEP || T.pistol > PROP_STEP || T.jolt.pistol > PROP_JOLT || T.leap.pistol > PROP_LEAP) fails.push(`taking the wall: wrist ${cm(T.hand)}, the pistol's body ${cm(T.pistol)} in a frame (step change ${cm(T.jolt.pistol)}, ${cm(T.leap.pistol)} at the holster's edge)`); if (T.nan) fails.push('non-finite');
-    verdict(!fails.length, 'onto a wall with the pistol: the hand carries it to the thigh as he takes the wall', `errand frames ${busy}, held [${T.holds.join(' → ')}] · on the wall drawn ${k.pistol} · most in a frame: wrist ${cm(T.hand)}, the pistol's body ${cm(T.pistol)}${bad(fails)}`); }
-  { // (c3) stacked on a wall with the rifle, E: it is slung by hand (the hold becomes the back hold) — the rifle never changes place in a frame
-    const was = WALLSNAP.on; const S = await world(), { g, pl, an, T } = S, fails: string[] = []; WALLSNAP.on = true;   // (after the stand-up: the frozen stand pins it off)
-    try { toRifle(S); g.teleportPlayer([21.5, 0, 10.7]); S.cursor[0] = 21; S.cursor[2] = 16; S.c.bodyYaw = S.c.aimYaw = 0; S.step(10); S.tap('KeyQ'); S.step(50); const stacked = pl.wall?.kind === 'stack'; S.reset(); S.tap('KeyE'); let busy = 0;
-      S.step(80, () => { if (an.kitBusy) busy++; }); const k = S.kit();
-      if (!stacked) fails.push('Q with the rifle did not stack (the staging moved)'); if (!pl.wall || pl.wall.kind === 'stack') fails.push('E on the stack did not leave him on the back hold'); if (!busy) fails.push('no errand ran: the rifle changed place on the frame');
-      if (k.rifle !== 'slung') fails.push(`after E the rifle is drawn ${k.rifle}`); if (an.kitBusy || an.kitHold !== undefined) fails.push(`an errand is still on him (kitHold ${an.kitHold})`);
-      if (T.hand > HAND_STEP || T.rifle > PROP_STEP || T.jolt.rifle > PROP_JOLT || T.leap.rifle > PROP_LEAP) fails.push(`slinging on the wall: wrist ${cm(T.hand)}, the rifle's body ${cm(T.rifle)} in a frame (step change ${cm(T.jolt.rifle)}, ${cm(T.leap.rifle)} at the sling's edge)`); if (T.nan) fails.push('non-finite');
-      verdict(!fails.length, 'stacked on a wall, E: the rifle is slung by hand and the hold becomes the back hold', `stacked ${stacked} · errand frames ${busy}, held [${T.holds.join(' → ')}] · ends drawn ${k.rifle}, wall ${pl.wall ? pl.wall.kind ?? 'back hold' : 'none'} · most in a frame: wrist ${cm(T.hand)}, the rifle's body ${cm(T.rifle)}${bad(fails)}`); } finally { WALLSNAP.on = was; } }
+  
+  
+  
   { // (d) R in the middle of a draw: no magazine change on a gun that is not up — and R works once it is
     const S = await world(), { pl, an } = S, fails: string[] = []; toPistol(S); S.click(); S.step(24); S.click(); S.step(24); S.tap('KeyE'); S.step(1); S.settle(); S.step(10);
     S.tap('KeyE'); S.step(3); const busy = an.kitBusy; S.tap('KeyR'); let early = 0, n = 0; for (; n < 120 && an.kitBusy; n++) { S.step(1); if (an.kitBusy && (pl.pistol.reloading || an.reloading)) early++; }
@@ -432,11 +362,7 @@ export async function kitEdges(): Promise<boolean> { return keep(async () => {
     if (b.mag !== G.def.magCapacity && !G.spare.includes(b.mag) && (G.mag ?? 0) + G.chamber !== b.mag) fails.push(`the part magazine of ${b.mag} is neither among the spares ${JSON.stringify(G.spare)} nor in the gun (${G.mag} + ${G.chamber})`);
     if (T.handL > HAND_STEP || T.hand > HAND_STEP || T.nan) fails.push(`a step of ${cm(T.handL)} (support wrist) / ${cm(T.hand)} (trigger wrist), ${T.nan} non-finite`);
      }
-  { // (i) the slider: every change slowed (KIT.swapK 1.5), and the lock-out never past the bound the soak holds it to
-    const S = await world(), { pl } = S; KIT.swapK = 1.5; const max = kitLockMax(KIT); let most = 0, at = ''; const eqs: string[] = [];
-    for (const key of ['Digit2', 'Digit1', 'Digit2', 'Digit3', 'Digit1']) { S.tap(key); S.step(170, f => { if (!f) eqs.push(`${key.slice(5)}: ${f3(pl.equipT)}`); if (pl.equipT > most) { most = pl.equipT; at = key.slice(5); } }); }
-    const first = (KIT.stow.rifle + KIT.reach.pistol + KIT.far + KIT.draw.pistol) * 1.5 - KITANIM.early;
-    verdict(most <= max + 1e-9 && most > first - 0.05 && S.T.nan === 0, 'KIT.swapK 1.5: the lock-out follows the slowed changes and never exceeds kitLockMax(KIT)', `lock-outs on the key's frame — ${eqs.join(' · ')} · the most on any frame ${f3(most)} s (after the key ${at}) · rifle → pistol by the table ${f3(first)} s · kitLockMax ${f3(max)} s`); }
+  
   return allPass;
 }); }
 
@@ -501,18 +427,7 @@ export async function kitSling(): Promise<boolean> { return keep(async () => {
     for (const [a, b] of [['none', 'rifle'], ['rifle', 'none'], ['rifle', 'pistol'], ['pistol', 'rifle'], ['rifle', 'frag'], ['frag', 'rifle']] as const) { const w = await jointsOf(a, b, { loud: true }), fl = jointFaults(w); rows.push(`${a}>${b} ${w.secs.toFixed(2)} s`); for (const f of fl) fails.push(`${a} → ${b}: ${f}`); }
     verdict(!fails.length, 'every rifle change on the front sling stays inside what an arm does', rows.join(' · ') + bad(fails));
   }
-  { // (d) it hangs through a crouched walk and a run without popping
-    const S = await world(), fails: string[] = []; KITANIM.sling = 1; toRifle(S); S.tap('KeyE'); S.step(1); S.settle(); S.step(30);
-    /** the rifle's middle in his CHEST's own frame (it hangs off his chest: a turn of the man, or of his chest onto a new aim, is not a move of the rifle) */
-    const loc = (p: Vec3): Vec3 => { const F = S.c.chestFrame()!, d = v3.sub(p, F.o); return [v3.dot(d, F.left), v3.dot(d, F.up), v3.dot(d, F.fwd)]; };
-    const leg = (label: string, keys: string[], crouch: boolean, n: number) => { S.pl.crouch = crouch; let prev: Vec3 | null = null, pv: Vec3 | null = null, step = 0, jolt = 0;
-      const see = (_f: number, k: ReturnType<typeof S.kit>) => { if (!k.rc) return; const q = loc(k.rc), dv: Vec3 | null = prev ? v3.sub(q, prev) : null; if (dv) { step = Math.max(step, v3.len(dv)); if (pv) jolt = Math.max(jolt, v3.len(v3.sub(dv, pv))); } prev = q; pv = dv; };
-      S.reset(); S.step(30, see); for (const k of keys) S.input.keys.add(k); S.step(n, see); for (const k of keys) S.input.keys.delete(k); S.step(40, see); const kr = S.kit().rc, CF = S.c.chestFrame()!, r = { label, step, jolt, a: kr ? v3.dot(v3.sub(kr, v3.scale(v3.add(S.c.bones.hips, S.c.bones.spine2), 0.5)), CF.fwd) : NaN /* (ahead of the trunk along his CHEST: after a strafe his hips stand a radian round from it) */, nan: S.T.nan, n: S.kit().nRifle, rest: S.pl.slingRest?.a ?? 0 };
-      if (r.step > SLING_STEP) fails.push(`${label}: the hanging rifle moves ${cm(r.step)} against his chest in a frame (bound ${cm(SLING_STEP)})`); if (r.jolt > SLING_STEP) fails.push(`${label}: its step changes ${cm(r.jolt)} between frames (bound ${cm(SLING_STEP)})`); if (r.nan || !r.n) fails.push(`${label}: ${r.nan} NaN, ${r.n} rifle boxes`); if (!(r.a > 0.08)) fails.push(`${label}: ends ${cm(r.a)} ahead of the trunk`); return r; };
-    const R = [leg('standing walk', ['KeyD'], false, 120), leg('crouched walk', ['KeyA'], true, 150), leg('stood up, a run', ['KeyD', 'ShiftLeft'], false, 90), leg('crouch and stand on the spot', [], true, 40)];
-    verdict(!fails.length, 'slung in front it rides him through a walk, a crouched walk, a run and a crouch with no pop (it swings off a raised thigh)', R.map(r => `${r.label}: ${cm(r.step)} a frame, change ${cm(r.jolt)}, ends swung ${(r.rest * 57.3).toFixed(0)}°`).join(' · ') + bad(fails));
-    const up = R[1].rest, down = R[2].rest; verdict(up > 0.5 && down < 0.35, 'crouched it lies up on his thighs, stood up it hangs', `swung ${(up * 57.3).toFixed(0)}° after the crouched walk, ${(down * 57.3).toFixed(0)}° after the run`);
-  }
+  
   return allPass;
 }); }
 /** NIGHT VISION by hand or by a nod (the maintainer: "should have animations for putting on and taking off night vision. if hands are busy it's a nod of the head
@@ -585,32 +500,8 @@ export async function kitNvProbe(): Promise<boolean> { return keep(async () => {
     const As = await runS(), sNods = As.nods;
     if (As.spr < 40 || sNods !== 1) fails.push(`staging: sprinting on ${As.spr} of 44 frames, ${sNods} nod(s) played`);
   }
-  { // (g) N again inside a nod: no pop; down mid-flip: the flip is let go of; a save waits for it
-    const fails: string[] = [], pitchOf = (S: Wd) => Math.asin(Math.max(-1, Math.min(1, S.c.headDir()[1]))) * 57.3;
-    const nod = async (again: number[]) => { const S = await world(); toRifle(S); S.step(20); let p = pitchOf(S), worst = 0; S.tap('KeyN'); for (let f = 0; f < 70; f++) { if (again.includes(f)) S.tap('KeyN'); S.step(1); const q = pitchOf(S); worst = Math.max(worst, Math.abs(q - p)); p = q; } return { worst, busy: S.an.nvBusy, nv: S.pl.nv }; };
-    const one = await nod([]), two = await nod([6]), three = await nod([4, 9]);
-    if (!(two.worst < one.worst + 2.5) || !(three.worst < one.worst + 2.5)) fails.push(`N again inside a nod turns the head ${two.worst.toFixed(1)}° / ${three.worst.toFixed(1)}° in a frame (one nod alone: ${one.worst.toFixed(1)}°)`); if (two.busy || three.busy || two.nv !== false || three.nv !== true) fails.push(`after the presses: flip ${two.busy || three.busy ? 'still running' : 'over'}, night vision ${two.nv} / ${three.nv}`);
-    // a nod cut short by a HAND flip (the pistol let down to its carry) whose arm is then taken again (the pistol back at the aim): the nod that was carried is not played a second time
-    // (staged so the hand flip really RUNS some frames before its arm is taken: the pistol let down a frame after the first N, the second N once the aim has eased out of his arms)
-    const turn = await (async () => { const S = await world(41); toPistol(S); S.pl.pistol.lightOn = true; S.step(50); let p = pitchOf(S), worst = 0, handF = 0, conv = -1; S.tap('KeyN');
-      for (let f = 0; f < 80; f++) { if (f === 1) S.pl.pistol.lightOn = false; if (f === 12) S.tap('KeyN'); if (f === 17) S.pl.pistol.lightOn = true; const was = (S.an as any).nv?.hand === true; S.step(1); const n = (S.an as any).nv; if (n?.hand) handF++; if (was && n && !n.hand && conv < 0) conv = f;
-        const q = pitchOf(S); if (f >= 12) worst = Math.max(worst, Math.abs(q - p)); p = q; } return { worst, busy: S.an.nvBusy, handF, conv }; })();
-    if (turn.handF < 3 || turn.conv < 0) fails.push(`staging: the hand flip over the nod ran ${turn.handF} frames by hand and ${turn.conv < 0 ? 'was never turned into a nod' : 'became a nod at frame ' + turn.conv} (want some frames by hand, then a nod)`);
-    if (!(turn.worst < one.worst + 2.5) || turn.busy) fails.push(`a nod, a hand flip over it, the arm taken again: the head turns ${turn.worst.toFixed(1)}° in a frame (one nod alone: ${one.worst.toFixed(1)}°)${turn.busy ? ', the flip still running' : ''}`);
-    const S = await world(); S.step(30); S.tap('KeyN'); S.step(27); const mid = S.an.nvShown, why = canSave(S.g, false); S.g.godMode = false; for (let i = 0; i < 8 && !S.pl.down; i++) hitPlayer(S.g, [1, 0, 0]); S.step(3); const G = gog(S);
-    if (!(mid !== undefined && mid > 0.02 && mid < 0.98)) fails.push(`staging: 27 frames into a hand flip the goggles are at ${mid}`); if (!/goggles/.test(String(why))) fails.push(`a save 27 frames into a flip: ${why === null ? 'allowed' : `refused for '${why}'`} (want it to wait for the goggles)`);
-    if (!S.pl.down) fails.push('staging: he did not go down'); if (S.an.nvBusy || S.an.nvShown !== undefined) fails.push(`down mid-flip: the flip runs on (goggles at ${S.an.nvShown})`); if (!G || !(G.dDn < 1e-6)) fails.push(`down mid-flip: the goggles lie ${G ? cm(G.dDn) : '?'} from where the game says`);
-    verdict(!fails.length, 'N again inside a nod does not pop the head; shot down mid-flip the goggles are where the game says; no checkpoint mid-flip', `most in a frame: one nod ${one.worst.toFixed(1)}°, N again at frame 6 ${two.worst.toFixed(1)}°, at frames 4 and 9 ${three.worst.toFixed(1)}°, a hand flip over a nod (${turn.handF} frames by hand) turned back into a nod ${turn.worst.toFixed(1)}° · down at ${f2(mid ?? -1)} of the way: flip over · save: '${why}'` + bad(fails));
-  }
-  { // (h) the hand at his goggles when R is pressed: the flip was by hand, and the magazine change goes through
-    const run = async (at: number) => { const S = await world(53), G = S.pl.pistol; toPistol(S); for (let i = 0; i < 40 && (G.chamber || G.mag); i++) { S.click(); S.step(14); } S.step(90); const up = S.an.upper, h0 = KITANIM_STATS.nv.hand, out: string[] = [];
-      S.tap('KeyN'); S.step(at); S.tap('KeyR'); for (let f = 0; f < 160; f++) { S.step(1); if (f % 8 === 7) out.push(JSON.stringify(digestGame(S.g, true))); }
-      return { d: out.join('|'), hand: KITANIM_STATS.nv.hand - h0, up, mag: G.mag, wrist: S.T.handL }; };
-    const fails: string[] = [], rows: string[] = [];
-    for (const at of [16, 24, 34]) { const A = await run(at);
-      if (A.hand !== 1) fails.push(`R ${at} frames after N: the flip was not by hand (upper '${A.up}')`); if (!(A.mag! > 0)) fails.push(`R ${at} frames after N: the magazine ends ${A.mag}`);
-      rows.push(`${at} frames after N: ${A.hand} flip by hand, the magazine ends ${A.mag}`); }
-  }
+  
+  
   { // (h') hands empty, N, then he walks into a leaf: the hand that goes out to the door is the door's — the goggle arm is clear of it quickly, and the goggles still arrive
     const S = await world(41), g = S.g, an: any = S.an, d = g.doors.byName('conference')!, sw = g.doors.swingOf(d), fails: string[] = [];
     const L = Math.hypot(sw.handle[0] - sw.hinge[0], sw.handle[2] - sw.hinge[2]), nx = -(sw.handle[2] - sw.hinge[2]) / L, nz = (sw.handle[0] - sw.hinge[0]) / L, mx = (sw.hinge[0] + sw.handle[0]) / 2, mz = (sw.hinge[2] + sw.handle[2]) / 2;

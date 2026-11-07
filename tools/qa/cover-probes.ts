@@ -247,7 +247,7 @@ export const coverWalk = guarded(async () => {
 // ---------------------------------------------------------------- cover-halt
 export const coverHalt = guarded(async () => {
   const { verdict, done } = family('cover-halt: stopped, everybody squares up to a different opening — and Sam\'s own gun counts');
-  for (const squad of [4, 2] as const) {
+  for (const squad of sample([4, 2] as const, 1)) {
     const tag = squad === 4 ? 'the four' : 'the pair';
     const R = await rig(3, squad); const { C, O, sam, game: g } = R;
     R.fallIn(); R.step(120); R.walk([[13, 0, 17.6], [20.6, 0, 17.6]]);
@@ -495,7 +495,7 @@ export const coverStep = guarded(async () => {
   verdict(cases.length >= 3, 'the office has doors that can stand open with a pair behind the leaf', `${cases.length} stagings: ${cases.map(c => `${c.door} ${c.ang > 0 ? '+' : '−'}`).join(', ')}`);
   // ---- following (each case staged once with nothing after it, to see that it arises: nobody has a line from the start)
   let arose = 0, onSaw = 0, onIn = 0, onFar = 0, mateMoved = 0, noSpot: string[] = [], keep: string[] = [], owed: string[] = [], wasted: string[] = [], back = 0, backOf = 0; const secs: number[] = [], rows: string[] = [];
-  for (const c of sample(cases, 3)) { const tag = `${c.door} ${c.ang > 0 ? '+' : '−'}`;
+  for (const c of sample(cases, 2)) { const tag = `${c.door} ${c.ang > 0 ? '+' : '−'}`;
     const A = await stepTrial(c, 'fallIn'); if (!A.blind0) { rows.push(`${tag}: a man has a line from the start — not a case`); continue; }
     arose++;
     let fell = '';

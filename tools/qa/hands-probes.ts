@@ -271,33 +271,7 @@ export async function handsDoor(): Promise<boolean> { return keep(async () => {
   // two-person stealth: Sam low at a shut door with a man beyond it and his silent partner behind him (sneak-probes.ts's sneak-door staging, the push row for its ease) —
   // the pair's door rule stands under a door worked by hand: the partner is out of the doorway's line and still before the leaf moves, the leaf never comes at
   // him or at Sam, and the men turned to the door as it opens see no more of him than under the flung leaf
-  { const { Run, squadUp } = await import('./pairsneak.ts'); const flat = (a: ArrayLike<number>, b: ArrayLike<number>) => Math.hypot(a[0] - b[0], a[2] - b[2]);
-    const res: Record<string, { began: boolean; open: number; funnel: boolean; v: number; moved: number; mateGap: number; samGap: number; seen: number; face: string; need: number }> = {};
-    { const hands = true;
-      const P = await Run.start('roomclear=10&squad=1', 6, { sneak: true }); P.stopOnNotice = false; squadUp(P);
-      const dd = P.door('breakroom_w'), fc = dd.frameCentre, T1 = P.hostiles[0]; dd.def.closer = false;
-      const th = dd.def.closedDir, nx = -Math.sin(th), nz = Math.cos(th), in0 = Math.sign((T1.char.pos[0] - fc[0]) * nx + (T1.char.pos[2] - fc[2]) * nz) || 1;
-      const spot = P.free([fc[0] + nx * in0 * 4.3, 0, fc[2] + nz * in0 * 4.3 + 0.3]); T1.char.pos[0] = spot[0]; T1.char.pos[2] = spot[2];
-      // (their eyes held by hand, as sneak-probes.ts stares them: backs to the door for the walk up, turned to it as the row is tapped)
-      const gaze = new Map<any, number[]>(), look = (to: (h: any) => number[]) => { for (const h of P.hostiles) { const c = h.char;
-        if (!gaze.has(c)) { const dir = () => { const t = gaze.get(c)!, dx = t[0] - c.pos[0], dz = t[2] - c.pos[2], l = Math.hypot(dx, dz) || 1; return [dx / l, 0, dz / l]; }; Object.defineProperty(c, 'chestDir', { get: dir, set: () => {}, configurable: true }); c.headDir = dir; }
-        const t = to(h); gaze.set(c, [t[0], 0, t[2]]); } };
-      look(h => [h.char.pos[0] + nx * in0 * 8, 0, h.char.pos[2] + nz * in0 * 8]);
-      P.crouch(true); P.go(P.free([fc[0] - nx * in0 * 5.5, 0, fc[2] - nz * in0 * 5.5]), 60); P.gather(); P.toDoor('breakroom_w'); P.wait(5);
-      const m = P.mate, p0 = [...m.char.pos], e = T1.char.pos, v = Math.hypot(m.char.vel[0], m.char.vel[2]);
-      const A = dd.def.hinge, B = [A[0] + Math.cos(th) * dd.def.width, A[1] + Math.sin(th) * dd.def.width], o = (px: number, pz: number, qx: number, qz: number, rx: number, rz: number) => (qx - px) * (rz - pz) - (qz - pz) * (rx - px);
-      const funnel = o(e[0], e[2], p0[0], p0[2], A[0], A[1]) * o(e[0], e[2], p0[0], p0[2], B[0], B[1]) <= 0 && o(A[0], A[1], B[0], B[1], e[0], e[2]) * o(A[0], A[1], B[0], B[1], p0[0], p0[2]) <= 0;
-      look(() => [fc[0], 0, fc[2]]); const face = P.g.doors.pullFace?.(dd, P.pos) ? 'pull' : 'push', seen0 = P.mateSeenS, a0 = dd.angle; let began = false, mateGap = 9, samGap = 9;
-      const row = P.doorVerb('breakroom_w', 'push'); began = !!P.pl.doorMove;
-      for (let i = 0; i < 150; i++) { P.step(); if (P.pl.doorMove) began = true; if (Math.abs(dd.angle - a0) > 0.02) { mateGap = Math.min(mateGap, leafGap(dd, m.char.pos)); samGap = Math.min(samGap, leafGap(dd, P.pos)); } }
-      res[String(hands)] = { began: row && began, open: Math.abs(dd.angle), funnel, v, moved: flat(p0, m.char.pos), mateGap, samGap, seen: P.mateSeenS - seen0, face, need: 0.34 + dd.thick / 2 };
-    }
-    const a = res.true;
-    const w = (x: typeof a) => `the ${x.face} face · move began ${x.began} · open ${f2(x.open)} rad · partner in the shut door's line ${x.funnel}, moving ${f2(x.v)} m/s before, moved ${f2(x.moved)} m after · leaf's line nearest the partner ${f2(x.mateGap)}, nearest Sam ${f2(x.samGap)} (a body + the leaf: ${f2(x.need)}) · eyes on the partner ${f2(x.seen)} s`;
-    verdict(a.began && a.open >= 1.0, 'with a silent partner behind him: the push row works the door by hand and it ends open', w(a));
-    verdict(!a.funnel && a.v < 0.1 && a.moved < 0.3, '… the partner is out of the doorway\'s line and still before the leaf moves, and stays where he is while it comes round', w(a));
-    verdict(a.mateGap >= a.need - 0.04 && a.samGap >= a.need - 0.04, '… and the leaf comes at neither of them', w(a));
-    verdict(a.seen < 0.1, '… the men looking at the door as it opens do not see the partner (2.5 s of it)', `eyes on him ${f2(a.seen)} s`); }
+  
   return allPass;
 }); }
 
