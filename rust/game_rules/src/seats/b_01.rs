@@ -10,8 +10,8 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// INVENTED BY THE SKELETON: which row of a table kept per view this pass reads: the man of the seat on Game, or CAST_KEY inside a second cast.
 /// (seats.ts SEAT_TABLES key by the view; the bridge writes a view's key as `view.player`, export.ts:83)
-pub fn view_key(g: &crate::game::Game) -> PlayerId {
-    if g.in_cast { CAST_KEY } else { g.player }
+pub fn view_key(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> PlayerId {
+    if g.in_cast { CAST_KEY } else { seat.player }
 }
 
 /// A SEAT'S MAN IS MADE ANEW (a restart): every table kept per view moves its row from the man who left to the man who stands in his place.

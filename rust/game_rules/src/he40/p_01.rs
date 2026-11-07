@@ -24,14 +24,14 @@ pub fn arc_armed(g: &crate::game::Game, sol: &crate::throwables::ThrowSolution) 
 }
 
 /// The living man under the reticle a round can meet, never one of Sam's own side. (he40.ts shellMan)
-pub fn shell_man(g: &crate::game::Game) -> Option<GuardId> {
+pub fn shell_man(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<GuardId> {
     let puppet_target = match &g.puppet {
         Some(p) => p.target,
         None => None,
     };
     let gd = match puppet_target {
         Some(t) if g.gd[t].state != crate::game::GuardState::Dead => Some(t),
-        _ => g.aim_guard,
+        _ => seat.aim_guard,
     };
     match gd {
         Some(id) if g.gd[id].state != crate::game::GuardState::Dead && g.gd[id].team != crate::teams::Team::Operative => Some(id),
@@ -116,8 +116,8 @@ pub fn shell_solve(g: &mut crate::game::Game, from: V3, target: V3, bodies: Opti
 }
 
 /// The point to send a round at: the chest of the man under the reticle, led; else the fixture; else the cursor's point. (he40.ts shellAimPoint)
-pub fn shell_aim_point(g: &crate::game::Game, from: V3) -> V3 {
-    if let Some(gd) = shell_man(g) {
+pub fn shell_aim_point(g: &crate::game::Game, seat: &crate::seats::SeatRef, from: V3) -> V3 {
+    if let Some(gd) = shell_man(g, seat) {
         let c = g.gd[gd].ch;
         let bone = g.ch[c].bones.get(crate::character::Bone::Chest).copied();
         let chest = v3::add(bone.unwrap_or_else(|| v3::add(g.ch[c].pos, [0.0, 1.2, 0.0])), [0.0, 0.0, 0.0]);
@@ -125,10 +125,10 @@ pub fn shell_aim_point(g: &crate::game::Game, from: V3) -> V3 {
         let vel = g.ch[c].vel;
         return v3::mad(chest, [vel[0], 0.0, vel[2]], tof);
     }
-    if let Some(t) = g.aim_target {
+    if let Some(t) = seat.aim_target {
         return v3::copy(g.tab.sim_lightshome_fixture[t].pos);
     }
-    let ap = g.aim_point;
+    let ap = seat.aim_point;
     [ap[0], ap[1] + 0.03, ap[2]]
 }
 

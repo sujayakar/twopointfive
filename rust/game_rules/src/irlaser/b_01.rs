@@ -10,8 +10,8 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// Sam's laser is on: a scenario's team on the floor, his goggles down, a gun in his hands and up at the aim, hands not on a lock or round a man, not
 /// down.   (irlaser.ts samLaserOn)
-pub fn sam_laser_on(g: &crate::game::Game) -> bool {
-    let pl = g.player;
+pub fn sam_laser_on(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+    let pl = seat.player;
     if !crate::roomfight::fight_live(g) || !g.pl[pl].nv { return false; }
     if !(crate::game::player_pistol_up(g, pl) || crate::game::player_rifle_up(g, pl)) { return false; }
     let c = g.pl[pl].ch;
@@ -25,7 +25,7 @@ pub fn sam_laser_on(g: &crate::game::Game) -> bool {
 /// NOT a boundary no-op, though it draws: its line and its dot are two boxes of the FRAME'S LIST, which the fog of war, the listing of the box world and
 /// every table numbered by reach count. Left empty, a goggled player's frame was two boxes short from the moment his gun came up.   (irlaser.ts samLaserBoxes)
 pub fn sam_laser_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
-    if !sam_laser_on(g) || !ir_viewer(g) { return; }
+    if !sam_laser_on(g, &crate::seats::here(g)) || !ir_viewer(g) { return; }
     let c = g.pl[g.player].ch;
     if let Some(r) = crate::combat::laser_reach(g, c, None, Some(true)) { crate::combat::beam_boxes(g, r.from, r.dir, r.l, out, r.dot, Some(true), Some(true)); }
 }

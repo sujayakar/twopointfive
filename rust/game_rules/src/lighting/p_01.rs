@@ -286,11 +286,11 @@ pub fn light_event(g: &mut crate::game::Game, t: FixtureId, cause: Option<crate:
 }
 
 /// Is there something under the reticle the OCP would act on right now?   (lighting.ts ocpable)
-pub fn ocpable(g: &crate::game::Game) -> bool {
-    if let Some(t) = g.aim_target {
+pub fn ocpable(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+    if let Some(t) = seat.aim_target {
         return !crate::carlamps::dead_lamp(g, t);
     }
-    let gd = match g.aim_guard {
+    let gd = match seat.aim_guard {
         Some(gd) => gd,
         None => return false,
     };
@@ -314,7 +314,7 @@ pub fn ocp(g: &mut crate::game::Game, t: Option<FixtureId>) {
         None => {
             if let Some(gd) = g.aim_guard {
                 if g.gd[gd].state != crate::game::GuardState::Dead {
-                    if !ocpable(g) {
+                    if !ocpable(g, &crate::seats::here(g)) {
                         return;
                     }
                     crate::weapons::ocp_use(&mut g.pl[p].ocp);

@@ -49,15 +49,15 @@ fn toward(s: V3, vx: f64, vz: f64, v: f64, pace_cos: f64, x: f64, z: f64) -> boo
 }
 
 /// THIS teammate's walk this frame, m/s: paced on the player   (teampace.ts teamWalkOf)
-pub fn team_walk_of(g: &crate::game::Game, gd: GuardId) -> f64 {
+pub fn team_walk_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> f64 {
     let slow = team_walk(g);
     if !g.k.teampace.pacing { return slow; }
     let own = g.tune.player_walk;
-    let post = match crate::orders::squad_orders_of(g, gd) { Some(a) => g.tab.orders_assignment[a].post, None => None };
+    let post = match crate::orders::squad_orders_of(g, seat, gd) { Some(a) => g.tab.orders_assignment[a].post, None => None };
     let mark = match post { Some(mark) => mark, None => return own };
     let (near, gap, cos, k, top) = (g.k.teampace.pace_near, g.k.teampace.pace_gap, g.k.teampace.pace_cos, g.k.teampace.k, g.k.pace.max);
     let p = g.ch[g.gd[gd].ch].pos;
-    let sam = g.pl[g.player].ch;
+    let sam = g.pl[seat.player].ch;
     let s = g.ch[sam].pos;
     if m::hyp2(p[0] - s[0], p[2] - s[2]) > near { return own; }
     let dm = m::hyp2(p[0] - mark[0], p[2] - mark[2]);
@@ -136,7 +136,7 @@ pub fn team_cap(g: &mut crate::game::Game, gd: GuardId) -> f64 {
         return if blast_run(g, gd) { m::max(g.k.pace.max, g.tune.player_sprint) } else { g.k.pace.max };
     }
     let l = live(g, gd);
-    let walk = team_walk_of(g, gd);
+    let walk = team_walk_of(g, &crate::seats::here(g), gd);
     let cap = m::max(walk, match l { Some(l) => l.top, None => 0.0 });
     if cap < g.k.pace.max && fighting(g, gd) { g.k.pace.max } else { cap }
 }
@@ -194,9 +194,9 @@ pub fn team_run_ago(g: &crate::game::Game, gd: GuardId) -> f64 {
 }
 
 /// × his card for a leg asked at `speed`: at a run a card weighs as it does on the player's sprint. None = as it was   (teampace.ts teamRunLegs)
-pub fn team_run_legs(g: &crate::game::Game, gd: GuardId, speed: f64) -> Option<f64> {
+pub fn team_run_legs(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, speed: f64) -> Option<f64> {
     if speed < g.k.teampace.run_at || !team_slow(g, gd) { return None; }
-    let k = crate::kitload::load_pace_on(g, crate::kitload::LoadPaceOnWho::Guard(gd));
+    let k = crate::kitload::load_pace_on(g, seat, crate::kitload::LoadPaceOnWho::Guard(gd));
     Some(speed * (1.0 + (k - 1.0) * g.k.kitload.sprint))
 }
 
@@ -214,12 +214,12 @@ pub fn team_sprinting(g: &crate::game::Game, gd: GuardId) -> bool {
 pub fn team_tread(g: &mut crate::game::Game, gd: GuardId, speed: f64, base: f64) -> f64 {
     let level = if speed >= g.k.teampace.run_at && team_slow(g, gd) {
         g.k.teampace.step
-    } else if crate::kitload::load_gait(g, crate::kitload::LoadGaitWho::Guard(gd), speed) > 2.0 {
+    } else if crate::kitload::load_gait(g, &crate::seats::here(g), crate::kitload::LoadGaitWho::Guard(gd), speed) > 2.0 {
         0.8
     } else {
         crate::silent::silent_step(g, gd).unwrap_or(base)
     };
-    level * crate::kitload::load_heard(g, crate::kitload::LoadHeardWho::Guard(gd))
+    level * crate::kitload::load_heard(g, &crate::seats::here(g), crate::kitload::LoadHeardWho::Guard(gd))
 }
 
 /// fall in's pace for a man `d` off his place, the player doing `sam_v`. None = as it was   (teampace.ts teamFollow)
@@ -291,7 +291,7 @@ pub fn team_dash(g: &mut crate::game::Game, gd: GuardId, to: V3, d: f64, stack: 
 
 /// A RUN THE MISSION TELLS HIM TO MAKE: the pace to run the leg at, or None   (teampace.ts teamTold)
 pub fn team_told(g: &mut crate::game::Game, gd: GuardId) -> Option<f64> {
-    if !crate::rails::rails_runs(g, gd) || !team_slow(g, gd) || crate::roomfight::room_fight_engaged(g, gd) { return None; }
+    if !crate::rails::rails_runs(g, &crate::seats::here(g), gd) || !team_slow(g, gd) || crate::roomfight::room_fight_engaged(g, gd) { return None; }
     let run = g.tune.player_sprint;
     if team_leave(g, gd, LeaveWhy::Told, run, None) { Some(run) } else { None }
 }

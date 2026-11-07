@@ -271,7 +271,7 @@ pub fn update_coding_plant(g: &mut crate::game::Game, dt: f64) {
         if g.pl[pl].wall.is_some() {
             release_wall(g);
         }
-        let hand = crate::handwork::sam_work_hand(g);
+        let hand = crate::handwork::sam_work_hand(g, &crate::seats::here(g));
         crate::handwork::work_stand(g, c, k.def.pos, k.n, dt, Some(hand), None);
     }
     collide_player(g, 1.0);
@@ -302,7 +302,7 @@ pub fn update_work_plant(g: &mut crate::game::Game, dt: f64, w: &mut crate::hand
     }
     g.ch[c].vel = [0.0, 0.0, 0.0];
     let (x0, z0) = (g.ch[c].pos[0], g.ch[c].pos[2]);
-    let hand = crate::handwork::sam_work_hand(g);
+    let hand = crate::handwork::sam_work_hand(g, &crate::seats::here(g));
     let yaw = crate::handwork::work_stand(g, c, w.p, w.n, dt, Some(hand), None);
     collide_player(g, 1.0);
     keep_off_guards(g, dt, 1.0, None);
@@ -489,7 +489,7 @@ pub fn update_kick(g: &mut crate::game::Game, dt: f64) {
     g.ch[c].anim.speed = if step_v > 0.2 { m::min(step_v, 1.7) } else { 0.0 };
     g.ch[c].anim.crouch_target = 0.0;
     g.ch[c].anim.upper = if crate::game::player_pistol_up(g, pl) { crate::character::UpperMode::Relaxed } else { crate::character::UpperMode::None };
-    g.ch[c].anim.big_tool = crate::bigkit::sam_big_pose(g);
+    g.ch[c].anim.big_tool = crate::bigkit::sam_big_pose(g, &crate::seats::here(g));
     let in_hands = crate::game::player_rifle_up(g, pl);
     arm_rifle(g, in_hands, Some(crate::character::LongStance::PortLong));
     crate::character::character_update(g, c, dt);
@@ -556,8 +556,8 @@ fn body_reach(g: &mut crate::game::Game, a: V3, p: V3, q: Option<V3>, add: f64, 
 }
 
 /// Throw origin, right hand-ish.   (player.ts throwOrigin)
-pub fn throw_origin(g: &crate::game::Game) -> V3 {
-    let pl = g.player;
+pub fn throw_origin(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> V3 {
+    let pl = seat.player;
     let c = g.pl[pl].ch;
     let f = crate::character::character_forward(g, c);
     let pos = g.ch[c].pos;
@@ -567,7 +567,7 @@ pub fn throw_origin(g: &crate::game::Game) -> V3 {
 /// The wind-up of a throw: the can counted now, it leaves the hand at THROW_RELEASE along the arc previewed.   (player.ts doThrow)
 pub fn do_throw(g: &mut crate::game::Game, sol: &crate::throwables::ThrowSolution, kind: crate::game::ThrowKind) {
     let pl = g.player;
-    if crate::game::game_throw_count(g, kind) <= 0.0 {
+    if crate::game::game_throw_count(g, &crate::seats::here(g), kind) <= 0.0 {
         let text = match kind {
             crate::game::ThrowKind::Frag => "no frag grenades left",
             crate::game::ThrowKind::Flash => "no flashbangs left",
@@ -588,7 +588,7 @@ pub fn do_throw(g: &mut crate::game::Game, sol: &crate::throwables::ThrowSolutio
     let dist = v3::dist_xz(g.ch[c].pos, sol.land);
     crate::character::anim_throw_item(g, c, Some(dist), Some(m::hyp2(sol.v0[0], sol.v0[2])));
     g.pl[pl].pending_throw = Some(crate::game::PlayerPendingThrow { t: crate::character::THROW_RELEASE, sol: sol.clone(), kind });
-    let at = throw_origin(g);
+    let at = throw_origin(g, &crate::seats::here(g));
     crate::audio_iface::game_audio_like_play(g, "throw", Some(at), Some(0.7), None);
 }
 

@@ -183,13 +183,13 @@ pub fn door_tools_sync(g: &mut crate::game::Game) {
     while at < g.guards.len() {
         let gd = g.guards[at];
         at += 1;
-        if crate::orders::squad_orders_mine(g, gd) {
+        if crate::orders::squad_orders_mine(g, &crate::seats::here(g), gd) {
             if g.door_tools.roster.get(i) != Some(&gd) { same = false; }
             i += 1;
         }
     }
     if !same || i != g.door_tools.roster.len() {
-        g.door_tools.roster = crate::orders::squad_orders_squad(g);
+        g.door_tools.roster = crate::orders::squad_orders_squad(g, &crate::seats::here(g));
         door_tools_reset(g);
         g.door_tools.go_key = None;
         g.door_tools.thr_key = None;
@@ -298,15 +298,15 @@ pub fn door_tools_alone(g: &mut crate::game::Game, n: f64) {
 
 /// a checkpoint's charge back on its door, as he set it   (doortools.ts DoorTools.setBack)
 pub fn door_tools_set_back(g: &mut crate::game::Game, d: DoorId, side: f64) {
-    if crate::doors::door_off(g, d) || door_tools_charge_on(g, d).is_some() { return; }
+    if crate::doors::door_off(g, d) || door_tools_charge_on(g, &crate::seats::here(g), d).is_some() { return; }
     let t = g.time;
     let c = g.tab.doortools_set_charge.push(crate::doortools::SetCharge { door: d, side, t, by: String::from(crate::ownblow::SAM_BY) });
     g.door_tools.set.push(c);
 }
 
 /// the charge set on this door, if any   (doortools.ts DoorTools.chargeOn)
-pub fn door_tools_charge_on(g: &crate::game::Game, d: DoorId) -> Option<ChargeId> {
-    g.door_tools.set.iter().copied().find(|&c| g.tab.doortools_set_charge[c].door == d)
+pub fn door_tools_charge_on(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId) -> Option<ChargeId> {
+    seat.door_tools.set.iter().copied().find(|&c| g.tab.doortools_set_charge[c].door == d)
 }
 
 /// can these men stack on that face of that door (the entry orders' menu test)   (doortools.ts DoorTools.stackable)
@@ -330,7 +330,7 @@ pub fn door_tools_stackable(g: &mut crate::game::Game, t: &crate::orders::OrderT
         return V::Text(String::from("steel, and locked."));
     }
     if door_tools_frame_held(g, d, side) && !door_tools_pickable(g, d) && !door_tools_big_opens(g, d, men) {
-        return V::Text(door_tools_no_boot(g, d));
+        return V::Text(door_tools_no_boot(g, &crate::seats::here(g), d));
     }
     V::Bool(true)
 }
@@ -339,7 +339,7 @@ pub fn door_tools_stackable(g: &mut crate::game::Game, t: &crate::orders::OrderT
 pub fn door_tools_locked_out(g: &mut crate::game::Game, d: DoorId, side: f64) -> bool {
     let w = g.dr[d].def.width;
     let from = door_pt(g, d, w / 2.0, 0.6, side, None);
-    let ring = crate::orders::squad_orders_ring(g);
+    let ring = crate::orders::squad_orders_ring(g, &crate::seats::here(g));
     crate::doors::doors_locked_out(g, d, from, Some(&ring))
 }
 
