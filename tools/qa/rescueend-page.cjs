@@ -10,7 +10,7 @@
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', ONLY = process.env.ONLY || '';   // (ONLY=on|clear|off = that page alone: a boot is minutes on the software adapter)
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
-const MISSION = 'levelFile=registry.json&rescue&difficulty=hard&pick=registry&seed=7&squad=0';   // (no teammates: with the pair on the floor the men left are shot inside the 20 s and the run is won cleared — which is the rule, and not what the first page asks)
+const MISSION = 'levelFile=registry.json&rescue&difficulty=hard&seed=7&squad=0';   // (no teammates: with the pair on the floor the men left are shot inside the 20 s and the run is won cleared — which is the rule, and not what the first page asks)
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS }); let failed = false;
   const line = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
