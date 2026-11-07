@@ -5550,14 +5550,6 @@
   "extra": ""
  },
  {
-  "path": "Sandbox ▸ Civilians",
-  "kind": "toggle",
-  "label": "civilians ▸ passing pleasantries",
-  "title": "'Evening.' — 'Evening, Marta.': a calm patrolling man passing within three metres of a working civilian gets a word and gives one back (at most one exchange a minute on the floor, four minutes per pair). Off = they never speak to each other (the identity probe's setting: the men's own chatter clocks are then untouched by her).",
-  "def": false,
-  "extra": ""
- },
- {
   "path": "Stealth ▸ Civilians",
   "kind": "buttons",
   "label": "civilians",
