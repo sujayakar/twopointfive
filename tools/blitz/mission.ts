@@ -83,6 +83,7 @@ class Stop extends Error {}
 const CALLS = (process.env.BLITZ_CALL ?? '').split(';').map(x => x.trim()).filter(Boolean).map(x => ({ w: x.split(' '), at: 0, down: 0 })); let shotLast = false, fragSaid = 0;
 const await0d: any = LEVER ? await import('../../src/game/difficulty.ts') : null;
 const await0 = CALLS.length ? await import('../../src/game/qrf.ts') : (null as any);
+let nvSaid = false, nvAfter = false; const noiseSaid = new WeakSet<object>();   // (the driver's own writes of Sam's goggles and of a staged report: said once)
 let selAfter = 0;   // the highlighted row of the nearby list as the last tick left it
 // A SCRIPTED CASE (`--case pie | orbit | boot`): a write BETWEEN TWO TICKS that the missions' seeds never make, so that a place mended by reading is
 // reached by a run. Each is a line of gives.txt (the runner makes the same write through the Rust game's own setter; with BLITZ_CASE_RAW=1 it makes the
@@ -230,6 +231,12 @@ Game.prototype.update = function (this: any, ...a: any[]) {
   if (k === 1 && LEVER) { const Df = await0d; for (const kv of LEVER.split(',')) { const [key, rung] = kv.split('=');
       if (!Df.leversNow().some((L: any) => L.key === key && L.rungs.some((r: any) => r.id === rung))) { say(`mission.ts: --lever knows ${Df.leversNow().map((L: any) => `${L.key}=${L.rungs.map((r: any) => r.id).join('|')}`).join(', ')}, not '${kv}'`); process.exit(64); }
       Df.setLever(key, rung, false); } say(`mission.ts: the levers before tick 1: ${Df.leversLine(true)}; TOLD.rung ${(knobRegistry() as any).TOLD?.rung}`); }
+  // THE SCRIPTED PLAYER'S OPTION WORDS (tools/qa/playthrough.ts): PT_BREAKER=sam cuts the mains by hand between ticks (`g.setBlackout(86400, 'hand')`),
+  // PT_NV=1 then puts Sam's goggles down (`g.player.nv = true`), PT_NOISE=1 pushes one loud round's report onto the game's events where the team
+  // starts. Each is a `call` line of the ordered record (`set_blackout_hand`, `nv_on`, `noise_shot x y z`).
+  if (k === 1 && !LESSON && !SOLO) { const sb = g.setBlackout; g.setBlackout = function (this: any, secs: number, cause: string) { if (!g.ticking) { if (secs === 86400 && cause === 'hand') between(`${k + 1} set_blackout_hand`, 'call'); else between(`${k + 1} UNSUPPORTED set_blackout ${secs} ${cause}`, 'call'); } return sb.call(this, secs, cause); }; }
+  if (!LESSON && !SOLO && k > 1) { if (g.player.nv && !nvSaid && !nvAfter) { nvSaid = true; between(`${k} nv_on`, 'call'); }
+    for (const e of g.events as any[]) if (e?.ptNoise && !noiseSaid.has(e)) { noiseSaid.add(e); between(`${k} noise_shot ${e.pos[0]} ${e.pos[1]} ${e.pos[2]}`, 'call'); } }
   if (k === 1) dressStand();
   caseStep(g);
   if (k === 1 && (!g.dice || /^\d+$/.test(arg('--die', '')))) g.dice = newDice(DIE);   // (`--die N` seeds the die of a game stood WITH one too: a tutorial's)
@@ -252,14 +259,17 @@ Game.prototype.update = function (this: any, ...a: any[]) {
     writeFileSync(`${outDir}/h${k}.bin`, hostHalf(g, reg, cmds as any[]));
     row('meter.txt', meterL, `${g.player.visibility}`);   // (a mission's scripted player writes the meter before every tick too, playthrough.ts:779: the same number every tick, until a restart makes the player anew)
     row('host.txt', hostL, `${dt} ${g.probe?.pending?.length ?? 0} ${g.time} ${g.dice?.n ?? -1} ${k === 1 ? 0 : uploads}`); uploads = 0;
-    const chron0 = g.chronicle, saves0 = chron0.counts.saves;
+    const chron0 = g.chronicle, saves0 = chron0.counts.saves, loads0 = chron0.counts.loads;
     // (the save controller's CAPTURE asks the whistle for the player's breath, which makes its row: `<k> save_breath` where the row came with this tick's save)
     const breathOf = (globalThis as any).__tpsTop?.['src/game/whistle.ts']?.blowerOf, breath0 = !!breathOf?.has?.(g.player);
     try { return step.call(this, dt, cmds); } finally {
       // THE HOST'S CHECKPOINT: the autosave controller (savestate.ts, the host's) writes a chronicle row and a count as the tick's last thing
       // (a restart inside the tick makes the chronicle anew: its count is then 0 where the old one's was not, and that is no save)
       if (g.chronicle === chron0 ? g.chronicle.counts.saves !== saves0 : g.chronicle.counts.saves > 0) { const E = g.chronicle.events, e = E[E.length - 1]; appendFileSync(`${outDir}/hostwrites.txt`, `${k} chron_save ${JSON.stringify(e?.kind === 'checkpoint' ? (e.label ?? e.data?.label ?? '') : 'NOT-LAST')}\n`); if (!breath0 && breathOf?.has?.(g.player)) appendFileSync(`${outDir}/hostwrites.txt`, `${k} save_breath\n`); }
-      selAfter = g.player.nearSel;
+      // (a FILE save loaded INSIDE the step, savestate.ts loadInStep from player.ts's bare Enter once down: the game is the saved one as this tick
+      //  returns. The runner does not compare this tick and takes the next one's opening state as a new start)
+      if (g.chronicle.counts.loads > loads0) appendFileSync(`${outDir}/hostwrites.txt`, `${k} load_in_step\n`);
+      selAfter = g.player.nearSel; nvAfter = !!g.player.nv;
       shotLast = (g.events as any[]).some((e: any) => (e?.kind === 'shot' || e?.kind === 'guardShot') && e.from && e.time >= g.time - 0.05);   // (a round fired in the tick just run: the events are kept half a second)
       row('post.txt', postL, `${k} ${g.dice?.n ?? -1} ${g.dice?.s ?? -1} ${g.time} ${hashes(words(g)).join(' ')}`);
       { const set = (g.seats?.length ? g.seats : [{ view: g }]).reduce((x: number, st: any) => x + (st.view?.wallCharge?.set?.length ?? 0), 0); if (set !== chargesSet) { chargesSet = set; appendFileSync(`${outDir}/charges.txt`, `${k} ${set}\n`); } }

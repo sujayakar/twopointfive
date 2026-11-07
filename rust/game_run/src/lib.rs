@@ -228,6 +228,19 @@ pub fn call(g: &mut game::game::Game, k: usize, rule: &str) -> String {
             let r = game::qrf::request_qrf(g, game::qrf::QrfReason::Panel);
             format!("  the rule called before tick {}: the response team staged, request_qrf(panel) -> {}", k, r)
         }
+        // (the scripted player cuts the mains by hand at the breaker, PT_BREAKER=sam: `Game.setBlackout(86400, 'hand')` between ticks)
+        "set_blackout_hand" => { game::game::game_set_blackout(g, 86400.0, game::game::GameSetBlackoutCause::Hand); format!("  the driver's call before tick {}: set_blackout(86400, hand)", k) }
+        // (PT_NOISE=1: one loud round's report where the team starts, a hearing event the driver pushes onto the game's list between ticks:
+        //  `call noise_shot <x> <y> <z>`)
+        "noise_shot" => {
+            let n: Vec<f64> = all[1..].iter().filter_map(|x| x.parse::<f64>().ok()).collect();
+            if n.len() != 3 { return format!("  NOTE tick {}: noise_shot takes three numbers: {:?}", k, all); }
+            let (time, serial) = (g.time, g.serial());
+            g.events.push(game::game::GameEvent { kind: game::director::EventKind::Shot, pos: [n[0], n[1], n[2]], time, loud: true, level: Some(1.0), who: Some(game::consts::PLAYER_ID), serial, ..game::game::GameEvent::zeroed() });
+            format!("  the driver's write before tick {}: a loud round's report at {:?} ({} events)", k, n, g.events.len())
+        }
+        // (PT_NV=1 with the mains cut: the scripted player puts Sam's goggles down, `g.player.nv = true`)
+        "nv_on" => { let p = g.player; g.pl[p].nv = true; format!("  the driver's write before tick {}: the player's goggles down", k) }
         "restart" => { game::game::game_restart(g, None); format!("  the rule called before tick {}: restart (the player's own); {} guards, time {}", k, g.guards.len(), g.time) }
         _ => format!("  NOTE tick {}: a rule the driver called that this runner does not know: {}", k, rule),
     }
