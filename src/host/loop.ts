@@ -26,7 +26,6 @@
 // switch off there is no interpolation: off 60 Hz the men and the camera move at 60 a second on a display that draws more, and on a frame of two ticks or more (a display
 // under the tick rate, a hitch) a flash that lives one tick and was made in the frame's first is aged out by its second and never drawn (with it on, tween.ts draws it once).
 // The module's default is off = every statement below as it was; THE PAGE turns both on (host/profile.ts pageSwitches: ?fixedstep=0, ?tween=0).
-import { BACKKEY } from '../game/backkey';
 import type { Game } from '../game/game';
 import type { Input } from '../game/input';
 import type { FollowCamera } from '../game/camera';
@@ -159,9 +158,9 @@ function stepFrameIn(ctx: LoopCtx, dt: number): void {
   const frozen = ctx.frozen();   // paused / start card: the world holds still, the picture stays live behind the card, hotkeys are off — unless attract mode has let the world go behind the start card
   const frozenKeys = frozen && input.pressed.size ? [...input.pressed] : null;   // (the hotkeys' look below: the recorder keys are read on a frozen frame too)
   if (frozen) { dt = 0; input.endFrame(); if (!ctx.tick) game.player.launchHeld = null; }   // (…and the launcher's button, if it was down as the card came up, is let go of unsent: the tick that follows the card would read 'the button came up' and send the round — player.ts)
-  if (frozen) ctx.thaw = true; else if (ctx.thaw) { ctx.thaw = false; if (BACKKEY.tab) input.pressed.add('Paused'); input.pressed.add('Thawed'); }   // (game/backkey.ts: the first tick after the card is told the card was up — a held list or arc is let go unsent IN the tick, where a recording has it)
+  if (frozen) ctx.thaw = true; else if (ctx.thaw) { ctx.thaw = false; input.pressed.add('Paused'); input.pressed.add('Thawed'); }   // (game/backkey.ts: the first tick after the card is told the card was up — a held list or arc is let go unsent IN the tick, where a recording has it)
   ctx.afterFreeze?.(frozen);
-  const auto = AUTOCAM.on ? (ctx.auto ??= autoCam()) : null;   // (the camera running itself, host/autocam.ts: nothing below asks it while the mode is off — host/findme.ts AUTOVIEW)
+  const auto = ctx.auto ??= autoCam();   // (the camera running itself: host/autocam.ts)
   if (!frozen && input.wheelCtrl && !game.rails.locks('zoom')) { cam.zoom(input.wheelCtrl); if (auto && AUTOVIEW.on) autoZoom(auto, cam, input.wheelCtrl); }                 // the camera's key + wheel (or a pinch) zooms; the plain wheel is Sam's walking pace (player.ts)
   const fixed = !frozen && FIXEDSTEP.on && !!ctx.fixedStep?.() && view.clientWidth > 0 && view.clientHeight > 0;
   const orbit = !frozen && input.orbitDX && !game.rails.locks('camera') ? ctrlTurn(input.orbitDX) : 0;       // hold the camera's key and move the mouse to orbit (Ctrl, or the Space bar while it is spare: host/keymap.ts camKey)

@@ -6,7 +6,6 @@
 // it stands beside the menu (ui/debrief.ts). DEBRIEF: the mission's card proper — up on mission complete (Again / Keep playing) and, a beat after Sam drops, as
 // the down card (Restart): the rating word and score, the numbers, the badges, the floor map with his path and the pins, the timeline. While any of them is
 // open main.ts freezes the simulation and keeps rendering the frozen frame underneath. Plain DOM, styled in index.html (#menu…) with ui/theme.ts's tokens.
-import { SAVETIMELINE, type SlotInfo } from '../game/savestate';
 export { loadSandbox } from '../game/sandbox';
 import { Engine } from '../engine';
 import { Game } from '../game/game';
@@ -271,14 +270,14 @@ export class Menu {
   private checkpointInfo() {
     const g = this.d.game; if (!this.d.loadCheckpoint) return null;
     const scn = this.d.scenario?.current() ?? null, n = g.saves.offer(g, g.mission.stats.elapsed);
-    if (scn && !scn.saves) return SAVETIMELINE.on && n && g.saves.isThisRun(n) ? n : null;   // (a scenario with a team: no file is written there and a solo run's is refused — but under SAVETIMELINE this run's own saves, kept in memory, are offered)
+    if (scn && !scn.saves) return n && g.saves.isThisRun(n) ? n : null;   // (a scenario with a team: no file is written there and a solo run's is refused — but this run's own saves, kept in memory, are offered)
     return n;
   }   // (savestate.ts offer: an earlier run's slot only if this game would load it)
   /** THE STRIP (savestate.ts SAVETIMELINE): this run's saves in the order they were made, each a tile — its picture, how long ago, a mark on the ones made by
    *  hand, a regretted autosave dimmed. A click, or Enter on the tile the arrows (A D too) have walked to, goes back to it. Null with the switch off, no loader,
    *  or fewer than two saves (one save is the button above it) unless one is asked for on this card. */
   private saveStrip(armed: () => boolean = () => true): HTMLElement | null {
-    const g = this.d.game, load = this.d.loadCheckpoint; if (!SAVETIMELINE.on || !load) return null;
+    const g = this.d.game, load = this.d.loadCheckpoint; if (!load) return null;
     const due = this.mode === 'pause' && !!this.d.saveDue?.();   // (a save asked for on this card: its tile stands where the save will, empty until play goes on and writes it)
     const line = g.saves.timeline(); if (line.length < 2 && !due) return null;
     const now = g.mission.stats.elapsed, offered = this.checkpointInfo();

@@ -1,5 +1,5 @@
-// THE LOOK PROTOTYPE (the page /look; render/frame.ts lookConfig, the scene prelude's const `LOOK`): THE MATERIAL LOOK, as STYLE.md's Surfaces now allows it (a box
-// has a paint and a material; the material is maps the page makes itself). On that page only until it is landed on the game's. This file is in the g-buffer module ONLY on that page (render/gbuffer.ts lookWgsl); every other page gets a stub.
+// THE LOOK PROTOTYPE (the page /look; render/frame.ts lookConfig): THE MATERIAL LOOK, as STYLE.md's Surfaces now allows it (a box
+// has a paint and a material; the material is maps the page makes itself). This file is in the g-buffer module (render/gbuffer.ts lookWgsl).
 //
 // What it does to a box pixel, in the g-buffer and nowhere else:
 //   MAPS      tiling materials (and two of masonry), each made by the page the first time a box is that stuff (render/gbuffer.ts needLook; render/lookTex.ts: paint, height, normal, roughness, cavity), picked by what the box SAYS it is made of
