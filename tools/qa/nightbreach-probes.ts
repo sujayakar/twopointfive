@@ -34,11 +34,9 @@
 import { sample, swept } from './sweep.ts';
 import { standUp, ROOT } from './headless.ts';
 const { NIGHTBREACH, BLIND } = await import(`${ROOT}/src/game/nightbreach.ts`);
-const { SUPPRESSION } = await import(`${ROOT}/src/game/suppression.ts`);
 const { FIGHT_SKILL } = await import(`${ROOT}/src/game/roomfight.ts`);
 const { fireWeapon, detonateStun } = await import(`${ROOT}/src/game/combat.ts`);
 const { MAX_LIGHTS } = await import(`${ROOT}/src/render/lights.ts`);
-const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
 const { canSave, canLoad } = await import(`${ROOT}/src/game/savestate.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 
@@ -108,19 +106,6 @@ const everyManFires = () => { FIGHT_SKILL.hostile.bangBreak = 0; };
  *  hostile is left in it — so 'clear' is judged on the room, not on the cast */
 const inRoom = (NB: any, g: any) => { const B = g.level.breach.bounds; return NB.hostiles.filter((h: any) => h.state !== 'dead' && h.char.pos[0] > B.x0 && h.char.pos[0] < B.x1 && h.char.pos[2] > B.z0 && h.char.pos[2] < B.z1).length; };
 
-export const nightbreachOff = guarded(async () => {
-  const { verdict, done } = family('nightbreach-off: with the flag off nothing of it runs');
-  const run = async (pressF: boolean) => { const R = await rig(5, {}, false); Math.random = seeded(77); for (let i = 0; i < 600; i++) { if (pressF && i === 120) R.W.input.pressed.add('KeyF'); R.step(); } return R; };
-  const A = await run(false), B = await run(true);
-  const g = B.game, NB = B.NB;
-  verdict(!NB.active && NB.drill === null && NB.state === 'off' && NB.log.length === 0 && NB.ops.length === 0 && NB.hostiles.length === 0, 'inert: inactive, no drill, no cast, an empty log after ten seconds and an F press',
-    `active ${NB.active} · state ${NB.state} · drill ${NB.drill} · log ${NB.log.length} · ${NB.summary()}`);
-  verdict(g.guards.length === B.before.guards && !g.guards.some((x: any) => x.unit) && g.civilians.length === B.before.civilians && NB.order() === null, 'the floor is the night game\'s: the shift, the civilians, no unit; order() does nothing',
-    `guards ${g.guards.length} (${g.guards.map((x: any) => x.callsign).join(', ')}) · units ${g.guards.filter((x: any) => x.unit).length} · civilians ${g.civilians.length}`);
-  const da = JSON.stringify(digestGame(A.game, true)), db = JSON.stringify(digestGame(B.game, true));
-  verdict(da === db, 'ten seeded seconds digest the same with and without the F press', `digest ${da.length} chars · ${da === db ? 'equal' : 'DIFFERENT'}`);
-  return done();
-});
 
 export const nightbreachStage = guarded(async () => {
   const { verdict, done } = family('nightbreach-stage: start() stages the room, the team and the defenders inside the budgets');

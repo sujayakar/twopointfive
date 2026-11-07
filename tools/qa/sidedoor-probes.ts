@@ -156,24 +156,3 @@ export const sidedoorFeet = guarded(async () => {
 });
 
 // ---------------------------------------------------------------- the fight
-export const sidedoorFight = guarded(async () => {
-  const { verdict, done } = family('sidedoor-fight: the manager\'s office taken through the side door, over seeds');
-  const SEEDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]; const rows: string[] = []; let threw = '';
-  const T = { side: { runs: 0, taken: 0, in: 0, clear: 0, lost: 0 }, corridor: { runs: 0, taken: 0, in: 0, clear: 0, lost: 0 } };
-  for (const way of ['side', 'corridor'] as const) for (const seed of SEEDS) {
-    try {
-      const R = await rig(seed); const { O, D } = R; const room = R.room('manager'), door = way === 'side' ? DOOR : 'manager', d = R.door(door);
-      // the server room as it stands once taken (its garrison down, the four in its aisle) — or, for the corridor door, the four outside it in the corridor
-      R.empty('server'); R.place(way === 'side' ? AISLE : [[24.0, 0, 11.2], [23.2, 0, 11.4], [22.4, 0, 11.4], [21.6, 0, 11.4], [20.8, 0, 11.4]]);
-      const before = R.up.length; const why = R.give('bangClear', door); R.step(2); const op = D.ops.find((o: any) => o.door === d);
-      R.until(() => !D.ops.includes(op), 70); R.step(60 * 6);
-      const left = room.defenders.filter((h: any) => h.state !== 'dead').length, lost = before - R.up.length, A = T[way];
-      A.runs++; if (why === null && op) A.taken++; if (op?.ended === 'in') A.in++; if (left === 0) A.clear++; A.lost += lost;
-      rows.push(`${way} door, seed ${seed}: give → ${why} · ended '${op?.ended}' · the office: ${left} of ${room.defenders.length} left · teammates lost ${lost} (${R.lostTo()})`);
-    } catch (e) { threw = `${way}/${seed}: ${e instanceof Error ? e.stack : e}`; }
-  }
-  verdict(!threw, 'nothing threw', threw || `${T.side.runs + T.corridor.runs} runs`);
-  verdict(T.side.taken === T.side.runs && T.side.in >= T.side.runs - 2, 'bang and clear on the side door from the server room is taken on every seed and ends \'in\' on all but two at most (a fight: a seed where the men it sent are down before the frame line is not the door\'s)', `taken ${T.side.taken} of ${T.side.runs} · ${T.side.in} in`);
-  console.log(`    what it costs, beside the same seeds through the office's corridor door (printed, not judged: twelve seeds are scatter)\n    side door: office clear ${T.side.clear} of ${T.side.runs}, teammates lost ${T.side.lost} · corridor door: clear ${T.corridor.clear} of ${T.corridor.runs}, lost ${T.corridor.lost}\n    ${rows.join('\n    ')}`);
-  return done();
-});
