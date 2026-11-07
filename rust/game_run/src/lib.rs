@@ -124,22 +124,38 @@ pub fn give(g: &mut game::game::Game, k: usize, l: &str) -> String {
     }
     if l.contains("UNSUPPORTED") || w.len() < 7 { return format!("  NOTE tick {}: an order of the driver's this runner cannot give: {}", k, l); }
     if let Some(n) = seat { if n >= g.seats.len() { return format!("  NOTE tick {}: an order for seat {} in a game of {}: {}", k, n, g.seats.len(), l); } }
-    let at = [w[4].parse::<f64>().unwrap(), w[5].parse::<f64>().unwrap(), w[6].parse::<f64>().unwrap()];
+    // (A LINE FROM OUTSIDE IS MEASURED, NEVER TAKEN: the page gives an order made between two ticks by this line (src/host/rustgame.ts), and a door or a
+    //  man the page holds that this game has not got (an object from before a restart) comes as place -1 or past the table's end. An index past a
+    //  table is a stop, and a stop is the game lost: such a line is an order this side cannot give, said in the log like every other.)
+    let cannot = |why: &str| format!("  NOTE tick {}: an order of the driver's this runner cannot give ({}): {}", k, why, l);
+    let num = |i: usize| w.get(i).and_then(|x| x.parse::<f64>().ok());
+    let (Some(x), Some(y), Some(z)) = (num(4), num(5), num(6)) else { return cannot("its place is no three numbers") };
+    let at = [x, y, z];
     let who = match w[2] { "-" => None, "all" => Some(Who::All), "red" => Some(Who::Red), "blue" => Some(Who::Blue), x => match x.parse::<f64>() { Ok(n) => Some(Who::Num(n)), Err(_) => { return format!("  NOTE tick {}: a `who` this runner cannot give: {}", k, l); } } };
+    let man = |i: usize| w.get(i).and_then(|x| x.parse::<usize>().ok()).and_then(|n| g.guards.get(n).copied());
     let t = match w[3] {
         "floor" => {
             // (a floor target that carries a wall: ` wall <index> <box> <alongX> <u> <side> <ok> <outer> x<why as hex>`, mission.ts wallTail)
             let wall = if w.get(7) == Some(&"wall") && w.len() >= 16 {
-                let n = |i: usize| w[i].parse::<f64>().unwrap();
-                let hex = &w[15][1..];
-                let why = String::from_utf8((0..hex.len() / 2).map(|i| u8::from_str_radix(&hex[2 * i..2 * i + 2], 16).unwrap()).collect()).unwrap();
-                Some(game::wallcharge::WallSpot { index: n(8), box_: game::ids::BoxId::from_ix(w[9].parse().unwrap()), along_x: w[10] == "1", u: n(11), side: n(12), ok: w[13] == "1", why, outer: match w[14] { "-1" => None, x => Some(x == "1") } })
+                let hex = w[15].get(1..).unwrap_or("");
+                let bytes: Option<Vec<u8>> = (0..hex.len() / 2).map(|i| hex.get(2 * i..2 * i + 2).and_then(|b| u8::from_str_radix(b, 16).ok())).collect();
+                let why = bytes.and_then(|b| String::from_utf8(b).ok());
+                let bx = w[9].parse::<usize>().ok();   // (a box is a number of the level's list: no table here to measure it against)
+                let (Some(index), Some(bx), Some(u), Some(side), Some(why)) = (num(8), bx, num(11), num(12), why) else { return cannot("its wall is not written whole") };
+                Some(game::wallcharge::WallSpot { index, box_: game::ids::BoxId::from_ix(bx), along_x: w[10] == "1", u, side, ok: w[13] == "1", why, outer: match w[14] { "-1" => None, x => Some(x == "1") } })
             } else { None };
             let serial = g.serial(); T::Floor(game::orders::OrderTargetFloor { at, wall, thing: None, serial })
         }
-        "door" => T::Door(game::orders::OrderTargetDoor { at, door: game::ids::DoorId::from_ix(w[8].parse().unwrap()), side: w[9].parse().unwrap() }),
-        "none" => T::None(game::orders::OrderTargetNone { at, man: if w.len() > 8 { Some(g.guards[w[8].parse::<usize>().unwrap()]) } else { None } }),
-        _ => T::Foe(game::orders::OrderTargetFoe { at, foe: g.guards[w[8].parse::<usize>().unwrap()] }),
+        "door" => {
+            let (Some(d), Some(side)) = (w.get(8).and_then(|x| x.parse::<usize>().ok()).filter(|&n| n < g.dr.len()), num(9)) else { return cannot("a door this game has not got") };
+            T::Door(game::orders::OrderTargetDoor { at, door: game::ids::DoorId::from_ix(d), side })
+        }
+        "none" => {
+            if w.len() > 8 { let Some(m) = man(8) else { return cannot("a man this game has not got") }; T::None(game::orders::OrderTargetNone { at, man: Some(m) }) }
+            else { T::None(game::orders::OrderTargetNone { at, man: None }) }
+        }
+        "foe" => { let Some(foe) = man(8) else { return cannot("a man this game has not got") }; T::Foe(game::orders::OrderTargetFoe { at, foe }) }
+        _ => return cannot("a kind of target it does not know"),
     };
     let why = match seat {
         Some(n) => { let sid = g.seats[n]; game::seats::with_seat(g, sid, &mut |v: &mut game::game::Game| game::orders::squad_orders_give(v, w[1], Some(&t), who, None)) }
@@ -241,6 +257,17 @@ pub fn call(g: &mut game::game::Game, k: usize, rule: &str) -> String {
         }
         // (PT_NV=1 with the mains cut: the scripted player puts Sam's goggles down, `g.player.nv = true`)
         "nv_on" => { let p = g.player; g.pl[p].nv = true; format!("  the driver's write before tick {}: the player's goggles down", k) }
+        // (the response team staged with the alarm at a place the TypeScript side chose: mission.ts `qrf_stage_rack` → `call qrf_stage_at x y z`)
+        "qrf_stage_at" => {
+            let n: Vec<f64> = all[1..].iter().filter_map(|x| x.parse::<f64>().ok()).collect();
+            if n.len() != 3 { return format!("  NOTE tick {}: qrf_stage_at takes three numbers: {:?}", k, all); }
+            g.tune.qrf = true; g.tune.qrf_eta = 14.0; g.tune.qrf_size = 4.0; g.tune.perimeter = false; g.tune.qrf_squad = true;
+            g.alarm.placed = true; g.alarm.pos = [n[0], n[1], n[2]]; g.alarm.raised_at = g.time;
+            let r = game::qrf::request_qrf(g, game::qrf::QrfReason::Panel);
+            format!("  the rule called before tick {}: the response team staged with the alarm at {:?}, request_qrf(panel) -> {}", k, n, r)
+        }
+        // (`--case lock-key`: the door's key on the player's ring before the squad is sent through it, `g.player.keys.add(lock)`: `call key_add <lock>`)
+        "key_add" => match arg { Some(lock) => { let p = g.player; g.pl[p].keys.add(String::from(lock)); format!("  the case's write before tick {}: the key '{}' on the player's ring ({} keys)", k, lock, g.pl[p].keys.len()) } None => format!("  NOTE tick {}: key_add takes a lock's name", k) },
         "restart" => { game::game::game_restart(g, None); format!("  the rule called before tick {}: restart (the player's own); {} guards, time {}", k, g.guards.len(), g.time) }
         _ => format!("  NOTE tick {}: a rule the driver called that this runner does not know: {}", k, rule),
     }

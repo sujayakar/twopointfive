@@ -118,13 +118,8 @@ pub fn smoke_grid_along(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
     if !g.cpu_smoke.grid.as_ref().unwrap().stands {
         return -1.0;
     }
-    let stamp = seam_sim_stamp(g);
+    let stamp = g.sim_stamp;   // (`st.stamp`, sense.ts:151: the stamp of the game's block, the one the lamps' shade and the dust hand to rust/sim)
     sim::bricks::trans(g.sim, stamp, a, b, g.k.sense.smoke.sigma)
-}
-
-/// The stamp of the game's block (SimState.stamp): bricks' tables are remade when it differs. No guess will do: 0 never remakes them after a reset.   (sense.ts:151)
-fn seam_sim_stamp(g: &mut crate::game::Game) -> f64 {
-    todo!("needs: SimState.stamp of the game's block (sense.ts:151; SmokeGrid.sim is Opaque, and neither the skeleton nor rust/sim's state.rs holds a stamp)")
 }
 
 /// The light that comes round on a point: the nearest square metre in clear sight, else 0.   (sense.ts SmokeGrid.glowAt)

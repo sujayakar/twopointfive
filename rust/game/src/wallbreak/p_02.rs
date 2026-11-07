@@ -723,14 +723,8 @@ pub fn wall_break_reset(g: &mut crate::game::Game, silent: Option<bool>) {
     }
 }
 
-/// CHECKPOINT: a clone of `Game` replaces it (conventions 6, doors-kit.md); nothing in the skeleton calls it.   (wallbreak.ts WallBreak.snapshot)
-pub fn wall_break_snapshot(g: &mut crate::game::Game) -> Option<crate::wallbreak::WallsSave> { todo!("not translated: a checkpoint, the state's clone replaces it") }
 
-/// CHECKPOINT: a clone of `Game` replaces it (conventions 6, doors-kit.md); nothing in the skeleton calls it.   (wallbreak.ts WallBreak.check)
-pub fn wall_break_check(g: &mut crate::game::Game, s: Option<&crate::wallbreak::WallsSave>) -> Option<String> { todo!("not translated: a checkpoint, the state's clone replaces it") }
 
-/// CHECKPOINT: a clone of `Game` replaces it (conventions 6, doors-kit.md); nothing in the skeleton calls it.   (wallbreak.ts WallBreak.restore)
-pub fn wall_break_restore(g: &mut crate::game::Game, s: Option<&crate::wallbreak::WallsSave>) { todo!("not translated: a checkpoint, the state's clone replaces it") }
 
 /// One line of the walls' state, for the checks.   (wallbreak.ts WallBreak.summary)
 pub fn wall_break_summary(g: &mut crate::game::Game) -> String {

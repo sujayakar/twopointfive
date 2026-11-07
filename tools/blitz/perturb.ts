@@ -13,6 +13,11 @@
 //   mains      the mains cut for some seconds (`game.setBlackout`)
 //   save/load  the save controller's own save by hand and the load of the last one made (`saves.write`, `saves.load`)
 //   restart    the pause card's restart (`game.restart`)
+// QA_PERTURB_ALARM=<tick>: THE RESPONSE TEAM CALLED at that tick, as tools/qa/qrf-squad-check.ts calls it (the response switched on, the squad's own door and
+// room code for it (`tune.qrfSquad`), four men fourteen seconds out, the alarm's place put on one of the team, `requestQrf(g, 'panel')`), and the alarm's
+// place put on one of the team again every twenty seconds while they are out: two casts of the door tools on one floor.
+// A level with no response team of its own refuses the call (the compound and the warehouse have none; the depot, the records office, the bazaar, the
+// crossing, the police post and the snatch have): the line then says `called (false)` and `no-team`.
 // QA_PERTURB_RATE=<k> scales every rate (1); QA_PERTURB_ONLY / QA_PERTURB_SKIP=<kinds, comma>; QA_PERTURB_FROM=<tick> (120).
 // THE LOG: a line a perturbation in `<RH_TICKS>/<word>.log`, in the soak's own shape (`  [seed N] 12.34s f741 STIM order: …`), so tools/blitz/fuzz-diff.ts
 // reads a squad run as it reads a soak. A perturbation that throws is logged with what it threw (its stack in `<word>.throws.txt`) and the play goes on.
@@ -25,7 +30,7 @@ const mulberry = (a: number) => () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t 
 
 export async function lay(W: any): Promise<void> {
   const seed = Number(process.env.QA_PERTURB); if (!Number.isFinite(seed)) throw new Error(`QA_PERTURB=${process.env.QA_PERTURB}: a seed (a number)`);
-  const { killGuard, fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
+  const { killGuard, fireWeapon } = await import(`${ROOT}/src/game/combat.ts`); const { requestQrf } = await import(`${ROOT}/src/game/qrf.ts`);
   const g = W.game, rng = mulberry(seed * 104729 + 977), K = Number(process.env.QA_PERTURB_RATE ?? 1), FROM = Number(process.env.QA_PERTURB_FROM ?? 120);
   const only = new Set((process.env.QA_PERTURB_ONLY ?? '').split(',').filter(Boolean)), skip = new Set((process.env.QA_PERTURB_SKIP ?? '').split(',').filter(Boolean));
   const kinds = Object.keys(RATES).filter(k => !skip.has(k) && (!only.size || only.has(k)));
@@ -59,9 +64,19 @@ export async function lay(W: any): Promise<void> {
     load() { const S = g.saves; if (!S || !saved.length) return null; const key = saved[saved.length - 1], why = S.load(g, key); return why ? `refused: ${why}` : `${key.replace(/^.*save\./, '')} put back`; },
     restart() { g.restart('fuzz: the pause card\'s restart'); saved.length = 0; return 'the pause card'; },
   };
+  const ALARM = process.env.QA_PERTURB_ALARM ? Number(process.env.QA_PERTURB_ALARM) : -1;
+  // (THE NAMES THIS FILE WRITES ON THE GAME. The walk for writes by name watches what the files of tools/qa write, read as each loads (tools/blitz/expose.ts);
+  // this file is not one of them, so it says its own: without this the Rust game dealt the team at the page's 75 s while the puppet read 14.)
+  if (ALARM >= 0) { const TW = (globalThis as any).__tpsToolWrites; if (TW?.names) { for (const k of ['qrf', 'qrfSquad', 'qrfEta', 'qrfSize', 'placed', 'pos', 'raisedAt']) TW.names.add(k); TW.version++; } }
+  const alarm = (first: boolean): string | null => { const T = team(), m = T.length ? pick(T).char.pos : g.player.char.pos, Q = g.qrf; if (!Q) return null;
+    if (first) { g.tune.qrf = true; g.tune.qrfSquad = true; g.tune.qrfEta = 14; g.tune.qrfSize = 4; }
+    g.alarm.placed = true; g.alarm.pos = [m[0], m[1], m[2]]; g.alarm.raisedAt = g.time;
+    const asked = first ? requestQrf(g, 'panel') : null;
+    return `${first ? `the response team called (${asked})` : 'the alarm\'s place moved'} to ${at(m)} · state ${Q.state}${Q.cast ? ' · the cast is built' : ''}${Q.op ? ' · on an entry' : ''} · its last note: ${Q.log?.[Q.log.length - 1]?.what ?? 'none'}`; };
   const step = W.step;
   W.step = function (this: any, ...a: any[]) {
+    if (ALARM >= 0 && n >= ALARM && (n - ALARM) % 1200 === 0 && !g.ticking) { let d: string | null; try { d = alarm(n === ALARM); } catch (e) { d = `THREW ${String((e as Error)?.message ?? e).slice(0, 200)}`; if (file) appendFileSync(file.replace(/\.log$/, '.throws.txt'), `f${n} alarm: ${String((e as Error)?.stack ?? e)}\n`); } if (d !== null) say(`STIM alarm: ${d}`); }
     if (n >= FROM && !g.ticking) for (const k of kinds) { if (rng() >= RATES[k] * K / 3600) continue; let d: string | null; try { d = DO[k](); } catch (e) { d = `THREW ${String((e as Error)?.message ?? e).slice(0, 200)}`; if (file) appendFileSync(file.replace(/\.log$/, '.throws.txt'), `f${n} ${k}: ${String((e as Error)?.stack ?? e)}\n`); } if (d !== null) say(`STIM ${k}: ${d}`); }
     n++; return step.apply(this, a); };
-  say(`--- perturbations laid, seed ${seed}: ${kinds.join(', ')}; rates a minute x${K}`);
+  say(`--- perturbations laid, seed ${seed}: ${kinds.join(', ')}; rates a minute x${K}${ALARM >= 0 ? `; the response team called at tick ${ALARM}` : ''}`);
 }

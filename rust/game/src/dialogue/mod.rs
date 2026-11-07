@@ -10,7 +10,7 @@ pub use p_02::{place_name, is_office, with_the, level_rects, rect_dist, own_plac
 pub mod p_03;
 pub use p_03::{sam_memory_of, peek_give, sam_stage_of, sam_facts, sam_line_fits, choose_sam_line, pick_sam_line, sam_line_for, sam_key_line_for, sam_remark_for, synth_ctx, blocked_phrase, lint_dialogue, coverage_matrix};
 pub mod p_04;
-pub use p_04::{sam_coverage, script_coverage, line_length_report, force_script, forced_script_of, peek_script, script_by_id, script_for, script_fits, script_live, beat_for, him_of};
+pub use p_04::{force_script, forced_script_of, peek_script, script_by_id, script_for, script_fits, script_live, beat_for, him_of};
 pub mod p_05;
 pub use p_05::{radio_state, radio_live, radio_clear, handler_beat, tick_radio, pair_worst};
 pub mod p_06;

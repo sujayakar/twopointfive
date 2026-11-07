@@ -263,8 +263,4 @@ pub fn rescue_flush_send(g: &mut crate::game::Game, h: GuardId, goal: crate::res
     crate::game::game_say(g, h, text, Some(true), None, None);
 }
 
-/// A checkpoint: a clone of Game replaces it (conventions 6); nothing calls it.   (rescueflush.ts RescueFlush.snapshot)
-pub fn rescue_flush_snapshot(g: &mut crate::game::Game) -> crate::rescueflush::RescueFlushSnap { todo!("not translated: a clone of Game replaces a checkpoint") }
 
-/// A checkpoint: a clone of Game replaces it (conventions 6); nothing calls it.   (rescueflush.ts RescueFlush.restore)
-pub fn rescue_flush_restore(g: &mut crate::game::Game, s: &crate::rescueflush::RescueFlushSnap) { todo!("not translated: a clone of Game replaces a checkpoint") }

@@ -859,12 +859,6 @@ pub fn furniture_reset(g: &mut crate::game::Game) {
     // the AI was told of every piece that went: it is told the level is back too, unless the walls' own reset has just said so
     furniture_note_reset(g, FurnitureNoteResetCause::Reset);
 }
-/// (furnblast.ts Furniture.snapshot) not translated: a checkpoint is a clone of Game (conventions 6)
-pub fn furniture_snapshot(g: &mut crate::game::Game) -> Option<crate::furnblast::FurnSave> { todo!("not translated: checkpoints are a clone of Game") }
-/// (furnblast.ts Furniture.check) not translated: a checkpoint is a clone of Game
-pub fn furniture_check(g: &mut crate::game::Game, s: Option<&crate::furnblast::FurnSave>) -> Option<String> { todo!("not translated: checkpoints are a clone of Game") }
-/// (furnblast.ts Furniture.restore) not translated: a checkpoint is a clone of Game
-pub fn furniture_restore(g: &mut crate::game::Game, s: Option<&crate::furnblast::FurnSave>) { todo!("not translated: checkpoints are a clone of Game") }
 /// one 'reset' row in the walls' change feed, unless its last row already says exactly that at this instant (furnblast.ts Furniture.noteReset)
 pub fn furniture_note_reset(g: &mut crate::game::Game, cause: crate::furnblast::FurnitureNoteResetCause) {
     let say = match g.destr.walls.changes.last() {

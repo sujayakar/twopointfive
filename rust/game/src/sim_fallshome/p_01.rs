@@ -64,10 +64,6 @@ pub fn fall_store_new(g: &mut crate::game::Game, home: crate::Opaque) -> crate::
     FallStore { base, home }
 }
 
-/// The block as doubles, which only the `here` bodies and the reads went by. (fallshome.ts FallStore.d)
-pub fn fall_store_d(g: &mut crate::game::Game) -> Vec<f64> {
-    todo!("needs: no such thing: the block is typed columns in Rust, not a Vec of doubles; drop this stub")
-}
 
 /// Landings waiting in the glass's list. (fallshome.ts FallStore.waiting)
 pub fn fall_store_waiting(g: &mut crate::game::Game) -> f64 {
@@ -190,30 +186,10 @@ pub fn cell(x: f64, z: f64) -> f64 {
     if ix >= 0.0 && ix < FALL_CELLS_X && iz >= 0.0 && iz < FALL_CELLS_Z { iz * FALL_CELLS_X + ix } else { NCELLS }
 }
 
-/// TWIN of sim::falls::deposit, whose call needs the slot. (fallshome.ts depositHere)
-pub fn deposit_here(d: &mut Vec<f64>, o: f64, x: f64, z: f64, amount: f64) {
-    todo!("needs: g: the twin's call takes the game's slot and this stub has none; nothing in Rust calls it, so drop the stub")
-}
 
-/// TWIN of sim::falls::schedule, whose call needs the slot. (fallshome.ts scheduleHere)
-pub fn schedule_here(d: &mut Vec<f64>, o: f64, l: f64, t: f64, x: f64, y: f64, z: f64, name: f64, gain: f64, rate: f64, amount: f64, who: f64, event: f64, level: f64, dust: f64, cap: f64) -> bool {
-    todo!("needs: g: the twin's call takes the game's slot and this stub has none; nothing in Rust calls it, so drop the stub")
-}
 
-/// TWIN of sim::falls::due, whose call needs the slot. (fallshome.ts dueHere)
-pub fn due_here(d: &mut Vec<f64>, o: f64, l: f64, time: f64, level: f64, gap: f64) -> Vec<crate::sim_fallshome::FallDue> {
-    todo!("needs: g: the twin's call takes the game's slot and this stub has none; nothing in Rust calls it, so drop the stub")
-}
 
-/// TWIN of sim::falls::step, whose call needs the slot. (fallshome.ts stepHere)
-pub fn step_here(d: &mut Vec<f64>, o: f64, x: f64, z: f64, level: f64, crunch_full: f64, grind: f64, gain: f64, add: f64) -> crate::sim_fallshome::StepHere {
-    todo!("needs: g: the twin's call takes the game's slot and this stub has none; nothing in Rust calls it, so drop the stub")
-}
 
-/// TWIN of sim::falls::clear, whose call needs the slot. (fallshome.ts clearHere)
-pub fn clear_here(d: &mut Vec<f64>, o: f64, l: f64, list_only: bool) {
-    todo!("needs: g: the twin's call takes the game's slot and this stub has none; nothing in Rust calls it, so drop the stub")
-}
 
 #[cfg(test)]
 mod tests {

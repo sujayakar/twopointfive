@@ -548,7 +548,7 @@ pub fn wall_words(g: &mut crate::game::Game, i: f64, m: &crate::kit::MemberKit) 
 pub fn kit_changed(g: &mut crate::game::Game, i: f64) -> bool {
     let mut m = kit_shown(g, i);
     let mut d = kit_issued_shown(g, i, None);
-    kit_rows(g, i).iter().any(|r| row_has(r, &m) && { let (a, b) = (row_get(g, r, &mut m), row_get(g, r, &mut d)); !same_value(&a, &b) })
+    kit_rows(g, i).iter().any(|r| row_has(g, r, &m) && { let (a, b) = (row_get(g, r, &mut m), row_get(g, r, &mut d)); !same_value(&a, &b) })
 }
 
 /// Why member i's card with one row set to `v` is refused, or null: it fits.   (kit.ts overWhy)
@@ -585,7 +585,7 @@ pub fn peek(g: &mut crate::game::Game, i: f64, field: crate::kit::KitField, dir:
     let n = row.values.len();
     let at = row.values.iter().position(|x| same_value(x, &cur)).unwrap_or(0);
     let counted = matches!(row.values.first(), Some(KitValue::Num(_)));
-    let stuck = if !row_has(&row, &card) {
+    let stuck = if !row_has(g, &row, &card) {
         alloc::format!("no {} on this card as it stands", row.label.to_lowercase())
     } else {
         row_fixed(g, &row, &card)
@@ -662,7 +662,7 @@ pub fn set_row(g: &mut crate::game::Game, i: f64, field: crate::kit::KitField, v
     let Some(row) = row_of(g, i, field) else { return false; };
     if !offers(&row.values, v) { return false; }
     let card = g.m.kit.kit.members[at].clone();
-    if (!row_has(&row, &card) || !row_fixed(g, &row, &card).is_empty()) && !same_value(v, &row_get_member(g, &row, at)) { return false; }
+    if (!row_has(g, &row, &card) || !row_fixed(g, &row, &card).is_empty()) && !same_value(v, &row_get_member(g, &row, at)) { return false; }
     if !over_why(g, i, &row, v).unwrap_or_default().is_empty() { return false; }
     write_row(g, i, &row, v);
     true
@@ -716,7 +716,7 @@ pub fn kit_preset_of(g: &mut crate::game::Game, i: f64) -> Option<crate::kit::Ki
     let mut m = kit_shown(g, i);
     for p in [KitPreset::Issued, KitPreset::Quiet, KitPreset::Loud] {   // (KIT_PRESETS' order)
         let mut c = kit_preset_card(g, i, p);
-        let same = kit_rows(g, i).iter().all(|r| (!row_has(r, &c) && !row_has(r, &m)) || { let (a, b) = (row_get(g, r, &mut c), row_get(g, r, &mut m)); same_value(&a, &b) });
+        let same = kit_rows(g, i).iter().all(|r| (!row_has(g, r, &c) && !row_has(g, r, &m)) || { let (a, b) = (row_get(g, r, &mut c), row_get(g, r, &mut m)); same_value(&a, &b) });
         if same { return Some(p); }
     }
     None
@@ -753,7 +753,7 @@ pub fn rows_moved(g: &mut crate::game::Game, i: f64, a: &crate::kit::MemberKit, 
 /// rowsMoved's walk, over the cards themselves: a read may home a card's picks and that lands on them.
 fn moved_rows(g: &mut Game, rows: &[KitRow], a: &mut MemberKit, b: &mut MemberKit) -> Vec<KitField> {
     rows.iter()
-        .filter(|r| (row_has(r, a) || row_has(r, b)) && { let (x, y) = (row_get(g, r, a), row_get(g, r, b)); !same_value(&x, &y) })
+        .filter(|r| (row_has(g, r, a) || row_has(g, r, b)) && { let (x, y) = (row_get(g, r, a), row_get(g, r, b)); !same_value(&x, &y) })
         .map(|r| r.field)
         .collect()
 }
@@ -794,14 +794,8 @@ pub fn kit_wears(g: &mut crate::game::Game, i: f64, from: &crate::kit::MemberKit
     kit_paste_peek(g, i, from).changed.is_empty()
 }
 
-/// The browser's storage: an interface with no body in the TypeScript.   (kit.ts Store.getItem)
-pub fn store_get_item(g: &mut crate::game::Game, k: &str) -> Option<String> { todo!("host work, no caller: kit.ts:1072 is an interface, the browser's storage; kitLoad and kitSave are out of the game") }
 
-/// The browser's storage: an interface with no body in the TypeScript.   (kit.ts Store.setItem)
-pub fn store_set_item(g: &mut crate::game::Game, k: &str, v: &str) { todo!("host work, no caller: kit.ts:1072 is an interface, the browser's storage; kitLoad and kitSave are out of the game") }
 
-/// The browser's storage: an interface with no body in the TypeScript.   (kit.ts Store.removeItem)
-pub fn store_remove_item(g: &mut crate::game::Game, k: &str) { todo!("host work, no caller: kit.ts:1072 is an interface, the browser's storage; kitLoad and kitSave are out of the game") }
 
 /// `out[field] = v` of a stored value, for a row with no reader of its own (one its value was found on, so the value's kind fits the field).
 fn put_field(card: &mut MemberKit, field: KitField, v: &KitValue) {

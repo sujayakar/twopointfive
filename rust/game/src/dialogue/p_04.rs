@@ -7,14 +7,8 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Tooling, read only by tools/qa/dialogue-probes.ts: not translated.   (dialogue.ts samCoverage)
-pub fn sam_coverage(g: &mut crate::game::Game) -> crate::dialogue::SamCoverage { todo!("tooling: read only by tools/qa, not translated") }
 
-/// Tooling, read only by tools/qa/dialogue-probes.ts: not translated.   (dialogue.ts scriptCoverage)
-pub fn script_coverage() -> Vec<crate::dialogue::ScriptCoverageItem> { todo!("tooling: read only by tools/qa, not translated") }
 
-/// Tooling, read only by tools/qa/dialogue-probes.ts and guidewords-check.ts: not translated.   (dialogue.ts lineLengthReport)
-pub fn line_length_report(g: &mut crate::game::Game) -> crate::dialogue::LineLengthReport { todo!("tooling: read only by tools/qa, not translated") }
 
 /// QA and the checkpoint: make this man's NEXT deal a named script (`None` = the pools).   (dialogue.ts forceScript)
 pub fn force_script(g: &mut crate::game::Game, talk: GameTalkId, id_2: Option<&str>) {

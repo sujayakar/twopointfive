@@ -155,7 +155,7 @@ export class RustHost {
   private lastState: Uint8Array | null = null; private lastBlock: Uint8Array | null = null;
   private pup: any; private say: (s: string) => void;
   private hoverApplied: unknown = null; private visApplied = NaN; private wholeNow = false; private uploadDone = false;
-  private missionRef: any = null; private loadsRef = 0; private stageRef: any = null; private downRef = -1; private outQ: { arm: string; e: any }[] = [];
+  private lastChanged = true; private missionRef: any = null; private loadsRef = 0; private stageRef: any = null; private downRef = -1; private outQ: { arm: string; e: any }[] = [];
   private asks: { after(): void } | null = null; asked = 0;
   private threw: Record<string, number> = {}; private warmDue = false;
   private dieRef: any = undefined; dieMoved = 0; private ticksFile = '';
@@ -183,7 +183,7 @@ export class RustHost {
   private live(): boolean { return !!this.h && !this.startDue; }
   surfaceDispatching(): boolean { return false; }
   inHook(): boolean { return this.dispatching; }
-  surfaceCall(row: number, bytes: Uint8Array): Uint8Array { const X = this.F.X; this.scanFlush(); this.busy++; try { { const hb: Uint8Array = this.B.hostHalf(this.g, this.B.reg, this.lastCmds ?? []); this.F.hand(hb, (p, n) => X.face_host_half(this.h, p, n)); this.viewLive(); }   /* (a rule that crosses reads the cursor and the cameras: they come with the host's half, and the tool has moved them since the tick) */ this.F.hand(bytes, (p, n) => X.face_call(this.h, row, p, n)); const out = this.F.outView().slice(); this.applyStep(); this.dispatch(); return out; } finally { this.busy--; this.scanRebase(); } }
+  surfaceCall(row: number, bytes: Uint8Array): Uint8Array { const X = this.F.X; this.scanFlush(); this.busy++; try { { const hb: Uint8Array = this.B.hostHalf(this.g, this.B.reg, this.lastCmds ?? []); this.F.hand(hb, (p, n) => X.face_host_half(this.h, p, n)); this.viewLive(); }   /* (a rule that crosses reads the cursor and the cameras: they come with the host's half, and the tool has moved them since the tick) */ this.F.hand(bytes, (p, n) => X.face_call(this.h, row, p, n)); const out = this.F.outView().slice(); this.applyStep(); this.dispatch(); return out; } finally { this.busy--; if (this.lastChanged || OFF.has('skipwalk')) this.scanRebase(); } }   /* (a crossing whose apply changed nothing and sent no event left the puppet as the walk last saw it: no second walk. `RH_OFF=skipwalk` walks as before.) */
   /** what the tool wrote since the walk last looked goes to the Rust game */
   private scanFlush(): void { if (this.audit || !this.h) return; this.tapsOn?.sweep(); this.blockBack(); if (process.env.TPS_GAME_SCAN === '0') return; const t = now(); if (!this.scan) { this.scan = this.B.makeScan(this.g, this.B.reg, (b: Uint8Array) => { this.F.hand(b, (p, n) => this.F.X.face_write(this.h, p, n)); }, (q: string) => this.count(`scan: ${q}`)); this.scan.rebase(); } else this.scan.flush(); this.T.scan += now() - t; }
   /** STAND-IN (belongs with the scan: a write by name of a field that lives in the block): WHAT THE TOOL WROTE INTO rust/sim's BLOCK. A door's swing and latch, a man's place and the die live in the block (the puppet's objects read and
@@ -429,7 +429,7 @@ export class RustHost {
     const g = this.g, X = this.F.X, B = this.B, t0 = now(), made0 = MADE.n; let t = t0; this.mBefore = g.mission;
     X.face_puppet(this.h, 0); const blob = this.F.outView(); this.stepBytes += blob.length; this.T.exportStep += now() - t;
     t = now(); const R = B.applyGame(g, blob, B.reg, { hooks: B.hooks, puppet: { ...this.pup, start: false } }); const el = now() - t; this.T.applyStep += el; if (el > this.worstApply) this.worstApply = el; this.missionRef = g.mission;   // (a mission the Rust game wrote is no start of a new game: only one a tool wrote behind it is)
-    if (R.out?.length) for (const e of R.out) this.outQ.push(e);
+    this.lastChanged = R.changed !== false || !!R.out?.length; if (R.out?.length) for (const e of R.out) this.outQ.push(e);
     this.after(R); this.copyBlock(); this.steps++; this.nest += now() - t0;
     // (STAND-IN, belongs in the importer (a made row is filled whole): A MAN THE APPLY MADE, the Rust game having restarted or spawned (inside its tick, or
     // by a call that crossed), holds only the fields of the every-tick list: his rifle's rows, his kit, read `undefined` to whatever reads the puppet
@@ -455,7 +455,7 @@ export class RustHost {
   // APPLY replaced is the Rust game's own doing, not a game the TypeScript put in the puppet's place: the host's reference follows it)
   private mBefore: any = null;
   private newRun(): void { const g = this.g, m = g.mission;
-    if (m !== this.mBefore) { if (this.missionRef === this.mBefore) { this.missionRef = m; this.t0Ref = m?.t0; } this.mBefore = m; return; }
+    if (m !== this.mBefore) { this.missionRef = m; this.t0Ref = m?.t0; this.mBefore = m; return; }   // (the apply made the record anew: followed, with its clock's start)
     if (!m || m !== this.missionRef || m.t0 === this.t0Ref || OFF.has('newrun')) return;
     g.mission = { ...m, stats: { ...m.stats } }; this.missionRef = g.mission; this.t0Ref = m.t0; this.count('the Rust game began its mission again: the puppet\'s mission record made anew'); }
   /** THE WHOLE APPLY: every field the bridge carries (a field the Rust game owns and TypeScript cannot hold, the box mirror among them, is kept beside the

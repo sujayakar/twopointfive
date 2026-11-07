@@ -409,8 +409,6 @@ pub fn fire_draws(g: &mut crate::game::Game) {
     }
 }
 
-/// One line for the panel and the probes. Host only: not translated (conventions 6), the stub stays. (fire.ts fireSummary)
-pub fn fire_summary(g: &mut crate::game::Game) -> String { todo!("host only: the panel and the probes") }
 
 #[cfg(test)]
 mod tests {
