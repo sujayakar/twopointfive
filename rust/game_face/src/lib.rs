@@ -260,10 +260,11 @@ fn roll_of_the_host() -> f64 { 0.0 }
 /// # Safety
 /// `p`, `n` name bytes the host wrote into memory from face_alloc.
 #[no_mangle]
-pub unsafe extern "C" fn face_call(h: u32, f: u32, p: *const u8, n: usize) {
+pub unsafe extern "C" fn face_call(h: u32, f: u32, view: i32, p: *const u8, n: usize) {
     game::call_gen::HOST_ROLL = Some(roll_of_the_host);
     let b = bytes(p, n);
-    let a = with(h, |x| game::call_gen::call(&mut x.g, f, b));
+    // (a caller that hands in a seat's view is asking about that seat: the call runs as that seat, whoever stands on the game)
+    let a = with(h, |x| if view < 0 { game::call_gen::call(&mut x.g, f, b) } else { game::seats::with_seat(&mut x.g, <game::ids::SeatId as game::ids::Id>::from_ix(view as usize), &mut |g| game::call_gen::call(g, f, b)) });
     out(a);
 }
 /// # Safety
