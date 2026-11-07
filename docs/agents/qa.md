@@ -360,6 +360,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   page's side, a stored card from before the tree, moved into `kittree-rows`, which is green; `mate40` lost its "no order, or not a tree" line;
   `KITTREE_BREAK=1` is kittree.ts's own hook and still fails `rows`, 9 lines). THE DOOR-TOOLS RIG'S PIN IS OUT (`doortools-probes.ts rig` wrote
   `OWNBLOW.on` off for 25 probes; refused, so nothing moved but the tags): a line of those probes that fails now reads as the page's side.
+  ROWS OF THE RUST GAME ARE PRINTED FROM A RUN, AND THE LIST IS FIVE TABLES (2026-11-07; `tools/qa/red-rows.ts`, `expected-red.ts RED_TABLES`).
+  `bun run tools/qa/probes.ts <family> > run.txt 2>&1; bun run tools/qa/red-rows.ts run.txt` prints a row for every red probe whose failing lines
+  are all the page's own side (nothing refused by the fold, no line under the "other side" note): 'real' with the place where the Rust game
+  panicked, 'open' where the check threw on a function that went with the tick, 'maybe' with the count and the first failing line otherwise. It
+  writes NO row for a probe that still writes a settled row (a comment line names the rows instead: clear the check first), because a row over
+  a check's own stale red would hide a real one behind it. It cannot tell a line that asks a build from before a settled rule (those are deleted,
+  not listed): read each row before keeping it. A row made so carries `rust: true`, reads "ON THE RUST GAME" in the runner's table, and the
+  `LIST_READ_ON` line is printed only where an older row is in the table. The tables: `older` (the 41 rows in `expected-red.ts`, read on the
+  TypeScript game) and one file a group of check families, `expected-red-world.ts`, `-kit.ts`, `-doors.ts`, `-stealth.ts`, so that four hands-over
+  do not meet in one file; `holds-check` (8) is red on a name in two tables. A row changes no verdict, as ever.
   EVERY RUN OF A STAND AS IT OPENS IS READ AGAINST THE LIST OF EXPECTED REDS, FOLDED OR NOT (2026-11-07; `probes.ts`). The runner had read a folded
   probe's red against no row; since the deletion that was every probe of every run with no word, so nothing read the list on the named build:
   no EXPECTED RED / NEW RED / GREEN AGAIN, and a break word's closing line could not say whether it bit (`holds-check` (9), red by it). The

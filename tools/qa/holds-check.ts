@@ -127,15 +127,16 @@ const probeNames = [...known].filter(n => ran.has(n)).sort(), heldNames = probeN
     `probes.ts selftest-holds: exit ${p.exitCode}${said ? ` · ${said[2].slice(0, 150)}` : ` · ${(p.stderr.toString() || out).trim().split('\n').slice(-1)[0]?.slice(0, 150)}`}`); }
 
 // (8) THE EXPECTED REDS' ROWS (tools/qa/expected-red.ts), as far as a row is typed: its name is one the runner has (a name it no longer has can never read
-// EXPECTED or GREEN AGAIN); a row that is red on the old stand carries no bisect (the bisect raises words on the old stand, where it says
+// EXPECTED or GREEN AGAIN) and is in one table of the list only; a row that is red on the old stand carries no bisect (the bisect raises words on the old stand, where it says
 // the probe is red already); every word of a bisect is one the stand can raise, value and all (a word written alone is raised to 1), and none is a word the
 // probe's own holds put off (the bisect raised it by hand over the hold, and the plain run never has it); `leans` is an unsettled row's.
 // WHAT (8) CANNOT SEE: a family's word from a probe's name (the runner knows its names, not which of them it runs a probe under: a row keyed by a family's
 // word passes here and never reads EXPECTED or GREEN AGAIN), and anything a row says in prose.
-{ const { EXPECTED_RED } = await import('./expected-red.ts'), { heldWords } = await import('./stand.ts'), can = new Set(heldWords(FROZEN_HOLDS as Record<string, string>));
+{ const { EXPECTED_RED, RED_TABLES } = await import('./expected-red.ts'), { heldWords } = await import('./stand.ts'), can = new Set(heldWords(FROZEN_HOLDS as Record<string, string>));
   const list: Record<string, RedRow> = BREAK ? { ...EXPECTED_RED, 'no-such-probe': { is: 'open', line: 'the break', whose: 'nobody' },
     ...(heldNames[0] ? { [heldNames[0]]: { is: 'open', bisect: { enough: [holdsOf(heldNames[0])[0].word] }, line: 'the break', whose: 'nobody' } } : {}) } : EXPECTED_RED;
-  const bad: string[] = [];
+  const bad: string[] = [], tableOf = new Map<string, string>();
+  for (const [t, rows] of Object.entries(RED_TABLES)) for (const n of Object.keys(rows)) { if (tableOf.has(n)) bad.push(`${n}: a row in two tables (${tableOf.get(n)}, ${t}): the later one hides the earlier`); tableOf.set(n, t); }
   for (const [n, r] of Object.entries(list)) {
     if (!known.has(n)) bad.push(`${n}: no name the runner has`);
     if (r.leans && (r.is === 'stale' || r.is === 'real')) bad.push(`${n}: \`leans\` on a settled row`);

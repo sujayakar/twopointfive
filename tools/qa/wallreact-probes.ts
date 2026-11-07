@@ -20,7 +20,6 @@ const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
-const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
 const { WALLS } = await import(`${ROOT}/src/game/wallbreak.ts`);
 const { WALLREACT, WALLREACT_STATS, WALLREACT_LOG, WALLREACT_DEBUG, wallReactOf } = await import(`${ROOT}/src/game/wallreact.ts`);
 const { planApproach, plansOf } = await import(`${ROOT}/src/game/tactics.ts`);
@@ -42,8 +41,8 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
 const KNOBS0 = { ...WALLREACT };
 
 /** the scenario of a level's row stood up under a seed: the four outside, the defenders as dealt, Sam idle and unhurtable */
-export async function rig(level: string, seed: number, on = true) {
-  Math.random = seeded(seed); Object.assign(WALLREACT, KNOBS0); WALLREACT.on = on; DESTRUCTION.on = true;
+export async function rig(level: string, seed: number) {
+  Math.random = seeded(seed); Object.assign(WALLREACT, KNOBS0);   // (the rule itself is settled and is not written: until 2026-11-07 the cover and crate probes each ran a second leg with it off)
   for (const k of Object.keys(WALLREACT_STATS)) (WALLREACT_STATS as any)[k] = 0; WALLREACT_LOG.length = 0;
   const log = console.log, err = console.error, warn = console.warn; let W: any;
   try {
@@ -132,9 +131,9 @@ function thru(B: any, p: number[], q: number[]): boolean {
 const tail = () => VERBOSE ? `\n    log: ${WALLREACT_LOG.join(' | ')}` : '';
 
 export async function wallreactCover(level: string): Promise<boolean> {
-  const F = family(`wallreact-cover [${level}]: the wall a man holds beside is blown from the far side — he leaves the spot, ends hidden from the hole; switch off, he stays`);
-  for (const on of [true, false]) {
-    const R = await rig(level, 3, on), g = R.g; const D = R.defs()[0], op = R.ops()[0];
+  const F = family(`wallreact-cover [${level}]: the wall a man holds beside is blown from the far side — he leaves the spot, ends hidden from the hole`);
+  for (const on of [true]) {
+    const R = await rig(level, 3), g = R.g; const D = R.defs()[0], op = R.ops()[0];
     // (the far side must not be ground his own mates stand on: a man does not run from a hole onto his mate's room — wallreact.ts threatFor)
     const lone = (s: Spot) => !R.defs().some((x: any) => x !== D && flat(x.gd.char.pos, v3.mad(s.mid, s.n, -2.5)) < 3.5);
     const S = spots(R, 2.6, true).flatMap(s => [s, flip(s)]).find(lone) ?? spots(R, 2.6, true)[0];
@@ -150,10 +149,10 @@ export async function wallreactCover(level: string): Promise<boolean> {
     if (on) {
       F.verdict(openAt0 && moved > 1.0 && WALLREACT_STATS.movedDef >= 1, 'the defender, open to the hole where he stood, leaves the spot', `stood ${at(d0)} (open to the far side: ${openAt0}) · now ${at(p1)}, ${f1(moved)} m off · moved as a holding man ${WALLREACT_STATS.movedDef}× · alive ${D.gd.state !== 'dead'}`);
       F.verdict(!still && D.mode === 'hold' && D.gd.state !== 'dead', '… and ends planted where a crouched chest is hidden from the hole', `open to the far side now: ${still} · mode ${D.mode} · pinned ${D.gd.pinned} · room ${D.room?.id ?? '-'}${tail()}`);
-    } else F.verdict(moved < 0.5 && openAt0 && still, 'switch off: he stays where he was put, open to the hole (the engine\'s build)', `moved ${f1(moved)} m · open before ${openAt0} · open now ${still} · wallreact rows ${WALLREACT_STATS.rows}`);
+    }
 
     // the teammate: a fresh floor (the first hole would muddle the second), a hold beside the wall
-    const R2 = await rig(level, 4, on), g2 = R2.g, S2 = spots(R2, 2.6, true)[0], op2 = R2.ops()[0];
+    const R2 = await rig(level, 4), g2 = R2.g, S2 = spots(R2, 2.6, true)[0], op2 = R2.ops()[0];
     if (!S2 || !op2) { F.verdict(false, 'a partition and a teammate to stage', `spots ${spots(R2).length} · team ${R2.ops().length}`); continue; }
     for (const m of g2.guards) if (m.team !== 'operative') m.dazzledUntil = g2.time + 1e6; R2.F.blindFire = false;   // (the teammate is stood deep in the building by himself: what is asked is what HE does about the wall — the defenders are left blind for it)
     R2.hold(op2, S2.a, v3.mad(S2.a, S2.u, 6) as Vec3); R2.step(0.5);
@@ -166,7 +165,7 @@ export async function wallreactCover(level: string): Promise<boolean> {
       F.verdict(open0 && !openNow, '… out of the hole\'s line: nobody is left standing in it', `open to the far side on the old mark: ${open0} · where he stands now: ${openNow}${tail()}`);
       const O = g2.cover.openings.find((o: any) => o.id === B2?.key), risk = B2 ? g2.entry.riskAt([B2.at[0] + S2.n[0] * 1.2, 0, B2.at[2] + S2.n[2] * 1.2]) : null;
       F.verdict(!!O && B2.ops >= 0 && risk === O, 'the hole is in the squad\'s book: an opening for the unasked cover, and a way a round can come for the entry points', `team knows since ${f1(B2?.ops ?? -1)} s · in cover.openings ${!!O} · entry risk a stride in front of it: ${risk ? risk.id : 'none'} · dealt to: ${g2.orders.squad().filter((m: any) => g2.cover.of(m)?.o === O).map((m: any) => m.callsign).join(', ') || 'nobody free with a line'}`);
-    } else F.verdict(flat(mk, m0) < 0.1 && flat(q1, m0) < 0.6 && !g2.cover.openings.some((o: any) => String(o.id).startsWith('breach:')), 'switch off: his mark stands, no opening is added', `mark moved ${f1(flat(mk, m0))} m · he is ${f1(flat(q1, m0))} m off it · open now ${openNow}`);
+    }
   }
   return F.done();
 }
@@ -229,10 +228,10 @@ export async function wallreactPort(level: string): Promise<boolean> {
 /** for a check that stages the crate line under switches of its own (everygone-check.ts): `stage` runs once the level stands, `seen` gets what the man did */
 export interface CrateHook { stage?: (on: boolean) => void; /** `rows`: the change rows the blast files beside the defender (within WALLREACT.nearM of his feet) */ seen?: (x: { on: boolean; rows: number; moved: number; hidden: boolean; open: boolean; near: boolean }) => void; /** the leg with the module on, and no other */ onOnly?: boolean }
 export async function wallreactCrate(level: string, orElse?: string, hook?: CrateHook): Promise<boolean> {
-  const F = family(`wallreact-crate [${level}]: the crate a man crouches behind is blown — he goes to other cover; switch off, he kneels behind nothing`);
+  const F = family(`wallreact-crate [${level}]: the crate a man crouches behind is blown — he goes to other cover`);
   let asked = false;
-  for (const on of hook?.onOnly ? [true] : [true, false]) {
-    const R = await rig(level, 8, on), g = R.g, nav = g.col.nav, D = R.defs()[0]; hook?.stage?.(on);
+  for (const on of [true]) {
+    const R = await rig(level, 8), g = R.g, nav = g.col.nav, D = R.defs()[0]; hook?.stage?.(on);
     // a cover object, a spot behind it, and a point a few strides off it hides him from (crouched) while it stands
     let pick: { w: any; P: Vec3; T: Vec3; near: boolean } | null = null;
     // (is there anywhere within a short run that hides a crouched chest from T — asked of the floor, not of the module)
@@ -272,7 +271,7 @@ export async function wallreactCrate(level: string, orElse?: string, hook?: Crat
       F.verdict(res.cover > 0 && hid0 && open1, 'the blast takes the crate: the man crouched behind it is open to where he was hiding from', `cover cells gone ${res.cover} (walls ${res.walls}) · crate #${w.id} ${w.surf} at ${at(w.box.c)} · hidden before ${hid0} · open after ${open1} · rows ${WALLREACT_STATS.rows}`);
       if (!near) F.verdict(moved < 0.5 && WALLREACT_STATS.noCover >= 1 && D.gd.state !== 'dead', 'no crate on this floor has anywhere within a run that hides him: he stays and fights from where he is, and is asked again every few seconds', `stood ${at(d0)} · moved ${f1(moved)} m · no cover found ${WALLREACT_STATS.noCover}×${tail()}`);
       else F.verdict(moved > 1.0 && hid1 && WALLREACT_STATS.movedDef + WALLREACT_STATS.movedAI >= 1 && D.gd.state !== 'dead', 'he leaves it for somewhere a crouched chest is hidden from that man again', `stood ${at(d0)} · now ${at(p1)}, ${f1(moved)} m off · hidden from ${at(T)}: ${hid1} · moved holding ${WALLREACT_STATS.movedDef} / in the fight ${WALLREACT_STATS.movedAI} · no cover found ${WALLREACT_STATS.noCover}× · mode ${D.mode} · state ${D.gd.state}${tail()}`);
-    } else F.verdict(moved < 0.5 && open1, 'switch off: he stays kneeling where the crate was, open (the engine\'s build)', `moved ${f1(moved)} m · open ${open1} · wallreact rows ${WALLREACT_STATS.rows}`);
+    }
   }
   if (!asked) { console.log(`=== wallreact-crate [${level}]: NOT ASKED (nothing to stage)${orElse && orElse !== level ? ` — asked on ${orElse}` : ''} ===`); return orElse && orElse !== level ? wallreactCrate(orElse, undefined, hook) : true; }
   return F.done();
@@ -370,7 +369,7 @@ if (import.meta.main) {
     if (only.length && !only.includes(name)) continue;
     try { ok = (await fn(level)) && ok; } catch (e) { ok = false; console.log(`- FAIL — wallreact-${name} [${level}] threw\n    ${e instanceof Error ? e.stack : e}`); }
   }
-  DESTRUCTION.on = false; Object.assign(WALLREACT, KNOBS0);
+  Object.assign(WALLREACT, KNOBS0);
   console.log(`\n=== wallreact-probes: ${ok ? 'ALL PASS' : 'FAILURES above'} ===`);
   process.exit(ok ? 0 : 1);
 }
