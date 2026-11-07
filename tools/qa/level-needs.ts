@@ -350,7 +350,7 @@ const startsOf = (o: unknown): number[][] => !o || typeof o !== 'object' ? [] : 
  *  `hall` are in neither on purpose: either would suit a team and has none yet, the maintainer's call. */
 export const NOBODY_COMES: Record<string, string> = {
   'quiet-relay': 'a hilltop, nobody within reach, and its wired spot brings its own men', vault: 'private hired guards who call nobody', 'lights-out': 'its one idea is the mains',
-  'quiet-yard': 'the test map', 'block-squads': 'at eleven, nobody is left to come', warehouse: 'at eleven, nobody is left to come', compound: 'at eleven, nobody is left to come',
+  'block-squads': 'at eleven, nobody is left to come', warehouse: 'at eleven, nobody is left to come', compound: 'at eleven, nobody is left to come',
   barracks: 'at eleven, nobody is left to come', registry: 'the hostage clock is the pressure', consulate: 'the hostage clock is the pressure',
   defuse: 'it has its own clock', killhouse: 'it has its own clock', floodlit: 'one idea, and it is not this', mousehole: 'one idea, and it is not this',
   glasshouse: 'one idea, and it is not this', pass: 'a snowed-in road' };

@@ -315,7 +315,7 @@ mod tests {
     #[test]
     fn a_program_is_recorded() {
         let mut manifest = Manifest::zeroed();
-        let script = crate::scene_level::LevelScriptFn::TutSky;
+        let script = crate::scene_level::LevelScriptFn::TutTeam;
         manifest_program(&mut manifest, "tutorial", &mut |p| { program_on_start(p, "go"); program_on_signal(p, "lesson:a", "go"); program_beat(p, "go", &script, None) }, None).unwrap();
         let row = manifest.programs.get("tutorial".into()).unwrap();
         assert_eq!(row.name, "tutorial");
@@ -328,7 +328,7 @@ mod tests {
     #[test]
     fn a_name_declared_twice_is_the_err() {
         let mut manifest = Manifest::zeroed();
-        let script = crate::scene_level::LevelScriptFn::TutSky;
+        let script = crate::scene_level::LevelScriptFn::TutTeam;
         let got = manifest_program(&mut manifest, "p", &mut |p| { program_beat(p, "b", &script, None)?; program_beat(p, "b", &script, None) }, None);
         assert_eq!(got, Err(String::from("script: beat 'b' declared twice in program 'p'")));
         assert!(!manifest.programs.has("p".into()));
@@ -363,7 +363,7 @@ mod tests {
         program_on_signal(&mut p, "sg", "nobeat3");
         p_on_enter(&mut p, &VolumeRef { kind: VolumeRefKind::Volume, id: "vv".into() }, "nobeat4");
         p_when(&mut p, "nobeat5");
-        program_beat(&mut p, "x", &crate::scene_level::LevelScriptFn::TutSky, None).unwrap();
+        program_beat(&mut p, "x", &crate::scene_level::LevelScriptFn::TutTeam, None).unwrap();
         for _ in 0..33 { p_when(&mut p, "x"); }
         manifest.programs.set("p".into(), p);
         d_expect_order(&mut manifest, "ghost", &["x".into()]);
