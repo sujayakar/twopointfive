@@ -51,6 +51,7 @@ import { classTable, valueTable } from 'tps-bridge/classes';
 import { puppetRows, SLOW, VALS } from 'tps-bridge/puppet-apply';
 import { OUT, OUT_HOST } from 'tps-bridge/out-dispatch';
 import { makePoke } from 'tps-bridge/poke';
+import { makeScan } from 'tps-bridge/scan';
 import { installAsks } from 'tps-bridge/ask';
 import LISTS from 'tps-bridge/puppet-lists.json';
 import SWITCHES from 'tps-bridge/switches.json';
@@ -187,7 +188,8 @@ function ownCopy(v: any, depth = 0): any {
 }
 function ownKeep(g: Game): unknown[] { const G = g as unknown as Record<string, any>; return OWN.map(name => { const o = G[name]; if (!o) return null; const c: Record<string, unknown> = {}; for (const k of Object.keys(o)) if (k !== 'g') c[k] = ownCopy(o[k]); return c; }); }
 function ownPut(g: Game, K: unknown[] | undefined): void { const G = g as unknown as Record<string, any>; OWN.forEach((name, i) => { const o = G[name], c = K?.[i] as Record<string, unknown> | null | undefined; if (!o || !c) return; for (const k of Object.keys(c)) o[k] = ownCopy(c[k]); }); }
-interface Held { g: Game; lastCmds: readonly PlayerCmd[] | null; lightsWas: Uint8Array | null; pictureWas: Float64Array | null; thinSerial: number; noted: object[]; kept: Set<number>; startKept: number; startOwn: unknown[]; back: { label: string; loads: number; saves: number } | null; took: boolean; saves: number; shelfSig: string; doorKept: number[]; lightOf: Map<number, Record<string, any>>; poke: ((obj: unknown, path: string | (string | number)[], value: unknown) => void) | null; watch: Watched[]; launch: unknown; putBacks: number; loads: number; h: number; slot: number; stale: string; uploaded: boolean; ctx: { p: number }; rows: unknown; inStep: boolean; side: { list: unknown[]; of: unknown; base: number }; asks: { after(): void } | null }
+let SETTLED_SAID = false;
+interface Held { settings?: { flush(): void; rebase(): void; stats(): { settledLeft: number } & Record<string, unknown> } | null; g: Game; lastCmds: readonly PlayerCmd[] | null; lightsWas: Uint8Array | null; pictureWas: Float64Array | null; thinSerial: number; noted: object[]; kept: Set<number>; startKept: number; startOwn: unknown[]; back: { label: string; loads: number; saves: number } | null; took: boolean; saves: number; shelfSig: string; doorKept: number[]; lightOf: Map<number, Record<string, any>>; poke: ((obj: unknown, path: string | (string | number)[], value: unknown) => void) | null; watch: Watched[]; launch: unknown; putBacks: number; loads: number; h: number; slot: number; stale: string; uploaded: boolean; ctx: { p: number }; rows: unknown; inStep: boolean; side: { list: unknown[]; of: unknown; base: number }; asks: { after(): void } | null }
 let H: Held | null = null;
 const REG = { v: null as Record<string, object> | null };
 const reg = (): Record<string, unknown> => (REG.v ??= knobRegistry()) as Record<string, unknown>;
@@ -284,6 +286,9 @@ function start(S: Held): void {
   S.asks = installAsks(g, reg(), (kind, row, seat, b) => { call('face_ask', () => hand(b, (p, n) => X!.face_ask(S.h, kind, row, seat, p, n))); return outBytes().slice(); }, () => { grown(g); if (!S.inStep) apply(S, false); });
   // (the write by path: by the rows' IDs in this book too)
   S.poke = makePoke(g, reg(), b => { call('face_write', () => hand(b, (p, n) => X!.face_write(S.h, p, n))); });
+  // THE SETTINGS, written here by whatever writes them (a panel's row, a lever, a difficulty, an address word) and read by the Rust game: held to what the last walk saw, as a tick opens. A settled row is no setting and is not walked
+  { const scan = makeScan(g, reg(), (b: Uint8Array) => { call('face_write', () => hand(b, (p, n) => X!.face_write(S.h, p, n))); }, () => {}, true); scan.rebase(); S.settings = scan;
+  if (!SETTLED_SAID) { SETTLED_SAID = true; console.info(`rust=1: ${scan.stats().settledLeft} settled rows of the knob tables are the game's constants, and what a page writes to them does not reach it`); } }
   // (room asked for and given back once the game stands: the allocator keeps it, so a step seldom has to grow the memory, which detaches every view over it)
   X!.face_reserve(64 * 1048576); grown(g);
   RUST_GAME.handle = h; RUST_GAME.slot = slot; RUST_GAME.starts++; RUST_GAME.startMs = performance.now() - t0; RUST_GAME.startBytes = state.length;
@@ -669,7 +674,7 @@ function step(S: Held, dt: number, cmds: readonly PlayerCmd[]): void {
     knobsToRust();
     if (PF.on) { const n = performance.now(); PF.knobs += n - tp; tp = n; }
     { const L = (G.doors?.list ?? []) as Record<string, any>[]; for (let i = 0; i < L.length && i < S.doorKept.length; i++) if (!Object.is(L[i].g(DC.posAngle), S.doorKept[i])) L[i].p(DC.posAngle, NaN); }
-    pokes(S);
+    pokes(S); if ((RUST_GAME.ticks & 15) === 0) S.settings?.flush();   // (a walk of the tables is about a millisecond, and a person's hand on a panel or a lever does not need it sooner than a quarter of a second)
     // the light probe's answers, as the GPU has handed them back by now
     { const P = G.sensors?.probeOf?.(), Rm: Map<string, number[]> | undefined = P?.results;
       if (Rm && Rm.size) { let n = 4; const keys: Uint8Array[] = []; for (const k of Rm.keys()) { const b = enc.encode(k); keys.push(b); n += 4 + b.length + 24; }
