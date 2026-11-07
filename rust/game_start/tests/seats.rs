@@ -38,3 +38,56 @@ fn a_reader_asked_about_the_seat_that_does_not_stand_answers_for_that_seat() {
         assert_eq!((own.0.len(), asked.0.len()), (2, 2), "seed {s}: four teammates, two to a seat");
     }
 }
+
+/// each row on a seat's menu as it stands: which row of the table, its id, digit, page and targets
+fn menu_of(g: &Game, seat: &SeatRef) -> Vec<(game::ids::OrdersOrderDefId, String)> {
+    seat.orders.defs.iter().map(|&d| { let r = &g.tab.orders_order_def[d]; (d, format!("{} {:?} {:?} {:?}", r.id, r.key, r.page, r.targets)) }).collect()
+}
+
+/// THE RULE: a row of the orders' menu belongs to the seat that lists it. Two players' menus hold no row of the table between them, and what is
+/// written on one seat's rows (a digit dealt, a page, a target that comes with the pairs) is not on the other's.
+/// A FAILURE MEANS: a row is found by its id alone, so the two menus are one set of rows and one player's menu changes the other's.
+#[test]
+fn a_row_of_the_menu_is_one_seats() {
+    for s in SEEDS {
+        let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed: s, seats: 2, ..Default::default() });
+        p.run(1.0);
+        let (first, second) = (p.g.seats[0], p.g.seats[1]);
+        let mine = menu_of(&p.g, &seats::seat(&p.g, first));
+        let theirs = menu_of(&p.g, &seats::seat(&p.g, second));
+        let both: Vec<_> = mine.iter().filter(|(d, _)| theirs.iter().any(|(x, _)| x == d)).collect();
+        assert!(!mine.is_empty() && !theirs.is_empty() && both.is_empty(), "seed {s}: {} rows are on both seats' menus: {:?}", both.len(), both);
+        // the second seat's fall in is given a target and a digit of its own: the first seat's menu is as it was
+        seats::with_seat(&mut p.g, second, &mut |g| {
+            let d = g.orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == "fallIn").expect("a squad's menu has fall in");
+            g.tab.orders_order_def[d].targets.push(game::orders::TargetKind::Foe);
+            g.tab.orders_order_def[d].key = None;
+            game::orders::squad_orders_register(g, d, None);
+        });
+        assert_eq!(menu_of(&p.g, &seats::seat(&p.g, first)), mine, "seed {s}: the second seat's menu was written and the first seat's changed");
+        assert!(menu_of(&p.g, &seats::seat(&p.g, second)) != theirs, "seed {s}: the second seat's menu did not change");
+    }
+}
+
+/// THE RULE: both players give orders for forty seconds and the table of rows does not grow.
+#[test]
+fn two_seats_orders_make_no_new_row() {
+    for s in SEEDS {
+        let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed: s, seats: 2, ..Default::default() });
+        p.run(1.0);
+        let n = p.menu_rows().len();
+        let doors: Vec<[f64; 2]> = p.g.doors.list.iter().map(|&d| { let c = p.g.dr[d].frame_centre; [c[0], c[2]] }).collect();
+        for k in 0..20 {
+            for seat in p.g.seats.clone() {
+                let d = doors[(k * 7 + seat.0 as usize * 3) % doors.len()];
+                seats::with_seat(&mut p.g, seat, &mut |g| {
+                    let t = game::orders::squad_orders_target_at(g, [d[0], 0.0, d[1]]);
+                    let _ = game::orders::squad_orders_give(g, ["openClear", "stack", "fallIn", "hold"][k % 4], Some(&t), Some(Who::All), None);
+                });
+            }
+            p.run(2.0);
+        }
+        let rows = p.menu_rows();
+        assert_eq!(rows.len(), n, "seed {s}: forty seconds of both seats' orders made {} rows: {:?}", rows.len() - n, &rows[n..]);
+    }
+}
