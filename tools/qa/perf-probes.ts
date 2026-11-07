@@ -107,9 +107,9 @@ export async function perfFlags() {
   const vals = Object.entries(FrameFlags) as [string, number][];
   const distinct = new Set(vals.map(([, v]) => v)).size === vals.length && vals.every(([, v]) => v > 0 && (v & (v - 1)) === 0);
   check(distinct, 'every FrameFlags value is a distinct single bit', vals.map(([k, v]) => `${k}=${v}`).join(' '));
-  check(FrameFlags.BounceCards === 33554432 && FrameFlags.DirectSeedHold === 67108864 && FrameFlags.GiAdaptiveHist === 134217728, 'BounceCards = 1<<25, DirectSeedHold = 1<<26, GiAdaptiveHist = 1<<27 (1<<22 / 1<<24 went to Decals / Particles since; bits 0‥30 are all owned now — bit 31, the sign bit, is the only one left: frame-layout prints the table)', `${FrameFlags.BounceCards} ${FrameFlags.DirectSeedHold} ${FrameFlags.GiAdaptiveHist}`);
+  check(FrameFlags.BounceCards === 33554432 && FrameFlags.DirectSeedHold === 67108864, 'BounceCards = 1<<25, DirectSeedHold = 1<<26 (1<<22 / 1<<24 went to Decals / Particles since; bit 27 is free again since the adaptive-history trial went with the old denoiser: frame-layout prints the table)', `${FrameFlags.BounceCards} ${FrameFlags.DirectSeedHold}`);
   const S = defaultSettings();
-  check(S.torchBounceCards === false && S.directSeedHold === false && S.giAdaptiveHistory === false, 'defaults: torchBounceCards off, directSeedHold off, giAdaptiveHistory off', `${S.torchBounceCards} ${S.directSeedHold} ${S.giAdaptiveHistory}`);
+  check(S.torchBounceCards === false && S.directSeedHold === false, 'defaults: torchBounceCards off, directSeedHold off', `${S.torchBounceCards} ${S.directSeedHold}`);
   const placed = Object.entries(PRESETS).map(([n, p]: [string, any]) => `${n}:${p.cards === undefined ? '—' : p.cards ? 'on' : 'off'}`).join(' ');
   console.log(`  (info) preset placement of the cards: ${placed}`);
   // the frame block: writeFrame's card words land inside FRAME_BYTES and read back

@@ -58,7 +58,7 @@
 
   // ------------------------------------------------------------------ variants: settings bundles over the boot defaults
   let S0 = null;
-  const OLD = { taau: false, restir: false, denoiser: 'legacy', froxelVol: false, rtReflect: false, detail: 0, renderScale: 1.0, sharpDirect: false, sharpDecouple: false, gbaa: false, taauHistSharp: 0 };   // THE OLD RENDERER (pre-v3 chain at native rows, FXAA, the resolve configuration off)
+  const OLD = { taau: false, restir: false, froxelVol: false, rtReflect: false, detail: 0, renderScale: 1.0, sharpDirect: false, sharpDecouple: false, gbaa: false, taauHistSharp: 0 };   // THE OLD RENDERER (pre-v3 chain at native rows, FXAA, the resolve configuration off)
   const VARIANTS = {
     main: {}, old: OLD,
     // B = the diffuse GI denoised at INTERNAL res (settings.giFullRes; B2 / B3 = fewer internal-res à-trous iterations, the cost tiers) (C, the young-history gather rays, went with the one-kernel gather 2026-11-07),
