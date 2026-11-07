@@ -845,6 +845,17 @@
 ],
 "sig": "pub fn mess_evicted(g: &mut crate::game::Game, c: V3, h: V3, yaw: f64, rot: Option<Quat>, mat: Option<crate::break_table::Mat>, kind: crate::debris::ChunkKind)",
 "mode": "push"
+},
+{
+"call": "EndCard",
+"rust": "crate::out_events::end_card",
+"ts": "endCard",
+"file": "tools/blitz/out-dispatch.ts",
+"why": "this",
+"params": [],
+"sig": "pub fn end_card(g: &mut crate::game::Game)",
+"mode": "push",
+"hostArm": "endCard"
 }
 ],
 "listed": [

@@ -77,7 +77,7 @@ export async function verdictCheck(): Promise<boolean> {
       line(!!R && R.men.every((m: any) => m.path.length >= 3 && m.path.length % 3 === 0), 'every man has a path');
       line(!!R && R.men.slice(1).every((m: any) => m.tone === 'red' || m.tone === 'blue'), 'four in two pairs: each teammate carries his pair\'s colour');
       const due0 = A.V.takeDue(); await A.step(Math.ceil(VERDICT.winSecs * 60) + 2); const due1 = A.V.takeDue(), due2 = A.V.takeDue();
-      line(!due0 && due1 && !due2 && !A.g.mission.debrief, `the card is due ${VERDICT.winSecs} s after the win, once`);
+      line(!due0 && due1 && !due2 && !A.g.endCards, `the card is due ${VERDICT.winSecs} s after the win, once`);
       await A.step(120);
       line(A.V.result === R, 'the verdict is made once and stands');
       await quiet(() => A.g.restartEncounter()); await A.step(5);
@@ -86,7 +86,7 @@ export async function verdictCheck(): Promise<boolean> {
       const B = await stage(); await B.nudge(); await B.step(20); await quiet(() => { B.g.player.down = true; }); await B.step(4);
       const L = B.V.result;
       line(!!L && !L.won && L.word === 'DOWN' && L.approach === null && L.men[0].state === 'dead', `the player down: ${L ? verdictLine(L) : 'no verdict'}`);
-      let raised = false; for (let i = 0; i < 240 && !raised; i++) { await B.step(1); raised = !!B.g.mission.debrief; }
+      let raised = false; for (let i = 0; i < 240 && !raised; i++) { await B.step(1); raised = !!B.g.endCards; }
       line(raised && !B.V.takeDue(), 'that card is the mission\'s own to raise (it does, and the verdict asks for no second one)');
 
       const C = await stage(); await C.nudge(); await C.step(5); C.g.godMode = true; await C.step(2); C.g.godMode = false; await C.drop(C.foes()); await C.step(4);

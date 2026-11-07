@@ -7,18 +7,16 @@
 //       than the knobs say
 //   (3) one of ours lost while a player still plays (a civilian, by Sam's own round) is kept — and still nothing is handed out
 //   (4) the panel: the plan and the three labels (who · with what · how far) on the card when he is down; no panel while the run is on
-//   (5) the switch off: nothing kept, nothing handed out, no panel
-//   (6) it only reads the game: the same staged run with the switch on and off ends on the same digest
 //   (7) a restart: that run's deaths are not the next run's
 //   (9) the playback (ui/recap.ts recapMenAt): every man drawn where he really was over the last seconds, the shooter coming in, Sam's gun line turning
 //       (RECAP_BREAK=snap = read off the last sample alone: must fail)
 //   (10) its clock on a frame clock of the check's own: real speed, a rest on the end, round again; nothing drawn while the card is put away
 //   (8) a man put out cold by a hand is not a death; a stun canister is not a killer, a fragmentation burst is; a hostage her captor shoots is his round;
-//       a run played on past its end shows nothing that happened after it; the switch thrown on mid-run takes no old body for a new death
+//       a run played on past its end shows nothing that happened after it
 //   (11) while the run is on (RECAP.live, deathrecap.ts lostLive): a teammate lost where nobody still up sees him go down or hears it has his row struck and
 //       nothing else, and a mate who finds him later changes nothing; heard = after a beat the way it came from, an eighth of the compass and no finer; seen
 //       by his mate = that and the mate's word for the side; seen by the player = no word; never the shooter's name or place, the card's record shut
-//       throughout; off = the row as it was; reads only   (RECAP_BREAK=seen = everybody sees through walls: must fail)
+//       throughout   (RECAP_BREAK=seen = everybody sees through walls: must fail)
 // RECAP_BREAK=1 = the round's line never reaches the module (neither by the combat.ts seam nor as the shot's event): (1) must fail.   exit 0 = all hold · 1 = one does not
 import { resolve } from 'node:path';
 import { clearLine } from './standwall.ts';
@@ -127,9 +125,6 @@ export async function deathrecapCheck(): Promise<boolean> {
           const on = deathRecapOf(A.g), n = recapDeathsForChecks(A.g).length;
           line(before === null && !!atEnd && atEnd.takes.length === 1 && n === 2 && !!on && on.takes.length === 1 && on.takes[0].death.victim === A.civ.char.id,
             'a run played on past its end shows what happened up to the end and nothing after it', `before the end: ${before ? 'handed out' : 'nothing'} · at the end: ${atEnd?.takes.length ?? 0} · played on, ${n} lost: ${on?.takes.length ?? 0} shown`); } }
-      { const A = await fresh(10); if (!A.civ) line(false, 'a civilian lost with the switch off');
-        else { RECAP.on = false; A.R.step(2); killGuard(A.g, A.civ, [0, 0, 1], false, 'shot', 'world'); A.R.step(10); RECAP.on = true; A.R.step(30);
-          line(A.civ.state === 'dead' && recapDeathsForChecks(A.g).length === 0, 'the switch thrown on mid-run: a man who went down while it was off is not taken for a death just seen', `kept ${recapDeathsForChecks(A.g).length}`); } }
     }
     // (9) the playback: where it draws the men is where they were
     { RECAP.on = true; let done = false; const ui = await import(`${ROOT}/src/ui/recap.ts`), { recapSpan, frameAt } = ui;
@@ -193,14 +188,14 @@ export async function deathrecapCheck(): Promise<boolean> {
     { const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`); const { lostLive, RECAP_STATS } = M;
       const eye = (c: any): number[] => c.bones?.head ?? [c.pos[0], 1.65, c.pos[2]], lie = (p: number[]): number[] => [p[0], 0.4, p[2]];
       const rowOf = (g: any, name: string) => g.orders.hud().status.flatMap((r: any) => r.opts).find((o: any) => o.text.includes(name));
-      const copy = (r: any) => r ? { gone: !!r.gone, from: r.lost ? r.lost.from && [...r.lost.from] : undefined } : null;   // (copied: the row hands out the live record)
+      const copy = (r: any) => r ? { gone: !!r.gone, from: r.lost ? (r.lost.from ? [...r.lost.from] : null) : undefined } : null;   // (copied: the row hands out the live record)
       /** A room clear's pair. A defender puts one round into the first man at a place neither his mate nor Sam has a line to.
        *    Nobody hears it in any mode but `heard` (the hearing reach shut for the run), so each line below is about the eyes alone.
        *    deaf  = and nobody sees it        heard = nobody sees it, they hear it (the reach opened: the team starts further off than it carries)
        *    mate  = his mate stands where he sees him go down, Sam near but with no line   sam = Sam is the one who sees him go down
        *    late  = deaf, and his mate comes to where he sees him lie two seconds after   gone = mate, and the mate is himself put down a fifth of a second later */
-      const run = async (live: boolean, mode: 'deaf' | 'heard' | 'mate' | 'sam' | 'late' | 'gone') => {
-        RECAP.on = true; RECAP.live = live; Object.assign(RECAP, { liveHearM: mode === 'heard' ? 1e9 : 0, liveSeeM: was.liveSeeM, liveSideM: mode === 'mate' ? 1e9 : was.liveSideM });
+      const run = async (mode: 'deaf' | 'heard' | 'mate' | 'sam' | 'late' | 'gone') => {
+        Object.assign(RECAP, { liveHearM: mode === 'heard' ? 1e9 : 0, liveSeeM: was.liveSeeM, liveSideM: mode === 'mate' ? 1e9 : was.liveSideM });
         const R = await rig(31); const g = R.game; await startFromQuery(g, new URLSearchParams('?roomclear=3')); g.aiEnabled = false; g.godMode = false; R.step(30);
         const sq = g.orders.squad().filter((x: any) => x.state !== 'dead'), A = sq[0], B = sq[1]; if (!A || !B) return null;
         for (const H of g.guards.filter((x: any) => x.team === 'hostile' && x.state !== 'dead')) {
@@ -225,7 +220,7 @@ export async function deathrecapCheck(): Promise<boolean> {
             if (mode === 'late') { for (let i = 0; i < 3; i++) { R.put(B, w, at); R.step(1); } R.step(90); }
             const L1 = lostLive(g).find((x: any) => x.id === A.char.id), said = (g.cues as any).bubbles.get(B)?.text ?? '';   // the cue itself: a bark of his own since would stand over it in bubbleOf
             const pc = g.player.char, side = g.fogOfWar.sideOf([pc.pos[0] + u[0] * 50, 0, pc.pos[2] + u[1] * 50]);
-            const out = { g, A, B, H, before, first, L: L1 ? { ...L1, from: L1.from && [...L1.from] } : null, keys: Object.keys(L1 ?? {}).sort().join(' '), row: copy(rowOf(g, A.callsign)), said, side, u, calls: RECAP_STATS.calls - calls0, card: deathRecapOf(g), digest: '' };
+            const out = { g, A, B, H, before, first, L: L1 ? { ...L1, from: L1.from ? [...L1.from] : null } : null, keys: Object.keys(L1 ?? {}).sort().join(' '), row: copy(rowOf(g, A.callsign)), said, side, u, calls: RECAP_STATS.calls - calls0, card: deathRecapOf(g), digest: '' };
             R.step(60); out.digest = JSON.stringify(digestGame(g, true));
             return out;
           }
@@ -234,49 +229,37 @@ export async function deathrecapCheck(): Promise<boolean> {
       };
       const offDeg = (r: any) => r?.L?.from ? Math.acos(Math.max(-1, Math.min(1, r.L.from[0] * r.u[0] + r.L.from[1] * r.u[1]))) * 180 / Math.PI : NaN;
       const anEighth = (v: number[] | null | undefined) => !!v && v.every(x => [0, 1, Math.SQRT1_2].some(k => Math.abs(Math.abs(x) - k) < 1e-9));
-      const deaf = await run(true, 'deaf');
+      const deaf = await run('deaf');
       if (!deaf) line(false, 'a defender\'s round put a teammate down out of everybody\'s sight (no place did: the check looked at nothing)');
       else {
         line(!deaf.before!.gone && deaf.first!.gone && deaf.row!.gone && deaf.row!.from === null && !!deaf.L && deaf.L.from === null && deaf.L.knownAt === Infinity && deaf.calls === 0 && deaf.card === null,
           'lost where nobody still up sees him go down or hears it: his row is struck and that is all — no direction, no word, and the card\'s record stays shut while the run is on',
           `row before ${deaf.before!.gone ? 'struck' : 'plain'} → ${deaf.row!.gone ? 'struck' : 'plain'} · direction ${deaf.L?.from ? JSON.stringify(deaf.L.from) : 'none'} · words ${deaf.calls} · card ${deaf.card === null ? 'shut' : 'OPEN'}`);
-        const late = await run(true, 'late');
+        const late = await run('late');
         line(!!late && !!late.L && late.L.from === null && late.calls === 0, 'his mate finds him lying two seconds after: he is still only down (a man found tells nobody which way it came)', late ? `direction ${late.L?.from ? JSON.stringify(late.L.from) : 'none'}` : 'the run did not play');
-        const heard = await run(true, 'heard');
+        const heard = await run('heard');
         line(!!heard && heard.first!.from === null && !!heard.L && Number.isFinite(heard.L.knownAt) && heard.L.knownAt - heard.L.t >= RECAP.liveBeat - 1e-9 && anEighth(heard.L.from) && offDeg(heard) <= 22.5 + 1e-6 && heard.calls === 0,
           'nobody sees it but they hear the shot: after a beat the squad has the way it came from, to the nearest eighth of the compass and no finer; nobody saw, so nobody says',
           heard ? `${f2(heard.L ? heard.L.knownAt - heard.L.t : NaN)} s after · ${JSON.stringify(heard.L?.from?.map((x: number) => +x.toFixed(3)))} is ${f2(offDeg(heard))}° off the true line · words ${heard.calls}` : 'the run did not play');
-        const mate = await run(true, 'mate'), word = mate ? (mate.side === 'front' ? 'from the front' : mate.side === 'behind' ? 'from behind us' : `from the ${mate.side}`) : '';
+        const mate = await run('mate'), word = mate ? (mate.side === 'front' ? 'from the front' : mate.side === 'behind' ? 'from behind us' : `from the ${mate.side}`) : '';
         line(!!mate && !!mate.L && anEighth(mate.L.from) && mate.calls === 1 && mate.said === `${word}!`,
           'his mate sees him go down: the squad has the way, and the mate says which side — the fog\'s own word for it, by the player\'s shoulders',
           mate ? `${mate.B.callsign}: "${mate.said}" · words ${mate.calls}` : 'the run did not play');
-        { // nothing is DRAWN for that way (RECAP.liveArrows; RECAP_BREAK=arrows: the arrows left on — must FAIL)
-          const fs = await import('node:fs'), ov: string = fs.readFileSync(`${ROOT}/src/ui/overlay.ts`, 'utf8'), pf: string = fs.readFileSync(`${ROOT}/src/host/profile.ts`, 'utf8');
-          if (process.env.RECAP_BREAK === 'arrows') RECAP.liveArrows = true; else RECAP.liveArrows = was.liveArrows;
-          const shipped = RECAP.liveArrows === false && M.lostArrowsShown() === false; RECAP.liveArrows = true; const back = M.lostArrowsShown() === true; RECAP.live = false; const dead = M.lostArrowsShown() === false; RECAP.live = true; RECAP.liveArrows = was.liveArrows;
-          const sites = (ov.match(/lostArrowsShown\(\)/g) ?? []).length, stroke = /lostArrowsShown\(\) \? lostLive\(game\) : \[\]/.test(ov), rowMark = /o\.lost && lostArrowsShown\(\) \? lostArrow\(/.test(ov), flag = /RECAP\.liveArrows = q\.get\('recaparrows'\) === '1'/.test(pf);
-          line(!!mate && !!mate.L && anEighth(mate.L.from) && mate.row!.gone && shipped && back && dead && stroke && rowMark && flag,
-            'the way is known and said, and nothing is drawn for it: no arrow on his row, no stroke on the ground (RECAP.liveArrows off, as the page has it; ?recaparrows=1 = both back)',
-            `row ${mate?.row?.gone ? 'struck' : 'plain'}, the way known ${!!mate?.L?.from} · drawn as shipped ${!shipped} · with the key on ${back} · with the live rule off ${!dead} · overlay.ts asks before the stroke ${stroke}, before the row's arrow ${rowMark} (${sites} asks) · the page's flag ${flag}`); }
+        { // nothing is DRAWN for that way (RECAP.liveArrows is settled, off): the row is struck, the way is known, and the overlay asks before it would draw either
+          const fs = await import('node:fs'), ov: string = fs.readFileSync(`${ROOT}/src/ui/overlay.ts`, 'utf8');
+          const stroke = /lostArrowsShown\(\) \? lostLive\(game\) : \[\]/.test(ov), rowMark = /o\.lost && lostArrowsShown\(\) \? lostArrow\(/.test(ov);
+          line(!!mate && !!mate.L && anEighth(mate.L.from) && mate.row!.gone && M.lostArrowsShown() === false && stroke && rowMark,
+            'the way is known and said, and nothing is drawn for it: no arrow on his row, no stroke on the ground',
+            `row ${mate?.row?.gone ? 'struck' : 'plain'}, the way known ${!!mate?.L?.from} · drawn ${M.lostArrowsShown()} · overlay.ts asks before the stroke ${stroke}, before the row's arrow ${rowMark}`); }
         const told = mate ? JSON.stringify(mate.L ?? {}) + JSON.stringify(mate.row ?? {}) + mate.said : '';
         line(!!mate && !told.includes(mate.H.callsign) && mate.keys === 'at from id knownAt name t' && mate.card === null,
           'what the squad is handed is a way off the man: never the shooter\'s name, never his place — and the card\'s record is still shut', mate ? `fields: ${mate.keys}` : '');
-        const gone = await run(true, 'gone');
+        const gone = await run('gone');
         line(!!gone && !!gone.L && gone.L.from === null && gone.calls === 0 && gone.B.state === 'dead', 'the mate who saw is put down himself before the beat is out: what he saw goes with him', gone ? `direction ${gone.L?.from ? JSON.stringify(gone.L.from) : 'none'} · ${gone.B.callsign} ${gone.B.state}` : 'the run did not play');
-        const sam = await run(true, 'sam');
+        const sam = await run('sam');
         line(!!sam && !!sam.L && anEighth(sam.L.from) && sam.calls === 0, 'the player himself is the one who sees him go down: the way is known, nobody tells him what he watched', sam ? `words ${sam.calls}` : 'the run did not play');
-        const off = await run(false, 'mate');
-        line(!!off && !off.L && !off.row!.gone && off.calls === 0 && off.said === '', 'the live rule off (RECAP.live): the row as it was, nothing said', off ? `row ${off.row!.gone ? 'struck' : 'plain'} · words ${off.calls}` : 'the run did not play');
-        line(!!off && !!mate && off.digest === mate.digest, 'it only reads the game: the same staged run ends on the same digest with the live rule on and off', off ? `${off.digest.length} bytes of digest` : '');
       }
       Object.assign(RECAP, was);
-    }
-    // (5) off, (6) reads only
-    { const run = async (on: boolean) => { for (let seed = 11; seed < 24; seed++) { RECAP.on = on; const T = await stage(seed); if (!T) continue; T.shoot(); T.R.step(1); if (!T.pl.down) continue; T.R.step(150);
-          return { seed, digest: JSON.stringify(digestGame(T.g, true)), rec: deathRecapOf(T.g), kept: recapDeathsForChecks(T.g).length, ui: await panel(T.g) }; } return null; };
-      const off = await run(false), on = await run(true);
-      line(!!off && off.rec === null && off.kept === 0 && off.ui === null, 'the switch off: nothing kept, nothing handed out, no panel');
-      line(!!off && !!on && off.seed === on.seed && off.digest === on.digest && !!on.rec, 'it only reads the game: the staged run ends on the same digest with the switch on and off', off && on ? `seed ${on.seed} · ${on.digest.length} bytes of digest` : 'a run did not play');
     }
   } finally { Object.assign(RECAP, was); }
   console.log(all ? '=== deathrecap: ALL PASS ===' : '=== deathrecap: FAILED ===');

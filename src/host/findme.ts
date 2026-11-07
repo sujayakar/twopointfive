@@ -109,7 +109,7 @@ let seat: { aimLead: number } | null = null, lead = 0;
  *  debugger's own aim lead slider writes the same number, and the later hand wins) */
 export function bindFindMe(cam: { aimLead: number }) { seat = cam; lead = cam.aimLead; if (FINDME.pan !== 1) cam.aimLead = lead * FINDME.pan; }
 /** one setting changed by the player: on the table, on the camera if it is the pan, and kept */
-export function setFindMe<K extends keyof FindMe>(k: K, v: FindMe[K]) { if (put(k, v)) keep(k); }
+export function setFindMe<K extends keyof FindMe>(k: K, v: FindMe[K]) { if (put(k, v)) keep(); }
 /** every row back to its start (Options' Reset): only what had been moved is written */
 export function resetFindMe() { let any = false; for (const k of Object.keys(FINDME_START) as (keyof FindMe)[]) any = put(k, FINDME_START[k], true) || any; if (any) keep(); }
 function put<K extends keyof FindMe>(k: K, v: FindMe[K], whole = false): boolean {
@@ -123,31 +123,22 @@ function movedRows(): string { const moved: Record<string, unknown> = {}; for (c
 /** the store's line: a string, null = a store that has kept nothing, undefined = no store here (a harness) or one that may not be read (a frame whose
  *  storage is blocked throws at the name itself) */
 function keptLine(): string | null | undefined { try { const st = globalThis.localStorage; return st ? st.getItem(LS) : undefined; } catch { return undefined; } }
-/** the table kept. Under the tuned starts (the page's own) the line is the rows moved off them and nothing else. UNDER THE BUILT ONES ON A VISIT (`k`: the
- *  row a hand just moved under `?findtuned=0`, or on a stand that never raised the switch) the line as it lies is the tuned starts' own and only that row
- *  is written into it — rewritten whole against the built starts, a kept `outline: false` would be 'at its start', written away, and drawn again on the
- *  next plain visit. No `k` = the whole table (Reset; a tidy). */
-function keep(k?: keyof FindMe) {
+/** the table kept: the line is the rows moved off the tuned starts and nothing else. */
+function keep() {
   try {
     const st = globalThis.localStorage; if (!st) return;
-    if (FINDTUNED.on || k === undefined) { st.setItem(LS, movedRows()); return; }
-    let was: Record<string, unknown> = {}; try { const j = JSON.parse(st.getItem(LS) ?? 'null'); if (j && typeof j === 'object' && !Array.isArray(j)) was = j; } catch { /* not ours: written over */ }
-    if (FINDME[k] === START[k]) delete was[k]; else was[k] = FINDME[k];
-    const out: Record<string, unknown> = {}; for (const key of Object.keys(START)) if (key in was) out[key] = was[key];   // (in the table's own order, as a whole line is)
-    st.setItem(LS, JSON.stringify(out));
+    st.setItem(LS, movedRows());
   } catch { /* no store */ }
 }
-/** THE STARTS IN FORCE FOLLOW THE SWITCH (FINDTUNED.on; host/profile.ts pageSwitches calls this once, before anything is drawn; a stand that raises the
- *  switch, after). A row standing at its old start moves to its new one; a row a hand has moved stays. Then, where there is a store, the kept line is
- *  read again over the new starts — a machine that has kept nothing gets the outline, one whose line names a row keeps that row, Off included — and, under
- *  the tuned starts only, a line that says more than the rows moved off them is written again as only those (an older build's whole line; a line that
- *  kept the tuned numbers by hand). Under `?findtuned=0` a line is left as it lies. The page calls this BEFORE it hands its camera over (bindFindMe puts
+/** THE STARTS IN FORCE (host/profile.ts pageSwitches calls this once, before anything is drawn). A row standing at its old start moves to its new one; a row a hand has moved stays. Then, where there is a store, the kept line is
+ *  read again over the new starts — a machine that has kept nothing gets the outline, one whose line names a row keeps that row, Off included — and a line
+ *  that says more than the rows moved off them is written again as only those (an older build's whole line; a line that kept the tuned numbers by hand). The page calls this BEFORE it hands its camera over (bindFindMe puts
  *  the pan on it); no camera is written here. Called again with nothing changed it does nothing on a harness. */
 export function findMeStarts(): void {
-  const T: Partial<FindMe> = FINDTUNED.on ? FINDME_TUNED : {}, S = START as unknown as Record<string, unknown>, F = FINDME as unknown as Record<string, unknown>;
+  const T: Partial<FindMe> = FINDME_TUNED, S = START as unknown as Record<string, unknown>, F = FINDME as unknown as Record<string, unknown>;
   for (const k of Object.keys(FINDME_BUILT) as (keyof FindMe)[]) { const next = k in T ? T[k] : FINDME_BUILT[k]; if (S[k] !== next) { if (F[k] === S[k]) F[k] = next; S[k] = next; } }
   const was = keptLine(); if (was === undefined) return;
-  Object.assign(FINDME, findMeRead(was)); if (FINDTUNED.on && was != null && was !== movedRows()) keep();
+  Object.assign(FINDME, findMeRead(was)); if (was != null && was !== movedRows()) keep();
 }
 { const was = keptLine(); if (was !== undefined) Object.assign(FINDME, findMeRead(was)); }   // (as the module loads: the line over the built starts. The game page asks again once its switches are written — pageSwitches — and the engine replay's Ctrl turn runs on that page)
 

@@ -743,10 +743,10 @@ fn rainStep(pin: Particle, slot: u32, isNew: bool, dt: f32) {
     var vAir = vec3f(0.0);
     if (numWinds() > 0u) { vAir = windAir(p.pos, P_RAIN, -1e9) * em.rainCfgD.w; }
     if (lv(SNOW_GRAINS)) { if (snowNow() && snowOneAir()) { vAir = snowAir(p.pos, vAir); } }   // ONE AIR: among the walls a flake falls through the simulated field (slack in a lee, fast through a gap), over them through the open wind
-    if (LOOK) { if (snowNow() && numWinds() > 0u) {   // A FIRE'S HOT AIR (heatAir above; no record of it on any page but the look's): a flake near a fire is drawn in and carried up its column, and one that gets into the hot of it is gone
+    if (snowNow() && numWinds() > 0u) {   // A FIRE'S HOT AIR (heatAir above): a flake near a fire is drawn in and carried up its column, and one that gets into the hot of it is gone
       let H = heatAir(p.pos); vAir += H.xyz;
       if (H.w > HEAT_MELT_AT && rnd(p.seed, 620u + u32(p.age * 240.0)) < 1.0 - exp(-HEAT_MELT_RATE * (H.w - HEAT_MELT_AT) * dt)) { pool.parts[slot].age = p.life; return; }
-    } }   // (LOOK: dead text on every page but the look's)
+    }
     var grav = k0.x;
     if (snowNow()) {   // A FLAKE (a level built for snow, game/snowFx.ts): it rides the air almost whole (the drag is the CPU's: gravity ÷ a metre and a bit a second), so its own
       // slow FLUTTER is added to the air it is dragged toward — a sway of rainCfgB.x m/s at rainCfgB.y rad/s (the glint's two slots: a flake has none), each flake its own phase

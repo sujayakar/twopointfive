@@ -3,11 +3,11 @@
 //   bun run tools/qa/probes.ts picks-play                          (minutes; not in the family) every scenario row played to its end by the scripted commander, its settings on
 //   bun run tools/qa/card-digest.ts [--nopicks]                      the cards as one word, to hold a tree against another (the switch's 'off = the build as it was')
 // PASS / FAIL each, all headless. Nothing here looks at a picture.
-//   picks-list   the table as data: ids unique and URL-safe, every mission on the build, a plain line on each, five to seven rows; each row's URL names its
+//   picks-list   the table as data: ids unique and URL-safe, every mission on the build, a plain line on each, two to seven rows; each row's URL names its
 //                mission, team size, difficulty, hour, weather and switches OUT (nothing left to what a machine keeps), reads back to that row and to no other,
 //                keeps a visitor's own flags and drops an older run's settings; `?pick=<id>` and `?pick=<place>` answer with that URL once and never twice;
 //                the row after each; a quit out of a pick takes its settings off the URL and leaves every other URL as the build's quit leaves it; the rules the
-//                maintainer set for the list (a four-person loud breach on a squad map first; the barracks by day and every other row at its level's own night
+//                maintainer set for the list (a four-person loud breach on a squad map first; every row at its level's own night
 //                and weather; no kit on a row); and THE ONE CHOICE: every scenario row's URL at the other difficulty differs in that one value and is the same pick
 //   picks-card   the real Menu on a fake DOM: the start card and the boot card open on the rows, in order — number, title, tags, line, a link to the row's own
 //                URL; a click is a load of exactly that URL and is remembered as started; beside every scenario row a link to the same mission at the other
@@ -126,8 +126,8 @@ function hrefSays(p: any, href: string, d?: string): string | null {
 export async function picksList(): Promise<boolean> {
   const F = family('picks-list: the short list as data — every row a mission on the build, its settings written out on its own URL');
   const L: any[] = P.PICKS, MS = await import(`${ROOT}/src/ui/missions.ts`);
-  F.verdict(L.length >= 5 && L.length <= 7 && new Set(L.map(p => p.id)).size === L.length && L.every(p => /^[a-z0-9]+(-[a-z0-9]+)*$/.test(p.id) && !/^\d+$/.test(p.id)),
-    'five to seven rows, each under an id of its own that is safe on a URL (and never a bare number: that is a place on the list)', L.map((p, i) => `${i + 1} ${p.id}`).join(' · '));
+  F.verdict(L.length >= 2 && L.length <= 7 && new Set(L.map(p => p.id)).size === L.length && L.every(p => /^[a-z0-9]+(-[a-z0-9]+)*$/.test(p.id) && !/^\d+$/.test(p.id)),
+    'two to seven rows, each under an id of its own that is safe on a URL (and never a bare number: that is a place on the list)', L.map((p, i) => `${i + 1} ${p.id}`).join(' · '));
   { const bad = L.filter(p => P.pickEntry(p) === undefined), ids = MS.missionList().map((m: any) => m.id);
     F.verdict(bad.length === 0 && L.every(p => ids.includes(p.mission)) && P.SOLO_ID === MS.SOLO_NIGHT.id && MS.SOLO_KEY === 'solo', "every row's mission is on the mission list (the solo night under the list's own id and flag)",
       L.map(p => `${p.id} → ${p.mission}`).join(' · ') + (bad.length ? ` — NOT ON THE BUILD: ${bad.map(p => p.mission).join(', ')}` : '')); }
@@ -197,7 +197,7 @@ export async function picksList(): Promise<boolean> {
     F.verdict(!!e && w.squad === 4 && !!squadsOf(e) && !w.flags.includes('silentstart') && !w.flags.includes('pair'), 'the first row is a four-person loud breach on a squad map (his pick of what comes first)',
       `${p.id}: ${e?.id} on ${e?.level} with ${w.squad}${w.flags.length ? ` · ${w.flags.join(' ')}` : ''}`); }
   { const timed = L.filter(p => p.hour || p.weather);
-    F.verdict(timed.length === 1 && timed.every(p => p.mission === 'barracks-four' && p.hour === 'midday' && !p.weather) && L.every(p => !(p.flags ?? []).some((f: string) => /^(sun|callout|nocallout)\b/.test(f))), "the barracks is the one row with an hour (midday, no weather, no sun: a dry clear day by the hours' own rule); every other row is its level's own night and weather; no row touches the call out",
+    F.verdict(timed.length === 0 && L.every(p => !(p.flags ?? []).some((f: string) => /^(sun|callout|nocallout)\b/.test(f))), "no row sets an hour, a weather or a sun: every row is its level's own",
       timed.length ? timed.map(p => `${p.id}: ${p.hour ?? ''}${p.weather ? ` ${p.weather}` : ''} → ${P.pickHref(p, '')}`).join(' · ') : 'no row sets an hour or a weather'); }
   { const on = L.every(p => P.onShortList(p.mission)), others = SCENARIOS.filter((e: any) => !L.some(p => p.mission === e.id)).every((e: any) => !P.onShortList(e.id)); P.PICKS_UI.on = false; const off = L.every(p => !P.onShortList(p.mission)); P.PICKS_UI.on = true;
     F.verdict(on && others && off, "a mission the list names is told from the rest (the mission sheet and the loadout screen leave 'untuned' off it), and none is with the switch off", `on the list ${on} · the rest not ${others} · none under ?nopicks ${off} · tagged untuned in the data: ${L.filter(p => (P.pickEntry(p) as any)?.untuned).map(p => p.id).join(', ') || 'none'}`); }

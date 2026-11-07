@@ -37,8 +37,7 @@ export function officeDress(parts: string[], list: CastVariant[]): CastVariant[]
   const keep = list.filter(v => (v.mask & bits!) === 0); return keep.length ? keep : list;
 }
 
-/** THE TEAMMATE AT A PLACE OF THE ROSTER (0 = the first teammate; Sam is the first operator and never dealt here): the one rule the game and the kit screen's
- *  figure (ui/kitFigure.ts) both ask, so the man on the Team & kit step is the man the mission stands up. */
+/** THE TEAMMATE AT A PLACE OF THE ROSTER (0 = the first teammate; Sam is the first operator and never dealt here): the rule the game asks. */
 export function operatorAt(cast: CastInfo, place: number): CastVariant | null {
   const ops = castSide(cast, 'operator'); if (!ops.length) return null;
   return ops.length > 1 ? ops[1 + place % (ops.length - 1)] : ops[0];

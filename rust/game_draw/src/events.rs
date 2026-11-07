@@ -4,6 +4,7 @@
 //!
 //! What the air and the smoke are asked for is two things, whoever asks: a push of the air, and a source of smoke. A source that also drives the air names its
 //! push.
+use alloc::string::String;
 use alloc::vec::Vec;
 use game::effects::Track;
 use game::game::Game;
@@ -99,6 +100,52 @@ event! {
         pub tint: [f32; 3],
     }
 }
+event! {
+    /// a sound
+    pub struct Sound {
+        /// its name's number (`face_draw_name`)
+        pub name: u32,
+        /// it has a place; 0 = it is in the ears
+        pub placed: u32,
+        /// the roll it follows, one more than the roll's voice (0: none)
+        pub follows: u32,
+        pub pos: [f32; 3],
+        /// NaN: not said
+        pub gain: f32,
+        pub rate: f32,
+        pub duration: f32,
+        pub lowpass: f32,
+        pub pan: f32,
+        pub wet: f32,
+    }
+}
+event! {
+    /// a footfall
+    pub struct Footfall {
+        pub own: u32,
+        /// what it landed on, one more than its number in FLOORS (0: not said)
+        pub floor: u32,
+        pub pos: [f32; 3],
+        pub loud: f32,
+    }
+}
+section! {
+    /// a thing that rolls, and how hard
+    pub struct Roll {
+        pub voice: u32,
+        pub at: [f32; 2],
+        pub hard: f32,
+    }
+}
+section! {
+    /// what is heard all the while: one row
+    pub struct Heard {
+        /// the game's clock
+        pub time: f32,
+        /// the rain's level where the listener stands
+        pub rain: f32,
+    }
+}
 section! {
     /// where something rides, for as long as a source rides it
     pub struct Anchor {
@@ -115,6 +162,13 @@ pub struct Events {
     pub pushes: Vec<AirPush>,
     pub sources: Vec<SmokeSource>,
     pub anchors: Vec<Anchor>,
+    pub sounds: Vec<Sound>,
+    pub footfalls: Vec<Footfall>,
+    pub rolls: Vec<Roll>,
+    pub heard: Vec<Heard>,
+    /// every name a sound has had, by its number
+    pub names: Vec<String>,
+    rain: f32,
     /// what the live sources ride: the anchor's key, the thing, and how long it is asked for
     rides: Vec<(u32, Track, f64)>,
     keys: u32,
@@ -129,8 +183,14 @@ impl Events {
         self.kicks.clear();
         self.pushes.clear();
         self.sources.clear();
+        self.sounds.clear();
+        self.footfalls.clear();
         let tick = crate::tick(g);
         for e in &g.out { self.one(tick, g, e); }
+        self.heard.clear();
+        self.heard.push(Heard { time: g.time as f32, rain: self.rain });
+        self.rolls.clear();
+        for r in &g.rolls { self.rolls.push(Roll { voice: r.voice as u32, at: [r.x as f32, r.z as f32], hard: r.k as f32 }); }
         self.anchors.clear();
         let mut rides = core::mem::take(&mut self.rides);
         rides.retain(|(key, t, until)| {
@@ -162,6 +222,19 @@ impl Events {
                     bias: o.and_then(|o| o.bias).map_or([NONE; 3], f3), eye: o.and_then(|o| o.eye).map_or([NONE; 3], f3),
                 });
             }
+            E::GameAudioLikePlay(e) => {
+                let name = match self.names.iter().position(|n| *n == e.name) { Some(i) => i, None => { self.names.push(e.name.clone()); self.names.len() - 1 } };
+                let (o, serial) = (e.opts.as_ref(), self.sounds.len() as u32);
+                self.sounds.push(Sound {
+                    tick, serial, name: name as u32, placed: e.pos.is_some() as u32, follows: o.and_then(|o| o.tok).map_or(0, |t| t as u32 + 1), pos: e.pos.map_or([0.0; 3], f3), gain: opt(e.gain),
+                    rate: opt(o.and_then(|o| o.rate)), duration: opt(o.and_then(|o| o.duration)), lowpass: opt(o.and_then(|o| o.lowpass)), pan: opt(o.and_then(|o| o.pan)), wet: opt(o.and_then(|o| o.wet)),
+                });
+            }
+            E::GameAudioLikeFootstep(e) => {
+                let serial = self.footfalls.len() as u32;
+                self.footfalls.push(Footfall { tick, serial, own: e.is_player as u32, floor: e.mat.as_ref().map_or(0, |m| *m as u32 + 1), pos: f3(e.pos), loud: e.loudness as f32 });
+            }
+            E::GameAudioLikeRain(e) => self.rain = e.level as f32,
             E::SmokeSystemLikePush(e) => self.push(tick, &e.p),
             E::SmokeSystemLikeEmit(e) => {
                 let e = &e.e;

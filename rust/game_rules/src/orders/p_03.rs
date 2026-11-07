@@ -1227,6 +1227,7 @@ pub fn squad_orders_reread(g: &mut crate::game::Game) -> bool {
 /// … and the whole of it: each row's why-not as well (orders.ts SquadOrders.refresh)
 pub fn squad_orders_refresh(g: &mut crate::game::Game) {
     if g.orders.menu.is_none() || !squad_orders_reread(g) { return; }
+    crate::squadthrow::plan::forget(g);
     let Some(m) = g.orders.menu.clone() else { return };
     let door_up = match &m.target { OrderTarget::Door(x) => if squad_orders_big(g, &crate::seats::here(g)) && !m.men.is_empty() { Some(*x) } else { None }, _ => None };
     if let Some(x) = door_up {

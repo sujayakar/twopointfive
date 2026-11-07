@@ -542,6 +542,12 @@ pub fn cues_adopt(g: &mut crate::game::Game, msgs: &[crate::cues::CuesAdoptMsgsI
     g.cues.rows = radio[from..].iter().map(|m| CueRow { t: m.t, text: String::from(&m.text[7..]), cls: 0.0, rank: 1.0, who: String::new() }).collect();
 }
 
+/// A word over a man and nothing else: the bubble, no strip row, no class clock: nothing the net's own lines wait on (the recap's side call)
+pub fn cues_aside(g: &mut crate::game::Game, gd: GuardId, text: &str) {
+    let t = g.time;
+    g.cues.bubbles.set(gd, Bubble { text: String::from(text), t, dur: crate::guards::bubble_secs(text), radio: false });
+}
+
 /// What a man is saying: his line (Guard.bubble) or a cue of this file's, whichever is the later and still running. A copy: `=== by.bubble` of the TypeScript compares `.t` and `.text` here.   (cues.ts Cues.bubbleOf)
 pub fn cues_bubble_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::cues::Bubble> {
     let b = g.gd[gd].bubble.as_ref().map(|b| Bubble { text: b.text.clone(), t: b.t, dur: b.dur, radio: b.radio });

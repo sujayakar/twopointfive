@@ -26,7 +26,7 @@ for (const name of names) {
   G = null;
   const r = await runLesson(name, { seed: 1 });
   const V = G?.verdict, R = V?.result, due = R ? (V.cardAt as number) - G.time : NaN;
-  const own = !!G?.mission?.debrief;   // the stealth mission's own card (a quiet lesson): the page opens it itself
+  const own = !!G?.endCards;   // the stealth mission's own card (a quiet lesson): the page opens it itself
   const card = !!R && (own || ((V.cardAt as number) >= 0 && due <= VERDICT.winSecs + 1e-6));   // (due < 0: the room fell before the scripted player's last step — the page raised the card then)
   const ok = r.code === 0 && !!R && R.won && card;
   if (!ok) bad++;

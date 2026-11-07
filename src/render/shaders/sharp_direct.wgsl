@@ -96,7 +96,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
   var remR = vec2f(1.0);                                     // rule 1: the ratio the class's REMAINDER (everything but the rayed light) rides on, per class
   if (live) {
     N = normalize(textureLoad(oNormal, gxy, 0).xyz * 2.0 - 1.0);
-    Nl = N; look = LOOK && textureLoad(oNormal, gxy, 0).a < 0.17;            // THE LOOK PROTOTYPE (look.wgsl): a tilted normal. Everything below runs on the box's own FACE as it always did; the relief only re-weighs each class's light at the end (Us ∕ U)
+    Nl = N; look = textureLoad(oNormal, gxy, 0).a < 0.17;            // THE LOOK'S OWN LINE (look.wgsl): a tilted normal. Everything below runs on the box's own FACE as it always did; the relief only re-weighs each class's light at the end (Us ∕ U)
     if (look) { N = lookGeoN(Nl, textureLoad(oId, gxy, 0).x); }
     // ---- U per class at THIS output pixel: the estimators' scoring loop (same order, same early-outs; walled-off lights stay in U here as there) ----
     for (var s = 0u; s < nIter; s++) {

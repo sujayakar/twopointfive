@@ -71,8 +71,11 @@ read by `f[D.at[Section.x] + X.field]`, with no object a row. What is drawn once
 the air and the smoke are asked for is one `AirPush` and one `SmokeSource`, whoever asks. Nothing that is still there a moment later is an event: the other sections alone make
 the picture right. `draw.html` (`?draw=1`; `src/host/drawpage.ts`) starts the game by `face_start`, hands it a hand (`face_hand`), steps it and draws it: its bundle holds none of
 the game's TypeScript, and `tools/draw/ban.ts` (the first step of `bun run build`) is red on an import of it. The page he plays takes the fog of war alone from a section; the rest
-of it is as it was. Not on the new page yet: marks, snow and rain, sounds, fires, the traffic map, a look's paint on door leaves (`lookDoors`), the particles' own look table, the
-HUD, every command that is not input (restart, saves, kit, panels). To add a section: a file, a line in `sections!`, the generator, a line in `hold draw`'s parts.
+of it is as it was. What a player or a panel does that is not input is ONE TYPED LIST, declared once (`rust/game_run/src/command.rs` `commands!`; the page's writer is generated beside the sections:
+`src/draw/commands.ts`), handed over before a step (`face_commands`) as the bytes a replay or another machine would be handed. Games are kept by the save controller in Rust
+(`game_rules` `savestate/control.rs`: when, which ring, what goes back; the module keeps the clones; a step told `SAVES` gives it its turn). Sound asks the world (`src/draw/ask.ts`).
+Not on the new page yet: marks, snow and rain, fires, the traffic map, a look's paint on door leaves (`lookDoors`), the particles' own look table, the
+HUD, the menus, kit, the panel's knobs, the level's own music. To add a section: a file, a line in `sections!`, the generator, a line in `hold draw`'s parts.
 Checks: `tools/draw/rows-check.ts` runs both packers on one tick of one game and compares every word (462 ticks of six levels, all equal; `ROWS_BREAK=1` fails; it goes when the
 TypeScript copy does); `rust/game_start/tests/draw.rs` and `fog.rs`; `hold draw` draws every frame of a set of plays, holds the game's words to what they were and prints what each
 part cost. Seen only in software: stills of the office beside the old page's. Never seen on a GPU.

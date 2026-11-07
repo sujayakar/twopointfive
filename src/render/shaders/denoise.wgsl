@@ -126,6 +126,14 @@ fn fetchFoot(t: texture_2d<f32>, f: Foot) -> vec4f {
 fn geomWeight(P0: vec3f, n0: vec3f, z0: f32, Pq: vec3f, nq: vec3f, kz: f32, kn: f32, span: f32) -> f32 {
   return exp(-abs(dot(Pq - P0, n0)) / max(z0 * kz * span, 0.02)) * pow(max(dot(nq, n0), 0.0), kn);
 }
+/** THE PLACE A TEXEL IS OF, for a filter that must not carry one room's light into the next (common.wgsl sideAt, asked a finger off the surface; SIDE_UNKNOWN and up =
+ *  one place and no other within reach, a doorway, or nothing known: it takes every tap, as it always did). Depth, plane and normal cannot tell two rooms apart where ONE
+ *  wall's face runs through both past the end of a partition, and by day the room next door holds many times this one's light. The top of a wall is of neither
+ *  room (place_common.wgsl PLACE_TOP) and is one surface. */
+fn placeOf(P: vec3f, n: vec3f) -> u32 {
+  if (!WALL_SIDES || (n.y > 0.5 && P.y > 1.88)) { return SIDE_UNKNOWN; }
+  let q = P.xz + standOff(n, 0.04); return sideAt(q.x, q.y);
+}
 /** SVGF's luminance edge-stop: differences the pixel's own noise (σ) explains are averaged away, larger ones are edges */
 fn lumWeight(l0: f32, lq: f32, sigma: f32, kl: f32, eps: f32) -> f32 { return exp(-abs(lq - l0) / (kl * sigma + eps)); }
 
@@ -797,6 +805,7 @@ fn radAtrous(@builtin(global_invocation_id) gid: vec3u) {
   var sig = sqrt(max(c0.a, 0.0));   // the pixel's own σ (its sample-moment EMA; the filtered variance from the second iteration on)
   if (pp) { sig *= 1.0 + 3.0 * young; }                                     // (a young history's variance is the spatial stand-in and its neighbours are all it has: looser)
   if (!SPEC && dn.gi3.y > 0.0) { let mz = textureLoad(raMom, pc, 0).z; sig *= 1.0 + dn.gi3.y * clamp(1.0 - (mz - 1.0) / 4.0, 0.0, 1.0); }   // diffuse, GI in motion: the same allowance for a young bounce history (0 from the fifth frame)
+  let own = placeOf(P0, n0);
   var acc = vec4f(0.0); var ws = 0.0;
   for (var t = 0; t < 9; t++) {
     let dx = t % 3 - 1; let dy = t / 3 - 1;
@@ -814,6 +823,7 @@ fn radAtrous(@builtin(global_invocation_id) gid: vec3u) {
       w *= exp(-dot(dd, dd) / (2.0 * radius * radius)) * exp(-abs(rq - r0) * 12.0);   // inside the lobe's footprint; a different finish is a different reflection
     }
     if (w <= 1e-6) { continue; }
+    if (own < SIDE_UNKNOWN && t != 4) { if ((placeOf(Pq, nq) & 15u) != own) { continue; } }   // (another place's, or a texel that takes every tap and may hold another's)
     var a = textureLoad(raIn, q, 0); if (FIRST) { a.a = textureLoad(raMom, q, 0).a; }
     let wq = w * lumWeight(l0, luminance(a.xyz), sig, kl, 0.002 + 0.05 * l0);   // (radiance is HDR: the floor of the edge-stop is relative to the pixel's own level)
     acc += vec4f(a.xyz * wq, a.a * wq * wq); ws += wq;
