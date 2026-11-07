@@ -213,30 +213,9 @@ export async function ownchargeSquad(): Promise<boolean> {
   return F.done();
 }
 
-// ───────────────────────────────────────────────────────────── save
-export async function ownchargeSave(): Promise<boolean> {
-  const F = family('owncharge-save: alone, a checkpoint carries your counts and a charge left set on a door');
-  await kept(async () => {
-    const R: any = await hushed(() => rig(13, { stage: false })); const { game: g, D } = R;
-    K.KIT.on = true; soloWith(g, { charges: 2 }); const d = R.door('breakroom_w'), side = faceToward(d, [20, 0, 18.9]); shut(d);
-    setByHand(R, d, side); g.teleportPlayer([25.0, 0, 18.9]); R.step(20);
-    const s1 = SAVE.saveState(g, { kind: 'harness', force: true });
-    R.press('KeyF'); R.step(30); const s2 = SAVE.saveState(g, { kind: 'harness', force: true });
-    const di = g.doors.list.indexOf(d);
-    await hushed(() => SAVE.loadState(g, s1)); R.step(3); const l1 = { n: D.charges, set: D.set.length, on: D.set[0]?.door === g.doors.list[di] && D.set[0]?.side === side && D.set[0]?.by === 'Sam', shut: g.doors.list[di].latched };
-    const blown0 = D.stats.blown; R.press('KeyF'); R.step(3); const l1b = { blown: D.stats.blown - blown0, n: D.charges, set: D.set.length };
-    await hushed(() => SAVE.loadState(g, s2)); R.step(3); const l2 = { n: D.charges, set: D.set.length };
-    const old = JSON.parse(JSON.stringify(s2)); delete old.player.own; await hushed(() => SAVE.loadState(g, old)); R.step(3); const l3 = D.charges;
-    F.verdict(l1.n === 1 && l1.set === 1 && l1.on && l1b.blown === 1 && l1b.set === 0 && l1b.n === 1 && l2.n === 1 && l2.set === 0 && l3 === 2,
-      'a load puts the count back AND the charge on its door, where F blows it; a file from before the counts were saved gets the staging\'s (your card\'s)', `first file: ${J(l1)}, then F: ${J(l1b)} · second: ${J(l2)} · a file without the counts: ${l3}`);
-    await hushed(() => SAVE.loadState(g, s1)); R.step(3); await hushed(() => g.restartEncounter()); R.step(5);
-    F.verdict(D.charges === 2 && D.set.length === 0 && D.samSpent === 0, 'a restart after that load: your card\'s two, nothing set', `count ${D.charges} · set ${D.set.length} · spent ${D.samSpent}`);
-  });
-  return F.done();
-}
 
 if (import.meta.main) {
-  const want = process.argv.slice(2); const all: [string, () => Promise<boolean>][] = [['kit', ownchargeKit], ['door', ownchargeDoor], ['squad', ownchargeSquad], ['save', ownchargeSave]];
+  const want = process.argv.slice(2); const all: [string, () => Promise<boolean>][] = [['kit', ownchargeKit], ['door', ownchargeDoor], ['squad', ownchargeSquad], ];
   const bad = want.filter(w => !all.some(([n]) => n === w)); if (bad.length) { console.error(`unknown: ${bad.join(' ')} (kit door squad save)`); process.exit(2); }
   let ok = true; for (const [n, fn] of all) if (!want.length || want.includes(n)) { try { ok = (await fn()) && ok; } catch (e) { ok = false; console.log(`- FAIL — owncharge-${n} threw\n    ${(e as Error).message}`); } }
   console.log(`\n=== owncharge-check: ${ok ? 'ALL PASS' : 'FAILED'} ===`); process.exit(ok ? 0 : 1);

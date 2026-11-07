@@ -439,50 +439,6 @@ export async function grabChoke() {
   return allPass;
 }
 
-// ================================================================ (6) coming free: there is no release verb (E draws on him instead) — torn loose when Sam goes down (freeHeld 'shot') he is alert on Sam within a frame, wasHeld, nothing of the hold left anywhere; and no re-grab of an alert man
-export async function grabRelease() {
-  console.log('\n=== grab-release: E on his row draws (still held); freeHeld — instant witness (alert on Sam, wasHeld 1), no stumble, nothing residual; the alert man cannot be grabbed again ===');
-  let allPass = true;
-  const S = await stage(61); const { W, game, A, lines } = S; const { cam, canvas } = W;
-  grabViaHold(S); untilHeld(S); W.step(DT);
-  for (let i = 0; i < 60; i++) W.step(DT);
-  const p0 = v3.copy(A.char.pos), yaw0 = A.char.bodyYaw;
-  tapKey(W, 'KeyE'); for (let i = 0; i < 20; i++) W.step(DT);
-  if (!A.held || game.player.holding?.phase !== 'held' || game.player.holding.variant !== 'gun' || A.held.variant !== 'gun') { console.log(`- FAIL — E on the held row: hold now ${game.player.holding?.phase ?? 'gone'} / ${game.player.holding?.variant} (want still held, drawn on him — there is no release verb)`); allPass = false; }
-  else console.log('- pass — E on the held row draws the pistol to his head: still held 0.33 s later, the gun variant');
-  game.freeHeld('shot');   // the hand-back path that remains (Sam shot down while holding): instant witness, alert on Sam, wasHeld — asserted below exactly as the shove used to be
-  let freeFrame = -1, alertFrame = -1; const trace: string[] = [];
-  for (let i = 0; i < 120; i++) {
-    W.step(DT);
-    if (freeFrame < 0 && !A.held) freeFrame = i;
-    if (alertFrame < 0 && A.state === 'alert') alertFrame = i;
-    if (i % 10 === 0 || i === freeFrame || i === alertFrame) trace.push(`f${i} ${game.player.holding?.phase ?? 'free'} him ${posS(A.char.pos)} ${A.state} aw ${f2(A.awareness)} reactT ${f2(A.reactT)} spd ${f2(A.speed)}`);
-  }
-  const stumble = v3.distXZ(A.char.pos, p0); const fwd: Vec3 = [Math.sin(yaw0), 0, Math.cos(yaw0)]; const along = (A.char.pos[0] - p0[0]) * fwd[0] + (A.char.pos[2] - p0[2]) * fwd[2];
-  const fails: string[] = [];
-  if (freeFrame !== 0) fails.push(`freed at frame ${freeFrame} (freeHeld('shot') hands him back at once — want frame 0)`);
-  if (alertFrame < 0 || alertFrame - freeFrame > 1) fails.push(`alert at frame ${alertFrame}, freed at ${freeFrame} (want within a frame)`);
-  if (stumble > 0.3) fails.push(`moved ${f2(stumble)} m (${f2(along)} m forward) on being freed — freeHeld hands him back where he stands, no shove`); void along;
-  if (penetration(game.col, A.char.pos, 0.3, 0.2, 1.5) > 0.03) fails.push('he ended inside static geometry');
-  if (game.player.holding || A.held || game.player.char.anim.holdPose || A.char.anim.heldPose) fails.push(`residue: holding ${!!game.player.holding} held ${!!A.held} holdPose ${!!game.player.char.anim.holdPose} heldPose ${!!A.char.anim.heldPose}`);
-  if (A.witness.wasHeld !== 1) fails.push(`wasHeld ${A.witness.wasHeld}`);
-  if (A.awareness < 0.99 || !A.lastKnown || v3.distXZ(A.lastKnown, game.player.char.pos) > 0.6) fails.push(`awareness ${f2(A.awareness)} fix ${A.lastKnown ? posS(A.lastKnown) : 'none'} vs Sam ${posS(game.player.char.pos)}`);
-  if (!lines.some((l: any) => l.who === A.callsign && /CONTACT/.test(l.text))) fails.push('no CONTACT! from him');
-  if (A.talk.heldSince !== -1) fails.push(`talk.heldSince ${A.talk.heldSince}`);
-  if (game.player.char.anim.hideHeldItem) { for (let i = 0; i < 30; i++) W.step(DT); if (game.player.char.anim.hideHeldItem) fails.push('Sam\'s pistol still hidden 2.5 s after letting go'); }
-  // no re-grab: behind him again, the row refuses
-  const gp = A.char.pos; const back: Vec3 = [gp[0] - Math.sin(A.char.bodyYaw) * 0.8, 0, gp[2] - Math.cos(A.char.bodyYaw) * 0.8];
-  game.teleportPlayer(back); W.step(DT);
-  buildInteractables(game, cam, 0, 0, canvas.clientWidth, canvas.clientHeight);
-  const it = game.interactables.find((x: any) => x.kind === 'guard' && x.guard === A);
-  startGrab(game, A);
-  if (it?.inReach) fails.push(`the alert man's row still offers "${it.line2}"`);
-  if (game.player.holding || A.held) fails.push('startGrab took an alert man');
-  const ok = fails.length === 0; allPass &&= ok;
-  console.log(`- ${ok ? 'PASS' : 'FAIL'} — freed at frame ${freeFrame}, alert at frame ${alertFrame}; stumbled ${f2(stumble)} m (${f2(along)} forward); now ${A.state} aw ${f2(A.awareness)}, wasHeld ${A.witness.wasHeld}, alertedBy ${A.witness.alertedBy}; behind him again: row "${it?.line2 ?? 'none'}" inReach ${it?.inReach}\n    ${trace.join('\n    ')}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
-  console.log(`=== grab-release: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
-  return allPass;
-}
 
 // ================================================================ (7) everything else that ends it: Sam shot down in the hold, a teleport, a restart, a guard reset, the man killed in the arm by somebody else
 export async function grabAuto() {

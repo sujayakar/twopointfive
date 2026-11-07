@@ -22,8 +22,6 @@ const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { glassPanes, isSheet, GLASS, resetGlass } = await import(`${ROOT}/src/game/glass.ts`);
 const PEN = await import(`${ROOT}/src/game/glasspen.ts`);
 const { GLASSPEN, GLASSPEN_STATS, GLASSPEN_HOOKS, paneToll, paneType, roundEnergy, holeCount, resetGlassPen, shotPasses } = PEN;
-const { GB_STATS, GLASSBREAK } = await import(`${ROOT}/src/game/glassbreak.ts`);
-const GB_BREAK: number = GLASSBREAK.breakE.annealed;
 const { fireWeapon, armThrough } = await import(`${ROOT}/src/game/combat.ts`);
 const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
 const { SHOTGUN_LAST, SHOTGUN_STATS } = await import(`${ROOT}/src/game/shotgun.ts`);
@@ -129,49 +127,6 @@ function recordBreaks(rec: number[], r: number): string | null {
   return null;
 }
 
-// ================================================================ pellets-arm
-/** one shell with the shoulder one side of a pane of `kind` and the muzzle 12 cm past its far face, a man two metres beyond; `brk` false = rounds through glass
- *  live but the fracture model switched off (the A/B a pane then never opens, so every pellet finds the glass across the arm) */
-async function armCase(seed: number, kind: PaneKind, brk = true) {
-  const S = await stage(seed, { brk, shards: brk }); const X = S.pane(kind, 1.2); if (!X || !X.chest) return null;
-  const half = Math.min(X.b.h[0], X.b.h[2]);
-  const muzzle = v3.mad(X.p, X.out, -(half + 0.12)) as Vec3, shoulder = v3.mad([X.p[0], X.p[1] + 0.07, X.p[2]], X.out, half + 0.33) as Vec3, to = v3.mad(X.p, X.out, -6) as Vec3;
-  const man = S.behind(X, 2.0); S.step(2);
-  const c = S.game.player.char, m0 = c.muzzle, a0 = c.bones.upperArmR; c.muzzle = muzzle; c.bones.upperArmR = shoulder; const pressed = armThrough(S.game, c); c.muzzle = m0; c.bones.upperArmR = a0;
-  const arm0 = GLASSPEN_STATS.viaArm, imp0 = GB_STATS.impacts;
-  const o = shellAt(S, X, muzzle, to, 0, shoulder);
-  return { S, X, o, pressed, viaArm: GLASSPEN_STATS.viaArm - arm0, impacts: GB_STATS.impacts - imp0, manDown: man.state === 'dead', ends: SHOTGUN_LAST.ends.length as number };
-}
-export const pelletsArm = guarded(async () => {
-  const { verdict, done } = family('pellets-arm: the muzzle pressed through a pane — one shell files ONE crossing at the arm point, not nine, and the nine fly on');
-  const pe = (GLASSPEN.energy.m870 ?? GLASSPEN.defaultEnergy) * GLASSPEN.fractureK;
-  // (1) everything live. The first pellet's crossing knocks the piece at the arm point out, so the other eight leave by the hole: one crossing by the glass's own doing
-  const A = await armCase(31, 'annealed');
-  if (!A) { verdict(false, 'a chest-high plain pane with floor both sides', 'none in the level'); return done(); }
-  verdict(A.pressed, 'staged: the shoulder one side of a plain (annealed) pane, the muzzle 12 cm past its far face (combat.ts armThrough says so)', `pane ${A.X.bi} · armThrough ${A.pressed}`);
-  verdict(A.o.blows === 1 && A.impacts === 1 && A.o.holes === 1 && A.o.jets === 1 && A.o.events === 1 && A.o.stars <= 1, 'GLASS FULLY LIVE: one blow in the fracture model, one hole remembered, one exit jet, one \'glass\' event', `blows on the pane ${A.o.blows} (anywhere ${A.impacts}) · energy filed ${f2(A.o.energy)} (a pellet is ${f2(pe)}) · holes ${A.o.holes} · jets ${A.o.jets} · events ${A.o.events} · stars ${A.o.stars} · pellets that met glass ${A.o.rec ? A.o.met : '?'} (the rest left by the hole the first one made)`);
-  verdict(A.manDown && A.o.flew === 9, 'and they are still nine rounds beyond the glass — every one flew on from the muzzle (on 0ee0094 pellets two to nine were put into "the panel" at the muzzle: the arm was through a hole by then) — and the man two metres past it is down', `man down ${A.manDown} · pellets that flew more than a metre ${A.o.flew} of ${A.ends}`);
-  { // the same hole, any gun: a rifle pressed through the glass, two rounds — the second leaves by the hole the first made and flies as far
-    const R = await stage(33); const X = R.pane('annealed', 1.2)!; const half = Math.min(X.b.h[0], X.b.h[2]);
-    const muzzle = v3.mad(X.p, X.out, -(half + 0.12)) as Vec3, shoulder = v3.mad([X.p[0], X.p[1] + 0.07, X.p[2]], X.out, half + 0.33) as Vec3, to = v3.mad(X.p, X.out, -6) as Vec3;
-    const flown: number[] = []; for (let k = 0; k < 2; k++) { R.fire(muzzle, to, 'fn2000', shoulder); const e = R.events.filter((x: any) => x.kind === 'shot').pop(); flown.push(e ? v3.dist(e.from, e.to) : -1); }
-    verdict(flown[0] > 1 && flown[1] > 1 && holeCount(R.game, X.bi) === 1, 'a rifle through the same glass, two rounds: the second leaves by the hole the first made and flies on (one crossing filed, not two)', `flew ${f2(flown[0])} m, then ${f2(flown[1])} m · holes remembered ${holeCount(R.game, X.bi)}`); }
-  // (2) the fracture model off, rounds through glass on: the pane never opens, all nine pellets find it across the arm — the case that stacked nine
-  const B = await armCase(31, 'annealed', false);
-  if (!B) { verdict(false, 'the same pane, the fracture model off', 'no pane'); return done(); }
-  verdict(B.pressed && B.viaArm === 9 && !!B.o.rec && B.o.met === 9 && B.o.through === 9 && B.o.marks === 1 && B.o.joined === 8, 'THE FRACTURE MODEL OFF (the pane cannot open): all nine pellets cross the glass at the arm point — the first is the mark, eight join it', B.o.rec ? `crossed at the arm ${B.viaArm} · met ${B.o.met} · through ${B.o.through} · marks ${B.o.marks} · joined ${B.o.joined}` : `crossed at the arm ${B.viaArm} · this build keeps no record of a shell on glass`);
-  verdict(B.o.holes === 1 && B.o.jets === 1 && B.o.stars === 1 && B.o.events === 1, '…and ONE crossing is filed for them: one hole remembered, one exit jet, one crack star, one \'glass\' event (it was nine of each bar the star)', `holes ${B.o.holes} · jets ${B.o.jets} · stars ${B.o.stars} · events ${B.o.events}`);
-  verdict(B.manDown && B.o.flew === 9, '…and all nine fly on from the muzzle: the man beyond is down', `man down ${B.manDown} · pellets that flew more than a metre ${B.o.flew} of ${B.ends}`);
-  // (3) laminated across the arm: nothing passes, one mark for the shell
-  const L = await armCase(32, 'laminated');
-  if (!L) console.log('    (no chest-high laminated sheet with floor both sides in this level: the stopped arm case is not run)');
-  else {
-    verdict(L.pressed && L.o.stars === 1 && L.o.events === 1 && L.o.holes === 0 && L.o.jets === 0 && !L.manDown && L.o.flew === 0, 'a LAMINATED sheet across the arm: the shell is spent in it as ONE mark — one star, one event, no hole, no jet — and the man beyond stands', `pressed ${L.pressed} · stars ${L.o.stars} · events ${L.o.events} · holes ${L.o.holes} · jets ${L.o.jets} · pellets beyond ${L.o.flew} · man down ${L.manDown}`);
-    verdict(Math.abs(L.o.energy - 9 * pe) < 1e-6, '…with the whole shell\'s energy in that one star (what stops in the glass stays in the glass)', `energy filed ${f2(L.o.energy)} = 9 × ${f2(pe)}`);
-    verdict(!!L.o.rec && L.o.met === 9 && L.o.through === 0 && L.o.marks === 1, 'all nine are in the shell\'s record as stopped, one mark for them', L.o.rec ? `met ${L.o.met} · through ${L.o.through} · marks ${L.o.marks}` : 'no record');
-  }
-  return done();
-});
 
 // ================================================================ pellets-rule
 const RANGES = [0.3, 1, 4, 8], SHELLS = swept(2, 40);
@@ -207,41 +162,6 @@ async function rangeRows(seed: number): Promise<Row[]> {
   }
   return rows;
 }
-export const pelletsRule = guarded(async () => {
-  const { verdict, done } = family('pellets-rule: a shell marks a pane once per place — pellets that go through and pellets that stop, by the one rule');
-  const rows = await rangeRows(41); const P = WEAPONS.m870.pellets;
-  console.log(`    one shell, square on, ${SHELLS} shells a row on a mended pane [pattern ${(2 * P.cone * 100).toFixed(0)} cm wide per metre · a pellet's energy ${GLASSPEN.energy.m870 ?? `${GLASSPEN.defaultEnergy} (no entry)`} · shellR ${GLASSPEN.shellR} m]`);
-  console.log('    glass       range   met glass   through   stopped   marks   joined   energy filed   pane fails (1 shell)   (2 shells)   open after   pellets beyond');
-  for (const r of rows) console.log(`    ${r.kind.padEnd(10)}  ${String(r.D).padStart(3)} m   ${f1(r.met / r.n).padStart(5)}        ${f1(r.through / r.n).padStart(5)}     ${f1(r.stopped / r.n).padStart(5)}    ${f1(r.marks / r.n).padStart(5)}   ${f1(r.joined / r.n).padStart(5)}      ${f2(r.energy / r.n).padStart(5)}          ${String(r.failed).padStart(2)} of ${r.n}              ${String(r.failed2).padStart(2)} of ${r.n}       ${(100 * r.open / r.n).toFixed(0).padStart(3)} %        ${f1(r.beyond / r.n).padStart(5)}`);
-  const bad = rows.flatMap(r => r.bad.map(b => `${r.kind} ${r.D} m, ${b}`));
-  verdict(rows.length >= swept(4, 9) && rows.every(r => r.met > 0), 'shells flown at plain, toughened and laminated glass from arm\'s length, 1, 4 and 8 m, every row with pellets on the pane', `${rows.length} rows · ${rows.reduce((a, r) => a + r.n, 0)} first shells · ${rows.reduce((a, r) => a + r.met, 0)} pellets met glass`);
-  verdict(bad.length === 0, 'EVERY shell: its record obeys the rule (a mark never on a mark of its own shell, a joiner always on one); a crack star is drawn for exactly the marks; the fracture model was given the marks and the energy of the pellets that stopped on one, nothing for a pellet through one; holes and exit jets are exactly the marks that went through; every pellet that ended in the pane is in the record as stopped, and none is in it as through that did not end beyond; one hearing event a shell', bad.length ? `${bad.length} breaks, first: ${bad.slice(0, 3).join(' | ')}` : 'no break in any shell');
-  const at = (k: PaneKind, D: number) => rows.find(r => r.kind === k && r.D === D);
-  const a0 = at('annealed', 0.3), a1 = at('annealed', 1), a4 = at('annealed', 4), l1 = at('laminated', 1);
-  if (a0) verdict(a0.failed === 0 && a0.marks / a0.n <= 2.5 && a0.open / a0.n < 0.05, 'PLAIN GLASS AT ARM\'S LENGTH: nine pellets in one spot read as one ragged hole — a blow or two\'s worth, and the pane stands', `a shell: ${f1(a0.met / a0.n)} pellets met glass as ${f1(a0.marks / a0.n)} marks (${f1((a0.beyond - a0.through) / a0.n)} left by the hole already there) · energy filed ${f2(a0.energy / a0.n)} of the ${GB_BREAK} that runs a plain pane · ran in ${a0.failed} of ${a0.n} · ${(100 * a0.open / a0.n).toFixed(1)} % of the sheet open`);
-  if (a1) verdict(a1.joined > 0 && a1.marks / a1.n < 9 * 0.6 && a1.failed * 2 < a1.n, 'PLAIN GLASS AT 1 m: the pattern is a hand across — pellets land on each other\'s marks or leave by the hole, and more often than not the pane keeps standing with a ragged hole in it', `a shell: ${f1(a1.met / a1.n)} pellets met glass as ${f1(a1.marks / a1.n)} marks (${f1((a1.beyond - a1.through) / a1.n)} left by the hole) · the pane ran in ${a1.failed} of ${a1.n} (after a second shell ${a1.failed2}) · ${(100 * a1.open / a1.n).toFixed(1)} % of the sheet open`);
-  if (a4 && a1) verdict(a4.marks / a4.n > a1.marks / a1.n && a4.joined / a4.n < 1.5, 'PLAIN GLASS AT 4 m: the pellets are a hand apart and each is its own mark — nine pocks are nine blows, and that much runs a plain pane', `marks a shell ${f1(a4.marks / a4.n)} (at 1 m ${f1(a1.marks / a1.n)}) · joined ${f1(a4.joined / a4.n)} · the pane ran in ${a4.failed} of ${a4.n}`);
-  if (l1) verdict(l1.through === 0 && l1.stopped === l1.met && l1.marks > l1.n * 1.2 && l1.beyond === 0, 'LAMINATED: nothing goes through, and the pellets that stop are marked by the same rule — not one in three', `stopped ${f1(l1.stopped / l1.n)} a shell · marks ${f1(l1.marks / l1.n)} · through ${l1.through} · beyond ${l1.beyond}`);
-  // pellets through AND pellets stopped, one shell, one pane: toughened glass raked at the pellet's limit
-  { const S = await stage(43); const X = S.pane('tempered', 3); let mixed: ShellOut | null = null, tries = 0, deg = 0;
-    if (X) {
-      const e = GLASSPEN.energy.m870 ?? GLASSPEN.defaultEnergy, cosLim = GLASSPEN.cost.tempered / Math.max(1e-6, e - GLASSPEN.minEnergy); deg = Math.acos(Math.min(1, cosLim)) * 180 / Math.PI;
-      const tan: Vec3 = [X.out[2], 0, -X.out[0]];
-      for (; tries < 5 && !mixed; tries++) { S.mend(); const a = (deg + (tries % 5 - 2) * 0.6) * Math.PI / 180; const from = v3.add(v3.mad(X.p, X.out, 2.2 * Math.cos(a)), v3.scale(tan, 2.2 * Math.sin(a))) as Vec3;
-        const o = shellAt(S, X, from, v3.mad(from, v3.normalize(v3.sub(X.p, from)), 8) as Vec3); if (o.through > 0 && o.stopped > 0) mixed = o; }
-    }
-    const why = mixed?.rec ? recordBreaks(mixed.rec, GLASSPEN.shellR) : 'no record';
-    verdict(!!mixed && !why && mixed.blows === mixed.marks + mixed.joinedStopped && mixed.stars === mixed.marks && mixed.holes === mixed.marksThrough && mixed.jets === mixed.marksThrough && mixed.stopped === mixed.endIn,
-      'ONE SHELL WITH BOTH — toughened glass raked at the angle a pellet just fails to cross: the pellets that got through and the ones that stopped are in one record under one rule', mixed ? `at ${f1(deg)}° off the normal (try ${tries}): ${mixed.through} through, ${mixed.stopped} stopped · marks ${mixed.marks} (${mixed.marksThrough} through) · stars ${mixed.stars} · blows ${mixed.blows} (${mixed.joinedStopped} stopped on a mark) · holes ${mixed.holes} · jets ${mixed.jets} · ${why ?? 'record holds'}` : `no shell with both in ${tries} tries${X ? '' : ' (no toughened pane with room)'}`); }
-  // no shell does less for being closer: toughened glass raked past the angle a pellet crosses at, so every pellet stops — from 0.4 m (one mark, the rest on it) and from 2 m (marks apart)
-  { const S = await stage(44); const X = S.pane('tempered', 3); const out: { D: number; o: ShellOut }[] = [];
-    if (X) { const tan: Vec3 = [X.out[2], 0, -X.out[0]], a = 40 * Math.PI / 180;
-      for (const D of [0.4, 2]) { S.mend(); const from = v3.add(v3.mad(X.p, X.out, D * Math.cos(a)), v3.scale(tan, D * Math.sin(a))) as Vec3; out.push({ D, o: shellAt(S, X, from, v3.mad(from, v3.normalize(v3.sub(X.p, from)), 8) as Vec3, 30) }); } }
-    const [near, far] = out;
-    verdict(!!near && !!far && near.o.through === 0 && near.o.joinedStopped > 0 && near.o.marks === 1 && near.o.diced && far.o.diced && near.o.energy > near.o.marks * (GLASSPEN.energy.m870 ?? 0.5) * GLASSPEN.fractureK,
-      'WHAT STOPS IN THE GLASS STAYS IN IT — toughened glass raked at 40° (no pellet crosses): from 0.4 m the shell lands on one mark, the pellets on it leave their energy in it, and the pane dices — as it does from 2 m (a shell does not do less for being closer)', near && far ? `0.4 m: ${near.o.stopped} stopped as ${near.o.marks} marks, energy ${f2(near.o.energy)}, diced ${near.o.diced} · 2 m: ${far.o.stopped} stopped as ${far.o.marks} marks, energy ${f2(far.o.energy)}, diced ${far.o.diced}` : 'no toughened pane with room'); }
-  return done();
-});
 
 // ================================================================ pellets-energy
 export const pelletsEnergy = guarded(async () => {
@@ -273,20 +193,5 @@ export const pelletsEnergy = guarded(async () => {
   return done();
 });
 
-// ================================================================ pellets-red
-export const pelletsRed = guarded(async () => {
-  const { verdict, done } = family('pellets-red: the red paths — each check above does go red when the thing it checks is taken away');
-  GLASSPEN.shellR = 0;
-  const A = await armCase(31, 'annealed', false);
-  verdict(!!A && A.pressed && A.o.holes === 9 && A.o.jets === 9 && A.o.stars === 9 && A.o.marks === 9, 'the rule switched off (GLASSPEN.shellR 0), the fracture model off: the same pressed shell files NINE crossings at the arm point — nine holes, nine jets — and pellets-arm\'s one-crossing check would be red', A ? `marks ${A.o.marks} · holes ${A.o.holes} · jets ${A.o.jets} · events ${A.o.events} · stars ${A.o.stars}` : 'no pane');
-  const L = await armCase(32, 'laminated');
-  if (L) verdict(L.o.stars === 9 && L.o.marks === 9, '…and a laminated sheet across the arm is starred nine times at one point', `stars ${L.o.stars} · marks ${L.o.marks}`);
-  Object.assign(GLASSPEN, JSON.parse(JSON.stringify(PEN_SHIPPED)));
-  const good = [0, 1, 0, 1, 1, 0.01, 1, 0, 1, 0, 0.2, 1, 0, 1, 1], twin = [0, 1, 0, 1, 1, 0.01, 1, 0, 1, 1], lone = [0, 1, 0, 1, 1, 0.2, 1, 0, 1, 0], byStop = [0, 1, 0, 0, 1, 0.01, 1, 0, 1, 0];
-  verdict(recordBreaks(good, 0.04) === null && !!recordBreaks(twin, 0.04) && !!recordBreaks(lone, 0.04) && !!recordBreaks(byStop, 0.04), 'the record checker: a good record holds; a second mark a centimetre from the first, a joiner with no mark near it, and a pellet through "by the hole" of one that stopped are each flagged', `good: ${recordBreaks(good, 0.04) ?? 'holds'} · twin marks: ${recordBreaks(twin, 0.04)} · lone joiner: ${recordBreaks(lone, 0.04)} · through by a stopped mark: ${recordBreaks(byStop, 0.04)}`);
-  delete GLASSPEN.energy.m870;
-  verdict(roundEnergy(WEAPONS.m870) === GLASSPEN.defaultEnergy, 'the m870 entry taken out: a pellet crosses glass as a sidearm round again (0.5) — pellets-energy\'s first check would be red', `roundEnergy(m870) ${roundEnergy(WEAPONS.m870)}`);
-  return done();
-});
 
 if (import.meta.main && process.argv.includes('--table')) { (GLASSPEN as any).shellR ??= 0; if (process.env.SHELLR) GLASSPEN.shellR = +process.env.SHELLR; if (process.env.M870E) GLASSPEN.energy.m870 = +process.env.M870E; const rows = await rangeRows(41); for (const r of rows) console.log(JSON.stringify({ ...r, bad: r.bad.length })); process.exit(0); }

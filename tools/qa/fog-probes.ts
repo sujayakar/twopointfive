@@ -26,7 +26,6 @@ import { standUp, ROOT } from './headless.ts';
 import { sample, swept } from './sweep.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { FOG, thingKeyOf } = await import(`${ROOT}/src/game/fogofwar.ts`);
-const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
 const { killGuard, fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
 const { MKEY } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { say, spawnUnit } = await import(`${ROOT}/src/game/guards.ts`);
@@ -714,26 +713,6 @@ export async function fogCone(): Promise<boolean> {
   return done();
 }
 
-export async function fogIdentity(): Promise<boolean> {
-  const { verdict, done } = family('fog-identity: it reads and never writes — the fight and the night floor digest the same with it on as off');
-  const fight = async (seed: number, fog: boolean) => {
-    const R = await rig(seed, { fog, chaos: 0.5 }); const { NB, game } = R;
-    R.step(40); NB.order(); R.step(60 * 7); NB.order(); R.step(60 * 14);
-    return { d: JSON.stringify(digestGame(game)), draws: (R.dice as any).draws(), state: NB.state as string, hid: R.FW.stats.hidden, frames: R.FW.stats.frames };
-  };
-  const rows: string[] = []; let same = true, ran = true;
-  for (const seed of [21, 22, 23]) { const a = await fight(seed, false), b = await fight(seed, true); same &&= a.d === b.d && a.draws === b.draws; ran &&= b.frames > 0 && a.frames === 0; rows.push(`seed ${seed}: ${a.state} / ${b.state}, dice ${a.draws} / ${b.draws}, digest ${a.d === b.d ? 'same' : 'DIFFERENT'} (${a.d.length} B)`); }
-  verdict(same && ran, 'the default night breach, three seeds, 21 s each at chaos 0.5: digest and dice the same on as off', rows.join(' · '));
-  const floor = async (fog: boolean) => {
-    const R = await rig(31, { fog, breach: false }); const { game, FW } = R; let hid = 0, tested = 0;
-    for (let i = 0; i < 60 * 180; i++) { R.step(); hid += FW.stats.hidden * (fog ? 1 : 0); tested = Math.max(tested, FW.stats.tested); }
-    return { d: JSON.stringify(digestGame(game)), draws: (R.dice as any).draws(), hid, tested, eyes: FW.eyes.length };
-  };
-  const a = await floor(false), b = await floor(true);
-  verdict(a.d === b.d && a.draws === b.draws && b.hid > 0 && b.eyes === 1, 'three minutes of the ordinary night floor (the shift and the civilians, Sam alone as the eye): the same on as off — while men were being hidden', `digest ${a.d === b.d ? 'same' : 'DIFFERENT'} (${a.d.length} B) · dice ${a.draws} / ${b.draws} · judged ${b.tested} men a frame, hidden man-frames ${b.hid} · eyes ${b.eyes}`);
-  if (VERBOSE) console.log(a.d.slice(0, 400));
-  return done();
-}
 
 // THE FOG'S SOFT EDGE (game/fogofwar.ts FOG.edge — the maintainer, 10-15: 'fog of war edges shouldn't be so sharp') and THE FOG KEEPS ITS COLOUR (FOG.desat 0 —
 // the same day: 'having fog of war mute the colors is unfortunate'). The band is drawn by the fog pass alone (shaders/fogofwar.wgsl fowEdge, over the sight

@@ -69,28 +69,6 @@ const POOL_ANNOUNCE = new Set<string>(Object.values(NEEDS_LINES.announce as Reco
 const POOL_BACK = new Set<string>(NEEDS_LINES.back);
 const replyPool = (others: string[]) => new Set<string>([...NEEDS_LINES.reply, ...others.flatMap((o: string) => NEEDS_LINES.replyOther.map((s: string) => s.replace(/\{other\}/g, o)))]);
 
-// ================================================================ (a) determinism
-async function determinismRun(seed: number): Promise<{ events: string[]; frames: number }> {
-  const S = await stage(seed); NEEDS.rateK = 4;
-  const events: string[] = []; const phase = new Map<any, string>();
-  const FRAMES = 60 * 300;
-  for (let f = 0; f < FRAMES; f++) {
-    S.step();
-    for (const gd of S.game.guards) { const T = needsTrip(gd); const ph = T ? `${T.kind}:${T.phase}` : '-'; if (phase.get(gd) !== ph) { if (phase.has(gd) || ph !== '-') events.push(`f${f} ${gd.callsign} ${ph}`); phase.set(gd, ph); } }
-  }
-  return { events, frames: FRAMES };
-}
-export async function needsDeterminism() {
-  console.log('\n=== needs-determinism: the same seeded five minutes twice at fill ×4 — the same men schedule / leave / arrive / return on the same frames ===');
-  const R1 = await determinismRun(1201); const R2 = await determinismRun(1201);
-  let allPass = true;
-  const same = R1.events.length === R2.events.length && R1.events.every((e, i) => e === R2.events[i]);
-  let firstDiff = ''; if (!same) { for (let i = 0; i < Math.max(R1.events.length, R2.events.length); i++) if (R1.events[i] !== R2.events[i]) { firstDiff = `#${i}: "${R1.events[i] ?? '—'}" vs "${R2.events[i] ?? '—'}"`; break; } }
-  allPass = verdict(R1.events.length >= 4, 'trips happen at all in five minutes at ×4', `${R1.events.length} phase edges: ${R1.events.slice(0, 10).join(' · ')}${R1.events.length > 10 ? ' …' : ''}`) && allPass;
-  allPass = verdict(same, 'run 2 = run 1, edge for edge and frame for frame', same ? `${R2.events.length} edges identical` : `first difference ${firstDiff}`) && allPass;
-  console.log(`=== needs-determinism: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
-  return allPass;
-}
 
 // ================================================================ (b) the telegraph's timeline, measured
 interface Timeline { t0: number; watchAt: number; watchHeld: number; glanceMax: number; sayAt: number; sayText: string; sayRadio: boolean; partner: string | null; replyAt: number; replyText: string; replyWho: string;

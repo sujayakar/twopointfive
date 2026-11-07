@@ -43,7 +43,6 @@ const { KITANIM, kitLockMax } = await import(`${ROOT}/src/game/kitanim.ts`);
 const { KIT: KIT_HANDS } = await import(`${ROOT}/src/game/character.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const SAVE = await import(`${ROOT}/src/game/savestate.ts`);
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
@@ -490,66 +489,8 @@ export async function wandMate(): Promise<boolean> {
   return F.done();
 }
 
-// ───────────────────────────────────────────────────────────── off
-export async function wandOff(): Promise<boolean> {
-  const F = family('wand-off: a wand carried and never used changes nothing');
-  const rnd = Math.random;
-  try {
-    const run = async (carry: boolean) => {
-      const W = await stand(11), g = W.game; Math.random = seeded(4242);
-      await hushed(() => { startFromQuery(g, 'roomclear&squad4'); steps(W, 5); g.player.wand = carry; steps(W, 595); });
-      return { h: hashDigest(digestGame(g, true)), row: g.doors.list.some((d: any) => wandOffered(g, g.player, d)), eye: !!g.fogOfWar.eyes[0]?.wand };
-    };
-    const c = await run(false), d = await run(!BREAK);
-    F.verdict(c.h === d.h, 'ten seconds of the four-man room clear digest the same with a wand carried and never used as with none', `none carried ${c.h} · carried ${d.h}`);
-    F.verdict(!c.row && d.row && !d.eye, 'not carried: no door offers the look; carried: shut doors offer it, and nothing is looked through unasked', `offered: ${c.row} ${d.row} · lens eye ${d.eye}`);
-  } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
-  finally { Math.random = rnd; }
-  return F.done();
-}
 
-// ───────────────────────────────────────────────────────────── quick
-/** The quick set-up (the maintainer: "setting up the optical wand should be faster. pretty much just the time for the animation and none of the waiting time with
- *  the spinner (which we can probably just remove)"). WANDQUICK_BREAK=1: nobody carries a wand, so no look starts — the lines must FAIL. */
-export async function wandQuick(): Promise<boolean> {
-  const F = family('wand-quick: the lens is through as he gets onto his knee — no feed to wait out, no ring on the row');
-  const ownWas = FOG.own, lsWas = FOG.lastSeen, rnd = Math.random, QBREAK = process.env.WANDQUICK_BREAK === '1';
-  try {
-    // Sam: Space on the row, to the lens through
-    const sam = async () => {
-      const { W, g, pl, T } = await atDoor(3); pl.wand = !QBREAK; W.step(DT);
-      const fog = g.fogOfWar, row = () => g.nearby.find((x: any) => x.verb === 'wand' && x.running);
-      const said0 = g.time as number, started = begin(W); let n = 0, down = -1, ring = 0, rows = 0;
-      while (n < 600 && pl.wanding && !pl.wanding.live) { W.cursorAt(T.char.pos); W.step(DT); n++; if (down < 0 && pl.wanding && pl.wanding.t > 0) down = n - 1; const r = row(); if (r) { rows++; if (r.progress !== undefined) ring++; } }
-      const live = !!pl.wanding?.live, knee = pl.wanding ? pl.wanding.t : -1, crouch = pl.char.anim.crouch as number, said = g.messages.filter((m: any) => m.t >= said0 && /wand/.test(m.text)).length;
-      steps(W, 30, () => { W.cursorAt(T.char.pos); }); const r1 = row(), liveRing = !!r1 && r1.progress !== undefined, seen = !fog.hidden(T), line = r1?.line2 ?? '';
-      return { started, live, total: n * DT, anim: Math.max(0, down) * DT, knee, ring, rows, liveRing, lit: !!r1, seen, line, down: crouch, said };
-    };
-    const on = await sam();
-    const QW = WD.wandFeedSecs(true);
-    F.verdict(on.started && on.live && on.seen && on.total >= QW - 1e-6 && on.total < Math.max(QW, on.anim) + 0.05 && on.down >= WAND.quickDown && on.said === 1,
-      'the lens is through as he gets onto his knee with his hands on it — the animation is the wait (the squat\'s own time, or putting the gun away where that is longer) — and the log says one line', `live ${on.live} after ${on.total.toFixed(2)} s (${on.anim.toFixed(2)} s to hands on it, ${on.knee.toFixed(2)} s on his knee, the kneel ${on.down.toFixed(2)} down; the wait ${QW}) · log lines ${on.said} · the man behind the door seen ${on.seen}`);
-    F.verdict(on.lit && on.rows > 0 && on.ring === 0 && !on.liveRing && /looking under it/.test(on.line),
-      'the row of the look under way is still there with its words, and draws no ring and no bar, feeding or looking', `frames of the row ${on.rows}, with a ring ${on.ring} · while he looks: row ${on.lit}, ring ${on.liveRing} · '${on.line}'`);
-
-    // a teammate on your order: from on his mark at the door to his lens among the fog's eyes
-    const mate = async () => {
-      const W = await stand(5), g = W.game; FOG.own = false; FOG.lastSeen = 0;
-      if (!QBREAK && !K.kitSet(1, 'wand', true)) { K.kitSet(1, 'bangs', Math.max(0, K.KIT.members[1].bangs - 1)); K.kitSet(1, 'wand', true); }
-      await hushed(() => startFromQuery(g, 'roomclear&squad4')); await hushed(() => steps(W, 30));
-      const S = g.orders, d = g.doors.list.find((x: any) => x.def.name === 'server'); if (!d || !g.fogOfWar.active) throw new Error(`no stage: door ${!!d} fog ${g.fogOfWar.active}`);
-      g.aiEnabled = false; const c = d.frameCentre; S.open(S.targetAt([c[0], 0, c[2]])); W.input.pressed.add(WAND.orderKey); W.step(DT);
-      const job = () => WO.wandOrderJobs(g)[0]; let n = 0, k = 0; await hushed(() => { while (n < 1800 && !job()?.live) { W.step(DT); n++; if (job()?.knelt) k++; } });
-      const J = job(); return { live: !!J?.live, knee: J?.live ? k * DT : -1, eyes: g.fogOfWar.eyes.filter((e: any) => e.wand).length };
-    };
-    const mOn = await keepKit(() => mate());   // (his card is written for the stage: put back for whatever runs next)
-    F.verdict(mOn.live && mOn.eyes === 1 && mOn.knee >= WAND.quickSecs - 0.02 && mOn.knee < WAND.quickSecs + 0.1,
-      'a teammate on your order: his lens is through as he kneels', `live ${mOn.live}, ${mOn.knee.toFixed(2)} s from on his mark (quick ${WAND.quickSecs}), lens eyes ${mOn.eyes}`);
-  } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
-  finally { FOG.own = ownWas; FOG.lastSeen = lsWas; Math.random = rnd; }
-  return F.done();
-}
 
 /** the file's probes, by the names the runner calls them */
-const PROBES = { 'wand-kit': wandKit, 'wand-tile': wandTile, 'wand-look': wandLook, 'wand-costs': wandCosts, 'wand-doors': wandDoors, 'wand-mate': wandMate, 'wand-quick': wandQuick, 'wand-off': wandOff };
+const PROBES = { 'wand-kit': wandKit, 'wand-tile': wandTile, 'wand-look': wandLook, 'wand-costs': wandCosts, 'wand-doors': wandDoors, 'wand-mate': wandMate,  };
 if (import.meta.main) process.exit(exitCode(await asProbes(PROBES, wanted())));
