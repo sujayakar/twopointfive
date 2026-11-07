@@ -33,7 +33,7 @@ pub fn order_tick(g: &mut crate::game::Game, d: OrdersOrderDefId, gd: GuardId, a
         OrderTick::ShutDoor => crate::shutdoor::tick(g, gd, a),
         OrderTick::ThrowRow => crate::squadthrow::walk_tick(g, gd, a),
         OrderTick::Wand => crate::wandorder::tick(g, gd, a),
-        OrderTick::Shell40 => crate::squad40::turn_tick(g, gd, a),
+        OrderTick::Row(r) => if let Some(f) = r.tick { f(g, gd, a) },
         OrderTick::Work => crate::workthings::work_things_tick(g, gd, a),
         OrderTick::PairTake => crate::pairorders::pair_orders_take_tick(g, gd, a),
         OrderTick::PairWatch => pair_watch_tick(g, gd, a),
