@@ -235,7 +235,9 @@ pub extern "C" fn face_poke(h: u32, what: u32, v: f64) -> u32 {
 pub extern "C" fn face_keep(h: u32, how: u32) -> u32 {
     let k = super::with(h, |x| {
         let block = block_of(x.g.sim);
-        if how == 0 { let mut g = x.g.clone(); g.out.clear(); Kept::Own(g, block) } else { Kept::Bytes(game::io::export(&x.g), block) }
+        // (either way a kept game has no recap: a load is a run in which that death has not happened)
+        let mut g = x.g.clone(); g.out.clear(); game::deathrecap::recap_left_behind(&mut g);
+        if how == 0 { Kept::Own(g, block) } else { Kept::Bytes(game::io::export(&g), block) }
     });
     keep(k)
 }

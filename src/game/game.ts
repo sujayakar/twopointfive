@@ -141,6 +141,7 @@ import { QuietMission } from './quiet';
 import { Lesson } from './lesson';
 import { Rails } from './rails';
 import { Par } from './par';
+import type { LostMan } from './deathrecap';
 import { Verdict } from './verdict';
 import { Snatch } from './snatch';
 import { Defuse } from './defuse';
@@ -978,6 +979,8 @@ export class Game {
   rails!: Rails;
   /** a room clear against a clock: the Rust game's record, written by the bridge (par.ts is how the page reads it); blank on a level without a scenarios.par block */
   par!: Par;
+  /** the squad's men lost, as the squad knows them: the game's record (rust/game_rules/src/deathrecap), read by the HUD */
+  recap: { lostLive: LostMan[] } = { lostLive: [] };
   /** how the run went, said once it is over (verdict.ts): reads only — the end card's record */
   verdict!: Verdict;
   /** the man a snatch level's team must take alive (snatch.ts): inert without the level's scenarios.snatch block */
