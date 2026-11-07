@@ -20,7 +20,6 @@ const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { DEFUSE } = await import(`${ROOT}/src/game/defuse.ts`);
 const { killGuard, hitPlayer } = await import(`${ROOT}/src/game/combat.ts`);
 const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
-const { objectiveText } = await import(`${ROOT}/src/game/mission.ts`);
 const { squadChoices } = await import(`${ROOT}/src/game/loadout.ts`);
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 
@@ -49,12 +48,14 @@ async function stage(file: string, patch?: (l: any) => void) {
 const stand = (g: any, i: number): Vec3 => { const d = g.level.scenarios.defuse.devices[i]; return [d.pos[0] + d.n[0] * 0.4, 0, d.pos[2] + d.n[1] * 0.4]; };
 
 if (BREAK) DEFUSE.on = false;
+/** the charges' own row on the Rust game's record of the mission's line */
+const rowOf = (g: any, of: string) => g.view.mission?.of === of ? g.view.mission : null;
 
 console.log('defuse-off — a level without the block, and the switch off');
 { const { g, DF, run } = await stage('test-rooms.json'); run(1);
-  line(!DF.active && DF.objective() === null && DF.armed().length === 0, 'a room clear on a level with no charges: the overlay is not live, no row, no thing to work');
+  line(!DF.active && !!g.view.mission && g.view.mission.of !== 'defuse' && DF.armed().length === 0, 'a room clear on a level with no charges: the overlay is not live, no row, no thing to work');
   if (!BREAK) { DEFUSE.on = false; const s = await stage('defuse.json'); s.g.teleportPlayer([20, 0, 20]); s.run(3);
-    line(!s.DF.active && !s.DF.started && s.DF.objective() === null && !/clock/.test(objectiveText(s.g)), 'the switch off on the charges\' own level: no clock, the objective row is the room clear\'s');
+    line(!s.DF.active && !s.DF.started && !!s.g.view.mission && s.g.view.mission.of !== 'defuse' && !/clock/.test(s.g.objectiveText()), 'the switch off on the charges\' own level: no clock, the objective row is the room clear\'s');
     DEFUSE.on = true; }
   void g;
   // (the pair that says something: the charges' own level with the switch off, against the same file with the block taken out of it — and, so the digest is
@@ -77,9 +78,9 @@ console.log('defuse-row — the Missions row and the level, as promised');
 
 console.log('defuse-clock — it waits for the first move, then runs in the objective row');
 { const { g, DF, run } = await stage('defuse.json'); run(2);
-  line(DF.active && !DF.started && /starts when you move/.test(objectiveText(g)), `staged and still: live, not started, the row says so — '${objectiveText(g).slice(0, 70)}…'`);
+  line(DF.active && !DF.started && /starts when you move/.test(g.objectiveText()), `staged and still: live, not started, the row says so — '${g.objectiveText().slice(0, 70)}…'`);
   const at = g.player.char.pos; g.teleportPlayer([at[0] + 2, 0, at[2]]); run(1.5);
-  line(DF.started && DF.left < g.level.scenarios.defuse.secs && DF.left > g.level.scenarios.defuse.secs - 3 && new RegExp(`${Math.floor(DF.left / 60)}:${String(Math.floor(DF.left % 60)).padStart(2, '0').slice(0, 1)}\\d on the clock`).test(objectiveText(g)) && !/starts when/.test(objectiveText(g)), `Sam moves: the clock runs — ${DF.left.toFixed(1)} s left, '${objectiveText(g).slice(0, 44)}…'`);
+  line(DF.started && DF.left < g.level.scenarios.defuse.secs && DF.left > g.level.scenarios.defuse.secs - 3 && new RegExp(`${Math.floor(DF.left / 60)}:${String(Math.floor(DF.left % 60)).padStart(2, '0').slice(0, 1)}\\d on the clock`).test(g.objectiveText()) && !/starts when/.test(g.objectiveText()), `Sam moves: the clock runs — ${DF.left.toFixed(1)} s left, '${g.objectiveText().slice(0, 44)}…'`);
   const s2 = await stage('defuse.json'); s2.run(1); s2.g.orders.give('hold', { kind: 'none' }, 'all'); s2.run(0.5);
   line(s2.DF.started, 'or the first order starts it with Sam standing still'); }
 
@@ -90,9 +91,9 @@ console.log('defuse-sam — his own Space row');
   g.teleportPlayer(stand(g, 1)); run(0.5);
   const offered = g.selectVerb('objective', 'defuse'); line(offered, 'stood at charge 2: the row is offered');
   const D = g.level.scenarios.defuse.devices, near = (o: any, i: number) => !!o?.pos && Math.hypot(o.pos[0] - D[i].pos[0], o.pos[2] - D[i].pos[2]) < 0.1;
-  line(near(DF.objective(), 1), 'nobody on either: the marker is on the charge nearest him');
+  line(near(rowOf(g, 'defuse'), 1), 'nobody on either: the marker is on the charge nearest him');
   run(1.5, ['Space']); line(DF.working && DF.states[1] === 'armed', 'Space: he is on it, the charge still live');
-  line(/charge 2 · you on it/.test(objectiveText(g)) && /charge 1 · nobody on it/.test(objectiveText(g)) && near(DF.objective(), 0), `the row says who is on which, the marker goes to the one nobody is at — '${objectiveText(g).slice(0, 96)}'`);
+  line(/charge 2 · you on it/.test(g.objectiveText()) && /charge 1 · nobody on it/.test(g.objectiveText()) && near(rowOf(g, 'defuse'), 0), `the row says who is on which, the marker goes to the one nobody is at — '${g.objectiveText().slice(0, 96)}'`);
   run(0.3, ['Space']); line(!DF.working && DF.states[1] === 'armed', 'Space again lets go: still live');
   g.selectVerb('objective', 'defuse'); run(1.0, ['Space']); line(DF.working, '…and the row takes it up again from the start');
   const p = stand(g, 1); g.teleportPlayer([p[0] - 1.2, 0, p[2] + 0.6]); run(0.3);
@@ -108,7 +109,7 @@ console.log('defuse-team — a pair ordered to it');
   line(g.level.scenarios.defuse.devices.every((c: any) => { const t = g.work.near([c.pos[0] + c.n[0] * 0.4, 0, c.pos[2] + c.n[1] * 0.4])?.target; return t?.thing?.kind === 'device' && !!t.thing.stand; }), 'every charge of the level has floor a man can stand on to work it');
   line(!!T?.thing && T.thing.kind === 'device', `the squad's work order knows charge 1 — ${T?.thing ? T.thing.name : 'no thing there'}`);
   const r = T ? g.orders.give('work', T, 'red') : null; let t = 0, said = '', mark = false, going = false, onIt = '', handOn = false;
-  while (t < 90 && DF.states[0] === 'armed') { run(0.5); t += 0.5; const o = DF.objective(), m = /charge 1 · (Red \w+) (going|on it)/.exec(o?.text ?? ''); if (m) { said ||= m[0]; if (m[2] === 'going') going = true; else { onIt ||= m[0]; handOn ||= !!g.work.hand(g.guards.find((x: any) => x.callsign === m[1])?.char); } mark ||= !!o?.pos && Math.abs(o.pos[0] - g.level.scenarios.defuse.devices[1].pos[0]) < 0.1; } }
+  while (t < 90 && DF.states[0] === 'armed') { run(0.5); t += 0.5; const o = rowOf(g, 'defuse'), m = /charge 1 · (Red \w+) (going|on it)/.exec(o?.text ?? ''); if (m) { said ||= m[0]; if (m[2] === 'going') going = true; else { onIt ||= m[0]; handOn ||= !!g.work.hand(g.guards.find((x: any) => x.callsign === m[1])?.char); } mark ||= !!o?.pos && Math.abs(o.pos[0] - g.level.scenarios.defuse.devices[1].pos[0]) < 0.1; } }
   line(!!said && mark, `while he is at it the row names him and the marker is on the other charge — '${said || 'never said'}'`);
   line(going && !!onIt && handOn, `'going' on his way, then 'on it' with his hand out on the charge — ${going ? 'going' : 'never going'}, then '${onIt || 'never on it'}'${handOn ? '' : ' (no hand out)'}`);
   line(DF.states[0] === 'safe' && !!DF.safeBy[0] && DF.safeBy[0] !== 'Player', `red sent to it: safe after ${t.toFixed(1)} s by ${DF.safeBy[0] ?? 'nobody'}${r ? ` (order refused: ${r})` : ''}`);
@@ -124,21 +125,21 @@ console.log('defuse-blast — the clock at zero');
   line(DF.end === 'failed' && DF.states.every((s: string) => s === 'blown') && rows.length === 2, `both charges went off — ${rows.join(' · ')}`);
   line(!hp0 && g.player.down, 'a man standing by one is put down by it (the game\'s own blast, god mode off)');
   line(hurt > 0, `…and the blast's own count has the room's men in it: ${hurt} killed or wounded`);
-  line(DF.objective() === null, 'with Sam down the row is the room clear\'s own (its card, its key)');
+  line(!!g.view.mission && g.view.mission.of !== 'defuse', 'with Sam down the row is the room clear\'s own (its card, its key)');
   const s2 = await stage('defuse.json', l => { l.scenarios.defuse = { ...l.scenarios.defuse, secs: 3 }; });
   const ticks: unknown[] = [], play0 = s2.g.audio.play.bind(s2.g.audio); s2.g.audio.play = (n: string, pos: unknown, ...r: unknown[]) => { if (n === 'click') ticks.push(pos); return play0(n, pos, ...r); };
   s2.g.teleportPlayer([20, 0, 20]); s2.run(5);
-  line(s2.DF.end === 'failed' && /FAILED/.test(objectiveText(s2.g)) && !s2.DF.won, `Sam standing clear: the row reads failed — '${objectiveText(s2.g).slice(0, 60)}…'`);
+  line(s2.DF.end === 'failed' && /FAILED/.test(s2.g.objectiveText()) && !s2.DF.won, `Sam standing clear: the row reads failed — '${s2.g.objectiveText().slice(0, 60)}…'`);
   line(ticks.length >= 2 && ticks.length <= 4 && ticks.every(p => p === null), `the last seconds tick once a second for the player wherever he stands (no place on the sound) — ${ticks.length} ticks on a 3 s clock`);
   const texts = () => (s2.g.messages ?? []).map((m: any) => typeof m === 'string' ? m : m.text ?? '').join(' | ');
   for (const x of s2.g.guards.filter((x: any) => x.unit && x.team === 'hostile' && x.state !== 'dead')) killGuard(s2.g, x, [1, 0, 0], false, 'shot', 'player'); s2.run(2);
-  line(s2.g.roomClear.end === 'taken' && !s2.DF.won && s2.DF.end === 'failed' && /FAILED/.test(objectiveText(s2.g)) && !/structure taken/.test(texts()) && /still failed/.test(texts()),   // (roomclear.ts end's own line, as the writing guide's pass left it: 'you took the house too late. a charge went off, so you still failed the mission.' — it read '… stays failed' before, and this line asked for the old words)
+  line(s2.g.roomClear.end === 'taken' && !s2.DF.won && s2.DF.end === 'failed' && /FAILED/.test(s2.g.objectiveText()) && !/structure taken/.test(texts()) && /still failed/.test(texts()),   // (roomclear.ts end's own line, as the writing guide's pass left it: 'you took the house too late. a charge went off, so you still failed the mission.' — it read '… stays failed' before, and this line asked for the old words)
     `failed, then the house taken, is not won: the row still reads FAILED and nobody says 'structure taken' — room clear '${s2.g.roomClear.end}'`);
 
   console.log('defuse-over — the run ended another way first');
   const s3 = await stage('defuse.json', l => { l.scenarios.defuse = { ...l.scenarios.defuse, secs: 4 }; }); s3.g.godMode = false; s3.g.teleportPlayer([20, 0, 20]); s3.run(1);
   for (let k = 0; k < 12 && !s3.g.player.down; k++) hitPlayer(s3.g, [1, 0, 0]); s3.run(6);
-  line(s3.g.player.down && s3.DF.end === 'over' && s3.DF.states.every((s: string) => s === 'armed') && s3.DF.objective() === null, `Sam down with the clock running: it stops, no blast behind the card — end '${s3.DF.end}', ${s3.DF.states.join(', ')}`);
+  line(s3.g.player.down && s3.DF.end === 'over' && s3.DF.states.every((s: string) => s === 'armed') && !!s3.g.view.mission && s3.g.view.mission.of !== 'defuse', `Sam down with the clock running: it stops, no blast behind the card — end '${s3.DF.end}', ${s3.DF.states.join(', ')}`);
 
   console.log('defuse-restart — a fresh staging starts it over');
   g.godMode = true; g.restartEncounter(); run(0.5);
@@ -152,8 +153,8 @@ console.log('defuse-save — snapshot and restore');
   DF.restore(snap); run(DT);
   line(!!snap && DF.states.join(',') === st && DF.end === null && Math.abs(DF.left - left) < 0.1 && DF.safeBy[0] === 'Player' && DF.safeBy[1] === null, `the clock, the charges and who made them safe come back as saved — ${st}, ${left.toFixed(2)} s then, ${DF.left.toFixed(2)} s now, by ${DF.safeBy.map((x: any) => x ?? '–').join(', ')}`);
   // (a file that lies about itself: every charge safe but no end written, names for charges that are not safe, `by` not a list — the end is read off the
-  //  charges and the row neither throws nor names a marker)
-  { let threw = ''; try { DF.restore({ ...snap, st: ['safe', 'safe'], by: 'Player' as any, end: null }); DF.objective(); } catch (e: any) { threw = String(e?.message ?? e); }
+  //  charges, and asking the game's row afterwards throws nothing)
+  { let threw = ''; try { DF.restore({ ...snap, st: ['safe', 'safe'], by: 'Player' as any, end: null }); g.objectiveText(); } catch (e: any) { threw = String(e?.message ?? e); }
     line(!threw && DF.end === 'safe' && DF.safeBy.every((x: any) => x === null), `a file with every charge safe and no end: the end is the charges' own word, nothing throws — end ${DF.end}${threw ? ` · threw ${threw}` : ''}`);
     DF.restore({ ...snap, st: ['armed', 'blown'], by: ['Player', 'Player'], end: null });
     line(DF.end === 'failed' && DF.safeBy.every((x: any) => x === null), `…one blown: failed, and no name kept for a charge that is not safe — end ${DF.end}`); }
@@ -165,7 +166,7 @@ console.log('defuse-save — snapshot and restore');
   line(DF.end === 'safe' && g.roomClear.end === 'taken' && DF.won, `every charge safe, nobody left: won (room clear '${g.roomClear.end}')`); }
 { const { g, DF, run } = await stage('defuse.json'); g.teleportPlayer([20, 0, 20]); run(1); DF.makeSafe(0, 'Player'); DF.makeSafe(1, 'Player'); run(1);
   line(DF.end === 'safe' && !DF.won && g.roomClear.end === null, 'both safe with defenders still up: not won yet, the room clear runs on');
-  line(!/clock/.test(objectiveText(g)), 'the objective row is the room clear\'s own again'); }
+  line(!/clock/.test(g.objectiveText()), 'the objective row is the room clear\'s own again'); }
 
 } finally { if (env0 === undefined) delete process.env.TPS_WORKTHINGS; else process.env.TPS_WORKTHINGS = env0; DEFUSE.on = true; }
 return fails === 0;

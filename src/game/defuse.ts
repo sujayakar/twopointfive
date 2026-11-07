@@ -25,7 +25,6 @@ import type { DefuseData, DefuseDevice } from '../scene/scenarios';
 import type { Vec3 } from '../math/vec';
 import './frag';
 import './handwork';
-import { WORK } from './workthings';
 import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** The knobs. `workSecs` / the blast's numbers stand in where the level's block names none. */
@@ -50,7 +49,6 @@ export type ChargeState = 'armed' | 'safe' | 'blown';
 /** a checkpoint's slice: seconds run on the clock (-1: not started), each charge's state, who made each safe, the end, Sam's seconds at a charge (null: none) */
 export interface DefuseSnap { ran: number; st: ChargeState[]; by?: (string | null)[]; end: 'safe' | 'failed' | null; sam: { dev: number; ran: number } | null }
 
-const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 /** the player the row is for (one seat today) */
 const who = (g: Game): Player => g.player;
 const mmss = (s: number) => { const t = Math.max(0, Math.ceil(s)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
@@ -131,26 +129,6 @@ export class Defuse {
   cancel(): boolean { if (!this.sam) return false; this.sam = null; this.g.msg('you let go, so the charge is still live'); return true; }
 
   // ------------------------------------------------------------ the HUD's row
-  /** The objective while a charge is live or one has gone off (mission.ts objectiveText / objectivePos; null = the room clear's own) */
-  objective(): { text: string; pos: Vec3 | null } | null {
-    const D = this.data; if (!D || !this.mine) return null;
-    const g = this.g;
-    if (this.end === 'safe' || this.end === 'over') return null;
-    if (who(g).down || g.roomClear.end === 'wiped') return null;   // (the run is over another way: the room clear's own word)
-    if (this.end === 'failed') return { text: `objective ▸ FAILED — ${D.devices.filter((_, i) => this.states[i] === 'blown').map(d => d.name).join(' and ')} went off · press shift+enter to restart`, pos: null };
-    const live = D.devices.flatMap((d, i) => this.states[i] === 'armed' ? [{ d, i, by: this.onIt(i) }] : []), p = who(g).char.pos;
-    if (!live.length) return null;   // (every charge settled and the end not yet written: the tick writes it this frame)
-    // (the HUD's marker carries ONE place: the live charge nobody is at or on his way to — the one that needs a decision — else the nearest)
-    const open = live.filter(x => !x.by), mark = (open.length ? open : live).reduce((a, b) => flat(p, b.d.pos) < flat(p, a.d.pos) ? b : a).d;
-    const safe = D.devices.filter((_, i) => this.states[i] === 'safe').map(d => `${d.name} is safe`);
-    const clock = this.started ? `${mmss(this.left)} on the clock` : `${mmss(D.secs)} on the clock, and it starts when you move`;
-    // (one line of the HUD, kept short. Nobody at a charge yet: 'make both charges safe' and the how-to; once somebody is, each live charge by name with
-    //  who is on it — '· Red One on it' — or that nobody is)
-    const what = live.some(x => x.by) ? live.map(x => `${x.d.name} · ${x.by ?? 'nobody on it'}`).join(' · ')
-      : !safe.length && live.length > 1 ? `make ${live.length === 2 ? 'both' : `all ${live.length}`} charges safe` : `make ${live.map(x => x.d.name).join(' and ')} safe`;
-    const how = safe.length || live.some(x => x.by) ? '' : ` · press Space at one${WORK.on && g.orders?.active ? ', or X on it' : ''}`;
-    return { text: `objective ▸ ${clock} · ${what}${safe.length ? ` · ${safe.join(' · ')}` : ''}${how}`, pos: [mark.pos[0], mark.pos[1], mark.pos[2]] };
-  }
   /** who is at charge i or on his way to it by an order, as the row says it (null: nobody) */
   onIt(i: number): string | null {
     if (this.sam?.dev === i) return 'you on it';

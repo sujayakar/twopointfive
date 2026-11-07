@@ -21,7 +21,7 @@ import { standUp, ROOT } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
-const { LASTSTAND, lastStandReport, lastStandHint } = await import(`${ROOT}/src/game/laststand.ts`);
+const { LASTSTAND, lastStandReport } = await import(`${ROOT}/src/game/laststand.ts`);
 const { digInPhase, digInWedged } = await import(`${ROOT}/src/game/digin.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { stripRows } = await import(`${ROOT}/src/game/cues.ts`);
@@ -55,6 +55,10 @@ function thin(W: any, keep: string[]) {
   return kept;
 }
 function steps(W: any, secs: number, each?: (i: number) => void) { const g = W.game; for (let i = 0; i < Math.round(secs * 60); i++) { g.player.visibility = 0.05; W.step(DT); each?.(i); } }
+/** the room clear's row on the Rust game's record of the mission's line */
+const rowOf = (g: any, of: string) => g.view.mission?.of === of ? g.view.mission : null;
+/** the rooms their net has named, as the row shows them: its [bracketed] names that are rooms of the structure, by id (a place or the response team is no room) */
+const namedRooms = (g: any): string[] => { const on = new Set([...String(rowOf(g, 'roomclear')?.text ?? '').matchAll(/\[([^\]]+)\]/g)].map(m => m[1])); return g.roomClear.rooms.filter((r: any) => on.has(r.def.name)).map((r: any) => r.def.id); };
 const said = (g: any) => lastStandReport(g).said as { t: number; who: string; kind: string; text: string }[];
 
 export async function lastStandCallOut(): Promise<boolean> {
@@ -68,7 +72,7 @@ export async function lastStandCallOut(): Promise<boolean> {
     steps(W, 1, frame); clean = said(g).length + lastStandReport(g).stats.checks;
     const kept = thin(W, KEEP);
     steps(W, 30, i => { frame(); if (first < 0 && said(g).length) first = i / 60; });
-    const A = { rep: lastStandReport(g), rows, obj: { ...g.roomClear.objective() }, hint: [...(lastStandHint(g)?.rooms ?? [])].sort(), truth: kept.map((h: any) => roomOf(g, h)).sort() as string[], clean, first };
+    const A = { rep: lastStandReport(g), rows, obj: { ...rowOf(g, 'roomclear') }, hint: namedRooms(g).sort(), truth: kept.map((h: any) => roomOf(g, h)).sort() as string[], clean, first };
     {   // … and one of the three in a fight (the team in his sight every frame): he does not answer the next check
       const busy = kept[1], n0 = said(g).length;
       steps(W, LASTSTAND.every + 12, () => { busy.lastSeenT = g.time; });
@@ -85,7 +89,7 @@ export async function lastStandCallOut(): Promise<boolean> {
     for (const id of ['hut', 'office']) {
       const W = await rig(5, false), g = W.game; steps(W, 1); const [one] = thin(W, process.env.LASTSTAND_BREAK === '1' ? [id, 'bunk'] : [id]);
       let room: string | null = null, named = '', spot = '', hunting = false, got = false;   // (where he is, what he is doing and what the net has named, the frame he says it — he may move afterwards)
-      steps(W, 16, () => { if (!got && said(g).some(l => l.kind === 'lastAt')) { got = true; room = roomOf(g, one); named = [...(lastStandHint(g)?.rooms ?? [])].join(); spot = room || !LASTSTAND.places ? '' : placeIn(g.level, one.char.pos)?.name ?? ''; hunting = (g.fight.defs as any[]).find(D => D.gd === one)?.mode === 'free'; } });
+      steps(W, 16, () => { if (!got && said(g).some(l => l.kind === 'lastAt')) { got = true; room = roomOf(g, one); named = namedRooms(g).join(); spot = room || !LASTSTAND.places ? '' : placeIn(g.level, one.char.pos)?.name ?? ''; hunting = (g.fight.defs as any[]).find(D => D.gd === one)?.mode === 'free'; } });
       const tail = said(g), last = tail.find(l => l.kind === 'lastAt'), post = id === 'hut';
       // (no room of the structure: 'outside the …' on ground the level has no word for — or, LASTSTAND.places, 'in the corridor' by the level's own name for the floor he stands on)
       const says = !!last && last.who === one.callsign && (room ? last.text.includes(`in the ${nameOf(g, room)}`) : spot ? last.text.includes(`in ${spot}`) : /outside the /.test(last.text));
@@ -129,7 +133,7 @@ async function standRun(F: { verdict: Verdict }, keep: string[], seed: number, l
   const fdefs = g.fight.defs as any[], standRoom = fdefs.find(D => D.gd === inRoom[0])?.room, wedged = standRoom ? digInWedged(g, standRoom).length : 0;
   F.verdict(phases.every((p: string) => p === 'set') && !!setLine && setLine.text.includes(nameOf(g, stand)) && (setLine.kind === 'set') === (wedged > 0), 'every man in the room digs in and sets; one of them says so ("shut" only with a door wedged)', `${phases.join(', ')} · ${setLine?.who}: ${setLine?.text} (${setT.toFixed(1)} s after three were left, ${wedged} door(s) wedged)`);
   const held = g.roomClear.rooms.filter((r: any) => !r.cleared).map((r: any) => r.def.id), loose = kept.filter((h: any) => h.state !== 'dead' && !R.in.includes(h.callsign)).length;   // (a man told to hold where he is, on his way, or out hunting — nobody's to order — still holds a room of his own)
-  const obj = g.roomClear.objective(), b = g.roomClear.rooms.find((r: any) => r.def.id === stand)?.def.bounds;
+  const obj = rowOf(g, 'roomclear'), b = g.roomClear.rooms.find((r: any) => r.def.id === stand)?.def.bounds;
   F.verdict(held.includes(stand) && held.length <= 1 + loose && !!obj.pos && !!b && Math.abs(obj.pos[0] - (b.x0 + b.x1) / 2) < 0.01 && obj.text.includes(`[${nameOf(g, stand)}]`),
     'the rooms they left are clear behind them; the marker and the bracket are on the stand room', `still held: ${held.join(', ')} · ${obj.text}`);
   if (squadRooms) F.verdict([...seen].every(id => squadRooms.includes(id)), "a squad whose men stay in its rooms: nobody is ever in a room that is not the squad's", `rooms they were in: ${[...seen].join(', ')} · ${outside} samples between rooms`);

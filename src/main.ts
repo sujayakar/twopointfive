@@ -1055,7 +1055,7 @@ async function main() {
     modelErrFrame();   // (?modelerr: a return on its first line otherwise)
     perfrec.cpuUpdate = loop.updateMs;
     // a par run just ended (game/par.ts): this machine's best for THIS run — level file, way in, squad size, difficulty — is filed here, the page's side,
-    // and its words ride the result where this page shows it (the end row, the card, the debrief). Never under a sandbox flag (god mode, no AI, unlimited ammo): that time is not a record —
+    // and its words ride the result where this page shows it (the card, the debrief). Never under a sandbox flag (god mode, no AI, unlimited ammo): that time is not a record —
     // and the flag counts if it was on at ANY frame while the clock ran (`parCheat`), not only on the frame the result appears.
     if (!tape && !net && !kitViewOn) { const R = game.par.result();
       if (!game.par.started) parCheat = false; else if (game.godMode || !game.aiEnabled || game.infiniteAmmo) parCheat = true;

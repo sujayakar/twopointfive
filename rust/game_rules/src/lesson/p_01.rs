@@ -133,7 +133,7 @@ pub fn after(log: &[u32], last: Option<u32>) -> usize {
 pub fn inside(r: crate::scene_scenarios::Rect, p: V3) -> bool { p[0] > r.x0 && p[0] < r.x1 && p[2] > r.z0 && p[2] < r.z1 }
 
 /// the player a lesson is taught to, one seat today (lesson.ts who)
-pub fn who(g: &mut crate::game::Game) -> PlayerId { g.player }
+pub fn who(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> PlayerId { seat.player }
 
 /// the door a teammate is on a plain 'stack up' on, by name; None: none (lesson.ts onStack)
 pub fn on_stack(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: GuardId) -> Option<String> {
@@ -185,9 +185,9 @@ fn test_ok(g: &mut Game, t: &LessonTest, s: &mut StepSeen) -> Option<bool> {
         T::In { area } => inside(*area, own_pos(g, &crate::seats::here(g))),
         T::Near { at, r } => { let p = own_pos(g, &crate::seats::here(g)); m::hyp2(p[0] - at[0], p[2] - at[2]) < r.unwrap_or(1.2) }
         T::Flag { flag, value } => flag_of(g, flag)? == value.unwrap_or(true),
-        T::Slot { slot, drawn } => { let p = who(g); g.pl[p].slot == *slot && drawn.map_or(true, |d| !g.pl[p].holstered == d) }
+        T::Slot { slot, drawn } => { let p = who(g, &crate::seats::here(g)); g.pl[p].slot == *slot && drawn.map_or(true, |d| !g.pl[p].holstered == d) }
         T::Pace { .. } => true,   // (TWOGEARS.on: the wheel is nobody's pace and the line goes by)
-        T::Meter { which, .. } => { let p = who(g); let v = if which == "noise" { g.pl[p].noise } else { g.pl[p].visibility }; band(v, t) }
+        T::Meter { which, .. } => { let p = who(g, &crate::seats::here(g)); let v = if which == "noise" { g.pl[p].noise } else { g.pl[p].visibility }; band(v, t) }
         T::Stage { stage } => stage_index(g.mission.stage.as_str()) >= stage_index(stage) && g.mission.stage != crate::game::MissionStage::Failed,
         T::Door { door, state } => ok_door(g, door, state),
         T::Target { name, on } => ok_target(g, name, *on),
@@ -271,7 +271,7 @@ fn ok_calm(g: &Game, route: Option<&str>) -> bool {
 }
 
 fn ok_loaded(g: &mut Game, s: &mut StepSeen) -> bool {
-    let p = who(g);
+    let p = who(g, &crate::seats::here(g));
     let Some(w) = crate::game::player_gun_in_hand(g, p) else { return false };
     if crate::weapons::firearm_reloading(g, w) { s.n.set(String::from("loaded:began"), 1.0); return false; }
     if js::truthy(seen_n(s, String::from("loaded:began"))) || g.fa[w].spare.is_empty() { return true; }
@@ -281,20 +281,20 @@ fn ok_loaded(g: &mut Game, s: &mut StepSeen) -> bool {
 }
 
 fn ok_reload(g: &mut Game) -> bool {
-    let p = who(g);
+    let p = who(g, &crate::seats::here(g));
     let (pistol, rifle) = (g.pl[p].pistol, g.pl[p].rifle);
     (crate::game::player_pistol_up(g, p) && crate::weapons::firearm_reloading(g, pistol)) || (crate::game::player_rifle_up(g, p) && crate::weapons::firearm_reloading(g, rifle))
 }
 
 fn ok_launcher(g: &mut Game, on: &str, fired: bool) -> bool {
-    let p = who(g);
+    let p = who(g, &crate::seats::here(g));
     let r = g.pl[p].rifle;
     let up = crate::weapons::rifle_attachment(g, r).map_or("none", |a| a.as_str());
     on == up && (!fired || (crate::game::player_rifle_up(g, p) && g.fa[r].ring_cd > 0.0))
 }
 
 fn ok_burst(g: &mut Game, n: Option<f64>) -> bool {
-    let p = who(g);
+    let p = who(g, &crate::seats::here(g));
     let r = g.pl[p].rifle;
     crate::game::player_rifle_up(g, p) && crate::weapons::firearm_automatic(g, r) && g.fa[r].auto_idx >= n.unwrap_or(3.0)
 }

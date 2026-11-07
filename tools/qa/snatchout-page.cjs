@@ -38,7 +38,7 @@ const URL = extra => `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&l
     const p = S.man.char.pos; g.teleportPlayer([p[0] - 1.6, 0, p[2] + 0.3]);
     if (!step(240, () => S.handsUp || S.tied)) { g.teleportPlayer([p[0] + 1.6, 0, p[2] - 0.3]); step(240, () => S.handsUp || S.tied); }
     out.tied = step(420, () => S.tied); out.endTied = S.end; out.up = g.guards.filter(h => h.team === 'hostile' && h.state !== 'dead').length;
-    out.row = (S.objective() || {}).text || null;
+    out.row = (g.view.mission?.of === 'snatch' ? g.view.mission.text : null) || null;
     g.teleportPlayer([p[0] - 1.2, 0, p[2] + 0.2]); step(18);
     out.verbs = (g.nearby || []).filter(r => r.guard === S.man && r.verb).map(r => r.verb);
     out.word = X.ruled ? X.word(g.player.char) : false; step(30);
