@@ -3051,7 +3051,6 @@ if (on('cover-walk', 'cover', 'all')) await run('cover-walk', async () => (await
 if (on('cover-halt', 'cover', 'all')) await run('cover-halt', async () => (await import('./cover-probes.ts')).coverHalt());
 if (on('cover-order', 'cover', 'all')) await run('cover-order', async () => (await import('./cover-probes.ts')).coverOrder());
 if (on('cover-step', 'cover', 'all')) await run('cover-step', async () => (await import('./cover-probes.ts')).coverStep());
-if (on('cover-side', 'cover', 'all')) await run('cover-side', async () => (await import('./cover-probes.ts')).coverSide());
 if (on('cover-settle', 'cover', 'all')) await run('cover-settle', async () => (await import('./cover-probes.ts')).coverSettle());
 // ---------------------------------------------------------------- the four-man squad's two pairs USED APART (pairs-probes.ts; a pair on its own side of a door, a held arc, two doors on one word, a tool on a held door, the lanes): 'pairs' = the family
 if (on('pairs-off', 'pairs', 'all')) await run('pairs-off', async () => (await import('./pairs-probes.ts')).pairsOff());
