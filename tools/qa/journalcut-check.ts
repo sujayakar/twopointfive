@@ -36,7 +36,7 @@ export async function journalCutCheck(): Promise<boolean> {
     const got: { f: any; why: string }[] = []; game.journal.onStop = (f: any, why: string) => { got.push({ f, why }); };
     if (BRK) game.journal.cut = () => { };
     if (!game.journal.request({ seed: 515151, note: 'journal-cut', hud: page })) throw new Error('journal.request refused: ' + game.journal.summary());
-    let n = 0; const step = (k: number, key2 = 'KeyD') => { for (let i = 0; i < k; i++) { input.keys.add(key2); W.step(DT); n++; if (until?.(W)) { if (page) J.hudExpireBubbles(game); input.keys.delete(key2); return true; } if (page) J.hudExpireBubbles(game); } input.keys.delete(key2); return false; };
+    let n = 0; const step = (k: number, key2 = 'KeyD') => { for (let i = 0; i < k; i++) { input.keys.add(key2); W.step(DT); n++; if (until?.(W)) { input.keys.delete(key2); return true; } } input.keys.delete(key2); return false; };
     const hit = step(frames); return { W, game, key, got, step, hit, n: () => n };
   };
   const replay = async (F: any, name: string) => { const R = await quiet(() => replaySession(JSON.parse(JSON.stringify(F)), name, { quiet: true })); return R; };
