@@ -1,0 +1,199 @@
+# THE SORTS A PERSON MADE of the rows tools/blitz/page-decides.ts finds running every frame. A line: pattern (file:function, * for any run of letters) TAB sort
+# TAB kind TAB reason. The first line that matches a row sorts it. Sorts: decides (to move into the Rust game) · moving (its move is already under way) · picture (the
+# picture's or the sound's own) · host (the host's own plumbing) · hand (the player's or the developer's own hand). A kind is the move a row belongs to.
+# ---- already on its way into the Rust game
+src/game/verdict.ts:*	moving	the verdict	the verdict is being moved into the Rust tick, which latches it; this file and src/game/thisrun.ts go when it lands	9
+src/main.ts:main › vBooks	moving	the verdict	the verdict's books kept on the page go with src/game/verdict.ts	1
+src/game/director.ts:*	moving	the Director	its host fields (the camera and Input rows) are being moved to the game's own; the show's pins and key locks wait for the host's half to be redrawn	4
+# ---- decides: the records the page keeps and the lines it says
+src/game/par.ts:*	decides	par clock	the dress step runs Par.tick on the copy: it keeps the run's time and result in a record only TypeScript has and says the par line into the log
+src/main.ts:main › {postUpdate}	decides	end card	the page takes the game's word for the end card by clearing Mission.debrief on its copy: the game should send the card as an event
+src/game/seats.ts:allDown	decides	end card	the page works out "every seat is down" on the copy (the find-me outline, the down card) where the game already knows it
+src/game/deathrecap.ts:*	decides	debrief	the dress step runs recapTick on the copy: who fell, who saw it and when the recap is due are kept in a record only TypeScript has
+src/game/chronicle.ts:*	decides	debrief	the debrief reads the chronicle through TypeScript's own counts and words, and the save controller adds its checkpoint row on the copy
+src/game/lesson.ts:*	decides	lesson conditions	a lesson's step, its line and whether it is over are worked out again on the copy (the camera and the HUD ask Lesson.step each frame)
+src/game/rails.ts:*	decides	lesson conditions	what a tutorial's rails allow, offer and teach is worked out again on the copy each frame (its key locks wait for the host's half to be redrawn)
+src/game/cues.ts:*	decides	radio and spoken lines	the radio strip's rows and whose bubble shows are worked out on the copy, and a line the page says is filed on the copy only
+src/game/dialogue.ts:*	decides	radio and spoken lines	the room and place names the lines use are worked out again on the copy
+src/game/doornames.ts:*	decides	radio and spoken lines	a door's said and written name are worked out again on the copy
+src/game/squadnet.ts:*	decides	radio and spoken lines	the squad net's "why" words are worked out again on the copy
+src/game/journal.ts:hudExpireBubbles	decides	radio and spoken lines	the page ends a man's bubble by clearing it on its copy: when a line ends is the game's
+src/ui/bubbles.ts:Bubbles.update	decides	radio and spoken lines	the page ends a man's bubble by clearing it on its copy: when a line ends is the game's
+src/main.ts:main › {betweenTicks}	decides	radio and spoken lines	between two ticks the page expires bubbles on its copy
+src/game/game.ts:Game.msg	decides	radio and spoken lines	a line pushed by the page lands in the copy's log only: the Rust game never hears it and the next apply may drop it
+src/main.ts:main › {said}	decides	radio and spoken lines	the page's own notes are pushed into the copy's log as if the game had said them
+# ---- decides: the same rule worked out twice (the HUD asks TypeScript, on the copy, what the Rust game already answers)
+src/game/game.ts:Game.objective*	decides	HUD mission lines	the HUD's objective line and place are asked of TypeScript, which works them out on the copy
+src/game/mission.ts:*	decides	HUD mission lines	the objective's text and place and "is the mission live" are worked out again on the copy
+src/game/nightbreach.ts:*	decides	HUD mission lines	the plain night's objective line and state are worked out again on the copy
+src/game/roomclear.ts:*	decides	HUD mission lines	the room clear's objective line, its start and its way in are worked out again on the copy
+src/game/defuse.ts:*	decides	HUD mission lines	the defuse's objective line, time left and who is on it are worked out again on the copy
+src/game/rescue*.ts:*	decides	HUD mission lines	the rescue's objective lines and its flow's words are worked out again on the copy
+src/game/snatch*.ts:*	decides	HUD mission lines	the snatch's objective lines are worked out again on the copy
+src/game/scenarioRun.ts:*	decides	HUD mission lines	which scenario is running and whose team a man is on are worked out again on the copy
+src/game/doors.ts:Doors.*	decides	HUD door and charge notes	which door is which by name, which side a man is on and whether he is locked out are worked out again on the copy
+src/game/doortools.ts:*	decides	HUD door and charge notes	the door notes (who waits, on which word, TOO CLOSE and who it names) are worked out by TypeScript on the copy each frame, and a door found shut is learnt on the copy only
+src/game/wallcharge.ts:*	decides	HUD door and charge notes	the wall charge's rows, target and who stands too close are worked out again on the copy
+src/game/doorblast.ts:*	decides	HUD door and charge notes	how far a door's blast reaches is worked out again on the copy for the notes and the previews
+src/game/frag.ts:*	decides	HUD door and charge notes	who a burst would catch and through which leaves is worked out again on the copy for the notes and the previews
+src/game/cleared.ts:*	decides	HUD door and charge notes	which rooms are known and cleared is worked out again on the copy (the plan, the door words)
+src/game/floorplan.ts:*	decides	HUD door and charge notes	the Tab plan's doors and who waits on which key are worked out again on the copy
+src/game/close.ts:*	decides	HUD door and charge notes	the close-in marks and windows are worked out again on the copy
+src/game/doorway.ts:*	decides	HUD door and charge notes	a doorway's lane price is worked out again on the copy
+src/game/roomfight.ts:*	decides	HUD door and charge notes	which door operation a room fight belongs to is worked out again on the copy
+src/game/teampace.ts:*	decides	HUD door and charge notes	the team's pace at a blast is worked out again on the copy
+src/game/orders.ts:*	decides	orders menu and hand ring	the menu's HUD (rows, words, who, the hover, the quick word) is built by TypeScript on the copy each frame; only a row's own closures ask the Rust game
+src/game/cover.ts:*	decides	orders menu and hand ring	cover's words in the menu are worked out by TypeScript, and its map of cover is built on the copy
+src/game/workthings.ts:*	decides	orders menu and hand ring	which things can be worked and their rows are worked out again on the copy
+src/game/interact.ts:*	decides	orders menu and hand ring	the hand ring's rows (what is empty, busy, wedged) are worked out again on the copy
+src/game/autopilot.ts:*	decides	orders menu and hand ring	the quick order the HUD offers is picked by TypeScript on the copy
+src/game/pairorders.ts:*	decides	orders menu and hand ring	which pair is up and waiting is worked out again on the copy
+src/game/planlay.ts:*	decides	orders menu and hand ring	what can be laid on the plan is worked out again on the copy
+src/game/planmode.ts:*	decides	orders menu and hand ring	whether goals are on is worked out again on the copy
+src/game/cmdring.ts:*	decides	orders menu and hand ring	the ring's pin is written on the copy
+src/game/handwork.ts:*	decides	orders menu and hand ring	what Sam's hands are at is worked out again on the copy
+src/game/lightswitch.ts:*	decides	orders menu and hand ring	whether a switch's plant is broken is worked out again on the copy
+src/game/whistle.ts:*	decides	orders menu and hand ring	who would blow is worked out again on the copy
+src/game/stickycam.ts:*	decides	orders menu and hand ring	whether a sticky camera is live and sending is worked out again on the copy
+src/game/qrf.ts:*	decides	orders menu and hand ring	who the reaction force owns is worked out again on the copy
+src/game/fogofwar.ts:*	decides	fog and light on the HUD	the HUD asks TypeScript's fog of war, on the copy, whether a man or a spot is hidden (about eight times a frame in a page play)
+src/game/guards.ts:*	decides	fog and light on the HUD	the light estimate, a man's reach of eye and "on screen" are worked out again on the copy
+src/game/hours.ts:*	decides	fog and light on the HUD	the hour's sky and moon light are estimated again on the copy for the light estimate (and written into the copy's sky cells)
+src/game/game.ts:Game.visibilityOf	decides	fog and light on the HUD	how visible a man is at a point is worked out again on the copy
+src/game/sense.ts:*	decides	fog and light on the HUD	the light at a point through smoke is worked out again on the copy
+src/game/seenwalk.ts:*	decides	fog and light on the HUD	a walk's price in being seen is worked out again on the copy
+src/game/calmtorch.ts:*	decides	fog and light on the HUD	the calm torch's light is placed again on the copy for that price
+src/game/squadthrow.ts:*	decides	previews that run a planner	the squad's throw preview runs TypeScript's whole throw planner on the copy every frame and keeps its plan there: the game throws by its own
+src/game/squad40.ts:*	decides	previews that run a planner	the squad's 40 mm preview runs TypeScript's planner on the copy
+src/game/squadsmoke.ts:*	decides	previews that run a planner	the squad's smoke run is worked out again on the copy
+src/game/throwplan.ts:*	decides	previews that run a planner	a throw's flight, its hits and its walls are flown again on the copy
+src/game/throwables.ts:*	decides	previews that run a planner	a thrown thing's own numbers are read through TypeScript's rules
+src/game/launcher.ts:*	decides	previews that run a planner	the launcher's arc is solved again on the copy
+src/game/he40.ts:*	decides	previews that run a planner	the 40 mm shell's arc is solved again on the copy
+src/game/picture.ts:*	decides	previews that run a planner	the picture overlay runs TypeScript's reading of what the squad believes on the copy every frame and keeps its views there
+src/game/attention.ts:*	decides	previews that run a planner	the attention overlay walks TypeScript's own way to a noise on the copy
+src/game/wallbreak.ts:*	decides	previews that run a planner	what a blast would open and which pieces a wall has are planned again on the copy (the throw preview asks), and a plan's flags are written on the copy's boxes
+src/game/destruction.ts:Destruction.doorsFor	decides	previews that run a planner	which doors a blast reaches is worked out again on the copy for the previews
+src/game/destruction.ts:Destruction.w*	decides	previews that run a planner	the previews ask their questions "with the walls open" by writing the copy's boxes and putting them back
+src/game/glassbreak.ts:GlassBreak.seeThrough	decides	previews that run a planner	whether a burst passes a pane is worked out again on the copy
+src/game/snowBog.ts:*	decides	previews that run a planner	where a thrown thing rests in snow is worked out again on the copy
+src/game/winbars.ts:*	decides	previews that run a planner	whether window bars stop a shot is answered by a TypeScript closure on the copy, for whoever on the page asks for a line of fire
+src/game/aim.ts:*	decides	aim and stance on the HUD	the player's aim, its cost and his feet are worked out again on the copy
+src/game/gunwall.ts:*	decides	aim and stance on the HUD	whether the gun is at a wall is worked out again on the copy
+src/game/player.ts:*	decides	aim and stance on the HUD	whether he can stand, what is in the way and how far a thing is are worked out again on the copy
+src/game/combat.ts:*	decides	aim and stance on the HUD	whether something solid lies between two points is worked out again on the copy
+src/game/condition.ts:*	decides	squad status words	"is he hurt" is worked out again on the copy
+src/game/silent.ts:*	decides	squad status words	whether the squad is silent and whether that is compromised are worked out again on the copy
+src/game/sneak.ts:*	decides	squad status words	the sneak word and whether sneaking is live are worked out again on the copy
+src/game/spotted.ts:*	decides	squad status words	the "spotted" mode is worked out again on the copy
+src/game/stalk.ts:*	decides	squad status words	whether the stalk can go and what it waits on are worked out again on the copy
+src/game/samstun.ts:*	decides	squad status words	whether Sam is blind or staggered is worked out again on the copy
+src/game/laststand.ts:*	decides	squad status words	the last stand's hint is worked out again and kept on the copy
+src/game/nvg.ts:*	decides	squad status words	whether goggles are worn is worked out again on the copy
+src/game/bigkit.ts:*	decides	squad status words	what big kit a man carries is worked out again on the copy
+src/game/weapons.ts:*	decides	squad status words	"reloading" and "ready" are worked out again on the copy
+src/game/quiet.ts:*	decides	mission switches	a quiet mission's rule switches (silent, sneak, spotted, pairs) live in TypeScript's module tables: the first line of Game.update hands them to this game, and the Rust game gets them through the knob tables, not from its own mission
+src/game/teams.ts:*	decides	mission switches	"staff against operatives" is a TypeScript module switch set with the quiet mission's
+src/game/kit.ts:*	decides	kit rows	the kit's rows, costs, what is legal and what each man is dealt are worked out by TypeScript (the HUD's kit strip and the kit page)
+src/game/kitload.ts:*	decides	kit rows	a gun's load and its share are worked out again on the copy
+src/game/gunslots.ts:*	decides	kit rows	the gun picks are worked out again on the copy
+src/game/slotsetup.ts:*	decides	kit rows	a slot's setup steps are worked out again on the copy
+# ---- the host's own
+src/host/rustgame.ts:*	host	the Rust host	the host itself: it hands the Rust game the host's half, steps it, takes the state and the out events	18
+src/host/rustdress.ts:*	host	the Rust host	the dress step hands the frame's men to the picture	1
+src/game/game.ts:Game.update	host	the Rust host	the game's update round the step: the die, the record sampled, the camera's cut	1
+src/game/game.ts:Game.host*	host	the Rust host	the host's half round the step: the Input's drag, the camera's peek and kick	3
+src/game/game.ts:Game.step	host	the Rust host	hands the record to the step the host hung	1
+src/game/cmd.ts:*	host	the Rust host	the player's record sampled from the Input and the camera	3
+src/game/input.ts:*	host	the Rust host	the page's Input rows	3
+src/game/camera.ts:*	host	the Rust host	the host's camera: its ease, zoom, kick and draw-in are the page's own between ticks	15
+src/host/loop.ts:*	host	the Rust host	the frame's loop: the Input's rows cleared, the camera stepped	3
+src/game/roomread.ts:*	picture	the picture's feel	the camera's own framing reads the room the player is in	1
+src/host/autocam.ts:*	host	the Rust host	the camera's own framing	2
+tools/blitz/out-dispatch.ts:*	host	the Rust host	the out events' dispatcher: what the tick told the host is made as today's calls on the page's objects (sound, particles, decals, smoke)	1
+src/game/savestate.ts:*	host	saves	the save controller's rhythm and shelf (saves and replays are not this list's)	16
+src/game/journal.ts:*	host	saves	the F10 session recorder (saves and replays are not this list's)	4
+src/game/sensors.ts:*	host	saves	the recorder's sensor stream	5
+src/game/rollback.ts:*	host	saves	snapshots for the networked page and the recorder	5
+src/game/replaybuf.ts:*	host	saves	the replay buffer's own cursor	2
+src/game/runtape.ts:*	host	saves	the run tape's own cursor	1
+src/game/rustknobs.ts:*	host	the bridge	the knob tables written across to the Rust game	2
+src/math/*	host	the bridge	the die's and the side tables' own book-keeping under the bridge	13
+src/sim/sim.ts:*	host	the bridge	the module's binding	6
+src/sim/state.ts:*	host	the bridge	the block's views	11
+src/sim/men/store.ts:*	host	the bridge	the men's columns in the block	1
+src/sim/weatherhome.ts:*	host	the bridge	the weather's words in the block	2
+src/scene/boxMirror.ts:*	host	the bridge	the box world's mirror in the block	24
+src/scene/collision.ts:*	host	the bridge	the queries' own stamps and counters (a query asked from the page is answered by the block)	31
+src/scene/cut.ts:*	host	the bridge	a cut's clip scratch	3
+src/game/seats.ts:*	host	the bridge	the seats' book: which man sits in which seat, looked up in the copy's own lists	16
+# ---- the picture's own
+src/anim/*	picture	the men drawn	the rig's poses and the character renderer's buffers for the frame	20
+src/game/character.ts:*	picture	the men drawn	the men's poses read for the picture (bones, hands, the animator's layers) and the cursor's ray against a man: the tick's drawn places come in the apply	4
+src/game/game.ts:Game.drawMen	picture	the men drawn	hands the men to the renderer	1
+src/game/game.ts:manNotDrawn	picture	the men drawn	a note of a man with nothing to draw	1
+src/game/cast.ts:*	picture	the men drawn	what a man wears	5
+src/game/charLook.ts:*	picture	the men drawn	a man's look for the frame	4
+src/game/stature.ts:*	picture	the men drawn	a man's eased scale	4
+src/game/civilians.ts:*	picture	the men drawn	which civilians are drawn and where they lie	6
+src/game/packside.ts:*	picture	the men drawn	a pack's extents	1
+src/game/game.ts:Game.followPos	picture	the men drawn	where the camera looks	1
+src/game/game.ts:Player.*	picture	the men drawn	what is in the player's hands, for his pose and the HUD's icon	6
+src/game/game.ts:isBreathing	picture	the men drawn	whether breath shows	1
+src/game/game.ts:Game.stepSnowTracks	picture	weather and ground	the snow's tracks for the picture	1
+src/game/game.ts:Game.syncSnowLook	picture	weather and ground	the snow's look for the picture	1
+src/game/snow*.ts:*	picture	weather and ground	snow: flakes, tracks, marks, breath (the tick decides nothing by them)	46
+src/game/rainFx.ts:*	picture	weather and ground	rain: drops and drips	6
+src/game/airSim.ts:*	picture	weather and ground	the air's drift for particles and smoke	5
+src/game/weather*.ts:*	picture	weather and ground	the weather's roofs and wet look for the picture	12
+src/game/wetGround.ts:*	picture	weather and ground	wet ground following the men	2
+src/game/wind.ts:*	picture	weather and ground	the wind handed to particles and smoke	9
+src/game/fire.ts:*	picture	weather and ground	fire drawn	6
+src/game/floor*.ts:*	picture	weather and ground	the floor under a point, and the floor's mess	4
+src/game/blastFeel.ts:*	picture	the picture's feel	a blast's kick and its particles' later stages	5
+src/game/carlamps.ts:*	picture	the picture's feel	a car's lamps painted	2
+src/game/glass*.ts:*	picture	the picture's feel	panes and sheets for the picture	10
+src/game/destruction.ts:*	picture	the picture's feel	roofs and broken walls for the picture	2
+src/game/furnblast.ts:Furniture.index	host	saves	the save controller checks the furniture before it offers a load	1
+src/game/furnblast.ts:*	picture	the picture's feel	furniture's groups for the picture	3
+src/game/props.ts:*	picture	the picture's feel	a prop's box placed for the picture	3
+src/game/doors.ts:Door.pos*	picture	the picture's feel	a door's leaf placed for the picture	2
+src/game/doors.ts:Door.keptPos	picture	the picture's feel	a door's leaf placed for the picture	1
+src/game/doors.ts:Door.dir	picture	the picture's feel	a door's leaf placed for the picture	1
+src/game/doors.ts:Door.swing	picture	the picture's feel	a door's leaf placed for the picture	1
+src/game/doors.ts:Door.off	picture	the picture's feel	a door's leaf placed for the picture	1
+src/game/doors.ts:DriveCols.*	picture	the picture's feel	a door's drive columns read for its leaf	1
+src/game/doors.ts:Door.*	decides	HUD door and charge notes	whether a door is closed, latched, locked, broken or noticed is worked out again on the copy from its angle and rows (a threshold written in two languages)
+src/game/wallwear.ts:*	picture	the picture's feel	a wall's wear from rounds, as decals (the tick tells the host of each round)	3
+src/game/lookDecals.ts:*	picture	the picture's feel	a mark's look	1
+src/game/moths.ts:*	picture	the picture's feel	the moths cleared for the picture	1
+src/ui/quality.ts:*	picture	the picture's feel	the quality ladder's own choice, kept in the browser's store	3
+src/game/marks.ts:*	picture	the picture's feel	marks on surfaces	2
+src/game/particleFx.ts:*	picture	the picture's feel	the particle pool	2
+src/game/attract.ts:*	picture	the picture's feel	the attract mode's camera	4
+src/game/demo.ts:*	picture	the picture's feel	the tour's camera and captions	2
+src/scene/*	picture	the box world	the box world packed for the renderer	39
+src/sim/lightshome.ts:*	picture	the box world	the lights' rows read for the renderer	4
+src/engine.ts:*	picture	the box world	the renderer's own frame	2
+src/host/tween.ts:*	picture	the box world	boxes posed between two ticks for the draw, and put back	2
+src/host/ahead.ts:*	picture	the box world	boxes posed ahead for the draw, and put back	2
+# ---- the hand's own
+src/game/quietfog.ts:*	hand	menus	the end card's link to the next mission reads the quiet fog's rows (setting them aside and back)	5
+src/game/difficulty.ts:*	hand	menus	the cards' links and the pause card's levers read the difficulty's tables	12
+src/game/stress.ts:*	hand	the developer's hand	the developer's stress test: how many men it wants	1
+src/host/firelab.ts:*	hand	the developer's hand	a developer's lab	2
+src/host/smokelab.ts:*	hand	the developer's hand	a developer's lab	1
+src/host/sneaklab.ts:*	hand	the developer's hand	a developer's lab	1
+src/main.ts:main › top	hand	the developer's hand	an address word's loop: the cans topped up, the fog held off	1
+src/main.ts:readout › {set}	hand	the developer's hand	a readout's row kept	1
+src/ui/perf*.ts:*	hand	the developer's hand	the performance recorder and sweep	2
+src/ui/sessionrec.ts:*	hand	the developer's hand	the session recorder's file sent	1
+src/ui/menu.ts:*	hand	menus	a card's button: a save's note, the sandbox row	3
+src/ui/planfloor.ts:*	hand	menus	the Tab plan's doors	1
+src/ui/coop.ts:*	hand	menus	this tab's id	1
+src/ui/missions.ts:*	hand	menus	a plan fetched for the list	1
+src/host/names.ts:*	hand	menus	the player's name kept	1
+src/game/sandbox.ts:*	hand	menus	the sandbox's rows kept	1
+src/cloud/*	hand	the cloud	the backend's client	2
+src/net/*	hand	the cloud	the networked page's own	1
+src/main.ts:main › {save}*	hand	the cloud	a save's file sent	1
