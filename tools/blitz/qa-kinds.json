@@ -91,9 +91,6 @@
 "checkpoint-turn": [
 "SAVETIMELINE.turn=false"
 ],
-"civilians-identity": [
-"CIV.greet=false"
-],
 "deathrecap": [
 "RECAP.on=false",
 "RECAP.live=false"
@@ -292,30 +289,6 @@
 "GLASSPEN.on=false",
 "GLASSFX.on=false"
 ],
-"qrf-element": [
-"RESPONSE.on=false"
-],
-"qrf-gating": [
-"RESPONSE.on=false"
-],
-"qrf-limits": [
-"RESPONSE.on=false"
-],
-"qrf-perimeter": [
-"RESPONSE.on=false"
-],
-"qrf-reset": [
-"RESPONSE.on=false"
-],
-"qrf-timeline": [
-"RESPONSE.on=false"
-],
-"qrf-trigger": [
-"RESPONSE.on=false"
-],
-"qrf-wave": [
-"RESPONSE.on=false"
-],
 "radiohome": [
 "WORDS.radioHome=false"
 ],
@@ -454,60 +427,6 @@
 "stay-open-pass": [
 "DOORSTAY.on=false"
 ],
-"sticky-default": [
-"SLOTSETUP.on=false",
-"SLOTSETUP.pop=false",
-"GUNSLOTS.on=false",
-"FOG.cone=true",
-"FOG.own=true"
-],
-"sticky-fly": [
-"SLOTSETUP.on=false",
-"SLOTSETUP.pop=false",
-"GUNSLOTS.on=false"
-],
-"sticky-fog": [
-"SLOTSETUP.on=false",
-"SLOTSETUP.pop=false",
-"GUNSLOTS.on=false"
-],
-"sticky-kit": [
-"SLOTSETUP.on=false",
-"SLOTSETUP.pop=false",
-"GUNSLOTS.on=false"
-],
-"sticky-mark": [
-"FOG.cone=true",
-"SLOTSETUP.on=false",
-"SLOTSETUP.pop=false",
-"GUNSLOTS.on=false",
-"STICKY.mark=false"
-],
-"sticky-save": [
-"SLOTSETUP.on=false",
-"SLOTSETUP.pop=false",
-"GUNSLOTS.on=false"
-],
-"sticky-take": [
-"SLOTSETUP.on=false",
-"SLOTSETUP.pop=false",
-"GUNSLOTS.on=false",
-"STICKY.take=false"
-],
-"sticky-wand": [
-"SLOTSETUP.on=false",
-"SLOTSETUP.pop=false",
-"GUNSLOTS.on=false",
-"QUIETFOG.wand=false",
-"WAND.on=false"
-],
-"sticky-ways": [
-"SLOTSETUP.on=false",
-"SLOTSETUP.pop=false",
-"TOLD.on=false",
-"TOLD.fogOff=false",
-"GUNSLOTS.on=false"
-],
 "threshold-doors": [
 "DOORTOOLS.wordNoCan=false"
 ],
@@ -549,26 +468,6 @@
 ],
 "trail-doors": [
 "ORDERS.trailDoors=false"
-],
-"wand-kit": [
-"WAND.mate=false",
-"KITTREE.on=false"
-],
-"wand-look": [
-"WAND.nv=false",
-"WAND.on=false",
-"FOG.cone=true"
-],
-"wand-mate": [
-"KITDEAL.on=false",
-"WAND.mate=false",
-"FOG.own=true"
-],
-"wand-off": [
-"WAND.on=false"
-],
-"wand-quick": [
-"WAND.quick=false"
 ],
 "weapons-identity": [
 "SLOTSETUP.on=false",
@@ -1018,7 +917,6 @@
 "civilians-comply": "iii",
 "civilians-determinism": "iii",
 "civilians-hearing": "iii",
-"civilians-identity": "iii",
 "civilians-phone": "iii",
 "civilians-scoring": "iii",
 "civilians-sight": "iii",
@@ -1501,11 +1399,9 @@
 "moves-cast": "iv-a",
 "moves-dazzle": "0",
 "moves-entry": "0",
-"moves-gait": "0",
 "moves-game": "iv-b",
 "moves-hands": "iv-b",
 "moves-kept": "0",
-"moves-off": "0",
 "moves-react": "ii",
 "moves-recoil": "0",
 "moves-reload": "0",
@@ -1932,7 +1828,6 @@
 "sticky-save": "ii",
 "sticky-take": "iv-a",
 "sticky-wand": "iii",
-"sticky-ways": "ii",
 "stripfirst": "iii",
 "sunglint": "0",
 "sup-hostage": "iii",
