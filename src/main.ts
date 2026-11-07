@@ -23,7 +23,7 @@ import type { HostApi } from './host/api';
 import { SAVED, SAVE_UP, saveFile, savedWords } from './host/savefile';
 import type { IrradianceProbe } from './render/probe';
 import { buildLevel, OFFICE_DATA } from './scene/level';
-import { loadLevel, levelFileOf, levelNameOf } from './scene/levelLoad';
+import { loadLevel, levelFileOf } from './scene/levelLoad';
 import { parseLevelData, type LevelData } from './scene/levelData';
 import { kitViewSetLevel, kitViewAddLevel, kitViewWayOfLink, kitViewSetQuery, kitViewSetDress } from './host/kitViewSet';   // (pure, no game module: ?kitview's bespoke set, laid over the level's file before it is built)
 import { KITANIM } from './game/kitanim';   // (written once, in ?kitview's own window on a quiet mission's set: where the rifle hangs — host/kitViewSet.ts kitViewSetDress)
@@ -143,8 +143,6 @@ import { lightEstimateAt } from './game/guards';
 import { STRESS, standExtra, stressTick, stressSummary, extraSpots } from './game/stress';
 import { Quality, ladderAimOf, rtVeto, sharpForce, gbaaForce, iqForce } from './ui/quality';
 import { buildPanel } from './ui/bindings';
-import { SceneTweak } from './ui/sceneTweak';
-import { sceneLayers } from './ui/sceneLayers';
 import { frameCanvas, postShot } from './ui/capture';
 import { FrameCap, FRAMECAP, watchTextures } from './render/framecap';
 import { reachBinding } from './render/frame';
@@ -469,8 +467,6 @@ async function main() {
   buildPanel(panel, engine, game, smoke, cam, overlay, audio, quality, () => ({ fps: fpsSm, union: unionSm }));   // (the status strip reads the frame loop's own smoothed numbers — only ever called from the panel's refresh, long after they exist)
   if (modelErrAsked(q) && !tape && !net) modelErrBoot(game, q.get('modelerr'), sceneOf(q), () => ({ adapter: gpu.adapterInfo, ...(gpu.adapterFallback ? { fallback: 'yes' } : {}), ...(sessionrec.commit ? { commit: sessionrec.commit } : {}) }), { held: () => menu.isOpen, startPage: startPageWanted() });   // ?modelerr: the game's own senses measured against the picture (host/modelerr.ts), nothing of it made without the word
   if (net) netRows(panel, net);   // (a networked game: the debugger's Network page — this page's connection made worse on purpose, live: ui/netrows.ts; nothing of it is made on any other page)
-  // ?tweak: the one off scene tweak panel (ui/sceneTweak.ts) — the picture's layers with their switches and numbers, live; without the word nothing of it is made or read
-  if (new URLSearchParams(location.search).has('tweak')) (window as any).__tweak = new SceneTweak(sceneLayers(engine, game), { scene: levelNameOf(game.level) ?? 'office' });
   input.keyVeto = e => (overlay.cardUp && !menu.isOpen && overlay.cardKey(e)) || panel.onKey(e);   // (a tutorial step's card first: the Enter or Space that closes it is no game key — ui/railcard.ts)
     // ← / → and [ / ] over the open panel walk its systems — before the game reads the key (a typed letter is the game's: the panel's search types only after a click on it)
   (window as any).__panel = panel;
