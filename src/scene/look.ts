@@ -105,7 +105,7 @@ export function lookPageOn(q: URLSearchParams): boolean { return !q.getAll('look
  *  level as it loads (`geo`, `lorry`), the hills that rays see (`hills`: the game's own rays meet them too), the seated posts (`?seat=0`) and a snow level's
  *  broken cloud. Each of those changes what the page's game PLAYS, and a
  *  co-op server, a headless run and a check all play the level as its file has it. main.ts reads this once at boot into LOOK_LAB */
-export function lookLabOn(q: URLSearchParams): boolean { return lookPageOn(q) && (lookPageRows(q).length > 0 || (typeof document !== 'undefined' && !!document.querySelector?.('meta[name="tps-look"]'))); }
+export function lookLabOn(q: URLSearchParams): boolean { return lookPageOn(q) && lookPageRows(q).length > 0; }
 /** …as this page booted (main.ts pageSwitches; false on every stand without a page) */
 export const LOOK_LAB = { on: false };
 /** ITS TRIALS: the address's word of each, and the key under which the look panel's button keeps it on this machine */
