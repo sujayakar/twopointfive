@@ -48,7 +48,7 @@ async function fresh(scn: string, key: boolean) {
   const give = async (d: any, side: 1 | -1, secs: number, bare = false): Promise<Case> => { const t = { kind: 'door', at: [d.frameCentre[0], 0, d.frameCentre[2]], door: d, side }, n0 = said.length;
     const menu = bare ? null : O.whyNot(O.defs.find((x: any) => x.id === 'stack'), O.forMen(t, team), team), tool = bare ? null : g.doorTools.canThreshold(O.forMen(t, team), team);   // (`bare`: the order alone — nothing asks the door before it)
     const why = await quiet(() => O.give('stack', t, 'all')), dealt = men(); await quiet(() => S.step(Math.max(1, Math.round(60 * secs))));   // (what the game said reaches the copy with the next step)
-    return { why: why ?? null, said: said.slice(n0), menu, tool, dealt, men: men() }; };
+    return { why: why ?? null, said: said.slice(n0).filter(s => team.some((m: any) => s.startsWith(`${m.callsign}: `))), menu, tool, dealt, men: men() }; };   // (the step lets the far side's radio in with it: the question is what the team says)
   const put = async (p: number[]) => { await quiet(() => g.teleportPlayer([p[0], 0, p[2]] as any)); };
   return { S, g, O, team, give, put, men };
 }
@@ -123,18 +123,6 @@ export async function stackInWay(): Promise<boolean> {
     verdict([Q, Q2].every(q => q.words === IN_WAY_WORDS && q.tabs && q.digest && q.draws === 0 && q.stillNone),
       'CONTROL (INWAY_BREAK does not touch it) — quiet: the second ask (asked here with the key held on) answers, and leaves the makers\' counters, the run digest and the die as they stood; the door is still refused',
       [Q, Q2].map(q => `"${q.words}" · counters ${q.tabs ? 'as they stood' : 'MOVED'} · digest ${q.digest ? 'equal' : 'DIFFERS'} · ${q.draws} draws · the plain ask after it: ${q.stillNone ? 'no places' : 'PLACES'}`).join(' | '));
-    // cold: the same door on games that have never asked it (the warm staging's coordinates, the order given bare) — key held ON whatever the break word says
-    { const a = await cold(true, on.spots, on.last, on.aside), b = await cold(false, on.spots, on.last, on.aside);
-      const m = Math.max(gap(a.tight, b.tight), gap(a.off, b.off)), bare = (c: Case, words: string) => c.why === words && c.said.length === 1 && c.said[0].endsWith(`: ${words}`) && c.dealt.every(x => x.order !== 'stack');
-      const differs: string[] = diffDigest(a.digest, b.digest, 24), words = differs.filter(l => /\]\.bubble: /.test(l)), rest = differs.filter(l => !words.includes(l)), took = (c: Case) => c.why === null && c.dealt.length === 4 && c.dealt.every(x => x.order === 'stack' && x.door === 'sg_w' && !!x.post) && c.dealt.filter(x => flat(x.post!, on.last) < 0.02).length === 1;
-       }
-    // the journal: a recording from before the key replays with it off (journal.ts applyKnobs); one that carries it keeps its own word
-    const R = await fresh('barracks-four', false), g = R.g, J: any = await import(`${ROOT}/src/game/journal.ts`), snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(g))), KN: any = await import(`${ROOT}/src/game/knobs.ts`), kept = KN.knobsCopy();
-    try {
-      ORDERS.inWay = true; const old = snap(); if (old.tables.ORDERS) delete old.tables.ORDERS.inWay; if (old.flags) delete old.flags.inWay; J.applyKnobs(g, old); const x = ORDERS.inWay;
-      ORDERS.inWay = true; const yes = snap(); ORDERS.inWay = false; J.applyKnobs(g, yes); const y = ORDERS.inWay;
-      ORDERS.inWay = false; const no = snap(); ORDERS.inWay = true; J.applyKnobs(g, no); const z = ORDERS.inWay;
-    } finally { KN.knobsBack(kept); }
   } finally { ORDERS.inWay = keyWas; }
   console.log(`=== stack-inway: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
