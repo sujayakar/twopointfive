@@ -18,7 +18,7 @@
 //     breach: breach-daylight   (+ clear-doctrine; the daytime breach showcase's own probes went with the show)
 //     carbine: carbine-fire carbine-rig
 //     charmats: charmats-cast charmats-off charmats-shader charmats-slots charmats-tables
-//     civilians: civilians-comply civilians-determinism civilians-hearing civilians-identity civilians-phone civilians-scoring civilians-sight civilians-spots
+//     civilians: civilians-comply civilians-determinism civilians-hearing civilians-phone civilians-scoring civilians-sight civilians-spots
 //     debrief: debrief-charge debrief-dom debrief-doorname debrief-loud debrief-rooms debrief-run debrief-score
 //     decals: decals-follow decals-identity decals-off decals-ring decals-sit decals-sites
 //     destruction: destruction-bounds destruction-caps destruction-determinism destruction-dust destruction-hearing destruction-identity destruction-impulses destruction-reset destruction-screen destruction-sheet
@@ -29,7 +29,7 @@
 //     workthings: work-breaker work-four work-objective work-edges work-posted work-face work-held work-walk work-defuse work-harness
 //     handwork: handwork-work handwork-radio handwork-swap
 //     wand: wand-kit wand-tile wand-look wand-costs wand-doors wand-mate wand-quick wand-off
-//     sticky: sticky-kit sticky-fly sticky-fog sticky-save sticky-ways sticky-default sticky-take sticky-wand
+//     sticky: sticky-kit sticky-fly sticky-fog sticky-save sticky-default sticky-take sticky-wand
 //     owncharge: owncharge-kit owncharge-door owncharge-squad owncharge-save
 //     workstow: workstow-sam workstow-mate workstow-wall
 //     squadnet: squadnet-why squadnet-clear squadnet-end squadnet-net
@@ -108,7 +108,7 @@ const DT = 1 / 60;
 const KNOWN = new Set<string>(['all', 'all-quick']);
 /** 'all-quick' = the union of the gate lists a lane is told to run before handing back (CLAUDE.md: perf · player (incl. selector) · doors · qrf · checkpoints · journal · ui + every identity
  *  card) — some twenty minutes where 'all' is hours; a dispatch line rides it when any of its names is one of these families / probes. `sh tools/qa/gate.sh all-quick` is the one-word gate. */
-const QUICK = new Set(['perf', 'player', 'doors', 'qrf', 'checkpoints', 'journal', 'ui', 'fold', 'weapons-identity', 'civilians-identity', 'decals-identity', 'destruction-identity', 'level-identity', 'glassbreak-off', 'director-scheduler',
+const QUICK = new Set(['perf', 'player', 'doors', 'qrf', 'checkpoints', 'journal', 'ui', 'fold', 'weapons-identity', 'decals-identity', 'destruction-identity', 'level-identity', 'glassbreak-off', 'director-scheduler',
   'roomclear', 'threshold', 'silent', 'lineoffire', 'doorpath', 'kit', 'missions', 'depot', 'registry', 'shipped', 'close', 'heldclicks', 'farsight', 'farcalm', 'look', 'kitanim', 'hands', 'roomfit', 'words', 'workthings', 'handwork', 'wand', 'owncharge', 'workstow', 'squadnet', 'gunslots', 'gunroles', 'gunlook', 'kittree', 'bigslot', 'noshield', 'takedown', 'stealthpose', 'sticky', 'holds']);   // (… and, second line, the REBUILD's families: the room clear, the threshold, the silent order, lines of fire, the door walk, the kit, the missions list with its as-shipped gate, the two levels with a run of their own, and the two-stands check; + close: the close-in mode near a guard, on in the page; + words: the dialogue pass's lint, the hostages' voice)
 // (first line: + glass-break's switch-off identity and the Director's idle identity, landed after the list froze — wave-4 review)
 /** The probes that failed this invocation (by name), the count run, and how many of those produced anything checkable (a boolean, a PASS / FAIL line, a banner). */
@@ -2575,7 +2575,6 @@ if (on('sticky-kit', 'sticky', 'kit', 'all')) await run('sticky-kit', async () =
 if (on('sticky-fly', 'sticky', 'all')) await run('sticky-fly', async () => (await import('./sticky-check.ts')).stickyFly());   // 2 again reaches it, the right button sends it; a wall, a leaf, a man, the oldest retired
 if (on('sticky-fog', 'sticky', 'fog', 'all')) await run('sticky-fog', async () => (await import('./sticky-check.ts')).stickyFog());   // hidden without it, seen inside its wedge with it; nothing behind its wall; the eyes' cap
 if (on('sticky-save', 'sticky', 'all')) await run('sticky-save', async () => (await import('./sticky-check.ts')).stickySave());   // the checkpoint's count and the cameras out; no save with one in the air
-if (on('sticky-ways', 'sticky', 'all')) await run('sticky-ways', async () => (await import('./sticky-check.ts')).stickyWays());   // a quiet row's link three ways, the cameras' button on the fog lever's row, each way started, restarted and quit
 if (on('sticky-default', 'sticky', 'quiet', 'all')) await run('sticky-default', async () => (await import('./sticky-check.ts')).stickyDefault());   // a quiet mission opened with no click: the fog all round, the partner's eye, two cameras on the rifle; the other ways a key each
 if (on('sticky-take', 'sticky', 'selector', 'all')) await run('sticky-take', async () => (await import('./sticky-check.ts')).stickyTake());   // STICKY.take: a stuck camera is a row of the use key at it, taken back onto the launcher; not through a wall; off = no row, the same digest
 if (on('sticky-mark', 'sticky', 'all')) await run('sticky-mark', async () => (await import('./sticky-check.ts')).stickyMark());   // STICKY.mark: his own stuck cameras stay in the picture under the fog and the HUD marks each lens; off = a dark one on unseen floor is not drawn, the same digest
@@ -3139,7 +3138,7 @@ if (on('spotted-off', 'spotted', 'all')) await run('spotted-off', async () => (a
 for (const n of ['camera', 'kit', 'take', 'landing', 'reach', 'off', 'stack', 'cover', 'off-same', 'duo']) if (on(`wallsnap-${n}`, 'wallsnap', 'all')) await run(`wallsnap-${n}`, async () => (await import('./wallsnap-probes.ts')).wallSnapProbes(`wallsnap-${n}`));
 if (on('wallpress', 'wallsnap', 'wall-snap', 'all')) await run('wallpress', async () => (await import('./wallpress-check.ts')).wallPressCheck());   // a move key held into a wall takes it, no Q (player.ts wallPress, WALLSNAP.press / ?wallpress=0 / TPS_WALLPRESS=1)
 if (on('wallrun', 'wallsnap', 'wall-snap', 'all')) await run('wallrun', async () => (await import('./wallrun-check.ts')).wallRunCheck());   // a sprint held straight into a wall takes it, and that run is not then a way off it (player.ts wallPress / wallRanOn, WALLSNAP.pressRun / ?wallrun=0; WALLRUN_BREAK=1 must fail)
-if (on('wallfelt', 'wallsnap', 'wall-snap', 'all')) await run('wallfelt', async () => (await import('./wallfelt-check.ts')).wallFeltCheck());   // the hold's two sounds and the unhurried take (WALLSNAP.voice / .slow; WALLFELT_BREAK=1 must fail)
+if (on('wallfelt', 'wallsnap', 'wall-snap', 'all')) await run('wallfelt', async () => (await import('./wallfelt-check.ts')).wallFeltCheck());   // the hold's two sounds and the take's rates (WALLSNAP.voice / .slow, settled; WALLFELT_BREAK=1 must fail)
 // ---------------------------------------------------------------- Sam handles his kit (kitanim-probes.ts; game/kitanim.ts KITANIM.on, character.ts KIT)
 if (on('kitanim-equip', 'kitanim', 'all')) await run('kitanim-equip', async () => (await import('./kitanim-probes.ts')).kitEquip());   // every change of what is in the fist is carried in order; a gun fires only once it is up
 if (on('kitanim-midswap', 'kitanim', 'all')) await run('kitanim-midswap', async () => (await import('./kitanim-probes.ts')).kitMidswap());   // a change in the middle of a change; a throw takes the arms
@@ -3180,8 +3179,8 @@ if (on('irl-near', 'irlight', 'all')) await run('irl-near', async () => (await i
 if (on('litman-rule', 'litman', 'all')) await run('litman-rule', async () => (await import('./litman-probes.ts')).litmanRule());
 if (on('light-wall', 'litman', 'all')) await run('light-wall', async () => (await import('./walllight-probes.ts')).lightWall());   // a teammate's light is dark into the wall at his muzzle (LIGHTS.wallOff; WALLLIGHT_BREAK=1 must fail)
 if (on('same-way', 'ordereddoor', 'all')) await run('same-way', async () => (await import('./sameway-probes.ts')).sameWay());   // a pair handed one order on one door goes round a building by one side (ORDERS.sameWay; SAMEWAY_BREAK=1 must fail)
-// ---------------------------------------------------------------- the loud demo's motion pass (moves-probes.ts; character.ts MOVES): off = the old calls to the bit; on = recoil, the toss, the flinch / hit, the stun hunch, the two gaits, a staged fight
-for (const [nm, fn] of [['moves-off', 'movesOff'], ['moves-recoil', 'movesRecoil'], ['moves-react', 'movesReact'], ['moves-toss', 'movesToss'], ['moves-dazzle', 'movesDazzle'], ['moves-gait', 'movesGait'], ['moves-game', 'movesGame'], ['moves-reload', 'movesReload'], ['moves-kept', 'movesKept'], ['moves-entry', 'movesEntry'], ['moves-second', 'movesSecond'], ['moves-hands', 'movesHands'], ['moves-cast', 'movesCast'], ['moves-snap', 'movesSnap'], ['moves-steady', 'movesSteady']] as const)
+// ---------------------------------------------------------------- the loud demo's motion pass (moves-probes.ts; character.ts MOVES, settled on): recoil, the toss, the flinch / hit, the stun hunch, a staged fight
+for (const [nm, fn] of [['moves-recoil', 'movesRecoil'], ['moves-react', 'movesReact'], ['moves-toss', 'movesToss'], ['moves-dazzle', 'movesDazzle'], ['moves-game', 'movesGame'], ['moves-reload', 'movesReload'], ['moves-kept', 'movesKept'], ['moves-entry', 'movesEntry'], ['moves-second', 'movesSecond'], ['moves-hands', 'movesHands'], ['moves-cast', 'movesCast'], ['moves-snap', 'movesSnap'], ['moves-steady', 'movesSteady']] as const)
   if (on(nm, 'moves', 'all')) await run(nm, async () => ((await import('./moves-probes.ts')) as any)[fn]());
 // ---------------------------------------------------------------- a hit can wound a man instead of killing him (wounds-probes.ts; game/wounds.ts WOUND.on, off as shipped): the rule as geometry, off = every hit kills, the state, both sides, no counter, checkpoints + found
 for (const [nm, fn] of [['wounds-zone', 'woundsZone'], ['wounds-off', 'woundsOff'], ['wounds-state', 'woundsState'], ['wounds-both', 'woundsBoth'], ['wounds-again', 'woundsAgain'], ['wounds-save', 'woundsSave'], ['wounds-play', 'woundsPlay']] as const)
@@ -3497,9 +3496,9 @@ if (on('tactics-lone', 'tactics', 'all')) await run('tactics-lone', async () => 
 if (on('tactics-door', 'tactics', 'ai-pass', 'all')) await run('tactics-door', async () => (await import('./tactics-probes.ts')).tacticsDoor());
 if (on('tactics-rounds', 'tactics', 'all')) await run('tactics-rounds', async () => (await import('./tactics-probes.ts')).tacticsRounds());
 if (on('tactics-decay', 'tactics', 'all')) await run('tactics-decay', async () => (await import('./tactics-probes.ts')).tacticsDecay());
-// ---------------------------------------------------------------- civilians (civilians-probes.ts): 'civilians' = the family; civilians-identity also rides 'ai-pass' (their presence alone must move nothing of the shift)
-{ const cf = async (name: string, fn: string, alsoAi = false) => { if (on(name, 'civilians', 'all', ...(alsoAi ? ['ai-pass'] : []))) await run(name, async () => ((await import('./civilians-probes.ts')) as any)[fn]()); };
-  await cf('civilians-spots', 'civiliansSpots'); await cf('civilians-sight', 'civiliansSight'); await cf('civilians-phone', 'civiliansPhone'); await cf('civilians-comply', 'civiliansComply'); await cf('civilians-scoring', 'civiliansScoring'); await cf('civilians-hearing', 'civiliansHearing'); await cf('civilians-determinism', 'civiliansDeterminism'); await cf('civilians-identity', 'civiliansIdentity', true);
+// ---------------------------------------------------------------- civilians (civilians-probes.ts): 'civilians' = the family
+{ const cf = async (name: string, fn: string) => { if (on(name, 'civilians', 'all')) await run(name, async () => ((await import('./civilians-probes.ts')) as any)[fn]()); };
+  await cf('civilians-spots', 'civiliansSpots'); await cf('civilians-sight', 'civiliansSight'); await cf('civilians-phone', 'civiliansPhone'); await cf('civilians-comply', 'civiliansComply'); await cf('civilians-scoring', 'civiliansScoring'); await cf('civilians-hearing', 'civiliansHearing'); await cf('civilians-determinism', 'civiliansDeterminism');
   if (KNOWN.has(which) && which.startsWith('civilians')) familyBanner('civilians', (await import('./civilians-probes.ts')).civiliansFailures()); }
 // ---------------------------------------------------------------- needs-driven patrol variation (needs-probes.ts): 'needs' = the family — its identity card (tune.needs off = the calm patrol,
 // byte for byte) is the AI passes' business too

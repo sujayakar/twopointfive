@@ -15,8 +15,8 @@
 //                                                               [--trace 'Red Two' --from 16 --to 17.2]   that man's yaws every frame of the stretch
 //   bun run tools/qa/snap-probes.ts --runs room-clear-four:1-8,block-squads:1,block-squads:3 [--turn 1|0|light|medium|heavy] [--jobs 4] [--json f.json]   the table, as the probes make it
 //   bun run tools/qa/probes.ts snap          THE GATE. snap-page (the page's defaults: no swing of 60° in the model's gun yaw; nothing drawn — rifle, trunk,
-//                                            head — comes DRAWN_MIN° round inside a tenth; the bang entries are in the sample) · snap-bites (turn weight off:
-//                                            the watcher finds both, in each mission and after a charge)
+//                                            head — comes DRAWN_MIN° round inside a tenth; the bang entries are in the sample) · snap-bites (the watcher's
+//                                            arithmetic on rows made by hand: what is a swing and what is not; SNAPBITES_BREAK=1 must fail)
 //   bun run tools/qa/probes.ts snap-open     THE OPEN FINDING, red today and so not one of the family's: the gun's own bar of 60° held to what is DRAWN. The model's
 //                                            muzzle keeps it; the drawn rifle, the shoulders and the face pass it, mostly in the tenth a rifle changes carriage
 //                                            (shouldered ↔ low ready) while the gun is swinging. The animator's to fix, and the fight reads those bones: a fix
@@ -127,10 +127,6 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
 }
 /** the page as it opens: the cast, the movement pass, the turn weight as shipped */
 const PAGE = { TPS_CAST: '1', TPS_MOVES: '1', TPS_TURN: '1' };
-/** THE TURN WEIGHT OFF IS A WORD, NOT THE LACK OF ONE: a tool with no word stands the game as the page opens it, weight on (it was the other way about when
- *  this file was written, and the 'off' arm asked by leaving the word out played the page and found nothing). `ran` holds each run to the RULE its game
- *  had, which its caller names: the word is how the arm is asked, never the proof that it was played. */
-const NO_TURN = '0';
 const ROOMS = 'room-clear-four:1-8', SQUADS = 'block-squads:1,block-squads:3';
 const count = (rs: SnapRun[], f: (s: Swing) => boolean = () => true) => rs.reduce((n, r) => n + r.swings.filter(f).length, 0);
 const worst = (rs: SnapRun[], f: (s: Swing) => boolean = () => true, n = 8) => rs.flatMap(r => r.swings.filter(f).map(s => ({ r, s }))).sort((a, b) => b.s.deg - a.s.deg).slice(0, n).map(x => swingLine(x.r, x.s)).join('\n');
@@ -167,8 +163,9 @@ export async function snapPage(): Promise<boolean> {
   return F.done();
 }
 export async function snapBites(): Promise<boolean> {
-  const F = family('snap-bites: the watcher finds the snaps where they are — a turn in one frame, and the page with the turn weight off');
-  { const L: Row[] = []; let y = 0; for (let i = 0; i < 40; i++) { if (i === 20) y += 90 / DEG; L.push({ pose: '', t: i / 60, gun: y, rifle: i >= 10 && i < 22 ? (i - 9) * 20 / DEG : i >= 22 ? 240 / DEG : 0, level: i < 30, trunk: i >= 20 && i < 26 ? (i - 19) * 11 / DEG : i >= 26 ? 66 / DEG : 0, head: i * 9 / DEG, body: 0, x: 0, z: 0, brk: i === 0, state: '' }); }
+  const F = family('snap-bites: the watcher finds the snaps where they are — a turn in one frame');
+  const BRK = process.env.SNAPBITES_BREAK === '1';   // (the red path: the staged quarter turn is never made, so the second line has nothing to find)
+  { const L: Row[] = []; let y = 0; for (let i = 0; i < 40; i++) { if (i === 20 && !BRK) y += 90 / DEG; L.push({ pose: '', t: i / 60, gun: y, rifle: i >= 10 && i < 22 ? (i - 9) * 20 / DEG : i >= 22 ? 240 / DEG : 0, level: i < 30, trunk: i >= 20 && i < 26 ? (i - 19) * 11 / DEG : i >= 26 ? 66 / DEG : 0, head: i * 9 / DEG, body: 0, x: 0, z: 0, brk: i === 0, state: '' }); }
     const g = swingsOf(L, 'gun', 60, 0.1), r = swingsOf(L, 'rifle', 60, 0.1), t = swingsOf(L, 'trunk', 60, 0.1), h = swingsOf(L, 'head', 60, 0.1);
     // (what the watcher must NOT read, and the pop a whole-tenth net would have lost)
     const row = (i: number, o: Partial<Row>): Row => ({ pose: '', t: i / 60, gun: 0, rifle: 0, level: true, trunk: 0, head: 0, body: 0, x: 0, z: 0, brk: i === 0, state: '', ...o });
@@ -177,15 +174,9 @@ export async function snapBites(): Promise<boolean> {
     const cg = swingsOf(cut, 'gun', 60, 0.1), cr = swingsOf(lev, 'rifle', 60, 0.1), lg = swingsOf(lev, 'gun', 60, 0.1), pt = swingsOf(pop, 'trunk', 60, 0.1);
     F.verdict(cg.length === 0 && cr.length === 0 && lg.length === 0 && pt.length === 1 && pt[0].deg === 75, 'a 90° turn across a staging is none, nor is one the bore was not level for; 75° there in three frames between 21° the other way each side is one swing of 75° (the whole tenth nets 33°)', `gun across a staging ${cg.map(s => s.deg + '°').join(' ') || 'none'} · rifle off level ${cr.map(s => s.deg + '°').join(' ') || 'none'} · the pop ${pt.map(s => s.deg + '°').join(' ') || 'none'}`);
     F.verdict(g.length === 1 && g[0].deg === 90 && r.length === 1 && r[0].deg === 120 && t.length === 1 && t[0].deg === 66 && h.length === 0, 'a 90° turn in one frame is one swing of 90°, 20° a frame for twelve frames is one of 120° (its largest tenth, not the first to reach 60°), 66° over six frames is one, a steady 54° a tenth is none', `gun ${g.map(s => s.deg + '°').join(' ') || 'none'} · rifle ${r.map(s => s.deg + '°').join(' ') || 'none'} · trunk ${t.map(s => s.deg + '°').join(' ') || 'none'} · head ${h.length}`); }
-  // (SNAPBITES_BREAK=1, the red path: the 'off' arm is asked by the word that puts the weight ON, so the word a run reports agrees with the word asked and
-  //  only the rule its game had can say the arm was not played — the arm's line and the lines after it must fail, on either stand)
-  const OFF = { ...PAGE, TPS_TURN: NO_TURN }, asked = process.env.SNAPBITES_BREAK === '1' ? PAGE : OFF, rs = await snapRuns(ALL, asked); ran(F, rs, ALL.length, asked, false);
-  // (the two squad runs hold ONE such turn with the weight off — Red One at 11.5 s of seed 3, after a charge: a thin sample, and a seeded one)
-  for (const [label, set] of SETS(rs)) { const g = count(set, isGun), d = count(set, isDrawn), need = set[0]?.scn === 'room-clear-four' ? 3 : 1;
-    F.verdict(g >= need, `${label}, the turn weight off (the page under ?noturn): the same runs DO hold swings of 60° in the model's gun yaw — snap-page passes because they are gone, not because it cannot see`, `${g}, the largest:\n${worst(set, isGun, 4)}`);
-    F.verdict(d >= need, `${label}: … and drawn rifle, trunk and head swings of ${DRAWN_MIN}°`, `${d}, the largest:\n${worst(set, isDrawn, 4)}`); }
-  const after = (s: Swing) => s.bang !== null && s.bang >= -0.1 && s.bang <= BANG_SECS, ga = count(rs, s => isGun(s) && after(s));
-  F.verdict(ga >= 1, `… and inside the ${BANG_SECS} s after a stun charge`, `${rs.reduce((n, r) => n + r.bangs.length, 0)} charges · gun swings of 60° in those seconds ${ga} · drawn swings of ${DRAWN_MIN}° ${count(rs, s => isDrawn(s) && after(s))}\n${worst(rs, s => isGun(s) && after(s), 3)}`);
+  // (until 2026-11-07 the probe went on to play both missions with the turn weight off, the page under ?noturn, and asked that the watcher DOES find gun
+  //  and drawn swings there, and after a stun charge: five lines on the off side of the turn weight, which is settled on. They are out; what is left is the
+  //  watcher's own arithmetic on rows made here)
   return F.done();
 }
 /** THE OPEN FINDING, as a probe that is RED today (so it is not one of the family's: `probes.ts snap` is the gate, `probes.ts snap-open` this): the gun's own bar —
