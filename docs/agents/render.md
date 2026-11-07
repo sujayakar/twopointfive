@@ -157,10 +157,20 @@ row on his machine is the answer, and the word puts the count back on any machin
   the sliver rule's alone and its const is `SLIVER_RAYS`; `frame.sharpCfgB` holds the same-plane k in `.w` and nothing else. **Five A/B bits of the estimator**
   (`restirCoherent` and its tile-shared random stream, `restirPermute`, `restirRatioRaw`, `restirSampleHue`, `restirMotionDither`): `RestirU.cfg.w` bits 4, 8,
   32, 64 and `mot.w` are free. **KEPT ON PURPOSE**: every row of the performance sweep (`src/ui/perfsweep.ts`: it is how a slow machine sheds work), the glossy
-  floors (a storm turns them on where the tier has no traced reflections: `game/weather.ts`), the estimator's motion twin. **THESE CHANGE SHADER TEXT** (denoise,
+  floors (a storm turns them on where the tier has no traced reflections: `game/weather.ts`). **THESE CHANGE SHADER TEXT** (denoise,
   the four composites, restir and its twin, the gather, both sharp kernels): all 115 boot texts and the four made on first use compile in Chromium's compiler with
   no warning; the other 31 modules are the same text by hash. The Rust crate's mirror of the settings (`rust/game/src/root_settings`) still lists the removed
   fields: the port's to regenerate. **Never seen on a GPU.**
+- **THE DIRECT LIGHT IS ONE PROGRAM (2026-11-07; the maintainer's yes on the shader survey's row for it).** `restirM`, the estimator compiled a second time for frames
+  the camera moved, is gone: `restir.wgsl` is compiled once (label `restir`; the lighting trades' twin `restirT` on first use as before) and the direct-motion
+  lane's three levers are the bits of `RestirU.cfg.w` they always were (256, 512, 1024), raised by `engine.ts` on the frames the camera moved
+  (`passes.restirMotionLive`; `settings.restirMotionStatic` raises them under a still camera too). **A still camera's frame does the arithmetic it did**: with no
+  motion bit up the flow is not measured (`MOTION_BITS` in `prevTexelAt`), `mvPx` stays 0 and every lever's branch is not taken, so what differs from the old plain
+  program is untaken branches. A frame the camera moved runs the text `restirM` ran. What it buys: one program of 244 KB pasted is no longer compiled after every
+  boot (38 s with the driver's cache off on the rented NVIDIA card at medium, the compile-time goal's reading), the encode picks nothing, and the stand-in rule
+  (a moved frame on the plain program until the twin landed) is gone with `restirMReady`. `shaderrows-check` holds that a moved frame runs the one program
+  with its taps packed. Boot texts 115 to 113; both compile in Chromium's compiler with no warning. **NOT MEASURED: what the untaken branches cost a still
+  frame on a real GPU** (the old twin run at rest measured +0.2 ms of direct at High on the M4 Max, most of it the flow this writing skips). **Never seen on a GPU.**
 - **Character proxies = the SDF character rig** — every mannequin's 15 shadow / reflection proxies are round cones fitted at load (`render/sdfrig.ts`, `shaders/sdfrig.wgsl`), no switch; extras in `frame.rigCfg` (`settings.charSelfShadow` default ON, `?noselfshadow`; the `?sdfsmooth` / `?charsoft` / `?charsoftmarch` experiments and `__rigTrace` went 2026-11-07); `__sdfrig` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 
 <!-- was CLAUDE.md lines 2658–2728 -->
