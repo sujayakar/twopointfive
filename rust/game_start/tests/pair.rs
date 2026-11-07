@@ -88,3 +88,29 @@ fn a_blown_job_finished_by_hand_ends_in_his_own_words() {
         assert!(p.g.pair.jobs.get(m).is_none(), "seed {s}: the job goes on");
     }
 }
+
+/// THE RULE: a man in the partner's hands finds no body, and from the frames after the hands are off he does. Held turned to a colleague lying
+/// behind him, shot partner and all. (The old check read this as a fault because it stopped turning him once the partner was shot, so he looked away.)
+/// A FAILURE MEANS: the hold on the body outlives the hands, or the grip no longer hides it.
+#[test]
+fn the_hold_on_a_body_ends_with_the_hands() {
+    let body = [20.4, 18.1];
+    let ((mut p, m, t1), t2) = pair_with_body(10, Some(body));
+    let t2 = t2.unwrap();
+    let at = p.g.ch[p.g.gd[t1].ch].pos;
+    let t = game::orders::OrderTarget::Foe(game::orders::OrderTargetFoe { at, foe: t1 });
+    assert_eq!(game::orders::squad_orders_give(&mut p.g, "pairMark", Some(&t), Some(game::orders::Who::All), None), None, "the order on the man was refused");
+    let mut n = 0;
+    while !p.g.pair.jobs.get(m).map_or(false, |j| j.set) && n < 30 * 60 { pin(&mut p, t1, GuardState::Patrol, 0.0); p.frame(); n += 1; }
+    game::pairorders::pair_orders_mark(&mut p.g, Some(game::pairorders::PairOrdersMarkBy::Api));
+    let mut n = 0;
+    while !p.g.pair.jobs.get(m).map_or(false, |j| j.t0 >= 0.0) && n < 5 * 60 { pin(&mut p, t1, GuardState::Patrol, 0.0); p.frame(); n += 1; }
+    assert!(game::pairorders::pair_gripped(&mut p.g, t1), "his hands never went on");
+    let to_body = (body[0] - AISLE_MID[0]).atan2(body[1] - AISLE_MID[1]);
+    let turn = |p: &mut Play| { let c = p.g.gd[t1].ch; p.g.ch[c].body_yaw = to_body; p.g.ch[c].aim_yaw = to_body; p.g.gd[t1].hold = true; p.g.gd[t1].pinned = true; };
+    for _ in 0..5 { turn(&mut p); p.frame(); assert!(!game::guards::body_seen(&mut p.g, t1, t2, None), "with hands on him he found the body"); }
+    game::combat::kill_guard(&mut p.g, m, [1.0, 0.0, 0.0], Some(false), None, None, None, None);
+    let mut seen = 0;
+    for _ in 0..54 { turn(&mut p); p.frame(); assert!(!game::pairorders::pair_gripped(&mut p.g, t1), "the hands are off and the grip stands"); if game::guards::body_seen(&mut p.g, t1, t2, None) { seen += 1; } }
+    assert!(seen > 30, "turned to the body with the hands off, he saw it on {seen} frames of 54");
+}
