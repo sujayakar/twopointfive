@@ -960,6 +960,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `bun run tools/qa/verdict-lessons.ts [name …]` (the scripted player of `lesson-run.ts` plays each of the seven to its end, input only; the run must end WON with a card due;
   ~1.5 min; `VERDICT_BREAK=1` must fail), `node tools/qa/verdict-look.cjs <dir> lesson` (the real page, software adapter: lesson 6 taken, the card up by itself, no pips, no
   ticks, nothing kept, `Next: 7 · …` first and focused, its link the next row's). Never seen on a GPU; never played by a person to the card.
+- **The list draws his thirteen** (2026-11-07, doing his "Keep my 13" of 2026-11-05): `tut-road`, `tut-team`, `tut-kit`, `tut-queue`; `pass-four`, `compound-four`, `rescue-consulate`, `depot-four`,
+  `mousehole-four`; the office's `room-clear-pair` and `hostage-rescue`; `vault-quiet`, `bazaar-quiet`, `lights-out-two`; and the solo night. The other sixteen carry `offList: true`: `tut-quiet`, `tut-pair`,
+  `records-pair`, `block-four`, `warehouse-four`, `barracks-four`, `rescue-registry`, `snatch-four`, `defuse-four`, `floodlit-four`, `killhouse-four`, `hall-four`, `glasshouse-four`, `police-post-quiet`,
+  `quiet-crossing-two`, `quiet-relay-two`. Their level files, rows and addresses stay; `?offlist=0` draws them. The tutorial now ends after `tut-queue`. The short list (`scene/picks.ts`) names only drawn rows, so
+  it is three: the compound, the depot, the solo night; no row sets an hour any more, and `Pick.hour` stays as the mechanism. The pricing run and the level tools read `listedLevels`, so they walk the thirteen
+  levels. Page checks whose question is one cut row open with `offlist=0` (`kitview-page.cjs`, `sticky-page.cjs`); `probes.ts offlist` and `unplayed-page.cjs` name all twenty-four. Never seen on a GPU.
 - **The block's three-squads row is cut from the mission list too** (2026-10-13, the fourth of the maintainer's tap 'Three': "One of the two block rows goes later, when the block's
   rebuild says which"). The rebuilt block is for `block-four` (eight men who hold their rooms); `block-squads` carries `offList: true` and stays a row of the table, as the other
   three do: its own address, `block-squads.json` and `?loadout=block-squads` hold (its `ways` now name the rebuilt floor's two starts, the same as `block-four`'s: the two files
