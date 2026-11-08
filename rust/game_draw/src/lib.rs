@@ -76,11 +76,13 @@ pub mod fires;
 pub mod fog;
 pub mod lights;
 pub mod men;
+pub mod resets;
 pub mod rims;
 pub mod sky;
 pub mod view;
+pub mod winds;
 
-groups! { fog view sky boxes lights men doorways rims events fires }
+groups! { fog view sky boxes lights men doorways rims events fires air }
 
 sections! {
     fog: fog::Fog = fog;
@@ -116,6 +118,16 @@ sections! {
     rims: rims::Rim = rims;
     fires: fires::Fire = fires;
     fire_table: fires::FireTable = fire_table;
+    winds: winds::Wind = winds.active;
+    gusts: winds::Wind = winds.gusts;
+    heat: winds::Wind = winds.heat;
+    air: winds::Air = winds.air;
+    wind_roofs: winds::Rect = winds.wind_roofs;
+    roofs: winds::Rect = winds.roofs;
+    ceilings: winds::Rect = winds.ceilings;
+    door_boxes: boxes::Leaf = winds.leaves;
+    open_panes: boxes::Word = winds.open;
+    resets: resets::Reset = resets;
 }
 
 /// the numbers of a page's look (src/draw/look.ts writes them in this order): the boxes', then the men's
@@ -125,7 +137,7 @@ pub const LOOK: usize = boxes::LOOK + 4;
 #[derive(Default)]
 pub struct Drawn { pub fog: Vec<fog::Fog>, pub view: Vec<view::View>, pub sky: Vec<sky::Sky>, pub boxes: boxes::Boxes, pub lights: lights::Lights, pub men: men::Men, pub doorways: Vec<doorways::Doorway>, pub events: events::Events, pub rims: Vec<rims::Rim>, tick: Option<u32>, stood: u32,
     /// the distance the host's camera was on its way to as the step was handed it
-    pub desired: f64, had: u32, want: u32, table: Vec<u32>, pub fires: Vec<fires::Fire>, pub fire_table: Vec<fires::FireTable> }
+    pub desired: f64, had: u32, want: u32, table: Vec<u32>, pub fires: Vec<fires::Fire>, pub fire_table: Vec<fires::FireTable>, pub winds: winds::Winds, pub resets: Vec<resets::Reset> }
 impl Drawn {
     /// A TICK HAS RUN: the sections of `want`, made again from the game as it stands
     pub fn take(&mut self, g: &Game, want: u32) {
@@ -141,8 +153,9 @@ impl Drawn {
         if want & want::lights != 0 { self.lights.take(g, again && self.had & want::lights != 0); }
         if want & want::men != 0 { self.men.take(g, again && self.had & want::men != 0); }
         if want & want::rims != 0 { self.rims.clear(); rims::fill(g, &mut self.rims); }
-        if want & want::events != 0 { self.events.take(g); }
+        if want & want::events != 0 { self.events.take(g); resets::fill(g, &mut self.resets); }
         if want & want::fires != 0 { self.fires.clear(); fires::fill(g, &mut self.fires, &mut self.fire_table); }
+        if want & want::air != 0 { self.winds.take(g, again && self.had & want::air != 0); }
         self.had = if again { self.had | want } else { want };
         if want & want::doorways != 0 && self.doorways.len() != g.level.doors.len() { self.doorways.clear(); doorways::fill(g, &mut self.doorways); }
     }
