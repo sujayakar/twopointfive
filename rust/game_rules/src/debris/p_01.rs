@@ -850,12 +850,12 @@ fn debris_seat(g: &mut Game, c: DebrisChunkId, seated: bool) -> (Option<f64>, Op
 }
 
 /// The top of what lies on `surface` over box b's footprint; the surface itself where nothing does. `rubble`: the wall's rubble counts as well as the pool's pieces.
-fn pile_top(g: &mut Game, b: BoxId, surface: f64, seated: bool, rubble: bool) -> f64 {
+fn pile_top(g: &mut Game, b: AnyBoxId, surface: f64, seated: bool, rubble: bool) -> f64 {
     let mine = footprint(g, b);
     let (bc, sup) = (seam_box(g, b).c, mine.hy);
     let mut top = surface;
-    let lies: Vec<BoxId> = g.destr.debris.list.iter().map(|&o| &g.tab.debris_chunk[o]).filter(|o| o.rest && o.glass.is_none() && o.box_ != b).map(|o| o.box_)
-        .chain(g.destr.edge_look.rubble.iter().filter(|r| rubble && r.t >= r.t_2 && r.box_ != b).map(|r| r.box_)).collect();
+    let lies: Vec<AnyBoxId> = g.destr.debris.list.iter().map(|&o| &g.tab.debris_chunk[o]).filter(|o| o.rest && o.glass.is_none() && o.box_ != b).map(|o| o.box_)
+        .chain(g.destr.edge_look.rubble.iter().filter(|r| rubble && r.t >= r.t_2 && AnyBoxId::Frame(r.box_) != b).map(|r| AnyBoxId::Frame(r.box_))).collect();
     for o in lies {
         let oc = seam_box(g, o).c;
         let (ob, oh) = (bound_of(seam_box(g, o).h), bound_of(seam_box(g, b).h));
@@ -871,7 +871,7 @@ fn pile_top(g: &mut Game, b: BoxId, surface: f64, seated: bool, rubble: bool) ->
 }
 
 /// Where the rubble of a wall that has just come down lies: at `y` as it was dealt, or on the pool's pieces if some already lie there.
-pub fn debris_rubble_height(g: &mut crate::game::Game, b: BoxId, y: f64) -> f64 {
+pub fn debris_rubble_height(g: &mut crate::game::Game, b: AnyBoxId, y: f64) -> f64 {
     if g.destr.debris.list.is_empty() { return y; }
     let sup = support_along(g, b, [0.0, 1.0, 0.0]);
     m::max(y, pile_top(g, b, y - sup, false, false) + sup + 0.0015)
@@ -896,7 +896,7 @@ pub fn debris_resettle(g: &mut crate::game::Game, c: DebrisChunkId) {
 /// A box's plan on the floor: a rectangle along its most level long axis, half extents e1 and e2, and its half height.
 #[derive(Clone, Copy)]
 struct Footprint { d1x: f64, d1z: f64, e1: f64, e2: f64, hy: f64 }
-fn footprint(g: &mut Game, b: BoxId) -> Footprint {
+fn footprint(g: &mut Game, b: AnyBoxId) -> Footprint {
     let bh = seam_box(g, b).h;
     let a = axes_of(rot_of(g, b));
     let mut iu = 0usize;

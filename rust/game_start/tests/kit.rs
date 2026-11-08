@@ -360,7 +360,7 @@ fn a_ray_onto_an_arc_lands_on_the_round() {
             let l = if arc.axis == 1.0 { [0.0, along] } else { [along, 0.0] };
             let (s, co) = (yaw.sin(), yaw.cos());
             let o = [c[0] + l[0] * co + l[1] * s, c[1] + 3.0, c[2] - l[0] * s + l[1] * co];
-            let hit = game::scene_boxes::ray_box(&mut p.g, o, [0.0, -1.0, 0.0], b, 6.0).expect("a ray down missed the box");
+            let hit = game::scene_boxes::ray_box(&mut p.g, o, [0.0, -1.0, 0.0], b.into(), 6.0).expect("a ray down missed the box");
             let y = o[1] - hit.t - c[1];
             let off = (y - axis_y).hypot(along) - r;
             assert!(off > -1e-6 && off <= stand + 1e-6, "{off} off the round (rise {}, half width {w}, stand {stand})", arc.rise);
