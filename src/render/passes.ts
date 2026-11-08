@@ -59,10 +59,10 @@ const RT = () => GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BIN
 
 /** What the engine hands the TAAU resolve each frame (engine.render → setTaauFrame): last frame's unjittered view-projection, this frame's jitter (internal px), the knobs, and the two facts only
  *  the engine knows — a debug view is up (bypass: plain upscale) and the particles' splat runs this frame (their reactive mask is fresh). */
-export interface TaauFrame { prevViewProjU: Mat4; jitter: [number, number]; bypass: boolean; alpha: number; clipGamma: number; reactK: number; kSharp: number; velK: number; sharpen: number; camStill: boolean; particles: boolean; lightJump: number; motionA: number; motionClip: number   /** history de-blur under motion (taau.wgsl histSharp): 0 = off */
+export interface TaauFrame { prevViewProjU: Mat4; jitter: [number, number]; bypass: boolean; alpha: number; clipGamma: number; reactK: number; kSharp: number; velK: number; sharpen: number; camStill: boolean; particles: boolean; motionA: number   /** history de-blur under motion (taau.wgsl histSharp): 0 = off */
   histSharp?: number;
 }
-const TAAU_PARAM_BYTES = 144;   // struct TaauParams in taau.wgsl: mat4 (64) + 3 vec2 + 11 scalars → 132, rounded to the struct's 16-byte alignment
+const TAAU_PARAM_BYTES = 128;   // struct TaauParams in taau.wgsl: mat4 (64) + 3 vec2 + 9 scalars → 124, rounded to the struct's 16-byte alignment
 /** restir.wgsl RestirU ahead of prevLights: cfg (16) + cfg2 (16) + jitter (16) + mot (16) + fwd (64) + inv (64) = 192 B (was 176 before the MOTION vec4 — direct-motion lane) */
 /** lasers / tracers handed to the reflection pass (setBeams): segments at most, and the uniform's size — 16 B of count + 48 B a segment (reflect.wgsl `Beams`) */
 const BEAM_MAX = 8, BEAM_HEAD = 32, BEAM_SEG_BYTES = BEAM_HEAD + BEAM_MAX * 48, FIRE_MAX = 4, FIRE_REC = 64, FIRE_AT = BEAM_SEG_BYTES, FIRE_LOOK_AT = FIRE_AT + 16 + FIRE_MAX * FIRE_REC, FIRE_LOOK_FLOATS = 16, BEAM_BYTES = FIRE_LOOK_AT + FIRE_LOOK_FLOATS * 4;   // (header: n, flags, 2 spare words, then k: vec4f — reflect.wgsl / composite.wgsl `Beams` … and behind the segments, for the composite alone, THE OPEN FIRES: a count word + FIRE_MAX records of 4 vec4f — fire.wgsl FireRec, setFires — and behind those the look's twelve numbers, fire.wgsl FireLook, setFireLook)
@@ -151,7 +151,7 @@ export class LightingPasses {
    *  spatialAll = spatial reuse everywhere regardless (A/B), sampleHue = A/B: shade every sample in its own light's hue (the first cut) instead of the belief-weighted class hue,
    *  knownDark = the lights the tile's own rays found dark leave the fresh draw (restir.wgsl BELIEFS; false = the unbiased first-cut draw, A/B), audit = the share of lanes
    *  spending one extra ray a frame re-testing those lights. */
-  restirRays = 4; restirSpatial = 3; restirHistory = 20; restirRadius = 16; restirGradient = true; restirGradK = 3.5; restirYoung = 8; restirSpatialAll = false; restirAudit = 0.25; restirKnownDark = true; restirPenCap = 0; restirPenRays = false;
+  restirRays = 4; restirSpatial = 3; restirHistory = 20; restirRadius = 16; restirGradient = true; restirGradK = 3.5; restirYoung = 8; restirSpatialAll = false; restirAudit = 0.25; restirKnownDark = true; restirPenRays = false;
   /** the HYBRID estimator (direct-quality lane, docs/internal/direct-quality.md): K stratified rays for each of the two carried leaders at a pixel, 0 = off (restir.wgsl HELD) — engine mirrors settings.heldRays */
   heldRays = 6; restirHueSplit = true;   // (+ the hue split: ru.cfg.w & 128 — restir.wgsl HUE SPLIT; false = the belief hue as it was)
   /** THE LIGHTING TRADES (restir.wgsl TRADES; engine mirrors settings.heldAdaptive / restirStableRetrace / restirDimClass — all off by default = the estimator's program and uniform
@@ -170,7 +170,7 @@ export class LightingPasses {
   /** MOTION (lane fix/direct-motion, docs/internal/direct-motion.md; restir.wgsl header MOTION): bitmask 1 = stochastic-bilinear reservoir reprojection, 2 = motion-scaled confidence,
    *  4 = spatial reuse wherever the pixel moves; 0 = none of them. V = the screen motion in px a frame AT 1000 INTERNAL ROWS (scaled to the target like restirRadius)
    *  under which the history keeps full confidence — the cut ramps to Min (fraction of the M cap) by 1.6 × V, Px = the motion (px a frame at 1000 rows, scaled alike) past which (4) opens the spatial pass. Engine mirrors settings.restirMotion*. */
-  restirMotionLive = false;   // this frame's uniform carries the motion bits: restirMotion ≠ 0 AND the camera moved (or settings.restirMotionStatic) — engine decides; a still camera's frame carries none
+  restirMotionLive = false;   // this frame's uniform carries the motion bits: restirMotion ≠ 0 AND the camera moved — engine decides; a still camera's frame carries none
   restirMotion = 0; restirMotionV = 1.1; restirMotionMin = 0.1; restirMotionPx = 0.5; restirMotionTaps = 0;   // (taps: (4)'s spatial tap count at a moving pixel when above the tier's own k; 0 = the tier's k)
   /** this frame's TAAU jitter in internal pixels (engine.jitter; 0,0 without TAAU) */
   restirJitter: [number, number] = [0, 0];
@@ -620,7 +620,7 @@ export class LightingPasses {
     u[0] = rays | ((Math.max(0, Math.min(8, Math.round(this.heldRays))) & 15) << 8);   // cfg.x: rays | heldRays << 8 (restir.wgsl HELD — the hybrid estimator's K; 0 = off: the transient stratum exactly as it was)
     u[0] |= (this.heldAdaptive ? 1 << 12 : 0) | (this.restirStableRetrace ? 1 << 13 : 0) | ((Math.max(0, Math.min(100, Math.round(this.restirDimClass * 100))) & 255) << 16);   // the lighting TRADES (restir.wgsl; read only by the RESTIR_TRADE twin; all off = 0 = the word as it was)
     const mot = this.restirMotionLive ? Math.max(0, Math.min(7, Math.round(this.restirMotion))) : 0;   // MOTION (restir.wgsl header): its three parts as cfg.w bits 256 / 512 / 1024 the encode takes while mot ≠ 0
-    u[1] = k | (mot ? (Math.max(0, Math.min(8, Math.round(this.restirMotionTaps))) & 15) << 8 : 0); u[2] = cap | ((Math.max(0, Math.min(30, Math.round(this.restirPenCap))) & 255) << 8) | (this.restirPenRays ? 1 << 16 : 0); u[3] = (this.restirGradient ? 1 : 0) | (this.restirSpatialAll ? 2 : 0) | (this.restirKnownDark ? 0 : 16) | (this.restirHueSplit ? 128 : 0) | (mot << 8);
+    u[1] = k | (mot ? (Math.max(0, Math.min(8, Math.round(this.restirMotionTaps))) & 15) << 8 : 0); u[2] = cap | (this.restirPenRays ? 1 << 16 : 0); u[3] = (this.restirGradient ? 1 : 0) | (this.restirSpatialAll ? 2 : 0) | (this.restirKnownDark ? 0 : 16) | (this.restirHueSplit ? 128 : 0) | (mot << 8);
     f[4] = Math.max(0, this.restirRadius) * (this.height / 1000); f[5] = Math.max(0.05, this.restirGradK); f[6] = Math.max(0, this.restirYoung); f[7] = Math.max(0, Math.min(1, this.restirAudit));
     f[8] = this.restirJitter[0]; f[9] = this.restirJitter[1]; f[10] = this.restirJitterPrev[0]; f[11] = this.restirJitterPrev[1];   // TAAU jitter in internal px: this frame's, the previous dispatch's (restir.wgsl RestirU.jitter)
     this.restirJitterPrev[0] = this.restirJitter[0]; this.restirJitterPrev[1] = this.restirJitter[1];
@@ -889,8 +889,8 @@ export class LightingPasses {
     fl[16] = f.jitter[0]; fl[17] = f.jitter[1]; fl[18] = this.cw || this.width; fl[19] = this.ch || this.height; fl[20] = this.ow; fl[21] = this.oh;   // inSize = the size of the picture the resolve reads (= the output under sharp direct: a 1 : 1 resolve; the engine hands the jitter in those pixels)
     fl[22] = f.alpha; fl[23] = f.clipGamma;
     const flags = (this.taaReset ? TF.Reset : 0) | (f.bypass ? TF.Bypass : 0) | (f.particles ? TF.Particles : 0) | TF.Velocity;
-    u[24] = flags; fl[25] = f.reactK; fl[26] = f.kSharp; fl[27] = f.velK; fl[28] = f.camStill ? 1 : 0; fl[29] = f.lightJump > 1 ? f.lightJump : 0; fl[30] = Math.max(0, Math.min(1, f.motionA)); fl[31] = Math.max(0, Math.min(0.9, f.motionClip));   // (29 = TaauParams.lightJump, 0 = off; 30 / 31 = motionA / motionClip: the motion-sharpness terms)
-    fl[32] = Math.max(0, Math.min(2, f.histSharp ?? 0)); fl[33] = 0; fl[34] = 0; fl[35] = 0;   // 32 = TaauParams.histSharp (the history de-blur under motion; 0 = off)
+    u[24] = flags; fl[25] = f.reactK; fl[26] = f.kSharp; fl[27] = f.velK; fl[28] = f.camStill ? 1 : 0; fl[29] = Math.max(0, Math.min(1, f.motionA));   // (29 = TaauParams.motionA: the motion-sharpness term)
+    fl[30] = Math.max(0, Math.min(2, f.histSharp ?? 0)); fl[31] = 0;   // 30 = TaauParams.histSharp (the history de-blur under motion; 0 = off)
     this.device.queue.writeBuffer(this.taauParams, 0, d);
     this.taaReset = false; this.taaStats.lastFlags = flags;   // (the reset raised since the last frame is honoured by this one)
     if (f.sharpen !== this.taauSharpen) { this.taauSharpen = f.sharpen; this.writeFxaaParams(); }
