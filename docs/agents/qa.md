@@ -1252,7 +1252,7 @@ but synthetic writes still work.
   with `PT_HUNT=first bun run tools/qa/ships.ts --trace <id>:<seed>`. `PT_HUNT=rooms` in the caller's env = the default order under the gate. Headless only.
 - **A mission's page waits for Start; a script's page does not** (2026-10-19, `src/ui/loadbrief.ts`; `docs/agents/menus.md` has the screen). A page
   whose address names a mission resolves `__ready` with the mission's brief up and the world held: nothing ticks until the brief is started. A tool is
-  never held by it: no brief is made under `?paused`, a replay, `?kitview` or a benchmark scene, `?mute` (or the test profile's mute) drops it at the
+  never held by it: no brief is made under `?paused`, a replay or a benchmark scene, `?mute` (or the test profile's mute) drops it at the
   boot's end, and a hook that drives the game (`__runFrames`, `__mouse`, `__click`, a save or a load) drops it at the loop's next
   step. A tool that loads a mission with none of those and only watches or shoots the page (`__shot`, `__png`) is looking at a held
   world under the brief: it presses Enter, or loads the page with `?loadbrief=0`.

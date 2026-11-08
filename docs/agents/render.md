@@ -301,8 +301,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   or `?aim=`) the page draws at that rate: `paceEvery(displayHz, target)` = floor(hz / target + edge) display frames go to one drawn frame. Every second
   at 120, 144 and 165 Hz, every third at 180, every fourth at 240; every one at 60 to 116, at an aim of the display's own rate (`?aim=120` on a 120 Hz
   display draws every frame), at 'as now', with the ladder off (a pinned preset with Options ▸ Hold frame rate off), and while the page measures the
-  machine (`quality.calibrating`, `bench.active`, `perfsweep.active`: no rate is held there; a benchmark and a sweep still wait for the GPU, below). Never under `?kitview`, which
-  has its own pacer. Only a frame that comes EARLY is passed over (`ts - lastWorked < (every - slack) · period`, on the frame callback's own stamps): one
+  machine (`quality.calibrating`, `bench.active`, `perfsweep.active`: no rate is held there; a benchmark and a sweep still wait for the GPU, below). Only a frame that comes EARLY is passed over (`ts - lastWorked < (every - slack) · period`, on the frame callback's own stamps): one
   that is due or late is always worked, so a machine that cannot hold the pace is never slowed further and a late frame moves the beat. It sits in
   `main.ts frame()` before the time is taken (the step takes the real time since the last WORKED frame, and the ladder samples that gap, so it reads a
   paced 120 Hz display as it reads a 60 Hz one, the case it was built on). THE DISPLAY'S PERIOD is the pacer's own reading off every callback's stamp
@@ -344,8 +343,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   is under the share already and nothing changes; work that fills the frame is drawn about every second frame while nobody is at the window (11 ms of
   GPU work: 30 a second on a 60 Hz display, 40 on a 120 Hz one), and the frame the focus comes back is worked at once. The window somebody is at is
   never held by it. Not while the page measures the machine (`quality.calibrating`, a benchmark, a sweep) or records a take (`perfrec.recording`).
-  Under `?kitview` too (the kit picture is a live window of its own, whose pacer knows nothing of who looks; the game's pacer holds no rate there and
-  only gives way). THE MEASURE of a frame's work is the GPU's own timing of its passes (`engine.timer.unionMs(GPU_RENDER_PASSES)`, the ladder's number)
+  THE MEASURE of a frame's work is the GPU's own timing of its passes (`engine.timer.unionMs(GPU_RENDER_PASSES)`, the ladder's number)
   and never more than the queue's answer took; with no timings it is the answer alone, which also counts the other windows' work ahead in the queue, so
   there a window beside a busy one gives more than half. The wait runs from the last worked frame's own stamp (`begun`), which a stall does not forget.
   WHO IS AT IT (`main.ts attended`): `window.top.document.hasFocus()`, asked of the top window because the game's page is a frame of the kept page and
@@ -358,7 +356,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   answer was read too, in a bare page with a frame: the frame's own document never has the focus, its top's follows the window in front). With the
   rule: the second's two asks took 23 s and 7 s (most of it behind the three frames the first had handed over before it was told) and it was ready in
   196 s; the first drew 17 frames meanwhile and passed 154 display frames over, with no error on either page. With `?giveway=0`: 37 s and 164 s, and
-  not ready four minutes in. Not run: `kitview-page.cjs` (with somebody at the window the pacer's call under `?kitview` holds no rate, waits for no frame and
+  not ready four minutes in. Not run: the kit picture's page check, since gone (with somebody at the window the pacer's call there held no rate, waited for no frame and
   passes nothing over, read off the code). KNOWN LIMITS: a
   window somebody IS at keeps the GPU as full as its work makes it (two frames with it at the most since the next bullet, where it was as many as the
   browser took), so a second window opened while the first keeps the focus, or the first clicked back into while the second starts, still waits behind
@@ -385,9 +383,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   (uneven: gaps of 8 and 17 ms mixed, at 11 ms of work) and the build draws the even 60 the ladder holds. `?pace=0` with the rule on is the look page's
   `&pace` to the letter; `?aim=120` holds 120. Which of the two he wants under 8 ms of work is his to say; it was said to him. A FRAME HELD FOR THE GPU
   IS THE MACHINE'S OWN PACE: the ladder and the visit's records read its gap (`held`, not `gave`). Not during the boot's calibration by itself
-  (`room` 0, frames go as they always did); a benchmark and a sweep wait since 11-04 (`pageRoom`, further down); on while a take is recorded. NOT under `?kitview`: the
-  kit picture's own pacer reads how late its frames come and steps down to an even pace by that, and a frame held here after that pacer had taken it
-  would hide the lateness from it (a window of it nobody is at still gives way). THE QUEUE IS ASKED once for every frame that DREW
+  (`room` 0, frames go as they always did); a benchmark and a sweep wait since 11-04 (`pageRoom`, further down); on while a take is recorded. THE QUEUE IS ASKED once for every frame that DREW
   (`behind.drawn`): a card that hides the picture hands the GPU nothing and asks nothing. The visit's records ask the same queue the same thing on
   some of the same frames (`cloud.ts lagAsk`); the two are not one asker yet. A FRAME THE QUEUE NEVER ANSWERS FOR is given up after `lost` (10 s) and
   the page goes on without it (`__pace().lost`): held at its limit for good by one lost answer, a window would be a frozen picture with no card. Ten
@@ -409,8 +405,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   one build on two such boxes agreed on GPU time to 2 % on eight lines of nine and disagreed on their sweep rows (mesh shadows off 'gave back'
   1.1 ms on one and cost 0.6 on the other). With the wait a measuring page is at most two frames ahead of the GPU, as a player's is, and where
   the card keeps up nothing is held. A benchmark's own calibration waits with it, so a run opens with no pile behind it; only the boot's
-  calibration by itself (a second and a half that counts frames as they come: on the software adapter the wait would stretch it without end) and
-  `?kitview` still say room 0. The even pace and giving way stay off while measuring, as before. A result says what it ran under (`wait`; absent
+  calibration by itself (a second and a half that counts frames as they come: on the software adapter the wait would stretch it without end) still says room 0. The even pace and giving way stay off while measuring, as before. A result says what it ran under (`wait`; absent
   = from before). WHAT THIS CHANGES ELSEWHERE: a benchmark's frame rate is now the pace a player's page gets, so on a fast display where the
   queue answers late it can read under what the card could do (the limit named above, for play), and on a slow headless card a scene runs in
   slow motion against its wall-clock cap as it does on a slow machine with a display. On an adapter slower than five seconds a frame the wait
@@ -1129,7 +1124,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   **Off:** `?firstframe=0`, or the row in Options (kept off). A load as it was is now THREE words: `?compactshaders=0&splitrays=0&firstframe=0`.
   **WHERE IT STARTS OFF:** the harness (both stands, as before; `TPS_FIRSTFRAME=1` raises it) and A BROWSER A SCRIPT DRIVES (`navigator.webdriver`, so every
   page tool): some forty tools poll for a hook and begin at once, and their first picture and first timing must be the settings' own. A tool that wants the
-  player's start asks for it (`?firstframe=1`) and waits on `__ready`. The Team & kit picture (`?kitview`, a still drawn once) and the workbench (debug views,
+  player's start asks for it (`?firstframe=1`) and waits on `__ready`. The Team & kit picture (`?kitview`, host/drawpage.ts) and the workbench (debug views,
   no stand-in) lower `PIPE_QUEUE.later` before they build, whatever the row says. **What moved with it:** (1) `window.__started` is the moment the card is
   live; a script's `__ready` waits for the later set too (`gpu/device.ts laterIdle`, a tick after the count reaches 0) and `__boot.marks.laterReady` is when
   it was in (`docs/agents/qa.md`). (2) The benchmark waits while `Engine.standsIn` (`ui/bench.ts standing`, 180 s in all on a page; past that its lines are
@@ -3832,7 +3827,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   on a wall 3 m off; a real one about 1 %), lamp glass 0.20 of its night glow; at dusk a bulb is 1/69, the torch 0.63 of its night strength and glass in
   full. The `min` is the night's hold: nothing is drawn brighter than the night draws it. The weather's cloud dims sun and sky under the hour's one
   exposure (`hours.ts`), so lamps count for more under rain by themselves. The row's amount is in stops (k^amount). NOT scaled: the sun and the moon, a
-  lightning stroke (`transient`), an infrared illuminator, a device's sight cone (`group 'devices'`) and the Team & kit figure's staging (`kitview…`).
+  lightning stroke (`transient`), an infrared illuminator and a device's sight cone (`group 'devices'`).
   Applied to the UPLOADED record and the frame's scale alone, so the picture, the bounce, the beams and the GPU's light meter read one number;
   `RtLight.intensity` and `settings.emissiveScale` are never written. WHERE NOBODY SAYS THE HOUR (`lookConfig.exposure` null: a night, or a level lit as a
   day by its own sky) the exposure runs from 1 to midday's by that sky's mean radiance 0.08 to 0.35, read without the Sky light row, as before. A night is
@@ -4031,7 +4026,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   says what each paint NAME the kits write is made of: a material of the look (`lookTex.ts LOOK_NAMES`), `plain` (meant flat: plastic, laminate,
   rubber, a screen), `waits` (no material yet: card, foliage, a lawn, a clean steel; drawn plain) or `mixed`. The palette's rows moved into it
   (checked against `GwotMat` by the compiler) and `LOOK_OF` is read off it, the same classes in the same order, so the shader's text is unchanged.
-  THE LEVEL'S OWN ROWS carry the names: the loader keeps a file's `materials` beside the level (`levelLoad.ts levelFileOf`) and the page makes the
+  THE LEVEL'S OWN ROWS carry the names: the loader keeps a file's `materials` beside the level (`levelLoad.ts`) and the page makes the
   look's word for a box with them (`lookWordOf(dry, rows)`): a paint a row names is its name's stuff, asked before any colour is weighed. A box
   and a loose prop's part are written under the FIRST row that has their colour exactly, so the row is found by the colour and no box carries a
   word. THAT IS ALSO ITS LIMIT, and what `mixed` is for: a file's writer names a box by its colour, and the kits have used one colour for two
