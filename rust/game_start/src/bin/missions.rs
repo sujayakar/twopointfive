@@ -3,7 +3,7 @@
 //!   missions [--seeds 1-8] [--secs 75] [--std | --hard] [LEVEL…]      play, and print a row a mission and difficulty, tab between columns (keep it in a file)
 //!   missions diff BEFORE AFTER                                        two kept files side by side: a line for each row that differs, and the sums
 //!
-//! Each mission is stood from its address as a click on its row stands it, on the file the page stands (`<level>-gwot.json` where there is one), Sam unhurt. A commander who is
+//! Each mission is stood from its address as a click on its row stands it, Sam unhurt. A commander who is
 //! no tactician gives the squad an order every five seconds: "open and clear" the door nearest the nearest enemy, then "move" onto him, by turns. He is the same for
 //! every build, which is all that is asked of him: a row is for setting beside the same row of another build, never a claim about how hard a mission is.
 //!
@@ -33,10 +33,7 @@ const WAYS_M: f64 = 4.0;
 #[derive(Clone, Debug, Default, PartialEq)]
 struct Run { up: usize, squad: usize, left: usize, enemies: usize, fell: Option<f64>, clear: Option<f64>, rounds: [f64; 2], reloads: [u32; 2], ways: [f64; 2], had: BTreeMap<String, f64> }
 
-fn file_of(level: &str) -> String {
-    let look = format!("{level}-gwot.json");
-    if std::path::Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/../../levels")).join(&look).exists() { look } else { format!("{level}.json") }
-}
+fn file_of(level: &str) -> String { format!("{level}.json") }
 
 fn enemies(p: &Play) -> Vec<GuardId> { p.g.guards.iter().copied().filter(|&m| p.g.gd[m].team == Team::Hostile).collect() }
 
