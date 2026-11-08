@@ -218,7 +218,7 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId, cam: CameraId, dt: 
         wheel = wheel || act.wheel.unwrap_or(false);
     }
     let walk = walk_keys();
-    let menu_up = g.orders.menu.is_some() && (has(&a, "menu") || has(&a, "ring"));
+    let menu_up = g.orders.menu.is_some() && (has(&a, "menu") || has(&a, "ring") || has(&a, "ringPart"));
     let (shift, enter) = {
         let i = &g.tab.input[input];
         (i.keys.has(String::from("ShiftLeft")) || i.keys.has(String::from("ShiftRight")),
@@ -259,7 +259,8 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId, cam: CameraId, dt: 
                 if i.pressed.has(kb()) || i.keys.has(kb()) { i.keys.delete(String::from("ShiftLeft")); i.keys.delete(String::from("ShiftRight")); }
             }
         }
-        if !has(&a, "ring") && !i.pressed.has(kb()) { i.keys.delete(kb()); }
+        // (`ringPart`: only with Shift down. Else the key is seen let go, so the press is a tap, which on a `noTap` step gives nothing and shows the note)
+        if !has(&a, "ring") && !(has(&a, "ringPart") && shift) && !i.pressed.has(kb()) { i.keys.delete(kb()); }
     }
     let clicked = js::to_i32(i.clicked);
     if clicked & !buttons != 0 { dropped += 1; }
