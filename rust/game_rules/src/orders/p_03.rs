@@ -550,8 +550,8 @@ pub fn order_when(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::ord
     }
 }
 /// `this.people?.ray(ro, rd, max) ?? null`: the man of the other side a cursor ray lands on nearer than `max` (orders.ts:783; the closure is pairorders.ts:162)
-pub fn squad_orders_people_ray(g: &mut crate::game::Game, ro: V3, rd: V3, max: f64) -> Option<GuardId> {
-    if g.orders.people.is_none() || !crate::pairorders::pair_orders_up(g, &crate::seats::here(g)) { return None; }
+pub fn squad_orders_people_ray(g: &crate::game::Game, seat: &crate::seats::SeatRef, ro: V3, rd: V3, max: f64) -> Option<GuardId> {
+    if seat.orders.people.is_none() || !crate::pairorders::pair_orders_up(g, seat) { return None; }
     let (mut best, mut bt) = (None, max);
     let mut i = 0;
     while i < g.guards.len() {
@@ -568,30 +568,28 @@ pub fn squad_orders_people_ray(g: &mut crate::game::Game, ro: V3, rd: V3, max: f
 // ---- the bodies ----
 
 /// What the cursor is on, before the whole-squad rule (orders.ts SquadOrders.targetUnderOf)
-pub fn squad_orders_target_under_of(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) -> crate::orders::OrderTarget {
-    if g.puppet.as_ref().map_or(false, |p| p.aim.is_some()) { let a = g.aim_point; return squad_orders_target_at(g, a); }
-    let mc = crate::rails::RailsMarkUnderCanvas { client_width: canvas.client_width, client_height: canvas.client_height };
-    if let Some(mk) = crate::rails::rails_mark_under(g, input, cam, mc) { return squad_orders_target_at(g, mk); }
-    let (mx, my) = (g.tab.input[input].mouse_x, g.tab.input[input].mouse_y);
-    let (u, v) = (mx / m::max(1.0, canvas.client_width), my / m::max(1.0, canvas.client_height));
-    let ray = crate::camera::follow_camera_ray(g, cam, u, v);
+pub fn target_under_of(g: &Game, seat: &crate::seats::SeatRef, now: &crate::view::HostNow, asked: &mut Vec<(f64, f64)>) -> crate::orders::OrderTarget {
+    if g.puppet.as_ref().map_or(false, |p| p.aim.is_some()) { return target_at(g, seat, seat.aim_point, asked); }
+    if let Some(mk) = crate::rails::rails_mark_under(g, now) { return target_at(g, seat, mk, asked); }
+    let (u, v) = (now.mouse[0] / m::max(1.0, now.client[0]), now.mouse[1] / m::max(1.0, now.client[1]));
+    let ray = crate::camera::ray(&now.inv_view_proj, u, v);
     let (ro, rd) = (ray.ro, ray.rd);
-    let pc = player_ch(g, &crate::seats::here(g));
+    let pc = player_ch(g, seat);
     let own_id = g.ch[pc].id;
     let hit = crate::scene_boxes::box_world_raycast(g, ro, rd, Some(200.0), None, Some(own_id), None);
     let p: V3 = match &hit {
         Some(h) => v3::mad(ro, rd, h.t),
-        None => match crate::camera::follow_camera_ground_point(g, cam, u, v, Some(0.0)) { Some(q) => q, None => g.aim_point },
+        None => match crate::camera::ground_point(&now.inv_view_proj, u, v, Some(0.0)) { Some(q) => q, None => seat.aim_point },
     };
     let mut man: Option<GuardId> = None;
     let mut best = match &hit { Some(h) => h.t + 0.3, None => 200.0 };
-    for gd in squad_orders_squad(g, &crate::seats::here(g)) {
+    for gd in squad_orders_squad(g, seat) {
         if !alive(g, gd) { continue; }
         let c = g.gd[gd].ch;
         let t = crate::character::character_ray_hit(g, c, ro, rd, best);
         if t >= 0.0 && t < best { best = t; man = Some(gd); }
     }
-    let fo = squad_orders_people_ray(g, ro, rd, best);
+    let fo = squad_orders_people_ray(g, seat, ro, rd, best);
     if let Some(foe) = fo {
         let q = g.ch[g.gd[foe].ch].pos;
         return OrderTarget::Foe(OrderTargetFoe { at: [q[0], 0.0, q[2]], foe });
@@ -602,17 +600,17 @@ pub fn squad_orders_target_under_of(g: &mut crate::game::Game, input: InputId, c
     }
     if let Some(h) = &hit {
         let b = g.engine.world.all.get(h.index as usize).copied();
-        if let Some(wt) = crate::workthings::work_on(g, b) { return wt; }
+        if let Some(wt) = crate::workthings::work_on(g, seat, b) { return wt; }
     }
     let self_to = match &hit { Some(h) => h.t, None => 200.0 };
     if crate::character::character_ray_hit(g, pc, ro, rd, self_to) >= 0.0 {
         let q = g.ch[pc].pos;
         return OrderTarget::None(OrderTargetNone { at: [q[0], 0.0, q[2]], man: None });
     }
-    let base = squad_orders_target_at(g, p);
+    let base = target_at(g, seat, p, asked);
     if matches!(base, OrderTarget::Door(_)) || crate::character::character_ray_hit(g, pc, ro, rd, best) >= 0.0 { return base; }
     let first = hit.as_ref().map(|h| SquadOrdersSceneHitFirst { t: h.t, index: h.index });
-    let sc = squad_orders_scene_hit(g, ro, rd, first);
+    let sc = squad_orders_scene_hit(g, seat, ro, rd, first);
     let bx = if sc.index >= 0.0 { g.engine.world.all.get(sc.index as usize).copied() } else { None };
     let land = if sc.index >= 0.0 { v3::mad(ro, rd, sc.t) } else { p };
     let own = bx.and_then(|b| g.doors.list.iter().copied().find(|&d| g.dr[d].box_ == b));
@@ -637,7 +635,7 @@ pub fn squad_orders_target_under_of(g: &mut crate::game::Game, input: InputId, c
 }
 
 /// What a cursor ray lands on of the scene, through glass and past the men (orders.ts SquadOrders.sceneHit)
-pub fn squad_orders_scene_hit(g: &mut crate::game::Game, ro: V3, rd: V3, first: Option<crate::orders::SquadOrdersSceneHitFirst>) -> crate::orders::SquadOrdersSceneHit {
+pub fn squad_orders_scene_hit(g: &crate::game::Game, seat: &crate::seats::SeatRef, ro: V3, rd: V3, first: Option<crate::orders::SquadOrdersSceneHitFirst>) -> crate::orders::SquadOrdersSceneHit {
     let f = crate::scene_boxes::box_flag();
     let skip = (js::to_i32(f.no_shadow) | js::to_i32(f.no_primary) | js::to_i32(f.glass)) as f64;
     if let Some(h) = first {
@@ -648,7 +646,7 @@ pub fn squad_orders_scene_hit(g: &mut crate::game::Game, ro: V3, rd: V3, first: 
         }
     }
     let mut t0 = 0.0;
-    let pc = player_ch(g, &crate::seats::here(g));
+    let pc = player_ch(g, seat);
     let mut owner = g.ch[pc].id;
     for k in 0..16 {
         let from = if k != 0 { v3::mad(ro, rd, t0) } else { ro };
@@ -1281,31 +1279,11 @@ pub fn squad_orders_due(g: &mut crate::game::Game, m: &crate::orders::Menu) -> b
     squad_orders_menu_rows(g, m, &t) != m.rows
 }
 
-/// What the cursor is on, for the HUD; kept in the asker's store while the cursor has not moved. Its rays and memos are asked aside (orders.ts SquadOrders.hover)
-pub fn squad_orders_hover(g: &mut crate::game::Game, kept: Option<&mut crate::orders::HoverKept>) -> Option<crate::orders::OrderTarget> {
-    let mut kept = kept;
-    let (Some(input), Some(cam), Some(canvas)) = (g.orders.view.input, g.orders.view.cam, g.orders.view.canvas) else { return None };
-    if !squad_orders_active(g, &crate::seats::here(g)) { return None; }
-    let (x, y, t) = (g.tab.input[input].mouse_x, g.tab.input[input].mouse_y, g.time);
-    if let Some(c) = kept.as_ref().and_then(|k| k.hov.as_ref()) {
-        if c.x == x && c.y == y && t >= c.t && t - c.t < 0.1 { return Some(c.v.clone()); }
-    }
-    let mut work = crate::workthings::WorkThingsAskAsideOwn::zeroed();
-    let mut col = crate::scene_collision::AsideOwn::zeroed();
-    let mut world = crate::scene_boxes::BoxWorldRayAsideOwn::zeroed();
-    let out: OrderTarget = crate::doors::doors_pos_aside(g, &mut |g: &mut Game| {
-        crate::wallcharge::sky_aside(g, &mut |g: &mut Game| {
-            crate::workthings::work_things_ask_aside(g, &mut work, &mut |g: &mut Game| {
-                crate::scene_collision::aside(g, &mut col, &mut |g: &mut Game| {
-                    crate::scene_boxes::box_world_ray_aside(g, &mut world, &mut |g: &mut Game| squad_orders_target_under(g, input, cam, canvas))
-                })
-            })
-        })
-    });
-    if let Some(k) = kept.as_mut() { k.hov = Some(HoverKeptHov { x, y, t, v: out.clone() }); }
-    Some(out)
+/// What the cursor is on, for a HUD (None: no squad answers to this seat) (orders.ts SquadOrders.hover)
+pub fn hover(g: &Game, seat: &crate::seats::SeatRef, now: &crate::view::HostNow) -> Option<crate::orders::OrderTarget> {
+    if !squad_orders_active(g, seat) { return None; }
+    Some(target_under(g, seat, now, &mut Vec::new()))
 }
-
 /// The order the quick key gives on a target: its first row (orders.ts SquadOrders.defaultFor)
 pub fn squad_orders_default_for(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> Option<OrdersOrderDefId> {
     squad_orders_rows_for(g, t, None, None).into_iter().find(|&d| !word(&g.tab.orders_order_def[d].opens))

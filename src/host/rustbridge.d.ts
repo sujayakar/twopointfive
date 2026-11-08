@@ -41,6 +41,5 @@ declare module 'tps-bridge/ask' {
 }
 declare module 'tps-bridge/surface' {
   export function surfaceHost(H: { g: any; knobs: Record<string, unknown>; surfaceOpen(): boolean; surfaceDispatching(): boolean; surfaceCall(row: number, bytes: Uint8Array, view?: number): Uint8Array } | null, gone?: unknown): void;
-  export function readRecord(g: object, type: string, bytes: Uint8Array): any;
   export function crossing(key: string, self: unknown, args: unknown[]): unknown;
 }
