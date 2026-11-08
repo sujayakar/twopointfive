@@ -447,7 +447,7 @@ impl Play {
     /// how many rounds have left the gun in his hands since it was made
     pub fn rounds_fired(&self, gd: GuardId) -> f64 { self.g.fa[self.g.gd[gd].weapon].shots_fired }
     /// Staging: his gun has this many rounds in it and no more, one of them in the chamber.
-    pub fn gun_has(&mut self, gd: GuardId, rounds: f64) { let w = self.g.gd[gd].weapon; self.g.fa[w].chamber = 1.0; self.g.fa[w].mag = Some(rounds - 1.0); }
+    pub fn gun_has(&mut self, gd: GuardId, rounds: f64) { let w = self.g.gd[gd].weapon; let chamber = rounds.min(1.0); self.g.fa[w].chamber = chamber; self.g.fa[w].mag = Some(rounds - chamber); }
 
     /// Staging: he cannot see for that many seconds.
     pub fn blinded(&mut self, gd: GuardId, secs: f64) { self.g.gd[gd].dazzled_until = self.g.time + secs; }
