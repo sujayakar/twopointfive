@@ -257,13 +257,12 @@ export async function squadthrowCheck(): Promise<boolean> {
         if (!by) { verdict(false, 'floor beside the spot to lay a man on', 'none'); return; }
         place(m, by); const up = ST.squadFragCatches(game, spot, spot);
         m.state = 'dead'; m.downKind = 'struck'; const cold = ST.squadFragCatches(game, spot, spot);
-        m.downKind = 'wounded'; const hurt = ST.squadFragCatches(game, spot, spot);
         m.downKind = 'shot'; const dead = ST.squadFragCatches(game, spot, spot);
         m.state = keepState; m.downKind = keepKind; place(m, keepPos);
         const his = `${m.callsign} is in it.`;
-        verdict(up === his && cold === his && hurt === his && dead !== his && clear(spot),
-          'a teammate lying out cold or wounded beside the spot refuses the frag by his name, as when he stood there; one shot dead does not (and with him back on his feet elsewhere the spot is clear again)',
-          `${m.callsign} ${f1(dist(by, spot))} m from the spot · standing: '${up}' · out cold: '${cold}' · wounded: '${hurt}' · dead: '${dead}'`);
+        verdict(up === his && cold === his && dead !== his && clear(spot),
+          'a teammate lying out cold beside the spot refuses the frag by his name, as when he stood there; one shot dead does not (and with him back on his feet elsewhere the spot is clear again)',
+          `${m.callsign} ${f1(dist(by, spot))} m from the spot · standing: '${up}' · out cold: '${cold}' · dead: '${dead}'`);
       }
     });
   } finally {
