@@ -62,6 +62,51 @@ fn the_squad_line_says_low_and_contact_while_they_last() {
     }
 }
 
+/// A game of two with a squad each, every squad silent, all but one defender down.
+fn two_seats(seed: u32) -> (Play, GuardId, Vec<Vec<GuardId>>) {
+    let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed, seats: 2, ..Default::default() });
+    p.g.god_mode = true;
+    p.g.k.pairup.on = true;
+    game::pairup::pair_up_apply(&mut p.g, None);
+    p.g.k.silent.on = true;
+    p.run(0.3);
+    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
+    p.drop_all_but(&foes[..1]);
+    let mut men = Vec::new();
+    for i in 0..2 {
+        let s = p.g.seats[i];
+        game::seats::with_seat(&mut p.g, s, &mut |g| game::silent::set_silent(g, true, None));
+        let mine = game::orders::squad_orders_squad(&p.g, &game::seats::seat(&p.g, s));
+        assert!(!mine.is_empty(), "seed {seed}: seat {i} has no men");
+        men.push(mine);
+    }
+    (p, foes[0], men)
+}
+
+/// THE RULE: in a game of two each player's squad line says what his own men are doing about it. A suspicious man near one seat's squad and out of reach of the
+/// other's: that seat reads 'SILENT · low', and the other plain 'SILENT'. Whichever seat it is.
+/// A FAILURE MEANS: the partner's rule is walking one seat's men only (before: `spotted_tick` ran for the first seat, so the second seat's line never moved).
+#[test]
+fn in_a_game_of_two_each_squad_line_says_low_for_its_own_men() {
+    for s in SEEDS {
+        for near in 0..2 {
+            let (mut p, t1, men) = two_seats(s);
+            let spots: [[f64; 2]; 2] = if near == 0 { [[15.0, 17.6], [3.0, 3.0]] } else { [[3.0, 3.0], [15.0, 17.6]] };
+            for _ in 0..60 {
+                pin(&mut p, t1, GuardState::Suspicious, 0.3);
+                for i in 0..2 {
+                    p.seat_stands(i, spots[i]);
+                    for &m in &men[i] { p.man_stands(m, [spots[i][0] + 0.5, spots[i][1]]); }
+                }
+                p.frame();
+            }
+            let say = |p: &mut Play, i: usize| { let seat = p.g.seats[i]; game::seats::with_seat(&mut p.g, seat, &mut |g| game::silent::posture_word(g, &game::seats::here(g)).unwrap_or_default()) };
+            assert_eq!(say(&mut p, near), "SILENT · low", "seed {s}: the suspicious man is near seat {near}'s men: {}", p.roll());
+            assert_eq!(say(&mut p, 1 - near), "SILENT", "seed {s}: he is out of reach of seat {}'s men: {}", 1 - near, p.roll());
+        }
+    }
+}
+
 /// THE RULE: a blown job finished by hand ends in the partner's own words, and he falls in again, with the fight's "tango down." after them: two
 /// lines said in one frame are both shown, one after the other.
 /// A FAILURE MEANS: a later line of the same frame has replaced an earlier one (before: "he's down. on you." was never seen).
