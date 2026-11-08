@@ -12,15 +12,10 @@ fn flat(a: V3, b: V3) -> f64 { v3::dist_xz(a, b) }
 /// (orders.ts:340 `yawTo = v3.yawTo`)
 fn yaw_to(a: V3, b: V3) -> f64 { v3::yaw_to(a, b) }
 
-// ------------------------------------------------------------ what a stored function became
 
-
-/// `d.tick?.(S, gd, A)`: each arm is the closure of the row that holds it. It may rewrite his Assignment or re-assign him. (orders.ts:1393)
+/// `d.tick?.(S, gd, A)`: it may rewrite his Assignment or re-assign him. (orders.ts:1393)
 pub fn order_tick(g: &mut crate::game::Game, d: OrdersOrderDefId, gd: GuardId, a: OrdersAssignmentId) {
-    let tick = match g.tab.orders_order_def[d].tick { Some(t) => t, None => return };
-    match tick {
-        OrderTick::Row(r) => if let Some(f) = r.tick { f(g, gd, a) },
-    }
+    if let Some(f) = g.tab.orders_order_def[d].row.tick { f(g, gd, a); }
 }
 
 // ------------------------------------------------------------ the men
