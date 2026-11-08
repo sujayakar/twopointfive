@@ -112,7 +112,7 @@ check(gain(SHADE[1], OUT, { u: lvl(1), ue: lvl(1) }) === 1 && gain(SHADE[1] * 0.
   // functions, so it says what the rule gives and what the splat gave before it, not that the shader was run. PARTSHOW_BREAK=1 shows a particle with
   // no gain, as it was, and must fail.
   const PB = process.env.PARTSHOW_BREAK === '1', rd = (f: string) => readFileSync(resolve(ROOT, f), 'utf8');
-  const draw = rd('src/render/shaders/particles_draw.wgsl'), parts = rd('src/render/particles.ts'), eng = rd('src/engine.ts'), passes = rd('src/render/passes.ts'), field = rd('src/render/placeField.ts'), main = rd('src/main.ts'), vols = [rd('src/render/shaders/volumetrics.wgsl')];
+  const draw = rd('src/render/shaders/particles_draw.wgsl'), parts = rd('src/render/particles.ts'), eng = rd('src/engine.ts'), passes = rd('src/render/passes.ts'), field = rd('src/render/placeField.ts'), vols = [rd('src/render/shaders/volumetrics.wgsl')];
   const u = lvl(4000), IN = { u, ue: u }, YARD = { u, ue: lvl(1) }, floor = white(4000, 1), brass = 0.6 * floor;   // a case that sends back 0.6 of what the pale floor under it does, deep in a store 4,000 times under the yard
   const surf = (l: number, place: typeof IN) => l * gain(0, OUT, place, SHADE, FLAT, l), show = (l: number, place: typeof IN) => PB ? l : surf(l, place);
   const rIn = show(brass, IN) / surf(floor, IN), rYard = show(brass, YARD) / surf(floor, YARD), gIn = gain(0, OUT, IN, SHADE, FLAT);

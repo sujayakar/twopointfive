@@ -29,7 +29,5 @@ for (const f of files) { const was = readFileSync(join(ROOT, f), 'utf8'); if (wa
   if (s !== was) { out.set(f, s); named++; } }
 for (const [a, b] of MOVES) if (existsSync(join(ROOT, a))) { mkdirSync(dirname(join(ROOT, b)), { recursive: true }); await $`git mv ${a} ${b}`.cwd(ROOT); }
 for (const [f, s] of out) writeFileSync(join(ROOT, TO.get(f) ?? f), s);
-// (the camera and the Input are no longer the game's copy, so what writes them is no row of what the page decides on it)
-{ const P = join(ROOT, 'tools/blitz/page-decides.rows.tsv'); writeFileSync(P, readFileSync(P, 'utf8').split('\n').filter(l => !/^(src\/host\/(input|camera)\.ts:\*|src\/game\/rails\.ts:Rails\.hostView|src\/main\.ts:main › refreshFrozenStill\*)\t/.test(l)).join('\n')); }
 console.log(`move: ${MOVES.filter(([, b]) => existsSync(join(ROOT, b))).length} files stand in their new places, ${named} files named one of them and were rewritten`);
 await $`bun run tools/wire/wire.ts gen`.cwd(ROOT);

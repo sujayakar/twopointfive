@@ -15,5 +15,4 @@ export const PASS_EXEMPT: readonly PassExempt[] = [
   { at: 'render/placeField.ts', label: '', why: 'an empty pass on an encoder of its own that only tries the two programs under an error scope, once at boot' },
   { at: 'render/diceRing.ts', label: '', why: 'an empty pass on an encoder of its own that only tries the program under an error scope, once when the ring is made' },
   { at: 'smoke/smoke.ts', label: '', why: "hands the caller's own descriptor on (the solver stepped alone, cut into one buffer an operation): every pass it opens is opened, and timed, where the solver encodes it" },
-  { at: 'main.ts', label: '', why: "a console lab that runs one kernel on numbers handed to it and reads them back (an encoder of its own; its label is the caller's word)" },
 ];
