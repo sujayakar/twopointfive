@@ -314,6 +314,23 @@ fn a_hand_on_a_switch_is_planted_for_either_seat() {
     }
 }
 
+/// THE RULE: a defender's live grenade is called to whichever player it is near.
+#[test]
+fn a_grenade_is_called_to_either_player() {
+    for s in SEEDS {
+        for seat in 0..2 {
+            let (mut p, _) = two(s);
+            p.seat_stands(1 - seat, [3.0, 3.0]);
+            p.seat_stands(seat, [18.0, AISLE]);
+            p.frag_lands([19.0, AISLE]);
+            p.frame();
+            p.g.m.frag.books.as_mut().unwrap()[0].cued = false;
+            game::frag::sam_cue(&mut p.g, 0, [19.0, 0.2, AISLE]);
+            assert!(p.g.m.frag.books.as_ref().unwrap()[0].cued, "seed {s}: a grenade a metre from seat {seat}'s man and nobody is told");
+        }
+    }
+}
+
 /// (coop.rs's store: a door and a room behind it)
 fn store(seed: u32) -> Scene {
     let mut s = Scene::new("store");
