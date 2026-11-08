@@ -157,7 +157,7 @@ import { CLEANRESTART } from '../game/cleanrestart';
 import { FIRELINE } from '../game/fireline';
 import { SAVETIMELINE } from '../game/savestate';
 import { hostAfterPutBack } from './putback';
-import { kitSoloStand, kitSoloIf } from '../game/kit';
+import { kitLessonPage, kitSoloStand, kitSoloIf } from '../game/kit';
 import { startFromQuery } from '../game/scenarioRun';
 import { glassPenHarness } from '../game/glasspen';
 import { glassFxForced, GLASS } from '../game/glass';
@@ -229,12 +229,18 @@ export function addressBeforeGame(q: URLSearchParams): StoodWith {
   const hour = hourAsked(q);
   return { weather, locked: true, hour: hour.id, sun: hour.sun, sunGiven: hour.sunGiven, dry: hour.dry, soloStand: false };
 }
-/** …AND THE DIFFICULTY IT ASKS FOR (difficulty.ts difficultyAsked), before the game is made, as a page reads it: a Training lesson's address reads no lever, as its page
+/** THE TRAINING ROW WHOSE LEVEL AN ADDRESS BOOTS (null: no Training level's). Its stagings wear what its lesson asks (kit.ts kitLessonPage), and no lever is read on it. */
+export function lessonOfAddress(q: URLSearchParams): (typeof LESSON_MISSIONS)[number] | null {
+  const row = LESSON_MISSIONS.find(e => e.level === q.get('levelFile'));
+  return row && lessonGroup(row.group) ? row : null;
+}
+/** …AND THE LESSON'S KIT AND THE DIFFICULTY IT ASKS FOR (difficulty.ts difficultyAsked), before the game is made, as a page reads it: a Training lesson's address reads no lever, as its page
  *  doesn't. It is the address's alone: no host but a page keeps a level. The tables it writes are knob tables, the process's in the TypeScript (the Rust start writes its game's
  *  own: scenario_run::difficulty_of_address), so in the harness an address that names a level leaves the tables on it, as a tool's own setDifficulty does, and one that names
  *  none leaves them as they stand. What it writes names no game, so it runs here and not on a Rust game an older stand left alive (tools/blitz/surface.ts hostOf). */
 export function difficultyOfAddress(q: URLSearchParams): void {
-  const a = difficultyAsked(q, lessonGroup(LESSON_MISSIONS.find(e => e.level === q.get('levelFile'))?.group));
+  const lesson = lessonOfAddress(q), a = difficultyAsked(q, !!lesson);
+  kitLessonPage(lesson);
   if (a) difficultyLay(a);
 }
 /** THE TWO SWITCHES THE ADDRESS'S READER READS, pinned by a harness run's own words (`TPS_SNOW`, `TPS_ROWSET`: profile.ts pinned). standGame pins them as it
@@ -247,10 +253,7 @@ export function pinRowset(): void { if (pinned('TPS_ROWSET')) ROWSET.on = String
 export function startAtAddress(game: Game, q: URLSearchParams, between?: () => void): ReturnType<typeof startFromQuery> {
   if (q.has('noweather')) game.weather.setEnabled(false);   // (?noweather: the level's own storm off from the start, as the page puts it off once its game is stood: main.ts. The address's reader has told the hour so — hours.ts hourAsked, Game.stood.dry)
   const r = startFromQuery(game, q); between?.();
-  // (A TRAINING LEVEL, one that carries a lesson, is left as it stands on a host that calls this: the page says the lesson's page before its game is
-  //  made (main.ts kitLessonPage) and its stagings then wear what the lesson asks; no other host says it yet, and the card dealt without it is neither
-  //  the page's kit nor the fresh Player the older road left there. Goes when the address's reader says the lesson's page on every host)
-  if (!game.level.scenarios?.lesson?.steps?.length) soloOfAddress(game, q);
+  soloOfAddress(game, q);
   return r;
 }
 /** THE SOLO CARD'S QUESTION OF AN ADDRESS (kit.ts kitSoloIf): the plain night (`?solo`, or no mission up and no quiet one), or a quiet mission alone, wears the
