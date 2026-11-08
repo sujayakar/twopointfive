@@ -13,7 +13,9 @@ fn up(id: vec2u, p: Px) -> vec4f {
     let s = pxSurf(p); let vz = textureLoad(vis, id.xy, 0); let b = up(id.xy, p); let nv = max(dot(p.n, V), 0.02); let F = fresnel(coatF0(s), nv); let m = matteOf(s) * (1.0 - lum(F)) / PI; let L = frame.sunDir.xyz; let cs = dot(p.n, L);
     var sun = frame.sunE.xyz * vz.a * poolLight(p.x);
     if (cs > 0.0) { c += sun * (m * cs + coatOf(s, V, L, 0.006)); } else if (p.leaf) { c += sun * s.through * (-cs / PI); }
-    c += (vz.rgb + b.rgb) * m;
+    var El = vec3f(0.0); var Cl = vec3f(0.0); let ln = select(p.n, vec3f(0.0), p.leaf); let wantCoat = p.rough >= 0.3 && !p.leaf;
+    for (var i = 0u; i < frame.counts.x; i++) { let e = lampE(i, p.x, ln); if (max3(e) <= 1e-5) { continue; } let k = select(vz.x, vz.y, lamps[i].kind == 2u); El += e * k; if (wantCoat && k > 0.0) { Cl += lampCoat(i, s, V) * k; } }
+    c += El * select(m, (m + s.through / PI) * 0.8, p.leaf) + Cl * smoothstep(0.3, 0.42, p.rough); c += b.rgb * select(m, (m + s.through / PI * 0.8), p.leaf);
     if (f.x == 0u && mir.a >= 0.0) { let k = 1.0 - smoothstep(0.36, 0.43, p.rough); let amb = b.rgb / PI * (coatF0(s) + (max(vec3f(1.0 - p.rough), coatF0(s)) - coatF0(s)) * pow(1.0 - nv, 5.0)) * 0.9; c += mix(amb, mir.rgb, select(k, 1.0, p.metal > 0.5)); }
     else if (f.x == 0u) { c += b.rgb / PI * (coatF0(s) + (max(vec3f(1.0 - p.rough), coatF0(s)) - coatF0(s)) * pow(1.0 - nv, 5.0)) * 0.8; }
     else { c += b.rgb / PI * coatF0(s) * 0.6; }

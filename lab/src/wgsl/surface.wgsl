@@ -120,6 +120,25 @@ fn aimLamp(i: u32, x: vec3f, u: vec2f) -> Aim {
   }
   return a;
 }
+/** the light a lamp lands on a surface at x facing n (n = 0: a leaf, either side) with nothing in the way: exact for a rectangle (its edges' integral) */
+fn lampE(i: u32, x: vec3f, n: vec3f) -> vec3f {
+  let l = &lamps[i]; if ((*l).on <= 0.0) { return vec3f(0.0); } let d = (*l).at - x; let dist = length(d); if (dist > (*l).reach) { return vec3f(0.0); } let leaf = all(n == vec3f(0.0));
+  let win = sat(1.0 - pow(dist / (*l).reach, 4.0));
+  if ((*l).kind != 0u || leaf) { let a = aimLamp(i, x, vec2f(0.5)); let c = dot(n, a.dir); return a.E * select(max(c, 0.0), 0.5, leaf) * win; }
+  if (dot(d, (*l).n) >= 0.0) { return vec3f(0.0); }
+  let b = basis(n); var v: array<vec3f, 6>; var m = 0u; var q: array<vec3f, 4>;
+  for (var k = 0u; k < 4u; k++) { let c = d + (*l).u * select(-1.0, 1.0, k == 1u || k == 2u) + (*l).v * select(-1.0, 1.0, k >= 2u); q[k] = vec3f(dot(c, b[0]), dot(c, b[1]), dot(c, n)); }
+  for (var k = 0u; k < 4u; k++) { let a = q[k]; let e = q[(k + 1u) & 3u]; if (a.z > 0.0) { v[m] = a; m++; } if ((a.z > 0.0) != (e.z > 0.0)) { v[m] = mix(a, e, a.z / (a.z - e.z)); m++; } }
+  if (m < 3u) { return vec3f(0.0); } var s = 0.0;
+  for (var k = 0u; k < m; k++) { let a = normalize(v[k]); let e = normalize(v[select(k + 1u, 0u, k + 1u == m)]); let c = cross(a, e); let sl = length(c); s += c.z * select(1.0, atan2(sl, dot(a, e)) / sl, sl > 1e-5); }
+  return (*l).radiance * ((*l).on * abs(s) * 0.5 * win);
+}
+/** a lamp seen in a coat: by the point of it nearest the mirror direction */
+fn lampCoat(i: u32, s: Surf, V: vec3f) -> vec3f {
+  let l = &lamps[i]; if ((*l).on <= 0.0) { return vec3f(0.0); } let d0 = (*l).at - s.x; if (length(d0) > (*l).reach) { return vec3f(0.0); } var u = vec2f(0.5); let R = reflect(-V, s.n); var widen = 0.0;
+  if ((*l).kind == 0u) { let den = dot(R, (*l).n); if (den > -1e-3) { u = vec2f(0.5); } else { let t = dot(d0, (*l).n) / den; let q = s.x + R * t - (*l).at; u = clamp(vec2f(dot(q, (*l).u) / dot((*l).u, (*l).u), dot(q, (*l).v) / dot((*l).v, (*l).v)) * 0.5 + 0.5, vec2f(0.0), vec2f(1.0)); } }
+  let a = aimLamp(i, s.x, u); widen = sqrt(max((*l).area, 1e-4)) * select(1.0, 0.35, (*l).kind == 0u) / (2.0 * max(a.dist, 0.2)); return a.E * coatOf(s, V, a.dir, widen);
+}
 /** what a lamp would send x with nothing in the way: its brightness, for choosing */
 fn lampWeight(i: u32, x: vec3f, n: vec3f) -> f32 {
   let l = &lamps[i]; let d = (*l).at - x; let dist = length(d); if (dist > (*l).reach || (*l).on <= 0.0) { return 0.0; }

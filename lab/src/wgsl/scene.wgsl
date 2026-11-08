@@ -109,13 +109,13 @@ fn meetLeaf(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> f32 {
   let n = octUnpack(b.x); let den = dot(n, rd); if (abs(den) < 1e-6) { return -1.0; }
   let t = dot(a.xyz - ro, n) / den; if (t <= tmin || t >= tmax) { return -1.0; }
   let x = ro + rd * t - a.xyz; let tl = octUnpack(b.y); let u = dot(x, tl) / a.w; let v = dot(x, cross(n, tl)) / a.w;
-  let w = select(0.46, 0.13, b.w == 1u) * (1.0 - u * u) * (1.0 + 0.35 * u);
+  let w = select(0.46, 0.06, b.w == 1u) * (1.0 - u * u) * (1.0 + 0.35 * u);
   return select(-1.0, t, abs(u) < 1.0 && abs(v) < w);
 }
 
 /** leaves one by one, or as a ball of them: a medium. Rays from what the camera sees take them one by one; the rest do not need to */
 var<private> fineLeaves: bool = true;
-const BALL_SIGMA = 0.83;                                            // per unit of the ball's radius, with the clumping a ball of leaves has (three quarters of its even density)
+const BALL_SIGMA = 0.80;                                            // per unit of the ball's radius, with the clumping a ball of leaves has (three quarters of its even density)
 fn ballStay(o: vec3f, d: vec3f, tmin: f32, tmax: f32) -> vec2f { let a = dot(d, d); let b = dot(o, d); let c = dot(o, o) - 1.0; let q = b * b - a * c; if (q <= 0.0) { return vec2f(1.0, 0.0); } let s = sqrt(q); return vec2f(max((-b - s) / a, tmin), min((-b + s) / a, tmax)); }
 /** NEAREST: what is out there. `cut` < 1e8 is the camera's section; `skip` = flags a ray does not meet. Glass is passed, and what it lets through is in thru */
 fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) -> Hit {

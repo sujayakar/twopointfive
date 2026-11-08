@@ -1,11 +1,14 @@
 [
- {"name":"01-roof-rt","w":1920,"h":1080,"scale":0.75,"samples":90,"run":true,"method":"realtime","dist":50,"hour":16.4,"tick":600},
- {"name":"02-garden-rt","w":1920,"h":1080,"scale":0.75,"samples":90,"run":true,"method":"realtime","dist":24,"hour":16.4,"look":[8,4,1.5],"pitch":0.72,"tick":600},
- {"name":"03-ground-rt","w":1920,"h":1080,"scale":0.75,"samples":90,"run":true,"method":"realtime","dist":40,"hour":15.6,"cut":2.55,"look":[0,0.6,0],"doors":0.8,"tick":600},
- {"name":"04-ground-ref","w":1920,"h":1080,"samples":500,"method":"reference","dist":40,"hour":15.6,"cut":2.55,"look":[0,0.6,0],"doors":0.8,"tick":690},
- {"name":"05-upper-rt","w":1920,"h":1080,"scale":0.75,"samples":90,"run":true,"method":"realtime","dist":38,"hour":10.5,"cut":5.95,"look":[-3,3.4,0],"doors":0.6,"tick":600},
- {"name":"06-night-rt","w":1920,"h":1080,"scale":0.75,"samples":120,"run":true,"method":"realtime","dist":48,"hour":21.5,"tick":600},
- {"name":"07-night-ground-rt","w":1920,"h":1080,"scale":0.75,"samples":120,"run":true,"method":"realtime","dist":40,"hour":21.5,"cut":2.55,"look":[0,0.6,0],"doors":0.9,"tick":600},
- {"name":"08-night-ground-ref","w":1920,"h":1080,"samples":400,"method":"reference","dist":40,"hour":21.5,"cut":2.55,"look":[0,0.6,0],"doors":0.9,"tick":720},
- {"name":"09-roof-ref","w":1920,"h":1080,"samples":300,"method":"reference","dist":50,"hour":16.4,"tick":690}
+ {"name":"01-city","w":1920,"h":1080,"scale":0.75,"samples":90,"run":true,"method":"realtime","dist":74,"hour":16.0,"tick":600},
+ {"name":"02-roof","w":1920,"h":1080,"scale":0.75,"samples":90,"run":true,"method":"realtime","dist":46,"hour":16.0,"look":[2,4,0],"tick":600},
+ {"name":"03-garden","w":1920,"h":1080,"scale":0.75,"samples":90,"run":true,"method":"realtime","dist":22,"hour":16.0,"look":[8,4,1.5],"pitch":0.70,"tick":600},
+ {"name":"04-ground-day","w":1920,"h":1080,"scale":0.75,"samples":90,"run":true,"method":"realtime","dist":44,"hour":15.0,"cut":2.55,"look":[0,0.6,0],"doors":0.8,"tick":600},
+ {"name":"05-ground-day-nolocal","w":1920,"h":1080,"scale":0.75,"samples":90,"run":true,"method":"realtime","dist":44,"hour":15.0,"cut":2.55,"look":[0,0.6,0],"doors":0.8,"tick":600,"local":0},
+ {"name":"06-upper-day","w":1920,"h":1080,"scale":0.75,"samples":90,"run":true,"method":"realtime","dist":40,"hour":10.5,"cut":5.95,"look":[-3,3.4,0],"doors":0.6,"tick":600},
+ {"name":"07-night","w":1920,"h":1080,"scale":0.75,"samples":120,"run":true,"method":"realtime","dist":50,"hour":21.5,"tick":600},
+ {"name":"08-night-ground","w":1920,"h":1080,"scale":0.75,"samples":120,"run":true,"method":"realtime","dist":42,"hour":21.5,"cut":2.55,"look":[0,0.6,0],"doors":0.9,"tick":600},
+ {"name":"09-night-ground-ref","w":1920,"h":1080,"samples":700,"method":"reference","dist":42,"hour":21.5,"cut":2.55,"look":[0,0.6,0],"doors":0.9,"tick":720},
+ {"name":"10-dusk","w":1920,"h":1080,"scale":0.75,"samples":120,"run":true,"method":"realtime","dist":56,"hour":18.3,"yaw":0.9,"pitch":0.62,"tick":600},
+ {"name":"11-roof-ref","w":1920,"h":1080,"samples":400,"method":"reference","dist":46,"hour":16.0,"look":[2,4,0],"tick":690},
+ {"name":"12-low","w":1920,"h":1080,"scale":0.75,"samples":120,"run":true,"method":"realtime","dist":36,"hour":8.2,"yaw":2.4,"pitch":0.42,"look":[4,3.5,0],"tick":600}
 ]

@@ -25,7 +25,7 @@ fn h(p: vec2u) -> f32 { var x = p.x * 1973u + p.y * 9277u + u32(k[0].y) * 26699u
   if (k[1].y > 0.0) {                              // the eye adapts by place: what is dark for metres round is lifted, what is bright is held
     let l0 = ll(textureSampleLevel(glow, sm, v.uv, 0.0).xyz); let a = ll(textureSampleLevel(wide, sm, v.uv, 0.0).xyz); let b = ll(textureSampleLevel(wider, sm, v.uv, 0.0).xyz);
     let wa = exp(-(a - l0) * (a - l0) * 0.45); let wb = exp(-(b - l0) * (b - l0) * 0.30) * 0.8; let ad = (l0 * 0.45 + a * wa + b * wb) / (0.45 + wa + wb); let mid = e[2];
-    c *= exp2(clamp((mid - ad) * k[1].y, -1.3, 2.6));
+    let up = (mid - ad) * k[1].y; c *= exp2(select(max(up * 0.45, -0.7), min(up, 2.6), up > 0.0));
   }
   let q = (v.uv - 0.5) * vec2f(1.0, 0.8); c *= 1.0 - 0.32 * dot(q, q);
   c = srgb(neutral(grade(max(c, vec3f(0.0)) * e[0] * exp2(k[0].x))));
@@ -40,7 +40,7 @@ var<workgroup> s: array<vec2f, 256>;
   let n = textureDimensions(src); var a = vec2f(0.0);
   for (var j = 0u; j < 24u; j++) { let t = i * 24u + j; let p = vec2f(f32(t % 96u) + 0.5, f32(t / 96u) + 0.5) / vec2f(96.0, 64.0); let c = textureLoad(src, vec2u(p * vec2f(n)), 0).xyz; let l = log2(clamp(dot(c, vec3f(0.2126, 0.7152, 0.0722)), 1e-4, 1e3)); let q = (p - 0.5) * 1.6; let w = exp(-dot(q, q) * 2.2); a += vec2f(l * w, w); }
   s[i] = a; workgroupBarrier(); for (var st = 128u; st > 0u; st >>= 1u) { if (i < st) { s[i] += s[i + st]; } workgroupBarrier(); }
-  if (i == 0u) { let mean = s[0].x / max(s[0].y, 1e-4); let want = exp2(clamp(-2.05 - mean * 0.86, -7.0, 5.5)); let r = select(0.06, 1.0, e[1] == 0.0 || k[1].x > 0.0); e[0] = select(want, exp2(mix(log2(max(e[0], 1e-6)), log2(want), r)), e[1] > 0.0); e[1] = 1.0; e[2] = mean; }
+  if (i == 0u) { let mean = s[0].x / max(s[0].y, 1e-4); let want = exp2(clamp(-1.35 - mean * 0.88, -7.0, 6.0)); let r = select(0.06, 1.0, e[1] == 0.0 || k[1].x > 0.0); e[0] = select(want, exp2(mix(log2(max(e[0], 1e-6)), log2(want), r)), e[1] > 0.0); e[1] = 1.0; e[2] = mean; }
 }` });
     this.meter = await d.createComputePipelineAsync({ layout: 'auto', compute: { module: m2, entryPoint: 'main' } }); void this.pipe;
   }

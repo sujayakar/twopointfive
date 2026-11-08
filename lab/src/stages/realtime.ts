@@ -26,7 +26,7 @@ import update from './cacheupdate.wgsl' with { type: 'text' };
 const SLOTS = 262144, HITS = 262144;
 export const CHANGES: Record<string, [string, string, 'uniform']> = { changes: ['changes', 'Changes', 'uniform'] };
 export interface CachePart { name: string; lib: string; bind: Stage['buffers']; stages: Stage[]; init(lab: Lab): Promise<void> }
-export interface DenoisePart { name: string; stages(o: { signal: string; div: 1 | 2; cap: number; rounds: number; narrow?: boolean }, g: Graph): { stages: Stage[]; result: string } }
+export interface DenoisePart { name: string; stages(o: { signal: string; div: 1 | 2; cap: number; rounds: number; narrow?: boolean; fractions?: boolean }, g: Graph): { stages: Stage[]; result: string } }
 export interface UpscalePart { name: string; stages(g: Graph): { stages: Stage[]; result: string } }
 
 /** light on surfaces, in a table */
@@ -71,10 +71,10 @@ function facePoints(lab: Lab): Float32Array {
 /** history, then a few rounds of blur that know their surface */
 export const svgf: DenoisePart = {
   name: 'svgf',
-  stages({ signal, div, cap, rounds, narrow }, g) {
+  stages({ signal, div, cap, rounds, narrow, fractions }, g) {
     const size: Size = div === 2 ? 'half' : 'render', N = narrow ? 1 : 0; g.signal(signal + 'H', 'rgba16float', size, true).signal(signal + 'M', 'rgba16float', size, true).signal(signal + 'A', 'rgba16float', size).signal(signal + 'B', 'rgba16float', size);
     const stages: Stage[] = [{ name: signal + ' history', over: size, reads: { [signal]: 'cur', [signal + 'H@prev']: 'hist', [signal + 'M@prev']: 'momPrev', surf: 'surf', 'surf@prev': 'surfPrev', aux: 'auxT', front: 'frontT' }, writes: { outH: signal + 'H', outM: signal + 'M' }, buffers: CHANGES, consts: { DIV: div, CAP: cap, SPREAD: narrow ? 1.6 : 1.25, NARROW: N }, code: signals + temporal }];
-    let from = signal + 'H'; for (let i = 0; i < rounds; i++) { const to = signal + (i % 2 ? 'B' : 'A'); stages.push({ name: signal + ' blur', over: size, reads: { [from]: 'src', [signal + 'M']: 'mom', surf: 'surf', front: 'frontT' }, writes: { outB: to }, buffers: CHANGES, consts: { DIV: div, STRIDE: 1 << i, SHARE: narrow ? 2.5 : 3.0, NARROW: N }, code: signals + blur }); from = to; }
+    let from = signal + 'H'; for (let i = 0; i < rounds; i++) { const to = signal + (i % 2 ? 'B' : 'A'); stages.push({ name: signal + ' blur', over: size, reads: { [from]: 'src', [signal + 'M']: 'mom', surf: 'surf', front: 'frontT' }, writes: { outB: to }, buffers: CHANGES, consts: { DIV: div, STRIDE: 1 << i, SHARE: narrow ? 2.5 : 3.0, NARROW: N, KIND: fractions ? 1 : 0 }, code: signals + blur }); from = to; }
     return { stages, result: from };
   },
 };
@@ -87,18 +87,18 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
     name: o.name ?? 'realtime', result: 'picture', glow: 'rt',
     signals(g, lab) {
       g.signal('surf', 'rgba32uint', 'render', true).signal('aux', 'rgba16float', 'render').signal('emit', 'rgba16float', 'render').signal('front', 'rgba32uint', 'render');
-      g.signal('vis', 'rgba16float', 'render').signal('res', 'rg32uint', 'render', true).signal('bounce', 'rgba16float', 'half').signal('mirror', 'rgba16float', 'render').signal('air', 'rgba16float', 'half').signal('airH', 'rgba16float', 'half', true).signal('airM', 'rgba16float', 'half', true).signal('color', 'rgba16float', 'render');
+      g.signal('vis', 'rgba16float', 'render').signal('bounce', 'rgba16float', 'half').signal('mirror', 'rgba16float', 'render').signal('air', 'rgba16float', 'half').signal('airH', 'rgba16float', 'half', true).signal('airM', 'rgba16float', 'half', true).signal('color', 'rgba16float', 'render');
       lab.buffer('past', Math.max(1, lab.building.world.moving.length) * 64); lab.uniform('changes', new Float32Array(36)); lab.uniform('taauK', new Float32Array(4));
     },
     stages(lab) {
       const g = lab.graph, c = { ...cache.bind, ...CHANGES };
       const S = (name: string, code: string, over: Size, reads: Record<string, string>, writes: Record<string, string>, buffers: Stage['buffers'] = {}, consts?: Record<string, number>): Stage => ({ name, code: signals + code, over, reads, writes, buffers: { ...CHANGES, ...buffers }, ...(consts ? { consts } : {}) });
-      const dVis = dn.stages({ signal: 'vis', div: 1, cap: 14, rounds: 3 }, g), dB = dn.stages({ signal: 'bounce', div: 2, cap: 36, rounds: 4 }, g), dM = dn.stages({ signal: 'mirror', div: 1, cap: 22, rounds: 2, narrow: true }, g), u = up.stages(g); m.result = u.result;
+      const dVis = dn.stages({ signal: 'vis', div: 1, cap: 18, rounds: 3, fractions: true }, g), dB = dn.stages({ signal: 'bounce', div: 2, cap: 36, rounds: 4 }, g), dM = dn.stages({ signal: 'mirror', div: 1, cap: 22, rounds: 2, narrow: true }, g), u = up.stages(g); m.result = u.result;
       const glows = glowStages(g, u.result, 'rt');
       return [
         S('first hit', surf, 'render', {}, { outSurf: 'surf', outAux: 'aux', outEmit: 'emit', outFront: 'front' }, { past: ['past', 'array<vec4f>', 'read'] }),
         ...cache.stages,
-        S('lamps', lamps, 'render', { surf: 'surf', 'surf@prev': 'surfPrev', aux: 'auxT', 'res@prev': 'resPrev' }, { outVis: 'vis', outRes: 'res' }),
+        S('lamps', lamps, 'render', { surf: 'surf' }, { outVis: 'vis' }),
         S('gather', cache.lib + gather, 'half', { surf: 'surf' }, { outE: 'bounce' }, { ...c, hits: ['hits', 'array<vec4f>', 'read_write'] }),
         S('mirror', cache.lib + mirror, 'render', { surf: 'surf', front: 'frontT' }, { outM: 'mirror' }, c),
         ...dVis.stages, ...dB.stages, ...dM.stages,
