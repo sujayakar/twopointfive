@@ -43,8 +43,10 @@ export function plantKit(w: World): Kit {
 function firstHit(pieces: Piece[], from: V3, dir: V3, far: number): number {
   let best = far; for (const p of pieces) { let a = 0, b = best; const o = sub(from, p.at); for (let k = 0; k < 3; k++) { const x = p.rot[k]!, q = x[0] * o[0] + x[1] * o[1] + x[2] * o[2], d = x[0] * dir[0] + x[1] * dir[1] + x[2] * dir[2], h = p.half[k]!; if (Math.abs(d) < 1e-9) { if (Math.abs(q) > h) { b = -1; break; } continue; } const u = (-h - q) / d, v = (h - q) / d; a = Math.max(a, Math.min(u, v)); b = Math.min(b, Math.max(u, v)); } if (a <= b && a > 0) best = a; } return best;
 }
+/** the inside's color (its root) of an old and a young leaf: Indian laurel fig, red maple in fall; and of a hedge and of grass. From PROSPECT-D, see surface.wgsl */
+export const FIG: [V3, V3] = [[0.157, 0.268, 0.080], [0.322, 0.365, 0.095]], MAPLE: [V3, V3] = [[0.387, 0.102, 0.060], [0.501, 0.204, 0.070]], HEDGE: V3 = [0.180, 0.272, 0.080], GRASS: V3 = [0.225, 0.320, 0.092];
 /** a clipped street tree: a short trunk, pale limbs that wander out to a dome, and leaves only where the light is: a shell of sprays round a dark hollow */
-export function domeTree(w: World, kit: Kit, at: V3, height: number, seed: number, dark: V3 = [0.25, 0.39, 0.17], light: V3 = [0.45, 0.56, 0.21], open = false) {
+export function domeTree(w: World, kit: Kit, at: V3, height: number, seed: number, dark: V3 = FIG[0], light: V3 = FIG[1], open = false) {
   const r = rng(seed), bark = { tint: [1, 0.98, 0.95] as V3, flags: open ? F.OPEN : F.CUT }, walls = w.pieces.slice(), R = height * (0.40 + 0.05 * r()), H = height * 0.36, mid: V3 = add(at, [(r() - 0.5) * R * 0.3, height * 0.64, (r() - 0.5) * R * 0.3]), fork = add(at, [(mid[0] - at[0]) * 0.3, height * 0.20, (mid[2] - at[2]) * 0.3]), thick = height * 0.026;
   /** out from the middle toward the dome, as far as what stands in the way lets it */
   const onDome = (d: V3, k: number, keep = 0.05): V3 => { const to: V3 = [d[0] * R * k, d[1] * H * k, d[2] * R * k], l = Math.hypot(...to), f = Math.max(0, Math.min(l, firstHit(walls, mid, mul(to, 1 / l), l + keep) - keep)); return add(mid, mul(to, f / l)); };

@@ -4,7 +4,7 @@ import { settle, freeEdges } from './faces';
 import { type V3, type Rot, rotY, rotX, rotZ, compose, apply, add, mul, sub, norm, rng, smooth } from '../math';
 import { World, F, type Piece, type Mark, taper } from './world';
 import { M, C } from './materials';
-import { plantKit, domeTree, tuft, bush, type Kit } from './plants';
+import { plantKit, domeTree, MAPLE, HEDGE, GRASS, tuft, bush, type Kit } from './plants';
 import { Person, type Stop } from './people';
 
 export interface Door { name: string; hinge: V3; yaw: number; swing: number; open: number; want: number; leaf: Piece[]; local: { at: V3; half: V3 }[]; slide?: V3 }
@@ -138,11 +138,11 @@ export function makeBuilding(): Building {
   bx(4.3, FL, -1.6, 12.0, FL + 0.05, 1.9, M.wood!, [1.15, 1.1, 1.02]);
   const rail: V3[] = [[4.2, FL, -8.0], [12.0, FL, -8.0], [12.0, FL, 8.0], [4.2, FL, 8.0]]; for (let i = 0; i < 3; i++) glassRail(rail[i]!, rail[i + 1]!);
   const planter = (x0: number, z0: number, x1: number, z1: number, h: number, tint: V3 = C.white as V3) => { const y = FL; bx(x0, y, z0, x1, y + h, z0 + 0.07, M.paint!, tint); bx(x0, y, z1 - 0.07, x1, y + h, z1, M.paint!, tint); bx(x0, y, z0 + 0.07, x0 + 0.07, y + h, z1 - 0.07, M.paint!, tint); bx(x1 - 0.07, y, z0 + 0.07, x1, y + h, z1 - 0.07, M.paint!, tint); bx(x0 + 0.07, y, z0 + 0.07, x1 - 0.07, y + h - 0.06, z1 - 0.07, M.soil!); return y + h - 0.06; };
-  const garden = (x0: number, z0: number, x1: number, z1: number, h: number, trees: [number, number, number][], seed: number, tint: V3 = C.white as V3, leafTint?: V3) => { const y = planter(x0, z0, x1, z1, h, tint), q = rng(seed); for (const [x, z, ht] of trees) domeTree(w, kit, [x, y, z], ht, seed + Math.round(x * 13 + z * 7), leafTint && mul(leafTint, 0.72), leafTint, true); const n = Math.round((x1 - x0) * (z1 - z0) * 6.5); for (let i = 0; i < n; i++) tuft(w, kit, [x0 + 0.2 + q() * (x1 - x0 - 0.4), y, z0 + 0.2 + q() * (z1 - z0 - 0.4)], 0.22 + q() * 0.3, seed * 31 + i, q() < 0.14 ? [0.70, 0.48, 0.78] : q() < 0.5 ? [0.52, 0.58, 0.30] : [0.42, 0.52, 0.30]); };
+  const garden = (x0: number, z0: number, x1: number, z1: number, h: number, trees: [number, number, number][], seed: number, tint: V3 = C.white as V3, leafTint?: V3) => { const y = planter(x0, z0, x1, z1, h, tint), q = rng(seed); for (const [x, z, ht] of trees) domeTree(w, kit, [x, y, z], ht, seed + Math.round(x * 13 + z * 7), leafTint && MAPLE[0], leafTint && MAPLE[1], true); const n = Math.round((x1 - x0) * (z1 - z0) * 6.5); for (let i = 0; i < n; i++) tuft(w, kit, [x0 + 0.2 + q() * (x1 - x0 - 0.4), y, z0 + 0.2 + q() * (z1 - z0 - 0.4)], 0.22 + q() * 0.3, seed * 31 + i, q() < 0.14 ? [0.44, 0.26, 0.50] : q() < 0.5 ? GRASS : mul(GRASS, 0.88)); };
   garden(4.6, 2.4, 11.8, 4.2, 0.55, [[5.7, 3.3, 3.4], [8.4, 3.2, 4.0], [10.8, 3.4, 3.1]], 11); garden(9.9, 4.9, 11.8, 7.7, 0.5, [[10.9, 6.4, 3.6]], 23); garden(4.6, 6.4, 7.6, 7.7, 0.5, [[6.2, 7.0, 2.9]], 37, C.white as V3, [0.80, 0.22, 0.14]);
   domeTree(w, kit, [1.2, 0.35, -6.4], 2.6, 90); w.cylinder([1.2, 0.2, -6.4], 0.42, 0.2, M.paint!, { tint: C.white as V3, ...cut }); w.cylinder([1.2, 0.36, -6.4], 0.37, 0.03, M.soil!, cut);
   // a hedge by the pool wall, climbers on the concrete, a strip of lawn
-  { const hr = rng(501); const y0 = planter(4.35, -7.9, 4.95, -2.2, 0.4); for (let i = 0; i < 17; i++) bush(w, kit, [4.65 + (hr() - 0.5) * 0.12, y0 + 0.22 + hr() * 0.08, -7.65 + i * 0.33], 0.27 + hr() * 0.06, 600 + i, [0.34, 0.46, 0.20]);
+  { const hr = rng(501); const y0 = planter(4.35, -7.9, 4.95, -2.2, 0.4); for (let i = 0; i < 17; i++) bush(w, kit, [4.65 + (hr() - 0.5) * 0.12, y0 + 0.22 + hr() * 0.08, -7.65 + i * 0.33], 0.27 + hr() * 0.06, 600 + i, HEDGE);
     // climbers: stems that wander up, leaves all along them, so that they grow together
     const climb = (n: number, start: (k: number) => V3, along: V3, height: number, tint: V3, seed: number) => { for (let k = 0; k < n; k++) { let p = start(k), lean = (hr() - 0.5) * 0.5; const steps = Math.floor(height * (0.45 + 0.55 * hr()) / 0.17); for (let q = 0; q < steps; q++) { lean = Math.max(-0.4, Math.min(0.4, lean + (hr() - 0.5) * 0.35)); p = add(p, [along[0] * lean * 0.17, 0.16, along[2] * lean * 0.17]); if (along[0]) p[0] = Math.max(-11.9, p[0]); else p[2] = Math.max(5.1, Math.min(7.9, p[2])); bush(w, kit, p, 0.11 + 0.10 * (1 - q / steps) + hr() * 0.04, seed + k * 40 + q, tint); } } };
     climb(7, k => [4.14, FL + 0.1, 5.5 + k * 0.33], [0, 0, 1], 2.6, [0.36, 0.48, 0.18], 700); climb(8, k => [-11.8 + k * 0.14, 0.1, 8.15], [1, 0, 0], 4.6, [0.40, 0.46, 0.16], 1200); }

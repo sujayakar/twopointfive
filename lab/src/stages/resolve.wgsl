@@ -24,7 +24,7 @@ fn leafAo(p: Px) -> vec2f { let w = 0.55 * lum(p.albedo) * 1.8; return p.ao / (1
     var sun = frame.sunE.xyz * vz.a * poolLight(p.x) * part(1u);
     if (cs > 0.0) { c += sun * (m * cs + coatOf(s, V, L, 0.006)); } else if (p.leaf) { c += sun * s.through * (-cs / PI); }
     let u = textureLoad(lampU, id.xy, 0); let El = u.rgb * vz.x + vec3f(1.06, 0.99, 0.87) * u.a * vz.y; var Cl = vec3f(0.0);
-    if (byFormula(p.rough) > 0.0 && !p.leaf) { let hc = textureLoad(lampC, id.xy, 0); let f0 = coatF0(s); Cl = hc.rgb * vz.z + vec3f(1.06, 0.99, 0.87) * f0 / max(lum(f0), 1e-4) * hc.a * vz.y; }
+    if (byFormula(p.rough) > 0.0) { let hc = textureLoad(lampC, id.xy, 0); let f0 = coatF0(s); Cl = hc.rgb * vz.z + vec3f(1.06, 0.99, 0.87) * f0 / max(lum(f0), 1e-4) * hc.a * vz.y; }
     c += part(2u) * El * select(m, (m + s.through / PI) * 0.5, p.leaf) + part(3u) * Cl * byFormula(p.rough); c += part(4u) * b.rgb * select(m, m * ao.x + s.through / PI * ao.y, p.leaf);
     if (mir.a >= 0.0) { let k = 1.0 - smoothstep(0.36, 0.43, p.rough); let amb = b.rgb / PI * (coatF0(s) + (max(vec3f(1.0 - p.rough), coatF0(s)) - coatF0(s)) * pow(1.0 - nv, 5.0)) * 0.9; c += mix(amb * part(4u), mir.rgb * (part(5u) * @tune.mirror), select(k, 1.0, p.metal > 0.5)); }
     else if (f.x == 0u && p.leaf) { let R = reflect(rd, p.n); let open = sat(lum(b.rgb) / max(lum(skyLod(p.n, 7.0)) * PI, 1e-5)); c += part(4u) * skyLod(R, 4.0) * (open * open * ao.x) * F; }     // a waxy leaf shows the sky, as much of it as reaches here

@@ -24,15 +24,24 @@ const GROW = `
 fn want(b: vec3i, tick: u32) {
   if (!inPage(b)) { return; } let i = brickIx(b); let p = atomicLoad(&M[M_PAGE + i]); if (p != 0u && p != NONE) { atomicStore(&M[M_STAMP + p - 1u], tick); return; } if (p == NONE) { return; }
   let r = atomicCompareExchangeWeak(&M[M_PAGE + i], 0u, NONE); if (!r.exchanged) { return; }
-  let n = atomicSub(&M[M_N], 1u); if (n == 0u || n > SLOTS_S) { atomicAdd(&M[M_N], 1u); atomicStore(&M[M_PAGE + i], 0u); return; }
-  let s = atomicLoad(&M[M_FREE + n - 1u]); atomicStore(&M[M_BRICK + s], i + 1u); atomicStore(&M[M_STAMP + s], tick); atomicStore(&M[M_DENSE + s], 0u); atomicStore(&M[M_BORN + s], 1u); atomicStore(&M[M_PAGE + i], s + 1u);
+  let n = atomicAdd(&M[M_N + 2u], 1u); if (n < 2048u) { atomicStore(&M[M_FREE + n], i); } else { atomicStore(&M[M_PAGE + i], 0u); }
 }`;
 const emitCode = GROW + `
 @compute @workgroup_size(64) fn main(@builtin(global_invocation_id) id: vec3u) { let tick = u32(smokeK.y); if (id.x >= u32(smokeK.w)) { return; } let e = sources[id.x * 2u]; let r = e.w + 0.2; let a = vec3i(floor((e.xyz - r - AT) / (8.0 * H))); let z = vec3i(floor((e.xyz + r - AT) / (8.0 * H))); for (var k = a.z; k <= z.z; k++) { for (var j = a.y; j <= z.y; j++) { for (var i = a.x; i <= z.x; i++) { want(vec3i(i, j, k), tick); } } } }`;
 const spreadCode = GROW + `
 @compute @workgroup_size(64) fn main(@builtin(global_invocation_id) id: vec3u) { let s = id.x; let tick = u32(smokeK.y); if (s >= SLOTS_S) { return; } let bi = atomicLoad(&M[M_BRICK + s]); if (bi == 0u) { return; } let d = bitcast<f32>(atomicLoad(&M[M_DENSE + s])); if (d < 0.004) { return; } let b = brickOf(bi - 1u); atomicStore(&M[M_STAMP + s], tick); for (var k = 0; k < 27; k++) { let o = vec3i(k % 3, (k / 3) % 3, k / 9) - 1; if (d < 0.05 && dot(o, o) > 1) { continue; } want(b + o, tick); } }`;
+const allocCode = `
+var<workgroup> w: array<u32, 2048>; var<workgroup> base: array<u32, 256>;
+@compute @workgroup_size(256) fn main(@builtin(local_invocation_index) li: u32) {
+  let n = min(M[M_N + 2u], 2048u); for (var k = li; k < 2048u; k += 256u) { w[k] = select(NONE, M[M_FREE + k], k < n); } workgroupBarrier();
+  for (var size = 2u; size <= 2048u; size <<= 1u) { for (var step = size >> 1u; step > 0u; step >>= 1u) { for (var k = li; k < 1024u; k += 256u) { let i = 2u * k - (k & (step - 1u)); let j = i + step; let up = (i & size) == 0u; let a = w[i]; let b = w[j]; if ((a > b) == up) { w[i] = b; w[j] = a; } } workgroupBarrier(); } }
+  var free = 0u; for (var k = 0u; k < 12u; k++) { if (M[M_BRICK + li * 12u + k] == 0u) { free += 1u; } } base[li] = free; workgroupBarrier();
+  var at = 0u; for (var k = 0u; k < li; k++) { at += base[k]; } var all = 0u; for (var k = 0u; k < 256u; k++) { all += base[k]; }
+  for (var k = 0u; k < 12u; k++) { let s = li * 12u + k; if (M[M_BRICK + s] != 0u) { continue; } if (at < n) { let i = w[at]; M[M_BRICK + s] = i + 1u; M[M_STAMP + s] = u32(smokeK.y); M[M_DENSE + s] = 0u; M[M_BORN + s] = 1u; M[M_PAGE + i] = s + 1u; } at += 1u; }
+  for (var k = all + li; k < n; k += 256u) { M[M_PAGE + w[k]] = 0u; }
+}`;
 const freeCode = `
-@compute @workgroup_size(64) fn main(@builtin(global_invocation_id) id: vec3u) { let s = id.x; let tick = u32(smokeK.y); if (s >= SLOTS_S) { return; } let bi = atomicLoad(&M[M_BRICK + s]); if (bi == 0u) { return; } if (tick - atomicLoad(&M[M_STAMP + s]) > 16u) { atomicStore(&M[M_PAGE + bi - 1u], 0u); atomicStore(&M[M_BRICK + s], 0u); let n = atomicAdd(&M[M_N], 1u); atomicStore(&M[M_FREE + n], s); return; } let n = atomicAdd(&M[M_N + 1u], 1u); atomicStore(&M[M_LIVE + n], s); }`;
+@compute @workgroup_size(64) fn main(@builtin(global_invocation_id) id: vec3u) { let s = id.x; let tick = u32(smokeK.y); if (s >= SLOTS_S) { return; } let bi = atomicLoad(&M[M_BRICK + s]); if (bi == 0u) { return; } if (tick - atomicLoad(&M[M_STAMP + s]) > 16u) { atomicStore(&M[M_PAGE + bi - 1u], 0u); atomicStore(&M[M_BRICK + s], 0u); return; } let n = atomicAdd(&M[M_N + 1u], 1u); atomicStore(&M[M_LIVE + n], s); }`;
 const linkCode = `
 @compute @workgroup_size(64) fn main(@builtin(workgroup_id) wg: vec3u, @builtin(local_invocation_index) li: u32) { let at = wg.x + wg.y * 64u; if (at >= M[M_N + 1u] || li >= 27u) { return; } let s = M[M_LIVE + at]; let b = brickOf(M[M_BRICK + s] - 1u); let q = b + vec3i(i32(li) % 3, (i32(li) / 3) % 3, i32(li) / 9) - 1; var n = NONE; if (inPage(q)) { let p = M[M_PAGE + brickIx(q)]; if (p != 0u && p != NONE) { n = p - 1u; } } M[M_NBR + s * 27u + li] = n; }`;
 const facesCode = perBrick(`
@@ -124,8 +133,8 @@ export class Smoke {
   get burning() { return this.sources.some(q => this.lab.tick - q.born < q.last * 60 + 1200); }
   frame() {
     const lab = this.lab, steam = lab.steam > 0 ? lab.building.world.plumes : []; if (steam.length) this.on = true; if (!this.on) { this.dt = 0; return; } const d = Math.max(0, Math.min(3, lab.tick - this.lastTick)); this.dt = this.lastTick < 0 ? 1 / 60 : d / 60; this.lastTick = lab.tick; if (this.dt <= 0 && !this.fresh) return; this.steps++; this.flip ^= 1;
-    if (this.fresh) { this.fresh = false; const m = new Uint32Array(WORDS); for (let i = 0; i < SMOKE.slots; i++) m[PG + 30 * SMOKE.slots + i] = SMOKE.slots - 1 - i; m[PG + 32 * SMOKE.slots] = SMOKE.slots; lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('smokeM')!, 0, m); this.dt = this.dt || 1 / 60; }
-    else lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('smokeM')!, (PG + 32 * SMOKE.slots + 1) * 4, new Uint32Array([0]));
+    if (this.fresh) { this.fresh = false; const m = new Uint32Array(WORDS); lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('smokeM')!, 0, m); this.dt = this.dt || 1 / 60; }
+    else lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('smokeM')!, (PG + 32 * SMOKE.slots + 1) * 4, new Uint32Array([0, 0]));
     const key = lab.building.doors.map(x => x.open.toFixed(3)).join(); this.faceNow = key !== this.doorKey; this.doorKey = key; void this.faceNow;
     const boxes = lab.building.doors.map(x => x.leaf[0]!), f = new Float32Array(16 * 16); boxes.slice(0, 16).forEach((p, i) => { for (let k = 0; k < 3; k++) { const r = p.rot[k]!; f.set([r[0], r[1], r[2], -(r[0] * p.at[0] + r[1] * p.at[1] + r[2] * p.at[2])], i * 16 + k * 4); } f.set(p.half, i * 16 + 12); }); lab.uniform('smokeDoors', f);
     const s = new Float32Array(16 * 8); let n = 0; for (const q of this.sources) { const age = (lab.tick - q.born) / 60; if (age > q.last || n >= 10) continue; const k = Math.min(1, age / 0.5) * Math.min(1, (q.last - age) / 2); s.set([...q.at, 0.34, 300 * q.rate * k, 1.1 * k, 1.0 * k, 95 * q.rate * k], n++ * 8); }
@@ -141,7 +150,7 @@ export class Smoke {
     const S = (name: string, code: string, buffers: NonNullable<Stage['buffers']>, over: Stage['over'] = BRICK, consts?: Record<string, number>): Stage => ({ name, over, code: head + code, buffers, when: go, ...(consts ? { consts } : {}) });
     const half = SMOKE.slots * 512, twice = (name: string, code: string, buffers: NonNullable<Stage['buffers']>): Stage[] => [0, 1].map(k => ({ ...S(name, code, buffers, BRICK, { FROM: k ? half : 0, TO: k ? 0 : half }), when: () => go() && this.flip === k }));
     return [
-      S('smoke page', emitCode, { ...MA, ...K }, { groups: () => [1, 1, 1] }), S('smoke page', spreadCode, { ...MA, smokeK: K.smokeK! }, ONE), S('smoke page', freeCode, { ...MA, smokeK: K.smokeK! }, ONE), S('smoke page', linkCode, MW),
+      S('smoke page', emitCode, { ...MA, ...K }, { groups: () => [1, 1, 1] }), S('smoke page', spreadCode, { ...MA, smokeK: K.smokeK! }, ONE), S('smoke page', allocCode, { ...MW, smokeK: K.smokeK! }, { groups: () => [1, 1, 1] }), S('smoke page', freeCode, { ...MA, smokeK: K.smokeK! }, ONE), S('smoke page', linkCode, MW),
       S('smoke faces', facesCode, { ...MR, W: rw('smokeW', U), Va: rw('smokeA', V2), Vb: rw('smokeB', V2), Q: rw('smokeQ', F), G: rw('smokeG', V2), smokeK: K.smokeK!, doors: ['smokeDoors', 'array<Box, 16>', 'uniform'] }),
       ...twice('smoke move', moveCode, { ...MR, W: ro('smokeW', U), Va: ro('smokeA', V2), Vb: rw('smokeB', V2), Q: rw('smokeQ', F), R: rw('smokeR', U), smokeK: K.smokeK! }),
       S('smoke move', sharpCode, { ...MR, W: ro('smokeW', U), Va: ro('smokeA', V2), Vb: ro('smokeB', V2), R: rw('smokeR', U), smokeK: K.smokeK! }),

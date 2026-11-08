@@ -30,10 +30,14 @@ fn relief(kind: u32, p: vec2f, s: f32, fp: f32) -> f32 {
   }
   let f = max(a.x, a.y); return h + a.z * (0.65 * shows(f, fp) * vnoise(p * a.xy) + 0.35 * shows(f * 2.7, fp) * vnoise(p * a.xy * 2.7 + 5.0)) + b * shows(a.w, fp) * vnoise(p * a.w);
 }
+/** LEAVES BY MEASURE. What comes back out of the inside of one (albedo) and what goes through it are the leaf optics model PROSPECT-D's, for the pigments of each
+ *  plant: Indian laurel fig, 62 to 20 µg/cm² of chlorophyll as it ages, or a red maple's anthocyanin; its waxy skin is a rough dielectric (n 1.45) over that.
+ *  More goes through a young, thin leaf: the ratio follows how much red it still sends back */
+fn leafThrough(alb: vec3f, grass: bool) -> vec3f { let k = select(1.45 * (1.0 - exp(-20.0 * alb.r)), 1.5, grass || alb.r > alb.g); return alb * vec3f(k, k * 0.96, k * 0.6); }
 /** a leaf sends on less than it gets, both sides together, whatever its tint asks: else a crown of them would light itself */
 fn leafKeeps(all: vec3f) -> f32 { return min(1.0, 0.88 / max(max3(all), 1e-3)); }
 fn leafSurf(h: Hit, x: vec3f, rd: vec3f, fp: f32) -> Surf {
-  let I = &insts[h.piece & 0x7fffffffu]; if (h.code == NOTHING) { var q: Surf; let t = unpackTint((*I).tint); q.x = x; q.ng = -rd; q.n = -rd; q.albedo = t * t; q.through = t * t * vec3f(0.9, 1.1, 0.35) * 0.85; let k = leafKeeps(q.albedo + q.through); q.albedo *= k; q.through *= k; q.rough = 1.0; q.f0 = 0.0; q.kind = 14u; q.piece = h.piece; q.flags = MOVES; return q; }
+  let I = &insts[h.piece & 0x7fffffffu]; if (h.code == NOTHING) { var q: Surf; let t = unpackTint((*I).tint); q.x = x; q.ng = -rd; q.n = -rd; q.albedo = t * t * 1.15; q.through = leafThrough(t * t, ((*I).tint & 0x2000000u) != 0u); let k = leafKeeps(q.albedo + q.through); q.albedo *= k; q.through *= k; q.rough = 1.0; q.f0 = 0.0; q.kind = 14u; q.piece = h.piece; q.flags = MOVES; return q; }
   let b = bitcast<vec4u>(extra[h.code * 2u + 1u]); let ln = octUnpack(b.x);
   // where on the leaf: u along the rib, v across (−1‥1 at its edges). Its blade domes to each side of the rib, its tip droops and its edge waves; what a pixel can not
   // hold of that is roughness
@@ -43,7 +47,7 @@ fn leafSurf(h: Hit, x: vec3f, rd: vec3f, fp: f32) -> Surf {
   var g = normalize((*I).r0.xyz * ln.x + (*I).r1.xyz * ln.y + (*I).r2.xyz * ln.z); var n = normalize((*I).r0.xyz * lf.x + (*I).r1.xyz * lf.y + (*I).r2.xyz * lf.z); var under = false; var ao = vec2f(f32((b.w >> 8u) & 255u), f32((b.w >> 16u) & 255u)) / 255.0; if (dot(g, rd) > 0.0) { g = -g; n = -n; ao = ao.yx; under = true; } if (dot(n, rd) > -0.05) { n = normalize(n - rd * (dot(n, rd) + 0.1)); }
   var s: Surf; s.x = x; s.ng = g; s.n = n; let t = unpackTint((*I).tint); let tone = bitcast<f32>(b.z);
   if ((b.w & 255u) == 2u) { s.albedo = vec3f(0.16, 0.115, 0.075) * mix(0.7, 1.2, tone); s.through = vec3f(0.0); s.rough = 0.85; s.f0 = 0.03; s.metal = 0.0; s.glow = vec3f(0.0); s.kind = 15u; s.piece = h.piece; s.flags = MOVES; return s; }
-  s.albedo = t * t * mix(0.58, 1.28, tone) * select(1.0, 0.7, (b.w & 255u) == 1u) * (1.0 + see * (0.10 * (1.0 - smoothstep(0.02, 0.12 + px, abs(v))) + 0.05 * (abs(fract(u * 4.5 - abs(v) * 0.9) - 0.5) - 0.25))); s.through = s.albedo * vec3f(0.95, 1.15, 0.35) * select(0.85, 0.5, (b.w & 255u) == 1u); { let k = leafKeeps(s.albedo + s.through); s.albedo *= k; s.through *= k; } s.rough = sqrt(mix(0.36, 0.40, see) * 0.40 + 0.030 * (1.0 - see) * blade); s.f0 = 0.04; if (under && blade > 0.0) { s.albedo = s.albedo * 0.92 + vec3f(0.028, 0.034, 0.024); s.rough = 0.62; s.f0 = 0.022; } s.metal = 0.0; s.glow = vec3f(0.0); s.ao = ao; s.kind = select(14u, 20u, (b.w & 255u) == 1u); s.piece = h.piece; s.flags = MOVES; return s;
+  s.albedo = t * t * mix(0.58, 1.28, tone) * select(1.0, 0.7, (b.w & 255u) == 1u) * (1.0 + see * (0.10 * (1.0 - smoothstep(0.02, 0.12 + px, abs(v))) + 0.05 * (abs(fract(u * 4.5 - abs(v) * 0.9) - 0.5) - 0.25))); s.through = leafThrough(s.albedo, (b.w & 255u) == 1u); { let k = leafKeeps(s.albedo + s.through); s.albedo *= k; s.through *= k; } s.rough = sqrt(0.47 * 0.47 + 0.040 * (1.0 - see) * blade); s.f0 = 0.0337; if (under && blade > 0.0) { s.albedo *= 1.45; s.rough = 0.75; } s.metal = 0.0; s.glow = vec3f(0.0); s.ao = ao; s.kind = select(14u, 20u, (b.w & 255u) == 1u); s.piece = h.piece; s.flags = MOVES; return s;
 }
 fn localNormal(k: u32, code: u32, lp: vec3f) -> vec3f {
   if (code < 6u) { var n = vec3f(0.0); n[code >> 1u] = select(-1.0, 1.0, (code & 1u) == 1u); return n; }
