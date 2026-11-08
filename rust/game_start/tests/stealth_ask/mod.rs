@@ -85,6 +85,82 @@ pub trait StealthAsk {
     fn breaks(&mut self, gd: GuardId) -> bool;
     /// has he dropped his gun and run
     fn fled(&self, gd: GuardId) -> bool;
+    /// Sam walks to a place by the keys, as a hand does: whether he got there in time
+    fn sam_goes_to(&mut self, at: [f64; 2], secs: f64) -> bool;
+    /// the fog of war is on
+    fn fog_up(&mut self);
+    /// does the fog hide this man from the team's picture
+    fn fogged(&self, gd: GuardId) -> bool;
+    /// the things the fog has kept in the picture where they were last seen: (where, is it kept as it was)
+    fn things_kept(&self) -> Vec<([f64; 2], bool)>;
+    /// the furniture of the floor
+    fn furniture(&self) -> Vec<game::ids::PropId>;
+    /// where a piece of furniture stands
+    fn prop_at(&self, it: game::ids::PropId) -> [f64; 2];
+    /// a piece of furniture shoved to a new place, by nobody's hand
+    fn prop_shoved(&mut self, it: game::ids::PropId, at: [f64; 2]);
+    /// is what this doer does shown under the fog
+    fn ours(&self, who: Option<f64>) -> bool;
+    /// the middle of a door's frame
+    fn door_at(&self, name: &str) -> [f64; 2];
+    /// the door of this name is shut and latched
+    fn door_shut(&mut self, name: &str);
+    /// is a place in the funnel a man at `from` looks through a door by (the plan's lines from him through the leaf's two ends)
+    fn in_doors_line(&self, name: &str, from: [f64; 2], at: [f64; 2]) -> bool;
+    /// the pair goes silent, as a quiet mission has it
+    fn pair_silent(&mut self);
+    /// would this man's eyes take that man in, this frame
+    fn eyes_take_in(&mut self, h: GuardId, m: GuardId) -> bool;
+    /// the free floor nearest a place, within a radius
+    fn free_near(&self, at: [f64; 2], r: f64) -> [f64; 2];
+    /// the row of this kind and verb has the highlight, and the key takes it: whether there was one
+    fn row_taken(&mut self, kind: game::game::InteractableKind, verb: game::game::Verb) -> bool;
+    /// the stage the mission stands at, in the game's own word
+    fn mission_stage(&self) -> game::game::MissionStage;
+    /// the quiet mission's deal: start, spot, patrol
+    fn quiet_deal(&self) -> (f64, f64, f64);
+    /// a wall the camera has a line to this man from: where on it, its outward normal, and a place to send it from
+    fn wall_for(&mut self, gd: GuardId) -> Option<([f64; 3], [f64; 3], [f64; 3])>;
+    /// a camera sent off the launcher's own call, flown until it comes to rest: whether it is on a wall
+    fn camera_sent(&mut self, from: [f64; 3], to: [f64; 3]) -> bool;
+    /// the eyes under the fog just now
+    fn fog_eyes(&self) -> usize;
+    /// does the fog hold this man as seen
+    fn fog_saw(&self, gd: GuardId) -> bool;
+    /// is this place inside the wedge of the newest eye
+    fn in_newest_wedge(&self, at: [f64; 3]) -> bool;
+    /// cameras out and on the launcher
+    fn cams(&self) -> (usize, f64);
+    /// Sam's hands have his wand; he is told to look under this door
+    fn lens_through(&self) -> Option<bool>;
+    /// is his eye the lens
+    fn eye_is_lens(&self) -> bool;
+    /// what the smoke break has counted
+    fn smoke_counts(&mut self) -> game::smokebreak::SmokeBreakStats;
+    /// how far a bone of a man is from his head
+    fn hand_from_head(&self, gd: GuardId, bone: game::character::Bone) -> f64;
+    /// a bone's place
+    fn bone_at(&self, gd: GuardId, bone: game::character::Bone) -> [f64; 3];
+    /// does he hold the round on this man (the silent pair's fire rule)
+    fn holds_round(&mut self, m: GuardId, h: GuardId) -> bool;
+    /// the picture's leaf of this door, against where it stands: (it is kept back, standing, shown)
+    fn leaf(&self, name: &str) -> (bool, f64, f64);
+    /// the doors of the floor by name
+    fn door_names(&self) -> Vec<String>;
+    /// the partner is ordered to the breaker, by the menu's own call
+    fn throws_the_breaker(&mut self);
+    /// are the mains out
+    fn mains_out(&self) -> bool;
+    /// the man the panel's going dark has sent to it
+    fn sent_to_the_breaker(&self) -> Option<GuardId>;
+    /// where a man's errand takes him
+    fn errand_at(&self, gd: GuardId) -> [f64; 3];
+    /// no errand: he walks to that place as a man who heard something there
+    fn walks_to_a_sound(&mut self, gd: GuardId, spot: [f64; 3]);
+    /// one frame of Sam walking on toward a place by the keys: false once he is there
+    fn sam_goes_to_step(&mut self, at: [f64; 2]) -> bool;
+    /// is the follower on that man's walk, as the rule asks it
+    fn follower_on_walk(&mut self, b: GuardId, man: GuardId, to_a_sound: bool) -> bool;
 }
 
 impl StealthAsk for Play {
@@ -153,4 +229,150 @@ impl StealthAsk for Play {
     fn last_stand_lines(&self) -> Vec<(String, String)> { self.g.m.laststand.states.as_ref().map_or(Vec::new(), |s| s.said.iter().map(|l| (l.who.clone(), l.text.clone())).collect()) }
     fn breaks(&mut self, gd: GuardId) -> bool { game::runner::runner_break(&mut self.g, gd) }
     fn fled(&self, gd: GuardId) -> bool { self.g.gd[gd].fled }
+    fn sam_goes_to(&mut self, at: [f64; 2], secs: f64) -> bool {
+        let keys = ["KeyW", "KeyS", "KeyA", "KeyD"];
+        let mut got = false;
+        for _ in 0..(secs * 60.0) as usize {
+            let (me, b) = (self.sam_at(), game::camera::follow_camera_planar_basis(&self.g, self.host.cam));
+            let (dx, dz) = (at[0] - me[0], at[1] - me[1]);
+            let d = (dx * dx + dz * dz).sqrt();
+            if d < 0.15 { got = true; break; }
+            let (a, r) = ((dx * b.fwd[0] + dz * b.fwd[2]) / d, (dx * b.right[0] + dz * b.right[2]) / d);
+            for (k, on) in keys.iter().zip([a > 0.38, a < -0.38, r < -0.38, r > 0.38]) { if on { self.key_down(k); } else { self.key_up(k); } }
+            self.frame();
+        }
+        for k in keys { self.key_up(k); }
+        got
+    }
+    fn fog_up(&mut self) { self.g.fog_of_war.on = true; }
+    fn fogged(&self, gd: GuardId) -> bool { game::fogofwar::fog_of_war_hidden__body(&self.g, gd) }
+    fn things_kept(&self) -> Vec<([f64; 2], bool)> { self.g.fog_of_war.thing_recs.values().map(|r| ([r.x, r.z], r.held)).collect() }
+    fn furniture(&self) -> Vec<game::ids::PropId> { self.g.props.props.iter().copied().collect() }
+    fn prop_at(&self, it: game::ids::PropId) -> [f64; 2] { [game::props::prop_x(&self.g, it), game::props::prop_z(&self.g, it)] }
+    fn prop_shoved(&mut self, it: game::ids::PropId, at: [f64; 2]) {
+        game::props::prop_set_x(&mut self.g, it, at[0]);
+        game::props::prop_set_z(&mut self.g, it, at[1]);
+        game::props::prop_set_dirty(&mut self.g, it, true);
+        game::props::prop_place(&mut self.g, it);
+    }
+    fn ours(&self, who: Option<f64>) -> bool { game::fogofwar::fog_of_war_ours_id(&self.g, who) }
+    fn door_at(&self, name: &str) -> [f64; 2] { let d = game::doors::doors_by_name(&self.g, name).unwrap_or_else(|| panic!("no door '{name}'")); let c = self.g.dr[d].frame_centre; [c[0], c[2]] }
+    fn door_shut(&mut self, name: &str) {
+        let d = game::doors::doors_by_name(&self.g, name).unwrap_or_else(|| panic!("no door '{name}'"));
+        game::doors::door_set_angle(&mut self.g, d, 0.0);
+        game::doors::door_set_latched(&mut self.g, d, true);
+    }
+    fn in_doors_line(&self, name: &str, from: [f64; 2], at: [f64; 2]) -> bool {
+        let d = game::doors::doors_by_name(&self.g, name).unwrap_or_else(|| panic!("no door '{name}'"));
+        let (h, th, w) = (self.g.dr[d].def.hinge, self.g.dr[d].def.closed_dir, self.g.dr[d].def.width);
+        let (a, b) = ([h[0], h[1]], [h[0] + th.cos() * w, h[1] + th.sin() * w]);
+        let o = |p: [f64; 2], q: [f64; 2], r: [f64; 2]| (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]);
+        o(from, at, a) * o(from, at, b) <= 0.0 && o(a, b, from) * o(a, b, at) <= 0.0
+    }
+    fn eyes_take_in(&mut self, h: GuardId, m: GuardId) -> bool {
+        let c = self.g.gd[m].ch;
+        let v = game::guards::can_see_char(&mut self.g, h, c, false);
+        v.visible && game::guards::sight_gain_on(&mut self.g, h, m, v.dist) > 0.05
+    }
+    fn free_near(&self, at: [f64; 2], r: f64) -> [f64; 2] {
+        let mut best = None;
+        let mut dx = -r;
+        while dx <= r {
+            let mut dz = -r;
+            while dz <= r {
+                let q = [at[0] + dx, at[1] + dz];
+                let d = dx.hypot(dz);
+                if !game::scene_collision::nav_grid_is_blocked(&self.g, q[0], q[1]) && best.map_or(true, |(b, _)| d < b) { best = Some((d, q)); }
+                dz += 0.2;
+            }
+            dx += 0.2;
+        }
+        best.unwrap_or_else(|| panic!("no free floor within {r} m of {at:?}")).1
+    }
+    fn row_taken(&mut self, kind: game::game::InteractableKind, verb: game::game::Verb) -> bool {
+        if !game::game::game_select_verb(&mut self.g, kind, Some(verb)) { return false; }
+        self.key_down("Space");
+        self.frame();
+        self.key_up("Space");
+        true
+    }
+    fn mission_stage(&self) -> game::game::MissionStage { self.g.mission.stage }
+    fn quiet_deal(&self) -> (f64, f64, f64) { let d = &self.g.quiet.deal; (d.start, d.spot, d.patrol) }
+    fn wall_for(&mut self, gd: GuardId) -> Option<([f64; 3], [f64; 3], [f64; 3])> {
+        let (at, y, off) = (self.g.ch[self.g.gd[gd].ch].pos, self.g.k.sticky.aim_y, self.g.k.sticky.off);
+        let chest = [at[0], 1.1, at[2]];
+        for k in 0..32 {
+            let a = k as f64 * std::f64::consts::PI / 16.0;
+            let (c, d) = ([at[0], y, at[2]], [a.sin(), 0.0, a.cos()]);
+            let Some(h) = game::scene_collision::raycast(&mut self.g, c, d, 12.0) else { continue };
+            if h.t < 2.2 || h.n[1].abs() > 0.3 || -(h.n[0] * d[0] + h.n[2] * d[2]) < 0.5 { continue; }
+            let p = [c[0] + d[0] * h.t, c[1], c[2] + d[2] * h.t];
+            let out = |k: f64| [p[0] + h.n[0] * k, p[1] + h.n[1] * k, p[2] + h.n[2] * k];
+            if game::scene_collision::segment_blocked(&mut self.g, out(1.3), out(0.05), None, None, None) || game::scene_collision::segment_blocked(&mut self.g, out(off), chest, None, None, None) { continue; }
+            return Some((p, h.n, out(1.3)));
+        }
+        None
+    }
+    fn camera_sent(&mut self, from: [f64; 3], to: [f64; 3]) -> bool {
+        let pl = self.g.player;
+        let c = game::stickycam::fire_cam(&mut self.g, pl, from, to);
+        for _ in 0..180 { if self.g.tab.stickycam_sticky_cam[c].vel.is_none() { break; } self.frame(); }
+        self.g.tab.stickycam_sticky_cam[c].vel.is_none() && self.g.tab.stickycam_sticky_cam[c].si >= 0.0
+    }
+    fn fog_eyes(&self) -> usize { self.g.fog_of_war.eyes.len() }
+    fn fog_saw(&self, gd: GuardId) -> bool { game::fogofwar::fog_of_war_seen(&self.g, gd) }
+    fn in_newest_wedge(&self, at: [f64; 3]) -> bool { let e = *self.g.fog_of_war.eyes.last().expect("an eye"); game::fogofwar::fog_of_war_in_field(&self.g, e, at) }
+    fn cams(&self) -> (usize, f64) { let pl = &self.g.pl[self.g.player]; (pl.cams.len(), self.g.fa[pl.rifle].cams) }
+    fn lens_through(&self) -> Option<bool> { self.g.pl[self.g.player].wanding.as_ref().map(|w| w.live) }
+    fn eye_is_lens(&self) -> bool { self.g.fog_of_war.eyes.iter().any(|e| e.wand == Some(true)) }
+    fn smoke_counts(&mut self) -> game::smokebreak::SmokeBreakStats { game::smokebreak::state_of(&mut self.g).stats }
+    fn hand_from_head(&self, gd: GuardId, bone: game::character::Bone) -> f64 {
+        let (h, b) = (self.bone_at(gd, game::character::Bone::Head), self.bone_at(gd, bone));
+        ((h[0] - b[0]).powi(2) + (h[1] - b[1]).powi(2) + (h[2] - b[2]).powi(2)).sqrt()
+    }
+    fn bone_at(&self, gd: GuardId, bone: game::character::Bone) -> [f64; 3] { *self.g.ch[self.g.gd[gd].ch].bones.get(bone).expect("the bone") }
+    fn holds_round(&mut self, m: GuardId, h: GuardId) -> bool { game::spotted::spotted_holds_round(&mut self.g, m, h) }
+    fn leaf(&self, name: &str) -> (bool, f64, f64) {
+        let d = game::doors::doors_by_name(&self.g, name).unwrap_or_else(|| panic!("no door '{name}'"));
+        (game::fogofwar::fog_of_war_door_held(&self.g, d), game::doors::door_angle(&self.g, d), game::fogofwar::fog_of_war_door_shown(&self.g, d))
+    }
+    fn door_names(&self) -> Vec<String> { self.g.doors.list.iter().map(|&d| self.g.dr[d].def.name.clone()).collect() }
+    fn throws_the_breaker(&mut self) {
+        let seat = game::seats::here(&self.g);
+        let th = game::workthings::work_things_things(&self.g, &seat).into_iter().find(|x| x.kind == game::workthings::WorkThingKind::Breaker).expect("a breaker to work");
+        let at = th.stand.expect("a place to stand at it");
+        let t = game::orders::OrderTarget::Floor(game::orders::OrderTargetFloor { at, wall: None, thing: Some(th), serial: 0 });
+        if let Some(why) = game::orders::squad_orders_give(&mut self.g, "work", Some(&t), Some(game::orders::Who::All), None) { panic!("the order was refused: {why}"); }
+    }
+    fn mains_out(&self) -> bool { game::sim_lightshome::mains_active(&self.g) }
+    fn sent_to_the_breaker(&self) -> Option<GuardId> { self.g.guards.iter().copied().find(|&m| matches!(self.g.gd[m].task, Some(game::game::GuardTask::Arm0(game::game::GuardTaskArm0 { kind: game::game::GuardTaskArm0Kind::Breaker, .. })))) }
+    fn errand_at(&self, gd: GuardId) -> [f64; 3] { match &self.g.gd[gd].task { Some(game::game::GuardTask::Arm0(k)) => k.pos, _ => panic!("no errand") } }
+    fn walks_to_a_sound(&mut self, gd: GuardId, spot: [f64; 3]) {
+        let floor = self.g.k.whistle.walk_floor;
+        let (at, h) = (self.at(gd), &mut self.g.gd[gd]);
+        if h.state == game::game::GuardState::Dead { return; }
+        h.task = None;
+        h.state = game::game::GuardState::Suspicious;
+        h.last_known = Some(spot);
+        h.awareness = if (at[0] - spot[0]).hypot(at[1] - spot[2]) > 1.2 { floor } else { h.awareness.min(floor) };
+    }
+    fn sam_goes_to_step(&mut self, at: [f64; 2]) -> bool {
+        let keys = ["KeyW", "KeyS", "KeyA", "KeyD"];
+        let (me, b) = (self.sam_at(), game::camera::follow_camera_planar_basis(&self.g, self.host.cam));
+        let (dx, dz) = (at[0] - me[0], at[1] - me[1]);
+        let d = dx.hypot(dz);
+        if d < 0.3 { for k in keys { self.key_up(k); } return false; }
+        let (a, r) = ((dx * b.fwd[0] + dz * b.fwd[2]) / d, (dx * b.right[0] + dz * b.right[2]) / d);
+        for (k, on) in keys.iter().zip([a > 0.38, a < -0.38, r < -0.38, r > 0.38]) { if on { self.key_down(k); } else { self.key_up(k); } }
+        self.frame();
+        true
+    }
+    fn follower_on_walk(&mut self, b: GuardId, man: GuardId, to_a_sound: bool) -> bool {
+        if to_a_sound { game::sneak::sneak_coming(&mut self.g, b, man) } else { game::workthings::work_coming(&mut self.g, b, man) }
+    }
+    fn pair_silent(&mut self) {
+        self.g.k.silent.on = true;
+        self.g.k.sneak.on = true;
+        game::silent::set_silent(&mut self.g, true, None);
+    }
 }
