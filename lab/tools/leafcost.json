@@ -1,0 +1,9 @@
+[
+ {"name": "base", "dist": 24, "hour": 14.0, "look": [8, 4, 1.5], "pitch": 0.7, "w": 480, "h": 270, "samples": 300, "tick": 600},
+ {"name": "nosheen", "dist": 24, "hour": 14.0, "look": [8, 4, 1.5], "pitch": 0.7, "w": 480, "h": 270, "samples": 300, "tick": 600, "method": "nosheen"},
+ {"name": "nofloor", "dist": 24, "hour": 14.0, "look": [8, 4, 1.5], "pitch": 0.7, "w": 480, "h": 270, "samples": 300, "tick": 600, "method": "nofloor"},
+ {"name": "nobounce", "dist": 24, "hour": 14.0, "look": [8, 4, 1.5], "pitch": 0.7, "w": 480, "h": 270, "samples": 300, "tick": 600, "tune": {"bounce": 0}},
+ {"name": "dense15", "dist": 24, "hour": 14.0, "look": [8, 4, 1.5], "pitch": 0.7, "w": 480, "h": 270, "samples": 300, "tick": 600, "dense": 1.5},
+ {"name": "dense2", "dist": 24, "hour": 14.0, "look": [8, 4, 1.5], "pitch": 0.7, "w": 480, "h": 270, "samples": 300, "tick": 600, "dense": 2.2},
+ {"name": "half", "dist": 24, "hour": 14.0, "look": [8, 4, 1.5], "pitch": 0.7, "w": 480, "h": 270, "samples": 300, "tick": 600, "tune": {"bounce": 0.6}}
+]

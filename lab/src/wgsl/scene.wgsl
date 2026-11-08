@@ -16,7 +16,7 @@ struct Frame {
   pool: vec4f,         // the water: x0 z0 x1 z1
   pool2: vec4f,        // its level, its depth
   weather: vec4f,      // how wet the open ground is, how hard it rains, steam, the wind's way (rad)
-  misc2: vec4f,        // is there smoke, where the blue noise starts in extra
+  misc2: vec4f,        // is there smoke, where the blue noise starts in extra, how dense foliage is to rays that see it as fog (1)
   tune: array<vec4f, 6>,  // what can be turned while looking (tune.ts)
 };
 struct Piece { r0: vec4f, r1: vec4f, r2: vec4f, half: vec3f, flags: u32, quad: vec4f, mat: u32, tint: u32, planes: u32, lamp: u32 };
@@ -164,7 +164,7 @@ fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) ->
         let k = lf >> 4u; let I = &insts[k]; let lc = select(cut, 1e9, ((*I).tint & 0x1000000u) != 0u && cut > OPEN_FLOOR);      // (what grows out of doors the section leaves whole)
         let o = vec3f(dot((*I).r0.xyz, ro) + (*I).r0.w, dot((*I).r1.xyz, ro) + (*I).r1.w, dot((*I).r2.xyz, ro) + (*I).r2.w);
         let d = vec3f(dot((*I).r0.xyz, rd), dot((*I).r1.xyz, rd), dot((*I).r2.xyz, rd));      // (scaled: t is the world's)
-        if (!fineLeaves) { let tuft = ((*I).tint & 0x2000000u) != 0u; let sigma = f32((*I).tint >> 26u) / 16.0; let bd = select(d, d / 0.85, tuft); let st = ballStay(select(o, (o - vec3f(0.0, 0.8, 0.0)) / 0.85, tuft), bd, tmin, best); let t = st.x - log(1.0 - rnd()) / (sigma * length(bd)); if (st.y > st.x && t < st.y && ro.y + rd.y * t < lc) { best = t; id = LEAF_HIT | k; code = NOTHING; } i++; continue; }
+        if (!fineLeaves) { let tuft = ((*I).tint & 0x2000000u) != 0u; let sigma = f32((*I).tint >> 26u) / 16.0 * frame.misc2.z; let bd = select(d, d / 0.85, tuft); let st = ballStay(select(o, (o - vec3f(0.0, 0.8, 0.0)) / 0.85, tuft), bd, tmin, best); let t = st.x - log(1.0 - rnd()) / (sigma * length(bd)); if (st.y > st.x && t < st.y && ro.y + rd.y * t < lc) { best = t; id = LEAF_HIT | k; code = NOTHING; } i++; continue; }
         let inv2 = safeInv(d); let q0 = (*I).node + octant(d) * (*I).per; var q = 0u; let qn = (*I).per;
         while (q < qn) {
           walked += 1u; let m = &nodes[q0 + q];
@@ -210,7 +210,7 @@ fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f {
         let k = lf >> 4u; let I = &insts[k];
         let o = vec3f(dot((*I).r0.xyz, ro) + (*I).r0.w, dot((*I).r1.xyz, ro) + (*I).r1.w, dot((*I).r2.xyz, ro) + (*I).r2.w);
         let d = vec3f(dot((*I).r0.xyz, rd), dot((*I).r1.xyz, rd), dot((*I).r2.xyz, rd));
-        if (!fineLeaves) { let tuft = ((*I).tint & 0x2000000u) != 0u; let sigma = f32((*I).tint >> 26u) / 16.0; let bd = select(d, d / 0.85, tuft); let st = ballStay(select(o, (o - vec3f(0.0, 0.8, 0.0)) / 0.85, tuft), bd, tmin, tmax); if (st.y > st.x) { T *= exp(-vec3f(1.0, 0.86, 1.1) * sigma * (st.y - st.x) * length(bd)); if (T.y < 0.02) { return vec3f(0.0); } } i++; continue; }
+        if (!fineLeaves) { let tuft = ((*I).tint & 0x2000000u) != 0u; let sigma = f32((*I).tint >> 26u) / 16.0 * frame.misc2.z; let bd = select(d, d / 0.85, tuft); let st = ballStay(select(o, (o - vec3f(0.0, 0.8, 0.0)) / 0.85, tuft), bd, tmin, tmax); if (st.y > st.x) { T *= exp(-vec3f(1.0, 0.86, 1.1) * sigma * (st.y - st.x) * length(bd)); if (T.y < 0.02) { return vec3f(0.0); } } i++; continue; }
         let inv2 = safeInv(d); let q0 = (*I).node + octant(d) * (*I).per; var q = 0u; let qn = (*I).per;
         while (q < qn) {
           walked += 1u; let m = &nodes[q0 + q];
