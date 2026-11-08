@@ -157,7 +157,7 @@ export interface Box {
   shaped?: boolean;
   /** this static is a PIECE of a shape (BoxShape.with): added after the level's own boxes by shapeLevel, taken away by it; never in a level file's list.
    *  TRIM: drawn and nothing else (it stands NoShadow, so no ray, eye or body meets it); `of` = the number of the box that says it, which it follows out of
-   *  the picture (shapes.ts withPieces) */
+   *  the picture */
   piece?: boolean;
   of?: number;
   /** DRESSING (CPU only): drawn and lit like any box, and PICTURE ONLY for the CPU's world ray, exactly as a look piece is (BoxWorld.raycast) — a cursor, an

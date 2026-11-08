@@ -64,7 +64,7 @@ const PLACES = { areas: [
   { name: 'front track', bounds: { x0: 0, x1: 8.12, z0: 0, z1: 28 } }, { name: 'back track', bounds: { x0: 31.88, x1: 40, z0: 0, z1: 28 } },
 ] };
 
-/** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): a bespoke set on the yard's west gate
+/** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): a bespoke set on the yard's west gate
  *  (train-ground-kitview.ts). In the level the generator and the breaker stand in a walled shed south of the gate, where the picture cannot see in. So: a lean-to
  *  of the shed's block against the yard wall, open to the gate, with the generator, the breaker on its back wall and the fuel out of the cage. The generator, the breaker's
  *  paint and the drums are this level's own boxes as exported (levels/lights-out.json), moved; the ids are the set's (lo_). */

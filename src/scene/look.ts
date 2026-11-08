@@ -16,14 +16,11 @@ export const LOOK = {
   suit: true,
 };
 
-/** THE SUIT FOR A PICTURE: a host that stages men for a picture and not for play (the Team & kit picture stands a quiet mission's team at a way in staged as a room
- *  clear — host/kitView.ts — while the card says the suit as issued) says which mission the men are DRESSED for, whatever is staged: 'quiet' = Sam and the staged
- *  team in the suit, null = no mission (Sam alone in it, as on the plain night). Undefined — as it is everywhere unless a host says otherwise — = the scenario that
- *  is up decides, as ever (game/cast.ts sneakSuit reads this first). Not a knob and in no table: one window's host says it for its own picture. Under LOOK.on and
- *  LOOK.suit like the suit itself; the rifle's black furniture follows the suit (combat.ts), where the rifle hangs does not (kitanim.ts KIT.sling). Looks only. */
+/** WHICH MISSION THE MEN ARE DRESSED FOR, where it is not the scenario that is up: the Rust game's `scene_look.suit_asked` (a picture staged as a room clear for a quiet mission, rust/game_start/src/kit_stage.rs
+ *  dress), carried to this name by the state bridge as any module's word is (tools/blitz/schema.json). 'quiet' = Sam and the staged team in the suit, null = no mission (Sam alone in it), undefined = the scenario
+ *  decides (game/cast.ts sneakSuit reads this first). Nothing on this page writes it. Looks only. */
 let suitAsked: 'quiet' | null | undefined;
-export function setSuitAs(k: 'quiet' | null | undefined) { suitAsked = k; }
-/** the mission a host asked the men to be dressed for (undefined: none asked — the game's own scenario decides) */
+/** the mission asked for (undefined: none asked — the game's own scenario decides) */
 export function suitAs(): 'quiet' | null | undefined { return suitAsked; }
 
 /** THE MEN'S DRESS FOLLOWS THE PLACE (the maintainer, 10-10: "middle eastern enemies also don't make sense for the office level"): the look's cast and colour

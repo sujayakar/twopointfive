@@ -67,8 +67,7 @@ const hasNvg = new SideMap<CastVariant, boolean>('cast.hasNvg'); hasNvg.asMemo()
  *  drawn in it THIS frame — under the default look, on a mission that is not a squad's loud one (a quiet mission; the plain night, its showcase with it), Sam, and on a
  *  quiet mission as two his partner (a pair in two dresses read as two sides from above). Asked every frame, so a mission started or quit on a running page re-dresses
  *  him. What it is: his own variant less the helmet and the back kit (castParts below), in the suit's own material rows (charLook.ts → render/charMaterials.ts SNEAK_SUIT).
- *  A host staging a PICTURE may say which mission the men are dressed for instead (scene/look.ts setSuitAs: the Team & kit picture of a quiet mission, staged as a
- *  room clear); nothing in play says it. Looks only, like everything in this file. */
+ *  Looks only, like everything in this file. */
 export function sneakSuit(g: Game, c: Character): boolean {
   if (!LOOK.on || !LOOK.suit) return false;
   const asked = suitAs(), k = asked !== undefined ? asked : activeScenario(g); if (k && k !== 'quiet') return false;   // (a squad's loud mission — and any kind added later, until it says otherwise: the issue dress, helmet and plates)
