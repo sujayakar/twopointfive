@@ -28,7 +28,7 @@ export class Lab {
   private prev: ReturnType<Camera['frame']> | null = null; prevAt = new Map<Piece, { at: V3; rot: Piece['rot'] }>(); slots = new Map<Piece, number>(); jitter: [number, number] = [0, 0]; private prevJitter: [number, number] = [0, 0];
   methods = new Map<string, { m: Method; stages: Stage[] }>(); current = ''; doorsAuto = false; torch: { on: boolean; at: V3; dir: V3 } | null = null; jittered = true; haze = 1; rain = 0; rainNow = 0; wet = 0; steam = 1; lampGroup: Record<string, number> = {}; dense = 1; readonly tune = defaults(); readonly smoke = new Smoke(this); readonly lampOff = new Set<number>();
   async open(canvas: HTMLCanvasElement | null) {
-    this.gpu = await openGpu(canvas); this.building = makeBuilding(); this.near = new Near(this.building.world.pieces); this.leaves = this.building.doors.flatMap(d => d.leaf); this.sky = new Sky(this.gpu); await this.sky.init();
+    this.gpu = await openGpu(canvas); this.building = makeBuilding(); for (let i = 0; i < 3; i++) this.building.world.lamps.push({ kind: 'sphere', at: [0, -60, 0], u: [0.2, 0, 0], v: [0, 0, 0], radiance: [520, 205, 48], name: 'fire', on: 0 }); this.near = new Near(this.building.world.pieces); this.leaves = this.building.doors.flatMap(d => d.leaf); this.sky = new Sky(this.gpu); await this.sky.init();
     this.water = new Water(this.gpu); await this.water.init(); this.scene = new SceneGpu(this.gpu, this.building.world, this.sky.tex, this.water.tex);
     this.graph = new Graph(this.gpu, () => math + '\n' + sceneCode + '\n' + wavesCode + '\n' + lampMapCode + joinCode + '\n' + surfaceCode + '\n', { layout: this.scene.layout, group: this.scene.group });
     this.pose(); for (const p of this.building.world.moving) this.prevAt.set(p, { at: p.at, rot: p.rot });
@@ -67,7 +67,7 @@ export class Lab {
   pose() {
     const b = this.building, t = this.tick * TICK, on = this.scene?.lampOn; for (const d of b.doors) poseDoor(d);
     const h = hourOf(this.hour, 0.85, this.rainNow), dark = this.lampsMode === 'on' ? 1 : this.lampsMode === 'off' ? 0 : h.night, inside = this.lampsMode === 'auto' ? Math.max(dark, 0.45) : dark; this.hourNow = h;
-    b.world.lamps.forEach((l, i) => { if (on && l.kind !== 'spot') on[i] = l.on * (l.name === 'terrace' || l.name === 'pool' ? dark : l.name === 'blue' ? Math.max(inside, 0.9) : inside) * (this.lampGroup[l.name] ?? 1) * (this.lampOff.has(i) ? 0 : 1); });
+    b.world.lamps.forEach((l, i) => { if (on && l.kind !== 'spot' && l.name !== 'fire') on[i] = l.on * (l.name === 'terrace' || l.name === 'pool' ? dark : l.name === 'blue' ? Math.max(inside, 0.9) : inside) * (this.lampGroup[l.name] ?? 1) * (this.lampOff.has(i) ? 0 : 1); });
     for (const p of b.people) if (p.torch >= 0) { const l = b.world.lamps[p.torch]!; const chest: V3 = [p.pos[0], p.pos[1] + 1.25, p.pos[2]], to: V3 = [p.torchAt[0] - chest[0], p.torchAt[1] - chest[1], p.torchAt[2] - chest[2]], len = Math.hypot(...to) || 1, dir: V3 = [to[0] / len, to[1] / len, to[2] / len], r = this.near.reach(chest, dir, len + 0.06, this.leaves) - 0.06; l.at = r < len ? [chest[0] + dir[0] * r, chest[1] + dir[1] * r, chest[2] + dir[2] * r] : p.torchAt; l.v = p.torchDir; if (on) on[p.torch] = h.night > 0.5 && !this.lampOff.has(p.torch) ? 1 : 0; } void t;
   }
   /** the frame's numbers to the GPU */
@@ -84,7 +84,7 @@ export class Lab {
   /** draw one frame with the current method; `then` may add its own passes (the canvas) */
   draw(then?: (e: GPUCommandEncoder, result: GPUTexture) => void) {
     const { m, stages } = this.methods.get(this.current)!; if (this.jittered) { const n = (this.frameNo % 16) + 1, hal = (i: number, b: number) => { let r = 0, k = 1 / b; while (i > 0) { r += (i % b) * k; i = Math.floor(i / b); k /= b; } return r; }; this.jitter = [hal(n, 2) - 0.5, hal(n, 3) - 0.5]; } else this.jitter = [0, 0];
-    const t0 = performance.now(); this.between(); this.send(); m.frame?.(this); this.sendMs = performance.now() - t0; const e = this.gpu.device.createCommandEncoder(); this.graph.timer.begin(); this.water.run(e, this.time, this.hourNow.sun, this.building.poolDeep); this.graph.run(e, stages); then?.(e, this.graph.texture(m.result)); const done = this.graph.timer.end(e);
+    const t0 = performance.now(); this.between(); this.smoke.flames(this.time); this.send(); m.frame?.(this); this.sendMs = performance.now() - t0; const e = this.gpu.device.createCommandEncoder(); this.graph.timer.begin(); this.water.run(e, this.time, this.hourNow.sun, this.building.poolDeep); this.graph.run(e, stages); then?.(e, this.graph.texture(m.result)); const done = this.graph.timer.end(e);
     this.gpu.device.queue.submit([e.finish()]); done?.(); this.graph.flip(); this.frameNo++; for (const p of this.building.world.moving) this.prevAt.set(p, { at: p.at, rot: p.rot });
   }
   buffer(name: string, bytes: number, usage = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC) { let b = this.graph.buffers.get(name); if (!b || b.size < bytes) { b = buffer(this.gpu, name, bytes, usage); this.graph.buffers.set(name, b); } return b; }

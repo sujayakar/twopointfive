@@ -237,7 +237,7 @@ fn smokeSpan(ro: vec3f, rd: vec3f, t1: f32) -> vec2f { let inv = safeInv(rd); le
 /** what a ray that is blurred anyway sees of it on its way to t1: light, and how much gets through. Six looks */
 fn smokeSeen(ro: vec3f, rd: vec3f, t1: f32) -> vec4f {
   if (frame.misc2.x < 0.5) { return vec4f(0.0, 0.0, 0.0, 1.0); } let s = smokeSpan(ro, rd, t1); if (s.y <= s.x) { return vec4f(0.0, 0.0, 0.0, 1.0); } let dt = (s.y - s.x) / 6.0; var T = 1.0; var L = vec3f(0.0);
-  for (var i = 0u; i < 6u; i++) { let x = ro + rd * (s.x + dt * (f32(i) + 0.5)); let p = smokeSlot(x); if (p == 0u) { continue; } let v = smokeIn(p, x); let e = exp(-v.w * dt); L += v.rgb * (T * (1.0 - e)); T *= e; } return vec4f(L, T);
+  for (var i = 0u; i < 6u; i++) { let x = ro + rd * (s.x + dt * (f32(i) + 0.5)); let p = smokeSlot(x); if (p == 0u) { continue; } let v = smokeIn(p, x); let e = exp(-v.w * dt); L += select(v.rgb, vec3f(0.0), max3(v.rgb) > 24.0) * (T * (1.0 - e)); T *= e; } /* (a flame lights by its lamp: rays that are blurred see only its smoke) */ return vec4f(L, T);
 }
 fn smokeThrough(ro: vec3f, rd: vec3f, t1: f32) -> f32 {
   if (frame.misc2.x < 0.5) { return 1.0; } let s = smokeSpan(ro, rd, t1); if (s.y <= s.x) { return 1.0; } let dt = (s.y - s.x) / 8.0; var a = 0.0; for (var i = 0u; i < 8u; i++) { let x = ro + rd * (s.x + dt * (f32(i) + 0.5)); let p = smokeSlot(x); if (p != 0u) { a += smokeIn(p, x).w; } } return exp(-a * dt);

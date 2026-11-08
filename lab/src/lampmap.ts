@@ -29,7 +29,7 @@ const grow = `
 }`;
 export async function mapLamps(lab: Lab, rays = 6144) {
   const d = lab.gpu.device, C = GPUShaderStage.COMPUTE, n = LM.cells[0] * LM.cells[1] * LM.cells[2], seen = buffer(lab.gpu, 'lamps seen', n * 8, GPUBufferUsage.STORAGE), lamps = lab.building.world.lamps.slice(0, 64);
-  const always = new Uint32Array(4); for (let i = 0; i < 64; i++) if (!lamps[i] || lamps[i]!.kind === 'spot') always[i >> 5]! |= 1 << (i & 31); const al = buffer(lab.gpu, 'always', always, GPUBufferUsage.UNIFORM);   // torches go anywhere; and lamps made later
+  const always = new Uint32Array(4); for (let i = 0; i < 64; i++) if (!lamps[i] || lamps[i]!.kind === 'spot' || lamps[i]!.name === 'fire') always[i >> 5]! |= 1 << (i & 31); const al = buffer(lab.gpu, 'always', always, GPUBufferUsage.UNIFORM);   // torches go anywhere; and lamps made later
   const l1 = d.createBindGroupLayout({ entries: [{ binding: 0, visibility: C, buffer: { type: 'storage' } }] }), l2 = d.createBindGroupLayout({ entries: [{ binding: 0, visibility: C, buffer: { type: 'read-only-storage' } }, { binding: 1, visibility: C, storageTexture: { format: 'rgba8unorm', viewDimension: '3d' } }, { binding: 2, visibility: C, buffer: { type: 'uniform' } }] });
   const pipe = (code: string, ...bindGroupLayouts: GPUBindGroupLayout[]) => d.createComputePipelineAsync({ label: 'lamp map', layout: d.createPipelineLayout({ bindGroupLayouts }), compute: { module: d.createShaderModule({ label: 'lamp map', code }), entryPoint: 'main' } });
   const [a, b] = await Promise.all([pipe(lab.graph.prelude() + mark, lab.scene.layout, l1), pipe(grow, l2)]);

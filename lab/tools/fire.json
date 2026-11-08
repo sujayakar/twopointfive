@@ -1,0 +1,113 @@
+[
+ {
+  "w": 1600,
+  "h": 900,
+  "samples": 260,
+  "run": true,
+  "method": "realtime",
+  "tick": 600,
+  "scale": 0.8,
+  "name": "f1-atrium",
+  "dist": 22,
+  "hour": 22,
+  "cut": 2.55,
+  "look": [
+   0,
+   0.8,
+   3
+  ],
+  "doors": 0.9,
+  "lamps": "off",
+  "fire": [
+   [
+    -0.5,
+    0.02,
+    3.2
+   ]
+  ]
+ },
+ {
+  "w": 1600,
+  "h": 900,
+  "samples": 260,
+  "run": true,
+  "method": "realtime",
+  "tick": 600,
+  "scale": 0.8,
+  "name": "f2-orange",
+  "dist": 24,
+  "hour": 22,
+  "cut": 2.55,
+  "look": [
+   7,
+   0.8,
+   -3.5
+  ],
+  "doors": 0.9,
+  "lamps": "off",
+  "fire": [
+   [
+    6.5,
+    0.02,
+    -5.5
+   ],
+   [
+    9.5,
+    0.02,
+    -2
+   ]
+  ]
+ },
+ {
+  "w": 1600,
+  "h": 900,
+  "samples": 260,
+  "run": true,
+  "method": "realtime",
+  "tick": 600,
+  "scale": 0.8,
+  "name": "f3-roof",
+  "dist": 26,
+  "hour": 22.5,
+  "look": [
+   -13,
+   1.5,
+   6
+  ],
+  "pitch": 0.55,
+  "fire": [
+   [
+    -15.2,
+    0.02,
+    5.2
+   ]
+  ]
+ },
+ {
+  "w": 1600,
+  "h": 900,
+  "samples": 260,
+  "run": true,
+  "method": "realtime",
+  "tick": 600,
+  "scale": 0.8,
+  "name": "f4-close",
+  "dist": 7,
+  "hour": 22,
+  "cut": 2.55,
+  "look": [
+   -0.5,
+   0.9,
+   3.2
+  ],
+  "pitch": 0.4,
+  "lamps": "off",
+  "fire": [
+   [
+    -0.5,
+    0.02,
+    3.2
+   ]
+  ]
+ }
+]

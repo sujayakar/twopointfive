@@ -64,7 +64,7 @@ const moveCode = FETCH + SHUT + perBrick(`
     for (var q = 0.0; q < n; q += 1.0) { f += st; for (var a = 0u; a < 3u; a++) { let g = select(-1, 1, f[a] > 0.0); if (abs(f[a]) > 0.5) { var t = c; t[a] += g; let j = cell(s, t); if (shut(i, a, g) || j == NONE) { f[a] = f32(g) * 0.5; } else { c = t; i = j; f[a] -= f32(g); } } } }
     var acc = vec4f(0.0); var ht = 0.0; let sg = vec3i(select(vec3f(-1.0), vec3f(1.0), f > vec3f(0.0))); let w = abs(f); var lo = 1e9; var hi = -1e9;
     for (var q = 0u; q < 8u; q++) { var t = c; var j = i; var wt = 1.0; for (var a = 0u; a < 3u; a++) { let on = ((q >> a) & 1u) == 1u; wt *= select(1.0 - w[a], w[a], on); if (on && j != NONE) { if (!shut(j, a, sg[a])) { t[a] += sg[a]; j = cell(s, t); } } } if (j == NONE) { lo = min(lo, 0.0); continue; } let e = unpackV(Va[j]); lo = min(lo, e.w); hi = max(hi, e.w); acc += e * wt; ht += Q[j + FROM] * wt; }
-    Vb[i0] = packV(acc); Q[i0 + TO] = ht * exp(-dt / 2.5); R[i0] = pack2x16float(vec2f(min(lo, 60.0), clamp(hi, 0.0, 60.0))); }
+    Vb[i0] = packV(acc); Q[i0 + TO] = ht * exp(-dt * (0.4 + 0.42 * max(ht - 2.0, 0.0))); R[i0] = pack2x16float(vec2f(min(lo, 60.0), clamp(hi, 0.0, 60.0))); }
 `, 256, `const HALF = SLOTS_S * 512u;`);
 /** MacCormack: what the trip there and back again lost is given back by half, within what was found there. Keeps edges that one step would blur */
 const sharpCode = FETCH + SHUT + perBrick(`
@@ -84,8 +84,8 @@ const pushCode = FETCH + SHUT + perBrick(`
     for (var n = 0u; n < u32(smokeK2.x); n++) { let a = pushes[n * 2u]; let f = pushes[n * 2u + 1u]; let d = length((x - a.xyz) * vec3f(1.0, f.w, 1.0)) / a.w; if (d < 1.0) { v = mix(v, f.xyz, (1.0 - d * d) * (1.0 - exp(-dt * 22.0))); } }
     let rim = min(min(x.x - AT.x, AT.x + f32(PN.x) * 8.0 * H - x.x), min(x.z - AT.z, AT.z + f32(PN.z) * 8.0 * H - x.z)); e.w *= exp(-dt * 4.0 * (1.0 - smoothstep(0.3, 3.0, rim)));
     e.w *= exp(-dt * (0.013 + out * 0.14)); v *= exp(-dt * 0.2);
-    for (var n = 0u; n < u32(smokeK.w); n++) { let a = sources[n * 2u]; let f = sources[n * 2u + 1u]; let d = x - a.xyz; let r = length(d); if (r < a.w) { let q = 1.0 - r / a.w; let sp = hash33(vec3f(floor(x * 9.0)) + floor(frame.misc.x * 20.0)) - 0.5; e.w = min(e.w + f.x * q * dt, 11.0); heat = min(heat + f.y * q * dt, 2.5); v += (normalize(d + vec3f(0.0, 0.1, 0.0)) * 3.0 + sp * 7.0) * (q * dt * f.z); } }
-    v *= min(1.0, (3.4 * H / dt) / max(length(v), 1e-4)); if (e.w < 0.002) { e.w = 0.0; } Va[i] = packV(vec4f(v, e.w)); Q[i + TO] = heat; }
+    for (var n = 0u; n < u32(smokeK.w); n++) { let a = sources[n * 2u]; let f = sources[n * 2u + 1u]; let d = x - a.xyz; let r = length(d); let flame = f.x < 0.0; if (r < a.w) { let q = 1.0 - r / a.w; let sp = hash33(vec3f(floor(x * 9.0)) + floor(frame.misc.x * 20.0)) - 0.5; e.w = min(e.w + abs(f.x) * q * dt, 11.0); let lick = select(1.0, smoothstep(0.30, 0.62, vnoise(x.xz * 7.0 + frame.misc.x * 2.3) * 0.6 + vnoise(x.zx * 13.0 - frame.misc.x * 3.1) * 0.4), flame); heat = min(heat + f.y * q * lick * dt, select(2.5, 9.0, flame)); v += (normalize(d + vec3f(0.0, 0.1, 0.0)) * 3.0 + sp * 7.0) * (q * dt * f.z); } }
+    v *= min(1.0, (3.4 * H / dt) / max(length(v), 1e-4)); e.w += dt * 0.5 * clamp(heat - 1.2, 0.0, 2.2) * step(1.2, heat); if (e.w < 0.002) { e.w = 0.0; } Va[i] = packV(vec4f(v, e.w)); Q[i + TO] = heat; }
 `, 256, `const HALF = SLOTS_S * 512u;
 fn vel(s: u32, c: vec3i) -> vec3f { let i = cell(s, c); if (i == NONE) { return vec3f(0.0); } return unpackV(Vb[i]).xyz; }
 fn curl(s: u32, c: vec3i) -> vec3f { let x = vel(s, c + vec3i(1, 0, 0)) - vel(s, c - vec3i(1, 0, 0)); let y = vel(s, c + vec3i(0, 1, 0)) - vel(s, c - vec3i(0, 1, 0)); let z = vel(s, c + vec3i(0, 0, 1)) - vel(s, c - vec3i(0, 0, 1)); return vec3f(y.z - z.y, z.x - x.z, x.y - y.x) / (2.0 * H); }`);
@@ -117,11 +117,13 @@ const lightCode = FETCH + perBrick(`
   if (h.piece == 0xffffffffu) { B = skyLod(d, 5.0); } else { let q = surfaceMean(x, d, h); let leaf = (h.piece & LEAF_HIT) != 0u; let own = !leaf && (pieces[h.piece].lamp & 255u) != 255u; B = select(q.glow, vec3f(0.0), own) + sentBack(q, leaf, rnd2(), d); }
   L += min(B * h.thru * sm.a + sm.rgb, vec3f(40.0)); let m = min(was.w + 1.0, mix(4.0, 24.0, steady(x))); G[gi] = packV(vec4f(mix(was.rgb, min(L, vec3f(200.0)), 1.0 / m), m));
 `, 64);
-const publishCode = FETCH + perBrick(`
+const publishCode = FETCH + `const HALF = SLOTS_S * 512u;` + perBrick(`
   if (!live) { return; } let blk = vec3i(i32(s & 15u), i32((s >> 4u) & 15u), i32(s >> 8u)) * 10;
   for (var k = li; k < 1000u; k += 256u) { let t = vec3i(i32(k % 10u), i32((k / 10u) % 10u), i32(k / 100u)); let c = t - 1; let q = clamp(c, vec3i(0), vec3i(7)); let o = c - q; let i = s * 512u + local(q); var d = 0.0; var open = true; for (var a = 0u; a < 3u; a++) { if (o[a] != 0 && ((W[i] >> (6u + a + select(0u, 3u, o[a] < 0))) & 1u) != 0u) { open = false; } } if (open) { let j = cell(s, c); if (j != NONE) { d = unpackV(Vb[j]).w; } }
     let p = clamp((vec3f(c) + 0.5) * 0.5 - 0.5, vec3f(0.0), vec3f(2.999)); let g0 = vec3i(p); let f = p - vec3f(g0); var L = vec3f(0.0); var ws = 0.0; for (var n = 0u; n < 8u; n++) { let m = vec3i(i32(n & 1u), i32((n >> 1u) & 1u), i32(n >> 2u)); let g = g0 + m; let e = unpackV(G[s * 64u + u32(g.x + 4 * (g.y + 4 * g.z))]); if (e.w <= 0.0) { continue; } let w = select(1.0 - f.x, f.x, m.x == 1) * select(1.0 - f.y, f.y, m.y == 1) * select(1.0 - f.z, f.z, m.z == 1) + 1e-3; L += e.rgb * w; ws += w; }
-    textureStore(atlas, blk + t, vec4f(L / max(ws, 1e-3), d)); }
+    // hot gas glows: what it gives off and what it scatters, by how much there is of each
+    var out = vec4f(L / max(ws, 1e-3), d); if (open) { let j = cell(s, c); if (j != NONE) { let h = Q[j + select(0u, HALF, smokeK.z > 0.5)]; if (h > 1.1) { let g = smoothstep(1.1, 4.5, h); let soot = 3.4 * g; let glow = mix(mix(vec3f(0.55, 0.045, 0.004), vec3f(1.0, 0.30, 0.035), smoothstep(0.1, 0.55, g)), vec3f(1.0, 0.62, 0.20), smoothstep(0.6, 1.0, g)) * (90.0 * g * g); out = vec4f((out.rgb * d + glow * soot) / (d + soot), d + soot); } } }
+    textureStore(atlas, blk + t, out); }
 `);
 const pageCode = `@compute @workgroup_size(64) fn main(@builtin(global_invocation_id) id: vec3u) { let i = id.x; if (i >= PAGES) { return; } var p = M[M_PAGE + i]; if (p == NONE) { p = 0u; } if (p != 0u) { if (bitcast<f32>(M[M_DENSE + p - 1u]) < 0.002) { p = 0u; } } textureStore(page, brickOf(i), vec4u(p)); }`;
 export class Smoke {
@@ -129,7 +131,12 @@ export class Smoke {
   constructor(private lab: Lab) {}
   /** a canister where it lies: it burns for `last` seconds */
   drop(at: V3, last = 14, rate = 1) { this.on = true; this.sources.push({ at: [at[0], Math.max(at[1], 0.05) + 0.14, at[2]], born: this.lab.tick, last, rate }); if (this.sources.length > 10) this.sources.shift(); }
-  clear() { this.sources = []; this.fresh = true; }
+  clear() { this.sources = []; this.fires = []; this.fresh = true; }
+  /** fires: each feeds the bricks hot gas and lights the room by a lamp that moves as it flickers */
+  fires: { at: V3; size: number }[] = [];
+  light(at: V3, size = 1) { this.on = true; this.fires.push({ at: [...at], size }); if (this.fires.length > 3) this.fires.shift(); }
+  /** its lamps, at a time (the same time, the same flicker) */
+  flames(t: number) { const lamps = this.lab.building.world.lamps; let k = 0; lamps.forEach((l, i) => { if (l.name !== 'fire') return; const f = this.fires[k]; k++; if (!f) { l.on = 0; this.lab.scene.lampOn[i] = 0; return; } const n = (a: number, b: number) => Math.sin(t * a + b) * 0.5 + Math.sin(t * a * 2.37 + b * 1.7) * 0.3 + Math.sin(t * a * 5.1 + b * 2.9) * 0.2, q = f.size * (0.82 + 0.18 * n(7.3, i) + 0.10 * n(17.0, i * 2)); l.at = [f.at[0] + 0.07 * n(5.1, i + 1), f.at[1] + 0.45 + 0.12 * n(6.3, i + 2), f.at[2] + 0.07 * n(4.7, i + 3)]; l.on = 1; this.lab.scene.lampOn[i] = Math.max(0.1, q); }); }
   get burning() { return this.sources.some(q => this.lab.tick - q.born < q.last * 60 + 1200); }
   frame() {
     const lab = this.lab, steam = lab.steam > 0 ? lab.building.world.plumes : []; if (steam.length) this.on = true; if (!this.on) { this.dt = 0; return; } const d = Math.max(0, Math.min(3, lab.tick - this.lastTick)); this.dt = this.lastTick < 0 ? 1 / 60 : d / 60; this.lastTick = lab.tick; if (this.dt <= 0 && !this.fresh) return; this.steps++; this.flip ^= 1;
@@ -138,13 +145,14 @@ export class Smoke {
     const key = lab.building.doors.map(x => x.open.toFixed(3)).join(); this.faceNow = key !== this.doorKey; this.doorKey = key; void this.faceNow;
     const boxes = lab.building.doors.map(x => x.leaf[0]!), f = new Float32Array(16 * 16); boxes.slice(0, 16).forEach((p, i) => { for (let k = 0; k < 3; k++) { const r = p.rot[k]!; f.set([r[0], r[1], r[2], -(r[0] * p.at[0] + r[1] * p.at[1] + r[2] * p.at[2])], i * 16 + k * 4); } f.set(p.half, i * 16 + 12); }); lab.uniform('smokeDoors', f);
     const s = new Float32Array(16 * 8); let n = 0; for (const q of this.sources) { const age = (lab.tick - q.born) / 60; if (age > q.last || n >= 10) continue; const k = Math.min(1, age / 0.5) * Math.min(1, (q.last - age) / 2); s.set([...q.at, 0.34, 300 * q.rate * k, 1.1 * k, 1.0 * k, 95 * q.rate * k], n++ * 8); }
+    for (const q of this.fires) { if (n >= 13) break; s.set([q.at[0], q.at[1] + 0.12, q.at[2], 0.30 * q.size, -0.3, 60, 0.5, 2.0], n++ * 8); }
     for (const p of steam) { if (n >= 16) break; const k = 0.75 + 0.25 * Math.sin(lab.tick * 0.11 + p.at[0]) * Math.sin(lab.tick * 0.043 + p.at[2]); s.set([p.at[0], p.at[1], p.at[2], p.r, 7 * p.k * k, 5.0, 0.35, 3 * k], n++ * 8); } lab.uniform('smokeSources', s);
-    const ps = new Float32Array(128); let m = 0; for (const q of lab.building.people) for (const [h, rad] of [[0.45, 0.42], [1.25, 0.45]] as const) if (m < 14) ps.set([q.pos[0], q.pos[1] + h, q.pos[2], rad, q.vel[0] * 1.15, 0, q.vel[2] * 1.15, 0.8], m++ * 8); for (const d of lab.building.doors) { const l = d.leaf[0]!, w = lab.prevAt.get(l); if (!w || m >= 16) continue; const v = [0, 1, 2].map(k => (l.at[k]! - w.at[k]!) / this.dt); if (Math.hypot(...v) > 0.05) ps.set([...l.at, 0.75, v[0]!, 0, v[2]!, 0.5], m++ * 8); } lab.uniform('smokePushes', ps); lab.uniform('smokeK2', new Float32Array([m, 0, 0, 0]));
+    const ps = new Float32Array(128); let m = 0; for (const q of lab.building.people) for (const [h, rad] of [[0.45, 0.42], [1.25, 0.45]] as const) if (m < 14) ps.set([q.pos[0], q.pos[1] + h, q.pos[2], rad, q.vel[0] * 1.15, 0, q.vel[2] * 1.15, 0.8], m++ * 8); for (const d of lab.building.doors) { const l = d.leaf[0]!, w = lab.prevAt.get(l); if (!w || m >= 16) continue; const v = [0, 1, 2].map(k => (l.at[k]! - w.at[k]!) / this.dt); if (Math.hypot(...v) > 0.05) ps.set([...l.at, 0.75, v[0]!, 0, v[2]!, 0.5], m++ * 8); } lab.uniform('smokePushes', ps); lab.uniform('smokeK2', new Float32Array([m, 0, 0, 0])); lab.uniform('smokeK3', new Float32Array([0, 0, this.flip === 0 ? 1 : 0, 0]));
     lab.uniform('smokeK', new Float32Array([this.dt, this.steps, boxes.length, n]));
   }
   stages(g: Graph, cacheBind: NonNullable<Stage['buffers']>, cacheLib: string, bounceLib: string): Stage[] {
     const lab = this.lab, B = (n: string, bytes: number) => lab.buffer(n, bytes, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST); B('smokeM', WORDS * 4); B('smokeA', CELLS * 8); B('smokeB', CELLS * 8); B('smokeQ', CELLS * 8); B('smokeP', CELLS * 8); B('smokeW', CELLS * 4); B('smokeR', CELLS * 4); B('smokeG', SMOKE.slots * 64 * 8); B('smokeD', SMOKE.slots * 4);
-    lab.uniform('smokeK', new Float32Array(4)); lab.uniform('smokeDoors', new Float32Array(256)); lab.uniform('smokeSources', new Float32Array(128)); lab.uniform('smokePushes', new Float32Array(128)); lab.uniform('smokeK2', new Float32Array(4)); lab.uniform('changes', new Float32Array(36)); g.bind('smokeAtlas', lab.scene.smokeTex); g.bind('smokePage', lab.scene.smokePage);
+    lab.uniform('smokeK', new Float32Array(4)); lab.uniform('smokeDoors', new Float32Array(256)); lab.uniform('smokeSources', new Float32Array(128)); lab.uniform('smokePushes', new Float32Array(128)); lab.uniform('smokeK2', new Float32Array(4)); lab.uniform('smokeK3', new Float32Array(4)); lab.uniform('changes', new Float32Array(36)); g.bind('smokeAtlas', lab.scene.smokeTex); g.bind('smokePage', lab.scene.smokePage);
     const go = () => this.on && this.dt > 0, K: NonNullable<Stage['buffers']> = { smokeK: ['smokeK', 'vec4f', 'uniform'], sources: ['smokeSources', 'array<vec4f, 32>', 'uniform'] }, rw = (n: string, t: string): [string, string, 'read_write'] => [n, t, 'read_write'], ro = (n: string, t: string): [string, string, 'read'] => [n, t, 'read'];
     const MA = { M: rw('smokeM', 'array<atomic<u32>>') }, MR = { M: ro('smokeM', 'array<u32>') }, MW = { M: rw('smokeM', 'array<u32>') }, V2 = 'array<vec2u>', F = 'array<f32>', U = 'array<u32>';
     const S = (name: string, code: string, buffers: NonNullable<Stage['buffers']>, over: Stage['over'] = BRICK, consts?: Record<string, number>): Stage => ({ name, over, code: head + code, buffers, when: go, ...(consts ? { consts } : {}) });
@@ -160,7 +168,7 @@ export class Smoke {
       S('smoke free', freedCode, { ...MR, W: ro('smokeW', U), Va: ro('smokeA', V2), P: ro('smokeP', F), Vb: rw('smokeB', V2), D: rw('smokeD', F) }),
       S('smoke page', doneCode, { ...MW, D: ro('smokeD', F) }, ONE),
       { ...S('smoke light', '', {}), code: signals + cacheLib + bounceLib + head + lightCode, buffers: { ...cacheBind, ...MR, Vb: ro('smokeB', V2), G: rw('smokeG', V2), changes: ['changes', 'Changes', 'uniform'] } },
-      { ...S('smoke show', publishCode, { ...MR, W: ro('smokeW', U), Vb: ro('smokeB', V2), G: ro('smokeG', V2) }), writes: { atlas: 'smokeAtlas' }, alone: true },
+      { ...S('smoke show', publishCode, { ...MR, W: ro('smokeW', U), Vb: ro('smokeB', V2), G: ro('smokeG', V2), Q: ro('smokeQ', F), smokeK: ['smokeK3', 'vec4f', 'uniform'] }), writes: { atlas: 'smokeAtlas' }, alone: true },
       { ...S('smoke show', pageCode, MR, { groups: () => [Math.ceil(PG / 64), 1, 1] }), writes: { page: 'smokePage' }, alone: true },
       { name: 'smoke keep', over: BRICK, code: '', async make() { return enc => { if (go()) enc.copyBufferToBuffer(g.buffers.get('smokeB')!, 0, g.buffers.get('smokeA')!, 0, CELLS * 8); }; } },
     ];
