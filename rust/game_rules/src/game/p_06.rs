@@ -31,6 +31,9 @@ pub fn game_step_seats(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     // (inside a tick the Game's own fields of a seat's name answer the FIRST seat's, whoever this host shows: seats.ts seatsStand)
     // (bare: no seat's view is open while the world's own lines run)
     // (the verdict's tick comes last, with the first seat still standing, so the end it latches is the same on every machine: verdict.ts tick)
+    // (the tick opens by listing the box world, on every host at the same moment: this tick's rays meet the last tick's boxes and whatever was written since, and
+    // the rows of the frames gone by are free again, after whoever showed the last frame has read it)
+    crate::scene_boxes::box_world_listed(g);
     if n == 1 { step_seats_on_first(g, dt, cmds); crate::verdict::verdict_tick(g); return; }
     crate::seats::on_first_bare(g, &mut |g| { step_seats_on_first(g, dt, cmds); crate::verdict::verdict_tick(g); });
 }
@@ -424,7 +427,7 @@ pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt:
         while i > 0 { i -= 1; out.push(g.fx[i].box_.into()); g.fx[i].ttl -= dt; if g.fx[i].ttl <= 0.0 { let gone = g.fx.remove(i); crate::scene_boxes::box_let_go(g, gone.box_); } }
     } else { for gone in core::mem::take(&mut g.fx) { crate::scene_boxes::box_let_go(g, gone.box_); } }
     // (A ROW OF `g.fx` IS THE ONLY HOLDER OF ITS BOX: the TypeScript drops the object with the row. Here the box is a row of the table, so as the fx row
-    //  goes its box joins the frame's rows, and the host's next listing frees it once it is on no list: boxes_frame_reset. Most fx rows live one frame
+    //  goes its box joins the frame's rows, and the next listing frees it once it is on no list: box_world_listed. Most fx rows live one frame
     //  (a charge's slab being placed, a stack's marker), so without this every such frame left a row for good.)
     // (game.ts:1818: his rig and a can in his fist are drawn where his drawn hands are: Box.dc / dh; the boxes themselves stay the simulation's)
     if statured { crate::stature::drawn_boxes(g, all, &out, rig0 as f64); }

@@ -3,7 +3,7 @@
 // Run by run.sh. It stands the mission up headless on THE PAGE'S STAND (no TPS_PROFILE word: tools/qa/stand.ts), plays it with tools/qa/playthrough.ts's scripted
 // player, and writes into DIR:
 //   every tick   h<k>.bin    THE HOST'S HALF as tick k opens: a record a seat, every camera and Input row (the bridge's own writer, export.ts hostHalf)
-//                host.txt    a line: dt, the probe's pending, time, the die's count, how often the host listed the box world since the last tick
+//                host.txt    a line: dt, the probe's pending, time, the die's count
 //                post.txt    after the tick, a line: `k die_n die_s time <a hash of each part of rust/sim's block, in SIM_PARTS' order>` (line 1 names the parts)
 //   tick 1       c1.bin, s0.bin (the state and the block both sides start from)
 //   --keep / --every   a<k>.bin, s<k>.bin: the whole state and the block as tick k returns, for diff.ts
@@ -226,7 +226,7 @@ function hashes(w: Uint32Array): number[] {
   LAY ??= simLayout().parts.map(p => ({ off: p.off >>> 2, len: p.len >>> 2 }));
   return LAY.map(({ off, len }) => { let n = Math.min(off + len, w.length); while (n > off && w[n - 1] === 0) n--; let h = 0x811c9dc5; for (let i = off; i < n; i++) h = Math.imul(h ^ w[i], 0x01000193); return h >>> 0; });
 }
-let k = 0, n = 0, uploads = 0, loadsSeen = 0, chargesSet = 0, chronSeen: any = null; const gives: string[] = [];
+let k = 0, n = 0, loadsSeen = 0, chargesSet = 0, chronSeen: any = null; const gives: string[] = [];
 for (const f of ['host.txt', 'gives.txt', 'hostwrites.txt', 'charges.txt', 'meter.txt', 'between.txt']) writeFileSync(`${outDir}/${f}`, '');
 // ONE ORDERED RECORD OF WHAT THE DRIVER DID BETWEEN TWO TICKS (between.txt): every order, every write and every call of a rule the scripted player made
 // before tick k, IN THE ORDER IT MADE THEM, a line each: `<k> give <a gives.txt line's rest>` · `<k> write <a hostwrites.txt line's rest>` (the lines a
@@ -263,7 +263,6 @@ const was = Game.prototype.update;
 Game.prototype.update = function (this: any, ...a: any[]) {
   if (++n < frame) return (was as any).apply(this, a);
   const g = this, step = g.stepSeats; k++;
-  if (k === 1) { const W = g.engine.world, up = W.upload; W.upload = function (this: any, ...x: any[]) { uploads++; return up.apply(this, x); }; }
   if (k === 1) tapGives(g);
   // BLITZ_CALL="<k> restart_encounter|reset_guards [start]": the rule called before tick k on BOTH sides (the runner reads the same word), to hold the
   // Rust game's restart to the TypeScript's. With `start` the Rust game does not call its own rule: it takes the TypeScript's state after the call as a
@@ -348,7 +347,7 @@ Game.prototype.update = function (this: any, ...a: any[]) {
     //  opens, tick 1's host half, the knob table; no tick is run, so this needs no TypeScript tick and no Rust module. Stand it with TPS_GAME=none)
     if (START_ONLY) { writeFileSync(`${outDir}/hostrows.txt`, hostRowsText(g));   /* (which rows of the half are the HOST's own, handed at the stand: half-grow.ts gives them to a half kept before a host had them) */ const x: any = sim(), at = x.knob_addr(0), len = x.knob_len(0) * 8; writeFileSync(`${outDir}/knobs.bin`, new Uint8Array(x.memory.buffer).slice(at, at + len)); EXIT(0); }
     row('meter.txt', meterL, `${g.player.visibility}`);   // (a mission's scripted player writes the meter before every tick too, playthrough.ts:779: the same number every tick, until a restart makes the player anew)
-    row('host.txt', hostL, `${dt} ${g.probe?.pending?.length ?? 0} ${g.time} ${g.dice?.n ?? -1} ${k === 1 ? 0 : uploads}`); uploads = 0;
+    row('host.txt', hostL, `${dt} ${g.probe?.pending?.length ?? 0} ${g.time} ${g.dice?.n ?? -1}`);
     const chron0 = g.chronicle, saves0 = chron0.counts.saves, loads0 = chron0.counts.loads;
     // (the save controller's CAPTURE asks the whistle for the player's breath, which makes its row: `<k> save_breath` where the row came with this tick's save)
     const breathOf = (globalThis as any).__tpsTop?.['src/game/whistle.ts']?.blowerOf, breath0 = !!breathOf?.has?.(g.player);
