@@ -21,4 +21,6 @@ export const EXPECTED_RED: Record<string, RedRow> = {
   'floodlit': { is: 'maybe', whose: "the senses' or the level's owner", line: "mains out: the yard 0.13 to 0.28 where under 0.2 is asked, the hall 0.27, the radio room's tube 0.94 against the moon's; wants one read of the game's own meter" },
   'depot-stage': { is: 'maybe', whose: "the senses' or the level's owner", line: "mains out: the open park 0.28 where under 0.25 is asked; wants one read of the game's own meter" },
   'checkpoint-identity': { is: 'maybe', whose: RUST, line: "save(load(s)) is the identity: a mark's radius 0.167 comes back 0.166, the digests equal" },
+  'checkpoint-turn': { is: 'maybe', whose: RUST, line: "a file loaded into a fresh game: one calm guard's torch comes on for about three seconds (off in the game that went on); places and yaws agree frame for frame. No torch or its clock is in the file but torchLostAt" },
+  'furnblast-levels': { is: 'maybe', whose: RUST, line: "block.json: after a wall charge at each of eight pieces of furniture and a restart, four slats of one bench (boxes 344 to 347, the shop wall's) stay gone; every other box, prop and the nav as they were. Four other levels restore" },
 };

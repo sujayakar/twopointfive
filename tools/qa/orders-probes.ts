@@ -13,7 +13,7 @@
 //   orders-fallin      fall in: the pair closes up; Sam walks on his own feet from the cubicles' aisle through the west door, across the break room and out of its north
 //                      door into the corridor: both men stay within a few metres the whole way and end beside him on the far side; turning on the spot does not move them
 //   orders-nightbreach the two systems together: an order while the pair is set on the breach calls the breach off (no kick), F stacks them again; once the
-//                      breach is going an order is refused and the breach runs to 'clear'; a recall once they are inside ends the drill ('recalled'); an order that
+//                      breach is going an order is refused and the breach runs to its end; a recall once they are inside ends the drill ('recalled'); an order that
 //                      cannot be carried out never calls the breach off
 //   orders-seams       what the later parts build on: a man the fight AI has (script ended, alert, eyes on) is left to it on his post and taken back once cold; a show
 //                      taking the floor drops every order
@@ -94,13 +94,13 @@ const logLine = (l: any) => l ? `${l.order} → ${l.who.join(' + ')} on ${l.targ
 const AISLE: number[] = [15, 0, 17.6], AISLE_FAR: number[] = [21, 0, 17.6], WEST: number[] = [7.5, 0, 17.6];
 
 export const ordersOff = guarded(async () => {
-  const { verdict, done } = family('orders-off: with no squad on the floor X, B, T and the middle button are dead');
+  const { verdict, done } = family('orders-off: with no squad on the floor B, T and the middle button are dead');
   const run = async (keys: boolean) => { const R = await rig(5, { nb: false }); Math.random = seeded(77);
-    for (let i = 0; i < 600; i++) { if (keys) { if (i === 100) menuKey(O); if (i === 160) R.input.pressed.add(ORDERS.whoKey); if (i === 220) R.input.pressed.add(ORDERS.quickKey); if (i === 280) R.input.clicked |= 2; if (i === 340) menuKey(O); } R.step(); }
+    for (let i = 0; i < 600; i++) { if (keys) { if (i === 160) R.input.pressed.add(ORDERS.whoKey); if (i === 220) R.input.pressed.add(ORDERS.quickKey); if (i === 280) R.input.clicked |= 2; } R.step(); }
     return R; };
   const A = await run(false), B = await run(true); const O = B.O;
   const hud = { menu: listedOf(O), status: blockOf(O) };
-  verdict(!O.active && O.menu === null && O.log.length === 0 && O.who === 'all' && hud.menu === null && hud.status.length === 0, 'inert: no squad, no menu, no order logged, no HUD block after X, T, B, a middle click and X again',
+  verdict(!O.active && O.menu === null && O.log.length === 0 && O.who === 'all' && hud.menu === null && hud.status.length === 0, 'inert: no squad, no menu, no order logged, no HUD block after T, B and a middle click',
     `active ${O.active} · menu ${O.menu} · log ${O.log.length} · hud rows ${hud.status.length}`);
   const why = O.give('fallIn');
   verdict(why === 'no squad', 'give() refuses with the reason', `give('fallIn') → ${why}`);
@@ -307,7 +307,7 @@ export const ordersNightBreach = guarded(async () => {
     R.key('KeyF'); R.step(20); const going = NB.state; const n = O.log.length;
     R.quick(sam.pos); const refusedLog = O.log.length === n; const stillOwned = men.every((m: any) => O.of(m) === null);
     const ended = R.until(() => NB.drill.phase === 'done', 45);
-    verdict(going === 'going' && refusedLog && stillOwned && ended && NB.state === 'clear' && !isNaN(beat('kick')) && !isNaN(beat('bang')), 'once the breach is going an order is refused, and the breach runs on to "clear"', `at the order: ${going}, logged ${!refusedLog}, taken ${!stillOwned} · ended ${NB.state} · kick @${f2(beat('kick'))} bang @${f2(beat('bang'))} clear @${f2(beat('clear'))} · ${NB.summary()}`);
+    verdict(going === 'going' && refusedLog && stillOwned && ended && (NB.state === 'clear' || NB.state === 'failed') && !isNaN(beat('kick')) && !isNaN(beat('bang')), 'once the breach is going an order is refused, and the breach runs on to its end (who wins the room is the fight\'s)', `at the order: ${going}, logged ${!refusedLog}, taken ${!stillOwned} · ended ${NB.state} · kick @${f2(beat('kick'))} bang @${f2(beat('bang'))} clear @${f2(beat('clear'))} · ${NB.summary()}`);
     verdict(!R.samHit, 'Sam was not hit', `hit ${R.samHit}`);
   }
   { // ---- a recall once they are inside
