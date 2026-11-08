@@ -1,4 +1,4 @@
-// OTHER TAKES of voices the maintainer was not happy with, to pick between on the listening page and on a sound replay's lanes (replay/soundlanes.ts):
+// OTHER TAKES of voices the maintainer was not happy with, to pick between on the listening page and on a sound replay's lanes (tape/soundlanes.ts):
 // two more ways each of the fourteen he filed under 'toys' (10-12) could go, and one more of each of the four he flagged on the lanes (10-13: propScrape,
 // propThud, lockBreak, magDrop — those four were also redone in the game's table to his note, so the take here is a second answer to the same note).
 // NOTHING HERE IS IN THE GAME'S TABLE: buildSfx / gameSfx never ask this file, a take is rendered the first time somebody asks for it and loaded beside the

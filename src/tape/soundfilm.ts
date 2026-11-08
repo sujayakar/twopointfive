@@ -1,4 +1,4 @@
-// THE HEAR-AGAIN PICTURE. The sound lanes' "hear again" (replay/soundlanes.ts relisten) pauses the replay and plays a stretch of its recorded sounds
+// THE HEAR-AGAIN PICTURE. The sound lanes' "hear again" (tape/soundlanes.ts relisten) pauses the replay and plays a stretch of its recorded sounds
 // over and over; the game cannot step backwards, so the picture stood still while the stretch looped. This keeps a small FILMSTRIP of what was drawn
 // while the replay played — one low-res JPEG per `everyMs` of TAPE time — and shows the frame for the hear-again head's time over the game view.
 //

@@ -298,3 +298,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   level and pitch follow the fire's heat (the follow voice's `k`, ⅔ at full heat). `fireCrack` 0.3 s plays with each pop of the wood, the same pop that throws embers and kicks the light, at
   `FIRE.crack` 0.55 × how hard, its rate 0.8 to 1.3. Levelled by hand under a footstep on a hard floor (`HEARD` 0.03 and 0.075). The mixer's alone: no sound
   event is filed, nobody in the game hears a fire. Both on the listening page under 'things'. Off with `?fire=0`. Written blind: nobody has heard them.
+- **The sound lanes and the sound replays are the new page's** (2026-11-08; `src/tape/soundlanes.ts`, `soundfilm.ts`, `soundtune.ts`, where `src/replay/` is written above). The lanes are handed the
+  run being played by an interface (`LaneTape`: where it stands, its pace, play, pause, seek, and a call after each drawn frame), so a seek back costs no page load; what is heard again after one
+  replaces the marks kept. `?soundlanes` as before. THE REPLAYS (`public/assets/replays/*.tape.gz`) are tapes of hands: `tools/draw/sound-tapes.cjs` walks each on its page for the sounds it asks
+  and writes `index.json`; `--again` plays the same hands anew on this build and level first; `--add <tape | kept run> <id> <title>` makes one of any kept run; `--check`, `--cover`.
+  `tools/draw/tape-make.ts` makes the runs a kept one is not sure to hold (cans thrown, two floors by the hands-off player, the breaker thrown). The old scripts and their bot are out: four of the five
+  replays are those scripts' hands, taken off the old recordings, and the loud office is its hands as they go now (the kit's slots moved under it, so its cans and its breaker are lost there; cans and
+  the block have them). 56 of 88 sounds, where the five had 57: `powerUp` is lost. CHECKS: `tools/draw/soundlanes-page.cjs`, `soundfilm-page.cjs`. A field of the lanes lets go of the keyboard on Esc by
+  the bar's own key (`bar.ts`). Never heard by anyone, never seen on a GPU.
