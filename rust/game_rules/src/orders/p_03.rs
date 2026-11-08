@@ -453,7 +453,7 @@ pub fn squad_orders_give(g: &mut crate::game::Game, id_2: &str, t: Option<&crate
         crate::game::game_say(g, by, &said, None, None, None);
     }
     if g.orders.posture.is_some() {
-        let loud = crate::silent::loud_rows().iter().any(|r| r == id_2);
+        let loud = crate::orders::rows::id_is(id_2, crate::orders::Is::Loud);
         crate::silent::silent_tool(g, loud);
     }
     let waits = opts.map_or(false, |o| on(o.on_word)) && squad_orders_big(g, &crate::seats::here(g));

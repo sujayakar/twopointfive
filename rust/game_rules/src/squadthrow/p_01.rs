@@ -468,7 +468,7 @@ pub fn may_walk(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId
         Some(a) => {
             if g.tab.orders_assignment[a].spare == Some(true) { return false; }
             let order = g.tab.orders_assignment[a].order.as_str();
-            resumed().iter().any(|r| r == order)
+            crate::orders::rows::id_is(order, crate::orders::Is::Resumed)
         }
         None => true,
     }

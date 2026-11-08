@@ -1,11 +1,12 @@
 //! WATCH HIM: each man who sees him keeps his gun on him. The job and its state are the module `pairorders`.
 use crate::game::Game;
 use crate::ids::*;
-use crate::orders::rows::Row;
+use crate::orders::rows::{Is, Row};
 use crate::orders::*;
 use alloc::{format, string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
+    is: &[Is::Pair],
     can: Some(can),
     valid: Some(valid),
     tick: Some(tick),

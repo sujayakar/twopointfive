@@ -329,7 +329,7 @@ pub fn pair_orders_quiet_first(g: &mut Game) {
 pub fn pair_orders_seat(g: &mut Game) {
     let up = pair_orders_up(g, &crate::seats::here(g));
     if up != seated_in(g, &crate::seats::here(g)) {
-        for id in crate::pairorders::rows().iter() { crate::orders::squad_orders_unregister(g, id); }
+        for r in crate::orders::rows::ROWS.iter().filter(|r| r.is.contains(&crate::orders::Is::Pair)) { crate::orders::squad_orders_unregister(g, r.id); }
         for id in ["fallIn", "hold"] {
             let found = g.orders.defs.iter().copied().find(|x| g.tab.orders_order_def[*x].id == id);
             let d = match found { Some(d) => d, None => continue };
@@ -358,7 +358,7 @@ pub fn pair_orders_seat(g: &mut Game) {
 pub fn pair_orders_reset(g: &mut Game) {
     for gd in crate::orders::squad_orders_squad(g, &crate::seats::here(g)) {
         if let Some(a) = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) {
-            if crate::pairorders::rows().contains(&asg!(g, a).order) { pair_orders_stand(g, gd, "holding", None); }
+            if crate::orders::rows::is(g, a, crate::orders::Is::Pair) { pair_orders_stand(g, gd, "holding", None); }
         }
     }
     let seat = crate::seats::here(g);
@@ -450,7 +450,7 @@ fn pair_orders_mine(g: &mut Game) {
         let foe = g.pair.jobs.get(gd).unwrap().foe;
         let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd);
         if g.gd[gd].state == crate::game::GuardState::Dead { g.pair.jobs.delete(gd); continue; }
-        let kept = match a { Some(a) => crate::pairorders::takes().contains(&asg!(g, a).order) && asg!(g, a).foe == Some(foe), None => false };
+        let kept = match a { Some(a) => crate::orders::rows::is(g, a, crate::orders::Is::Take) && asg!(g, a).foe == Some(foe), None => false };
         if !kept {
             g.pair.jobs.delete(gd);
             g.stats.pairorders.cancelled += 1;

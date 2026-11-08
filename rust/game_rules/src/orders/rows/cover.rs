@@ -1,12 +1,13 @@
 //! COVER: "cover this door", "cover that way". Each man stays where he is and watches it.
 use crate::game::Game;
 use crate::ids::*;
-use crate::orders::rows::Row;
+use crate::orders::rows::{Is, Row};
 use crate::orders::*;
 use crate::v3::{self, V3};
 use alloc::{format, string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
+    is: &[Is::Covers, Is::Resumed, Is::KeepsLane, Is::WalksLow],
     can: Some(can),
     ..Row::new("cover", label, issue)
 };

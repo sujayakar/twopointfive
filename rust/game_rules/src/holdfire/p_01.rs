@@ -164,7 +164,7 @@ pub fn hold_fire_order(g: &mut crate::game::Game, id_2: &str, o: Option<crate::h
         lift(g, o.why.unwrap_or(LiftWhy::Order), id_2, by, Some(true));
         return;
     }
-    if !crate::holdfire::lift_orders().iter().any(|x| x == id_2) || o.waits == Some(true) || (crate::holdfire::blow_orders().iter().any(|x| x == id_2) && o.blown != Some(true)) {
+    if !crate::orders::rows::id_is(id_2, crate::orders::Is::LiftsFire) || o.waits == Some(true) || (crate::orders::rows::id_is(id_2, crate::orders::Is::Blows) && o.blown != Some(true)) {
         return;
     }
     let by = match o.by {
