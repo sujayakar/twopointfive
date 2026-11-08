@@ -7,7 +7,6 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Debug)]
 pub enum OrderLabel {
     Text { text: String },
-    Cover,
     DoorOpenClear,
     DoorBangClear,
     DoorCharge,
@@ -29,8 +28,6 @@ pub enum OrderLabel {
 /// OrderDef.can: this man can do his part (true in the TypeScript), or the word for why not. The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
 #[derive(Clone, Copy, Debug)]
 pub enum OrderCan {
-    Move,
-    Cover,
     WallRow,
     Work,
     PairTake,
@@ -60,8 +57,6 @@ pub enum OrderOnly {
 /// OrderDef.valid: these men together can carry it out here (true), or not (false, or the word for why). The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
 #[derive(Clone, Debug)]
 pub enum OrderValid {
-    Move,
-    Stack,
     DoorOpenClear,
     DoorBangClear,
     DoorCharge,
@@ -87,11 +82,6 @@ pub enum OrderValid {
 #[derive(Clone, Debug)]
 pub enum OrderIssue {
     Nothing,
-    Move,
-    Stack,
-    Cover,
-    FallIn,
-    Hold,
     DoorOpenClear,
     DoorBangClear,
     DoorCharge,
@@ -119,7 +109,6 @@ pub enum OrderIssue {
 /// OrderDef.tick: once a frame for each man under the order, before he is posed. The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
 #[derive(Clone, Copy, Debug)]
 pub enum OrderTick {
-    Move,
     ShutDoor,
     ThrowRow,
     Wand,

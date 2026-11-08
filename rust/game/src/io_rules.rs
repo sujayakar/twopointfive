@@ -30,11 +30,6 @@ pub fn deal_closures(g: &mut crate::game::Game) {
     for id in g.tab.orders_order_def.ids().collect::<Vec<_>>() {
         let d = &mut g.tab.orders_order_def[id];
         match d.id.as_str() {
-            "move" => { d.label = OrderLabel::Text { text: String::from("move there") }; d.can = Some(OrderCan::Move); d.only = None; d.valid = Some(OrderValid::Move); d.issue = OrderIssue::Move; d.tick = Some(OrderTick::Move); d.gone = None; }
-            "stack" => { d.label = OrderLabel::Text { text: String::from("stack up") }; d.can = None; d.only = None; d.valid = Some(OrderValid::Stack); d.issue = OrderIssue::Stack; d.tick = None; d.gone = None; }
-            "cover" => { d.label = OrderLabel::Cover; d.can = Some(OrderCan::Cover); d.only = None; d.valid = None; d.issue = OrderIssue::Cover; d.tick = None; d.gone = None; }
-            "fallIn" => { d.label = OrderLabel::Text { text: String::from("fall in") }; d.can = None; d.only = None; d.valid = None; d.issue = OrderIssue::FallIn; d.tick = None; d.gone = None; }
-            "hold" => { d.label = OrderLabel::Text { text: String::from("hold position") }; d.can = None; d.only = None; d.valid = None; d.issue = OrderIssue::Hold; d.tick = None; d.gone = None; }
             "tools" => { d.label = OrderLabel::Text { text: String::from("door tools") }; d.can = None; d.only = None; d.valid = None; d.issue = OrderIssue::Nothing; d.tick = None; d.gone = None; }
             "held" => { d.label = OrderLabel::Text { text: String::from("threshold held") }; d.can = None; d.only = None; d.valid = None; d.issue = OrderIssue::Nothing; d.tick = None; d.gone = None; if let Some(s) = d.stands_in.as_mut() { s.when = OrderWhen::DoorHeld; } }
             "walltools" => { d.label = OrderLabel::Text { text: String::from("wall tools") }; d.can = None; d.only = None; d.valid = None; d.issue = OrderIssue::Nothing; d.tick = None; d.gone = None; }
