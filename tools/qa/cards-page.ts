@@ -70,7 +70,7 @@ function walk(deep: string[] | undefined): Promise<string> {
     said(`# rows`); for (const h of all('.msec')) said(`head ${words(h)} ${h.title} ${h.dataset.count ?? ''}`); for (const r of all('.mrow')) said(`${r.dataset.mission} ${r.dataset.group ?? ''} ${flags(r)} ${words(r)} ${r.getAttribute('href') ?? ''}`);
     for (const id of ids) { P().missions.select(id); await wait(30); said(`# mission ${id}`); rail(); team(); }
     // the setting rows, pressed: on one mission of each kind
-    const kinds = new Map<string, string>(); for (const m of P().missions.list) { const k = `${m.scenario?.kind ?? 'solo'}:${m.squad}:${m.scenario?.ways ? 'ways' : ''}:${m.group}`; if (!kinds.has(k)) kinds.set(k, m.id); }
+    const kinds = new Map<string, string>(); for (const m of P().missions.list) { const k = `${m.kind}:${m.squad}:${m.ways.length ? 'ways' : ''}:${m.group}`; if (!kinds.has(k)) kinds.set(k, m.id); }
     for (const id of kinds.values()) { P().missions.select(id); await wait(20);
       for (const r of all('.mstore .mdiff')) { if (gone(r) || r.classList.contains('na')) continue;
         for (const b of all('button', r)) { if (gone(b)) continue; press(b); await wait(2); said(`# ${id} ${words(r.querySelector('.dl'))} = ${words(b)}`); rail(); team(); said(kept()); }

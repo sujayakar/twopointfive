@@ -311,6 +311,16 @@ export function initDifficulty(q: URLSearchParams, plain = false) {
     else for (const [k, r] of Object.entries(keptLevers())) setLever(k as LeverKey, r as never, false);
   });
 }
+/** THE TABLES AS THIS MACHINE NOW KEEPS THEM, after a press on the desk has written the store: what setDifficulty or setLever with `keep` would have left. The fog's and how much you're told write nothing of
+ *  the defenders' two tables, as setLever has it */
+export function difficultyFromStore() {
+  const was = `${BASE}|${SET.ai}|${SET.kit}`;
+  let kept: string | null = null; try { kept = globalThis.localStorage?.getItem(LS) ?? null; } catch { /* no store */ }
+  BASE = kept === 'hard' ? 'hard' : 'standard'; delete SET.fog; delete SET.ai; delete SET.kit; delete SET.told; Object.assign(SET, keptLevers()); HELD = null;
+  const own = was === `${BASE}|${SET.ai}|${SET.kit}`;
+  if (!own) { resetPressure(); resetDigIn(); }
+  write(own);
+}
 /** the levers this machine keeps (only rungs the build still has) */
 export function keptLevers(): Partial<Levers> {
   const out: Partial<Levers> = {};
@@ -369,8 +379,6 @@ export function difficultyWords(level: Difficulty | 'custom' = difficultyNow(), 
   return level === 'standard' ? 'standard: the usual defenders' : level === 'hard' ? "hard: the defenders come at you together and around through a second door, a far room's defenders come as a group, and they stand and fight where they meet you in the open. If they hear you before your first entry, they'll get ready. The last defender in a room will slip out through another door before you reach his door. At the records office, the defenders who come to a lost room will watch its door from out of a flashbang's reach and let you come out to them. On a hostage rescue the captor calls your assault on the radio and his guards act on it. On the night breach the defenders are drilled, half as shaken by a flashbang, and they'll fire blind through the door they were watching" + (HARD_AT[HERE]?.stuns ? ". Here each defender carries a stun charge, and he'll throw it through a door before he comes in" : '') + (Cone && '.' + Cone) : 'custom: rows under the switch were moved by hand (the Enemy AI page of the debugger)';
 }
 
-/** the rung of one lever in a line (its `words`; '' = it stands on none) — the screens' note beside a lever's buttons */
-export function leverWords(key: LeverKey, rung: string | null): string { return leversNow().find(L => L.key === key)?.rungs.find(r => r.id === rung)?.words ?? ''; }
 /** the levers in a line — 'fog of war: your own eyes · enemy AI: standard · enemy kit: stun charges'. `all` false: only the ones moved by hand ('' = none) */
 export function leversLine(all = false): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('leversLine', undefined, [all]); if (__r !== RUST_PASS) return __r as any; } }
   const S = leversShown() as Record<LeverKey, string | null>;
