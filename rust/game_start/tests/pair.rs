@@ -189,3 +189,120 @@ fn a_dark_way_round_is_a_way() {
         assert!(q[0] > at[0] && (q[0] - at[0]).hypot(q[2] - at[1]) < 1.6, "switch {oneeye}: set at {q:?}, the man at {at:?}, looking west");
     }
 }
+
+// ---------------------------------------------------------------- what a defender hears of a chair
+
+/// The partner's quiet takedown, F given, from the hands to three seconds past the man down: the noises filed.
+fn takedown_noises(seed: u32) -> (Play, GuardId, f64, Vec<game::game::GameEvent>) {
+    let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear=10&squad=1", &Opts { seed, ..Default::default() });
+    p.g.god_mode = true;
+    p.g.fog_of_war.on = false;
+    p.g.k.pairup.on = true;
+    game::pairup::pair_up_apply(&mut p.g, None);
+    p.g.k.silent.on = true;
+    p.run(0.3);
+    game::silent::set_silent(&mut p.g, true, None);
+    let m = p.mates()[0];
+    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
+    let t1 = foes[0];
+    p.drop_all_but(&foes[..1]);
+    let east = std::f64::consts::FRAC_PI_2;
+    for _ in 0..10 { p.pin_man(t1, AISLE_MID, east, GuardState::Patrol, 0.0); p.frame(); }
+    p.sam_put([11.0, 18.5]);
+    let c = p.g.gd[m].ch;
+    p.g.ch[c].pos = [13.0, 0.0, 17.6];
+    let t = game::orders::OrderTarget::Foe(game::orders::OrderTargetFoe { at: [AISLE_MID[0], 0.0, AISLE_MID[1]], foe: t1 });
+    assert_eq!(game::orders::squad_orders_give(&mut p.g, "pairMark", Some(&t), Some(game::orders::Who::All), None), None, "seed {seed}");
+    for _ in 0..(60 * 30) { pin(&mut p, t1, GuardState::Patrol, 0.0); p.frame(); if game::pairorders::pair_orders_job_of(&p.g, m).map_or(false, |j| j.set) { break; } }
+    p.key_down("KeyF"); p.frame(); p.key_up("KeyF");
+    let mut newest = p.g.events.iter().map(|e| e.serial).max().unwrap_or(0);
+    let (mut down, mut noises) = (None, Vec::new());
+    for _ in 0..(60 * 8) {
+        if p.g.gd[t1].state != GuardState::Dead && game::pairorders::pair_orders_job_of(&p.g, m).map_or(true, |j| j.t0 < 0.0) { pin(&mut p, t1, GuardState::Patrol, 0.0); }
+        p.frame();
+        if down.is_none() && p.g.gd[t1].state == GuardState::Dead { down = Some(p.time()); }
+        for e in p.g.events.iter().filter(|e| e.serial > newest && e.kind == game::director::EventKind::Prop) { noises.push(*e); }
+        newest = p.g.events.iter().map(|e| e.serial).max().unwrap_or(newest).max(newest);
+        if down.map_or(false, |d| p.time() - d > 3.0) { break; }
+    }
+    let down = down.expect("the man never went down");
+    (p, m, down, noises)
+}
+
+/// THE RULE: the hands make no noise, nor does the man going down. Anything filed in those seconds is the partner's own feet in a chair on the way back to Sam (a
+/// defender in reach hears that as any noise of the other side: the test below).
+/// A FAILURE MEANS: a quiet takedown clatters.
+#[test]
+fn a_quiet_takedown_files_no_noise_of_its_own() {
+    let mut chairs = 0;
+    for seed in [10, 11, 12] {
+        let (p, m, down, noises) = takedown_noises(seed);
+        for n in &noises {
+            assert_eq!(n.who, Some(p.id_of(m)), "seed {seed}: a noise that is not the partner's: {n:?}");
+            assert!(n.time >= down, "seed {seed}: a noise {} s before the man was down", down - n.time);
+            chairs += 1;
+        }
+    }
+    assert!(chairs > 0, "the staging is wrong: nobody's chair moved, so this says nothing of whose it is");
+}
+
+/// On a quiet mission: a defender with nothing on his mind, held where he stands, and `who`'s noise two metres off him.
+fn hears(who: impl Fn(&Play, GuardId, GuardId) -> f64, kind: game::director::EventKind) -> f64 {
+    let mut p = Play::mission("crossing.json", "?levelFile=crossing.json&quiet&squad=1", &Opts { seed: 10, ..Default::default() });
+    p.g.god_mode = true;
+    p.run(0.3);
+    let m = p.mates()[0];
+    let foe = p.g.guards.iter().copied().find(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).expect("a defender");
+    let at = p.g.ch[p.g.gd[foe].ch].pos;
+    let yaw = p.g.ch[p.g.gd[foe].ch].body_yaw;
+    for _ in 0..5 { p.pin_man(foe, [at[0], at[2]], yaw, GuardState::Patrol, 0.0); p.frame(); }
+    let id = who(&p, m, foe);
+    let (time, serial) = (p.g.time, p.g.serial());
+    p.g.events.push(game::game::GameEvent { kind, pos: [at[0] + 2.0, 0.3, at[2]], time, loud: false, level: Some(0.3), who: Some(id), serial, ..game::game::GameEvent::zeroed() });
+    p.frame();
+    p.g.gd[foe].awareness
+}
+
+/// THE RULE: a chair or a door moved by a man of the other side is heard, as Sam's is, and so is a noise with no man's id; his own noises are not worth his looking up.
+/// A FAILURE MEANS: the player hears his partner shove a chair beside a defender who cannot, or a defender stirs at his own feet.
+#[test]
+fn a_man_hears_the_other_sides_chair_and_door_and_not_his_own() {
+    use game::director::EventKind::{Door, Prop};
+    for kind in [Prop, Door] {
+        let theirs = hears(|p, m, _| p.id_of(m), kind);
+        let sams = hears(|p, _, _| p.g.ch[p.g.pl[p.g.player].ch].id, kind);
+        let nobodys = hears(|_, _, _| 0.0, kind);
+        let his_own = hears(|p, _, foe| p.id_of(foe), kind);
+        assert!(theirs > 0.05, "{kind:?}: the partner's noise two metres off stirred him {theirs}");
+        assert_eq!(theirs, sams, "{kind:?}: the partner's and Sam's");
+        assert_eq!(theirs, nobodys, "{kind:?}: the partner's and a thing's with no man");
+        assert_eq!(his_own, 0.0, "{kind:?}: a noise he made himself");
+    }
+}
+
+/// THE RULE: low is quiet: a man the game moves, low, makes half the noise of the same shove on his feet, as Sam does.
+/// A FAILURE MEANS: a partner sneaking low into a chair scrapes it as loud as a man walking.
+#[test]
+fn a_low_man_shoves_a_chair_at_half_the_noise() {
+    let shove = |crouch: f64| -> f64 {
+        let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear=10&squad=1", &Opts { seed: 10, ..Default::default() });
+        p.run(0.2);
+        let m = p.mates()[0];
+        let c = p.g.gd[m].ch;
+        let chair = p.g.props.props.iter().copied().min_by(|&a, &b| {
+            let d = |q| { let (x, z) = (game::props::prop_x(&p.g, q), game::props::prop_z(&p.g, q)); (x - 19.9).hypot(z - 18.2) };
+            d(a).partial_cmp(&d(b)).unwrap()
+        }).expect("the office has furniture");
+        let (x, z) = (game::props::prop_x(&p.g, chair), game::props::prop_z(&p.g, chair));
+        p.g.ch[c].pos = [x - 0.45, 0.0, z];
+        p.g.ch[c].vel = [3.0, 0.0, 0.0];
+        p.g.ch[c].anim.crouch = crouch;
+        let newest = p.g.events.iter().map(|e| e.serial).max().unwrap_or(0);
+        game::game::game_update_props(&mut p.g, 1.0 / 60.0);
+        let id = p.id_of(m);
+        let e = p.g.events.iter().find(|e| e.serial > newest && e.kind == game::director::EventKind::Prop && e.who == Some(id)).expect("the staging is wrong: the shove made no noise");
+        e.level.unwrap()
+    };
+    let (up, low) = (shove(0.0), shove(1.0));
+    assert!((low - 0.5 * up).abs() < 1e-9, "on his feet {up}, low {low}");
+}
