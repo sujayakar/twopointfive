@@ -152,7 +152,7 @@ try {
       && cleanName('a\u200bb\u202e') === 'ab' && cleanName('\u3164\u2800') === '' && cleanName('...') === '' && over('nan') === 'nan' && over('inf') === 'inf' && over('Ada') === 'Ada' && cleanName('\u{1F468}\u200D\u{1F469}\u200D\u{1F467}') === '\u{1F468}\u200D\u{1F469}\u200D\u{1F467}';
     // the server's own cleaning: a hello written by hand, never through a client's
     const got: string[] = [], conn = { send(t: string) { got.push(t); return 1; }, close() { /* */ } };
-    const srv = new NetServer({ now: () => 0, step() { /* */ }, word: () => '', ended: () => null } as never, { game: 'g', build: '', recipe: {} as never, seatKeys: ['a', 'b'] });
+    const srv = new NetServer({ now: () => 0, step() { /* */ }, word: () => '', ended: () => null } as never, { game: 'g', build: '', start: {} as never, seatKeys: ['a', 'b'] });
     srv.message(conn, JSON.stringify({ k: 'hello', proto: WR.NET.proto, build: '', game: 'g', key: 'b', name: '  Grace\u0007   Hopper the Second ' }));
     const said = got.map(t => JSON.parse(t)).filter(m => m.k === 'state').pop(), served = JSON.stringify(said?.names) === JSON.stringify(['', 'Grace Hopper']);
     const w0 = stateHash(g), mate = team[0];

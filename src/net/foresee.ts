@@ -1,11 +1,11 @@
 // WHERE A CLIENT'S OWN MAN IS BY THE RECORDS STILL ON THEIR WAY (the look ahead: what "local prediction" is here). Host-neutral, like the client's core: the
-// page calls it at the end of each of its ticks (page.ts) and so does a headless bot (tools/mp/bot.ts), on the game each has stood.
+// page calls it at the end of each of its ticks (host/drawnet.ts) and so does a headless bot (tools/mp/bot.ts), on the game each has stood.
 //   A client's game stands at the last tick the server confirmed (client.ts), so the player's man answers a key only when its tick comes back — the way up,
 //   the server's buffer, the way down. But the records the seat has SENT are known here, and what they do to his walk and his aim does not wait on anybody
-//   else. So once a tick his walk is worked out through his seat's records the game has not had yet (client.ts unplayed) by game/walkahead.ts walkAhead: a
+//   else. So once a tick his walk is worked out through his seat's records the game has not had yet (client.ts unplayed) by the module's face_ahead: a
 //   pure working on a body of its own, by the tick's own lines for a man's legs and aim, that writes nothing to the game (no round, no door, no order, no
-//   throw: those are the game's to play). What it answers is where the picture draws him (host/ahead.ts) and how far ahead the camera looks; the WORLD is
-//   never ahead, and nothing of this is read by a tick. Where his legs are not his own (he is down, on a wall, his hands at work: walkAhead's `free`) the
+//   throw: those are the game's to play). What it answers is where the picture draws him (rust/game_draw lead.rs) and how far ahead the camera looks; the WORLD is
+//   never ahead, and nothing of this is read by a tick. Where his legs are not his own (he is down, on a wall, his hands at work: `free`) the
 //   answer is where the game has him.
 //   A CORRECTION: the last look ahead ended on some tick; this one passes through the same tick, and where it has him THERE is the newer word (the server
 //   played another record than the one sent, somebody stood in his way, a round moved him). The difference is not shown at once: the drawn man keeps his
@@ -16,19 +16,19 @@ import type { WireCmd } from './wire';
 
 /** a man's place and the way his gun points */
 export interface Stand { pos: ArrayLike<number>; yaw: number }
-/** WHERE A SEAT'S MAN WOULD BE AFTER RECORDS THE GAME HAS NOT HAD, as the game answers it (game/walkahead.ts, the module's face_ahead), writing nothing: the man · is
+/** WHERE A SEAT'S MAN WOULD BE AFTER RECORDS THE GAME HAS NOT HAD, as the game answers it (the module's face_ahead), writing nothing: the man · is
  *  he down · where the game has him, his aim, the normal of a wall he holds (x z) and how near the nearest other body stands (m) · are his legs his own this tick · where the records take him, his
  *  aim there, what his seat's camera would follow with him there, the point the newest record aims at · his place after each record */
 export interface Ahead { id: number; down: boolean; at: [number, number, number]; yaw: number; wall: [number, number] | null; near: number; free: boolean; pos: [number, number, number]; aimYaw: number; follow: [number, number, number]; aim: [number, number, number] | null; path: ArrayLike<number>[] }
 
-/** `on`: the switch — off here as every switch is, raised by a networked page (page.ts netFromUrl; `?netpredict=0` leaves it off) and by the scripted
+/** `on`: the switch — off here as every switch is, raised by a networked page (door.ts tryFrom; `?netpredict=0` leaves it off) and by the scripted
  *  client's `--predict`. Off = his own man is drawn where the game has him. `max`: the most records a look ahead plays. `ease`: what
  *  is left, a tick later, of a correction's distance. `snap` (m): a correction longer than this is a cut. */
 export const FORESEE = { on: false, max: 30, ease: 0.85, snap: 1.5 };
 
 /** a look ahead: the man, where the game has him (`from`), where he is drawn (`to`: where his records take him, a correction's rest laid on), how far the
  *  look-at of a camera on him moves with that (`by`), the point his newest record aims at, how many records were played and the tick after the last of them.
- *  `free` false: his legs are not his own this tick (walkahead.ts: on a wall, hands at work, crouched under the tap step, stalking…) — nothing was walked
+ *  `free` false: his legs are not his own this tick (on a wall, hands at work, crouched under the tap step, stalking…) — nothing was walked
  *  and `to` is where the game has him, with what is left of a correction */
 export interface Foreseen { id: number; from: Stand; to: Stand; by: number[]; aim: [number, number, number] | null; n: number; end: number; pos: number[]; free: boolean }
 
