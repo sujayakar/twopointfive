@@ -281,9 +281,13 @@ fn clear_of_props(g: &Game, q: V3) -> bool {
 
 /// what `fits` of stackRoomFix closed over
 struct FixFit<'a> { d: DoorId, side: f64, f: &'a crate::stackroom::Floor, c: V3, min_m: f64, used: &'a [V3], glass: bool, shy: bool }
+/// Is this place another door's: before its leaf, or within the blast a charge on it throws back.
+fn anothers(g: &Game, d: DoorId, q: V3) -> bool { crate::doorway::before_another_door(g, q, d) || crate::doortools::in_anothers_blast(g, &crate::seats::here(g), d, q) }
+
 /// a place a mark may be dealt   (stackroom.ts stackRoomFix's fits)
 fn fix_fits(g: &mut Game, x: &FixFit, q: V3, apart: f64) -> bool {
     on_floor(g, x.f, q)
+        && !anothers(g, x.d, q)
         && flat(q, x.c) >= x.min_m
         && !x.used.iter().any(|o| flat(*o, q) < apart)
         && !crate::doorway::doorway_in_way(g, q)
@@ -294,7 +298,7 @@ fn fix_fits(g: &mut Game, x: &FixFit, q: V3, apart: f64) -> bool {
 /// what a mark dealt again takes of its new place (Partial<StackPost>): no stackSide = its own stays; group always, none included
 struct Got { pos: V3, face: f64, stack_side: Option<f64>, group: Option<f64> }
 
-/// every post not on the floor of that face is dealt again, the rest stay; None: one has no room at all   (stackroom.ts stackRoomFix)
+/// every post not on the floor of that face, or at another door, is dealt again, the rest stay; None: one has no room at all   (stackroom.ts stackRoomFix)
 pub fn stack_room_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Option<&[crate::orders::StackPost]>, taken: &[V3], min_m: Option<f64>) -> Option<Vec<crate::orders::StackPost>> {
     let min_m = min_m.unwrap_or(0.0);
     let posts = posts?;
@@ -302,7 +306,7 @@ pub fn stack_room_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
     let s = g.k.stackroom;
     g.stats.stackroom.asked += posts.len() as i32;
     let mut bad = Vec::with_capacity(posts.len());
-    for p in posts { bad.push(!on_floor(g, &f, p.pos)); }
+    for p in posts { bad.push(!on_floor(g, &f, p.pos) || anothers(g, d, p.pos)); }
     if !bad.iter().any(|b| *b) { return Some(posts.to_vec()); }
     let mut out = posts.to_vec();
     let (w, c, th) = (g.dr[d].def.width, g.dr[d].frame_centre, g.dr[d].def.closed_dir);
@@ -417,6 +421,7 @@ pub fn stack_room_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
             }
         }
         let Some(got) = got else {
+            if on_floor(g, &f, pp.pos) { continue; }   // (nowhere better than at the other door: there, as it was dealt)
             g.stats.stackroom.none += 1;
             return None;
         };
