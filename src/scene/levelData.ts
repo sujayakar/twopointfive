@@ -20,7 +20,7 @@
 //     sums like (x0 + x1) / 2, and the identity gate (tools/qa/level-probes.ts) is bit-for-bit.
 //   - versioned: `version` is bumped on any breaking change; the loader refuses versions it does not know.
 import type { Vec3, Quat } from '../math/vec';
-import type { WeaponId } from '../game/weapons';   // type only (erased): what a route may hand its man
+import type { WeaponId } from './weaponIds';
 import type { RoomClearPlan, BreachPlan, CivilianTask } from './level';
 import type { LevelScenarios } from './scenarios';
 import { SQUAD_MAX_MEN, QUIET_MAX_ROUTES } from './scenarios';
@@ -30,9 +30,7 @@ import { MarkingDef, MAX_MARKS_PER_BOX, MARKING_TEXEL, markingErrors } from './m
 import { shapeErrors, formOf, type ShapeForm } from './shapes';
 import { BOX_STUFFS, boxStuffOk } from './stuff';
 import { DOES_WORDS, doesWordOk } from './materials';
-import { DOOR_CAP } from '../sim/doorshome';
-import { PROP_CAP, PROP_PARTS } from '../sim/propshome';
-import { LIGHT_CAPS } from '../sim/lightshome';
+import { DOOR_CAP, LIGHT_CAPS, PROP_CAP, PROP_PARTS } from './caps';
 export type { MarkingDef } from './markings';
 
 export const LEVEL_DATA_VERSION = 2 as const;

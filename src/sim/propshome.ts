@@ -19,12 +19,8 @@ import { sim, f64, type SimExports } from './sim';
 import { simRoom, P_PROPS, type SimState } from './state';
 import { ColStore, colsOf, colDiff, type ColsOf } from './colstore';
 
-/** loose things of furniture a level can have (rust/sim/src/props.rs CAP; a level of more is not loaded: game/levelfit.ts) */
-export const PROP_CAP = 128;
-/** …and the boxes all of a level's furniture is made of, at most (the Rust module's copy of the box world lists them as one list of leaves:
- *  rust/sim/src/world.rs MAX_LEAVES, held to this number by scene/boxMirror.ts as it boots; game/levelfit.ts says so as a level loads). 256 until
- *  2026-11-04, when the fullest level stood at 220. */
-export const PROP_PARTS = 512;
+import { PROP_CAP, PROP_PARTS } from '../scene/caps';
+export { PROP_CAP, PROP_PARTS };
 /** THE COLUMNS in the part's order (props.rs COLS; tools/qa/rust-check.ts holds the names and propIo() the offsets to the module's own): the doubles — the
  *  hot ones first — then the words */
 export const PROP_F64 = ['x', 'z', 'yaw', 'vx', 'vz', 'w', 'cs', 'sn', 'idle', 'pushT', 'noiseT'] as const;

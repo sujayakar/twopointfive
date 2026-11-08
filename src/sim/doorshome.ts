@@ -12,8 +12,8 @@
 import { sim, f64, type SimExports } from './sim';
 import { simRoom, simPart, P_DOORS, type SimState } from './state';
 
-/** doors a level can have and still keep them in the module (rust/sim/src/doors.rs CAP; more: they stay in TypeScript, the row on or not) */
-export const DOOR_CAP = 64;
+import { DOOR_CAP } from '../scene/caps';
+export { DOOR_CAP };
 /** THE COLUMNS, by the numbers rust/sim/src/doors.rs gives them (its constants are these names in capitals: tools/qa/rust-check.ts holds the two lists to each other) */
 export const DC = { angle: 0, vel: 1, quietT: 2, latched: 3, lastWho: 4, sinceBash: 5, closing: 6, locked: 7, lockBroken: 8, noticed: 9, noticedT: 10, pick: 11, picking: 12, pickIdle: 13,
   pickClock: 14, pickN: 15, rattleT: 16, guardT: 17, passers: 18, dealt: 19, outward: 20, clearway: 21, pullT: 22, velSeen: 23, swept: 24, solidT: 25, pressT: 26, openT: 27, mirrored: 28,
