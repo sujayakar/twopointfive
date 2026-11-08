@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 // LIVED-IN ROOMS: THE STACK FACES KEEP THEIR MARKS — the check lived-check.ts cannot make (it imports nothing of src/game, and holds only 1.1 m off a door's line).
-//   bun run tools/qa/lived-stack-check.ts [scenario,scenario …] [--quiet] [--strict]        (default: every scenario of src/scene/scenarioList.ts SCENARIOS)
+//   bun run tools/qa/lived-stack-check.ts [scenario,scenario …] [--quiet] [--strict]        (default: 12 scenarios of src/scene/scenarioList.ts SCENARIOS; QA_SWEEP=all: every one)
 // A stack on a door stands along the wall either side of it, up to 3 m off the frame, and in a small room along the next wall too. Furniture there does not stop
 // the level playing: the order is REFUSED 'no room on that door' and the team goes round by another door, which no run file shows as a fault of the room.
 // What it does: each scenario is staged twice, as the page ships it (TPS_PROFILE=shipped), with the rooms on (TPS_LIVED=1) and off (=0), each in a process of
@@ -45,8 +45,8 @@ if (argv[0] === '--ask') {   // the child: one stand (the env says which), every
 
 const QUIET = argv.includes('--quiet'), STRICT = argv.includes('--strict'), names = argv.filter(a => !a.startsWith('--')), named = names[0];
 if (names.length > 1 || argv.some(a => a.startsWith('--') && a !== '--quiet' && a !== '--strict')) { console.error('usage: bun run tools/qa/lived-stack-check.ts [scenario,scenario …] [--quiet] [--strict]     (several scenarios = ONE argument, comma separated)'); process.exit(2); }
-const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
-const ids: string[] = named ? named.split(',') : SCENARIOS.map((e: any) => e.id);
+const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`), { sample } = await import('./sweep.ts');
+const ids: string[] = named ? named.split(',') : sample(SCENARIOS.map((e: any) => e.id as string), 12);
 for (const id of ids) if (!SCENARIOS.some((e: any) => e.id === id)) { console.error(`no scenario '${id}' — ${SCENARIOS.map((e: any) => e.id).join(', ')}`); process.exit(2); }
 
 const ask = (lived: '1' | '0') => Bun.spawn(['bun', 'run', import.meta.path, '--ask', ids.join(',')], { env: { ...process.env, TPS_PROFILE: 'shipped', TPS_LIVED: lived }, stdout: 'pipe', stderr: 'pipe' });

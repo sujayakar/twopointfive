@@ -15,7 +15,7 @@ export const NET_AGREED: readonly string[] = [
   'spectate', 'player_invisible', 'rings', 'shells', 'fn2000', 'doors', 'door_deals', 'props', 'reach_interior', 'touring', 'tmp_v', 'called_in',
   'stood_down', 'escalation', 'escalation_t', 'alarm', 'clearing', 'clear_rooms', 'cleared_at', 'beacons', 'items', 'tracers', 'fx_seed',
   'ocp_cooldown', 'last_sting_t', 'event_seq', 'messages', 'mission', 'qrf', 'devices', 'air_dust', 'moths', 'glass_break', 'shards', 'director',
-  'night_breach', 'quiet', 'lesson', 'rails', 'defuse', 'room_clear', 'fight', 'cues', 'cover', 'entry', 'cleared', 'rescue', 'pair',
+  'night_breach', 'quiet', 'lesson', 'rails', 'room_clear', 'fight', 'cues', 'cover', 'entry', 'cleared', 'rescue', 'pair',
   'door_path', 'rack_targets', 'mark_lights', 'tune', 'engine.lights', 'engine.weather', 'level', 'rig', 'quiet_utility', 'mission_in_tour', 'rolls',
   'roll_seq', 'restart_cut', 'seats', 'ticking', 'door_owns', 'door_was', 'door_hand_recs', 'in_cast', 'sim_stamp', 'k', 'm.scene_ground_field',
   'm.scene_markings', 'm.scene_materials', 'm.rig_props', 'm.character', 'm.teams', 'm.opening', 'm.weather_kinds', 'm.kitload', 'm.holdfire',

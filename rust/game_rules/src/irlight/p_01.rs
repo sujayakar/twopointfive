@@ -249,7 +249,7 @@ fn seat_light(g: &mut Game) {
         };
         pose(g, l, sc);
         // (the wand under a door, his goggles down: the flood is the lens's too, level along its look, and the place read is the one it looks into)
-        let eye = crate::wand::wand_eye(g);
+        let eye = crate::wand::wand_eye(g, &crate::seats::here(g));
         if let Some(e) = &eye {
             g.tab.light[l].pos = v3::copy(e.pos);
             g.tab.light[l].dir = [e.look[0], 0.0, e.look[2]];

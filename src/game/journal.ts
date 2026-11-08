@@ -32,7 +32,6 @@ import { PLAN_PACE } from '../render/planPace';
 import { REACH_PACE } from '../render/reach';
 import { COATFINISH, SOLIDGLASS } from '../scene/stuff';
 import { WALLSKIN } from './wallskin';
-import { AUTOCAM, autoTuneOld } from '../host/autocam';
 import { PRESSURE } from './pressure';
 import { DOORSHOT } from './doorblast';
 import { LIGHT_IN } from '../sim/lightshome';
@@ -91,7 +90,6 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (typeof (k.tables.MOVES as { steadyRun?: number } | undefined)?.steadyRun !== 'number') { const M = knobTables().MOVES as { steadyRun?: number } | undefined; if (M) M.steadyRun = 0; }   // (…and from before the rifle sprint's side roll was taken out — no such key in its MOVES row — replays with the trunk rolling as it was recorded: his head and chest bones are what eyes look for)
   if (!k.tables.WALLSNAP) WALLSNAP.on = false;   // (a file from before the wall hold's feel pass: its takes ran the old clock and its rifle was slung for the wall)
   else { const ws = k.tables.WALLSNAP as Partial<typeof WALLSNAP>; if (ws.alongDeg === undefined) WALLSNAP.alongDeg = 0; if (ws.press === undefined) WALLSNAP.press = false; if (ws.leanGun === undefined) WALLSNAP.leanGun = 0; }   // (…and one from before 10-10's two rules: the stick's along / away as it was, the rifle drawn on the wall waiting for the step off)
-  if (typeof (k.tables.CMDRING as { hint?: boolean } | undefined)?.hint !== 'boolean') CMDRING.hint = false;   // (… and one from before its hint: nothing drawn at the cursor before the key)
   if (typeof (k.tables.CMDRING as { holdSecs?: number } | undefined)?.holdSecs !== 'number') CMDRING.holdSecs = 0;   // (… and from before a tap opened no ring: the ring went up as the key went down)
   for (const key of ['goalHalf', 'twice'] as const) if (typeof (k.tables.CMDRING as Record<string, unknown> | undefined)?.[key] !== 'boolean') CMDRING[key] = false;   // (… and from before the first goal sent half the squad and the key tapped twice was 'fall in': its first goal was everyone's, and its second tap the key's order again)
   if (typeof (k.tables.HOLD as { strip?: { fall?: number } } | undefined)?.strip?.fall !== 'number') HOLD.strip.fall = 0;   // (a file from before the stripped gun's fall was timed: thrown down at the fixed push, wherever that landed it)
@@ -114,7 +112,6 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.COATFINISH) COATFINISH.on = false;   // (a file with no table for a named coat's finish: its vehicles' bodies have the finish their level files give them, as before the rule. A picture only)
   if (!k.tables.SOLIDGLASS) SOLIDGLASS.on = false;   // (a file with no table for solid glass's dark: its vehicles' windows are the grey their level files give them, as before the rule. A picture only)
   if (!k.tables.WALLSKIN) WALLSKIN.on = false;   // (a file from before the paint on a wall went with the wall: its holed walls' bands were drawn whole)
-  if ((k.tables.AUTOCAM as Partial<typeof AUTOCAM> | undefined)?.tune === undefined) autoTuneOld((k.tables.AUTOCAM ?? {}) as Partial<typeof AUTOCAM>);   // (…and one from before its numbers were the player's: the switch off, and the numbers it has no word for the module's own)
   if ((k.tables.MORALE as Partial<typeof MORALE> | undefined)?.training === undefined) { MORALE.training = 'none'; MORALE.nerve = 'normal'; MORALE.fanStep = 0; }   // (…and one from before a man was green or steady: every man the first slice's — broken alone in the dark only, folded when he was, and scrabbling straight back with no fan to find him a way (fanStep 0 shuts it). A recording that carries the keys keeps its own: assignDeep takes a string row as it takes a number)
   if ((k.tables.MORALE as Partial<typeof MORALE> | undefined)?.darkRead === undefined) MORALE.darkRead = 'place';   // (…and one from before the dark had a second reading: where he stands, as it was read)
   { const F0 = k.tables.FIRE as (Partial<typeof FIRE> & { look?: Partial<typeof FIRE.look> }) | undefined;   // (… one from before a fire's lamp was a fire's: the level's strength and colour; and from before the look's newer numbers: the picture's memory unchanged, the flame hardly leaning)

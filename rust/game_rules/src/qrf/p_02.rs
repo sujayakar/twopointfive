@@ -9,6 +9,8 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- small private helpers
 fn pos_of(g: &Game, x: GuardId) -> V3 { g.ch[g.gd[x].ch].pos }
+/// where a man with no foe named looks: the player nearest him
+fn near_man_pos(g: &Game, gd: GuardId) -> V3 { let pl = crate::seats::nearest_or_first(g, &g.ch[g.gd[gd].ch].pos); g.ch[g.pl[pl].ch].pos }
 fn player_pos(g: &Game, seat: &crate::seats::SeatRef) -> V3 { g.ch[g.pl[seat.player].ch].pos }
 fn char_id(g: &Game, x: GuardId) -> f64 { g.ch[g.gd[x].ch].id }
 fn nav_blocked(g: &Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }
@@ -61,7 +63,7 @@ pub fn dealt(g: &mut crate::game::Game, reason: crate::qrf::QrfReason) -> crate:
     let b = crate::dice::draw_world(g, "qrf::dealt#2");
     let c = crate::dice::draw_world(g, "qrf::dealt#3");
     let mut clear: Vec<usize> = Vec::new();
-    for &i in &open { if clear_of_foes(g, &crate::seats::here(g), r.ways[i].muster[0]) { clear.push(i); } }
+    for &i in &open { if clear_of_foes(g, r.ways[i].muster[0]) { clear.push(i); } }
     let from = if !clear.is_empty() { clear } else { open };
     let step = g.k.response.eta_step;
     let span = men[1] - men[0] + 1.0;
@@ -296,10 +298,10 @@ pub fn re_deal(g: &mut crate::game::Game, quiet: bool) {
     let r = match response_of(g) { Some(r) => r, None => return };
     if r.ways.len() < 2 { return; }
     let way = g.qrf.way as usize;
-    if clear_of_foes(g, &crate::seats::here(g), r.ways[way].muster[0]) { return; }
+    if clear_of_foes(g, r.ways[way].muster[0]) { return; }
     let mut other = None;
     for (i, y) in r.ways.iter().enumerate() {
-        if i != way && way_open(g, y) && clear_of_foes(g, &crate::seats::here(g), y.muster[0]) { other = Some(i); break; }
+        if i != way && way_open(g, y) && clear_of_foes(g, y.muster[0]) { other = Some(i); break; }
     }
     let other = match other { Some(i) => i, None => return };
     g.qrf.way = other as f64;
@@ -452,12 +454,12 @@ pub fn tick_men(g: &mut crate::game::Game, dt: f64) {
     }
     if let Some(c) = contact {
         let near = g.qrf.phase != Phase::File || {
-            let foe = match crate::teams::foe_char(g, c) { Some(f) => g.ch[f].pos, None => player_pos(g, &crate::seats::here(g)) };
+            let foe = match crate::teams::foe_char(g, c) { Some(f) => g.ch[f].pos, None => near_man_pos(g, c) };
             flat(pos_of(g, c), foe) < 8.0
         };
         if near { to_fight(g, &el, c); }
         else {
-            g.qrf.fix = Some(v3::copy(g.gd[c].last_known.unwrap_or(player_pos(g, &crate::seats::here(g)))));
+            g.qrf.fix = Some(v3::copy(g.gd[c].last_known.unwrap_or(near_man_pos(g, c))));
             g.qrf.fix_t = g.time;
             g.qrf.cue_rush = true;
             crate::mind::cap(g, c, 0.84, "qrf");
@@ -467,6 +469,9 @@ pub fn tick_men(g: &mut crate::game::Game, dt: f64) {
 
 /// The senses updateGuard would have run for a man the runner drives. A noise is a cue; eyes on him is contact (true).   (qrf.ts perceiveScripted)
 pub fn perceive_scripted(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
+    crate::seats::standing_for(g, m, &mut |g| perceive_here(g, m, dt))
+}
+fn perceive_here(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
     use crate::game::{Foe, GuardState};
     if !g.ai_enabled { return false; }
     let mut ids: Vec<f64> = Vec::new();
@@ -634,7 +639,8 @@ pub fn man_down(g: &mut crate::game::Game) {
         note(g, &what);
     }
     // the run ending on one of THEIR rounds
-    if g.pl[g.player].down && !g.qrf.sam_was_down && !g.qrf.got_sam {
+    let down = crate::seats::all_down(g);
+    if down && !g.qrf.sam_was_down && !g.qrf.got_sam {
         for &o in &theirs {
             if let Some(ls) = g.gd[o].aim.last_shot.as_ref() {
                 if m::abs(ls.t - g.time) < 1e-6 {
@@ -646,7 +652,7 @@ pub fn man_down(g: &mut crate::game::Game) {
             }
         }
     }
-    g.qrf.sam_was_down = g.pl[g.player].down;
+    g.qrf.sam_was_down = down;
 }
 
 // ---------------------------------------------------------------- entry

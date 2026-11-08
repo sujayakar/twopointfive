@@ -11,7 +11,6 @@ pub enum MissionOf {
     /// a level's program while it runs
     Script,
     Lesson,
-    Defuse,
     Roomclear,
     Rescue,
     Nightbreach,
@@ -406,6 +405,55 @@ pub struct TickView {
     pub aim: crate::view::AimView,
     /// the men who wear or carry something the drawer draws: nobody else is listed
     pub worn: Vec<crate::view::WornView>,
+    /// the squad's words (None: no squad answers to the seat)
+    pub squad: Option<crate::view::SquadView>,
+    /// what a set charge and a held threshold say to this seat, squad or none: a key's line, or a warning under no key
+    pub corner: Vec<crate::view::Note>,
+}
+
+/// which pair of the squad a man is of
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum Pair {
+    Red,
+    Blue,
+}
+
+/// one man's line on the squad's block
+#[derive(Clone, Debug, Default)]
+pub struct MateLine {
+    /// his character's id
+    pub man: f64,
+    /// his callsign
+    pub name: String,
+    /// what he is doing, and what he covers
+    pub doing: String,
+    /// among the men the next order goes to, while not all of them are
+    pub addressed: bool,
+    /// his pair, while the squad is in pairs
+    pub pair: Option<crate::view::Pair>,
+    pub down: bool,
+}
+
+/// a line of the squad's block
+#[derive(Clone, Debug, Default)]
+pub struct Note {
+    /// the key that does it ('' = none): the default key's letter, the page names the player's own
+    pub key: String,
+    pub text: String,
+}
+
+/// WHAT A SEAT'S HUD IS TOLD OF ITS SQUAD
+#[derive(Clone, Debug, Default)]
+pub struct SquadView {
+    /// loud or quiet, at a glance
+    pub posture: Option<String>,
+    /// who the next order goes to
+    pub who: String,
+    /// not everybody is addressed
+    pub picked: bool,
+    pub mates: Vec<crate::view::MateLine>,
+    /// the block's notes, in its order: the door tools', the word's, the pair's mark, the smoke, the wall charges'
+    pub notes: Vec<crate::view::Note>,
 }
 
 /// what kind of thing an order would be about
@@ -727,4 +775,148 @@ pub struct TeamView {
     pub frags: f64,
     pub smoke: f64,
     pub bangs: f64,
+    /// the link Deploy loads
+    pub link: String,
+}
+
+/// one thing a setting can be
+#[derive(Clone, Debug, Default)]
+pub struct SettingChoice {
+    pub id: String,
+    pub label: String,
+    /// what it does
+    pub title: String,
+    pub on: bool,
+    /// it is offered on this mission
+    pub shown: bool,
+}
+
+/// a setting of a mission before it is played: the difficulty, one of its levers, the hour, the weather, the way in
+#[derive(Clone, Debug, Default)]
+pub struct Setting {
+    pub key: String,
+    pub label: String,
+    /// it changes something on this mission
+    pub live: bool,
+    /// it is drawn for this mission
+    pub shown: bool,
+    /// a lever moved off its level's rung by hand
+    pub moved: bool,
+    /// what the choice that is on does
+    pub note: String,
+    pub choices: Vec<crate::view::SettingChoice>,
+}
+
+/// a mission as the list has it
+#[derive(Clone, Debug, Default)]
+pub struct StartRow {
+    pub id: String,
+    pub title: String,
+    /// "solo" for the plain solo night, else its scenario's kind
+    pub kind: String,
+    pub group: String,
+    pub group_title: String,
+    pub group_line: String,
+    pub place: String,
+    pub blurb: String,
+    pub lean: String,
+    pub lean_words: String,
+    /// its level's file
+    pub level: String,
+    pub level_words: String,
+    pub squad: f64,
+    pub team_words: String,
+    pub team_tag: String,
+    /// nobody has balanced it, and the short list does not name it
+    pub unplayed: bool,
+    /// cut from the lists (its own address still finds it)
+    pub off_list: bool,
+    /// the player packs for it, though it is a lesson
+    pub packs: bool,
+    /// it is played with the kit as issued
+    pub as_issued: bool,
+    pub lesson: bool,
+    /// the levels' ways in, by name (none: it has one)
+    pub ways: Vec<String>,
+    /// the short list's row of it, and its one line (empty: not on the short list)
+    pub pick: String,
+    pub line: String,
+    /// the team's size the short list starts it with (-1: the mission's own)
+    pub pick_squad: f64,
+    /// the link the row has
+    pub link: String,
+}
+
+/// the list of missions, in the order the page draws them
+#[derive(Clone, Debug, Default)]
+pub struct StartView {
+    pub rows: Vec<crate::view::StartRow>,
+    /// the mission the address names (empty: none)
+    pub named: String,
+    /// the short list's row the address is (empty: none)
+    pub pick: String,
+    /// the address starts something, so the list is not the way in
+    pub playing: bool,
+    /// the row a visit that names none and has started none opens on: the short list's first
+    pub first: String,
+}
+
+/// a mission's sheet
+#[derive(Clone, Debug, Default)]
+pub struct SheetView {
+    pub id: String,
+    pub settings: Vec<crate::view::Setting>,
+    /// the link the row has, and the link its team is deployed by (the short list's own where the settings are still its own), without the team's size
+    pub link: String,
+    pub base: String,
+    /// the settings are the short list's for this mission
+    pub as_pick: bool,
+    /// its kind's gear screen is the quiet one
+    pub quiet: bool,
+}
+
+/// what a mission's page says of it while it loads
+#[derive(Clone, Debug, Default)]
+pub struct BriefView {
+    /// the row of the list (empty: the address starts none, and the rest is empty too)
+    pub id: String,
+    pub title: String,
+    /// what it is ('solo' for the plain night)
+    pub kind: String,
+    /// the heading it is under
+    pub group_title: String,
+    pub place: String,
+    pub blurb: String,
+    pub lean_words: String,
+    /// the team as this address deploys it
+    pub team: String,
+    /// its level's file
+    pub level: String,
+    /// a lesson's: where we are and why
+    pub scene: String,
+    /// a lesson's: what it teaches
+    pub teaches: Vec<String>,
+    /// the way in the address asks for: 0 the level's own, k its k-th
+    pub way: f64,
+}
+
+/// what the pause and end cards say of the short list, on a page one of its rows started
+#[derive(Clone, Debug, Default)]
+pub struct ShortView {
+    /// the row the address is (empty: none, and the rest is empty too)
+    pub now: String,
+    /// that row starts a scenario (the solo night's starts none)
+    pub now_scenario: bool,
+    /// the row after it (empty: it was the last)
+    pub next: String,
+    /// the mission that row starts
+    pub next_mission: String,
+    /// what the card calls it, with a difficulty the player chose carried on
+    pub title: String,
+    /// its one plain line
+    pub line: String,
+    /// the page load that starts it
+    pub link: String,
+    /// the same row at the other difficulty (empty: it has one)
+    pub other_link: String,
 }

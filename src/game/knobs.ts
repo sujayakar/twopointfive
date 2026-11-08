@@ -93,7 +93,6 @@ import { HOLDFIRE } from './holdfire';
 import { PAIRUP } from './pairup';
 import { LESSON } from './lesson';
 import { VERDICT } from './verdict';
-import { DEFUSE } from './defuse';
 import { SPOTTED } from './spotted';
 import { SLOTS, ISSUE, BIGSLOT, KITDEAL } from './kit';
 import { NIGHTBREACH } from './nightbreach';
@@ -169,9 +168,6 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   'HANDRING',
   // a can in the wind-up goes back on the belt when another beat begins (throwback.ts THROWBACK): a recording made with it on replays those cans kept, one from before as thrown late
   'THROWBACK',
-  // the camera frames things itself once its key is tapped twice (host/autocam.ts AUTOCAM): the seat's view rides every record, so a recording replays the view it was made with
-  // either way — the name is here so that a file from before the key puts the switch off for the hand that takes over when it ends
-  'AUTOCAM',
   // his own charge goes off from his own actions, not the squad's key (ownblow.ts OWNBLOW): a recording made with it on replays its interaction-key row as the blast, one from before the squad's key as it was
   'OWNBLOW',
   // the gun is put away for a two-handed job (workstow.ts WORKSTOW): a recording made with it on replays a charge's longer clock and the draw after it, one from before the gun in the hand as it was
@@ -249,7 +245,6 @@ import { TOLD } from './told';
 import { TORCH } from './calmtorch';
 import { BACKKEY } from './backkey';
 import { FIXEDSTEP } from '../host/loop';
-import { AUTOCAM } from '../host/autocam';
 import { TWEEN } from '../host/tween';
 import { SAVEPIC } from '../host/savepic';
 import { EVENPACE } from '../host/pace';
@@ -458,8 +453,6 @@ export function knobRegistry(): Record<string, object> {
     EVENPACE,
     // which starts the outline's rows have on this machine (host/findme.ts): the page's alone, as the three above are
     FINDTUNED,
-    // the camera running itself (host/autocam.ts): the switch, what it frames and by how much, when it may turn
-    AUTOCAM,
     // shaken (morale.ts): what a blast does to the men it does not hurt — who ducks, who breaks, the rounds a broken man puts into the dust — reads these
     MORALE,
     // a man's condition (condition.ts): whether a blast that leaves a man standing leaves him hurt, the pace and the spread that costs him, how long
@@ -538,7 +531,7 @@ export function knobRegistry(): Record<string, object> {
     // the scenario's and the defenders' tables (a play-through's --set reaches them)
     RESCUE, DIGIN, HAULHOME, PRESSURE, LANES, GUNHOLD, HARD, HARD_AT, DRILLED, SQUADS, DRILL_AT, CUES, BUDDY, WX_SIM, WX_OWN, SNOW, SNOW_LOOK, AIR_SIM, LASTSTAND, CLEARLINE, STACKROOM, REARWATCH, STACKLINE,
     // the team's own rules that no other list named (found by tools/qa/knobs-check.ts), and the two scenarios' own tables
-    SNEAK, PAIRUP, SPOTTED, NIGHTBREACH, ROOMCLEAR, LESSON, DEFUSE,
+    SNEAK, PAIRUP, SPOTTED, NIGHTBREACH, ROOMCLEAR, LESSON,
     // a room clear against a clock (the Rust game keeps it, rust/game_rules/src/par). A SETTLED row, on: nothing reads it any more, on either side
     ISSUE,
     // how a run went, said at its end (verdict.ts): reads only — off = no verdict, the end card as it was

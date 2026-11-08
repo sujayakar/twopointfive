@@ -8,6 +8,7 @@
 //   roomfit-walk      the order given in the office (the night breach's pair, then the four): they step off at once with nothing named, arrive each on his
 //                     own mark, 'set.' once, each gun on what he was dealt, the row says what, nobody drifts; a man whose watch comes to weigh nothing looks
 //                     again and his gun — never his feet — moves on
+import { doing, sameWord } from './squadwords';
 import { readdirSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 import { sample } from './sweep.ts';
@@ -96,8 +97,8 @@ export const roomfitWalk = guarded(async () => {
     const spread = ROOMFIT.spread0 + ROOMFIT.spreadPer * squad;
     verdict(set && dPost.every(d => d < 0.35) && dAt.every(d => d <= spread + 0.01) && gap > ROOMFIT.apart - 0.3, `${tag}: all arrive, each on his own mark, the marks round the point and a body's room apart`, `in ${f2(tSet)} s · off his mark ${dPost.map(f2).join(' / ')} m · marks off the point ${dAt.map(f2).join(' / ')} m (≤ ${f2(spread)}) · nearest two ${f2(gap)} m`);
     const watching = men.map((m, i) => { const F = fits[i]; return F.on && (!F.watch || Math.abs(wrap(yawTo(m.char.pos, F.watch) - gunYaw(m))) < 0.35); });
-    const rows = men.map(m => O.statusOf(m)), keys = fits.map(f => f.key), ways = keys.filter(k => k && !/^(floor|run):/.test(k));
-    verdict(watching.every(Boolean) && rows.every((r, i) => fits[i].words ? r === `in position · ${fits[i].words}` : r === 'in position') && new Set(ways).size >= Math.min(ways.length, 2),
+    const rows = men.map(m => doing(O.g, m)), keys = fits.map(f => f.key), ways = keys.filter(k => k && !/^(floor|run):/.test(k));
+    verdict(watching.every(Boolean) && rows.every((r, i) => sameWord(r, fits[i].words ? `in position · ${fits[i].words}` : 'in position')) && new Set(ways).size >= Math.min(ways.length, 2),
       `${tag}: stood, each gun is on what he was dealt and his row says what; no two on one way while there were ways for both`, `${men.map((m, i) => `${m.callsign} ${at(m.char.pos)} ${rows[i]}`).join(' · ')}`);
     const sets = R.lines(/^set\.$/, t0);
     const here = men.map(m => [...m.char.pos]); R.step(60 * 6); const drift = men.map((m, i) => dist(m.char.pos, here[i]));
@@ -106,8 +107,8 @@ export const roomfitWalk = guarded(async () => {
     // within the second: with two men there are ways nobody is on, and his gun — never his feet — goes to the heaviest of them he has a line to
     if (squad === 2) { const F = fits[0], k0 = F.key, p0 = men.map(m => [...m.char.pos]); F.key = 'run:0'; F.w = 0.001; F.words = 'watching nothing much'; F.sig = '';
       R.step(60 * 3); const still = men.map((m, i) => dist(m.char.pos, p0[i])), gun = !!F.watch && Math.abs(wrap(yawTo(men[0].char.pos, F.watch) - gunYaw(men[0]))) < 0.35;
-      verdict(still.every(d => d < 0.1) && ROOMFIT_STATS.moved === moved0 + 1 && !!F.key && !/^run:/.test(F.key) && F.key !== fits[1].key && F.w > 0.02 && gun && O.statusOf(men[0]) === `in position · ${F.words}`,
-        `${tag}: a man whose watch has come to weigh nothing looks again inside three seconds — his gun, never his feet, goes to the heaviest thing nobody is on`, `${men[0].callsign}: ${k0} → run:0 (by hand) → ${F.key} (${f2(F.w)}) · his mate is on ${fits[1].key} · guns moved ${ROOMFIT_STATS.moved - moved0} · feet ${still.map(f2).join(' / ')} m · row "${O.statusOf(men[0])}"`); }
+      verdict(still.every(d => d < 0.1) && ROOMFIT_STATS.moved === moved0 + 1 && !!F.key && !/^run:/.test(F.key) && F.key !== fits[1].key && F.w > 0.02 && gun && sameWord(doing(O.g, men[0]), `in position · ${F.words}`),
+        `${tag}: a man whose watch has come to weigh nothing looks again inside three seconds — his gun, never his feet, goes to the heaviest thing nobody is on`, `${men[0].callsign}: ${k0} → run:0 (by hand) → ${F.key} (${f2(F.w)}) · his mate is on ${fits[1].key} · guns moved ${ROOMFIT_STATS.moved - moved0} · feet ${still.map(f2).join(' / ')} m · row "${doing(O.g, men[0])}"`); }
   }
   // one pair sent, then the other to the same spot: the second deal keeps the first pair's room and takes what the first is not on
   { const R = await rig(21, 4); const { O } = R; const men: any[] = O.squad(), red: any[] = O.men('red'), blue: any[] = O.men('blue'); R.step(30);

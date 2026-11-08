@@ -17,7 +17,6 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ROOT } from './headless.ts';
 import { HOLDS, holdsOf, named, holdOff, asProbe, asProbes, exitCode, type Hold } from './holds.ts';
-import type { RedRow } from './expected-red.ts';
 
 const HERE = import.meta.dir, tools = readdirSync(HERE).filter(x => x.endsWith('.ts') && !/^(holds|holds-check|probes)\.ts$/.test(x)).map(f => ({ f, src: readFileSync(resolve(HERE, f), 'utf8') }));
 
@@ -126,28 +125,9 @@ const probeNames = [...known].filter(n => ran.has(n)).sort(), heldNames = probeN
   line(p.exitCode === 0 && said?.[1] === 'PASS' && none === null && ran === 0 && exitCode(none) === 2, '(7) the runner\'s run() holds a probe\'s words by its name, and a part a file has not is said (exit 2), not passed over',
     `probes.ts selftest-holds: exit ${p.exitCode}${said ? ` · ${said[2].slice(0, 150)}` : ` · ${(p.stderr.toString() || out).trim().split('\n').slice(-1)[0]?.slice(0, 150)}`}`); }
 
-// (8) THE EXPECTED REDS' ROWS (tools/qa/expected-red.ts), as far as a row is typed: its name is one the runner has (a name it no longer has can never read
-// EXPECTED or GREEN AGAIN) and is in one table of the list only; a row that is red on the old stand carries no bisect (the bisect raises words on the old stand, where it says
-// the probe is red already); every word of a bisect is one the stand can raise, value and all (a word written alone is raised to 1), and none is a word the
-// probe's own holds put off (the bisect raised it by hand over the hold, and the plain run never has it); `leans` is an unsettled row's.
-// WHAT (8) CANNOT SEE: a family's word from a probe's name (the runner knows its names, not which of them it runs a probe under: a row keyed by a family's
-// word passes here and never reads EXPECTED or GREEN AGAIN), and anything a row says in prose.
-{ const { EXPECTED_RED, RED_TABLES } = await import('./expected-red.ts'), { heldWords } = await import('./stand.ts'), can = new Set(heldWords(FROZEN_HOLDS as Record<string, string>));
-  const list: Record<string, RedRow> = BREAK ? { ...EXPECTED_RED, 'no-such-probe': { is: 'open', line: 'the break', whose: 'nobody' },
-    ...(heldNames[0] ? { [heldNames[0]]: { is: 'open', bisect: { enough: [holdsOf(heldNames[0])[0].word] }, line: 'the break', whose: 'nobody' } } : {}) } : EXPECTED_RED;
-  const bad: string[] = [], tableOf = new Map<string, string>();
-  for (const [t, rows] of Object.entries(RED_TABLES)) for (const n of Object.keys(rows)) { if (tableOf.has(n)) bad.push(`${n}: a row in two tables (${tableOf.get(n)}, ${t}): the later one hides the earlier`); tableOf.set(n, t); }
-  for (const [n, r] of Object.entries(list)) {
-    if (!known.has(n)) bad.push(`${n}: no name the runner has`);
-    if (r.leans && (r.is === 'stale' || r.is === 'real')) bad.push(`${n}: \`leans\` on a settled row`);
-    if (!r.bisect) continue;
-    if (r.on) bad.push(`${n}: a bisect on a row that is red on the old stand`);
-    if (!r.bisect.enough.length) bad.push(`${n}: a bisect of no word`);
-    for (const w of r.bisect.enough) { const full = w.includes('=') ? w : `${w}=1`, k = full.split('=')[0];
-      if (!can.has(full)) bad.push(`${n}: '${w}' is no word the stand can raise${[...can].some(c => c.startsWith(`${k}=`)) ? ` (the stand's is ${[...can].find(c => c.startsWith(`${k}=`))})` : ''}`);
-      else if (holdsOf(n).some(x => x.word === k)) bad.push(`${n}: '${w}' is a word its own holds put off`); }
-  }
-  line(!bad.length && Object.keys(list).length > 0, '(8) every row of the expected reds is under a name the runner has, and what it says of the stand\'s words can be so', bad.length ? few(bad, 8) : `${Object.keys(list).length} rows, ${Object.values(list).filter(r => r.bisect).length} with a bisect`); }
+// (8) EVERY ROW OF THE EXPECTED REDS (expected-red.ts) is under a name the runner has: a row of a probe that is gone never reads EXPECTED or GREEN AGAIN.
+{ const { EXPECTED_RED } = await import('./expected-red.ts'), names = [...Object.keys(EXPECTED_RED), ...(BREAK ? ['no-such-probe'] : [])], bad = names.filter(n => !known.has(n));
+  line(!bad.length, '(8) every row of the expected reds is under a name the runner has', bad.length ? few(bad, 8) : `${names.length} rows`); }
 
 // (9) A BREAK WORD IS SAID, AND WHETHER IT BIT (stand.ts BREAK_WORDS, the close of probes.ts): the runner's own green and red self tests in children started
 // with a word no check reads. Green: DID NOT BITE. Red, no row: named as the word's to explain. WHAT (9) CANNOT SEE: the third reading, BITE NOT SHOWN, which

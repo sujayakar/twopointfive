@@ -146,34 +146,6 @@ export async function wandKit(): Promise<boolean> {
   return F.done();
 }
 
-// ───────────────────────────────────────────────────────────── tile
-/** the maintainer, 10-12, on Team & kit of the solo night: "wand greyed out" — the tile was dimmed whole on a mission with no fog of war and still read CARRIED */
-export async function wandTile(): Promise<boolean> {
-  const F = family('wand-tile: a carried wand or sticky camera says so itself where the mission has no fog of war for it to look into');
-  const G = globalThis as any, hadLS = 'localStorage' in G, prevLS = G.localStorage;
-  try {
-    await keepKit(async () => { await withDom('?quality=high&mute', async () => {
-      G.localStorage = memStore(); G.location.pathname = '/'; G.location.hash = ''; G.location.assign = () => { }; G.location.reload = () => { };
-      const M = await import(`${ROOT}/src/ui/missions.ts`), UI = await import(`${ROOT}/src/ui/loadout.ts`);
-      K.kitLoad(null, ''); for (const f of ['smoke', 'bangs', 'frags', 'shells']) K.kitSet(0, f, 0);
-      if (!BREAK) K.kitTry(0, 'wand', 1); K.kitTry(0, 'cams', 2);
-      const SEARCH = '?quality=high&mute', list: any[] = M.missionList(), up: any[] = [];
-      try {
-      const tiles = (root: El) => Object.fromEntries(root.all(e => e.cls.has('kc-row')).map(r => [r.attrs['data-field'], { idle: r.cls.has('idle'), val: r.all(e => e.cls.has('kc-val'))[0]?.textContent ?? '', title: r.title, dimIco: !!r.all(e => e.cls.has('kc-ico'))[0]?.cls.has('none') }])) as Record<string, { idle: boolean; val: string; title: string; dimIco: boolean }>;
-      const open = (id: string) => { const m = list.find(x => x.id === id); const host = new El('DIV') as any; const L = UI.openLoadout(UI.entryOfMission(m), { host, search: M.missionHref(m, SEARCH), deploy: () => { }, back: () => { } }); up.push(L); return { L, root: L.root as unknown as El }; };
-      const say = (t: Record<string, { idle: boolean; val: string }>) => Object.entries(t).map(([f, r]) => `${f} '${r.val}'${r.idle ? ' idle' : ''}`).join(' · ');
-
-      // a squad mission: its own fog
-      const four = open('room-clear-four'), t1 = tiles(four.root);
-      F.verdict(!!t1.wand && !t1.wand.idle && /carried/i.test(t1.wand.val) && !t1.wand.title && !t1.cams.idle && t1.cams.val === '2', 'a squad mission (its own fog of war): the same card reads carried and 2, nothing idle', say({ wand: t1.wand, cams: t1.cams }));
-
-      } finally { for (const L of up) L.close?.(); }
-    }); });
-  } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
-  finally { if (hadLS) G.localStorage = prevLS; else delete G.localStorage; }
-  return F.done();
-}
-
 // ───────────────────────────────────────────────────────────── look
 export async function wandLook(): Promise<boolean> {
   const F = family('wand-look: at a shut door under the fog, the wand shows the room behind it — after the feed, inside its wedge, through his own eye\'s place');
@@ -495,5 +467,5 @@ export async function wandMate(): Promise<boolean> {
 
 
 /** the file's probes, by the names the runner calls them */
-const PROBES = { 'wand-kit': wandKit, 'wand-tile': wandTile, 'wand-look': wandLook, 'wand-costs': wandCosts, 'wand-doors': wandDoors, 'wand-mate': wandMate,  };
+const PROBES = { 'wand-kit': wandKit, 'wand-look': wandLook, 'wand-costs': wandCosts, 'wand-doors': wandDoors, 'wand-mate': wandMate,  };
 if (import.meta.main) process.exit(exitCode(await asProbes(PROBES, wanted())));

@@ -1,5 +1,5 @@
 // THE WALL CHARGE'S SAFETY RADIUS — the check behind WALLCHARGE.safe (src/game/wallcharge.ts safeRadius; a settled rule: every tool stands the game with it on).
-//   bun run tools/qa/wallsafe-check.ts [--scn room-clear-four,block-squads] [--verbose]        (also `probes.ts wallsafe`)
+//   bun run tools/qa/wallsafe-check.ts [--scn room-clear-four,block-four] [--verbose]        (also `probes.ts wallsafe`)
 // On the office and on a level with outer walls, a squad of four, the destruction switch raised as the wall charge's own probes raise it:
 //   (1) the level's own geometry says which side of a wall is indoors: an outer wall worked from outside is not, a partition (or an outer wall from inside) is;
 //       the radius is larger than it was outdoors and larger again indoors;
@@ -23,6 +23,7 @@
 // 2026-11-07 (later): the three blasts of (3) are on a charge Sam's own hands set (tools/qa/charge-rig.ts), each set before the men are stood around it; until
 // then its row was pushed onto the tools' copy of the game, which the Rust game never got. What was said is read from the game's own state (heard.ts).
 // WALLSAFE_BREAK=1 = the charges of (3) and (8) are set and never set off: their blast lines must fail.   exit 0 = all hold · 1 = one does not
+import { behindWall, notesOf } from './squadwords';
 import { resolve } from 'node:path';
 import { samSets } from './charge-rig.ts';
 import { sample } from './sweep.ts';
@@ -30,7 +31,7 @@ const ROOT = resolve(import.meta.dir, '../..');
 type Vec3 = [number, number, number];
 
 /** the two levels asked when none is named: each has a room to play the charge in from a fresh start */
-const FRESH = sample(['room-clear-four', 'block-squads'], 1);
+const FRESH = sample(['room-clear-four', 'block-four'], 1);
 export async function wallsafeCheck(scns = FRESH): Promise<boolean> {
   const { rig, outerSites, partition } = (await import('./outerwall-probes.ts')) as any;
   const { WALLCHARGE, WALL_ORDER, wallTarget, chargeIndoors, safeRadius, wallPt, wallOff } = await import(`${ROOT}/src/game/wallcharge.ts`);
@@ -103,7 +104,7 @@ export async function wallsafeCheck(scns = FRESH): Promise<boolean> {
         // (with the wall standing this floor has no place for him on the charge's side: being rocked inside the reach, and shielded by a wall the charge does not take, is the Rust game's native test)
         if (!pS2 || !pN) { console.log(`    ${name}: no room for Sam inside the reach on this floor: at ${f2(0.5 * r.reach)} m ${pS2 ? 'yes' : 'no'} · a man at ${f2(0.3 * r.reach)} m ${pN ? 'yes' : 'no'}`); continue; }
         R.put(A, pA); for (const gd of [A, B, M]) gd.dazzledUntil = -1; g.teleportPlayer(pS2); pl.fireCd = 0; pl.sup.v = 0; pl.dazzledUntil = -1; R.step(1);
-        const warn2: string[] = C.tooClose(c), note = (C as any).hudNotes().map((n: any) => n.text).join(' / '), hits1 = pl.hitsLeft; key();
+        const warn2: string[] = C.tooClose(c), note = notesOf(g).join(' / '), hits1 = pl.hitsLeft; key();
         // ('the nearer man is blind the longer' went 2026-11-07: a man that near the charge is killed by it — the charge's kill at its foot, a settled rule this check used to hold off)
         line(warn2.includes('you') && /TOO CLOSE: you/.test(note) && pl.fireCd >= WALLCHARGE.samSecs[1] - 0.05 && pl.fireCd <= WALLCHARGE.samSecs[0] && pl.sup.v >= WALLCHARGE.samSup && (C.lastBlow?.sam ?? 0) > 0 && !pl.down && pl.hitsLeft === hits1 && dz(A) > 0,
           `${name}: Sam inside the reach of the squad's charge is rocked — no round for a beat, his aim open — and is neither hit nor down; the note said so before it went`,

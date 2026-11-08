@@ -115,7 +115,7 @@ stoves, crates, tyres, generators, pickups, lanterns). What makes a level is wha
 Other levels have a skin of their own (`tools/levels/*-gwot.ts`) or are built straight from the kit
 (`src/scene/gwotKit.ts`). No two places share an accent or a family of ground marks.
 
-![The block: green dado, cover plates in the floor](public/assets/menu/block-squads.jpg)
+![The block: green dado, cover plates in the floor](public/assets/menu/block-four.jpg)
 
 **A room** needs six things: a use named in two words; signature furniture big enough to read from
 above; the clutter of that use; its own light; its own floor; something to shove or break. The

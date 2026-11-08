@@ -1195,27 +1195,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`tyres` `bunks` `radio` `store` `mess`, + `front`, `back` and `hall` = the door that cuts the corridor; they were n1 n2 n3 s4 s5 mid): an id is SAID and shown
   (orders.ts `doorIdWords`: 'holding · store door'), and the HUD has no compass. The rule for every level: a door is named for its room, no compass word in a name.
 - **The snatch is out** (2026-11-08, marked on the keep or cut page): the man to take alive, his run for the gate and the van left both sides with `snatch.ts`, `snatchout.ts`, `SNATCH`, `SNATCHOUT` and `?nosnatch`. `levels/snatch.json` stands as a plain room clear with no row on the list, no man and no `response` block (`rust/game_start/tests/cut_missions.rs`). What the notes below say of the snatch is history.
-- **Timed charges over a room clear** (`src/game/defuse.ts`, `Game.defuse`, table `DEFUSE` in the knob registry — no Tab row; block `scenarios.defuse`, docs/level-format.md
-  *Scenarios*; level `levels/defuse.json` + its look file ← `tools/levels/defuse.ts` / `defuse-gwot.ts`; row `defuse-four` 'The two charges', group `clock`, untuned,
-  `?levelFile=defuse.json&roomclear&squad4`): ONE clock (`secs` 75 from the team's first move or order, in the objective row; its last ten seconds tick wherever the player is)
-  over two charges a wing apart — 'charge 1' / 'charge 2' in the end rooms 'workshop 1' / 'workshop 2', each workshop with a door from its wing (`shop_N`) and a back door
-  from outside (`back_N`); no compass word in a name (the check holds it). Two pairs at once is the plan the clock rewards; all four one wing then the other is a real but
-  worse one (numbers below). THE ROW DEPLOYS AT FOUR ONLY (`ScenarioEntry.only`, scenarios.ts → `loadout.ts squadChoices` greys the other sizes with the row's own line, as a
-  Training row at its own size: a design rule, NOT `CANNOT` — the level still stages a pair from a URL or a harness tool, and `loadout-stage` knows the two apart). A charge is
-  made safe by `workSecs` 6 s at it: Sam's Space row 'make it safe' (a sustained verb; with HANDWORK on he is planted by `handwork.ts samWork` kind `'defuse'`, LMB lets go) or
-  a teammate through the squad's work order (`workthings.ts` thing kind `'device'`, verb `'defuse'`: X on it, 1 — needs `WORK.on`, so the frozen stand has only Sam's row;
-  `work.onDevice(i)` = the man with his hands on it, else the one walking to it). The objective row names who is on a charge ('· Red One on it') and the marker stands on
-  the charge nobody is working. The clock at zero = `frag.ts blast()` at every live charge and the row reads FAILED — and STAYS failed: the room fight plays on, but a
-  'structure taken' after it is not a win (roomclear.ts `finish`). Won = both safe AND the room clear 'taken'. The clock stops (end `'over'`, no blast behind the card) only
-  when Sam goes down or the room clear itself ends 'wiped'; the four down with Sam still up, it runs on. State is keyed to `g.mission` (a restart starts it over); the
-  optional checkpoint slice `defuse` (`ran, st, by, end, sam`) is UNREACHABLE IN PLAY today — no checkpoint is written with a squad on the floor — so the check's 'save' lines
-  ask `snapshot / restore` directly (a file that lies about `end` is read off its charges). A level without the block, or `DEFUSE.on` false, is the room clear alone by
-  digest (a paired run on the defuse level itself). QA: `bun run tools/qa/defuse-check.ts` (`probes.ts defuse`, in family `missions`; passes on both stands;
-  `DEFUSE_BREAK=1` must fail), `TPS_PROFILE=shipped bun run tools/qa/defuse-run.ts [--arm split|whole|split-back|whole-back|sam|both|backs|all] [--seeds 1-12] [--jobs 2]
-  [--secs 100 --clocks 60,75,90] [--trace arm:seed]` (a scripted commander; `--clocks` reads one long-clock run as every shorter clock; a last defender who has walked out
-  of the house is hunted by a 'move' to where he stands). 12 seeds as shipped at 75 s ON THE LEVEL'S OWN FOOTSTEP MAP (below), won · teammates up of 48 before any blast: two pairs through the wings 12 · 29, all
-  four one wing then the other 5 · 25 (a charge went off 5), pairs by the back doors 9 · 24, all four by the backs 10 · 40 (the grass behind the house is quiet: on the office's map it was 6 · 25; its last charge is safe at 69 s of the 75, so a slower hand than the script's does not make it), the player on one charge himself and the four on
-  the other 11 · 32; at 65 s both 'together' plans won 0 of 12 and the split ones the same 12 / 9 / 11, at 70 s together 2 and 8, at 90 s 10 and 11. Page rebuild/missions/new/defuse.md. Never seen on a GPU. THE LEVEL CARRIES ITS OWN FOOTSTEP MAP (`surfaces`, written off the generator's slabs: grass behind the house, lino hall, stone workshops, carpet wings, asphalt lot; it used to get the office's rectangles): playthrough.ts's commander as shipped, 24 seeds, taken · teammates up of 96: 23 · 67 with the office's map → 21 · 64 with its own (8 of 24 runs the same; chaotic per seed, not read as a difference).
+- **The two charges are out** (2026-11-08, marked on the keep or cut page): the two charges on one clock left both sides with `defuse.ts`, `DEFUSE`, the work order's `'device'` thing and Sam's make it safe row. `levels/defuse.json` and its look file stand as a plain room clear with no row on the list (`rust/game_start/tests/cut_missions.rs`). What the notes below say of the charges is history.
 - **A room clear issues its own wall charges** (`src/game/issue.ts issueStage`, one line in nightbreach.ts after the kit's staging; field `scenarios.roomClear.wallCharges: N`
   (1‥9), docs/level-format.md *Scenarios*): the squad carries AT LEAST N wall charges for the run whatever the kit cards say (`WallCharge.raiseCarried`: raises, never lowers;
   the kit's store is neither read nor written; a level without the field returns on the first line). No switch. Today `levels/mousehole.json` alone (+ its look file ←
@@ -1322,7 +1302,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `scenarios.issue` names his card, and `kitPlayer` asks only `stealthRun` (a quiet scenario up, or the night alone), so the mission's five sponge rounds
   were handed over that card and the launcher came up on them, ahead of the grenades its lines teach. THE RULE: where the level's block names YOUR card
   (place '0') and the staging runs under it (`issuing === 'own'`), nothing is handed over it: no sponge rounds for a quiet kind, no cameras or wand for a
-  fog (`lent` in `kitPlayer`; `kitIssueWhole(members)` is the one test, asked by `ui/loadout.ts lentNow` too so the Team & kit figure draws no camera or
+  fog (`lent` in `kitPlayer`; `kitIssueWhole(members)` is the one test, asked by `kit/team.rs team_worn` too so the Team & kit figure draws no camera or
   wand the run will not have). With no sponge round the right button is on the first load he does carry (the grenade). NOT TOUCHED: a block that names
   no card for you (the long hall's two levels, `members: {}`: a night alone there is handed what it was), a mission with no block (the stealth card, or
   the hand-overs with that card off), a lesson's page with no block (the hand-overs over the plain issue), the teammates, the row's `lean` (still a word
@@ -1406,7 +1386,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   spot the level marks `wired: true` (scenarios.ts `QuietSpot.wired`, docs/level-format.md *Scenarios*: the holder is on a network or an alarm — today `quiet-relay`'s middle rack, and Training 1's trunk, whose last step is the man who comes to look). The
   take's own clunk is still in the hearing model, so a man near enough to hear it still comes; a man questioned says 'somebody's been sent to look' only where somebody was. The solo-night quiet tallies in this file were played with the errand on every take (the vault's are the rule's own since a re-play on 10-12; lights-out's 240
   runs are the same run for run either way: its pair is out of the gate 6.5 s after the take). `bun run tools/qa/takecheck-check.ts` (`probes.ts takecheck`, in families `quiet` and `missions`; both
-  stands; `TAKECHECK_BREAK=1` must fail). The Missions list draws GROUPS (`scenarios.ts MISSION_GROUPS`, `ui/missions.ts groupOf / groupHeads`: training · raids · strongholds · on the clock · quiet alone ·
+  stands; `TAKECHECK_BREAK=1` must fail). The Missions list draws GROUPS (the desk's `start_list` `GROUPS`, `group_of`: training · raids · strongholds · on the clock · quiet alone ·
   quiet as two — every mission under exactly one, eight at most; a row that names none: quiet by its team, a rescue 'clock', else 'raids'). Levels built for it: `bazaar.json`, `police-post.json` (alone; rows `bazaar-quiet`, `police-post-quiet`), `quiet-yard.json` (the test yard, alone and as two). QA: `probes.ts quiet` (seven; `quiet-fixes` = the review of the join), `tools/qa/quiet-check.ts` (also red on two men under one name: `CALLSIGNS` holds seven), `solo-night.ts --level <f> --quiet [pin] [--squad 1] [--exit <way out's name>] [--ghost]`; the missions gate plays quiet rows
   with solo-night (`missions-gate.ts`: eight seeds a row run by name, two inside `probes.ts missions-shipped` so a family stays under gate.sh's cap — `MISSIONS_QUIET_SEEDS=1-8` there plays the eight —, `--quiet-seeds`, each line saying how many of the level's deals they were; the ghost goes round a man standing in its way where the floor has another way, else stands off up to a minute for him to walk on).
 - **A quiet level built for two** (`levels/lights-out.json` ← `tools/levels/lights-out.ts`, on the shared walled yard `train-ground.ts`, one file; row `lights-out-two`
@@ -2445,12 +2425,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   and nothing in the table moved: the rows, levels, scripts, scripted players, page runs and checks stay, each still opens by its own address, and
   `?offlist=0` draws them on the lists again where they stood ("for now" is his word). THE LIST READS 'The tunnel, from above', 'The fuel stop, alone',
   'The ledger', 'The truck park, as two'. A won lesson's end card leads to the next lesson THE LISTS DRAW (`ui/verdictNext.ts nextLessonOf` asks
-  `listedMissions`, in the table's order): the tunnel now leads to the fuel stop and the fuel stop to the ledger; a cut lesson is nobody's next, and one
+  the desk's `start`, in the table's order): the tunnel now leads to the fuel stop and the fuel stop to the ledger; a cut lesson is nobody's next, and one
   played by its own address leads to the listed lesson after it (the tactics mission still to the ledger). The ledger's `scene` line no longer names "the
   post", which was the tactics mission's: "The people who hit the convoy were paid through a money changer's shop in town". NO SWITCH of its own: the list
-  is data, and the next-lesson rule follows `OFFLIST_UI` (ON in the page, OFF in the module and so in every harness; off = every lesson leads to the next
-  row of the table, as before). CHECK `tools/qa/offlist-check.ts` (probe `offlist`, 10 lines): its cut list names the two rows, and two new lines hold the
-  chain of next lessons against what `listedMissions` draws, on and off; `OFFLIST_BREAK=1` fails the first of them with the lists' own lines.
+  is data, and the next-lesson rule follows what the desk draws (`?offlist=0` = every lesson leads to the next row of the table, as before). CHECK: `rust/game_run/tests/desk.rs` (the cut rows, `offlist=0`); `offlist-check.ts` went with the page's list, 2026-11-08.
   `tools/qa/kitview-page.cjs` reads a row's cut from its whole line now (both new rows say it after their level). RUN on this change: `offlist-check`
   both ways, `writing-check`, `lesson-check`, `rails-check` on both stands, the `ui` gate, the `missions` gate (two reds there, `defuse` and
   `missions-shipped`'s compound row, are red on the unchanged build head too). ON THE REAL PAGE (headless Chromium, the software adapter, the DOM read, no

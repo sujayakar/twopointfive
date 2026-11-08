@@ -329,10 +329,11 @@ pub fn update_shells(g: &mut crate::game::Game, dt: f64) {
                 let c = g.gd[cv].ch;
                 try_char(g, shooter, c, Some(cv), pos, dir, reach, &mut best, &mut hit_c, &mut hit_g);
             }
-            let pl = g.player;
-            if !g.pl[pl].down {
-                let c = g.pl[pl].ch;
-                try_char(g, shooter, c, None, pos, dir, reach, &mut best, &mut hit_c, &mut hit_g);
+            for pl in crate::seats::men(g) {
+                if !g.pl[pl].down {
+                    let c = g.pl[pl].ch;
+                    try_char(g, shooter, c, None, pos, dir, reach, &mut best, &mut hit_c, &mut hit_g);
+                }
             }
             let st = crate::scene_collision::raycast(g, pos, dir, reach);
             let ph = crate::props::prop_system_raycast(g, pos, dir, reach);

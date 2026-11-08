@@ -57,8 +57,8 @@ if (process.env.SIMSTATE_BREAK === '1') { const { SimState } = await import(`${R
  *  before it was the host's — the mark must then be gone */
 const unhost = (g: any): void => { const pl = g.probe?.plumbing; if (pl) Object.setPrototypeOf(pl, Object.prototype); };
 const DT = 1 / 60, CAP = Number(flag('--cap') ?? 45), EVERY = Number(flag('--every') ?? 6), TICKS = Number(flag('--ticks') ?? 60);
-/** the default set: a solo night, a pair, the four in two pairs, a rescue, a compound, charges on a clock, two squads, walls to blow */
-const DEFAULT = ['night-breach', 'room-clear-pair', 'room-clear-four', 'hostage-rescue', 'compound-four', 'defuse-four', 'block-squads', 'mousehole-four'];
+/** the default set: a solo night, a pair, the four in two pairs, a rescue, a compound, two squads, walls to blow */
+const DEFAULT = ['night-breach', 'room-clear-pair', 'room-clear-four', 'hostage-rescue', 'compound-four', 'mousehole-four'];
 
 interface Moment { frame: number; t: number; why: string; same: number; fresh: number; /** the tick the other game's strict word parted at though it stayed alike value for value (−1 = it never parted) */ alias: number; /** the other game's ticks changed this game's own state: the two share something live */ leak: boolean; ring: number; back: boolean; backFull: boolean; /** what the host keeps on a GPU object of the game's (the light meter's buffers) is as it was left, not as the snapshot saw it */ host: boolean; freshAt: boolean; takeMs: number; tickTakeMs: number; restoreMs: number; freshMs: number; stepMs: number; bytes: number; own: number; objects: number }
 interface Out { scn: string; seed: number; arm: string; end: string; t: number; digest: string; last: string; frames: number; moments: Moment[]; rawWeak: string[]; simViews?: number; why: string[]; fns: Record<string, number>; error?: string }

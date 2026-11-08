@@ -1,11 +1,11 @@
 // Written by tools/draw/gen.ts from rust/game_draw. To change a section, change it there.
 
 /** the stamp of the sections this was made from: a module of another stamp is refused (drawn.ts) */
-export const LAYOUT = 40177740;
+export const LAYOUT = 3491097453;
 /** what a host may ask for: what is made together is asked for together */
-export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, air = 2048, levelLook = 4096, snow = 8192, all = 16383 }
+export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, air = 2048, levelLook = 4096, snow = 8192, smoke = 16384, all = 32767 }
 /** each section's place in the table the module answers with */
-export const enum Section { fog = 0, view = 1, sky = 2, head = 3, geo = 4, mat = 5, cut = 6, visible = 7, marks = 8, cells = 9, items = 10, info = 11, panes = 12, leaves = 13, lights = 14, men = 15, insts = 16, bones = 17, caps = 18, doorways = 19, emits = 20, kicks = 21, pushes = 22, sources = 23, anchors = 24, beams = 25, sounds = 26, footfalls = 27, rolls = 28, heard = 29, rims = 30, fires = 31, fireTable = 32, decals = 33, decalKeys = 34, decalHead = 35, winds = 36, gusts = 37, heat = 38, air = 39, windRoofs = 40, roofs = 41, ceilings = 42, doorBoxes = 43, openPanes = 44, resets = 45, traffic = 46, dust = 47, feet = 48, things = 49, blasts = 50, snowWords = 51, count = 52 }
+export const enum Section { fog = 0, view = 1, sky = 2, head = 3, geo = 4, mat = 5, cut = 6, visible = 7, marks = 8, cells = 9, items = 10, info = 11, panes = 12, leaves = 13, lights = 14, men = 15, insts = 16, bones = 17, caps = 18, doorways = 19, emits = 20, kicks = 21, pushes = 22, sources = 23, anchors = 24, beams = 25, sounds = 26, footfalls = 27, rolls = 28, heard = 29, rims = 30, fires = 31, fireTable = 32, decals = 33, decalKeys = 34, decalHead = 35, winds = 36, gusts = 37, heat = 38, air = 39, windRoofs = 40, roofs = 41, ceilings = 42, doorBoxes = 43, openPanes = 44, resets = 45, traffic = 46, dust = 47, feet = 48, things = 49, blasts = 50, snowWords = 51, smoke = 52, smokeAt = 53, smokeBricks = 54, count = 55 }
 
 /** the fog: one row */
 export const enum Fog {
@@ -79,50 +79,48 @@ export const enum View {
   at = 3,
   /** f32 × 3 */
   follow = 6,
-  /** f32: which way he aims, on the plan */
-  aimYaw = 9,
   /** f32 × 3: where his aim meets the world */
-  aim = 10,
+  aim = 9,
   /** u32: the view is another man's: nothing leans on the cursor */
-  spectating = 13,
+  spectating = 12,
   /** f32 × 3: the view is held off the follow point by this much (a peek round a wall's end), and kicked for this frame's picture by that much */
-  peek = 14,
+  peek = 13,
   /** f32 × 3 */
-  kick = 17,
+  kick = 16,
   /** u32: the tick cut the view to here: once each time the count moves */
-  cuts = 20,
+  cuts = 19,
   /** f32 × 3 */
-  cut = 21,
+  cut = 20,
   /** u32: a show or a level's script holds the view here: where it looks, and from how far and which way (0: nobody does) */
-  pinned = 24,
+  pinned = 23,
   /** f32 × 3 */
-  pin = 25,
+  pin = 24,
   /** f32 */
-  pinYaw = 28,
+  pinYaw = 27,
   /** f32 */
-  pinPitch = 29,
+  pinPitch = 28,
   /** f32 */
-  pinDistance = 30,
+  pinDistance = 29,
   /** u32: the tick turned the host's own view: 1 its yaw · 2 its pitch · 4 its distance · 8 where it looks, to these */
-  turned = 31,
+  turned = 30,
   /** f32 */
-  yaw = 32,
+  yaw = 31,
   /** f32 */
-  pitch = 33,
+  pitch = 32,
   /** f32 */
-  distance = 34,
+  distance = 33,
   /** f32 × 3 */
-  target = 35,
+  target = 34,
   /** u32: what a lesson does not let the hand do to the view: 1 turn it · 2 zoom it */
-  locks = 38,
+  locks = 37,
   /** u32: the run's end card is due: 1 it was lost, 2 won (0: not yet) */
-  ended = 39,
+  ended = 38,
   /** f32: night vision's amount, and how hard he has just been hit */
-  night = 40,
+  night = 39,
   /** f32 */
-  hit = 41,
+  hit = 40,
   /** words a row */
-  row = 42,
+  row = 41,
 }
 
 /** the sky: one row */
@@ -637,8 +635,12 @@ export const enum Heard {
   time = 0,
   /** f32: the rain's level where the listener stands */
   rain = 1,
+  /** f32: how tense the floor is, by the nerves of those who are not the player's own: what the score follows */
+  tension = 2,
+  /** u32: which run this is (a fresh one is the score's cue) */
+  run = 3,
   /** words a row */
-  row = 2,
+  row = 4,
 }
 
 /** a man of the team: the first row is the shown player's own */
@@ -927,6 +929,28 @@ export const enum SnowWord {
   w = 0,
   /** words a row */
   row = 1,
+}
+
+/** the grid's plan: one row, on a level that has one */
+export const enum SmokeHead {
+  /** u32: steps taken */
+  step = 0,
+  /** u32: the plan in bricks, along x and along z */
+  wide = 1,
+  /** u32 */
+  deep = 2,
+  /** words a row */
+  row = 3,
+}
+
+/** a brick that stands: four half-metre cells along x, then along z, then eight up */
+export const enum SmokeBrick {
+  /** f32 × 128: how much smoke is in each cell, in the solver's own unit as it is drawn */
+  rho = 0,
+  /** u32 × 32: a byte a cell: 1 = open toward +x · 2 = up · 4 = toward +z · 8 = asked */
+  open = 128,
+  /** words a row */
+  row = 160,
 }
 
 /** what a box may say it is made of, by its number in Rust */

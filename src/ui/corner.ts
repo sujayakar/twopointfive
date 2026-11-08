@@ -19,8 +19,8 @@ export function objectiveParts(line: string): { label: string; note: string; tex
 }
 type Opt = InteractRow['opts'][number];
 /** The corner as HANDRING.corner has it. `mine`: his own rows as the panel listed them (the highlighted row, a running verb's, a line no key gives,
- *  the word an empty tap left) · `primary`: which of them is the highlighted one (-1 none) · `squad`: the squad's block (orders.ts hud().status) ·
- *  `notes`: what the block and a door's heading say that the corner would lose, as a key's line or a warning under none (doortools.ts cornerNotes) · `objective`: the mission's line ('' =
+ *  the word an empty tap left) · `primary`: which of them is the highlighted one (-1 none) · `squad`: the squad's block (a man's line, the notes, the quick key's: game.view.squad and orders.ts quickLine) ·
+ *  `notes`: what the block and a door's heading say that the corner would lose, as a key's line or a warning under none (game.view.corner) · `objective`: the mission's line ('' =
  *  none, or a lesson's own line is up) · `stage`: the mission's stage, for the section's colour ('done', 'failed').
  *  Back: the objective as a section; then of his rows every line a key gives (the key's own, the two clicks on a man in reach) each by itself, and a
  *  row no key gives whole under no heading (a running verb's words and its bar, a committed move's, the word an empty tap left with how far); then
@@ -37,6 +37,6 @@ export function cornerRows(mine: InteractRow[], primary: number, squad: Interact
   const sq = squad.flatMap(r => r.opts), line = (o: Opt): InteractRow => ({ kind: 'objective', label: '', opts: [{ key: o.key, text: o.text }], inReach: true, off: false, one: true });
   for (const o of notes) rows.push(line(o));
   for (const o of sq) if (o.key && !o.gone) rows.push(line(o));
-  const lost = sq.filter(o => o.gone); if (lost.length) rows.push({ kind: 'objective', label: '', opts: lost, inReach: true, off: false, one: true });   // (the same lines: the page's arrow is set on them)
+  const lost = sq.filter(o => o.gone); if (lost.length) rows.push({ kind: 'objective', label: '', opts: lost, inReach: true, off: false, one: true });
   return { rows, primary: lit };
 }

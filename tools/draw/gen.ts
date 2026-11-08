@@ -57,14 +57,14 @@ const COMMANDS = join(ROOT, 'src/draw/commands.ts'), C: string[] = ['// Written 
     C.push(`  /** ${doc} */`, `  ${m[2][0].toLowerCase()}${m[2].slice(1)}(${F.map(f => `${f.name}: ${f.k === 'text' ? 'string' : 'number'}`).join(', ')}): void { this.u32(${m[1]});${F.map(f => ` this.${f.k}(${f.name});`).join('')} }`); doc = ''; }
   C.push('}', ''); }
 // ---- what a page asks the desk, from its declaration: the answers' readers are the wire's (src/view/read.ts)
-const ASKS = join(ROOT, 'src/draw/asks.ts'), A: string[] = [], answers = new Set<string>();
+const ASKS = join(ROOT, 'src/draw/asks.ts'), A: string[] = [], answers = new Set<string>(); let answersWord = false, answersNumber = false;
 { const src = (readFileSync(join(ROOT, 'rust/game_run/src/desk.rs'), 'utf8').match(/^asks! \{\n([\s\S]*?)^\}/m) ?? die('no asks! in desk.rs'))[1]; let doc = '', n = 0;
   for (const l of src.split('\n')) { const t = l.trim(); if (t.startsWith('///')) { doc = t.replace(/^\/\/\/ ?/, ''); continue; }
     const m = t.match(/^(\d+) (\w+) \{([^}]*)\} -> (\w+) = /); if (!m) continue; if (Number(m[1]) !== n++) die(`asks!: ${m[2]} says ${m[1]}`);
-    const F = fieldsOf(m[3], m[2]); answers.add(m[4]);
-    A.push(`  /** ${doc} */`, `  ${m[2][0].toLowerCase()}${m[2].slice(1)}(${F.map(f => `${f.name}: ${f.k === 'text' ? 'string' : 'number'}`).join(', ')}): ${m[4]} { this.u32(${m[1]});${F.map(f => ` this.${f.k}(${f.name});`).join('')} return ${m[4] === 'Pressed' ? 'this.told(' : ''}read${m[4]}(this.answer(this.take()))${m[4] === 'Pressed' ? ')' : ''}; }`); doc = ''; }
+    const F = fieldsOf(m[3], m[2]), word = m[4] === 'String', num = m[4] === 'u32'; if (word) answersWord = true; else if (num) answersNumber = true; else answers.add(m[4]);
+    A.push(`  /** ${doc} */`, `  ${m[2][0].toLowerCase()}${m[2].slice(1)}(${F.map(f => `${f.name}: ${f.k === 'text' ? 'string' : 'number'}`).join(', ')}): ${word ? 'string' : num ? 'number' : m[4]} { this.u32(${m[1]});${F.map(f => ` this.${f.k}(${f.name});`).join('')} return ${m[4] === 'Pressed' ? 'this.told(' : ''}${word ? 'readWord' : num ? 'readNumber' : `read${m[4]}`}(this.answer(this.take()))${m[4] === 'Pressed' ? ')' : ''}; }`); doc = ''; }
   const names = [...answers].sort();
-  A.unshift('// Written by tools/draw/gen.ts from rust/game_run/src/desk.rs. To change an ask, change it there.', "import { Writer } from './writer';", `import { ${names.map(x => `read${x}`).join(', ')}, ${names.map(x => `type ${x}`).join(', ')} } from '../view/read';`, '',
+  A.unshift('// Written by tools/draw/gen.ts from rust/game_run/src/desk.rs. To change an ask, change it there.', "import { Writer } from './writer';", `import { ${names.map(x => `read${x}`).join(', ')}, ${names.map(x => `type ${x}`).join(', ')} } from '../view/read';`, '', ...(answersWord ? ['/** an answer that is one word: its length, then its bytes */', 'const readWord = (b: Uint8Array): string => new TextDecoder().decode(b.subarray(4));', ''] : []), ...(answersNumber ? ['/** an answer that is one number */', 'const readNumber = (b: Uint8Array): number => new DataView(b.buffer, b.byteOffset, b.byteLength).getUint32(0, true);', ''] : []),
     '/** what the cards before a game show and press; `answer` is the module\'s, to the bytes of an ask */', 'export class Asks extends Writer {', '  constructor(private readonly answer: (asked: Uint8Array) => Uint8Array) { super(); }', '  /** a press, as it went */', '  protected told(p: Pressed): Pressed { return p; }');
   A.push('}', ''); }
 // ---- every number a person may turn while the game plays, by its name: where it lies in the knobs, from the wire's table (a settled row is the build's own)

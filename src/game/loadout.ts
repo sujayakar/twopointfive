@@ -23,23 +23,8 @@ import { soloFogRow } from './quietfog';   // (called inside noteOf only: src/ga
 import { lessonGroup } from '../scene/scenarios';
 import { kitPacks } from './kit';   // (called inside kitAsIssued only: src/game is one import cycle)
 
-/** how many teammates stand beside Sam */
-export type SquadSize = 0 | 1 | 2 | 3 | 4;
-export const SQUAD_SIZES: SquadSize[] = [0, 1, 2, 3, 4];
-
-/** a number as a squad size, or null (not an integer 0‥4) */
-export function asSquadSize(v: unknown): SquadSize | null { const n = typeof v === 'number' ? v : typeof v === 'string' && /^\d$/.test(v.trim()) ? Number(v) : NaN; return n === 0 || n === 1 || n === 2 || n === 3 || n === 4 ? n : null; }
-/** The squad size a query string asks for: `?squad=N` (0‥4), else `?squad4` = 4 (unless `flag4` is false: the rescue never read that flag), else null — the
- *  scenario's default. A `squad=` that is no size (`squad=9`, `squad=many`) asks for nothing. */
-export function squadOfQuery(search: string | URLSearchParams, flag4 = true): SquadSize | null {
-  const q = typeof search === 'string' ? new URLSearchParams(search) : search;
-  return asSquadSize(q.get('squad')) ?? (flag4 && q.has('squad4') ? 4 : null);
-}
-
-/** 'solo' / 'you + one' / 'you + the pair' / 'you + three' / 'you + four' */
-export function sizeWords(n: number): string { return n >= 4 ? 'you + four' : n === 3 ? 'you + three' : n === 2 ? 'you + the pair' : n === 1 ? 'you + one' : 'solo'; }
-/** the short tag: 'solo' / 'one' / 'pair' / 'three' / 'four' */
-export function sizeTag(n: number): string { return n >= 4 ? 'four' : n === 3 ? 'three' : n === 2 ? 'pair' : n === 1 ? 'one' : 'solo'; }
+export { SQUAD_SIZES, asSquadSize, sizeTag, sizeWords, squadOfQuery, squadSearch, type SquadSize } from '../scene/squadsize';
+import { asSquadSize, SQUAD_SIZES, type SquadSize } from '../scene/squadsize';
 
 /** one teammate as a size stages him: his callsign and the pair he is dealt into */
 export interface RosterMan { name: string; pair: PairId }
@@ -61,19 +46,8 @@ const SOLO_ONLY = 'The solo night is yours alone: nobody else is on the roster.'
 const QUIET_ONLY = 'A quiet mission is for one or two: you, or you and one partner.';
 /** a lesson's row (scenarioList.ts LESSON_MISSIONS: the tutorial's missions) is its own size and no other: its lines name that team's keys */
 const LESSON_ONLY = 'A tutorial mission is played at its own size.';
-/** …and with the kit AS ISSUED, whatever this machine keeps: its steps ask for the issue kit's own things (the rifle on 2, a frag on 5, the launcher's rounds,
- *  the squad's cans and charges), and a kept card without one would leave a step that can never pass. The page reads the kit table without the store on a
- *  Training row's load (main.ts) and the loadout screen shows no cards for one (ui/loadout.ts). (Your own four counts in a lesson are what a Player is built
- *  with — 4 smoke, 2 stun, 2 frags, 3 rounds of 40 mm — not the one of each the pouches rule issues: the kit lesson has you throw more than one can. kit.ts
- *  kitIssuedPage.) */
-export const LESSON_KIT = 'A lesson is played with the kit as issued.';
-/** a size's note on a Training row: its own words less 'your own kit' (a lesson has the issue kit, not his), then the line above */
-export function lessonNote(note: string): string { return [note.replace('your own kit, and nobody', 'nobody'), LESSON_KIT].filter(Boolean).join(' '); }
-/** …and a MISSION THAT ISSUES ITS OWN KIT (the level file's scenarios.issue — kit.ts kitIssue: every staging wears the issue cards with the mission's fields
- *  over them, whatever this machine keeps): its loadout screen shows no cards either and says so, with who carries what (`who`, the screen's own words) */
-export const MISSION_KIT = 'This mission issues its own kit, whatever this machine keeps';
-export function issueNote(note: string, who: string): string { return [note.replace('your own kit, and nobody', 'nobody'), `${MISSION_KIT}${who ? `: ${who}` : ''}.`].filter(Boolean).join(' '); }
-/** …BUT NOT a lesson the player packs for (kit.ts ISSUE.picked, the row's `packs`: the tutorial's squad mission): its screen shows the cards and its page
+/** …and with the kit AS ISSUED, whatever this machine keeps: its steps ask for the issue kit's own things, and a kept card without one would leave a step that can never pass.
+ *  BUT NOT a lesson the player packs for (kit.ts ISSUE.picked, the row's `packs`: the tutorial's squad mission): its screen shows the cards and its page
  *  stages what this machine keeps. Its SIZE stays its own (squadChoices below reads the group), and its levers stay off (main.ts reads the group). */
 export function kitAsIssued(e: { group?: string; packs?: unknown } | null | undefined): boolean { return lessonGroup(e?.group) && !kitPacks(e); }
 /** WHICH SIZES A SCENARIO CAN STAGE — a pure function of its row (kind, own size, level), since the level itself is not loaded until Deploy. Every kind stages
@@ -100,35 +74,5 @@ function noteOf(kind: LoadoutKind, n: SquadSize, office: boolean, own = 2): stri
   return '';
 }
 
-/** THE QUERY STRING DEPLOY LOADS: the row's own (`pick` — scenarioList.ts pickSearch, with whatever else rides on it) with the size on it. At the scenario's
- *  own size (`own`) it is `pick` untouched (but for an older `squad=` that is not the row's own); otherwise `squad4` and any older `squad=` are dropped and `squad=N` added. `loadout` never rides along. */
-export function squadSearch(pick: string, n: SquadSize, own: number): string {
-  const q = new URLSearchParams(pick.replace(/^[^?]*\?/, '')); q.delete('loadout');
-  const kept = n === own && own !== 2 && q.get('squad') === String(own) && !q.has('squad4');   // (a row whose own size IS its `squad=N` — the four's rescue: dropped, the page would stage the pair)
-  if (!kept) q.delete('squad');
-  if (n !== own) { q.delete('squad4'); q.set('squad', String(n)); }
-  const parts: string[] = []; q.forEach((v, k) => parts.push(v === '' ? encodeURIComponent(k) : `${encodeURIComponent(k)}=${encodeURIComponent(v)}`));   // (bare flags left bare: `?roomclear`, not `?roomclear=`)
-  return parts.length ? '?' + parts.join('&') : '';
-}
-
 // ───────────────────────────────────────────── what this machine picked last (the screen's memory, never a run's) ─────────────────────────────────────────────
-export const LOADOUT_LS = 'twopointsix.loadout';
-/** the stored record: the size last deployed with, per scenario id */
-export interface LoadoutStore { squad: Record<string, SquadSize> }
 type Store = Pick<Storage, 'getItem' | 'setItem'>;
-const ls = (): Store | null => { try { return typeof localStorage !== 'undefined' ? localStorage : null; } catch { return null; } };
-export function readLoadout(store: Store | null = ls()): LoadoutStore {
-  const out: LoadoutStore = { squad: {} };
-  try { const o = JSON.parse(store?.getItem(LOADOUT_LS) ?? 'null'); if (o && typeof o.squad === 'object' && o.squad) for (const [id, v] of Object.entries(o.squad)) { const n = asSquadSize(v); if (n !== null) out.squad[id] = n; } } catch { /* unreadable: nothing remembered */ }
-  return out;
-}
-/** remember `n` for scenario `id` (the other keys of the record — another part's — are kept as they stood) */
-export function storeSquad(id: string, n: SquadSize, store: Store | null = ls()) {
-  if (!store) return;
-  try { let o: any = null; try { o = JSON.parse(store.getItem(LOADOUT_LS) ?? 'null'); } catch { /* start over */ } if (!o || typeof o !== 'object') o = {}; if (!o.squad || typeof o.squad !== 'object') o.squad = {}; o.squad[id] = n; store.setItem(LOADOUT_LS, JSON.stringify(o)); } catch { /* a full or forbidden store: the pick is simply not remembered */ }
-}
-/** the size the screen opens on for a scenario: what was deployed last if that can still be staged, else its own */
-export function startSize(e: { id: string; kind: LoadoutKind; squad: number; level?: string; group?: string }, store: Store | null = ls()): SquadSize {
-  const C = squadChoices(e), last = readLoadout(store).squad[e.id];
-  return last !== undefined && C[last].ok ? last : (asSquadSize(e.squad) ?? 2);
-}

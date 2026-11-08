@@ -18,7 +18,8 @@
 // lamps the level keeps dark included; a door the file gives no angle stands ajar one time in five, by a hash, whichever way it swings and steel or not.
 import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { missionList, type Mission } from '../src/ui/missions';
+import { ALL_MISSIONS } from '../src/scene/scenarioList';
+import type { ScenarioEntry } from '../src/scene/scenarios';
 
 const ROOT = join(import.meta.dir, '..'), DEG = Math.PI / 180, FOV = 28;
 type V3 = [number, number, number];
@@ -49,9 +50,9 @@ interface Pin extends Partial<Mood> { look?: number[]; yaw?: number; pitch?: num
   at?: number[]; ops?: number[][]; aim?: number[]; ajar?: Record<string, number>;
   /** `flip` = the other shoulder than the one the picture would take · `lead` = how far from the cast toward what they face the lens looks (0‥1) · `glow` =
    *  lamps of the picture's own, rows [x, y, z, r, g, b, reach] (light out of a doorway) · `guards` = men of the place stood by hand, rows [x, z, facing x, z] ·
-   *  `work` = which of the cast (0 = the lead) kneel with their hands on something · `armed` = a quiet man with his rifle up · `charges` = a charge set on a
+   *  `armed` = a quiet man with his rifle up · `charges` = a charge set on a
    *  wall, rows [x, y, z] */
-  flip?: boolean; lead?: number; glow?: number[][]; guards?: number[][]; work?: number[]; armed?: boolean; charges?: number[][] }
+  flip?: boolean; lead?: number; glow?: number[][]; guards?: number[][]; armed?: boolean; charges?: number[][] }
 const PIN: Record<string, Pin> = {
   // the office is five missions on one floor: each picture is its own corner of it
   'night-breach': { at: [38.6, 0, 21.9], ops: [[36.9, 0, 19.6], [36.9, 0, 22.0]], aim: [36.0, 20.75], ajar: { fire_exit: -0.9 }, swing: 62, glow: [[34.9, 2.0, 20.8, 14, 11, 7.5, 9]] },   // the fire exit, its light on the lot as it opens
@@ -60,7 +61,7 @@ const PIN: Record<string, Pin> = {
   'hostage-rescue': { expo: 1.6 },
   'block-four': { at: [13.2, 0, 7.7], ops: [[13.3, 0, 9.2], [12.3, 0, 11.0], [11.6, 0, 10.3], [13.2, 0, 10.9]], aim: [16.4, 4.6], look: [14.7, 1, 7.4], yaw: -143, pitch: 63, dist: 11.5, ajar: { m_s: -1.9 } },   // the mess: the team at the room's turn
   // two missions on one level stand at its two ways in
-  'block-squads': { start: 1, back: -2 }, 'warehouse-four': { start: 1 },
+  'warehouse-four': { start: 1 },
   // each of these is the picture of what its mission is ABOUT, not of where its team starts
   'glasshouse-four': { at: [20, 0, 24], ops: [[18.6, 0, 24.4], [21.4, 0, 24.4], [17.2, 0, 24.9], [22.8, 0, 24.9]], aim: [20.2, 18], swing: 20 },   // the lit forecourt, the dark glass
   'floodlit-four': { look: [19, 1, 17], yaw: 12, pitch: 38, dist: 24, rim: 0, at: [19, 0, 22.2], ops: [[17.5, 0, 22.6], [20.5, 0, 22.6], [16, 0, 23.1], [22, 0, 23.1]], aim: [19.4, 13] },   // the yard under its floods, the team at its dark edge
@@ -68,7 +69,6 @@ const PIN: Record<string, Pin> = {
   'hall-four': { at: [10.5, 0, 14], ops: [[9.4, 0, 14.3], [8.2, 0, 13.7], [7.0, 0, 14.3], [5.8, 0, 13.7]], aim: [31, 14], look: [14, 1, 14], yaw: -80, pitch: 38, dist: 17, ajar: { front: 1.4 }, guards: [[30.6, 13.5, 9, 14], [30.6, 14.5, 9, 14]] },   // the file at the one door in, the far guns' lights down the hall's length
   'mousehole-four': { charges: [[12, 1.1, 6.86]], at: [9.9, 0, 6.3], ops: [[9.0, 0, 6.3], [14.1, 0, 6.3], [15.0, 0, 6.3]], aim: [12, 7.0], look: [12, 1, 6.6], yaw: 165, pitch: 30, dist: 11 },   // either side of a charge on blank wall
   'rescue-registry': { expo: 1.8, dist: 11, pitch: 40 }, 'rescue-consulate': { expo: 1.8, dist: 11, pitch: 40 },
-  'defuse-four': { at: [8.5, 0, 8.6], work: [0], lampK: 0.05, skyK: 0.4, expo: 0.7, ops: [[7.4, 0, 10.9], [10.9, 0, 12.0], [6.9, 0, 12.3], [10.2, 0, 9.4]], aim: [8.5, 7.65], pitch: 44 },   // a man's hands on charge 1
   'compound-four': { at: [2.4, 0, 14.9], ops: [[2.4, 0, 16.1], [1.6, 0, 15.5], [1.6, 0, 16.6], [2.5, 0, 13.6]], aim: [10, 14.9], ajar: { gate_w: 1.2 }, look: [3.8, 1, 15.3], yaw: -62, pitch: 36, dist: 13 },   // the west gate, the lit yard beyond it
   'quiet-relay-two': { at: [16.77, 0, 15.15], ops: [[15.3, 0, 15.9]], aim: [16.77, 14.5], look: [17.6, 1, 15.6], yaw: -78, pitch: 24, dist: 8 },   // at the lock of the hut's door, under its lamp
   'solo-night': { lead: 0.2, flip: true },
@@ -90,7 +90,7 @@ interface Data {
   switchables?: { id: string; boxes: string[]; on?: boolean; baseEmissive?: number[] }[]; routes?: { points: (number[] | { pos: number[] })[] }[];
   mission?: { playerSpawn?: number[]; objectives?: { area?: { x0: number; x1: number; z0: number; z1: number } }[] };
   devices?: { kind: string; from?: number[]; to?: number[] }[];
-  scenarios?: { defuse?: { devices?: { pos: number[]; n?: number[] }[] }; roomClear?: { team?: Team; starts?: Team[] }; nightBreach?: { team?: Team }; rescue?: { team?: Team }; quiet?: { starts?: Team[] } };
+  scenarios?: { roomClear?: { team?: Team; starts?: Team[] }; nightBreach?: { team?: Team }; rescue?: { team?: Team }; quiet?: { starts?: Team[] } };
 }
 const F_PRIMARY = 1, F_SHADOW = 2, F_GLASS = 4;   // (a pane is neither drawn nor a shadow: the lens tints what it sees through one)
 /** boxes as flat rows: centre, half size, cos / sin of the yaw, paint, glow, flags */
@@ -183,11 +183,11 @@ const SNEAK: Dress = { body: [0.022, 0.022, 0.026], legs: [0.022, 0.022, 0.026],
 const CIVIL: Dress = { body: [0.5, 0.5, 0.52], legs: [0.1, 0.11, 0.16], kit: [0.5, 0.5, 0.52], head: [0.4, 0.3, 0.23], hat: null };
 const GUARD: Dress = { body: [0.42, 0.38, 0.3], legs: [0.2, 0.19, 0.18], kit: [0.1, 0.09, 0.08], head: [0.4, 0.29, 0.21], hat: [0.3, 0.27, 0.2] };
 /** a man standing (or low) at `at`, his gun along `f` (a unit way on the floor) and pitched; returns his muzzle */
-function addMan(at: number[], f: number[], D: Dress, pose: boolean | 'kneel' | 'work', gun: 'rifle' | 'torch' | 'none', pitch = 0): V3 {
-  const knees = pose === 'kneel' || pose === 'work', low = pose === true;
+function addMan(at: number[], f: number[], D: Dress, pose: boolean | 'kneel', gun: 'rifle' | 'torch' | 'none', pitch = 0): V3 {
+  const knees = pose === 'kneel', low = pose === true;
   const r = [f[1], -f[0]], P = (fw: number, rt: number, y: number): V3 => [at[0] + f[0] * fw + r[0] * rt, y, at[2] + f[1] * fw + r[1] * rt], caps: Cap[] = [];
   const cap = (a: V3, b: V3, rad: number, col: V3) => caps.push({ a, b: a[0] === b[0] && a[1] === b[1] && a[2] === b[2] ? [b[0], b[1] + 0.01, b[2]] : b, r: rad, col });
-  const hip = knees ? 0.5 : low ? 0.56 : 0.93, chest = knees ? 0.95 : low ? 0.98 : 1.4, lean = pose === 'work' ? 0.2 : knees ? 0.03 : low ? 0.3 : 0.07, headY = knees ? 1.16 : low ? 1.17 : 1.64, headF = pose === 'work' ? 0.3 : knees ? 0.1 : low ? 0.42 : 0.12;
+  const hip = knees ? 0.5 : low ? 0.56 : 0.93, chest = knees ? 0.95 : low ? 0.98 : 1.4, lean = knees ? 0.03 : low ? 0.3 : 0.07, headY = knees ? 1.16 : low ? 1.17 : 1.64, headF = pose === 'work' ? 0.3 : knees ? 0.1 : low ? 0.42 : 0.12;
   if (knees) { for (const sd of [0.1, -0.1]) { cap(P(0, sd, hip), P(0.3, sd * 1.2, 0.1), 0.08, D.legs); cap(P(0.3, sd * 1.2, 0.1), P(-0.18, sd * 1.2, 0.08), 0.065, D.legs); } }   // (both knees down, the feet behind)
   else if (low) { cap(P(0, 0.1, hip), P(0.3, 0.13, 0.48), 0.08, D.legs); cap(P(0.3, 0.13, 0.48), P(0.26, 0.13, 0.07), 0.07, D.legs); cap(P(0, -0.1, hip), P(-0.06, -0.12, 0.13), 0.08, D.legs); cap(P(-0.06, -0.12, 0.13), P(-0.44, -0.12, 0.08), 0.065, D.legs); }
   else { cap(P(0, 0.1, hip), P(0.17, 0.13, 0.5), 0.08, D.legs); cap(P(0.17, 0.13, 0.5), P(0.17, 0.14, 0.07), 0.07, D.legs); cap(P(0, -0.1, hip), P(-0.1, -0.13, 0.5), 0.08, D.legs); cap(P(-0.1, -0.13, 0.5), P(-0.2, -0.14, 0.07), 0.07, D.legs); }
@@ -197,7 +197,6 @@ function addMan(at: number[], f: number[], D: Dress, pose: boolean | 'kneel' | '
   if (gun === 'rifle') { cap(P(lean, -0.18, sh), G(0.14, -0.05), 0.05, D.body); cap(P(lean, 0.18, sh), G(0.44, 0.07), 0.05, D.body); cap(G(-0.12, 0.05), muzzle, 0.03, [0.03, 0.03, 0.032]); cap(G(0.1, 0.05), G(0.14, 0.05) .map((v, i) => i === 1 ? v - 0.16 : v) as V3, 0.028, [0.03, 0.03, 0.032]); }
   else if (gun === 'torch') { cap(P(lean, -0.18, sh), G(0.3, -0.1), 0.05, D.body); cap(G(0.3, -0.1), muzzle, 0.03, [0.05, 0.05, 0.05]); cap(P(lean, 0.18, sh), P(lean + 0.05, 0.22, hip + 0.05), 0.05, D.body); }
   else if (pose === 'kneel') { cap(P(lean, -0.18, sh), P(lean - 0.2, -0.07, hip + 0.08), 0.05, D.body); cap(P(lean, 0.18, sh), P(lean - 0.2, 0.07, hip + 0.08), 0.05, D.body); }   // (wrists behind the back)
-  else if (pose === 'work') { cap(P(lean, -0.18, sh), P(lean + 0.5, -0.08, sh - 0.22), 0.05, D.body); cap(P(lean, 0.18, sh), P(lean + 0.5, 0.08, sh - 0.22), 0.05, D.body); }   // (both hands out on the thing)
   else { cap(P(lean, -0.18, sh), P(lean + 0.22, -0.16, hip + 0.12), 0.05, D.body); cap(P(lean, 0.18, sh), P(lean + 0.22, 0.16, hip + 0.12), 0.05, D.body); }
   men.push({ caps, c: [at[0] + f[0] * 0.2, 0.9, at[2] + f[1] * 0.2], rad: 1.5 }); return muzzle;
 }
@@ -246,6 +245,12 @@ function levelOf(file: string): { d: Data; file: string } {
   return { d: JSON.parse(readFileSync(join(ROOT, 'levels', f), 'utf8')) as Data, file: f };
 }
 
+/** a mission as this tool draws it: a row of the table, or the plain solo night (`scenario` null), under the heading it is listed under */
+interface Mission { id: string; scenario: ScenarioEntry | null; group: string; squad: number }
+function missionList(): Mission[] {
+  const groupOf = (e: ScenarioEntry) => e.group ?? (e.kind === 'quiet' ? (e.squad ? 'quiet-two' : 'quiet-alone') : e.kind === 'rescue' ? 'clock' : 'raids');
+  return [{ id: 'solo-night', scenario: null, group: 'quiet-alone', squad: 0 }, ...ALL_MISSIONS.map(e => ({ id: e.id, scenario: e, group: groupOf(e), squad: e.squad }))];
+}
 async function render(m: Mission, O: Opts): Promise<Cam> {
   const file = m.scenario?.level ?? 'office.json', { d } = levelOf(file), pin: Pin = { ...(PIN[m.id] ?? {}), ...(O.set[m.id] ?? {}) }, M: Mood = { ...(MOODS[m.group ?? 'raids'] ?? NIGHT), ...pin } as Mood;
   const S = new Scene(), lampsAll = (pin.lamps ?? 'all') === 'all'; men.length = 0; spots.length = 0; areas.length = 0; seed = hash(m.id);
@@ -267,8 +272,8 @@ async function render(m: Mission, O: Opts): Promise<Cam> {
     S.add([D.hinge[0] + Math.cos(a) * D.width / 2, hh, D.hinge[1] + Math.sin(a) * D.width / 2], [D.width / 2 - 0.01, hh, 0.025], -a, D.albedo ?? (D.steel ? [0.3, 0.32, 0.34] : [0.42, 0.3, 0.19]), undefined, F_PRIMARY | F_SHADOW);
     doorAt.push([D.hinge[0] + Math.cos(D.closedDir) * D.width / 2, D.hinge[1] + Math.sin(D.closedDir) * D.width / 2]); });
   for (const p of d.props ?? []) { const cs = Math.cos(p.yaw ?? 0), sn = Math.sin(p.yaw ?? 0); for (const q of p.parts) S.add([p.x + cs * q.off[0] + sn * q.off[2], q.off[1], p.z - sn * q.off[0] + cs * q.off[2]], q.h, (p.yaw ?? 0) + (q.yaw ?? 0), q.albedo ?? d.materials[q.material ?? '']?.albedo ?? [0.3, 0.3, 0.3], q.emissive, F_PRIMARY | F_SHADOW); }
-  // a charge on its clock (the level's own), or one set on a wall for the picture: a small red lamp and what it lights
-  for (const c of [...(kind === 'roomclear' ? d.scenarios?.defuse?.devices ?? [] : []).map(v => v.pos), ...(pin.charges ?? [])]) {
+  // a charge set on a wall for the picture: a small red lamp and what it lights
+  for (const c of pin.charges ?? []) {
     S.add([c[0], c[1], c[2]], [0.1, 0.07, 0.05], 0, [0.04, 0.04, 0.04], undefined, F_PRIMARY | F_SHADOW); S.add([c[0], c[1] + 0.085, c[2]], [0.03, 0.015, 0.03], 0, [0.1, 0.02, 0.02], [14, 0.5, 0.3], F_PRIMARY);
     spots.push({ p: [c[0], c[1] + 0.3, c[2]], d: [0, -1, 0], ci: 2, co: -2, I: [3.2, 0.2, 0.12], range: 6, rad: 0.03, vol: 0.7, stage: true }); }
   for (const q of pin.glow ?? []) spots.push({ p: [q[0], q[1], q[2]], d: [0, -1, 0], ci: 2, co: -2, I: [q[3], q[4], q[5]], range: q[6] ?? 9, rad: 0.12, vol: 0.5 });
@@ -313,7 +318,6 @@ async function render(m: Mission, O: Opts): Promise<Cam> {
     places.forEach((p, i) => {
       const spread = [aim[0] + ((hash(m.id + i) % 100) / 100 - 0.5) * 2.2, aim[1] + ((hash(m.id + 'z' + i) % 100) / 100 - 0.5) * 2.2], f = toward0(p, spread), dist = Math.hypot(spread[0] - p[0], spread[1] - p[2]);
       const D = loud ? OPERATOR : SNEAK;
-      if (pin.work?.includes(i)) { addMan(p, toward0(p, aim), D, 'work', 'none'); return; }
       if (!loud && !pin.armed) { addMan(p, f, SNEAK, true, 'none'); return; }
       // a gun comes down for a friend in its line or a wall in its face, and its light goes out (the game's own rule): only a man with a clear line shows a beam
       const friend = places.some((q, j) => { if (j === i) return false; const ax = q[0] - p[0], az = q[2] - p[2], al = ax * f[0] + az * f[1]; return al > 0.2 && al < dist && Math.abs(ax * f[1] - az * f[0]) < 0.55; });

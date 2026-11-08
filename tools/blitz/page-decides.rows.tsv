@@ -22,8 +22,6 @@ src/game/squadnet.ts:whyWords	decides	orders menu and hand ring	worded off the p
 src/game/mission.ts:*	decides	HUD mission lines	"is the mission live" and how far the rack is are worked out again on the copy
 src/game/nightbreach.ts:*	decides	HUD mission lines	the plain night's state is worked out again on the copy
 src/game/roomclear.ts:*	decides	HUD mission lines	whether the room clear is up and where it starts are worked out again on the copy
-src/game/defuse.ts:*	decides	HUD mission lines	whether the defuse is up, which charges are live and what Sam is working on are worked out again on the copy
-src/game/rescue*.ts:*	decides	HUD mission lines	who is a hostage is worked out again on the copy
 src/game/scenarioRun.ts:*	decides	HUD mission lines	which scenario is running and whose team a man is on are worked out again on the copy
 src/game/doors.ts:Doors.*	decides	HUD door and charge notes	which door is which by name, which side a man is on and whether he is locked out are worked out again on the copy
 src/game/doortools.ts:*	decides	HUD door and charge notes	the door notes (who waits, on which word, TOO CLOSE and who it names) are worked out by TypeScript on the copy each frame, and a door found shut is learnt on the copy only
@@ -32,7 +30,6 @@ src/game/doorblast.ts:*	decides	HUD door and charge notes	how far a door's blast
 src/game/frag.ts:*	decides	HUD door and charge notes	who a burst would catch and through which leaves is worked out again on the copy for the notes and the previews
 src/game/cleared.ts:*	decides	HUD door and charge notes	which rooms are known and cleared is worked out again on the copy (the plan, the door words)
 src/game/floorplan.ts:*	decides	HUD door and charge notes	the Tab plan's doors and who waits on which key are worked out again on the copy
-src/game/close.ts:*	decides	HUD door and charge notes	the close-in marks and windows are worked out again on the copy
 src/game/doorway.ts:*	decides	HUD door and charge notes	a doorway's lane price is worked out again on the copy
 src/game/roomfight.ts:*	decides	HUD door and charge notes	which door operation a room fight belongs to is worked out again on the copy
 src/game/teampace.ts:*	decides	HUD door and charge notes	the team's pace at a blast is worked out again on the copy
@@ -42,10 +39,7 @@ src/game/workthings.ts:*	decides	orders menu and hand ring	which things can be w
 src/game/interact.ts:*	decides	orders menu and hand ring	the hand ring's rows (what is empty, busy, wedged) are worked out again on the copy
 src/game/autopilot.ts:*	decides	orders menu and hand ring	the quick order the HUD offers is picked by TypeScript on the copy
 src/game/pairorders.ts:*	decides	orders menu and hand ring	which pair is up and waiting is worked out again on the copy
-src/game/planmode.ts:*	decides	orders menu and hand ring	whether goals are on is worked out again on the copy
 src/game/cmdring.ts:*	decides	orders menu and hand ring	the ring's pin is written on the copy
-src/game/handwork.ts:*	decides	orders menu and hand ring	what Sam's hands are at is worked out again on the copy
-src/game/lightswitch.ts:*	decides	orders menu and hand ring	whether a switch's plant is broken is worked out again on the copy
 src/game/whistle.ts:*	decides	orders menu and hand ring	who would blow is worked out again on the copy
 src/game/stickycam.ts:*	decides	orders menu and hand ring	whether a sticky camera is live and sending is worked out again on the copy
 src/game/qrf.ts:*	decides	orders menu and hand ring	who the reaction force owns is worked out again on the copy
@@ -77,8 +71,6 @@ src/game/player.ts:*	decides	aim and stance on the HUD	whether he can stand, wha
 src/game/combat.ts:*	decides	aim and stance on the HUD	whether something solid lies between two points is worked out again on the copy
 src/game/condition.ts:*	decides	squad status words	"is he hurt" is worked out again on the copy
 src/game/silent.ts:*	decides	squad status words	whether the squad is silent and whether that is compromised are worked out again on the copy
-src/game/sneak.ts:*	decides	squad status words	the sneak word and whether sneaking is live are worked out again on the copy
-src/game/spotted.ts:*	decides	squad status words	the "spotted" mode is worked out again on the copy
 src/game/stalk.ts:*	decides	squad status words	whether the stalk can go and what it waits on are worked out again on the copy
 src/game/samstun.ts:*	decides	squad status words	whether Sam is blind or staggered is worked out again on the copy
 src/game/nvg.ts:*	decides	squad status words	whether goggles are worn is worked out again on the copy
@@ -105,8 +97,6 @@ src/game/cmd.ts:*	host	the Rust host	the player's record sampled from the Input 
 src/game/input.ts:*	host	the Rust host	the page's Input rows	3
 src/game/camera.ts:*	host	the Rust host	the host's camera: its ease, zoom, kick and draw-in are the page's own between ticks	14
 src/host/loop.ts:*	host	the Rust host	the frame's loop: the Input's rows cleared, the camera stepped	3
-src/game/roomread.ts:*	picture	the picture's feel	the camera's own framing reads the room the player is in	1
-src/host/autocam.ts:*	host	the Rust host	the camera's own framing	2
 tools/blitz/out-dispatch.ts:*	host	the Rust host	the out events' dispatcher: what the tick told the host is made as today's calls on the page's objects (sound, particles, decals, smoke)	1
 src/game/savestate.ts:*	host	saves	the save controller's rhythm and shelf (saves and replays are not this list's)	15
 src/game/sensors.ts:*	host	saves	the recorder's sensor stream	2
@@ -121,7 +111,7 @@ src/sim/weatherhome.ts:*	host	the bridge	the weather's words in the block	2
 src/scene/boxMirror.ts:*	host	the bridge	the box world's mirror in the block	21
 src/scene/collision.ts:*	host	the bridge	the queries' own stamps and counters (a query asked from the page is answered by the block)	31
 src/scene/cut.ts:*	host	the bridge	a cut's clip scratch	3
-src/game/seats.ts:*	host	the bridge	the seats' book: which man sits in which seat, looked up in the copy's own lists	15
+src/game/seats.ts:*	host	the bridge	the seats' book: which man sits in which seat, looked up in the copy's own lists	13
 # ---- the picture's own
 src/anim/*	picture	the men drawn	the rig's poses and the character renderer's buffers for the frame	20
 src/game/character.ts:*	picture	the men drawn	the men's poses read for the picture (bones, hands, the animator's layers) and the cursor's ray against a man: the tick's drawn places come in the apply	3
@@ -144,8 +134,8 @@ src/game/weather*.ts:*	picture	weather and ground	the weather's roofs and wet lo
 src/game/wetGround.ts:*	picture	weather and ground	wet ground following the men	2
 src/game/wind.ts:*	picture	weather and ground	the wind handed to particles and smoke	9
 src/game/fire.ts:*	picture	weather and ground	fire drawn	6
-src/game/floor*.ts:*	picture	weather and ground	the floor under a point, and the floor's mess	4
-src/game/blastFeel.ts:*	picture	the picture's feel	a blast's kick and its particles' later stages	5
+src/game/floor*.ts:*	picture	weather and ground	the floor under a point, and the floor's mess	7
+src/game/blastFeel.ts:*	picture	the picture's feel	a blast's kick and its particles' later stages	4
 src/game/carlamps.ts:*	picture	the picture's feel	a car's lamps painted	2
 src/game/glass*.ts:*	picture	the picture's feel	panes and sheets for the picture	9
 src/game/destruction.ts:*	picture	the picture's feel	roofs and broken walls for the picture	2
@@ -153,7 +143,6 @@ src/game/furnblast.ts:Furniture.index	host	saves	the save controller checks the 
 src/game/furnblast.ts:*	picture	the picture's feel	furniture's groups for the picture	3
 src/game/props.ts:*	picture	the picture's feel	a prop's box placed for the picture	2
 src/game/doors.ts:Door.pos*	picture	the picture's feel	a door's leaf placed for the picture	1
-src/game/doors.ts:Door.keptPos	picture	the picture's feel	a door's leaf placed for the picture	1
 src/game/doors.ts:Door.dir	picture	the picture's feel	a door's leaf placed for the picture	1
 src/game/doors.ts:Door.swing	picture	the picture's feel	a door's leaf placed for the picture	1
 src/game/doors.ts:Door.off	picture	the picture's feel	a door's leaf placed for the picture	1
@@ -163,14 +152,14 @@ src/game/wallwear.ts:*	picture	the picture's feel	a wall's wear from rounds, as 
 src/game/lookDecals.ts:*	picture	the picture's feel	a mark's look	1
 src/game/moths.ts:*	picture	the picture's feel	the moths cleared for the picture	1
 src/ui/quality.ts:*	picture	the picture's feel	the quality ladder's own choice, kept in the browser's store	3
-src/game/marks.ts:*	picture	the picture's feel	marks on surfaces	2
+src/game/marks.ts:*	picture	the picture's feel	marks on surfaces	4
 src/game/particleFx.ts:*	picture	the picture's feel	the particle pool	2
 src/game/attract.ts:*	picture	the picture's feel	the attract mode's camera	4
 src/scene/*	picture	the box world	the box world packed for the renderer	38
 src/sim/lightshome.ts:*	picture	the box world	the lights' rows read for the renderer	2
 src/engine.ts:*	picture	the box world	the renderer's own frame	2
 src/host/tween.ts:*	picture	the box world	boxes posed between two ticks for the draw, and put back	2
-src/host/ahead.ts:*	picture	the box world	boxes posed ahead for the draw, and put back	2
+src/host/ahead.ts:*	picture	the box world	boxes posed ahead for the draw, and put back	4
 # ---- the hand's own
 src/game/quietfog.ts:*	hand	menus	the end card's link to the next mission reads the quiet fog's rows (setting them aside and back)	5
 src/game/difficulty.ts:*	hand	menus	the cards' links and the pause card's levers read the difficulty's tables	12

@@ -145,8 +145,8 @@ pub enum OrderGone {
     DoorBigClear,
     WallRow,
 }
-/// SquadOrders.notes: who has a line for the squad's HUD block, in the order they were pushed. Read only by hud() (triage: dress).
-#[derive(Clone, Copy, Debug)]
+/// SquadOrders.notes: who has a line for the squad's HUD block, in the order they were pushed. Read only by `orders::squad_view` (rust/game_rules/src/orders/hud.rs).
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum OrderNoteFn {
     DoorToolsHud,
     DoorToolsWord,
@@ -1177,30 +1177,6 @@ impl OrderHudMenu {
     }
 }
 impl Default for OrderHudMenu { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: a union)
-#[derive(Clone, Debug)]
-pub enum OrderNote {
-    Text(String),
-    Arm1(crate::orders::OrderNoteArm1),
-}
-
-/// (TypeScript: inline at src/game/orders.ts:503 OrderNote, src/game/orders.ts:503)
-#[derive(Clone, Debug)]
-pub struct OrderNoteArm1 {
-    pub key: String,
-    pub text: String,
-}
-impl OrderNoteArm1 {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        OrderNoteArm1 {
-            key: String::new(),
-            text: String::new(),
-        }
-    }
-}
-impl Default for OrderNoteArm1 { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: FightLease, src/game/orders.ts:520)
 #[derive(Clone, Copy, Debug)]

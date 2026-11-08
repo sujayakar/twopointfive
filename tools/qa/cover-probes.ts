@@ -24,15 +24,14 @@
 //                    three quarters of all of them: where both men are on openings of their own that the door does not outweigh by COVER.sticky + 0.3 nobody
 //                    is asked, counted apart; a free man with nothing left unasked, or a step that earns nobody the doorway, is a FAIL);
 //                    Sam walks on and both fall in again; the same under a plain 'hold' (he is walked off a mark that stays put, nothing 'stopped short')
-//   cover-settle     ONE JOB AT A TIME (cover.ts REAR). The rule itself, staged on a stack's rear man stood on his mark with the deal stopped and his job let
-//                    go of by hand as the deal lets go of one: (a) with nothing else dealt his gun stays on the opening REAR.secs, then the door has it;
-//                    (b) Sam stepping into its line takes it off at once; (c) dealt again 0.4 s on, the gun never starts for the door.
-//                    Round that, a walk: the four and then the pair walked to three doors and stacked on each — every stack has its rear man and he is
+//   cover-settle     ONE JOB AT A TIME (cover.ts REAR): the walk. (Until 2026-11-08 the rule was also staged by hand on a rear man, its job let go of on the copy: that never reached the game.)
+//                    A walk: the four and then the pair walked to three doors and stacked on each — every stack has its rear man and he is
 //                    dealt a rear, nobody twitches (playthrough.ts's arithmetic, copied: keep the two in step).
 // SINCE 2026-11-07 the family's four switches (COVER.on, COVER.stacked, COVER.step, REAR.settle) are settled on and no probe here writes them, nor the
 // goggles' switch: cover-order's "the plain contract first" staging (rear security held off) and its "COVER.on false" line, cover-step's run of each case
 // with the step off and "the BEFORE" line, and cover-settle's off walks, "no more twitches than with the switch off" and "(off: it does)" are out.
 // cover-side is deleted: every line of it compared the step-outs with cover on against the same seeds with cover off.
+import { blockOf } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 import { sample } from './sweep.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
@@ -47,6 +46,8 @@ const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const yawTo = (a: number[], b: number[]) => Math.atan2(b[0] - a[0], b[2] - a[2]);
 /** is he turned on what his job says, within `deg` (read off the job's own row: the game's reader went with the TypeScript tick) */
 const facingJob = (C: any, m: any, deg = 15): boolean => { const J = C.jobs.get(m) ?? C.kept.get(m)?.J; return !!J && !J.off && Math.abs(wrap(yawTo(m.char.pos, J.to) - m.char.aimYaw)) < deg * DEG; };
+/** the same point (a copy of the game hands a man's job and his script's aim over as values, each its own array) */
+const samePoint = (a: any, b: any): boolean => !!a && !!b && a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
 const wrap = (x: number) => { while (x > Math.PI) x -= 2 * Math.PI; while (x < -Math.PI) x += 2 * Math.PI; return x; };
 const pct = (a: number, b: number) => `${b ? Math.round(a / b * 100) : 0} %`;
 const median = (a: number[]) => { const s = [...a].sort((x, y) => x - y); return s.length ? s[s.length >> 1] : NaN; };
@@ -298,7 +299,7 @@ export const coverOrder = guarded(async () => {
   const under0 = R.ops.filter((m: any) => O.of(m)?.order === 'fallIn').length, stray = R.ops.filter((m: any) => C.of(m) && O.of(m)?.order !== 'fallIn').length, spare0 = R.ops.filter((m: any) => !C.of(m) && !boxed(m)).length;
   const quiet = START.fallIn ? under0 === 4 && stray === 0 && spare0 === 0 && before >= 1 : before === 0;
   R.fallIn(); R.step(120); R.walk([[13, 0, 17.6]]); R.walk([[19.0, 0, 11.0]]); R.step(120);
-  const following = dealt(), rows = () => O.hud().status[0]?.opts.slice(0, 4).map((o: any) => o.text) ?? [];
+  const following = dealt(), rows = () => blockOf(O)[0]?.opts.slice(0, 4).map((o: any) => o.text) ?? [];
   const r0 = rows();
   verdict(quiet && following === 4 && r0.every((t: string) => / · on /.test(t)), 'following with no other order, all four are dealt an opening — and the squad block says which', `${START.fallIn ? `fallen in from the staging, ${under0} of 4 under 'fall in' with nothing said: ${before} dealt, ${stray} dealt with no such order, ${spare0} with nothing beside an opening that is his to take` : `before 'fall in': ${before} dealt`} · after: ${following} · ${r0.join(' | ')}`);
   // an order to everybody: stack up on the server door
@@ -353,7 +354,7 @@ export const coverSettle = guarded(async () => {
         R.step();
         const on = R.ops.filter((m: any) => m.state !== 'dead' && O.of(m)?.order === 'stack'); if (on.length && on.every((m: any) => O.of(m).arrived)) stood++;
         for (const m of on) { const A = O.of(m); if (!A.spare) continue;
-          const J = C.of(m) ?? C.keptJob(m), tag = J && m.script?.aimAt === J.aim ? J.o.id : 'the door', yaw = m.char.aimYaw;
+          const J = C.of(m) ?? C.keptJob(m), tag = J && samePoint(m.script?.aimAt, J.aim) ? J.o.id : 'the door', yaw = m.char.aimYaw;
           let T = tr.get(m); if (!T) { tr.set(m, T = { tag, doorAt: -100, fl: 0, ext: yaw, dir: 0, turns: [], tw: false, n: 0 }); out.men++; }
           if (T.tag !== tag) { if (tag === 'the door') T.doorAt = g.time; else if (T.tag === 'the door' && T.n > 0 && g.time - T.doorAt < 0.75) { T.fl++; out.flicks++; } T.tag = tag; T.n++; out.changes++; }
           if (tag === 'the door') out.doorT += DT; else out.rearT += DT;
@@ -375,50 +376,6 @@ export const coverSettle = guarded(async () => {
     const words = (r: Row) => `${r.stacks} stacks, ${r.men} rear men · ${r.changes} changes of what the gun is on · ${r.flicks} flicks to the door and back · ${r.twitch} twitches · behind the stack ${f1(r.rearT)} s, on the door ${f1(r.doorT)} s\n      ${r.said.join('\n      ')}`;
     verdict(on.stacks === sample(LEGS, 1).length && on.men >= on.stacks && on.twitch === 0 && on.rearT > 0, `${tag}, settled: every stack has its rear man, each is dealt a rear, none twitches`, words(on));
   }
-  // ---- the rule itself: the four stacked on the server door, one rear man stood on his mark with his gun on an opening — the deal stopped, his job let go of
-  //      by hand exactly as the deal lets go of one (Cover.drop)
-  let noMan: any = null;   // (the same seed finds no man again: the blocks below need not stage it again to say so)
-  const stood = async () => {
-    if (noMan) return noMan;
-    const R = await rig(3, 4); const { C, O } = R;
-    R.fallIn(); R.step(120); R.walk(LEGS[0].walk); R.step(60);
-    O.give('stack', O.targetAt(R.door('server').frameCentre));
-    const on = (m: any) => { const J = C.of(m), A = O.of(m); return !!J && !!A?.spare && !!A.arrived && m.script?.aimAt === J.aim && Math.hypot(m.char.vel[0], m.char.vel[2]) < 0.1; };
-    R.until(() => R.ops.some(on), 14);
-    const got = { R, on, m: R.ops.find(on) as any }; if (!got.m) noMan = got;
-    return got;
-  };
-  const brg = (m: any, p: number[]) => Math.atan2(p[0] - m.char.pos[0], p[2] - m.char.pos[2]), off = (m: any, p: number[]) => Math.abs(wrap(m.char.aimYaw - brg(m, p))) * 57.3;
-  { // (a) let go of and nothing dealt: the gun stays REAR.secs, then the door has it
-    const { R, m } = await stood(); const { C, O, game: g } = R;
-    if (!m) verdict(false, 'staged: a rear man stood on his mark with an opening dealt', 'none found');
-    else {
-      const J = C.of(m), A = O.of(m), t0 = g.time; (C as any).dealAt = g.time + 100; (C as any).drop(m);
-      R.step(1); const at1 = C.keptJob(m) === J && m.script.aimAt === J.aim;
-      R.until(() => g.time - t0 >= REAR.secs - 0.1, 5); const held = C.keptJob(m) === J && m.script.aimAt === J.aim, offHeld = off(m, J.to);
-      R.until(() => g.time - t0 >= REAR.secs + 0.1, 5); const gone = C.keptJob(m) === null && m.script.aimAt === A.watch;
-      R.step(90); const offDoor = off(m, A.watch);
-      verdict(at1 && held && offHeld < 12 && gone && offDoor < 12, `let go of with nothing else dealt, ${m.callsign}'s gun stays on ${J.o.id} for REAR.secs (${REAR.secs} s), then the door has it`,
-        `the frame after: ${at1 ? 'still on it' : 'OFF it'} · at ${f2(REAR.secs - 0.1)} s: ${held ? 'on it' : 'OFF it'}, ${Math.round(offHeld)}° off the opening · at ${f2(REAR.secs + 0.1)} s: ${gone ? 'the order has the gun' : 'NOT handed back'} · 1.5 s on: ${Math.round(offDoor)}° off the door`);
-      // (b) Sam steps into the line of a kept gun: it comes off at once
-      (C as any).dealAt = 0; R.until(() => !!C.of(m) && m.script?.aimAt === C.of(m).aim, 6); R.step(30);
-      const J2 = C.of(m);
-      if (!J2) verdict(false, 'staged: the same man dealt an opening again', 'he was not');
-      else { (C as any).dealAt = g.time + 100; (C as any).drop(m); R.step(1); const was = C.keptJob(m) === J2;
-        const p = m.char.pos, k = Math.min(0.5, 1.2 / Math.max(1.2, Math.hypot(J2.to[0] - p[0], J2.to[2] - p[2]))); g.teleportPlayer([p[0] + (J2.to[0] - p[0]) * k, 0, p[2] + (J2.to[2] - p[2]) * k]);
-        R.step(2);
-        verdict(was && C.keptJob(m) === null && m.script.aimAt !== J2.aim, 'Sam stepping into the line of a gun left on an opening takes it off at once', `kept before he stepped in: ${was ? 'yes' : 'NO'} · two frames after: ${C.keptJob(m) ? 'STILL kept' : 'let go'}, gun ${m.script.aimAt === J2.aim ? 'STILL the cover\'s' : 'the order\'s'}`); }
-    }
-  }
-  { // (c) let go of and dealt again 0.4 s later (what the deal does on the move): the gun never visits the door
-    const visit = async () => { const { R, m } = await stood(); if (!m) return null; const { C, O, game: g } = R;
-      const A = O.of(m); (C as any).dealAt = g.time + 0.4; (C as any).drop(m);
-      let door = 0; for (let i = 0; i < 60; i++) { R.step(); if (m.script?.aimAt === A.watch) door++; }
-      return { who: m.callsign, door, again: !!C.of(m) }; };
-    const b = await visit();
-    verdict(!!b && b.door === 0 && b.again, 'let go of and dealt again 0.4 s on: the gun never starts for the door',
-      b ? `${b.who}'s gun the order's for ${b.door} frames of 60${b.again ? '' : ' · NOT dealt again'}` : 'no rear man staged');
-  }
   return done();
 });
 
@@ -438,25 +395,25 @@ async function stepTrial(c: StepCase, order: 'fallIn' | 'hold', then?: (R: Await
   const start = R.ops.map((m: any) => [...m.char.pos]);
   if (order === 'fallIn') R.fallIn(); else O.give('hold', O.targetAt(sam.pos));
   const posts = R.ops.map((m: any) => { const q = O.of(m)?.post; return q ? [...q] : null; });
-  const op = () => C.openings.find((x: any) => x.door === d) ?? o;
+  const op = () => C.openings.find((x: any) => x.door === d || x.door?.def?.name === d.def.name) ?? o;
   let blind0 = false, inOpening = 0, worst = Infinity, sawAt = -1, who: any = null, far = 0, stepD = false, noSpotD = false, idle = false, jobs = ''; const t0 = g.time;
   R.post = () => {
     const D = op(); if (!D) return;
     // (what the deal did about THIS door: a step begun for it · men who could go and no spot for any of them (its own doorTry) · and, once the deal has
     //  settled, a free man stood still with nothing, or on the leaf's edge, while nobody sees into it: him the rule owes a try)
-    for (const S of C.steps.values()) if (S.o === D) stepD = true;
+    for (const S of C.steps.values()) if (S.o?.id === D.id) stepD = true;
     if (((C as any).doorTry.get(D) ?? 0) > 0) noSpotD = true;
-    const el = g.time - t0, settled = el > 1.5 && el < 6, unseen = !C.live.some((L: any) => L.o === D), free: any[] = settled && unseen ? R.free() : [];
+    const el = g.time - t0, settled = el > 1.5 && el < 6, unseen = !C.live.some((L: any) => L.o?.id === D.id), free: any[] = settled && unseen ? R.free() : [];
     if (settled) jobs = R.jobs();
     for (const m of R.ops) { const J = C.of(m), S = C.steps.get(m);
-      if (!S && free.includes(m) && Math.hypot(m.char.vel[0], m.char.vel[2]) < 0.3 && (!J || (J.o === D && J.to !== D.at))) idle = true;
-      if (g.time - t0 < 0.7 && ((J && J.o === D && J.to !== D.at) || (!J && !C.live.some((L: any) => L.o === D && L.by)))) blind0 = true;
+      if (!S && free.includes(m) && Math.hypot(m.char.vel[0], m.char.vel[2]) < 0.3 && (!J || (J.o?.id === D.id && !samePoint(J.to, D.at)))) idle = true;
+      if (g.time - t0 < 0.7 && ((J && J.o?.id === D.id && !samePoint(J.to, D.at)) || (!J && !C.live.some((L: any) => L.o?.id === D.id && L.by)))) blind0 = true;
       // (the team fallen in from the staging — startfile.ts START.fallIn, as the page opens — comes to the leaf already dealt: there is no moment between the
       //  order and its first deal in which a man has nothing. The case arises there as the deal itself has it once it has dealt them where they now stand:
       //  each man on an opening of his own and the door on nobody's list — no free man has a line into its doorway)
-      if (START.fallIn && g.time - t0 >= COVER.dealSecs && g.time - t0 < 0.7 && J && J.o !== D && !C.live.some((L: any) => L.o === D)) blind0 = true;
+      if (START.fallIn && g.time - t0 >= COVER.dealSecs && g.time - t0 < 0.7 && J && J.o?.id !== D.id && !C.live.some((L: any) => L.o?.id === D.id)) blind0 = true;
       if (S) { far = Math.max(far, dist(m.char.pos, S.from)); for (const x of C.openings) { const k = dist(m.char.pos, x.at) - x.half; worst = Math.min(worst, k); if (k < 0.2) inOpening++; } }
-      if (sawAt < 0 && J && J.o === D && J.to === D.at && facingJob(C, m, 20)) { sawAt = g.time - t0; who = m; } } };
+      if (sawAt < 0 && J && J.o?.id === D.id && samePoint(J.to, D.at) && facingJob(C, m, 20)) { sawAt = g.time - t0; who = m; } } };
   R.step(60 * 7);
   const moved = R.ops.map((m: any, i: number) => dist(m.char.pos, start[i]));
   // (how it ended, said once: a man sees through · a step begun for the door and nobody dealt its doorway · asked, no spot · a free man with nothing never asked ·

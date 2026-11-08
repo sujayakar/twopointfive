@@ -325,6 +325,15 @@ pub fn can_see(g: &mut crate::game::Game, gd: GuardId) -> crate::guards::CanSee 
     crate::guards::CanSee { visible: r.visible, dist: r.dist, in_cone: r.in_cone }
 }
 
+/// he sees a man who is up: any player, each asked of on his own seat
+pub fn sees_a_man(g: &mut crate::game::Game, gd: GuardId) -> bool {
+    if g.seats.len() == 1 { let p = g.player; return !g.pl[p].down && can_see(g, gd).visible; }
+    for s in g.seats.clone() {
+        if crate::seats::with_seat(g, s, &mut |g: &mut Game| { let p = g.player; !g.pl[p].down && { let pc = g.pl[p].ch; can_see_char(g, gd, pc, true).visible } }) { return true; }
+    }
+    false
+}
+
 /// WHERE A MAN LOOKS, for every eye in the game: his head, or his sights when a long gun is in his shoulder and level; level, always. It is the
 /// fog's own answer (`fogofwar::gaze_of`), so what the player is shown of where a man looks and what that man can see are one thing.
 ///
@@ -444,7 +453,7 @@ pub fn eye_contact(g: &mut crate::game::Game, e: crate::guards::Eye, pc: CharId,
     let lens = crate::scene_collision::EyeContactE { pos: e.pos, look: e.look, range: e.range, half_deg: e.half_deg, near_m: e.near_m, near_deg: e.near_deg, v_half_deg: e.v_half_deg };
     let r = crate::scene_collision::eye_contact(g, lens, tgt, tgt2, unseen, smoked, through);
     let mut visible = r.visible;
-    if visible && is_player && (g.player_invisible || g.pl[g.player].down) { visible = false; }
+    if visible && is_player && (g.player_invisible || crate::seats::man_of(g, Some(pc)).map_or(g.pl[g.player].down, |p| g.pl[p].down)) { visible = false; }
     crate::guards::EyeContact { visible, dist: r.dist, in_cone: r.in_cone }
 }
 
@@ -643,7 +652,7 @@ pub fn go_to(g: &mut crate::game::Game, gd: GuardId, goal: V3, force: Option<boo
     }
     let tactics = crate::tactics::tactics_penalty(g, gd, goal);
     let pen = crate::lanes::lane_penalty(g, gd, tactics.as_ref());
-    let round = if crate::teampace::team_at_walk(g, gd) { crate::orders::prop_penalty(g, gd, pen.as_ref()) } else { None };
+    let round = if crate::teampace::team_at_walk(g, gd) { crate::orders::prop_penalty(g, &crate::seats::here(g), gd, pen.as_ref()) } else { None };
     let mut p = go_to_plan(g, gd, goal, pen.as_ref(), round.as_ref());
     if p.is_none() {
         let u = unstick_begin(g, gd);

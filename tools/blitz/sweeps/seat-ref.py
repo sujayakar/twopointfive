@@ -29,7 +29,7 @@ BORROWED = ['orders', 'door_tools', 'work', 'wall_charge', 'hover', 'interactabl
 # built, or answer about every seat at once (in a game of one seat, "the seat on the game" is their short way to say "the only seat")
 KEEP = {
     'seats/seat_ref.rs': ['here', 'seat'],
-    'seats/p_01.rs': ['set_of_game', 'all_down', 'host_man', 'man_by_id', 'view_of_id', 'faced_man', 'faced_view', 'view_of_body', 'view_of', 'orders_of'],
+    'seats/p_01.rs': ['men', 'set_of_game', 'all_down', 'host_man', 'man_by_id', 'view_of_id', 'faced_man', 'faced_view', 'view_of_body', 'view_of', 'orders_of'],
     'cmd/p_01.rs': ['seat_man'],      # the man of ANY seat by its id: from the game where it stands, from where it is kept
 }
 # the crates whose callers the compiler is asked for, in the order they build
