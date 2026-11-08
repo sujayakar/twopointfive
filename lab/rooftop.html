@@ -1015,7 +1015,7 @@ fn sentBack(q: Surf, leaf: bool, j: vec2f, rd: vec3f) -> vec3f {
     let side = p.leaf && rnd() < 0.45; let n = select(p.n, -p.n, side); let u = blue2(id.xy, 1u + k); let w = wideDir(select(x, p.x - p.ng * 0.02, side), n, u, rnd()); if (w.w <= 0.0) { continue; }
     if (dot(w.xyz, p.ng) * select(1.0, -1.0, side) <= 0.0) { continue; }
     let h = nearest(select(x, p.x - p.ng * 0.02, side) + w.xyz * select(0.0, 0.03, p.leaf), w.xyz, 2e-3, 600.0, 0u, 1e9); var L = vec3f(0.0);
-    if (h.piece == NOTHING) { L = skyLod(w.xyz, 3.0); dist += 12.0; }
+    if (h.piece == NOTHING) { L = skyLod(w.xyz, 1.0); dist += 12.0; }
     else {
       let q = surfaceMean(x, w.xyz, h); let leaf = (h.piece & LEAF_HIT) != 0u; let own = !leaf && (pieces[h.piece].lamp & 255u) != 255u; L = select(q.glow, vec3f(0.0), own) + sentBack(q, leaf, rnd2(), w.xyz); dist += min(h.t, 12.0);
       let w0 = who * 2u + k; if (k < 2u && w0 < HITS) { let wn = select(q.ng, vec3f(0.0), leaf); let wants = cacheWants(q.x, wn, !leaf && (q.flags & MOVES) != 0u); if (wants != 0u) { hits[w0] = vec4u(bitcast<vec3u>(q.x), select(octPack(q.ng), EVERY_WAY, leaf)); for (var l = 0u; l < 4u; l++) { if ((wants & (1u << l)) != 0u) { cacheFound(cacheKeyOf(q.x, wn, l & 1u, l >> 1u), w0); } } } }
@@ -1404,7 +1404,7 @@ fn oneMore(s: u32) {
   if (w.w > 0.0) {
     let h = nearest(x, w.xyz, 2e-3, 600.0, NOSHADOW * 0u, 1e9);
     let sm = smokeSeen(x, w.xyz, min(h.t, 80.0)); E += min(sm.rgb * w.w, vec3f(60.0));
-    if (h.piece == NOTHING) { E += skyLod(w.xyz, 4.0) * h.thru * (w.w * sm.a); }
+    if (h.piece == NOTHING) { E += skyLod(w.xyz, 1.0) * h.thru * (w.w * sm.a); }
     else { let q = surfaceMean(x, w.xyz, h); let leaf = (h.piece & LEAF_HIT) != 0u; let own = !leaf && (pieces[h.piece].lamp & 255u) != 255u;
       let L = select(q.glow, vec3f(0.0), own) + sentBack(q, leaf, rnd2(), w.xyz);
       E += min(L * h.thru * (w.w * sm.a), vec3f(60.0)); }

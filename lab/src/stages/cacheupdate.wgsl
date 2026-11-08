@@ -30,7 +30,7 @@ fn oneMore(s: u32) {
   if (w.w > 0.0) {
     let h = nearest(x, w.xyz, 2e-3, 600.0, NOSHADOW * 0u, 1e9);
     let sm = smokeSeen(x, w.xyz, min(h.t, 80.0)); E += min(sm.rgb * w.w, vec3f(60.0));
-    if (h.piece == NOTHING) { E += skyLod(w.xyz, 4.0) * h.thru * (w.w * sm.a); }
+    if (h.piece == NOTHING) { E += skyLod(w.xyz, 1.0) * h.thru * (w.w * sm.a); }
     else { let q = surfaceMean(x, w.xyz, h); let leaf = (h.piece & LEAF_HIT) != 0u; let own = !leaf && (pieces[h.piece].lamp & 255u) != 255u;
       let L = select(q.glow, vec3f(0.0), own) + sentBack(q, leaf, rnd2(), w.xyz);
       E += min(L * h.thru * (w.w * sm.a), vec3f(60.0)); }

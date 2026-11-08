@@ -1,0 +1,5 @@
+[
+ {"w": 960, "h": 540, "tick": 600, "name": "ground day", "dist": 34, "hour": 15.0, "cut": 2.55, "look": [0, 0.6, 0], "doors": 0.8},
+ {"w": 960, "h": 540, "tick": 600, "name": "ground day, fine cells", "dist": 34, "hour": 15.0, "cut": 2.55, "look": [0, 0.6, 0], "doors": 0.8, "method": "finetable"},
+ {"w": 960, "h": 540, "tick": 600, "name": "ground day, no coarse", "dist": 34, "hour": 15.0, "cut": 2.55, "look": [0, 0.6, 0], "doors": 0.8, "method": "nocoarse"}
+]
