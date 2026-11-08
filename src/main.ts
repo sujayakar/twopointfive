@@ -117,10 +117,8 @@ import { SQUAD40, SQUAD40_STATS, SQUAD40_LOG, squad40Left, squad40Brought, squad
 import { squadSmokeStage } from './game/squadsmoke';   // (the same: game/kit.ts has loaded it)
 import { checkQuiet } from './game/quiet';
 import { LESSON_STATS, checkLesson } from './game/lesson';
-import { parBest } from './ui/parBest';
-import { verdictKey, recordOf, tryStarted, runEnded, APPROACHES, type MissionRecord } from './ui/verdictStore';
+import { RunBooks } from './ui/runBooks';
 import { watchMissionRows } from './ui/verdictRows';
-import { SOLO_ID } from './scene/picks';
 import { SCENARIOS, ALL_MISSIONS, LESSON_MISSIONS, pickSearch } from './scene/scenarioList';
 import { lessonGroup } from './scene/scenarios';
 import { DOORWAY } from './game/doors';
@@ -517,6 +515,7 @@ async function main() {
       jpeg(picCanvas, picCanvas.getContext('2d'), cx => cx.drawImage(canvas, 0, 0, W, H));
     } catch (e) { reportWarning('save.picture', e); /* no picture: the save stands without one */ }
   };
+  let vRun: object | null = null; const books = new RunBooks();
   { const host = game.saves.onPutBack; game.saves.onPutBack = info => { host?.(info); cutToHim(); vRun = null; }; }   // (…and the run's books below start over: the Mission is the same OBJECT put back, and a load is another try, as a file's is — an end already filed must not stand for the end to come)
   // the start card's sandbox row (god mode / no AI / unlimited ammo) as this machine last left it — but not on a benchmark scene's page: its fight is the set's, and with
   // 'no AI' kept the mission below refuses to start at all (nobody would move), so the row has to stand off BEFORE the scenario is staged, not at the scene's start
@@ -957,26 +956,14 @@ async function main() {
     fire: (man, at) => { const c = man ? man.char : game.player.char, w = firearmOf(game, c, !man); if (!w.fire()) { w.rearm(); w.fire(); }   // (as every fire site: Firearm.fire() cycles the round out FIRST — the gun's own counters are what tracers.ts isTracerRound reads; a dry or reloading gun is stood up fresh for it. The view tops the magazine up as the row ends)
       fireWeapon(game, c, at, !man, { steady: true }); }, panes: () => glassMod.glassPanes(game).map(i => game.level.boxes[i]),
     mendGlass: () => { glassMod.resetGlass(game); resetGlassPen(game); } }) : null;
-  let parCheat = false;   // (a sandbox flag was on at some frame while this run's par clock ran: its time is not filed)
-  // the verdict's bookkeeping (game/verdict.ts names how a run went; what this MACHINE keeps of it is the page's: ui/verdictStore.ts): `vRun` = the run the
-  // three below belong to, `vKey` = the key it is kept under (mission + difficulty, read when the try starts), `vStreak` = which try of the streak it is
-  // (0: not counted), `vDone` = its end has been filed
-  let vRun: object | null = null, vKey = '', vStreak = 0, vCounted = false, vDone = false;
-  const vNote = (rec: MissionRecord | null, streak: number, fresh: boolean) => { const ways: Record<string, { first: boolean; clean: boolean }> = {}; let n = 0; if (rec) for (const a of APPROACHES) { const w = rec.w[a]; if (w) { ways[a] = { first: w.tries === 1, clean: w.clean }; n++; } } return { streak, fresh, gold: n >= 2, ways }; };
-  // a try started / a run ended (game/verdict.ts): counted and kept here, the page's side. A try is counted the frame it STARTS (so one given up is a
-  // try all the same) and never under a cheat; a run loaded from a checkpoint is ANOTHER try (the load is the retry). The card is told what was kept
-  // (`kept`) — so this runs before the card is opened (postUpdate: the stealth game's card opens on the very frame its run ends).
-  const vBooks = () => { if (tape || net || kitViewOn || offBooks) return; const VD = game.verdict;   // (?kitview: a beat at the door is nobody's run — no try counted, no end filed, no par below; nor is a networked game's, a run the server decided with another player in it, nor a benchmark's or a pricing run's)
-    if (VD.current !== vRun) { vRun = VD.current; vKey = ''; vStreak = 0; vCounted = false; vDone = false; }
-    const lesson = () => lessonGroup(runningScenario(game, levelFileQ)?.entry?.group);   // a Training lesson is not a run to be won: no try counted, no way kept, and its card grades nothing
-    if (VD.live && VD.started && !vCounted) { vCounted = true;
-      vKey = verdictKey(runningScenario(game, levelFileQ)?.entry?.id ?? (levelFileQ ? `night:${levelFileQ}` : SOLO_ID), difficultyNow());
-      vStreak = VD.cheat || lesson() ? 0 : tryStarted(vKey); }
-    const R = VD.result;
-    if (R && !vDone) { vDone = true;
-      if (lesson()) VD.kept = { streak: 0, fresh: false, gold: false, ways: {}, lesson: true };
-      else if (R.void || !vStreak) VD.kept = vNote(vKey ? recordOf(vKey) : null, 0, false);
-      else { const K = runEnded(vKey, vStreak, { won: R.won, approach: R.approach, clean: R.clean, secs: R.secs }); VD.kept = vNote(K.rec, K.streak, K.fresh); } } };
+  // the books of what this machine keeps of the runs played (ui/runBooks.ts), told as a run's try begins and as it ends, before its card is opened (postUpdate: the stealth game's card opens on the very
+  // frame its run ends). `vRun` = the run they are of. Not a replay's, a networked game's (the server decides it, with another player in it) nor the kit view's, nobody's run, nor a benchmark's or a pricing run's
+  const vBooks = () => { if (tape || net || kitViewOn || offBooks) return; const VD = game.verdict;
+    if (VD.current !== vRun) { vRun = VD.current; books.anew(); }
+    if (!books.due(VD.live && VD.started, !!VD.result)) return;
+    const R = game.runView(); if (!R) return;
+    books.tell(R);
+    if (books.note) { VD.kept = books.note; if (books.best) game.par.best(books.best); } };
   function step(dt: number, lastOfBurst = true) {
     lastOfBurstNow = lastOfBurst;
     stressTick(game);   // (?extra=N / the panel's stress row: the asked-for extra enemies stood again after a restart — a return on its first line while off)
@@ -984,12 +971,6 @@ async function main() {
     if (tape) tape.frame(dt); else { stepFrame(loop, dt); if (net && loop.frozen()) net.rest(input, cam, canvas); }   // (a replay owns the frame: the tape's steps, then the picture — replay/engineplay.ts; a networked game goes on under a card that freezes this page — net/page.ts)
     modelErrFrame();   // (?modelerr: a return on its first line otherwise)
     perfrec.cpuUpdate = loop.updateMs;
-    // a par run just ended (game/par.ts): this machine's best for THIS run — level file, way in, squad size, difficulty — is filed here, the page's side,
-    // and its words ride the result where this page shows it (the card, the debrief). Never under a sandbox flag (god mode, no AI, unlimited ammo): that time is not a record —
-    // and the flag counts if it was on at ANY frame while the clock ran (`parCheat`), not only on the frame the result appears.
-    if (!tape && !net && !kitViewOn && !offBooks) { const R = game.par.result();
-      if (!game.par.started) parCheat = false; else if (game.godMode || !game.aiEnabled || game.infiniteAmmo) parCheat = true;
-      if (R && !game.par.bestSaid) game.par.best(parCheat ? '' : parBest(`${levelFileQ ?? 'office'}|way${(game.roomClear.way ?? 0) + 1}|squad${game.nightBreach.ops.length}|${difficultyNow()}`, R.shown)); }   // (once a run: the words are kept with the run they are about)
     vBooks();   // (the verdict's bookkeeping again, for a try that started this frame and an end no card followed)
     simSm = simSm * 0.95 + loop.updateMs * 0.05;   // (the read-out's 'sim ms': Game.update on the CPU, eased as the fps row is)
 

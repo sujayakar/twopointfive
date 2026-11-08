@@ -50,6 +50,8 @@ section! {
         pub fall_in: u32,
         /// the run's end card is due: 1 it was lost, 2 won (0: not yet)
         pub ended: u32,
+        /// this run, for whoever keeps what was won: 1 its try has begun · 2 it is over (what there is to keep is asked: face_run_view)
+        pub run: u32,
         /// night vision's amount, and how hard he has just been hit
         pub night: f32,
         pub hit: f32,
@@ -77,6 +79,7 @@ pub fn fill(g: &Game, stood: u32, desired: f64, out: &mut Vec<View>) {
         }
     }
     r.ended = ended(g);
+    { let (begun, over) = game::verdict::run_on(g); r.run = begun as u32 | (over as u32) << 1; }
     (r.god, r.thinks, r.ammo, r.autosave) = (g.god_mode as u32, g.ai_enabled as u32, g.infinite_ammo as u32, g.saves.enabled as u32);
     (r.wall_feel, r.wall_press, r.fall_in) = (g.k.wallsnap.on as u32, g.k.wallsnap.press as u32, game::orders::squad_orders_twice_on(g) as u32);
     r.locks = game::rails::rails_locks(g, "camera") as u32 | (game::rails::rails_locks(g, "zoom") as u32) << 1;

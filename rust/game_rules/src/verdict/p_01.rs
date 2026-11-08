@@ -261,3 +261,33 @@ pub fn verdict_lines(g: &crate::game::Game) -> Option<(bool, String)> {
     Some((r.won, format!("{}\n{}\n{}\n{}\n{} {}\n{} {}\n{}\n{}\n{}\n{}", r.word, r.why, r.secs, r.approach.map_or("-", |a| a.as_str()), r.lost, r.of, r.foes.down, r.foes.of,
         r.hostages.as_ref().map_or(String::from("-"), |h| format!("{} {}", h.alive, h.of)), r.void, r.clean, men.join(";"))))
 }
+
+/// Has this run's try begun, and is it over: a run a machine may keep.
+pub fn run_on(g: &crate::game::Game) -> (bool, bool) {
+    if !live(g) || g.verdict.run != Some(g.mission.serial) { return (false, false); }
+    (started(g), g.verdict.res.is_some())
+}
+
+/// What a machine keeps of this run. A read: asked as the try begins and as the run ends.
+pub fn run_view(g: &crate::game::Game) -> crate::view::RunView {
+    let (begun, over) = run_on(g);
+    let file = row_file(g);
+    let entry = crate::scenario_run::running_scenario(g, file.as_deref(), None).and_then(|r| r.entry);
+    let level = String::from(crate::difficulty::difficulty_now(g).as_str());
+    let res = if over { g.verdict.res.as_ref() } else { None };
+    let name = file.as_deref().unwrap_or("office");
+    crate::view::RunView {
+        begun,
+        over,
+        void: res.map_or(g.verdict.cheat, |r| r.void),
+        lesson: entry.as_ref().map_or(false, |e| e.group == Some(crate::scene_scenarios::MissionGroup::Tutorial)),
+        mission: match (&entry, &file) { (Some(e), _) => e.id.clone(), (None, Some(f)) => format!("night:{}", f), (None, None) => String::from(crate::scene_scenario_list::SOLO_ID) },
+        won: res.map_or(false, |r| r.won),
+        way: res.and_then(|r| r.approach),
+        clean: res.map_or(false, |r| r.clean),
+        secs: res.map_or(0.0, |r| r.secs),
+        course: format!("{}|way{}|squad{}|{}", name, g.room_clear.way + 1.0, g.night_breach.ops.len(), level),
+        level,
+        par: crate::par::par_result_now(g).map(|r| r.shown),
+    }
+}

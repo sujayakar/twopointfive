@@ -7,7 +7,7 @@ import { Commands } from '../draw/commands';
 import { HAND } from '../draw/hand';
 import type { SaveRow } from '../ui/runcard';
 import { CURSOR_DOUBLES, sampleCursor, type CursorAt, type CursorCanvas, type CursorLens } from '../view/cursor';
-import { readCursorView, readDebriefView, readTickView, type CursorView, type DebriefView, type TickView } from '../view/read';
+import { readCursorView, readDebriefView, readRunView, readTickView, type CursorView, type DebriefView, type RunView, type TickView } from '../view/read';
 
 /** what a start is handed beside the level (rust/game_start/src/handed.rs PARTS) */
 export interface Start { level: Uint8Array; words: string; mannequin: Uint8Array; mannequinBin: Uint8Array; cast: Uint8Array; castLook: Uint8Array; seed: number; seats?: number }
@@ -128,6 +128,8 @@ export class DrawGame {
   }
   /** what the end card shows of the run, asked as it opens */
   debrief(): DebriefView { this.X.face_debrief_view(this.h); return readDebriefView(this.bytes()); }
+  /** what a machine keeps of the run, asked as its try begins and as it ends */
+  run(): RunView { this.X.face_run_view(this.h); return readRunView(this.bytes()); }
   /** how the run ended, in a word, and why; null while it is being played */
   verdict(): { won: boolean; word: string; why: string } | null { const r = this.X.face_verdict(this.h); if (!r) return null; const [word, ...why] = this.answer().split('\n'); return { won: r === 2, word, why: why.join(' ') }; }
   /** this run's saves as a card lays them out, the one to go back to, and the mission's clock now */
