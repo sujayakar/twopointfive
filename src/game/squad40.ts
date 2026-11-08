@@ -71,7 +71,7 @@ export const SHELL_THERE = 'shellThere';
 interface Shot { gd: Guard; from: Vec3; to: Vec3; sol: ThrowSolution; burst: Vec3; aimed: boolean }
 /** a man turning to his shot: lent from his order (squadthrow.ts), the spot, since when, when the round went (−1: not yet), the arc as planned (the picture's) */
 interface Turn extends Lent { at: Vec3; t0: number; firedT: number; shot: Shot }
-interface State { rounds: Map<Guard, number>; brought: number; last: Map<Guard, number>; turns: Map<Guard, Turn>; noted: unknown;
+interface State { rounds: Map<Guard, number>; brought: number; last: Map<Guard, number>; turns: Map<Guard, Turn>;
   shown: { t: number; text: string } | null; kept: Map<Asker, { key: string; t: number; a: Shot | string; who: string | null }>; }
 /** who re-reads a plan inside a third of a second, each with an answer of his own: the row's two questions (the picture keeps none — its reads are a drawn
  *  frame's, and nothing a drawn frame does may be in the Game's state) */
@@ -95,7 +95,7 @@ export function squad40Stage(g: Game, carried: readonly (readonly [Guard, number
   const rounds = new Map<Guard, number>(); let n = 0;
   for (const [gd, c] of carried) { const k = tubeUp(gd) ? Math.max(0, Math.floor(c) || 0) : 0; if (k) { rounds.set(gd, k); n += k; } }
   let s = states.get(g);
-  if (!s) { if (!n) return; states.set(g, s = { rounds, brought: 0, last: new Map(), turns: new Map(), noted: null, shown: null, kept: new Map() }); }
+  if (!s) { if (!n) return; states.set(g, s = { rounds, brought: 0, last: new Map(), turns: new Map(), shown: null, kept: new Map() }); }
   s.rounds = rounds; s.brought = n; s.last = new Map(); s.turns = new Map(); s.shown = null; s.kept.clear(); SQUAD40_STATS.staged++;
 }
 

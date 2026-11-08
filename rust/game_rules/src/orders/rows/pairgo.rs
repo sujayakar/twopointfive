@@ -9,6 +9,7 @@ pub const ORDER: Row = Row {
     is: &[Is::Pair],
     only: Some(only),
     valid: Some(valid),
+    notes: Some(crate::pairorders::pair_orders_mark_note),
     ..Row::new("pairGo", label, issue)
 };
 

@@ -8,6 +8,7 @@ use alloc::{format, string::String, vec, vec::Vec};
 pub const ORDER: Row = Row {
     only: Some(only),
     valid: Some(valid),
+    notes: Some(crate::squadsmoke::notes),
     ..Row::new("smokeThere", label, crate::squadsmoke::row_smoke_issue)
 };
 

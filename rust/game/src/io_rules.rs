@@ -23,11 +23,6 @@ pub fn ask(g: &mut crate::game::Game, kind: u32, row: u32, seat: u32, args: &[u8
 /// WHAT THE WALK CANNOT READ, DEALT BY KEY: every order row its functions, by its id (`rows::by_id`). A row whose id is no line of the list stops the import, by name.
 pub fn deal_closures(g: &mut crate::game::Game) {
     use crate::orders::*;
-    // (the block's voices, on a game handed over by a host that registers none: each reader answers for itself whether it has anything to say)
-    for f in [OrderNoteFn::DoorToolsHud, OrderNoteFn::DoorToolsWord, OrderNoteFn::Pair, OrderNoteFn::SquadSmoke, OrderNoteFn::WallCharge, OrderNoteFn::Squad40, OrderNoteFn::SquadThrow] {
-        crate::orders::squad_orders_voice(g, f);
-        for s in g.tab.cmd_seat.ids().collect::<Vec<_>>() { if let Some(o) = g.tab.cmd_seat[s].own.as_mut() { if !o.orders.notes.contains(&f) { o.orders.notes.push(f); } } }
-    }
     for id in g.tab.orders_order_def.ids().collect::<Vec<_>>() {
         let d = &mut g.tab.orders_order_def[id];
         d.row = rows::by_id(&d.id).unwrap_or_else(|| panic!("the order {} has no functions: it is no line of orders/rows", d.id));

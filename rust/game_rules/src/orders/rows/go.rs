@@ -9,6 +9,7 @@ pub const ORDER: Row = Row {
     is: &[Is::LiftsFire],
     only: Some(only),
     valid: Some(valid),
+    notes: Some(crate::doortools::door_tools_word_note),
     ..Row::new("go", label, issue)
 };
 
