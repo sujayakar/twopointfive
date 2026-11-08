@@ -55,7 +55,7 @@ export class KitPage {
     if (this.gone) return;
     if (kit === NONE) { this.none(); return; }
     this.drawn++;
-    if (!this.said && this.drawn >= READY) { this.said = true; post('ready'); }
+    if (!this.said && this.drawn >= READY) { this.said = true; post('ready'); this.commands.kitStageShown(); }
     if (veil !== this.asked) { this.asked = veil; if (this.said) { this.cover(); this.left = SETTLE; } this.commands.kitStageUnder(); return; }
     if (this.left > 0 && --this.left === 0 && this.veil) { const v = this.veil; void v.offsetWidth; v.style.transition = `opacity ${FADE_MS}ms linear`; v.style.opacity = '0'; }
   }

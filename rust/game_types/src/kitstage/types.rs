@@ -150,8 +150,10 @@ pub struct KitStage {
     pub keep: Option<Vec<usize>>,
     /// THE DISSOLVE: copies asked of the page · when the last was asked (none: none is out) · the page has laid it · a blank wall's hole is not stood again by what it covers
     pub veil: u32, pub veil_asked: Option<f64>, pub veil_laid: bool,
-    /// a check's own: nothing is directed, the men stand on their places
+    /// the link's `stillkit`, or a check's own: nothing is directed, the men stand on their places
     pub still: bool,
+    /// the page has shown its first picture: no act and no life before it
+    pub shown: bool,
     /// THE ACTS: the director's own (acts.rs)
     pub a: Acts,
 }
@@ -196,17 +198,19 @@ pub struct GunSwap { pub man: GuardId, pub id: crate::weapons::WeaponId, pub at:
 pub struct Scan { pub key: Option<GuardId>, pub k: usize, pub from: f64, pub to: f64, pub t0: f64, pub next: f64, pub v: f64, pub on: bool }
 /// loud kit's cost as it last played
 #[derive(Clone, Copy, Debug, Default)]
-pub struct CostSeen { pub field: &'static str, pub i: u32, pub door: bool, pub leaf: f64, pub up: bool, pub catches: bool, pub s: f64, pub how: &'static str, pub moved: f64, pub pool: bool }
+pub struct CostSeen { pub field: &'static str, pub i: u32, pub door: bool, pub leaf: f64, pub up: bool, pub s: f64, pub how: &'static str, pub moved: f64, pub pool: bool }
 
 /// The director's own state
 #[derive(Clone, Debug)]
 pub struct Acts {
-    /// the thing under the highlight · the thing asked for now · when it was heard · the running beat is cut for it · the gun and the light, turn about · no row before this · a rest owed after a mended lamp · beats begun · a row has been waited for since
-    pub hi: Option<&'static str>, pub asked: Option<&'static str>, pub ask_t: f64, pub cut_now: bool, pub flip: u32, pub rest_until: f64, pub rest_next: f64, pub beat_n: u32, pub wait_t: f64,
+    /// the thing under the highlight · the thing asked for now · the running beat is cut for it · the gun and the light, turn about · no row before this · a rest owed after a mended lamp · beats begun · a row has been waited for since
+    pub hi: Option<&'static str>, pub asked: Option<&'static str>, pub cut_now: bool, pub flip: u32, pub rest_until: f64, pub rest_next: f64, pub beat_n: u32, pub wait_t: f64,
     /// the beat under way · what the last row left only a restage mends · the men a whole-team row left apart go back onto their places
     pub beat: Option<Beat>, pub dirty: bool, pub apart: bool,
-    /// the leaf last pulled · Sam's card is owed him · the men the last row had off their places, and until when · the hand a row cut this tick owes Sam · a leaf asked shut until · the last row's end
-    pub pulled: f64, pub sam_card_due: bool, pub home_men: Vec<GuardId>, pub home_until: f64, pub hand_due: Option<crate::game::SlotKind>, pub leaf_ask: f64, pub last_end: f64,
+    /// a restage for a man off his place is out, and the row that waited begins at once · one has been tried and nobody seen home since · at a wall left open: the men the next row waits for · and Sam and every man, for the row after the charge
+    pub seated: bool, pub seat_tried: bool, pub hole_men: Vec<GuardId>, pub hole_all: bool,
+    /// the leaf last pulled · Sam's card is owed him · the men the last row had off their places · the hand a row cut this tick owes Sam · a leaf asked shut until · the last row's end
+    pub pulled: f64, pub sam_card_due: bool, pub home_men: Vec<GuardId>, pub hand_due: Option<crate::game::SlotKind>, pub leaf_ask: f64, pub last_end: f64,
     /// smoke: when the vent is shut · a cut can vents nothing until · the game's clock at the last tick and since it
     pub vent_at: f64, pub vent_kill: f64, pub step_t: f64, pub step_dt: f64,
     /// THE HOLD through Sam's frag: the beat it is on for · since when the team is on a knee · each man's knee as it last stood · a row of Sam's has waited for the men since · the beat that has the team down
@@ -219,6 +223,8 @@ pub struct Acts {
     pub swaps: Vec<GunSwap>, pub issued_suit: Vec<(u32, V3)>, pub issued_trim: Vec<(u32, V3)>,
     /// the walks · this way's wall would not open on its span, and why · the wall charge's own tile is not played here again, and why · the order as start() would have given it
     pub walks: Vec<Walk>, pub shut_wall: Option<String>, pub shut_own: Option<String>, pub wall_ask: Option<(crate::orders::OrderTarget, Vec<GuardId>)>,
+    /// the picture's solver has been told of smoke since the air was last cleared
+    pub smoke_told: bool,
     /// a round has gone and nothing is mended yet · when · bursts looked past through a wall left open
     pub shot: bool, pub shot_at: f64, pub hole_shots: u32,
     /// Sam's aim as the director has it, and its height · his body and aim as drawn · his rest aim (NaN: a row of his own hands has it) · when his yaws last stepped
@@ -242,9 +248,10 @@ impl Default for Acts {
     fn default() -> Self {
         let n = f64::NAN;
         Acts {
-            hi: None, asked: None, ask_t: 0.0, cut_now: false, flip: 0, rest_until: 0.0, rest_next: n, beat_n: 0, wait_t: n,
+            hi: None, asked: None, cut_now: false, flip: 0, rest_until: 0.0, rest_next: n, beat_n: 0, wait_t: n,
             beat: None, dirty: false, apart: false,
-            pulled: -1e9, sam_card_due: false, home_men: Vec::new(), home_until: -1.0, hand_due: None, leaf_ask: -1.0, last_end: -1e9,
+            seated: false, seat_tried: false, hole_men: Vec::new(), hole_all: false, smoke_told: false,
+            pulled: -1e9, sam_card_due: false, home_men: Vec::new(), hand_due: None, leaf_ask: -1.0, last_end: -1e9,
             vent_at: -1.0, vent_kill: -1.0, step_t: 0.0, step_dt: 0.0,
             pin: None, pin_t: 0.0, kneel_t: 0.0, knees: Vec::new(), home_t: n, kneel: None,
             flee_m: None, seen_was: None, lead_was: None,

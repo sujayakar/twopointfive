@@ -134,4 +134,6 @@ commands! {
     };
     /// the kit picture: the page has laid its copy over the picture, as the view's `veil` asked
     33 KitStageUnder {} = |g| game::kitstage::under(g);
+    /// the kit picture: the page has shown its first picture: the acts may begin
+    34 KitStageShown {} = |g| game::kitstage::shown(g);
 }

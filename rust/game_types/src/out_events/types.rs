@@ -21,6 +21,7 @@ pub enum OutEvent {
     ParticlesSetHeat(crate::out_events::OutParticlesSetHeat),
     ReachKeepChanged(crate::out_events::OutReachKeepChanged),
     SmokeSystemLikeClearAll,
+    SmokeCansShut,
     SmokeSystemLikeEmit(crate::out_events::OutSmokeSystemLikeEmit),
     SmokeSystemLikeKeepHot(crate::out_events::OutSmokeSystemLikeKeepHot),
     SmokeSystemLikeObstaclesChanged(crate::out_events::OutSmokeSystemLikeObstaclesChanged),

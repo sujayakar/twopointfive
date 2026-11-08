@@ -1,6 +1,7 @@
 //! THE KIT PICTURE'S STAGE: the Team & kit screen's picture of the team at the mission's own way in. The mission is started as Deploy would start it; then this stands the team on the plan's places, parks
 //! everybody else far off and calm, hangs the lamps and pins the camera. NO RULE OF THE GAME READS THE STAGE: it writes only what any host could write (men, lights, boxes, a pin) round the tick.
 use super::acts;
+use super::aim::R;
 use super::light::{KIT_VIEW_LIGHT as T, KIT_VIEW_LOOP as K, KIT_VIEW_QUIET as QK, KIT_VIEW_STAGE as ST};
 use super::plan::{porch_lit, KIT_PLAN};
 use super::types::*;
@@ -14,7 +15,6 @@ use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
 
-const R: f64 = m::PI / 180.0;
 /// a man no event can reach: past any number an event can get
 const DEAF: f64 = 9007199254740991.0;
 
@@ -230,34 +230,18 @@ fn torches(g: &mut Game, st: &mut KitStage) {
     l.intensity = st.sam_intensity; l.peak_intensity = st.sam_intensity; l.inner_deg = st.sam_inner; l.outer_deg = st.sam_outer; l.volumetric = st.sam_volumetric;
 }
 
-/// the man at his place, turned his way, as the squad's own hand-over has it: it takes him off whatever had him. A staged man's `hold` is only "nothing moves until the first order", and with no order of his own he drifts after Sam.
-fn send(g: &mut Game, x: GuardId, p: V2, face: f64, low: bool) {
-    let mut a = crate::orders::SquadOrdersAssignA::zeroed();
-    a.order = String::from(crate::orders::rows::cover::ORDER.id);
-    a.post = Some([p[0], 0.0, p[1]]);
-    a.face = Some(face);
-    a.strafe = Some(true);
-    a.stance = Some(crate::character::Stance::LowReady);
-    a.upper = Some(crate::character::UpperMode::None);
-    a.pace = Some(K.pace);
-    a.crouch = Some(low);
-    crate::orders::squad_orders_assign(g, x, &a);
-}
-/// every man on his place: sent once, and again whenever he is found with no such order (a fresh man has the scenario's own until his first)
+/// every man on his place, as the squad's own hand-over has it (a staged man's `hold` is only "nothing moves until the first order", and with no order of his own he drifts after Sam): sent once, and again whenever he is found with no such order (a fresh man has the scenario's own until his first)
 fn home_men(g: &mut Game, st: &mut KitStage) {
     for k in 0..st.order.len() {
         let x = st.order[k];
-        let actor = open_man(g, st) == Some(x);
-        let (p, yaw, low) = match st.mate { Some((p, y)) if k == 0 && !actor => (p, y, st.quiet), _ => (st.spots[k], st.yaws[k], false) };
+        let is_open = acts::actor(g, st) == Some(x);
+        let (p, yaw, low) = match st.mate { Some((p, y)) if k == 0 && !is_open => (p, y, st.quiet), _ => (st.spots[k], st.yaws[k], false) };
         let mine = crate::orders::squad_orders_of(g, &crate::seats::here(g), x).map_or(false, |a| g.tab.orders_assignment[a].order == crate::orders::rows::cover::ORDER.id);
         if mine && st.sent.contains(&x) { continue; }
-        send(g, x, p, yaw, low);
+        super::walk::send(g, x, p, yaw, None, K.pace, true, low);
         if !st.sent.contains(&x) { st.sent.push(x); }
     }
 }
-/// the man of the open card (member i is the team's [i - 1])
-fn open_man(g: &Game, st: &KitStage) -> Option<GuardId> { if st.who > 0 { crate::scenario_run::team_of(g).get(st.who as usize - 1).copied() } else { None } }
-
 fn hands_off(g: &mut Game, i: InputId) { let r = &mut g.tab.input[i]; r.keys.clear(); r.pressed.clear(); r.buttons = 0.0; r.clicked = 0.0; }
 
 /// THE STAGING, off the stage's plan. On a failure the stage says `none`, never a panic.
@@ -368,12 +352,14 @@ let (intensity, emissive) = (home::fixture_base_intensity(g, t), g.tab.sim_light
 
     // THE MEN: the open card's man first, on the plan's places
     st.who = if st.want >= 1 && (st.want as usize) <= team.len() { st.want } else { 0 };
-    let head = open_man(g, st).filter(|h| team.contains(h));
-    // (a restage keeps the file's order, the men's places by team index: a restart makes new men; and stands the open card's man first)
+    let head = acts::actor(g, st).filter(|h| team.contains(h));
+    // (a restage keeps the file's order, the men's places by team index: a restart makes new men. The open card's man goes to the head of it by the card switch's own walk, the fourth man round Sam: `live`. Only a first staging and the still picture, which has no walks, stand him first)
     let all0 = crate::scenario_run::team_of(g);
-    let kept_men: Vec<GuardId> = st.keep.take().map_or(Vec::new(), |perm| perm.iter().filter_map(|&i| all0.get(i).copied()).filter(|x| team.contains(x)).collect());
+    let keep = st.keep.take();
+    let kept_order = keep.is_some() && !st.still;
+    let kept_men: Vec<GuardId> = keep.map_or(Vec::new(), |perm| perm.iter().filter_map(|&i| all0.get(i).copied()).filter(|x| team.contains(x)).collect());
     let file: Vec<GuardId> = kept_men.iter().copied().chain(team.iter().copied().filter(|x| !kept_men.contains(x))).collect();
-    let order: Vec<GuardId> = match head { Some(h) => core::iter::once(h).chain(file.iter().copied().filter(|&x| x != h)).collect(), None => file };
+    let order: Vec<GuardId> = match head { Some(h) if !kept_order => core::iter::once(h).chain(file.iter().copied().filter(|&x| x != h)).collect(), _ => file };
     st.doorway = alloc::vec![a.a, a.b];
     st.stand = plan.slots.iter().map(|p| [p[0], p[1]]).collect();
     st.hand_right = plan.hand == "right";
@@ -595,7 +581,9 @@ pub fn restage(g: &mut Game) {
     n.serial_next = n.serial_next.max(g.serial_next);
     n.out = core::mem::take(&mut g.out);
     n.cmd_buf = g.cmd_buf.take();
-    n.m.kit = g.m.kit.clone();
+    // (the cards, the notes, the words on them; what is keyed by a man or a player is of the game thrown away, and a restart's new men would answer to it)
+    let of_base = core::mem::replace(&mut n.m.kit, g.m.kit.clone());
+    (n.m.kit.man_of, n.m.kit.bare_eyed, n.m.kit.kit_staged, n.m.kit.issued_player, n.m.kit.you_bare) = (of_base.man_of, of_base.bare_eyed, of_base.kit_staged, of_base.issued_player, of_base.you_bare);
     (n.k.nightbreach.squad, n.k.rescue.squad) = (g.k.nightbreach.squad, g.k.rescue.squad);
     crate::scene_collision::unstand(&mut n);
     ::sim::state::put(g.sim, &base.0.1);
@@ -604,7 +592,7 @@ pub fn restage(g: &mut Game) {
     let mut st = Box::new(base.0.2.clone());
     (st.base, st.want, st.field, st.size, st.frame, st.aspect) = (Some(base), was.want, was.field.clone(), was.size, was.frame, was.aspect);
     (st.roused_men, st.roused_alarms) = (was.roused_men, was.roused_alarms);
-    (st.veil, st.still, st.keep) = (was.veil, was.still, Some(keep));
+    (st.veil, st.still, st.shown, st.keep) = (was.veil, was.still, was.shown, Some(keep));
     acts::carry(&was.a, &mut st.a);
     crate::game::game_restart_encounter(g);
     place(g, &mut st);
@@ -858,4 +846,12 @@ pub fn cards(g: &mut Game, size: i32) {
 /// THE PAGE HAS LAID ITS COPY over the picture: what it was asked for is staged again in the next tick
 pub fn under(g: &mut Game) {
     if let Some(st) = g.kit_stage.as_mut() { if st.veil_asked.is_some() { st.veil_laid = true; } }
+}
+/// THE PAGE HAS SHOWN ITS FIRST PICTURE: from now the acts may begin
+pub fn shown(g: &mut Game) {
+    let now = g.time;
+    let Some(st) = g.kit_stage.as_mut() else { return };
+    // (the first row's rest is counted from the picture the eye has)
+    if !st.shown { st.a.rest_until = m::max(st.a.rest_until, now + K.rest_stage); }
+    st.shown = true;
 }
