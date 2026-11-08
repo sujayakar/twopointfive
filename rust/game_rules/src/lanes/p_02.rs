@@ -188,7 +188,7 @@ pub fn lanes_tick(g: &mut crate::game::Game, dt: f64) {
         if h.aimed {
             if mode != DefMode::Hold || flat(pos, h.at) > 2.5 { held_off(g, gd); continue; }   // (somebody else has moved him since: no longer this rule's man)
             // …moved a step all the same onto floor a gun of the lane has, or left in a doorway: out of it again. Never a man set on the lane's other side: his place a step short of their line is the errand's own
-            if fit(g, gd) && !close_fight(g, &crate::seats::here(g), gd) && !pushing(g, gd) && !flanking(g, gd) && !s(g).flank_of.has(gd) && !s(g).peek.has(gd) && g.time - g.gd[gd].last_seen_t > 1.0 && g.time - s(g).back_t.get(gd).copied().unwrap_or(-100.0) > 6.0 {
+            if fit(g, gd) && !close_fight(g, gd) && !pushing(g, gd) && !flanking(g, gd) && !s(g).flank_of.has(gd) && !s(g).peek.has(gd) && g.time - g.gd[gd].last_seen_t > 1.0 && g.time - s(g).back_t.get(gd).copied().unwrap_or(-100.0) > 6.0 {
                 if let Some(l) = lane_by_id(g, h.lane) {
                     if knows(g, l, gd) && (crate::doorway::doorway_in_way(g, pos) || gun_on(g, l, pos, Some(k.shift_m))) && !back_out(g, gd, l) {
                         let now = g.time;
@@ -288,7 +288,7 @@ pub fn lanes_tick(g: &mut crate::game::Game, dt: f64) {
         let d = g.fight.defs[di];
         di += 1;
         let gd = g.tab.roomfight_def[d].gd;
-        if mode_of(g, d) == DefMode::Move || !fit(g, gd) || close_fight(g, &crate::seats::here(g), gd) || pushing(g, gd) || flanking(g, gd) || s(g).peek.has(gd) || g.time - s(g).back_t.get(gd).copied().unwrap_or(-100.0) < 6.0 { continue; }
+        if mode_of(g, d) == DefMode::Move || !fit(g, gd) || close_fight(g, gd) || pushing(g, gd) || flanking(g, gd) || s(g).peek.has(gd) || g.time - s(g).back_t.get(gd).copied().unwrap_or(-100.0) < 6.0 { continue; }
         let pos = pos_of(g, gd);
         if mode_of(g, d) == DefMode::Hold && flat(pos, s(g).post.get(gd).copied().unwrap_or(pos)) < 3.0 { continue; }   // (his own post: the room fight's to defend, not this rule's to move)
         let l = match lane_on(g, pos, gd) { Some(l) => l, None => continue };

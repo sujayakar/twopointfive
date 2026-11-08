@@ -81,3 +81,23 @@ fn the_team_is_down_when_all_of_it_is() {
         }
     }
 }
+
+fn close(p: &Play, gd: GuardId) -> bool { game::lanes::close_fight(&p.g, gd) }
+
+/// THE RULE: a defender's foe, when it is a player, is the player he faces.
+/// A failure means he is measured against the first player wherever the second stands.
+#[test]
+fn a_defenders_foe_is_the_player_he_faces() {
+    for s in SEEDS {
+        for seat in 0..2 {
+            let (mut p, t1) = two(s);
+            p.seat_stands(seat, [20.0, AISLE]);
+            p.seat_stands(1 - seat, [3.0, 3.0]);
+            p.pin_man(t1, [21.0, AISLE], 0.0, game::game::GuardState::Alert, 1.0);
+            p.g.gd[t1].foe = Some(Foe::Player);
+            p.g.gd[t1].faces = Some(seat as f64);
+            p.g.gd[t1].last_seen_t = p.g.time;
+            assert!(close(&p, t1), "seed {s}: he has seat {seat}'s man a metre off and calls it no close fight");
+        }
+    }
+}

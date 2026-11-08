@@ -9,6 +9,8 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- small private helpers
 fn pos_of(g: &Game, x: GuardId) -> V3 { g.ch[g.gd[x].ch].pos }
+/// where a man with no foe named looks: the player nearest him
+fn near_man_pos(g: &Game, gd: GuardId) -> V3 { let pl = crate::seats::nearest_or_first(g, &g.ch[g.gd[gd].ch].pos); g.ch[g.pl[pl].ch].pos }
 fn player_pos(g: &Game, seat: &crate::seats::SeatRef) -> V3 { g.ch[g.pl[seat.player].ch].pos }
 fn char_id(g: &Game, x: GuardId) -> f64 { g.ch[g.gd[x].ch].id }
 fn nav_blocked(g: &Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }
@@ -452,12 +454,12 @@ pub fn tick_men(g: &mut crate::game::Game, dt: f64) {
     }
     if let Some(c) = contact {
         let near = g.qrf.phase != Phase::File || {
-            let foe = match crate::teams::foe_char(g, c) { Some(f) => g.ch[f].pos, None => player_pos(g, &crate::seats::here(g)) };
+            let foe = match crate::teams::foe_char(g, c) { Some(f) => g.ch[f].pos, None => near_man_pos(g, c) };
             flat(pos_of(g, c), foe) < 8.0
         };
         if near { to_fight(g, &el, c); }
         else {
-            g.qrf.fix = Some(v3::copy(g.gd[c].last_known.unwrap_or(player_pos(g, &crate::seats::here(g)))));
+            g.qrf.fix = Some(v3::copy(g.gd[c].last_known.unwrap_or(near_man_pos(g, c))));
             g.qrf.fix_t = g.time;
             g.qrf.cue_rush = true;
             crate::mind::cap(g, c, 0.84, "qrf");
