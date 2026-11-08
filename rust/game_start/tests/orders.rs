@@ -162,3 +162,11 @@ fn every_order_says_what_the_old_lists_said() {
     }
     assert!(!rows::id_is("thrBang", Is::Loud), "an id on no line is nothing");
 }
+
+/// THE RULE: the squad's block comes in the list's order: the door tools, the word, the pairs, smoke, the wall, the 40 mm, the throws.
+/// A FAILURE MEANS: a line of `rows!` moved, and what a player reads in the block moved with it.
+#[test]
+fn the_block_comes_in_the_lists_order() {
+    let said: Vec<&str> = game::orders::rows::ROWS.iter().filter(|r| r.notes.is_some()).map(|r| r.id).collect();
+    assert_eq!(said, ["tools", "go", "pairGo", "smokeThere", "wallCharge", "shellThere", "throwThere"]);
+}

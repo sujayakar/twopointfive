@@ -32,7 +32,6 @@ pub fn look_of(g: &Game, h: GuardId) -> [f64; 2] {
 pub fn pair_orders_new(g: &mut Game) -> crate::pairorders::PairOrders {
     // (SquadOrdersPeople has no fields: being set is what orders' squad_orders_people_near and _ray test)
     g.orders.people = Some(crate::orders::SquadOrdersPeople::zeroed());
-    crate::orders::squad_orders_voice(g, crate::orders::OrderNoteFn::Pair);
     crate::pairorders::PairOrders::blank()
 }
 
