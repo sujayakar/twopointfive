@@ -1,34 +1,29 @@
-// THE TWO CHARGES — a small level for ONE idea: two timed charges in rooms well apart, both on one clock (75 s) that two pairs working both wings at once
-// beat with room to spare and the whole squad going to one and then the other beats less than half the time (red to one wing, blue to the other: T, then
-// the door orders — or the player takes a charge himself and sends the four to the other). Rooms, doors and charges are named 1 and 2, the numbers the look
-// file paints at the doors: the HUD has no compass. A low house of five rooms: a hall along the front, and off it two
-// wings, each a room and the workshop behind it where a charge stands on the bench. TWO WAYS TO EACH CHARGE: through the hall and the wing's room (two doors,
-// the room's men met on the way), or round the outside of the house to the workshop's own back door in its end wall (one door — and the room's men behind you
-// while you work). The wings share no door: from one charge to the other is back through the hall, or round the house.
+// THE TWO WORKSHOPS: a low house of five rooms, a room clear. It was the two charges' level, and that mission is out, so no row of the list opens it. A hall along
+// the front, and off it two wings, each a room and the workshop behind it. TWO WAYS TO EACH WORKSHOP: through the hall and the wing's room (two doors), or round the
+// outside of the house to the workshop's own back door in its end wall. The wings share no door: from one workshop to the other is back through the hall, or round the house.
 //
 //          x=6        x=12          x=20          x=28        x=34
 //   z=7    +----------+-------------+-------------+-----------+
 //          | WEST     |  WEST       |  EAST       | EAST      |
-//          | WORKSHOP d  ROOM       |  ROOM       d WORKSHOP  |      d = a door · the charges stand on the benches on the north wall
-//   (back) d charge 1 |             |             | charge 2  d (back)
+//          | WORKSHOP d  ROOM       |  ROOM       d WORKSHOP  |      d = a door · the benches stand on the north wall
+//   (back) d          |             |             |           d (back)
 //   z=13   +----------+----d--------+--------d----+-----------+
 //          |                 HALL (nobody holds it)           |
 //   z=17   +--WW--------------------d(front)-------------WW---+
 //                       the team forms up in the dark lot to the south
 //
-// What makes the idea true is in the file's `scenarios.defuse` block (scene/scenarios.ts DefuseData, read by game/defuse.ts): the two charges and the one clock.
 // The room clear is the level's `scenarios.roomClear` as on any level. Regenerate: bun run tools/levels/export.ts defuse
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag } from '../../src/scene/boxes';
 import type { Level } from '../../src/scene/level';
-import type { DefuseData, KitViewData, LevelScenarios, StructureData } from '../../src/scene/scenarios';
+import type { KitViewData, LevelScenarios, StructureData } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
 import * as K from '../../src/scene/levelKit';
 import { livedPieces, INK } from './livedPieces';
 import { gwotKit, gwotOfKit } from '../../src/scene/gwotKit';
 
 export const NAME = 'defuse';
-export const NOTES = 'The two charges: a defuse mission\'s own level. Two wings off one hall, a timed charge on the bench in the far room of each, one clock for both. Kit pieces only. Regenerate: bun run tools/levels/export.ts defuse';
+export const NOTES = 'A room clear in a low house: two wings off one hall, a workshop in the far room of each. Kit pieces only. Regenerate: bun run tools/levels/export.ts defuse';
 
 /** The rooms INSIDE their walls and the doors each is entered by: data about the level, kept beside the generator that makes them true. */
 export const DEFUSE_ROOMS = {
@@ -41,9 +36,8 @@ export const DEFUSE_ROOMS = {
 /** where the team forms up: the dark lot south of the front door */
 export const DEFUSE_START: Vec3 = [20.0, 0, 22.4];
 
-/** the bench a charge stands on: its middle on the north wall, and the point on the charge a hand goes to */
+/** the workshops' bench: its middle on the north wall */
 const BENCH_Z = 7.47, BENCH_D = 0.7, BENCH_TOP = 0.76, WEST_X = 8.5, EAST_X = 31.5;
-const chargeAt = (x: number): Vec3 => [x, BENCH_TOP + 0.08, BENCH_Z + 0.18];
 
 /** THE ROOM CLEAR (scene/scenarios.ts StructureData): four held rooms, two men in each — the room in front of each workshop and the workshop itself.
  *  A mark's place implies its facing: a man stands across the room from the door he fears. No breach plan, so no F drill: the team's start is here. */
@@ -82,20 +76,9 @@ export const DEFUSE_STRUCTURE: StructureData = {
   ],
 };
 
-/** THE IDEA (scene/scenarios.ts DefuseData — game/defuse.ts): the two charges and their one clock. The clock is set where two pairs working both wings at once
- *  have room to spare and the whole squad working one and then the other only sometimes makes it (tools/qa/defuse-run.ts measures both). The names are the
- *  numbers painted at the workshop doors: the HUD has no compass and the camera turns. */
-export const DEFUSE_CHARGES: DefuseData = {
-  secs: 75, workSecs: 6,
-  devices: [
-    { id: 'one', name: 'charge 1', pos: chargeAt(WEST_X), n: [0, 1] },
-    { id: 'two', name: 'charge 2', pos: chargeAt(EAST_X), n: [0, 1] },
-  ],
-};
-
 // THE TEAM & KIT PICTURE (scenarios.kitView): a set of the house's own front, on the front wall's own line and door. The real door plans clean, but the
-// thing the level is about (the firing wire down the hall, the charges in the back rooms) is out of the picture's reach behind it: the set brings the
-// wire, its battery plate, a charge and the bench it was built on to the wall the stack stands on, under one warm bulb.
+// firing wire down the hall is out of the picture's reach behind it: the set brings the
+// wire, its battery plate, a dead charge and the bench it was built on to the wall the stack stands on, under one warm bulb.
 const COPPER: [number, number, number] = [0.46, 0.21, 0.07];
 const DEFUSE_KITVIEW: KitViewData = {
   sets: { front: { ref: [20.25, 20],
@@ -141,7 +124,7 @@ const DEFUSE_KITVIEW: KitViewData = {
       group: 'df', enabled: true, volumetric: 0, radius: 0.06, mains: false, fixture: 'df_bulb' }] } },
   ways: [{ door: 'df_front', set: 'front', pane: false, light: { porch: { intensity: 9, color: [1, 0.66, 0.36] }, fill: { intensity: 3.2 } } }] };
 
-export const DEFUSE_SCENARIOS: LevelScenarios = { roomClear: DEFUSE_STRUCTURE, defuse: DEFUSE_CHARGES, kitView: DEFUSE_KITVIEW,
+export const DEFUSE_SCENARIOS: LevelScenarios = { roomClear: DEFUSE_STRUCTURE, kitView: DEFUSE_KITVIEW,
   places: { areas: [{ name: DEFUSE_ROOMS.hall.name, bounds: { ...DEFUSE_ROOMS.hall.bounds } }] } };
 
 /** What tools/levels/export.ts writes levels/defuse.json from: the Level, the file's scenarios block, the editor group of every box. */
@@ -181,7 +164,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   K.wallZ(k, 28, 7.12, 12.94, INT, iw, [K.doorAt(k, 'shop_2', 'z', 28, 9.4)]);
   K.wallZ(k, 20, 7.12, 12.94, INT, iw);
 
-  // ---------------- the workshops: the bench on the north wall (the charge stands on it — game/defuse.ts draws it), a bare bulb over it ----------------
+  // ---------------- the workshops: the bench on the north wall, a bare bulb over it ----------------
   for (const [id, x] of [['wshop', WEST_X], ['eshop', EAST_X]] as const) {
     K.grp(k, id);
     K.desk(k, x, BENCH_Z, 1.8, BENCH_D, 0, C.woodDark);

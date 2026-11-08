@@ -294,8 +294,6 @@ impl Play {
     pub fn par_counts(&self) -> (i32, i32) { (self.g.stats.par.started, self.g.stats.par.finished) }
     /// … and the finished run (None: not taken yet, or wiped).
     pub fn par_result(&self) -> Option<game::par::ParResult> { game::par::par_result_now(&self.g).cloned() }
-    /// where a defuse level's charges are, in the file's order
-    pub fn charges(&self) -> Vec<[f64; 2]> { self.g.level.scenarios.as_ref().and_then(|s| s.defuse.as_ref()).map_or(Vec::new(), |d| d.devices.iter().map(|x| [x.pos[0], x.pos[2]]).collect()) }
     /// how many door charges a seat's squad has set and not blown
     pub fn seat_door_charges(&self, seat: usize) -> usize { game::seats::seat(&self.g, self.g.seats[seat]).door_tools.set.len() }
     /// how many wall charges the first player's squad has set and not blown

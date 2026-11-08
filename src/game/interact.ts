@@ -73,7 +73,6 @@ export function runningVerb(g: Game): string {
   if (pl.breakerMove) return 'breaker';   // his hand on the mains lever (handwork.ts) — a half second COMMITTED like a kick: nothing in cancelSustained stops it, and no other row is on offer under it
   if (pl.charging) return `charge:${pl.charging.door.def.name}`;   // a breaching charge going on a door by hand (doortools.ts samTick)
   if (g.wallCharge?.setting) return 'charge:wall';   // a breaching charge going on a wall by hand (wallcharge.ts)
-  if (g.defuse?.working) return 'defuse';   // a hand on a defuse mission's charge (defuse.ts)
   return '';
 }
 /** Stop the running sustained verb where it is — what letting go of the held key used to do, now on a Space press, Esc, or a step: the leaf stays where it got
@@ -90,7 +89,6 @@ export function cancelSustained(g: Game): boolean { { const __s = RUST_SURFACE; 
   if (g.mission.driveT >= 0) { cancelDrive(g); return true; }
   if (g.doorTools?.cancelSam()) return true;
   if (g.wallCharge?.cancel()) return true;
-  if (g.defuse?.cancel()) return true;
   return false;
 }
 /** a row the ring has a wedge for: one with something to do */

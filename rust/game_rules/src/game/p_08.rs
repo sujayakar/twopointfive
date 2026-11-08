@@ -202,7 +202,7 @@ pub fn game_hands_on_doors(g: &mut crate::game::Game, before: &[f64]) {
                 Some(h) => {
                     let hand = crate::handwork::TeamWorkHandH { p: h.p, n: h.n, w: h.w };
                     let verb = wj.as_ref().map(|j| j.verb);
-                    let kind = if verb == Some(crate::workthings::WorkVerb::Drive) || verb == Some(crate::workthings::WorkVerb::Defuse) { crate::handwork::TeamWorkHandKind::Take } else { crate::handwork::TeamWorkHandKind::Lever };
+                    let kind = if verb == Some(crate::workthings::WorkVerb::Drive) { crate::handwork::TeamWorkHandKind::Take } else { crate::handwork::TeamWorkHandKind::Lever };
                     let secs = wj.as_ref().map_or(0.0, |j| j.secs);
                     let need = wj.as_ref().map_or(1.0, |j| j.need);
                     let dir = if verb == Some(crate::workthings::WorkVerb::BreakerOn) { -1.0 } else { 1.0 };

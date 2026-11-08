@@ -83,12 +83,10 @@ export const WORK = {
 export const WORK_STATS = { given: 0, done: 0, moot: 0 };
 export const WORK_ORDER = 'work';
 
-export type WorkVerb = 'breakerOff' | 'breakerOn' | 'drive' | 'defuse';
+export type WorkVerb = 'breakerOff' | 'breakerOn' | 'drive';
 /** A thing a teammate can work: `face` the point on it his palm goes to (world), `n` the unit normal out of it toward where he stands (planar), `stand`
  *  where he stands to work it (null: nowhere he can), `name` the menu's words for it ('on the breaker') */
-export interface WorkThing { kind: 'breaker' | 'objective' | 'device'; face: Vec3; n: Vec3; stand: Vec3 | null; name: string;
-  /** kind 'device': which of a defuse mission's charges (defuse.ts) */
-  dev?: number; }
+export interface WorkThing { kind: 'breaker' | 'objective'; face: Vec3; n: Vec3; stand: Vec3 | null; name: string; }
 /** The work a hand is out for (workJob): which, how far in, how long it takes */
 export interface WorkJob { verb: WorkVerb; secs: number; need: number; }
 interface Job { thing: WorkThing; verb: WorkVerb; A: Assignment; t0: number; lastT: number; }
@@ -172,7 +170,7 @@ export class WorkThings {
   things(): WorkThing[] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('WorkThings.things', this, []); if (__r !== RUST_PASS) return __r as any; } }
     const g = this.g; if (!WORK.on) return [];
     const B = g.level.breaker, bo = g.blackout, M = g.level.mission, drive = g.mission.stage === 'drive' && !g.quietUtility && !g.puppet, W = drive ? quietWords(g) : null;
-    const key = `${B ? B.pos.join(',') : ''}|${B && !(bo.active && bo.permanent)}|${drive && M?.rack ? M.rack.front.join(',') : ''}|${W ? W.holder : ''}|${g.defuse?.key ?? ''}`;
+    const key = `${B ? B.pos.join(',') : ''}|${B && !(bo.active && bo.permanent)}|${drive && M?.rack ? M.rack.front.join(',') : ''}|${W ? W.holder : ''}`;
     if (this.cache && this.cache.key === key && g.time >= this.cache.t && g.time - this.cache.t < 1) return this.cache.list;
     this.prune();
     const list: WorkThing[] = [];
@@ -184,7 +182,6 @@ export class WorkThings {
       let n: Vec3 = [0, 0, 1]; if (stand && W) { const d = flat(stand, rf) || 1; n = [(stand[0] - rf[0]) / d, 0, (stand[2] - rf[2]) / d]; }
       list.push({ kind: 'objective', face: [rf[0], y, rf[2]], n, stand, name: W ? W.holder : 'the rack' });
     }
-    for (const d of g.defuse?.armed() ?? []) list.push({ kind: 'device', face: d.face, n: d.n, stand: standFor(g, d.face, d.n), name: d.name, dev: d.i });   // a defuse mission's live charges (defuse.ts)
     this.cache = { key, t: g.time, list }; return list;
   }
   /** records of men who are no longer at it: down, off the roster (a new cast), or since ordered elsewhere — and hands with no living owner on the roster */
@@ -194,17 +191,15 @@ export class WorkThings {
     for (const c of this.hands.keys()) if (!squad.some(gd => gd.char === c && gd.state !== 'dead')) this.hands.delete(c);
   }
   /** what working it would do now */
-  verbOf(th: WorkThing): WorkVerb { return th.kind === 'device' ? 'defuse' : th.kind === 'objective' ? 'drive' : this.g.blackout.active ? 'breakerOn' : 'breakerOff'; }
+  verbOf(th: WorkThing): WorkVerb { return th.kind === 'objective' ? 'drive' : this.g.blackout.active ? 'breakerOn' : 'breakerOff'; }
   /** the row's words */
   words(th: WorkThing): string {
-    if (th.kind === 'device') return `make ${th.name} safe`;
     if (th.kind === 'breaker') return this.g.blackout.active ? 'turn the power back on' : 'throw the breaker';
     const W = quietWords(this.g); return W ? `take ${W.thing}` : 'pull the drive';
   }
   /** why that is not there to be done any more (null: it is) — the word the man says */
   private moot(th: WorkThing, verb: WorkVerb): string | null {
     const g = this.g, bo = g.blackout;
-    if (th.kind === 'device') return g.defuse ? g.defuse.moot(th.dev ?? -1) : "it's gone.";
     if (th.kind === 'objective') return g.mission.stage === 'drive' ? null : quietWords(g) ? "it's already gone." : "it's already out.";
     if (bo.active && bo.permanent) return "it's scrap.";
     return verb === 'breakerOff' ? (bo.active ? "it's already dark." : null) : bo.active ? null : "it's already on.";
@@ -267,9 +262,9 @@ export class WorkThings {
     const th = J.thing, stand = th.stand!, H0 = this.hands.get(gd.char);
     if (J.t0 >= 0 && (now - J.lastT > 0.25 || !H0 || H0.until !== Infinity)) this.handOff(gd, J);   // (a gap in his ticks, or the hand has come off in it: start again)
     J.lastT = now;
-    // the run has ENDED under his hand (Sam is down): the mission's thing is nobody's to take and a charge stays armed (defuse.ts's makeSafe does nothing then).
-    // The job ends here with no word — "it's already gone." and 'charge is safe.' would both be false. The breaker is the level's, not the run's: it goes on
-    if (g.player.down && (J.verb === 'drive' || J.verb === 'defuse')) { WORK_STATS.moot++; this.note(gd, 'moot: the run is over'); this.settle(S, gd, J, null, false); return; }
+    // the run has ENDED under his hand (Sam is down): the mission's thing is nobody's to take.
+    // The job ends here with no word — "it's already gone." would be false. The breaker is the level's, not the run's: it goes on
+    if (g.player.down && J.verb === 'drive') { WORK_STATS.moot++; this.note(gd, 'moot: the run is over'); this.settle(S, gd, J, null, false); return; }
     const why = this.moot(th, J.verb);
     if (why) { WORK_STATS.moot++; this.note(gd, `moot: ${why}`); this.settle(S, gd, J, why, true); return; }
     // the orders bring a mark to a man who cannot reach it (orders.ts tick: stuck, or somebody standing on it) — and call that arrived. He is not at the thing:
@@ -286,14 +281,11 @@ export class WorkThings {
         if (!m.handsOn) { m.handsOn = true; chronObjective(g, W ? `hands on ${W.thing}` : 'hands on the drive', th.face); } } }
     const H = this.hands.get(gd.char); if (H) H.seen = now;
     const need = this.needOf(J.verb), k = (now - J.t0) / need;
-    A.there = J.verb === 'drive' || J.verb === 'defuse' ? `${this.words(th)}… ${Math.min(99, Math.round(k * 100))}%` : `on ${th.name}`;
+    A.there = J.verb === 'drive' ? `${this.words(th)}… ${Math.min(99, Math.round(k * 100))}%` : `on ${th.name}`;
     if (k < 1) return;
     let line: string;
     if (J.verb === 'breakerOff') { g.setBlackout(86400, 'hand'); line = 'lights out.'; }
     else if (J.verb === 'breakerOn') { g.endBlackout(); line = "power's back."; }
-    else if (J.verb === 'defuse') { const i = th.dev ?? -1; g.defuse.makeSafe(i, gd);
-      if (g.defuse.states[i] !== 'safe') { WORK_STATS.moot++; this.note(gd, 'moot: not made safe'); this.settle(S, gd, J, null, false); return; }   // (the word follows the deed: makeSafe has its own reasons to do nothing)
-      line = 'charge is safe.'; }
     else { const n0 = g.player.noise, W = quietWords(g); drivePulled(g); g.player.noise = n0; line = W ? `got ${W.bare}.` : 'got the drive.'; }   // (the clunk is the rack's, heard as ever — it is not Sam's own noise)
     WORK_STATS.done++; this.note(gd, `done: ${J.verb}`); this.settle(S, gd, J, line, true);
   }
@@ -313,20 +305,11 @@ export class WorkThings {
     return H.push;
   }
   /** how long the work on a thing takes from the hand going out, s */
-  private needOf(verb: WorkVerb): number { return WORK.handSecs + (verb === 'drive' ? DRIVE_SECS : verb === 'defuse' ? this.g.defuse.workSecs : WORK.breakerSecs); }
+  private needOf(verb: WorkVerb): number { return WORK.handSecs + (verb === 'drive' ? DRIVE_SECS : WORK.breakerSecs); }
   /** he is at work and stood on the spot his thing is worked from (workPasses) */
   atThing(gd: Guard): boolean { return goneWithTick('WorkThings.atThing') as any; }
   /** is this man working a thing (a probe, the HUD) */
   working(gd: Guard): boolean { const J = this.jobs.get(gd); return !!J && gd.state !== 'dead' && this.g.orders.of(gd) === J.A; }
-  /** the man an order has on a defuse mission's charge i (defuse.ts: the objective row's 'charge 1 · Red One on it'): `on` = his hand is on it NOW (his
-   *  order ticked with it out inside the last quarter second — a man the fight has taken off it reads 'going' until he is back), else he is on his way; a
-   *  man with his hand on it is named before one still walking. null: nobody */
-  onDevice(i: number): { gd: Guard; on: boolean } | null {
-    let best: { gd: Guard; on: boolean } | null = null;
-    for (const [gd, J] of this.jobs) if (J.thing.kind === 'device' && J.thing.dev === i && this.working(gd)) {
-      const on = J.t0 >= 0 && this.g.time - J.lastT <= 0.25; if (on) return { gd, on }; best ??= { gd, on }; }
-    return best;
-  }
   private note(gd: Guard, what: string) { this.log.push({ t: this.g.time, who: gd.callsign, what }); if (this.log.length > 200) this.log.splice(0, 50); }
   summary(): string { const th = this.things(), n = [...this.jobs.keys()].filter(gd => this.working(gd)).length; return !WORK.on ? 'off' : `${th.map(x => `${x.name}${x.stand ? '' : ' (no place to stand)'}`).join(' · ') || 'nothing to work'} · ${n} at work · given ${WORK_STATS.given} done ${WORK_STATS.done} moot ${WORK_STATS.moot}`; }
 }
