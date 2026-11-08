@@ -14,6 +14,7 @@ pub const ORDER: Row = Row {
     valid: Some(valid),
     tick: Some(squad40::turn_tick),
     frame: Some(squad40::squad40_tick),
+    notes: Some(squad40::notes),
     ..Row::new("shellThere", label, issue)
 };
 

@@ -7253,8 +7253,7 @@ export function puppetRows(C: Ctx) {
   function f_squadsmoke_State(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.brought; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.brought = v !== 0 as any; else o.brought = v; } }   // brought
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.cans; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.cans = v !== 0 as any; else o.cans = v; } }   // cans
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) { const v = b[C.p++] !== 0; const c = o.noted; if (typeof c === 'boolean') { if (c !== v) o.noted = v; } else if (c === null) { if (v) o.noted = v; } else if (typeof c === 'object') { if (!v) o.noted = null; } else if (!(c === undefined && !v)) o.noted = v; }   // noted
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1232, o);   // last
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1232, o);   // last
   }
   function f_squadsmoke_SquadsmokeModSQUADSMOKELOGItem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
@@ -7270,8 +7269,7 @@ export function puppetRows(C: Ctx) {
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.brought; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.brought = v !== 0 as any; else o.brought = v; } }   // brought
     if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1234, o);   // last
     if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1235, o);   // turns
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) { const v = b[C.p++] !== 0; const c = o.noted; if (typeof c === 'boolean') { if (c !== v) o.noted = v; } else if (c === null) { if (v) o.noted = v; } else if (typeof c === 'object') { if (!v) o.noted = null; } else if (!(c === undefined && !v)) o.noted = v; }   // noted
-    if (b[MP + ((m + 5) >> 3)] & (1 << ((m + 5) & 7))) C.slow(1236, o);   // shown
+    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1236, o);   // shown
   }
   function f_squad40_Squad40ModSQUAD40LOGItem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t
@@ -7284,10 +7282,9 @@ export function puppetRows(C: Ctx) {
   }
   function f_squadthrow_State(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) C.slow(1237, o);   // last
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = b[C.p++] !== 0; const c = o.noted; if (typeof c === 'boolean') { if (c !== v) o.noted = v; } else if (c === null) { if (v) o.noted = v; } else if (typeof c === 'object') { if (!v) o.noted = null; } else if (!(c === undefined && !v)) o.noted = v; }   // noted
-    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1238, o);   // shown
-    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1239, o);   // walks
-    if (b[MP + ((m + 4) >> 3)] & (1 << ((m + 4) & 7))) C.slow(1240, o);   // scratch
+    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) C.slow(1238, o);   // shown
+    if (b[MP + ((m + 2) >> 3)] & (1 << ((m + 2) & 7))) C.slow(1239, o);   // walks
+    if (b[MP + ((m + 3) >> 3)] & (1 << ((m + 3) & 7))) C.slow(1240, o);   // scratch
   }
   function f_squadthrow_SquadthrowModSQUADTHROWLOGItem(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.t; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.t = v !== 0 as any; else o.t = v; } }   // t

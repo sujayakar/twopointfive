@@ -8,7 +8,6 @@ use alloc::{string::String, vec::Vec};
 pub struct State {
     pub brought: f64,
     pub cans: f64,
-    pub noted: bool,
     pub last: JsMap<GuardId, f64>,
 }
 impl State {
@@ -17,7 +16,6 @@ impl State {
         State {
             brought: 0.0,
             cans: 0.0,
-            noted: false,
             last: JsMap::new(),
         }
     }
