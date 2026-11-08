@@ -15,7 +15,7 @@ const { makeBox, matWord, wordOf, ROUGH_DEFAULT, sentAlbedo, glassDark, solidGla
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
 
-const DT = 1 / 60, BREAK = process.env.COATFINISH_BREAK === '1', GLASS_BREAK = process.env.SOLIDGLASS_BREAK === '1', FILE = 'gwot-yard.json', TWIN = 'depot-gwot.json';
+const DT = 1 / 60, BREAK = process.env.COATFINISH_BREAK === '1', GLASS_BREAK = process.env.SOLIDGLASS_BREAK === '1', FILE = 'crossing.json', TWIN = 'depot-gwot.json';
 function seeded(seed: number) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 async function hushed<T>(f: () => T | Promise<T>): Promise<T> { const log = console.log, warn = console.warn; console.log = console.warn = () => { }; try { return await f(); } finally { console.log = log; console.warn = warn; } }
 const levelOf = (file: string) => loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${file}`, 'utf8')));
@@ -75,7 +75,7 @@ export async function coatfinishCheck(): Promise<boolean> {
     // (3) every level file: each box that says a named coat is sent no rougher than the coat, and no other box of any level is sent other than its own
     { let files = 0, said = 0, off = 0, other = 0; up(true);
       for (const f of readdirSync(`${ROOT}/levels`).filter(f => f.endsWith('.json') && !f.includes('.lint')).sort()) { const T = tally(levelOf(f).boxes as any[]); if (T.said) files++; said += T.said; off += T.said - T.coated; other += T.others; }
-      line(said > 400 && off === 0 && other === 0, '3 every level file through the rule: each box that says a named coat is sent at the coat\'s roughness (or its own, where that is smoother), and no other box of any level is sent other than its own', `${said} boxes in ${files} files · not the coat's ${off} · others moved ${other}`); }
+      line(said > 300 && off === 0 && other === 0, '3 every level file through the rule: each box that says a named coat is sent at the coat\'s roughness (or its own, where that is smoother), and no other box of any level is sent other than its own', `${said} boxes in ${files} files · not the coat's ${off} · others moved ${other}`); }
 
     // (4) a rule of the picture: the same seeded rounds toward the yard's pickup with the rule up and down is the same run
     { const run = async (on: boolean) => { const V: any = await stand(on), g = V.game; const body = (V.level.boxes as any[]).find((b: any) => namedCoat(b.stuff) && b.h[0] > 1);

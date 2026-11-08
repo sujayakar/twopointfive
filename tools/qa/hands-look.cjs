@@ -1,5 +1,5 @@
 // HANDS LOOK: stills of the hands' moves (src/game/hands.ts) off the real page on the software WebGPU adapter — a body taken up from its feet and from its
-// head, hauled, laid down; the west gate of Training lesson 1 pulled open from the yard (it opens toward him), the hut door pushed open from outside. The camera is pinned close on the player.
+// head, hauled, laid down; the west gate of Lights out pulled open from the yard (it opens toward him), the shed door pushed open from outside. The camera is pinned close on the player.
 //   node tools/qa/hands-look.cjs <outDir> [extra query, e.g. nohands]      env: PORT (default 5199) · SIZE (default 960x540) · QUALITY (default low) · ONLY=body|door · ENDS=feet,head · YAW (camera, rad; default: side-on)
 // Slow by nature (page-look.cjs says why): ~95 s to boot, 5–15 s a drawn frame.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
@@ -37,7 +37,7 @@ const PLAY = ({ secs, keys, tap }) => {
   const errors = [];
   page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 600)));
   page.on('console', m => { if (m.type() === 'error' && !/smoke|storage textures|Failed to load resource/i.test(m.text())) errors.push(m.text().slice(0, 300)); });
-  const url = `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&levelFile=train-move.json&quiet&quietfog=off&difficulty=hard${extra ? '&' + extra : ''}`;
+  const url = `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&levelFile=lights-out.json&quiet&quietfog=off&difficulty=hard${extra ? '&' + extra : ''}`;
   log('goto', url); await page.goto(url);
   await page.evaluate(async () => { await window.__ready; window.__testVisible = true; });
   await page.evaluate(async () => { const P = window.__cut?.programs, r = P?.swap ? P.ready : null; if (r) await Promise.race([Promise.resolve(r).catch(() => 0), new Promise(d => setTimeout(d, 300000))]); });
@@ -79,7 +79,7 @@ const PLAY = ({ secs, keys, tap }) => {
       await play(1.2); await still(`door-${name}-5-shut`);
     };
     await door('pull-gate', [8.75, 0, 14.0], 0.6, 'gate_w');      // the west gate from the yard: it opens toward him, and he stands in its sweep (the hut's own pull side is under its roof)
-    await door('push-outside', [22.3, 0, 9.7], 1.2, 'hut');
+    await door('push-outside', [9.3, 0, 16.2], 1.2, 'shed');
   }
   fs.writeFileSync(path.join(outDir, 'report.json'), JSON.stringify({ url, errors }, null, 1));
   log('errors', errors.length, errors.slice(0, 5));
