@@ -32,7 +32,6 @@ import { PLAN_PACE } from '../render/planPace';
 import { REACH_PACE } from '../render/reach';
 import { COATFINISH, SOLIDGLASS } from '../scene/stuff';
 import { WALLSKIN } from './wallskin';
-import { AUTOCAM, autoTuneOld } from '../host/autocam';
 import { PRESSURE } from './pressure';
 import { DOORSHOT } from './doorblast';
 import { LIGHT_IN } from '../sim/lightshome';
@@ -114,7 +113,6 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.COATFINISH) COATFINISH.on = false;   // (a file with no table for a named coat's finish: its vehicles' bodies have the finish their level files give them, as before the rule. A picture only)
   if (!k.tables.SOLIDGLASS) SOLIDGLASS.on = false;   // (a file with no table for solid glass's dark: its vehicles' windows are the grey their level files give them, as before the rule. A picture only)
   if (!k.tables.WALLSKIN) WALLSKIN.on = false;   // (a file from before the paint on a wall went with the wall: its holed walls' bands were drawn whole)
-  if ((k.tables.AUTOCAM as Partial<typeof AUTOCAM> | undefined)?.tune === undefined) autoTuneOld((k.tables.AUTOCAM ?? {}) as Partial<typeof AUTOCAM>);   // (…and one from before its numbers were the player's: the switch off, and the numbers it has no word for the module's own)
   if ((k.tables.MORALE as Partial<typeof MORALE> | undefined)?.training === undefined) { MORALE.training = 'none'; MORALE.nerve = 'normal'; MORALE.fanStep = 0; }   // (…and one from before a man was green or steady: every man the first slice's — broken alone in the dark only, folded when he was, and scrabbling straight back with no fan to find him a way (fanStep 0 shuts it). A recording that carries the keys keeps its own: assignDeep takes a string row as it takes a number)
   if ((k.tables.MORALE as Partial<typeof MORALE> | undefined)?.darkRead === undefined) MORALE.darkRead = 'place';   // (…and one from before the dark had a second reading: where he stands, as it was read)
   { const F0 = k.tables.FIRE as (Partial<typeof FIRE> & { look?: Partial<typeof FIRE.look> }) | undefined;   // (… one from before a fire's lamp was a fire's: the level's strength and colour; and from before the look's newer numbers: the picture's memory unchanged, the flame hardly leaning)

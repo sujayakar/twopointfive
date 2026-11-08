@@ -1,6 +1,6 @@
 // FINDING YOUR OWN MAN ON THE SCREEN, and how the camera answers the hand (Options > Game; ui/findme.ts draws the ring, hands the renderer the outline's frame and
 // builds the rows). With all of them as they start the game is as it stood before it had them on both of the harness's stands: the ring and the outline start
-// off and the camera's three start as the camera was. (THE PAGE, since 2026-10-26, starts the outline ON, the aim pan at none and the turn the other way:
+// off and the camera's two start as the camera was. (THE PAGE, since 2026-10-26, starts the outline ON, the aim pan at none and the turn the other way:
 // FINDME_TUNED and findMeStarts, below; the module and the frozen stand are as this says.)
 //   pan      how far the view leans from the man toward the aim point, as a share of the follow camera's own lead (FollowCamera.aimLead as it was built):
 //            1 = as it was · 0 = he is the middle of the screen wherever the mouse goes
@@ -8,11 +8,7 @@
 //   outline  a rim round him and his teammates where they are dark as drawn, by the picture, part by part: his true silhouette, drawn by the renderer from the
 //            pixels that are his (render/outline.ts). Its numbers are settled there and in OUTLINE_LOOK, below
 //   turn     which way the view turns under Ctrl + the mouse: 1 = as it was · -1 = the other way
-//   behind   Ctrl tapped twice brings the view round to look where he was looking at the tap. NOT 'the camera behind him' in a third-person game's sense, and
-//            it cannot be while the system cursor is the aim: he faces the cursor's point in the world, the cursor stays where it is on the screen, so as
-//            the view turns he would turn with it. So his aim is CARRIED round with the view (AimCarry, below): he goes on facing what he faced, now at
-//            the top of the screen, until the hand uses the mouse or a key that reads the cursor; then the cursor is the aim again
-// pan, turn and behind change the seat's VIEW, and the view is the player's input (game/cmd.ts carries it as data, tick by tick): a recording replays the view
+// pan and turn change the seat's VIEW, and the view is the player's input (game/cmd.ts carries it as data, tick by tick): a recording replays the view
 // it was made with whatever these say today, and no rule of the game reads this table. ring is the HUD's alone and outline the picture's: nobody's senses,
 // no light meter and no digest can tell either on from off.
 // KEPT PER MACHINE (localStorage `twopointsix.findme`), read as this module loads and again when the page says which starts are in force (findMeStarts);
@@ -20,12 +16,12 @@
 // are NOT at their starts are written (keep), so a start that is tuned later reaches every machine whose row stands at the old start — a row put back to
 // its start by hand is one of those: these are rows on trial, and their starts are what the maintainer's own hand is settling. A line an older build kept
 // whole is written again that way as the page reads it under its own starts, and a row that is no longer one (the outline's width, strength, fade, light rows,
-// teammates' width and colour, settled 2026-11-08) reads as if it were not named. No imports, on purpose:
+// teammates' width and colour, settled 2026-11-08; the double tap's, gone with the auto camera) reads as if it were not named. No imports, on purpose:
 // the loop (host/loop.ts) and the engine replay's own view (replay/engineplay.ts, its Ctrl turn) read the table and nothing of the game or the page comes with it.
 
-export interface FindMe { pan: number; ring: boolean; outline: boolean; turn: 1 | -1; behind: boolean }
+export interface FindMe { pan: number; ring: boolean; outline: boolean; turn: 1 | -1 }
 /** every row as it was BUILT: the module's own starts, and the frozen stand's (no rim) */
-export const FINDME_BUILT: Readonly<FindMe> = { pan: 1, ring: false, outline: false, turn: 1, behind: false };
+export const FINDME_BUILT: Readonly<FindMe> = { pan: 1, ring: false, outline: false, turn: 1 };
 /** THE ROWS AS THE MAINTAINER'S HAND LEFT THEM, made the starts on 2026-10-26: he had watched a first-time player on a machine that had kept nothing and "i don't
  *  think the outlines showed up for him" — it was off — then "we should take the numbers i tuned ... and use those as the defaults". THE CAMERA'S TWO are his as
  *  well ("i think aim pan zero and turn direction reversed feel good"; "yeah let's do those as defaults to"): the view does not lean toward the aim point, and it
@@ -55,9 +51,9 @@ const LS = 'twopointsix.findme';
 export function findMeRead(text: string | null | undefined): FindMe {
   let v: Record<string, unknown> = {};
   try { const j = JSON.parse(text ?? 'null'); if (j && typeof j === 'object') v = j; } catch { /* not ours */ }
-  const flag = (k: 'ring' | 'outline' | 'behind') => typeof v[k] === 'boolean' ? v[k] as boolean : FINDME_START[k];
+  const flag = (k: 'ring' | 'outline') => typeof v[k] === 'boolean' ? v[k] as boolean : FINDME_START[k];
   const pan = v.pan;
-  return { pan: typeof pan === 'number' && isFinite(pan) ? Math.max(0, Math.min(1, pan)) : FINDME_START.pan, ring: flag('ring'), outline: flag('outline'), turn: v.turn === -1 ? -1 : v.turn === 1 ? 1 : FINDME_START.turn, behind: flag('behind') };
+  return { pan: typeof pan === 'number' && isFinite(pan) ? Math.max(0, Math.min(1, pan)) : FINDME_START.pan, ring: flag('ring'), outline: flag('outline'), turn: v.turn === -1 ? -1 : v.turn === 1 ? 1 : FINDME_START.turn };
 }
 /** THE OUTLINE'S SETTLED NUMBERS (the maintainer's hand, 2026-10-22, on his GPU: "overall these feel a lot better already"): a teammate's rim covers `mates` of what the
  *  player's does (render/outline.ts outlineRadius `times`), and `colour` of the way from the pale ink to his own. The box the rim is looked for in reaches `reachM`
@@ -98,127 +94,7 @@ export function findMeStarts(): void {
 }
 { const was = keptLine(); if (was !== undefined) Object.assign(FINDME, findMeRead(was)); }   // (as the module loads: the line over the built starts. The game page asks again once its switches are written — pageSwitches — and the engine replay's Ctrl turn runs on that page)
 
-// ---- the camera running itself (host/autocam.ts): is the mode on
-/** THE AUTO CAMERA'S MODE, the seat's own: on = the camera frames things itself (the camera's key tapped twice), off = it is the hand's (the key held with
- *  the mouse moved, or with a walk key). Kept per machine (localStorage `twopointsix.autocam`), read once as this module loads; a harness has no store and
- *  starts with it off. Nothing reads it while AUTOCAM.on is off. */
-export const AUTOVIEW = { on: false };
-const LS_AUTO = 'twopointsix.autocam';
-export function setAutoView(on: boolean): void { if (AUTOVIEW.on === on) return; AUTOVIEW.on = on; try { if (on) globalThis.localStorage?.setItem(LS_AUTO, '1'); else globalThis.localStorage?.removeItem(LS_AUTO); } catch { /* no store */ } }
-try { AUTOVIEW.on = globalThis.localStorage?.getItem(LS_AUTO) === '1'; } catch { /* no store */ }
-
 // ---- Ctrl + the mouse
 /** the view's turn for `dx` pixels of the mouse under Ctrl (rad), the way round the `turn` row says: the one place the rate and the sign are written (the
  *  loop's orbit in play, the engine replay's own view) */
 export function ctrlTurn(dx: number): number { return dx * 0.006 * FINDME.turn; }
-
-// ---- Ctrl tapped twice
-/** what counts as a tap of the camera key, and as two of them: down no longer than `tapMs`, the second down within `gapMs` of the first coming up, the mouse
- *  moved no further than `driftPx` with the key down (further is an orbit, however short) */
-export const TAPTWICE = { tapMs: 250, gapMs: 300, driftPx: 12 };
-/** Two short presses of one key with nothing else in between, told from the times the page saw them. A key held down is never a tap however long it repeats
- *  (down() while it is down is ignored), a press with another key, a button, the wheel or an orbit in it is not one, and the answer comes as the SECOND tap
- *  is let go: both presses have to have been taps. */
-export class TapTwice {
-  private downAt = -1; private firstUp = -1; private clean = false; private drift = 0;
-  down(t: number) { if (this.downAt >= 0) return; this.downAt = t; this.clean = true; this.drift = 0; if (this.firstUp >= 0 && t - this.firstUp > TAPTWICE.gapMs) this.firstUp = -1; }
-  /** the key came up: true = that was the second of two taps */
-  up(t: number): boolean {
-    const tap = this.downAt >= 0 && this.clean && t - this.downAt <= TAPTWICE.tapMs && this.drift <= TAPTWICE.driftPx; this.downAt = -1;
-    if (!tap) { this.firstUp = -1; return false; }
-    if (this.firstUp >= 0) { this.firstUp = -1; return true; }
-    this.firstUp = t; return false;
-  }
-  /** anything else the hand did: another key, a mouse button, the wheel */
-  other() { this.clean = false; this.firstUp = -1; }
-  /** the mouse moved this many pixels (it counts only with the key down) */
-  moved(px: number) { if (this.downAt >= 0) this.drift += Math.abs(px); }
-  reset() { this.downAt = -1; this.firstUp = -1; this.clean = false; this.drift = 0; }
-}
-/** The page's listener for it (main.ts, once): returns the loop's `ctrlTwice` — true once for each double tap, taken as it is asked. A tap in a text field
- *  is not the game's; `idle()` true (the tour has the hands) = none is. It claims no key and prevents nothing: the browser's own Ctrl chords are as they were.
- *  The taps are of the camera's key: Ctrl, or the key `key` names while it names one.
- *  (`field`: the test game/input.ts makes of a key's target, its embed sink told by the label that file gives it.) */
-export function watchCtrlTaps(win: Window, idle: () => boolean, key: () => string | null = () => null): () => boolean {
-  const T = new TapTwice(); let twice = false;
-  const field = (e: Event) => { const t = e.target as { tagName?: string; isContentEditable?: boolean } | null; return !!t && (/^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName ?? '') && (t as { getAttribute?(k: string): string | null }).getAttribute?.('aria-label') !== 'game input' || !!t.isContentEditable); };
-  const mine = (e: KeyboardEvent) => { const k = key(); return k ? e.code === k : e.key === 'Control'; };   // (`key`: the camera's key where it is not Ctrl — the page hands it host/keymap.ts camKey — as a code on the board; null = Ctrl)
-  let held: string | null = null;   // (the key the tap under way went down as — 'Control' or a code: the camera's key may change hands while it is down, and the tap is let go as what it was)
-  const lifts = (e: KeyboardEvent) => held !== null && (held === 'Control' ? e.key === 'Control' : e.code === held);
-  win.addEventListener('keydown', e => {
-    if (!mine(e)) { if (!e.repeat) T.other(); return; }   // (a held W repeating is not a new thing the hand did)
-    if (e.repeat) return;
-    if (field(e) || e.altKey || e.metaKey || (e.shiftKey && !key())) { T.reset(); return; }   // (Shift with Ctrl is a chord of the browser's; with the camera on a key of its own Shift is only his sprint, and a tap under it is a tap)
-    held = key() ? e.code : 'Control'; T.down(e.timeStamp);
-  }, { capture: true });
-  win.addEventListener('keyup', e => { if (!lifts(e)) return; held = null; if (T.up(e.timeStamp) && !idle()) twice = true; }, { capture: true });
-  win.addEventListener('mousedown', () => T.other(), { capture: true });
-  win.addEventListener('wheel', () => T.other(), { capture: true, passive: true });
-  win.addEventListener('mousemove', e => T.moved(Math.abs(e.movementX) + Math.abs(e.movementY)), { capture: true, passive: true });   // (it counts only with the key down: TapTwice.moved)
-  win.addEventListener('blur', () => { held = null; T.reset(); });
-  return () => { const v = twice; twice = false; return v; };
-}
-
-// ---- the view coming round behind him
-/** how fast it comes round (1/s: the share of what is left taken each second) and how near counts as there (rad) */
-export const BEHIND = { rate: 12, done: 1e-3 };
-/** the yaw of a view that looks where a man with this `aimYaw` looks (the camera's yaw 0 looks toward −Z, a man's toward +Z) */
-export function behindYaw(aimYaw: number): number { return aimYaw + Math.PI; }
-/** one step of the view at `yaw` coming round to `goal` the short way: the turn to give the camera, and whether that lands it (`rate`: the auto camera's own
- *  turns come round slower — host/autocam.ts) */
-export function behindStep(yaw: number, goal: number, dt: number, rate = BEHIND.rate): { turn: number; done: boolean } {
-  let d = goal - yaw; d = Math.atan2(Math.sin(d), Math.cos(d));
-  if (Math.abs(d) <= BEHIND.done) return { turn: d, done: true };
-  return { turn: d * Math.min(1, dt * rate), done: false };
-}
-
-// ---- his aim carried round with that view
-/** After the double tap the system's cursor is where it was on the screen, and he faces the cursor: left to that he turns AGAIN as the view comes round (a cursor
- *  that was not straight ahead of him no longer lies on what he faced). So the GAME's cursor — Input.mouseX / mouseY, what the aim ray, the reticle and the input
- *  record read — is carried: put, each tick, where the point he faced at the tap now stands on the screen (it walks with him: the same way out from his feet),
- *  until the hand takes the mouse up again. That is the mouse moved further than `letGoPx` from where it lay at the tap (less is a hand's tremor), a button, or
- *  any key that is not on `CARRY_KEYS` (it may read the cursor: an order, a throw, a thing to work). Then the cursor is the real one, to the pixel, before the
- *  tick reads it, and he turns to it as a moved mouse always meant. The system's own pointer is never moved: while the carry holds it is not where he aims.
- *  `minM`: a cursor nearer his feet than this faces nowhere; the point is taken this far out along his facing. */
-export const CARRY = { letGoPx: 10, minM: 1.5, /** carryStep's `aimOf`: how far off his line the cursor's ray may land (rad) before another point of the line is tried · the shares of the distance tried · and the heights, after the point's own */ offRad: 0.02, tries: [0.6, 1.6, 0.35, 2.5, 0.2, 1, 4], heights: [1.3, 0.5, 2], /** …and how little his point may have moved in the view (px) for last tick's answer to stand */ restPx: 0.25 };
-/** the keys the carry holds under: walking and its pace, his stance, his light, his goggles, a reload, and the camera key itself */
-export const CARRY_KEYS: ReadonlySet<string> = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight', 'KeyC', 'KeyL', 'KeyN', 'KeyR']);
-export interface AimCarry {
-  /** the way he faced at the tap (X, Z: unit), how far out the cursor's point lay and how high */
-  dx: number; dz: number; dist: number; y: number;
-  /** the real mouse (CSS px of the view): where it lay at the tap, where it is now, and where the game's cursor was last put (NaN = not yet) */
-  fromX: number; fromY: number; realX: number; realY: number; putX: number; putY: number;
-  /** carryStep's `aimOf`: where his point stood in the view when the line was last searched (absent = never) */
-  atX?: number; atY?: number;
-}
-/** the carry a double tap begins: he faces `aimYaw` from `pos`, the cursor's point in the world is `aim`, the mouse is at (mx, my) */
-export function aimCarry(aimYaw: number, pos: ArrayLike<number>, aim: ArrayLike<number>, mx: number, my: number): AimCarry {
-  return { dx: Math.sin(aimYaw), dz: Math.cos(aimYaw), dist: Math.max(CARRY.minM, Math.hypot(aim[0] - pos[0], aim[2] - pos[2])), y: aim[1], fromX: mx, fromY: my, realX: mx, realY: my, putX: NaN, putY: NaN };
-}
-/** One tick of it, before the tick samples its input: the game's cursor stands at (mx, my) — where the carry put it, or where a moved mouse has since — `used` =
- *  a button or a key off CARRY_KEYS this tick, `project` = a world point to the view's pixels and whether it is in front of the eye. Returns the cursor to give
- *  the game and whether the carry still holds (false = that cursor is the real mouse, and the carry is over). */
-export function carryStep(c: AimCarry, mx: number, my: number, used: boolean, pos: ArrayLike<number>, project: (x: number, y: number, z: number) => [number, number, boolean],
-  aimOf?: (sx: number, sy: number) => ArrayLike<number> | null): { x: number; y: number; held: boolean } {
-  if (mx !== c.putX || my !== c.putY) { c.realX = mx; c.realY = my; }   // not where it was put: the hand moved it there
-  if (!used && Math.hypot(c.realX - c.fromX, c.realY - c.fromY) <= CARRY.letGoPx) {
-    let [sx, sy, front] = project(pos[0] + c.dx * c.dist, c.y, pos[2] + c.dz * c.dist);
-    // (`aimOf`, the auto camera's — host/autocam.ts: a view that comes round a long way looks at that point past things it did not look past before, and the cursor's
-    // ray stops on the first of them, off to one side of where he faced. Where it does, the cursor is put on another point of the same line from his feet whose ray
-    // lands on that line: nearer, further, at chest height. Absent = the point as it is, as the double tap always carried it)
-    if (front && aimOf) {
-      if (c.atX !== undefined && Math.abs(sx - c.atX) < CARRY.restPx && Math.abs(sy - c.atY!) < CARRY.restPx && c.putX === c.putX) { sx = c.putX; sy = c.putY; }   // (the view and his feet at rest: the cursor where it was put, and no ray asked)
-      else {
-        c.atX = sx; c.atY = sy;
-        const off = (x: number, y: number): number => { const p = aimOf(x, y); if (!p) return Math.PI; const ax = p[0] - pos[0], az = p[2] - pos[2]; return Math.abs(Math.atan2(ax * c.dz - az * c.dx, ax * c.dx + az * c.dz)); };
-        let best = off(sx, sy);
-        search: if (best > CARRY.offRad) for (const y of [c.y, ...CARRY.heights]) for (const k of CARRY.tries) {
-          const d = Math.max(CARRY.minM, c.dist * k), [tx, ty, tf] = project(pos[0] + c.dx * d, y, pos[2] + c.dz * d); if (!tf) continue;
-          const e = off(tx, ty); if (e < best) { best = e; sx = tx; sy = ty; } if (best <= CARRY.offRad) break search;
-        }
-      }
-    }
-    if (front) { c.putX = sx; c.putY = sy; return { x: sx, y: sy, held: true }; }
-  }
-  return { x: c.realX, y: c.realY, held: false };
-}
