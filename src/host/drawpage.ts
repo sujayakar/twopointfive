@@ -385,7 +385,7 @@ async function main(): Promise<void> {
   };
   // a page over the whole view (the brief, the start page): the still behind it is drawn until its histories are full, and then not again while it is up
   let covered = -1; const unseen = (): boolean => { if (settling || quality.measuring || measure.rec.recording || !(brief?.held || startPage())) { covered = -1; return false; } if (covered < 0) covered = told.frames; return told.frames - covered >= 90; };
-  let last = performance.now(), held = q.has('paused');
+  let last = performance.now(), held = !kitPicture && q.has('paused');
   // THE PAGE'S PACE (host/pace.ts): a frame is not begun while two are still with the GPU, and a fast display's frames between the ladder's are passed over. A tab
   // nobody sees is not drawn; the time it was away is not the game's
   const pace = pacer(), rate = rateMeter(), rendered = [...RENDER_PASSES]; let resolved = -1, gpuMs = NaN;

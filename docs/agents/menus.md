@@ -95,8 +95,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   one arc, `kitloud`, the solo night, a loud mission as it was, no page error; `QUIETGEAR_BREAK=1` must fail). SEEN: stills of the real page's DOM at
   1440 × 900 with no picture behind it, looked at twice by a reviewer. NOT SEEN BY ANYONE: the panel over the real night picture, on a GPU, in a Mac's
   condensed face, with a pair (a teammate's card), in a window under 1180 px wide.
-- **The Team & kit picture on the new page is the Rust game's** (2026-11-08). draw.html in the kit screen's frame, on the very address Deploy would load plus `kitview` (`src/ui/kitView.ts` makes it, as
-  the old page does). The module starts that mission and STAGES it: `rust/game_start/src/kit_stage.rs` reads the words (way, set, `add`, dress) and makes the plan (`kit_plan.rs`, `kit_set.rs`, to the bit
+- **The Team & kit picture on the new page is the Rust game's** (2026-11-08). draw.html in the kit screen's frame, on the very address Deploy would load plus `kitview` (`src/ui/kitView.ts` makes it, on
+  the old page too). The module starts that mission and STAGES it: `rust/game_start/src/kit_stage.rs` reads the words (way, set, `add`, dress) and makes the plan (`kit_plan.rs`, `kit_set.rs`, to the bit
   the TypeScript's: `tools/blitz/kitplan-diff.ts`), `rust/game_rules/src/kitstage` stands the team, parks everybody else, hangs the lamps and pins the camera, round the tick (`game_step_seats`); no rule
   reads it (`Game.kit_stage`, None in every other game). Commands 30 `KitStageCards`, 31 `KitStageOpen`, 32 `KitStageFrame`; the View section's `kit` (1 staged, 2 nothing to stage). The page's half is
   `src/host/kitpage.ts` (messages to commands; a team staged again is staged under a copy of the last picture) and `src/host/kitguard.ts` (this window writes no store and hears no key). Checks:
