@@ -102,7 +102,7 @@ fn roster(g: &mut Game) {
 /// A man put down by hand with no name on it is the partner's where the team has ONE AI man; with more it is nobody's.   (verdict.ts Verdict.onlyMate)
 fn only_mate(g: &Game, h: GuardId) -> Option<crate::Num> {
     let x = &g.gd[h];
-    if x.killer_id >= 0.0 || x.down_by != Some(crate::game::DownBy::Guard) || x.down_kind == Some(crate::game::DownKind::Shot) || x.down_kind == Some(crate::game::DownKind::Wounded) { return None; }
+    if x.killer_id >= 0.0 || x.down_by != Some(crate::game::DownBy::Guard) || x.down_kind == Some(crate::game::DownKind::Shot) { return None; }
     let (mut one, mut n) = (None, 0);
     for (k, t) in g.verdict.tracks.iter() { if !t.human { one = Some(k); n += 1; } }
     if n == 1 { one } else { None }
@@ -157,7 +157,7 @@ fn watch(g: &mut Game) {
         if down {
             let state = match pl {
                 Some(_) => ManState::Dead,
-                None => { let x = &g.gd[gd.unwrap()]; if x.wound.is_some() { ManState::Wounded } else if x.down_kind.is_some() && x.down_kind != Some(crate::game::DownKind::Shot) { ManState::Out } else { ManState::Dead } }
+                None => { let x = &g.gd[gd.unwrap()]; if x.down_kind.is_some() && x.down_kind != Some(crate::game::DownKind::Shot) { ManState::Out } else { ManState::Dead } }
             };
             let room = crate::chronicle::room_of(g, p);
             let by = match pl {

@@ -295,7 +295,6 @@ pub enum DownKind {
     Shot,
     Struck,
     Choked,
-    Wounded,
 }
 impl DownKind {
     pub const fn as_str(self) -> &'static str {
@@ -303,7 +302,6 @@ impl DownKind {
             DownKind::Shot => "shot",
             DownKind::Struck => "struck",
             DownKind::Choked => "choked",
-            DownKind::Wounded => "wounded",
         }
     }
 }
@@ -433,7 +431,6 @@ pub enum WitnessSawActKind {
     Shot,
     Struck,
     Choked,
-    Wounded,
     Grab,
 }
 impl WitnessSawActKind {
@@ -442,7 +439,6 @@ impl WitnessSawActKind {
             WitnessSawActKind::Shot => "shot",
             WitnessSawActKind::Struck => "struck",
             WitnessSawActKind::Choked => "choked",
-            WitnessSawActKind::Wounded => "wounded",
             WitnessSawActKind::Grab => "grab",
         }
     }
@@ -2306,7 +2302,6 @@ pub struct Guard {
     pub found: bool,
     pub down_kind: Option<crate::game::DownKind>,
     pub down_by: Option<crate::game::DownBy>,
-    pub wound: Option<crate::wounds::Wound>,
     pub witness: crate::game::Witness,
     pub talk: GameTalkId,
     pub keys: JsSet<String>,
@@ -2449,7 +2444,6 @@ impl Guard {
             found: false,
             down_kind: None,
             down_by: None,
-            wound: None,
             witness: crate::game::Witness { heard: crate::game::WitnessHeard { shots: 0.0, last_shot_t: -1.0, kick: 0.0, bang: 0.0, small: 0.0, small_where: None, loud_at: None, last_t: -1.0 }, peak_awareness: 0.0, alerted_by: None, alert_t: -1.0, saw_act: None, saw_body: None, called_to_body: None, saw_held: None, was_held: 0.0, dazzled: 0.0 },
             talk: GameTalkId(0),
             keys: JsSet::new(),
@@ -3568,7 +3562,6 @@ pub struct Stats {
     pub digin: crate::digin::DiginStats,
     pub stickycam: crate::stickycam::StickycamStats,
     pub par: crate::par::ParStats,
-    pub wounds: crate::wounds::WoundsStats,
     pub aimweight: crate::aimweight::AimweightStats,
     pub calmtorch: crate::calmtorch::CalmtorchStats,
     pub darkfoe: crate::darkfoe::DarkfoeStats,

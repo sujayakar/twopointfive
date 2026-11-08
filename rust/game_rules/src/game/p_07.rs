@@ -116,19 +116,6 @@ pub fn game_update_doors(g: &mut crate::game::Game, dt: f64) {
         of.push(Some(c));
         contacts.push(DoorContact { pos: g.ch[c].pos, radius: 0.34, bash, who: g.ch[c].id, quiet, key: Some(true), hand, round: Some(round), ..DoorContact::zeroed() });
     }
-    // (a copy of where a wounded man's BODY is: `at` is his contact's own pos, so what the leaf did to it is read from there. (the man, his contact, x, z))
-    let mut wounded_at: Vec<(GuardId, usize, f64, f64)> = Vec::new();
-    let mut i = 0;
-    while i < g.guards.len() {
-        let gd = g.guards[i]; i += 1;
-        let Some(pose) = g.gd[gd].wound.as_ref().map(|w| w.pose) else { continue; };
-        let c = g.gd[gd].ch; let p = g.ch[c].pos;
-        let h = if pose == crate::wounds::WoundPose::Back { g.ch[c].bones.get(Bone::Hips).copied() } else { None };
-        let at: V3 = match h { Some(h) => [h[0], p[1], h[2]], None => v3::copy(p) };
-        wounded_at.push((gd, contacts.len(), at[0], at[2]));
-        of.push(None);
-        contacts.push(DoorContact { pos: at, radius: 0.3, bash: false, who: g.ch[c].id, quiet: true, weak: Some(true), ..DoorContact::zeroed() });
-    }
     let n0 = contacts.len();
     crate::civilians::civilian_door_contacts(g, &mut contacts);
     let shown_civs = crate::civilians::civilians_shown(g);
@@ -174,20 +161,6 @@ pub fn game_update_doors(g: &mut crate::game::Game, dt: f64) {
     // (…and as it ends: where the leaves put them)
     for k in 0..contacts.len() { if let Some(c) = of[k] { let p = contacts[k].pos; g.ch[c].pos[0] = p[0]; g.ch[c].pos[2] = p[2]; } }
     crate::doorthrow::door_throw_after(g, &contacts);
-    for &(gd, k, x, z) in wounded_at.iter() {
-        let mut at = contacts[k].pos;
-        if at[0] == x && at[2] == z { continue; }
-        crate::scene_collision::collide_circle(g, &mut at, 0.3, 0.2, 1.5, None); crate::scene_collision::clamp_to_world(g, &mut at, 0.3);
-        let mut dx = at[0] - x; let mut dz = at[2] - z;
-        let d = m::hyp2(dx, dz); let f = if d > 0.25 { 0.25 / d } else { 1.0 };
-        dx *= f; dz *= f;
-        let c = g.gd[gd].ch;
-        let mut p = g.ch[c].pos; p[0] += dx; p[2] += dz;
-        g.ch[c].pos = p;
-        crate::scene_collision::collide_circle(g, &mut p, 0.3, 0.2, 1.5, None); g.ch[c].pos = p;
-        crate::scene_collision::clamp_to_world(g, &mut p, 0.3); g.ch[c].pos = p;
-        if d > 0.005 { crate::character::character_update(g, c, 0.0); }
-    }
     crate::doorblast::door_slabs(g, dt);
     game_hands_on_doors(g, &angles);
     for i in 0..n {

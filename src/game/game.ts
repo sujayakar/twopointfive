@@ -207,7 +207,6 @@ import { kitFresh } from './kit';
 import type { BigKit } from './kit';
 import type { KitWorn } from './kitload';
 import './kitload';   // (asked inside the frame only)
-import type { Wound } from './wounds';
 import { buildInteriorCells } from '../render/reach';
 import { simDraw, simRandom, useDice } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import type { SimDice } from '../math/dice';
@@ -512,7 +511,7 @@ export const TEMPERAMENT: Record<string, Temperament> = {
 /** How a downed man went down and by whose hand (combat.ts killGuard): shot = dead; struck (the takedown's cross, a pistol-whip later) / choked (the choke-out
  *  from a hold, later) = out cold and breathing. His state is 'dead' either way — every one of the floor's 'is this man out of the picture' tests keeps working —
  *  this is the side record the found-body lines, the room clear's grim lines, the debrief and (one day) a wake-up read. by: only the player's own count on the card. */
-export type DownKind = 'shot' | 'struck' | 'choked' | 'wounded';   // (wounded: a round that did not land where it kills — wounds.ts, behind WOUND.on: down, breathing, out of the fight, and POSED rather than a ragdoll — Guard.wound)
+export type DownKind = 'shot' | 'struck' | 'choked';   // (wounded: a round that did not land where it kills — wounds.ts, behind WOUND.on: down, breathing, out of the fight, and POSED rather than a ragdoll — Guard.wound)
 export type DownBy = 'player' | 'guard' | 'world';
 /** Down but breathing: put out cold (struck / choked), not shot. False for a living man and for a corpse. */
 export function isBreathing(gd: Guard): boolean { return gd.state === 'dead' && gd.downKind !== null && gd.downKind !== 'shot'; }
@@ -620,7 +619,6 @@ export class Guard extends GuardCols {
   /** (dead) how he went down and by whose hand — set once by combat.ts killGuard; null while he lives. isBreathing() reads it: struck / choked = out cold. */
   downKind: DownKind | null = null; downBy: DownBy | null = null;
   /** WOUNDS (wounds.ts): down wounded — out of the fight, breathing, posed where he went down (state 'dead', downKind 'wounded'). null on everybody else, always with the switch off. */
-  wound: Wound | null = null;
   /** what he has personally seen and heard this encounter (see Witness) — event memory for the dialogue to come; the AI itself never reads it */
   witness: Witness = newWitness();
   /** what Sam has got out of him so far (see Talk) — read and advanced only by the interrogation (dialogue.ts via Game.interrogate) */

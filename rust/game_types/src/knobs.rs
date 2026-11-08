@@ -3695,31 +3695,6 @@ impl TurnK {
 }
 impl Default for TurnK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wounds.ts:32 WOUND, src/game/wounds.ts:32)
-#[derive(Clone, Copy, Debug)]
-pub struct WoundK {
-    pub on: bool,
-    pub centre: f64,
-    pub head: f64,
-    pub lead: f64,
-    pub depth: f64,
-    pub back_room: f64,
-}
-impl WoundK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WoundK {
-            on: false,
-            centre: 0.0,
-            head: 0.0,
-            lead: 0.0,
-            depth: 0.0,
-            back_room: 0.0,
-        }
-    }
-}
-impl Default for WoundK { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/game/doorpath.ts:37 DOORPATH, src/game/doorpath.ts:37)
 #[derive(Clone, Copy, Debug)]
 pub struct DoorpathK {
@@ -12763,10 +12738,6 @@ pub fn page_turn() -> TurnK {
     crate::knobs::TurnK { body_share: 0.5, green: 0.6, lead: 0.6, lead_rate: 16.0, jump: 0.75, aim: 11.0, aim_acc: 150.0, body: 7.0, body_acc: 60.0, on: 1.0 }
 }
 
-pub fn page_wound() -> WoundK {
-    crate::knobs::WoundK { on: false, centre: 0.105, head: 0.125, lead: 0.4, depth: 0.7, back_room: 1.9 }
-}
-
 pub fn page_doorpath() -> DoorpathK {
     crate::knobs::DoorpathK { on: true, at: 0.52, out_m: 0.7, in_m: 0.7, look: 0.5, leaf_clear: 0.45, tip_m: 0.75, gap_m: 0.0, short_m: 0.6, cap: 2.5, move_m: 0.0, apart_m: 0.7, body_m: 0.0, body_off: 0.6, body_move: 1.2 }
 }
@@ -13583,7 +13554,6 @@ pub struct Knobs {
     pub moves: MovesK,
     pub mv: MvK,
     pub turn: TurnK,
-    pub wound: WoundK,
     pub doorpath: DoorpathK,
     pub walls: WallsK,
     pub wallcharge: WallchargeK,
@@ -13824,7 +13794,6 @@ impl Knobs {
             moves: page_moves(),
             mv: page_mv(),
             turn: page_turn(),
-            wound: page_wound(),
             doorpath: page_doorpath(),
             walls: page_walls(),
             wallcharge: page_wallcharge(),

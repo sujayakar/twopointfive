@@ -553,10 +553,7 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
             let reach = dragging || body_dist(g, gd, Some(1.3)) < 1.3;
             let callsign = g.gd[gd].callsign.clone();
             let nm = match g.gd[gd].civ { Some(cv) => format!("{} (the {})", callsign, g.cv[cv].label), None => callsign };
-            let wound = g.gd[gd].wound.is_some();
-            let line1 = if wound {
-                format!("{}, wounded — out of the fight", nm)
-            } else if crate::game::is_breathing(g, gd) {
+            let line1 = if crate::game::is_breathing(g, gd) {
                 format!("body · {}, out cold — breathing", nm)
             } else {
                 format!("body · {}, dead", nm)
@@ -569,7 +566,7 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
                 if dragging {
                     let carrying = g.pl[pl].haul.as_ref().map_or(false, |h| h.carry.is_some());
                     verbs.push(row(&it, crate::game::Verb::Drop, if carrying { "put him down" } else { "let go of him" }, "sprinting drops him"));
-                } else if !dragging_any && !wound {
+                } else if !dragging_any {
                     verbs.push(row(&it, crate::game::Verb::Drag, if lift { "pick him up" } else { "drag him off" }, ""));
                 }
             }
@@ -830,7 +827,7 @@ pub fn toggle_drag(g: &mut crate::game::Game, which: Option<GuardId>) {
         let mut all: Vec<GuardId> = g.guards.clone();
         all.extend(crate::civilians::civilians_shown(g));
         for gd in all {
-            if g.gd[gd].state != crate::game::GuardState::Dead || g.gd[gd].wound.is_some() { continue; }
+            if g.gd[gd].state != crate::game::GuardState::Dead { continue; }
             let d = body_dist(g, gd, Some(1.3));
             if d < bd {
                 bd = d;

@@ -591,7 +591,7 @@ pub fn perceive_scripted(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool
                 let the = crate::words::w(g, &"", &"the ");
                 let room = crate::dialogue::room_name(g, bp);
                 let many = if n > 1 { format!(" — {} of them", n) } else { String::new() };
-                let how = if g.gd[o].wound.is_some() { "hit, breathing" } else if crate::game::is_breathing(g, o) { "out cold, breathing" } else { "dead" };
+                let how = if crate::game::is_breathing(g, o) { "out cold, breathing" } else { "dead" };
                 let text = format!("{} down in {}{}{}, {}. pushing on", victim, the, room, many, how);
                 radio(g, Some(m), &text);
             }

@@ -802,7 +802,7 @@ export function toggleDrag(g: Game, which?: Guard) { { const __s = RUST_SURFACE;
   if (pl.dragging) { releaseBody(g); g.msg('body dropped'); return; }
   if (pl.down || pl.sprinting) return;
   let best: Guard | null = which && which.state === 'dead' ? which : null;
-  if (!best) { let bd = 1.3; for (const gd of [...g.guards, ...civiliansShown(g)]) { if (gd.state !== 'dead' || gd.wound) continue; const d = bodyDist(g, gd, 1.3); if (d < bd) { bd = d; best = gd; } } }   // (a civilian on the floor is a body to haul like any)
+  if (!best) { let bd = 1.3; for (const gd of [...g.guards, ...civiliansShown(g)]) { if (gd.state !== 'dead') continue; const d = bodyDist(g, gd, 1.3); if (d < bd) { bd = d; best = gd; } } }   // (a civilian on the floor is a body to haul like any)
   if (!best || !best.char.ragdoll) { g.msg('no body within reach'); return; }
   releaseWall(g);   // (you take hold of a body off the wall, crouched to it)
   pl.dragging = best; pl.crouch = true; pl.dragNoiseT = 0.3; pl.dragStuckT = 0; best.char.ragdoll.wake(); haulBegin(g, best); g.msg(pl.haul?.carry ? 'picking him up — Space puts him down, sprint drops him' : pl.haul?.end === 'head' ? 'got him under the arms — Space lets go, sprint drops him' : 'dragging the body — Space lets go, sprint drops it');

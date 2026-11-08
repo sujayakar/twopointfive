@@ -50,7 +50,7 @@ export function verdictMen(game: Game, V: RunVerdict): HTMLElement {
     const name = el('span', 'nm'); name.textContent = m.name; name.title = m.name; row.appendChild(name);   // (the title: a long picked name is cut by the column)
     const bar = el('span', 'bar'), fill = el('i', 'fill'); fill.style.width = m.state === 'up' ? '100%' : pct(m.downAt); bar.appendChild(fill);
     for (const t of m.drops) { const d = el('i', 'drop'); d.style.left = pct(t); d.title = `${clock(t)} · took down a defender`; bar.appendChild(d); }
-    if (m.state !== 'up') { const x = el('i', 'fell'); x.textContent = m.state === 'dead' ? '✕' : m.state === 'wounded' ? '✚' : 'z'; x.style.left = pct(m.downAt); x.title = fellWords(m); bar.appendChild(x); }
+    if (m.state !== 'up') { const x = el('i', 'fell'); x.textContent = m.state === 'dead' ? '✕' : 'z'; x.style.left = pct(m.downAt); x.title = fellWords(m); bar.appendChild(x); }
     row.appendChild(bar);
     const n = el('b', `n${m.drops.length ? '' : ' none'}`); n.textContent = String(m.drops.length); n.title = 'defenders he took down'; row.appendChild(n);
     box.appendChild(row);
@@ -75,7 +75,7 @@ export function namedMen(game: Game, V: RunVerdict): VerdictMan[] {
 }
 /** when, where and to whom a man went down (the cross's tooltip, the map mark's) */
 export function fellWords(m: VerdictMan): string {
-  const how = m.state === 'dead' ? 'down' : m.state === 'wounded' ? 'down wounded' : 'out cold';
+  const how = m.state === 'dead' ? 'down' : 'out cold';
   return `${m.name} ${how} · ${clock(m.downAt)}${m.downRoom ? ` · ${m.downRoom}` : ''}${m.downBy ? ` · by ${m.downBy}` : ''}`;
 }
 function squares(cls: string, label: string, on: number, of: number, title: string): HTMLElement {

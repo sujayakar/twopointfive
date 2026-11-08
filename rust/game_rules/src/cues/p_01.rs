@@ -589,7 +589,7 @@ pub fn bubbles_view(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<
     for &gd in g.guards.iter().chain(g.civilians.iter()) {
         let Some(b) = cues_bubble_of(g, gd) else { continue; };
         let m = &g.gd[gd];
-        if !up(b.t, b.dur) || (m.state == crate::game::GuardState::Dead && m.wound.is_none()) { continue; }
+        if !up(b.t, b.dur) || m.state == crate::game::GuardState::Dead { continue; }
         if m.civ.map_or(false, |c| g.cv[c].state == crate::civilians::CivState::Gone) { continue; }
         let hidden = crate::fogofwar::fog_of_war_hidden__body(g, gd);
         let place = if !crate::orders::squad_orders_mine(g, seat, gd) {

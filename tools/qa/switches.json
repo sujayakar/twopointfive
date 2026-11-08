@@ -1,7 +1,7 @@
 {
   "what": "Every switch row of the knob tables: its value on the page and its kind. settled = a constant of the game at `page` (tools/qa/fold.ts holds it there); open decision = stays a switch; player's or run-time = stays a variable (`page` = where a fresh page starts). Written by tools/qa/switch-list.ts from the port's switch list (project files, rebuild/rust-sim/port/blitz/port-list.json): do not edit by hand.",
   "from": {"made":"2026-11-05, by the switch cleanup","corrections":8},
-  "counts": {"settled":734,"player's or run-time":44,"open decision":22},
+  "counts": {"settled":733,"player's or run-time":44,"open decision":22},
   "rows": [
     {"row":"AIM.player.lightSnapPx","page":14,"kind":"settled"},
     {"row":"AIM.player.level","page":1,"kind":"settled"},
@@ -100,7 +100,6 @@
     {"row":"FOG.edge","page":0.5,"kind":"settled"},
     {"row":"MOVES.on","page":1,"kind":"settled"},
     {"row":"TURN.on","page":1,"kind":"settled"},
-    {"row":"WOUND.on","page":false,"kind":"settled"},
     {"row":"DOORPATH.on","page":true,"kind":"settled"},
     {"row":"WALLCHARGE.on","page":true,"kind":"settled"},
     {"row":"WALLCHARGE.brace","page":true,"kind":"settled"},

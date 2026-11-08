@@ -196,10 +196,7 @@ fn cursor_pitch(g: &Game, seat: &crate::seats::SeatRef, pl: PlayerId, c: CharId,
     let mut target_y = ap[1] + 0.03;
     if let Some(t) = seat.aim_target { target_y = v3::clamp(g.tab.sim_lightshome_fixture[t].pos[1], 0.3, 2.95); }
     else if let Some(gd) = seat.aim_guard {
-        target_y = match seat.aim_snap {
-            Some(snap) if g.gd[gd].wound.is_some() => snap[1],
-            _ => man_aim(g, seat, gd, 1.2)[1],
-        };
+        target_y = man_aim(g, seat, gd, 1.2)[1];
     }
     else if level_on(g) { return 0.0; }
     let gun_y = g.ch[c].pos[1] + (if g.pl[pl].crouch { 0.95 } else { 1.4 });
@@ -214,10 +211,7 @@ fn shot_target(g: &Game, seat: &crate::seats::SeatRef) -> V3 {
     }
     if let Some(t) = seat.aim_target { return v3::copy(g.tab.sim_lightshome_fixture[t].pos); }
     if let Some(gd) = seat.aim_guard {
-        return match seat.aim_snap {
-            Some(snap) if g.gd[gd].wound.is_some() => v3::copy(snap),
-            _ => man_aim(g, seat, gd, 1.25),
-        };
+        return man_aim(g, seat, gd, 1.25);
     }
     free_aim(g, seat, None)
 }

@@ -23,7 +23,7 @@ fn keypad(seed: u32, charges: Option<f64>) -> (Play, game::ids::DoorId, [f64; 3]
     p.run(0.5);
     for m in p.mates() { if let Some(mut e) = p.g.m.kit.man_of.get(m).cloned() { e.kit.big = game::kit::BigKit::None; p.g.m.kit.man_of.set(m, e); } }
     if let Some(n) = charges { p.g.door_tools.charges = n; }
-    for gd in p.g.guards.clone() { if p.g.gd[gd].team != game::teams::Team::Operative && p.up(gd) { game::combat::kill_guard(&mut p.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, None, None); } }
+    for gd in p.g.guards.clone() { if p.g.gd[gd].team != game::teams::Team::Operative && p.up(gd) { game::combat::kill_guard(&mut p.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, None); } }
     p.run(1.0);
     let office = game::doors::doors_by_name(&p.g, "manager").unwrap();
     game::doors::door_set_locked(&mut p.g, office, false);

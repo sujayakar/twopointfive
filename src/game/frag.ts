@@ -363,7 +363,6 @@ function blastRaw(g: Game, at: Vec3, spec: BlastSpec): BlastReport {
     // the card: `had` = his knockout is on it (the player's own, or a partner's that teamtally.ts counted); `fresh` = put down this very step, which that
     // module has not read yet and will, as he is when the step ends — so a partner's burst leaves the kill itself to it
     const st = g.mission.stats, fresh = gd.diedAt === g.time, had = gd.downBy === 'player' || (!fresh && teamTallied(g, gd));
-    if (gd.wound) { gd.wound = null; c.anim.wound = null; }
     gd.downKind = 'shot'; gd.downBy = mine ? 'player' : spec.who ? 'guard' : 'world'; if (spec.who) gd.killerId = spec.who;
     const team = !mine && teamTallied(g, gd);
     if (missionLive(g) && (mine || team)) { if (had && st.knockouts > 0) st.knockouts--; if (mine || !fresh) st.kills++; }
