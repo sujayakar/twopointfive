@@ -67,4 +67,8 @@ export class Commands extends Writer {
   kitStageUnder(): void { this.u32(33); }
   /** the kit picture: the page has shown its first picture: the acts may begin */
   kitStageShown(): void { this.u32(34); }
+  /** one of the panel's actions, by its name (actions.rs), with what its row picked */
+  act(name: string, value: number, word: string): void { this.u32(35); this.text(name); this.f64(value); this.text(word); }
+  /** an address's words, on what stands no game yet: the desk, whose kit rules read the numbers they turn */
+  words(text: string): void { this.u32(36); this.text(text); }
 }
