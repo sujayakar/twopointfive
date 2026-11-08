@@ -31,7 +31,7 @@ const { fireRing } = await import(`${ROOT}/src/game/launcher.ts`);
 const { Decals, DECAL_CAP, DECAL_MAX_PER_CELL, DECAL_LIST_CAP, DECAL_ANY_BOX, WEAR_MARK, MARKSIT } = await import(`${ROOT}/src/render/decals.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const { wallBreakOn } = await import(`${ROOT}/src/game/wallbreak.ts`);
-const { WALLPEN_HOOKS } = await import(`${ROOT}/src/game/wallpen.ts`);
+const { WALLPEN_STATS } = await import(`${ROOT}/src/game/wallpen.ts`);
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
@@ -142,16 +142,15 @@ export async function decalsSites() {
     // ROUNDS THROUGH THIN WALLS (game/wallpen.ts: on as the page opens, held off on the frozen stand). A round with the energy for it goes on through a partition,
     // and that rule's contract is that a thing crossed gets a mark where the round went in AND one on its far face, as a round that stops there would leave.
     // This family's question is the emit site: what a round leaves on THE WALL IT WAS FIRED INTO. So the marks are counted on that wall (inside its box), and
-    // which the wall is owed is asked of the round's flight through the rule's own hook: stopped in it, one mark, and nothing anywhere else; gone through it,
+    // which the wall is owed is asked of the rule's own count of things crossed (the Rust tick calls no hook on the copy): stopped in it, one mark, and nothing anywhere else; gone through it,
     // one where it went in and one hole on the far face. What the round leaves beyond the wall (more walls, a pane, a cabinet, nothing) is the thin walls
     // check's to hold (wallpen-check), not counted here. `own` is the mark where the round went in, which the lines below always held to the wall's face.
     const flight = (from: Vec3, to: Vec3, fire: () => void): { own: any; through: boolean; fails: string[] } => {
       const aim = game.col.raycast(from, v3.normalize(v3.sub(to, from)), 30); const wb = aim && aim.index < 1e6 ? game.col.boxes[aim.index] : null;
-      const n0 = dc.count; const crossed: any[] = []; const was = WALLPEN_HOOKS.crossed; WALLPEN_HOOKS.crossed = (g2: any, x: any, who: number) => { crossed.push(x); was?.(g2, x, who); };
-      try { fire(); } finally { WALLPEN_HOOKS.crossed = was; }
+      const n0 = dc.count, c0 = WALLPEN_STATS.crossed; fire();
       const brk = process.env.DECALSITES_BREAK;
       if (brk === '1' && wb) dc.add('bullet', [wb.c[0], wb.c[1], wb.c[2] + wb.h[2]], [0, 0, 1], 0.025);   // (the break: a mark on the wall that no round owes)
-      const x = crossed.find((c: any) => c.index === aim?.index) ?? null;
+      const x = aim && WALLPEN_STATS.crossed > c0 ? { nIn: aim.n, nOut: v3.scale(aim.n, -1) } : null;
       let fresh: any[] = dc.list.slice(n0);
       if (brk === 'far' && x) fresh = fresh.filter((m: any) => !(m.kind === 'bullet' && v3.dot(m.n, x.nOut) > 0.999));   // (the break: a round that goes through and leaves no hole behind)
       if (!wb) return { own: null, through: false, fails: ['staging: the aim meets no wall'] };

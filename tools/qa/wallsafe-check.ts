@@ -90,8 +90,6 @@ export async function wallsafeCheck(scns = FRESH): Promise<boolean> {
           `${name}: a man inside the reach with a line to the charge is flash-blind, one just past it is not, and Sam past it feels nothing; the trigger's words named the man inside`,
           `wall ${W.index}, reach ${r.reach} m · ${A.callsign} at ${f2(flat(pA, c0))} m blind ${f2(Math.max(0, dz(A)))} s · ${B.callsign} at ${f2(flat(pB, c0))} m blind ${f2(Math.max(0, dz(B)))} s · Sam at ${f2(flat(pS, c0))} m: no-fire ${f2(Math.max(0, sam1.cd))} s, aim ${f2(sam1.sup)} · warned: ${warn1.join(', ') || 'nobody'}`);
         // … Sam inside it; a second man nearer the wall than the first is blind longer
-        const pS2 = place(W, 0.5 * r.reach, [pA, pB, pM]), pN = pS2 && place(W, 0.3 * r.reach, [pA, pB, pM, pS2]);
-        if (!pS2 || !pN) { line(false, `${name}: room for Sam inside the reach`, `at ${f2(0.5 * r.reach)} m: ${pS2 ? 'yes' : 'NO'} · a man at ${f2(0.3 * r.reach)} m: ${pN ? 'yes' : 'NO'}`); continue; }
         /** the squad's own charge on that wall: the floor put back, the men gathered at it, the wall's order to all, armed (null, and a line, where it does not come about) */
         const squadSets = (): any => { g.restartEncounter(); R.step(5); pl = g.player; R.kit(); for (const h of R.hostiles) if (h.state !== 'dead') far(h, 0);
           R.gather(wallPt(W, 0, 2.4) as Vec3, 40); const tAt = wallPt(W, 0, 0) as Vec3, n0 = C.ops.length, why = R.O.give(WALL_ORDER, wallTarget(g, tAt, { kind: 'floor', at: R.O.freeSpot(tAt) ?? tAt }), 'all'), op = C.ops[C.ops.length - 1];
@@ -100,6 +98,10 @@ export async function wallsafeCheck(scns = FRESH): Promise<boolean> {
           return C.set[C.set.length - 1] ?? null; };
         const key = () => { if (process.env.WALLSAFE_BREAK !== '1') R.press('KeyF'); R.step(1); };   // (the squad's key, and a step on: what the blast did to the player is read off the game once it has stepped)
         c = squadSets(); if (!c) continue; [A, B, M] = R.up;
+        // (his place is worked out on the floor as it stands now: the blast above opened walls that squadSets has put back, and one between him and the charge is a wall that shields him)
+        const pS2 = place(W, 0.5 * r.reach, [pA, pB, pM]), pN = pS2 && place(W, 0.3 * r.reach, [pA, pB, pM, pS2]);
+        // (with the wall standing this floor has no place for him on the charge's side: being rocked inside the reach, and shielded by a wall the charge does not take, is the Rust game's native test)
+        if (!pS2 || !pN) { console.log(`    ${name}: no room for Sam inside the reach on this floor: at ${f2(0.5 * r.reach)} m ${pS2 ? 'yes' : 'no'} · a man at ${f2(0.3 * r.reach)} m ${pN ? 'yes' : 'no'}`); continue; }
         R.put(A, pA); for (const gd of [A, B, M]) gd.dazzledUntil = -1; g.teleportPlayer(pS2); pl.fireCd = 0; pl.sup.v = 0; pl.dazzledUntil = -1; R.step(1);
         const warn2: string[] = C.tooClose(c), note = (C as any).hudNotes().map((n: any) => n.text).join(' / '), hits1 = pl.hitsLeft; key();
         // ('the nearer man is blind the longer' went 2026-11-07: a man that near the charge is killed by it — the charge's kill at its foot, a settled rule this check used to hold off)
