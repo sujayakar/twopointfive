@@ -389,3 +389,43 @@ man fell, when the floor was clear, the rounds and reloads of each side and how 
 what it does not see: stealth, Sam's gun, the rescues, a commander who waits. `hold` says whether a build is the same game; this says what the
 other game came to.
 
+## The gate: what a build is held to (`src/bin/gate/`)
+
+One native command, with nothing of TypeScript in it: no page, no module and no bridge. It stands every mission on the game's own list and plays a few of them, each as the page and the server
+stand a game (`dress`, seed 9, the mission's own link).
+
+```
+cd rust/game_start && cargo build --release --bin gate
+target/release/gate                 # every row, four at a time. Exit 0 = all pass · 1 = a row failed · 64 = a wrong word
+target/release/gate save            # only rows whose name starts with a word: `gate start`, `gate "start depot-four"`
+target/release/gate pin [ROW…]      # record the pins again and say which moved; nothing moved = the file is as it was, byte for byte
+target/release/gate breaks          # each row of the breaks' table plays unbroken and must PASS, then each break must FAIL in its check's own words. Exit 0 = all did
+target/release/gate list            # the rows
+```
+
+Each row prints one line in the rows' order, and the last line is the count and the wall time, with what each kind cost. A row is a child process, so a game that panics costs its own rows, which then
+FAIL with the first lines of what it wrote; the four rows of one run share a child, because the run is played once for all of them. About a minute and a half on four cores, release build.
+
+| row | what it holds | its break |
+|---|---|---|
+| `start <id>, one player` · `, two players`: every row of `all_missions`, twice | The start is the pinned start, part by part, or the same refusal in the same words. A second start in one process is the first: 5 s idle, every part each half second, then the mission before it on the list stood and run 2 s, then the mission again, the same | `pin` a word of the pin made wrong · `second` the second start's seed is one more |
+| `play <run>` | 40 s under a hand: one word a second (every part folded as `hold` folds them) against the pin. Says which of the hand's lines were never done on that floor | `pin` a word of the series made wrong |
+| `again <run>` | The run stood and played twice more in one process, 10 s of the next run on the list between the two: the same word every second | `second` the second run's die is drawn once before its first frame |
+| `save <run>` | THE GAME PUT BACK IS THE GAME THAT WENT ON: a `Moment` at 3, 9, 15, 21 and 27 s, each stood again (the odd ones in slot 1) and played 3 s under the same hand: every part of every frame the same. What a host keeps beside a game (where the hand's next line is, `Play.cursor`) goes back with it. | `block` a moment whose block bytes are the run's end's |
+| `load <run>` | A LOAD: the moments of 9 and 21 s, the value a save keeps, the run's game gone and another mission played 2 s in the process, then stood as a page stands a kept game in a slot nobody was in and played 3 s under the same hand: every part of every frame the run's | `block` one byte of the block's die is another |
+| `draw <run>` | Everything drawn after every tick, at 0.5 and at 1.0. (a) the word every second is the undrawn run's. (b) a mirror of the page's buffers, filled ONLY as the page fills them (`src/bin/gate/draw.rs` lists them), is the module's own tables after every frame. (c) the boxes' head says what their lists hold. (d) once a second, what the mirror holds is what a host that has just opened is told, but for what is a table's history (`draw.rs` says which). Played as hosts play: some frames come after two or three ticks, the look is said twice, and a moment of 18 s is put back at 20 s and the run goes on, its word still the run's | `told` a die drawn once between the undrawn run and this one · `mark` the mirror skips `from..to` on the frames that carry one after the first · `head` the head made wrong before it is read · `opened` a word of the fresh host's made wrong |
+| `seats <id>` | A fight of two is its records: scripted hands, each tick's two commands through `cmd_text` and back. Fresh games play the records with nobody sampling, showing seat 0 and then seat 1, and a moment at 12 s is put back and played to 18 s: every part the same each half second. The series is pinned. The two players' hands differ on one tick in five at least, each man walks and the fight fires at least so much (a small fight: its hands walk a man 4 to 8 metres and fire 2 to 8 rounds), and more than half the seconds have different words | `pin` · `fresh` a fresh game's replay hands each seat the other's records · `moment` the moment's does · `idle` nobody's hands do anything |
+| `par <id>`: every mission whose level has `scenarios.par` | The clock moves nobody: 30 s under `push`, with the file's par block and with it taken out of the tree before the stand. The parts differ in nothing but the table `CLOCK_ONLY` in `rows.rs` names, each with its reason; the clock's own part does differ, and the level's own record stands on each side as it stood | `moves` a die drawn once on the clocked side only · `noclock` the block is out on both sides |
+
+The runs (`RUNS` in `rows.rs`) reach the office's night breach under `doors`, a room clear in the rain (`depot-four`) under `bangs`, `compound-four` under `doors`, `glasshouse-four` under `kit`,
+`killhouse-four` and `bazaar-quiet` and a rescue under `push`, and the snow (`pass-four`) under `bangs`.
+
+**What it does not hold.** A row holds a game to itself, to its pins or to the same game by another road, never that it is any good, and a mistake made at a pin passes: `start` a game at rest, `play` and `again` what the eight hands reach, `save` the three seconds after each moment, `seats` a fight nobody plays well, `par` thirty seconds of a clock that has not yet finished.
+`draw` holds the rows a page is handed, not what a GPU makes of them; and no row has a page, a module build or a teammate's conduct in it, and the par clock's arithmetic and its row are `tests/par.rs`'s.
+
+**The pins (`pins.txt`).** Text, made by `gate pin`, read by the rows, never written by hand. ROWS: every row's name, in order: a whole `gate` fails where the rows are not that list (`rows gone: …`, `new rows: … (`gate pin`)`), and only a whole `gate pin` writes it. STARTS: the refused columns with their words, a line of the columns' names, then a line a part: its name
+and a word a column, or one word where every column has the same, so a part that joins or leaves the state is one line of the file. SERIES: a line a run, a word a second. A pin depends on nothing but
+the game: a debug build records the same bytes. `gate pin start` touches only the columns named.
+
+- **A commit that moves a pin says why.** A move nobody meant is a fault, and the row's line says where to look: `hold keep` on the build before and `hold check` on this one name the part and the frame.
+- **A join that conflicts in `pins.txt` records them again** on the joined tree, and says so in its message. The two sides' moves are not merged by hand.
