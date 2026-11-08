@@ -28,7 +28,6 @@ const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 
 type V = [number, number, number];
 const WALKED = process.env.RK_JUMP ? 0 : 30;   // frames Sam's leaving reads as a walk; RK_JUMP=1 = set down outside, as the check first had it
-if (process.env.RK_LAST === '0') REARWATCH.roomLast = false;   // RK_LAST=0 = a keeper freed the moment the men behind him have come by, as it was: warehouse-four b_s+ must fail 'last out'
 const DT = 1 / 60, args = process.argv.slice(2), VERBOSE = args.includes('--verbose'), OFF = args.includes('--off');
 const MAX = args.includes('--max') ? Number(args[args.indexOf('--max') + 1]) : 6, CASE = args.includes('--case') ? args[args.indexOf('--case') + 1] : '', ids = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--max' && args[i - 1] !== '--case');   // (--case door:+ | door:- — that one face alone)
 const NEED = 0.85, AIM = 0.5, STAY = 3, LEAVE = 20, NEAR = 6, WINDOW = 8;

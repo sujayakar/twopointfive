@@ -47,7 +47,7 @@ export function emptyThing(g: Game): { it: Interactable; d: number; why: string 
     const D = it.door, r = D ? (d >= Doors.USE_REACH ? 2 : pl.sprinting ? 1 : 0) : it.inReach ? 0 : 3;   // (a door's reach is its distance and his feet: its `inReach` is also the big tool's, from where a stack stands)
     if (r === 3) { other = Math.min(other, d); continue; }
     const why = r === 0 ? (it.framed ? EMPTY_WHY.held : D ? EMPTY_WHY.no : '') : !(D!.isClosed() ? SHUT_ROWS : OPEN_ROWS).some(v => g.rails.offers(v)) ? EMPTY_WHY.held : r === 1 ? EMPTY_WHY.run : EMPTY_WHY.far;
-    if (!why) { other = Math.min(other, d); continue; }   // (in reach with no row and no frame to blame — a wounded man)
+    if (!why) { other = Math.min(other, d); continue; }   // (in reach with no row and no frame to blame)
     if (r > rank || (r === rank && best && d >= best.d)) continue;
     if (r === 2 ? walled(it.pos) && walled(D!.frameCentre) : r === 1 && g.doors.lockedOut(D!, p, pl.keys)) continue;
     best = { it, d, why }; rank = r;

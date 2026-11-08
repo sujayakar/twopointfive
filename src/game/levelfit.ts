@@ -50,7 +50,7 @@ export const menHeld = (): number => simWhyNot() ? Infinity : Math.min(Math.floo
 /** CIVILIANS A GAME HOLDS AT ONCE, AT MOST: what a step's hand-over leaves after every other man a game may hold. civilians.ts `join`, the one place a
  *  civilian comes into a game, refuses one more — so the arithmetic holds whoever adds a civilian, and when. */
 export const civMost = (): number => menHeld() - menMost(0);
-/** WHAT ONE STEP IS HANDED OF THEM, AT MOST. At the doors a man is one contact, two while he lies wounded, and — his body near a doorway — a few of his
+/** WHAT ONE STEP IS HANDED OF THEM, AT MOST. At the doors a man is one contact, and — his body near a doorway — a few of his
  *  ragdoll's particles (game.ts BODY_DOOR_PARTICLES): never more than those and his own. At the furniture a man is one. */
 export const handOverMost = (civilians: number): { doorMen: number; propMen: number } => ({ doorMen: menMost(civilians) * (BODY_DOOR_PARTICLES.length + 1), propMen: menMost(civilians) });
 import { LIGHT_CAPS } from '../sim/lightshome';

@@ -577,7 +577,7 @@ pub fn set_lever(g: &mut crate::game::Game, key: crate::difficulty::LeverKey, ru
     write(g, Some(own(key)));
 }
 
-/// round the kept feel rows being read back: the fog lever's rung over them again. (difficulty.ts leversFog)
+/// the fog lever's rung over the feel rows. (difficulty.ts leversFog)
 pub fn levers_fog(g: &mut crate::game::Game) {
     if g.m.difficulty.own_for.is_some() {
         if let Some(was) = g.m.difficulty.own_was { g.k.fog.own = was; }

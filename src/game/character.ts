@@ -738,8 +738,7 @@ export const MOVES = { on: 1, recoil: 1, toss: 1, dazzle: 1, flinch: 1, gait: 1,
    *  as if it were not dipped (`sightsLift`). The weapon light stays down with the muzzle, as a real one does. */
   reload: 1, bound: 1, clutch: 1, entry: 0, entryEyes: 0,
   /** the clutch's FOLD: a man knocked about and still up stays doubled over the hurt, swaying, for as long as the game roots him — the TRUNK and head, so not
-   *  arms-only (his hit columns and a lowered gun move with it; he fires nothing while rooted). NOT on with the pass: 0 = it comes up with the wounds switch and
-   *  only with it (FOLD_WITH below — wounds off, the trunk of a staggered man is the base's), 1 = on by itself (`?fold`), -1 = never (`?fold=0`). */
+   *  arms-only (his hit columns and a lowered gun move with it; he fires nothing while rooted). NOT on with the pass: 0 = off (the trunk of a staggered man is the base's), 1 = on by itself (`?fold`), -1 = never (`?fold=0`). */
   fold: 0,
   /** THE SNAP SHOT (a pistol fired from the relaxed carry; the same trade when the aim is raised or let go by hand). The carry and the two-hand aim are two
    *  layers eased on two clocks (9 and 14 a second), so while they traded neither had the arm and the base clip's HANGING arm came through from under both: a
@@ -780,8 +779,7 @@ export const MOVES = { on: 1, recoil: 1, toss: 1, dazzle: 1, flinch: 1, gait: 1,
    *  with a rifle in both hands that is the player: a teammate tops out under the jog's speed and his run is the old hold to the bit. */
   steadyRun: 1 };
 /** who else raises the fold while MOVES.fold is 0: wounds.ts hands its switch in (this file reads no game table) */
-export const FOLD_WITH = { on: (): boolean => false };
-const foldOn = (too = false) => MOVES.on > 0.5 && MOVES.clutch > 0.5 && (MOVES.fold > 0.5 || (MOVES.fold === 0 && (too || FOLD_WITH.on())));   // (`too`: the figure's own `foldToo` — condition.ts raises the fold with its switch as wounds.ts does with its own)
+const foldOn = (too = false) => MOVES.on > 0.5 && MOVES.clutch > 0.5 && (MOVES.fold > 0.5 || (MOVES.fold === 0 && too));   // (`too`: the figure's own `foldToo` — condition.ts raises the fold with its switch as wounds.ts does with its own)
 export function setMoves(on: boolean) { MOVES.on = on ? 1 : 0; }
 try { const q = new URLSearchParams(location.search); if (q.has('moves')) MOVES.on = q.get('moves') !== '0' ? 1 : 0; if (q.has('nomoves')) MOVES.on = 0; if (q.has('entry')) { MOVES.entry = q.get('entry') !== '0' ? 1 : 0; MOVES.entryEyes = q.get('entry') === 'eyes' ? 1 : 0; } if (q.has('fold')) MOVES.fold = q.get('fold') !== '0' ? 1 : -1; if (q.has('snap')) MOVES.snap = q.get('snap') !== '0' ? 1 : 0; if (q.has('steady')) MOVES.steady = q.get('steady') === '0' ? 0 : q.get('steady') === '2' ? 2 : 1; } catch { /* no page (the harness) */ }
 const mvOn = (k: keyof typeof MOVES) => MOVES.on > 0.5 && MOVES[k] > 0.5;
@@ -4364,7 +4362,7 @@ export class Character extends ManCols {
   update(dt: number) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Character.update', this, [dt]); if (__r !== RUST_PASS) return __r as any; } } const lent = stageOpen(this.anim.poses); try { this.updateStanding(dt); } finally { if (lent) stageShut(this.anim.poses); } }
   private updateStanding(dt: number) {
     if (this.ragdoll) { this.updateRagdoll(dt); return; }
-    if (this.turn.on && TURN.on > 0.5 && dt > 0 && !this.anim.wound) this.turnWeigh(dt);   // (a man down wounded turns to nothing: wounds.ts dropped his turn as he went)
+    if (this.turn.on && TURN.on > 0.5 && dt > 0 && !this.anim.wound) this.turnWeigh(dt);
     else {   // not weighed — or a dt-0 bake: a RE-BAKE in place (game.ts updateProps, a frozen clock: his yaws untouched since they were handed back, or put back to the wish by turnBegin and not rewritten) keeps his turn going; a staging (yaws rewritten, or moved) takes them as written and the next frame starts from them
       const T = this.tn;
       if (T && dt <= 0 && this.turn.on && TURN.on > 0.5 && (this.bodyYaw === T.body || this.bodyYaw === T.ib) && (this.aimYaw === T.aim || this.aimYaw === T.ia) && hyp2(this.pos[0] - T.x, this.pos[2] - T.z) <= TURN.jump) { this.bodyYaw = T.body; this.aimYaw = T.aim; }
@@ -4526,7 +4524,6 @@ export class Character extends ManCols {
     if (!this.tn) this.update(0);   // (the bake read the turn as a staging — he stands further from where it was weighed than a turn is carried: no turn, and he is posed at the yaws he is left with)
   }
   /** TURN let go of (wounds.ts: a man going down wounded stays a posed figure): his yaws become the ones that were drawn, and no turn is carried on */
-  turnDrop() { if (this.tn) { this.bodyYaw = this.tn.body; this.aimYaw = this.tn.aim; this.tn = null; } }
   /** where his GUN is in yaw — for a fire gate that runs inside his own AI update (guards.ts, aim.ts), where aimYaw reads as the wish: he may not fire down a line his
    *  gun has not reached. aimYaw itself with the weight off, and wherever aimYaw is already the turned yaw (everything outside his update). */
   get gunYaw(): number { const T = this.tn; return T && !this.ragdoll ? T.aim : this.aimYaw; }

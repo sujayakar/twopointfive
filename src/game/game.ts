@@ -170,7 +170,7 @@ import { WallCharge } from './wallcharge';
 import { WorkThings } from './workthings';
 import { DoorPath } from './doorpath';
 import { registerShutDoor } from './shutdoor';
-import { spawnCivilians, resetCivilians, civilianAnswer, civiliansSummary } from './civilians';
+import { spawnCivilians, resetCivilians, civilianAnswer, civiliansSummary, civiliansAddressWord } from './civilians';
 import type { Civ } from './civilians';
 import { updateTargets } from './lighting';
 import { LightHome, LIGHT_IN, type Fixture } from '../sim/lightshome';
@@ -511,7 +511,7 @@ export const TEMPERAMENT: Record<string, Temperament> = {
 /** How a downed man went down and by whose hand (combat.ts killGuard): shot = dead; struck (the takedown's cross, a pistol-whip later) / choked (the choke-out
  *  from a hold, later) = out cold and breathing. His state is 'dead' either way — every one of the floor's 'is this man out of the picture' tests keeps working —
  *  this is the side record the found-body lines, the room clear's grim lines, the debrief and (one day) a wake-up read. by: only the player's own count on the card. */
-export type DownKind = 'shot' | 'struck' | 'choked';   // (wounded: a round that did not land where it kills — wounds.ts, behind WOUND.on: down, breathing, out of the fight, and POSED rather than a ragdoll — Guard.wound)
+export type DownKind = 'shot' | 'struck' | 'choked';
 export type DownBy = 'player' | 'guard' | 'world';
 /** Down but breathing: put out cold (struck / choked), not shot. False for a living man and for a corpse. */
 export function isBreathing(gd: Guard): boolean { return gd.state === 'dead' && gd.downKind !== null && gd.downKind !== 'shot'; }
@@ -618,7 +618,6 @@ export class Guard extends GuardCols {
   found = false;                 // (dead) somebody has discovered this body — counted once for the debrief
   /** (dead) how he went down and by whose hand — set once by combat.ts killGuard; null while he lives. isBreathing() reads it: struck / choked = out cold. */
   downKind: DownKind | null = null; downBy: DownBy | null = null;
-  /** WOUNDS (wounds.ts): down wounded — out of the fight, breathing, posed where he went down (state 'dead', downKind 'wounded'). null on everybody else, always with the switch off. */
   /** what he has personally seen and heard this encounter (see Witness) — event memory for the dialogue to come; the AI itself never reads it */
   witness: Witness = newWitness();
   /** what Sam has got out of him so far (see Talk) — read and advanced only by the interrogation (dialogue.ts via Game.interrogate) */
@@ -1067,6 +1066,7 @@ export class Game {
     leversFog(); fogFlags(); irFlags();           // (before the squad's systems read them)
     this.tune.chaos = CHAOS.def;
     loadWind(this.tune);      // this machine's wind (wind.ts, the Weather page's rows; the moths' switch rides with it)
+    civiliansAddressWord(this);      // (?nocivilians: civilians.ts)
     // (the FN2000 is always in the kit now — no per-machine loadout memory; Game.fn2000 / setLoadout stay for the harness)
     this.col = new StaticCollision(level.boxes, levelNameOf(level));
     if (engine.gbuffer?.setWearMap) { const wm = buildWearMap(level, this.col.nav, lookConfig.longFoot > 0, lookConfig.walked > 0); engine.gbuffer.setWearMap(wm.data, wm.w, wm.h); }   // the detail layer's traffic map (render/wear.ts: the routes over the nav grid + the thresholds, the walls' feet) — the harness's engine stand-in has no g-buffer to hand it to

@@ -160,7 +160,13 @@ for (const [table, paths] of byTable) {
 }
 // ---- the words that held a row on the old stand: its line of src/host/profile.ts's list, and standup.ts's pin of that word
 { let p = files.get('src/host/profile.ts') ?? '', u = files.get('src/host/standup.ts') ?? '';
-  for (const r of taken) { const m = new RegExp(`^\\s*'${r.replace(/\./g, '\\.')}': '(TPS_\\w+)=[^']*',[^\\n]*\\n`, 'm').exec(p); if (!m) continue; p = p.replace(m[0], ''); u = u.replace(new RegExp(`^[ \\t]*if \\(pinned\\('${m[1]}'\\)\\)[^\\n]*\\n`, 'm'), ''); }
+  for (const r of taken) {
+    const m = new RegExp(`^\\s*'${r.replace(/\./g, '\\.')}': '(TPS_\\w+)=(?:[^'\\\\]|\\\\.)*',[^\\n]*\\n`, 'm').exec(p); if (!m) continue; p = p.replace(m[0], '');
+    // a pin may set many rows of its word: this row leaves its chain, and the pin goes with its last row
+    const pin = new RegExp(`^[ \\t]*if \\(pinned\\('${m[1]}'\\)\\) [^\\n]*\\n`, 'm').exec(u); if (!pin) continue;
+    const without = pin[0].replace(`${r} = `, ''), rest = [...without.split(' = String(')[0].matchAll(/[A-Z_0-9]+\.\w+/g)];
+    u = u.replace(pin[0], rest.length ? without : '');
+  }
   files.set('src/host/profile.ts', p); files.set('src/host/standup.ts', u); }
 const goneRows = new Set(taken); const sw = readFileSync('tools/qa/switches.json', 'utf8').split('\n');
 const swKept = sw.filter(l => { const m = /^\s*\{"row":"([^"]+)"/.exec(l); if (!m) return true; return !(goneRows.has(m[1]) || [...goneRows].some(g => m[1].startsWith(g + '.'))); });
