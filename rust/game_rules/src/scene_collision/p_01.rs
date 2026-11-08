@@ -967,7 +967,7 @@ fn lamps_part_into(g: &mut Game, last: bool, out: &mut [f64; 6]) {
     let (set, n) = (g.col.mirror.lamp_set as i32, g.col.mirror.lamp_n as usize);
     let rows = rows_for(g, q.rows);
     let r = if q.stands != 0.0 {
-        let shade = sim::light::Shade { sigma: g.k.sense.smoke.sigma, g: g.sim, stamp: sim::state::stamp(g.sim), stands: true, nb: 0, k: [0.0; 4] };
+        let shade = sim::light::Shade { sigma: g.k.sense.smoke.sigma, g: g.sim, stamp: sim::state::stamp(g.sim) };
         sim::light::asked(w, set, n, p, &shade, more, rows, last, out)
     } else {
         sim::light::asked(w, set, n, p, &sim::light::NO_SHADE, more, rows, last, out)
@@ -1076,7 +1076,7 @@ pub fn grid_step(g: &mut crate::game::Game, n: f64, k: crate::scene_collision::G
             }
         }
     }
-    // (lib.rs grid_step: a wind that is no number, or whose rise with height is none, is still air)
+    // (a wind that is no number, or whose rise with height is none, is still air: the block is the game's state, and what is no number spreads)
     let real = |v: f64| v - v == 0.0;
     let windy = real(wx) && real(wz) && real(low) && real(gain) && real(full_at) && real(k.in_wind) && low >= 0.0 && gain >= 0.0 && full_at > 0.0;
     let (wx, wz) = if windy { (wx, wz) } else { (0.0, 0.0) };

@@ -88,7 +88,6 @@ pub fn ps_orders_OrderTargetFloor(s: &crate::orders::OrderTargetFloor, o: &mut W
 pub fn ps_orders_OrderTargetDoor(s: &crate::orders::OrderTargetDoor, o: &mut W) { s.door.w(o); s.side.w(o); }
 pub fn ps_orders_OrderTargetNone(s: &crate::orders::OrderTargetNone, o: &mut W) { s.man.w(o); }
 pub fn ps_orders_OrderTargetFoe(s: &crate::orders::OrderTargetFoe, o: &mut W) { s.foe.w(o); }
-pub fn ps_scene_collision_LampRows(s: &crate::scene_collision::LampRows, o: &mut W) { s.leave.w(o); s.steady.w(o); }
 pub fn ps_game_Interactable(s: &crate::game::Interactable, o: &mut W) { s.kind.w(o); s.pos.w(o); s.line1.w(o); s.line2.w(o); s.in_reach.w(o); s.off.w(o); s.progress.w(o); s.target.w(o); s.door.w(o); s.guard.w(o); s.verb.w(o); s.running.w(o); s.close.w(o); s.past.w(o); s.framed.w(o); }
 pub fn ps_kit_MemberKit(s: &crate::kit::MemberKit, o: &mut W) { s.weapon.w(o); s.bangs.w(o); s.smoke.w(o); s.frags.w(o); s.shells.w(o); s.suit.w(o); s.trim.w(o); s.wand.w(o); s.cams.w(o); s.big.w(o); s.rings.w(o); }
 pub fn ps_doortools_DoorToolsDoneItemLaneBackMove(s: &crate::doortools::DoorToolsDoneItemLaneBackMove, o: &mut W) { s.stance.w(o); s.upper.w(o); }
@@ -1152,7 +1151,6 @@ pub fn pa_orders_OrderTargetFloor(s: &crate::orders::OrderTargetFloor, o: &mut W
 pub fn pa_orders_OrderTargetDoor(s: &crate::orders::OrderTargetDoor, o: &mut W) { s.door.w(o); s.side.w(o); }
 pub fn pa_orders_OrderTargetNone(s: &crate::orders::OrderTargetNone, o: &mut W) { s.man.w(o); }
 pub fn pa_orders_OrderTargetFoe(s: &crate::orders::OrderTargetFoe, o: &mut W) { s.foe.w(o); }
-pub fn pa_scene_collision_LampRows(s: &crate::scene_collision::LampRows, o: &mut W) { s.leave.w(o); s.steady.w(o); }
 pub fn pa_game_Interactable(s: &crate::game::Interactable, o: &mut W) { s.kind.w(o); s.pos.w(o); s.line1.w(o); s.line2.w(o); s.in_reach.w(o); s.off.w(o); s.progress.w(o); s.target.w(o); s.door.w(o); s.guard.w(o); s.verb.w(o); s.running.w(o); s.close.w(o); s.past.w(o); s.framed.w(o); }
 pub fn pa_kit_MemberKit(s: &crate::kit::MemberKit, o: &mut W) { s.weapon.w(o); s.suppressed.w(o); s.light.w(o); s.nvg.w(o); s.bangs.w(o); s.charges.w(o); s.smoke.w(o); s.frags.w(o); s.walls.w(o); s.shells.w(o); s.suit.w(o); s.trim.w(o); s.wand.w(o); s.cams.w(o); s.bare.w(o); s.big.w(o); s.primary.w(o); s.secondary.w(o); s.side_can.w(o); s.rings.w(o); }
 pub fn pa_doortools_DoorToolsDoneItemLaneBackMove(s: &crate::doortools::DoorToolsDoneItemLaneBackMove, o: &mut W) { s.stance.w(o); s.upper.w(o); }
@@ -2309,7 +2307,6 @@ pub fn pm_orders_OrderTargetFloor(s: &crate::orders::OrderTargetFloor, o: &mut W
 pub fn pm_orders_OrderTargetDoor(s: &crate::orders::OrderTargetDoor, o: &mut W, c: &mut Vec<u32>) { s.door.w(o); c.push(o.b.len() as u32); s.side.w(o); c.push(o.b.len() as u32); }
 pub fn pm_orders_OrderTargetNone(s: &crate::orders::OrderTargetNone, o: &mut W, c: &mut Vec<u32>) { s.man.w(o); c.push(o.b.len() as u32); }
 pub fn pm_orders_OrderTargetFoe(s: &crate::orders::OrderTargetFoe, o: &mut W, c: &mut Vec<u32>) { s.foe.w(o); c.push(o.b.len() as u32); }
-pub fn pm_scene_collision_LampRows(s: &crate::scene_collision::LampRows, o: &mut W, c: &mut Vec<u32>) { if o.wide { s.leave.w(o); } c.push(o.b.len() as u32); if o.wide { s.steady.w(o); } c.push(o.b.len() as u32); }
 pub fn pm_game_Interactable(s: &crate::game::Interactable, o: &mut W, c: &mut Vec<u32>) { s.kind.w(o); c.push(o.b.len() as u32); s.pos.w(o); c.push(o.b.len() as u32); s.line1.w(o); c.push(o.b.len() as u32); s.line2.w(o); c.push(o.b.len() as u32); s.in_reach.w(o); c.push(o.b.len() as u32); s.off.w(o); c.push(o.b.len() as u32); s.progress.w(o); c.push(o.b.len() as u32); s.target.w(o); c.push(o.b.len() as u32); s.door.w(o); c.push(o.b.len() as u32); s.guard.w(o); c.push(o.b.len() as u32); s.verb.w(o); c.push(o.b.len() as u32); s.running.w(o); c.push(o.b.len() as u32); s.close.w(o); c.push(o.b.len() as u32); s.past.w(o); c.push(o.b.len() as u32); s.framed.w(o); c.push(o.b.len() as u32); }
 pub fn pm_kit_MemberKit(s: &crate::kit::MemberKit, o: &mut W, c: &mut Vec<u32>) { s.weapon.w(o); c.push(o.b.len() as u32); s.bangs.w(o); c.push(o.b.len() as u32); s.smoke.w(o); c.push(o.b.len() as u32); s.frags.w(o); c.push(o.b.len() as u32); s.shells.w(o); c.push(o.b.len() as u32); s.suit.w(o); c.push(o.b.len() as u32); s.trim.w(o); c.push(o.b.len() as u32); s.wand.w(o); c.push(o.b.len() as u32); s.cams.w(o); c.push(o.b.len() as u32); s.big.w(o); c.push(o.b.len() as u32); s.rings.w(o); c.push(o.b.len() as u32); }
 pub fn pm_doortools_DoorToolsDoneItemLaneBackMove(s: &crate::doortools::DoorToolsDoneItemLaneBackMove, o: &mut W, c: &mut Vec<u32>) { if o.wide { s.stance.w(o); } c.push(o.b.len() as u32); if o.wide { s.upper.w(o); } c.push(o.b.len() as u32); }

@@ -281,7 +281,6 @@ pub mod script_tut_team { pub mod types; pub use types::*; }
 pub mod seats { pub mod types; pub use types::*; pub mod seat_ref; pub use seat_ref::*; }
 pub mod seenwalk { pub mod types; pub use types::*; }
 pub mod sense { pub mod types; pub use types::*; }
-pub mod sensors { pub mod types; pub use types::*; }
 pub mod shard_model { pub mod types; pub use types::*; }
 pub mod shards { pub mod types; pub use types::*; }
 pub mod sheet_model { pub mod types; pub use types::*; }

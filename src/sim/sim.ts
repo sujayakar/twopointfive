@@ -283,7 +283,7 @@ let doorsOn = true, fallsOn = true, propsOn = true, slabsOn = true, itemsOn = tr
  *          die has to be there before any rule that rolls it is. A game takes the row as its next tick opens.
  *
  *  THE SENSES ARE NO ROWS: an eye on a man, the light on a point, the smoke along a line, a sound's way, a way across the floor and the fog of war's
- *  sight pass are the module's alone (rust/sim/src/sight.rs, light.rs, smoke.rs, hear.rs, nav.rs, fog.rs, asked through src/scene/collision.ts, THE
+ *  sight pass are the module's alone (rust/sim/src/sight.rs, light.rs, hear.rs, nav.rs, fog.rs, asked through src/scene/collision.ts, THE
  *  SENSES). Their TypeScript is gone, so there is nothing to put one down to: a check holds them to their own earlier answers (tools/qa/sense-ident.ts).
  *
  *  THE THINGS of a level, a row a family (each keeps its state in the game's block from the moment the game is made — sim/state.ts — and, while its row
