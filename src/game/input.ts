@@ -7,7 +7,7 @@ export class Input {
   mouseX = 0; mouseY = 0;          // CSS pixels relative to canvas
   orbitDX = 0;                     // horizontal mouse travel this frame WHILE the camera's key is held (Ctrl, or the Space bar while it is spare — host/keymap.ts camKey; the loop consumes it)
   wheelCtrl = 0;                   // wheel travel with the camera's key held, or a pinch (zoom); plain `wheel` is the walking-pace control (player.ts)
-  buttons = 0; clicked = 0;        // held / edge-this-frame button bits, 1 << MouseEvent.button: 1 = LMB, 2 = MMB, 4 = RMB (see lmb() / mmb() / rmb())
+  buttons = 0; clicked = 0;        // held / edge-this-frame button bits, 1 << MouseEvent.button: 1 = LMB, 2 = MMB, 4 = RMB (see mmb() / rmb())
   suppressClick = false;           // set by the title card: swallow the very next mouse press
   wheel = 0;
   hasFocus = true;
@@ -102,7 +102,6 @@ export class Input {
   focusGame() { if (!this.el) return; if (this.sink) { if (document.activeElement !== this.sink) this.sink.focus({ preventScroll: true }); } else if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body && !document.activeElement.closest('#panel')) document.activeElement.blur(); }
   down(code: string) { return this.keys.has(code); }
   hit(code: string) { return this.pressed.has(code); }
-  lmb() { return (this.buttons & 1) !== 0; }
   rmb() { return (this.buttons & 4) !== 0; }
   lmbHit() { return (this.clicked & 1) !== 0; }
   mmb() { return (this.buttons & 2) !== 0; }
