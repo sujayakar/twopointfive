@@ -42,7 +42,6 @@ import { makeOutlineFrame } from './render/outline';
 import { SavePics } from './host/savepics';
 import { EVENPACE, pacer, pageRoom, rateMeter } from './host/pace';
 import { TWEEN, Tween } from './host/tween';
-import { AheadDraw } from './host/ahead';
 import { v3, Vec3, quat } from './math/vec';
 import { loadCharacterSet, castUrlFor } from './anim/gltf';
 import * as charMatsMod from './render/charMaterials';
@@ -169,12 +168,6 @@ import { knobRegistry, knobsCopy, knobsBack } from './game/knobs';   // (last on
 import type { Gpu } from './gpu/device';
 import { RENDER_PASSES } from './gpu/timer';
 import { PLAYTAPE, tapeFromUrl } from './replay/engineplay';
-import { NETPLAY, NET_JOIN } from './net/address';
-import { netFromUrl } from './net/page';
-import { netKeyed, netLeave } from './net/door';
-import { netRows } from './ui/netrows';
-import { COOP } from './net/lobby';
-import { coopFromUrl, coopInvite } from './ui/coop';
 import { soundLanes } from './replay/soundlanes';
 import { pageSay } from './view/pagesaid';
 
@@ -222,17 +215,8 @@ async function main() {
   // the tape's own query (so this boot is the recording's boot); `tape` then lays the tape's knob tables and kit over this machine's at each point below. Absent = nothing.
   const tapePlay = q.has(PLAYTAPE) ? await tapeFromUrl(q) : null; if (tapePlay === 'moved') return;
   const tape = tapePlay && !tapePlay.refuse ? tapePlay : null;
-  // `?net=<ws address>` (net/page.ts): this page is a client of a game server. As a replay's page it is first sent to the game's own query, and the server's
-  // recipe is laid over this machine's at the same points of the boot (`recipe` below is whichever of the two this page has). Absent = nothing.
-  // `?join=<CODE>` (net/lobby.ts, ui/coop.ts): the door of a co-op game. The control plane gives this tab its seat and the page is sent on to the game's server (`?net=`, below).
-  // (a co-op game's code on the address, in a tab that holds no seat in it: the lobby's door gives it one and sends it on — ui/coop.ts. A game's whole address
-  // pasted into another tab comes this way too, or it would only watch.
-  // The door said why not and took the code off the address: it is off this visit's words too, or the page client would put it back and come round again)
-  if (COOP.on && !tape && q.has(NET_JOIN) && !(q.has(NETPLAY) && netKeyed(q))) { if (await coopFromUrl(q) === 'moved') return; q.delete(NET_JOIN); }
-  const netPlay = !tape && q.has(NETPLAY) ? await netFromUrl(q) : null; if (netPlay === 'moved') return;
-  const net = netPlay && !netPlay.refuse ? netPlay : null, recipe = tape ?? net;
   pageSwitches(q);   // the switches this boot writes from the URL — the destruction goal's (?nodestruction ?nofurnblast ?nowallreact ?nocoverfire ?nowallcharge ?wallmenu=direct) and the room entry's door walk (?nodoorpath ?doorpath=0|gun) — in src/host/profile.ts, which the QA harness's shipped stand calls too with an empty query: one function, so the two cannot drift. Before the level loads (the destruction's dressing)
-  const recipeTables = (): void => { if (!recipe) return; recipe.tables(); pageRows(q); };   // a recipe's knob tables over this machine's (below, at each point of the boot that wrote over them) — and then the Rust module's rows as the build has them, whatever an older recipe wrote (profile.ts pageRows: a row is no switch, and no recipe made now carries one)
+  const recipeTables = (): void => { if (!tape) return; tape.tables(); pageRows(q); };   // a recipe's knob tables over this machine's (below, at each point of the boot that wrote over them) — and then the Rust module's rows as the build has them, whatever an older recipe wrote (profile.ts pageRows: a row is no switch, and no recipe made now carries one)
   setLookPlace(placeOfQuery(q));   // the men's dress follows the place (scene/look.ts): on the office family the first cast and its tables, dressed for a building — said before the cast is fetched below
   LOADBRIEF.options = { open: () => openOptions({ tab: 'controls' }), close: closeOptions, up: optionsOpen };
   LOADBRIEF.on = q.get('loadbrief') !== '0';   // a mission's page loads behind that mission's brief and waits for the player's Start (ui/loadbrief.ts; ?loadbrief=0 = the boot card and the straight start, as before)
@@ -282,7 +266,7 @@ async function main() {
   if (q.has('norainshadow')) rainShadowConfig.on = false;   // ?norainshadow: the rain lit by the reach masks alone — through a shut door, through the wall a weapon light is pointed at — as it was (render/frame.ts rainShadowConfig)
   // (the hour, with the address's other words read before the game is made: addressBeforeGame, above) ?hour=dawn|midday|overcast|dusk (+ ?sun=0‥1): the level at another hour than its own night (src/game/hours.ts) — standGame lays it over the level; no flag = the level as authored
   recipeTables();
-  const brief = tape || net || q.has('paused') || runPage(q) ? null : loadBrief(location.search);   // THE LOAD BRIEF (ui/loadbrief.ts): a page that boots a mission of the list shows that mission, not the old card's controls list — never a page nobody sits at (a replay, the automation boot, a benchmark's scene)
+  const brief = tape || q.has('paused') || runPage(q) ? null : loadBrief(location.search);   // THE LOAD BRIEF (ui/loadbrief.ts): a page that boots a mission of the list shows that mission, not the old card's controls list — never a page nobody sits at (a replay, the automation boot, a benchmark's scene)
   const card = brief ?? bootCard(); loading.textContent = '';
   const tick = () => document.hidden ? Promise.resolve() : new Promise<void>(r => setTimeout(r, 0));   // (a hidden pane / background tab services timers about once a second and paints nothing anyway: no yield there)
   await tick();
@@ -339,7 +323,7 @@ async function main() {
   // THE GAME'S OWN DIE (math/dice.ts): ?seed=N plays that seed (the same N and the same inputs roll the same numbers), no flag = a fresh one each visit (read it back
   // as __game.dice.seed), ?seed=off = the game on Math.random as before. A script that puts its own die in Math.random's place still gets the game's dice, as ever.
   const seed = ((): number | null => { const v = q.get('seed'); if (v === 'off') return null; const n = v === null || v === '' ? NaN : Number(v); return Number.isFinite(n) ? n >>> 0 : (crypto.getRandomValues(new Uint32Array(1))[0] >>> 0); })();
-  recipeTables(); recipe?.env(engine.settings as never);
+  recipeTables(); tape?.env(engine.settings as never);
   const input = Input.detached();   // (made BEFORE the stand, which hands the game its host's camera and keys, once — game.ts hostCam. It listens to nothing yet: its listeners go on below, where the page's Input was always made)
   ({ game, cam } = await standGame(engine, { level, ch, smoke, populate: false, seed, input, stood }));   // the ONE stand-up (src/host/standup.ts) — the world / lights were populated above; the harness and the native entry come through the same call
   if (game.weather.levelRoofs) weatherKindConfig.on = true;   // (the picture follows the game: a game that stands under a level's own roofs has the shaders read the third and fourth, whose half is frame data: render/frame.ts levelSwitches)
@@ -451,8 +435,7 @@ async function main() {
   const panel = new Panel();
   if (rustGame) { const set = panel.setStatus.bind(panel); panel.setStatus = (f: () => string) => set(() => { const w = rustGame.rustSettledLine(); return w ? `${w} \u00b7 ${f()}` : f(); }); }   // (?rust=1: what the hold of the settled rows turned away, on the panel's first line: host/rustgame.ts)
   buildPanel(panel, engine, game, smoke, cam, overlay, audio, quality, () => ({ fps: fpsSm, union: unionSm }), devHud);   // (the status strip reads the frame loop's own smoothed numbers — only ever called from the panel's refresh, long after they exist)
-  if (modelErrAsked(q) && !tape && !net) modelErrBoot(game, q.get('modelerr'), sceneOf(q), () => ({ adapter: gpu.adapterInfo, ...(gpu.adapterFallback ? { fallback: 'yes' } : {}), ...(replaykey.commit ? { commit: replaykey.commit } : {}) }), { held: () => menu.isOpen, startPage: startPageWanted() });   // ?modelerr: the game's own senses measured against the picture (host/modelerr.ts), nothing of it made without the word
-  if (net) netRows(panel, net);   // (a networked game: the debugger's Network page — this page's connection made worse on purpose, live: ui/netrows.ts; nothing of it is made on any other page)
+  if (modelErrAsked(q) && !tape) modelErrBoot(game, q.get('modelerr'), sceneOf(q), () => ({ adapter: gpu.adapterInfo, ...(gpu.adapterFallback ? { fallback: 'yes' } : {}), ...(replaykey.commit ? { commit: replaykey.commit } : {}) }), { held: () => menu.isOpen, startPage: startPageWanted() });   // ?modelerr: the game's own senses measured against the picture (host/modelerr.ts), nothing of it made without the word
   input.keyVeto = e => (overlay.cardUp && !menu.isOpen && overlay.cardKey(e)) || panel.onKey(e);   // (a tutorial step's card first: the Enter or Space that closes it is no game key — ui/railcard.ts)
     // ← / → and [ / ] over the open panel walk its systems — before the game reads the key (a typed letter is the game's: the panel's search types only after a click on it)
   (window as any).__panel = panel;
@@ -543,7 +526,7 @@ async function main() {
     if (!menu.isOpen && panelWantsEsc()) { const a = document.activeElement as HTMLElement; a.dataset.esc = '1'; a.blur(); delete a.dataset.esc; return; }   // (the mark: a field that takes Esc as 'never mind' reads it in the change its blur fires)
     if (!menu.isOpen && (game.director.showing || game.director.handedOver)) { endShow(); e.preventDefault(); return; } input.pressed.delete('Escape'); menu.toggle(); e.preventDefault(); } }, { capture: true });   // (game/backkey.ts: Esc is only the pause — nothing backs out on it; Tab does that, in the tick)   // (Esc over a running tour ends it to the start card)
   const panelWantsEsc = () => { const a = document.activeElement; return !!a && (a instanceof HTMLInputElement || a instanceof HTMLSelectElement) && !!a.closest('#panel, #sndcard'); };   // first Esc just releases a focused tweak-panel control; controls inside the menu never block it
-  recipe?.stood(game);   // (a tape, or a networked game's recipe: the game's tune, flags and tables as the recording's stood, round the mission's staging — tools/qa/rerun.ts's order)
+  tape?.stood(game);   // (a tape: the game's tune, flags and tables as the recording's stood, round the mission's staging — tools/qa/rerun.ts's order)
   const booted = scenarioFromUrl(q, game);
   recipeTables();
   // Esc ▸ 'Quit to scenarios' (and the down card's): the scenario stopped — its cast gone, the shift back, a fresh night — its flags off the URL, the start
@@ -555,7 +538,6 @@ async function main() {
     quit: () => {
       if (!runningScenario(game, levelFileQ)) return;   // (the cards only offer it with a scenario up; the console hook gets the same rule)
       const pick = pickOfQuery(location.search), next = pickQuitSearch(location.search); booted.why = null;   // (pickQuitSearch off a pick's page = quitSearch, less a row's name left on the URL)
-      if (net) { net.close(); location.assign(location.pathname + netLeave(next) + location.hash); return; }   // (a networked game is left by leaving its page: the seat is let go, the address loses the game's words)
       if (pick || q.has('levelFile')) { reopenMissionsAfterLoad(); location.assign(location.pathname + next + location.hash); return; }
       attract.poke();
       quitScenario(game, plainFog(q));
@@ -570,7 +552,7 @@ async function main() {
   (window as any).__quiet = { get on() { return game.quiet.active; }, get deal() { return game.quiet.deal; }, get ops() { return game.quiet.ops; }, summary: () => game.quiet.summary(), log: game.quiet.log, check: () => checkQuiet(game), restage: () => game.quiet.restage() };   // the quiet mission (game/quiet.ts): what this run was dealt, the level's block against its floor
   (window as any).__lesson = { get step() { return game.view.lesson; }, get i() { return game.lesson.i; }, log: game.lesson.log, stats: LESSON_STATS, check: () => checkLesson(game) };   // a training lesson (game/lesson.ts): the step that is up, the level's block against its floor
   soloOfAddress(game, q);   // (host/standup.ts: the one question every host asks of an address) the plain night — off the loadout screen (?solo) or off the card's own Start —, or a quiet mission alone, and no squad scenario up: your own card on the plain night's player, and on every fresh one after a restart (game/kit.ts — one function, which the harness's shipped stand asks of a game stood up plain too: Start no longer hands him the eleven things the pouches rule took off every other Sam)
-  const openStartCard = !q.has('solo') && !game.nightBreach.active && !game.rescue.active && !game.quiet.active && !tape && !net;   // (?solo: the mission list's solo night — ui/missions.ts — is the plain night straight in)   // (opened below, once every hook is on window: that is the moment the card's buttons come alive and __ready resolves)
+  const openStartCard = !q.has('solo') && !game.nightBreach.active && !game.rescue.active && !game.quiet.active && !tape;   // (?solo: the mission list's solo night — ui/missions.ts — is the plain night straight in)   // (opened below, once every hook is on window: that is the moment the card's buttons come alive and __ready resolves)
 
   let last = performance.now(); let lastTs = -1, vsDt = -1; let timeAcc = 0; let fpsSm = 60; const pace = pacer(), rate = rateMeter(); let frameCount = 0; let unionSm = 0; let simSm = 0;
   const debugNames = ['final', 'albedo', 'normals', 'direct', 'indirect', 'volumetrics', 'depth', 'dice', 'lighting', 'denoise hints', 'specular', 'restir history', 'restir rays', 'denoise state', 'rt reflections', 'material', '(16: free)', 'rt raw'];   // (16 was the resampling gather's reservoirs; 17 = the reflection pass's output as fetched, before the cutoff fade)   // (specular = the glossy floors' reflection term + what the glass panes add, + the ray-traced reflections, composite debug view 10; rt reflections = the traced term alone, view 14; restir history / rays = views 11 / 12, restir.wgsl's diagnostics; 13 = the v3 shadow client's σ per class + history length)
@@ -638,7 +620,7 @@ async function main() {
   // __resetClock(): zero every per-frame counter that feeds jitter / seeds / flicker, snap the camera — so a scripted capture sequence
   // renders the same frames whatever ran during boot (pair with __pauseLoop)
   window.__resetClock = () => { engine.frameIdx = 0; engine.passes.resetClocks(); cam.distance = cam.desiredDistance; cam.target = v3.copy(game.followPos()); };
-  if (tape || net) automated = true;   // (a replay, a networked game: no attract reel under it)
+  if (tape) automated = true;   // (a replay: no attract reel under it)
   if (new URLSearchParams(location.search).has('paused')) { window.__pauseLoop = true; automated = true; }   // ?paused: nothing runs until a script steps it (deterministic captures from frame 0) — and attract mode never, even if the loop is let go later
   window.__timeScale = 1;
   if (new URLSearchParams(location.search).has('hud')) readout.set(true);
@@ -805,7 +787,6 @@ async function main() {
   // __fixedstep = the knobs + what the last frame ran and drew.
   { const n = Number(q.get('fixedstep')); if (n >= 30 && n <= 240) FIXEDSTEP.hz = n; }
   const tween = new Tween(engine);
-  const aheadDraw = net ? new AheadDraw(engine) : null;   // (a networked game: the player's own man drawn where his records take him, over the tween's blend — host/ahead.ts)
   let lastOfBurstNow = true;
   // Tab: a card of the objective in full and the squad over a held game, and back (ui/tabcard.ts).
   const tabEl = document.getElementById('tabcard'); let tabUp = false;
@@ -840,7 +821,6 @@ async function main() {
     updateMs: 0,
     fixedStep: () => !scripted,   // (the fixed 60 Hz game step, host/loop.ts FIXEDSTEP: live frames only — a script's __runFrames names its own dt and gets exactly that)
     betweenTicks: () => { engine.world.relist(); },   // (nothing is drawn between two ticks: the list the cursor's ray reads, not the pack — scene/boxes.ts relist)
-    ...(net ? { tick: (tdt: number, i: Input, c: FollowCamera, v: LoopCtx['view']) => net.tick(tdt, i, c, v), lead: () => net.lead() } : {}),   // (a networked game: the server's confirmed ticks step the game — net/page.ts)
     tween,
     vsyncDt: () => vsDt >= 0 ? vsDt : undefined,
     beforeTick: dt => handsTick(dt),
@@ -872,8 +852,7 @@ async function main() {
       const firstRender = !rendered;
       { const bc = document.body.classList; findMeOutline(engine.outline ??= makeOutlineFrame(), game, !bc.contains('attract') && !bc.contains('blinded')); }   // the outline in the dark (host/findme.ts → render/outline.ts): off unless his Options ask, and never where the HUD's own marks of him stand down
       const tR = performance.now();
-      if (aheadDraw) { const between = !tween.stale && tween.have > 1; aheadDraw.around(between ? tween.last.a : 1, between ? tween.drawn : null, () => engine.render(camR, t, dt, present)); }
-      else engine.render(camR, t, dt, present);
+      engine.render(camR, t, dt, present);
       perfrec.cpuRender = performance.now() - tR; framecap.frame(tR, perfrec.cpuRender);
       if (pics.wanted && present) pics.take();
       if (firstRender) {   // the boot timeline's last two marks: the first frame encoded + submitted (its CPU side, incl. every target's allocation), and the GPU through with it ('GPU ready')
@@ -885,7 +864,7 @@ async function main() {
   (window as any).__fixedstep = { knobs: FIXEDSTEP, tween: TWEEN, get ticks() { return loop.ticks ?? 0; }, get owed() { return loop.fixed?.acc ?? 0; }, get drew() { return tween.stale ? null : { ...tween.last, lag: tween.lag }; } };
   // the books of what this machine keeps of the runs played (ui/runBooks.ts), told as a run's try begins and as it ends, before its card is opened (postUpdate: the stealth game's card opens on the very
   // frame its run ends). `vRun` = the run they are of. Not a replay's, a networked game's (the server decides it, with another player in it) nor a benchmark's or a pricing run's
-  const vBooks = () => { if (tape || net || offBooks) return; const VD = game.verdict;
+  const vBooks = () => { if (tape || offBooks) return; const VD = game.verdict;
     if (VD.current !== vRun) { vRun = VD.current; books.anew(); }
     if (!books.due(VD.live && VD.started, !!VD.result)) return;
     const R = game.runView(); if (!R) return;
@@ -895,7 +874,7 @@ async function main() {
     lastOfBurstNow = lastOfBurst;
     stressTick(game);   // (?extra=N / the panel's stress row: the asked-for extra enemies stood again after a restart — a return on its first line while off)
     lookTidy(engine.world, game.destr.walls.skins.live && cutBoxesOn());   // (picture only: a dado / damp foot the default look laid on a wall goes with that wall when it is holed, WHOLE — scene/lookTidy.ts; it hides only where game/wallskin.ts is not in force (?wallskin=0, or the cut switch down), and rests where that rule cuts every wall's paint at the hole's edge)
-    if (tape) tape.frame(dt); else { stepFrame(loop, dt); if (net && loop.frozen()) net.rest(input, cam, canvas); }   // (a replay owns the frame: the tape's steps, then the picture — replay/engineplay.ts; a networked game goes on under a card that freezes this page — net/page.ts)
+    if (tape) tape.frame(dt); else stepFrame(loop, dt);   // (a replay owns the frame: the tape's steps, then the picture — replay/engineplay.ts)
     modelErrFrame();   // (?modelerr: a return on its first line otherwise)
     perfrec.cpuUpdate = loop.updateMs;
     vBooks();   // (the verdict's bookkeeping again, for a try that started this frame and an end no card followed)
@@ -943,8 +922,6 @@ async function main() {
   }
   // ---- READY: every hook above is on window. The real start card replaces the boot card (or the boot card goes, for a boot that opens no card: ?solo, a scenario, a replay), __ready resolves, the loop starts.
   tape?.attach({ game, canvas, cam, input, loop, engine: engine as never, smoke: smoke as never, audio, pre: () => { stressTick(game); lookTidy(engine.world, game.destr.walls.skins.live && cutBoxesOn()); }, tools: { wrote: () => rustGame.rustToolsWrote(), hold: () => rustGame.rustToolsHold() }, fingerprint: () => saveMod.levelFingerprint(game).fp });
-  net?.attach({ game, engine: engine as never, smoke: smoke as never, audio, loop, ahead: aheadDraw });
-  if (net) coopInvite(net, q);   // (a co-op game's host is shown the code and the link while the server waits for the second player: ui/coop.ts)
   if (tape) soundLanes(tape, audio);   // the replay page's sound lanes: what the mixer was asked for, laid under the timeline (replay/soundlanes.ts)
   boot.mark('hooks');
   // THE LOAD BRIEF stays up, the world held still behind it (`frozen` below), until the player starts the run — on a page a person sits at. A page a script
@@ -953,7 +930,7 @@ async function main() {
   // THE START WAITS FOR THE PICTURE (ui/startwait.ts). `__boot.marks.settled` is when it is over; a script that takes the page meanwhile drops the brief (briefHolds) and the wait with it.
   const briefSettle = (b: NonNullable<typeof brief>): void => startWaits(b, { drawn: () => behind.drawn, measuring: () => quality.calibrating, settling: on => { settling = on; }, settled: () => boot.mark('settled'), run: () => { audio.start(); input.focusGame(); } });
   // THE FIRST PLAYED FRAME IS AN ORDINARY ONE, ON EVERY ROAD STRAIGHT TO PLAY (a mission's card, a benchmark's address): the Rust game is started, its apply and its tick run once here, before the loop's first frame, and not where the first frame would pay for them (host/rustgame.ts rustWarm). Not behind the title (a pick is a page load, and an idle title's attract stages by name first), a show, a networked game's machine (it starts by its server's clock) or a replay (it stands from its tape). ?rustwarm=0: the first frame pays.
-  if (!openStartCard && !net && !tape && q.get('rustwarm') !== '0') rustGame?.rustWarm({ input, cam, canvas });
+  if (!openStartCard && !tape && q.get('rustwarm') !== '0') rustGame?.rustWarm({ input, cam, canvas });
   if (openStartCard) { brief?.off(); menu.open('start');
     if (missionsReopenAsked() && !startPage()) openStartPage();   // (ui/startpage.ts: the one page was put up by the boot card — `?loadout=` included; left on the list across a load: the page again)
   } else if (brief && briefGo) briefSettle(brief); else card.off();

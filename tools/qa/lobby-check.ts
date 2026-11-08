@@ -6,7 +6,7 @@
 //   the server    the REAL game server (tools/mp/server.ts), started by that runner for the game the lobby made
 //   words      a typed code (and the control plane's own letters for one), the mission's address as a game's setup, the addresses of the door and of the
 //              game, the refusals as the player is told them — also when a deployed backend keeps a refusal's words in its data
-//   settings   the host's difficulty is the server's: the recipe stood from a Hard address differs from a Standard one's in the tables Hard writes
+//   settings   the host's difficulty is the server's: a game stood for a Hard address is another than a Standard one's, and an address that names none is Standard
 //   host       one tab makes a game of a squad mission and comes through the door: it holds the first seat and is told its server's address; the server
 //              stood the mission with TWO seats and waits
 //   join       a second tab comes through the same door by the code: the second seat, its own key, the same server; the first tab again is the first seat
@@ -52,10 +52,11 @@ check(codeTyped(' bq-7zk w!x ') === 'BQZKW' && codeWhole('BQZKW') && !codeWhole(
 check(/^[a-z0-9]{40}$/.test(freshId()) && freshId() !== freshId() && Number.isInteger(freshSeed()) && freshSeed() >= 0 && freshSeed() <= 0xFFFFFFFF, 'a tab\'s id is one the control plane takes, and a new game\'s die one the server takes');
 
 console.log('settings');
-{ const recipe = async (search: string): Promise<{ tables: Record<string, unknown> } | null> => { const p = Bun.spawn(['bun', 'run', 'tools/mp/setup.ts', JSON.stringify({ search, seed: 7 })], { cwd: ROOT, stdout: 'pipe', stderr: 'ignore', env: process.env }); const l = (await new Response(p.stdout).text()).split('\n').find(x => x.startsWith('MPSETUP ')); return l ? JSON.parse(l.slice(8)) as never : null; };
-  const at = (d: string) => coopScenario(`?roomclear&difficulty=${d}`), [std, hard, bare] = await Promise.all([recipe(at('standard')), recipe(at('hard')), recipe(coopScenario('?roomclear'))]);
-  const moved = std && hard ? Object.keys(std.tables).filter(k => JSON.stringify(std.tables[k]) !== JSON.stringify(hard.tables[k])) : [];
-  check(!!std && !!hard && !!bare && moved.length > 0 && JSON.stringify(bare.tables) === JSON.stringify(std.tables), `the host's difficulty is the server's: a Hard address stands a recipe that differs from a Standard one's in ${moved.join(', ') || 'nothing'}, and an address that names none is Standard`); }
+{ const M = await import('../mp/stand.ts'), idle = { k: [], b: 0, m: [640, 360], s: [1280, 720, 1280, 720], v: [0, 0, 0, 0, 0.96, 21, 0.6, 16 / 9, 0] } as never;
+  // (the mission is the address without the difficulty's own word, so that two games differ by what the word does and not by its letters)
+  const game = async (said: string): Promise<string> => { const search = coopScenario(said), start = M.freshStart({ search, seed: 7 }), q = new URLSearchParams(search); q.delete('difficulty'); const G = await M.standStart({ ...start, words: '?' + q.toString() }); for (let i = 0; i < 30; i++) G.step([idle, idle]); return `${G.word()} ${G.watch()}`; };
+  const [std, hard, bare] = [await game('?roomclear&difficulty=standard'), await game('?roomclear&difficulty=hard'), await game('?roomclear')];
+  check(std === bare && hard !== std, `the host's difficulty is the server's: a Hard address stands another game than a Standard one (${hard} · ${std}), and an address that names none is Standard (${bare})`); }
 
 // ---- the flow: a stand-in backend, the real runner, the real server
 const S = standIn();

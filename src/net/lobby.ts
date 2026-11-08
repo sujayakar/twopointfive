@@ -1,17 +1,17 @@
-// THE LOBBY: how a page gets INTO a networked game (page.ts is the page once it is in one). No DOM and no game here: the words, the control plane's three
+// THE LOBBY: how a page gets INTO a networked game (host/drawnet.ts is the page once it is in one). No DOM and no game here: the words, the control plane's three
 // calls (cloud/convex/games.ts make · join · get) and the addresses. The screen is ui/coop.ts.
 //   A CO-OP GAME HAS ONE DOOR: `Lobby.seat(code)`. Its address is  /?join=<CODE>  (the link a friend opens; a game's address pasted into a tab that holds no
 //   seat comes through it too); the title's Host and Join go through the same call with no page load of their own. Whoever comes through it is given a seat
 //   by the control plane (`games:join`: the first free one, or the one this tab already holds), waits for the game's server to answer, and is sent on to the server's own
-//   address — `?net=…&netgame=…&netkey=…`, page.ts — with `join=<CODE>` still on it, so the page in the game can show the code and a reload finds the game.
+//   address — `?net=…&netgame=…&netkey=…`, door.ts — with `join=<CODE>` still on it, so the page in the game can show the code and a reload finds the game.
 //   WHO A SEAT'S HOLDER IS: the TAB (an id kept in sessionStorage). Two windows of one browser on one machine are two players, a tab loaded again is the same
 //   one. (The browser's own id — cloud/cloud.ts cloudPid — is one for every window of it: the second window would be handed the first one's seat.)
 //   WHAT THE HOST HANDS OVER (the setup record): the mission's own address as the starting page would load it — its level, hour, weather, way in and
-//   difficulty — with the team of four and two seats on it (`coopScenario`: each player brings two teammates, game/seats.ts dealSeats) and the levers this
+//   difficulty — with the team of four and two seats on it (`coopScenario`: each player brings two teammates) and the levers this
 //   machine keeps written out (the server keeps nothing: a lever the page would read back from its store has to ride on the address), and a fresh die.
-//   NOT CARRIED: the kit this machine keeps (both players play the kit as issued) and knob tables changed in the debugger.
+//   NOT CARRIED: the kit this machine keeps (both players play the kit as issued) and what is turned in the debugger.
 // THE SWITCH: COOP.on — on for a real page, `?coop=0` = the page as it was (no Co-op row on the title, a `?join=` on the address is not read). Nothing a tick
-// reads: a game is the server's recipe whatever this says.
+// reads: a game is the server's start whatever this says.
 import type { Wire } from '../cloud/wire';
 import { NETPLAY, NET_GAME, NET_KEY, NET_JOIN } from './address';
 import { bare } from '../scene/scenarioList';
@@ -46,14 +46,14 @@ export function coopScenario(search: string, kept: [string, string][] = []): str
 }
 /** THE DOOR'S ADDRESS, and the link to send: this page's own address with the code and nothing else of this visit's */
 export const joinLink = (origin: string, path: string, code: string): string => `${origin}${path}?${NET_JOIN}=${code}`;
-/** …and the address of the game's server for a tab that holds a seat (page.ts reads it): this visit's words, the server, the game's name, the seat's key */
+/** …and the address of the game's server for a tab that holds a seat (door.ts reads it): this visit's words, the server, the game's name, the seat's key */
 export function netSearch(now: URLSearchParams | string, v: Pick<GameView, 'address' | 'game' | 'seatKey' | 'code'>): string {
   const q = new URLSearchParams(now); q.set(NETPLAY, v.address); q.set(NET_GAME, v.game); q.set(NET_KEY, v.seatKey); q.set(NET_JOIN, v.code); return '?' + q.toString();
 }
 
 /** a fresh id for a seat's holder (40 characters off 160 bits of the browser's dice: the shape the control plane takes for a browser's id) */
 export function freshId(): string { const a = new Uint8Array(20); crypto.getRandomValues(a); let id = ''; for (const b of a) id += (b % 36).toString(36) + (b >> 4).toString(16); return id; }
-/** a die for a new game: a whole number the server takes (tools/mp/stand.ts: up to 4294967295) */
+/** a die for a new game: a whole number the server takes (start.ts: up to 4294967295) */
 export function freshSeed(): number { const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0]; }
 
 /** WHY NOT, as the player is told it. The control plane's refusals begin with a word (`full:` · `build:` · `code:`); anything else did not get there */

@@ -1,6 +1,5 @@
 // A GAME STOOD AS A RECIPE SAYS, ON THE PAGE. A recipe (format.ts RunTape.recipe; game/runtape.ts recipeOf) is a run's setup: the die, the page's address, the
-// journal's knobs and env, every other knob table, the kit cards. Two things stand this page's game from one: the engine replay (engineplay.ts, a saved run's
-// tape) and a networked game's client (src/net/page.ts, the recipe its server made) — a networked game is a run tape written live. The page is first sent to the
+// journal's knobs and env, every other knob table, the kit cards. The engine replay stands its page's game from one (engineplay.ts, a saved run's tape). The page is first sent to the
 // recipe's own address with its seed, so the boot is that run's boot; then, through that boot, main.ts asks this file to lay the recipe over whatever this
 // machine keeps: `tables` before the level is loaded, before and after the game is stood and round the mission's staging (each a plain overwrite), `env` before
 // the game is built and before every step, `stood` once the game exists, `tune` at the first step. tools/qa/rerun.ts does the same headless: keep the two in step.
@@ -59,7 +58,7 @@ export class RecipeStand {
     if (!!g.tune.civilians !== civ) resetCivilians(g);   // (the game was built on this machine's kept switch: the floor's civilians are the recipe's switch's)
     g.saves.store = memoryStore();   // (such a run's autosaves are its own: this browser's checkpoints are not written over)
   }
-  /** the recipe's sandbox flags over the game's: before every step of a host whose page could have flipped one since (net/page.ts) */
+  /** the recipe's sandbox flags over the game's: before every step */
   flags(g: Game): void { const fl = (this.recipe.knobs as { flags?: Plain } | null)?.flags; if (fl) layFlags(g, fl); }
   /** the recipe's tune over the game's, at the first step: the last word over what the boot wrote after the staging (this machine's sandbox row, its kept feel rows) */
   tune(g: Game): void { const kn = this.recipe.knobs as { tune?: Plain } | null; if (kn?.tune) K.assignDeep(g.tune as never, kn.tune); }
