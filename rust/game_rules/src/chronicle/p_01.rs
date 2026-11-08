@@ -525,15 +525,19 @@ pub fn chron_key(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::chroni
 
 /// A man put down by the player's hand: shot dead ('kill') or out cold ('ko').   (chronicle.ts chronDown)
 pub fn chron_down(g: &mut crate::game::Game, gd: GuardId, how: crate::game::DownKind, line: Option<&str>) -> Option<crate::chronicle::ChronEvent> {
+    chron_down_by(g, gd, how, line, None)
+}
+
+/// `chron_down`, with what did it when that is not the gun in the hand.
+pub fn chron_down_by(g: &mut crate::game::Game, gd: GuardId, how: crate::game::DownKind, line: Option<&str>, by: Option<&str>) -> Option<crate::chronicle::ChronEvent> {
     use crate::game::DownKind;
     let l = line.unwrap_or("");
     let callsign = man_callsign(g, gd);
     let p = man_pos(g, gd);
     if how == DownKind::Shot {
+        if let Some(w) = by { return live_row(g, ChronKind::Kill, row_data(vec![("who", tx(&callsign)), ("weapon", tx(w)), ("blast", yes(true))]), Some(p)); }
         let weapon = if l.starts_with("knife") {
             String::from("knife")
-        } else if l.ends_with("at the charge when it went") {
-            String::from("a wall charge")
         } else {
             let man = crate::seats::man_here(g, &crate::seats::here(g));
             match crate::game::player_gun_in_hand(g, man) {
