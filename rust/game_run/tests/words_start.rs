@@ -15,7 +15,7 @@ fn a_start_stands_with_what_its_address_says() {
     let level = files::level_text("depot.json");
     let stand = |words: &str| {
         let link = format!("?levelFile=depot.json&roomclear&squad4{words}");
-        let b = pack(&[level.as_bytes(), link.as_bytes(), a.mannequin.text.as_bytes(), a.mannequin.bin.unwrap(), a.cast.map_or(&b""[..], |c| c.text.as_bytes()), a.cast_look.map_or(&b""[..], |c| c.text.as_bytes()), b"", b""]);
+        let b = pack(&[level.as_bytes(), link.as_bytes(), a.mannequin.text.as_bytes(), a.mannequin.bin.unwrap(), a.cast.map_or(&b""[..], |c| c.text.as_bytes()), a.cast_look.map_or(&b""[..], |c| c.text.as_bytes()), b""]);
         stand_handed(&b, &StartOpts { seed: 1, slot: 1, ..Default::default() }, &mut |g, w, c| game_run::words::at_start(g, w, c).unwrap())
     };
     let plain = stand("");

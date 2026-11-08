@@ -122,7 +122,7 @@ and `cargo test`'s threads take turns. A test that stands a second game drops th
 | collision, the walk grid, sound paths, fixtures, doors, guards, civilians, orders, the fog, the room fight, every module | **the game's own constructor, `game_new`** (`rust/game/src/game/p_04.rs`), which had never run before this crate |
 | the moving state at home in the block | `settle` (the die, the pose pool, the smoke grid) |
 | the host's Input and camera | the game's `input_detached`, `FollowCamera`, `follow_camera_rebuild` |
-| the address's words, where one is handed (`StartOpts.link`), BEFORE the game is made | the game's `address_before_game`: the row's own hour and weather onto the words, the weather the game is born in, the visit's hour (`src/host/standup.ts addressBeforeGame`); then `difficulty_of_address`, the difficulty it asks for (`&hard`, `&difficulty=`, the levers, `&digin`, `&pressure`, `&fogcone`), on this game's own knob tables, unless `StartOpts.difficulty` is false: a host that handed its knob tables (`stand_handed`, part 6) has read its address onto them itself (`src/host/standup.ts difficultyOfAddress`) |
+| the address's words, where one is handed (`StartOpts.link`), BEFORE the game is made | the game's `address_before_game`: the row's own hour and weather onto the words, the weather the game is born in, the visit's hour (`src/host/standup.ts addressBeforeGame`); then `difficulty_of_address`, the difficulty it asks for (`&hard`, `&difficulty=`, the levers, `&digin`, `&pressure`, `&fogcone`), on this game's own knob tables, unless `StartOpts.difficulty` is false: a host that handed commands (`stand_handed`) has read its address onto them itself (`src/host/standup.ts difficultyOfAddress`) |
 | a mission, where asked | the game's `start_scenario`; or, from an address, `start_at_address`: `start_from_query` on its words, then the solo card's question, as a click on a row of the mission list starts it on a page |
 
 `frame(g, host, dt)` is one frame of that host: the game's `game_update` on the host's Input and camera, the camera after the man, the lights'
@@ -197,7 +197,7 @@ that the picture, the sound, the HUD and the menus read (`src/host/rustgame.ts`,
     itself refuses for two). Nobody at the second seat's controls, no server, no rollback here.
 11. **The module.** DONE AS FAR AS THE START ITSELF. The page's module carries this crate (`rust/game_face` links it without its `std`
     feature), and `face_start` stands a game inside the module from one run of handed bytes (`src/handed.rs`: the level file's text, the
-    address's words, the character's files, the host's knob tables). `tools/blitz/start-module.ts` holds the game the module starts to the
+    address's words, the character's files, the host's commands). `tools/blitz/start-module.ts` holds the game the module starts to the
     game the native start makes, mission by mission ("The module's start", below). Nothing plays a game started that way yet: item 13.
 12. **A MISSION'S TEAM NUMBERS BELONG ON THE GAME, AND THE RUST START IS WHERE THAT LANDS.** Today they are written into the process's knob
     tables, so a game whose start does not write a table finds it as the last mission left it: the one thing a second start in one process
@@ -287,9 +287,8 @@ above.
 
 The page's module can start a game itself. `face_start(p, n, slot, seed, seats, flags)` (`rust/game_face/src/page.rs`) runs `stand` inside the
 module on what the host hands in one run of bytes (`src/handed.rs` reads it, `tools/blitz/start-pack.ts` writes it): the level file's text,
-the address's words, the mannequin's gltf and buffer, the two casts' gltf, and the host's knob tables as the bridge writes them (empty: the
-page's own). The knob tables are laid on the blank game before the start reads its first knob (`stand_with`), as they stand when the
-TypeScript stands a game. `slot` below 0 = a free slot of rust/sim; `flags`: 1 = the rows that dress the picture are up, 2 = the game works
+the address's words, the mannequin's gltf and buffer, the two casts' gltf, and the host's commands (what it does to the blank game
+before the start reads its first knob: `stand_with`). `slot` below 0 = a free slot of rust/sim; `flags`: 1 = the rows that dress the picture are up, 2 = the game works
 its senses out itself.
 
 ```sh

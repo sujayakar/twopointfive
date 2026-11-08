@@ -6,12 +6,10 @@
 use crate::gltf::GltfFile;
 use crate::json;
 use crate::stand::{stand_with, Assets, StartOpts, Stood};
-use game::io::Io;
 use alloc::{format, string::String, vec::Vec};
 
 /// the parts a host hands, in order (a host's packer names them by these places)
-pub const PARTS: [&str; 8] = ["the level file's text", "the address's words (empty: none)", "the mannequin's gltf", "the mannequin's buffer", "the cast's gltf (empty: none)", "the look's cast's gltf (empty: none)",
-    "the knob tables as the host has them (the bridge's bytes of the game's knobs; empty: the page's own)",
+pub const PARTS: [&str; 7] = ["the level file's text", "the address's words (empty: none)", "the mannequin's gltf", "the mannequin's buffer", "the cast's gltf (empty: none)", "the look's cast's gltf (empty: none)",
     "what the host does to the game before it is made (its commands; empty: nothing)"];
 
 /// the parts of a handed run of bytes; an error says what is wrong with the bytes
@@ -38,18 +36,8 @@ pub fn stand_handed(b: &[u8], o: &StartOpts, host: &mut dyn FnMut(&mut game::gam
     let data = json::parse(text(0)).unwrap_or_else(|e| panic!("{}: {}", PARTS[0], e));
     let assets = Assets { mannequin: GltfFile { text: text(2), bin: Some(p[3]) }, cast: some(4), cast_look: some(5) };
     let link = if p[1].is_empty() { None } else { Some(String::from(text(1))) };
-    // (the knob tables are read whole or not at all: bytes left over are another layout's, and a game stood on half-read knobs is no host's game)
-    // (a host that handed its knob tables, or the commands that wrote them, read its address onto them itself, with whatever it keeps, so the address's difficulty is not laid
-    //  over them; one that handed neither has not)
-    stand_with(&data, assets, &StartOpts { link, difficulty: p[6].is_empty() && p[7].is_empty(), ..o.clone() }, &mut |g| {
-        if !p[6].is_empty() {
-            let mut r = game::io::R::new(p[6]);
-            g.k.ri(&mut r);   // (read over the page's own: a row the bridge does not carry stays the page's)
-            assert!(r.p == p[6].len(), "{}: {} bytes were handed and the knob tables are {}", PARTS[6], p[6].len(), r.p);
-        }
-        // (the commands after them: a table read whole would take back what one wrote)
-        host(g, text(1), p[7]);
-    })
+    // (a host that handed commands read its address onto the game by them, with whatever it keeps, so the address's difficulty is not laid over them; one that handed none has not)
+    stand_with(&data, assets, &StartOpts { link, difficulty: p[6].is_empty(), ..o.clone() }, &mut |g| host(g, text(1), p[6]))
 }
 
 #[cfg(test)]
@@ -58,8 +46,8 @@ mod tests {
     fn pack(parts: &[&[u8]]) -> Vec<u8> { let mut b = (parts.len() as u32).to_le_bytes().to_vec(); for p in parts { b.extend((p.len() as u32).to_le_bytes()); b.extend(*p); } b }
     #[test]
     fn the_parts_come_back_as_handed_and_bytes_that_are_not_a_starts_are_refused() {
-        let b = pack(&[b"{}", b"", b"m", &[1, 2, 3], b"", b"look", b"k", b"c"]);
-        assert_eq!(parts(&b).unwrap(), [&b"{}"[..], b"", b"m", &[1, 2, 3], b"", b"look", b"k", b"c"]);
+        let b = pack(&[b"{}", b"", b"m", &[1, 2, 3], b"", b"look", b"c"]);
+        assert_eq!(parts(&b).unwrap(), [&b"{}"[..], b"", b"m", &[1, 2, 3], b"", b"look", b"c"]);
         assert!(parts(&pack(&[b"{}", b""])).unwrap_err().contains("2 parts"));
         assert!(parts(&b[..b.len() - 1]).unwrap_err().contains("what the host does"));
         let mut more = b.clone(); more.push(0);

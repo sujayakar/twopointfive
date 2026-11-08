@@ -19,7 +19,6 @@
 //!   face_new(state, n, block, bn) -> h        a game from a start: the bridge's bytes (`io::import`) and rust/sim's block as the start was taken, copied
 //!                                             into the first free slot. 0 where every slot is taken.
 //!   face_lesson(h, p, n)                      a tutorial mission's tests (tools/blitz lesson.json), which the bridge does not carry: once, after face_new
-//!   face_blank() -> h                         a game as its field initialisers leave it (no level): proves the module stands
 //!   face_drop(h)                              the game and its slot are free again
 //!   face_slot(h) -> slot                      which of rust/sim's slots the game stands in (`state_addr(slot)` is its block)
 //!   face_import_into(h, p, n)                 the bridge's bytes over a game that stands: what the walk does not carry stays as that game has it
@@ -333,16 +332,6 @@ pub unsafe extern "C" fn face_new(state: *const u8, n: usize, block: *const u8, 
     put(Held::new(g))
 }
 #[no_mangle]
-pub extern "C" fn face_blank() -> u32 {
-    hook();
-    let Some(slot) = free_slot() else { return 0 };
-    let mut g = Box::new(Game::blank());
-    g.sim = slot;
-    // (a block with nothing in it is zeros under the layout's word: whatever game stood in the slot before is gone)
-    sim::state::put(slot, &[]);
-    put(Held::new(g))
-}
-#[no_mangle]
 pub extern "C" fn face_drop(h: u32) {
     page::shelf_off(h, |_| true);
     moment::off(h);
@@ -514,11 +503,6 @@ pub unsafe extern "C" fn face_checkpoint(h: u32, p: *const u8, n: usize) {
 pub extern "C" fn face_export(h: u32) {
     let b = with(h, |x| { page::serial_seen(x.g.serial_next); game::io::export(&x.g) });
     out(b);
-}
-/// how many out events the game holds (`g.out`: what the rules of the steps since the last clear told the host)
-#[no_mangle]
-pub extern "C" fn face_out_n(h: u32) -> usize {
-    with(h, |x| x.g.out.len())
 }
 /// the host has taken (or does not want) the out events: the list is a step's output and no part of the state, so nothing else empties it
 #[no_mangle]
