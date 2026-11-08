@@ -32,7 +32,6 @@
 import './seats';
 import { clamp, type Vec3 } from '../math/vec';
 import type { Game } from './game';
-import type { AutoPick } from './autopilot';
 import './guards';   // (asked inside a call only)
 import { crossToRust, goneWithTick } from './crossing';
 
@@ -77,16 +76,6 @@ export class SquadNet {
   tick(): void { return crossToRust('SquadNet.tick', this, []) as any; }
 }
 
-/** what a quick-key pick that is not a plain open adds: the end of the quick key's row, and the line the man who answers says in place of the row's own
- *  (null: the plain thing, the switch off, or nothing a door's entry) */
-export function whyWords(P: AutoPick): { row: string; ack: string } | null {
-  if (!SQUADNET.why || P.word || P.t.kind !== 'door') return null;
-  if (P.id === 'bangClear' && P.why === 'contact') return { row: 'they see one inside', ack: 'banging it. i see one in there.' };
-  if (P.id === 'bangClear' && P.why === 'unknown') return { row: "nobody's been in there", ack: "banging it. nobody's been in there." };
-  if (P.id === 'charge' && P.why === 'shut') return { row: "they can't open it", ack: "we can't open it. setting a charge." };
-  if (P.id === 'openClear' && P.kept) return { row: "they're saving the last bang", ack: "going in. i'm saving the last bang." };
-  return null;
-}
 
 /** the call a lead makes when an entry is over (doortools.ts): `left` = floor of the room its search was cut short of (0 where it ended by its own bar, and
  *  where the entry had no search of its own: open floor), `inside` = a living enemy stands in the room, `seen` = one of them the team has in sight. Null:

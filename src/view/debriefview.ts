@@ -23,7 +23,6 @@ export interface Debrief { counts: RunCounts; score: number; lines: ScoreLine[];
 /** One row of the timeline. `down`: the floor's alarm going down (such a row carries no pin) */
 export interface DebriefRow { t: number; kind: string; room: string; pos: Vec3; text: string; down: boolean; }
 /** a room of the floor map: `label` is what is drawn on it, `name` what the tooltip says */
-export interface DebriefRoom { name: string; label: string; x0: number; x1: number; z0: number; z1: number; }
 
 /** round = a round that landed on him (or one whose line he stood in: a hostage shot by her captor) · blast = a fragmentation burst · other = the game names
  *  who, not how · unknown = neither */
@@ -52,7 +51,7 @@ export interface RecapTake { death: RecapDeath; t0: number; t1: number; cast: Re
 export interface DeathRecap { takes: RecapTake[]; /** the take the card opens on: the last player to go down, else the last of ours */ main: number; }
 export const MAN_STRIDE = 5;
 
-export interface DebriefView { debrief: Debrief; rows: DebriefRow[]; /** rows the timeline's caps refused */ dropped: number; /** x, z, t a point */ path: ArrayLike<number>; rooms: DebriefRoom[]; /** nothing while anybody still plays, or nobody of ours went down */ recap?: DeathRecap | null; }
+export interface DebriefView { debrief: Debrief; rows: DebriefRow[]; /** rows the timeline's caps refused */ dropped: number; /** x, z, t a point */ path: ArrayLike<number>; /** nothing while anybody still plays, or nobody of ours went down */ recap?: DeathRecap | null; }
 
 /** what a game no host steps is told */
-export const NO_DEBRIEF: DebriefView = { debrief: { counts: { elapsed: 0, stage: 'infiltrate', done: false, failed: false, sandbox: false, blackout: false, seen: 0, seenUp: 0, alarms: 0, esc1: 0, esc2: 0, bodies: 0, kills: 0, kos: 0, shots: 0, shotsNearMen: 0, lightsShot: 0, ocps: 0, kicked: 0, picked: 0, keys: 0, intel: 0, questioned: 0, roster: 0, hits: 0, down: false, loads: 0, thrown: 0, grabs: 0, dropped: 0, devices: 0, civSeen: 0, civReported: 0, civComplied: 0, civKo: 0, civKilled: 0 }, score: 100, lines: [], rating: '', blurb: '', badges: [], summary: '', state: 'sofar', scored: false, grade: '' }, rows: [], dropped: 0, path: [], rooms: [], recap: null };
+export const NO_DEBRIEF: DebriefView = { debrief: { counts: { elapsed: 0, stage: 'infiltrate', done: false, failed: false, sandbox: false, blackout: false, seen: 0, seenUp: 0, alarms: 0, esc1: 0, esc2: 0, bodies: 0, kills: 0, kos: 0, shots: 0, shotsNearMen: 0, lightsShot: 0, ocps: 0, kicked: 0, picked: 0, keys: 0, intel: 0, questioned: 0, roster: 0, hits: 0, down: false, loads: 0, thrown: 0, grabs: 0, dropped: 0, devices: 0, civSeen: 0, civReported: 0, civComplied: 0, civKo: 0, civKilled: 0 }, score: 100, lines: [], rating: '', blurb: '', badges: [], summary: '', state: 'sofar', scored: false, grade: '' }, rows: [], dropped: 0, path: [], recap: null };

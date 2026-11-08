@@ -118,14 +118,6 @@ pub fn setup_view(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option
     Some(crate::view::KitSetup { rows, back: String::from("TAB") })
 }
 
-/// the keys the setup would take if pressed now: the gun in his hands' own digit and, while it is open, its rows' (slotsetup.ts slotSetupTakes)
-pub fn setup_takes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<String> {
-    let Some(gun) = setup_gun(g, seat.player) else { return Vec::new() };
-    let mut keys = vec![digit_code(slot_digit(gun))];
-    if slot_setup_open(g, seat) { keys.extend(setup_rows(g, seat.player, gun).iter().map(|r| digit_code(r.key as i32))); }
-    keys
-}
-
 /// Esc with the back key's rule off: shut it, and say whether there was one to shut (slotsetup.ts slotSetupShut)
 pub fn slot_setup_shut(g: &mut crate::game::Game) -> bool {
     if !slot_setup_open(g, &crate::seats::here(g)) {
