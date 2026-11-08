@@ -7,8 +7,6 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Debug)]
 pub enum OrderLabel {
     Text { text: String },
-    ThrowRow { kind: crate::squadthrow::SquadThrowKind },
-    ThrowOpen,
     PairGo,
     /// an order written as a module (orders/rows/): its own function
     Row(&'static crate::orders::Row),
@@ -25,7 +23,6 @@ pub enum OrderCan {
 /// OrderDef.only: the men among those addressed this order is for. The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
 #[derive(Clone, Debug)]
 pub enum OrderOnly {
-    ThrowRow { kind: crate::squadthrow::SquadThrowKind },
     PairTake,
     PairGo,
     /// an order written as a module (orders/rows/): its own function
@@ -34,7 +31,6 @@ pub enum OrderOnly {
 /// OrderDef.valid: these men together can carry it out here (true), or not (false, or the word for why). The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
 #[derive(Clone, Debug)]
 pub enum OrderValid {
-    ThrowRow { kind: crate::squadthrow::SquadThrowKind },
     PairTake,
     PairWatch,
     PairGo,
@@ -45,7 +41,6 @@ pub enum OrderValid {
 #[derive(Clone, Debug)]
 pub enum OrderIssue {
     Nothing,
-    ThrowRow { kind: crate::squadthrow::SquadThrowKind },
     PairTake { mode: crate::pairorders::JobMode },
     PairWatch,
     PairDark,
@@ -56,7 +51,6 @@ pub enum OrderIssue {
 /// OrderDef.tick: once a frame for each man under the order, before he is posed. The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
 #[derive(Clone, Copy, Debug)]
 pub enum OrderTick {
-    ThrowRow,
     PairTake,
     PairWatch,
     PairDark,
