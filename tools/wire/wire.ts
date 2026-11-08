@@ -21,7 +21,7 @@
 //   bun run tools/wire/wire.ts add-mix <Mix> <Id>,<Id>                              an ID of either of two tables: one number on the wire, the page's book answers it (io.rs writes the number by hand)
 //   bun run tools/wire/wire.ts retype <mod::Type.field>=<type>...                   fields that now hold another type: the bytes they write are their type's
 //   bun run tools/wire/wire.ts retype-call <row id>:<type>=<type>...                a row of the call surface whose argument or answer holds another type now
-//   tools/blitz/rust.sh rust bun run tools/wire/cost.ts [address]                   what a tick's export and apply cost now, on the page's list
+//   TPS_GAME=rust bun run tools/wire/cost.ts [address]                   what a tick's export and apply cost now, on the page's list
 // An enum arm needs nothing: an arm the table does not know goes out as the tag 0xffff, and the page keeps what it had.
 import { nullTable } from './nulls';
 import { execFileSync } from 'node:child_process';

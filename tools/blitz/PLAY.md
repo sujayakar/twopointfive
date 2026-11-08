@@ -5,27 +5,14 @@ game that steps**: `Game.update`'s own lines run as they are (the record sampled
 it the Rust game's state is applied onto the TypeScript objects in place. Whatever reads the game (the scripted player of tools/qa, a tally, a probe)
 reads what the Rust game holds, and what it presses goes to the Rust game as the tick's record. `stepSeats`' body never runs.
 
-```sh
-tools/blitz/play.sh room-clear-four:1                  # the plain TypeScript play first (the reference), the face built, then the play, every tick compared
-tools/blitz/play.sh <mission>:<seed> --no-build -- --audit --ticks 600
-bun run --preload ./tools/blitz/expose.ts tools/blitz/play.ts <mission>:<seed> --ref DIR [--out DIR] [--ticks N] [--audit] [--whole-every N] [--stale N] [--go-on] [--quiet]
-tools/blitz/rust.sh rust bun run tools/qa/playthrough.ts --scn depot-four --seeds 1-4 --json rust.json     # any headless tool, on the Rust game
-```
+**THE TOOLS THAT PLAYED MISSIONS ON THIS HOST WENT ON 2026-11-08** (`play.ts`, `play.sh`, `rust.sh`, `thrice.ts`, the play-through and the tallies): what a build is held to is `gate` (`rust/game_start/README.md`). This host stays for the tools that still stand it, until they go. Every command and number below that names one of those is the record of what was done with it, and cannot be run.
 
 | file | |
 |---|---|
 | `rust-host.ts` | the host: the module, a game's start, the step, the two applies, the driver's calls, the out events, the dress step. `RustHost.attach(game, opts)` |
-| `play.ts` | a mission stood as `tools/qa/playthrough.ts` stands it (a tutorial: `lesson-run.ts`), played on the host, HELD TO THE PLAIN TYPESCRIPT PLAY every tick |
 | `audit.ts` | the walks that compare two whole states field by field (the audit's, and `--stale`'s) |
-| `rust.sh` | the harness's word and the bridge's preload in front of any command |
-| `tally-diff.ts` | two `playthrough.ts --json` files side by side, a run a row |
-| `thrice.ts` | one fight stood N times in one process, every game held to the first (the digest a second; `--ticks`, `--dump` to find where two part) |
-| `qa-sweep.py` | every family of probes.ts three ways, a probe a row: the table's `sweep` rows and its Rust-only reds by kind |
 | `word.ts` | THE ONE SWITCH: the word asked for (`TPS_GAME`, else `DEFAULT_WORD`), the table, a frozen run, the closing line. No import of src |
 | `preload.ts` | bunfig.toml's preload: nothing unless the word asks; then the bridge's window (`expose.ts`) and the top process's closing line |
-| `qa-kinds.json` | the table `TPS_GAME=table` reads |
-| `table-check.ts` | the table held to `probes.ts list` (by hand): red on a name the table lacks or a row probes.ts lost |
-| `die-check.ts` | the game's die seeded after the stand, the helper and the plain site, a line a word |
 | `rust/game_face/src/harness.rs` | the face's exports a host that plays needs: the filtered export with its memo, the camera's ask, a flooded room, the program stopped before a take |
 
 ## Since cut 7.10: what a tool does to the game between two ticks, and how it reaches the Rust game
@@ -129,7 +116,7 @@ an object).
 
 ## The harness's word
 
-`TPS_GAME` in front of any headless tool run from the repository's root (`tools/blitz/rust.sh <word> <command>` is the same thing from anywhere). The
+`TPS_GAME` in front of any headless tool run from the repository's root. The
 bridge's preload is listed in bunfig.toml and does nothing unless the word asks (below), so the word alone is enough, for the tool and every child `bun`
 it starts in the root. ONE FILE decides which game a `standUp` stands: tools/blitz/word.ts.
 
