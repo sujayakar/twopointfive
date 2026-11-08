@@ -1,12 +1,10 @@
 // The 'breach' family, run through probes.ts — what is left of it since the daytime breach SHOWCASE was removed (its breach-run / breach-restore / breach-tour went
-// with the show; the daylight variant and the room-clearing doctrine it staged are the game's and stay checked):
-//   bun run tools/qa/probes.ts breach | breach-daylight | clear-doctrine
+// with the show; the daylight variant it staged is the game's and stays checked):
+//   bun run tools/qa/probes.ts breach | breach-daylight
 // PASS / FAIL each, all headless:
 //   breach-daylight   setDaylight(true) then (false) leaves the light list (name, kind, enabled, intensity, colour, dir) and the frame's sky / haze bit for bit as
 //                     they were; while it is day: a 'sun' of kind 2 is in the set and lit, the moon and every street lamp are out, every listed group is on, and
 //                     the level's blackout (thrown first) is over
-//   clear-doctrine    the guards' own two-man RoomClear (squad.ts) keeps battle drill six: the kicker off the funnel, #2 a beat behind, centre then his corner,
-//                     #2 on the next door
 import { standUp, ROOT } from './headless.ts';
 const { setDaylight } = await import(`${ROOT}/src/game/lighting.ts`);
 
