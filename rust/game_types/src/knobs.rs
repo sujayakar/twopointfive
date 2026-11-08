@@ -3158,55 +3158,6 @@ impl StalkK {
 }
 impl Default for StalkK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/tapstep.ts:28 TAPSTEP, src/game/tapstep.ts:28)
-#[derive(Clone, Copy, Debug)]
-pub struct TapstepK {
-    pub on: bool,
-    pub tap_m: f64,
-    pub beat_m: f64,
-    pub reach_m: f64,
-    pub secs: f64,
-    pub rushed: f64,
-    pub settle: f64,
-    pub beat: f64,
-    pub quiet: f64,
-    pub scuff: f64,
-    pub mask_secs: f64,
-    pub mask_m: f64,
-    pub mask: f64,
-    pub land_m: f64,
-    pub land_cos: f64,
-    pub follow: f64,
-    pub turn: f64,
-    pub legs: f64,
-}
-impl TapstepK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TapstepK {
-            on: false,
-            tap_m: 0.0,
-            beat_m: 0.0,
-            reach_m: 0.0,
-            secs: 0.0,
-            rushed: 0.0,
-            settle: 0.0,
-            beat: 0.0,
-            quiet: 0.0,
-            scuff: 0.0,
-            mask_secs: 0.0,
-            mask_m: 0.0,
-            mask: 0.0,
-            land_m: 0.0,
-            land_cos: 0.0,
-            follow: 0.0,
-            turn: 0.0,
-            legs: 0.0,
-        }
-    }
-}
-impl Default for TapstepK { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/game/devices.ts:56 OVERHEAR, src/game/devices.ts:56)
 #[derive(Clone, Copy, Debug)]
 pub struct OverhearK {
@@ -12976,10 +12927,6 @@ pub fn page_stalk() -> StalkK {
     crate::knobs::StalkK { on: true, only: true, cursor_m: 1.1, begin_cos: -0.25, out_cos: -0.05, station_m: 0.55, grab_m: 0.95, pace: 1.6, close_min: 0.3, close_k: 0.6, ease_up: 4.0, ease_down: 9.0, tell: true, reach_from: 2.9, reach: 1.0, rise_from: 2.3, rise_by: 1.05, rise: 0.7, catch_secs: 0.3, catch_m: 0.75, catch_long: 1.1, turn_in: true, catch_stride: 1.5, yank: 0.28, yank_room: 0.4, yank_with: true, corner: true, corner_m: 1.35, corner_deg: 110.0, jolt: 0.6, jolt_face: 50.0, jolt_secs: 0.6, jolt_at_once: false, corner_show: true, corner_see: 3.2, corner_reach: [0.25, 0.55], corner_coil: 0.3, corner_rise: 0.24, key: true, key_m: 0.8, low: true, low_from: 2.6, low_by: 1.1, low_k: 0.35, low_drop: 0.06, low_back: 0.03, low_lean: 6.0, low_hands: 1.0, low_spring: 18.0, low_wind: 0.12, wide: true, wide_out: 0.1, wide_down: 0.32, wide_fwd: 0.24, wide_lead: 0.07, wide_by: 0.35, wide_pole: [0.45, 0.15, -0.88], heft: true, heft_twist: 20.0, heft_swing: 0.11, heft_side: 0.04, heft_lean: 4.0, heft_dip: 0.02, heft_surge: 1.0, heft_out: 0.18, heft_down: 0.4, heft_fwd: -0.2, heft_lead: 0.0, heft_pole: [0.6, 0.0, -0.8], drag: false, drag_dead: 14.0, drag_full: 140.0, orbit: true, orbit_k: 3.0, orbit_edge: 0.05, orbit_snap: 0.3, low_begin_m: 4.2, low_out_m: 5.0 }
 }
 
-pub fn page_tapstep() -> TapstepK {
-    crate::knobs::TapstepK { on: false, tap_m: 0.28, beat_m: 0.45, reach_m: 0.65, secs: 0.75, rushed: 0.35, settle: 0.08, beat: 0.16, quiet: 0.08, scuff: 0.4, mask_secs: 0.16, mask_m: 7.0, mask: 0.3, land_m: 0.95, land_cos: 0.8, follow: 0.6, turn: 10.0, legs: 14.0 }
-}
-
 pub fn page_overhear() -> OverhearK {
     crate::knobs::OverhearK { path_m: 9.0, carry: 0.5 }
 }
@@ -13832,7 +13779,6 @@ pub struct Knobs {
     pub dash: DashK,
     pub watch: WatchK,
     pub stalk: StalkK,
-    pub tapstep: TapstepK,
     pub overhear: OverhearK,
     pub score: ScoreK,
     pub badge: BadgeK,
@@ -14076,7 +14022,6 @@ impl Knobs {
             dash: page_dash(),
             watch: page_watch(),
             stalk: page_stalk(),
-            tapstep: page_tapstep(),
             overhear: page_overhear(),
             score: page_score(),
             badge: page_badge(),

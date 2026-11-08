@@ -306,7 +306,6 @@ pub use game_rules::suppression;
 pub use game_rules::tactics;
 pub use game_rules::takecheck;
 pub use game_rules::takedown;
-pub use game_rules::tapstep;
 pub use game_rules::teamfeel;
 pub use game_rules::teampace;
 pub use game_rules::teams;

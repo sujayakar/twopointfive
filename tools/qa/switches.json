@@ -81,7 +81,6 @@
     {"row":"STALK.heft","page":true,"kind":"settled"},
     {"row":"STALK.drag","page":false,"kind":"settled"},
     {"row":"STALK.orbit","page":true,"kind":"settled"},
-    {"row":"TAPSTEP.on","page":false,"kind":"settled"},
     {"row":"FOG.desat","page":0,"kind":"settled"},
     {"row":"FOG.cone","page":false,"kind":"player's or run-time"},
     {"row":"FOG.own","page":false,"kind":"player's or run-time"},

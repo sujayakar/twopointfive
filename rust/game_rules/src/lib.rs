@@ -306,7 +306,6 @@ pub mod suppression;
 pub mod tactics;
 pub mod takecheck;
 pub mod takedown;
-pub mod tapstep;
 pub mod teamfeel;
 pub mod teampace;
 pub mod teams;

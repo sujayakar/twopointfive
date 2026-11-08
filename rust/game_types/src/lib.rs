@@ -335,7 +335,6 @@ pub mod suppression { pub mod types; pub use types::*; }
 pub mod tactics { pub mod types; pub use types::*; }
 pub mod takecheck { pub mod types; pub use types::*; }
 pub mod takedown { pub mod types; pub use types::*; }
-pub mod tapstep { pub mod types; pub use types::*; }
 pub mod teamfeel { pub mod types; pub use types::*; }
 pub mod teampace { pub mod types; pub use types::*; }
 pub mod teams { pub mod types; pub use types::*; }
