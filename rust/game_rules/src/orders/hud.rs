@@ -28,7 +28,14 @@ pub fn squad_view(g: &Game, seat: &SeatRef) -> Option<SquadView> {
         picked,
         mates,
         notes,
+        quick: quick_note(g, seat),
     })
+}
+/// the quick key's line on the block: what the tick keeps, and nothing where the mission has not taught the key
+fn quick_note(g: &Game, seat: &SeatRef) -> Option<Note> {
+    let text = seat.orders.shown.quick.clone()?;
+    if crate::rails::rails_locks(g, "order") || (crate::cmdring::ring_hold_secs(g) > 0.0 && crate::rails::rails_teaches_hold(g)) { return None; }
+    Some(Note { key: crate::view::key_cap(&g.k.orders.quick_key), text })
 }
 /// a voice registers for the block once, in the order they come
 pub fn squad_orders_voice(g: &mut Game, f: crate::orders::OrderNoteFn) { if !g.orders.notes.contains(&f) { g.orders.notes.push(f); } }

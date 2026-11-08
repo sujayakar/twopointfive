@@ -65,7 +65,6 @@ pub fn kit_view(g: &Game, seat: &crate::seats::SeatRef) -> KitView {
         slots,
         gun,
         setup,
-        takes: crate::slotsetup::setup_takes(g, seat),
         big: big_view(g, seat),
         hits_left: p.hits_left,
         hits_max: crate::game::PLAYER_MAX_HITS,

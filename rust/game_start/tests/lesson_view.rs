@@ -21,7 +21,7 @@ fn put_on(p: &mut Play, id: &str) -> usize {
     k
 }
 fn step_text(p: &Play, id: &str, f: impl Fn(&game::scene_scenarios::LessonStep) -> Option<String>) -> String {
-    let t = game::lesson::lesson_data(&p.g).unwrap().steps.into_iter().find(|t| t.id == id).unwrap();
+    let t = game::lesson::lesson_data(&p.g).unwrap().steps.iter().find(|t| t.id == id).unwrap();
     game::lesson::lesson_line(&p.g, &f(&t).expect("the step has that line"))
 }
 /// the middle of the men still up, as the view's sky seat rides it
@@ -61,9 +61,10 @@ fn the_hud_is_told_the_step_that_is_up_and_what_it_opens() {
         let row = p.view().mission.expect("the lesson's row").text;
         assert!(row.starts_with("training 1/12 \u{25b8} Hold [Ctrl]"), "seed {}: {:?}", seed, row);
         assert!(opens(&v, "zoom") && opens(&v, "camera") && !opens(&v, "order") && !opens(&v, "word"), "seed {}: {:?}", seed, f.open);
+        assert!(p.view().squad.map_or(true, |q| q.quick.is_none()), "seed {}: the lesson holds the squad's key back, and its line is told", seed);
         assert_eq!(f.orders.as_deref().unwrap().join(" "), "move stack go fallIn", "seed {}", seed);
-        assert!(f.mark.is_none() && f.card.is_none() && f.arrow.is_none() && f.sky.is_none() && !f.teaches_hold && !f.stalk_shut, "seed {}: {:?}", seed, f);
-        assert_eq!(f.no_lasers, game::lesson::lesson_data(&p.g).unwrap().rails.unwrap().lasers == Some(false), "seed {}", seed);
+        assert!(f.card.is_none() && f.arrow.is_none() && f.sky.is_none() && !f.teaches_hold && !f.stalk_shut, "seed {}: {:?}", seed, f);
+        assert_eq!(f.no_lasers, game::lesson::lesson_data(&p.g).unwrap().rails.as_ref().unwrap().lasers == Some(false), "seed {}", seed);
 
         // the view turned by the hand: the next step, and it asks for nothing
         p.run(0.2);   // (a view test starts from the view after the run's opening ticks)
@@ -78,7 +79,9 @@ fn the_hud_is_told_the_step_that_is_up_and_what_it_opens() {
         // the step that opens the squad's key: it names the key, and marks the place
         let k = put_on(&mut p, "move");
         let v = lesson(&p);
-        assert!(v.step == k as u32 && opens(&v, "order") && frame_of(&v).mark == Some([11.4, 0.02, 16.4]), "seed {}: {:?}", seed, v);
+        assert!(v.step == k as u32 && opens(&v, "order"), "seed {}: {:?}", seed, v);
+        p.run(0.1);
+        assert!(p.view().squad.is_some_and(|q| q.quick.is_some()), "seed {}: the step that opens the squad's key has its line", seed);
         let line = frame_of(&v).prompt.clone().unwrap();
         assert!(line.line.starts_with("Press [B]") && !line.watch, "seed {}: {:?}", seed, line);
 
@@ -113,7 +116,7 @@ fn a_card_comes_with_its_step_after_the_deed_before_it_has_settled() {
 
         put_on(&mut p, "door1");
         assert!(frame_of(&lesson(&p)).card.is_none(), "seed {}: a step with no card has none", seed);
-        let door = game::lesson::lesson_data(&p.g).unwrap().steps.into_iter().find(|t| t.id == "door1").unwrap().at.unwrap();
+        let door = game::lesson::lesson_data(&p.g).unwrap().steps.iter().find(|t| t.id == "door1").unwrap().at.unwrap();
         p.order("stack", [door[0], door[2]], Who::All);
         p.until(60.0, |p| lesson(p).settling || up(p) != "door1").unwrap_or_else(|| panic!("seed {}: the stack never did the step", seed));
         let v = lesson(&p);
@@ -151,7 +154,7 @@ fn an_arrow_and_a_refused_tap_are_told() {
         q.frame();
         put_on(&mut q, "wall");
         let f = lesson(&q);
-        let toward = game::lesson::lesson_data(&q.g).unwrap().steps.into_iter().find(|t| t.id == "wall").unwrap().toward;
+        let toward = game::lesson::lesson_data(&q.g).unwrap().steps.iter().find(|t| t.id == "wall").unwrap().toward.clone();
         assert_eq!(frame_of(&f).arrow, toward, "seed {}", seed);
         assert!(frame_of(&f).arrow.is_some(), "seed {}", seed);
     }
@@ -167,7 +170,6 @@ fn the_sky_seat_rides_the_squad_as_the_tick_eases_it() {
         let v = lesson(&p);
         let f = frame_of(&v);
         assert_eq!(up(&p), "zoom", "seed {}", seed);
-        assert!(f.mark.is_none(), "seed {}: this step marks nothing", seed);
         let sky = f.sky.expect("the sky seat");
         let men = p.mates();
         assert_eq!(f.line_men.len(), men.len(), "seed {}: {:?}", seed, f.line_men);
@@ -258,7 +260,7 @@ fn in_a_game_of_two_each_hud_is_told_of_its_own_seat() {
         assert!(frame_of(&b).line_men.contains(&him) && !frame_of(&b).line_men.contains(&me), "seed {}: {:?}", seed, frame_of(&b).line_men);
 
         // the second player's ring up on the step's mark: the line is what to press in it, for him alone
-        let at = frame_of(&a).mark.unwrap();
+        let at = p.g.level.scenarios.as_ref().unwrap().lesson.as_ref().unwrap().steps[a.step as usize].at.expect("the step marks a place");
         let s = p.g.seats[1];
         game::seats::with_seat(&mut p.g, s, &mut |g| { let t = game::orders::squad_orders_target_at(g, at); game::orders::squad_orders_open(g, Some(&t), Some(true), None); });
         assert!(game::seats::seat(&p.g, s).orders.menu.is_some(), "seed {}: his ring is up", seed);
