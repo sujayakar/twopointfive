@@ -7,7 +7,7 @@
 //   pricerun       a pricing run's word: the win, as benchrun
 //   bench          the word that asks for a benchmark, on a tab with no session store (the refused run plays the mission): the win, as benchrun
 // The two plain arms are what make the others mean something: if one raises no card or moves no store, the stage reached no end, so an arm asked for by name brings its plain arm first.
-//   PORT=<a dev server's port> node tools/qa/runbooks-page.cjs [arm …]
+//   PORT=<a dev server's port> node tools/qa/runbooks-page.cjs [arm …]     (no word: plain, plain-down, benchrun, bench)
 // exit 0 = all of it with no page error · 1 = otherwise. The stealth game's own way out is not staged here (a long walk); it ends by the same event as plain-down.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const PORT = process.env.PORT || 5199;
@@ -37,7 +37,8 @@ const READ = ([V, P]) => { const m = document.getElementById('menu'), g = window
   const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
   const asked = process.argv.slice(2), bad = asked.filter(a => !(a in ARMS));
   if (bad.length) { console.log(`no arm '${bad[0]}' (${Object.keys(ARMS).join(' · ')})`); process.exit(1); }
-  const named = asked.length ? asked : Object.keys(ARMS), want = Object.keys(ARMS).filter(a => named.includes(a) || (ARMS[a].control && named.some(n => ARMS[n].end === ARMS[a].end)));
+  const named = asked.length ? asked : ['plain', 'plain-down', 'benchrun', 'bench'],   // (with no word four arms, a minute and more each; the others by name)
+    want = Object.keys(ARMS).filter(a => named.includes(a) || (ARMS[a].control && named.some(n => ARMS[n].end === ARMS[a].end)));
   for (const arm of want) {
     const A = ARMS[arm];
     const ctx = await browser.newContext({ viewport: { width: 640, height: 360 }, deviceScaleFactor: 1 });
