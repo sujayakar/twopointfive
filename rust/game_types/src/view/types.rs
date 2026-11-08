@@ -215,6 +215,176 @@ pub struct KitView {
     pub key_tag: Option<String>,
 }
 
+/// the colour a mark over a man is drawn in
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum HeadTone {
+    Calm,
+    /// out cold, and breathing
+    Ko,
+    Dead,
+    Alert,
+    Sus,
+}
+
+/// a man on the floor, as the HUD marks him
+#[derive(Clone, Debug)]
+pub struct ManMark {
+    /// his character's id
+    pub man: f64,
+    /// the glyphs over his head ('': no mark)
+    pub text: String,
+    pub tone: crate::view::HeadTone,
+    /// a civilian: the small mark of their own
+    pub civ: bool,
+    /// the fog hides him from this seat's team (a picture with the fog lifted is a viewer's own, and shows him all the same)
+    pub hidden: bool,
+    /// the AI's own words after the mark, with the debug labels on ('': off)
+    pub debug: String,
+}
+impl Default for ManMark { fn default() -> Self { ManMark { man: -1.0, text: String::new(), tone: HeadTone::Calm, civ: false, hidden: false, debug: String::new() } } }
+
+/// where an enemy who has gone out of the team's sight was last seen
+#[derive(Clone, Copy, Debug, Default)]
+pub struct SeenMark {
+    /// his character's id
+    pub man: f64,
+    pub at: V3,
+    /// seconds since
+    pub age: f64,
+    /// seconds the mark lasts
+    pub life: f64,
+}
+
+/// a stuck camera of the seat's own, while the fog is live
+#[derive(Clone, Copy, Debug, Default)]
+pub struct CamMark {
+    pub at: V3,
+    /// it is the one sending a picture
+    pub sends: bool,
+}
+
+/// a defender's live grenade the team has been cued on (the cue is one a grenade, and made about the first man: in a game of two the second is told of the same)
+#[derive(Clone, Copy, Debug, Default)]
+pub struct FragMark {
+    pub at: V3,
+    /// seconds left on its fuse
+    pub left: f64,
+}
+
+/// WHAT THE HUD MARKS ON THE FLOOR AND SAYS OF THE SEAT'S MAN
+#[derive(Clone, Debug, Default)]
+pub struct MarksView {
+    /// every man on the floor the HUD may mark, hidden or not: guards first, then the civilians shown
+    pub men: Vec<crate::view::ManMark>,
+    pub seen: Vec<crate::view::SeenMark>,
+    pub cams: Vec<crate::view::CamMark>,
+    pub frags: Vec<crate::view::FragMark>,
+    /// how blind he is: 1 for the body of a dazzle, easing to 0
+    pub blind: f64,
+    /// the light meter, 0 to 1
+    pub light: f64,
+    /// the light on him as it was measured
+    pub irradiance: f64,
+    /// the noise he is making, 0 to 1 and over
+    pub noise: f64,
+    /// the man he is stalking (his character's id)
+    pub stalk: Option<f64>,
+    /// he waits at a corner for a man to come round it
+    pub stalk_waits: bool,
+}
+
+/// what the auto-aim has snapped to
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum RingOn {
+    /// nothing: the bare point
+    Free,
+    /// a light or a fixture
+    Light,
+    /// a man
+    Guard,
+}
+
+/// the aim model's cone at the ring
+#[derive(Clone, Copy, Debug, Default)]
+pub struct AimCone {
+    /// its half width, radians
+    pub spread: f64,
+    /// how settled his track is, 0 to 1
+    pub track: f64,
+    /// metres from his hand to the ring
+    pub range: f64,
+    /// its terms, for the debugger's row: his hands, how far the track is from settled, the man crossing, his feet
+    pub hands: f64,
+    pub settle: f64,
+    pub crossing: f64,
+    pub feet: f64,
+}
+
+/// the gun's ring, when nothing Space acts on holds the reticle
+#[derive(Clone, Copy, Debug)]
+pub struct AimRing {
+    /// where it stands: where the gun points while it swings, else what it snapped to, else the cursor's point
+    pub at: V3,
+    pub on: crate::view::RingOn,
+    /// the circle is still swinging on to the cursor
+    pub trail: bool,
+    /// his gun cannot get a round out from here
+    pub shut: bool,
+    /// what it will settle on, marked while it swings (bare floor needs none)
+    pub wish: Option<V3>,
+    /// (None: the aim model is not up)
+    pub cone: Option<crate::view::AimCone>,
+}
+impl Default for AimRing { fn default() -> Self { AimRing { at: [0.0; 3], on: RingOn::Free, trail: false, shut: false, wish: None, cone: None } } }
+
+/// the gun's own small circle, while the reticle's ring is on a thing Space acts on: a round goes there
+#[derive(Clone, Copy, Debug, Default)]
+pub struct GunDot {
+    pub at: V3,
+    pub shut: bool,
+}
+
+/// what a thing in the air would reach, flat on the floor round a point
+#[derive(Clone, Copy, Debug, Default)]
+pub struct ThrowReachView {
+    pub at: V3,
+    pub kill: f64,
+    pub hurt: f64,
+    pub stun: f64,
+}
+
+/// the arc he is aiming
+#[derive(Clone, Debug, Default)]
+pub struct ThrowView {
+    pub points: Vec<V3>,
+    pub land: V3,
+    /// a 40 mm arc too short to arm
+    pub short: bool,
+    /// where it comes to rest (None: the launcher's round bursts or sticks where it lands)
+    pub rest: Option<crate::player::ThrowRest>,
+    pub reach: Option<crate::view::ThrowReachView>,
+}
+
+/// WHAT THE HUD DRAWS OF THE SEAT'S AIM
+#[derive(Clone, Debug, Default)]
+pub struct AimView {
+    pub ring: Option<crate::view::AimRing>,
+    pub dot: Option<crate::view::GunDot>,
+    /// the word at the reticle: the 40 mm's arc is too short to arm
+    pub too_close: bool,
+    pub throw: Option<crate::view::ThrowView>,
+}
+
+/// what a man wears and carries that the drawer draws
+#[derive(Clone, Copy, Debug)]
+pub struct WornView {
+    /// his character's id
+    pub man: f64,
+    pub goggles: bool,
+    pub big: Option<crate::bigkit::BigCarried>,
+}
+impl Default for WornView { fn default() -> Self { WornView { man: -1.0, goggles: false, big: None } } }
+
 /// WHAT A SEAT'S HUD IS TOLD OF THE GAME AS A TICK LEFT IT: a section for each kind of thing a HUD words. Nothing in it is kept by the game.
 #[derive(Clone, Debug, Default)]
 pub struct TickView {
@@ -230,6 +400,12 @@ pub struct TickView {
     pub place: String,
     /// what he carries and the state he is in
     pub kit: crate::view::KitView,
+    /// what the HUD marks
+    pub marks: crate::view::MarksView,
+    /// what the HUD draws of his aim
+    pub aim: crate::view::AimView,
+    /// the men who wear or carry something the drawer draws: nobody else is listed
+    pub worn: Vec<crate::view::WornView>,
 }
 
 /// what kind of thing an order would be about

@@ -17,7 +17,7 @@
 //   SHOOTER  his own feet: rad of cone per m/s. Heavier than the target's — and the reason a closing guard now brakes to a standstill for each shot inside
 //            his shoot band and closes again on the beat (guards.ts, aimBrake), and Sam's ring blooms while he moves.
 //   Guard round = (row base + range term) × settle + target + shooter + suppression (+ burst growth); Sam's = base(stand / crouch) × settle + target + shooter
-//   + his suppression term (player.ts adds the two). The composition lives here (guardRound / playerAim); the fire sites only ask.
+//   + his suppression term (player.ts adds the two). The composition is the Rust game's; the fire sites only ask.
 import { Vec3, v3, clamp, lerp } from '../math/vec';
 import './guards';
 import type { Game, Guard } from './game';
@@ -148,8 +148,6 @@ export function trackGuard(g: Game, gd: Guard, dt: number): void { return crossT
 
 /** The first-shot gate (the alert branch's single round, the START of a burst, the standoff's round): true with the model off. */
 export function aimReady(g: Game, gd: Guard): boolean { return goneWithTick('aimReady') as any; }
-/** the panel / marker tell: an alert man whose track on Sam has passed the gate */
-export function guardAcquired(g: Game, gd: Guard): boolean { return g.tune.aimModel && gd.state === 'alert' && gd.aim.track >= AIM.guard.acquireMin - 1e-9; }
 
 /** the terms of a guard's cone under the model (his row less its linear target-speed term, × settle, + the bearing rate's, + his feet's) — `extra` rides outside the multiplier */
 function guardTerms(g: Game, gd: Guard, extra: number) {
@@ -191,19 +189,6 @@ export function boreFouled(g: Game, gd: Guard): boolean { return crossToRust('bo
  *  a wall, a fixture) — reset when a NEW man comes under it (free → man, man → another; off a man onto the floor beside him it carries), capped at a sprint / on
  *  the move, quicker crouched; and the bearing rate of that man across his view. Rests at 0 with the model off or Sam down. */
 export function trackPlayer(g: Game, dt: number): void { return crossToRust('trackPlayer', undefined, [g, dt]) as any; }
-/** Sam's cone under the model and his track (the overlay sizes and tints the ring off these): 0 / 1 with the model off, and under the tour's puppet (its scripted
- *  double-taps land, as suppression's term already has it). */
-export function playerAim(g: Game): { spread: number; track: number; base: number; settle: number; tgt: number; own: number } {
-  if (!g.tune.aimModel || g.puppet) return { spread: 0, track: 1, base: 0, settle: 1, tgt: 0, own: 0 };
-  const pl = g.player, A = pl.aim, P = AIM.player, c = pl.char;
-  const base = pl.crouch ? P.baseCrouch : P.baseStand;
-  const settle = lerp(P.unsettledK, 1, clamp(A.track, 0, 1));
-  const tgt = Math.min(P.targetMoveCap, A.bearingRate * P.targetMoveK);
-  const own = feetOf(A, c.vel, P.steadyPace, moveCost(g)) * P.shooterMoveK;
-  const k = AIM_HOOKS.playerExternalK(g); const kk = Number.isFinite(k) ? Math.max(0, k) : 1;
-  if (moveCost(g)) return { spread: (base * settle + tgt) * kk + own * lerp(kk, 1, clamp(1 - AIMCOST.braceFeet, 0, 1)), track: A.track, base, settle, tgt, own };   // (aimcost.ts: a braced rifle is steady, the legs under it are not — the brace reaches only part of the feet term)
-  return { spread: (base * settle + tgt + own) * kk, track: A.track, base, settle, tgt, own };
-}
 /** The one term Sam's fire sites add to their spread (player.ts, beside samSpread): 0 with the model off / under the puppet. Stamps aim.lastShot. */
 export function samAim(g: Game): number { return crossToRust('samAim', undefined, [g]) as any; }
 
@@ -212,13 +197,13 @@ export function samAim(g: Game): number { return crossToRust('samAim', undefined
 export function aimSummary(g: Game): string {
   const f2 = (x: number) => x.toFixed(2), f3 = (x: number) => x.toFixed(3);
   if (!g.tune.aimModel) return 'aim ▸ model OFF (every round as it was: guards\' rows, the player dead-on)';
-  const R = playerAim(g); const pa = g.player.aim;
-  const parts = [`you: track ${f2(pa.track)}${pa.tgtKey && pa.tgtKey !== 'free' ? pa.tgtKey.startsWith('l') ? ` on lamp ${pa.tgtKey.slice(1)}` : ` on #${pa.tgtKey.slice(1)}` : ''} · cone ${f3(R.spread)} (hands ${f3(R.base)} ×${f2(R.settle)} + crossing ${f3(R.tgt)} + feet ${f3(R.own)})${g.puppet ? ' [puppet: dead-on]' : ''}`];
+  const R = g.view.aim.ring?.cone ?? null; const pa = g.player.aim;
+  const parts = [`you: track ${f2(pa.track)}${pa.tgtKey && pa.tgtKey !== 'free' ? pa.tgtKey.startsWith('l') ? ` on lamp ${pa.tgtKey.slice(1)}` : ` on #${pa.tgtKey.slice(1)}` : ''} · cone ${R ? `${f3(R.spread)} (hands ${f3(R.hands)} ×${f2(R.settle)} + crossing ${f3(R.crossing)} + feet ${f3(R.feet)})` : 'no gun up'}${g.puppet ? ' [puppet: dead-on]' : ''}`];
   let men = g.guards.filter(x => x.state === 'alert');
   if (!men.length) { const n = g.nearestLivingGuard(); if (n) men = [n]; }
   for (const gd of men) {
     const A = gd.aim; const T = guardTerms(g, gd, 0); const ls = A.lastShot;
-    parts.push(`${gd.callsign}${guardAcquired(g, gd) ? ' ◎' : ''} ${gd.state} track ${f2(A.track)}${gd.pinned ? ' (pinned)' : ''} · brg ${f2(A.bearingRate)} rad/s · cone ${f3(T.spread)} (hands ${f3(T.hands)} ×${f2(T.settle)} + crossing ${f3(T.tgt)} + feet ${f3(T.own)})${A.braking ? ' · BRAKING' : ''}${ls && g.time - ls.t < 3 ? ` · last round ${f2(g.time - ls.t)} s ago at track ${f2(ls.track)}, ${f3(ls.spread)} rad, ${f2(ls.speed)} m/s` : ''}`);
+    parts.push(`${gd.callsign}${g.view.marks.men.find(m => m.man === gd.char.id)?.text.includes('◎') ? ' ◎' : ''} ${gd.state} track ${f2(A.track)}${gd.pinned ? ' (pinned)' : ''} · brg ${f2(A.bearingRate)} rad/s · cone ${f3(T.spread)} (hands ${f3(T.hands)} ×${f2(T.settle)} + crossing ${f3(T.tgt)} + feet ${f3(T.own)})${A.braking ? ' · BRAKING' : ''}${ls && g.time - ls.t < 3 ? ` · last round ${f2(g.time - ls.t)} s ago at track ${f2(ls.track)}, ${f3(ls.spread)} rad, ${f2(ls.speed)} m/s` : ''}`);
   }
   return 'aim ▸ ' + parts.join(' · ');
 }

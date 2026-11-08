@@ -8,8 +8,9 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// Can a stun show on the player at all: up, no puppet's strings, no tour.   (samstun.ts live)
-pub fn live(g: &mut crate::game::Game) -> bool {
-    let p = g.player;
+pub fn live(g: &crate::game::Game) -> bool { live_of(g, g.player) }
+/// …of one man
+pub fn live_of(g: &crate::game::Game, p: PlayerId) -> bool {
     !g.pl[p].down && g.puppet.is_none() && !g.touring
 }
 
@@ -67,10 +68,11 @@ pub fn sam_staggered(g: &mut crate::game::Game, now: Option<f64>) -> bool {
 }
 
 /// How blind he is right now: 1 for the body of a dazzle, easing to 0 over its last `fade` seconds.   (samstun.ts samBlind)
-pub fn sam_blind(g: &mut crate::game::Game, now: Option<f64>) -> f64 {
+pub fn sam_blind(g: &crate::game::Game, now: Option<f64>) -> f64 { man_blind(g, g.player, now) }
+/// …of one man
+pub fn man_blind(g: &crate::game::Game, p: PlayerId, now: Option<f64>) -> f64 {
     let now = now.unwrap_or(g.time);
-    if !live(g) { return 0.0; }
-    let p = g.player;
+    if !live_of(g, p) { return 0.0; }
     let left = g.pl[p].dazzled_until - now;
     if left <= 0.0 { 0.0 } else { v3::clamp(left / m::max(0.05, g.k.samstun.fade), 0.0, 1.0) }
 }

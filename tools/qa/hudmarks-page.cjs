@@ -1,11 +1,11 @@
-// THE BARRED AIM RING AND THE THROW'S REST MARK, ON THE REAL PAGE (GUNWALL.mark, player.ts gunShut · THROWBACK.restMark, player.ts throwRest; the headless
+// THE BARRED AIM RING AND THE THROW'S REST MARK, ON THE REAL PAGE (game.view.aim: the ring's shut, the arc's rest; the headless
 // cards are tools/qa/leangun-check.ts and tools/qa/throwrest-check.ts, which cannot see the overlay): boot the page in headless Chromium on the software
 // WebGPU adapter (tools/qa/page-look.cjs's recipe), start the plain night, and read the overlay's own elements.
 //   ring   the rifle in his hands beside the conference doorway's jamb on its side, the cursor on a point in the room: the gun is held down and the ring (or,
-//          with the ring busy on the door, the gun's own small circle) wears the bar, drawn (its ::after has a box); with the mark off it does not; stood in
+//          with the ring busy on the door, the gun's own small circle) wears the bar, drawn (its ::after has a box); stood in
 //          the middle of the doorway it does not.
-//   rest   a smoke in his hand, the cursor four metres down the corridor: the preview's ring is on the point throwRest gives, well past the arc's end, the
-//          tick is on the arc's end and the dotted roll is drawn; with the mark off the ring is on the arc's end and neither tick nor roll shows.
+//   rest   a smoke in his hand, the cursor four metres down the corridor: the preview's ring is on the point game.view.aim.throw.rest gives, well past the arc's end, the
+//          tick is on the arc's end and the dotted roll is drawn.
 //   PORT=5231 node tools/qa/hudmarks-page.cjs [--shots dir]       (a dev server on that port: PORT=5231 bun run tools/serve.ts)
 // exit 0 = both hold with no page error · 1 = otherwise.   SOFTWARE ADAPTER: this is the page's DOM over a software-rendered frame, not a GPU.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
@@ -41,8 +41,7 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
   await shot('ring-barred');
   const ring2 = await page.evaluate(async () => {
     const H = window.__hm, S = Math.PI, into = x => [x, 1.2, 6.5];
-    H.K.GUNWALL.mark = false; await H.at(10.3, 10.62, S, into(10.3), 3); const off = H.ring(); H.K.GUNWALL.mark = true;
-    await H.at(9.75, 10.62, S, into(9.75), 30); const mid = H.ring(); return { off, mid };
+    await H.at(9.75, 10.62, S, into(9.75), 30); const mid = H.ring(); return { mid };
   });
   await shot('ring-plain');
   const rest = await page.evaluate(async () => {
@@ -52,16 +51,16 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
       const land = pv ? cam.project(pv.land, view.clientWidth, view.clientHeight) : null;
       return { arc: !!pv, ring: ringEl && ringEl.style.display !== 'none' ? [+ringEl.getAttribute('cx'), +ringEl.getAttribute('cy')] : null, land: land ? [land[0], land[1]] : null,
         tick: tick && tick.style.display !== 'none' ? [+tick.getAttribute('cx'), +tick.getAttribute('cy')] : null, roll: roll && roll.style.display !== 'none' ? (roll.getAttribute('points') || '').split(' ').length : 0, landW: pv ? pv.land : null }; };
-    const on = read(); H.K.THROWBACK.restMark = false; await H.at(24, 11.2, W, to, 20); const off = read(); H.K.THROWBACK.restMark = true; await H.at(24, 11.2, W, to, 20);
-    return { on, off, slot: g.player.slot };
+    const on = read();
+    return { on, slot: g.player.slot };
   });
   await shot('rest-mark');
   await browser.close();
   const d = (a, b) => a && b ? Math.hypot(a[0] - b[0], a[1] - b[1]) : NaN;
-  const okRing = !setup.fatal && setup.mark === true && setup.wall === true && ring.rifle && ring.a.barred && /none|^$/.test(ring.a.bar) === false && ring.a.stance === 'lowLong' && !ring2.off.barred && !ring2.mid.barred;
-  console.log(`- ${okRing ? 'PASS' : 'FAIL'} — ring: mark ${setup.mark}, rule ${setup.wall} · rifle ${ring.rifle}, ${ring.a.stance} · beside the jamb the ${ring.a.on || 'ring'} is ${ring.a.barred ? 'barred' : 'NOT barred'} (its bar: ${ring.a.bar || 'none'}) · mark off: ${ring2.off.barred ? 'BARRED' : 'plain'} · mid doorway: ${ring2.mid.barred ? 'BARRED' : 'plain'}\n    reticle '${ring.a.reticle}' · gun circle '${ring.a.wish}'`);
-  const okRest = setup.rest === true && rest.on.arc && !!rest.on.ring && d(rest.on.ring, rest.on.land) > 30 && d(rest.on.tick, rest.on.land) < 2 && rest.on.roll > 2 && !!rest.off.ring && d(rest.off.ring, rest.off.land) < 2 && !rest.off.tick && rest.off.roll === 0;
-  console.log(`- ${okRest ? 'PASS' : 'FAIL'} — rest: mark ${setup.rest} · slot ${rest.slot}, arc ${rest.on.arc} · the ring is ${d(rest.on.ring, rest.on.land).toFixed(0)} px past the arc's end, the tick ${d(rest.on.tick, rest.on.land).toFixed(1)} px from it, ${rest.on.roll} points of roll drawn · mark off: the ring ${d(rest.off.ring, rest.off.land).toFixed(1)} px from the arc's end, tick ${rest.off.tick ? 'SHOWN' : 'hidden'}, roll ${rest.off.roll}`);
+  const okRing = !setup.fatal && setup.mark === true && setup.wall === true && ring.rifle && ring.a.barred && /none|^$/.test(ring.a.bar) === false && ring.a.stance === 'lowLong' && !ring2.mid.barred;
+  console.log(`- ${okRing ? 'PASS' : 'FAIL'} — ring: mark ${setup.mark}, rule ${setup.wall} · rifle ${ring.rifle}, ${ring.a.stance} · beside the jamb the ${ring.a.on || 'ring'} is ${ring.a.barred ? 'barred' : 'NOT barred'} (its bar: ${ring.a.bar || 'none'})· mid doorway: ${ring2.mid.barred ? 'BARRED' : 'plain'}\n    reticle '${ring.a.reticle}' · gun circle '${ring.a.wish}'`);
+  const okRest = setup.rest === true && rest.on.arc && !!rest.on.ring && d(rest.on.ring, rest.on.land) > 30 && d(rest.on.tick, rest.on.land) < 2 && rest.on.roll > 2;
+  console.log(`- ${okRest ? 'PASS' : 'FAIL'} — rest: mark ${setup.rest} · slot ${rest.slot}, arc ${rest.on.arc} · the ring is ${d(rest.on.ring, rest.on.land).toFixed(0)} px past the arc's end, the tick ${d(rest.on.tick, rest.on.land).toFixed(1)} px from it, ${rest.on.roll} points of roll drawn`);
   if (errors.length) console.log(`- FAIL — page errors:\n    ${errors.slice(0, 5).join('\n    ')}`);
   const failed = !okRing || !okRest || errors.length > 0;
   console.log(failed ? '=== hudmarks-page: FAILED ===' : '=== hudmarks-page: ALL PASS ===');

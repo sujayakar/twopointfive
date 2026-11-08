@@ -46,7 +46,7 @@ export class AimWeight {
   /** the circle's range from his feet and its height, eased onto the cursor's */
   r = 0; y = 0;
   live = false; was = false;
-  /** the swing is over: the circle IS the cursor's point (aimGunPoint hands that very point back, not one rebuilt from an angle) */
+  /** the swing is over: the circle IS the cursor's point (aimweight::aim_gun_point hands that very point back, not one rebuilt from an angle) */
   landed = true;
   /** what drives vs. what is read: the gun is within `onM` of the cursor's line (always true when not live) */
   on = true;
@@ -80,15 +80,6 @@ export function aimSwing(w: { vel: number }, err: number, top: number, dt: numbe
 
 
 
-/** Where the gun points: the circle's world point — null when nothing is weighing his aim (the circle is the cursor's). */
-export function aimGunPoint(g: Game): Vec3 | null {
-  const pl = g.player, w = pl.aimw; if (!w.live || !AIMWEIGHT.on) return null;
-  if (w.landed) return [g.aimPoint[0], g.aimPoint[1], g.aimPoint[2]];
-  const c = pl.char;
-  return [c.pos[0] + Math.sin(c.aimYaw) * w.r, w.y, c.pos[2] + Math.cos(c.aimYaw) * w.r];
-}
-/** Is the circle on the cursor (true when nothing is weighing his aim) */
-export function aimGunOn(g: Game): boolean { const w = g.player.aimw; return !(w.live && AIMWEIGHT.on) || w.on; }
 
 /** What leaves the gun goes where the gun points. `tgt` = the point the build would have sent it at (a man's chest, a fixture, a launcher's lead on a walking
  *  man, level along the cursor's heading): handed back AS IT IS while the circle is on the cursor — the one test the HUD's circle shows — else turned about

@@ -47,16 +47,17 @@ pub fn arm_through(g: &mut crate::game::Game, c_2: CharId) -> bool {
 }
 
 /// A panel between `from` and `to`: a static, or a leaf standing shut or as good as (SoundSeal). Short segments only.   (combat.ts solidBetween)
-pub fn solid_between(g: &mut crate::game::Game, from: V3, to: V3) -> bool {
-    if crate::scene_collision::segment_blocked_dynamic(g, from, to, Some(crate::scene_boxes::box_flag().sound_seal)) { return true; }
+pub fn solid_between(a: &mut impl crate::ask::Asker, from: V3, to: V3) -> bool {
+    if a.leaf_across(from, to, Some(crate::scene_boxes::box_flag().sound_seal)) { return true; }
     let d = v3::sub(to, from);
     let l = v3::len(d);
     if l < 1e-3 { return false; }
     let rd = v3::scale(d, 1.0 / l);
     let mut scratch: Vec<i32> = solid_scratch();
-    let n = crate::scene_collision::gather(g, m::min(from[0], to[0]) - 0.1, m::min(from[2], to[2]) - 0.1, m::max(from[0], to[0]) + 0.1, m::max(from[2], to[2]) + 0.1, m::min(from[1], to[1]) - 0.1, m::max(from[1], to[1]) + 0.1, &mut scratch);
+    let n = a.gather(m::min(from[0], to[0]) - 0.1, m::min(from[2], to[2]) - 0.1, m::max(from[0], to[0]) + 0.1, m::max(from[2], to[2]) + 0.1, m::min(from[1], to[1]) - 0.1, m::max(from[1], to[1]) + 0.1, &mut scratch);
     let mut i = 0usize;
     while (i as f64) < n {
+        let g = a.game();
         let b = g.col.boxes[scratch[i] as usize];   // gather answers places in g.col.boxes, not IDs
         if crate::scene_boxes::ray_box(g, from, rd, b.into(), l).is_some() { return true; }
         i += 1;

@@ -485,7 +485,7 @@ function rollOn(g: Game, it: Item, touchFuse?: number, props = FRAG.restProps, h
   }
   return { at: [p[0], props ? Math.max(0.05, p[1]) : restY(p[1]), p[2]], path };
 }
-/** WHERE A CAN THROWN FROM `from` AT `v0` WILL BE WHEN IT IS DONE MOVING — or when its fuse finds it, if that is sooner (player.ts throwRest: the throw
+/** WHERE A CAN THROWN FROM `from` AT `v0` WILL BE WHEN IT IS DONE MOVING — or when its fuse finds it, if that is sooner (rust: frag::rest_of_throw; the throw
  *  preview's rest mark): rollOn on a body that was never spawned. A frag: its fuse from the hand. A stun canister: its fuse from its first touch (combat.ts
  *  updateItems), and never more than bang.maxAir in the air. A smoke: until it lies still. Loose furniture is in it as it stands (a chair it strikes is
  *  not pushed here). `path`: what it crosses from its first touch to there, at the height it lies. Nothing of the simulation's is written and nothing
@@ -637,11 +637,6 @@ export function fragFlee(g: Game, gd: Guard): GuardScript | null { { const __s =
 /** is he on his legs off a live grenade this frame (silent.ts: a silent squad's walk is not the pace a man leaves a grenade at) */
 export function fragRunning(g: Game, gd: Guard): boolean { const B = books.get(g); if (!B || !B.length) return false; for (const L of B) { const s = L.flee.get(gd); if (s && s.goal) return true; } return false; }
 
-/** the overlay's: every hostile grenade Sam has been cued on — where it lies and the seconds left on it */
-export function fragMarks(g: Game): { at: Vec3; left: number }[] {
-  const B = books.get(g); if (!B || !B.length) return [];
-  const out: { at: Vec3; left: number }[] = []; for (const L of B) if (L.cued && !L.it.fired) out.push({ at: L.it.pos, left: L.it.fuse }); return out;
-}
 /** QA's scripted commander (tools/qa/playthrough.ts) and anything else that walks Sam for him: where a player who has read the cue would go — the spot fleeSpot
  *  gives a man with Sam's legs (`speed`) off the nearest cued grenade that has a line to him, null when there is none or he is as well off where he stands. */
 export function fragStepOff(g: Game, speed = 3.2): Vec3 | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('fragStepOff', undefined, [g, speed]); if (__r !== RUST_PASS) return __r as any; } }

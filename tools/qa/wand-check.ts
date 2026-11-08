@@ -44,6 +44,7 @@ const { KIT: KIT_HANDS } = await import(`${ROOT}/src/game/character.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const SAVE = await import(`${ROOT}/src/game/savestate.ts`);
+const lastSeen = (g: any): any[] => g.view.marks.seen.map((m: any) => ({ ...m, gd: g.guards.find((x: any) => x.char.id === m.man) }));   // (what the HUD is told)
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
 function family(title: string): { verdict: Verdict; done: () => boolean } {
@@ -263,12 +264,12 @@ export async function wandCosts(): Promise<boolean> {
       W.input.pressed.add('KeyS'); W.input.keys.add('KeyS'); W.step(DT); W.input.keys.delete('KeyS');
       const out = !pl.wanding, lock = pl.equipT, pick = pl.char.anim.lockpick, byHand = KITANIM.on;   // (kit handling on — the page — the gun comes back up BY HAND and the lock-out is that draw's own; off, the wand's stow)
       steps(W, 120);
-      const hid = fog.hidden(T), marks = fog.lastSeen().filter((m: any) => m.gd === T), life = marks[0]?.life, age = marks[0]?.age;
+      const hid = fog.hidden(T), marks = lastSeen(g).filter((m: any) => m.gd === T), life = marks[0]?.life, age = marks[0]?.age;
       F.verdict(sawHim && out && !pick && (byHand ? lock > 0.3 && lock <= kitLockMax(KIT_HANDS) : lock > WAND.stowSecs - 2 * DT && lock <= WAND.stowSecs) && hid && marks.length === 1 && life === WAND.markSecs && age > 1.5 && age < 3,
         'a step pulls it out: no round for the stow, the room goes back to fog, and the man he saw keeps a mark where he stood', `out ${out} · lock-out ${lock.toFixed(2)} s (${byHand ? 'the gun drawn by hand' : `stow ${WAND.stowSecs}`}) · hidden again ${hid} · mark ${marks.length} aged ${age?.toFixed(1)} s of ${life}`);
       steps(W, Math.ceil((WAND.markSecs - 1.5) / DT));
-      const after = fog.lastSeen().filter((m: any) => m.gd === T).length;
-      WAND.markSecs = 0; const none = fog.lastSeen().length; WAND.markSecs = mark;
+      const after = lastSeen(g).filter((m: any) => m.gd === T).length;
+      WAND.markSecs = 0; const none = lastSeen(g).length; WAND.markSecs = mark;
       F.verdict(after === 0 && none === 0, 'the mark is gone after its time, and with its time at nothing there is none', `after ${WAND.markSecs} s: ${after} · markSecs 0: ${none}`);
     }
     // the other ways out
@@ -445,7 +446,7 @@ export async function wandMate(): Promise<boolean> {
       await run(60, () => {});
       const fell = S.give('fallIn', tgt, 'all'); W.step(DT); W.step(DT);
       const g1 = { jobs: jobs().length, knelt: !!him.char.anim.lockpick, order: S.of(him)?.order, eyes: wandEyes().length };
-      const lost = await until(900, () => !fog.drawn(T)), mk = fog.lastSeen().filter((m: any) => m.gd === T)[0];
+      const lost = await until(900, () => !fog.drawn(T)), mk = lastSeen(g).filter((m: any) => m.gd === T)[0];
       F.verdict(fell === null && !g1.jobs && !g1.knelt && g1.order === 'fallIn' && !g1.eyes && lost < 900 && !!mk && mk.life === WAND.markSecs,
         '\'fall in\' ends it on the frame: he is up, the lens is out of the fog\'s eyes; the man he saw goes out of the picture and keeps the wand\'s own fading mark', `given: ${fell ?? 'yes'} · jobs ${g1.jobs}, knelt ${g1.knelt}, his order ${g1.order}, lens eyes ${g1.eyes} · out of the picture after ${(lost * DT).toFixed(1)} s · mark ${mk ? `life ${mk.life} s` : 'none'}`);
 
