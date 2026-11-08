@@ -1,5 +1,5 @@
 // The 'breaks' probe family (src/game/breakTable.ts — walls, cover and what the destruction lane knocks loose break BY MATERIAL into cut pieces), run through probes.ts:
-//   bun run tools/qa/probes.ts breaks | breaks-shapes | breaks-wall | breaks-again | breaks-overflow | breaks-caps | breaks-determinism [--level block-squads]
+//   bun run tools/qa/probes.ts breaks | breaks-shapes | breaks-wall | breaks-again | breaks-caps | breaks-determinism [--level block-squads]
 // CUT PIECES ARE A SETTLED RULE (scene/cut.ts CUT.on; 2026-11-07): nothing here asks the wreck with the cut switch off or writes it. Until then a probe `off` did, with
 // an off run beside the on run in `wall`, `studs`, `furniture` and `look`; those runs, their lines and the furniture rule's pin in `wall` are out.
 // Headless = the Proxy device: nothing is drawn. What is asserted is the TABLE and the BUDGET:
@@ -46,11 +46,11 @@ const WALLS0 = JSON.parse(JSON.stringify(WALLS));
 const restoreKnobs = () => { for (const k of Object.keys(WALLS0)) (WALLS as any)[k] = JSON.parse(JSON.stringify(WALLS0[k])); };
 
 /** the harness Game on the loud level at `chaos`, a Particles attached, everyone deaf, blind and out of the way */
-async function stage(seed: number, chaos: number, cap = 64) {
+async function stage(seed: number, chaos: number) {
   Math.random = seeded(seed); restoreKnobs();
   const lv = LEVEL === 'office' ? undefined : loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${LEVEL}.json`, 'utf8')));
   const W = await standUp(lv ? { level: lv, dress: true } : { dress: true }); const { game, engine } = W;   // (the rows up: the debris pool is a dressing row, and a host that draws nothing holds no pool)
-  engine.particles = new Particles(fake('device'), fake('sceneLayout')); engine.settings.gpuParticles = true; engine.settings.debrisCap = cap;
+  engine.particles = new Particles(fake('device'), fake('sceneLayout')); engine.settings.gpuParticles = true;
   game.godMode = true; game.aiEnabled = false; game.player.visibility = 0.02; game.tune.chaos = chaos; zero(WALL_STATS); WALL_LOG.length = 0; zero(BREAK_STATS);
   game.destr.breaks.look = null;   // (the family judges the table ALONE: a look-only wall dressing a merged tree attaches is put aside — breaks-look sets its own)
   for (let i = 0; i < 3; i++) W.step(DT);
@@ -153,8 +153,8 @@ export async function breaksShapes(): Promise<boolean> {
 // ================================================================ a blown wall
 export async function breaksWall(): Promise<boolean> {
   const F = family(`breaks-wall: a charge against a partition with cut pieces on — slabs, a heap, ragged ends, the same boxes underfoot (${LEVEL})`);
-  const run = async (cap: number) => {
-    const S = await stage(11, 0.5, cap); const { W, game } = S;
+  const run = async () => {
+    const S = await stage(11, 0.5); const { W, game } = S;
     const pick = pickWall(game); if (!pick) return null;
     const { mid, n } = pick; const at: Vec3 = [mid[0] + n[0] * 0.3, 0.3, mid[2] + n[2] * 0.3];
     const open0 = new Map<number, number>(game.destr.walls.all().map((w: any) => [w.id, w.open]));
@@ -170,12 +170,12 @@ export async function breaksWall(): Promise<boolean> {
     const out = { res, born, chips0, cells0, also, peak, pick, game, stats: { ...BREAK_STATS }, wstats: { ...WALL_STATS }, standing: standing(game), share: game.destr.breaks.share(), surf: game.destr.walls.all().find((w: any) => w.id === pick.id).surf };
     return out;
   };
-  const on = await run(64), on32 = await run(32);
-  if (!on || !on32) { F.verdict(false, 'a partition with floor both sides', 'none found'); return F.done(); }
+  const on = await run();
+  if (!on) { F.verdict(false, 'a partition with floor both sides', 'none found'); return F.done(); }
   const row = BREAK[BT.matOfSurf(on.surf)] as any;
   F.verdict(on.res.walls >= 1 && on.res.opened > 0, 'the charge holed the wall', `wall #${on.pick.id} (${on.surf}): ${on.wstats.holes} hole(s), nav cells opened ${on.res.opened}`);
   // thrown + heap inside the share
-  for (const [tag, r] of [['pool 64', on], ['pool 32', on32]] as [string, any][]) {
+  for (const [tag, r] of [['the pool', on]] as [string, any][]) {
     const heap = r.born.filter((b: any) => b.rest0), thrown = r.born.filter((b: any) => !b.rest0 && b.c.kind === 'chunk' && b.c.mat && Math.abs(b.side) < 0.2);   // born in the wall's own thickness: a piece of furniture the same charge broke is not the wall's
     if (tag === 'pool 64') F.verdict(thrown.length > 0 && thrown.length <= r.share.thrown && heap.length === r.stats.heap && heap.length <= r.share.heap && heap.length >= 1, `${tag}: thrown wall pieces and the dealt heap inside the blast's share`,
       `${thrown.length} thrown (share ${r.share.thrown}), ${heap.length} dealt at rest (share ${r.share.heap}); the pool peaked at ${r.peak} / ${r.game.destr.debris.cap()}; refused ${r.stats.refused}`);
@@ -205,7 +205,7 @@ export async function breaksWall(): Promise<boolean> {
 export async function breaksStuds(): Promise<boolean> {
   const F = family(`breaks-studs: a partition shot through over a standing sill keeps its metal uprights; a hole does not (${LEVEL})`);
   const run = async () => {
-    const S = await stage(14, 0.5, 64); const { game, engine } = S; const pick = pickWall(game); if (!pick) return null;
+    const S = await stage(14, 0.5); const { game, engine } = S; const pick = pickWall(game); if (!pick) return null;
     const walls = game.destr.walls as any; const B = walls.list.find((b: any) => b.id === pick.id); const N = pick.alongX ? B.nx : B.nz; const ci = (k: number, iy: number) => pick.alongX ? (iy * B.nz) * B.nx + k : (iy * B.nz + k) * B.nx;
     const u = pick.alongX ? pick.mid[0] - pick.box.c[0] : pick.mid[2] - pick.box.c[2]; const L = pick.alongX ? pick.box.h[0] : pick.box.h[2]; const k0 = Math.max(1, Math.min(N - 4, Math.floor((u + L) / (2 * L) * N) - 1));
     const studs = () => standing(game).filter((b: any) => b.name === 'stud'); const n0 = game.col.boxes.length;
@@ -238,7 +238,7 @@ export async function breaksStuds(): Promise<boolean> {
 export async function breaksFurniture(): Promise<boolean> {
   const F = family(`breaks-furniture: a plain furniture piece takes its row's outline where it is; one metal panel a blast comes off kinked (${LEVEL})`);
   const run = async () => {
-    const S = await stage(14, 0.5, 64); const { game } = S; const D = game.destr.debris, Bk = game.destr.breaks;
+    const S = await stage(14, 0.5); const { game } = S; const D = game.destr.debris, Bk = game.destr.breaks;
     const pick = pickWall(game); if (!pick) return null;
     D.clear(); zero(BREAK_STATS);
     const mk = (h: Vec3, k: number, mat: string) => { const c0: Vec3 = [pick.a[0] + (pick.alongX ? (k - 3) * 0.7 : 0), 1.2, pick.a[2] + (pick.alongX ? 0 : (k - 3) * 0.7)];
@@ -277,9 +277,9 @@ export async function breaksFurniture(): Promise<boolean> {
 // ================================================================ the worst case
 export async function breaksCaps(): Promise<boolean> {
   const F = family(`breaks-caps: every breakable of the level blown end to end stays inside the pools (${LEVEL})`);
-  for (const cap of [64, 32]) {
-    const S = await stage(15, 1, cap); const { W, game, engine } = S; const D = game.destr.debris;
-    let blasts = 0, peak = 0, peakLoad = 0, bad = ''; const P = engine.particles as any; const births = cap >= 64 ? 384 : 192;   // (the page's frame deals the queue its births every frame: high 384, low 192)
+  { const cap = 64;
+    const S = await stage(15, 1); const { W, game, engine } = S; const D = game.destr.debris;
+    let blasts = 0, peak = 0, peakLoad = 0, bad = ''; const P = engine.particles as any; const births = 384;   // (the page's frame deals the queue its births every frame: high 384)
     const step0 = W.step; W.step = (dt: number) => { step0(dt); P.prepare(dt, true, births); };
     const look = () => { peak = Math.max(peak, D.list.length); peakLoad = Math.max(peakLoad, game.destr.breaks.load()); if (!bad) for (const c of D.list) { /* a kinked plate is two halves in one box: neither half fills it */ const f = recordFault(c.box.h, c.box.cut, !c.mate) ?? (c.mate ? recordFault(c.mate.h, c.mate.cut, false) : null); if (f) { bad = `chunk ${c.serial}: ${f}`; break; } if (c.box.c.some((x: number) => !isFinite(x))) { bad = `chunk ${c.serial} not finite`; break; } } };
     for (const w of game.destr.walls.all()) { const b = w.box; const alongX = b.h[0] >= b.h[2]; const L = alongX ? b.h[0] : b.h[2];

@@ -140,7 +140,7 @@ pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 /// up, and not broken and run: off the net from his shout on (laststand.ts alive)
 pub fn alive(g: &crate::game::Game, d: RoomfightDefId) -> bool {
     let gd = g.tab.roomfight_def[d].gd;
-    g.gd[gd].state != crate::game::GuardState::Dead && !crate::owner::has_him(g, gd, crate::owner::own().runner)
+    g.gd[gd].state != crate::game::GuardState::Dead && !crate::owner::has(g, gd, crate::owner::by::RUNNER)
 }
 
 /// a beat between two numbers, off the state's own die (laststand.ts pick)
@@ -169,7 +169,7 @@ pub fn note(g: &mut crate::game::Game, gd: Option<GuardId>, what: &str) {
 
 /// fit to speak or be spoken to: up, not held, his wits about him (laststand.ts fitGd)
 pub fn fit_gd(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    g.gd[gd].state != crate::game::GuardState::Dead && g.gd[gd].held.is_none() && !crate::owner::has_him(g, gd, crate::owner::own().runner)
+    g.gd[gd].state != crate::game::GuardState::Dead && g.gd[gd].held.is_none() && !crate::owner::has(g, gd, crate::owner::by::RUNNER)
         && !crate::control::man::blind(g, gd) && !crate::control::man::staggered(g, gd)
 }
 
@@ -189,7 +189,7 @@ pub fn calm(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
 pub fn movable(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
     let gd = g.tab.roomfight_def[d].gd;
     calm(g, d) && g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Hold && g.tab.roomfight_def[d].rally_at != f64::INFINITY
-        && !crate::owner::has_him(g, gd, crate::owner::own().squad_word) && !crate::owner::has_him(g, gd, crate::owner::own().squad_leg) && !crate::owner::has_him(g, gd, crate::owner::own().press) && !crate::pressure::press_keeps_home(g, d, None)
+        && !crate::owner::has(g, gd, crate::owner::by::SQUAD_WORD) && !crate::owner::has(g, gd, crate::owner::by::SQUAD_LEG) && !crate::owner::has(g, gd, crate::owner::by::PRESS) && !crate::pressure::press_keeps_home(g, d, None)
         && (crate::digin::dig_in_phase(g, gd) == "idle" || crate::digin::dig_in_phase(g, gd) == "set")
 }
 
@@ -625,7 +625,7 @@ pub fn tick_check(g: &mut crate::game::Game) {
         st.next_at = m::min(st.next_at, time + 5.0);
         return;
     }
-    if g.k.laststand.regroup { decide(g, caller, &heard); } else { tell_only(g, caller); }
+    tell_only(g, caller);
 }
 
 /// nobody answers him: true the first time (laststand.ts lone)

@@ -178,9 +178,9 @@ export const workWalk = () => keep(async () => {
 
 export const workObjective = () => keep(async () => {
   console.log('\n=== work-objective: the partner of a quiet mission takes the thing ===');
-  const R = await rig(g => startFromQuery(g, '?levelFile=quiet-yard.json&quiet&squad=1').why, true, 2, 'quiet-yard');
+  const R = await rig(g => startFromQuery(g, '?levelFile=crossing.json&quiet&squad=1').why, true, 2, 'crossing');
   const { g, O } = R; const ops: any[] = O.squad(), Wd = quietWords(g);
-  verdict(!R.why && ops.length === 1 && !!Wd, 'staged: a quiet mission (levels/quiet-yard.json) with one partner', `refusal ${R.why} · partner ${ops.map(o => o.callsign).join(', ')} · thing "${Wd?.thing}" in "${Wd?.holder}" (${Wd?.place})`);
+  verdict(!R.why && ops.length === 1 && !!Wd, 'staged: a quiet mission (levels/crossing.json) with one partner', `refusal ${R.why} · partner ${ops.map(o => o.callsign).join(', ')} · thing "${Wd?.thing}" in "${Wd?.holder}" (${Wd?.place})`);
   if (!Wd || !ops.length) return;
   const rf = g.level.mission.rack.front;
   verdict(g.mission.stage !== 'drive' && !g.work.things().some((x: any) => x.kind === 'objective'), 'before the objective is to take it, the holder is no thing to work (as Sam\'s own row)', `stage ${g.mission.stage} · things ${g.work.things().map((x: any) => x.name).join(', ')}`);

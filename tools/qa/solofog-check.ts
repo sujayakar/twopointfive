@@ -43,7 +43,7 @@ export async function soloFog(): Promise<boolean> {
   console.log(`\n=== ${title} ===`); let all = true;
   const verdict = (ok: boolean, label: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
   await hushed(() => standUp({ uploadEvery: 1 }));   // (the stand's own values are on the tables from the first game it stands up: read them after one)
-  const was = { ...QF.QUIETFOG }, stood = QF.QUIETFOG.solo, stickyWas = SC.STICKY.on, wandWas = WAND.on, coneWas = FOG.cone, ownWas = FOG.own, soloWas = { ...KIT.KIT_SOLO }, rnd = Math.random;
+  const was = { ...QF.QUIETFOG }, stood = QF.QUIETFOG.solo, stickyWas = SC.STICKY.on, wandWas = WAND.on, coneWas = FOG.cone, ownWas = FOG.own, rnd = Math.random;
   const games: any[] = [], up = !BREAK;
   try {
     const a = await night(1, '?solo', up); games.push(a.g);
@@ -84,7 +84,7 @@ export async function soloFog(): Promise<boolean> {
   } catch (e) { verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
   finally {
     for (const g of games) try { await hushed(() => RUN.quitScenario(g)); QF.quietFogEnd(); SC.stickyVisitSet(g, 0); } catch { /* nothing staged */ }
-    Object.assign(QF.QUIETFOG, was); SC.STICKY.on = stickyWas; WAND.on = wandWas; FOG.cone = coneWas; FOG.own = ownWas; Object.assign(KIT.KIT_SOLO, soloWas); Math.random = rnd;
+    Object.assign(QF.QUIETFOG, was); SC.STICKY.on = stickyWas; WAND.on = wandWas; FOG.cone = coneWas; FOG.own = ownWas; Math.random = rnd;
   }
   console.log(`=== solo-fog: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;

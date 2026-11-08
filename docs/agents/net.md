@@ -60,8 +60,8 @@ line).
     on both). 30 of 310 state words differ and 897,180 paths of the export, in four kinds: the picture's and the host's own carried in the state (the
     quality preset under `g.engine.settings`, the cast's meshes, the look's materials on box rows, the page's wind handed to its particles, caches
     and counters); the page's extra camera and Input rows (3 and 2 against 2 and 1), so a seat's camera is `CameraId(1)` there and `CameraId(0)` in
-    bun; the order rows (bun's table holds `thrWord` twice, 25 rows against 24); and three unplaced (`m.kit.issued_player{…}.slot`,
-    `m.kit.kit_solo.stand`, `g.director.strict`). So the whole words cannot be the alarm between a page and a server until the host's-own list
+    bun; the order rows (bun's table holds `thrWord` twice, 25 rows against 24); and two unplaced (`m.kit.issued_player{…}.slot`,
+    `g.director.strict`; a third, the harness's solo flag, is the game's own `stood.solo_stand` now, and an address stands it down on every host). So the whole words cannot be the alarm between a page and a server until the host's-own list
     covers the first kind and the rows are numbered alike. The probe and the path list: the Library's
     `rebuild/multiplayer/coop-on-rust/page-vs-bun/`.
     READ AGAIN ON THE RUST GOAL'S FOURTH BATCH (step 1905): a game of two on four bun machines agrees on every one of 307 parts, and the whole exports of
@@ -175,7 +175,7 @@ line).
   moved to does not carry it, so a visit's record never holds it (a browser that keeps nothing leaves it on the address). WHO STEPS THE GAME is the
   loop's seam, `host/loop.ts LoopCtx.tick` (absent = `game.update` then the lights, the loop as it was): on a page tick the player's input is sampled
   (`sampleCmd`, off the page's own camera) and sent, the game is stepped only through the server's confirmed ticks by `netStep`, and the host's half
-  of a tick is done round them (`Game.hostBefore` / `hostAfter`: `update`'s own lines, named — the peek's nudge, a blast's kick, a cut, the live view
+  of a tick is done round them (`Game.hostAfter`: `update`'s own lines, named — the peek's nudge, a blast's kick, a cut, the live view
   put back). HOW FAST: one confirmed tick a page tick, two while more than `NET.lead` wait; from `NETPAGE.far` waiting (it joined late, its tab slept)
   the page CATCHES UP as a replay seeks — the mixer shut, as many ticks as fit in `NETPAGE.farMs`, the hands off the keys (decided before the tick's
   record is made), nothing drawn between two of those ticks, the picture's queues let go when it is level (`engineplay.ts unseenDone`, the seek's own). No playout buffer: a tick that comes late is a tick drawn late. THE GAME IS THE SERVER'S: a card's Restart and a checkpoint's load are refused in words

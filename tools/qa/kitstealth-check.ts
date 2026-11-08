@@ -26,7 +26,7 @@ const FULL = { rings: 5, cams: 2, wand: true }, BARE = { rings: 5, cams: 0, wand
 export async function kitStealth(): Promise<boolean> {
   console.log(`\n=== kitstealth: a stealth mission's kit is what your card starts at there${BROKEN ? ' [KITSTEALTH_BREAK=1]' : ''} ===`);
   let all = true; const verdict = (ok: boolean, label: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
-  const was = { big: K.BIGSLOT.on, on: K.KIT.on, slots: K.SLOTS.on, solo: K.KIT_SOLO.on };
+  const was = { big: K.BIGSLOT.on, on: K.KIT.on, slots: K.SLOTS.on };
   const raise = () => { K.kitMission(null); K.BIGSLOT.on = true; K.KIT.on = true; K.SLOTS.on = true; };
   try {
     // ── the card
@@ -56,7 +56,7 @@ export async function kitStealth(): Promise<boolean> {
       verdict(why === null && q.weapon === 'rifle' && q.rings === 5 && q.cams === 2 && q.wand && !q.frags && K.kitCost(0, q).used === 4 && !list.includes('quiet') && list[0] === 'issued',
         'the Quiet kit\'s card for you is a stealth mission\'s kit (the long gun kept, no frag), and a stealth mission\'s row of kits does not list it beside the same card as issued', `${words(q)} (${cost(q)}) · a stealth screen lists ${list.join(', ')}`); }
 
-  } finally { K.kitMission(null); K.BIGSLOT.on = was.big; K.KIT.on = was.on; K.SLOTS.on = was.slots; K.KIT_SOLO.on = was.solo; K.kitLoad(null, ''); K.SLOTS.on = was.slots; K.KIT.on = was.on; }
+  } finally { K.kitMission(null); K.BIGSLOT.on = was.big; K.KIT.on = was.on; K.SLOTS.on = was.slots; K.kitLoad(null, ''); K.SLOTS.on = was.slots; K.KIT.on = was.on; }
   console.log(`=== kitstealth: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
 }

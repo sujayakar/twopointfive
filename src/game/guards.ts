@@ -761,8 +761,10 @@ function beamWalled(g: Game, o: Vec3, fan: Vec3[], m: number, held: boolean): bo
  *  line test, at a margin either side of its distances: tools/qa/beam-reading.ts) */
 export function beamWalledAt(g: Game, o: Vec3, d: Vec3, m: number, held = false): boolean { return crossToRust('beamWalledAt', undefined, [g, o, d, m, held]) as any; }
 export function beamRayEnd(g: Game, o: Vec3, r: Vec3, m: number): 0 | 1 | 2 | 3 { return crossToRust('beamRayEnd', undefined, [g, o, r, m]) as any; }
+/** a carried light's emitter radius, in metres (rust: guards::FLASHLIGHT_RADIUS) */
+const FLASHLIGHT_RADIUS = 0.07;
 /** where a carried light will burn: at its lens `p`, or this side of the wall the lens is carried through from `held` (attachFlashlight, lighting.ts lensClear) */
-function burnsFrom(g: Game, held: Vec3, p: Vec3): Vec3 { return g.col.segmentBlocked(held, p) ? lensClear(g, held, p, g.engine.settings.flashlightRadius) : p; }
+function burnsFrom(g: Game, held: Vec3, p: Vec3): Vec3 { return g.col.segmentBlocked(held, p) ? lensClear(g, held, p, FLASHLIGHT_RADIUS) : p; }
 /** …a living man's weapon light, for the checks (nothing before he has a pose) */
 export function beamLens(g: Game, gd: Guard): Vec3 | null { return crossToRust('beamLens', undefined, [g, gd]) as any; }
 /** LIGHTS.wallOff (the maintainer, 10-22, off the first tutorial mission: "weird that they are shining the flashlight on the wall immediately in front of
@@ -1060,7 +1062,7 @@ export function burstSummary(g: Game): string {
 
 export function attachFlashlight(g: Game, gd: Guard, dt = 1 / 60) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('attachFlashlight', undefined, [g, gd, dt]); if (__r !== RUST_PASS) return __r as any; } }   // (dt: the relaxed carry's easing is per second — rigProps.ts torchCarryDir; callers outside the frame loop, savestate / squad, take the sixtieth)
   const held = poseFlashlight(g, gd, dt), fl = gd.flashlight;
-  if (held && fl.enabled) fl.pos = lensClear(g, held, fl.pos, g.engine.settings.flashlightRadius, fl);   // a burning lens carried through the wall he is pressed to lights from this side of it (lighting.ts LIGHTWALL; a dark light asks nothing)
+  if (held && fl.enabled) fl.pos = lensClear(g, held, fl.pos, FLASHLIGHT_RADIUS, fl);   // a burning lens carried through the wall he is pressed to lights from this side of it (lighting.ts LIGHTWALL; a dark light asks nothing)
 }
 /** the light at its lens, its beam and whether it burns; returns what the lens hangs off — his gun shoulder, or the dropped torch's own body (nothing before he has a pose) */
 function poseFlashlight(g: Game, gd: Guard, dt: number): Vec3 | undefined {
@@ -1095,7 +1097,7 @@ function poseFlashlight(g: Game, gd: Guard, dt: number): Vec3 | undefined {
   if (hangs && TORCH.wallDark && !TORCH.wallLow) fl.enabled = false;   // (the other answer to the same reading, only where asked for: put out instead of tipped)
   if (wallDark(g, gd, held) && fl.enabled) { fl.enabled = false; const s = wallSeen.get(gd); if (s) s.out = true; }   // (LIGHTS.wallOff: a teammate's beam that would end on the wall or the truck at his muzzle — asked every frame so its clock runs whether or not the light burns; false for everybody with the switch off)
   if (fl.enabled && dozeDark(gd)) fl.enabled = false;   // (doze.ts: a man sat down to doze has put his torch out — false with its switch off)
-  fl.peakIntensity = T.flashIntensity; fl.intensity = T.flashIntensity; fl.innerDeg = T.flashInner; fl.outerDeg = T.flashOuter; fl.radius = g.engine.settings.flashlightRadius;
+  fl.peakIntensity = T.flashIntensity; fl.intensity = T.flashIntensity; fl.innerDeg = T.flashInner; fl.outerDeg = T.flashOuter; fl.radius = FLASHLIGHT_RADIUS;
   return held;
 }
 

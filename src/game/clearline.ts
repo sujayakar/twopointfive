@@ -114,11 +114,9 @@ export interface ClearNote { t: number; who: string; what: 'step' | 'cover' | 'k
 export const CLEARLINE_LOG: ClearNote[] = [];
 
 const LS = 'twopointsix.clearline';
-const KEPT = ['on', 'after', 'afterEdge', 'inEntry', 'holdBehind', 'holdStep', 'still', 'stillFar', 'reachM', 'pace', 'cover', 'kneel', 'cue', 'holdMax'] as const;   // (the panel's rows)
+const KEPT = ['after', 'afterEdge', 'inEntry', 'holdBehind', 'holdStep', 'still', 'stillFar', 'reachM', 'pace', 'cover', 'kneel', 'cue', 'holdMax'] as const;   // (the panel's rows)
 export function saveClearLine() { try { const o: Record<string, boolean | number> = {}; for (const k of KEPT) if (CLEARLINE[k] !== CLEARLINE_DEFAULTS[k]) o[k] = CLEARLINE[k]; if (Object.keys(o).length) globalThis.localStorage?.setItem(LS, JSON.stringify(o)); else globalThis.localStorage?.removeItem(LS); } catch { /* no store */ } }
 try { const o = JSON.parse(globalThis.localStorage?.getItem(LS) ?? 'null'); if (o) for (const k of KEPT) if (typeof o[k] === typeof CLEARLINE[k]) (CLEARLINE as Record<string, unknown>)[k] = o[k]; } catch { /* no store, or not ours */ }
-try { const q = new URLSearchParams(location.search); if (q.has('clearline')) CLEARLINE.on = q.get('clearline') !== '0'; } catch { /* no page (the harness) */ }
-try { const e = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.CLEARLINE; if (e) CLEARLINE.on = /^(1|on|true|yes)$/i.test(e); } catch { /* no process (the page) */ }
 
 type What = 'step' | 'cover' | 'kneel';
 /** what he is doing about it: where, about which man, since when; `onT` = when that man was last his (roomfight's target), `until` = a cover's end */

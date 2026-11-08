@@ -23,7 +23,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
-import { sample } from './sweep.ts';
 import { tapVerb } from './verbs.ts';
 import { listen } from './heard.ts';
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
@@ -32,9 +31,7 @@ const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { LASTSTAND, lastStandReport } = await import(`${ROOT}/src/game/laststand.ts`);
-const { DIGIN_STATS } = await import(`${ROOT}/src/game/digin.ts`);
 const { KIT } = await import(`${ROOT}/src/game/kit.ts`);
 
 const DT = 1 / 60, BREAK = process.env.FRAMEHOLDS_BREAK === '1';   // (the red path: no door is hung the other way, so no locked face is one a door opens toward)
@@ -165,41 +162,3 @@ export const frameholdsSam = guarded(async () => {
   return F.done();
 });
 
-// ---------------------------------------------------------------- frameholds-wedge
-// The last stand on the compound (laststand-probes.ts's staging: five on eleven, the team left on its start mark, the defenders taken down by hand to three, who
-// are ordered into one room and dig in — a last stand wedges ANY door of its room). The moment the room is named, every door of it is hung to open OUT of the
-// room (or INTO it: the control), and the three are left to it. Doors stay where they are left (a settled rule), so the three walk in by the room's doors and
-// leave them standing open: the probe is the hand that shuts each door of the room behind them (the game's own pull, whenever nobody living is within 2 m of
-// the doorway), and the hold test then decides.
-async function standRig(seed: number) {
-  reset(); Object.assign(LASTSTAND, { regroup: true }); Math.random = seeded(seed);   // (regroup: the last stand's order into one room, an open switch off in the page — raised BEFORE the stand-up, so the game starts with it)
-  return quiet(async () => { const W = await standUp({ uploadEvery: 4, level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', 'compound.json'), 'utf8'))) }); await startFromQuery(W.game, new URLSearchParams(`?levelFile=compound.json&roomclear=${seed}&squad4`)); return W; });
-}
-async function standWedges(seed: number, hang: 'out' | 'in' | number) {   // (a number: that entry of the room alone opens out of it, the rest into it)
-  const W: any = await standRig(seed); try {
-    const g = W.game, step = (secs: number, each?: () => void) => { for (let i = 0; i < Math.round(secs * 60); i++) { g.player.visibility = 0.05; W.step(DT); each?.(); } };
-    step(1); const kept: any[] = [];
-    for (const R of g.roomClear.rooms) { const stay = ['office', 'bunk', 'back'].includes(R.def.id) ? R.defenders[0] : null; if (stay) kept.push(stay); for (const h of R.defenders.slice()) if (h !== stay && h.state !== 'dead') killGuard(g, h, [1, 0, 0], true); }
-    const s0 = { ...DIGIN_STATS }; let room: any = null, hung: string[] = [], setT = -1, n = 0;
-    while (n < 150 * 60 && (setT < 0 || n < setT * 60 + 300)) step(1 / 60, () => { n++; const R = lastStandReport(g);
-      if (!room && R.room) { const there = kept.find((h: any) => h.state !== 'dead' && g.roomClear.roomAt(h.char.pos) === R.room); room = (g.fight.defs as any[]).find(D => D.gd === there)?.room ?? null;
-        if (room) for (const [i, e] of room.entries.entries()) { const inside: [number, number, number] = [e.at[0] - e.out[0] * 0.8, 0, e.at[2] - e.out[1] * 0.8], toward = g.doors.pullFace(e.door, inside), wantOut = typeof hang === 'number' ? i === hang : hang === 'out';
-          if (toward === wantOut && Math.abs(e.door.angle) < 0.05) e.door.setSwing(-e.door.swing); hung.push(`${e.door.def.name} ${g.doors.pullFace(e.door, inside) ? 'in' : 'out'}`); } }
-      if (room) for (const e of room.entries) if (!e.door.latched && !e.door.off && !g.guards.some((h: any) => h.state !== 'dead' && Math.hypot(h.char.pos[0] - e.at[0], h.char.pos[2] - e.at[2]) < 2)) g.doors.pullTo(e.door, 0);
-      if (setT < 0 && R.said.some((l: any) => l.kind.startsWith('set'))) setT = n / 60; });
-    const d = (k: string) => (DIGIN_STATS as any)[k] - (s0 as any)[k];
-    const on: string[] = room ? (room.entries as any[]).filter(e => e.door.locked && !e.door.def.locked && !e.door.lockBroken).map(e => e.door.def.name as string) : [];   // (a wedge is a lock from the inside: a door locked that the level did not lock)
-    return { room: lastStandReport(g).room as string | null, hung, n: room ? room.entries.length as number : 0, on, wedged: room ? on.length : -1, braced: d('braced'), away: d('wedgedAway'), passed: d('opensAway'), setT };
-  } finally { reset(); }
-}
-export const frameholdsWedge = guarded(async () => {
-  const F = family('frameholds-wedge: defenders wedge only a door that opens toward them (the last stand on the compound, its room\'s doors hung out of it)');
-  // (the deal: one on which the room's men get their furniture to a door, so that the hold test is what decides. FH_SEED=<n> asks another deal)
-  const SEED = Number(process.env.FH_SEED ?? 1);
-  const line = (r: any) => `room ${r.room} (${r.hung.join(', ')}) · ${r.wedged} doors wedged, ${r.braced} wedges placed, ${r.away} on a door opening away, ${r.passed} doors passed over · all set at ${f2(r.setT)} s`;
-  // the mixed room: one door of it opens out, the rest in — the wedges go on the doors a wedge can hold, whichever door they are expected by
-  for (const k of sample([1, 0], 1)) { const M = await standWedges(SEED, k), out = M.hung.find((h: string) => h.endsWith('out'))?.split(' ')[0];
-    F.verdict(M.n >= 2 && !!out && M.hung.filter((h: string) => h.endsWith('out')).length === 1 && M.wedged === M.n - 1 && !M.on.includes(out) && M.away === 0 && M.passed === 1,
-      `one door of the room (${out}) opens out of it, the rest into it: every other door is wedged, that one is passed over`, `${line(M)} · wedged: ${M.on.join(', ')}`); }
-  return F.done();
-});

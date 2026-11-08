@@ -39,8 +39,6 @@ import { mountKitView, type KitViewFrame } from './kitView';
 import { KIT_CLIP } from './kitCard';
 import { mountKitBrief, type KitBrief } from './kitBrief';
 import { mountKitGuide, type KitGuide } from './kitGuide';
-import { KIT_PLANS } from './kitPlan';
-import { kitPacks } from '../game/kit';
 
 
 const CSS = `
@@ -419,7 +417,7 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
 
   /** the short list's settings are what the page shows for `m`: its pick, else null */
   const asPick = (m: Mission): Pick | null => { const p = pickOfMission(m.id); if (!p) return null; const d = quietFogAside(() => leversMixed() ? leversBase() : difficultyNow());   // (levers moved to a mix of their own: the level they stand over)
-    return (!pickEntry(p) || d === (p.difficulty ?? 'standard') || (!p.oneDifficulty && (d === 'standard' || d === 'hard'))) && M.hourNow === (p.hour ?? 'night') && M.weather === (p.weather ?? null) && !/[?&]way=/.test(M.hrefOf(m)) ? p : null; };   // (a way in picked on the sheet is not the short list's: the row's own link carries it)
+    return (!pickEntry(p) || d === (p.difficulty ?? 'standard') || d === 'standard' || d === 'hard') && M.hourNow === 'night' && M.weather === null && !/[?&]way=/.test(M.hrefOf(m)) ? p : null; };   // (a way in picked on the sheet is not the short list's: the row's own link carries it)
   const baseOf = (m: Mission): string => { const p = asPick(m), d = quietFogAside(() => leversMixed() ? leversBase() : difficultyNow()), h = p && pickHref(p, search, undefined, undefined, pickEntry(p) && (d === 'standard' || d === 'hard') ? d : undefined); return h ? quietFogAside(() => leversHref(h)) : M.hrefOf(m); };
   const WHAT: Record<Pane, string> = { list: 'W S mission · Enter team and kit · Esc back', loadout: 'W S A D change · Enter deploy · Esc back' };
   /** THE HIGHLIGHTED MISSION HAS NO KIT STEP (a mission played with the kit as issued): its TEAM & KIT pane has nothing on it to pick, so nothing on the
@@ -504,13 +502,13 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
     if (settling || shut) return;
     const m = M.selected, p = pickOfMission(m.id), fresh = m.id !== lastId;
     if (m.id === lastId) { if (lastHour !== null && M.hourNow !== lastHour) playerHour = null; }   // (H, or a click on the Hour row, on the same mission: that hour is the player's from here on)
-    else { const mine = playerHour ?? M.hourNow, own = p ? p.hour ?? 'night' : null, want = own ?? mine;   // (onto a short-list row: its own hour; off it: the player's back)
+    else { const mine = playerHour ?? M.hourNow, own = p ? 'night' : null, want = own ?? mine;   // (onto a short-list row: the level's own night; off it: the player's back)
       playerHour = own !== null && own !== mine ? mine : null;
       if (M.hourNow !== want) { settling = true; M.hour(want); settling = false; } }
     lastId = m.id; lastHour = M.hourNow;
     tip.textContent = p ? p.line : '';
     if (fresh) rest('', '');
-    kbrief?.show(m, kguide && kitPacks(m.scenario) ? KIT_PLANS[m.id] ?? null : null);   // (a tutorial mission with a kit plan of its own: its map names the rooms — ui/kitPlan.ts)
+    kbrief?.show(m);
     paintVals(fresh);
     mount();
   };

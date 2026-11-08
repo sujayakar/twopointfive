@@ -6,6 +6,7 @@
 // it stands beside the menu (ui/debrief.ts). DEBRIEF: the mission's card proper — up on mission complete (Again / Keep playing) and, a beat after Sam drops, as
 // the down card (Restart): the rating word and score, the numbers, the badges, the floor map with his path and the pins, the timeline. While any of them is
 // open main.ts freezes the simulation and keeps rendering the frozen frame underneath. Plain DOM, styled in index.html (#menu…) with ui/theme.ts's tokens.
+import { kitSolo } from '../game/kit';   // (the mission list's solo night off the start card: your card, on this game)
 export { loadSandbox } from '../game/sandbox';
 import { Engine } from '../engine';
 import { Game } from '../game/game';
@@ -63,8 +64,7 @@ export function bootCard(): { status(text: string): void; off(): void } {
 /** the title screen's head and its main menu (the boot card and the real start card build the same screen) */
 function titleHead(): HTMLElement { const head = el('div', 'head'); head.innerHTML = `<div class="t1">two<b>point</b>six</div><div class="t2">${TITLE_LINE}</div>`; return head; }
 /** EXTRAS (the title screen's fourth entry: the maintainer, 10-11 — "the showcase and editor and whatever other tools we have … should all be linked in the main menu"): the
- *  tool pages, each a LINK — a tool is its own page (the `.html` names: the dev server forwards them to its routes, the build has them as files; the one-file build has no tool
- *  pages and lists none: `onePage`); a row whose link is a key of this page (`?bench`) keeps the visitor's other flags (`showHref`) and, ON THE LIVE TITLE, STARTS IN PLACE
+ *  tool pages, each a LINK — a tool is its own page (the `.html` names: the dev server forwards them to its routes, the build has them as files); a row whose link is a key of this page (`?bench`) keeps the visitor's other flags (`showHref`) and, ON THE LIVE TITLE, STARTS IN PLACE
  *  (Menu.title hands `TitleShows`) — no page load, the click is the gesture the sound needs; the link is what such a row is while the page still boots, or in a new tab.
  *  (The two showcases that were this list's first section — the night and the day — were removed.) What is listed and what is not, and why: rebuild/menus/tools.md. */
 export const EXTRAS: { head: string; rows: { id: string; label: string; line: string; href: string }[] }[] = [
@@ -75,8 +75,6 @@ export const EXTRAS: { head: string; rows: { id: string; label: string; line: st
 ];
 /** the link of a row that is a key of this page (`?bench`): its key, then the visitor's own flags as every mission link keeps them (`?mute&quality=low` rides along; another mission's keys do not) */
 function showHref(href: string): string { if (href[0] !== '?') return href; const rest = quitSearch(typeof location !== 'undefined' ? location.search ?? '' : ''); return href + (rest ? '&' + rest.slice(1) : ''); }
-/** the one-file build (tools/build-one.ts marks its page): index.html is all there is, so the tool pages are not listed */
-const onePage = () => typeof document !== 'undefined' && !!document.querySelector?.('meta[name="tps-one-page"]');
 /** a row started in place, by its id: true = started (or refused aloud), false = not from here — the row's link loads it */
 type TitleShows = Partial<Record<string, () => boolean>>;
 /** which page of the title's menu is up: the main one, or EXTRAS (kept through the boot card handing over to the real title) */
@@ -92,9 +90,8 @@ function titleActions(onClose?: () => void, shows?: TitleShows): { actions: HTML
     actions.innerHTML = ''; actions.classList.toggle('extras', titleExtras);
     if (titleCoop && COOP.on && !titleExtras) { coopRows(actions, () => { titleCoop = false; fill('coop'); }, !!focus); play = actions.querySelector('.btn') as HTMLElement; return; }
     if (titleExtras) {
-      const one = onePage();
       for (const sec of EXTRAS) {
-        const rows = sec.rows.filter(r => !one || r.href[0] === '?'); if (!rows.length) continue;
+        const rows = sec.rows; if (!rows.length) continue;
         const h = el('div', 'xhead'); h.textContent = sec.head; actions.appendChild(h);
         for (const r of rows) {
           const a = el('a', 'btn xrow') as HTMLAnchorElement; a.href = showHref(r.href); a.dataset.extra = r.id; a.innerHTML = `<b>${esc(r.label)}</b>`; a.title = r.line;   // (show, not tell: a row is its name; its sentence is the tooltip)
@@ -151,7 +148,7 @@ export class Menu {
   /** Auto's calibration has just settled (main.ts wires Quality.onCalibrated): the options screen's live line follows, if it is the one up */
   refreshQualityNote() { refreshOptions(); }
 
-  open(mode: 'start' | 'pause' | 'debrief') { if (mode === 'debrief') closeOptions(); this.mode = mode; MISSIONS.startSolo = mode === 'start' ? () => this.close() : null; this.render(); this.root.classList.add('on'); }   // (the mission list's solo night off the start card IS Start)
+  open(mode: 'start' | 'pause' | 'debrief') { if (mode === 'debrief') closeOptions(); this.mode = mode; MISSIONS.startSolo = mode === 'start' ? (card) => { this.close(); if (card) kitSolo(this.d.game); } : null; this.render(); this.root.classList.add('on'); }   // (the mission list's solo night off the start card IS Start)
   close() { closeOptions(); MISSIONS.startSolo = null; closeMissions(); if (this.mode === 'start') this.d.onStart(); this.mode = 'closed'; this.run = false; this.root.classList.remove('on'); this.d.focusGame?.(); }   // keys go to the game, not the (now hidden) button that had focus
   /** the pause card with 'Run so far' open beside it (Tab, while that is what Tab is trying out: ui/tabkey.ts) */
   openRun() { this.run = true; this.open('pause'); }

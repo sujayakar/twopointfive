@@ -30,7 +30,7 @@ import './lighting';
 import './guards';
 import { WORLD } from '../scene/world';
 import { hourWeatherChanged } from './hours';   // (called inside setKind only)
-import { WEATHER_BOOT, WX_OWN, WEATHER_PRESETS, isAnyKind, snowLevel, packFog, unpackFog, packRect, unpackRect, inRect } from './weatherKinds';
+import { WX_OWN, WEATHER_PRESETS, isAnyKind, snowLevel, packFog, unpackFog, packRect, unpackRect, inRect } from './weatherKinds';
 import type { WeatherKind, Rect, FogSpec } from './weatherKinds';
 import { levelNameOf } from '../scene/levelLoad';   // (asked inside levelKind only)
 import { sim, f64 } from '../sim/sim';
@@ -126,7 +126,7 @@ export class Weather {
   get enabled(): boolean { return this.on; }
   set enabled(v: boolean) { this.setEnabled(v); }
   private on = true;
-  /** the weather the level was STARTED in (weatherKinds.ts), or null = as it has always been. Set at birth from WEATHER_BOOT, by a checkpoint, or setKind(). */
+  /** the weather the level was STARTED in (weatherKinds.ts), or null = as it has always been. Set at birth from the game's record (Game.stood), by a checkpoint, or setKind(). */
   get kind(): WeatherKind | null { return this.kindNow; }
   set kind(k: WeatherKind | null) { this.kindNow = k; wxSet(this.g.sim, WX.live, k ? 1 : 0); }
   private kindNow: WeatherKind | null = null;
@@ -192,10 +192,10 @@ export class Weather {
 
   constructor(private g: Game) { g.sim.keep(WX_BIT, 'weather');
     { const has = roofsCounted(g.level.boxes, WORLD.ceilingY), most = wxCap(0); if (has > most) console.warn(`the level has ${has} ceiling slabs and the weather's table holds ${most}: the biggest ${most} are its roofs, and rain and wind pass the rest`); }   // (content is never an error)
-    this.storm = LEGACY.storm; this.rainRate = LEGACY.rain; this.thunderUntil = -1e9; this.nextFlashAt = -1; this.lastBarkT = -1e9; this.die = 20260809; this.roofs = [INTERIOR, ANNEX]; const born = this.levelKind() ?? (WEATHER_BOOT.kind === 'snow' ? null : WEATHER_BOOT.kind); if (!born && ownFloor(g)) this.ownNight(); this.wet = this.rainRate > 0 ? 1 : 0; if (born) this.setKind(born); else this.syncRoofs(); }   // (wet from the first frame: it has been raining all night — the lot starts wet, not drying in front of the player over the first twenty seconds)
+    this.storm = LEGACY.storm; this.rainRate = LEGACY.rain; this.thunderUntil = -1e9; this.nextFlashAt = -1; this.lastBarkT = -1e9; this.die = 20260809; this.roofs = [INTERIOR, ANNEX]; const born = this.levelKind() ?? (g.stood.weather === 'snow' ? null : g.stood.weather); if (!born && ownFloor(g)) this.ownNight(); this.wet = this.rainRate > 0 ? 1 : 0; if (born) this.setKind(born); else this.syncRoofs(); }   // (wet from the first frame: it has been raining all night — the lot starts wet, not drying in front of the player over the first twenty seconds)
   /** A LEVEL BUILT FOR SNOW (weatherKinds.ts SNOW_LEVELS, the switch SNOW.on) is born in the kind 'snow' and stays in it: the level's own weather, whatever a
    *  URL or a tool picked for the visit. null = any other level (and every level with the switch off): the rules below, untouched. */
-  private levelKind(): WeatherKind | null { return snowLevel(levelNameOf(this.g.level)) && (!WEATHER_BOOT.locked || WEATHER_BOOT.kind === 'snow') ? 'snow' : null; }   // (a page — locked — that was not opened on the snow level has no flake in its shaders: a level of that name loaded into it later stands under the weather any level has)
+  private levelKind(): WeatherKind | null { return snowLevel(levelNameOf(this.g.level)) && (!this.g.stood.locked || this.g.stood.weather === 'snow') ? 'snow' : null; }   // (a page — locked — that was not opened on the snow level has no flake in its shaders: a level of that name loaded into it later stands under the weather any level has)
   /** SNOWFALL 0‥1 (the kind's preset): what game/snowFx.ts draws flakes by. The picture's alone — nothing an eye, an ear or a foot reads. */
   snowRate = 0;
   /** NO WEATHER PICKED ON A FLOOR THAT IS NONE OF THE OFFICE'S (ownFloor): the legacy storm rains by the office's two rectangles, which are another building's —
@@ -220,7 +220,7 @@ export class Weather {
   }
   /** the footprints follow the rule in force (the constructor, setKind, and the top of every update: the switch is live) */
   private syncRoofs(tellWind = false) {
-    const g = this.g; const own = !this.kind && WX_OWN.roofs && WEATHER_BOOT.packed && !ownFloor(g) && !this.officeFit();   // (packed: a page whose shaders were compiled without the third and fourth roof's reads keeps the two rectangles — main.ts)
+    const g = this.g; const own = !this.kind && WX_OWN.roofs && !ownFloor(g) && !this.officeFit();   // (a rule of play: the picture follows it, main.ts turns the shaders' packed-roof reads on for a game that stands under a level's own roofs)
     if (own === this.own && !tellWind) return;
     if (own !== this.own) {
       this.own = own; this.setWet(false);   // (what is wet hangs on the roofs: put the ground back, the next update wets it by the new rule)
@@ -238,7 +238,7 @@ export class Weather {
    *  in progress and thunder on its way are dropped; the ground is as wet as if it had been that way all night. */
   setKind(kind: WeatherKind | null): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Weather.setKind', this, [kind]); if (__r !== RUST_PASS) return __r as any; } }
     { const own = this.levelKind(); if (own && kind !== own) { console.warn(`weather: this level is in '${own}' and stays in it ('${kind ?? 'the level\'s own'}' was asked for)`); return false; } }   // a level built for snow stays in it: no pick, tool or restored file takes it out (and the page's shaders are that kind's)
-    if (WEATHER_BOOT.locked && kind !== WEATHER_BOOT.kind) { console.warn(`weather: this page was opened in '${WEATHER_BOOT.kind ?? 'the level\'s own'}' — open it with ?weather=${kind ?? ''} for another (the renderer's half is compiled at boot)`); return false; }
+    if (this.g.stood.locked && kind !== this.g.stood.weather) { console.warn(`weather: this page was opened in '${this.g.stood.weather ?? 'the level\'s own'}' — open it with ?weather=${kind ?? ''} for another (the renderer's half is compiled at boot)`); return false; }
     const g = this.g; this.setWet(false); this.kind = kind; this.own = false; this.snowRate = 0;   // (what is wet depends on the kind: put the ground back, the next update wets it by the new rule; the footprints are dealt afresh below)
     if (kind && !this.on) this.on = true;   // (a picked weather IS on: the simulation follows it, so the picture must)
     this.endFlash(); this.thundersAre = []; this.nextFlashAt = -1; this.thunderUntil = -1e9;
@@ -258,11 +258,11 @@ export class Weather {
     hourWeatherChanged(g);   // the level started at another hour (hours.ts): this weather's cloud over that sun and sky, the level's own storm held off again when the kind is taken away — nothing at night
     return true;
   }
-  /** can a checkpoint's weather be put in here? null, or the reason (the page's weather is its URL's: WEATHER_BOOT.locked) */
+  /** can a checkpoint's weather be put in here? null, or the reason (the page's weather is its URL's: Game.stood.locked) */
   refuses(s: WeatherSnap | null | undefined): string | null {
     const k = isAnyKind(s?.kind) ? s!.kind! : null;
     { const own = this.levelKind(); if (own && k !== own) return `made in other weather (${k ?? 'the level\'s own'}; this level is in ${own})`; }
-    return WEATHER_BOOT.locked && k !== this.kind ? `made in other weather (${k ?? 'the level\'s own'}; this page is in ${this.kind ?? 'the level\'s own'}) — open the mission in that weather to load it` : null;
+    return this.g.stood.locked && k !== this.kind ? `made in other weather (${k ?? 'the level\'s own'}; this page is in ${this.kind ?? 'the level\'s own'}) — open the mission in that weather to load it` : null;
   }
   /** the footprints in force now, as underRoof reads them (for a rule that asks many points of them elsewhere: the thrown things' walk in the Rust module) */
   roofsNow(): readonly Rect[] { this.syncRoofs(); return this.roofs; }

@@ -9,7 +9,7 @@ Written by surface.py. 1095 rows of `io::call`, 803 with a guard at load. What i
 - **takes no game: nothing to write** (7): `AimState.clear`, `Ocp.update`, `Ocp.use`, `RateCap.reset`, `RateCap.take`, `gpFragments`, `manifestOf`
 - **answers what its Rust function does not** (5): `Destruction.onBlast`, `Pose.copy`, `WallBreak.onChange`, `searchPlanFor`, `wallReactOf`
 - **a parameter only Rust has** (4): `blendPose`, `layerSlot`, `sampleClip`, `spawnShot`
-- **takes an address's words, which are not on the wire** (2): `initWeather`, `quietFogStart` (in Rust they take a `Query`, `rust/game/src/query.rs`; a host hands an address's TEXT across)
+- **takes an address's words, which are not on the wire** (2): `weatherAsked`, `quietFogStart` (in Rust they take a `Query`, `rust/game/src/query.rs`; a host hands an address's TEXT across)
 
 ## The picture's own functions have no row
 
@@ -25,6 +25,14 @@ row whose Rust body carries the boundary no-op mark, and `wetSummary`, whose bod
 A row is named by its `id`, which is the dispatcher's arm in `rust/game/src/call_gen.rs`, not by its place in `calls.json`: the eleven left holes and
 no other row moved (`surface.ts` indexes by `id`). The eleven arms and their no-op bodies are still in the Rust crate, reached by nothing from the
 TypeScript; they can go with the next change there, and no number needs to move when they do.
+
+ALSO OFF, the host's own though it has a Rust body: `sampleCmd` (row 498), which writes a tick's record from the live Input, camera and window (of the
+game it reads a showcase's aim, `g.puppet.aim`, which moves the host's cursor). While the harness's Input was no row of the game it passed as the
+TypeScript; from the step that hands the host's camera and keys to the game at the stand it crossed, 5.5 ms a call (0.05 before), for every tool that
+samples a record itself: the two-seat checks, and the scripted clients of a game server, which then started 14 to 21 beats late and never drew level
+(`mpserver-check` `ahead`). A tool that steps by `Game.update` was not slower: inside it nothing crosses, and so the host's other lines
+(`Game.hostBefore`, `Game.hostAfter`, `Director.injectInput`: called there, and by a networked page, which has no surface) never do. The Rust arm is
+reached by nothing from the TypeScript. 1062 rows are left.
 
 LEFT ON THE TABLE though their Rust body is empty, because the nothing is the game's own answer and not the picture's: `SnatchOut.switched` and
 `closeMarks` (a settled switch), `fogFlags` and `loadCivTune` (the address and the browser's storage are the host's; their TypeScript would read a page).

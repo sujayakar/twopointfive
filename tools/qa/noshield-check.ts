@@ -10,7 +10,7 @@
 //           store without the word; the same card PASTED; the squad kit that carried one is not on the list and cannot be put on
 //   staged  the long hall (its issue block handed the first teammate the shield) stages every man on the plain issue, nobody with a pistol for his gun; no
 //           level file names one, and a level whose issue card still does is REFUSED with the reason in words; no mission's words say shield
-//   tape    what was recorded with one: an F10 session's knobs (the SHIELD table among them) apply without a throw and make no table — such a file LOADS,
+//   tape    what was recorded with one: a tape's knobs (the SHIELD table among them) apply without a throw and make no table — such a file LOADS,
 //           and where a shield man was in it the replay parts from the file's own digests and says at which frame, as for any file the build has moved past
 //           (the file does not say who carried what: nothing to refuse it by); an F7 run tape made with one is refused in words before a re-run (the map
 //           viewer plays its samples as ever), and a tape made without is not
@@ -134,7 +134,7 @@ export async function noshieldTape(): Promise<boolean> {
     try {
       const W: any = await hushed(() => standUp()), g = W.game, JR = await import(`${ROOT}/src/game/journal.ts`), RF = await import(`${ROOT}/src/replay/format.ts`);
       const now = JR.knobsSnapshot(g), has = 'SHIELD' in (now.tables as Record<string, unknown>);
-      // an F10 session from the build before carries the SHIELD table among its tables (the cards are in no recording: kit.ts KIT is in no registry)
+      // a tape from the build before carries the SHIELD table among its tables (the cards are in no recording: kit.ts KIT is in no registry)
       const old = JSON.parse(J(now)); old.tables.SHIELD = { on: true, handsK: 1.6, first: true, blast: true, aimLow: true };
       let threw = ''; try { await hushed(() => JR.applyKnobs(g, old)); } catch (e) { threw = String((e as Error)?.message ?? e); }
       const KN = await import(`${ROOT}/src/game/knobs.ts`), reg = 'SHIELD' in (KN.knobRegistry() as Record<string, unknown>), back = J(JR.knobsSnapshot(g).tables) === J(now.tables);

@@ -4,7 +4,7 @@ import type { Engine } from '../engine';
 import { lookAmounts, lookSync, LOOK_DEFAULTS } from '../render/gbuffer';
 import type { PerfRecorder, PerfDump } from './perfrec';
 import type { PerfSweep } from './perfsweep';
-import { takeRead, takeWords, sendTake } from './perfsend';
+import { takeRead, takeWords } from './perfsend';
 import { sharpForce } from './quality';
 import type { Panel } from './panel';
 import { POWDER, POWDER_DRAW } from '../render/powderField';
@@ -67,7 +67,7 @@ export const LOOK_SYSTEM = 'Materials prototype';
 // The page still OPENS with them up (panel.show), as the box did.
 export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, open: boolean, shapes?: { on: boolean; flip: () => void }, hills?: { on: boolean; flip: () => void }, lorry?: { on: boolean; flip: () => void }): void {
   const w = window as any;
-  const here = () => panel.system(LOOK_SYSTEM, { icon: '◍', short: 'Look', title: 'a slider a layer of the look · plain boxes to compare · the hour, sun and moon · the trials · performance takes · the character lab' });
+  const here = () => panel.system(LOOK_SYSTEM, { icon: '◍', short: 'Look', title: 'a slider a layer of the look · plain boxes to compare · the hour, sun and moon · the trials · performance takes' });
   here();
   const send = () => { engine.gbuffer.setLook(); lookSync(); };
   let kept: typeof lookAmounts | null = null;   // the amounts as the sliders have them, while the boxes are shown plain
@@ -168,8 +168,8 @@ export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, 
     if (shapes) panel.buttons(tr, 'shapes', [{ text: shapes.on ? 'round and broken: on' : 'round and broken: off', run: shapes.flip, title: 'round drums and tyres, a bite out of the yard wall’s top. The page loads again to change it' }]);   // A GEOMETRY TRIAL (scene/geoTry.ts)
     if (hills) panel.buttons(tr, 'ground', [{ text: hills.on ? 'hills cast shadows: on' : 'hills cast shadows: off', run: hills.flip, title: 'the snow’s hills stand in the light’s way as their own round shape. The page loads again to change it' }]);   // GROUND THAT RAYS CAN SEE, A TRIAL (scene/groundField.ts)
   }
-  // PERFORMANCE: the F9 recorder and the F8 sweep (ui/perfrec.ts, ui/perfsweep.ts) from two buttons, with the look's layers as rows of the sweep, and the take
-  // sent where a hosted page can send it (ui/perfsend.ts): a page in a sandbox starts no download, so a take made there never left it. The maintainer, 10-25:
+  // PERFORMANCE: the F9 recorder and the F8 sweep (ui/perfrec.ts, ui/perfsweep.ts) from two buttons, with the look's layers as rows of the sweep, and the take's
+  // short read in a box to copy (ui/perfsend.ts). The maintainer, 10-25:
   // "it'd be good to have a way to collect a lot of perf data so you can see how it runs on my laptop", and "i do worry that we have a few stuttering frames even
   // if overall fps is pretty high". Record play = every frame's time while he plays (the slow frames are listed one by one); Price the layers = the sweep, hands off.
   const perfRows = (): boolean => {   // (the page makes its recorder after this panel: asked for until it is there)
@@ -199,12 +199,9 @@ export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, 
       ];
       const deliver = rec.deliver.bind(rec);
       rec.deliver = (dump: PerfDump) => {
-        // the recorder's own way out (a download, the shot server on this machine) where no store is handed in. With a store the page is a hosted one that
-        // starts no download: the try only raises the host's "downloads aren't available" notice over a take that did get out
-        if ((window as unknown as { __takeStore?: unknown }).__takeStore) (window as unknown as { __lastPerfDump?: PerfDump }).__lastPerfDump = dump; else deliver(dump);
+        deliver(dump);
         const id = `perf-${dump.startedAt.replace(/[:.]/g, '-')}`, read = takeRead(dump, id), told = takeWords(read).join('\n');
-        box.value = JSON.stringify(read); box.hidden = false; copyRow(); said.textContent = told;
-        void sendTake(dump, read, t => { said.textContent = `${told}\n${t}`; }).then(t => { said.textContent = `${told}\n${t}`; said.scrollIntoView({ block: 'nearest' }); });
+        box.value = JSON.stringify(read); box.hidden = false; copyRow(); said.textContent = told; said.scrollIntoView({ block: 'nearest' });
       };
       play.addEventListener('click', () => { if (sweep.active) return; if (rec.recording) rec.stop(); else { rec.start('look prototype: a play take (the panel)'); said.textContent = 'recording: play, then press Stop'; } });
       price.addEventListener('click', () => { if (sweep.active) { sweep.stop('the panel'); return; } if (rec.recording) return;
@@ -213,28 +210,6 @@ export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, 
     }
     return true;
   };
-  // THE CHARACTER LAB (host/charlab.ts): the camera down on you at a man's height, and you in any outfit of the cast. The maintainer, 10-25: "we should just
-  // iterate on the characters in a character lab". Its rows show while it is open.
-  const labRows = (): boolean => {   // (made after this panel, like the recorder)
-    const lab = w.__charlab as { state: { on: boolean; yaw: number; pitch: number; dist: number; height: number; turn: boolean }; open(): void; leave(): void; wear(pick: string | number): string; worn(): string; outfits(): string[] } | undefined;
-    if (!lab) return false;
-    here(); const cl = panel.section('Character lab', { open: true });
-    const open = btn(row(cl, 'the lab'), 'Open', 'the camera comes down to you and stays on you; nobody notices or hurts you. Walk into the light you want to judge a man in');
-    const rows = document.createElement('div'); rows.hidden = true; cl.append(rows);   // (in the page before its rows are made: the panel files a row's refresh by the page it stands on)
-    const wear = row(rows, 'outfit'), prev = btn(wear, '◀', 'the outfit before'), next = btn(wear, '▶', 'the next outfit'), worn = document.createElement('span'); worn.style.cssText = 'color:#e8efe9;margin-left:6px'; wear.append(worn);
-    const S = lab.state;
-    slide(rows, 'Angle', 'where the camera stands round you, in degrees', 0, 359, 1, () => S.yaw, v => { S.yaw = v; });
-    slide(rows, 'Height', 'how steeply it looks down, in degrees', 2, 80, 1, () => S.pitch, v => { S.pitch = v; });
-    slide(rows, 'Distance', 'metres from you', 1.2, 9, 0.1, () => S.dist, v => { S.dist = v; });
-    slide(rows, 'Looks at', 'the height on you it looks at, in metres: 1.6 is the face, 0.2 the boots', 0.1, 1.8, 0.05, () => S.height, v => { S.height = v; });
-    panel.toggleBox(rows, 'turn slowly round him', () => S.turn, v => { S.turn = v; });
-    words(rows, 'You are the mannequin. Walk him into the sun, the shade or by a lamp.');
-    const show = () => { rows.hidden = !S.on; open.textContent = S.on ? 'Leave' : 'Open'; worn.textContent = S.on ? lab.worn() : ''; };
-    open.addEventListener('click', () => { if (S.on) lab.leave(); else lab.open(); show(); });
-    prev.addEventListener('click', () => { lab.wear(-1); show(); }); next.addEventListener('click', () => { lab.wear(1); show(); });
-    show();
-    return true;
-  };
-  for (const made of [labRows, perfRows]) if (!made()) { const h = setInterval(() => { if (made()) clearInterval(h); }, 300); }
+  if (!perfRows()) { const h = setInterval(() => { if (perfRows()) clearInterval(h); }, 300); }
   if (open) panel.show(LOOK_SYSTEM);   // (the look lab's page opens on its rows, as the box did; on every other page they are a system of the debugger like any other, shut until asked for)
 }

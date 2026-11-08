@@ -64,11 +64,11 @@ pub fn lane_of(g: &crate::game::Game, gd: GuardId) -> Option<LanesLaneId> {
 
 /// The owner's record says what this file's state says of him.   (lanes.ts laneSay)
 pub fn lane_say(g: &mut crate::game::Game, gd: GuardId) {
-    let (rule, t) = (crate::owner::own().lane, g.time);
+    let (rule, t) = (crate::owner::by::LANE, g.time);
     if lane_of(g, gd).is_some() {
-        crate::owner::claim_man(g, gd, rule, t, None);
+        crate::owner::claim(g, gd, rule, t, None);
     } else {
-        crate::owner::release_man(g, gd, rule, t);
+        crate::owner::release(g, gd, rule, t);
     }
 }
 
@@ -98,12 +98,12 @@ pub fn peek_off(g: &mut crate::game::Game, gd: GuardId) {
 
 /// Every man this file had, let go of: the state goes with them.   (lanes.ts letGo)
 pub fn let_go(g: &mut crate::game::Game) {
-    let (rule, t) = (crate::owner::own().lane, g.time);
+    let (rule, t) = (crate::owner::by::LANE, g.time);
     for gd in s(g).held.keys() {
-        crate::owner::release_man(g, gd, rule, t);
+        crate::owner::release(g, gd, rule, t);
     }
     for gd in s(g).peek.keys() {
-        crate::owner::release_man(g, gd, rule, t);
+        crate::owner::release(g, gd, rule, t);
     }
 }
 

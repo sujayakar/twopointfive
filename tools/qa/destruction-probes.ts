@@ -7,7 +7,7 @@
 //                  particles.ts KIND_DEFAULTS.sheet ARE the model's; particles_common.wgsl carries the same two constants; a sheet emit packs aspect / tumble /
 //                  normal-jitter where the kernel reads them;
 //   (caps)         every path is bounded whatever is thrown at it: paper conversions ≤ papersPerSec, dust puffs ≤ puffsPerSec and ≤ puffsPerFrame, knock-offs ≤
-//                  knocksPerSec, ceiling tiles ≥ tileGapSecs apart / ≤ tilesPerEncounter / one per square, the debris pool ≤ settings.debrisCap with eviction of
+//                  knocksPerSec, ceiling tiles ≥ tileGapSecs apart / ≤ tilesPerEncounter / one per square, the debris pool ≤ 64 with eviction of
 //                  a RESTING chunk and refusal + demotion (a chip burst) when every chunk is still moving;
 //   (dust)         a sustained burst into plaster injects 'puff' emitters into the smoke solver — real density, coarse lattice, short ttl, anchored off the wall
 //                  — i.e. the SAME field the guards' sight lines march (one model; the transmittance itself needs the GPU probe: tools/qa/destr-scenes.js
@@ -20,7 +20,7 @@
 //   (identity)     chaos 0 = the game as it was: the decals family's seeded 15 s corridor fight with the hooks live at chaos 0 vs the hooks stubbed out →
 //                  identical rounds / events / audio / prop poses / decal list, and the module's counters never move;
 //   (determinism)  chaos 1, the same seeded burst + bang twice → identical destruction log, debris rest poses, particle emit stream, decal list, events;
-//   (bounds)       90 s of continuous full-auto at chaos 1 on a 32-chunk pool: debris ≤ cap throughout, decals ≤ their ring, the particle queue ≤ MAX_QUEUE,
+//   (bounds)       90 s of continuous full-auto at chaos 1: debris ≤ cap throughout, decals ≤ their ring, the particle queue ≤ MAX_QUEUE,
 //                  the log capped, hidden ≤ the index, puffs/s ≤ cap, no NaN anywhere in the debris;
 //   (impulses)     later events kick the litter: the bang / impact / thud records destruction.ts queues flown on the sheetModel reference (wake ≥ 90 % within
 //                  2 m, nothing past the radius, re-settle ≤ ~2 s, |v| ≤ vMax), the 16-a-frame cap with merge / drop under 48 charges, the idle frame's
@@ -260,8 +260,8 @@ export async function destructionIdentity() {
 
 // ================================================================ bounds (a short loud soak)
 export async function destructionBounds() {
-  const SECS = swept(45, 90), F = family('destruction-bounds: seconds of continuous full auto at chaos 1 on a 32-chunk pool never outgrows a cap and never NaNs');
-  const { W, game, engine, P, smokeLog } = await stage(3801, 1); engine.settings.debrisCap = 32;
+  const SECS = swept(45, 90), F = family('destruction-bounds: seconds of continuous full auto at chaos 1 never outgrows a cap and never NaNs');
+  const { W, game, engine, P, smokeLog } = await stage(3801, 1);
   const deb = game.destr.debris; let maxDeb = 0, maxDec = 0, maxQueue = 0, maxLog = 0, nan = 0, maxHidden = 0;
   const spots: Vec3[] = [...DESK_PTS, [17.6, 0.85, 21.3], [15.4, 0.9, 20.2], [21.7, 0.95, 20.3], [16.5, 1.2, 20.62], [19.5, 1.0, 20.62]];
   for (let f = 0; f < 60 * SECS; f++) {
@@ -275,10 +275,10 @@ export async function destructionBounds() {
   const puffT = smokeLog.filter(e => e.kind === 'puff').map(e => e.t); let maxPuffSec = 0; for (let s = 0; s < SECS; s++) maxPuffSec = Math.max(maxPuffSec, puffT.filter(t => t >= s && t < s + 1).length);
   const idx = game.destr.inventory(); const indexed = (idx.paper ?? 0) + (idx.screen ?? 0) + (idx.housing ?? 0) + (idx.clutter ?? 0) + (idx.binder ?? 0) + (idx.tv ?? 0);
   const fails: string[] = [];
-  if (maxDeb > 32) fails.push(`debris peaked at ${maxDeb} (cap 32)`); if (maxDec > DECAL_CAP) fails.push(`decals ${maxDec} (cap ${DECAL_CAP})`); if (maxQueue > MAX_QUEUE) fails.push(`particle queue ${maxQueue} (cap ${MAX_QUEUE})`);
+  if (maxDeb > 64) fails.push(`debris peaked at ${maxDeb} (cap 64)`); if (maxDec > DECAL_CAP) fails.push(`decals ${maxDec} (cap ${DECAL_CAP})`); if (maxQueue > MAX_QUEUE) fails.push(`particle queue ${maxQueue} (cap ${MAX_QUEUE})`);
   if (maxLog > 200) fails.push(`log ${maxLog} lines (cap 200)`); if (nan) fails.push(`${nan} non-finite chunk samples`); if (maxHidden > indexed) fails.push(`hidden ${maxHidden} > indexed ${indexed}`);
   if (maxPuffSec > D.CHAOS.puffsPerSec + 1) fails.push(`puffs ${maxPuffSec} in one second (cap ${D.CHAOS.puffsPerSec})`); if (D.DESTR_STATS.tiles > D.CHAOS.tilesPerEncounter) fails.push(`tiles ${D.DESTR_STATS.tiles} (cap ${D.CHAOS.tilesPerEncounter})`);
-  F.verdict(!fails.length, `${SECS * 10} rounds + ${Math.round(SECS / 15)} bangs: debris ≤ ${maxDeb}/32 (spawned ${deb.stats.spawned}, refused ${deb.stats.refused}, evicted ${deb.stats.evicted}), decals ≤ ${maxDec}/${DECAL_CAP}, particle queue ≤ ${maxQueue}/${MAX_QUEUE}, log ≤ ${maxLog}, hidden ≤ ${maxHidden}/${indexed}, puffs ≤ ${maxPuffSec}/s, tiles ${D.DESTR_STATS.tiles}, NaN ${nan}`, fails.join('; ') || `stats ${JSON.stringify(D.DESTR_STATS)}`);
+  F.verdict(!fails.length, `${SECS * 10} rounds + ${Math.round(SECS / 15)} bangs: debris ≤ ${maxDeb}/64 (spawned ${deb.stats.spawned}, refused ${deb.stats.refused}, evicted ${deb.stats.evicted}), decals ≤ ${maxDec}/${DECAL_CAP}, particle queue ≤ ${maxQueue}/${MAX_QUEUE}, log ≤ ${maxLog}, hidden ≤ ${maxHidden}/${indexed}, puffs ≤ ${maxPuffSec}/s, tiles ${D.DESTR_STATS.tiles}, NaN ${nan}`, fails.join('; ') || `stats ${JSON.stringify(D.DESTR_STATS)}`);
   return F.done();
 }
 
@@ -391,7 +391,7 @@ export async function destructionImpulses() {
     if (after.some(w => w.startsWith(`${IMP_OFFSET}+`)) || cnt3 !== 0 || P.pendingImpulseCount !== 0) fails.push(`the frame after: writes ${after.join(' ')} count ${cnt3} pending ${P.pendingImpulseCount} (the queue empties every frame)`);
     F.verdict(!fails.length, `no impulses → the header alone (${idleEmpty.join(' ')}), count 0; an impulse with nothing live → no tail upload, counted idle; two impulses over live particles → one ${2 * IMP_BYTES} B upload at ${IMP_OFFSET}, count 2 in flags; the next frame back to nothing`, fails.join('; ') || `writes: ${idleLive.join(' ')} | ${withImp.join(' ')}`); }
   { // (5) the DEBRIS pool gets the same events: resting chunks near a charge wake and hop (none beyond its radius, none behind the spine), a round half a metre off nudges one, a metre off does not
-    const { W, game, engine } = await stage(3905, 0.5); engine.settings.debrisCap = 64;
+    const { W, game, engine } = await stage(3905, 0.5);
     const destr = game.destr as any; const deb = destr.debris; const kps0 = D.CHAOS.knocksPerSec; D.CHAOS.knocksPerSec = 99;
     const items = [...destr.items.values()].filter((d: any) => (d.kind === 'clutter' || d.kind === 'binder') && !d.group).slice(0, 8);
     for (const it of items) destr.knockOff(it, [1, 0, 0], 0.5, it.kind === 'binder' ? 'binder' : 'clutter');

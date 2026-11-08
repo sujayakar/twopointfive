@@ -76,8 +76,6 @@ const hushed = async <T>(fn: () => Promise<T> | T): Promise<T> => { const log = 
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const J = (o: unknown) => JSON.stringify(o), DT = 1 / 60, f2 = (x: number) => (Number.isFinite(x) ? x.toFixed(2) : String(x));
 const STAND = harnessProfile() as string, BROKEN = process.env.BIGKIT_BREAK === '1', WEIGHT_BROKEN = process.env.BIGWEIGHT_BREAK === '1';
-/** whether the plain night wears your card (kit.ts KIT_SOLO — a game stood up while it is up puts the table's card on its fresh Player) */
-const SOLO0 = { ...K.KIT_SOLO };
 const memStore = (init: Record<string, string> = {}) => { const m = new Map(Object.entries(init)); return { m, getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, String(v)); }, removeItem: (k: string) => { m.delete(k); } }; };
 const fields = (i: number): string[] => K.kitRows(i).map((r: any) => r.field as string);
 const rowOf = (i: number, f: string) => K.kitRows(i).find((r: any) => r.field === f);
@@ -87,8 +85,8 @@ const stats = () => ({ ...BIG_STATS }) as Record<string, number>;
 const since = (a: Record<string, number>) => Object.fromEntries(Object.entries(BIG_STATS as Record<string, number>).map(([k, v]) => [k, v - a[k]])) as Record<string, number>;
 /** the kit table, its rules, the switch, the silent order's switch and the dice as they stood, put back after `fn` (the store the table writes to is left on nothing) */
 async function kept<T>(fn: () => Promise<T> | T): Promise<T> {
-  const cards = K.KIT.members.map((m: any) => ({ ...m })), on = K.KIT.on, slots = K.SLOTS.on, big = K.BIGSLOT.on, solo = { ...K.KIT_SOLO }, hush = SIL.SILENT.on, rnd = Math.random;
-  try { return await fn(); } finally { K.kitLoad(null, ''); K.BIGSLOT.on = big; K.SLOTS.on = slots; K.KIT.on = on; for (let i = 0; i < cards.length; i++) K.KIT.members[i] = cards[i]; Object.assign(K.KIT_SOLO, solo); SIL.SILENT.on = hush; Math.random = rnd; }
+  const cards = K.KIT.members.map((m: any) => ({ ...m })), on = K.KIT.on, slots = K.SLOTS.on, big = K.BIGSLOT.on, hush = SIL.SILENT.on, rnd = Math.random;
+  try { return await fn(); } finally { K.kitLoad(null, ''); K.BIGSLOT.on = big; K.SLOTS.on = slots; K.KIT.on = on; for (let i = 0; i < cards.length; i++) K.KIT.members[i] = cards[i]; SIL.SILENT.on = hush; Math.random = rnd; }
 }
 
 // where Sam stands for the manager's door (his side of it is the side the squad works it from): the corridor, off the line of the opening
@@ -101,7 +99,7 @@ type Ev = { t: number; kind: string; weapon?: string; who?: number; loud: boolea
  *  Sam in god mode and dark; every game event but footfalls kept, with its time. */
 async function rig(seed: number, o: { cards?: Record<number, Record<string, unknown>>; stage?: boolean; on?: boolean } = {}) {
   Math.random = seeded(0x51b6 + seed * 7919);
-  Object.assign(K.KIT_SOLO, SOLO0); for (let i = 0; i < K.KIT_MEMBERS; i++) K.KIT.members[i] = K.kitDefault(i);   // (nothing of the game before this one: its cards)
+  for (let i = 0; i < K.KIT_MEMBERS; i++) K.KIT.members[i] = K.kitDefault(i);   // (nothing of the game before this one: its cards)
   const W: any = await hushed(() => standUp()); const game = W.game; K.BIGSLOT.on = o.on ?? true;
   for (let i = 0; i < K.KIT_MEMBERS; i++) K.KIT.members[i] = { ...K.kitDefault(i), ...(o.cards?.[i] ?? {}) };
   game.godMode = true;

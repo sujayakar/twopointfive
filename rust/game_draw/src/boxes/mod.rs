@@ -215,7 +215,7 @@ impl Boxes {
         self.epoch += 1;
     }
     /// nothing is drawn through what went before: the game is another than the one last drawn
-    pub fn cut(&mut self) { self.have = 0; self.drawn.clear(); }
+    pub fn cut(&mut self) { self.have = 0; self.drawn.clear(); self.glass.cut(); }
 
     /// A TICK HAS RUN: the statics that changed are packed again, and the frame's own boxes are packed where the tick left them (`again`: the tick already taken)
     pub fn take(&mut self, g: &Game, night: bool, again: bool) {

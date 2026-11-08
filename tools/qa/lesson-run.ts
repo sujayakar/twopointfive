@@ -124,12 +124,12 @@ export async function runLesson(name: string, o: LessonRunOpts = {}): Promise<Le
   const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`), destr = DESTRUCTION.on, loud = process.env.PT_DESTR === '1' /* (the script's `raises`, or a hand's) */; if (loud) DESTRUCTION.on = true;
   try { return await playLesson(name, o, loud); } finally { for (const k of up) delete process.env[k]; DESTRUCTION.on = destr; }
 }
-/** A mission whose lines lean on its own card is played wearing what its page deals (`pageKit` in the scripted player's file). The page's kit and the solo
- *  card's flag (kitSoloIf raises KIT_SOLO.on) are module state every later game in this process would wear: both are put back after the run */
+/** A mission whose lines lean on its own card is played wearing what its page deals (`pageKit` in the scripted player's file). The page's kit is
+ *  module state every later game in this process would wear: it is put back after the run */
 async function playLesson(name: string, o: LessonRunOpts = {}, loud = false): Promise<LessonRunOut> {
   const scriptFile = resolve(import.meta.dir, 'lessons', `${name}.ts`), K = existsSync(scriptFile) && (await import(scriptFile)).pageKit === true ? await import(`${ROOT}/src/game/kit.ts`) : null;
-  const solo = K?.KIT_SOLO.on; K?.kitIssuedPage(true);
-  try { return await playLessonAs(name, o, loud); } finally { if (K) { K.kitIssuedPage(false); K.KIT_SOLO.on = !!solo; } }
+  K?.kitIssuedPage(true);
+  try { return await playLessonAs(name, o, loud); } finally { K?.kitIssuedPage(false); }
 }
 async function playLessonAs(name: string, o: LessonRunOpts = {}, loud = false): Promise<LessonRunOut> {
   const lines: string[] = [], out: LessonRunOut = { code: 0, why: '', lines, steps: [], secs: 0, byFight: [] };

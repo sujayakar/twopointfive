@@ -101,8 +101,6 @@ import { AUTOPILOT, AUTOPILOT_STATS, autoHint, autoPick, type AutoPick } from '.
 import { whyWords } from './squadnet';   // (read inside hud() and quickFor() only)
 import { CMDRING, CMDRING_STATS, ringZoom, ringHoldSecs, ringSeats, flatSeats, type RingView, type RingState, type RingHint } from './cmdring';   // (cmdring.ts: the order menu as a ring on one key — a prototype, read inside methods only)
 import { handsBusy } from './interact';   // (read inside ringInput only: his hands on a list, a press or a running verb)
-import type { LayState } from './planlay';
-import { PLANLAY, layable, layGiven, layNote, layKey } from './planlay';
 import { goalShift } from './planmode';   // (planmode.ts: Shift + the key adds a goal, read inside methods only)   // (planlay.ts: the menu's 'wait for my word' row lays an order — all read inside methods only)
 import './teampace';   // (read inside update only)
 import './noshove';   // (read inside update only)
@@ -549,10 +547,7 @@ export class SquadOrders {
   tapWas: { at: number; t: OrderTarget; /** where the cursor was, in the view's pixels */ x: number; y: number } | null = null;
   /** what was ordered when (the probes read it; capped) */
   log: { t: number; order: string; who: string[]; target: string; /** the quick key gave it with the autopilot on (autopilot.ts: its plan is drawn a little longer) */ auto?: boolean; /** the word's key sent it off a laid plan (planlay.ts) */ laid?: boolean }[] = [];
-  /** the plan laid for the word, and the one kept for the next try (planlay.ts — nothing is ever in it with that switch off) */
-  readonly lay: LayState = { laid: [], kept: null, keptFor: '', tryKey: '', started: false, sending: false, restoredT: -1 };
   /** the order being given is the SEAT's own, at once (the menu's pick, the quick key) — not a scenario's, a tool's or the plan's (planlay.ts strikes its men off a laid plan) */
-  private byHand = false;
   /** the squad's own changes of plan, newest last: who, when (autopilot.ts AUTOPILOT.replan — PICTURE ONLY: floorplan.ts draws these men for a moment as it
    *  does an order just given; nothing of the game reads it, it is no order and starts no clock) */
   shows: { t: number; who: string[] }[] = [];
@@ -829,7 +824,7 @@ export class SquadOrders {
   /** a stand-in row put where the row it stands in for is: that row's digit and page, the next place in the table */
   private seat(def: OrderDef, stood: OrderDef) { def.key = stood.key; def.hotKey = stood.hotKey; def.page = stood.page; this.defs.splice(this.defs.indexOf(stood) + 1, 0, def); }
   /** is the 'wait for my word' row offered under these rows (a door, the squad of four, a row among them that can wait) */
-  private wordRowOf(t: OrderTarget, rows: OrderDef[]): boolean { return PLANLAY.on ? t.kind !== 'foe' && rows.some(layable) : t.kind === 'door' && this.big && rows.some(d => d.onWord); }   // (planlay.ts: with its switch on, under every menu with an order in it — the row LAYS)
+  private wordRowOf(t: OrderTarget, rows: OrderDef[]): boolean { return t.kind === 'door' && this.big && rows.some(d => d.onWord); }
   /** the open menu's page that has the 'wait for my word' row, seen from its first page (null: none, or not on the first page) */
   private wordPage(M: Menu): string | null { return M.page !== null ? null : M.rows.find(d => d.opens && this.wordRowOf(M.target, this.rowsFor(M.target, d.opens, M.men)))?.opens ?? null; }
   /** the digit the open menu's 'wait for my word' row is on (0: none — a row of the page has it, or the knob is not a digit: `waitAlt` flips it) */
@@ -869,7 +864,6 @@ export class SquadOrders {
     if (ORDERS.sameWay && men.length > 1) this.sameWays(men);   // (a pair handed one order goes round a building by one side: a return on its first line for a man alone)
     if (flipped) g.cleared.stats.face++;
     if (!def.free) this.log.push({ t: g.time, order: id, who: men.map(gd => gd.callsign), target: t.kind === 'door' ? `door:${t.door.def.name}` : t.kind === 'floor' ? (t.thing ? `thing:${t.thing.kind}` : `floor:${t.at[0].toFixed(1)},${t.at[2].toFixed(1)}`) : t.kind === 'foe' ? `foe:${t.foe.callsign}` : 'none' }); if (this.log.length > 200) this.log.splice(0, 50);
-    if (!def.free && this.byHand) layGiven(g, men);   // (planlay.ts: an order the player gives at once takes its men off a laid plan — never a scenario's own 'fall in'; a return on its first line with the switch off)
     g.msg(this.givenLine(def, t, men));
     if (def.ack?.length) { const k = this.acks++, A = opts?.ack ? [opts.ack] : wg(def.ackNow ?? def.ack, def.ack); g.say(men[k % men.length], A[Math.floor(k / men.length) % A.length]); }   // (the men take turns answering, each through the lines in turn)
     this.posture?.given(def);
@@ -919,7 +913,6 @@ export class SquadOrders {
     if (!this.active || this.g.player.down) return false;
     const rows = flat ? this.flatRows(target, part) : this.rowsFor(target, null, part);   // (`flat`: ringUp's, under cmdring.ts CMDRING.flat — every order of the target, no pages)
     this.menu = { target, men: [], rows, why: [], sel: 0, wheelAcc: 0, readT: -1, page: null, wordRow: this.wordRowOf(target, rows), onWord: false, menSide: null, sideKey: '', flat: flat || undefined, ...(part ? { part } : {}) }; this.refresh();   // (the highlight starts on the first row — the target's own order: the button twice gives it)
-    if (this.menu && PLANLAY.on && PLANLAY.sticky && this.menu.wordRow && this.lay.laid.length) this.menu.onWord = true;   // (planlay.ts: a plan is being laid — the next order is for it too)
     return !!this.menu;
   }
   close() { this.menu = null; }
@@ -1947,8 +1940,8 @@ export class SquadOrders {
       const alt = ORDERS.waitAlt ? keyName(ORDERS.waitAlt) : '', waitD = this.waitDigit(M), wordPage = this.wordPage(M);
       const carries = (d: OrderDef) => M.page !== null && M.onWord && this.wordRowOf(M.target, this.rowsFor(mt, d.opens ?? null, M.men));   // (a page behind a page: 'wait for my word', on, goes in with it)
       const hot = (d: OrderDef) => { const h = this.rowsFor(mt, d.opens ?? null, M.men).find(x => !!x.hotKey && !x.pageOnly); return h ? ` · ${keyName(h.hotKey!)}: ${this.labelOf(h, mt).split(' · ')[0]}` : ''; };   // (a page with a row on a key of its own — the word, on a held threshold's: that key works from here too)
-      const words = (d: OrderDef) => d.opens ? `${this.labelOf(d, mt)} ▸${d.opens !== wordPage ? (carries(d) ? ' · on my word: ON' : hot(d)) : M.onWord ? ' · on my word: ON' : alt && !(PLANLAY.on && M.wordRow) ? ` · ${alt}: on my word` : ''}${d.opens === wordPage ? hot(d) : ''}` : (M.onWord && (PLANLAY.on ? layable(d) : d.onWord) ? 'wait · ' : '') + this.labelOf(d, mt);
-      const altLive = PLANLAY.on && (M.rows.some((d, i) => d.hotKey === ORDERS.waitAlt && !M.why[i]) || this.g.doorTools.wordKeyHeld()), altDead = (d: OrderDef, i: number) => PLANLAY.on && M.wordRow && d.hotKey === ORDERS.waitAlt && !!M.why[i];   // (planlay.ts, as input() has it: the key is a row's own while that row can be given, else the 'wait for my word' row's — and is shown on one of them only)
+      const words = (d: OrderDef) => d.opens ? `${this.labelOf(d, mt)} ▸${d.opens !== wordPage ? (carries(d) ? ' · on my word: ON' : hot(d)) : M.onWord ? ' · on my word: ON' : alt ? ` · ${alt}: on my word` : ''}${d.opens === wordPage ? hot(d) : ''}` : (M.onWord && d.onWord ? 'wait · ' : '') + this.labelOf(d, mt);
+      const altLive = false, altDead = (_d: OrderDef, _i: number) => false;   // (planlay.ts, as input() has it: the key is a row's own while that row can be given, else the 'wait for my word' row's — and is shown on one of them only)
       const rows: OrderHudRow[] = M.rows.map((d, i) => ({ kind, label: headOf(d), opts: [{ key: d.key ? String(d.key) : d.hotKey && !altDead(d, i) ? keyName(d.hotKey) : '', text: words(d) + (this.posture?.mark(d) ?? '') + (M.why[i] ? ` — ${M.why[i]}` : '') }], inReach: n > 0 && !M.why[i], off: !!M.why[i], cont: i > 0 && headOf(M.rows[i - 1]) === headOf(d) }));
       if (!rows.length) rows.push({ kind, label: head, opts: [{ key: '', text: 'no order fits' }], inReach: false, off: false });
       if (M.wordRow) rows.push({ kind, label: WORD_HEAD, opts: [{ key: waitD ? String(waitD) : !digitOf(ORDERS.waitKey) && ORDERS.waitKey ? keyName(ORDERS.waitKey) : altLive ? '' : alt, text: `wait for my word${waitD && alt && !altLive ? ` (${alt})` : ''} · ${M.onWord ? 'ON' : 'off'}` }], inReach: n > 0, off: false, cont: M.rows.length > 0 && headOf(M.rows[M.rows.length - 1]) === WORD_HEAD });
@@ -1966,7 +1959,7 @@ export class SquadOrders {
     const quick = hov && words ? `${words}${hov.kind === 'none' && !hov.man ? '' : ` · ${this.hoverWords(hov)}`}${why ? ` · ${why}` : ''}` : null;   // (what the quick key would give on what the cursor is on)
     const lk = (act: string) => !!this.g.rails?.locks(act);   // (rails.ts, a tutorial mission: a key the mission has not taught yet is not named on the panel either)
     return { menu: null, status: [{ kind: 'objective', label: lk('who') ? 'squad' : `squad · ${posture ? `${posture} · ` : ''}orders to ${this.whoTag().tag}`, inReach: true, off: false, tone,
-      opts: [...S.map(gd => ({ key: '', text: `${some ? (men.includes(gd) ? '▸ ' : '· ') : ''}${gd.callsign} · ${this.statusOf(gd)}${this.g.cover.tail(gd)}`, tone: this.paired ? this.pairOf(gd) ?? undefined : undefined, gone: gd.state === 'dead' && lostShown(), lost: gd.state === 'dead' ? lostOf(this.g, gd.char.id) ?? undefined : undefined })), ...(lk('menu') ? [] : [...this.notes.flatMap(f => f()).map(x => typeof x === 'string' ? { key: '', text: x } : x), ...layNote(this.g, keyName(layKey()))]),   // (planlay.ts: the key's line while a plan waits on it)
+      opts: [...S.map(gd => ({ key: '', text: `${some ? (men.includes(gd) ? '▸ ' : '· ') : ''}${gd.callsign} · ${this.statusOf(gd)}${this.g.cover.tail(gd)}`, tone: this.paired ? this.pairOf(gd) ?? undefined : undefined, gone: gd.state === 'dead' && lostShown(), lost: gd.state === 'dead' ? lostOf(this.g, gd.char.id) ?? undefined : undefined })), ...(lk('menu') ? [] : [...this.notes.flatMap(f => f()).map(x => typeof x === 'string' ? { key: '', text: x } : x)]),
         ...(quick && !lk('order') && !(CMDRING.on && ringHoldSecs() > 0 && this.g.rails?.teachesHold()) ? [{ key: keyName(ORDERS.quickKey), text: quick }] : []), ...(lk('menu') || CMDRING.only ? [] : [{ key, text: hov ? `orders · ${this.hoverWords(hov)}` : 'orders' }]), ...(lk('who') || CMDRING.only ? [] : [{ key: whoKey, text: onMan && next === S.indexOf(onMan) ? `who · ${onMan.callsign} (under the cursor)` : onMan && next === 'all' ? `who · back to ${this.paired ? 'gold' : 'all'}` : `who · ${this.whoStrip()}` }]) ] }] };   // (cmdring.ts `only`: the orders key and the who key have no key — the ring is the menu, and who is its wheel or a click on a man)
   }
   /** Where the menu that is up is frozen, for a mark in the world (the page's overlay rings it — Sam may have walked on and be aiming elsewhere): the point, a

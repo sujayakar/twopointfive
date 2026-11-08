@@ -13,7 +13,8 @@ It does not touch a flag written through another name (`let man = &mut g.gd[gd];
 lists every such line, and those are rewritten by hand. With `--check` nothing is written and the exit is 1 if
 anything is still written the old way.
 """
-import glob, os, re, sys
+import os, re, sys
+from bodies import bodies
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'rust', 'game_rules', 'src')
 MAN = r'((?:[^\[\]]|\[[^\[\]]*\])+)'
@@ -36,8 +37,7 @@ def rewrite(module, text):
 def main():
     check = '--check' in sys.argv
     left, done, aliases = 0, 0, []
-    for path in sorted(glob.glob(os.path.join(ROOT, '*', '[pb]_*.rs'))):
-        module = os.path.basename(os.path.dirname(path))
+    for path, module, _ in bodies(ROOT):
         if module in SKIP: continue
         whole = open(path).read()
         # (a file's tests set a man up by plain writes, and hold the game in a Box: they are left as they are)

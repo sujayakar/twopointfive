@@ -5,7 +5,7 @@ One of the area files CLAUDE.md indexes. Everything below was moved here word fo
 title may now live in another file of this folder: `grep -l '<title>' docs/agents/*.md`. New bullets for this area go at the foot of this file.
 
 <!-- was CLAUDE.md lines 2765–2889 -->
-- **Session journal: record → replay (F10)** (`src/game/sensors.ts` + `journal.ts` + `digest.ts`, `ui/sessionrec.ts`, `tools/qa/replay.ts`; the maintainer's ask, 08-13:
+- **The sensors' seam** (`src/game/sensors.ts`; it began as the F10 session journal, which the maintainer cut on 2026-11-07 along with `ui/sessionrec.ts`, `tools/qa/replay.ts` and the fixtures; the F7 replay and its run tape are what is kept. The ask, 08-13:
   "a record mode that journals all of the reads from the GPU for replay later … strict mode QA of the deterministic stuff"). The simulation is deterministic GIVEN ITS
   INPUTS; the journal files the inputs. **`Game.sensors: Sensors` is THE seam between the GPU and the game**: every value the simulation takes off the renderer — Sam's
   meter (`playerChest` / `playerHead`), a held man's / a unit's / a civilian's meter (`heldC/H<id>`, `unitC/H`, `civC/H`), the light on a body (`bodyL<id>`), a searcher's
@@ -23,85 +23,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   exact double, `'nan' / 'inf' / '-0'`), `replay` = nothing asked of a GPU, `read(key)` serves the journaled value for (frame, key); a read the recording never made
   there is a DIVERGENCE (`firstDivergence {f, kind 'unjournaled-read' | 'unasked', key}`, the last value that key had is served so the run completes) and values
   delivered but never read are counted the same way. `beginFrame / endFrame` bracket Game.update (the recorder inside it; the replay tool around it); reads outside a
-  frame are `strays`. **A RECORDING** (`Game.journal: SessionRecorder`, UI-free; `request()` → `pending` → the top of the next update that may): frame 0 = a
-  `kind: 'harness'` CHECKPOINT of the moment (`canStart` = `canSave` unforced + no flash / tracer / stroke light alive — it WAITS with the reason on the HUD, gives up
-  after `JOURNAL_PENDING_FRAMES`) **re-entered through `loadState` on the spot** (record and replay start from the same bytes by the same road — the checkpoints'
-  B ≡ C claim; smoke in the air is dropped as on any load, a searcher re-deals), `Math.random ← simDie(seed)` (`math/dice.ts`: mulberry32 carrying the displaced die
-  on `.sys`; **audio/ and smoke.ts draw `sysRandom()`** so only the simulation takes from the seeded stream while a plainly seeded Math.random still reaches them),
-  `env` (what the sim reads off the ENGINE: debrisCap, emissiveScale, flashlightRadius, markings, particlesOn, the canister row, the fixtures' unsaved
-  restrike `stagger`, `hud` = recorded under the page's HUD), `knobs` (`Game.tune`, the sandbox flags + fn2000 + autosave, and `KNOB_TABLES` = AIM TRAINED AI_TUNE
-  BODY_LIGHT GUARD_EYE NEEDS WHISTLE WET WIND CIV CHAOS RING LAUNCHER GLASS TALK_TUNE HOLD SUPPRESSION RIFLE_SPREAD OVERHEAR SCORE BADGE CKPT, deep-copied; `applyKnobs`
-  deep-assigns over existing keys), then per frame at `frameStart` (Game.update's FIRST statement): dt exactly as passed (RLE), the canvas size on change, **the
-  CAMERA as the update reads it** (look-at / yaw / pitch / distance / aspect / fov, exact doubles, changed fields only — an INPUT like the mouse: the aim ray, WASD's
-  basis and `onScreen` (bubble vs log line) hang on it, and a follow-camera tweak invalidates no recording), the input (`k` keys held on change, `p` pressed, `c`
-  clicked bits, `b` buttons on change, `m` cursor on change, `w` wheel), the sensors' frame; at `frameEnd` (update's LAST statement) a `digestGame(g, true)` every
-  `JOURNAL_DIGEST_EVERY` 120 frames and after the last (`stop()` between frames DEFERS to the end of the next update so the closing digest is straight after an
-  update — where a replay compares it; `stop(why, true)` = now, for the headless recorder / a second F10). THE HUD WRITES NOTHING OF THE GAME (2026-11-07): `ui/bubbles.ts` used to null
-  an expired `bubble` on its speaker after the update, on the page's copy, where the game that ticks never saw it (and a replay of a page recording,
-  `env.hud`, made the same write). A line is over when its time is: every reader asks the clock, and a page recording from before replays without the write. File = `SessionFile v1` {v, game, recordedAt, commit? (dev server `/qa/commit`), seed,
-  level (savestate's fingerprint), save, env, knobs, frames, dt, view, cam, input, sensors {keys, recs}, slots? {index, lastAuto, loads} (the checkpoint
-  store: below, 'a checkpoint loaded inside an update'; `v` 2 with a text in `loads` or `meta.lost`), digests [[f, digest]], meta {seconds, stopped,
-  bytesPerFrame, between?, lost?}}; `checkSessionFile`. Sizes (the 90 s headless self-test): ≈ 80 B/frame of streams (camera ≈ 53 while the follow point creeps, digests ≈ 26,
-  sensors ≈ 0 headless — a page recording adds ~30–40 for Sam's meter changing every frame and ~20 for a real rAF dt), + the ~30 KB checkpoint; **≈ 450 KB per 90 s
-  as JSON, ≈ 80 KB gzipped** (fixtures and the sink's copies are `.json.gz`; the tools read both). **THE MAINTAINER'S LOOP: F10 on the game page** (`ui/sessionrec.ts`;
-  the tag under the checkpoint tag: amber `REC waits: <why>`, red `● REC f=1234 · 38 KB (F10 stops)`; hands off the debugger while it runs — its live edits are
-  not journaled) **→ F10 again → `twopointsix-session-<date>-<secs>s.json` lands in `tools/qa/sessions/<name>.json.gz` if `bun run tools/shot-server.ts` is up** (no
-  download since 2026-10-27, `src/host/savefile.ts`: the file goes to a build's backend where there is one, the note says where it went, and
-  `?downloads=1` on the address downloads it as before) **→ `bun run tools/qa/replay.ts <file> [--strict] [--invariants] [--until F]`** (or `--all` = every fixture): a fresh headless Game stood up as the
-  recording's engine was (`standUp({env})`: settings, a fake Particles if it had one, the canister row), fingerprint + `canLoad` checked, knobs → `loadState` → knobs
-  + staggers → seed → `sensors.replay` → `SessionPlayer.applyFrame` per frame (dt, canvas, camera + `rebuild()`, input through the synthetic path — the tool
-  never calls `cam.update`) → `game.update` → digest compare on the beat (`diffDigest`: 'guards[1 Novak].aw: 0.31 ≠ 0.29'), `--invariants` = the soak's essential
-  subset (finite, in the world, states sane, Sam never through / inside a static); **exit 0 = replayed identically to the last digest with no divergence, 1 =
-  diverged / mismatched / violated (the first of each named), 2 = bad file. A REFACTOR must replay every session in `tools/qa/sessions/` identically
-  (`probes.ts journal-fixtures`, in `gate.sh journal`); an INTENDED gameplay change is expected to diverge — re-record the fixtures** (`bun run tools/qa/probes.ts
-  journal --write` re-files the scripted `selftest.json.gz`; drop F10 files into that folder to make them fixtures). `__journal` {start({seed, note}), stop(immediate =
-  false — then step a frame), toggle, save() (re-deliver the last file), state, file, stats, check, sensors, summary}. QA: `probes.ts journal` (roundtrip: record 90 s
-  headless → check → replay identical + invariants; perturb: a forged sensor stream diverges at/after the forged frame with the field / key named; knob: guardWalk
-  × 1.15 mismatches naming a guard field while a presentation-only env change replays identically; fixtures). NOT captured by decision: Tab-panel edits
-  mid-recording, module tables outside KNOB_TABLES, another level (refused by fingerprint), a stroke's light across frame 0.
-  · **A change made BETWEEN frames ends the recording, and a new one is asked for** (10-22; no switch: nothing of play changes). A checkpoint loaded off a card or
-    the panel (`Checkpoints.load` / `loadMem`) and an encounter staged again between two frames (`Game.restartEncounter`: a card's restart, a show, a
-    mission's quit) are in no frame's input, and a tape that ran on across one replayed as a break of the game's own at that frame. Each now calls
-    `SessionRecorder.cut(why)` first: recording and not inside an update, the file is finished there and handed over through `onStop` like any stop
-    (`meta.stopped` 'a checkpoint was loaded' / 'the encounter was staged again'), and the same request is made again, so one F10 covers the session as one
-    file per stretch (the next begins at the first update `canStart` allows; with a unit on the floor it waits and gives up as any request does). Inside an
-    update `cut` does nothing (what changes the game there is that frame's input, on the tape); under a request still pending too (the recorder's own
-    `begin` stages the encounter). A recording FINISHED BETWEEN FRAMES — a cut, or an immediate `stop` with no update running — takes its closing digest
-    after the HUD's bubble write of the last frame, so the file carries `meta.between` and `replay.ts` makes that write before it compares the last digest.
-    Check
-    `probes.ts recordcut` (family checkpoints; both stands; `JOURNALCUT_BREAK=1` must fail): a file's load and a restart (both files of each replay), a
-    page-like tape cut on the very frame a bubble ran out (replays; with `meta.between` struck it does not), a cut asked inside an update, a memory save
-    written while the tape ran and loaded between frames. KNOWN AND OPEN: the panel's other hands on a recording game (the sandbox row, a teleport) are on
-    no tape. A page recording cut this way has not been made in a browser.
-  · **A checkpoint loaded INSIDE an update is on the tape, and the recording runs on over it** (10-22; no switch: nothing of play changes). The bare Enter
-    once down is the frame's own input (`player.ts` → `Checkpoints.loadInStep`). Three parts. (1) THE SENSORS' STREAM IS THE HOST'S: the mode, the frame
-    count, everything a recording has filed and a replay is serving live in `SensorStream` (`sensors.ts`), a `HostOwned` (`math/side.ts`), which a
-    rollback snapshot holds as it is and never puts back. They were plain fields of `Sensors`: a save in memory made while a tape ran took the tape back
-    to the save's frame with the game, one made before it put the sensors back to live under the recorder, and every snapshot taken under a recording
-    copied the whole stream. `own`'s answers (the CPU senses) stay the game's and go back with it. (2) THE STORE IS PART OF WHAT A RECORDING REPLAYS ON:
-    `begin` takes `Checkpoints.tapeBegin()` — the slot index as it stands (every row) and the autosave still inside its regret window — into the file's
-    `slots` block (absent when nothing was stored), and `replay.ts` gives it to its game after the checkpoint is loaded (`tapeSeed`: the rows, each over an
-    empty text, which reads as 'gone'), so `newest`, the ring's next slot and the regret mark choose in a replay as they did. A replay writes the
-    recording's own saves again as it runs (`slotWrote`: a save an update of this recording made); the text of ANY OTHER slot an update reads
-    (`Checkpoints.load` → `slotRead`) is filed once as `slots.loads` [frame, key, text] and the replay puts it in its store before that frame. A save or an
-    import made BETWEEN frames (the panel; `Checkpoints.write` / `importText`) is on no tape and ends the recording first, as a load there does
-    (`meta.stopped` 'a checkpoint was saved between frames' / 'a checkpoint was imported'), so the rows of frame 0 and the updates' own saves are all a
-    tape has to know. (3) A SAVE IN MEMORY FROM BEFORE THE RECORDING is in no replay's memory (a save in memory keeps the recording it was made under,
-    `journal.take`): put back inside an update it ends the recording with that frame (`cut(why, lost)`: `meta.stopped` 'a save in memory from before the
-    recording was loaded', `meta.lost`, no digest of that frame) and a new one is asked for; that last frame is the Enter a replay takes another way, and
-    `replay.ts` plays a `meta.lost` file to the frame before it. By play this does not come up: a recording does not begin with a unit on the floor
-    (`canStart`) and a unit never leaves it. THE FILE'S VERSION: a file with a slot's text filed or with `meta.lost` says `v: 2`
-    (`JOURNAL_VERSION_SLOTS`), so a build from before them refuses it by its version instead of replaying it into a break of its own; every other file
-    still says 1, and this build reads both (`checkSessionFile`, which also holds the `slots` block's shape; `tapeSeed` / `tapeText` write only the
-    checkpoints' own keys). Check `probes.ts recordload` (`tools/qa/journalload-check.ts`; family checkpoints; both stands; `JOURNALLOAD_BREAK=1` must
-    fail all four), over a GPU stand-in that answers: a save in memory made by F5 under the tape and put back by Enter (the file is as long as the run,
-    its sensor stream too, every value the game took is taken again by the replay, with the same load in it); a save in memory from before the recording
-    (the file ends on the Enter's frame, says so, and replays to the frame before); an IMPORTED file slot from before the recording (rows and text in the
-    file; replays through a save by hand and a second Enter back to that one); a save off the panel under a recording (ends it whole; the next recording
-    has the slot among its rows and an Enter that loads it replays). The check's own hands between frames (a unit spawned, Sam put down) are made again
-    at the same frame of the replay (`ReplayOpts.between`). NOT COVERED: the panel's 'clear' under a recording (the replay still has the rows); two saves
-    inside one millisecond of a replay (the rows sort by wall clock); a store that refuses a save on the page (quota) and takes it in the replay.
-    Headless only: no such recording has been made in a browser, and nothing here was seen on a GPU.
+  frame are `strays`. `record` and `replay` lost their one recorder with F10 and stay until one way of sensing takes them. `applyKnobs` and `knobsSnapshot` stayed in `journal.ts` for the kept replay's recipe.
 - **The game's own die** (`src/math/dice.ts`; engine groundwork for two-player co-op, nothing networked): every roll of the simulation is `simRandom()`, never `Math.random()` —
   `bun run tools/qa/dice-check.ts` is red on a `Math.random` in src/game outside journal.ts (which installs a recording's die) and civilians.ts `withDice`. A Game stood up with a seed
   (`standGame({ seed })`) OWNS a `SimDice` (`Game.dice`: one mulberry32 word `s`, the count `n`, the `seed`), made current by `useDice()` at stand-up, as `Game.update`'s first statement
@@ -178,7 +100,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   camera (`attach`, called by `update`): showcases lock real keys and pin the real camera. Between ticks `orders.hostView` / `g.viewProj` point at the host's live objects again,
   as the HUD and the tools always saw them. Read off the seat's view inside a tick (each per seat once there are two): the reticle's pixel snaps and the order menu's cursor ray,
   the walk keys' basis, on-screen-or-not for a line (`viewProj` → bubble vs log row: guards.ts say, civilians, the weather's stroke filter), the thunder's pan, the rain's near
-  field, `mPerPx`, a blast's kick. The session journal's format is untouched (it files the raw camera and input before the sample).
+  field, `mPerPx`, a blast's kick. 
 - **The rollback snapshot: any tick taken and put back, to the bit** (`src/game/rollback.ts`, `src/math/side.ts`; groundwork for server authority then rollback, nothing
   networked; when it went in nothing called it, and the 21 scripted play-throughs' digests on both stands were the ones from before it. ONE CALLER IN PLAY SINCE: a save
   kept in memory with a team on the floor, `savestate.ts` under `SAVETIMELINE`, `docs/agents/qa.md`). Beside the
@@ -632,16 +554,6 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   on the floor" (a room clear with the four, F5, his own frag puts him down, Enter; the re-run equal to the digest), green on both stands. A load made
   BETWEEN two steps (a card, the panel) ends the tape in the words "a checkpoint was loaded", as a file's does. The F10 journal is another matter and
   not this bullet's: there the sensors' recorded stream IS inside what a restore puts back.
-- **A replay on a page that writes the sandbox flags itself** (10-25). The sneak lab and the fire lab write `playerInvisible` / `godMode` on every page
-  frame from their own panel (`host/sneaklab.ts sneakLabFrame`), and a replay boots the tape's address, so the lab boots under it on the ADDRESS's
-  scenario. A scenario picked on the panel while recording (one where the men can notice him) is a 'flags' row on the tape; the player wrote it once and the
-  lab's frame had the last word from the next frame on, so the replay ran with nobody noticing him. `engineplay.ts` now keeps the tape's flags (the
-  recipe's, then each row's) and writes them before EVERY step (`fl`, `stepOne`). No switch: the replay player only. The headless re-run boots no lab
-  and needed nothing. CHECK: `engine-replay-page.cjs`, section `lab` (ONLY=lab runs alone): the lab opened, 'dark corridor' picked on the panel, he is
-  put in front of a man and runs about, two men go suspicious; the replay is PLAYED a page frame at a time (`__tape.run` alone steps past the page's
-  frame and hides the fault). Before the mend: parted at step 151, the men on patrol, unseen true where the recording had false. After: 550 of 550
-  steps, parted never, Sam and every man where the recording left them. Software adapter; never seen on a GPU. STILL OPEN, not this bullet's: what the
-  lab's panel does to the men (a gap, a seat, the lamps) is on no tape, and a lab tape from before the 'pose' rows is staged by the address's scenario.
 - **A replay keeps the viewer's shader words** (10-27). The shader rows on trial (`ui/shaderrows.ts`: `compactshaders`, `firstframe`,
   `splitrays`; five when this was written, two taken out since: `render.md`), the compile queue's `pipequeue`, `shadertrim` and `shaderfold` are words of the VISIT (`ui/replaykey.ts VISIT_FLAGS`, the rows by `SHADER_ROW_WORDS`): how this
   machine builds its shaders, read once as the page loads. They were on neither list, so `?playtape=..&compactshaders=1` was sent on to the tape's address

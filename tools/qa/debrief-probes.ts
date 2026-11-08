@@ -401,7 +401,7 @@ export async function debriefDom() {
         notes.push(`door row: ${row.slice(-44)}`); } }
     // and a row that leans loud draws no rating, no score, no docked line, no badges, and its numbers untoned (ui/debrief.ts over Debrief.scored — debrief-loud has the rule)
     {
-      { const row4 = LOUD_BREAK ? 'tut-quiet.json' : 'tut-solo.json', W4 = await standRow(row4, `?levelFile=${row4}&quiet`), cells = (r: El) => r.all(e => e.cls.has('st') && /^(seen|alarms|floor up|bodies found|kills|doors kicked|called in|checkpoint loads|civilians saw you|…and told them)/.test(e.textContent)), toned = (r: El) => cells(r).filter(e => e.cls.has('good') || e.cls.has('bad') || e.cls.has('warn')).length;
+      { const row4 = LOUD_BREAK ? 'tut-quiet.json' : 'tut-road.json', W4 = await standRow(row4, `?levelFile=${row4}&quiet`), cells = (r: El) => r.all(e => e.cls.has('st') && /^(seen|alarms|floor up|bodies found|kills|doors kicked|called in|checkpoint loads|civilians saw you|…and told them)/.test(e.textContent)), toned = (r: El) => cells(r).filter(e => e.cls.has('good') || e.cls.has('bad') || e.cls.has('warn')).length;
         { const st = W4.game.mission.stats, n = W4.game.chronicle.counts; st.bodies = 1; st.kills = 2; n.kicked = 1; n.devices = 1; n.loads = 1; n.civSeen = 1; n.hits = 1; }   // (a run that would tone every one of them, and one cell that keeps its red: a hit taken)
         const h4 = new El('DIV'); const ui4 = renderDebrief(h4 as any, W4.game); const r4: El = h4.children[0];
         const drawn = ['db-rating', 'db-score', 'db-t3', 'chip'].filter(c => r4.all(e => e.cls.has(c)).length), t2 = r4.all(e => e.cls.has('db-t2'))[0]?.textContent ?? '';

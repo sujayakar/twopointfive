@@ -78,25 +78,20 @@ export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; e
   /** K.assignDeep, but a null on the tape is written too (a knob that is `number | null`: the wall charges carried) — only for tapes that carry their own tables */
   const put = (dst: Record<string, unknown>, src: Record<string, unknown>) => { for (const k of Object.keys(src)) { if (!(k in dst)) continue; const a = dst[k], b = src[k];
     if (plain(a) && plain(b)) put(a, b); else if (typeof a === typeof b || a === null || b === null) dst[k] = b !== null && typeof b === 'object' ? JSON.parse(JSON.stringify(b)) : b; } };
+  const RS = await import(`${ROOT}/src/game/rowset.ts`);
   const SH = await import(`${ROOT}/src/scene/shapes.ts`);   // (a tape from before a box could say its shape: that switch is read as the level is stood up, too)
   const RD = await import(`${ROOT}/src/scene/round.ts`);   // (a tape from before round things were round: the switch is read as the level is stood up)
   const CL = await import(`${ROOT}/src/game/carlamps.ts`);   // (a tape from before a vehicle's lamps were light targets: the switch is read as the Game is built)
   const tables = () => { const src = { ...(rc.knobs?.tables ?? {}), ...(rc.tables ?? {}) } as Record<string, unknown>, into = rc.tables ? reg : J.knobTables() as Record<string, Record<string, unknown>>;
     for (const [name, Tb] of Object.entries(into)) { const t = src[name]; if (plain(t)) { if (rc.tables) put(Tb, t); else K.assignDeep(Tb, t); } }
     if (!plain(src.POSEMATH)) (reg.POSEMATH as { singles: boolean }).singles = false;   // (a tape from before a pose's arithmetic had a rule: worked as it was — src/anim/skeleton.ts POSEMATH)
-    if (!plain(src.SENSE)) (reg.SENSE as { cpu: boolean }).cpu = false; if (!plain(src.CMDCHECK)) (reg.CMDCHECK as { on: boolean }).on = false; CL.carLampsTape(src); RD.roundTape(src); SH.shapesTape(src); };   // (a tape from before the game's own maths: the engine's functions, said before the level and the game are built — as the page's player does, src/replay/engineplay.ts tables())
+    if (!plain(src.SENSE)) (reg.SENSE as { cpu: boolean }).cpu = false; if (!plain(src.CMDCHECK)) (reg.CMDCHECK as { on: boolean }).on = false; CL.carLampsTape(src); RD.roundTape(src); SH.shapesTape(src); RS.rowsetTape(src); };   // (rowsetTape: the row's own hour and weather are read off the address BEFORE the game is made — headless.ts `address` — so a tape from before that rule has it off here, before the stand, as the page's player has, replay/engineplay.ts; journal.ts applyKnobs says the same afterwards)   // (a tape from before the game's own maths: the engine's functions, said before the level and the game are built — as the page's player does, src/replay/engineplay.ts tables())
   const Kt = await import(`${ROOT}/src/game/kit.ts`);
   const kitOf = (k: unknown) => { const c = k as { on?: unknown; members?: unknown; own?: unknown; stealth?: unknown } | undefined; if (!c || !Array.isArray(c.members)) return;
     Kt.kitMission(null);   // (no mission's card stands first in the table while the tape's cards are written into it)
     Kt.kitOwn(c.own === true); Kt.KIT.on = c.on !== false; const cards = Array.from({ length: Kt.KIT_MEMBERS }, (_, i) => Kt.kitSanitize(i, (c.members as unknown[])[i])); Kt.KIT.members.length = 0; Kt.KIT.members.push(...cards);
     Kt.kitStealthSet(c.stealth); };   // (kit.ts KITDEAL.stealth: the stealth card the tape's run wore beside the loud one, or none — never this process's; as the page's player does, engineplay.ts kitOf)
   const RT = await import(`${ROOT}/src/game/runtape.ts`);
-  // (A SNEAK LAB TAPE FROM BEFORE THE TAPE CARRIED WHERE THE PLAYER WAS PUT — the page's address has the lab's word and no 'pose' row is on it: the lab's page stood
-  // him at its scenario's start at boot and after every restart, host/sneaklab.ts stage, and nothing of that was taped. Done here from the address's own scene, with
-  // THIS checkout's lab (its scenarios and its staging: the level's fingerprint does not cover them); a scenario picked on the lab's panel later is not on such a
-  // tape, and the men's buttons — a gap, a seat, the lamps — are on no tape)
-  const labQ = new URLSearchParams(rc.search ?? ''), labOld = labQ.has('sneaklab') && !tape.x.some(r => r[1] === 'pose');
-  const LAB = labOld ? await import(`${ROOT}/src/host/sneaklab.ts`) : null, labStage = () => { if (LAB) LAB.stage(g); };
   let g: Headless['game'], poses: { row(f: number, kind: string, data: unknown): boolean } | null = null;
   /** the tables and the game's tune just before and just after journal.ts applyKnobs (which, beside the tape's own keys, writes the older value of some keys a file lacks) */
   const knobsWere: unknown[] = [], knobShot = (): unknown => JSON.parse(JSON.stringify({ ...reg, tune: g.tune }));
@@ -109,14 +104,14 @@ export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; e
     if (loaded && stoodAs !== need && !rc.tables) warnings.push(`this process had already stood the harness as ${stoodAs} and the tape was made as ${want}, with no tables of its own on it: run it in a process of its own (replay-at.ts) to stand it right`);
     if (rc.levelFile) { try { level = await levelOf(rc.levelFile); } catch (e) { return out(`the replay's level file ${rc.levelFile} could not be loaded here: ${(e as Error).message}`); } }
     if (rc.seed === null) Math.random = mulberry32(0x7e9a);
-    W = await standUp({ seed: rc.seed, env: rc.env, search: rc.search ?? '', ...(level ? { level } : {}), ...(opts.scan === false ? { scan: false } : {}), ...(opts.dress ? { dress: true } : {}), ...(opts.draws === false ? { draws: false } : {}) });   // (`search`: the run's own address says how many seats it has — src/game/seats.ts)
+    // (A TAPE MADE ON A PAGE IS STOOD AS A PAGE STANDS: its address is the stand's from the first line, read before the game is made — headless.ts `address`.
+    //  A networked game's machines all come this way, tools/mp/stand.ts standRecipe. A tape a headless tool made on a game stood plain is walked as it was made)
+    const paged = want === 'page' && !!rc.search && rc.search.length > 1;
+    W = await standUp({ seed: rc.seed, env: rc.env, search: rc.search ?? '', ...(paged ? { address: rc.search! } : {}), ...(level ? { level } : {}), ...(opts.scan === false ? { scan: false } : {}), ...(opts.dress ? { dress: true } : {}), ...(opts.draws === false ? { draws: false } : {}) });   // (`search`: the run's own address says how many seats it has — src/game/seats.ts)
     g = W.game;
     { const fpo = levelFingerprint(g) as any, fp = typeof fpo === 'string' ? fpo : fpo?.fp; if (F.level.fp && fp !== F.level.fp && !opts.force) return out(`the replay was saved on another level than this checkout's (${F.level.file ?? 'the office'}: fingerprint ${F.level.fp} there, ${fp} here)${F.commit ? `. Check out ${F.commit} (git worktree add ../at-replay ${F.commit}) and run this there` : ''}; --force walks it anyway`); }
     knobsWere.push(knobShot()); J.applyKnobs(g, rc.knobs); knobsWere.push(knobShot()); tables(); J.applyEnvGame(g, rc.env);
-    if (rc.search && rc.search.length > 1) { const r = startFromQuery(g, rc.search); if (r.why) warnings.push(`the page's scenario did not start here: ${r.why}`); tables(); }
-    if (LAB) { const n = Number(labQ.get('scene')); LAB.SNEAKLAB.scene = n >= 1 && n <= LAB.SCENES.length ? n - 1 : 0; labStage();
-      { const back = g.restart.bind(g); g.restart = (said?: string) => { back(said); labStage(); }; }   // (a restart the run makes itself, Shift+Enter: wrapped as the lab's page wraps it)
-      warnings.push(`a sneak lab replay from before the tape carried where the player was put: he is stood at the start of the address's scenario (${LAB.SCENES[LAB.SNEAKLAB.scene].name}) as THIS checkout's lab stages it, at the first step and after every restart${F.commit ? ` — the replay's own build is ${F.commit}` : ''}. A scenario picked on the lab's panel during the run is not on this tape`); }
+    if (rc.search && rc.search.length > 1) { const r = paged ? W.start(tables) /* (a page lays the recipe's tables again between the staging and the solo card's question: main.ts) */ : startFromQuery(g, rc.search); if (r.why) warnings.push(`the page's scenario did not start here: ${r.why}`); tables(); }
     poses = RT.tapePoses(g);
   } finally { for (const [k, v] of Object.entries(kept)) setEnv(k, v); }
   // ---- a tape OLDER (or newer) than this build's knobs. tables() and applyKnobs write only the keys the tape has, so a key added to a table (or to Game.tune)
@@ -165,7 +160,7 @@ export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; e
   for (let f = 0; f < toN; f++) {
     // from outside the step, as the page did it
     for (const [, kind, data] of walk.outside()) {
-      if (kind === 'restart') { if (data === 'start' && host?.startKept) host.toStart(); else g.restartEncounter(); labStage(); }
+      if (kind === 'restart') { if (data === 'start' && host?.startKept) host.toStart(); else g.restartEncounter(); }
       else if (kind === 'load') { const why = g.saves.load(g, String(data)); if (why) { warnings.push(`the checkpoint loaded at step ${f} did not load here: ${why}`); drift ??= { r: D.r[F.samples.findIndex(s => s.n > f)] ?? 0, n: f, who: 'the checkpoint', metres: Infinity }; } }
       else if (poses?.row(f, kind, data)) { /* where the player was put from outside a step, or by a restart inside the coming one: runtape.ts */ }
       else if (kind === 'flags') { const fl = data as any; g.godMode = !!fl.godMode; g.aiEnabled = fl.aiEnabled !== false; g.infiniteAmmo = !!fl.infiniteAmmo; g.playerInvisible = !!fl.playerInvisible; if (typeof fl.autosave === 'boolean') g.saves.enabled = fl.autosave; }

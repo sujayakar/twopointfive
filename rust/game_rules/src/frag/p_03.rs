@@ -71,8 +71,8 @@ pub fn frag_say(g: &mut crate::game::Game) {
     while n < g.guards.len() {
         let gd = g.guards[n]; n += 1;
         let dealt = g.m.frag.books.as_ref().map_or(false, |b| b.iter().any(|l| matches!(l.flee.get(gd), Some(Some(_)))));
-        let (rule, t) = (crate::owner::own().frag, g.time);
-        if dealt { crate::owner::claim_man(g, gd, rule, t, None); } else { crate::owner::release_man(g, gd, rule, t); }
+        let (rule, t) = (crate::owner::by::FRAG, g.time);
+        if dealt { crate::owner::claim(g, gd, rule, t, None); } else { crate::owner::release(g, gd, rule, t); }
     }
 }
 
@@ -444,7 +444,7 @@ fn tick_carrier(g: &mut Game, ci: usize, dt: f64) {
     let gd = car!(g, ci).gd;
     let c = g.gd[gd].ch;
     if !js::truthy(car!(g, ci).frags) { return; }
-    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() || { let r = crate::owner::own().runner; crate::owner::has_him(g, gd, r) } { car!(g, ci).wind = None; return; }
+    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() || { let r = crate::owner::by::RUNNER; crate::owner::has(g, gd, r) } { car!(g, ci).wind = None; return; }
     let out = crate::control::man::staggered(g, gd) || crate::control::man::blind(g, gd);
     let head = head_of(g, c);
     if car!(g, ci).wind.is_some() { tick_wind(g, ci, gd, c, out); return; }
@@ -656,7 +656,7 @@ pub fn free(g: &mut crate::game::Game, gd: GuardId) -> Option<usize> {
     let b = g.m.frag.def_books.as_ref()?;
     let ci = b.carriers.iter().position(|x| x.gd == gd)?;
     if !js::truthy(b.carriers[ci].frags) || b.carriers[ci].wind.is_some() { return None; }
-    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() || { let r = crate::owner::own().runner; crate::owner::has_him(g, gd, r) } || crate::control::man::staggered(g, gd) || crate::control::man::blind(g, gd) || frag_flee(g, gd).is_some() || g.time - book!(g).last_t < g.k.frag.def_gap { return None; }
+    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() || { let r = crate::owner::by::RUNNER; crate::owner::has(g, gd, r) } || crate::control::man::staggered(g, gd) || crate::control::man::blind(g, gd) || frag_flee(g, gd).is_some() || g.time - book!(g).last_t < g.k.frag.def_gap { return None; }
     Some(ci)
 }
 

@@ -308,7 +308,7 @@ export async function glassbreakCaps() {
   const diced = [...gb.panes.values()].filter((s: any) => s.type === 'tempered').length;
   const dropCap = GBM.GLASSREAL.drop;   // (dropping at once a sheet leaves on one step, as at most GLASSREAL.blocks fragments: that is its cap a frame, not the wave's clumpsPerFrame)
   // the stand-in under the same load: the debris pool must never pass its cap; refusals are counted, not thrown
-  gb.reset(); gb.onRelease = null; let over = 0; const cap = engine.settings.debrisCap ?? 64;
+  gb.reset(); gb.onRelease = null; let over = 0; const cap = 64;
   for (let k = 0; k < 40; k++) glassImpact(game, PANE, W_((rnd() * 2 - 1) * 0.47, (rnd() * 2 - 1) * 0.97), IN, 1, 1);
   for (const at of [[7.0, 0.8, 9.2], [10.5, 0.8, 9.2], [13.0, 0.8, 9.2]] as Vec3[]) gb.blast(at, { who: 1 });
   for (const i of engine.world.glassStatics) if (gb.typeOfPane(i) === 'tempered') { const b = game.level.boxes[i]; glassImpact(game, i, v3.copy(b.c), IN, 1, 1); }

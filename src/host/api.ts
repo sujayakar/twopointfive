@@ -44,7 +44,7 @@ export interface HostApi {
   readonly world: BoxWorld;
   /** the light set: add / flash / remove / lights / upload (render/lights.ts) */
   readonly lights: LightSet;
-  /** the knob table (src/settings.ts). The game READS emissiveScale, flashlightRadius, particleRain, wetChars, markingTexel, decals, markings, gloss, debrisCap, gpuParticles,
+  /** the knob table (src/settings.ts). The game READS emissiveScale, particleRain, wetChars, markingTexel, decals, markings, gloss, gpuParticles,
    *  sharpDecouple, and WRITES nothing here (nvAmount / hitFlash are written by the loop — src/host/loop.ts — off Player) */
   readonly settings: RenderSettings;
   /** what the weather wants drawn in the outdoor air (game/weather.ts writes it; game/wet.ts reads .rain). Absent on a stand-in: weather.ts `??=`s one in */

@@ -11,7 +11,7 @@
 //   corner    his back on a wall, hands empty, the button held (STALK.corner): a man walking past is grabbed once he is past, by the same step in; a man facing him
 //             is not taken.
 // STALK_BREAK=1 = the key, the low creep and the corner left down where they are asked for up: each must FAIL.   exit 0 = all hold · 1 = one does not
-// THE HARNESS HAS NO GPU: nothing here says how it looks or feels. tools/qa/stalk-page.cjs drives the real page on the software adapter.
+// THE HARNESS HAS NO GPU: nothing here says how it looks or feels.
 import { standUp, ROOT } from './headless.ts';
 
 const { STALK, STALK_STATS, stalkOn, stalkPolish } = await import(`${ROOT}/src/game/stalk.ts`);

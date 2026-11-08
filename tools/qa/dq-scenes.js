@@ -221,12 +221,12 @@
     return out;
   }
   // ------------------------------------------------------------------ S6: the torch sweep
-  // A SYNTHETIC held torch — the guards' own numbers (game.tune.flashIntensity / flashInner / flashOuter, settings.flashlightRadius) on a light the harness owns, its OWNER byte set
+  // A SYNTHETIC held torch — the guards' own numbers (game.tune.flashIntensity / flashInner / flashOuter, 0.07) on a light the harness owns, its OWNER byte set
   // (250: nobody's id, but a carried light to the estimator) — moved along a scripted hand-height path while it yaws: what a walking man's torch does to the picture, to the pixel,
   // run after run (a staged man's hand sways on clocks that differ by the run's start time: his pool landed tens of pixels apart between variants and no frame could be compared).
   let torchL = null;
   function torchLight(on, o = {}) {
-    const g = G(); const tn = g.tune || {}; const I = o.intensity ?? tn.flashIntensity ?? 70; const inner = o.innerDeg ?? tn.flashInner ?? 7; const outer = o.outerDeg ?? tn.flashOuter ?? 19; const radius = o.radius ?? S().flashlightRadius ?? 0.07;
+    const g = G(); const tn = g.tune || {}; const I = o.intensity ?? tn.flashIntensity ?? 70; const inner = o.innerDeg ?? tn.flashInner ?? 7; const outer = o.outerDeg ?? tn.flashOuter ?? 19; const radius = o.radius ?? 0.07;
     if (!torchL) torchL = E().lights.add({ name: 'dq_torch', group: 'test', kind: 1, pos: [31, 0.95, 11.7], dir: [0, -0.3, -1], color: [1.0, 0.92, 0.78], intensity: I, range: 16, innerDeg: inner, outerDeg: outer, radius, volumetric: 1.0, owner: 250, enabled: false, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, peakIntensity: I, card: true });
     torchL.intensity = torchL.peakIntensity = I; torchL.innerDeg = inner; torchL.outerDeg = outer; torchL.radius = radius; torchL.owner = o.owner ?? 250; torchL.enabled = !!on;
     return torchL;

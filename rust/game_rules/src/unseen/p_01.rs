@@ -314,11 +314,6 @@ pub fn unseen_step(g: &mut Game, gd: GuardId) -> Option<f64> {
     })
 }
 
-/// his light is held off because Sam's is: UNSEEN.lights is off on the page, so never (unseen.ts unseenDark)
-pub fn unseen_dark(g: &Game, gd: GuardId) -> bool {
-    false
-}
-
 /// (unseen.ts unseenHush)
 pub fn unseen_hush(g: &mut Game, gd: GuardId) -> bool {
     in_view(g, gd, &mut |g: &mut Game| under_unseen(g, gd))

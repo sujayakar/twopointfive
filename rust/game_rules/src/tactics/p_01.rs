@@ -197,8 +197,7 @@ pub fn entry_bearing(t: V3, from: V3, path: &[V3], r: f64) -> f64 {
 
 /// The line of FIRE from a man stood at p to the fix area at T, chest to chest height. (tactics.ts losOpen)
 pub fn los_open(g: &mut crate::game::Game, p: V3, t: V3, team: crate::teams::Team) -> bool {
-    let energy = crate::glasspen::side_shot_energy(g, team);
-    !crate::scene_collision::shot_blocked(g, [p[0], 1.15, p[2]], [t[0], 1.0, t[2]], Some(0.02), energy)
+    !crate::scene_collision::shot_blocked(g, [p[0], 1.15, p[2]], [t[0], 1.0, t[2]], Some(0.02), None)
 }
 
 /// The last point along from → path still COVERED from T before the line opens for good on the way in, at least `min_from_t` off T. (tactics.ts lastCoverPoint)

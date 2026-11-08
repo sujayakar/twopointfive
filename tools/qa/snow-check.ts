@@ -44,11 +44,11 @@ export async function snowCheck(o: { verbose?: boolean } = {}): Promise<boolean>
   const was = SNOW.on, envWas = process.env.TPS_SNOW, bootWas = WEATHER_BOOT.kind;
 
   /** a game stood up on `file` with the switch where `on` says (by the stand's own word, so the frozen stand's pin and the shipped stand's boot both obey) */
-  async function rig(file: string, on: boolean, pick: string | null = null) {
+  async function rig(file: string, on: boolean, pick: string | null = null, record?: any) {
     const sw = on && !BREAK;
     process.env.TPS_SNOW = sw ? '1' : '0'; SNOW.on = !sw; WEATHER_BOOT.kind = pick as any;   // (the module's switch left the WRONG way round: only the stand's word, read before the Game is built, can put it right)
     const lvl = loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')));
-    let W: any; try { W = await quiet(() => standUp({ level: lvl, seed: 7 })); } finally { WEATHER_BOOT.kind = bootWas; }
+    let W: any; try { W = await quiet(() => standUp({ level: lvl, seed: 7, ...(record ? { stood: record } : {}) })); } finally { WEATHER_BOOT.kind = bootWas; }
     const g = W.game; const stood = SNOW.on; SNOW.on = sw;
     const step = (n = 1) => { for (let i = 0; i < n; i++) { SNOW.on = sw; W.step(DT); } };
     return { W, g, step, stood, wx: g.weather as any, frame: () => (g.engine as any).weather as any };
@@ -71,8 +71,8 @@ export async function snowCheck(o: { verbose?: boolean } = {}): Promise<boolean>
       const D = await rig('pass.json', true, 'rain'); D.step(3);
       const took = D.wx.setKind('rain'), after = D.wx.kind, rainAfter = D.wx.rainRate;   // (what a ?weather= word does headless: scenarioRun.ts startFromQuery → setKind)
       // a PAGE (its kind locked at boot): opened on the snow level it is in snow; a page opened on another level, the pass loaded into it later, is not (no flake in its shaders)
-      const lockWas = WEATHER_BOOT.locked; let pageOn = '', pageOther = '';
-      try { WEATHER_BOOT.locked = true; pageOn = String((await rig('pass.json', true, 'snow')).wx.kind); pageOther = String((await rig('pass.json', true, null)).wx.kind); } finally { WEATHER_BOOT.locked = lockWas; SNOW.on = !BREAK; }
+      const onPage = (weather: string | null) => ({ weather, locked: true, hour: 'night', sun: 1, sunGiven: false, dry: true, soloStand: false }); let pageOn = '', pageOther = '';
+      try { pageOn = String((await rig('pass.json', true, null, onPage('snow'))).wx.kind); pageOther = String((await rig('pass.json', true, null, onPage(null))).wx.kind); } finally { SNOW.on = !BREAK; }
       const office = await rig('compound.json', true, 'snow');   // (the word 'snow' on the page's boot, the level not a snow level — a level file that failed to load: no snow)
       verdict(!(WEATHER_KINDS as string[]).includes('snow') && !isWeatherKind('snow') && weatherOfSearch('?weather=snow') === null && D.wx.kind === 'snow' && D.frame().rain === 0 && took === false && after === 'snow' && rainAfter === 0
         && pageOn === 'snow' && pageOther !== 'snow' && office.wx.kind === null,

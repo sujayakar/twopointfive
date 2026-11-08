@@ -54,13 +54,16 @@ fn collide_legs(g: &mut Game, m: &mut crate::player::Legs, y1: f64) {
 
 // ---- the part's functions ----
 
+/// how a player steps to the launcher's next load (slotsetup.ts loadKeys)
+const LOAD_KEYS: &str = "press 2, then 2";
+
 /// Is what moves him this tick his walk keys and nothing else. Asked, nothing written.   (player.ts legsOwn)
 pub fn legs_own(g: &mut crate::game::Game) -> bool {
     let pl = g.player;
     let busy = g.pl[pl].down || g.pl[pl].takedown.is_some() || g.pl[pl].holding.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some()
         || g.pl[pl].wanding.is_some() || g.pl[pl].coding.is_some() || g.pl[pl].wall.is_some() || g.pl[pl].dragging.is_some() || g.pl[pl].haul.is_some()
         || g.pl[pl].door_move.is_some() || g.puppet.is_some() || g.touring;
-    !(busy || crate::handwork::sam_work(g).is_some() || crate::stalk::stalk_on(g, &crate::seats::here(g)).is_some() || (g.k.tapstep.on && g.pl[pl].crouch) || crate::rails::rails_allowed(g).is_some())
+    !(busy || crate::handwork::sam_work(g).is_some() || crate::stalk::stalk_on(g, &crate::seats::here(g)).is_some() || crate::rails::rails_allowed(g).is_some())
 }
 
 /// The top pace of a walk of his own this tick, by what his legs are doing and what his card weighs.   (player.ts freePace)
@@ -103,10 +106,9 @@ pub fn sprint_stance(g: &mut crate::game::Game, m: &mut crate::player::Legs, wan
 }
 
 /// One stride: his pace taken up or let go, his place moved by it, the walls and then the men given their say.   (player.ts strideStep)
-pub fn stride_step(g: &mut crate::game::Game, m: &mut crate::player::Legs, mx: f64, mz: f64, ml: f64, tap: Option<crate::player::StrideStepTap>, stalk: Option<crate::player::StrideStepStalk>, dt: f64, now: Option<f64>) {
+pub fn stride_step(g: &mut crate::game::Game, m: &mut crate::player::Legs, mx: f64, mz: f64, ml: f64, stalk: Option<crate::player::StrideStepStalk>, dt: f64, now: Option<f64>) {
     let now = now.unwrap_or(g.time);
     let mut max_speed = free_pace(g, &crate::seats::here(g), *m, ml);
-    if let Some(t) = tap { max_speed = t.speed; }
     if let Some(s) = stalk { max_speed = if ml == 0.0 { 0.0 } else { s.pace }; }
     if m.sprinting { max_speed *= crate::sprintdoor::sprint_door_pace(g, door_stamps(m), Some(now)); }
     let rate = match stalk {
@@ -114,8 +116,7 @@ pub fn stride_step(g: &mut crate::game::Game, m: &mut crate::player::Legs, mx: f
         None => if max_speed > m.speed_sm { 6.0 } else { 12.0 },
     };
     m.speed_sm = v3::damp(m.speed_sm, max_speed, rate, dt);
-    if let Some(t) = tap { m.speed_sm = t.speed; }
-    let moving = match tap { Some(t) => t.speed > 0.0, None => ml > 0.0 };
+    let moving = ml > 0.0;
     if moving { m.char.vel = [mx * m.speed_sm, 0.0, mz * m.speed_sm]; } else { m.char.vel = v3::scale(m.char.vel, m::exp(-14.0 * dt)); }
     m.char.pos = v3::mad(m.char.pos, m.char.vel, dt);
     let headroom = if m.crouch { 1.0 } else { 1.7 };
@@ -438,7 +439,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     }
     let stalk = {
         let (lmb, lmb_hit) = (input_lmb(g, input), input_lmb_hit(g, input));
-        let stick = if g.k.stalk.drag { Some(crate::stalk::StalkStick { x: g.tab.input[input].mouse_x, y: g.tab.input[input].mouse_y, fwd, right }) } else { None };
+        let stick = None;
         crate::stalk::stalk_step(g, lmb, lmb_hit, mx != 0.0 || mz != 0.0, stick, Some(crate::stalk::StalkKeys { mx, mz, dt }))
     };
     if let Some(st) = stalk { mx = st.mx; mz = st.mz; g.pl[pl].crouch = true; }
@@ -487,17 +488,12 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     if !on_wall {
         if want_sprint && g.pl[pl].dragging.is_some() { crate::game::game_toggle_drag(g, None); }
         own_legs(g, pl, |g, m| sprint_stance(g, m, want_sprint, stalk.is_some()));
-        let tap = if !g.k.tapstep.on { None }
-            else if g.pl[pl].crouch && !want_sprint && stalk.is_none() && g.pl[pl].dragging.is_none() && !hands_walk && !rooted && g.puppet.is_none() && !g.touring { Some(crate::tapstep::tap_tick(g, mx, mz, ml, dt)) }
-            else { crate::tapstep::tap_off(g, ml); None };
-        if let Some(t) = tap { mx = t.mx; mz = t.mz; }
         if g.pl[pl].sprinting && firearm_reloading(g, gun) { firearm_cancel_reload(g, gun); crate::character::anim_cancel_reload(g, c); }
         if g.pl[pl].sprinting && firearm_reloading(g, rifle) { firearm_cancel_reload(g, rifle); crate::character::anim_cancel_reload(g, c); }
-        let tap_row = tap.map(|t| crate::player::StrideStepTap { speed: t.speed });
         let stalk_row = stalk.map(|s| crate::player::StrideStepStalk { pace: s.pace, keep: s.keep });
         // (the stride puts a NEW array in his `pos`'s place, player.ts:448 `c.pos = v3.mad(…)`, on the lent legs: said here, where the man is known)
         { let c = g.pl[pl].ch; crate::character::pos_replaced(g, c); }
-        own_legs(g, pl, |g, m| stride_step(g, m, mx, mz, ml, tap_row, stalk_row, dt, None));
+        own_legs(g, pl, |g, m| stride_step(g, m, mx, mz, ml, stalk_row, dt, None));
     }
     let speed = m::hyp2(g.ch[c].vel[0], g.ch[c].vel[2]);
     // aim
@@ -882,7 +878,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     // the weapon light: its position and direction are the gun's
     let infinite = g.infinite_ammo;
     g.fa[gun].infinite = infinite; g.fa[rifle].infinite = infinite;
-    let (light, power, radius) = (g.pl[pl].light, g.tune.player_light, g.engine.settings.flashlight_radius * 0.7);
+    let (light, power, radius) = (g.pl[pl].light, g.tune.player_light, crate::guards::FLASHLIGHT_RADIUS * 0.7);
     { let l = &mut g.tab.light[light]; l.peak_intensity = power; l.intensity = power; l.radius = radius; }
     pose_gun_light(g);
     // footsteps, for audio and the AI's hearing
@@ -913,7 +909,7 @@ fn load_flip_line(g: &Game, rifle: FirearmId, a: Option<crate::weapons::RifleAtt
         }
         Some(RifleAttachment::He40) => {
             let s = if g.fa[rifle].shells > 0.0 {
-                let keys = crate::slotsetup::load_keys(g);
+                let keys = LOAD_KEYS;
                 let next = next_load(g, rifle);
                 format!("40 mm grenade ×{} on the right button — goes off on what it hits, like a frag; arms {} m out (nearer: a dud); {} for {}", js::num_str(g.fa[rifle].shells), js::num_str(g.k.he40.arm_m), keys, next)
             } else { let next = next_load(g, rifle); format!("the 40 mm — but no grenades left for it (2 again for {})", next) };
@@ -932,13 +928,12 @@ fn launcher_dry_line(g: &Game, rifle: FirearmId, load: crate::weapons::RifleAtta
         RifleAttachment::Ring => {
             if g.fa[rifle].rings > 0.0 { return String::from("cycling the launcher…"); }
             let s = crate::gear::gear_text(g, if g.fa[rifle].shells > 0.0 { "no ring airfoils left — they are not coming back (2 again for the 40 mm)" } else { "no ring airfoils left — they are not coming back" });
-            let keys = crate::slotsetup::load_keys(g);
-            s.replacen("2 again", &keys, 1)
+            s.replacen("2 again", LOAD_KEYS, 1)
         }
         RifleAttachment::He40 => {
             if g.fa[rifle].shells > 0.0 { return String::from("loading the launcher…"); }
             let s = if g.fa[rifle].rings > 0.0 || g.fa[rifle].cams > 0.0 {
-                let keys = crate::slotsetup::load_keys(g);
+                let keys = LOAD_KEYS;
                 let next = next_load(g, rifle);
                 format!("no 40 mm grenades left ({} for {})", keys, next)
             } else { String::from("no 40 mm grenades left") };

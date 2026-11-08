@@ -17,7 +17,6 @@ out of a solo stealth demo (touchstone: Splinter Cell: Chaos Theory), which is s
 ```bash
 bun run dev            # tools/serve.ts → http://localhost:5173 (game at /, replay viewer at /replay, /sounds, /music)
 bun run build          # tools/build.ts → dist/
-bun run build:one      # tools/build-one.ts → dist/one/twopointsix.html, the whole game page as ONE file (docs/agents/workflow.md)
 bun run typecheck      # src/      ← before every commit (no vendor/typescript in a cloud checkout: a system `tsc --noEmit -p tsconfig.json`)
 bun run typecheck:qa   # tools/qa (its own tsconfig)
 bun run tools/qa/probes.ts <name|family|all-quick|list>   # exit 0 pass · 1 a probe failed · 2 unknown name
@@ -41,7 +40,7 @@ Detail, exit codes, the page's `window` hooks and URL flags: `docs/agents/qa.md`
   gone, said on stderr by a run that uses it, and no new fixture is recorded on it. A header that says "both stands" is older.
 - **A new rule is a switch.** ON in the page (a URL flag puts it off), OFF in its module: so a switch's value is read off the page's
   stand (`bun run tools/qa/stand-dump.ts`), never off the module's own table. A `FROZEN_HOLDS` row while that list stands; its table
-  registered in `src/game/knobs.ts` (`knobs-check` is red otherwise) and carried by the session journal so that a recording from
+  registered in `src/game/knobs.ts` (`knobs-check` is red otherwise) and carried by a tape's recipe (`journal.ts`) so that a recording from
   before the key replays with it off (`journal.ts applyKnobs`). Off = the build as it was, by run digest. It ships with a check
   whose `<NAME>_BREAK=1` path must fail.
 - **No `Math.random` in `src/game`** — `simRandom()` (`src/math/dice.ts`); `bun run tools/qa/dice-check.ts` is red on one. No wall
@@ -129,7 +128,7 @@ happened when; the live queue is outside the repo.
 - `render.md` — judging renderer output, GPU timing traps, quality presets and the ladder, caps, froxels, ReSTIR, TAAU, sharp direct,
   the gather, the denoiser, the smoke solver, effects numbers, prototype branches (longer renderer bullets:
   `docs/internal/claude-md-renderer-systems.md`).
-- `replays.md` — the F10 session journal and the `Sensors` seam, the game's own die, the fixed step, the input record, F7 replays, the
+- `replays.md` — the `Sensors` seam, the game's own die, the fixed step, the input record, F7 replays, the
   engine replay player, kept runs and the dump.
 - `net.md` — networked play: the wire (inputs, never state), the server's input rule, the server and client cores, the game server
   process and its environment, the page as a client (`?net=`), the lobby (host or join a co-op game, `?join=`), their checks.
@@ -139,8 +138,7 @@ happened when; the live queue is outside the repo.
 - `sounds.md` — the game's sound table, sound lanes on the engine replay, takes, tuning, the score and its pieces.
 - `writing.md` — how player text is written: the rules above at length, by kind of text (prompt, card, list row, menu, radio line),
   with before and after pairs from the game.
-- `workflow.md` — the fast loop, reviews, lanes and their deliverables, commits, the maintainer's taste, where the repo lives, the
-  playable Artifact.
+- `workflow.md` — the fast loop, reviews, lanes and their deliverables, commits, the maintainer's taste, where the repo lives.
 
 Other maps: `STYLE.md` (the look as rules), `docs/level-format.md`, `docs/internal/<topic>.md` (notebooks),
 `STATUS.md`. `handoff.md` and a few old logs are not in this repo: see `docs/agents/workflow.md`.

@@ -62,6 +62,7 @@ import { Tracers } from './tracers';
 import { Particles } from '../render/particles';
 import { sparkSink, kickDustFx, lockSplinterFx, clearParticleFx, loadDust, applyDustLook } from './particleFx';
 import { Weather } from './weather';
+import { stoodOfPick, type StoodWith } from './stood';
 import { wetInstance, wetKnobs, wetLineRow, wetSummary, clearWetPrints } from './wet';
 import './takedown';   // takedowns as moves (takedown.ts): who breathes, once a frame
 import { hourAfterReset } from './hours';
@@ -188,7 +189,6 @@ import { openingStart } from './opening';
 import { Checkpoints } from './savestate';
 import { Sensors } from './sensors';
 import type { ProbeLike } from './sensors';
-import { SessionRecorder } from './journal';
 import { Devices, loadDeviceTune, learnCode, DEVICE_TUNE_DEFAULTS } from './devices';
 import { Destruction, loadChaos } from './destruction';
 import './fixtureBreak';   // the look of a fixture breaking and hanging broken (picture only)
@@ -809,8 +809,6 @@ export class Game {
   /** THE SENSES ON THE CPU (sense.ts SENSE.cpu; off = nothing below runs): the game's own smoke, fed by every emitter handed to the solver while the switch is on,
    *  and the solver as it was before the game's tee was put in front of it (null = no tee) */
   cpuSmoke = new CpuSmoke(); private smokeOwned: { solver: SmokeSystemLike; undo: () => void } | null = null;
-  /** the session journal's recorder (journal.ts): F10 / __journal on the game page, tools/qa/journal-probes.ts headless — idle unless somebody asked */
-  journal: SessionRecorder = new SessionRecorder(this);
   /** THE REPLAY BUFFER's tap (replaybuf.ts): called as a step's first statement with the record it is about to run on, and as its last with none — it only reads. null (a game nobody gave a buffer) = nothing */
   replayTap: ((dt: number, cmd?: PlayerCmd) => void) | null = null;
   /** The AI's window on the renderer's light, by key — the same GPU irradiance queries the light meter is made of (1–2 frames' latency, read back by key):
@@ -917,6 +915,10 @@ export class Game {
   /** the night storm (weather.ts, E10): rain outdoors, lightning through the windows, thunder, the wet lot — on by default (?noweather boots it off; Tab ▸ Weather;
    *  window.__weather) */
   weather: Weather;
+  /** what this game was stood with (stood.ts), set once at the stand: the rules read this, never the module tables it was picked from */
+  stood: StoodWith;
+  /** THE SOLO NIGHT'S CARD (kit.ts kitSolo): your own kit on the plain night's player and on every fresh one */
+  soloCard = false;
   fxSeed = 1;               // counting seed for the seeded effects: every shot / can differs, a replayed session repeats
   audio: GameAudioLike = nullAudio;
   ocpCooldown = 0; lastStingT = -100; eventSeq = 0;
@@ -1062,7 +1064,8 @@ export class Game {
     // in view before the floor goes up a step; deviceCones = each live camera throws a faint red cone into the haze (a light slot apiece)
     ...DEVICE_TUNE_DEFAULTS };
 
-  constructor(public engine: HostApi, public level: Level, public ch: GltfCharacter, public smoke: SmokeSystemLike, opts: { seats?: number } = {}) { RUST_SURFACE?.newGame();
+  constructor(public engine: HostApi, public level: Level, public ch: GltfCharacter, public smoke: SmokeSystemLike, opts: { seats?: number; stood?: StoodWith } = {}) { RUST_SURFACE?.newGame();
+    this.stood = { ...(opts.stood ?? stoodOfPick()) };   // (its own copy. First: the Weather made below is born in it)
     { const over = levelOver(level); if (over) throw new Error(over); }   // (levelfit.ts: a level the pools cannot hold is not loaded, said before anything of it is built)
     this.seats = seatsStand(this, opts.seats ?? 1); this.localSeat = this.seats[0];   // (seats.ts: before anything is built over a seat's view; one seat = the Game is its own seat's view and nothing below differs)
     const first = this.seats[0].view;   // (the first seat's view: this Game, in a game of one)
@@ -1427,7 +1430,7 @@ export class Game {
     if (CLEANRESTART.picture && this.engine.restartPicture) { this.engine.restartPicture('level restarted'); CLEANRESTART_STATS.pictures++; }
   }
   /** Restart the encounter: a fresh Player at the insertion point with full kit, fresh Guards on their routes, lights repaired, the level as authored. */
-  restartEncounter() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.restartEncounter', this, []); if (__r !== RUST_PASS) return __r as any; } } this.journal.cut('the encounter was staged again');   // (between frames — a card's restart, a show, a mission's quit — this is on no tape: an F10 recording ends whole before it and a new one is asked for; inside an update, or under a request still pending, it does nothing: journal.ts cut)
+  restartEncounter() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.restartEncounter', this, []); if (__r !== RUST_PASS) return __r as any; } }
     useDice(this.dice); this.sensors.ownReset(); this.quiet?.current();
     const clean = CLEANRESTART.on;   // (cleanrestart.ts: nothing of the try that ended stands, sounds or plays on in this one — off, every line below as it was)
     if (clean) { CLEANRESTART_STATS.restarts++; CLEANRESTART_STATS.lines += this.messages.length; this.messages.length = 0; }   // (the lines of the encounter that ended go before anything below speaks: a staging's own line is this one's)
@@ -1474,23 +1477,17 @@ export class Game {
     const me = this.hostSeat();   // (the seat this host plays: its record is sampled here; any other seat's is whatever was last handed to it — Seat.hand)
     if (this.restartCut) { this.restartCut = false; const cut = me.takeCut();   // a restart from outside a tick (a card's button) cut the seat's camera: taken HERE, before this tick's record reads the view, so the fresh man's first tick is aimed through the camera that is on him
       if (cut && !cam.pin) { cam.target = v3.copy(cut); cam.desired = v3.copy(cam.target); cam.rebuild(); } }
-    this.journal.frameStart(dt, input, cam, canvas);   // the session journal (journal.ts): idle, a return; asked for, it takes its checkpoint and re-enters it HERE, before anything of the frame has run; recording, it files this frame's dt / camera / input and opens the sensors' frame
     this.director?.injectInput(input);   // a showcase beat's synthetic key / click from LAST frame's tick (director.ts c.press / c.click) becomes this frame's input, ahead of everybody who reads it — a return on its first line otherwise
-    this.hostBefore(input);
     this.cmdBuf = sampleCmd(me.view, input, cam, canvas, this.cmdBuf);
     const cmds: readonly PlayerCmd[] = this.seats.length === 1 ? (this.stepBuf[0] = this.cmdBuf, this.stepBuf) : this.seats.map(s => s === this.localSeat ? this.cmdBuf! : s.handed(this.cmdBuf!));
     this.replayTap?.(dt, cmds[0]);   // the replay buffer's run tape (runtape.ts): this step's dt and the first seat's record, before anything of it has run — reads only
     this.stepSeats(dt, cmds);
     this.hostAfter(input, cam, canvas);
-    this.journal.frameEnd();     // the session journal closes the frame (the sensors' reads folded in, a digest on the beat): after everything, so a digest is the whole settled frame
-    this.replayTap?.(dt);        // the replay buffer (replaybuf.ts): the settled frame read into its ring — reads only, after the journal has closed the frame
+    this.replayTap?.(dt);        // the replay buffer (replaybuf.ts): the settled frame read into its ring — reads only
   }
   /** THE HOST'S HALF OF A TICK, round the step — `update`'s own lines, named for a host that steps the game by records it did not sample itself (a networked
    *  page: net/page.ts). Before: what the host's INPUT is told. After: what the tick hands back for the camera of the seat this host shows (`hostSeat`), and
    *  that seat's live view put back. */
-  hostBefore(input: Input) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.hostBefore', this, [input]); if (__r !== RUST_PASS) return __r as any; } }
-    input.dragOff = STALK.on && STALK.drag;   // (the HOST's input, input.ts: a held press's cursor is followed off the view only while the creep reads the mouse as a stick — stalk.ts STALK.drag)
-  }
   hostAfter(input: Input, cam: FollowCamera, canvas: View) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.hostAfter', this, [input, cam, canvas]); if (__r !== RUST_PASS) return __r as any; } }
     const me = this.hostSeat();
     cam.peekOffset = me.cam.peekOffset; cam.kick = me.cam.kick;

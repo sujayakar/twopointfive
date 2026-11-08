@@ -381,7 +381,7 @@ export async function castLook() {
             verdict(suitAs() === undefined && !sneakSuit(gr, sm) && [sm, ...ops.map((x: any) => x.char)].every((c: any, i: number) => mask(c) === was[i]), 'nothing asked (as in play): the scenario decides again — every mask as it was before the ask'); }
           } finally { gr.nightBreach?.stop?.(); } }
         { // a quiet mission as two: Sam and the partner in the suit, the staff in their own
-          const W: any = await standUp({ ch: await loadCastOf(true), level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/quiet-yard.json`, 'utf8'))) }); const gq = W.game; try { const r = startFromQuery(gq, '?quiet=1&squad=1'); for (let f = 0; f < 6; f++) W.step(1 / 60);
+          const W: any = await standUp({ ch: await loadCastOf(true), level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/vault.json`, 'utf8'))) }); const gq = W.game; try { const r = startFromQuery(gq, '?quiet=1&squad=1'); for (let f = 0; f < 6; f++) W.step(1 / 60);
           const sm = gq.player.char, mates: any[] = gq.quiet?.ops ?? [], staff = gq.guards.filter((x: any) => x.team !== 'operative');
           const pm = mates[0]?.char, pw = pm ? worn(gq, pm) : [], pc = pm ? cloth(gq, pm) : { u: 1, w: 1, b: 1 };
           verdict(!r.why && !!gq.quiet?.active && mates.length === 1 && !!pm && sneakSuit(gq, sm) && hard(worn(gq, sm)).length === 0 && sneakSuit(gq, pm) && hard(pw).length === 0 && pw.includes('op_suit') && pc.u < 0.05, `a quiet mission as two: Sam and ${mates[0]?.callsign ?? 'the partner'} are both in the suit (his cloth ${pc.u.toFixed(3)})`, r.why ?? pw.join(' '));

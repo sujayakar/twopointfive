@@ -29,8 +29,8 @@ const J = (o: unknown) => JSON.stringify(o), f2 = (x: number) => (Number.isFinit
 const raise = () => { K.BIGSLOT.on = true; K.KIT.on = true; };
 /** every table and card put back as found */
 async function kept<T>(fn: () => Promise<T>): Promise<T> {
-  const big = K.BIGSLOT.on, kit = K.KIT.on, solo = K.KIT_SOLO.on, cards = JSON.stringify(K.KIT.members);
-  try { return await fn(); } finally { K.BIGSLOT.on = big; K.KIT.on = kit; K.KIT_SOLO.on = solo; K.KIT.members.splice(0, K.KIT.members.length, ...JSON.parse(cards)); }
+  const big = K.BIGSLOT.on, kit = K.KIT.on, cards = JSON.stringify(K.KIT.members);
+  try { return await fn(); } finally { K.BIGSLOT.on = big; K.KIT.on = kit; K.KIT.members.splice(0, K.KIT.members.length, ...JSON.parse(cards)); }
 }
 const issue = () => { for (let i = 0; i < K.KIT.members.length; i++) K.KIT.members[i] = K.kitDefault(i); };
 const rows = (i: number) => K.kitRows(i) as any[];
@@ -132,7 +132,7 @@ export async function kittreeSponge(): Promise<boolean> {
   const F = family('kittree-sponge: sponge rounds are a row, and only a quiet run is handed them');
   await kept(async () => {
     const R: any = await hushed(() => rig(17, { stage: false })); raise(); issue(); const g = R.game, pl = () => g.player;
-    const quiet = (on: boolean) => { K.KIT_SOLO.on = on; if (on) g.guards = g.guards.filter((gd: any) => !(gd.unit && gd.team === 'operative')); };
+    const quiet = (on: boolean) => { g.soloCard = on; if (on) g.guards = g.guards.filter((gd: any) => !(gd.unit && gd.team === 'operative')); };
     const r = row(0, 'rings'), issued = K.kitDefault(0).rings;
     F.verdict(!!r && issued === 0 && [0, 1, 2, 3, 4].every(i => K.kitDefault(i).rings === 0), 'a Sponge rounds row is on your card, and nobody is issued one', `row: ${r ? `${r.label} ${J(r.values)}` : 'none'} · issued ${[0, 1, 2, 3, 4].map(i => K.kitDefault(i).rings).join(' ')}`);
     quiet(false); K.kitPlayer(g); const loud = { rings: pl().rifle.rings, load: pl().rifle.attachment, tube: pl().rifle.attachments.includes('ring') };

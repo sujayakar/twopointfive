@@ -1,6 +1,6 @@
 // The 'laststand' family (game/laststand.ts — what the last few defenders of a room clear do once most are down: the call out, which is settled and on, and
 // the regroup, an open decision that the page has off and the regroup probes raise), run through
-// probes.ts:   bun run tools/qa/probes.ts laststand | laststand-callout | laststand-regroup | laststand-keep
+// probes.ts:   bun run tools/qa/probes.ts laststand | laststand-callout
 // PASS / FAIL each, all headless — no picture and no sound here. Each stages levels/compound.json (five on eleven, three squads), leaves the team on its start
 // mark and takes the defenders down by hand to the three the probe names, so the endgame starts on a known floor.
 //   laststand-callout   the call out with no regroup: a radio check, answers naming the rooms the men are truly in, the count and the asker's room, the strip
@@ -8,9 +8,6 @@
 //                       (a man at his post: the net names his room). LASTSTAND_BREAK=1 = a second man is left up in the last-man run: that line must fail.
 //                       (The call out is settled: no line asks it off and nothing here writes it. Until 2026-11-07 the probe ran the floor twice, with
 //                       it on and off, and held the two runs' digests together with the net-goes-quiet rule pinned off; the break word was call out off.)
-//   laststand-regroup   `regroup`: nothing before three are left; then the check, an order naming one room, the others say so and walk to it, every man of it
-//                       digs in and sets, one of them says so; the rooms they left are clear for the room clear and the marker is on the stand
-//   laststand-keep      `regroup` with the Keep's three (a squad whose men stay in its rooms): whoever moves stays inside the Keep's rooms
 //   laststand-few       'most are down' is never more than a third of the staging: on the block's eight (levels/block.json) three up says nothing, two
 //                       up starts the check
 import { readFileSync } from 'node:fs';
@@ -33,9 +30,8 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
   console.log(`\n=== ${title} ===`); let all = true;
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
 }
-/** `regroup`: the open decision the page has off (LASTSTAND.regroup); the call out is the page's own */
-async function rig(seed: number, regroup: boolean, level = 'compound') {
-  LASTSTAND.regroup = regroup; Math.random = seeded(seed);
+async function rig(seed: number, level = 'compound') {
+  Math.random = seeded(seed);
   const log = console.log, err = console.error, warn = console.warn; let W: any;
   try { console.log = console.error = console.warn = () => { };
     W = await standUp({ uploadEvery: 4, level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', `${level}.json`), 'utf8'))) });
@@ -64,7 +60,7 @@ export async function lastStandCallOut(): Promise<boolean> {
   const was = { ...LASTSTAND };
   try {
     const KEEP = ['office', 'bunk', 'back'];
-    const W = await rig(5, false), g = W.game;
+    const W = await rig(5), g = W.game;
     let clean = 0, first = -1; const rows = new Set<string>();
     const frame = () => { for (const r of stripRows(g) as { text: string }[]) rows.add(r.text); };
     steps(W, 1, frame); clean = said(g).length + lastStandReport(g).stats.checks;
@@ -75,7 +71,7 @@ export async function lastStandCallOut(): Promise<boolean> {
     //   a squad of one, so no mate of his drops and he HOLDS HIS POST: he says the hut and the net names the hut.
     // LASTSTAND_BREAK=1 = a second man is left up with him (the bunk room's): he is not the last, and both lines must fail.
     for (const id of ['hut']) {
-      const W = await rig(5, false), g = W.game; steps(W, 1); const [one] = thin(W, process.env.LASTSTAND_BREAK === '1' ? [id, 'bunk'] : [id]);
+      const W = await rig(5), g = W.game; steps(W, 1); const [one] = thin(W, process.env.LASTSTAND_BREAK === '1' ? [id, 'bunk'] : [id]);
       let room: string | null = null, named = '', spot = '', hunting = false, got = false;   // (where he is, what he is doing and what the net has named, the frame he says it — he may move afterwards)
       steps(W, 16, () => { if (!got && said(g).some(l => l.kind === 'lastAt')) { got = true; room = roomOf(g, one); named = namedRooms(g).join(); spot = room || !LASTSTAND.places ? '' : placeIn(g.level, one.char.pos)?.name ?? ''; hunting = (g.fight.defs as any[]).find(D => D.gd === one)?.mode === 'free'; } });
       const tail = said(g), last = tail.find(l => l.kind === 'lastAt'), post = id === 'hut';
@@ -97,51 +93,11 @@ export async function lastStandCallOut(): Promise<boolean> {
   return F.done();
 }
 
-async function standRun(F: { verdict: Verdict }, keep: string[], seed: number, squadRooms: string[] | null) {
-  const W = await rig(seed, true), g = W.game;
-  steps(W, 1); const clean = said(g).length + lastStandReport(g).stats.checks;
-  const kept = thin(W, keep), was = kept.map((h: any) => roomOf(g, h));
-  let orderT = -1, setT = -1, outside = 0, n = 0; const seen = new Set<string>();
-  while (n < 150 * 60 && (setT < 0 || n < setT * 60 + 300)) steps(W, 1, () => {   // (until five seconds after the room is said shut, 150 s at most)
-    const i = n++, R = lastStandReport(g);
-    if (orderT < 0 && R.said.some((l: any) => l.kind === 'order' || l.kind === 'orderFrom')) orderT = i / 60;
-    if (setT < 0 && R.said.some((l: any) => l.kind.startsWith('set'))) setT = i / 60;
-    if (squadRooms) for (const h of kept) { const id = roomOf(g, h); if (id) seen.add(id); else if (i % 6 === 0 && h.state !== 'dead') outside++; }
-  });
-  const R = lastStandReport(g), S = R.said as { who: string; kind: string; text: string }[], stand = R.room as string | null;
-  F.verdict(clean === 0, 'nothing is said or counted with eleven up', `${clean}`);
-  F.verdict(S[0]?.kind === 'check1' && S.filter(l => l.kind === 'ansAt' || l.kind === 'ansFreeAt').length >= 2 && orderT > 0, 'the check, two answers that say where, and an order', S.slice(0, 4).map(l => `${l.who}: ${l.text}`).join(' · '));
-  const order = S.find(l => l.kind === 'order' || l.kind === 'orderFrom');
-  F.verdict(!!order && !!stand && order.text.includes(nameOf(g, stand)) && was.includes(stand), 'the order names one room — one a man of theirs is already holding', `${order?.who}: ${order?.text} → ${stand} (they were in ${was.join(', ')})`);
-  const inRoom = kept.filter((h: any) => h.state !== 'dead' && roomOf(g, h) === stand), went = S.filter(l => l.kind === 'go'), came = S.filter(l => l.kind === 'in');
-  F.verdict(R.stats.sent >= 1 && went.length === R.stats.sent - R.stats.quiet && R.stats.arrived >= 1 && R.stats.arrived + R.stats.short + R.stats.met + R.stats.diedOnWay + R.stats.dropped + R.moving.length === R.stats.sent && inRoom.length === R.in.length && R.in.length >= 2,
-    'every man sent says so and walks; who arrives is in the room (a man stopped on the way holds where he is and says so)', `${R.stats.sent} sent, ${R.stats.arrived} arrived, ${R.stats.short} stopped short, ${R.stats.met} met, ${R.moving.length} still walking, ${R.stats.noWay} with no way · in the room: ${inRoom.map((h: any) => h.callsign).join(', ')} · ${went.concat(came).map(l => `${l.who}: ${l.text}`).join(' · ')}`);
-  const phases = inRoom.map((h: any) => digInPhase(g, h)), setLine = S.find(l => l.kind === 'set' || l.kind === 'setOpen');
-  F.verdict(phases.every((p: string) => p === 'set') && !!setLine && setLine.text.includes(nameOf(g, stand)), 'every man in the room digs in and sets; one of them says so', `${phases.join(', ')} · ${setLine?.who}: ${setLine?.text} (${setT.toFixed(1)} s after three were left)`);
-  const held = g.roomClear.rooms.filter((r: any) => !r.cleared).map((r: any) => r.def.id), loose = kept.filter((h: any) => h.state !== 'dead' && !R.in.includes(h.callsign)).length;   // (a man told to hold where he is, on his way, or out hunting — nobody's to order — still holds a room of his own)
-  const obj = rowOf(g, 'roomclear'), b = g.roomClear.rooms.find((r: any) => r.def.id === stand)?.def.bounds;
-  F.verdict(held.includes(stand) && held.length <= 1 + loose && !!obj.pos && !!b && Math.abs(obj.pos[0] - (b.x0 + b.x1) / 2) < 0.01 && obj.text.includes(`[${nameOf(g, stand)}]`),
-    'the rooms they left are clear behind them; the marker and the bracket are on the stand room', `still held: ${held.join(', ')} · ${obj.text}`);
-  if (squadRooms) F.verdict([...seen].every(id => squadRooms.includes(id)), "a squad whose men stay in its rooms: nobody is ever in a room that is not the squad's", `rooms they were in: ${[...seen].join(', ')} · ${outside} samples between rooms`);
-  return { W, R };
-}
-export async function lastStandRegroup(): Promise<boolean> {
-  const F = family('laststand-regroup: the last three gather in one room on a spoken order, dig in and stay set');
-  const was = { ...LASTSTAND };
-  try { await standRun(F, ['sala', 'kitchen', 'hut'], 3, null); } finally { Object.assign(LASTSTAND, was); }
-  return F.done();
-}
-export async function lastStandKeep(): Promise<boolean> {
-  const F = family('laststand-keep: the Keep\'s three (its men stay in its rooms) make their stand inside it');
-  const was = { ...LASTSTAND };
-  try { await standRun(F, ['office', 'bunk', 'back'], 5, ['office', 'bunk', 'back']); } finally { Object.assign(LASTSTAND, was); }
-  return F.done();
-}
 export async function lastStandFew(): Promise<boolean> {
   const F = family('laststand-few: the last few are never more than a third of the men staged');
   const was = { ...LASTSTAND };
   try {
-    const W = await rig(2, true, 'block'), g = W.game; steps(W, 1);
+    const W = await rig(2, 'block'), g = W.game; steps(W, 1);
     const all = g.nightBreach.hostiles.slice(), down = (n: number) => { for (const h of all) if (up(g).length > n && h.state !== 'dead') killGuard(g, h, [1, 0, 0], true); };
     down(3); steps(W, 12); const at3 = said(g).length + lastStandReport(g).stats.checks;
     down(2); steps(W, 12); const at2 = said(g);
@@ -159,7 +115,7 @@ export async function lastStandFled(): Promise<boolean> {
   const F = family('laststand-fled: a man who has dropped his gun and run is no man of the radio check');
   const was = { ...LASTSTAND };
   try {
-    const W = await rig(2, true, 'block'), g = W.game; steps(W, 1);
+    const W = await rig(2, 'block'), g = W.game; steps(W, 1);
     const all = g.nightBreach.hostiles.slice(); for (const h of all) if (up(g).length > 3 && h.state !== 'dead') killGuard(g, h, [1, 0, 0], true);
     steps(W, 2); const before = said(g).length + lastStandReport(g).stats.checks;
     const ran = up(g).find((h: any) => runnerBreak(g, h)) ?? null; steps(W, 40);

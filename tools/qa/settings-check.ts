@@ -53,8 +53,6 @@ const KNOWN: Record<string, Record<string, Row>> = {
     emissiveScale: [1, 'CARRIED, TO MOVE (2026-11-05): what a fixture gives a light question, as an argument of the lights\' step'],
   },
   'game/fogofwar.ts': { emissiveScale: [2, 'CARRIED, TO MOVE (2026-11-05, with lighting.ts\'s): the fog\'s lamps'] },
-  'game/guards.ts': { flashlightRadius: [3, 'CARRIED, TO MOVE (2026-11-05): a torch\'s radius, part of the light on a point'] },
-  'game/debris.ts': { debrisCap: [1, 'CARRIED, TO MOVE (2026-11-05): the pool\'s size; with DEBRIS.dress on the pool is dressing'] },
   'game/journal.ts': { '(all)': [5, 'CARRIED: this is the carrying (envSnapshot reads the settings a file keeps, applyEnvSettings lays them back)'] },
   'game/fire.ts': { fireSmoke: [1, 'TO JUDGE (2026-11-05): whether the fire\'s smoke is drawn by the solver, on a line that also reads the picture\'s camera'] },
   'game/weather.ts': { gloss: [3, 'PICTURE: the wet ground\'s gloss, kept and handed back'] },

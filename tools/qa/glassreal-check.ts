@@ -45,12 +45,9 @@ const CENSUS: Record<string, [number, number, number]> = {
   office: [10, 9, 3], warehouse: [0, 3, 0], 'test-rooms': [0, 1, 0], registry: [1, 4, 2], records: [2, 5, 0],
   pass: [0, 8, 0], mousehole: [0, 3, 0], killhouse: [4, 0, 0], hall: [1, 0, 0], glasshouse: [10, 0, 0],
   defuse: [0, 2, 0], consulate: [1, 5, 1], block: [0, 4, 0], bazaar: [0, 3, 0], barracks: [0, 12, 0],
-  'tut-solo': [0, 1, 0],
   'library-hall': [0, 2, 12],   // (the hut's two panes: the office kit's paneX and paneZ, stood once. The twelve are the house front's six windows, two 0.6 m
                                               //  leaves each, on a wall that stands alone under the sky: no side of it is indoors, so each leaf reads as a narrow light)
   'tut-kit': [0, 1, 0],   // (the fuel halt's shop window again, from its sill)
-  'tut-squad': [0, 1, 0],   // (the hall's street window: from a sill, so it runs to daggers under the rounds the window's step asks for)
-  'tut-sky': [0, 8, 0],   // (the tunnel station: eight sill windows behind their shutters)
   'tut-team': [0, 8, 0],   // (the same station, box for box)
   'tut-road': [0, 1, 0],   // (the road post's hut: one sill window on the gateway's side)
 };

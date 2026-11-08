@@ -429,7 +429,6 @@ pub fn game_restart(g: &mut crate::game::Game, said: Option<&str>) {
 
 /// Restart the encounter: a fresh Player at the insertion point with full kit, fresh Guards on their routes, lights repaired, the level as authored.   (game.ts restartEncounter)
 pub fn game_restart_encounter(g: &mut crate::game::Game) {
-    crate::journal::session_recorder_cut(g, "the encounter was staged again", None);   // (game.ts:1490, first of all; `lost` left to its default)
     crate::math_dice::use_dice(g);
     crate::sensors::sensors_own_reset(g);
     crate::quiet::quiet_mission_current(g);
@@ -545,7 +544,6 @@ pub fn game_update(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
         }
     }
     crate::director::director_inject_input(g, input);
-    game_host_before(g, input);
     let into = g.cmd_buf.take();
     let c = crate::seats::with_seat(g, me, &mut |g| crate::cmd::sample_cmd(g, input, cam, canvas, into.as_ref()));
     g.cmd_buf = Some(c.clone());
@@ -560,11 +558,6 @@ pub fn game_update(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
         game_step_seats(g, dt, &cmds);
     }
     game_host_after(g, input, cam, canvas);
-}
-
-/// What the host's input is told before a step: a held press's cursor is followed off the view only while the creep reads the mouse as a stick.   (game.ts hostBefore)
-pub fn game_host_before(g: &mut crate::game::Game, input: InputId) {
-    g.tab.input[input].drag_off = g.k.stalk.drag;
 }
 
 /// What the tick hands back for the camera of the seat this host shows, and that seat's live view put back.   (game.ts hostAfter)
