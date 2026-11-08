@@ -825,11 +825,6 @@ pub fn dig_in_phase(g: &crate::game::Game, gd: GuardId) -> String {
     String::from(phase.as_str())
 }
 
-/// laststand.ts: the team has been in this room since somebody dug in there   (digin.ts digInEntered)
-pub fn dig_in_entered(g: &crate::game::Game, room: RoomfightRoomId) -> bool {
-    match g.m.digin.states.as_ref().and_then(|s| s.rooms.get(room)) { Some(r) => !r.entered_at.is_nan(), None => false }
-}
-
 /// roomfight.ts applyWatch: a man set off the door's line rests his gun on the floor they must cross (writes `pt`)   (digin.ts digInLook)
 pub fn dig_in_look(g: &crate::game::Game, gd: GuardId, pt: &mut V3) {
     let m = match g.m.digin.states.as_ref().and_then(|s| s.men.get(gd)) { Some(x) => *x, None => return };

@@ -18,13 +18,6 @@ fn air_read(g: &Game) -> &'static ::sim::air::Air {
     &::sim::weather::of_read(g.sim).air
 }
 
-/// The slot's tables, made if they are owed. (rust/sim/src/lib.rs air_of)
-fn plan(g: &mut Game) -> &'static mut ::sim::air::Plan {
-    let stamp = ::sim::state::stamp(g.sim);
-    let wx = ::sim::weather::of_read(g.sim);
-    ::sim::air::plan(g.sim, stamp, &wx.air, &wx.roofs, wx.roofs_n as usize)
-}
-
 /// The knobs current for a question asked of the module now. WX_KNOBS.here is set by rustknobs.ts:59 and reads the knobs; the skeleton's `here()` has no g (notes, ## Skeleton).
 fn knobs_here(g: &mut Game) {
     if !g.m.rustknobs.rust_knobs.tick {
