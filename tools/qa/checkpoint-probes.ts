@@ -31,6 +31,7 @@ const { startGrab, startKick, startPicking, toggleDrag } = await import(`${ROOT}
 const { spawnUnit, despawnUnit, rollcallState } = await import(`${ROOT}/src/game/guards.ts`);
 const { ambientState, hashStr } = await import(`${ROOT}/src/game/dialogue.ts`);
 const { HOLD, TURN } = await import(`${ROOT}/src/game/character.ts`);
+const { debriefOf } = await import('./debrief-read.ts');;
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;

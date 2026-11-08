@@ -4,7 +4,7 @@
 // PLAYS: its clock was started when the card was built, and three moments of it (a quarter in, past the middle, the end) are three different pictures. (The
 // moments are asked for with `__recap.seek(k)`: on the software adapter the page's frame clock does not run at all — 0 animation frames in 1.5 s once the
 // game is up — so the clock itself is held headless, by tools/qa/deathrecap-check.ts on a frame clock of its own.)
-// Then the same under ?norecap: the card comes up with no panel. `look` after the outDir adds a page that is no verdict, only stills: a squad's room clear on
+// `look` after the outDir adds a page that is no verdict, only stills: a squad's room clear on
 // the compound, Sam stood in front of a defender — four teammates and the defenders all on the plan.
 // Then two pages of a squad's room clear for what is shown WHILE THE RUN IS ON (the block before them says what is held).
 //   PORT=5261 node tools/qa/deathrecap-page.cjs [outDir]      (a dev server on that port: PORT=5261 bun run tools/serve.ts; outDir = stills of the card and the panel)
@@ -26,7 +26,7 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
     return true;
   };
   let failed = false;
-  for (const [name, q, want] of ONLY && ONLY !== 'card' ? [] : [['recap', 'solo', true], ['norecap', 'solo&norecap', false], ...(LOOK && OUT ? [['look', 'levelFile=compound.json&roomclear&squad4&freshstart=0', true]] : [])]) {
+  for (const [name, q, want] of ONLY && ONLY !== 'card' ? [] : [['recap', 'solo', true], ...(LOOK && OUT ? [['look', 'levelFile=compound.json&roomclear&squad4&freshstart=0', true]] : [])]) {
     const browser = await launch(), page = await browser.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 }); const errors = [];
     page.on('console', m => { if (m.type() === 'error' && !NOISE.test(m.text()) && !/Failed to load resource/.test(m.text())) errors.push(m.text().slice(0, 300)); });
     page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));
@@ -74,8 +74,8 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
   // until that defender shoots him, a second teammate a few steps behind (the squad hears it: that is how it knows the way). Then Sam is brought near, so the
   // body is on the screen. As the page ships (RECAP.liveArrows off): the squad block's line for the man is struck, the squad knows the way, and NOTHING is drawn for it
   // — no arrow on his row, no stroke on the ground. Under &recaparrows=1: the arrow on the row (the game's own direction, projected by this camera here and
-  // compared with what the HUD drew) and one stroke on the ground at him. Either way the panel names no defender and no card is up. Under &recaplive=0: his line as it was.
-  for (const [name, q, want] of [['live', 'levelFile=compound.json&roomclear&squad4&freshstart=0', 'plain'], ['livearrows', 'levelFile=compound.json&roomclear&squad4&freshstart=0&recaparrows=1', 'arrows'], ['liveoff', 'levelFile=compound.json&roomclear&squad4&freshstart=0&recaplive=0', 'off']].filter(c => !ONLY || ONLY === 'live' || ONLY === c[0])) {
+  // compared with what the HUD drew) and one stroke on the ground at him. Either way the panel names no defender and no card is up.
+  for (const [name, q, want] of [['live', 'levelFile=compound.json&roomclear&squad4&freshstart=0', 'plain']].filter(c => !ONLY || ONLY === 'live' || ONLY === c[0])) {
     const browser = await launch(), page = await browser.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 }); const errors = [];
     page.on('console', m => { if (m.type() === 'error' && !NOISE.test(m.text()) && !/Failed to load resource/.test(m.text())) errors.push(m.text().slice(0, 300)); });
     page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));

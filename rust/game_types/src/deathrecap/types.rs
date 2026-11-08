@@ -293,10 +293,10 @@ pub struct RecapDue {
 }
 
 /// What the end card may show: the takes, and the one it opens on (the last player to go down, else the last of ours).
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct DeathRecap {
     pub takes: Vec<crate::deathrecap::RecapTake>,
-    pub main: usize,
+    pub main: f64,
 }
 
 /// THE RECAP'S RECORD: the game's own, written by the tick (`deathrecap::recap_tick`) and by a round landing (`recap_round`), fresh with every mission. Only

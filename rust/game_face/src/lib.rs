@@ -50,6 +50,7 @@
 //!   face_export(h)                            the whole state (`io::export`) at face_out
 //!   face_verdict(h) -> 0 | 1 | 2              how the mission ended, off the record the game's tick latches: 0 not yet, 1 lost, 2 won (then the record as lines at face_out)
 //!   face_tick_view(h)                         what a HUD is told of the game as its last tick left it (a TickView at face_out); a read, nothing kept
+//!   face_debrief_view(h)                      what the end card shows of the run (a DebriefView at face_out); a read, nothing kept
 //!   face_line(h, what, a…, b…) -> 0 | 1 · face_ray(h, o…, d…, max) -> 0 | 1 · face_hear(h, s…, d…)
 //!                                             the box world asked of the game shared: the camera's, the sound's, the cursor's questions; nothing is kept
 //!   face_die_n(h) -> f64 · face_time(h) -> f64 · face_rows(h) -> usize
@@ -155,6 +156,12 @@ pub extern "C" fn face_verdict(h: u32) -> i32 {
 pub extern "C" fn face_tick_view(h: u32) {
     use game::io::Io;
     out(with_ref(h, |x| { let g = &x.g; let mut o = game::io::W::new(); game::view::tick_view(g, &game::seats::seat(g, g.local_seat.unwrap_or(g.seat))).w(&mut o); o.b }));
+}
+/// what the end card shows of the run (a DebriefView at face_out): asked once, as the card opens; a read, nothing kept
+#[no_mangle]
+pub extern "C" fn face_debrief_view(h: u32) {
+    use game::io::Io;
+    out(with_ref(h, |x| { let g = &x.g; let mut o = game::io::W::new(); game::view::debrief_view(g, &game::seats::seat(g, g.local_seat.unwrap_or(g.seat))).w(&mut o); o.b }))
 }
 // ---- the box world, asked of the game shared (game::ask::WorldAsk): the host's camera, its sound, its cursor. The copy stands from a tick's end; where a writer put it
 // down the first question stands it again, and no question proves it for itself
