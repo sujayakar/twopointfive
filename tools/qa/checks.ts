@@ -1,12 +1,12 @@
 // THE CHECKS THAT STAND NO GAME OF THEIR OWN MAKING: the picture's code, the shaders' texts, the page and its cards, the sounds, the level files, the player's words.
 // Each is a file run in a process of its own. The game's rules are asked in Rust (`cargo test` in rust/), whole plays by the native missions and `hold`, the page by pages.ts.
-//   bun run tools/qa/checks.ts [group | name …] [--list]     no word: every group but 'game'    groups: picture · shaders · page · menus · sound · levels · words · build · game
+//   bun run tools/qa/checks.ts [group | name …] [--list]     no word: every group    groups: picture · shaders · page · menus · sound · levels · words · build
 //   env: CHECK_JOBS (four) at a time · CHECK_CAP (ten) minutes each, its process group stopped there
 // Exit 0 every one green · 1 one red (its exit, a FAIL line, or the cap), or a *-check.ts here that no row names · 2 an unknown name
 import { readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-type Group = 'picture' | 'shaders' | 'page' | 'menus' | 'sound' | 'levels' | 'words' | 'build' | 'game';
+type Group = 'picture' | 'shaders' | 'page' | 'menus' | 'sound' | 'levels' | 'words' | 'build';
 type Row = readonly [file: string, group: Group, ...args: string[]];
 const ROWS: readonly Row[] = [
   ['bouncewalls-check.ts', 'picture'], ['cast-probes.ts', 'picture'], ['charmats-probes.ts', 'picture'], ['floor-order-check.ts', 'picture'], ['frame-layout.ts', 'picture'],
@@ -24,7 +24,6 @@ const ROWS: readonly Row[] = [
   ['ground-pieces-check.ts', 'levels'], ['kit-stores-check.ts', 'levels'], ['palette-check.ts', 'levels'], ['walked-check.ts', 'levels'], ['ways-check.ts', 'levels'],
   ['mystery-check.ts', 'words'], ['writing-check.ts', 'words'],
   ['claude-md-check.ts', 'build'],
-  ['bigslot-check.ts', 'game'], ['goals-check.ts', 'game'], ['halftwice-check.ts', 'game'], ['smokebreak-check.ts', 'game'], ['squadsmoke-probes.ts', 'game'], ['tutqueue-check.ts', 'game'],
 ];
 /** check files no row runs, each with who runs it */
 const BY_HAND: Readonly<Record<string, string>> = {
@@ -36,7 +35,7 @@ const BY_HAND: Readonly<Record<string, string>> = {
 };
 
 const HERE = import.meta.dir, argv = process.argv.slice(2), words = argv.filter(a => !a.startsWith('--')), name = (r: Row): string => r[0].replace(/(-check|-probes)?\.ts$/, '');
-const picked = words.length ? ROWS.filter(r => words.includes(r[1]) || words.includes(name(r)) || words.includes(r[0])) : ROWS.filter(r => r[1] !== 'game');
+const picked = words.length ? ROWS.filter(r => words.includes(r[1]) || words.includes(name(r)) || words.includes(r[0])) : ROWS;
 { const strange = words.filter(w => !ROWS.some(r => r[1] === w || name(r) === w || r[0] === w)); if (strange.length) { console.error(`checks: no check or group ${strange.join(', ')}`); process.exit(2); } }
 if (argv.includes('--list')) { for (const r of picked) console.log(`${r[1].padEnd(8)} ${name(r)}`); process.exit(0); }
 
