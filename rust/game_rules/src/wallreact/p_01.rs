@@ -659,9 +659,12 @@ pub fn wall_react_notice(g: &mut Game) {
     let now = g.time;
     for b in breaches_of(g) {
         if g.tab.wallreact_breach[b].ops < 0.0 {
-            let pl = g.player;
-            let (pos, yaw) = { let c = &g.ch[g.pl[pl].ch]; (c.pos, c.aim_yaw) };
-            if !g.pl[pl].down && wall_react_sees(g, b, pos, Some(yaw)) {
+            let mut saw = false;
+            for pl in crate::seats::men(g) {
+                let (pos, yaw) = { let c = &g.ch[g.pl[pl].ch]; (c.pos, c.aim_yaw) };
+                if !g.pl[pl].down && wall_react_sees(g, b, pos, Some(yaw)) { saw = true; break; }
+            }
+            if saw {
                 wall_react_ops_know(g, b, "the player saw it");
             } else {
                 for gd in g.guards.clone() {
@@ -912,8 +915,8 @@ pub fn wall_react_beyond(g: &mut Game, gd: GuardId, b: WallreactBreachId, at: V3
     let over = |p: V3| ((p[0] - bat[0]) * n[0] + (p[2] - bat[2]) * n[1]) * s < 0.0 && flat(p, far) < 2.5;
     if is_op(g, gd) {
         if crate::cleared::cleared_rooms_room_at(g, far) != 0.0 && crate::cleared::cleared_rooms_known_at(g, far) { return None; }
-        let squad = crate::orders::squad_orders_squad(g, &crate::seats::here(g));
-        if squad.iter().any(|x| *x != gd && !is_dead(g, *x) && over(pos_of(g, *x))) || (!g.pl[g.player].down && over(player_pos(g, &crate::seats::here(g)))) { return None; }
+        let squad = crate::seats::team_squad(g, &crate::seats::here(g));
+        if squad.iter().any(|x| *x != gd && !is_dead(g, *x) && over(pos_of(g, *x))) || crate::seats::men(g).into_iter().any(|pl| !g.pl[pl].down && over(g.ch[g.pl[pl].ch].pos)) { return None; }
     } else {
         let team = g.gd[gd].team;
         for x in g.guards.iter().copied() {

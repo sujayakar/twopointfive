@@ -1,9 +1,8 @@
 // THE VERDICT OF A MISSION PLAYED BY THE SCRIPTED PLAYER: the word the end card would carry, and the tick it was first said.
 //   bun run tools/blitz/verdict-of.ts <mission>:<seed> [<mission>:<seed> …]
 // The tally (tools/qa/playthrough.ts) records how the SCRIPTED PLAYER's own run ended (`end`: a room clear "taken" or "wiped", a rescue "rescued"), which
-// is the room clear's or the rescue's word and not the verdict's: a defuse mission whose charges went off and whose rooms were then taken reads "taken"
-// there, and its card reads BLOWN. This plays the same scripted player and prints the verdict itself, as the game's `verdict.result` first answers:
-//   VERDICT defuse-four:1 · lost BLOWN · the try's clock 1:15 · the card's line: BLOWN 1:15 · 4 of 5 up · 6 of 8 defenders down
+// is the room clear's or the rescue's word and not the verdict's. This plays the same scripted player and prints the verdict itself, as the game's `verdict.result` first answers:
+//   VERDICT compound-four:1 · won CLEAR · the try's clock 1:15 · the card's line: CLEAR 1:15 · 4 of 5 up · 8 of 8 defenders down
 // and the scripted player's own end beside it. A line a mission; "no verdict" where the run ended and none was said. Nothing here is part of any digest.
 // Exit 0 always but for a wrong word (64): it reads, it does not judge.
 export {};

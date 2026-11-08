@@ -30,10 +30,10 @@ async function play(how: 'stay' | 'brush', o: { secs?: number } = {}): Promise<P
   if (o.secs !== undefined) UNSEEN.wallSecs = o.secs;
   WALLSNAP.on = true; WALLSNAP.press = true;
   const why = g.orders.give('fallIn', { kind: 'none', at: [R.pos[0], 0, R.pos[2]] }); if (why) { P.why = `fall in refused: ${why}`; return P; }
-  const sneaking = () => U.unseenWord(g) === 'sneaking';
+  const sneaking = () => /sneaking/.test(g.view.squad?.posture ?? '');
   try {
     await quiet(() => R.step(60));
-    if (pl.crouch || pl.wall || sneaking()) { P.why = `not an upright walk to begin with (crouch ${pl.crouch}, wall ${!!pl.wall}, the squad ${U.unseenWord(g) ?? 'loud'})`; return P; }
+    if (pl.crouch || pl.wall || sneaking()) { P.why = `not an upright walk to begin with (crouch ${pl.crouch}, wall ${!!pl.wall}, the squad ${g.view.squad?.posture ?? 'loud'})`; return P; }
     let dir: number[] | null = null;
     await quiet(() => { for (const d of WAYS) { if (pl.wall) break; R.goal = [c.pos[0] + d[0] * 12, 0, c.pos[2] + d[1] * 12]; for (let i = 0; i < 60 * 6 && !pl.wall; i++) { R.step(); if (sneaking() && !pl.wall) P.pre++; } if (pl.wall) dir = d; } });
     if (!pl.wall || !dir) { P.why = 'no way he walked took him onto a wall'; return P; }

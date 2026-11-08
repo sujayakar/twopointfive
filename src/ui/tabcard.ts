@@ -1,7 +1,7 @@
 // WHAT TAB SHOWS: a card over a paused game with the objective in full and the squad — each teammate, what he is doing and what
 // he carries, then what the squad carries between them. The maintainer, 10-23: "if you don't have a menu open, tab opens up an
 // objectives modal that also has your squad equipment?". It is the home of what the corner panel no longer says (ui/corner.ts: the line per man, loud
-// or quiet, the counts). Every word on it is one the game already makes (the objective's line, orders.ts statusOf and the block's notes, kit.ts
+// or quiet, the counts). Every word on it is one the game already makes (the objective's line, the view's squad, kit.ts
 // kitWords); this file lays them out. No page under it: `tabCard` is the card as data, `tabCardOf` the card of a game as it stands, `tabCardHtml` its
 // markup. Called from the page's Tab key only (main.ts): nothing here runs at module load.
 import { objectiveParts } from './corner';
@@ -34,16 +34,17 @@ export function tabCard(objective: string, men: TabMan[], carry: string[], who =
   const O = objectiveParts(objective), L = O?.label === 'objective' ? objectiveList(O.text) : { goal: O?.text ?? '', items: [] };
   return { label: O?.label ?? '', note: O?.note ?? '', goal: L.goal, items: L.items, men, who, carry };
 }
-/** the card of a game as it stands: the squad in its order, each man's line as the block words it (what he is doing and what he covers) and the card he was staged with in a line (kit.ts
- *  kitOf: a mission that issues its own kit stages its own cards); the block's title and its plain notes (orders.ts hud: a line a man, then the notes,
- *  then the keys' lines — no notes where a lesson's frame keeps them back). Every key named is named as the page has it (keymap.ts keyText). */
 /** a kit line with its counted things said as what he set out with: the squad's throwables and charges are one pool once the run is on (doortools.ts),
  *  and its count is the note under the men, so a man's own count is what his card gave him, not what he has left */
 export const staged = (kit: string): string => kit.split(' · ').map(p => (/^\d+ stun\b/.test(p) ? `started with ${p}` : p)).join(' · ');
+/** the card of a game as it stands: the squad in its order, each man's line as the view words it (what he is doing and what he covers) and the card he was staged with in a line (kit.ts
+ *  kitOf: a mission that issues its own kit stages its own cards); the block's title and its plain notes (game.view.squad; no notes where a lesson's frame keeps
+ *  them back). Every key named is named as the page has it (keymap.ts keyText). */
 export function tabCardOf(game: Game): TabCard {
-  const O = game.orders, S = O.active ? O.squad() : [], block = O.hud().status[0];
-  const men = S.map(gd => { const i = kitIndex(gd), m = kitOf(gd); return { name: gd.callsign, doing: keyText(O.statusOf(gd) + game.cover.tail(gd)), kit: i && m ? staged(kitWords(i, m)) : '', down: gd.state === 'dead' }; });
-  return tabCard(keyText(game.objectiveText()), men, block ? block.opts.slice(S.length).filter(o => !o.key).map(o => keyText(o.text)) : [], block ? block.label.replace(/^squad(\s*·\s*)?/, '') : '');
+  const V = game.view.squad, by = new Map(game.orders.squad().map(gd => [gd.char.id, gd]));
+  const men = (V?.mates ?? []).map(M => { const gd = by.get(M.man), i = gd && kitIndex(gd), m = gd && kitOf(gd); return { name: M.name, doing: keyText(M.doing), kit: i && m ? staged(kitWords(i, m)) : '', down: M.down }; });
+  const carry = V && !game.rails.locks('menu') ? V.notes.filter(o => !o.key).map(o => keyText(o.text)) : [];
+  return tabCard(keyText(game.objectiveText()), men, carry, V && !game.rails.locks('who') ? `${V.posture ? `${V.posture} · ` : ''}orders to ${V.who}` : '');
 }
 const esc = (s: string): string => s.replace(/[&<>"]/g, c => (c === '&' ? '&amp;' : c === '<' ? '&lt;' : c === '>' ? '&gt;' : '&quot;'));
 /** the card's markup (index.html #tabcard): a section for the objective and one for the squad, each only while it has something to say; a line with no

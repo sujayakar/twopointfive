@@ -13,6 +13,7 @@
 // holds it). A whole apply keeps a copy of its bytes beside the object and writes nothing; the puppet's export writes those bytes back (export.ts). So a re-export after an apply is Rust's bytes everywhere, and such a field needs no class of its own in a host's compare.
 import GAME_REF_LIST from './game-ref.json';
 import CLASS_DEFAULTS from './class-defaults.json';
+import CLASS_NULLS from './class-nulls.json';
 import { SCHEMA, parse, bookOf, seedBook, helpersOf, compiledExpr, LOOSE, ECHO, LENS, forGame, classWord, isGameSide } from './export';
 import { rawKey, PUT_BACKS, isSeatTable } from '../../src/math/side';
 
@@ -93,7 +94,12 @@ const CLASSES = new Map<string, object>();
 // WHAT A THING THE APPLY MAKES HOLDS BESIDE WHAT IT IS SENT (class-defaults.json, written by tools/wire/class-defaults.ts from the things a start builds): a leaf the class keeps in a typed array, so that it arrives as one, and each plain field no list carries, at its class's value. The picture's own half is a made hook's (rustgame.ts).
 const TYPED_LEAF: Record<string, any> = { Float32Array, Float64Array, Int32Array, Uint32Array, Int16Array, Uint16Array, Int8Array, Uint8Array };
 const DEFAULTS = CLASS_DEFAULTS as Record<string, { plain?: Record<string, unknown>; typed?: Record<string, [string, number]>; lists?: string[]; nan?: string[]; inf?: string[] }>;
-function fillDefaults(o: any, T: any): void { const d = DEFAULTS[`${T.mod}::${T.name}`]; if (!d) return; if (d.typed) for (const k in d.typed) { const [c, n] = d.typed[k]; o[k] = new TYPED_LEAF[c](n); } if (d.plain) for (const k in d.plain) o[k] = d.plain[k]; if (d.lists) for (const k of d.lists) o[k] = []; if (d.nan) for (const k of d.nan) o[k] = NaN; if (d.inf) for (const k of d.inf) o[k] = Infinity; }
+/** the fields of a made thing that are null until they are sent something (class-nulls.json, tools/wire/nulls.ts: what its TypeScript type says nothing is), less those its class answers by an accessor */
+const NULLS = CLASS_NULLS as Record<string, string[]>, nullsMemo = new WeakMap<object, Map<object, string[]>>();
+function nullsOf(o: any, T: any): string[] { const P = Object.getPrototypeOf(o); let M = nullsMemo.get(T); if (!M) nullsMemo.set(T, M = new Map()); let L = M.get(P); if (!L) { L = (NULLS[`${T.mod}::${T.name}`] ?? []).filter(k => !(k in P)); M.set(P, L); } return L; }
+/** told of every thing the apply makes (tools/qa/madenull-check.ts) */
+export const MADE: { told: ((o: any, T: any) => void) | null } = { told: null };
+function fillDefaults(o: any, T: any): void { if (!(globalThis as any).__madeNullBreak) for (const k of nullsOf(o, T)) o[k] = null; MADE.told?.(o, T); const d = DEFAULTS[`${T.mod}::${T.name}`]; if (!d) return; if (d.typed) for (const k in d.typed) { const [c, n] = d.typed[k]; o[k] = new TYPED_LEAF[c](n); } if (d.plain) for (const k in d.plain) o[k] = d.plain[k]; if (d.lists) for (const k of d.lists) o[k] = []; if (d.nan) for (const k of d.nan) o[k] = NaN; if (d.inf) for (const k of d.inf) o[k] = Infinity; }
 /** a row whose numbers are the block's columns reads them through these: what its constructor would have set, the row itself coming with the fields */
 const BLOCK_ROW: Record<string, (o: any, g: any) => void> = { Item: (o, g) => { o.S = g.items.store; o.things = g.props.all; o.kept = null; } };
 let looseOrder: object[] = [];

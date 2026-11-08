@@ -31,7 +31,7 @@ const SET = () => {
   return r;
 };
 const OPEN = (key) => { const O = window.__orders; if (!key) O.open(O.targetAt(window.__s40.at)); else window.__input.pressed.add(key); };
-const MENU = () => { const O = window.__orders, M = O.menu; return { page: M ? M.page ?? null : 'shut', rows: ((O.hud().menu || {}).rows || []).slice(1).map(r => `${(r.opts[0] || {}).key || ''} ${(r.opts[0] || {}).text || ''}`) }; };
+const MENU = () => { const O = window.__orders, M = O.menu; return { page: M ? M.page ?? null : 'shut', rows: (O.menu ? O.menu.rows.map((d, i) => ({ kind: 'row', opts: [{ key: d.key ? String(d.key) : (d.hotKey || '').replace(/^Key|^Digit/, ''), text: `${O.labelOf(d, O.menuTarget())}${d.opens ? ' ▸' : ''}${O.menu.why[i] ? ` — ${O.menu.why[i]}` : ''}` }], off: !!O.menu.why[i] })) : []).map(r => `${(r.opts[0] || {}).key || ''} ${(r.opts[0] || {}).text || ''}`) }; };
 const READ = () => { const g = window.__game, S = window.__squad40, O = window.__orders, L = S.log[S.log.length - 1] || null;
   return { fired: S.stats.fired, left: S.left(), of0: S.of(0), menuUp: !!O.menu, logged: O.log.some(l => l.order === 'shellThere'), who: L ? L.who : null, burstOff: L ? Math.hypot(L.burst[0] - window.__s40.at[0], L.burst[2] - window.__s40.at[2]) : -1,
     drawn: (document.querySelector('#traj .squadthrow') || { innerHTML: '' }).innerHTML.length, fatal: (document.getElementById('fatal') || {}).textContent || '' }; };

@@ -350,8 +350,9 @@ pub fn unseen_glass_held(g: &mut Game) {
 // ------------------------------------------------------------ the HUD's word, QA
 
 /// the squad line's word beside the posture (None: nothing to say) (unseen.ts unseenWord)
-pub fn unseen_word(g: &mut Game) -> Option<String> {
-    if unseen_live(g) { Some(String::from("sneaking")) } else { None }
+pub fn unseen_word(g: &Game, seat: &crate::seats::SeatRef) -> Option<String> {
+    let live = g.m.unseen.states.get(crate::seats::view_key(g, seat)).is_some_and(|s| s.live);   // (as the tick last read it: `unseen_live` is a clock of its own, kept by the tick)
+    if live { Some(String::from("sneaking")) } else { None }
 }
 
 /// (unseen.ts unseenSummary)

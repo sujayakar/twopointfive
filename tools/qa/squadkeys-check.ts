@@ -24,26 +24,24 @@ export async function squadKeysCheck(): Promise<boolean> {
   const built: Row[] = (KEYS as { group: string; rows: Row[] }[]).find(g => g.group === 'Squad')?.rows ?? [];
   const say = (rows: Row[]) => rows.map(r => `[${r[0].join(' + ')}] ${r[1]}`).join(' · '), has = (rows: Row[], k: string) => rows.some(r => r[0].length === 1 && r[0][0] === k);
   // ---- as built
-  const a = squadRows(built, false, true, false) as Row[];
-  line(a === built && built.length === 6, 'as built: with the squad on its older keys the six rows are handed back untouched', say(a));
+  const a = squadRows(built, false, true) as Row[];
+  line(a === built && built.length === 5, 'as built: with the squad on its older keys the five rows are handed back untouched', say(a));
   // ---- keys
-  const k = squadRows(built, true, !BREAK, false) as Row[], cmd = k.findIndex(r => r[0].length === 1 && r[0][0] === 'B'), part = k[cmd + 1], word = k.find(r => r[0][0] === 'F');
+  const k = squadRows(built, true, !BREAK) as Row[], cmd = k.findIndex(r => r[0].length === 1 && r[0][0] === 'B'), part = k[cmd + 1], word = k.find(r => r[0][0] === 'F');
   line(cmd === 0 && k[0][1] === 'Order the squad' && /tap it/.test(k[0][2] ?? '') && /hold it a moment to open the wheel/.test(k[0][2] ?? '') && !!part && part[0].join('+') === 'Shift+B' && /part of the squad/.test(part[1]) && /hold Shift and tap B\b/.test(part[2] ?? '') && /wheel/.test(part[2] ?? '')
     && !!word && /everyone who's waiting/.test(word[1]) && has(k, 'T'),
     "keys: the command key's row says its tap and its hold, the sprint key with it is the next row, and the word's row says what it does", say(k));
-  // ---- menu
-  const withKey = squadRows(built, true, true, true) as Row[], menu = withKey.find(r => r[0][0] === 'X');
-  line(!has(k, 'X') && !has(k, 'H') && !has(k, 'G') && !!menu && has(withKey, 'H') && has(withKey, 'G') && !/middle/i.test(menu[2] ?? '') && /1 to 5/.test(menu[2] ?? '') && /middle/i.test(built.find(r => r[0][0] === 'X')?.[2] ?? ''),
-    "menu: the orders menu's row and its two letters are listed only while the menu has a key, and its words then leave the middle button out", `no key: ${say(k)} | a key: ${say(withKey)} · "${menu?.[2] ?? ''}"`);
+  // ---- letters
+  line(!has(k, 'H') && !has(k, 'G'), "letters: the wheel's two letters are not listed", say(k));
   // ---- no part
-  const n = squadRows(built, true, false, false) as Row[];
+  const n = squadRows(built, true, false) as Row[];
   line(!n.some(r => r[0].length > 1) && n.length === k.length - (BREAK ? 0 : 1), 'no part: with goals off there is no row for a part of the squad', say(n));
   // ---- twice (the key tapped twice is 'fall in', game/cmdring.ts `twice`: the command key's row says so, and only then)
-  const tw = squadRows(built, true, true, false, true) as Row[], twSaid = tw[0]?.[2] ?? '';
+  const tw = squadRows(built, true, true, true) as Row[], twSaid = tw[0]?.[2] ?? '';
   line(/tap it twice to call everyone back to you/.test(twSaid) && /tap it to give the usual order/.test(twSaid) && /hold it a moment to open the wheel/.test(twSaid) && !/twice/.test(k[0][2] ?? '') && tw.length === k.length,
     "twice: with the key tapped twice being 'fall in' the command key's row says so between its tap and its hold, and without the rule it does not", `"${twSaid}"`);
   // ---- words
-  const said = [...k, ...withKey].filter(r => r[1] !== 'Who takes the next order' && /plan mode/i.test(`${r[1]} ${r[2] ?? ''}`)).map(r => r[1]);
+  const said = [...k].filter(r => r[1] !== 'Who takes the next order' && /plan mode/i.test(`${r[1]} ${r[2] ?? ''}`)).map(r => r[1]);
   // (two builds pass this: the one where `?goals=0` still had plan mode, with both behind `goals` being off, and the one with plan mode out of the game, where neither is in the source at all)
   const planWords = [...src.matchAll(/\bWHO_[A-Z]+ = (?:'([^']*)'|"([^"]*)")/g)].filter(m => /plan mode/i.test(m[1] ?? m[2] ?? '')).map(m => m[0].split(' ')[0]);
   const circles = /'Plan mode circles'/.test(src) ? /if \(CMDRING\.plan && !CMDRING\.goals\) range\(body, 'Plan mode circles'/.test(src) : true;

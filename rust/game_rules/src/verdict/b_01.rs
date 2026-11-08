@@ -37,10 +37,6 @@ pub(crate) fn ended(g: &crate::game::Game) -> Option<(bool, &'static str, String
     use crate::scenario_run::ActiveScenario as K;
     let kind = crate::scenario_run::active_scenario(g);
     let roomclear = kind == Some(K::Roomclear);
-    // (defuse.ts Defuse.active, without its copy of the level's block: this pass is the running mission's, on a level with devices and rooms)
-    let defuse = roomclear && g.defuse.run == Some(g.mission.serial) && !g.room_clear.rooms.is_empty()
-        && g.level.scenarios.as_ref().and_then(|s| s.defuse.as_ref()).map_or(false, |d| !d.devices.is_empty());
-    if defuse && g.defuse.end == Some(crate::defuse::DefuseEnd::Failed) { return Some((false, "BLOWN", String::new())); }   // (the blast that fails it can take him with it: the charge is the why)
     let mut all_down = true;
     for i in 0..g.seats.len() { let s = g.seats[i]; let p = crate::cmd::seat_man(g, s); if !g.pl[p].down { all_down = false; break; } }
     if all_down {
@@ -50,13 +46,6 @@ pub(crate) fn ended(g: &crate::game::Game) -> Option<(bool, &'static str, String
     if roomclear {
         use crate::roomclear::RoomClearEnd as E;
         let end = g.room_clear.end;
-        if defuse {
-            let d = g.defuse.end;
-            if d == Some(crate::defuse::DefuseEnd::Safe) && end == Some(E::Taken) { return Some((true, "DEFUSED", g.room_clear.end_why.clone())); }   // (defuse.ts Defuse.won)
-            if d == Some(crate::defuse::DefuseEnd::Failed) { return Some((false, "BLOWN", String::new())); }
-            if d == Some(crate::defuse::DefuseEnd::Over) || end == Some(E::Wiped) { return Some((false, "WIPED", g.room_clear.end_why.clone())); }
-            return None;
-        }
         return match end { Some(E::Taken) => Some((true, "CLEAR", g.room_clear.end_why.clone())), Some(E::Wiped) => Some((false, "WIPED", g.room_clear.end_why.clone())), None => None };
     }
     if kind == Some(K::Rescue) {

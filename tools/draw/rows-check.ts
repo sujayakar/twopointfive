@@ -15,7 +15,7 @@ const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { cutConfig } = await import(`${ROOT}/src/scene/cut.ts`), { lookConfig } = await import(`${ROOT}/src/render/frame.ts`), { lookWordOf, lookCoreOf } = await import(`${ROOT}/src/render/gbuffer.ts`), { COATFINISH, SOLIDGLASS } = await import(`${ROOT}/src/scene/stuff.ts`);
-const { DRESS } = await import(`${ROOT}/src/game/dress.ts`), { lookDoors } = await import(`${ROOT}/src/scene/lookTidy.ts`), { LOOK_DOORS } = await import(`${ROOT}/src/scene/look.ts`);
+const { DRESS } = await import(`${ROOT}/src/game/dress.ts`);
 
 const LEVELS = process.argv.slice(2).length ? process.argv.slice(2) : ['office', 'compound', 'pass', 'glasshouse', 'depot', 'mousehole'];
 const BREAK = process.env.ROWS_BREAK === '1', DT = 1 / 60;
@@ -42,7 +42,6 @@ for (const L of LEVELS) { const [name, query] = L.split(':');
   const g = W.game, E = g.engine, world = E.world; const seen = new Map<string, [number, string]>(); let ticks = 0, boxes = 0, lights = 0, cuts = 0, panes = 0, marked = 0;
   let D: Drawn = null as never;
   DRESS.men = true; DRESS.wetGround = true; world.setStuffOf(lookWordOf(), lookCoreOf());
-  lookDoors(g.doors.list, world.statics, LOOK_DOORS[`${name.replace(/-gwot$/, '')}.json`]);   // (a page's leaves wear the level's paint: main.ts does this as a game stands)
   for (let t = 0; t < 420; t++) {
     if (t === 60 || t === 200) g.dropThrowable('frag', [g.player.char.pos[0] + 3, 0, g.player.char.pos[2] + 1]);
     g.godMode = true;

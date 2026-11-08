@@ -262,8 +262,8 @@ pub fn sticky_live(g: &crate::game::Game, pl: &crate::stickycam::StickyLivePl) -
 }
 
 /// The fog's eyes a player's live stuck cameras are, newest first. (stickycam.ts stickyEyes)
-pub fn sticky_eyes(g: &crate::game::Game) -> Vec<crate::fogofwar::FogEye> {
-    let pl = g.player;
+pub fn sticky_eyes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::fogofwar::FogEye> {
+    let pl = seat.player;
     if g.pl[pl].cams.is_empty() { return none(); }
     let mut out: Vec<crate::fogofwar::FogEye> = Vec::new();
     // (under the fog's cone a camera's wedge is no wider than an eye's   stickycam.ts:195)
@@ -493,7 +493,7 @@ mod tests {
         g.k.sticky.live = 3.0;
         assert_eq!(sticky_live(&mut g, &cams), vec![b, a]);
         g.k.sticky.live = 1.0;
-        let eyes = sticky_eyes(&mut g);
+        let eyes = sticky_eyes(&g, &crate::seats::here(&g));
         assert_eq!(eyes.len(), 1);
         assert_eq!((eyes[0].id, eyes[0].fov, eyes[0].near), (202.0, Some(360.0), Some(0.0)));
     }

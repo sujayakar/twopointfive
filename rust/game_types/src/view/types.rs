@@ -11,7 +11,6 @@ pub enum MissionOf {
     /// a level's program while it runs
     Script,
     Lesson,
-    Defuse,
     Roomclear,
     Rescue,
     Nightbreach,
@@ -406,6 +405,55 @@ pub struct TickView {
     pub aim: crate::view::AimView,
     /// the men who wear or carry something the drawer draws: nobody else is listed
     pub worn: Vec<crate::view::WornView>,
+    /// the squad's words (None: no squad answers to the seat)
+    pub squad: Option<crate::view::SquadView>,
+    /// what a set charge and a held threshold say to this seat, squad or none: a key's line, or a warning under no key
+    pub corner: Vec<crate::view::Note>,
+}
+
+/// which pair of the squad a man is of
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum Pair {
+    Red,
+    Blue,
+}
+
+/// one man's line on the squad's block
+#[derive(Clone, Debug, Default)]
+pub struct MateLine {
+    /// his character's id
+    pub man: f64,
+    /// his callsign
+    pub name: String,
+    /// what he is doing, and what he covers
+    pub doing: String,
+    /// among the men the next order goes to, while not all of them are
+    pub addressed: bool,
+    /// his pair, while the squad is in pairs
+    pub pair: Option<crate::view::Pair>,
+    pub down: bool,
+}
+
+/// a line of the squad's block
+#[derive(Clone, Debug, Default)]
+pub struct Note {
+    /// the key that does it ('' = none): the default key's letter, the page names the player's own
+    pub key: String,
+    pub text: String,
+}
+
+/// WHAT A SEAT'S HUD IS TOLD OF ITS SQUAD
+#[derive(Clone, Debug, Default)]
+pub struct SquadView {
+    /// loud or quiet, at a glance
+    pub posture: Option<String>,
+    /// who the next order goes to
+    pub who: String,
+    /// not everybody is addressed
+    pub picked: bool,
+    pub mates: Vec<crate::view::MateLine>,
+    /// the block's notes, in its order: the door tools', the word's, the pair's mark, the smoke, the wall charges'
+    pub notes: Vec<crate::view::Note>,
 }
 
 /// what kind of thing an order would be about

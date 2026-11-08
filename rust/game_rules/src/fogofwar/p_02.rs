@@ -125,7 +125,7 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
             if g.seats.len() != 1 && eyes.len() as f64 >= cap { return; }   // (v !== g: only a view differs, and a game of one lends itself)
             let c = g.pl[g.player].ch;
             let own = fog_of_war_eye_of(g, c);
-            let e = match crate::wand::wand_eye(g) {
+            let e = match crate::wand::wand_eye(g, &crate::seats::here(g)) {
                 Some(e) => e,
                 None => crate::peeksight::peek_eye(g, own).unwrap_or(own),
             };
@@ -155,7 +155,7 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
         });
     }
     crate::seats::each_seat(g, &mut |g| {
-        for e in crate::stickycam::sticky_eyes(g) {
+        for e in crate::stickycam::sticky_eyes(g, &crate::seats::here(g)) {
             if eyes.len() as f64 >= cap { g.stats.stickycam.blind += 1; break; }
             eyes.push(e);
         }
