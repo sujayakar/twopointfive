@@ -159,6 +159,7 @@ pub mod kit { pub mod types; pub use types::*; }
 pub mod kitanim { pub mod types; pub use types::*; }
 pub mod kitload { pub mod types; pub use types::*; }
 pub mod kittree { pub mod types; pub use types::*; }
+pub mod kitstage;
 pub mod knobs_reg { pub mod types; pub use types::*; }
 pub mod lanes { pub mod types; pub use types::*; }
 pub mod laststand { pub mod types; pub use types::*; }

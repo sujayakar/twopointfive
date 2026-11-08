@@ -126,6 +126,7 @@ pub mod kit;
 pub mod kitanim;
 pub mod kitload;
 pub mod kittree;
+pub mod kitstage;
 pub mod knobs_reg;
 pub mod lanes;
 pub mod laststand;
