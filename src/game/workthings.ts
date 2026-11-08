@@ -67,14 +67,10 @@ export const WORK = {
    *  and a bare radius at fixed offsets from the panel, right only where it hangs facing the way the office's does — elsewhere the man stood in a wall, or
    *  re-armed it from the far side of the one it hangs on) */
   ownFace: true,
-  /** a man stood at his thing does not take as a target, or turn to look for at a mate's call or a footfall, a man his round is held for (the squad's fire
-   *  is held and that man has noticed nobody): he works the thing, his partner's gun on the man if he has a partner (false: his muzzle stays on that man for
-   *  as long as the hold stands, his chest turned off the thing, and it is never worked) */
-  heldPass: true,
   /** a following teammate does not wait, back off or stand still for a suspicious man who is walking to the breaker while he is stood within `walkM` (m)
    *  of what is left of that man's walk and Sam is going on: he goes on after Sam (false: he waits where he is, as for any man who is looking, and is
    *  walked into) */
-  offWalk: true, walkM: 2.5,
+  walkM: 2.5,
   /** Sam's own row at the breaker (player.ts), and his OCP at it (lighting.ts), also take a clear line to the panel's OWN face from in front of it (false:
    *  only the line to a point a hand's width toward -z of its mark, right only where it hangs facing the way the office's does — on a panel hung facing any
    *  other way that point is inside the wall, and he was never offered the row) */

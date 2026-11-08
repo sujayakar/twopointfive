@@ -52,8 +52,6 @@ export const HOLDFIRE = {
   loud: true,
   /** a man on his stack mark with his round held on a man counts as arrived, and the lead keeps his hand off the handle while his own is (off: 'stacking' until his gun is the door's, and the handle tried, as it was) */
   stackSet: true,
-  /** … and the handle waits while ANY man of that door's stack is so held, by the stamp of the orders' last tick (off: the lead's own fresh answer only; nothing without `stackSet`) */
-  stackWait: true,
 };
 /** the orders that mean fire, by id (doortools.ts, wallcharge.ts, squadthrow.ts — by NAME: a row from a part not in the tree lifts the day it lands) */
 export const LIFT_ORDERS: readonly string[] = ['openClear', 'bigClear', 'bangClear', 'fragClear', 'charge', 'threshold', 'thresholdHold', 'outside', 'thrStep', 'thrBang', 'thrWord', 'go', 'wallCharge', 'fragThere', 'stunThere', 'shellThere'];
