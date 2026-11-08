@@ -13,15 +13,12 @@
 // a stain, a mat; a strip of floor or ground that narrow is a row too, and reads as one), in any group. No list of names: a level's groups say what they are
 // (`snow.paths`, `yard.stains`, `lived.mess`), and the reader judges.
 // THE LEVEL AND ITS WAYS ARE tools/qa/walked-check.ts pageWays' and its starts that check's startsOf: the file as the page loads it (lived rooms and
-// dressing in, the office with its script), so the lanes and starts drawn are the ones the check asks about. A LOOK TWIN asked by name is drawn with ITS
-// OWN flat things (the look's bands and stains are in the twin's file) over its plain file's ways: the two stand on one floor (scene/look.ts
-// LOOK_LEVELS). <dir> is dist/walked where none is said (git ignores dist/): nothing git keeps is written.
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+// dressing in, the office with its script), so the lanes and starts drawn are the ones the check asks about. <dir> is dist/walked where none is said (git ignores dist/): nothing git keeps is written.
+import { writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { encodePng } from '../qa/png';
-import { pageWays, plainOf, startsOf } from '../qa/walked-check';
+import { pageWays, startsOf } from '../qa/walked-check';
 import { doorMid } from '../../src/scene/ways';
-import { parseLevelData } from '../../src/scene/levelData';
 import { WORLD } from '../../src/scene/world';
 
 const ROOT = resolve(import.meta.dir, '../..'), argv = process.argv.slice(2), usage = () => { console.error('usage: bun run tools/levels/walked-overlay.ts <level …> [--out <dir>] [--px 4‥64]'); process.exit(2); };
@@ -38,7 +35,7 @@ const KIND: Record<string, [number, number, number]> = { patrol: [235, 70, 60], 
 const hue = (k: number, n: number): [number, number, number] => { const h = (k / Math.max(1, n)) * 6, c = 90, x = c * (1 - Math.abs(h % 2 - 1)), m = 95; const [r, g, b] = h < 1 ? [c, x, 0] : h < 2 ? [x, c, 0] : h < 3 ? [0, c, x] : h < 4 ? [0, x, c] : h < 5 ? [x, 0, c] : [c, 0, x]; return [r + m, g + m, b + m]; };
 
 for (const name of names) {
-  const plain = plainOf(name), { data: plainData, level, nav, ways: A } = pageWays(plain), data = plain === name ? plainData : parseLevelData(readFileSync(`${ROOT}/levels/${name}.json`, 'utf8'));
+  const { data, level, nav, ways: A } = pageWays(name);
   const X0 = WORLD.min[0], Z0 = WORLD.min[2], WM = WORLD.max[0] - X0, HM = WORLD.max[2] - Z0, W = Math.round(WM * PX), H = Math.round(HM * PX), img = new Uint8Array(W * H * 4);
   const put = (x: number, y: number, c: readonly number[], a = 1) => { if (x < 0 || y < 0 || x >= W || y >= H) return; const o = (y * W + x) * 4; for (let k = 0; k < 3; k++) img[o + k] = Math.round(img[o + k] * (1 - a) + c[k] * a); img[o + 3] = 255; };
   // the walk grid

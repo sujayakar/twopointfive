@@ -9,7 +9,6 @@ import type { Game } from '../game/game';
 import { reportWarning } from '../cloud/report';
 import { typedInto } from '../host/keymap';
 import { SHADER_ROW_WORDS } from './shaderrows';
-import { lookDressWord } from '../scene/look';
 import { ReplayBuffer, REPLAY } from '../game/replaybuf';
 import type { ReplayMeta } from '../game/replaybuf';
 import type { RunTape, ReplayFile } from '../replay/format';
@@ -270,12 +269,10 @@ export function viewerUrl(id: number): string { return new URL(`replay.html#id=$
 export const VISIT_FLAGS = ['paused', 'mute', 'quality', 'adapt', 'hud', 'oldsounds', 'newsounds', 'soundlanes', 'fogedge', 'fogdesat', 'fogair', 'fogkept', 'nobouncewalls', 'noreflwalls', 'sharpcap', 'allproxies', 'framecap', 'pace', 'giveway', 'flight', 'look', 'nosunglint', 'glintpick', 'holedepth', 'kept', 'hireach',
   ...SHADER_ROW_WORDS, 'pipequeue', 'shadertrim', 'shaderfold', 'fell', 'smokeindirect'];   // (the second line: how THIS machine builds its shaders — ui/shaderrows.ts, the compile queue and the trim, gpu/ — a word of the visit's address read once as the page loads; without them here a replay opened with one was sent on to an address without it and built the plain way. nobouncewalls: the picture's walled bounce read off — render/frame.ts bounceWallsConfig — so a page tool can play one replay both ways)
 // (…and `fell`: the count of questions the TypeScript answered while its row was up, sim.ts FELL — a page sent on to a recipe's address keeps the word. The Rust module's rows have no word: they are not switches)
-/** A WORD OF AN ADDRESS, WITH ITS VALUE, IS THE VISIT'S: one of VISIT_FLAGS, but `look` is two things under one word (scene/look.ts). The dress's
- *  `look=plain|0|off` names the LEVEL a run plays, so it is the run's: it stays in a tape's recipe and in a co-op invite. Every other value is a row of the look
- *  prototype's page, which is how the page is looked at: the visit's. Ask by pair, never by the list alone, wherever a word is kept or dropped. */
-export const visitWord = (k: string, v: string): boolean => VISIT_FLAGS.includes(k) && (k !== 'look' || !lookDressWord(v));
+/** a word of an address is the visit's: one of VISIT_FLAGS */
+export const visitWord = (k: string): boolean => VISIT_FLAGS.includes(k);
 /** the visit's words on an address, pair by pair in the list's order (a word can stand more than once: the look page's rows) */
-export const visitPairs = (q: URLSearchParams): [string, string][] => VISIT_FLAGS.flatMap(k => q.getAll(k).filter(v => visitWord(k, v)).map(v => [k, v] as [string, string]));
+export const visitPairs = (q: URLSearchParams): [string, string][] => VISIT_FLAGS.flatMap(k => q.getAll(k).map(v => [k, v] as [string, string]));
 export function engineUrl(id: number, file: ReplayFile): string | null {
   if (tapeWhy(file)) return null;
   const T = file.rerun as RunTape;

@@ -46,18 +46,18 @@ What a row does NOT hold:
 | `room-clear-pair` | `office.json` | yes | 0 | 300 in step | 0 |  |
 | `room-clear-four` (off the list) | `office.json` | yes | 0 | 300 in step | 0 |  |
 | `hostage-rescue` | `office.json` | yes | 0 | 300 in step | 0 |  |
-| `records-pair` (off the list) | `records-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `depot-four` | `depot-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `block-four` (off the list) | `block-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `warehouse-four` (off the list) | `warehouse-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `compound-four` | `compound-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `barracks-four` (off the list) | `barracks-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `rescue-registry` (off the list) | `registry-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `rescue-consulate` | `consulate-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `floodlit-four` (off the list) | `floodlit-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `killhouse-four` (off the list) | `killhouse-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `mousehole-four` | `mousehole-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `hall-four` (off the list) | `hall-gwot.json` | yes | 0 | 300 in step | 0 |  |
+| `records-pair` (off the list) | `records.json` | yes | 0 | 300 in step | 0 |  |
+| `depot-four` | `depot.json` | yes | 0 | 300 in step | 0 |  |
+| `block-four` (off the list) | `block.json` | yes | 0 | 300 in step | 0 |  |
+| `warehouse-four` (off the list) | `warehouse.json` | yes | 0 | 300 in step | 0 |  |
+| `compound-four` | `compound.json` | yes | 0 | 300 in step | 0 |  |
+| `barracks-four` (off the list) | `barracks.json` | yes | 0 | 300 in step | 0 |  |
+| `rescue-registry` (off the list) | `registry.json` | yes | 0 | 300 in step | 0 |  |
+| `rescue-consulate` | `consulate.json` | yes | 0 | 300 in step | 0 |  |
+| `floodlit-four` (off the list) | `floodlit.json` | yes | 0 | 300 in step | 0 |  |
+| `killhouse-four` (off the list) | `killhouse.json` | yes | 0 | 300 in step | 0 |  |
+| `mousehole-four` | `mousehole.json` | yes | 0 | 300 in step | 0 |  |
+| `hall-four` (off the list) | `hall.json` | yes | 0 | 300 in step | 0 |  |
 | `glasshouse-four` (off the list) | `glasshouse.json` | yes | 0 | 300 in step | 0 |  |
 | `pass-four` | `pass.json` | yes | 0 | 300 in step | 0 |  |
 | `bazaar-quiet` | `bazaar.json` | yes | 0 | 300 in step | 0 |  |
@@ -89,18 +89,18 @@ TypeScript start makes for two, and that the two stay in step while nobody moves
 | `room-clear-pair` | `office.json` | yes | 0 | 300 in step | 0 |  |
 | `room-clear-four` (off the list) | `office.json` | yes | 0 | 300 in step | 0 |  |
 | `hostage-rescue` | `office.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
-| `records-pair` (off the list) | `records-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `depot-four` | `depot-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `block-four` (off the list) | `block-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `warehouse-four` (off the list) | `warehouse-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `compound-four` | `compound-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `barracks-four` (off the list) | `barracks-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `rescue-registry` (off the list) | `registry-gwot.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
-| `rescue-consulate` | `consulate-gwot.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
-| `floodlit-four` (off the list) | `floodlit-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `killhouse-four` (off the list) | `killhouse-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `mousehole-four` | `mousehole-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `hall-four` (off the list) | `hall-gwot.json` | yes | 0 | 300 in step | 0 |  |
+| `records-pair` (off the list) | `records.json` | yes | 0 | 300 in step | 0 |  |
+| `depot-four` | `depot.json` | yes | 0 | 300 in step | 0 |  |
+| `block-four` (off the list) | `block.json` | yes | 0 | 300 in step | 0 |  |
+| `warehouse-four` (off the list) | `warehouse.json` | yes | 0 | 300 in step | 0 |  |
+| `compound-four` | `compound.json` | yes | 0 | 300 in step | 0 |  |
+| `barracks-four` (off the list) | `barracks.json` | yes | 0 | 300 in step | 0 |  |
+| `rescue-registry` (off the list) | `registry.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
+| `rescue-consulate` | `consulate.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
+| `floodlit-four` (off the list) | `floodlit.json` | yes | 0 | 300 in step | 0 |  |
+| `killhouse-four` (off the list) | `killhouse.json` | yes | 0 | 300 in step | 0 |  |
+| `mousehole-four` | `mousehole.json` | yes | 0 | 300 in step | 0 |  |
+| `hall-four` (off the list) | `hall.json` | yes | 0 | 300 in step | 0 |  |
 | `glasshouse-four` (off the list) | `glasshouse.json` | yes | 0 | 300 in step | 0 |  |
 | `pass-four` | `pass.json` | yes | 0 | 300 in step | 0 |  |
 | `bazaar-quiet` | `bazaar.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |

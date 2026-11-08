@@ -166,10 +166,10 @@ export function tapeSearch(tape: RunTape, now: URLSearchParams, v: string): stri
  *  `net` words — src/net/page.ts): what the page must be booted on to be that run's page */
 export function recipeSearch(recipe: RunTape['recipe'], now: URLSearchParams, own: Record<string, string>): string {
   const out = new URLSearchParams();
-  for (const [k, val] of new URLSearchParams(recipe.search ?? '')) if (SENDING_WORDS.includes(k) ? SAYS_OFF.test(val) : !NOT_THE_RUNS.includes(k) && !visitWord(k, val)) out.append(k, val);   // (a visit's word is never the run's, whichever list a goal put it on: a tape recorded under one does not put it on the page that replays it)
+  for (const [k, val] of new URLSearchParams(recipe.search ?? '')) if (SENDING_WORDS.includes(k) ? SAYS_OFF.test(val) : !NOT_THE_RUNS.includes(k) && !visitWord(k)) out.append(k, val);   // (a visit's word is never the run's, whichever list a goal put it on: a tape recorded under one does not put it on the page that replays it)
   out.set('seed', recipe.seed === null || recipe.seed === undefined ? 'off' : String(recipe.seed));
   out.set('noreplay', '');   // (no tape of a tape: the page's own buffer stays off)
-  for (const [k, v] of visitPairs(now)) out.append(k, v);   // (pair by pair: the dress's `look` word is the run's and stays as the recipe has it, ui/replaykey.ts visitWord)
+  for (const [k, v] of visitPairs(now)) out.append(k, v);   // (pair by pair, ui/replaykey.ts visitWord)
   for (const k of SENDING_WORDS) if (now.has(k)) out.set(k, now.get(k) ?? '');
   for (const [k, val] of Object.entries(own)) out.set(k, val);
   return '?' + out.toString();

@@ -118,14 +118,14 @@ const hollowsOf = (b: Uint8Array) => { let s = 0; for (let i = 3; i < b.length; 
       'on a level, through the real pack: with nobody asking, the finish word is as it ever was; on the look page every box carries its stuff (the word it says, nothing else) above its finish and the finish reads back (to a 500th: the word shares the float); a box past the statics, and no other, says it moves; and when a static is appended no mover\'s word changes, though every mover\'s place in the list does',
       `pass: ${boxes.length} boxes, ${classed} with a material, ${classOff} not their own word's (${said} say a word), ${finishOff} finishes moved, ${mine.size} movers with ${salts.size} numbers between them, ${movesOff} wrong about moving, ${jumped} changed when a static was added`); }
   // the rain, by the game's own weather: a level whose lot is gravel and stands wet
-  { const g = (await stand('consulate-gwot')).game, world = g.engine.world, st = world.statics as any[];
+  { const g = (await stand('consulate')).game, world = g.engine.world, st = world.statics as any[];
     const li = st.findIndex(b => b.c[1] < 0 && b.c[1] + b.h[1] > -0.01 && b.h[0] > 18 && b.h[2] > 12), lot = st[li], dry = li < 0 ? undefined : g.weather.dryPaint(lot);
     const cls = (i: number) => Math.floor(world.matData[i * MAT_STRIDE + 7] / 8) & (LOOK_WORD.stuffs - 1);
     world.setStuffOf(lookWordOf(), lookCoreOf()); world.upload(); const told = li < 0 ? -1 : cls(li);
     const soaked = !!dry && lot.albedo.some((v: number, c: number) => Math.abs(v - dry[c]) > 0.01);
     check(li >= 0 && soaked && lot.stuff === 'gravel' && told === lookStuffOf('gravel'),
       'rain does not change what a thing is made of: the game\'s own weather darkens a gravel lot in place, and the lot is still gravel because it SAYS gravel (nobody is asked the paint it had dry: no colour is read)',
-      li < 0 ? 'consulate-gwot: no lot found' : `consulate-gwot: the lot's paint now ${lot.albedo.map((v: number) => v.toFixed(3)).join(' ')}, dry ${dry ? [...dry].map((v: number) => v.toFixed(3)).join(' ') : 'not kept'}; it says ${lot.stuff}, packed as ${told}`); }
+      li < 0 ? 'consulate: no lot found' : `consulate: the lot's paint now ${lot.albedo.map((v: number) => v.toFixed(3)).join(' ')}, dry ${dry ? [...dry].map((v: number) => v.toFixed(3)).join(' ') : 'not kept'}; it says ${lot.stuff}, packed as ${told}`); }
   const gsrc = readFileSync(`${ROOT}/src/render/shaders/gbuffer.wgsl`, 'utf8'), csrc = readFileSync(`${ROOT}/src/render/shaders/common.wgsl`, 'utf8'), lsrc = readFileSync(`${ROOT}/src/render/shaders/look.wgsl`, 'utf8'), msrc = readFileSync(`${ROOT}/src/main.ts`, 'utf8');
   check(/o\.look = boxStuff\(bi\);/.test(gsrc) && !/lookClass\(o\.albedo\)/.test(gsrc) && /fn boxLook\(i: u32\) -> u32 \{ return u32\(boxMat\[i \* 4u \+ 1u\]\.w \* 0\.125\); \}/.test(csrc) && /fn boxStuff\(i: u32\) -> u32 \{ return boxLook\(i\) & 31u; \}/.test(csrc) && LOOK_WORD.stuffs === 32
     && /w -= 8\.0 \* floor\(w \* 0\.125\);/.test(csrc) && /let word = boxLook\(bi\); let moves = \(word & 32u\) != 0u;/.test(lsrc) && LOOK_WORD.moves === 32 && /let salt = word >> 6u;/.test(lsrc) && LOOK_WORD.own === 64 && /\|\| moves\) \{/.test(lsrc) && !/bi % (7|13)u/.test(lsrc)

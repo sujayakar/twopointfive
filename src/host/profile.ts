@@ -47,7 +47,7 @@ import { gearFromQuery } from '../game/gear';
 import { wordsFromQuery } from '../game/words';
 import { kitLoad, KIT_SOLO, BIGSLOT } from '../game/kit';
 import { squadSenses } from '../game/enemysquads';
-import { LOOK, lookOfQuery, suitOfQuery } from '../scene/look';
+import { LOOK, suitOfQuery } from '../scene/look';
 import { LIVED, livedOfQuery } from '../scene/lived';
 import { SHAPES } from '../scene/shapes';
 import { ROOMCLEAR } from '../game/roomclear';
@@ -119,7 +119,7 @@ export function pageSwitches(q: URLSearchParams): void {
   BIGSLOT.on = !q.has('nobigslot');   // the big slot (game/kit.ts BIGSLOT, game/bigkit.ts): every card has ONE big slot beside its pouches — the wall charge, the breaching shotgun (kit now, not a gun: the man keeps his rifle) or the dynamic hammer — and the last two take a lock from either face, yours on a locked door's row, a teammate's on a door order. ON in the page, ?nobigslot = the cards and the weapon row as they were; off on the frozen stand (TPS_BIGSLOT=1). Before the kit is read from the store: a stored shotgun-as-gun card is read as rifle + shotgun in the big slot.
   gearFromQuery(q);   // the 2010s issue kit (game/gear.ts): Sam's rifle and pistol named a Mk 18 and a Glock 19 (the rifle drawn as an M4-pattern carbine), two-tube goggles that do not glow, the ring worded and drawn a 40 mm sponge round — ON in the page; ?oldgear = the Splinter Cell kit, as it was. Words and boxes, and one number: the Glock's magazines hold fifteen
   wordsFromQuery(q);   // the dialogue pass (game/words.ts): hostages with a voice of their own, and every line said by the side and in the place it was written for — ON in the page; ?oldwords = every line as it was. A bubble's time is its length, so a reworded line can move who talks next: the frozen stand keeps the old words
-  LOOK.on = lookOfQuery(q);   // the default look, 2010s GWOT (scene/look.ts): the loud levels' second files and the men's dress (the cast file and its material tables; weapons and kit are GEAR's) — ON in the page; ?look=plain = every level and man as before. Look only: headless no run differs by it (on the page the repainted walls' bounce reaches the GPU light meter).
+  LOOK.on = true;   // the default look, 2010s GWOT (scene/look.ts): the men's dress (the cast file and its material tables; weapons and kit are GEAR's) and a leaf's paint
   suitOfQuery(q);   // …and under it the black sneaking suit Sam wears on a mission that is not a squad's loud one (game/cast.ts sneakSuit): ?suit=0 = the operators' issue dress on every mission
   LIVED.on = livedOfQuery(q);   // lived-in rooms (scene/lived.ts): the furniture, clutter, floor pieces and lamps that make each room of a level its own place, as the office's rooms are — ON in the page, raised before the level loads; ?lived=0 = every level as it was before there were any
   { const w = q.get('way'); ROOMCLEAR.way = w === 'any' ? -1 : w !== null && /^\d+$/.test(w) ? +w : 0; }   // …and the way in (ROOMCLEAR.way; the mission sheet's 'Way in' row writes it on the link): absent or ?way=1 = the level's own start, ?way=2 … = its other ones, ?way=any = dealt off this visit's die with the marks

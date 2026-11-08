@@ -34,7 +34,7 @@ const quiet = async <T>(fn: () => Promise<T> | T): Promise<T> => { const l = con
 /** the glass the drop lines make their pane before they shoot it: toughened — or, under GLASSREAL_BREAK, float (which runs to daggers and does not drop) */
 const TOUGH = BROKEN ? 'annealed' : 'tempered';
 
-/** EVERY LEVEL'S GLASS BY KIND: [toughened, float, laminated]. A level not listed must hold no glass. (The -gwot looks, the
+/** EVERY LEVEL'S GLASS BY KIND: [toughened, float, laminated]. A level not listed must hold no glass. (The
  *  relief and the squads block are their base level's boxes: asked too, against the base's row.) */
 const CENSUS: Record<string, [number, number, number]> = {
   office: [10, 9, 3], warehouse: [0, 3, 0], 'test-rooms': [0, 1, 0], registry: [1, 4, 2], records: [2, 5, 0],
@@ -46,7 +46,7 @@ const CENSUS: Record<string, [number, number, number]> = {
   'tut-team': [0, 8, 0],   // (the same station, box for box)
   'tut-road': [0, 1, 0],   // (the road post's hut: one sill window on the gateway's side)
 };
-const baseOf = (file: string) => file.replace(/\.json$/, '').replace(/-gwot$/, '');
+const baseOf = (file: string) => file.replace(/\.json$/, '');
 
 /** the office with a Particles attached, everyone parked, Sam in the corridor, the fracture live. */
 async function stage() {

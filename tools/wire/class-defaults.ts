@@ -16,7 +16,7 @@ const { knobRegistry } = await import('../../src/game/knobs.ts').catch(() => ({ 
 const { ALL_MISSIONS } = await import('../../src/scene/scenarioList.ts');
 const { startFromQuery } = await import('../../src/game/scenarioRun.ts');
 const { loadLevel } = await import('../../src/scene/levelLoad.ts'), { parseLevelData } = await import('../../src/scene/levelData.ts');
-const { scenarioQuery } = await import('../../src/scene/scenarios.ts'), { lookLevelFile } = await import('../../src/scene/look.ts');
+const { scenarioQuery } = await import('../../src/scene/scenarios.ts');
 const CLASSES = classTable();
 type Seen = { fields: Map<string, Set<string>>; values: Map<string, Set<unknown>>; n: number; proto: Set<object> };
 const SEEN = new Map<string, Seen>();
@@ -33,7 +33,7 @@ function walk(n: any, v: any, g: any, B: any, seen: Set<object>): void { if (v =
   case 'type': { const T = SCHEMA.types[n.path]; if (T?.k !== 'struct' || typeof v !== 'object' || seen.has(v)) return; seen.add(v); look(n.path, v);
     for (const f of T.fields) { let x: any; try { x = f.expr ? compiledExpr(f.expr)(v, g, B) : v[f.ts]; } catch { continue; } walk(parse(f.ty), x, g, B, seen); } } } }
 const missions = (ALL_MISSIONS as any[]); let stood = 0; const refused: string[] = [];
-for (const m of missions) { let W: any; try { const look = m.level ? lookLevelFile(m.level) : '', level = !m.level ? 'office.json' : existsSync(join(ROOT, 'levels', look)) ? look : m.level; W = await standUp({ dress: true, level: loadLevel(parseLevelData(readFileSync(existsSync(level) ? level : join(ROOT, 'levels', level), 'utf8'))), seed: 20942 } as any); const r = startFromQuery(W.game, scenarioQuery(m)); if (r.why) { refused.push(`${m.id}: ${r.why}`); continue; } W.step(1 / 60); } catch (e) { refused.push(`${m.id}: ${String((e as Error)?.message ?? e).slice(0, 120)}`); continue; }
+for (const m of missions) { let W: any; try { const level = m.level || 'office.json'; W = await standUp({ dress: true, level: loadLevel(parseLevelData(readFileSync(existsSync(level) ? level : join(ROOT, 'levels', level), 'utf8'))), seed: 20942 } as any); const r = startFromQuery(W.game, scenarioQuery(m)); if (r.why) { refused.push(`${m.id}: ${r.why}`); continue; } W.step(1 / 60); } catch (e) { refused.push(`${m.id}: ${String((e as Error)?.message ?? e).slice(0, 120)}`); continue; }
   const g = W.game, bk = bookOf(g); if (!bk) { refused.push(`${m.id}: no book`); continue; } const reg = (globalThis as any).__tpsKnobs ?? (knobRegistry ? knobRegistry() : {}), B = helpersOf(g, reg), seen = new Set<object>(); stood++;
   for (const t of SCHEMA.tables) for (const o of bk.listOf(t.id)) walk(parse(t.ty.replace(/^alloc::boxed::Box<(.*)>$/, '$1')), o, g, B, seen);
   walk({ k: 'type', path: SCHEMA.root }, g, g, B, seen); }
