@@ -286,7 +286,6 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
     g.quiet = crate::quiet::quiet_mission_new(g);
     g.rails = crate::rails::rails_new(g);
     g.lesson = crate::lesson::lesson_new(g);
-    g.defuse = crate::defuse::defuse_new(g);
     g.night_breach = crate::nightbreach::night_breach_new(g);
     g.room_clear = crate::roomclear::room_clear_scenario_new(g);
     stand_each_seat(g, &mut |v: &mut Game| { v.orders = crate::orders::squad_orders_new(v, None); });

@@ -333,7 +333,6 @@ fn work_at_walked(g: &mut crate::game::Game, pl: PlayerId, kind: crate::handwork
     let at = match kind {
         crate::handwork::SamWorkKind::Wall => g.wall_charge.sam.as_mut().map(|s| &mut s.at),
         crate::handwork::SamWorkKind::Door => g.pl[pl].charging.as_mut().map(|s| &mut s.at),
-        crate::handwork::SamWorkKind::Defuse => g.defuse.sam.as_mut().map(|s| &mut s.at),
         _ => None,
     };
     if let Some(at) = at {

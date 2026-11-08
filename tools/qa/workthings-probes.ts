@@ -1,5 +1,5 @@
 // The `workthings` probes (src/game/workthings.ts: a teammate is sent to work the breaker, or the mission's thing) — `bun run tools/qa/probes.ts workthings`,
-// or one of work-breaker / work-four / work-objective / work-edges / work-posted / work-face / work-held / work-walk / work-defuse / work-harness. All headless on the real Game (nothing is drawn: the menu is read as the data
+// or one of work-breaker / work-four / work-objective / work-edges / work-posted / work-face / work-held / work-walk / work-harness. All headless on the real Game (nothing is drawn: the menu is read as the data
 // the panel is built from), every order given THROUGH THE INPUT as the page writes it — the harness cursor on the thing, then one-frame presses. WORK.on is
 // raised by the probe itself: the frozen stand holds it off (TPS_WORKTHINGS=1).
 //   work-breaker    the room clear's pair on the office: X with the cursor on the breaker panel lists the thing's own order on digit 1 where 'move there' is
@@ -11,9 +11,6 @@
 //                   it (the mission moves on to the way out, in the level's own words); before that stage the holder is plain floor
 //   work-edges      what is NOT the breaker (the top of its wall, the next room's floor behind it, a metre in front), Sam standing at it with the cursor on
 //                   himself is himself, and a man the orders stop short of it holds where he is: the breaker is not thrown from there
-//   work-defuse     a mission's charge (defuse.ts): sent to it he makes it safe and says so; the run ending under his hand (Sam down) leaves the charge armed,
-//                   and he neither says 'charge is safe.' nor is a job counted done; the same for a quiet mission's partner with his hands in the holder
-//                   (he does not take it, and does not say it is already gone)
 //   work-held       the squad's fire held and a defender who has noticed nobody stood in plain sight of the panel: the man sent still throws the breaker (his
 //                   partner's gun on that man, no round fired), his footfalls turn nobody at the panel, and the moment that man notices he is the squad's to shoot again. Asserts the fault with
 //                   WORK.heldPass off (his muzzle stays on the man, the mains stay on); WORKHELD_BREAK=1 leaves the rule off for the rule's own lines: must fail
