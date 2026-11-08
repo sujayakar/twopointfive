@@ -204,3 +204,5 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **A man low shoves furniture at half the noise, whoever he is** (2026-11-08; `game quiet_man`). It was Sam's alone: a teammate or a defender on his knees scraped a chair as loud as a man walking. No switch. A
   defender in reach hears a teammate's chair as he hears Sam's; a quiet takedown files no noise of its own, and the one `prop` a check found 1.08 s after a man went down is the partner's own feet in a chair on his
   way back to Sam. Check: `tests/pair.rs a_low_man_shoves_a_chair_at_half_the_noise`, `a_quiet_takedown_files_no_noise_of_its_own`, `a_man_hears_the_other_sides_chair_and_door_and_not_his_own`. Not measured on a mission's tally.
+- **A shut door opened on Sam's body** (2026-11-08). On the game's own senses the man who opens it steps past the leaf and fires: 46 stagings of Sam behind the break room's leaf, two seeds, longest he stood
+  alert with nothing fired 1.3 s, where the tree before them stood him in the frame for over six. Which line of that change cured it was not traced. Check: `tests/door_body.rs`. Never seen on a GPU.
