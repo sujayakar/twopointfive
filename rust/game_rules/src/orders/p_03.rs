@@ -167,7 +167,7 @@ fn seam_arm_label(g: &mut Game, arm: &OrderLabel, t: &OrderTarget) -> String {
             if w.is_empty() { String::from("go") } else { format!("go · {}", w) }
         }
         // (the arms order_label takes itself, named so that a new row of the enum is a build error here and never a stop in play)
-        OrderLabel::Text { .. } | OrderLabel::Cover | OrderLabel::WallRow | OrderLabel::ThrowRow { .. } | OrderLabel::ThrowOpen | OrderLabel::Row(_) | OrderLabel::Work | OrderLabel::Smoke | OrderLabel::PairGo => unreachable!("order_label answers this arm itself"),
+        OrderLabel::Text { .. } | OrderLabel::WallRow | OrderLabel::ThrowRow { .. } | OrderLabel::ThrowOpen | OrderLabel::Row(_) | OrderLabel::Work | OrderLabel::Smoke | OrderLabel::PairGo => unreachable!("order_label answers this arm itself"),
     }
 }
 /// Err(None): false, Err(Some): the word for why not
@@ -245,7 +245,7 @@ fn seam_arm_valid(g: &mut Game, arm: &OrderValid, t: &OrderTarget, men: &[GuardI
             Err(Some(crate::words::wg(g, &now, &was)))
         }
         // (the arms order_valid takes itself, named so that a new row of the enum is a build error here and never a stop in play)
-        OrderValid::Move | OrderValid::Stack | OrderValid::WallRow | OrderValid::ShutDoor | OrderValid::ThrowRow { .. } | OrderValid::Wand | OrderValid::Row(_) | OrderValid::Work | OrderValid::Smoke | OrderValid::PairTake | OrderValid::PairWatch | OrderValid::PairGo => unreachable!("order_valid answers this arm itself"),
+        OrderValid::WallRow | OrderValid::ShutDoor | OrderValid::ThrowRow { .. } | OrderValid::Wand | OrderValid::Row(_) | OrderValid::Work | OrderValid::Smoke | OrderValid::PairTake | OrderValid::PairWatch | OrderValid::PairGo => unreachable!("order_valid answers this arm itself"),
     }
 }
 /// Some: refused, in those words
@@ -295,7 +295,7 @@ fn seam_arm_issue(g: &mut Game, arm: &OrderIssue, men: &[GuardId], t: &OrderTarg
         OrderIssue::PairWatch => crate::pairorders::p_01::watch_issue(g, men, t),
         OrderIssue::PairDark => crate::pairorders::p_01::dark_issue(g, men, t),
         // (the arms order_issue takes itself, named so that a new row of the enum is a build error here and never a stop in play)
-        OrderIssue::Nothing | OrderIssue::Move | OrderIssue::Stack | OrderIssue::Cover | OrderIssue::FallIn | OrderIssue::Hold | OrderIssue::Silent | OrderIssue::Loud | OrderIssue::ShutDoor | OrderIssue::ThrowRow { .. } | OrderIssue::WallRow | OrderIssue::Wand | OrderIssue::Work | OrderIssue::PairGo | OrderIssue::Row(_) => unreachable!("order_issue answers this arm itself"),
+        OrderIssue::Nothing | OrderIssue::Silent | OrderIssue::Loud | OrderIssue::ShutDoor | OrderIssue::ThrowRow { .. } | OrderIssue::WallRow | OrderIssue::Wand | OrderIssue::Work | OrderIssue::PairGo | OrderIssue::Row(_) => unreachable!("order_issue answers this arm itself"),
     }
 }
 
@@ -308,7 +308,6 @@ pub fn order_label(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::or
     let arm = g.tab.orders_order_def[d].label.clone();
     match arm {
         OrderLabel::Text { text } => text,
-        OrderLabel::Cover => row_cover_label(g, t),
         OrderLabel::WallRow => match crate::wallcharge::wall_charge_charge_on_target(g, &crate::seats::here(g), t) {
             Some(c) => format!("blow the charge{}", crate::wallcharge::wall_charge_close_words(g, Some(c), None)),
             None => crate::wallcharge::wall_charge_row_words(g, &crate::seats::here(g)),
@@ -344,8 +343,6 @@ pub fn order_can(g: &mut crate::game::Game, d: OrdersOrderDefId, gd: GuardId, t:
     let at = at_of(t);
     match arm {
         OrderCan::Row(r) => match r.can { Some(f) => f(g, gd, t), None => None },
-        OrderCan::Move => row_move_can(g, gd, t),
-        OrderCan::Cover => row_cover_can(g, gd, t),
         OrderCan::WallRow => match crate::wallcharge::wall_charge_can_of(g, gd, t) {
             crate::wallcharge::WallChargeCanOf::Text(w) => Some(w),
             crate::wallcharge::WallChargeCanOf::Bool(_) => None,
@@ -437,8 +434,6 @@ pub fn order_valid(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::or
     let Some(arm) = g.tab.orders_order_def[d].valid.clone() else { return Ok(()) };
     let at = at_of(t);
     match arm {
-        OrderValid::Move => row_move_valid(g, t, men),
-        OrderValid::Stack => row_stack_valid(g, t, men),
         OrderValid::WallRow => match crate::wallcharge::wall_charge_valid(g, t, men) {
             crate::wallcharge::WallChargeValid::Text(w) => Err(Some(w)),
             crate::wallcharge::WallChargeValid::Bool(true) => Ok(()),
@@ -494,11 +489,6 @@ pub fn order_issue(g: &mut crate::game::Game, d: OrdersOrderDefId, men: &[GuardI
     let arm = g.tab.orders_order_def[d].issue.clone();
     match arm {
         OrderIssue::Nothing => None,
-        OrderIssue::Move => row_move_issue(g, men, t, o),
-        OrderIssue::Stack => row_stack_issue(g, men, t, o),
-        OrderIssue::Cover => row_cover_issue(g, men, t, o),
-        OrderIssue::FallIn => row_fall_in_issue(g, men, t, o),
-        OrderIssue::Hold => row_hold_issue(g, men, t, o),
         OrderIssue::Silent => { crate::silent::set_silent(g, true, Some(crate::silent::By::Order)); None }
         OrderIssue::Loud => { crate::silent::set_silent(g, false, Some(crate::silent::By::Order)); None }
         OrderIssue::ShutDoor => crate::shutdoor::order_issue(g, men, t),
