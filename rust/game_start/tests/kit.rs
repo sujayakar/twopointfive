@@ -466,3 +466,19 @@ fn men_getting_off_a_grenade_leave_by_a_door_that_stands_open_and_not_a_shut_one
         }
     }
 }
+
+// ---------------------------------------------------------------- a Training level's kit
+
+/// THE RULE: a Training level is played with the kit its lesson is taught with: what a player is built with of his own four things, whatever the issue card
+/// counts out, as the address of its level says. The same address of a mission's level wears the card.
+/// A FAILURE MEANS: a lesson asks for a thing he has too few of, on a page that starts its game from the address.
+#[test]
+fn a_training_level_wears_its_lessons_kit() {
+    for s in [1, 2, 3] {
+        let start = |level: &str| Play::mission(level, &format!("?levelFile={level}&roomclear=1&squad4"), &Opts { seed: s, ..Default::default() });
+        let built = kit(&start("tut-team.json"));
+        assert_eq!((built.3, built.4, built.5, built.0), (4.0, 2.0, 2.0, 5.0), "seed {s}: smoke, stuns, frags and sponge rounds on a lesson");
+        let issued = kit(&start("killhouse.json"));
+        assert_eq!((issued.3, issued.4, issued.5), (1.0, 1.0, 1.0), "seed {s}: the control wears the issue card");
+    }
+}
