@@ -58,11 +58,11 @@ pub fn smoke_step(g: &mut crate::game::Game, dt: f64) {
     if n == 0 {
         return;
     }
-    let (s, gk) = (g.k.sense.smoke, g.k.sense.glow);
+    let s = g.k.sense.smoke;
     let k = crate::scene_collision::GridStepK { decay: s.decay, spread: s.spread, rise: s.rise, rise_rate: s.rise_rate, gone: s.gone, in_wind: s.in_wind };
-    let glow = crate::scene_collision::GridStepGlow { k: crate::scene_collision::GridStepGlowK { albedo: gk.albedo, share: gk.share, passes: gk.passes, sweep: gk.sweep } };
     let wind = if smoky(g) { crate::wind::wind_storm_drift(g) } else { None };
-    crate::scene_collision::grid_step(g, n as f64, k, Some(glow), wind.as_ref());
+    let sweep = g.k.sense.glow.sweep;
+    crate::scene_collision::grid_step(g, n as f64, k, sweep, wind.as_ref());
 }
 
 /// No smoke anywhere; the beat, the plan and the light that comes round stay: they are the level's.
@@ -79,25 +79,10 @@ pub fn smoke_renew(g: &mut crate::game::Game) {
     }
 }
 
-/// The light that comes round on a point: the nearest square metre in clear sight, else 0.
-pub fn glow_at(g: &mut crate::game::Game, p: V3) -> f64 {
-    let (nx, nz) = sim::bricks::plan(g.sim);
-    let (ix, iz) = (m::floor(p[0]), m::floor(p[2]));
-    let (ax, az) = (p[0] - ix - 0.5, p[2] - iz - 0.5);
-    let (sx, sz) = (if ax < 0.0 { -1.0 } else { 1.0 }, if az < 0.0 { -1.0 } else { 1.0 });
-    let x_first = m::abs(ax) >= m::abs(az);
-    for k in 0..4 {
-        let dx = if k == 3 || k == (if x_first { 1 } else { 2 }) { sx } else { 0.0 };
-        let dz = if k == 3 || k == (if x_first { 2 } else { 1 }) { sz } else { 0.0 };
-        let (jx, jz) = (ix + dx, iz + dz);
-        if !(jx >= 0.0 && jz >= 0.0 && jx < nx && jz < nz) {
-            continue;
-        }
-        if !crate::scene_collision::segment_blocked(g, p, [jx + 0.5, sim::glow::CHEST, jz + 0.5], None, None, None) {
-            return sim::state::state_read(g.sim).smoke.st[sim::bricks::O_GLOW_B + (jz * nx + jx) as usize];
-        }
-    }
-    0.0
+/// THE LIGHT UNDER A ROOF at a point that is no lamp's and not the sun's own beam (None: it is under the open
+/// sky, or nothing was swept yet).
+pub fn under_roof(g: &crate::game::Game, p: V3) -> Option<sim::glow::Field> {
+    sim::bricks::under_roof(g.sim, g.sim, p)
 }
 
 /// FOR A TOOL THAT HOLDS THE SENSES TO THE PICTURE (src/host/modelerr.ts), between ticks; no rule asks it. `what` 0: the light on points (`xs`: whose carried
@@ -108,7 +93,7 @@ pub fn sense_tool(g: &mut crate::game::Game, what: f64, xs: &[f64]) -> Vec<f64> 
     match what as i32 {
         0 => {
             let Some((&owner, points)) = xs.split_first() else { return Vec::new() };
-            points.chunks_exact(3).map(|p| crate::guards::light_estimate_at(g, at(p), Some(&mut |_: &mut Game, o: f64| o == owner), None, None)).collect()
+            points.chunks_exact(3).map(|p| crate::guards::light_at(g, at(p), Some(&mut |_: &mut Game, o: f64| o == owner), None, None).0).collect()
         }
         1 => xs.chunks_exact(6).map(|l| smoke_between(g, at(l), at(&l[3..]))).collect(),
         2 if xs.len() == 3 => {

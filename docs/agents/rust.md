@@ -1220,6 +1220,24 @@ one stops the tool by name, on an address one does nothing and says so in the co
     a searching man knows the dark places from the lit ones where there is no picture too (they read 0.5); smoke dims every pair's line, not only room fighters within
     18 m, and each eye asks its own line (it was one answer a pair); the fog shows a man any one of the team sees past the smoke, with no latch of 8 or 30 frames;
     the goggles' place light has the sky's dome and the bounce; a bad tube's dips are not what the place lights (`lights.rs tube`).
+  - THE LIGHT UNDER A ROOF IS LIGHT (`rust/sim/src/glow.rs`): from every square metre 128 lines go out and bring what they meet, a surface with its own colour and the sun's where it
+    falls, or the hour's sky and the ground out by an opening; a sweep of the plan (3.2 s) is one more bounce, and the lamps' change goes quicker. No constant was fitted. Against the
+    graphics card's probe at 1.2 m, the share of points that read the other side of the lit line: barracks midday 3.7 % (43 before), dusk 3.0, overcast 1.8, night 6.5; compound midday 2.2 (57),
+    warehouse midday 2.2 (31), registry midday 1.5 (17.5). At 0.4 m by day it is worse (barracks midday 19.5 %). Left out: carried lamps, flashes, smoke, a yard's lamp seen from inside.
+  - A LAMP IS AS STRONG AS IT IS DRAWN (`light.rs by_day`, `hours::exposure`, `render_lights::light_by_day`): one fact of the hour that the rules and the picture's upload both read. A weapon
+    light in the eyes goes by it too (`roomfight::lamp_glare`); a flash's and a stun's dazzle are times and do not. The drawn smoke's wind is the rules' wind (`wind_blows`: no storm drift in an
+    hour the sky puts the storm off; head-high smoke outdoors at midday 55 % -> 15 % of points apart from the picture's).
+  - EYES GET USED TO A PLACE (`guards::eyes_at`, `glow.rs levels`): by day, under a roof, light reads as the picture's one exposure model shows it to eyes that are there
+    (`place_common.wgsl lookExpoFor`): x the open air's level over the place's, from 1 to the night's exposure over the hour's. A place's level is the light on a face that looks up, smoothed
+    8 m and never through a wall, a pane or a doorway: the picture's place field (`placePlan.ts PLACE`), on metres. 1 at night and in the open. Without it a windowless room at noon
+    read 0.00 and the men in it were blind at three paces. `Guard.irradiance` is the light as it stands (the goggles' tube reads that); `visibility` is what the eyes see by. Limit: a point has
+    one reading, its own place's; a man in the yard looking into a dark room is not told it is darker to him.
+    Notice times, Sam 3 to 7 m before each man, before -> after: barracks midday 3.10 s -> 0.26, dusk 2.95 -> 0.48, night 3.74 -> 4.30; compound midday 1.63 -> 0.23; warehouse midday 6 of 10 in 0.58
+    -> 10 of 10 in 0.26; tut-queue (stands at dusk) 1 of 7 either way.
+  - WHAT A BOX SENDS BACK of the light is in its row of the box world (`World.back`) and compared with it: whoever paints a static says `scene_collision::wrote`.
+  - COST, native: 0.30 to 0.38 ms a step of a tenth of a second (0.06 ms a tick), the same by day and night; 125 to 190 ms once, in a mission's first step. 1.8 MB a world beside the block, 80 KB in it.
+    Two machines of two seats at midday, one of them put back four ticks twice a second: five minutes equal in every part, on the barracks and the compound. `game_start/tests/senses.rs`.
+    Never seen on a GPU beside it, played by nobody.
   - HELD BY `rust/game_start/tests/senses.rs` (eight rules; the put-back one is red with the stamp held still) and by `tools/qa/modelerr.ts` (`TPS_GAME=rust`), which asks
     the Rust game through the one tools' row `senseTool`: against the M4 Max's kept picture, light decides the other way on 1.1 % under a roof and 1.1 % under the sky,
     smoke at 1.5 m on 9.7 % and 2.7 %. MEASURED, 12 seeds, the same grid before and after: a guard 7 m from a lit man notices in 0.53 s and 0.53 s, through thinning

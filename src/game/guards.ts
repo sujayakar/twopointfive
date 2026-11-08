@@ -927,7 +927,7 @@ function lightEstimateIn(g: Game, P: Vec3, skipOwner: ((owner: number) => boolea
   if (moon) moonLight(g, P, acc);   // …and at night the moon where it has a line to P (sense.ts SENSE.moon; the error tool asks both ways)
   if (!steadyOnly) strokeLight(g, P, acc);   // a stroke of lightning under a picked weather (weather.ts): the renderer's meter reads it, so its stand-in does — nothing with no weather picked
   const direct = Math.max(acc[0], acc[1], acc[2], acc[3], acc[4], acc[5]);
-  return field ? direct + field.grid.glowAt(g.col, P) : direct;   // (the light that comes round reaches every face alike: it is added to the brightest)
+  return direct;
 }
 /** THE LIGHT MODEL'S FIELD for this game (sense.ts SENSE.bounce): its own smoke, where the senses are the game's, the switch is up and a grid stands.
  *  With it the estimate above has the smoke's shadow on every lamp and the light that comes round; null = the estimate as it always was. */

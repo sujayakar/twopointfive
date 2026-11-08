@@ -616,11 +616,11 @@ pub fn bodies(g: &mut crate::game::Game, gd: GuardId) {
 pub fn civ_visibility(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> f64 {
     let cv = civ_of(g, gd);
     let c = g.gd[gd].ch;
-    let e = crate::guards::light_on(g, c);
+    let [stands, e] = crate::guards::light_on(g, c);
     let seen = crate::game::game_visibility_of(g, e);
     g.cv[cv].vis = v3::damp(g.cv[cv].vis, seen, 6.0, dt);
     g.gd[gd].visibility = g.cv[cv].vis;
-    g.gd[gd].irradiance = e;
+    g.gd[gd].irradiance = stands;
     g.cv[cv].vis
 }
 

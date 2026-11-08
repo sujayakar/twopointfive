@@ -94,31 +94,60 @@ pub fn sweep_statics(g: &mut crate::game::Game, c_2: CharId, fx: f64, fz: f64) {
 
 // ------------------------------------------------------------ the light meter
 
-/// THE LIGHT ON A POINT, by which every eye judges how well it is seen: the best of the six axis faces under every lamp that reaches it (each dimmed by the
-/// smoke on its way), the sun or the moon and the sky, a stroke of lightning, plus the light that comes round the corners. `skip_owner` = whose carried
-/// lamps are left out; `steady_only` = what the place lights, with nothing that passes; `leave` = lamps of the level's own left out, by what feeds them.
+/// THE LIGHT ON A POINT, by which every eye judges how well it is seen: what stands on it (`light_at`), as eyes used to the place see it (`eyes_at`).
 pub fn light_estimate_at(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: Option<bool>, leave: Option<f64>) -> f64 {
+    let (e, place) = light_at(g, p, skip_owner, steady_only, leave);
+    e * eyes_at(g, place)
+}
+/// How many times brighter than it stands the light of the place about a point is seen by whoever is there (`eyes_at`).
+pub fn eyes_in(g: &mut crate::game::Game, p: V3) -> f64 {
+    if crate::hours::exposure(g) >= 1.0 { return 1.0; }
+    let field = crate::scene_collision::window(g, &mut |g: &mut Game| crate::sense::under_roof(g, p));
+    eyes_at(g, field.map(|f| f.place))
+}
+/// EYES GET USED TO A PLACE: how many times brighter a place under a roof that holds `place` of light is seen than an hour's light stands at, by whoever is in it: up
+/// to as bright as the open air, and never past a night's own exposure, at which a lamp is as it is at night. 1 at night and in the open air. (The picture's one
+/// exposure model, render/shaders/place_common.wgsl lookExpoFor, for eyes that are in the place, under one open sky: its low level and its middle are one. The panel's
+/// rows over it, Room brightness and Eyes open in the dark, are a taste of the picture's.)
+const EXPO_BAND: f64 = 1.25;
+fn eyes_at(g: &crate::game::Game, place: Option<f64>) -> f64 {
+    let exposure = crate::hours::exposure(g);
+    match place {
+        Some(here) if exposure < 1.0 => {
+            let darker = m::max(1.0, sim::glow::open_air(&crate::hours::sky_now(g)) / (EXPO_BAND * m::max(here, 1e-9)));
+            m::min(darker * m::min(m::sqrt(darker), EXPO_BAND), 1.0 / exposure)
+        }
+        _ => 1.0,
+    }
+}
+/// WHAT LIGHT STANDS ON A POINT, at the hour's exposure: the best of the six axis faces under every lamp that reaches it (each dimmed by the smoke on its way),
+/// the sun's or the moon's beam and the sky, a stroke of lightning, and what comes round; and, under a roof, how light the place is. `skip_owner` = whose carried lamps are
+/// left out; `steady_only` = what the place lights, with nothing that passes; `leave` = lamps of the level's own left out, by what feeds them.
+pub fn light_at(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: Option<bool>, leave: Option<f64>) -> (f64, Option<f64>) {
     let mut skip_owner = skip_owner;
     let steady_only = steady_only.unwrap_or(false);
     let leave = leave.unwrap_or(0.0);
     if crate::scene_collision::standing(g) {
-        light_estimate_in(g, p, lend(&mut skip_owner), steady_only, leave)
+        light_in(g, p, lend(&mut skip_owner), steady_only, leave)
     } else {
-        crate::scene_collision::window(g, &mut |g: &mut Game| light_estimate_in(g, p, lend(&mut skip_owner), steady_only, leave))
+        crate::scene_collision::window(g, &mut |g: &mut Game| light_in(g, p, lend(&mut skip_owner), steady_only, leave))
     }
 }
 
-/// The lamps, the hour's sky or the night's, the stroke, onto six faces; the best of them, plus the light that comes round. The order is the bits.
-pub fn light_estimate_in(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool, leave: f64) -> f64 {
+/// The lamps, the sun's beam or the moon's, the stroke, onto six faces, with the sky's under the open sky; the best of them. Under a roof the sky is what the
+/// openings show of it, and with all that comes round it is the field's (sim/glow.rs): its mean with the best face of the beams, or its own best face.
+fn light_in(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool, leave: f64) -> (f64, Option<f64>) {
     let mut skip_owner = skip_owner;
     let mut acc: Vec<f64> = vec![0.0; 6];
     lamps_on(g, p, lend(&mut skip_owner), steady_only, &mut acc, leave);
-    crate::hours::hour_light(g, p, &mut acc);
-    crate::hours::moon_light(g, p, &mut acc);
+    crate::hours::sun_light(g, p, &mut acc);
+    let field = crate::sense::under_roof(g, p);
+    if field.is_none() || leave != 0.0 { crate::hours::dome_light(g, p, &mut acc); }
     if !steady_only { crate::weather::stroke_light(g, p, &mut acc); }
     let direct = m::max_n(&[acc[0], acc[1], acc[2], acc[3], acc[4], acc[5]]);
-    // (what comes round does not say whose it is: a question that leaves lamps of the level out asks of the direct light)
-    if leave != 0.0 { direct } else { direct + crate::sense::glow_at(g, p) }
+    let Some(f) = field else { return (direct, None) };
+    // (what comes round does not say whose it is: a question that leaves lamps of the level out asks of the direct light, the sky's by lines of its own)
+    (if leave == 0.0 { m::max(direct + f.mean, f.best) } else { direct }, Some(f.place))
 }
 
 /// Is this lamp, one no fixture feeds, one of a light question's. The level's own lamps have these gates in the module (light.rs `row`). (guards.ts lampAsked)
@@ -141,6 +170,7 @@ pub fn rows_of(g: &mut crate::game::Game, steady_only: bool, leave: f64) -> crat
 /// A light question's own lamps written to the module, in the list's order, each with how many of the level's rows stand before it; the rows themselves are the module's to read. False = no question stands and the table is full. (guards.ts writeLamps)
 pub fn write_lamps(g: &mut crate::game::Game, p: Option<V3>, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool) -> bool {
     let mut skip_owner = skip_owner;
+    let exposure = crate::hours::exposure(g);
     let mut rows = 0.0;
     let mut i = 0;
     while i < g.engine.lights.lights.len() {
@@ -156,6 +186,7 @@ pub fn write_lamps(g: &mut crate::game::Game, p: Option<V3>, skip_owner: Option<
         let sp = if steady_only { row.steady } else { None };
         let (lp, radius, intensity) = match sp { Some(s) => (s.pos, s.radius, s.intensity), None => (row.pos, row.radius, row.intensity) };
         let (range, kind, dir, outer, inner, color) = (row.range, row.kind, row.dir, row.outer_deg, row.inner_deg, row.color);
+        let intensity = if exposure < 1.0 { sim::light::by_day(crate::render_lights::light_by_day(row), intensity, row.peak_intensity, exposure) } else { intensity };
         if let Some(q) = p {
             let (dx, dy, dz) = (lp[0] - q[0], lp[1] - q[1], lp[2] - q[2]);
             if dx > range || -dx > range || dy > range || -dy > range || dz > range || -dz > range { continue; }
@@ -185,21 +216,23 @@ pub fn lamps_on(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn Fn
     crate::scene_collision::lamps_on(g, acc);
 }
 
-/// The light on one body: the brighter of his chest and his head.
-pub fn light_on(g: &mut crate::game::Game, c: CharId) -> f64 {
+/// The light on one body, the brighter of his chest and his head: what stands on him, and what eyes used to the place see him by.
+pub fn light_on(g: &mut crate::game::Game, c: CharId) -> [f64; 2] {
     let pos = g.ch[c].pos;
     let chest = match g.ch[c].bones.get(crate::character::Bone::Chest) { Some(b) => *b, None => v3::add(pos, [0.0, 1.2, 0.0]) };
     let head = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(b) => *b, None => v3::add(pos, [0.0, 1.6, 0.0]) };
-    m::max(light_estimate_at(g, chest, None, None, None), light_estimate_at(g, head, None, None, None))
+    let (a, pa) = light_at(g, chest, None, None, None);
+    let (b, pb) = light_at(g, head, None, None, None);
+    [m::max(a, b), m::max(a * eyes_at(g, pa), b * eyes_at(g, pb))]
 }
 /// `light_on`, by the name and the shape the page's call surface has for it (the key it took is nothing's now).
-pub fn meter_of(g: &mut crate::game::Game, c: CharId, _key: &str) -> f64 { light_on(g, c) }
+pub fn meter_of(g: &mut crate::game::Game, c: CharId, _key: &str) -> f64 { light_on(g, c)[1] }
 
 /// The light meter of a man some AI side can be hostile to, eased at Sam's rate into his visibility. (guards.ts unitLightMeter)
 pub fn unit_light_meter(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let c = g.gd[gd].ch;
-    let e = light_on(g, c);
-    g.gd[gd].irradiance = e;
+    let [stands, e] = light_on(g, c);
+    g.gd[gd].irradiance = stands;
     let was = g.gd[gd].visibility;
     let to = crate::game::game_visibility_of(g, e);
     g.gd[gd].visibility = v3::damp(was, to, 6.0, dt);

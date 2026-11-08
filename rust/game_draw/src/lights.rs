@@ -3,7 +3,6 @@
 use alloc::vec::Vec;
 use game::game::Game;
 use game::ids::*;
-use game::render_lights::RtLight;
 
 section! {
     /// a light
@@ -102,7 +101,7 @@ fn row(g: &Game, id: LightId, ir: bool) -> Light {
     Light {
         key: id.ix() as u32,
         kind: l.kind as u32,
-        class: class(l),
+        class: game::render_lights::light_by_day(l),
         says: l.enabled as u32 | ((l.ttl >= 0.0 || l.transient == Some(true)) as u32) << 1 | (l.broad as u32) << 2 | (l.card as u32) << 3 | (ir as u32) << 4 | ((hand || l.group == "player") as u32) << 5,
         owner: l.owner as u32,
         mark: l.mark_ref.map_or(-1, |m| m as i32),
@@ -112,15 +111,4 @@ fn row(g: &Game, id: LightId, ir: bool) -> Light {
         fog: if ir { 0.0 } else { game::render_lights::light_set_fog_class(g, id) as f32 },
         ghost: l.fog_ghost.unwrap_or(0.0) as f32,
     }
-}
-
-/// what a light is, for what it is drawn at by day (render/photometry.ts lightClass)
-fn class(l: &RtLight) -> u32 {
-    if l.kind == 2.0 || l.transient == Some(true) || l.group == "devices" || l.group == "sky" || l.name.starts_with("kitview") { return 0; }
-    if l.kind == 3.0 { return 5; }
-    if l.ttl >= 0.0 || l.group == "tracer" || l.steady.is_some() { return 4; }
-    if l.card || l.group == "flashlights" { return 2; }
-    let body: &str = l.name.split("_lamp").next().unwrap_or("");
-    let car = l.name.contains("_lamp") && ["van", "gun_truck", "truck", "pickup", "lorry", "jeep", "car"].iter().any(|v| body.starts_with(v) && body[v.len()..].chars().all(|c| c.is_ascii_alphanumeric() || c == '_'));
-    if car { 3 } else { 1 }
 }
