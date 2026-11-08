@@ -109,7 +109,7 @@ pub fn room_fight_cover_passes(g: &crate::game::Game, seat: &crate::seats::SeatR
     let mine = g.tab.roomfight_op[o].tgt == Some(h);
     for &xo in g.fight.ops.iter() {
         let x = &g.tab.roomfight_op[xo];
-        if xo != o && x.tgt == Some(h) && g.gd[x.gd].state != crate::game::GuardState::Dead && x.block_t < r.no_shot && x.line_t == 0.0 && g0 >= x.reload_until && !g.gd[x.gd].muzzle_down && (!mine || g0 >= x.ready_at) { return true; }
+        if xo != o && x.tgt == Some(h) && g.gd[x.gd].state != crate::game::GuardState::Dead && x.block_t < r.no_shot && x.line_t == 0.0 && !crate::control::man::changing_magazine(g, x.gd) && !g.gd[x.gd].muzzle_down && (!mine || g0 >= x.ready_at) { return true; }
     }
     false
 }

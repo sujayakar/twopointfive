@@ -431,6 +431,18 @@ impl Play {
     /// Can he not see: a flash or a blast has his eyes for now.
     pub fn blind(&self, gd: GuardId) -> bool { self.g.time < self.g.gd[gd].dazzled_until }
 
+    /// are his hands changing magazine, and how much of it is left, in seconds
+    pub fn reloading(&self, gd: GuardId) -> Option<f64> { if game::control::man::changing_magazine(&self.g, gd) { Some(self.g.gd[gd].reload_t) } else { None } }
+    /// how many rounds have left the gun in his hands since it was made
+    pub fn rounds_fired(&self, gd: GuardId) -> f64 { self.g.fa[self.g.gd[gd].weapon].shots_fired }
+    /// Staging: his gun has this many rounds in it and no more, one of them in the chamber.
+    pub fn gun_has(&mut self, gd: GuardId, rounds: f64) { let w = self.g.gd[gd].weapon; self.g.fa[w].chamber = 1.0; self.g.fa[w].mag = Some(rounds - 1.0); }
+
+    /// Staging: the gun in his hands is the only one he has.
+    pub fn no_second_gun(&mut self, gd: GuardId) { self.g.gd[gd].second = None; }
+    /// has he no hand for his gun: reeling, in somebody's arm, a hostage in his own, his hands on a job
+    pub fn no_hand_for_it(&self, gd: GuardId) -> bool { use game::control::man::*; staggered(&self.g, gd) || held(&self.g, gd) || in_a_standoff(&self.g, gd) || game::gunslots::side_locked(&self.g, gd) }
+
     /// The spot the rounds past him have sent him to, while he is on his way or about to go (the suppression rule's cover spot); `None`: not sent.
     pub fn sent_to_cover(&self, gd: GuardId) -> Option<[f64; 2]> { self.g.gd[gd].sup.cover.map(|p| [p[0], p[2]]) }
 

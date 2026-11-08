@@ -292,7 +292,7 @@ interface Op {
   stepT: number; stepBy: { by: Guard; t: number; at: Vec3 } | null;
   /** ROOMFIGHT.doorEars: the door an enemy's hand has just opened where he heard it and has a line to its doorway — who worked it, when, the doorway point he looks at */
   doorBy: { by: Guard; t: number; at: Vec3; door: Door } | null;
-  funnelT: number; lineT: number; /** who the round was last held for, and when (showwhy.ts reads it: the fire gate's own answer, lane or cone) */ lineBy: Guard | 'player' | null; lineAt: number; /** seconds on his man with his gun in a wall (gunwall.ts) */ wallT: number; stepUntil: number; reloadUntil: number; saidT: number;
+  funnelT: number; lineT: number; /** who the round was last held for, and when (showwhy.ts reads it: the fire gate's own answer, lane or cone) */ lineBy: Guard | 'player' | null; lineAt: number; /** seconds on his man with his gun in a wall (gunwall.ts) */ wallT: number; stepUntil: number; saidT: number;
   rounds: number; heldForFriend: number; heldForLine: number; blockT: number;
   /** the feet his hands still remember (aimcost.ts `feetHold`; only fed under AIMCOST.move) */
   feetSm?: number;
