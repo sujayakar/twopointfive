@@ -394,7 +394,7 @@ export class Overlay implements HudLike {
       const squad: InteractRow[] = S ? [{ kind: 'objective', label: '', opts: [...men, ...(shut ? [] : S.notes), ...(quick ? [quick] : [])], inReach: true, off: false }] : [];
       const C = cornerRows(rows, I.lit, squad, V.lesson?.rails?.prompt ? '' : objectiveWords(V), V.corner.filter(o => !o.key || (!!S && !shut)), V.stage);
       return { rows: C.rows, primary: C.primary, more: 0, open: false }; }
-    return { rows, primary: I.lit, more: I.more, open: I.open, hint: `let go to do it · wheel / ↑↓ chooses · ${V.look.back} backs out` };   // (up as a ring the panel's list is the list at rest)
+    return { rows, primary: I.lit, more: I.more, open: I.open, hint: `let go to do it · wheel / ↑↓ chooses · ${{ tab: 'Tab', esc: 'Esc' }[V.look.back]} backs out` };   // (up as a ring the panel's list is the list at rest)
   }
 
 

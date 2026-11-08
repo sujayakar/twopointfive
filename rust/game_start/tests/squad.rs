@@ -95,7 +95,7 @@ fn too_close_is_as_he_stands_in_the_same_tick() {
 #[test]
 fn asking_writes_nothing_with_a_charge_set() {
     fn words(p: &mut Play) -> Vec<u32> {
-        let (mut w, mut words) = (game::io::W::new(), Vec::new());
+        let (mut w, mut words) = (game::bytes::W::new(), Vec::new());
         game::state_words::state_words(&mut p.g, &mut w, &mut words);
         words.extend(game_start::block::part_hashes(0));
         words
