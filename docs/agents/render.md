@@ -4219,7 +4219,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   `drawnAs('slab', [...])` where NOBODY chose and the word is only what the colour rule made of those numbers (grep `drawnAs(` for the
   list still owed a decision: 51 in 17 files, officeGen 15; none of them is a word a round reads falsely, below). `PAINT_STUFF` has no
   'mixed': a name says one thing, and a row's word is what the row is (asphalt says plain). A door's leaf says its paint's word
-  (`lookTidy.ts lookDoors`; a `look.ts LOOK_DOORS` row says one a side). An old cut's core says its stuff in the cut record (`cut.ts
+  (`leafPaint.ts paintLeaves`; a `look.ts LOOK_DOORS` row says one a side). An old cut's core says its stuff in the cut record (`cut.ts
   CUT_CORE_STUFF`, bits 12..16). A SHAPE'S PIECE (`scene/shapes.ts`, a box's `shape.with`) says its word as a box does, its own or its
   paint's row's, and the box stood up for it carries it. A TONE OF A PALETTE ROW is made of what the row is: the kit's `toned` (`gwotKit.ts`)
   and the snow levels' rock (`tools/levels/snowRock.ts`) hand their numbers through `tonedAs`, which is how ground dressing, stains, worn

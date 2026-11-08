@@ -19,6 +19,8 @@ impl Query {
         let pairs = text.split('&').filter(|w| !w.is_empty()).map(|w| match w.split_once('=') { Some((k, v)) => (decode(k), decode(v)), None => (decode(w), String::new()) }).collect();
         Query { pairs }
     }
+    /// `q.getAll(name)`
+    pub fn get_all<'a>(&'a self, name: &'a str) -> impl Iterator<Item = &'a str> + 'a { self.pairs.iter().filter(move |(k, _)| k == name).map(|(_, v)| v.as_str()) }
     /// `q.has(name)`
     pub fn has(&self, name: &str) -> bool { self.pairs.iter().any(|(k, _)| k == name) }
     /// `q.get(name)`: the first value under the name

@@ -33,8 +33,8 @@ import type { FollowCamera } from './game/camera';
 import { standGame, populateHost, addressBeforeGame, soloOfAddress } from './host/standup';
 import { pageSwitches, pageRows } from './host/profile';
 import { MARKING_TEXEL } from './scene/markings';
-import { LOOK, LOOK_DOORS, LOOK_LAB, lookLabOn, lookLevelFile, lookPageRows, lookTrialOn, LOOK_TRIALS, placeOfQuery, setLookPlace, setSuitAs, lookKeptOf } from './scene/look';
-import { lookTidy, lookDoors } from './scene/lookTidy';
+import { LOOK, LOOK_LAB, lookLabOn, lookLevelFile, lookPageRows, lookTrialOn, LOOK_TRIALS, placeOfQuery, setLookPlace, setSuitAs, lookKeptOf } from './scene/look';
+import { lookTidy } from './scene/lookTidy';
 import { stepFrame, FIXEDSTEP, type LoopCtx } from './host/loop';
 import { bindFindMe, watchCtrlTaps, FINDME, setFindMe } from './host/findme';
 import { findMeOutline } from './ui/findme';
@@ -360,7 +360,6 @@ async function main() {
   if (game.weather.levelRoofs) weatherKindConfig.on = true;   // (the picture follows the game: a game that stands under a level's own roofs has the shaders read the third and fourth, whose half is frame data: render/frame.ts levelSwitches)
   boot.span('gameCtor', tGame); boot.mark('game');
   if (rustGame) { rustGame.rustAttach(game); (window as any).__rust = Object.assign(rustGame.RUST_GAME, { hashes: rustGame.rustHashes, settled: rustGame.RUST_SETTLED, means: rustGame.rustMeans, resync: rustGame.rustResync, whole: rustGame.rustWhole, file: rustGame.rustFile, fileIn: rustGame.rustFileIn, poke: rustGame.rustPoke, call: rustGame.rustCall, bridge: rustGame.rustBridge, state: rustGame.rustState, warmUp: (n?: number) => rustGame.rustWarm({ input, cam, canvas }, n) }); }   // (?rust=1: from here the game's tick is the Rust game's and this Game its puppet)
-  if (LOOK.on) lookDoors(game.doors.list, engine.world.statics, LOOK_DOORS[(q.get('levelFile') ?? '').replace(/-gwot(?=\.json$)/, '')]);   // (picture only: under the default look a level that wears it has its door leaves in its own paint and weathered wood, not the office's veneer — scene/lookTidy.ts)
   // … and the maps of what the level stands up with are made before its first frame (render/gbuffer.ts needLook, awaited with the pipelines below): every static,
   // door's leaf and loose prop's part is asked its word, by the one rule (whatever a paint is told by: its colour, or a name) and after the leaves have their paint
   let lookMaps: Promise<void> | undefined;
