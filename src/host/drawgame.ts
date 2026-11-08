@@ -9,8 +9,11 @@ import type { SaveRow } from '../ui/runcard';
 import { CURSOR_DOUBLES, sampleCursor, type CursorAt, type CursorCanvas, type CursorLens } from '../view/cursor';
 import { readCursorView, readDebriefView, readRunView, readTickView, type CursorView, type DebriefView, type RunView, type TickView } from '../view/read';
 
-/** what a measuring take notes: each man by what he is at and whether he carries a light, the reaction force, the alarm, the run's saves */
-export interface Tally { men: [state: string, lit: 0 | 1][]; qrf: string; escalation: number; autosaves: number; manual: number; loads: number }
+/** a hands-off player's plan: the die his beats are rolled on, the seconds he plays, doors by name to take first, the breaker thrown before any */
+export interface HandsOffPlan { seed: number; cap?: number; route?: string[]; breaker?: boolean }
+export interface HandsOffSaid { t: number; end: 'taken' | 'sam' | 'cap' | 'spent' | null; given: number; shotAt: number; up: number; of: number; left: number }
+/** what a measuring take notes: each man by what he is at and whether he carries a light, the reaction force, the alarm, the run's saves, the mission's stage */
+export interface Tally { men: [state: string, lit: 0 | 1][]; qrf: string; escalation: number; autosaves: number; manual: number; loads: number; stage: string; alarm: boolean; alerts: number; /** a room clear is staged */ clear: boolean }
 /** what a start is handed beside the level (rust/game_start/src/handed.rs PARTS) */
 export interface Start { level: Uint8Array; words: string; mannequin: Uint8Array; mannequinBin: Uint8Array; cast: Uint8Array; castLook: Uint8Array; seed: number; seats?: number }
 
@@ -142,6 +145,16 @@ export class DrawGame {
   run(): RunView { this.X.face_run_view(this.h); return readRunView(this.bytes()); }
   /** how the run ended, in a word, and why; null while it is being played */
   verdict(): { won: boolean; word: string; why: string } | null { const r = this.X.face_verdict(this.h); if (!r) return null; const [word, ...why] = this.answer().split('\n'); return { won: r === 2, word, why: why.join(' ') }; }
+  /** nobody's hands are on the seat: a hands-off player takes it (rust/game_run hands_off.rs), or with no plan it is the host's again */
+  handsOff(plan: HandsOffPlan | null): void { const b = this.enc.encode(plan ? [plan.seed, plan.cap ?? 240, plan.breaker ? 1 : 0, ...plan.route ?? []].join('\n') : ''); this.handed(b, (p, n) => this.X.face_hands_off(this.h, 0, p, n)); this.handsKept.tick = -1; }
+  /** how he stands, null where nobody is hands off */
+  hands(): HandsOffSaid | null {
+    const K = this.handsKept; if (K.tick === this.ticks && K.h === this.h) return K.said;
+    this.X.face_hands_said(this.h); const s = this.answer(); K.tick = this.ticks; K.h = this.h; return K.said = s ? JSON.parse(s) as HandsOffSaid : null;
+  }
+  private handsKept = { tick: -1, h: 0, said: null as HandsOffSaid | null };
+  /** his timeline */
+  handsTrace(): string { this.X.face_hands_trace(this.h); return this.answer(); }
   private tallied: { tick: number; h: number; t: Tally } | null = null;
   /** what a measuring take notes of the game as its last tick left it */
   tally(): Tally {
