@@ -224,8 +224,6 @@
 "squad::RoomClear":["nextDoor","restA","restB","b"],
 "squadthrow::LentBack":["post","face"],
 "squadthrow::State":["shown","scratch"],
-"squadthrow::StateCaught":["who"],
-"squadthrow::StateKeptValue":["th","line"],
 "squadthrow::Walk":["A","back"],
 "squadthrow::WalkBack":["post","face"],
 "stackroom::Book":["near"],

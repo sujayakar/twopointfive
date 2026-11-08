@@ -208,7 +208,7 @@ fn one(dir: &str, r: &Run, check: bool, but: &[String]) -> Result<String, String
     let hand = read_hand(&std::fs::read_to_string(format!("{}/{}.hand", dir, r.hand)).map_err(|e| format!("{}/{}.hand: {}", dir, r.hand, e))?, frames);
     let file = format!("{}/{}.h", dir, r.tag());
     // the parts: the game's own (game::state_words), then rust/sim's block (`sim.dice`, `sim.poses`, …)
-    let names: Vec<String> = game::state_words::STATE_NAMES.iter().map(|s| s.to_string()).chain(game_start::block::PART_NAMES.iter().map(|s| format!("sim.{}", s))).collect();
+    let names: Vec<String> = game::state_words::state_names().into_iter().chain(game_start::block::PART_NAMES.iter().map(|s| format!("sim.{}", s))).collect();
     let n = names.len();
     let mut kept: Vec<u8> = Vec::new();
     // (then: the kept file's part names, where its frames begin and how wide one is; pairs: the parts compared, as (its place now, its place then))
@@ -239,7 +239,7 @@ fn one(dir: &str, r: &Run, check: bool, but: &[String]) -> Result<String, String
     let file_of = if r.level.ends_with(".json") || std::path::Path::new(&r.level).exists() { r.level.clone() } else { format!("{}.json", r.level) };
     let mut p = Play::level(&file_of, r.clear, &Opts { seed: r.seed, ..Default::default() });
     p.g.god_mode = hand.unhurt;
-    let (mut w, mut words, mut row) = (game::io::W::new(), Vec::new(), vec![0u8; 8 + n]);
+    let (mut w, mut words, mut row) = (game::bytes::W::new(), Vec::new(), vec![0u8; 8 + n]);
     let (mut next, mut done, mut undone) = (0usize, 0usize, 0usize);
     let mut did = vec![0usize; hand.lines.len()];
     let mut why_not = vec![String::new(); hand.lines.len()];

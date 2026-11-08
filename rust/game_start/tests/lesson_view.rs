@@ -39,7 +39,7 @@ fn char_id(p: &Play, seat: usize) -> f64 { let s = p.g.seats[seat]; p.g.ch[p.g.p
 
 /// every word of the game's state, a word a part: the game's own parts, then rust/sim's block
 fn words(p: &mut Play) -> Vec<u32> {
-    let (mut w, mut words) = (game::io::W::new(), Vec::new());
+    let (mut w, mut words) = (game::bytes::W::new(), Vec::new());
     game::state_words::state_words(&mut p.g, &mut w, &mut words);
     words.extend(game_start::block::part_hashes(0));
     words

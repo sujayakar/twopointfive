@@ -1,18 +1,18 @@
 //! A GAME IS THE SAME GAME IN ANY OF rust/sim's SLOTS, and two that stand at once do not touch each other. The page's module stands a game
 //! wherever a slot is free (`face_start`), and a host of several games (a server, the probe runner) has them side by side.
 //! (A file of its own: these stands hold no `Play`, so they must not run beside the tests that do.)
+use game::bytes::{ToBytes, W};
 use game_start::stand::{self, StartOpts, Stood};
 use game_start::{block, files, json};
 
 const LINK: &str = "?levelFile=kit-yard.json&roomclear&squad4";
 fn opts(seed: u32, slot: usize) -> StartOpts { StartOpts { seed, slot, link: Some(LINK.into()), ..Default::default() } }
 fn step(s: &mut Stood, frames: usize) { for _ in 0..frames { stand::frame(&mut s.game, &s.host, 1.0 / 60.0); } }
-/// the game as the bridge writes it, and a hash of each part of its block. The box mirror is left out of the game's bytes: it holds where its
-/// tables stand in memory, which is the slot's own (its tables themselves are in the block, and the block is compared whole)
+/// the game's own bytes, whole, and a hash of each part of its block
 fn read(s: &Stood, slot: usize) -> (Vec<u8>, Vec<u32>) {
-    let mut g = s.game.clone();
-    g.col.mirror = game::scene_box_mirror::BoxMirror::blank();
-    (game::io::export(&g), block::part_hashes(slot))
+    let mut o = W::new();
+    s.game.w(&mut o);
+    (o.b, block::part_hashes(slot))
 }
 
 /// A FAILURE MEANS: something of a game is kept by the slot's number, or outside the game and its block (a static of rust/sim or of the game

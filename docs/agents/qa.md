@@ -1402,9 +1402,8 @@ but synthetic writes still work.
   fresh run would move them (seats.ts drives its first seat through the host's own Input and camera) and the kept run never recorded them. A grown
   run holds for as long as no rule of the tick reads the host's own rows on a host that steps by records; the day one does, it parts from a fresh
   run and is kept anew. `hold.sh` calls the grower only when the end-grown rule fails, and says so on the run's line. The snapshot's list of
-  what is the host's (`src/game/rollback.ts HOST_FIELDS`) has the two fields too: it is a second list beside the wire's (`tools/wire/wire.ts
-  HOSTS_OWN`), in the TypeScript's names and with another rule (what a snapshot leaves alone, against what no state word reads), and the two are
-  not made one here.
+  what is the host's (`src/game/rollback.ts HOST_FIELDS`) has the two fields too: it is a second list beside the types' own (`#[bytes(skip)]`),
+  in the TypeScript's names and with another rule (what a snapshot leaves alone, against what no state word reads), and the two are not made one here.
 - **A mission's address is read in two places, and a host that starts a game from one reads it in both** (2026-11-07; `src/host/standup.ts`
   `addressBeforeGame(q)` and `startAtAddress(game, q)` / `soloOfAddress`; in Rust `scenario_run::address_before_game` and `start_at_address`, called
   by `rust/game_start stand.rs`). BEFORE THE GAME IS MADE: the mission row's own hour and weather onto the words, the weather the game is BORN in
@@ -1439,7 +1438,7 @@ but synthetic writes still work.
   (`plain`) and does read a level. WHAT WRITES WHAT: in the TypeScript the knob tables and the difficulty module's own state are the PROCESS'S, so an address that names a level leaves the tables
   on it, as a tool's own `setDifficulty` does, and one that names none leaves them as they stand; such a call names no game, so it runs the TypeScript's body and does not cross to a Rust game an older
   stand left alive, which takes it by the scan if it is stepped again ((6): `surface.ts hostOf`, `scan.ts SETTING`). In Rust they are the game's own. A host's tables win: `standUp`'s new `tables` is laid right after the
-  address's reading (a page's tape in `rerun.ts`, as a page lays `recipeTables`), and a Rust start HANDED knob tables (`stand_handed`, part 6) does not read the
+  address's reading (a co-op machine's `tools/mp/stand.ts`, a page's tape in `rerun.ts`, as a page lays `recipeTables`), and a Rust start HANDED commands (`stand_handed`) does not read the
   address's difficulty at all (`StartOpts.difficulty`), because that host already has.
   THE CHECKS: `bun run tools/blitz/start-levels.ts` and `--seats 2` hold the Rust start to this one mission by mission; `--again` holds a second
   start in one process to the first; `--words '&hard'` holds every mission's hard start, the knob tables and the difficulty module's record with it; `tests/hard.rs` and the probe `levers-address` (`LEVERS_ADDRESS_BREAK=1` must fail) hold the reading; `tools/qa/rowset-check.ts` reads the order of the address's reader off its source (`ROWSET_ORDER_BREAK=1`
