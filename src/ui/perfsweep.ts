@@ -9,11 +9,10 @@
 // The picture flickers while it runs — it is a measurement take, not play. THE ROWS ARE DATA: a new settings row to price is one line in SWEEP_ROWS; a row whose
 // setting this build does not have, or that is already at the flipped value, is skipped and named in the 'begin' event.
 import type { Engine } from '../engine';
-import type { Game } from '../game/game';
 import { SCALE_STEP, SCALE_FLOOR, type Quality, type QualityName } from './quality';
 import type { SmokeSystem } from '../smoke/smoke';
 import { smokeIndirectFlip } from './sweepSmoke';
-import type { PerfRecorder } from './perfrec';
+import type { MeasuredGame, PerfRecorder } from './perfrec';
 import { savedWords, onThisMachine } from '../host/savefile';
 import { mulberry32 } from '../math/dice';
 
@@ -133,7 +132,7 @@ export class PerfSweep {
   private tag: HTMLElement | null = null; private preset = ''; private hand = false; private own = false;   // (the preset the page should be at right now: the start's, or the preset row's while it is flipped)
   /** the last finished (or stopped) sweep: 'done' | 'stopped: why' — what a script polls */
   last = '';
-  constructor(private engine: Engine, private game: Game, private quality: Quality, private smoke: SmokeSystem, private rec: PerfRecorder, private note: (s: string) => void,
+  constructor(private engine: Engine, private game: MeasuredGame, private quality: Quality, private smoke: SmokeSystem, private rec: PerfRecorder, private note: (s: string) => void,
     /** a reason the page cannot be measured right now (auto quality still calibrating, the start card up), or null */
     private blocked: () => string | null = () => null) {}
   /** the 'one snow in one air off' row's flip (ui/sweepSnow.ts, set by the page): its flip, or why not here. Unset = a page without it: the row is skipped */
@@ -216,7 +215,7 @@ export class PerfSweep {
   /** the start of segment i that is dropped, ms: the take's own, or a slow row's — for its flipped segment and for the baseline right after it (the flip takes as long to go as to come) */
   private settleOf(i: number): number { return Math.max(this.opts.settleMs, Math.round(this.slow * Math.max(this.plan[i]?.armed?.row.settleMs ?? 0, this.plan[i - 1]?.armed?.row.settleMs ?? 0, this.plan[i - 1]?.armed?.row.settleAfterMs ?? 0))); }
   /** the game's own clock, s (null on a page whose game has none) */
-  private clock(): number | null { const t = (this.game as unknown as { time?: unknown }).time; return typeof t === 'number' ? t : null; }
+  private clock(): number | null { const t: unknown = this.game.time; return typeof t === 'number' ? t : null; }
   private next(): void {
     this.at++;
     const seg = this.plan[this.at], a = seg?.armed ?? null;
@@ -335,7 +334,7 @@ export class PerfSweep {
         return { row, label: row.label, from: { fogPass: 'hint' }, to: { fogPass: 'old' }, apply: () => { F.pass = 'old'; return () => { F.pass = 'hint'; }; }, ready: () => { const r = ran(); return r === undefined || r === 'old'; } };
       }
       case 'fogEdge': {   // the band, to nothing and back. The pass reads it off the frame, and a running game writes the frame from its own table (the fog's `knobs`) every step: so both are written and both put back — on a frozen take the frame's holds, on a live one the game's. Read loosely: a build from before the soft edge has neither number. (The game's table is a journaled one: a run tape taken across a live take carries the flips as its own rows)
-        const fog = this.game.fogOfWar as unknown as { on?: boolean; knobs?: Record<string, unknown> } | null | undefined;
+        const fog = this.game.fogOfWar;
         const F = E.fogFrame as ({ on: boolean; count?: number; full?: boolean; sight?: boolean; edge?: number } | null | undefined), K = fog?.knobs;
         if (!fog?.on || !F?.on || (F.count !== undefined && F.count <= 0)) return 'fog of war is off here';
         if (!K || typeof K.edge !== 'number' || typeof F.edge !== 'number') return "this build's fog has no soft edge";
