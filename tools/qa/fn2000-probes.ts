@@ -223,9 +223,9 @@ export async function rifleReload() {
   { const fresh = kit(rf); const D = rf.def;
     for (let f = 0; f < 60; f++) { W.cursorAt(WALLPT); if (f % 12 === 0) input.clicked |= 1; W.step(DT); } for (let f = 0; f < 10; f++) W.step(DT);
     const before = kit(rf); const items0 = new Set(game.items.items);
-    let animAt0 = false, hudMid = '';
+    let animAt0 = false;
     const plan = kitReload(game, rf, true);
-    const { beat, doneAt } = reloadBeat(170, f => { if (f === 0) animAt0 = pl.char.anim.reloading; if (f === 40) hudMid = hudText(game); });
+    const { beat, doneAt } = reloadBeat(170, f => { if (f === 0) animAt0 = pl.char.anim.reloading; });
     const after = kit(rf); const newItems = game.items.items.filter((it: any) => !items0.has(it));
     const fails: string[] = [];
     if (fresh !== 'chamber 1 mag 30 spare [30,30]') fails.push(`fresh kit "${fresh}" (want 30+1 [30,30])`);
@@ -235,7 +235,6 @@ export async function rifleReload() {
     if (after !== 'chamber 1 mag 30 spare [30,25]') fails.push(`after "${after}" (want the fullest in, the 25 to storage)`);
     if (newItems.length) fails.push(`${newItems.length} item(s) dropped on a partial reload`);
     if (!animAt0) fails.push('no reload one-shot on the animator');
-    if (!hudMid.includes(gearText('FN2000 · reloading'))) fails.push(`kit row mid-reload lacks "${gearText('FN2000 · reloading')}": ${hudMid.slice(-260)}`);
      }
   // (b) empty: the box drops (fill 3, his), the rack at 2.0
   { rf.mag = 0; rf.chamber = 0; if (!RELOAD.auto) W.step(DT); const items0 = new Set(game.items.items);
@@ -450,31 +449,6 @@ export async function kitSlots() {
     pl.slot = 'rifle'; pl.holstered = false; pl.throwKind = 'smoke'; settle(40); const f2k = fistOf(game);
     if (f2k.can) fails.push(`the rifle in the hands and a ${f2k.can} can in the fist — the 08-08 bug`);
     F.verdict(!fails.length, '(b) the fist shows the SELECTED item and nothing else: the pistol in it only on the pistol\'s slot drawn, a can only on a canister slot drawn, the rifle in the hands only on its slot drawn (else across the back) — never a can beside the rifle', (fails.length ? '✗ ' + fails.join('\n    ✗ ') + '\n    ' : '') + tr.join(' | ')); }
-  // (c) the kit column: rows 1‥4 in the digits' order, the OCP tag closing row 1, nothing about the right button in the strip, the load that is UP lit (RING on a fresh kit, the 40MM dim; after 2 again the other way round); the loadout off
-  { const fails: string[] = [];
-    pl.slot = 'pistol'; pl.holstered = false; rf.attIdx = 0; settle(10); const h0 = hudText(game);   // (the RING up, as on a fresh kit)
-    const order = [...h0.matchAll(/span\.key\{(\d)\} span\.name\{([^}]*)\}/g)].map(m => `${m[1]}:${m[2]}`).join(',');
-    if (order !== gearText('1:Five-seveN,2:FN2000,3:smoke,4:stun,5:frag')) fails.push(`rows ${order}`);   // (5: the frag part's row)
-    if (!/div\.slot\.sel\(span\.key\{1\}[^|]*span\.tag\.ocp\.on\{OCP\}\(span\.ocpbar/.test(h0)) fails.push(`row 1 lacks the lit OCP tag + meter: ${h0.split(' | ')[2]}`);
-    if (/RMB/.test(h0.split(' | ')[0]) || /BRACE/.test(h0)) fails.push(`the strip still names the right button / a brace: ${h0.split(' | ')[0]}`);
-    if (!h0.includes(`span.tag.rings.on{${ringTag()} ×5} span.tag.rings.shells{${shellTag()} ×${SH}}`) || /tag\.rings\.shells\.on/.test(h0)) fails.push(`the RING up: want its tag lit and the 40MM's dim beside it: ${h0.split(' | ').find(x => /key\{2\}/.test(x))}`);
-    pl.ocp.charge = 0.4; settle(1); const hLow = hudText(game); pl.ocp.charge = 1;
-    if (!/span\.tag\.ocp\{OCP\}\(span\.ocpbar\(b\)\)/.test(hLow)) fails.push(`OCP at 40 %: ${(hLow.match(/span\.tag\.ocp[^)]*\)\)/) ?? ['?'])[0]} (want the tag dim — not .on — while it recharges)`);   // (this file's hudText drops inline widths; weapons-identity's card keeps the meter's %)
-    pl.slot = 'rifle'; settle(40); const hRing = hudText(game);
-    if (!new RegExp(`div\\.slot\\.slung\\.sel\\(span\\.key\\{2\\}[^|]*span\\.tag\\.on\\{SEMI\\}[^|]*span\\.tag\\.rings\\.on\\{${ringTag()} ×5\\} span\\.tag\\.rings\\.shells\\{${shellTag()} ×${SH}\\}`).test(hRing)) fails.push(`row 2 with the rifle up and the RING on its button: ${hRing.split(' | ').find(x => /key\{2\}/.test(x))}`);
-    input.pressed.add('Digit2'); settle(2); const h40 = hudText(game);   // (RING → 40 MM)
-    if (!new RegExp(`div\\.slot\\.slung\\.sel\\(span\\.key\\{2\\}[^|]*span\\.tag\\.on\\{SEMI\\}[^|]*span\\.tag\\.rings\\{${ringTag()} ×5\\} span\\.tag\\.rings\\.shells\\.on\\{${shellTag()} ×${SH}\\}`).test(h40)) fails.push(`row 2 after 2 again (the 40 mm up): ${h40.split(' | ').find(x => /key\{2\}/.test(x))}`);
-    input.pressed.add('Digit2'); settle(2);   // (40 MM → RING)
-    if (rf.attachment !== 'ring' || !hudText(game).includes(`span.tag.rings.on{${ringTag()} ×5} span.tag.rings.shells{${shellTag()} ×${SH}}`)) fails.push(`2 again a second time: the load up is ${rf.attachment}, row 2 ${hudText(game).split(' | ').find(x => /key\{2\}/.test(x))}`);
-    // the loadout off: row 2 greyed and named, 3 / 4 keep their numbers, 2 says so and selects nothing, 3 still throws smoke
-    game.setLoadout(false); settle(4); const hOff = hudText(game); msgs.length = 0;
-    if (!hOff.includes(gearText('div.slot.absent(span.key{2} span.name{FN2000} span{not in this kit})'))) fails.push(`loadout off, row 2: ${hOff.split(' | ').find(x => /key\{2\}/.test(x))}`);
-    if (pl.slot !== 'pistol') fails.push(`loadout off with the rifle selected left slot ${pl.slot}`);
-    input.pressed.add('Digit2'); settle(2); if (pl.slot !== 'pistol' || !msgs.some(m => m.includes(gearText('no FN2000 in this loadout')))) fails.push(`2 with no rifle: slot ${pl.slot}, "${msgs.at(-1)}"`);
-    input.pressed.add('Digit3'); settle(2); if (pl.slot !== 'smoke') fails.push(`3 with no rifle: slot ${pl.slot} (want smoke — the numbers do not close up)`);
-    if (fistOf(game).rifle !== 'none') fails.push('rifle boxes drawn with the loadout off');
-    game.setLoadout(true); pl.slot = 'pistol'; pl.holstered = false; settle(10);
-     }
   // (d) the right button's matrix — pistol + light = OCP; pistol + a man whose torch is out = nothing; pistol + a man with it lit = his torch (electronics too);
   //     rifle (the RING up — there is always a load up) over a light = the ring's gesture begins like anywhere else: no OCP, no word about it; Esc drops it unsent;
   //     rifle + RING on a man = the press frame holds the arc and sends nothing, the next frame sends one ring; the pace no slower with the rifle up

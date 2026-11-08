@@ -636,11 +636,6 @@
     #equip { position: absolute; left: 18px; bottom: 86px; min-width: 200px; font: 11px/1.15 var(--h-font); color: var(--h-ink); text-shadow: var(--h-shadow); pointer-events: none; display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
     #equip .slot { display: flex; align-items: center; gap: 8px; padding: 4px 7px; border: 1px solid rgba(var(--h-edge),0.25); background: rgba(var(--h-plate),0.6); border-radius: 3px; opacity: 0.7; white-space: nowrap; }
     #equip .slot.sel { opacity: 1; border-color: rgba(var(--h-edge),0.7); box-shadow: 0 0 8px rgba(0,0,0,0.4); }
-    #equip .slot.holstered { opacity: 0.7; border-style: dashed; }   /* E: the selected item put away */
-    #equip .slot.holstered::after { content: 'holstered · E'; margin-left: 8px; color: var(--h-dim); font-size: 10px; letter-spacing: 0.1em; }
-    #equip .slot.slung.holstered::after { content: 'slung · E'; }
-    body.handslot #equip .slot.holstered::after { content: 'holstered'; } body.handslot #equip .slot.slung.holstered::after { content: 'slung'; }   /* empty hands are a slot (game/handslot.ts): E is not the way back, the row's own digit is */   /* the FN2000's row: put away is on his back */
-    #equip .slot.slung .rounds i { width: 2px; } #equip .slot.slung .rounds i.spent { width: 0; }   /* thirty of them: slimmer pips */
     #equip .slot.absent { opacity: 0.3; border-style: dotted; }   /* the rifle's row in a kit without it: kept (greyed) so smoke and stun keep their numbers */
     #equip .slot.absent .name { color: var(--h-dim); }
     #equip .tag { font: 700 10px/1.2 var(--h-head); letter-spacing: 0.14em; padding: 0 4px; border: 1px solid rgba(var(--h-edge),0.35); border-radius: 2px; color: var(--h-faint); }   /* SEMI / AUTO (Z) and RING ×n (B): lit = what the trigger does now */
@@ -650,8 +645,6 @@
     #equip .tag.ocp .ocpbar { width: 30px; height: 4px; margin-left: 5px; border-color: rgba(var(--h-edge),0.45); }
     #equip .tag.ocp.on .ocpbar { border-color: rgba(var(--h-edge),0.6); }
     #equip .tag.ocp:not(.on) .ocpbar b { background: var(--h-faint); }
-    #equip .pace { display: flex; align-items: center; gap: 8px; font: 600 10px/1.3 var(--h-head); letter-spacing: 0.14em; color: var(--h-soft); padding: 1px 7px; }
-    #equip .pace .ticks { display: inline-flex; gap: 3px; } #equip .pace .ticks i { width: 9px; height: 6px; border: 1px solid rgba(var(--h-edge),0.5); } #equip .pace .ticks i.on { background: var(--h-hi); box-shadow: 0 0 4px rgba(0,0,0,0.5); }
     #equip .key { color: var(--h-dim); font: 700 11px/1 var(--h-mono); }
     #equip .name { font: 700 12px/1 var(--h-head); letter-spacing: 0.08em; text-transform: uppercase; color: var(--h-hi); }
     /* the magazine's pips: a line of their own UNDER each gun's row, selected or not (so the column keeps its height when the selection changes). Out of the
@@ -664,7 +657,6 @@
     #equip .mags { display: flex; gap: 3px; align-items: flex-end; margin-left: 4px; }
     #equip .mag { width: 7px; height: 14px; border: 1px solid rgba(var(--h-edge),0.55); position: relative; }
     #equip .mag b { position: absolute; left: 0; right: 0; bottom: 0; background: var(--h-ink); }
-    #equip .gadgets { display: flex; gap: 12px; padding: 1px 1px 2px; font-size: 10px; letter-spacing: 0.05em; white-space: nowrap; }
     #equip .g { color: var(--h-soft); } #equip .g.on { color: var(--h-hi); text-shadow: 0 0 6px #000; }
     #equip .ocpbar { width: 46px; height: 5px; border: 1px solid rgba(var(--h-edge),0.5); display: inline-block; vertical-align: middle; margin-left: 4px; position: relative; }
     #equip .ocpbar b { position: absolute; left: 0; top: 0; bottom: 0; background: var(--h-hi); }
