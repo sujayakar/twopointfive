@@ -184,7 +184,7 @@ export async function workstowMate(): Promise<boolean> {
 export async function workstowWall(): Promise<boolean> {
   const F = family('workstow-wall: the same on a wall charge — by your hands, and on order');
   await kept(async () => {
-    const WP: any = await import('./wallcharge-probes.ts'), SCN = 'block-squads';
+    const WP: any = await import('./wallcharge-probes.ts'), SCN = 'block-four';
     try {
       // by your hands (the wall probes' own man alone: the door tools' bag, the row at the foot of a partition)
       

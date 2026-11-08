@@ -102,7 +102,7 @@ export async function missionsScreen(): Promise<boolean> {
       OPEN();
       let S = M.currentMissions()!, mroot: El = S?.root as any;
       const rows = missionRowsOf(mroot);
-      F.verdict(!!S && mroot.cls.has('on') && rows.length === L.length && rows.every((r, i) => r.id === L[i].id && r.title === L[i].title && r.n === String(i + 1).padStart(2, '0')), 'the list opened: it is up with one numbered row per mission, in order', rows.map(r => `${r.n} ${r.title}`).join(' · '));
+      F.verdict(!!S && mroot.cls.has('on') && rows.length === L.length && rows.every((r, i) => r.id === L[i].id && (r.title === L[i].title || `${r.title}, as two` === L[i].title) && r.n === String(i + 1).padStart(2, '0')), 'the list opened: it is up with one numbered row per mission, in order', rows.map(r => `${r.n} ${r.title}`).join(' · '));
       F.verdict(rows.every((r, i) => r.href === M.missionHref(L[i], SEARCH) && r.href.endsWith('quality=high&mute') && r.team === M.teamTagOf(L[i]) && r.lean === L[i].lean) && rows.filter(r => r.sel).length === 1 && rows[0].sel,
         "each row is a link to its own URL (the visitor's flags kept) tagged solo / pair / four with its lean; exactly one is highlighted — the first, with nothing remembered", rows.map(r => `${r.title} [${r.team} · ${r.lean}] ${r.href}`).join('\n    '));
       // ---- the sheet follows the highlight

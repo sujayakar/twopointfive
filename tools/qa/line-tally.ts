@@ -22,7 +22,7 @@ const load = (f: string): Run[] => { if (statSync(f).isDirectory()) return readd
   let j: any; try { j = JSON.parse(readFileSync(f, 'utf8')); } catch { return []; }   // (a file still being written)
   return Array.isArray(j.runs) ? j.runs : j.scn ? [j] : []; };
 for (const f of files) for (const r of load(f)) { const k = `${r.scn}:${r.seed}`; if (seen.has(k) || (SEEDS && (r.seed < SEEDS[0] || r.seed > SEEDS[1]))) continue; seen.add(k); runs.push(r); }
-const ORDER = ['night-breach', 'room-clear-pair', 'room-clear-four', 'hostage-rescue', 'rescue-registry', 'records-pair', 'depot-four', 'block-four', 'block-squads', 'warehouse-four', 'compound-four', 'barracks-four'];
+const ORDER = ['night-breach', 'room-clear-pair', 'room-clear-four', 'hostage-rescue', 'rescue-registry', 'records-pair', 'depot-four', 'block-four', 'warehouse-four', 'compound-four', 'barracks-four'];
 runs.sort((a, b) => ORDER.indexOf(a.scn) - ORDER.indexOf(b.scn) || a.seed - b.seed);
 const scns = [...new Set(runs.map(r => r.scn))];
 const f1 = (x: number) => x.toFixed(1), f0 = (x: number) => String(Math.round(x)), pc = (a: number, b: number) => b > 0 ? `${Math.round(100 * a / b)}%` : '—';
