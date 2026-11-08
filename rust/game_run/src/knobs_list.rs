@@ -2644,19 +2644,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("rescueflush.busy_secs", offset_of!(Knobs, rescueflush.busy_secs), false),
     ("rescueflush.smoke_k", offset_of!(Knobs, rescueflush.smoke_k), false),
     ("rescueflush.at_door_m", offset_of!(Knobs, rescueflush.at_door_m), false),
-    ("snatchout.marker_m", offset_of!(Knobs, snatchout.marker_m), false),
-    ("snatchout.reach_m", offset_of!(Knobs, snatchout.reach_m), false),
-    ("snatchout.gap_m", offset_of!(Knobs, snatchout.gap_m), false),
-    ("snatchout.send_m", offset_of!(Knobs, snatchout.send_m), false),
-    ("snatchout.send_him_m", offset_of!(Knobs, snatchout.send_him_m), false),
-    ("snatchout.in_m", offset_of!(Knobs, snatchout.in_m), false),
-    ("snatchout.carry_m", offset_of!(Knobs, snatchout.carry_m), false),
-    ("snatchout.trail_m", offset_of!(Knobs, snatchout.trail_m), false),
-    ("snatchout.close_m", offset_of!(Knobs, snatchout.close_m), false),
-    ("snatchout.turn_secs", offset_of!(Knobs, snatchout.turn_secs), false),
-    ("snatchout.lane_m", offset_of!(Knobs, snatchout.lane_m), false),
-    ("snatchout.off_m", offset_of!(Knobs, snatchout.off_m), false),
-    ("snatchout.spot_m", offset_of!(Knobs, snatchout.spot_m), false),
     ("posemath.singles", offset_of!(Knobs, posemath.singles), true),
     ("sense.cpu", offset_of!(Knobs, sense.cpu), true),
     ("sense.grid", offset_of!(Knobs, sense.grid), true),
@@ -3593,13 +3580,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("nightbreach.squad", offset_of!(Knobs, nightbreach.squad), false),
     ("roomclear.seed", offset_of!(Knobs, roomclear.seed), false),
     ("roomclear.way", offset_of!(Knobs, roomclear.way), false),
-    ("snatch.give_up_m", offset_of!(Knobs, snatch.give_up_m), false),
-    ("snatch.halt_m", offset_of!(Knobs, snatch.halt_m), false),
-    ("snatch.see_m", offset_of!(Knobs, snatch.see_m), false),
-    ("snatch.see_rate", offset_of!(Knobs, snatch.see_rate), false),
-    ("snatch.cuff_m", offset_of!(Knobs, snatch.cuff_m), false),
-    ("snatch.cuff_secs", offset_of!(Knobs, snatch.cuff_secs), false),
-    ("snatch.bolt_secs", offset_of!(Knobs, snatch.bolt_secs), false),
     ("defuse.work_secs", offset_of!(Knobs, defuse.work_secs), false),
     ("defuse.reach", offset_of!(Knobs, defuse.reach), false),
     ("defuse.marker_m", offset_of!(Knobs, defuse.marker_m), false),
@@ -6002,19 +5982,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.rescueflush.busy_secs;
     let _: &f64 = &k.rescueflush.smoke_k;
     let _: &f64 = &k.rescueflush.at_door_m;
-    let _: &f64 = &k.snatchout.marker_m;
-    let _: &f64 = &k.snatchout.reach_m;
-    let _: &f64 = &k.snatchout.gap_m;
-    let _: &f64 = &k.snatchout.send_m;
-    let _: &f64 = &k.snatchout.send_him_m;
-    let _: &f64 = &k.snatchout.in_m;
-    let _: &f64 = &k.snatchout.carry_m;
-    let _: &f64 = &k.snatchout.trail_m;
-    let _: &f64 = &k.snatchout.close_m;
-    let _: &f64 = &k.snatchout.turn_secs;
-    let _: &f64 = &k.snatchout.lane_m;
-    let _: &f64 = &k.snatchout.off_m;
-    let _: &f64 = &k.snatchout.spot_m;
     let _: &bool = &k.posemath.singles;
     let _: &bool = &k.sense.cpu;
     let _: &bool = &k.sense.grid;
@@ -6924,13 +6891,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.nightbreach.squad;
     let _: &f64 = &k.roomclear.seed;
     let _: &f64 = &k.roomclear.way;
-    let _: &f64 = &k.snatch.give_up_m;
-    let _: &f64 = &k.snatch.halt_m;
-    let _: &f64 = &k.snatch.see_m;
-    let _: &f64 = &k.snatch.see_rate;
-    let _: &f64 = &k.snatch.cuff_m;
-    let _: &f64 = &k.snatch.cuff_secs;
-    let _: &f64 = &k.snatch.bolt_secs;
     let _: &f64 = &k.defuse.work_secs;
     let _: &f64 = &k.defuse.reach;
     let _: &f64 = &k.defuse.marker_m;

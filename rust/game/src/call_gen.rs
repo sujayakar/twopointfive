@@ -250,10 +250,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 347 => { let a1: String = Io::r(&mut i); let a2: bool = Io::r(&mut i); let r = crate::quietfog::quiet_fog_href(g, &a1, a2); r.w(&mut o);  }
 348 => {  crate::quietfog::quiet_fog_end(g);  }
 349 => {  crate::par::par_tick(g);  }
-351 => { let a1: Option<CharId> = Io::r(&mut i); let r = crate::snatchout::snatch_out_word(g, a1); r.w(&mut o);  }
-353 => {  crate::snatchout::snatch_out_switched(g);  }
-360 => { let a1: Option<crate::snatch::SnatchSnap> = Io::r(&mut i); crate::snatch::snatch_restore(g, a1.as_ref());  }
-361 => {  let r = crate::snatch::check_snatch(g); r.w(&mut o);  }
 365 => { let a1: Option<crate::defuse::DefuseSnap> = Io::r(&mut i); crate::defuse::defuse_restore(g, a1.as_ref());  }
 366 => { let a1: GuardId = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let a3: Option<crate::wounds::WoundDownZone> = Io::r(&mut i); crate::wounds::wound_down(g, a1, a2, a3);  }
 367 => { let a1: f64 = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let r = crate::calmtorch::place_light(g, a1, a2); r.w(&mut o);  }

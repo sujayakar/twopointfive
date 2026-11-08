@@ -144,7 +144,6 @@ import { Rails } from './rails';
 import { Par } from './par';
 import type { LostMan } from './deathrecap';
 import { Verdict } from './verdict';
-import { Snatch } from './snatch';
 import { Defuse } from './defuse';
 import { RoomClearScenario } from './roomclear';
 import { SquadOrders } from './orders';
@@ -984,8 +983,6 @@ export class Game {
   recap: { lostLive: LostMan[]; allDown: boolean } = { lostLive: [], allDown: false };
   /** how the run went, said once it is over (verdict.ts): reads only — the end card's record */
   verdict!: Verdict;
-  /** the man a snatch level's team must take alive (snatch.ts): inert without the level's scenarios.snatch block */
-  snatch!: Snatch;
   /** a defuse mission's charges and their one clock (defuse.ts): an overlay on a room clear; inert on a level without a scenarios.defuse block */
   defuse!: Defuse;
   /** the room clear (roomclear.ts; ?roomclear / native --roomclear / __roomclear): the night breach on a structure of four held rooms, with per-room cleared state
@@ -1221,7 +1218,6 @@ export class Game {
     this.verdict = new Verdict(this);           // the run's verdict (verdict.ts): reads only, said once at the run's end
     this.rails = new Rails(this);               // a tutorial mission's frame (rails.ts): inert unless the level's lesson carries a rails record
     this.lesson = new Lesson(this);             // a training lesson's steps (lesson.ts): inert on a level without a scenarios.lesson block
-    this.snatch = new Snatch(this);             // the man to take alive (snatch.ts): inert on a level without a scenarios.snatch block
     this.defuse = new Defuse(this);             // a defuse mission's charges (defuse.ts): inert on a level without a scenarios.defuse block
     this.nightBreach = new NightBreach(this);   // the night breach playtest (nightbreach.ts): inert until started
     this.roomClear = new RoomClearScenario(this);   // the room clear (roomclear.ts): the same playtest on a four-room structure — inert until started

@@ -1194,61 +1194,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   left: rebuild/missions/new/killhouse.md. Never seen in a browser, never run with two seats. ITS DOORS ARE NAMED FOR THEIR ROOMS
   (`tyres` `bunks` `radio` `store` `mess`, + `front`, `back` and `hall` = the door that cuts the corridor; they were n1 n2 n3 s4 s5 mid): an id is SAID and shown
   (orders.ts `doorIdWords`: 'holding · store door'), and the HUD has no compass. The rule for every level: a door is named for its room, no compass word in a name.
-- **One man to take alive on a room clear** (`src/game/snatch.ts`, `Game.snatch`, `__snatch`; block `scenarios.snatch { man, exits }`, docs/level-format.md
-  *Scenarios*; today `levels/snatch.json` alone — `tools/levels/snatch.ts`, built on the look's kit, no second look file — row `snatch-four` 'The snatch' in the
-  list's 'On the clock' group, `untuned`): an overlay on that level's room clear. The man is a CIVILIAN of the usual make (civilians.ts `spawnTarget`), put on the floor
-  at every staging; gunfire or a teammate he sees sends him running for the nearest of the block's ways out; he gives up (hands on his head) to one of the team
-  within `giveUpM` 3.5 m with a line to him, or to one standing between him and the way out he runs at within `haltM`; hands up with a man within `cuffM` for
-  `cuffSecs` 3 = tied for good, hands up with nobody in sight for `boltSecs` 6 = he runs again. WON = the room clear's own 'taken' with him alive and in hand;
-  LOST = he reached a way out or a round killed him (anybody's). The defenders do not know he exists and no teammate holds fire for him. HIS WORDS ARE HIS OWN (dialogue.ts `SNATCH_LINES`, picked by `snatch.voice` inside civilians.ts `civSay` / `civilianAnswer`: calm he says nothing, never the office worker's lines). `SNATCH.on` (knob
-  registry; `?nosnatch`) off = the room clear alone; a level without the block returns on every entry point's first line. One tick line in game.ts after
-  `updateMission`; his line stands over the room clear's on the objective row while he is loose; a `snatch` slice in savestate (unreached today: no checkpoint
-  with a squad on the floor). `bun run tools/qa/snatch-check.ts` (`probes.ts snatch`; `SNATCH_BREAK=1` must fail); playthrough.ts `PT_SNATCH=cover|front`
-  (the commander posts a pair at the back gate first / goes straight in). Numbers and the calls left: rebuild/missions/new/snatch.md. Seen
-  only on the software adapter. Names a player reads carry no compass word: doors `front` `back` `side` `his` `hut` `back_room` `kitchen` (the last two were mb / mk),
-  places 'the back alley' · 'the side yard' · 'the wash yard' · 'the courtyard'. His LIVE objective rows lead with 'objective ▸ ' like every other mission's (the two end
-  rows do not; roomclear.ts's 'structure taken … not over:' line takes the prefix off).
-- **A snatch ends in the van** (2026-10-19; `src/game/snatchout.ts`, `Game.snatch.out`, `__snatch.out` / `.exfil`). The maintainer, playing the snatch: "i was
-  expecting to have to grab him and exfil him though (while my squad handles holding off the response force), not needing to clear the structure" · "like
-  maybe we need to get him to a van near our infil". SWITCH `SNATCHOUT.on`: on in the page (`?nosnatchout` off), off in the module and on the frozen stand
-  (`TPS_SNATCHOUT=1`), `FROZEN_HOLDS` row, knob registry, journal (`applyKnobs`: a recording from before the key replays with it off), debugger panel rows
-  'a snatch ends in the van' and 'the squad covers the walk out'. It needs the level's word too: `scenarios.snatch.van { name, pos }` (docs/level-format.md;
-  `checkSnatch`: floor, with a walk from his room) — a snatch level without it ends as it did. Off, or no van = the build as it was.
-  THE END: tied (or out cold, or in Sam's arm) is no longer the end and the house does not have to fall — `roomclear.ts finish` says 'not over' while
-  `snatch.owes`, and the win is the man IN THE VAN (`into`: he is off the floor, `civilianOff`; the debrief's line is 'Daoud is in the van'). The losses are
-  the old two (through a way out · a round kills him), all the way to the van. HOW HE GETS THERE: a row on the tied man, 'on your feet — with me' (the rescue's
-  own follow, `civilians.ts hostageLead`: he walks `gapM` behind whoever gave the word, wrists behind him) and 'stay here' to put him down; with the leader
-  within `sendM` 3.5 of the van's doors and him within `sendHimM` 8 he walks the last steps himself (`civilianLedTo`) and is in it at `inM`. A man out cold
-  or in an arm follows nobody and is in it when Sam has him within `carryM` of the doors (read, never run by a check). Nothing is won behind a leader who is
-  down. His row is never the hands-empty click's takedown (game.ts, beside the rescue's hostages). Only the player gives the word today (`word(by)` takes a
-  Character: which player, not the player). The objective row: 'objective ▸ get Daoud to the van', its mark on him until he is moving, then on the van.
-  THE VAN is level data: `gwotKit.ts van()` (4.9 × 1.8 × 1.95 m, back doors open) parked outside the front gate about 6 m from where the team starts
-  (`tools/levels/snatch.ts`). It is LEVEL DATA, not the switch's: it stands there with `SNATCHOUT.on` off too, and the level's digest moved, so a checkpoint
-  or recording of the snatch from before is refused as from another floor.
-  THE RESPONSE: the level now carries `scenarios.response` (the village guard, 2 men, by the back gate or round the wall to the front gate, 20–40 s after a
-  man of the house lives `RESPONSE.callSecs` to report gunfire — docs/agents/enemies.md, the response team), raided ONLY under this switch (`qrf.ts raid`), and
-  not called off when the house falls: only the snatch's own end does (`raidOver`). Two is what the sixteen-figure budget leaves (eight defenders, the four,
-  the man): a bigger party means fewer men in the house, and that is the maintainer's call. `civilians.ts evacuationCheck` no longer walks the man a snatch
-  came for off the floor when a team is called (it lost the mission on the spot).
-  THE SQUAD (`SNATCHOUT.hold`, `?nosnatchhold`; no order of anybody else's is touched — a man whose order is another object than the one this module last
-  saw, the player's or a drill's, planted or walking, is theirs until the man is next moved off): while he is being moved (led, or in Sam's arm or hands), of
-  the men under 'fall in', one pair PLANTS (a silent 'hold' facing the way orders.ts `holdArcs` gives men left holding together, with nothing named to watch:
-  cover.ts deals each man one of the room's doors or gaps, no two the same) and the other walks out with the leader; a planted pair left `trailM` 12 behind
-  comes up at a walk ('moving.') and the pair with the leader plants in its place — one pair moving at a time, nobody called off a fight. A planted man is
-  never put in a doorway or a gap, on the leader's way out (`laneM`), or on a mate (`spot`: the nearest free floor within `spotM`, or the pair stays in the
-  file and is asked again half a second on); while one of them fights, or one has just gone down, the other's gun goes to where that is for `turnSecs`. At
-  either end (won, lost) and at 'stay here' every planted man is back in the file. Nobody sprints (the orders' own pace cap; the check reads every
-  teammate's speed on the walk out). One line said, once: 'holding here — get him out.' The panel's switch thrown mid-run stands the rule down (nobody led,
-  nobody planted).
-  CHECK `bun run tools/qa/snatchout-check.ts` (`probes.ts snatchout`, family `missions`; 30 lines; `SNATCHOUT_BREAK=1` fails 19 of them, `=hold` the
-  squad's 7), ALL PASS on both stands; `snatch-check.ts` now asks for the old end by name (`SNATCHOUT.on = false`) and is 20 lines green on both;
-  `PORT=<dev server> node tools/qa/snatchout-page.cjs [outDir]` plays it on the real page (software adapter). MEASURED (the scripted commander, who cannot be
-  hurt and gives the squad no order on the walk out; `PT_SNATCH=cover`, shipped stand, standard, seeds 1–8): won 7 of 8 with 18 of 32 teammates up, the same
-  with `SNATCHOUT.hold` off (7 of 8, 18 of 32) — the hold changes who stands where, not the tally: every teammate lost but one went down in the house fight
-  before the word, and no planted man was lost at his post. The team was called in all 16 runs and arrived as the walk out began (tied at 20–34 s, in the van
-  at 70–89 s). The hold run had 19 smells to 22 (no man left standing in a doorway). THE OLD RULE WITH THE VAN ON THE MAP (frozen stand, the rule off, the
-  same plan and seeds): won 5 of 8 with 8 of 32 up, against 5 of 8 with 9 of 32 on the level as it was — the van costs the old snatch nothing that eight
-  seeds show. NOBODY HAS PLAYED IT; never seen on a GPU; not measured on hard; the out-cold and in-arm ways into the van are read, not run.
+- **The snatch is out** (2026-11-08, marked on the keep or cut page): the man to take alive, his run for the gate and the van left both sides with `snatch.ts`, `snatchout.ts`, `SNATCH`, `SNATCHOUT` and `?nosnatch`. `levels/snatch.json` stands as a plain room clear with no row on the list, no man and no `response` block (`rust/game_start/tests/cut_missions.rs`). What the notes below say of the snatch is history.
 - **Timed charges over a room clear** (`src/game/defuse.ts`, `Game.defuse`, table `DEFUSE` in the knob registry — no Tab row; block `scenarios.defuse`, docs/level-format.md
   *Scenarios*; level `levels/defuse.json` + its look file ← `tools/levels/defuse.ts` / `defuse-gwot.ts`; row `defuse-four` 'The two charges', group `clock`, untuned,
   `?levelFile=defuse.json&roomclear&squad4`): ONE clock (`secs` 75 from the team's first move or order, in the objective row; its last ten seconds tick wherever the player is)
@@ -2030,10 +1976,6 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   changes nothing there). No family runs the consulate through this file: it is the level's own task line, typed. NOT from this: the test level's stall on shipped in the
   rescue part ended with the rescue ending's own step (the scripted player leads the hostages out), joined under this one. What the six seconds say about a teammate
   behind a friend in a corridor is the squad's to read, under a player who would have fired or been shot.
-- **The snatch's card names the van** (2026-10-19; words only, no switch). The row's blurb said 'One unarmed man to take alive.'; since the snatch ends with him
-  in the team's van (`snatchout.ts`, above) it says 'to take alive and walk out to your van', so the sheet sets up the walk out the maintainer expected when he
-  played it. 152 characters (the list's rule is 160). With `?nosnatchout` the old end is back and the card still names the van: it stands at the gate either
-  way. Checked: `probes.ts missions-list` and `missions-screen` on both stands, the src typecheck. Nobody has read it on a page.
 - **The snatch's yards and the ground outside it are dressed** (dress every level, 2026-11-03; level data only, under the one switch `LIVED`: `?lived=0` = the
   level as it was, off on the frozen stand, `TPS_LIVED=1` raises it). The rooms were furnished when the house was built and the level had no lived things at
   all; from above its courtyard and the dust round its wall were each one sheet (`level-needs` `ground`: 515 m² of dust and 131 m² of dirt with nothing on

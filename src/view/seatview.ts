@@ -10,7 +10,7 @@
 import type { Vec3 } from '../math/vec';
 
 /** whose words the mission's line is */
-export type MissionOf = 'stages' | 'script' | 'lesson' | 'defuse' | 'snatch' | 'roomclear' | 'rescue' | 'nightbreach';
+export type MissionOf = 'stages' | 'script' | 'lesson' | 'defuse' | 'roomclear' | 'rescue' | 'nightbreach';
 /** the mission's one line and the place its marker stands on */
 export interface MissionView { of: MissionOf; text: string; pos: Vec3 | null }
 /** a row of the radio strip: a line on a net, or a shout that reached an ear of the team's (his words alone) */
