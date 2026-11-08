@@ -165,7 +165,7 @@
     #overlay { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
     .marker { position: absolute; transform: translate(-50%, -100%); font-size: 13px; font-weight: 700; text-shadow: 0 1px 3px #000, 0 0 6px #000; white-space: nowrap; }
     .marker.sus { color: #fd6; } .marker.alert { color: #f54; } .marker.dead { color: #777; font-weight: 400; font-size: 10px; } .marker.ko { color: var(--h-dim); font-weight: 400; font-size: 10px; letter-spacing: -0.05em; } .marker.calm { color: var(--h-soft); font-weight: 400; font-size: 10px; }
-    .marker.frag { color: #ff5a3c; font-weight: 700; font-size: 14px; letter-spacing: 0.04em; }   /* frag.ts fragMarks: a defender's live grenade Sam has been cued on, with the seconds left */
+    .marker.frag { color: #ff5a3c; font-weight: 700; font-size: 14px; letter-spacing: 0.04em; }   /* game.view.marks.frags: a defender's live grenade Sam has been cued on, with the seconds left */
     .lostfrom { position: absolute; height: 3px; transform-origin: 0 50%; pointer-events: none; background: linear-gradient(90deg, rgba(var(--h-acc-rgb),0.35), var(--h-acc)); }   /* deathrecap.ts lostLive: the way the round came in at a squad man lost, on the ground at him */
     .lostfrom::after { content: ''; position: absolute; right: -2px; top: -3.5px; border-left: 9px solid var(--h-acc); border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
     .marker.lastseen { color: #cbb98a; font-weight: 400; font-size: 12px; letter-spacing: 0.08em; }   /* fogofwar.ts lastSeen: '(?)' where an enemy was last seen, fading — thin and bracketed, never a live man's bold '?' */
@@ -176,7 +176,7 @@
     .reticle.aim { width: 16px; height: 16px; border-width: 1px; opacity: 0.7; box-shadow: none; pointer-events: none; }   /* the auto-aim snap ring: smaller and quieter than the interaction ring; under the aim model overlay.ts sizes it to the cone and brightens it as the aim settles */
     .reticle.aim.k-free { border-color: rgba(var(--h-hi-rgb),0.85); }   /* …round the bare cursor's point when nothing is near (aim model only) */
     .reticle.aim.trail { opacity: 0.55; }   /* aimweight.ts: the circle is where the gun points — quieter while it is still swinging onto the cursor */
-    .reticle.aim.shut, .aimwish.gun.shut { border-style: dashed; opacity: 0.95 !important; }   /* player.ts gunShut: his gun cannot get a round out from here (a wall holds it down, or its muzzle is past a jamb) — the ring is broken and barred; while the ring is busy on a thing Space acts on, the gun's own small circle is */
+    .reticle.aim.shut, .aimwish.gun.shut { border-style: dashed; opacity: 0.95 !important; }   /* game.view.aim shut: his gun cannot get a round out from here (a wall holds it down, or its muzzle is past a jamb) — the ring is broken and barred; while the ring is busy on a thing Space acts on, the gun's own small circle is */
     .reticle.aim.shut::after, .aimwish.gun.shut::after { content: ''; position: absolute; left: 50%; top: 50%; width: 2px; height: 130%; min-height: 20px; background: rgba(var(--h-hi-rgb),0.95); border-radius: 1px; transform: translate(-50%, -50%) rotate(45deg); box-shadow: 0 0 3px rgba(0,0,0,0.9); }
     .reticle.aim.k-guard.shut::after { background: #ff8070; }
     .aimwish { position: absolute; width: 5px; height: 5px; border-radius: 50%; transform: translate(-50%, -50%); background: #ffe9a8; opacity: 0.85; pointer-events: none; }   /* …and a dot on what the reticle snapped to (a light, a man) until it gets there */
@@ -621,15 +621,9 @@
     body.attract .plan, body.blinded .plan { display: none; }
     /* closer than ever (game/close.ts → ui/overlay.ts drawClose): the windows round a man near Sam, on the floor — open = a thin outline, the one he stands in
        filled and bright, a shut one amber and broken; each with what it gives in a few words just outside its arc */
-    /* game/throwreach.ts: what the thing he is aiming will reach, flat on the floor — a frag's kill ring (solid, alarm red-orange) and the ring it hurts to (dotted), a stun canister's ring (the HUD's own bright, dashed) */
+    /* game.view.aim.throw.reach: what the thing he is aiming will reach, flat on the floor — a frag's kill ring (solid, alarm red-orange) and the ring it hurts to (dotted), a stun canister's ring (the HUD's own bright, dashed) */
     .reach { fill: none; stroke-linejoin: round; stroke-linecap: round; } .reach.cut { fill: none !important; } .reach.kill { stroke: rgba(255,112,72,0.95); stroke-width: 2; fill: rgba(255,96,56,0.10); } .reach.hurt { stroke: rgba(255,112,72,0.6); stroke-width: 1.5; stroke-dasharray: 1 7; } .reach.stun { stroke: rgba(var(--h-hi-rgb),0.85); stroke-width: 1.5; stroke-dasharray: 8 6; fill: rgba(var(--h-hi-rgb),0.06); }
-    .trajpath { stroke: rgba(var(--h-hi-rgb),0.85); } .trajland { fill: rgba(var(--h-hi-rgb),0.12); stroke: rgba(var(--h-hi-rgb),0.9); } .trajroll { stroke: rgba(var(--h-hi-rgb),0.6); } .trajtick { fill: none; stroke: rgba(var(--h-hi-rgb),0.7); }   /* player.ts throwRest: the ring is where the can comes to rest; the tick is its first touch, the dots the floor it rolls over */
-    .closewin path { fill: rgba(var(--h-edge),0.06); stroke: rgba(var(--h-edge),0.55); stroke-width: 1.2; stroke-linejoin: round; }
-    .closewin path.cw-in { fill: rgba(var(--h-edge),0.2); stroke: rgba(var(--h-hi-rgb),0.98); stroke-width: 2; }
-    .closewin path.cw-shut { fill: none; stroke: rgba(255,190,120,0.5); stroke-dasharray: 3 4; }
-    .closewin text { font: 500 10px/1 var(--h-font); letter-spacing: 0.03em; fill: rgba(var(--h-edge),0.9); paint-order: stroke; stroke: rgba(var(--h-plate),0.72); stroke-width: 3px; stroke-linejoin: round; }
-    .closewin text.cw-in { font-weight: 700; font-size: 11px; fill: var(--h-hi); }
-    .closewin text.cw-shut { fill: rgba(255,200,140,0.85); }
+    .trajpath { stroke: rgba(var(--h-hi-rgb),0.85); } .trajland { fill: rgba(var(--h-hi-rgb),0.12); stroke: rgba(var(--h-hi-rgb),0.9); } .trajroll { stroke: rgba(var(--h-hi-rgb),0.6); } .trajtick { fill: none; stroke: rgba(var(--h-hi-rgb),0.7); }   /* game.view.aim.throw.rest: the ring is where the can comes to rest; the tick is its first touch, the dots the floor it rolls over */
     /* kit, bottom-left, a column standing on the light / sound meters (Chaos-Theory-style): the key strip (the selected gun's light · night vision) and the condition
        pips as two slim rows on top, then one slot per item in the digits' order — 1 the pistol (its OCP charge closing the row), 2 the FN2000 (SEMI/AUTO, RING ×n),
        3 smoke, 4 stun: key, name, rounds / cans — the selected one lit. Left edges line up with the meters at 18 px. */

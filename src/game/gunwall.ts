@@ -1,12 +1,9 @@
 import { SideMap, GameSideMap } from '../math/side';
 import type { Vec3 } from '../math/vec';
-import { v3, clamp, lerp } from '../math/vec';
-import { BoxFlag } from '../scene/boxes';
+import { clamp, lerp } from '../math/vec';
 import type { Game } from './game';
 import type { Character } from './character';
 import './character';
-import { solidBetween } from './combat';
-import { glassPenLive } from './glasspen';
 
 /** A RAISED WEAPON COMES DOWN AT A WALL. A shouldered rifle's muzzle stands 0.63 m ahead of the man who holds it and an aimed pistol's 0.64; a man can stand
  *  with his centre 0.3 m off a wall — so every man who turned to cover a line with a wall, a jamb or a door leaf inside that reach was DRAWN with his gun in it
@@ -39,7 +36,7 @@ import { glassPenLive } from './glasspen';
  *  `fightS`: a fight anywhere on the floor (a man gone alert, a scripted man with one in his sights) makes EVERY man a man in a fight for this long after it
  *  was last seen — the calm man's margins bring a gun down a stride early, and a stride early at a jamb with defenders two rooms off is a shot not taken
  *  (0 = only the man who has a target himself).
- *  `mark`: the player's aim ring wears a bar while his gun cannot get a round out (player.ts gunShut; the overlay's, nothing in the game reads it — the
+ *  `mark`: the player's aim ring wears a bar while his gun cannot get a round out (game.view.aim: player::gun_shut; the overlay's, nothing in the game reads it — the
  *  words a dead click files are in no list the page draws). Off here; the page turns it on (?nogunmark = off). */
 export const GUNWALL = { on: false, downM: 0.03, upM: 0.12, leadS: 0.2, atM: 0.5, tuckM: 0.04, tuckLeadS: 0.12, fightS: 5, mark: false };
 /** QA: line tests made, guns brought down (spells) and for how long (man-seconds), frames a low carriage was pulled in — tools/qa/gunwall-watch.ts reads it; nothing in the game does */
@@ -98,14 +95,6 @@ function raisedLine(c: Character, up: GunUp, yaw: number, o: Vec3 = c.pos): { a:
 const lowReach = (c: Character) => c.anim.longGun ? 0.145 + 0.7 * c.muzzleAhead : 0.241 + 0.74 * c.muzzleAhead;
 /** QA (tools/qa/gunwall-probes.ts gun-model): the worked-out carriages, to be held against the posed gun */
 export const gunWallModel = { raisedLine, lowReach, TUCK_REACH };
-
-/** …the same answer with nothing counted (player.ts gunShut: the overlay asks it every frame, and a QA tally is not the picture's to move) */
-export function woodBetween(g: Game, a: Vec3, b: Vec3): boolean {
-  if (!solidBetween(g, a, b)) return false;
-  if (!glassPenLive(g)) return true;
-  const d = v3.sub(b, a), L = v3.len(d), h = L > 1e-3 ? g.col.raycast(a, v3.scale(d, 1 / L), L) : null;
-  return !(h && h.index < 1e6 && (g.col.boxes[h.index].flags & BoxFlag.Glass));
-}
 
 /** the last answer, read only, if it is this frame's or the last's (roomfight.ts: a gun on its man that a wall holds down is no shot from here) */
 export function gunWallIs(g: Game, c: Character): boolean {

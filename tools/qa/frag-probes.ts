@@ -607,7 +607,7 @@ export async function theirsCorridor(seed: number, carbine: boolean) {
  *  the team hears the cue and is off it when it goes; a player who moves on the cue lives where one who stands may not. */
 export const fragTheirs = guardedOrder(async () => {
   const F = family("frag-theirs: defenders' own frags — a cue first, a fuse the team can beat");
-  const { fragCarriers, fragStepOff, fragMarks, comeDown } = await import(`${ROOT}/src/game/frag.ts`);
+  const { fragCarriers, fragStepOff, comeDown } = await import(`${ROOT}/src/game/frag.ts`);
   // the corridor: the carrier at its east end, two teammates bunched ten metres west of him, Sam beside them
   // (THE CARRIER IS STAGED ALERT ON THE PAIR — state, awareness and a seen fix at T1, once; every tick after that is his own eyes. The page's stand needs it:
   //  there the team holds its fire while nobody has seen it, and a carrier nobody wakes stood calm for all 14 s ('calm' 1754 frames a seed, 0 of 4 throws,
@@ -632,7 +632,7 @@ export const fragTheirs = guardedOrder(async () => {
     for (let i = 0; i < 14 * 60 && !FRAG_LOG.length; i++) {
       drive(); R.step();
       if (!item) { item = g.items.items.find((x: any) => x.kind === 'frag'); if (item) { tOut = g.time; fuse0 = item.fuse + DT; } }
-      if (isNaN(cueT) && R.said.some(s => /GRENADE/.test(s))) cueT = g.time; markN = Math.max(markN, fragMarks(g).length);
+      if (isNaN(cueT) && R.said.some(s => /GRENADE/.test(s))) cueT = g.time; markN = Math.max(markN, g.view.marks.frags.length);
     }
     const rep = FRAG_LOG[0] ?? null; const shout = said.find(s => s.who === C.callsign && /frag out|grenade out|fire in the hole/.test(s.text));
     const lift = rep ? [rep.at[0], rep.at[1] + FRAG.lift, rep.at[2]] : null;
