@@ -10,6 +10,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   - **A check reads the same alone, in its family and on every run.** A game stood with no seed and no die gets die 1 (`tools/qa/die.ts`; `standdie-check.ts`,
     STANDDIE_BREAK=1 fails it), each probe begins on it (`holds.ts asProbe`), and `probes.ts <family>` runs a process a probe, `QA_JOBS` at a time (the cores by
     default), each stopped at `QA_PROBE_CAP` seconds (600; 0 = none). The closing line says what the run cost and names the five slowest.
+  - **`probes.ts all-quick` is every probe that costs at most 8 CPU seconds** (`tools/qa/costs.json`, written anew by `probes.ts all --costs`; `QA_QUICK_SECS`): some 290
+    probes in five to six minutes on four cores. `all` is about 950 in an hour and a half there.
   - **A probe is under a minute of CPU.** A sweep asks a sample (`tools/qa/sweep.ts`: `sample`, `everyNth`, floors through `swept`); `QA_SWEEP=all` asks every case.
     A game stood with `reach: true` makes the picture's light masks every step: only a check that reads masks asks for it (it was nine tenths of the wall family's time).
   - **A red is the game's only when the check reached the game.** A tool holds a COPY of the Rust game's state. Of about sixty reds placed one by one, five were the
