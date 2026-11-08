@@ -274,7 +274,7 @@ pub fn door_new(g: &mut crate::game::Game, def: &crate::doors::DoorDef, index: O
     door_set_pick_idle(g, id, 0.0); door_set_pick_clock(g, id, 0.0); door_set_pick_n(g, id, 0.0); door_set_rattle_t(g, id, 0.0); door_set_guard_t(g, id, -100.0); door_set_passers(g, id, 0.0);
     door_set_outward(g, id, 0.0); door_set_clearway(g, id, 0.0); door_set_pull_t(g, id, 0.0); set_col(g, id, ::sim::doors::VEL_SEEN, 0.0); door_set_swept(g, id, false);
     door_set_drive(g, id, None); door_set_solid_t(g, id, 0.0); door_set_press_t(g, id, 0.0); door_set_open_t(g, id, 10.0); door_set_mirrored(g, id, 0.0); set_col(g, id, ::sim::doors::ANGLE_SEEN, 0.0);
-    door_set_off(g, id, false); door_set_shot(g, id, 0.0); door_set_creak_armed(g, id, true); set_col(g, id, ::sim::doors::POS_ANGLE, m::NAN); set_col(g, id, ::sim::doors::POS_X, 0.0); set_col(g, id, ::sim::doors::POS_Z, 0.0);
+    door_set_off(g, id, false); door_set_shot(g, id, 0.0); door_set_creak_armed(g, id, true);
     let height = def.height.unwrap_or(crate::scene_door_size::LEAF_H);
     let thick = def.thickness.unwrap_or(0.05);
     let min_auth = def.min_angle.unwrap_or(-1.92);
@@ -342,8 +342,6 @@ pub fn door_pos(g: &crate::game::Game, id: DoorId) -> V3 {
 /// `p` is the kept centre from here on   (doors.ts Door.keptPos)
 pub fn door_kept_pos(g: &mut crate::game::Game, id: DoorId, p: V3) {
     g.dr[id].pos_at = p;
-    set_col(g, id, ::sim::doors::POS_X, p[0]);
-    set_col(g, id, ::sim::doors::POS_Z, p[2]);
 }
 /// the kept centre as it stands, whatever angle the leaf has now   (doors.ts Door.keptAt)
 pub fn door_kept_at(g: &crate::game::Game, id: DoorId) -> V3 { g.dr[id].pos_at }
