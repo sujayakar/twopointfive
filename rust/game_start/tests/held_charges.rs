@@ -11,12 +11,11 @@ fn alone(door: &str, n: f64, s: u32) -> (Play, game::ids::DoorId, f64) {
     let mut p = Play::level("office.json", false, &Opts { seed: s, ..Default::default() });
     p.sam_a_ghost();
     p.sam_unhurt();
-    p.g.ai_enabled = false;
+    p.no_wits();
     p.run(0.2);
     p.alone_with_charges(n);
     let d = p.door(door);
-    let at = game::doortools::door_pt(&p.g, d, 0.4, 1.0, 1.0, None);
-    let side = if at[2] < p.g.dr[d].frame_centre[2] { 1.0 } else { -1.0 };   // (the corridor lies north of the rooms on the level's south side)
+    let side = p.corridor_side(d);
     (p, d, side)
 }
 /// The row given and held to its end; the frames his hands had nothing in them out of all of them.
@@ -92,9 +91,7 @@ fn his_own_charge_goes_off_from_his_own_actions_and_the_squads_on_the_squads_key
         let _ = sets(&mut p);
         p.run(0.05);
         assert_eq!(p.seat_door_charges(0), 1, "seed {s}: the charge is not on the door: {:?}", p.log());
-        let w = p.g.dr[d].def.width;
-        let off = game::doortools::door_pt(&p.g, d, w / 2.0 + 2.6, 1.0, side, None);
-        p.sam_put([off[0], off[2]]);
+        p.sam_put(p.off_the_door(d, side, 2.6, 1.0));
         p.run(0.15);
         p.tap("KeyF");
         p.run(0.3);
