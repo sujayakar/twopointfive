@@ -7,11 +7,11 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A player easing past furniture: crouched and not dashing.   (game.ts quietMan)
-pub fn quiet_man(g: &crate::game::Game, pl: Option<PlayerId>) -> bool {
+/// A man easing past furniture: a player crouched and not dashing; anyone else low.   (game.ts quietMan)
+pub fn quiet_man(g: &crate::game::Game, pl: Option<PlayerId>, c: CharId) -> bool {
     match pl {
         Some(p) => g.pl[p].crouch && !g.pl[p].dash,
-        None => false,
+        None => g.ch[c].anim.crouch > 0.5,
     }
 }
 

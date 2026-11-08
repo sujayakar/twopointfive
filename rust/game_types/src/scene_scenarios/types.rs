@@ -1073,69 +1073,6 @@ impl IssueData {
 }
 impl Default for IssueData { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: DefuseDevice, src/scene/scenarios.ts:360)
-#[derive(Clone, Debug)]
-pub struct DefuseDevice {
-    pub id: String,
-    pub name: String,
-    pub pos: V3,
-    pub n: [f64; 2],
-}
-impl DefuseDevice {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DefuseDevice {
-            id: String::new(),
-            name: String::new(),
-            pos: [0.0; 3],
-            n: [0.0; 2],
-        }
-    }
-}
-impl Default for DefuseDevice { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: DefuseData, src/scene/scenarios.ts:369)
-#[derive(Clone, Debug)]
-pub struct DefuseData {
-    pub secs: f64,
-    pub work_secs: Option<f64>,
-    pub devices: Vec<crate::scene_scenarios::DefuseDevice>,
-    pub blast: Option<crate::scene_scenarios::DefuseDataBlast>,
-}
-impl DefuseData {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DefuseData {
-            secs: 0.0,
-            work_secs: None,
-            devices: Vec::new(),
-            blast: None,
-        }
-    }
-}
-impl Default for DefuseData { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/scene/scenarios.ts:376 DefuseData.blast, src/scene/scenarios.ts:376)
-#[derive(Clone, Copy, Debug)]
-pub struct DefuseDataBlast {
-    pub lethal_m: Option<f64>,
-    pub wound_m: Option<f64>,
-    pub radius: Option<f64>,
-    pub power: Option<f64>,
-}
-impl DefuseDataBlast {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DefuseDataBlast {
-            lethal_m: None,
-            wound_m: None,
-            radius: None,
-            power: None,
-        }
-    }
-}
-impl Default for DefuseDataBlast { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: ResponseWay, src/scene/scenarios.ts:486)
 #[derive(Clone, Debug)]
 pub struct ResponseWay {
@@ -1265,7 +1202,6 @@ pub struct LevelScenarios {
     pub quiet: Option<crate::scene_scenarios::QuietData>,
     pub lesson: Option<crate::scene_scenarios::LessonData>,
     pub par: Option<crate::scene_scenarios::ParData>,
-    pub defuse: Option<crate::scene_scenarios::DefuseData>,
     pub issue: Option<crate::scene_scenarios::IssueData>,
     pub kit_view: Option<crate::scene_scenarios::KitViewData>,
     pub response: Option<crate::scene_scenarios::ResponseData>,
@@ -1283,7 +1219,6 @@ impl LevelScenarios {
             quiet: None,
             lesson: None,
             par: None,
-            defuse: None,
             issue: None,
             kit_view: None,
             response: None,

@@ -18,6 +18,7 @@
 //   orders-seams       what the later parts build on: a man the fight AI has (script ended, alert, eyes on) is left to it on his post and taken back once cold; a show
 //                      taking the floor drops every order
 //   orders-edges       what cannot be done is refused aloud; the men keep clear of Sam; the file closes up; the fight seam's clock
+import { blockOf, doing, listedOf, menuKey, sameWord } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ORDERS, doorWords } = await import(`${ROOT}/src/game/orders.ts`);   // (doorWords: a door's name as the HUD says it — its id's words, or the rooms it joins where the door names rule is on — so the expected words follow the stand)
@@ -69,7 +70,7 @@ async function rig(seed: number, o: { nb?: boolean; quiet?: boolean; knobs?: Rec
     /** the quick key pressed with the cursor on p: the target's own order, at once */
     quick(p: number[]) { R.aim(p); input.pressed.add(ORDERS.quickKey); R.step(); },
     /** X PRESSED (one frame — nothing is held) with the cursor on p: the menu comes up there; then `secs` more of frames with every key up */
-    openX(p: number[], secs = 0.4) { R.aim(p); input.pressed.add(ORDERS.key); R.step(); const n = Math.round(secs * 60) - 1; for (let i = 0; i < n; i++) R.step(); },
+    openX(p: number[], secs = 0.4) { R.aim(p); menuKey(O); R.step(); const n = Math.round(secs * 60) - 1; for (let i = 0; i < n; i++) R.step(); },
     /** Esc pressed: the menu goes down with no order */
     esc() { input.pressed.add('Escape'); R.step(); },
     /** a left click as the page's mouse writes it: the press bit for one frame, the held bit until the button comes up a few frames on */
@@ -95,10 +96,10 @@ const AISLE: number[] = [15, 0, 17.6], AISLE_FAR: number[] = [21, 0, 17.6], WEST
 export const ordersOff = guarded(async () => {
   const { verdict, done } = family('orders-off: with no squad on the floor X, B, T and the middle button are dead');
   const run = async (keys: boolean) => { const R = await rig(5, { nb: false }); Math.random = seeded(77);
-    for (let i = 0; i < 600; i++) { if (keys) { if (i === 100) R.input.pressed.add(ORDERS.key); if (i === 160) R.input.pressed.add(ORDERS.whoKey); if (i === 220) R.input.pressed.add(ORDERS.quickKey); if (i === 280) R.input.clicked |= 2; if (i === 340) R.input.pressed.add(ORDERS.key); } R.step(); }
+    for (let i = 0; i < 600; i++) { if (keys) { if (i === 100) menuKey(O); if (i === 160) R.input.pressed.add(ORDERS.whoKey); if (i === 220) R.input.pressed.add(ORDERS.quickKey); if (i === 280) R.input.clicked |= 2; if (i === 340) menuKey(O); } R.step(); }
     return R; };
   const A = await run(false), B = await run(true); const O = B.O;
-  const hud = O.hud();
+  const hud = { menu: listedOf(O), status: blockOf(O) };
   verdict(!O.active && O.menu === null && O.log.length === 0 && O.who === 'all' && hud.menu === null && hud.status.length === 0, 'inert: no squad, no menu, no order logged, no HUD block after X, T, B, a middle click and X again',
     `active ${O.active} · menu ${O.menu} · log ${O.log.length} · hud rows ${hud.status.length}`);
   const why = O.give('fallIn');
@@ -134,7 +135,7 @@ export const ordersMove = guarded(async () => {
   verdict(early.every(d => d > 0.1) && first.every(d => d > 0), 'they step off at once (a third of a second on, both are moving — a man leans into a move now, guards.ts PACE.accel: it was a quarter metre gone by then)', `moved after 0.33 s: ${early.map(f2).join(' / ')} m${START.fallIn ? ` · off his spot three ticks in ${first.map(d => (d * 1000).toFixed(1)).join(' / ')} mm · each turned to the heading first (they stood fallen in, at ${stood.map(f2).join(' / ')} rad)` : ''}`);
   verdict(set && dPost.every(d => d < 0.35) && dAt.every(d => d < 2.55) && apart > 0.8, 'both arrive: each on his own mark round the point, a body\'s room and more apart (roomfit.ts deals the marks from the room; it was two abreast at the point)', `in ${f2(tSet)} s · off his spot ${dPost.map(f2).join(' / ')} m · off the point ${dAt.map(f2).join(' / ')} m · apart ${f2(apart)} m · ${men.map((m: any) => at(m.char.pos)).join(' ')}`);
   R.step(60);
-  verdict(men.every((m: any) => { const A = O.of(m); return !!A.watch && Math.abs(wrap(m.char.aimYaw - yawTo(m.char.pos, A.watch))) < 0.3; }) && men.every((m: any) => O.statusOf(m).startsWith('in position · ')), 'each has his gun on what the room dealt him and the HUD says "in position" and what he is on (it was: every man facing the way they were sent)', `off the heading ${dYaw.map(f2).join(' / ')} rad · ${men.map((m: any) => O.statusOf(m)).join(' / ')}`);
+  verdict(men.every((m: any) => { const A = O.of(m); return !!A.watch && Math.abs(wrap(m.char.aimYaw - yawTo(m.char.pos, A.watch))) < 0.3; }) && men.every((m: any) => doing(O.g, m).startsWith('in position · ')), 'each has his gun on what the room dealt him and the HUD says "in position" and what he is on (it was: every man facing the way they were sent)', `off the heading ${dYaw.map(f2).join(' / ')} rad · ${men.map((m: any) => doing(O.g, m)).join(' / ')}`);
   const sets = R.lines(/^set\.$/, t0);
   verdict(sets.length === 1, '"set." is called once, when both are on their marks', `${sets.map(s => `${s.who} @${f2(s.t - t0)} s`).join(', ') || 'never'}`);
   const here = men.map((m: any) => [...m.char.pos]); R.step(60 * 6);
@@ -147,7 +148,7 @@ export const ordersMove = guarded(async () => {
   const held = lastOrder(O); const atOrder = men.map((m: any) => [...m.char.pos]);
   R.step(60 * 2); const after2 = men.map((m: any, i: number) => dist(m.char.pos, atOrder[i]));
   R.step(60 * 6); const after8 = men.map((m: any, i: number) => dist(m.char.pos, atOrder[i])); const toFar = men.map((m: any) => dist(m.char.pos, AISLE_FAR));
-  verdict(held?.order === 'hold' && speed.every((s: number) => s > 1) && after2.every(d => d < 0.6) && after8.every(d => d < 0.6) && toFar.every(d => d > 1.5) && men.every((m: any) => O.statusOf(m) === 'holding' && m.speed < 0.1),
+  verdict(held?.order === 'hold' && speed.every((s: number) => s > 1) && after2.every(d => d < 0.6) && after8.every(d => d < 0.6) && toFar.every(d => d > 1.5) && men.every((m: any) => doing(O.g, m).startsWith('holding') && m.speed < 0.1),
     'hold position while they run to a far spot: both stop within a stride of where they were and stay there', `${logLine(held)} · speed at the order ${speed.map(f2).join(' / ')} m/s · ${mid.map(at).join(' ')} · off it after 2 s ${after2.map(f2).join(' / ')} m, after 8 s ${after8.map(f2).join(' / ')} m · still ${toFar.map(f2).join(' / ')} m short of the far spot`);
   verdict(!R.samHit && R.NB.state === 'staged', 'Sam untouched, the breach still only staged', `hit ${R.samHit} · night breach ${R.NB.state}`);
   return done();
@@ -165,7 +166,7 @@ export const ordersCover = guarded(async () => {
     const off = men.map((m: any) => offAim(m, p)), moved = men.map((m: any, i: number) => dist(m.char.pos, here[i]));
     let worst = 0; for (let i = 0; i < 60 * 8; i++) { R.step(); for (const m of men) worst = Math.max(worst, offAim(m, p)); }
     const moved8 = men.map((m: any, i: number) => dist(m.char.pos, here[i]));
-    const words = men.map((m: any) => O.statusOf(m)); const up = men.map((m: any) => m.script?.upper); const body = men.map((m: any) => Math.abs(wrap(m.char.bodyYaw - yawTo(m.char.pos, p))));
+    const words = men.map((m: any) => doing(O.g, m)); const up = men.map((m: any) => m.script?.upper); const body = men.map((m: any) => Math.abs(wrap(m.char.bodyYaw - yawTo(m.char.pos, p))));
     verdict(l.order === 'cover' && watch.every((w: number[]) => dist(w, p) < 0.1) && before.every(b => b > 0.5) && on && off.every(d => d < 0.2) && moved.every(d => d < 0.3), `${label}: each man turns his gun onto it where he stands`,
       `${logLine(l)} · watching ${at(watch[0])} for ${at(p)} · off it before ${before.map(f2).join(' / ')} rad → ${off.map(f2).join(' / ')} rad in ${f2(tOn)} s · moved ${moved.map(f2).join(' / ')} m`);
     verdict(worst < 0.2 && body.every(d => d < 0.4) && moved8.every(d => d < 0.3) && words.every((w: string) => wantWords.test(w)) && up.every((u: string) => u === 'aim'), `${label}: eight seconds on he is still on it — gun and body — and the HUD says where`,
@@ -212,8 +213,8 @@ export const ordersStack = guarded(async () => {
     //  walk left it, and what the hold must not do is move it.)
     const leaf0 = DOORSTAY.on ? d.angle : 0;
     const here = men.map((m: any) => [...m.char.pos]); R.step(60 * 6); const drift = men.map((m: any, i: number) => dist(m.char.pos, here[i]));
-    const sets = R.lines(/^set\.$/, t0); const words = men.map((m: any) => O.statusOf(m));
-    verdict(drift.every(x => x < 0.1) && sets.length === 1 && words.every((s: string) => s === `stacked · ${doorWords(d)}`) && Math.abs(d.angle - leaf0) < 0.05, `${name}: they hold the stack (six seconds, the door untouched), "set." called once, the HUD says "stacked"`,
+    const sets = R.lines(/^set\.$/, t0); const words = men.map((m: any) => doing(O.g, m));
+    verdict(drift.every(x => x < 0.1) && sets.length === 1 && words.every((s: string) => sameWord(s, `stacked · ${doorWords(d)}`)) && Math.abs(d.angle - leaf0) < 0.05, `${name}: they hold the stack (six seconds, the door untouched), "set." called once, the HUD says "stacked"`,
       `drift ${drift.map(f2).join(' / ')} m · set. ${sets.map(s => `${s.who} @${f2(s.t - t0)} s`).join(', ') || 'never'} · "${words[0]}" · leaf angle ${f2(d.angle)}${leaf0 ? ` (${f2(leaf0)} as the hold began)` : ''}`);
     if (!R.samHit) continue; verdict(false, `${name}: Sam was hit`, '');
   }
@@ -230,7 +231,7 @@ export const ordersFallIn = guarded(async () => {
   R.quick(sam.pos); const l = lastOrder(O);
   R.until(() => men.every((m: any) => O.of(m)?.arrived), 12); R.step(60);
   const near = men.map((m: any) => dist(m.char.pos, sam.pos));
-  verdict(l?.order === 'fallIn' && far.every(d => d > 6) && near.every(d => d > 0.7 && d < 3.2) && dist(b1.char.pos, b2.char.pos) > 0.6 && men.every((m: any) => O.statusOf(m) === 'with you'), 'the quick key on Sam: the pair comes back from a far spot and stops short of him, in file',
+  verdict(l?.order === 'fallIn' && far.every(d => d > 6) && near.every(d => d > 0.7 && d < 3.2) && dist(b1.char.pos, b2.char.pos) > 0.6 && men.every((m: any) => doing(O.g, m).startsWith('with you')), 'the quick key on Sam: the pair comes back from a far spot and stops short of him, in file',
     `${logLine(l)} · from ${far.map(f2).join(' / ')} m to ${near.map(f2).join(' / ')} m of Sam in ${f2(g.time - t0 - 1)} s · apart ${f2(dist(b1.char.pos, b2.char.pos))} m`);
   // turning on the spot: the men do not shuffle round him
   const here = men.map((m: any) => [...m.char.pos]);
@@ -291,7 +292,7 @@ export const ordersNightBreach = guarded(async () => {
     const R = await rig(11, { quiet: false }); const { game: g, O, NB } = R; const [b1, b2] = O.squad(); const men = [b1, b2]; const sam = g.player.char;
     const beat = (w: string) => { const b = NB.drill?.beats.find((x: any) => x.what === w); return b ? b.t : NaN; };
     R.step(5);
-    R.key('KeyF'); const set = R.until(() => NB.state === 'set', 30); const stS = men.map((m: any) => O.statusOf(m));
+    R.key('KeyF'); const set = R.until(() => NB.state === 'set', 30); const stS = men.map((m: any) => doing(O.g, m));
     verdict(set && stS.every((s: string) => /^set · press F/.test(s)), 'F stacks the pair as before, and the HUD\'s squad block says so', `night breach ${NB.state} · "${stS.join('" / "')}"`);
     const dS = R.door('server_manager'); const tS = { kind: 'door', at: [dS.frameCentre[0], 0, dS.frameCentre[2]], door: dS, side: 1 };   // (the keypad door, from the far side of the floor: nobody can get to that face — and with ORDERS.workOut off, no floor at either jamb on it)
     const greyS = O.whyNot(O.defs.find((d: any) => d.id === 'stack'), tS); const whyS = O.give('stack', tS); R.step(30);
@@ -317,7 +318,7 @@ export const ordersNightBreach = guarded(async () => {
     try { R.step(60 * 12); } catch (e: any) { threw = String(e?.message ?? e); }
     const alive = men.filter((m: any) => m.state !== 'dead');
     verdict(inside && l?.order === 'fallIn' && st === 'recalled' && NB.drill.phase === 'done' && !threw && alive.every((m: any) => !!O.of(m)), 'an order once they are inside recalls them: the drill ends ("recalled"), the men are on Sam\'s order, the floor runs on',
-      `${logLine(l)} · night breach ${st} · ${threw || 'no throw in 12 s'} · ${men.map((m: any) => `${m.callsign} ${m.state === 'dead' ? 'down' : `"${O.statusOf(m)}" ${f2(dist(m.char.pos, sam.pos))} m`}`).join(' · ')}`);
+      `${logLine(l)} · night breach ${st} · ${threw || 'no throw in 12 s'} · ${men.map((m: any) => `${m.callsign} ${m.state === 'dead' ? 'down' : `"${doing(O.g, m)}" ${f2(dist(m.char.pos, sam.pos))} m`}`).join(' · ')}`);
   }
   return done();
 });
@@ -329,16 +330,16 @@ export const ordersSeams = guarded(async () => {
   // the fight layer's seam: Blue One's script ended 'alert' with eyes on somebody for two seconds (emulated: lastSeenT stamped), then nothing
   const post = [...O.of(b1).post]; endGuardScript(b1, 'alert');
   let scripted = 0, pinned = 0, n = 0; const words = new Set<string>();
-  for (let i = 0; i < 120; i++) { b1.lastSeenT = g.time; R.step(); n++; if (b1.script) scripted++; if (b1.pinned) pinned++; words.add(O.statusOf(b1)); }
+  for (let i = 0; i < 120; i++) { b1.lastSeenT = g.time; R.step(); n++; if (b1.script) scripted++; if (b1.pinned) pinned++; words.add(doing(O.g, b1).split(' · on ')[0]); }
   const dHot = dist(b1.char.pos, post), stateHot = b1.state;
   const retaken = R.until(() => !!b1.script, 6); const tCold = g.time - b1.lastSeenT; R.until(() => !!O.of(b1)?.arrived, 6); R.step(30);
   verdict(scripted === 0 && pinned === n && words.size === 1 && words.has('in contact') && dHot < 0.5 && stateHot === 'alert', 'a man the fight AI has (script ended, alert, eyes on): orders leave him to it, rooted on his post, the HUD says "in contact"',
     `two seconds: scripted ${scripted}/${n} frames, pinned ${pinned}/${n} · "${[...words].join('", "')}" · ${f2(dHot)} m off his post · ${stateHot}`);
-  verdict(retaken && tCold >= ORDERS.coldSecs - 0.05 && tCold < ORDERS.coldSecs + 0.2 && O.of(b1)?.order === 'move' && dist(b1.char.pos, post) < 0.35 && O.statusOf(b1).startsWith('in position') && O.of(b2)?.arrived === true,
-    'his contact cold: he is back on his order, on his post', `re-taken ${f2(tCold)} s after the last sighting (coldSecs ${ORDERS.coldSecs}) · ${f2(dist(b1.char.pos, post))} m off his post · "${O.statusOf(b1)}" · state ${b1.state}`);
+  verdict(retaken && tCold >= ORDERS.coldSecs - 0.05 && tCold < ORDERS.coldSecs + 0.2 && O.of(b1)?.order === 'move' && dist(b1.char.pos, post) < 0.35 && doing(O.g, b1).startsWith('in position') && O.of(b2)?.arrived === true,
+    'his contact cold: he is back on his order, on his post', `re-taken ${f2(tCold)} s after the last sighting (coldSecs ${ORDERS.coldSecs}) · ${f2(dist(b1.char.pos, post))} m off his post · "${doing(O.g, b1)}" · state ${b1.state}`);
   // a show takes the floor
   O.give('hold', O.targetAt(g.player.char.pos), 'all'); R.step(5); const had = men.filter((m: any) => O.of(m)).length;
-  g.touring = true; R.input.pressed.add(ORDERS.key); R.step(3); const left = men.filter((m: any) => O.of(m)).length; const hud = O.hud(); g.touring = false;
+  g.touring = true; menuKey(O); R.step(3); const left = men.filter((m: any) => O.of(m)).length; const hud = { menu: listedOf(O), status: blockOf(O) }; g.touring = false;
   verdict(had === 2 && left === 0 && !hud.menu && hud.status.length === 0, 'a show takes the floor (touring): every order is dropped, X is dead, the HUD block is gone', `orders ${had} → ${left} · hud rows ${hud.status.length}`);
   return done();
 });
@@ -399,7 +400,7 @@ export const ordersEdges = guarded(async () => {
     verdict(men.every((m: any) => by(m.callsign) === 'on you. + with you.'), 'four orders in a row: each man answers twice, once with each line', men.map((m: any) => `${m.callsign}: ${by(m.callsign)}`).join(' · ')); }
   // (g4) a mark no path reaches, handed over directly (the menu would have refused it): he stops trying, says so, and the mark comes to him
   if (island) { const t0 = g.time; O.newGroup(); O.assign(b1, { order: 'move', post: [...island], face: 0, going: 'moving', there: 'in position' }); const got = R.until(() => !!O.of(b1)?.arrived, 20);
-    verdict(got && O.statusOf(b1) === 'stopped short' && R.lines(/can't get through/, t0).length === 1 && g.time - t0 < ((await import(`${ROOT}/src/game/teampace.ts`)).TEAMPACE.on ? 16 : 12), 'a man sent at a mark he cannot reach gives up within seconds, says so once, and stands where he got to', `"${O.statusOf(b1)}" after ${f2(g.time - t0)} s · said: ${R.lines(/can't/, t0).map(l => `${l.who} "${l.text}"`).join(' ')} · ${f2(dist(b1.char.pos, island))} m from the mark`); }
+    verdict(got && doing(O.g, b1).startsWith('stopped short') && R.lines(/can't get through/, t0).length === 1 && g.time - t0 < ((await import(`${ROOT}/src/game/teampace.ts`)).TEAMPACE.on ? 16 : 12), 'a man sent at a mark he cannot reach gives up within seconds, says so once, and stands where he got to', `"${doing(O.g, b1)}" after ${f2(g.time - t0)} s · said: ${R.lines(/can't/, t0).map(l => `${l.who} "${l.text}"`).join(' ')} · ${f2(dist(b1.char.pos, island))} m from the mark`); }
   // (h) the fight seam's clock: handed over with no sighting on record he is still left alone for the cold time, and gunfire in his ear keeps him in it
   O.give('hold', { kind: 'none', at: [...b2.char.pos], man: b2 }); R.step(30);
   b2.lastSeenT = -1000; endGuardScript(b2, 'alert'); const tY = g.time; R.until(() => !!b2.script, 6); const leftFor = g.time - tY;

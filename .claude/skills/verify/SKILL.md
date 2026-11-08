@@ -96,7 +96,7 @@ Surface: a WebGPU canvas app (GUI). Verification = load it in a WebGPU-capable b
 - **Start page → Team & kit → Deploy**: the Mission step lists the solo night and one row per `src/scene/scenarioList.ts SCENARIOS` entry (`H` / `J` step the Hour / Weather rows); its Team & kit step (`src/ui/loadout.ts`: how many teammates, none to four, each man's kit card, the Squad kit row) deploys by a PAGE LOAD of the mission's URL. `?loadout=<mission id>` opens the start page on that step.
 - **Straight in by URL** (what a row loads; one config per fresh boot): `?roomclear` (the pair), `?roomclear&squad4` or
   `?squad=N` (0‥4 teammates), `?nightbreach`, `?rescue`, plus `&levelFile=<name>.json` for a level of its own (records, depot,
-  block, block-squads, warehouse, compound, barracks, registry). After `await __ready` check `__scenarios.current()`,
+  block, warehouse, compound, barracks, registry). After `await __ready` check `__scenarios.current()`,
   `__roomclear.state` / `__nightbreach.state` / `__rescue.state`, and that the team stands (`__roomclear.team`).
 - **Orders menu**: aim the cursor at a door / a spot on the floor (`__mouse`), press `X` (one-frame `__input.pressed.add('KeyX')`
   inside a `__runFrames` step, or `__orders.open()`), read `__orders.menu` (rows listed for that target; greyed rows carry the

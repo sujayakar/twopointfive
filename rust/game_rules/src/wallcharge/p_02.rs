@@ -65,19 +65,6 @@ pub fn wall_charge_sync(g: &mut crate::game::Game) -> bool {
     live
 }
 
-/// A row the wall's fifth has taken the digit of: itself, digitless, one stand-in a row. (wallcharge.ts undigit)
-pub fn wall_charge_undigit(g: &mut crate::game::Game, d: OrdersOrderDefId) -> OrdersOrderDefId {
-    let mut row = g.tab.orders_order_def[d].clone();
-    row.key = None;
-    if let Some(x) = g.m.wallcharge.stand_ins.get(d).copied() {
-        g.tab.orders_order_def[x] = row;
-        return x;
-    }
-    let x = g.tab.orders_order_def.push(row);   // (a second row of the same id ON PURPOSE: made once a row, kept in stand_ins, written in place above)
-    g.m.wallcharge.stand_ins.set(d, x);
-    x
-}
-
 /// Puts the rows on the menu as the mode says. (wallcharge.ts seat)
 pub fn wall_charge_seat(g: &mut crate::game::Game) {
     crate::orders::squad_orders_unregister(g, WALL_PAGE);
@@ -690,16 +677,21 @@ pub fn wall_charge_fire_at(g: &mut crate::game::Game, q: V3, w: Option<&crate::w
 }
 
 /// How much of the blast a place on the charge's own side takes: 0 = none, up to 1 at the wall. (wallcharge.ts blastShare)
-pub fn wall_charge_blast_share(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot, p: V3, r: Option<crate::wallcharge::WallChargeAwayMarksValueR>, leaves: Option<bool>) -> f64 {
-    let r = match r { Some(r) => r, None => safe_radius(g, w) };
+pub fn wall_charge_blast_share_of(g: &crate::game::Game, w: &crate::wallcharge::WallSpot, p: V3, r: Option<crate::wallcharge::WallChargeAwayMarksValueR>, leaves: Option<bool>) -> f64 {
+    let r = match r { Some(r) => r, None => safe_radius_of(g, w) };
     let leaves = leaves.unwrap_or(true);
     let at = wall_pt(g, w, 0.0, 0.0, None);
     let d = flat(p, at);
     let t = thick(g, w);
     if d >= r.reach || wall_off(g, w, p) < -t / 2.0 { return 0.0; }
     let (a, b): (V3, V3) = (wall_pt(g, w, 0.0, 0.5, Some(1.1)), [p[0], 1.1, p[2]]);
-    let cut = crate::scene_collision::solid_blocked_over(g, &if leaves { Over::OWN } else { Over::statics() }, a, b, None);
+    let cut = crate::ask::WorldAsk::of(g).over(if leaves { Over::OWN } else { Over::statics() }).line(a, b, crate::ask::Line::Solid);
     if cut { 0.0 } else { 1.0 - d / r.reach }
+}
+/// …for a rule that holds the game: the copy of the boxes stood first
+pub fn wall_charge_blast_share(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot, p: V3, r: Option<crate::wallcharge::WallChargeAwayMarksValueR>, leaves: Option<bool>) -> f64 {
+    crate::scene_collision::stands(g);
+    wall_charge_blast_share_of(g, w, p, r, leaves)
 }
 
 /// The charge's radius, read once while it is on the wall, and the same with the stand-off distance for its reach (the closure `rOf` of clearOf).
@@ -812,45 +804,50 @@ pub fn wall_charge_clear_of(g: &mut crate::game::Game, gd: GuardId, where_: &mut
     Some(mark)
 }
 
-/// Who is inside the radius of a set charge right now: 'you' and the teammates by callsign. (wallcharge.ts tooClose)
-pub fn wall_charge_too_close(g: &mut crate::game::Game, c_2: Option<WallChargeId>) -> Vec<String> {
+/// Who is inside the radius of a set charge right now: 'you' and the seat's men by callsign. (wallcharge.ts tooClose)
+pub fn wall_charge_too_close_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, c_2: Option<WallChargeId>) -> Vec<String> {
     let c = match c_2 { Some(c) => c, None => return Vec::new() };
     let w = wall_of(g, c);
-    let r = safe_radius(g, &w);
+    let r = safe_radius_of(g, &w);
     let mut out = Vec::new();
-    if !g.pl[g.player].down {
-        let p = sam_pos(g, &crate::seats::here(g));
-        if wall_charge_blast_share(g, &w, p, Some(r), Some(false)) > 0.0 { out.push(String::from("you")); }
+    if !g.pl[seat.player].down {
+        let p = sam_pos(g, seat);
+        if wall_charge_blast_share_of(g, &w, p, Some(r), Some(false)) > 0.0 { out.push(String::from("you")); }
     }
-    for gd in crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None) {
+    for gd in crate::orders::squad_orders_men(g, seat, None, None) {
         let p = man_pos(g, gd);
-        if wall_charge_blast_share(g, &w, p, Some(r), Some(false)) > 0.0 { out.push(g.gd[gd].callsign.clone()); }
+        if wall_charge_blast_share_of(g, &w, p, Some(r), Some(false)) > 0.0 { out.push(g.gd[gd].callsign.clone()); }
     }
     out
 }
+/// …for a rule that holds the game: the copy of the boxes stood first
+pub fn wall_charge_too_close(g: &mut crate::game::Game, c_2: Option<WallChargeId>) -> Vec<String> {
+    crate::scene_collision::stands(g);
+    wall_charge_too_close_of(g, &crate::seats::here(g), c_2)
+}
 
 /// A clear line to `p` from the far face at the charge or a step either side, door leaves out (the closure `lined` of behind).
-fn lined(g: &mut Game, w: &WallSpot, t: f64, p: V3) -> bool {
-    let statics = Over::statics();
+fn lined(g: &Game, w: &WallSpot, t: f64, p: V3) -> bool {
+    let world = crate::ask::WorldAsk::of(g).over(Over::statics());
     for du in [0.0, 0.4, -0.4] {
         let a = wall_pt(g, w, du, -(t + 0.45), Some(1.1));
-        if !crate::scene_collision::solid_blocked_over(g, &statics, a, [p[0], 1.1, p[2]], None) { return true; }
+        if !world.line(a, [p[0], 1.1, p[2]], crate::ask::Line::Solid) { return true; }
     }
     false
 }
 
 /// Who the blast would catch beyond the wall right now. (wallcharge.ts behind)
-pub fn wall_charge_behind(g: &mut crate::game::Game, c_2: Option<WallChargeId>) -> Vec<String> {
+pub fn wall_charge_behind_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, c_2: Option<WallChargeId>) -> Vec<String> {
     let c = match c_2 { Some(c) => c, None => return Vec::new() };
     let w = wall_of(g, c);
     let (t, at) = (thick(g, &w), wall_pt(g, &w, 0.0, 0.0, None));
     let stun_m = g.k.doortools.stun_m;
     let mut out = Vec::new();
     {
-        let p = sam_pos(g, &crate::seats::here(g));
-        if !g.pl[g.player].down && g.puppet.is_none() && !g.touring && wall_off(g, &w, p) < -t / 2.0 && flat(p, at) < stun_m && lined(g, &w, t, p) { out.push(String::from("you")); }
+        let p = sam_pos(g, seat);
+        if !g.pl[seat.player].down && g.puppet.is_none() && !g.touring && wall_off(g, &w, p) < -t / 2.0 && flat(p, at) < stun_m && lined(g, &w, t, p) { out.push(String::from("you")); }
     }
-    for gd in crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None) {
+    for gd in crate::orders::squad_orders_men(g, seat, None, None) {
         let p = man_pos(g, gd);
         if wall_off(g, &w, p) < -t / 2.0 && flat(p, at) <= stun_m && lined(g, &w, t, p) { out.push(g.gd[gd].callsign.clone()); }
     }
@@ -858,13 +855,18 @@ pub fn wall_charge_behind(g: &mut crate::game::Game, c_2: Option<WallChargeId>) 
 }
 
 /// The trigger's warning in words ('' = nobody). (wallcharge.ts closeWords)
-pub fn wall_charge_close_words(g: &mut crate::game::Game, c_2: Option<WallChargeId>, caps: Option<bool>) -> String {
+pub fn wall_charge_close_words_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, c_2: Option<WallChargeId>, caps: Option<bool>) -> String {
     let caps = caps.unwrap_or(false);
-    let (near, far) = (wall_charge_too_close(g, c_2), wall_charge_behind(g, c_2));
+    let (near, far) = (wall_charge_too_close_of(g, seat, c_2), wall_charge_behind_of(g, seat, c_2));
     let mut s = String::new();
     if !near.is_empty() { s.push_str(if caps { " · TOO CLOSE: " } else { " · too close: " }); s.push_str(&near.join(", ")); }
     if !far.is_empty() { s.push_str(if caps { " · BEHIND THE WALL: " } else { " · behind the wall: " }); s.push_str(&far.join(", ")); }
     s
+}
+/// …for a rule that holds the game: the copy of the boxes stood first
+pub fn wall_charge_close_words(g: &mut crate::game::Game, c_2: Option<WallChargeId>, caps: Option<bool>) -> String {
+    crate::scene_collision::stands(g);
+    wall_charge_close_words_of(g, &crate::seats::here(g), c_2, caps)
 }
 
 /// A teammate outside the order in the blast: the word for it. (wallcharge.ts inBlast)

@@ -1,9 +1,9 @@
 import { kitViewOn, kitViewStart, kitViewFatal, kitViewQuietOf, type KitView } from './host/kitView';   // (FIRST on purpose: under ?kitview its load makes this window's storage read-only before any module below reads or writes a store — it imports no module at run time, so nobody's load order changes)
 import { END_CARD } from './host/endcard';
 import { Menu, loadSandbox, bootCard } from './ui/menu';
-import { optionsOpen, walkInNow } from './ui/options';
+import { optionsOpen, openOptions, closeOptions, walkInNow } from './ui/options';
 import { LOADBRIEF, loadBrief } from './ui/loadbrief';
-import { SETTLE, Settle } from './ui/settle';
+import { settleOfQuery, startWaits } from './ui/startwait';
 import { CMDRING } from './game/cmdring';   // (a prototype: with the orders ring on, Tab is its key and nothing else's)
 import { tabCardOf, tabCardHtml } from './ui/tabcard';
 import { bootTextSize } from './ui/textsize';
@@ -11,10 +11,13 @@ import { modelErrAsked, modelErrBoot, modelErrFrame, sceneOf } from './host/mode
 import { SENSE_PAGE } from './game/sense';
 import { kitFresh, kitShow, kitPlayer, kitGun, kitLessonPage, kitLoad, kitRows, KIT, SUITS, TRIMS } from './game/kit';
 import { kitBoot } from './ui/kitBoot';
-import { missionsBusy, reopenMissionsAfterLoad, missionsReopenAsked, OFFLIST_UI } from './ui/missions';
+import { Desk, KIT_KEPT, desk, setDesk } from './view/desk';
+import { Commands } from './draw/commands';
+import { machineBefore } from './host/machine';
+import { missionsBusy, reopenMissionsAfterLoad, missionsReopenAsked } from './ui/missions';
 import { startPage, startPageWanted, openStartPage, openList } from './ui/startpage';
 import { PICKS, pickRedirect, pickQuitSearch, pickOfQuery, pickHref } from './scene/picks';
-import { initGpu, showFatal, showFatalError, pipelineProgress, gpuStory, pipeQueue, laterIdle, laterProgress, PIPE_QUEUE, FATAL } from './gpu/device';
+import { initGpu, showFatal, showFatalError, pipelineProgress, gpuStory, pipeQueue, laterIdle, PIPE_QUEUE, FATAL } from './gpu/device';
 import { shaderRowsOn } from './ui/shaderrows';
 import * as boot from './ui/boot';
 import { rigTable } from './render/sdfrig';
@@ -35,8 +38,8 @@ import { MARKING_TEXEL } from './scene/markings';
 import { LOOK, LOOK_LAB, lookLabOn, lookLevelFile, lookPageRows, placeOfQuery, setLookPlace, setSuitAs, lookKeptOf } from './scene/look';
 import { lookTidy } from './scene/lookTidy';
 import { stepFrame, FIXEDSTEP, type LoopCtx } from './host/loop';
-import { bindFindMe, watchCtrlTaps, FINDME, setFindMe } from './host/findme';
-import { findMeOutline } from './ui/findme';
+import { bindFindMe, FINDME, setFindMe } from './host/findme';
+import { findMeOutline } from './ui/findmeviz';
 import { makeOutlineFrame } from './render/outline';
 import { SavePicture } from './render/savepic';
 import { EVENPACE, pacer, pageRoom, rateMeter } from './host/pace';
@@ -123,7 +126,8 @@ import { SCENARIOS, ALL_MISSIONS, LESSON_MISSIONS, pickSearch } from './scene/sc
 import { lessonGroup } from './scene/scenarios';
 import { DOORWAY } from './game/doors';
 import { HANDLE, HANDLE_STATS } from './game/handleside';
-import { initDifficulty, difficultyNow, keptLevers } from './game/difficulty';
+import { initDifficulty, difficultyNow, difficultyFromStore, keptLevers } from './game/difficulty';
+import { quietFogForget } from './game/quietfog';
 import { WEATHER_PRESETS, snowLevelOfQuery } from './game/weatherKinds';
 import { SNOW_SURF, snowCfgRows } from './render/snowField';
 import { SNOWTRACKS, TRACK_RES } from './game/snowTracks';
@@ -210,12 +214,7 @@ async function main() {
   await rustGame.rustBoot();
   { const no = simWhyNot(); if (no) { console.info(simSay()); throw noWasm() ? new NoWasmError(no) : new Error(`the Rust simulation did not start: ${no}`); } }
   if (!kitViewOn && await cloudAdopt(q)) return;   // a browser handed another's id (`?player=`) takes it and its settings before a single key is read, then loads once more without the word (cloud/cloud.ts; no request at all on a build with no backend)
-  keymap.KEYMAP.handWhen = () => true;   // (…and his own actions on the key that leaves spare, the whistle's row with no key: host/keymap.ts HAND, the rule game/handring.ts)
-  keymap.KEYMAP.slotWhen = () => true;   // (empty hands are a slot on backtick, the debugger on backslash, E spare: host/keymap.ts SLOT, the rule game/handslot.ts)
-  keymap.KEYMAP.freeWhen = () => WALLSNAP.on && walkInNow();   // (the wall hold's row has no key while walking into a wall takes it: host/keymap.ts qFree)
-  keymap.KEYMAP.setWhen = () => true;   // (…and the selector's and the light's while a gun's key again opens its setup: host/keymap.ts setFree)
-  keymap.KEYMAP.onlyWhen = () => true; keymap.KEYMAP.throwWhen = () => false;   // (the old menu's letters sleep while the ring carries every order and the menu has no key; G not while it is the quick throw's: host/keymap.ts letGo)
-  keymap.keysBoot(q);   // the player's own keys (host/keymap.ts): live on this page from before anything is drawn; ?keybinds=0 = the build's
+  keymap.gameKeysBoot(q, walkInNow);   // the player's own keys (host/keymap.ts): live on this page from before anything is drawn; ?keybinds=0 = the build's
   (window as any).__keys = keymap;   // …and its hook from the same moment: the Controls screen is up before the boot is over, and a check of it asks the table (tools/qa/keybinds-page.cjs)
   bootTextSize(q, kitViewOn);   // the page's words at the window's size, the browser's zoom keys the game's (ui/textsize.ts; ?textsize=0 = the page as it was) — before anything is drawn
   // `?pick=<id | place>` alone (scene/picks.ts): a link to a row of the short list that stays right when the row's settings change — answered with ONE replace to
@@ -242,10 +241,15 @@ async function main() {
   pageSwitches(q);   // the switches this boot writes from the URL — the destruction goal's (?nodestruction ?nofurnblast ?nowallreact ?nocoverfire ?nowallcharge ?wallmenu=direct) and the room entry's door walk (?nodoorpath ?doorpath=0|gun) — in src/host/profile.ts, which the QA harness's shipped stand calls too with an empty query: one function, so the two cannot drift. Before the level loads (the destruction's dressing)
   const recipeTables = (): void => { if (!recipe) return; recipe.tables(); pageRows(q); };   // a recipe's knob tables over this machine's (below, at each point of the boot that wrote over them) — and then the Rust module's rows as the build has them, whatever an older recipe wrote (profile.ts pageRows: a row is no switch, and no recipe made now carries one)
   setLookPlace(placeOfQuery(q));   // the men's dress follows the place (scene/look.ts): on the office family the first cast and its tables, dressed for a building — said before the cast is fetched below
-  OFFLIST_UI.on = q.get('offlist') !== '0';   // the rows cut from the mission list are drawn on no list (ui/missions.ts listedMissions; ?offlist=0 = every row drawn, as before the cut)
+  LOADBRIEF.options = { open: () => openOptions({ tab: 'controls' }), close: closeOptions, up: optionsOpen };
   LOADBRIEF.on = q.get('loadbrief') !== '0';   // a mission's page loads behind that mission's brief and waits for the player's Start (ui/loadbrief.ts; ?loadbrief=0 = the boot card and the straight start, as before)
-  { const v = q.get('settle'), w = Number(q.get('settlewait')); SETTLE.on = v === null ? navigator.webdriver !== true : v !== '0'; if (v && /^\d+$/.test(v) && +v > 1) SETTLE.frames = +v; if (w > 0) SETTLE.programSecs = w; }   // the brief's START is live when the picture behind it is ready: every shader in, the first frames drawn, auto quality's pick made (ui/settle.ts). On where a person sits; ?settle=0 = live the moment the level stands, as before; ?settle=1 = on for a page a script drives too, a number over 1 = that many frames and ?settlewait=N = that many seconds for the programs (a page tool on a slow adapter)
+  settleOfQuery(q);   // the brief's START is live when the picture behind it is ready (ui/settle.ts). On where a person sits; ?settle=0 = live the moment the level stands; ?settle=1 = on for a page a script drives too, a number over 1 = that many frames and ?settlewait=N = that many seconds for the programs (a page tool on a slow adapter)
   kitBoot();   // each member's kit and uniform read from this machine's store (ui/kitBoot.ts, game/kit.ts)
+  // THE DESK (view/desk.ts): the cards before a game ask the module the page has booted. What a press keeps goes in this machine's store and from there into the tables the page's own start wears
+  { const F = rustGame.rustFace(), C = new Commands();
+    setDesk(new Desk(F.exports, F.memory, (key, text) => { let store: Storage | null = null; try { store = window.localStorage; if (text) store.setItem(key, text); else store.removeItem(key); } catch { /* a sandboxed frame: nothing is kept */ }
+      if (key === KIT_KEPT) kitLoad(store, location.search); else if (key.startsWith('twopointsix.quiet')) quietFogForget(); else difficultyFromStore(); }));
+    machineBefore(q, q.get('levelFile') ?? 'office.json', C); desk().do(C); }
   const lessonRow = LESSON_MISSIONS.find(e => e.level === q.get('levelFile')) ?? null; kitLessonPage(lessonRow && lessonGroup(lessonRow.group) ? lessonRow : null);   // …but a TRAINING level is played with the kit AS ISSUED (game/loadout.ts kitAsIssued): the page names its lesson's row (kit.ts kitLessonPage) and every staging on it puts the issue cards on the men — all but the one lesson he packs for (kit.ts ISSUE.picked), whose stagings wear the kept cards —, since a lesson's steps ask for the issue kit's own things (a card with no rifle left 'press 2' a step that could never pass; your own four counts stay what a Player is built with — the kit lesson throws more than the one of each the pouches rule issues). The table and the store stay this machine's: the lesson neither wears nor writes the kept cards, and the loadout screen opened from this page for ANOTHER mission shows and keeps them
   recipeTables();
   const canvas = document.getElementById('view') as HTMLCanvasElement;
@@ -376,7 +380,7 @@ async function main() {
   worldHooks(engine, game, audio);
   input.listen(canvas);
   (window as any).__findme = { table: FINDME, set: setFindMe };   // (host/findme.ts: the Options rows for finding your own man, for a page check to move without the screen)
-  bindFindMe(cam); const ctrlTwice = watchCtrlTaps(window, () => !!input.lockExcept, keymap.camKey);   // (host/findme.ts: the player's kept aim pan onto the follow camera; the camera key tapped twice)
+  bindFindMe(cam);   // (host/findme.ts: the player's kept aim pan onto the follow camera)
   window.__cam = cam;   // (the follow camera standGame put on the spawn)
   const overlay = new Overlay(); if (tape || q.get('cards') === '0') overlay.cards = false;   // (a replay's tape shows no tutorial card, nor does `?cards=0`: ui/railcard.ts)
   overlay.cardClosed = () => input.focusGame();
@@ -900,7 +904,6 @@ async function main() {
     fixedStep: () => !scripted && !kitViewOn,   // (the fixed 60 Hz game step, host/loop.ts FIXEDSTEP: live frames only — a script's __runFrames names its own dt and gets exactly that; and never ?kitview's picture: host/kitView.ts stands its men round EVERY update from two hooks the loop calls once a frame, and a frame of two ticks or of none would leave updates unattended — it keeps one update a drawn frame under its own pacer, as it was built)
     betweenTicks: () => { engine.world.relist(); },   // (nothing is drawn between two ticks: the list the cursor's ray reads, not the pack — scene/boxes.ts relist)
     ...(net ? { tick: (tdt: number, i: Input, c: FollowCamera, v: LoopCtx['view']) => net.tick(tdt, i, c, v), lead: () => net.lead() } : {}),   // (a networked game: the server's confirmed ticks step the game — net/page.ts)
-    ctrlTwice,
     tween,
     vsyncDt: () => vsDt >= 0 ? vsDt : undefined,
     beforeTick: dt => handsTick(dt),
@@ -1039,28 +1042,8 @@ async function main() {
   // THE LOAD BRIEF stays up, the world held still behind it (`frozen` below), until the player starts the run — on a page a person sits at. A page a script
   // drives, a benchmark, a show, or a mission whose start was refused (the start card says why) drops it here and goes on as before.
   const briefGo = !openStartCard && !automated && !benchOn() && !game.director.showing;
-  // THE START WAITS FOR THE PICTURE (ui/settle.ts): the brief holds the world, its block not yet live, until every program is in (the later set too:
-  // nothing compiles once the run is live) and the frames behind it have been drawn with them and measured. A press kept from the boot
-  // starts the run then. `__boot.marks.settled` is when; a script that takes the page meanwhile drops the brief (briefHolds) and the wait with it.
-  const briefSettle = (b: NonNullable<typeof brief>): void => {
-    const run = (): void => { audio.start(); input.focusGame(); };
-    if (!SETTLE.on) { boot.mark('settled'); b.live(run); return; }
-    b.hold(); pipeQueue.rush(true);
-    const P = pipelineProgress, S = new Settle(); let laterMost = laterProgress.pending, settleLast = performance.now(), drawnAt = behind.drawn;
-    const back = (): void => { settleLast = performance.now(); };   // (a tab that comes back: the time it was away is not the wait's)
-    const end = (): void => { settling = false; pipeQueue.rush(false); document.removeEventListener('visibilitychange', back); };
-    document.addEventListener('visibilitychange', back);
-    const settleStep = (): void => {
-      if (!b.held) { end(); return; }
-      const now = performance.now(), out = P.total - P.done + laterProgress.pending; laterMost = Math.max(laterMost, laterProgress.pending);
-      const done = S.step((now - settleLast) / 1000, behind.drawn - drawnAt, { out, measuring: quality.calibrating }); settleLast = now; drawnAt = behind.drawn;
-      if (done) { end(); boot.mark('settled'); b.live(run); return; }
-      settling = S.picture;   // (only the picture's turn needs its frames: while programs compile the still behind the brief goes undrawn after its warm frames, as ever)
-      b.status(S.picture ? 'getting the picture ready …' : `compiling shaders ${P.done + laterMost - laterProgress.pending} / ${P.total + laterMost} …`);
-      requestAnimationFrame(settleStep);
-    };
-    requestAnimationFrame(settleStep);
-  };
+  // THE START WAITS FOR THE PICTURE (ui/startwait.ts). `__boot.marks.settled` is when it is over; a script that takes the page meanwhile drops the brief (briefHolds) and the wait with it.
+  const briefSettle = (b: NonNullable<typeof brief>): void => startWaits(b, { drawn: () => behind.drawn, measuring: () => quality.calibrating, settling: on => { settling = on; }, settled: () => boot.mark('settled'), run: () => { audio.start(); input.focusGame(); } });
   // THE FIRST PLAYED FRAME IS AN ORDINARY ONE, ON EVERY ROAD STRAIGHT TO PLAY (a mission's card, a benchmark's address): the Rust game is started, its apply and its tick run once here, before the loop's first frame, and not where the first frame would pay for them (host/rustgame.ts rustWarm). Not behind the title (a pick is a page load, and an idle title's attract stages by name first), a show, a networked game's machine (it starts by its server's clock) or a replay (it stands from its tape). ?rustwarm=0: the first frame pays.
   if (!openStartCard && !net && !tape && q.get('rustwarm') !== '0') rustGame?.rustWarm({ input, cam, canvas });
   if (openStartCard) { brief?.off(); menu.open('start');
@@ -1154,7 +1137,6 @@ function weatherHourHooks(game: Game, smoke: SmokeSystem) {
   (window as any).__weather = game.weather;
   // the hour (hours.ts): __hour.set('dusk') live, .sun(0.4) = the one number a cloud dims, .at([x,y,z]) = the hour's light the meter's stand-in adds there, .est(p, skipOwner) = that
   // stand-in whole (guards.ts lightEstimateAt: what the harness and the team's rules read) — beside `__game.sensors.read('playerChest')` it is the stand-in against the renderer's own meter
-  HOUR.live = () => hourOf(game);   // (the mission sheet's no-load shortcut asks which hour the page is standing at: a checkpoint or the panel may have moved it off the visit's)
   (window as any).__hour = { ids: HOUR_IDS, table: HOURS, visit: HOUR, get id() { return hourOf(game); }, set: (id: string) => { applyHour(game, HOUR_IDS.includes(id as any) ? id as any : 'night'); return hourOf(game); },
     sun: (k?: number) => { if (k !== undefined) setSunStrength(game, k); return sunStrength(game); }, cloud: () => { sunToCloud(game); return sunStrength(game); },
     cover: (c?: number) => { const W = game.weather; if (!W?.kind) return null; if (c !== undefined && Number.isFinite(c)) { WEATHER_PRESETS[W.kind].cloud = Math.min(1, Math.max(0, c)); sunToCloud(game); game.engine.invalidateWorldCache?.(); } return W.cloud; },   // the picked weather's cloud cover for the VISIT (the look panel's Cloud row): the sun, its disc and the sky follow by hours.ts's own rule; null with no weather picked. Not carried by a save or a recording

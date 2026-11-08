@@ -15,7 +15,6 @@ import * as m11 from '../../src/game/cmd';
 import * as m12 from '../../src/game/cover';
 import * as m13 from '../../src/game/cues';
 import * as m14 from '../../src/game/debris';
-import * as m15 from '../../src/game/defuse';
 import * as m16 from '../../src/game/destruction';
 import * as m17 from '../../src/game/devices';
 import * as m18 from '../../src/game/director';
@@ -98,7 +97,6 @@ export const classTable = (): Record<string, { prototype: object }> => { nameCla
   [(m46 as any).CpuSmoke, "CpuSmoke"],
   [(m13 as any).Cues, "Cues"],
   [(m14 as any).Debris, "Debris"],
-  [(m15 as any).Defuse, "Defuse"],
   [(m16 as any).Destruction, "Destruction"],
   [(m17 as any).Devices, "Devices"],
   [(m18 as any).Director, "Director"],
@@ -200,7 +198,6 @@ export const classTable = (): Record<string, { prototype: object }> => { nameCla
   "cover::Cover": (m12 as any).Cover,
   "cues::Cues": (m13 as any).Cues,
   "debris::Debris": (m14 as any).Debris,
-  "defuse::Defuse": (m15 as any).Defuse,
   "destruction::Destruction": (m16 as any).Destruction,
   "devices::CameraRt": (m17 as any).CameraRt,
   "devices::Devices": (m17 as any).Devices,

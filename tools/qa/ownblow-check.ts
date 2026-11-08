@@ -95,7 +95,7 @@ export async function ownBlowCheck(): Promise<boolean> {
       R.press('KeyF'); const crossed = R.until(() => op.crossed.size > 0, 8);
       verdict(set && w === null && armed && D.stats.blown === b0 + 1 && crossed, 'the squad stood off behind HIS charge: the squad\'s key is the word, it goes and they are in behind it', `set by hand ${set} · the order ${w === null ? 'taken' : w} · armed ${armed} · blown ${D.stats.blown - b0} · crossed ${crossed}`); }
     // ---- a wall
-    { const WP: any = await import('./wallcharge-probes.ts'), R: any = await WP.rig('block-squads', 13, { squad: false }); OWNBLOW.on = !BRK; HANDRING.on = false; WALLSNAP.press = false; WALLCHARGE.safe = true; WALLKILL.on = true;
+    { const WP: any = await import('./wallcharge-probes.ts'), R: any = await WP.rig('block-four', 13, { squad: false }); OWNBLOW.on = !BRK; HANDRING.on = false; WALLSNAP.press = false; WALLCHARGE.safe = true; WALLKILL.on = true;
       const { C, game: g } = R, P = WP.partitions(R)[0], foot = wallPt(P.W, 0, 0.55);
       g.teleportPlayer(foot); R.aim(P.top, 150); g.selectVerb('wall', 'charge'); R.press('Space'); const set = R.until(() => C.set.length === 1, DOORTOOLS.setSecs + 1), Wc = C.set[0]?.wall, said = R.said.filter((t: string) => /charge set on the wall/.test(t)).pop() ?? '';
       R.step(6); const god = !!g.godMode, godGrey = !!g.hover?.off; g.godMode = false;   // (the rig's player cannot be hurt: nothing holds his tap, and the row is not greyed)

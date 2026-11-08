@@ -72,8 +72,8 @@ fn turned(pan: f64, l: crate::wand::WandLens, aim: V3, max: f64, pan_rate: f64, 
 }
 
 /// The lens as one of the fog's eyes, or None while nobody is looking. (wand.ts wandEye)
-pub fn wand_eye(g: &crate::game::Game) -> Option<crate::fogofwar::FogEye> {
-    let pl = g.player;
+pub fn wand_eye(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::fogofwar::FogEye> {
+    let pl = seat.player;
     let w = g.pl[pl].wanding?;
     if !w.live || g.pl[pl].down { return None; }
     let l = wand_lens(g, w.door, w.side);

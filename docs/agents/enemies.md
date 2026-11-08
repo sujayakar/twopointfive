@@ -361,8 +361,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **Civilians** (`src/game/civilians.ts`, STATUS E12 d; `tune.civilians` default ON — OFF, or `?nocivilians`, = nobody but the shift, byte for byte; `probes.ts
   civilians-identity` also holds that their calm PRESENCE (greetings off) moves nothing of the shift's seeded three minutes). The cleaner (Marta, id 40) and the late
   worker (Owen, 41) are `Guard` records with `team 'civilian'` (teams.ts: hostile to nobody, nobody hostile to them) and a `civ: Civ` record, kept in `Game.civilians`
-  — NEVER in `Game.guards`, so no AI loop, pairing, rollcall, clear or QRF count sees them; built inside `withDice` (a private mulberry) so their construction draws
-  nothing from Math.random. Authored as DATA (`levels/office.json civilians[]` ← officeGen; docs/level-format.md *Civilians*: marks + wait + task wipe / bin / sit /
+  — NEVER in `Game.guards`, so no AI loop, pairing, rollcall, clear or QRF count sees them. (They were built under a private die, `withDice`;
+  since the keyed draws one man's construction moves nobody's, and it is gone.) Authored as DATA (`levels/office.json civilians[]` ← officeGen; docs/level-format.md *Civilians*: marks + wait + task wipe / bin / sit /
   printer / cooler / shelf / stand + face; character.ts `anim.act` = a whole-body clip layer for the tasks). They perceive through the SAME functions as the men:
   `guards.ts eyeContact` + `sightGain` × `CIV.keenK` 0.6 (narrower `eyeBusy` cone while working, wider `eyeAlarmed` once frightened, × `gunK` when Sam's gun is
   out within `gunM`), smoke via the probe's segment query, hearing = their own pass over `g.events` with hearingCheck's horizons and `col.sound.propagate` (a
@@ -736,7 +736,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   level's answer: the convoy escort, 2 or 3, by the main gate or the back gate) and `records` (a night desk with a telephone in the front office, 'the
   first room on a quiet floor': the night patrol, 2, off the street or round the back lane). LEFT WITHOUT, ON PURPOSE: the office's three squad missions
   (its block answers a quiet night; they stay as tuned), block-squads / warehouse / compound / barracks (at eleven: nobody is left to come), registry and
-  consulate (the hostage clock is the pressure), defuse / killhouse (each has its own clock), floodlit / mousehole / glasshouse (one idea each,
+  consulate (the hostage clock is the pressure), killhouse (it has its own clock), floodlit / mousehole / glasshouse (one idea each,
   and it is not this), pass (a snowed-in road). `block` (a telephone exchange, eight men) and `hall` (a police barracks wing) would suit one and have
   none yet: the maintainer's call. WHAT THE TEAM DOES: as on a quiet level, on the net's word — in a raid the net is the men at the set and the team itself (what another
   defender knows reaches control only by being told to a man at the set: `PICTURE`'s tell); with
@@ -1566,3 +1566,18 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   CHECK `bun run tools/qa/postends-check.ts` (`probes.ts postends`, family doors; both stands); `POSTENDS_BREAK=1` fails line 1 on both.
   MEASURED 11-05 on step 1515, page's stand: alone it moves one run of the 42, rescue-consulate:2, lost to rescued (taken 26, wiped 8, rescued 5, lost 3, team lost 68, seconds 3,540).
   NOT SEEN: never on a GPU, never played.
+- **A man looks where the player is shown he looks (2026-11-07; every enemy, every teammate, every civilian).** `guards::look_of` is `fogofwar::gaze_of`: his head, or his sights when a long
+  gun is in his shoulder and level, levelled. Every cone the AI asks is along it, with the table's half of 58 degrees. TWO CHANGES, no switch, the old sums are gone. FIRST the look was made level: it
+  was the mean of the chest's and the head's bones, tip and all, so a man kneeling with his gun low looked 65 degrees down and saw nobody past 3.5 m, and a patrolling guard with his gun up saw 46
+  degrees a side for the table's 58. SECOND it became the gaze: a man with a rifle up stands bladed, his chest 60 to 90 degrees to the right of his gun, and the mean went with it. Measured with a long
+  gun in the shoulder and level (13 missions, three seeds), the old look was to the RIGHT of the gun by a median of 45 degrees for an enemy not alert (n 61,413), 41 for one who is (39,842), 28 for a
+  squad man (24,071): he saw 13 to 18 degrees to the left of his sights and 100 to the right. Now 58 either side. So going past a guard with his gun up on his LEFT is harder than it was and on his
+  right easier; a kneeling squad sees. CHECK: native, `rust/game_start/tests/eyes.rs`, three seeds, each line red on the game before.
+  MEASURED, the level look (playthrough, god, seed 1, 21 runs): men up 34 to 44, kills 115 to 132; mortal, seed 1: ends equal (5 taken, 12 wiped, 4 lost), men up 52 to 53. The gaze, with the rest of
+  that day's join on its side: god, seed 1, 21 runs: men up 44 to 41, kills 133 to 122; seven quiet missions by two seeds: first notice and time down within 0.4 s; the four stealth lessons that play
+  themselves end as they did. barracks-four over six seeds: taken 3 to 0, all at one open doorway (near 28, 22) the squad's column walks past lit with no gun on it; two seeds of a later die took it
+  again, so six seeds is not the last word. depot-four over three seeds is no worse. `sneak-probes.ts stare` writes the old puppet and reaches nothing, so no check says a teammate waits on a man's eyes.
+  NOT SEEN: never on a GPU; nobody has played past a guard's left side by hand.
+- **A man who cannot see goes nowhere (2026-11-07).** In the fight's cover branch (`guards/behave/alert.rs`), for every rule that names a spot: dazzled or staggered, he gets down where he is, keeps
+  the spot and goes when he can see. The clock of his shift (6 s) waits while he is blind. No switch. Before, a man flashed as he was sent walked 2.97 m to his cover. CHECK: native,
+  `rust/game_start/tests/blind.rs`, three seeds, red before. MEASURED only inside the joins above. Never seen on a GPU, never played.

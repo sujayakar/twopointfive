@@ -77,7 +77,7 @@
 // rooms (unless `force`, which files them as searching men and drops the drill), Sam mid-action (unless `force`, which lets go of everything the way a teleport
 // does — in the FILE, never in the running game: saving is read-only).
 import { SideMap, rollbackVar, wallClock, HostOwned } from '../math/side';
-import { loadSandbox } from './sandbox';
+import { autosaveKept, keepAutosave, loadSandbox } from '../host/sandbox';
 import { hostileTo } from './teams';
 import { Vec3, v3, quat, clamp } from '../math/vec';
 import { Game, Guard, Player, KIT_ORDER } from './game';
@@ -92,7 +92,6 @@ import type { QuietSnap } from './quiet';
 import type { FogSnap } from './fogofwar';
 import { quietWords } from './quiet';   // (called inside functions only: src/game is one import cycle)
 import type { LessonSnap } from './lesson';
-import type { DefuseSnap } from './defuse';
 import { woundRestore, type Wound } from './wounds';
 import type { GameEvent, LightTarget, MissionStage, Mission, SlotKind, ThrowKind, Witness, GuardState, DownKind, DownBy, GuardTask } from './game';
 import { Firearm, Pistol, Rifle, WEAPONS } from './weapons';
@@ -248,8 +247,6 @@ export interface SaveState {
   /** a training lesson's place among its steps (lesson.ts LessonSnap) — absent off a lesson level or with the lesson switched off */
   lesson?: LessonSnap;
   // (a file from the builds that had plan mode may carry a `plan` key — the men picked and the chains they were on: nothing reads it now, and the file loads without it)
-  /** a defuse mission's clock and charges (defuse.ts DefuseSnap) — absent off a level with the block */
-  defuse?: DefuseSnap;
   player: PlayerSnap; guards: GuardSnap[]; items: ItemSnap[]; doors: DoorSnap[]; props: PropSnap[]; propsTime: number; targets: TargetSnap[];
   devices: DevicesSnap | null; mission: Mission; chronicle: ChronSnap; events: GameEvent[]; messages: { text: string; t: number }[];
   rollcall: RollcallSnap; needs: NeedsSnap; whistle: WhistleSnap; tactics: TacticsSnap; dialogue: DialogueSnap; weather: WeatherSnap | null; qrf: { loudT: number; word?: ResponseWordSnap[] };
@@ -366,7 +363,7 @@ export const SAVETIMELINE = {
   picPx: 256, picQ: 0.6,
 };
 const KEY_PREFIX = 'twopointsix.save.';
-const KEY_INDEX = KEY_PREFIX + 'index', KEY_MANUAL = KEY_PREFIX + 'manual', KEY_AUTO = (i: number) => `${KEY_PREFIX}auto.${i}`, KEY_AUTOSAVE_ON = 'twopointsix.autosave';
+const KEY_INDEX = KEY_PREFIX + 'index', KEY_MANUAL = KEY_PREFIX + 'manual', KEY_AUTO = (i: number) => `${KEY_PREFIX}auto.${i}`;
 /** SAVETIMELINE: the ring of saves by hand (its first is the one slot the build always had), a slot's picture, a save kept in memory */
 const KEY_HAND = (i: number) => i === 0 ? KEY_MANUAL : `${KEY_MANUAL}.${i}`, KEY_PIC = (key: string) => `${KEY_PREFIX}pic.${key.slice(KEY_PREFIX.length)}`, KEY_MEM = (slot: 'auto' | 'manual', i: number) => `${KEY_PREFIX}mem.${slot}.${i}`;
 
@@ -481,7 +478,6 @@ export function playerBusy(g: Game): string | null {
   if (pl.easing) return 'easing a door';
   if (pl.doorMove) return 'working a door';
   if (g.wallCharge?.setting || pl.charging || pl.workStow) return 'setting a charge';   // (workStow — workstow.ts: his gun put away for one and not back in his hand yet)
-  if (g.defuse?.working) return 'at a charge';
   if (pl.kick || (pl.doorKickTail && pl.char.anim.kicking)) return 'kicking a door';   // (doorKickTail — sprintdoor.ts: his legs are his own again while the leg of a boot at the run is still coming down, and the animator's kick clock is not in a file)
   if (pl.pendingThrow || pl.throwHeld || pl.char.anim.inThrow) return 'throwing';
   if (pl.launchHeld) return 'lining up the launcher';   // (the launcher's button down: the gesture is not in the file — a load would drop it and the release then send nothing)
@@ -604,7 +600,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     events: g.events.map(e => ({ kind: e.kind, pos: c3(e.pos), time: e.time, loud: e.loud, level: e.level, id: e.id, who: e.who, weapon: e.weapon, from: e.from ? c3(e.from) : undefined, to: e.to ? c3(e.to) : undefined, announced: e.announced, cause: e.cause, ...(e.ears ? { ears: [c3(e.ears[0]), c3(e.ears[1])] as [Vec3, Vec3] } : {}), ...(e.swAt ? { swAt: c3(e.swAt) } : {}) })),
     messages: g.messages.map(m => ({ text: m.text, t: m.t })),
     rollcall: { nextAt: R.nextAt, stage: R.stage, t0: R.t0, caller: gi(R.caller), missing: gi(R.missing), answered: R.answered, checks: R.checks },
-    needs: needsSnapshot(g), whistle: whistleSnapshot(g), tactics: tacticsSnapshot(g), lanes: lanesSnapshot(g), walls: g.destr?.walls?.snapshot(), furn: g.destr?.furn?.snapshot(), bars: barsSnapshot(g), dialogue: dialogueSnapshot(g), weather: g.weather?.snapshot() ?? null, ...(air ? { air } : {}), ...(g.quiet?.active ? { quiet: g.quiet.snapshot()! } : {}), ...(g.lesson?.data ? { lesson: g.lesson.snapshot() } : {}), ...(g.defuse?.active ? { defuse: g.defuse.snapshot() } : {}), qrf: { loudT: g.qrf?.loudT ?? -1e9, ...(RESPONSE.on ? { word: responseWordSnapshot(g) } : {}) },
+    needs: needsSnapshot(g), whistle: whistleSnapshot(g), tactics: tacticsSnapshot(g), lanes: lanesSnapshot(g), walls: g.destr?.walls?.snapshot(), furn: g.destr?.furn?.snapshot(), bars: barsSnapshot(g), dialogue: dialogueSnapshot(g), weather: g.weather?.snapshot() ?? null, ...(air ? { air } : {}), ...(g.quiet?.active ? { quiet: g.quiet.snapshot()! } : {}), ...(g.lesson?.data ? { lesson: g.lesson.snapshot() } : {}), qrf: { loudT: g.qrf?.loudT ?? -1e9, ...(RESPONSE.on ? { word: responseWordSnapshot(g) } : {}) },
     civilians: civiliansSnapshot(g),
     decals, ...(glassPenSnapshot(g) ? { glassPen: glassPenSnapshot(g) } : null),
     ...(dz ? { doze: dz } : null),   // (who dozes in which chair and who was woken — doze.ts; no key with its switch off)
@@ -674,13 +670,13 @@ export function loadState(g: Game, s: SaveState, opts: { label?: string } = {}) 
   barsRestore(g, s.bars);             // the window bars a round or a blast took (winbars.ts), gone again before the walls settle round them — the order they went in
   g.destr?.walls?.restore(s.walls);   // the level first (holed walls, chewed cover: the statics re-cut, the nav grid re-baked) — everything below is placed in it
   g.destr?.furn?.restore(s.furn);     // …then the furniture a blast took: gone again, silently (its pieces are not filed — no debris is)
-  try { applyState(g, s, prevLoads, prevSaves, opts); g.lesson?.restore(s.lesson); g.defuse?.restore(s.defuse); ringRestore(g); g.fogOfWar?.restore(s.fog); }   // (…and a training lesson's place among its steps, lesson.ts: after the mission slice — a file without it, made with the lesson off, leaves the lesson stood down for that run)
+  try { applyState(g, s, prevLoads, prevSaves, opts); g.lesson?.restore(s.lesson); ringRestore(g); g.fogOfWar?.restore(s.fog); }   // (…and a training lesson's place among its steps, lesson.ts: after the mission slice — a file without it, made with the lesson off, leaves the lesson stood down for that run)
   catch (e) { g.restartEncounter(); pageSay(`checkpoint failed to load (${(e as Error).message}) — encounter restarted`); throw e; }   // (a file broken past the checks: never a half-poured encounter — the fresh one, and the reason)
 }
 function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number, opts: { label?: string }) {
   g.time = fin(s.time, g.time); g.eventSeq = s.eventSeq | 0; g.fxSeed = s.fxSeed | 0; g.ocpCooldown = fin(s.ocpCooldown); g.calledIn = !!s.calledIn; g.stoodDown = !!s.stoodDown; g.lightHome.in(LIGHT_IN.fix, null, fin(s.breakerFixT)); g.lastStingT = fin(s.lastStingT, -100);
   g.aiEnabled = s.flags.aiEnabled !== false; g.godMode = !!s.flags.godMode; g.infiniteAmmo = !!s.flags.infiniteAmmo; g.playerInvisible = !!s.flags.playerInvisible;
-  loadSandbox(g, false);   // …then THIS MACHINE's start-card preference wins over the file's three sandbox flags (game/sandbox.ts; headless it is a no-op, so save∘load stays the identity on the file — probes checkpoint-identity)
+  loadSandbox(g, false);   // …then THIS MACHINE's start-card preference wins over the file's three sandbox flags (host/sandbox.ts; headless it is a no-op, so save∘load stays the identity on the file — probes checkpoint-identity)
   g.spectate = -1;
   // ---- items (before the men: their dropped torches point in here)
   const propsById = g.props.all;
@@ -925,9 +921,9 @@ export class Checkpoints {
   private hand = false; private due: string | null = null;
   constructor(store?: SaveStore) { wallClock(this, 'runId');   // (a run's name is made of the clock and a serial: never compared between two plays)
     this.store = store ?? (typeof localStorage !== 'undefined' ? localStore : memoryStore());
-    try { if (typeof localStorage !== 'undefined' && localStorage.getItem(KEY_AUTOSAVE_ON) === '0') this.enabled = false; } catch { /* */ }
+    if (!autosaveKept()) this.enabled = false;
   }
-  setEnabled(on: boolean) { this.enabled = !!on; try { if (typeof localStorage !== 'undefined') localStorage.setItem(KEY_AUTOSAVE_ON, on ? '1' : '0'); } catch { /* */ } }
+  setEnabled(on: boolean) { this.enabled = !!on; keepAutosave(this.enabled); }
   /** into the store — false when it would not take it, or threw (a store of the host's own may: the game goes on without the save) */
   private put(key: string, val: string): boolean { try { return this.store.set(key, val); } catch { return false; } }
   private note(g: Game, what: string) { this.log.push({ t: g.time, what }); if (this.log.length > 40) this.log.splice(0, this.log.length - 40); }

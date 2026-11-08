@@ -111,6 +111,15 @@ export async function verdictCheck(): Promise<boolean> {
       const A = await stage('night'); await A.nudge(); await A.step(20); A.g.mission.stats.alerts = 1; A.g.mission.stage = 'done'; await A.step(2);
       line(!!A.V.result && A.V.result.won && A.V.result.approach !== 'quiet' && !A.V.resumed, `the stealth night, out after an alarm: not quiet (${A.V.result?.approach})`); }
 
+    // 4b. which kinds the squad's card is for: the plain night's record has no kind, and one made on the page for the Rust game's has no such word at all
+    { const { squadVerdict } = await import(`${ROOT}/src/ui/verdictCard.ts`), said = [undefined, null, 'quiet', 'roomclear', 'rescue', 'nightbreach'].map(kind => squadVerdict({ kind } as any));
+      line(said.join() === 'false,false,false,true,true,true', `no kind, null and quiet are the stealth game's card, the squad's three kinds the squad's (${said.join(' ')})`);
+      const { withDom, El } = await import('./scenario-picker-probes.ts'), { renderDebrief } = await import(`${ROOT}/src/ui/debrief.ts`);
+      const N = await stage('night'), R = { kind: undefined, won: true, word: 'OUT', why: '', secs: 123, approach: 'quiet', void: false, clean: true, men: [], lost: 0, of: 1, foes: { down: 0, of: 3, fell: [] }, hostages: null, start: [0, 0] };
+      Object.defineProperty(N.V, 'result', { configurable: true, get: () => R });
+      await withDom('', async () => { const host = new El('DIV'); renderDebrief(host as any, N.g); const root: any = host.children[0], n = (c: string) => root.all((e: any) => e.cls.has(c)).length;
+        line(!root.cls.has('vd-squad') && n('vd-man') === 0 && n('db-rating') === 1 && n('st') >= 14 && n('db-timeline') === 1, `the solo night's card, its record with no kind: the rating, ${n('st')} numbers and the timeline stand (squad rows ${n('vd-man')})`); }); }
+
     // 5. off = the same game
     { const play = async (on: boolean) => { const S = await stage('clear', on); const hs: string[] = [];
         await S.step(20); await quiet(() => S.g.orders.give('fallIn', S.g.orders.targetAt(S.g.player.char.pos), 'all'));
@@ -165,7 +174,8 @@ export async function verdictCheck(): Promise<boolean> {
       line(store.tryStarted('a|b') === 0 && store.recordOf('a|b').n === 0, 'with nowhere to keep it (headless) nothing is counted'); }
 
     // 8. a mission's card on the start page
-    { const { withDom, El } = await import('./scenario-picker-probes.ts'), { dressMissionRows, rowEarns } = await import(`${ROOT}/src/ui/verdictRows.ts`);
+    { const { withDom, El } = await import('./scenario-picker-probes.ts'), { dressMissionRows, rowEarns } = await import(`${ROOT}/src/ui/verdictRows.ts`), { setDesk } = await import(`${ROOT}/src/view/desk.ts`);
+      setDesk({ start: () => ({ rows: ['killhouse-four', 'solo-night', 'tut-quiet', 'bazaar-quiet'].map(id => ({ id, lesson: id.startsWith('tut-') })) }) } as any);   // (the desk's rows, stood in for: which rows are lessons is the module's)
       const P: any = El.prototype;   // (the checks' fake element has no removeChild / replaceChild: the two the dresser needs, for this check only)
       P.removeChild ??= function (this: any, c: any) { this.children = this.children.filter((x: any) => x !== c); return c; };
       P.replaceChild ??= function (this: any, n: any, o: any) { this.children = this.children.map((x: any) => x === o ? n : x); n.parentElement = this; return o; };

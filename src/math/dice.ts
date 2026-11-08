@@ -41,6 +41,8 @@ export class SimDice {
   home: DiceHome | null = null;
   s0: number; n0 = 0;
   seed: number; sys: () => number;
+  /** the keyed draws made at this clock: how many of each key (simDraw) */
+  at = 0; drawn = new Map<bigint, number>();
   constructor(seed: number) { this.s0 = seed | 0; this.seed = seed >>> 0; this.sys = Math.random; }
   get s(): number { const h = this.home; return h ? h.s : this.s0; }
   set s(v: number) { const h = this.home; if (h) h.s = v; else this.s0 = v | 0; }
@@ -59,4 +61,27 @@ export function simRandom(): number {
   const d = cur; if (!d || Math.random !== d.sys) return Math.random();
   const h = d.home; if (h !== null) return h.roll();   // (the die is somewhere else — the game's block of the Rust module: rolled there, the same draw)
   d.n0++; const a = d.s0 = (d.s0 + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+
+// THE KEYED DRAW (rust/game_types/src/dice.rs `keyed`, the same function to the bit: tools/qa/dice-check.ts and that file's own test hold both to one number).
+// A fixed function of the game's seed, the SITE that asks, the man it is about (0: nobody, else his body's id + 1), the clock, and how many times this site has drawn
+// for him at this clock: no draw moves another. The game rolls in Rust; this side rolls what STANDING A GAME UP rolls, under the Rust site's own name.
+const W64 = (1n << 64n) - 1n, BITS = new DataView(new ArrayBuffer(8));
+function stir(x: bigint): bigint { x ^= x >> 30n; x = x * 0xbf58476d1ce4e5b9n & W64; x ^= x >> 27n; x = x * 0x94d049bb133111ebn & W64; return x ^ (x >> 31n); }
+/** who asks, about whom, as one word */
+export function drawKey(site: string, who: number): bigint {
+  let h = 0xcbf29ce484222325n; for (let i = 0; i < site.length; i++) { h ^= BigInt(site.charCodeAt(i)); h = h * 0x100000001b3n & W64; }
+  return stir(h ^ stir(BigInt(who) ^ 0x9e3779b97f4a7c15n));
+}
+export function keyed(seed: number, key: bigint, time: number, nth: number): number {
+  BITS.setFloat64(0, time);
+  const x = stir(stir(stir(BigInt(seed >>> 0) ^ 0x2545f4914f6cdd1dn) ^ key) ^ stir(BITS.getBigUint64(0)) ^ ((BigInt(nth) << 1n | 1n) * 0xd6e8feb86659fd93n & W64));
+  return Number(stir(x) >> 11n) / 9007199254740992;
+}
+/** a keyed draw for the simulation. The game's die is still rolled once a draw (its count says how many draws were made); with none in force the roll is the draw. */
+export function simDraw(site: string, who = 0, time = 0): number {
+  const d = diceInUse(), old = simRandom(); if (!d) return old;
+  if (d.at !== time) { d.at = time; d.drawn.clear(); }
+  const key = drawKey(site, who), nth = d.drawn.get(key) ?? 0; d.drawn.set(key, nth + 1);
+  return keyed(d.seed, key, time, nth);
 }

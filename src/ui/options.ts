@@ -12,22 +12,30 @@
 // loud on every mission was no option). The tier, autosave and the cheats were already kept by their own modules; brightness is the mission's own (its hour
 // and weather set the exposure) and is not kept.
 // Plain DOM in a layer of its own (#options, over #menu), its rules injected here once. Nothing at module level uses another module's exports.
-import { saveSandbox } from '../game/sandbox';
-import { gearText } from '../game/gear';
+import { keepSandbox } from '../host/sandbox';
 import { menuTheme } from './theme';
-import { WALLSNAP } from '../game/wallsnap';
-import { CMDRING } from '../game/cmdring';
 import { findMeRows } from './findme';
 import { cloudRows } from './cloudrows';
 import { TEXTSIZE, TEXT_EVENT, textStep, setTextStep } from './textsize';
 import { KEYMAP, cmdOnQ, keyText, keysOf, resetKeys, slotNow, camCap, capNow } from '../host/keymap';   // (the player's own keys: the Controls tab rebinds them)
 import { keyCapEl, keyCapture, keyStop, keyWaiting, type KeyHost } from './keybinds';
-import { VOLUME_DEFAULTS } from '../audio/audio';   // (the mixer's levels on a fresh page: what Reset puts back)
-import type { MenuDeps } from './menu';
-import { visitTier, type QualityName } from './quality';
+import { VOLUME_DEFAULTS } from '../audio/mixlaw';   // (the mixer's levels on a fresh page: what Reset puts back)
+import type { Engine } from '../engine';
+import type { AudioEngine } from '../audio/audio';
+import { visitTier, type Quality, type QualityName } from './quality';
 
 export type OptionsTab = 'graphics' | 'audio' | 'game' | 'controls';
-export type OptionsDeps = Pick<MenuDeps, 'engine' | 'game' | 'quality' | 'audio' | 'overlay'>;
+/** WHAT THE SCREEN SETS OF A GAME, whoever holds it: each reads as the game is set now, and is set by being written */
+export interface OptionsGame {
+  autosave: boolean; god: boolean; thinks: boolean; ammo: boolean;
+  /** the wall hold's feel is on, and whether walking into a wall takes it */
+  readonly wallFeel: boolean; wallPress: boolean;
+  /** the command key tapped twice calls the squad in, now (a tutorial holds it back until a step lists it) */
+  readonly fallIn: boolean;
+  /** the faint dots on what can be acted on */
+  hints: boolean;
+}
+export interface OptionsDeps { engine: Engine; quality: Quality; audio: AudioEngine; game: OptionsGame }
 const TABS: { id: OptionsTab; label: string }[] = [{ id: 'graphics', label: 'Graphics' }, { id: 'audio', label: 'Audio' }, { id: 'game', label: 'Game' }, { id: 'controls', label: 'Controls' }];
 const LS = 'twopointsix.options';
 
@@ -47,17 +55,14 @@ const SLOT_ROW: [string[], string, string?] = [['0'], 'Empty hands', 'put away w
 /** the action key's row and the whistle's while his own actions are a ring that stays (game/handring.ts): the list's wheel is gone, the whistle is a wedge */
 const ACT_WHAT = 'Do the highlighted action', WHISTLE_WHAT = 'Whistle';
 const RING_SMALL = 'hold it a moment for a ring of everything you can do here, then pick with 1 to 5 or a click', WHISTLE_SMALL = 'the nearest guard will come to look. the whistle is on the ring';
-/** the auto camera's row (host/autocam.ts): the camera's key tapped twice */
-const AUTO_WHAT = 'Tap twice for the auto camera';
 /** THE WHO ROW (the orders' who key, code 'KeyT'). While quick orders are the whole squad's (game/cmdring.ts `wholeSquad`: the key steps
  *  nobody) a row with no key is not listed, so there is no dashed cap to put a dead key on; one the player gave a key earlier stays his to see and move,
  *  and says where it still works. */
 const WHO_WHAT = 'Who takes the next order', WHO_DEAD = "this key doesn't do anything now. hold Shift and tap B to send part of the squad";
 const whoRowGone = () => !keysOf('KeyT').length;
 /** THE SQUAD'S KEYS AS THE PAGE HAS THEM (game/cmdring.ts `only`: the command key and the word's are the squad's only keys, and the wheel carries every
- *  order). The command key's row says both of its presses and the word's row says what the word does. The orders menu's row (code 'KeyX') has no key
- *  and no middle button there, so with no key it is not listed, and neither are the two rows that are keys of that menu alone (H and G: with a wheel
- *  up the letters are nobody's, with nothing up they give nothing); a menu given a key by hand has all three back, without the middle button's words.
+ *  order). The command key's row says both of its presses and the word's row says what the word does. Neither letter of the wheel (H and G: with a wheel
+ *  up the letters are nobody's, with nothing up they give nothing) is listed.
  *  With `goals` (the sprint key with the command key gives one more thing to a part of the squad: nothing else picks a part of it) the list has
  *  that press as a row of its own, both caps following their keys, and the who key, which then steps nobody anywhere, says so. The codes are written
  *  in the words (Shift, B): the list names the keys as they are bound. `?qonly=0` = the rows as they were; `?goals=0` = no row for the part of the
@@ -66,18 +71,18 @@ const CMD_WHAT = 'Order the squad', CMD_TAP = 'tap it to give the usual order wh
 /** … and with the key tapped twice being 'fall in' (game/cmdring.ts `twice`; `?qtwice=0` = the row's words as they were) the command key's row says so */
 const CMD_TWICE = `${CMD_TAP}. tap it twice to call everyone back to you. ${CMD_HOLD}`;
 const PART_WHAT = 'Send part of the squad to one more thing', PART_SMALL = 'hold Shift and tap B. keep B down a moment to pick their order on the wheel';
-const WORD_WHAT = "Send in everyone who's waiting", WORD_SMALL = 'it also blows a charge the squad set', MENU_SMALL = 'then press 1 to 5 to pick an order';
+const WORD_WHAT = "Send in everyone who's waiting", WORD_SMALL = 'it also blows a charge the squad set';
 type KeyRow = [string[], string, string?];
 /** the Squad group's rows as the board has them (the note above). Pure: the three facts are handed in */
-export function squadRows(rows: KeyRow[], only: boolean, goals: boolean, menuKey: boolean, twice = false): KeyRow[] {
+export function squadRows(rows: KeyRow[], only: boolean, goals: boolean, twice = false): KeyRow[] {
   if (!only) return rows;
   return rows.flatMap((r): KeyRow[] => { const k = r[0][0];
-    return k === 'X' ? (menuKey ? [[r[0], r[1], MENU_SMALL]] : []) : k === 'H' || k === 'G' ? (menuKey ? [r] : []) : k === 'B' ? [[r[0], CMD_WHAT, twice ? CMD_TWICE : CMD_SMALL], ...(goals ? [[['Shift', 'B'], PART_WHAT, PART_SMALL] as KeyRow] : [])] : k === 'F' ? [[r[0], WORD_WHAT, WORD_SMALL]] : [r]; });
+    return k === 'H' || k === 'G' ? [] : k === 'B' ? [[r[0], CMD_WHAT, twice ? CMD_TWICE : CMD_SMALL], ...(goals ? [[['Shift', 'B'], PART_WHAT, PART_SMALL] as KeyRow] : [])] : k === 'F' ? [[r[0], WORD_WHAT, WORD_SMALL]] : [r]; });
 }
 /** what the Controls list is built from that can change under it (a key given or taken, a rule ticked in the debugger): the list is built once */
 /** is the key tapped twice 'fall in' in the game that is up (off on a tutorial mission until a step lists it: game/rails.ts `twice`) */
-const twiceNow = () => CMDRING.twice && !deps?.game.rails?.locks('twice');
-const listNow = () => `${whoRowGone()} ${twiceNow()} ${keysOf('KeyX').length > 0}`;
+const twiceNow = () => deps?.game.fallIn ?? true;
+const listNow = () => `${whoRowGone()} ${twiceNow()}`;
 const PACE_WHAT = 'Walking pace', SPRINT_WHAT = 'Sprint';
 /** the sprint's row while Shift in a crouch is a fast crouch walk (game/player.ts CROUCHRUN): what the same key does crouched, and that it is heard
  *  (each footfall louder than a walk's: it is no sneak) */
@@ -91,7 +96,6 @@ export const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
     [['Q'], WALL_WHAT, WALL_SMALL],   // (wallLine below: its words while the row has no key)
     [['Ctrl', 'Mouse'], 'Orbit the camera'],
     [['Ctrl', 'Wheel'], 'Zoom'],
-    [['Ctrl'], AUTO_WHAT, 'turn the view yourself to take it back'],   // (host/autocam.ts: no row while AUTOCAM.on is off)
   ] },
   { group: 'Hands', rows: [
     [['Space'], ACT_WHAT, 'hold it to pick another with the wheel, then let go to do it'],
@@ -115,7 +119,6 @@ export const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
     [['5'], 'Frag'],
   ] },
   { group: 'Squad', rows: [
-    [['X'], 'Orders, on what the cursor is on', 'or use the middle mouse button, then press 1 to 5 to pick an order'],
     [['B'], 'The usual order for that spot, at once'],
     [['T'], WHO_WHAT, 'everyone, red, blue or one teammate'],
     [['F'], 'Go', 'tells a waiting squad to go, and blows a charge the squad set'],
@@ -195,14 +198,12 @@ let deps: OptionsDeps | null = null, open: Screen | null = null;
 let turned = 1, wrote: number | null = null;
 
 function el(tag: string, cls?: string, text?: string) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
-function kept(): { vol?: Partial<typeof VOLUME_DEFAULTS>; hints?: boolean; wallpress?: boolean; cmdhint?: boolean } { try { const v = JSON.parse(globalThis.localStorage?.getItem(LS) ?? 'null'); return v && typeof v === 'object' ? v : {}; } catch { return {}; } }
+function kept(): { vol?: Partial<typeof VOLUME_DEFAULTS>; hints?: boolean; wallpress?: boolean } { try { const v = JSON.parse(globalThis.localStorage?.getItem(LS) ?? 'null'); return v && typeof v === 'object' ? v : {}; } catch { return {}; } }
 /** a page held silent (`?mute`, or the automation profile's kept flag: main.ts pins the master bus at 0 there): that 0 is the rig's, never the player's level */
 function muted(): boolean { try { return new URLSearchParams(globalThis.location?.search ?? '').has('mute') || globalThis.localStorage?.getItem('twopointsix.testMute') === '1'; } catch { return false; } }
-function keep() { if (!deps) return; try { const v = deps.audio.volume, master = muted() ? kept().vol?.master ?? VOLUME_DEFAULTS.master : v.master; globalThis.localStorage?.setItem(LS, JSON.stringify({ vol: { master, sfx: v.sfx, ambience: v.ambience, music: v.music }, hints: deps.overlay.showLightDots, ...(pressKept !== null ? { wallpress: pressKept } : {}), ...(hintKept !== null ? { cmdhint: hintKept } : {}) })); } catch { /* no store */ } }
+function keep() { if (!deps) return; try { const v = deps.audio.volume, master = muted() ? kept().vol?.master ?? VOLUME_DEFAULTS.master : v.master; globalThis.localStorage?.setItem(LS, JSON.stringify({ vol: { master, sfx: v.sfx, ambience: v.ambience, music: v.music }, hints: deps.game.hints, ...(pressKept !== null ? { wallpress: pressKept } : {}) })); } catch { /* no store */ } }
 /** the wall taken without Q (game/wallsnap.ts `press`): what this machine has kept (null = never chosen: the build's own), and whether this visit's `?wallpress=` chose */
 let pressKept: boolean | null = null, pressUrl = false;
-/** the order's mark at the cursor before the key (game/cmdring.ts `hint`): what this machine has kept (null = never chosen: off), and whether this visit's `?cmdhint` chose */
-let hintKept: boolean | null = null, hintUrl = false;
 
 /** ui/menu.ts hands the live objects over when its Menu is made (the boot is over): what this machine kept is put on them, and a screen that is up fills in */
 export function setOptionsDeps(d: OptionsDeps | null) {
@@ -211,11 +212,9 @@ export function setOptionsDeps(d: OptionsDeps | null) {
   let moved = false;
   if (k.vol && vol) for (const b of ['master', 'sfx', 'ambience', 'music'] as const) { if (b === 'master' && muted()) continue; const x = k.vol[b]; if (typeof x === 'number' && isFinite(x) && x >= 0 && x <= 1 && vol[b] !== x) { vol[b] = x; moved = true; } }
   if (moved) d.audio.setVolumes();
-  if (typeof k.hints === 'boolean') d.overlay.showLightDots = k.hints;
+  if (typeof k.hints === 'boolean') d.game.hints = k.hints;
   pressKept = typeof k.wallpress === 'boolean' ? k.wallpress : null; try { pressUrl = new URLSearchParams(globalThis.location?.search ?? '').has('wallpress'); } catch { pressUrl = false; }
-  hintKept = typeof k.cmdhint === 'boolean' ? k.cmdhint : null; try { const q = new URLSearchParams(globalThis.location?.search ?? ''); hintUrl = q.has('cmdhint') || q.has('nocmdhint'); } catch { hintUrl = false; }
-  if (hintKept !== null && !hintUrl) CMDRING.hint = hintKept;   // (a `?cmdhint` visit holds its own)
-  if (pressKept !== null && !pressUrl) WALLSNAP.press = pressKept;   // (a `?wallpress=` visit holds its own, and is never written as this machine's choice)
+  if (pressKept !== null && !pressUrl) d.game.wallPress = pressKept;   // (a `?wallpress=` visit holds its own, and is never written as this machine's choice)
   if (open) render(open);
 }
 export function optionsOpen() { return !!open; }
@@ -328,20 +327,20 @@ function render(S: Screen) {
     bus('music', 'Music', 'The score follows the tension on the floor. Zero turns it off.');
     reset = () => { Object.assign(V, VOLUME_DEFAULTS); audio.setVolumes(); keep(); };
   } else {
-    const { game, overlay } = deps;
+    const { game } = deps;
     sec(body, 'Play');
-    flip(body, 'Autosave checkpoints', () => game.saves.enabled, v => { game.saves.setEnabled(v); },
+    flip(body, 'Autosave checkpoints', () => game.autosave, v => { game.autosave = v; },
       'The game saves a checkpoint by itself when the mission moves on, when you first enter a room, when you hide a body, and after every minute and a half of quiet play. It never saves while anyone is onto you. Press Enter when you\'re down to load the newest one.');
-    flip(body, 'Interaction hints', () => overlay.showLightDots, v => { overlay.showLightDots = v; keep(); }, `Show faint dots on what ${capNow('Space')} and right-click can act on, like lights, doors and bodies.`);
-    if (WALLSNAP.on) flip(body, 'Walk into a wall to take it', () => WALLSNAP.press, v => { WALLSNAP.press = v; pressKept = v; pressUrl = false; keep(); }, wallWay() === 'key' ? keyText('Keep holding a move key into a wall to put your back to it. Q does the same either way.') : cmdOnQ() ? 'Keep holding a move key into a wall to put your back to it. When this is off, the wall hold needs a key from Controls.' : 'Keep holding a move key into a wall to put your back to it. When this is off, press Q instead.');   // (Q the squad's command key — host/keymap.ts qCmd: the wall hold never falls back to it)
+    flip(body, 'Interaction hints', () => game.hints, v => { game.hints = v; keep(); }, `Show faint dots on what ${capNow('Space')} and right-click can act on, like lights, doors and bodies.`);
+    if (game.wallFeel) flip(body, 'Walk into a wall to take it', () => game.wallPress, v => { game.wallPress = v; pressKept = v; pressUrl = false; keep(); }, wallWay() === 'key' ? keyText('Keep holding a move key into a wall to put your back to it. Q does the same either way.') : cmdOnQ() ? 'Keep holding a move key into a wall to put your back to it. When this is off, the wall hold needs a key from Controls.' : 'Keep holding a move key into a wall to put your back to it. When this is off, press Q instead.');   // (Q the squad's command key — host/keymap.ts qCmd: the wall hold never falls back to it)
     const findReset = findMeRows({ sec, flip, seg, range }, body);   // (ui/findme.ts: finding your own man on the screen and how the camera answers the hand — rows on trial, kept by host/findme.ts)
     cloudRows({ sec, flip, seg }, body);   // (ui/cloudrows.ts: a hosted build's two rows — sharing, and the settings link; nothing on a build with no backend)
     sec(body, 'Cheats');
-    flip(body, 'God mode', () => game.godMode, v => { game.godMode = v; saveSandbox(game, 'god'); }, 'Enemies still see you and shoot you, but hits don\'t hurt. This is saved on this machine.', ['On', 'Off']);
-    flip(body, 'Enemies don\'t think', () => !game.aiEnabled, v => { game.aiEnabled = !v; saveSandbox(game, 'noAi'); }, 'Everybody stays where they are, and nobody patrols, hears or sees. This is saved on this machine.', ['On', 'Off']);
-    flip(body, 'Unlimited ammunition', () => game.infiniteAmmo, v => { game.infiniteAmmo = v; saveSandbox(game, 'ammo'); }, gearText('Bottomless magazines, canisters, ring airfoils and wall charges. This is saved on this machine.'), ['On', 'Off']);
-    reset = () => { game.saves.setEnabled(true); overlay.showLightDots = true; WALLSNAP.press = true; pressKept = null; pressUrl = false; CMDRING.hint = false; hintKept = null; hintUrl = false; keep(); findReset();
-      if (game.godMode) { game.godMode = false; saveSandbox(game, 'god'); } if (!game.aiEnabled) { game.aiEnabled = true; saveSandbox(game, 'noAi'); } if (game.infiniteAmmo) { game.infiniteAmmo = false; saveSandbox(game, 'ammo'); } };
+    flip(body, 'God mode', () => game.god, v => { game.god = v; keepSandbox('god', v); }, 'Enemies still see you and shoot you, but hits don\'t hurt. This is saved on this machine.', ['On', 'Off']);
+    flip(body, 'Enemies don\'t think', () => !game.thinks, v => { game.thinks = !v; keepSandbox('noAi', v); }, 'Everybody stays where they are, and nobody patrols, hears or sees. This is saved on this machine.', ['On', 'Off']);
+    flip(body, 'Unlimited ammunition', () => game.ammo, v => { game.ammo = v; keepSandbox('ammo', v); }, 'Bottomless magazines, canisters, 40 mm sponge rounds and wall charges. This is saved on this machine.', ['On', 'Off']);
+    reset = () => { game.autosave = true; game.hints = true; game.wallPress = true; pressKept = null; pressUrl = false; keep(); findReset();
+      if (game.god) { game.god = false; keepSandbox('god', false); } if (!game.thinks) { game.thinks = true; keepSandbox('noAi', false); } if (game.ammo) { game.ammo = false; keepSandbox('ammo', false); } };
   }
   if (reset) { const run = reset, b = el('button', 'op-btn', 'Reset to defaults') as HTMLButtonElement; b.dataset.act = 'reset'; b.onclick = () => { run(); S.paint(); }; foot.appendChild(b); }
   foot.appendChild(el('div', 'op-hint', S.tab === 'controls' && S.rows.length ? '1 2 3 4 tabs · W S keys · Enter a new key · Esc back' : S.rows.length ? '1 2 3 4 tabs · W S rows · A D change · Esc back' : '1 2 3 4 tabs · W S scroll · Esc back'));
@@ -352,21 +351,21 @@ function render(S: Screen) {
     S.rows.forEach((R, i) => R.el.classList.toggle('sel', i === S.sel));
     const R = S.rows[S.sel]; desc.innerHTML = '';
     if (R) { desc.appendChild(el('b', '', R.label)); desc.appendChild(document.createTextNode(R.desc())); }
-    else desc.appendChild(document.createTextNode(S.tab === 'controls' ? gearText(`You don't need to hold anything down for long. Hold ${capNow('Space')} a moment for the ring of your actions, ${camCap()} to turn the view, and the rifle's launcher to see its arc.`) : ''));
+    else desc.appendChild(document.createTextNode(S.tab === 'controls' ? `You don't need to hold anything down for long. Hold ${capNow('Space')} a moment for the ring of your actions, ${camCap()} to turn the view, and the rifle's launcher to see its arc.` : ''));
   };
   S.paint();
 }
 
-/** the walk-in as it will stand once the boot is over (game/wallsnap.ts `press`): before the Menu is made this machine's kept choice is not on the table yet
- *  (setOptionsDeps), and the boot card and the keyboard both ask before that */
+/** does walking into a wall take it, as it will stand once the boot is over: before a game is handed over, what this machine has kept and the address's words (the boot card
+ *  and the keyboard both ask before that) */
 export function walkInNow(): boolean {
-  if (!deps) try { const k = kept().wallpress; if (typeof k === 'boolean' && !new URLSearchParams(globalThis.location?.search ?? '').has('wallpress')) return k; } catch { /* no store */ }
-  return WALLSNAP.press;
+  if (deps) return deps.game.wallFeel && deps.game.wallPress;
+  try { const q = new URLSearchParams(globalThis.location?.search ?? ''); return !q.has('nowallsnap') && (q.has('wallpress') ? q.get('wallpress') !== '0' : kept().wallpress ?? true); } catch { return true; }
 }
 /** HOW A WALL IS TAKEN ON THIS BOARD: 'key' = the hold's row has one · 'walk' = it has none and walking into a wall takes it (host/keymap.ts qFree: the
  *  build's own board) · 'none' = neither: he took its key off and switched the walk-in off. The Controls list keeps the row whichever it is, its cap the
  *  dashed — a click puts on a key, and writes the row's words to suit */
-function wallWay(): 'key' | 'walk' | 'none' { return keysOf('KeyQ').length ? 'key' : WALLSNAP.on && walkInNow() ? 'walk' : 'none'; }
+function wallWay(): 'key' | 'walk' | 'none' { return keysOf('KeyQ').length ? 'key' : walkInNow() ? 'walk' : 'none'; }
 const wallLine = (s: string) => { const w = wallWay(); return w === 'key' ? s : s === WALL_WHAT ? (w === 'walk' ? 'Walk into a wall to put your back to it' : s) : s === WALL_SMALL ? (w === 'walk' ? 'slide along it and look around its end, then step away to let go' : 'no key yet. click the cap to give it one') : s; };
 /** THE GUN'S SETUP (game/slotsetup.ts), with its switch on: the two rows it took the keys of say where the thing is set now (while they have no key),
  *  and a gun's own row says what its key does pressed again */
@@ -387,13 +386,13 @@ function controls(body: HTMLElement, host: KeyHost) {
     const geared = tabbed.flatMap(r => r[1] === PACE_WHAT ? [] : r[1] === 'Crouch' ? [[r[0], r[1], 'slower and quiet'] as typeof r] : [r]);   // (game/player.ts TWOGEARS: the wheel is nobody's pace, the crouch is the sneak)
     const low = sprintSmall(), paced = !low ? geared : geared.map(r => r[1] === SPRINT_WHAT ? [r[0], r[1], low] as typeof r : r);   // (CROUCHRUN: Shift is not only the sprint)
     const rows = !slotNow() ? paced : g.group === 'Kit' ? [SLOT_ROW, ...paced] : paced.filter(r => r[1] !== E_WHAT || keysOf('KeyE').length > 0);   // (E's row put on a key by hand is still his to see and move)
-    for (const [caps, what, small0] of g.group === 'Squad' ? squadRows(rows, true, true, keysOf('KeyX').length > 0, twiceNow()) : rows) {
+    for (const [caps, what, small0] of g.group === 'Squad' ? squadRows(rows, true, true, twiceNow()) : rows) {
       const small1 = what === WHO_WHAT ? WHO_DEAD : what === ACT_WHAT ? RING_SMALL : what === WHISTLE_WHAT ? WHISTLE_SMALL : small0;
       if (what === WHO_WHAT && whoRowGone()) continue;   // (quick orders are the whole squad's: game/cmdring.ts wholeSquad)
       const r = el('div', 'op-krow'), c = el('div', 'op-caps');
-      caps.forEach((k, i) => { if (i > 0 && caps.length < 4) c.appendChild(el('u', '', '+')); c.appendChild(k === 'Ctrl' ? camCapEl(host) : keyCapEl(k, gearText(wallLine(what)), host, seen)); });
-      const w = el('div', 'op-what', gearText(wallLine(what))), wt = w.firstChild, small = () => setupSmall(caps[0], small1) ?? '', sm = small1 || SETUP_SMALL[caps[0]] ? el('small', '', gearText(wallLine(small()))) : null; if (sm) w.appendChild(sm);   // (asked at every paint: a row that gets its key back has its own words again)
-      host.paints.push(() => { const t = keyText(gearText(wallLine(what))); if (wt && wt.textContent !== t) wt.textContent = t; if (sm) { const u = keyText(gearText(wallLine(small()))); if (sm.textContent !== u) sm.textContent = u; } });
+      caps.forEach((k, i) => { if (i > 0 && caps.length < 4) c.appendChild(el('u', '', '+')); c.appendChild(k === 'Ctrl' ? camCapEl(host) : keyCapEl(k, wallLine(what), host, seen)); });
+      const w = el('div', 'op-what', wallLine(what)), wt = w.firstChild, small = () => setupSmall(caps[0], small1) ?? '', sm = small1 || SETUP_SMALL[caps[0]] ? el('small', '', wallLine(small())) : null; if (sm) w.appendChild(sm);   // (asked at every paint: a row that gets its key back has its own words again)
+      host.paints.push(() => { const t = keyText(wallLine(what)); if (wt && wt.textContent !== t) wt.textContent = t; if (sm) { const u = keyText(wallLine(small())); if (sm.textContent !== u) sm.textContent = u; } });
       r.appendChild(c); r.appendChild(w); box.appendChild(r);
     }
     cols.appendChild(box);

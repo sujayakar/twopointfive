@@ -28,7 +28,7 @@ pub fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::runner::LineKin
     let mut pool = l.say;
     pool.extend(extra.unwrap_or_default());
     let n = pool.len() as f64;
-    let at = js::rem(m::floor(crate::math_dice::sim_random(g) * n), n) as usize;
+    let at = js::rem(m::floor(crate::dice::draw_of(g, "runner::bark#1", gd) * n), n) as usize;
     crate::game::game_say(g, gd, &pool[at], Some(false), Some(true), None);
 }
 
@@ -78,12 +78,12 @@ pub fn foe_at(g: &crate::game::Game, c_2: CharId, who: crate::picture::Who) -> c
 }
 
 /// his enemies on the floor: the player and every living man of a side hostile to his   (runner.ts foes)
-pub fn foes(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> Vec<crate::runner::Foe> {
+pub fn foes(g: &crate::game::Game, gd: GuardId) -> Vec<crate::runner::Foe> {
     let mut out = Vec::new();
     let team = g.gd[gd].team;
-    if crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !g.pl[seat.player].down {
-        let c = g.pl[seat.player].ch;
-        out.push(foe_at(g, c, crate::picture::Who::Player));
+    if crate::teams::is_hostile(g, team, crate::teams::Team::Player) {
+        // (a man's picture holds one place for "the player": the one nearest him)
+        if let Some(pl) = crate::seats::nearest_man(g, &g.ch[g.gd[gd].ch].pos) { let c = g.pl[pl].ch; out.push(foe_at(g, c, crate::picture::Who::Player)); }
     }
     let mut i = 0;
     while i < g.guards.len() {
@@ -103,7 +103,7 @@ pub fn by_picture(g: &crate::game::Game) -> bool { !g.touring }
 
 /// the enemies a run is planned round: the men he knows of, each where he believes him to be   (runner.ts known)
 pub fn known(g: &mut crate::game::Game, gd: GuardId) -> Vec<crate::runner::Foe> {
-    if !by_picture(g) { return foes(g, &crate::seats::here(g), gd); }
+    if !by_picture(g) { return foes(g, gd); }
     let mut out = Vec::new();
     let (forget, eye_h) = (g.k.picture.forget_secs, g.k.picture.eye_h);
     for i in crate::picture::ideas_of(g, gd) {
@@ -324,7 +324,7 @@ pub fn route(g: &mut crate::game::Game, gd: GuardId, goal: V3, e: &[crate::runne
     let pos = g.ch[g.gd[gd].ch].pos;
     if by_picture(g) {
         g.stats.picture.ran += 1;
-        let t = foes(g, &crate::seats::here(g), gd);
+        let t = foes(g, gd);
         if t.len() != e.len() || t.iter().any(|t| !e.iter().any(|x| flat(x.pos, t.pos) < 1.0)) { g.stats.picture.ran_off += 1; }
     }
     let mut pen = |_g: &mut Game, ix: f64, iz: f64| -> f64 {
@@ -704,7 +704,7 @@ pub fn step(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
         if is_out {
             // (the world's rule, not his: he leaves the floor when no TRUE enemy has a line to him)
             let eyes: Option<Vec<Foe>> = if by_picture(g) {
-                let t = foes(g, &crate::seats::here(g), gd);
+                let t = foes(g, gd);
                 Some(t.into_iter().filter(|f| line_to(g, *f, pos)).collect())
             } else {
                 None

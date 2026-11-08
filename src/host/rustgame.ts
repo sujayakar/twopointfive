@@ -7,7 +7,7 @@
 // `stepSeats`, is this file's `step`, hung on the game object):
 //   the host's half   the knobs the module reads · each seat's record with every camera and
 //                     Input row (the bridge's `hostHalf` → `face_host_half`)
-//   the tick          `face_step`: the box world listed again first where the picture has uploaded it since the last step, the tick, the lights' update,
+//   the tick          `face_step`: the tick, the lights' update,
 //                     a rails level's host view
 //   the apply         `face_puppet`: only what the page reads and only what changed (tools/blitz/PUPPET.md) → `applyGame` onto the puppet, in place
 //   the out events    what the tick's rules told the host (a sound, particles, a decal, smoke): the generated dispatcher makes today's calls on the
@@ -32,6 +32,7 @@
 //
 // Every special case here is marked STAND-IN with its reason and where it belongs.
 import { FaceError, fetchFace } from './face';
+import type { DeskFace } from '../view/desk';
 import { simAdopt, type SimExports } from '../sim/sim';
 import { BoxMirror } from '../scene/boxMirror';
 import { PUT_BACKS } from '../math/side';
@@ -194,7 +195,7 @@ function revive(S: Held): void {
     X!.face_drop(S.h); X!.face_puppet_drop(S.h);
     const h = X!.face_stand(S.startKept, S.slot);
     if (!h) throw new Error('rust=1: the kept start is gone: no game could be stood after the panic');
-    S.h = h; S.told = -1; RUST_GAME.handle = h; S.back = null; S.took = false; S.uploaded = true; S.shelfSig = '';
+    S.h = h; S.told = -1; RUST_GAME.handle = h; S.back = null; S.took = false; S.shelfSig = '';
     grown(S.g);
   } catch (e) { RUST_PANIC.dead ??= D; throw e; }
 }
@@ -240,9 +241,9 @@ export const RUST_GAME = {
   warm: { n: 0, startMs: 0, applyMs: 0, tickMs: 0, dressMs: 0, ticks: 0, firstTickMs: 0, lastTickMs: 0 },
   keeps: 0, keepMs: 0, keepWorst: 0, kept: 0, backs: 0, backMs: { back: 0, whole: 0, hand: 0 }, restarts: 0, shelfSent: 0, keepAs: 0 as 0 | 1,
   /** WHERE A STEP'S TIME GOES, finer (`prof.on`, for a check: the tick is then four calls into the module where play makes one). Sums in ms over `n` steps:
-   *  the host's half (the knobs · the bridge's hand-over built and taken), the listing, the tick, the lights'
+   *  the host's half (the knobs · the bridge's hand-over built and taken), the tick, the lights'
    *  update, the rails' view, the filtered export, the apply (the bridge's own walk, by its phases · the menu's questions · the doors' stand-in), the out events, the dress step, the save controller */
-  prof: { on: false, n: 0, knobs: 0, hostHalf: 0, upload: 0, tick: 0, lights: 0, view: 0, asked: 0, export: 0, applyWalk: 0, applyRows: 0, applyMain: 0, applyTables: 0, asks: 0, doors: 0, out: 0, dress: 0, saves: 0, phases: {} as Record<string, number> },
+  prof: { on: false, n: 0, knobs: 0, hostHalf: 0, tick: 0, lights: 0, view: 0, asked: 0, export: 0, applyWalk: 0, applyRows: 0, applyMain: 0, applyTables: 0, asks: 0, doors: 0, out: 0, dress: 0, saves: 0, phases: {} as Record<string, number> },
   /** quiet runs of steps (`rustQuiet`): how many ended in an apply, and the steps taken inside them */
   quiet: { runs: 0, ticks: 0 },
   outEvents: 0, outArms: {} as Record<string, number>, outThrew: {} as Record<string, string>, gives: [] as string[],
@@ -283,6 +284,8 @@ export function rustSettledLine(): string {
   if (R.said !== n) { R.said = n; console.info(`rust=1: ${line}`); }
   return line;
 }
+/** the module the page has booted, as the cards' desk asks it */
+export function rustFace(): { exports: DeskFace; memory: WebAssembly.Memory } { if (!X || !MEM) throw new Error('rustFace before rustBoot'); return { exports: X as unknown as DeskFace, memory: MEM }; }
 /** THE MODULE, fetched and compiled off the page's thread (Chrome compiles nothing over 8 MB on it), started, and handed to src/sim as the simulation's
  *  one instance. Before anything has asked src/sim for its module. Throws in plain words where there is no module to fetch. */
 export async function rustBoot(): Promise<void> {
@@ -313,7 +316,7 @@ export async function rustBoot(): Promise<void> {
 /** what a slot of the save controller holds here in a snapshot's place: the number of a game kept in the module */
 interface KeptGame { game: Game; rust: number }
 let SETTLED_SAID = false;
-interface Held { drawn: Drawn; /** how often the Rust game has been moved (an apply, a whole apply, a write into it), the count the view was asked at, and the view */ moved: number; viewAt: number; view: TickView; told: number; toolScan: boolean; inRun: boolean; settings?: { flush(): void; rebase(): void; stats(): { settledLeft: number } & Record<string, unknown> } | null; g: Game; lastCmds: readonly PlayerCmd[] | null; kept: Set<number>; startKept: number; back: { label: string; loads: number; saves: number } | null; took: boolean; shelfSig: string; poke: ((obj: unknown, path: string | (string | number)[], value: unknown) => void) | null; watch: Watched[]; launch: unknown; putBacks: number; loads: number; h: number; slot: number; stale: string; uploaded: boolean; ctx: { p: number }; rows: unknown; inStep: boolean; side: { list: unknown[]; of: unknown; base: number }; asks: { after(): void; give(S: any, id: string, t?: any, who?: any, o?: any): string | null; refused: { n: number; rows: Record<string, string> } } | null; quiet: boolean; owed: number; quietDt: number }
+interface Held { drawn: Drawn; /** how often the Rust game has been moved (an apply, a whole apply, a write into it), the count the view was asked at, and the view */ moved: number; viewAt: number; view: TickView; told: number; toolScan: boolean; inRun: boolean; settings?: { flush(): void; rebase(): void; stats(): { settledLeft: number } & Record<string, unknown> } | null; g: Game; lastCmds: readonly PlayerCmd[] | null; kept: Set<number>; startKept: number; back: { label: string; loads: number; saves: number } | null; took: boolean; shelfSig: string; poke: ((obj: unknown, path: string | (string | number)[], value: unknown) => void) | null; watch: Watched[]; launch: unknown; putBacks: number; loads: number; h: number; slot: number; stale: string; ctx: { p: number }; rows: unknown; inStep: boolean; side: { list: unknown[]; of: unknown; base: number }; asks: { after(): void; give(S: any, id: string, t?: any, who?: any, o?: any): string | null; refused: { n: number; rows: Record<string, string> } } | null; quiet: boolean; owed: number; quietDt: number }
 let H: Held | null = null;
 const REG = { v: null as Record<string, object> | null };
 const reg = (): Record<string, unknown> => (REG.v ??= knobRegistry()) as Record<string, unknown>;
@@ -359,7 +362,7 @@ function grown(g: Game): void {
 export function rustAttach(g: Game): void {
   if (!X) throw new Error('rustAttach before rustBoot');
   const G = g as unknown as Record<string, any>;
-  H = { drawn: new Drawn(X as unknown as DrawFace, MEM!, Want.fog), moved: 0, viewAt: -1, view: NO_VIEW, told: -1, toolScan: false, inRun: false, g, lastCmds: null, kept: new Set(), startKept: 0, back: null, took: false, shelfSig: '', poke: null, watch: [], launch: null, putBacks: -1, loads: 0, h: 0, slot: -1, stale: 'the game was stood', uploaded: true, ctx: { p: 0 }, rows: null, inStep: false, side: { list: [], of: null, base: 0 }, asks: null, quiet: false, owed: 0, quietDt: 1 / 60 };
+  H = { drawn: new Drawn(X as unknown as DrawFace, MEM!, Want.fog), moved: 0, viewAt: -1, view: NO_VIEW, told: -1, toolScan: false, inRun: false, g, lastCmds: null, kept: new Set(), startKept: 0, back: null, took: false, shelfSig: '', poke: null, watch: [], launch: null, putBacks: -1, loads: 0, h: 0, slot: -1, stale: 'the game was stood', ctx: { p: 0 }, rows: null, inStep: false, side: { list: [], of: null, base: 0 }, asks: null, quiet: false, owed: 0, quietDt: 1 / 60 };
   const held = H;
   G.stepSeats = (dt: number, cmds: readonly PlayerCmd[]) => step(held, dt, cmds);
   // (for a networked game, src/net/step.ts: a quiet run of steps, and the game's own words for its state, as `rustHashes` reads them by name for a check)
@@ -388,9 +391,6 @@ export function rustAttach(g: Game): void {
   SNAPS.own = true;
   SNAPS.take = (gg, _since, label) => { if (gg !== g) throw new Error('rust=1: a save of another game than the one the Rust game steps'); return take(held, label) as unknown as Snapshot; };
   SNAPS.put = s => { const k = s as unknown as KeptGame; if (k.game !== g || !k.rust) throw new Error('rust=1: that save is not a game kept by the Rust game'); put(held, k); };
-  // THE BOX WORLD LISTED for the picture (engine.world.upload, between ticks) is also where the Rust game lists its own and frees the frame boxes gone by:
-  // a listing since the last step is made there as the next step opens
-  { const W = G.engine.world; for (const name of ['upload', 'relist']) { const was = W[name]; if (typeof was === 'function') W[name] = function (this: unknown, ...a: unknown[]) { held.uploaded = true; return was.apply(this, a); }; } }   // (`relist`: an undrawn step of a script's burst lists the world and packs nothing: main.ts)
   // THE LIGHTS' UPDATE (a flash's envelope and its retirement) is made on the Rust side as its step ends (`face_step`'s LIGHTS flag); the lights are rows of
   // the one block, so made here too it would be made twice
   { const L = G.engine.lights; L.update = function () { /* the Rust side made it */ }; }
@@ -472,7 +472,7 @@ function start(S: Held): void {
   const h = call('face_new_at', () => hand(state, (p, n) => X!.face_new_at(p, n, slot)));
   if (!h) throw new Error('rust=1: the face made no game (no such slot)');
   part('make');
-  S.h = h; S.told = -1; S.slot = slot; S.stale = ''; S.uploaded = true; S.ctx = { p: 0 }; S.rows = puppetRows(S.ctx); S.back = null; S.took = false; S.shelfSig = '';
+  S.h = h; S.told = -1; S.slot = slot; S.stale = ''; S.ctx = { p: 0 }; S.rows = puppetRows(S.ctx); S.back = null; S.took = false; S.shelfSig = '';
   grown(g);
   S.asks = null;
   apply(S, true); part('apply');
@@ -597,7 +597,7 @@ function stoodAgain(S: Held, k: number): void {
   if (!S.kept.has(k) || !call('face_back', () => X!.face_back(S.h, k))) throw new Error('rust=1: that kept game is gone (it was of a game that has been stood again since)');
   grown(g);
   RUST_GAME.backMs.back = performance.now() - t; t = performance.now();
-  S.uploaded = true; S.shelfSig = '';   // (the kept game's own `g.saves` is the shelf as it was handed over before that save: the shelf as it stands is handed over again)
+  S.shelfSig = '';   // (the kept game's own `g.saves` is the shelf as it was handed over before that save: the shelf as it stands is handed over again)
   whole(S);
   RUST_GAME.backMs.whole = performance.now() - t; RUST_GAME.backs++;
 }
@@ -678,8 +678,8 @@ function shelfIn(S: Held): void {
   let n = 0; for (const b of parts) n += b.length; const all = new Uint8Array(n); n = 0; for (const b of parts) { all.set(b, n); n += b.length; }
   call('face_saves_in', () => hand(all, (p, m) => X!.face_saves_in(S.h, p, m))); RUST_GAME.shelfSent++;
 }
-/** the bridge's own words, for a page check that walks the puppet by the schema (tools/qa/readtrap-page.cjs) */
-export const rustBridge = () => ({ SCHEMA, parse, compiledExpr, helpersOf, bookOf, lists: lists(), knobs: reg() });
+/** the bridge's own words, for a page check that walks the puppet by the schema (tools/qa/readtrap-page.cjs, writetrap-page.cjs) */
+export const rustBridge = () => ({ SCHEMA, parse, compiledExpr, helpersOf, bookOf, lists: lists(), knobs: reg(), face: X, slot: H?.slot ?? -1 });
 /** THE WHOLE STATE ONTO THE PUPPET (`face_export` → the bridge's whole apply): after a kept game stood again, and for a tool that is about to read the
  *  puppet for something the page does not show (`window.__rust.whole()`). A third of a second, outside any tick. */
 function whole(S: Held): void {
@@ -723,7 +723,7 @@ function send(S: Held, w: Watched): boolean {
   try { S.poke!(w[0], w[1], w[2]); RUST_GAME.pokes++; RUST_GAME.poked[name] = (RUST_GAME.poked[name] ?? 0) + 1; return true; }
   catch (e) { RUST_GAME.pokeRefused[name] ??= String((e as Error)?.message ?? e).slice(0, 300); return false; }
 }
-const LIGHTS = 2, VIEW = 4, UPLOAD = 1;
+const LIGHTS = 2, VIEW = 4;
 /** ONE TICK, in place of `Game.stepSeats`: no tick while the game is stopped by a panic (Enter in the tick's own record puts a kept game back); a trap
  *  inside it stops the game and is no throw of the frame's; a throw of the apply is answered by the whole state once */
 function step(S: Held, dt: number, cmds: readonly PlayerCmd[]): void {
@@ -791,9 +791,9 @@ function stepOne(S: Held, dt: number, cmds: readonly PlayerCmd[]): void {
     tellShown(S); const hb = hostHalf(g, reg(), cmds); hand(hb, (p, n) => X!.face_host_half(S.h, p, n));
     if (PF.on) { PF.hostHalf += performance.now() - tp; PF.n++; }
     const tHost = performance.now() - t; t = performance.now();
-    const flags = LIGHTS | VIEW | (S.uploaded ? UPLOAD : 0); S.uploaded = false;
-    if (PF.on) call('face_step', () => {   // (the same four things in the same order, each timed)
-      let a = performance.now(), b = a; if (flags & UPLOAD) { X!.face_upload(S.h); b = performance.now(); PF.upload += b - a; a = b; }
+    const flags = LIGHTS | VIEW;
+    if (PF.on) call('face_step', () => {   // (the same three things in the same order, each timed)
+      let a = performance.now(), b = a;
       X!.face_step(S.h, dt, 0); b = performance.now(); PF.tick += b - a; a = b; X!.face_lights(S.h, dt); b = performance.now(); PF.lights += b - a; a = b; X!.face_view(S.h); PF.view += performance.now() - a; });
     else call('face_step', () => X!.face_step(S.h, dt, flags));
     grown(g);
@@ -903,11 +903,11 @@ export function rustWarm(host: { input: unknown; cam: unknown; canvas: unknown }
       const cmd = stillCmd(sampleCmd(g.hostSeat().view as never, host.input as never, host.cam as never, host.canvas as never, null)), cmds = g.seats.map(() => cmd);
       for (let i = 0; i < ticks; i++) { const a = performance.now();
         tellShown(S); const hb = hostHalf(g, reg(), cmds); hand(hb, (p, n) => X!.face_host_half(S.h, p, n));
-        call('face_step (warming)', () => X!.face_step(S.h, 1 / 60, LIGHTS | VIEW | UPLOAD)); X!.face_saves_asked(S.h); X!.face_puppet(S.h, 0); grown(g);
+        call('face_step (warming)', () => X!.face_step(S.h, 1 / 60, LIGHTS | VIEW)); X!.face_saves_asked(S.h); X!.face_puppet(S.h, 0); grown(g);
         const ms = performance.now() - a; if (i === 0) W.firstTickMs = ms; W.lastTickMs = ms; W.ticks++; }
     } finally {
       // THE GAME AS IT WAS STARTED stands again, and what the filtered export last sent is filled again from it (the puppet never took the ticks above)
-      call('face_back', () => X!.face_back(S.h, k)); X!.face_kept_drop(k); call('face_puppet', () => X!.face_puppet(S.h, 1)); grown(g); S.uploaded = true;
+      call('face_back', () => X!.face_back(S.h, k)); X!.face_kept_drop(k); call('face_puppet', () => X!.face_puppet(S.h, 1)); grown(g);
     }
     W.tickMs = performance.now() - t; t = performance.now();
     // THE PICTURE'S OWN STEP once, at no time: its first run is what the first frame would otherwise pay (the rain's drip lines, a few thousand rays, the men's first draw). The rain's lines are made whole whether or not it rains yet. A step of dt 0 bears nothing and writes no game state: the dress step only reads the game, and the next tick's runs again over the same puppet

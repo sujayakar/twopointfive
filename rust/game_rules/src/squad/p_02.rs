@@ -40,6 +40,9 @@ fn rank(r: Perceive) -> i32 {
 
 /// The senses updateGuard would have run for a man the runner drives: what they came to this frame. (squad.ts perceive)
 pub fn perceive(g: &mut crate::game::Game, gd: GuardId, dt: f64, before: f64) -> Option<crate::squad::Perceive> {
+    crate::seats::standing_for(g, gd, &mut |g| perceive_here(g, gd, dt, before))
+}
+fn perceive_here(g: &mut crate::game::Game, gd: GuardId, dt: f64, before: f64) -> Option<crate::squad::Perceive> {
     crate::guards::hearing_check(g, gd, None, None, None);
     let vis = crate::guards::can_see(g, gd);
     let mut seen = false;
@@ -141,7 +144,7 @@ pub fn clearing_tick(g: &mut crate::game::Game, dt: f64) -> bool {
     let (a, b) = { let c = cl!(g); (c.a, c.b) };
     if cl!(g).stage == ClearStage::Done { return false; }
     if !g.guards.contains(&a) || b.map_or(false, |b| !g.guards.contains(&b)) { cl!(g).stage = ClearStage::Done; return false; }
-    if g.quiet_utility || !g.ai_enabled || crate::guards::escalation_of(g) < 2.0 || g.pl[g.player].down { clearing_cancel(g); return false; }
+    if g.quiet_utility || !g.ai_enabled || crate::guards::escalation_of(g) < 2.0 || crate::seats::all_down(g) { clearing_cancel(g); return false; }
     { let c = cl!(g); c.t += dt; c.total += dt; }
     if g.gd[a].state == crate::game::GuardState::Dead || b.map_or(false, |b| g.gd[b].state == crate::game::GuardState::Dead) {
         if cl!(g).stage != ClearStage::Muster {

@@ -22,7 +22,6 @@ export const SETLISTS: Record<string, readonly string[]> = {
   'records': ['Paper Walls', 'Cold Storage'],              // thin partitions and a strong room: the piece named for it
   'depot': ['Dead Freight', 'Wire Act'],                   // a motor pool: freight (E minor to A minor, a fifth: the easy handover)
   'block': ['Wire Act', 'Dead Freight'],                   // a lit leg and a dark turn in every room: balance, then drive
-  'block-squads': ['Dead Freight', 'Wire Act'],            // the same block held by eleven: the drive first
   'warehouse': ['Cold Storage', 'Dead Freight'],           // a racked hall and a loading dock
   'compound': ['Undertow', 'Glass Rain'],                  // eleven behind a wall at night: the bells, then frame drum and dulcimer
   'barracks': ['Wire Act', 'Undertow'],                    // two galleries that look across at each other
@@ -31,10 +30,8 @@ export const SETLISTS: Record<string, readonly string[]> = {
   'mousehole': ['Paper Walls', 'Undertow'],                // the walls are the way in
   'glasshouse': ['Glass Rain', 'Wire Act'],                // rooms walled in glass
   'pass': ['Undertow', 'Glass Rain'],                      // a teahouse under snow: bells, then the dulcimer
-  'tut-sky': ['Undertow', 'Glass Rain'],                   // the squad's tunnel mission, a station under the same snow: the pass's own list
   'tut-team': ['Undertow', 'Glass Rain'],                  // the same station with the player on the ground: the same list
   'tut-road': ['Dead Freight', 'Undertow'],                // the tutorial's first: one man up a snowed-in road, loud from the first second: the drive, then the pass's bells
-  'tut-solo': ['Dead Freight', 'Wire Act'],                // one man down a fuel halt's line, loud from the first second: the drive, then balance
   'tut-kit': ['Dead Freight', 'Wire Act'],                 // the fuel halt again, alone with his kit and then with his four: the drive, then balance
   'tut-quiet': ['Night Shift', 'Glass Rain'],              // the tutorial's quiet house: the quiet missions' own piece, then the dulcimer
   'tut-pair': ['Night Shift', 'Undertow'],                 // the tutorial's truck park, as two: the quiet missions' own piece, then the bells
@@ -51,8 +48,6 @@ export const SETLISTS: Record<string, readonly string[]> = {
   'crossing': ['Undertow', 'Night Shift'],                 // two sentries across a lit road: slow, three against four
   'quiet-relay': ['Wire Act', 'Paper Walls'],
   'lights-out': ['Paper Walls', 'Night Shift'],
-  'quiet-yard': ['Night Shift', 'Paper Walls'],
-  'tut-squad': ['Dead Freight', 'Wire Act'],
   'tut-queue': ['Wire Act', 'Undertow'],                   // the fourth tutorial mission, on the old plan mode mission's floor: its list
 };
 /** a level with no row of its own */

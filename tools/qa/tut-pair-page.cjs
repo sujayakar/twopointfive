@@ -34,7 +34,7 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
     return { i: g.lesson.i, id: g.lesson.step?.id ?? null, done: g.lesson.finished, line: el?.querySelector('.line')?.textContent ?? '', keys: [...(el?.querySelectorAll('kbd') ?? [])].map(k => k.textContent), up: !!el && getComputedStyle(el).display !== 'none',
       note: el?.querySelector('.note')?.textContent ?? '', row: document.getElementById('objective')?.textContent ?? '', fatal: document.getElementById('fatal')?.textContent || '', rails: g.rails.live, sum: g.rails.summary(), script: !!g.director.running,
       at: [+P.char.pos[0].toFixed(2), +P.char.pos[2].toFixed(2)], crouch: !!P.crouch, holding: !!P.holding, nv: !!P.nv, lit: +P.visibility.toFixed(2), dark: !!g.blackout.active,
-      mate: mate ? [+mate.char.pos[0].toFixed(1), +mate.char.pos[2].toFixed(1)] : null, mateSays: mate ? g.orders.statusOf(mate) : '', men: g.guards.filter(x => !x.unit && x.state !== 'dead').length,
+      mate: mate ? [+mate.char.pos[0].toFixed(1), +mate.char.pos[2].toFixed(1)] : null, mateSays: mate ? (g.view.squad?.mates.find(x => x.man === mate.char.id)?.doing ?? '') : '', men: g.guards.filter(x => !x.unit && x.state !== 'dead').length,
       roused: g.guards.filter(x => !x.unit && x.state !== 'dead' && x.state !== 'patrol' && !x.held).map(x => `${x.callsign} ${x.state}`).join(', '),
       orders: g.orders.log.length, last: g.orders.log.length ? `${g.orders.log[g.orders.log.length - 1].order}@${g.orders.log[g.orders.log.length - 1].target}` : '', menu: !!window.__orders?.menu, stage: g.mission.stage, t: +g.time.toFixed(1) }; });
   // (a picture, as tut-page.cjs takes one: the frame is drawn and read back in the page and stood under the HUD as a still)

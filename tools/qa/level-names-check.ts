@@ -2,13 +2,13 @@
 // missions list).
 // The fault it holds shut: every table of room names in the game was the office's (the level the game was written on). A level that named no rooms of its
 // own — the registry — had its captor 'holding the server room' (the mission's reach area, on a floor with no server room), men 'in the back offices' and
-// 'coming from the car park'; and the debrief's map and timeline called every level's floor 'cubicles', 'lobby', 'server room' by the office's rectangles.
+// 'coming from the car park'; and the debrief's timeline called every level's floor 'cubicles', 'lobby', 'server room' by the office's rectangles.
 //   bun run tools/qa/level-names-check.ts [--levels registry,compound,…] [--play rescue-registry] [--seeds 1-6] [--no-play]
 // What it does:
 //   NAMES   for every level (default: every levels/*.json that is not the office and has a scenario), over the whole floor on a half-metre lattice:
 //             · the level names floor of its own (its structure's rooms, `scenarios.places` and/or the rooms its quiet mission's spots are in) — a level that names nothing is listed, and must then
 //               say none of the office's words either
-//             · what a line would call the spot (roomName, placeName) and what the debrief would (chronicle.ts roomOf, roomsOf) is one of the level's own
+//             · what a line would call the spot (roomName, placeName) and what the debrief would (rooms.ts roomOf) is one of the level's own
 //               names, 'outside' one of them (placeName only: the other two are nouns), or the one place-free word — never a room of the office's tables
 //               that the level does not have itself, and never anything else (an empty string, 'undefined', a throw)
 //             · at the middle of every named rectangle, the name said is that rectangle's own
@@ -57,12 +57,10 @@ for (const f of files) {
   const said = new Map<string, number>(), wrong = new Map<string, string>(); let pts = 0;
   const roomOf = (p: number[]): string => { try { return String(CHR.roomOf(p, level)); } catch { return '(roomOf threw)'; } };
   const legal = (how: string, text: string) => { const t = text.replace(/^the /, '').toLowerCase(); return own.length ? own.includes(t) || (how === 'placeName' && own.some(o => text.toLowerCase() === `outside the ${o}` || text.toLowerCase() === `outside ${o}`)) : /^(the )?building$/.test(text); };
-  const hear = (how: string, text: string, p: number[]) => { said.set(text, (said.get(text) ?? 0) + 1); const t = text.toLowerCase(), w = foreign.find(x => new RegExp(`(^|[^a-z])${x}($|[^a-z])`).test(t)); if ((w || (how !== 'debrief label' && !legal(how, text))) && !wrong.has(`${how}: '${text}'`)) wrong.set(`${how}: '${text}'`, `(${p[0].toFixed(1)}, ${p[2].toFixed(1)})`); };
+  const hear = (how: string, text: string, p: number[]) => { said.set(text, (said.get(text) ?? 0) + 1); const t = text.toLowerCase(), w = foreign.find(x => new RegExp(`(^|[^a-z])${x}($|[^a-z])`).test(t)); if ((w || !legal(how, text)) && !wrong.has(`${how}: '${text}'`)) wrong.set(`${how}: '${text}'`, `(${p[0].toFixed(1)}, ${p[2].toFixed(1)})`); };
   CUES.on = true;   // (as the page ships. The cues off = every line as it was before them, the office's fall-through included: that switch is the old words' pin for the frozen digests, and nothing this check holds)
   try { for (let z = z0 + 0.25; z < z1; z += 0.5) for (let x = x0 + 0.25; x < x1; x += 0.5) { const p = [x, 0, z]; pts++; hear('roomName', DLG.roomName(level, p), p); hear('placeName', DLG.placeName(level, p), p); hear('debrief roomOf', roomOf(p), p); } }
     finally { /* (left on for the rectangles' middles below) */ }
-  const labels: string[] = typeof CHR.roomsOf === 'function' ? CHR.roomsOf(level).map((r: any) => String(r.name)) : (CHR.ROOMS ?? []).map((r: any) => String(r.name));   // (the debrief map's labels: a build without roomsOf draws the office's table on every level)
-  for (const l of labels) hear('debrief label', l, [0, 0, 0]);
   looked++;
   verdict(wrong.size === 0, `${f}: no spot of its floor is called by a room of the office's`, wrong.size ? `${wrong.size} wrong, e.g. ${[...wrong].slice(0, 5).map(([k, at]) => `${k} at ${at}`).join(' · ')}` : `${pts} points · it says: ${[...said.keys()].filter(k => !/^outside /.test(k)).slice(0, 14).join(', ')}${own.length ? '' : ' (the level names no floor of its own)'}`);
   if (named.length) {

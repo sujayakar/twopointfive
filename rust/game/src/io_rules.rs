@@ -2,7 +2,7 @@
 use game_wire::io::*;
 use game_wire::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
-/// WHAT THE HOST ASKS OF AN ORDER ROW (bridge/ask.ts): the closures of a row in the TypeScript, each answered by the match over its arms. `kind` is ask.ts's; `args` is written by the schema. 0 to 7 only read; 8, 9 and 10 write, and the host applies again after them.
+/// WHAT THE HOST ASKS OF AN ORDER ROW (tools/blitz/ask.ts): the functions of a row, each called through its `Row`. `kind` is ask.ts's; `args` is written by the schema. 0 to 6 only read; 7, 8 and 9 write, and the host applies again after them.
 pub fn ask(g: &mut crate::game::Game, kind: u32, row: u32, seat: u32, args: &[u8]) -> Vec<u8> {
     use crate::orders::OrderTarget as T;
     let s = <SeatId as Id>::from_ix(seat as usize); let d = <OrdersOrderDefId as Id>::from_ix(row as usize);
@@ -11,58 +11,26 @@ pub fn ask(g: &mut crate::game::Game, kind: u32, row: u32, seat: u32, args: &[u8
         1 => { let gd: GuardId = Io::r(&mut i); let t: T = Io::r(&mut i); crate::orders::order_can(g, d, gd, &t).w(&mut o); }
         2 => { let men: Vec<GuardId> = Io::r(&mut i); let t: T = Io::r(&mut i); crate::orders::order_only(g, d, &men, &t).w(&mut o); }
         3 => { let t: T = Io::r(&mut i); let men: Vec<GuardId> = Io::r(&mut i); match crate::orders::order_valid(g, d, &t, &men) { Ok(()) => o.b.push(0), Err(None) => o.b.push(1), Err(Some(w)) => { o.b.push(2); w.w(&mut o); } } }
-        4 => { let t: T = Io::r(&mut i); let men: Vec<GuardId> = Io::r(&mut i); crate::orders::order_when(g, d, &t, &men).w(&mut o); }
-        5 => { let t: T = Io::r(&mut i); let men: Vec<GuardId> = Io::r(&mut i); crate::orders::order_gone(g, d, &t, &men).w(&mut o); }
-        6 => { crate::silent::posture_word(g).w(&mut o); }
-        7 => { String::from(crate::silent::posture_mark(g, &crate::seats::here(g), d)).w(&mut o); }
-        8 => { crate::silent::posture_given(g, d); }
-        9 => { let men: Vec<GuardId> = Io::r(&mut i); let t: T = Io::r(&mut i); let opts: Option<crate::orders::GiveOpts> = Io::r(&mut i); crate::orders::order_issue(g, d, &men, &t, opts.as_ref()).w(&mut o); }
-        10 => { let id: String = Io::r(&mut i); let t: Option<T> = Io::r(&mut i); let who: Option<crate::orders::Who> = Io::r(&mut i); let opts: Option<crate::orders::GiveOpts> = Io::r(&mut i); crate::orders::squad_orders_give(g, &id, t.as_ref(), who, opts.as_ref()).w(&mut o); }
+        4 => { let t: T = Io::r(&mut i); let men: Vec<GuardId> = Io::r(&mut i); crate::orders::order_when(g, &crate::seats::here(g), d, &t, &men).w(&mut o); }
+        5 => { let t: T = Io::r(&mut i); let men: Vec<GuardId> = Io::r(&mut i); crate::orders::order_gone(g, &crate::seats::here(g), d, &t, &men).w(&mut o); }
+        6 => { String::from(crate::silent::posture_mark(g, &crate::seats::here(g), d)).w(&mut o); }
+        7 => { crate::silent::posture_given(g, d); }
+        8 => { let men: Vec<GuardId> = Io::r(&mut i); let t: T = Io::r(&mut i); let opts: Option<crate::orders::GiveOpts> = Io::r(&mut i); crate::orders::order_issue(g, d, &men, &t, opts.as_ref()).w(&mut o); }
+        9 => { let id: String = Io::r(&mut i); let t: Option<T> = Io::r(&mut i); let who: Option<crate::orders::Who> = Io::r(&mut i); let opts: Option<crate::orders::GiveOpts> = Io::r(&mut i); crate::orders::squad_orders_give(g, &id, t.as_ref(), who, opts.as_ref()).w(&mut o); }
         k => panic!("bridge: no question of kind {}", k),
     } assert!(i.p == args.len(), "bridge: {} bytes left over in a question of kind {}", args.len() - i.p, kind); o.b })
 }
-/// WHAT THE WALK CANNOT READ, DEALT BY KEY: every order row's closures by its id (the arms as the parts register them), the 'go' row by which of its two the game has dealt.
-/// A row with an id this does not know stands at its blank: export.ts names it in its report.
+/// WHAT THE WALK CANNOT READ, DEALT BY KEY: every order row its functions, by its id (`rows::by_id`). A row whose id is no line of the list stops the import, by name.
 pub fn deal_closures(g: &mut crate::game::Game) {
     use crate::orders::*;
-    use crate::squadthrow::SquadThrowKind::{Frag as F, Stun as S};
-    let small = g.door_tools.go_key == Some(Some(String::from("small")));
+    // (the block's voices, on a game handed over by a host that registers none: each reader answers for itself whether it has anything to say)
+    for f in [OrderNoteFn::DoorToolsHud, OrderNoteFn::DoorToolsWord, OrderNoteFn::Pair, OrderNoteFn::SquadSmoke, OrderNoteFn::WallCharge, OrderNoteFn::Squad40, OrderNoteFn::SquadThrow] {
+        crate::orders::squad_orders_voice(g, f);
+        for s in g.tab.cmd_seat.ids().collect::<Vec<_>>() { if let Some(o) = g.tab.cmd_seat[s].own.as_mut() { if !o.orders.notes.contains(&f) { o.orders.notes.push(f); } } }
+    }
     for id in g.tab.orders_order_def.ids().collect::<Vec<_>>() {
         let d = &mut g.tab.orders_order_def[id];
-        match d.id.as_str() {
-            "move" => { d.label = OrderLabel::Text { text: String::from("move there") }; d.can = Some(OrderCan::Move); d.only = None; d.valid = Some(OrderValid::Move); d.issue = OrderIssue::Move; d.tick = Some(OrderTick::Move); d.gone = None; }
-            "stack" => { d.label = OrderLabel::Text { text: String::from("stack up") }; d.can = None; d.only = None; d.valid = Some(OrderValid::Stack); d.issue = OrderIssue::Stack; d.tick = None; d.gone = None; }
-            "cover" => { d.label = OrderLabel::Cover; d.can = Some(OrderCan::Cover); d.only = None; d.valid = None; d.issue = OrderIssue::Cover; d.tick = None; d.gone = None; }
-            "fallIn" => { d.label = OrderLabel::Text { text: String::from("fall in") }; d.can = None; d.only = None; d.valid = None; d.issue = OrderIssue::FallIn; d.tick = None; d.gone = None; }
-            "hold" => { d.label = OrderLabel::Text { text: String::from("hold position") }; d.can = None; d.only = None; d.valid = None; d.issue = OrderIssue::Hold; d.tick = None; d.gone = None; }
-            "tools" => { d.label = OrderLabel::Text { text: String::from("door tools") }; d.can = None; d.only = None; d.valid = None; d.issue = OrderIssue::Nothing; d.tick = None; d.gone = None; }
-            "held" => { d.label = OrderLabel::Text { text: String::from("threshold held") }; d.can = None; d.only = None; d.valid = None; d.issue = OrderIssue::Nothing; d.tick = None; d.gone = None; if let Some(s) = d.stands_in.as_mut() { s.when = OrderWhen::DoorHeld; } }
-            "walltools" => { d.label = OrderLabel::Text { text: String::from("wall tools") }; d.can = None; d.only = None; d.valid = None; d.issue = OrderIssue::Nothing; d.tick = None; d.gone = None; }
-            "throwThere" => { d.label = OrderLabel::ThrowOpen; d.can = None; d.only = None; d.valid = None; d.issue = OrderIssue::Nothing; d.tick = None; d.gone = None; }
-            "openClear" => { d.label = OrderLabel::DoorOpenClear; d.can = None; d.only = Some(OrderOnly::DoorHeldOrAll); d.valid = Some(OrderValid::DoorOpenClear); d.issue = OrderIssue::DoorOpenClear; d.tick = None; d.gone = None; }
-            "bangClear" => { d.label = OrderLabel::DoorBangClear; d.can = None; d.only = Some(OrderOnly::DoorHeldOrAll); d.valid = Some(OrderValid::DoorBangClear); d.issue = OrderIssue::DoorBangClear; d.tick = None; d.gone = None; }
-            "charge" => { d.label = OrderLabel::DoorCharge; d.can = None; d.only = None; d.valid = Some(OrderValid::DoorCharge); d.issue = OrderIssue::DoorCharge; d.tick = None; d.gone = Some(OrderGone::DoorCharge); }
-            "fragClear" => { d.label = OrderLabel::DoorFragClear; d.can = None; d.only = None; d.valid = Some(OrderValid::DoorFragClear); d.issue = OrderIssue::DoorFragClear; d.tick = None; d.gone = None; }
-            "thresholdHold" => { d.label = OrderLabel::DoorThresholdHold; d.can = None; d.only = None; d.valid = Some(OrderValid::DoorThresholdHold); d.issue = OrderIssue::DoorThresholdHold; d.tick = None; d.gone = None; }
-            "bigClear" => { d.label = OrderLabel::DoorBigClear; d.can = None; d.only = None; d.valid = Some(OrderValid::DoorBigClear); d.issue = OrderIssue::DoorBigClear; d.tick = None; d.gone = Some(OrderGone::DoorBigClear); }
-            "thrWord" => { d.label = OrderLabel::DoorThrWord; d.can = None; d.only = Some(OrderOnly::DoorThrWord); d.valid = Some(OrderValid::DoorThrWord); d.issue = OrderIssue::DoorThrWord; d.tick = None; d.gone = None; }
-            "shutDoor" => { d.label = OrderLabel::Text { text: String::from("shut that door") }; d.can = None; d.only = Some(OrderOnly::ShutDoor); d.valid = Some(OrderValid::ShutDoor); d.issue = OrderIssue::ShutDoor; d.tick = Some(OrderTick::ShutDoor); d.gone = None; if let Some(s) = d.stands_in.as_mut() { s.when = OrderWhen::ShutDoor; } }
-            "work" => { d.label = OrderLabel::Work; d.can = Some(OrderCan::Work); d.only = Some(OrderOnly::Work); d.valid = Some(OrderValid::Work); d.issue = OrderIssue::Work; d.tick = Some(OrderTick::Work); d.gone = None; }
-            "wallCharge" => { d.label = OrderLabel::WallRow; d.can = Some(OrderCan::WallRow); d.only = None; d.valid = Some(OrderValid::WallRow); d.issue = OrderIssue::WallRow; d.tick = None; d.gone = Some(OrderGone::WallRow); }
-            "silent" => { d.label = OrderLabel::Text { text: String::from("go silent") }; d.can = None; d.only = Some(OrderOnly::SilentAll); d.valid = None; d.issue = OrderIssue::Silent; d.tick = None; d.gone = None; }
-            "loud" => { d.label = OrderLabel::Text { text: String::from("go loud") }; d.can = None; d.only = Some(OrderOnly::SilentAll); d.valid = None; d.issue = OrderIssue::Loud; d.tick = None; d.gone = None; if let Some(s) = d.stands_in.as_mut() { s.when = OrderWhen::Loud; } }
-            "wandLook" => { d.label = OrderLabel::Text { text: String::from("look under it · wand") }; d.can = None; d.only = Some(OrderOnly::Wand); d.valid = Some(OrderValid::Wand); d.issue = OrderIssue::Wand; d.tick = Some(OrderTick::Wand); d.gone = None; }
-            "smokeThere" => { d.label = OrderLabel::Smoke; d.can = None; d.only = Some(OrderOnly::Smoke); d.valid = Some(OrderValid::Smoke); d.issue = OrderIssue::Smoke; d.tick = None; d.gone = None; }
-            "fragThere" => { d.label = OrderLabel::ThrowRow { kind: F }; d.can = None; d.only = Some(OrderOnly::ThrowRow { kind: F }); d.valid = Some(OrderValid::ThrowRow { kind: F }); d.issue = OrderIssue::ThrowRow { kind: F }; d.tick = Some(OrderTick::ThrowRow); d.gone = None; }
-            "stunThere" => { d.label = OrderLabel::ThrowRow { kind: S }; d.can = None; d.only = Some(OrderOnly::ThrowRow { kind: S }); d.valid = Some(OrderValid::ThrowRow { kind: S }); d.issue = OrderIssue::ThrowRow { kind: S }; d.tick = Some(OrderTick::ThrowRow); d.gone = None; }
-            "pairMark" => { d.label = OrderLabel::Text { text: String::from("take him · on your mark") }; d.can = Some(OrderCan::PairTake); d.only = Some(OrderOnly::PairTake); d.valid = Some(OrderValid::PairTake); d.issue = OrderIssue::PairTake { mode: crate::pairorders::JobMode::Mark }; d.tick = Some(OrderTick::PairTake); d.gone = None; }
-            "pairTake" => { d.label = OrderLabel::Text { text: String::from("take him now") }; d.can = Some(OrderCan::PairTake); d.only = Some(OrderOnly::PairTake); d.valid = Some(OrderValid::PairTake); d.issue = OrderIssue::PairTake { mode: crate::pairorders::JobMode::Now }; d.tick = Some(OrderTick::PairTake); d.gone = None; }
-            "pairWatch" => { d.label = OrderLabel::Text { text: String::from("watch him") }; d.can = Some(OrderCan::PairWatch); d.only = None; d.valid = Some(OrderValid::PairWatch); d.issue = OrderIssue::PairWatch; d.tick = Some(OrderTick::PairWatch); d.gone = None; }
-            "pairDark" => { d.label = OrderLabel::Text { text: String::from("move there · hold in the dark") }; d.can = Some(OrderCan::PairDark); d.only = None; d.valid = None; d.issue = OrderIssue::PairDark; d.tick = Some(OrderTick::PairDark); d.gone = None; if let Some(s) = d.stands_in.as_mut() { s.when = OrderWhen::PairDark; } }
-            "pairGo" => { d.label = OrderLabel::PairGo; d.can = None; d.only = Some(OrderOnly::PairGo); d.valid = Some(OrderValid::PairGo); d.issue = OrderIssue::PairGo; d.tick = None; d.gone = None; }
-            "go" => { if small { d.label = OrderLabel::DoorGoSmall; d.only = Some(OrderOnly::DoorGoSmall); d.valid = Some(OrderValid::DoorGoSmall); d.issue = OrderIssue::DoorGoSmall; } else { d.label = OrderLabel::DoorGoBig; d.only = Some(OrderOnly::DoorGoBig); d.valid = Some(OrderValid::DoorGoBig); d.issue = OrderIssue::DoorGoBig; } }
-            other => { let Some(r) = rows::by_id(other) else { panic!("the order {} has no closures: it is neither an arm here nor a line of orders/rows", other) }; let data = d.clone(); *d = rows::def(r, data); d.gone = None; }
-        }
+        d.row = rows::by_id(&d.id).unwrap_or_else(|| panic!("the order {} has no functions: it is no line of orders/rows", d.id));
     }
 }
 /// WHAT A LEVEL SCRIPT IS IN AN IMPORTED GAME. A script is code, hung on the Level by the level's name, and its define pass keeps its locals in a closure the bridge cannot read. So the level's name says which script it is,

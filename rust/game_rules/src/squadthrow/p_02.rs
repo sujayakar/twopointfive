@@ -520,42 +520,33 @@ pub fn squad_throw_plans(g: &crate::game::Game, _v: Option<&mut crate::squadthro
 
 /// The row that opens the page and the page's two: made, not yet on the menu. (squadthrow.ts rows)
 pub fn rows(g: &mut crate::game::Game) -> Vec<OrdersOrderDefId> {
-    let open = crate::orders::OrderDef {
-        id: String::from(THROW_OPEN),
+    use crate::orders::rows;
+    let open = rows::def(&rows::throwopen::ORDER, crate::orders::OrderDef {
         opens: Some(String::from(THROW_PAGE)),
         hot_key: Some(g.k.frag.order_key.clone()),
         targets: vec![crate::orders::TargetKind::Floor],
         free: Some(true),
-        label: crate::orders::OrderLabel::ThrowOpen,
-        issue: crate::orders::OrderIssue::Nothing,
         ..crate::orders::OrderDef::zeroed()
-    };
+    });
     let open = crate::orders::squad_orders_row(g, open);
     let mut out = vec![open];
-    for kind in [SquadThrowKind::Frag, SquadThrowKind::Stun] {
-        let one = crate::orders::OrderDef {
-            id: String::from(row_of(kind).as_str()),
+    for row in [&rows::fragthere::ORDER, &rows::stunthere::ORDER] {
+        let one = rows::def(row, crate::orders::OrderDef {
             page: Some(String::from(THROW_PAGE)),
             targets: vec![crate::orders::TargetKind::Floor],
             free: Some(true),
-            label: crate::orders::OrderLabel::ThrowRow { kind },
-            only: Some(crate::orders::OrderOnly::ThrowRow { kind }),
-            valid: Some(crate::orders::OrderValid::ThrowRow { kind }),
-            issue: crate::orders::OrderIssue::ThrowRow { kind },
-            tick: Some(crate::orders::OrderTick::ThrowRow),
             ..crate::orders::OrderDef::zeroed()
-        };
+        });
         out.push(crate::orders::squad_orders_row(g, one));
     }
     out
 }
 
 /// The squad's HUD block: the throw just made. (squadthrow.ts notes)
-pub fn notes(g: &mut crate::game::Game) -> Vec<crate::orders::OrderNote> {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
-    if let Some(w) = g.m.squadthrow.states.get(key).and_then(|s| s.shown.as_ref()) {
+pub fn notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::view::Note> {
+    if let Some(w) = g.m.squadthrow.states.get(crate::seats::view_key(g, seat)).and_then(|s| s.shown.as_ref()) {
         if g.time >= w.t && g.time - w.t < g.k.squadthrow.shown_secs {
-            return vec![crate::orders::OrderNote::Text(w.text.clone())];
+            return vec![crate::view::Note { key: String::new(), text: w.text.clone() }];
         }
     }
     Vec::new()
@@ -590,7 +581,7 @@ pub fn sync(g: &mut crate::game::Game) {
     let s = state(g);
     if !s.noted {
         s.noted = true;
-        g.orders.notes.push(crate::orders::OrderNoteFn::SquadThrow);
+        crate::orders::squad_orders_voice(g, crate::orders::OrderNoteFn::SquadThrow);
     }
 }
 

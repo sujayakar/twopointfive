@@ -3570,16 +3570,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("nightbreach.squad", offset_of!(Knobs, nightbreach.squad), false),
     ("roomclear.seed", offset_of!(Knobs, roomclear.seed), false),
     ("roomclear.way", offset_of!(Knobs, roomclear.way), false),
-    ("defuse.work_secs", offset_of!(Knobs, defuse.work_secs), false),
-    ("defuse.reach", offset_of!(Knobs, defuse.reach), false),
-    ("defuse.marker_m", offset_of!(Knobs, defuse.marker_m), false),
-    ("defuse.shift", offset_of!(Knobs, defuse.shift), false),
-    ("defuse.start_m", offset_of!(Knobs, defuse.start_m), false),
-    ("defuse.lethal_m", offset_of!(Knobs, defuse.lethal_m), false),
-    ("defuse.wound_m", offset_of!(Knobs, defuse.wound_m), false),
-    ("defuse.radius", offset_of!(Knobs, defuse.radius), false),
-    ("defuse.power", offset_of!(Knobs, defuse.power), false),
-    ("defuse.warn_secs", offset_of!(Knobs, defuse.warn_secs), false),
     ("verdict.win_secs", offset_of!(Knobs, verdict.win_secs), false),
     ("verdict.loss_secs", offset_of!(Knobs, verdict.loss_secs), false),
     ("unseen.pace_at", offset_of!(Knobs, unseen.pace_at), false),
@@ -6871,16 +6861,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.nightbreach.squad;
     let _: &f64 = &k.roomclear.seed;
     let _: &f64 = &k.roomclear.way;
-    let _: &f64 = &k.defuse.work_secs;
-    let _: &f64 = &k.defuse.reach;
-    let _: &f64 = &k.defuse.marker_m;
-    let _: &f64 = &k.defuse.shift;
-    let _: &f64 = &k.defuse.start_m;
-    let _: &f64 = &k.defuse.lethal_m;
-    let _: &f64 = &k.defuse.wound_m;
-    let _: &f64 = &k.defuse.radius;
-    let _: &f64 = &k.defuse.power;
-    let _: &f64 = &k.defuse.warn_secs;
     let _: &f64 = &k.verdict.win_secs;
     let _: &f64 = &k.verdict.loss_secs;
     let _: &f64 = &k.unseen.pace_at;

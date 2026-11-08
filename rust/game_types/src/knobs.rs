@@ -7934,19 +7934,6 @@ impl FindtunedK {
 }
 impl Default for FindtunedK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/host/autocam.ts:73 AUTOCAM, src/host/autocam.ts:73)
-#[derive(Clone, Copy, Debug)]
-pub struct AutocamK {
-}
-impl AutocamK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AutocamK {
-        }
-    }
-}
-impl Default for AutocamK { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/game/morale.ts:90 MORALE, src/game/morale.ts:90)
 #[derive(Clone, Copy, Debug)]
 pub struct MoraleK {
@@ -12568,41 +12555,6 @@ impl LessonK {
 }
 impl Default for LessonK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/defuse.ts:31 DEFUSE, src/game/defuse.ts:31)
-#[derive(Clone, Copy, Debug)]
-pub struct DefuseK {
-    pub on: bool,
-    pub work_secs: f64,
-    pub reach: f64,
-    pub marker_m: f64,
-    pub shift: f64,
-    pub start_m: f64,
-    pub lethal_m: f64,
-    pub wound_m: f64,
-    pub radius: f64,
-    pub power: f64,
-    pub warn_secs: f64,
-}
-impl DefuseK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DefuseK {
-            on: false,
-            work_secs: 0.0,
-            reach: 0.0,
-            marker_m: 0.0,
-            shift: 0.0,
-            start_m: 0.0,
-            lethal_m: 0.0,
-            wound_m: 0.0,
-            radius: 0.0,
-            power: 0.0,
-            warn_secs: 0.0,
-        }
-    }
-}
-impl Default for DefuseK { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/game/kit.ts:1170 ISSUE, src/game/kit.ts:1170)
 #[derive(Clone, Copy, Debug)]
 pub struct IssueK {
@@ -13435,10 +13387,6 @@ pub fn page_findtuned() -> FindtunedK {
     crate::knobs::FindtunedK {  }
 }
 
-pub fn page_autocam() -> AutocamK {
-    crate::knobs::AutocamK {  }
-}
-
 pub fn page_morale() -> MoraleK {
     crate::knobs::MoraleK { on: true, half_life: 25.0, ask_secs: 0.25, alone: 0.25, alone_m: 7.0, dark: 0.25, lit_asks: 3.0, blast: 0.35, shock_cap: 0.5, blast_m: 10.0, near_m: 4.0, far_k: 0.6, jumpy: 0.3, broken: 0.7, hyst: 0.15, duck_secs: 2.5, down_secs: 0.6, back_until: 2.2, back_m: 3.5, back_speed: 2.0, burst_rounds: 5.0, burst_every: 0.2, spread: 0.3, call2_secs: 6.0, bait_m: 2.0, bait_short: 5.0, bait_every: 0.1, reload_secs: 3.2, bark_secs: 2.0, fan_deg: 70.0, fan_step: 17.5, straight_m: 1.5, training: crate::morale::Training::Difficulty, green_broken: 0.5, leader_down: 0.25, leader_shock: 0.3, flinch_secs: 0.8, shout_gap: 0.6, order_m: 4.0, order_beat: 0.5, order_secs: 1.0, order_gap: 0.15, stand_secs: 2.5, side_m: 0.75, steady_duck: 1.0, hold_shock: 0.05, hold_max: 70.0, nerve: crate::morale::Nerve::Normal, nerve_k: crate::knobs::MoraleKNerveK { brittle: 1.4, normal: 1.0, steady: 0.7 }, dark_read: crate::knobs::MoraleKDarkRead::Place }
 }
@@ -13789,10 +13737,6 @@ pub fn page_lesson() -> LessonK {
 }
 
 
-pub fn page_defuse() -> DefuseK {
-    crate::knobs::DefuseK { on: true, work_secs: 6.0, reach: 1.3, marker_m: 5.0, shift: 0.45, start_m: 1.2, lethal_m: 5.0, wound_m: 9.0, radius: 3.5, power: 1.0, warn_secs: 10.0 }
-}
-
 pub fn page_issue() -> IssueK {
     crate::knobs::IssueK { on: true, whole: true, picked: true }
 }
@@ -13977,7 +13921,6 @@ pub struct Knobs {
     pub savepic: SavepicK,
     pub evenpace: EvenpaceK,
     pub findtuned: FindtunedK,
-    pub autocam: AutocamK,
     pub morale: MoraleK,
     pub condition: ConditionK,
     pub inhand: InhandK,
@@ -14065,7 +14008,6 @@ pub struct Knobs {
     pub nightbreach: NightbreachK,
     pub roomclear: RoomclearK,
     pub lesson: LessonK,
-    pub defuse: DefuseK,
     pub issue: IssueK,
     pub verdict: VerdictK,
     pub unseen: UnseenK,
@@ -14222,7 +14164,6 @@ impl Knobs {
             savepic: page_savepic(),
             evenpace: page_evenpace(),
             findtuned: page_findtuned(),
-            autocam: page_autocam(),
             morale: page_morale(),
             condition: page_condition(),
             inhand: page_inhand(),
@@ -14310,7 +14251,6 @@ impl Knobs {
             nightbreach: page_nightbreach(),
             roomclear: page_roomclear(),
             lesson: page_lesson(),
-            defuse: page_defuse(),
             issue: page_issue(),
             verdict: page_verdict(),
             unseen: page_unseen(),

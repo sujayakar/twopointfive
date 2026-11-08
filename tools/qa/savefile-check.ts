@@ -192,11 +192,6 @@ page();
   const { savers, unread, strange, unsaved } = saversOf(SAVED_KINDS, texts);
   const sets = files.filter(f => /SAVED\.sink\s*=[^=]/.test(readFileSync(f, 'utf8'))).map(f => f.slice(root.length + 1)), main = readFileSync(join(root, 'main.ts'), 'utf8');
   check(sets.join() === 'main.ts' && /SAVED\.sink = cloud \? \(f, done\) => \{ const took = cloud\.save\(f\.name, f\.blob,[^\n]*f\.meta, done\); return took === 'sent' \|\| took === 'held' \? took : false; \} : null;/.test(main), `one place sets the listener: main.ts, to the backend's file intake, and hands its whole answer back (${sets.join(', ') || 'nowhere'})`);
-  // the debug panel's checkpoint export (ui/bindings.ts): its line is the door's answer in the shared words, with a second line for the file's end, and
-  // the old "exported <name>" stands only where the browser was handed the file
-  { const row = readFileSync(join(root, 'ui/bindings.ts'), 'utf8').split("text: 'export chosen'")[1]?.split("text: 'import…'")[0] ?? '';
-    check(/saveFile\('checkpoint', name, [^\n]*\{ done: arrived => game\.msg\(savedEnd\('The checkpoint', arrived\)\) \}/.test(row) && /if \(w\.local\) game\.msg\(`exported /.test(row) && /game\.msg\(savedWords\('The checkpoint', w\.went\)\)/.test(row) && !/title: '[^']*\bdownload the\b/.test(row),
-      'the checkpoint export says what became of its file in the shared words (sent, held, not sent, and its end), and says "exported" only of a file the browser was handed'); }
   check(own.length === 0, `no file under src/ makes a download of its own${own.length ? ` (own: ${own.join(', ')})` : ''}`);
   check(SAVED_KINDS.length > 1 && unsaved.length === 0 && unread.length === 0 && strange.length === 0, `every kind of the door's is saved through it, by the door's own list (${SAVED_KINDS.map(k => `${k}: ${savers.get(k)!.join(' + ') || 'NOBODY'}`).join(' · ')})${unread.length ? ` (a save whose kind is not read: ${unread.join(', ')})` : ''}${strange.length ? ` (a kind the door does not list: ${strange.join(', ')})` : ''}`);
 }

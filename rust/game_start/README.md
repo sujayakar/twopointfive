@@ -84,7 +84,7 @@ side by side with a door between them and a door each to the yard, a defender in
 - **Ask:** `p.at(man)`, `p.state(man)`, `p.awareness(man)`, `p.fix(man)`, `p.facing(man)`, `p.speed(man)`, `p.low(man)`, `p.stacked(man)`,
   `p.up(man)`, `p.sam_at()`, `p.sam_light()`, `p.frag_fuse()`, `p.floor()` (what stands on the level: round things, shaped boxes, trim, civilians, devices); `p.lines(man)` and `p.said` are every line a man spoke (read off the speech
   bubbles after each frame), `p.sounds` every sound the game asked its host to play, `p.end_cards` when it told its host to open the end card. `p.debrief_view(seat)` is what the end card shows that seat.
-  The mission: `p.view()` and `p.view_of(seat)` (all a HUD is told), `p.objective()` (its row), `p.charges()`, `p.log()` (the lines on the game's log), `p.room_clear_end()`, `p.hostiles()`; the par
+  The mission: `p.view()` and `p.view_of(seat)` (all a HUD is told), `p.objective()` (its row), `p.log()` (the lines on the game's log), `p.room_clear_end()`, `p.hostiles()`; the par
   clock: `p.par_live()`, `p.par_bars()`, `p.par_started()`, `p.par_result()`, `p.par_counts()`.
 - **Do:** `p.order("stack", place, Who::Red)` is the order menu's own call; `p.frag_lands(place)` the sandbox's; `p.sam_fires_at(place, settle)`,
   `p.point_at`, `p.press`, `p.key_down` move Sam as a player's hand does, through the host's Input. An order pointed at Sam's own spot has a
@@ -126,7 +126,7 @@ and `cargo test`'s threads take turns. A test that stands a second game drops th
 | a mission, where asked | the game's `start_scenario`; or, from an address, `start_at_address`: `start_from_query` on its words, then the solo card's question, as a click on a row of the mission list starts it on a page |
 
 `frame(g, host, dt)` is one frame of that host: the game's `game_update` on the host's Input and camera, the camera after the man, the lights'
-envelopes, the box world listed again. It answers what the step told its host (sounds, marks, lines said).
+envelopes. It answers what the step told its host (sounds, marks, lines said).
 
 NOT MADE, because no rule of the tick reads them: the character renderer, the mesh shadows' tree, the proxy fits of the rig.
 

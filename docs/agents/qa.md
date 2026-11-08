@@ -10,6 +10,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   - **A check reads the same alone, in its family and on every run.** A game stood with no seed and no die gets die 1 (`tools/qa/die.ts`; `standdie-check.ts`,
     STANDDIE_BREAK=1 fails it), each probe begins on it (`holds.ts asProbe`), and `probes.ts <family>` runs a process a probe, `QA_JOBS` at a time (the cores by
     default), each stopped at `QA_PROBE_CAP` seconds (600; 0 = none). The closing line says what the run cost and names the five slowest.
+  - **`probes.ts all-quick` is every probe that costs at most 8 CPU seconds** (`tools/qa/costs.json`, written anew by `probes.ts all --costs`; `QA_QUICK_SECS`): some 290
+    probes in five to six minutes on four cores. `all` is about 950 in an hour and a half there.
   - **A probe is under a minute of CPU.** A sweep asks a sample (`tools/qa/sweep.ts`: `sample`, `everyNth`, floors through `swept`); `QA_SWEEP=all` asks every case.
     A game stood with `reach: true` makes the picture's light masks every step: only a check that reads masks asks for it (it was nine tenths of the wall family's time).
   - **A red is the game's only when the check reached the game.** A tool holds a COPY of the Rust game's state. Of about sixty reds placed one by one, five were the
@@ -19,7 +21,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     text (a yaw is written EVERY frame). A bubble's object is reused: compare its `t`. Only the newest game of a process is live: play one arm to its end, then stand the next.
   - `game.msg` / `game.say` wrapped by a check are told what the Rust game said (`headless.ts`, `heard.ts`): the log's five rows a tick and one line a man.
   - **A rule of the simulation is asked natively first** (`rust/game_start/tests`); a probe is for what crosses the bridge or the page.
-  - The expected reds are what is left red, each a fault placed or a thing nobody has placed yet; a row goes the day its check is green.
+  - **The expected reds are one short list** (`tools/qa/expected-red.ts`): faults of the game, placed or waiting for their owner's read. A check's own red is mended, cut or deleted,
+    never listed; a row goes the day its check is green. (The five tables, `red-rows.ts`, `LIST_READ_ON`, the `on` / `bisect` / `rust` fields that older bullets name are gone.)
+  - A check file that is a script of its own is a row of the runner's script table (`probes.ts`, [name, file, families]): a file nothing runs is not a check.
 - **THE HARNESS STANDS THE GAME AS THE PAGE OPENS IT (2026-11-05; the maintainer ruled that the frozen stand may be retired).** With no word in front a
   headless tool is on what the bullet below calls the SHIPPED stand. THE RULE IS ONE FUNCTION, `standOf` in the import-free `src/host/standEnv.ts`: no
   word or `TPS_PROFILE=shipped` = the page's stand, `TPS_PROFILE=frozen` = the old one, any other word stops the tool. `harnessProfile()`
@@ -77,7 +81,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   loader, `src/main.ts`) adds, up to a ceiling of fifteen minutes, one mission stood and played 45 s under real keys in headless Chromium
   (`PORT=<port> node tools/blitz/page-walk.cjs`). A red is placed by one run on the named head: the same red there is old, a new one goes back to its
   sender. A read with a memory kill beside it, a time cap or a lost browser is spoiled and is read again, not called. EVERYTHING ELSE IS ASYNC, after the
-  name, and its reds are fixed forward by their owners and told, never hidden: the page as it opens and the other page checks, the read trap over a few missions (`tools/qa/readtrap-page.cjs`: a field the page reads that is neither on its list nor in `tools/wire/fields.json` `unsent`), the 84 mission tallies
+  name, and its reds are fixed forward by their owners and told, never hidden: the page as it opens and the other page checks, the read trap over a few missions (`tools/qa/readtrap-page.cjs`: a field the page reads that is neither on its list nor in `tools/wire/fields.json` `unsent`), its twin (`tools/qa/writetrap-page.cjs`: a word of the block or a field the page writes outside a call of the module, with no reason in `pageWrites`; `--seats2` the page in a two-player game), the 84 mission tallies
   (seeds 1 to 4) against the named head, the check families read as a list of reds by kind (not a bar), tour, soak, the two-seat run and the co-op
   checks, rollback, a build of the Rust module compared with the checked-in one. What the short gate does not see: a page that does not boot (unless the
   change is of the kind above), a rule that breaks on one die in ten, any mission but one, co-op, a family's red, timing, and a real GPU (no tool has
@@ -347,8 +351,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `switches.json` whether a row is settled. A word a game module reads as it loads over a settled row (`GLASSFX=off`) does nothing either, and is
   not said any more. MEASURED: every table after `shippedBoot()` the same as before (one row, `CUT.on`, is raised there and no longer as a game is
   stood), and each of 708 words of the source at seven values moves the same rows that are still switches, but for three: `?autotune=0`, `?goals=0`
-  and `?qring=0` moved such rows through a settled one, as `?findtuned=0` did the outline's own table (in no registry). Seven page checks still say
-  one of the four and lose the arm or the staging they made with it: autocam-page, findme-page, findme-squad-page, findtuned-page, goals-page,
+  and `?qring=0` moved such rows through a settled one, as `?findtuned=0` did the outline's own table (in no registry). Six page checks still say
+  one of the four and lose the arm or the staging they made with it: findme-page, findme-squad-page, findtuned-page, goals-page,
   squadkeys-page, engine-replay-page (`fog`, `turn`). FROZEN_HOLDS, `standup.ts` and the reads in `src/game` are as they were.
   THE HOLDS TABLE IS TWO ROWS (2026-11-07; `tools/qa/holds.ts`). It held rules OFF for probes written for an older model. Fourteen of its sixteen
   rows held only settled rows: on the page's stand every such hold was refused under the fold (101 a run of `holds`, which was red in all-quick by
@@ -479,7 +483,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   WHAT MAKING IT FOUND: 21 rows the list called settled that the page's own code writes, so a game with them as constants was wrong: ten the
   player's DIFFICULTY lays (`difficulty.ts write()` assigns the whole PRESSURE and DIGIN tables and the fog's two rows: PRESSURE.warned,
   second, byWay, rescueCrew, wayOut, drilled, sweep; DIGIN.keeper; FOG.cone; FOG.own, also a quiet mission's fog rung), eight the camera's
-  tune in Options > Game (`autocam.ts` AUTO_KEYS), three inside the slots table (data, `NOT_KNOBS`). The retire tool had not seen them: a
+  tune in Options > Game (the auto camera's, shelved 2026-11-08), three inside the slots table (data, `NOT_KNOBS`). The retire tool had not seen them: a
   whole-table assign is no write site to it. A second review then walked all 38 missions on Hard with every lever under the fold: nothing
   refused. NOT COVERED: a write through a road nothing here walks (a menu's own row through an alias); the fold names it when a check does.
   THE CHECK (`fold-check.ts`, the same on both stands, every game in a child on the page's stand): (1) the settled rows are in the tables,
@@ -1367,9 +1371,7 @@ but synthetic writes still work.
   too, for a question asked at once. Each returns the function that puts back what it changed and no more (a flag is lowered only where it was
   raised here). A door's leaf is no static: neither hides one. The floor's grid is not baked again: a man meets a wall and does not plan round it.
   Take walls down last up first; stand none across a restart.
-  THE FIVE CHECKS THAT LAID A STAND-IN NOW STAND WALLS, and each reads what it read (both stands, the same day, the lines compared with the tree before):
-  `autocam-check` (a wall half way to a man at his side; a wall 0.9 m toward the lens as wide as hid everything within acos 0.9 of that way, stood
-  again where he stops since a wall does not follow a man as the function did; a pillar half way to the locked man): every line of its output the same;
+  THE CHECKS THAT LAID A STAND-IN NOW STAND WALLS, and each reads what it read (both stands, the same day, the lines compared with the tree before):
   `stalk-check` (a wall half way between Sam and his man where 'something solid comes between them'): every line the same, and under `STALK_BREAK=1`;
   `deathrecap-check` (`RECAP_BREAK=seen` hides what stands between his mate or Sam and the man, where he lies and at his chest: every line the same, and the break fails the lines it failed; its output the same but for a digest one byte longer on the page's stand); `moonlight-check`
   (`MOONLIGHT_BREAK=1` asks of a level with no static standing): every line the same, the break fails `shadow` as it did, to the digit;

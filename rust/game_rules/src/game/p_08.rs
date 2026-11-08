@@ -202,7 +202,7 @@ pub fn game_hands_on_doors(g: &mut crate::game::Game, before: &[f64]) {
                 Some(h) => {
                     let hand = crate::handwork::TeamWorkHandH { p: h.p, n: h.n, w: h.w };
                     let verb = wj.as_ref().map(|j| j.verb);
-                    let kind = if verb == Some(crate::workthings::WorkVerb::Drive) || verb == Some(crate::workthings::WorkVerb::Defuse) { crate::handwork::TeamWorkHandKind::Take } else { crate::handwork::TeamWorkHandKind::Lever };
+                    let kind = if verb == Some(crate::workthings::WorkVerb::Drive) { crate::handwork::TeamWorkHandKind::Take } else { crate::handwork::TeamWorkHandKind::Lever };
                     let secs = wj.as_ref().map_or(0.0, |j| j.secs);
                     let need = wj.as_ref().map_or(1.0, |j| j.need);
                     let dir = if verb == Some(crate::workthings::WorkVerb::BreakerOn) { -1.0 } else { 1.0 };
@@ -299,7 +299,7 @@ pub fn game_update_props(g: &mut crate::game::Game, dt: f64) {
     let mut contacts: Vec<crate::props::PropContact> = Vec::with_capacity(chars.len());
     for c in chars.iter().copied() {
         let man = crate::seats::man_of(g, Some(c));
-        let quiet = crate::game::quiet_man(g, man);
+        let quiet = crate::game::quiet_man(g, man, c);
         contacts.push(crate::props::PropContact { pos: g.ch[c].pos, vel: g.ch[c].vel, radius: 0.3, who: g.ch[c].id, mass: 75.0, quiet });
     }
     let before: Vec<[f64; 2]> = chars.iter().map(|c| [g.ch[*c].pos[0], g.ch[*c].pos[2]]).collect();

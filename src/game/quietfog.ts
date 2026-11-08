@@ -39,7 +39,6 @@ import type { FogRung } from './difficulty';
 import { FOG } from './fogofwar';
 import { STICKY, stickyVisit } from './stickycam';   // (read inside functions only)
 import type { Game } from './game';
-import { lessonGroup } from '../scene/scenarios';
 import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 export const QUIETFOG: { on: boolean; def: QuietRung; wand: boolean; solo: boolean } = { on: false, def: 'off', wand: false, solo: false };
@@ -63,8 +62,6 @@ export const QUIET_RUNGS: { id: QuietRung; label: string; words: string }[] = [
   { id: 'own', label: 'own eyes', words: "only the cone you're looking down lifts the fog, and a partner calls out what he sees" },
 ];
 const isRung = (v: unknown): v is QuietRung => typeof v === 'string' && QUIET_RUNGS.some(r => r.id === v);
-/** the line beside the lever for a rung ('' = none) */
-export const quietFogWords = (rung: string | null): string => QUIET_RUNGS.find(r => r.id === rung)?.words ?? '';
 
 const LS = 'twopointsix.quietfog', PARAM = 'quietfog';
 let PICK: QuietRung | null = null;   // (null: not read from this machine's store yet)
@@ -120,8 +117,6 @@ export function setQuietFog(rung: QuietRung, keep = true) { { const __s = RUST_S
 /** the pick forgotten, to be read from the store again (the checks; a page never needs it) */
 export function quietFogForget() { PICK = null; KEPT = false; CAMS = null; CAMS_READ = false; }
 
-/** a mission's row is one the lever is live on: a quiet mission that is not a Training lesson, while the rule is on */
-export const quietFogRow = (e: { kind: string; group?: string } | null | undefined): boolean => QUIETFOG.on && !!e && e.kind === 'quiet' && !lessonGroup(e.group);
 /** A mission link with the quiet pick put right on it: whatever rung it carried is dropped (the visitor's own flags ride on every link — a rung is one
  *  mission's), and `quiet` — the link is a quiet mission's, not a Training lesson's — puts this machine's pick on it where that is not the default's
  *  (QUIETFOG.def: a bare quiet link IS the default). The switch's own `quietfog=0` is left where it is; with the switch off the link is returned as it came. */

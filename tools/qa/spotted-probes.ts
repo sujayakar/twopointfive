@@ -18,6 +18,7 @@
 // off, spotted-fire the hold with SPOTTED.hold and SPOTTED.holdUnaware off; and the rig held the net-goes-quiet rule off (settled on): the one man left
 // is asked as the page plays him. Until the same day spotted-fire also planted a quiet gun's report and a hostage's last warning on the copy, which the Rust game
 // is not sent (out), and spotted-suspicious asked 'back to calm, said once' of a man settling, which the last TypeScript game failed too (out).
+import { blockOf } from './squadwords';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
@@ -64,7 +65,7 @@ export async function rig(seed: number, on: boolean, knobs: Record<string, unkno
       for (const e of game.events) { if (seen.has(e)) continue; seen.add(e); if (e.kind === 'guardShot' && R.mate && e.who === R.mate.char.id) R.shots.push(game.time); }
       { const b = R.mate?.bubble, key = b ? `${b.t}|${b.text}` : ''; if (b && key !== lastLine) { lastLine = key; said.push(`${R.mate.callsign}${b.radio ? ' (radio)' : ''}: ${b.text}`); } }
       R.post?.(); } },
-    label(): string { return game.orders.hud().status[0]?.label ?? ''; },
+    label(): string { return blockOf(game.orders)[0]?.label ?? ''; },
     lines(re: RegExp): string[] { return said.filter(t => re.test(t)); },
     of(): any { return SPM.spottedOf(R.mate); },
     mode(): string { return SPM.spottedMode(game, R.mate); },

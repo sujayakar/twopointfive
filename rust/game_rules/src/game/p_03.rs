@@ -25,7 +25,7 @@ pub fn guard_new(g: &mut crate::game::Game, men: crate::Opaque, ch: RigId, id_2:
     let id = g.gd.push(Guard::blank());
     g.gd[id].witness = new_witness();
     g.gd[id].talk = new_talk(g);
-    g.gd[id].look_phase = crate::math_dice::sim_random(g) * 10.0;
+    g.gd[id].look_phase = crate::dice::draw_world(g, "game::guard_new#1") * 10.0;
 
     let (p0, p1, weapon, keys) = {
         let r = &g.tab.route[route];

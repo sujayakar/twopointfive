@@ -109,9 +109,9 @@ fn lit() -> crate::director::Cond {
 }
 
 /// q.inside(v, 'sam') of a volume the define pass named (director.ts:852)
-fn sam_inside(g: &Game, r: DirectorRunId, v: &Option<crate::director::VolumeRef>) -> bool {
+fn sam_inside(g: &Game, seat: &crate::seats::SeatRef, r: DirectorRunId, v: &Option<crate::director::VolumeRef>) -> bool {
     let id = &v.as_ref().expect("tut-quiet: the define pass names its volumes").id;
-    crate::director::director_inside_volume(g, r, id, &crate::director::DirectorInsideVolumeWho::Sam)
+    crate::director::director_inside_volume(g, seat, r, id, &crate::director::DirectorInsideVolumeWho::Sam)
 }
 
 /// what turns him from his smoke (tut-quiet.script.ts:80 heard, :82 turns)
@@ -275,10 +275,10 @@ pub fn tut_quiet_night_test(g: &mut crate::game::Game, r: DirectorRunId, b: Dire
     let vars = tut_quiet_vars(g, r).clone();
     match id {
         TEST_TAKEN => Ok(taken(g, r, &u)),
-        TEST_MET => Ok(in_strip(g, r, &u)? && sam_inside(g, r, &vars.walk)),
-        TEST_LIT => Ok(sam_inside(g, r, &vars.walk) || sam_inside(g, r, &vars.beam)),
+        TEST_MET => Ok(in_strip(g, r, &u)? && sam_inside(g, &crate::seats::here(g), r, &vars.walk)),
+        TEST_LIT => Ok(sam_inside(g, &crate::seats::here(g), r, &vars.walk) || sam_inside(g, &crate::seats::here(g), r, &vars.beam)),
         TEST_AT_GAP | TEST_AT_CHAIR => crate::director::director_query_arrived(g, r, &u),
-        TEST_PAST => Ok(sam_inside(g, r, &vars.past)),
+        TEST_PAST => Ok(sam_inside(g, &crate::seats::here(g), r, &vars.past)),
         _ => Err(format!("tut-quiet night: no test {id}")),
     }
 }

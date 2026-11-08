@@ -422,7 +422,7 @@ pub fn anim_new(g: &mut crate::game::Game, ch: RigId) -> crate::character::Anim 
     crate::anim_skeleton::pose_copy(g, s1, rest);
     crate::anim_skeleton::pose_copy(g, s2, rest);
     g.k.posemath.singles = pose_rule;
-    a.phase = crate::math_dice::sim_random(g);
+    a.phase = crate::dice::draw_world(g, "character::anim_new#1");
     a
 }
 

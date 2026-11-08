@@ -5,7 +5,7 @@
 //! The order round a tick (tools/blitz/BRIDGE.md, "What a Rust host calls round a step"):
 //!   a start  `start` (c1.bin, s0.bin)
 //!   before   `host_half` (h<k>.bin) · `give` (each line of gives.txt for this tick) · `write_before` (each line of hostwrites.txt for this tick) · `meter`
-//!            (a line of meter.txt, a tutorial mission's) · `upload`
+//!            (a line of meter.txt, a tutorial mission's)
 //!            … or, where the TypeScript side wrote ONE ORDERED RECORD (between.txt), `between` for each of the tick's lines as they stand: the orders,
 //!            the writes, the rules the driver called and the meter in the driver's own order, in place of `give`, `write_before` and `meter`
 //!   the tick `step`
@@ -226,11 +226,6 @@ pub fn call(g: &mut game::game::Game, k: usize, rule: &str) -> String {
             let c = game::stickycam::fire_cam(g, pl, [n[0], n[1], n[2]], [n[3], n[4], n[5]]);
             format!("  the case's call before tick {}: a sticky camera fired ({:?}); {} out", k, c, g.pl[pl].cams.len())
         }
-        // (a lesson's player asks the words of a set door charge: the answer is kept a quarter second and the tick's own ask reads it, doortools.ts closeAt)
-        "door_close_words" => match arg.and_then(|x| x.parse::<usize>().ok()).and_then(|i| g.door_tools.set.get(i).copied()) {
-            Some(c) => { let said = game::doortools::door_tools_close_words(g, c); format!("  the driver's ask before tick {}: door_close_words -> {:?}", k, said) }
-            None => format!("  NOTE tick {}: the driver asked the words of a set charge this game does not hold: {:?}", k, arg),
-        },
         "frag_step_off" => { let r = game::frag::frag_step_off(g, None); if r.is_some() { format!("  the driver's ask before tick {}: frag_step_off -> {:?}", k, r) } else { String::new() } }
         // (BLITZ_CALL, mission.ts: a rule of the game called before a tick on both sides, to hold the Rust game's restart to the TypeScript's)
         "restart_encounter" => { game::game::game_restart_encounter(g); format!("  the rule called before tick {}: restart_encounter; {} guards, time {}", k, g.guards.len(), g.time) }
@@ -315,10 +310,6 @@ pub fn checkpoint(g: &mut game::game::Game, label: &str) -> bool {
     let _ = game::chronicle::chron_checkpoint(g, game::chronicle::ChronCheckpointWhat::Save, Some(label));
     stopped
 }
-
-/// HOST STEP: where the headless host listed the box world again between two ticks (`engine.world.upload()`). The listing is also where the rows of the
-/// frames gone by are freed (`boxes_frame_reset`, inside `host_world_upload`): a host that never lists keeps every frame box as a row for good.
-pub fn upload(g: &mut game::game::Game) { game::host_api::b_01::host_world_upload(g); }
 
 /// HOST STEP AFTER THE TICK (the headless host's `engine.lights.update(dt, game.time)`): every flash's envelope and retirement, which the next tick's light reads
 pub fn lights(g: &mut game::game::Game, dt: f64) { let now = g.time; game::render_lights::light_set_update(g, dt, now); }

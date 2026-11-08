@@ -106,7 +106,7 @@ pub fn is_man_id(g: &crate::game::Game, id_2: f64) -> bool {
 }
 
 /// every seat's man, in seat order (seats.ts men)
-pub fn men(g: &mut crate::game::Game) -> Vec<PlayerId> {
+pub fn men(g: &crate::game::Game) -> Vec<PlayerId> {
     if g.seats.len() == 1 { return vec![g.player]; }
     let mut out = Vec::new();
     for i in 0..g.seats.len() { let s = g.seats[i]; out.push(crate::cmd::seat_man(g, s)); }
@@ -128,6 +128,25 @@ pub fn all_down(g: &crate::game::Game) -> bool {
         if !g.pl[p].down { return false; }
     }
     true
+}
+
+/// the men a rule about the team goes by: those still up, or every one if none is (a game of one asks about its one man, down or up)
+pub fn men_left(g: &crate::game::Game) -> Vec<PlayerId> {
+    let all = men(g);
+    let up: Vec<PlayerId> = all.iter().copied().filter(|p| !g.pl[*p].down).collect();
+    if up.is_empty() { all } else { up }
+}
+
+/// the man up nearest a place, or the first if every one is down
+pub fn nearest_or_first(g: &crate::game::Game, at: &[f64]) -> PlayerId {
+    nearest_man(g, at).unwrap_or_else(|| crate::cmd::seat_man(g, g.seats[0]))
+}
+
+/// `f` standing on the seat this man's senses and doings are about: his own, or the one he faces (update_guard's own way, for whoever else runs a man)
+pub fn standing_for<R>(g: &mut crate::game::Game, gd: GuardId, f: &mut dyn FnMut(&mut crate::game::Game) -> R) -> R {
+    if g.seats.len() == 1 { return f(g); }
+    let v = view_for(g, gd);
+    with_seat(g, v, f)
 }
 
 /// can a mission of this kind be played by two (seats.ts seatsKind)

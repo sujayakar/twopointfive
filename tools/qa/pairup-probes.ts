@@ -30,6 +30,7 @@
 // rules' off sides: pairup-identity whole (every line moved the rule rows), the 'rule off' / 'without it' / 'as it was' line of hunted, rejoin, word,
 // grip (two), hands (two), stay; the orders' own rule beside the one eye (three halves); the moon's rule-off halves, its roofed CONTROL (on against off,
 // no keeper) and its recording. STALKAMBIENT_BREAK=1 is a staging now: the partner's meter is not held at the moon's half — the moon lines must fail.
+import { doing, sneakWordOf } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
@@ -132,7 +133,7 @@ export async function rig(o: RigOpts = {}) {
       return false; },
     foe(h: any) { return { kind: 'foe', at: [h.char.pos[0], 0, h.char.pos[2]], foe: h }; },
     silent(): boolean { return SLM.squadSilent(game); },
-    status(): string { return O.statusOf(R.mate); },
+    status(): string { return doing(O.g, R.mate); },
     log(): string { return PM.PAIR_LOG.map((x: any) => `${f1(x.t)} ${x.what}`).join(' | '); },
     lines(re: RegExp): string[] { return said.filter(t => re.test(t)); },
     /** the meter's reading for a man LOW on a spot, as the sneak reads a step (the CPU's steady direct light at his chest and head) */
@@ -192,7 +193,7 @@ async function feetRun(o: { lit: boolean; spotted: boolean; samLow?: boolean }) 
   fallIn(R); const samLow = o.samLow ? crouchKey(R) : false;
   const rows: { f: number; what: string | null; spot: number[] | null; goal: number[] | null; speed: number; crouch: boolean; here: number[]; word: string | null; lit: number; trail: number }[] = [], trail: number[][] = [];
   R.post = () => { const sp = SPM.spottedOf(m), w = written(m), s = g.player.char.pos; trail.push([s[0], 0, s[2]]);
-    rows.push({ f: R.frames, what: sp?.what ?? null, spot: sp?.spot ? [...sp.spot] : null, ...w, here: [m.char.pos[0], 0, m.char.pos[2]], word: SNM.sneakWord(g, m), lit: m.visibility, trail: w.goal ? Math.min(...trail.map(t => flat(t, w.goal!))) : NaN }); };
+    rows.push({ f: R.frames, what: sp?.what ?? null, spot: sp?.spot ? [...sp.spot] : null, ...w, here: [m.char.pos[0], 0, m.char.pos[2]], word: sneakWordOf(g, m), lit: m.visibility, trail: w.goal ? Math.min(...trail.map(t => flat(t, w.goal!))) : NaN }); };
   // (lit: Sam stands a moment first. spotted.ts holds the partner still for `slipWait` after the man turned before it moves him off the line, and once Sam
   //  has walked on up the corridor every spot out of the man's line is in SAM's line to him: the slip has to be found while Sam still stands here)
   if (o.lit) R.step(Math.ceil(60 * (SPOTTED.slipWait + 0.6)));
@@ -310,7 +311,7 @@ async function waitRun(o: RigOpts) {
   const R = await rig(o); const g = R.game, m = R.mate, W = R.tango(2); R.only(W);
   R.pin(W, { at: [27, 0, 11], yaw: WEST, state: 'suspicious', aw: 0.4, eyesOn: null }); g.teleportPlayer([20.9, 0, 11]); R.put(m, [20.3, 0, 11], EAST); fallIn(R);
   const s0 = clone(SNM.SNEAK_STATS), modes = new Set<string>(), words = new Set<string>();
-  R.post = () => { modes.add(SPM.spottedMode(g, m)); const w = SNM.sneakWord(g, m); if (w) words.add(w); };
+  R.post = () => { modes.add(SPM.spottedMode(g, m)); const w = sneakWordOf(g, m); if (w) words.add(w); };
   R.walk([24.5, 0, 11], 1.0, 6); R.step(60 * 9); R.post = null;
   return { R, waits: SNM.SNEAK_STATS.waits - s0.waits, cues: SNM.SNEAK_STATS.cues - s0.cues, modes: [...modes], words: [...words], lines: mine(R) };
 }
@@ -325,7 +326,7 @@ export const pairupVoice = guarded(async () => {
 });
 export const pairupWord = guarded(async () => {
   const { verdict, done } = family('pairup-word: the squad line says why a following partner is not at Sam\'s shoulder');
-  const r = await waitRun({ up: true }), R = r.R, m = R.mate, word = SNM.sneakWord(R.game, m), gap = flat(m.char.pos, R.game.player.char.pos);
+  const r = await waitRun({ up: true }), R = r.R, m = R.mate, word = sneakWordOf(R.game, m), gap = flat(m.char.pos, R.game.player.char.pos);
   const withW = R.status();
   verdict(word === 'waiting on eyes' && withW.endsWith(` · ${word}`), 'waiting short of a watched stretch: the line carries the sneak\'s word', `${f1(gap)} m behind Sam · '${withW}'`);
   return done();

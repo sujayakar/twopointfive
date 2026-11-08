@@ -10,6 +10,7 @@
 //   host untouched a tick eats keys and buttons off its record, never off the host's Input: what the host pressed is still there after Game.update
 //   seat outputs   the wall peek's nudge, a blast's kick and a scenario's opening cut reach the host's camera; stepped from records the cut waits on the seat
 //   swallowed click a click the order menu took reads as up until let go; a fresh press inside one tick is a fresh press
+import { menuKey } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 const { digestGame, diffDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { Game } = await import(`${ROOT}/src/game/game.ts`);
@@ -74,10 +75,10 @@ const breach: Script = (W, k) => {
   const mid: [number, number, number] = [door.def.hinge[0] + door.def.closedDir[0] * door.def.width * 0.5, 1.0, door.def.hinge[2] + door.def.closedDir[2] * door.def.width * 0.5];
   if (k < 200) W.cursorAt(mid); else W.cursorAt([g.player.char.pos[0] + 2.5, 0, g.player.char.pos[2] - 1.5]);
   if (k === 60) I.pressed.add('KeyB');                                        // the door's first row at once
-  if (k === 240) I.pressed.add('KeyX'); if (k === 250) I.pressed.add('Digit1');   // the menu on a spot of floor, its first row
+  if (k === 240) menuKey(W.game.orders); if (k === 250) I.pressed.add('Digit1');   // the menu on a spot of floor, its first row
   if (k === 330) I.keys.add('KeyW'); if (k === 420) I.keys.delete('KeyW');
-  if (k === 430) I.pressed.add('KeyX'); if (k === 440) I.pressed.add('Digit3');   // fall in
-  if (k === 520) I.pressed.add('KeyT'); if (k === 540) I.pressed.add('KeyX'); if (k === 550) I.pressed.add('Digit4');   // one element, hold
+  if (k === 430) menuKey(W.game.orders); if (k === 440) I.pressed.add('Digit3');   // fall in
+  if (k === 520) I.pressed.add('KeyT'); if (k === 540) menuKey(W.game.orders); if (k === 550) I.pressed.add('Digit4');   // one element, hold
 };
 
 const recsOf = (r: { first: string }) => r.first;
@@ -93,7 +94,7 @@ const recsOf = (r: { first: string }) => r.first;
 // ---- host untouched, seat outputs
 { Math.random = seeded(4); const W = await standUp({ seed: 5 }); const g = W.game, I = W.input;
   startFromQuery(g, 'nightbreach'); for (let k = 0; k < 30; k++) W.step(DT);
-  I.pressed.add('KeyX'); g.update(DT, I, W.cam, W.canvas); const menuUp = !!g.orders.menu; I.endFrame();
+  menuKey(W.game.orders); g.update(DT, I, W.cam, W.canvas); const menuUp = !!g.orders.menu; I.endFrame();
   I.pressed.add('Digit3'); I.pressed.add('Escape'); g.update(DT, I, W.cam, W.canvas);
   const kept = I.pressed.has('Digit3') && I.pressed.has('Escape'), eaten = !g.seat.input.pressed.has('Escape'); I.endFrame();
   verdict(menuUp && kept && eaten, 'host untouched: the tick eats keys off its record, the host\'s Input keeps what was pressed', `order menu up on X ${menuUp} · after the tick the host still has Digit3 + Escape ${kept} · the record's copy had Escape taken by the menu ${eaten}`);

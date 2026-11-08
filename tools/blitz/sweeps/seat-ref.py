@@ -6,7 +6,7 @@
 A seat's own things are nineteen fields of the game (FIELDS), those of whichever seat stands on it. A function that reads
 one through a shared game (`g: &Game`) answers for the standing seat without saying so, and cannot be asked about another.
 This program gives every such function (but the seats' own machinery, KEEP) a second parameter `seat: &SeatRef`
-(seats/seat_ref.rs; `seat_ref` where the function already has a `seat` of its own) and turns its `g.<field>` into
+(rust/game_types/src/seats/seat_ref.rs; `seat_ref` where the function already has a `seat` of its own) and turns its `g.<field>` into
 `seat.<field>`; then it mends the callers BY THE COMPILER'S OWN LIST: `cargo check --message-format=json` names every call
 that is an argument short and where it is. A caller that has a SeatRef passes it on; a shared caller that has none gains
 the parameter itself (so the next round names ITS callers); a caller that holds the game exclusively, or has no game,
@@ -28,8 +28,7 @@ BORROWED = ['orders', 'door_tools', 'work', 'wall_charge', 'hover', 'interactabl
 # THE SEATS' OWN MACHINERY: the functions that may name the nineteen through a shared game, because they are how a seat is found or
 # built, or answer about every seat at once (in a game of one seat, "the seat on the game" is their short way to say "the only seat")
 KEEP = {
-    'seats/seat_ref.rs': ['here', 'seat'],
-    'seats/p_01.rs': ['set_of_game', 'all_down', 'host_man', 'man_by_id', 'view_of_id', 'faced_man', 'faced_view', 'view_of_body', 'view_of', 'orders_of'],
+    'seats/p_01.rs': ['men', 'set_of_game', 'all_down', 'host_man', 'man_by_id', 'view_of_id', 'faced_man', 'faced_view', 'view_of_body', 'view_of', 'orders_of'],
     'cmd/p_01.rs': ['seat_man'],      # the man of ANY seat by its id: from the game where it stands, from where it is kept
 }
 # the crates whose callers the compiler is asked for, in the order they build

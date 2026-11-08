@@ -482,13 +482,23 @@ pub fn beat(g: usize, dt: f64) -> u32 {
     n
 }
 
+/// the plan of box world `w`, in squares
+fn plan_of(w: usize) -> (f64, f64) {
+    let o = world(w);
+    (-floor(-(o.w as f64 * o.cs) / SIDE), -floor(-(o.h as f64 * o.cs) / SIDE))
+}
+/// the light's tables of box world `w` made before a step asks for them (glow.rs ready)
+pub fn light_ready(w: usize, to_sun: [f64; 3]) {
+    let (x, z) = plan_of(w);
+    if x >= 1.0 && z >= 1.0 && x * z <= MAX_BRICKS as f64 {
+        crate::glow::ready(w, x as usize, z as usize, to_sun);
+    }
+}
 /// `n` STEPS of a tenth of a second each of the grid of the game in slot `g` (its block's `stamp`), over the copy `copy` of box world `w` as it stands
 /// and the leaves of list `set`. 0, or ASK_HOST = no grid stands on this level (its plan is larger than a grid can be), or the game has none: the
 /// state is as it was.
 pub fn step(g: usize, stamp: f64, w: usize, copy: f64, set: i32, n: u32, k: &K, glow: Option<&crate::glow::K>) -> u32 {
-    let o = world(w);
-    let (mx, mz) = (o.w as f64 * o.cs, o.h as f64 * o.cs);
-    let (nbx, nbz) = (-floor(-mx / SIDE), -floor(-mz / SIDE));
+    let (nbx, nbz) = plan_of(w);
     if !(nbx >= 1.0 && nbz >= 1.0 && nbx * nbz <= MAX_BRICKS as f64) || set >= LEAF_SETS as i32 || state(g).smoke.live == 0 {
         return ASK_HOST;
     }
@@ -518,6 +528,8 @@ pub fn step(g: usize, stamp: f64, w: usize, copy: f64, set: i32, n: u32, k: &K, 
     0
 }
 
+/// how much of its rise a plume in the whole of the wind loses (the drawn one, in a storm's yard, tops out at about 1.1 m)
+const LAID: f64 = 0.4;
 fn substep(w: usize, set: i32, g: &mut Grid, k: &K) {
     // 0. the faces round every leaf that is not as the last step found it (a door swings; one is new, one is gone) are asked again: where it stood and
     //    where it stands. A leaf that has not moved keeps the answers it had.
@@ -552,6 +564,9 @@ fn substep(w: usize, set: i32, g: &mut Grid, k: &K) {
 
     // 1. the emitters let out, each up the column it stands under (from its own foot to the top of its plume: its width, and the rise the blobs had),
     //    and the spent ones leave the list
+    let windy = k.wind_x != 0.0 || k.wind_z != 0.0;
+    let share = unsafe { &*core::ptr::addr_of!(WIND) };
+    let wide = g.nbx * 2;
     let n = emitters(g.st);
     let mut kept = 0;
     for i in 0..n {
@@ -562,8 +577,12 @@ fn substep(w: usize, set: i32, g: &mut Grid, k: &K) {
             let top = (BY - 1) as f64;
             // (its foot and the top of its plume, in cells: each cell between takes what of the plume is in it)
             let foot = js_min(js_max((y0 - radius) / CELL, 0.0), top);
-            let head = js_min(js_max((y0 + radius + js_min(k.rise, k.rise_rate * age)) / CELL, foot + 0.1), top + 1.0);
             let (fx, fz) = (floor(x / CELL), floor(z / CELL));
+            // (the wind lays a plume over: in all of it, it rises LAID less)
+            let (mx, mz) = (floor(x), floor(z));
+            let blown = if windy && mx >= 0.0 && mz >= 0.0 && mx < wide as f64 && mz < (g.nbz * 2) as f64 { unit(share[mz as usize * wide + mx as usize]) } else { 0.0 };
+            let rise = js_min(k.rise, k.rise_rate * age) * (1.0 - LAID * blown);
+            let head = js_min(js_max((y0 + radius + rise) / CELL, foot + 0.1), top + 1.0);
             // (a point off the plan lets out nowhere)
             if fx >= 0.0 && fz >= 0.0 && fx < (g.nbx * BX) as f64 && fz < (g.nbz * BX) as f64 {
                 // the column: the one it stands in if what it lets out can reach that cell's middle, else the first of those round it that it can reach (a
@@ -681,9 +700,6 @@ fn substep(w: usize, set: i32, g: &mut Grid, k: &K) {
     //     step, each from the densities the one before left; a wind faster than MAX_PASSES carry is slowed WHOLE, both axes by one number, never
     //     bent. A brick the smoke is blown toward is made by 2, at the next step. No statement of this is reached in still air.
     let mut blown = 0.0;
-    let windy = k.wind_x != 0.0 || k.wind_z != 0.0;
-    let share = unsafe { &*core::ptr::addr_of!(WIND) };
-    let wide = g.nbx * 2;
     if windy {
         let fast = js_max(js_max(k.wind_x, -k.wind_x), js_max(k.wind_z, -k.wind_z)) * SUB / CELL * (k.wind_low + js_max(k.wind_gain, 0.0));
         let passes = js_max(1.0, js_min(MAX_PASSES, -floor(-fast / DRIFT_MAX)));

@@ -24,10 +24,10 @@ fn at_of(t: &OrderTarget) -> V3 {
     }
 }
 /// `recipients(t)` with its `who` left to the standing choice
-fn recipients_of(g: &Game, seat: &crate::seats::SeatRef, t: &OrderTarget) -> Vec<GuardId> {
+pub(crate) fn recipients_of(g: &Game, seat: &crate::seats::SeatRef, t: &OrderTarget) -> Vec<GuardId> {
     squad_orders_recipients(g, seat, Some(t), None)
 }
-fn on(b: Option<bool>) -> bool {
+pub(crate) fn on(b: Option<bool>) -> bool {
     b.unwrap_or(false)
 }
 /// `if (word)` of an optional string
@@ -86,468 +86,30 @@ fn drop_stock_word(s: &str) -> &str {
 fn seam_box_owner(g: &Game, b: AnyBoxId) -> f64 { g.tab[b].owner }
 /// `b.flags`. As seam_box_owner
 fn seam_box_flags(g: &Game, b: AnyBoxId) -> f64 { g.tab[b].flags }
-// BRING-UP: THE DOOR ROWS' CLOSURES (doortools.ts:808-846 the constructor's rows, :864 thrRows on the page's `outsidePlain`, :908-938 sync's `go` and the big
-// slot's row). The skeleton has their arms and no named function for their bodies, so the first door order given stopped here (room-clear-four tick 1009, 'bangClear').
-// SKELETON-GAP: a public name in doortools for each Door* arm's body (label / valid / issue), as squadthrow has row_label / row_valid / row_issue; then these are calls.
-fn tt_of(t: &OrderTarget) -> crate::doortools::DoorToolsThresholdThenT {
-    use crate::doortools::DoorToolsThresholdThenT as T;
-    match t { OrderTarget::Floor(x) => T::Floor(x.clone()), OrderTarget::Door(x) => T::Door(x.clone()), OrderTarget::None(x) => T::None(x.clone()), OrderTarget::Foe(x) => T::Foe(x.clone()) }
-}
-fn ct_of(t: &OrderTarget) -> crate::doortools::DoorToolsCanThresholdThenT {
-    use crate::doortools::DoorToolsCanThresholdThenT as T;
-    match t { OrderTarget::Floor(x) => T::Floor(x.clone()), OrderTarget::Door(x) => T::Door(x.clone()), OrderTarget::None(x) => T::None(x.clone()), OrderTarget::Foe(x) => T::Foe(x.clone()) }
-}
-/// `stackable(t, men)` as a row's `valid` answers it
-fn door_stackable(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
-    match crate::doortools::door_tools_stackable(g, t, men) {
-        crate::doortools::DoorToolsStackable::Text(w) => Err(Some(w)),
-        crate::doortools::DoorToolsStackable::Bool(true) => Ok(()),
-        crate::doortools::DoorToolsStackable::Bool(false) => Err(None),
-    }
-}
-/// `canThresholdThen(what, t, men)` as a row's `valid` answers it
-fn door_can_then(g: &mut Game, what: crate::doortools::DoorToolsCanThresholdThenWhat, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
-    match crate::doortools::door_tools_can_threshold_then(g, what, Some(&ct_of(t)), men) {
-        crate::doortools::DoorToolsCanThresholdThen::Text(w) => Err(Some(w)),
-        crate::doortools::DoorToolsCanThresholdThen::Bool(true) => Ok(()),
-        crate::doortools::DoorToolsCanThresholdThen::Bool(false) => Err(None),
-    }
-}
-/// `who === 'you' ? wg(…) : `${who} is behind that door.``
-fn behind_words(g: &Game, who: String) -> String {
-    if who == "you" { let (now, was) = (String::from("you're behind that door."), String::from("you are behind that door.")); crate::words::wg(g, &now, &was) } else { format!("{} is behind that door.", who) }
-}
-fn seam_arm_label(g: &mut Game, arm: &OrderLabel, t: &OrderTarget) -> String {
-    use crate::doortools::DoorToolsEntryVerb as Verb;
-    match arm {
-        // doortools.ts:808 `held(t) ? 'go in and clear · no bang' : `${this.entryVerb(t)} and clear${known(t)}``
-        OrderLabel::DoorOpenClear => {
-            let men = recipients_of(g, &crate::seats::here(g), t);
-            if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, &men) { return String::from("go in and clear · no bang"); }
-            let verb = crate::doortools::door_tools_entry_verb(g, t);
-            let known = match t { OrderTarget::Door(x) if crate::doortools::door_tools_entry_verb(g, t) != Verb::Open => format!(" · {}", crate::doortools::door_tools_shut_why(g, x.door)), _ => String::new() };
-            format!("{} and clear{}", verb.as_str(), known)
-        }
-        // doortools.ts:812
-        OrderLabel::DoorBangClear => {
-            let men = recipients_of(g, &crate::seats::here(g), t);
-            if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, &men) { return format!("bang, then go in · {} left", g.door_tools.bangs); }
-            let first = if crate::doortools::door_tools_entry_verb(g, t) == Verb::Open { String::from("bang") } else { format!("{}, bang", crate::doortools::door_tools_entry_verb(g, t).as_str()) };
-            format!("{} and clear · {} left", first, g.door_tools.bangs)
-        }
-        // doortools.ts:819 (OWNCHARGE.on is on on the page)
-        OrderLabel::DoorCharge => {
-            if let OrderTarget::Door(x) = t {
-                if crate::doortools::door_tools_loose_on(g, &crate::seats::here(g), t) { return String::from("stand off · in behind the charge"); }
-                if crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), x.door).is_some() {
-                    let c = crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), x.door).unwrap();
-                    return format!("blow the charge{}", crate::doortools::door_tools_close_words(g, c));
-                }
-            }
-            format!("breach with a charge · {} left", g.door_tools.charges)
-        }
-        // doortools.ts:838
-        OrderLabel::DoorFragClear => format!("frag and clear · {} left", g.door_tools.frags),
-        // doortools.ts:864 (thrRows on `outsidePlain`)
-        OrderLabel::DoorThresholdHold => {
-            let men = recipients_of(g, &crate::seats::here(g), t);
-            String::from(if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, &men) { "clear from outside · holding it" } else { "clear from outside" })
-        }
-        // doortools.ts:908 / :916
-        OrderLabel::DoorGoSmall => { let men = recipients_of(g, &crate::seats::here(g), t); let w = crate::doortools::door_tools_stack_words(g, &men); if w.is_empty() { String::from("go") } else { format!("go · {}", w) } }
-        OrderLabel::DoorGoBig => { let men = recipients_of(g, &crate::seats::here(g), t); let w = crate::doortools::door_tools_waiting_words(g, &men); if w.is_empty() { String::from("go") } else { format!("go · {}", w) } }
-        // doortools.ts:929
-        OrderLabel::DoorBigClear => { let men = recipients_of(g, &crate::seats::here(g), t); format!("{} and clear", crate::doortools::door_tools_big_word(g, t, &men).as_str()) }
-        // doortools.ts:935
-        OrderLabel::DoorThrWord => {
-            if !squad_orders_big(g, &crate::seats::here(g)) {
-                return String::from(if crate::silent::silent_no_cans(g, &crate::seats::here(g)) || crate::doortools::door_tools_word_quiet(g, &crate::seats::here(g)) { "go · step in · no bang" } else { "go · bang the blind pockets, step in" });
-            }
-            let men = recipients_of(g, &crate::seats::here(g), t); let w = crate::doortools::door_tools_waiting_words(g, &men);
-            if w.is_empty() { String::from("go") } else { format!("go · {}", w) }
-        }
-        // (the arms order_label takes itself, named so that a new row of the enum is a build error here and never a stop in play)
-        OrderLabel::Text { .. } | OrderLabel::Cover | OrderLabel::WallRow | OrderLabel::ThrowRow { .. } | OrderLabel::ThrowOpen | OrderLabel::Row(_) | OrderLabel::Work | OrderLabel::Smoke | OrderLabel::PairGo => unreachable!("order_label answers this arm itself"),
-    }
-}
-/// Err(None): false, Err(Some): the word for why not
-fn seam_arm_valid(g: &mut Game, arm: &OrderValid, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
-    use crate::doortools::DoorToolsCanThresholdThenWhat as What;
-    match arm {
-        // doortools.ts:810
-        OrderValid::DoorOpenClear => if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, men) { door_can_then(g, What::Step, t, men) } else { door_stackable(g, t, men) },
-        // doortools.ts:814-817
-        OrderValid::DoorBangClear => {
-            if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, men) { return door_can_then(g, What::Bang, t, men); }
-            if g.door_tools.bangs <= 0.0 { return Err(Some(String::from("no bangs left."))); }
-            let who = match t { OrderTarget::Door(x) => crate::doortools::door_tools_can_behind(g, x.door, x.side, men), _ => None };
-            if let Some(who) = who { return Err(Some(behind_words(g, who))); }
-            door_stackable(g, t, men)
-        }
-        // doortools.ts:821-830
-        OrderValid::DoorCharge => {
-            let OrderTarget::Door(x) = t else { return Err(None) };
-            let fits = |r: crate::doortools::DoorToolsStandoffFits| match r { crate::doortools::DoorToolsStandoffFits::Text(w) => Err(Some(w)), crate::doortools::DoorToolsStandoffFits::Bool(true) => Ok(()), crate::doortools::DoorToolsStandoffFits::Bool(false) => Err(None) };
-            if crate::doortools::door_tools_loose_on(g, &crate::seats::here(g), t) { return fits(crate::doortools::door_tools_standoff_fits(g, men, t, Some(true))); }
-            if crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), x.door).is_some() { return Ok(()); }
-            if on(g.dr[x.door].def.steel) { return Err(Some(String::from("steel. a charge won't cut it."))); }
-            let open = crate::doortools::door_tools_known_open(g, x.door);
-            if open { return Err(Some(String::from("it's open."))); }
-            if g.door_tools.charges <= 0.0 { return Err(Some(String::from("no charges left."))); }
-            let ops = g.door_tools.ops.clone();
-            if ops.iter().any(|&o| { let op = &g.tab.doortools_door_op[o]; op.kind == crate::doortools::DoorToolKind::Charge && op.door == x.door && op.phase == crate::doortools::Phase::Place }) { return Err(Some(String::from("already on it."))); }
-            fits(crate::doortools::door_tools_standoff_fits(g, men, t, None))
-        }
-        // doortools.ts:839-842 (FRAG.on is on on the page)
-        OrderValid::DoorFragClear => {
-            if g.door_tools.frags <= 0.0 { return Err(Some(String::from("no frags left."))); }
-            let hostages = g.rescue.hostages.clone();
-            if hostages.iter().any(|&h| g.gd[h].state != crate::game::GuardState::Dead) { return Err(Some(String::from("not with hostages on the floor."))); }
-            let mate = match t { OrderTarget::Door(x) => crate::doortools::door_tools_frag_behind(g, x.door, x.side, men), _ => None };
-            if let Some(mate) = mate { return Err(Some(behind_words(g, mate))); }
-            door_stackable(g, t, men)
-        }
-        // doortools.ts:865
-        OrderValid::DoorThresholdHold => {
-            if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, men) { return Err(Some(String::from("already holding it."))); }
-            match crate::doortools::door_tools_can_threshold(g, t, men) {
-                crate::doortools::DoorToolsCanThreshold::Text(w) => Err(Some(w)),
-                crate::doortools::DoorToolsCanThreshold::Bool(true) => Ok(()),
-                crate::doortools::DoorToolsCanThreshold::Bool(false) => Err(None),
-            }
-        }
-        // doortools.ts:910 / :918
-        OrderValid::DoorGoSmall => if !crate::doortools::door_tools_stack_waits(g, men).is_empty() || !crate::doortools::door_tools_frag_held(g, men).is_empty() { Ok(()) } else { Err(Some(String::from("nobody waiting."))) },
-        OrderValid::DoorGoBig => if !crate::doortools::door_tools_waiting_any(g, men).is_empty() || !crate::doortools::door_tools_frag_held(g, men).is_empty() { Ok(()) } else { Err(Some(String::from("nobody waiting."))) },
-        // doortools.ts:931-936 (SHOTGUN.on, SILENT.toolsLoud and DOORTOOLS.testDoor are on on the page: the silent refusal is not on its path)
-        OrderValid::DoorBigClear => {
-            let OrderTarget::Door(x) = t else { return Err(None) };
-            if crate::doortools::is_open(g, x.door) { return Err(Some(String::from("it's open."))); }
-            if on(g.dr[x.door].def.steel) { return Err(Some(String::from("steel. no way through."))); }
-            let mut any = false;
-            for &m in men { if crate::bigkit::carries_hammer(g, m) || (g.gd[m].state != crate::game::GuardState::Dead && crate::kit::kit_big(g, m) == crate::kit::BigKit::Shotgun) { any = true; break; } }
-            if !any { return Err(Some(String::from("nobody here carries one."))); }
-            if crate::doors::door_locked(g, x.door) && g.dr[x.door].lock_id.starts_with("wedge:") {
-                let mut hammer = false;
-                for &m in men { if crate::bigkit::carries_hammer(g, m) { hammer = true; break; } }
-                if !hammer && crate::doortools::door_tools_known_shut(g, x.door, x.side) {
-                    let (now, was) = (String::from("it's wedged. a shell won't open it."), String::from("wedged. no shell shifts it."));
-                    return Err(Some(crate::words::wg(g, &now, &was)));
-                }
-            }
-            door_stackable(g, t, men)
-        }
-        // doortools.ts:937 `this.heldOn(t, men).some(op => !op.word) || wg(…)`
-        OrderValid::DoorThrWord => {
-            let ops = crate::doortools::door_tools_held_on(g, &crate::seats::here(g), t, men);
-            if ops.iter().any(|&o| g.tab.doortools_door_op[o].word.is_none()) { return Ok(()); }
-            let (now, was) = (String::from("nobody's holding that door."), String::from("nobody is holding that door."));
-            Err(Some(crate::words::wg(g, &now, &was)))
-        }
-        // (the arms order_valid takes itself, named so that a new row of the enum is a build error here and never a stop in play)
-        OrderValid::Move | OrderValid::Stack | OrderValid::WallRow | OrderValid::ShutDoor | OrderValid::ThrowRow { .. } | OrderValid::Wand | OrderValid::Row(_) | OrderValid::Work | OrderValid::Smoke | OrderValid::PairTake | OrderValid::PairWatch | OrderValid::PairGo => unreachable!("order_valid answers this arm itself"),
-    }
-}
-/// Some: refused, in those words
-fn seam_arm_issue(g: &mut Game, arm: &OrderIssue, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
-    use crate::doortools::{DoorToolKind as Kind, DoorToolsIssue, DoorToolsThenOnWord, DoorToolsThenOnWordWhat, DoorToolsThresholdThen, DoorToolsThresholdThenWhat};
-    let on_word = o.map_or(false, |o| on(o.on_word));
-    let issued = |r: DoorToolsIssue| match r { DoorToolsIssue::Text(w) => Some(w), DoorToolsIssue::Arm1(()) => None };
-    // `this.heldPlain(t, men) ? (o?.onWord ? this.thenOnWord(what, men, t) : this.thresholdThen(what, men, t)) : this.issue(kind, men, t, !!o?.onWord)`   (doortools.ts:811, :818)
-    fn entry(g: &mut Game, bang: bool, men: &[GuardId], t: &OrderTarget, on_word: bool) -> Option<String> {
-        if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, men) {
-            if on_word {
-                return match crate::doortools::door_tools_then_on_word(g, if bang { DoorToolsThenOnWordWhat::Bang } else { DoorToolsThenOnWordWhat::Step }, men, t) { DoorToolsThenOnWord::Text(w) => Some(w), DoorToolsThenOnWord::Arm1(()) => None };
-            }
-            return match crate::doortools::door_tools_threshold_then(g, if bang { DoorToolsThresholdThenWhat::Bang } else { DoorToolsThresholdThenWhat::Step }, men, Some(&tt_of(t))) { DoorToolsThresholdThen::Text(w) => Some(w), DoorToolsThresholdThen::Arm1(()) => None };
-        }
-        match crate::doortools::door_tools_issue(g, if bang { Kind::BangClear } else { Kind::OpenClear }, men, t, Some(on_word)) { DoorToolsIssue::Text(w) => Some(w), DoorToolsIssue::Arm1(()) => None }
-    }
-    match arm {
-        OrderIssue::DoorOpenClear => entry(g, false, men, t, on_word),
-        OrderIssue::DoorBangClear => entry(g, true, men, t, on_word),
-        // doortools.ts:831
-        OrderIssue::DoorCharge => {
-            let OrderTarget::Door(x) = t else { return Some(String::from("no door")) };
-            let started = |r: crate::doortools::DoorToolsStartCharge| match r { crate::doortools::DoorToolsStartCharge::Text(w) => Some(w), crate::doortools::DoorToolsStartCharge::Arm1(()) => None };
-            if crate::doortools::door_tools_loose_on(g, &crate::seats::here(g), t) { return started(crate::doortools::door_tools_start_charge(g, men, t, Some(true))); }
-            if let Some(c) = crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), x.door) { crate::doortools::door_tools_trigger(g, Some(c)); return None; }
-            started(crate::doortools::door_tools_start_charge(g, men, t, None))
-        }
-        // doortools.ts:843 `this.fragNext = true; try { return this.issue('bangClear', …) } finally { this.fragNext = false }`
-        OrderIssue::DoorFragClear => { g.door_tools.frag_next = true; let r = crate::doortools::door_tools_issue(g, Kind::BangClear, men, t, Some(on_word)); g.door_tools.frag_next = false; issued(r) }
-        // doortools.ts:865
-        OrderIssue::DoorThresholdHold => match crate::doortools::door_tools_threshold_hold(g, men, t, Some(on_word)) { crate::doortools::DoorToolsThresholdHold::Text(w) => Some(w), crate::doortools::DoorToolsThresholdHold::Arm1(()) => None },
-        // doortools.ts:910 `this.goMen(men, this.stackWaits(men)) ?? undefined`
-        OrderIssue::DoorGoSmall => {
-            let only: Vec<crate::doortools::DoorToolsGoMenOnlyItem> = crate::doortools::door_tools_stack_waits(g, men).into_iter().map(|x| crate::doortools::DoorToolsGoMenOnlyItem { stack: x.stack, men: x.men }).collect();
-            crate::doortools::door_tools_go_men(g, men, Some(&only))
-        }
-        // doortools.ts:918 `{ this.goMen(men); }`
-        OrderIssue::DoorGoBig => { crate::doortools::door_tools_go_men(g, men, None); None }
-        // doortools.ts:937
-        OrderIssue::DoorBigClear => { g.door_tools.big_next = true; let r = crate::doortools::door_tools_issue(g, Kind::OpenClear, men, t, Some(on_word)); g.door_tools.big_next = false; issued(r) }
-        // doortools.ts:938 `(S.big ? this.goMen(men) : this.pairWord(men) ? null : 'nobody\'s waiting for you to say go.') ?? undefined`
-        OrderIssue::DoorThrWord => if squad_orders_big(g, &crate::seats::here(g)) { crate::doortools::door_tools_go_men(g, men, None) } else if crate::doortools::door_tools_pair_word(g, men) { None } else { Some(String::from("nobody's waiting for you to say go.")) },
-        // squad40.ts:208, squadsmoke.ts:135, pairorders.ts:211 / :227 / :240. These bodies are not in the skeleton's sig.rs: the paths resolve only in the joined crate
-        OrderIssue::Smoke => crate::squadsmoke::p_01::row_smoke_issue(g, men, t, o),
-        OrderIssue::PairTake { mode } => crate::pairorders::p_01::take_issue(g, *mode, men, t),
-        OrderIssue::PairWatch => crate::pairorders::p_01::watch_issue(g, men, t),
-        OrderIssue::PairDark => crate::pairorders::p_01::dark_issue(g, men, t),
-        // (the arms order_issue takes itself, named so that a new row of the enum is a build error here and never a stop in play)
-        OrderIssue::Nothing | OrderIssue::Move | OrderIssue::Stack | OrderIssue::Cover | OrderIssue::FallIn | OrderIssue::Hold | OrderIssue::Silent | OrderIssue::Loud | OrderIssue::ShutDoor | OrderIssue::ThrowRow { .. } | OrderIssue::WallRow | OrderIssue::Wand | OrderIssue::Work | OrderIssue::PairGo | OrderIssue::Row(_) => unreachable!("order_issue answers this arm itself"),
-    }
-}
-
-// ---- OrderDef's fields: the matches (the skeleton's INVENTED order_*: orders.ts calls these fields in this part's lines). An arm is the row's public name, or a few public calls written here; the rest wait in the seams above ----
-fn plain_valid(w: Option<String>) -> Result<(), Option<String>> {
-    match w { Some(w) => Err(Some(w)), None => Ok(()) }
-}
+// ---- an order's functions, called through its row (orders/rows/) ----
 /// `d.label(t)`
-pub fn order_label(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::orders::OrderTarget) -> String {
-    let arm = g.tab.orders_order_def[d].label.clone();
-    match arm {
-        OrderLabel::Text { text } => text,
-        OrderLabel::Cover => row_cover_label(g, t),
-        OrderLabel::WallRow => match crate::wallcharge::wall_charge_charge_on_target(g, &crate::seats::here(g), t) {
-            Some(c) => format!("blow the charge{}", crate::wallcharge::wall_charge_close_words(g, Some(c), None)),
-            None => crate::wallcharge::wall_charge_row_words(g, &crate::seats::here(g)),
-        },
-        OrderLabel::ThrowRow { kind } => crate::squadthrow::row_label(g, kind, at_of(t)),
-        OrderLabel::ThrowOpen => {
-            let frag = crate::squadthrow::left(g, crate::squadthrow::SquadThrowKind::Frag);
-            let stun = crate::squadthrow::left(g, crate::squadthrow::SquadThrowKind::Stun);
-            format!("throw · frag {} · bang {}{}", frag, stun, crate::squad40::squad40_word(g, &crate::seats::here(g)))
-        }
-        OrderLabel::Row(r) => (r.label)(g, t),
-        OrderLabel::Work => match t {
-            OrderTarget::Floor(OrderTargetFloor { thing: Some(th), .. }) => crate::workthings::work_things_words(g, th),
-            _ => String::from("work it"),
-        },
-        OrderLabel::Smoke => format!("smoke there · {} left", crate::squadsmoke::squad_smoke_left(g, &crate::seats::here(g))),
-        OrderLabel::PairGo => {
-            let waiting = crate::pairorders::pair_orders_waiting(g);
-            if waiting.is_empty() { return String::from("mark"); }
-            let mut parts: Vec<String> = Vec::with_capacity(waiting.len());
-            for (gd, j) in &waiting {
-                let foe = crate::pairorders::name_of(g, j.foe);
-                parts.push(format!("{} takes {}{}", g.gd[*gd].callsign, foe, if j.watcher.is_some() { " anyway" } else { "" }));
-            }
-            format!("mark · {}", parts.join(" · "))
-        }
-        arm => seam_arm_label(g, &arm, t),
-    }
-}
-/// `d.can(S, gd, t)`, the match over OrderCan: None he can, or the row has no `can`; Some the word he says (orders.ts:850, :868)
+pub fn order_label(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::orders::OrderTarget) -> String { (g.tab.orders_order_def[d].row.label)(g, t) }
+/// `d.can(S, gd, t)`: None he can, or the row has no `can`; Some the word he says (orders.ts:850, :868)
 pub fn order_can(g: &mut crate::game::Game, d: OrdersOrderDefId, gd: GuardId, t: &crate::orders::OrderTarget) -> Option<String> {
-    let Some(arm) = g.tab.orders_order_def[d].can else { return None };
-    let at = at_of(t);
-    match arm {
-        OrderCan::Row(r) => match r.can { Some(f) => f(g, gd, t), None => None },
-        OrderCan::Move => row_move_can(g, gd, t),
-        OrderCan::Cover => row_cover_can(g, gd, t),
-        OrderCan::WallRow => match crate::wallcharge::wall_charge_can_of(g, gd, t) {
-            crate::wallcharge::WallChargeCanOf::Text(w) => Some(w),
-            crate::wallcharge::WallChargeCanOf::Bool(_) => None,
-        },
-        OrderCan::Work => squad_orders_reach(g, gd, at),
-        OrderCan::PairTake => {
-            let OrderTarget::Foe(x) = t else {
-                let (now, was) = (String::from("nobody there."), String::from("no man there."));
-                return Some(crate::words::wg(g, &now, &was));
-            };
-            let to = crate::pairorders::pair_orders_behind(g, x.foe);
-            let spot = squad_orders_free_spot(g, &crate::seats::here(g), to).unwrap_or(to);
-            if !crate::pairorders::pair_orders_back_open(g, x.foe, spot) || !crate::pairorders::pair_orders_rear(g, x.foe, spot, Some(true)) {
-                let (now, was) = (String::from("no room behind him."), String::from("no room at his back."));
-                return Some(crate::words::wg(g, &now, &was));
-            }
-            let stage = crate::pairorders::pair_orders_stage(g, x.foe);
-            squad_orders_reach(g, gd, stage)
-        }
-        OrderCan::PairWatch => match t {
-            OrderTarget::Foe(x) if crate::pairorders::pair_orders_sees(g, gd, x.foe) => None,
-            _ => Some(String::from("no line from here.")),
-        },
-        OrderCan::PairDark => {
-            let dark = crate::pairorders::pair_orders_dark_spot(g, at);
-            let w = squad_orders_reach(g, gd, dark.unwrap_or(at));
-            if w.is_some() { return w; }
-            if dark.is_some() { None } else { Some(String::from("no dark spot there.")) }
-        }
-    }
+    match g.tab.orders_order_def[d].row.can { Some(f) => f(g, gd, t), None => None }
 }
-/// `d.only(S, men, t)`, the match over OrderOnly. A row with no `only`: men, as a copy (orders.ts:865, :1006)
+/// `d.only(S, men, t)`. A row with no `only`: men, as a copy (orders.ts:865, :1006)
 pub fn order_only(g: &mut crate::game::Game, d: OrdersOrderDefId, men: &[GuardId], t: &crate::orders::OrderTarget) -> Vec<GuardId> {
-    let Some(arm) = g.tab.orders_order_def[d].only.clone() else { return men.to_vec() };
-    let at = at_of(t);
-    match arm {
-        OrderOnly::DoorHeldOrAll => if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, men) { crate::doortools::door_tools_held_men(g, &crate::seats::here(g), men, t) } else { men.to_vec() },
-        OrderOnly::DoorGoSmall => {
-            let mut waits: Vec<GuardId> = Vec::new();
-            for x in crate::doortools::door_tools_stack_waits(g, men) { waits.extend(x.men); }
-            let held = crate::doortools::door_tools_frag_held(g, men);
-            men.iter().copied().filter(|m| waits.contains(m) || held.iter().any(|&o| g.tab.doortools_door_op[o].men.contains(m))).collect()
-        }
-        OrderOnly::DoorGoBig => {
-            let waits = crate::doortools::door_tools_waiting_men(g, men);
-            if !waits.is_empty() { return waits; }
-            let held = crate::doortools::door_tools_frag_held(g, men);
-            men.iter().copied().filter(|m| held.iter().any(|&o| g.tab.doortools_door_op[o].men.contains(m))).collect()
-        }
-        // doortools.ts:936 `S.big ? this.waitingMen(men) : this.heldMen(men, t)`
-        OrderOnly::DoorThrWord => if squad_orders_big(g, &crate::seats::here(g)) { crate::doortools::door_tools_waiting_men(g, men) } else { crate::doortools::door_tools_held_men(g, &crate::seats::here(g), men, t) },
-        OrderOnly::SilentAll => squad_orders_men(g, &crate::seats::here(g), None, None),
-        OrderOnly::ShutDoor => {
-            let OrderTarget::Door(x) = t else { return men.to_vec() };
-            if crate::doors::door_off(g, x.door) || !crate::shutdoor::stands_open(g, x.door) { return men.to_vec(); }
-            match crate::shutdoor::plan(g, x.door, men) {
-                crate::shutdoor::Plan::Text(_) => men.to_vec(),
-                crate::shutdoor::Plan::Arm1(p) => vec![p.gd],
-            }
-        }
-        OrderOnly::ThrowRow { kind } => crate::squadthrow::row_only(g, men, at, kind),
-        OrderOnly::Wand => {
-            let OrderTarget::Door(x) = t else { return Vec::new() };
-            for side in [x.side, -x.side] {
-                let mut there = OrderTarget::Door(OrderTargetDoor { side, ..*x });
-                if let crate::wandorder::Pick::Arm1(p) = crate::wandorder::pick(g, men, &there) { return vec![p.gd]; }
-            }
-            Vec::new()
-        }
-        OrderOnly::Row(r) => match r.only { Some(f) => f(g, men, t), None => men.to_vec() },
-        OrderOnly::Work => crate::workthings::work_things_pick(g, men, t),
-        OrderOnly::Smoke => match crate::squadsmoke::squad_smoke_thrower(g, men, at) { Some(th) => vec![th.gd], None => Vec::new() },
-        OrderOnly::PairTake => {
-            let OrderTarget::Foe(x) = t else { return Vec::new() };
-            let to = crate::pairorders::pair_orders_stage(g, x.foe);
-            let mut out: Vec<GuardId> = Vec::new();
-            for &gd in men { if squad_orders_reach(g, gd, to).is_none() { out.push(gd); } }
-            let there = g.ch[g.gd[x.foe].ch].pos;
-            let rows: &Game = &*g;
-            js::sort_by(&mut out, |&a, &b| v3::dist_xz(rows.ch[rows.gd[a].ch].pos, there) - v3::dist_xz(rows.ch[rows.gd[b].ch].pos, there));
-            out.truncate(1);
-            out
-        }
-        OrderOnly::PairGo => crate::pairorders::pair_orders_waiting(g).into_iter().map(|(gd, _)| gd).collect(),
-    }
+    match g.tab.orders_order_def[d].row.only { Some(f) => f(g, men, t), None => men.to_vec() }
 }
-/// `d.valid(S, t, men)`, the match over OrderValid: Ok true, or the row has no `valid`; Err(None) false, whyNot's 'not here.'; Err(Some) the word (orders.ts:852)
+/// `d.valid(S, t, men)`: Ok true, or the row has no `valid`; Err(None) false, whyNot's 'not here.'; Err(Some) the word (orders.ts:852)
 pub fn order_valid(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
-    let Some(arm) = g.tab.orders_order_def[d].valid.clone() else { return Ok(()) };
-    let at = at_of(t);
-    match arm {
-        OrderValid::Move => row_move_valid(g, t, men),
-        OrderValid::Stack => row_stack_valid(g, t, men),
-        OrderValid::WallRow => match crate::wallcharge::wall_charge_valid(g, t, men) {
-            crate::wallcharge::WallChargeValid::Text(w) => Err(Some(w)),
-            crate::wallcharge::WallChargeValid::Bool(true) => Ok(()),
-            crate::wallcharge::WallChargeValid::Bool(false) => Err(None),
-        },
-        OrderValid::ShutDoor => {
-            let OrderTarget::Door(x) = t else { return Err(None) };
-            plain_valid(crate::shutdoor::why_not_shut(g, x.door, men))
-        }
-        OrderValid::ThrowRow { kind } => crate::squadthrow::row_valid(g, men, at, kind).map_err(Some),
-        OrderValid::Wand => match crate::wandorder::pick(g, men, &t.clone()) {
-            crate::wandorder::Pick::Text(w) => Err(Some(w)),
-            crate::wandorder::Pick::Arm1(_) => Ok(()),
-        },
-        OrderValid::Row(r) => match r.valid { Some(f) => f(g, t, men), None => Ok(()) },
-        OrderValid::Work => {
-            let OrderTarget::Floor(OrderTargetFloor { thing: Some(th), .. }) = t else { return Err(Some(String::from("nothing to work there."))) };
-            if th.stand.is_none() { return Err(Some(String::from("can't get a hand on it."))); }
-            let verb = crate::workthings::work_things_verb_of(g, th);
-            plain_valid(crate::workthings::work_things_moot(g, th, verb))
-        }
-        OrderValid::Smoke => {
-            if crate::squadsmoke::squad_smoke_left(g, &crate::seats::here(g)) <= 0.0 { return Err(Some(String::from("no smoke left."))); }
-            if crate::squadsmoke::squad_smoke_thrower(g, men, at).is_some() { Ok(()) } else { Err(Some(String::from("no throw from here."))) }
-        }
-        OrderValid::PairTake => {
-            let OrderTarget::Foe(x) = t else { return Err(None) };
-            if let Some(w) = crate::pairorders::pair_orders_gone(g, x.foe) { return Err(Some(w)); }
-            if crate::pairorders::pair_orders_noticed(g, x.foe) {
-                let (now, was) = (String::from("he's fighting. can't grab him."), String::from("he's fighting. no hands."));
-                return Err(Some(crate::words::wg(g, &now, &was)));
-            }
-            if crate::pairorders::pair_orders_caught(g) {
-                let (now, was) = (String::from("they're onto us. can't grab him."), String::from("they're onto us. no hands."));
-                return Err(Some(crate::words::wg(g, &now, &was)));
-            }
-            Ok(())
-        }
-        OrderValid::PairWatch => {
-            let OrderTarget::Foe(x) = t else { return Err(None) };
-            plain_valid(crate::pairorders::pair_orders_gone(g, x.foe))
-        }
-        OrderValid::PairGo => {
-            if !crate::pairorders::pair_orders_waiting(g).is_empty() { return Ok(()); }
-            let (now, was) = (String::from("nobody's waiting on your mark."), String::from("nobody is waiting on your mark."));
-            Err(Some(crate::words::wg(g, &now, &was)))
-        }
-        arm => seam_arm_valid(g, &arm, t, men),
-    }
+    match g.tab.orders_order_def[d].row.valid { Some(f) => f(g, t, men), None => Ok(()) }
 }
-/// `d.issue(S, men, t, opts)`, the match over OrderIssue: Some is the refusal, the string the closure returned (orders.ts:877)
-pub fn order_issue(g: &mut crate::game::Game, d: OrdersOrderDefId, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> {
-    let arm = g.tab.orders_order_def[d].issue.clone();
-    match arm {
-        OrderIssue::Nothing => None,
-        OrderIssue::Move => row_move_issue(g, men, t, o),
-        OrderIssue::Stack => row_stack_issue(g, men, t, o),
-        OrderIssue::Cover => row_cover_issue(g, men, t, o),
-        OrderIssue::FallIn => row_fall_in_issue(g, men, t, o),
-        OrderIssue::Hold => row_hold_issue(g, men, t, o),
-        OrderIssue::Silent => { crate::silent::set_silent(g, true, Some(crate::silent::By::Order)); None }
-        OrderIssue::Loud => { crate::silent::set_silent(g, false, Some(crate::silent::By::Order)); None }
-        OrderIssue::ShutDoor => crate::shutdoor::order_issue(g, men, t),
-        OrderIssue::ThrowRow { kind } => crate::squadthrow::row_issue(g, men, t, kind),
-        OrderIssue::WallRow => match crate::wallcharge::wall_charge_issue(g, men, t) {
-            crate::wallcharge::WallChargeIssue::Text(w) => Some(w),
-            crate::wallcharge::WallChargeIssue::Arm1(()) => None,
-        },
-        OrderIssue::Wand => match crate::wandorder::issue(g, men, &t.clone()) {
-            crate::wandorder::Issue::Text(w) => Some(w),
-            crate::wandorder::Issue::Arm1(()) => None,
-        },
-        OrderIssue::Work => match crate::workthings::work_things_issue(g, men, t) {
-            crate::workthings::WorkThingsIssue::Text(w) => Some(w),
-            crate::workthings::WorkThingsIssue::Arm1(()) => None,
-        },
-        OrderIssue::PairGo => { crate::pairorders::pair_orders_mark(g, Some(crate::pairorders::PairOrdersMarkBy::Row)); None }
-        OrderIssue::Row(r) => (r.issue)(g, men, t, o),
-        arm => seam_arm_issue(g, &arm, men, t, o),
-    }
+/// `d.issue(S, men, t, opts)`: Some is the refusal, the string the closure returned (orders.ts:877)
+pub fn order_issue(g: &mut crate::game::Game, d: OrdersOrderDefId, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> { (g.tab.orders_order_def[d].row.issue)(g, men, t, o) }
+/// the flat ring does not offer the row on this target at all. False with no `gone` (orders.ts:831)
+pub fn order_gone(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: OrdersOrderDefId, t: &crate::orders::OrderTarget, men: &[GuardId]) -> bool {
+    g.tab.orders_order_def[d].row.gone.map_or(false, |f| f(g, seat, t, men))
 }
-/// `d.gone?.(S, t, men)`, the match over OrderGone. False with no `gone` (orders.ts:831)
-pub fn order_gone(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::orders::OrderTarget, men: &[GuardId]) -> bool {
-    let Some(arm) = g.tab.orders_order_def[d].gone else { return false };
-    match arm {
-        OrderGone::DoorCharge => match t {
-            OrderTarget::Door(x) => on(g.dr[x.door].def.steel) && crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), x.door).is_none(),
-            _ => false,
-        },
-        OrderGone::DoorBigClear => match t {
-            OrderTarget::Door(x) => crate::doortools::is_open(g, x.door) || on(g.dr[x.door].def.steel),
-            _ => false,
-        },
-        OrderGone::WallRow => g.wall_charge.brought == Some(0.0) && crate::wallcharge::wall_charge_charge_on_target(g, &crate::seats::here(g), t).is_none(),
-    }
-}
-/// `d.standsIn?.when(S, t, men)`, the match over OrderWhen. False with no stands_in (orders.ts:819)
-pub fn order_when(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::orders::OrderTarget, men: &[GuardId]) -> bool {
-    let Some(arm) = g.tab.orders_order_def[d].stands_in.as_ref().map(|s| s.when) else { return false };
-    match arm {
-        OrderWhen::ShutDoor => {
-            let OrderTarget::Door(x) = t else { return false };
-            crate::shutdoor::stands_open(g, x.door) && crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), x.door).is_none()
-        }
-        // doortools.ts:846 `if (DOORTOOLS.outsidePlain) return false; …`: outsidePlain is on on the page (settled), so the held page never stands in
-        OrderWhen::DoorHeld => false,
-        OrderWhen::Loud => crate::silent::squad_silent(g, &crate::seats::here(g)),
-        OrderWhen::PairDark => crate::pairorders::pair_orders_up(g, &crate::seats::here(g)) && crate::silent::squad_silent(g, &crate::seats::here(g)),
-    }
+/// the row stands in for the one its data names now. False with no `when` (orders.ts:819)
+pub fn order_when(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: OrdersOrderDefId, t: &crate::orders::OrderTarget, men: &[GuardId]) -> bool {
+    g.tab.orders_order_def[d].row.when.map_or(false, |f| f(g, seat, t, men))
 }
 /// `this.people?.ray(ro, rd, max) ?? null`: the man of the other side a cursor ray lands on nearer than `max` (orders.ts:783; the closure is pairorders.ts:162)
 pub fn squad_orders_people_ray(g: &crate::game::Game, seat: &crate::seats::SeatRef, ro: V3, rd: V3, max: f64) -> Option<GuardId> {
@@ -659,19 +221,19 @@ pub fn squad_orders_scene_hit(g: &crate::game::Game, seat: &crate::seats::SeatRe
 }
 
 /// The rows that fit a target's kind on one page of the menu (orders.ts SquadOrders.rowsFor)
-pub fn squad_orders_rows_for(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, page: Option<&str>, men: Option<&[GuardId]>) -> Vec<OrdersOrderDefId> {
+pub fn squad_orders_rows_for(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: &crate::orders::OrderTarget, page: Option<&str>, men: Option<&[GuardId]>) -> Vec<OrdersOrderDefId> {
     let kind = kind_of(t);
-    let listed: Vec<OrdersOrderDefId> = g.orders.defs.iter().copied().filter(|&d| {
+    let listed: Vec<OrdersOrderDefId> = seat.orders.defs.iter().copied().filter(|&d| {
         let r = &g.tab.orders_order_def[d];
         r.listed.as_ref().unwrap_or(&r.targets).contains(&kind) && r.page.as_deref() == page
     }).collect();
-    let walled = crate::wallcharge::wall_rows(g, t, page, &listed);
+    let walled = crate::wallcharge::wall_rows(g, &crate::seats::here(g), t, page, &listed);
     let rows = crate::workthings::work_rows(g, &crate::seats::here(g), t, page, &walled);
     if !rows.iter().any(|&d| g.tab.orders_order_def[d].stands_in.is_some()) { return crate::rails::rails_order_rows(g, &rows); }
     let who = match men { Some(x) => x.to_vec(), None => recipients_of(g, &crate::seats::here(g), t) };
     let mut ins: Vec<OrdersOrderDefId> = Vec::new();
     for &d in &rows {
-        if g.tab.orders_order_def[d].stands_in.is_some() && order_when(g, d, t, &who) { ins.push(d); }
+        if g.tab.orders_order_def[d].stands_in.is_some() && order_when(g, &crate::seats::here(g), d, t, &who) { ins.push(d); }
     }
     let mut out: JsSet<String> = JsSet::new();
     for &d in &ins {
@@ -689,32 +251,32 @@ pub fn squad_orders_flat_ring(g: &crate::game::Game) -> bool {
     !crate::rails::rails_live(g) || crate::rails::rails_flat_ring(g)
 }
 
-fn flat_walk(g: &mut Game, t: &OrderTarget, men: Option<&[GuardId]>, who: &[GuardId], page: Option<&str>, out: &mut Vec<OrdersOrderDefId>, seen: &mut JsSet<String>) {
-    let rows = squad_orders_rows_for(g, t, page, men);
+fn flat_walk(g: &Game, seat: &crate::seats::SeatRef, t: &OrderTarget, men: Option<&[GuardId]>, who: &[GuardId], page: Option<&str>, out: &mut Vec<OrdersOrderDefId>, seen: &mut JsSet<String>) {
+    let rows = squad_orders_rows_for(g, seat, t, page, men);
     for &d in &rows {
         let r = &g.tab.orders_order_def[d];
         if word(&r.opens) || out.iter().any(|&x| g.tab.orders_order_def[x].id == r.id) { continue; }
-        if order_gone(g, d, t, who) { continue; }
+        if order_gone(g, &crate::seats::here(g), d, t, who) { continue; }
         out.push(d);
     }
     for &d in &rows {
         let opens = g.tab.orders_order_def[d].opens.clone();
         if let Some(p) = opens.filter(|p| !p.is_empty()) {
-            if !seen.has(p.clone()) { seen.add(p.clone()); flat_walk(g, t, men, who, Some(&p), out, seen); }
+            if !seen.has(p.clone()) { seen.add(p.clone()); flat_walk(g, seat, t, men, who, Some(&p), out, seen); }
         }
     }
 }
 
 /// Every order of the target for a flat ring (orders.ts SquadOrders.flatRows)
-pub fn squad_orders_flat_rows(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: Option<&[GuardId]>) -> Vec<OrdersOrderDefId> {
+pub fn squad_orders_flat_rows(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: &crate::orders::OrderTarget, men: Option<&[GuardId]>) -> Vec<OrdersOrderDefId> {
     let mut out: Vec<OrdersOrderDefId> = Vec::new();
     let mut seen: JsSet<String> = JsSet::new();
     let who = match men { Some(x) => x.to_vec(), None => recipients_of(g, &crate::seats::here(g), t) };
-    flat_walk(g, t, men, &who, None, &mut out, &mut seen);
+    flat_walk(g, seat, t, men, &who, None, &mut out, &mut seen);
     let kind = kind_of(t);
     if kind != TargetKind::None {
         let place = OrderTarget::None(OrderTargetNone { at: at_of(t), man: None });
-        for d in squad_orders_rows_for(g, &place, None, men) {
+        for d in squad_orders_rows_for(g, seat, &place, None, men) {
             let r = &g.tab.orders_order_def[d];
             if on(r.free) && !word(&r.opens) && !word(&r.hot_key) && r.targets.contains(&kind) && !out.iter().any(|&x| g.tab.orders_order_def[x].id == r.id) { out.push(d); }
         }
@@ -723,8 +285,8 @@ pub fn squad_orders_flat_rows(g: &mut crate::game::Game, t: &crate::orders::Orde
 }
 
 /// The rows of a menu that is up, read afresh (orders.ts SquadOrders.menuRows)
-pub fn squad_orders_menu_rows(g: &mut crate::game::Game, m: &crate::orders::Menu, t: &crate::orders::OrderTarget) -> Vec<OrdersOrderDefId> {
-    if on(m.flat) { squad_orders_flat_rows(g, t, Some(&m.men)) } else { squad_orders_rows_for(g, t, m.page.as_deref(), Some(&m.men)) }
+pub fn squad_orders_menu_rows(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: &crate::orders::Menu, t: &crate::orders::OrderTarget) -> Vec<OrdersOrderDefId> {
+    if on(m.flat) { squad_orders_flat_rows(g, seat, t, Some(&m.men)) } else { squad_orders_rows_for(g, seat, t, m.page.as_deref(), Some(&m.men)) }
 }
 
 /// A stand-in row put where the row it stands in for is (orders.ts SquadOrders.seat)
@@ -747,7 +309,7 @@ pub fn squad_orders_word_page(g: &mut crate::game::Game, m: &crate::orders::Menu
     for &d in &m.rows {
         let opens = g.tab.orders_order_def[d].opens.clone();
         if let Some(p) = opens.filter(|p| !p.is_empty()) {
-            let rows = squad_orders_rows_for(g, &m.target, Some(&p), Some(&m.men));
+            let rows = squad_orders_rows_for(g, &crate::seats::here(g), &m.target, Some(&p), Some(&m.men));
             if squad_orders_word_row_of(g, &m.target, &rows) { return Some(p); }
         }
     }
@@ -766,7 +328,7 @@ pub fn squad_orders_why_not(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &
     if !g.tab.orders_order_def[d].targets.contains(&kind_of(t)) { return Some(String::from("not here.")); }
     if men.is_empty() { return Some(String::from("nobody to take it.")); }
     let mut first: Option<String> = None;
-    let able: Vec<GuardId> = if g.tab.orders_order_def[d].can.is_some() {
+    let able: Vec<GuardId> = if g.tab.orders_order_def[d].row.can.is_some() {
         let mut a = Vec::with_capacity(men.len());
         for &gd in &men {
             match order_can(g, d, gd, t) {
@@ -777,7 +339,7 @@ pub fn squad_orders_why_not(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &
         a
     } else { men };
     if able.is_empty() { return Some(first.unwrap_or_else(|| String::from("not here."))); }
-    if g.tab.orders_order_def[d].valid.is_none() { return None; }
+    if g.tab.orders_order_def[d].row.valid.is_none() { return None; }
     match order_valid(g, d, t, &able) {
         Ok(()) => None,
         Err(Some(w)) => Some(w),
@@ -806,7 +368,7 @@ pub fn squad_orders_give(g: &mut crate::game::Game, id_2: &str, t: Option<&crate
         None => squad_orders_recipients(g, &crate::seats::here(g), Some(&t), who),
     };
     if asked.is_empty() { crate::game::game_msg(g, "nobody to take that order"); return Some(String::from("nobody to take it")); }
-    if g.tab.orders_order_def[def].only.is_some() {
+    if g.tab.orders_order_def[def].row.only.is_some() {
         let o = order_only(g, def, &asked, &t);
         if !o.is_empty() { asked = o; }
     }
@@ -814,7 +376,7 @@ pub fn squad_orders_give(g: &mut crate::game::Game, id_2: &str, t: Option<&crate
     let t = squad_orders_for_men(g, &t, &asked);
     let flipped = g.orders.face_flip;
     let mut cant: Vec<(GuardId, String)> = Vec::new();
-    let all: Vec<GuardId> = if g.tab.orders_order_def[def].can.is_some() {
+    let all: Vec<GuardId> = if g.tab.orders_order_def[def].row.can.is_some() {
         let mut a = Vec::with_capacity(asked.len());
         for &gd in &asked {
             match order_can(g, def, gd, &t) {
@@ -1068,7 +630,7 @@ pub fn squad_orders_open(g: &mut crate::game::Game, target: Option<&crate::order
     let target: OrderTarget = match target { Some(x) => x.clone(), None => { let a = g.aim_point; squad_orders_target_at(g, a) } };
     let flat = flat.unwrap_or(false);
     if !squad_orders_active(g, &crate::seats::here(g)) || g.pl[g.player].down { return false; }
-    let rows = if flat { squad_orders_flat_rows(g, &target, part) } else { squad_orders_rows_for(g, &target, None, part) };
+    let rows = if flat { squad_orders_flat_rows(g, &crate::seats::here(g), &target, part) } else { squad_orders_rows_for(g, &crate::seats::here(g), &target, None, part) };
     let word_row = squad_orders_word_row_of(g, &target, &rows);
     // (THE MENU'S OWN TARGET IS KNOWN BY IDENTITY: wallcharge.ts keptFor asks `M.target === t` before it keeps a walk for the open menu. A floor target
     //  carries a serial for that, and this is where the one a menu keeps is dealt; the rows above were asked before there was this menu, as in the
@@ -1108,7 +670,7 @@ pub fn squad_orders_turn(g: &mut crate::game::Game, page: Option<&str>, on_word:
     let from = m.page.clone();
     m.page = page.map(String::from);
     if let Some(up) = g.orders.menu.as_mut() { up.page = m.page.clone(); }
-    let rows = squad_orders_rows_for(g, &m.target, page, Some(&m.men));
+    let rows = squad_orders_rows_for(g, &crate::seats::here(g), &m.target, page, Some(&m.men));
     let word_row = squad_orders_word_row_of(g, &m.target, &rows);
     let opener = from.as_ref().and_then(|f| g.orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].opens.as_ref() == Some(f)));
     let mut sel: Option<usize> = rows.iter().position(|&d| { let o = &g.tab.orders_order_def[d].opens; word(o) && o.as_ref() == from.as_ref() });
@@ -1239,7 +801,7 @@ pub fn squad_orders_refresh(g: &mut crate::game::Game) {
     }
     let Some(m) = g.orders.menu.clone() else { return };
     let mt = menu_target_of(&m);
-    let rows = squad_orders_menu_rows(g, &m, &mt);
+    let rows = squad_orders_menu_rows(g, &crate::seats::here(g), &m, &mt);
     if rows != m.rows {
         let was = row_at(&m.rows, m.sel);
         if let Some(up) = g.orders.menu.as_mut() { up.rows = rows.clone(); }
@@ -1249,7 +811,7 @@ pub fn squad_orders_refresh(g: &mut crate::game::Game) {
             Some(w) if on(m.flat) => rows.iter().position(|&d| d == w),
             Some(w) => {
                 let wk = g.tab.orders_order_def[w].key;
-                rows.iter().position(|&d| d == w || (g.tab.orders_order_def[d].key.is_some() && g.tab.orders_order_def[d].key == wk))
+                rows.iter().position(|&d| d == w).or_else(|| rows.iter().position(|&d| wk.is_some() && g.tab.orders_order_def[d].key == wk))
             }
         };
         let sel = match i { Some(x) => x as f64, None => m::min(m.sel, rows.len() as f64 + if word_row { 1.0 } else { 0.0 }) };
@@ -1262,7 +824,7 @@ pub fn squad_orders_refresh(g: &mut crate::game::Game) {
     let mut why: Vec<Option<String>> = Vec::with_capacity(m.rows.len());
     for (i, &d) in m.rows.iter().enumerate() {
         if later.as_ref().map_or(false, |l| l.contains(&(i as f64))) { why.push(None); continue; }
-        let o = if g.tab.orders_order_def[d].only.is_some() { order_only(g, d, &m.men, &mt) } else { m.men.clone() };
+        let o = if g.tab.orders_order_def[d].row.only.is_some() { order_only(g, d, &m.men, &mt) } else { m.men.clone() };
         let to: &[GuardId] = if o.is_empty() { &m.men } else { &o };
         why.push(squad_orders_why_not(g, d, &mt, Some(to)));
     }
@@ -1276,7 +838,7 @@ pub fn squad_orders_due(g: &mut crate::game::Game, m: &crate::orders::Menu) -> b
         if g.orders.defs.iter().any(|&d| { let r = &g.tab.orders_order_def[d]; r.opens.as_ref() == Some(p) && r.stands_in.is_some() }) { return true; }
     }
     let t = menu_target_of(m);
-    squad_orders_menu_rows(g, m, &t) != m.rows
+    squad_orders_menu_rows(g, &crate::seats::here(g), m, &t) != m.rows
 }
 
 /// What the cursor is on, for a HUD (None: no squad answers to this seat) (orders.ts SquadOrders.hover)
@@ -1285,8 +847,8 @@ pub fn hover(g: &Game, seat: &crate::seats::SeatRef, now: &crate::view::HostNow)
     Some(target_under(g, seat, now, &mut Vec::new()))
 }
 /// The order the quick key gives on a target: its first row (orders.ts SquadOrders.defaultFor)
-pub fn squad_orders_default_for(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> Option<OrdersOrderDefId> {
-    squad_orders_rows_for(g, t, None, None).into_iter().find(|&d| !word(&g.tab.orders_order_def[d].opens))
+pub fn squad_orders_default_for(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: &crate::orders::OrderTarget) -> Option<OrdersOrderDefId> {
+    squad_orders_rows_for(g, seat, t, None, None).into_iter().find(|&d| !word(&g.tab.orders_order_def[d].opens))
 }
 
 /// What T would make of `who` with the cursor on `point` (orders.ts SquadOrders.whoAfterT)
@@ -1349,16 +911,11 @@ pub fn squad_orders_input(g: &mut crate::game::Game, _dt: f64, input: InputId, c
     }
     crate::planmode::goal_input(g, input, cam, canvas);
     if squad_orders_ring_input(g, input, cam, canvas) { return; }
-    let k = g.k.orders.key.clone();
-    let key = crate::input::input_hit(g, input, &k);
     let Some(m) = g.orders.menu.clone() else {
         let quick = g.k.orders.quick_key.clone();
         if crate::input::input_hit(g, input, &quick) {
             let t = squad_orders_target_under(g, input, cam, canvas);
             squad_orders_tap_give(g, &t, input, None);
-        } else if key && g.pl[g.player].sel.down_t < 0.0 {
-            let t = squad_orders_target_under(g, input, cam, canvas);
-            squad_orders_open(g, Some(&t), None, None);
         }
         return;
     };
@@ -1401,7 +958,7 @@ pub fn squad_orders_input(g: &mut crate::game::Game, _dt: f64, input: InputId, c
         if let Some(up) = g.orders.menu.as_mut() { up.wheel_acc = acc; }
     }
     if lmb && matches!(g.pl[g.player].holding.as_ref().map(|h| h.variant), Some(crate::character::HoldVariant::Arm)) { unclick(g, input, 1); }
-    if blur || key || lmb { g.orders.menu = None; return; }
+    if blur || lmb { g.orders.menu = None; return; }
     if esc || rmb {
         if !squad_orders_page_back(g) { g.orders.menu = None; }
         return;
