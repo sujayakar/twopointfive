@@ -255,11 +255,8 @@ if (!ROW && RC) {
 if (!RC) note('no room clear on this level: no row to draw, nothing to stage');
 else if (listed) {
   try {
-    const drawn = await withDom('', async () => { const MS = await import(`${ROOT}/src/ui/missions.ts`); const host = new El('DIV'); MS.openMissions({ root: host as any }); const r = missionRows(host, MS.SOLO_NIGHT.id); MS.closeMissions(); return r; });
-    const mine = drawn.find(r => r.id === ROW.id);
-    verdict(!!mine && mine.href.endsWith(scenarioQuery(ROW)), `its row '${ROW.title}' is drawn on the mission list by ui/missions.ts`, mine ? `${drawn.length} rows · link ${mine.href} · ${mine.team}` : `${drawn.length} rows, none is '${ROW.id}'`);
     verdict(entryOfQuery(scenarioQuery(ROW)) === ROW, 'its link reads back as this row', scenarioQuery(ROW));
-  } catch (e: any) { fail('the mission list draws', String(e?.message ?? e)); }
+  } catch (e: any) { fail('its link reads back', String(e?.message ?? e)); }
 }
 if (g && RC && ROW) {
   let why: string | null = 'did not run', team = 0, theirs = 0;

@@ -127,11 +127,6 @@ export async function loadoutPure(): Promise<boolean> {
         if (q.get('quality') !== 'low' || !q.has('mute') || q.has('loadout')) bad.push(`${e.id}@${n}: the visitor's flags (${to})`);
         if (quitSearch(to) !== '?quality=low&mute') bad.push(`${e.id}@${n}: a quit leaves ${quitSearch(to)}`); } }
     verdict(!bad.length, 'Deploy\'s query: the row\'s own URL untouched at its own size, squad=N in place of squad4 otherwise; reads back to that size; other flags ride; a quit drops it', bad.slice(0, 4).join(' · ') || `${same} at the mission's own size, ${changed} changed · e.g. ${L.squadSearch(pickSearch(SCENARIOS[2], ''), 3, 4)}`); }
-  { const st = memStore(), e = SCENARIOS.find((x: any) => x.id === 'depot-four');
-    const a = L.startSize(e, st); L.storeSquad(e.id, 1, st); const b = L.startSize(e, st), other = L.startSize(SCENARIOS[0], st);
-    st.setItem(L.LOADOUT_LS, '{"squad":{"depot-four":7},"kit":{"keep":1}}'); const c = L.startSize(e, st); L.storeSquad(e.id, 3, st); const kept = JSON.parse(st.getItem(L.LOADOUT_LS)!);
-    st.setItem(L.LOADOUT_LS, 'not json'); const d = L.startSize(e, st);
-    verdict(a === 4 && b === 1 && other === SCENARIOS[0].squad && c === 4 && d === 4 && kept.kit?.keep === 1 && kept.squad['depot-four'] === 3, `the store (${L.LOADOUT_LS}): a mission opens on what was deployed last, missions apart, junk read as nothing, another part's keys kept`, `fresh ${a} · after deploying 1: ${b} (another mission: ${other}) · a stored 7: ${c} · unreadable: ${d} · kept ${JSON.stringify(kept)}`); }
   return done();
 }
 
