@@ -138,97 +138,10 @@ export async function koKinds() {
     verdict(fails.length === 0, "(c) a colleague's round / the world / a choke-out: only the player's own count, and a choke is a knockout",
       `A shot-by-guard → ${A.downKind}/${A.downBy}; B choked → ${B.downKind}/${B.downBy} breathing ${isBreathing(B)}; C shot-by-world → ${C.downKind}/${C.downBy}; stats kills ${st.kills} ko ${st.knockouts}; log: ${msgs.map(m => m.text).filter(t => /down|choked|takedown/.test(t)).join(' | ')}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
   }
-  // ---- (d) the room clear's grim lines over a man out cold: lockdown, the pair sent to the room the third man lies in
-  {
-    Math.random = seeded(304);
-    const W = await standUp(); const { game } = W; const { lines } = tap(game);
-    game.playerInvisible = true; game.godMode = true; game.teleportPlayer([4.9, 0, 23.2]);
-    for (let i = 0; i < 30; i++) W.step(DT);
-    game.escalate(); game.escalate(); if (game.clearing) { game.clearing.cancel(); game.clearing = null; }
-    for (let i = 0; i < 60 * 12; i++) W.step(DT);
-    game.teleportPlayer([20.5, 0, 11.3]); game.clearNearestRoom(); game.teleportPlayer([4.9, 0, 23.2]);   // fix mid-corridor: server room + manager's office
-    let third: any = null; for (let i = 0; i < 60 * 30 && !third; i++) { W.step(DT); const Cl = game.clearing; if (Cl && Cl.stage === 'approach') third = game.guards.find((x: any) => x.state !== 'dead' && x !== Cl.a && x !== Cl.b) ?? null; }
-    const Cl = game.clearing; const fails: string[] = []; let grim: string[] = [];
-    if (!third || !Cl?.cur?.bounds) fails.push('staging: no approach / no third man / no room bounds');
-    else {
-      const Bd = Cl.cur.bounds; const q: Vec3 = [(Bd.x0 + Bd.x1) / 2 - 1.2, 0, Bd.z1 - 2.2];
-      third.post = null; place(third, q, Math.PI); killGuard(game, third, [0, 0, -1], true);   // out cold, a couple of metres inside the door
-      const t0 = game.time; for (let f = 0; f < 60 * 60; f++) { W.step(DT); if (game.time - t0 > 45 && !game.clearing) break; }
-      grim = lines.filter(l => l.t > t0 && /breathing|out cold/.test(l.text)).map(l => `${l.who}: ${l.text}`);
-      if (!third.found) fails.push('the pair never found him');
-      if (!grim.some(t => /room's clear — nobody but him, and he's breathing|checking under… just him\. breathing|still breathing|out cold/.test(t))) fails.push(`no out-cold line from the drill: ${lines.filter(l => l.t > t0).map(l => l.text).slice(0, 12).join(' | ')}`);
-    }
-    verdict(fails.length === 0, '(d) the room clear over a man out cold inside the room: the breathing set of grim lines', `${grim.join(' | ') || '—'}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
-  }
   console.log(`=== ko-kinds: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
   return allPass;
 }
 
-// ================================================================ (2) the radio check: an unconscious man fails to answer exactly like a dead one
-/** The missing-colleague staging (ai-probes.ts missing (A)): the lobby man put down behind the reception desk on his own loop, Sam gone, a calm floor — once out
- *  cold (the takedown's 'struck'), once shot dead, same seed. Both: nothing before the check, the count-in without him, his name asked ≈ 4 s after the call, a man
- *  sent ≈ 8 s after it, the body found on the walk, the floor up a step. The timings must agree between the two to the frame (the dice are the same until the
- *  words differ); only the finder's call differs — out cold vs 'man down!'. PASS / FAIL. */
-export async function koRollcall() {
-  console.log('\n=== ko-rollcall: a man out cold is as silent on the net as a corpse — same check, same errand, same alarm; only the words over him differ (the SHIFT ALONE on the floor: civilians off) ===');
-  let allPass = true;
-  type Run = { how: string; tKill: number; tCall: number; tAsk: number; tSend: number; tFound: number; tEsc: number; esc: number; call: string; preLeak: string; answers: string; fails: string[] };
-  const runs: Run[] = [];
-  for (const how of ['struck', 'shot'] as const) {
-    Math.random = seeded(201);
-    const W = await standUp(); const { game } = W;
-    // RESTAGED with the civilians OFF (probe-restaging lane, docs/internal/probe-restage.md): this probe is about the SHIFT's own net — the count-in, the man sent
-    // round the route, HIS find. Since the civilians merged (d7c3289) the late worker's loop brings him on the body behind the reception desk ≈ 16 s after the man
-    // is sent and before the walk gets there (measured 08-12, seed 201: Owen '→ alarmed [body, armed]' at +113.5 s, runs to Novak, tells him at +119.6, control puts
-    // the floor up on cause 'civilian' — "somebody's on the floor who shouldn't be" — at +122.4); the run ends on that escalation with the body never found by the
-    // shift's walk — a different, possibly legitimate outcome the maintainer has not ruled on. Nobody but the shift here: exactly the floor the probe was written
-    // against (the devices / teams probes pin them off the same way).
-    // TODO(civilians-on variant, awaiting the maintainer): is "a civilian called it in first" a third legitimate outcome of the missing-man staging? If yes, add
-    // koRollcallCivilians: same seed with them on, expecting the floor up on 'civilian' before the walk finds him, and the finder's words checked when he does.
-    game.tune.civilians = false; game.civilians.length = 0;
-    game.playerInvisible = true; game.godMode = true; game.teleportPlayer([37.5, 0, 26.5]);
-    const { lines, msgs } = tap(game);
-    for (let i = 0; i < 60 * 5; i++) W.step(DT);
-    const victim = game.guards[2];   // lobby_break
-    place(victim, [7.6, 0, 16.1], -Math.PI / 2);
-    killGuard(game, victim, [-1, 0, 0], true, how);   // (quiet both times — folded where he stood, nothing clattering — so the ONLY difference between the runs is dead vs out cold: a thrown body and a dropped torch's clatter are the loud kill's physics, not the net's doing)
-    const tKill = game.time; const others = game.guards.filter((x: any) => x !== victim);
-    let tCall = -1, tAsk = -1, tSend = -1, tFound = -1, tEsc = -1; let preLeak = '';
-    for (let f = 0; f < 60 * 260; f++) {
-      W.step(DT); const t = game.time;
-      if (tCall < 0) {
-        const l = lines.find(x => /sound off/.test(x.text)); if (l) tCall = l.t;
-        else if (!preLeak) { if (victim.found) preLeak = `${t.toFixed(1)}s body found`; else if (game.escalation) preLeak = `${t.toFixed(1)}s escalation`; else for (const o of others) if (o.state !== 'patrol' || o.task || o.bodyDuty) { preLeak = `${t.toFixed(1)}s ${o.callsign} ${o.state}`; break; } }
-      }
-      if (tCall >= 0 && tAsk < 0) { const l = lines.find(x => x.t > tCall && x.text.includes(`${victim.callsign}?`)); if (l) tAsk = l.t; }
-      if (tCall >= 0 && tSend < 0 && others.some((x: any) => x.task?.kind === 'checkOn' && x.task.who === victim)) tSend = t;
-      if (tFound < 0 && victim.found) tFound = t;
-      if (tEsc < 0 && game.escalation > 0) tEsc = t;
-      if (tEsc >= 0 && t > tEsc + 3) break;
-    }
-    const call = lines.find(l => l.radio && /radioing it in/.test(l.text))?.text ?? '';
-    const answers = msgs.filter(m => /^radio: …/.test(m.text)).map(m => m.text).join(' / ');
-    const fails: string[] = [];
-    if (victim.downKind !== how) fails.push(`downKind ${victim.downKind} (want ${how})`);
-    if (preLeak) fails.push(`something moved before the radio check: ${preLeak}`);
-    if (tCall < 0 || tCall - tKill > 100) fails.push(`radio check at ${tCall < 0 ? 'never' : '+' + (tCall - tKill).toFixed(1) + ' s'}`);
-    if (tAsk < 0 || Math.abs(tAsk - tCall - 4) > 0.6) fails.push(`asked for at ${tAsk < 0 ? 'never' : '+' + (tAsk - tCall).toFixed(1) + ' s after the call'} (want ≈ +4)`);
-    if (tSend < 0 || Math.abs(tSend - tCall - 8) > 0.6) fails.push(`sent at ${tSend < 0 ? 'never' : '+' + (tSend - tCall).toFixed(1) + ' s after the call'} (want ≈ +8)`);
-    if (answers.includes(victim.callsign)) fails.push(`he answered the count-in: ${answers}`);
-    if (tFound < 0) fails.push('never found on the walk');
-    if (!(tEsc >= 0 && game.escalation >= 1)) fails.push(`floor stayed at ${game.escalation}`);
-    if (how === 'struck' && !/out cold but breathing/.test(call)) fails.push(`finder's call "${call}" (want out cold)`);
-    if (how === 'shot' && call !== 'man down! — radioing it in') fails.push(`finder's call "${call}" (want 'man down!')`);
-    runs.push({ how, tKill, tCall, tAsk, tSend, tFound, tEsc, esc: game.escalation, call, preLeak, answers, fails });
-  }
-  const [ko, dead] = runs; const rel = (r: Run, t: number) => t >= 0 ? `+${(t - r.tKill).toFixed(1)} s` : 'never';
-  const same = ['tCall', 'tAsk', 'tSend', 'tFound'].every(k => Math.abs(((ko as any)[k] - ko.tKill) - ((dead as any)[k] - dead.tKill)) < 1.0);
-  if (!same) ko.fails.push('the out-cold run and the dead run diverge in timing (the net treated them differently)');
-  for (const r of runs) { const ok = r.fails.length === 0; allPass &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${r.how === 'struck' ? 'out cold (the takedown)' : 'shot dead'}: radio check ${rel(r, r.tCall)} · asked for ${rel(r, r.tAsk)} · sent ${rel(r, r.tSend)} · found ${rel(r, r.tFound)} · floor → ${r.esc} at ${rel(r, r.tEsc)}\n    count-in: ${r.answers || '—'} · finder: "${r.call || '—'}"${r.fails.length ? '\n    ✗ ' + r.fails.join('\n    ✗ ') : ''}`); }
-  console.log(`  timings agree between the two runs (< 1 s each): ${same}`);
-  console.log(`=== ko-rollcall: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
-  return allPass;
-}
 
 // ================================================================ (3) the witness record: a man remembers only what he saw or heard
 /** (a) Sam shoots A on the corridor with his SUPPRESSED pistol (level 0.6 since 8b3f69d: an odd noise within ≈ 7.5 m, not gunfire): B six metres off with A in

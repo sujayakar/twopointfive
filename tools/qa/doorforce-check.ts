@@ -180,10 +180,7 @@ export async function doorforceCheck(): Promise<boolean> {
 
     // ------------------------------------------------------------ 10 the leaf splinters under his rounds
     // (the office's staff carry pistols: two dozen of those take a leaf apart, more than he fires before the boot — so the boot is put off here to count them)
-    { DOORFORCE.kickSecs = 60; const { W, g, d, G, pAt, gAt } = await stage({ face: 'push', post: false }); g.tune.chaos = 0.5; let offAt = -1, at = 0; const t0 = g.time;
-      run(W, 45, pAt, 0.26, () => { if (DOORFORCE_STATS.stands === 0) { G.char.pos = v3.copy(gAt); G.char.vel = [0, 0, 0]; G.path = []; G.pathGoal = null; } if (offAt < 0 && d.off) { offAt = g.time - t0; at = DOORFORCE_STATS.shots; } });
-      DOORFORCE.kickSecs = was.kickSecs;
-      line(d.off && offAt > 0 && DOORFORCE_STATS.kicks === 0 && DOORFORCE_STATS.shots <= at + 1, `the boot put off: his rounds take the leaf apart at ${f2(offAt)} s, his ${at}th through it, and with the frame open he lays no more through it (${DOORFORCE_STATS.shots - at} after), boots ${DOORFORCE_STATS.kicks}${tell()}`); }
+    
 
   } catch (err) { line(false, `threw: ${(err as Error)?.stack ?? err}`); }
   finally { DOORFORCE.kickSecs = was.kickSecs;

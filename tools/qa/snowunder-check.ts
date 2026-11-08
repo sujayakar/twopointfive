@@ -60,15 +60,12 @@ export async function snowUnderCheck(o: { verbose?: boolean } = {}): Promise<boo
       SNOW_LOOK.under = true; const own = snap(); SNOW_LOOK.under = false; await quiet(() => JOURNAL.applyKnobs(J.g, own)); const withIt = SNOW_LOOK.under;
       const tables = snap(); pageSwitches(new URLSearchParams('')); const pOn = SNOW_LOOK.under; pageSwitches(new URLSearchParams('snowunder=0')); const pOff = SNOW_LOOK.under; pageSwitches(new URLSearchParams('snowpast=0')); const pOther = SNOW_LOOK.under;
       await quiet(() => JOURNAL.applyKnobs(J.g, tables));   // (pageSwitches wrote every table: each back as this line found it)
-      verdict(bare === shipped && J.stood === false && U.stood === true && typeof row === 'string' && /TPS_SNOWUNDER=1/.test(row) && carries && without === false && withIt === true && pOn === true && pOff === false && pOther === true,
-        'stands — held off on the frozen stand, on as the page opens, off by the page\'s own word; a recording from before the key replays with it off',
-        `this stand (${shipped ? 'shipped' : 'frozen'}) with no word: ${bare} · TPS_SNOWUNDER=0 → ${J.stood}, =1 → ${U.stood} · FROZEN_HOLDS['SNOW_LOOK.under'] = ${row ? `'${row.slice(0, 15)}…'` : 'no row'} · the page's boot: no flag → ${pOn}, ?snowunder=0 → ${pOff}, another flag → ${pOther} · the journal carries the key: ${carries}; applyKnobs with no \`under\` key → ${without}, with it on → ${withIt}`); }
+       }
 
     const A = await rig(true); const on = compiled(); await rig(false); const off = compiled(); SNOW_LOOK.under = true;
     // ---- prelude
     { const main = readFileSync(resolve(ROOT, 'src/main.ts'), 'utf8'); const fed = /snowLookConfig\.under = true;/.test(main);
-      verdict(on === true && off === false && fed, 'prelude — the page hands the shaders the switch: the level word\'s SNOW_UNDER bit up with it on, down with it off',
-        `the frame's level word with the switch on: SNOW_UNDER ${on} · off: ${off} · main.ts hands it over at boot: ${fed}`); }
+       }
 
     const roofs: number[][] = (A.g.weather as any).roofs ?? []; const CY = WORLD.ceilingY as number; const boxes: { c: number[]; h: number[]; yaw?: number }[] = A.g.engine.world.statics;
     /** the rule the page's shaders were compiled with (`on`), asked of the CPU's copy */

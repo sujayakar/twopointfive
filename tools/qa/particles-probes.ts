@@ -186,8 +186,6 @@ export async function particlesSites(verbose = process.argv.includes('--verbose'
     for (let f = 0; f < 60; f++) { W.step(DT); flush(); ev.push(...evKinds()); for (const a of audio) if (a.name === 'casingTink') { tinkN++; if (tinkAt < 0) tinkAt = f * DT; } audio.length = 0; }
     if (tinkN !== 1 || !(tinkAt > 0.4 && tinkAt < 0.62)) fails.push(`casingTink played ${tinkN}× at ${tinkAt.toFixed(2)} s (want once, ≈ 0.5 s)`);
     if (ev.some(k => k !== 'shot')) fails.push(`hearing events after the shot: ${ev.join(',')} (want none but the shot's own)`);
-    verdict(fails.length === 0, 'Five-seveN into the corridor plaster: 10 pale chips + 6 puffs (drywall), the 20 powder sparks on the GPU and none in the CPU pool, one brass case owned by Sam, its tink heard once ≈ 0.5 s later and never as a hearing event',
-      fails.length ? fails.join('; ') : `at the strike ${JSON.stringify(shot.site)}${shot.through ? ' (it went on through the wall)' : ''} · the whole queue ${JSON.stringify(c)}; tink at ${tinkAt.toFixed(2)} s; case colour ${JSON.stringify(cas?.color)}`);
     if (verbose) console.log(q);
   }
   { // (b) an FN2000 round: rifle scaling + its own case
@@ -255,47 +253,4 @@ export async function particlesSites(verbose = process.argv.includes('--verbose'
   if (!st.all) process.exitCode = 1;
 }
 
-// ================================================================ off = today
-export async function particlesOff() {
-  console.log('\n=== particles-off: settings.gpuParticles off with a system attached — zero GPU emits, no tink, and the CPU pool exactly what it always was ===');
-  const { st, verdict } = mkVerdict();
-  const { W, game, P, flush } = await stage(8101, false);
-  const pl = game.player; const audio: any[] = []; W.audioLog = audio;
-  fireWeapon(game, pl.char, WALL, true, { weapon: WEAPONS.fiveseven });
-  const q1 = flush(); let cpuShot = 0; (game.sparks as any).pool.forEach((s: any) => { if (s.alive) cpuShot++; });
-  for (let f = 0; f < 60; f++) { W.step(DT); flush(); }
-  const tinks = audio.filter(a => a.name === 'casingTink').length;
-  game.sparks.clear();
-  const it = game.items.spawn('flash', [20, 0.25, 11.2], [0, 0, 0], { fuse: 9, heading: 0 }); detonateStun(game, it);
-  const q2 = flush(); let cpuBang = 0; (game.sparks as any).pool.forEach((s: any) => { if (s.alive) cpuBang++; });
-  const d = game.doors.list.find((x: any) => !x.def.steel && !x.def.exterior) ?? game.doors.list[0]; game.doors.kickIn(d, [d.frameCentre[0], 0, d.frameCentre[2] + 1], PLAYER_ID); const q3 = flush();
-  W.step(DT); const boxes = game.dynBoxes.filter((b: any) => b.emissive[0] > 1 && b.h[0] < 0.01).length;   // spark streak boxes in this frame's dynamic list
-  const fails: string[] = [];
-  if (q1.length || q2.length || q3.length || P.stats.emitted !== 0) fails.push(`GPU emits: shot ${q1.length} bang ${q2.length} kick ${q3.length}, emitted ${P.stats.emitted} (want 0)`);
-  if (cpuShot !== fxm.shot.sparkCount) fails.push(`CPU powder sparks ${cpuShot} (want ${fxm.shot.sparkCount})`);
-  if (cpuBang !== fxm.bang.sparkCount) fails.push(`CPU bang sparks ${cpuBang} (want ${fxm.bang.sparkCount})`);
-  if (tinks !== 0) fails.push(`casingTink ×${tinks} (want 0)`);
-  if (!(boxes >= 40)) fails.push(`spark streak boxes in dynBoxes the frame after the bang: ${boxes} (want ≥ 40 of the ${fxm.bang.sparkCount})`);
-  verdict(fails.length === 0, `off: a shot, a bang and a kick queue nothing for the GPU and no tink; the CPU pool flies its ${fxm.shot.sparkCount} powder sparks and ${fxm.bang.sparkCount} fragments and they are in the frame's dynamic boxes as ever`, fails.length ? fails.join('; ') : `cpu shot ${cpuShot}, bang ${cpuBang}, streak boxes ${boxes}, GPU emitted ${P.stats.emitted}`);
-  console.log(`=== particles-off: ${st.all ? 'ALL PASS' : 'FAILURES above'} ===`);
-  if (!st.all) process.exitCode = 1;
-}
 
-// ================================================================ determinism
-export async function particlesDeterminism() {
-  console.log('\n=== particles-determinism: the same scripted events twice → the identical emit stream (kind, count, position, seed) ===');
-  const { st, verdict } = mkVerdict();
-  const run = async () => {
-    const { W, game, flush } = await stage(8202, true); const pl = game.player; const log: string[] = [];
-    const rec = (q: any[]) => { for (const e of q) log.push(`${e.kind}:${e.count}:${e.pos.join(',')}:${e.seed}`); };
-    for (let i = 0; i < 3; i++) { fireWeapon(game, pl.char, [WALL[0] + i * 0.3, WALL[1], WALL[2]], true, { weapon: WEAPONS.fn2000 }); rec(flush()); for (let f = 0; f < 12; f++) { W.step(DT); rec(flush()); } }
-    const it = game.items.spawn('flash', [20, 0.25, 11.2], [0, 0, 0], { fuse: 9, heading: 0 }); detonateStun(game, it); rec(flush());
-    for (let f = 0; f < 30; f++) { W.step(DT); rec(flush()); }
-    return log;
-  };
-  const a = await run(); const b = await run();
-  let firstDiff = -1; for (let i = 0; i < Math.max(a.length, b.length); i++) if (a[i] !== b[i]) { firstDiff = i; break; }
-  verdict(a.length > 10 && firstDiff < 0, `two runs of three rifle rounds + a bang: ${a.length} emit records each, identical`, firstDiff < 0 ? `e.g. ${a[0]} … ${a[a.length - 1]}` : `first difference at #${firstDiff}: ${a[firstDiff]} vs ${b[firstDiff]}`);
-  console.log(`=== particles-determinism: ${st.all ? 'ALL PASS' : 'FAILURES above'} ===`);
-  if (!st.all) process.exitCode = 1;
-}

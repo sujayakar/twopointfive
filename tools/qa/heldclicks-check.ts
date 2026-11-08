@@ -32,7 +32,7 @@ const f3 = (x: number) => (Number.isFinite(x) ? x.toFixed(3) : String(x)), J = (
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 function place(gd: any, p: P3, yaw: number) { gd.char.pos = v3.copy(p); gd.char.vel = [0, 0, 0]; gd.speed = 0; gd.char.bodyYaw = gd.char.aimYaw = yaw; gd.char.aimPitch = 0; gd.path = []; gd.pathGoal = null; gd.char.update(0); gd.char.update(DT); }
 function park(gd: any, i: number) { gd.hold = true; gd.pinned = true; gd.dazzledUntil = 1e9; gd.heardUpTo = 1e12; place(gd, [37.5, 0, 6 + i * 1.5], EAST); }
-interface Stage { W: any; g: any; pl: any; A: any; msgs: string[]; ocps: number[]; step: (n?: number) => void }
+interface Stage { W: any; g: any; pl: any; A: any; msgs: string[]; step: (n?: number) => void }
 /** a fresh stand-up on one seed: every man parked blind and deaf on the lot but the one to be held — the corridor man planted calm facing east, or (civ) the
  *  first standing civilian where she is — Sam 0.7 m behind with the pistol drawn or holstered, the grab made, the hold settled */
 async function held(seed: number, opts: { drawn?: boolean; civ?: boolean } = {}): Promise<Stage | null> {
@@ -46,20 +46,19 @@ async function held(seed: number, opts: { drawn?: boolean; civ?: boolean } = {})
   else { men.slice(1).forEach((m: any, i: number) => park(m, i)); place(A, [14, 0, 11.2], EAST); A.wp = 1; }
   g.teleportPlayer([A.char.pos[0] - 0.7, 0, A.char.pos[2]]); pl.char.bodyYaw = pl.char.aimYaw = EAST; W.cam.yaw = 0; W.cam.rebuild?.(); step(1);
   const msgs: string[] = []; const msg0 = g.msg.bind(g); g.msg = (t: string) => { msgs.push(t); return msg0(t); };
-  const ocps: number[] = []; const ocp0 = g.ocp.bind(g); g.ocp = (t: any) => { ocps.push(g.time); return ocp0(t); };
   W.audioLog = [];
   await hushed(() => startGrab(g, A));
   for (let i = 0; i < 120 && pl.holding && pl.holding.phase !== 'held'; i++) step(1);
   step(30);   // (well past the reach: the hand is on its tool and no question is in the air)
   if (pl.holding?.phase !== 'held' || pl.holding.g !== A) return null;
   W.cursorAt([A.char.pos[0] + 6, 1.3, A.char.pos[2]]);   // (the reticle on open floor ahead of the pair: nothing of anybody's under it)
-  return { W, g, pl, A, msgs, ocps, step };
+  return { W, g, pl, A, msgs, step };
 }
 /** what a run came to, as one line: the hold, the man, Sam, the gun, what was said and heard */
 function sig(S: Stage): string {
   const { g, pl, A, W } = S, H = pl.holding, p = pl.char.pos, a = A.char.pos;
   return J({ hold: H ? [H.variant, H.phase, f3(H.t), f3(H.windT)] : null, man: [A.state, A.downKind, A.civ?.state ?? null], sam: [f3(p[0]), f3(p[2]), f3(pl.char.bodyYaw)], at: [f3(a[0]), f3(a[2])],
-    gun: [pl.pistol.roundsReady, f3(pl.lastFireT), f3(g.ocpCooldown)], ocps: S.ocps.length, msgs: S.msgs.length, sounds: (W.audioLog as any[]).map(x => x.name).join(','), events: g.eventSeq });
+    gun: [pl.pistol.roundsReady, f3(pl.lastFireT), f3(g.ocpCooldown), f3(pl.ocp.charge)], msgs: S.msgs.length, sounds: (W.audioLog as any[]).map(x => x.name).join(','), events: g.eventSeq });
 }
 const click = (S: Stage, bits: number) => { S.W.input.clicked |= bits; S.step(1); };
 /** frames until the hold is over (−1 = not inside `cap`) */
@@ -82,9 +81,9 @@ export async function heldClicksCheck(): Promise<boolean> {
     // ---- d: the gun hold — LMB a round past him, RMB the OCP
     for (const [name, bits] of [['LMB', LMB], ['RMB', RMB]] as [string, number][]) {
       const S = await held(904, { drawn: true }), bad = !S || S.pl.holding.variant !== 'gun'; let on: { shots: number; ocps: number; phase: string; alive: boolean } | null = null;
-      if (S && !bad) { const r0 = S.pl.pistol.roundsReady; click(S, bits); S.step(60); on = { shots: r0 - S.pl.pistol.roundsReady, ocps: S.ocps.length, phase: String(S.pl.holding?.phase), alive: S.A.state !== 'dead' }; }
+      if (S && !bad) { const r0 = S.pl.pistol.roundsReady, c0 = S.pl.ocp.charge, au0 = S.W.audioLog.length; click(S, bits); S.step(1); const spent = S.pl.ocp.charge < c0 || S.W.audioLog.slice(au0).some((x: any) => x.name === 'deny'); S.step(59); on = { shots: r0 - S.pl.pistol.roundsReady, ocps: spent ? 1 : 0, phase: String(S.pl.holding?.phase), alive: S.A.state !== 'dead' }; }
       const did = bits === LMB ? on?.shots === 1 && on.ocps === 0 : on?.ocps === 1 && on.shots === 0;
-      F.verdict(!!on && did && on.phase === 'held' && on.alive, `d · the gun hold, ${name}: ${bits === LMB ? 'one round past him' : 'the OCP'} (still held, the man alive)`,
+      F.verdict(!!on && did && on.phase === 'held' && on.alive, `d · the gun hold, ${name}: ${bits === LMB ? 'one round past him' : 'the OCP (its charge spent on a lamp, its refusal with none under the reticle)'} (still held, the man alive)`,
         !on ? 'staging: the gun hold never settled' : `${on.shots} round(s), ${on.ocps} OCP · phase ${on.phase}`); }
 
     // ---- e: a held civilian — the clicks are never hers

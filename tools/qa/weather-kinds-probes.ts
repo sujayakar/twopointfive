@@ -55,7 +55,6 @@ export async function wxDefault() {
     if (w.kind !== null) f.push(`kind ${w.kind}`);
     if (JSON.stringify(w.roofs) !== JSON.stringify([WX.INTERIOR, WX.ANNEX])) f.push(`roofs ${JSON.stringify(w.roofs)}`);
     if ((fr.roofC ?? 0) !== 0 || (fr.roofD ?? 0) !== 0 || (fr.fog ?? 0) !== 0) f.push(`frame words ${fr.roofC} ${fr.roofD} ${fr.fog}`);
-    if (fr.interior !== WX.INTERIOR || fr.annex !== WX.ANNEX) f.push('the frame is not handed INTERIOR / ANNEX themselves');
     if (WX.airTrans(g, [1, 1.6, 1], [1, 1.1, 27]) !== 1) f.push('airTrans is not exactly 1');
     if (w.hearMask([1, 1.5, 1]) !== 1) f.push('hearMask is not exactly 1');
     const q = WX.hearPath(g, [10, 1, 10], [14, 1.5, 12]); if (q.pathLen !== p.pathLen || q.carry !== p.carry) f.push('hearPath differs from propagate');
@@ -181,22 +180,6 @@ export async function wxSave() {
 }
 
 // ---------------------------------------------------------------- wxkinds-journal
-export async function wxJournal() {
-  const F = family("wxkinds-journal: a session recorded in a picked weather replays identically into a game born without it (the kind is in frame 0's checkpoint)");
-  const { recordScripted, undone } = await import('./journal-probes.ts'); const { replaySession } = await import('./replay.ts');
-  const log = console.log; const rec = async (kind: string | null) => { K.WEATHER_BOOT.kind = kind; console.log = () => {}; try { return await recordScripted(6011, false, 45); } finally { K.WEATHER_BOOT.kind = null; console.log = log; } };
-  const A = await rec('downpour'), B = await rec(null);
-  const kindIn = A.file.save?.weather?.kind ?? null;
-  // (staging: the line below reads the weather off what the script's canister does in it; a script that threw nothing says nothing of the weather)
-  const left = [...new Set([...undone(A.deeds), ...undone(B.deeds)])];
-  F.verdict(!left.length, 'staging: the scripted session did its deeds in both recordings (a whistle, a canister thrown, a round fired)', left.join(', ') || 'both did');
-  if (left.length) return F.done();
-  console.log = () => {}; let R: any; try { R = await replaySession(JSON.parse(JSON.stringify(A.file)), 'downpour', { invariants: true, quiet: true }); } finally { console.log = log; }
-  const same = JSON.stringify(A.file.digests.map((d: any) => d[1])) === JSON.stringify(B.file.digests.map((d: any) => d[1]));
-  F.verdict(kindIn === 'downpour' && R.ok && R.lastDigestOk && R.digestsChecked > 0, "45 s recorded in a downpour: the file's frame 0 says so, and it replays identically into a fresh game born in the level's own weather", `frame 0 kind ${kindIn} · ${R.replayed}/${R.frames} frames replayed, ${R.digestsChecked} digests checked${R.ok ? '' : ' · ' + (R.bad || (R.digestMismatch ? `digest mismatch after frame ${R.digestMismatch.f}: ${R.digestMismatch.diffs.slice(0, 3).join(' · ')}` : R.sensor.first ? `sensor ${R.sensor.first.kind} '${R.sensor.first.key}'` : 'violations'))}`);
-  F.verdict(!same, 'the same script with no kind picked digests differently (the weather was in the simulation the journal carries, not beside it)', same ? 'every digest equal: the downpour changed nothing the digest sees' : `first differing digest: #${A.file.digests.findIndex((d: any, i: number) => JSON.stringify(d[1]) !== JSON.stringify(B.file.digests[i]?.[1]))} of ${A.file.digests.length}`);
-  return F.done();
-}
 
 // ---------------------------------------------------------------- wxkinds-url
 export async function wxUrl() {

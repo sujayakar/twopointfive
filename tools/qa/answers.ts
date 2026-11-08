@@ -91,7 +91,7 @@ async function answer0(E: any, plan: Plan, before: ((g: any, W: any, at: { noise
   // — and the back is not the room he stands in while another room has such a man: nobody is put down without a sound at the captor's elbow
   const held = rooms.filter(r => r.men.some((gd: any) => gd !== captor)), front = held[0] ?? rooms[0] ?? null, far = held.filter(r => r !== front && !r.men.includes(captor)), back = far.length ? far[far.length - 1] : held.length > 1 ? held[held.length - 1] : null;
   out.oneRoom = rooms.length === 1;
-  const keep: number[] | null = captor ? [...((g.rescue as any).roomPoint?.('outside') ?? captor.char.pos)] : null;   // (the hostage room's door, from outside: where the rescue sends a roamer with nothing loud to go to)
+  const keep: number[] | null = captor ? [...captor.char.pos] : null;   // (the man who holds the hostages: the rescue sends a roamer to that room's door with nothing loud to go to)
   const breaker: number[] | null = g.level.breaker ? [...g.level.breaker.pos] : null;
   let victims: any[] = [], noise: number[] | null = null;
   if (plan === 'loud') { if (!front) { out.note = 'no defended room with a door'; return out; } victims = front.men.filter((gd: any) => gd !== captor); noise = front.door; }

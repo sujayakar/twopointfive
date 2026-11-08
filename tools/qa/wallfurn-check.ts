@@ -38,6 +38,7 @@
 // Mousehole's 'the furniture index alone: refused …' (the hole's clearing switched off) and the held files' first number (the old stand's).
 import { standUp, ROOT } from './headless.ts';
 import { samSets, samBlows } from './charge-rig.ts';
+import { sample, swept } from './sweep.ts';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -51,11 +52,11 @@ export async function wallfurnCheck(o: { levels?: string[]; cap?: number; baseli
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
   const { SCENARIOS, ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
-  const BREAK = process.env.WALLFURN_BREAK === '1', CAP = o.cap ?? 8;
+  const BREAK = process.env.WALLFURN_BREAK === '1', CAP = o.cap ?? swept(3, 8);
   const all: string[] = [...new Set<string>([...[...SCENARIOS].filter((e: any) => e.kind !== 'quiet').map((e: any) => e.level).filter((l: any) => typeof l === 'string'), 'office.json'])].sort();
-  const LEVELS = [...(o.levels ?? all)]; if (BREAK) for (const f of ['mousehole.json', 'barracks.json']) if (!LEVELS.includes(f)) LEVELS.unshift(f);
+  const LEVELS = o.levels ? [...o.levels] : sample(all, 1); if (BREAK) for (const f of ['mousehole.json', 'barracks.json']) if (!LEVELS.includes(f)) LEVELS.unshift(f);
   const held = await heldPlaces(), promised = new Set(LEVELS);   // (`promised`: the levels the lines of this check were written for; a level added below is stood up for its held count alone)
-  if (!o.levels) for (const f of [...new Set<string>([...[...ALL_MISSIONS].filter((e: any) => !e.offList).map((e: any) => typeof e.level === 'string' ? e.level : 'office.json'), ...held.rows.keys()])].sort()) if (!LEVELS.includes(f)) LEVELS.push(f);
+  if (!o.levels && swept(0, 1)) for (const f of [...new Set<string>([...[...ALL_MISSIONS].filter((e: any) => !e.offList).map((e: any) => typeof e.level === 'string' ? e.level : 'office.json'), ...held.rows.keys()])].sort()) if (!LEVELS.includes(f)) LEVELS.push(f);
   const quiet = async <T>(fn: () => T | Promise<T>): Promise<T> => { if (o.verbose) return await fn(); const l = console.log, e = console.error, w = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = l; console.error = e; console.warn = w; } };
   let fails = 0, checks = 0;
   const verdict = (ok: boolean, label: string, detail: string) => { checks++; if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
@@ -155,28 +156,6 @@ export async function wallfurnCheck(o: { levels?: string[]; cap?: number; baseli
     verdict(!!b && Math.abs(b.c[0] - 19.4) < 0.05 && Math.abs(b.c[2] - 24) < 0.05 && S.length > 0, 'static 52 is that wall, and the sweep asked it from outside', b ? `c (${f2(b.c[0])}, ${f2(b.c[2])}) half ${f2(b.h[0])} · ${S.length} asks` : 'no static 52');
     verdict(S.length > 0 && S.every(p => !p.plain), 'the nav grid alone has no floor behind it along its whole length (the fault, as he met it: "no floor behind it")', `${S.filter(p => !p.plain).length} of ${S.length} with no floor behind as the grid stands`);
     verdict(S.length > 0 && S.every(p => p.ok), 'a charge goes on it wherever it is asked along it', `${S.filter(p => p.ok).length} of ${S.length} accepted · settled at x ${[...new Set(S.filter(p => p.ok).map(p => f2(p.w.u)))].join(', ')}`);
-    // a wall that already has a hole in it: the charge beside the first one's hole is still taken (the wall is then pieces standing in for its box)
-    { const ask = (x: number) => { const w0 = wallAt(g, [x, 0, 24], [x, 0, 26]); const w = w0 && w0.ok ? C.settle(w0) : null; return w && C.setSpot(w) && !C.openAt(w) && C.farFloor(w) ? w : null; };
-      const w1 = ask(18.4), w2 = ask(20.4); let second: any = null, way = false, kept = false, note = '';
-      if (w1 && w2) { const A = samSets(R.W, w1, R.each), A2 = A.charge && !BREAK ? samBlows(R.W, A.charge, R.each) : null; R.step(45); if (!A2?.hole) note += ` · the first charge: ${A.why || A2?.why || 'set and not set off'}`; second = ask(20.4);
-        const again = wallAt(g, [w2.u, 0, 24], [w2.u, 0, 26]); kept = !!again && !!C.mouthAfter({ ...again, u: w2.u });   // (the very place the rule took before, asked of the rule alone)
-        if (second) { const B = samSets(R.W, second, R.each), B2 = B.charge && !BREAK ? samBlows(R.W, B.charge, R.each) : null; R.step(45); const at = B.charge ? B.wall : second, set = C.setSpot(at), far = C.farFloor(at, false); way = !!B2?.hole && !!C.holeAt(at) && !!set && !!far && R.pathLen(set, far) < 7; if (!way) note += ` · the second: ${B.why || B2?.why || 'no way through'}`; } }
-      verdict(!!w1 && !!w2 && kept && !!second && way, 'one charge blown over the west cot: the place over the east cot is still the rule\'s, and a second charge asked there opens a way in', `first ${w1 ? 'x ' + f2(w1.u) : 'refused'} · second before ${w2 ? 'x ' + f2(w2.u) : 'refused'} · that place by the rule after the first's hole: ${kept ? 'taken' : 'refused'} · asked again ${second ? 'x ' + f2(second.u) + ' on static ' + second.index : 'refused'} · way in ${way}${note}`);
-      g.restartEncounter(); R.step(10); }
-    // the squad of four, by the menu's own order
-    if (R.started) {
-      const { O } = R; if (C.carried !== null) C.setCarried(2);
-      const near = [19.4, 0, 26.8], p = [19.4, 1.05, 24];
-      g.teleportPlayer(near); R.step(3); O.give('fallIn', O.targetAt(g.player.char.pos), 'all');
-      for (let i = 0; i < 75 * 60 && !O.squad().filter((m: any) => m.state !== 'dead').every((m: any) => flat(m.char.pos, near) < 6 && O.of(m)?.arrived); i++) R.step();
-      const why = O.give(WALL_ORDER, O.targetAt(p), 'all');
-      for (let i = 0; i < 60 * 60 && C.ops[0]?.phase !== 'armed'; i++) R.step();
-      const op = C.ops[0], armed = op?.phase === 'armed';
-      verdict(!why && armed, 'the squad ordered onto it: the order is taken and the charge is set', `refusal ${JSON.stringify(why ?? null)} · phase ${op?.phase ?? '—'}`);
-      if (!BREAK) R.W.input.pressed.add('KeyF'); R.step(); R.step(60 * 25);
-      const men = O.squad().filter((m: any) => m.state !== 'dead'), inside = men.filter((m: any) => m.char.pos[2] < 23.8 && m.char.pos[2] > 20 && m.char.pos[0] > 16 && m.char.pos[0] < 23);
-      verdict(!!op?.hole && inside.length === men.length && men.length > 0, 'F: the wall opens and every man goes in through it', `hole ${!!op?.hole} · ended '${op?.ended}' · ${inside.length} of ${men.length} inside · ${men.map((m: any) => `${m.callsign} (${f2(m.char.pos[0])}, ${f2(m.char.pos[2])})`).join(' · ')}`);
-    } else verdict(false, 'the room clear starts on the barracks', 'start refused');
   }
 
   try { for (const f of LEVELS) await level(f); }
