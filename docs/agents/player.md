@@ -137,7 +137,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   under the ring's own flags, as the ring's three slats; the flight, rule, counts, item kind and the `'ring to the head'` log line the chronicle keys on are
   untouched), and the kit column's second launcher tag reads `HE ×3` for `40MM ×3` (`shellTag()`; the reticle's and the draw line's '40 MM' are as they were). A chronicle row WRITES a weapon by its old name whichever kit is issued (`plainShort(def)`: saves and recordings read the same
   on and off) and is worded where it is shown. The OCP stays. Every player-facing line that names the kit goes through `gearText()` WHERE IT IS SHOWN (kit card, HUD column and
-  reticle word, controls list, captions, the debrief's rows) — a new line that says FN2000 / Five-seveN / ring airfoil needs the same. QA: `bun run
+  reticle word, controls list, captions, the debrief's rows; Options, which holds no game, says the issued kit's words in its one line that names it) — a new line that says FN2000 / Five-seveN / ring airfoil needs the same. QA: `bun run
   tools/qa/gear-check.ts` (`GEAR_BREAK=1` must fail; it holds the fifteen, the Mk 18 and the slug both ways); the fn2000 family's WORD checks ask for their lines
   through `gearText` / `ringTag`, so `TPS_GEAR=1 probes.ts fn2000` and `he40` are green as the frozen stand's are; rifle-slot, nvg-rig and the soak's rifle-box
   count follow the switch. Not seen on a GPU; `RIG.m4` / the tubes are first-pass numbers for the viewer.
@@ -624,7 +624,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   your card's (the next bullet). No checkpoint slice: a floor with a spawned unit on it takes no
   checkpoint (`savestate.ts canSave`), and every teammate is one.
   UI: the two rows are drawn as their class of gun (`ui/kitIcons.ts` by `pickIcon`: the same three drawings; no long gun = an empty board), wear the can by
-  `kit.ts kitRowCan`, carry their own noise mark (`ui/kitNoise.ts`), and the kit view plays the gun's demo for either (`host/kitView.ts TILES`).
+  `CardRow.can`, carry their own noise mark (`CardRow.noise`), and the kit view plays the gun's demo for either (`host/kitView.ts TILES`).
   Check: `bun run tools/qa/gunslots-check.ts` (families `gunslots-card -mate -fight -guns -off` in `probes.ts`, in `all-quick`), ALL PASS on both stands;
   `GUNSLOTS_BREAK=1` fails every family. Probes written against the one gun row (`bigslot- kitpaste- kitlent- kitcan- sticky-`) run with the
   switch held off (`tools/qa/holds.ts GUN_ROW_AS_IT_WAS`); the card family has its own paste, set, issue-card and old-row verdicts under it. `gunslots-fight` is the measure: two teammates with a round each and three men five metres in front of them —
@@ -1112,19 +1112,15 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   touchpad drivers, some mice) cannot be told from the chord and is nothing: `?pinchonly=0`, there is no Options row; (3) Ctrl held and the wheel
   turned over a page that never saw the key go down (another frame, the address bar or devtools has the keys) still zooms until the mouse moves; (4) Safari sends a
   pinch as its own gesture events and no wheel, so a pinch there was never the zoom (not checked here). NOBODY HAS TRIED IT ON A TRACKPAD.
-  TWICE (`host/findme.ts watchCtrlTaps(win, idle, key)`; main.ts hands it `camKey`): the "Double tap" option of Options, Game (off unless he turns
-  it on) is two taps of the camera's key, wherever it is. findme.ts still imports nothing.
-  A tap of Space with Shift held counts (Shift is his sprint; with Ctrl it is a browser chord and still does not). With a text box focused (the
-  debugger's search) Space types a space and turns nothing, where Ctrl still turned: left so.
+  With a text box focused (the debugger's search) Space types a space and turns nothing, where Ctrl still turned: left so.
   THE WORDS: Options, Controls draws the two camera rows' cap plain (`ui/options.ts camCapEl`: Ctrl or Space; never keyCapEl's 'Space', which is the
   action's row and reads "E"); Options,
-  Game says "Double tap Space" and "hold Space and move the mouse" (`ui/findme.ts`, `camCap()`).
+  Game says "hold Space and move the mouse" (`ui/findme.ts`, `camCap()`).
   NOT A ROW (a reviewer's note, left as it is): the camera's key cannot be moved in Options, and a row put on Space takes Space from it with no
-  swap shown. Making the camera hold a row of the board would give it caps, words and a swap by the board's own machinery. `tools/qa/findme-page.cjs`
-  (the settings thread's) reads "Double tap Ctrl" and presses Control: it needs `&camspace=0` or the new words. The engine replay's own view still
+  swap shown. Making the camera hold a row of the board would give it caps, words and a swap by the board's own machinery. The engine replay's own view still
   turns on Ctrl (`replay/engineplay.ts`). A laptop touchpad that goes dead while a key is held would not turn the view under Space: not tried.
-  CHECK: `bun run tools/qa/probes.ts camspace` (family `player`), 6 lines: the board, held, Ctrl, the wheel (above), twice, off; on game/input.ts's own listeners and
-  the double tap's, stood on a window and a canvas that are lists of them. `CAMSPACE_BREAK=1` fails 5 (the `off` line is the build as it was).
+  CHECK: `bun run tools/qa/probes.ts camspace` (family `player`), 5 lines: the board, held, Ctrl, the wheel (above), off; on game/input.ts's own listeners,
+  stood on a window and a canvas that are lists of them. `CAMSPACE_BREAK=1` fails 4 (the `off` line is the build as it was).
   `tools/qa/keybinds-page.cjs` reads the camera's cap in its last line.
   Never seen on a GPU; nobody has felt Space held under a thumb while the same hand walks.
 - **A can in the wind-up goes back on the belt when his hands start something else** (`src/game/throwback.ts THROWBACK.on`, 10-22; the deep
@@ -1212,6 +1208,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   rest, writes `--railshift` on it: down past the ring if the window has the room, else up over it (index.html: the line's transform, eased). The
   line stays readable: it is often what says which wedge to press. The older `ringover` (the status column faint under the squad's ring) is as it
   was. Page-only: no headless check sees it; read on the software adapter by the boxes' places, never seen on a GPU, no picture taken.
+- (Since 2026-11-08 `emptyThing`, `emptyWord` and `handRingView` below are `rust/game_rules/src/interact`'s and `view/rings.rs`'s: the HUD reads `view.empty` and `view.hand`.)
 - **A tap that finds no row beside a thing names the thing and why** (`HANDRING.near`, handring.ts; interact.ts `emptyThing` / `emptyWord`; on and off
   with `on`, as `empty` is: `?handring=0`, `TPS_HANDRING=1`, a `FROZEN_HOLDS` row, a recording from before the key replays with it off). The
   maintainer, 10-22, on the stealth tutorial with the back door open at his elbow: "nothing in reach to close the door?". THE CAUSE was not reach:

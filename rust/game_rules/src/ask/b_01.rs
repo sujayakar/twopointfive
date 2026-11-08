@@ -99,6 +99,8 @@ impl<'g> WorldAsk<'g> {
             r
         })
     }
+    /// the way on the floor from a to b, as a man would be walked it, with what the module's search has as its scratch (None: the floor has none)
+    pub fn way(&self, a: crate::V3, b: crate::V3, max_iter: u32) -> Option<alloc::vec::Vec<crate::V3>> { crate::scene_collision::way_shared(self.g, a, b, max_iter) }
     /// how a sound at `src` reaches `dst`, of the level as it stands
     pub fn hear(&self, src: crate::V3, dst: crate::V3) -> crate::scene_collision::Propagation { crate::scene_collision::heard_shared(self.g, src, dst) }
 }

@@ -103,6 +103,31 @@ pub fn set_quiet_fog(g: &mut crate::game::Game, rung: crate::quietfog::QuietRung
     }
 }
 
+/// What this machine keeps of the rung, as the store's read takes it: a word that is no rung is nothing. (quietfog.ts quietFog)
+pub fn quiet_fog_kept(g: &mut crate::game::Game, word: &str) {
+    let Some(rung) = rung_of(Some(word)) else { return };
+    g.m.quietfog.pick = Some(rung);
+    g.m.quietfog.pick_def = quiet_fog_default(g);
+    g.m.quietfog.kept = true;
+}
+
+/// What this machine keeps of the cameras, as the store's read takes it: no lever moves. (quietfog.ts quietCams)
+pub fn quiet_cams_kept(g: &mut crate::game::Game, on: bool) {
+    g.m.quietfog.cams = Some(on);
+    g.m.quietfog.cams_read = true;
+}
+
+/// The text this machine keeps of the rung ('' = none: the default's own stores nothing). (quietfog.ts setQuietFog)
+pub fn quiet_fog_text(g: &mut crate::game::Game) -> String {
+    let rung = quiet_fog(g);
+    if rung == quiet_fog_default(g) { String::new() } else { String::from(rung.as_str()) }
+}
+
+/// The text this machine keeps of the cameras just pressed ('' = none: the default's own stores nothing). (quietfog.ts setQuietCams)
+pub fn quiet_cams_text(g: &crate::game::Game, on: bool) -> String {
+    if on == quiet_cams_default(g) { String::new() } else { String::from(if on { "1" } else { "0" }) }
+}
+
 /// The pick forgotten, to be read again. (quietfog.ts quietFogForget)
 pub fn quiet_fog_forget(g: &mut crate::game::Game) {
     g.m.quietfog.pick = None;

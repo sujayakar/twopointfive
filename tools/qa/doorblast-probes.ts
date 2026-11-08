@@ -281,7 +281,7 @@ export const offHingesAfter = guarded(async () => {
 });
 
 // ---------------------------------------------------------------- every door of every level
-const LEVELS = [undefined, 'records.json', 'depot.json', 'block.json', 'block-squads.json', 'barracks.json', 'compound.json', 'warehouse.json', 'kit-yard.json', 'test-rooms.json'];
+const LEVELS = [undefined, 'records.json', 'depot.json', 'block.json', 'barracks.json', 'compound.json', 'warehouse.json', 'kit-yard.json', 'test-rooms.json'];
 export const offHingesSweep = guarded(async () => {
   const { verdict, done } = family('off-hinges-sweep: every ordinary door of every level, both faces, by a blast and by a set charge — off, landed, clear of the walls, the doorway open');
   let total = 0, backs = 0; const bad: string[] = []; const perLevel: string[] = []; let nudged = 0, laid = 0, nudgeMax = 0;   // (summed a level at a time: a stand-up puts a game's tallies back, so the tally holds one level's — tools/qa/fresh.ts)

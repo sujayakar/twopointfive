@@ -47,9 +47,9 @@
 //! reading back
 //!   face_export(h)                            the whole state (`io::export`) at face_out
 //!   face_verdict(h) -> 0 | 1 | 2              how the mission ended, off the record the game's tick latches: 0 not yet, 1 lost, 2 won (then the record as lines at face_out)
-//!   face_tick_view(h)                         what a HUD is told of the game as its last tick left it (a TickView at face_out); a read: no word of the state is written, and the copy of the boxes, which is none, is stood only for a view that will ask it
+//!   face_tick_view(h)                         what a HUD is told of the game as its last tick left it (a TickView at face_out); a read: no word of the state is written, and a copy of the boxes a writer put down is stood first
 //!   face_debrief_view(h)                      what the end card shows of the run (a DebriefView at face_out); a read, nothing kept
-//!   face_line(h, what, a…, b…) -> 0 | 1 · face_ray(h, o…, d…, max) -> 0 | 1 · face_hear(h, s…, d…)
+//!   face_line(h, what, a…, b…) -> 0 | 1 · face_ray(h, o…, d…, max) -> 0 | 1 · face_hear(h, s…, d…) · face_way(h, ax, az, bx, bz, iters) -> corners | -1
 //!                                             the box world asked of the game shared: the camera's, the sound's, the cursor's questions; nothing is kept
 //!   face_die_n(h) -> f64 · face_time(h) -> f64 · face_rows(h) -> usize
 //!                                             the die's count of draws (in the game's block), the game's clock, the rows of the box table
@@ -150,8 +150,8 @@ pub extern "C" fn face_verdict(h: u32) -> i32 {
     }
 }
 /// WHAT A HUD IS TOLD of the game as its last tick left it (`view::tick_view`), about the seat this machine shows: a `TickView`'s bytes at face_out, read
-/// by the host with the table's own reader. A read: no word of the game's state is written and no seat is changed over; where a writer put the copy of the boxes down and
-/// this view will ask it (`view::asks_the_boxes`), it is stood first, as every question of it does.
+/// by the host with the table's own reader. A read: no word of the game's state is written and no seat is changed over; where a writer put the copy of the boxes down it is
+/// stood first, as for every question of it.
 #[no_mangle]
 pub extern "C" fn face_tick_view(h: u32) {
     use game::io::Io;
@@ -197,6 +197,13 @@ pub extern "C" fn face_hear(h: u32, sx: f64, sy: f64, sz: f64, dx: f64, dy: f64,
     WAYS.with(|w| *w.borrow_mut() = k);
     let how = if p.direct { 2.0 } else { 0.0 } + if p.routed { 1.0 } else { 0.0 };
     out([p.path_len, p.via[0], p.via[1], p.via[2], p.apparent[0], p.apparent[1], p.apparent[2], p.muffle, p.carry, how].iter().flat_map(|v| v.to_le_bytes()).collect());
+}
+/// the way on the floor from a to b: at face_out, two doubles (x z) a corner, the count returned; -1 where the floor has none. A search of the module's, kept by nobody here
+#[no_mangle]
+pub extern "C" fn face_way(h: u32, ax: f64, az: f64, bx: f64, bz: f64, max_iter: u32) -> i32 {
+    let Some(w) = asked(h, |w| w.way([ax, 0.0, az], [bx, 0.0, bz], max_iter)) else { return -1 };
+    out(w.iter().flat_map(|p| [p[0].to_le_bytes(), p[2].to_le_bytes()].concat()).collect());
+    w.len() as i32
 }
 /// WHAT A HUD IS TOLD of what the cursor is on (`view::cursor_view`), about a seat by its place in the game's list (−1: the one this machine shows): a `CursorView`'s
 /// bytes at face_out. `p` = 36 doubles the host has as it draws: the cursor (x y), the picture it is in (w h), the camera's view and projection, and their

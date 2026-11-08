@@ -14,7 +14,6 @@ import type { ReplayMeta } from '../game/replaybuf';
 import type { ReplayFile } from '../replay/format';
 import { shelfPut } from '../replay/shelf';
 import { CAME_FROM, GAME_PAGE, clock, replayBlob, errorMarks, lastRun, leaveFor, replayName } from '../replay/format';
-import { missionLive } from '../game/mission';
 export { CAME_FROM, leaveFor };
 import { ReplayKeeper } from '../replay/keeper';
 import { KEEP, keptSummary, pruneKept, keepBudget } from '../replay/keepstore';
@@ -157,7 +156,7 @@ export class ReplayKey {
    *  goes; with no run to lose (a card up, a show, a run over) one press goes, as the card's button does. */
   keyView(): void {
     const now = performance.now();
-    if (this.canView && missionLive(this.game) && now > this.armed) { this.armed = now + ARM_MS; this.say('Shift+F7 again leaves this run for its replay. F7 alone saves and stays.'); return; }
+    if (this.canView && this.game.view.live && now > this.armed) { this.armed = now + ARM_MS; this.say('Shift+F7 again leaves this run for its replay. F7 alone saves and stays.'); return; }
     this.armed = 0; this.openViewer('key');
   }
   private armed = 0;

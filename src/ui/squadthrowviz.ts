@@ -1,22 +1,15 @@
-// A SQUAD THROW ON THE FLOOR — who throws, his walk, the arc, where it rests (game/squadthrow.ts squadThrowPlans). The maintainer, 10-13: "(and maybe
+// A SQUAD THROW ON THE FLOOR — who throws, his walk, the arc, where it rests (`view.throws`). The maintainer, 10-13: "(and maybe
 // visualize who's doing it and the path on the ground?)". No words: a ring at the thrower's feet in his element's colour, a dashed line along his walk to a
 // small ring where he will throw from, the arc, a ring where the thing comes to rest and, for a frag, two dotted ones: the radius it kills in and, fainter, the radius it wounds in. Fainter while it
 // is only the highlighted row of the throw page; full from the order until the thing leaves his hand. Drawn into the overlay's #traj SVG, under Sam's own
-// throw arc. SQUADTHROW.draw off = nothing here (a module that draws the squad's whole plan may read squadThrowPlans itself). Reads only; no state but its nodes.
+// throw arc. While the plan on the floor is drawn it draws a frag and a can itself (ui/planfloor.ts), and this draws the 40 mm's. Reads only; no state but its nodes.
 import type { Vec3 } from '../math/vec';
 import type { Game } from '../game/game';
 import type { FollowCamera } from '../game/camera';
-import { SQUADTHROW, squadThrowPlans, squadThrowKept, type SquadThrowKept } from '../game/squadthrow';
-import { squad40Plans } from '../game/squad40';
-import { FRAG } from '../game/frag';
-import { planDrawsThrows } from '../game/floorplan';
 
 const NS = 'http://www.w3.org/2000/svg';
 const TONE: Record<string, string> = { red: '#ff9a8a', blue: '#9cc8ff', gold: '#f2cf6b' };
 const RING = 20, BIG = 48, FLOOR = 0.03;
-/** the preview's search, kept on the picture's side, one store a game (game/squadthrow.ts SquadThrowKept) */
-const kept = new WeakMap<Game, SquadThrowKept>();
-const keptOf = (g: Game): SquadThrowKept => { let k = kept.get(g); if (!k) kept.set(g, k = squadThrowKept()); return k; };
 type Part = 'who' | 'walk' | 'spot' | 'arc' | 'land' | 'kill' | 'wound';
 interface Els { g: SVGGElement; p: Record<Part, SVGPathElement>; d: Record<Part, string>; tone: string; op: string }
 
@@ -35,8 +28,7 @@ export class SquadThrowViz {
     this.root.appendChild(g); return E;
   }
   update(game: Game, cam: FollowCamera, w: number, h: number, edge: number) {
-    const throws = SQUADTHROW.on && !planDrawsThrows() ? squadThrowPlans(game, keptOf(game)) : [];   // (the floor plan draws them itself while it is on: ui/planfloor.ts · the preview's search is kept HERE, on the picture's side: nothing of the game's is written)
-    const plans = [...throws, ...squad40Plans(game)];   // (a teammate's 40 mm on order — game/squad40.ts: who fires, the arc, where it goes off; empty unless a card brought a round)
+    const plans = game.view.plan ? game.view.throws.filter(t => t.kind === 'shell') : game.view.throws;
     // one path per part: a point out of the view BREAKS the line there (never a chord across the gap), and a ring the view's edge cuts keeps the part of it in view
     const path = (pts: Vec3[] | undefined, closed: boolean) => {
       if (!pts || pts.length < 2) return '';
@@ -55,16 +47,15 @@ export class SquadThrowViz {
     };
     const set = (E: Els, k: Part, d: string) => { if (E.d[k] !== d) { E.d[k] = d; E.p[k].setAttribute('d', d); } };   // (a still plan writes nothing)
     for (let i = 0; i < plans.length; i++) {
-      const P = plans[i], E = this.els[i] ?? (this.els[i] = this.make()), tone = TONE[game.orders.pairOf(P.gd) ?? 'gold'] ?? TONE.gold, walking = !!P.walk && P.walk.length > 1, op = P.preview ? '0.6' : '0.95';
+      const P = plans[i], E = this.els[i] ?? (this.els[i] = this.make()), tone = TONE[P.tone ?? 'gold'] ?? TONE.gold, feet = game.guards.find(m => m.char.id === P.man)?.char.pos ?? null, walking = !!P.walk && P.walk.length > 1, op = P.preview ? '0.6' : '0.95';
       if (i >= this.shown) E.g.style.display = 'block';
       if (E.tone !== tone) { E.tone = tone; E.g.style.color = tone; }
       if (E.op !== op) { E.op = op; E.g.setAttribute('opacity', op); }
-      set(E, 'who', ring(P.gd.char.pos, 0.42));
-      set(E, 'walk', walking ? path(P.walk, false) : ''); set(E, 'spot', ring(walking ? P.from : null, 0.2));
+      set(E, 'who', ring(feet, 0.42));
+      set(E, 'walk', walking ? path(P.walk ?? undefined, false) : ''); set(E, 'spot', ring(walking ? P.from : null, 0.2));
       set(E, 'arc', path(P.points, false));
       set(E, 'land', ring(P.land, 0.3));
-      const frag = P.kind !== 'stun';   // (a frag's burst — and a 40 mm round's, which is the same one)
-      set(E, 'kill', ring(frag ? P.land : null, FRAG.lethalM, BIG)); set(E, 'wound', ring(frag ? P.land : null, FRAG.woundM, BIG));
+      set(E, 'kill', ring(P.kill > 0 ? P.land : null, P.kill, BIG)); set(E, 'wound', ring(P.wound > 0 ? P.land : null, P.wound, BIG));
     }
     for (let i = plans.length; i < this.shown; i++) this.els[i].g.style.display = 'none';
     this.shown = plans.length;

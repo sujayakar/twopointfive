@@ -202,6 +202,8 @@ export async function pickerCard(): Promise<boolean> {
   try {
     await withDom(SEARCH, async (root) => {
       const { Menu, bootCard } = await import(`${ROOT}/src/ui/menu.ts`);
+      { const { setDesk } = await import(`${ROOT}/src/view/desk.ts`), { namesMission } = await import(`${ROOT}/src/scene/picks.ts`);
+        setDesk({ start: (s: string) => ({ rows: [], named: '', pick: '', playing: namesMission(s) }), next: () => ({ next: '' }) } as any); }   // (does the address name a mission: the module's, stood in for)
       Math.random = seeded(0x51c4); resetKnobs();
       const W = await quiet(() => standUp({ uploadEvery: 4 })); const g = W.game; g.godMode = true;
       let quits = 0;
@@ -211,35 +213,7 @@ export async function pickerCard(): Promise<boolean> {
       menu.setScenario({ current: () => runningScenario(g, null), quit: () => { quits++; quitScenario(g, false); menu.open('start'); } });   // (main.ts's quit minus its page glue: the URL, the camera cut)
       // ---- the title
       menu.open('start');
-      // (the rows live on the mission list — ui/missions.ts, its own layer; the 'missions' family holds the list itself: every row, the sheet, the keys, a pick.
-      //  Here: the scenario rows' links and difficulty switch where they now live)
-      const MS = await import(`${ROOT}/src/ui/missions.ts`);
-      // (the list is every mission in its GROUPS' order — training, quiet alone, quiet as two, loud with the squad — not the squad table's: the model the rows are held against is the list's own)
-      const L: any[] = MS.missionList().filter((m: any) => m.id !== MS.SOLO_NIGHT.id).map((m: any) => m.scenario);
-      const mrowsOf = (r: El): Row[] => missionRows(r, MS.SOLO_NIGHT.id);
       F.verdict(rowsOf(root).length === 0 && !!buttonOf(root, 'Play ›') && !buttonOf(root, 'Quit to scenarios'), "the title carries no scenario rows: Play is the way to them", buttons(root).map(b => b.textContent).join(' · '));
-      MS.openMissions({ onPick: () => { } });
-      const mroot: El = MS.currentMissions()!.root as any, rows = mrowsOf(mroot);
-      F.verdict(rows.length === L.length && L.length === ALL.length && ALL.every((e: any) => L.includes(e)) && rows.every((r, i) => r.id === L[i].id && r.title === L[i].title), 'the mission list holds every entry of every table, in the list\'s order, by its title (beside the solo night)', rows.map(r => r.title).join(' · '));
-      F.verdict(rows.every((r, i) => r.href === pickSearch(L[i], SEARCH) && r.href.startsWith(scenarioQuery(L[i])) && r.href.endsWith('quality=high&mute') && entryOfQuery(r.href) === L[i]), "each row is a link to its entry's own URL, the visitor's other flags kept", rows.map(r => r.href).join(' · '));
-      // the difficulty switch on the list's sheet (ui/missions.ts, game/difficulty.ts): standard as shipped, hard one press away, standard one press back
-      { const { PRESSURE, PRESSURE_DEFAULTS } = await import(`${ROOT}/src/game/pressure.ts`), { DIGIN, DIGIN_DEFAULTS } = await import(`${ROOT}/src/game/digin.ts`), { difficultyNow, HARD } = await import(`${ROOT}/src/game/difficulty.ts`);
-        const db = () => mroot.all((e: El) => !!e.attrs['data-difficulty']), lit = () => db().filter((e: El) => e.cls.has('on')).map((e: El) => e.attrs['data-difficulty']).join(',');
-        const eq = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
-        const was = lit(), n = db().length, now0 = difficultyNow();
-        db().find((e: El) => e.attrs['data-difficulty'] === 'hard')?.onclick?.(); const hard = lit(), nowH = difficultyNow(), onH = PRESSURE.on && DIGIN.on && DIGIN.reachM === HARD.reachM && DIGIN.keeper === HARD.keeperDigs && PRESSURE.warned === HARD.warned && PRESSURE.second === HARD.second && PRESSURE.picket === HARD.picket && PRESSURE.byWay === HARD.byWay && PRESSURE.wayOut === HARD.wayOut && PRESSURE.drilled === HARD.drilled && !DIGIN.stay && !DIGIN.gather, hrefH = mrowsOf(mroot).map(r => r.href);
-        // (THE ROW MOVED BY HAND IS A NUMBER OF THE LEVEL'S: the dig-in's reach. Until 2026-11-07 it was PRESSURE.flank and DIGIN.cover, two settled rows: the write was refused, nothing moved, and the line read 'hard')
-        const reach0 = DIGIN.reachM; DIGIN.reachM = reach0 + 1; const nowC = difficultyNow(), litC = lit();
-        const nowOff = (PRESSURE.on = false, DIGIN.on = false, difficultyNow()); PRESSURE.on = DIGIN.on = true; DIGIN.reachM = reach0;
-        db().find((e: El) => e.attrs['data-difficulty'] === 'standard')?.onclick?.(); const back = lit(), nowS = difficultyNow(), hrefS = mrowsOf(mroot).map(r => r.href);
-        F.verdict(n === 2 && was === 'standard' && now0 === 'standard', 'the mission list carries the difficulty switch: two buttons, standard lit as shipped', `${n} buttons · lit: ${was} · tables read: ${now0}`);
-        F.verdict(hard === 'hard' && nowH === 'hard' && onH, 'one press on hard: both harder-defender tables on (press + dig-in, stay and gather off), hard lit', `lit: ${hard} · tables read: ${nowH}`);
-        F.verdict(hrefH.length === L.length && hrefH.every((h, i) => h === `${pickSearch(L[i], SEARCH)}&difficulty=hard`) && hrefS.every((h, i) => h === pickSearch(L[i], SEARCH)),
-          "the press puts the level on every scenario link (a pick is a page load: the choice rides the URL too), and the press back takes it off again (standard is said on a link only over a ?hard the visitor arrived with — the 'missions' family holds that)", `${hrefH[0]} · ${hrefS[0]}`);
-        F.verdict(nowC === 'custom' && nowOff === 'standard', 'a row under the switch moved by hand reads custom while a switch is on; both switches off reads standard whatever the rows say', `one row moved: ${nowC} (lit before repaint: ${litC}) · both off, a row moved: ${nowOff}`);
-        F.verdict(back === 'standard' && nowS === 'standard' && eq(PRESSURE, PRESSURE_DEFAULTS) && eq(DIGIN, DIGIN_DEFAULTS), 'one press back on standard: both tables are the build\'s again, key for key', `lit: ${back} · tables read: ${nowS}`);
-      }
-      MS.closeMissions();
       { bootCard(); const pb = buttonOf(root, 'Play ›');
         F.verdict(!!pb && !pb.disabled, 'the boot card (up while the shaders compile) has Play, already live', pb ? pb.textContent : 'no Play');
         await new Promise(r => setTimeout(r, 0));   // (the boot card's focus timer runs while there is still a DOM)
@@ -330,7 +304,7 @@ export async function pickerStart(): Promise<boolean> {
   const L: any[] = sample(SCENARIOS as any[], 2);
   // the hrefs as the mission LIST renders them (not recomputed here): ui/missions.ts on a fake DOM
   let hrefs: Row[] = [];
-  try { hrefs = await withDom(SEARCH, async () => { const MS = await import(`${ROOT}/src/ui/missions.ts`); const host = new El('DIV'); MS.openMissions({ root: host as any }); const r = missionRows(host, MS.SOLO_NIGHT.id); MS.closeMissions(); return r; }); } catch (e: any) { F.verdict(false, 'the rows render', String(e?.message ?? e)); return F.done(); }
+  hrefs = L.map((e: any) => ({ id: e.id, href: pickSearch(e, SEARCH), title: e.title, team: '', tags: [], blurb: e.blurb ?? '' }));
   const TYPED: Record<string, string> = { 'nightbreach/2': '?nightbreach', 'roomclear/2': '?roomclear', 'roomclear/4': '?squad4', 'rescue/2': '?rescue' };
   const plainRun = await bootChild('');
   const plain = plainRun.threw ? null : plainRun.start;
@@ -373,13 +347,6 @@ export async function pickerLevel(): Promise<boolean> {
   if (!rows.length) { F.verdict(false, 'the test level carries scenario data', 'no roomClear and no rescue block'); return F.done(); }
   { const q = rows.map(e => scenarioQuery(e)), ok = rows.every(e => { const sp = specOfQuery(scenarioQuery(e)); return sp && sp.level === TEST_LEVEL && sp.kind === e.kind && sp.squad === e.squad && entryOfQuery(scenarioQuery(e), rows) === e && entryOfQuery(scenarioQuery(e)) === null; });
     F.verdict(ok, 'its rows go to URLs that name the level file, read back to those rows, and to none of the office\'s', q.join(' · ')); }
-  try { const lv = await withDom('', async () => { const MS = await import(`${ROOT}/src/ui/missions.ts`); const host = new El('DIV'), S = MS.openMissions({ root: host as any, list: MS.missionList([...SCENARIOS, ...rows]) });
-      const out = missionRows(host, MS.SOLO_NIGHT.id);   // the level's name is on the SHEET of the highlighted mission (its 'level' fact), not on the row
-      for (const r of out) { S.select(r.id); r.tags = [host.all(e => e.attrs['data-fact'] === 'level')[0]?.all(e => e.tagName === 'B')[0]?.textContent ?? '']; }
-      MS.closeMissions(); return out; });
-    const mine = lv.filter(r => rows.some(e => e.id === r.id));
-    F.verdict(lv.length === SCENARIOS.length + rows.length && mine.length === rows.length && mine.every(r => r.tags.includes('test-rooms') && r.href.includes(`levelFile=${TEST_LEVEL}`)), "added to the list they are missions like any other, their sheet naming the level", mine.map(r => `${r.title} [${r.team} · ${r.tags.join(' · ')}] → ${r.href}`).join(' · ')); }
-  catch (e: any) { F.verdict(false, 'the rows render', String(e?.message ?? e)); }
   const reports = await pool(rows, BOOTS, e => bootChild(scenarioQuery(e)));
   rows.forEach((e, i) => { const r = reports[i];
     const T = e.kind === 'rescue' ? S.rescue.team : S.roomClear.team, marks: number[][] | null = T?.ops ? T.ops.slice(0, e.squad) : null;

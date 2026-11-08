@@ -12,12 +12,13 @@ import type { Input } from './input';
 import type { OrderTarget, SquadOrders } from './orders';
 import { CMDRING } from './cmdring';
 import { crossToRust } from './crossing';
+import { locked } from '../view/seatview';
 
 export const PLAN_STATS = { goals: 0, split: 0, rings: 0, none: 0 };
 
 /** SHIFT + THE KEY ADDS A GOAL (CMDRING.goals): on Sam's own squad — and on a tutorial mission only from the step that teaches it (the frame's action
  *  `goal`, rails.ts: locked on every lesson that never lists it, and until its step on the one that does) */
-export const goalsOn = (S: SquadOrders): boolean => CMDRING.goals && CMDRING.on && S.sams && !S.g.rails?.locks('goal');
+export const goalsOn = (S: SquadOrders): boolean => CMDRING.goals && CMDRING.on && S.sams && !locked(S.g.view, 'goal');
 /** what the men who have nobody to give say */
 export const GOAL_NONE = "nobody's free for that.";
 /** WHO TAKES A GOAL ADDED ON `t` (CMDRING.goals has the rule), and how they come to: 'his' — a teammate under the cursor (where it still picks one,

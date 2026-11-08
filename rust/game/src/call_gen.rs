@@ -74,7 +74,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 92 => { let a1: f64 = Io::r(&mut i); let a2: Option<f64> = Io::r(&mut i); let r = crate::kitload::load_ref(g, a1, a2); r.w(&mut o);  }
 93 => { let a1: f64 = Io::r(&mut i); let a2: crate::kit::MemberKit = Io::r(&mut i); let a3: Option<f64> = Io::r(&mut i); let r = crate::kitload::load_worn(g, a1, &a2, a3); r.w(&mut o);  }
 94 => { let a1: V3 = Io::r(&mut i); crate::marks::bang_scorch(g, a1);  }
-95 => { let mut a1: crate::cmdring::RingState = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let a3: f64 = Io::r(&mut i); let a4: f64 = Io::r(&mut i); let a5: f64 = Io::r(&mut i); crate::cmdring::ring_pin(g, &mut a1, a2, a3, a4, a5); a1.w(&mut o); }
 96 => { let mut a1: crate::cmdring::RingState = Io::r(&mut i); let a2: InputId = Io::r(&mut i); let a3: f64 = Io::r(&mut i); let a4: f64 = Io::r(&mut i); let a5: Option<f64> = Io::r(&mut i); let a6: Option<f64> = Io::r(&mut i); let r = crate::cmdring::ring_want(g, &mut a1, a2, a3, a4, a5, a6); r.w(&mut o); a1.w(&mut o); }
 97 => { let a1: GuardId = Io::r(&mut i); crate::workstow::stow_fired(g, a1);  }
 98 => { let a1: GuardId = Io::r(&mut i); let a2: V3 = Io::r(&mut i); crate::belief::cover(g, a1, a2);  }
@@ -266,8 +265,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 382 => { let a1: crate::lightswitch::WallSwitch = Io::r(&mut i); let a2: bool = Io::r(&mut i); let a3: CharId = Io::r(&mut i); crate::lightswitch::flip_switch(g, &a1, a2, a3);  }
 383 => { let a1: PlayerId = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let r = crate::lightswitch::switch_near(g, a1, a2); r.w(&mut o);  }
 384 => { let a1: PlayerId = Io::r(&mut i); let a2: crate::game::Verb = Io::r(&mut i); let r = crate::lightswitch::switch_act(g, a1, a2); r.w(&mut o);  }
-385 => {  let r = crate::interact::empty_thing(g); r.w(&mut o);  }
-386 => { let a1: Option<crate::interact::EmptyThing> = Io::r(&mut i); let r = crate::interact::empty_word(g, a1.as_ref()); r.w(&mut o);  }
 387 => {  let r = crate::interact::cancel_sustained(g); r.w(&mut o);  }
 389 => { let a1: f64 = Io::r(&mut i); let a2: V3 = Io::r(&mut i); crate::samstun::stagger_player(g, a1, a2);  }
 391 => { let a1: GuardId = Io::r(&mut i); let r = crate::stalk::stalk_key_can(g, a1); r.w(&mut o);  }
@@ -311,16 +308,13 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 474 => { let a1: GuardId = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let a3: Option<f64> = Io::r(&mut i); let a4: Option<V3> = Io::r(&mut i); let r = crate::squadsmoke::squad_arc_to(g, a1, a2, a3, a4); r.w(&mut o);  }
 475 => { let a1: Vec<GuardId> = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let r = crate::squadsmoke::squad_smoke_thrower(g, &a1, a2); r.w(&mut o);  }
 476 => { let a1: Vec<(GuardId, f64)> = Io::r(&mut i); crate::squad40::squad40_stage(g, &a1);  }
-477 => {  let r = crate::squad40::squad40_plans(g); r.w(&mut o);  }
-478 => { let a1: crate::squadthrow::SquadThrowKind = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let a3: V3 = Io::r(&mut i); let a4: Option<f64> = Io::r(&mut i); let r = crate::throwplan::throw_flight(g, a1, a2, a3, a4); r.w(&mut o);  }
 479 => { let a1: Vec<GuardId> = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let a3: crate::squadthrow::SquadThrowKind = Io::r(&mut i); let r = crate::squadthrow::squad_thrower(g, &a1, a2, a3); r.w(&mut o);  }
 480 => { let a1: Vec<GuardId> = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let a3: crate::squadthrow::SquadThrowKind = Io::r(&mut i); let a4: Option<bool> = Io::r(&mut i); let a5: Option<bool> = Io::r(&mut i); let r = crate::squadthrow::squad_throw_plan(g, &a1, a2, a3, a4, a5); r.w(&mut o);  }
 481 => { let a1: V3 = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let a3: Option<crate::squadthrow::SquadFragCatchesMoved> = Io::r(&mut i); let a4: Option<bool> = Io::r(&mut i); let a5: Option<bool> = Io::r(&mut i); let a6: Option<crate::squadthrow::SquadFragCatchesBurst> = Io::r(&mut i); let r = crate::squadthrow::squad_frag_catches(g, a1, a2, a3, a4, a5, a6.as_ref()); r.w(&mut o);  }
 482 => { let a1: V3 = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let r = crate::squadthrow::squad_stun_catches(g, a1, a2); r.w(&mut o);  }
-483 => { let mut a1: Option<crate::squadthrow::SquadThrowKept> = Io::r(&mut i); let r = crate::squadthrow::squad_throw_plans(g, a1.as_mut()); r.w(&mut o); a1.w(&mut o); }
 486 => {  crate::squadnet::squad_net_tick(g);  }
 487 => { let a1: crate::orders::OrderTargetDoor = Io::r(&mut i); let a2: Option<bool> = Io::r(&mut i); let r = crate::autopilot::auto_entries(g, &crate::seats::here(g), a1, a2); r.w(&mut o);  }
-488 => { let a1: crate::orders::OrderTarget = Io::r(&mut i); let a2: Option<bool> = Io::r(&mut i); let a3: Option<Vec<GuardId>> = Io::r(&mut i); let r = crate::autopilot::auto_pick(g, &a1, a2, a3.as_deref()); r.w(&mut o);  }
+488 => { let a1: crate::orders::OrderTarget = Io::r(&mut i); let a2: Option<bool> = Io::r(&mut i); let a3: Option<Vec<GuardId>> = Io::r(&mut i); let r = crate::autopilot::auto_pick(g, &crate::seats::here(g), &a1, a2, a3.as_deref()); r.w(&mut o);  }
 489 => { let a1: crate::orders::OrderTarget = Io::r(&mut i); let r = crate::autopilot::auto_quick(g, &a1); r.w(&mut o);  }
 490 => { let a1: crate::orders::OrderTarget = Io::r(&mut i); let a2: Option<crate::autopilot::AutoPick> = Io::r(&mut i); let r = crate::autopilot::auto_hint(g, &a1, a2.as_ref()); r.w(&mut o);  }
 491 => {  let r = crate::kitanim::kit_sling_rest(g); r.w(&mut o);  }
@@ -658,7 +652,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 957 => {  crate::orders::squad_orders_loaded(g);  }
 963 => { let a1: Option<f64> = Io::r(&mut i); let r = crate::orders::squad_orders_pick(g, a1); r.w(&mut o);  }
 967 => { let a1: Vec<GuardId> = Io::r(&mut i); let a2: crate::orders::OrderTarget = Io::r(&mut i); let r = crate::orders::squad_orders_quick_for(g, &a1, &a2); r.w(&mut o);  }
-971 => {  let r = crate::orders::squad_orders_ring_view(g); r.w(&mut o);  }
 973 => { let a1: V3 = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let a3: f64 = Io::r(&mut i); let r = crate::orders::squad_orders_spots_at(g, a1, a2, a3); r.w(&mut o);  }
 974 => { let a1: DoorId = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let a3: Vec<GuardId> = Io::r(&mut i); let a4: Option<Vec<GuardId>> = Io::r(&mut i); let r = crate::orders::squad_orders_stack_posts(g, a1, a2, &a3, a4.as_deref()); r.w(&mut o);  }
 977 => { let a1: DoorId = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let a3: V3 = Io::r(&mut i); let a4: Option<bool> = Io::r(&mut i); let r = crate::orders::squad_orders_glass_eyes(g, a1, a2, a3, a4); r.w(&mut o);  }

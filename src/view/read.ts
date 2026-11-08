@@ -125,8 +125,74 @@ export function readNote(b: Uint8Array): Note { const I = new In(b), r = readNot
 export interface SquadView { posture: string | null; who: string; picked: boolean; mates: MateLine[]; notes: Note[] }
 function readSquadViewIn(I: In): SquadView { return { posture: I.bool() ? I.str() : null, who: I.str(), picked: I.bool(), mates: I.list(() => readMateLineIn(I)), notes: I.list(() => readNoteIn(I)) }; }
 export function readSquadView(b: Uint8Array): SquadView { const I = new In(b), r = readSquadViewIn(I); if (I.p !== b.length) throw new Error(`the view: SquadView is ${b.length} bytes and ${I.p} were read`); return r; }
-export interface TickView { mission: MissionView | null; radio: RadioRow[]; bubbles: BubbleView[]; me: number; place: string; kit: KitView; marks: MarksView; aim: AimView; worn: WornView[]; squad: SquadView | null; corner: Note[] }
-function readTickViewIn(I: In): TickView { return { mission: I.bool() ? readMissionViewIn(I) : null, radio: I.list(() => readRadioRowIn(I)), bubbles: I.list(() => readBubbleViewIn(I)), me: I.float64(), place: I.str(), kit: readKitViewIn(I), marks: readMarksViewIn(I), aim: readAimViewIn(I), worn: I.list(() => readWornViewIn(I)), squad: I.bool() ? readSquadViewIn(I) : null, corner: I.list(() => readNoteIn(I)) }; }
+export interface RailPrompt { line: string; n: number; of: number; note: string | null; watch: boolean }
+function readRailPromptIn(I: In): RailPrompt { return { line: I.str(), n: I.uint32(), of: I.uint32(), note: I.bool() ? I.str() : null, watch: I.bool() }; }
+export function readRailPrompt(b: Uint8Array): RailPrompt { const I = new In(b), r = readRailPromptIn(I); if (I.p !== b.length) throw new Error(`the view: RailPrompt is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface RailCard { title: string | null; text: string }
+function readRailCardIn(I: In): RailCard { return { title: I.bool() ? I.str() : null, text: I.str() }; }
+export function readRailCard(b: Uint8Array): RailCard { const I = new In(b), r = readRailCardIn(I); if (I.p !== b.length) throw new Error(`the view: RailCard is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface RailsView { prompt: RailPrompt | null; card: RailCard | null; mark: Vec3 | null; arrow: Vec3 | null; lineMen: number[]; open: string[]; rows: string[] | null; orders: string[] | null; stalkShut: boolean; teachesHold: boolean; noLasers: boolean; sky: Vec3 | null }
+function readRailsViewIn(I: In): RailsView { return { prompt: I.bool() ? readRailPromptIn(I) : null, card: I.bool() ? readRailCardIn(I) : null, mark: I.bool() ? [I.float64(), I.float64(), I.float64()] : null, arrow: I.bool() ? [I.float64(), I.float64(), I.float64()] : null, lineMen: I.list(() => I.float64()), open: I.list(() => I.str()), rows: I.bool() ? I.list(() => I.str()) : null, orders: I.bool() ? I.list(() => I.str()) : null, stalkShut: I.bool(), teachesHold: I.bool(), noLasers: I.bool(), sky: I.bool() ? [I.float64(), I.float64(), I.float64()] : null }; }
+export function readRailsView(b: Uint8Array): RailsView { const I = new In(b), r = readRailsViewIn(I); if (I.p !== b.length) throw new Error(`the view: RailsView is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface LessonView { step: number; of: number; id: string | null; finished: boolean; over: boolean; settling: boolean; asksView: boolean; rails: RailsView | null }
+function readLessonViewIn(I: In): LessonView { return { step: I.uint32(), of: I.uint32(), id: I.bool() ? I.str() : null, finished: I.bool(), over: I.bool(), settling: I.bool(), asksView: I.bool(), rails: I.bool() ? readRailsViewIn(I) : null }; }
+export function readLessonView(b: Uint8Array): LessonView { const I = new In(b), r = readLessonViewIn(I); if (I.p !== b.length) throw new Error(`the view: LessonView is ${b.length} bytes and ${I.p} were read`); return r; }
+export type ThrowKind = 'frag' | 'stun' | 'shell';
+const ThrowKindWords: readonly ThrowKind[] = ['frag', 'stun', 'shell'];
+function readThrowKindIn(I: In): ThrowKind { return I.word(ThrowKindWords, 'ThrowKind'); }
+export type Tone = 'red' | 'blue' | 'gold';
+const ToneWords: readonly Tone[] = ['red', 'blue', 'gold'];
+function readToneIn(I: In): Tone { return I.word(ToneWords, 'Tone'); }
+export interface ThrowLine { man: number; kind: ThrowKind; from: Vec3; points: Vec3[]; land: Vec3; walk: Vec3[] | null; preview: boolean; kill: number; wound: number; tone: Tone | null }
+function readThrowLineIn(I: In): ThrowLine { return { man: I.float64(), kind: readThrowKindIn(I), from: [I.float64(), I.float64(), I.float64()], points: I.list(() => [I.float64(), I.float64(), I.float64()]), land: [I.float64(), I.float64(), I.float64()], walk: I.bool() ? I.list(() => [I.float64(), I.float64(), I.float64()]) : null, preview: I.bool(), kill: I.float64(), wound: I.float64(), tone: I.bool() ? readToneIn(I) : null }; }
+export function readThrowLine(b: Uint8Array): ThrowLine { const I = new In(b), r = readThrowLineIn(I); if (I.p !== b.length) throw new Error(`the view: ThrowLine is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface RingWedge { key: number; text: string; off: boolean; opens: boolean }
+function readRingWedgeIn(I: In): RingWedge { return { key: I.float64(), text: I.str(), off: I.bool(), opens: I.bool() }; }
+export function readRingWedge(b: Uint8Array): RingWedge { const I = new In(b), r = readRingWedgeIn(I); if (I.p !== b.length) throw new Error(`the view: RingWedge is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface RingPin { at: Vec3; ox: number; oy: number; edgeX: number; edgeY: number }
+function readRingPinIn(I: In): RingPin { return { at: [I.float64(), I.float64(), I.float64()], ox: I.float64(), oy: I.float64(), edgeX: I.float64(), edgeY: I.float64() }; }
+export function readRingPin(b: Uint8Array): RingPin { const I = new In(b), r = readRingPinIn(I); if (I.p !== b.length) throw new Error(`the view: RingPin is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface RingView { x: number; y: number; zoom: number; lit: number; tone: Tone | null; caption: string; wedges: RingWedge[]; pin: RingPin | null }
+function readRingViewIn(I: In): RingView { return { x: I.float64(), y: I.float64(), zoom: I.float64(), lit: I.float64(), tone: I.bool() ? readToneIn(I) : null, caption: I.str(), wedges: I.list(() => readRingWedgeIn(I)), pin: I.bool() ? readRingPinIn(I) : null }; }
+export function readRingView(b: Uint8Array): RingView { const I = new In(b), r = readRingViewIn(I); if (I.p !== b.length) throw new Error(`the view: RingView is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface HandRingView { x: number; y: number; zoom: number; lit: number; wedges: RingWedge[]; pin: RingPin | null }
+function readHandRingViewIn(I: In): HandRingView { return { x: I.float64(), y: I.float64(), zoom: I.float64(), lit: I.float64(), wedges: I.list(() => readRingWedgeIn(I)), pin: I.bool() ? readRingPinIn(I) : null }; }
+export function readHandRingView(b: Uint8Array): HandRingView { const I = new In(b), r = readHandRingViewIn(I); if (I.p !== b.length) throw new Error(`the view: HandRingView is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface EmptyView { word: string; kind: string; dist: number | null }
+function readEmptyViewIn(I: In): EmptyView { return { word: I.str(), kind: I.str(), dist: I.bool() ? I.float64() : null }; }
+export function readEmptyView(b: Uint8Array): EmptyView { const I = new In(b), r = readEmptyViewIn(I); if (I.p !== b.length) throw new Error(`the view: EmptyView is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface PlanWay { from: Vec3; own: Vec3[] | null; stops: Vec3[] }
+function readPlanWayIn(I: In): PlanWay { return { from: [I.float64(), I.float64(), I.float64()], own: I.bool() ? I.list(() => [I.float64(), I.float64(), I.float64()]) : null, stops: I.list(() => [I.float64(), I.float64(), I.float64()]) }; }
+export function readPlanWay(b: Uint8Array): PlanWay { const I = new In(b), r = readPlanWayIn(I); if (I.p !== b.length) throw new Error(`the view: PlanWay is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface PlanMan { man: number; tag: string; tone: Tone | null; age: number; way: PlanWay | null; mark: Vec3; there: boolean; held: boolean; aim: number | null; watch: Vec3 | null; onDoor: boolean }
+function readPlanManIn(I: In): PlanMan { return { man: I.float64(), tag: I.str(), tone: I.bool() ? readToneIn(I) : null, age: I.float64(), way: I.bool() ? readPlanWayIn(I) : null, mark: [I.float64(), I.float64(), I.float64()], there: I.bool(), held: I.bool(), aim: I.bool() ? I.float64() : null, watch: I.bool() ? [I.float64(), I.float64(), I.float64()] : null, onDoor: I.bool() }; }
+export function readPlanMan(b: Uint8Array): PlanMan { const I = new In(b), r = readPlanManIn(I); if (I.p !== b.length) throw new Error(`the view: PlanMan is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface PlanWho { man: number; at: Vec3; tone: Tone | null }
+function readPlanWhoIn(I: In): PlanWho { return { man: I.float64(), at: [I.float64(), I.float64(), I.float64()], tone: I.bool() ? readToneIn(I) : null }; }
+export function readPlanWho(b: Uint8Array): PlanWho { const I = new In(b), r = readPlanWhoIn(I); if (I.p !== b.length) throw new Error(`the view: PlanWho is ${b.length} bytes and ${I.p} were read`); return r; }
+export type KeyCap = 'none' | 'plate' | 'dark' | 'lit';
+const KeyCapWords: readonly KeyCap[] = ['none', 'plate', 'dark', 'lit'];
+function readKeyCapIn(I: In): KeyCap { return I.word(KeyCapWords, 'KeyCap'); }
+export type WaitWhy = 'stack' | 'tool' | 'charge' | 'thr' | 'drill' | 'wall' | 'pair';
+const WaitWhyWords: readonly WaitWhy[] = ['stack', 'tool', 'charge', 'thr', 'drill', 'wall', 'pair'];
+function readWaitWhyIn(I: In): WaitWhy { return I.word(WaitWhyWords, 'WaitWhy'); }
+export interface PlanDoor { door: string | null; a: Vec3; b: Vec3; tone: Tone | null; key: string | null; now: boolean; cap: KeyCap; why: WaitWhy }
+function readPlanDoorIn(I: In): PlanDoor { return { door: I.bool() ? I.str() : null, a: [I.float64(), I.float64(), I.float64()], b: [I.float64(), I.float64(), I.float64()], tone: I.bool() ? readToneIn(I) : null, key: I.bool() ? I.str() : null, now: I.bool(), cap: readKeyCapIn(I), why: readWaitWhyIn(I) }; }
+export function readPlanDoor(b: Uint8Array): PlanDoor { const I = new In(b), r = readPlanDoorIn(I); if (I.p !== b.length) throw new Error(`the view: PlanDoor is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface PlanThrow { man: number; tag: string; tone: Tone | null; kind: ThrowKind; preview: boolean; from: Vec3; walk: Vec3[]; arc: Vec3[]; land: Vec3; reach: number }
+function readPlanThrowIn(I: In): PlanThrow { return { man: I.float64(), tag: I.str(), tone: I.bool() ? readToneIn(I) : null, kind: readThrowKindIn(I), preview: I.bool(), from: [I.float64(), I.float64(), I.float64()], walk: I.list(() => [I.float64(), I.float64(), I.float64()]), arc: I.list(() => [I.float64(), I.float64(), I.float64()]), land: [I.float64(), I.float64(), I.float64()], reach: I.float64() }; }
+export function readPlanThrow(b: Uint8Array): PlanThrow { const I = new In(b), r = readPlanThrowIn(I); if (I.p !== b.length) throw new Error(`the view: PlanThrow is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface SeatPlan { men: PlanMan[]; who: PlanWho[]; you: Vec3 | null; doors: PlanDoor[]; throws: PlanThrow[]; mode: boolean }
+function readSeatPlanIn(I: In): SeatPlan { return { men: I.list(() => readPlanManIn(I)), who: I.list(() => readPlanWhoIn(I)), you: I.bool() ? [I.float64(), I.float64(), I.float64()] : null, doors: I.list(() => readPlanDoorIn(I)), throws: I.list(() => readPlanThrowIn(I)), mode: I.bool() }; }
+export function readSeatPlan(b: Uint8Array): SeatPlan { const I = new In(b), r = readSeatPlanIn(I); if (I.p !== b.length) throw new Error(`the view: SeatPlan is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface PlanView { own: SeatPlan; others: SeatPlan[] }
+function readPlanViewIn(I: In): PlanView { return { own: readSeatPlanIn(I), others: I.list(() => readSeatPlanIn(I)) }; }
+export function readPlanView(b: Uint8Array): PlanView { const I = new In(b), r = readPlanViewIn(I); if (I.p !== b.length) throw new Error(`the view: PlanView is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface QuietView { place: string; holder: string; thing: string; outs: string; bare: string }
+function readQuietViewIn(I: In): QuietView { return { place: I.str(), holder: I.str(), thing: I.str(), outs: I.str(), bare: I.str() }; }
+export function readQuietView(b: Uint8Array): QuietView { const I = new In(b), r = readQuietViewIn(I); if (I.p !== b.length) throw new Error(`the view: QuietView is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface TickView { mission: MissionView | null; radio: RadioRow[]; bubbles: BubbleView[]; me: number; place: string; kit: KitView; marks: MarksView; aim: AimView; worn: WornView[]; squad: SquadView | null; corner: Note[]; lesson: LessonView | null; throws: ThrowLine[]; ring: RingView | null; hand: HandRingView | null; empty: EmptyView | null; plan: PlanView | null; live: boolean; quiet: QuietView | null }
+function readTickViewIn(I: In): TickView { return { mission: I.bool() ? readMissionViewIn(I) : null, radio: I.list(() => readRadioRowIn(I)), bubbles: I.list(() => readBubbleViewIn(I)), me: I.float64(), place: I.str(), kit: readKitViewIn(I), marks: readMarksViewIn(I), aim: readAimViewIn(I), worn: I.list(() => readWornViewIn(I)), squad: I.bool() ? readSquadViewIn(I) : null, corner: I.list(() => readNoteIn(I)), lesson: I.bool() ? readLessonViewIn(I) : null, throws: I.list(() => readThrowLineIn(I)), ring: I.bool() ? readRingViewIn(I) : null, hand: I.bool() ? readHandRingViewIn(I) : null, empty: I.bool() ? readEmptyViewIn(I) : null, plan: I.bool() ? readPlanViewIn(I) : null, live: I.bool(), quiet: I.bool() ? readQuietViewIn(I) : null }; }
 export function readTickView(b: Uint8Array): TickView { const I = new In(b), r = readTickViewIn(I); if (I.p !== b.length) throw new Error(`the view: TickView is ${b.length} bytes and ${I.p} were read`); return r; }
 export type UnderKind = 'floor' | 'door' | 'none' | 'foe';
 const UnderKindWords: readonly UnderKind[] = ['floor', 'door', 'none', 'foe'];
@@ -236,12 +302,33 @@ export function readTeamThing(b: Uint8Array): TeamThing { const I = new In(b), r
 export interface TeamMan { here: boolean; title: string; sub: string; pair: string; changed: boolean; words: string; pouches: CardPouches; gun: string; icon: string; can: boolean; clip: boolean; things: TeamThing[]; worn: string }
 function readTeamManIn(I: In): TeamMan { return { here: I.bool(), title: I.str(), sub: I.str(), pair: I.str(), changed: I.bool(), words: I.str(), pouches: readCardPouchesIn(I), gun: I.str(), icon: I.str(), can: I.bool(), clip: I.bool(), things: I.list(() => readTeamThingIn(I)), worn: I.str() }; }
 export function readTeamMan(b: Uint8Array): TeamMan { const I = new In(b), r = readTeamManIn(I); if (I.p !== b.length) throw new Error(`the view: TeamMan is ${b.length} bytes and ${I.p} were read`); return r; }
-export interface TeamView { size: number; sizes: TeamSize[]; note: string; cards: boolean; asIssued: boolean; squad: string; pool: string; walls: boolean; kits: TeamKit[]; men: TeamMan[]; frags: number; smoke: number; bangs: number }
-function readTeamViewIn(I: In): TeamView { return { size: I.float64(), sizes: I.list(() => readTeamSizeIn(I)), note: I.str(), cards: I.bool(), asIssued: I.bool(), squad: I.str(), pool: I.str(), walls: I.bool(), kits: I.list(() => readTeamKitIn(I)), men: I.list(() => readTeamManIn(I)), frags: I.float64(), smoke: I.float64(), bangs: I.float64() }; }
-export function readTeamView(b: Uint8Array): TeamView { const I = new In(b), r = readTeamViewIn(I); if (I.p !== b.length) throw new Error(`the view: TeamView is ${b.length} bytes and ${I.p} were read`); return r; }
 export interface KeptText { key: string; text: string }
 function readKeptTextIn(I: In): KeptText { return { key: I.str(), text: I.str() }; }
 export function readKeptText(b: Uint8Array): KeptText { const I = new In(b), r = readKeptTextIn(I); if (I.p !== b.length) throw new Error(`the view: KeptText is ${b.length} bytes and ${I.p} were read`); return r; }
 export interface Pressed { ok: boolean; why: string; passed: string; changed: string[]; kept: KeptText[] }
 function readPressedIn(I: In): Pressed { return { ok: I.bool(), why: I.str(), passed: I.str(), changed: I.list(() => I.str()), kept: I.list(() => readKeptTextIn(I)) }; }
 export function readPressed(b: Uint8Array): Pressed { const I = new In(b), r = readPressedIn(I); if (I.p !== b.length) throw new Error(`the view: Pressed is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface TeamView { size: number; sizes: TeamSize[]; note: string; cards: boolean; asIssued: boolean; squad: string; pool: string; walls: boolean; kits: TeamKit[]; men: TeamMan[]; frags: number; smoke: number; bangs: number; link: string }
+function readTeamViewIn(I: In): TeamView { return { size: I.float64(), sizes: I.list(() => readTeamSizeIn(I)), note: I.str(), cards: I.bool(), asIssued: I.bool(), squad: I.str(), pool: I.str(), walls: I.bool(), kits: I.list(() => readTeamKitIn(I)), men: I.list(() => readTeamManIn(I)), frags: I.float64(), smoke: I.float64(), bangs: I.float64(), link: I.str() }; }
+export function readTeamView(b: Uint8Array): TeamView { const I = new In(b), r = readTeamViewIn(I); if (I.p !== b.length) throw new Error(`the view: TeamView is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface SettingChoice { id: string; label: string; title: string; on: boolean; shown: boolean }
+function readSettingChoiceIn(I: In): SettingChoice { return { id: I.str(), label: I.str(), title: I.str(), on: I.bool(), shown: I.bool() }; }
+export function readSettingChoice(b: Uint8Array): SettingChoice { const I = new In(b), r = readSettingChoiceIn(I); if (I.p !== b.length) throw new Error(`the view: SettingChoice is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface Setting { key: string; label: string; live: boolean; shown: boolean; moved: boolean; note: string; choices: SettingChoice[] }
+function readSettingIn(I: In): Setting { return { key: I.str(), label: I.str(), live: I.bool(), shown: I.bool(), moved: I.bool(), note: I.str(), choices: I.list(() => readSettingChoiceIn(I)) }; }
+export function readSetting(b: Uint8Array): Setting { const I = new In(b), r = readSettingIn(I); if (I.p !== b.length) throw new Error(`the view: Setting is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface StartRow { id: string; title: string; kind: string; group: string; groupTitle: string; groupLine: string; place: string; blurb: string; lean: string; leanWords: string; level: string; levelWords: string; squad: number; teamWords: string; teamTag: string; unplayed: boolean; offList: boolean; packs: boolean; asIssued: boolean; lesson: boolean; ways: string[]; pick: string; line: string; pickSquad: number; link: string }
+function readStartRowIn(I: In): StartRow { return { id: I.str(), title: I.str(), kind: I.str(), group: I.str(), groupTitle: I.str(), groupLine: I.str(), place: I.str(), blurb: I.str(), lean: I.str(), leanWords: I.str(), level: I.str(), levelWords: I.str(), squad: I.float64(), teamWords: I.str(), teamTag: I.str(), unplayed: I.bool(), offList: I.bool(), packs: I.bool(), asIssued: I.bool(), lesson: I.bool(), ways: I.list(() => I.str()), pick: I.str(), line: I.str(), pickSquad: I.float64(), link: I.str() }; }
+export function readStartRow(b: Uint8Array): StartRow { const I = new In(b), r = readStartRowIn(I); if (I.p !== b.length) throw new Error(`the view: StartRow is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface SheetView { id: string; settings: Setting[]; link: string; base: string; asPick: boolean; quiet: boolean }
+function readSheetViewIn(I: In): SheetView { return { id: I.str(), settings: I.list(() => readSettingIn(I)), link: I.str(), base: I.str(), asPick: I.bool(), quiet: I.bool() }; }
+export function readSheetView(b: Uint8Array): SheetView { const I = new In(b), r = readSheetViewIn(I); if (I.p !== b.length) throw new Error(`the view: SheetView is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface ShortView { now: string; nowScenario: boolean; next: string; nextMission: string; title: string; line: string; link: string; otherLink: string }
+function readShortViewIn(I: In): ShortView { return { now: I.str(), nowScenario: I.bool(), next: I.str(), nextMission: I.str(), title: I.str(), line: I.str(), link: I.str(), otherLink: I.str() }; }
+export function readShortView(b: Uint8Array): ShortView { const I = new In(b), r = readShortViewIn(I); if (I.p !== b.length) throw new Error(`the view: ShortView is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface BriefView { id: string; title: string; kind: string; groupTitle: string; place: string; blurb: string; leanWords: string; team: string; level: string; scene: string; teaches: string[]; way: number }
+function readBriefViewIn(I: In): BriefView { return { id: I.str(), title: I.str(), kind: I.str(), groupTitle: I.str(), place: I.str(), blurb: I.str(), leanWords: I.str(), team: I.str(), level: I.str(), scene: I.str(), teaches: I.list(() => I.str()), way: I.float64() }; }
+export function readBriefView(b: Uint8Array): BriefView { const I = new In(b), r = readBriefViewIn(I); if (I.p !== b.length) throw new Error(`the view: BriefView is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface StartView { rows: StartRow[]; named: string; pick: string; playing: boolean; first: string }
+function readStartViewIn(I: In): StartView { return { rows: I.list(() => readStartRowIn(I)), named: I.str(), pick: I.str(), playing: I.bool(), first: I.str() }; }
+export function readStartView(b: Uint8Array): StartView { const I = new In(b), r = readStartViewIn(I); if (I.p !== b.length) throw new Error(`the view: StartView is ${b.length} bytes and ${I.p} were read`); return r; }

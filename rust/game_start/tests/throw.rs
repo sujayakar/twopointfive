@@ -3,7 +3,7 @@
 use game_start::play::{dist, Opts, Play};
 
 const SEEDS: [u32; 2] = [5, 6];
-const LEVELS: [&str; 6] = ["office.json", "block-squads.json", "records.json", "barracks.json", "killhouse.json", "hall.json"];
+const LEVELS: [&str; 6] = ["office.json", "block.json", "records.json", "barracks.json", "killhouse.json", "hall.json"];
 
 /// What one held menu showed and what its press gave: the man, the spot he throws from (None: where he stands), where it comes to rest.
 type Throw = (game::ids::GuardId, Option<[f64; 2]>, [f64; 2]);
@@ -21,7 +21,8 @@ fn lit(p: &mut Play, at: [f64; 2]) -> bool {
 
 /// What the picture shows of the lit row.
 fn shown(p: &mut Play) -> Option<Throw> {
-    game::squadthrow::squad_throw_plans(&mut p.g, None).into_iter().find(|x| x.preview == Some(true)).map(|x| (x.gd, x.walk.as_ref().map(|_| flat(x.from)), flat(x.land)))
+    let v = game::view::throws_view(&p.g, &game::seats::here(&p.g));
+    v.into_iter().find(|x| x.preview).map(|x| (*p.g.guards.iter().find(|&&gd| p.id_of(gd) == x.man).unwrap(), x.walk.as_ref().map(|_| flat(x.from)), flat(x.land)))
 }
 
 /// the walks to a throw under way, by man: the spot asked for and the spot he walks to

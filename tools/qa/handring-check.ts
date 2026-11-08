@@ -41,7 +41,7 @@ export async function handRingCheck(): Promise<boolean> {
   const verdict = (ok: boolean, what: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };
   console.log(`\n=== handring: his own actions are a ring that stays${BRK ? ' (the rule and the board\'s layer off: must fail)' : ONE ? ` (HANDRING.${ONE} off, the rest on: its block must fail)` : ''} ===`);
   const { HANDRING } = await import(`${ROOT}/src/game/handring.ts`); const { HANDSLOT } = await import(`${ROOT}/src/game/handslot.ts`); const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
-  const { WALLSNAP } = await import(`${ROOT}/src/game/wallsnap.ts`); const { handRingView } = await import(`${ROOT}/src/game/interact.ts`);
+  const { WALLSNAP } = await import(`${ROOT}/src/game/wallsnap.ts`); const handRingView = (g: any) => g.view.hand;
   const { WHISTLE_STATS, WHISTLE } = await import(`${ROOT}/src/game/whistle.ts`); const { BACKKEY } = await import(`${ROOT}/src/game/backkey.ts`);
   const { knobsSnapshot, applyKnobs } = await import(`${ROOT}/src/game/journal.ts`); const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
   const K = await import(`${ROOT}/src/host/keymap.ts`); const { TWOGEARS } = await import(`${ROOT}/src/game/player.ts`);
@@ -135,10 +135,7 @@ export async function handRingCheck(): Promise<boolean> {
       slot = true; hand = false; const offCodes = codes(), off = !BRK && K.gameCode('KeyE') === '' && K.gameCode('Space') === 'Space' && K.gameCode('KeyV') === 'KeyV' && K.keyText('Space  pull it shut') === 'Space  pull it shut';
       verdict(on && words && bound && reset && plain && off, 'the page\'s board: his own actions on E, Space and V give nothing, the words follow; the whistle can be given a key; without the slot the ring is on Space; rule off, as it was',
         `on: ${seenOn}, the rest themselves ${on} · words ${words} ("${w1}", "${w3.slice(27)}") · the whistle put on G ${bound}, Reset ${reset} · no slot: ${noSlot} ${plain} · rule off: ${offCodes} ${off}`); }
-    // ---- the lesson's line
-    { const { lessonLine } = await import(`${ROOT}/src/game/lesson.ts`), LINE = 'V whistles the cook out. Then hide at once, at the mark';
-      rule(true); const on = `▸ ${lessonLine(LINE)}`; rule(false); const off = `▸ ${lessonLine(LINE)}`;
-       }
+    // (the lesson's line that names the whistle's old key: rust/game_rules/src/lesson, line_on_page and its tests)
     // ---- recordings
     { HANDRING.on = true; const snap: any = JSON.parse(JSON.stringify(knobsSnapshot(g)));
       const old = JSON.parse(JSON.stringify(snap)); delete old.tables.HANDRING;

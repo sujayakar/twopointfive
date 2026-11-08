@@ -97,9 +97,6 @@ A replacement that answers for the function does not change the Rust tick: a tap
 | file:line | replaces |
 |---|---|
 | tools/qa/attention-check.ts:70 | s2.g.fogOfWar.hidden |
-| tools/qa/autocam-check.ts:173 | fog.hidden |
-| tools/qa/autocam-check.ts:256 | fog.hidden |
-| tools/qa/autocam-check.ts:431 | g.fogOfWar.hidden |
 | tools/qa/breathsteam-check.ts:131 | fog.hidden |
 | tools/qa/breathsteam-check.ts:149 | fog.hidden |
 | tools/qa/burstglass-probes.ts:141 | R.g.destr.blast |

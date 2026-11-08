@@ -1,7 +1,7 @@
 // Written by tools/draw/gen.ts from rust/game_draw. To change a section, change it there.
 
 /** the stamp of the sections this was made from: a module of another stamp is refused (drawn.ts) */
-export const LAYOUT = 4186130778;
+export const LAYOUT = 3923819931;
 /** what a host may ask for: what is made together is asked for together */
 export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, air = 2048, levelLook = 4096, snow = 8192, all = 16383 }
 /** each section's place in the table the module answers with */
@@ -79,50 +79,62 @@ export const enum View {
   at = 3,
   /** f32 × 3 */
   follow = 6,
-  /** f32: which way he aims, on the plan */
-  aimYaw = 9,
   /** f32 × 3: where his aim meets the world */
-  aim = 10,
+  aim = 9,
   /** u32: the view is another man's: nothing leans on the cursor */
-  spectating = 13,
+  spectating = 12,
   /** f32 × 3: the view is held off the follow point by this much (a peek round a wall's end), and kicked for this frame's picture by that much */
-  peek = 14,
+  peek = 13,
   /** f32 × 3 */
-  kick = 17,
+  kick = 16,
   /** u32: the tick cut the view to here: once each time the count moves */
-  cuts = 20,
+  cuts = 19,
   /** f32 × 3 */
-  cut = 21,
+  cut = 20,
   /** u32: a show or a level's script holds the view here: where it looks, and from how far and which way (0: nobody does) */
-  pinned = 24,
+  pinned = 23,
   /** f32 × 3 */
-  pin = 25,
+  pin = 24,
   /** f32 */
-  pinYaw = 28,
+  pinYaw = 27,
   /** f32 */
-  pinPitch = 29,
+  pinPitch = 28,
   /** f32 */
-  pinDistance = 30,
+  pinDistance = 29,
   /** u32: the tick turned the host's own view: 1 its yaw · 2 its pitch · 4 its distance · 8 where it looks, to these */
-  turned = 31,
+  turned = 30,
   /** f32 */
-  yaw = 32,
+  yaw = 31,
   /** f32 */
-  pitch = 33,
+  pitch = 32,
   /** f32 */
-  distance = 34,
+  distance = 33,
   /** f32 × 3 */
-  target = 35,
+  target = 34,
   /** u32: what a lesson does not let the hand do to the view: 1 turn it · 2 zoom it */
-  locks = 38,
+  locks = 37,
+  /** u32: what the game is set to, for a screen that sets it: hits do nothing to him, the men think, unlimited ammunition, it saves by itself, the wall hold's feel, walking into a wall takes it, the command key tapped twice calls the squad in */
+  god = 38,
+  /** u32 */
+  thinks = 39,
+  /** u32 */
+  ammo = 40,
+  /** u32 */
+  autosave = 41,
+  /** u32 */
+  wallFeel = 42,
+  /** u32 */
+  wallPress = 43,
+  /** u32 */
+  fallIn = 44,
   /** u32: the run's end card is due: 1 it was lost, 2 won (0: not yet) */
-  ended = 39,
+  ended = 45,
   /** f32: night vision's amount, and how hard he has just been hit */
-  night = 40,
+  night = 46,
   /** f32 */
-  hit = 41,
+  hit = 47,
   /** words a row */
-  row = 42,
+  row = 48,
 }
 
 /** the sky: one row */
@@ -651,14 +663,10 @@ export const enum Rim {
   id = 0,
   /** u32: 0 the first player's, 1 the red pair's, 2 the blue pair's, 3 the second player's */
   hue = 1,
-  /** u32: he is on his feet */
-  up = 2,
-  /** f32 */
-  light = 3,
   /** f32 × 3 */
-  at = 4,
+  at = 2,
   /** words a row */
-  row = 7,
+  row = 5,
 }
 
 /** a fire that burns, or that the fog's picture has burning still */

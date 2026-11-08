@@ -206,7 +206,7 @@ export async function standoffFlank() {
     if (exc) fails.push('exception: ' + exc.split('\n')[0]);
     if (facingDrift > 0.1 || Math.abs(wrapAngle((faceDeg - FACE) * DEG)) > 0.1) fails.push(`staging: the pair's facing ${f1(faceDeg)}° drifted ${f2(facingDrift)} rad (want ${FACE}° held)`);
     if (victim.state === 'dead') fails.push(`Novak died in the arm: ${victim.downKind}/${victim.downBy}`);
-    let anyFired = false, anyLine = false;
+    let anyLine = false;
     for (const m of men) {
       const T = tracks.get(m)!; const name = m.callsign;
       if (T.enterT < 0) { fails.push(`${name} never entered the standoff`); continue; }
@@ -217,7 +217,6 @@ export async function standoffFlank() {
       if (T.shots.length) fails.push(`${name} FIRED ${T.shots.length} round(s) with Novak alive in the arm and muzzle discipline on: ${T.shots.map(s => `${f2(s.t - t0)}s ${Math.round(s.rear)}° clear ${f2(s.clear)}${s.ok ? ' (flank line)' : ''}`).join(', ')}`);
       if (T.lineFrames >= 30 && T.aimOnLine < 0.9 * T.lineFrames) fails.push(`${name} held the flank line ${f1(T.lineFrames * DT)} s but had the pistol up on Sam for only ${f1(T.aimOnLine * DT)} s of it (want ≥ 90 %: point, don't fire)`);
       if (m.fireCd < 0.35 - 1e-6) fails.push(`${name}'s fireCd ${f2(m.fireCd)} at the end (want ≥ 0.35 kept in hand for when the shield goes)`);
-      if (T.shots.length) anyFired = true;
     }
     if (!two) {
       const T = tracks.get(A)!;

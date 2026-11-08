@@ -32,7 +32,7 @@ export interface OutlineMan {
    *  (x0, y0, x1, y1; y down; all 0 = he is behind the lens) — the pass draws inside it alone */
   rect: [number, number, number, number];
 }
-/** What the host hands the pass (one object, written in place: ui/findme.ts findMeOutline, once a frame): the player's own man, and his teammates
+/** What the host hands the pass (one object, written in place: ui/findmeviz.ts findMeOutline, once a frame): the player's own man, and his teammates
  *  (`mates`: a pool, each with its own `on`). `on` false = no pass at all, whatever the mates say. */
 export interface OutlineFrame extends OutlineMan {
   mates: OutlineMan[];

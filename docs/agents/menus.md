@@ -7,7 +7,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 <!-- was CLAUDE.md lines 16–36 -->
 - **The menus are one game from the title to the debrief** (the look is ONE set of tokens, `src/ui/theme.ts menuTheme()`: warm black ground, sand text, flat fills, one orange
   accent `--m-accent`, the condensed heading stack `--m-head`; a canvas — the floor plans, the debrief's map — and the kit silhouettes repeat `--m-base` as literals).
-  A fresh visit opens on the TITLE (`#menu.title`: **Play ›** · Options · Controls · Extras; Esc does nothing there; W S walk the buttons; EXTRAS swaps the title's own column for the list `ui/menu.ts EXTRAS` — the replay viewer `replay.html`, the listening page `sounds.html`, each a link, a NAME only (its sentence is the row's tooltip), Esc back; the BENCHMARK row starts in place from the live title (no page load), and its link — what it is while the page boots, or in a new tab — is `?bench` with the visitor's other flags kept; the list's first section was the two SHOWCASES, removed 2026-10-17 with their `?demo` / `?breach` pages (docs/agents/showcases.md); the one-file build lists no tool page (tools/artifact-page.py marks its page, `onePage`); the replay viewer's bar carries a '‹ Game' link back; a row added to that table is a row on the title; what is kept and not listed, and why: rebuild/menus/tools.md); Play opens the ONE STARTING PAGE
+  A fresh visit opens on the TITLE (`#menu.title`: **Play ›** · Options · Controls · Extras; Esc does nothing there; W S walk the buttons; EXTRAS swaps the title's own column for the list `ui/title.ts EXTRAS` — the replay viewer `replay.html`, the listening page `sounds.html`, each a link, a NAME only (its sentence is the row's tooltip), Esc back; the BENCHMARK row starts in place from the live title (no page load), and its link — what it is while the page boots, or in a new tab — is `?bench` with the visitor's other flags kept; the list's first section was the two SHOWCASES, removed 2026-10-17 with their `?demo` / `?breach` pages (docs/agents/showcases.md); the one-file build lists no tool page (tools/artifact-page.py marks its page, `onePage`); the replay viewer's bar carries a '‹ Game' link back; a row added to that table is a row on the title; what is kept and not listed, and why: rebuild/menus/tools.md); Play opens the ONE STARTING PAGE
   (`src/ui/startpage.ts` over the mission list — its rows in the list's six groups (`scenarios.ts MISSION_GROUPS`: training · raids · strongholds · against the clock · quiet alone · quiet as two), drawn the way Door Kickers 2 draws them (the maintainer, 10-11: "i think door kickers did a good job of this btw"): the groups are PICTURE TILES in a rail down the left (`.mgroups .msec`, each its first mission's picture and its count), the open group's missions a grid of CARDS, a picture and a name each (`.mgrid .mrow`, canvas `.mthumb`), the short list's missions first inside a group, a fresh visit on the compound — in TWO STEPS named on its head, MISSION › TEAM & KIT — Enter goes on, Esc back, Enter on the second deploys. A CARD'S PICTURE IS KEY ART (the maintainer: "our art style is also AWESOME so if we could highlight it" · "use your artistic judgment though. and it can be synthetic, doesn't have to literally be a rendering of the level. make it awesome!"): `public/assets/menu/<mission id>.jpg` + `stills.json`, read by `src/ui/menuStills.ts` (a list that is not there is the answer for the page's life; a server that did not answer, a 5xx or a picture that failed to load is asked for again when the Play page is next opened: `bun run tools/qa/menustills-check.ts`); since 10-12 (the maintainer on the composed set: "they look somewhat staged and repetitive … our actual gameplay looks a lot cooler!") a mission that has a RECIPE in `tools/menu-shots/recipes.cjs` is a frame of the REAL page with the mission being PLAYED — `PORT=<dev server> node tools/menu-shots/shots.cjs make [id …]` boots the mission's own link in headless Chromium on the software adapter, the in-page director (`director.js`, `window.__ms`: Sam on the walk keys, the squad on the menu's own orders, the fight the game's) plays it undrawn until the recipe's moment (a can going off, a round, a wall coming down), then the frame is drawn from a pinned camera (minutes a picture; `shots.cjs serve` keeps pages alive for finding a moment; a recipe gives that KIND of moment again, not the frame to the pixel; across a group no two recipes share a moment, an hour and a camera) — every other mission's picture is still the first set, COMPOSED offline by `bun run tools/menu-art.ts [id …]` — a small CPU path tracer over the mission's own level file (the look's file where there is one: boxes, paint, lamps, door leaves) with a cast placed for the picture (weapon lights and lasers in haze on a loud mission, one man low in the dark and the guards' torches on a quiet one, the captor and hostages on a rescue), its mood by GROUP (`MOODS`) and its place by mission where the level's own start does not make a picture (`PIN`: the office is five missions on one floor, each its own corner); not a capture of play, nothing is marked on it, no GPU; a mission added since gets its picture by running the tool again (two to three minutes a picture a core at the shipped 760 × 475, 40 samples: about half an hour for all of them on four cores; do not edit the tool while it runs — each picture is a fresh bun that imports it. A picture is aimed by its `PIN` row: who stands where — `at`, `ops`, `guards`, `aim` —, the camera — `look`, `yaw`, `pitch`, `dist` —, doors `ajar`, and any field of the mood) and until then — and in the one-file build, which has no folder beside it — its card shows the menu's own drawn model of the place, `src/ui/planArt.ts` (the level's boxes tilted as the game's camera sees them, walls cut, flat fills: also THE MAP SHEET beside the list, where the way in is marked). MISSION: the
   cards · a briefing · a SETUP rail of one row a setting with its VALUE (Difficulty, its three levers hung under it (a fourth since 10-23, `You're told`: stealth.md), Hour,
   Weather, Way in; a click or its key steps it; the list's own setting rows are parked unseen in `.mstore` and the rail's rows press THEIR buttons, so what a setting may
@@ -74,12 +74,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   Windows, at a text size other than the first, on the debrief of a finished squad mission, or the squad-down card's replay picture where the pair wraps.
 - **A quiet mission's gear screen** (2026-10-17; the maintainer: "quiet missions should have different gear screen stuff i think. be creative!", with
   show, not tell). The PANEL side of Team & kit; the picture beside it is the kit figure's. WHEN: the mission's kind is quiet or it is the solo night
-  (`ui/kitNoise.ts quietGear`), on the Team & kit step only: the root wears `quiet` (`ui/startpage.ts`, where `nokit` is set). `kitloud` on the address = the
+  (`ui/startpage.ts quietGear`), on the Team & kit step only: the root wears `quiet` (`ui/startpage.ts`, where `nokit` is set). `kitloud` on the address = the
   panel as it was. No FROZEN row and no knob: it is DOM and a look, nothing of the simulation reads it. WHAT: (1) THE LIGHTS ARE OUT: on that step
   `--m-accent` is the bright sand, so nothing on it is orange and the night picture is the brightest thing in the window. The cursor is told from 'on' by
   weight, not hue: 4 px of bright sand under a tab or beside a tile where 'on' is 2 px of the soft ink, and the roster's standing bar a step dimmer. Deploy is
   a hollow block: a 2 px bright frame over a faint fill. (2) THE TILES ARE SOLID PLATES (the panel colour at 0.94; they were the edge colour at 0.06), so the
-  room does not show through them. (3) THE KIT READS BY NOISE, no word added: every tile carries `data-noise` 0‥3 (`ui/kitCard.ts`, from `kitNoise.ts`), and
+  room does not show through them. (3) THE KIT READS BY NOISE, no word added: every tile carries `data-noise` 0‥3 (`ui/kitCard.ts`, the row's `noise`: `kit/card.rs kit_noise`), and
   on this screen a tile above 0 wears a sound mark after its VALUE (the name's line is cut with an ellipsis in a narrow tile and holds the arrows): a source
   and one arc = heard nearby and no alarm (an event with `loud: false`: the suppressed pistol's report, a smoke can's pop, a sticky camera fired and
   striking), two arcs = the floor hears it (`loud: true`: every other gun, a stun can, a charge, a hammer), three = the blast (`level: 2`, frag.ts blast(): a
@@ -90,8 +90,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   ground colour with its words at 0.65 (0.9 under the cursor). (5) AN EMPTY BIG SLOT is a tile like the rest, not the card's widest; with something in
   it, it is wide as before. NOT DONE: the tiles keep their order (the keys walk the card's own order); the picture's fade under the panel is the kit
   figure's (`ui/kitView.ts`). A loud mission's screen is untouched (every rule is under `#missions.one.quiet.pane-loadout`). CHECKS:
-  `bun run tools/qa/kitnoise-check.ts` (a gun's step follows `WEAPONS[...].report` for Sam's three picks and six teammate cards; each fixed step still has
-  the line of the game it copies; which missions take the look; `KITNOISE_BREAK=1` must fail) and `PORT=<port> node tools/qa/quietgear-page.cjs [outDir]`
+  the walk (`tools/qa/cards-page.ts`: every tile's `noise`) and `PORT=<port> node tools/qa/quietgear-page.cjs [outDir]`
   (the real page in headless Chromium, no adapter needed: the look, the steps, a mark on every noisy tile and no other, the big slot, the quiet set's gun at
   one arc, `kitloud`, the solo night, a loud mission as it was, no page error; `QUIETGEAR_BREAK=1` must fail). SEEN: stills of the real page's DOM at
   1440 × 900 with no picture behind it, looked at twice by a reviewer. NOT SEEN BY ANYONE: the panel over the real night picture, on a GPU, in a Mac's
@@ -114,7 +113,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   QUERY: a query that changes (less its team size) drops the element and makes another — no entry in the tab's history, and a message counts only from the
   current element's own window. The child says `boot` (its listener is up; on every load of its page the parent answers with
   `{kv:'frame', cx, cy, h, w, man, door, left, right, keep}` off the `.onefig` column's rectangle and, where the tiles moved since its query, the kit), `ready`, `none`, and — still mode only — `held` (`dip` / `undip` are gone, 10-14: the child dissolves inside itself, below; the parent ignores the two words from an older child). A kit
-  tile or the size is `{kv:'kit', members: KIT.members, squad}` at once on the first change (the LEADING edge; `kitMs` 150 only folds the clicks that follow into one more), and nothing else: the CHILD works out what moved. The loop's two more: `{kv:'sel', who, field}` (the open card's member and the highlighted tile's field, null on the sets;
+  tile or the size is `{kv:'kit', members, squad}` (members: `KitViewAsk.worn`, each place's kept text off the desk's TeamView, as objects) at once on the first change (the LEADING edge; `kitMs` 150 only folds the clicks that follow into one more), and nothing else: the CHILD works out what moved. The loop's two more: `{kv:'sel', who, field}` (the open card's member and the highlighted tile's field, null on the sets;
   said when either changes and again at every `boot`) and `{kv:'pause', on}` (on = the step is not showing: `show(null)`). THE PARENT'S HOOKS, all there are: `MemberCardOpts.onSelect(i, field)` (kitCard.ts, told from `draw()` when the highlighted row is another: a move changes no value, so `onChange` never said it), `loadout.ts` routes it to its `onPaint`, `startpage.ts paintFigure` passes `member: s.member, row: s.card?.at()` to `show()`. NOBODY STANDS IN FOR THE PICTURE (10-20; the maintainer: "we show the original gear screen before the new one fades in. let's just remove the old one with
   the figure?"). The standing man (the software-drawn kit figure, removed 2026-11-07) used to be drawn while the child booted past a 2.5 s grace (`KIT_VIEW.grace`, `?kitgrace`: both gone) and
   wherever there was no picture; a second game slower than the grace therefore showed him for a moment and then faded the picture in over him. Now `show()` answers true for every case the column is the picture's:
@@ -897,10 +896,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (the real page, software adapter; `cards` needs no adapter). Page: rebuild/run-verdict/read-first.md. Never seen on a GPU.
 - **Three rows are cut from the mission list** (2026-10-13; the maintainer's tap 'Three' on the card 'Cut which untuned rows from the mission list?'): `room-clear-four` (the office a third
   time), `quiet-yard-alone` and `quiet-yard-two` (the quiet engine's test floor). Each carries `offList: true` in `scene/scenarioList.ts` and STAYS A ROW OF THE TABLE: its id, its own
-  address, its level file, `?loadout=<id>` and every tool that names it hold as they were. Switch `OFFLIST_UI.on` (ui/missions.ts): off in the module and in every harness (the list
-  probes pin the whole table, untouched), put ON by the page's entry (main.ts); `?offlist=0` = every row drawn, as before the cut. `listedMissions(list, keep)`
-  is what the Missions screen and the start page draw when handed no list; `keep` = a row the visit names, so a cut row asked for by name is drawn that once. `missionList()` is
-  unchanged (lookups by id go through it). CHECK: `probes.ts offlist` (family missions; `tools/qa/offlist-check.ts`), `OFFLIST_BREAK=1` fails; the real page by
+  address, its level file, `?loadout=<id>` and every tool that names it hold as they were. The list is the desk's (`start_list.rs start_rows`): `?offlist=0` = every row drawn, as before the cut; a row the visit names is drawn that once. (2026-11-08: `OFFLIST_UI`, `listedMissions` and their check went with the page's list; `rust/game_run/tests/desk.rs` holds this.) The real page by
   `tools/qa/unplayed-page.cjs` (no card for a cut row; cards again under `?offlist=0`). To cut another row: `offList: true` on it and its id in BOTH `CUT` lists
   (`tools/qa/offlist-check.ts`, `tools/qa/unplayed-page.cjs`) — only on the maintainer's yes. Of the block pair, `block-squads` was cut later the same day (the bullet at the
   foot of this file); `block-four` stays. Never seen on a GPU.
@@ -982,9 +978,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **Copy and paste for loadouts** (2026-10-15; the maintainer: "we should have copy and paste for loadouts"). On Team & kit, **C** copies the picked
   man's kit and **V** pastes the copied kit onto the picked man, from any row of the screen (Ctrl / Cmd with either is the same press while no text on the
   page is selected and no text field has the keys; the two go by the LETTER on the key, `kitCard.ts clipKey`, the screen's other keys by their place);
-  the mouse has two buttons, Copy and Paste, at the end of the card's sets line (`.kc-clip`, not `.kc-set`: the sets are still three). `src/ui/kitCard.ts
-  KIT_CLIP {card}` holds the one copied card for the page's life (UI only: nothing in the game reads it, so it is no knob table and no journal row;
-  the headless probes' cards carry the two buttons as the page's do). THE
+  the mouse has two buttons, Copy and Paste, at the end of the card's sets line (`.kc-clip`, not `.kc-set`: the sets are still three). The desk
+  holds the one copied card for the page's life (`rust/game_run/src/desk.rs`: nothing in the game reads it, so it is no knob table and no journal row). THE
   PASTE IS `src/game/kit.ts kitPaste(i, card)` (`kitPastePeek` = the same, nothing written): every ROW of the man's own card takes the copied card's
   value where his row offers it, a count over his row's most comes down to it, a row that cannot show the copied value at all keeps what it had (a
   teammate's wall charge onto you with your own charges off: your big slot is left alone; your cans as one of four splits with the pouches rule off), a field his card has no row for is never
@@ -1009,12 +1004,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   such keyboard has pressed them. Never seen on a GPU, and never with the door picture up behind the tiles; nobody has played it.
 - **What a mission hands you shows on your card** (2026-10-16; a claim from the stealth goal's mission wand). A quiet mission played under the fog hands Sam
   its sticky cameras for the visit (`scenarioRun.ts` → `stickyVisitSet`, to a card with the rifle) and, where `quietfog.ts QUIETFOG.wand` is up (`?quietwand=0` off), an
-  optical wand with them; the Team & kit card read his CARD alone and said 'none' beside both. Now `ui/kitCard.ts MemberCardOpts.lent(field)` (how many the mission
-  hands him) marks a tile `lent` where that is more than his card carries: the thing drawn lit, the mission's count and `LENT_WORD` ('mission’s') where the
+  optical wand with them; the Team & kit card read his CARD alone and said 'none' beside both. Now `CardRow.lent` (how many the mission
+  hands him; `kit/card.rs card_row`) marks a tile `lent` where that is more than his card carries: the thing drawn lit, the mission's count and `LENT_WORD` ('mission’s') where the
   value is (his own count stays in front where he carries some: '1 · mission’s 2', so an arrow pressed still moves a number he can see), the row's line for
-  a man who has it, no pouch rate on a tile the mission alone fills, the reason on the tile (`LENT_WHY`). `ui/loadout.ts lentNow` answers it from the link
-  the screen would deploy, by the game's own rule (`scenarioRun.ts quietCamsOfLink`, the one `startFromQuery` hands to `stickyVisitSet`; the fog lever and
-  the Sticky cameras row are on that screen: moved, the card is drawn again); you only, quiet missions only, never a lesson, no cameras beside a pistol.
+  a man who has it, no pouch rate on a tile the mission alone fills, the reason on the tile (`LENT_WHY`). The desk answers it from the link
+  the screen would deploy, by the game's own rule (`scenario_run quiet_cams_of_link`; the fog lever and
+  the Sticky cameras row are on that screen: moved, the desk is told and the card is drawn again); you only, quiet missions only, never a lesson, no cameras beside a pistol.
   `worn()` lays the same kit over the card it hands the drawn man, so the figure beside the card is dressed in what he will deploy with. NOTHING OF THE
   CARD OR THE POUCHES IS WRITTEN: whether lent kit stays free is the maintainer's open call on the stealth page, and a card that carries its own wand still
   pays its pouch. CHECK: `bun run tools/qa/kitlent-check.ts` (`probes.ts kitlent`, also in `kit`; a headless DOM, it sets its
@@ -1144,12 +1139,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   frames, one seed: the same digest on as off; a pair and one man count what they counted; the long hall, whose block names nobody since the shield left the game, counts the same;
   60,000 seeded presses (eight seeds, sizes stepped) left no stored or worn card outside the rule on either stand. Never seen on a GPU; nobody has
   played it.
-- **The gear screen is a tree, the same for every man** (`src/game/kittree.ts KITTREE`, `kit.ts buildRowsTree`, `ui/kitCard.ts`, `ui/gunStats.ts`; the
+- **The gear screen is a tree, the same for every man** (`src/game/kittree.ts KITTREE`, `kit.ts buildRowsTree`, `ui/kitCard.ts`, `kit/card.rs`; the
   maintainer on Team & kit, 10-19: "have some way of distinguishing different guns (some stats?), attachments like silencer should be per gun", "should
   be symmetric between self and teammates (e.g. 40mm should work for squad)", "sponge should show up, should only be part of stealth builds by default",
   "ideally rifle attachments should be hierarchical under the rifle", "weird that we have both per person defaults (as issued, quiet set, etc.) and
   then squad kits too"). With the switch on a card is ONE list of rows for you and a teammate. Each gun is a box: its tile, FOUR BARS of what it is
-  good at (Reach, Volume, Handling, Quiet: `gunStats(def)` read off its `weapons.ts` row, no number shown), and under it, set in off a rule, what
+  good at (Reach, Volume, Handling, Quiet: `kit/card.rs gun_stats` read off its weapon's row, no number shown), and under it, set in off a rule, what
   rides on it (`KitRow.under`): its own suppressor (`suppressed` the primary's, `sideCan` the secondary's, new), the weapon light, and on a gun with
   the tube (`KitRow.has`) sponge rounds (`rings`, a row for the first time), 40 mm grenades and sticky cameras. A suppressor row on a gun that has no
   choice reads what it is and has no arrows (`KitRow.fixed`), and its flag is put back on when the gun leaves the card (`homeCans`): a paste or a kit
@@ -1173,9 +1168,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   build before, row for row: one Suppressor row for both a teammate's guns, your guns always suppressed, five sponge rounds with every launcher, the
   two rows of sets. CHECK: `bun run tools/qa/kittree-check.ts` (`probes.ts kittree`: `kittree-rows`, `-guns`, `-sponge`, `-off`, `-mate40`; 31 lines on both
   stands, `KITTREE_BREAK=1` fails 18 on the frozen stand and 19 on the shipped one); a deploy off the card,
-  `tools/qa/kittree-deploy-page.cjs` (two mission boots on the software adapter, slow). The older card probes that read a row's place (`wand-kit`,
-  `wand-tile`) hold the tree off on every stand (`tools/qa/holds.ts ROWS_BEFORE_THE_TREE`), as `gunslots-check.ts` does in its own `raise`; `loadout-screen`
-  reads 'bare' in a man's line where it read the old row's name, and `kitpaste-page.cjs` counts the one Reset on a tree card. A MAN'S LINE under his
+  `tools/qa/kittree-deploy-page.cjs` (two mission boots on the software adapter, slow). The older card probes that read a row's place (`wand-kit`) hold the tree off on every stand (`tools/qa/holds.ts ROWS_BEFORE_THE_TREE`), as `gunslots-check.ts` does in its own `raise`, and `kitpaste-page.cjs` counts the one Reset on a tree card. A MAN'S LINE under his
   name (`kitWords`) names his guns by their picks under the tree, with `bare` after one whose suppressor the card has taken off. LEFT, the
   maintainer's calls: a sponge round costs a pouch and on a quiet run buys nothing over the lent five; the Quiet kit names no sponge; which four
   bars, and their scale (untuned, nobody has compared guns by them in play); a bare Mk 18 in a teammate's hands is the old unsuppressed row, in yours
@@ -1354,7 +1347,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   wall taken without the key. The Controls list and the Options key list do not mention it.
 - **THE OUTLINE IS SETTLED (2026-11-08; his card "Cut as marked").** One row stays: 'Outline in the dark', on as the page starts it. The rows Outline width, strength, fades by, shows under light, full under light, teammate width and colour are gone, a kept line that names them reads as if it did not (`findMeRead`), and the numbers are his hand's: `render/outline.ts OUTLINE` (`wide` 0.25, `opacity` 0.6, `lit` 0.3, `dark` 0.12) and `host/findme.ts OUTLINE_LOOK` (`mates` 0.8, `colour` 0.5). The light meter's mode is gone with `outlineWant`, the frame's `strength` and the shader's blank picture: the rim goes by the picture alone, and a frame with no copy of the composite (none but the first) draws none. A second player down still has his own rim (`findMeOutline`: the line that meant to take it out was read only by the meter, so nothing drawn moved). No switch: a cut. CHECKS: `findme` (`FINDME_BREAK=1` must fail), `teams`, `tools/qa/draw-equal.cjs` base against tip. The bullets below say how the rows came about, and every sentence in them that names a row is history.
 - **Finding your own man, and the camera under the hand: twelve rows on trial in Options > Game (10-19; six, cut to four and back to five 10-20; the outline's width row 10-21, its strength, two light rows, teammates and colour 10-22;
-  `src/host/findme.ts` the table, `src/ui/findme.ts` the ring, the rows and the outline's frame, `src/render/outline.ts` the outline's pass).** From a play test: a new player kept losing his own man on the screen, in the dark and behind
+  `src/host/findme.ts` the table, `src/ui/findme.ts` the rows, `src/ui/findmeviz.ts` the ring and the outline's frame, `src/render/outline.ts` the outline's pass).** From a play test: a new player kept losing his own man on the screen, in the dark and behind
   walls, and reached for a camera that turns the other way and one that snaps behind him. The maintainer asked for settings to play with, none a new
   default THEN (since 10-26 the outline's four rows start at the maintainer's own numbers ON THE PAGE, behind a switch with a `FROZEN_HOLDS` row: THE OUTLINE IS ON, below; what follows is the module and the frozen stand), so there was no switch and no `FROZEN_HOLDS` row: `FINDME` starts as `{ pan: 1, ring: false, outline: false, width: 1, opacity: 0.6, picture: true, lit: 0.3, dark: 0.12, picLit: 0.3, picDark: 0.12, mates: 1, colour: 0.6, turn: 1, behind: false }` on the page and on
   both stands, and at those starts the build is the build as it was (measured against the build head each time: the same game digest and the same
@@ -1363,22 +1356,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   scales `FollowCamera.aimLead` as built; none = he is the middle of the screen wherever the mouse goes), `Ring at your feet` (the gold ring the order
   menu draws, `PLAN.ringM * 1.35`, on at all times; it stands down while the menu's own is up: `PlanFloor.youOn`), `Turn direction` (the camera's key + mouse
   turns the view the other way: one function, `host/findme.ts ctrlTurn`, asked by the loop's orbit and by the engine replay's own Ctrl turn,
-  `replay/engineplay.ts ctrlTurn`), `Double tap Ctrl` (named after the camera's key, `host/keymap.ts camCap`: it reads `Double tap Space` on the page
-  while the Space bar is spare, and `watchCtrlTaps` listens for that key; two short presses, answered as the second comes up, bring the view round over about a quarter
-  of a second to look where he looked at the tap; a hand's orbit, a pin, a show or a spectated man drops it; `TapTwice`: a press held is never a tap,
-  nor one with another key, a button, the wheel or more than 12 px of orbit in it). The maintainer played them 10-20: "aim pan zero and turn
+  `replay/engineplay.ts ctrlTurn`). (A `Double tap` row brought the view round to where he looked, his aim carried with it, until the auto camera took the tap; it left with that mode, 2026-11-08.) The maintainer played them 10-20: "aim pan zero and turn
   direction reversed feel good"; whether those become the starts is his to say.
-  THE DOUBLE TAP AND HIS AIM (10-20, from that play: "the mouse's position probably wasn't at 12 oclock, so the player rotates again after the
-  camera rotates"): he faces the cursor's point in the world and the system cursor stays where it is on the screen, so left to that he turned AGAIN
-  as the view came round. Now his aim is CARRIED with the view (`host/findme.ts AimCarry`, `carryStep`; the loop's `carryAim`, right before each tick
-  samples its input): the game's cursor (`Input.mouseX / mouseY`: the aim ray, the reticle, the input record) is put where the point he faced at the
-  tap stands on the screen, the same way out from his feet as he walks, until the hand takes the mouse up again: moved more than `CARRY.letGoPx`
-  (10 px; less is a tremor), a button pressed, or any key off `CARRY_KEYS` (walking, pace, stance, light, goggles, reload and Ctrl hold it; any other
-  key may read the cursor, so it gives the cursor back first). Then the cursor is the real mouse to the pixel before the tick reads it, and he turns
-  to it. A button held since before the tap does not let go (a burst goes on to where it was going). It is input as data: the carried cursor is what
-  the tick's record holds. WHAT THE PLAYER SEES THAT IS NEW: while the carry holds, the system's own pointer is not where he aims (it cannot be
-  moved without pointer lock); the reticle is. Behind the same row, nothing with the row off. Truly owning the reticle (the system cursor hidden,
-  ours moved from 12 o'clock on) is still the camera key's own work.
   THE OUTLINE IN THE DARK IS THE RENDERER'S (10-20). The first one, and a `Shape through walls` beside it, were drawn in the overlay's SVG from his
   joints, each limb a stroke as wide as a bare limb with a filter's rim round the lot, and were only ever looked at close in on the office level. From
   a squad level's distance an arm was two pixels wide and the outline was a stick figure's (the loop of his arms a box, his legs a zigzag); the
@@ -1391,7 +1370,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   and the camera is not drawn on. His body, kit and gun are in it because they carry his owner byte; so do a round of his for the frame it leaves the
   muzzle and a charge while his hands set it, and they take the rim too. HOW STRONG is the light meter's word (`host/findme.ts outlineWant`: full at
   `Player.visibility` 0.12 and under, none at 0.3 and over as the rows start, none under the goggles), eased at 6 a second, taken whole on a frame with no time in it
-  (the row flipped under the pause card shows at once). The page fills the frame once a frame (`ui/findme.ts findMeOutline`: off with the row off,
+  (the row flipped under the pause card shows at once). The page fills the frame once a frame (`ui/findmeviz.ts findMeOutline`: off with the row off,
   the man down, and where the HUD's own marks of him stand down: a stun's white-out, attract mode, the kit's picture); `Engine.render` adds the box
   on the picture from the camera it draws with (`outlineBox`; he behind the lens = no pass), so a still or a card's settled frame has its own. WHAT
   IT COSTS: with the row off, nothing: the pass object is not made and `encode` is not called. First frame on: one bind group layout, a small
@@ -1555,20 +1534,19 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NEIGHBOURS' CHECKS MENDED FOR IT: `tween-check.ts` turned its reference camera by a sign written out (`ORBIT_PX * 0.006`) and was red on
   the shipped stand, three lines; the rate is still written out and the way round is now the stand's row (`* FINDME.turn`). `replayturn-check.ts` asked that the row START at 1: it asks
   `FINDME_BUILT`. Three page checks assert the camera as built and now open with `findtuned=0`: `engine-replay-page.cjs` `fog` (Ctrl's turn,
-  its sign) and `turn` (a kept `{turn:-1}` is a row moved off the built start; under the page's own it is the start and is tidied away), and
-  `autocam-page.cjs`'s lines as built ("the look-at followed the cursor": it does not with no pan). `findme-page.cjs` and
+  its sign) and `turn` (a kept `{turn:-1}` is a row moved off the built start; under the page's own it is the start and is tidied away), and `findme-page.cjs` and
   `findme-squad-page.cjs` already did.
   CHECKS: `probes.ts findme` line (12) now also holds the camera handed over (lead none and 100 px turning the view −0.6 rad on a machine that
   kept nothing; lead 0.18 and +0.6 under the word), Normal and the full pan chosen by hand written and still the hand's on the visit after,
   an older line's pan none and reversed read under the word, and the copy of the knobs put back. ALL PASS on both stands, each plain and with
   the word both ways (`TPS_FINDTUNED=1` frozen, `=0` shipped); `FINDTUNED_BREAK=1` failed that line on both (word and line gone). `tween-check` four ways,
-  `replayturn-check`, `autocam-check`, `camspace-check`, `probes.ts shipped` and the `ui` gate (143 lines) pass on both stands.
+  `replayturn-check`, `camspace-check`, `probes.ts shipped` and the `ui` gate (143 lines) pass on both stands.
   `probes.ts all-quick` was NOT run through on either stand (the frozen run was stopped at forty minutes with no FAIL in what it had done).
   `findtuned-page.cjs`, the real page on the software adapter, RUN ONCE at 1024 × 576 on `verylow`: a browser that kept nothing has the
   table at the six tuned rows and its follow camera's lead at 0; the camera's key (Space) held and the mouse really dragged 100 px turns the
   view −0.6 rad there and +0.6 under `?findtuned=0`; Options > Game reads Aim pan None and Turn direction Reversed and Reset keeps them.
-  NOT RUN on this change: `engine-replay-page.cjs`, `autocam-page.cjs`, `findme-page.cjs`, `findme-squad-page.cjs` (the first two were
-  edited: one word on a URL each), and every other page check that opens a fresh browser now does so with no aim lead and the turn
+  NOT RUN on this change: `engine-replay-page.cjs`, `findme-page.cjs`, `findme-squad-page.cjs` (the first was
+  edited: one word on a URL), and every other page check that opens a fresh browser now does so with no aim lead and the turn
   reversed — any that asserts where the look-at sits against the cursor, or which way a held camera key turns, was not looked for beyond a
   grep. NOT MEASURED: nothing of play; no tally moves by reading (no rule reads the two rows) and none was run. NEVER SEEN ON A GPU as a
   fresh browser's start; it is how the maintainer has played on his own machine since 10-20. NOBODY HAS ASKED a first-time player whether
@@ -1576,200 +1554,31 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   labels name the built direction, not the page's.
   SHELVED STILL: `Shape through walls` (no row, no key; a kept line that names it reads without it). A proper one is him drawn once more with the
   depth test off into a mask and filled where a wall hides him: a pass of its own, to be built only once the outline has been seen on a GPU.
-  ONE MODEL HOLDS: pan, turn and behind change the seat's view, which is the player's input and rides the record as data (`cmd.ts`), so a recording
+  ONE MODEL HOLDS: pan and turn change the seat's view, which is the player's input and rides the record as data (`cmd.ts`), so a recording
   replays the view it was made with; the ring and the outline read his position and his light and write nothing of the game's (a run with both on
   and asked every frame is the run with them off, digest for digest: the picture's own, as the fog of war's pass is; no sense and no meter reads
-  the composite after it). Checks: `bun run tools/qa/probes.ts findme` (family `ui`; `FINDME_BREAK=1` = the rows moved and the table not: pan,
-  turn, behind, the carry, the ring, the outline and the teammates' must fail), the same on both stands: its line (10) runs the outline's pass on a stand-in device
+  the composite after it). Checks: `bun run tools/qa/probes.ts findme` (family `ui`; `FINDME_BREAK=1` = the rows moved and the table not:
+  the ring, the outline and the teammates' must fail), the same on both stands: its line (10) runs the outline's pass on a stand-in device
   that writes down what it is asked (nothing while off, one program, no draw until it is in, a scissored draw, never after a failed program);
   `PORT=… node tools/qa/findme-page.cjs` (the real page on the software adapter: the rows exist, move live, are kept over a reload and reset; the
-  outline's program compiles there and draws with no GPU error; a real drag with the camera's key held, a real held press, a real double tap with the mouse to one side
-  and a real move of the mouse after it; the check asks the page which key that is, `__keys.camCap()`, looks for the last row under that name and
-  presses that key, so it follows the page as it opens). NOT DONE: the Controls tab has no line for the double tap. The camera's key is the Space bar
-  on the page while the board leaves it spare (`KEYMAP.camSpace`, docs/agents/player.md); under `?camspace=0` it is Ctrl as it was, and there a double
-  tap is two more presses of it: on Windows Ctrl then W still closes the tab. NEVER SEEN ON A GPU by anyone here; how fast the view should come round,
-  whether 250 / 300 ms is the right tap and 10 px the right let-go are first guesses in `BEHIND`, `TAPTWICE` and `CARRY`.
-- **The camera runs itself: a double tap of the camera's key puts it on, the key held with the mouse or a walk key gives the view back** (`src/host/autocam.ts`,
-  `AUTOCAM.on`, 10-23; the maintainer: "double tap space just turns on auto camera mode, and then space + movement disables to go to manual mode", and "the
-  squad AI is already magical and just tapping Q feels amazing. i think we can do the same for the camera"). SWITCH: on in the page (`?autocam=0` = the page as it
-  was; `?autoturn=0` = it never turns the view, `?autozoom=0` = it never zooms), OFF in the module and on the frozen stand (`FROZEN_HOLDS['AUTOCAM.on']`,
-  `TPS_AUTOCAM=1`), in the knob registry and `JOURNAL_KNOBS` (a recording from before the key replays with it off). The MODE is not the switch: `AUTOVIEW.on`
-  (`host/findme.ts`), off until the key is tapped twice, kept per machine (`localStorage` `twopointsix.autocam`), also the row "Auto camera" in Options > Game,
-  which stands where "Double tap Space" stood (Reset puts it off). With the switch on and the mode never put on the game and the view are the build's, by run
-  digest, on the free and the fixed step.
-  WHAT MOVED: the double tap was the Options row "look where he looks" (`FINDME.behind`, off at the start). Now the tap puts the mode on AND brings the view
-  round as that row did; with the mode on, a tap twice brings it round again. Under `?autocam=0` the old row is back.
-  THE RULE (all in `autoRead` / `autoFrame` / `turnGoal`, called from `host/loop.ts camStep`, which only a tool that steps through `stepFrame` reaches):
-  the look-at is his feet moved toward, in rising order, the middle of the room he is in, the door under his hand or the way out he walks at (and the floor
-  past it), the squad's beat for a few seconds (a door order changing phase, a post newly given), the enemies he could shoot (hostile, in the picture, a clear
-  line: never one `fogOfWar.hidden` says is hidden). It is held inside a box on the screen so he never leaves the middle (`sideM` / `awayM` / `backM`, scaled
-  by the zoom), eased, and frozen while a mouse button is down. NOTHING LEANS ON THE CURSOR (the maintainer had already put the aim pan at none). The zoom is
-  the hand's own, a little tighter in a room and in close-in, wider under the sky and in a fight, and out to fit what is framed; it never zooms in on a fight;
-  the wheel under the key still zooms and that becomes the base. THE TURN: the view is the seat's input (walk keys and the aim ray are read through it), so the
-  view turns by itself only with his feet still for half a second, no button down, no hostile man shown in his line (or within `nearM`, 9 m, in his line or
-  not), no shot for three seconds, and at most once every 2.5 s, for two reasons: a wall stands between the lens and him, or what is framed lies on the lens's side of him. A walk key, a click, the hand taking the cursor back, or anything that would have stopped it
-  beginning ends such a turn where it is. His aim goes round with the view (`AimCarry`); a long turn looks at his point past walls it did not look past before, so `carryStep` takes
-  an `aimOf` and, where the cursor's ray would land off his line, puts the cursor on another point of that line (`CARRY.tries`, `CARRY.heights`): measured on
-  a 141° turn beside a door, 0.01° off at the end and at the most on the way (it was 8° to 38° mid-turn before that). GIVING IT BACK (`autoHand`): the key
-  held and the mouse moved more than 12 px inside 0.4 s, or the key held over a quarter second with a walk key down; two quick taps with a walk key held still
-  put it ON. Going off, the zoom goes back to the hand's own. IT STANDS DOWN, the mode still on, under a pin, a show, a spectated man, plan mode's look point, the sky seat, a puppet, and with him down; it
-  starts no turn while a lesson locks the camera or teaches the view. Sounds are NOT used: the sound list is every sound on the floor, enemy footsteps
-  included, and a camera that leaned toward them would point at men the fog hides.
-  CHECK: `bun run tools/qa/probes.ts autocam` (`tools/qa/autocam-check.ts`, 13 lines: the frame and the turn from made-up scenes; the mode on and off
-  through `stepFrame`; a real door walked at and stood by; a real hostile man shown and fog-hidden; the stand-downs; three CONTROL lines: switch on and mode
-  never on = the same digest and view, the scene read every frame and never used = the same game, the stand words and the journal). ALL PASS on both stands;
-  `AUTOCAM_BREAK=1` (the switch left off) fails four of them on both. On the real page, software adapter: `PORT=… node tools/qa/autocam-page.cjs` (the row,
-  a real double tap, the look-at no longer following the mouse, the key + a real drag, the key + a walk key, kept over a reload, Reset).
-  `findme-page.cjs` now opens the page with `autocam=0` and `findme-check.ts` stands the switch off: their subject is the old row's double tap. One floor (the office), one seed. NOBODY HAS SEEN OR PLAYED
-  IT, AND NEVER ON A GPU: every number in `AUTOCAM` is a first guess (how far it leans, how long it lingers on the squad, the turn's speed and its 2.5 s
-  gap, the zoom range). KNOWN: with the mouse held still, a frame that leans or zooms slides the floor under the cursor, so his aim drifts a little toward
-  where the frame went (worst with the cursor near his feet); the frame freezes under a held button for that reason. No HUD mark says the mode is on: the
-  view coming round is the answer to the tap.
-- **The auto camera may turn in a fight and on the move, smoothly: the sway** (`AUTOCAM.sway`, `src/host/autocam.ts autoSway`, 10-23; the maintainer, of
-  the bullet above: "i think we could play with auto camera moving during battle so long as it does so smoothly. bonus points for being correlated with
-  moment and reversible so it still feels somewhat connected to human control", and then "smoothness is the only thing that's mandatory"). SWITCH: on in the
-  page (`?autosway=0` = the turn rule of the bullet above, only at rest), OFF in the module and on the frozen stand (`FROZEN_HOLDS['AUTOCAM.sway']`,
-  `TPS_AUTOSWAY=1`); a key of the `AUTOCAM` table, so a recording from before it replays with it off (`journal.ts applyKnobs`). Nothing with the mode off.
-  THE RULE: the yaw the hand left the view at is the anchor (`cam.yaw − A.sway`); the sway is a lean round it, a function of the moment and not a sum of
-  turns. It leans toward the middle of the MEN OF THE FIGHT, so the fight comes up the screen where the picture is longest (`swayFight`, 0.6 of the angle to
-  them, 38° at the most; a man of the fight is a hostile man the picture shows who was in his line within `swayLinger`, 2 s, so one stepping in and out of
-  cover does not rock the view; men gone round behind the lens to the other side do not flip the side it took; their middle within 1.5 m of him leans
-  nothing), and, while no fight asks for a lean, toward the side he moves to ("moment" was read as movement: `swayMove`, 14° at 2.5 m/s across the view;
-  straight up or down the screen leans nowhere), 45° in all. SMOOTH IS THE BAR (his one hard rule): what the scene asks for is worked out ten times a second
-  and eased (`swayEase`), the yaw goes to it by a critically damped spring (`swayHz`) whose speed is capped (`swayRate`, 11.5° a second), and every stop or
-  change of mind goes through that spring or a decay: a mouse button down (its speed dies away over a fifth of a second, and it stays stopped 0.6 s after the
-  button comes up, so tapped shots are one stop), a wall (it never goes to a yaw that puts a wall between the lens and him or a man in his line where the
-  hand's own view has none; the share the walls allow falls at once and comes back only after a second clear), the view gone to plan mode or a show (it
-  coasts to a stop and is where it was when the view is his again). REVERSIBLE: the cause gone, it comes back to the hand's yaw, to the bit; a turn the hand
-  made meanwhile is kept. A come-round (the double tap) takes the view from it at once, and a turn at rest waits for it to be home. NOTHING CARRIES HIS AIM
-  through it: the view turns slowly under a live cursor, and a held walk key bends his path at the same slow rate, as in any game whose camera follows.
-  CHECK: `autocam` lines 14 to 16. 14, from made-up scenes: the lean and its first step (a seventh of the cap), home to the bit, the walk, a button and ten
-  tapped shots, a wall and a wall that flickers, the kept side, one of two men in and out each second (3.5° of movement, the worst case: longer out than the
-  linger), the men's middle beside him, a turn by hand mid-lean kept, the switch off; and over ALL of it no step past the cap and no step that differs from
-  the one before by more than the spring can make it. 15: a real hostile man to one side through `stepFrame` on the fixed step (the lean, a second behind a
-  wall and still a man of the fight, home when the fog hides him), and the same with the sway off: the yaw never moves. 16: the stand words and the journal.
-  ALL PASS on both stands; `AUTOSWAY_BREAK=1` fails 14 and 15 on both. Lines 1 to 13 run with the sway off: they are the rule as it was. A second reader
-  simulated the first cut and found a 2.9° jump at the snap home after a hand's tremor, rocking when one of several men peeked and a stutter under tapped
-  fire: all mended, and the rate came down from 26° to 11.5° a second on that reading. Real page: `autocam-page.cjs` walks across the view with the mode on
-  (the lean, the cap, home). One floor, one seed. NOBODY HAS SEEN OR PLAYED IT, NEVER ON A GPU: whether a view that turns under a held walk key and a live
-  cursor is welcome in a fight is the maintainer's to say, and every number is a first guess.
-- **The auto camera's numbers are the player's: a mode and rows on Options, gentle where nobody has chosen** (`AUTOCAM.tune`, the foot of
-  `src/host/autocam.ts`, the rows in `src/ui/findme.ts autoRows`, 10-23; the maintainer, of his first play of the mode: "I was getting a little bit
-  motion sick with my first test of the auto camera. I think it's from like having too much rotation ... come up with like a ton of different
-  options of like modes or like sliders to configure in the settings panel, then we can iterate on that"). WHAT WAS FOUND IN THE CODE: a turn of
-  the mode's own took a share of what was left each second (`turnRate` 5), so it BEGAN at its fastest: a quarter turn opened at about 450 degrees a
-  second, and the double tap's swing (`BEHIND.rate` 12) at more than twice that. A turn at rest for the thing framed on the lens's side is also
-  most of a half turn, each time he stops at a door the lens is past.
-  SWITCH: on in the page (`?autotune=0` = every number the module's, the camera of the two bullets above, and no rows), OFF in the module and on
-  the frozen stand (`FROZEN_HOLDS['AUTOCAM.tune']` and a row for each number gentle moves, `TPS_AUTOTUNE=1`; pinned in `host/standup.ts`). It
-  rides `AUTOCAM`: a recording from before the key replays with the switch off and the numbers it has no word for at the module's, the ones it
-  carries left alone (`autoTuneOld`, `journal.ts applyKnobs`). The view is the seat's input, so no recording and no digest can tell one tuning
-  from another.
-  THE MODES (`AUTO_MODES`; `AUTOTUNE.mode`): `free` = the numbers as built · `gentle` (THE START) = a turn at rest only for a wall that hides
-  him (`restAhead` off), every turn of its own EASED (`turnCap` 30 degrees a second) and the double tap's swing eased too (`swingCap` 180), the
-  fight's lean 15 degrees at 6 a second and none for the way he walks · `rest` = those turns and no lean · `never` = the view turns only by
-  the hand and by the double tap he asks it with (the frame and the zoom go on).
-  THE EASED TURN (`turnEase`, `host/loop.ts comeRound`): a critically damped spring with a top speed and a ramp up to it (`turnRamp` 0.6 s),
-  whose rate is the top speed over `turnLand` (0.24 rad), so it starts from rest, brakes over the same angle at any speed, and lands without
-  going past or stepping; a goal gone round to the other side, or a speed handed on from a faster turn, is braked no harder than a landing
-  brakes. One ended by a walk key, a button or the hand's own turn dies away (`turnCoast`); one under way as the view goes to somebody else
-  (plan mode, the sky seat, a show) ends there. Rules changed WITH it, and only where `turnCap` is over none: the hand's mouse does not end it
-  and his aim is not carried through it (it is seconds long, and slow enough for the hand to follow, as the sway is; a quick turn as built
-  still carries the aim and ends at the mouse); `gap` is counted from where an eased turn or swing is SEEN TO STOP (`turnSeen`, a degree a
-  second: from where it began, a turn stopped midway began again at once; the last of its settling is not waited out). The swing in the mode
-  goes by the same spring under `swingCap`: it keeps the aim carry (the tap is "look where I look"), a walk key does not end it (he may tap
-  on the run, and walks an arc while it turns), a shot does, and the hand taking the view back ends it.
-  THE ROWS, each read off the table and written through `setAutoTune`, a row over a mode kept only while it differs from the mode's own (the
-  mode stays lit and its line reads "This is Gentle with your own changes below"): turn when a wall hides you (`rest`) and turn to face the
-  door ahead (`restAhead`), each on its own; turn speed (`turnCap`; one notch past the fastest is "Quick", the share as built); wait before it
-  turns (`still`); time between turns (`gap`); turn in a fight (`swayFightMax`, to `swayMax`; at none a fight leans nothing for his walk
-  either); lean when you move sideways (`swayMove`); lean speed (`swayRate`; over the speed as built the sway's spring is that much stiffer, or
-  a small lean never reached it); swing when you double tap (`swing`: off, the tap that puts the mode on turns nothing); swing speed
-  (`swingCap`, "Quick" as above); framing (`leanK`, a share of every lean of the frame, to none); framing speed (`lean`); zoom (`zoomAmt`, a
-  share of how far the zoom leaves the hand's own, to none); zoom speed (`zoomRate`); stay on the squad (`beatSecs`). A slider's ends are
-  `AUTO_RANGE`, in the table's units; the notch a mode's own number shows as puts back that number.
-  KEPT PER MACHINE (localStorage `twopointsix.autotune`: the mode and the rows over it; nothing where it is the start), read once as the
-  module loads: a line whose mode this build has not is not read at all, a key of the wrong kind is dropped, a number is held to `AUTO_RANGE`.
-  Reset on Options puts the start back. `?autoturn=0`, `?autozoom=0` and `?autosway=0` still stand over all of it.
-  CHECK: `autocam` lines 17 to 20 (lines 1 to 16 run with the tuning off, on the numbers as built), both stands, `AUTOTUNE_BREAK=1` red on 17,
-  18 and 19: the modes, what is kept and what is refused; gentle's turns and each reason on its own row; the eased turn (from rest, under its
-  top speed, no step, there without going past, every notch a quicker turn, ended midway it dies away); the sway's two mends; the two shares;
-  and through the whole Game on the free and the fixed step: the swing off, the swing eased, a shot ending a slow swing, a wall's turn tick by
-  tick with the mouse moved in the middle of it, a walk key ending it, and the next turn waiting out the gap from there. Not in a line: a turn
-  under way as plan mode opens, and an eased turn meeting a lean of the sway's (lines 17 to 19 run with the sway parked off). `tools/qa/autocam-page.cjs` drives the real page:
-  its old lines under `?autotune=0`, then the page as it opens (a real double tap's swing frame by frame, the rows, a mode clicked, rows slid,
-  a reload, Reset; `ONLY=tune` for those alone).
-  MEASURED (one floor, one seed, headless): a wall's 45 degrees at 10 / 20 / 30 / 40 / 60 / 80 / 100 / 120 degrees a second takes 15.4 / 8.0 /
-  5.5 / 4.2 / 3.0 / 2.4 / 2.0 / 1.7 s, the last part of each a slow settle; its first step is 2.8% of the top speed's, where the turn as
-  built covered 10 degrees of a 120 degree turn in its first frame; a half turn of the swing at 180 degrees a second takes 2.0 s; a walk key
-  at 30 degrees a second leaves 2.5 degrees more.
-  NOT DONE: nothing on the HUD says the mode came on when the swing is off; the springs of the sway and of the turn are two copies of one
-  idea; a recording played back writes its own numbers into the table until the visit ends (the mode's line then says they are not the
-  mode's). The modes' numbers are FIRST GUESSES for his hand to settle (a row he settles on becomes a mode's own). Never seen on a GPU.
-  NOBODY HAS PLAYED IT: whether gentle is calm enough, and whether a slow turn that does not carry his aim reads right, are his to say.
-- **The auto camera comes in on a man he sneaks up on: the soft lock** (`AUTOCAM.lock`, `src/host/autocam.ts` read and frame, 10-23; the
-  maintainer, of a review of Chaos Theory's "closer than ever" chapter: "there's definitely stuff for the auto camera mode to learn"). WHAT THE
-  REVIEW SAYS OF THAT CAMERA (from a machine's rough transcript of its narration, so in our words): with an enemy on screen the camera shifts
-  its focus to him, more strongly the nearer the player gets, as if softly locked on, and most players never notice; in a narrow hall it shifts
-  to the side he is not on to show what is ahead; at a corner it moves out a little to see round it. WHAT WAS FOUND IN THE CODE: the mode leaned
-  the frame half way to the middle of the men he could shoot, never came in on a man in his line ("it never comes in on a fight"), and a held
-  button stilled the frame, so through the whole of a stalk (the held click) the camera did nothing.
-  THE RULE: the man he is stalking (`game/stalk.ts`, while its click is held), or else the nearest hostile man the picture shows in his line
-  who is not `alert` and whom he could take (`close.ts closeSubject`; one searching counts, as for a stalk), is the lock's man from `lockM`
-  (8 m) in. The man it has is kept until another is `lockStick` (0.75 m) nearer and through `lockLinger` (1 s) out of his line (a pillar he
-  passes). NOBODY is the lock's man in a FIGHT: while any hostile man is alert, in the picture or not, and for `lockCalm` (4 s) after; and but for a stalk
-  nobody is while he is not sneaking (the close-in mode's list less the wall hold: the rifle up, a sprint, a body in tow, a kick, a lock, the
-  wand, hands at work; and a throw being aimed. The list is kept by hand beside `close.ts modeNow`). Its strength goes from none at `lockM` to full
-  at `lockNearM` (2 m), eased (`lockEase`). By that strength the frame goes from the middle of the men he could shoot to the middle of the two
-  of them (`lockK`), and the camera goes from where it would be toward the lock's own distance: the place's zoom less `lockIn` (40%), never so
-  near that another man he could shoot leaves the picture's reach (`fitMost` stands; a door ahead and the squad's beat hold the zoom out under
-  it, not the lock in full). The zoom as it was is worked out untouched under it (`A.goal`: the place's own zoom, the band; the lock's is
-  `A.lockTo`), so it begins with no step under the sky and in a room alike. `lockIn` goes by the hand's share of the zoom (`zoomAmt`): with
-  either at none the distance is as it was to the bit. One rule of the zoom gives way to it: "it never comes in on a fight" holds the zoom
-  out while any man is in his line, and the lock's man lets it back in by the lock's strength (else a zoom gone out to fit men earlier would
-  starve it). A man out of his line for the linger, or stalked from behind something, is framed as he was in it. A man he holds keeps the
-  camera in close (the close-in mode's zoom under it) and leaves the frame as it is. A held button stills it as it stills the frame (the
-  strength, and the share it takes: the men he could shoot are still kept in the picture), but for the held click of a stalk or of the wait
-  at a corner (it aims at nothing; the wait is read off the stalk polish's own picture, `stalkWait`), a man in his arm, and letting go once a
-  fight has begun (a stalk the man broke, the button still down: the camera goes back out; a man shot under a held aim with nobody onto him:
-  it waits for the button). A fight stamped ahead of the clock (a checkpoint loaded) is none. The view gone to somebody else (plan mode, a
-  show): the lock lets go at once and the distance is the zoom's own (`autoRest`).
-  NO TURN is added: it moves and zooms the frame only.
-  SWITCH: on in the page (`?autolock=0` = the frame and the zoom as they were), OFF in the module and on the frozen stand
-  (`FROZEN_HOLDS['AUTOCAM.lock']`, `TPS_AUTOLOCK=1`; pinned in `host/standup.ts`). It rides `AUTOCAM`; a recording from before the key replays
-  with it off (`journal.ts applyKnobs`). The view is the seat's input: no digest can tell it on from off.
-  ROWS (under the tuning's, only with the lock on): "Zoom in when you sneak up" (`lockIn`, none to 60%) and "Start zooming in from" (`lockM`,
-  4 to 12 m). They are numbers of every mode, kept as the tuning's rows are.
-  CHECK: `autocam` lines 21 to 23, both stands, `AUTOLOCK_BREAK=1` red on 21 and 22 (`AUTOCAM_BREAK=1` on 22 too). 21, the frame function:
-  the frame and the zoom by the lock's strength from rest with no step; the place's zoom at 1.15 and at 0.92; a plain held button, a stalk's,
-  and the button still down with his man gone (kept in close with nobody onto him, let go in a fight); two men with the lock's share told
-  apart from the fight's; a man in his arm; a second man kept in reach and a door ahead that does not hold it out; `lockIn` at none and
-  `zoomAmt` at none and at a half; the zoom held out for a man in his line as it was (no lock's man, a fight, the lock's zoom at none, the
-  switch off: the last two to the bit) and let in by the lock's man; his man out of the line framed as in it; the view gone to somebody
-  else. 22, the
-  whole Game on the free and the fixed step: a man stood at the end of a clear line and closed on in stages, a button held as he is moved back
-  out, a second man 0.4 m and 1.5 m nearer, the stalked man over the nearest, a man in his arm, half a second and a second and a half out of
-  his line, the rifle up, a body in tow, the corner wait's click, the man onto him, the calm after, and a fight stamped ahead of the clock.
-  NOT in a line: a real stalk begun by the held click and a man really held (the lock is handed its man), and a walk up to him past a door
-  (he is put there in stages). `tools/qa/autocam-page.cjs` (`ONLY=tune`) does 9 m and 3 m on the real page.
-  MEASURED (one floor, one seed, headless, the frozen stand): the hand's distance 21 m; at 8 / 7 / 5.5 / 4 / 3 / 2 m from him the camera at
-  20.6 / 20.0 / 17.5 / 14.3 / 12.5 / 11.7 m (the page's stand ends at 10.2 m: the close-in mode's own zoom is under it there); a button held
-  and he 6 m off again: 15.8 m, 17.0 once it is up.
-  NOT DONE, from the same review: the corridor's side shift and the move out at a corner (the frame already leans to the room he is in and to
-  the door ahead; neither was built or measured against these); his head turning to the man is the sneak's, which may ask the camera for its
-  man (`autoLock`). KNOWN: the hand taking the view back in the middle of a sneak puts the distance back to the hand's own, as it always did,
-  and from full lock that is a long way out (eased by the camera's own damping); a stalk's click still held after its man is lost with
-  nobody onto him is a plain held button, and the camera stays in until it is up; with the stalk polish off the corner wait's click is a
-  plain button too. Nobody has played it, and it has never been seen on a GPU: whether 40% is too much, and whether coming back out when a man turns on him
-  reads as a lurch, are his to judge.
+  outline's program compiles there and draws with no GPU error; a real drag with the camera's key held, a real held press, and real double taps, which do nothing; the check asks the page which key that is, `__keys.camCap()`, and
+  presses that key, so it follows the page as it opens). The camera's key is the Space bar
+  on the page while the board leaves it spare (`KEYMAP.camSpace`, docs/agents/player.md); under `?camspace=0` it is Ctrl as it was. NEVER SEEN ON A GPU by anyone here.
+- **The auto camera is shelved (2026-11-08; the maintainer: "i think we can rip out the auto camera for now btw", "we can put that on the queue for a future release").** A double tap of the
+  camera's key turned on a camera that framed the door, the squad or the fight by itself and came in as he sneaked up on someone. It left whole, with the double tap: the camera is the hand's, and a tap of its key
+  does nothing. Its design, its numbers and its checks last lived at step 2197, commit 069dfa6a511563d3ba394354cbc5fc9945135f1e: `src/host/autocam.ts` (its head is the design), `src/host/loop.ts`, `src/host/findme.ts`
+  `AUTOVIEW`, `src/ui/findme.ts` `autoRows`, `tools/qa/autocam-check.ts`, `tools/qa/autocam-page.cjs`, and this file's bullets at that commit. A machine's kept `twopointsix.autocam` and `twopointsix.autotune` are not read.
+  NO SWITCH: it is deleted, not held off, so there is no word on either stand and no `FROZEN_HOLDS` row; `?autocam`, `?autoturn`, `?autozoom`, `?autosway`, `?autotune` and `?autolock` do nothing. CHECKS: `camspace` and `findme` re-aimed
+  (`CAMSPACE_BREAK=1`, `FINDME_BREAK=1` red on both stands), `tools/qa/findme-page.cjs` holds on the real page that a held press and three double taps turn nothing and leave the cursor on the mouse. MEASURED, on the Rust game, one seed: the hand's camera
+  (yaw, pitch, distance, look-at, the cursor) through `stepFrame` over 900 frames of a scripted hand, free step and fixed, both stands, equal to the bit with the head with the mode off; thrice and night-breach:1 equal to the head. NOBODY HAS PLAYED IT, and it has never been seen on a GPU; `tools/qa/autocam-check.ts` and `autocam-page.cjs` left with it, so nothing asks about the mode any more.
 - **A mission's page loads behind that mission's brief and waits for Start** (2026-10-19; the maintainer, after watching a first-time player: "having
   the loading screen make more sense (e.g. being a pre mission brief) that you then click through rather than flashing the controls"; that player's
   notes: "stay on loading screen longer, would like to read"). `src/ui/loadbrief.ts`. BEFORE: a page whose address names a mission booted behind the
-  old start card's look-alike (`ui/menu.ts bootCard`: a grey Start, the notes, the whole controls list, the shader count) and the mission began under
+  old start card's look-alike (`ui/title.ts bootCard`: a grey Start, the notes, the whole controls list, the shader count) and the mission began under
   it the moment the boot was done. NOW that page shows the mission, in a layer of its own (`#brief`, z 30: over the menu and the list, under the
   options and the fatal card): the heading it is listed under, its title, place and one line, the sheet's three cells (Team AS DEPLOYED, Defenders,
   Approach), THE MAP of its level (below; the file did not come = the words alone), and ONE block, START, which fills by the boot's own status line and is
-  live when the boot is done. Every word is the mission list's (`briefOfQuery`: the row its address boots; deployed at a size no row has, the row of
+  live when the boot is done. Every word is the mission list's (`desk().brief`, `start_list.rs brief_of`: the row its address boots; deployed at a size no row has, the row of
   that kind on that level; `?solo` alone = the solo night; NONE for an address that picks its level by `?level=` — the editor's own level plays the
   moment it loads, under no other level's words); the only words that are the screen's own are Start, Enter, Controls and Back. IT STAYS
   UNTIL STARTED (a click on the block, Enter or Space) with the world stood up and held still behind it — `main.ts`: `briefHolds()` is one more term
@@ -2084,3 +1893,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the arrows, and a letter typed into a field is the field's (`keymap.ts typedInto`).
 - **The software-drawn kit figure and the `?kit` preview are gone** (2026-11-07, the maintainer's list). The start page's column is the team at its door or empty; `ui/kitBoot.ts` reads the
   kit store and puts up the `__kit` hook. What the figure's check held of the game stays in `tools/qa/cast-deal-check.ts` (a teammate wears his place's variant, not his id's; `ROSTER_BREAK=1` must fail).
+
+- **THE DESK** (the cards before a game hold no rule on the page). Where the rules are: `rust/game_rules/src/kit/card.rs` (a man's card, `CardView`), `team.rs` (the team, `TeamView`) and `start_list` (the mission list: `StartView`, a mission's `SheetView` with its rows of `Setting`, the short list's `ShortView`, the load brief's `BriefView`, every link),
+  asked of one blank game by `rust/game_run/src/desk.rs`, which is done the same commands a start is done (`src/host/machine.ts machineBefore`), so a man is staged with what his card shows.
+  HOW A CARD ASKS: `src/view/desk.ts` (`desk()`, set at the page's boot beside `kitBoot`, on the module the page has booted) and its generated caller `src/draw/asks.ts`. `ui/kitCard.ts memberCard` asks
+  `desk().card(i)` at each draw that can have changed the card and keeps that view for a move of the highlight (a row's `takes` and `would` are already on it; a move asks nothing); `ui/loadout.ts` says
+  `desk().for(mission, '', issue, walls)` as it opens and when the level's file has come (an empty link: the desk works out the link and asks again when a setting moves it), and asks `desk().team()` at each paint; `TeamView.link` is what Deploy loads, and `desk().same(link, page)` says whether that is what the plain page already stands (the solo night's start with no load).
+  THE LIST: `ui/missions.ts openMissions` draws `desk().start(address).rows` and, for the highlighted row, `desk().sheet(id)`: every setting row (difficulty, the levers and the cams row, hour, weather, way) by ONE loop over `settings`, a press and the keys A D, H, J, K by `desk().set(id, key, to)`. `ui/startpage.ts` is its layout and what is its own: the rail reads those rows' DOM, `sheet.base` and `sheet.asPick`, the Hour row put at a short-list row's own night and the player's put back, pressed through `set` (on a mission that always draws the row: the hour is the list's). The load brief is `desk().brief(address)`; its Controls button is what `LOADBRIEF.options` hands it (main.ts: ui/options.ts, which holds game rows); no options, no button. The cards' Next is `desk().next(address)`, a won lesson's next the next `lesson` row of `start`. The page's: the plan sheet (`issuedWalls`, `issuedKit`, `placeNeeds`, `kitViewWays` read the level's file), pictures, DOM, keys, focus, the row last started (`twopointsix.mission`) and the size last deployed (`twopointsix.loadout`). `tools/draw/ban.ts` walks `ui/startpage.ts` and `ui/loadbrief.ts` too: nothing under them imports src/game.
+  THE OLD PAGE IN STEP: `main.ts`'s `keeps` writes the text a press says is kept, then what its own start reads re-reads it: `kitLoad`, `difficultyFromStore` (difficulty.ts), `quietFogForget`. A press (`step`, `choose`, `reset`, `copy`, `paste`, `size`, `named`) answers `Pressed`: a refusal's
+  words, and what is kept, which the desk's owner stores (the old page then runs `kitLoad`, which is all its own start reads). The page's are only its layout, the labels of buttons, tooltips and how a value is put together with `IDLE_WORD` and `LENT_WORD`.
+  ADD A ROW: `kit/p_02.rs` rows, its note in `card.rs row_note`, a drawing in `ui/kitIcons.ts`. ADD AN ASK: one line of `asks!` in `desk.rs`, a struct by `tools/wire` if it answers a new one, then `bun run tools/draw/gen.ts`.
+  THE WALK: `CHROME=… bun run tools/qa/cards-page.ts OUT [--face PATH]`, then `--diff A B`: every mission, size, man, step, pick, copy and paste written down in about 245,000 lines, and two trees compared; it replaced the fake-page probes `kit-card`, `pouch-card`, `loadout-screen`, `kitload-card`, `wand-tile`, `kitdeal-screen`, `kitnoise-check`, the bars' verdicts of `kittree-guns`, and of the list `missions-list`, `missions-screen`, `levers-screens`, `picks-card`, `hourwx-sheet`, `offlist`, `unplayed` and the sheet's verdicts of `hours-sheet`, `rowset`, `quietfog`, `told`, `sticky-default`, `picker-card`, `picker-level`, `map` (the module's own tests: `rust/game_run` desk tests; the eight-a-group cap too). The picture beside the card (`ui/kitView.ts`) is stubbed there: never seen against the desk on a GPU.

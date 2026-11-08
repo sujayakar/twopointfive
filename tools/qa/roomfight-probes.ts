@@ -29,7 +29,7 @@ const { ROOMFIGHT, FIGHT_SKILL } = await import(`${ROOT}/src/game/roomfight.ts`)
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { spawnUnit, engage, canSeeChar } = await import(`${ROOT}/src/game/guards.ts`);
 const { order } = await import(`${ROOT}/src/game/squad.ts`);
-const { fireWeapon, detonateStun, killGuard } = await import(`${ROOT}/src/game/combat.ts`);
+const { fireWeapon, detonateStun } = await import(`${ROOT}/src/game/combat.ts`);
 const { holdFireDrill } = await import(`${ROOT}/src/game/holdfire.ts`);
 
 const DT = 1 / 60;

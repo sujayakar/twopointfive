@@ -179,7 +179,8 @@ pub struct State {
     pub turns: JsMap<GuardId, crate::squad40::Turn>,
     pub noted: bool,
     pub shown: Option<crate::squad40::StateShown>,
-    pub kept: JsMap<crate::squad40::Asker, crate::squad40::StateKeptValue>,
+    /// the shot the menu's lit row would give, as it was this frame (Rust's own: not on the wire)
+    pub plan: Option<crate::squad40::ShellPlan>,
 }
 impl State {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -191,7 +192,7 @@ impl State {
             turns: JsMap::new(),
             noted: false,
             shown: None,
-            kept: JsMap::new(),
+            plan: None,
         }
     }
 }
@@ -213,89 +214,6 @@ impl StateShown {
     }
 }
 impl Default for StateShown { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum Asker {
-    Only,
-    Valid,
-}
-impl Asker {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Asker::Only => "only",
-            Asker::Valid => "valid",
-        }
-    }
-}
-
-/// (TypeScript: inline at src/game/squad40.ts:83 State.kept, src/game/squad40.ts:83)
-#[derive(Clone, Debug)]
-pub struct StateKeptValue {
-    pub key: String,
-    pub t: f64,
-    pub a: crate::squad40::StateKeptValueA,
-    pub who: Option<String>,
-}
-impl StateKeptValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StateKeptValue {
-            key: String::new(),
-            t: 0.0,
-            a: crate::squad40::StateKeptValueA::Text(String::new()),
-            who: None,
-        }
-    }
-}
-impl Default for StateKeptValue { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: a union)
-#[derive(Clone, Debug)]
-pub enum StateKeptValueA {
-    Text(String),
-    Shot(crate::squad40::Shot),
-}
-
-/// (TypeScript: Squad40Plan, src/game/squad40.ts:246)
-#[derive(Clone, Debug)]
-pub struct Squad40Plan {
-    pub gd: GuardId,
-    pub from: V3,
-    pub points: Vec<V3>,
-    pub land: V3,
-    pub kind: crate::squad40::Squad40PlanKind,
-    pub preview: Option<bool>,
-    pub walk: Option<()>,
-}
-impl Squad40Plan {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Squad40Plan {
-            gd: GuardId(0),
-            from: [0.0; 3],
-            points: Vec::new(),
-            land: [0.0; 3],
-            kind: crate::squad40::Squad40PlanKind::Shell,
-            preview: None,
-            walk: None,
-        }
-    }
-}
-impl Default for Squad40Plan { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum Squad40PlanKind {
-    Shell,
-}
-impl Squad40PlanKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Squad40PlanKind::Shell => "shell",
-        }
-    }
-}
 
 /// (TypeScript: inline at src/game/squad40.ts:90 SQUAD40_LOG, src/game/squad40.ts:90)
 #[derive(Clone, Debug)]
@@ -350,29 +268,17 @@ pub enum ShotOf {
     Shot(crate::squad40::Shot),
 }
 
-/// (TypeScript: a union)
+/// THE SHELL AT A SPOT, and everything anybody is shown or told of it: the menu's row, its refusal, the picture, and the order given are all read off one of these.
 #[derive(Clone, Debug)]
-pub enum Plan {
-    Text(String),
-    Arm1(crate::squad40::PlanArm1),
+pub struct ShellPlan {
+    pub at: V3,
+    /// the men it was asked of
+    pub men: Vec<GuardId>,
+    /// the man and his shot; none: nobody has one
+    pub shot: Option<crate::squad40::Shot>,
+    /// why it may not be given, in the row's words
+    pub no: Option<String>,
 }
-
-/// (TypeScript: inline at src/game/squad40.ts:152 plan ->, src/game/squad40.ts:152)
-#[derive(Clone, Debug)]
-pub struct PlanArm1 {
-    pub a: crate::squad40::Shot,
-    pub who: Option<String>,
-}
-impl PlanArm1 {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PlanArm1 {
-            a: crate::squad40::Shot::zeroed(),
-            who: None,
-        }
-    }
-}
-impl Default for PlanArm1 { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]

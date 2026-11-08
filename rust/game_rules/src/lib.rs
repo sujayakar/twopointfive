@@ -235,6 +235,7 @@ pub mod scene_markings;
 pub mod scene_materials;
 pub mod scene_place_plan;
 pub mod scene_scenario_list;
+pub mod start_list;
 pub mod scene_scenarios;
 pub mod scene_shapes;
 pub mod scene_stuff;

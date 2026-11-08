@@ -18,7 +18,8 @@
 // lamps the level keeps dark included; a door the file gives no angle stands ajar one time in five, by a hash, whichever way it swings and steel or not.
 import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { missionList, type Mission } from '../src/ui/missions';
+import { ALL_MISSIONS } from '../src/scene/scenarioList';
+import type { ScenarioEntry } from '../src/scene/scenarios';
 
 const ROOT = join(import.meta.dir, '..'), DEG = Math.PI / 180, FOV = 28;
 type V3 = [number, number, number];
@@ -60,7 +61,7 @@ const PIN: Record<string, Pin> = {
   'hostage-rescue': { expo: 1.6 },
   'block-four': { at: [13.2, 0, 7.7], ops: [[13.3, 0, 9.2], [12.3, 0, 11.0], [11.6, 0, 10.3], [13.2, 0, 10.9]], aim: [16.4, 4.6], look: [14.7, 1, 7.4], yaw: -143, pitch: 63, dist: 11.5, ajar: { m_s: -1.9 } },   // the mess: the team at the room's turn
   // two missions on one level stand at its two ways in
-  'block-squads': { start: 1, back: -2 }, 'warehouse-four': { start: 1 },
+  'warehouse-four': { start: 1 },
   // each of these is the picture of what its mission is ABOUT, not of where its team starts
   'glasshouse-four': { at: [20, 0, 24], ops: [[18.6, 0, 24.4], [21.4, 0, 24.4], [17.2, 0, 24.9], [22.8, 0, 24.9]], aim: [20.2, 18], swing: 20 },   // the lit forecourt, the dark glass
   'floodlit-four': { look: [19, 1, 17], yaw: 12, pitch: 38, dist: 24, rim: 0, at: [19, 0, 22.2], ops: [[17.5, 0, 22.6], [20.5, 0, 22.6], [16, 0, 23.1], [22, 0, 23.1]], aim: [19.4, 13] },   // the yard under its floods, the team at its dark edge
@@ -244,6 +245,12 @@ function levelOf(file: string): { d: Data; file: string } {
   return { d: JSON.parse(readFileSync(join(ROOT, 'levels', f), 'utf8')) as Data, file: f };
 }
 
+/** a mission as this tool draws it: a row of the table, or the plain solo night (`scenario` null), under the heading it is listed under */
+interface Mission { id: string; scenario: ScenarioEntry | null; group: string; squad: number }
+function missionList(): Mission[] {
+  const groupOf = (e: ScenarioEntry) => e.group ?? (e.kind === 'quiet' ? (e.squad ? 'quiet-two' : 'quiet-alone') : e.kind === 'rescue' ? 'clock' : 'raids');
+  return [{ id: 'solo-night', scenario: null, group: 'quiet-alone', squad: 0 }, ...ALL_MISSIONS.map(e => ({ id: e.id, scenario: e, group: groupOf(e), squad: e.squad }))];
+}
 async function render(m: Mission, O: Opts): Promise<Cam> {
   const file = m.scenario?.level ?? 'office.json', { d } = levelOf(file), pin: Pin = { ...(PIN[m.id] ?? {}), ...(O.set[m.id] ?? {}) }, M: Mood = { ...(MOODS[m.group ?? 'raids'] ?? NIGHT), ...pin } as Mood;
   const S = new Scene(), lampsAll = (pin.lamps ?? 'all') === 'all'; men.length = 0; spots.length = 0; areas.length = 0; seed = hash(m.id);
