@@ -45,8 +45,7 @@ fn heat_and_what_goes_are_told() {
     let mut p = pass(5);
     (p.g.m.dress.dress.wind, p.g.m.dress.dress.fires) = (true, true);
     let (mut d, mut hot) = (Drawn::default(), false);
-    let t = (0..p.g.targets.len()).map(|i| p.g.targets[i]).find(|&t| game::fire::is_fire(&p.g, t)).expect("the pass has a brazier");
-    p.g.engine.view_focus = Some(game::fire::mouth_of(&p.g, t).pos);
+    assert!((0..p.g.targets.len()).any(|i| game::fire::is_fire(&p.g, p.g.targets[i])), "the pass has a brazier");
     for _ in 0..60 { p.g.out = game_start::stand::frame(&mut p.g, &p.host, 1.0 / 60.0); d.take(&p.g, ALL); hot |= !d.winds.heat.is_empty(); p.g.out.clear(); }
     assert!(hot, "beside a burning fire its hot air is told");
     p.g.out = game_start::stand::frame(&mut p.g, &p.host, 1.0 / 60.0);

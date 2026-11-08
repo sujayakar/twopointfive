@@ -82,11 +82,11 @@ impl Winds {
     pub fn take(&mut self, g: &Game, again: bool) {
         (self.active.clear(), self.gusts.clear(), self.air.clear(), self.wind_roofs.clear(), self.roofs.clear());
         for &id in &g.wind.active { let w = own(&g.tab.wind_wind_source[id], &mut self.wind_roofs); self.active.push(w); }
-        for &id in &g.wind.to_pool.list { let w = own(&g.tab.wind_wind_source[id], &mut self.wind_roofs); self.gusts.push(w); }
+        for id in gusts(g) { let w = own(&g.tab.wind_wind_source[id], &mut self.wind_roofs); self.gusts.push(w); }
         // (the heat of the fires is said by the tick that moved the clock: a tick that said none has none)
         if !again {
             self.heat.clear();
-            for e in g.out.iter().rev() { if let OutEvent::ParticlesSetHeat(h) = e { for s in &h.srcs { self.heat.push(gpu(s)); } break; } }
+            for e in g.out.iter().rev() { if let OutEvent::ParticlesSetHeat(h) = e { for s in &h.srcs { if !crate::far_for_a_fire(g, s.pos) { self.heat.push(gpu(s)); } } break; } }
         }
         for r in g.weather.roof_rects.iter() { self.roofs.push(Rect { r: r.map(|x| x as f32) }); }
         self.stands(g);
@@ -130,6 +130,21 @@ impl Winds {
             for (i, &id) in statics.iter().enumerate() { if all[id].flags as i64 as u32 & glass != 0 && ::sim::panes::open_fraction(g.sim, i as u32) > g.k.air_sim.glass_open { self.open.push(crate::boxes::Word { w: i as u32 }); } }
         }
     }
+}
+
+/// The sources the particles feel, as the picture picks them: the jets near where it looks, nearest first when there are more than it has room for, then the storm
+fn gusts(g: &Game) -> Vec<WindWindSourceId> {
+    let (tab, f, near_m) = (&g.tab.wind_wind_source, crate::looks_at(g), g.k.wind.near_m);
+    let dist = |s: WindWindSourceId| game::v3::dist(tab[s].bound.c, f);
+    let mut jets: Vec<_> = g.wind.active.iter().copied().filter(|&s| tab[s].kind == WindSourceKind::Jet && dist(s) < near_m + tab[s].bound.r).collect();
+    let storm = g.wind.active.iter().copied().find(|&s| tab[s].kind == WindSourceKind::Storm);
+    let most = game::smoke_types::WIND_GPU_MAX as usize - storm.is_some() as usize;
+    if jets.len() > most {
+        jets.sort_by(|&a, &b| dist(a).total_cmp(&dist(b)));
+        jets.truncate(most);
+    }
+    jets.extend(storm);
+    jets
 }
 
 fn own(s: &WindSource, roofs: &mut Vec<Rect>) -> Wind {

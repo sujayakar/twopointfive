@@ -7098,7 +7098,6 @@
 "wind::WindStats.door_gusts",
 "wind::WindStats.frames",
 "wind::WindStats.storm_frames",
-"wind::WindStats.to_particles",
 "wind::WindStats.to_smoke",
 "workstow::WorkstowStats.mate_down",
 "workstow::WorkstowStats.mate_fired",
@@ -7129,7 +7128,6 @@
 "workthings::WorkthingsStats.given",
 "workthings::WorkthingsStats.moot",
 "wind::Wind.active",
-"wind::Wind.to_pool",
 "wind::WindSource.kind",
 "wind::WindSource.speed",
 "wind::WindSource.dir",
@@ -7303,7 +7301,8 @@
 "game::Game.stood",
 "game::Game.solo_card",
 "smoke_types::WindGpuSourceBound.c",
-"smoke_types::WindGpuSourceBound.r"
+"smoke_types::WindGpuSourceBound.r",
+"wind::WindSource.bound"
 ],
 "everyTickNotCarried": [
 {
@@ -8986,11 +8985,9 @@
 "weather_kinds::WeatherPreset.title",
 "weather_kinds::WeatherPreset.wind",
 "weather_kinds::WeatherPreset.words",
-"wind::PoolList.list",
 "wind::Wind.active",
 "wind::Wind.lv_roofs",
 "wind::Wind.storm",
-"wind::Wind.to_pool",
 "wind::WindSource.vent",
 "wind::wind_for_particle.crate::wind::wind_for_particles",
 "workthings::Job.a",
@@ -12292,7 +12289,6 @@
 "wind::WindStats.door_gusts",
 "wind::WindStats.frames",
 "wind::WindStats.storm_frames",
-"wind::WindStats.to_particles",
 "wind::WindStats.to_smoke",
 "workstow::WorkstowStats.mate_down",
 "workstow::WorkstowStats.mate_fired",
@@ -12309,7 +12305,6 @@
 "workthings::WorkthingsStats.given",
 "workthings::WorkthingsStats.moot",
 "wind::Wind.active",
-"wind::Wind.to_pool",
 "wind::WindSource.kind",
 "wind::WindSource.speed",
 "wind::WindSource.dir",
@@ -12435,7 +12430,8 @@
 "game::Game.stood",
 "game::Game.solo_card",
 "smoke_types::WindGpuSourceBound.c",
-"smoke_types::WindGpuSourceBound.r"
+"smoke_types::WindGpuSourceBound.r",
+"wind::WindSource.bound"
 ],
 "unsent": {
 "anim_characters::CharacterRenderer": "the page's renderer: the host fills its arrays and draws from them",
