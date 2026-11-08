@@ -1,6 +1,12 @@
 {"_": "The keys of calls.json's rows whose Rust function cannot write the game: it takes the game by a shared borrow, has no `&mut` anywhere in its parameters, and neither it nor anything it uses is unsafe, names a static or a cell, or is handed a block of the sim to write (the compiler's proof, then the taint of tools/fold/readers.sh). After a crossing of one the host exports and applies nothing. Written by `tools/fold/readers.sh --reads`: run it again when bodies change.", "rows": [
+  "Cover.summary",
+  "Cover.tail",
+  "Cover.words",
+  "FogOfWar.pageLook",
   "Game.wetSummary",
+  "WorkThings.things",
   "autoEntries",
+  "clearLineOf",
   "difficultyHref",
   "difficultyNow",
   "difficultyWords",
@@ -11,5 +17,9 @@
   "leversMixed",
   "leversShown",
   "loadCivTune",
-  "presetLevers"
+  "placeIn",
+  "placeName",
+  "placeRects",
+  "presetLevers",
+  "roomName"
 ]}

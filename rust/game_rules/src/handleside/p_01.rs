@@ -107,7 +107,7 @@ pub fn stands(g: &mut crate::game::Game, p: V3, nav: Option<bool>) -> bool {
 }
 
 /// Is `p` at the handle of d: on the handle half, within reach, and on the face it opens into clear of the sweep. (handleside.ts atHandle)
-pub fn at_handle(g: &mut crate::game::Game, d: DoorId, p: V3, reach: Option<f64>) -> bool {
+pub fn at_handle(g: &crate::game::Game, d: DoorId, p: V3, reach: Option<f64>) -> bool {
     let reach = reach.unwrap_or(g.k.handle.reach + 0.05);
     let f = crate::guards::frame_of(g, d);
     let along = along_of(&f, p);
@@ -207,13 +207,13 @@ pub fn find_face(g: &mut crate::game::Game, d: DoorId, side: f64) -> crate::hand
 }
 
 /// The angle under which a leaf stands in a man's way. (handleside.ts ajarOf)
-pub fn ajar_of(g: &mut crate::game::Game, d: DoorId) -> f64 {
+pub fn ajar_of(g: &crate::game::Game, d: DoorId) -> f64 {
     let open = crate::doors::doors_swing_of(g, d).open;
     m::min(g.k.handle.ajar, 0.8 * open)
 }
 
 /// A leaf that wants a hand from `gd` standing at `from`: in his way, on its hinges, not locked against him, and nobody's already. (handleside.ts wantsHand)
-pub fn wants_hand(g: &mut crate::game::Game, gd: GuardId, d: DoorId, from: V3) -> bool {
+pub fn wants_hand(g: &crate::game::Game, gd: GuardId, d: DoorId, from: V3) -> bool {
     if g.gd[gd].team == crate::teams::Team::Civilian { return false; }
     if crate::doors::door_off(g, d) { return false; }
     let latched = crate::doors::door_latched(g, d);

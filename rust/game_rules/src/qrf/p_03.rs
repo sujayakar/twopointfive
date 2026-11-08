@@ -119,7 +119,7 @@ pub fn start_stack(g: &mut crate::game::Game, el: &[GuardId]) {
 }
 
 /// The stack forms; planted (or out of time) the point man steps to the lock. (qrf.ts phaseStack)
-pub fn phase_stack(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
+pub fn phase_stack(g: &mut crate::game::Game, el: &Vec<GuardId>) {
     for &man in el.iter() { advance(g, man); }
     let planted = el.iter().filter(|&&man| man_arrived(g, man)).count() as f64;
     if (planted >= m::min(el.len() as f64, 3.0) && g.qrf.phase_t > 1.2) || g.qrf.phase_t > STACK_CAP {

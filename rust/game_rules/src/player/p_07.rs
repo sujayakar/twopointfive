@@ -60,7 +60,7 @@ fn join_line2(rows: &[crate::game::Interactable]) -> String {
     s
 }
 /// the door's marker this frame, or a plain one if it has none   (player.ts marker)
-fn marker(g: &mut Game, list: &[crate::game::Interactable], d: DoorId) -> crate::game::Interactable {
+fn marker(g: &Game, list: &[crate::game::Interactable], d: DoorId) -> crate::game::Interactable {
     if let Some(x) = list.iter().find(|x| x.door == Some(d)) { return x.clone(); }
     let pos = crate::doors::door_pos(g, d);
     let mut it = mark(crate::game::InteractableKind::Door, pos, String::from("door"), String::new(), true, false);

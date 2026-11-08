@@ -187,7 +187,7 @@ pub fn edge_look_flush(g: &mut crate::game::Game) {
 /// This lane's pieces into the frame's dynamic list (after the lane's debris). (src/game/edgeLook.ts:169 EdgeLook.boxes)
 pub fn edge_look_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     if g.destr.edge_look.held { g.destr.edge_look.held = false; } else { edge_look_flush(g); }   // (a wall that opened this frame is dressed on the next: `dress`)
-    let e = &mut g.destr.edge_look;
+    let e = &g.destr.edge_look;
     let (room, mut n) = (e.room, 0.0);
     for l in e.decor.values() { for &b in l { if n >= room { break; } out.push(b.into()); n += 1.0; } }
     let mut i = e.rubble.len();

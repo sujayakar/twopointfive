@@ -13,7 +13,7 @@ pub fn smoke_grid_new(g: &crate::game::Game, sim: crate::Opaque) -> crate::sense
 }
 
 /// Is there smoke for a step to move: an emitter not yet taken, or a brick standing.   (sense.ts SmokeGrid.smoky)
-pub fn smoke_grid_smoky(g: &mut crate::game::Game) -> bool {
+pub fn smoke_grid_smoky(g: &crate::game::Game) -> bool {
     !g.cpu_smoke.grid.as_ref().unwrap().pending.is_empty() || sim::state::state_read(g.sim).smoke.live as usize > sim::bricks::ROW + sim::bricks::O_RHO * 8
 }
 

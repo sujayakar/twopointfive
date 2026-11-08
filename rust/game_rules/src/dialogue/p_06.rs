@@ -120,7 +120,7 @@ pub fn ambient_live(g: &mut crate::game::Game) -> bool {
 }
 
 /// A calm patrolling staff man with nothing on his hands or mind, not talking, not held by a script. (dialogue.ts chatty)
-pub fn chatty(g: &mut crate::game::Game, x: GuardId) -> bool {
+pub fn chatty(g: &crate::game::Game, x: GuardId) -> bool {
     let time = g.time;
     let m = &g.gd[x];
     let calm = m.team == crate::teams::Team::Guard && m.unit.is_none() && m.state == crate::game::GuardState::Patrol

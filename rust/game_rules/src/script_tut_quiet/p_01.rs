@@ -109,7 +109,7 @@ fn lit() -> crate::director::Cond {
 }
 
 /// q.inside(v, 'sam') of a volume the define pass named (director.ts:852)
-fn sam_inside(g: &mut Game, r: DirectorRunId, v: &Option<crate::director::VolumeRef>) -> bool {
+fn sam_inside(g: &Game, r: DirectorRunId, v: &Option<crate::director::VolumeRef>) -> bool {
     let id = &v.as_ref().expect("tut-quiet: the define pass names its volumes").id;
     crate::director::director_inside_volume(g, r, id, &crate::director::DirectorInsideVolumeWho::Sam)
 }
@@ -270,7 +270,7 @@ pub fn tut_quiet_night_step(g: &mut crate::game::Game, r: DirectorRunId, b: Dire
 }
 
 /// (tut-quiet.script.ts:46-93) night's c.until closures, by the TEST_ ids.
-pub fn tut_quiet_night_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_quiet::TutQuietNightFrame, id: u32) -> Result<bool, String> {
+pub fn tut_quiet_night_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_quiet::TutQuietNightFrame, id: u32) -> Result<bool, String> {
     let u = f.u.clone().expect("tut-quiet night: u is set at its start");
     let vars = tut_quiet_vars(g, r).clone();
     match id {

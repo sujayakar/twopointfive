@@ -617,7 +617,7 @@ pub fn shoulders(g: &mut crate::game::Game, a: V3, b: V3, q: V3) -> bool {
 }
 
 /// The leaves standing open within `r` m of `p`, each as hinge and end on the floor (x, z, x, z). (frag.ts openLeaves)
-pub fn open_leaves(g: &mut crate::game::Game, p: V3, r: f64) -> Vec<Vec<f64>> {
+pub fn open_leaves(g: &crate::game::Game, p: V3, r: f64) -> Vec<Vec<f64>> {
     let mut out: Vec<Vec<f64>> = Vec::new();
     for x in g.doors.list.clone() {
         if !crate::doors::door_off(g, x) && m::abs(crate::doors::door_angle(g, x)) > 0.15 && flat(g.dr[x].frame_centre, p) < r {
@@ -802,12 +802,12 @@ pub fn flee_spot_kept(g: &mut crate::game::Game, c_2: crate::frag::FleeSpotC, at
 }
 
 /// A doorway a man can leave by as it stands. (frag.ts openWay)
-pub fn open_way(g: &mut crate::game::Game, d: DoorId) -> bool {
+pub fn open_way(g: &crate::game::Game, d: DoorId) -> bool {
     crate::doors::door_off(g, d) || (!crate::doors::door_latched(g, d) && !crate::doors::door_closing(g, d) && m::abs(crate::doors::door_angle(g, d)) >= g.k.frag.flee_door_open)
 }
 
 /// His spot is in the mouth of an open doorway. (frag.ts inMouth)
-pub fn in_mouth(g: &mut crate::game::Game, p: V3) -> bool {
+pub fn in_mouth(g: &crate::game::Game, p: V3) -> bool {
     for d in g.doors.list.clone() {
         if open_way(g, d) && flat(g.dr[d].frame_centre, p) < g.k.frag.flee_door_mouth { return true; }
     }

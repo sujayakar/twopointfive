@@ -735,13 +735,13 @@ pub fn fog_of_war_door_seen(g: &mut crate::game::Game, d: DoorId, shown: f64) ->
 }
 
 /// Is this door drawn where the team last saw it rather than where it stands. (FogOfWar.doorHeld)
-pub fn fog_of_war_door_held(g: &mut crate::game::Game, d: DoorId) -> bool {
+pub fn fog_of_war_door_held(g: &crate::game::Game, d: DoorId) -> bool {
     let shown = match g.fog_of_war.door_recs.get(d) { Some(r) => r.shown, None => return false };
     fog_of_war_active(g) && m::abs(crate::doors::door_angle(g, d) - shown) > DOOR_EPS
 }
 
 /// The angle the picture has this door at. (FogOfWar.doorShown)
-pub fn fog_of_war_door_shown(g: &mut crate::game::Game, d: DoorId) -> f64 {
+pub fn fog_of_war_door_shown(g: &crate::game::Game, d: DoorId) -> f64 {
     if let Some(s) = g.fog_of_war.door_recs.get(d).map(|r| r.shown) {
         if fog_of_war_active(g) { return s; }
     }

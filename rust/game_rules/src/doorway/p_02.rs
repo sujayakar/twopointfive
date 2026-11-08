@@ -112,7 +112,7 @@ fn exposed(g: &mut Game, aim_at: V3, p: V3) -> i32 {
 }
 
 /// `p` is in a door's way for a man left standing there: in some frame's own strip, or where a leaf swings. (doorway.ts doorwayInWay)
-pub fn doorway_in_way(g: &mut crate::game::Game, p: V3) -> bool {
+pub fn doorway_in_way(g: &crate::game::Game, p: V3) -> bool {
     for i in 0..g.doors.list.len() {
         let d = g.doors.list[i];
         if flat(p, g.dr[d].frame_centre) > g.dr[d].def.width + 1.0 { continue; }
