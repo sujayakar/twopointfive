@@ -794,7 +794,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 801 => { let a1: GuardId = Io::r(&mut i); let a2: crate::game::DownKind = Io::r(&mut i); let a3: Option<String> = Io::r(&mut i); let r = crate::chronicle::chron_down(g, a1, a2, a3.as_deref()); r.w(&mut o);  }
 802 => { let a1: Option<String> = Io::r(&mut i); let r = crate::chronicle::chron_hit(g, a1.as_deref()); r.w(&mut o);  }
 803 => { let a1: crate::chronicle::ChronDoorKind = Io::r(&mut i); let a2: DoorId = Io::r(&mut i); let r = crate::chronicle::chron_door(g, a1, a2); r.w(&mut o);  }
-804 => { let a1: crate::chronicle::ChronCheckpointWhat = Io::r(&mut i); let a2: Option<String> = Io::r(&mut i); let r = crate::chronicle::chron_checkpoint(g, a1, a2.as_deref()); r.w(&mut o);  }
 805 => { let a1: crate::mission::TallyK = Io::r(&mut i); crate::mission::tally(g, a1);  }
 806 => { let a1: V3 = Io::r(&mut i); let r = crate::mission::rack_dist(g, a1); r.w(&mut o);  }
 807 => { let a1: f64 = Io::r(&mut i); let a2: InputId = Io::r(&mut i); crate::mission::update_mission(g, a1, a2);  }

@@ -837,18 +837,17 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `src/ui/kitCard.ts`: how many come, each man's kit card, the Squad kit row; `?loadout=<mission id>`), and Deploy is a PAGE LOAD of the mission's URL.
 
 <!-- was CLAUDE.md lines 759–770 -->
-- **The debrief = the chronicle** (`src/game/chronicle.ts`, `Game.chronicle`, replaced by `restartEncounter`): a capped timeline `events[]` of `{ t (mission
+- **The debrief = the chronicle** (`rust/game_rules/src/chronicle`, `Game.chronicle`, replaced by `restartEncounter`; `src/game/chronicle.ts` keeps only its record's shape and the two tables the knob registry reads): a capped timeline `events[]` of `{ t (mission
   clock), kind, room, pos, data }` — kinds `objective spotted contact heard lost calm alarm radio shot lightShot ocp blackout thrown grab interrogated keyTaken ko kill
   bodyFound doorKicked lockPicked hit down checkpoint` — Sam's PATH sampled every 0.5 s (flat Float32Array, thins itself at PATH_CAP), and the counters MissionStats
   lacks (`counts`). Written by ONE-LINE hooks at the true sites (guards.ts hearingCheck ×5 / the alert transition / dropToSearch / the search's end / raiseEscalation +
   stepDown / say(radio) / both body-found sites; combat.ts fireWeapon ×3 + killGuard; lighting.ts setBlackout + ocp ×2; player.ts takeKey / kick impact / pick done /
   throw release / startGrab; game.ts interrogate; mission.ts spotted / objectives / `tickChronicle`) through the SAME gate as the tallies (`missionLive`: nothing under
-  the tour / puppet, nothing once done or failed). New verbs: call `chronicle(g, kind, data, pos?)` or add a `chronX` helper there; G5's seam is `chronCheckpoint(g,
-  'save'|'load', label)`. `roomOf(pos)` = the ROOMS table (nominal partition lines; replace with the level format's rooms block when G1 lands). Reading: `debriefOf(g)`
-  → counts + `stealthScore` (100 minus SCORE's price list — every term only subtracts; probes hold monotonicity) + `ratingOf` (BANDS: GHOST ≥ 90 · SHADOW ≥ 70 ·
-  OPERATIVE ≥ 40 · ASSAULT) + `badgesOf` (BADGE knobs) + the summary line; `fmtEvent` words a row. The card is `ui/debrief.ts renderDebrief(host, game, actions)`
+  the tour / puppet, nothing once done or failed). New verbs: call `chronicle` or add a `chron_x` helper there; a save's or a load's row is the game's own, written under the save's label (`face_checkpoint`, `face_loaded`). What the page's own books ask of a floor point (the autosave's 'first time in a room' and its label, the verdict's rows, the devices) is `src/game/rooms.ts`. Reading: the page asks ONCE, as the card is built, `face_debrief_view` → `view::debrief_view` (`game.debriefView()`, the record `src/view/debriefview.ts`): `debrief_of`
+  → counts + `stealth_score` (100 minus SCORE's price list — every term only subtracts; `the_score_only_goes_down` holds it) + `rating_of` (bands: GHOST ≥ 90 · SHADOW ≥ 70 ·
+  OPERATIVE ≥ 40 · ASSAULT) + `badges_of` (BADGE knobs) + the summary line; `rows` = each row in words (`event_text`), `path`, `rooms`, `recap`. A tool reads it with `tools/qa/debrief-read.ts`. The card is `ui/debrief.ts renderDebrief(host, game, actions)`
   (menu.ts: mode 'debrief' on the game's out event EndCard — sent on exfil AND `DOWN_CARD_SECS` after Sam drops, `END_CARD.due` for the page's frame — plus the pause card's *Run so far* tab; CSS `#menu .db-*`);
-  the map is a canvas at nav-grid resolution + percent-placed DOM pins (PIN table). QA: `probes.ts debrief` (run / rooms / doorname / charge / loud / score / dom), soak's 'leak chronicle' invariant.
+  the map is a canvas at nav-grid resolution + percent-placed DOM pins (PIN table). QA: `rust/game_start/tests/debrief.rs` and chronicle's own tests natively, `probes.ts debrief` (run / rooms / loud / dom) for the card as the page reads it, soak's 'leak chronicle' invariant.
 
 <!-- was CLAUDE.md lines 1735–1757 -->
 - **The start card's sandbox row** (ui/menu.ts `sandboxRow`, `SANDBOX_LS` = localStorage `twopointsix.sandbox`, applied by main.ts `loadSandbox` at boot): god mode ·
@@ -883,7 +882,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 
 <!-- added 2026-10-13, after the cut -->
 - **THE RECAP'S RECORD IS THE RUST TICK'S (2026-11-07).** `rust/game_rules/src/deathrecap` keeps who of ours fell, to whom, from where, with what, the floor's last seconds and what the squad knows of a man lost (`Game.recap`; only `lost_live` is on the wire), last in the tick, with `rust/game_start/tests/recap.rs` holding each rule. A kept game has none of it: a load starts it over. The bullet below is the rules as they were written and the page's side of them.
-- **The down card says who shot you, and from where** (the death recap goal, 'Every death explains itself'; `src/game/deathrecap.ts` `RECAP.on` + `src/ui/recap.ts`; step 1 = commit
+- **The down card says who shot you, and from where** (the death recap goal, 'Every death explains itself'; `rust/game_rules/src/deathrecap`, kept by the tick and read through `face_debrief_view`; `src/ui/recap.ts` draws it; `src/game/deathrecap.ts` keeps `RECAP`, the record's shape and what the squad block reads; step 1 = commit
   456c2e1b, in the build since 8d2c2785; its page is rebuild/death-recap/read-first.md): when Sam goes down the down
   card has a small plan above the route map — the man who shot him in the menu's orange with his name, the line of the round with an arrowhead, Sam as a white cross, a faint wedge for where
   he was looking — and under it the man's name, his gun, the distance. The same record is kept for every teammate and hostage who goes down (rounds, fragmentation bursts, a hostage shot by
@@ -1428,9 +1427,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `fmtEvent(e)`): the line exactly as it was. So the frozen stand reads as it did (`TPS_WORDS=1 TPS_DOORNAMES=1` raise it), and the door names key is the
   switch: off = the card as it was. The card's two readers pass the game (`ui/debrief.ts`: the timeline's row, the map pin's hover line). NOT DONE: a
   door with only a MADE name ('hall-side mess door') still reads its id on the card: `doorWords` would also spell an unnamed door's bearing out ('vault
-  west door'), and the card has no compass. Check `bun run tools/qa/probes.ts debrief-doorname` (families `debrief`, `words`: the stand's own keys
-  first, then the keys by hand; `DOORNAMES_BREAK=1` asks for the name with the key down and is red) and a line of `debrief-dom` (the card on the fake
-  DOM: the row and the pin), both stands. Only the office's two break room doors have written names so far, so that is where it shows.
+  west door'), and the card has no compass. Check: `a_door_row_calls_its_door_what_its_level_calls_it` in `rust/game_start/tests/debrief.rs`. Only the office's two break room doors have written names so far, so that is where it shows.
 - **A wall charge's rows on the debrief say a charge (10-19, rides `WALLKILL`).** A man at the charge when it went read 'shot dead (a wall charge)' and
   the player 'DOWN — the wall charge's round'. `chronicle.ts eventText` now words them 'killed — the wall charge' and 'DOWN — the wall charge' (a `by`
   that ends in 'charge' takes no 'round'); the rows' data is as the charge files it, every other kill and down row reads as it did, and the end card's
@@ -1439,7 +1436,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `civilians.ts` now file the row's `method` as 'charge' from the charge's own line ('… behind the wall when it went') and the row reads 'out cold —
   the wall charge'. That is a row's data and words only (no tally, no digest: a digest holds a row's kind and time), and a Training lesson's
   'downed how: takedown' step no longer counts a charge's knock. A checkpoint saved before keeps its 'takedown' rows. Check
-  `bun run tools/qa/probes.ts debrief-charge` (family `debrief`; the rows' own words, the same on both stands). Text only; nobody has played to it.
+  `a_charge_files_its_own_rows` in `rust/game_start/tests/debrief.rs` and the `words` test in `rust/game_rules/src/chronicle`. Text only; nobody has played to it.
 - **Options ▸ Game ▸ 'Walk into a wall to take it'** (10-20; `ui/options.ts`, shown only with the wall hold's feel pass on): flips `WALLSNAP.press`, kept in
   `twopointsix.options` as `wallpress`, a `?wallpress` in the URL wins over the kept value, Reset puts it back on. The rule: `docs/agents/stealth.md`, the
   wall taken without the key. The Controls list and the Options key list do not mention it.

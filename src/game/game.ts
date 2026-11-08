@@ -78,6 +78,7 @@ import { seatsStand, seatManId, standMen, spotBeside, manById, isManId, eachSeat
 import { doorMan } from './doorthrow';
 import './mission';
 import { NO_VIEW, type TickView } from '../view/seatview';
+import { NO_DEBRIEF, type DebriefView } from '../view/debriefview';
 import type { WorldAsk } from '../view/worldask';
 import type { CursorAt, CursorLens, CursorView, Under } from '../view/cursor';
 import { Chronicle, chronInterrogated } from './chronicle';
@@ -1673,6 +1674,9 @@ export class Game {
   get view(): TickView { return this.viewAsk?.() ?? NO_VIEW; }
   /** the host's: asks the Rust game for its view (src/host/rustgame.ts in a page, tools/blitz/rust-host.ts in bun) */
   viewAsk: (() => TickView) | null = null;
+  /** WHAT THE END CARD SHOWS OF THE RUN (src/view/debriefview.ts): asked of the Rust game by the host that steps it, as the card is built */
+  debriefView(): DebriefView { return this.debriefAsk?.() ?? NO_DEBRIEF; }
+  debriefAsk: (() => DebriefView) | null = null;
   /** THE BOX WORLD, ASKED (src/view/worldask.ts) by whoever draws, hears or points: the Rust game's answer where one steps this game (the host sets `askHost`), and
    *  this page's own copy of the level where none does (a workbench's floor, the moment before the first start) */
   readonly ask: WorldAsk = {

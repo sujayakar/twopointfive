@@ -133,7 +133,6 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/game/coverfire.ts COVERFIRE_LOG': 'TALLY · counted in coverfire.ts; no read in src/game, src/scene or src/anim',
   'src/game/darkdoor.ts DARKDOOR_STATS': 'TALLY · counted in darkdoor.ts; no read in src/game, src/scene or src/anim',
   'src/game/darkfoe.ts DARKFOE_STATS': 'TALLY · counted in darkfoe.ts; no read in src/game, src/scene or src/anim',
-  'src/game/deathrecap.ts RECAP_STATS': 'TALLY · counted in deathrecap.ts; no read in src/game, src/scene or src/anim',
   'src/game/defuse.ts DEFUSE_STATS': 'TALLY · counted in defuse.ts; no read in src/game, src/scene or src/anim',
   'src/game/destruction.ts DESTR_LOG': 'TALLY · counted in destruction.ts; no read in src/game, src/scene or src/anim; shown by main.ts',
   'src/game/destruction.ts DESTR_STATS': 'TALLY · counted in destruction.ts; its reads there (350, 520, 744) keep a count and put it back round a retry; summary (859-861), main.ts, the panel',

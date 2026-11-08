@@ -2,7 +2,6 @@
 import { trackOf } from './track';
 import '../../src/game/game';
 import { WEAPONS } from '../../src/game/weapons';
-import { recapRound } from '../../src/game/deathrecap';
 import { messBurst, messOpened, messWall, messEvicted } from '../../src/game/floormess';
 import { bangScorch, bulletMark, chipMark, kickScuff } from '../../src/game/marks';
 import { clearSnowBlast } from '../../src/game/snowBlast';
@@ -38,7 +37,6 @@ export const OUT: Record<string, (g: any, e: any) => void> = {
   SmokeSystemLikePush: (g, e) => { g.smoke?.push?.(e.p); },
   WallWearReset: (g, e) => { g.destr.walls.wear?.reset?.(); },
   WallWearRound: (g, e) => { g.destr.walls.wear?.round?.(g, e.box_, e.surf, e.key, e.counted, e.frac, e.hitP, e.dir); },
-  RecapRound: (g, e) => { recapRound(g, e.victim, e.wasDown, e.shooter, e.muzzle, e.hit, WEAPONS[e.def], e.blind); },
   MessBurst: (g, e) => { messBurst(g, e.at, e.size); },
   MessOpened: (g, e) => { messOpened(g, e.rect); },
   MessWall: (g, e) => { messWall(g, e.p, e.n, e.thick, e.through); },

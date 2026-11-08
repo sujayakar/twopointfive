@@ -67,7 +67,8 @@ import { setDaylight, isDaylight, setGroup } from './lighting';
 import { cancelActions, teleportPlayer } from './player';
 import './combat';
 import { learnCode as devicesLearnCode } from './devices';
-import { chronicle, chronRadio, chronObjective, roomOf } from './chronicle';
+import { chronicle, chronRadio, chronObjective } from './chronicle';
+import { roomOf } from './rooms';
 import { radioHand } from './handwork';
 import { runnerBreak } from './runner';   // (asked inside the drill's ending check and a beat's `rout` / `routed` only: false with its switch off)
 import { hasHim, OWN } from './owner';

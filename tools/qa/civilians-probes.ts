@@ -28,7 +28,7 @@ const { CIV, CIV_STATS, CIV_DEBUG, CIV_SPOTS, checkCivSpots, civiliansSummary, c
 const { CIV_LINES, civilianLines } = await import(`${ROOT}/src/game/dialogue.ts`);
 const { startGrab, startTakedown } = await import(`${ROOT}/src/game/player.ts`);
 const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
-const { debriefOf, SCORE } = await import(`${ROOT}/src/game/chronicle.ts`);
+const { SCORE } = await import(`${ROOT}/src/game/chronicle.ts`); const { debriefOf } = await import('./debrief-read.ts');;
 const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
 
 type Vec3 = [number, number, number];

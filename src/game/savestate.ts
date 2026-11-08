@@ -103,7 +103,8 @@ import type { Item, ItemKind } from './throwables';
 import { DOORWAY, driveOf, type DoorDrive } from './doors';
 import { slabSnapshot, slabRestore, type SlabSnap } from './doorblast';
 import { RAG_COUNT } from './ragdoll';
-import { Chronicle, chronCheckpoint, MAX_EVENTS } from './chronicle';
+import { Chronicle, MAX_EVENTS } from './chronicle';
+import { roomOf } from './rooms';
 import type { ChronEvent, ChronCounts, ChronKind, ChronData } from './chronicle';
 import { missionLive } from './mission';
 import { attachFlashlight, rollcallState, escalationOf, forgetGuardClocks } from './guards';
@@ -508,7 +509,6 @@ export interface SaveOpts { label?: string; kind?: SaveState['kind']; force?: bo
 export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
   const why = canSave(g, !!opts.force); if (why) throw new Error(`checkpoint refused: ${why}`);
   const label = opts.label ?? '', kind = opts.kind ?? 'manual';
-  if (kind !== 'harness') chronCheckpoint(g, 'save', label);   // (inside the mission's live gate: nothing under the tour — which cannot save anyway; a HARNESS snapshot is nobody's checkpoint: no row, the run it captures untouched)
   const pl = g.player, pc = pl.char;
   const forced: string[] = [];
   { const b = playerBusy(g); if (b) forced.push(b); if (g.clearing) forced.push('clearing drill'); for (const x of g.guards) if (x.script && x.state !== 'dead') forced.push(`${x.callsign} scripted`); }
@@ -814,6 +814,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
     for (const e of S.events ?? []) { if (C.events.length >= MAX_EVENTS) break; C.events.push({ t: fin(e.t), kind: e.kind as ChronKind, room: e.room, pos: c3(e.pos), data: { ...(e.data as ChronData) } }); }
     C.dropped = S.dropped | 0; Object.assign(C.counts, S.counts ?? {}); for (const q of S.questioned ?? []) C.questioned.add(q);
     C.counts.loads = Math.max(C.counts.loads | 0, prevLoads); C.counts.saves = Math.max(C.counts.saves | 0, prevSaves);
+    if (s.kind !== 'harness') C.counts.loads = (C.counts.loads | 0) + 1;   // (a file is loaded only by a tool, the page keeps its games in the module: what stands here is what the next Rust game starts from, and a load is the same try: `resumed`)
     const n = Math.min(S.pathN | 0, Math.floor((S.path?.length ?? 0) / 3), C.path.length / 3); for (let i = 0; i < n * 3; i++) C.path[i] = S.path[i]; C.pathN = n; C.pathEvery = fin(S.pathEvery, 0.5) || 0.5; C.pathNext = fin(S.pathNext);
     g.chronicle = C; }
   // ---- what was in the air, on the strip, in the men's heads
@@ -846,7 +847,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
   updateTargets(g, 0);   // (every target's factor / light / emissive off the restored switches and blackout NOW: a checkpoint written in the dark loads dark on its first frame, not its second)
   updateFire(g, 0);      // (… and an open fire's lamp, its place and its coals as this clock has them: fire.ts)
   if (s.dice && g.dice) { g.dice.s = s.dice.s | 0; g.dice.n = fin(s.dice.n); g.dice.seed = fin(s.dice.seed) >>> 0; }   // the game's own die back where the file left it — LAST, after every construction draw the clean slate above made
-  if (s.kind !== 'harness') { chronCheckpoint(g, 'load', opts.label ?? s.label); pageSay(`checkpoint loaded${s.label ? ` — ${s.label}` : ''}`); }   // (a harness restore is staging, not a checkpoint the player loaded: no row, no line, no load on the card)
+  if (s.kind !== 'harness') { pageSay(`checkpoint loaded${s.label ? ` — ${s.label}` : ''}`); }   // (a harness restore is staging, not a checkpoint the player loaded: no row, no line, no load on the card)
 }
 /** a dynamic box's local point / direction into the world (the inverse of what decals.ts stores for an attached mark: yaw about +Y, then the centre) */
 function localToWorld(b: Box, p: V3, point: boolean): Vec3 {
@@ -895,7 +896,7 @@ export interface SaveResult { ok: boolean; why?: string; info?: SlotInfo; bytes?
  *  the same slots, labels and rhythm. `own` up: every save is such a save in memory, a run alone included (no file of this module's is written or read: a
  *  file would be of the fields this Game holds, which are not the game), and no base is taken, since such a take is never one since another. As shipped:
  *  rollback.ts's two functions and `own` down, and nothing here differs. */
-export const SNAPS: { own: boolean; take: (g: Game, since?: Snapshot) => Snapshot; put: (s: Snapshot) => void } = { own: false, take: (g, since) => takeSnapshot(g, since), put: s => restoreSnapshot(s) };   // (named inside functions: nothing of rollback.ts is used as this module loads)
+export const SNAPS: { own: boolean; /** `label`: the checkpoint's row is the game's to write, under this name */ take: (g: Game, since?: Snapshot, label?: string) => Snapshot; put: (s: Snapshot) => void } = { own: false, take: (g, since) => takeSnapshot(g, since), put: s => restoreSnapshot(s) };   // (named inside functions: nothing of rollback.ts is used as this module loads)
 let runSerial = 0;
 rollbackVar('savestate.runSerial', () => runSerial, v => { runSerial = v; });
 /** the room the player stands in, for the autosave's 'first time in a room' trigger and its label: the game's word for it, the level's own name for the place */
@@ -1096,7 +1097,6 @@ export class Checkpoints {
   /** SAVETIMELINE with a team on the floor: the game as it stands kept in memory, in its own two rings (this run's only) */
   private writeMem(g: Game, slot: 'auto' | 'manual', label: string, authored = false): SaveResult {
     const why = authored ? runNo(g, true, true) : canSnap(g); if (why) { this.stats.refused++; this.note(g, `refused ${slot}: ${why}`); return { ok: false, why }; }
-    chronCheckpoint(g, 'save', label);
     this.lastSaveT = g.time; this.quietT = 0;
     const ring = slot === 'auto' ? SAVETIMELINE.auto : SAVETIMELINE.manual; let n = 0, at = Infinity;
     for (let i = 0; i < ring; i++) { const e = this.shelf.get(KEY_MEM(slot, i)); if (!e) { n = i; break; } if (e.info.savedAt < at) { at = e.info.savedAt; n = i; } }
@@ -1104,7 +1104,7 @@ export class Checkpoints {
     const info: SlotInfo = { key, slot, n, label, kind: slot, savedAt: Date.now(), missionT: g.mission.stats.elapsed, stage: g.mission.stage, runId: this.runId, bytes: 0, mem: true };
     // (SAVETIMELINE.since: what has not changed since the last save in memory — or the one last put back — is shared with it, not copied again and not walked;
     //  rollback.ts walks the whole game again by itself when that snapshot's chain has grown stale)
-    const base = SAVETIMELINE.since ? this.shelf.last : null, snap = SNAPS.take(g, base ?? undefined); this.shelf.last = snap;
+    const base = SAVETIMELINE.since ? this.shelf.last : null, snap = SNAPS.take(g, base ?? undefined, label); this.shelf.last = snap;
     this.shelf.set(key, { info, snap, pic: null, take: g.journal.take });
     if (slot === 'auto') { this.stats.autosaves++; this.flash = { text: 'CHECKPOINT', t: g.time }; this.lastAuto = { key, t: g.time }; } else { this.stats.manual++; this.flash = { text: 'CHECKPOINT SAVED', t: g.time }; }
     this.note(g, `${slot} → ${key.replace(KEY_PREFIX, '')}: ${label || '—'} (in memory)`);
@@ -1143,7 +1143,7 @@ export class Checkpoints {
     Object.assign(this, host); Object.assign(g.tune, tune); Object.assign(g, flags); loadSandbox(g, false);
     g.chronicle.counts.loads = loads; g.chronicle.counts.saves = saves;
     this.pending = null; this.lastAuto = null; this.hand = false; this.due = null; this.lastSaveT = g.time;   // (a load counts as a save for the gap, as a file's does)
-    chronCheckpoint(g, 'load', e.info.label); pageSay(`checkpoint loaded${e.info.label ? ` — ${e.info.label}` : ''}`);
+    pageSay(`checkpoint loaded${e.info.label ? ` — ${e.info.label}` : ''}`);
     this.stats.loads++; this.flash = { text: 'CHECKPOINT LOADED', t: g.time }; this.note(g, `loaded ${key.replace(KEY_PREFIX, '')}: ${e.info.label || '—'} (from memory)`);
     g.rails?.putBack();   // (a tutorial mission's program is functions half run, which no snapshot holds: rails.ts starts it again and sends the step's cue again)
     this.onPutBack?.(e.info);

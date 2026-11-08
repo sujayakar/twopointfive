@@ -74,7 +74,6 @@ const MARKS: [string, string][] = [
   ['.player.hitFlash = Math.max(', 'update: tail (cues, the squad\'s net, tallies, the death recap)'],
   ['this.saves.tick(', 'checkpoints (the autosave\'s triggers and its take)'],
   ['this.journal.frameEnd()', 'journal + replay tape (the frame closed, the host\'s after)'],
-  ['recapTick(this)', 'update: tail (cues, the squad\'s net, tallies, the death recap)'],
   ['this.replayTap?.(dt);', 'journal + replay tape (the frame closed, the host\'s after)'],
 ];
 /** …and the marks that stand INSIDE a method the step calls (the part of the frame that method is): looked for in the methods only */

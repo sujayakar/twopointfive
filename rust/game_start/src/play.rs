@@ -338,6 +338,8 @@ impl Play {
     pub fn seat_id(&mut self, seat: usize) -> f64 { let s = self.g.seats[seat]; game::seats::with_seat(&mut self.g, s, &mut |g| g.ch[g.pl[g.player].ch].id) }
     /// a man's character id
     pub fn id_of(&self, gd: GuardId) -> f64 { self.g.ch[self.g.gd[gd].ch].id }
+    /// what the end card shows the seat of this number
+    pub fn debrief_view(&self, seat: usize) -> game::view::DebriefView { game::view::debrief_view(&self.g, &game::seats::seat(&self.g, self.g.seats[seat])) }
     /// THE RECAP, as the game keeps it. What the end card may show (None: somebody still plays, or nobody of ours went down) …
     pub fn recap_card(&self) -> Option<game::deathrecap::DeathRecap> { game::deathrecap::recap_card(&self.g) }
     /// … every one of ours lost so far this run, whoever still plays: never for a screen …
