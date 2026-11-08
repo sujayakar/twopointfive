@@ -378,9 +378,10 @@ pub fn cover_lane(g: &mut crate::game::Game, gd: GuardId, from: V3, to: V3) -> b
     };
     let t_max = 1.0 + flight / l;
     let team = g.gd[gd].team;
-    if !crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !g.pl[g.player].down {
-        let pc = g.pl[g.player].ch;
-        if lane_hit(g, pc, from, dx, dz, l2, t_max, l) { return false; }
+    if !crate::teams::is_hostile(g, team, crate::teams::Team::Player) {
+        for pl in crate::seats::men(g) {
+            if !g.pl[pl].down { let pc = g.pl[pl].ch; if lane_hit(g, pc, from, dx, dz, l2, t_max, l) { return false; } }
+        }
     }
     let mut i = 0;
     while i < g.guards.len() {
