@@ -133,7 +133,7 @@ export const PASS_STRUCTURE: StructureData = {
     { id: 'lines', name: 'Lines', rooms: ['store', 'bunk'], rally: [30.2, 0, 15.8], barricade: ['bunk'] },
   ],
 };
-/** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): a bespoke set for both ways in — the compound's mud wall
+/** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): a bespoke set for both ways in — the compound's mud wall
  *  on the road, the wicket in the truck gate under its one lamp, the lorry behind the wall, snow on everything. The level's own two starts stand in the open dark
  *  with no door near them; the set is what the place looks like from the road. */
 const PASS_KITVIEW: KitViewData = {

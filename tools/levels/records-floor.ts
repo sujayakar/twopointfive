@@ -101,7 +101,7 @@ export const RECORDS_STRUCTURE: StructureData = {
 };
 
 /** the parked car's boxes, by the ids the export writes (body, cabin, roof, wheels, lamps): what the front door's kit view takes out of ITS picture — it stands
- *  between that camera and the men. (tools/qa/kitview-page.cjs holds each id to a box of the car's footprint: a level edit that renumbers them is red there.) */
+ *  between that camera and the men. (tools/qa/kitview-plan.ts holds each id to what stands in the camera's way: a level edit that renumbers them is red there.) */
 const CAR = ['box_0212', 'box_0213', 'box_0214', 'box_0215', 'box_0216', 'box_0217', 'box_0218', 'box_0219', 'box_0220', 'box_0221', 'box_0222'];
 /** THE RECORDS OFFICE'S RESPONSE TEAM (scene/scenarios.ts ResponseData; game/qrf.ts RESPONSE.raid — `bun run tools/qa/response-check.ts` stands every mark
  *  on the built floor). A raid's team: it stands with the defenders. WHY HERE: the front office is 'the first room on a QUIET floor' — a night desk, a lamp,
@@ -124,10 +124,10 @@ export const RESPONSE: ResponseData = {
 export const RECORDS_SCENARIOS: LevelScenarios = { roomClear: RECORDS_STRUCTURE, response: RESPONSE,
   // the floor nobody holds, by name (scene/scenarios.ts PlacesData — words only): what a line on their net calls a spot that is no room of the structure
   places: { areas: [{ name: RECORDS_ROOMS.hall.name, bounds: { ...RECORDS_ROOMS.hall.bounds } }] },
-  // the start page's picture of the team at the way-in door (scene/scenarios.ts KitViewData, src/host/kitView.ts; picture only), per way in as the starts are:
+  // the start page's picture of the team at the way-in door (scene/scenarios.ts KitViewData, rust/game_rules/src/kitstage; picture only), per way in as the starts are:
   // the south lot's front door with the worked-out camera and lamp and its slots written down; the dark west side's the same way (no pin: one worked-out camera rule for both)
-  // (Sam's slot is 1.8 m from each door's middle, further off the wall than the worked-out 1.2 m: a door charge's moment goes off beside him — host/kitView.ts KIT_VIEW_STAGE.samClear)
-  // (what the plan — src/host/kitViewPlan.ts — would otherwise MEASURE and get a different picture from, written down as this level's own: the stack was laid out
+  // (Sam's slot is 1.8 m from each door's middle, further off the wall than the worked-out 1.2 m: a door charge's moment goes off beside him — rust/game_rules/src/kitstage KIT_VIEW_STAGE)
+  // (what the plan — rust/game_start/src/kit_plan.rs — would otherwise MEASURE and get a different picture from, written down as this level's own: the stack was laid out
   //  0.9 m apart (`slotGap`: spread to the picture's spacing), the yard's lived things stay in the front picture (`show`), and the front fill stands at its full 6.5 m
   //  though the lot's far kerb is nearer than that)
   kitView: { ways: [

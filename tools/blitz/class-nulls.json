@@ -226,7 +226,7 @@
 "squadthrow::State":["shown","scratch"],
 "squadthrow::StateCaught":["who"],
 "squadthrow::StateKeptValue":["th","line"],
-"squadthrow::Walk":["A","back"],
+"squadthrow::Walk":["held","A","back"],
 "squadthrow::WalkBack":["post","face"],
 "stackroom::Book":["near"],
 "stackroom::StackRoomProbe":["seed"],

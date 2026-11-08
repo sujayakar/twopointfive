@@ -60,7 +60,7 @@ export const REGISTRY_ROWS: { x: number; z0: number; z1: number }[] = [
   { x: 13.2, z0: 12.9, z1: 19.9 }, { x: 16.8, z0: 16.9, z1: 23.9 }, { x: 20.4, z0: 12.9, z1: 19.9 }, { x: 24.0, z0: 16.9, z1: 23.9 },
 ];
 
-/** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest; picture only). The rescue starts the team 3 m INSIDE the
+/** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest; picture only). The rescue starts the team 3 m INSIDE the
  *  front door, and from in there a picture looks out; from the forecourt the one thing that is this building's — the scribe's pitch, his table and typewriter
  *  under a faded umbrella — stands on the floor the men walk, south of the door and between Sam and the camera. So the way is a bespoke set: THE FRONT ITSELF,
  *  where it stands (the west wall on x 4, the same leaf on the same hinge, the lobby's red floor, its door mat and exit sign, a panel burning over the

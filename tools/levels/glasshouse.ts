@@ -111,7 +111,7 @@ export const GLASSHOUSE_STRUCTURE: StructureData = {
     { id: 'back', name: 'Back', rooms: ['lab', 'office', 'store'], rally: [19.5, 0, 11.4] },                                // the dark rooms and the store: four in three rooms. The store apart as a squad of one that stays was tried: its man, dug in behind the racks, shot 13 of 48 teammates as the last room
   ],
 };
-/** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): both ways are the station's own walls, nothing built for
+/** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): both ways are the station's own walls, nothing built for
  *  the picture. WAY 1 was a span of the blank end wall, the hole the mission issues its one wall charge for — and a picture on a blank wall had nothing for the
  *  kit that works a leaf (the hammer, the shotgun, a door charge, the wand, a bang or a frag on order all stood idle; the gun only scanned). It is the FRONT
  *  door now, seen from the forecourt (`ref`: the team's own start is round the corner, on the building's other side of that wall's line), the stack along the
