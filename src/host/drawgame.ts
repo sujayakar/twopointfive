@@ -2,7 +2,7 @@
 // holds its number and nothing of it.
 import { FaceError, type Face, type Fetched } from './face';
 import { Drawn, drawRefused, type DrawFace } from '../draw/drawn';
-import { Want } from '../draw/sections';
+import { Man, Section, View, Want } from '../draw/sections';
 import { Commands } from '../draw/commands';
 import { HAND } from '../draw/hand';
 import type { SaveRow } from '../ui/runcard';
@@ -63,7 +63,7 @@ export class DrawGame {
   /** A GAME LOST TO A PANIC STANDS AGAIN, from the best save of it or from its run's first step: the save's label, '' for the start, null where nothing of it is kept */
   recover(newest: boolean): string | null {
     const h = this.X.face_recover(this.h, newest ? 1 : 0); if (!h) return null;
-    this.lost = null; this.h = h; const label = this.answer(); this.said = null; this.draw(); return label;
+    this.lost = null; this.h = h; this.between = 1; const label = this.answer(); this.said = null; this.draw(); return label;
   }
 
   /** A GAME, from its start; what has been commanded by now is done to it before it is made */
@@ -76,7 +76,7 @@ export class DrawGame {
     if (this.h) { this.X.face_drop(this.h); this.h = 0; }
     try { this.h = this.X.face_start(at, n, -1, o.seed, o.seats ?? 1, DRESS); } finally { this.X.face_free(at, n); }
     if (!this.h) throw new FaceError('no room for another game in this module');
-    this.ticks = 0; this.said = null;
+    this.ticks = 0; this.said = null; this.between = 1;
     // (room asked for and given back: the allocator keeps it, and a step seldom has to grow the memory)
     this.X.face_reserve(64 * 1048576);
     this.draw();
@@ -101,7 +101,15 @@ export class DrawGame {
   /** what has been commanded is done now, between two ticks, and what it changed is there to be read: the next step would do the same things first */
   tell(): void { this.order(); this.draw(); }
   /** A FRAME IS DRAWN, `a` of the way from the tick before to the last */
-  frame(a: number, focus: ArrayLike<number>): void { this.drawn.frame(this.h, a, focus); }
+  frame(a: number, focus: ArrayLike<number>): void { this.drawn.frame(this.h, a, focus); this.between = a; }
+  private between = 1;
+  /** the picture's clock: seconds of the game's, between its ticks as the frame is */
+  get time(): number { return Math.max(0, this.drawn.u[this.drawn.at[Section.view] + View.tick] - 1 + this.between) / 60; }
+  /** where a man is drawn standing, by his character's id; null = nothing is drawn of him */
+  at(id: number): [number, number, number] | null {
+    const { f, u, n, at } = this.drawn; for (let i = 0, o = at[Section.men]; i < n[Section.men]; i++, o += Man.row) if (u[o + Man.id] === id) return [f[o + Man.feet], f[o + Man.feet + 1], f[o + Man.feet + 2]];
+    return null;
+  }
   /** what this page says of its look, when it is another than it last said */
   look(v: Float64Array): void {
     const was = this.said; if (was) { let i = 0; while (i < v.length && v[i] === was[i]) i++; if (i === v.length) return; }
