@@ -343,24 +343,6 @@ pub fn stalk_step(g: &mut crate::game::Game, lmb: bool, lmb_hit: bool, own_keys:
     Some(StalkMove { mx: bx / bl, mz: bz / bl, pace, at, keep: None })
 }
 
-/// The stick's step: the mouse's way from the press as a way across the floor, taken round the man. (stalk.ts dragged)
-pub fn dragged(g: &mut crate::game::Game, pl: PlayerId, gd: GuardId, p: &[f64], at: V3, dist: f64, st: crate::stalk::StalkStick, mid: [f64; 2], dt: f64) -> crate::stalk::StalkMove {
-    let (dx, dy) = (st.x - mid[0], st.y - mid[1]);
-    let mag = m::hyp2(dx, dy);
-    let k = v3::clamp((mag - g.k.stalk.drag_dead) / m::max(1.0, g.k.stalk.drag_full - g.k.stalk.drag_dead), 0.0, 1.0);
-    if k <= 0.0 {
-        return StalkMove { mx: 0.0, mz: 0.0, pace: 0.0, at, keep: Some(true) };
-    }
-    // screen down is the camera's back
-    let mut mx = st.right[0] * dx - st.fwd[0] * dy;
-    let mut mz = st.right[2] * dx - st.fwd[2] * dy;
-    let l = js::or(m::hyp2(mx, mz), 1.0);
-    mx /= l;
-    mz /= l;
-    let pace = g.k.stalk.pace * k;
-    orbited(g, pl, gd, p, at, dist, mx, mz, pace, dt)
-}
-
 /// The share of a way into the man left to it at `dist`: all until 20 cm outside `keyM`, none from 4 cm outside. (stalk.ts intoKeep)
 pub fn into_keep(g: &crate::game::Game, dist: f64) -> f64 {
     v3::clamp((dist - g.k.stalk.key_m - 0.04) / 0.16, 0.0, 1.0)

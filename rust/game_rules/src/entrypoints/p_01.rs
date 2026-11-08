@@ -20,12 +20,6 @@ pub fn entry_points_reset(g: &mut crate::game::Game) {
     g.entry.log.clear();
 }
 
-/// The level's openings as this module counts them: the doors. (entrypoints.ts EntryPoints.openings)
-pub fn entry_points_openings(g: &mut crate::game::Game) -> Vec<CoverOpeningId> {
-    let all = crate::cover::cover_ready(g);
-    all.into_iter().filter(|&o| g.tab.cover_opening[o].kind == crate::cover::OpeningKind::Door).collect()
-}
-
 /// Four times a second: where the squad stands is known ground. (entrypoints.ts EntryPoints.tick)
 pub fn entry_points_tick(g: &mut crate::game::Game) {
     if !crate::seats::team_active(g) { return; }

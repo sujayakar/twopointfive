@@ -175,11 +175,6 @@ pub fn game_stand_down(g: &mut crate::game::Game) {
     crate::guards::stand_down_escalation(g);
 }
 
-/// Panel: the human shield's standoff. (game.ts Game.standoffSummary)
-pub fn game_standoff_summary(g: &mut crate::game::Game) -> String {
-    crate::guards::standoff_summary(g)
-}
-
 /// Panel: what each unfound body reads on the light meter. (game.ts Game.bodyLightSummary)
 pub fn game_body_light_summary(g: &mut crate::game::Game) -> String {
     crate::guards::body_light_summary(g)
