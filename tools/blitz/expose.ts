@@ -1,7 +1,7 @@
 // THE STATE BRIDGE'S WINDOW ON A MODULE'S OWN VARIABLES. A module's top-level `let`s and tables are private, and only part of them are registered with side.ts (a table
 // that is built at load and never written is rightly exempt there, but the Rust game needs it all the same). This preload adds one line at the end of every source file
 // of the simulation's folders, with no effect on what runs: a getter for each top-level name the schema's walk asks for, kept on globalThis.__tpsTop[<file>]. A tool's only: never in the page.
-//   bun --preload ./tools/blitz/expose.ts run tools/blitz/bridge-check.ts
+//   bun --preload ./tools/blitz/expose.ts run tools/blitz/mission.ts <mission>:<seed>
 import { plugin } from 'bun';
 import { readFileSync } from 'node:fs';
 const SCHEMA = JSON.parse(readFileSync(`${import.meta.dir}/schema.json`, 'utf8'));

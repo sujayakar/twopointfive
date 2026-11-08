@@ -13,7 +13,7 @@ import { Game } from '../game/game';
 import { SmokeSystem } from '../smoke/smoke';
 import { FollowCamera } from '../host/camera';
 import { Overlay } from './overlay';
-import type { DevHud } from './devhud';
+import type { WindViz } from './windviz';
 import { Panel } from './panel';
 import { SYS, buildGraphics, graphicsSystems, type HudStats } from './graphicspanel';
 import { rowHeld } from '../host/held';
@@ -60,7 +60,7 @@ function knobRows(panel: Panel, sec: HTMLElement, table: KnobTable, defs: KnobTa
   }
 }
 
-export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: SmokeSystem, cam: FollowCamera, overlay: Overlay, audio: AudioEngine, quality: Quality, hud: HudStats | undefined, dev: Pick<DevHud, 'windViz'>) {
+export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: SmokeSystem, cam: FollowCamera, overlay: Overlay, audio: AudioEngine, quality: Quality, hud: HudStats | undefined, dev: { windViz: WindViz }) {
   const S = engine.settings;
   const flag = (sec: HTMLElement, label: string, f: number, title?: string) => panel.toggleBox(sec, label, () => (S.flags & f) !== 0, v => { S.flags = v ? S.flags | f : S.flags & ~f; }, title);
   /** rows built inside are ADVANCED (A/B knobs, measurement switches): hidden until 'all knobs' or a search finds them */

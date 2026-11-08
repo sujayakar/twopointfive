@@ -609,7 +609,7 @@ over 3,006 ticks with 9 men; compound-four 1.22 ms over 7,576 ticks with 15 men)
 animation and light. So nothing in this design is bought with speed, and the design may spend freely on
 clarity: asking every rule every tick, granting by channel, writing the record. Speed is the bodies' matter
 (pose only men a camera can see; a cheaper light meter) and the page's (the hand-over to the picture costs more
-than the tick: `tools/blitz/PAGE.md`).
+than the tick).
 
 ## 11. Special cases today, and the general rule that replaces each
 

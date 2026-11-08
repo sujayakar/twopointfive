@@ -1,5 +1,5 @@
 // THE DIFF of two whole states (a TypeScript export and a Rust one) in O(file) memory, walking both by the schema side by side: no list of every path is built
-// (paths.ts's diff holds 2 to 3 GB for a 10 MB state; a state grows by the frame's boxes every tick).
+// 
 //   bun run tools/blitz/diff.ts <a.bin> <b.bin> [--show 30] [--out file.tsv] [--canon BoxId,LightId | --canon-file canon.txt] [--known known.txt[,more.txt]] [--blocks s.bin ns.bin] [--why] [--dump <path regex> [--dump-max 400]] [--dynboxes] [--leave-out skin,look]
 //   bun run tools/blitz/diff.ts <a.bin> <a.bin> --tables     how many rows each table of a state holds
 //   exit 0 the same but for what is known · 1 they part
@@ -7,7 +7,7 @@
 // (the root, then every other table's rows in order, then the rows those reach), and a row nothing reaches is not compared. The TypeScript's walk numbers a made box
 // when an export first meets it and the Rust game when it is made; with an export only every so many ticks those numbers differ and mean nothing. A path of such a
 // row reads `g.tab.boxes[c12]`, and an ID's value `BoxId(c12)`.
-// --live: BY REACH FROM THE LIVE GAME, for two states the die and the block call equal (a fuzz run's, every half minute). Three rules, each with what it hides:
+// --live: BY REACH FROM THE LIVE GAME, for two states the die and the block call equal. Three rules, each with what it hides:
 //  1. A map or set keyed by a row of a canon table is not walked for reach until its key is reached some other way. The TypeScript keeps such tables
 //     weakly, by the object, and lists a row for a player, a gun or an order's assignment that is out of the game (before a fresh deal, a restart, a
 //     load) for as long as the collector leaves it; numbered through that row, every gun after it compared crosswise. The Rust game keeps a row by its
@@ -21,8 +21,6 @@
 //     TypeScript holds is counted. A set is held to its count, and only the Rust side's surplus is reported.
 //     HIDES: which key holds which value; a member only the TypeScript holds.
 //  3. `WallchargeMod.stand_ins` (a declared memo) is not walked for reach.
-// (A fourth rule is the caller's: after a load a run's states are also held to known-loaded.txt, the modules' own logs and tallies, which the TypeScript's
-//  put-back leaves as the abandoned future wrote them and the Rust game's kept clone takes back. tools/blitz/fuzz-dumps.ts.)
 // A Vec of two lengths: `.len` differs, the common rows are compared, the rest is counted as one path `[n..]`. A map / set is compared by key.
 import { readFileSync, writeFileSync } from 'node:fs';
 const { SCHEMA, parse } = await import('./export.ts');
@@ -124,7 +122,7 @@ function index(s: Side): void {
   s.p = 0; skip(ROOT, s, null);
   for (const t of SCHEMA.tables) { const L = s.u32(), N = parse(t.ty), at: number[] = new Array(L); s.tableLen.set(t.id, L); for (let k = 0; k < L; k++) { at[k] = s.p; skip(N, s, null); } s.rows.set(t.id, at); }
   s.serialAt = s.p; s.p += 4;
-  // (then the floats of the poses no pool holds, each `row, n, n floats`: carried for an import and compared by nothing, as paths.ts)
+  // (then the floats of the poses no pool holds, each `row, n, n floats`: carried for an import and compared by nothing)
   for (let n = s.u32(); n > 0; n--) { s.p += 4; const L = s.u32(); s.p += L * 4; }
   if (s.p !== s.b.length) throw new Error(`diff: ${s.b.length - s.p} bytes left over`);
   const onId = (id: string, v: number) => { if (v === 0xffffffff) return; const M = s.canon.get(id)!; if (M.has(v) || leftOut(s, id, v)) return; M.set(v, M.size); s.order.get(id)!.push(v); queue.push([id, v]); };
@@ -159,7 +157,7 @@ function leftOut(s: Side, id: string, v: number): boolean {
   s.left.set(key, out); if (out) s.leftN++; return out;
 }
 // ---- the comparison
-// BY RULE (schema.json, as paths.ts): a field in `schema.scratch` is a memo no rule reads back and is not compared; a field in `schema.serial` holds an object's
+// BY RULE (schema.json): a field in `schema.scratch` is a memo no rule reads back and is not compared; a field in `schema.serial` holds an object's
 // identity serial, which the two sides deal apart by design: its value is not compared (whether it is there still is), and a map or set marked `<field>{}`
 // is keyed by one and is compared by place. How many leaves each rule passed over is said at the end.
 let SER = false, KEYSER = false, serialN = 0, scratchN = 0, nullN = 0, rowN = 0; const STALE = new Map<string, [number, number]>(); const stale = (q: string, a: number, b: number) => { const c = STALE.get(q) ?? [0, 0]; c[0] += a; c[1] += b; STALE.set(q, c); };
