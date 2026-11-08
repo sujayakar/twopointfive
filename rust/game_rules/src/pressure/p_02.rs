@@ -22,7 +22,6 @@ fn op_gd(g: &Game, i: usize) -> GuardId { g.tab.roomfight_op[g.fight.ops[i]].gd 
 #[inline]
 fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 #[inline]
-fn player_pos(g: &Game, seat: &crate::seats::SeatRef) -> V3 { g.ch[g.pl[seat.player].ch].pos }
 #[inline]
 fn door_centre(g: &Game, door: DoorId) -> V3 { g.dr[door].frame_centre }
 #[inline]
@@ -220,8 +219,8 @@ pub fn team_stands(g: &mut crate::game::Game, r: RoomfightRoomId) -> bool {
         let o = op_gd(g, i);
         if g.gd[o].state != crate::game::GuardState::Dead && in_room(g, r, pos_of(g, o)) { return true; }
     }
-    let p = player_pos(g, &crate::seats::here(g));
-    in_room(g, r, p)
+    for pl in crate::seats::men_left(g) { let p = g.ch[g.pl[pl].ch].pos; if in_room(g, r, p) { return true; } }
+    false
 }
 /// the last of his side alive: nobody left to go to. (pressure.ts lastAlone)
 pub fn last_alone(g: &crate::game::Game, d: RoomfightDefId) -> bool {
@@ -267,7 +266,6 @@ fn bang_by(g: &mut Game, r: Option<RoomfightRoomId>, c: V3, p: V3) -> bool {
 }
 /// once a frame while anybody carries a charge: the team's loud doings read off the floor's events; marked doors the team has left let be; the counts of charges gone off. (pressure.ts learn)
 pub fn learn(g: &mut crate::game::Game) {
-    let pid = g.ch[g.pl[g.player].ch].id;
     let now = g.time;
     for i in 0..g.events.len() {
         let e = g.events[i];
@@ -278,7 +276,7 @@ pub fn learn(g: &mut crate::game::Game) {
         if st.ev_seen.has(e.serial) { continue; }
         st.ev_seen.add(e.serial);
         if !kick && e.level.unwrap_or(0.0) < 1.0 { continue; }
-        if who != pid && !g.fight.ops.iter().any(|&o| g.ch[g.gd[g.tab.roomfight_op[o].gd].ch].id == who) { continue; }
+        if !crate::seats::is_man_id(g, who) && !g.fight.ops.iter().any(|&o| g.ch[g.gd[g.tab.roomfight_op[o].gd].ch].id == who) { continue; }
         let mut p = e.pos;
         if kick {
             let mut bd = 2.5;
@@ -346,8 +344,8 @@ pub fn learn(g: &mut crate::game::Game) {
             let o = op_gd(g, i);
             if g.gd[o].state != crate::game::GuardState::Dead { let p = pos_of(g, o); if bang_by(g, room, c, p) { any = true; break; } }
         }
-        let pp = player_pos(g, &crate::seats::here(g));
-        if !any && !bang_by(g, room, c, pp) { state_of(g).stats.stun_empty += 1.0; }
+        if !any { for pl in crate::seats::men_left(g) { let p = g.ch[g.pl[pl].ch].pos; if bang_by(g, room, c, p) { any = true; break; } } }
+        if !any { state_of(g).stats.stun_empty += 1.0; }
     }
 }
 /// handed to the fight AI as the stock rally hands a man over: off his post, roused, the fight's place his fix. (pressure.ts loose)

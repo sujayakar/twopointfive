@@ -106,7 +106,7 @@ pub fn is_man_id(g: &crate::game::Game, id_2: f64) -> bool {
 }
 
 /// every seat's man, in seat order (seats.ts men)
-pub fn men(g: &mut crate::game::Game) -> Vec<PlayerId> {
+pub fn men(g: &crate::game::Game) -> Vec<PlayerId> {
     if g.seats.len() == 1 { return vec![g.player]; }
     let mut out = Vec::new();
     for i in 0..g.seats.len() { let s = g.seats[i]; out.push(crate::cmd::seat_man(g, s)); }
