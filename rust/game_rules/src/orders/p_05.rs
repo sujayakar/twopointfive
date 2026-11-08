@@ -29,7 +29,6 @@ fn pair_watch_tick(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
 pub fn order_tick(g: &mut crate::game::Game, d: OrdersOrderDefId, gd: GuardId, a: OrdersAssignmentId) {
     let tick = match g.tab.orders_order_def[d].tick { Some(t) => t, None => return };
     match tick {
-        OrderTick::ThrowRow => crate::squadthrow::walk_tick(g, gd, a),
         OrderTick::Row(r) => if let Some(f) = r.tick { f(g, gd, a) },
         OrderTick::PairTake => crate::pairorders::pair_orders_take_tick(g, gd, a),
         OrderTick::PairWatch => pair_watch_tick(g, gd, a),

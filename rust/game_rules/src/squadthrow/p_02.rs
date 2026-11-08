@@ -520,31 +520,23 @@ pub fn squad_throw_plans(g: &crate::game::Game, _v: Option<&mut crate::squadthro
 
 /// The row that opens the page and the page's two: made, not yet on the menu. (squadthrow.ts rows)
 pub fn rows(g: &mut crate::game::Game) -> Vec<OrdersOrderDefId> {
-    let open = crate::orders::OrderDef {
-        id: String::from(THROW_OPEN),
+    use crate::orders::rows;
+    let open = rows::def(&rows::throwopen::ORDER, crate::orders::OrderDef {
         opens: Some(String::from(THROW_PAGE)),
         hot_key: Some(g.k.frag.order_key.clone()),
         targets: vec![crate::orders::TargetKind::Floor],
         free: Some(true),
-        label: crate::orders::OrderLabel::ThrowOpen,
-        issue: crate::orders::OrderIssue::Nothing,
         ..crate::orders::OrderDef::zeroed()
-    };
+    });
     let open = crate::orders::squad_orders_row(g, open);
     let mut out = vec![open];
-    for kind in [SquadThrowKind::Frag, SquadThrowKind::Stun] {
-        let one = crate::orders::OrderDef {
-            id: String::from(row_of(kind).as_str()),
+    for row in [&rows::fragthere::ORDER, &rows::stunthere::ORDER] {
+        let one = rows::def(row, crate::orders::OrderDef {
             page: Some(String::from(THROW_PAGE)),
             targets: vec![crate::orders::TargetKind::Floor],
             free: Some(true),
-            label: crate::orders::OrderLabel::ThrowRow { kind },
-            only: Some(crate::orders::OrderOnly::ThrowRow { kind }),
-            valid: Some(crate::orders::OrderValid::ThrowRow { kind }),
-            issue: crate::orders::OrderIssue::ThrowRow { kind },
-            tick: Some(crate::orders::OrderTick::ThrowRow),
             ..crate::orders::OrderDef::zeroed()
-        };
+        });
         out.push(crate::orders::squad_orders_row(g, one));
     }
     out
