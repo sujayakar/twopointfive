@@ -264,7 +264,7 @@ async function main(): Promise<void> {
     D.fresh();
     if (!measure.freezing) { skyFrom(engine, D); fogFrom(fog, D); }   // (a take over a held world flips what these write)
     smokeFrom(smoke, D);
-    rimsFrom(rims, D); weather.frame(cam); dustFrom(engine.particles!, D);
+    if (!kit) rimsFrom(rims, D); weather.frame(cam); dustFrom(engine.particles!, D);
     { const o = view(); engine.settings.nvAmount = D.f[o + View.night]; engine.settings.hitFlash = D.f[o + View.hit]; }
     game.look(lookNumbers(engine.settings, engine.world, !!ch.cast));
     const t1 = performance.now();

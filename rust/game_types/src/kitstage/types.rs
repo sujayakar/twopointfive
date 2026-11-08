@@ -127,6 +127,8 @@ pub struct KitStage {
     pub frame: Option<FrameAsk>, pub aspect: f64, pub pinned: Option<([f64; 3], f64, f64, f64)>,
     /// whose card is open (0 the player) and the row under its highlight · how many come, as last asked
     pub who: u32, pub field: String, pub size: Option<u32>,
+    /// the card asked for, whose man may not have come yet · staged again by the next tick
+    pub want: u32, pub due: bool,
     /// the boxes it sank, as places in the level's list · the level's men found roused by a park, and the alarm's marks it dropped: 0 for good is what the picture is held to
     pub sunk: Vec<usize>, pub roused_men: u32, pub roused_alarms: u32,
     /// nothing to stage

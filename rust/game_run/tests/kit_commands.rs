@@ -27,9 +27,10 @@ fn the_commands_reach_the_stage_and_the_step_holds_it() {
     // 30: the cards and the size
     let mut b = Vec::new();
     u32s(&mut b, 30);
-    text(&mut b, "[{\"weapon\":\"rifle\"}]");
+    text(&mut b, "{\"v\":2,\"own\":true,\"stealth\":true,\"members\":[{\"weapon\":\"rifle\"}]}");
     b.extend(2i32.to_le_bytes());
     command::apply(&mut p.g, &b).unwrap();
+    step(&mut p);
     assert_eq!(st(&p).order.len(), 2);
     assert_eq!(st(&p).size, Some(2));
     // (under 0: as it stands)
@@ -38,12 +39,14 @@ fn the_commands_reach_the_stage_and_the_step_holds_it() {
     text(&mut b, "{\"members\":[]}");
     b.extend((-1i32).to_le_bytes());
     command::apply(&mut p.g, &b).unwrap();
+    step(&mut p);
     assert_eq!(st(&p).order.len(), 2);
 
     // 31: the open card
     let mut b = Vec::new();
     u32s(&mut b, 31); u32s(&mut b, 2); text(&mut b, "bangs");
     command::apply(&mut p.g, &b).unwrap();
+    step(&mut p);
     assert_eq!((st(&p).who, st(&p).field.as_str()), (2, "bangs"));
     assert_eq!(st(&p).order[0], game::scenario_run::team_of(&p.g)[1]);
 
@@ -53,10 +56,7 @@ fn the_commands_reach_the_stage_and_the_step_holds_it() {
     let mut b = Vec::new();
     u32s(&mut b, 32);
     for x in [1.6, -0.4, 0.0, 0.6, 0.5, 0.19] { b.extend(f64::to_le_bytes(x)); }
-    u32s(&mut b, 1);
-    for x in [-0.2, -0.9, 0.1, 0.85] { b.extend(f64::to_le_bytes(x)); }
-    u32s(&mut b, 0);
-    for x in [0.0, 0.0] { b.extend(f64::to_le_bytes(x)); }
+    for x in [-0.2, -0.9, 0.1, 0.85, f64::NAN, f64::NAN] { b.extend(f64::to_le_bytes(x)); }
     command::apply(&mut p.g, &b).unwrap();
     let now = p.g.tab.camera[cam].pin.unwrap();
     assert!(now.look != was.look && st(&p).frame.unwrap().hung.is_some(), "the frame moved nothing");

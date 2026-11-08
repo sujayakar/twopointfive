@@ -1,13 +1,14 @@
 //! THE KIT PICTURE'S STAGE, AT A START: the words of a link that carries `kitview` read into the level that is built, the mission's words and the men's dress; and the plan made once the mission is up.
 use crate::json::Json;
 use crate::kit_plan::{self as kp, PlanBlock, PlanLevel, Way};
-use crate::kit_set::{self, Query, QuietKind};
+use crate::kit_set::{self, QuietKind};
 use alloc::borrow::Cow;
 use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
 use core::cell::RefCell;
 use game::game::Game;
+use game::query::Query;
 use game::kitstage::{self, KitStage, LampOver, SamOver, WayLights};
 
 /// a link that asks for the picture, and what it does to the start
@@ -39,10 +40,7 @@ pub fn dress(g: &mut Game, k: &KitLink) {
     if quiet_of(&k.q) != 0 { g.k.kitanim.sling = 2.0; }
 }
 /// the words the mission is started by: on a set the picture is a room clear whatever the mission's kind
-pub fn mission_words(k: &KitLink) -> game::query::Query {
-    let q = if k.on_set { kit_set::set_query(&k.q) } else { k.q.clone() };
-    game::query::Query::of_words(q.0)
-}
+pub fn mission_words(k: &KitLink) -> Query { if k.on_set { kit_set::set_query(&k.q) } else { k.q.clone() } }
 
 fn lamp(j: &Json) -> LampOver {
     let fx = j.get("fixture");

@@ -4,7 +4,8 @@
 //!   kitplan --ask <file>           a request a line (JSON, see `answer`), an answer a line: the process start is paid once
 use game_start::json::{self, Json};
 use game_start::kit_plan::{self as kp, PlanBlock, PlanLevel, PlanOpts, Way};
-use game_start::kit_set::{self as ks, Query, QuietKind};
+use game::query::Query;
+use game_start::kit_set::{self as ks, QuietKind};
 use std::collections::{BTreeSet, HashMap};
 
 struct Level { data: Json, level: PlanLevel, block: PlanBlock, spawn: [f64; 2] }
@@ -56,7 +57,7 @@ fn answer(r: &Json, levels: &mut HashMap<String, Level>) -> Json {
         "set_of" => match ks::set_of(&lv().data, r.get("way").num().unwrap() as usize) { Some(h) => json::s(h.name), None => Json::Null },
         "way_of_query" => json::n(ks::way_of_query(r.get("q").str(), &lv().data) as f64),
         "way_of_link" => json::n(ks::way_of_link(&query(r), &lv().data) as f64),
-        "set_query" => json::arr(ks::set_query(&query(r)).0.iter().map(|(k, v)| json::arr(vec![json::s(k), json::s(v)])).collect()),
+        "set_query" => json::arr(ks::set_query(&query(r)).words().iter().map(|(k, v)| json::arr(vec![json::s(k), json::s(v)])).collect()),
         "set_dress" => match ks::set_dress(&query(r)) { Some(d) => json::obj(vec![("suit", d.suit.map_or(Json::Null, json::s)), ("sling", json::n(d.sling))]), None => Json::Null },
         "quiet_kind" => match ks::quiet_kind(&query(r)) { Some(QuietKind::Quiet) => json::s("quiet"), Some(QuietKind::Solo) => json::s("solo"), None => Json::Null },
         "paint" => ks::set_paint(r.get("b"), r.get("materials")),

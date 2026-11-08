@@ -116,7 +116,7 @@ fn by_day_the_porch_lamp_is_out_with_the_levels_own() {
 fn another_size_stages_that_many_and_the_mission_keeps_its_own() {
     let mut p = stood("records.json", "roomclear&squad4");
     for n in [2, 0, 3, 4, 1] {
-        kitstage::cards(&mut p.g, n);
+        kitstage::cards(&mut p.g, n); p.frame();
         assert!(!st(&p).none, "{} men: nothing staged", n);
         assert_eq!(st(&p).order.len(), n as usize, "{} asked", n);
         on_their_places(&p, &format!("{} men", n), 0.05);
@@ -126,7 +126,7 @@ fn another_size_stages_that_many_and_the_mission_keeps_its_own() {
     drop(p);
     // (a quiet mission's men are its own: the cards are written, the size is not asked)
     let mut q = stood("bazaar.json", "quiet&squad=1");
-    kitstage::cards(&mut q.g, 3);
+    kitstage::cards(&mut q.g, 3); q.frame();
     assert_eq!(st(&q).order.len(), 1);
     assert!(st(&q).quiet);
 }
@@ -135,14 +135,35 @@ fn another_size_stages_that_many_and_the_mission_keeps_its_own() {
 fn an_open_card_stands_its_man_first() {
     let mut p = stood("records.json", "roomclear&squad4");
     let team = game::scenario_run::team_of(&p.g);
-    kitstage::open(&mut p.g, 2, "weapon");
+    kitstage::open(&mut p.g, 2, "weapon"); p.frame();
     assert_eq!(st(&p).who, 2);
     let now = game::scenario_run::team_of(&p.g);
     assert_eq!(team.len(), now.len());
     assert_eq!(st(&p).order[0], now[1], "the open card's man is first at the door");
     on_their_places(&p, "card 2", 0.05);
-    kitstage::open(&mut p.g, 0, "");
+    kitstage::open(&mut p.g, 0, ""); p.frame();
     assert_eq!(st(&p).order[0], game::scenario_run::team_of(&p.g)[0]);
+}
+
+#[test]
+fn a_card_may_be_open_before_its_man_has_come() {
+    let mut p = stood("records.json", "roomclear&squad4");
+    kitstage::cards(&mut p.g, 3); p.frame();
+    kitstage::open(&mut p.g, 4, "weapon"); p.frame();
+    assert_eq!((st(&p).who, st(&p).order.len()), (0, 3), "three came: the player's card stands in");
+    kitstage::cards(&mut p.g, 4); p.frame();
+    assert_eq!(st(&p).who, 4);
+    assert_eq!(st(&p).order[0], game::scenario_run::team_of(&p.g)[3], "he came, and his card is open");
+    // (a message and a card in the same moment are one restaging, and the lamps hung are the same rows)
+    kitstage::cards(&mut p.g, 3); p.frame();
+    let was = p.g.mission.serial;
+    kitstage::cards(&mut p.g, 3); p.frame();
+    let (once, at) = (p.g.mission.serial - was, p.g.mission.serial);
+    let lamps = (st(&p).porch, st(&p).fill);
+    kitstage::cards(&mut p.g, 3);
+    kitstage::open(&mut p.g, 1, "weapon"); p.frame();
+    assert_eq!((st(&p).porch, st(&p).fill), lamps);
+    assert_eq!(p.g.mission.serial - at, once, "staged again once");
 }
 
 #[test]
@@ -150,7 +171,7 @@ fn a_frame_moves_the_pin_and_stays_in_range() {
     let mut p = stood("records.json", "roomclear&squad4");
     let cam = p.g.host_cam.unwrap();
     let was = p.g.tab.camera[cam].pin.unwrap();
-    let ask = kitstage::frame_ask(-0.4, 0.0, 0.6, 0.5, 0.19, Some([-0.2, -0.9, 0.1, 0.85]), None);
+    let ask = kitstage::frame_ask(-0.4, 0.0, 0.6, 0.5, 0.19, [-0.2, -0.9, 0.1, 0.85], [f64::NAN; 2]);
     kitstage::frame(&mut p.g, 1.6, ask);
     let now = p.g.tab.camera[cam].pin.unwrap();
     assert!(now.look != was.look || now.dist != was.dist, "the frame moved nothing");
@@ -168,7 +189,7 @@ fn nothing_to_stage_says_so_and_never_stops() {
         assert!(st(&p).none, "{}: staged", what);
         p.run(0.5);
         assert!(st(&p).none, "{}: staged a tick on", what);
-        kitstage::cards(&mut p.g, 2);
+        kitstage::cards(&mut p.g, 2); p.frame();
         assert!(st(&p).none, "{}: staged by the cards", what);
     }
 }
