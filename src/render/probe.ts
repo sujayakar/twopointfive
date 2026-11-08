@@ -10,7 +10,7 @@ import probeSrc from './shaders/probe.wgsl' with { type: 'text' };
  *  below, probe.wgsl's runtime-sized arrays and its `i >= pp.count` guard, a dispatch of ⌈n / 32⌉ groups of the kernel's 32 threads — still two storage buffers.
  *  It was 32: Sam + the four + eleven defenders ask about fifty (two meters a unit, a smoke line a defender, the fog of war's). */
 export const MAX_QUERIES = 64;
-/** the last of the ranks an ask can carry (0 first; game/sensors.ts askRank deals them): on a frame that asks for more than the table holds the lowest ranks keep
+/** the last of the ranks an ask can carry (0 first): on a frame that asks for more than the table holds the lowest ranks keep
  *  their places — see put() */
 const LAST_RANK = 3;
 type Ask = { key: string; pos: Vec3; skipOwner: number; b?: Vec3; rank: number };
@@ -28,6 +28,14 @@ class Plumbing extends HostOwned {
   countData = new Uint32Array(4);   // (the count uniform, rewritten in place — review R1.4)
   /** how many times the game was put back under the meter (putBack): an answer asked for before the last one is of a moment that is gone */
   gen = 0;
+}
+
+/** what the game holds a probe as: asked by key, answered a frame or two later by key; `results` is the answer table a tool reads */
+export interface ProbeLike {
+  query(key: string, pos: Vec3, skipOwner?: number, rank?: number): void;
+  querySegment(key: string, a: Vec3, b: Vec3, rank?: number): void;
+  get(key: string): ArrayLike<number> | undefined;
+  results: Map<string, unknown>;
 }
 
 export class IrradianceProbe {
