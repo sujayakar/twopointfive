@@ -1477,6 +1477,8 @@ pub const NUM_MAX: usize = 1024;
 static mut NUM: [[f64; NUM_MAX]; NUMS] = [[0.0; NUM_MAX]; NUMS];
 static mut NUM_LEN: [u32; NUMS] = [0; NUMS];
 
+/// the numbers of the list, for whoever has them to write. Code in this module reads and writes on one thread, between reads
+pub fn values() -> &'static mut [f64; KNOBS] { unsafe { &mut *core::ptr::addr_of_mut!(KNOB) } }
 /// knob `i` of the list (a `pub const` above)
 #[inline(always)]
 pub fn k(i: usize) -> f64 {
