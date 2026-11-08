@@ -11,6 +11,11 @@ use super::*;
 use crate::game::Game;
 use alloc::string::String;
 
+fn stage_word(s: crate::game::MissionStage) -> Stage {
+    use crate::game::MissionStage as M;
+    match s { M::Drive => Stage::Drive, M::Infiltrate => Stage::Infiltrate, M::Exfil => Stage::Exfil, M::Done => Stage::Done, M::Failed => Stage::Failed }
+}
+
 /// the view about `seat`, as the last tick left the game
 pub fn tick_view(g: &Game, seat: &crate::seats::SeatRef) -> TickView {
     let me = &g.ch[g.pl[seat.player].ch];
@@ -34,6 +39,11 @@ pub fn tick_view(g: &Game, seat: &crate::seats::SeatRef) -> TickView {
         plan: plan_view(g, seat),
         live: crate::mission::mission_live(g),
         quiet: crate::quiet::quiet_words(g).map(|q| QuietView { place: q.place, holder: q.holder, thing: q.thing, outs: q.outs, bare: q.bare }),
+        interact: crate::interact::interact_view(g, seat),
+        alarm: crate::guards::alarm_view(g),
+        stage: stage_word(g.mission.stage),
+        look: hud_look(g),
+        attention: crate::attention::attention_view(g),
     }
 }
 

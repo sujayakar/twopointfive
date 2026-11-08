@@ -779,8 +779,6 @@ export function pickHover(g: Game) { { const __s = RUST_SURFACE; if (__s) { cons
  *  Lower = higher up the list. Within one thing its verbs keep the order buildInteractables gave them; MAX_NEAR rows in all, so a man to grab beside a shut
  *  door reads [grab · push · ease] and the door's third verb (if it had one) would be the row that falls off. */
 export const INTERACT_PRIORITY: Record<Interactable['kind'], number> = { guard: 0, held: 0, body: 1, objective: 2, door: 3, light: 9, breaker: 2.5, switch: 3.2, charge: 9.4, wall: 9.5, cam: 9.6, cancel: 10 };   // (wall: a partition's 'breach with a charge' row ranks last — it never takes one of the MAX_NEAR rows from a door, a body or a switch · charge: ownblow.ts's row is put after the capped rows by hand and is never ordered by this — its rank is only the table's)
-/** how far a thing is from him, as its reach is measured: a door by its leaf or its doorway's centre, whichever is nearer */
-export function thingDist(it: Interactable, p: Vec3): number { const d = v3.distXZ(it.pos, p); return it.door ? Math.min(d, v3.distXZ(it.door.frameCentre, p)) : d; }
 export function interactOrder(p: Vec3): (a: Interactable, b: Interactable) => number { return goneWithTick('interactOrder') as any; }
 /** the most verb rows the interaction list ever holds (the highest-priority available ones; the cancel row while the selector is open is extra) */
 export const MAX_NEAR = 3;
