@@ -155,7 +155,7 @@ pub fn rows_how(r: Option<crate::scene_collision::LampRows>) -> f64 {
 }
 /// a question's word of the rows as a call of the module takes it (lib.rs light_rows over `rowsHow`). `LampRows.st` is Opaque: the block that holds the rows is this game's, `g.sim`
 fn rows_for(g: &Game, r: Option<LampRows>) -> Option<sim::light::Rows> {
-    r.map(|r| sim::light::Rows { g: g.sim, leave: js::to_u32(r.leave), steady: js::to_u32(rows_how(Some(r))) & 2 != 0 })
+    r.map(|r| sim::light::Rows { g: g.sim, leave: js::to_u32(r.leave), steady: js::to_u32(rows_how(Some(r))) & 2 != 0, exposure: crate::hours::exposure(g) })
 }
 
 /// a sense's question the module handed back, in words
@@ -1023,7 +1023,7 @@ pub fn sense_for(g: &mut crate::game::Game, row: crate::scene_collision::SenseFo
 }
 
 /// `n` steps of the coarse grid's smoke over the boxes and leaves as they stand. False = nothing was done. (collision.ts StaticCollision.gridStep)
-pub fn grid_step(g: &mut crate::game::Game, n: f64, k: crate::scene_collision::GridStepK, glow: Option<crate::scene_collision::GridStepGlow>, wind: Option<&crate::scene_collision::GridWind>) -> bool {
+pub fn grid_step(g: &mut crate::game::Game, n: f64, k: crate::scene_collision::GridStepK, sweep: f64, wind: Option<&crate::scene_collision::GridWind>) -> bool {
     ready(g);
     let mine = !standing(g);
     if mine {
@@ -1040,15 +1040,14 @@ pub fn grid_step(g: &mut crate::game::Game, n: f64, k: crate::scene_collision::G
     // the light that comes round: the only `lamps` hung is guards.ts steadyLamps (sense.ts step, called from game.ts), which writes the lamps of nobody's fixture and answers with the rows' word
     let mut lamps = -1i32;
     let mut said_rows: Option<LampRows> = None;
-    if glow.is_some() {
-        g.col.mirror.lamp_n = 0.0;
-        lamps_over(g);
-        match crate::guards::steady_lamps(g) {
-            crate::guards::SteadyLamps::Bool(false) => {}
-            crate::guards::SteadyLamps::Bool(true) => { lamps = g.col.mirror.lamp_n as i32; }
-            crate::guards::SteadyLamps::LampRows(r) => { lamps = g.col.mirror.lamp_n as i32; said_rows = Some(r); }
-        }
+    g.col.mirror.lamp_n = 0.0;
+    lamps_over(g);
+    match crate::guards::steady_lamps(g) {
+        crate::guards::SteadyLamps::Bool(false) => {}
+        crate::guards::SteadyLamps::Bool(true) => { lamps = g.col.mirror.lamp_n as i32; }
+        crate::guards::SteadyLamps::LampRows(r) => { lamps = g.col.mirror.lamp_n as i32; said_rows = Some(r); }
     }
+    let sky = crate::hours::sky_now(g);
     let (mut wx, mut wz, mut low, mut gain, mut full_at) = (0.0, 0.0, 1.0, 0.0, 1.0);
     if let Some(wd) = wind {
         if wd.x != 0.0 || wd.z != 0.0 {
@@ -1086,13 +1085,8 @@ pub fn grid_step(g: &mut crate::game::Game, n: f64, k: crate::scene_collision::G
     let copy = crate::scene_box_mirror::box_mirror_grid_copy(g);
     let (w, block) = (slot(g), g.sim);
     let rows = rows_for(g, said_rows);
-    let r = match (&glow, lamps >= 0) {
-        (Some(gl), true) => {
-            let gk = sim::glow::K { albedo: gl.k.albedo, share: gl.k.share, passes: js::to_u32(gl.k.passes), sweep: gl.k.sweep, lamps: lamps as usize, rows };
-            sim::bricks::step(block, stamp, w, copy, set, js::to_u32(n), &bk, Some(&gk))
-        }
-        _ => sim::bricks::step(block, stamp, w, copy, set, js::to_u32(n), &bk, None),
-    };
+    let gk = if lamps >= 0 { Some(sim::glow::K { sweep, sky, lamps: lamps as usize, rows }) } else { None };
+    let r = sim::bricks::step(block, stamp, w, copy, set, js::to_u32(n), &bk, gk.as_ref());
     if mine { crate::scene_box_mirror::box_mirror_shut(g); }
     r != ASK_HOST
 }

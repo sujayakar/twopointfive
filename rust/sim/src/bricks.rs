@@ -53,16 +53,17 @@ const H_CLOCK: usize = 6;
 pub const O_EMIT: usize = HEAD;
 /// which brick is where: its place in plan, x then z, EACH PLUS ONE (0 = the slot is free: a row of zeros is an empty grid)
 pub const O_KEYS: usize = O_EMIT + MAX_EMIT * EMIT;
-/// THE LIGHT THAT COMES ROUND (glow.rs), a number a square metre of the plan in four columns: the lamps' light at its middle · the bounced light there ·
-/// is the way open to the metre toward +x · and toward +z (1 or 0). Zeros where nothing has swept: no light.
+/// THE LIGHT UNDER A ROOF (glow.rs), a number a square metre of the plan in five columns: the best of the six faces at its middle · their mean · the mean
+/// with the lamps', which is what leaves its surfaces · the face that looks up · the level of the place it is in (a logarithm). Zeros where nothing has swept: no light.
 pub const MAX_GLOW: usize = MAX_BRICKS * (SIDE * SIDE) as usize;
-pub const O_GLOW_D: usize = O_KEYS + MAX_BRICKS * 2;
-pub const O_GLOW_B: usize = O_GLOW_D + MAX_GLOW;
-pub const O_GLOW_X: usize = O_GLOW_B + MAX_GLOW;
-pub const O_GLOW_Z: usize = O_GLOW_X + MAX_GLOW;
+pub const O_GLOW_MAX: usize = O_KEYS + MAX_BRICKS * 2;
+pub const O_GLOW_MEAN: usize = O_GLOW_MAX + MAX_GLOW;
+pub const O_GLOW_A: usize = O_GLOW_MEAN + MAX_GLOW;
 /// …and the word of the lamps it is swept under (glow.rs; 0 = never, or not since the light model was last down) · which metre the sweep comes to next ·
 /// how many it has still to go through at the quick pace
-pub const O_GLOW_LAMPS: usize = O_GLOW_Z + MAX_GLOW;
+pub const O_GLOW_UP: usize = O_GLOW_A + MAX_GLOW;
+pub const O_GLOW_PLACE: usize = O_GLOW_UP + MAX_GLOW;
+pub const O_GLOW_LAMPS: usize = O_GLOW_PLACE + MAX_GLOW;
 pub const O_GLOW_AT: usize = O_GLOW_LAMPS + 1;
 pub const O_GLOW_LEFT: usize = O_GLOW_AT + 1;
 /// THE CELLS, last: brick b's are the `CELLS` doubles from `O_RHO + b * CELLS`, so the row is in use up to the end of the highest brick that stands
@@ -143,6 +144,12 @@ fn dims(st: &[f64; LEN]) -> (usize, usize) {
     } else {
         (0, 0)
     }
+}
+/// THE LIGHT UNDER A ROOF at a point, of the game in slot `g` over box world `w` (glow.rs at)
+pub fn under_roof(g: usize, w: usize, p: [f64; 3]) -> Option<crate::glow::Field> {
+    let st = &state_read(g).smoke.st;
+    let (x, z) = dims(st);
+    crate::glow::at(w, st, x, z, p)
 }
 /// THE PLAN A GAME'S GRID STANDS ON, in metres along x and z (0 by 0 before its first step)
 pub fn plan(g: usize) -> (f64, f64) {
@@ -327,7 +334,7 @@ pub fn empty(g: usize) {
             gr.st[h] = 0.0;
         }
     }
-    for v in gr.st[O_EMIT..O_GLOW_D].iter_mut() {
+    for v in gr.st[O_EMIT..O_GLOW_MAX].iter_mut() {
         *v = 0.0;
     }
     for v in gr.st[O_RHO..].iter_mut() {
@@ -492,7 +499,7 @@ pub fn step(g: usize, stamp: f64, w: usize, copy: f64, set: i32, n: u32, k: &K, 
         // (the first step on this level: a state from any other plan holds nothing that is anywhere here)
         g.st[H_NBX] = nbx;
         g.st[H_NBZ] = nbz;
-        for v in g.st[O_GLOW_D..O_RHO].iter_mut() {
+        for v in g.st[O_GLOW_MAX..O_RHO].iter_mut() {
             *v = 0.0;
         }
         g.nbx = nbx as usize;
@@ -553,8 +560,9 @@ fn substep(w: usize, set: i32, g: &mut Grid, k: &K) {
         if age < ttl {
             let amount = rate * js_min(SUB, ttl - age);
             let top = (BY - 1) as f64;
-            let lo = js_min(js_max(floor((y0 - radius) / CELL), 0.0), top);
-            let hi = js_min(js_max(floor((y0 + radius + js_min(k.rise, k.rise_rate * age)) / CELL), lo), top);
+            // (its foot and the top of its plume, in cells: each cell between takes what of the plume is in it)
+            let foot = js_min(js_max((y0 - radius) / CELL, 0.0), top);
+            let head = js_min(js_max((y0 + radius + js_min(k.rise, k.rise_rate * age)) / CELL, foot + 0.1), top + 1.0);
             let (fx, fz) = (floor(x / CELL), floor(z / CELL));
             // (a point off the plan lets out nowhere)
             if fx >= 0.0 && fz >= 0.0 && fx < (g.nbx * BX) as f64 && fz < (g.nbz * BX) as f64 {
@@ -577,10 +585,10 @@ fn substep(w: usize, set: i32, g: &mut Grid, k: &K) {
                 let (ux, uz) = (cx as usize, cz as usize);
                 g.st[H_OUT] += amount;
                 if let Some(b) = g.brick_or_new((ux / BX) as i32, (uz / BX) as i32) {
-                    let each = amount / VOL / (hi - lo + 1.0);
-                    let mut y = lo;
-                    while y <= hi {
-                        g.st[O_RHO + b * CELLS + cell_at(ux % BX, y as usize, uz % BX)] += each;
+                    let each = amount / VOL / (head - foot);
+                    let mut y = floor(foot);
+                    while y < head {
+                        g.st[O_RHO + b * CELLS + cell_at(ux % BX, y as usize, uz % BX)] += each * (js_min(head, y + 1.0) - js_max(foot, y));
                         y += 1.0;
                     }
                 }

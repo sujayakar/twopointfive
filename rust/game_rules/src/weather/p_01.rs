@@ -32,6 +32,7 @@ fn level_boxes(g: &Game) -> Vec<BoxId> { g.col.boxes.clone() }
 fn paint(g: &mut Game, b: BoxId, albedo: V3, flags: f64, rough: Option<f64>, aniso: Option<bool>) {
     let x = seam_box(g, b);
     x.albedo = albedo; x.flags = flags; x.rough = rough; x.aniso = aniso;
+    crate::scene_collision::wrote(g);   // (what it sends back of the light is of the box world's row)
 }
 
 /// `WEATHER_PRESETS[kind]`.

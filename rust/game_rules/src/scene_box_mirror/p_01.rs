@@ -206,14 +206,17 @@ pub fn put(g: &mut crate::game::Game, m: &mut Vec<f64>, fl: &mut Vec<u32>, o: f6
     }
 }
 
+/// what a box sends back of the light on it, of 255
+fn back_of(b: &SBox) -> u8 { (v3::clamp(crate::hours::lum(b.albedo), 0.0, 1.0) * 255.0) as u8 }
 /// static `i`'s row in world `w` is box b: the row of the statics' table, the planes in the cut table.
 fn static_same(g: &mut Game, w: usize, i: usize, b: BoxId, kind: f64) -> bool {
-    let o = world_read(w);
-    row_same(&o.rec, i * REC_, o.flags[i], &o.cut, 0, seam_box(g, b), kind)
+    let (o, x) = (world_read(w), seam_box(g, b));
+    o.back[i] == back_of(x) && row_same(&o.rec, i * REC_, o.flags[i], &o.cut, 0, x, kind)
 }
 fn static_put(g: &mut Game, w: usize, i: usize, b: BoxId, kind: f64, cut_row: f64) {
     let (o, x) = (world(w), seam_box(g, b));
     o.wrote = o.wrote.wrapping_add(1);
+    o.back[i] = back_of(x);
     row_put(&mut o.rec, i * REC_, &mut o.flags[i], x, kind, cut_row);
     if (kind as u32) & K_CUT_ != 0 {
         planes_put(&mut o.cut, (cut_row * CUT_ROW) as usize, x);

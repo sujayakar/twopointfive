@@ -369,9 +369,9 @@ pub fn wind_share_under(g: &mut crate::game::Game, x: f64, z: f64, roofs: Option
     m::max(0.0, m::min(1.0, q[0] / low))
 }
 
-/// The wind the game's own smoke drifts by, or none in still air: no machine's settings and no gust in it. (wind.ts Wind.stormDrift)
+/// The wind the game's own smoke drifts by, or none in still air (an hour with no storm in it, as the drawn air has none): no wind setting and no gust in it. (wind.ts Wind.stormDrift)
 pub fn wind_storm_drift(g: &mut crate::game::Game) -> Option<crate::scene_collision::GridWind> {
-    if !wind_blows(g, false) {
+    if !wind_blows(g) {
         return None;
     }
     let x = g.weather.wind[0];
@@ -385,9 +385,9 @@ pub fn wind_storm_drift(g: &mut crate::game::Game) -> Option<crate::scene_collis
     Some(crate::scene_collision::GridWind { x, z, low, gain, full_at, share })
 }
 
-/// Does the weather blow at all; `session` adds the weather's own switch, which the game's drift does not ask. (wind.ts Wind.blows)
-pub fn wind_blows(g: &crate::game::Game, session: bool) -> bool {
-    if session && !crate::weather::weather_enabled(g) {
+/// Does the weather blow at all. (wind.ts Wind.blows)
+pub fn wind_blows(g: &crate::game::Game) -> bool {
+    if !crate::weather::weather_enabled(g) {
         return false;
     }
     if crate::lighting::is_daylight(g) && crate::weather::weather_kind(g).is_none() {
@@ -397,8 +397,8 @@ pub fn wind_blows(g: &crate::game::Game, session: bool) -> bool {
 }
 
 /// The storm's wind vector when it should be felt, none otherwise. (wind.ts Wind.stormWind)
-#[doc(hidden)] pub fn wind_storm_wind__body(g: &crate::game::Game) -> Option<V3> {
-    if !wind_blows(g, true) {
+#[doc(hidden)] pub fn wind_storm_wind__body(g: &mut crate::game::Game) -> Option<V3> {
+    if !wind_blows(g) {
         return None;
     }
     let wx = g.weather.wind[0] * g.k.wind.storm_k;

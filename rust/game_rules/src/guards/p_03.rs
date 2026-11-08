@@ -140,7 +140,7 @@ pub fn held_visibility(g: &mut crate::game::Game, p: &crate::guards::Pair) -> f6
             return r.vis;
         }
     }
-    let e = light_on(g, hc);
+    let [_, e] = light_on(g, hc);
     let dt = match &row {
         Some(r) => m::min(0.1, m::max(0.0, now - r.t)),
         None => 0.1,

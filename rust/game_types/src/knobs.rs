@@ -9196,18 +9196,12 @@ impl Default for SenseK { fn default() -> Self { Self::zeroed() } }
 /// (TypeScript: inline at src/game/sense.ts:64 SenseK.glow, src/game/sense.ts:64)
 #[derive(Clone, Copy, Debug)]
 pub struct SenseKGlow {
-    pub albedo: f64,
-    pub share: f64,
-    pub passes: f64,
     pub sweep: f64,
 }
 impl SenseKGlow {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         SenseKGlow {
-            albedo: 0.0,
-            share: 0.0,
-            passes: 0.0,
             sweep: 0.0,
         }
     }
@@ -13535,7 +13529,7 @@ pub fn page_posemath() -> PosemathK {
 }
 
 pub fn page_sense() -> SenseK {
-    crate::knobs::SenseK { glow: crate::knobs::SenseKGlow { albedo: 0.3, share: 0.1, passes: 2.0, sweep: 32.0 }, smoke: crate::knobs::SenseKSmoke { sigma: 6.0, decay: 0.14, spread: 0.2, widest: 3.5, rise: 1.0, rise_rate: 0.3, in_wind: 0.15, least: 0.05, gone: 0.02, cap: 48.0, emitters: 64.0, reserve: 12.0 } }
+    crate::knobs::SenseK { glow: crate::knobs::SenseKGlow { sweep: 32.0 }, smoke: crate::knobs::SenseKSmoke { sigma: 6.0, decay: 0.14, spread: 0.2, widest: 3.5, rise: 1.0, rise_rate: 0.3, in_wind: 0.15, least: 0.05, gone: 0.02, cap: 48.0, emitters: 64.0, reserve: 12.0 } }
 }
 
 pub fn page_cmdcheck() -> CmdcheckK {

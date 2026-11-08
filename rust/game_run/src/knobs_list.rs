@@ -2645,9 +2645,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("rescueflush.smoke_k", offset_of!(Knobs, rescueflush.smoke_k), false),
     ("rescueflush.at_door_m", offset_of!(Knobs, rescueflush.at_door_m), false),
     ("posemath.singles", offset_of!(Knobs, posemath.singles), true),
-    ("sense.glow.albedo", offset_of!(Knobs, sense.glow.albedo), false),
-    ("sense.glow.share", offset_of!(Knobs, sense.glow.share), false),
-    ("sense.glow.passes", offset_of!(Knobs, sense.glow.passes), false),
     ("sense.glow.sweep", offset_of!(Knobs, sense.glow.sweep), false),
     ("sense.smoke.sigma", offset_of!(Knobs, sense.smoke.sigma), false),
     ("sense.smoke.decay", offset_of!(Knobs, sense.smoke.decay), false),
@@ -5976,9 +5973,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.rescueflush.smoke_k;
     let _: &f64 = &k.rescueflush.at_door_m;
     let _: &bool = &k.posemath.singles;
-    let _: &f64 = &k.sense.glow.albedo;
-    let _: &f64 = &k.sense.glow.share;
-    let _: &f64 = &k.sense.glow.passes;
     let _: &f64 = &k.sense.glow.sweep;
     let _: &f64 = &k.sense.smoke.sigma;
     let _: &f64 = &k.sense.smoke.decay;

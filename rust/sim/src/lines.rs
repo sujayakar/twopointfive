@@ -715,7 +715,7 @@ fn face_of(axis: i32, sgn: f64) -> (f64, f64, f64) {
 /// boxes.ts rayBox, whole (a round box, a cut one, a fully rotated one, a plain yawed one, asked in that order): where the ray enters the box within tmax
 /// and the normal of the face it enters by. None = it does not, or it starts inside (the rule rayBox documents).
 #[allow(clippy::too_many_arguments)]
-fn ray_box_n(cut: &[f64], a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, b: &[f64], tmax: f64) -> Option<(f64, f64, f64, f64)> {
+pub(crate) fn ray_box_n(cut: &[f64], a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, b: &[f64], tmax: f64) -> Option<(f64, f64, f64, f64)> {
     let kind = b[R_KIND] as u32;
     if kind & K_ROUND != 0 {
         // rayBoxRound: face 0 = none entered (the origin is inside), 1 = an end, 2 = the side
