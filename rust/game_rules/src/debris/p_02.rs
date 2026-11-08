@@ -27,7 +27,7 @@ fn lay_flat_row(row: &mut crate::scene_boxes::Box, n: V3, k: f64) {
 }
 
 /// A SHEET DOES NOT STAND ON ITS EDGE: one that came to rest up on end goes down on its face (a thing that is many times its thickness tall has nothing to stand on).
-pub fn lay_sheet(g: &mut crate::game::Game, b: BoxId, n: V3) {
+pub fn lay_sheet(g: &mut crate::game::Game, b: AnyBoxId, n: V3) {
     const SHEET: f64 = 3.0;
     let row = seam_box(g, b);
     let r: Quat = match row.rot { Some(q) => q, None => v3::quat::yaw(row.yaw) };

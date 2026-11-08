@@ -47,7 +47,7 @@ fn word_of_box(g: &mut Game, b: AnyBoxId) -> crate::scene_boxes::WordOf {
     crate::scene_boxes::word_of(crate::scene_boxes::WordOfB { stuff, does })
 }
 /// what a box is inside: what it says it is made of (inside_of)
-fn inside_of_box(g: &mut Game, b: BoxId, mat: Mat) -> Inside { inside_of(seam_box(g, b).stuff, mat) }
+fn inside_of_box(g: &mut Game, b: AnyBoxId, mat: Mat) -> Inside { inside_of(seam_box(g, b).stuff, mat) }
 fn cut_len(cut: &Option<Vec<crate::scene_cut::CutPlane>>) -> i32 { cut.as_ref().map_or(0, |c| c.len() as i32) }
 /// the key of a chunk's second drawn box (breakTable.ts:581,603)
 fn mate_mkey(g: &Game, c: DebrisChunkId) -> f64 {
@@ -643,7 +643,7 @@ pub fn breaks_shed_cell(g: &mut crate::game::Game, surf: crate::scene_materials:
     let cells = row.cell.len() as f64;
     let n = m::min_n(&[m::max(0.0, budget.chunks), cells, budget.per.unwrap_or(cells)]);
     let k0 = if n < cells && cells > 1.0 && breaks_hash(g) < 0.5 { 1 } else { 0 };
-    let word = word_of_box(g, cell);
+    let word = word_of_box(g, cell.into());
     let inside = inside_of(word.stuff, mat);
     let core_tint = g.k.breaks.core_tint;
     let tinted = breaks_tint(g, inside, paint, core_tint);
@@ -736,7 +736,7 @@ pub fn breaks_heap(g: &mut crate::game::Game, surf: crate::scene_materials::Surf
     let mut dealt = 0.0;
     let wall_h = seam_box(g, wall).h;
     let face = m::min(wall_h[0], wall_h[2]);
-    let word = word_of_box(g, wall);
+    let word = word_of_box(g, wall.into());
     let inside = inside_of(word.stuff, mat);
     let core_tint = g.k.breaks.core_tint;
     let tinted = breaks_tint(g, inside, paint, core_tint);
@@ -798,7 +798,7 @@ pub fn breaks_heap(g: &mut crate::game::Game, surf: crate::scene_materials::Surf
 /// What the wall `b` is inside, for a lane that holds what it does as the Surf's word.
 pub fn breaks_inside(g: &mut crate::game::Game, surf: &str, b: BoxId) -> crate::break_table::Inside {
     let mat = surf_mat_of_word(surf).unwrap_or(Mat::Masonry);
-    inside_of_box(g, b, mat)
+    inside_of_box(g, b.into(), mat)
 }
 
 /// The colour a standing piece's ragged end shows. (breakTable.ts Breaks.endCore)
@@ -871,7 +871,7 @@ pub fn breaks_ragged(g: &mut crate::game::Game, b: &crate::break_table::CellGrid
 /// The studs of a holed plasterboard partition, read off the cells alone. (breakTable.ts Breaks.studs)
 pub fn breaks_studs(g: &mut crate::game::Game, b: &crate::break_table::CellGrid) -> Vec<crate::break_table::BreaksStudsItem> {
     if b.ny < 2.0 || mat_of_surf(b.surf) != Mat::Plasterboard || b.n_open == Some(0.0) { return Vec::new(); }
-    if !inside_of_box(g, b.box_, Mat::Plasterboard).framed { return Vec::new(); }
+    if !inside_of_box(g, b.box_.into(), Mat::Plasterboard).framed { return Vec::new(); }
     let k_ = g.k.breaks.stud;
     let box_h = seam_box(g, b.box_).h;
     let along_x = b.nx > 1.0 || (b.nz == 1.0 && box_h[0] >= box_h[2]);
