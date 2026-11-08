@@ -1,12 +1,13 @@
 //! STACK UP: "stack up". The men take the marks of a stack on the door, the lead nearest the frame.
 use crate::game::Game;
 use crate::ids::*;
-use crate::orders::rows::Row;
+use crate::orders::rows::{Is, Row};
 use crate::orders::*;
 use crate::v3::V3;
 use alloc::{format, string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
+    is: &[Is::Stacks, Is::Resumed, Is::KeepsLane],
     valid: Some(valid),
     ..Row::new("stack", label, issue)
 };
@@ -43,7 +44,7 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
         // (`x.pos === p` in the TypeScript: the very mark dealt. Marks of one stack are never at one spot, so the first of the same bits is that one)
         let post = *posts.iter().find(|x| same_bits(x.pos, p)).unwrap();
         let a = SquadOrdersAssignA {
-            order: String::from("stack"), post: Some(post.pos), face: Some(post.face),
+            order: String::from(ORDER.id), post: Some(post.pos), face: Some(post.face),
             watch: Some([fc[0], 1.05, fc[2]]), door: Some(door), shy: Some(door),
             stance: Some(if post.lead { crate::character::Stance::Stack } else { crate::character::Stance::HighReady }),
             upper: Some(crate::character::UpperMode::None),

@@ -110,14 +110,5 @@ pub struct HoldfireStats {
     pub lifts: [i32; 3],
 }
 
-/// (src/game/holdfire.ts:62 LIFT_ORDERS: a table nothing writes)
-pub fn lift_orders() -> Vec<String> { alloc::vec![String::from("openClear"), String::from("bigClear"), String::from("bangClear"), String::from("fragClear"), String::from("charge"), String::from("threshold"), String::from("thresholdHold"), String::from("outside"), String::from("thrStep"), String::from("thrBang"), String::from("thrWord"), String::from("go"), String::from("wallCharge"), String::from("fragThere"), String::from("stunThere"), String::from("shellThere")] }
-
-/// (src/game/holdfire.ts:64 BLOW_ORDERS: a table nothing writes)
-pub fn blow_orders() -> Vec<String> { alloc::vec![String::from("charge"), String::from("wallCharge")] }
-
-/// (src/game/holdfire.ts:66 LOUD_ORDER)
-pub const LOUD_ORDER: &str = "loud";
-
 /// (src/game/holdfire.ts:100 WAITS: a table nothing writes)
 pub fn waits() -> Vec<String> { alloc::vec![String::from("place"), String::from("standoff"), String::from("armed")] }

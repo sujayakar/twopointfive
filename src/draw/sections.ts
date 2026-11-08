@@ -1,7 +1,7 @@
 // Written by tools/draw/gen.ts from rust/game_draw. To change a section, change it there.
 
 /** the stamp of the sections this was made from: a module of another stamp is refused (drawn.ts) */
-export const LAYOUT = 4249064872;
+export const LAYOUT = 2093614525;
 /** what a host may ask for: what is made together is asked for together */
 export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, air = 2048, levelLook = 4096, snow = 8192, smoke = 16384, all = 32767 }
 /** each section's place in the table the module answers with */
@@ -113,32 +113,38 @@ export const enum View {
   target = 34,
   /** u32: what a lesson does not let the hand do to the view: 1 turn it · 2 zoom it */
   locks = 37,
+  /** u32: the back key is the game's now: 1 it would put something away (a list, an open order menu, a running verb, a held throw, a gun's setup) · 2 a level's script has the view */
+  backs = 38,
   /** u32: saves made of this game so far: moves when there is another */
-  saves = 38,
+  saves = 39,
   /** u32: what the game is set to, for a screen that sets it: hits do nothing to him, the men think, unlimited ammunition, it saves by itself, the wall hold's feel, walking into a wall takes it, the command key tapped twice calls the squad in */
-  god = 39,
+  god = 40,
   /** u32 */
-  thinks = 40,
+  thinks = 41,
   /** u32 */
-  ammo = 41,
+  ammo = 42,
   /** u32 */
-  autosave = 42,
+  autosave = 43,
   /** u32 */
-  wallFeel = 43,
+  wallFeel = 44,
   /** u32 */
-  wallPress = 44,
+  wallPress = 45,
   /** u32 */
-  fallIn = 45,
+  fallIn = 46,
+  /** u32: what each man is thinking is said over him */
+  labels = 47,
   /** u32: the run's end card is due: 1 it was lost, 2 won (0: not yet) */
-  ended = 46,
+  ended = 48,
   /** u32: this run, for whoever keeps what was won: 1 its try has begun · 2 it is over (what there is to keep is asked: face_run_view) */
-  run = 47,
+  run = 49,
   /** f32: night vision's amount, and how hard he has just been hit */
-  night = 48,
+  night = 50,
   /** f32 */
-  hit = 49,
+  hit = 51,
+  /** u32: this game is the Team & kit picture: 1 staged, 2 nothing to stage (0: it is no picture) */
+  kit = 52,
   /** words a row */
-  row = 50,
+  row = 53,
 }
 
 /** the sky: one row */

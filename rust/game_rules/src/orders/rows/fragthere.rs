@@ -1,16 +1,17 @@
 //! FRAG THERE: a frag on that spot, thrown by one man. The throw's plan, its code and its state are the module `squadthrow` (plan.rs).
 use crate::game::Game;
 use crate::ids::*;
-use crate::orders::rows::Row;
+use crate::orders::rows::{Is, Row};
 use crate::orders::*;
 use crate::squadthrow::SquadThrowKind;
 use alloc::{format, string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
+    is: &[Is::LiftsFire, Is::Loud],
     only: Some(only),
     valid: Some(valid),
     tick: Some(crate::squadthrow::walk_tick),
-    ..Row::new(crate::squadthrow::FRAG_THERE, label, issue)
+    ..Row::new("fragThere", label, issue)
 };
 
 fn label(g: &mut Game, t: &OrderTarget) -> String {

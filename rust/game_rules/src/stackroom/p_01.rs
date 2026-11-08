@@ -566,7 +566,7 @@ pub fn stack_view_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
         for &man in men {
             let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), man);
             let Some(a) = a else { continue };
-            if g.tab.orders_assignment[a].order != "stack" || g.tab.orders_assignment[a].door != Some(d) { continue; }
+            if !crate::orders::rows::is(g, a, crate::orders::Is::Stacks) || g.tab.orders_assignment[a].door != Some(d) { continue; }
             let Some(post) = g.tab.orders_assignment[a].post else { continue };
             if flat(g.ch[g.gd[man].ch].pos, post) < 0.6 && crate::doortools::off_of(g, d, post, side) > 0.0 { stood.push(post); }
         }

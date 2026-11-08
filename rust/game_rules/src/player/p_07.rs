@@ -737,13 +737,18 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
     crate::close::close_tick(g);
 }
 
+/// the man or the door a row is about, by the name it goes by ('' = neither)
+pub fn who_of<'g>(g: &'g crate::game::Game, r: &crate::game::Interactable) -> &'g str {
+    match (r.door, r.guard) {
+        (Some(d), _) => g.dr[d].def.name.as_str(),
+        (None, Some(gd)) => g.gd[gd].callsign.as_str(),
+        (None, None) => "",
+    }
+}
+
 /// identity of a row: the thing and the verb   (player.ts rowKey)
 pub fn row_key(g: &crate::game::Game, r: &crate::game::Interactable) -> String {
-    let who = match (r.door, r.guard) {
-        (Some(d), _) => g.dr[d].def.name.clone(),
-        (None, Some(gd)) => g.gd[gd].callsign.clone(),
-        (None, None) => String::new(),
-    };
+    let who = who_of(g, r);
     match r.verb {
         Some(v) => format!("{}:{}:{}", r.kind.as_str(), who, v.as_str()),
         None => format!("{}:{}:~{}", r.kind.as_str(), who, r.line2),

@@ -115,10 +115,11 @@ fn finish(g: &mut Game, b: &Burst, rep: &mut BlastReport, gd: GuardId) {
         if b.mine || !fresh { g.mission.stats.kills += 1.0; }
     }
     if b.mine || (team_ && !fresh) {
-        let weapon = if b.mine { b.name.clone() } else { alloc::format!("a teammate's {}", b.name) };
+        let weapon = if b.mine { alloc::format!("the {}", b.name) } else { alloc::format!("a teammate's {}", b.name) };
         let mut data: JsMap<String, Option<crate::chronicle::ChronicleDataValue>> = JsMap::new();
         data.set(String::from("who"), Some(crate::chronicle::ChronicleDataValue::Text(callsign.clone())));
         data.set(String::from("weapon"), Some(crate::chronicle::ChronicleDataValue::Text(weapon)));
+        data.set(String::from("blast"), Some(crate::chronicle::ChronicleDataValue::Bool(true)));
         crate::chronicle::chronicle(g, crate::chronicle::ChronKind::Kill, Some(&data), Some(pts[0]));
     }
     if b.mine { crate::guards::witness_kill(g, gd, crate::game::DownKind::Shot, crate::game::DownBy::Player); }
@@ -282,9 +283,9 @@ pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpe
             rep.killed += 1.0;
             let line = alloc::format!("{} down — the {}", g.gd[gd].callsign, b.name);
             let dir = away(at, g.ch[c].pos);
-            // (on the thrower's seat: the debrief's row names the man himself)
+            // (on the thrower's seat, the debrief's row naming what went off)
             let thrower = crate::seats::seat_of_id(g, spec.who);
-            crate::seats::on_seat(g, thrower, &mut |g| crate::combat::kill_guard(g, gd, dir, Some(false), Some(crate::game::DownKind::Shot), Some(down_by(&b)), Some(&line)));
+            crate::seats::on_seat(g, thrower, &mut |g| crate::combat::kill_guard_by(g, gd, dir, Some(false), Some(crate::game::DownKind::Shot), Some(down_by(&b)), Some(&line), Some(&b.name)));
             if js::truthy(spec.who) { g.gd[gd].killer_id = spec.who; }
         } else {
             if r == BlastResult::Wounded { rep.wounded += 1.0; }

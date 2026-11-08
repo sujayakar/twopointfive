@@ -13,6 +13,7 @@ import { Game } from '../game/game';
 import { SmokeSystem } from '../smoke/smoke';
 import { FollowCamera } from '../game/camera';
 import { Overlay } from './overlay';
+import type { DevHud } from './devhud';
 import { Panel } from './panel';
 import { SYS, buildGraphics, graphicsSystems, type HudStats } from './graphicspanel';
 import { rowHeld } from '../host/held';
@@ -59,7 +60,7 @@ function knobRows(panel: Panel, sec: HTMLElement, table: KnobTable, defs: KnobTa
   }
 }
 
-export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: SmokeSystem, cam: FollowCamera, overlay: Overlay, audio: AudioEngine, quality: Quality, hud?: HudStats) {
+export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: SmokeSystem, cam: FollowCamera, overlay: Overlay, audio: AudioEngine, quality: Quality, hud: HudStats | undefined, dev: Pick<DevHud, 'windViz'>) {
   const S = engine.settings;
   const flag = (sec: HTMLElement, label: string, f: number, title?: string) => panel.toggleBox(sec, label, () => (S.flags & f) !== 0, v => { S.flags = v ? S.flags | f : S.flags & ~f; }, title);
   /** rows built inside are ADVANCED (A/B knobs, measurement switches): hidden until 'all knobs' or a search finds them */
@@ -220,7 +221,7 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
   panel.text(wd, () => game.wind.summary());
   // THE FIELD MADE VISIBLE (ui/windviz.ts): arrows of game.wind.at() on a lattice round the look-at, the sources' cones / the storm's arrow / door gusts, what the particles were handed, the air at the cursor —
   // a 2D canvas over the view; the renderer and the game are untouched whether it is on or off
-  { const V = overlay.windViz;
+  { const V = dev.windViz;
     const wv = panel.section('Wind — field view (debug)', { open: false, summary: () => V.summary() });
     panel.toggleBox(wv, 'wind: show field', () => V.showField, v => { V.showField = v; }, 'a lattice of arrows on a horizontal plane round the camera\'s look-at point: each is game.wind.at(p) — the same analytic sum of every blowing source the GPU particles and the smoke solver evaluate — its length ∝ the air speed there (capped), its colour the HUD\'s: thin green under 0.5 m/s, amber by 1.5, red from 3; a faint dot = still air. Under a ceiling diffuser at 2 m the down-jet is a tight red cluster, at 0.1 m the wall jet fans out along the floor; by an open exterior door in the storm the gust points in. ≤ 600 samples a frame on the CPU (the cost is in the summary above)');
     panel.select(wv, 'wind: field height', ['0.1 m (the floor\'s wall jets)', '1.0 m (chest)', '2.0 m (under the diffusers)'], () => V.height < 0.5 ? 0 : V.height < 1.5 ? 1 : 2, v => { V.height = [0.1, 1.0, 2.0][v] ?? 1; }, 'the plane the lattice is sampled on');

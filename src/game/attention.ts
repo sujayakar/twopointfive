@@ -22,7 +22,7 @@
 //   · HE IS NOT A FOOL (the maintainer: "we don't want them to feel dumb"): every taking inside `memorySecs` is shorter by `wearK` and he says so; the
 //     `spent`-th is no look at all — he draws and searches the place (the whistle's own 'twice' rule, whistle.ts, stands beside this and is not changed).
 //     Things inside `sameSecs` of each other are one happening (a canister's bounces, a thing dragged): one taking, which follows it.
-//   · HOW HE SHOWS IT (attentionMarks → ui/attentionviz.ts; show, not tell — no word, no number): a thread on the floor from him to the place and a ring there
+//   · HOW HE SHOWS IT (`view.attention` → ui/attentionviz.ts; show, not tell — no word, no number): a thread on the floor from him to the place and a ring there
 //     that runs down like a clock once he is at it; `tellSecs` before the end he SAYS he is done ('must have been nothing' moves here from the walk back), and
 //     only then does the eye widen. Nothing is drawn of a man the fog of war hides.
 // ONE switch, ATTENTION.on: ON in the page (?noattention = the build as it was), OFF here and on the frozen harness stand (TPS_ATTENTION=1; a FROZEN_HOLDS row).
@@ -145,51 +145,6 @@ function end(g: Game, gd: Guard, why: string) {
   const M = mem(gd), H = M.hold; if (!H) return;
   M.hold = null; if (why === 'done') ATTENTION_STATS.released++; else if (why !== 'over') ATTENTION_STATS.broken++;
   log(g, gd, why, H);
-}
-
-// ---------------------------------------------------------------- showing it (ui/attentionviz.ts draws exactly this list; the check reads it)
-/** one man's held attention as the floor shows it: a thread from his feet to the place and a ring there, `left` of it still to run (1 while he walks to it or
- *  it is lent — less than 1 from the start for a worn taking; → 0 at the thing); `ending` = he has said he is done; `worn` = not his first inside the memory */
-export interface AttentionMark { gd: Guard; from: Vec3; at: Vec3; left: number; mode: HoldMode; kind: DrawKind; ending: boolean; worn: boolean; /** he is on his way over to it (not yet at the thing) */ walking: boolean; }
-export function attentionMarks(g: Game): AttentionMark[] {
-  if (!ATTENTION.on || !ATTENTION.marks || g.touring) return [];
-  const out: AttentionMark[] = [];
-  for (const gd of g.guards) {
-    const H = attentionOf(g, gd); if (!H || gd.state === 'dead' || g.fogOfWar.hidden(gd)) continue;   // (fog of war: nothing live of a man nobody on the team sees — not his thread either)
-    const left = H.mode === 'lent' ? 1 : clamp((H.until < 0 ? H.secs : H.until - g.time) / Math.max(1e-3, H.full), 0, 1);   // (against a FRESH taking's length)
-    out.push({ gd, from: [gd.char.pos[0], 0.05, gd.char.pos[2]], at: [H.at[0], 0.05, H.at[2]], left, mode: H.mode, kind: H.kind, ending: H.mode !== 'lent' && H.until >= 0 && H.until - g.time <= ATTENTION.tellSecs, worn: H.nth > 1, walking: H.mode === 'go' && H.until < 0 });
-  }
-  return out;
-}
-
-/** THE THREAD'S WAY (ATTENTION.way; the maintainer, 10-22, of a thread drawn through a hut's wall: "weird that the line here is a straight line, not a pathed
- *  one. i'd expected pathed from squad commands"). For a man WALKING to the place: his feet, every corner of the way he will take, the place — his own nav
- *  path from where he is on it when it is the walk to this place, else the nav grid's answer (kept `wayReask` s; ui/planfloor.ts wayOf is the squad's same
- *  picture). Straight (his feet, the place) for a man who only looks — a turned head, a lent hold, a man standing at the thing — and where the floor has no
- *  way at all. PICTURE ONLY: asked by the overlay, read by nothing in the update, and it WRITES NOTHING OF THE GAME'S — the kept answer lives with whoever
- *  draws (`kept`: the overlay's own table in ui/attentionviz.ts, a check's own Map), never in a side table here, so a game drawn and the same game not drawn
- *  hash alike; the grid's search writes nothing of the game's (its tables are the Rust module's, scratch of the one question). */
-export interface AttentionWayKept { key: string; t: number; from: Vec3; pts: Vec3[] | null }
-export interface AttentionWayStore { get(gd: Guard): AttentionWayKept | undefined; set(gd: Guard, w: AttentionWayKept): unknown }
-export function attentionWay(g: Game, M: AttentionMark, kept: AttentionWayStore): Vec3[] {
-  const gd = M.gd, p = gd.char.pos, flat = v3.distXZ, out: Vec3[] = [M.from];
-  if (!ATTENTION.way || !M.walking) return [M.from, M.at];
-  const add = (q: Vec3) => { if (flat(out[out.length - 1], q) > 0.05) out.push([q[0], M.from[1], q[2]]); };
-  const P = gd.path, own = !!gd.pathGoal && gd.pathI < P.length && flat(gd.pathGoal, M.at) < 0.9 && flat(P[P.length - 1], gd.pathGoal) < 1.2;   // (a one-point side step to get unstuck is not his way)
-  if (own) for (let i = gd.pathI; i < P.length; i++) add(P[i]);
-  else {
-    const key = `${M.at[0].toFixed(1)},${M.at[2].toFixed(1)}`, c = kept.get(gd), dt = c ? g.time - c.t : -1;   // (dt < 0: the clock went back on a load)
-    let W = c && c.key === key && dt >= 0 && dt < ATTENTION.wayReask ? c : null;
-    if (!W) kept.set(gd, W = { key, t: g.time, from: [p[0], 0, p[2]], pts: g.col.nav.findPath(p, M.at, 6000) });   // (6000: goTo's own budget — a place his walk finds is a place the thread finds)
-    const pts = W.pts; if (!pts) return [M.from, M.at];
-    // an answer kept from a stride ago starts behind him: from the end of the leg he is nearest on — looked for over its first two metres only, never 'the
-    // corner nearest him' of the whole way (one that doubles back passes near him again further on, and the thread then cut the wall between)
-    let k = 0, best = Infinity, arc = 0, a = W.from;
-    for (let i = 0; i < pts.length && arc <= 2; i++) { const b = pts[i], dx = b[0] - a[0], dz = b[2] - a[2], l2 = dx * dx + dz * dz, u = l2 > 1e-9 ? clamp(((p[0] - a[0]) * dx + (p[2] - a[2]) * dz) / l2, 0, 1) : 0, d = Math.hypot(p[0] - a[0] - dx * u, p[2] - a[2] - dz * u); if (d < best - 1e-6) { best = d; k = i; } arc += Math.sqrt(l2); a = b; }
-    for (let i = k < pts.length - 1 && flat(p, pts[k]) < 0.3 ? k + 1 : k; i < pts.length; i++) add(pts[i]);
-  }
-  add(M.at); if (out.length < 2) out.push(M.at);
-  return out;
 }
 
 // ---------------------------------------------------------------- checkpoints (savestate.ts): every man's hold and memory by roster index, clocks as seconds from now

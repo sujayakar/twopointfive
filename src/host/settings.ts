@@ -4,9 +4,9 @@ import type { DrawGame } from './drawgame';
 import { Section, View } from '../draw/sections';
 import { keepAutosave } from './sandbox';
 
-export function settingsOf(game: DrawGame): OptionsGame {
+/** `dots`: where the hints are drawn (a page with no HUD keeps the word) */
+export function settingsOf(game: DrawGame, dots: { showLightDots: boolean } = { showLightDots: true }): OptionsGame {
   const D = game.drawn, C = game.commands, set = (word: View): boolean => D.u[D.at[Section.view] + word] !== 0, n = (v: boolean): number => v ? 1 : 0;
-  let hints = true;
   return {
     get god() { return set(View.god); }, set god(v) { C.god(n(v)); game.tell(); },
     get thinks() { return set(View.thinks); }, set thinks(v) { C.ai(n(v)); game.tell(); },
@@ -15,6 +15,6 @@ export function settingsOf(game: DrawGame): OptionsGame {
     get wallFeel() { return set(View.wallFeel); },
     get wallPress() { return set(View.wallPress); }, set wallPress(v) { game.turn('wallsnap.press', n(v)); game.tell(); },
     get fallIn() { return set(View.fallIn); },
-    get hints() { return hints; }, set hints(v) { hints = v; },
+    get hints() { return dots.showLightDots; }, set hints(v) { dots.showLightDots = v; },
   };
 }

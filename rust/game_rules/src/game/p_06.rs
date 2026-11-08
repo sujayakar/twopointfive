@@ -27,6 +27,18 @@ fn bone_or(g: &Game, c: CharId, b: crate::character::Bone, up: f64) -> V3 {
 pub fn game_step_seats(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::PlayerCmd]) {
     let n = g.seats.len();
     if cmds.len() != n { panic!("stepSeats: {} record(s) for {} seat(s)", cmds.len(), n); }
+    // (the kit picture's stage, where one is up, has the hand before the tick and what it left after it)
+    if g.kit_stage.is_some() {
+        let mut held = cmds.to_vec();
+        crate::kitstage::before(g, &mut held[0]);
+        step_listed(g, dt, &held);
+        crate::kitstage::after(g);
+        return;
+    }
+    step_listed(g, dt, cmds);
+}
+fn step_listed(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::PlayerCmd]) {
+    let n = g.seats.len();
     // (inside a tick the Game's own fields of a seat's name answer the FIRST seat's, whoever this host shows: seats.ts seatsStand)
     // (bare: no seat's view is open while the world's own lines run)
     // (the verdict's tick comes last, with the first seat still standing, so the end it latches is the same on every machine: verdict.ts tick)

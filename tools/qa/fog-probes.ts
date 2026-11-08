@@ -13,7 +13,7 @@
 //   fog-smoke     a defender in plain view through the open door: seen in clear air; the Rust game's own count of its asks (FW.stats.smokeAsks): some a frame while
 //                 a line is clear, none with the knob at 0, at most six a frame with more pairs wanted than that. Until 2026-11-07 it planted the probe's answers
 //                 (opaque, thin, late, stale, silent) on the copy's table, which the headless host does not hand over. What smoke does to a man is asked once, with a
-//                 real canister under the game's own senses (SENSE.cpu): unseen and out of the picture while the line is clear. The late, stale and silent answers are not asked.
+//                 real canister under the game's own senses: unseen and out of the picture while the line is clear. The late, stale and silent answers are not asked.
 //   fog-rules     the smaller rules: a man who dies unseen stays out of the picture until somebody has a line to the body, then stays in it for good; the linger;
 //                 a field under 360° turns an eye's back into fog (and its near field does not); a dazzled teammate is no eye; a show running stands it aside;
 //                 the reticle does not find a hidden man under the cursor (it does with the switch off); a hidden man's spoken line goes to the log; the
@@ -174,16 +174,14 @@ export async function fogSmoke(): Promise<boolean> {
     const lines = hs2.map(h => oracle(g2, h)); const open = hs2.every(h => F2.seen(h));
     verdict(F2.eyes.length === 3 && lines.every(o => o.any) && lines.filter(o => o.mates).length >= 4 && open, 'staged in the open: five men with lines from the team\'s three eyes (more pairs than a frame\'s asks), clear air → all seen', `eyes ${F2.eyes.length} · ${hs2.map((h, i) => `${h.callsign}: sam ${lines[i].sam} mates ${lines[i].mates} seen ${F2.seen(h)}`).join(' · ')}`);
   }
-  { // A REAL PLUME, under the game's own senses (SENSE.cpu: the Rust game answers its own smoke lines, which a headless game has nothing else to answer): a canister let off on the line
-    const { SENSE } = await import(`${ROOT}/src/game/sense.ts`), was = SENSE.cpu; SENSE.cpu = true;
-    try { const Q = await rig(13, { fog: true }); const g3 = Q.game, F3 = Q.FW; g3.teleportPlayer([25.2, 0, 17.6]); Q.openDoor(g3.level.breach.door); Q.step(20);
+  { // A REAL PLUME, under the game's own senses: a canister let off on the line
+    const Q = await rig(13, { fog: true }); const g3 = Q.game, F3 = Q.FW; g3.teleportPlayer([25.2, 0, 17.6]); Q.openDoor(g3.level.breach.door); Q.step(20);
       const h = (Q.NB.hostiles as any[]).find(x => F3.seen(x)), sam = g3.player.char.pos, hid0 = F3.stats.smokeHid;
       if (!h) verdict(false, 'a canister on the line: a man in the line to test it on', 'nobody seen through the open door');
       else { g3.items.spawn('smoke', [(h.char.pos[0] + sam[0]) / 2, 0.1, (h.char.pos[2] + sam[2]) / 2], [0, 0, 0], { fuse: 0.05 });
         let lost = -1; for (let i = 0; i < 60 * 6 && lost < 0; i++) { Q.step(); if (!F3.seen(h)) lost = i; } Q.step(60);
         verdict(lost >= 0 && !F3.seen(h) && F3.hidden(h) && !Q.inPicture(h).inst && oracle(g3, h).any && F3.stats.smokeHid > hid0, 'a smoke canister let off on the line, under the game\'s own senses: the man is unseen, hidden, out of the skin list — while the line itself is still clear of walls and leaves (it is the smoke that hides him)',
           `${h.callsign} lost ${lost} frames after it was let off · seen ${F3.seen(h)} hidden ${F3.hidden(h)} · line ${oracle(g3, h).any} · lines the smoke hid ${F3.stats.smokeHid - hid0}`); }
-    } finally { SENSE.cpu = was; }
   }
   return done();
 }

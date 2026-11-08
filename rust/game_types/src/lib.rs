@@ -159,6 +159,7 @@ pub mod kit { pub mod types; pub use types::*; }
 pub mod kitanim { pub mod types; pub use types::*; }
 pub mod kitload { pub mod types; pub use types::*; }
 pub mod kittree { pub mod types; pub use types::*; }
+pub mod kitstage;
 pub mod knobs_reg { pub mod types; pub use types::*; }
 pub mod lanes { pub mod types; pub use types::*; }
 pub mod laststand { pub mod types; pub use types::*; }
@@ -280,7 +281,6 @@ pub mod script_tut_team { pub mod types; pub use types::*; }
 pub mod seats { pub mod types; pub use types::*; pub mod seat_ref; pub use seat_ref::*; }
 pub mod seenwalk { pub mod types; pub use types::*; }
 pub mod sense { pub mod types; pub use types::*; }
-pub mod sensors { pub mod types; pub use types::*; }
 pub mod shard_model { pub mod types; pub use types::*; }
 pub mod shards { pub mod types; pub use types::*; }
 pub mod sheet_model { pub mod types; pub use types::*; }

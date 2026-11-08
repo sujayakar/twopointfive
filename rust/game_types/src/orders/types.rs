@@ -3,17 +3,6 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// SquadOrders.notes: who has a line for the squad's HUD block, in the order they were pushed. Read only by `orders::squad_view` (rust/game_rules/src/orders/hud.rs).
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum OrderNoteFn {
-    DoorToolsHud,
-    DoorToolsWord,
-    WallCharge,
-    Pair,
-    Squad40,
-    SquadThrow,
-    SquadSmoke,
-}
 /// what marksKeep took, to put back once: the makers' counters, the room rule's book, the leaf's answer (orders.ts marksKeep). Not kept past the one trial.
 #[derive(Clone, Debug)]
 pub enum MarksKeep {
@@ -63,7 +52,6 @@ pub struct SquadOrders {
     /// what the squad's panel says of this seat, as its last tick left it (orders/shown.rs; Rust's own: not on the wire, so blank after a load until the next tick)
     pub shown: crate::orders::Shown,
     pub owners: Vec<crate::orders::SquadOwner>,
-    pub notes: Vec<crate::orders::OrderNoteFn>,
     pub posture: Option<crate::orders::SquadOrdersPosture>,
     pub people: Option<crate::orders::SquadOrdersPeople>,
     pub who: crate::orders::Who,
@@ -116,7 +104,6 @@ impl SquadOrders {
             made: JsMap::new(),
             shown: crate::orders::Shown::default(),
             owners: Vec::new(),
-            notes: Vec::new(),
             posture: None,
             people: None,
             who: crate::orders::Who::All,
@@ -1877,9 +1864,6 @@ pub fn low() -> crate::orders::LOW { crate::orders::LOW { stance: crate::charact
 /// (src/game/orders.ts:2630 AIM: a table nothing writes)
 pub fn aim() -> crate::orders::AIM { crate::orders::AIM { stance: crate::character::Stance::None, upper: crate::character::UpperMode::Aim } }
 
-/// (src/game/orders.ts:2631 LANE_ORDERS: a table nothing writes)
-pub fn lane_orders() -> &'static [&'static str] { &["cover", "stack", "move", "hold"] }
-
 /// (src/game/orders.ts:2634 OFF_M)
 pub const OFF_M: f64 = 0.3;
 
@@ -1926,6 +1910,8 @@ use crate::game::Game;
 pub struct Row {
     /// its id on the menu and in a man's assignment
     pub id: &'static str,
+    /// what the rules that do not know it by name need to know of it
+    pub is: &'static [Is],
     pub label: fn(&mut Game, &OrderTarget) -> String,
     pub can: Option<fn(&mut Game, GuardId, &OrderTarget) -> Option<String>>,
     pub only: Option<fn(&mut Game, &[GuardId], &OrderTarget) -> Vec<GuardId>>,
@@ -1937,12 +1923,14 @@ pub struct Row {
     pub when: Option<fn(&Game, &crate::seats::SeatRef, &OrderTarget, &[GuardId]) -> bool>,
     pub tick: Option<fn(&mut Game, GuardId, OrdersAssignmentId)>,
     pub frame: Option<fn(&mut Game)>,
+    /// its lines in the squad's HUD block, for this seat: whether it has anything to say is its own to answer
+    pub notes: Option<fn(&Game, &crate::seats::SeatRef) -> Vec<crate::view::Note>>,
 }
 impl Row {
     /// An order with the three things every order has. The rest are `None` until its file says otherwise:
     /// `Row { frame: Some(frame), ..Row::new(ID, label, issue) }`.
     pub const fn new(id: &'static str, label: fn(&mut Game, &OrderTarget) -> String, issue: fn(&mut Game, &[GuardId], &OrderTarget, Option<&GiveOpts>) -> Option<String>) -> Row {
-        Row { id, label, can: None, only: None, valid: None, issue, gone: None, when: None, tick: None, frame: None }
+        Row { id, is: &[], label, can: None, only: None, valid: None, issue, gone: None, when: None, tick: None, frame: None, notes: None }
     }
 }
 fn none_label(_g: &mut Game, _t: &OrderTarget) -> String { String::new() }
@@ -1950,6 +1938,37 @@ fn none_issue(_g: &mut Game, _men: &[GuardId], _t: &OrderTarget, _o: Option<&Giv
 impl Row {
     /// The row a blank OrderDef holds until it is dealt its own: it says nothing and refuses.
     pub const NONE: Row = Row::new("", none_label, none_issue);
+}
+/// WHAT AN ORDER IS, to a rule that has no reason to know it by name. An order says these of itself (`Row.is`); a rule asks
+/// (`rows::is`, of a man's assignment; `rows::id_is`, of an id).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Is {
+    /// he follows the player: after a throw he falls in again, and a rule that looks for a free man counts him
+    Follows,
+    /// he stays where he was told: after a throw he comes back to the spot alone, and with no mark to watch he is walked to where he sees
+    Holds,
+    /// he watches a side from a post: the room fight and the rescue read him as watching it
+    Covers,
+    /// he is on a door, waiting for the word: the door's tools and the room fight read his place in the stack
+    Stacks,
+    /// a man under it who is sent to throw goes back to it afterwards
+    Resumed,
+    /// once he has arrived he goes low when a man of the other pair stands in his line
+    KeepsLane,
+    /// his walk to a mark goes low while the player is low
+    WalksLow,
+    /// giving it starts the fight: the squad's held fire lifts (at the word if it waits, when it goes off if it `Blows`)
+    LiftsFire,
+    /// it lifts the held fire only when it goes off, not when it is given
+    Blows,
+    /// it gives a silent squad away, so its row says so and giving it spends the quiet
+    Loud,
+    /// he is going in by a door: the rescue reads a man at his post for one as standing to it
+    Enters,
+    /// it is one of the two pairs' rows: they come and go with the pairs
+    Pair,
+    /// a man under it has a marked man for his own
+    Take,
 }
 impl core::fmt::Debug for Row {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result { write!(f, "Row({})", self.id) }

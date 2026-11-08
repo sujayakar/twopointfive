@@ -5,7 +5,7 @@
    "run": "office.json,glasshouse.json,barracks.json,consulate.json n 300 seed 1",
    "end": "5447 calls",
    "tree": "the port, the last tree where the TypeScript twin stood",
-   "stood": "TPS_CPUSENSE=1",
+   "stood": "",
    "words": {
     "annealed": {
      "asked": 328,
@@ -185,7 +185,7 @@
    "run": "office.json,glasshouse.json,barracks.json,consulate.json n 300 seed 1",
    "end": "5453 calls",
    "tree": "506e79e7 (step 1572); on this tree the old stand's run folds to the first recording's words, 43 of 43",
-   "stood": "TPS_CPUSENSE=1",
+   "stood": "",
    "words": {
     "annealed": {
      "asked": 517,

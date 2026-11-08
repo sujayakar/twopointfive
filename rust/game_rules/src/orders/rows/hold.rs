@@ -1,13 +1,13 @@
 //! HOLD POSITION: "hold position". A running man plants a stride on; the squad of four take an approach each.
 use crate::game::Game;
 use crate::ids::*;
-use crate::orders::rows::Row;
+use crate::orders::rows::{Is, Row};
 use crate::orders::*;
 use crate::m;
 use crate::v3::V3;
 use alloc::{format, string::String, vec, vec::Vec};
 
-pub const ORDER: Row = Row::new("hold", label, issue);
+pub const ORDER: Row = Row { is: &[Is::Holds, Is::Resumed, Is::KeepsLane], ..Row::new("hold", label, issue) };
 
 fn label(_g: &mut Game, _t: &OrderTarget) -> String { String::from("hold position") }
 
@@ -29,7 +29,7 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
                 let fc = g.dr[door].frame_centre;
                 let there = format!("holding · {}", door_words(g, door));
                 SquadOrdersAssignA {
-                    order: String::from("hold"), post: Some(posts[i]), face: Some(yaw), watch: Some([fc[0], 1.1, fc[2]]), door: Some(door),
+                    order: String::from(ORDER.id), post: Some(posts[i]), face: Some(yaw), watch: Some([fc[0], 1.1, fc[2]]), door: Some(door),
                     stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim), light: Some(true),
                     going: String::from("holding"), there,
                     ..Default::default()
@@ -40,14 +40,14 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
                 let pl = crate::dialogue::watched_place(g, posts[i], [posts[i][0] + m::sin(arc.yaw) * arc.reach, 0.0, posts[i][2] + m::cos(arc.yaw) * arc.reach]);
                 let there = if truthy_str(&pl) { format!("holding · {}", pl.unwrap()) } else { String::from("holding") };
                 SquadOrdersAssignA {
-                    order: String::from("hold"), post: Some(posts[i]), face: Some(arc.yaw), watch: Some(watch),
+                    order: String::from(ORDER.id), post: Some(posts[i]), face: Some(arc.yaw), watch: Some(watch),
                     stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim), light: Some(true),
                     going: String::from("holding"), there,
                     ..Default::default()
                 }
             }
             None => SquadOrdersAssignA {
-                order: String::from("hold"), post: Some(posts[i]), face: Some(g.ch[g.gd[gd].ch].body_yaw),
+                order: String::from(ORDER.id), post: Some(posts[i]), face: Some(g.ch[g.gd[gd].ch].body_yaw),
                 stance: Some(crate::character::Stance::LowReady), upper: Some(crate::character::UpperMode::None),
                 going: String::from("holding"), there: String::from("holding"),
                 ..Default::default()

@@ -29,7 +29,7 @@ import { COOP } from '../net/lobby';
 import { coopRows } from './coop';
 import { TITLE, cheatWords, titleScreen } from './title';
 import type { SlotInfo } from '../game/savestate';
-import { button, checkpointButton, el, saveStrip, type Press, type RunSaves } from './runcard';
+import { button, checkpointButton, el, layStripAgain, saveStrip, type Press, type RunSaves } from './runcard';
 import { locked } from '../view/seatview';
 
 TITLE.coop = () => (COOP.on ? coopRows : null);
@@ -83,10 +83,7 @@ export class Menu {
   private stripAt: HTMLElement | null = null;   // (the pause card's node the strip of saves sits before)
   /** F5 came on the pause card (main.ts `saveDue`): the strip alone is laid again, with the tile to come — the card and where the keys had walked on it stay */
   saveAsked() {
-    if (this.mode !== 'pause') return; const strip = this.saveStrip(), old = this.root.querySelector('.saves'); if (!strip) return;
-    const held = !!old && old.contains(document.activeElement);
-    if (old) old.replaceWith(strip); else if (this.stripAt?.parentNode) this.stripAt.parentNode.insertBefore(strip, this.stripAt); else return;
-    if (held) (strip.querySelector('.tile[tabindex="0"]') as HTMLElement | null)?.focus();
+    if (this.mode === 'pause') layStripAgain(this.root, on => this.saveStrip(undefined, on), this.stripAt);
   }
   toggle() { if (this.titled) return; if (this.isOpen) this.close(); else this.open('pause'); }   // (Esc: on the title screen there is nothing to back out of — the solo night is a row of the starting page)
 
@@ -190,7 +187,7 @@ export class Menu {
     return n;
   }   // (savestate.ts offer: an earlier run's slot only if this game would load it)
   /** this run's saves laid out in time (ui/runcard.ts) */
-  private saveStrip(armed: () => boolean = () => true): HTMLElement | null { const run = this.saves(); return run && saveStrip(run, this.press(armed)); }
+  private saveStrip(armed: () => boolean = () => true, on?: string): HTMLElement | null { const run = this.saves(); return run && saveStrip(run, this.press(armed), on); }
 
   /** a save's picture came after its tile was laid (main.ts takes it a frame or a few after the save, host/savepic.ts): the tile on the card, if one is up, takes it — nothing is laid again */
   pictureCame(info: { key: string; savedAt: number }, url: string) {

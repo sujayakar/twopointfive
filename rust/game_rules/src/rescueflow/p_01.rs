@@ -662,7 +662,7 @@ pub fn rescue_flow_tick(g: &mut crate::game::Game) {
                 i += 1;
                 if g.gd[op].state != crate::game::GuardState::Dead && !crate::rescue::rescue_owns(g, op) {
                     if let Some(a) = crate::orders::squad_orders_of(g, &crate::seats::here(g), op) {
-                        if g.tab.orders_assignment[a].order == "fallIn" {
+                        if crate::orders::rows::is(g, a, crate::orders::Is::Follows) {
                             file += 1;
                         }
                     }
@@ -698,7 +698,7 @@ pub fn rescue_flow_tick(g: &mut crate::game::Game) {
                 g,
                 gd,
                 &crate::orders::SquadOrdersAssignA {
-                    order: String::from("cover"),
+                    order: String::from(crate::orders::rows::cover::ORDER.id),
                     post: Some(v3::copy(o.mark)),
                     face: Some(v3::yaw_to(o.mark, watch)),
                     watch: Some(watch),
@@ -750,7 +750,7 @@ pub fn rescue_flow_free(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> 
             continue;
         }
         let Some(a) = crate::orders::squad_orders_of(g, seat, gd) else { continue };
-        if g.tab.orders_assignment[a].order != "fallIn" {
+        if !crate::orders::rows::is(g, a, crate::orders::Is::Follows) {
             continue;
         }
         if (g.gd[gd].script.is_none() && g.gd[gd].state == crate::game::GuardState::Alert) || crate::roomfight::room_fight_engaged(g, gd) {
@@ -770,7 +770,7 @@ pub fn rescue_flow_take(g: &mut crate::game::Game, gd: GuardId, o: &crate::scene
         g,
         gd,
         &crate::orders::SquadOrdersAssignA {
-            order: String::from("cover"),
+            order: String::from(crate::orders::rows::cover::ORDER.id),
             post: Some(v3::copy(o.mark)),
             face: Some(v3::yaw_to(o.mark, o.watch)),
             watch: Some(v3::copy(o.watch)),
@@ -801,7 +801,7 @@ pub fn rescue_flow_rejoin(g: &mut crate::game::Game, gd: GuardId, words: Option<
         g,
         gd,
         &crate::orders::SquadOrdersAssignA {
-            order: String::from("fallIn"),
+            order: String::from(crate::orders::rows::fallin::ORDER.id),
             post: None,
             follow: Some(9.0),
             face: None,

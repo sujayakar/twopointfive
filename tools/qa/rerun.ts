@@ -1,5 +1,5 @@
 // A REPLAY RE-RUN: a headless game walked through the same run a replay was saved from, up to a chosen step, off the replay's RUN TAPE (src/game/runtape.ts —
-// the recipe, then per step its dt, the player's input and camera, the values the game read off the GPU, what was done to it from outside a step). Used by
+// the recipe, then per step its dt, the player's input and camera, what was done to it from outside a step). Used by
 // `bun run tools/qa/replay-at.ts <file> --rerun` and importable by a probe:   const R = await rerun(file, { toN });  R.W.game is the live game at that step.
 // IT MEASURES ITSELF: wherever the replay's TRACE has a sample on a step the re-run passes, every man's place is compared with where the page had him; the report
 // says how far apart they were at worst and from which moment they parted (`drift`). An exact re-run reads 0.00 m. A re-run that parted from the page is still a
@@ -7,15 +7,15 @@
 // THE STAND: the game is stood as the tape's game stood — the page's rules for a tape made on the page (src/host/profile.ts shippedBoot + pageSwitches for its query),
 // the tool's own stand for one made headless — and then given the tape's own knob tables (the whole registry) and kit cards. ONE RE-RUN AT A TIME, and the process
 // is LEFT on the tape's tables and kit (the live game handed back goes on reading them): stand nothing else in it afterwards and expect this process's own stand.
-// REFUSED, in words (`refuse`): a replay with no tape (saved before the tape existed, or its tape ended — a scenario switched from a menu, a checkpoint loaded,
-// a session past the tape's length), and a level that is not this checkout's (the fingerprint differs: the words name the commit to check out).
+// REFUSED, in words (`refuse`): a replay with no tape to walk (format.ts tapeWhy: none, one of another version, or one that ended — a scenario switched from a menu,
+// another run's checkpoint loaded, a session past the tape's length: the step is named), and a level that is not this checkout's (the fingerprint differs: the words name the commit to check out).
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { standOf } from '../../src/host/standEnv.ts';
 import type { Headless } from './headless.ts';   // (the harness itself is imported inside rerun(), once the stand the tape was made on is known: it reads TPS_PROFILE as it loads)
 import type { ReplayFile, RunTape, Decoded } from '../../src/replay/format.ts';
-import { decode, clock, tapeShield, TAPE_SHIELD } from '../../src/replay/format.ts';
+import { decode, clock, tapeWhy } from '../../src/replay/format.ts';
 import { TapeWalk } from '../../src/replay/tapewalk.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
@@ -28,10 +28,6 @@ export interface RerunReport {
   compared: number; worst: Drift | null; drift: Drift | null; tol: number;
   /** men the trace has that the re-run does not (or the other way) at the last compared sample */
   castDiffers: string;
-  /** sensor reads the re-run made that the page had not made on that step (served the key's last value) */
-  unjournaled: number;
-  /** a tape made with the senses on the CPU: the reads the re-run's game answered ITSELF, and how many of them were not the value the page's game had read */
-  ownSenses: { on: boolean; reads: number; differ: number };
   /** what the stand-up had to say (a scenario that did not start, a build that differs) */
   warnings: string[];
 }
@@ -47,12 +43,10 @@ export async function levelOf(file: string): Promise<any> {
 }
 
 /** walk a fresh headless game through the replay's run up to step `toN` (a sample's / a note's `n`; default: the replay's last sample). `each` is called after every step. */
-export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; each?: (W: Headless, f: number) => void; force?: boolean; served?: (v: number | undefined) => void; /** handed to standUp (headless.ts `scan`, `dress`, `draws`) */ scan?: boolean; dress?: boolean; draws?: boolean } = {}): Promise<Rerun> {
+export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; each?: (W: Headless, f: number) => void; force?: boolean; /** handed to standUp (headless.ts `scan`, `dress`, `draws`) */ scan?: boolean; dress?: boolean; draws?: boolean } = {}): Promise<Rerun> {
   const D = decode(F), tol = opts.tol ?? 0.15, T = F.rerun;
   const out = (refuse: string): Rerun => ({ W: null, refuse, report: null, D });
-  if (!T) return out('this replay has no run tape (it was saved by a build from before the tape): it reads as a trace — drop --rerun');
-  if ('dead' in T) return out(`this replay's run tape ended at step ${T.tick}: ${T.dead}. It reads as a trace — drop --rerun`);
-  if (!opts.force && tapeShield(T as RunTape)) return out(`${TAPE_SHIELD.replace(/^This/, 'this')}: it reads as a trace — drop --rerun`);
+  { const no = tapeWhy(F); if (no) return out(`${no.replace(/^This/, 'this')}${T && 'dead' in T ? ` (step ${T.tick})` : ''}: it reads as a trace — drop --rerun${T && !('dead' in T) && F.commit ? `, or check out ${F.commit} and run this there` : ''}`); }
   const tape = T as RunTape, lastN = F.samples.length ? F.samples[F.samples.length - 1].n : tape.ticks, toN = Math.min(tape.ticks, Math.max(0, Math.round(opts.toN ?? lastN)));
   const J = await import(`${ROOT}/src/game/journal.ts`), K = await import(`${ROOT}/src/game/knobs.ts`), { levelFingerprint } = await import(`${ROOT}/src/game/savestate.ts`);
   const { startFromQuery, activeScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`), { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
@@ -84,7 +78,7 @@ export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; e
   const tables = () => { const src = { ...(rc.knobs?.tables ?? {}), ...(rc.tables ?? {}) } as Record<string, unknown>, into = rc.tables ? reg : J.knobTables() as Record<string, Record<string, unknown>>;
     for (const [name, Tb] of Object.entries(into)) { const t = src[name]; if (plain(t)) { if (rc.tables) put(Tb, t); else K.assignDeep(Tb, t); } }
     if (!plain(src.POSEMATH)) (reg.POSEMATH as { singles: boolean }).singles = false;   // (a tape from before a pose's arithmetic had a rule: worked as it was — src/anim/skeleton.ts POSEMATH)
-    if (!plain(src.SENSE)) (reg.SENSE as { cpu: boolean }).cpu = false; if (!plain(src.CMDCHECK)) (reg.CMDCHECK as { on: boolean }).on = false; CL.carLampsTape(src); SH.shapesTape(src); RS.rowsetTape(src); };   // (rowsetTape: the row's own hour and weather are read off the address BEFORE the game is made — headless.ts `address` — so a tape from before that rule has it off here, before the stand, as the page's player has, replay/engineplay.ts; journal.ts applyKnobs says the same afterwards)   // (a tape from before the game's own maths: the engine's functions, said before the level and the game are built — as the page's player does, src/replay/engineplay.ts tables())
+    if (!plain(src.CMDCHECK)) (reg.CMDCHECK as { on: boolean }).on = false; CL.carLampsTape(src); SH.shapesTape(src); RS.rowsetTape(src); };   // (rowsetTape: the row's own hour and weather are read off the address BEFORE the game is made — headless.ts `address` — so a tape from before that rule has it off here, before the stand, as the page's player has, replay/engineplay.ts; journal.ts applyKnobs says the same afterwards)   // (a tape from before the game's own maths: the engine's functions, said before the level and the game are built — as the page's player does, src/replay/engineplay.ts tables())
   const Kt = await import(`${ROOT}/src/game/kit.ts`);
   const kitOf = (k: unknown) => { const c = k as { on?: unknown; members?: unknown; own?: unknown; stealth?: unknown } | undefined; if (!c || !Array.isArray(c.members)) return;
     Kt.kitMission(null);   // (no mission's card stands first in the table while the tape's cards are written into it)
@@ -141,15 +135,8 @@ export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; e
     if (notes.length && F.commit) notes[notes.length - 1] += ` To walk it as recorded: git worktree add ../at-replay ${F.commit}, and run this there.`;
     warnings.push(...notes); }
   if (activeScenario(g) !== rc.scenario) warnings.push(`the page had scenario ${rc.scenario ?? 'none'} up at its first step; this game has ${activeScenario(g) ?? 'none'}`);
-  // ---- the tape's streams and the sensors served off it: src/replay/tapewalk.ts, the one walk this tool and the engine replay (src/replay/engineplay.ts) share
+  // ---- the tape's streams: src/replay/tapewalk.ts, the one walk this tool and the engine replay (src/replay/engineplay.ts) share
   const walk = new TapeWalk(tape, { cam: [W.cam.target[0], W.cam.target[1], W.cam.target[2], W.cam.yaw, W.cam.pitch, W.cam.distance, W.cam.aspect, W.cam.fov, W.cam.aimLead], mouse: [W.input.mouseX, W.input.mouseY] });
-  walk.served = opts.served ?? null;
-  // (a tape made with the senses on the CPU — src/game/sense.ts — needs none of its values: the game answers itself, from its seed and its inputs alone, and what the
-  //  tape kept is only HELD AGAINST those answers — as f32, the tape's own width)
-  const SENSE = reg.SENSE as { cpu?: boolean } | undefined, ownSenses = { on: !!SENSE?.cpu, reads: 0, differ: 0 };
-  { const S = g.sensors, mine = S.read.bind(S);   // (asked of the switch at every read: a tape may move it between two steps)
-    S.read = (key: string): number | undefined => { const t = walk.read(key); if (!SENSE?.cpu) return t;
-      const v = mine(key); ownSenses.reads++; if (!Object.is(v === undefined ? v : Math.fround(v), t === undefined ? t : Math.fround(t))) ownSenses.differ++; return v; }; }
   const byN = new Map<number, number>(); F.samples.forEach((s, i) => byN.set(s.n, i));
   const idOf = new Map<number, number>(); F.cast.forEach((c, ci) => idOf.set(c.id, ci));
   let compared = 0, worst: Drift | null = null, drift: Drift | null = null, castDiffers = '';
@@ -184,7 +171,7 @@ export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; e
       castDiffers = miss.length ? `the trace has ${miss.join(', ')} on the floor; the re-run does not` : '';
       if (miss.length && !drift) drift = { r: D.r[si], n: f + 1, who: miss[0], metres: Infinity }; }
   }
-  return { W, refuse: '', D, report: { ticks: toN, toN, compared, worst, drift, tol, castDiffers, unjournaled: walk.unjournaled, ownSenses, warnings } };
+  return { W, refuse: '', D, report: { ticks: toN, toN, compared, worst, drift, tol, castDiffers, warnings } };
 }
 
 /** the report in words: the first line is the verdict */
@@ -194,7 +181,6 @@ export function rerunWords(R: RerunReport, F: ReplayFile): string[] {
   else if (!d) out.push(`RE-RUN MATCHES THE PAGE: ${R.ticks} steps walked, held against ${R.compared} trace samples, no man more than ${w ? w.metres.toFixed(2) : '0.00'} m from where the page had him${w && w.metres > 0.011 ? ` (${w.who} at ${clock(w.r)})` : ''}`);
   else out.push(`RE-RUN PARTED FROM THE PAGE at ${clock(d.r)} (step ${d.n}): ${d.who} ${Number.isFinite(d.metres) ? `${d.metres.toFixed(2)} m from where the page had him` : 'is not on the floor'}; worst ${w ? `${Number.isFinite(w.metres) ? w.metres.toFixed(2) + ' m' : 'a man missing'} (${w.who} at ${clock(w.r)})` : '–'} over ${R.compared} samples. From ${clock(d.r)} on this game is its OWN run, not what was on the screen — trust the trace for that`);
   if (R.castDiffers) out.push(`  ${R.castDiffers}`);
-  if (R.unjournaled) out.push(`  ${R.unjournaled} sensor read${R.unjournaled === 1 ? '' : 's'} the page had not made on that step (served the last value)`);
   for (const x of R.warnings) out.push(`  NOTE: ${x}`);
   if (F.commit) out.push(`  (saved on build ${F.commit})`);
   return out;

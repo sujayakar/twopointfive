@@ -229,9 +229,6 @@ pub fn pre() -> Vec<String> { alloc::vec![String::from("stack"), String::from("r
 /// (src/game/rearwatch.ts:110 GOING: a table nothing writes)
 pub fn going() -> Vec<String> { alloc::vec![String::from("kick"), String::from("toss"), String::from("fuse"), String::from("wait"), String::from("enter")] }
 
-/// (src/game/rearwatch.ts:110 ENTRIES: a table nothing writes)
-pub fn entries() -> Vec<String> { alloc::vec![String::from("openClear"), String::from("bangClear"), String::from("charge")] }
-
 /// (src/game/rearwatch.ts:112 SLOW: a table nothing writes)
 pub fn slow() -> Vec<String> { alloc::vec![String::from("toss"), String::from("fuse"), String::from("wait")] }
 

@@ -878,9 +878,6 @@ pub fn squad_orders_walk_try(g: &mut crate::game::Game, gd: GuardId, to: V3) -> 
     if crate::doortools::door_tools_untried(g, l.door, l.side) { Some(SquadOrdersWalkTry { door: l.door, side: l.side }) } else { None }
 }
 
-/// `x.pos === p` where `p` is the spot itself, handed back: to the bit, so that a NaN finds its post as identity would
-fn same_bits(a: V3, b: V3) -> bool { a[0].to_bits() == b[0].to_bits() && a[1].to_bits() == b[1].to_bits() && a[2].to_bits() == b[2].to_bits() }
-
 /// The men of a 'move' whose way runs at such a door, each dealt a stack mark on the face he comes to it by; Text: that door has no room for them.   (orders.ts SquadOrders.walkStacks)
 pub fn squad_orders_walk_stacks(g: &mut crate::game::Game, men: &[GuardId], to: V3) -> Option<crate::orders::SquadOrdersWalkStacks> {
     if g.orders.cast.is_some() { return None; }
@@ -933,7 +930,7 @@ fn assign_to_on(s: &SquadOrdersAssignA) -> TriesOn { order_as!(TriesOn, s, |t: O
 pub fn squad_orders_walk_send(g: &mut crate::game::Game, gd: GuardId, t: crate::orders::SquadOrdersWalkSendT, at: V3, on: &crate::orders::SquadOrdersAssignA) {
     let fc = g.dr[t.door].frame_centre;
     let a = SquadOrdersAssignA {
-        order: String::from("move"),
+        order: String::from(crate::orders::rows::movethere::ORDER.id),
         post: Some(t.post.pos),
         face: Some(t.post.face),
         watch: Some([fc[0], 1.05, fc[2]]),

@@ -145,13 +145,13 @@ export async function handRingCheck(): Promise<boolean> {
     // ---- turned to the switch (HANDRING.turn: lightswitch.ts, handwork.ts — the row's own call, as a tap or a ring's wedge makes it)
     
     // ---- the corner panel (HANDRING.corner: ui/corner.ts — the reduction; the panel as drawn is the page's, never seen here)
-    { const { cornerRows, objectiveParts, cornerOn } = await import(`${ROOT}/src/ui/corner.ts`), PROFILE = await import(`${ROOT}/src/host/profile.ts`), OV = await import(`${ROOT}/src/ui/overlay.ts`);
+    { const { cornerRows, objectiveParts } = await import(`${ROOT}/src/ui/corner.ts`), PROFILE = await import(`${ROOT}/src/host/profile.ts`), OV = await import(`${ROOT}/src/ui/overlay.ts`);
       rule(true); const soft = (o: any) => o.gone ? `~${o.text}~` : o.text;
       const show = (R: any[]) => R.map((r: any) => (r.sec ? `{${r.label}${r.note ? ` (${r.note})` : ''}: ${r.opts[0].text}}` : r.opts.length ? r.opts.map((o: any) => o.key ? `[${o.key}] ${o.text}` : soft(o)).join(' / ') : `'${r.label}'`) + (r.dist !== undefined ? ` ${r.dist}m` : '') + (r.progress !== undefined ? ' ▬' : '')).join(' | ') || 'nothing';
-      // (a row as the page makes it: the thing's name and state over what parseOpts reads off the row's own second line — player.ts buildInteractables)
-      const made = (kind: string, label: string, line2: string, over: any = {}) => ({ kind, label, opts: OV.parseOpts(line2), inReach: true, off: false, ...over });
+      // (rows as the view hands them: the thing's name and state over its lines, a key and its words or a line no key gives — held to the row's authored line in rust/game_start/tests/hud.rs)
+      const K_ = (key: string, text: string) => ({ key, text }), made = (kind: string, label: string, opts: any[], over: any = {}) => ({ kind, label, opts, inReach: true, off: false, ...over });
       // (the panel of his picture: a door's row under its heading, the squad's title, four men — one lost — what they carry, the quick key's line)
-      const door = made('door', 'door · open', 'Space  push it shut  ·  or sprint into it');
+      const door = made('door', 'door · open', [K_('Space', 'push it shut'), K_('', 'or sprint into it')]);
       const men = ['Gold 1 · stacked on the lobby door', 'Gold 2 · stacked on the lobby door', 'Blue 1 · covering the hall', 'Blue 2 · down'].map((text, i) => ({ key: '', text, gone: i === 3 }));
       const squad = [{ kind: 'objective', label: 'squad · loud · orders to gold', inReach: true, off: false, tone: 'gold', opts: [...men, { key: '', text: 'charges 2 · bangs 3' }, { key: '', text: 'frags 2' }, { key: '', text: 'charge set · lobby door — press F to blow it' }, { key: 'Q', text: 'move there · that spot' }] }];
       const A = cornerRows([door], 0, squad, 'par 1:00 / 1:30 / 2:00 · objective ▸ clear the back office · 2 left', [{ key: 'F', text: 'blow the charge · lobby door' }], 'infiltrate'), a = show(A.rows), flat = JSON.stringify(A.rows);
@@ -160,7 +160,7 @@ export async function handRingCheck(): Promise<boolean> {
       const B = cornerRows([], -1, [{ ...squad[0], opts: men.slice(0, 3) }], ''), C = cornerRows([], -1, [{ ...squad[0], opts: squad[0].opts.filter((o: any) => !o.gone) }], 'objective ▸ reach the server room'), D = cornerRows([door], 0, [], '');
       // (a man in reach: both clicks · a verb running: its own words and its bar, no heading · one with no bar · a committed move's line · the word an
       //  empty tap left, with how far · the old list's cancel row is not one — each second line as player.ts words it)
-      const man = made('guard', 'guard', 'LMB  knock him out  ·  RMB  grab him'), pick = made('door', 'door · locked', 'picking… 40%  ·  Space or a step breaks off', { progress: 0.4 }), wand = made('door', 'door · shut', 'looking under it — the cursor turns the lens  ·  Space or a step pulls it out');
+      const man = made('guard', 'guard', [K_('LMB', 'knock him out'), K_('RMB', 'grab him')]), pick = made('door', 'door · locked', [K_('', 'picking… 40%'), K_('', 'Space or a step breaks off')], { progress: 0.4 }), wand = made('door', 'door · shut', [K_('', 'looking under it — the cursor turns the lens'), K_('', 'Space or a step pulls it out')]);
       const word = { kind: 'door', label: 'door · step closer', opts: [], inReach: false, off: false, dist: 1.4 }, cancel = { kind: 'cancel', label: '', opts: [], inReach: true, off: false };
       const E = cornerRows([man, cancel], -1, [], ''), F = cornerRows([pick], 0, [], ''), W = cornerRows([wand], 0, [], ''), H = cornerRows([word], -1, [], '');
       const shapes = show(E.rows) === '[LMB] knock him out | [RMB] grab him' && E.primary === -1 && show(F.rows) === 'picking… 40% / Space or a step breaks off ▬' && show(W.rows) === 'looking under it — the cursor turns the lens / Space or a step pulls it out' && show(H.rows) === "'door · step closer' 1.4m";
@@ -168,8 +168,8 @@ export async function handRingCheck(): Promise<boolean> {
       const P1 = objectiveParts('training 2/7 ▸ press the key at the door'), P2 = objectiveParts('structure taken · 3:21 · GOLD — press shift+enter to restart'), P3 = objectiveParts('objective ▸ 0:42 · the charge in the vault');
       const parts = P1?.label === 'training 2/7' && P1.note === '' && P1.text === 'press the key at the door' && P2?.label === '' && P2.text.startsWith('structure taken') && P3?.label === 'objective' && P3.text === '0:42 · the charge in the vault' && objectiveParts('  ') === null;
       // (the page's own feed, asked with no page: what the panel is handed here, at a door with the squad — the three things; with the rule off the list as it was)
-      const fed = (on: boolean, here = false) => { rule(on); HANDRING.on = !BRK; if (!here) { atDoor(); breath(); } const D = OV.Overlay.prototype['deriveInteractions'].call({}, g); return { rows: D.rows as any[], primary: D.primary as number, top: !D.rows.some((r: any) => r.sec) }; };   // (`top`: no section in what the panel is handed, so the line at the top still says it — setInteractions blanks that line only for a section it drew)
-      const line = g.objectiveText(), on = fed(true), off = fed(false); rule(true);
+      const fed = (on: boolean, here = false) => { rule(on); HANDRING.on = !BRK; if (!here) { atDoor(); breath(); } const D = OV.Overlay.prototype.deriveInteractions.call({}, g.view); return { rows: D.rows as any[], primary: D.primary as number, top: !D.rows.some((r: any) => r.sec) }; };   // (`top`: no section in what the panel is handed, so the line at the top still says it — setInteractions blanks that line only for a section it drew)
+      const line = (g.view.mission?.text ?? ''), on = fed(true), off = fed(false); rule(true);
       const wired = on.rows.every((r: any) => r.sec || r.one) && on.rows.some((r: any) => r.one && r.opts[0]?.key) && on.primary >= 0 && !!on.rows[on.primary]?.one && (!line || (on.rows[0].sec === true && !on.top)) && off.rows.every((r: any) => !r.sec && !r.one) && off.rows[0]?.label.length > 0 && off.top;
       // (a charge set on this door by hand, him a stride from it and then well away: whatever the block's line says of a key, or of who it would catch,
       //  the corner's notes say — a key's line under that key, a warning under none, nothing where the block's line says neither — and the panel has it)
@@ -181,8 +181,7 @@ export async function handRingCheck(): Promise<boolean> {
         return { ok: notes && panel, say: `the block '${hn}' → ${cn.length ? cn.map((o: any) => `[${o.key}] ${o.text}`).join(' | ') : 'nothing'}, the panel ${panel ? 'has it so' : `HAS [${got.join(' | ')}] FOR [${want.join(' | ')}]`}${notes ? '' : ' (THE NOTES ARE NOT THE BLOCK\'S)'}` }; };
       DT.set.push({ door: leafD, side: 1, t: g.time, by: SAM_BY }); const cNear = chargeAt(true), cFar = chargeAt(false); DT.set.length = set0; step(20); const cNone = cornerOf(g).length === 0; rule(true);
       
-      // (the panel's own gate: the three things with the rule on, the list as it was under the tour's puppet, with his ring's rule off, with this one off)
-      const gate = cornerOn(false), gatePup = !cornerOn(true); HANDRING.on = false; const gateRing = !cornerOn(false); rule(true); HANDRING.corner = false; const gateOff = !cornerOn(false); rule(true);
+      // (the panel's own gate is the view's `interact.corner`, held in rust/game_start/tests/hud.rs)
       const all: any = JSON.parse(JSON.stringify(knobsSnapshot(g))), km = { ...K.KEYMAP };
       const page = await quiet(() => { PROFILE.pageSwitches(new URLSearchParams('')); const on = HANDRING.corner; PROFILE.pageSwitches(new URLSearchParams('corner=0')); const off = HANDRING.corner, rest = HANDRING.on && HANDRING.lone; applyKnobs(g, all); Object.assign(K.KEYMAP, km); return `${on ? 'on' : 'OFF'} as the page opens, ${off ? 'STILL ON' : 'off'} under ?corner=0${rest ? '' : ' (AND THE REST WITH IT)'}`; });
       const old = JSON.parse(JSON.stringify(all)); delete old.tables.HANDRING.corner;

@@ -156,7 +156,7 @@ fn a_taps_word_and_live_are_told() {
         // on open floor
         p.key_down(game::consts::INTERACT_KEY); p.frame(); p.key_up(game::consts::INTERACT_KEY); p.run(0.4);
         let e = p.view().empty.unwrap_or_else(|| panic!("seed {seed}: a tap on open floor says nothing: {:?} nearby {}", p.g.pl[p.g.player].sel.word, p.g.nearby.len()));
-        assert_eq!((e.word.as_str(), e.kind.as_str(), e.dist), (game::handring::EMPTY_WORD, "wall", None), "seed {seed}");
+        assert_eq!((e.word.as_str(), e.kind, e.dist), (game::handring::EMPTY_WORD, game::view::ThingKind::Wall, None), "seed {seed}");
         // a step up to a door takes it down
         p.sam_put([door[0], door[1] + 0.9]);
         p.run(0.2);

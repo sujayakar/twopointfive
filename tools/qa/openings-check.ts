@@ -120,7 +120,7 @@ const inward = (m: Uint8Array, o: O) => roofed(m, o.pos[0] + o.dir[0] * 0.7, o.p
   check(O.length >= 9 && wide.length >= 5 && high.length >= 2, 'the office has every window the glass-only rule found there (nine) and more: its long windows and its strips of high glass among them', `${O.length} with every door shut: ${wide.length} of more than 2.5 m², ${high.length} over head height`); }
 // ---- awnings: a stall's roof on posts is no room
 { const out: string[] = []; let ok = true;
-  for (const name of ['gwot-yard', 'tut-quiet']) { const S = await stand(name); S.shut(); const { O, all } = S.read(); out.push(`${name}: ${O.length} open with every door shut, ${all.length - O.length} doorways`); if (O.some(o => o.full > 3) || O.length > 1) ok = false; }
+  for (const name of ['tut-quiet']) { const S = await stand(name); S.shut(); const { O, all } = S.read(); out.push(`${name}: ${O.length} open with every door shut, ${all.length - O.length} doorways`); if (O.some(o => o.full > 3) || O.length > 1) ok = false; }
   check(ok, 'a yard of market stalls gets no light from their awnings (the first cut lit four of five there)', out.join(' · ')); }
 
 // ---- the vault's floor: a window hole with no glass

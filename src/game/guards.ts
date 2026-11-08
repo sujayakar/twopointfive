@@ -10,8 +10,7 @@ import { Character, HOLD } from './character';
 import { manLeaves } from '../sim/men/store';
 import './character';
 import { BoxFlag } from '../scene/boxes';
-import { BAKE_Y, type StaticCollision, type LampRows } from '../scene/collision';
-import { SENSE, type LightField } from './sense';   // (read inside functions only: the light model's switch and its field)
+import { BAKE_Y } from '../scene/collision';
 import { FOG, fogThrough } from './fogofwar';
 import { Door } from './doors';
 import { rigLightPose, rigTorchPos, torchCarryDir, torchCarryWant, torchLightDef, RIG, sc20kLightPose } from './rigProps';
@@ -50,7 +49,7 @@ import { calmTorchDark, TORCH } from './calmtorch';
 import { darkFoeLit } from './darkfoe';
 import { powerOutLit } from './powerout';
 import { whistleSoft } from './whistle';
-import { hearPath, strokeLight } from './weather';
+import { hearPath } from './weather';
 import { attentionSideK } from './attention';
 import { tacticsPenalty } from './tactics';
 import { lanePenalty } from './lanes';
@@ -65,7 +64,6 @@ import './glass';
 import { shotEnergy } from './glasspen';
 import { kitPistol } from './kit';
 import './gunslots';   // (called inside startReloadBeat only)
-import { hourLight, moonLight } from './hours';
 import './handleside';
 import './gunhold';
 import { teamAtWalk } from './teampace';   // (teampace.ts: a teammate's walk is a share of the player's, and he runs only for a reason — all read inside functions)
@@ -183,21 +181,13 @@ export function bodySeen(g: Game, gd: Guard, o: Guard, around: boolean | number 
 export const BODY_LIGHT = { lit: 0.22, litNear: 0.04, nearM: 2.0, farM: 5.0, smoke: 0.3 };
 /** the body's light meter, per body (the light ON it is whoever's-looking-independent): eased reading + when; and the last irradiance behind it for the panel */
 const bodyMeters = new SideMap<Guard, { vis: number; E: number; t: number }>('guards.bodyMeters');
-/** probe queries these tests may spend a frame between them (light points + smoke segments): they run inside the guards' update, AHEAD of Sam's own two meter
- *  queries in the probe's 32-slot frame, and a floor of bodies under three pairs of eyes must never crowd those out — past it a body keeps its eased reading /
- *  the CPU estimate and a pair its last transmittance for the frame */
-const BODY_PROBE_BUDGET = 6;
-const bodyProbeN = new SideMap<Game, { t: number; n: number }>('guards.bodyProbeN');
-function bodyProbeSlot(g: Game): boolean { let b = bodyProbeN.get(g); if (!b || b.t !== g.time) { b = { t: g.time, n: 0 }; bodyProbeN.set(g, b); } return b.n++ < BODY_PROBE_BUDGET; }
-/** What the meter reads at this body now (0‥1): probe query `bodyL<id>` at its trunk (its own capsules skipped), the CPU estimate until answered, eased at the meter's rate. */
+/** What the meter reads at this body now (0‥1): the light at its trunk, eased at the meter's rate. */
 export function bodyVisibility(g: Game, o: Guard): number {
   let m = bodyMeters.get(o); const now = g.time;
   if (m && m.t === now) return m.vis;
-  const c = o.char, id = c.id; const hp = c.bones.hips ?? c.pos;
+  const c = o.char; const hp = c.bones.hips ?? c.pos;
   const at: Vec3 = [hp[0], Math.max(hp[1], 0.12) + 0.22, hp[2]];   // the trunk of a man lying down: a hand's height over the pelvis (a query flush with the floor reads the floor's own shadow terminator)
-  const key = `bodyL${id}`; if (bodyProbeSlot(g)) g.lightQuery(key, at, id);
-  const r = g.lightAt(key);
-  const E = r !== undefined && Number.isFinite(r) ? r : lightEstimateAt(g, at);
+  const E = lightEstimateAt(g, at);
   const dt = m ? Math.min(0.1, Math.max(0, now - m.t)) : 0;
   const target = g.visibilityOf(E); const vis = m && dt > 0 ? damp(m.vis, target, 6, dt) : target;   // (first look: the reading as it stands — a torch swung onto it a frame ago has already lit it)
   m = { vis, E, t: now }; bodyMeters.set(o, m); return vis;
@@ -636,8 +626,8 @@ export const LIGHTS = { on: true, afterSecs: 2.5, hotSecs: 5, stepSecs: 4, tail:
   /** a man on his mark with his gun up who stands LIT himself (his own meter ≥ lookLit) and looks into the DARK (the floor along his gun, out to lookM or the
    *  first wall, under lookDark with the team's own lights left out) burns his light: the dark hides only the other side. Off = dark on every hold, as it was —
    *  four men holding a lit room were shot from a dark doorway eight metres off by a man none of them could see. SHIPS OFF, a row to try: it keeps a man
-   *  holding a taken room lit for as long as he holds (the hold is meant to be dark, and a lit man is seen), it reads the floor by the CPU's direct-light
-   *  estimate (no bounce, no moon unless sense.ts SENSE.moon) where everything else a man does by light goes by the meter, and two lit mates can keep each other's lights on */
+   *  holding a taken room lit for as long as he holds (the hold is meant to be dark, and a lit man is seen), it reads the floor by the game's light
+   *  on it (lightEstimateAt) where everything else a man does by light goes by the meter, and two lit mates can keep each other's lights on */
   lookDark: false, lookLit: 0.25, lookBelow: 0.12, lookM: 10,
   /** THE PLACE DECIDES (the footage: lights off in lit halls and rooms whatever the men are doing, on in the dark): a man who stands on lit floor with lit
    *  floor all along his gun — every metre out to `litM` (his light's reach) or the first wall, and every third metre down both edges of its cone — whose man,
@@ -656,7 +646,7 @@ export const LIGHTS = { on: true, afterSecs: 2.5, hotSecs: 5, stepSecs: 4, tail:
    *  an order that takes him away from him is walked) instead of carrying him, gun lowered, up into the man's light. The rule above (`litOff`) wants his own floor lit too; this is the other side of it: a man in a dark room with an enemy under a
    *  lamp outside the door shoots from the dark. Asked four times a second per man with a man in his eyes (or, for the light alone, out of them for under a
    *  second and a half: the blink roomfight.ts keeps his aim through — the walk is held only with the man in his eyes); the light is the other
-   *  rules' again the frame he has no such man, the walk within a quarter of a second. The estimate is the CPU's direct light with no bounce and no moon (unless sense.ts SENSE.moon): it errs toward calling HIM dark. No range limit, by measurement: held to the nine metres `litAt` is a sighting at, his light came up from the dark on the far man and the lens gave him away (624 against 653 of 864 teammates up over 432 night breaches). false = as it was: sent on
+   *  rules' again the frame he has no such man, the walk within a quarter of a second. No range limit, by measurement: held to the nine metres `litAt` is a sighting at, his light came up from the dark on the far man and the lens gave him away (624 against 653 of 864 teammates up over 432 night breaches). false = as it was: sent on
    *  past Sam at a man under a lamp, his light came up with the word and he walked at him with his gun down (the night breach's last hunt) */
   litMan: true,
   /** NOT INTO THE WALL AT HIS MUZZLE (wallDark, below, has the rule): `wallOff` the switch — off here, on in the page (host/profile.ts; ?walllight=0 puts it
@@ -899,77 +889,13 @@ export function crossesDoor(a: Vec3, b: Vec3, d: Door): { t: number; side: 1 | -
 
 
 
-/** The CPU's estimate of the renderer's light meter at world point P (probe.wgsl: the best, over the six axis normals, of the luminance of the SHADOWED DIRECT
- *  irradiance) — every enabled analytic light the engine holds this frame (fixtures' area lights, lamps, torches and weapon lights, the beacons, muzzle flashes)
- *  through the shader's own terms (evalLight: 1/max(d², r²), the range window, the spot cone's smoothstep, the panel's emitter cosine, the receiving cosine),
- *  shadowed by one segment test against the statics and the door leaves (collision.ts — the CPU's stand-in for occluded()). What it has not got, named: no
- *  bounce (the probe adds the radiance cache's; a room lit only round a corner reads darker here than on screen), no moon unless sense.ts SENSE.moon says
- *  (kind 2: unshadowed it would light everybody — hours.ts moonLight gives it the sun's one shadow test), no bodies' shadows (capsules are GPU-side), no smoke, no fixture flicker. Used for one thing: how lit
- *  an AI TARGET is to an AI eye (unitLightMeter) when the renderer has not answered — headless always, the browser's first frame or two. Sam's meter reads it
- *  only with the senses on the CPU (sense.ts SENSE.cpu, game.ts lightMeter). ~one segment test per light in range: a few dozen per target per frame.
- *  `field` = the light model (sense.ts SENSE.bounce), where one stands: each lamp is then dimmed by the grid's smoke on its way, and the bounce of the
- *  square metre the point stands in is added. null = the estimate as above, whatever the switch says (the error tool asks both). `moon` = the level's
- *  moon is in it too (the switch's word unless the asker says). `leave` = lamps of the level's own the asker leaves out, by what feeds them
- *  (sim/lightshome.ts ROW_BIT: a sleeper's face leaves the screens'). */
-export function lightEstimateAt(g: Game, P: Vec3, skipOwner?: (owner: number) => boolean, steadyOnly = false, field: LightField | null = lightField(g), moon = true, leave = 0): number {
-  // (the lamps are one question in several calls, and the sun's, the moon's and the stroke's lines follow it: asked outside a tick — an order given
-  //  between ticks prices its walk by the light of the floor — the whole of it stands in one window over the module's copy, scene/collision.ts window)
-  return g.col.mirror.live ? lightEstimateIn(g, P, skipOwner, steadyOnly, field, moon, leave) : g.col.window(() => lightEstimateIn(g, P, skipOwner, steadyOnly, field, moon, leave));
-}
-function lightEstimateIn(g: Game, P: Vec3, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean, field: LightField | null, moon: boolean, leave: number): number {
-  const acc = [0, 0, 0, 0, 0, 0];
-  lampsOn(g, P, skipOwner, steadyOnly, acc, field, leave);   // (the lamps: one question a point to the Rust module, rust/sim/src/light.rs)
-  hourLight(g, P, acc);   // the level started at another hour (hours.ts): its sun and its sky on the same six faces — nothing at night
-  if (moon) moonLight(g, P, acc);   // …and at night the moon where it has a line to P (sense.ts SENSE.moon; the error tool asks both ways)
-  if (!steadyOnly) strokeLight(g, P, acc);   // a stroke of lightning under a picked weather (weather.ts): the renderer's meter reads it, so its stand-in does — nothing with no weather picked
-  const direct = Math.max(acc[0], acc[1], acc[2], acc[3], acc[4], acc[5]);
-  return direct;
-}
-/** THE LIGHT MODEL'S FIELD for this game (sense.ts SENSE.bounce): its own smoke, where the senses are the game's, the switch is up and a grid stands.
- *  With it the estimate above has the smoke's shadow on every lamp and the light that comes round; null = the estimate as it always was. */
-export function lightField(g: Game): LightField | null { const C = g.cpuSmoke; return C.grid && C.grid.stands ? C as LightField : null; }
-type Lamp = Game['engine']['lights']['lights'][number];
-/** WHICH OF THE LAMPS NO FIXTURE FEEDS IS ONE OF A LIGHT QUESTION'S (a man's torch, a flash, a tracer's lamp): on, not the moon,
- *  not one of an owner the asker leaves out, and, to who asks what the PLACE lights (`steadyOnly`, LIGHTS.litMan), nobody's passing flash: a round's
- *  impact, a tracer's lamp, a stun charge. The level's own lamps have these gates where they stand, in the module (rust/sim/src/light.rs `row`: a
- *  blackout beacon sweeping past is passing by its row's own bit). */
-function lampAsked(l: Lamp, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean): boolean {
-  if (!l.enabled || l.intensity <= 0 || l.kind === 2 || (skipOwner && l.owner && skipOwner(l.owner))) return false;
-  return !(steadyOnly && (l.ttl >= 0 || l.transient));
-}
-/** what a light question says of the level's own lamps (collision.ts LampRows): this game's rows, less the passing ones and each as its steady self to
- *  who asks what the PLACE lights (a fixture somebody flickers is its authored self there), less whatever else the asker leaves out */
-const rowsOf = (g: Game, steadyOnly: boolean, leave: number): LampRows => ({ st: g.lightHome.block, leave: steadyOnly ? leave | ROW_BIT.passing : leave, steady: steadyOnly });
-/** A LIGHT QUESTION'S OWN LAMPS written to the module (collision.ts lamp), each as the question takes it and with how many of the level's rows stand
- *  before it in the list: the module reads those where they stand and takes the two as one list in the list's order (light.rs `each`). The rows are
- *  the rows' in that order (sim/lightshome.ts stand), and a list that is not is a mistake thrown by name.
- *  `P`: a lamp whose reach cannot hold that point is not sent (a lamp further off along one axis than its range is further off than its range: the
- *  sum's own first test would pass it by). False = no question stands and the table is full: the sweep's (steadyLamps). */
-function writeLamps(g: Game, col: StaticCollision, P: Vec3 | null, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean): boolean {
-  const lights = g.engine.lights.lights; let rows = 0;
-  for (let i = 0; i < lights.length; i++) {
-    const l = lights[i];
-    if (l.row !== undefined) { if (l.row !== rows) throw new Error(`light: the lamp '${l.name}' is row ${l.row} of the level's lights and stands after ${rows} of them in the engine's list: the rows are that list's order (sim/lightshome.ts stand)`); rows++; continue; }
-    if (!lampAsked(l, skipOwner, steadyOnly)) continue;
-    const sp = steadyOnly ? l.steady : undefined, lp = sp ? sp.pos : l.pos, R = l.range;
-    if (P) { const dx = lp[0] - P[0], dy = lp[1] - P[1], dz = lp[2] - P[2]; if (dx > R || -dx > R || dy > R || -dy > R || dz > R || -dz > R) continue; }
-    if (!col.lamp(lp, R, sp ? sp.radius : l.radius, l.kind, l.dir, l.outerDeg, l.innerDeg, l.color, sp ? sp.intensity : l.intensity, rows)) return false;
-  }
-  return true;
-}
-const CARRIED = (): boolean => true;
-/** THE LAMPS THE LIGHT THAT COMES ROUND IS SWEPT FROM (glow.rs): what the PLACE lights, less every lamp somebody carries (it moves faster than a sweep,
- *  and lights a man directly in the estimate). The level's own are its rows, read by the module where they stand: this writes the few of nobody's
- *  fixture and answers with how the rows are read. False = more of those than the module's table holds: the field stands as it was. */
-export function steadyLamps(g: Game, col: StaticCollision): LampRows | false { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('steadyLamps', undefined, [g, col]); if (__r !== RUST_PASS) return __r as any; } } return writeLamps(g, col, null, CARRIED, true) && rowsOf(g, true, 0); }
-/** THE LAMPS' PART OF lightEstimateAt: the shadowed direct light of every lamp, onto the six faces in `acc`. The Rust module's (rust/sim/src/light.rs):
- *  the level's own lamps are read where they stand and the question's own are written, and the module sums the two as one list in the engine's order, in
- *  as many parts as the written ones need (collision.ts lamp). A lamp there: the shader's own terms (1/max(d², r²), the range window, the spot
- *  cone's smoothstep, the panel's emitter cosine, the probe's floor for a light worth a shadow ray), then one line to it — a wall, a partition, a desk,
- *  a shut leaf between him and it: dark from that one — and the receiving cosine on each face. The smoke's shadow (`field`, SENSE.bounce) is the grid's
- *  cells along that very line and, where the grid cannot answer, the field's own blobs (smoke.rs). A grid nothing was let out into dims nothing: not asked. */
-function lampsOn(g: Game, P: Vec3, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean, acc: number[], field: LightField | null, leave: number): void {
-  const col = g.col; col.lampsBegin(P, field !== null && field.grid.fed ? field : null, SENSE.smoke, rowsOf(g, steadyOnly, leave)); writeLamps(g, col, P, skipOwner, steadyOnly); col.lampsOn(acc);
+/** THE LIGHT THAT STANDS ON A POINT, as the Rust game has it (rust/game_rules/src/guards light_at): for a preview on the page and for a tool, between ticks; no rule
+ *  asks it here. `skipOwner`: whose carried lamps are left out · `steadyOnly`: what the PLACE lights, with nothing that passes · `leave`: lamps of the level's own left
+ *  out, by what feeds them (sim/lightshome.ts ROW_BIT). It applies nothing. With no Rust game under it, it throws by name (sense.ts senseTool). */
+export function lightEstimateAt(g: Game, P: Vec3, skipOwner?: (owner: number) => boolean, steadyOnly = false, leave = 0): number {
+  const owners: number[] = [];
+  if (skipOwner) for (const l of g.engine.lights.lights) if (l.owner && !owners.includes(l.owner) && skipOwner(l.owner)) owners.push(l.owner);
+  return g.ask.light(P, owners, steadyOnly, leave);
 }
 
 // ------------------------------------------------------------ the right hand: what his state puts in it, what is actually there, and the reload beat
@@ -1377,7 +1303,6 @@ export function spawnUnit(g: Game, o: UnitOpts): Guard { { const __s = RUST_SURF
 /** everything of a unit that lives outside the Guard object, taken back (despawnUnit / resetGuards): his weapon light out of the engine's list, his meter keys forgotten */
 function releaseUnit(g: Game, gd: Guard) {
   g.engine.lights.remove(gd.flashlight);
-  g.lightForget(`unitC${gd.char.id}`); g.lightForget(`unitH${gd.char.id}`);
 }
 export function despawnUnit(g: Game, gd: Guard): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('despawnUnit', undefined, [g, gd]); if (__r !== RUST_PASS) return __r as any; } }
   if (!gd.unit) return false;

@@ -233,7 +233,7 @@ const line = (ok, label, detail = '') => { if (!ok) failed++; console.log(`- ${o
   line(going.from === first - 20 && going.n > 0, 'a click on a checkpoint\'s chip behind the tape starts that stretch again', `from step ${going.from}, ${going.n} sounds to hand back`);
   line(going.back === '■ stop' && going.is && going.head && going.band && going.held !== 'BUTTON', 'while it is heard again the head says so: "■ stop", its own head and its stretch on the lanes', `${going.back}, head ${going.head}, band ${going.band}`);
   line(!r1.on && r1.played === going.n && r1.bufs.length === going.n && r1.bufs.includes(`${toy}@new 1`) && !r1.bufs.includes(toy), 'the stretch is heard again in the picked take', `${r1.bufs.length} sounds, ${r1.bufs.filter(x => x.startsWith(toy)).join(' ')}`);
-  line(r1.events === ev1 && r1.state.f === set.f && !r1.state.drift && !r1.state.unjournaled, 'hearing it again files no mark and runs no step', `${r1.events} marks, step ${r1.state.f}`);
+  line(r1.events === ev1 && r1.state.f === set.f && !r1.state.drift, 'hearing it again files no mark and runs no step', `${r1.events} marks, step ${r1.state.f}`);
   await page.evaluate(toy => { window.__sndlanes.pick(toy, { take: 'new 2' }); window.__bufs.length = 0; }, toy);
   await page.locator('#sndl .hd .back').click();
   const r2 = await re();
@@ -395,7 +395,7 @@ const line = (ok, label, detail = '') => { if (!ok) failed++; console.log(`- ${o
   // 4. the replay still plays step for step, with the lanes holding every sound the tape lists
   const c = await walk(row.steps + 10);
   const names = new Set(c.rows.map(r => r.name)), missing = Object.keys(row.sounds).filter(n => !names.has(n) && !(n === 'smokePop' && names.has('smokeHiss')));
-  line(c.state.ended && !c.state.drift && !c.state.unjournaled, 'the replay plays to its end step for step', `step ${c.state.f}, drift ${c.state.drift ?? 'none'}, unjournaled ${c.state.unjournaled}`);
+  line(c.state.ended && !c.state.drift, 'the replay plays to its end step for step', `step ${c.state.f}, drift ${c.state.drift ?? 'none'}`);
   line(!missing.length, 'every sound of the replay has a lane', missing.length ? `missing ${missing.join(' ')}` : `${names.size} lanes`);
   const reset = await page.evaluate(toy => { const L = window.__sndlanes; L.pick(toy, { take: L.takesOf(toy).game, flag: false, note: '' }); return { trim: L.takesOf(toy).trim, text: L.copyText() }; }, toy);
   line(!reset.trim || !reset.trim.take, 'picking the game\'s own take puts the mixer back', reset.text);

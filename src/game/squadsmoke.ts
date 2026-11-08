@@ -53,7 +53,7 @@ export const SQUADSMOKE = {
   againSecs: 1.2,
 };
 export const SMOKE_ORDER = 'smokeThere';
-interface State { /** what this staging brought · what is left of it */ brought: number; cans: number; noted: boolean; last: WeakMap<Guard, number>; }
+interface State { /** what this staging brought · what is left of it */ brought: number; cans: number; last: WeakMap<Guard, number>; }
 const states = new SideMap<Game, State>('squadsmoke.states');
 export const SQUADSMOKE_STATS = { staged: 0, thrown: 0 };
 /** every can thrown on the order, newest last (QA; capped) */
@@ -68,7 +68,7 @@ export function squadSmokeBrought(g: Game): number { return states.get(g)?.broug
  *  one or more. */
 export function squadSmokeStage(g: Game, cans: number) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('squadSmokeStage', undefined, [g, cans]); if (__r !== RUST_PASS) return __r as any; } }
   const n = Math.max(0, Math.floor(cans) || 0); let s = states.get(g);
-  if (!s) { if (!n) return; states.set(g, s = { brought: 0, cans: 0, noted: false, last: new SideMap() }); }   // (never a can on this Game: nothing kept, nothing registered)
+  if (!s) { if (!n) return; states.set(g, s = { brought: 0, cans: 0, last: new SideMap() }); }   // (never a can on this Game: nothing kept, nothing registered)
   s.brought = s.cans = n; s.last = new SideMap(); SQUADSMOKE_STATS.staged++;
   const S = g.orders; S.unregister(SMOKE_ORDER);
   if (!n) return;

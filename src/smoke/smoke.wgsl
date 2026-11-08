@@ -76,9 +76,10 @@ const MAX_TRACE: f32 = 14.0;   // cells a backtrace may span: two bricks less th
 // what is drawn of it, finer and livelier than the simulation could afford, so it is BENT TOWARD THE GRID ALL THE TIME, ONE WAY, A LITTLE AT A TIME: x ← step(x) + (1 − e^(−dt·rate)) · P(y − C·x). y = the
 // grid's cells (the page hands them over as they lie: rust/game_draw/src/smoke.rs) · C = the mean over a brick's air (K_MEAN): A COARSE BRICK IS ONE CELL OF THE GRID, half a metre, so C is one sum a brick
 // · P = the correction spread over the brick's cells, shaded into the bricks next door where the grid says the way is open, so nothing is drawn of the half metres. Everything finer than a brick is left alone.
-//   · HOW FAST goes by how much it matters to an eye: `bend` × the difference in what a line of sight through it hides. Two opaque clouds are one, a haze is mended slowly, a cloud one side lacks at once.
+//   · HOW FAST goes by how much it matters to an eye: `bend` × the square of the difference in what a metre and a half of it hides. Two opaque clouds are one and a small difference is let be (it is the
+//     solver's to look as it likes within it: billows), a cloud one side lacks is mended at once.
 //   · IT GOES THERE FIRST: smoke is drawn toward where the game has more of it (`pull`, along the difference's gradient; K_PULL), so a cloud rolls out to where it should be and what is left to mend is little.
-//   · TOO MUCH is thinned where it stands, its thin parts first; TOO LITTLE is thickened where it stands, its thick parts first, so billows stay billows; where there is none it comes up out of the air in wisps (bendTo).
+//   · TOO MUCH is thinned where it stands, its thin parts first; TOO LITTLE is thickened where it stands, its thick parts first, so billows stay billows; where there is next to none it comes up out of the air in wisps (bendTo; no haze is laid between billows).
 //   · ONLY THE GAME'S SMOKE is measured and bent. A source the game does not hold (a breath, a fire's plume, gun gas) says so in the first byte of its K word, and that share of a cell is nobody's here.
 //   · what the grid holds that has no brick gets one (markBent), so a game put back grows its cloud again; a picture let go of while the grid holds smoke takes it whole (`snap`).
 const M_BENT: u32 = M_META + CAP * MS;   // (+ 0: the grid's plan in its own bricks, along x · + 1: along z)
@@ -86,7 +87,7 @@ const M_BAT: u32 = M_BENT + 16u;         // a word a place of the plan: the row 
 const M_BROW: u32 = M_BAT + 512u;        // rows of 160 words: 128 densities (4 along x, then 4 along z, then 8 up), then a byte a cell: 1, 2, 4 = open toward +x, up, +z
 /** what a cell of the grid holds before a brick is made and kept for it: more as the pool runs short (WHO GIVES WAY) */
 fn bentLeast() -> f32 { return 0.03 * (1.0 + 3.0 * bitcast<f32>(M[M_TIGHT])); }
-const BENT_SIGMA: f32 = 18.0;            // what three metres of smoke of density 1 takes out of the light (6 a metre, common.wgsl): the stretch of a line of sight a difference is judged over
+const BENT_SIGMA: f32 = 6.0;             // what a metre of smoke of density 1 takes out of the light (common.wgsl)
 /** the grid's brick and cell a coarse brick stands for: row + 1 (0 = none stands: no smoke), cell · row NONE = the grid says nothing there (off its plan, above its top) */
 fn bentAt(b: vec3i) -> vec2u {
   let x = b.x >> 2u; let z = b.z >> 2u; let wide = i32(M[M_BENT]);
@@ -96,8 +97,8 @@ fn bentAt(b: vec3i) -> vec2u {
 /** what the grid holds there (−1 = it says nothing) */
 fn bentRho(r: vec2u) -> f32 { if (r.x == NONE) { return -1.0; } if (r.x == 0u) { return 0.0; } return bitcast<f32>(M[M_BROW + (r.x - 1u) * 160u + r.y]); }
 fn bentOpen(r: vec2u) -> u32 { if (r.x == NONE || r.x == 0u) { return 0u; } return (M[M_BROW + (r.x - 1u) * 160u + 128u + (r.y >> 2u)] >> ((r.y & 3u) * 8u)) & 7u; }
-/** what a line of sight through it lets through */
-fn bentThrough(rho: f32) -> f32 { return exp(-BENT_SIGMA * rho); }
+/** what `m` metres of it let through */
+fn bentThrough(rho: f32, m: f32) -> f32 { return exp(-BENT_SIGMA * m * rho); }
 
 fn packCoord(l: u32, b: vec3i) -> u32 { return u32(b.x) | (u32(b.y) << 10u) | (u32(b.z) << 17u) | (l << 27u) | 0x80000000u; }
 fn coordB(w: u32) -> vec3i { return vec3i(i32(w & 1023u), i32((w >> 10u) & 127u), i32((w >> 17u) & 1023u)); }
@@ -647,7 +648,7 @@ fn forces(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) lid: 
     var u = unV(V[V_VEL1 + i]).xyz;
     let dT = unpack2x16float(S[S_DEN0 + i]);
     u.y += (sp.buoyancy * dT.y - sp.weight * dT.x) * k.dt;
-    u += pull * (1.0 - bentThrough(0.1 * dT.x)) * k.dt;   // (only where there is smoke to go: clear air is not blown about)
+    u += pull * (1.0 - bentThrough(dT.x, 0.3)) * k.dt;   // (only where there is smoke to go: clear air is not blown about)
     let Pw = worldP(k, c);
     // CURLS WHERE A BODY STIRS (sp.stirConf; 0 = one strength everywhere): the confinement that keeps an eddy turning is stronger right round a moving body, falling
     // to the plain strength by three of its radii, so what he sheds rolls up while he is there and the smoke the wind pushes along a wall is as smooth as it was
@@ -809,7 +810,7 @@ var<workgroup> wgWays: array<u32, 27>;
 var<workgroup> wgCorners: array<u32, 8>;
 fn bentIx(o: vec3i) -> u32 { return u32((o.x + 1) + 3 * (o.y + 1) + 9 * (o.z + 1)); }
 /** how much more of a line of sight the game hides there than is drawn */
-fn bentOff(o: vec3i) -> f32 { let i = bentIx(o); return bentThrough(wgHas[i]) - bentThrough(max(wgWant[i], 0.0)); }
+fn bentOff(o: vec3i) -> f32 { let i = bentIx(o); return bentThrough(wgHas[i], 3.0) - bentThrough(max(wgWant[i], 0.0), 3.0); }
 /** is the way from the brick at o to the one beyond it along axis a (toward s) open */
 fn bentWay(o: vec3i, a: u32, s: i32) -> bool { var at = o; if (s < 0) { at[a] -= 1; } return (wgWays[bentIx(at)] & (1u << a)) != 0u; }
 /** the corners an eighth (its signs) is shaded between: those it can be gone to from the brick's own middle, round the corners of two or three open ways; where that middle is solid, whichever are not */
@@ -840,15 +841,27 @@ fn bentHere(c: vec3i) -> vec2f {
   if (sum <= 0.0) { return vec2f(-1.0, 0.0); }
   return vec2f(y, m) / sum;
 }
+/** lumps a unit across, about -0.5..0.5, no two alike: a slope hashed at whole numbers, rounded between (two sines crossed show as stripes where a whole cloud comes up at once) */
+fn lumps(p: vec3f) -> f32 {
+  let i = vec3i(floor(p)); let f = p - floor(p); let u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0); var v = 0.0;
+  for (var j = 0; j < 8; j++) {
+    let o = vec3i(j & 1, (j >> 1u) & 1, j >> 2u); let w = select(1.0 - u, u, o == vec3i(1)); let c = bitcast<vec3u>(i + o);
+    var n = (c.x * 1664525u) ^ (c.y * 2246822519u) ^ (c.z * 3266489917u); n = (n ^ (n >> 15u)) * 2654435761u; n ^= n >> 13u;
+    let g = vec3f((vec3u(n) >> vec3u(2u, 12u, 22u)) & vec3u(1023u)) / 511.5 - 1.0;
+    v += w.x * w.y * w.z * dot(g, f - vec3f(o));
+  }
+  return v;
+}
 /** the game's smoke in a cell, bent: `g` of it stands there, the grid holds h.x about it and h.y is drawn. The mean over a brick moves by the share of the way the rate says, whatever is in its cells. */
 fn bendTo(g: f32, h: vec2f, P: vec3f, dt: f32) -> f32 {
-  let a = select(1.0 - exp(-sp.bend * abs(bentThrough(h.x) - bentThrough(h.y)) * dt), 1.0, sp.snap > 0.0);
+  let o = bentThrough(h.x, 1.5) - bentThrough(h.y, 1.5); let a = select(1.0 - exp(-sp.bend * o * o * dt), 1.0, sp.snap > 0.0);
   let d = h.x - h.y;
   let thick = 2.0 * g / max(g + h.y, 1e-6);   // (1 where a cell holds what the brick does, toward 2 in its billows, 0 in its gaps)
   if (d <= 0.0) { return g * max(1.0 + a * d / max(h.y, 1e-6) * (2.0 - thick), 0.0); }
-  let q = P * 4.0 + vec3f(0.0, -sp.time * 0.7, sp.time * 0.3);
-  let n = sin(q.x + 1.7 * sin(q.y * 1.3)) * sin(q.z + 1.3 * sin(q.x * 1.6)); let wisp = 3.2 * max(n, 0.0) + 0.2;
-  return g * (1.0 + a * d / h.x * thick) + a * d * (1.0 - h.y / h.x) * wisp;
+  let was = g * (1.0 + a * min(d / max(h.y, 1e-6), 2.0) * thick); let bare = 1.0 - h.y / h.x; let due = a * d * bare * bare * bare * bare;
+  if (due < 1e-6) { return was; }
+  let q = P * 2.0 + vec3f(0.0, -sp.time * 0.35, sp.time * 0.15);
+  return was + due * (0.2 + 1.75 * smoothstep(-0.3, 0.5, lumps(q) + 0.5 * lumps(q * 2.1 + 17.0)));   // (wisps at two sizes, 0.85 in the mean)
 }
 var<workgroup> wgLo: array<atomic<i32>, 3>;
 var<workgroup> wgHi: array<atomic<i32>, 3>;
@@ -1002,7 +1015,7 @@ fn publish(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) l
     if (bent) {
       let m = f32(atomicLoad(&wgSum)) / 8192.0 / f32(max(atomicLoad(&wgAir), 1u)); let y = bentRho(bentAt(k.b));
       M[k.m + K_MEAN] = bitcast<u32>(m);
-      if (y >= 0.0 && (fl & F_WALL) == 0u && max(y, m) > 0.01) { atomicAdd(&A[C_OFF], u32(abs(bentThrough(y) - bentThrough(m)) * 1024.0)); atomicAdd(&A[C_OFFN], 1u); }
+      if (y >= 0.0 && (fl & F_WALL) == 0u && max(y, m) > 0.01) { atomicAdd(&A[C_OFF], u32(abs(bentThrough(y, 3.0) - bentThrough(m, 3.0)) * 1024.0)); atomicAdd(&A[C_OFFN], 1u); }
     }
     if (k.l == 1u) {
       textureStore(pageOut, k.b + vec3i(0, i32(sp.levels[1].texY), 0), vec4u(select(0u, slot + 1u, hit), 0u, 0u, 0u));

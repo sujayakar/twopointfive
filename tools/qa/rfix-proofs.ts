@@ -34,7 +34,7 @@ async function r101() {
     const trace = await c.eval(`(async () => {
       seed(7); calm({ look: [9.0, 0, 17.0], yaw: 0.6, pitch: -1.0, dist: 9 }, { pos: [9.0, 0, 17.0], yaw: 0 }); await step(40);
       const rows = []; const P = [9.6, 1.0, 17.6];
-      const sample = async (tag, n) => { for (let i = 0; i < n; i++) { __game.lightQuery('rfixP', P); await step(1); const m = __game.lightAt('playerChest'), p = __game.lightAt('rfixP'); rows.push({ tag, i, chest: m ?? null, point: p ?? null, grid: __engine.rc.cfg.nx + 'x' + __engine.rc.cfg.ny + 'x' + __engine.rc.cfg.nz, priming: __engine.rc.priming, parked: __engine.rcParked.join(',') }); } };
+      const sample = async (tag, n) => { for (let i = 0; i < n; i++) { __game.probe.query('rfixP', P); await step(1); const m = __game.probe.get('playerChest')?.[0], p = __game.probe.get('rfixP')?.[0]; rows.push({ tag, i, chest: m ?? null, point: p ?? null, grid: __engine.rc.cfg.nx + 'x' + __engine.rc.cfg.ny + 'x' + __engine.rc.cfg.nz, priming: __engine.rc.priming, parked: __engine.rcParked.join(',') }); } };
       await sample('high', 12);
       __quality.pin('low');  await sample('low', 24);
       __quality.pin('high'); await sample('high2', 24);
@@ -68,7 +68,7 @@ async function r101b() {
     const trace = await c.eval(`(async () => {
       seed(7); calm({ look: [9.0, 0, 17.0], yaw: 0.6, pitch: -1.0, dist: 9 }, { pos: [9.0, 0, 17.0], yaw: 0 }); await step(40);
       const rows = []; const P = [9.6, 1.0, 17.6];
-      const sample = async (tag, n) => { for (let i = 0; i < n; i++) { __game.lightQuery('rfixP', P); await step(1); rows.push({ tag, i, chest: __game.lightAt('playerChest') ?? null, point: __game.lightAt('rfixP') ?? null, grid: __engine.rc.cfg.nx + 'x' + __engine.rc.cfg.ny, day: __daylight() }); } };
+      const sample = async (tag, n) => { for (let i = 0; i < n; i++) { __game.probe.query('rfixP', P); await step(1); rows.push({ tag, i, chest: __game.probe.get('playerChest')?.[0] ?? null, point: __game.probe.get('rfixP')?.[0] ?? null, grid: __engine.rc.cfg.nx + 'x' + __engine.rc.cfg.ny, day: __daylight() }); } };
       await sample('nightHigh', 8);
       __quality.pin('low'); await sample('nightLow', 12);          // high's grid parked holding the NIGHT field
       __daylight(true);     await sample('dayLow', 16);            // the world changes while it is parked

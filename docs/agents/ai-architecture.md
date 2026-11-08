@@ -377,7 +377,7 @@ list. A reaction can take a man
 whole, not his legs alone while he goes on shooting. A reaction's file is longer than its idea, because it must
 ask for itself whether a man is on a post, kept to his rooms or somebody's (a third of the worked example).
 A reaction that draws from the die re-deals the rest of the mission until the keyed draws land. An order that
-shows a line in the squad's HUD block registers an arm of `OrderNoteFn` on the seat's `SquadOrders.notes` and gives that arm a reader in `orders/hud.rs notes_of` (a function of the game shared and the seat: its words reach the page in `TickView.squad.notes`, and the page words nothing), and an order that keeps state of its own still needs a field on the game. The rest of this section is the detail of each of these.
+shows a line in the squad's HUD block says so in its file (`notes` of its `Row`, a function of the game shared and the seat; the block comes in the list's order and its words reach the page in `TickView.squad.notes`, and the page words nothing), and an order that keeps state of its own still needs a field on the game. The rest of this section is the detail of each of these.
 
 ### The pieces in detail
 
@@ -537,8 +537,7 @@ TypeScript). The pilot's test: a guard who runs dry in the open kneels to change
   re-deals every mission once, so it lands alone with the mission tallies before and after. Until it lands, a
   new rule that draws moves every later draw of the mission, and a tally cannot judge it. The pilot waits on it.
 - A rule's rows are cloned with the game (a kept game keeps them) but are not in a checkpoint written to a file.
-- Orders: one is moved, about thirty are not. The one long-hand left for an order that has a line in the
-  squad's HUD block: that line is an arm of `OrderNoteFn` with a reader in `orders/hud.rs notes_of`; the page is handed the lines as text (`TickView.squad.notes`). It ends when a `Row` has a `notes` function. An order's own state is still a field of the
+- Orders: every order is a file of `orders/rows/`, and what a rule that does not know it by name needs of it is its `Row`'s `is`. An order's own state is still a field of the
   game's `Mods` (`g.m.squad40`).
 - No-change proofs are native now (`rust/game_start`, `hold keep` / `hold check`: 24 levels by three scripted
   hands, every part of the game hashed every frame), but the hands reach three things: a pushed fight, cans
