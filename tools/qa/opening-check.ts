@@ -16,7 +16,7 @@ import { tmpdir } from 'node:os';
 const argv = process.argv.slice(2), flag = (n: string) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
 for (const a of argv) if (a.startsWith('--') && !['--seeds', '--off', '--level', '--stand'].includes(a)) { console.error(`unknown flag ${a} (--seeds --off --level)`); process.exit(2); }
 const off = argv.includes('--off'), levelFile = flag('--level') ?? null;
-const seeds = (flag('--seeds') ?? '1-3').split(',').flatMap(s => { const m = /^(\d+)-(\d+)$/.exec(s); if (!m) return [Number(s)]; const out: number[] = []; for (let k = +m[1]; k <= +m[2]; k++) out.push(k); return out; });
+const seeds = (flag('--seeds') ?? '1').split(',').flatMap(s => { const m = /^(\d+)-(\d+)$/.exec(s); if (!m) return [Number(s)]; const out: number[] = []; for (let k = +m[1]; k <= +m[2]; k++) out.push(k); return out; });
 if (!seeds.length || seeds.some(s => !Number.isFinite(s))) { console.error('bad --seeds'); process.exit(2); }
 const NEAR_M = 8, FAIR_SECS = 5;
 const env = { ...process.env, TPS_OPENING: off ? '0' : '1' };

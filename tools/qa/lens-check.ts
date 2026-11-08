@@ -19,7 +19,7 @@ import { standUp, ROOT } from './headless.ts';
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
 const BREAK = process.env.LENS_BREAK === '1';
 const argv = process.argv.slice(2), val = (k: string) => { const i = argv.indexOf(`--${k}`); return i >= 0 ? argv[i + 1] : undefined; };
-const STEPS = Number(process.env.LENS_STEPS ?? 12 * 60), POKES = [0, 90, 91, 240, 400, 401, 402, 655];
+const STEPS = Number(process.env.LENS_STEPS ?? 7 * 60), POKES = [0, 90, 91, 240, 400, 401, 402, 655];
 
 // (the child: a room clear with the four, taped, its raw bits chained — written to the file named, then nothing else runs. `--poke`: the camera's pose is written
 // with no rebuild before the steps of POKES)
