@@ -13,8 +13,9 @@ import { HELD_PAGE_WORDS, PRICE_ASK_WORDS, RUN_PAGE_WORDS, heldPage } from '../h
 
 // THE LIST'S GROUPS (scenarios.ts MISSION_GROUPS, ui/missions.ts groupOf): a row may name its own; without one a quiet mission is 'quiet alone' / 'quiet as
 // two' by its team, a rescue is 'on the clock' and any other squad's mission a 'raid'. (A comment over a row below that says group 'ideas' or 'more' is of the groups before 10-11: the row's own field is the fact.)
-// THE LIST DRAWS HIS THIRTEEN (the maintainer's "Keep my 13", 2026-11-05; done 2026-11-07): the four tutorial missions, the pass, the compound, the consulate, the depot, Mousehole, the office, the
-// counting house, the bazaar and Lights out, and the solo night beside them. Every other row carries `offList`: it stays a row of its table with its level file and its address.
+// THE LIST DRAWS SEVENTEEN (the maintainer's "Keep my 13", 2026-11-05, and the four he brought back 2026-11-08): the four tutorial missions, the pass, the compound, the consulate, the depot, the block,
+// the warehouse, Mousehole, the office, the records office, the kill house, the counting house, the bazaar and Lights out, and the solo night beside them. Every other row carries `offList`: it stays a row
+// of its table with its level file and its address.
 export const SCENARIOS: ScenarioEntry[] = [
   // the office (the bundled level). The night breach was built and tuned on this floor and its idea is picking your entry. It is CUT FROM THE LIST (the
   // maintainer, 10-24: "let's also remove "night breach" since it's unnecessary now"): no list or card draws it; the row, its address (`?nightbreach`) and
@@ -33,16 +34,16 @@ export const SCENARIOS: ScenarioEntry[] = [
     place: "The office · the manager's office", lean: 'loud', defenders: 3,
     blurb: 'Two hostages are held by a captor on a clock. Move down the corridor, clear only what you have to, and get in before time runs out.' },
   // a level per scenario (levels/<name>.json, the levels goal's — each row is all it took): the pair's room clear, the four's, the rescue
-  { id: 'records-pair', title: 'The records office', kind: 'roomclear', squad: 2, level: 'records.json', ways: ['the south lot', 'the dark west side'], untuned: true, group: 'raids', offList: true,
+  { id: 'records-pair', title: 'The records office', kind: 'roomclear', squad: 2, level: 'records.json', ways: ['the dark lot, on the front door', 'the dark side yard, on the records room'], untuned: true, group: 'raids',
     place: 'Three small rooms and a strong room, a dark lot outside', lean: 'loud', defenders: 5,
     blurb: 'The choice here is which door. Most rooms have two or three, but the strong room has one locked door off a room you have to take first.' },
   { id: 'depot-four', title: 'The depot', kind: 'roomclear', squad: 4, level: 'depot.json', ways: ['the main gate', 'the back gate'], untuned: true,
     place: 'A motor pool at night: three huts round a floodlit yard', lean: 'loud', defenders: 5,
     blurb: 'The yard is floodlit, and enemies cover it from two dark openings in the comms room and the store. The breaker is behind the comms room.' },
-  { id: 'block-four', title: 'The block', kind: 'roomclear', squad: 4, level: 'block.json', ways: ['the loading hall, on the main hall', 'the loading hall, on the tool crib'], untuned: true, group: 'strongholds', offList: true,
+  { id: 'block-four', title: 'The block', kind: 'roomclear', squad: 4, level: 'block.json', ways: ['the loading hall, on the main hall', 'the loading hall, on the tool crib'], untuned: true, group: 'strongholds',
     place: 'Four rooms off one hall, a turn in each', lean: 'loud', defenders: 8, squads: true,
     blurb: 'Every held room turns a corner, so the enemies wait in the dark past a lit doorway. Each has a second door from the small room beside it.' },
-  { id: 'warehouse-four', title: 'The warehouse', kind: 'roomclear', squad: 4, level: 'warehouse.json', ways: ['the south-west corner', 'the south-east corner'], untuned: true, group: 'strongholds', offList: true,
+  { id: 'warehouse-four', title: 'The warehouse', kind: 'roomclear', squad: 4, level: 'warehouse.json', ways: ['the staff parking, by the staff door', 'the dark corner by the loading dock'], untuned: true, group: 'strongholds',
     place: 'A racked hall, a loading dock, a ring of small rooms', lean: 'loud', defenders: 11, squads: true,
     blurb: 'The building is laid out as a ring, so whichever door you fight at, someone can walk around behind you.' },
   { id: 'compound-four', title: 'The compound', kind: 'roomclear', squad: 4, level: 'compound.json', ways: ['the side yard gate', 'the back gate'], untuned: true, group: 'strongholds',
@@ -62,7 +63,7 @@ export const SCENARIOS: ScenarioEntry[] = [
   { id: 'floodlit-four', title: 'The floodlit yard', kind: 'roomclear', squad: 4, level: 'floodlit.json', untuned: true, group: 'raids', offList: true,
     place: 'A walled fuel post, eleven metres of lit yard to its door', lean: 'either', defenders: 7,
     blurb: 'The yard is floodlit, with guns in two open windows. The breaker is in a shed outside the wall, and the enemies don\'t have night vision.' },
-  { id: 'killhouse-four', title: 'The kill house', kind: 'roomclear', squad: 4, level: 'killhouse.json', ways: ['the ready line, on the front door', 'the dark side, on the back door'], untuned: true, group: 'clock', offList: true,
+  { id: 'killhouse-four', title: 'The kill house', kind: 'roomclear', squad: 4, level: 'killhouse.json', ways: ['the ready line, on the front door', 'the dark side, on the back door'], untuned: true, group: 'clock',
     place: 'A five-room shoot house on a range', lean: 'loud', defenders: 6,
     blurb: 'The clock starts on your first move. Gold is 1:05, silver 1:30 and bronze 2:00. Every teammate you lose adds 25 seconds.' },
   // new ideas (group 'ideas': small missions, each built on one idea). Mousehole = the walls are the way in: the level's own room clear issues the squad wall
