@@ -81,6 +81,7 @@ import { doorMan } from './doorthrow';
 import './mission';
 import { NO_VIEW, type TickView } from '../view/seatview';
 import { NO_DEBRIEF, type DebriefView } from '../view/debriefview';
+import type { RunView } from '../view/read';
 import type { WorldAsk } from '../view/worldask';
 import type { CursorAt, CursorLens, CursorView, Under } from '../view/cursor';
 import { Chronicle, chronInterrogated } from './chronicle';
@@ -1660,6 +1661,9 @@ export class Game {
   /** WHAT THE END CARD SHOWS OF THE RUN (src/view/debriefview.ts): asked of the Rust game by the host that steps it, as the card is built */
   debriefView(): DebriefView { return this.debriefAsk?.() ?? NO_DEBRIEF; }
   debriefAsk: (() => DebriefView) | null = null;
+  /** WHAT THERE IS TO KEEP OF THE RUN (ui/runBooks.ts), asked as its try begins and as it ends; null while no Rust game stands */
+  runView(): RunView | null { return this.runAsk?.() ?? null; }
+  runAsk: (() => RunView | null) | null = null;
   /** THE BOX WORLD, ASKED (src/view/worldask.ts) by whoever draws, hears or points: the Rust game's answer where one steps this game (the host sets `askHost`), and
    *  this page's own copy of the level where none does (a workbench's floor, the moment before the first start) */
   readonly ask: WorldAsk = {

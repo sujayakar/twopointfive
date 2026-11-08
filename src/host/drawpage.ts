@@ -40,6 +40,8 @@ import { settleOfQuery, startWaits } from '../ui/startwait';
 import { TITLE, bootCard, cheatWords, titleScreen } from '../ui/title';
 import { missionsReopenAsked, reopenMissionsAfterLoad } from '../ui/missions';
 import { openStartPage, startPage, startPageWanted } from '../ui/startpage';
+import { RunBooks } from '../ui/runBooks';
+import { watchMissionRows } from '../ui/verdictRows';
 import { KIT_VIEW } from '../ui/kitView';
 import { Desk, desk, setDesk, type DeskFace } from '../view/desk';
 import { Commands } from '../draw/commands';
@@ -102,6 +104,7 @@ async function main(): Promise<void> {
   LOADBRIEF.on = q.get('loadbrief') !== '0'; settleOfQuery(q);
   LOADBRIEF.options = { open: () => openOptions({ tab: 'controls' }), close: closeOptions, up: optionsOpen };
   TITLE.ownKeys = false; KIT_VIEW.page = new URL('./', document.baseURI).pathname; KIT_VIEW.tier = () => tier();   // (no benchmark on this page; the Team & kit picture is the game's page in a frame)
+  watchMissionRows();   // (each mission's card shows the ways this machine has won it)
   let title = startPageWanted(); const brief = q.has('paused') || runPage(q) ? null : loadBrief(location.search), card = brief ?? bootCard(); let tier = (): string | undefined => undefined;
   loading.textContent = ''; say = line => card.status(line);
   const [level, mannequin, mannequinBin, cast, castLook] = await filesP;
@@ -170,10 +173,11 @@ async function main(): Promise<void> {
     { const t = D.u[o + View.turned]; if (t & 8) three(cam.target, o + View.target); if (t & 1) cam.yaw = D.f[o + View.yaw]; if (t & 2) cam.pitch = D.f[o + View.pitch]; if (t & 4) cam.distance = cam.desiredDistance = D.f[o + View.distance]; }
     if (cuts < 0) { three(cam.target, o + View.follow); cuts = n; } else if (n !== cuts) { cuts = n; three(cam.target, o + View.cut); }
   };
+  const books = new RunBooks(), unkept = ownPage(q);   // (what this machine keeps of the runs played: a page that plays a run of its own is nobody's)
   /** the game is another than the one last drawn (a restart, a load): what the picture and the sound carry over from frame to frame starts over, before anything of the new one is played */
   const anew = (): void => {
     const o = view(), first = stood < 0; stood = D.u[o + View.stood]; if (first) return;
-    engine.restartPicture(); engine.particles?.clear(); smoke.clearAll(); events.cut(); weather.cut(); audio.hush(); game.turnAgain(); pair.cut(); lag.reset(); three(cam.target, o + View.follow);
+    engine.restartPicture(); engine.particles?.clear(); smoke.clearAll(); events.cut(); weather.cut(); audio.hush(); game.turnAgain(); pair.cut(); lag.reset(); books.anew(); three(cam.target, o + View.follow);
   };
   anew(); lens(); cam.aspect = Math.max(1, canvas.clientWidth) / Math.max(1, canvas.clientHeight); cam.rebuild();
 
@@ -212,6 +216,8 @@ async function main(): Promise<void> {
     if (input.orbitDX && plan.ticks && !(locks & 1)) cam.rotate(ctrlTurn(input.orbitDX));   // (in a frame's first tick: the next tick's hand looks the way it left the view)
     cam.frame();
     for (let i = 0; i < plan.ticks; i++) { if (i) input.endTick(); tick(1 / FIXEDSTEP.hz); }
+    // (what this machine keeps of the run: its try as it begins, its end before the card of it)
+    { const on = D.u[view() + View.run]; if (!unkept && books.due((on & 1) !== 0, (on & 2) !== 0)) books.tell(game.run()); }
     // (the run's end card, once each time one is due; a restart or a load is another end to come)
     { const e = D.u[view() + View.ended]; if (e !== ended) { ended = e; if (e) onEnded(); } }
     D.fresh();
@@ -275,7 +281,7 @@ async function main(): Promise<void> {
   else card.off();
   loading.style.display = 'none'; knobPanel(document.getElementById('app')!, game);
   // (for a tool: the page's parts, and frames stepped by hand)
-  Object.assign(window, { __draw: { game, engine, world, audio, pause, cam, input, quality, told, fog, weather, smoke, get held() { return held; }, set held(v: boolean) { held = v; last = performance.now(); }, run: (n: number, keys: string[] = [], drawn: 'none' | 'last' | 'all' = 'last') => { if (title || brief?.up) { title = false; brief?.off(); card.off(); } for (const k of keys) input.keys.add(k); try { for (let i = 0; i < n; i++) frame(1 / 60, 1, drawn === 'all' || (drawn === 'last' && i === n - 1)); } finally { for (const k of keys) input.keys.delete(k); } } } });
+  Object.assign(window, { __draw: { game, books, engine, world, audio, pause, cam, input, quality, told, fog, weather, smoke, get held() { return held; }, set held(v: boolean) { held = v; last = performance.now(); }, run: (n: number, keys: string[] = [], drawn: 'none' | 'last' | 'all' = 'last') => { if (title || brief?.up) { title = false; brief?.off(); card.off(); } for (const k of keys) input.keys.add(k); try { for (let i = 0; i < n; i++) frame(1 / 60, 1, drawn === 'all' || (drawn === 'last' && i === n - 1)); } finally { for (const k of keys) input.keys.delete(k); } } } });
   requestAnimationFrame(loop);
 }
 // (a tool waits for the programs made behind the start too: until then a pass draws its stand-in, and the fog of war is the lit one)

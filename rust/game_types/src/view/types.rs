@@ -630,6 +630,30 @@ pub struct DebriefView {
     pub recap: Option<crate::deathrecap::DeathRecap>,
 }
 
+/// WHAT A MACHINE KEEPS OF A RUN: asked as a try begins and as the run ends. The game says what there is to keep, and a page keeps it.
+#[derive(Clone, Debug, Default)]
+pub struct RunView {
+    /// the try has begun (an order, a stride, a round), on a run that may be kept
+    pub begun: bool,
+    /// the run is over
+    pub over: bool,
+    /// a cheat was on during it
+    pub void: bool,
+    /// a lesson: nothing of it is kept
+    pub lesson: bool,
+    /// the mission's id, as the list has it, and the level of difficulty
+    pub mission: String,
+    pub level: String,
+    /// how it ended: won, the way it was won (None: it was not), nobody of ours lost, its seconds
+    pub won: bool,
+    pub way: Option<crate::verdict::Approach>,
+    pub clean: bool,
+    pub secs: f64,
+    /// what its time is held against (the level's file, the way in, how many came, the difficulty), and the total on the par clock (None: no par, or not taken)
+    pub course: String,
+    pub par: Option<f64>,
+}
+
 /// a card's two weights: how readily its man moves, and how little of him is seen
 #[derive(Clone, Copy, Debug, Default)]
 pub struct CardLoad {
