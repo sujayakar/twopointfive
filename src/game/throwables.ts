@@ -21,7 +21,7 @@ import { Box, BoxFlag, makeBox, boxOf, MKEY } from '../scene/boxes';
 import { SNOWBOG } from './snowBog';
 import type { PropSystem, Prop } from './props';
 import type { Team } from './teams';
-import { GEAR } from './gear';   // (a leaf: which rifle a dropped FN2000-row item is DRAWN as)
+import { GEAR } from '../host/gear';   // (a leaf: which rifle a dropped FN2000-row item is DRAWN as)
 import type { Game } from './game';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { hyp3 } from '../math/vec';

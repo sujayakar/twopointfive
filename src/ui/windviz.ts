@@ -7,7 +7,7 @@
 // section header. Nothing here touches the renderer or the game's state (WIND_STATS.atCalls ticks, a counter): the frame is byte for byte what it was, on or off.
 import { Vec3, v3 } from '../math/vec';
 import { textZoom } from './textsize';
-import type { FollowCamera } from '../game/camera';
+import type { FollowCamera } from '../host/camera';
 import type { Game } from '../game/game';
 import type { WindSource } from '../game/wind';
 

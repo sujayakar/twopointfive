@@ -10,7 +10,7 @@
 // Drawn into the overlay's #traj SVG under the squad's marks. Reads only; no state but its nodes. Never seen on a GPU: the weights and colours are guesses.
 import type { Vec3 } from '../math/vec';
 import type { Game } from '../game/game';
-import type { FollowCamera } from '../game/camera';
+import type { FollowCamera } from '../host/camera';
 import { pictureViews } from '../game/picture';
 
 const NS = 'http://www.w3.org/2000/svg';

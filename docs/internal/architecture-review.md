@@ -73,7 +73,7 @@ Game‑agnostic today (by types, not by comments): gpu/**, render/{texpool, gbuf
 
 Where the game leaks in:
 - `engine.ts:17` imports `FollowCamera` from game/; the engine needs `{viewProj, invViewProj, prevViewProj, pos, forward, target, fov, aspect, rebuild()}`.
-- `render/particles.ts:19` imports `SHEET/IMP_RESPONSE` from `game/sheetModel.ts` (the CPU reference of a shader's constants) — the reference should live beside the shader.
+- `render/particles.ts:19` imports `SHEET/IMP_RESPONSE` from `render/sheetModel.ts` (the CPU reference of a shader's constants) — the reference should live beside the shader.
 - `render/frame.ts:40–56 WeatherFrame.interior/annex`: two office rectangles ride in the `Frame` uniform (weatherC/D @496/@528) and volumetrics.wgsl tests them; a second level with three roofs cannot be expressed. Should be N "no‑precipitation AABBs" in `SceneInfo` or the box list.
 - `RenderSettings` holds gameplay/HUD state: `debrisCap` (game/debris pool), `hitFlash`, `nvAmount` (written from `game.player` every frame, main.ts:522).
 - Owner byte = character id in the GPU flag word (boxes.ts, bits 8–15) and `PLAYER_ID`/`10+i`/`20‥24`/`40,41` id conventions: fine as an engine concept ("owner id, ≤255"), but the *allocation* of ids is scattered across game.ts:773, breach, qrf, civilians.

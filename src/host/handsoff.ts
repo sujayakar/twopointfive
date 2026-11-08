@@ -14,13 +14,14 @@ import type { Vec3 } from '../math/vec';
 import { mulberry32 } from '../math/dice';
 import type { Game, Guard } from '../game/game';
 import type { Door } from '../game/doors';
-import type { Input } from '../game/input';
-import type { FollowCamera } from '../game/camera';
+import type { Input } from './input';
+import type { FollowCamera } from './camera';
 import type { OrderTarget } from '../game/orders';
 import { ORDERS } from '../game/orders';
 import { CMDRING } from '../game/cmdring';
 import { autoPick } from '../game/autopilot';   // (asked inside enter() only)
 import { INTERACT_KEY } from '../game/consts';
+import type { HandsOffPlan } from './benchScenes';
 import type { View } from './hud';
 import { fogHides } from '../view/seatview';
 
@@ -29,16 +30,6 @@ interface Way { at: Vec3; out: [number, number]; door: Door }
 interface Held { room: { entries: Way[]; cells: Set<number> }; men: Guard[] }
 type Script<T = void> = Generator<void, T, void>;
 
-export interface HandsOffPlan {
-  /** the die the hands' own beats are rolled on */
-  seed: number;
-  /** run seconds after which the hands stop (end 'cap') */
-  cap?: number;
-  /** doors by name: a held room that has one of them is taken first, by that door, in this order — then the nearest as ever */
-  route?: string[];
-  /** before the rooms: a teammate is sent to throw the breaker (the quick key on its panel), and the hands wait for the dark */
-  breaker?: boolean;
-}
 /** taken: no defender left · sam: Sam is down · cap: out of time · spent: nothing left to try */
 export type HandsOffEnd = 'taken' | 'sam' | 'cap' | 'spent';
 

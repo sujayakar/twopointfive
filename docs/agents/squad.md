@@ -159,7 +159,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the board as it was, every line fails), 5 of 5 on both stands: the boot and its three words · Q gives 'KeyB', B gives '', no other key moved, the
   wall hold keyless with the walk-in on or off · the words · his own keys (back on B and kept, Reset, an old table, Q given to another row, 2,563 moves by a
   die with no key on two rows) · THE GAME on this stand, the room clear with four: the floor, a door, the door again once stacked, the floor, once
-  with the code written straight in and once off the Q key through `game/input.ts`'s own listeners, leave the same four rows to the millisecond
+  with the code written straight in and once off the Q key through `host/input.ts`'s own listeners, leave the same four rows to the millisecond
   (move, stack, bangClear, move) and one run digest, and the B key files nothing. `cmdring-check.ts` 25 of 25 on both stands (lines 20 to 22 are
   new: Tab gives nothing, the plan's time, the mark with the ring off; `CMDRING_BREAK=1` fails 17) and `planmode-check.ts` 28 of 28 on both.
   `keybinds-check.ts` asks the wall hold's rule by itself, the command left on B (its boots add `bkey`), 13 of 13 on both stands; the last three

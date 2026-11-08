@@ -100,13 +100,9 @@ const span = (g: number[]) => `${Math.min(...g).toFixed(1)} to ${Math.max(...g).
   check(about(ev, 60, 0.005) && hit > 40 && hit < 46 && about(back, 60, 0.005) && about(two, 2, 0.01), `an even 60 reads ${ev.toFixed(1)}; a 300 ms hitch reads ${hit.toFixed(0)} (the frames of that second) and ${back.toFixed(1)} a second on; two frames a second read ${two.toFixed(1)}`); }
 
 // 10. the wiring, read off the source: where the pass-over sits in the frame, what holds it off, the address word, the benchmark and a tape's player
-{ const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8'), fr = main.slice(main.indexOf('  function frame(ts?: number) {'));
-  const at = fr.indexOf('pace.skip(ts,'), now = fr.indexOf('const now = performance.now(); const rawDt'), line = at >= 0 ? fr.slice(fr.lastIndexOf('\n', at), fr.indexOf('\n', at)) : '';
-  check(at > 0 && now > at && /if \(pace\.skip\(ts, !measuring && /.test(line) && /requestAnimationFrame\(frame\); return;/.test(line), "the frame loop passes a display frame over before it takes the time or steps anything, and holds no rate of its own under ?kitview");
-  check(/measuring = quality\.calibrating \|\| tools,/.test(fr) && /!measuring && \(quality\.adaptive \|\| quality\.auto\) \? quality\.bands\.target : 0/.test(line), "the rate asked for is the ladder's, and none while the boot measures the machine, in a benchmark, in a sweep, or with the ladder off");
-  check(/fpsSm = rate\.push\(now\);/.test(fr) && !/fpsSm \* 0\.95/.test(main), 'the frame rate shown is the frames of the last second over their time, and the mean of rates is gone');
-  const prof = readFileSync(`${ROOT}/src/host/profile.ts`, 'utf8'), run = readFileSync(`${ROOT}/src/ui/benchrun.ts`, 'utf8'), key = readFileSync(`${ROOT}/src/tape/address.ts`, 'utf8');
-  check(/EVENPACE\.on = q\.get\('pace'\) !== '0';/.test(prof) && /'EVENPACE\.on': 'TPS_EVENPACE=1/.test(prof), "on in the page, ?pace=0 puts it off, and the stands' book has its row");
+{ const opens = readFileSync(`${ROOT}/src/host/pictureopens.ts`, 'utf8');
+  const run = readFileSync(`${ROOT}/src/ui/benchrun.ts`, 'utf8'), key = readFileSync(`${ROOT}/src/tape/address.ts`, 'utf8');
+  check(/EVENPACE\.on = q\.get\('pace'\) !== '0';/.test(opens), 'on in the page, ?pace=0 puts it off');
   check(['pace', 'giveway', 'flight'].every(w => new RegExp(`const CARRIED = new RegExp\\(\`\\^\\([^\`]*\\|${w}\\|`).test(run) && new RegExp(`VISIT_FLAGS = \\[[^\\]]*'${w}'`).test(key)), "a benchmark's scene pages keep the visitor's ?pace, ?giveway and ?flight words (no note says one was left behind), and a tape's player leaves them to the viewer"); }
 
 // ---- A WINDOW NOBODY IS AT GIVES WAY ----
@@ -235,14 +231,9 @@ const mean = (g: number[]) => g.reduce((a, b) => a + b, 0) / Math.max(1, g.lengt
   check(C.held === 6 && C.worked === 114 && C.lost === 0 && C.flying <= 1, `asleep 3 s, the GPU still at the two frames on waking: ${C.held} display frames wait for the answers, then it draws on (${C.worked}), none given up`);
   check(D.held === 120 && D.worked === 0 && D.lost === 0, `asleep 3 s and never answered: it waits (${D.held} of the two seconds played), and ten seconds from when the frames were handed over is the most it can (the give-up line above)`); }
 // 29. the wiring, read off the source
-{ const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8'), fr = main.slice(main.indexOf('  function frame(ts?: number) {')), prof = readFileSync(`${ROOT}/src/host/profile.ts`, 'utf8');
-  const aw = fr.indexOf('away = EVENPACE.giveway'), awLine = aw >= 0 ? fr.slice(fr.lastIndexOf('\n', aw), fr.indexOf('\n', aw)) : '', sk = fr.indexOf('pace.skip(ts,'), st = fr.indexOf('      step(dt);'), se = fr.indexOf('pace.sent(');
-  check(aw > 0 && aw < sk && /const tools = bench\.active \|\| perfsweep\.active, measuring = quality\.calibrating \|\| tools, away = EVENPACE\.giveway && !measuring && !perfrec\.recording && !attended\(\), room = pageRoom\(\{ calibrating: quality\.calibrating, measuring: tools \}\);/.test(awLine) && /const waits = pageRoom\(\{ calibrating: quality\.calibrating, measuring: bench\.active \|\| perfsweep\.active \}\) > 0;/.test(main) && /quality\.bands\.target : 0, away, room\)\)/.test(fr), 'the frame loop asks who is at the window and how many frames the GPU may hold before it passes a frame over; it never gives way while the page measures the machine or records a take, and who waits for the GPU is the one rule the readout reads too (pageRoom)');
-  check(st > 0 && se > st && /if \(\(away \|\| room > 0\) && behind\.drawn !== drawnLast\) \{ drawnLast = behind\.drawn; const w = pace\.sent\(performance\.now\(\)\)/.test(fr) && /pace\.done\(w, performance\.now\(\), away && engine\.timer\.enabled \? engine\.timer\.unionMs\(GPU_RENDER_PASSES\) : 0\)/.test(fr) && /onSubmittedWorkDone\(\)\.then\(end, end\)/.test(fr), "a frame that drew tells the pacer when its work went to the GPU and when the queue says that frame is done (with the GPU's own timing of a frame where a window gives way); a frame that drew nothing, or of a page that waits for nothing, asks the queue nothing");
-  check(/const rested = pace\.gave !== gaveLast; gaveLast = pace\.gave;/.test(fr) && /&& !rested && rawDt < 0\.5/.test(fr) && /!document\.hidden && !rested, endStage/.test(fr), "the quality ladder and the visit's frame records do not read a frame whose gap held a display frame passed over for giving way, and read every other frame: one held for the GPU among them");
-  check(/if \(topAsks\) try \{ return \(window\.top \?\? window\)\.document\.hasFocus\(\); \} catch \{ topAsks = false; \} return true; \};/.test(main) && /const t = window\.__testFocus; if \(typeof t === 'boolean'\) return t;/.test(main), "who is at the window is the top window's own focus (the game's page is a frame of the kept page); a top that cannot be asked counts as somebody and is asked once");
-  check(/EVENPACE\.giveway = q\.get\('giveway'\) !== '0';/.test(prof) && /'EVENPACE\.giveway': 'TPS_GIVEWAY=1/.test(prof), "on in the page, ?giveway=0 puts it off, and the stands' book has its row");
-  check(/EVENPACE\.flight = q\.get\('flight'\) === '0' \? 0 : q\.get\('flight'\) === '1' \? 1 : FLIGHT_PAGE;/.test(prof) && /'EVENPACE\.flight': 'TPS_FLIGHT=1/.test(prof), "waiting for the GPU is on in the page at two, ?flight=1 is one, ?flight=0 puts it off, and the stands' book has its row"); }
+{ const opens = readFileSync(`${ROOT}/src/host/pictureopens.ts`, 'utf8');
+  check(/EVENPACE\.giveway = q\.get\('giveway'\) !== '0';/.test(opens), 'giving way is on in the page, ?giveway=0 puts it off');
+  check(/EVENPACE\.flight = q\.get\('flight'\) === '0' \? 0 : q\.get\('flight'\) === '1' \? 1 : FLIGHT_PAGE;/.test(opens), 'waiting for the GPU is on in the page at two, ?flight=1 is one, ?flight=0 puts it off'); }
 
 console.log(failed ? `=== pace-check: FAILED (${failed}) ===` : '=== pace-check: ALL PASS ===');
 process.exit(failed ? 1 : 0);

@@ -2,8 +2,8 @@
 // (rust/game_run knobs.rs), then the renderer's pages (ui/graphicspanel.ts) and the look's, with its takes (ui/lookpanel.ts).
 import type { Engine } from '../engine';
 import type { GltfCharacter } from '../anim/gltf';
-import type { FollowCamera } from '../game/camera';
-import type { Input } from '../game/input';
+import type { FollowCamera } from './camera';
+import type { Input } from './input';
 import type { Decals } from '../render/decals';
 import type { SmokeSystem } from '../smoke/smoke';
 import type { Quality } from '../ui/quality';

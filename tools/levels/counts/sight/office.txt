@@ -1,0 +1,24 @@
+# how many of 21 lines each man of office has open to the ground his gun rests on: his name, his count (levels sight --write; a line that starts # under this one is a note and is kept)
+plans.breach.hostiles#0 15
+plans.breach.hostiles#1 12
+plans.breach.hostiles#2 15
+roomClear.breakroom.marks#0 15
+roomClear.breakroom.marks#1 12
+roomClear.breakroom.marks#2 12
+roomClear.breakroom.marks#3 15
+roomClear.breakroom.marks#4 15
+roomClear.breakroom.marks#5 17
+roomClear.storage.marks#0 15
+roomClear.storage.marks#1 15
+roomClear.storage.marks#2 15
+roomClear.manager.marks#0 15
+roomClear.manager.marks#1 12
+roomClear.manager.marks#2 9
+roomClear.server.marks#0 12
+roomClear.server.marks#1 12
+roomClear.server.marks#2 12
+rescue.captor 18
+rescue.doorMan.inside 12
+rescue.doorMan.outside 15
+rescue.roamers#0 9
+rescue.roamers#1 18

@@ -1,4 +1,4 @@
-// THE HANDS-OFF PLAYER (rust/game_run hands_off.rs), with no page: a benchmark's scenes (host/benchScenes.ts) played from their own addresses as draw.html would play them, through a camera that
+// THE HANDS-OFF PLAYER (rust/game_run hands_off.rs), with no page: a benchmark's scenes (host/benchScenes.ts) played from their own addresses as the page would play them, through a camera that
 // follows the man as the page's does. Each is taken, or is being taken when its seconds are up: orders given, rounds fired, defenders down.
 //   bun run tools/draw/hands-check.ts [scene…] [--trace] [--seeds 1,2,3]      exit 0 · 1 and each that was not · 2 no such scene
 //   HANDS_BREAK=1 …      nobody plays the seat: every scene must fail
@@ -8,7 +8,7 @@ import { faceHere } from '../blitz/face-build.ts';
 import { characterFiles } from '../blitz/start-pack.ts';
 import { DrawGame } from '../../src/host/drawgame';
 import { sampleHand } from '../../src/draw/hand';
-import { FollowCamera } from '../../src/game/camera';
+import { FollowCamera } from '../../src/host/camera';
 import { BENCH_SCENES } from '../../src/host/benchScenes';
 import { benchSceneSearch } from '../../src/ui/benchrun';
 import { Section, View } from '../../src/draw/sections';

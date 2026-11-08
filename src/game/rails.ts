@@ -32,8 +32,8 @@
 import type { Game, Guard } from './game';
 import type { LessonData } from '../scene/scenarios';
 import type { Vec3 } from '../math/vec';
-import type { Input } from './input';
-import type { FollowCamera } from './camera';
+import type { Input } from '../host/input';
+import type { FollowCamera } from '../host/camera';
 import { lessonTokenFaults } from './lesson';   // (called inside railsFaults only: src/game is one import cycle)
 import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 

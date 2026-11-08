@@ -12,15 +12,15 @@
 // A re-run is exact as far as the page's arithmetic and bun's agree; the tool measures that against the trace instead of promising it.
 import type { Game } from './game';
 import type { PlayerCmd } from './cmd';
-import type { RunTape, TapeInput, TapeVal } from '../replay/format';
-import { TAPE_VERSION, tapeNum } from '../replay/format';
-import type { TapePiece } from '../replay/kept';
+import type { RunTape, TapeInput, TapeVal } from '../tape/format';
+import { TAPE_VERSION, tapeNum } from '../tape/format';
+import type { TapePiece } from '../tape/kept';
 import { envSnapshot, knobsSnapshot } from './journal';
 import { activeScenario } from './scenarioRun';
 import { knobRegistry, NOT_KNOBS } from './knobs';
 import { KIT, kitOwn, kitStealthCard } from './kit';
 import { STAND_ENV } from '../host/standEnv';
-import { FollowCamera } from './camera';
+import { FollowCamera } from '../host/camera';
 
 type Proc = { versions?: Record<string, string | undefined>; env?: Record<string, string | undefined> } | undefined;
 const proc = (): Proc => (globalThis as { process?: Proc }).process;
@@ -206,7 +206,7 @@ export class RunTapeRec {
     return { v: TAPE_VERSION, ticks: this.ticks, recipe: { ...this.recipe, search, ...(levelFile ? { levelFile } : {}) }, dt: this.dt.map(r => [r[0], r[1]] as [number, number]), view: this.view.slice(), cam: this.cam.slice(), input: this.input.slice(),
       x: this.x.slice(), lens: this.lens.slice() };
   }
-  /** THE KEPT TAPE (src/replay/kept.ts, ui/replaykey.ts keep()): the rows taped since the last call, as a piece a kept tape appends — asked BETWEEN two steps. The first
+  /** THE KEPT TAPE (src/tape/kept.ts, ui/replaykey.ts keep()): the rows taped since the last call, as a piece a kept tape appends — asked BETWEEN two steps. The first
    *  piece carries the recipe; a tape that ended hands its reason once (the rows it had not yet handed over went with it) and nothing after. null = nothing new.
    *  Only reads the tape: file() is what it was. */
   private took = { ticks: 0, view: 0, cam: 0, input: 0, x: 0, lens: 0, recipe: false, dead: false };

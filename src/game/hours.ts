@@ -26,6 +26,7 @@
 // hourWorldChanged(g). Checkpoints carry the hour (savestate.ts `hour`), and with them the session journal (its frame 0 is a checkpoint).
 // (src/game is one import cycle: nothing here is built from another game module's exports at module load.)
 import { GameSideMap } from '../math/side';
+import type { HourId } from '../scene/words';
 import { Vec3, v3, clamp, smoothstep } from '../math/vec';
 import type { Game, LightTarget } from './game';
 import type { RtLight } from '../render/lights';
@@ -35,7 +36,7 @@ import { ENV } from './env';
 import { LIGHT_IN } from '../sim/lightshome';
 import { RUST_PASS, RUST_SURFACE } from './crossing';
 
-export type HourId = 'night' | 'dawn' | 'midday' | 'overcast' | 'dusk';
+export type { HourId };
 /** the order of a day, the authored night last — and the order the sheet's row and the keys walk */
 export const HOUR_IDS: HourId[] = ['dawn', 'midday', 'overcast', 'dusk', 'night'];
 

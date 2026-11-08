@@ -18,6 +18,6 @@ for (const f of ['src/render/shaders/sharp_direct.wgsl']) {
 const constOf = (): string => /const SHARP_CAP: bool = (true|false);/.exec(scenePrelude())?.[1] ?? 'missing';
 const was = sharpCapConfig.on, up = constOf(); sharpCapConfig.on = BRK ? was : false; const down = constOf(); sharpCapConfig.on = was;
 check(was === true && up === 'true' && down === 'false' && constOf() === 'true', 'the prelude carries the setting: up as the module stands, down when it is lowered, up again when put back', `module ${was} · const ${up} · lowered ${down}`);
-const main = readFileSync(resolve(ROOT, 'src/main.ts'), 'utf8');
-check(/if \(q\.get\('sharpcap'\) === '0'\) sharpCapConfig\.on = false;/.test(main) && main.indexOf("q.get('sharpcap') === '0'") < main.indexOf('new Engine('), 'the page lowers it for ?sharpcap=0, before the engine and its programs are made');
+const opens = readFileSync(resolve(ROOT, 'src/host/pictureopens.ts'), 'utf8'), page = readFileSync(resolve(ROOT, 'src/host/drawpage.ts'), 'utf8');
+check(/if \(q\.get\('sharpcap'\) === '0'\) sharpCapConfig\.on = false;/.test(opens) && page.indexOf('pictureWords(q)') > 0 && page.indexOf('pictureWords(q)') < page.indexOf('new Engine('), 'the page lowers it for ?sharpcap=0, before the engine and its programs are made');
 process.exit(red ? 1 : 0);

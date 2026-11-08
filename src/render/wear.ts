@@ -15,11 +15,11 @@
 //       every crate and bench foot).
 // A pure function of the level + its nav grid (nothing random: the same level draws the same wear); built once at boot by game.ts. The viewer / editor build
 // none, so their g-buffer keeps its 1×1 zero and the floor terms do nothing there.
-import type { Level } from '../scene/level';
-import type { NavGrid } from '../scene/collision';
+import type { Vec3 } from '../math/vec';
+import type { LevelScenarios } from '../scene/scenarios';
 import { WORLD } from '../scene/world';
 import { BoxFlag, type Box } from '../scene/boxes';
-import { levelWays, doorMid } from '../scene/ways';
+import { levelWays, doorMid, type WalkGrid, type WayLevel } from '../scene/ways';
 
 export const WEAR_RES = 8;          // texels per metre (12.5 cm: a lane's edge is soft over twice that anyway)
 const LANE_SIGMA = 0.34;            // a walking lane's Gaussian half-width (m): two feet and some wander
@@ -35,10 +35,12 @@ const RUN_STEP = 0.12;              // m: a face this far proud of another, or b
 const RUN_TURN = 0.9986;            // … and faces the same way within 3° (the cosine)
 
 export interface WearMap { data: Uint8Array; w: number; h: number }
+/** what the wear reads of a level: its ways, a route's stops, and the boxes */
+export interface WearLevel extends WayLevel { routes: readonly { name: string; points: Vec3[]; wait: number[] }[]; boxes: Box[]; scenarios?: LevelScenarios }
 
 /** `longFoot`: the wall band × how long the face is; `walked`: the traffic is every way the level is walked (the head of this file; the look's page asks
  *  for both, every other page has the map as it always was) */
-export function buildWearMap(level: Level, nav: NavGrid | null, longFoot = false, walked = false): WearMap {
+export function buildWearMap(level: WearLevel, nav: WalkGrid | null, longFoot = false, walked = false): WearMap {
   const w = Math.round(WORLD.gridW * WORLD.gridCell * WEAR_RES), h = Math.round(WORLD.gridH * WORLD.gridCell * WEAR_RES);
   const ox = WORLD.min[0], oz = WORLD.min[2];
   const T = new Float32Array(w * h);
@@ -58,7 +60,7 @@ export function buildWearMap(level: Level, nav: NavGrid | null, longFoot = false
     for (let i = 0; i <= n; i++) { const t = i / n; stamp(ax + (bx - ax) * t, az + (bz - az) * t, LANE_SIGMA, per); }
   };
   /** a man stands and turns at a waypoint for his wait: a worn patch there */
-  const stand = (route: Level['routes'][number], i: number) => stamp(route.points[i][0], route.points[i][2], LANE_SIGMA * 1.3, 0.35 + Math.min(1, (route.wait[i] ?? 0) / 20));
+  const stand = (route: WearLevel['routes'][number], i: number) => stamp(route.points[i][0], route.points[i][2], LANE_SIGMA * 1.3, 0.35 + Math.min(1, (route.wait[i] ?? 0) / 20));
   if (walked) {   // every way the level is walked, each traced along its own line as a route's legs always were, by its kind's weight
     for (const p of levelWays(level, level.scenarios, nav).paths) for (let k = 0; k + 1 < p.points.length; k++) walk(p.points[k][0], p.points[k][2], p.points[k + 1][0], p.points[k + 1][2], WAY[p.kind] * p.weight);
     for (const route of level.routes) if (route.points.length >= 2) for (let i = 0; i < route.points.length; i++) stand(route, i);

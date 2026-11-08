@@ -45,7 +45,6 @@ export const MAX_GLASS = 32;
 export const BOX_ROUND_BIT = 8;
 
 import { coatRough, SOLIDGLASS } from './stuff';   // (stuff.ts reaches only the look's table of names, a module with no imports of its own: no cycle)
-import { RUST_PASS, RUST_SURFACE } from '../game/crossing';
 export type BoxStuff = import('./stuff').BoxStuff;
 export type DoesWord = import('./materials').DoesWord;
 /** the engine's wait for a stale draw order (BoxWorld.upload): `calm` drawn packs the statics must have stood still for, and `still`, upload's own count of
@@ -1138,7 +1137,7 @@ export const shapeCut = (b: Box): boolean => b.shaped === true && b.cut !== unde
 /** IS THIS BOX'S CUT RECORD MET by the game's rays and segments? Under the cut-pieces switch every record is (scene/cut.ts); a shape's always: a shape is
  *  the simulation's, and a picture setting may not move it (as a round thing, scene/round.ts). Ask it only of a box that has a record. */
 export const cutMet = (b: Box): boolean => (cutConfig.on || b.shaped === true) && b.cut!.length > 0;
-export function rayBox(ro: Vec3, rd: Vec3, b: Box, tmax: number): { t: number; n: Vec3 } | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('rayBox', undefined, [ro, rd, b, tmax]); if (__r !== RUST_PASS) return __r as any; } }
+export function rayBox(ro: Vec3, rd: Vec3, b: Box, tmax: number): { t: number; n: Vec3 } | null {
   return rayBoxOwn(ro, rd, b, tmax);
 }
 /** The test itself, with no crossing: for the box world's own raycast (BoxWorld.raycast is the host's and walks the host's list, a thousand boxes a ray:

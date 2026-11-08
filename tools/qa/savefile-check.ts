@@ -11,7 +11,7 @@ import { FileSync, FILESYNC } from '../../src/cloud/files';
 import { wire } from '../../src/cloud/wire';
 const is = (w: Went, went: Saved, local: boolean) => w.went === went && w.local === local;
 import { PerfRecorder } from '../../src/ui/perfrec';
-import { replayBlob } from '../../src/replay/format';
+import { replayBlob } from '../../src/tape/format';
 const BREAK = process.env.SAVEFILE_BREAK === '1';
 let red = 0; const check = (ok: boolean, w: string) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${w}`); if (!ok) red++; };
 const G = globalThis as any;
@@ -163,7 +163,7 @@ page();
   const replays = [...texts].filter(([f, text]) => /replay/i.test(f) && DOOR.test(text)).map(([f]) => f);
   check(DOOR.test("import { saveFile } from '../host/savefile';") && replays.length === 0 && !SAVED_KINDS.some(k => /replay/.test(k)),
     `a replay does not leave the page by this door: no replay file imports it, and it has no such kind (${SAVED_KINDS.join(', ')})${replays.length ? ` (${replays.join(', ')})` : ''}`);
-  // … and the file F7 sends is still the replay with its blank notes left out, named by the notes it keeps (replay/format.ts `replayBlob`)
+  // … and the file F7 sends is still the replay with its blank notes left out, named by the notes it keeps (tape/format.ts `replayBlob`)
   { const { name, blob } = replayBlob({ savedAt: '2026-01-02T03:04:05.000Z', seconds: 12, notes: [{ t: 1, text: ' ' }, { t: 2, text: 'here' }] } as any), back = JSON.parse(await blob.text());
     check(/^twopointsix-replay-.*-12s-1notes\.json$/.test(name) && back.notes.length === 1 && back.notes[0].text === 'here' && back.seconds === 12, `a replay's file leaves out a note with no words and is named by the notes it keeps (${name})`); }
   // EVERY KIND OF THE DOOR'S IS SAVED THROUGH IT, BY THE DOOR'S OWN LIST (host/savefile.ts SAVED_KINDS; this was five file names written by hand while
@@ -190,8 +190,8 @@ page();
     check(t.unsaved.join() === 'bench' && t.strange.join() === 'c.ts: odd' && t.unread.join() === 'd.ts,e.ts,f.ts,g.ts,h.ts' && t.savers.get('perf')!.join() === 'a.ts' && t.savers.get('net-log')!.join() === 'c.ts' && t.savers.get('ninth')!.join() === 'f.ts' && k.kinds.join() === 'modelerr' && k.unread === 0,
       `the walk on lines of its own: a kind only a note speaks of has nobody, a kind off the list is strange, and a save whose kind is not said outright or by one const is not read (nobody: ${t.unsaved.join()} · strange: ${t.strange.join()} · not read: ${t.unread.join()})`); }
   const { savers, unread, strange, unsaved } = saversOf(SAVED_KINDS, texts);
-  const sets = files.filter(f => /SAVED\.sink\s*=[^=]/.test(readFileSync(f, 'utf8'))).map(f => f.slice(root.length + 1)), door = readFileSync(join(root, 'cloud/door.ts'), 'utf8'), pages = ['main.ts', 'host/drawcloud.ts'].every(p => /\n  doorTo\(cloud\);/.test(readFileSync(join(root, p), 'utf8')));
-  check(sets.join() === 'cloud/door.ts' && pages && /SAVED\.sink = cloud \? \(f, done\) => \{ const took = cloud\.save\(f\.name, f\.blob,[^\n]*f\.meta, done\); return took === 'sent' \|\| took === 'held' \? took : false; \} : null;/.test(door), `one place sets the listener, for both pages: cloud/door.ts, to the backend's file intake, and hands its whole answer back (${sets.join(', ') || 'nowhere'})`);
+  const sets = files.filter(f => /SAVED\.sink\s*=[^=]/.test(readFileSync(f, 'utf8'))).map(f => f.slice(root.length + 1)), door = readFileSync(join(root, 'cloud/door.ts'), 'utf8'), pages = /\n  doorTo\(cloud\);/.test(readFileSync(join(root, 'host/drawcloud.ts'), 'utf8'));
+  check(sets.join() === 'cloud/door.ts' && pages && /SAVED\.sink = cloud \? \(f, done\) => \{ const took = cloud\.save\(f\.name, f\.blob,[^\n]*f\.meta, done\); return took === 'sent' \|\| took === 'held' \? took : false; \} : null;/.test(door), `one place sets the listener: cloud/door.ts, to the backend's file intake, and hands its whole answer back (${sets.join(', ') || 'nowhere'})`);
   check(own.length === 0, `no file under src/ makes a download of its own${own.length ? ` (own: ${own.join(', ')})` : ''}`);
   check(SAVED_KINDS.length > 1 && unsaved.length === 0 && unread.length === 0 && strange.length === 0, `every kind of the door's is saved through it, by the door's own list (${SAVED_KINDS.map(k => `${k}: ${savers.get(k)!.join(' + ') || 'NOBODY'}`).join(' · ')})${unread.length ? ` (a save whose kind is not read: ${unread.join(', ')})` : ''}${strange.length ? ` (a kind the door does not list: ${strange.join(', ')})` : ''}`);
 }

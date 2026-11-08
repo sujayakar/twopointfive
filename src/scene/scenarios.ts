@@ -7,7 +7,8 @@
 // unless it is something a gun rests on (y ≈ 1.1). What the data must satisfy against the floor is checked in the game, headless: roomclear.ts checkStructure,
 // rescue.ts checkRescue, rescueflow.ts RescueFlow.check — tools/qa/scenario-level-probes.ts runs all three on a level file.
 import type { Vec3 } from '../math/vec';
-import type { BoxData, DoorData, LightData } from './levelData';   // (types only, erased: a kit view SET is written in the level format's own records)
+import type { BoxData, DoorData, LightData } from './levelRows';   // (types only, erased: a kit view SET is written in the level format's own records)
+import type { HourId, WeatherKind } from './words';
 
 export interface Rect { x0: number; x1: number; z0: number; z1: number }
 
@@ -348,7 +349,7 @@ export interface IssueCard { weapon?: 'rifle' | 'pistol' | 'shotgun'; suppressed
   loaded?: 'ring' | 'he40' }
 export interface IssueData { members: { [place: string]: IssueCard } }
 /** THE KIT VIEW (rust/game_rules/src/kitstage — the Team & kit step shows the team as picked, stood at the mission's own way-in door, drawn by the page that draws
- *  a game it does not hold, opened `draw.html?…&kitview`): where the men stand and how the camera looks, per WAY IN. `ways` is indexed as the team starts are — [0] the
+ *  a game it does not hold, opened `?…&kitview`): where the men stand and how the camera looks, per WAY IN. `ways` is indexed as the team starts are — [0] the
  *  structure's own `team`, [k] its `starts[k − 1]` (roomclear.ts RoomClearScenario.way). A way needs only its `door` (a door id): the slots, the camera and the
  *  lamps are worked out from the door's frame and the side the team starts on; every other key lays an authored value over that. Picture only: no rule of the
  *  game reads this block, and a level without it shows an empty column there. */
@@ -542,7 +543,7 @@ export interface ScenarioEntry {
    *  hour and one sky (a fuel halt at dusk in dust, a plan laid by day). They win over the link's `hour=` / `weather=`, and the mission sheet draws no Hour
    *  or Weather row for such a row. Absent (every row but those): the visitor's pick, else the level's own night and weather, as ever. A weather a level can
    *  be STARTED in: never 'snow' (a level built for snow keeps its own and names none). Types only: nothing here imports the game */
-  hour?: import('../game/hours').HourId; weather?: Exclude<import('../game/weatherKinds').WeatherKind, 'snow'>;
+  hour?: HourId; weather?: Exclude<WeatherKind, 'snow'>;
   /** the room clear's placement seed · a quiet mission's deal, pinned (absent: dealt from the page's die on every start) */
   seed?: number;
   /** the picker's one line under the title: what the scenario is for (scene/scenarioList.ts; absent = the title alone) */

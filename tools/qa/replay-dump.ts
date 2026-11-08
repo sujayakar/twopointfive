@@ -1,4 +1,4 @@
-// A DUMP OF KEPT REPLAYS, UNPACKED AND GONE THROUGH (src/replay/kept.ts — the page keeps every run by itself; a hosted build's backend holds them and tools/cloud/pull.ts
+// A DUMP OF KEPT REPLAYS, UNPACKED AND GONE THROUGH (src/tape/kept.ts — the page keeps every run by itself; a hosted build's backend holds them and tools/cloud/pull.ts
 // writes them out as one such file. Until 2026-10-27 the page made that file itself, 'Hand over replays': those are read here as before):
 //   bun run tools/qa/replay-dump.ts <dump.ndjson[.gz] | replay.json[.gz] | folder> … [--out DIR] [--moments N] [--again] [--quiet]
 // Takes any mix of dumps and single replay files (F7's, the viewer's 'download with notes'), in any number, in any order, as often as they are sent:
@@ -22,13 +22,13 @@
 import { closeSync, createReadStream, existsSync, mkdirSync, openSync, readFileSync, readSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createGunzip, gzipSync, gunzipSync } from 'node:zlib';
 import { basename, join } from 'node:path';
-import type { ReplayFile, ReplayNote, ManAt, ManDo } from '../../src/replay/format.ts';
-import { checkReplay, decode, clock, errorMarks, TAPE_VERSION } from '../../src/replay/format.ts';
+import type { ReplayFile, ReplayNote, ManAt, ManDo } from '../../src/tape/format.ts';
+import { checkReplay, decode, clock, errorMarks, TAPE_VERSION } from '../../src/tape/format.ts';
 
 /** what the index adds to a tape's steps where this checkout cannot walk it (tools/qa/rerun.ts refuses another version's) */
 const otherVersion = (F: ReplayFile): string => F.rerun && 'v' in F.rerun && F.rerun.v !== TAPE_VERSION ? ' (another version: not walked here)' : '';
-import type { KeptLine, Visit } from '../../src/replay/kept.ts';
-import { assemble, visitsOf } from '../../src/replay/kept.ts';
+import type { KeptLine, Visit } from '../../src/tape/kept.ts';
+import { assemble, visitsOf } from '../../src/tape/kept.ts';
 import { handsOf } from '../../src/tape/keep.ts';
 
 // ---------------------------------------------------------------- the moments

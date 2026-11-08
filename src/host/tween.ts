@@ -53,7 +53,7 @@ interface Snap {
   caps: Float64Array; capOwner: number[]; capN: number;
   cam: Float64Array; hasCam: boolean;
 }
-/** the camera's pose (game/camera.ts FollowCamera: what rebuild() makes its matrices from) */
+/** the camera's pose (host/camera.ts FollowCamera: what rebuild() makes its matrices from) */
 export interface TweenCam { target: Vec3; yaw: number; pitch: number; distance: number }
 const newSnap = (): Snap => ({ n: 0, key: new Map(), box: new Float64Array(256 * BS), dc: new Float64Array(256 * 3), lights: new Map(), lf: new Float64Array(64 * 6), men: new Map(), joints: new Float32Array(0), menN: 0, caps: new Float64Array(0), capOwner: [], capN: 0, cam: new Float64Array(6), hasCam: false });
 const CAPS = BoxWorld.CAPS_PER_CHAR, CW = CAPS * 8;   // records a man, and his words: 8 floats a record (ends at 0‥2 and 4‥6)

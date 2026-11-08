@@ -87,28 +87,27 @@ did not.
   every level's panes by kind against a table: a new level with glass adds its row; `--verbose` prints them).
 - **Every room they can shut has another way in.** The maintainer: "maybe we just need to design levels so there's always
   another route in?" A door hung to open OUT (`swing`), a walk-through window, or issued wall charges. **seen** barricaded
-  rooms that could only be opened with a charge or a 40 mm. **check** `bun run tools/qa/second-way-check.ts <name>.json`
-  (export runs it too: red fails the export of a level a squad row plays and is a note on one with no row yet; a changed
+  rooms that could only be opened with a charge or a 40 mm. **check** `levels second-way <name>`
+  (in `rust/game_start`: `cargo run --release --bin levels -- second-way <name>`; export runs it too: red fails the export of a level a squad row plays and is a note on one with no row yet; a changed
   swing moves that level's tallies and par times).
 - **Its starts and its doors are on a way.** The maintainer: "wear, paths in the ground ... can all tell a story for how
   people walk through the level, its logic, leading the player". The look's page wears the floor where the level is walked
   (`src/scene/ways.ts`), so a start no way leaves from, or a door no way crosses or ends at, tells no story. Give it one
-  with a `scenarios.walked` row (from a named thing to a named thing: a door is one). **check** `bun run
-  tools/qa/walked-check.ts <name>` (what is owed is held by name in the level's count file).
+  with a `scenarios.walked` row (from a named thing to a named thing: a door is one). **check** `levels walked <name>`
+  (what is owed is held by name in the level's count file).
 - **A defender sees what he watches.** The dress goal's rule: "a window a mark watches through, or a covered lane crosses,
   stays see-through"; the maintainer: "we don't want them to feel dumb". Dress such a window with the kit's OPEN form
   (`gwotKit` `boards`, `shutters`, `windowBlanket` take `'shut'` or `'open'`), and stand no cover in a mark's line. **seen**
   the pass's tea room with its boards and shutters shut: its two men at the glass lost a half and a sixth of the yard they
   hold; and the block with one leaf shut on a window no defender needs: the scripted team took it 3 times in 24 against 7
   with the leaves folded back, so a shut window is laid only where the mission's tally was read with it shut. **check**
-  `bun run tools/qa/marksight-check.ts <name>` on both stands (export runs it too; a new level writes its
-  count file with `--write` once on each stand, and a move that makes a man see less carries the file with a `#` line
-  saying why).
+  `levels sight <name>` (export runs it too; a new level writes its count file with `--write`, and a move that makes a man see
+  less carries the file, `tools/levels/counts/sight/<name>.txt`, with a `#` line saying why).
 - **A door a held room lists opens into that room**, and can be walked from both faces. **check** no check today (`rust/game_start/tests`),
   `oneway-deal`.
 - **Every door face has floor for a stack**: a man on each jamb, 2 m of wall clear, nothing on the marks. **seen** a carton on
   a stack place; a table on the wall refused the order "no room on that door". **check**
-  `bun run tools/qa/stack-marks-check.ts <row>`; `lived-stack-check.ts <row>` after moving furniture.
+  `levels stacks <row>`; `lived-stack-check.ts <row>` after moving furniture.
 - **A solid thing by a door is read at that door.** A thing that stops feet (over 0.19 m) laid within a few metres of a door can shut the
   walk grid's cells on a team's way to its stack, and the entry is then another fight. **seen** a log laid across two others by the
   pass's chopping block shut a square metre in front of two doors; the stacks' marks and the charges' places were untouched. **check**
@@ -215,7 +214,7 @@ level that already has its rooms, and moves nobody's fight. The office was the f
   A room's name is the middle of its floor: **seen** the server room's middle is a bank of racks, so three rows ended at the racks' near face
   and not where anyone stands; a mark on free floor at the thing says where.
   Draw the ways after and look: **seen** a row to a machine at the end of a walkway ran right round the building, because a parked car and a
-  bollard shut the walkway on the walk grid. **check** `bun run tools/qa/ways-check.ts`, then `bun run tools/qa/walked-check.ts <level>`: a
+  bollard shut the walkway on the walk grid. **check** `bun run tools/qa/ways-check.ts`, then `levels walked <level>`: a
   start or a door your rows now reach leaves its count file with `--write`, and the hand-over says which names left.
 - **No word names a room, and no paint is there for the player.** The maintainer, playing the office's first cut: "i don't like the "lobby"
   and "conference" labels in the level, pretty lame". A room is shown by what is in it. The test for paint: would THIS building's own people
@@ -233,7 +232,7 @@ level that already has its rooms, and moves nobody's fight. The office was the f
   and are drawn only unless told they are solid; a band of paint is the wall's own stuff in another colour (`saidAs`). Groups `lived.<room>`
   at the generator's tail, so the frozen stand's level is the level it was. Lay conduit in lengths of under two metres: a breach takes what
   hangs over the hole and leaves the rest. A band from the floor stays across a breach, as every painted dado in the game does today.
-  **check** `lived-check` (it prints "0 solid"), `wallfurn-check`, `marksight-check`, `second-way-check` and `zfight-check <level>` (no more
+  **check** `lived-check` (it prints "0 solid"), `wallfurn-check`, `levels sight`, `levels second-way` and `zfight-check <level>` (no more
   seen than before), and the three play-through reads against the step before: none moves.
 - **Put it where the play camera reads, and draw your stills from that camera.** It opens at yaw -22 and pitch 55 degrees and turns with him.
   At rest it shows floors, tops, south faces and west faces, and a wall hides about two metres of floor behind it. **seen** the office's

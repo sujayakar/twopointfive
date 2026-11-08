@@ -313,7 +313,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     { ...dx('s1', 14.8, SZ), swing: -1 }, dx('s2', 21.8, SZ), dx('s3', 26.8, SZ), dx('s4', 32.8, SZ), { ...dz('s34', S34, 21.8), swing: -1 },                     // the south wing's
     dz('ng_w', NG_FIRE[0], 8.8), dz('ng_e', NG_FIRE[1], 8.8), dz('sg_w', SG_FIRE[0], 17.8), dz('sg_e', SG_FIRE[1], 17.8),          // the galleries' fire doors
   ];
-  // ANOTHER WAY IN (tools/qa/second-way-check.ts): a held room whose two doors could both stand wedged has one hung to open OUT of it, which no wedge holds —
+  // ANOTHER WAY IN (rust/game_start levels second-way): a held room whose two doors could both stand wedged has one hung to open OUT of it, which no wedge holds —
   // the day room's west door n4a (onto the gallery), bunks 2's n12 (into bunks 1's lobby: hung so while bunks 2 was held; the room is empty now and the swing is
   // only how the door hangs), bunks 3's s1 (into its lobby off the south gallery: the duty office
   // behind o_s1 is itself shut when the mess hall wedges o_hall), bunks 5's s34 (into bunks 4's lobby).

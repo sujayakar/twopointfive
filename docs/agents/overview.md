@@ -68,6 +68,8 @@ Every line checked against the code at 527a92a. The build is THE PAGE IN THE BRO
 <!-- was CLAUDE.md lines 507–619 -->
 ## Architecture map
 
+The page that draws names nothing of the game, not even as a type (`tools/draw/ban.ts`), so what it keeps stands outside the game's folders: the camera, the input and the gear in `src/host/`, the sheet and shard models in `src/render/`, the audio's face in `src/audio/iface.ts`, the replay file and the kept tapes in `src/tape/`.
+
 ```
 src/main.ts          boot, frame loop, HUD, hotkeys, automation hooks      src/engine.ts   device, settings, frame orchestration
 src/cloud/           the hosted page's side of its backend (cloud.ts boot + who the browser is, wire.ts, tapes.ts, telemetry.ts, prefs.ts): nothing of it exists on a build given no
@@ -160,7 +162,7 @@ src/game/            game.ts (Game: state, constructor, event plumbing, doors/pr
                      rigProps.ts (everything bolted to a mannequin: goggles, pistol parts, holster, torch, the guards' carbine,
                      Sam's FN2000 in hand / slung), input.ts
                      ALSO in src/game/ (each has its bullet below): teams.ts, interact.ts, devices.ts, attract.ts, savestate.ts, dialogue.ts, floor.ts, civilians.ts, tactics.ts, needs.ts, whistle.ts,
-                     qrf.ts, destruction.ts + debris.ts + sheetModel.ts, wind.ts + moths.ts, wet.ts, weather.ts, glass.ts, marks.ts, particleFx.ts, audio_iface.ts, consts.ts
+                     qrf.ts, destruction.ts + debris.ts + sheetModel.ts, wind.ts + moths.ts, wet.ts, weather.ts, glass.ts, marks.ts, particleFx.ts, audio/iface.ts, consts.ts
 src/ui/              menu.ts (start/pause card + the debrief / down card), debrief.ts, bindings.ts (the tweak panel = the debugger, on the backslash key — every knob), quality.ts (presets, auto calibration, the ladder + climb),
                      overlay.ts (HUD), panel.ts, boot.ts (boot card + timeline), bubbles.ts, capture.ts, perfrec.ts (F9 recorder)
 src/anim/            gltf.ts (loader; accepts embedded data-URI buffers), skeleton.ts, characters.ts (skinning, CharInst)

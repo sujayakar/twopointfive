@@ -31,7 +31,7 @@ pub extern "C" fn face_floor(h: u32) {
     super::out(s.into_bytes());
 }
 
-/// {men: [{id, x, z, aim, team, kind, down, name, state}], doors: [{hx, hz, ux, uz, width, locked, broken, off}]}: the players first, in their seats' order
+/// {men: [{id, x, z, aim, team, kind, down, name, state}], doors: [{hx, hz, ux, uz, width, locked, broken, off, name}]}: the players first, in their seats' order
 #[no_mangle]
 pub extern "C" fn face_map(h: u32) {
     let s = super::with_ref(h, |x| {
@@ -41,7 +41,7 @@ pub extern "C" fn face_map(h: u32) {
         for &s in &g.seats { let p = game::cmd::seat_man(g, s); let q = &g.pl[p]; man(q.ch, "player", "player", q.down, &game::seats::player_name(g, p), ""); }
         for &gd in &g.guards { let m = &g.gd[gd]; man(m.ch, m.team.as_str(), "man", m.state == game::game::GuardState::Dead, &m.callsign, m.state.as_str()); }
         for &gd in &g.civilians { let m = &g.gd[gd]; man(m.ch, "civilian", "civ", m.state == game::game::GuardState::Dead, &m.callsign, ""); }
-        let doors: Vec<String> = g.doors.list.iter().map(|&d| { let (f, u) = (&g.dr[d].def, game::doors::door_dir(g, d)); format!("{{\"hx\":{},\"hz\":{},\"ux\":{},\"uz\":{},\"width\":{},\"locked\":{},\"broken\":{},\"off\":{}}}", r2(f.hinge[0]), r2(f.hinge[1]), r2(u[0]), r2(u[1]), r2(f.width), game::doors::door_locked(g, d), game::doors::door_lock_broken(g, d), game::doors::door_off(g, d)) }).collect();
+        let doors: Vec<String> = g.doors.list.iter().map(|&d| { let (f, u) = (&g.dr[d].def, game::doors::door_dir(g, d)); format!("{{\"hx\":{},\"hz\":{},\"ux\":{},\"uz\":{},\"width\":{},\"locked\":{},\"broken\":{},\"off\":{},\"name\":{}}}", r2(f.hinge[0]), r2(f.hinge[1]), r2(u[0]), r2(u[1]), r2(f.width), game::doors::door_locked(g, d), game::doors::door_lock_broken(g, d), game::doors::door_off(g, d), text(&f.name)) }).collect();
         format!("{{\"men\":[{}],\"doors\":[{}]}}", men.join(","), doors.join(","))
     });
     super::out(s.into_bytes());

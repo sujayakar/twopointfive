@@ -1,4 +1,4 @@
-// A TAPE OF A RUN (src/tape/handtape.ts), with no page: missions played on the module as draw.html plays them, by a hands-off player and by a hand that does anything, with
+// A TAPE OF A RUN (src/tape/handtape.ts), with no page: missions played on the module as the page plays them, by a hands-off player and by a hand that does anything, with
 // saves, a load, a restart, knobs turned and every question a page asks between two ticks, and each tape walked on another game that is asked nothing: the die, the parts and the
 // whole state are what they were at every mark and at the end. The size is said.
 //   bun run tools/draw/tape-check.ts [mission id…] [--secs 30]      exit 0 · 1 and each that parted, with the tick · 2 no such mission
@@ -12,7 +12,7 @@ import { DrawGame, type Start } from '../../src/host/drawgame';
 import { HAND, sampleHand } from '../../src/draw/hand';
 import { DrawPlay } from '../../src/host/drawplay';
 import { HandTape, MARKS } from '../../src/tape/handtape';
-import { FollowCamera } from '../../src/game/camera';
+import { FollowCamera } from '../../src/host/camera';
 import { Section, View } from '../../src/draw/sections';
 
 const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.TAPE_BREAK === '1', args = process.argv.slice(2), at = args.indexOf('--secs'), SECS = at >= 0 ? Number(args[at + 1]) : 30;

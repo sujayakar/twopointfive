@@ -1,5 +1,6 @@
 // A GAME IN THE MODULE, AS A PAGE THAT DRAWS IT HAS IT: started, handed a player's input, stepped, and read by what it leaves to be drawn (src/draw). The page
 // holds its number and nothing of it.
+import type { HandsOffPlan } from './benchScenes';
 import { FaceError, type Face, type Fetched } from './face';
 import { Drawn, drawRefused, type DrawFace } from '../draw/drawn';
 import { Heard, Man, Section, View, Want } from '../draw/sections';
@@ -11,8 +12,6 @@ import type { RunMark, RunVerdict } from '../view/runend';
 import { CURSOR_DOUBLES, sampleCursor, type CursorAt, type CursorCanvas, type CursorLens } from '../view/cursor';
 import { readCursorView, readDebriefView, readRunView, readTickView, type CursorView, type DebriefView, type RunView, type TickView } from '../view/read';
 
-/** a hands-off player's plan: the die his beats are rolled on, the seconds he plays, doors by name to take first, the breaker thrown before any */
-export interface HandsOffPlan { seed: number; cap?: number; route?: string[]; breaker?: boolean }
 export interface HandsOffSaid { t: number; end: 'taken' | 'sam' | 'cap' | 'spent' | null; given: number; shotAt: number; up: number; of: number; left: number }
 /** how a run ended, as the module's record of it says (game::verdict::verdict_lines) */
 export interface Verdict { won: boolean; word: string; why: string; secs: number; approach: string | null; lost: number; of: number; foesDown: number; foesOf: number; hostages: { alive: number; of: number } | null; void: boolean; clean: boolean }
@@ -156,9 +155,9 @@ export class DrawGame {
   /** A VIEWER'S OWN PICTURE of the run: with the fog off it, and through a tube or not whatever the run's was (null: as the run had it). The first call has the game keep what such a picture is made from */
   viewAs(bared: boolean, tube: boolean | null): void { this.as = [bared ? 1 : 0, tube === null ? 0 : tube ? 1 : 2]; if (this.lost) return; this.X.face_draw_as(this.h, ...this.as); this.draw(); }
   private as: [number, number] | null = null;
-  /** the floor as it stands, for a map of it (replay/minimap.ts), and who and what is on it now: everybody, seen or not */
+  /** the floor as it stands, for a map of it (tape/minimap.ts), and who and what is on it now: everybody, seen or not */
   floor(): { bounds: [number, number, number, number]; boxes: number[] } { this.X.face_floor(this.h); return JSON.parse(this.answer()); }
-  map(): { men: { id: number; x: number; z: number; aim: number; team: string; kind: 'player' | 'man' | 'civ'; down: boolean; name: string; state: string }[]; doors: { hx: number; hz: number; ux: number; uz: number; width: number; locked: boolean; broken: boolean; off: boolean }[] } { this.X.face_map(this.h); return JSON.parse(this.answer()); }
+  map(): { men: { id: number; x: number; z: number; aim: number; team: string; kind: 'player' | 'man' | 'civ'; down: boolean; name: string; state: string }[]; doors: { hx: number; hz: number; ux: number; uz: number; width: number; locked: boolean; broken: boolean; off: boolean; name: string }[] } { this.X.face_map(this.h); return JSON.parse(this.answer()); }
   /** THE MOMENT THE GAME STANDS AT, whole, to come back to exactly (a walk of a tape's): its number, 0 where it cannot be held */
   moment(): number { return this.X.face_moment(this.h); }
   /** the game stands there again, at tick `ticks` */
@@ -168,6 +167,14 @@ export class DrawGame {
   /** ticks were stepped that nobody was shown: the picture is of where the game stands, and of nothing before it */
   show(): void { this.X.face_draw_cut(this.h); this.draw(); }
   momentDrop(k: number): void { this.X.face_moment_drop(k); }
+  /** THE FIRST TICKS, PLAYED AND THROWN AWAY: a browser compiles a function of the module as it is first called, and a game's first tick calls thousands of them. `hand` fills in what tick `i` of them is
+   *  handed (the keys' text its answer); a tick, then a turn of the event loop. The game stands at its moment again after, and nobody was shown any of it */
+  async warm(n: number, hand: (N: Float64Array, i: number) => string, turn: () => Promise<void>): Promise<void> {
+    const k = this.X.face_moment(this.h); if (!k) return;
+    const T = this.tape, at = this.ticks; this.tape = null;   // (a tape keeps what was played)
+    try { for (let i = 0; i < n; i++) { const keys = hand(this.numbersOf(), i); this.tick(1 / 60, keys); this.X.face_out_clear(this.h); await turn(); } } catch (e) { if (!this.lost) throw e; /* (lost in them: it stands again below, and is lost in play if it is to be) */ }
+    finally { this.momentBack(k, at); this.momentDrop(k); this.tape = T; this.draw(); }   // (…and its sections are of where it stands, before anybody asks which game they are of)
+  }
   /** what has been commanded is done now, between two ticks, and what it changed is there to be read: the next step would do the same things first */
   tell(): void { this.order(); this.done++; this.draw(); }
   /** A FRAME IS DRAWN, `a` of the way from the tick before to the last */

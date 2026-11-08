@@ -81,7 +81,7 @@ no smoke reads 14 to 17. The vault read as 60 until a smoke can was let off, the
 counts, the queue's answer timed from a page script (wrap the INSTANCE's `device.queue.submit` and `onSubmittedWorkDone`: the page keeps its own
 queue's methods, the prototype's are not called), and leaving one thing out of the frame at a time. Not the particles, their draw, the wind, the main
 thread (3 ms) or the picture's size: the solver, and of it only THE ABOUT TWENTY `dispatchWorkgroupsIndirect` CALLS A FRAME (per-brick kernels by a
-GPU-written count). The same kernels dispatched directly keep 60. THE GAME'S PAGE NOW OPENS ON THE WHOLE POOL (`main.ts` sets `sparse.indirect` by
+GPU-written count). The same kernels dispatched directly keep 60. THE GAME'S PAGE NOW OPENS ON THE WHOLE POOL (`src/host/pictureopens.ts` sets `sparse.indirect` by
 `smoke/dispatch.ts pageIndirect`; `smoke.ts encode` asks `byGpuCount`): a per-brick kernel is dispatched directly over all 4,096 workgroups. A
 workgroup past the step's own list returns at its guard, which is how the pool has always gone from `directAt` of it stepping, so the smoke is the
 same to the bit and no kernel runs that did not. The dispatches of fixed size are as they were; one pipeline set, the call is picked at encode time.
@@ -797,7 +797,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   own). ANOTHER PAGE of the site asked for in the frame (the replay viewer, the workbench, the listening pages) is loaded by the TAB (the frame stops the
   load with the Navigation API and the tab makes it; without that API the shell sees the frame land there and follows): such a page has the address bar
   to itself, and coming back to the game from it is a new shell and one more compile. The keys are the frame's own window's (`KEPT.shelled`,
-  `game/input.ts`: no sink text box as in somebody else's frame, so F7, F8 and a paste into a field work as on a whole page). A browser that will
+  `host/input.ts`: no sink text box as in somebody else's frame, so F7, F8 and a paste into a field work as on a whole page). A browser that will
   not draw into a frame's canvas with its parent's device throws at `configure`: that load and the ones after open their own device (`Keeper.refused`, one
   warning record `gpu.keep.refused`). **The load's record** gets `kept` (which load on this page: 1 = the one that compiled, 2 and up = a start on the kept
   page; absent = a plain page), `made` { pipelines, modules, asked, and on kept 2+ the first labels compiled }, counted up to the boot's own end
