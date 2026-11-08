@@ -299,6 +299,37 @@ pub trait DoorsAsk {
     fn standoff_marks(&mut self, d: DoorId, side: f64, men: &[GuardId]) -> Vec<[f64; 2]>;
     /// the threshold as a mission's own order gives it, to go on in by itself
     fn threshold_given(&mut self, at: [f64; 2]);
+    /// what the door's mark on the plan says while a stack waits on it: its key, and would it go now
+    fn stack_mark(&mut self, d: DoorId) -> Option<(Option<String>, bool)>;
+    /// how many a door order has left to spend, and the cap on the word's wait for the cuts
+    fn word_cap_put(&mut self, secs: f64);
+    /// which tool a door order is, and when each of its beats came
+    fn op_kind(&self, op: DoorOpId) -> game::doortools::DoorToolKind;
+    fn beat_times(&self, op: DoorOpId) -> Vec<f64>;
+    /// is he walking backwards facing his way, and is his next step of his path behind the way he is moving
+    fn walks_backwards(&self, m: GuardId) -> bool;
+    fn walks_away_from_his_path(&self, m: GuardId) -> bool;
+    /// how many leaves have been gone round
+    fn leaves_gone_round(&self) -> f64;
+    /// seconds of blindness and of doubling over a man has left
+    fn blind_secs(&self, m: GuardId) -> f64;
+    fn fold_secs(&self, m: GuardId) -> f64;
+    /// STAGING: a man of the other side is a quiet mission's staff
+    fn is_staff(&mut self, m: GuardId);
+    /// the points an entry by a door is dealt, before and at a threshold
+    fn entry_pods(&mut self, d: DoorId, side: f64, n: f64) -> Vec<[f64; 2]>;
+    fn shallow_pods(&mut self, d: DoorId, side: f64, n: f64) -> Vec<[f64; 2]>;
+    /// the stack the game deals a door: by 'stack up', by the door tools
+    fn stack_marks(&mut self, d: DoorId, side: f64, men: &[GuardId]) -> Vec<[f64; 2]>;
+    fn tool_marks(&mut self, d: DoorId, side: f64, men: &[GuardId]) -> Vec<[f64; 2]>;
+    /// the walls' own marks, with glass not counted
+    fn walls_own_marks(&mut self, d: DoorId, side: f64, men: &[GuardId]) -> Vec<[f64; 2]>;
+    /// where an item is now
+    fn item_at(&self, it: ItemId) -> [f64; 2];
+    /// the panes on a door's own wall beside its frame: their span along the wall from the hinge
+    fn panes_by(&self, d: DoorId) -> Vec<(f64, f64)>;
+    /// a run with something asked each frame
+    fn run_each(&mut self, secs: f64, each: impl FnMut(&mut Play));
     /// a threshold's two jamb men, and is the door called held
     fn thr_jamb(&self, op: DoorOpId) -> Vec<GuardId>;
     fn thr_told(&self, op: DoorOpId) -> bool;
@@ -626,6 +657,42 @@ impl DoorsAsk for Play {
         let (men, t) = (self.men(), game::orders::squad_orders_target_at(&mut self.g, [at[0], 0.0, at[1]]));
         assert!(!matches!(game::doortools::door_tools_threshold(&mut self.g, &men, &t, None, Some(false)), game::doortools::DoorToolsThreshold::Text(_)), "the threshold was refused");
     }
+    fn stack_mark(&mut self, d: DoorId) -> Option<(Option<String>, bool)> {
+        let name = self.door_name(d);
+        self.view().plan.as_ref()?.own.doors.iter().find(|x| x.door.as_deref() == Some(name.as_str()) && x.why == game::view::WaitWhy::Stack).map(|x| (x.key.clone(), x.now))
+    }
+    fn word_cap_put(&mut self, secs: f64) { self.g.k.doortools.word_cuts_cap = secs; }
+    fn op_kind(&self, op: DoorOpId) -> game::doortools::DoorToolKind { self.g.tab.doortools_door_op[op].kind }
+    fn beat_times(&self, op: DoorOpId) -> Vec<f64> { self.g.tab.doortools_door_op[op].beats.iter().map(|b| b.t).collect() }
+    fn walks_backwards(&self, m: GuardId) -> bool { self.g.gd[m].script.as_ref().map_or(false, |s| s.strafe == Some(true)) }
+    fn walks_away_from_his_path(&self, m: GuardId) -> bool {
+        let h = &self.g.gd[m];
+        let c = &self.g.ch[h.ch];
+        let Some(w) = h.path.get(h.path_i as usize) else { return false };
+        c.vel[0].hypot(c.vel[2]) > 0.3 && c.vel[0] * (w[0] - c.pos[0]) + c.vel[2] * (w[2] - c.pos[2]) < 0.0
+    }
+    fn leaves_gone_round(&self) -> f64 { self.g.doors.rounds }
+    fn blind_secs(&self, m: GuardId) -> f64 { (self.g.gd[m].dazzled_until - self.g.time).max(0.0) }
+    fn fold_secs(&self, m: GuardId) -> f64 { (self.g.gd[m].stagger_until - self.g.time).max(0.0) }
+    fn is_staff(&mut self, m: GuardId) { self.g.gd[m].team = game::teams::Team::Guard; }
+    fn entry_pods(&mut self, d: DoorId, side: f64, n: f64) -> Vec<[f64; 2]> { game::doortools::door_tools_pods_as_were(&mut self.g, d, side, Some(n)).iter().map(|q| [q.pos[0], q.pos[2]]).collect() }
+    fn shallow_pods(&mut self, d: DoorId, side: f64, n: f64) -> Vec<[f64; 2]> { game::doortools::door_tools_shallow_pods(&mut self.g, d, side, Some(n)).iter().map(|q| [q.pos[0], q.pos[2]]).collect() }
+    fn stack_marks(&mut self, d: DoorId, side: f64, men: &[GuardId]) -> Vec<[f64; 2]> { game::orders::squad_orders_stack_posts(&mut self.g, d, side, men, None).unwrap_or_default().iter().map(|q| [q.pos[0], q.pos[2]]).collect() }
+    fn tool_marks(&mut self, d: DoorId, side: f64, men: &[GuardId]) -> Vec<[f64; 2]> { game::doortools::door_tools_stack_posts(&mut self.g, d, side, men, None).unwrap_or_default().iter().map(|q| [q.pos[0], q.pos[2]]).collect() }
+    fn walls_own_marks(&mut self, d: DoorId, side: f64, men: &[GuardId]) -> Vec<[f64; 2]> { game::orders::squad_orders_stack_posts_on(&mut self.g, &game::ask::Over::OWN, d, side, men, &[], false, None).unwrap_or_default().iter().map(|q| [q.pos[0], q.pos[2]]).collect() }
+    fn item_at(&self, it: ItemId) -> [f64; 2] { let q = game::throwables::item_pos(&self.g, it); [q[0], q[2]] }
+    fn panes_by(&self, d: DoorId) -> Vec<(f64, f64)> {
+        let (f, w) = (game::guards::frame_of(&self.g, d), self.door_w(d));
+        let mut out = Vec::new();
+        for &b in &self.g.col.boxes {
+            let x = &self.g.tab.boxes[b];
+            if (x.flags as u32) & (game::scene_boxes::box_flag().glass as u32) == 0 { continue; }
+            let (a, o, ha) = ((x.c[0] - f.hx) * f.ux + (x.c[2] - f.hz) * f.uz, (x.c[0] - f.hx) * f.nx + (x.c[2] - f.hz) * f.nz, f.ux.abs() * x.h[0] + f.uz.abs() * x.h[2]);
+            if o.abs() < 0.3 && a + ha > -2.5 && a - ha < w + 2.5 { out.push((a - ha, a + ha)); }
+        }
+        out
+    }
+    fn run_each(&mut self, secs: f64, mut each: impl FnMut(&mut Play)) { for _ in 0..(secs * 60.0) as i32 { self.frame(); each(self); } }
     fn thr_jamb(&self, op: DoorOpId) -> Vec<GuardId> { self.g.tab.doortools_door_op[op].thr.as_ref().map_or(Vec::new(), |t| t.jamb.clone()) }
     fn thr_told(&self, op: DoorOpId) -> bool { self.g.tab.doortools_door_op[op].thr.as_ref().map_or(false, |t| t.told) }
     fn cut_of(&self, op: DoorOpId, m: GuardId) -> Option<(usize, usize, [f64; 2], bool)> {
