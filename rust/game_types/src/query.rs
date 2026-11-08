@@ -48,6 +48,26 @@ impl Query {
     }
 }
 
+/// `encodeURIComponent(text)`
+pub fn encoded(s: &str) -> String { let mut out = String::new(); encode(s, &mut out); out }
+
+/// `decodeURIComponent(text)`: every `%` starts a whole sequence of good UTF-8, a `+` is a plus; None where the language throws
+pub fn decoded(s: &str) -> Option<String> {
+    let b = s.as_bytes();
+    let hex = |c: u8| (c as char).to_digit(16).map(|d| d as u8);
+    let mut out: Vec<u8> = Vec::with_capacity(b.len());
+    let mut i = 0;
+    while i < b.len() {
+        if b[i] != b'%' { out.push(b[i]); i += 1; continue; }
+        out.push(hex(*b.get(i + 1)?)? * 16 + hex(*b.get(i + 2)?)?);
+        i += 3;
+    }
+    String::from_utf8(out).ok()
+}
+
+/// the part of an address after its `?` (`text.replace(/^[^?]*\?/, '')`): all of it where it has none
+pub fn after_mark(s: &str) -> &str { s.split_once('?').map_or(s, |(_, q)| q) }
+
 /// one side of a word: `+` is a space, `%XX` a byte, the bytes read as UTF-8 (a broken sequence becomes U+FFFD, a `%` with no two hex digits stays)
 fn decode(s: &str) -> String {
     let b = s.as_bytes();
@@ -95,6 +115,14 @@ mod tests {
         q.set("levelFile", "the pass.json");
         assert_eq!(q.bare(), "?quiet&squad=2&weather=rain&levelFile=the%20pass.json");
         assert_eq!(Query::parse("").bare(), "");
+    }
+    /// what the language's `decodeURIComponent` and `encodeURIComponent` answer
+    #[test]
+    fn decodes_and_encodes_a_side_as_the_language_does() {
+        assert_eq!(decoded("a+b%20c%C3%A9").as_deref(), Some("a+b c\u{e9}"));
+        assert_eq!((decoded("100%"), decoded("%zz"), decoded("%C3"), decoded("%4")), (None, None, None, None));
+        assert_eq!(encoded("a b+c/\u{e9}-_.!~*'()"), "a%20b%2Bc%2F%C3%A9-_.!~*'()");
+        assert_eq!((after_mark("/x?a?b"), after_mark("a=1")), ("a?b", "a=1"));
     }
     /// a word read as a number is the language's reading of it (js.rs), and a name that is not there is no number
     #[test]
