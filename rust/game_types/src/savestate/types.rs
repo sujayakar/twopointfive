@@ -580,36 +580,6 @@ impl GuardSnap {
 }
 impl Default for GuardSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum GuardSnapWoundZone {
-    Side,
-    Leg,
-}
-impl GuardSnapWoundZone {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GuardSnapWoundZone::Side => "side",
-            GuardSnapWoundZone::Leg => "leg",
-        }
-    }
-}
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum GuardSnapWoundPose {
-    Knee,
-    Back,
-}
-impl GuardSnapWoundPose {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GuardSnapWoundPose::Knee => "knee",
-            GuardSnapWoundPose::Back => "back",
-        }
-    }
-}
-
 /// (TypeScript: inline at src/game/savestate.ts:210 GuardSnap.bodyDuty, src/game/savestate.ts:210)
 #[derive(Clone, Copy, Debug)]
 pub struct GuardSnapBodyDuty {
