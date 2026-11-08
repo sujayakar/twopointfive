@@ -146,9 +146,9 @@ export const roomclearStage = guarded(async () => {
   verdict(1 + g.guards.length === 8 && steady(W) <= MAX_LIGHTS, 'inside the budgets: eight characters all told, the steady lights under the buffer', `characters ${1 + g.guards.length}/8 · steady lights ${steady(W)}/${MAX_LIGHTS} (night ${R.before.steady})`);
   const pl = g.player;
   verdict(dist(pl.char.pos, NIGHTBREACH.samAt) < 0.3 && pl.slot === 'rifle' && !pl.holstered && !pl.down, 'Sam beside the pair with the rifle up', `Sam @${pl.char.pos.map(f2)} ${pl.slot}`);
-  const op = g.objectivePos(), br = STRUCTURE.rooms[0].bounds;
-  verdict(g.view.mission?.of === 'roomclear' && /clear the structure/.test(g.objectiveText()) && STRUCTURE.rooms.every((r: any) => g.objectiveText().includes(r.name)) && !g.objectiveText().includes('✓') && !!op && dist(op, [(br.x0 + br.x1) / 2, 0, (br.z0 + br.z1) / 2]) < 0.01,
-    'the HUD\'s objective is the structure\'s: every room named, none ticked, the marker on the first room still held (not the mission\'s server door)', `'${g.objectiveText()}' · marker ${op?.map(f2)}`);
+  const op = (g.view.mission?.pos ?? null), br = STRUCTURE.rooms[0].bounds;
+  verdict(g.view.mission?.of === 'roomclear' && /clear the structure/.test((g.view.mission?.text ?? '')) && STRUCTURE.rooms.every((r: any) => (g.view.mission?.text ?? '').includes(r.name)) && !(g.view.mission?.text ?? '').includes('✓') && !!op && dist(op, [(br.x0 + br.x1) / 2, 0, (br.z0 + br.z1) / 2]) < 0.01,
+    'the HUD\'s objective is the structure\'s: every room named, none ticked, the marker on the first room still held (not the mission\'s server door)', `'${(g.view.mission?.text ?? '')}' · marker ${op?.map(f2)}`);
   R.step(60 * 6);
   const still = NB.hostiles.every((h: any, i: number) => dist(h.char.pos, want[i].pos) < 0.05) && NB.ops.every((o: any, i: number) => dist(o.char.pos, P.from[i]) < 0.3);
   const shoved = g.props.props.filter((p: any) => STRUCTURE.rooms.some((r: any) => p.home[0] > r.bounds.x0 && p.home[0] < r.bounds.x1 && p.home[1] > r.bounds.z0 && p.home[1] < r.bounds.z1) && Math.hypot(p.x - p.home[0], p.z - p.home[1]) > 0.02);
@@ -166,7 +166,7 @@ export const roomclearRooms = guarded(async () => {
     R.drop('storage', 1, true);
     verdict(R.room('storage').cleared && R.cleared() === 'storage' && R.logged('cleared:storage') === 1 && Number.isFinite(R.room('storage').clearedAt) && RC.end === null, 'storage\'s one man struck, out cold: storage is clear (down is down), and it is the only one', `cleared ${R.cleared()} · at ${f2(R.room('storage').clearedAt)} · ${RC.summary()}`);
     R.step(45);   // (the dialogue pass: rooms that come clear together are called in ONE line, 0.6 s after the first — and a room nobody of the team stood in is 'nobody left in', not 'clear')
-    verdict(g.objectiveText().includes('✓ storage') && !g.objectiveText().includes('✓ break room') && g.messages.some((m: any) => /(?:storage clear|nobody left in storage) — 3 rooms to go/.test(m.text)), 'it is called on the HUD and ticked on the objective line', `'${g.objectiveText()}' · said: ${g.messages.map((m: any) => m.text).filter((t: string) => /clear/.test(t)).join(' | ')}`);
+    verdict((g.view.mission?.text ?? '').includes('✓ storage') && !(g.view.mission?.text ?? '').includes('✓ break room') && g.messages.some((m: any) => /(?:storage clear|nobody left in storage) — 3 rooms to go/.test(m.text)), 'it is called on the HUD and ticked on the objective line', `'${(g.view.mission?.text ?? '')}' · said: ${g.messages.map((m: any) => m.text).filter((t: string) => /clear/.test(t)).join(' | ')}`);
     // a living defender of another room standing in a cleared one holds it again (nobody walks today — they are pinned — so he is carried)
     const man = R.room('manager').defenders[0]; const home = [...man.char.pos]; man.char.pos = [33.0, 0, 7.0];
     R.step(2);
@@ -209,12 +209,12 @@ export const roomclearEnds = guarded(async () => {
     verdict(before === null && mid === null && RC.end === 'taken' && RC.state === 'taken' && R.logged('end:taken') === 1 && RC.rooms.every((r: any) => r.cleared) && Number.isFinite(RC.endAt) && up(NB.hostiles) === 0,
       '\'taken\' fires on the last defender and not one man sooner, with every room clear', `end ${before} → ${mid} → ${RC.end} at ${f2(RC.endAt)} (${RC.endWhy}) · ${RC.summary()}`);
     R.step(120);
-    verdict(R.logged('end:taken') === 1 && R.heard(/structure taken/) === 1 && /structure taken/.test(g.objectiveText()) && g.objectivePos() === null, 'once: the end is not announced again, the HUD says so and points nowhere', `'${g.objectiveText()}' · ends logged ${R.logged('end:taken')} · said ${R.heard(/structure taken/)}×`);
+    verdict(R.logged('end:taken') === 1 && R.heard(/structure taken/) === 1 && /structure taken/.test((g.view.mission?.text ?? '')) && (g.view.mission?.pos ?? null) === null, 'once: the end is not announced again, the HUD says so and points nowhere', `'${(g.view.mission?.text ?? '')}' · ends logged ${R.logged('end:taken')} · said ${R.heard(/structure taken/)}×`);
     // the stealth mission underneath stands still: Sam in the server room pulls no objective, and out past the fire exit completes nothing
     const M = g.level.mission, stage0 = g.mission.stage;
     g.teleportPlayer([(M.serverRoom.x0 + M.serverRoom.x1) / 2, 0, (M.serverRoom.z0 + M.serverRoom.z1) / 2]); R.step(30); const inServer = g.mission.stage;
     g.mission.stage = 'exfil'; g.teleportPlayer([M.exfilX + 0.6, 0, M.exfilZ]); R.step(30); const outside = g.mission.stage; g.mission.stage = stage0;
-    verdict(stage0 === 'infiltrate' && inServer === 'infiltrate' && outside === 'exfil' && !g.endCards && R.heard(/reached the server room|exfiltrated/) === 0 && /structure taken/.test(g.objectiveText()),
+    verdict(stage0 === 'infiltrate' && inServer === 'infiltrate' && outside === 'exfil' && !g.endCards && R.heard(/reached the server room|exfiltrated/) === 0 && /structure taken/.test((g.view.mission?.text ?? '')),
       'the stealth mission stands still under it: Sam in the server room starts no drive objective, and past the fire exit nothing is completed', `stage ${stage0} → in the server room ${inServer} · forced to exfil and stood outside: ${outside} · end cards ${g.endCards ?? 0}`);
   }
   { const R = await rig(11); const { game: g, RC, NB } = R; R.step(30);
@@ -225,8 +225,8 @@ export const roomclearEnds = guarded(async () => {
     verdict(g.player.down && RC.end === 'wiped' && RC.endWhy === 'player down' && R.logged('end:wiped') === 1 && up(NB.ops) === 2, '\'wiped\' fires when Sam goes down (the pair still up: the player\'s run is over)', `Sam down ${g.player.down} · end ${RC.end} (${RC.endWhy}) · pair ${up(NB.ops)}/2`);
     for (const id of ['server', 'manager', 'breakroom']) R.drop(id);
     R.step(30);
-    verdict(RC.end === 'wiped' && R.logged('end:taken') === 0 && RC.rooms.every((r: any) => r.cleared) && R.heard(/to go$/) === 1 && R.heard(/press Enter to restart$/) === 1 && /(team wiped|player down) — press enter to restart/.test(g.objectiveText()),
-      'and stays: the rooms emptied afterwards are counted clear but do not turn it into a win, and nothing more is called after the end', `end ${RC.end} · cleared ${R.cleared()} · room calls ${R.heard(/to go$/)} (storage, before he fell) · '${g.objectiveText()}'`);
+    verdict(RC.end === 'wiped' && R.logged('end:taken') === 0 && RC.rooms.every((r: any) => r.cleared) && R.heard(/to go$/) === 1 && R.heard(/press Enter to restart$/) === 1 && /(team wiped|player down) — press enter to restart/.test((g.view.mission?.text ?? '')),
+      'and stays: the rooms emptied afterwards are counted clear but do not turn it into a win, and nothing more is called after the end', `end ${RC.end} · cleared ${R.cleared()} · room calls ${R.heard(/to go$/)} (storage, before he fell) · '${(g.view.mission?.text ?? '')}'`);
   }
   { const R = await rig(11); const { game: g, RC, NB } = R; R.step(30);
     for (const o of NB.ops) killGuard(g, o, [1, 0, 0], false, 'shot', 'guard'); R.step(5);
@@ -241,7 +241,7 @@ export const roomclearEnds = guarded(async () => {
     for (const h of R.room('breakroom').defenders) killGuard(g, h, [1, 0, 0], false, 'shot', 'player');
     for (let i = 0; i < 4 && !g.player.down; i++) hitPlayer(g, [1, 0, 0]);
     R.step(2);
-    verdict(g.player.down && RC.end === 'wiped' && R.logged('end:taken') === 0 && RC.rooms.every((r: any) => r.cleared) && /(team wiped|player down) — press enter/.test(g.objectiveText()), 'the last defender and Sam down inside one frame is \'wiped\', not a win', `end ${RC.end} (${RC.endWhy}) · cleared ${R.cleared()} · '${g.objectiveText()}'`);
+    verdict(g.player.down && RC.end === 'wiped' && R.logged('end:taken') === 0 && RC.rooms.every((r: any) => r.cleared) && /(team wiped|player down) — press enter/.test((g.view.mission?.text ?? '')), 'the last defender and Sam down inside one frame is \'wiped\', not a win', `end ${RC.end} (${RC.endWhy}) · cleared ${R.cleared()} · '${(g.view.mission?.text ?? '')}'`);
   }
   { // the point man dropped on the stack with his number two still up: the drill's entry is off — said once, by this scenario
     const R = await rig(11); const { game: g, RC, NB } = R; R.step(60); R.press(); R.until(() => NB.state === 'set', 30);
@@ -261,17 +261,17 @@ export const roomclearEnds = guarded(async () => {
         R.step(2);
         const kill = on ? `${h.callsign} down` : 'guard down — dead', cut = `${on ? op.callsign : 'guard'}: man down.`;
         const end = on ? /^the mission is over\. press Enter to restart$/ : /^team wiped — player down\. press Enter to restart$/, obj = on ? /^player down — press enter to restart/ : /^team wiped — press enter to restart/;
-        verdict(R.said.includes(kill) && R.said.includes(cut) && R.heard(end) === 1 && obj.test(g.objectiveText()) && up(NB.ops) === 1 && RC.end === 'wiped' && RC.endWhy === 'player down',
+        verdict(R.said.includes(kill) && R.said.includes(cut) && R.heard(end) === 1 && obj.test((g.view.mission?.text ?? '')) && up(NB.ops) === 1 && RC.end === 'wiped' && RC.endWhy === 'player down',
           `the player's kill, a teammate's cut-off line and Sam down with a man still up read by name, and as what happened`,
-          `end ${RC.end} (${RC.endWhy}) · want '${kill}' · '${cut}' · ${end} · row ${obj} — said: ${R.said.slice(1).join(' | ')} · row '${g.objectiveText()}' · pair ${up(NB.ops)}/2`);
+          `end ${RC.end} (${RC.endWhy}) · want '${kill}' · '${cut}' · ${end} · row ${obj} — said: ${R.said.slice(1).join(' | ')} · row '${(g.view.mission?.text ?? '')}' · pair ${up(NB.ops)}/2`);
       }
       const R = await rig(11); const { game: g, RC, NB } = R; R.step(30);
       for (const op of NB.ops) killGuard(g, op, [1, 0, 0], false, 'shot', 'hostile');
       R.step(5);
       for (let i = 0; i < 4 && !g.player.down; i++) hitPlayer(g, [1, 0, 0]);
       R.step(2);
-      verdict(RC.end === 'wiped' && up(NB.ops) === 0 && R.heard(/^team wiped — player down\. press Enter to restart$/) === 1 && /^team wiped — press enter to restart/.test(g.objectiveText()),
-        'every teammate down and then Sam: that IS the team wiped, and it is called so', `end ${RC.end} (${RC.endWhy}) · pair ${up(NB.ops)}/2 · row '${g.objectiveText()}' · said: ${R.said.slice(-3).join(' | ')}`);
+      verdict(RC.end === 'wiped' && up(NB.ops) === 0 && R.heard(/^team wiped — player down\. press Enter to restart$/) === 1 && /^team wiped — press enter to restart/.test((g.view.mission?.text ?? '')),
+        'every teammate down and then Sam: that IS the team wiped, and it is called so', `end ${RC.end} (${RC.endWhy}) · pair ${up(NB.ops)}/2 · row '${(g.view.mission?.text ?? '')}' · said: ${R.said.slice(-3).join(' | ')}`);
     }
   }
   return done();
@@ -327,8 +327,8 @@ export const roomclearStop = guarded(async () => {
   const staff = g.guards.filter((x: any) => !x.unit);
   verdict(!RC.active && RC.state === 'off' && RC.rooms.length === 0 && RC.end === null && !NB.active && NB.layout === null && g.guards.length === R.before.guards && staff.length === R.before.guards && staff.every((x: any) => x.state === 'patrol' && g.engine.lights.lights.includes(x.flashlight)),
     'the cast is gone, the scenario and its layout are off, and the shift is back on the list, on patrol, torches in the light set', `${RC.summary()} · ${NB.summary()} · layout ${NB.layout} · guards ${g.guards.map((x: any) => `${x.callsign}:${x.state}`).join(' ')}`);
-  verdict(g.civilians.length === R.before.civilians && JSON.stringify(g.tune) === R.before.tune && steady(W) === R.before.steady && g.objectiveText() === R.before.objective,
-    'the civilians, Game.tune, the steady light count and the mission\'s objective line are as before', `civilians ${g.civilians.length}/${R.before.civilians} · tune ${JSON.stringify(g.tune) === R.before.tune ? 'untouched' : 'CHANGED'} · steady ${steady(W)}/${R.before.steady} · '${g.objectiveText()}'`);
+  verdict(g.civilians.length === R.before.civilians && JSON.stringify(g.tune) === R.before.tune && steady(W) === R.before.steady && (g.view.mission?.text ?? '') === R.before.objective,
+    'the civilians, Game.tune, the steady light count and the mission\'s objective line are as before', `civilians ${g.civilians.length}/${R.before.civilians} · tune ${JSON.stringify(g.tune) === R.before.tune ? 'untouched' : 'CHANGED'} · steady ${steady(W)}/${R.before.steady} · '${(g.view.mission?.text ?? '')}'`);
   const authoredDoors = g.doors.list.every((d: any) => d.locked === R.before.doors[d.def.name] && Math.abs(d.angle - d.sided(d.def.angle ?? 0)) < 0.02);
   let threw = ''; try { R.step(60 * 10); } catch (e) { threw = String(e); }
   verdict(authoredDoors && !threw && !R.bad && !g.player.down, 'the doors stand as the level has them, and the night floor runs on for ten seconds', `doors authored ${authoredDoors} · ${threw || 'no throw'}`);
@@ -337,9 +337,9 @@ export const roomclearStop = guarded(async () => {
   NB.stop(); R.step(2);
   verdict(RC.start() === null && NB.active && NB.hostiles.length === 5, 'and the room clear starts a second time', NB.summary());
   NB.stop(); R.step(2);
-  verdict(!RC.active && RC.state === 'off' && RC.rooms.length === 0 && NB.layout === null && g.guards.length === R.before.guards && g.objectiveText() === R.before.objective && R.heard(/^room clear off — /) === 2,
+  verdict(!RC.active && RC.state === 'off' && RC.rooms.length === 0 && NB.layout === null && g.guards.length === R.before.guards && (g.view.mission?.text ?? '') === R.before.objective && R.heard(/^room clear off — /) === 2,
     'the night breach\'s own stop under it ends this scenario too (and says which one went off)', `${RC.summary()} · guards ${g.guards.length} · said: ${R.said.filter((t: string) => / off — /.test(t)).join(' | ')}`);
-  { const M = g.level.mission; const door = g.doors.byName(M.entryDoor)?.frameCentre, pos0 = g.objectivePos();
+  { const M = g.level.mission; const door = g.doors.byName(M.entryDoor)?.frameCentre, pos0 = (g.view.mission?.pos ?? null);
     g.teleportPlayer([(M.serverRoom.x0 + M.serverRoom.x1) / 2, 0, (M.serverRoom.z0 + M.serverRoom.z1) / 2]); R.step(3);
     verdict(!!door && !!pos0 && dist(pos0, door) < 0.01 && g.mission.stage === 'drive', 'and off, the stealth mission is its own again: the marker on the server door, and Sam in the server room is given the drive', `marker ${pos0?.map(f2)} · stage ${g.mission.stage}`); }
   return done();

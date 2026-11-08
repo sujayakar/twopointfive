@@ -93,6 +93,7 @@ pub fn marks_view(g: &Game, seat: &crate::seats::SeatRef) -> MarksView {
         noise: me.noise,
         stalk,
         stalk_waits: crate::stalk::stalk_waits(g, seat),
+        floor: crate::floor::floor_heard(g, g.ch[me.ch].pos),
     }
 }
 

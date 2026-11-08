@@ -42,6 +42,7 @@
 // AFTER A SEEK the smoke in the air and the particles are not the recording's (they are stepped per drawn frame; a seek draws nothing): picture only.
 //
 // Nothing here is read by the game: no table, no knob, no state a step reads. The page without ?playtape never calls into this file past `tapeFromUrl`'s first line.
+import { drawHud } from '../host/hudsource';
 import type { ReplayFile, ReplayNote, RunTape, Decoded } from './format';
 import { reportWarning } from '../cloud/report';
 import { PLAYER_NAME, backToGame, checkReplay, clock, decode, isErrorMark, replayBlob, sampleAt, tapeWhy } from './format';
@@ -360,7 +361,7 @@ export class TapePlay {
     try { g.fogLift(this.nofog, tube, g.viewPx(cam, h.canvas));   // (the fog taken off the picture and its HUD, the infrared lines the viewer's tube shows or does not, and laser lines / tracers re-fit to THIS picture's pixel — the step sized them for the recording's view — for this draw only; Game.fogBack puts the step's own lists back)
       if (blent) { try { tw!.pose(a); L.render(cam, tPic, pdt, L.present()); } finally { tw!.unpose(); } }   // (the blend hangs on the drawn things for the render alone: the HUD below, and the next step, read the game's own)
       else L.render(cam, L.time, pdt, L.present());
-      L.hud?.update(g, cam, h.canvas); L.bubbles?.update(g, cam, h.canvas); }
+      drawHud(g, L, cam, h.canvas); }
     finally { g.fogBack(); cam.kickOut(); }
     this.mapDraw();
   }

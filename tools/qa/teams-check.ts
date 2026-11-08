@@ -37,7 +37,9 @@ const SE = await import(`${ROOT}/src/game/seats.ts`) as typeof import('../../src
 const F = await import(`${ROOT}/src/host/findme.ts`) as typeof import('../../src/host/findme.ts');
 const { findMeOutline } = await import(`${ROOT}/src/ui/findmeviz.ts`) as typeof import('../../src/ui/findmeviz.ts');
 const { makeOutlineFrame } = await import(`${ROOT}/src/render/outline.ts`) as typeof import('../../src/render/outline.ts');
-const PF = await import(`${ROOT}/src/ui/planfloor.ts`) as typeof import('../../src/ui/planfloor.ts');
+const PFU = await import(`${ROOT}/src/ui/planfloor.ts`) as typeof import('../../src/ui/planfloor.ts');
+const { hudSource } = await import(`${ROOT}/src/host/hudsource.ts`) as typeof import('../../src/host/hudsource.ts');
+const PF = { PlanFloor: PFU.PlanFloor, plansToDraw: (g: any) => PFU.plansToDraw(hudSource(g)) };
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`) as typeof import('../../src/game/doortools.ts');
 const FP = await import(`${ROOT}/src/game/floorplan.ts`) as typeof import('../../src/game/floorplan.ts'), { PLAN } = FP;
 
@@ -59,7 +61,7 @@ function drawn(g: any): { k: number; way: boolean }[] {
   G.document = { createElementNS: (_ns: string, tag: string) => fakeEl(tag), body: { classList: { contains: () => false } } };
   try {
     const svg = fakeEl('svg'), floor = new PF.PlanFloor(svg as never);
-    floor.update(g, { project: (p: number[], w: number, h: number) => [w / 2 + p[0] * 10, h / 2 + p[2] * 10, true] } as never, 800, 600);
+    floor.update(hudSource(g), g.view, { project: (p: number[], w: number, h: number) => [w / 2 + p[0] * 10, h / 2 + p[2] * 10, true] } as never, 800, 600);
     const shown = (e: FakeEl) => e.style.display === 'block';
     return svg.kids[0].kids.filter(e => e.tag === 'g' && shown(e) && e.kids.some(c => c.attrs.class?.startsWith('pm') && shown(c))).map(e => ({ k: Number(e.style.opacity), way: e.kids.some(c => c.attrs.class === 'pp' && shown(c) && !!c.attrs.d) }));
   } finally { G.document = had; }

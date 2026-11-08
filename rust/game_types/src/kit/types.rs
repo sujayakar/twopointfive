@@ -587,6 +587,8 @@ impl Default for KitModKept0 { fn default() -> Self { Self::zeroed() } }
 pub struct KitModManOfValue {
     pub i: f64,
     pub kit: crate::kit::MemberKit,
+    /// the card in a line, as he was staged with it: a HUD is told it each tick. Off the wire: a whole game read in says it again (`kit::kit_words_again`)
+    pub words: String,
 }
 impl KitModManOfValue {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -594,6 +596,7 @@ impl KitModManOfValue {
         KitModManOfValue {
             i: 0.0,
             kit: crate::kit::MemberKit::zeroed(),
+            words: String::new(),
         }
     }
 }

@@ -47,6 +47,7 @@ pub fn part_hashes(slot: usize) -> [u32; 13] {
 /// `Game.sim`, and the block is copied by bytes by whoever holds the slot: here. Answers the game and the lines for the log.
 pub fn start(state: &[u8], block: &[u8], slot: usize) -> (Box<game::game::Game>, Vec<String>) {
     let mut g = Box::new(game::io::import(state));
+    game::kit::kit_words_again(&mut g);
     let mut said: Vec<String> = Vec::new();
     sim::state::put(slot, block);
     // (the one way to say which of rust/sim's slots a game stands in: the game's own word and the box mirror's)
