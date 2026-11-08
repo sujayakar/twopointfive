@@ -947,7 +947,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
   in the module on BOTH sides, the same number of times and over its floor (`collision.ts SENSED` counts them: some hundred thousand eyes and lights a run, some thousand sounds, some hundred ways; the smoke has no
   floor a run, since not every run throws a canister, and a floor over the runs together), and `--both` no longer answers a sense twice (nothing else answers one). The game
   server's 600 ticks ask no smoke: the missions hold it.
-  A NEW SYSTEM GETS THE SAME THREE: a differential of its own on recorded inputs (`tools/cpu-frame/raycast-diff.ts` is that for the collision world), the
+  A NEW SYSTEM GETS THE SAME THREE: a differential of its own on recorded inputs, the
   missions with its row on and off, and the page.
   - **What holds a family once its TypeScript is gone** (`tools/qa/ident-pin.ts`; the animator's layers are its first user, `tools/qa/layer-ident.ts`;
     2026-11-05). With two languages a family's check ran every call both ways on the same input and compared. With one there is nothing to compare
