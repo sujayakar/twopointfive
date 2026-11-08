@@ -1,4 +1,4 @@
-// THE TUTORIAL'S BIG LINE STAYS CLEAR OF YOUR OWN MEN (ui/overlay.ts #railprompt; game/rails.ts lineMen, RAILS.lineClear). The line lies low in the middle
+// THE TUTORIAL'S BIG LINE STAYS CLEAR OF YOUR OWN MEN (ui/overlay.ts #railprompt; the view's `lesson.rails.lineMen`, RAILS.lineClear). The line lies low in the middle
 // of the screen, and with the view led up the screen (the aim on a man ahead), or in a short window, that is where the player and his partner stand: the
 // plate lay over both. So the line has TWO places and no more — where it lies, and the bottom edge of the picture just under that. While a man of yours is
 // under where it lies and the bottom edge is clear of them all, it is at the bottom edge (the radio's rows, which live there, go up over it: index.html
