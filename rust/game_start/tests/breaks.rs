@@ -45,14 +45,14 @@ fn pieces(p: &Play) -> Vec<Bx> {
     use game::break_table::Mat;
     let mut out: Vec<Bx> = p.g.destr.debris.list.iter().map(|&c| &p.g.tab.debris_chunk[c])
         .filter(|c| matches!(c.mat.map(|m| m.mat), Some(Mat::Plasterboard | Mat::Blockwork)))
-        .map(|c| p.g.tab.boxes[c.box_].clone()).collect();
-    out.extend(p.g.destr.edge_look.rubble.iter().map(|r| p.g.tab.boxes[r.box_].clone()));
+        .map(|c| p.g.tab[c.box_].clone()).collect();
+    out.extend(p.g.destr.edge_look.rubble.iter().map(|r| p.g.tab.frame_boxes[r.box_].clone()));
     out
 }
 /// everything at rest on the floor that a blast threw or shed, whatever it was
 fn lying(p: &Play) -> Vec<Bx> {
-    let mut out: Vec<Bx> = p.g.destr.debris.list.iter().map(|&c| &p.g.tab.debris_chunk[c]).filter(|c| c.rest).map(|c| p.g.tab.boxes[c.box_].clone()).collect();
-    out.extend(p.g.destr.edge_look.rubble.iter().map(|r| p.g.tab.boxes[r.box_].clone()));
+    let mut out: Vec<Bx> = p.g.destr.debris.list.iter().map(|&c| &p.g.tab.debris_chunk[c]).filter(|c| c.rest).map(|c| p.g.tab[c.box_].clone()).collect();
+    out.extend(p.g.destr.edge_look.rubble.iter().map(|r| p.g.tab.frame_boxes[r.box_].clone()));
     out
 }
 /// how much whiter than `paint` a colour is: its mean, less the paint's
@@ -78,7 +78,7 @@ fn a_mud_wall_goes_off_as_mud() {
         // what still stands round the hole: mud too, and no steel in it
         for rows in p.g.destr.edge_look.decor.values() {
             for &b in rows.iter() {
-                let x = &p.g.tab.boxes[b];
+                let x = &p.g.tab.frame_boxes[b];
                 assert!(whiter(x.albedo, paint) < 0.02, "seed {s}: the hole's edge shows {:?}, whiter than the wall's mud {paint:?}", x.albedo);
             }
         }
@@ -175,7 +175,7 @@ fn pieces_lie_on_each_other_not_through_each_other() {
         let (mut p, c) = bunk_room(s);
         game::wallcharge::wall_charge_blow(&mut p.g, Some(c), Some(true));
         p.run(8.0);
-        let rest: Vec<Bx> = p.g.destr.debris.list.iter().map(|&c| &p.g.tab.debris_chunk[c]).filter(|c| c.rest).map(|c| p.g.tab.boxes[c.box_].clone()).collect();
+        let rest: Vec<Bx> = p.g.destr.debris.list.iter().map(|&c| &p.g.tab.debris_chunk[c]).filter(|c| c.rest).map(|c| p.g.tab[c.box_].clone()).collect();
         assert!(rest.len() >= 10, "seed {s}: only {} pieces lie at rest", rest.len());
         let span = |b: &Bx| { let q = b.rot.unwrap_or_else(|| game::v3::quat::yaw(b.yaw)); let up = |a: [f64; 3]| game::v3::quat::rotate(q, a)[1].abs(); up([b.h[0], 0.0, 0.0]) + up([0.0, b.h[1], 0.0]) + up([0.0, 0.0, b.h[2]]) };
         let mut through = Vec::new();
