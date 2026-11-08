@@ -227,28 +227,10 @@ export class Qrf {
   }
 }
 
-// ================================================================ knobs kept per machine
-const TUNE_KEY = 'twopointsix.qrf';
-/** `?qrfsquad=0` on the page's address: the element's own drill for this visit — over the machine's memory of the row, and never written into it */
+// ================================================================ the address
+/** `?qrfsquad=0` on the page's address: the element's own drill for this visit */
+export function qrfAddressWord(g: Game) { if (ownDrillAsked()) g.tune.qrfSquad = false; }
 function ownDrillAsked(): boolean { try { const q = (globalThis as { location?: { search?: string } }).location?.search; return !!q && /[?&]qrfsquad=(0|off|false)\b/i.test(q); } catch { return false; } }
-function storedTune(): Record<string, unknown> | null { try { const raw = localStorage.getItem(TUNE_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; } }   // (null: no storage (the harness), nothing kept, or junk in it)
-export function loadQrfTune(g: Game) {
-  const o = storedTune() as { [k: string]: any } | null, T = g.tune;
-  if (o) {
-    if (typeof o.qrf === 'boolean') T.qrf = o.qrf; if (typeof o.perimeter === 'boolean') T.perimeter = o.perimeter; if (typeof o.qrfSilent === 'boolean') T.qrfSilent = o.qrfSilent; if (typeof o.qrfSquad === 'boolean') T.qrfSquad = o.qrfSquad;
-    if (Number.isFinite(o.qrfEta)) T.qrfEta = clamp(o.qrfEta, 15, 240); if (Number.isFinite(o.perimeterEta)) T.perimeterEta = clamp(o.perimeterEta, 10, 180);
-    if (Number.isFinite(o.qrfSize)) T.qrfSize = clamp(Math.round(o.qrfSize), 2, 4); if (Number.isFinite(o.perimeterSize)) T.perimeterSize = clamp(Math.round(o.perimeterSize), 2, 4);
-  }
-  if (ownDrillAsked()) T.qrfSquad = false;
-}
-export function saveQrfTune(g: Game) {
-  const T = g.tune, kept = storedTune()?.qrfSquad, qrfSquad = ownDrillAsked() ? (typeof kept === 'boolean' ? kept : QRF_TUNE_DEFAULTS.qrfSquad) : T.qrfSquad;   // (under the address's word the row's memory stays as it was)
-  try { localStorage.setItem(TUNE_KEY, JSON.stringify({ qrf: T.qrf, qrfEta: T.qrfEta, qrfSize: T.qrfSize, perimeter: T.perimeter, perimeterEta: T.perimeterEta, perimeterSize: T.perimeterSize, qrfSilent: T.qrfSilent, qrfSquad })); } catch { /* */ }
-}
-/** the knobs back to what game.ts's tune ships (its literal — keep the two in step) and the machine's memory of them dropped, like every other module's 'defaults' (whistle / needs / tactics …);
- *  for a Tab ▸ Sandbox 'QRF ▸ defaults' button and the console */
-export const QRF_TUNE_DEFAULTS = { qrf: true, qrfEta: 75, qrfSize: 4, perimeter: true, perimeterEta: 45, perimeterSize: 2, qrfSilent: true, qrfSquad: true } as const;
-
 // ================================================================ small shared helpers
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 function note(Q: Qrf, g: Game, what: string) { Q.log.push({ t: g.time, what }); if (Q.log.length > 200) Q.log.splice(0, 50); }

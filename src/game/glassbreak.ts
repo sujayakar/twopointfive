@@ -53,7 +53,7 @@ import { SHARD } from './shardModel';
 import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 export type GlassType = 'annealed' | 'tempered' | 'laminated';
-/** the knobs (Tab ▸ Destruction ▸ Glass edits breakE / hangArea / blastM live; kept per machine by saveGlassBreak) */
+/** the knobs */
 export const GLASSBREAK = {
   maxSites: GP_MAX_SITES,
   /** energy (1 = one pistol round square on) a pane takes before it gives: annealed = its radials RUN to the frame (daggers, the support rule); tempered = it dices */
@@ -121,25 +121,7 @@ export const GLASSREAL = {
 };
 export const GLASSBREAK_DEFAULTS = { breakE: { ...GLASSBREAK.breakE }, hangArea: GLASSBREAK.hangArea, blastM: GLASSBREAK.blastM, blastRunK: GLASSBREAK.blastRunK, blastDiceK: GLASSBREAK.blastDiceK, blastSheetK: GLASSBREAK.blastSheetK, rakeOpen: GLASSBREAK.rakeOpen };
 /** the tuning rounds' knobs the panel keeps beside the first four (each 0‥1) */
-const GB_KEPT = ['blastRunK', 'blastDiceK', 'blastSheetK', 'rakeOpen'] as const;
-const LS_KEY = 'twopointsix.glassfracture.on', LS_KNOBS = 'twopointsix.glassfracture';   // (the knobs under their own key: the first model's failHits / dropSupport kept on a machine mean nothing here)
 type GbTune = { glassBreak?: boolean };
-/** the persisted switch alone (main.ts reads it BEFORE the Engine builds a pipeline, to raise the prelude const) */
-export function glassBreakPersisted(): boolean { try { const raw = localStorage.getItem(LS_KEY); if (!raw) return true; return JSON.parse(raw)?.on !== false; } catch { return true; } }   // (ON unless this machine said off — under a key of its own: 'twopointsix.glassbreak' holds choices made while off was the default)
-/** Game constructor: the switch + knobs kept per machine */
-export function loadGlassBreak(tune: GbTune) {
-  try { const raw = localStorage.getItem(LS_KEY); if (raw) { const o = JSON.parse(raw); if (typeof o.on === 'boolean') tune.glassBreak = o.on; } } catch { /* no storage / bad JSON: defaults */ }
-  try {
-    const raw = localStorage.getItem(LS_KNOBS); if (!raw) return; const o = JSON.parse(raw); const num = (x: unknown): x is number => typeof x === 'number' && isFinite(x);
-    if (o.breakE) for (const k of ['annealed', 'tempered'] as const) if (num(o.breakE[k])) GLASSBREAK.breakE[k] = Math.max(0.25, Math.min(20, o.breakE[k]));
-    if (num(o.hangArea)) GLASSBREAK.hangArea = Math.max(0, Math.min(1, o.hangArea));
-    if (num(o.blastM)) GLASSBREAK.blastM = Math.max(0, Math.min(6, o.blastM));
-    for (const k of GB_KEPT) if (num(o[k])) GLASSBREAK[k] = Math.max(0, Math.min(1, o[k]));
-  } catch { /* */ }
-}
-export function saveGlassBreak(g: Game) {
-  try { localStorage.setItem(LS_KEY, JSON.stringify({ on: !!(g.tune as GbTune).glassBreak })); localStorage.setItem(LS_KNOBS, JSON.stringify({ breakE: { ...GLASSBREAK.breakE }, hangArea: GLASSBREAK.hangArea, blastM: GLASSBREAK.blastM, blastRunK: GLASSBREAK.blastRunK, blastDiceK: GLASSBREAK.blastDiceK, blastSheetK: GLASSBREAK.blastSheetK, rakeOpen: GLASSBREAK.rakeOpen })); } catch { /* */ }
-}
 /** the one gate every entry point takes first: the switch on AND destruction's contract (chaos 0 / the tour = the game byte for byte) */
 export function glassBreakLive(g: Game): boolean { return GLASSFX.on && !!(g.tune as GbTune).glassBreak && chaosOf(g) > 0 && g.engine.glassFracture !== false; }   // (a host whose renderer has no port of the per-piece rule — the native engine today — says glassFracture false: the model stays inert there rather than open holes the picture does not show)
 

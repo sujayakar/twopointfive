@@ -34,7 +34,7 @@ import { SAMESTART } from './samestart';   // (a leaf)
 import { spawnUnit } from './guards';
 import { order } from './squad';
 import { kitStage } from './kit';
-import { PAIRUP, PAIR_HELD, pairUpApply } from './pairup';
+import { PAIRUP, pairUpApply } from './pairup';
 import { PAIR } from './pairorders';
 import { SNEAK } from './sneak';
 import { SPOTTED } from './spotted';
@@ -115,8 +115,8 @@ export class QuietMission {
     this.data = g.level.scenarios!.quiet!; this.pin = pin; this.squad = squad; this.failure = null; this.staged = 0; this.log.length = 0;
     this.authored = { spawn: g.level.playerSpawn, mission: g.level.mission };
     this.current();
-    if (squad) {   // the pair rules and the silent posture, for this run (put back by release; the pair's stored row keeps its own word while held — pairup.ts PAIR_HELD)
-      this.was = heldNow(); PAIR_HELD.row = PAIRUP.on; holder = this;
+    if (squad) {   // the pair rules and the silent posture, for this run (put back by release)
+      this.was = heldNow(); holder = this;
       PAIRUP.on = true; pairUpApply();   // (the switch's own road to its three parts: this visit's word against one of them — `?sneak=0`, SNEAK=off — stands, as under the switch anywhere else)
       SILENT.on = true; SILENT.start = true;
       this.mine = heldNow();
@@ -148,7 +148,7 @@ export class QuietMission {
   /** THE RUN IS OVER: the module switches it took, put back as they stood before it — each one only while it still stands as the run wrote it (a row moved by
    *  hand during the run, on the panel, is the player's word and stays where he put it). */
   release() {
-    if (this.was && this.mine) { const W = this.was, M = this.mine, N = heldNow(), out = { ...N }; for (const k of Object.keys(W) as (keyof Held)[]) if (N[k] === M[k]) out[k] = W[k]; heldSet(out); staffVsOperatives(false); PAIR_HELD.row = null; }
+    if (this.was && this.mine) { const W = this.was, M = this.mine, N = heldNow(), out = { ...N }; for (const k of Object.keys(W) as (keyof Held)[]) if (N[k] === M[k]) out[k] = W[k]; heldSet(out); staffVsOperatives(false); }
     this.was = this.mine = null;
     if (holder === this) holder = null;
   }
@@ -156,8 +156,8 @@ export class QuietMission {
    *  as they stood before it — kept as it had them, for when that Game next runs — and this Game's own run, if it has one up, takes them again. */
   current() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('QuietMission.current', this, []); if (__r !== RUST_PASS) return __r as any; } }
     if (holder === this) return;
-    if (holder) { const H = holder; if (H.was) { H.mine = heldNow(); heldSet(H.was); H.was = null; staffVsOperatives(false); PAIR_HELD.row = null; } holder = null; }
-    if (this.active && this.squad && this.mine) { this.was = heldNow(); PAIR_HELD.row = PAIRUP.on; heldSet(this.mine); staffVsOperatives(true); holder = this; }
+    if (holder) { const H = holder; if (H.was) { H.mine = heldNow(); heldSet(H.was); H.was = null; staffVsOperatives(false); } holder = null; }
+    if (this.active && this.squad && this.mine) { this.was = heldNow(); heldSet(this.mine); staffVsOperatives(true); holder = this; }
   }
   /** deal afresh on the same run (the panel; the probes) */
   restage() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('QuietMission.restage', this, []); if (__r !== RUST_PASS) return __r as any; } } if (this.active) this.g.restartEncounter(); }

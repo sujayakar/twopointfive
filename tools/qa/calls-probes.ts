@@ -5,14 +5,14 @@
 // calls-leave and calls-held walked the threshold's page behind X, 5, 4 and its held page with a row switch flicked (the page has neither: 'clear from
 // outside' is one plain order on the tools' row 4), and calls-rally asked ROOMFIGHT.rallyK on a floor stood as one pool (the page deals every floor into
 // squads). PASS / FAIL each, all headless. No picture here.
-//   calls-shipped   every call of the list ships at its pick, and is a key the Team feel panel keeps
+//   calls-shipped   every call of the list ships at its pick
 //   calls-lastseen  FOG.lastSeen turned up to 4: an enemy seen and then lost keeps a mark where he was last seen, ageing, gone after 4 s, never while he
 //                   is in sight. What decides the mark while the row is 0 is the 'you're told' lever: tools/qa/told-check.ts
 import { ROOT } from './headless.ts';
 import { stage, quiet, guarded, family } from './thresholdmenu-probes.ts';
 const { FOG } = await import(`${ROOT}/src/game/fogofwar.ts`);
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
-const { feelRange, feelDefaults } = await import(`${ROOT}/src/game/teamfeel.ts`);
+const { knobRegistry } = await import(`${ROOT}/src/game/knobs.ts`);
 
 const scn = (id: string) => SCENARIOS.find((e: any) => e.id === id);
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
@@ -29,10 +29,10 @@ const SHIPPED: [string, string, unknown, string][] = [
 
 // ---------------------------------------------------------------- every call ships at its pick
 export const callsShipped = guarded(async () => {
-  const { verdict, done } = family('calls-shipped: every call taken ships at its pick and is kept per machine');
-  const D = feelDefaults() as Record<string, Record<string, unknown>>;
-  for (const [t, k, want, other] of SHIPPED) { const got = D[t]?.[k], range = feelRange(t, k);
-    verdict(got === want && range !== undefined, `${t}.${k} ships ${JSON.stringify(want)} and is kept per machine`, `shipped ${JSON.stringify(got)} · ${range === undefined ? 'NOT KEPT (teamfeel.ts)' : range === null ? 'a switch' : `a slider ${JSON.stringify(range)}`} · the other side — ${other}`); }
+  const { verdict, done } = family('calls-shipped: every call taken ships at its pick');
+  const D = knobRegistry() as Record<string, Record<string, unknown>>;
+  for (const [t, k, want, other] of SHIPPED) { const got = D[t]?.[k];
+    verdict(got === want, `${t}.${k} ships ${JSON.stringify(want)}`, `shipped ${JSON.stringify(got)} · the other side: ${other}`); }
   return done();
 });
 
