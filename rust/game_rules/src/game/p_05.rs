@@ -28,7 +28,7 @@ pub fn game_on_door_event(g: &mut crate::game::Game, e: crate::doors::DoorEvent)
             if e.level < 1.0 { audio_play_rate(g, "doorBash", e.pos, 0.6, 1.15); } else { audio_play(g, "doorBash", e.pos, 0.9); }
         }
         DoorSound::Rattle => audio_play(g, "doorRattle", e.pos, 0.35 + 2.0 * e.level),
-        DoorSound::Pick => { let rate = 0.9 + crate::math_dice::sim_random(g) * 0.25; audio_play_rate(g, "lockPick", e.pos, 0.5, rate); }
+        DoorSound::Pick => { let rate = 0.9 + crate::dice::draw_world(g, "game::game_on_door_event#1") * 0.25; audio_play_rate(g, "lockPick", e.pos, 0.5, rate); }
         DoorSound::Unlock => audio_play(g, "lockOpen", e.pos, 0.4 + 1.3 * e.level),
         DoorSound::Kick => {
             audio_play_rate(g, "doorBash", e.pos, 1.0, 0.9);
@@ -118,7 +118,7 @@ pub fn game_on_prop_event(g: &mut crate::game::Game, e: crate::props::PropEvent)
     }
     if let Some(pl) = crate::seats::man_by_id(g, e.who) { g.pl[pl].noise = m::max(g.pl[pl].noise, e.level); }
     let (thud_rate, scrape_rate) = { let t = &g.tab.props_prop[e.prop].tune; (t.thud_rate, t.scrape_rate) };
-    let jitter = 0.95 + crate::math_dice::sim_random(g) * 0.1;
+    let jitter = 0.95 + crate::dice::draw_world(g, "game::game_on_prop_event#1") * 0.1;
     if e.sound == PropEventSound::Thud {
         audio_play_rate(g, "propThud", e.pos, v3::clamp(0.35 + 0.15 * e.speed, 0.3, 1.0), thud_rate * jitter);
         crate::destruction::destruction_thud(g, e.pos, Some(0.4 + 0.3 * e.speed), Some(e.who));
@@ -426,7 +426,6 @@ pub fn game_restart(g: &mut crate::game::Game, said: Option<&str>) {
 /// Restart the encounter: a fresh Player at the insertion point with full kit, fresh Guards on their routes, lights repaired, the level as authored.   (game.ts restartEncounter)
 pub fn game_restart_encounter(g: &mut crate::game::Game) {
     crate::math_dice::use_dice(g);
-    crate::sensors::sensors_own_reset(g);
     crate::quiet::quiet_mission_current(g);
     g.stats.cleanrestart.restarts += 1;
     g.stats.cleanrestart.lines += g.messages.len() as i32;
@@ -474,7 +473,7 @@ pub fn game_restart_encounter(g: &mut crate::game::Game) {
     game_clear_aftermath(g);
     crate::smoke_types::smoke_system_like_clear_all(g);
     crate::out_events::push_smoke_system_like_clear_all(g);   // (game.ts:1505: the host's solver hears it too)
-    if g.cpu_smoke.grid.is_some() { crate::sense::smoke_grid_renew(g); }
+    crate::sense::smoke_renew(g);
     g.engine.host_books = None;
     for &s in &seats {
         crate::seats::with_seat(g, s, &mut |g| { g.hover = None; g.interactables = Vec::new(); g.nearby = Vec::new(); g.act = None; });

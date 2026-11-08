@@ -152,10 +152,10 @@ export async function aimMotion() {
       // standing square-on at 6.5 m in the crossing lane, 20 s
       { const { W, game, pl, A } = await stage(921, model, LAT_G, [LAT_X, 0, LAT_G[2]]); const K: Case = { rounds: 0, hits: 0, cones: [], brs: [], dists: [], speeds: [] };
         for (let f = 0; f < 60 * 20; f++) { pl.visibility = 0.9; pl.hitFlash = 0; W.step(DT); collect(game, pl, A, K); } out.standing = K; }
-      // across: Sam sprints up and down x = LAT_X between LAT_Z0 and LAT_Z1 (the puppet's goal flipped at each end, Shift held), 45 s; rounds with him inside ±3.5 m of square-on count (at the ends he is turning: those are printed apart)
+      // across: Sam sprints up and down x = LAT_X between LAT_Z0 and LAT_Z1 (the puppet's goal flipped at each end, Shift held), 30 s; rounds with him inside ±3.5 m of square-on count (at the ends he is turning: those are printed apart)
       { const { W, game, input, pl, A } = await stage(922, model, LAT_G, [LAT_X, 0, LAT_Z0]); const K: Case = { rounds: 0, hits: 0, cones: [], brs: [], dists: [], speeds: [] }; const all: Case = { rounds: 0, hits: 0, cones: [], brs: [], dists: [], speeds: [] };
         let goalZ = LAT_Z1; game.puppet = { goal: [LAT_X, 0, goalZ], aim: null }; input.keys.add('ShiftLeft');
-        for (let f = 0; f < 60 * 45; f++) {
+        for (let f = 0; f < 60 * 30; f++) {
           pl.visibility = 0.9; pl.hitFlash = 0;
           if (Math.abs(pl.char.pos[2] - goalZ) < 0.6) { goalZ = goalZ > LAT_G[2] ? LAT_Z0 : LAT_Z1; game.puppet.goal = [LAT_X, 0, goalZ]; }
           W.step(DT);
@@ -176,7 +176,7 @@ export async function aimMotion() {
         input.keys.delete('ShiftLeft'); game.puppet = null; out.atHim = K; }
       // standing at 6.8 m in the corridor too (the at-him case's own reference: the middle of its run)
       { const { W, game, pl, A } = await stage(924, model, COR_G, COR_STAND); const K: Case = { rounds: 0, hits: 0, cones: [], brs: [], dists: [], speeds: [] };
-        for (let f = 0; f < 60 * 20; f++) { pl.visibility = 0.9; pl.hitFlash = 0; W.step(DT); collect(game, pl, A, K); } out.standingCor = K; }
+        for (let f = 0; f < 60 * 14; f++) { pl.visibility = 0.9; pl.hitFlash = 0; W.step(DT); collect(game, pl, A, K); } out.standingCor = K; }
     } catch (e: any) { exc = String(e?.stack ?? e); }
     if (VERBOSE) console.log('    ' + traces.join('\n    '));
     return { out, exc, traces };

@@ -14,8 +14,9 @@ import { clock, type KeptNote, type RunVerdict, type VerdictMan } from '../game/
 import { pipsEl } from './verdictPips';
 import { shownName } from '../host/names';
 
-/** a mission played by a squad (its end card is the men's): everything but the stealth game alone or as two */
-export function squadVerdict(V: RunVerdict): boolean { return V.kind !== null && V.kind !== 'quiet'; }
+/** a mission played by a squad (its end card is the men's): one of the squad's kinds. The stealth game is a quiet mission, alone or as two, and the plain night, whose
+ *  record names no kind (null, or not there at all: a record made here for the Rust game's has no word it was not given) */
+export function squadVerdict(V: RunVerdict): boolean { return V.kind === 'roomclear' || V.kind === 'rescue' || V.kind === 'nightbreach'; }
 /** Panels other goals put inside the end card, under the men's rows: each is called once per card with an empty box it may fill (leave it empty = nothing
  *  drawn). A panel that throws is dropped for that card. */
 export const verdictPanels: ((slot: HTMLElement, game: Game, V: RunVerdict) => void)[] = [];

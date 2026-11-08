@@ -312,16 +312,11 @@ pub fn quiet_mission_note(g: &mut crate::game::Game, s: &str) {
     if g.quiet.log.len() > 60 { g.quiet.log.drain(0..30); }
 }
 
-/// one deal. SAMESTART.on is settled on: a mission with no pin is the first of each list, with the three draws made all the same   (quiet.ts QuietMission.dealOne)
-pub fn quiet_mission_deal_one(g: &mut crate::game::Game, q: &crate::scene_scenarios::QuietData) -> crate::quiet::QuietDeal {
+/// one deal: the pinned seed's, and with no pin the first of each list   (quiet.ts QuietMission.dealOne)
+pub fn quiet_mission_deal_one(g: &crate::game::Game, q: &crate::scene_scenarios::QuietData) -> crate::quiet::QuietDeal {
     let sets = q.patrols.as_ref().map(|p| p.len());
     match g.quiet.pin {
-        None => {
-            crate::math_dice::sim_random(g);
-            crate::math_dice::sim_random(g);
-            crate::math_dice::sim_random(g);
-            crate::quiet::QuietDeal { start: 0.0, spot: 0.0, patrol: if sets.map_or(false, |n| n > 0) { 0.0 } else { -1.0 } }
-        }
+        None => crate::quiet::QuietDeal { start: 0.0, spot: 0.0, patrol: if sets.map_or(false, |n| n > 0) { 0.0 } else { -1.0 } },
         Some(pin) => pinned_deal(crate::math_dice::mulberry32(pin_seed(pin) as f64), q.starts.len(), q.spots.len(), sets),
     }
 }

@@ -59,7 +59,7 @@ function mkQuality(w: Win, preset: QualityName, auto: boolean, settings: Record<
   store.clear();
   const E = mkEngine(w, {}); const q: any = new Quality(E as never, { params: { rbIters: 4 } } as never);
   q.auto = auto; q.apply(preset); q.adaptive = true; q.climbAllowed = true; q.calib = { ...q.calib, done: true };
-  for (const k of ['renderScale', 'gatherThird', 'volQuarter', 'ladderClimb', 'capClimb', 'ladderPaced', 'ladderHeld', 'oneCacheGrid', 'taau', 'sharpDirect', 'rcHalfRate', 'maxInternalHeight']) if (k in settings) E.settings[k] = settings[k];
+  for (const k of ['renderScale', 'gatherThird', 'volQuarter', 'ladderClimb', 'ladderPaced', 'ladderHeld', 'oneCacheGrid', 'taau', 'sharpDirect', 'rcHalfRate', 'maxInternalHeight']) if (k in settings) E.settings[k] = settings[k];
   E.settings.ladderShed = settings.ladderShed === true;   // (SHARP SHED only where a machine or a take says so: every case and every take from before the switch runs the ladder as it was)
   if (shed0 && auto && E.settings.ladderShed && !E.settings.sharpDirect) q.shed = true;   // (a take begun with the shed standing, PerfDump.shedAtStart: the ladder knows sharp direct is its own to bring back)
   E.settings.ladderAim = aim; q.displayHzPin = hz; q.cooldown = 0; q.lastChange = '';

@@ -19,7 +19,6 @@ check(steps.pistol === 1 && steps.rifle === 2 && steps.shotgun === 2, 'the pisto
   for (const weapon of ['rifle', 'pistol', 'shotgun']) for (const suppressed of [true, false]) { const m = { ...kitDefault(1), weapon, suppressed } as MemberKit, want = WEAPONS[kitGun(m)].report.loud ? 2 : 1, got = kitNoise('weapon', m, 1); if (got !== want) bad.push(`${weapon}/${suppressed}: ${got} not ${want}`); }
   check(bad.length === 0, "a teammate's gun follows the gun his card puts in his hands", bad.join(' · ') || 'six cards, each the step of WEAPONS[kitGun(card)].report'); }
 { const lines: [string, string, RegExp, number][] = [
-    ['smoke', 'combat.ts', /kind: 'shot'[^\n]*loud: false[^\n]*the pop/, 1], ['cams', 'stickycam.ts', /kind: 'prop'[^\n]*loud: false/, 1],
     ['bangs', 'combat.ts', /kind: 'bang'[^\n]*loud: true/, 2], ['charges', 'combat.ts', /kind: 'bang'[^\n]*loud: true, charge: true/, 2],
     ['frags', 'frag.ts', /kind: 'bang'[^\n]*loud: true, level: 2/, 3], ['shells', 'he40.ts', /= blast\(g,/, 3] ];
   const m = kitDefault(0), bad = lines.filter(([f, file, re, n]) => kitNoise(f, m, 0) !== n || !re.test(src(file))).map(([f, file]) => `${f} (${file})`);

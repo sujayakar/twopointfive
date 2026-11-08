@@ -1,6 +1,6 @@
 // DIRECT-QUALITY bench (lane v3/direct-quality, docs/internal/direct-quality.md): the maintainer's 08-12 notes at HIGH — "odd glowing at contact points … the light from
 // muzzle flashes looks pretty noisy … weird light leaking in door frame … weird red wall leaking on sam … noise in flashing light in cubicle" — as five deterministic scenes,
-// plus the sharp path's SLIVER census / paint and the readbacks that attribute them. Dev only: on a `?paused&quality=<p>&mute` boot of THIS lane's server,
+// plus the sharp path's SLIVER census and the readbacks that attribute them. Dev only: on a `?paused&quality=<p>&mute` boot of THIS lane's server,
 //     await import('/qa/dq-scenes.js'); await __dq.boot(); await __dq.stage('S1'); await __dq.cap('tag')  …  __dq.res
 // Scenes (camera pinned VERBATIM through __stage, guards parked dark unless staged, phases zeroed, grain off, dice seeded, the flickering tube held steady unless the scene drives it):
 //   S1  DOOR FRAME — the storage door from the corridor at the follow camera's own framing (55°, 28° fov), the corridor panel east of it the one light: the leaf's edges, the
@@ -108,9 +108,9 @@
     for (let i = 0; i < w * h; i++) { for (let k = 0; k < 3; k++) { const v = (a.data[i * 4 + k] + b.data[i * 4 + k]) * ex / Math.PI; const t = v / (1 + v); out[i * 4 + k] = Math.round(255 * Math.pow(t, 1 / 2.2)); } out[i * 4 + 3] = 255; }
     return { w, h, data: out };
   }
-  /** capture the CURRENT frame under tag: whole frame (÷2), the scene's tiles ×3, the direct term's tiles ×3, the census; opts.paint = also a sliver-paint frame of the same tiles */
+  /** capture the CURRENT frame under tag: whole frame (÷2), the scene's tiles ×3, the direct term's tiles ×3, the census */
   async function cap(tag, name, o = {}) {
-    const sc = SCENES[name]; const { paint = true, dir = true, whole = true } = o;
+    const sc = SCENES[name]; const { dir = true, whole = true } = o;
     const shots = []; const fr = await readback();
     if (whole) shots.push(await postFrame(`dq_${tag}_${name}_frame`, fr));
     const rects = {}; for (const [tn, [p, w, h]] of Object.entries(sc.tiles)) { const r = tileRect(p, w, h, fr); if (r) { rects[tn] = r; shots.push(await postCrop(`dq_${tag}_${name}_${tn}`, fr, r)); } }
@@ -118,11 +118,6 @@
     if (E().sharpOn) {
       census = await T.census();
       if (dir) { const d = await dirTerm(); if (d) for (const [tn, r] of Object.entries(rects)) shots.push(await postCrop(`dq_${tag}_${name}_${tn}_dir`, d, r)); }
-      if (paint) {
-        const d0 = S().sharpDiag; S().sharpDiag = 1; await window.__perf.render(1); const pf = await readback(); S().sharpDiag = d0;
-        for (const [tn, r] of Object.entries(rects)) shots.push(await postCrop(`dq_${tag}_${name}_${tn}_paint`, pf, r));
-        await window.__perf.render(2);   // (the paint frame entered the TAA history: two clean renders wash most of it out; re-settle before measuring)
-      }
     } else if (dir) { const d = await dirTermInternal(); const k = d.w / fr.w; for (const [tn, r] of Object.entries(rects)) shots.push(await postCrop(`dq_${tag}_${name}_${tn}_dirI`, d, { x: Math.floor(r.x * k), y: Math.floor(r.y * k), w: Math.floor(r.w * k), h: Math.floor(r.h * k) }, Math.round(3 / k))); }
     const out = { tag, name, res: [E().width, E().height, E().outWidth, E().outHeight], sharpOn: E().sharpOn, knobs: window.__sharp?.knobs?.(), census, rects, shots };
     ((T.res[name] = T.res[name] || {}))[tag] = out;
@@ -360,7 +355,7 @@
     sharpOff:  { sharpDirect: false },                        // (the internal path: TAAU upscale of the internal composite)
     held0:     { heldRays: 0 }, held2: { heldRays: 2 }, held3: { heldRays: 3 }, held8: { heldRays: 8 },   // the hybrid's K alone (0 = the transient stratum as it was)
   };
-  const BASE_KEYS = ['sharpSliver', 'sharpSliverCap', 'sharpDiag', 'gbaaClamp', 'gbaa', 'sharpDecouple', 'sharpDirect', 'heldRays', 'restirHueSplit', 'meshShadows', 'taau', 'renderScale'];
+  const BASE_KEYS = ['sharpSliver', 'sharpSliverCap', 'gbaaClamp', 'gbaa', 'sharpDecouple', 'sharpDirect', 'heldRays', 'restirHueSplit', 'meshShadows', 'taau', 'renderScale'];
   let base = null;
   function apply(name, extra = {}) {
     const s = S(); if (!base) { base = {}; for (const k of BASE_KEYS) base[k] = s[k]; }

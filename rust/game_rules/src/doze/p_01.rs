@@ -148,7 +148,7 @@ pub fn walk_len(g: &mut crate::game::Game, from: &[f64], to: V3) -> f64 {
 pub fn seated(d: crate::doze::Doze) -> bool { d.phase == Phase::Down || d.phase == Phase::Asleep || d.phase == Phase::Work }
 /// a number drawn from [from, to] (doze.ts span)
 pub fn span(g: &mut crate::game::Game, who: crate::dice::Who, r: &[f64]) -> f64 {
-    r[0] + crate::math_dice::sim_random(g) * (r[1] - r[0])
+    r[0] + crate::dice::draw_for(g, "doze::span#1", who) * (r[1] - r[0])
 }
 /// a chair at a screen: the screen, and the place nearest the chair from which a man facing it has floor under him and it in his eye (doze.ts screenSeat)
 pub fn screen_seat(g: &mut crate::game::Game, gd: GuardId, p: PropId) -> Option<crate::doze::Seat> {
@@ -509,7 +509,7 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
                 { let said = g.m.doze.said.as_ref().unwrap();
                   for i in 0..n { if !said.contains(&(i as f64)) { left.push(i); } } }
                 let len = left.len() as f64;
-                let k = left[js::rem(m::floor(crate::math_dice::sim_random(g) * len), len) as usize];
+                let k = left[js::rem(m::floor(crate::dice::draw_of(g, "doze::doze_tick#1", gd) * len), len) as usize];
                 g.m.doze.said.as_mut().unwrap().push(k as f64);
                 let every = g.k.doze.say_every.clone();
                 let t = g.time;
@@ -553,7 +553,7 @@ pub fn face_light(g: &mut crate::game::Game, gd: GuardId, head: V3) -> f64 {
     let me = g.ch[g.gd[gd].ch].id;
     let team = g.gd[gd].team;
     let mut skip = move |g: &mut Game, owner: f64| -> bool { owner == me || own_side_owns(g, owner, team) };
-    let est = crate::guards::light_estimate_at(g, head, Some(&mut skip), Some(false), None, None, Some(crate::sim_lightshome::row_bit().screen));
+    let est = crate::guards::light_estimate_at(g, head, Some(&mut skip), Some(false), Some(crate::sim_lightshome::row_bit().screen));
     crate::game::game_visibility_of(g, est)
 }
 /// a man of this team carries the lamp with this owner (doze.ts:307, 314)

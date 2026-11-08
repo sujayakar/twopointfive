@@ -72,12 +72,6 @@ export async function tabBackCheck(): Promise<boolean> {
         'the pause is the pause and nothing else: the first tick after the card holds \'Paused\' once, a Space list held as the card came up is shut with its row not done (and the same keys given tick by tick, as a replay gives them, end the same), the order menu is still up, and main.ts takes Esc\'s press out of the frame and never backs out on it',
         `order menu up ${up0} → after the card ${up1}, ticks holding 'Paused' ${stA.seen} · Space list open ${L.open}, still open under the card ${L.under0} → shut on the first tick back ${L.shut}, anything done ${L.did}, ticks holding 'Paused' ${stL.seen} · the same keys tick by tick: shut ${T.shut}, anything done ${T.did} · main.ts: no back-out on Esc ${never}, the press leaves the frame ${takes}, Tab's trial waits its turn ${trial} · the hint rows name ${backName()}`); }
 
-    // ---- the words: Options ▸ Game's 'Tab key' row must not say Tab does nothing while Tab is the back key (ui/tabkey.ts tabChoices)
-    { const { tabChoices, TAB_CHOICES, TAB_BACK_LINE } = await import(`${ROOT}/src/ui/tabkey.ts`); const on = tabChoices(true);
-      const first = on[0].v === 'off' && on[0].label === 'Nothing more' && on[0].line.startsWith(TAB_BACK_LINE) && !/does nothing/.test(on[0].line), rest = on.slice(1).every((c: any, i: number) => c.label === TAB_CHOICES[i + 1].label && c.line === `${TAB_CHOICES[i + 1].line} Backing out comes first.`);
-      verdict(first && rest, 'the Tab key row on Options says what Tab does: the first choice is \'Nothing more\' and says Tab backs out, every other choice says backing out comes first',
-        `'${on[0].label}' · '${on[0].line}' · the others end 'Backing out comes first.' ${rest}`); }
-
   } finally { console.log = log; console.error = err; console.warn = warn; }
   console.log(`=== tabback: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;

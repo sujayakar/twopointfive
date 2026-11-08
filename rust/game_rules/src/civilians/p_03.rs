@@ -199,7 +199,6 @@ pub fn to_gone(g: &mut crate::game::Game, gd: GuardId, evac: bool) {
         let secs = g.k.civ.outside_call_secs;
         later(g, secs, &LaterP { kind: PendKind::OutsideCall, cv: gd, o: None, ..LaterP::zeroed() });
     }
-    forget_meter(g, gd);
     set_state(g, gd, CivState::Gone);
 }
 
@@ -479,7 +478,6 @@ pub fn civilian_down(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: boo
     if g.gd[gd].held.is_some() { g.gd[gd].held = None; g.ch[c].anim.held_pose = None; }
     g.ch[c].anim.act = None; g.cv[cid].target = None; g.cv[cid].report_to = None;
     crate::character::character_ragdollize(g, c, true, dir, quiet);
-    forget_meter(g, gd);
     let dead = how == DownKind::Shot;
     let hostage = crate::rescue::rescue_is_hostage(g, gd);
     let (name, label, her) = (g.cv[cid].name.clone(), g.cv[cid].label.clone(), g.cv[cid].her.clone());

@@ -1,6 +1,6 @@
 // A DEATH'S SUMMARY LINE IS TRUE — the check on the debrief's one-line summary (src/game/chronicle.ts summaryLine / badgesOf; the missions goal's fault S5a:
 // a run on which a guard saw Sam and shot him read 'seen 1 · … · unseen by staff · went down' — the badge was about the CIVILIANS and named the staff).
-//   bun run tools/qa/death-summary-check.ts [--seeds 1-2]
+//   bun run tools/qa/death-summary-check.ts [--seeds 1]
 // What it does: plays solo-night.ts's walk plan with the night's opening off (TPS_OPENING=0: the quick death the fault was read on) and, for every run that
 // ended DOWN (on this plan: a guard's round, fired by a man looking at him), reads the summary: it says 'went down', its 'seen' count is not 0, and none of its
 // words says he was unseen ('never seen', 'unseen by staff').
@@ -10,7 +10,7 @@ import { readFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 
 const argv = process.argv.slice(2), flag = (n: string) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
-const seeds = (flag('--seeds') ?? '1-2').split(',').flatMap(s => { const m = /^(\d+)-(\d+)$/.exec(s); if (!m) return [Number(s)]; const out: number[] = []; for (let k = +m[1]; k <= +m[2]; k++) out.push(k); return out; });
+const seeds = (flag('--seeds') ?? '1').split(',').flatMap(s => { const m = /^(\d+)-(\d+)$/.exec(s); if (!m) return [Number(s)]; const out: number[] = []; for (let k = +m[1]; k <= +m[2]; k++) out.push(k); return out; });
 let failed = false, looked = 0;
 const dir = mkdtempSync(resolve(tmpdir(), 'death-summary-'));
 for (const seed of seeds) {

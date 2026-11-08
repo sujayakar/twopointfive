@@ -330,10 +330,10 @@ export class Rescue {
     (S.guards ?? []).forEach((m, i) => cast.push({ role: 'guard', inRoom: true, mark: m, name: `Room guard ${i + 1}` }));   // (the level's own: more guns that never leave the room — in no crew, not the door man)
     if (S.cast) {   // THE LEVEL'S OWN CAST: so many of its roamer marks manned, which ones drawn here (a partial shuffle off the staging's dice — no room is known empty)
       const idx = MARKS.roamers.map((_, i) => i), n = Math.max(0, Math.min(idx.length, Math.round(S.cast.roamers)));
-      if (K.seedRoamers) for (let i = 0; i < n; i++) { const j = i + Math.floor(simRandom() * (idx.length - i)); if (!SAMESTART.on) [idx[i], idx[j]] = [idx[j], idx[i]]; }   // (seedRoamers off, or samestart.ts on: the first n marks, as written — the die is drawn either way, here and twice below, so a run with the switch on rolls the same stream as the run with it off)
+      if (K.seedRoamers && !SAMESTART.on) for (let i = 0; i < n; i++) { const j = i + Math.floor(simRandom() * (idx.length - i)); [idx[i], idx[j]] = [idx[j], idx[i]]; }   // (seedRoamers off, or samestart.ts on: the first n marks, as written, and nothing drawn, here and twice below)
       idx.slice(0, n).sort((a, b) => a - b).forEach((m, i) => cast.push({ role: 'roamer', inRoom: false, mark: MARKS.roamers[m], name: `Roamer ${i + 1}` }));
     } else {
-    const swap = K.seedRoamers && simRandom() < 0.5 && !SAMESTART.on ? 1 : 0;   // (a staging-time draw, like the clock's length below)
+    const swap = K.seedRoamers && !SAMESTART.on && simRandom() < 0.5 ? 1 : 0;   // (a staging-time draw, like the clock's length below)
     for (let i = 0; i < Math.max(0, Math.min(MARKS.roamers.length, Math.round(K.roamers))); i++) cast.push({ role: 'roamer', inRoom: false, mark: MARKS.roamers[(i + swap) % MARKS.roamers.length], name: `Roamer ${i + 1}` });
     }
     cast.forEach((c, k) => {
@@ -357,7 +357,7 @@ export class Rescue {
       const cd = defs[i];
       this.hostages.push(spawnHostage(g, { name: cd?.name ?? (['Marta', 'Owen', 'Ines'][i] ?? `Hostage ${i + 1}`), kind: cd?.kind ?? (i === 0 ? 'cleaner' : 'worker'), tint: cd?.tint ?? (i === 0 ? [0.3, 0.42, 0.5] : i === 1 ? [0.5, 0.48, 0.42] : [0.46, 0.33, 0.36]), tint2: cd?.tint2, pos: m.pos, face: m.face }));
     });
-    this.resolve = 0; this.resolveSecs = Math.max(5, K.resolveSecs + (simRandom() * 2 - 1) * (SAMESTART.on ? 0 : K.resolveSpread)); this.t0 = NaN;   // (samestart.ts on: the clock is the knob's to the second; else a staging-time draw, as every Guard's construction draws: nothing is drawn while it runs)
+    this.resolve = 0; this.resolveSecs = Math.max(5, K.resolveSecs + (SAMESTART.on ? 0 : (simRandom() * 2 - 1) * K.resolveSpread)); this.t0 = NaN;   // (samestart.ts on: the clock is the knob's to the second; else a staging-time draw, as every Guard's construction draws: nothing is drawn while it runs)
     this.doorOrders = 0; this.blindRounds = 0; this.result = null;
     this.act = null; this.capBy = null; this.executed.clear(); this.counted.clear(); this.securedAt = NaN; this.step = 'waiting'; this.barkAt = 0; this.noise = null; this.alarmAt = NaN; this.way = null; this.lastOrder = g.orders.log[g.orders.log.length - 1] ?? null;
     const pl = g.player;

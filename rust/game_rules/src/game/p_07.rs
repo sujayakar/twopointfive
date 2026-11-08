@@ -34,84 +34,32 @@ pub fn game_draw_men(g: &mut crate::game::Game, all: &[CharId], statured: bool, 
     crate::anim_characters::character_renderer_finish(g, 0.0);
 }
 
-/// the top of a step under SENSE.cpu (sense.ts): the game's own smoke put in front of the solver and taken away again, aged by this step   (game.ts senseStep)
-pub fn game_sense_step(g: &mut crate::game::Game, dt: f64) {
-    // (the tee on the solver is a test of g.smoke_owned where the smoke's calls are made: nothing to install or undo; a game's solver is never replaced, so no identity compare)
-    let on = g.k.sense.cpu;
-    if on != g.smoke_owned {
-        g.smoke_owned = on;
-        crate::sense::cpu_smoke_clear(g);
-        if g.cpu_smoke.grid.is_some() { crate::sense::smoke_grid_renew(g); }
-        crate::sensors::sensors_set_own(g, if on { Some(crate::sensors::SensorsOwn::CpuSmokeAlong) } else { None });
-    }
-    if !on { return; }
-    crate::sense::cpu_smoke_step(g, dt);
-    if g.cpu_smoke.grid.is_some() {
-        let (bounce, drift) = (g.k.sense.bounce, g.k.sense.drift);
-        let mut wind = |g: &mut Game| crate::wind::wind_storm_drift(g);
-        let wind: Option<&mut dyn FnMut(&mut Game) -> Option<crate::scene_collision::GridWind>> = if drift { Some(&mut wind) } else { None };
-        crate::sense::smoke_grid_step(g, dt, bounce, wind);   // (lamps: the skeleton's bool, the callee writes steadyLamps itself)
-    }
-}
-
-/// a seat's word on a sensor's key: its index, none for the first   (game.ts:2085, :2096)
-fn seat_key(g: &Game, s: SeatId) -> String {
-    let ix = g.tab.cmd_seat[s].index;
-    if js::truthy(ix) { alloc::format!("{}", ix) } else { String::new() }
-}
-
-/// the sensors' asks (Sam's meter, the guards' smoke sight lines) and Sam's visibility off the last answer   (game.ts lightMeter)
+/// what each guard's line to the man he faces has of smoke and weather on it, and how lit each seat's man is   (game.ts lightMeter)
 pub fn game_light_meter(g: &mut crate::game::Game, dt: f64) {
     use crate::character::Bone;
     let seats = g.seats.clone(); let one = seats.len() == 1;
-    for &s in seats.iter() {
-        let pl = crate::cmd::seat_man(g, s); let pc = g.pl[pl].ch; let k = seat_key(g, s);
-        let id = g.ch[pc].id;
-        let chest = bone_or(g, pc, Bone::Chest, 1.2);
-        crate::sensors::sensors_ask(g, &alloc::format!("playerChest{}", k), chest, Some(id));
-        let head = bone_or(g, pc, Bone::Head, 1.6);
-        crate::sensors::sensors_ask(g, &alloc::format!("playerHead{}", k), head, Some(id));
-    }
-    let tight = g.guards.len() > 8;
     let mut i = 0;
     while i < g.guards.len() {
-        let gd = g.guards[i]; let at = i; i += 1;
+        let gd = g.guards[i]; i += 1;
         if g.gd[gd].state == crate::game::GuardState::Dead { continue; }
         let pl = if one { g.player } else { let view = crate::seats::view_for(g, gd); crate::cmd::seat_man(g, view) };
         let pc = g.pl[pl].ch;
         let chest = bone_or(g, pc, Bone::Chest, 1.1);
         let eye = bone_or(g, g.gd[gd].ch, Bone::Head, 1.65);
-        let ask = !tight || crate::teams::hostile_to(g, gd, crate::teams::HostileToO::Player);
-        let seen = crate::sensors::sensors_segment(g, &alloc::format!("smoke{}", at), eye, chest, Some(ask)).unwrap_or(1.0);
-        let t = seen * crate::weather::air_trans(g, eye, chest);
-        g.gd[gd].smoke_trans = t;
+        g.gd[gd].smoke_trans = crate::sense::smoke_between(g, eye, chest) * crate::weather::air_trans(g, eye, chest);
     }
-    crate::fogofwar::fog_of_war_flush_asks(g);
-    for &s in seats.iter() { let k = seat_key(g, s); crate::seats::with_seat(g, s, &mut |g| game_meter_read(g, dt, &k)); }
+    for &s in seats.iter() { crate::seats::with_seat(g, s, &mut |g| game_meter_read(g, dt)); }
 }
 
-/// a seat's half of lightMeter, over its view: the player's visibility off the last answer to his two asks   (game.ts meterRead)
-pub fn game_meter_read(g: &mut crate::game::Game, dt: f64, k: &str) {
-    use crate::character::Bone;
-    let pl = g.player; let pc = g.pl[pl].ch;
-    let mut r1 = crate::sensors::sensors_read(g, &alloc::format!("playerChest{}", k));
-    let mut r2 = crate::sensors::sensors_read(g, &alloc::format!("playerHead{}", k));
-    if g.sensors.own.is_some() {
-        let p = bone_or(g, pc, Bone::Chest, 1.2); r1 = Some(crate::guards::light_estimate_at(g, p, None, None, None, None, None));
-        let p = bone_or(g, pc, Bone::Head, 1.6); r2 = Some(crate::guards::light_estimate_at(g, p, None, None, None, None, None));
-    }
-    if let (Some(a), Some(b)) = (r1, r2) {
-        if a.is_finite() && b.is_finite() {
-            let e = m::max(a, b); g.pl[pl].irradiance = e;
-            let to = game_visibility_of(g, e);
-            g.pl[pl].visibility = v3::damp(g.pl[pl].visibility, to, 6.0, dt);
-        }
-    }
-    if !g.pl[pl].visibility.is_finite() {
-        let ir = g.pl[pl].irradiance;
-        g.pl[pl].visibility = if ir.is_finite() { game_visibility_of(g, ir) } else { 0.0 };
-    }
-    if !g.pl[pl].irradiance.is_finite() { g.pl[pl].irradiance = 0.0; }
+/// a seat's half of lightMeter, over its view: the light on its man, eased into his visibility   (game.ts meterRead)
+pub fn game_meter_read(g: &mut crate::game::Game, dt: f64) {
+    let pl = g.player;
+    let [stands, e] = crate::guards::light_on(g, g.pl[pl].ch);
+    if !e.is_finite() { return; }
+    g.pl[pl].irradiance = stands;
+    let to = game_visibility_of(g, e);
+    let was = g.pl[pl].visibility;
+    g.pl[pl].visibility = if was.is_finite() { v3::damp(was, to, 6.0, dt) } else { to };
 }
 
 /// put the highlight on the row of `kind` (the one whose verb is `verb`, if given) in this frame's list; false if none is on offer   (game.ts selectVerb)

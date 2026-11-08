@@ -25,10 +25,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   delivered but never read are counted the same way. `beginFrame / endFrame` bracket Game.update (the recorder inside it; the replay tool around it); reads outside a
   frame are `strays`. `record` and `replay` lost their one recorder with F10 and stay until one way of sensing takes them. `applyKnobs` and `knobsSnapshot` stayed in `journal.ts` for the kept replay's recipe.
 - **The game's own die** (`src/math/dice.ts`; engine groundwork for two-player co-op, nothing networked): every roll of the simulation is `simRandom()`, never `Math.random()` —
-  `bun run tools/qa/dice-check.ts` is red on a `Math.random` in src/game outside journal.ts (which installs a recording's die) and civilians.ts `withDice`. A Game stood up with a seed
+  `bun run tools/qa/dice-check.ts` is red on a `Math.random` in src/game outside journal.ts (which installs a recording's die). A Game stood up with a seed
   (`standGame({ seed })`) OWNS a `SimDice` (`Game.dice`: one mulberry32 word `s`, the count `n`, the `seed`), made current by `useDice()` at stand-up, as `Game.update`'s first statement
   and in `restartEncounter`. THE ONE RULE: the own die is drawn only while `Math.random` is still the function it was when the die was made (`dice.sys`); anything that puts its own die
-  in Math.random's place — every harness tool's `Math.random = seeded(n)`, a recording's `simDie`, the capture recipes above, `withDice` — gets the game's dice from that moment exactly
+  in Math.random's place — every harness tool's `Math.random = seeded(n)`, a recording's `simDie`, the capture recipes above — gets the game's dice from that moment exactly
   as before, and the own die stands still until it is put back. THE PAGE seeds its game (`?seed=N` = that seed, no flag = a fresh one read back as `__game.dice.seed`, `?seed=off` = the
   game on Math.random as before); THE HARNESS does not (both stands: every frozen digest and tally was recorded on the tool's Math.random) unless `standUp({ seed })` / `TPS_SEED=n`.
   A checkpoint carries the die's position (`SaveState.dice`, only while the own die is in force) and a load puts it back, so on an own die continue ≡ load ≡ load into a fresh game
@@ -262,7 +262,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT DONE / NOT SEEN: node's V8 is not Chrome's build of it, and nobody has run this in Chrome, in Safari or on a Mac — the two-engine line is bun
   against node on one Linux machine; everything on the page (sound synthesis, the renderer's CPU side, the UI) also computes on these functions while
   the switch is on.
-- **The senses on the CPU** (`src/game/sense.ts`, switch `SENSE.cpu`; DEFAULT OFF on the page and on both stands — `?cpusense`, `TPS_CPUSENSE=1`; whether the
+- (HISTORY from here to the end of the bullet, and of the `Sensors` seam above: rust.md, ONE WAY OF SENSING, 2026-11-07.) **The senses on the CPU** (`src/game/sense.ts`, switch `SENSE.cpu`; DEFAULT OFF on the page and on both stands — `?cpusense`, `TPS_CPUSENSE=1`; whether the
   page plays on it is the maintainer's call; engine groundwork, nothing networked): off, the men see by the renderer's values through `Game.sensors` — a fight
   on the page is then its seed, its inputs AND a stream of GPU readbacks that land a drawn frame or two late (the run tape keeps them, so a tape re-runs; a
   machine with no GPU cannot play the fight afresh). On, nothing is asked of the probe: every LIGHT meter falls to the estimate it already had for 'no answer
@@ -674,3 +674,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   over 0.007 m off the trace (the trace's own rounding), and the same four files walked by `tools/qa/rerun.ts` to 0.01 m. ON THE GPU'S SENSES a page's tape
   parts (room clear: at step 1,174): the light probe's answers are on no tape, since the tick no longer reads them through `Sensors.read`. That is why the game page
   plays no tapes yet. Nobody has watched one; never seen on a GPU.
+- **Every draw is keyed (2026-11-08; `rust/game_types/src/dice.rs`, `dice::draw_of / draw_body / draw_def / draw_op / draw_for / draw_world`).** A draw is a fixed function of the game's seed, the SITE
+  that asks (`"<module>::<function>#<n>"`, a string in the code), the man it is about, the tick and how many times that site drew for him this tick. A MAN'S NUMBER IS HIS ID, never his row (`dice.rs man`; a squad's is off its
+  name): a row is where a machine keeps him, and the two hosts kept the same man in two. So a draw added, dropped or made in another order
+  moves no other draw, and a rule's tally shows the rule. The block's die is still stepped once a draw (its count witnesses how many draws a run made); its value is not used. WRITING ONE: name the site
+  by hand; a body that moves to another module KEEPS its string, or its values move. A helper that draws is handed its man (`dice::Who`). A draw whose value nothing reads keeps nothing: delete it.
+  THE OLD PAGE'S START ROLLS THE SAME (`src/math/dice.ts simDraw`, BigInt): a man's idle phase, his look clock and the mains' stagger, under the Rust sites' names; the civilians' private die
+  (`withDice`) is gone on both sides, since a draw moves no other. Held by `start-levels.ts` and by one word of a thousand draws in `dice.rs`'s test and `tools/qa/dice-check.ts`.
+  CHECK `python3 tools/blitz/sweeps/keyed-dice.py --check` and `dice-who.py --check` (0 each). It dealt every mission anew once: recordings from before it play other dice. MEASURED, before and after:
+  13 levels by six seeds, 75 s, native: floors cleared 34 and 37 of 78, squad men standing 117 and 128 of 312, first notice (median) 6.48 and 6.48 s; playthrough, god, seeds 1 and 2 on 21: wins 27 and
+  25, men up 77 and 64 of 148, hall and floodlit lost on both seeds. Those two with barracks and block-squads, the same code with either die, 24 seeds each (96 runs a die, native, 75 s): floors cleared 25
+  and 31, squad men standing 106 and 142 of 384, enemies left 267 and 257 of 864, ever alert 790 and 791, the first notice and alert to the hundredth or four, a squad man fell in 90 and 83 runs; hall 11
+  and 14 men up of 96, floodlit 31 and 42. So two seeds' losses were the seeds'. 50,000 draws of either die are flat in tenths. TWO MEN OF ONE NUMBER IN TWO LEVELS draw the same as they are made, at one
+  seed: the level is not in the key. Never played.

@@ -361,14 +361,10 @@ pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Res
     Ok(gd)
 }
 
-/// What of a unit lives outside his row: his weapon light, his meter keys.   (guards.ts releaseUnit)
+/// What of a unit lives outside his row: his weapon light.   (guards.ts releaseUnit)
 pub fn release_unit(g: &mut crate::game::Game, gd: GuardId) {
     let fl = g.gd[gd].flashlight;
     crate::render_lights::light_set_remove(g, fl);
-    let c = g.gd[gd].ch;
-    let id = g.ch[c].id;
-    crate::game::game_light_forget(g, &format!("unitC{}", id));
-    crate::game::game_light_forget(g, &format!("unitH{}", id));
 }
 
 /// Take a spawned man back out, and every hand on him. True if he was one.   (guards.ts despawnUnit)

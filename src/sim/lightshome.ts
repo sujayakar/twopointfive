@@ -11,6 +11,7 @@ import { sim, type SimExports } from './sim';
 import { simPart, simRoom, P_LIGHTS, type SimState } from './state';
 import type { Vec3 } from '../math/vec';
 import type { RtLight } from '../render/lights';
+import { lightClass } from '../render/photometry';
 import { RUST_PASS, RUST_SURFACE } from '../game/crossing';
 
 /** THE COLUMNS OF THE PART in rust/sim/src/lights.rs COLS' order. Where each stands is the module's word, read once. */
@@ -35,7 +36,9 @@ function columns(): void {
 }
 /** a fixture's truths (lights.rs T_*), a row's (R_*), a camera's (C_*), a tripwire's (L_*), the mains' (M_*) */
 const T = { on: 1, broken: 2, flicker: 4, mains: 8, hand: 16, authored: 32, emissive: 64 } as const;
-export const ROW_BIT = { on: 1, passing: 2, screen: 4, role: 24, own: 0, area: 8, beacon: 16, cone: 24, steady: 32 } as const;
+export const ROW_BIT = { on: 1, passing: 2, screen: 4, role: 24, own: 0, area: 8, beacon: 16, cone: 24, steady: 32, day: 7 << 6 } as const;
+/** what a lamp is beside an hour's light, in its row's bits (rust/sim light.rs DAY_…) */
+const DAY = ['none', 'fixture', 'hand', 'vehicle', 'flash', 'face'] as const, dayBits = (l: RtLight): number => DAY.indexOf(lightClass(l)) << 6;
 const CB = { sweep: 1, last: 2, saw: 4, dead: 8 } as const;
 const LB = { dead: 1, held: 2 } as const;
 export const MAINS = { active: 1, permanent: 2 } as const;
@@ -187,7 +190,7 @@ export class LightHome {
       if (r >= LIGHT_CAPS.rows) throw new Error(`a level of more than ${LIGHT_CAPS.rows} lamps on its fixtures got past game/levelfit.ts`);
       l.row = r; this.lamps.push(l);
       d[C.row_base + r] = W.base; w[C.row_target + r] = W.t.i;
-      w[C.row_bits + r] = W.role | (W.role === ROW_BIT.beacon ? ROW_BIT.passing : 0) | (W.role === ROW_BIT.area && W.t.group === 'monitors' ? ROW_BIT.screen : 0);
+      w[C.row_bits + r] = W.role | (W.role === ROW_BIT.beacon ? ROW_BIT.passing : 0) | (W.role === ROW_BIT.area && W.t.group === 'monitors' ? ROW_BIT.screen : 0) | dayBits(l);
       this.feed(l); r++;
     }
     w[C.rows] = r;
@@ -205,6 +208,7 @@ export class LightHome {
     d[C.dx + r] = l.dir[0]; d[C.dy + r] = l.dir[1]; d[C.dz + r] = l.dir[2]; d[C.outer + r] = l.outerDeg; d[C.inner + r] = l.innerDeg;
     d[C.r + r] = l.color[0]; d[C.g + r] = l.color[1]; d[C.b + r] = l.color[2]; d[C.intensity + r] = l.intensity;
     d[C.sx + r] = s ? s.pos[0] : 0; d[C.sy + r] = s ? s.pos[1] : 0; d[C.sz + r] = s ? s.pos[2] : 0; d[C.s_radius + r] = s ? s.radius : 0; d[C.s_intensity + r] = s ? s.intensity : 0;
+    if (!!s !== ((w[C.row_bits + r] & ROW_BIT.steady) !== 0)) w[C.row_bits + r] = (w[C.row_bits + r] & ~ROW_BIT.day) | dayBits(l);   // (a lamp that has come to burn as a fire does is one beside the hour, too)
     w[C.row_bits + r] = (w[C.row_bits + r] & ~(ROW_BIT.on | ROW_BIT.steady)) | (l.enabled ? ROW_BIT.on : 0) | (s ? ROW_BIT.steady : 0);
   }
 
