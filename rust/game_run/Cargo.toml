@@ -12,6 +12,7 @@ publish = false
 [dependencies]
 game = { path = "../game" }
 sim = { path = "../sim" }
+game_start = { path = "../game_start", default-features = false }
 
 [profile.dev]
 opt-level = 0
