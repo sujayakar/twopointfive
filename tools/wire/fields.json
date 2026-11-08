@@ -7823,10 +7823,6 @@
 "why": "its type is not in the bridge"
 },
 {
-"key": "Sensors.own",
-"why": "its type holds what the bridge cannot read: Option<crate::sensors::SensorsOwn>"
-},
-{
 "key": "SlabSeen.ang",
 "why": "its type is not in the bridge"
 },
@@ -8822,24 +8818,6 @@
 "scene_shapes::ShapePiece.h",
 "scene_shapes::ShapePiece.off",
 "scene_shapes::ShapePiece.yaw",
-"sensors::SensorStats.divergences",
-"sensors::SensorStats.frames",
-"sensors::SensorStats.recs",
-"sensors::SensorStream.cursor",
-"sensors::SensorStream.divergence_log",
-"sensors::SensorStream.first_divergence",
-"sensors::SensorStream.frame",
-"sensors::SensorStream.in_frame",
-"sensors::SensorStream.mode",
-"sensors::SensorStream.pending",
-"sensors::SensorStream.prev_seq",
-"sensors::SensorStream.prev_vals",
-"sensors::SensorStream.recs",
-"sensors::SensorStream.seq",
-"sensors::SensorStream.src",
-"sensors::SensorStream.stats",
-"sensors::SensorStream.vals",
-"sensors::sensors_stat.crate::sensors::sensors_stats",
 "shards::GlassShards.log",
 "shards::glass_shards_litte.crate::shards::glass_shards_litter",
 "shards::glass_shards_liv.crate::shards::glass_shards_live",

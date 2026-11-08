@@ -28,7 +28,6 @@ import { INTERIOR, ANNEX } from './weather';
 import { WX_OWN } from './weatherKinds';
 import { isDaylight } from './lighting';
 import { gpuFx } from './particleFx';
-import type { GridWind } from '../scene/collision';
 import { sim, f64 } from '../sim/sim';
 import { WX_WATCH, wxScratch } from '../sim/weatherhome';
 import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
@@ -194,20 +193,6 @@ export class Wind {
     const s = this.storm, p = SCRATCH_P, q = SCRATCH_Q; p[0] = x; p[1] = 0; p[2] = z;
     if (roofs) stormVelRoofs(UNIT_X, roofs, p, q); else stormVel(UNIT_X, s.interior!, s.annex!, p, q);
     return Math.max(0, Math.min(1, q[0] / WIND_FIELD.stormLow));
-  }
-  /** THE WIND THE GAME'S OWN SMOKE DRIFTS BY (sense.ts SENSE.drift; rust/sim/src/bricks.rs 3b), or null in still air: the weather's vector as the game
-   *  holds it, by `stormWind`'s test of whether the weather blows at all, `stormShare` for where, and the storm field's own rise with height (`low` of
-   *  it at the ground, `gain` more by `fullAt` metres up). It is the game's, so none of a machine's own wind settings is in it (the master,
-   *  `WIND.storm`, `WIND.stormK`, the weather's own on / off: what a player turns down is his picture), and no gust: one vector, from what a
-   *  snapshot carries, the same on every machine that plays the game. */
-  stormDrift(): GridWind | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Wind.stormDrift', this, []); if (__r !== RUST_PASS) return __r as any; } }
-    const W = this.g.weather; if (!this.blows(false)) return null;
-    const x = W.wind[0], z = W.wind[1]; if (x === 0 && z === 0) return null;
-    // (the footprints as the weather's roofs and the switch give them NOW, not as the storm's record last had them: that record is refreshed by the
-    //  frame's dressing step, `update`, which a host with the wind turned down or no picture does not take. Made for the asker and let go: no function
-    //  is kept on the game)
-    const roofs = this.fieldRoofs();
-    return { x, z, low: WIND_FIELD.stormLow, gain: WIND_FIELD.stormGain, fullAt: WIND_FIELD.stormFullAt, share: (px, pz) => this.shareUnder(px, pz, roofs) };
   }
   /** DOES THE WEATHER BLOW AT ALL: at night or in a picked kind (which blows by day and in the dry too: weather.ts), and rain or a storm running. The
    *  one test, for the picture's storm (`stormWind`, which adds a machine's own wind settings) and the game's drift alike. `session`: …and the
