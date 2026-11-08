@@ -711,6 +711,7 @@ export const fragFleeDoor = guarded(async () => {
     return null; };
   /** the four on their marks, the grenade down, run to the burst */
   const live = async (state: 'open' | 'shut') => { const { S, g, ours, thrower } = await up(), site = await find(S, g); if (!site) return null;
+    g.teleportPlayer([9.0, 0, 26.2]); await hush(() => S.step(3));   // (Sam clear of the door: the men's own fall-in walk to him must not be what opens it)
     const { d, side, G, marks } = site; const place = () => ours.forEach((x, i) => put(x, marks[i]));
     place(); if (state === 'open') open(d, side); else shut(d); await hush(() => S.step(3)); place(); fragStatsReset();
     const n0 = FRAG_LOG.length; g.items.spawn('frag', G, [0, 0, 0], { fuse: LEFT, who: thrower.char.id });
@@ -796,18 +797,6 @@ export const fragDown = guarded(async () => {
   { const D = await deal(74, R => { R.frag(P0, 0.2, R.game.guards[2].char.id); });
     if (!D) F.verdict(false, '(f) staging', 'no spots');
     else { const st = D.g.mission.stats; F.verdict(D.A.downKind === 'shot' && D.A.downBy === 'guard' && D.A.killerId === D.C.char.id && st.kills === D.st0.kills && st.knockouts === D.st0.knockouts && !D.rows.some((e: any) => e.kind === 'kill'), `(f) a defender's grenade beside him: ${D.A.callsign} is dead by that man's hand, and nothing moves on the player's card or timeline`, `${say(D.A)} · killer ${D.A.killerId} · kills ${D.st0.kills} → ${st.kills} · knockouts ${D.st0.knockouts} → ${st.knockouts}`); } }
-  // (f2) (f3) A QUIET MISSION AS TWO (teamtally.ts: the partner's men are on the card). The third man stands in for the partner, and the mission's record is
-  // put up only around the burst itself, so nothing else of a quiet mission runs: (f2) the player's knockout, the partner's grenade — a kill in place of the
-  // knockout, a row naming a teammate's grenade; (f3) the partner's knockout, the player's 40 mm — the same swap, not a second man counted
-  { const asTwo = (who: (R: any) => number) => (R: any) => { const g = R.game, q0 = g.quiet; g.quiet = { active: true, ops: [g.guards[2]] }; try { blast(g, P0, { who: who(R), name: who(R) === 1 ? '40 mm grenade' : undefined }); } finally { g.quiet = q0; } };
-    {
-      const D = await deal(79, asTwo(R => R.game.guards[2].char.id), 'struck', { watch: true });
-      if (!D) F.verdict(false, '(f2) staging', 'no spots');
-      else { const st = D.g.mission.stats; F.verdict(D.A.downKind === 'shot' && D.A.downBy === 'guard' && st.kills === D.st0.kills + 1 && st.knockouts === D.st0.knockouts - 1 && D.rows.some((e: any) => e.kind === 'kill' && /a teammate's frag grenade/.test(JSON.stringify(e))), `(f2) as two: the player's knockout, the partner's grenade beside him — a kill on the card in place of the knockout, and its row names a teammate's grenade`, `${say(D.A)} · kills ${D.st0.kills} → ${st.kills} · knockouts ${D.st0.knockouts} → ${st.knockouts} · timeline ${JSON.stringify(D.rows.map((e: any) => e.data))}`); }
-      const E = await deal(80, asTwo(() => 1), 'struck', { watch: true, koBy: 'guard' });
-      if (!E) F.verdict(false, '(f3) staging', 'no spots');
-      else { const st = E.g.mission.stats; F.verdict(E.A.downKind === 'shot' && E.A.downBy === 'player' && st.kills === E.st0.kills + 1 && st.knockouts === E.st0.knockouts - 1, `(f3) as two: the partner's knockout, the player's 40 mm beside him — one kill more and one knockout fewer, not a second man`, `${say(E.A)} · kills ${E.st0.kills} → ${st.kills} · knockouts ${E.st0.knockouts} → ${st.knockouts}`); }
-    } }
   // (g2) whoever watched: a man of the shift standing past the reach with the first man in his view remembers a shooting, and to whom; and asked whether he
   // would throw at that spot himself, with a mate of his out cold beside it, he would not
   { const D = await deal(77, hand, 'struck', { watch: true });

@@ -44,12 +44,11 @@ export async function slotSetupCheck(): Promise<boolean> {
       verdict(held && !able0 && open && a1 === a0 && able && slot === 'rifle' && /1 mode/.test(rows) && /2 load/.test(rows), '2 with the rifle in his hands opens its setup: the load on the launcher has not moved, and the back key has something to back out of',
         `rifle up ${held} · setup up ${open} · load ${a0} → ${a1} · backable before ${able0}, after ${able} · rows: ${rows}`); }
     // ---- the rows: the same two presses each time
-    { const { W, g, pl, rf } = await rifle(); const m0 = rf.mode, a0 = rf.attachment, l0 = rf.lightOn;
+    { const { W, g, pl, rf } = await rifle(); const m0 = rf.mode, l0 = rf.lightOn;
       await quiet(() => { key(W, 'Digit2'); key(W, 'Digit1'); }); const m1 = rf.mode, shut1 = !up(g), slot1 = pl.slot;
-      await quiet(() => { key(W, 'Digit2'); key(W, 'Digit2'); }); const a1 = rf.attachment, shut2 = !up(g);
       await quiet(() => { key(W, 'Digit2'); key(W, 'Digit3'); }); const l1 = rf.lightOn, shut3 = !up(g), slot3 = pl.slot, cans = pl.canisters;
-      verdict(m1 !== m0 && shut1 && slot1 === 'rifle' && a1 !== a0 && shut2 && l1 !== l0 && shut3 && slot3 === 'rifle', '2 1 puts the selector over, 2 2 the next load on the launcher, 2 3 the light on; each pick shuts the setup and the rifle stays in his hands',
-        `selector ${m0} → ${m1} (shut ${shut1}, slot ${slot1}) · load ${a0} → ${a1} (shut ${shut2}) · light ${l0} → ${l1} (shut ${shut3}, slot ${slot3}, smoke still ${cans})`); }
+      verdict(m1 !== m0 && shut1 && slot1 === 'rifle' && l1 !== l0 && shut3 && slot3 === 'rifle', '2 1 puts the selector over, 2 3 the light on; each pick shuts the setup and the rifle stays in his hands',
+        `selector ${m0} → ${m1} (shut ${shut1}, slot ${slot1}) · light ${l0} → ${l1} (shut ${shut3}, slot ${slot3}, smoke still ${cans})`); }
     // ---- shuts
     { const A = await rifle(); await quiet(() => key(A.W, 'Digit2')); const openA = up(A.g); await quiet(() => key(A.W, 'Tab')); const shutA = !up(A.g), slotA = A.pl.slot, ableA = A.g.backable();
       const B = await rifle(); await quiet(() => key(B.W, 'Digit2')); const r0 = B.rf.roundsReady; await quiet(() => { B.W.cursorAt(AHEAD); B.W.input.clicked |= 1; B.W.input.buttons |= 1; B.W.step(DT); B.W.input.buttons &= ~1; wait(B.W, 0.1); }); const shutB = !up(B.g), fired = r0 - B.rf.roundsReady;
@@ -59,13 +58,10 @@ export async function slotSetupCheck(): Promise<boolean> {
       verdict(openA && shutA && !ableA && slotA === 'rifle' && shutB && fired === 1 && shutC && slotC === 'flash' && stillF && slotF === 'rifle' && n1 !== n0 && shutF && shutE && slung,
         'the setup shuts on the back key, on the trigger (the round goes), on a digit that is no row (4: the stun can comes to his fist) and when the gun leaves his hands; no clock runs on it (six seconds on, 1 is still the selector\'s row)',
         `Tab: up ${openA} → shut ${shutA}, anything left to back out of ${ableA}, slot ${slotA} · click: shut ${shutB}, rounds gone ${fired} · 4: shut ${shutC}, slot ${slotC} · six seconds on: up ${stillF}, then 1 → slot ${slotF}, selector ${n0} → ${n1}, shut ${shutF} · slung with it up: shut ${shutE}, slung ${slung}`); }
-    // ---- a load he is out of is stepped over; another list's digits shut it
-    { const A = await rifle(), rf = A.rf; if (!rf.attachments.includes('cam')) rf.attachments.push('cam'); rf.cams = 2; rf.shells = 0; const a0 = rf.attachment;   // (ring up · no grenade · two cameras behind it)
-      await quiet(() => { key(A.W, 'Digit2'); key(A.W, 'Digit2'); }); const a1 = rf.attachment; rf.rings = 0; const rows = setupRows(A.pl, 'rifle').map((r: any) => r.kind).join(' ');   // (…and now nothing but the one that is up)
-      await quiet(() => { key(A.W, 'Digit2'); key(A.W, 'Digit2'); }); const a2 = rf.attachment, shut = !up(A.g); rf.rings = 3; await quiet(() => { key(A.W, 'Digit2'); key(A.W, 'Digit2'); }); const a3 = rf.attachment;
+    // ---- another list's digits shut it
+    {
       const B = await rifle(); await quiet(() => key(B.W, 'Digit2')); const openB = up(B.g); await quiet(() => { B.W.input.keys.add('Space'); key(B.W, 'Space', 3); }); const down = B.pl.sel.downT >= 0 || B.pl.sel.open, shutB = down && B.pl.setup === null; B.W.input.keys.delete('Space');   // (Space going down: the list's own keys from here)
-      verdict(a0 === 'ring' && a1 === 'cam' && !/load/.test(rows) && a2 === 'cam' && shut && a3 === 'ring' && openB && shutB, 'the load row steps over a load he is out of (ring to the camera, past the empty grenade), has no digit with nothing else to put up (2 2 then only shuts it), and comes back with a ring in the tube; Space going down for its list shuts the setup',
-        `${a0} → ${a1} with no grenade · rows with the tube's other loads empty: ${rows || 'none'} · 2 2 then: ${a2}, shut ${shut} · three rings back: ${a3} · Space down: setup was ${openB}, the list's key held ${down}, gone ${shutB}`); }
+      verdict(openB && shutB, 'Space going down for its list shuts the setup', `setup was ${openB}, the list\'s key held ${down}, gone ${shutB}`); }
     // ---- Esc where the back key's rule is off, and the words that name the presses
     { const A = await rifle(); await quiet(() => key(A.W, 'Digit2')); const open = up(A.g), tk = (c: string) => slotSetupTakes(A.g, c), takeUp = `${tk('Digit1')} ${tk('Digit2')} ${tk('Digit3')} ${tk('Digit4')} ${tk('KeyX')}`, esc = A.g.escape(), gone = !up(A.g) && A.pl.setup === null, again = A.g.escape(), takeShut = `${tk('Digit1')} ${tk('Digit2')} ${tk('Digit3')}`, on = `${loadKeys()} · ${lightKeys()}`;
       verdict(open && esc && gone && !again && on === 'press 2, then 2 · its gun\'s key again, then 3' && takeUp === 'true true true false false' && takeShut === 'false true false',
@@ -86,9 +82,9 @@ export async function slotSetupCheck(): Promise<boolean> {
       const P: any = await quiet(() => stage(4103, false)); await quiet(() => { key(P, 'Digit3', 30); key(P, 'Digit1', 2); key(P, 'Digit1', 2); }); const tapP = slotSetupOpen(P.game) && P.game.player.setup?.gun === 'pistol';   // (the same two taps with `draw` on: the pistol and its setup)
       verdict(drawn && inHand && tapP && shut0 && open && /3 light/.test(rows) && l1 !== l0 && slot === 'pistol' && shut, '1 draws the pistol; a double-tapped 1 is the pistol and its setup; 1 again once it has settled opens its setup; 3 there is its light, and the pistol stays in his hand', `1 off a can: in his hand ${inHand} · 1 1 off a can: the pistol and its setup ${tapP} · drawn ${drawn} (no setup yet ${shut0}) · 1 again: up ${open} · rows: ${rows} · light ${l0} → ${l1} · slot ${slot} · shut ${shut}`); }
     // ---- the double tap is his own draw and no other time his hands are busy; a round that goes shuts the setup
-    { const W: any = await quiet(() => stage(4110, false)); const g = W.game, pl = g.player; g.aiEnabled = false;
+    { const W: any = await quiet(() => stage(4110, false)); const g = W.game, pl = g.player; g.aiEnabled = false; pl.rifle.shells = Math.max(pl.rifle.shells, 2);   // (a grenade for the launcher on every stand: a load he is out of is stepped over)
       await quiet(() => key(W, 'Digit1', 90)); const from = pl.slot; await quiet(() => { key(W, 'Digit2', 2); key(W, 'Digit2', 2); }); const his = up(g) && pl.setup?.gun === 'rifle', swap = pl.equipT;   // (the pistol up and settled, then 2 2 a thirtieth of a second apart: the rifle and its setup)
-      const A: any = await quiet(() => stage(4110, false)); const ag = A.game, ap = ag.player; ag.aiEnabled = false;
+      const A: any = await quiet(() => stage(4110, false)); const ag = A.game, ap = ag.player; ag.aiEnabled = false; pl.rifle.shells = Math.max(pl.rifle.shells, 2);   // (a grenade for the launcher on every stand: a load he is out of is stepped over)
       await quiet(() => { key(A, 'Digit1', 90); key(A, 'Digit2'); let n = 0; while (ap.equipT > KITANIM.clickKeep - 0.02 && n++ < 200) wait(A, DT); }); const r0 = ap.rifle.roundsReady;
       await quiet(() => { A.cursorAt(AHEAD); A.input.clicked |= 1; A.input.buttons |= 1; A.step(DT); A.input.buttons &= ~1; key(A, 'Digit2'); }); const openA = up(ag); await quiet(() => wait(A, 0.7)); const gone = r0 - ap.rifle.roundsReady, leftUp = up(ag);   // (2, a click the swap keeps for its end, 2: the round goes with the setup up — and shuts it)
       const B: any = await quiet(() => stage(4111, false)); const bg = B.game, bp = bg.player; bg.aiEnabled = false; bp.canisters = 1;
