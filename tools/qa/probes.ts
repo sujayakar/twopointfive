@@ -3380,6 +3380,7 @@ for (const [name, file, ...fams] of [
   ['snowpuffs', 'snowpuffs-check.ts', 'snow'],
   ['shaderinline', 'shaderinline-check.ts', 'shaders'],
   ['view', 'view-check.ts', 'menus'],
+  ['page-decides', 'page-decides-check.ts', 'menus'],
   ['tween', 'tween-check.ts', 'perf'],
 ] as [string, string, ...string[]][]) if (on(name, ...fams, 'all')) await run(name, () => runScript(file));
 // ---------------------------------------------------------------- the runner's own self-tests (never in 'all'): `selftest-fail` must turn the verdict and gate.sh red, `selftest-throw` likewise without
