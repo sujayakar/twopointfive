@@ -1,4 +1,4 @@
-// THE LOOK'S SECOND FILE OF A LEVEL (src/scene/look.ts): tools/levels/<name>-gwot.ts builds the level with ITS OWN generator, lets the exporter dress it
+// A LEVEL'S CLOTHES (src/scene/look.ts): tools/levels/<name>.ts builds the level with its floor's generator (<name>-floor.ts), lets the exporter dress it
 // exactly as it dresses the plain file, and then `skinLevel` changes its clothes — every box where it was, the size it was, with the flags it had:
 //   · REPAINT   a box's albedo + finish, by its group and the office paint it wore. WHAT THE BOX DOES IS NOT ITS PAINT'S (src/scene/materials.ts, Box.does):
 //               every box has its word before the first repaint (tools/levels/doesWas.ts stampDoes, the exporter's own step) and a repaint leaves it, so
@@ -28,8 +28,8 @@ import { saidAs, tonedAs, worded, repainted, type BoxStuff } from '../../src/sce
 import { flatsOverlap, isFlat, layFlats } from './flatLayers';
 
 export const LOOK_GROUP = 'look';
-/** what every look file's NOTES say after the plain file's own (each tools/levels/<name>-gwot.ts wrapper appends it) */
-export const LOOK_NOTE = ' — IN THE DEFAULT LOOK (2010s GWOT: tools/levels/gwotSkin.ts): the same boxes repainted, decals added; what a man collides with, hides behind or sees through is the plain file\'s.';
+/** what a skinned level's NOTES say after its floor's own (each tools/levels/<name>.ts appends it) */
+export const LOOK_NOTE = ' — IN THE DEFAULT LOOK (2010s GWOT: tools/levels/gwotSkin.ts): the same boxes repainted, decals added.';
 const lum = (a: Vec3) => 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
 const h01 = (a: number, b: number, c = 0) => (mkHash(a | 0, b | 0, c | 0) % 4096) / 4096;
 

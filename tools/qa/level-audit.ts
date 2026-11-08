@@ -61,7 +61,7 @@ async function one(level: string) {
   const quiet = <T>(fn: () => T): T => { const l = console.log, w = console.warn, i = console.info; console.log = console.warn = console.info = () => { }; try { return fn(); } finally { console.log = l; console.warn = w; console.info = i; } };
   const { ROOT, standUp } = await import('./headless.ts');
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`), { buildLevel } = await import(`${ROOT}/src/scene/level.ts`);
-  const { lookLevelFile } = await import(`${ROOT}/src/scene/look.ts`), { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
+  const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
   const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`), { WORLD } = await import(`${ROOT}/src/scene/world.ts`), { cutConfig } = await import(`${ROOT}/src/scene/cut.ts`);
   const { skyPlan } = await import(`${ROOT}/src/scene/placePlan.ts`), { planOpenings, openAreas, LOOK_OPENINGS } = await import(`${ROOT}/src/scene/openings.ts`);   // (loaded by a built path, as every check here loads the game, so the typecheck does not see a module that moves: RUN the audit after a merge)
   const { LOOK_NAMES, lookStuffOf } = await import(`${ROOT}/src/render/lookTex.ts`), { snowPaintOf } = await import(`${ROOT}/src/render/snowField.ts`);
@@ -71,8 +71,8 @@ async function one(level: string) {
   if (!rows) { console.log(JSON.stringify({ level, error: 'no drawn row of the mission list plays on this level' })); process.exit(2); }
   const row = rows.rows[0], hour: string = row.hour ?? 'night';
 
-  // ---- the level, as the page loads it: the look's file where it has one, then the look page's shapes over it
-  const file = rows.file ? lookLevelFile(rows.file) : null, text = file ? readFileSync(`${ROOT}/levels/${file}`, 'utf8') : null;
+  // ---- the level, as the page loads it: its file, then the look page's shapes over it
+  const file = rows.file ?? null, text = file ? readFileSync(`${ROOT}/levels/${file}`, 'utf8') : null;
   const src: any = text ? JSON.parse(text) : JSON.parse(readFileSync(`${ROOT}/levels/office.json`, 'utf8'));
   const lv: any = quiet(() => text ? loadLevel(parseLevelData(text)) : buildLevel());
   const fileBoxes = lv.boxes.length;
