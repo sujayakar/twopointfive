@@ -14,6 +14,7 @@ section! {
 }
 
 pub fn fill(g: &Game, out: &mut Vec<Rim>) {
+    out.clear();
     if game::seats::all_down(g) { return; }
     let shown = g.local_seat.unwrap_or(g.seats[0]);
     let mut put = |c: game::ids::CharId, hue: u32| out.push(Rim { id: g.ch[c].id as u32, hue, at: g.ch[c].pos.map(|x| x as f32) });
