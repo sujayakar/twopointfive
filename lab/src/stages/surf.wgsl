@@ -26,8 +26,8 @@ fn movedLeaf(i: u32, x: vec3f) -> vec3f {
     let far = ro + rd * 1900.0; let q = projectPrev(far); let now = project(far);
     var s: Surf; s.n = vec3f(0.0, 1.0, 0.0); s.ng = s.n; textureStore(outSurf, id.xy, packPx(1900.0, s)); textureStore(outAux, id.xy, vec4f(q.xy - now.xy, 0.0, 0.0)); textureStore(outEmit, id.xy, vec4f(sky(rd) * thru, 0.0)); textureStore(outFront, id.xy, front); return;
   }
-  var r0 = ro; if (wetT > 0.0) { wetLen = h.t - wetT; let b = refract(rd, wetN, 0.75); r0 = ro + (b - rd) * wetLen * 0.55; }     // seen through water: what is drawn there shifts; where it is does not
-  var s = surfaceAt(r0, rd, h, px * h.t); s = wetFilm(s, px * h.t); s.x = ro + rd * h.t; if (dot(s.n, -rd) < 0.03) { s.n = normalize(s.n - rd * (0.05 - dot(s.n, -rd))); }
+  if (wetT > 0.0) { wetLen = h.t - wetT; }
+  var s = surfaceAt(ro, rd, h, px * h.t); s = wetFilm(s, px * h.t); s.x = ro + rd * h.t; if (dot(s.n, -rd) < 0.03) { s.n = normalize(s.n - rd * (0.05 - dot(s.n, -rd))); }
   var was = s.x; if ((h.piece & LEAF_HIT) == 0u) { was = moved(h.piece, s.x); } else { was = movedLeaf(h.piece & 0x7fffffffu, s.x); } let q = projectPrev(was); let now = project(s.x);
   if (wetLen > 0.0) { front.w = bitcast<u32>(wetLen); }
   textureStore(outSurf, id.xy, packPx(h.t, s)); textureStore(outAux, id.xy, vec4f(q.xy - now.xy, wetLen, select(0.0, 1.0, (s.flags & MOVES) != 0u)));

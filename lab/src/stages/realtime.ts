@@ -11,6 +11,8 @@ import signals from '../wgsl/signals.wgsl' with { type: 'text' };
 import cacheLib from '../wgsl/cache.wgsl' with { type: 'text' };
 import surf from './surf.wgsl' with { type: 'text' };
 import lamps from './lamps.wgsl' with { type: 'text' };
+import bounceLib from '../wgsl/bounce.wgsl' with { type: 'text' };
+import waterpx from './waterpx.wgsl' with { type: 'text' };
 import gather from './gather.wgsl' with { type: 'text' };
 import mirror from './mirror.wgsl' with { type: 'text' };
 import temporal from './temporal.wgsl' with { type: 'text' };
@@ -37,7 +39,7 @@ export function hashCache(): CachePart {
   const groups = { groups: (): [number, number, number] => [SLOTS / 64 / 8, 8, 1] }, lin = (t: string) => t.replaceAll('let s = id.x;', `let s = id.x + id.y * ${SLOTS / 8}u;`);
   const claimS: Stage = { name: 'cache claim', over: groups, buffers: { ...bind, norms: ['norms', 'array<u32>', 'read_write'], hits: ['hits', 'array<vec4u>', 'read'], fresh: ['fresh', 'array<vec4f>', 'read_write'] }, code: cacheLib + lin(claim) };
   const keep: Stage = { name: 'cache keep', over: groups, code: '', async make() { return (enc, g) => { if (keep.when && !keep.when()) return; enc.copyBufferToBuffer(g.buffers.get('fresh')!, 0, g.buffers.get('cells')!, 0, SLOTS * 32); }; } };
-  const updateS: Stage = { name: 'cache', over: groups, buffers: { ...bind, norms: ['norms', 'array<u32>', 'read'], fresh: ['fresh', 'array<vec4f>', 'read_write'], ...CHANGES }, code: signals + cacheLib + lin(update) };
+  const updateS: Stage = { name: 'cache', over: groups, buffers: { ...bind, norms: ['norms', 'array<u32>', 'read'], fresh: ['fresh', 'array<vec4f>', 'read_write'], ...CHANGES }, code: signals + cacheLib + bounceLib + lin(update) };
   let at: [number, number] = [0, 0]; const warmS: Stage = { name: 'cache warm', over: { groups: () => [Math.ceil((at[1] - at[0]) / 64), 1, 1] }, buffers: { ...bind, hits: ['hits', 'array<vec4u>', 'read'], warmAt: ['warmAt', 'vec4u', 'uniform'] }, code: cacheLib + warm };
   const again = (k: number): Stage => ({ ...updateS, name: 'cache', when: () => (part.rush ?? 0) > k, code: updateS.code.replace('rngKey(key, 91u)', `rngKey(key, ${92 + k}u)`) });
   const part: CachePart = {
@@ -84,7 +86,7 @@ export const svgf: DenoisePart = {
   },
 };
 /** no memory of light at all: what a bounce hits is lit by nothing. Shows what the cache is worth */
-export function noCache(): CachePart { const lib = 'struct Cached { E: vec3f, sun: f32, n: f32 };\nfn cacheRead(x: vec3f, n: vec3f, j: vec2f) -> Cached { var c: Cached; return c; }\nfn cacheKey(x: vec3f, n: vec3f, level: u32) -> u32 { return 1u; }\nfn cacheFind(key: u32) -> u32 { return 1u; }\nfn cacheFound(key: u32, who: u32) {}\n'; return { name: 'none', lib: lib + 'fn cacheWants(x: vec3f, n: vec3f, moves: bool) -> u32 { return 0u; }\n', bind: {}, stages: [], async init(lab) { lab.buffer('hits', HITS * 16); } }; }
+export function noCache(): CachePart { const lib = 'struct Cached { E: vec3f, sun: f32, n: f32 };\nconst EVERY_WAY = 0x80010003u;\nfn cacheRead(x: vec3f, n: vec3f, j: vec2f) -> Cached { var c: Cached; return c; }\nfn cacheKey(x: vec3f, n: vec3f, level: u32) -> u32 { return 1u; }\nfn cacheFind(key: u32) -> u32 { return 1u; }\nfn cacheFound(key: u32, who: u32) {}\n'; return { name: 'none', lib: lib + 'fn cacheWants(x: vec3f, n: vec3f, moves: bool) -> u32 { return 0u; }\n', bind: {}, stages: [], async init(lab) { lab.buffer('hits', HITS * 16); } }; }
 export const bilinear: UpscalePart = { name: 'bilinear', stages(g) { g.signal('picture', 'rgba16float', 'output', true); return { result: 'picture', stages: [{ name: 'upscale', over: 'output', reads: { color: 'color' }, writes: { outT: 'picture' }, buffers: { taauK: ['taauK', 'vec4f', 'uniform'] }, code: '@compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) { let o = frame.size.zw; if (f32(id.x) >= o.x || f32(id.y) >= o.y) { return; } textureStore(outT, id.xy, textureSampleLevel(color, linSamp, (vec2f(id.xy) + 0.5) / o, 0.0)); }' }] }; } };
 export const noDenoise: DenoisePart = { name: 'none', stages: ({ signal }) => ({ stages: [], result: signal }) };
 export const taauUp: UpscalePart = { name: 'taau', stages(g) { g.signal('picture', 'rgba16float', 'output', true); return { result: 'picture', stages: [{ name: 'upscale', over: 'output', reads: { color: 'color', 'picture@prev': 'hist', aux: 'auxT' }, writes: { outT: 'picture' }, buffers: { taauK: ['taauK', 'vec4f', 'uniform'] }, code: taau }] }; } };
@@ -107,10 +109,11 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
       return [
         raster,
         S('first hit', surf, 'render', { id: 'idT', idClear: 'idC', depth: 'depthT' }, { outSurf: 'surf', outAux: 'aux', outEmit: 'emit', outFront: 'front' }, { past: ['past', 'array<vec4f>', 'read'], pastLeaves: ['pastLeaves', 'array<vec4f>', 'read'] }),
+        S('water', waterpx, 'render', { idClear: 'idC', depth: 'depthT' }, { outSurf: 'surf', outAux: 'aux', outEmit: 'emit', outFront: 'front' }),
         ...cache.stages,
-        S('lamps', lamps, 'render', { surf: 'surf', sunLeaves: 'sunLeaves' }, { outVis: 'vis', outU: 'lampU' }),
-        S('gather', cache.lib + gather, 'half', { surf: 'surf' }, { outE: 'bounce' }, { ...c, hits: ['hits', 'array<vec4u>', 'read_write'] }, { HITS }),
-        S('mirror', cache.lib + mirror, 'half', { surf: 'surf', front: 'frontT' }, { outM: 'mirror' }, c, { DIV: 2 }),
+        S('lamps', lamps, 'render', { surf: 'surf', front: 'frontT', sunLeaves: 'sunLeaves' }, { outVis: 'vis', outU: 'lampU' }),
+        S('gather', cache.lib + bounceLib + gather, 'half', { surf: 'surf', front: 'frontT' }, { outE: 'bounce' }, { ...c, hits: ['hits', 'array<vec4u>', 'read_write'] }, { HITS }),
+        S('mirror', cache.lib + bounceLib + mirror, 'half', { surf: 'surf', front: 'frontT' }, { outM: 'mirror' }, c, { DIV: 2 }),
         ...dVis.stages, ...dB.stages, ...dM.stages,
         S('air', cache.lib + air, 'half', { surf: 'surf' }, { outA: 'air' }, { ...c, plumes: ['plumes', 'array<vec4f, 18>', 'uniform'] }),
         S('air history', temporal, 'half', { air: 'cur', 'airH@prev': 'hist', 'airM@prev': 'momPrev', surf: 'surf', 'surf@prev': 'surfPrev', aux: 'auxT', front: 'frontT' }, { outH: 'airH', outM: 'airM' }, {}, { DIV: 2, CAP: 16, SPREAD: 1.0, NARROW: 0, KIND: 0 }),

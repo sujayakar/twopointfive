@@ -8,6 +8,8 @@ fn unpackPx(v: vec4u, rd: vec3f) -> Px {
   var p: Px; p.t = bitcast<f32>(v.x); p.sky = p.t > 1.5e3; p.x = frame.camPos.xyz + rd * p.t; p.n = octUnpack(v.y); p.albedo = unpackRGB(v.z); p.rough = f32(v.z >> 24u) / 255.0;
   p.ng = octDec(vec2f(f32(v.w & 255u), f32((v.w >> 8u) & 255u)) / 255.0); p.metal = f32((v.w >> 16u) & 15u) / 15.0; p.kind = (v.w >> 20u) & 63u; p.leaf = ((v.w >> 26u) & 1u) != 0u; p.f0 = 0.04; return p;
 }
+/** under water, what is seen does not stand on the pixel's straight ray */
+fn underWater(p: Px, f: vec4u, rd: vec3f) -> Px { var q = p; if ((f.z >> 24u) == 2u && f.w != 0u) { q.x = frame.camPos.xyz + rd * bitcast<f32>(f.x) + refract(rd, octUnpack(f.y), 0.75) * bitcast<f32>(f.w); } return q; }
 fn pxSurf(p: Px) -> Surf { var s: Surf; s.x = p.x; s.n = p.n; s.ng = p.ng; s.albedo = p.albedo; s.rough = p.rough; s.metal = p.metal; s.f0 = p.f0; s.kind = p.kind; s.through = select(vec3f(0.0), p.albedo * vec3f(0.95, 1.15, 0.35) * 0.85, p.leaf); return s; }
 /** the ray of a render pixel this frame, jitter and all */
 fn pxRay(id: vec2u) -> vec3f { return camRay((vec2f(id) + 0.5 + frame.jitter.xy) / frame.size.xy); }

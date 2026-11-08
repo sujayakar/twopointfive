@@ -4,7 +4,8 @@
 //   (a round reads cells and writes fresh, which is then copied over: what an entry sees of another never depends on which ran first)
 //   cells[2s]    E.rgb, samples                        cells[2s+1]  its point, sun seen          norms[slot]  its normal, packed
 const SLOTS = 262144u; const REACH = 32u; const CELL = 0.32; const COARSE = 1.35; const FAR_CELL = 6.0;
-fn facing(n: vec3f) -> u32 { let a = abs(n); if (a.x >= a.y && a.x >= a.z) { return select(1u, 0u, n.x > 0.0); } if (a.y >= a.z) { return select(3u, 2u, n.y > 0.0); } return select(5u, 4u, n.z > 0.0); }
+const EVERY_WAY = 0x80010003u;                                      // a normal that is none: foliage, which faces every way
+fn facing(n: vec3f) -> u32 { if (all(n == vec3f(0.0))) { return 6u; } let a = abs(n); if (a.x >= a.y && a.x >= a.z) { return select(1u, 0u, n.x > 0.0); } if (a.y >= a.z) { return select(3u, 2u, n.y > 0.0); } return select(5u, 4u, n.z > 0.0); }
 /** the building and its roof are kept finely; the city only coarsely, or it would fill the table by itself */
 fn cacheNear(x: vec3f) -> bool { return abs(x.x) < 20.0 && abs(x.z) < 15.0 && x.y > -0.6 && x.y < 12.0; }
 fn cacheKey(x: vec3f, n: vec3f, level: u32) -> u32 {
@@ -28,7 +29,7 @@ fn cacheWants(x: vec3f, n: vec3f, moves: bool) -> u32 {
 struct Cached { E: vec3f, sun: f32, n: f32 };
 /** what lands at x, facing n. `j` spreads the lookups over neighbouring cells, so that blocks blend; far or young falls back on the coarse cells */
 fn cacheRead(x: vec3f, n: vec3f, j: vec2f) -> Cached {
-  let b = basis(n); let o = x + (b[0] * (j.x - 0.5) + b[1] * (j.y - 0.5)) * CELL; var c: Cached;
+  let every = all(n == vec3f(0.0)); let b = basis(select(n, vec3f(0.0, 1.0, 0.0), every)); let o = x + (b[0] * (j.x - 0.5) + b[1] * (j.y - 0.5) + b[2] * select(0.0, fract(j.x * 7.31 + j.y * 3.17) - 0.5, every)) * CELL; var c: Cached;
   for (var level = 0u; level < 2u; level++) {
     let s = cacheFind(cacheKey(select(x, o, level == 0u), n, level)); if (s == NOTHING) { continue; }
     let a = cells[2u * s]; if (bad4(a)) { continue; } if (a.w < select(1.0, 3.0, level == 0u)) { if (level == 0u) { continue; } }

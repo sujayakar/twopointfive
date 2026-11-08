@@ -44,7 +44,7 @@ fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
   if ((h.piece & LEAF_HIT) != 0u) { return leafSurf(h, x, rd); }
   let k = h.piece; let p = &pieces[k]; let m = mats[(*p).mat & 255u]; let lp = toLocal(k, x);
   var s: Surf; s.x = x; s.piece = k; s.flags = (*p).flags; s.kind = m.kind; s.through = vec3f(0.0);
-  if (h.code == CODE_CUT) { s.ng = vec3f(0.0, 1.0, 0.0); s.n = s.ng; s.albedo = vec3f(0.012, 0.013, 0.016); s.rough = 0.6; s.f0 = 0.04; s.metal = 0.0; s.glow = vec3f(0.0); s.kind = 99u; return s; }
+  if (h.code == CODE_CUT) { s.ng = vec3f(0.0, 1.0, 0.0); s.n = s.ng; s.albedo = vec3f(0.012, 0.013, 0.016); s.rough = 0.6; s.f0 = 0.04; s.metal = 0.0; s.glow = vec3f(0.0); s.kind = 63u; return s; }
   let ln = localNormal(k, h.code, lp); s.ng = normalize(toWorld(k, ln)); s.n = s.ng;
   let tint = unpackTint((*p).tint); let tint2 = tint * tint;
   var base = m.base * tint2; s.rough = m.rough; s.metal = m.metal; s.f0 = m.f0;

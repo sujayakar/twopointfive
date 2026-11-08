@@ -43,7 +43,7 @@ fn lampsAt(s: Surf, V: vec3f, glossy: bool) -> vec3f {
     let V = -rd; if (dot(s.n, V) < 0.02) { s.n = normalize(s.n + V * (0.04 - dot(s.n, V))); }
     let own = (h.piece & LEAF_HIT) == 0u && (pieces[h.piece].lamp & 255u) != 255u;
     if (any(s.glow > vec3f(0.0)) && (clear || !own)) { gained = thr * s.glow; L += gained; if (depth == 0u) { direct += gained; } else if (depth == 1u) { one += gained; } }
-    if (s.kind == 99u) { break; }
+    if (s.kind == 63u) { break; }
     let glossy = s.rough < 0.25;
     gained = thr * lampsAt(s, V, glossy); L += gained; if (depth == 0u) { direct += gained; } else if (depth == 1u) { one += gained; }
     if (water) {

@@ -7,8 +7,8 @@ fn leafSun(x: vec3f, n: vec3f, r: vec2f) -> f32 {
 }
 @compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) {
   let dim = vec2u(frame.size.xy); if (id.x >= dim.x || id.y >= dim.y) { return; }
-  let rd = pxRay(id.xy); let p = unpackPx(textureLoad(surf, id.xy, 0), rd);
-  if (p.sky || p.kind == 99u) { textureStore(outVis, id.xy, vec4f(0.0)); textureStore(outU, id.xy, vec4f(0.0)); return; }
+  let rd = pxRay(id.xy); let p = underWater(unpackPx(textureLoad(surf, id.xy, 0), rd), textureLoad(frontT, id.xy, 0), rd);
+  if (p.sky || p.kind == 63u) { textureStore(outVis, id.xy, vec4f(0.0)); textureStore(outU, id.xy, vec4f(0.0)); return; }
   rngInit(id.xy, 3u); let bn = blue2(id.xy, 0u); let b2 = blue2(id.xy, 7u); let b3 = blue2(id.xy, 11u); let n = select(p.n, vec3f(0.0), p.leaf);
   var W = vec2f(0.0); var U = vec3f(0.0); var pick = vec2i(-1); var u = vec2f(b2.x, b3.x);
   for (var i = 0u; i < frame.counts.x; i++) {
