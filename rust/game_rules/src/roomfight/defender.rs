@@ -447,26 +447,11 @@ pub fn room_fight_tick_move(g: &mut crate::game::Game, d: RoomfightDefId, dt: f6
     let gd = g.tab.roomfight_def[d].gd; let c = g.gd[gd].ch; let s = hostile_skill(g);
     let arrived0 = match &g.gd[gd].script { Some(x) => x.arrived.unwrap_or(false), None => { room_fight_plant(g, d, "script gone"); return; } };
     g.tab.roomfight_def[d].move_t += dt;
-    crate::guards::hearing_check(g, gd, None, None, None);
-    let mut contact: Option<crate::game::Foe> = None;
-    if !crate::control::man::blind(g, gd) {
-        let from = if g.time < g.tab.roomfight_def[d].bolt_until { g.tab.roomfight_def[d].bolt_from } else { None };
-        let man = crate::seats::faced_man(g, gd); let team = g.gd[gd].team; let reach = g.k.roomfight.move_engage_m;
-        if !matches!(from, Some(crate::game::Foe::Player)) && crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !g.pl[man].down && !g.player_invisible {
-            let view = crate::seats::faced_view(g, gd);
-            let seen = crate::seats::with_seat(g, view, &mut |g| { let vis = crate::guards::can_see(g, gd); vis.visible && vis.dist < reach && crate::guards::sight_gain(g, gd, vis.dist) > 0.25 });
-            if seen { contact = Some(crate::game::Foe::Player); }
-        }
-        let mut i = 0;
-        while i < g.guards.len() && contact.is_none() {
-            let o = g.guards[i]; i += 1;
-            if matches!(from, Some(crate::game::Foe::Guard(x)) if x == o) || is_dead(g, o) { continue; }
-            let ot = g.gd[o].team;
-            if !crate::teams::is_hostile(g, team, ot) || crate::rails::rails_down(g, o) { continue; }
-            let oc = g.gd[o].ch; let vis = crate::guards::can_see_char(g, gd, oc, false);
-            if vis.visible && vis.dist < reach && crate::guards::sight_gain_on(g, gd, o, vis.dist) > 0.25 { contact = Some(crate::game::Foe::Guard(o)); }
-        }
-    }
+    // the man his eyes have (guards/senses), near enough to stop for; never the one he is getting away from
+    let from = if g.time < g.tab.roomfight_def[d].bolt_until { g.tab.roomfight_def[d].bolt_from } else { None };
+    let reach = g.k.roomfight.move_engage_m;
+    let near = crate::teams::foe_char(g, gd).map_or(false, |fc| v3::dist(g.ch[fc].pos, g.ch[c].pos) < reach);
+    let contact = g.gd[gd].foe.filter(|&f| g.gd[gd].saw_foe_this_frame && near && !crate::control::man::blind(g, gd) && Some(f) != from);
     if let Some(ct) = contact {
         let fc = match ct { crate::game::Foe::Player => { let man = crate::seats::faced_man(g, gd); g.pl[man].ch } crate::game::Foe::Guard(o) => g.gd[o].ch };
         g.gd[gd].foe = Some(ct);

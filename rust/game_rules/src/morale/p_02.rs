@@ -197,7 +197,7 @@ pub fn step(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     drive(g, gd, dt, false);
 }
 
-/// this file's script has him this frame: posed, gun out, ears open, a magazine change run on, his reaction beat run down (morale.ts drive)
+/// this file's script has him this frame: posed, gun out, his reaction beat run down (morale.ts drive)
 pub fn drive(g: &mut crate::game::Game, gd: GuardId, dt: f64, rooted: bool) {
     pose(g, gd, rooted);
     let time = g.time;
@@ -206,7 +206,6 @@ pub fn drive(g: &mut crate::game::Game, gd: GuardId, dt: f64, rooted: bool) {
         st.drive = true; st.drive_t = time;
     }
     g.gd[gd].drawn = true;
-    crate::guards::hearing_check(g, gd, None, None, None);
     {
         let st = g.m.morale.state_of.get_mut(gd).unwrap();
         if st.shout && st.act != MoraleAct::Duck { st.shout = false; }

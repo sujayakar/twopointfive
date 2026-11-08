@@ -22,15 +22,6 @@ fn def_row(g: &Game, w: FirearmId) -> crate::weapons::WeaponDef {
     g.m.weapons.weapons.get(g.fa[w].def).unwrap().clone()
 }
 
-/// f === gd.foe. (guards.ts:2708, 2715)
-fn same_foe(a: crate::game::Foe, b: Option<crate::game::Foe>) -> bool {
-    match (a, b) {
-        (crate::game::Foe::Player, Some(crate::game::Foe::Player)) => true,
-        (crate::game::Foe::Guard(x), Some(crate::game::Foe::Guard(y))) => x == y,
-        _ => false,
-    }
-}
-
 // ------------------------------------------------------------ the guards' collision
 
 /// g.col.collideCircle(c.pos, c.radius, 0.2, 1.5, iterations): moves c.pos in place. (guards.ts:2570, 2585, 2594)
@@ -246,7 +237,7 @@ fn consider(g: &mut Game, gd: GuardId, f: crate::game::Foe, ch: CharId, best: &m
             sight_gain_on(g, gd, o, vis.dist)
         }
     };
-    if same_foe(f, g.gd[gd].foe) && rate > 0.05 { *cur_visible = true; }
+    if g.gd[gd].foe == Some(f) && rate > 0.05 { *cur_visible = true; }
     if rate > *best_rate {
         *best_rate = rate;
         *best = Some(f);
@@ -303,7 +294,7 @@ pub fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
     let op = team == Team::Operative;
     if cur_visible { return; }
     if let Some(b) = best {
-        if !same_foe(b, g.gd[gd].foe) {
+        if g.gd[gd].foe != Some(b) {
             g.gd[gd].foe = Some(b);
             crate::aim::aim_state_clear(&mut g.gd[gd].aim);
             if mine { crate::game::game_say(g, gd, if op { "he's down — next." } else { "got him!" }, None, None, None); }

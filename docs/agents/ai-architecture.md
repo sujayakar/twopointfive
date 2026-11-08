@@ -271,9 +271,10 @@ Under `rust/game_rules/src/`. One man's frame, in the order it runs (`guards/fra
 
 | what | where | to add one |
 |---|---|---|
-| what takes him whole, before he senses: a live grenade, broke and ran, shaken, startled | `control/{frag,runner,morale,startle}.rs`, the list in `control/mod.rs` | a file and a line of `rules!` |
+| his ears and eyes, every tick, whoever has his body | `guards/senses/{hearing,foe}.rs`, from `senses/mod.rs sense` | a kind of sound is a function of `hearing.rs` |
+| what takes him whole: a live grenade, broke and ran, shaken, startled | `control/{frag,runner,morale,startle}.rs`, the list in `control/mod.rs` | a file and a line of `rules!` |
 | his own script (an order, a drill, a mission's staging) | `squad/` (`run_guard_script`), `gd.script` | |
-| what he senses, a file a sense: his ears, his eyes on his man, where his man went, a colleague on the floor, the man he trails, a kicked lock | `guards/senses/{hearing,foe,lead,body,leader,lock}.rs`, in order in `senses/mod.rs` | a file and its line in `perceive`; a kind of sound is a function of `hearing.rs` |
+| what he does about what is around him where nothing has him: where his man went, a colleague on the floor, the man he trails, a kicked lock | `guards/senses/{lead,body,leader,lock}.rs`, in order in `senses/mod.rs notice` | a file and its line in `notice` |
 | where a man looks, for every eye | `guards/p_04.rs look_of`, which is `fogofwar::gaze_of` | |
 | how alert he is | `guards/frame.rs alertness`; every write of awareness, state and fix through `mind.rs` | |
 | what takes him in his fight: head down under fire | `control/duck.rs`, asked at the top of `alert` | a file and a line of `rules!` |
@@ -302,8 +303,8 @@ him, rounds pass close). One file and one line.
    keeps of one man (`()` if nothing). Three more have defaults that do nothing: `transition(g, man, dt)` move
    its own state · `commit(g, man, Outcome)` what his body made of it · `lost(g, man)` a higher rule took him.
 2. One line in `rules!` of `control/mod.rs`: `<name>: "the words that name it";`. Its place in the list is its
-   rank. WHAT IT ASKS FOR IS WHERE IT IS ASKED: a rule whose `Ask` is `GuardScript` is asked before he senses
-   and hands him a script; one whose `Ask` is `TakeCover` is asked of a man whose state is Alert and who has no
+   rank. WHAT IT ASKS FOR IS WHERE IT IS ASKED: a rule whose `Ask` is `GuardScript` is asked after his ears and
+   eyes, before anything he does of his own, and hands him a script; one whose `Ask` is `TakeCover` is asked of a man whose state is Alert and who has no
    script of his own (`TakeCover::down()`, or `TakeCover::to(spot, pace)`). ALERT IS NOT "HAS A MAN TO FIGHT":
    a bang alone makes a man Alert, so a rule that means "in a fight" asks `man::saw_his_man_within(g, man,
    secs)`. What a rule may ask of a man is `control/man.rs` (enemy, blind, staggered, held, in a standoff,
@@ -409,7 +410,7 @@ impl Reaction for Rule {
 
 A line names the rule's file and the words that name it. The stage of a man's frame at which it is asked is the
 type of what it asks for, so a rule cannot answer out of its stage: the compiler refuses it. `GuardScript`:
-asked before he senses, and his whole body follows the script. `TakeCover`: asked at the top of `alert`
+asked once his ears and eyes have run, and his whole body follows the script. `TakeCover`: asked at the top of `alert`
 (`guards/behave/alert.rs`), that is of a man whose state is Alert and whom no script has, before his reaction time and
 before his fight: down where he is or off to a spot crouched, gun lowered toward the danger, no round fired,
 hands free to change magazine. The line makes the rule's module, its id, the table of its rows
