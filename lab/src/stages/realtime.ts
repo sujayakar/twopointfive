@@ -25,7 +25,7 @@ import claim from './cacheclaim.wgsl' with { type: 'text' };
 import warm from './cachewarm.wgsl' with { type: 'text' };
 import update from './cacheupdate.wgsl' with { type: 'text' };
 
-const SLOTS = 262144, HITS = 262144;
+const SLOTS = 262144, HITS = 1 << 20;
 export const CHANGES: Record<string, [string, string, 'uniform']> = { changes: ['changes', 'Changes', 'uniform'] };
 export interface CachePart { name: string; lib: string; bind: Stage['buffers']; stages: Stage[]; init(lab: Lab): Promise<void>; /** more rounds this frame: the light has changed everywhere */ rush?: number }
 export interface DenoisePart { name: string; stages(o: { signal: string; div: 1 | 2; cap: number; rounds: number; narrow?: boolean; fractions?: boolean }, g: Graph): { stages: Stage[]; result: string } }
@@ -84,7 +84,7 @@ export const svgf: DenoisePart = {
   },
 };
 /** no memory of light at all: what a bounce hits is lit by nothing. Shows what the cache is worth */
-export function noCache(): CachePart { const lib = 'struct Cached { E: vec3f, sun: f32, n: f32 };\nfn cacheRead(x: vec3f, n: vec3f, j: vec2f) -> Cached { var c: Cached; return c; }\nfn cacheKey(x: vec3f, n: vec3f, level: u32) -> u32 { return 1u; }\nfn cacheFind(key: u32) -> u32 { return 1u; }\nfn cacheFound(key: u32, who: u32) {}\n'; return { name: 'none', lib, bind: {}, stages: [], async init(lab) { lab.buffer('hits', HITS * 16); } }; }
+export function noCache(): CachePart { const lib = 'struct Cached { E: vec3f, sun: f32, n: f32 };\nfn cacheRead(x: vec3f, n: vec3f, j: vec2f) -> Cached { var c: Cached; return c; }\nfn cacheKey(x: vec3f, n: vec3f, level: u32) -> u32 { return 1u; }\nfn cacheFind(key: u32) -> u32 { return 1u; }\nfn cacheFound(key: u32, who: u32) {}\n'; return { name: 'none', lib: lib + 'fn cacheWants(x: vec3f, n: vec3f) -> bool { return false; }\n', bind: {}, stages: [], async init(lab) { lab.buffer('hits', HITS * 16); } }; }
 export const bilinear: UpscalePart = { name: 'bilinear', stages(g) { g.signal('picture', 'rgba16float', 'output', true); return { result: 'picture', stages: [{ name: 'upscale', over: 'output', reads: { color: 'color' }, writes: { outT: 'picture' }, buffers: { taauK: ['taauK', 'vec4f', 'uniform'] }, code: '@compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) { let o = frame.size.zw; if (f32(id.x) >= o.x || f32(id.y) >= o.y) { return; } textureStore(outT, id.xy, textureSampleLevel(color, linSamp, (vec2f(id.xy) + 0.5) / o, 0.0)); }' }] }; } };
 export const noDenoise: DenoisePart = { name: 'none', stages: ({ signal }) => ({ stages: [], result: signal }) };
 export const taauUp: UpscalePart = { name: 'taau', stages(g) { g.signal('picture', 'rgba16float', 'output', true); return { result: 'picture', stages: [{ name: 'upscale', over: 'output', reads: { color: 'color', 'picture@prev': 'hist', aux: 'auxT' }, writes: { outT: 'picture' }, buffers: { taauK: ['taauK', 'vec4f', 'uniform'] }, code: taau }] }; } };
@@ -109,7 +109,7 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
         S('first hit', surf, 'render', { id: 'idT', idClear: 'idC', depth: 'depthT' }, { outSurf: 'surf', outAux: 'aux', outEmit: 'emit', outFront: 'front' }, { past: ['past', 'array<vec4f>', 'read'] }),
         ...cache.stages,
         S('lamps', lamps, 'render', { surf: 'surf', sunLeaves: 'sunLeaves' }, { outVis: 'vis', outU: 'lampU' }),
-        S('gather', cache.lib + gather, 'half', { surf: 'surf' }, { outE: 'bounce' }, { ...c, hits: ['hits', 'array<vec4f>', 'read_write'] }),
+        S('gather', cache.lib + gather, 'half', { surf: 'surf' }, { outE: 'bounce' }, { ...c, hits: ['hits', 'array<vec4f>', 'read_write'] }, { HITS }),
         S('mirror', cache.lib + mirror, 'half', { surf: 'surf', front: 'frontT' }, { outM: 'mirror' }, c, { DIV: 2 }),
         ...dVis.stages, ...dB.stages, ...dM.stages,
         S('air', air, 'half', { surf: 'surf' }, { outA: 'air' }),
@@ -123,7 +123,7 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
       const mv = lab.building.world.moving, f = new Float32Array(mv.length * 16); for (const p of mv) { const s = lab.slots.get(p); if (s === undefined) continue; const q = lab.prevAt.get(p) ?? p, o = (s - lab.scene.piece0[2]) * 16; f.set(q.at, o); f.set(q.rot[0], o + 4); f.set(q.rot[1], o + 8); f.set(q.rot[2], o + 12); } if (mv.length) lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('past')!, 0, f);
       const ch = new Float32Array(36); let n = 0; for (const d of lab.building.doors) if (Math.abs(d.want - d.open) > 1e-3 && n < 8) { ch.set([d.hinge[0], d.hinge[1] + 1, d.hinge[2], 7.5], n * 4); n++; }
       lab.building.world.lamps.forEach((l, i) => { if (Math.abs(lab.scene.lampOn[i]! - prevOn[i]!) > 0.02 && l.kind !== 'spot' && n < 8) { ch.set([...l.at, 9], n * 4); n++; } }); prevOn = lab.scene.lampOn.slice();
-      const key = lab.hour.toFixed(3) + lab.lampsMode; if (key !== last) { last = key; quiet = 40; if (Math.abs(lab.hour - lastHour) > 0.25) ch[33] = 1; lastHour = lab.hour; } quiet = Math.max(0, quiet - 1); ch[32] = 1 - 0.85 * Math.min(1, quiet / 24); lab.uniform('changes', ch);
+      const drift = lastHour < 0 ? 0 : Math.abs(lab.hour - lastHour), key = lab.lampsMode; lastHour = lab.hour; if (key !== last || drift > 0.02) { last = key; quiet = 40; if (drift > 0.1) ch[33] = 1; } quiet = Math.max(0, quiet - 1); ch[32] = 1 - Math.max(0.85 * Math.min(1, quiet / 24), Math.min(0.6, drift * 110)); lab.uniform('changes', ch);
       lab.uniform('taauK', new Float32Array([0.25 * (lab.exposure || 1), fresh ? 1 : 0, 0.2 + 0.8 * ch[32]!, 0])); fresh = false; cache.rush = quiet > 0 ? 3 : 0;
     },
     reset() { fresh = true; },

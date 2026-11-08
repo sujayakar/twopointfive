@@ -18,7 +18,7 @@
     var w = select(1.0 - f.x, f.x, (k & 1u) == 1u) * select(1.0 - f.y, f.y, k > 1u); if (w < 1e-3) { continue; }
     let fq = min(q * DIV, vec2i(rdim) - 1); let o = unpackPx(textureLoad(surfPrev, fq, 0), vec3f(0.0)); let was = frame.prevPos.xyz + pxRayPrev((vec2f(fq) + 0.5 + frame.jitter.zw) / rdim) * o.t;
     var ok = abs(dot(was - p.x, p.ng)) < 0.006 * p.t + 0.02 && dot(o.ng, p.ng) > 0.7; if (aux.w > 0.5) { ok = abs(o.t - p.t) < 0.25 && dot(o.ng, p.ng) > 0.4; } if (p.leaf) { ok = o.leaf && abs(o.t - p.t) < 0.5; } if (NARROW == 1 && front) { ok = true; }
-    if (!ok) { continue; } let v = textureLoad(hist, q, 0); if (NARROW == 1 && v.a < 0.0) { continue; } h += v * w; mo += textureLoad(momPrev, q, 0) * w; ws += w;
+    if (!ok) { continue; } let v = textureLoad(hist, q, 0); let pm = textureLoad(momPrev, q, 0); if (bad4(v) || bad4(pm)) { continue; } if (NARROW == 1 && v.a < 0.0) { continue; } h += v * w; mo += pm * w; ws += w;
   }
   var n = 0.0; var o = c; var mom = vec4f(lum(c.rgb), lum(c.rgb) * lum(c.rgb), 0.0, 0.0); if (NARROW == 0) { mom.w = c.a * c.a; }
   if (ws > 0.02) {

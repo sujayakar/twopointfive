@@ -14,14 +14,16 @@ fn cacheFound(key: u32, who: u32) {
   var s = key % SLOTS;
   for (var i = 0u; i < 8u; i++) { let k = atomicLoad(&keys[s]); if (k == key) { atomicMin(&cand[s], who); return; } if (k == 0u) { let r = atomicCompareExchangeWeak(&keys[s], 0u, key); if (r.exchanged || r.old_value == key) { atomicMin(&cand[s], who); return; } } s = (s + 1u) % SLOTS; }
 }
+/** does this surface still want an entry? (Asked of cells, which no one writes while rays are out, so that who founds it never depends on who came first) */
+fn cacheWants(x: vec3f, n: vec3f) -> bool { let s = cacheFind(cacheKey(x, n, 0u)); if (s == NOTHING) { return true; } return all(cells[2u * s + 1u].xyz == vec3f(0.0)); }
 struct Cached { E: vec3f, sun: f32, n: f32 };
 /** what lands at x, facing n. `j` spreads the lookups over neighbouring cells, so that blocks blend; far or young falls back on the coarse cells */
 fn cacheRead(x: vec3f, n: vec3f, j: vec2f) -> Cached {
   let b = basis(n); let o = x + (b[0] * (j.x - 0.5) + b[1] * (j.y - 0.5)) * CELL; var c: Cached;
   for (var level = 0u; level < 2u; level++) {
     let s = cacheFind(cacheKey(select(x, o, level == 0u), n, level)); if (s == NOTHING) { continue; }
-    let a = cells[2u * s]; if (a.w < select(1.0, 3.0, level == 0u)) { if (level == 0u) { continue; } }
-    c.E = a.xyz; c.n = a.w; c.sun = cells[2u * s + 1u].w; if (a.w > 0.0) { return c; }
+    let a = cells[2u * s]; if (bad4(a)) { continue; } if (a.w < select(1.0, 3.0, level == 0u)) { if (level == 0u) { continue; } }
+    c.E = a.xyz; c.n = a.w; c.sun = finite(cells[2u * s + 1u].w, 1.0); if (a.w > 0.0) { return c; }
   }
   c.n = 0.0; return c;
 }

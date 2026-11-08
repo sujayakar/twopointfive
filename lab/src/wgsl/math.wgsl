@@ -26,4 +26,7 @@ fn unpackRGB(u: u32) -> vec3f { let c = vec3f(f32(u & 255u), f32((u >> 8u) & 255
 
 // ---- what may be kept: numbers only. By the bits, since a compiler that assumes there are no NaNs may drop any test written with comparisons
 fn finite(x: f32, most: f32) -> f32 { let b = bitcast<u32>(x); if ((b & 0x7f800000u) == 0x7f800000u) { return 0.0; } return clamp(x, -most, most); }
+/** is it not a number (or no finite one)? Never ask this with a comparison */
+fn bad(x: f32) -> bool { return (bitcast<u32>(x) & 0x7f800000u) == 0x7f800000u; }
+fn bad4(v: vec4f) -> bool { let b = bitcast<vec4u>(v) & vec4u(0x7f800000u); return any(b == vec4u(0x7f800000u)); }
 fn finite4(v: vec4f, most: f32) -> vec4f { return vec4f(finite(v.x, most), finite(v.y, most), finite(v.z, most), finite(v.w, most)); }

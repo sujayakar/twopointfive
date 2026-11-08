@@ -1,5 +1,5 @@
 // THE AIR, one walk from the eye: a thin haze and the dust of the rooms, lit by the sun where it gets in, and by the lamps' own light on surfaces nearby.
-fn dustAt(x: vec3f) -> f32 { let inside = select(0.0, 1.0, x.x > -12.0 && x.x < 12.0 && x.z > -8.0 && x.z < 8.0 && x.y < 6.7 && (x.y < 3.3 || x.x < 4.0)); return frame.misc.w * (0.0016 * exp(-max(x.y + 12.0, 0.0) * 0.045) + 0.013 * inside); }
+fn dustAt(x: vec3f) -> f32 { let inside = select(0.0, 1.0, x.x > -12.0 && x.x < 12.0 && x.z > -8.0 && x.z < 8.0 && x.y < 6.7 && (x.y < 3.3 || x.x < 4.0)); return frame.misc.w * (0.0016 * exp(-max(x.y + 12.0, 0.0) * 0.045) + 0.026 * inside); }
 @compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) {
   let dim = textureDimensions(outA); if (id.x >= dim.x || id.y >= dim.y) { return; }
   let full = min(id.xy * 2u, vec2u(frame.size.xy) - 1u); let rd = pxRay(full); let t1 = min(bitcast<f32>(textureLoad(surf, full, 0).x), 260.0); let ro = frame.camPos.xyz; fineLeaves = false;

@@ -1,6 +1,8 @@
 [
- {"name":"70-day","w":1920,"h":1080,"scale":0.8,"samples":120,"run":true,"method":"realtime","dist":52,"hour":16.8,"tick":1200,"pitch":0.72,"yaw":0.75},
- {"name":"71-cut","w":1920,"h":1080,"scale":0.8,"samples":120,"run":true,"method":"realtime","dist":46,"hour":15.0,"cut":2.55,"look":[0,0.6,0],"doors":0.8,"tick":1400},
- {"name":"72-night-cut","w":1920,"h":1080,"scale":0.8,"samples":160,"run":true,"method":"realtime","dist":44,"hour":21.5,"cut":2.55,"look":[0,0.6,0],"doors":0.9,"tick":1600},
- {"name":"73-noon","w":1920,"h":1080,"scale":0.8,"samples":120,"run":true,"method":"realtime","dist":34,"hour":12.5,"look":[6,3.6,0],"tick":1900,"pitch":0.8}
+ {"name":"80-day","w":1920,"h":1080,"scale":0.8,"samples":120,"run":true,"method":"realtime","dist":52,"hour":16.4,"tick":1200,"pitch":0.75,"yaw":0.7},
+ {"name":"81-cut","w":1920,"h":1080,"scale":0.8,"samples":120,"run":true,"method":"realtime","dist":44,"hour":15.0,"cut":2.55,"look":[0,0.6,0],"doors":0.8,"tick":1400},
+ {"name":"82-night-cut","w":1920,"h":1080,"scale":0.8,"samples":160,"run":true,"method":"realtime","dist":44,"hour":21.5,"cut":2.55,"look":[0,0.6,0],"doors":0.9,"tick":1600},
+ {"name":"83-upper","w":1920,"h":1080,"scale":0.8,"samples":120,"run":true,"method":"realtime","dist":40,"hour":9.5,"cut":5.95,"look":[-3,3.4,0],"doors":0.6,"tick":1900},
+ {"name":"84-low","w":1920,"h":1080,"scale":0.8,"samples":120,"run":true,"method":"realtime","dist":46,"hour":18.0,"yaw":0.5,"pitch":0.3,"look":[2,3,0],"tick":2200},
+ {"name":"85-dusk","w":1920,"h":1080,"scale":0.8,"samples":160,"run":true,"method":"realtime","dist":54,"hour":18.6,"yaw":0.9,"pitch":0.62,"tick":2500}
 ]

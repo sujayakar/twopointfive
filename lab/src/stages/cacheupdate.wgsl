@@ -3,9 +3,9 @@ fn cachePut(s: u32, E: vec3f, n: f32, x: vec3f, sun: f32) { let a = finite4(vec4
 // LIGHT ON SURFACES, one more sample an entry: the sun, one lamp, and one ray to see what else is out there, read from the table as it stands.
 @compute @workgroup_size(64) fn main(@builtin(global_invocation_id) id: vec3u) {
   let s = id.x; if (s >= SLOTS) { return; } if (norms[s] == 0u) { return; }
-  var a = cells[2u * s]; let b = cells[2u * s + 1u]; let x0 = b.xyz; let st = steady(x0);
+  var a = cells[2u * s]; var b = cells[2u * s + 1u]; let x0 = b.xyz; let st = steady(x0);
   if (changes.all.y > 0.5) { a.w = min(a.w, 1.0); }
-  if (!(a.w >= 0.0)) { a.w = 0.0; }
+  if (bad4(a) || bad(b.w)) { a = vec4f(0.0); b.w = 0.0; }
   let key = atomicLoad(&keys[s]); if (a.w > 24.0 && st > 0.9 && (key & 3u) != (frame.counts.z & 3u)) { return; }
   rngKey(key, 91u); let n = octUnpack(norms[s] & 0xfffffffeu); fineLeaves = false;
   // a little about its point, so that a cell is the mean of its patch
