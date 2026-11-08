@@ -7,6 +7,7 @@ import { closeOptions, openOptions } from './options';
 import { button, checkpointButton, el, layStripAgain, saveStrip, type RunSaves } from './runcard';
 
 interface Next { title: string; start(): void }
+const hint = (b: HTMLElement, title: string): HTMLElement => { b.title = title; return b; };
 export interface PauseDeps {
   /** what is paused, under the wordmark */
   title: string;
@@ -39,6 +40,7 @@ export class PauseCard {
     this.root.addEventListener('mousedown', e => e.stopPropagation());   // (a click on the card is no shot)
     this.root.addEventListener('contextmenu', e => e.preventDefault());
     addEventListener('keydown', e => { if (e.code === 'Escape' && !e.repeat) { e.preventDefault(); if (!this.d.away()) this.toggle(); }
+      else if ((e.code === 'Enter' || e.code === 'NumpadEnter') && e.shiftKey && !e.repeat && this.up && this.ended && !e.metaKey && !e.ctrlKey && !e.altKey) { e.preventDefault(); e.stopPropagation(); if (this.press.armed()) { this.d.restart(); this.close(); } }
       else if (e.code === 'F5' && !e.repeat && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && this.up && !this.ended) { e.preventDefault(); if (this.d.save()) layStripAgain(this.root, on => saveStrip(this.d.saves, this.press, on), this.stripAt); } }, { capture: true });
   }
   toggle(): void { if (this.up) this.close(); else this.open(); }
@@ -86,9 +88,9 @@ export class PauseCard {
     const lead = V && V.won && !lost && E.kept?.lesson ? this.d.lesson() : null, pick = this.d.pick(), go = (n: Next, cls: string): HTMLElement => button(`Next: ${n.title} ›`, () => { if (armed()) n.start(); }, cls);
     const first = lead ? go(lead, 'primary next') : null, b = lost ? checkpointButton(this.d.saves, press, first ? '' : 'primary') : null, strip = lost ? saveStrip(this.d.saves, press) : null;
     const again = button(lost ? 'Restart' : 'Again', () => { if (!armed()) return; this.d.restart(); this.close(); }, first || b ? '' : 'primary'), keep = button(lost ? 'Back to the floor' : 'Keep playing', () => { if (armed()) this.close(); });
-    const watch = this.d.replay(), actions = [first, b, again, keep, strip, button('Quit to missions', () => { if (armed()) this.d.quit(); }, 'quit'), pick ? go(pick, 'next') : null, watch ? button('Replay', () => { if (armed()) watch(); }, 'replay') : null].filter((x): x is HTMLElement => !!x);
+    const watch = this.d.replay(), actions = [first, b, again, keep, strip, button('Quit to missions', () => { if (armed()) this.d.quit(); }, 'quit'), pick ? go(pick, 'next') : null, watch ? hint(button('Replay', () => { if (armed()) watch(); }, 'replay'), 'watch this run again in the game') : null].filter((x): x is HTMLElement => !!x);
     const body = el('div', 'body'); card.appendChild(body); renderDebrief(body, E, actions);
-    { const foot = el('div', 'foot'); foot.textContent = lost ? (b ? 'Press Enter to go back to the checkpoint · press Esc to close this' : 'Press Enter to start again · press Esc to close this') : 'Press Esc to keep playing · Esc ▸ Run so far shows this for a run in progress'; card.appendChild(foot); }
+    { const foot = el('div', 'foot'); foot.textContent = lost ? (b ? 'Press Enter to go back to the checkpoint · press Shift+Enter to restart the mission · press Esc to close this' : 'Press Enter or Shift+Enter to restart · press Esc to close this') : 'Press Esc to keep playing · press Shift+Enter to restart any time · Esc ▸ Run so far shows this for a run in progress'; card.appendChild(foot); }
     setTimeout(() => (first ?? b ?? again).focus(), 0);
   }
 }
