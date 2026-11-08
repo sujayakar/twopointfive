@@ -100,8 +100,22 @@ fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
   }
   s.albedo = clamp(base, vec3f(0.0), vec3f(0.94)); return s;
 }
+/** under the open sky? (the building's own rooms are dry) */
+fn openAir(x: vec3f) -> bool { let room = abs(x.x) < 12.0 && abs(x.z) < 8.0 && (x.y < 3.3 || (x.y < 6.55 && x.x < 4.0)); return !room; }
+/** THE WET FILM, laid over any material the rain reaches: darker, smoother, and where the ground is low a mirror with rings in it */
+fn wetFilm(s0: Surf, fp: f32) -> Surf {
+  var s = s0; let w = frame.weather.x; if (w <= 0.0 || !openAir(s.x + s.ng * 0.02) || s.kind == 14u) { return s; }
+  let up = sat(s.ng.y); let low = fbm(s.x.xz * 0.42 + 5.0); let pud = w * smoothstep(0.47 - 0.05 * w, 0.545, low) * smoothstep(0.9, 0.99, up); let film = w * (0.35 + 0.65 * up);
+  let lumA = lum(s.albedo); s.albedo *= mix(1.0, 0.52 + 0.25 * lumA, film * select(1.0, 0.4, s.metal > 0.5)); s.rough = mix(s.rough, max(0.09, s.rough * 0.30), film); s.f0 = max(s.f0, mix(s.f0, 0.03, film));
+  if (pud > 0.0) {
+    s.rough = mix(s.rough, 0.03, pud); s.albedo *= mix(1.0, 0.75, pud); var n = vec2f(0.0);
+    if (frame.weather.y > 0.0 && fp < 0.12) { for (var k = 0u; k < 2u; k++) { let g = s.x.xz * 2.6 + f32(k) * 17.3; let c = floor(g); let h = hash33(vec3f(c, f32(k) + 3.0)); let t = fract(frame.misc.x * (0.9 + 0.5 * h.x) + h.y); let d = g - c - 0.25 - 0.5 * h.yz; let r = length(d); let ring = sin((r - t * 0.5) * 60.0) * exp(-abs(r - t * 0.5) * 22.0) * (1.0 - t); n += d / max(r, 1e-3) * ring * 0.10 * frame.weather.y; } }
+    s.n = normalize(mix(s.n, normalize(s.ng + vec3f(n.x, 0.0, n.y)), pud));
+  }
+  return s;
+}
 /** the same for a ray that only wants the mean: no patterns, no paint */
-fn surfaceMean(ro: vec3f, rd: vec3f, h: Hit) -> Surf { return surfaceAt(ro, rd, h, 1.0); }
+fn surfaceMean(ro: vec3f, rd: vec3f, h: Hit) -> Surf { var s = surfaceAt(ro, rd, h, 1.0); if (frame.weather.x > 0.0 && openAir(s.x + s.ng * 0.02)) { s.albedo *= mix(1.0, 0.62, frame.weather.x); } return s; }
 
 // ================================================================ lamps
 struct Aim { dir: vec3f, dist: f32, E: vec3f };       // toward a point of a lamp: what it would send a surface facing it, per unit of 1 / pdf

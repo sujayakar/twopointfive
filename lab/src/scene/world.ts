@@ -23,7 +23,7 @@ export interface Cluster { leaves: Leaf[]; kind: number }
 export interface Instance { cluster: number; at: V3; rot: Rot; scale: number; base: V3; sway: number; phase: number; tint: V3 }
 
 export class World {
-  pieces: Piece[] = []; moving: Piece[] = []; lamps: Lamp[] = []; openings: Opening[] = []; clusters: Cluster[] = []; instances: Instance[] = [];
+  pieces: Piece[] = []; moving: Piece[] = []; lamps: Lamp[] = []; openings: Opening[] = []; clusters: Cluster[] = []; instances: Instance[] = []; plumes: { at: V3; r: number; h: number; k: number }[] = [];
   add(p: Partial<Piece> & { at: V3; half: V3; mat: number }): Piece {
     const full: Piece = { rot: ID, flags: 0, ...p }; if (full.quad) full.flags |= F.QUAD;
     (full.flags & F.MOVES ? this.moving : this.pieces).push(full); return full;

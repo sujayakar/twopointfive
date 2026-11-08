@@ -35,5 +35,11 @@ fn upMirror(id: vec2u, p: Px, f: vec4u) -> vec4f {
   }
   let ai = vec2i(id.xy) / 2; let ad = vec2i(textureDimensions(air)); var a = vec4f(0.0); var ws = 0.0; for (var k = 0; k < 4; k++) { let q = clamp(ai + vec2i(k & 1, k >> 1u), vec2i(0), ad - 1); let t = bitcast<f32>(textureLoad(surf, min(q * 2, vec2i(dim) - 1), 0).x); let w = exp(-abs(t - p.t) / (0.04 * p.t + 0.1)) + 1e-3; a += textureLoad(air, q, 0) * w; ws += w; } a /= ws;
   c = c * a.a + a.rgb;
+  if (frame.weather.y > 0.0) {                                       // rain: falling streaks in three sheets before the surface, where the ray is in the open
+    for (var k = 0u; k < 3u; k++) {
+      let y = array<f32, 3>(8.6, 5.2, 2.4)[k] ; let t = (y - frame.camPos.y) / min(rd.y, -0.05); if (t < 2.0 || t > p.t) { continue; } let x = frame.camPos.xyz + rd * t; if (!openAir(x)) { continue; }
+      let r = normalize(frame.camRight.xyz); let q = vec2f(dot(x, r) * 7.0 + f32(k) * 31.0, dot(x, normalize(frame.camUp.xyz)) * 0.75 + frame.misc.x * 8.5 + f32(k) * 3.1); let cell = floor(q.x); let h = hash33(vec3f(cell, f32(k), 1.0)); let v = fract(q.y * 0.8 + h.x * 9.0); let u = abs(q.x - cell - 0.5 - (h.y - 0.5) * 0.5);
+      let px = t * 2.0 * length(frame.camUp.xyz) / frame.size.y * 7.0; let line = (1.0 - smoothstep(0.02, 0.02 + px, u)) * min(0.05 / (0.04 + px), 1.0); let drop = smoothstep(0.0, 0.03, v) * (1.0 - smoothstep(0.10, 0.22, v)) * step(0.45, h.z);
+      c += (a.rgb * 1.5 + skyLod(vec3f(0.0, 1.0, 0.0), 6.0) * 0.18) * (line * drop * frame.weather.y * 0.55); } }
   textureStore(outC, id.xy, vec4f(min(c, vec3f(500.0)), p.t));
 }

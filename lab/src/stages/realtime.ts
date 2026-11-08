@@ -96,7 +96,7 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
     signals(g, lab) {
       g.signal('surf', 'rgba32uint', 'render', true).signal('aux', 'rgba16float', 'render').signal('emit', 'rgba16float', 'render').signal('front', 'rgba32uint', 'render');
       g.signal('vis', 'rgba16float', 'render').signal('lampU', 'rgba16float', 'render').signal('bounce', 'rgba16float', 'half').signal('mirror', 'rgba16float', 'half').signal('air', 'rgba16float', 'half').signal('airH', 'rgba16float', 'half', true).signal('airM', 'rgba16float', 'half', true).signal('color', 'rgba16float', 'render');
-      lab.buffer('past', Math.max(1, lab.building.world.moving.length) * 64); lab.uniform('changes', new Float32Array(36)); lab.uniform('taauK', new Float32Array(4));
+      lab.buffer('past', Math.max(1, lab.building.world.moving.length) * 64); lab.uniform('changes', new Float32Array(36)); lab.uniform('taauK', new Float32Array(4)); const pl = new Float32Array(72), ps = lab.building.world.plumes.slice(0, 8); ps.forEach((p, i) => { pl.set([...p.at, p.r], i * 4); pl.set([p.h, p.k, 0, 0], 36 + i * 4); }); pl[32] = ps.length; lab.uniform('plumes', pl);
     },
     stages(lab) {
       const g = lab.graph, c = { ...cache.bind, ...CHANGES };
@@ -112,7 +112,7 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
         S('gather', cache.lib + gather, 'half', { surf: 'surf' }, { outE: 'bounce' }, { ...c, hits: ['hits', 'array<vec4f>', 'read_write'] }, { HITS }),
         S('mirror', cache.lib + mirror, 'half', { surf: 'surf', front: 'frontT' }, { outM: 'mirror' }, c, { DIV: 2 }),
         ...dVis.stages, ...dB.stages, ...dM.stages,
-        S('air', air, 'half', { surf: 'surf' }, { outA: 'air' }),
+        S('air', cache.lib + air, 'half', { surf: 'surf' }, { outA: 'air' }, { ...c, plumes: ['plumes', 'array<vec4f, 18>', 'uniform'] }),
         S('air history', temporal, 'half', { air: 'cur', 'airH@prev': 'hist', 'airM@prev': 'momPrev', surf: 'surf', 'surf@prev': 'surfPrev', aux: 'auxT', front: 'frontT' }, { outH: 'airH', outM: 'airM' }, {}, { DIV: 2, CAP: 16, SPREAD: 1.0, NARROW: 0, KIND: 0 }),
         S('resolve', resolve, 'render', { surf: 'surf', emit: 'emit', front: 'frontT', [dVis.result]: 'vis', lampU: 'lampU', [dB.result]: 'bounce', [dM.result]: 'mirror', airH: 'air' }, { outC: 'color' }),
         ...u.stages, ...glows,

@@ -15,6 +15,7 @@ struct Frame {
   piece0: vec4u,       // where each one's pieces start (the fourth's are instances)
   pool: vec4f,         // the water: x0 z0 x1 z1
   pool2: vec4f,        // its level, its depth
+  weather: vec4f,      // how wet the open ground is, how hard it rains, steam, the wind's way (rad)
 };
 struct Piece { r0: vec4f, r1: vec4f, r2: vec4f, half: vec3f, flags: u32, quad: vec4f, mat: u32, tint: u32, planes: u32, lamp: u32 };
 struct Node { mn: vec3f, skip: u32, mx: vec3f, leaf: u32 };

@@ -6,12 +6,14 @@ import skyCode from './wgsl/sky.wgsl' with { type: 'text' };
 
 export interface Hour { sun: V3; sunE: V3; radius: number; intensity: number; night: number; haze: number; cloud: number; isMoon: boolean }
 /** an hour of the day (0‥24) → where the sun is and what it sends */
-export function hourOf(h: number, bearing = 0.85): Hour {
+export function hourOf(h: number, bearing = 0.85, cover = 0): Hour {
   const a = (h - 6) / 12 * Math.PI, el = Math.sin(a) * 1.02, dir = norm([Math.cos(a) * Math.cos(bearing) + 0.25, el, Math.cos(a) * Math.sin(bearing) + 0.55]);
   const y = dir[1], night = 1 - smooth(-0.12, 0.10, y), m = 1 / Math.max(0.03, y + 0.06), T: V3 = [Math.exp(-0.055 * m), Math.exp(-0.115 * m), Math.exp(-0.27 * m)];
   const k = 21 * smooth(-0.035, 0.07, y); let sunE: V3 = [T[0] * k * 1.0, T[1] * k * 0.985, T[2] * k * 1.0], sun = dir, radius = 0.0047 * 1.6, isMoon = false;
   if (y < -0.03) { isMoon = true; sun = norm([-0.45, 0.72, 0.5]); const q = 0.11 * smooth(0.03, 0.16, -y); sunE = [q * 0.62, q * 0.80, q * 1.15]; radius = 0.012; }
-  return { sun, sunE, radius, intensity: 21, night, haze: 1.0, cloud: 0.9, isMoon, ...({ air: dir } as object) } as Hour;
+  // cloud takes the sun's disc and spreads it: softer, weaker, and the sky greyer
+  const c = clamp(cover, 0, 1); sunE = [sunE[0] * (1 - 0.94 * c), sunE[1] * (1 - 0.93 * c), sunE[2] * (1 - 0.92 * c)]; radius += 0.10 * c;
+  return { sun, sunE, radius, intensity: 21, night, haze: 1.0 + 1.6 * c, cloud: 0.9 + c, isMoon, ...({ air: dir } as object) } as Hour;
 }
 export class Sky {
   readonly tex: GPUTexture; readonly size = 256; private views: GPUTextureView[] = []; private draw!: GPUComputePipeline; private half!: GPUComputePipeline; private knob: GPUBuffer; private last = '';

@@ -30,6 +30,7 @@ async function main() {
     row('lamps', (['auto', 'on', 'off'] as const).map(k => ['Lamps ' + k, () => lab.lampsMode === k, () => { lab.lampsMode = k; }] as [string, () => boolean, () => void]));
     row('view', views.map((v, i) => [v, () => viewIx === i, () => { viewIx = i; }] as [string, () => boolean, () => void]));
     row('groups', ['atrium', 'orange', 'green', 'blue', 'gallery', 'studio', 'lounge'].map(k => [k, () => (lab.lampGroup[k] ?? 1) > 0, () => { lab.lampGroup[k] = (lab.lampGroup[k] ?? 1) > 0 ? 0 : 1; }] as [string, () => boolean, () => void]));
+    row('weather', [['Clear', () => lab.rain === 0, () => { lab.rain = 0; }], ['Rain', () => lab.rain > 0, () => { lab.rain = 1; }], ['Steam', () => lab.steam > 0, () => { lab.steam = lab.steam > 0 ? 0 : 1; }]]);
     $('mode').textContent = method === rt ? 'Real time' : 'Reference, path traced';
     $<HTMLInputElement>('hour').value = String(lab.hour);
   }
