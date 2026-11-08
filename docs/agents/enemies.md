@@ -1266,7 +1266,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   to)`, as the press and the rally ask it) — he stays the lanes' own man (their look, their grenade, their way round). A man come to rest with nobody
   in his sights is sent again `againSecs` after his last word. THEY'RE GONE: the first to stand in the room and find no hostage says so, and from then on they
   go to the team's last loud thing and to the way out, in turn. THE GUN ON HER: a man of theirs inside `reachM` of a living hostage with a line a ROUND can fly (`shotBlocked`: a
-  pane that stops a round is a wall to this) and no smoke hiding her (`Game.sensors.segment`, under `smokeK`; headless the air is clear) HAS
+  pane that stops a round is a wall to this) and no smoke hiding her (under `smokeK`) HAS
   her, as the man standing in the room always did (rescue.ts `captor()` → `flush.holder`); one who came for her is `killSecs` from turning his gun on her,
   then `RESCUE.aimSecs` from the round — the same act, broken the same ways, and broken too if she leaves his line before the round (`act:broken`). Lines
   (their net, said once per errand): "it's gone quiet in there — I'm going in for them!" · "going round — I'll take the other door!" · "the hostages are

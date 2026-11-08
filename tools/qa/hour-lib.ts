@@ -2,15 +2,6 @@
 // sight-watch.ts: the bystander on a scripted run, playthrough.ts PT_SIGHT=1; hour-tally.ts: the tables over many runs). Nothing here is game code and nothing
 // here changes a rule: it reads the game's own tables and functions, and — one thing, opt-in — ANSWERS THE LIGHT METER where the harness has nobody to.
 //
-// THE METER STAND-IN (PT_METER=sky; hour-measure.ts prints both). The harness has no GPU, so the light meter of every AI man falls back to guards.ts
-// lightEstimateAt — and that estimate SKIPS every directional light (kind 2: the moon, a sun, a stroke of lightning). The page's meter (render/shaders/probe.wgsl)
-// does not: it sums every light, the directional ones through common.wgsl evalLight (colour × intensity × the receiving cosine, one shadow ray to the sky). So
-// under an open sky the harness plays a darker floor than the page shows, at night already (the moon), and by day it would play the night. meterAt() is
-// lightEstimateAt's own arithmetic with the directional lights put back the way the shader has them; installSkyMeter() hands it to the game through the hooks
-// the game keeps for exactly this (Game.lightQuery / lightAt — the Sensors seam), so a run can be played AS THE PAGE'S METER WOULD LIGHT IT. What it still has
-// not got, named: no bounce (the page adds the radiance cache's — a room lit only through its windows reads darker here than on the page), no bodies' shadows,
-// no smoke or haze between a light and a man, no fixture flicker. Sam's own meter is never answered (the scripted commander is unseen by design).
-// With `sky` off meterAt IS lightEstimateAt, and selfCheck() holds that to the last bit on a spread of points.
 import { ROOT } from './headless.ts';
 const GU: any = await import(`${ROOT}/src/game/guards.ts`);
 const NV: any = await import(`${ROOT}/src/game/nvg.ts`);
@@ -73,28 +64,6 @@ export function meterAt(g: any, P: Vec3, o: MeterOpts): number {
     for (let k = 0; k < 6; k++) { const N = AXES[k]; const cs = N[0] * Lx + N[1] * Ly + N[2] * Lz; if (cs > 0) acc[k] += L * cs; }
   }
   return Math.max(acc[0], acc[1], acc[2], acc[3], acc[4], acc[5]);
-}
-/** meterAt with the sky off must be guards.ts lightEstimateAt, to the bit, in all three of its modes: [points checked, points that differ] */
-export function selfCheck(g: any, pts: Vec3[]): [number, number] {
-  let bad = 0;
-  for (const p of pts) {
-    // (the estimate asked with no moon in it, whatever sense.ts SENSE.moon says: `sky: false` is the lamps alone)
-    if (meterAt(g, p, { sky: false }) !== GU.lightEstimateAt(g, p, undefined, false, undefined, false)) bad++;
-    if (meterAt(g, p, { sky: false, placeOnly: true }) !== GU.lightEstimateAt(g, p, () => true, false, undefined, false)) bad++;
-    if (meterAt(g, p, { sky: false, placeOnly: true, steady: true }) !== GU.lightEstimateAt(g, p, () => true, true, undefined, false)) bad++;
-  }
-  return [pts.length * 3, bad];
-}
-/** Answer the game's light meter as the page's would for direct light (see the head) — for exactly the keys the harness already has a reading for (a man's
- *  meter, a held man's, a civilian's, the light on a body: each falls back to guards.ts lightEstimateAt when the hook has no answer), so a run with it differs
- *  from a run without it by THE SKY ALONE. Left unanswered, as headless: Sam's own meter, and the searchers' spot readings (`srch:` — headless nobody answers
- *  them and every spot scores a flat half-dark; answering them would switch a second thing on). Returns how many readings it has given. */
-export function installSkyMeter(g: any): { reads: number } {
-  const at = new Map<string, Vec3>(), S = { reads: 0 };
-  g.lightQuery = (key: string, pos: Vec3) => { if (!key.startsWith('player') && !key.startsWith('srch:')) at.set(key, [pos[0], pos[1], pos[2]]); };
-  g.lightAt = (key: string) => { const p = at.get(key); if (!p) return undefined; S.reads++; return meterAt(g, p, { sky: true }); };
-  g.lightForget = (key: string) => { at.delete(key); };
-  return S;
 }
 /** is the sky open straight above this point (no static over a standing man's head): what the tables call OUTDOORS */
 export function openSky(g: any, x: number, z: number): boolean { return !g.col.segmentBlocked([x, 1.9, z], [x, 40, z]); }

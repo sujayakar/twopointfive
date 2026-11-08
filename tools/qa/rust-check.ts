@@ -43,9 +43,8 @@
 //             a man shown who should not be moves the bits on four of the five runs, a man missed one pass in seven moved none on the two runs tried
 //   poses     the posing functions (rust/sim/src/skeleton.rs against src/anim/skeleton.ts): tools/qa/pose-ident.ts — the game's own rig and clips sampled (also against the
 //             plain definition kept there), blended, run forward, turned and solved, each question asked of both: every single of every pose and every double of every run the same bits
-//   senses    an eye on a man, the light on a point, the smoke along a line, a sound's way, a way across the floor and what a team's eyes see (rust/sim/src/
-//             sight.rs, light.rs, smoke.rs, hear.rs, nav.rs, fog.rs): tools/qa/sense-ident.ts — random questions over whole levels (doors swung, statics re-shaped and said, lamps of
-//             every kind, two dozen blobs), each asked of the module and of the TypeScript: every number of every answer the same bits. `missions` and
+//   senses    an eye on a man, a sound's way, a way across the floor and what a team's eyes see (rust/sim/src/sight.rs, hear.rs, nav.rs, fog.rs): tools/qa/sense-ident.ts — random
+//             questions over whole levels (doors swung, statics re-shaped and said): every number of every answer held to the module's own earlier answers. `missions` and
 //             `both` hold them in play: a run is fair only if each raised sense answered there, and `both` answers every one of them twice.
 //   state     a game's state in the module (rust/sim/src/state.rs, src/sim/state.ts) and its first tenant, the game's own die (dice.rs): tools/qa/simstate-check.ts
 //             on both stands — the layout, the die against mulberry32 draw for draw, more blocks than slots, take and put, the row on against off and flipped
@@ -121,7 +120,7 @@ function unsaid(C: any, M: any): void {
   M.BoxMirror.prototype.followLeaf = function (_i: number, b: { yaw: number }) { return b.yaw; }; M.BoxMirror.prototype.followRow = function (b: { yaw: number }) { return b.yaw; };   // (…and the other way round: a leaf the module's door step turned is not followed by its box)
 }
 /** the senses collision.ts counts the questions of (SENSED). They are no rows: the module's alone, whatever is held down */
-const SENSES = ['sight', 'light', 'smoke', 'sound', 'paths'] as const;
+const SENSES = ['sight', 'sound', 'paths'] as const;
 type Sense = (typeof SENSES)[number];
 type Sensed = Record<Sense, number>;
 /** the ticks that opened with the box world's line tests, and its circles, going to the module, the ticks in which the fog's pass asked the module at
@@ -135,7 +134,7 @@ function countLines(C: any): { n: number; circles: number; fog: number; sees: nu
 }
 // ---- `missions`, one run in THIS process (a child): the update tapped, the raw bits chained after every tick
 if (args[0] === '--run') {
-  process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.PT_DIGEST ??= '1';
+  process.env.TPS_PROFILE ??= 'shipped'; process.env.PT_DIGEST ??= '1';
   const [scn, seed, how] = args[1].split(':'); if (how !== undefined && how !== 'hard') { console.error(`rust-check: a run is scenario:seed or scenario:seed:hard (not "${args[1]}")`); process.exit(2); }
   const { Game } = await import(`${ROOT}/src/game/game.ts`);
   const PT: any = await import(`${ROOT}/tools/qa/playthrough.ts`), FW: any = await import(`${ROOT}/src/game/fogofwar.ts`);
@@ -341,7 +340,7 @@ let wordOwn = '', wordRust = '';
   const levelsRed = redAsMust(r, 'RUST_BREAK');   // (under the break: every kind's word moved on some level against the same run played plain)
   // the numbers the host writes and reads by (boxMirror.ts FACE) against the Rust sources' own, name for name
   const fs = await import('node:fs'), face = /export const FACE = \{([^}]*)\}/.exec(fs.readFileSync(resolve(ROOT, 'src/scene/boxMirror.ts'), 'utf8'))?.[1] ?? '';
-  const rust = ['light', 'smoke', 'hear', 'sight'].map(f => fs.readFileSync(resolve(ROOT, `rust/sim/src/${f}.rs`), 'utf8')).join('\n');
+  const rust = ['hear', 'sight'].map(f => fs.readFileSync(resolve(ROOT, `rust/sim/src/${f}.rs`), 'utf8')).join('\n');
   const pairs = [...face.matchAll(/(\w+):\s*(\d+)/g)].map(m => ({ name: m[1], here: Number(m[2]), there: Number(new RegExp(`pub const ${m[1]}: \\w+ = (\\d+);`).exec(rust)?.[1] ?? NaN) }));
   { const nav = /export const NAV = \{([^}]*)\}/.exec(fs.readFileSync(resolve(ROOT, 'src/scene/boxMirror.ts'), 'utf8'))?.[1] ?? '', there = fs.readFileSync(resolve(ROOT, 'rust/sim/src/nav.rs'), 'utf8');   // (boxMirror.ts NAV: what a search answers that is no count)
     for (const m of nav.matchAll(/(\w+):\s*(-?\d+)/g)) pairs.push({ name: `nav ${m[1]}`, here: Number(m[2]), there: Number(new RegExp(`pub const ${m[1]}: \\w+ = (-?\\d+);`).exec(there)?.[1] ?? NaN) }); }
@@ -349,17 +348,6 @@ let wordOwn = '', wordRust = '';
   //  Not under RUST_BREAK, which is another red path of the same tool)
   const order = BREAK ? null : child(['bun', 'run', 'tools/qa/sense-ident.ts', '--n', '3000', '--levels', 'office.json,compound.json'], { PRICED_BREAK: '1' });
   const orderRed = !order || redAsMust(order, 'PRICED_BREAK');
-  // (…and the lamps in parts: with every part beginning its sum again, the words of the lamps' block and no kind's of the questions)
-  const parts = BREAK ? null : child(['bun', 'run', 'tools/qa/sense-ident.ts', '--n', '300', '--levels', 'office.json,compound.json'], { LAMPS_BREAK: '1' });
-  const partsRed = !parts || redAsMust(parts, 'LAMPS_BREAK');
-  // (…and the smoke's shadow where the grid cannot answer: with the module handed no blobs, the words of those two cases and nothing else)
-  const shade = BREAK ? null : child(['bun', 'run', 'tools/qa/sense-ident.ts', '--n', '300', '--levels', 'office.json,compound.json'], { SHADE_BREAK: '1' });
-  const shadeRed = !shade || redAsMust(shade, 'SHADE_BREAK');
-  // (…and the order of the level's rows among a question's own lamps: with the host saying no row stands before any lamp it writes, a light word and no other kind's)
-  const rowed = BREAK ? null : child(['bun', 'run', 'tools/qa/sense-ident.ts', '--n', '1200', '--levels', 'office.json,compound.json'], { ROWS_BREAK: '1' });
-  const rowedRed = !rowed || redAsMust(rowed, 'ROWS_BREAK');
-  // (…and the blobs: a game keeps no more than the module's table holds — sense.ts CpuSmoke.emit — so the knob as it ships must fit it: a build's mistake otherwise)
-  const SE: any = await import(`${ROOT}/src/game/sense.ts`), BMF: any = (await import(`${ROOT}/src/scene/boxMirror.ts`)).FACE, blobsFit = SE.SENSE.smoke.cap <= BMF.MAX_BLOBS;
   // (…and the floor: it is the build's, scene/world.ts WORLD, so a search of the module's must hold it, and what a search holds is the least of what its
   //  three tables reach — the cells' own, a way's waypoints, and the open list at a cell closed once and eight listed as it is: rust/sim/src/nav.rs MAX_FLOOR)
   const navRs = fs.readFileSync(resolve(ROOT, 'rust/sim/src/nav.rs'), 'utf8'), table = (n: string) => { const m = new RegExp(`const ${n}: usize = 1 << (\\d+);`).exec(navRs); return m ? 2 ** Number(m[1]) : NaN; };
@@ -368,18 +356,14 @@ let wordOwn = '', wordRust = '';
   const floorFits = holds === Math.min(table('MAX_NAV'), table('MAX_WAY'), Math.floor((table('MAX_OPEN') - 1) / 8)) && ways === table('MAX_WAY') && floorCells <= holds;
   // (…and THE PIN: the same questions over a box world of the tool's own, on the page's stand, every word the recording's — tools/qa/fixtures/sense-words.json.
   //  Under RUST_BREAK the child plays its own red path and must end red)
-  const made = child(['bun', 'run', 'tools/qa/sense-ident.ts', '--made'], { TPS_PROFILE: 'shipped', TPS_CPUSENSE: undefined });
+  const made = child(['bun', 'run', 'tools/qa/sense-ident.ts', '--made'], { TPS_PROFILE: 'shipped' });
   const madeSay = made.out.split('\n').filter(l => /^- (PASS|FAIL) — (reach|asked|same)/.test(l)).map(l => l.replace(/^- /, '').slice(0, 260)), madeOk = made.status === 0 && madeSay.some(l => /^PASS — same: every count and word is that of the recording/.test(l));
   red['the senses'] = levelsRed && made.status === 1 && /every one: the break reaches each/.test(made.out);   // (…and every word of the made-up world's pin: the family's red rule, as a row has one)
-  const off = pairs.filter(q => q.here !== q.there), ok = r.status === 0 && rows.length > 0 && rows.every(l => / PASS /.test(l)) && pairs.length >= 20 && off.length === 0 && orderRed && partsRed && shadeRed && rowedRed && blobsFit && floorFits && madeOk;
-  verdict(ok, 'senses: an eye on a man, the light on a point, the smoke along a line, a sound\'s way, a way across the floor and what a team\'s eyes see are answered by the Rust module, and held to its own earlier answers', (rows.length ? rows.map(l => l.replace(/\s+/g, ' ').trim().slice(0, 420)).join('\n    ') : `the check left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`)
+  const off = pairs.filter(q => q.here !== q.there), ok = r.status === 0 && rows.length > 0 && rows.every(l => / PASS /.test(l)) && pairs.length >= 20 && off.length === 0 && orderRed && floorFits && madeOk;
+  verdict(ok, 'senses: an eye on a man, a sound\'s way, a way across the floor and what a team\'s eyes see are answered by the Rust module, and held to its own earlier answers', (rows.length ? rows.map(l => l.replace(/\s+/g, ' ').trim().slice(0, 420)).join('\n    ') : `the check left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`)
     + `\n    ${pairs.length} numbers shared with the Rust sources (boxMirror.ts FACE, NAV)${off.length ? ` — NOT THE SAME: ${off.map(q => `${q.name} ${q.here} here, ${q.there} there`).join(', ')}` : ', each the same'}`
     + `\n    the floor: ${floorCells} cells, and a search of the module's holds ${holds} (a way ${ways} waypoints)${floorFits ? ': no table of a search can be outgrown on it' : ' — NOT AS IT MUST BE (nav.rs MAX_FLOOR is the least of MAX_NAV, MAX_WAY and (MAX_OPEN − 1) / 8, and the build\'s floor is under it)'}`
     + (order ? `\n    a priced search's prices asked for last first (PRICED_BREAK=1): ${orderRed ? 'the paths\' words move and no other, as they must' : `NOT RED AS IT MUST BE (exit ${order.status}): ${order.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : '')
-    + (parts ? `\n    the lamps of a question in parts, every part beginning its sum again (LAMPS_BREAK=1): ${partsRed ? 'the words of the lamps\' block move and no kind\'s of the questions, as they must' : `NOT RED AS IT MUST BE (exit ${parts.status}): ${parts.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : '')
-    + (shade ? `\n    a lamp's shadow with the module handed no blobs (SHADE_BREAK=1): ${shadeRed ? 'the words of the two cases where the grid cannot answer move and nothing else, as they must' : `NOT RED AS IT MUST BE (exit ${shade.status}): ${shade.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : '')
-    + (rowed ? `\n    the level's rows with their order dropped from the lamps the host writes (ROWS_BREAK=1): ${rowedRed ? 'a light word moves and none that is not the light\'s, as it must' : `NOT RED AS IT MUST BE (exit ${rowed.status}): ${rowed.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : '')
-    + `\n    the smoke's blobs: the game keeps ${SE.SENSE.smoke.cap} at most and the module's table holds ${BMF.MAX_BLOBS}${blobsFit ? '' : ' — THE KNOB IS PAST THE TABLE'}`
     + `\n    the pin (a made-up box world, the page's stand): ${madeOk ? '' : `NOT HELD (exit ${made.status}) · `}${madeSay.length ? madeSay.join(' · ') : (made.err || made.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
 }
 
@@ -670,7 +654,7 @@ let wordOwn = '', wordRust = '';
   const def = stood(rDef), off = stood(rDef, 'rows=0'), on = stood(rDef, 'maths=1');
   const table = (r: any) => r?.tables?.RUST ?? r?.knobs?.tables?.RUST ?? r?.tables?.EXACT ?? r?.knobs?.tables?.EXACT, T = (r: string) => S.rustOn(r) ? TICKS : 0;
   const ok = !!on && !!off && refused && on.ticks === TICKS && off.ticks === TICKS && on.rust === TICKS && off.rust === 0 && on.lines === TICKS && off.lines === 0 && on.circles === TICKS && off.circles === 0 && on.fog > 0 && off.fog === on.fog
-    && on.exact && off.exact && on.word === off.word && SENSES.every(k => off.sensed[k] === on.sensed[k]) && on.sensed.sight > 0 && on.sensed.light > 0 && on.sensed.sound > 0 && on.sensed.paths > 0;
+    && on.exact && off.exact && on.word === off.word && SENSES.every(k => off.sensed[k] === on.sensed[k]) && on.sensed.sight > 0 && on.sensed.sound > 0 && on.sensed.paths > 0;
   verdict(ok, 'server: the game server\'s stand ticks on the module\'s maths (that row held up), lines and circles, and is the game it is with every row held down (the senses and the fog\'s pass the module\'s either way); a setup that asks for a row is refused', !on || !off ? `a stand left nothing (recipe: ${!!rDef} · stands: ${!!on} ${!!off})` :
     `a setup with a RUST table: ${refused ? 'refused by name' : `NOT REFUSED (exit ${asked.status})`} · ${on.rust} of ${on.ticks} ticks on the module's maths, ${on.lines} on its lines, ${on.circles} on its circles and ${on.fog} with its sight pass (every row held down: ${off.rust}, ${off.lines}, ${off.circles} and ${off.fog} of ${off.ticks}) · the senses asked of it: ${SENSES.map(k => `${k} ${on.sensed[k]}`).join(', ')} (without: ${SENSES.map(k => off.sensed[k]).join(', ')}) · word ${on.word}${on.word === off.word ? ', the same' : ` ≠ ${off.word}`}`);
   // (the recipe as a server plays it today, with no arm held: the build's rows, RUST_ON, and no other. A section of its own, so that its red path is its
@@ -710,7 +694,7 @@ if (args.includes('--missions') || args.includes('--both')) {
   const one = (run: string, rustOn: boolean, both = false): Promise<Run | string> => new Promise(done => {
     const [name, how] = run.split('@');   // (`@frag`: the run played with 'frag and clear' ordered at a held room's door — tools/qa/playthrough.ts PT_FRAG — so that blasts take leaves off their hinges)
     const cmd = node ? [...NODE, 'tools/qa/rust-check.ts', '--run', name] : ['bun', 'run', 'tools/qa/rust-check.ts', '--run', name];
-    const env: Record<string, string | undefined> = { ...process.env, TPS_PROFILE: 'shipped', TPS_CPUSENSE: '1', PT_DIGEST: '1', RUST_BOTH: both ? '1' : '0', ...(node ? { V8_ENTRY: resolve(ROOT, 'tools/qa/rust-check.ts'), FC_NOSTANDIN: '1' } : {}) };
+    const env: Record<string, string | undefined> = { ...process.env, TPS_PROFILE: 'shipped', PT_DIGEST: '1', RUST_BOTH: both ? '1' : '0', ...(node ? { V8_ENTRY: resolve(ROOT, 'tools/qa/rust-check.ts'), FC_NOSTANDIN: '1' } : {}) };
     env.QA_HOLD = all.map(r => `${r}=${rustOn && up.includes(r) ? 1 : 0}`).join(',');   // (this check's own arm, said to the child: the rows of this run's side, each by name — tools/qa/headless.ts hold)
     if (how === 'frag') env.PT_FRAG = '1';
     if (up.includes('dice')) env.TPS_SEED = name.split(':')[1];   // (the die's row moves the game's OWN die: both of a pair are stood up with one, off the run's seed)
@@ -721,8 +705,8 @@ if (args.includes('--missions') || args.includes('--both')) {
   });
   /** the fewest questions of each sense a mission asks the module, which answers them whatever is held down (a squad mission asks each thousands of times; the smoke only where a
    *  canister is thrown, which not every run has: no floor a run, and SET_FLOOR over the runs together) */
-  const SENSE_FLOOR: Sensed = { sight: 1000, light: 1000, smoke: -1, sound: 100, paths: 100 };
-  const SET_FLOOR: Sensed = { sight: 1000, light: 1000, smoke: 1000, sound: 100, paths: 100 };
+  const SENSE_FLOOR: Sensed = { sight: 1000, sound: 100, paths: 100 };
+  const SET_FLOOR: Sensed = { sight: 1000, sound: 100, paths: 100 };
   /** the senses that the runs TOGETHER did not ask the module enough of (a set of runs with no smoke in it says nothing of the smoke) */
   const thin = (rs: (Run | string)[]) => SENSES.filter(k => rs.reduce((n, r) => n + (typeof r === 'string' ? 0 : r.sensed[k]), 0) <= SET_FLOOR[k]);
   /** the fewest layers of the animator a tick that a mission runs in the module (a squad mission runs about sixty and the office night with three guards
