@@ -319,13 +319,6 @@ pub fn checkpoint(g: &mut game::game::Game, label: &str) -> bool {
     stopped
 }
 
-/// HOST STEP AFTER THE TICK (game.ts hostAfter): a tutorial mission staged again opens on its first view, set with the host's camera; a return on its
-/// first line off a rails level. The host's camera is the row the game was handed at its stand (`host_cam`).
-pub fn view(g: &mut game::game::Game) {
-    let cam = host_cam(g);
-    game::rails::rails_host_view(g, cam);
-}
-
 /// THE HOST'S CAMERA: the row every host hands the game once, at its stand (game.ts hostCam, standGame; game_start `host_new`). A game that was
 /// handed none is refused here by name: nothing is guessed (the first camera that is no seat's was the check's scratch lens wherever no host row stood).
 fn host_cam(g: &game::game::Game) -> game::ids::CameraId {
@@ -354,7 +347,7 @@ pub fn view_live(g: &mut game::game::Game) {
 }
 
 /// HOST STEP AFTER THE TICK (the headless host's `cam.update(dt, view.followPos(), …)`, for each seat a host shows): the host's camera asks the game where
-/// to look. The ask changes nothing now: the tick itself eases a tutorial's sky seat, as its last step (`rails_ease_mid`).
+/// to look. The ask changes nothing now.
 pub fn follow(g: &mut game::game::Game) {
     for s in g.seats.clone() { game::seats::with_seat(g, s, &mut |g| { let _ = game::game::game_follow_pos(g, None); }); }
 }

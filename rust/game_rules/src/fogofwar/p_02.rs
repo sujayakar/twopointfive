@@ -120,19 +120,17 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
     // ---- the eyes
     let mut eyes: Vec<crate::fogofwar::FogEye> = Vec::new();
     let cap = m::min(crate::render_fogofwar::FOG_EYES, fog_eye_count(g.k.fog.eyes) + g.seats.len() as f64 - 1.0);
-    if !crate::rails::rails_sky_on(g) {
-        crate::seats::each_seat(g, &mut |g| {
-            if g.seats.len() != 1 && eyes.len() as f64 >= cap { return; }   // (v !== g: only a view differs, and a game of one lends itself)
-            let c = g.pl[g.player].ch;
-            let own = fog_of_war_eye_of(g, c);
-            let e = match crate::wand::wand_eye(g, &crate::seats::here(g)) {
-                Some(e) => e,
-                None => crate::peeksight::peek_eye(g, own).unwrap_or(own),
-            };
-            eyes.push(e);
-        });
-    }
-    if !g.k.fog.own || crate::rails::rails_sky_on(g) {
+    crate::seats::each_seat(g, &mut |g| {
+        if g.seats.len() != 1 && eyes.len() as f64 >= cap { return; }   // (v !== g: only a view differs, and a game of one lends itself)
+        let c = g.pl[g.player].ch;
+        let own = fog_of_war_eye_of(g, c);
+        let e = match crate::wand::wand_eye(g, &crate::seats::here(g)) {
+            Some(e) => e,
+            None => crate::peeksight::peek_eye(g, own).unwrap_or(own),
+        };
+        eyes.push(e);
+    });
+    if !g.k.fog.own {
         let mut i = 0;
         while i < g.guards.len() {
             let gd = g.guards[i];
@@ -164,28 +162,12 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
     let mut pic_own: Option<Vec<crate::fogofwar::FogEye>> = None;
     let mut view: Option<Vec<crate::fogofwar::FogEye>> = None;
     {
-        let e = crate::rails::rails_eye(g);
-        let s = crate::rails::rails_step_eye(g);
-        let first = s.is_some();
-        let own = e.is_some() || s.is_some();
-        if own { pic_own = Some(eyes.clone()); view = Some(Vec::new()); }
-        let pic: &mut Vec<crate::fogofwar::FogEye> = match pic_own.as_mut() { Some(p) => p, None => &mut eyes };
-        if let (Some(s), true) = (s, first) {
+        if let Some(s) = crate::rails::rails_step_eye(g) {
+            let mut pic = eyes.clone();
             if pic.len() as f64 >= cap { pic.truncate((cap - 1.0) as usize); }
             pic.push(s);
-            if let Some(v) = view.as_mut() { v.push(s); }
-        }
-        if let Some(e) = e {
-            if (pic.len() as f64) < cap {
-                pic.push(e);
-                if let Some(v) = view.as_mut() { v.push(e); }
-            }
-        }
-        if let (Some(s), false) = (s, first) {
-            if (pic.len() as f64) < cap {
-                pic.push(s);
-                if let Some(v) = view.as_mut() { v.push(s); }
-            }
+            pic_own = Some(pic);
+            view = Some(alloc::vec![s]);
         }
     }
     let pic = match pic_own { Some(p) => p, None => eyes.clone() };

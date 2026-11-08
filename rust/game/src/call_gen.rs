@@ -418,7 +418,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 667 => { let a1: GuardId = Io::r(&mut i); let a2: GuardId = Io::r(&mut i); let r = crate::silent::silent_holds_round(g, a1, a2); r.w(&mut o);  }
 668 => { let a1: GuardId = Io::r(&mut i); let r = crate::silent::silent_holds_target(g, a1); r.w(&mut o);  }
 670 => {  crate::silent::silent_tick(g);  }
-674 => { let a1: InputId = Io::r(&mut i); let a2: CameraId = Io::r(&mut i); let a3: f64 = Io::r(&mut i); crate::rails::rails_gate(g, a1, a2, a3);  }
 677 => { let a1: f64 = Io::r(&mut i); crate::rails::rails_tick(g, a1);  }
 678 => {  crate::rails::rails_put_back(g);  }
 679 => {  crate::rails::rails_resume(g);  }

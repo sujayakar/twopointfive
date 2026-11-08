@@ -304,7 +304,6 @@ pub fn player_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     use crate::kitanim::KitShowVRifle as Rf;
     use crate::rig_props::{RigOpts, RigOptsRifle};
     let p = g.player;
-    let mine0 = out.len();
     let c = g.pl[p].ch;
     let busy = g.ch[c].anim.hide_held_item;
     let kind_sel = crate::game::player_canister_sel(g, p);
@@ -393,7 +392,6 @@ pub fn player_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     crate::rig_props::rig_boxes(g, c, opts, out, None, None);
     crate::handwork::work_props(g, c, out);
     crate::irlaser::sam_laser_boxes(g, out);
-    if crate::rails::rails_sky_on(g) { out.truncate(mine0); }
 }
 
 /// Where the hammer's grip point and handle are at the side of the pack this man wears, in his chest joint's space. None: no pack.   (combat.ts hammerSide)

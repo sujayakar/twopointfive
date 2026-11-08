@@ -239,7 +239,7 @@ pub fn verdict_tick(g: &mut crate::game::Game) {
         if moved || fired(g) != g.verdict.fired0 || tail != g.verdict.order0 { g.verdict.t0 = g.time; }
     }
     // (rails.ts: the seat with nobody on the floor parks him unseen: the mission's own staging, not a sandbox tick)
-    if started(g) && (g.god_mode || !g.ai_enabled || g.infinite_ammo || (g.player_invisible && !crate::rails::rails_sky_on(g))) { g.verdict.cheat = true; }
+    if started(g) && (g.god_mode || !g.ai_enabled || g.infinite_ammo || g.player_invisible) { g.verdict.cheat = true; }
     watch(g);
     if let Some(end) = ended(g) { close(g, end); }
 }

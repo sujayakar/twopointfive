@@ -182,12 +182,10 @@ export function railsFaults(L: LessonData): string[] {
     if (!R.flatRing && T.flatLine !== undefined) out.push(`${w}.flatLine: the lesson's rails.flatRing is not set, so no ring here is flat`);
     if (T.cue !== undefined) { if (cues.has(T.cue)) out.push(`${w}.cue '${T.cue}' is another step's too: a cue starts one beat`); cues.add(T.cue); } });
   if (R.rows !== undefined && !(Array.isArray(R.rows) && R.rows.length > 0 && R.rows.every(v => typeof v === 'string' && !!v))) out.push('rails.rows: a list of verbs, at least one (absent: every row)');
-  if (R.sky && !(Array.isArray(R.sky.park) && R.sky.park.length === 3)) out.push('rails.sky.park: a Vec3 (where the player stands, out of the picture)');
   if (R.waits !== undefined) { const Wt = R.waits as unknown as Record<string, unknown> | null;
-    if (!Wt || typeof Wt !== 'object' || Array.isArray(Wt) || Object.keys(Wt).some(k => k !== 'low') || (Wt.low !== undefined && typeof Wt.low !== 'boolean') || !!R.sky) out.push('rails.waits: { low?: true } (the squad holds where it starts until a step allows `order`), and never with rails.sky');
+    if (!Wt || typeof Wt !== 'object' || Array.isArray(Wt) || Object.keys(Wt).some(k => k !== 'low') || (Wt.low !== undefined && typeof Wt.low !== 'boolean')) out.push('rails.waits: { low?: true } (the squad holds where it starts until a step allows `order`)');
     else if ((R.allow ?? []).includes('order') || !L.steps.some(T => T.allow?.includes('order'))) out.push("rails.waits: the wait ends at the first step that allows 'order', so one step has to and rails.allow must not (they would wait for ever, or not at all)"); }
   if (R.orders !== undefined && !(Array.isArray(R.orders) && R.orders.length > 0 && R.orders.every(x => typeof x === 'string'))) out.push('rails.orders: a list of order ids (at least one)');
-  if (R.sky?.eye && !(Array.isArray(R.sky.eye.at) && R.sky.eye.at.length === 3 && typeof R.sky.eye.yaw === 'number' && (R.sky.eye.fov === undefined || (R.sky.eye.fov > 0 && R.sky.eye.fov <= 360)))) out.push('rails.sky.eye: { at: a Vec3, yaw: radians, fov?: degrees up to 360 }');
   return out;
 }
 

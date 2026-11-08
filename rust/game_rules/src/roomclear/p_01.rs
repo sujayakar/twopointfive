@@ -738,9 +738,7 @@ pub fn room_clear_scenario_tick(g: &mut crate::game::Game, _dt: f64) {
     } else if crate::rails::rails_ends_now(g) {
         room_clear_scenario_finish(g, crate::roomclear::RoomClearEnd::Taken, "the mission is done");
     } else if crate::rails::rails_holds_end(g) {
-        if pair_up == 0 && ops > 0 && crate::rails::rails_sky_on(g) {
-            room_clear_scenario_finish(g, crate::roomclear::RoomClearEnd::Wiped, pair_word);
-        }
+        // (the mission is still on its steps: its end is theirs)
     } else if live.is_empty() && !crate::qrf::response_up(g) {
         let team = if ops > 0 { format!("{} of {} teammates up", pair_up, ops) } else { String::from("alone") };
         let why = format!("{} rooms clear, {}", g.room_clear.rooms.len(), team);

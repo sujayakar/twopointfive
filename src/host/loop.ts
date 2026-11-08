@@ -190,7 +190,7 @@ function stepFrameIn(ctx: LoopCtx, dt: number): void {
     const shotPos: Vec3 | null = (dshow ? dshow.look : null) ?? attractPos;   // a scripted look-at this frame: the level script's pinned shot / attract mode's
     ctx.host.settings.nvAmount = game.player.nvAmount; ctx.host.settings.hitFlash = game.player.hitFlash;
     if (ctx.audio) {
-      const lp = ((attract?.active ?? false) || !!dshow) && shotPos ? shotPos : game.view.lesson?.rails?.sky ? game.followPos() : game.player.char.pos;   // (a showcase parks Sam 30 m away outdoors exactly as attract does: listen from the shot, not from him — review 08-10 #3)
+      const lp = ((attract?.active ?? false) || !!dshow) && shotPos ? shotPos : game.player.char.pos;   // (a showcase parks Sam 30 m away outdoors exactly as attract does: listen from the shot, not from him — review 08-10 #3)
       ctx.audio.setListener([lp[0], lp[1] + 1.6, lp[2]], cam.forward); ctx.audio.update(dt, ctx.time);   // ← these two MUST stay statements: an 08-09 comment reshuffle swallowed them into the line above for three days (listener stuck at the lot corner, finished voices never released)
     }
     ctx.smoke?.update(dt);

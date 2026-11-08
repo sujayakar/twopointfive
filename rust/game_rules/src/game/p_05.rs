@@ -281,11 +281,10 @@ fn audio_play_rate(g: &mut Game, name: &str, pos: V3, gain: f64, rate: f64) {
 /// (game.ts clearNearestRoom)
 pub fn game_clear_nearest_room(g: &mut crate::game::Game) { crate::guards::force_clear(g) }
 
-/// Camera follow position: a spectated guard, a rail's look, `at`, else the player.   (game.ts followPos)
+/// Camera follow position: a spectated guard, `at`, else the player.   (game.ts followPos)
 pub fn game_follow_pos(g: &mut crate::game::Game, at: Option<V3>) -> V3 {
     let gd = if g.spectate >= 0.0 { g.guards.get(g.spectate as usize).copied() } else { None };
     if let Some(gd) = gd { let c = g.gd[gd].ch; return g.ch[c].pos; }
-    if let Some(p) = crate::rails::rails_look(g, &crate::seats::here(g)) { return p; }
     if let Some(a) = at { return a; }
     let c = g.pl[g.player].ch;
     g.ch[c].pos
@@ -559,7 +558,6 @@ pub fn game_host_after(g: &mut crate::game::Game, input: InputId, cam: CameraId,
     if let Some(cut) = crate::cmd::seat_take_cut(g, me) { cut_lens(g, cam, cut); }
     let vp = g.tab.camera[cam].view_proj;
     crate::seats::with_seat(g, me, &mut |g| g.view_proj = Some(crate::game::GameViewProj::Float32Array(vp.to_vec())));
-    crate::rails::rails_host_view(g, cam);
     crate::seats::with_seat(g, me, &mut |g| crate::orders::squad_orders_host_view(g, input, cam, canvas));
 }
 

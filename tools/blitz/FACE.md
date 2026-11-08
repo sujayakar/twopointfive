@@ -28,7 +28,7 @@ All C ABI; a pointer and a length are `usize`, a handle a `u32`. The head of `ru
 | a panic | `face_panic_ptr()` `face_panic_len()` `face_panic_clear()`: the last panic's words with file and line. The module aborts on a panic, so the host catches a trap and reads the words; the game of that call is gone, the others stand |
 | a game | `face_new(state, n, block, bn) -> h` (`io::import` + the block copied into the first free slot; 0 = no slot) · `face_lesson(h, p, n)` · `face_drop(h)` · `face_slot(h)` · `face_import_into(h, p, n)` |
 | the host's half | `face_host(h, p, n, first)` (one `h<k>.bin`) · `face_give(h, k, line)` · `face_hostwrite(h, k, line)` · `face_meter(h, v)` |
-| the step | `face_step(h, dt, flags)`: `game_step`, the autosave's rows kept by `face_hostwrite`, flag 4 the host's view of a level on rails (a flash's envelope is the tick's own last line). One call a tick for a host that plays · by name: `face_view(h)` `face_checkpoint(h, label, n)` |
+| the step | `face_step(h, dt, flags)`: `game_step`, the autosave's rows kept by `face_hostwrite` (a flash's envelope is the tick's own last line). One call a tick for a host that plays · by name: `face_checkpoint(h, label, n)` |
 | reading back | `face_export(h)` (`io::export` at `face_out`) · `face_die_n(h)` · `face_time(h)` · `face_rows(h)` · `face_parts()` `face_part_name(i)` `face_part(name, n) -> i` `face_part_addr(slot, i)` `face_part_len(i)` `face_part_hashes(slot) -> p` |
 | `rust/sim`'s own | all 272 of the shipped module's exports, same names, kinds and parameter counts (`sim_abi` 34, `state_layout`, `state_len` 3,248,912, 4 slots, 13 parts all equal) |
 
@@ -105,7 +105,6 @@ kept by the allocator: with `--reserve 32` no step of room-clear-four:1 or mouse
 
 ## Worked round, and asked
 
-- **The host's view** (`rails_host_view` after each tick, a level on rails) is a stand-in of the runner's too: `game_run::view`, `face_view`, flag 4.
 - **The box mirror's world is the TypeScript game's slot.** `g.col.mirror.slot` is carried by the bridge as a number, so a game imported into slot 1
   wrote its box world into world 0 and read world 1: the second of two games parted at tick 1832 in `doors` (stepped second) or 626 in `props` (stepped
   first). `game_run::start` sets it to the game's own slot; both games are then in step. Asked: `io::import` should not carry it, or should take the slot.
