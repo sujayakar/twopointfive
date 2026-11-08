@@ -238,6 +238,33 @@ pub trait DoorsAsk {
     fn rescue_aim(&self) -> f64;
     /// STAGING: a flash has his eyes for so long
     fn dazzled_for(&mut self, gd: GuardId, secs: f64);
+    /// is the room of that id on the room clear's list cleared
+    fn room_cleared(&self, id: &str) -> bool;
+    /// the defenders that room was dealt
+    fn room_men(&self, id: &str) -> Vec<GuardId>;
+    /// who the room fight has this man's gun on
+    fn gun_on(&self, gd: GuardId) -> Option<GuardId>;
+    /// STAGING, each frame: a man the probe stands where it wants him, blind and not to be killed; nobody's round goes; the floor is hot
+    fn puppet(&mut self, foe: GuardId, at: [f64; 2], yaw: f64);
+    /// STAGING: this man sees nothing for now
+    fn blinded(&mut self, gd: GuardId);
+    /// an order to these men by the menu's call
+    fn order_men(&mut self, id: &str, at: [f64; 2], men: &[GuardId]) -> Option<String>;
+    /// his script as his order wrote it: what his arms and body are told, and is the fight's overlay on him
+    fn script_says(&self, gd: GuardId) -> Option<(Option<game::character::UpperMode>, Option<game::character::Stance>, Option<f64>, bool)>;
+    /// what his arms are doing as shown
+    fn arms_shown(&self, gd: GuardId) -> game::character::UpperMode;
+    /// is that door locked against a man with no key from that place, and with the key
+    fn locked_out(&self, d: DoorId, from: [f64; 2]) -> (bool, bool);
+    /// a hand works the door from that place, with the key or without
+    fn door_used(&mut self, d: DoorId, from: [f64; 2], key: bool);
+    fn lock_on(&self, d: DoorId) -> bool;
+    /// the face of the door its lock is on
+    fn key_face(&self, d: DoorId) -> f64;
+    /// the team's walking pace
+    fn team_pace(&self) -> f64;
+    /// Sam can be hurt again
+    fn sam_hurtable(&mut self);
     /// a blast of a frag's tearing reach at a place, by the doors' own call: the doors it took off
     fn blast_tears(&mut self, at: [f64; 2]) -> Vec<DoorId>;
     /// how wide Sam's line of fire is reckoned `along` metres down it, either side of its middle
@@ -468,6 +495,42 @@ impl DoorsAsk for Play {
     fn fight_notes(&self, name: &str) -> Vec<String> { self.g.fight.log.iter().filter(|n| n.who == name).map(|n| n.what.clone()).collect() }
     fn rescue_aim(&self) -> f64 { self.g.k.rescue.aim_secs }
     fn dazzled_for(&mut self, gd: GuardId, secs: f64) { self.g.gd[gd].dazzled_until = self.g.time + secs; }
+    fn room_cleared(&self, id: &str) -> bool { self.g.room_clear.rooms.iter().find(|r| r.def.id == id).is_some_and(|r| r.cleared) }
+    fn room_men(&self, id: &str) -> Vec<GuardId> { self.g.room_clear.rooms.iter().find(|r| r.def.id == id).map_or(Vec::new(), |r| r.defenders.clone()) }
+    fn gun_on(&self, gd: GuardId) -> Option<GuardId> { self.g.fight.ops.iter().map(|&o| &self.g.tab.roomfight_op[o]).find(|o| o.gd == gd).and_then(|o| o.tgt) }
+    fn puppet(&mut self, foe: GuardId, at: [f64; 2], yaw: f64) {
+        self.pin_man(foe, at, yaw, GuardState::Patrol, 0.0);
+        let t = self.g.time;
+        self.g.gd[foe].dazzled_until = t + 9.0;
+        self.g.gd[foe].god = true;
+        for o in self.g.fight.ops.clone() { self.g.tab.roomfight_op[o].ready_at = t + 1.0; }
+        self.g.fight.hot_t = t;
+        for m in self.mates() { let c = self.g.gd[m].ch; self.g.gd[foe].god = true; }
+    }
+    fn blinded(&mut self, gd: GuardId) { self.g.gd[gd].dazzled_until = self.g.time + 9.0; }
+    fn order_men(&mut self, id: &str, at: [f64; 2], men: &[GuardId]) -> Option<String> {
+        let t = game::orders::squad_orders_target_at(&mut self.g, [at[0], 0.0, at[1]]);
+        let o = game::orders::GiveOpts { men: Some(men.to_vec()), ..game::orders::GiveOpts::zeroed() };
+        game::orders::squad_orders_give(&mut self.g, id, Some(&t), None, Some(&o))
+    }
+    fn script_says(&self, gd: GuardId) -> Option<(Option<game::character::UpperMode>, Option<game::character::Stance>, Option<f64>, bool)> { self.g.gd[gd].script.as_ref().map(|s| (s.upper, s.stance, s.face, s.over.is_some())) }
+    fn arms_shown(&self, gd: GuardId) -> game::character::UpperMode { self.g.ch[self.g.gd[gd].ch].anim.upper }
+    fn locked_out(&self, d: DoorId, from: [f64; 2]) -> (bool, bool) {
+        let at = [from[0], 0.0, from[1]];
+        let mut keys = game::js::JsSet::new();
+        keys.add(self.g.dr[d].lock_id.clone());
+        (game::doors::doors_locked_out(&self.g, d, at, None), game::doors::doors_locked_out(&self.g, d, at, Some(&keys)))
+    }
+    fn door_used(&mut self, d: DoorId, from: [f64; 2], key: bool) {
+        let mut keys = game::js::JsSet::new();
+        if key { keys.add(self.g.dr[d].lock_id.clone()); }
+        let who = self.g.ch[self.g.pl[self.g.player].ch].id;
+        game::doors::doors_use(&mut self.g, d, [from[0], 0.0, from[1]], who, Some(&keys));
+    }
+    fn lock_on(&self, d: DoorId) -> bool { game::doors::door_locked(&self.g, d) }
+    fn key_face(&self, d: DoorId) -> f64 { self.g.dr[d].key_side }
+    fn team_pace(&self) -> f64 { self.g.k.pace.max }
+    fn sam_hurtable(&mut self) { self.g.god_mode = false; }
     fn blast_tears(&mut self, at: [f64; 2]) -> Vec<DoorId> { let r = self.g.k.doorblast.tear_m.frag; game::doors::doors_blast(&mut self.g, [at[0], 1.0, at[1]], r, -1.0) }
     fn lane_half(&self, along: f64) -> f64 { let (ff, fl) = (&self.g.k.friendlyfire, &self.g.k.fireline); ff.body_m + fl.clear_m + along * ff.cone_k * fl.spread }
     fn sam_rounds(&self) -> f64 { self.g.fa[self.g.pl[self.g.player].rifle].shots_fired }
