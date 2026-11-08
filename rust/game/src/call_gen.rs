@@ -320,7 +320,7 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 483 => { let mut a1: Option<crate::squadthrow::SquadThrowKept> = Io::r(&mut i); let r = crate::squadthrow::squad_throw_plans(g, a1.as_mut()); r.w(&mut o); a1.w(&mut o); }
 486 => {  crate::squadnet::squad_net_tick(g);  }
 487 => { let a1: crate::orders::OrderTargetDoor = Io::r(&mut i); let a2: Option<bool> = Io::r(&mut i); let r = crate::autopilot::auto_entries(g, &crate::seats::here(g), a1, a2); r.w(&mut o);  }
-488 => { let a1: crate::orders::OrderTarget = Io::r(&mut i); let a2: Option<bool> = Io::r(&mut i); let a3: Option<Vec<GuardId>> = Io::r(&mut i); let r = crate::autopilot::auto_pick(g, &a1, a2, a3.as_deref()); r.w(&mut o);  }
+488 => { let a1: crate::orders::OrderTarget = Io::r(&mut i); let a2: Option<bool> = Io::r(&mut i); let a3: Option<Vec<GuardId>> = Io::r(&mut i); let r = crate::autopilot::auto_pick(g, &crate::seats::here(g), &a1, a2, a3.as_deref()); r.w(&mut o);  }
 489 => { let a1: crate::orders::OrderTarget = Io::r(&mut i); let r = crate::autopilot::auto_quick(g, &a1); r.w(&mut o);  }
 490 => { let a1: crate::orders::OrderTarget = Io::r(&mut i); let a2: Option<crate::autopilot::AutoPick> = Io::r(&mut i); let r = crate::autopilot::auto_hint(g, &a1, a2.as_ref()); r.w(&mut o);  }
 491 => {  let r = crate::kitanim::kit_sling_rest(g); r.w(&mut o);  }

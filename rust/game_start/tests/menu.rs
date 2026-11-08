@@ -77,3 +77,30 @@ fn a_fight_leaves_no_row_twice() {
         assert_eq!(twice(&rows), Vec::<String>::new(), "seed {s}: the table holds a row twice ({} rows; {})", rows.len(), p.roll());
     }
 }
+
+/// THE RULE: a digit is the first row's that has it. On a wall the fifth is the wall's own; the floor's own fifth row stays on the menu after it, the same row of the table, and
+/// opening the menu adds none.
+/// A FAILURE MEANS: a row is being copied to take its digit off (before: `silent` twice in the table, once with its digit and once without).
+#[test]
+fn a_walls_menu_copies_no_row() {
+    for s in SEEDS {
+        let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed: s, ..Default::default() });
+        p.sam_unhurt();
+        p.run(0.1);
+        game::wallcharge::wall_charge_raise_carried(&mut p.g, 2.0);
+        p.sam_put([14.6, 15.2]);
+        p.run(0.5);
+        let (rows, menu) = (p.menu_rows(), p.menu());
+        assert_eq!(twice(&rows), Vec::<String>::new(), "seed {s}: the staging holds a row twice");
+        for _ in 0..2 {
+            let t = game::orders::squad_orders_target_at(&mut p.g, [12.06, 0.0, 13.78]);
+            assert!(matches!(&t, game::orders::OrderTarget::Floor(f) if f.wall.is_some()), "seed {s}: the staging is wrong: the point is on no wall");
+            let up: Vec<_> = game::orders::squad_orders_rows_for(&p.g, &game::seats::here(&p.g), &t, None, None);
+            let fifth: Vec<String> = up.iter().filter(|&&d| p.g.tab.orders_order_def[d].key == Some(5.0)).map(|&d| p.g.tab.orders_order_def[d].id.clone()).collect();
+            assert!(fifth.len() > 1 && fifth[0].starts_with("wall"), "seed {s}: the rows with the fifth digit: {fifth:?}, the wall's first");
+            for d in &up { assert!(p.g.orders.defs.contains(d), "seed {s}: a row of the wall's menu is no row of the squad's"); }
+            p.run(0.3);
+        }
+        assert_eq!((p.menu_rows(), p.menu()), (rows, menu), "seed {s}: opening a wall's menu changed the table");
+    }
+}

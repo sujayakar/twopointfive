@@ -38,7 +38,7 @@ pub fn note(g: &mut crate::game::Game, gd: GuardId, d: DoorId, what: &str) {
 }
 
 /// Does d stand open (off its hinges it reads wide open: its row is there, greyed). (shutdoor.ts standsOpen)
-pub fn stands_open(g: &mut crate::game::Game, d: DoorId) -> bool {
+pub fn stands_open(g: &crate::game::Game, d: DoorId) -> bool {
     !crate::doors::door_latched(g, d) && m::abs(crate::doors::door_angle(g, d)) >= k().open
 }
 
