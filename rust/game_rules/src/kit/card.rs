@@ -215,6 +215,9 @@ fn seq(g: &Game, rows: &[KitRow], m: &MemberKit) -> Vec<KitRow> {
     out
 }
 
+/// The kind of gun a pick is drawn as (empty: no gun).   (gunslots.ts pickIcon)
+pub fn pick_kind(g: &Game, id: &str) -> String { crate::gunslots::pick_icon(g, id).map_or(String::new(), |k| String::from(k.as_str())) }
+
 /// A gun's picks: every value of its row, tried on a copy of the card.   (kitCard.ts drawDense)
 fn card_picks(g: &mut Game, i: f64, r: &KitRow, m: &MemberKit, now: &KitValue, slot: GunSlot) -> Vec<CardPick> {
     let mut out = Vec::new();
@@ -224,7 +227,7 @@ fn card_picks(g: &mut Game, i: f64, r: &KitRow, m: &MemberKit, now: &KitValue, s
         let on = same_value(v, now);
         let why = if on { String::new() } else { kit_paste_peek(g, i, &c).why };
         let bars = kit_slot_def(g, i, &c, slot).map_or(Vec::new(), |d| gun_stats(&d).to_vec());
-        out.push(CardPick { id: value_text(v), word: row_word(g, i, r, v), note: row_note(g, i, r, &c), why, now: on, can: kit_row_can(g, &c, r.field), bars });
+        out.push(CardPick { id: value_text(v), word: row_word(g, i, r, v), note: row_note(g, i, r, &c), why, now: on, can: kit_row_can(g, &c, r.field), icon: pick_kind(g, &value_text(v)), bars });
     }
     out
 }
@@ -285,6 +288,7 @@ fn card_row(g: &mut Game, i: f64, r: &KitRow, m: &mut MemberKit, issued: &mut Me
         less: kit_peek(g, i, r.field, -1.0).why,
         more: kit_peek(g, i, r.field, 1.0).why,
         can: kit_row_can(g, m, r.field),
+        icon: if gun_slot(r.field).is_some() { pick_kind(g, &value_text(&v)) } else { String::new() },
         noise: kit_noise(g, r.field, m),
         takes: share.map(|s| CardLoad { mob: s.mob, con: s.con }),
         would,
