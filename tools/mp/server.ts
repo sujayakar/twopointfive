@@ -1,5 +1,5 @@
 // THE GAME SERVER (bun): one process, one game, stepped with authority over WebSockets. The core is src/net/server.ts; this file is the process round it — the
-// environment, the stood game (tools/mp/stand.ts), the sockets, the health page, the heartbeat, the exit. It knows nothing of where it runs: a control plane
+// environment, the stood game (stand.ts), the sockets, the health page, the heartbeat, the exit. It knows nothing of where it runs: a control plane
 // starts it in a sandbox, a dev server starts it as a child, a person starts it by hand.
 //   MP_SETUP='{"scenario":"?roomclear&squad4","seed":7,"seatKeys":["k0"]}' bun run tools/mp/server.ts
 // THE ENVIRONMENT (the control plane's contract):
@@ -7,11 +7,9 @@
 //   MP_GAME      the game's id (default 'local')
 //   MP_SETUP     THE SETUP RECORD as JSON, the one a host's page hands the control plane and the control plane hands on:
 //                  scenario  the mission's page address ("?roomclear&squad4", "?rescue&levelFile=consulate.json")       seed  the die, a whole number
-//                  knobs     knob tables laid over the page's own (the host's settings; optional)                        seats one entry a seat (read for its count)
-//                            or {stand: 'module', commands}: THE GAME STANDS ON THE MODULE ALONE (modstand.ts), its host's settings as commands
+//                  knobs     {commands}: what the host has set before the game is made, as commands' bytes in base64 (none: what the address says)     seats one entry a seat
 //                  seatKeys  one key a seat: a player proves his seat with it. As many as the stood game has seats      build, game  as MP_BUILD, MP_GAME
-//                or {recipe, seatKeys} or {start, seatKeys} where whoever made the game already has one
-//   MP_STAND     'module' or 'recipe': what a record that does not say stands on (default recipe)
+//                or {start, seatKeys} where whoever made the game already has one
 //   MP_SEATKEYS  the seat keys, comma separated, where the record carries none
 //   MP_CONTROL   a URL to POST heartbeats to (none: nobody is told) · MP_SECRET what proves a heartbeat is this server's
 //   MP_IDLE_S    seconds with nobody connected before it ends itself (default 60) · MP_MAX_S its longest life (default 3600) · MP_GRACE_S how long it runs
@@ -22,63 +20,36 @@
 // IT TELLS THE CONTROL PLANE: POST {game, secret, …health} every 10 s and at once on a change of state or of who is sitting; a server that is done says
 // state 'ended' whatever it was doing. An answer of 410 = the control plane has no such game any more: the server stops.
 // IT EXITS 0 when the core is done (idle, ended, too old, told its game is gone) after a last heartbeat; 1 when it could not stand its game; 2 on a bad environment.
-import { resolve } from 'node:path';
-import type { Recipe } from '../../src/net/recipe.ts';
 import type { NetStart } from '../../src/net/start.ts';
-import type { WireCmd } from '../../src/net/wire.ts';
-import type { Conn } from '../../src/net/server.ts';
-import { buildName, type Stood } from './stood.ts';
+import { NetServer, type Conn } from '../../src/net/server.ts';
+import { NET } from '../../src/net/wire.ts';
+import { buildName, freshStart, standStart, type Stood } from './stand.ts';
 
-const ROOT = resolve(import.meta.dir, '../..'), E = process.env;
+const E = process.env;
 const say = (s: string) => console.log(`[mp ${new Date().toISOString().slice(11, 23)}] ${s}`);
 const num = (k: string, d: number): number => { const v = E[k]; if (v === undefined || v === '') return d; const n = Number(v); if (!Number.isFinite(n) || n < 0) { console.error(`server.ts: ${k}=${v} is not a number`); process.exit(2); } return n; };
 const port = num('MP_PORT', 5300), hostname = E.MP_HOST ?? '127.0.0.1';
 
 /** the setup record (see the head) */
-let asked: { recipe?: Recipe; scenario?: unknown; seed?: unknown; knobs?: unknown; start?: NetStart; seatKeys?: unknown; build?: unknown; game?: unknown };
-try { asked = JSON.parse(E.MP_SETUP ?? ''); if (!asked || typeof asked !== 'object') throw new Error('not a record'); } catch { console.error('server.ts: MP_SETUP is not a setup record as JSON (want {"scenario":"?roomclear&squad4","seed":7,"seatKeys":["k0"]} or {"recipe":{…}})'); process.exit(2); }
+let asked: { scenario?: unknown; seed?: unknown; knobs?: unknown; start?: NetStart; seatKeys?: unknown; build?: unknown; game?: unknown };
+try { asked = JSON.parse(E.MP_SETUP ?? ''); if (!asked || typeof asked !== 'object') throw new Error('not a record'); } catch { console.error('server.ts: MP_SETUP is not a setup record as JSON (want {"scenario":"?roomclear&squad4","seed":7,"seatKeys":["k0"]})'); process.exit(2); }
 const game = E.MP_GAME ?? (typeof asked.game === 'string' ? asked.game : 'local'), build = E.MP_BUILD ?? (typeof asked.build === 'string' ? asked.build : buildName());
 
-/** the setup made into a recipe in a process of its own (tools/mp/setup.ts: the game it stands for it is thrown away) */
-async function recipeOfSetup(setup: { search: string; seed: number; tables?: Record<string, unknown> }): Promise<Recipe> {
-  const p = Bun.spawn([process.execPath, 'run', resolve(import.meta.dir, 'setup.ts'), JSON.stringify(setup)], { stdout: 'pipe', stderr: 'pipe', cwd: ROOT, env: { ...E } });
-  const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
-  const line = out.split('\n').find(l => l.startsWith('MPSETUP '));
-  if (code !== 0 || !line) throw new Error(`the setup could not be made into a recipe: ${err.trim().split('\n').pop() || `exit ${code}`}`);
-  return JSON.parse(line.slice(8)) as Recipe;
-}
-
-let stood: Stood, recipe: Recipe | undefined, start: NetStart | undefined;
+let stood: Stood, start: NetStart;
 try {
   const knobs: unknown = asked.knobs ?? {}; if (typeof knobs !== 'object' || knobs === null || Array.isArray(knobs)) throw new Error('the setup\'s knobs are not an object');
-  const { stand = E.MP_STAND ?? 'recipe', commands, ...tables } = knobs as { stand?: unknown; commands?: unknown };
-  if (stand !== 'module' && stand !== 'recipe') throw new Error(`a game stands on the module or from a recipe, not on ${JSON.stringify(stand)}`);
-  if (asked.start || (stand === 'module' && !asked.recipe)) {
-    const M = await import('./modstand.ts');
-    if (Object.keys(tables).length) throw new Error('a game on the module takes its host\'s settings as commands, not as knob tables');
-    if (commands !== undefined && typeof commands !== 'string') throw new Error('the setup\'s commands are not bytes');
-    start = asked.start ?? M.freshStart({ search: String(asked.scenario ?? ''), seed: Number(asked.seed), commands });
-    stood = await M.standStart(start);
-  } else {
-    if (commands !== undefined) throw new Error('a game stood from a recipe takes its host\'s settings as knob tables, not as commands');
-    recipe = asked.recipe ?? await recipeOfSetup({ search: String(asked.scenario ?? ''), seed: Number(asked.seed), ...(asked.knobs ? { tables } : {}) });
-    stood = await (await import('./stand.ts')).standRecipe(recipe);
-  }
-  stood.begin();   // (the Rust game's start is made here, before anybody is let in: the first tick of the fight then costs a tick)
+  const { commands, ...other } = knobs as { commands?: unknown };
+  if (Object.keys(other).length) throw new Error(`a host's settings are handed over as commands, not as ${Object.keys(other).join(', ').slice(0, 80)}`);
+  if (commands !== undefined && typeof commands !== 'string') throw new Error('the setup\'s commands are not bytes');
+  start = asked.start ?? freshStart({ search: String(asked.scenario ?? ''), seed: Number(asked.seed), commands });
+  stood = await standStart(start);
 } catch (e) { console.error(`server.ts: ${(e as Error).message}`); process.exit(1); }
-for (const w of stood.warnings) say(`note: ${w}`);
 const seatsN = stood.seats;
 const seatKeys: string[] = Array.isArray(asked.seatKeys) ? asked.seatKeys.filter((k): k is string => typeof k === 'string' && k !== '') : (E.MP_SEATKEYS ?? '').split(',').filter(Boolean);
 if (seatKeys.length !== seatsN || new Set(seatKeys).size !== seatsN) { console.error(`server.ts: the stood game has ${seatsN} seat${seatsN === 1 ? '' : 's'} and wants as many different seat keys (the record's seatKeys, or MP_SEATKEYS): got ${seatKeys.length}`); process.exit(2); }
 
-const { NetServer } = await import(`${ROOT}/src/net/server.ts`), { NET } = await import(`${ROOT}/src/net/wire.ts`);
-// THE SERVER READS NOTHING OF ITS GAME BETWEEN TWO TICKS but how it ended: its ticks are a quiet run (stand.ts `quiet`) from one state word to the next, so
-// the copy of the game this process holds is brought up twice a second, and the verdict it is asked for every tick is read off that (at most
-// `wordEvery` ticks late). The state word is the game's own and needs no copy.
-let quiet = false;
-const step = (cmds: WireCmd[]): void => { if (!quiet) { stood.quiet(true); quiet = true; } stood.step(cmds); if (stood.ticks % NET.wordEvery === 0) { stood.quiet(false); quiet = false; } };
-const core = new NetServer({ now: () => performance.now(), step, word: () => stood.word(), watch: () => stood.watch(), ended: () => stood.ended() },
-  { game, build, recipe, start, seatKeys, idleS: num('MP_IDLE_S', 60), maxS: num('MP_MAX_S', 3600), graceS: num('MP_GRACE_S', 15) });
+const core = new NetServer({ now: () => performance.now(), step: cmds => stood.step(cmds), word: () => stood.word(), watch: () => stood.watch(), ended: () => stood.ended() },
+  { game, build, start, seatKeys, idleS: num('MP_IDLE_S', 60), maxS: num('MP_MAX_S', 3600), graceS: num('MP_GRACE_S', 15) });
 
 // ---- the heartbeat
 const control = E.MP_CONTROL ?? '', secret = E.MP_SECRET ?? '';
@@ -91,7 +62,7 @@ function beat(): void {
   beating = beating.then(() => fetch(control, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, signal: AbortSignal.timeout(5000) }).then(r => { if (r.status === 410) core.stop('the control plane has no such game'); }, () => undefined));
 }
 let saidState = '';
-core.onChange = () => { const h = core.health(), k = `${h.state} ${h.seats.join()} ${h.lost} ${h.done ?? ''}`; if (k !== saidState) { saidState = k; say(`${h.state} · tick ${h.tick} · seats ${h.seats.map((s: boolean) => s ? 'in' : 'empty').join(', ')}${h.outcome ? ` · ${h.outcome.end} (${h.outcome.why})` : ''}${h.lost ? ` · ${h.lost} client${h.lost === 1 ? '' : 's'} parted from this game` : ''}${h.done ? ` · done: ${h.done}` : ''}`); beat(); } };
+core.onChange = () => { const h = core.health(), k = `${h.state} ${h.seats.join()} ${h.lost} ${h.done ?? ''}`; if (k !== saidState) { saidState = k; say(`${h.state} · tick ${h.tick} · seats ${h.seats.map(s => s ? 'in' : 'empty').join(', ')}${h.outcome ? ` · ${h.outcome.end} (${h.outcome.why})` : ''}${h.lost ? ` · ${h.lost} client${h.lost === 1 ? '' : 's'} parted from this game` : ''}${h.done ? ` · done: ${h.done}` : ''}`); beat(); } };
 
 // ---- the sockets
 type WS = { send(text: string): number; close(code?: number, reason?: string): unknown; data: { conn: Conn } };
@@ -111,7 +82,7 @@ const server = Bun.serve({
     close(ws: WS) { core.closed(ws.data.conn); },
   },
 });
-say(`game ${game} · build ${build || '(none)'} · ${start ? `${start.file} ${start.words} · seed ${start.seed} · the module` : `${recipe!.scenario} ${recipe!.search} · seed ${recipe!.seed}`} · ${seatsN} seat${seatsN === 1 ? '' : 's'} · ws://${hostname}:${server.port} · ${NET.hz} Hz`);
+say(`game ${game} · build ${build || '(none)'} · ${start.file} ${start.words} · seed ${start.seed} · ${seatsN} seat${seatsN === 1 ? '' : 's'} · ws://${hostname}:${server.port} · ${NET.hz} Hz`);
 beat();
 
 const pulse = setInterval(beat, 10_000);

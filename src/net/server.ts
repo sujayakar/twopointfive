@@ -12,7 +12,6 @@
 //   IT ENDS ITSELF (`done`): nobody connected for `idleS`, the mission over and the grace run, or `maxS` since it was made. The host exits on it.
 //   BEHIND: a host that cannot keep the rate runs at most NET.catchUp ticks in one go, and past NET.slipAt behind lets the game's clock slip rather than run a
 //   spiral (`slips` counts; a client follows the slip by the ticks it hears, client.ts).
-import type { Recipe } from './recipe';
 import type { NetStart } from './start';
 import type { NetState, Outcome, WireCmd, Hello, ToServer, ToClient, Tick, State, ByeCode } from './wire';
 import { NET, netText, netParse, heldOf, wireOk, withEdges, cleanName } from './wire';
@@ -20,11 +19,11 @@ import { SeatLine } from './timeline';
 
 /** what the host gives: its clock (ms, never going back), one tick of its game on the seats' records (and whatever it does between two ticks), the game's
  *  chained state word after the last tick, and how the mission ended (null while it has not) */
-export interface ServerHost { now(): number; step(cmds: WireCmd[]): void; word(): string; /** the wider word after the last word tick (step.ts netWatch), where the host has one */ watch?(): string | null; ended(): Outcome | null; }
+export interface ServerHost { now(): number; step(cmds: WireCmd[]): void; word(): string; /** the word of the whole game after the last word tick (words.ts foldWhole), where the host has one */ watch?(): string | null; ended(): Outcome | null; }
 /** a connection as the core sees it. `send` answers what became of the text: above 0 it went, below 0 it was taken but the socket is backed up (the host says
  *  `drained` when it no longer is), 0 it was NOT taken */
 export interface Conn { send(text: string): number; close(why: string): void; }
-export interface ServerOpts { game: string; build: string; /** what every machine stands its game from: one of the two */ recipe?: Recipe; start?: NetStart; seatKeys: string[]; idleS?: number; maxS?: number; graceS?: number; }
+export interface ServerOpts { game: string; build: string; /** what every machine stands its game from */ start: NetStart; seatKeys: string[]; idleS?: number; maxS?: number; graceS?: number; }
 export interface Health { game: string; build: string; state: NetState; tick: number; seats: boolean[]; watchers: number; slips: number; lost: number; outcome?: Outcome; done?: string; }
 
 interface Sitter { line: SeatLine; conn: Conn | null; ready: boolean; prev: WireCmd | null; /** what its player calls himself ('' = nothing: wire.ts cleanName), as his last hello said */ name: string; }
@@ -92,7 +91,7 @@ export class NetServer {
     else if (this.watching >= NET.watchers) return this.bye(conn, 'full', 'no room to watch');
     if (seat >= 0) { const S = this.seats[seat]; if (S.conn) { const old = S.conn; this.peers.delete(old); this.leave(S); old.close('the seat was taken again'); } S.conn = conn; S.name = cleanName(m.name); }
     this.peers.set(conn, { seat, at: 0, slow: false, slowAt: 0, lost: false });
-    this.send(conn, { k: 'welcome', proto: NET.proto, game: O.game, build: O.build, seat, seats: this.seats.length, hz: NET.hz, ...(O.start ? { start: O.start } : { recipe: O.recipe }), tick: this.tick, state: this.state });
+    this.send(conn, { k: 'welcome', proto: NET.proto, game: O.game, build: O.build, seat, seats: this.seats.length, hz: NET.hz, start: O.start, tick: this.tick, state: this.state });
     this.said();
   }
   /** the fight starts once every seat is sat in by a client that has stood its game */

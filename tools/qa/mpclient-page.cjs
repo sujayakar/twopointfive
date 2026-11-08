@@ -154,7 +154,7 @@ async function drive({ N, BREAK, NO_AHEAD, PICK, WORDS }) {
 }
 
 (async () => {
-  const srv = spawn('bun', ['run', 'tools/mp/server.ts'], { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, ...(WORDS ? { MP_WORDS: `${resolve(WORDS)}/server` } : {}), MP_STAND: 'module', MP_PORT: String(MP), MP_BUILD: '', MP_IDLE_S: '600', MP_GRACE_S: '900', MP_SETUP: JSON.stringify({ game: 'check', ...setup, seatKeys: KEYS }) } });
+  const srv = spawn('bun', ['run', 'tools/mp/server.ts'], { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, ...(WORDS ? { MP_WORDS: `${resolve(WORDS)}/server` } : {}), MP_PORT: String(MP), MP_BUILD: '', MP_IDLE_S: '600', MP_GRACE_S: '900', MP_SETUP: JSON.stringify({ game: 'check', ...setup, seatKeys: KEYS }) } });
   let srvErr = ''; srv.stderr.on('data', d => { srvErr += d; }); srv.stdout.on('data', () => {});
   let h0 = null; for (let i = 0; i < 200 && !h0; i++) { h0 = await health(); if (!h0) await sleep(100); }
   if (!h0) { srv.kill(); console.log(`mpclient-page: the server did not come up: ${srvErr.trim().split('\n').slice(-2).join(' / ')}`); process.exit(2); }
@@ -165,7 +165,7 @@ async function drive({ N, BREAK, NO_AHEAD, PICK, WORDS }) {
   try {
     browser = await chromium.launch({ headless: true, ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}), args: FLAGS }); const page = await browser.newPage({ viewport: { width: 480, height: 270 } }); page.setDefaultTimeout(600000);
     page.on('console', m => { if (process.env.MPCLIENT_SAY && m.text().startsWith('[mpc]')) console.log('  ' + m.text()); if (m.type() === 'error' && !NOISE.test(m.text())) errs.push(m.text().slice(0, 200)); }); page.on('pageerror', e => errs.push('PAGEERROR ' + String(e).slice(0, 300)));
-    await page.goto(`http://localhost:${PORT}/?draw=1&net=${encodeURIComponent(`ws://127.0.0.1:${MP}`)}&netgame=check&netkey=${KEYS[MINE]}&paused&mute&quality=${QUALITY}${NO_AHEAD ? '&netpredict=0' : ''}`, { waitUntil: 'load' });
+    await page.goto(`http://localhost:${PORT}/?net=${encodeURIComponent(`ws://127.0.0.1:${MP}`)}&netgame=check&netkey=${KEYS[MINE]}&paused&mute&quality=${QUALITY}${NO_AHEAD ? '&netpredict=0' : ''}`, { waitUntil: 'load' });
     await page.waitForFunction(() => new URLSearchParams(location.search).has('seed'), null, { timeout: 60000 });
     const moved = new URLSearchParams(await page.evaluate(() => location.search));
     let hWait = null; for (let i = 0; i < 600; i++) { hWait = await health(); if (hWait && hWait.seats[MINE]) break; await sleep(50); }   // (asked the moment the moved page has said hello: its game is nowhere near stood)

@@ -23,7 +23,7 @@ const path = require('node:path'), cp = require('node:child_process'), fs = requ
 const ROOT = path.resolve(__dirname, '../..');
 const PORT = process.env.PORT || 5351, CPORT = Number(process.env.CLOUD_PORT) || 3251, BREAK = process.env.LOBBY_BREAK === '1', QUALITY = process.env.QUALITY || 'verylow';
 const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i >= 0 ? process.argv[i + 1] : d; };
-const N = Number(arg('ticks', '300')), NAV = Math.max(60000, Number(process.env.NAV_MS) || 480000), BASE = `http://localhost:${PORT}/`, CLOUD = `http://127.0.0.1:${CPORT}`, KEY = 'page-check-key', WORDS = 'draw=1&paused&mute&quality=' + QUALITY;
+const N = Number(arg('ticks', '300')), NAV = Math.max(60000, Number(process.env.NAV_MS) || 480000), BASE = `http://localhost:${PORT}/`, CLOUD = `http://127.0.0.1:${CPORT}`, KEY = 'page-check-key', WORDS = 'paused&mute&quality=' + QUALITY;
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog', '--no-sandbox'];
 const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage textures \(5\) in the Compute stage|Failed to load resource/;
 const T0 = Date.now(), log = (...a) => { if (process.env.LOBBY_SAY) console.log(`  [${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a); };

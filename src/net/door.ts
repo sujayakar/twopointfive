@@ -1,6 +1,6 @@
 // THE DOOR OF A NETWORKED GAME, for any page: its address and its seat's key, the socket and the connection made worse on purpose, the hello up to the welcome or the
 // words that say why there is none, HOW FAST the confirmed ticks are walked, the look ahead, and the one line a player is shown while something is not as it
-// should be. Nothing here knows a game: whoever holds one stands it from what the welcome carries and steps it (page.ts; the page that draws).
+// should be. Nothing here knows a game: whoever holds one stands it from what the welcome carries and steps it (host/drawnet.ts).
 // THE SEAT'S KEY comes on the address once and is kept for the tab (sessionStorage); it is taken off the address before anything else is asked, so nothing
 // that reads the address later (a visit's record, a replay's head) reads the key — refused or not.
 // HOW FAST: a page tick walks one confirmed tick, two while more than NET.lead wait (the page's clock and the server's are two clocks). A page far behind
@@ -48,7 +48,7 @@ function tryFrom(words: Record<string, string>): void {
 }
 
 export interface NetPageState { seat: number; state: string; confirmed: number; heard: number; behind: number; far: boolean; wordsOk: number; bad: { t: number; server: string; mine: string } | null; word: string;
-  /** the wider word, watched (client.ts): word ticks it was the server's, was not, and the first that was not */ watchOk: number; watchOff: number; watchFirst: number | null;
+  /** the whole game's word, watched (client.ts): word ticks it was the server's, was not, and the first that was not */ watchOk: number; watchOff: number; watchFirst: number | null;
   sent: number; holds: number; skips: number; /** a message from the server waited this long in the page's own queue (ms, eased: a worse connection asked for) */ heldMs: number; margin: number; lead: number; pending: number; broken: string; bye: string; refuse: string; outcome: unknown; walkMs: number;
   /** his own man ahead of the game (null: drawn where the game has him): records played, where they take him and how far that is from where the game has him
    *  (m), what is left of a correction (m), corrections so far past a centimetre and the longest (m), and what a look ahead costs (ms, eased) */
@@ -70,11 +70,11 @@ export function movedTo(door: NetDoor, want: string): boolean {
   if (new URLSearchParams(location.search).toString() === new URLSearchParams(want).toString()) return false;
   door.close(); location.replace(location.pathname + want + location.hash); return true;
 }
-/** the address without the game's words: where a player who leaves a networked game goes (main.ts, the cards' Quit) */
+/** the address without the game's words: where a player who leaves a networked game goes (the cards' Quit) */
 export function netLeave(search: string): string { const u = new URLSearchParams(search); for (const k of [NETPLAY, NET_GAME, NET_KEY, NET_JOIN, ...TRY_ALL]) u.delete(k); const s = u.toString(); return s ? '?' + s : ''; }
 const TRY_ALL = [NET_PREDICT, ...TRY_WORDS.map(w => w[0])];
 /** does this tab hold a seat's key for the game its address names: on the address, or put away for the tab? (A game's address with no key is a watcher's:
- *  one that also names a co-op game's code goes through the lobby's door first — net/lobby.ts, main.ts) */
+ *  one that also names a co-op game's code goes through the lobby's door first — net/lobby.ts) */
 export function netKeyed(q: URLSearchParams): boolean {
   if (q.has(NET_KEY)) return true;
   try { const k = JSON.parse(sessionStorage.getItem(KEEP) ?? 'null') as unknown; return Array.isArray(k) && k[0] === q.get(NETPLAY) && k[1] === (q.get(NET_GAME) ?? 'local') && typeof k[2] === 'string'; } catch { return false; }
