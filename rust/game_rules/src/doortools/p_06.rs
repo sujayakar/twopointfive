@@ -41,7 +41,7 @@ fn cut_a(g: &Game, seat: &crate::seats::SeatRef, post: V3, face: f64, watch: V3,
     }
 }
 /// `{ post: P.pos, face: P.face, watch: the frame, stance: 'highReady', upper: 'none', move, stackSide, going, there }`: stood off from the charge
-fn standing_off(g: &Game, d: DoorId, p: &crate::orders::StackPost, name: &str) -> DoorToolsAssignA {
+pub(super) fn standing_off(g: &Game, d: DoorId, p: &crate::orders::StackPost, name: &str) -> DoorToolsAssignA {
     let c = g.dr[d].frame_centre;
     DoorToolsAssignA {
         post: Some(p.pos), face: Some(p.face), watch: Some([c[0], 1.05, c[2]]), stance: Some(crate::character::Stance::HighReady), upper: Some(crate::character::UpperMode::None),

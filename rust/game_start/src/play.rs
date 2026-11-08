@@ -266,6 +266,8 @@ impl Play {
     /// A flash lands at `at` (the sandbox's own call, as `frag_lands`): it goes off after its fuse.
     pub fn flash_lands(&mut self, at: [f64; 2]) { game::game::game_drop_throwable(&mut self.g, game::game::ThrowKind::Flash, [at[0], 0.0, at[1]]); }
 
+    /// Sam is nobody's enemy to see (the page's own option)
+    pub fn sam_unseen(&mut self) { self.g.player_invisible = true; }
     /// Nothing hurts Sam from here on (the sandbox's switch): for a test that is not about him.
     pub fn sam_unhurt(&mut self) { self.g.god_mode = true; }
     /// the lines `gd` has said so far
@@ -468,6 +470,9 @@ impl Play {
         let turn = yaw - (at[0] - q[0]).atan2(at[1] - q[1]);
         ((turn + std::f64::consts::PI).rem_euclid(std::f64::consts::TAU) - std::f64::consts::PI).abs().to_degrees()
     }
+
+    /// the mark his order has for him, if it has one
+    pub fn mark_of(&self, gd: GuardId) -> Option<[f64; 2]> { let a = game::orders::squad_orders_of(&self.g, &game::seats::here(&self.g), gd)?; self.g.tab.orders_assignment[a].post.map(|p| [p[0], p[2]]) }
 
     /// The spot the rounds past him have sent him to, while he is on his way or about to go (the suppression rule's cover spot); `None`: not sent.
     pub fn sent_to_cover(&self, gd: GuardId) -> Option<[f64; 2]> { self.g.gd[gd].sup.cover.map(|p| [p[0], p[2]]) }
