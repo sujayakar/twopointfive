@@ -65,7 +65,7 @@ export class Graph {
     let list = this.tex.get(name);
     if (!list) {
       const [w, h] = this.px(s.size);
-      const usage = s.format.startsWith('depth') ? GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING : GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST | (s.format === 'r32uint' ? GPUTextureUsage.RENDER_ATTACHMENT : 0);
+      const usage = s.format.startsWith('depth') ? GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING : GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST | (s.format === 'r32uint' || name === 'rain' ? GPUTextureUsage.RENDER_ATTACHMENT : 0);
       list = Array.from({ length: s.history ? 2 : 1 }, (_, i) => this.g.device.createTexture({ label: name + i, size: [w, h], format: s.format, usage }));
       this.tex.set(name, list);
     }

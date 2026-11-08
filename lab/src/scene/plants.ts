@@ -45,7 +45,7 @@ function firstHit(pieces: Piece[], from: V3, dir: V3, far: number): number {
 }
 /** a clipped street tree: a short trunk, pale limbs that wander out to a dome, and leaves only where the light is: a shell of sprays round a dark hollow */
 export function domeTree(w: World, kit: Kit, at: V3, height: number, seed: number, dark: V3 = [0.25, 0.39, 0.17], light: V3 = [0.45, 0.56, 0.21], open = false) {
-  const r = rng(seed), bark = { tint: [1, 0.98, 0.95] as V3, flags: open ? 0 : F.CUT }, walls = w.pieces.slice(), R = height * (0.40 + 0.05 * r()), H = height * 0.36, mid: V3 = add(at, [(r() - 0.5) * R * 0.3, height * 0.64, (r() - 0.5) * R * 0.3]), fork = add(at, [(mid[0] - at[0]) * 0.3, height * 0.20, (mid[2] - at[2]) * 0.3]), thick = height * 0.026;
+  const r = rng(seed), bark = { tint: [1, 0.98, 0.95] as V3, flags: open ? F.OPEN : F.CUT }, walls = w.pieces.slice(), R = height * (0.40 + 0.05 * r()), H = height * 0.36, mid: V3 = add(at, [(r() - 0.5) * R * 0.3, height * 0.64, (r() - 0.5) * R * 0.3]), fork = add(at, [(mid[0] - at[0]) * 0.3, height * 0.20, (mid[2] - at[2]) * 0.3]), thick = height * 0.026;
   /** out from the middle toward the dome, as far as what stands in the way lets it */
   const onDome = (d: V3, k: number, keep = 0.05): V3 => { const to: V3 = [d[0] * R * k, d[1] * H * k, d[2] * R * k], l = Math.hypot(...to), f = Math.max(0, Math.min(l, firstHit(walls, mid, mul(to, 1 / l), l + keep) - keep)); return add(mid, mul(to, f / l)); };
   w.taper(at, fork, thick * 1.25, thick, M.paleBark!, bark); w.ellipsoid(at, [thick * 1.8, thick * 0.8, thick * 1.8], M.paleBark!, bark); w.ellipsoid(fork, [thick * 1.15, thick * 1.15, thick * 1.15], M.paleBark!, bark);

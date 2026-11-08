@@ -4,7 +4,7 @@
   let b = textureLoad(idC, id.xy, 0).x; if (b == 0u || (b & LEAF_HIT) != 0u || (pieces[b - 1u].flags & WATER) == 0u) { return; }
   let rd = pxRay(id.xy); let ro = frame.camPos.xyz; let zd = textureLoad(depthT, id.xy, 0); let t0 = select(4000.0, 0.25 / (zd * dot(rd, frame.camFwd.xyz)), zd > 0.0);
   if (!meet(b - 1u, ro, rd, 1e-3, t0, frame.misc.y) || hCode != 3u) { return; }
-  let tw = hT; let x0 = ro + rd * tw; let n = waveNormal(x0.xz, frame.misc.x); let d = refract(rd, n, 0.75); fineLeaves = false; noLeaves = true;
+  let tw = hT; let x0 = ro + rd * tw; let n = poolNormal(x0.xz, frame.misc.x); let d = refract(rd, n, 0.75); fineLeaves = false; noLeaves = true;
   let h = nearest(x0 - vec3f(0.0, 0.004, 0.0), d, 1e-3, 60.0, WATER, frame.misc.y); if (h.piece == NOTHING || (h.piece & LEAF_HIT) != 0u) { return; }
   let px = length(frame.camUp.xyz) * 2.0 / frame.size.w; var s = surfaceAt(x0, d, h, px * (tw + h.t)); if (dot(s.n, -d) < 0.03) { s.n = normalize(s.n - d * (0.05 - dot(s.n, -d))); }
   let seen = ro + rd * (tw + h.t * 0.75); let q = projectPrev(seen); let now = project(seen);       // (it moves on the screen as what stands at its apparent depth does)

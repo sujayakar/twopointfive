@@ -124,16 +124,21 @@ fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
 }
 /** under the open sky? (the building's own rooms are dry) */
 fn openAir(x: vec3f) -> bool { let room = abs(x.x) < 12.0 && abs(x.z) < 8.0 && (x.y < 3.3 || (x.y < 6.55 && x.x < 4.0)); return !room; }
-/** THE WET FILM, laid over any material the rain reaches: darker, smoother, and where the ground is low a mirror with rings in it */
+/** the pool's surface, and what the rain does to it */
+fn poolNormal(p: vec2f, t: f32) -> vec3f { var s = waveSlope(p, t) * (1.0 - 0.45 * frame.weather.y); if (frame.weather.y > 0.0) { s += rainRings(p, t, frame.weather.y) + rainRings(p * 1.7 + 5.0, t * 1.1, frame.weather.y) * 0.6; } return normalize(vec3f(-s.x, 1.0, -s.y)); }
+/** THE WET FILM, laid over any material the rain reaches. What soaks goes dark and stays dull; what sheds water shines; low ground fills, and is a mirror with rings in it */
 fn wetFilm(s0: Surf, fp: f32) -> Surf {
-  var s = s0; let w = frame.weather.x; if (w <= 0.0 || !openAir(s.x + s.ng * 0.02) || s.kind == 14u || s.kind == 20u) { return s; }
-  let up = sat(s.ng.y); let low = fbm(s.x.xz * 0.42 + 5.0); let pud = w * smoothstep(0.47 - 0.05 * w, 0.545, low) * smoothstep(0.9, 0.99, up); let film = w * (0.35 + 0.65 * up);
-  let lumA = lum(s.albedo); s.albedo *= mix(1.0, 0.52 + 0.25 * lumA, film * select(1.0, 0.4, s.metal > 0.5)); s.rough = mix(s.rough, max(0.09, s.rough * 0.30), film); s.f0 = max(s.f0, mix(s.f0, 0.03, film));
-  if (pud > 0.0) {
-    s.rough = mix(s.rough, 0.03, pud); s.albedo *= mix(1.0, 0.75, pud); var n = vec2f(0.0);
-    if (frame.weather.y > 0.0 && fp < 0.12) { for (var k = 0u; k < 2u; k++) { let g = s.x.xz * 2.6 + f32(k) * 17.3; let c = floor(g); let h = hash33(vec3f(c, f32(k) + 3.0)); let t = fract(frame.misc.x * (0.9 + 0.5 * h.x) + h.y); let d = g - c - 0.25 - 0.5 * h.yz; let r = length(d); let ring = sin((r - t * 0.5) * 60.0) * exp(-abs(r - t * 0.5) * 22.0) * (1.0 - t); n += d / max(r, 1e-3) * ring * 0.10 * frame.weather.y; } }
-    s.n = normalize(mix(s.n, normalize(s.ng + vec3f(n.x, 0.0, n.y)), pud));
-  }
+  var s = s0; let w = frame.weather.x; if (w <= 0.0 || !openAir(s.x + s.ng * 0.02)) { return s; }
+  if (s.kind == 14u || s.kind == 20u) { s.albedo *= mix(1.0, 0.82, w); s.rough = mix(s.rough, 0.24, w); return s; }
+  let up = sat(s.ng.y); let soaks = select(select(0.55, 0.15, s.metal > 0.5 || s.rough < 0.35), 1.0, s.kind == 1u || s.kind == 5u || s.kind == 6u || s.kind == 13u || s.kind == 15u || s.kind == 16u || s.kind == 10u || s.kind == 21u);
+  // how low the ground is here: broad dips and the fine unevenness of what was laid
+  let low = fbm(s.x.xz * 0.34 + 5.0) + 0.10 * (vnoise(s.x.xz * 2.7) - 0.5); let pud = w * smoothstep(0.50 - 0.07 * w, 0.565, low) * smoothstep(0.93, 0.995, up); let damp = w * smoothstep(0.42 - 0.06 * w, 0.54, low) * up;
+  // down a wall it runs in streaks
+  var runs = 0.0; if (up < 0.3) { let across = select(s.x.x, s.x.z, abs(s.ng.x) > abs(s.ng.z)); let q = across * 5.0; runs = w * smoothstep(0.50, 0.72, vnoise(vec2f(q, s.x.y * 0.35 + 7.0)) * shows(5.0, fp)); }
+  let film = w * clamp(0.55 * up + 0.25 + 0.5 * runs, 0.0, 1.0);
+  s.albedo *= mix(1.0, mix(0.78, 0.46, soaks), clamp(film + 0.25 * damp, 0.0, 1.0)); let shine = clamp(max(film * (1.0 - 0.75 * soaks), max(damp * 0.75, runs * 0.8)), 0.0, 1.0);
+  s.rough = mix(s.rough, max(0.07, s.rough * 0.28), shine); s.f0 = max(s.f0, mix(s.f0, 0.03, shine));
+  if (pud > 0.0) { s.rough = mix(s.rough, 0.022, pud); s.albedo *= mix(1.0, 0.72, pud); var n = vec2f(0.0); if (frame.weather.y > 0.0 && fp < 0.12) { n = rainRings(s.x.xz * 1.25, frame.misc.x, frame.weather.y) * shows(4.0, fp); } s.n = normalize(mix(s.n, normalize(s.ng - vec3f(n.x, 0.0, n.y)), pud)); }
   return s;
 }
 /** the same for a ray that only wants the mean: no patterns, no paint */

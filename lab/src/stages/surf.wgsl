@@ -20,7 +20,7 @@ fn movedLeaf(i: u32, x: vec3f) -> vec3f {
   }
   if (b != 0u && (b & LEAF_HIT) == 0u) {
     let k = b - 1u; if (meet(k, ro, rd, 1e-3, h.t, frame.misc.y)) { let t = hT; let x = ro + rd * t;
-      if ((pieces[k].flags & WATER) != 0u) { if (hCode == 3u) { wetN = waveNormal(x.xz, frame.misc.x); wetT = t; front = vec4u(bitcast<u32>(t), octPack(wetN), 2u << 24u, 0u); } }
+      if ((pieces[k].flags & WATER) != 0u) { if (hCode == 3u) { wetN = poolNormal(x.xz, frame.misc.x); wetT = t; front = vec4u(bitcast<u32>(t), octPack(wetN), 2u << 24u, 0u); } }
       else if (hCode != CODE_CUT) { let n = normalize(toWorld(k, localNormal(k, hCode, toLocal(k, x)))); front = vec4u(bitcast<u32>(t), octPack(n), packRGB(unpackTint(pieces[k].tint)) | (1u << 24u), 0u); } } }
   if (h.piece == NOTHING) {
     let far = ro + rd * 1900.0; let q = projectPrev(far); let now = project(far);

@@ -19,6 +19,7 @@ import temporal from './temporal.wgsl' with { type: 'text' };
 import blur from './blur.wgsl' with { type: 'text' };
 import air from './air.wgsl' with { type: 'text' };
 import resolve from './resolve.wgsl' with { type: 'text' };
+import { rainStages, rainKnobs } from './raindraw';
 import taau from './taau.wgsl' with { type: 'text' };
 import { glowStages } from './glow';
 import { exposeStages } from './expose';
@@ -108,7 +109,7 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
       const raster = rasterStage(lab, g);
       const S = (name: string, code: string, over: Size, reads: Record<string, string>, writes: Record<string, string>, buffers: Stage['buffers'] = {}, consts?: Record<string, number>): Stage => ({ name, code: signals + code, over, reads, writes, buffers: { ...CHANGES, ...buffers }, ...(consts ? { consts } : {}) });
       const dVis = dn.stages({ signal: 'vis', div: 1, cap: 18, rounds: 3, fractions: true }, g), dB = dn.stages({ signal: 'bounce', div: 2, cap: 36, rounds: 4 }, g), dM = dn.stages({ signal: 'mirror', div: 2, cap: 40, rounds: 4, narrow: true }, g), dS = dn.stages({ signal: 'shine', div: 2, cap: 26, rounds: 2, narrow: true, layer: 1 }, g), u = up.stages(g); m.result = u.result;
-      const glows = [...glowStages(g, u.result, 'rt'), ...exposeStages(lab, g, u.result, 'rtGlow2', 'rt')];
+      const rains = rainStages(lab, g); const glows = [...glowStages(g, u.result, 'rt'), ...exposeStages(lab, g, u.result, 'rtGlow2', 'rt')];
       return [
         raster,
         S('first hit', surf, 'render', { id: 'idT', idClear: 'idC', depth: 'depthT' }, { outSurf: 'surf', outAux: 'aux', outEmit: 'emit', outFront: 'front' }, { past: ['past', 'array<vec4f>', 'read'], pastLeaves: ['pastLeaves', 'array<vec4f>', 'read'] }),
@@ -122,10 +123,11 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
         S('air', cache.lib + air, 'half', { surf: 'surf' }, { outA: 'air', outD: 'airD' }, { ...c, plumes: ['plumes', 'array<vec4f, 18>', 'uniform'] }),
         S('air history', 'fn airAt2(p: vec2u) -> f32 { return textureLoad(airD, p, 0).x; }\n' + temporal, 'half', { airD: 'airD', air: 'cur', 'airH@prev': 'hist', 'airM@prev': 'momPrev', surf: 'surf', 'surf@prev': 'surfPrev', aux: 'auxT', front: 'frontT' }, { outH: 'airH', outM: 'airM' }, {}, { DIV: 2, CAP: 16, SPREAD: 1.0, NARROW: 0, KIND: 0, LAYER: 0 }),
         S('resolve', WHOLE + resolve, 'render', { surf: 'surf', emit: 'emit', front: 'frontT', [dVis.result]: 'vis', lampU: 'lampU', [dB.result]: 'bounce', [dM.result]: 'mirror', [dS.result]: 'shine', lampC: 'lampC', airH: 'air' }, { outC: 'color' }),
-        ...u.stages, ...glows,
+        ...u.stages, ...rains, ...glows,
       ].map(s => o.edit ? o.edit(s) : s);
     },
     frame(lab) {
+      rainKnobs(lab);
       // where each moving piece was; and what changed
       const mv = lab.building.world.moving, f = new Float32Array(mv.length * 16); for (const p of mv) { const s = lab.slots.get(p); if (s === undefined) continue; const q = lab.prevAt.get(p) ?? p, o = (s - lab.scene.piece0[2]) * 16; f.set(q.at, o); f.set(q.rot[0], o + 4); f.set(q.rot[1], o + 8); f.set(q.rot[2], o + 12); } if (mv.length) lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('past')!, 0, f); lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('pastLeaves')!, 0, lab.scene.instWas as Float32Array<ArrayBuffer>);
       const ch = new Float32Array(36); let n = 0; for (const d of lab.building.doors) if (Math.abs(d.want - d.open) > 1e-3 && n < 8) { ch.set([d.hinge[0], d.hinge[1] + 1, d.hinge[2], 7.5], n * 4); n++; }

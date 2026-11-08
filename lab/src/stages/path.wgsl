@@ -38,7 +38,7 @@ fn lampsAt(s: Surf, V: vec3f, glossy: bool) -> vec3f {
     if (wet) { thr *= exp(-WATER_SIGMA * h.t); wet = false; }
     var s: Surf; var water = false;
     if ((h.piece & LEAF_HIT) == 0u && (pieces[h.piece].flags & WATER) != 0u && h.code == 3u) {
-      water = true; let x = ro + rd * h.t; s.x = x; s.n = waveNormal(x.xz, frame.misc.x); s.ng = vec3f(0.0, 1.0, 0.0); s.rough = 0.11; s.f0 = 0.02; s.kind = 8u;
+      water = true; let x = ro + rd * h.t; s.x = x; s.n = poolNormal(x.xz, frame.misc.x); s.ng = vec3f(0.0, 1.0, 0.0); s.rough = 0.11; s.f0 = 0.02; s.kind = 8u;
     } else { s = wetFilm(surfaceAt(ro, rd, h, select(1.0, fp, clear || fp < 0.2)), fp); }
     let V = -rd; if (dot(s.n, V) < 0.02) { s.n = normalize(s.n + V * (0.04 - dot(s.n, V))); }
     let own = (h.piece & LEAF_HIT) == 0u && (pieces[h.piece].lamp & 255u) != 255u;

@@ -2,7 +2,7 @@
 import type { Gpu } from './gpu';
 import { buffer } from './gpu';
 import { buildBvh, refitBvh, type Bvh } from './bvh';
-import { type World, type Piece, PIECE_FLOATS, boundsOf, packPiece, packCluster, F } from './scene/world';
+import { type World, type Piece, PIECE_FLOATS, boundsOf, packPiece, packCluster, F, OPEN_FLOOR } from './scene/world';
 import { MATERIALS } from './scene/materials';
 import { artRect, drawArt } from './scene/art';
 import { swayed } from './scene/plants';
@@ -68,12 +68,12 @@ export class SceneGpu {
   cull(c: { pos: ArrayLike<number>; right: ArrayLike<number>; up: ArrayLike<number>; fwd: ArrayLike<number> }, cut: number) {
     const { pos, right: r, up: u, fwd: w } = c, tx = Math.hypot(r[0]!, r[1]!, r[2]!), ty = Math.hypot(u[0]!, u[1]!, u[2]!), kx = Math.sqrt(1 + tx * tx), ky = Math.sqrt(1 + ty * ty);
     const seen = (x: number, y: number, z: number, rad: number) => { const a = x - pos[0]!, b = y - pos[1]!, d = z - pos[2]!, f = a * w[0]! + b * w[1]! + d * w[2]!; return f > -rad && f * tx - Math.abs(a * r[0]! + b * r[1]! + d * r[2]!) / tx > -rad * kx && f * ty - Math.abs(a * u[0]! + b * u[1]! + d * u[2]!) / ty > -rad * ky; };
-    const L: Record<string, number[]> = { plain: [], fancy: [], clear: [], clearFancy: [] }, put = (p: Piece, i: number, x: number, y: number, z: number, rad: number, hy: number) => { const cuts = cut < 1e8 && !!(p.flags & F.CUT); if (cuts && y - hy > cut) return; if (!seen(x, y, z, rad)) return; const fancy = !!p.quad || !!p.planes?.length || (cuts && y + hy > cut); L[p.flags & (F.GLASS | F.WATER) ? (fancy ? 'clearFancy' : 'clear') : fancy ? 'fancy' : 'plain']!.push(i); };
+    const L: Record<string, number[]> = { plain: [], fancy: [], clear: [], clearFancy: [] }, put = (p: Piece, i: number, x: number, y: number, z: number, rad: number, hy: number) => { const cuts = cut < 1e8 && !!(p.flags & F.CUT); if ((cuts && y - hy > cut) || (p.flags & F.OPEN && cut < OPEN_FLOOR)) return; if (!seen(x, y, z, rad)) return; const fancy = !!p.quad || !!p.planes?.length || (cuts && y + hy > cut); L[p.flags & (F.GLASS | F.WATER) ? (fancy ? 'clearFancy' : 'clear') : fancy ? 'fancy' : 'plain']!.push(i); };
     const B = this.box; this.standing.forEach((p, i) => { const o = i * 5; put(p, i, B[o]!, B[o + 1]!, B[o + 2]!, B[o + 3]!, B[o + 4]!); });
     const m = this.world.moving; if (this.moveTree) this.moveTree.order.forEach((src, i) => { const p = m[src]!, hy = Math.abs(p.rot[0][1]) * p.half[0] + Math.abs(p.rot[1][1]) * p.half[1] + Math.abs(p.rot[2][1]) * p.half[2]; put(p, this.piece0[2] + i, p.at[0], p.at[1], p.at[2], Math.hypot(...p.half), hy); });
     const D = this.listData; let o = 0; for (const k of ['plain', 'fancy', 'clear', 'clearFancy'] as const) { this.draws[k] = [o, L[k]!.length]; D.set(L[k]!, o); o += L[k]!.length; }
     this.leafDraws.length = this.sunDraws.length = 0; const wld = this.world, order = this.instTree?.order ?? [];
-    for (const leaves of new Set(wld.clusters.map(c => c.leaves.length))) { const all: number[] = [], near: number[] = []; order.forEach((src, i) => { const n = wld.instances[src]!, c = wld.clusters[n.cluster]!; if (c.leaves.length !== leaves) return; all.push(i); const a = this.posed[src]!.at, e = n.scale * (c.kind ? 2.1 : 1.22); if ((n.open || a[1] - e < cut) && seen(a[0], a[1], a[2], e)) near.push(i); });
+    for (const leaves of new Set(wld.clusters.map(c => c.leaves.length))) { const all: number[] = [], near: number[] = []; order.forEach((src, i) => { const n = wld.instances[src]!, c = wld.clusters[n.cluster]!; if (c.leaves.length !== leaves) return; all.push(i); const a = this.posed[src]!.at, e = n.scale * (c.kind ? 2.1 : 1.22); if (((n.open && cut > OPEN_FLOOR) || a[1] - e < cut) && seen(a[0], a[1], a[2], e)) near.push(i); });
       this.leafDraws.push({ first: o, count: near.length, leaves }); D.set(near, o); o += near.length; this.sunDraws.push({ first: o, count: all.length, leaves }); D.set(all, o); o += all.length; }
     this.g.device.queue.writeBuffer(this.lists, 0, D, 0, o);
   }

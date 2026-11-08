@@ -42,7 +42,7 @@ struct Mark { at: vec2f, size: vec2f, uv: vec4f, color: vec3f, face: u32 };
 @group(0) @binding(13) var repSamp: sampler;
 @group(0) @binding(14) var lampTex: texture_3d<f32>;
 
-const GLASS = 256u; const WATER = 512u; const CUT = 1024u; const GLOW = 2048u; const NOSHADOW = 4096u; const QUAD = 8192u; const MOVES = 16384u; const FAR = 32768u;
+const GLASS = 256u; const WATER = 512u; const CUT = 1024u; const GLOW = 2048u; const NOSHADOW = 4096u; const QUAD = 8192u; const MOVES = 16384u; const FAR = 32768u; const OPEN = 0x10000000u; const OPEN_FLOOR = 3.5;
 const NOTHING = 0xffffffffu; const LEAF_HIT = 0x80000000u;
 
 // ---- random numbers: a stream per pixel and frame, the same every run
@@ -68,7 +68,7 @@ const CODE_QUAD = 6u; const CODE_CUT = 15u;
 
 /** one piece: the overlap of the stays its box, its quadric and its planes allow. Sets hT and hCode */
 fn meet(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32, cut: f32) -> bool {
-  let p = &pieces[k]; let flags = (*p).flags;
+  let p = &pieces[k]; let flags = (*p).flags; if ((flags & OPEN) != 0u && cut < OPEN_FLOOR) { return false; }
   let o = vec3f(dot((*p).r0.xyz, ro) + (*p).r0.w, dot((*p).r1.xyz, ro) + (*p).r1.w, dot((*p).r2.xyz, ro) + (*p).r2.w);
   let d = vec3f(dot((*p).r0.xyz, rd), dot((*p).r1.xyz, rd), dot((*p).r2.xyz, rd));
   let inv = 1.0 / select(d, vec3f(1e-12), abs(d) < vec3f(1e-12));
@@ -156,7 +156,7 @@ fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) ->
       if (!boxHit(n, ro, inv, tmin, best)) { i = (*n).skip; continue; }
       let lf = (*n).leaf;
       if ((lf & 15u) != 0u) {
-        let k = lf >> 4u; let I = &insts[k]; let lc = select(cut, 1e9, ((*I).tint & 0x1000000u) != 0u);      // (what grows out of doors the section leaves whole)
+        let k = lf >> 4u; let I = &insts[k]; let lc = select(cut, 1e9, ((*I).tint & 0x1000000u) != 0u && cut > OPEN_FLOOR);      // (what grows out of doors the section leaves whole)
         let o = vec3f(dot((*I).r0.xyz, ro) + (*I).r0.w, dot((*I).r1.xyz, ro) + (*I).r1.w, dot((*I).r2.xyz, ro) + (*I).r2.w);
         let d = vec3f(dot((*I).r0.xyz, rd), dot((*I).r1.xyz, rd), dot((*I).r2.xyz, rd));      // (scaled: t is the world's)
         if (!fineLeaves) { let tuft = ((*I).tint & 0x2000000u) != 0u; let sigma = f32((*I).tint >> 26u) / 16.0; let bd = select(d, d / 0.85, tuft); let st = ballStay(select(o, (o - vec3f(0.0, 0.8, 0.0)) / 0.85, tuft), bd, tmin, best); let t = st.x - log(1.0 - rnd()) / (sigma * length(bd)); if (st.y > st.x && t < st.y && ro.y + rd.y * t < lc) { best = t; id = LEAF_HIT | k; code = NOTHING; } i++; continue; }
