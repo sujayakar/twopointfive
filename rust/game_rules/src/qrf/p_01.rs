@@ -159,13 +159,6 @@ pub fn qrf_owns(g: &crate::game::Game, gd: GuardId) -> bool {
 /// `?qrfsquad=0` on the page's address. The skeleton has no row for the address: the TypeScript's answer with no word.   (qrf.ts ownDrillAsked)
 pub fn own_drill_asked() -> bool { false }
 
-/// storeName's shape: `stored_tune` with what it needs, the store being reached through `g`. Nothing kept or junk in it: None.   (qrf.ts storedTune)
-fn stored_tune_in(g: &Game) -> Option<JsMap<String, crate::qrf::StoredTuneRow>> {
-    let raw = crate::savestate::save_store_get(g, TUNE_KEY)?;
-    if raw.is_empty() { return None; }
-    tune_rows(&raw)
-}
-
 /// `JSON.parse` as far as the two readers can tell: an object's booleans and numbers. Not JSON, or JSON of another shape (which reads no row): None.
 fn tune_rows(raw: &str) -> Option<JsMap<String, crate::qrf::StoredTuneRow>> {
     let mut i = 0;
@@ -304,21 +297,6 @@ fn row_bool(o: &JsMap<String, crate::qrf::StoredTuneRow>, key: &str) -> Option<b
 /// `Number.isFinite(o[key])`
 fn row_num(o: &JsMap<String, crate::qrf::StoredTuneRow>, key: &str) -> Option<f64> {
     match o.get(String::from(key)) { Some(crate::qrf::StoredTuneRow::Num { v }) if v.is_finite() => Some(*v), _ => None }
-}
-
-/// The response's knobs from the machine's memory, and the address's word over the squad row.   (qrf.ts loadQrfTune)
-pub fn load_qrf_tune(g: &mut crate::game::Game) {
-    if let Some(o) = stored_tune_in(g) {
-        if let Some(v) = row_bool(&o, "qrf") { g.tune.qrf = v; }
-        if let Some(v) = row_bool(&o, "perimeter") { g.tune.perimeter = v; }
-        if let Some(v) = row_bool(&o, "qrfSilent") { g.tune.qrf_silent = v; }
-        if let Some(v) = row_bool(&o, "qrfSquad") { g.tune.qrf_squad = v; }
-        if let Some(v) = row_num(&o, "qrfEta") { g.tune.qrf_eta = crate::v3::clamp(v, 15.0, 240.0); }
-        if let Some(v) = row_num(&o, "perimeterEta") { g.tune.perimeter_eta = crate::v3::clamp(v, 10.0, 180.0); }
-        if let Some(v) = row_num(&o, "qrfSize") { g.tune.qrf_size = crate::v3::clamp(m::round(v), 2.0, 4.0); }
-        if let Some(v) = row_num(&o, "perimeterSize") { g.tune.perimeter_size = crate::v3::clamp(m::round(v), 2.0, 4.0); }
-    }
-    if own_drill_asked() { g.tune.qrf_squad = false; }
 }
 
 /// A number as `JSON.stringify` writes it: as the template string does, and null if it is not finite.

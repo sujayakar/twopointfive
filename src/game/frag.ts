@@ -129,10 +129,6 @@ export const FRAG = {
    *  `lethalM` the rule gives way if it would leave him no leg at all (a mate shouldered beats a man dead). false = as
    *  it was (the module's and the frozen stand's; ON in the page, ?nofleemates puts both off; TPS_FLEEMATES=1 raises both — they need TPS_FLEEWISE=1). */
   restProps: false, fleeApart: false, fleeApartM: 1.0, fleeLaneM: 0.9,
-  /** `fleeOnto` (the same word): a man who has 'arrived' (the script's 0.3 m) but is still coming onto his mark is not dealt again for being in its line there —
-   *  he was, a stride short of the corner the burst has no line to, and with no ring of spots nearer than 1.2 m was told to get down where he was: in the open,
-   *  0.27 m from cover (the thrower of an ordered frag, wounded at 6.6 m). A man stopped short (a mate in the corner) is dealt again as before. */
-  fleeOnto: false,
   /** `fleeSam` (the same word again; 10-17, a kicker killed by his own squad's ordered grenade at a door): SAM IS A MATE WHO IS STAYING. The lists above were
    *  made of the AI's men only, so a leg was dealt onto the floor the player stood on or past his shoulder — and the man stalled against him, still in its
    *  line, until the one-second 'no ground made' deal came or the fuse ran out first (a matter of a twentieth of a second which). With it Sam's place is in

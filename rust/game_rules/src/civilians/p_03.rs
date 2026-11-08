@@ -818,8 +818,6 @@ pub fn evacuation_check(g: &mut crate::game::Game) {
 /// the switch and the fail rule, kept on the machine: the browser's storage is the host's, and with no storage the TypeScript's own try does nothing (civilians.ts saveCivTune)
 pub fn save_civ_tune(g: &crate::game::Game) {}
 
-/// the stored switch and `?nocivilians`: the browser's storage and the address are the host's, which sets g.tune; with neither the TypeScript's own tries do nothing (civilians.ts loadCivTune)
-pub fn load_civ_tune(g: &crate::game::Game) {}
 
 /// the switch flipped live (civilians.ts setCivilians)
 pub fn set_civilians(g: &mut crate::game::Game, on: bool) {

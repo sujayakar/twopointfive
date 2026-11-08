@@ -1431,7 +1431,6 @@ export class CharacterAnimator {
   aimYawOffset = 0;          // chest yaw relative to body (rad)
   aimPitch = 0;              // rad, positive = up
   lookYawExtra = 0;          // additional head/neck yaw (looking around)
-  lookPitchExtra = 0;        // additional head/neck pitch, + = chin down (nothing sets it, and 0 adds no twist: the field goes when the wire drops it)
   /** TURN (Character.turnWeigh): how far his wish is ahead of where his gun has got to, eased — the neck carries it, so the head is on a new point before the muzzle (rad; 0 with the weight off) */
   turnLead = 0;
   /** Ready posture layered under the aim layer (aim / firing still win): 'highReady' pistol up under the eye line, elbows in, leaning into it — pieing a corner,
@@ -2576,7 +2575,6 @@ export class CharacterAnimator {
     this.twists.push({ node: nd.spine2, yaw: y * 0.35, pitch: 0 });
     this.twists.push({ node: nd.spine3, yaw: y * 0.40, pitch: -p * 0.35 });
     if (Math.abs(look) > 1e-3) { this.twists.push({ node: nd.neck, yaw: look * 0.4, pitch: 0 }); this.twists.push({ node: nd.head, yaw: look * 0.6, pitch: 0 }); }
-    if (this.lookPitchExtra !== 0) { this.twists.push({ node: nd.neck, yaw: 0, pitch: this.lookPitchExtra * 0.4 }); this.twists.push({ node: nd.head, yaw: 0, pitch: this.lookPitchExtra * 0.6 }); }
     if (this.nv || this.smoke !== null) {   // (KIT.nv, and a smoke: what turns the head after the layers, kept for the hand's reach next frame)
       const w = this.nvTw; w[0] = w[1] = w[2] = w[3] = 0;
       for (const t of this.twists) { if (t.node === nd.neck) { w[0] += t.yaw; w[1] += t.pitch; } else if (t.node === nd.head) { w[2] += t.yaw; w[3] += t.pitch; } }

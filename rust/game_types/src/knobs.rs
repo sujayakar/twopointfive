@@ -191,7 +191,6 @@ pub struct GuardEyeK {
     pub near_m: f64,
     pub near_deg: f64,
     pub far: bool,
-    pub far_calm: bool,
     pub far_fix_at: f64,
     pub far_range: f64,
     pub far_lo: f64,
@@ -207,7 +206,6 @@ impl GuardEyeK {
             near_m: 0.0,
             near_deg: 0.0,
             far: false,
-            far_calm: false,
             far_fix_at: 0.0,
             far_range: 0.0,
             far_lo: 0.0,
@@ -1248,7 +1246,6 @@ pub struct FragK {
     pub flee_apart: bool,
     pub flee_apart_m: f64,
     pub flee_lane_m: f64,
-    pub flee_onto: bool,
     pub flee_sam: bool,
     pub flee_look: bool,
     pub down_kill: bool,
@@ -1319,7 +1316,6 @@ impl FragK {
             flee_apart: false,
             flee_apart_m: 0.0,
             flee_lane_m: 0.0,
-            flee_onto: false,
             flee_sam: false,
             flee_look: false,
             down_kill: false,
@@ -3024,7 +3020,6 @@ pub struct StalkK {
     pub jolt: f64,
     pub jolt_face: f64,
     pub jolt_secs: f64,
-    pub jolt_at_once: bool,
     pub corner_show: bool,
     pub corner_see: f64,
     pub corner_reach: [f64; 2],
@@ -3104,7 +3099,6 @@ impl StalkK {
             jolt: 0.0,
             jolt_face: 0.0,
             jolt_secs: 0.0,
-            jolt_at_once: false,
             corner_show: false,
             corner_see: 0.0,
             corner_reach: [0.0; 2],
@@ -4416,7 +4410,6 @@ pub struct DoorthrowK {
     pub startle: f64,
     pub wary: f64,
     pub soft: bool,
-    pub jolt: bool,
     pub min_speed: f64,
     pub hand_rate: f64,
     pub floor_rad: f64,
@@ -4435,7 +4428,6 @@ impl DoorthrowK {
             startle: 0.0,
             wary: 0.0,
             soft: false,
-            jolt: false,
             min_speed: 0.0,
             hand_rate: 0.0,
             floor_rad: 0.0,
@@ -4609,7 +4601,6 @@ pub struct DoormannersK {
     pub step: f64,
     pub round: f64,
     pub round_out: f64,
-    pub own_place: bool,
     pub own_m: f64,
     pub own_end_m: f64,
     pub leaf_round: bool,
@@ -4643,7 +4634,6 @@ pub struct DoormannersK {
     pub funnel_rest: f64,
     pub through: f64,
     pub past: f64,
-    pub step_cover: bool,
     pub plane_deg: f64,
     pub rest_secs: f64,
     pub mark_clear: bool,
@@ -4679,7 +4669,6 @@ impl DoormannersK {
             step: 0.0,
             round: 0.0,
             round_out: 0.0,
-            own_place: false,
             own_m: 0.0,
             own_end_m: 0.0,
             leaf_round: false,
@@ -4713,7 +4702,6 @@ impl DoormannersK {
             funnel_rest: 0.0,
             through: 0.0,
             past: 0.0,
-            step_cover: false,
             plane_deg: 0.0,
             rest_secs: 0.0,
             mark_clear: false,
@@ -5437,7 +5425,6 @@ pub struct CloseK {
     pub alert_strike: bool,
     pub held_clicks: bool,
     pub reach_up: bool,
-    pub hands_low: bool,
     pub no_knife: bool,
     pub rmb_hold: bool,
     pub rmb_tap_secs: f64,
@@ -5473,7 +5460,6 @@ impl CloseK {
             alert_strike: false,
             held_clicks: false,
             reach_up: false,
-            hands_low: false,
             no_knife: false,
             rmb_hold: false,
             rmb_tap_secs: 0.0,
@@ -5551,7 +5537,6 @@ pub struct PlanK {
     pub marks: bool,
     pub sectors: bool,
     pub who: bool,
-    pub tags: bool,
     pub word: bool,
     pub throws: bool,
     pub menu_only: bool,
@@ -5577,7 +5562,6 @@ impl PlanK {
             marks: false,
             sectors: false,
             who: false,
-            tags: false,
             word: false,
             throws: false,
             menu_only: false,
@@ -5661,17 +5645,13 @@ impl Default for TakeK { fn default() -> Self { Self::zeroed() } }
 /// (TypeScript: inline at src/game/autoreload.ts:23 RELOAD, src/game/autoreload.ts:23)
 #[derive(Clone, Copy, Debug)]
 pub struct ReloadK {
-    pub auto: bool,
     pub delay: f64,
-    pub last_mag: bool,
 }
 impl ReloadK {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         ReloadK {
-            auto: false,
             delay: 0.0,
-            last_mag: false,
         }
     }
 }
@@ -6204,12 +6184,10 @@ impl Default for HandslotK { fn default() -> Self { Self::zeroed() } }
 pub struct HandringK {
     pub on: bool,
     pub hold_secs: f64,
-    pub early: bool,
     pub empty: bool,
     pub near: bool,
     pub lone: bool,
     pub lone_wrap: bool,
-    pub on_thing: bool,
     pub bare: bool,
     pub turn: bool,
     pub turn_max: f64,
@@ -6221,12 +6199,10 @@ impl HandringK {
         HandringK {
             on: false,
             hold_secs: 0.0,
-            early: false,
             empty: false,
             near: false,
             lone: false,
             lone_wrap: false,
-            on_thing: false,
             bare: false,
             turn: false,
             turn_max: 0.0,
@@ -6282,7 +6258,6 @@ pub struct SprintdoorK {
     pub rip_secs: f64,
     pub rip_vel: f64,
     pub rip_level: f64,
-    pub kick: bool,
     pub kick_k: f64,
     pub kick_into: f64,
     pub kick_free: f64,
@@ -6300,7 +6275,6 @@ impl SprintdoorK {
             rip_secs: 0.0,
             rip_vel: 0.0,
             rip_level: 0.0,
-            kick: false,
             kick_k: 0.0,
             kick_into: 0.0,
             kick_free: 0.0,
@@ -6328,7 +6302,6 @@ pub struct TeampaceK {
     pub pace_near: f64,
     pub pace_gap: f64,
     pub pace_cos: f64,
-    pub walk_aim: bool,
     pub walk_aim_off: f64,
     pub walk_aim_on: f64,
     pub run_at: f64,
@@ -6356,7 +6329,6 @@ impl TeampaceK {
             pace_near: 0.0,
             pace_gap: 0.0,
             pace_cos: 0.0,
-            walk_aim: false,
             walk_aim_off: 0.0,
             walk_aim_on: 0.0,
             run_at: 0.0,
@@ -6373,7 +6345,6 @@ impl Default for TeampaceK { fn default() -> Self { Self::zeroed() } }
 pub struct NoshoveK {
     pub on: bool,
     pub round: bool,
-    pub own: bool,
     pub ring: f64,
     pub back: f64,
 }
@@ -6383,7 +6354,6 @@ impl NoshoveK {
         NoshoveK {
             on: false,
             round: false,
-            own: false,
             ring: 0.0,
             back: 0.0,
         }
@@ -6406,7 +6376,6 @@ pub struct RailsK {
     pub way_run: bool,
     pub after_secs: f64,
     pub after_max: f64,
-    pub shift_tap: bool,
     pub line_clear: bool,
     pub mark_clear: bool,
     pub eye_first: bool,
@@ -6435,7 +6404,6 @@ impl RailsK {
             way_run: false,
             after_secs: 0.0,
             after_max: 0.0,
-            shift_tap: false,
             line_clear: false,
             mark_clear: false,
             eye_first: false,
@@ -6536,7 +6504,6 @@ pub struct SlotsetupK {
     pub on: bool,
     pub pop: bool,
     pub secs: f64,
-    pub stay: bool,
     pub draw: bool,
     pub settle: f64,
     pub mags: bool,
@@ -6548,7 +6515,6 @@ impl SlotsetupK {
             on: false,
             pop: false,
             secs: 0.0,
-            stay: false,
             draw: false,
             settle: 0.0,
             mags: false,
@@ -7233,8 +7199,6 @@ pub struct WorkK {
     pub hand_m: f64,
     pub posted: bool,
     pub own_face: bool,
-    pub held_pass: bool,
-    pub off_walk: bool,
     pub walk_m: f64,
     pub sam_face: bool,
 }
@@ -7255,8 +7219,6 @@ impl WorkK {
             hand_m: 0.0,
             posted: false,
             own_face: false,
-            held_pass: false,
-            off_walk: false,
             walk_m: 0.0,
             sam_face: false,
         }
@@ -7416,7 +7378,6 @@ pub struct GunslotsK {
     pub out: f64,
     pub lull: f64,
     pub back: f64,
-    pub heard: bool,
     pub bare: bool,
 }
 impl GunslotsK {
@@ -7428,7 +7389,6 @@ impl GunslotsK {
             out: 0.0,
             lull: 0.0,
             back: 0.0,
-            heard: false,
             bare: false,
         }
     }
@@ -7533,7 +7493,6 @@ pub struct SquadthrowK {
     pub walk_secs: f64,
     pub turn_secs: f64,
     pub toss_secs: f64,
-    pub back: bool,
     pub lob: bool,
     pub lob_paces: Vec<f64>,
     pub lob_bank_paces: Vec<f64>,
@@ -7574,7 +7533,6 @@ impl SquadthrowK {
             walk_secs: 0.0,
             turn_secs: 0.0,
             toss_secs: 0.0,
-            back: false,
             lob: false,
             lob_paces: Vec::new(),
             lob_bank_paces: Vec::new(),
@@ -8194,7 +8152,6 @@ impl Default for RunnerK { fn default() -> Self { Self::zeroed() } }
 /// (TypeScript: inline at src/game/startle.ts:40 STARTLE, src/game/startle.ts:40)
 #[derive(Clone, Copy, Debug)]
 pub struct StartleK {
-    pub on: bool,
     pub beat: f64,
     pub draw: f64,
     pub fresh: f64,
@@ -8210,7 +8167,6 @@ impl StartleK {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         StartleK {
-            on: false,
             beat: 0.0,
             draw: 0.0,
             fresh: 0.0,
@@ -8822,7 +8778,6 @@ pub struct DarkfoeK {
     pub off_jitter: f64,
     pub hold_secs: f64,
     pub lamp_m: f64,
-    pub suspect: bool,
     pub blind_secs: f64,
     pub seek_m: f64,
     pub walk_m: f64,
@@ -8852,7 +8807,6 @@ impl DarkfoeK {
             off_jitter: 0.0,
             hold_secs: 0.0,
             lamp_m: 0.0,
-            suspect: false,
             blind_secs: 0.0,
             seek_m: 0.0,
             walk_m: 0.0,
@@ -9062,7 +9016,6 @@ pub struct RescueflushK {
     pub busy_secs: f64,
     pub smoke_k: f64,
     pub at_door_m: f64,
-    pub lanes_choose: bool,
 }
 impl RescueflushK {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -9077,7 +9030,6 @@ impl RescueflushK {
             busy_secs: 0.0,
             smoke_k: 0.0,
             at_door_m: 0.0,
-            lanes_choose: false,
         }
     }
 }
@@ -9254,7 +9206,6 @@ pub struct DozeK {
     pub say_first: Vec<f64>,
     pub say_every: Vec<f64>,
     pub idle_secs: f64,
-    pub lend: bool,
 }
 impl DozeK {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -9284,7 +9235,6 @@ impl DozeK {
             say_first: Vec::new(),
             say_every: Vec::new(),
             idle_secs: 0.0,
-            lend: false,
         }
     }
 }
@@ -10148,7 +10098,6 @@ pub struct DoortoolsK {
     pub frag_way_wait: f64,
     pub frag_way_open: f64,
     pub frag_way_ajar: f64,
-    pub bang_way: bool,
     pub open_hand: bool,
     pub gate_hand: bool,
     pub last_out: bool,
@@ -10257,16 +10206,13 @@ pub struct DoortoolsK {
     pub bang_pass_v: f64,
     pub halt_back: bool,
     pub behind_sam: bool,
-    pub toss_mate: bool,
     pub charge_answer: bool,
     pub pod_frames: bool,
     pub pod_frame_m: f64,
     pub thr_hand: bool,
     pub thr_hand_wait: f64,
     pub thr_hand_every: f64,
-    pub thr_no_can: bool,
     pub thr_frag_hold: bool,
-    pub thr_doors_leaf: bool,
     pub frag_hold: bool,
     pub frag_hold_cap: f64,
     pub threat_first: bool,
@@ -10320,7 +10266,6 @@ impl DoortoolsK {
             frag_way_wait: 0.0,
             frag_way_open: 0.0,
             frag_way_ajar: 0.0,
-            bang_way: false,
             open_hand: false,
             gate_hand: false,
             last_out: false,
@@ -10429,16 +10374,13 @@ impl DoortoolsK {
             bang_pass_v: 0.0,
             halt_back: false,
             behind_sam: false,
-            toss_mate: false,
             charge_answer: false,
             pod_frames: false,
             pod_frame_m: 0.0,
             thr_hand: false,
             thr_hand_wait: 0.0,
             thr_hand_every: 0.0,
-            thr_no_can: false,
             thr_frag_hold: false,
-            thr_doors_leaf: false,
             frag_hold: false,
             frag_hold_cap: 0.0,
             threat_first: false,
@@ -10470,7 +10412,6 @@ pub struct RoomfightK {
     pub crowd: f64,
     pub fear_min: f64,
     pub fall_back: bool,
-    pub rally: bool,
     pub fall_back_in: bool,
     pub close_m: f64,
     pub no_shot: f64,
@@ -10483,7 +10424,6 @@ pub struct RoomfightK {
     pub no_shot_pass: f64,
     pub rally_k: f64,
     pub arc_half_deg: f64,
-    pub cover_keep: bool,
     pub cover_half_deg: f64,
     pub cover_near_m: f64,
     pub team_hot: f64,
@@ -10508,7 +10448,6 @@ impl RoomfightK {
             crowd: 0.0,
             fear_min: 0.0,
             fall_back: false,
-            rally: false,
             fall_back_in: false,
             close_m: 0.0,
             no_shot: 0.0,
@@ -10521,7 +10460,6 @@ impl RoomfightK {
             no_shot_pass: 0.0,
             rally_k: 0.0,
             arc_half_deg: 0.0,
-            cover_keep: false,
             cover_half_deg: 0.0,
             cover_near_m: 0.0,
             team_hot: 0.0,
@@ -11043,9 +10981,6 @@ pub struct PairK {
     pub stalk_wait: f64,
     pub sweep: bool,
     pub ring_m: f64,
-    pub keep_way: bool,
-    pub habit_stood: bool,
-    pub steady: bool,
     pub steady_face_secs: f64,
     pub front_m: f64,
     pub cone_m: f64,
@@ -11082,9 +11017,6 @@ impl PairK {
             stalk_wait: 0.0,
             sweep: false,
             ring_m: 0.0,
-            keep_way: false,
-            habit_stood: false,
-            steady: false,
             steady_face_secs: 0.0,
             front_m: 0.0,
             cone_m: 0.0,
@@ -11445,7 +11377,6 @@ pub struct LanesK {
     pub peek_keep: f64,
     pub peek_pace: f64,
     pub peek_lean: f64,
-    pub pin: bool,
     pub pin_rounds: f64,
     pub pin_every: f64,
     pub pin_snap: f64,
@@ -11458,7 +11389,6 @@ pub struct LanesK {
     pub pin_show_m: f64,
     pub pin_min_m: f64,
     pub glass: bool,
-    pub stop_clear: bool,
     pub look_m: f64,
     pub roused: bool,
     pub frag: bool,
@@ -11466,8 +11396,6 @@ pub struct LanesK {
     pub frag_gap: f64,
     pub frag_look: f64,
     pub frag_step_m: f64,
-    pub frag_own: bool,
-    pub drill: bool,
     pub max: f64,
 }
 impl LanesK {
@@ -11519,7 +11447,6 @@ impl LanesK {
             peek_keep: 0.0,
             peek_pace: 0.0,
             peek_lean: 0.0,
-            pin: false,
             pin_rounds: 0.0,
             pin_every: 0.0,
             pin_snap: 0.0,
@@ -11532,7 +11459,6 @@ impl LanesK {
             pin_show_m: 0.0,
             pin_min_m: 0.0,
             glass: false,
-            stop_clear: false,
             look_m: 0.0,
             roused: false,
             frag: false,
@@ -11540,8 +11466,6 @@ impl LanesK {
             frag_gap: 0.0,
             frag_look: 0.0,
             frag_step_m: 0.0,
-            frag_own: false,
-            drill: false,
             max: 0.0,
         }
     }
@@ -11552,7 +11476,6 @@ impl Default for LanesK { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Copy, Debug)]
 pub struct GunholdK {
     pub on: bool,
-    pub fire: bool,
     pub cover_m: f64,
     pub near_m: f64,
     pub rear_deg: f64,
@@ -11571,7 +11494,6 @@ impl GunholdK {
     pub fn zeroed() -> Self {
         GunholdK {
             on: false,
-            fire: false,
             cover_m: 0.0,
             near_m: 0.0,
             rear_deg: 0.0,
@@ -12117,7 +12039,6 @@ pub struct RearwatchK {
     pub room: bool,
     pub room_secs: f64,
     pub room_m: f64,
-    pub room_last: bool,
 }
 impl RearwatchK {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -12133,7 +12054,6 @@ impl RearwatchK {
             room: false,
             room_secs: 0.0,
             room_m: 0.0,
-            room_last: false,
         }
     }
 }
@@ -12177,10 +12097,8 @@ pub struct SneakK {
     pub back: f64,
     pub ahead_m: f64,
     pub lit_at: f64,
-    pub by_eye: bool,
     pub seen_rate: f64,
     pub ambient: bool,
-    pub stalk_ambient: bool,
     pub cone_deg: f64,
     pub near_m: f64,
     pub cross_m: f64,
@@ -12219,10 +12137,8 @@ impl SneakK {
             back: 0.0,
             ahead_m: 0.0,
             lit_at: 0.0,
-            by_eye: false,
             seen_rate: 0.0,
             ambient: false,
-            stalk_ambient: false,
             cone_deg: 0.0,
             near_m: 0.0,
             cross_m: 0.0,
@@ -12278,7 +12194,6 @@ impl Default for PairupK { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Copy, Debug)]
 pub struct SpottedK {
     pub on: bool,
-    pub hold: bool,
     pub leash_m: f64,
     pub slip_m: f64,
     pub lit_at: f64,
@@ -12288,7 +12203,6 @@ pub struct SpottedK {
     pub linger_secs: f64,
     pub brace_secs: f64,
     pub brace_m: f64,
-    pub close: bool,
     pub take_m: f64,
     pub take_reach: f64,
     pub take_secs: f64,
@@ -12305,7 +12219,6 @@ impl SpottedK {
     pub fn zeroed() -> Self {
         SpottedK {
             on: false,
-            hold: false,
             leash_m: 0.0,
             slip_m: 0.0,
             lit_at: 0.0,
@@ -12315,7 +12228,6 @@ impl SpottedK {
             linger_secs: 0.0,
             brace_secs: 0.0,
             brace_m: 0.0,
-            close: false,
             take_m: 0.0,
             take_reach: 0.0,
             take_secs: 0.0,
@@ -12531,7 +12443,6 @@ pub struct HoldfireK {
     pub lift_secs: f64,
     pub loud: bool,
     pub stack_set: bool,
-    pub stack_wait: bool,
 }
 impl HoldfireK {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -12541,7 +12452,6 @@ impl HoldfireK {
             lift_secs: 0.0,
             loud: false,
             stack_set: false,
-            stack_wait: false,
         }
     }
 }
@@ -12685,7 +12595,7 @@ pub fn page_body_light() -> BodyLightK {
 }
 
 pub fn page_guard_eye() -> GuardEyeK {
-    crate::knobs::GuardEyeK { range: 16.0, half_deg: 58.0, near_m: 3.5, near_deg: 100.0, far: true, far_calm: true, far_fix_at: 0.5, far_range: 26.0, far_lo: 0.4, far_hi: 0.8, far_k: 0.1 }
+    crate::knobs::GuardEyeK { range: 16.0, half_deg: 58.0, near_m: 3.5, near_deg: 100.0, far: true, far_fix_at: 0.5, far_range: 26.0, far_lo: 0.4, far_hi: 0.8, far_k: 0.1 }
 }
 
 pub fn page_needs() -> NeedsK {
@@ -12729,7 +12639,7 @@ pub fn page_launcher40() -> Launcher40K {
 }
 
 pub fn page_frag() -> FragK {
-    crate::knobs::FragK { on: true, issue: 2.0, fuse: 3.0, order_fuse: 2.4, squad: 2.0, order_key: String::from("KeyG"), order_in: 3.4, lethal_m: 4.0, wound_m: 8.0, destr_m: 2.5, wound_kill: 0.6, stagger: [3.2, 1.2], lift: 0.2, sam_stun: true, door_stun: true, wall_stun: true, glass_m: 4.0, glass_power: 1.5, pane_energy: 0.0, see_m: 9.0, hear_m: 5.0, react: [0.25, 0.5], react_jit: 0.25, shout_m: 9.0, flee_m: 9.0, run_speed: 3.4, flee_wise: true, flee_keep: 1.0, rest_props: true, flee_apart: true, flee_apart_m: 1.0, flee_lane_m: 0.9, flee_onto: true, flee_sam: true, flee_look: true, down_kill: true, down_shove: 2.4, wall_flee: true, flee_door: true, flee_door_open: 1.0, flee_door_in: 1.0, flee_door_dip: 0.6, flee_door_mouth: 0.9, flee_door_leaf: 0.3, flee_door_via: 0.9, flee_door_via_m: 0.45, flee_door_new: 30.0, flee_door_most: 2.0, flee_door_try: 4.0, flee_door_nodes: 1500.0, defenders: true, def_share: 3.0, def_max: 3.0, def_fuse: 4.0, def_wind: 1.0, def_near: 3.5, def_far: 13.0, def_past: 2.0, def_fresh: 4.0, def_blocked: 1.2, def_bunch: 2.5, def_bunch_secs: 0.5, def_gap: 14.0, def_own_m: 6.0, def_scatter: [0.6, 2.2], cue_m: 12.0 }
+    crate::knobs::FragK { on: true, issue: 2.0, fuse: 3.0, order_fuse: 2.4, squad: 2.0, order_key: String::from("KeyG"), order_in: 3.4, lethal_m: 4.0, wound_m: 8.0, destr_m: 2.5, wound_kill: 0.6, stagger: [3.2, 1.2], lift: 0.2, sam_stun: true, door_stun: true, wall_stun: true, glass_m: 4.0, glass_power: 1.5, pane_energy: 0.0, see_m: 9.0, hear_m: 5.0, react: [0.25, 0.5], react_jit: 0.25, shout_m: 9.0, flee_m: 9.0, run_speed: 3.4, flee_wise: true, flee_keep: 1.0, rest_props: true, flee_apart: true, flee_apart_m: 1.0, flee_lane_m: 0.9, flee_sam: true, flee_look: true, down_kill: true, down_shove: 2.4, wall_flee: true, flee_door: true, flee_door_open: 1.0, flee_door_in: 1.0, flee_door_dip: 0.6, flee_door_mouth: 0.9, flee_door_leaf: 0.3, flee_door_via: 0.9, flee_door_via_m: 0.45, flee_door_new: 30.0, flee_door_most: 2.0, flee_door_try: 4.0, flee_door_nodes: 1500.0, defenders: true, def_share: 3.0, def_max: 3.0, def_fuse: 4.0, def_wind: 1.0, def_near: 3.5, def_far: 13.0, def_past: 2.0, def_fresh: 4.0, def_blocked: 1.2, def_bunch: 2.5, def_bunch_secs: 0.5, def_gap: 14.0, def_own_m: 6.0, def_scatter: [0.6, 2.2], cue_m: 12.0 }
 }
 
 pub fn page_shotgun() -> ShotgunK {
@@ -12805,7 +12715,7 @@ pub fn page_watch() -> WatchK {
 }
 
 pub fn page_stalk() -> StalkK {
-    crate::knobs::StalkK { on: true, only: true, cursor_m: 1.1, begin_cos: -0.25, out_cos: -0.05, station_m: 0.55, grab_m: 0.95, pace: 1.6, close_min: 0.3, close_k: 0.6, ease_up: 4.0, ease_down: 9.0, tell: true, reach_from: 2.9, reach: 1.0, rise_from: 2.3, rise_by: 1.05, rise: 0.7, catch_secs: 0.3, catch_m: 0.75, catch_long: 1.1, turn_in: true, catch_stride: 1.5, yank: 0.28, yank_room: 0.4, yank_with: true, corner: true, corner_m: 1.35, corner_deg: 110.0, jolt: 0.6, jolt_face: 50.0, jolt_secs: 0.6, jolt_at_once: false, corner_show: true, corner_see: 3.2, corner_reach: [0.25, 0.55], corner_coil: 0.3, corner_rise: 0.24, key: true, key_m: 0.8, low: true, low_from: 2.6, low_by: 1.1, low_k: 0.35, low_drop: 0.06, low_back: 0.03, low_lean: 6.0, low_hands: 1.0, low_spring: 18.0, low_wind: 0.12, wide: true, wide_out: 0.1, wide_down: 0.32, wide_fwd: 0.24, wide_lead: 0.07, wide_by: 0.35, wide_pole: [0.45, 0.15, -0.88], heft: true, heft_twist: 20.0, heft_swing: 0.11, heft_side: 0.04, heft_lean: 4.0, heft_dip: 0.02, heft_surge: 1.0, heft_out: 0.18, heft_down: 0.4, heft_fwd: -0.2, heft_lead: 0.0, heft_pole: [0.6, 0.0, -0.8], orbit: true, orbit_k: 3.0, orbit_edge: 0.05, orbit_snap: 0.3, low_begin_m: 4.2, low_out_m: 5.0 }
+    crate::knobs::StalkK { on: true, only: true, cursor_m: 1.1, begin_cos: -0.25, out_cos: -0.05, station_m: 0.55, grab_m: 0.95, pace: 1.6, close_min: 0.3, close_k: 0.6, ease_up: 4.0, ease_down: 9.0, tell: true, reach_from: 2.9, reach: 1.0, rise_from: 2.3, rise_by: 1.05, rise: 0.7, catch_secs: 0.3, catch_m: 0.75, catch_long: 1.1, turn_in: true, catch_stride: 1.5, yank: 0.28, yank_room: 0.4, yank_with: true, corner: true, corner_m: 1.35, corner_deg: 110.0, jolt: 0.6, jolt_face: 50.0, jolt_secs: 0.6, corner_show: true, corner_see: 3.2, corner_reach: [0.25, 0.55], corner_coil: 0.3, corner_rise: 0.24, key: true, key_m: 0.8, low: true, low_from: 2.6, low_by: 1.1, low_k: 0.35, low_drop: 0.06, low_back: 0.03, low_lean: 6.0, low_hands: 1.0, low_spring: 18.0, low_wind: 0.12, wide: true, wide_out: 0.1, wide_down: 0.32, wide_fwd: 0.24, wide_lead: 0.07, wide_by: 0.35, wide_pole: [0.45, 0.15, -0.88], heft: true, heft_twist: 20.0, heft_swing: 0.11, heft_side: 0.04, heft_lean: 4.0, heft_dip: 0.02, heft_surge: 1.0, heft_out: 0.18, heft_down: 0.4, heft_fwd: -0.2, heft_lead: 0.0, heft_pole: [0.6, 0.0, -0.8], orbit: true, orbit_k: 3.0, orbit_edge: 0.05, orbit_snap: 0.3, low_begin_m: 4.2, low_out_m: 5.0 }
 }
 
 pub fn page_overhear() -> OverhearK {
@@ -12897,7 +12807,7 @@ pub fn page_doorshot() -> DoorshotK {
 }
 
 pub fn page_doorthrow() -> DoorthrowK {
-    crate::knobs::DoorthrowK { on: true, push_secs: 2.0, kick_secs: 4.0, startle: 1.0, wary: 0.5, soft: true, jolt: true, min_speed: 0.9, hand_rate: 1.2, floor_rad: 0.6, rate: 9.0, slide: 1.5, again: 3.0, aware: 0.92 }
+    crate::knobs::DoorthrowK { on: true, push_secs: 2.0, kick_secs: 4.0, startle: 1.0, wary: 0.5, soft: true, min_speed: 0.9, hand_rate: 1.2, floor_rad: 0.6, rate: 9.0, slide: 1.5, again: 3.0, aware: 0.92 }
 }
 
 pub fn page_winbars() -> WinbarsK {
@@ -12917,7 +12827,7 @@ pub fn page_handle() -> HandleK {
 }
 
 pub fn page_doormanners() -> DoormannersK {
-    crate::knobs::DoormannersK { on: true, stand: true, fight: true, reach: 3.0, half: 0.45, throat: 1.25, gap: 1.05, gap_min: 0.7, brake: 8.0, patience: 1.1, rest: 2.0, beyond: 0.6, aside: 0.4, jamb_out: 0.6, jamb_past: 0.5, file_gap: 0.9, apart: 0.85, step: 1.4, round: 1.2, round_out: 0.85, own_place: true, own_m: 0.45, own_end_m: 2.5, leaf_round: true, leaf_stall: true, leaf_stall_m: 0.12, leaf_stall_secs: 0.6, leaf_stall_reach: 0.6, leaf_stall_ahead: 0.3, leaf_stall_push: 1.5, sweep: 0.2, lane: true, lane_ajar: 0.6, lane_m: 6.0, lane_out: 0.3, lane_flare: 0.12, lane_clear: 0.15, lane_apart: 0.7, lane_leaf: true, watch: true, stack_cover: true, cover_m: 2.0, cover_deep: 2.5, cover_look: 0.8, cover_quiet: 1.0, cover_cap: 8.0, lane_walk: true, lane_dear: 6.0, lane_strip: 0.7, lane_long: 1.6, funnel: 0.6, funnel_rest: 1.5, through: 0.95, past: 0.6, step_cover: true, plane_deg: 30.0, rest_secs: 1.0, mark_clear: true, pod_clear: false, clear_m: 1.4, held_cap: 12.0, own_leaf: true, own_mark: true, off_furniture: true, back_on: true }
+    crate::knobs::DoormannersK { on: true, stand: true, fight: true, reach: 3.0, half: 0.45, throat: 1.25, gap: 1.05, gap_min: 0.7, brake: 8.0, patience: 1.1, rest: 2.0, beyond: 0.6, aside: 0.4, jamb_out: 0.6, jamb_past: 0.5, file_gap: 0.9, apart: 0.85, step: 1.4, round: 1.2, round_out: 0.85, own_m: 0.45, own_end_m: 2.5, leaf_round: true, leaf_stall: true, leaf_stall_m: 0.12, leaf_stall_secs: 0.6, leaf_stall_reach: 0.6, leaf_stall_ahead: 0.3, leaf_stall_push: 1.5, sweep: 0.2, lane: true, lane_ajar: 0.6, lane_m: 6.0, lane_out: 0.3, lane_flare: 0.12, lane_clear: 0.15, lane_apart: 0.7, lane_leaf: true, watch: true, stack_cover: true, cover_m: 2.0, cover_deep: 2.5, cover_look: 0.8, cover_quiet: 1.0, cover_cap: 8.0, lane_walk: true, lane_dear: 6.0, lane_strip: 0.7, lane_long: 1.6, funnel: 0.6, funnel_rest: 1.5, through: 0.95, past: 0.6, plane_deg: 30.0, rest_secs: 1.0, mark_clear: true, pod_clear: false, clear_m: 1.4, held_cap: 12.0, own_leaf: true, own_mark: true, off_furniture: true, back_on: true }
 }
 
 pub fn page_breaks() -> BreaksK {
@@ -12961,11 +12871,11 @@ pub fn page_gunwall() -> GunwallK {
 }
 
 pub fn page_close() -> CloseK {
-    crate::knobs::CloseK { on: true, ready: true, dark: true, marks: false, side: true, front: true, seat: true, alert_strike: true, held_clicks: true, reach_up: true, hands_low: true, no_knife: true, rmb_hold: true, rmb_tap_secs: 0.2, rmb_loud: 0.15, rmb_wait_secs: 1.2, hands_low_neck_m: 1.15, mode_m: 3.0, mode_out_m: 3.6, dark_at: 0.1, lit_at: 0.3, touch_m: 0.55, fade_m: 0.9, reach: crate::knobs::CloseKReach { behind: 1.05, side: 0.95, front: 0.85, seat: 1.2, seat_front: 0.95 }, side_from_deg: 50.0, inner: 0.34, step_deg: 7.5, strike_dist: 0.6, seat_dist: 0.72, noise: crate::knobs::CloseKNoise { behind: 0.3, side: 0.38, front: 0.5, seat: 0.3 }, alert_noise: 0.15 }
+    crate::knobs::CloseK { on: true, ready: true, dark: true, marks: false, side: true, front: true, seat: true, alert_strike: true, held_clicks: true, reach_up: true, no_knife: true, rmb_hold: true, rmb_tap_secs: 0.2, rmb_loud: 0.15, rmb_wait_secs: 1.2, hands_low_neck_m: 1.15, mode_m: 3.0, mode_out_m: 3.6, dark_at: 0.1, lit_at: 0.3, touch_m: 0.55, fade_m: 0.9, reach: crate::knobs::CloseKReach { behind: 1.05, side: 0.95, front: 0.85, seat: 1.2, seat_front: 0.95 }, side_from_deg: 50.0, inner: 0.34, step_deg: 7.5, strike_dist: 0.6, seat_dist: 0.72, noise: crate::knobs::CloseKNoise { behind: 0.3, side: 0.38, front: 0.5, seat: 0.3 }, alert_noise: 0.15 }
 }
 
 pub fn page_plan() -> PlanK {
-    crate::knobs::PlanK { on: true, paths: true, marks: true, sectors: true, who: true, tags: true, word: true, throws: true, menu_only: true, key_lit: true, thr_told: true, fresh_secs: 2.5, walk_dim: 0.6, rest_dim: 0.45, ring_m: 0.3, sector_m: 1.6, sector_deg: 24.0, sight_m: 14.0, reask_secs: 0.5, pair_bar_m: 0.55, others: 0.45 }
+    crate::knobs::PlanK { on: true, paths: true, marks: true, sectors: true, who: true, word: true, throws: true, menu_only: true, key_lit: true, thr_told: true, fresh_secs: 2.5, walk_dim: 0.6, rest_dim: 0.45, ring_m: 0.3, sector_m: 1.6, sector_deg: 24.0, sight_m: 14.0, reask_secs: 0.5, pair_bar_m: 0.55, others: 0.45 }
 }
 
 pub fn page_gear() -> GearK {
@@ -12985,7 +12895,7 @@ pub fn page_take() -> TakeK {
 }
 
 pub fn page_reload() -> ReloadK {
-    crate::knobs::ReloadK { auto: true, delay: 0.25, last_mag: true }
+    crate::knobs::ReloadK { delay: 0.25 }
 }
 
 pub fn page_quickthrow() -> QuickthrowK {
@@ -13077,7 +12987,7 @@ pub fn page_handslot() -> HandslotK {
 }
 
 pub fn page_handring() -> HandringK {
-    crate::knobs::HandringK { on: true, hold_secs: 0.3, early: true, empty: true, near: true, lone: true, lone_wrap: true, on_thing: true, bare: true, turn: true, turn_max: 0.45, corner: true }
+    crate::knobs::HandringK { on: true, hold_secs: 0.3, empty: true, near: true, lone: true, lone_wrap: true, bare: true, turn: true, turn_max: 0.45, corner: true }
 }
 
 pub fn page_throwback() -> ThrowbackK {
@@ -13089,19 +12999,19 @@ pub fn page_ownblow() -> OwnblowK {
 }
 
 pub fn page_sprintdoor() -> SprintdoorK {
-    crate::knobs::SprintdoorK { on: true, keep: 0.75, bash_vel: 9.0, lean: 0.45, lean_secs: 0.25, rip_pace: 0.3, rip_secs: 0.3, rip_vel: 6.0, rip_level: 0.55, kick: true, kick_k: 0.25, kick_into: 2.5, kick_free: 0.8 }
+    crate::knobs::SprintdoorK { on: true, keep: 0.75, bash_vel: 9.0, lean: 0.45, lean_secs: 0.25, rip_pace: 0.3, rip_secs: 0.3, rip_vel: 6.0, rip_level: 0.55, kick_k: 0.25, kick_into: 2.5, kick_free: 0.8 }
 }
 
 pub fn page_teampace() -> TeampaceK {
-    crate::knobs::TeampaceK { on: true, k: 0.8, follow_k: 1.3, behind_m: 1.0, fight_secs: 2.0, back_secs: 6.0, own: true, dash_m: 2.5, dash_seen: 0.5, dash_every: 0.25, dash_hot: 6.0, door_brisk: true, pacing: true, pace_near: 12.0, pace_gap: 1.0, pace_cos: 0.5, walk_aim: true, walk_aim_off: 0.25, walk_aim_on: 0.5, run_at: 2.7, accel: 6.0, step: 1.0, gap: 1.0 }
+    crate::knobs::TeampaceK { on: true, k: 0.8, follow_k: 1.3, behind_m: 1.0, fight_secs: 2.0, back_secs: 6.0, own: true, dash_m: 2.5, dash_seen: 0.5, dash_every: 0.25, dash_hot: 6.0, door_brisk: true, pacing: true, pace_near: 12.0, pace_gap: 1.0, pace_cos: 0.5, walk_aim_off: 0.25, walk_aim_on: 0.5, run_at: 2.7, accel: 6.0, step: 1.0, gap: 1.0 }
 }
 
 pub fn page_noshove() -> NoshoveK {
-    crate::knobs::NoshoveK { on: true, round: true, own: true, ring: 0.6, back: 1.2 }
+    crate::knobs::NoshoveK { on: true, round: true, ring: 0.6, back: 1.2 }
 }
 
 pub fn page_rails() -> RailsK {
-    crate::knobs::RailsK { on: true, pan_speed: 11.0, pan_reach: 16.0, snap_px: 40.0, keep: 0.21, keep_speed: 9.0, keep_deep: 0.79, keep_up: 0.39, way_m: 6.0, way_run: true, after_secs: 8.0, after_max: 45.0, shift_tap: true, line_clear: true, mark_clear: true, eye_first: true, eye_view: true, card_beat: true, card_beat_secs: 1.2, card_quiet: 2.0, card_max: 9.0, spare_down: true, flat_ring: true, spare_secs: 6.0 }
+    crate::knobs::RailsK { on: true, pan_speed: 11.0, pan_reach: 16.0, snap_px: 40.0, keep: 0.21, keep_speed: 9.0, keep_deep: 0.79, keep_up: 0.39, way_m: 6.0, way_run: true, after_secs: 8.0, after_max: 45.0, line_clear: true, mark_clear: true, eye_first: true, eye_view: true, card_beat: true, card_beat_secs: 1.2, card_quiet: 2.0, card_max: 9.0, spare_down: true, flat_ring: true, spare_secs: 6.0 }
 }
 
 pub fn page_belief() -> BeliefK {
@@ -13113,7 +13023,7 @@ pub fn page_doorforce() -> DoorforceK {
 }
 
 pub fn page_slotsetup() -> SlotsetupK {
-    crate::knobs::SlotsetupK { on: true, pop: true, secs: 1.5, stay: false, draw: true, settle: 0.35, mags: true }
+    crate::knobs::SlotsetupK { on: true, pop: true, secs: 1.5, draw: true, settle: 0.35, mags: true }
 }
 
 pub fn page_glassreal() -> GlassrealK {
@@ -13149,7 +13059,7 @@ pub fn page_hands() -> HandsK {
 }
 
 pub fn page_work() -> WorkK {
-    crate::knobs::WorkK { on: true, pick_m: 0.45, pick_wide_m: 0.9, behind_m: 0.5, behind_panel_m: 0.09, stand_m: 0.5, buddy_m: 1.4, hand_secs: 0.45, breaker_secs: 0.7, fade_secs: 0.4, hand_m: 0.85, posted: true, own_face: true, held_pass: true, off_walk: true, walk_m: 2.5, sam_face: true }
+    crate::knobs::WorkK { on: true, pick_m: 0.45, pick_wide_m: 0.9, behind_m: 0.5, behind_panel_m: 0.09, stand_m: 0.5, buddy_m: 1.4, hand_secs: 0.45, breaker_secs: 0.7, fade_secs: 0.4, hand_m: 0.85, posted: true, own_face: true, walk_m: 2.5, sam_face: true }
 }
 
 pub fn page_wand() -> WandK {
@@ -13169,7 +13079,7 @@ pub fn page_owncharge() -> OwnchargeK {
 }
 
 pub fn page_gunslots() -> GunslotsK {
-    crate::knobs::GunslotsK { on: true, near: 10.0, out: 0.7, lull: 1.6, back: 0.65, heard: true, bare: true }
+    crate::knobs::GunslotsK { on: true, near: 10.0, out: 0.7, lull: 1.6, back: 0.65, bare: true }
 }
 
 pub fn page_gunlook() -> GunlookK {
@@ -13185,7 +13095,7 @@ pub fn page_kittree() -> KittreeK {
 }
 
 pub fn page_squadthrow() -> SquadthrowK {
-    crate::knobs::SquadthrowK { on: true, frag_roll_k: 0.04, again_secs: 1.2, shown_secs: 2.5, slack_m: 1.0, walk: true, walk_m: 12.0, min_m: 1.5, max_m: 11.5, tries: 12.0, keep_secs: 0.4, walk_secs: 16.0, turn_secs: 1.2, toss_secs: 0.5, back: true, lob: true, lob_paces: alloc::vec![7.5, 10.0, 5.0], lob_bank_paces: alloc::vec![10.0, 7.5], lob_speed: 11.0, lob_near_m: 1.5, lob_up_m: 1.2, lob_walls: 12.0, lob_wall_m: 3.0, lob_wall_h: 0.9, lob_sims: 48.0, lob_cells: 10.0, lob_keep_secs: 1.0, settle_secs: 0.5, lob_steps: alloc::vec![0.008333333333333333, 0.025], sam_call: true, duck: true, duck_secs: 0.5, duck_throw_secs: 0.2, duck_cells: 16.0, duck_apart_m: 1.0, duck_min_m: 5.0 }
+    crate::knobs::SquadthrowK { on: true, frag_roll_k: 0.04, again_secs: 1.2, shown_secs: 2.5, slack_m: 1.0, walk: true, walk_m: 12.0, min_m: 1.5, max_m: 11.5, tries: 12.0, keep_secs: 0.4, walk_secs: 16.0, turn_secs: 1.2, toss_secs: 0.5, lob: true, lob_paces: alloc::vec![7.5, 10.0, 5.0], lob_bank_paces: alloc::vec![10.0, 7.5], lob_speed: 11.0, lob_near_m: 1.5, lob_up_m: 1.2, lob_walls: 12.0, lob_wall_m: 3.0, lob_wall_h: 0.9, lob_sims: 48.0, lob_cells: 10.0, lob_keep_secs: 1.0, settle_secs: 0.5, lob_steps: alloc::vec![0.008333333333333333, 0.025], sam_call: true, duck: true, duck_secs: 0.5, duck_throw_secs: 0.2, duck_cells: 16.0, duck_apart_m: 1.0, duck_min_m: 5.0 }
 }
 
 pub fn page_squad40() -> Squad40K {
@@ -13253,7 +13163,7 @@ pub fn page_runner() -> RunnerK {
 }
 
 pub fn page_startle() -> StartleK {
-    crate::knobs::StartleK { on: true, beat: 0.5, draw: 0.3, fresh: 1.0, late: 0.25, run_m: 8.0, near_m: 2.5, clear_secs: 1.5, run_secs: 4.0, stuck_secs: 0.75, stuck_m: 0.3 }
+    crate::knobs::StartleK { beat: 0.5, draw: 0.3, fresh: 1.0, late: 0.25, run_m: 8.0, near_m: 2.5, clear_secs: 1.5, run_secs: 4.0, stuck_secs: 0.75, stuck_m: 0.3 }
 }
 
 pub fn page_rowset() -> RowsetK {
@@ -13281,7 +13191,7 @@ pub fn page_darkdoor() -> DarkdoorK {
 }
 
 pub fn page_darkfoe() -> DarkfoeK {
-    crate::knobs::DarkfoeK { on: true, carry: 1.0, lit_at: 0.3, look_m: 12.0, step_m: 2.0, fan_rad: 0.3, see_share: 0.34, ask_secs: 0.25, on_secs: 0.6, on_jitter: 2.5, off_secs: 15.0, off_jitter: 0.4, hold_secs: 2.0, lamp_m: 16.0, suspect: false, blind_secs: 3.0, seek_m: 10.0, walk_m: 12.0, edge_m: 3.0, stumble_k: 0.75, again_secs: 20.0, moves: 2.0, quiet_secs: 4.0, calm_secs: 6.0, roam: false }
+    crate::knobs::DarkfoeK { on: true, carry: 1.0, lit_at: 0.3, look_m: 12.0, step_m: 2.0, fan_rad: 0.3, see_share: 0.34, ask_secs: 0.25, on_secs: 0.6, on_jitter: 2.5, off_secs: 15.0, off_jitter: 0.4, hold_secs: 2.0, lamp_m: 16.0, blind_secs: 3.0, seek_m: 10.0, walk_m: 12.0, edge_m: 3.0, stumble_k: 0.75, again_secs: 20.0, moves: 2.0, quiet_secs: 4.0, calm_secs: 6.0, roam: false }
 }
 
 pub fn page_powerout() -> PoweroutK {
@@ -13309,7 +13219,7 @@ pub fn page_rescueend() -> RescueendK {
 }
 
 pub fn page_rescueflush() -> RescueflushK {
-    crate::knobs::RescueflushK { on: true, after_secs: 4.0, gap_secs: 2.5, again_secs: 8.0, reach_m: 10.0, kill_secs: 3.0, busy_secs: 2.0, smoke_k: 0.3, at_door_m: 1.8, lanes_choose: true }
+    crate::knobs::RescueflushK { on: true, after_secs: 4.0, gap_secs: 2.5, again_secs: 8.0, reach_m: 10.0, kill_secs: 3.0, busy_secs: 2.0, smoke_k: 0.3, at_door_m: 1.8 }
 }
 
 
@@ -13330,7 +13240,7 @@ pub fn page_seats() -> SeatsK {
 }
 
 pub fn page_doze() -> DozeK {
-    crate::knobs::DozeK { on: true, min_wait: 20.0, max_wait: 90.0, chair_m: 4.5, nod_secs: 2.5, rise_secs: 2.0, hear_k: 0.6, light_at: 0.3, light_secs: 0.8, ask_secs: 0.25, wake_aw: 0.55, bump_aw: 0.7, stir_secs: 1.3, breath_secs: 3.6, screen: true, screen_m: 1.5, pull_m: 0.5, nap_wait: 40.0, settle_secs: 1.2, ears: 0.5, noises: 0.6, say_first: alloc::vec![5.0, 11.0], say_every: alloc::vec![16.0, 30.0], idle_secs: 60.0, lend: true }
+    crate::knobs::DozeK { on: true, min_wait: 20.0, max_wait: 90.0, chair_m: 4.5, nod_secs: 2.5, rise_secs: 2.0, hear_k: 0.6, light_at: 0.3, light_secs: 0.8, ask_secs: 0.25, wake_aw: 0.55, bump_aw: 0.7, stir_secs: 1.3, breath_secs: 3.6, screen: true, screen_m: 1.5, pull_m: 0.5, nap_wait: 40.0, settle_secs: 1.2, ears: 0.5, noises: 0.6, say_first: alloc::vec![5.0, 11.0], say_every: alloc::vec![16.0, 30.0], idle_secs: 60.0 }
 }
 
 pub fn page_netquiet() -> NetquietK {
@@ -13426,11 +13336,11 @@ pub fn page_laser() -> LaserK {
 }
 
 pub fn page_doortools() -> DoortoolsK {
-    crate::knobs::DoortoolsK { charges: 2.0, bangs: 3.0, blow_key: String::from("KeyF"), word_on_key: true, word_tap: 0.6, thr_hold_first: true, thr_bang_first: true, thr_outside_row: true, thr_leave_fall_in: false, thr_hands_off: false, thr_held_all: false, thr_menu_word: true, stack_cap: 60.0, still_secs: 2.5, kick_cap: 5.0, in_cap: 9.0, shove: 5.5, hold_open: 10.0, toss_after_open: 0.15, bang_in: 2.4, fuse_after_land: 0.35, air_in: 1.6, air_h: 1.2, toss_cap: 1.6, toss_after_kick: 0.05, throw_reach: 4.0, toss_turn: 0.0, frag_way: true, frag_way_wait: 1.0, frag_way_open: 1.15, frag_way_ajar: 0.6, bang_way: true, open_hand: true, gate_hand: true, last_out: true, last_out_m: 3.0, after_bang: 0.6, quiet: 0.15, entry_cap: 2.8, second: 0.25, sweep_rad: 0.9, sweep_secs: 0.6, corner_secs: 0.3, corner_rad: 0.3, corner_cap: 1.6, corner_owed: true, lead_seen: true, lead_seen_min: 12.0, lead_seen_secs: 30.0, lead_seen_m: 11.0, sector_secs: 0.6, search: true, scan_rate: 1.4, look_rad: 0.3, look_m: 11.0, dead_cells: 8.0, search_moves: 3.0, search_cap: 24.0, search_cells: 900.0, tuck: 0.4, edge_out: 0.4, bang_file: 1.1, set_secs: 2.0, standoff: alloc::vec![2.6, 2.0, 1.5], knock_m: 2.0, stun_m: 8.0, stun_secs: alloc::vec![6.0, 2.5], stagger_secs: 2.0, backblast_m: 1.6, backblast_secs: 1.5, blow_vel: 12.0, slice_back: 1.0, slice_look: 0.35, slice_edge: 0.12, slice_deep: 3.5, slice_pace: 0.9, word_stack: 20.0, word_in: 6.0, room_back: alloc::vec![2.8, 3.7, 4.6, 5.5], pod_apart: 1.2, thr_pull: true, thr_pull_at: alloc::vec![0.45, 1.8], thr_still: alloc::vec![0.45, 1.2], thr_arc: alloc::vec![alloc::vec![-0.45, 1.2], alloc::vec![0.25, 1.8]], thr_min: 4.0, thr_quiet: 2.0, thr_cap: 25.0, thr_bangs: 2.0, thr_pocket: 12.0, thr_shot_m: 8.0, thr_throw_m: 5.0, thr_flash_m: 7.0, thr_turn: 0.5, thr_next: 0.3, thr_cover: true, thr_slice: false, thr_light: 1.0, thr_in: 4.0, thr_pie: true, thr_pie_arc: alloc::vec![alloc::vec![-0.2, 1.4], alloc::vec![-0.05, 1.6], alloc::vec![0.08, 1.8]], thr_pie_apart: 0.65, thr_lean: true, thr_lean_m: 0.15, thr_knee_in: -0.1, thr_pie_one: true, thr_lean_look: 1.1, thr_doors_m: 5.5, thr_doors_walk: 16.0, thr_doors_stay: 1.0, other_door_m: 9.0, own_can: true, buddy: true, buddy_m: 5.0, buddy_pair_m: 12.0, buddy_left_m: 8.0, flow_on: true, flow_cells: 28.0, flow_moves: 5.0, flow_reach: 5.5, flow_deep: 3.0, flow_bound: 8.0, flow_secs: 10.0, flow_fight: 20.0, open_air: true, flow_max: 400.0, test_door: true, outside_plain: true, word_no_can: true, word_cuts: true, word_cuts_cap: 8.0, word_small: true, bang_into: true, bang_into_min: 1.5, bang_into_lit: 0.9, bang_into_deep: 6.0, bang_into_wide: 4.2, bang_hand_m: 0.9, bang_pass_v: 6.5, halt_back: true, behind_sam: true, toss_mate: true, charge_answer: true, pod_frames: true, pod_frame_m: 0.55, thr_hand: true, thr_hand_wait: 6.0, thr_hand_every: 0.25, thr_no_can: true, thr_frag_hold: true, thr_doors_leaf: true, frag_hold: true, frag_hold_cap: 8.0, threat_first: true, threat_secs: 12.0, threat_cap: 1.5, threat_near_m: 1.5, threat_stuck: 1.0, thr_set_secs: 1.5, thr_dark: true, thr_first: 1.0, thr_first_min: 2.0, thr_first_stale: 0.0, thr_first_in: 0.0, thr_first_only: true, thr_last: true, thr_last_m: 2.0, thr_last_fresh: 3.0 }
+    crate::knobs::DoortoolsK { charges: 2.0, bangs: 3.0, blow_key: String::from("KeyF"), word_on_key: true, word_tap: 0.6, thr_hold_first: true, thr_bang_first: true, thr_outside_row: true, thr_leave_fall_in: false, thr_hands_off: false, thr_held_all: false, thr_menu_word: true, stack_cap: 60.0, still_secs: 2.5, kick_cap: 5.0, in_cap: 9.0, shove: 5.5, hold_open: 10.0, toss_after_open: 0.15, bang_in: 2.4, fuse_after_land: 0.35, air_in: 1.6, air_h: 1.2, toss_cap: 1.6, toss_after_kick: 0.05, throw_reach: 4.0, toss_turn: 0.0, frag_way: true, frag_way_wait: 1.0, frag_way_open: 1.15, frag_way_ajar: 0.6, open_hand: true, gate_hand: true, last_out: true, last_out_m: 3.0, after_bang: 0.6, quiet: 0.15, entry_cap: 2.8, second: 0.25, sweep_rad: 0.9, sweep_secs: 0.6, corner_secs: 0.3, corner_rad: 0.3, corner_cap: 1.6, corner_owed: true, lead_seen: true, lead_seen_min: 12.0, lead_seen_secs: 30.0, lead_seen_m: 11.0, sector_secs: 0.6, search: true, scan_rate: 1.4, look_rad: 0.3, look_m: 11.0, dead_cells: 8.0, search_moves: 3.0, search_cap: 24.0, search_cells: 900.0, tuck: 0.4, edge_out: 0.4, bang_file: 1.1, set_secs: 2.0, standoff: alloc::vec![2.6, 2.0, 1.5], knock_m: 2.0, stun_m: 8.0, stun_secs: alloc::vec![6.0, 2.5], stagger_secs: 2.0, backblast_m: 1.6, backblast_secs: 1.5, blow_vel: 12.0, slice_back: 1.0, slice_look: 0.35, slice_edge: 0.12, slice_deep: 3.5, slice_pace: 0.9, word_stack: 20.0, word_in: 6.0, room_back: alloc::vec![2.8, 3.7, 4.6, 5.5], pod_apart: 1.2, thr_pull: true, thr_pull_at: alloc::vec![0.45, 1.8], thr_still: alloc::vec![0.45, 1.2], thr_arc: alloc::vec![alloc::vec![-0.45, 1.2], alloc::vec![0.25, 1.8]], thr_min: 4.0, thr_quiet: 2.0, thr_cap: 25.0, thr_bangs: 2.0, thr_pocket: 12.0, thr_shot_m: 8.0, thr_throw_m: 5.0, thr_flash_m: 7.0, thr_turn: 0.5, thr_next: 0.3, thr_cover: true, thr_slice: false, thr_light: 1.0, thr_in: 4.0, thr_pie: true, thr_pie_arc: alloc::vec![alloc::vec![-0.2, 1.4], alloc::vec![-0.05, 1.6], alloc::vec![0.08, 1.8]], thr_pie_apart: 0.65, thr_lean: true, thr_lean_m: 0.15, thr_knee_in: -0.1, thr_pie_one: true, thr_lean_look: 1.1, thr_doors_m: 5.5, thr_doors_walk: 16.0, thr_doors_stay: 1.0, other_door_m: 9.0, own_can: true, buddy: true, buddy_m: 5.0, buddy_pair_m: 12.0, buddy_left_m: 8.0, flow_on: true, flow_cells: 28.0, flow_moves: 5.0, flow_reach: 5.5, flow_deep: 3.0, flow_bound: 8.0, flow_secs: 10.0, flow_fight: 20.0, open_air: true, flow_max: 400.0, test_door: true, outside_plain: true, word_no_can: true, word_cuts: true, word_cuts_cap: 8.0, word_small: true, bang_into: true, bang_into_min: 1.5, bang_into_lit: 0.9, bang_into_deep: 6.0, bang_into_wide: 4.2, bang_hand_m: 0.9, bang_pass_v: 6.5, halt_back: true, behind_sam: true, charge_answer: true, pod_frames: true, pod_frame_m: 0.55, thr_hand: true, thr_hand_wait: 6.0, thr_hand_every: 0.25, thr_frag_hold: true, frag_hold: true, frag_hold_cap: 8.0, threat_first: true, threat_secs: 12.0, threat_cap: 1.5, threat_near_m: 1.5, threat_stuck: 1.0, thr_set_secs: 1.5, thr_dark: true, thr_first: 1.0, thr_first_min: 2.0, thr_first_stale: 0.0, thr_first_in: 0.0, thr_first_only: true, thr_last: true, thr_last_m: 2.0, thr_last_fresh: 3.0 }
 }
 
 pub fn page_roomfight() -> RoomfightK {
-    crate::knobs::RoomfightK { on: true, evidence_secs: 12.0, sticky: 0.25, crowd: 0.2, fear_min: 0.15, fall_back: true, rally: true, fall_back_in: true, close_m: 2.5, no_shot: 0.4, close_lane: true, point_blank: 2.0, sam_behind: true, sam_beside: true, sam_travel: true, no_shot_go: 1.5, no_shot_pass: 4.0, rally_k: 1.0, arc_half_deg: 100.0, cover_keep: true, cover_half_deg: 45.0, cover_near_m: 6.0, team_hot: 45.0, let_go: 0.8, step_look_secs: 5.0, door_ears: true, door_look_secs: 3.5, door_shots: true, door_shot_m: 8.0, hold_short_secs: 4.0, move_engage_m: 7.0, lamp: 0.7, preaim_deg: 12.0 }
+    crate::knobs::RoomfightK { on: true, evidence_secs: 12.0, sticky: 0.25, crowd: 0.2, fear_min: 0.15, fall_back: true, fall_back_in: true, close_m: 2.5, no_shot: 0.4, close_lane: true, point_blank: 2.0, sam_behind: true, sam_beside: true, sam_travel: true, no_shot_go: 1.5, no_shot_pass: 4.0, rally_k: 1.0, arc_half_deg: 100.0, cover_half_deg: 45.0, cover_near_m: 6.0, team_hot: 45.0, let_go: 0.8, step_look_secs: 5.0, door_ears: true, door_look_secs: 3.5, door_shots: true, door_shot_m: 8.0, hold_short_secs: 4.0, move_engage_m: 7.0, lamp: 0.7, preaim_deg: 12.0 }
 }
 
 pub fn page_orders() -> OrdersK {
@@ -13458,7 +13368,7 @@ pub fn page_silent() -> SilentK {
 }
 
 pub fn page_pair() -> PairK {
-    crate::knobs::PairK { on: false, max_squad: 1.0, pick_m: 0.9, stage_m: 1.2, reach: 1.05, secs: 0.6, scuffle: 0.0, grip: true, pace: 1.1, go_pace: 1.6, stalk_every: 0.3, stalk_wait: 20.0, sweep: true, ring_m: 2.4, keep_way: true, habit_stood: true, steady: true, steady_face_secs: 1.2, front_m: 3.6, cone_m: 9.0, cone_lit: 0.3, watched: true, watch_secs: 1.2, watch_aw: 0.25, look_back: true, heel_ring: 2.9, heel_fresh: 1.2, heel_wait: 22.0, take_secs: 75.0, dark_vis: 0.3, dark_m: 1.5, dark_h: 0.9, lit_secs: 2.0, lit_every: 20.0 }
+    crate::knobs::PairK { on: false, max_squad: 1.0, pick_m: 0.9, stage_m: 1.2, reach: 1.05, secs: 0.6, scuffle: 0.0, grip: true, pace: 1.1, go_pace: 1.6, stalk_every: 0.3, stalk_wait: 20.0, sweep: true, ring_m: 2.4, steady_face_secs: 1.2, front_m: 3.6, cone_m: 9.0, cone_lit: 0.3, watched: true, watch_secs: 1.2, watch_aw: 0.25, look_back: true, heel_ring: 2.9, heel_fresh: 1.2, heel_wait: 22.0, take_secs: 75.0, dark_vis: 0.3, dark_m: 1.5, dark_h: 0.9, lit_secs: 2.0, lit_every: 20.0 }
 }
 
 pub fn page_rescue() -> RescueK {
@@ -13478,11 +13388,11 @@ pub fn page_pressure() -> PressureK {
 }
 
 pub fn page_lanes() -> LanesK {
-    crate::knobs::LanesK { on: true, secs: 150.0, reach_m: 32.0, half_deg: 22.0, width_m: 1.1, field_m: 12.0, own_m: 1.0, min_m: 2.0, round_k: 0.5, near_m: 1.5, react_secs: 0.35, call_secs: 0.9, see_m: 30.0, body_m: 12.0, dear: 14.0, ahead_m: 3.5, close_m: 4.5, hot_secs: 8.0, round_men: 2.0, think_secs: 2.5, round_max_m: 80.0, round_gap: 25.0, round_side_deg: 55.0, round_show_m: 8.0, shift_m: 0.9, stun_m: 12.0, bang_m: 5.0, push_secs: 6.0, push_m: 12.0, push_fast: 0.8, stun_gap: 20.0, moved_m: 15.0, moved_secs: 20.0, peek: true, peek_quiet: 10.0, peek_gap: 15.0, peek_max: 60.0, peek_lost: 45.0, peek_reach_m: 5.0, peek_near_m: 10.0, peek_look: 0.8, peek_sure: 45.0, peek_keep: 60.0, peek_pace: 1.3, peek_lean: 0.35, pin: true, pin_rounds: 3.0, pin_every: 0.12, pin_snap: 0.6, pin_gap: 4.0, pin_max: 4.0, pin_rest: 20.0, pin_spread: 0.24, pin_aim_deg: 9.0, pin_pace: 2.0, pin_show_m: 12.0, pin_min_m: 7.0, glass: true, stop_clear: true, look_m: 1.5, roused: true, frag: true, frag_think: 4.0, frag_gap: 30.0, frag_look: 1.5, frag_step_m: 0.9, frag_own: true, drill: true, max: 6.0 }
+    crate::knobs::LanesK { on: true, secs: 150.0, reach_m: 32.0, half_deg: 22.0, width_m: 1.1, field_m: 12.0, own_m: 1.0, min_m: 2.0, round_k: 0.5, near_m: 1.5, react_secs: 0.35, call_secs: 0.9, see_m: 30.0, body_m: 12.0, dear: 14.0, ahead_m: 3.5, close_m: 4.5, hot_secs: 8.0, round_men: 2.0, think_secs: 2.5, round_max_m: 80.0, round_gap: 25.0, round_side_deg: 55.0, round_show_m: 8.0, shift_m: 0.9, stun_m: 12.0, bang_m: 5.0, push_secs: 6.0, push_m: 12.0, push_fast: 0.8, stun_gap: 20.0, moved_m: 15.0, moved_secs: 20.0, peek: true, peek_quiet: 10.0, peek_gap: 15.0, peek_max: 60.0, peek_lost: 45.0, peek_reach_m: 5.0, peek_near_m: 10.0, peek_look: 0.8, peek_sure: 45.0, peek_keep: 60.0, peek_pace: 1.3, peek_lean: 0.35, pin_rounds: 3.0, pin_every: 0.12, pin_snap: 0.6, pin_gap: 4.0, pin_max: 4.0, pin_rest: 20.0, pin_spread: 0.24, pin_aim_deg: 9.0, pin_pace: 2.0, pin_show_m: 12.0, pin_min_m: 7.0, glass: true, look_m: 1.5, roused: true, frag: true, frag_think: 4.0, frag_gap: 30.0, frag_look: 1.5, frag_step_m: 0.9, max: 6.0 }
 }
 
 pub fn page_gunhold() -> GunholdK {
-    crate::knobs::GunholdK { on: true, fire: true, cover_m: 10.0, near_m: 3.0, rear_deg: 70.0, keep_secs: 14.0, peek_every: 4.0, peek_secs: 0.8, show_m: 2.5, shy_s: 6.0, dash_m: 3.5, face_deg: 50.0, flank_max_m: 40.0, react: [0.1, 0.4] }
+    crate::knobs::GunholdK { on: true, cover_m: 10.0, near_m: 3.0, rear_deg: 70.0, keep_secs: 14.0, peek_every: 4.0, peek_secs: 0.8, show_m: 2.5, shy_s: 6.0, dash_m: 3.5, face_deg: 50.0, flank_max_m: 40.0, react: [0.1, 0.4] }
 }
 
 pub fn page_hard() -> HardK {
@@ -13538,7 +13448,7 @@ pub fn page_stackroom() -> StackroomK {
 }
 
 pub fn page_rearwatch() -> RearwatchK {
-    crate::knobs::RearwatchK { on: true, through: true, hold: false, reach: 9.0, ajar: 0.6, grace: 1.5, short: 1.5, room: true, room_secs: 8.0, room_m: 8.0, room_last: true }
+    crate::knobs::RearwatchK { on: true, through: true, hold: false, reach: 9.0, ajar: 0.6, grace: 1.5, short: 1.5, room: true, room_secs: 8.0, room_m: 8.0 }
 }
 
 pub fn page_stackline() -> StacklineK {
@@ -13546,7 +13456,7 @@ pub fn page_stackline() -> StacklineK {
 }
 
 pub fn page_sneak() -> SneakK {
-    crate::knobs::SneakK { on: false, crouch: true, min_pace: 0.5, low_pace: 1.45, cross_pace: 1.6, step: 0.14, trail_m: 60.0, back: 0.3, ahead_m: 2.4, lit_at: 0.1, by_eye: true, seen_rate: 0.05, ambient: true, stalk_ambient: true, cone_deg: 25.0, near_m: 2.1, cross_m: 4.5, patience: 8.0, cross_secs: 8.0, budget: 0.12, margin: 1.6, memory: 12.0, nag_secs: 7.0, cue_gap: 12.0, stand_m: 4.0, stand_near: 0.8, side_m: 2.6, side_stop: 0.25, door: true, door_m: 1.8, door_pad: 0.4, door_settle: 1.0, hide_gap: 2.5, noise_walk: true, noise_walk_m: 2.5, plan_secs: 0.12, skill: 1.0 }
+    crate::knobs::SneakK { on: false, crouch: true, min_pace: 0.5, low_pace: 1.45, cross_pace: 1.6, step: 0.14, trail_m: 60.0, back: 0.3, ahead_m: 2.4, lit_at: 0.1, seen_rate: 0.05, ambient: true, cone_deg: 25.0, near_m: 2.1, cross_m: 4.5, patience: 8.0, cross_secs: 8.0, budget: 0.12, margin: 1.6, memory: 12.0, nag_secs: 7.0, cue_gap: 12.0, stand_m: 4.0, stand_near: 0.8, side_m: 2.6, side_stop: 0.25, door: true, door_m: 1.8, door_pad: 0.4, door_settle: 1.0, hide_gap: 2.5, noise_walk: true, noise_walk_m: 2.5, plan_secs: 0.12, skill: 1.0 }
 }
 
 pub fn page_pairup() -> PairupK {
@@ -13554,7 +13464,7 @@ pub fn page_pairup() -> PairupK {
 }
 
 pub fn page_spotted() -> SpottedK {
-    crate::knobs::SpottedK { on: false, hold: true, leash_m: 7.0, slip_m: 3.2, lit_at: 0.3, slip_wait: 1.5, wary_m: 14.0, ear_m: 5.0, linger_secs: 1.5, brace_secs: 3.0, brace_m: 7.0, close: true, take_m: 2.2, take_reach: 1.05, take_secs: 0.6, fresh_secs: 2.5, caught_m: 30.0, last_secs: 6.0, step: true, step_m: 3.2, face_deg: 35.0, close_m: 6.0 }
+    crate::knobs::SpottedK { on: false, leash_m: 7.0, slip_m: 3.2, lit_at: 0.3, slip_wait: 1.5, wary_m: 14.0, ear_m: 5.0, linger_secs: 1.5, brace_secs: 3.0, brace_m: 7.0, take_m: 2.2, take_reach: 1.05, take_secs: 0.6, fresh_secs: 2.5, caught_m: 30.0, last_secs: 6.0, step: true, step_m: 3.2, face_deg: 35.0, close_m: 6.0 }
 }
 
 pub fn page_nightbreach() -> NightbreachK {
@@ -13587,7 +13497,7 @@ pub fn page_seenwalk() -> SeenwalkK {
 }
 
 pub fn page_holdfire() -> HoldfireK {
-    crate::knobs::HoldfireK { on: true, lift_secs: 45.0, loud: true, stack_set: true, stack_wait: true }
+    crate::knobs::HoldfireK { on: true, lift_secs: 45.0, loud: true, stack_set: true }
 }
 
 pub fn page_slots() -> SlotsK {

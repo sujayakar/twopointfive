@@ -30,8 +30,6 @@ export const NOSHOVE = {
   on: false,
   /** a man falling in whose way lies through the player goes round him or stops short (false: he walks into him and the player is shouldered aside, as it was) */
   round: true,
-  /** what men moved the player by is not the player walking (false: the squad reads a shoved player as a walking one, as it was) */
-  own: true,
   /** no room to go round: he squeezes past and the player is not moved (false: he stops short and waits) */
   through: true,
   /** how near the player's centre such a man's own steps take him (m; the player's own keep-off is 0.55) */
