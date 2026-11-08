@@ -57,12 +57,6 @@ export const BUDDY = {
   /** s a call nobody could answer stands before he may call again · calls a man makes at most */
   again: 20, calls: 2,
 };
-export const BUDDY_DEFAULTS: typeof BUDDY = JSON.parse(JSON.stringify(BUDDY));
-const LS = 'twopointsix.buddy';
-/** the panel's four rows are kept per machine (a scenario pick is a page load) */
-const KEPT = ['staged', 'emptyRoom', 'calls'] as const;   // (the panel's rows)
-export function saveBuddy() { try { const o: Record<string, boolean | number> = {}; for (const k of KEPT) if (BUDDY[k] !== BUDDY_DEFAULTS[k]) o[k] = BUDDY[k]; if (Object.keys(o).length) globalThis.localStorage?.setItem(LS, JSON.stringify(o)); else globalThis.localStorage?.removeItem(LS); } catch { /* no store */ } }
-try { const o = JSON.parse(globalThis.localStorage?.getItem(LS) ?? 'null'); if (o) for (const k of KEPT) if (typeof o[k] === typeof BUDDY[k]) (BUDDY as Record<string, unknown>)[k] = o[k]; } catch { /* no store, or not ours */ }
 
 type Def = RoomFight['defs'][number];
 interface Man { had: boolean; callAt: number; calledT: number; calls: number; open: boolean; lookT: number; /** when his last errand as somebody's buddy ended */ doneT: number; /** the pair just made stays put until then */ keepT: number }

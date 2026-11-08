@@ -207,35 +207,6 @@ export function playerAim(g: Game): { spread: number; track: number; base: numbe
 /** The one term Sam's fire sites add to their spread (player.ts, beside samSpread): 0 with the model off / under the puppet. Stamps aim.lastShot. */
 export function samAim(g: Game): number { return crossToRust('samAim', undefined, [g]) as any; }
 
-// ================================================================ persistence (the two knob groups, one key, per machine — the way the crouch-speed slider is kept)
-const LS_KEY = 'twopointsix.aim';
-const KEPT: { guard: (keyof AimKnobs['guard'])[]; player: (keyof AimKnobs['player'])[] } = {
-  guard: ['settleSecs', 'acquireMin', 'unsettledK', 'targetMoveK', 'shooterMoveK', 'stopToShoot'],
-  player: ['settleSecs', 'unsettledK', 'targetMoveK', 'shooterMoveK', 'lightSnapPx', 'level'],   // (`low` is not kept: the page's boot writes it — host/profile.ts pageSwitches, ?noaimlow)
-};
-/** write the kept knobs to localStorage (the panel calls it on every change) */
-export function saveAim() {
-  try {
-    const out: Record<string, Record<string, number>> = { guard: {}, player: {} };
-    for (const k of KEPT.guard) out.guard[k] = AIM.guard[k]; for (const k of KEPT.player) out.player[k] = AIM.player[k];
-    localStorage.setItem(LS_KEY, JSON.stringify(out));
-  } catch { /* no storage (the harness, a locked-down page): nothing to keep */ }
-}
-/** read them back (once, at module load): only finite numbers in a sane range are taken */
-export function loadAim() {
-  try {
-    const j = JSON.parse(localStorage.getItem(LS_KEY) ?? 'null'); if (!j || typeof j !== 'object') return;
-    const take = <T extends Record<string, number>>(dst: T, src: unknown, keys: (keyof T)[]) => { if (!src || typeof src !== 'object') return; for (const k of keys) { const v = (src as Record<string, unknown>)[k as string]; if (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= (k === 'lightSnapPx' ? SNAP_PX : 20)) (dst as Record<string, number>)[k as string] = v; } };
-    take(AIM.guard, j.guard, KEPT.guard); take(AIM.player, j.player, KEPT.player);
-  } catch { /* nothing stored, or not readable: the shipped values stand */ }
-}
-/** everything back to the shipped values, and the stored copy dropped */
-export function resetAim() {
-  Object.assign(AIM.guard, AIM_DEFAULTS.guard); Object.assign(AIM.player, AIM_DEFAULTS.player);
-  try { localStorage.removeItem(LS_KEY); } catch { /* none */ }
-}
-loadAim();
-
 // ================================================================ panel / QA
 /** 'aim ▸ you: track 0.85 · cone 0.021 (hands 0.012 ×1.3 + crossing 0.000 + feet 0.009) · Kowalski ◎ 1.00 cone 0.061 … ' — Sam, then every living alert man (or the nearest, at rest). */
 export function aimSummary(g: Game): string {

@@ -43,8 +43,8 @@ import { AimWeight } from './aimweight';
 import type { Ring } from './launcher';
 import type { Shell } from './he40';
 import './he40';
-import { glassSummary, crackTest, resetGlass, loadGlassFx } from './glass';
-import { glassPenLive, shotPasses, resetGlassPen, loadGlassPen, GLASSPEN_HOOKS } from './glasspen';
+import { glassSummary, crackTest, resetGlass } from './glass';
+import { glassPenLive, shotPasses, resetGlassPen, GLASSPEN_HOOKS } from './glasspen';
 import { bootBars, resetBars } from './winbars';
 import type { WeaponId, RifleAttachment } from './weapons';
 import { Doors, Door, DoorEvent, DoorContact, FLOOR_KEY } from './doors';
@@ -59,7 +59,7 @@ import * as fx from './effects';
 import { Sparks } from './sparks';
 import { Tracers } from './tracers';
 import { Particles } from '../render/particles';
-import { sparkSink, kickDustFx, lockSplinterFx, clearParticleFx, loadDust, applyDustLook } from './particleFx';
+import { sparkSink, kickDustFx, lockSplinterFx, clearParticleFx, applyDustLook } from './particleFx';
 import { Weather } from './weather';
 import { stoodOfPick, type StoodWith } from './stood';
 import { wetInstance, wetKnobs, wetLineRow, wetSummary, clearWetPrints } from './wet';
@@ -95,7 +95,7 @@ import './netquiet';
 import './samstun';
 import './sprintdoor';
 import './deathrecap';
-import { loadBodyLight, bodyLightSummary, groundFresh } from './guards';
+import { bodyLightSummary, groundFresh } from './guards';
 import { CpuSmoke } from './sense';
 import { DRESS } from './dress';
 import { say, resetGuards, tension, escalationSummary, raiseEscalation, standDownEscalation, clearingSummary, clearQueueSummary, forceClear } from './guards';
@@ -120,7 +120,7 @@ import { throwCount, toggleDrag, teleportPlayer, settleSpot, freeHeld, takeKey, 
 import type { WallHold, Hold } from './player';
 import { escapeInteract, backableInteract } from './interact';
 import { slotSetupOpen, slotSetupShut } from './slotsetup';
-import { loadTactics, tacticsSummary, tacticsReset } from './tactics';
+import { tacticsSummary, tacticsReset } from './tactics';
 import { lanesReset } from './lanes';
 import { pictureReset } from './picture';
 import './darkfoe';
@@ -128,7 +128,6 @@ import { powerOutReset } from './powerout';
 import { rescueCheckReset } from './rescuecheck';
 import { dozeReset } from './doze';
 import { wallReactReset } from './wallreact';
-import { loadTeamFeel } from './teamfeel';
 import './nvg';
 import { irFlags } from './irlight';
 import './silent';
@@ -136,7 +135,7 @@ import { holdFireReset } from './holdfire';
 import './spotted';
 import './handleside';
 import './doorway';
-import { loadNeeds, needsSummary } from './needs';
+import { needsSummary } from './needs';
 import { Director } from './director';
 import { NightBreach } from './nightbreach';
 import { QuietMission } from './quiet';
@@ -166,6 +165,8 @@ import './squadthrow';
 import './squad40';
 import { PairOrders } from './pairorders';
 import { pairUpApply } from './pairup';
+import { qrfAddressWord } from './qrf';
+import { CHAOS } from './destruction';
 import { WallCharge } from './wallcharge';
 import { WorkThings } from './workthings';
 import { DoorPath } from './doorpath';
@@ -185,13 +186,13 @@ import type { DialoguePick } from './dialogue';
 import { Sup, suppressionSummary } from './suppression';
 import { conditionSummary } from './condition';
 import { AimState, aimSummary } from './aim';
-import { Qrf, resetQrf, loadQrfTune } from './qrf';
+import { Qrf, resetQrf } from './qrf';
 import { openingStart } from './opening';
 import { Checkpoints } from './savestate';
 import { Sensors } from './sensors';
 import type { ProbeLike } from './sensors';
-import { Devices, loadDeviceTune, learnCode, DEVICE_TUNE_DEFAULTS } from './devices';
-import { Destruction, loadChaos } from './destruction';
+import { Devices, learnCode, DEVICE_TUNE_DEFAULTS } from './devices';
+import { Destruction } from './destruction';
 import './fixtureBreak';   // the look of a fixture breaking and hanging broken (picture only)
 import { coverfireReset } from './coverfire';
 import { doorForceReset } from './doorforce';
@@ -200,9 +201,9 @@ import { attachAir, airResend } from './airSim';
 import { AirDust } from './airDust';
 import { Moths } from './moths';
 import { WetGround } from './wetGround';
-import { GlassBreak, loadGlassBreak } from './glassbreak';
+import { GlassBreak } from './glassbreak';
 import { flatPanel, levelOver, stoodOver } from './levelfit';
-import { GlassShards, loadShards } from './shards';
+import { GlassShards } from './shards';
 import { kitFresh } from './kit';
 import type { BigKit } from './kit';
 import type { KitWorn } from './kitload';
@@ -1055,7 +1056,7 @@ export class Game {
     // the shift: today's game byte for byte); civilianKillFails = a civilian killed by Sam's hand fails the mission there and then (off: it costs him forty points, a
     // 'civilian casualty' on the card and control's fury on the net — Chaos Theory fails some missions for it, this one prices it)
     civilians: true, civilianKillFails: false,
-    // bodies found by the LIGHT on them (guards.ts bodyInView / bodyLit — review A6.2, Chaos Theory's rule; Tab ▸ Sandbox row, remembered per machine with its numbers: loadBodyLight): a body in view
+    // bodies found by the LIGHT on them (guards.ts bodyInView / bodyLit — review A6.2, Chaos Theory's rule; : a body in view
     // is found only when the light where it lies reads high enough on the meter's own scale (or he is inside two metres of it), and not through a plume; off = range, cone and line alone, as before
     bodyLight: true,
     // the level-design devices (game/devices.ts, Tab ▸ Sandbox ▸ devices rows — remembered per machine): devices = cameras and tripwires sense at all (off = they are
@@ -1069,19 +1070,11 @@ export class Game {
     { const over = levelOver(level); if (over) throw new Error(over); }   // (levelfit.ts: a level the pools cannot hold is not loaded, said before anything of it is built)
     this.seats = seatsStand(this, opts.seats ?? 1); this.localSeat = this.seats[0];   // (seats.ts: before anything is built over a seat's view; one seat = the Game is its own seat's view and nothing below differs)
     const first = this.seats[0].view;   // (the first seat's view: this Game, in a game of one)
-    try { const v = parseFloat(localStorage.getItem('twopointsix.playerCrouch') ?? ''); if (isFinite(v) && v >= 0.3 && v <= 3) this.tune.playerCrouch = v; } catch {}   // the panel's crouch-speed slider is remembered per machine
-    loadQrfTune(this);   // …and so are the response team's knobs (qrf.ts: on/off, ETA, size, the perimeter tier's)
-    loadTactics(this.tune);   // the pursuit tactics' four knobs, kept per machine like the aim rows (tactics.ts)
-    leversFog(loadTeamFeel); fogFlags(); irFlags();           // …and the room fight's feel rules a player has changed in the panel (teamfeel.ts: before the squad's systems read them)
-    loadNeeds(this.tune);     // …and the needs' switch + fairness knobs (needs.ts)
-    loadChaos(this.tune);     // …and the destruction lane's chaos knob (destruction.ts)
-    loadWind(this.tune);      // …and the wind's master + rows (wind.ts; the moths' switch rides with it)
-    loadGlassFx(); loadGlassBreak(this.tune);   // …and the glass-breaking switch + knobs (glassbreak.ts)
-    loadShards(this.tune);       // …and the shards' (shards.ts)
-    loadDust();               // …and the dust puffs' emit / look table (particleFx.ts DUST / DUST_LOOK; the look goes onto the particle kind once the system exists, below)
-    loadDeviceTune(this);   // …and the devices' (devices.ts: on/off, the beams', the cameras' two thresholds, the cones)
-    loadCivTune(this);      // …and the civilians' (civilians.ts: on/off, whether a dead civilian fails the mission)
-    loadBodyLight(this.tune);   // …and the bodies-by-light switch with its bar (guards.ts)
+    qrfAddressWord(this);   // (?qrfsquad=0: qrf.ts)
+    leversFog(); fogFlags(); irFlags();           // (before the squad's systems read them)
+    this.tune.chaos = CHAOS.def;
+    loadWind(this.tune);      // this machine's wind (wind.ts, the Weather page's rows; the moths' switch rides with it)
+    loadCivTune(this);      // (?nocivilians: civilians.ts)
     // (the FN2000 is always in the kit now — no per-machine loadout memory; Game.fn2000 / setLoadout stay for the harness)
     this.col = new StaticCollision(level.boxes, levelNameOf(level));
     if (engine.gbuffer?.setWearMap) { const wm = buildWearMap(level, this.col.nav, lookConfig.longFoot > 0, lookConfig.walked > 0); engine.gbuffer.setWearMap(wm.data, wm.w, wm.h); }   // the detail layer's traffic map (render/wear.ts: the routes over the nav grid + the thresholds, the walls' feet) — the harness's engine stand-in has no g-buffer to hand it to
@@ -1206,7 +1199,7 @@ export class Game {
     { const n = level.mission.rack.index; this.rackTargets = this.targets.filter(t => t.name === `rack${n}_leds` || t.name === `rack${n}_glow`); }   // what goes dark when the drive comes out (level.ts "server room")
     this.destr = new Destruction(this);   // the destructible statics indexed by shape (paper stacks, screens + housings, desk clutter) — after the targets and devices exist: a lit screen dies through its target
     this.glassBreak = new GlassBreak(this);   // glass breaking (glassbreak.ts): attaches its cell-table / open-cell / walkable hooks to the world and the collision; its shards go into destr's debris pool — inert until tune.glassBreak
-    loadGlassPen(); this.col.glassPen = { live: () => glassPenLive(this), passes: (a, rd, panes, energy) => shotPasses(this, a, rd, panes, energy) };   // rounds through glass (glasspen.ts): the line of FIRE asks the round's own toll at each pane — behind GLASSPEN.on (off: shotBlocked is the solid walk it was)
+    this.col.glassPen = { live: () => glassPenLive(this), passes: (a, rd, panes, energy) => shotPasses(this, a, rd, panes, energy) };   // rounds through glass (glasspen.ts): the line of FIRE asks the round's own toll at each pane — behind GLASSPEN.on (off: shotBlocked is the solid walk it was)
     bootBars(this);   // a window's bar breaks from one round (winbars.ts): the line of fire's own question and the blasts' call list — nothing while WINBARS.on is off
     this.shards = new GlassShards(this);      // broken glass after it lets go (shards.ts): takes the debris pool's glass door (and the fracture model's release hook where there is one) — inert until glass breaking is live
     GLASSPEN_HOOKS.crossed = (g, x, who) => { g.shards.crossed(x, who); };   // a round THROUGH a sheet: the exit jet off its far face (shards.ts crossed; nothing unless the falling-glass model is live)

@@ -58,7 +58,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   id `block-four`, eight defenders) is the start card's eighth row. Scripted numbers only — nothing of this was seen on a GPU. QA: `probes.ts picker-card`
   (the row, the links, custom), the room-fight families at standard.
 - **Defender cues (10-07;** `src/game/cues.ts`, `Game.cues`, record rebuild/telegraphing/cues.md; the maintainer: "maybe we just need more
-  telegraphing from the NPCs then"; `CUES.on` DEFAULT ON, Tab ▸ Sandbox ▸ 'Defender cues', `?nocues`, persisted `twopointsix.cues`; off = the strip and every line as they
+  telegraphing from the NPCs then"; `CUES.on` DEFAULT ON, Tab ▸ Sandbox ▸ 'Defender cues', `?nocues`; off = the strip and every line as they
   were, digest for digest). Three things, all for a ROOM FIGHT's defenders (team 'hostile' units while `fightLive`): (1) their radio lines reach the RADIO STRIP — `say()`
   hands them to `cues.heard`, the overlay draws `game.view.radio` (`cues::radio_rows`, the cues' own row list: an undrawn row can no longer push a drawn one out of the five-row message ring;
   `'radio: '` rows from `Game.msg` are filed as class 0, always drawn; `adopt()` on a checkpoint load); (2) the strip RANKS and RATE-LIMITS (classes 1 coming round / to help ·
@@ -292,7 +292,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `QRF_MARKS` (door 'stairwell', landing, entry fan, posts, outside spawns) live in qrf.ts with a TODO for LevelData; the door + landing boxes are in
   the level ('stairwell' LevelDoorDef: `steel` (doors.ts: kickIn → 'clang' DoorSound → loud 'door' event, no lockBroken; pick refuses; player.ts offers no
   pick row), `lock 'stairwell'`, `keySide −1`; the west plant moved to the SW corner out of the leaf's sweep). Knobs `tune.qrf/qrfEta/qrfSize/perimeter/
-  perimeterEta/perimeterSize` (persisted `twopointsix.qrf`, Tab ▸ Sandbox ▸ QRF rows + 'call QRF now' / 'perimeter now' / 'stand down'). Character
+  perimeterEta/perimeterSize` (Tab ▸ Sandbox ▸ QRF rows + 'call QRF now' / 'perimeter now' / 'stand down'). Character
   budget: skinning holds 16 (`MAX_CHARS`); the shadow-proxy table holds 8 — Sam + guards/units are guaranteed (a 9th unit throws in spawnUnit), civilians
   are appended last and lose their shadow proxies while a full QRF wave is up. QA: `probes.ts qrf` (trigger / timeline / element / wave / reset /
   gating / limits / perimeter), `soak.ts --loud-at MIN` (+ qrf invariants always on: state sane, men never below 'search', budget, radio ≤ 30/min).
@@ -381,7 +381,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   civilian block; `tune.civilianKillFails` (off) fails the mission on a kill instead. Hidden under the tour / breach / quietUtility (`civiliansOnFloor`); cleared
   off the floor ('evacuate' to the exits) when the QRF is called (never the man a snatch came for: `evacuationCheck` leaves `g.snatch.isMan` where he is). A calm civilian is no prop contact and yields to guards (they never feel her); frightened she
   shoves furniture like anybody. `CIV_SPOTS` phones / exits are constants with a headless check (TODO(LevelData)). Knobs `CIV` + `tune.civilians /
-  civilianKillFails` + `CIV.greet` (persisted `twopointsix.civilians`; Tab ▸ Sandbox ▸ civilians rows: on, kill fails, greetings, 'panic the cleaner', 'send
+  civilianKillFails` + `CIV.greet` (Tab ▸ Sandbox ▸ civilians rows: on, kill fails, greetings, 'panic the cleaner', 'send
   her to the phone', summary); `__civ` {list, panic(i, 'panic'|'phone'), set, knobs, stats, log, spots, check, summary}. QA: `probes.ts civilians` (spots /
   sight / phone / comply / scoring / hearing / determinism / identity), soak `--civilians on|off` + the civ-panic / civ-grab stimuli + invariants + `civStats`.
 - **Hard, after-close rules (10-13; each a switch that steps back, none with a Tab row, none in a journal's tables — no recording is made with a room fight on the floor)**: `PRESSURE.stunKnown`
@@ -674,7 +674,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the threshold's watch, the shot scan, `others`), and `g.cleared` / `g.doorPath` / `g.cover` / `g.entry` are the Game's own (built over Sam's squad) —
   for the QRF those answer as for a squad nobody shot at; module states kept per Game (silent, sneak) are fresh for the view, so the cast is never
   'silent'. SWITCH: ON in the page (`?qrfsquad=0` = the element's own drill for the visit, never written to the machine; the backtick panel ▸ Stealth ▸ QRF
-  'QRF ▸ clears rooms like your squad', persisted in `twopointsix.qrf`), OFF on the frozen stand (`FROZEN_HOLDS 'tune.qrfSquad'`, `TPS_QRFSQUAD=1`), a recording
+  'QRF ▸ clears rooms like your squad'), OFF on the frozen stand (`FROZEN_HOLDS 'tune.qrfSquad'`, `TPS_QRFSQUAD=1`), a recording
   without the key replays with it off (`applyKnobs`). Off = the build as it was: two staged QRF nights × 240 half-second digests equal to aa17743c.
   CHECK: `bun run tools/qa/qrf-squad-check.ts` (`probes.ts qrfsquad`, in the `qrf` family; 12 lines, both stands; `QRFSQUAD_BREAK=1` fails every line
   but (3) and (6)); `qrf-probes.ts` pins the switch off (it measures the element's own drill). MEASURED, headless, hard, the scripted loud Sam made
