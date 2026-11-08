@@ -151,13 +151,6 @@ export function register(SC: Record<string, any>, CH: any) {
       c.anim.clutch = 0; c.anim.upper = 'aim'; c.anim.stance = 'none'; S.run(0.25); S.shot('let go +0.25 s'); S.run(0.5); S.shot('+0.75 s');
     } finally { if ('fold' in CH.MOVES) CH.MOVES.fold = keep; }
   } };
-  // WOUNDS (src/game/wounds.ts, off unless ?wounds): the two ways a man goes down wounded and out of the fight — the gun leaves his hands at the hit, as the game's own drop does
-  const wounded = (S: any, pose: 'knee' | 'back', at: 'ribs' | 'thigh', marks: number[]) => { const c = S.man({ rifle: true, tone: 1 }); c.anim.trained = 0.12; c.anim.upper = 'aim'; S.run(0.8); S.shot('carbine up');
-    c.__rifle = false; c.anim.longGun = false; c.anim.upper = 'none'; c.anim.hit?.(); c.anim.wound = { pose, at };
-    const t0 = S.t; for (const t of marks) { S.run(t - (S.t - t0)); S.shot(`${t.toFixed(2)} s`); } };
-  SC['wounded-knee'] = { title: 'a round through the flank (wounds on): he drops the carbine and sinks to a knee, doubled over it, the hand to his ribs — out of the fight, breathing', opts: { side: 'left', follow: false }, run(S: any) { wounded(S, 'knee', 'ribs', [0.12, 0.3, 0.5, 0.8, 1.2, 2.2, 3.2]); } };
-  SC['wounded-leg'] = { title: 'a round through the leg with no room to fall (wounds on): down on the knee where he stood, the hand to his thigh', opts: { side: 'left', follow: false }, run(S: any) { wounded(S, 'knee', 'thigh', [0.3, 0.8, 1.2, 2.2]); } };
-  SC['wounded-back'] = { title: 'a round through the leg from in front (wounds on): the leg goes, he lands on his back with a knee drawn up, head off the floor, the hand to his thigh', opts: { side: 'left', follow: false, scale: 105 }, run(S: any) { wounded(S, 'back', 'thigh', [0.15, 0.4, 0.7, 1.0, 1.45, 2.4, 3.4]); } };
   SC['entry-dip'] = { title: 'through the door behind the lead: number two\'s muzzle goes down past his back and comes up as they part (MOVES.entry, off unless ?entry)', opts: { scale: 105 }, run(S: any) {
     const keep = CH.MOVES.entry; if (CH.MOVES.on > 0.5) CH.MOVES.entry = 1;
     try {
