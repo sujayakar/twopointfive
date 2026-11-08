@@ -238,7 +238,7 @@ as a call when it is made:
 | a lesson's player feeds the light meter (`player.visibility`) | `face_meter`, when the number differs from what the last apply left |
 | the autosave takes a checkpoint (the dress step's `saves.tick`) | `face_checkpoint`; an authored one on a level on rails: `face_stop_program` first |
 | a question floods a room (`fight.roomAt`) | `face_room_at`, asked of the Rust game FIRST; where it flooded, the puppet takes the whole state and the TypeScript's own ask floods nothing |
-| the host lists the box world (`engine.world.upload`) | `face_upload`, and the TypeScript's own listing runs too (the list of every box and the ray grid are the TypeScript's own on the filtered path) |
+| the host lists the box world (`engine.world.upload`) | the TypeScript's own listing, for the picture (the list of every box and the ray grid are the TypeScript's own on the filtered path); the Rust game lists its own as a tick ends |
 | the host's camera asks the game where to look | `face_follow` after every step |
 | a checkpoint put back, a restart (the TypeScript puts another game in the puppet's place) | A NEW START: the puppet exported whole once, a new Rust game made from it |
 
@@ -527,7 +527,6 @@ The gate's forms of the tour and the soak (`--runs 3`; three seeds, twelve minut
   question the Rust game has not got. Belongs in ask.ts: one reader of the number for both hosts.
 - **The game's die seeded on the Rust side by a write into the block** (rust-host.ts `seedDie`: the `dice` part found by its name, the count and the word
   by their offsets). Belongs in the face: one call that seeds the die of the game in a slot.
-- **The list-alone call tapped by hand** (rust-host.ts: `world.relist` → `face_upload`, beside the tap on `upload`). Belongs with the generated taps.
 - **The bridge's own tools known by their path** (word.ts: a tool of tools/blitz with no row gets no word). Belongs in the table, a row a tool.
 - **A box whose markings went is `marks: null`** after an apply; scene/boxes.ts:841 tests `!== undefined`. Made undefined before the puppet's own listing
   (rust-host.ts). Belongs in import.ts.
@@ -600,7 +599,7 @@ A tally's tick is the step, the every-tick export and its apply in about equal t
 THE GAME SERVER'S TICK was something else: a networked game's tick lists the box world by `world.relist()` (src/net/step.ts), the host tapped only
 `upload()`, and so the Rust game never listed its world: every tick's frame boxes stayed in its tables (the whole state 10.7 MB at tick 100, 28.4 MB at
 tick 600), the every-tick walk met them all (its time 9, 17, 27, 25, 38, 41 ms over the first six hundred ticks; its size a steady 185 KB) and the step
-and the apply slowed with it. `relist` is tapped now (`face_upload`): 4.0, 2.9, 4.4, 7.2, 4.9, 2.3 ms at the same load, and the chained raw-bits word
+and the apply slowed with it. `relist` was tapped (the Rust game lists as a tick ends since): 4.0, 2.9, 4.4, 7.2, 4.9, 2.3 ms at the same load, and the chained raw-bits word
 of the server's game after 600 ticks is the `ts` game's before and after the mend. `mpserver-check.ts` under `rust` after it: 199 s where 473, a tick
 27 to 45 ms in each of its three processes where 120 to 175, 13 lines PASS and 2 red, `lag` and `ahead`, the two that are red under `ts` too
 (`same fight` and `late joiner` are green: every game stepped its 1,200 ticks).
