@@ -1,6 +1,6 @@
 //! The types of `enemysquads`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what RoundCtx.hot closed over that the record does not hold: the known places as of the build, and the doorways standing open then (enemysquads.ts roundCtx); rear is RoundCtx.rear
@@ -14,13 +14,13 @@ pub enum RoundHotCell {
     Memo { hot_at: JsMap<crate::Num, bool> },
 }
 /// INVENTED: one row of DRILL_AT, what a map writes over the drill's table; None = the table's own (enemysquads.ts:287, the rows its literal names; merged as { ...SQUADS, ...row } at :306). One arm: the proposal shape has no key for a new struct
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub enum DrillAtRow {
     Row { drill_net: Option<bool>, net_k: Option<f64>, reinforce_k: Option<f64>, drill_own: Option<bool>, own_up: Option<f64>, drill_back: Option<bool>, back_beat: Option<f64> },
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum SquadChoice {
     Barricade,
     Flank,
@@ -37,7 +37,7 @@ impl SquadChoice {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum SquadState {
     Down,
     Contact,
@@ -62,7 +62,7 @@ impl SquadState {
 }
 
 /// (TypeScript: Fix, src/game/enemysquads.ts:245)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Fix {
     pub at: V3,
     pub t: f64,
@@ -83,7 +83,7 @@ impl Fix {
 impl Default for Fix { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum FixBy {
     Ears,
     Net,
@@ -98,7 +98,7 @@ impl FixBy {
 }
 
 /// (TypeScript: Sent, src/game/enemysquads.ts:246)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Sent {
     pub gd: GuardId,
     pub role: crate::enemysquads::SentRole,
@@ -147,7 +147,7 @@ impl Sent {
 impl Default for Sent { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum SentRole {
     Look,
     Flank,
@@ -166,7 +166,7 @@ impl SentRole {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum SentPhase {
     Set,
     Run,
@@ -183,7 +183,7 @@ impl SentPhase {
 }
 
 /// (TypeScript: SquadEvent, src/game/enemysquads.ts:248)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SquadEvent {
     pub t: f64,
     pub what: crate::enemysquads::SquadEventWhat,
@@ -204,7 +204,7 @@ impl SquadEvent {
 impl Default for SquadEvent { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum SquadEventWhat {
     Down,
     Back,
@@ -273,7 +273,7 @@ impl SquadEventWhat {
 }
 
 /// (TypeScript: Check, src/game/enemysquads.ts:252)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Check {
     pub next_at: f64,
     pub stage: crate::enemysquads::CheckStage,
@@ -328,7 +328,7 @@ impl Check {
 impl Default for Check { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum CheckStage {
     Idle,
     Called,
@@ -345,7 +345,7 @@ impl CheckStage {
 }
 
 /// (TypeScript: Quiet, src/game/enemysquads.ts:254)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Quiet {
     pub gd: GuardId,
     pub at: V3,
@@ -370,7 +370,7 @@ impl Quiet {
 impl Default for Quiet { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Looker, src/game/enemysquads.ts:256)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Looker {
     pub gd: GuardId,
     pub who: GuardId,
@@ -413,7 +413,7 @@ impl Looker {
 impl Default for Looker { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Calm, src/game/enemysquads.ts:261)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Calm {
     pub state: crate::game::GuardState,
     pub awareness: f64,
@@ -448,7 +448,7 @@ impl Calm {
 impl Default for Calm { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/enemysquads.ts:252 Check.cut, src/game/enemysquads.ts:252)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CheckCutItem {
     pub who: GuardId,
     pub at: f64,
@@ -465,7 +465,7 @@ impl CheckCutItem {
 impl Default for CheckCutItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/enemysquads.ts:252 Check.netOut, src/game/enemysquads.ts:252)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CheckNetOutValue {
     pub about: EnemysquadsSquadId,
     pub at: V3,
@@ -484,7 +484,7 @@ impl CheckNetOutValue {
 impl Default for CheckNetOutValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Call, src/game/enemysquads.ts:260)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Call {
     pub by: GuardId,
     pub t0: f64,
@@ -511,7 +511,7 @@ impl Call {
 impl Default for Call { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Squad, src/game/enemysquads.ts:262)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Squad {
     pub def: crate::scene_scenarios::SquadData,
     pub name: String,
@@ -584,7 +584,7 @@ impl Squad {
 impl Default for Squad { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/enemysquads.ts:272 Squad.hung, src/game/enemysquads.ts:272)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SquadHungItem {
     pub who: GuardId,
     pub t: f64,
@@ -601,7 +601,7 @@ impl SquadHungItem {
 impl Default for SquadHungItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/enemysquads.ts:275 Squad.due, src/game/enemysquads.ts:275)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SquadDueItem {
     pub gd: GuardId,
     pub at: V3,
@@ -622,7 +622,7 @@ impl SquadDueItem {
 impl Default for SquadDueItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: State, src/game/enemysquads.ts:277)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct State {
     pub stay_ask: Option<bool>,
     pub s: crate::scene_scenarios::StructureData,
@@ -649,7 +649,7 @@ impl State {
 impl Default for State { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/enemysquads.ts:277 State.net, src/game/enemysquads.ts:277)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StateNetItem {
     pub t: f64,
     pub squad: EnemysquadsSquadId,
@@ -670,7 +670,7 @@ impl StateNetItem {
 impl Default for StateNetItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: NetCheck, src/game/enemysquads.ts:280)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct NetCheck {
     pub next_at: f64,
     pub stage: crate::enemysquads::NetCheckStage,
@@ -705,7 +705,7 @@ impl NetCheck {
 impl Default for NetCheck { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum NetCheckStage {
     Idle,
     Called,
@@ -722,7 +722,7 @@ impl NetCheckStage {
 }
 
 /// (TypeScript: inline at src/game/enemysquads.ts:280 NetCheck.say, src/game/enemysquads.ts:280)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct NetCheckSayItem {
     pub t: f64,
     pub gd: GuardId,
@@ -743,7 +743,7 @@ impl NetCheckSayItem {
 impl Default for NetCheckSayItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/enemysquads.ts:277 State.word, src/game/enemysquads.ts:277)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct StateWord {
     pub t: f64,
     pub at: V3,
@@ -770,7 +770,7 @@ impl StateWord {
 impl Default for StateWord { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/enemysquads.ts:277 StateWord.call, src/game/enemysquads.ts:277)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct StateWordCall {
     pub q: EnemysquadsSquadId,
     pub go: Vec<RoomfightDefId>,
@@ -833,14 +833,18 @@ impl Known {
 impl Default for Known { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: RoundCtx, src/game/enemysquads.ts:512)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RoundCtx {
     pub t: f64,
     pub t_2: RoomfightRoomId,
     pub key: String,
     pub rear: Vec<V3>,
     pub mouths: Vec<V3>,
+    /// (one round's own, made again by the next: in no bytes)
+    #[bytes(skip)]
     pub hot: crate::enemysquads::RoundHot,
+    /// (one round's own, made again by the next: in no bytes)
+    #[bytes(skip)]
     pub hot_cell: crate::enemysquads::RoundHotCell,
     pub cost: JsMap<crate::Num, f64>,
     pub held: JsMap<crate::Num, RoomfightRoomId>,
@@ -891,7 +895,7 @@ impl SquadReport {
 impl Default for SquadReport { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/enemysquads.ts:879 BANGS, src/game/enemysquads.ts:879)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct EnemysquadsModBANGSValue {
     pub n: f64,
     pub t: f64,
@@ -1175,7 +1179,7 @@ impl SquadWaysRoundItem {
 impl Default for SquadWaysRoundItem { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct EnemysquadsMod {
     /// (src/game/enemysquads.ts:281 STATES)
     pub states: Option<crate::enemysquads::State>,

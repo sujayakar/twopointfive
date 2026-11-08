@@ -1,6 +1,6 @@
 //! The types of `shards`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: PaneCrossLike, src/game/shards.ts:51)
@@ -150,7 +150,7 @@ impl ShardsTune {
 impl Default for ShardsTune { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: PlateMeta, src/game/shards.ts:148)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct PlateMeta {
     pub gen_: f64,
     pub area: f64,
@@ -206,7 +206,7 @@ impl Pending {
 impl Default for Pending { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Life, src/game/shards.ts:153)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Life {
     pub t: f64,
     pub n: f64,
@@ -223,7 +223,7 @@ impl Life {
 impl Default for Life { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: GlassShards, src/game/shards.ts:158)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct GlassShards {
     pub lives: Vec<crate::shards::Life>,
     pub live_est: f64,
@@ -260,7 +260,7 @@ impl GlassShards {
 impl Default for GlassShards { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/game/shards.ts:165 GlassShards.breaks, src/game/shards.ts:165)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct GlassShardsBreaksItem {
     pub c: DebrisChunkId,
     pub speed: f64,
@@ -277,7 +277,7 @@ impl GlassShardsBreaksItem {
 impl Default for GlassShardsBreaksItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/shards.ts:171 GlassShards.deferred, src/game/shards.ts:171)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct GlassShardsDeferredItem {
     pub pos: V3,
     pub dir: V3,
@@ -300,7 +300,7 @@ impl GlassShardsDeferredItem {
 impl Default for GlassShardsDeferredItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: SprayOpts, src/game/shards.ts:674)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SprayOpts {
     pub speed: f64,
     pub speed_jit: f64,

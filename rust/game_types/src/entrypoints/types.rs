@@ -1,10 +1,10 @@
 //! The types of `entrypoints`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Pod, src/game/entrypoints.ts:64)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Pod {
     pub pos: V3,
     pub face: f64,
@@ -26,7 +26,7 @@ impl Pod {
 impl Default for Pod { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: EntryPoints, src/game/entrypoints.ts:67)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct EntryPoints {
     pub been: JsMap<CoverOpeningId, f64>,
     pub last: f64,
@@ -47,7 +47,7 @@ impl EntryPoints {
 impl Default for EntryPoints { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/game/entrypoints.ts:73 EntryPoints.stats, src/game/entrypoints.ts:73)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct EntryPointsStats {
     pub pods: f64,
     pub risky: f64,

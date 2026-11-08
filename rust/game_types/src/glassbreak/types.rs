@@ -1,6 +1,6 @@
 //! The types of `glassbreak`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// a burst's view of the glass for one judgment (GlassBreak.seeThrough): which panes a walk also passes
@@ -12,7 +12,7 @@ pub enum GlassBreakAlso {
 }
 
 /// (TypeScript: GlassBreak, src/game/glassbreak.ts:221)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct GlassBreak {
     pub log: Vec<String>,
     pub sheet_list: Option<Vec<f64>>,
@@ -35,7 +35,7 @@ impl GlassBreak {
 impl Default for GlassBreak { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/game/glassbreak.ts:390 GlassBreak.viewOf, src/game/glassbreak.ts:390)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct GlassBreakViewOf {
     pub kind: crate::glassbreak::GlassBreakViewOfKind,
     pub from: V3,
@@ -54,7 +54,7 @@ impl GlassBreakViewOf {
 impl Default for GlassBreakViewOf { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum GlassBreakViewOfKind {
     Blown,
     Wary,
@@ -71,7 +71,7 @@ impl GlassBreakViewOfKind {
 }
 
 /// (TypeScript: GlassBlastOpts, src/game/glassbreak.ts:178)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct GlassBlastOpts {
     pub radius: Option<f64>,
     pub power: Option<f64>,
@@ -476,7 +476,7 @@ impl GLASSBREAKDEFAULTSBreakE {
 impl Default for GLASSBREAKDEFAULTSBreakE { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/glassbreak.ts:193 GB_HOST, src/game/glassbreak.ts:193)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct GlassbreakModGBHOST {
     pub panes: f64,
     pub impacts: f64,
@@ -703,11 +703,13 @@ impl GlassBreakPaneInfo {
 impl Default for GlassBreakPaneInfo { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct GlassbreakMod {
     /// (src/game/glassbreak.ts:193 GB_HOST)
     pub gb_host: crate::glassbreak::GlassbreakModGBHOST,
     /// (src/game/glassbreak.ts:211 F)
+    /// (scratch, read by nobody who did not just write it: in no bytes)
+    #[bytes(skip)]
     pub f: Option<Vec<f64>>,
 }
 impl GlassbreakMod {

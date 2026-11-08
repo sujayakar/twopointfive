@@ -1,6 +1,6 @@
 //! The types of `cmd`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: PlayerCmd, src/game/cmd.ts:25)
@@ -76,19 +76,37 @@ impl PlayerCmdView {
 impl Default for PlayerCmdView { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Seat, src/game/cmd.ts:146)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Seat {
     pub index: f64,
+    /// (walked by its own parts: in none of the row's bytes)
+    #[bytes(skip)]
     pub own: Option<crate::seats::SeatSet>,
+    /// (a host's hand, which differs by machine: in no bytes)
+    #[bytes(skip)]
     pub input: InputId,
+    /// (a host's hand, which differs by machine: in no bytes)
+    #[bytes(skip)]
     pub cam: CameraId,
+    /// (a host's hand, which differs by machine: in no bytes)
+    #[bytes(skip)]
     pub canvas: crate::host_hud::View,
+    /// (a host's hand, which differs by machine: in no bytes)
+    #[bytes(skip)]
     pub cmd: Option<crate::cmd::PlayerCmd>,
+    /// (a host's hand, which differs by machine: in no bytes)
+    #[bytes(skip)]
     pub remote: bool,
     pub fixed: f64,
     pub fixed_cmds: f64,
+    /// (a host's hand, which differs by machine: in no bytes)
+    #[bytes(skip)]
     pub mask: f64,
+    /// (a host's hand, which differs by machine: in no bytes)
+    #[bytes(skip)]
     pub waiting: Option<crate::cmd::PlayerCmd>,
+    /// (a host's hand, which differs by machine: in no bytes)
+    #[bytes(skip)]
     pub mark: u32,
 }
 impl Seat {
@@ -147,7 +165,7 @@ impl CheckCmdIn {
 impl Default for CheckCmdIn { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CmdMod {
     /// (src/game/cmd.ts:74 checkLens)
     pub check_lens: Option<CameraId>,

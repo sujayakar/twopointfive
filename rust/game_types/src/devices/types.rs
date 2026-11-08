@@ -1,10 +1,10 @@
 //! The types of `devices`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: inline at src/game/devices.ts:40 CameraDef, src/scene/level.ts:129)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CameraDef2 {
     pub kind: crate::devices::CameraDef2Kind,
     pub name: String,
@@ -39,7 +39,7 @@ impl CameraDef2 {
 impl Default for CameraDef2 { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum CameraDef2Kind {
     Camera,
 }
@@ -52,7 +52,7 @@ impl CameraDef2Kind {
 }
 
 /// (TypeScript: inline at src/game/devices.ts:41 KeypadDef, src/scene/level.ts:130)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct KeypadDef2 {
     pub kind: crate::devices::KeypadDef2Kind,
     pub name: String,
@@ -77,7 +77,7 @@ impl KeypadDef2 {
 impl Default for KeypadDef2 { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum KeypadDef2Kind {
     Keypad,
 }
@@ -90,7 +90,7 @@ impl KeypadDef2Kind {
 }
 
 /// (TypeScript: inline at src/game/devices.ts:42 LaserDef, src/scene/level.ts:131)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LaserDef2 {
     pub kind: crate::devices::LaserDef2Kind,
     pub name: String,
@@ -117,7 +117,7 @@ impl LaserDef2 {
 impl Default for LaserDef2 { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum LaserDef2Kind {
     Laser,
 }
@@ -130,7 +130,7 @@ impl LaserDef2Kind {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum LaserDef2Alarm {
     Alarm,
     Suspicion,
@@ -145,13 +145,15 @@ impl LaserDef2Alarm {
 }
 
 /// (TypeScript: CameraRt, src/game/devices.ts:62)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CameraRt {
     pub def: crate::devices::CameraDef2,
     pub index: f64,
     pub target: FixtureId,
     pub cone: LightId,
     pub slot: f64,
+    /// (holds nothing: in no bytes)
+    #[bytes(skip)]
     pub st: crate::Opaque,
 }
 impl CameraRt {
@@ -170,7 +172,7 @@ impl CameraRt {
 impl Default for CameraRt { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: LaserRt, src/game/devices.ts:68)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LaserRt {
     pub def: crate::devices::LaserDef2,
     pub index: f64,
@@ -178,6 +180,8 @@ pub struct LaserRt {
     pub dir: V3,
     pub len: f64,
     pub slot: f64,
+    /// (holds nothing: in no bytes)
+    #[bytes(skip)]
     pub st: crate::Opaque,
 }
 impl LaserRt {
@@ -197,7 +201,7 @@ impl LaserRt {
 impl Default for LaserRt { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: KeypadRt, src/game/devices.ts:71)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct KeypadRt {
     pub def: crate::devices::KeypadDef2,
     pub door: DoorId,
@@ -216,7 +220,7 @@ impl KeypadRt {
 impl Default for KeypadRt { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: DeviceLogRow, src/game/devices.ts:73)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DeviceLogRow {
     pub seq: f64,
     pub t: f64,
@@ -241,7 +245,7 @@ impl DeviceLogRow {
 impl Default for DeviceLogRow { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum DeviceLogRowWhat {
     Dead,
     Code,
@@ -337,7 +341,7 @@ impl DevicesSnapLasersItem {
 impl Default for DevicesSnapLasersItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Devices, src/game/devices.ts:77)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Devices {
     pub cameras: Vec<CameraRtId>,
     pub lasers: Vec<LaserRtId>,

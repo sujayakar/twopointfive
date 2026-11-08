@@ -1,6 +1,6 @@
 //! The types of `sim_lightshome`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
@@ -251,7 +251,7 @@ impl FixtureDefAreaLightsItem {
 impl Default for FixtureDefAreaLightsItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Fixture, src/sim/lightshome.ts:67)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Fixture {
     pub name: String,
     pub group: String,
@@ -266,6 +266,8 @@ pub struct Fixture {
     pub area_lights: Option<Vec<crate::sim_lightshome::FixtureAreaLightsItem>>,
     pub lens: Option<V3>,
     pub i: f64,
+    /// (holds nothing: in no bytes)
+    #[bytes(skip)]
     pub st: crate::Opaque,
 }
 impl Fixture {
@@ -292,7 +294,7 @@ impl Fixture {
 impl Default for Fixture { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum FixtureKind {
     Analytic,
     Emissive,
@@ -311,7 +313,7 @@ impl FixtureKind {
 }
 
 /// (TypeScript: inline at src/sim/lightshome.ts:68 Fixture.areaLights, src/sim/lightshome.ts:68)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FixtureAreaLightsItem {
     pub light: LightId,
     pub base: f64,
@@ -328,8 +330,10 @@ impl FixtureAreaLightsItem {
 impl Default for FixtureAreaLightsItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Mains, src/sim/lightshome.ts:90)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Mains {
+    /// (holds nothing: in no bytes)
+    #[bytes(skip)]
     pub st: crate::Opaque,
 }
 impl Mains {
@@ -396,10 +400,12 @@ impl BeaconFact {
 impl Default for BeaconFact { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: LightHome, src/sim/lightshome.ts:147)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LightHome {
     pub mains: crate::sim_lightshome::Mains,
     pub lamps: Vec<LightId>,
+    /// (holds nothing: in no bytes)
+    #[bytes(skip)]
     pub st: crate::Opaque,
 }
 impl LightHome {

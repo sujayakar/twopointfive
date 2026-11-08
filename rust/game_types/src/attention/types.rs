@@ -1,10 +1,10 @@
 //! The types of `attention`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum DrawKind {
     Door,
     Light,
@@ -25,7 +25,7 @@ impl DrawKind {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum HoldMode {
     Go,
     Look,
@@ -42,7 +42,7 @@ impl HoldMode {
 }
 
 /// (TypeScript: Hold, src/game/attention.ts:74)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Hold {
     pub at: V3,
     pub kind: crate::attention::DrawKind,
@@ -84,7 +84,7 @@ impl Hold {
 impl Default for Hold { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Mem, src/game/attention.ts:87)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Mem {
     pub hold: Option<crate::attention::Hold>,
     pub cand: Option<crate::attention::MemCand>,
@@ -119,7 +119,7 @@ impl Mem {
 impl Default for Mem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/attention.ts:90 Mem.cand, src/game/attention.ts:90)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct MemCand {
     pub at: V3,
     pub kind: crate::attention::DrawKind,
@@ -138,7 +138,7 @@ impl MemCand {
 impl Default for MemCand { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/attention.ts:92 Mem.lent, src/game/attention.ts:92)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct MemLent {
     pub at: V3,
     pub t: f64,
@@ -315,7 +315,7 @@ impl AttentionSnapItemLent {
 impl Default for AttentionSnapItemLent { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/attention.ts:106 ATTENTION_LOG, src/game/attention.ts:106)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct AttentionModATTENTIONLOGItem {
     pub t: f64,
     pub who: String,
@@ -415,7 +415,7 @@ impl AttentionLendO {
 impl Default for AttentionLendO { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct AttentionMod {
     /// (src/game/attention.ts:100 memOf)
     pub mem_of: JsMap<GuardId, crate::attention::Mem>,

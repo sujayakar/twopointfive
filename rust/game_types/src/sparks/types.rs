@@ -1,10 +1,10 @@
 //! The types of `sparks`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: SparkParams, src/game/sparks.ts:10)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SparkParams {
     pub gravity: f64,
     pub drag: f64,
@@ -37,7 +37,7 @@ impl SparkParams {
 impl Default for SparkParams { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Spark, src/game/sparks.ts:23)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Spark {
     pub pos: V3,
     pub vel: V3,
@@ -62,7 +62,7 @@ impl Spark {
 impl Default for Spark { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Sparks, src/game/sparks.ts:25)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Sparks {
     pub pool: Vec<crate::sparks::Spark>,
     pub live: f64,

@@ -1,10 +1,10 @@
 //! The types of `fixture_break`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Piece, src/game/fixtureBreak.ts:53)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Piece {
     pub box_: FrameBoxId,
     pub v: V3,
@@ -47,7 +47,7 @@ impl Piece {
 impl Default for Piece { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Rec, src/game/fixtureBreak.ts:54)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Rec {
     pub t: FixtureId,
     pub kind: f64,
@@ -118,7 +118,7 @@ impl Rec {
 impl Default for Rec { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: State, src/game/fixtureBreak.ts:63)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct State {
     pub recs: Vec<crate::fixture_break::Rec>,
     pub prev: JsMap<FixtureId, bool>,
@@ -143,7 +143,7 @@ impl State {
 impl Default for State { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/fixtureBreak.ts:28 FIXLOOK, src/game/fixtureBreak.ts:28)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct FixtureBreakModFIXLOOK {
     pub on: bool,
     pub max_panels: f64,
@@ -226,7 +226,7 @@ impl FixtureBreakModFIXLOOK {
 impl Default for FixtureBreakModFIXLOOK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/fixtureBreak.ts:41 FixtureBreakModFIXLOOK.spark, src/game/fixtureBreak.ts:41)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FixtureBreakModFIXLOOKSpark {
     pub speed: f64,
     pub speed_jit: f64,
@@ -251,7 +251,7 @@ impl FixtureBreakModFIXLOOKSpark {
 impl Default for FixtureBreakModFIXLOOKSpark { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/fixtureBreak.ts:92 FLOOR, src/game/fixtureBreak.ts:92)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FixtureBreakModFLOOR {
     pub on: Option<BoxId>,
 }
@@ -313,7 +313,7 @@ impl GlowAtOut {
 impl Default for GlowAtOut { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct FixtureBreakMod {
     /// (src/game/fixtureBreak.ts:28 FIXLOOK)
     pub fixlook: crate::fixture_break::FixtureBreakModFIXLOOK,

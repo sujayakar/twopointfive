@@ -22,6 +22,7 @@ macro_rules! id {
             #[inline] fn from_ix(i: usize) -> Self { $name(i as u32) }
             #[inline] fn ix(self) -> usize { self.0 as usize }
         }
+        impl $crate::bytes::ToBytes for $name { #[inline] fn w(&self, o: &mut $crate::bytes::W) { $crate::bytes::ToBytes::w(&self.0, o) } }
     )* };
 }
 id! {

@@ -1,10 +1,10 @@
 //! The types of `roomclear`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Placement, src/game/roomclear.ts:89)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Placement {
     pub room: String,
     pub mark: f64,
@@ -29,7 +29,7 @@ impl Placement {
 impl Default for Placement { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum RoomClearEnd {
     Taken,
     Wiped,
@@ -63,7 +63,7 @@ impl RoomClearState {
 }
 
 /// (TypeScript: RoomState, src/game/roomclear.ts:227)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RoomState {
     pub def: crate::scene_scenarios::StructureRoom,
     pub defenders: Vec<GuardId>,
@@ -84,7 +84,7 @@ impl RoomState {
 impl Default for RoomState { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: RoomClearScenario, src/game/roomclear.ts:229)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RoomClearScenario {
     pub rooms: Vec<crate::roomclear::RoomState>,
     pub end: Option<crate::roomclear::RoomClearEnd>,
@@ -131,7 +131,7 @@ impl RoomClearScenario {
 impl Default for RoomClearScenario { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/game/roomclear.ts:258 RoomClearScenario.log, src/game/roomclear.ts:258)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RoomClearScenarioLogItem {
     pub t: f64,
     pub what: String,

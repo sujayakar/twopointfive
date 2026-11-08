@@ -1,10 +1,10 @@
 //! The types of `netquiet`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum LineKind {
     Body,
     Name,
@@ -27,7 +27,7 @@ impl LineKind {
 }
 
 /// (TypeScript: Mind, src/game/netquiet.ts:122)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Mind {
     pub quiet: f64,
     pub asked: JsSet<crate::Num>,
@@ -129,7 +129,7 @@ impl NetQuietSnap {
 impl Default for NetQuietSnap { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/netquiet.ts:89 NETQUIET_LOG, src/game/netquiet.ts:89)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct NetquietModNETQUIETLOGItem {
     pub id: f64,
     pub t: f64,
@@ -301,7 +301,7 @@ impl NetQuietOf {
 impl Default for NetQuietOf { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct NetquietMod {
     /// (src/game/netquiet.ts:89 NETQUIET_LOG)
     pub netquiet_log: Vec<crate::netquiet::NetquietModNETQUIETLOGItem>,

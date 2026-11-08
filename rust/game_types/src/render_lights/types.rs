@@ -1,13 +1,15 @@
 //! The types of `render_lights`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: LightSet, src/render/lights.ts:118)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LightSet {
     pub lights: Vec<LightId>,
     pub ir: Vec<LightId>,
+    /// (holds nothing: in no bytes)
+    #[bytes(skip)]
     pub device: crate::Opaque,
     pub fog_team: crate::render_lights::LightSetFogTeam,
 }
@@ -25,7 +27,7 @@ impl LightSet {
 impl Default for LightSet { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/render/lights.ts:193 LightSet.fogTeam, src/render/lights.ts:193)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LightSetFogTeam {
     pub on: bool,
     pub owners: JsSet<crate::Num>,
@@ -44,7 +46,7 @@ impl LightSetFogTeam {
 impl Default for LightSetFogTeam { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: RtLight, src/render/lights.ts:8)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RtLight {
     pub name: String,
     pub group: String,
@@ -119,7 +121,7 @@ impl RtLight {
 impl Default for RtLight { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/render/lights.ts:26 RtLight.steady, src/render/lights.ts:26)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RtLightSteady {
     pub intensity: f64,
     pub pos: V3,
@@ -144,7 +146,7 @@ impl RtLightSteady {
 impl Default for RtLightSteady { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/render/lights.ts:60 RtLight.portal, src/render/lights.ts:60)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RtLightPortal {
     pub half_wide: f64,
     pub share: f64,

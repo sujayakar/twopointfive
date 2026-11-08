@@ -1,13 +1,15 @@
 //! The types of `sim_itemshome`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: ItemStore, src/sim/itemshome.ts:58)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ItemStore {
     pub at: Vec<f64>,
     pub o: crate::sim_itemshome::ItemStoreO,
+    /// (holds nothing: in no bytes)
+    #[bytes(skip)]
     pub home: crate::Opaque,
     pub b8: f64,
     pub b4: f64,
@@ -29,7 +31,7 @@ impl ItemStore {
 impl Default for ItemStore { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/sim/colstore.ts:28 ItemStore.O, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1611)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ItemStoreO {
     pub kind: f64,
     pub fill: f64,

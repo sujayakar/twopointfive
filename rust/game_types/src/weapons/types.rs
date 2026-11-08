@@ -1,13 +1,13 @@
 //! The types of `weapons`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// WHICH OF THE THREE A GUN IS: a Pistol's and a Rifle's own rows are fields of the one Firearm (g.fa)
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, ToBytes)]
 pub enum GunKind { Plain, Pistol, Rifle }
 /// WHAT A RELOAD TELLS ITS OWNER AS IT GOES (weapons.ts ReloadEvents, callbacks in the TypeScript: player.ts:362 and :381 are the only callers that give any). The body matches on it at each stage
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub enum ReloadEvents {
     None,
     /// the sidearm's: the three sounds and the magazine that falls. `fill` what it drops (feedPlan's drop, or 0)
@@ -16,14 +16,14 @@ pub enum ReloadEvents {
     Rifle { ch: CharId, feed: Option<FeedPlan> },
 }
 /// what gunreload.ts feedPlan returns: own sounds at the cues, their times, what an empty one leaving the gun is drawn as
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct FeedPlan { pub cues: Option<Vec<FeedCue>>, pub times: Vec<f64>, pub drop: Option<f64> }
 /// (gunreload.ts FeedCue)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct FeedCue { pub t: f64, pub sfx: String, pub gain: f64, pub rate: f64 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum GunModelId {
     M870,
     Mk12,
@@ -48,7 +48,7 @@ impl GunModelId {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum WeaponId {
     Fiveseven,
     Guard9mm,
@@ -91,7 +91,7 @@ impl WeaponId {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum FireMode {
     Semi,
     Auto,
@@ -108,7 +108,7 @@ impl FireMode {
 }
 
 /// (TypeScript: WeaponDef, src/game/weapons.ts:55)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WeaponDef {
     pub id: crate::weapons::WeaponId,
     pub enabled: bool,
@@ -187,7 +187,7 @@ impl WeaponDef {
 impl Default for WeaponDef { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum WeaponClass {
     Pistol,
     Carbine,
@@ -206,7 +206,7 @@ impl WeaponClass {
 }
 
 /// (TypeScript: inline at src/game/weapons.ts:70 WeaponDef.reload, src/game/weapons.ts:70)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WeaponDefReload {
     pub dur: f64,
     pub out: Option<f64>,
@@ -232,7 +232,7 @@ impl WeaponDefReload {
 impl Default for WeaponDefReload { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: BurstSpec, src/game/weapons.ts:32)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BurstSpec {
     pub min: f64,
     pub max: f64,
@@ -259,7 +259,7 @@ impl BurstSpec {
 impl Default for BurstSpec { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: AutoSpec, src/game/weapons.ts:43)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AutoSpec {
     pub interval: f64,
     pub spread_per_round: f64,
@@ -280,7 +280,7 @@ impl AutoSpec {
 impl Default for AutoSpec { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/weapons.ts:84 WeaponDef.report, src/game/weapons.ts:84)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WeaponDefReport {
     pub level: f64,
     pub loud: bool,
@@ -299,7 +299,7 @@ impl WeaponDefReport {
 impl Default for WeaponDefReport { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: AiSpread, src/game/weapons.ts:27)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AiSpread {
     pub base: f64,
     pub move_k: f64,
@@ -322,7 +322,7 @@ impl AiSpread {
 impl Default for AiSpread { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum WeaponDefDamage {
     OneShot,
 }
@@ -335,7 +335,7 @@ impl WeaponDefDamage {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum WeaponDefRig {
     Pistol,
     Carbine,
@@ -354,7 +354,7 @@ impl WeaponDefRig {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum WeaponDefLight {
     None,
     Rail,
@@ -371,7 +371,7 @@ impl WeaponDefLight {
 }
 
 /// (TypeScript: TracerSpec, src/game/weapons.ts:45)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct TracerSpec {
     pub every: f64,
     pub last_n: f64,
@@ -390,7 +390,7 @@ impl TracerSpec {
 impl Default for TracerSpec { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: PelletSpec, src/game/weapons.ts:53)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct PelletSpec {
     pub n: f64,
     pub cone: f64,
@@ -413,7 +413,7 @@ impl PelletSpec {
 impl Default for PelletSpec { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/weapons.ts:53 PelletSpec.breach, src/game/weapons.ts:53)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct PelletSpecBreach {
     pub reach_m: f64,
     pub latch_m: f64,
@@ -432,7 +432,7 @@ impl PelletSpecBreach {
 impl Default for PelletSpecBreach { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/weapons.ts:111 WeaponDef.hands, src/game/weapons.ts:111)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WeaponDefHands {
     pub still: f64,
     pub moving: f64,
@@ -451,7 +451,7 @@ impl WeaponDefHands {
 impl Default for WeaponDefHands { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/weapons.ts:120 WeaponDef.own, src/game/weapons.ts:120)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WeaponDefOwn {
     pub model: crate::weapons::GunModelId,
     pub voice: Option<String>,
@@ -470,7 +470,7 @@ impl WeaponDefOwn {
 impl Default for WeaponDefOwn { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Ocp, src/game/weapons.ts:542)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Ocp {
     pub charge: f64,
     pub recharge_per_sec: f64,
@@ -489,7 +489,7 @@ impl Ocp {
 impl Default for Ocp { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum RifleAttachment {
     Ring,
     He40,
@@ -506,7 +506,7 @@ impl RifleAttachment {
 }
 
 /// (TypeScript: BurstState, src/game/weapons.ts:37)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BurstState {
     pub left: f64,
     pub n: f64,
@@ -531,7 +531,7 @@ impl BurstState {
 impl Default for BurstState { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Firearm, src/game/weapons.ts:353)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Firearm {
     pub chamber: f64,
     pub infinite: bool,
@@ -633,7 +633,7 @@ impl FirearmStartReloadShells {
 impl Default for FirearmStartReloadShells { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WeaponsMod {
     /// (src/game/weapons.ts:325 WEAPONS)
     pub weapons: JsMap<crate::weapons::WeaponId, crate::weapons::WeaponDef>,

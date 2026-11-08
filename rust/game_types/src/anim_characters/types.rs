@@ -1,14 +1,16 @@
 //! The types of `anim_characters`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: CharacterRenderer, src/anim/characters.ts:20)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CharacterRenderer {
     pub index_count: f64,
     pub index_format: crate::anim_characters::CharacterRendererIndexFormat,
     pub instance_count: f64,
+    /// (holds nothing: in no bytes)
+    #[bytes(skip)]
     pub char_mats: crate::Opaque,
     pub mat_data: Vec<f32>,
     pub mat_dirty: bool,
@@ -17,6 +19,8 @@ pub struct CharacterRenderer {
     pub inst_u32: Vec<u32>,
     pub joint_staging: Vec<f32>,
     pub inst_sent: Vec<u32>,
+    /// (holds nothing: in no bytes)
+    #[bytes(skip)]
     pub device: crate::Opaque,
     pub ch: RigId,
     pub part_spans: Option<Vec<u32>>,
@@ -53,7 +57,7 @@ impl CharacterRenderer {
 impl Default for CharacterRenderer { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum CharacterRendererIndexFormat {
     Uint16,
     Uint32,
@@ -68,7 +72,7 @@ impl CharacterRendererIndexFormat {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum CharacterRendererJointsFormat {
     Float16,
     Float16x2,

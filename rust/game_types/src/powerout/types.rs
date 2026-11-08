@@ -1,10 +1,10 @@
 //! The types of `powerout`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Calm, src/game/powerout.ts:93)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Calm {
     pub awareness: f64,
     pub hold: bool,
@@ -37,7 +37,7 @@ impl Calm {
 impl Default for Calm { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum Phase {
     Out,
     Back,
@@ -56,7 +56,7 @@ impl Phase {
 }
 
 /// (TypeScript: Man, src/game/powerout.ts:95)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Man {
     pub gd: GuardId,
     pub role: crate::powerout::ManRole,
@@ -91,7 +91,7 @@ impl Man {
 impl Default for Man { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum ManRole {
     Cover,
     Lever,
@@ -106,7 +106,7 @@ impl ManRole {
 }
 
 /// (TypeScript: PowerOutEvent, src/game/powerout.ts:96)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct PowerOutEvent {
     pub t: f64,
     pub what: crate::powerout::PowerOutEventWhat,
@@ -127,7 +127,7 @@ impl PowerOutEvent {
 impl Default for PowerOutEvent { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum PowerOutEventWhat {
     Stay,
     Lost,
@@ -162,7 +162,7 @@ impl PowerOutEventWhat {
 }
 
 /// (TypeScript: State, src/game/powerout.ts:97)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct State {
     pub since: f64,
     pub decide_at: f64,
@@ -203,7 +203,7 @@ impl State {
 impl Default for State { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/powerout.ts:105 State.seen, src/game/powerout.ts:105)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StateSeenItem {
     pub i: f64,
     pub lit: f64,
@@ -428,7 +428,7 @@ impl CoverSpot {
 impl Default for CoverSpot { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct PoweroutMod {
     /// (src/game/powerout.ts:111 STATES)
     pub states: Option<crate::powerout::State>,

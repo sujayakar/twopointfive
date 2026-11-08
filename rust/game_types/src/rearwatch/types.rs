@@ -1,10 +1,10 @@
 //! The types of `rearwatch`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: RearPin, src/game/rearwatch.ts:97)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RearPin {
     pub o: CoverOpeningId,
     pub front: V3,
@@ -43,7 +43,7 @@ impl RearPin {
 impl Default for RearPin { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: RoomKeep, src/game/rearwatch.ts:101)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RoomKeep {
     pub pin: crate::rearwatch::RearPin,
     pub room: RoomfightRoomId,
@@ -79,7 +79,7 @@ impl RoomKeepRoom {
 impl Default for RoomKeepRoom { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Book, src/game/rearwatch.ts:102)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Book {
     pub pins: JsMap<GuardId, crate::rearwatch::RearPin>,
     pub by_op: JsMap<DoorOpId, GuardId>,
@@ -110,7 +110,7 @@ impl Book {
 impl Default for Book { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/rearwatch.ts:105 Book.shut, src/game/rearwatch.ts:105)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BookShutValue {
     pub o: CoverOpeningId,
     pub room: RoomfightRoomId,
@@ -190,7 +190,7 @@ impl RearWaysItem {
 impl Default for RearWaysItem { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RearwatchMod {
     /// (src/game/rearwatch.ts:106 books)
     pub books: JsMap<PlayerId, crate::rearwatch::Book>,

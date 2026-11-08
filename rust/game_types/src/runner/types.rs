@@ -1,10 +1,10 @@
 //! The types of `runner`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum RunPhase {
     Low,
     Out,
@@ -25,7 +25,7 @@ impl RunPhase {
 }
 
 /// (TypeScript: Run, src/game/runner.ts:99)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Run {
     pub phase: crate::runner::RunPhase,
     pub t: f64,
@@ -227,7 +227,7 @@ impl RunnerOf {
 impl Default for RunnerOf { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RunnerMod {
     /// (src/game/runner.ts:101 stateOf)
     pub state_of: JsMap<GuardId, crate::runner::Run>,

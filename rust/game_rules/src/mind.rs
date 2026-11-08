@@ -22,6 +22,7 @@
 //! What this is a step towards: `raise` and `cap` are the only two things most writers ever meant, so the next step
 //! is that they hand over a percept ("told at this place by that man") and this module alone decides what it does
 //! to him. Nothing here changes play.
+use crate::bytes::ToBytes;
 use crate::game::{Game, GuardState};
 use crate::ids::GuardId;
 use crate::m;
@@ -30,7 +31,7 @@ use alloc::format;
 use alloc::string::String;
 
 /// One write that moved him: who, when (the game's clock) and to what.
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, ToBytes)]
 pub struct Mark {
     pub by: &'static str,
     pub t: f64,
@@ -38,7 +39,7 @@ pub struct Mark {
 }
 
 /// The last writers that moved a man's mind. A write that left him where he was is not kept.
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, ToBytes)]
 pub struct Note {
     /// the last write that made him MORE aware
     pub up: Mark,

@@ -1,10 +1,10 @@
 //! The types of `hands`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Haul, src/game/hands.ts:103)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Haul {
     pub end: crate::hands::HaulEnd,
     pub phase: crate::hands::HaulPhase,
@@ -35,7 +35,7 @@ impl Haul {
 impl Default for Haul { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum HaulEnd {
     Head,
     Feet,
@@ -50,7 +50,7 @@ impl HaulEnd {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum HaulPhase {
     Set,
     Reach,
@@ -69,7 +69,7 @@ impl HaulPhase {
 }
 
 /// (TypeScript: inline at src/game/hands.ts:106 Haul.carry, src/game/hands.ts:106)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HaulCarry {
     pub dim: [f64; 4],
     pub lie: crate::hands::Lie,
@@ -94,7 +94,7 @@ impl HaulCarry {
 impl Default for HaulCarry { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Lie, src/game/hands.ts:108)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Lie {
     pub p: V3,
     pub u: V3,
@@ -117,7 +117,7 @@ impl Lie {
 impl Default for Lie { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: DoorMove, src/game/hands.ts:110)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DoorMove {
     pub d: DoorId,
     pub open: bool,
@@ -152,7 +152,7 @@ impl DoorMove {
 impl Default for DoorMove { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum DoorMoveStage {
     Hand,
     Swing,

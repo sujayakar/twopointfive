@@ -1,6 +1,6 @@
 //! The types of `blast_feel`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Face, src/game/blastFeel.ts:89)
@@ -23,7 +23,7 @@ impl Face {
 impl Default for Face { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Kick, src/game/blastFeel.ts:90)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Kick {
     pub t0: f64,
     pub at: V3,
@@ -40,7 +40,7 @@ impl Kick {
 impl Default for Kick { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: State, src/game/blastFeel.ts:91)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct State {
     pub seen: Vec<WallChargeId>,
     pub queue: Vec<crate::blast_feel::StateQueueItem>,
@@ -65,7 +65,7 @@ impl State {
 impl Default for State { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/blastFeel.ts:91 State.queue, src/game/blastFeel.ts:91)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StateQueueItem {
     pub at: f64,
     pub run: crate::FnField,
@@ -82,7 +82,7 @@ impl StateQueueItem {
 impl Default for StateQueueItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/blastFeel.ts:47 FEEL, src/game/blastFeel.ts:47)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct BlastFeelModFEEL {
     pub on: bool,
     pub kick: f64,
@@ -121,7 +121,7 @@ impl BlastFeelModFEEL {
 impl Default for BlastFeelModFEEL { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/blastFeel.ts:53 BlastFeelModFEEL.sound, src/game/blastFeel.ts:53)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BlastFeelModFEELSound {
     pub crack: f64,
     pub thump: f64,
@@ -160,7 +160,7 @@ impl BlastFeelModFEELSound {
 impl Default for BlastFeelModFEELSound { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/blastFeel.ts:66 BlastFeelModFEEL.ring, src/game/blastFeel.ts:66)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BlastFeelModFEELRing {
     pub stages: f64,
     pub sectors: f64,
@@ -195,7 +195,7 @@ impl BlastFeelModFEELRing {
 impl Default for BlastFeelModFEELRing { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/blastFeel.ts:70 BlastFeelModFEEL.ceil, src/game/blastFeel.ts:70)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BlastFeelModFEELCeil {
     pub spots: f64,
     pub reach: f64,
@@ -222,7 +222,7 @@ impl BlastFeelModFEELCeil {
 impl Default for BlastFeelModFEELCeil { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/blastFeel.ts:72 BlastFeelModFEEL.fire, src/game/blastFeel.ts:72)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct BlastFeelModFEELFire {
     pub core: crate::blast_feel::BlastFeelModFEELFireCore,
     pub roll: crate::blast_feel::BlastFeelModFEELFireRoll,
@@ -245,7 +245,7 @@ impl BlastFeelModFEELFire {
 impl Default for BlastFeelModFEELFire { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/blastFeel.ts:73 BlastFeelModFEELFire.core, src/game/blastFeel.ts:73)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct BlastFeelModFEELFireCore {
     pub count: Vec<f64>,
     pub speed: Vec<f64>,
@@ -266,7 +266,7 @@ impl BlastFeelModFEELFireCore {
 impl Default for BlastFeelModFEELFireCore { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/blastFeel.ts:74 BlastFeelModFEELFire.roll, src/game/blastFeel.ts:74)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct BlastFeelModFEELFireRoll {
     pub count: Vec<f64>,
     pub speed: Vec<f64>,
@@ -289,7 +289,7 @@ impl BlastFeelModFEELFireRoll {
 impl Default for BlastFeelModFEELFireRoll { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/blastFeel.ts:75 BlastFeelModFEELFire.soot, src/game/blastFeel.ts:75)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct BlastFeelModFEELFireSootItem {
     pub after: f64,
     pub count: Vec<f64>,
@@ -312,7 +312,7 @@ impl BlastFeelModFEELFireSootItem {
 impl Default for BlastFeelModFEELFireSootItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/blastFeel.ts:78 BlastFeelModFEELFire.chunks, src/game/blastFeel.ts:78)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct BlastFeelModFEELFireChunks {
     pub count: Vec<f64>,
     pub speed: Vec<f64>,
@@ -335,7 +335,7 @@ impl BlastFeelModFEELFireChunks {
 impl Default for BlastFeelModFEELFireChunks { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct BlastFeelMod {
     /// (src/game/blastFeel.ts:47 FEEL)
     pub feel: crate::blast_feel::BlastFeelModFEEL,

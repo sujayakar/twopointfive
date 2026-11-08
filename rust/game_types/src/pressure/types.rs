@@ -1,10 +1,10 @@
 //! The types of `pressure`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Man, src/game/pressure.ts:234)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Man {
     pub d: RoomfightDefId,
     pub role: crate::pressure::ManRole,
@@ -63,7 +63,7 @@ impl Man {
 impl Default for Man { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum ManRole {
     Press,
     Flank,
@@ -78,7 +78,7 @@ impl ManRole {
 }
 
 /// (TypeScript: Press, src/game/pressure.ts:249)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Press {
     pub id: f64,
     pub room: RoomfightRoomId,
@@ -123,7 +123,7 @@ impl Press {
 impl Default for Press { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum PressPhase {
     Go,
     Word,
@@ -140,7 +140,7 @@ impl PressPhase {
 }
 
 /// (TypeScript: Out, src/game/pressure.ts:251)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Out {
     pub door: Option<DoorId>,
     pub def: RoomfightDefId,
@@ -165,7 +165,7 @@ impl Out {
 impl Default for Out { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Warn, src/game/pressure.ts:269)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Warn {
     pub phase: crate::pressure::WarnPhase,
     pub t0: f64,
@@ -192,7 +192,7 @@ impl Warn {
 impl Default for Warn { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum WarnPhase {
     Heard,
     Called,
@@ -209,7 +209,7 @@ impl WarnPhase {
 }
 
 /// (TypeScript: State, src/game/pressure.ts:278)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct State {
     pub presses: Vec<crate::pressure::Press>,
     pub of: JsMap<RoomfightDefId, PressureManId>,
@@ -278,7 +278,7 @@ impl State {
 impl Default for State { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/pressure.ts:282 State.think, src/game/pressure.ts:282)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StateThinkValue {
     pub room: RoomfightRoomId,
     pub at: f64,
@@ -297,7 +297,7 @@ impl StateThinkValue {
 impl Default for StateThinkValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/pressure.ts:282 State.called, src/game/pressure.ts:282)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StateCalledValue {
     pub room: RoomfightRoomId,
     pub t: f64,
@@ -314,7 +314,7 @@ impl StateCalledValue {
 impl Default for StateCalledValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/pressure.ts:286 State.ear, src/game/pressure.ts:286)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StateEarValue {
     pub t: f64,
     pub i: f64,
@@ -333,7 +333,7 @@ impl StateEarValue {
 impl Default for StateEarValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/pressure.ts:289 State.told, src/game/pressure.ts:289)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StateToldValue {
     pub room: RoomfightRoomId,
     pub at: V3,
@@ -352,7 +352,7 @@ impl StateToldValue {
 impl Default for StateToldValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/pressure.ts:292 State.heard, src/game/pressure.ts:292)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StateHeardItem {
     pub t: f64,
     pub p: V3,
@@ -369,7 +369,7 @@ impl StateHeardItem {
 impl Default for StateHeardItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/pressure.ts:292 State.marks, src/game/pressure.ts:292)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StateMarksValue {
     pub r: Option<RoomfightRoomId>,
     pub team: crate::teams::Team,
@@ -388,7 +388,7 @@ impl StateMarksValue {
 impl Default for StateMarksValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/pressure.ts:294 State.word, src/game/pressure.ts:294)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StateWord {
     pub t: f64,
     pub p: V3,
@@ -405,7 +405,7 @@ impl StateWord {
 impl Default for StateWord { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/pressure.ts:294 State.look, src/game/pressure.ts:294)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct StateLook {
     pub at: V3,
     pub go_t: f64,
@@ -426,7 +426,7 @@ impl StateLook {
 impl Default for StateLook { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/pressure.ts:295 State.stats, src/game/pressure.ts:252)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StateStats {
     pub press_formed: f64,
     pub press_men: f64,
@@ -714,7 +714,7 @@ impl Aim {
 impl Default for Aim { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct PressureMod {
     /// (src/game/pressure.ts:297 STATES)
     pub states: Option<crate::pressure::State>,

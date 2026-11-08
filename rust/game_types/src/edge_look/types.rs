@@ -1,10 +1,10 @@
 //! The types of `edge_look`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: BreakLike, src/game/edgeLook.ts:75)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct BreakLike {
     pub id: f64,
     pub kind: crate::wallbreak::BKind,
@@ -35,7 +35,7 @@ impl BreakLike {
 impl Default for BreakLike { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Rubble, src/game/edgeLook.ts:90)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Rubble {
     pub box_: FrameBoxId,
     pub t: f64,
@@ -66,7 +66,7 @@ impl Rubble {
 impl Default for Rubble { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Frame, src/game/edgeLook.ts:92)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Frame {
     pub b: BoxId,
     pub along_x: bool,
@@ -105,7 +105,7 @@ impl Frame {
 impl Default for Frame { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: EdgeLook, src/game/edgeLook.ts:94)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct EdgeLook {
     pub decor: JsMap<crate::Num, Vec<FrameBoxId>>,
     pub dirty: JsMap<crate::Num, crate::edge_look::BreakLike>,
@@ -138,7 +138,7 @@ impl EdgeLook {
 impl Default for EdgeLook { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/game/edgeLook.ts:122 EdgeLook.todo, src/game/edgeLook.ts:122)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct EdgeLookTodoItem {
     pub b: crate::edge_look::BreakLike,
     pub f: Option<crate::edge_look::Frame>,
@@ -161,7 +161,7 @@ impl EdgeLookTodoItem {
 impl Default for EdgeLookTodoItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/edgeLook.ts:40 EDGE, src/game/edgeLook.ts:40)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct EdgeLookModEDGE {
     pub on: bool,
     pub max_decor: f64,
@@ -224,7 +224,7 @@ impl EdgeLookModEDGE {
 impl Default for EdgeLookModEDGE { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/edgeLook.ts:57 EdgeLookModEDGE.blast, src/game/edgeLook.ts:57)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct EdgeLookModEDGEBlast {
     pub more: f64,
     pub lumps: f64,
@@ -251,7 +251,7 @@ impl EdgeLookModEDGEBlast {
 impl Default for EdgeLookModEDGEBlast { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/edgeLook.ts:61 EdgeLookModEDGE.cutHeap, src/game/edgeLook.ts:61)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct EdgeLookModEDGECutHeap {
     pub slabs: f64,
     pub slab: [f64; 2],
@@ -280,7 +280,7 @@ impl EdgeLookModEDGECutHeap {
 impl Default for EdgeLookModEDGECutHeap { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/edgeLook.ts:64 EdgeLookModEDGE.scorch, src/game/edgeLook.ts:64)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct EdgeLookModEDGEScorch {
     pub near: f64,
     pub far: f64,
@@ -309,7 +309,7 @@ impl EdgeLookModEDGEScorch {
 impl Default for EdgeLookModEDGEScorch { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct EdgeLookMod {
     /// (src/game/edgeLook.ts:40 EDGE)
     pub edge: crate::edge_look::EdgeLookModEDGE,

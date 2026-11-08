@@ -1,6 +1,6 @@
 //! The types of `particle_fx`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: ImpactRecipe, src/game/particleFx.ts:130)
@@ -92,7 +92,7 @@ impl CasingSpecFrom {
 }
 
 /// (TypeScript: FxState, src/game/particleFx.ts:289)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct FxState {
     pub tinks: Vec<crate::particle_fx::FxStateTinksItem>,
     pub n: f64,
@@ -109,7 +109,7 @@ impl FxState {
 impl Default for FxState { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/particleFx.ts:289 FxState.tinks, src/game/particleFx.ts:289)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FxStateTinksItem {
     pub t: f64,
     pub pos: V3,
@@ -128,7 +128,7 @@ impl FxStateTinksItem {
 impl Default for FxStateTinksItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/particleFx.ts:35 DUST, src/game/particleFx.ts:35)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ParticleFxModDUST {
     pub count: f64,
     pub size: f64,
@@ -153,7 +153,7 @@ impl ParticleFxModDUST {
 impl Default for ParticleFxModDUST { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/particleFx.ts:39 DUST_LOOK, src/game/particleFx.ts:39)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ParticleFxModDUSTLOOK {
     pub opacity: f64,
     pub growth: f64,
@@ -278,7 +278,7 @@ impl SOLIDGLASSCRACK {
 impl Default for SOLIDGLASSCRACK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/particleFx.ts:144 PFX, src/game/particleFx.ts:144)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ParticleFxModPFX {
     pub impact_scale_rifle: f64,
     pub spark_size: f64,
@@ -573,7 +573,7 @@ impl TestBurstKind {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ParticleFxMod {
     /// (src/game/particleFx.ts:35 DUST)
     pub dust: crate::particle_fx::ParticleFxModDUST,

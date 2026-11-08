@@ -1,10 +1,10 @@
 //! The types of `spotted`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum SpottedMode {
     Calm,
     Wary,
@@ -21,7 +21,7 @@ impl SpottedMode {
 }
 
 /// (TypeScript: Man, src/game/spotted.ts:101)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Man {
     pub mode: crate::spotted::SpottedMode,
     pub since: f64,
@@ -72,7 +72,7 @@ impl Man {
 impl Default for Man { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum ManWhat {
     Step,
     Freeze,
@@ -89,7 +89,7 @@ impl ManWhat {
 }
 
 /// (TypeScript: inline at src/game/spotted.ts:115 Man.take, src/game/spotted.ts:115)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ManTake {
     pub foe: GuardId,
     pub t0: f64,
@@ -115,7 +115,7 @@ impl ManTake {
 impl Default for ManTake { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/spotted.ts:117 Man.takeNo, src/game/spotted.ts:117)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ManTakeNo {
     pub foe: GuardId,
     pub until: f64,
@@ -205,7 +205,7 @@ impl SPOTTEDDEFAULTS {
 impl Default for SPOTTEDDEFAULTS { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/spotted.ts:122 SPOTTED_LOG, src/game/spotted.ts:122)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SpottedModSPOTTEDLOGItem {
     pub t: f64,
     pub who: String,
@@ -228,7 +228,7 @@ impl SpottedModSPOTTEDLOGItem {
 impl Default for SpottedModSPOTTEDLOGItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/spotted.ts:312 drops, src/game/spotted.ts:312)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SpottedModDropsValue {
     pub down: JsSet<GuardId>,
     pub at: Vec<crate::spotted::SpottedModDropsValueAtItem>,
@@ -249,7 +249,7 @@ impl SpottedModDropsValue {
 impl Default for SpottedModDropsValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/spotted.ts:312 SpottedModDropsValue.at, src/game/spotted.ts:312)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SpottedModDropsValueAtItem {
     pub pos: V3,
     pub t: f64,
@@ -332,7 +332,7 @@ impl SpottedOf {
 impl Default for SpottedOf { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SpottedMod {
     /// (src/game/spotted.ts:119 men)
     pub men: JsMap<GuardId, crate::spotted::Man>,

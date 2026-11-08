@@ -1,6 +1,6 @@
 //! The types of `lanes`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// a walk's price list, nav.findPath's penalty: a cell of the mask costs `dear`, any other 1, or at least the pursuit tactics' price where there is one; a man the rule leaves alone pays the tactics' price alone (lanes.ts priceOf, lanePenalty)
@@ -12,7 +12,7 @@ pub enum LanePenalty {
 }
 
 /// (TypeScript: Lane, src/game/lanes.ts:158)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Lane {
     pub id: f64,
     pub from: V3,
@@ -91,7 +91,7 @@ impl Lane {
 impl Default for Lane { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/lanes.ts:174 Lane.re, src/game/lanes.ts:174)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LaneRe {
     pub set: JsSet<crate::Num>,
     pub i: f64,
@@ -108,7 +108,7 @@ impl LaneRe {
 impl Default for LaneRe { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/lanes.ts:177 Lane.can, src/game/lanes.ts:177)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct LaneCan {
     pub who: f64,
     pub t: f64,
@@ -127,7 +127,7 @@ impl LaneCan {
 impl Default for LaneCan { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Flank, src/game/lanes.ts:189)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Flank {
     pub lane: f64,
     pub phase: crate::lanes::FlankPhase,
@@ -150,7 +150,7 @@ impl Flank {
 impl Default for Flank { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum FlankPhase {
     Set,
     Go,
@@ -167,7 +167,7 @@ impl FlankPhase {
 }
 
 /// (TypeScript: Peek, src/game/lanes.ts:190)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Peek {
     pub lane: f64,
     pub phase: crate::lanes::PeekPhase,
@@ -200,7 +200,7 @@ impl Peek {
 impl Default for Peek { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum PeekPhase {
     Out,
     Back,
@@ -215,7 +215,7 @@ impl PeekPhase {
 }
 
 /// (TypeScript: inline at src/game/lanes.ts:192 Peek.fire, src/game/lanes.ts:192)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct PeekFire {
     pub n: f64,
     pub t: f64,
@@ -238,7 +238,7 @@ impl PeekFire {
 impl Default for PeekFire { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/lanes.ts:194 Peek.frag, src/game/lanes.ts:194)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct PeekFrag {
     pub at: Option<V3>,
     pub k: f64,
@@ -269,7 +269,7 @@ impl PeekFrag {
 impl Default for PeekFrag { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: State, src/game/lanes.ts:195)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct State {
     pub lanes: Vec<LanesLaneId>,
     pub serial: f64,
@@ -336,7 +336,7 @@ impl State {
 impl Default for State { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/lanes.ts:199 State.own, src/game/lanes.ts:199)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct StateOwnValue {
     pub ver: f64,
     pub m: Vec<u8>,
@@ -353,7 +353,7 @@ impl StateOwnValue {
 impl Default for StateOwnValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/lanes.ts:202 State.held, src/game/lanes.ts:202)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StateHeldValue {
     pub lane: f64,
     pub t: f64,
@@ -376,7 +376,7 @@ impl StateHeldValue {
 impl Default for StateHeldValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/lanes.ts:202 State.due, src/game/lanes.ts:202)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StateDueItem {
     pub gd: GuardId,
     pub lane: f64,
@@ -395,7 +395,7 @@ impl StateDueItem {
 impl Default for StateDueItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/lanes.ts:203 State.stats, src/game/lanes.ts:203)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StateStats {
     pub lanes: f64,
     pub known: f64,
@@ -452,7 +452,7 @@ impl StateStats {
 impl Default for StateStats { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/lanes.ts:209 State.fragNo, src/game/lanes.ts:209)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StateFragNoValue {
     pub lane: f64,
     pub at: V3,
@@ -469,7 +469,7 @@ impl StateFragNoValue {
 impl Default for StateFragNoValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/lanes.ts:211 State.near, src/game/lanes.ts:211)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StateNearItem {
     pub gd: GuardId,
     pub from: V3,
@@ -617,7 +617,7 @@ impl LanesListItem {
 impl Default for LanesListItem { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LanesMod {
     /// (src/game/lanes.ts:213 states)
     pub states: Option<crate::lanes::State>,
