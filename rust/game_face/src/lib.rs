@@ -34,8 +34,6 @@
 //!
 //! the step
 //!   face_step(h, dt, flags)                   ONE TICK, and what tools/blitz/BRIDGE.md says a host calls round it, in its order:
-//!                                             flag 1 `UPLOAD`: the box world listed again first (where the host uploaded since the last tick; the
-//!                                             listing is also what frees the rows of the frames gone by) ·
 //!                                             `game_step` with the record face_host took (or the game's own `cmd_buf` where none was taken) ·
 //!                                             the autosave's rows face_hostwrite kept · flag 2 `LIGHTS`: the lights' update (a flash's envelope and
 //!                                             its retirement, which the next tick reads) · flag 4 `VIEW`: the host's view of a level on rails · flag 8 `SAVES`: the
@@ -43,7 +41,7 @@
 //!                                             A host that plays calls this one thing a tick with LIGHTS and VIEW up. A host that compares the block
 //!                                             with the TypeScript's leaves them down, compares, and calls face_lights and face_view: the
 //!                                             TypeScript's hashes are taken before its host's half.
-//!   face_upload(h) · face_lights(h, dt) · face_view(h) · face_checkpoint(h, label, n)
+//!   face_lights(h, dt) · face_view(h) · face_checkpoint(h, label, n)
 //!                                             the same by name, for a host that calls them itself (face_checkpoint when it has saved)
 //!
 //! reading back
@@ -425,14 +423,12 @@ pub extern "C" fn face_meter(h: u32, v: f64) {
 }
 
 // ---- the step
-pub const UPLOAD: u32 = 1;
 pub const LIGHTS: u32 = 2;
 pub const VIEW: u32 = 4;
 pub const SAVES: u32 = 8;
 #[no_mangle]
 pub extern "C" fn face_step(h: u32, dt: f64, flags: u32) {
     let said = with(h, |x| {
-        if flags & UPLOAD != 0 { game_run::upload(&mut x.g); }
         if let Some(cmds) = x.cmds.take() { game::game::game_step_seats(&mut x.g, dt, &cmds); } else {
             let cmd = x.cmd.take().or_else(|| x.g.cmd_buf.clone()).expect("face_step: no record of the tick's input (face_host or face_host_half hands one over, or the state carries one in Game.cmd_buf)");
             game_run::step(&mut x.g, dt, &cmd);
@@ -445,10 +441,6 @@ pub extern "C" fn face_step(h: u32, dt: f64, flags: u32) {
         said
     });
     out(said.into_bytes());
-}
-#[no_mangle]
-pub extern "C" fn face_upload(h: u32) {
-    with(h, |x| game_run::upload(&mut x.g));
 }
 #[no_mangle]
 pub extern "C" fn face_view(h: u32) {
