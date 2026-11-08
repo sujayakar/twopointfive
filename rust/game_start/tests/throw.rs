@@ -3,7 +3,7 @@
 use game_start::play::{dist, Opts, Play};
 
 const SEEDS: [u32; 2] = [5, 6];
-const LEVELS: [&str; 6] = ["office.json", "block-squads.json", "records.json", "barracks.json", "killhouse.json", "hall.json"];
+const LEVELS: [&str; 6] = ["office.json", "block.json", "records.json", "barracks.json", "killhouse.json", "hall.json"];
 
 /// What one held menu showed and what its press gave: the man, the spot he throws from (None: where he stands), where it comes to rest.
 type Throw = (game::ids::GuardId, Option<[f64; 2]>, [f64; 2]);

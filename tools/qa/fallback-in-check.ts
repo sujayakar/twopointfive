@@ -6,7 +6,7 @@
 // `falls back through <door> to <x>,<z>` note: the spot he was sent to hold the door from. Read against the level FILE (not the game's own test), that spot
 // must not be out of the building: outside the rectangle round the structure's rooms (scenarios.roomClear.rooms' bounds) with no roof slab over it (a box
 // at least 2 m across whose underside is 2.5 m up or more).
-//   --level  the level file, when the scenario's name is not its file's (block-squads → levels/block-squads.json is found; the office's scenarios have no
+//   --level  the level file, when the scenario's name is not its file's (compound-four → levels/compound.json is found; the office's scenarios have no
 //            structure in a file and cannot be asked here)
 //   --off   plays with the rule off (`--set '{"ROOMFIGHT":{"fallBackIn":false}}'`): the fault as it was — expected to FAIL (exit 1), the proof that it can
 // The seeds: NONE ARE NAMED. Which deals hold a fall-back moves with every change to the fight (the four once named here — 1, 26, 40, 42 — stopped holding

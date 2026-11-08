@@ -2,8 +2,8 @@
  "what": "tools/qa/weather-ident.ts: every name's count of calls and word over its run on the shipped stand (tools/qa/ident-pin.ts; --record writes it)",
  "stands": {
   "shipped": {
-   "run": "compound-four:1:: compound-four:1:clear: compound-four:1:overcast: compound-four:1:rain: compound-four:1:downpour: compound-four:1:fog: compound-four:1:dust: pass-four:1:: warehouse-four:1:rain: block-squads:1:downpour: hostage-rescue:1:: compound-four:1:rain:midday compound-four:1::midday",
-   "end": "compound-four:1::=stalled compound-four:1:clear:=stalled compound-four:1:overcast:=stalled compound-four:1:rain:=stalled compound-four:1:downpour:=stalled compound-four:1:fog:=stalled compound-four:1:dust:=stalled pass-four:1::=stalled warehouse-four:1:rain:=stalled block-squads:1:downpour:=wiped hostage-rescue:1::=rescued compound-four:1:rain:midday=stalled compound-four:1::midday=stalled",
+   "run": "compound-four:1:: compound-four:1:clear: compound-four:1:overcast: compound-four:1:rain: compound-four:1:downpour: compound-four:1:fog: compound-four:1:dust: pass-four:1:: warehouse-four:1:rain: hostage-rescue:1:: compound-four:1:rain:midday compound-four:1::midday",
+   "end": "compound-four:1::=stalled compound-four:1:clear:=stalled compound-four:1:overcast:=stalled compound-four:1:rain:=stalled compound-four:1:downpour:=stalled compound-four:1:fog:=stalled compound-four:1:dust:=stalled pass-four:1::=stalled warehouse-four:1:rain:=stalled hostage-rescue:1::=rescued compound-four:1:rain:midday=stalled compound-four:1::midday=stalled",
    "tree": "the weather's own commit on b0e1ca88",
    "stood": "",
    "words": {
@@ -638,86 +638,6 @@
     "warehouse-four:1:rain:|wind.stormRoofs": {
      "asked": 161,
      "word": "4268956e91967400"
-    },
-    "block-squads:1:downpour:|air.settle": {
-     "asked": 2,
-     "word": "ab637b85554d0c91"
-    },
-    "block-squads:1:downpour:|air.update": {
-     "asked": 2700,
-     "word": "37cfd8ec9b38157d"
-    },
-    "block-squads:1:downpour:|fog.tau": {
-     "asked": 90,
-     "word": "ff062445e6dd69b3"
-    },
-    "block-squads:1:downpour:|weather.airTrans": {
-     "asked": 35037,
-     "word": "3a235f6c68a5822c"
-    },
-    "block-squads:1:downpour:|weather.gap": {
-     "asked": 4,
-     "word": "0ab4c60b24c1e6ac"
-    },
-    "block-squads:1:downpour:|weather.hearMask": {
-     "asked": 1404,
-     "word": "c934e0e4d6ba38fc"
-    },
-    "block-squads:1:downpour:|weather.lot": {
-     "asked": 2700,
-     "word": "ef31c73def565dcb"
-    },
-    "block-squads:1:downpour:|weather.rainBed": {
-     "asked": 90,
-     "word": "ff297b8d229eaaea"
-    },
-    "block-squads:1:downpour:|weather.roofsOf": {
-     "asked": 91,
-     "word": "6d26baa2e31b598b"
-    },
-    "block-squads:1:downpour:|weather.strike": {
-     "asked": 47,
-     "word": "6a25d0c1923a7dcd"
-    },
-    "block-squads:1:downpour:|weather.strokeDue": {
-     "asked": 2700,
-     "word": "29d7a8d297d0c7cb"
-    },
-    "block-squads:1:downpour:|weather.strokeMean": {
-     "asked": 1468,
-     "word": "09c9cf5975c97bb4"
-    },
-    "block-squads:1:downpour:|weather.thunder": {
-     "asked": 43,
-     "word": "be27a3e1aad062fe"
-    },
-    "block-squads:1:downpour:|weather.underRoof": {
-     "asked": 7432,
-     "word": "23f7b9d79c063b6c"
-    },
-    "block-squads:1:downpour:|wet.openSky": {
-     "asked": 2790,
-     "word": "ad2e380517c98ff6"
-    },
-    "block-squads:1:downpour:|wet.step": {
-     "asked": 43200,
-     "word": "4eeeb00604123af9"
-    },
-    "block-squads:1:downpour:|wind.jet": {
-     "asked": 180,
-     "word": "e7b75d9c2d0320c3"
-    },
-    "block-squads:1:downpour:|wind.noise": {
-     "asked": 2790,
-     "word": "33814ddd5a28d574"
-    },
-    "block-squads:1:downpour:|wind.storm": {
-     "asked": 2880,
-     "word": "36c7a8ff5a9c60c4"
-    },
-    "block-squads:1:downpour:|wind.stormRoofs": {
-     "asked": 90,
-     "word": "88760375257a207b"
     },
     "hostage-rescue:1::|weather.airTrans": {
      "asked": 16731,
