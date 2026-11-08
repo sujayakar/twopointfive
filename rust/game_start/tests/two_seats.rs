@@ -341,3 +341,67 @@ fn store(seed: u32) -> Scene {
     s.defender("far", [32.25, 10.25], "far-yard").defender("store", [17.25, 9.25], "store-yard");
     s
 }
+
+/// A game of two with the partner's rules up (`?pair`), every squad silent, one defender left, held.
+fn partners(seed: u32) -> (Play, GuardId) {
+    let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad=2", &Opts { seed, seats: 2, ..Default::default() });
+    p.g.god_mode = true;
+    p.run(0.3);
+    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
+    p.drop_all_but(&foes[..1]);
+    let t1 = foes[0];
+    p.g.k.pairup.on = true;
+    game::pairup::pair_up_apply(&mut p.g, None);
+    p.g.k.silent.on = true;
+    for i in 0..2 { let sn = p.g.seats[i]; game::seats::with_seat(&mut p.g, sn, &mut |g| game::silent::set_silent(g, true, None)); }
+    p.frame();
+    (p, t1)
+}
+/// THE RULE: each player has the partner's rows on his own menu and his own word for the go: a mark waiting on one player's man goes on that player's F, and on nobody else's.
+/// A failure means the second player has no partner's rows, or the first player's F sends the second player's man.
+#[test]
+fn each_player_has_his_own_partner() {
+    for s in SEEDS {
+        for seat in 0..2 {
+            let (mut p, t1) = partners(s);
+            let sn = p.g.seats[seat];
+            let has = |p: &Play, sn, id: &str| { let seat = game::seats::seat(&p.g, sn); seat.orders.defs.iter().any(|d| p.g.tab.orders_order_def[*d].id == id) };
+            assert!(has(&p, sn, "pairMark"), "seed {s}: seat {seat} has no partner's rows on his menu");
+            let mine = game::orders::squad_orders_squad(&p.g, &game::seats::seat(&p.g, sn));
+            let at = [22.0, AISLE];
+            const EAST: f64 = std::f64::consts::FRAC_PI_2;
+            let theirs = game::orders::squad_orders_squad(&p.g, &game::seats::seat(&p.g, p.g.seats[1 - seat]));
+            for _ in 0..10 {
+                p.pin_man(t1, at, EAST, game::game::GuardState::Patrol, 0.0);
+                p.seat_stands(seat, [11.0, 18.5]);
+                for &m in &mine { p.man_stands(m, [13.0, AISLE]); }
+                p.seat_stands(1 - seat, [3.0, 3.0]);
+                for &m in &theirs { p.man_stands(m, [3.5, 3.5]); }
+                p.frame();
+            }
+            let picked = game::orders::squad_orders_people_near(&p.g, &game::seats::seat(&p.g, sn), [at[0], 0.0, at[1]]).map(|(h, _)| h);
+            assert_eq!(picked, Some(t1), "seed {s}: seat {seat}'s cursor cannot pick a man for his partner");
+            let why = game::seats::with_seat(&mut p.g, sn, &mut |g| {
+                let t = game::orders::OrderTarget::Foe(game::orders::OrderTargetFoe { at: [at[0], 0.0, at[1]], foe: t1 });
+                game::orders::squad_orders_give(g, "pairMark", Some(&t), Some(game::orders::Who::All), None)
+            });
+            assert_eq!(why, None, "seed {s}: seat {seat}'s mark was refused");
+            p.pin_man(t1, at, EAST, game::game::GuardState::Patrol, 0.0);
+            p.frame();
+            let job = |p: &Play| mine.iter().find_map(|m| p.g.pair.jobs.get(*m).copied());
+            assert!(job(&p).map_or(false, |j| !j.go), "seed {s}: seat {seat}'s man waits on the mark: {:?}", job(&p));
+            // the other player's F sends nobody of his
+            let other = p.g.tab.cmd_seat[p.g.seats[1 - seat]].input;
+            p.g.tab.input[other].pressed.add(String::from("KeyF"));
+            p.pin_man(t1, at, EAST, game::game::GuardState::Patrol, 0.0);
+            p.net_frame(0);
+            assert!(job(&p).map_or(false, |j| !j.go), "seed {s}: the other player's F sent seat {seat}'s man");
+            let marks = p.g.stats.pairorders.marks;
+            let own = p.g.tab.cmd_seat[sn].input;
+            p.g.tab.input[own].pressed.add(String::from("KeyF"));
+            p.pin_man(t1, at, EAST, game::game::GuardState::Patrol, 0.0);
+            p.net_frame(0);
+            assert!(p.g.stats.pairorders.marks > marks, "seed {s}: seat {seat}'s own F did not send his man: {:?}", job(&p));
+        }
+    }
+}
