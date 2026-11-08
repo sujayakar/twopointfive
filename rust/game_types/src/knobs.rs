@@ -4824,7 +4824,6 @@ impl Default for DoormannersK { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Copy, Debug)]
 pub struct BreaksK {
     pub share: crate::knobs::BreaksKShare,
-    pub small_pool_chip_k: f64,
     pub refuse_chips: [f64; 2],
     pub crumble_chips: [f64; 2],
     pub sized_chips: [f64; 2],
@@ -4849,7 +4848,6 @@ impl BreaksK {
     pub fn zeroed() -> Self {
         BreaksK {
             share: crate::knobs::BreaksKShare::zeroed(),
-            small_pool_chip_k: 0.0,
             refuse_chips: [0.0; 2],
             crumble_chips: [0.0; 2],
             sized_chips: [0.0; 2],
@@ -4877,14 +4875,12 @@ impl Default for BreaksK { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Copy, Debug)]
 pub struct BreaksKShare {
     pub big: crate::knobs::BreaksKShareBig,
-    pub small: crate::knobs::BreaksKShareSmall,
 }
 impl BreaksKShare {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         BreaksKShare {
             big: crate::knobs::BreaksKShareBig::zeroed(),
-            small: crate::knobs::BreaksKShareSmall::zeroed(),
         }
     }
 }
@@ -4908,25 +4904,6 @@ impl BreaksKShareBig {
     }
 }
 impl Default for BreaksKShareBig { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/breakTable.ts:94 BreaksKShare.small, src/game/breakTable.ts:94)
-#[derive(Clone, Copy, Debug)]
-pub struct BreaksKShareSmall {
-    pub thrown: f64,
-    pub heap: f64,
-    pub furniture: f64,
-}
-impl BreaksKShareSmall {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BreaksKShareSmall {
-            thrown: 0.0,
-            heap: 0.0,
-            furniture: 0.0,
-        }
-    }
-}
-impl Default for BreaksKShareSmall { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/breakTable.ts:107 BreaksK.heap, src/game/breakTable.ts:107)
 #[derive(Clone, Copy, Debug)]
@@ -7804,25 +7781,6 @@ impl AutopilotK {
     }
 }
 impl Default for AutopilotK { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/planlay.ts:36 PLANLAY, src/game/planlay.ts:36)
-#[derive(Clone, Copy, Debug)]
-pub struct PlanlayK {
-    pub on: bool,
-    pub keep: bool,
-    pub sticky: bool,
-}
-impl PlanlayK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PlanlayK {
-            on: false,
-            keep: false,
-            sticky: false,
-        }
-    }
-}
-impl Default for PlanlayK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/cmdring.ts:50 CMDRING, src/game/cmdring.ts:50)
 #[derive(Clone, Debug)]
@@ -12911,21 +12869,6 @@ impl DefuseK {
 }
 impl Default for DefuseK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/par.ts:24 PAR, src/game/par.ts:24)
-#[derive(Clone, Copy, Debug)]
-pub struct ParK {
-    pub on: bool,
-}
-impl ParK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ParK {
-            on: false,
-        }
-    }
-}
-impl Default for ParK { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/game/kit.ts:1170 ISSUE, src/game/kit.ts:1170)
 #[derive(Clone, Copy, Debug)]
 pub struct IssueK {
@@ -13467,7 +13410,7 @@ pub fn page_doormanners() -> DoormannersK {
 }
 
 pub fn page_breaks() -> BreaksK {
-    crate::knobs::BreaksK { share: crate::knobs::BreaksKShare { big: crate::knobs::BreaksKShareBig { thrown: 5.0, heap: 5.0, furniture: 8.0 }, small: crate::knobs::BreaksKShareSmall { thrown: 4.0, heap: 1.0, furniture: 4.0 } }, small_pool_chip_k: 1.4285714285714286, refuse_chips: [6.0, 8.0], crumble_chips: [4.0, 6.0], sized_chips: [4.0, 14.0], sized_span: [0.05, 0.5], china_land: 3.5, china_max: 0.06, core_tint: 0.3, chip_tint: 0.5, heap: crate::knobs::BreaksKHeap { span: [0.15, 0.55], out: [0.0, 0.7], tip: [0.07, 0.24] }, max_standing_planes: 4.0, across_deg: [35.0, 55.0], look_edges: true, look_heap: true, loose_min: 0.08, kink: crate::knobs::BreaksKKink { deg: [25.0, 42.0], skew: 20.0, off: 0.4, min_long: 0.2, gap_secs: 0.5 }, head: crate::knobs::BreaksKHead { on: false, from: 1.9, deep: [0.2, 0.3], planes: 2.0, across: [14.0, 32.0], min_room: 0.3, most_of_width: 0.45 }, steel: crate::knobs::BreaksKSteel { sheet: 0.008, kink: [9.0, 24.0], dents: [3.0, 5.0], dent: [0.025, 0.06], dent_most: 0.14, rim: 0.035, lip: 0.004, inside: 0.16 }, stud: crate::knobs::BreaksKStud { half: 0.02, depth_k: 0.7, foot: 0.13, albedo: [0.56, 0.57, 0.6], rough: 0.35, metal: true, does: crate::scene_materials::DoesWord::UnnamedLightGrey } }
+    crate::knobs::BreaksK { share: crate::knobs::BreaksKShare { big: crate::knobs::BreaksKShareBig { thrown: 5.0, heap: 5.0, furniture: 8.0 } }, refuse_chips: [6.0, 8.0], crumble_chips: [4.0, 6.0], sized_chips: [4.0, 14.0], sized_span: [0.05, 0.5], china_land: 3.5, china_max: 0.06, core_tint: 0.3, chip_tint: 0.5, heap: crate::knobs::BreaksKHeap { span: [0.15, 0.55], out: [0.0, 0.7], tip: [0.07, 0.24] }, max_standing_planes: 4.0, across_deg: [35.0, 55.0], look_edges: true, look_heap: true, loose_min: 0.08, kink: crate::knobs::BreaksKKink { deg: [25.0, 42.0], skew: 20.0, off: 0.4, min_long: 0.2, gap_secs: 0.5 }, head: crate::knobs::BreaksKHead { on: false, from: 1.9, deep: [0.2, 0.3], planes: 2.0, across: [14.0, 32.0], min_room: 0.3, most_of_width: 0.45 }, steel: crate::knobs::BreaksKSteel { sheet: 0.008, kink: [9.0, 24.0], dents: [3.0, 5.0], dent: [0.025, 0.06], dent_most: 0.14, rim: 0.035, lip: 0.004, inside: 0.16 }, stud: crate::knobs::BreaksKStud { half: 0.02, depth_k: 0.7, foot: 0.13, albedo: [0.56, 0.57, 0.6], rough: 0.35, metal: true, does: crate::scene_materials::DoesWord::UnnamedLightGrey } }
 }
 
 pub fn page_furn() -> FurnK {
@@ -13740,10 +13683,6 @@ pub fn page_squad40() -> Squad40K {
 
 pub fn page_autopilot() -> AutopilotK {
     crate::knobs::AutopilotK { on: true, show_secs: 4.0, keep_bangs: 1.0, contact_m: 9.0, replan: true, plain: true, restack: true }
-}
-
-pub fn page_planlay() -> PlanlayK {
-    crate::knobs::PlanlayK { on: true, keep: true, sticky: true }
 }
 
 pub fn page_cmdring() -> CmdringK {
@@ -14142,10 +14081,6 @@ pub fn page_defuse() -> DefuseK {
     crate::knobs::DefuseK { on: true, work_secs: 6.0, reach: 1.3, marker_m: 5.0, shift: 0.45, start_m: 1.2, lethal_m: 5.0, wound_m: 9.0, radius: 3.5, power: 1.0, warn_secs: 10.0 }
 }
 
-pub fn page_par() -> ParK {
-    crate::knobs::ParK { on: true }
-}
-
 pub fn page_issue() -> IssueK {
     crate::knobs::IssueK { on: true, whole: true, picked: true }
 }
@@ -14322,7 +14257,6 @@ pub struct Knobs {
     pub squadthrow: SquadthrowK,
     pub squad40: Squad40K,
     pub autopilot: AutopilotK,
-    pub planlay: PlanlayK,
     pub cmdring: CmdringK,
     pub torch: TorchK,
     pub backkey: BackkeyK,
@@ -14422,7 +14356,6 @@ pub struct Knobs {
     pub lesson: LessonK,
     pub snatch: SnatchK,
     pub defuse: DefuseK,
-    pub par: ParK,
     pub issue: IssueK,
     pub verdict: VerdictK,
     pub unseen: UnseenK,
@@ -14571,7 +14504,6 @@ impl Knobs {
             squadthrow: page_squadthrow(),
             squad40: page_squad40(),
             autopilot: page_autopilot(),
-            planlay: page_planlay(),
             cmdring: page_cmdring(),
             torch: page_torch(),
             backkey: page_backkey(),
@@ -14671,7 +14603,6 @@ impl Knobs {
             lesson: page_lesson(),
             snatch: page_snatch(),
             defuse: page_defuse(),
-            par: page_par(),
             issue: page_issue(),
             verdict: page_verdict(),
             unseen: page_unseen(),

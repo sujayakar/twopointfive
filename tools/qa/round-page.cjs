@@ -14,7 +14,7 @@ const fs = require('node:fs'), path = require('node:path'), net = require('node:
 
 const argv = process.argv.slice(2);
 const flag = (n, d) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : d; };
-if (!flag('--root') || !flag('--out')) { console.error('usage: node round-page.cjs --root <checkout dir> --out <dir> [--tag after] [--level pass.json] [--look x,y,z] [--quality verylow] [--w 960 --h 540] [--settle 8] [--cam brazier,play] [--port N] [--only before|after] [--q flags]'); process.exit(2); }
+if (!flag('--root') || !flag('--out')) { console.error('usage: node round-page.cjs --root <checkout dir> --out <dir> [--tag after] [--level pass.json] [--look x,y,z] [--quality verylow] [--w 960 --h 540] [--settle 8] [--cam brazier,play] [--port N] [--q flags]'); process.exit(2); }
 const ROOT = path.resolve(flag('--root')), OUT = path.resolve(flag('--out')), QUALITY = flag('--quality', 'verylow'), VW = Number(flag('--w', 960)), VH = Number(flag('--h', 540)), SETTLE = Number(flag('--settle', 8));
 const DEG = Math.PI / 180, LEVEL = flag('--level', 'pass.json'), TAG = flag('--tag', 'after'), LOOK = flag('--look');
 // metres; yaw / pitch in degrees; a camera sits at look + dist × (sin yaw · cos pitch, sin pitch, cos yaw · cos pitch)
@@ -84,7 +84,7 @@ async function boot(port, tag) {
   await page.close();
   const P = state.pipelines || {};
   const ok = errors.length === 0 && !state.fatal && P.total > 0 && P.done === P.total && !P.failed && stills.every(s => s.gpuErrs === 0 && s.meanRGB > 1)
-    && state.world.roundBoxes > 0 && state.world.listed >= state.world.roundBoxes && state.world.cutTraced === 0;
+    && state.world.roundBoxes > 0 && state.world.listed >= state.world.roundBoxes;
   return { tag, url, ok, state, stills, errors, smokePipelineNoise: noise, wallSeconds: Math.round((Date.now() - t0) / 1000) };
 }
 

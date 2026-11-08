@@ -40,7 +40,7 @@ import { FOG } from './fogofwar';
 import { STICKY, stickyVisit } from './stickycam';   // (read inside functions only)
 import type { Game } from './game';
 import { lessonGroup } from '../scene/scenarios';
-import { RUST_PASS, RUST_SURFACE, crossToRust } from './crossing';
+import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 export const QUIETFOG: { on: boolean; def: QuietRung; wand: boolean; solo: boolean } = { on: false, def: 'off', wand: false, solo: false };
 /** the solo night's row is one the lever is live on (QUIETFOG.solo): the screens ask this where a quiet row is asked quietFogRow */
@@ -118,7 +118,7 @@ export function setQuietFog(rung: QuietRung, keep = true) { { const __s = RUST_S
   }
 }
 /** the pick forgotten, to be read from the store again (the checks; a page never needs it) */
-export function quietFogForget(): void { return crossToRust('quietFogForget', undefined, []) as any; }
+export function quietFogForget() { PICK = null; KEPT = false; CAMS = null; CAMS_READ = false; }
 
 /** a mission's row is one the lever is live on: a quiet mission that is not a Training lesson, while the rule is on */
 export const quietFogRow = (e: { kind: string; group?: string } | null | undefined): boolean => QUIETFOG.on && !!e && e.kind === 'quiet' && !lessonGroup(e.group);

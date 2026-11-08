@@ -492,7 +492,7 @@ pub fn fresh(g: &mut crate::game::Game) -> crate::laststand::State {
     rot.set(LineKind::MovedFree, 0.0);
     State {
         post, key, die, next_at: 0.0, check: None, known: JsSet::new(), named: JsMap::new(), spots: JsMap::new(), at: JsMap::new(), stand: None,
-        lone_said: false, few_n: 0.0, told: JsSet::new(), hint: None, said: Vec::new(), stats: new_stats(), stale: false, rot, cls_at: Vec::new(), later: Vec::new(),
+        lone_said: false, few_n: 0.0, told: JsSet::new(), said: Vec::new(), stats: new_stats(), stale: false, rot, cls_at: Vec::new(), later: Vec::new(),
     }
 }
 
@@ -517,27 +517,24 @@ pub fn of_stand(g: &crate::game::Game, s: &crate::laststand::Stand, gd: GuardId)
 /// The owner's bit: the stand claims its men and lets go of every other.   (laststand.ts standSay)
 pub fn stand_say(g: &mut crate::game::Game) {
     let s = g.m.laststand.states.as_ref().and_then(|st| st.stand.clone());
-    let rule = crate::owner::own().stand;
+    let rule = crate::owner::by::STAND;
     let t = g.time;
     let guards = g.guards.clone();   // (neither call touches the list)
     for gd in guards {
         let has = match &s { Some(s) => of_stand(g, s, gd), None => false };
-        if has { crate::owner::claim_man(g, gd, rule, t, None); } else { crate::owner::release_man(g, gd, rule, t); }
+        if has { crate::owner::claim(g, gd, rule, t, None); } else { crate::owner::release(g, gd, rule, t); }
     }
 }
 
 /// Once a frame from RoomFight.tick, after the defenders', the press's and the buddy call's own ticks.   (laststand.ts lastStandTick)
 pub fn last_stand_tick(g: &mut crate::game::Game) {
     step_stand(g);
-    if g.k.laststand.regroup { stand_say(g); }
 }
 
 /// The frame of the endgame: 'most are down' starts it; then the lines waiting, the check, who has moved, the stand.   (laststand.ts stepStand)
 pub fn step_stand(g: &mut crate::game::Game) {
-    if !g.k.laststand.regroup {
-        // (the switch flipped mid-stand; callOut is settled on, so the frame goes on)
-        if let Some(s) = g.m.laststand.states.as_ref().and_then(|st| st.stand.clone()) { dissolve(g, &s); }
-    }
+    // (the switch flipped mid-stand; callOut is settled on, so the frame goes on)
+    if let Some(s) = g.m.laststand.states.as_ref().and_then(|st| st.stand.clone()) { dissolve(g, &s); }
     if !crate::roomclear::room_clear_scenario_active(g) || g.room_clear.end.is_some() || g.rescue.active { return; }
     if g.m.laststand.states.as_ref().map_or(true, |st| st.stale) {
         let all = g.night_breach.hostiles.clone();
@@ -585,38 +582,18 @@ pub fn last_stand_stop(g: &mut crate::game::Game) {
     st.spots.clear();
     st.at.clear();
     st.later.clear();
-    st.hint = None;
     st.stale = true;
 }
 
-/// roomclear.ts objective(): the rooms their net has named, the named places that are no room of it, and a key that changes when they do.   (laststand.ts lastStandHint)
-pub fn last_stand_hint(g: &mut crate::game::Game) -> Option<crate::laststand::Hint> {
-    let (named, spotted) = match g.m.laststand.states.as_ref() {
-        None => return None,
-        Some(st) if st.stale => return None,
-        Some(st) if st.hint.is_some() => (Vec::new(), Vec::new()),
-        Some(st) => (
-            st.named.iter().map(|(d, id)| (d, id.clone())).collect::<Vec<(RoomfightDefId, String)>>(),
-            st.spots.iter().map(|(d, x)| (d, x.clone())).collect::<Vec<(RoomfightDefId, Spot)>>(),
-        ),
-    };
-    if st(g).hint.is_none() {
-        let mut rooms: JsSet<String> = JsSet::new();
-        for (d, id) in named { if alive(g, d) { rooms.add(id); } }
-        let mut spots: Vec<Spot> = Vec::new();
-        for (d, x) in spotted { if alive(g, d) && !spots.iter().any(|y| y.name == x.name) { spots.push(x); } }
-        let mut ids = rooms.keys();
-        ids.sort();
-        let mut key = ids.join(",");
-        if !spots.is_empty() {
-            let names: Vec<String> = spots.iter().map(|x| x.name.clone()).collect();
-            key.push('|');
-            key.push_str(&names.join(","));
-        }
-        st(g).hint = Some(Hint { key, rooms, spots });
-    }
-    let h = st(g).hint.as_ref().unwrap();
-    if !h.rooms.is_empty() || !h.spots.is_empty() { Some(h.clone()) } else { None }
+/// roomclear.ts objective(): the rooms their net has named and the named places that are no room of it, by the men still up who said so
+pub fn last_stand_hint(g: &crate::game::Game) -> Option<crate::laststand::Hint> {
+    let st = g.m.laststand.states.as_ref()?;
+    if st.stale { return None; }
+    let mut rooms: JsSet<String> = JsSet::new();
+    for (d, id) in st.named.iter() { if alive(g, d) { rooms.add(id.clone()); } }
+    let mut spots: Vec<Spot> = Vec::new();
+    for (d, x) in st.spots.iter() { if alive(g, d) && !spots.iter().any(|y| y.name == x.name) { spots.push(x.clone()); } }
+    if rooms.is_empty() && spots.is_empty() { None } else { Some(Hint { rooms, spots }) }
 }
 
 #[cfg(test)]

@@ -29,7 +29,7 @@ pub fn alive(g: &Game, gd: GuardId) -> bool {
 
 /// Alive, not held, not dazzled, not staggered: he can speak on the net.   (rescuecheck.ts fit)
 pub fn fit(g: &Game, gd: GuardId) -> bool {
-    alive(g, gd) && g.gd[gd].held.is_none() && g.time >= g.gd[gd].dazzled_until && g.time >= g.gd[gd].stagger_until
+    alive(g, gd) && g.gd[gd].held.is_none() && !crate::control::man::blind(g, gd) && !crate::control::man::staggered(g, gd)
 }
 
 /// Alert or searching.   (rescuecheck.ts roused)
@@ -94,13 +94,13 @@ pub fn walking(g: &Game, gd: GuardId) -> bool {
 
 /// Said as the rescue's tick opens, the frame's senses all in: the record of who is walking.   (rescuecheck.ts rescueCheckSay)
 pub fn rescue_check_say(g: &mut Game) {
-    let rule = crate::owner::own().walk;
+    let rule = crate::owner::by::WALK;
     let mut i = 0;
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
         let t = g.time;
-        if walking(g, gd) { crate::owner::claim_man(g, gd, rule, t, None); } else { crate::owner::release_man(g, gd, rule, t); }
+        if walking(g, gd) { crate::owner::claim(g, gd, rule, t, None); } else { crate::owner::release(g, gd, rule, t); }
     }
 }
 

@@ -1,5 +1,5 @@
 // The DIRECTOR: a level's bespoke scripting, run on the game clock (docs/design/level-scripting.md — milestone M1; the notebook is docs/internal/director.md).
-// ONE LEVEL HAS A SCRIPT TODAY: the first tutorial mission's (levels/tut-sky.script.ts, attached by scene/levelLoad.ts off scene/levelScripts.ts; its one play
+// ONLY THE TUTORIAL'S LEVELS HAVE A SCRIPT TODAY: each tutorial mission's (levels/<name>.script.ts, attached by scene/levelLoad.ts off scene/levelScripts.ts; its one play
 // program 'tutorial' is started by game/rails.ts, and only with that switch on). The office's (the night and day showcases, its programs 'night' and 'breach')
 // was removed with the two showcases, so on every other level the Director has no manifest and idles (tick() returns on its first line); the checks stage
 // scripts of their own (tools/qa/director-probes.ts).
@@ -13,18 +13,18 @@
 //                c.spawn / despawn / unit / order / arrived / release / rout / drill.breach|clear|hold|exchange / say / radio / control — world c.lights.* / doors.* /
 //                stimulus.charge|burst / objective / chronicle — and, ONLY in programs declared showcase: true, c.stage / puppet / press / click / camera.* / caption /
 //                chapters / fade / variant / shift (they throw elsewhere, and scanShowcaseVerbs finds them statically).
-// How it runs: Game.director.tick(dt, input, cam) inside Game.update immediately before tacticsTick — orders issued this frame move men this frame; triggers read last
+// How it runs: Game.director.tick(dt) inside Game.update immediately before tacticsTick — orders issued this frame move men this frame; triggers read last
 // frame's settled world plus this frame's g.events. Beats are GENERATORS resumed by an explicit scheduler (never async/await: a Promise continuation lands after
 // Game.update, a setTimeout wait runs on wall time — both wrong under fixed stepping); each tick: drills tick → triggers → every running beat whose condition now holds
 // is resumed synchronously until it yields an unsatisfied one (≤ MAX_RESUMES a beat a tick) → the showcase tail (camera shot, veil, the cut). start(name) is
 // SYNCHRONOUS: it stages the world between frames exactly as the old Breach.start() did (onStart beats run their synchronous prefix there and then). Every it.next()
-// is try/caught: a throw fails that beat, logs it with its step, releases the men it held to the AI, drops a camera pin it held, and the frame goes on (strict, set by
-// the harness, rethrows). Everything is logged: director.log {t, run, program, beat, kind, what, data} — trigger fires, beat start / label / note / end, spawns,
+// is try/caught: a throw fails that beat, logs it with its step, releases the men it held to the AI, drops a camera pin it held, and the frame goes on (what a HOST does with
+// a failed beat is the host's: the harness throws after the step on the `error` row filed here, tools/qa/headless.ts). Everything is logged: director.log {t, run, program, beat, kind, what, data} — trigger fires, beat start / label / note / end, spawns,
 // drill beats (forwarded with the drill's own clock), radio lines, stimuli, camera shots — the probes' substrate and, one day, the panel's timeline. Nothing here
 // reads performance.now() or Math.random: a program's dice are its own mulberry32.
 // M1's cut (the doc §2.3 / §7): beats are atomic — a checkpoint is refused while any program runs (savestate.ts canSave asks blocksSave()); volumes got their runtime
 // slot (Level.volumes) so onEnter is real; loadouts and marks are declared IN the script with literals until LevelData v2 (M3) gives them a home; drill.advance and
-// the units[] / director save slices wait for M3; the tour stays demo.ts (M2). With no program running tick() is a return on its first line: the game is the game.
+// the units[] / director save slices wait for M3. With no program running tick() is a return on its first line: the game is the game.
 // WHAT THE NIGHT SHOWCASE ADDED (the removed program 'night' — the tour as a story; the verbs stay), all small,
 // all documented at their sites: D.device(id) (a handle on a level device — the keypad — linted like the doors); c.learnCode(device, from) (devices.ts learnCode: the
 // man in Sam's arm gives the pad's digits and Sam KNOWS them — the code row opens the door a minute later); c.say(unit) is FORCED (a scripted line is deliberate: a
@@ -67,7 +67,8 @@ import { setDaylight, isDaylight, setGroup } from './lighting';
 import { cancelActions, teleportPlayer } from './player';
 import './combat';
 import { learnCode as devicesLearnCode } from './devices';
-import { chronicle, chronRadio, chronObjective, roomOf } from './chronicle';
+import { chronicle, chronRadio, chronObjective } from './chronicle';
+import { roomOf } from './rooms';
 import { radioHand } from './handwork';
 import { runnerBreak } from './runner';   // (asked inside the drill's ending check and a beat's `rout` / `routed` only: false with its switch off)
 import { hasHim, OWN } from './owner';
@@ -426,12 +427,9 @@ export class Director {
   /** the beat log across runs (a ring of LOG_CAP rows — a whole run's worth and more); `run` = the running program, `lastRun` = the one before (its rows stay in the log for the probes) */
   readonly log: LogRow[] = [];
   run: Run | null = null; lastRun: { serial: number; name: string; t: number; finished: boolean } | null = null;
-  /** rethrow a beat's exception instead of failing the beat and going on (tools/qa/headless.ts sets it: a probe must go red, a player's frame must not die) */
-  strict = false;
   /** called at the very end of a program's teardown: main.ts puts the start card back after a finished showcase */
   onProgramEnd: ((name: string, finished: boolean) => void) | null = null;
   frame: DirectorFrame | null = null;
-  private cam: FollowCamera | null = null; private input: Input | null = null;
   private serial = 0; private seen = new SideSet<GameEvent>(); private exiting = false;
   /** c.press / c.click land here and go into the Input at the top of the NEXT Game.update (injectInput): the tick runs after updatePlayer / updateInteract have read this frame's input, and
    *  main.ts clears the edge sets at the end of the frame — pressed there and then, a beat's key would reach nobody */
@@ -449,8 +447,8 @@ export class Director {
     this.report();
   }
   private report() { const errs = this.problems.filter(p => p.level === 'error'); if (errs.length && typeof console !== 'undefined') console.error(`level script NOT armed — ${errs.length} lint error(s):\n  ` + errs.map(p => p.what).join('\n  ')); }
-  /** hand the Director the camera and the input before the first tick (main.ts): a program started before any frame can then pin its first shot and lock the keys at once */
-  attach(o: { cam?: FollowCamera | null; input?: Input | null }) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Director.attach', this, [o]); if (__r !== RUST_PASS) return __r as any; } } if (o.cam) this.cam = o.cam; if (o.input) this.input = o.input; }
+  // (THE HOST'S CAMERA AND KEYS ARE THE GAME'S TO NAME, NOT THE DIRECTOR'S TO KEEP: a show pins `g.hostCam` and locks `g.hostInput`, which every host hands
+  //  the game once, at its stand — host/standup.ts standGame. A host that handed none shows nothing of a pin or a lock, as a Director nobody attached did)
   get programs(): string[] { return this.manifest ? [...this.manifest.programs.keys()] : []; }
   /** is a SHOWCASE program holding the frame right now (main.ts: the camera, the listener, the veil, the HUD are its) */
   get showing(): boolean { return !!this.run?.show && !this.run.ended; }
@@ -462,7 +460,7 @@ export class Director {
     const P = this.manifest.programs.get(name); if (!P) return `no program '${name}' (programs: ${this.programs.join(', ') || 'none'})`;
     if (!this.armed) return 'the script is not armed (lint errors — see the console)';
     if (this.run && !this.run.ended) return `program '${this.run.name}' is running`;
-    if (P.opts.showcase && this.g.touring) return 'the tour or attract mode has the floor';   // (a caller stops them first; a bare start() over them would fight their resets — review 08-10 #22)
+    if (P.opts.showcase && this.g.touring) return 'attract mode has the floor';   // (a caller stops them first; a bare start() over them would fight their resets — review 08-10 #22)
     if (P.opts.showcase && (this.g.qrf?.state !== undefined && this.g.qrf.state !== 'idle' || this.g.guards.some(x => x.unit))) return 'a response unit is on the floor (the cast would not fit the character budget)';
     if (P.opts.showcase && !this.g.tune.teams && [...this.manifest.loadouts.values()].length && [...P.beats.values()].some(B => /\.\s*spawn\s*\(/.test(String(B.fn)))) return 'sides are switched off (tune.teams) — the cast cannot be spawned';   // (only a program whose beats spawn anybody: the night showcase casts the shift itself and runs with sides off)
     return null;
@@ -598,8 +596,7 @@ export class Director {
     this.push({ beat: b.name, kind: 'error', what: `threw at step ${b.step}: ${msg}` });
     if (typeof console !== 'undefined') console.error(`director: beat '${R.name}/${b.name}' failed at step ${b.step} — ${msg}`);
     for (const id of b.touched) { const u = R.units.get(id); const gd = u ? u.gd : this.g.guards.find(x => x.char.id === id) ?? null; if (gd && gd.script && gd.state !== 'dead' && !R.drills.some(d => !d.done && d.men.includes(gd))) endGuardScript(gd, gd.team === 'guard' ? 'search' : 'alert'); }   // armed men are never left frozen (a man a live drill still holds stays the drill's)
-    if (b.pinnedCamera && this.cam) { this.cam.pin = null; if (R.show) R.show.shot = null; }
-    if (this.strict) throw e;
+    if (b.pinnedCamera && this.g.hostCam) { this.g.hostCam.pin = null; if (R.show) R.show.shot = null; }
     if (R.show && !R.finishing) { R.failedShow = true; this.beginFinish(R); }   // a broken show does not hold the screen: cut, restore, and report it stopped rather than finished
   }
   private beginFinish(R: Run) {
@@ -616,7 +613,7 @@ export class Director {
       S.ending.t += dt; S.fade = Math.min(1, S.fade + dt / (R.def.opts.endVeil ?? 0.35));
       if (S.ending.t > (R.def.opts.endHold ?? 0.5) && S.fade >= 1) { this.stop(!R.failedShow); return; }
     } else {
-      if (S.shot && this.cam && !S.handedOver) this.frameShot(S, S.shot, dt);
+      if (S.shot && this.g.hostCam && !S.handedOver) this.frameShot(S, S.shot, dt);
       if (S.fadeRate > 0 && S.fade !== S.fadeTo) { const step = dt * S.fadeRate; S.fade = S.fade < S.fadeTo ? Math.min(S.fadeTo, S.fade + step) : Math.max(S.fadeTo, S.fade - step); }
     }
     this.frame = { look: S.handedOver ? null : v3.copy(S.look), caption: S.caption, sub: S.sub, fade: S.fade, lowerThird: !!R.def.opts.lowerThird && !S.handedOver, program: R.name, handedOver: S.handedOver };
@@ -628,13 +625,13 @@ export class Director {
     const u = smoothstep(0.1, 0.9, shot.t / s.dur);
     const yaw = (s.yawTo !== undefined ? s.yaw + wrapAngle((s.yawTo - s.yaw) * DEG) / DEG * u : s.yaw) * DEG;
     const dist = s.distTo !== undefined ? s.dist + (s.distTo - s.dist) * u : s.dist;
-    this.cam!.pin = { look: v3.copy(S.look), yaw, pitch: s.pitch * DEG, dist };
+    this.g.hostCam!.pin = { look: v3.copy(S.look), yaw, pitch: s.pitch * DEG, dist };
   }
   private lookOf(s: CameraShotSpec): Vec3 { const p = typeof s.look === 'function' ? s.look() : this.placeOf(s.look); return [p[0], s.lookY ?? 0.8, p[2]]; }
 
   // ---------------------------------------------------------------- showcase plumbing (Breach.start / restore, generalised: every show did exactly this by hand)
   private enterShow(R: Run) {
-    const g = this.g, cam = this.cam, input = this.input;
+    const g = this.g, cam = g.hostCam, input = g.hostInput;
     R.show = { saved: { ai: g.aiEnabled, god: g.godMode, invisible: g.playerInvisible, quiet: g.quietUtility, touring: g.touring, cam: cam ? { yaw: cam.yaw, pitch: cam.pitch, dist: cam.desiredDistance } : null },
       look: v3.copy(g.followPos()), shot: null, shotI: -1, chapterT0: 0, chapters: [], caption: '', sub: '', fade: 0, fadeTo: 0, fadeRate: 0, ending: null, benched: null, variantOn: false, puppet: false, weatherSaved: null, missionOn: false, handedOver: false, chaosSet: false };
     g.quietUtility = true; g.touring = true;                        // the tour's terms: nothing here is the mission's, the alarm's or the log's business
@@ -648,7 +645,7 @@ export class Director {
     g.msg(`${R.name} — P to stop`);
   }
   private exitShow(R: Run) {
-    const g = this.g, S = R.show!, cam = this.cam, input = this.input, sv = S.saved;
+    const g = this.g, S = R.show!, cam = g.hostCam, input = g.hostInput, sv = S.saved;
     this.restoreWeather(S); this.restoreChaos(S);
     if (S.handedOver) {   // c.handover gave the player the fresh encounter, his flags, his camera and his keys already: only the show's own two flags are left to drop
       g.touring = sv.touring; g.missionInTour = false;
@@ -677,7 +674,7 @@ export class Director {
    *  player's flags live (seen, mortal unless he had god mode on, the mission counting, his AI setting), the follow camera released onto him at the framing he had, his keys unlocked; the
    *  caption stays up as the top card until the program's last beat finishes; the veil is left WHOLE for the beat to lift (c.fade(0, secs) a beat later). Idempotent. */
   private handOver(R: Run, caption: string, sub: string, caller: LiveBeat | null = null) {
-    const g = this.g, S = R.show!, cam = this.cam, input = this.input, sv = S.saved;
+    const g = this.g, S = R.show!, cam = g.hostCam, input = g.hostInput, sv = S.saved;
     if (S.handedOver) { S.caption = caption; S.sub = sub; return; }
     for (const b of R.beats) if (b.state === 'running' && b !== caller) { b.state = 'cancelled'; try { b.it.return(); } catch { /* */ } this.push({ beat: b.name, kind: 'beat', what: 'cancelled', data: { step: b.step, why: 'handover' } }); }   // (every OTHER beat ends here: the men it held are about to be replaced by the fresh encounter's — resetGuards reuses their ids, so a later c.order / c.say of theirs would land on the player's live shift and freeze a man for good; wave-5 review)
     this.restoreWeather(S); this.restoreChaos(S);
@@ -945,7 +942,7 @@ export class Director {
         const f = o.strike ? Wx.strike(o.strike) : null;
         this.push({ beat: b.name, kind: 'stimulus', what: o.strike ? `stroke${f ? '' : ' (no storm)'}` : 'weather', data: { storm: +Wx.storm.toFixed(2), rain: +Wx.rainRate.toFixed(2), ...(o.seed !== undefined ? { seed: o.seed | 0 } : {}), ...(o.strike && f ? { distKm: +f.distKm.toFixed(2) } : {}) } });
       },
-      mission: on => { const S = showOnly('mission'); g.missionInTour = !!on; S.missionOn = !!on; if (on) { g.mission.sweepAt = -1; g.mission.debrief = false; } this.push({ beat: b.name, kind: 'note', what: `mission ${on ? 'live' : 'off'}` }); },
+      mission: on => { const S = showOnly('mission'); g.missionInTour = !!on; S.missionOn = !!on; if (on) { g.mission.sweepAt = -1; } this.push({ beat: b.name, kind: 'note', what: `mission ${on ? 'live' : 'off'}` }); },
       handover: (caption, sub = '') => { showOnly('handover'); this.handOver(R, caption, sub, b); },
       chaos: k => {   // the program's own destruction knob (destruction.ts Destruction.showChaos): read under the show's touring flag where the player's reads 0; restoreChaos nulls it as the program ends
         const S = showOnly('chaos'); if (!g.destr) return;
@@ -963,10 +960,10 @@ export class Director {
           S.shot = { spec: { ...s }, t: 0, title }; S.shotI = s.chapter ?? (S.shotI + 1); b.pinnedCamera = true;
           if (S.shotI !== prevI) S.chapterT0 = R.t;
           S.look = this.lookOf(s);
-          if (this.cam) this.cam.pin = { look: v3.copy(S.look), yaw: s.yaw * DEG, pitch: s.pitch * DEG, dist: s.dist };
+          if (this.g.hostCam) this.g.hostCam.pin = { look: v3.copy(S.look), yaw: s.yaw * DEG, pitch: s.pitch * DEG, dist: s.dist };
           this.push({ beat: b.name, kind: 'camera', what: title });
         },
-        release: () => { const S = showOnly('camera.release'); S.shot = null; b.pinnedCamera = false; if (this.cam) this.cam.pin = null; },
+        release: () => { const S = showOnly('camera.release'); S.shot = null; b.pinnedCamera = false; if (this.g.hostCam) this.g.hostCam.pin = null; },
         get shotT() { return R.show?.shot?.t ?? 0; },
       },
       caption: (title, sub = '') => { const S = showOnly('caption'); S.caption = title; S.sub = sub; },

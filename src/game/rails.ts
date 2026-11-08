@@ -290,14 +290,6 @@ export class Rails {
   /** THE GATE (Game.step, right after the tick's record is loaded into the seat's input): whatever the step has not unlocked is taken out of the tick */
   gate(input: Input, cam: FollowCamera, dt: number): void { return goneWithTick('Rails.gate') as any; }
 
-  /** the step's mark under the cursor (orders.ts targetUnder): the place itself, so an order pointed at the ring on the screen is an order on the door, the
-   *  wall or the thing the ring is on, even where a wall stands between the eye and it. Null: no mark, or the cursor is not on it */
-  markUnder(input: Input, cam: FollowCamera, canvas: { clientWidth: number; clientHeight: number }): Vec3 | null {
-    const S = this.lesson(); if (!S || BREAK) return null; const at = S.L.steps[S.i]?.at; if (!at) return null;
-    const [sx, sy, front] = cam.project(at, canvas.clientWidth, canvas.clientHeight); if (!front) return null;
-    return RAILS.snapPx > 0 && Math.hypot(input.mouseX - sx, input.mouseY - sy) <= RAILS.snapPx ? at : null;
-  }
-
   /** THE MENU'S ROWS on a tutorial mission (orders.ts rowsFor): only the orders the level names — a row nobody taught is not on the ring */
   orderRows<T extends { id: string }>(rows: T[]): T[] { const L = this.live && !BREAK ? this.data?.orders : undefined; return L ? rows.filter(d => L.includes(d.id)) : rows; }
   /** the sky seat's lookout (fogofwar.ts update: one more eye of the picture's, and of the team's only with RAILS.eyeView off): null without one */
@@ -346,7 +338,7 @@ export class Rails {
     const S = this.lesson(), of = S?.L.steps.length ?? 0; if (!S || !of) return null;
     // (every step done and the mission not yet over — the last metre to an exit, the last man of a fight: the last line stays up until the mission's own
     //  end. The small row it would fall back to is the one a tutorial mission never shows)
-    if (S.i >= of ? BREAK || this.g.lesson.over() : !this.g.lesson.objective()) return null;
+    if ((BREAK && S.i >= of) || this.g.lesson.over()) return null;
     const i = Math.min(S.i, of - 1);
     // (the squad's ring is up ON THE STEP'S MARK: the line is what to press in it — on its first page `menuLine`, on a page under it `pageLine`; a flat ring, RAILS.flatRing: `flatLine`)
     const T = S.L.steps[i], M = S.i < of ? this.g.orders?.menu : null, on = !!M && (!T.at || Math.hypot(M.target.at[0] - T.at[0], M.target.at[2] - T.at[2]) < MENU_M);

@@ -136,9 +136,9 @@ if (process.argv.includes('--hole')) { await hole(); process.exit(red ? 1 : 0); 
     const KEEPS: any[] = [];   // (every borrowed engine's keeper of its own lights' masks: render/reachKeep.ts)
     const mk = () => Object.assign(Object.create(Engine.prototype), { lights: LS, world: g.engine.world, settings: { skyZenith: HOURS.overcast.sky.zenith, skyHorizon: HOURS.overcast.sky.horizon, exposure: HOURS.overcast.exposure }, viewFocus: [20, 0, 10], openRecs: [], dayLights: [], openLevel: null, openSerial: -1, openTick: 0, openSeen: NaN, openPlanned: NaN, openWait: 0, openLeaves: NaN, openWalls: null, openJob: new Steps(), reach: KEEPS[KEEPS.push(new ReachKeep(g.engine.world, LS)) - 1] }) as any;   // (… and a keeper of its own for the masks of its own lights: render/reachKeep.ts)
     const E = mk(), M = (l: any) => { if (l) for (const k of KEEPS) { const m = k.of(l); if (m) return m; } return undefined; };   // (a day light's mask: the engine's keeper holds it, no light carries one)
-    const was = { on: lookConfig.on, windows: lookConfig.windows, rooms: lookConfig.rooms, eye: lookConfig.eyeAt, gaps: lookConfig.doorGaps, lit: LOOK_OPENINGS.lit };
+    const was = { windows: lookConfig.windows, rooms: lookConfig.rooms, eye: lookConfig.eyeAt, gaps: lookConfig.doorGaps, lit: LOOK_OPENINGS.lit };
     const quiet = <T>(f: () => T): T => { const l = console.log, w = console.warn; console.log = console.warn = () => { }; try { return f(); } finally { console.log = l; console.warn = w; } };
-    try { lookConfig.on = true; lookConfig.windows = 1; lookConfig.rooms = 1;
+    try { lookConfig.windows = 1; lookConfig.rooms = 1;
       let eye: [number, number] = [20, 10]; lookConfig.eyeAt = () => eye;
       lookConfig.doorGaps = () => g.doors.list.map((d: any) => { const [hx, hz] = d.def.hinge, a = d.def.closedDir, wd = d.def.width; return [hx, hz, hx + Math.cos(a) * wd, hz + Math.sin(a) * wd]; });
       // (a drawn frame: the engine's pass alone. The game is NOT stepped between them: behind the start card and on a paused page it is not either)
@@ -497,7 +497,7 @@ if (process.argv.includes('--hole')) { await hole(); process.exit(red ? 1 : 0); 
         lookConfig.rooms = 0; const E2 = mk(); quiet(() => { E2.lookOpeningLights(); E2.lookOpeningLights(); }); const a2 = (E2.dayLights as any[]).filter(l => l.enabled).length; lookConfig.rooms = 1; quiet(() => E2.lookOpeningLights()); const b2 = (E2.dayLights as any[]).filter(l => l.enabled && M(l)).length;
         check(n0 === O.length && off === n0 && bare && on === n0 && masked && a2 === n0 && b2 === n0, 'with "Light stays in its room" put off the lights are lit with no mask, and put on again, or on for the first time in the middle of a level, every one is lit on that same frame with its mask', `${n0} lit · the row off ${off} · on again ${on} · a level begun with the row off ${a2}, the row put on ${b2}`); }
       lookConfig.windows = 0; frames(1); check(day().length === 0, 'the row at 0 takes every one of them out');
-    } finally { lookConfig.on = was.on; lookConfig.windows = was.windows; lookConfig.rooms = was.rooms; lookConfig.eyeAt = was.eye; lookConfig.doorGaps = was.gaps; LOOK_OPENINGS.lit = was.lit; } }
+    } finally { lookConfig.windows = was.windows; lookConfig.rooms = was.rooms; lookConfig.eyeAt = was.eye; lookConfig.doorGaps = was.gaps; LOOK_OPENINGS.lit = was.lit; } }
 }
 
 // ---- the office: windows wider than a doorway and strips of glass over head height (the first cut of this rule lost both)
@@ -512,12 +512,9 @@ if (process.env.TPS_PROFILE === 'shipped') await hole();
 else { const r = Bun.spawnSync(['bun', 'run', import.meta.path, '--hole'], { cwd: ROOT, env: { ...process.env, TPS_PROFILE: 'shipped' }, stdout: 'pipe', stderr: 'pipe' }), out = r.stdout.toString().split('\n').filter(l => /^- (PASS|FAIL)|^    /.test(l)).join('\n');
   console.log(out || '- FAIL — the hole line gave nothing'); if (r.exitCode !== 0 || !out) red = true; }
 
-// ---- the smoke lab's floor: a window hole with no glass, a passage's mouth
-{ const S = await stand('smoke-lab'); S.shut(); const a = S.read();
-  for (const d of S.g.doors.list) S.hang(d.def.name, 1.5); const b = S.read();
-  const hole = a.O.find(o => o.full < 2), mouth = b.O.filter(o => Math.abs(o.pos[2] - 22) < 0.5 && o.pos[0] > 6 && o.pos[0] < 8.6);
-  check(a.O.length === 2 && !!hole && Math.abs(hole.ajar - 0.8) < 0.06 && Math.abs(hole.pos[0] - 16) < 0.1 && Math.abs(hole.pos[1] - 1.5) < 0.06 && hole.dir[2] === -1 && inward(a.m, hole), 'a window hole with no glass is an opening by the same rule, measured as the hole (0.8 by 1.0 m, its middle 1.5 m up)', a.O.map(say).join(' · '));
-  check(b.O.length === 6 && mouth.length === 1 && mouth[0].dir[2] === -1 && Math.abs(mouth[0].full - 7.2) < 0.4 && b.O.every(o => inward(b.m, o)), 'with every door open the lab has six (the hole, four doors to the yard and the tunnel\'s mouth between its two walls); the door between its rooms is none', b.O.map(say).join(' · ')); }
+// ---- the vault's floor: a window hole with no glass
+{ const S = await stand('vault'); S.shut(); const a = S.read(), hole = a.O.find(o => o.full < 2);
+  check(a.O.length === 1 && !!hole && Math.abs(hole.ajar - 0.8) < 0.06 && Math.abs(hole.pos[0] - 17.4) < 0.15 && Math.abs(hole.pos[1] - 1.5) < 0.06 && hole.dir[0] === -1 && inward(a.m, hole), 'a window hole with no glass is an opening by the same rule, measured as what is open of it', a.O.map(say).join(' · ')); }
 
 // ---- how bright, by the hour
 { const sunOf = (h: any) => ({ intensity: h.sun.intensity, dir: [0, -Math.sin(h.sun.elevDeg * Math.PI / 180), 0], color: h.sun.color }), lum = (r: readonly number[]) => 0.2126 * r[0] + 0.7152 * r[1] + 0.0722 * r[2];

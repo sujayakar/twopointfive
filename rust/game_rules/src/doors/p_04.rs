@@ -31,6 +31,11 @@ pub fn doors_pull_to(g: &mut crate::game::Game, d: DoorId, who: f64) {
     door_set_last_who(g, d, who);
 }
 
+/// A leaf pulled to and still on its way home. A body in its way, or a hand on it, stops that within a moment; the slowest it swings on its own before it latches is about 0.01 rad/s.
+pub fn doors_coming_home(g: &mut crate::game::Game, d: DoorId) -> bool {
+    door_closing(g, d) && door_vel(g, d) * door_angle(g, d) < 0.0 && m::abs(door_vel(g, d)) > 0.005
+}
+
 /// A hand on the handle from the face it opens into: unlatched with its creak, brought round at the pull's pace.   (doors.ts Doors.pull)
 pub fn doors_pull(g: &mut crate::game::Game, d: DoorId, who: f64, quiet: Option<bool>) {
     let quiet = quiet.unwrap_or(false);
@@ -306,12 +311,12 @@ pub fn doors_thread_path(g: &mut crate::game::Game, path: &[V3], start: V3, is_f
 }
 
 /// Every leaf's box and its two handles, for the picture's list (the fog's doorBoxes asks it).   (doors.ts Doors.boxes)
-pub fn doors_boxes(g: &crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn doors_boxes(g: &crate::game::Game, out: &mut Vec<AnyBoxId>) {
     for d in g.doors.list.iter() {
         let dr = &g.dr[*d];
-        out.push(dr.box_);
-        out.push(dr.handle_boxes[0]);
-        out.push(dr.handle_boxes[1]);
+        out.push(dr.box_.into());
+        out.push(dr.handle_boxes[0].into());
+        out.push(dr.handle_boxes[1].into());
     }
 }
 
@@ -319,13 +324,6 @@ pub fn doors_boxes(g: &crate::game::Game, out: &mut Vec<BoxId>) {
 pub fn doors_leaf_boxes(g: &crate::game::Game) -> Vec<BoxId> {
     g.doors.list.iter().map(|d| g.dr[*d].box_).collect()
 }
-
-/// `fn_` asked aside of every door here.   (doors.ts Doors.posAside)
-pub fn doors_pos_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
-    let mut list = g.doors.list.clone();
-    door_pos_aside(g, &mut list, fn_)
-}
-
 
 #[doc(hidden)] pub fn doors_blast(g: &mut crate::game::Game, at: V3, tear_m: f64, who: f64) -> Vec<DoorId> {
     use crate::io::Io;

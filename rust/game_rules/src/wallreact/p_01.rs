@@ -11,7 +11,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 fn flat(a: V3, b: V3) -> f64 { v3::dist_xz(a, b) }
 fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
-fn player_pos(g: &Game) -> V3 { g.ch[g.pl[g.player].ch].pos }
+fn player_pos(g: &Game, seat: &crate::seats::SeatRef) -> V3 { g.ch[g.pl[seat.player].ch].pos }
 fn char_id(g: &Game, gd: GuardId) -> f64 { g.ch[g.gd[gd].ch].id }
 fn is_dead(g: &Game, gd: GuardId) -> bool { g.gd[gd].state == crate::game::GuardState::Dead }
 fn is_op(g: &Game, gd: GuardId) -> bool { g.gd[gd].team == crate::teams::Team::Operative }
@@ -531,8 +531,8 @@ pub fn wall_react_reflood(g: &mut Game, opened: &[f64]) {
 // ================================================================ (b) noticing
 
 /// (wallreact.ts WallReact.head)
-pub fn wall_react_head(g: &Game, gd: WallReactHeadGd) -> V3 {
-    let p = match gd { WallReactHeadGd::Sam => player_pos(g), WallReactHeadGd::Guard(gd) => pos_of(g, gd) };
+pub fn wall_react_head(g: &Game, seat: &crate::seats::SeatRef, gd: WallReactHeadGd) -> V3 {
+    let p = match gd { WallReactHeadGd::Sam => player_pos(g, seat), WallReactHeadGd::Guard(gd) => pos_of(g, gd) };
     [p[0], EYE, p[2]]
 }
 
@@ -639,7 +639,7 @@ pub fn wall_react_heard(g: &mut Game, b: WallreactBreachId, row: &crate::wallbre
         if is_dead(g, gd) { continue; }
         let made = char_id(g, gd) == row.who;
         if !made {
-            let head = wall_react_head(g, WallReactHeadGd::Guard(gd));
+            let head = wall_react_head(g, &crate::seats::here(g), WallReactHeadGd::Guard(gd));
             if !hears(g, head, src, r) { continue; }
         }
         let team = g.gd[gd].team;
@@ -695,7 +695,7 @@ pub fn wall_react_notice(g: &mut Game) {
             for gd in g.guards.clone() {
                 if gd == t.by || is_dead(g, gd) || g.gd[gd].team != g.gd[t.by].team || g.tab.wallreact_breach[b].men.has(gd) { continue; }
                 if flat(pos_of(g, gd), pos_of(g, t.by)) >= tell_m { continue; }
-                let (from, to) = (wall_react_head(g, WallReactHeadGd::Guard(t.by)), wall_react_head(g, WallReactHeadGd::Guard(gd)));
+                let (from, to) = (wall_react_head(g, &crate::seats::here(g), WallReactHeadGd::Guard(t.by)), wall_react_head(g, &crate::seats::here(g), WallReactHeadGd::Guard(gd)));
                 if crate::scene_collision::sound_paths_propagate(g, from, to, None).path_len < tell_m { wall_react_man_knows(g, b, gd, WallReactManKnowsHow::Told); }
             }
         }
@@ -836,7 +836,7 @@ pub fn wall_react_look(g: &mut Game, gd: GuardId, pt: &mut V3) {
 pub fn wall_react_posts(g: &mut Game) -> Vec<WallReactPostsItem> {
     let mut out = Vec::new();
     if !crate::seats::team_active(g) { return out; }
-    for gd in crate::seats::team_men(g) {
+    for gd in crate::seats::team_men(g, &crate::seats::here(g)) {
         if is_dead(g, gd) { continue; }
         if let Some(a) = crate::seats::order_of(g, gd) {
             if g.tab.orders_assignment[a].post.is_some() { out.push(WallReactPostsItem { gd, a }); }
@@ -912,8 +912,8 @@ pub fn wall_react_beyond(g: &mut Game, gd: GuardId, b: WallreactBreachId, at: V3
     let over = |p: V3| ((p[0] - bat[0]) * n[0] + (p[2] - bat[2]) * n[1]) * s < 0.0 && flat(p, far) < 2.5;
     if is_op(g, gd) {
         if crate::cleared::cleared_rooms_room_at(g, far) != 0.0 && crate::cleared::cleared_rooms_known_at(g, far) { return None; }
-        let squad = crate::orders::squad_orders_squad(g);
-        if squad.iter().any(|x| *x != gd && !is_dead(g, *x) && over(pos_of(g, *x))) || (!g.pl[g.player].down && over(player_pos(g))) { return None; }
+        let squad = crate::orders::squad_orders_squad(g, &crate::seats::here(g));
+        if squad.iter().any(|x| *x != gd && !is_dead(g, *x) && over(pos_of(g, *x))) || (!g.pl[g.player].down && over(player_pos(g, &crate::seats::here(g)))) { return None; }
     } else {
         let team = g.gd[gd].team;
         for x in g.guards.iter().copied() {
@@ -1153,7 +1153,7 @@ pub fn wall_react_reconsider1(g: &mut Game, p: &mut Pend) -> (WallReactReconside
         if g.time - man.last_seen_t < 0.6 && man.last_known.map_or(false, |k| flat(k, c) < 5.0) { return (R::Later, String::from("a man at arm's length")); }
         let mut to = wall_react_spot(g, gd, threat, pb, &others);
         if let Some(q) = to {
-            if crate::owner::has_him(g, gd, crate::owner::own().stand) || g.gd[gd].stays_in_rooms || crate::digin::dig_in_set(g, gd) {
+            if crate::owner::has(g, gd, crate::owner::by::STAND) || g.gd[gd].stays_in_rooms || crate::digin::dig_in_set(g, gd) {
                 if crate::roomfight::room_fight_room_at(g, q) != g.tab.roomfight_def[d].room { to = None; }
             }
         }
@@ -1232,7 +1232,7 @@ pub fn wall_react_shift(g: &mut Game, gd: GuardId, threat: V3, b: Option<Wallrea
 pub fn wall_react_op_move(g: &mut Game, p: &mut Pend) -> WallReactOpMove {
     let gd = p.gd;
     let v = crate::seats::view_of(g, gd);
-    let a = match crate::seats::with_seat(g, v, &mut |g| crate::orders::squad_orders_of(g, gd)) { Some(a) => a, None => return WallReactOpMove::Fine };
+    let a = match crate::seats::with_seat(g, v, &mut |g| crate::orders::squad_orders_of(g, &crate::seats::here(g), gd)) { Some(a) => a, None => return WallReactOpMove::Fine };
     let post = match g.tab.orders_assignment[a].post { Some(q) => q, None => return WallReactOpMove::Fine };
     if crate::seats::with_seat(g, v, &mut |g| g.door_tools.ops.iter().any(|op| g.tab.doortools_door_op[*op].men.contains(&gd))) { return WallReactOpMove::Fine; }
     if crate::seats::with_seat(g, v, &mut |g| g.wall_charge.ops.iter().any(|op| g.tab.wallcharge_wall_op[*op].men.contains(&gd))) { return WallReactOpMove::Fine; }
@@ -1241,11 +1241,11 @@ pub fn wall_react_op_move(g: &mut Game, p: &mut Pend) -> WallReactOpMove {
     let q = match wall_react_asks(g, gd, p, post, 1.2) { WallReactAsks::Text(_) => return WallReactOpMove::Fine, WallReactAsks::Arm1(q) => q };
     let threat = q.threat;
     let taken: Vec<V3> = crate::seats::with_seat(g, v, &mut |g| {
-        let mut taken = vec![player_pos(g)];
-        for m in crate::orders::squad_orders_squad(g) {
+        let mut taken = vec![player_pos(g, &crate::seats::here(g))];
+        for m in crate::orders::squad_orders_squad(g, &crate::seats::here(g)) {
             if m == gd || is_dead(g, m) { continue; }
             taken.push(pos_of(g, m));
-            if let Some(b) = crate::orders::squad_orders_of(g, m) {
+            if let Some(b) = crate::orders::squad_orders_of(g, &crate::seats::here(g), m) {
                 if let Some(q) = g.tab.orders_assignment[b].post { taken.push(q); }
             }
         }

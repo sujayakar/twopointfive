@@ -113,7 +113,7 @@ pub fn light_estimate_at(g: &mut crate::game::Game, p: V3, skip_owner: Option<&m
     };
     let moon = moon.unwrap_or(g.k.sense.moon);
     let leave = leave.unwrap_or(0.0);
-    if g.col.mirror.live {
+    if crate::scene_collision::standing(g) {
         light_estimate_in(g, p, lend(&mut skip_owner), steady_only, field, moon, leave)
     } else {
         crate::scene_collision::window(g, &mut |g: &mut Game| light_estimate_in(g, p, lend(&mut skip_owner), steady_only, field.as_deref_mut(), moon, leave))
@@ -196,7 +196,7 @@ pub fn carried() -> bool {
 
 /// The lamps the light that comes round is swept from: writes the few of nobody's fixture and answers with how the rows are read. Bool(false) = more of those than the module's table holds. (guards.ts steadyLamps)
 pub fn steady_lamps(g: &mut crate::game::Game) -> crate::guards::SteadyLamps {
-    if !write_lamps(g, None, Some(&mut |_g: &mut Game, _owner: f64| carried()), true) { return crate::guards::SteadyLamps::Bool(false); }
+    if !write_lamps(g, None, Some(&mut |_g: &mut Game, _owner: f64| true), true) { return crate::guards::SteadyLamps::Bool(false); }
     crate::guards::SteadyLamps::LampRows(rows_of(g, true, 0.0))
 }
 
@@ -347,7 +347,7 @@ pub fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
         crate::guards::guard_set_path_goal(g, gd, None);
         g.gd[gd].search_plan = None;
         g.gd[gd].pieing = None;
-        let left = enemy_up_on_floor(g, team);
+        let left = enemy_up_on_floor(g, &crate::seats::here(g), team);
         let said = left || floor_called_clear(g, gd, team);
         if mine {
             let text = if op { if said { "he's down." } else { "he's down — clear." } } else if said { "got him!" } else { "got him — that's all of them." };
@@ -361,7 +361,7 @@ pub fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// Nobody calls a floor clear with an enemy still up on it. (guards.ts:2729, WORDS.on settled on)
-fn enemy_up_on_floor(g: &Game, team: crate::teams::Team) -> bool {
+fn enemy_up_on_floor(g: &Game, seat: &crate::seats::SeatRef, team: crate::teams::Team) -> bool {
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
@@ -370,7 +370,7 @@ fn enemy_up_on_floor(g: &Game, team: crate::teams::Team) -> bool {
         let oteam = g.gd[o].team;
         if crate::teams::is_hostile(g, team, oteam) { return true; }
     }
-    crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !g.pl[g.player].down
+    crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !g.pl[seat.player].down
 }
 
 /// One of his side said it in the last three seconds. (guards.ts:2730)
@@ -616,7 +616,7 @@ pub fn attach_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>
     if let Some(from) = held {
         if g.tab.light[fl].enabled {
             let lens = g.tab.light[fl].pos;
-            let radius = g.engine.settings.flashlight_radius;
+            let radius = FLASHLIGHT_RADIUS;
             let to = crate::lighting::lens_clear(g, from, lens, radius, Some(fl));
             g.tab.light[fl].pos = to;
         }
@@ -712,7 +712,7 @@ pub fn pose_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Optio
     }
     if g.tab.light[fl].enabled && crate::doze::doze_dark(g, gd) { g.tab.light[fl].enabled = false; }
     let (peak, inner, outer) = (g.tune.flash_intensity, g.tune.flash_inner, g.tune.flash_outer);
-    let radius = g.engine.settings.flashlight_radius;
+    let radius = FLASHLIGHT_RADIUS;
     let row = &mut g.tab.light[fl];
     row.peak_intensity = peak;
     row.intensity = peak;
@@ -736,16 +736,16 @@ pub fn on_screen(g: &mut crate::game::Game, p: V3) -> bool {
     if g.seats.len() > 1 {
         let seats = g.seats.clone();
         for s in seats {
-            if crate::seats::with_seat(g, s, &mut |g: &mut Game| in_game_view(g, p)) { return true; }
+            if crate::seats::with_seat(g, s, &mut |g: &mut Game| in_game_view(g, &crate::seats::here(g), p)) { return true; }
         }
         return false;
     }
-    in_game_view(g, p)
+    in_game_view(g, &crate::seats::here(g), p)
 }
 
 /// inView of the view on Game: of the seat this pass is about.
-fn in_game_view(g: &Game, p: V3) -> bool {
-    match &g.view_proj {
+fn in_game_view(g: &Game, seat: &crate::seats::SeatRef, p: V3) -> bool {
+    match seat.view_proj {
         None => false,
         Some(crate::game::GameViewProj::Array(v)) => in_view_of(|i| v[i], p),
         Some(crate::game::GameViewProj::Float32Array(v)) => in_view_of(|i| v[i] as f64, p),

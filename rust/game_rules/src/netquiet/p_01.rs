@@ -75,14 +75,14 @@ pub fn ours(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// …on the net: alive, not in Sam's arm, not a man who has run (netquiet.ts onNet)
 pub fn on_net(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    ours(g, gd) && g.gd[gd].held.is_none() && !crate::owner::has_him(g, gd, crate::owner::own().runner)
+    ours(g, gd) && g.gd[gd].held.is_none() && !crate::owner::has(g, gd, crate::owner::by::RUNNER)
 }
 
 /// gone to his mates, whether or not they know it yet (netquiet.ts lostTo)
 pub fn lost_to(g: &mut crate::game::Game, m: GuardId) -> bool {
     g.gd[m].state == crate::game::GuardState::Dead
         || g.gd[m].held.is_some()
-        || crate::owner::has_him(g, m, crate::owner::own().runner)
+        || crate::owner::has(g, m, crate::owner::by::RUNNER)
         || !g.guards.contains(&m)
 }
 
@@ -306,7 +306,7 @@ pub fn body_of(g: &mut crate::game::Game, finder: GuardId, men: &[GuardId]) -> O
 /// a body found: the finder, and the men of `men` he tells (netquiet.ts netQuietBody)
 pub fn net_quiet_body(g: &mut crate::game::Game, finder: Option<GuardId>, men: &[GuardId]) {
     let Some(finder) = finder else { return };
-    if !ours(g, finder) || crate::owner::has_him(g, finder, crate::owner::own().runner) {
+    if !ours(g, finder) || crate::owner::has(g, finder, crate::owner::by::RUNNER) {
         return;
     }
     let (k_body, k_told, calm_secs, body_beat) = (g.k.netquiet.body, g.k.netquiet.body_told, g.k.netquiet.calm_secs, g.k.netquiet.body_beat);
@@ -397,7 +397,7 @@ pub fn net_quiet_fall(g: &mut crate::game::Game, victim: GuardId) {
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == victim || !on_net(g, o) || g.gd[o].team != v_team || g.time < g.gd[o].dazzled_until {
+        if o == victim || !on_net(g, o) || g.gd[o].team != v_team || crate::control::man::blind(g, o) {
             continue;
         }
         if !crate::guards::can_see_char(g, o, v_ch, false).visible {
@@ -644,10 +644,10 @@ pub fn free(g: &mut crate::game::Game, gd: GuardId) -> bool {
         && !g.touring
         && !g.quiet_utility
         && g.gd[gd].held.is_none()
-        && g.time >= g.gd[gd].dazzled_until
-        && g.time >= g.gd[gd].stagger_until
-        && !crate::owner::has_him(g, gd, crate::owner::own().morale)
-        && !crate::owner::has_him(g, gd, crate::owner::own().runner)
+        && !crate::control::man::blind(g, gd)
+        && !crate::control::man::staggered(g, gd)
+        && !crate::owner::has(g, gd, crate::owner::by::MORALE)
+        && !crate::owner::has(g, gd, crate::owner::by::RUNNER)
 }
 
 /// is he the last: 2 = he had mates and none of his side is up anywhere · 1 = his squad is down and he knows it, nobody at his side · 0 = neither (netquiet.ts lastKind)
@@ -711,16 +711,16 @@ pub fn mine(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// the record of who is the last man at his act, as the frame's acts leave it (netquiet.ts syncLastMan)
 pub fn sync_last_man(g: &mut crate::game::Game) {
-    let last_man = crate::owner::own().last_man;
+    let last_man = crate::owner::by::LAST_MAN;
     let mut i = 0;
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
         let t = g.time;
         if mine(g, gd) {
-            crate::owner::claim_man(g, gd, last_man, t, None);
+            crate::owner::claim(g, gd, last_man, t, None);
         } else {
-            crate::owner::release_man(g, gd, last_man, t);
+            crate::owner::release(g, gd, last_man, t);
         }
     }
 }
@@ -759,7 +759,7 @@ pub fn net_quiet_tick(g: &mut crate::game::Game, dt: f64) {
             g.m.netquiet.state_of.delete(gd);
             continue;
         }
-        if crate::owner::has_him(g, gd, crate::owner::own().runner) {
+        if crate::owner::has(g, gd, crate::owner::by::RUNNER) {
             if let Some(n) = g.m.netquiet.state_of.get_mut(gd) {
                 n.last = NONE;
                 n.t = 0.0;
@@ -1020,19 +1020,15 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
         settle(g, gd, d);
     }
     mind(g, gd).low = ok;
-    // where his eyes are, low on his gun: read off his own pose once he is down and still, eased
+    // where his eyes are, low on his gun: his look (the one every eye in the game is asked along) once he is down and still, eased
     let c = g.gd[gd].ch;
-    let hd = crate::character::character_head_dir(g, c);
-    let chest = g.ch[c].chest_dir;
-    let (lx, ly, lz) = (chest[0] + hd[0], chest[1] + hd[1], chest[2] + hd[2]);
-    let len = m::hyp3(lx, ly, lz);
-    if g.ch[c].anim.crouch > k.crouch - 0.15 && g.gd[gd].speed < 0.3 && len > 1e-3 {
+    if g.ch[c].anim.crouch > k.crouch - 0.15 && g.gd[gd].speed < 0.3 {
         let e = m::min(1.0, dt * 2.0);
-        let flat_k = m::hyp2(lx, lz) / len;
+        let look = crate::guards::look_of(g, c);
         let aim_yaw = g.ch[c].aim_yaw;
         let n = mind(g, gd);
-        n.eye += (v3::wrap_angle(m::atan2(lx, lz) - aim_yaw) - n.eye) * e;
-        n.eye_half += (m::acos(v3::clamp(m::cos(k.eye_deg * v3::DEG) / m::max(flat_k, 1e-3), -1.0, 1.0)) - n.eye_half) * e;
+        n.eye += (v3::wrap_angle(m::atan2(look[0], look[2]) - aim_yaw) - n.eye) * e;
+        n.eye_half += (k.eye_deg * v3::DEG - n.eye_half) * e;
     }
     watch(g, gd);
     // nothing seen, nothing heard for `alertSecs`: he is no longer 'alert'; the spot, the crouch and the arc stay

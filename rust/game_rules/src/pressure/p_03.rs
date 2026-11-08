@@ -133,7 +133,7 @@ pub fn stand_to(g: &mut crate::game::Game) {
         while i < g.fight.defs.len() {
             let x = g.fight.defs[i];
             i += 1;
-            if holds(g, x) && g.tab.roomfight_def[x].room != w.room && g.time >= g.gd[g.tab.roomfight_def[x].gd].dazzled_until { pick = Some(x); break; }
+            if holds(g, x) && g.tab.roomfight_def[x].room != w.room && !crate::control::man::blind(g, g.tab.roomfight_def[x].gd) { pick = Some(x); break; }
         }
         if pick.is_none() { pick = first_holding(g); }
         if let Some(x) = pick {
@@ -192,7 +192,7 @@ pub fn stand_and_fight(g: &mut crate::game::Game) {
         let m = st.of.get(d).copied();
         let k = match st.called.get(d).copied() { Some(k) => k, None => continue };
         if g.time - k.t > CALLED_SECS || !alive(g, d) || g.gd[gd].held.is_some() || g.tab.roomfight_def[d].mode != crate::roomfight::DefMode::Free
-            || m.map_or(false, |m| g.tab.pressure_man[m].fell) || g.time - g.gd[gd].last_seen_t >= 0.1 || g.time < g.gd[gd].dazzled_until || g.time < g.gd[gd].stagger_until { continue; }
+            || m.map_or(false, |m| g.tab.pressure_man[m].fell) || g.time - g.gd[gd].last_seen_t >= 0.1 || crate::control::man::blind(g, gd) || crate::control::man::staggered(g, gd) { continue; }
         let dc = crate::guards::door_cells(g);
         let sight = g.gd[gd].sight_pos;
         let at = cell_of(g, sight);
@@ -234,9 +234,8 @@ pub fn stand_and_fight(g: &mut crate::game::Game) {
 fn look_free(g: &mut Game, d: RoomfightDefId, p: V3) -> bool {
     if !alive(g, d) || g.tab.roomfight_def[d].mode != crate::roomfight::DefMode::Hold || state_of(g).of.has(d) { return false; }
     let gd = g.tab.roomfight_def[d].gd;
-    if g.gd[gd].held.is_some() || g.tab.roomfight_def[d].rally_at == f64::INFINITY || !(g.time >= g.gd[gd].dazzled_until) || !(g.time >= g.gd[gd].stagger_until) { return false; }
-    let own = crate::owner::own();
-    if state_of(g).outs.iter().any(|o| o.def == d) || crate::owner::has_him(g, gd, own.stand) || crate::owner::has_him(g, gd, own.squad) { return false; }
+    if g.gd[gd].held.is_some() || g.tab.roomfight_def[d].rally_at == f64::INFINITY || crate::control::man::blind(g, gd) || crate::control::man::staggered(g, gd) { return false; }
+    if state_of(g).outs.iter().any(|o| o.def == d) || crate::owner::has(g, gd, crate::owner::by::STAND) || crate::owner::has(g, gd, crate::owner::by::SQUAD) { return false; }
     let ph = crate::digin::dig_in_phase(g, gd);   // (on his way to cover or at a door with a wedge: busy. Set on his door, he has done getting ready)
     if ph != "idle" && ph != "set" { return false; }
     !crate::lanes::lane_bars(g, gd, Some(p)) && !crate::lanes::lane_known_at(g, gd, Some(p))
@@ -429,12 +428,12 @@ pub fn step_press(g: &mut crate::game::Game, _dt: f64) {
 /// the fight is over: every press forgotten; the counts stay for whoever reads them after the run   (pressure.ts pressStop)
 pub fn press_stop(g: &mut crate::game::Game) {
     if g.m.pressure.states.is_none() { return; }
-    let press = crate::owner::own().press;
+    let press = crate::owner::by::PRESS;
     let mut i = 0;
     while i < g.guards.len() {
         let (gd, now) = (g.guards[i], g.time);
         i += 1;
-        crate::owner::release_man(g, gd, press, now);
+        crate::owner::release(g, gd, press, now);
     }
     let st = match g.m.pressure.states.as_mut() { Some(st) => st, None => return };
     st.presses = Vec::new();

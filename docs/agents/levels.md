@@ -645,7 +645,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `lived-quiet`, `officeGen` `pipe`); a drawn-only round is still four flagged slabs (`drawnRoundSlabs`), which nothing meets, 19 of them in the files today. Every
   generator's run equals its converted file byte for byte (`export.ts --check`). `tools/qa/round-same.ts --base <hash>` stands every level by the tree before the
   conversion and by this one and holds the round boxes to the bit (`ROUNDSAME_BREAK=1` red). THE STANDS: frozen numbers on levels with a round moved to what the page
-  plays, since the frozen stand had the slabs. A LEVEL WITH A ROUND CHANGED ITS FINGERPRINT, so older checkpoints and tapes of it are refused. NEVER SEEN ON A GPU.
+  plays, since the frozen stand had the slabs. A LEVEL WITH A ROUND CHANGED ITS FINGERPRINT, so older checkpoints and tapes of it are refused. THE PICTURE moved in one way: a mark's hand and wear are salted by its box's place in the list (`markings.wgsl markSurfaceGB`, `bi * 7 + k`), and every box after a round has a new place, so the paint on a drum's band or a crate's stamp wobbles differently. With that salt held still, the pass and the long hall came out with no pixel different on the software adapter. NEVER SEEN ON A GPU.
   Below, what was written of the old form is kept where it says how a round is met; `?round`, `?roundexact`, `roundConfig`, `findOctagons`, `roundLevel`, `Box.was` are gone.
   ONE MODEL: CPU rays and segments (`boxes.ts rayBoxRound` behind `rayBox`, `collision.ts lineBox`, and the two fast paths in `segmentBlocked`
   and the dynamic walk hand a round box to them), MOVEMENT (`collideCircle` pushes a body straight out from the axis, `circleTouches` asks circle
@@ -714,7 +714,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   distance; tut-pair's seven chewable drums one cell each; a save loading with the switch as saved and across it; a lone
   round's walk grid a disc; ten seconds of the pass with the switch down the same run by digest on a level that was rounded and put back;
   fingerprint, stands, an old recording; the box world's words, rows and lists with the GPU half up and down. PAGE: `node
-  tools/qa/round-page.cjs --root . --out <dir>` boots the pass twice on the software adapter (`round=0` and as it opens), wants every pipeline
+  tools/qa/round-page.cjs --root . --out <dir>` boots a level on the software adapter, once for each checkout it is run on, wants every pipeline
   compiled and no console or GPU error, and writes a still of the brazier from each.
   EVERY LEVEL'S ROUND THINGS, WHERE THEY STAND (`round-check` line 4c; the routine is `tools/qa/round-lib.ts probeRound`, and line 4's brazier
   is handed to the same one): no recorded run reaches most round things (the depot's ten tyres became round and no play-through result
@@ -918,22 +918,6 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   run by digest; the vault's scripted runs (five plans, the breaker's among them, seeds 1 and 2) and Lights out's (three plans), each record the same.
   No mission of the list's 21 loads one of the eight, so the 42 say nothing of them (they are the same too). A checkpoint or a recording made on one of
   the eight before this is refused after it: the level's fingerprint reads every box to the centimetre. Never seen on a GPU and not played.
-- **THE SMOKE LAB'S FLOOR** (11-01; `levels/smoke-lab.json` from `tools/levels/smoke-lab.ts`, the GWOT kit; opened by the dev server's `/smokelab`, in no
-  mission list, nobody on it but Sam; the lab's panel is `docs/agents/render.md`, THE SMOKE LAB). The maintainer asked for "a separate smoke lab that's more
-  suited to playing with it". Each place shows one thing smoke does and is there for nothing else: the YARD (open ground under the sky and a low wall of
-  sandbags: the wind takes smoke, and smoke parts round a thing), the TUNNEL (a roofed passage 16 m long up the screen, shut at its far end, its mouth to the
-  camera: smoke rolls down a passage and out), the KITCHEN (a door to the yard, a door to the pantry and a window hole with no glass: smoke leaks through a
-  hole all the time and through a door when it opens), the PANTRY (the room beside it, shut by its two doors) and the SHED (four walls and one door: a shut
-  room fills). TWO LIT FRONTS (11-01, the maintainer: "can we add something like the lit sign (or the vending machine from the office) to smoke bench to
-  test it?"): the office's red and blue vending machines, its own boxes and markings at its own brightness, backs to the house's yard wall between the
-  kitchen's window and the pantry's door, facing down the screen, switchable group `fronts`: a bright sharp thing to look at through smoke and a light
-  that colours it. Never seen on a GPU there. Five doors, three roofs, a bulb a room, two in the tunnel, one floodlight and a moon. Level data only: no switch, no game code. Check:
-  `bun run tools/qa/smokelab-check.ts` (the file is its generator's; by the renderer's own floor plan the shed and the pantry are shut rooms with their doors
-  shut, the kitchen is joined to the yard by its window, the tunnel by its mouth, the two rooms are one with the door between them open; roofs; the page's
-  address; no mission names it; `SMOKELAB_BREAK=1` leaves the shed's door open and fails). `level-needs smoke-lab` passes with two notes (no mission row; 211 m²
-  of the yard is one finish, left bare on purpose: nothing there should stop the wind). Every bulb is lit. The address opens it at a dry dusk (`&hour=dusk&weather=clear`: the plain page's own night came up in rain, which is noise over
-  smoke); an hour or a weather on the address wins. Drawn on the software adapter only (the whole floor at dusk with cans burning in the yard, the tunnel,
-  the kitchen and the shed, no GPU errors): never seen on a GPU, and nobody has thrown smoke on it by hand.
 - **The library: every object and every paint, once (`docs/library.md`, dress every level, 11-03; tools and level data, no switch).** The maintainer: "as we
   dress the levels, I'd love for us to have a library of objects, materials, etc. that we reuse across them". What exists is SIX KITS with their own pieces and
   paints: `src/scene/gwotKit.ts` (the look's), `src/scene/officeGen.ts officeKit`, `tools/levels/livedKit.ts`, `livedPieces.ts`, `lived-quiet.ts`,

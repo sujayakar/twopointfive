@@ -4,19 +4,19 @@
 // What each round becomes is what the game used to make of it as a level was stood up, to the bit: the first slab's middle and height, radius 1.026 x the slabs'
 // half length (the circle with the octagon's area), no turn, the lid as a disc and the band on the four sides. Unnamed boxes are named by their place in the file,
 // so every unnamed box after a round takes a new name, as the exporter would give it, and whatever names it follows. A list that names all four slabs of a round
-// names the one box; anything else that names a slab the file loses stops the conversion, and nothing is written.
+// names the one box; anything else that names a slab the file loses stops the conversion, and nothing is written. A kit view's set (scenarios.kitView.sets) holds boxes
+// of the same record and stands up as a level, so its round things are converted too.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
-const { MARKING_TEXEL, MAX_MARKS_PER_BOX, texelOf } = await import(`${ROOT}/src/scene/markings.ts`);
+const { MARKING_TEXEL } = await import(`${ROOT}/src/scene/markings.ts`);
+const { roundMarks, roundRadius } = await import(`${ROOT}/src/scene/gwotKit.ts`);
 const { LEVEL_DATA_VERSION, serializeLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 
-type Mark = { face: string; res?: 'fine' | 'base' | 'coarse'; at: [number, number]; size: [number, number]; pal: unknown[]; cells: string[] };
+type Mark = Record<string, unknown>;
 type Slab = { id: string; name?: string; c: number[]; h: number[]; yaw?: number; rot?: unknown; flags?: string[]; shape?: unknown; material?: string; albedo?: number[]; markings?: Mark[]; [k: string]: unknown };
 type Doc = { version: number; name: string; meta?: { markTexel?: number }; boxes: Slab[]; materials?: Record<string, { albedo: number[] }>; [k: string]: unknown };
 
-/** the round's radius over the slabs' half length: the circle with the octagon's own area, the square root of (8 tan 22.5 degrees / pi) */
-const R_OF_SLAB = 1.026;
 const TAN8 = Math.tan(Math.PI / 8);
 const near = (a: number, b: number, e = 1e-4) => Math.abs(a - b) < e;
 const yawOf = (b: Slab) => b.yaw ?? 0;
@@ -37,30 +37,19 @@ function octagonAt(B: readonly Slab[], i: number, paint: (b: Slab) => readonly n
   }
   return true;
 }
-/** the octagons of a file's boxes, as the index of each one's first slab */
-export function findOctagons(d: Doc): number[] {
-  const paint = (b: Slab): readonly number[] => b.albedo ?? d.materials?.[b.material!]?.albedo ?? [NaN, NaN, NaN];   // (NaN: a box with no paint is like no other)
+/** the octagons of a list of boxes, as the index of each one's first slab */
+export function findOctagons(boxes: readonly Slab[], materials: Doc['materials']): number[] {
+  const paint = (b: Slab): readonly number[] => b.albedo ?? materials?.[b.material!]?.albedo ?? [NaN, NaN, NaN];   // (NaN: a box with no paint is like no other)
   const out: number[] = [];
-  for (let i = 0; i + 3 < d.boxes.length; i++) if (octagonAt(d.boxes, i, paint)) { out.push(i); i += 3; }
+  for (let i = 0; i + 3 < boxes.length; i++) if (octagonAt(boxes, i, paint)) { out.push(i); i += 3; }
   return out;
 }
-/** a round patch on a lid (a tyre's hole, an oven's mouth): the slab's own +y mark was cut to the slab, so it is drawn again as a disc of radius R */
-function discMark(like: Mark, R: number, texel: number): Mark {
-  const t = texelOf(like, texel), N = Math.min(32, 2 * Math.ceil(R / t) + 2), cells: string[] = [];
-  for (let j = N - 1; j >= 0; j--) { let row = ''; for (let i = 0; i < N; i++) row += Math.hypot(i + 0.5 - N / 2, j + 0.5 - N / 2) * t < R ? 'a' : '.'; cells.push(row); }
-  return { face: '+y', ...(like.res && like.res !== 'base' ? { res: like.res } : {}), at: [-N / 2, -N / 2], size: [N, N], pal: [like.pal[0]], cells };
-}
-const SIDES = ['+x', '-x', '+z', '-z'];
 /** the one box a round's four slabs are */
 function roundOf(slabs: Slab[], texel: number): Slab {
-  const a = slabs[0], R = a.h[0] * R_OF_SLAB;
-  const band = slabs.flatMap(b => b.markings ?? []).find(m => m.face === '+z' || m.face === '-z');   // a slab's long face carries the whole band (a drum's ribs); its short ends carry a cut of it
-  const lid = (a.markings ?? []).find(m => m.face === '+y');
-  const marks: Mark[] = [];
-  if (lid && lid.pal.length === 1) marks.push(discMark(lid, R * 0.5, texel));   // (a lid of two paints is a drum's: its rim is the shader's, its bung is let go)
-  if (band) for (const f of SIDES) if (marks.length < MAX_MARKS_PER_BOX) marks.push({ ...band, face: f });
-  const { yaw: _yaw, markings: _marks, ...rest } = a;
-  return { ...rest, h: [R, a.h[1], R], round: true, ...(marks.length ? { markings: marks } : {}) };
+  const a = slabs[0], R = roundRadius(a.h[0]), marks = roundMarks(slabs.map(b => b.markings), R, texel);
+  const out = {} as Slab;   // (a set's box is written in the order its generator wrote it: `round` after `h`)
+  for (const [k, v] of Object.entries(a)) { if (k === 'yaw' || k === 'markings') continue; out[k] = k === 'h' ? [R, a.h[1], R] : v; if (k === 'h') out.round = true; }
+  return { ...out, ...(marks ? { markings: marks } : {}) };
 }
 const POSITIONAL = /^box_\d+$/;
 const idAt = (i: number) => `box_${String(i).padStart(4, '0')}`;
@@ -68,16 +57,24 @@ const idAt = (i: number) => `box_${String(i).padStart(4, '0')}`;
 /** a version 1 document as version 2. Throws, naming the box and the place, where a reference cannot be carried */
 export function convertLevel(d: Doc): { data: Doc; rounds: number } {
   if (d.version !== 1) throw new Error(`${d.name}: version ${d.version} is not the version this converts`);
-  const texel = d.meta?.markTexel ?? MARKING_TEXEL, firsts = findOctagons(d);
+  const texel = d.meta?.markTexel ?? MARKING_TEXEL;
   const speckOf = new Map<string, string>(), fourOf = new Map<string, string[]>();   // (a slab that leaves the file → its round's first slab; the first slab → all four ids)
-  const out: Slab[] = [];
-  for (let i = 0, f = 0; i < d.boxes.length; i++) {
-    if (firsts[f] !== i) { out.push(d.boxes[i]); continue; }
-    const slabs = d.boxes.slice(i, i + 4);
-    for (const s of slabs.slice(1)) { speckOf.set(s.id, slabs[0].id); if (s.name !== slabs[0].name) throw new Error(`${d.name}: ${s.id} says a name its round's first slab does not`); }
-    fourOf.set(slabs[0].id, slabs.map(s => s.id));
-    out.push(roundOf(slabs, texel)); i += 3; f++;
-  }
+  let rounds = 0;
+  /** a list of boxes with each round's four slabs made one */
+  const made = (boxes: readonly Slab[]): Slab[] => {
+    const firsts = findOctagons(boxes, d.materials), out: Slab[] = [];
+    for (let i = 0, f = 0; i < boxes.length; i++) {
+      if (firsts[f] !== i) { out.push(boxes[i]); continue; }
+      const slabs = boxes.slice(i, i + 4);
+      for (const s of slabs.slice(1)) { speckOf.set(s.id, slabs[0].id); if (s.name !== slabs[0].name) throw new Error(`${d.name}: ${s.id} says a name its round's first slab does not`); }
+      fourOf.set(slabs[0].id, slabs.map(s => s.id));
+      out.push(roundOf(slabs, texel)); i += 3; f++; rounds++;
+    }
+    return out;
+  };
+  const out = made(d.boxes);
+  const sets = (d.scenarios as { kitView?: { sets?: Record<string, { boxes?: Slab[] }> } } | undefined)?.kitView?.sets;
+  const setsMade = sets && Object.fromEntries(Object.entries(sets).map(([k, s]) => [k, s.boxes ? { ...s, boxes: made(s.boxes) } : s]));
   const rename = new Map<string, string>();
   out.forEach((b, i) => { if (POSITIONAL.test(b.id)) { const id = idAt(i); if (id !== b.id) rename.set(b.id, id); b.id = id; } });
   const named = (id: string) => rename.get(id) ?? id;
@@ -92,10 +89,10 @@ export function convertLevel(d: Doc): { data: Doc; rounds: number } {
     if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, carry(x, `${where}.${k}`)]));
     return v;
   };
-  const data: Doc = { ...d };
-  for (const k of Object.keys(d)) if (k !== 'boxes' && k !== 'materials' && k !== 'meta' && k !== 'version' && k !== 'name') data[k] = carry(d[k], k);
+  const data: Doc = { ...d, ...(setsMade ? { scenarios: { ...(d.scenarios as object), kitView: { ...(d.scenarios as { kitView: object }).kitView, sets: setsMade } } } : {}) };
+  for (const k of Object.keys(data)) if (k !== 'boxes' && k !== 'materials' && k !== 'meta' && k !== 'version' && k !== 'name') data[k] = carry(data[k], k);
   data.boxes = out; data.version = LEVEL_DATA_VERSION;
-  return { data, rounds: firsts.length };
+  return { data, rounds };
 }
 
 if (import.meta.main) {

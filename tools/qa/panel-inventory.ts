@@ -20,7 +20,7 @@ export interface Row { path: string; kind: string; label: string; min?: number; 
 const FIXTURE = join(ROOT, 'tools/qa/fixtures/panel-inventory-main.json');
 const SCRATCH = join(ROOT, 'tools/qa/.panel-inventory-scratch');
 
-// ---------------------------------------------------------------- a small fake DOM (the shape editor-probes.ts uses, plus what panel.ts v2 touches)
+// ---------------------------------------------------------------- a small fake DOM (with what panel.ts v2 touches)
 type Listener = (e: any) => void;
 class Style { [k: string]: any; setProperty(k: string, v: string) { this[k] = v; } removeProperty(k: string) { delete this[k]; } }
 class ClassList { s = new Set<string>(); add(...c: string[]) { c.forEach(x => this.s.add(x)); } remove(...c: string[]) { c.forEach(x => this.s.delete(x)); } contains(c: string) { return this.s.has(c); } toggle(c: string, force?: boolean) { const on = force ?? !this.s.has(c); if (on) this.s.add(c); else this.s.delete(c); return on; } toString() { return [...this.s].join(' '); } }
@@ -187,7 +187,6 @@ export async function panelInventory(argv: string[] = process.argv.slice(2)): Pr
       writeFileSync(FIXTURE, JSON.stringify(before, null, 1) + '\n'); console.log(`  --gone: ${dead.length} fixture row(s) taken out, ${missing.length - dead.length} still missing`); const left = missing.filter(r => !dead.includes(r)); missing.length = 0; missing.push(...left);
     }
     const ok = missing.length === 0;
-    console.log(`\n- ${ok ? 'PASS' : 'FAIL'} — ${missing.length} missing of ${before.length} reference rows · ${live.length} live (${added.length} added, ${moved} moved)`);
     return ok;
   } finally { restore(); try { rmSync(SCRATCH, { recursive: true, force: true }); } catch { /* */ } }
 }

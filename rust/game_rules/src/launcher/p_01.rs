@@ -109,11 +109,11 @@ pub fn arc_solve(g: &mut crate::game::Game, from: V3, target: V3, r: crate::laun
 }
 
 /// The point to send a ring at: the head of the man under the reticle, led by his ground velocity; else the fixture or world point the cursor names. (launcher.ts ringAimPoint)
-pub fn ring_aim_point(g: &crate::game::Game, from: V3) -> V3 {
+pub fn ring_aim_point(g: &crate::game::Game, seat: &crate::seats::SeatRef, from: V3) -> V3 {
     let puppet = g.puppet.as_ref().and_then(|p| p.target);
     let gd = match puppet {
         Some(t) if g.gd[t].state != crate::game::GuardState::Dead => Some(t),
-        _ => g.aim_guard,
+        _ => seat.aim_guard,
     };
     if let Some(gd) = gd {
         let c = g.gd[gd].ch;
@@ -123,8 +123,8 @@ pub fn ring_aim_point(g: &crate::game::Game, from: V3) -> V3 {
         let vel = g.ch[c].vel;
         return v3::mad(head, [vel[0], 0.0, vel[2]], tof);
     }
-    if let Some(t) = g.aim_target { return v3::copy(g.tab.sim_lightshome_fixture[t].pos); }
-    let ap = g.aim_point;
+    if let Some(t) = seat.aim_target { return v3::copy(g.tab.sim_lightshome_fixture[t].pos); }
+    let ap = seat.aim_point;
     [ap[0], ap[1] + 0.03, ap[2]]
 }
 
@@ -374,7 +374,7 @@ pub fn stagger_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, shooter: C
 }
 
 /// Rings in flight as boxes: under the issue kit (GEAR.on, settled) the sponge round nose first along its flight, rolling about it. The tick's gathering of dynamic boxes calls this. (launcher.ts ringBoxes)
-pub fn ring_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn ring_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     // (skeleton 5.2: sponge_boxes takes g, so the walk reads each ring's numbers out first; making a box cannot change the rings)
     let rings: Vec<(V3, V3, f64)> = g.rings.iter().map(|r| (r.pos, r.vel, r.spin)).collect();
     struct R { pos: V3, vel: V3, spin: f64 }

@@ -64,7 +64,7 @@ pub fn off_threshold(g: &mut crate::game::Game, gd: GuardId, aim_at: Option<V3>,
             for lat in [f.w + past, -past] {
                 if foe && side == sgn && !cover { continue; }   // (the face the half-plane calls theirs: only ever under cover)
                 let p: V3 = [f.hx + f.ux * lat + f.nx * side * thru, 0.0, f.hz + f.uz * lat + f.nz * side * thru];
-                if !spot_free(g, gd, p, 0.8)
+                if !spot_free(g, &crate::seats::here(g), gd, p, 0.8)
                     || crate::scene_collision::solid_blocked(g, [pos[0], 0.45, pos[2]], [p[0], 0.45, p[2]], None)
                     || (line && crate::scene_collision::shot_blocked(g, [p[0], 1.4, p[2]], aim_at, None, None)) { continue; }
                 let mut bad = false;

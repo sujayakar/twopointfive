@@ -3,11 +3,6 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// who takes a fragment as it lets go (GlassBreak.onRelease; shards.ts takes and gives it back): None = the stand-in runs
-#[derive(Clone, Copy, Debug)]
-pub enum GlassBreakOnRelease {
-    Shards,
-}
 /// a burst's view of the glass for one judgment (GlassBreak.seeThrough): which panes a walk also passes
 #[derive(Clone, Debug)]
 pub enum GlassBreakAlso {
@@ -19,7 +14,6 @@ pub enum GlassBreakAlso {
 /// (TypeScript: GlassBreak, src/game/glassbreak.ts:221)
 #[derive(Clone, Debug)]
 pub struct GlassBreak {
-    pub on_release: Option<crate::glassbreak::GlassBreakOnRelease>,
     pub log: Vec<String>,
     pub sheet_list: Option<Vec<f64>>,
     pub view_of: Option<crate::glassbreak::GlassBreakViewOf>,
@@ -30,7 +24,6 @@ impl GlassBreak {
     /// what a new one holds: the TypeScript's field initialisers, before its constructor
     pub fn blank() -> Self {
         GlassBreak {
-            on_release: None,
             log: Vec::new(),
             sheet_list: None,
             view_of: None,

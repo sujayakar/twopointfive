@@ -30,8 +30,9 @@ pub fn game_step_seats(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     if cmds.len() != n { panic!("stepSeats: {} record(s) for {} seat(s)", cmds.len(), n); }
     // (inside a tick the Game's own fields of a seat's name answer the FIRST seat's, whoever this host shows: seats.ts seatsStand)
     // (bare: no seat's view is open while the world's own lines run)
-    if n == 1 { step_seats_on_first(g, dt, cmds); return; }
-    crate::seats::on_first_bare(g, &mut |g| step_seats_on_first(g, dt, cmds));
+    // (the verdict's tick comes last, with the first seat still standing, so the end it latches is the same on every machine: verdict.ts tick)
+    if n == 1 { step_seats_on_first(g, dt, cmds); crate::verdict::verdict_tick(g); return; }
+    crate::seats::on_first_bare(g, &mut |g| { step_seats_on_first(g, dt, cmds); crate::verdict::verdict_tick(g); });
 }
 
 /// The tick's lines, with the first seat on Game.   (game.ts stepSeats)
@@ -167,6 +168,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     crate::lighting::lens_recheck(g);
     crate::irlight::ir_light_tick(g);
     in_seat(g, seats[0], |g| crate::mission::update_mission(g, dt, input));
+    crate::par::par_tick(g);   // (right after the mission's update: this tick's orders and the room clear's end are in)
     crate::lesson::lesson_tick(g, dt);
     crate::rails::rails_tick(g, dt);
     crate::snatch::snatch_tick(g, dt);
@@ -208,6 +210,8 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     crate::game::game_draw_characters(g, &all, statured);
     crate::smokebreak::update_smoke_break(g, dt);
     crate::game::game_light_meter(g, dt);
+    // (every seat's list of things its men can work, before anybody's orders are read: what a point or a cursor is on is asked of it, inside a tick and between two)
+    for &s in &seats { in_seat(g, s, |g| crate::workthings::work_things_keep(g)); }
     for &s in &seats {
         let pl = crate::cmd::seat_man(g, s);
         g.pl[pl].hit_flash = m::max(0.0, g.pl[pl].hit_flash - dt * 3.0);
@@ -218,6 +222,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     if g.m.dress.dress.net { crate::squadnet::squad_net_tick(g); }
     if g.m.dress.dress.cues { crate::cues::cues_tick(g); }
     crate::teamtally::team_tally_tick(g);
+    crate::deathrecap::recap_tick(g);   // (last: it reads the frame as it ended, and moves nothing a rule reads)
     g.ticking = false;
     crate::scene_collision::tick_shut(g);
     g.m.rustknobs.rust_knobs.tick = false;   // (game.ts:1727, the finally)
@@ -307,7 +312,7 @@ pub fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
             let lg = *grip.get_or_insert_with(|| { let x = crate::rig_props::carbine_grip(None); AnimLongGrip { wrist: x.wrist, fingers: x.fingers, back: x.back } });
             g.ch[c].anim.long_grip = lg;
         }
-        if crate::gunlook::gun_look_on(g) || g.ch[c].gun_look.is_some() {
+        {
             let had = g.ch[c].gun_look.as_ref().and_then(|l| l.hand);
             let into = g.ch[c].gun_look.clone();
             let in_hands = weapon_row(g, def).clone();
@@ -363,7 +368,7 @@ pub fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
         }
         // (MOVES.on, page 1)
         let dip = g.k.moves.entry > 0.5 && cb && !show && g.gd[gd].held.is_none() && !dead && team == Team::Operative
-            && !crate::roomfight::room_fight_busy(g, gd, 1.5) && !crate::roomfight::room_fight_contact(g, gd) && crate::game::friend_before_muzzle(g, gd);
+            && !crate::roomfight::room_fight_busy(g, gd, 1.5) && !crate::roomfight::room_fight_contact(g, gd) && crate::game::friend_before_muzzle(g, &crate::seats::here(g), gd);
         g.ch[c].anim.dip = if dip { 1.0 } else { 0.0 };
         if !dead && now < g.gd[gd].dazzled_until {
             // (trap: the TypeScript's `from` may be his own position array, which follows him; here it is this moment's copy: notes.md)
@@ -416,7 +421,7 @@ pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt:
     //  keeps no list of them and no row's time is stepped)
     if g.m.dress.dress.fx {
         let mut i = g.fx.len();
-        while i > 0 { i -= 1; out.push(g.fx[i].box_); g.fx[i].ttl -= dt; if g.fx[i].ttl <= 0.0 { let gone = g.fx.remove(i); crate::scene_boxes::box_let_go(g, gone.box_); } }
+        while i > 0 { i -= 1; out.push(g.fx[i].box_.into()); g.fx[i].ttl -= dt; if g.fx[i].ttl <= 0.0 { let gone = g.fx.remove(i); crate::scene_boxes::box_let_go(g, gone.box_); } }
     } else { for gone in core::mem::take(&mut g.fx) { crate::scene_boxes::box_let_go(g, gone.box_); } }
     // (A ROW OF `g.fx` IS THE ONLY HOLDER OF ITS BOX: the TypeScript drops the object with the row. Here the box is a row of the table, so as the fx row
     //  goes its box joins the frame's rows, and the host's next listing frees it once it is on no list: boxes_frame_reset. Most fx rows live one frame
@@ -441,10 +446,9 @@ pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt:
 
 /// characters → what each man wears (the renderer's own half is the picture's), and the frame's dynamic boxes handed to the world   (game.ts drawCharacters)
 pub fn game_draw_characters(g: &mut crate::game::Game, all: &[CharId], statured: bool) {
-    g.men_all = all.to_vec(); g.men_statured = statured; g.men_bare = false;
-    game_draw_men(g, all, statured, false, Some(false));   // (DRESS.men down: dress.ts, "what each WEARS is still dealt")
-    g.dyn_raw = g.dyn_boxes.len() as f64;
+    game_draw_men(g, all, statured, Some(false));   // (DRESS.men down: dress.ts, "what each WEARS is still dealt")
     let mut list = core::mem::take(&mut g.dyn_boxes);
+    crate::fogofwar::picture::keep_raw(g, &list);
     let dynamics = crate::fogofwar::fog_of_war_things(g, &mut list);
     g.dyn_boxes = list;
     g.engine.world.dynamics = dynamics;

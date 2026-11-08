@@ -14,13 +14,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `.worktrees/` (gitignored) does a broader soak. Nothing minutes-long runs in the foreground while the user is
   around. Up to ~32 parallel agents is fine.
 - **Lanes = background agents in `.worktrees/<name>` on their own branch; the lead is the merge + verify gate** (unsigned `git merge --no-ff` in the main checkout, the changed
-  families through `gate.sh` + tour (+ soak for gameplay) + `bun run build` on the MERGED tree in the background, a pane boot when shader text changed, commit, retire the worktree).
+  families through `gate.sh` (+ soak for gameplay) + `bun run build` on the MERGED tree in the background, a pane boot when shader text changed, commit, retire the worktree).
   Each lane serves ITS checkout on ITS OWN port (`PORT=52xx nohup bun run tools/serve.ts` there; a shot sink beside it,
   `window.__shotPort` pointing the harnesses at it (main's default 5174); `vendor/typescript` symlinked from the main tree) and stops it BY PID / PORT (`lsof -ti :52xx`) — never
   `pkill -f tools/serve.ts`: that killed every lane's server and the maintainer's :5173 at once. **:5173 is the maintainer's own `bun run dev` tab and it bundles at start-up: after
   every merge to main restart it from the main checkout (kill the pid on the port, `PORT=5173 nohup bun run tools/serve.ts`) and say so — their tab keeps running, a
   reload picks the build up; `.claude/launch.json`'s `lead` entry (:5199) is for the lead's own boots.** The Browser pane is SHARED by every lane: pin `tabId` on each call (an
-  unpinned `__hotCommon` / `__stage` / `__shot` has landed on another lane's page and spoiled its take), close your tabs when done (the pane's tab cap once left a lane unable to
+  unpinned `__stage` / `__shot` has landed on another lane's page and spoiled its take), close your tabs when done (the pane's tab cap once left a lane unable to
   boot), or drive a private headless Chrome (`--headless=new`, Metal, over CDP) from the worktree. Commit in small steps and keep the
   notebook's top self-sufficient so a resume costs minutes.
 - **A lane's deliverables** (every renderer / perf / prototype lane since v3): notebook `docs/internal/<topic>.md` (10-line summary on top, method, negatives written up), numbers
@@ -55,40 +55,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `tools/publish-public.sh`, and the one-file page generators (`tools/artifact-page.py`, `tools/page-artifact.ts`,
   `tools/sounds-artifact.ts`). They stayed in the old private repo with the history up to 2026-10-16; a pointer to one of them in
   a comment or a bullet is a pointer there.
-- **Playable build, one file** = `bun run build:one` (`tools/build-one.ts` → `dist/one/twopointsix.html`, about 12.5 MB at 10-16): the game page
-  and everything it asks for at run time in ONE self-contained HTML — `index.html` as it is with its module tag replaced by the module
-  itself (no chunks) and THE PACK, one inert `<script data-pack="<path>">` block of base64 per file (gzipped but for the pictures): the
-  animation library with its `.bin`, both casts, the mission pictures and their list, every level file under `levels/`, and `qa/commit`
-  (left out of a build of uncommitted changes). The game is not told how it is packed: `src/host/onefile.ts` (a classic script the build
-  puts in front of the module; nothing imports it) answers `fetch` and `<img>.src` of a packed path from its block, and takes over a
-  page load of the page's OWN address with another query that the page starts (a mission picked, Deploy, a restart, a showcase link —
-  the Navigation API): the query goes into the history entry's state on the address the page was first served from (a new entry where
-  the load would have made one, so Back still works; Back / Forward between the page's own entries reload as the entry), the page
-  reloads, and the script writes the query back with `history.replaceState` before the game reads `location.search` — so the page plays
-  where its address cannot carry flags (a frame another page owns) and where address + query is not served. NOT taken over: the
-  browser's own reload button and a link opened in a new tab (they ask for address + query, fine wherever that is served). The Team &
-  kit picture's second instance of the page (`ui/kitView.ts`' iframe) gets its query in the frame's `name`; opened from DISK the
-  page and that picture do post to each other (measured in Chromium without a WebGPU adapter: `tools/qa/kitview-disk.cjs`; the picture
-  itself up on a page from disk is NOT SEEN — the software adapter had not booted the second instance from disk in 150 s; never on a
-  GPU). The page carries
-  `<meta name="tps-one-page">`, as before: no tool pages in Extras, no replay viewer (F7 sends its file to a backend the address names, and with none says the replay was not kept), and
-  `ui/menuStills.ts` asks for pictures there only when the page packs them. OUT of the file: the workbench, the replay viewer, the
-  sounds and music pages, `public/assets/replays`. CHECK: `bun run build:one && node tools/qa/onefile-page.cjs` (a server that knows
-  one address and 404s the same address with a query; `ONEFILE_BREAK=1` = the boot script taken out, must FAIL) — the pack (the `.bin`
-  by digest), the Play page, the picture frame's flags, Team & kit → Deploy into the mission's flags, a reload, Back, Forward, two
-  loads at once, back to the title, nothing else asked of the server. No adapter there. On the software adapter (10-16, once, by
-  hand): the file booted to `__ready` on the title and into a level-file mission with no page error and no request but its one
-  address; its picture has never been seen on a GPU. A NEW FILE THE GAME PAGE FETCHES at run time has to be added to the pack in
-  `tools/build-one.ts`, or the one-file page asks the network for it. How the file is published as a page is not in this repo.
 
 ## The hosted build and its backend (since 2026-10-26)
 
 The maintainer, 10-26: "we should just deploy this on vercel and have a convex backend where we accumulate stuff like replays, telemetry,
 preferences, etc." No accounts; nothing multiplayer.
 
-- **The hosted build** = `vercel.json` + `tools/host/build.sh`: the static `bun run build` (`dist/`), `cleanUrls` so `/workbench`, `/replay`,
-  `/sounds`, `/music` open as on the dev server, the dev server's three forwards (`/sneaklab`, `/firelab`, `/gait`) as redirects, and
-  `dist/qa/commit` (the commit, from the host's `VERCEL_GIT_COMMIT_SHA` or a clean checkout's `git rev-parse`: a recording made on the build
+- **The hosted build** = `vercel.json` + `tools/host/build.sh`: the static `bun run build` (`dist/`), `cleanUrls` so `/replay`,
+  `/sounds`, `/music` open as on the dev server, `dist/qa/commit` (the commit, from the host's `VERCEL_GIT_COMMIT_SHA` or a clean checkout's `git rev-parse`: a recording made on the build
   names it, as on the dev server). The project on the host is the maintainer's; its production branch is `twopointsix`, so every step that
   joins the build redeploys the link. NOT in the repo: the project, its address, any key.
 - **The backend** = `cloud/` — a Convex project (`cloud/convex/`: `schema.ts`, `prefs.ts`, `tapes.ts`, `telemetry.ts`, `limits.ts`) with a
@@ -113,7 +87,7 @@ preferences, etc." No accounts; nothing multiplayer.
   `end`; nothing else, no key pressed), `prefs.ts` (the browser's `twopointsix.*` localStorage keys as a map, bar the machine's own — the
   quality tier, text size — saves, the editor's and this family's keys). `src/ui/cloudrows.ts` = two rows on Options ▸ Game, on a build
   with a backend only.
-- **A build with no address has none of it**: the dev server, a checkout, `build:one`, every headless tool — `cloudBoot` returns null, no id
+- **A build with no address has none of it**: the dev server, a checkout, every headless tool — `cloudBoot` returns null, no id
   is made, no timer, no request, `__cloud` is null. THE BUILD AS IT WAS (`cloud-check` `off` and `identity`; `cloud-page` step 3).
 - **Who the browser is**: a random 40-character id it makes once (localStorage `twopointsix.cloud.pid`). `?player=<id>` (the link
   `__cloud.link()` / Options ▸ Game ▸ Your settings link copies) hands it to another browser, which takes the id and the settings kept under

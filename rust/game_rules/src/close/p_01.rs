@@ -230,7 +230,7 @@ pub fn close_rows(g: &mut crate::game::Game, gd: GuardId, p: &[f64], busy: bool,
     if o.can && !busy {
         let is_civ = g.gd[gd].civ.is_some();
         let empty = g.pl[pl].holstered;
-        let gun = crate::player::grab_variant(g) == crate::character::HoldVariant::Gun;
+        let gun = crate::player::grab_variant(g, &crate::seats::here(g)) == crate::character::HoldVariant::Gun;
         let bare = close_bare(g);
         let two = close_lethal(g) || bare;
         let rmb = !(crate::rails::rails_hushes(g, "alt") && crate::rails::rails_hushes(g, "menu"));
@@ -284,7 +284,7 @@ pub fn close_rows(g: &mut crate::game::Game, gd: GuardId, p: &[f64], busy: bool,
 
 /// The line that says what the held click does. (close.ts sneakHint)
 pub fn sneak_hint(g: &crate::game::Game) -> String {
-    String::from(if g.k.stalk.drag { "LMB  press and drag to sneak up on him" } else { "LMB  hold to sneak up on him" })
+    String::from("LMB  hold to sneak up on him")
 }
 
 /// This frame's best offer: the nearest man Sam could do something to. (close.ts noteBest)
@@ -326,7 +326,7 @@ pub fn close_ready(g: &mut crate::game::Game) -> Option<crate::close::CloseReady
     let o = match o { Some(o) if o.can => o, _ => return None };
     if g.pl[pl].down || g.pl[pl].holding.is_some() || g.pl[pl].takedown.is_some() || g.pl[pl].dragging.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some() || g.pl[pl].wanding.is_some()
         || crate::game::player_rifle_up(g, pl) || (crate::game::player_canister_sel(g, pl).is_some() && !g.pl[pl].holstered) { return None; }
-    if crate::handwork::sam_work(g).is_some() || (g.pl[pl].coding.is_some() && crate::handwork::live(g, crate::handwork::LiveHalf::Work)) { return None; }
+    if crate::handwork::sam_work(g).is_some() || g.pl[pl].coding.is_some() { return None; }
     if g.pl[pl].wall.is_some() { return None; }
     let c = g.gd[o.guard].ch;
     let neck = g.ch[c].bones.get(Bone::Neck).or_else(|| g.ch[c].bones.get(Bone::Head)).copied();
@@ -347,7 +347,7 @@ pub fn mode_now(g: &mut crate::game::Game, pl: PlayerId) -> Option<GuardId> {
     g.m.close.state.get_or_insert_with(pl, fresh_state).mode_d = m::INF;
     if g.touring || g.pl[pl].down || g.pl[pl].holding.is_some() || g.pl[pl].dragging.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some() || g.pl[pl].wanding.is_some()
         || crate::game::player_rifle_up(g, pl) || g.pl[pl].sprinting || g.pl[pl].wall.is_some() { return None; }
-    if crate::handwork::sam_work(g).is_some() || (g.pl[pl].coding.is_some() && crate::handwork::live(g, crate::handwork::LiveHalf::Work)) { return None; }
+    if crate::handwork::sam_work(g).is_some() || g.pl[pl].coding.is_some() { return None; }
     let c = g.pl[pl].ch;
     let p = g.ch[c].pos;
     let mut best: Option<GuardId> = None;
@@ -376,7 +376,7 @@ pub fn close_tick(g: &mut crate::game::Game) {
     state_of(g);
     let c = g.pl[pl].ch;
     let r = close_ready(g);
-    let tell = if r.map_or(true, |r| r.kind != ReadyKind::Seat) && crate::handwork::sam_work(g).is_none() && !(g.pl[pl].coding.is_some() && crate::handwork::live(g, crate::handwork::LiveHalf::Work)) { crate::stalk::stalk_tell(g) } else { None };
+    let tell = if r.map_or(true, |r| r.kind != ReadyKind::Seat) && crate::handwork::sam_work(g).is_none() && !g.pl[pl].coding.is_some() { crate::stalk::stalk_tell(g) } else { None };
     let best: Option<GuardId> = { let now = g.time; let s = state_of(g); if s.t == now { s.best.as_ref().map(|b| b.guard) } else { None } };
     let on_tell = tell.filter(|t| r.is_none() || best.is_none() || best == Some(t.gd));
     if let Some(t) = on_tell {
@@ -424,7 +424,7 @@ pub fn close_tick(g: &mut crate::game::Game) {
         g.ch[c].anim.hands_down = if bare { g.k.stalk.low_hands } else { 0.0 };
         let bare = close_bare(g);
         let wide = if bare && !has_h {
-            if g.k.tapstep.on && g.pl[pl].crouch { 1.0 } else { m::min(1.0, g.ch[c].anim.low / m::max(0.05, g.k.stalk.wide_by)) }
+            m::min(1.0, g.ch[c].anim.low / m::max(0.05, g.k.stalk.wide_by))
         } else { 0.0 };
         g.ch[c].anim.wide = wide;
         if js::truthy(wide) {
@@ -448,8 +448,8 @@ pub fn close_tick(g: &mut crate::game::Game) {
     if r.is_some() { g.stats.close.ready_frames += 1; }
     let m_ = if g.pl[pl].takedown.is_some() { state_of(g).mode } else { mode_now(g, pl) };
     state_of(g).mode = m_;
-    g.ch[c].anim.creep = m_.is_some() || crate::tapstep::tap_held(g);
-    if !crate::tapstep::tap_held(g) { g.ch[c].anim.tap_u = -1.0; }
+    g.ch[c].anim.creep = m_.is_some() || crate::tapstep::tap_held(g, &crate::seats::here(g));
+    if !crate::tapstep::tap_held(g, &crate::seats::here(g)) { g.ch[c].anim.tap_u = -1.0; }
     if let Some(mm) = m_ {
         let mc = g.gd[mm].ch;
         let ch = g.ch[mc].bones.get(Bone::Chest).copied();

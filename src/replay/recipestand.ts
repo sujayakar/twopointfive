@@ -26,8 +26,8 @@ export const plain = (v: unknown): v is Plain => !!v && typeof v === 'object' &&
 export const put = (dst: Plain, src: Plain): void => { for (const k of Object.keys(src)) { if (k === '__proto__' || k === 'constructor' || k === 'prototype' || !(k in dst)) continue; const a = dst[k], b = src[k];
   if (plain(a) && plain(b)) put(a, b); else if (typeof a === typeof b || a === null || b === null) dst[k] = b !== null && typeof b === 'object' ? JSON.parse(JSON.stringify(b)) : b; } };
 
-/** THE SANDBOX FLAGS A STEP RUNS UNDER, written to the game (a recipe's, a tape's later row's) */
-export function layFlags(g: Game, fl: Plain): void { g.godMode = !!fl.godMode; g.aiEnabled = fl.aiEnabled !== false; g.infiniteAmmo = !!fl.infiniteAmmo; g.playerInvisible = !!fl.playerInvisible; }
+/** THE SANDBOX FLAGS A STEP RUNS UNDER, written to the game (a recipe's, a tape's later row's), and whether it saves by itself: a save is the game's own line too */
+export function layFlags(g: Game, fl: Plain): void { g.godMode = !!fl.godMode; g.aiEnabled = fl.aiEnabled !== false; g.infiniteAmmo = !!fl.infiniteAmmo; g.playerInvisible = !!fl.playerInvisible; if (typeof fl.autosave === 'boolean') g.saves.enabled = fl.autosave; }
 
 export class RecipeStand {
   constructor(readonly recipe: RunTape['recipe']) {}

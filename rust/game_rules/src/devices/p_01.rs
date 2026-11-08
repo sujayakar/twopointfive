@@ -9,7 +9,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- seams
 /// devices.ts:370 `out[k].mkey = …`: the made box's row in `g.tab.boxes`
-fn seam_set_mkey(g: &mut Game, b: BoxId, mkey: f64) { g.tab.boxes[b].mkey = Some(mkey); }
+fn seam_set_mkey(g: &mut Game, b: AnyBoxId, mkey: f64) { g.tab[b].mkey = Some(mkey); }
 
 // ---------------------------------------------------------------- small readers of this file
 /// `c.bones.<b> ?? v3.add(c.pos, off)`
@@ -167,12 +167,12 @@ pub fn sensing(g: &crate::game::Game) -> bool {
     g.ai_enabled && !g.quiet_utility && !g.touring && g.tune.devices && !g.night_breach.active && !g.rescue.active
 }
 /// Lit-seconds per second a camera's integrator fills at.   (devices.ts lensGain)
-pub fn lens_gain(g: &crate::game::Game, dist: f64, range: f64, smoke_trans: f64) -> f64 {
-    let pl = g.player;
+pub fn lens_gain(g: &crate::game::Game, seat: &crate::seats::SeatRef, dist: f64, range: f64, smoke_trans: f64) -> f64 {
+    let pl = seat.player;
     let light = g.pl[pl].visibility;
     let dist_f = v3::clamp(1.0 - (dist - 3.0) / m::max(1.0, range - 3.0), 0.2, 1.0);
     let crouch = if g.pl[pl].crouch { 0.75 } else { 1.0 };
-    m::pow(light, 1.5) * dist_f * crouch * v3::clamp((smoke_trans - 0.3) / 0.5, 0.0, 1.0) * crate::kitload::load_seen(g, crate::kitload::LoadSeenWho::Player)
+    m::pow(light, 1.5) * dist_f * crouch * v3::clamp((smoke_trans - 0.3) / 0.5, 0.0, 1.0) * crate::kitload::load_seen(g, seat, crate::kitload::LoadSeenWho::Player)
 }
 /// The lens's look direction at yaw / pitch.   (devices.ts lensDir)
 pub fn lens_dir(yaw: f64, pitch: f64) -> V3 {
@@ -212,7 +212,7 @@ pub fn update_camera(g: &mut crate::game::Game, c_2: CameraRtId, dt: f64, live: 
     let air = smoke * crate::weather::air_trans(g, d.pos, chest);
     let vis = crate::guards::eye_contact(g, e, pc, true, false, air, None);
     if vis.in_cone { let chest = bone_or(g, pc, crate::character::Bone::Chest, [0.0, 1.1, 0.0]); crate::sensors::sensors_ask_segment(g, &key, d.pos, chest); }
-    let gain = if vis.visible { lens_gain(g, vis.dist, range, air) } else { 0.0 };
+    let gain = if vis.visible { lens_gain(g, &crate::seats::here(g), vis.dist, range, air) } else { 0.0 };
     let (now, at, sus, alarm) = (g.time, g.ch[pc].pos, g.tune.camera_suspicion_secs, g.tune.camera_alarm_secs);
     let r = crate::sim_lightshome::light_home_camera_see(g, slot, now, dt, vis.visible, gain, at, sus, alarm);
     if has(r, bit.suspect) { camera_suspect(g, c); }
@@ -591,14 +591,14 @@ pub fn update_coding(g: &mut crate::game::Game, dt: f64) {
 
 // ---------------------------------------------------------------- the boxes of the devices (a rule reads them: world.raycast takes a camera's body and bracket; see notes)
 /// The devices' boxes into the frame's list, keyed by ordinal.   (devices.ts deviceBoxes)
-pub fn device_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn device_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let n0 = out.len();
     device_boxes_raw(g, out);
     let base = crate::scene_boxes::mkey().device;
     for k in n0..out.len() { seam_set_mkey(g, out[k], base + (k - n0) as f64); }
 }
 /// A camera's bracket, body, lens and LED; a pad's plate, keys and LED; a beam's housings, LED and line.   (devices.ts deviceBoxesRaw)
-pub fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     use crate::scene_boxes::{make_box_frame as make_box, MakeBoxP};   // (every box here is pushed straight onto the frame's list)
     let fl = crate::scene_boxes::box_flag();
     let dyn_ = fl.dynamic;
@@ -611,40 +611,40 @@ pub fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
         let yaw = crate::sim_lightshome::camera_machine_yaw(g, c);
         let look = lens_dir(yaw, pitch);
         let back: V3 = [-m::sin(d.yaw), 0.0, -m::cos(d.yaw)];
-        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, back, 0.16), h: [0.025, 0.025, 0.09], yaw: Some(d.yaw), albedo: Some(cam_dark()), flags: Some(dyn_), ..MakeBoxP::zeroed() }));
+        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, back, 0.16), h: [0.025, 0.025, 0.09], yaw: Some(d.yaw), albedo: Some(cam_dark()), flags: Some(dyn_), ..MakeBoxP::zeroed() }).into());
         let x = v3::normalize(v3::cross([0.0, 1.0, 0.0], look));
         let y = v3::cross(look, x);
-        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, look, -0.04), h: [0.055, 0.05, 0.1], yaw: Some(yaw), rot: Some(v3::quat::from_basis(x, y, look)), albedo: Some(cam_col()), flags: Some(dyn_), ..MakeBoxP::zeroed() }));
-        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, look, 0.075), h: [0.03, 0.03, 0.02], yaw: Some(yaw), rot: Some(v3::quat::from_basis(x, y, look)), albedo: Some([0.02, 0.02, 0.025]), flags: Some(deco), ..MakeBoxP::zeroed() }));
+        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, look, -0.04), h: [0.055, 0.05, 0.1], yaw: Some(yaw), rot: Some(v3::quat::from_basis(x, y, look)), albedo: Some(cam_col()), flags: Some(dyn_), ..MakeBoxP::zeroed() }).into());
+        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, look, 0.075), h: [0.03, 0.03, 0.02], yaw: Some(yaw), rot: Some(v3::quat::from_basis(x, y, look)), albedo: Some([0.02, 0.02, 0.025]), flags: Some(deco), ..MakeBoxP::zeroed() }).into());
         let seen = crate::sim_lightshome::camera_machine_seen(g, c);
         let hot = seen > 0.02;
         let blink = if crate::sim_lightshome::camera_machine_state(g, c) != crate::sim_lightshome::CameraState::Idle { if m::sin(g.time * 18.0) > 0.0 { 1.0 } else { 0.15 } } else { 1.0 };
         let led: V3 = if !ok { [0.0, 0.0, 0.0] } else {
             v3::scale(if hot { led_hot() } else { led_idle() }, blink * (if hot { v3::clamp(0.4 + seen / m::max(0.1, g.tune.camera_suspicion_secs), 0.4, 1.6) } else { 1.0 }))
         };
-        out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.pos, look, 0.02), v3::scale(y, 0.062)), h: [0.012, 0.008, 0.012], yaw: Some(yaw), rot: Some(v3::quat::from_basis(x, y, look)), albedo: Some([0.05, 0.0, 0.0]), emissive: Some(led), flags: Some(deco), ..MakeBoxP::zeroed() }));
+        out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.pos, look, 0.02), v3::scale(y, 0.062)), h: [0.012, 0.008, 0.012], yaw: Some(yaw), rot: Some(v3::quat::from_basis(x, y, look)), albedo: Some([0.05, 0.0, 0.0]), emissive: Some(led), flags: Some(deco), ..MakeBoxP::zeroed() }).into());
     }
     for k in g.devices.keypads.clone() {
         let d = &k.def;
         let n = k.n;
         let yaw = d.yaw;
-        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, n, 0.012), h: [0.045, 0.065, 0.012], yaw: Some(yaw), albedo: Some(pad_col()), flags: Some(deco), ..MakeBoxP::zeroed() }));
-        out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.pos, n, 0.026), [0.0, -0.015, 0.0]), h: [0.03, 0.035, 0.003], yaw: Some(yaw), albedo: Some([0.06, 0.06, 0.07]), stuff: Some(crate::scene_stuff::BoxStuff::Metal), flags: Some(deco), ..MakeBoxP::zeroed() }));
+        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, n, 0.012), h: [0.045, 0.065, 0.012], yaw: Some(yaw), albedo: Some(pad_col()), flags: Some(deco), ..MakeBoxP::zeroed() }).into());
+        out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.pos, n, 0.026), [0.0, -0.015, 0.0]), h: [0.03, 0.035, 0.003], yaw: Some(yaw), albedo: Some([0.06, 0.06, 0.07]), stuff: Some(crate::scene_stuff::BoxStuff::Metal), flags: Some(deco), ..MakeBoxP::zeroed() }).into());
         let locked = crate::doors::door_locked(g, k.door) && crate::doors::door_latched(g, k.door);
         let busy = crate::seats::men(g).iter().any(|&pl| g.pl[pl].coding == Some(k.door));
         let led: V3 = if busy { v3::scale(amber(), if m::sin(g.time * 30.0) > 0.0 { 1.0 } else { 0.2 }) } else if locked { red() } else { green() };
-        out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.pos, n, 0.026), [0.0, 0.045, 0.0]), h: [0.012, 0.006, 0.003], yaw: Some(yaw), albedo: Some([0.04, 0.04, 0.04]), emissive: Some(v3::scale(led, 0.5)), flags: Some(deco), ..MakeBoxP::zeroed() }));
+        out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.pos, n, 0.026), [0.0, 0.045, 0.0]), h: [0.012, 0.006, 0.003], yaw: Some(yaw), albedo: Some([0.04, 0.04, 0.04]), emissive: Some(v3::scale(led, 0.5)), flags: Some(deco), ..MakeBoxP::zeroed() }).into());
     }
     for l in g.devices.lasers.clone() {
         let d = g.tab.devices_laser_rt[l].def.clone();
         let (target, dir, len) = (g.tab.devices_laser_rt[l].target, g.tab.devices_laser_rt[l].dir, g.tab.devices_laser_rt[l].len);
         let ok = alive(g, target);
         let yaw = v3::yaw_of(dir);
-        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.from, dir, -0.03), h: [0.03, 0.035, 0.03], yaw: Some(yaw), albedo: Some(emit_col()), flags: Some(deco), ..MakeBoxP::zeroed() }));
-        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.to, dir, 0.03), h: [0.03, 0.035, 0.03], yaw: Some(yaw), albedo: Some(emit_col()), flags: Some(deco), ..MakeBoxP::zeroed() }));
+        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.from, dir, -0.03), h: [0.03, 0.035, 0.03], yaw: Some(yaw), albedo: Some(emit_col()), flags: Some(deco), ..MakeBoxP::zeroed() }).into());
+        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.to, dir, 0.03), h: [0.03, 0.035, 0.03], yaw: Some(yaw), albedo: Some(emit_col()), flags: Some(deco), ..MakeBoxP::zeroed() }).into());
         let (last, cut) = (crate::sim_lightshome::laser_machine_last_trip_at(g, l), crate::sim_lightshome::laser_machine_cut(g, l));
         let glow: V3 = if ok { if g.time - last < 1.5 { v3::scale(red(), if m::sin(g.time * 40.0) > 0.0 { 2.0 } else { 0.2 }) } else { [1.5, 0.1, 0.05] } } else { [0.0, 0.0, 0.0] };
-        out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.from, dir, -0.03), [0.0, 0.043, 0.0]), h: [0.008, 0.005, 0.008], yaw: Some(yaw), albedo: Some([0.05, 0.0, 0.0]), emissive: Some(glow), flags: Some(deco), ..MakeBoxP::zeroed() }));
+        out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.from, dir, -0.03), [0.0, 0.043, 0.0]), h: [0.008, 0.005, 0.008], yaw: Some(yaw), albedo: Some([0.05, 0.0, 0.0]), emissive: Some(glow), flags: Some(deco), ..MakeBoxP::zeroed() }).into());
         if ok && cut > 0.05 { crate::combat::beam_boxes(g, d.from, dir, cut, out, cut < len - 0.05, None, None); }
     }
 }

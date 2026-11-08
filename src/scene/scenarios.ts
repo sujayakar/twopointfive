@@ -248,7 +248,7 @@ export interface LessonStep {
   /** the line while a page UNDER the ring's first is showing (the first page's key pressed: what is left to press — absent: `menuLine`) */
   pageLine?: string;
   /** the line while the squad's ring is up as ONE ring of every order of the thing (a mission whose `rails.flatRing` is set, game/rails.ts RAILS.flatRing:
-   *  what to press in it — absent: `menuLine`). The digit it names is the wedge the row is on with this level's `rails.orders` (tools/qa/rails-check.ts asks) */
+   *  what to press in it — absent: `menuLine`). The digit it names is the wedge the row is on with this level's `rails.orders` */
   flatLine?: string;
   done: LessonTest;
   /** seconds the test must stay true before the step counts (absent: the frame it turns true) */
@@ -333,7 +333,7 @@ export interface LessonData {
 
 /** A PAR (game/par.ts): the level's room clear run AGAINST A CLOCK. The clock runs from the squad's first order (or Sam's first stride off his start) to the
  *  room clear's 'taken'; every teammate lost adds `lossSecs`; the total is held against three times, best first (gold < silver < bronze, seconds). The par only
- *  READS the game: a level with the block plays the same run with it switched off (PAR.on). Only beside a `roomClear`. */
+ *  READS the game: a level with the block plays the same run as one without it. Only beside a `roomClear`. */
 export interface ParData { gold: number; silver: number; bronze: number; lossSecs: number }
 /** A MISSION'S OWN ISSUE (game/kit.ts kitIssue): kit this level hands the squad whatever the machine keeps, with no visit to the loadout screen. `members` is
  *  keyed by the man's place on the roster ('0' = you, '1'‥'4' = the teammates in order); each record is the FIELDS THAT DIFFER from his issue card (kit.ts
@@ -386,7 +386,7 @@ export interface DefuseData {
  *  instance of the page opened `?kitview`): where the men stand and how the camera looks, per WAY IN. `ways` is indexed as the team starts are — [0] the
  *  structure's own `team`, [k] its `starts[k − 1]` (roomclear.ts RoomClearScenario.way). A way needs only its `door` (a door id): the slots, the camera and the
  *  lamps are worked out from the door's frame and the side the team starts on; every other key lays an authored value over that. Picture only: no rule of the
- *  game reads this block, and a level without it shows the menu's standing man as before. */
+ *  game reads this block, and a level without it shows an empty column there. */
 export interface KitViewLamp {
   /** RtLight.kind (render/lights.ts): 0 point · 1 spot · 3 area disk */
   kind: 0 | 1 | 3;
@@ -576,7 +576,7 @@ export interface ScenarioEntry {
    *  squadChoices). A design call, not an inability: the level still stages any size from a URL or a harness tool (loadout-probes.ts knows the difference) */
   only?: string;
   /** a lesson THE PLAYER PACKS FOR (kit.ts ISSUE.picked): its Team & kit step shows the cards and its page stages what this machine keeps, not the plain issue
-   *  every other lesson is played with. A row that carries it has a plan written for it (ui/kitPlan.ts). `frags` = the least of them he carries there whatever
+   *  every other lesson is played with. `frags` = the least of them he carries there whatever
    *  he packs (kit.ts kitLessonPage: a step of that mission asks for one of his own) */
   packs?: { frags?: number };
   /** a file under levels/ (absent = the bundled office) */

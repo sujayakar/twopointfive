@@ -72,9 +72,7 @@ export class SmokeSystem implements SmokeSystemLike {
    *  can just thrown stands up in a pool full of old smoke (smoke.wgsl WHO GIVES WAY; 0 = first come, as first benched).
    *  fine* = gun gas gives its bricks back (smoke.wgsl THE FINE LATTICE LETS GO): thin smoke on the fine lattice, and the heat in it, fades fineDecay/s faster, always; density / heat at or under fineEps / fineHeat is
    *  stored as 0 there and fineRing cells of air are kept round it (these three only while fineDecay > 0); that lattice may hold fineShare of the pool, or what the coarse one leaves under softLo if that is more (haze is
-   *  refused bricks from 0.7 of it, all but sources at all of it). fineDecay 0 and fineShare 1 = none of it, as first benched: notebook §9.8.
-   *  fineKeep = gas hotter than this on the fine lattice is not let go (0 = no such rule, as it was): what lets a fire's flame be heat on that lattice (game/fire.ts FIRE.gas
-   *  raises it through keepHot while such a fire burns near the view and puts it back to 0; while it is up, gun gas and breath that hot linger as long too) */
+   *  refused bricks from 0.7 of it, all but sources at all of it). fineDecay 0 and fineShare 1 = none of it, as first benched: notebook §9.8. */
   sparse = { keep: 20, ring: 4, flushEps: 2e-3, thinDecay: 0, thinBelow: 0.25, softLo: 0.6, softHi: 0.95, softEps: 0.03, softDecay: 1.5, viewBias: 1, viewR: 10, indirect: true, directAt: 0.5, split: false, calmMax: 4, farCells: 1, readSkip: false, fresh: 0.15, fineDecay: 3, fineShare: 0.25, fineEps: 0.01, fineHeat: 0.1, fineRing: 2, fineKeep: 0 };
   stats = {
     /** the pool in use in units of 512 bricks, at least 1 while anything is alive, 0 with no smoke: what the F9 recorder's smoke column and the tools' 'is there smoke yet' read (512 bricks = one of
@@ -160,11 +158,6 @@ export class SmokeSystem implements SmokeSystemLike {
     return { fields, tables, atlas, page, total: fields + tables + atlas + page, perBrick: fields / cap + 8000 };
   }
 
-  /** Tools: recompile the solver from an edited smoke.wgsl text and swap every kernel in (the pool keeps its contents) */
-  async hotSwap(src: string): Promise<void> {
-    this.mod = makeShader(this.engine.device, wgslWorldConsts() + smokeSolverConsts(this.grid) + windFieldSrc + '\n' + windForceSrc + '\n' + src, 'smokeHot');
-    await this.init();
-  }
   async init(): Promise<void> {
     const device = this.engine.device, mod = this.mod;
     const pl = (extra?: GPUBindGroupLayout) => device.createPipelineLayout({ bindGroupLayouts: extra ? [this.g0L, this.g1L, extra] : [this.g0L, this.g1L] });
@@ -221,16 +214,11 @@ export class SmokeSystem implements SmokeSystemLike {
     for (const b of this.boxes) if ((only < 0 || b.level === only) && !(seen >> b.level & 1) && this.inBox(b, p.pos)) { seen |= 1 << b.level; this.pushes.push({ ...p, pos: v3.copy(p.pos), level: b.level }); }
   }
   private inBox(b: { lo: Vec3; hi: Vec3 }, p: Vec3) { return p[0] >= b.lo[0] && p[0] <= b.hi[0] && p[1] >= b.lo[1] && p[1] <= b.hi[1] && p[2] >= b.lo[2] && p[2] <= b.hi[2]; }
-  /** gas hotter than `heat` on the fine lattice is kept (sparse.fineKeep; 0 = no such rule): game/fire.ts raises it while a fire's flame is the solver's gas */
-  keepHot(heat: number) { this.sparse.fineKeep = Math.max(0, +heat || 0); }
   /** is p somewhere smoke is being simulated? (the bounds as last read back: a frame or two old, and loose — what its two callers ask is 'is it worth stirring / thickening here') */
   inSmokeDomain(p: Vec3): boolean { for (const b of this.boxes) if (this.inBox(b, p)) return true; return false; }
   budget(): number { let n = 0; for (const e of this.emitters) if (!e.look) n++; return Math.max(0, MAX_EMITTERS - 12 - n); }   // (a `look` source is never counted: types.ts)
   drawing(): boolean { return this.params.enabled && !this.params.frozen && (this.engine.settings.flags & FrameFlags.Smoke) !== 0; }
-  /** THE SMOKE LAB'S STREAKS (host/smokelab.ts; nothing else writes them; pack below): bands = how dark a can's dark bands are (0‥0.6, a tint its smoke carries: the
-   *  picture alone) · puffs = how unevenly it lets smoke out (0‥0.9: this one moves the density, so sight lines too) · every = seconds from one band to the next */
-  readonly streak = { bands: 0, puffs: 0, every: 1.4 };
-  /** A ROUND THROUGH SMOKE (the smoke lab's rows; game/combat.ts asks on the look page only). The maintainer, 11-02: "also still can't see bullets leaving trails through
+  /** A ROUND THROUGH SMOKE (the smoke lab's rows; game/combat.ts asks with the Stirred smoke row up). The maintainer, 11-02: "also still can't see bullets leaving trails through
    *  the somke". A round used to be a row of soft shoves 7 cm across (a cell and a bit) for one step, which moved nothing anyone could see. It is ONE LINE now (`push`
    *  with `line`): the air within about `radius` of the path is brought up to `speed` along it, once (smoke.wgsl: never slowed, never turned, the same whatever the
    *  frame's length), and a long thin jet is nearly free of divergence, so the pressure step leaves it standing: it drags smoke after the round out of the far side
@@ -250,13 +238,7 @@ export class SmokeSystem implements SmokeSystemLike {
   clearAll() { this.emitters.length = 0; this.pushes.length = 0; this.needsReset = true; this.needsWipe = true; this.boxes = []; this.binding.count = 0; this.quiet = 1e9; this.epoch++; this.zeroStats(); }
   /** a render-density row moved: every live brick's atlas block is written again on the next frame, the waiting ones' too, and with the field frozen as well (the scale is applied at publish, smoke.wgsl) */
   refreshDomains() { this.again = true; }
-  private again = false; private skipWas = false; private showWas = 0;
-  /** THE SMOKE LAB'S PICTURES (host/smokelab.ts; nothing else raises them): bricks = the wire of every brick that holds smoke, both lattices, drawn over the picture · spin = the coarse
-   *  smoke redrawn by how hard the air in it turns (the curl the step keeps), full colour at spinFull, 1/s · both are the composite's (composite.wgsl smokeLabOver) off one word the
-   *  solver hands the readers; while spin is up a coarse cell's tint channels carry the spin, so dust is drawn as plain smoke (`dusty` below) */
-  show = { bricks: false, spin: false, spinFull: 8 };
-  private showWord(): number { const w = this.show; if (!w) return 0;   // (a system made without its constructor, as a check makes one, shows nothing)
-    return (w.bricks ? 1 : 0) + (w.spin ? 2 : 0) + ((w.bricks || w.spin) ? 4 * Math.min(63, Math.max(1, Math.round(+w.spinFull || 8))) : 0); }
+  private again = false; private skipWas = false;
   obstaclesChanged(c: Vec3, r: number) { this.noteDirty([c[0] - r, c[1] - r, c[2] - r], [c[0] + r, c[1] + r, c[2] + r]); }
   setWind(srcs: readonly WindGpuSource[], relax: number) { this.windSrcs = srcs; this.windRelax = relax; }
   private stirK = 0;
@@ -297,8 +279,7 @@ export class SmokeSystem implements SmokeSystemLike {
     const on = this.params.enabled && this.live() && !this.needsReset;
     this.stats.live = on ? Math.max(1, Math.round(this.stats.pool / 512)) : 0;
     this.binding.count = on ? 8 : 0;
-    this.binding.streaks = this.streak.bands > 0;
-    this.binding.dusty = DUST_DRAW.on && on && !this.show?.spin && (this.stats.tinted > 0 || this.emitters.some(e => !!e.tint || (this.streak.bands > 0 && e.kind === 'canister')));   // (look only: the volumetric pass draws dust as dust on such frames — shaders/dust_look.wgsl; never with the page's dust look put off)
+    this.binding.dusty = DUST_DRAW.on && on && (this.stats.tinted > 0 || this.emitters.some(e => !!e.tint));   // (look only: the volumetric pass draws dust as dust on such frames — shaders/dust_look.wgsl; never with the page's dust look put off)
     if (!on) { this.pushes.length = 0; if (this.stats.pool && this.params.enabled) this.zeroStats(); }   // (switched off the pool still holds what it held, and nothing would read the counts back while the world stands still: they stand, so `dusty` is right the frame it is switched on again)
   }
 
@@ -344,13 +325,13 @@ export class SmokeSystem implements SmokeSystemLike {
     f[4] = dt; f[5] = this.time; f[6] = P.buoyancy; f[7] = P.weight;
     f[8] = P.vortConf; f[9] = P.velDamp; f[10] = P.densDecay; f[11] = P.tempDecay;
     f[12] = P.turbulence; f[13] = omega; f[14] = Math.max(0, X.flushEps); u[15] = X.ring | 0;
-    f[16] = Math.max(0, +P.stirConf || 0) * this.stirK; f[17] = this.showWord(); u[18] = this.bakeAll ? 0 : this.dirty.length; u[19] = this.bakeAll ? 1 : 0;
+    f[16] = Math.max(0, +P.stirConf || 0) * this.stirK; u[18] = this.bakeAll ? 0 : this.dirty.length; u[19] = this.bakeAll ? 1 : 0;
     f[20] = X.softLo; f[21] = Math.max(X.softHi, X.softLo + 0.01); f[22] = X.softEps; f[23] = X.softDecay;
     f[24] = Math.max(0, X.thinDecay); f[25] = Math.max(1e-4, X.thinBelow); f[26] = X.readSkip ? 1 : 0; f[27] = Math.min(0.4, Math.max(0, +X.fresh || 0));
     const vf = this.engine.viewFocus; f[28] = vf[0]; f[29] = vf[2]; f[30] = Math.max(1, X.viewR); f[31] = Math.min(1, Math.max(0, X.viewBias));
     f[32] = Math.max(0, +P.calmCells || 0); f[33] = Math.max(0, +X.farCells || 0); u[34] = calmMax; f[35] = calmMax > 1 ? DT_CAP_WAIT : DT_MAX;
     f[36] = P.densityScale; f[37] = P.fxDensityScale ?? 1; f[38] = Math.max(0, +X.fineDecay || 0); f[39] = Math.min(1, Math.max(0.02, Number.isFinite(+X.fineShare) ? +X.fineShare : 1));
-    const lets = f[38] > 0; f[40] = lets ? Math.max(0, +X.fineEps || 0) : 0; f[41] = lets ? Math.max(0, +X.fineHeat || 0) : 0; u[42] = lets ? Math.max(1, X.fineRing | 0) : 8; f[43] = lets ? Math.max(0, +X.fineKeep || 0) : 0;   // (its floors and its air go with the fade: one row off = all three)
+    const lets = f[38] > 0; f[40] = lets ? Math.max(0, +X.fineEps || 0) : 0; f[41] = lets ? Math.max(0, +X.fineHeat || 0) : 0; u[42] = lets ? Math.max(1, X.fineRing | 0) : 8;   // (its floors and its air go with the fade: one row off = all three)
     g.levels.forEach((L, l) => { const o = SP_HEADER_WORDS + l * 8; u[o] = L.dims[0]; u[o + 1] = L.dims[1]; u[o + 2] = L.dims[2]; u[o + 3] = L.pageBase; f[o + 4] = L.voxel; u[o + 5] = L.texY; u[o + 6] = L.tile; u[o + 7] = L.tileBase; });
     const dAt = SP_HEADER_WORDS + SP_LEVEL_WORDS;
     this.dirty.forEach((d, i) => { const o = dAt + i * 8; f[o] = d.lo[0]; f[o + 1] = d.lo[1]; f[o + 2] = d.lo[2]; f[o + 3] = 0; f[o + 4] = d.hi[0]; f[o + 5] = d.hi[1]; f[o + 6] = d.hi[2]; f[o + 7] = 0; });
@@ -391,15 +372,6 @@ export class SmokeSystem implements SmokeSystemLike {
         if (a1 <= a0) env = 0; else { let s = 0; for (let k = 0; k < 4; k++) s += envAt(a0 + (a1 - a0) * (k + 0.5) / 4); env = (s / 4) * ((a1 - a0) / dt); }
       }
       dens *= env; temp *= env; expand *= env;
-      // A CAN BURNS UNEVENLY (the smoke lab's two rows, `streak` above; both 0 = the can as it was). Its smoke leaves in bands, a darker one then a pale one, and in puffs.
-      // A band is a tint the smoke carries (the K word every cell already has for dust), so the air folds it: a curl, a draught through a door, the wake of a round are
-      // drawn as the bands they bend. The times come from the can's own age and where it lies, so two runs are the same and two cans differ.
-      let band: Vec3 | undefined;
-      if (kind === 'canister' && (this.streak.bands > 0 || this.streak.puffs > 0)) {
-        const ph = (age / Math.max(0.2, this.streak.every)) * 2 * Math.PI + (e.pos[0] * 1.7 + e.pos[2] * 2.3), wave = (x: number) => 0.5 + 0.5 * Math.sin(x + 1.7 * Math.sin(x * 0.37));
-        if (this.streak.puffs > 0) dens *= Math.max(0, 1 + this.streak.puffs * (2 * wave(ph * 1.31 + 0.9) - 1));
-        if (this.streak.bands > 0) { const w = wave(ph), a = this.streak.bands * Math.max(0, Math.min(1, (w - 0.35) / 0.3)); band = [1 - a, 1 - a * 0.94, 1 - a * 0.86]; }
-      }
       const j = (e.line ?? 0) > 0 ? 0 : e.jitter ?? (kind === 'flash' || kind === 'push' || kind === 'burst' ? 0.08 : 0.35); const jd = v3.normalize([e.dir[0] + (sysRandom() - 0.5) * j, e.dir[1] + (sysRandom() - 0.5) * j, e.dir[2] + (sysRandom() - 0.5) * j]);
       const sp = e.speed * (kind === 'push' ? 1 : e.jitter !== undefined ? 1 + (sysRandom() - 0.5) * e.jitter : 0.75 + sysRandom() * 0.5);
       f[o] = e.pos[0]; f[o + 1] = e.pos[1]; f[o + 2] = e.pos[2]; f[o + 3] = e.radius;
@@ -407,7 +379,7 @@ export class SmokeSystem implements SmokeSystemLike {
       f[o + 8] = dens; f[o + 9] = temp; u[o + 10] = e.level; f[o + 11] = e.mode === 'burst' ? 1 : (e.body ?? 0) > 0 ? 2 : (e.line ?? 0) > 0 ? 3 : 0;
       f[o + 12] = e.push ?? LEGACY_PUSH; f[o + 13] = expand; f[o + 15] = Math.max(0, (e.body ?? 0) > 0 ? e.body! : e.line ?? 0);
       // what it raises (smoke.wgsl WHAT IS IN A CELL): not canister smoke = the first byte full; 1 − tint in the other three (look only: smoke/dustTint.ts's switch)
-      const q = (x: number) => Math.max(0, Math.min(255, Math.round((1 - x) * 255))), t = DUST_DRAW.on ? (kind === 'canister' ? band : e.tint) : undefined;
+      const q = (x: number) => Math.max(0, Math.min(255, Math.round((1 - x) * 255))), t = DUST_DRAW.on && kind !== 'canister' ? e.tint : undefined;
       u[o + 14] = (kind === 'canister' ? (t ? q(t[0]) << 8 | q(t[1]) << 16 | q(t[2]) << 24 : 0) : 255 | (t ? q(t[0]) << 8 | q(t[1]) << 16 | q(t[2]) << 24 : 0)) >>> 0;
     });
     this.pushes.length = 0;
@@ -425,11 +397,10 @@ export class SmokeSystem implements SmokeSystemLike {
     this.stats.steps = 0;
     if (!this.params.enabled || !this.live()) return;
     if (this.sparse.readSkip !== this.skipWas) { this.skipWas = this.sparse.readSkip; this.again = true; }
-    if (this.showWord() !== this.showWas) { this.showWas = this.showWord(); this.again = true; }   // (the smoke lab's pictures: every brick is published again, and the readers' word with it)
     if (this.params.frozen || this.engine.lastDt <= 0) {   // nothing steps; what the readers are handed still follows its rows
       if (!this.again || this.needsReset || !this.pipes.publishAll) return;
       this.again = false;
-      const q = this.engine.device.queue; q.writeBuffer(this.spBuf, 26 * 4, new Float32Array([this.sparse.readSkip ? 1 : 0])); q.writeBuffer(this.spBuf, 17 * 4, new Float32Array([this.showWord()])); q.writeBuffer(this.spBuf, 36 * 4, new Float32Array([this.params.densityScale, this.params.fxDensityScale ?? 1]));
+      const q = this.engine.device.queue; q.writeBuffer(this.spBuf, 26 * 4, new Float32Array([this.sparse.readSkip ? 1 : 0])); q.writeBuffer(this.spBuf, 36 * 4, new Float32Array([this.params.densityScale, this.params.fxDensityScale ?? 1]));
       const pass = enc.beginComputePass({ label: 'smoke', timestampWrites: ts('smoke') }); pass.setBindGroup(0, this.g0); pass.setBindGroup(1, this.g1);
       pass.setPipeline(this.pipes.publishAll); pass.setBindGroup(2, this.gPub); pass.dispatchWorkgroups(this.grid.cap);
       pass.setPipeline(this.pipes.boxes); pass.setBindGroup(2, this.gBox); pass.dispatchWorkgroups(1); pass.end(); this.stats.steps = 2;

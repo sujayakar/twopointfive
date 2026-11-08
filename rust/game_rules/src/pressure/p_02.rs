@@ -22,7 +22,7 @@ fn op_gd(g: &Game, i: usize) -> GuardId { g.tab.roomfight_op[g.fight.ops[i]].gd 
 #[inline]
 fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 #[inline]
-fn player_pos(g: &Game) -> V3 { g.ch[g.pl[g.player].ch].pos }
+fn player_pos(g: &Game, seat: &crate::seats::SeatRef) -> V3 { g.ch[g.pl[seat.player].ch].pos }
 #[inline]
 fn door_centre(g: &Game, door: DoorId) -> V3 { g.dr[door].frame_centre }
 #[inline]
@@ -126,8 +126,7 @@ pub fn stand_off_spot(g: &mut crate::game::Game, d: RoomfightDefId, t: Roomfight
             if tries >= STAND_OFF_TRIES || best.map_or(false, |b| k.d >= b.1) { break; }
             if k.ok == Some(false) || k.way == Some(None) || taken.iter().any(|q| flat(*q, k.p) < apart || off_line(k.p, *q, mouth) < lane || off_line(*q, k.p, mouth) < lane) { continue; }
             if k.ok.is_none() {
-                let energy = crate::glasspen::side_shot_energy(g, team);
-                k.ok = Some(!crate::scene_collision::shot_blocked(g, [k.p[0], 1.35, k.p[2]], mouth, Some(0.02), energy));
+                k.ok = Some(!crate::scene_collision::shot_blocked(g, [k.p[0], 1.35, k.p[2]], mouth, Some(0.02), None));
             }
             if k.ok != Some(true) { continue; }
             if dark {
@@ -221,7 +220,7 @@ pub fn team_stands(g: &mut crate::game::Game, r: RoomfightRoomId) -> bool {
         let o = op_gd(g, i);
         if g.gd[o].state != crate::game::GuardState::Dead && in_room(g, r, pos_of(g, o)) { return true; }
     }
-    let p = player_pos(g);
+    let p = player_pos(g, &crate::seats::here(g));
     in_room(g, r, p)
 }
 /// the last of his side alive: nobody left to go to. (pressure.ts lastAlone)
@@ -347,7 +346,7 @@ pub fn learn(g: &mut crate::game::Game) {
             let o = op_gd(g, i);
             if g.gd[o].state != crate::game::GuardState::Dead { let p = pos_of(g, o); if bang_by(g, room, c, p) { any = true; break; } }
         }
-        let pp = player_pos(g);
+        let pp = player_pos(g, &crate::seats::here(g));
         if !any && !bang_by(g, room, c, pp) { state_of(g).stats.stun_empty += 1.0; }
     }
 }
@@ -432,12 +431,12 @@ pub fn consider(g: &mut crate::game::Game, d: RoomfightDefId) {
     let hold = crate::roomfight::DefMode::Hold;
     // (rallyAt Infinity = somebody pinned him to his room: not ours either)
     let ok0 = df(g, d).mode == hold && !state_of(g).of.has(d) && df(g, d).noise_out && g.gd[gd].held.is_none() && df(g, d).rally_at != m::INF
-        && g.time >= g.gd[gd].dazzled_until && g.time >= g.gd[gd].stagger_until
+        && !crate::control::man::blind(g, gd) && !crate::control::man::staggered(g, gd)
         && g.time - df(g, d).noise_t < g.k.pressure.memory_secs && g.time - g.gd[gd].last_seen_t > 3.0
         && g.time - state_of(g).done_at.get(d).copied().unwrap_or(-100.0) > again && !state_of(g).outs.iter().any(|o| o.def == d)
-        && !crate::owner::has_him(g, gd, crate::owner::own().stand)
+        && !crate::owner::has(g, gd, crate::owner::by::STAND)
         && !{ let n = df(g, d).noise_at; crate::lanes::lane_bars(g, gd, n) }
-        && !crate::owner::has_him(g, gd, crate::owner::own().squad)
+        && !crate::owner::has(g, gd, crate::owner::by::SQUAD)
         && !(g.k.digin.on && crate::digin::dig_in_stays(g, gd));
     // the last of them alive has no others to go to, and nobody on the net to call: he keeps his room
     let lone = last_alone(g, d);
@@ -519,7 +518,7 @@ pub fn consider(g: &mut crate::game::Game, d: RoomfightDefId) {
             // a mate on his beat toward the same fight, or told of it and free to come
             let w = match state_of(g).think.get(x).copied() {
                 Some(tx) => tx.room == tt && tx.at > g.time,
-                None => told_of(g, x).map(|t| t.room) == Some(tt) && df(g, x).mode == hold && g.time >= g.gd[o].dazzled_until && g.time >= g.gd[o].stagger_until
+                None => told_of(g, x).map(|t| t.room) == Some(tt) && df(g, x).mode == hold && !crate::control::man::blind(g, o) && !crate::control::man::staggered(g, o)
                     && g.time - g.gd[o].last_seen_t > 3.0 && g.time - state_of(g).done_at.get(x).copied().unwrap_or(-100.0) > again,
             };
             if w { wait = true; }
@@ -827,7 +826,7 @@ fn tick_man(g: &mut Game, p: &mut Press, mi: PressureManId, team_in: bool) {
             }
         }
     }
-    if g.time - g.tab.pressure_man[mi].free_at > 0.5 && g.time >= g.gd[gd].dazzled_until && g.time - p.go_at < 30.0 {
+    if g.time - g.tab.pressure_man[mi].free_at > 0.5 && !crate::control::man::blind(g, gd) && g.time - p.go_at < 30.0 {
         // the push has failed for him when enough of it lies where he can see it and the enemy is on him: back out to the door he came by
         let eye = eye_of(g, gd);
         let here = pos_of(g, gd);
@@ -979,7 +978,7 @@ pub fn last_man(g: &mut crate::game::Game, d: RoomfightDefId) {
     // (lostAt ahead of the clock = somebody holds him to his room)
     let room = df(g, d).room;
     let ok = df(g, d).mode == crate::roomfight::DefMode::Hold && !state_of(g).of.has(d) && room.map_or(false, |r| g.tab.roomfight_room[r].cells.len() as f64 <= ROOM_CELLS) && g.gd[gd].held.is_none() && !(df(g, d).lost_at > g.time)
-        && g.time >= g.gd[gd].dazzled_until && g.time >= g.gd[gd].stagger_until
+        && !crate::control::man::blind(g, gd) && !crate::control::man::staggered(g, gd)
         && g.time - df(g, d).moved_at > 6.0 && g.time - state_of(g).tried.get(d).copied().unwrap_or(-100.0) > 6.0 && !state_of(g).outs.iter().any(|o| o.def == d)
         && {
             let mut other = false;
@@ -990,7 +989,7 @@ pub fn last_man(g: &mut crate::game::Game, d: RoomfightDefId) {
             !other
         }
         && !g.gd[gd].stays_in_rooms
-        && !crate::owner::has_him(g, gd, crate::owner::own().stand);
+        && !crate::owner::has(g, gd, crate::owner::by::STAND);
     if !ok { state_of(g).last.delete(d); return; }
     let r = room.unwrap();
     let mut why: Option<HookedWhy> = None;
@@ -1160,7 +1159,7 @@ pub fn fight_on(g: &mut crate::game::Game) -> bool {
     for i in 0..g.fight.defs.len() {
         let x = g.fight.defs[i];
         let o = gd_of(g, x);
-        if !alive(g, x) || df(g, x).mode == crate::roomfight::DefMode::Free || g.time < g.gd[o].dazzled_until || g.time - g.gd[o].last_seen_t < 5.0 { return true; }
+        if !alive(g, x) || df(g, x).mode == crate::roomfight::DefMode::Free || crate::control::man::blind(g, o) || g.time - g.gd[o].last_seen_t < 5.0 { return true; }
         if df(g, x).noise_at.is_some() && g.time - df(g, x).noise_t < 5.0 && !df(g, x).noise_out { return true; }
     }
     false

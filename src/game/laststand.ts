@@ -2,7 +2,7 @@
 // the "bring order to chaos" objective. curious how we can make this more fun while still having the peril of barricaded defenders"). Two switches, both
 // `regroup` ships OFF, `callOut` ON (10-08: telling only, so the run is the run with both off) — with both off nothing here runs, no die is drawn and the room fight is run for run what it was (the seams: `lastStandTick` at the tail of
 // RoomFight.tick, `lastStandStop` in stop(), one clause each in rally(), lost(), the dig-in's gate / wedge rule / stand-down, the squads' home(), the press's
-// consider(), and the room clear's objective()).
+// consider(), and the room clear's row, which the Rust game words).
 //
 //   WHEN. A room clear (not the hostage rescue), once `few` (3) or fewer of its defenders are up and no more than a third of the staging (the compound's
 //     eleven: three; the block's eight: two; the office's five: the last man). Until that frame a run with
@@ -52,8 +52,7 @@ import './dialogue';
 import './digin';
 import './netquiet';
 import './enemysquads';
-import { claimMan, releaseMan, hasHim, ownerWitness, OWN } from './owner';
-import { RUST_PASS, RUST_SURFACE } from './crossing';
+import { claimMan, releaseMan, ownerWitness, OWN } from './owner';
 
 export const LASTSTAND = {
   /** REGROUP AND DIG IN LOUDLY (shipped off): the last defenders gather in one room on a spoken order, wedge it and hold it to the end */
@@ -89,12 +88,12 @@ export const LASTSTAND = {
 };
 export const LASTSTAND_DEFAULTS: typeof LASTSTAND = JSON.parse(JSON.stringify(LASTSTAND));
 const LS = 'twopointsix.laststand';
-/** the panel's rows are kept per machine; `?regroup` / `?callout` (and `=0`) set a switch for the visit; the harness sets them by `LASTSTAND=regroup,callout`
+/** the panel's rows are kept per machine; `?callout` (and `=0`) sets the switch for the visit; the harness sets it by `LASTSTAND=callout`
  *  in the environment (tools/qa/playthrough.ts's --set reaches a fixed list of tables) */
-const KEPT = ['regroup', 'callOut', 'places', 'few', 'every', 'again', 'maxM'] as const;   // (the panel's rows)
+const KEPT = ['callOut', 'places', 'few', 'every', 'again', 'maxM'] as const;   // (the panel's rows)
 export function saveLastStand() { try { const o: Record<string, boolean | number> = {}; for (const k of KEPT) if (LASTSTAND[k] !== LASTSTAND_DEFAULTS[k]) o[k] = LASTSTAND[k]; if (Object.keys(o).length) globalThis.localStorage?.setItem(LS, JSON.stringify(o)); else globalThis.localStorage?.removeItem(LS); } catch { /* no store */ } }
 try { const o = JSON.parse(globalThis.localStorage?.getItem(LS) ?? 'null'); if (o) for (const k of KEPT) if (typeof o[k] === typeof LASTSTAND[k]) (LASTSTAND as Record<string, unknown>)[k] = o[k]; } catch { /* no store, or not ours */ }
-try { const q = new URLSearchParams(location.search); if (q.has('regroup')) LASTSTAND.regroup = q.get('regroup') !== '0'; if (q.has('callout')) LASTSTAND.callOut = q.get('callout') !== '0'; if (q.has('calloutplaces')) LASTSTAND.places = q.get('calloutplaces') !== '0'; } catch { /* no page (the harness) */ }
+try { const q = new URLSearchParams(location.search); if (q.has('callout')) LASTSTAND.callOut = q.get('callout') !== '0'; if (q.has('calloutplaces')) LASTSTAND.places = q.get('calloutplaces') !== '0'; } catch { /* no page (the harness) */ }
 try { const e = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.LASTSTAND; if (e) { const w = e.toLowerCase().split(/[\s,+]+/); if (w.includes('regroup')) LASTSTAND.regroup = true; if (w.includes('callout')) LASTSTAND.callOut = true; if (w.includes('nocallout')) LASTSTAND.callOut = false; if (w.includes('places')) LASTSTAND.places = true; if (w.includes('noplaces')) LASTSTAND.places = false; } } catch { /* no process (the page) */ }
 
 type Def = RoomFight['defs'][number];
@@ -124,7 +123,7 @@ interface State {
   die: Die; nextAt: number; check: Check | null; known: Set<Def>; named: Map<Def, string>; stand: Stand | null;
   /** `places`: the place each of them last named that is no room of the structure, and what every named man said last (to say again when it is no longer true) */
   spots: Map<Def, Spot>; at: Map<Def, Said>; loneSaid: boolean; fewN: number; told: Set<Def>;
-  hint: Hint | null; said: LastStandSaid[]; stats: ReturnType<typeof newStats>; stale: boolean;
+  said: LastStandSaid[]; stats: ReturnType<typeof newStats>; stale: boolean;
   /** the post each of them was staged on (room id), and the staging it was read off (seed:attempt) */ post: Map<Guard, string>; key: string;
   /** the lines: the next variant of each kind (two men never say the same words back to back), when a line of each class may next go out, and the lines waiting for that */
   rot: Map<LineKind, number>; clsAt: number[]; later: Later[];
@@ -134,17 +133,15 @@ interface Spot { name: string; pos: Vec3 }
 /** what a man last named: `key` the room's id or the place's name, `the` as he said it; since when he has been somewhere else (NaN: he has not), where and
  *  since when he has stood still, when he last said he moved */
 interface Said { key: string; the: string; offT: number; stillAt: Vec3; stillT: number; saidT: number }
-export interface Hint { key: string; rooms: Set<string>; /** `places`: named places that are no room of the list, first named first */ spots: Spot[] }
 const STATES = new SideMap<Game, State>('laststand.STATES');
 ownerWitness<Game>('stand', (gd, g) => { if (!LASTSTAND.regroup) return false; const S = STATES.get(g)?.stand; return !!S && ofStand(S, gd); });
 
-const alive = (D: Def) => D.gd.state !== 'dead' && !hasHim(D.gd, OWN.runner);   // (runner.ts: a man who has broken and run is off the net from his shout on — he leads no check, answers none and is not one of the few)
 
 /** the strip takes one line of a class every few seconds and DROPS the rest (cues.ts `gaps`, whoever spoke last — the squads' and the dig-in's lines too): a
  *  line that would land inside that waits its turn here, and is said by the same man if he is still fit to say it. `then` = what the line makes true for the
  *  HUD (the room it names): it happens when the line is said, never for a line that was not */
 const fill = (tpl: string, vars: Record<string, string>) => tpl.replace(/\{(\w+)\}/g, (_m, k: string) => vars[k] ?? '');
-const name = (st: State, D: Def, id: string | null) => { if (id) st.named.set(D, id); else st.named.delete(D); st.spots.delete(D); st.at.delete(D); st.hint = null; };
+const name = (st: State, D: Def, id: string | null) => { if (id) st.named.set(D, id); else st.named.delete(D); st.spots.delete(D); st.at.delete(D); };
 
 
 
@@ -153,19 +150,7 @@ const name = (st: State, D: Def, id: string | null) => { if (id) st.named.set(D,
 const ofStand = (S: Stand, gd: Guard) => { for (const D of S.in) if (D.gd === gd) return true; for (const D of S.out) if (D.gd === gd) return true; return S.movers.some(m => m.D.gd === gd); };
 function standSay(g: Game): void { const S = STATES.get(g)?.stand; for (const gd of g.guards) { if (S && ofStand(S, gd)) claimMan(gd, OWN.stand, g.time); else releaseMan(gd, OWN.stand, g.time); } }
 /** the fight is over (RoomFight.stop): everything forgotten but the counts and the lines, which stay for whoever reads them after the run */
-export function lastStandStop(g: Game) { const st = STATES.get(g); if (!st) return; st.check = null; st.stand = null; standSay(g); st.known.clear(); st.named.clear(); st.spots.clear(); st.at.clear(); st.later.length = 0; st.hint = null; st.stale = true; }
-/** roomclear.ts objective(): the rooms their net has named (STRUCTURE ids), the named places that are no room of it (`places`), and a key that changes when
- *  they do — null with both switches off or nothing said */
-export function lastStandHint(g: Game): Hint | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('lastStandHint', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
-  if (!LASTSTAND.regroup && !LASTSTAND.callOut) return null;
-  const st = STATES.get(g); if (!st || st.stale) return null;
-  if (!st.hint) {
-    const rooms = new Set<string>(), spots: Spot[] = []; for (const [D, id] of st.named) if (alive(D)) rooms.add(id);
-    for (const [D, s] of st.spots) if (alive(D) && !spots.some(x => x.name === s.name)) spots.push(s);
-    st.hint = { key: [...rooms].sort().join(',') + (spots.length ? `|${spots.map(s => s.name).join(',')}` : ''), rooms, spots };
-  }
-  return st.hint.rooms.size || st.hint.spots.length ? st.hint : null;
-}
+export function lastStandStop(g: Game) { const st = STATES.get(g); if (!st) return; st.check = null; st.stand = null; standSay(g); st.known.clear(); st.named.clear(); st.spots.clear(); st.at.clear(); st.later.length = 0; st.stale = true; }
 export function lastStandStats(g: Game): Record<string, number> { const s = STATES.get(g)?.stats ?? newStats(); const r: Record<string, number> = {}; for (const [k, v] of Object.entries(s)) r[k] = Number.isFinite(v) ? +v.toFixed(2) : -1; return r; }
 /** the endgame as it went, for the tallies and the probes: the counts, the lines their net said and where the stand is */
 export function lastStandReport(g: Game): { on: string; stats: Record<string, number>; room: string | null; in: string[]; out: string[]; moving: string[]; known: string[]; named: string[]; said: LastStandSaid[] } {

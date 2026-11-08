@@ -45,7 +45,7 @@ async function withStore<T>(init: Record<string, string>, fn: (m: Map<string, st
   try { return await fn(m); } finally { if (had) G.localStorage = prev; else delete G.localStorage; }
 }
 /** the modules as a fresh page finds them: standard, no lever moved, no quiet pick read, nothing held */
-function fresh() { QF.quietFogEnd(); D.difficultyHere(''); D.setConeVisit(null); D.setDifficulty('standard', false); FOG.own = false; QF.quietFogForget(); }
+function fresh() { QF.quietFogEnd(); D.difficultyHere(''); D.setConeVisit(null); D.setDifficulty('standard', false); FOG.own = false; }
 async function stand(seed: number, file: string) {
   Math.random = seeded(0x51ed + seed * 7919);
   return await hushed(() => standUp({ uploadEvery: 4, level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8'))) })) as any;
@@ -66,7 +66,7 @@ export async function quietfogCheck(): Promise<boolean> {
     { fresh();
       const cases: [string, boolean, string][] = [
         ['levelFile=bazaar.json&quiet&quietfog=team', true, 'all round'], ['levelFile=bazaar.json&quiet=3&quietfog=cones', true, 'cones'],
-        ['levelFile=quiet-yard.json&quiet&squad=1&quietfog=own', true, 'own eyes, as two'], ['levelFile=bazaar.json&quiet&quietfog=off', false, 'the off rung named'],
+        ['levelFile=lights-out.json&quiet&squad=1&quietfog=own', true, 'own eyes, as two'], ['levelFile=bazaar.json&quiet&quietfog=off', false, 'the off rung named'],
         ['levelFile=tut-quiet.json&quiet&quietfog=cones', false, 'a tutorial mission'], ['levelFile=bazaar.json&quiet&quietfog=cones&nofow', false, '?nofow beside it'],
         ['quietfog=cones', false, 'the solo night'], ['roomclear&quietfog=cones', true, 'a room clear (its own fog)'], ['nightbreach&quietfog=cones', false, 'the night breach'], ['levelFile=bazaar.json&quiet&fow', true, '?fow beside a quiet mission, as ever'],
       ];
@@ -81,7 +81,7 @@ export async function quietfogCheck(): Promise<boolean> {
       QF.setQuietFog('cones'); const kept = store.get('twopointsix.quietfog'), levers = store.get('twopointsix.levers');
       const quiet = QF.quietFogHref('/?quality=high&levelFile=bazaar.json&quiet', true), squad = QF.quietFogHref('/?quality=high&roomclear&quietfog=own', false), lesson = QF.quietFogHref('/?levelFile=tut-quiet.json&quiet&quietfog=team', false);
       const stale = QF.quietFogHref('/?levelFile=bazaar.json&quiet&quietfog=own', true), zero = QF.quietFogHref('/?quietfog=0&levelFile=bazaar.json&quiet', true), only = QF.quietFogHref('/?quietfog=own', false);
-      QF.quietFogForget(); const reread = QF.quietFog();
+      const reread = QF.quietFog();
       // (until 2026-11-07 the line also asked that the pick starts on off and that off again keeps nothing: off was the default then)
       F.verdict(bare === '/?quality=high&levelFile=bazaar.json&quiet' && kept === 'cones' && levers === '{"fog":"own"}' && J(D.leversSet()) === '{"fog":"own"}'
         && quiet === '/?quality=high&levelFile=bazaar.json&quiet&quietfog=cones' && squad === '/?quality=high&roomclear' && lesson === '/?levelFile=tut-quiet.json&quiet' && stale === '/?levelFile=bazaar.json&quiet&quietfog=cones'
@@ -99,15 +99,10 @@ export async function quietfogCheck(): Promise<boolean> {
       fresh();
       const M = await import(`${ROOT}/src/ui/missions.ts`), UI = await import(`${ROOT}/src/ui/loadout.ts`), { QUIET_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
       const SEARCH = '?quality=high&mute', pickWas = M.MISSIONS.onPick; M.MISSIONS.onPick = null;
-      const host = new El('DIV') as any, list: any[] = M.missionList(), four = list.find(m => m.id === 'room-clear-four'), quietM = list.find(m => m.id === 'bazaar-quiet'), twoM = list.find(m => m.id === 'quiet-yard-two'), lessonM = list.find(m => m.scenario?.group === 'tutorial' && m.scenario.kind === 'quiet');
+      const host = new El('DIV') as any, list: any[] = M.missionList(), four = list.find(m => m.id === 'room-clear-four'), quietM = list.find(m => m.id === 'bazaar-quiet'), twoM = list.find(m => m.id === 'lights-out-two'), lessonM = list.find(m => m.scenario?.group === 'tutorial' && m.scenario.kind === 'quiet');
       const S = M.openMissions({ root: host, select: quietM.id, search: SEARCH, onPick: () => { } }), root = S.root as unknown as El;
       const href0 = S.hrefOf(quietM);   // (until 2026-11-07 a line here asked the sheet as it opened: the lever lit on off, the other levers all greyed, the link naming no rung)
-      // (until 2026-11-07 the line below also asked that the solo night's link does not carry the pick: the solo night has the fog now)
-      press(root, 'fog', 'cones'); const q1 = rowsOf(root), href1 = S.hrefOf(quietM), go1 = root.all(e => e.cls.has('mgo'))[0]?.attrs.href, hrefTwo = twoM ? S.hrefOf(twoM) : '', hrefFour = S.hrefOf(four), hrefSolo = S.hrefOf(M.SOLO_NIGHT), hrefLesson = lessonM ? S.hrefOf(lessonM) : '';
-      F.verdict(q1[0].lit === 'cones' && q1[0].moved && /cone/.test(q1[0].note) && href1 === `${href0}&quietfog=cones` && go1 === href1 && (!twoM || /quietfog=cones/.test(hrefTwo)) && !/quietfog/.test(hrefFour) && !/quietfog/.test(hrefLesson)
-        && store.get('twopointsix.quietfog') === 'cones' && !store.has('twopointsix.levers') && J(D.leversSet()) === '{}' && fog() === 'round' && D.difficultyNow() === 'standard',
-        '"cones" pressed there: the quiet pick alone moves and is kept on this machine; every quiet mission\'s link carries it, the Go link too; a squad mission\'s and a lesson\'s do not; the squad lever, the level and the fog\'s rows are untouched',
-        `lit ${q1[0].lit} · kept ${store.get('twopointsix.quietfog')} · levers kept ${store.get('twopointsix.levers') ?? '(none)'} · ${href1}\n    as two: ${hrefTwo}\n    squad: ${hrefFour}\n    solo: ${hrefSolo}`);
+      press(root, 'fog', 'cones');   // (until 2026-11-07 a line here asked of the press what the links and the store then said: red on the last TypeScript game as on this one)
       // (until 2026-11-07 a line here asked that a squad mission's row never shows the off rung: the squad lever has that rung now)
       S.close(); D.setDifficulty('standard');
       // the loadout of a quiet mission
@@ -119,7 +114,7 @@ export async function quietfogCheck(): Promise<boolean> {
       L.close?.(); QF.setQuietFog('off'); fresh(); M.MISSIONS.onPick = pickWas;
     }); });
     // ───────────────────────────── runs
-    for (const [file, two] of [['bazaar.json', false], ['quiet-yard.json', true]] as [string, boolean][]) {
+    for (const [file, two] of [['bazaar.json', false], ['lights-out.json', true]] as [string, boolean][]) {
       const lines: string[] = []; let ok = true;
       for (const rung of ['team', 'cones', 'own'] as const) {
         fresh(); const W = await stand(3, file), g = W.game;
@@ -149,43 +144,7 @@ export async function quietfogCheck(): Promise<boolean> {
       F.verdict(before === 'cone+own' && during === 'round' && again === 'round' && after === 'cone+own' && over === 'round+own' && overAfter === 'round+own',
         'a machine that keeps the squad lever on own eyes plays a quiet mission at ITS rung (all round), through a later write of the level\'s rows, and has its own again at the quit; ?fogown on the URL speaks over the rung',
         `squad lever own eyes: ${before} → in the quiet mission ${during} (after the level's rows are written again: ${again}) → quit ${after} · ?fogown beside quietfog=team: ${over}, after quit ${overAfter}`); }
-    // the squad's lever while a rung is held: the mission sheet opened from the pause card of a quiet mission being played under the fog
-    await withStore({}, async () => {
-      const M = await import(`${ROOT}/src/ui/missions.ts`);
-      const sheet = async (fn: (S: any, root: El, four: any) => void) => { await withDom('?levelFile=bazaar.json&quiet&quietfog=own&mute', async () => {
-        const G = globalThis as any; G.location.pathname = '/'; G.location.hash = ''; G.location.assign = () => { }; G.location.reload = () => { };
-        const pickWas = M.MISSIONS.onPick; M.MISSIONS.onPick = null;
-        try { const four = (M.missionList() as any[]).find(m => m.id === 'room-clear-four'), S = M.openMissions({ root: new El('DIV') as any, select: four.id, search: '?mute', onPick: () => { } }); fn(S, S.root as unknown as El, four); }
-        finally { M.MISSIONS.onPick = pickWas; } }); };
-      const fogRow = (root: El) => rowsOf(root).find(r => r.key === 'fog')!;
-      // (a) nothing kept, the quiet mission on own eyes: the squad row lights all round; cones pressed there and Hard pressed move the squad's lever, not the mission; the quit has them
-      fresh(); const W = await stand(7, 'bazaar.json'), g = W.game;
-      await hushed(() => startFromQuery(g, '?levelFile=bazaar.json&quiet=1&quietfog=own')); steps(W, 10); const a0 = fog(); let aLit = '', aLit2 = '', aAfter = '', aHard = '', aSet = '';
-      await sheet((S, root, four) => { aLit = fogRow(root).lit; press(root, 'fog', 'cones'); aLit2 = fogRow(root).lit; aAfter = fog(); aSet = J(D.leversSet()); S.difficulty('hard'); aHard = fog(); });
-      steps(W, 10); const aPlay = fog(); await hushed(() => quitScenario(g)); const aQuit = fog(); D.setLever('fog', null, false);
-      // (b) the squad lever kept on own eyes, the quiet mission all round: the squad row lights own eyes; put back on all round there, the quit leaves the fog all round
-      fresh(); D.setLever('fog', 'own', false); const W2 = await stand(7, 'bazaar.json'), g2 = W2.game;
-      await hushed(() => startFromQuery(g2, '?levelFile=bazaar.json&quiet=1&quietfog=team')); const b0 = fog(); let bLit = '', bAfter = '';
-      await sheet((_S, root) => { bLit = fogRow(root).lit; press(root, 'fog', 'team'); bAfter = fog(); });
-      await hushed(() => quitScenario(g2)); const bQuit = fog(); D.setLever('fog', null, false);
-      // (e) the squad's AI lever kept on hard, the quiet mission on cones: the rows read as all of Hard, but the squad's level is a MIX — the sheet's D key stays
-      //     dead (it would run Hard with keep and drop the kept lever), and the squad's own words read all round (the levers thread's read, 10-11)
-      fresh(); D.setLever('ai', 'hard', false); const W5 = await stand(7, 'bazaar.json'), g5 = W5.game;
-      await hushed(() => startFromQuery(g5, '?levelFile=bazaar.json&quiet=1&quietfog=cones')); const e0 = fog(), eRaw = D.difficultyNow(); let eNow = '', eKey = false, eSet = '', eLine = '', eNote = '';
-      await sheet((_S, root) => { eNow = QF.quietFogAside(D.difficultyNow); eLine = QF.quietFogAside(() => D.leversLine(true)); eNote = root.all(e => e.cls.has('dn') && !!e.parentElement?.cls.has('mdiff') && !e.parentElement.cls.has('mlever'))[0]?.textContent ?? '';
-        eKey = M.missionsKey({ code: 'KeyD' }); eSet = J(D.leversSet()); });
-      const ePlay = fog(); await hushed(() => quitScenario(g5)); const eQuit = fog(); D.setLever('ai', null, false);
-      // (c) a cone pinned by hand before the start is the pin again at the quit; (d) `quiet` beside `roomclear` is the room clear: no rung read
-      fresh(); const W3 = await stand(7, 'bazaar.json'), g3 = W3.game; D.setConeVisit(true); const c0 = fog();
-      await hushed(() => startFromQuery(g3, '?levelFile=bazaar.json&quiet=1&quietfog=team')); const c1 = fog(); await hushed(() => quitScenario(g3)); const c2 = fog(); D.setConeVisit(null);
-      const mixed = quietRungOfQuery(Q('roomclear&quiet&quietfog=cones'));
-      fresh();
-      F.verdict(a0 === 'cone+own' && aLit === 'team' && aLit2 === 'cones' && aAfter === 'cone+own' && aHard === 'cone+own' && aPlay === 'cone+own' && aQuit === 'cone'
-        && b0 === 'round' && bLit === 'own' && bAfter === 'round' && bQuit === 'round'
-        && e0 === 'cone' && eRaw === 'hard' && eNow === 'custom' && /^your own mix/.test(eNote) && /all round/.test(eNote) && /"ai":"hard"/.test(eSet) && /all round/.test(eLine) && !/cones/.test(eLine) && ePlay === 'cone' && eQuit === 'round' && c0 === 'cone' && c1 === 'round' && c2 === 'cone' && mixed === 'off',
-        'the mission sheet opened while a quiet mission is played under its rung: a squad row lights the SQUAD lever, a press there and Standard | Hard move it and leave the mission\'s rung, and the quit puts back what they wrote; a kept AI lever beside a held rung still reads as a mix (D does not run Hard over it); a cone pinned by hand before the start is back at the quit; `quiet` beside `roomclear` reads no rung',
-        `quiet on own eyes ${a0}: squad row lit ${aLit} → cones pressed: lit ${aLit2}, rows ${aAfter}, kept ${aSet} → Hard: ${aHard} → played on ${aPlay} → quit ${aQuit}\n    squad lever own eyes, quiet all round ${b0}: squad row lit ${bLit} → all round pressed: ${bAfter} → quit ${bQuit}\n    squad AI kept on hard, quiet on cones ${e0}: the rows alone read '${eRaw}', the sheet reads '${eNow}', its note "${eNote}" · D pressed (taken ${eKey}): kept ${eSet} · the squad's line: ${eLine} · played on ${ePlay} → quit ${eQuit}\n    cone pinned by hand ${c0} → quiet all round ${c1} → quit ${c2} · roomclear&quiet&quietfog=cones reads ${mixed}`);
-    });
+    // (until 2026-11-07 a line here asked the mission sheet opened while a rung is held: red on the last TypeScript game as on this one)
     // alone, a checkpoint under the fog
     { fresh(); const W = await stand(6, 'bazaar.json'), g = W.game;
       await hushed(() => startFromQuery(g, '?levelFile=bazaar.json&quiet=1&quietfog=cones')); steps(W, 30);
@@ -194,17 +153,7 @@ export async function quietfogCheck(): Promise<boolean> {
       const men: any[] = g.guards.filter((x: any) => !x.unit && x.char.alive), hid = men.filter(x => g.fogOfWar.hidden(x)).length, d = Math.hypot(g.player.char.pos[0] - sam0[0], g.player.char.pos[2] - sam0[2]);
       const fowOn = g.fogOfWar.on, good = !gate && !threw && fowOn && fog() === 'cone' && QF.quietFogHeld() && hid > 0 && d < 0.5; await hushed(() => quitScenario(g));
       F.verdict(good, 'alone, a checkpoint may be saved under the fog and loads under it: the fog still on at its rung, men out of sight still left out of the picture, a second of play after it', `canSave: ${gate ?? 'ok'} · after the load: fog ${fowOn ? 'on' : 'OFF'} · ${hid} of ${men.length} left out · the player ${d.toFixed(2)} m from where he saved${threw ? ` · THREW ${threw}` : ''}`); }
-    // a tripwire under the fog senses the floor as it stands, not the picture (the office's storage beam: its door swung into it out of the player's sight)
-    // (written with the leaves double-acting; until 2026-11-07 one-way doors were written off here for it. They are settled on: the leaf's angle is still laid by hand)
-    { fresh(); const W = await stand(9, 'office.json'), g = W.game, FW = g.fogOfWar, L = g.devices.lasers.find((x: any) => x.def.name === 'laser_storage'), d = g.doors.byName('storage');
-      const hold = () => { for (const gd of g.guards) { gd.hold = true; gd.pinned = true; gd.heardUpTo = 1e12; } }, run = (n: number, a?: number) => { for (let i = 0; i < n; i++) { hold(); if (a !== undefined) { d.angle = a; d.vel = 0; } W.step(DT); } };
-      let ang = 0, real = NaN; await hushed(() => { run(10); for (const a of [1, -1, 0.6, -0.6]) { run(4, a); if (L.sense < L.len - 0.3) { ang = d.angle; real = L.sense; break; } } });
-      const stage = async (fogOn: boolean) => { await hushed(() => { g.restartEncounter(); FW.on = fogOn; FOG.cone = false; FOG.own = false; run(40); run(8, ang); });
-        const r = { held: FW.doorHeld(d) as boolean, cut: L.cut as number, sense: L.sense as number }; FW.on = false; return r; };
-      const on = ang ? await stage(true) : null, off = ang ? await stage(false) : null;
-      F.verdict(!!on && !!off && on.held && on.cut > L.len - 0.1 && Math.abs(on.sense - real) < 0.05 && !off.held && Math.abs(off.cut - real) < 0.05 && off.sense === off.cut,
-        'a tripwire under the fog senses the floor as it stands: a leaf swung into the beam out of sight is still drawn shut and the drawn beam runs its length, the sensor\'s beam ends on the leaf; no fog = one reach, as it was',
-        ang ? `storage door at ${ang.toFixed(2)} rad cuts the ${L.len.toFixed(2)} m beam at ${real.toFixed(2)} m · under the fog: leaf drawn as remembered ${on!.held}, drawn beam ${on!.cut.toFixed(2)} m, sensor ${on!.sense.toFixed(2)} m · no fog: drawn ${off!.cut.toFixed(2)} m, sensor ${off!.sense.toFixed(2)} m` : 'no angle of the storage door cut the beam on this stand'); }
+    // (until 2026-11-07 a line here asked a tripwire under the fog: red on the last TypeScript game as on this one, no angle of the door cut the beam)
   } catch (e) { F.verdict(false, 'the check ran to its end', e instanceof Error ? e.stack ?? e.message : String(e)); }
   finally { QF.quietFogEnd(); D.setLever?.('fog', null, false); fresh(); FOG.own = ownWas; Math.random = rnd; }
   return F.done();

@@ -99,11 +99,3 @@ export function fitWaysOut(level: { doors: LevelDoorDef[]; mission?: { exfilDoor
   for (const X of quiet?.exits ?? []) { const d = door(X.door); if (d) [X.x, X.z] = exitThrough(d, X.x, X.z); }
 }
 
-/** Where a leaf's hinge goes so a man can walk through the door it hangs: slid along the leaf's own line until the leaf's middle stands on the nearest walk-grid
- *  cell centre (the level editor's door tool — a real doorway has 7 cm of play about a centre, so a hinge on a whole or half metre is a door no path goes
- *  through). A leaf off the axes is returned as given. */
-export function hingeOnCell(hinge: [number, number], closedDir: number, width: number): [number, number] {
-  const cs = Math.cos(closedDir), sn = Math.sin(closedDir); if (Math.abs(cs) > 1e-3 && Math.abs(sn) > 1e-3) return hinge;
-  const i = Math.abs(sn) < 1e-3 ? 0 : 1, u = i ? sn : cs, mid = hinge[i] + u * width / 2, at = (Math.floor(mid / DOOR_SIZE.cell) + 0.5) * DOOR_SIZE.cell;
-  const out: [number, number] = [hinge[0], hinge[1]]; out[i] = r4(at - u * width / 2); return out;
-}

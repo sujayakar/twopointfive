@@ -360,7 +360,7 @@ pub fn round_for(g: &mut crate::game::Game, gd: GuardId, b: &mut crate::doorforc
 
 /// The alert branch's hook: the door this man is on, where his gun points and how fast his legs go. None = nothing of the kind. (doorforce.ts doorForce)
 pub fn door_force(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crate::doorforce::DoorForce> {
-    if !live(g) || !defender(g, gd) || g.gd[gd].script.is_some() || g.gd[gd].held.is_some() || g.time < g.gd[gd].dazzled_until || g.time < g.gd[gd].stagger_until { return None; }
+    if !live(g) || !defender(g, gd) || g.gd[gd].script.is_some() || g.gd[gd].held.is_some() || crate::control::man::blind(g, gd) || crate::control::man::staggered(g, gd) { return None; }
     g.m.doorforce.states.as_ref()?.men.get(gd)?;
     let (kf, time, c, w) = (g.k.doorforce, g.time, g.gd[gd].ch, g.gd[gd].weapon);
     man!(g, gd).served = time;

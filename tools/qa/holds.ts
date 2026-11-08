@@ -12,6 +12,7 @@
 // the pacing on (and `TPS_PACING=0` in front is the hold itself, said by hand: a stand-up raises a row for '1' alone).
 import { resolve } from 'node:path';
 import { FOLD, foldLost, foldSpeaker, foldOutside, foldLine, foldFor, foldMode } from './fold.ts';
+import { harnessDie } from './die.ts';
 const ROOT = resolve(import.meta.dir, '../..');   // (not the harness's own: a tool that names its stand before it loads the harness can still import this file first)
 
 /** One held row: the stand word, the knob table and the row's key (src/game/knobs.ts's registry), and whether the row is put off at once as well as the word
@@ -39,7 +40,7 @@ export const HOLDS: readonly { readonly list: string; readonly names: readonly s
   // a half; at the player's walk he is through it in 0.7 s) and noshove's room keeper (rule off, the entry's timing stands a man across the player and the
   // keeper walks out of his way; at the player's walk the entry lands otherwise). Their mend lines are green with the pace on (TPS_PACING=1 in front shows it:
   // only the fault arm goes red).
-  { list: 'PACE_AS_IT_WAS', names: ['leafstall', 'noshove'], holds: [atStandUp('TPS_PACING', 'TEAMPACE', 'pacing')] },
+  { list: 'PACE_AS_IT_WAS', names: ['noshove'], holds: [atStandUp('TPS_PACING', 'TEAMPACE', 'pacing')] },
 ];
 
 /** whether a name written in the table (one of its three ways) is this probe's */
@@ -73,7 +74,7 @@ export async function holdOff(holds: readonly Hold[]): Promise<() => void> {
 
 /** Run one probe as the runner runs it, whoever calls: the words its name is owed held (holdOff, above), and round it the fence that keeps one probe's leftovers
  *  out of the next of the same process — every knob table copied before and put back after (src/game/knobs.ts: a key a probe added is dropped, every value
- *  restored in place; the cut-pieces switch is one of them), 'the plain night wears your card' (kit.ts KIT_SOLO, a flag of the visit in no knob table), and the
+ *  restored in place; the cut-pieces switch is one of them), and the
  *  loud card first in the table again (kit.ts kitMission: a probe that staged a quiet run leaves your stealth card first). Throws, after everything else is
  *  back, if the tables cannot be put back. */
 let fenceDepth = 0;
@@ -82,14 +83,18 @@ export async function asProbe<T>(name: string, fn: () => T | Promise<T>): Promis
   // (tools/qa/fold.ts: one line a probe from whoever runs the probes, the outermost. Under the runner, whose run() says it, this says nothing.)
   const says = fenceDepth === 0 && foldSpeaker('probe'); if (says) { const o = foldOutside(`before ${name}`); if (o) console.log(o); }   // (a probe run inside another's fence is the outer one's)
   const foldWas = fenceDepth === 0 ? foldMode() : null;   // (fold.ts foldFor: the fold on or off as this fence opens, put back FIRST as it closes, so the tables go back in the mode they were copied in)
-  const soloOn = kit.KIT_SOLO.on, knobs = knobsCopy(), release = await holdOff(holdsOf(name));
+  const knobs = knobsCopy(), release = await holdOff(holdsOf(name));
+  // (THE DIE IS PART OF THE FENCE: every probe begins on die 1 and whatever die it leaves in `Math.random` is taken out after it, so a probe that stands a game
+  // with no seed stands the same game alone, after any other probe, and on every run — tools/qa/die.ts)
+  const dieWas = Math.random; if (fenceDepth === 0) Math.random = harnessDie() ?? dieWas;
   let threw: unknown, failed = false, red = false; fenceDepth++;
   try { const r = await fn(); red = (r as unknown) === false; return r; }
   catch (e) { failed = true; red = true; threw = e; throw e; }
   finally {
     foldFor(foldWas);
+    if (fenceDepth === 1) Math.random = dieWas;
     try { kit.kitMission(null); } catch { /* (as the runner always ran it: a throw here is not the probe's verdict) */ }
-    release(); kit.KIT_SOLO.on = soloOn;
+    release();
     fenceDepth--; if (FOLD.on) { try { foldLost(); } catch { /* the put-back below still runs */ } }   // (tools/qa/fold.ts: a settled row's hold lost to a branch replaced whole is found BEFORE the tables go back, so it is named with the value the probe left it at)
     try { knobsBack(knobs); if (FOLD.on) foldLost(); }   // (…and after: the put-back makes again a branch the probe deleted, plain)
     catch (e: any) { throw new Error(`the knob tables could not be put back after '${name}' — ${e?.stack ?? e}${failed ? ` (and the probe itself threw — ${(threw as any)?.stack ?? threw})` : ''}`); }

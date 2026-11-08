@@ -62,7 +62,6 @@ import { fireShell, pelletDrops, pelletEnd, type Shell } from './shotgun';
 import { fragInFist, FRAG } from './frag';
 import { GUNHAND } from './gunhand';
 import { SAMSTUN, staggerPlayer, dazzlePlayer } from './samstun';
-import { recapRound } from './deathrecap';
 import { wallReport } from './blastFeel';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { ffLive, ffBody, ffSide, ffUnpressed, ffNote, ffPast } from './friendlyfire';   // (called inside fireWeapon only)
@@ -233,10 +232,10 @@ function fireWeaponRaw(g: Game, shooter: Character, target: Vec3, isPlayer: bool
   if (third) noteRound(g, shooter, muzzle, hitP, hitGuard?.char ?? (playerHit ? hitView.player.char : null));   // suppression: everybody ELSE this segment passed close to, or stopped close to, has felt it go by (suppression.ts — the man it went into is shot, not suppressed)
   if (pen && ph) eK = segAt(pen, ph.t).e / e0; else if (penLive) eK = eMuzzle / e0;
   if (ph && ph.t <= tHit + 1e-3 && third) { const J = def.propImpulse * eK; const pd = pen ? segAt(pen, ph.t).d : dir; g.props.applyImpulse(ph.prop, pen ? pathAt(pen, ph.t) : v3.mad(muzzle, dir, ph.t), [pd[0] * J, 0, pd[2] * J], shooter.id, true); }   // (not a prop standing behind the body the round stopped in) the row's few N·s, exaggerated over the real round so it reads: cartons hop, chairs twitch and roll — and it is heard at the prop
-  // bullet wake through smoke volumes. On the look page the smoke takes each straight leg of the path as ONE line (smoke.ts `round`: the air along it is dragged with
-  // the round, so smoke follows it out of a plume and clear air in); anywhere else, and with that row at 0, the row of soft dots it always was
+  // bullet wake through smoke volumes. The smoke takes each straight leg of the path as ONE line (smoke.ts `round`: the air along it is dragged with
+  // the round, so smoke follows it out of a plume and clear air in); with that row at 0, the row of soft dots it always was
   let lined = false;
-  if (third && lookConfig.on && lookConfig.stir > 0 && g.smoke.round) { const far = Math.min(tHit, 25);
+  if (third && lookConfig.stir > 0 && g.smoke.round) { const far = Math.min(tHit, 25);
     if (pen) { for (const k of pen.segs) { const a = Math.max(k.t0, 0.3), b = Math.min(k.t0 + k.len, far); if (b > a) lined = g.smoke.round(v3.mad(k.o, k.d, a - k.t0), k.d, b - a) || lined; } }
     else if (far > 0.3) lined = g.smoke.round(v3.mad(muzzle, dir, 0.3), dir, far - 0.3); }
   if (third && !lined) for (let d = 0.3; d < Math.min(tHit, 25); d += 0.28) { const p = pen ? pathAt(pen, d) : v3.mad(muzzle, dir, d); if (g.smoke.inSmokeDomain(p)) g.smoke.push({ pos: p, dir: pen ? segAt(pen, d).d : dir, speed: 5.5, radius: 0.07 }); }
@@ -253,7 +252,6 @@ function fireWeaponRaw(g: Game, shooter: Character, target: Vec3, isPlayer: bool
   if (def.tracer && g.tune.tracers) g.tracers.round(firearmOf(g, shooter, isPlayer), def, muzzle, pen ? v3.normalize(v3.sub(hitP, muzzle)) : dir, pen ? v3.dist(muzzle, hitP) : tHit, hitGuard || playerHit ? 'flesh' : st || ph || through ? 'solid' : 'none', shooter.id);   // tracers (R6, tracers.ts): the row lights every third round and the last three of the box, counted off the gun that fired it — a streak travelling this same segment over the next few frames with a small light on its head, an ember where it stopped in geometry. A pistol row never asks (tracer null: not one instruction more than before); the flag off, nobody does
   if (ffOurs && (playerHit || (hitGuard && !hitGuard.civ && !isHostile('player', hitGuard.team)))) ffNote(sg, isPlayer, playerHit);
   if (ffOn && isPlayer && lead) ffPast(g, muzzle, hitP, hitGuard?.char ?? null);
-  recapRound(g, playerHit ? hitView.player.char : hitGuard?.char, playerHit ? hitView.player.down : hitGuard?.state === 'dead', shooter, muzzle, hitP, def, o.blind);   // deathrecap.ts: the round about to land on a man, for the end card (reads only)
   const manDown = !hitGuard ? null : () => {   // (by 'guard': the held man, above — the only colleague a guard's round ever tests — or, teams, an enemy AI man)
     const wasUp = hitGuard.state !== 'dead';
     if (wasUp && hitGuard.civ) g.snatch?.roundOn(hitGuard, sg);   // (snatch.ts: whose round found the man the team came for — the tally's, nothing else reads it)
@@ -443,7 +441,7 @@ export function hitPlayer(g: Game, fromDir: Vec3) { { const __s = RUST_SURFACE; 
 }
 
 /** Held / worn props as small oriented boxes (traced; lit lenses raster-only): the Five-seveN (+ can + rail light) in the player's hand and the trifocal goggles on
- *  their head, pistol or torch with a glowing lens for guards. All placement numbers live in rigProps.RIG (tune them in viewer.html). */
+ *  their head, pistol or torch with a glowing lens for guards. All placement numbers live in rigProps.RIG. */
 export function handProps(g: Game, out: Box[]): void { return crossToRust('handProps', undefined, [g, out]) as any; }
 const handOrd = new Uint16Array(256);
 function rigKeys(out: Box[], n0: number) {

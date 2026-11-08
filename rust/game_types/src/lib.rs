@@ -193,7 +193,6 @@ pub mod par { pub mod types; pub use types::*; }
 pub mod particle_fx { pub mod types; pub use types::*; }
 pub mod peeksight { pub mod types; pub use types::*; }
 pub mod picture { pub mod types; pub use types::*; }
-pub mod planlay { pub mod types; pub use types::*; }
 pub mod planmode { pub mod types; pub use types::*; }
 pub mod player { pub mod types; pub use types::*; }
 pub mod posehome { pub mod types; pub use types::*; }
@@ -276,9 +275,6 @@ pub mod script_tut_pair { pub mod types; pub use types::*; }
 pub mod script_tut_queue { pub mod types; pub use types::*; }
 pub mod script_tut_quiet { pub mod types; pub use types::*; }
 pub mod script_tut_road { pub mod types; pub use types::*; }
-pub mod script_tut_sky { pub mod types; pub use types::*; }
-pub mod script_tut_solo { pub mod types; pub use types::*; }
-pub mod script_tut_squad { pub mod types; pub use types::*; }
 pub mod script_tut_team { pub mod types; pub use types::*; }
 pub mod seats { pub mod types; pub use types::*; }
 pub mod seenwalk { pub mod types; pub use types::*; }
@@ -357,6 +353,7 @@ pub mod ui_missions { pub mod types; pub use types::*; }
 pub mod ui_shaderrows { pub mod types; pub use types::*; }
 pub mod unseen { pub mod types; pub use types::*; }
 pub mod verdict { pub mod types; pub use types::*; }
+pub mod view { pub mod types; pub use types::*; }
 pub mod walkahead { pub mod types; pub use types::*; }
 pub mod wallbreak { pub mod types; pub use types::*; }
 pub mod wallcharge { pub mod types; pub use types::*; }

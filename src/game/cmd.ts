@@ -38,7 +38,7 @@ export interface PlayerCmd {
 
 /** the record for this tick, sampled from the host's live input, camera and view. Game.update calls it once, after the journal and a showcase's injected keys.
  *  (A showcase puppet AIMS by moving the cursor: done here, on the host's input, so the HUD's reticle follows — updateAim finds the cursor already there.) */
-export function sampleCmd(g: Game, input: Input, cam: FollowCamera, canvas: View, into: PlayerCmd | null = null): PlayerCmd { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('sampleCmd', undefined, [g, input, cam, canvas, into]); if (__r !== RUST_PASS) return __r as any; } }
+export function sampleCmd(g: Game, input: Input, cam: FollowCamera, canvas: View, into: PlayerCmd | null = null): PlayerCmd {
   if (g.puppet?.aim) {
     const [sx, sy, front] = cam.project(g.puppet.aim, canvas.clientWidth, canvas.clientHeight, Infinity, 1e-3);
     if (front) { input.mouseX = sx; input.mouseY = sy; }

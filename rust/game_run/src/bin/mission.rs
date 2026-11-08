@@ -171,7 +171,7 @@ fn main() {
             // (BLITZ_STATE=<file>: the game's state words after every tick, a line a tick, for two processes or two games to be held word by word)
             if let Some(f) = state_file.as_mut() { use std::io::Write; game::state_words::state_words(&mut g, &mut sw_o, &mut sw); let mut l = format!("{}", k); for w in &sw { l.push(' '); l.push_str(&format!("{:08x}", w)); } writeln!(f, "{}", l).unwrap(); f.flush().unwrap(); }
             // (the mission's verdict as the game itself answers it, game::verdict::verdict_ended: the first tick it does, once)
-            if !verdict_said { if let Some((won, word, why)) = game::verdict::verdict_ended(&mut g) { verdict_said = true; println!("VERDICT at tick {}: {} {}{}", k, if won { "won" } else { "lost" }, word, if why.is_empty() { String::new() } else { format!(" ({})", why) }); } }
+            if !verdict_said { if let Some((won, word, why)) = game::verdict::verdict_ended(&g).map(|(a, b, c)| (a, b.to_string(), c.to_string())) { verdict_said = true; println!("VERDICT at tick {}: {} {}{}", k, if won { "won" } else { "lost" }, word, if why.is_empty() { String::new() } else { format!(" ({})", why) }); } }
             // (a level script's beats as they stand: every beat this game started, how many resumes it has had, where it is)
             if std::env::var("BLITZ_BEATS").is_ok() { for b in g.tab.director_live_beat.ids().collect::<Vec<_>>() { let lb = &g.tab.director_live_beat[b]; println!("  beat after tick {}: {} {:?} step {} waiting {:?} it {:?}", k, lb.name, lb.state, lb.step, lb.waiting, lb.it); } }
             for l in hostwrites.iter().filter(|l| game_run::line_of(l, k)) { if let Some(t) = game_run::write_after(&mut g, k, l) { println!("{}", t); } }
@@ -205,7 +205,7 @@ fn main() {
             if !same { n_parted += 1; if n_parted <= 40 && !first_part { println!("TICK {}: the block PARTS in {:?} (die n={} / {})", k, off, d.n, p.map(|p| p[1].as_str()).unwrap_or("?")); } } else if n_parted > 0 && !was_same { println!("TICK {}: the block is the same again", k); }
             was_same = same;
             if first_part || k % 100 == 0 || k == ticks || !die_same {
-                println!("TICK {}; time {:.4}; die n={} (TypeScript {}); block {}; boxes {}; mean tick {:.2} ms, worst {:.1} ms", k, g.time, d.n, p.map(|p| p[1].as_str()).unwrap_or("?"), if same { "the same".to_string() } else { format!("PARTS in {:?}", off) }, g.tab.boxes.len(), spent.as_secs_f64() * 1e3 / k as f64, worst.as_secs_f64() * 1e3);
+                println!("TICK {}; time {:.4}; die n={} (TypeScript {}); block {}; boxes {}; mean tick {:.2} ms, worst {:.1} ms", k, g.time, d.n, p.map(|p| p[1].as_str()).unwrap_or("?"), if same { "the same".to_string() } else { format!("PARTS in {:?}", off) }, g.tab.boxes.len() + g.tab.frame_boxes.len(), spent.as_secs_f64() * 1e3 / k as f64, worst.as_secs_f64() * 1e3);
             }
             if first_part || keep.iter().any(|(a, b)| k >= *a && k <= *b) || (every > 0 && k % every == 0) {
                 std::fs::write(format!("{}/n{}.bin", dir, k), game::io::export(&g)).unwrap();
@@ -228,9 +228,11 @@ fn main() {
         if std::env::var("BLITZ_BOXES").is_ok() {
             let mut by: std::collections::BTreeMap<String, usize> = std::collections::BTreeMap::new();
             let free: std::collections::HashSet<usize> = g.box_frame_free.iter().map(|b| b.ix()).collect();
-            for (i, id) in g.tab.boxes.ids().enumerate() { if i < rows0 || free.contains(&i) { continue; } let b = &g.tab.boxes[id]; *by.entry(format!("h {:.3} {:.3} {:.3} flags {} owner {} name {:?}", b.h[0], b.h[1], b.h[2], b.flags, b.owner, b.name)).or_default() += 1; }
+            let mut tally = |b: &game::scene_boxes::Box| *by.entry(format!("h {:.3} {:.3} {:.3} flags {} owner {} name {:?}", b.h[0], b.h[1], b.h[2], b.flags, b.owner, b.name)).or_default() += 1;
+            for (i, id) in g.tab.boxes.ids().enumerate() { if i >= rows0 { tally(&g.tab.boxes[id]); } }
+            for (i, id) in g.tab.frame_boxes.ids().enumerate() { if !free.contains(&i) { tally(&g.tab.frame_boxes[id]); } }
             let mut v: Vec<_> = by.into_iter().collect(); v.sort_by(|a, b| b.1.cmp(&a.1));
-            println!("BOXES: {} rows at the start, {} now, {} of them free frame rows; made since and held:", rows0, g.tab.boxes.len(), free.len());
+            println!("BOXES: {} rows of the world at the start, {} now; {} rows of the frame, {} of them free; made since and held:", rows0, g.tab.boxes.len(), g.tab.frame_boxes.len(), free.len());
             for (k, n) in v.iter().take(14) { println!("   {} x {}", n, k); }
         }
         beats_line(&g);

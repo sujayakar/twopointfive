@@ -13,7 +13,7 @@ export async function teamTallyCheck(): Promise<boolean> {
   const { startFromQuery, teamOf } = await import(`${ROOT}/src/game/scenarioRun.ts`);
   const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
   const { hostileTo } = await import(`${ROOT}/src/game/teams.ts`);
-  const { runCounts, badgesOf, eventText } = await import(`${ROOT}/src/game/chronicle.ts`);
+  const { runCounts, badgesOf, rowsOf } = await import('./debrief-read.ts');;
   const BREAK = process.env.TEAMTALLY_BREAK === '1';
   let allPass = true; const line = (ok: boolean, label: string) => { allPass &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}`); };
   const hush = <T>(f: () => T): T => { const l = console.log, w = console.warn; console.log = console.warn = () => { }; try { return f(); } finally { console.log = l; console.warn = w; } };
@@ -28,15 +28,13 @@ export async function teamTallyCheck(): Promise<boolean> {
     step(3);
     const foes = () => g.guards.filter((x: any) => x.team !== 'operative' && !x.civ && x.state !== 'dead' && hostileTo(x, 'player'));
     const mate = teamOf(g)[0] ?? null;
-    /** a man put down inside a step the way the partner's sites do it (the game's own order: the kill, then whose round it was) */
+    /** a man put down the way the partner's sites do it (the game's own order: the kill, then whose round it was), and a step for it to land */
     const down = (h: any, how: 'shot' | 'struck' | 'wounded', by: 'player' | 'guard', killer: number | null) => hush(() => {
-      // the kill lands MID-step, as a round or a takedown does: after the step's clock has moved, before the step's tail (the fog's update is on the way there)
-      const pre = g.fogOfWar.update.bind(g.fogOfWar);
-      g.fogOfWar.update = (dt: number) => { g.fogOfWar.update = pre; killGuard(g, h, [1, 0, 0], how === 'struck', how, by); if (killer !== null && !BREAK) h.killerId = killer; return pre(dt); };
+      killGuard(g, h, [1, 0, 0], how === 'struck', how, by); if (killer !== null && !BREAK) h.killerId = killer; h.diedAt = g.time + 1 / 60;   // (the game's tally asks of the men who went down in the step it ends: a kill made between steps is given to the next one)
       W.step(1 / 60);
     });
-    const C = () => runCounts(g), badge = (id: string) => !!badgesOf(C()).find((b: any) => b.id === id)?.on;
-    const rows = () => (g.chronicle.events as any[]).filter(e => e.kind === 'kill' || e.kind === 'ko').map(e => eventText(e));
+    const C = () => runCounts(g), badge = (id: string) => !!badgesOf(g).find((b: any) => b.id === id)?.on;
+    const rows = () => rowsOf(g).filter(e => e.kind === 'kill' || e.kind === 'ko').map(e => e.text);
     return { W, g, step, foes, mate, down, C, badge, rows };
   }
 

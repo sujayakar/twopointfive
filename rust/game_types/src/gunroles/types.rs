@@ -135,7 +135,6 @@ pub struct GunrolesStats {
     pub akms: i32,
     pub first: i32,
     pub last: i32,
-    pub filed: i32,
     pub posts: i32,
 }
 

@@ -223,25 +223,9 @@ pub fn throwables_world(g: &mut crate::game::Game) {
     let dyn_ = g.col.dynamic_boxes.clone();
     crate::scene_collision::rules_world(g, &dyn_);
     debug_assert!(crate::scene_collision::rules_panes(g) >= 0.0, "the pane's rule is not the module's to ask");
-    let p = furniture(g);
-    if !crate::scene_box_mirror::box_mirror_things(g, &p) {
+    if !crate::scene_box_mirror::box_mirror_things(g) {
         panic!("the box world's copy would not take the level's furniture: more things, or more boxes of them, than its tables hold, and a level of more is not loaded (game/levelfit.ts levelOver)");
     }
-}
-
-/// `this.props` as the copy reads it: every thing by its id, and the ones in the level in the furniture's own order (throwables.ts:318 hands the PropSystem itself).
-fn furniture(g: &mut Game) -> crate::scene_box_mirror::Furniture {
-    let (all, props) = (g.props.all.clone(), g.props.props.clone());
-    crate::scene_box_mirror::Furniture { all: things_of(g, &all), props: things_of(g, &props) }
-}
-fn things_of(g: &mut Game, ids: &[PropId]) -> Vec<crate::scene_box_mirror::FurnitureThing> {
-    let mut out = Vec::with_capacity(ids.len());
-    for &p in ids {
-        let (id, radius, boxes) = { let r = &g.tab.props_prop[p]; (r.id, r.radius, r.boxes.clone()) };
-        let (x, z, yaw) = (crate::props::prop_x(g, p), crate::props::prop_z(g, p), crate::props::prop_yaw(g, p));
-        out.push(crate::scene_box_mirror::FurnitureThing { id, x, z, yaw, radius, boxes });
-    }
-    out
 }
 
 /// One number of the walk's hand-over (rust/sim items.rs PAR, by its address as the TypeScript has it: never a reference kept across the walk).
@@ -400,7 +384,7 @@ fn item_bounced(g: &mut Game, b: ItemBounce, sp: f64, p: V3, it: ItemId, n: V3) 
 }
 
 /// `out[k].mkey = key` of a box made this frame: it has no row to write yet (skeleton 5 has g.col.boxes: Vec<BoxId> and no Tab<BoxId, Box>).   (throwables.ts:507)
-fn seam_box_set_mkey(g: &mut Game, b: BoxId, mkey: f64) { g.tab.boxes[b].mkey = Some(mkey); }
+fn seam_box_set_mkey(g: &mut Game, b: AnyBoxId, mkey: f64) { g.tab[b].mkey = Some(mkey); }
 
 /// Fill 4 to 7's magazines (gunreload.ts): half length, half width, half thickness, colour.   (throwables.ts:502)
 const OWN_MAGS: [(f64, f64, f64, V3); 4] = [
@@ -411,7 +395,7 @@ const OWN_MAGS: [(f64, f64, f64, V3); 4] = [
 ];
 
 /// A thrown thing's parts as boxes into this frame's list, each keyed off its serial.   (throwables.ts Throwables.boxes)
-pub fn throwables_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn throwables_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let flag = crate::scene_boxes::box_flag();
     let dy = flag.dynamic;
     let dn = (js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64;
@@ -431,15 +415,15 @@ pub fn throwables_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
                     ([0.25, 0.29, 0.2], [0.6, 0.08, 0.06])
                 };
                 let c0: V3 = if settled { [p[0], p[1] - radius + 0.034, p[2]] } else { v3::copy(p) };
-                out.push(item_box(g, c0, [0.032, 0.032, 0.07], yaw, flying, body, dy));
-                out.push(item_box(g, v3::add(c0, v3::quat::rotate(flying, [0.0, 0.0, 0.045])), [0.034, 0.034, 0.012], yaw, flying, band, dn));
+                out.push(item_box(g, c0, [0.032, 0.032, 0.07], yaw, flying, body, dy).into());
+                out.push(item_box(g, v3::add(c0, v3::quat::rotate(flying, [0.0, 0.0, 0.045])), [0.034, 0.034, 0.012], yaw, flying, band, dn).into());
             }
             ItemKind::Frag => {
                 let f = frag_item();
                 let c0: V3 = if settled { [p[0], p[1] - radius + f.half[0] + 0.002, p[2]] } else { v3::copy(p) };
-                out.push(item_box(g, c0, f.half, yaw, flying, f.body, dy));
-                out.push(item_box(g, v3::add(c0, v3::quat::rotate(flying, [0.0, 0.0, 0.012])), [0.034, 0.034, 0.006], yaw, flying, f.band, dn));
-                out.push(item_box(g, v3::add(c0, v3::quat::rotate(flying, [0.0, 0.0, 0.05])), [0.012, 0.012, 0.014], yaw, flying, f.fuze, dn));
+                out.push(item_box(g, c0, f.half, yaw, flying, f.body, dy).into());
+                out.push(item_box(g, v3::add(c0, v3::quat::rotate(flying, [0.0, 0.0, 0.012])), [0.034, 0.034, 0.006], yaw, flying, f.band, dn).into());
+                out.push(item_box(g, v3::add(c0, v3::quat::rotate(flying, [0.0, 0.0, 0.05])), [0.012, 0.012, 0.014], yaw, flying, f.fuze, dn).into());
             }
             ItemKind::Pistol | ItemKind::Torch | ItemKind::Rifle => {
                 // in the air it flips end over end; settled, on its side with that face on the floor
@@ -452,28 +436,28 @@ pub fn throwables_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
                 let c: V3 = if settled { [p[0], p[1] - radius + thick + 0.004, p[2]] } else { v3::copy(p) };
                 let at = |off: V3| -> V3 { v3::add(c, v3::quat::rotate(rot, off)) };
                 if kind == ItemKind::Pistol {
-                    out.push(item_box(g, at([0.0, 0.0, 0.0]), [0.016, 0.026, 0.095], yaw, rot, [0.05, 0.05, 0.055], dy));
+                    out.push(item_box(g, at([0.0, 0.0, 0.0]), [0.016, 0.026, 0.095], yaw, rot, [0.05, 0.05, 0.055], dy).into());
                     let grip_rot = v3::quat::mul(rot, v3::quat::axis_angle(x_axis, 108.0 * m::PI / 180.0));
-                    out.push(item_box(g, v3::add(at([0.0, -0.024, -0.045]), v3::quat::rotate(grip_rot, [0.0, 0.0, 0.047])), [0.014, 0.017, 0.047], yaw, grip_rot, [0.05, 0.05, 0.055], dy));
+                    out.push(item_box(g, v3::add(at([0.0, -0.024, -0.045]), v3::quat::rotate(grip_rot, [0.0, 0.0, 0.047])), [0.014, 0.017, 0.047], yaw, grip_rot, [0.05, 0.05, 0.055], dy).into());
                     if fill > 0.0 {
-                        out.push(item_box(g, at([0.0, 0.0, 0.17]), [0.019, 0.019, 0.075], yaw, rot, [0.09, 0.09, 0.09], dy));
+                        out.push(item_box(g, at([0.0, 0.0, 0.17]), [0.019, 0.019, 0.075], yaw, rot, [0.09, 0.09, 0.09], dy).into());
                     }
                 } else if kind == ItemKind::Rifle && fill == 1.0 {
                     let s = m4_item();
-                    out.push(item_box(g, at([0.0, 0.0, s.hull.z]), s.hull.h, yaw, rot, s.polymer, dy));
-                    out.push(item_box(g, at([0.0, 0.0, s.fore.z]), s.fore.h, yaw, rot, s.fore_col, dy));
-                    out.push(item_box(g, at([0.0, s.mag.y, s.mag.z]), s.mag.h, yaw, rot, s.metal, dy));
-                    out.push(item_box(g, at([0.0, s.optic.y, s.optic.z]), s.optic.h, yaw, rot, s.metal, dn));
+                    out.push(item_box(g, at([0.0, 0.0, s.hull.z]), s.hull.h, yaw, rot, s.polymer, dy).into());
+                    out.push(item_box(g, at([0.0, 0.0, s.fore.z]), s.fore.h, yaw, rot, s.fore_col, dy).into());
+                    out.push(item_box(g, at([0.0, s.mag.y, s.mag.z]), s.mag.h, yaw, rot, s.metal, dy).into());
+                    out.push(item_box(g, at([0.0, s.optic.y, s.optic.z]), s.optic.h, yaw, rot, s.metal, dn).into());
                 } else if kind == ItemKind::Rifle {
                     let r = rifle_item();
-                    out.push(item_box(g, at([0.0, 0.0, r.receiver.z]), r.receiver.h, yaw, rot, r.steel, dy));
-                    out.push(item_box(g, at([0.0, 0.0, r.fore.z]), r.fore.h, yaw, rot, r.wood, dy));
+                    out.push(item_box(g, at([0.0, 0.0, r.receiver.z]), r.receiver.h, yaw, rot, r.steel, dy).into());
+                    out.push(item_box(g, at([0.0, 0.0, r.fore.z]), r.fore.h, yaw, rot, r.wood, dy).into());
                     let mag_rot = v3::quat::mul(rot, v3::quat::axis_angle(x_axis, r.mag.cant));
-                    out.push(item_box(g, at([0.0, r.mag.y, r.mag.z]), r.mag.h, yaw, mag_rot, r.wood, dy));
-                    out.push(item_box(g, at([0.0, -0.012, r.stock.z]), r.stock.h, yaw, rot, r.steel, dn));
+                    out.push(item_box(g, at([0.0, r.mag.y, r.mag.z]), r.mag.h, yaw, mag_rot, r.wood, dy).into());
+                    out.push(item_box(g, at([0.0, -0.012, r.stock.z]), r.stock.h, yaw, rot, r.steel, dn).into());
                 } else {
-                    out.push(item_box(g, at([0.0, 0.0, 0.0]), [0.022, 0.022, 0.09], yaw, rot, [0.09, 0.09, 0.1], dy));
-                    out.push(item_box(g, at([0.0, 0.0, 0.095]), [0.026, 0.026, 0.008], yaw, rot, [0.16, 0.16, 0.15], dn));
+                    out.push(item_box(g, at([0.0, 0.0, 0.0]), [0.022, 0.022, 0.09], yaw, rot, [0.09, 0.09, 0.1], dy).into());
+                    out.push(item_box(g, at([0.0, 0.0, 0.095]), [0.026, 0.026, 0.008], yaw, rot, [0.16, 0.16, 0.15], dn).into());
                 }
             }
             // GEAR.on, settled true on the page: the 40 mm sponge round
@@ -484,8 +468,8 @@ pub fn throwables_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
             ItemKind::Shell => {
                 let s = shell_item();
                 let c0: V3 = if settled { [p[0], p[1] - radius + s.half[0] + 0.002, p[2]] } else { v3::copy(p) };
-                out.push(item_box(g, c0, s.half, yaw, flying, s.body, dy));
-                out.push(item_box(g, v3::add(c0, v3::quat::rotate(flying, [0.0, 0.0, s.half[2] * 0.62])), [s.half[0] + 0.001, s.half[1] + 0.001, s.half[2] * 0.4], yaw, flying, s.nose, dn));
+                out.push(item_box(g, c0, s.half, yaw, flying, s.body, dy).into());
+                out.push(item_box(g, v3::add(c0, v3::quat::rotate(flying, [0.0, 0.0, s.half[2] * 0.62])), [s.half[0] + 0.001, s.half[1] + 0.001, s.half[2] * 0.4], yaw, flying, s.nose, dn).into());
             }
             // a magazine. fill 2: a rifleman's empty thirty; 3: the FN2000's black thirty; 4 to 7: OWN_MAGS; else a pistol's (0 empty, 0 to 1 part full)
             ItemKind::Mag => {
@@ -500,10 +484,10 @@ pub fn throwables_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
                 let th = match own { Some(o) => o.2, None => 0.012 };
                 if settled {
                     let b = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: [p[0], p[1] + th, p[2]], h: [hw, th, hl], yaw: Some(yaw), albedo: Some(col), flags: Some(dn), ..Default::default() });
-                    out.push(b);
+                    out.push(b.into());
                 } else {
                     let deep = match own { Some(o) => m::max(0.03, o.2), None => 0.03 };
-                    out.push(item_box(g, v3::copy(p), [hw, hl, deep], yaw, flying, col, dn));
+                    out.push(item_box(g, v3::copy(p), [hw, hl, deep], yaw, flying, col, dn).into());
                 }
             }
         }

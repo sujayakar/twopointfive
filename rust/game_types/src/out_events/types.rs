@@ -20,7 +20,6 @@ pub enum OutEvent {
     ParticlesImpulse(crate::out_events::OutParticlesImpulse),
     ParticlesSetHeat(crate::out_events::OutParticlesSetHeat),
     ReachKeepChanged(crate::out_events::OutReachKeepChanged),
-    SessionRecorderCut(crate::out_events::OutSessionRecorderCut),
     SmokeSystemLikeClearAll,
     SmokeSystemLikeEmit(crate::out_events::OutSmokeSystemLikeEmit),
     SmokeSystemLikeKeepHot(crate::out_events::OutSmokeSystemLikeKeepHot),
@@ -28,10 +27,10 @@ pub enum OutEvent {
     SmokeSystemLikePush(crate::out_events::OutSmokeSystemLikePush),
     WallWearReset,
     WallWearRound(crate::out_events::OutWallWearRound),
-    RecapRound(crate::out_events::OutRecapRound),
     MessBurst(crate::out_events::OutMessBurst),
     MessOpened(crate::out_events::OutMessOpened),
     MessWall(crate::out_events::OutMessWall),
+    MessEvicted(crate::out_events::OutMessEvicted),
     BangScorch(crate::out_events::OutBangScorch),
     BulletMark(crate::out_events::OutBulletMark),
     ChipMark(crate::out_events::OutChipMark),
@@ -41,6 +40,7 @@ pub enum OutEvent {
     ClearSnowTracks,
     Tap(crate::out_events::OutTap),
     WallFeel(crate::out_events::OutWallFeel),
+    EndCard,
 }
 
 #[derive(Clone, Debug)]
@@ -119,12 +119,6 @@ pub struct OutReachKeepChanged {
 }
 
 #[derive(Clone, Debug)]
-pub struct OutSessionRecorderCut {
-    pub why: String,
-    pub lost: Option<bool>,
-}
-
-#[derive(Clone, Debug)]
 pub struct OutSmokeSystemLikeEmit {
     pub e: crate::smoke_types::SmokeEmitter,
 }
@@ -156,16 +150,6 @@ pub struct OutWallWearRound {
     pub dir: V3,
 }
 
-#[derive(Clone, Debug)]
-pub struct OutRecapRound {
-    pub victim: Option<CharId>,
-    pub was_down: bool,
-    pub shooter: CharId,
-    pub muzzle: V3,
-    pub hit: V3,
-    pub def: crate::weapons::WeaponId,
-    pub blind: Option<bool>,
-}
 
 #[derive(Clone, Debug)]
 pub struct OutMessBurst {
@@ -176,6 +160,17 @@ pub struct OutMessBurst {
 #[derive(Clone, Debug)]
 pub struct OutMessOpened {
     pub rect: [f64; 4],
+}
+
+/// A resting piece the debris pool took: what the host needs to lay its mark, by value, since its slot is taken before the host reads this.
+#[derive(Clone, Debug)]
+pub struct OutMessEvicted {
+    pub c: V3,
+    pub h: V3,
+    pub yaw: f64,
+    pub rot: Option<Quat>,
+    pub mat: Option<crate::break_table::Mat>,
+    pub kind: crate::debris::ChunkKind,
 }
 
 #[derive(Clone, Debug)]

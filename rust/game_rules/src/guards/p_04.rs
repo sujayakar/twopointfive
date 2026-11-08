@@ -216,7 +216,7 @@ pub fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p: crate:
 /// Every frame for a man carrying a standoff record: is it still one? The pair when it stands.   (guards.ts standoffUpkeep)
 pub fn standoff_upkeep(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::guards::Pair> {
     let s = g.gd[gd].standoff?;
-    let p = pair_of(g);
+    let p = pair_of(g, &crate::seats::here(g));
     let pair = g.tab.guards_standoff[s].pair;
     let why = if g.quiet_utility || g.gd[gd].hold || g.gd[gd].pinned || !g.ai_enabled {
         Some("off")
@@ -279,7 +279,7 @@ pub fn hostage_hit_bark(g: &mut crate::game::Game, shooter: GuardId, victim: Gua
 
 /// Panel / QA: one line per man in a standoff. Text only; `{:.n}` stands for toFixed (they differ on an exact tie).   (guards.ts standoffSummary)
 pub fn standoff_summary(g: &mut crate::game::Game) -> String {
-    let p = pair_of(g);
+    let p = pair_of(g, &crate::seats::here(g));
     let mut parts: Vec<String> = Vec::new();
     let mut i = 0;
     while i < g.guards.len() {
@@ -325,27 +325,19 @@ pub fn can_see(g: &mut crate::game::Game, gd: GuardId) -> crate::guards::CanSee 
     crate::guards::CanSee { visible: r.visible, dist: r.dist, in_cone: r.in_cone }
 }
 
-/// WHERE A MAN LOOKS, for every eye in the game: the bearing of the mean of his chest and his head, LEVEL. His pose turns his eyes; it does not
-/// tip them. A chest bowed over a knee or a low gun points at the floor, and with the tip kept his cone left the room: a kneeling man saw nobody
-/// past the near cone. Height is the line test's business (a wall or a floor stops the line). A mean with no flat part (looking straight down or
-/// up) is his facing. A pose that is MEANT to take a man's sight says so by name where the eye is asked (asleep, gripped, dazzled), not by its bones.
+/// WHERE A MAN LOOKS, for every eye in the game: his head, or his sights when a long gun is in his shoulder and level; level, always. It is the
+/// fog's own answer (`fogofwar::gaze_of`), so what the player is shown of where a man looks and what that man can see are one thing.
+///
+/// His pose turns his eyes; it does not tip them. A chest bowed over a knee or a low gun points at the floor, and with the tip kept his cone left the
+/// room: a kneeling man saw nobody past the near cone. Nor does his chest turn them: a man with a rifle up stands bladed, his chest 60 to 90 degrees
+/// to the right of his gun, and with the chest in the mean his cone was centred 40 degrees right of his sights, so a defender with his gun on a door
+/// never saw a lit man 20 degrees to the left of it. Height is the line test's business (a wall or a floor stops the line). A pose that is MEANT to
+/// take a man's sight says so by name where the eye is asked (asleep, gripped, dazzled), not by its bones.
 /// Every cone in the game that asks "does this man see that" is asked along this: a man or Sam (`can_see_char`), a point, a body, a kicked lock, the
-/// standoff's pair, the floor, a civilian's eye, the sneak's reading of a defender. Before, five took the mean with its tip, two levelled it, and six
-/// took the chest alone with its flat part left short, so a bowed chest narrowed each of them by another amount.
-pub fn look_of(g: &crate::game::Game, c: CharId) -> V3 {
-    let chest_dir = g.ch[c].chest_dir;
-    let head_dir = crate::character::character_head_dir(g, c);
-    level_look(chest_dir, head_dir, g.ch[c].body_yaw)
-}
-/// `look_of`'s sum: the level bearing of the chest and the head together, or the facing `yaw` when they have none. (The arithmetic is the pair
-/// orders' own `look_of`, which had the rule right and now calls this.)
-fn level_look(chest: V3, head: V3, yaw: f64) -> V3 {
-    let (x, z) = (chest[0] + head[0], chest[2] + head[2]);
-    let flat = m::hyp2(x, z);
-    if flat > 1e-4 { [x / flat, 0.0, z / flat] } else { [m::sin(yaw), 0.0, m::cos(yaw)] }
-}
+/// standoff's pair, the floor, a civilian's eye, the sneak's reading of a defender.
+pub fn look_of(g: &crate::game::Game, c: CharId) -> V3 { crate::fogofwar::gaze_of(g, c) }
 
-/// canSee against any man `pc`; a teammate with his long gun in the shoulder also sees an AI man along his sights.   (guards.ts canSeeChar)
+/// canSee against any man `pc`.   (guards.ts canSeeChar)
 pub fn can_see_char(g: &mut crate::game::Game, gd: GuardId, pc: CharId, is_player: bool) -> crate::guards::CanSeeChar {
     let c = g.gd[gd].ch;
     let eye = match g.ch[c].bones.get(crate::character::Bone::Head) {
@@ -353,31 +345,12 @@ pub fn can_see_char(g: &mut crate::game::Game, gd: GuardId, pc: CharId, is_playe
         None => v3::add(g.ch[c].pos, [0.0, 1.65, 0.0]),
     };
     let look = look_of(g, c);
-    let range = reach_for(g, gd, pc, is_player, eye);
-    let mut e = crate::guards::Eye { pos: eye, look, range, half_deg: g.k.guard_eye.half_deg, near_m: g.k.guard_eye.near_m, near_deg: g.k.guard_eye.near_deg, v_half_deg: None };
+    let range = reach_for(g, &crate::seats::here(g), gd, pc, is_player, eye);
+    let e = crate::guards::Eye { pos: eye, look, range, half_deg: g.k.guard_eye.half_deg, near_m: g.k.guard_eye.near_m, near_deg: g.k.guard_eye.near_deg, v_half_deg: None };
     let through = eye_through(g, gd);
-    let blind = g.time < g.gd[gd].dazzled_until || crate::pairorders::pair_gripped(g, gd) || crate::doze::doze_asleep(g, gd);
+    let blind = crate::control::man::blind(g, gd) || crate::pairorders::pair_gripped(g, gd) || crate::doze::doze_asleep(g, gd);
     let smoke_trans = g.gd[gd].smoke_trans;
     let mut r = eye_contact(g, e, pc, is_player, blind, smoke_trans, Some(through));
-    // ROOMFIGHT.sights on, sightsFoe off: the eye along the sights is an operative's alone
-    if !r.in_cone && r.dist < e.range && !is_player && g.gd[gd].team == crate::teams::Team::Operative && crate::roomfight::fight_live(g) {
-        let gun_yaw = crate::character::character_gun_yaw(g, c);
-        let (ax, az) = (m::sin(gun_yaw), m::cos(gun_yaw));
-        let gun_dir = g.ch[c].gun_dir;
-        let mut lv = gun_dir[0] * ax + gun_dir[2] * az;
-        let lift = g.ch[c].anim.sights_lift;
-        if lift > 0.0 {
-            let gh = m::hyp2(gun_dir[0], gun_dir[2]);
-            if gh > 1e-6 { lv *= m::cos(lift) - gun_dir[1] / gh * m::sin(lift); }
-        }
-        if g.ch[c].anim.long_shown == Some(crate::character::LongStance::Shoulder) && !crate::character::anim_at_well(g, c) && lv > SIGHTS_COS {
-            e.look = [ax, 0.0, az];
-            e.half_deg = m::min(e.half_deg, g.k.roomfight.sights_deg);
-            let blind = g.time < g.gd[gd].dazzled_until || crate::pairorders::pair_gripped(g, gd) || crate::doze::doze_asleep(g, gd);
-            let smoke_trans = g.gd[gd].smoke_trans;
-            r = eye_contact(g, e, pc, false, blind, smoke_trans, Some(through));
-        }
-    }
     if !is_player && r.visible && crate::roomfight::pair_smoke(g, c, pc) < 0.3 { r.visible = false; }
     crate::guards::CanSeeChar { visible: r.visible, dist: r.dist, in_cone: r.in_cone }
 }
@@ -395,10 +368,10 @@ fn reach_of(k: &crate::knobs::GuardEyeK, lit: f64) -> f64 {
 }
 
 /// …for the man `pc` in this man's view.   (guards.ts reachFor)
-pub fn reach_for(g: &crate::game::Game, gd: GuardId, pc: CharId, is_player: bool, eye: V3) -> f64 {
+pub fn reach_for(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, pc: CharId, is_player: bool, eye: V3) -> f64 {
     if g.touring { return g.k.guard_eye.range; }
     if is_player {
-        let vis = g.pl[g.player].visibility;
+        let vis = g.pl[seat.player].visibility;
         return eye_reach(g, vis);
     }
     let t = match g.ch[pc].bones.get(crate::character::Bone::Chest) { Some(b) => *b, None => g.ch[pc].pos };
@@ -701,21 +674,6 @@ pub fn go_to(g: &mut crate::game::Game, gd: GuardId, goal: V3, force: Option<boo
 mod tests {
     use super::*;
     use crate::game::GuardState;
-
-    /// A look is a bearing: a chest bowed to the floor does not tip it, and one with no bearing at all is his facing.
-    #[test]
-    fn a_look_is_level_whatever_the_pose() {
-        // (kneeling with the gun low, as measured: the chest straight down, the head 45 degrees down and ahead)
-        let l = level_look([0.0, -1.0, -0.1], [-0.14, -0.68, -0.72], 1.0);
-        assert_eq!(l[1], 0.0);
-        assert!((m::hyp2(l[0], l[2]) - 1.0).abs() < 1e-12);
-        assert!(l[2] < -0.95, "he looks the way his head is turned: {:?}", l);
-        // (straight down: no bearing in it, so his facing)
-        assert_eq!(level_look([0.0, -1.0, 0.0], [0.0, -1.0, 0.0], 0.5), [m::sin(0.5), 0.0, m::cos(0.5)]);
-        // (chest one way and head another: between them)
-        let l = level_look([1.0, 0.0, 0.0], [0.0, 0.0, 1.0], 2.0);
-        assert!((l[0] - l[2]).abs() < 1e-12 && l[0] > 0.7);
-    }
 
     // the TypeScript's own bits, under bun with EXACT on and the page's GUARD_EYE
     #[test]

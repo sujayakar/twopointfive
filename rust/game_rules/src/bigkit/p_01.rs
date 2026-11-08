@@ -55,7 +55,7 @@ pub fn sam_big(g: &mut crate::game::Game, d: DoorId, p: Option<V3>) -> Option<cr
         || crate::doors::door_off(g, d)
         || g.dr[d].def.steel.unwrap_or(false)
         || !crate::doors::door_is_closed(g, d)
-        || sam_big_tail(g)
+        || sam_big_tail(g, &crate::seats::here(g))
     {
         return None;
     }
@@ -221,8 +221,8 @@ pub fn sam_big_walk(g: &mut crate::game::Game, dt: f64) -> f64 {
 }
 
 /// What the animator is told of the beat this frame.   (bigkit.ts samBigPose)
-pub fn sam_big_pose(g: &crate::game::Game) -> Option<crate::character::AnimBigTool> {
-    let pid = g.player;
+pub fn sam_big_pose(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::character::AnimBigTool> {
+    let pid = seat.player;
     let t = g.pl[pid].kick.as_ref()?.tool.as_ref()?;
     let mv = t.moves.as_ref()?;
     let (tool_kind, t_now, blows, end, at) = (t.kind, t.t, mv.blows.clone(), mv.end, mv.at);
@@ -238,11 +238,6 @@ pub fn sam_big_pose(g: &crate::game::Game) -> Option<crate::character::AnimBigTo
 /// The tool changes hands with the weight of a gun swap: on, on the page.   (bigkit.ts weighed)
 pub fn weighed(g: &crate::game::Game) -> bool {
     true
-}
-
-/// … is on (kitanim.ts asks).   (bigkit.ts bigWeighed)
-pub fn big_weighed(g: &crate::game::Game) -> bool {
-    weighed(g)
 }
 
 /// Seconds from the hand leaving for the tool to the tool in his hands.   (bigkit.ts bigEquip)
@@ -276,7 +271,7 @@ pub fn sam_big_lead_of(g: &mut crate::game::Game) -> f64 {
     }
     let pid = g.player;
     let Some(Some(it)) = g.pl[pid].kit_was else { return 0.0 };
-    if crate::kitanim::kit_in_hand(g).is_none() {
+    if crate::kitanim::kit_in_hand(g, &crate::seats::here(g)).is_none() {
         return 0.0;
     }
     if it == crate::character::KitItem::Rifle && crate::kitanim::kit_sling_front(g) {
@@ -287,8 +282,8 @@ pub fn sam_big_lead_of(g: &mut crate::game::Game) -> f64 {
 }
 
 /// That errand is the kit's to run this frame.   (bigkit.ts samBigCarry)
-pub fn sam_big_carry(g: &crate::game::Game) -> bool {
-    let pid = g.player;
+pub fn sam_big_carry(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+    let pid = seat.player;
     let c = g.pl[pid].ch;
     let Some(t) = g.pl[pid].kick.as_ref().and_then(|k| k.tool.as_ref()) else { return false };
     if t.moves.is_none() || !t.lead.map_or(false, |l| l > 0.0) {
@@ -309,15 +304,15 @@ pub fn big_swing(g: &crate::game::Game) -> f64 {
 }
 
 /// The beat is over and his legs are his own, the tool still going back onto him.   (bigkit.ts samBigTail)
-pub fn sam_big_tail(g: &crate::game::Game) -> bool {
-    let pid = g.player;
+pub fn sam_big_tail(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+    let pid = seat.player;
     let c = g.pl[pid].ch;
     g.ch[c].anim.big_tool.is_some() && !g.pl[pid].kick.as_ref().map_or(false, |k| k.tool.is_some())
 }
 
 /// What is left of the tail (s).   (bigkit.ts samBigLeft)
-pub fn sam_big_left(g: &crate::game::Game) -> f64 {
-    let c = g.pl[g.player].ch;
+pub fn sam_big_left(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> f64 {
+    let c = g.pl[seat.player].ch;
     match &g.ch[c].anim.big_tool {
         Some(b) if b.end >= 0.0 => m::max(0.0, b.end + b.stow - b.t),
         _ => 0.0,
@@ -328,7 +323,7 @@ pub fn sam_big_left(g: &crate::game::Game) -> f64 {
 pub fn sam_big_ended(g: &mut crate::game::Game) {
     let pid = g.player;
     let c = g.pl[pid].ch;
-    let left = sam_big_left(g);
+    let left = sam_big_left(g, &crate::seats::here(g));
     if left > 0.0 {
         g.pl[pid].equip_t = m::max(g.pl[pid].equip_t, left);
     } else {
@@ -712,7 +707,7 @@ pub fn hammer_out_tick(g: &mut crate::game::Game, mine: &mut dyn FnMut(&mut crat
             continue;
         }
         // (only this book's own man is told to put it away for want of a job in this book: another seat's hammer is on that seat's door)
-        if end < 0.0 && crate::orders::squad_orders_mine(g, gd) && !mine(g, gd) {
+        if end < 0.0 && crate::orders::squad_orders_mine(g, &crate::seats::here(g), gd) && !mine(g, gd) {
             hammer_in(g, gd, None);
         }
         let Some((t0, end)) = g.gd[gd].big_out.as_ref().map(|h| (h.t0, h.end)) else { continue };

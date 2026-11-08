@@ -43,7 +43,6 @@ export function plansToDraw(game: Game): { P: FloorPlan; k: number }[] {
 interface ManEls { g: SVGGElement; way: SVGPathElement; mark: SVGPolygonElement; fan: SVGPolygonElement; sight: SVGLineElement; feet: SVGPolygonElement; tag: SVGTextElement }
 interface ThrowEls { g: SVGGElement; reach: SVGPolygonElement; walk: SVGPathElement; spot: SVGPolygonElement; who: SVGPolygonElement; arc: SVGPathElement; land: SVGPolygonElement; tag: SVGTextElement }
 interface DoorEls { g: SVGGElement; bar: SVGLineElement; cap: SVGRectElement; key: SVGTextElement }
-interface LaidEls { g: SVGGElement; ways: SVGPathElement[]; feet: SVGPolygonElement[]; spot: SVGPolygonElement; bar: SVGLineElement; cap: SVGRectElement; key: SVGTextElement }
 
 export class PlanFloor {
   private g: SVGGElement;
@@ -54,7 +53,6 @@ export class PlanFloor {
   youOn = false;
   private doors: DoorEls[] = []; private doorsShown = 0;
   private throws: ThrowEls[] = []; private throwsShown = 0;
-  private laid: LaidEls[] = []; private laidShown = 0;
   private was = new WeakMap<Element, Record<string, string>>();
   constructor(svg: SVGSVGElement) {
     this.g = document.createElementNS(NS, 'g') as SVGGElement; this.g.setAttribute('class', 'plan');
@@ -101,19 +99,9 @@ export class PlanFloor {
     }
     return E;
   }
-  private laidEls(i: number): LaidEls {
-    let E = this.laid[i];
-    if (!E) {
-      const g = document.createElementNS(NS, 'g') as SVGGElement; this.g.appendChild(g);
-      E = { g, ways: [], feet: [], spot: this.el(g, 'polygon', 'pm'), bar: this.el(g, 'line', 'pd'), cap: this.el(g, 'rect', 'pk'), key: this.el(g, 'text', 'pkt') };
-      this.capSetup(E);
-      this.laid[i] = E;
-    }
-    return E;
-  }
   update(game: Game, cam: FollowCamera, w: number, h: number) {
-    const bc = document.body.classList, plans = PLAN.on && !(bc.contains('blinded') || bc.contains('attract')) ? plansToDraw(game) : [];   // (hidden by the page under those: nothing asked)
-    let n = 0, k = 0, nd = 0, nt = 0, nl = 0, you = false;
+    const bc = document.body.classList, plans = !(bc.contains('blinded') || bc.contains('attract')) ? plansToDraw(game) : [];   // (hidden by the page under those: nothing asked)
+    let n = 0, k = 0, nd = 0, nt = 0, you = false;
     for (const { P, k: dim } of plans) {
       const f1 = (v: number) => v.toFixed(1);
       const px = (x: number, z: number): [number, number] | null => { const [sx, sy, v] = cam.project([x, Y, z], w, h, Infinity, NEAR_W); return v ? [sx, sy] : null; };
@@ -137,7 +125,7 @@ export class PlanFloor {
         if (walking) { let pen = false, segs = 0; for (const q of m.path) { const s = pt(q[0], q[2]); if (!s) { pen = false; continue; } d += `${pen ? 'L' : 'M'}${s}`; if (pen) segs++; pen = true; } if (!segs) d = ''; }
         this.show(E.way, !!d); if (d) this.put(E.way, 'd', d);
         // the mark
-        const mr = PLAN.marks ? ring(m.mark, PLAN.ringM) : null;
+        const mr = ring(m.mark, PLAN.ringM);
         this.show(E.mark, !!mr); if (mr) { this.put(E.mark, 'points', mr); this.put(E.mark, 'class', m.there ? 'pm there' : 'pm'); }
         // what he watches: a fan from the mark; a thin line on to the point while the order is fresh, and to his door for as long as he is on it
         let fan: string | null = null;
@@ -150,10 +138,10 @@ export class PlanFloor {
         const b = m.watch && c && (fresh > 0 || m.onDoor) ? px(m.watch[0], m.watch[2]) : null;
         this.show(E.sight, !!b); if (b && c) { this.put(E.sight, 'x1', f1(c[0])); this.put(E.sight, 'y1', f1(c[1])); this.put(E.sight, 'x2', f1(b[0])); this.put(E.sight, 'y2', f1(b[1])); }
         // who: a ring at his feet while the order is fresh and he has somewhere to go
-        const fr = walking && fresh > 0 && PLAN.who ? ring(m.path[0], PLAN.ringM * 1.35) : null;
+        const fr = walking && fresh > 0 ? ring(m.path[0], PLAN.ringM * 1.35) : null;
         this.show(E.feet, !!fr); if (fr) { this.put(E.feet, 'points', fr); this.put(E.feet, 'opacity', fresh.toFixed(2)); }
         // his tag: in the ring he is walking to, under the ring he stands in
-        const tag = PLAN.tags && !!m.tag && !!c;
+        const tag = !!m.tag && !!c;
         this.show(E.tag, tag); if (tag && c) { this.put(E.tag, 'x', f1(c[0])); this.put(E.tag, 'y', f1(c[1] + (m.there ? TAG_DROP : 0))); this.put(E.tag, 'text', m.tag); this.put(E.tag, 'class', m.there ? 'pt there' : 'pt'); }
       }
       for (const q of P.who) {
@@ -175,10 +163,10 @@ export class PlanFloor {
         this.put(E.g, 'class', T.tone ? `t-${T.tone}` : ''); this.put(E.g, 'opacity', T.preview ? '0.60' : '0.95');   // (never fainter for being another's: see the head)
         const poly = (e: SVGPolygonElement, s: string | null) => { this.show(e, !!s); if (s) this.put(e, 'points', s); };
         const p = T.gd.char.pos, walking = T.walk.length > 1;
-        poly(E.who, PLAN.who ? ring(p, PLAN.ringM * 1.35) : null);
+        poly(E.who, ring(p, PLAN.ringM * 1.35));
         const dw = walking ? way(T.walk, false) : ''; this.show(E.walk, !!dw); if (dw) this.put(E.walk, 'd', dw);
-        poly(E.spot, walking && PLAN.marks ? ring(T.from, PLAN.ringM) : null);
-        const c = walking && PLAN.tags && T.tag ? px(T.from[0], T.from[2]) : null;
+        poly(E.spot, walking ? ring(T.from, PLAN.ringM) : null);
+        const c = walking && T.tag ? px(T.from[0], T.from[2]) : null;
         this.show(E.tag, !!c); if (c) { this.put(E.tag, 'x', f1(c[0])); this.put(E.tag, 'y', f1(c[1])); this.put(E.tag, 'text', T.tag); }
         const da = way(T.arc, true); this.show(E.arc, !!da); if (da) this.put(E.arc, 'd', da);
         poly(E.land, ring(T.land, PLAN.ringM));
@@ -190,34 +178,12 @@ export class PlanFloor {
         const a = px(dr.a[0], dr.a[2]), b = px(dr.b[0], dr.b[2]); if (!a || !b) continue;
         const E = this.doorEls(nd++), c = capOf(dr); this.show(E.g, true); this.put(E.g, 'opacity', dim.toFixed(2));
         this.put(E.g, 'class', `pdoor w-${dr.why}${dr.tone ? ` t-${dr.tone}` : ''}${dr.now ? ' now' : ''}${c === 'lit' ? ' lit live' : c === 'dark' ? ' lit' : ''}`);
-        this.show(E.bar, dr.why !== 'pair' || !PLAN.keyLit); this.put(E.bar, 'x1', f1(a[0])); this.put(E.bar, 'y1', f1(a[1])); this.put(E.bar, 'x2', f1(b[0])); this.put(E.bar, 'y2', f1(b[1]));
+        this.show(E.bar, dr.why !== 'pair'); this.put(E.bar, 'x1', f1(a[0])); this.put(E.bar, 'y1', f1(a[1])); this.put(E.bar, 'x2', f1(b[0])); this.put(E.bar, 'y2', f1(b[1]));
         const cap = c !== 'none', mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
         this.show(E.cap, cap); this.show(E.key, cap);
         if (cap) { this.put(E.cap, 'x', f1(mx - 7.5)); this.put(E.cap, 'y', f1(my - 7.5)); this.put(E.key, 'x', f1(mx)); this.put(E.key, 'y', f1(my)); this.put(E.key, 'text', dr.key!); }
       }
-      // a plan laid for the word (planlay.ts): each man's way from his feet, broken wide, a ring at his feet, the door's bar or the spot's ring, the key on it
-      for (const L of P.laid) {
-        const E = this.laidEls(nl++); this.show(E.g, true);
-        this.put(E.g, 'class', `laid${L.tone ? ` t-${L.tone}` : ''}`); this.put(E.g, 'opacity', (L.k * dim).toFixed(2));
-        for (let i = 0; i < Math.max(L.ways.length, E.ways.length); i++) {
-          const e = E.ways[i] ?? (E.ways[i] = E.g.insertBefore(this.el(E.g, 'path', 'pp'), E.g.firstChild)), d = i < L.ways.length ? way(L.ways[i], false) : '';
-          this.show(e, !!d); if (d) this.put(e, 'd', d);
-        }
-        for (let i = 0; i < Math.max(L.feet.length, E.feet.length); i++) {
-          const e = E.feet[i] ?? (E.feet[i] = this.el(E.g, 'polygon', 'pw')), r = i < L.feet.length && PLAN.who ? ring(L.feet[i], PLAN.ringM * 1.35) : null;
-          this.show(e, !!r); if (r) this.put(e, 'points', r);
-        }
-        const a = L.a && L.b ? px(L.a[0], L.a[2]) : null, b = L.a && L.b ? px(L.b[0], L.b[2]) : null, bar = !!a && !!b;
-        this.show(E.bar, bar); if (a && b) { this.put(E.bar, 'x1', f1(a[0])); this.put(E.bar, 'y1', f1(a[1])); this.put(E.bar, 'x2', f1(b[0])); this.put(E.bar, 'y2', f1(b[1])); }
-        const sr = !bar && L.at && PLAN.marks ? ring(L.at, PLAN.ringM) : null;
-        this.show(E.spot, !!sr); if (sr) this.put(E.spot, 'points', sr);
-        const c = a && b ? [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] : L.at ? px(L.at[0], L.at[2]) : L.feet[0] ? px(L.feet[0][0], L.feet[0][2]) : null, cap = !!c && PLAN.word && !!L.key;
-        this.show(E.cap, cap); this.show(E.key, cap);
-        if (cap && c) { const dy = bar || L.at ? 0 : TAG_DROP + 4; this.put(E.cap, 'x', f1(c[0] - 7.5)); this.put(E.cap, 'y', f1(c[1] + dy - 7.5)); this.put(E.key, 'x', f1(c[0])); this.put(E.key, 'y', f1(c[1] + dy)); this.put(E.key, 'text', L.key); }
-      }
     }
-    for (let i = nl; i < this.laidShown; i++) this.show(this.laid[i].g, false);
-    this.laidShown = nl;
     for (let i = nd; i < this.doorsShown; i++) this.show(this.doors[i].g, false);
     for (let i = nt; i < this.throwsShown; i++) this.show(this.throws[i].g, false);
     for (let i = n; i < this.menShown; i++) this.show(this.men[i].g, false);

@@ -247,7 +247,7 @@ export class GlassBreak {
       if (!RUST_KNOBS.tick) knobsToRust();
       const set = M.leaves(c.dynamicBoxes); if (set === -2) throw new Error('glass: more leaves than a list of the module holds');
       const x = M.x, s = g.sim.bind();
-      x.panes_ctx(s, M.slot, set, g.time, this.onRelease !== null && (g.tune as { glassShards?: boolean }).glassShards !== false && glassBreakLive(g) ? 1 : 0, SHARD.gravity);
+      x.panes_ctx(s, M.slot, set, g.time, (g.tune as { glassShards?: boolean }).glassShards !== false && glassBreakLive(g) ? 1 : 0, SHARD.gravity);
       const r = fn(x, s, M.slot);
       if (x.panes_take_wrote()) c.wrote();
       return r;

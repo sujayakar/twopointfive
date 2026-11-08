@@ -555,6 +555,12 @@ pub fn wind_update(g: &mut crate::game::Game, dt: f64) {
 /// The air's velocity at p this frame, m/s: the sum over every active source. (wind.ts Wind.at)
 pub fn wind_at(g: &mut crate::game::Game, p: V3, out: Option<&mut V3>) -> V3 {
     g.stats.wind.at_calls += 1;
+    let sum = wind_sum(g, p);
+    put(out, sum)
+}
+
+/// The sum itself, of the game as it stands.
+pub fn wind_sum(g: &crate::game::Game, p: V3) -> V3 {
     let mut sum: V3 = [0.0, 0.0, 0.0];
     for &id in g.wind.active.iter() {
         let s = &g.tab.wind_wind_source[id];
@@ -571,7 +577,7 @@ pub fn wind_at(g: &mut crate::game::Game, p: V3, out: Option<&mut V3>) -> V3 {
         sum[1] += q[1];
         sum[2] += q[2];
     }
-    put(out, sum)
+    sum
 }
 
 /// The source called `name`. (wind.ts Wind.byName)

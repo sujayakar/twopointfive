@@ -112,15 +112,13 @@ export class Denoiser {
     await Promise.all(jobs);
   }
   private layPack: GPUPipelineLayout; private layShTemp: GPUPipelineLayout; private layGiTemp: GPUPipelineLayout; private laySpecTemp: GPUPipelineLayout;
-  private async buildFixed(mod: GPUShaderModule = this.mod): Promise<[GPUComputePipeline, GPUComputePipeline, GPUComputePipeline, GPUComputePipeline]> {
-    const d = this.device;
-    const four = await Promise.all([
+  private async buildFixed(): Promise<void> {
+    const d = this.device, mod = this.mod;
+    [this.pPack, this.pShTemp, this.pGiTemp, this.pSpecTemp] = await Promise.all([
       computePipelineAsync(d, { label: 'dnPack', layout: this.layPack, compute: { module: mod, entryPoint: 'shPack' } }),
       computePipelineAsync(d, { label: 'dnShTemporal', layout: this.layShTemp, compute: { module: mod, entryPoint: 'shTemporal' } }),
       computePipelineAsync(d, { label: 'dnGiTemporal', layout: this.layGiTemp, compute: { module: mod, entryPoint: 'giTemporal', constants: { SPEC: 0 } } }),
       computePipelineAsync(d, { label: 'dnSpecTemporal', layout: this.laySpecTemp, compute: { module: mod, entryPoint: 'specTemporal', constants: { SPEC: 1 } } }) ]);
-    if (mod === this.mod) [this.pPack, this.pShTemp, this.pGiTemp, this.pSpecTemp] = four;   // (a hot swap builds off its new module first and installs everything in one step itself)
-    return four;
   }
   /** the async twins of shAtrous / radAtrous for init(): the same descriptors into the same maps (a key already present, or in flight, is not made twice) */
   private pending = new Map<string, Promise<GPUComputePipeline>>();
@@ -135,18 +133,6 @@ export class Denoiser {
     let p = this.pending.get('R' + key);
     if (!p) { p = computePipelineAsync(this.device, { label: `dnRadAtrous${key}`, layout: this.layRadAtrous, compute: { module: this.mod, entryPoint: 'radAtrous', constants: { STRIDE: stride, FIRST: first ? 1 : 0, SPEC: spec ? 1 : 0 } } }).then(pl => { this.pRadAtrous.set(key, pl); this.pending.delete('R' + key); return pl; }); this.pending.set('R' + key, p); }
     return p;
-  }
-  /** Dev / measurement hook (main.ts __hotDenoise): rebuild every pipeline from `src` (a denoise.wgsl variant; the scene prelude is prepended) so an edited core can be A/B'd against a
-   *  staged scene without a reboot. Resolves to the compiler's messages; nothing is swapped if there is an error. */
-  async hotSwap(src: string): Promise<{ ok: boolean; messages: string[] }> {
-    const mod = this.device.createShaderModule({ code: scenePrelude() + src, label: 'denoise-hot' });
-    const info = await mod.getCompilationInfo();
-    const off = scenePrelude().split('\n').length - 1;
-    const messages = info.messages.map(m => `${m.type} ${m.lineNum - off}:${m.linePos} ${m.message}`);
-    if (info.messages.some(m => m.type === 'error')) return { ok: false, messages };
-    const four = await this.buildFixed(mod);   // built off the NEW module first; then the swap is one synchronous step (no frame sees a mix, overlapping swaps end on the last to install)
-    this.mod = mod; this.pShAtrous.clear(); this.pRadAtrous.clear(); this.pending.clear(); [this.pPack, this.pShTemp, this.pGiTemp, this.pSpecTemp] = four;   // (the à-trous variants re-make themselves lazily off the new module, as before)
-    return { ok: true, messages };
   }
   private shAtrous(stride: number, final: boolean, first: boolean): GPUComputePipeline {
     const key = `${stride}/${final ? 1 : 0}/${first ? 1 : 0}`; let p = this.pShAtrous.get(key);

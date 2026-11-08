@@ -60,7 +60,7 @@ console.log(`callout-place-check · ${levelName} · the rule ${off ? 'OFF (the f
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 {
-  LASTSTAND.regroup = false; LASTSTAND.callOut = true; LASTSTAND.places = !off; Math.random = seeded(seed);
+  LASTSTAND.callOut = true; LASTSTAND.places = !off; Math.random = seeded(seed);
   const log = console.log, err = console.error, warn = console.warn; let W: any;
   try { console.log = console.error = console.warn = () => { };
     W = await standUp({ uploadEvery: 4, level: loadLevel(data) });
@@ -80,7 +80,7 @@ function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; le
   const spot = free(place.b)!; stand(spot);
   let line: { text: string; kind: string } | null = null, obj: { text: string; pos: number[] | null } | null = null, at: number[] = [], n0 = 0;
   steps(LASTSTAND.first[1] + LASTSTAND.listen[1] + 8, () => { stand(spot); if (line) return; const l = said().find(x => /At$/.test(x.kind) && x.who === man.callsign); if (l) { line = l; n0 = said().length; at = [man.char.pos[0], man.char.pos[2]]; } });
-  steps(0.5, () => stand(spot)); obj = g.roomClear.objective();
+  steps(0.5, () => stand(spot)); obj = g.view.mission?.of === 'roomclear' ? g.view.mission : null;
   if (!line) { console.log(`- NO VERDICT — ${man.callsign} said nothing in ${(LASTSTAND.first[1] + LASTSTAND.listen[1] + 8).toFixed(0)} s alone (${said().map(l => l.text).join(' · ') || 'no line at all'}): the check looked at nothing`); process.exit(1); }
   looked++;
   const L = line as { text: string; kind: string }, h = holds(L.text, at[0], at[1]);
@@ -92,7 +92,7 @@ function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; le
   if (to) {
     const t0 = g.time; let moved: { t: number; text: string } | null = null; stand(to);
     steps(10, () => { stand(to); if (!moved) { const l = said().slice(n0).find(x => x.who === man.callsign && holds(x.text, to[0], to[2])?.ok); if (l) moved = { t: l.t, text: l.text }; } });
-    steps(0.5, () => stand(to)); const o2 = g.roomClear.objective(), b2 = (o2?.text.match(/\[[^\]]+\]/g) ?? []) as string[], M = moved as { t: number; text: string } | null;
+    steps(0.5, () => stand(to)); const o2 = g.view.mission?.of === 'roomclear' ? g.view.mission : null, b2 = (o2?.text.match(/\[[^\]]+\]/g) ?? []) as string[], M = moved as { t: number; text: string } | null;
     verdict(!!M && b2.includes(`[${home.def.name}]`) && !b2.includes(`[${bare}]`), `moved into ${the(home.def.name)}, he says where he is now within ten seconds and the bracket moves with him`,
       `${M ? `${(M.t - t0).toFixed(1)} s after the move: '${M.text}'` : `nothing true of where he stands in 10 s (${said().slice(n0).map(l => `'${l.text}'`).join(' · ') || 'no line'})`} · ${o2?.text ?? ''}`);
   }

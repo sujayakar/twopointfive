@@ -6,10 +6,10 @@
 // the maintainer, 10-17: "esc is overloaded -- exiting out of menus as well as going to pause. maybe we make tab exit out of menus and esc is always pause?"
 // THE FOUR THINGS ESC BACKED OUT OF, each staged as play stages it and given a Tab in the tick:
 //   the squad's order menu (X on the floor, a room clear with four) · the open Space list (Space held at a shut door) · a running verb (the leaf being eased)
-//   · the launcher's held arc (the right button held with a 40 mm up).
+//   (the launcher's held arc is not asked: its rounds are staged on the copy, which is never sent).
 // THEN THE PAUSE with the rule on, under stepFrame (host/loop.ts, the loop main.ts runs) with the card up for some frames and Space let go under it: the first
 // tick after the card, and only it, holds the one-tick code 'Paused'; the Space list is shut and its row is not done; the order menu is still up. The same
-// keys given to a fresh game tick by tick (what a recording holds and a replay does) end the same way, and a held arc given 'Paused' is let go unsent.
+// keys given to a fresh game tick by tick (what a recording holds and a replay does) end the same way.
 // A headless run cannot press the page's keys: main.ts's lines (Esc's press taken out of the frame, no back-out on it, Tab's trial waiting its turn) are held
 // by their source text here, and looked at on the real page apart.
 import { readFileSync } from 'node:fs';
@@ -43,16 +43,6 @@ export async function tabBackCheck(): Promise<boolean> {
     { const on = await ease(TAB);
       verdict(on.easing && on.stopped, 'a running verb (the leaf being eased): Tab stops it where it is', `${on.hv} running ${on.easing} → stopped ${on.stopped}`); }
 
-    // ---- the launcher's held arc: the 40 mm up, the right button held
-    const arc = async (how: string) => quiet(async () => { const W: any = await stage(2301); const g = W.game, pl = g.player, rf = pl.rifle; rf.shells = Math.max(rf.shells, 2);
-      const AHEAD: V = [35.5, 1.2, 11.5], at = () => AHEAD; for (let i = 0; i < 3 && rf.attachment !== 'he40'; i++) { key(W, 'Digit2'); for (let f = 0; f < 40; f++) { W.cursorAt(AHEAD); W.step(DT); } }
-      const s0 = rf.shells; rmbHold(W, at, 6); const held = pl.launchHeld;
-      W.cursorAt(AHEAD); W.input.buttons |= 4; W.input.pressed.add(how); W.step(DT);
-      const after = pl.launchHeld; rmbUp(W, at); for (let f = 0; f < 6; f++) { W.cursorAt(AHEAD); W.step(DT); }
-      return { load: rf.attachment, held, after, flew: s0 - rf.shells + g.shells.length }; });
-    { const on = await arc(TAB);
-      verdict(on.held === 'he40' && on.after === null && on.flew === 0, 'the launcher\'s held arc: Tab lets go of it unsent',
-        `held ${on.held} → ${on.after}, rounds gone ${on.flew}`); }
 
     // ---- the squad's order menu: a room clear with four, X on the floor ahead
     const squad = async () => quiet(async () => { const W: any = await standUp({ seed: 33 }); const g = W.game; g.godMode = true;
@@ -68,7 +58,7 @@ export async function tabBackCheck(): Promise<boolean> {
       const under = (W: any, st: { frozen: boolean; seen: number; esc: number }) => { const g = W.game, up = g.update;
         g.update = function (this: any, dt: number, input: any, ...a: unknown[]) { if (input.pressed.has('Paused')) st.seen++; if (input.pressed.has('Escape')) st.esc++; return up.call(this, dt, input, ...a); };
         return { game: g, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render: () => { W.engine.world.upload(); }, betweenTicks: () => { W.engine.world.relist(); },
-          smoke: null, audio: null, demo: null, attract: null, hud: null, bubbles: null, time: 0, updateMs: 0, frozen: () => st.frozen, present: () => false, fixedStep: () => false }; };
+          smoke: null, audio: null, attract: null, hud: null, bubbles: null, time: 0, updateMs: 0, frozen: () => st.frozen, present: () => false, fixedStep: () => false }; };
       const A = await squad(), up0 = !!A.O.menu, stA = { frozen: false, seen: 0, esc: 0 };
       await quiet(() => { const ctx = under(A.W, stA); A.W.cursorAt(A.at); stepFrame(ctx, DT); stA.frozen = true; for (let i = 0; i < 3; i++) stepFrame(ctx, DT); stA.frozen = false; for (let i = 0; i < 3; i++) { A.W.cursorAt(A.at); stepFrame(ctx, DT); } }); const up1 = !!A.O.menu;
       const stL = { frozen: false, seen: 0, esc: 0 };
@@ -77,11 +67,10 @@ export async function tabBackCheck(): Promise<boolean> {
         for (let i = 0; i < 30; i++) stepFrame(ctx, DT); return { open, under0, shut, did: Math.abs(d.angle - a0) > 0.02 || !!pl.easing || !!pl.picking }; });
       const T = await quiet(async () => { const { W, d, pl } = await door(); W.input.keys.add(IK); W.input.pressed.add(IK); for (let i = 0; i < 30 && !pl.sel.open; i++) W.step(DT); const open = !!pl.sel.open, a0 = d.angle;
         W.input.keys.delete(IK); W.input.pressed.add('Paused'); W.step(DT); const shut = !pl.sel.open; for (let i = 0; i < 30; i++) W.step(DT); return { open, shut, did: Math.abs(d.angle - a0) > 0.02 || !!pl.easing || !!pl.picking }; });
-      const R = await arc('Paused');
-      const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8'), never = /!BACKKEY\.tab && game\.escape\(\)/.test(main), takes = /if \(BACKKEY\.tab\) input\.pressed\.delete\('Escape'\); menu\.toggle\(\);/.test(main), trial = /input\.hit\('Tab'\) && !\(BACKKEY\.tab && !frozen && game\.backable\(\)\)/.test(main);
-      verdict(up0 && up1 && stA.seen === 1 && L.open && L.under0 && L.shut && !L.did && stL.seen === 1 && stL.esc === 0 && T.open && T.shut && !T.did && R.held === 'he40' && R.after === null && R.flew === 0 && never && takes && trial && backName() === 'Tab',
-        'the pause is the pause and nothing else: the first tick after the card holds \'Paused\' once, a Space list held as the card came up is shut with its row not done (and the same keys given tick by tick, as a replay gives them, end the same), a held arc is let go unsent, the order menu is still up, and main.ts takes Esc\'s press out of the frame and never backs out on it',
-        `order menu up ${up0} → after the card ${up1}, ticks holding 'Paused' ${stA.seen} · Space list open ${L.open}, still open under the card ${L.under0} → shut on the first tick back ${L.shut}, anything done ${L.did}, ticks holding 'Paused' ${stL.seen} · the same keys tick by tick: shut ${T.shut}, anything done ${T.did} · arc held ${R.held} → ${R.after} on 'Paused', rounds gone ${R.flew} · main.ts: no back-out on Esc ${never}, the press leaves the frame ${takes}, Tab's trial waits its turn ${trial} · the hint rows name ${backName()}`); }
+      const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8'), never = !/game\.escape\(\)/.test(main), takes = /input\.pressed\.delete\('Escape'\); menu\.toggle\(\);/.test(main), trial = /input\.hit\('Tab'\) && !\(!frozen && game\.backable\(\)\)/.test(main);
+      verdict(up0 && up1 && stA.seen === 1 && L.open && L.under0 && L.shut && !L.did && stL.seen === 1 && stL.esc === 0 && T.open && T.shut && !T.did && never && takes && trial && backName() === 'Tab',
+        'the pause is the pause and nothing else: the first tick after the card holds \'Paused\' once, a Space list held as the card came up is shut with its row not done (and the same keys given tick by tick, as a replay gives them, end the same), the order menu is still up, and main.ts takes Esc\'s press out of the frame and never backs out on it',
+        `order menu up ${up0} → after the card ${up1}, ticks holding 'Paused' ${stA.seen} · Space list open ${L.open}, still open under the card ${L.under0} → shut on the first tick back ${L.shut}, anything done ${L.did}, ticks holding 'Paused' ${stL.seen} · the same keys tick by tick: shut ${T.shut}, anything done ${T.did} · main.ts: no back-out on Esc ${never}, the press leaves the frame ${takes}, Tab's trial waits its turn ${trial} · the hint rows name ${backName()}`); }
 
     // ---- the words: Options ▸ Game's 'Tab key' row must not say Tab does nothing while Tab is the back key (ui/tabkey.ts tabChoices)
     { const { tabChoices, TAB_CHOICES, TAB_BACK_LINE } = await import(`${ROOT}/src/ui/tabkey.ts`); const on = tabChoices(true);

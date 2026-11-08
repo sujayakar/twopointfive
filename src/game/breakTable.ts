@@ -88,11 +88,10 @@ export const BREAK: Record<Mat, BreakRow> = {
   plant:        { core: [0.62, 0.36, 0.24], cell: ['wedge', 'wedge'], thick: 0.02, span: [0.1, 0.25], slim: [0.6, 1], tears: [1, 2], ragged: null,
                   again: { land: NEVER, kick: 0.85, how: 'diag', chips: 6 }, small: { n: 16, size: [0.008, 0.018], aspect: [1, 2.5] }, dust: 2, sparks: 0, puff: 0, rest: 0.1, level: 0, mark: 0.02 },
 };
-/** the knobs that are not a material's: the rigid pool's shares for ONE blast by pool size (thrown wall / cover pieces, heap slabs dealt at rest at the wall foot,
- *  furniture pieces), the chips a cell throws instead when the small pool cuts its slabs, what a refused / evicted piece leaves, the china rule */
+/** the knobs that are not a material's: the rigid pool's shares for ONE blast (thrown wall / cover pieces, heap slabs dealt at rest at the wall foot,
+ *  furniture pieces), what a refused / evicted piece leaves, the china rule */
 export const BREAKS = {
-  share: { big: { thrown: 5, heap: 5, furniture: 8 }, small: { thrown: 4, heap: 1, furniture: 4 } },
-  smallPoolChipK: 20 / 14,
+  share: { big: { thrown: 5, heap: 5, furniture: 8 } },
   refuseChips: [6, 8] as [number, number], crumbleChips: [4, 6] as [number, number],
   /** THE EVICTION POP's two answers (both ride the cut switch; off = the pool's oldest piece gone into `crumbleChips` in a ball, as it was): the slot a spawn over
    *  the cap takes is the SMALLEST resting piece's (its longest half extent; ties the oldest) — a mug's worth goes before a door-sized plank; and what an evicted
@@ -343,13 +342,12 @@ export class Breaks {
   private pcounter = 1;
   private phash = (): number => DEBRIS.dress ? hash01(this.pcounter++ * 2246822519 + 0x51ed27) : this.hash();
   reset() { this.counter = 1; this.pcounter = 1; this.queue.length = 0; this.kinkT = -1e9; }
-  private small(): boolean { return this.debris.cap() < 64; }
   /** a chunk's serial counted from the pool's last clear(): 1, 2, … in every encounter = a fresh game's own serials, so a restarted or loaded encounter breaks its pieces again as a
    *  fresh game does (the pool's `serial` itself runs on across restarts: motion keys stay unique) */
   private rel(c: Chunk): number { return c.serial - this.debris.serial0 + 1; }
   /** the rigid pool's share of one blast for thrown wall / cover pieces, heap slabs, furniture pieces */
   share(): { thrown: number; heap: number; furniture: number } {
-    const s = this.small() && !DEBRIS.dress ? BREAKS.share.small : BREAKS.share.big;   // (DEBRIS.dress: what a blast THROWS is the simulation's and the same on every tier — the full share; a small pool turns what it cannot hold into chips)
+    const s = BREAKS.share.big;   // (DEBRIS.dress: what a blast THROWS is the simulation's and the same on every tier — the full share; a small pool turns what it cannot hold into chips)
     return this.look?.on && BREAKS.lookHeap ? { thrown: s.thrown + s.heap, heap: 0, furniture: s.furniture } : s;   // (somebody's rubble is the heap: its part is thrown)
   }
   /** THE LOAD NUMBER (probes, the panel): pieces moving + particle records waiting to be born */
@@ -387,7 +385,7 @@ export class Breaks {
   }
   /** the pool took a resting piece's slot: it crumbles into a few chips of its own material where it lay (glass: game/shards.ts's own crumble, when it has one) */
   evicted(c: Chunk) {
-    messEvicted(this.g, c);   // (picture only: the mark it leaves where it lay — floormess.ts CHAOS.mess, nothing with the rule off)
+    if (!c.glass) messEvicted(this.g, c.box.c, c.box.h, c.box.yaw, c.box.rot, c.mat?.mat, c.kind);   // (picture only: the mark it leaves where it lay — floormess.ts CHAOS.mess, nothing with the rule off)
     if (!cutBoxesOn()) return;
     if (c.glass) { (this.g as unknown as { shards?: { evicted?(c: Chunk): void } }).shards?.evicted?.(c); return; }
     if (EVICT.on) this.dissolve(c); else this.crumble(c, BREAKS.crumbleChips, 0.35);
@@ -594,7 +592,7 @@ export class Breaks {
       this.tag(got, mat, 0, paint); res.thrown++;
       if (sb?.cut) { BREAK_STATS.shaped++; BREAK_STATS.planes += sb.cut.length; } else BREAK_STATS.plain++;
     }
-    const chipN = Math.round(row.small.n * (this.small() ? BREAKS.smallPoolChipK : 1));
+    const chipN = row.small.n;
     this.chips(row, paint, cell.c, dir ? v3.normalize(v3.add(out, [0, 0.5, 0])) : [0, 1, 0], chipN, 2.4, Math.max(cell.h[0], cell.h[2]) * 0.6, who);
     this.fines(row, paint, cell.c, dir ? out : [0, 1, 0]);
     if (row.puff > 0) g.destr.cellDust(cell.c, dir ? out : [0, 1, 0], row.puff, surf);   // (a hole is six cells in one frame: what the frame's puff cap holds back waits in the lane's dust queue)

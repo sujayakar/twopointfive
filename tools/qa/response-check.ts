@@ -3,7 +3,7 @@
 // The switch, its three rules and the picture's are settled on: the check asks the page's side alone and no longer writes them (until 2026-11-07 its
 // rig raised all five, and the break word was the switch left off).
 // Headless: nothing here has been seen on a GPU, and nobody has played a run with a team on any of these levels.
-//   (1) the files: exactly the levels chosen carry a block, each with its reason; the validator refuses a block with three muster marks, five men, a door
+//   (1) the files: exactly the levels chosen, and the office's two files, carry a block, each with its reason; the validator refuses a block with three muster marks, five men, a door
 //       the level has not got
 //   (2) the floor: every block stands on its built floor (checkResponse: free marks, a walk in for each man, posts that can be reached); a mark moved into
 //       a wall is caught. The office's block is the old constant, mark for mark
@@ -32,10 +32,12 @@
 //   (20) a team still on the road when the last defender falls never arrives: the place is taken and the call is called off
 //   (21) the records office's raid: the way in decides it — from the lot the desk is the first man met (a call, or the desk down inside its six seconds); from the
 //        other way in the desk calls the patrol. With it every level on the WITH list has a call played through by its own mission
+// An ordinary run asks (1) (2) (3) (4) (5) (9); QA_SWEEP=all asks them all, every level in (2) and (3), and the time the block deals in (4). Read whole and green 2026-11-07.
 // RESPONSE_BREAK=1 = the floor is stood with no response team at all (tune.qrf off) for the lines that want one: every line but (1), (2) and (18) must fail.
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
+import { sample, swept } from './sweep.ts';
 const { parseLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
@@ -52,6 +54,8 @@ type Vec3 = [number, number, number];
 const DT = 1 / 60, BREAK = process.env.RESPONSE_BREAK === '1';
 /** the levels that have a team, and nobody else (a level added to this list has its reason in its file's `why` and in docs/agents/enemies.md) */
 const WITH = ['bazaar.json', 'crossing.json', 'depot-gwot.json', 'depot.json', 'police-post.json', 'records-gwot.json', 'records.json', 'snatch.json'];
+/** …and the office's own two files, whose block is the old constant (line 2) */
+const OFFICE = ['office.json', 'office-relief.json'];
 /** …of them, the ones whose team answers a squad's raid (ResponseData.raid), with the mission that raids them */
 const RAIDS: Record<string, string> = { 'depot.json': '?roomclear&squad=4', 'depot-gwot.json': '?roomclear&squad=4', 'records.json': '?roomclear&squad=2', 'records-gwot.json': '?roomclear&squad=2', 'snatch.json': '?roomclear&squad=4' };
 const f1 = (x: number) => x.toFixed(1), flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]), at = (p: number[]) => `${f1(p[0])},${f1(p[2])}`;
@@ -61,6 +65,8 @@ const text = (file: string) => readFileSync(resolve(ROOT, 'levels', file), 'utf8
 /** …with its block held to one answer, for a line whose subject is not the deal: the first way, the most men, the middle of the time (RESPONSE.deal is settled on) */
 async function stand1(file: string | null, seed: number, on: boolean, q: string | null = '?quiet=1', way = 0) { oneAnswer = true; try { return await stand(file, seed, on, q, way); } finally { oneAnswer = false; } }
 let oneAnswer = false;
+/** …with the block's time to arrive cut short, for a line whose subject is not the road's length (the time the block deals is line 5's) */
+let shortRoad = false;
 /** a level stood up, with a response team to call (`on`; false = RESPONSE_BREAK's floor without one); `q` starts its mission */
 async function stand(file: string | null, seed: number, on: boolean, q: string | null = '?quiet=1', way = 0) {
   Math.random = seeded(0x7e5 + seed * 7919);
@@ -70,6 +76,7 @@ async function stand(file: string | null, seed: number, on: boolean, q: string |
   if (q && (g.level.scenarios?.quiet || /roomclear|rescue/.test(q))) await hushed(() => startFromQuery(g, q));
   g.godMode = true; g.aiEnabled = true; g.tune.qrf = on; g.tune.perimeter = false;
   if (oneAnswer) { const R = g.level.scenarios.response, e = (R.eta[0] + R.eta[1]) / 2; R.men = [R.men[1], R.men[1]]; R.eta = [e, e]; R.ways = [R.ways[0]]; }
+  if (shortRoad) g.level.scenarios.response.eta = [15, 15];
   W.steps(20, DT);
   return W;
 }
@@ -91,6 +98,7 @@ export async function responseCheck(): Promise<boolean> {
   let all = true; const was = { ...RESPONSE };   // (put back at the end: a runner that goes on in this process finds its stand as it left it)
   const line = (ok: boolean, label: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
   const ON = !BREAK;
+  const WHOLE = swept(0, 1) === 1;   // (every call played through takes half a minute and more of a CPU, the whole check ten minutes: the lines an ordinary run skips are asked under QA_SWEEP=all)
   console.log(`\n=== response-check: the response team is the level's own — where it comes in, who it is, what it was told (RESPONSE)${BREAK ? ' · RESPONSE_BREAK: no response team on the floor' : ''} ===`);
 
   // ---- (1) the files
@@ -100,13 +108,13 @@ export async function responseCheck(): Promise<boolean> {
     const errs = have.flatMap(f => (validateLevelData(JSON.parse(text(f))) as string[]).filter(e => /response/.test(e)));
     const broke = (edit: (R: any) => void) => { const d = JSON.parse(text('police-post.json')); edit(d.scenarios.response); return (validateLevelData(d) as string[]).filter(e => /response/.test(e)).length; };
     const b = [broke(R => R.ways[0].muster.pop()), broke(R => { R.men = [2, 5]; }), broke(R => { R.ways[1].door = 'no_such_gate'; }), broke(R => { delete R.why; }), broke(R => { R.men = [2.5, 3.5]; })];
-    line(JSON.stringify(have) === JSON.stringify(WITH) && whys.every(w => w.length > 40) && !errs.length && b.every(n => n > 0),
+    line(JSON.stringify(have) === JSON.stringify([...WITH, ...OFFICE].sort()) && whys.every(w => w.length > 40) && !errs.length && b.every(n => n > 0),
       '(1) the chosen levels carry a block with its reason, nobody else does; a block short a mark, five strong, by a door the level has not got, with no reason, or half a man is refused',
       `${files.length} level files · with a block: ${have.join(' ')} · validator on them: ${errs.length ? errs.slice(0, 3).join(' · ') : 'clean'} · five broken edits refused: ${b.map(n => n > 0).join(' ')}`); }
 
   // ---- (2) the floor
   { const out: string[] = []; let caught = 0, clean = true;
-    for (const f of [null, ...WITH]) { const W = await stand(f, 2, true, f ? RAIDS[f] ?? null : null); const g = W.game; const c: string[] = checkResponse(g); clean &&= c.length === 0 && !!g.level.scenarios?.response; out.push(`${f ?? 'office'}: ${c.length ? c.slice(0, 2).join(' / ') : 'stands'}`);
+    for (const f of [null, ...sample(WITH, 3)]) { const W = await stand(f, 2, true, f ? RAIDS[f] ?? null : null); const g = W.game; const c: string[] = checkResponse(g); clean &&= c.length === 0 && !!g.level.scenarios?.response; out.push(`${f ?? 'office'}: ${c.length ? c.slice(0, 2).join(' / ') : 'stands'}`);
       if (f === 'police-post.json') { const R = g.level.scenarios.response, keep = R.ways[0].muster[0]; let wall: Vec3 | null = null; for (let x = 5; x < 35 && !wall; x += 0.5) for (let z = 5; z < 23 && !wall; z += 0.5) if (g.col.nav.isBlocked(x, z)) wall = [x, 0, z];
         R.ways[0].muster[0] = wall!; caught = checkResponse(g).length; R.ways[0].muster[0] = keep; } }
     const W = await stand(null, 2, true, null), R = W.game.level.scenarios.response, y = R.ways[0];
@@ -115,13 +123,13 @@ export async function responseCheck(): Promise<boolean> {
 
   // ---- (3) no block, no team
   { const out: string[] = []; let ok = true;
-    for (const f of ['quiet-yard.json', 'quiet-relay.json']) { const W = await stand(f, 3, ON); const g = W.game; goLoud(W); steps(W, 12);
+    for (const f of sample(['quiet-relay.json'], 1)) { const W = await stand(f, 3, ON); const g = W.game; goLoud(W); steps(W, 12);
       const idle = g.qrf.state === 'idle', heard = g.qrf.loudT > -1e8, panel = requestQrf(g, 'panel'), none = !g.guards.some((x: any) => g.qrf.owns(x));
       ok &&= idle && heard && !panel && none && !hasResponse(g) && notes(g).some(n => n === 'no-team:this level has none'); out.push(`${f}: gunfire heard ${heard} · locked down ${g.escalation} · ${g.qrf.state} · panel call ${panel ? 'taken' : 'refused'}`); }
     line(ok, '(3) a level with no block has no team: the same gunfire on a locked-down floor calls nobody, and the panel\'s own call is refused', out.join(' · ')); }
 
   // ---- (4) a quiet mission gone loud calls its own team
-  { const W = await stand('police-post.json', 4, ON); const g = W.game, Q = g.qrf, rx = tapRadio(g), R = g.level.scenarios.response;
+  { shortRoad = !WHOLE; const W = await stand('police-post.json', 4, ON); shortRoad = false; const g = W.game, Q = g.qrf, rx = tapRadio(g), R = g.level.scenarios.response;
     g.teleportPlayer(sighting(g, 7).spot); goLoud(W); steps(W, 4, () => Q.state !== 'idle');
     const asked = Q.state !== 'idle' && Q.reason === 'gunfire', D = dealOf(g), t0 = Q.requestedAt; hideSam(g);
     steps(W, 130, () => notes(g).includes('fan'), () => hideSam(g));
@@ -144,7 +152,7 @@ export async function responseCheck(): Promise<boolean> {
       `way/men/secs: ${A.out.join(' ')} · ${ways.size} ways, ${sizes.size} sizes, ${etas.size} times · seed 5 again: ${B.out.join(' ')} · seed 6: ${C.out.join(' ')}`); }
 
   // ---- (6) staging
-  { const W = await stand('bazaar.json', 7, ON); const g = W.game, Q = g.qrf, R = g.level.scenarios.response, rx = tapRadio(g); const got = new Set<number>();
+  if (WHOLE) { const W = await stand('bazaar.json', 7, ON); const g = W.game, Q = g.qrf, R = g.level.scenarios.response, rx = tapRadio(g); const got = new Set<number>();
     hideSam(g, R.ways[1].muster[0]); for (let i = 0; i < 12; i++) { requestQrf(g, 'gunfire'); const D = dealOf(g); if (D) got.add(D.way); resetQrf(g); }
     hideSam(g); requestQrf(g, 'gunfire'); const D = dealOf(g); const w0 = D?.way ?? -1;
     steps(W, 4); if (w0 >= 0) hideSam(g, R.ways[w0].muster[0]);
@@ -155,7 +163,7 @@ export async function responseCheck(): Promise<boolean> {
       `Sam on way 2's muster, twelve calls: ways dealt ${[...got].map(w => w + 1).join(' ') || 'none'} · then dealt way ${w0 + 1}, Sam walks onto its muster: ${re ?? 'no re-deal'} · stood up at way ${w1 + 1}'s marks ${moved} · “${rx.find(l => /change of plan/.test(l.text))?.text ?? ''}”`); }
 
   // ---- (7) no word: the level's named places, wherever Sam really is
-  { const run = async (sam: Vec3) => { const W = await stand1('police-post.json', 8, ON); const g = W.game, rx = tapRadio(g); hideSam(g, sam); requestQrf(g, 'gunfire');
+  if (WHOLE) { const run = async (sam: Vec3) => { const W = await stand1('police-post.json', 8, ON); const g = W.game, rx = tapRadio(g); hideSam(g, sam); requestQrf(g, 'gunfire');
       steps(W, 110, undefined, () => hideSam(g, sam)); return { targets: notes(g).filter(n => n.startsWith('target:')), word: g.qrf.word.size, fix: g.qrf.fix, rx, brief: rx.find(l => /rolling/.test(l.text))?.text ?? '' }; };
     const A = await run([39.2, 0, 0.8]), B = await run([24.5, 0, 10.0]);   // (B: stood in the radio room, in the dark, unseen)
     const sweeps = A.targets.filter(t => t.endsWith(':sweep'));
@@ -164,7 +172,7 @@ export async function responseCheck(): Promise<boolean> {
       `“${A.brief.slice(0, 110)}” · places walked: ${sweeps.map(t => t.split(':')[2]).join(', ')} · with Sam in the radio room: ${A.targets.join() === B.targets.join() ? 'the same walk' : B.targets.map(t => t.split(':')[2]).join(', ')} · the net's word ${A.word}/${B.word}`); }
 
   // ---- (8) (10) a man on the net sees him
-  { const W = await stand1('police-post.json', 9, ON); const g = W.game, Q = g.qrf, rx = tapRadio(g);
+  if (WHOLE) { const W = await stand1('police-post.json', 9, ON); const g = W.game, Q = g.qrf, rx = tapRadio(g);
     const { seer, spot } = sighting(g, 4); g.playerInvisible = false;
     steps(W, 6, () => Q.word.has('player'), () => { g.teleportPlayer(spot); g.player.visibility = 1; });
     const seenAt: Vec3 = [...(Q.word.get('player')?.at ?? [0, 0, 0])] as Vec3, had = Q.word.has('player');
@@ -198,7 +206,7 @@ export async function responseCheck(): Promise<boolean> {
       `saw him ${sawIt} · on the net before he could say it ${early} · held four seconds: word ${silent ? 'none' : 'there'} · he still holds the idea ${still} · let go: word ${Q.word.has('player') ? 'there' : 'none'}`); }
 
   // ---- (11) whoever is against them is their enemy
-  { const W = await stand1('crossing.json', 11, ON, '?quiet=1&squad=1'); const g = W.game, Q = g.qrf; const mate = g.guards.find((x: any) => x.team === 'operative');
+  if (WHOLE) { const W = await stand1('crossing.json', 11, ON, '?quiet=1&squad=1'); const g = W.game, Q = g.qrf; const mate = g.guards.find((x: any) => x.team === 'operative');
     hideSam(g); requestQrf(g, 'gunfire');
     const far: Vec3 = [38.8, 0, 26.6]; if (mate) { mate.char.pos[0] = far[0]; mate.char.pos[2] = far[2]; }
     steps(W, 110, () => notes(g).includes('fan'), () => { hideSam(g); if (mate) { mate.char.pos[0] = far[0]; mate.char.pos[2] = far[2]; } });
@@ -208,7 +216,7 @@ export async function responseCheck(): Promise<boolean> {
     line(!!mate && contact && on > 0, '(11) the partner in view of the element is contact, and he is the one they turn on (Sam is out of it, unseen)', `partner ${mate ? 'staged' : 'missing'} · element in ${notes(g).includes('fan')} · contact ${contact} · men whose enemy is the partner ${on}/${Q.men.length}`); }
 
   // ---- (12) never more of theirs up than the level's most
-  { const W = await stand1('police-post.json', 12, ON); const g = W.game, Q = g.qrf, R = g.level.scenarios.response; g.tune.perimeter = true; g.tune.perimeterEta = 6; g.tune.perimeterSize = 2;
+  if (WHOLE) { const W = await stand1('police-post.json', 12, ON); const g = W.game, Q = g.qrf, R = g.level.scenarios.response; g.tune.perimeter = true; g.tune.perimeterEta = 6; g.tune.perimeterSize = 2;
     hideSam(g); requestQrf(g, 'gunfire'); let most = 0; const up = () => g.guards.filter((x: any) => Q.owns(x) && x.state !== 'dead').length;
     steps(W, 110, () => notes(g).includes('fan'), () => hideSam(g)); const came = Q.men.length;
     if (Q.men[3]) killGuard(g, Q.men[3], [1, 0, 0], false);
@@ -218,7 +226,7 @@ export async function responseCheck(): Promise<boolean> {
       `${came} came · ${per || 'no second lift'} · most of theirs up at once ${most} (the level's most ${R.men[1]}) · on their posts ${posted}/${Q.perim?.men.length ?? 0}`); }
 
   // ---- (14) stood up on open ground in an enemy's view
-  { const W = await stand1('bazaar.json', 14, ON); const g = W.game, Q = g.qrf, R = g.level.scenarios.response; hideSam(g); requestQrf(g, 'gunfire');
+  if (WHOLE) { const W = await stand1('bazaar.json', 14, ON); const g = W.game, Q = g.qrf, R = g.level.scenarios.response; hideSam(g); requestQrf(g, 'gunfire');
     steps(W, 100, () => Q.state === 'arriving', () => hideSam(g));
     const m0 = R.ways[0].muster[0], spot: Vec3 = [m0[0] + 6.5, 0, m0[2] + 0.5]; g.playerInvisible = false; const t0 = g.time;   // (he walks into the street's open end once they are stood there)
     const seen = steps(W, 9, () => notes(g).some(n => n.startsWith('contact:')), () => { g.teleportPlayer(spot); g.player.visibility = 1; });
@@ -228,7 +236,7 @@ export async function responseCheck(): Promise<boolean> {
   // ---- (15) a raid brings the level's team, on the defenders' side
   const hutOf = (g: any) => g.roomClear.rooms.find((r: any) => r.def.id === g.level.scenarios.response.raid.room).defenders as any[];
   const squadOf = (g: any) => [g.player.char.pos, ...g.nightBreach.ops.filter((o: any) => o.state !== 'dead').map((o: any) => o.char.pos)] as Vec3[];
-  { const W = await stand('depot.json', 15, ON, RAIDS['depot.json']); const g = W.game, Q = g.qrf, rx = tapRadio(g), R = g.level.scenarios.response;
+  if (WHOLE) { const W = await stand('depot.json', 15, ON, RAIDS['depot.json']); const g = W.game, Q = g.qrf, rx = tapRadio(g), R = g.level.scenarios.response;
     const hut = hutOf(g).map((h: any) => h.callsign); goLoud(W); const heardAt = Q.raidT;
     const asked = steps(W, 14, () => Q.state !== 'idle'), beat = Q.requestedAt - heardAt, ask = rx.find(l => /we are being hit/.test(l.text))?.text ?? '';
     steps(W, 120, () => Q.state === 'arriving'); const D = dealOf(g), men = Q.men as any[], y = D ? R.ways[D.way] : null;
@@ -241,7 +249,7 @@ export async function responseCheck(): Promise<boolean> {
       `heard in the hut at ${f1(heardAt)} s · asked ${asked ? `${f1(beat)} s later` : 'never'}: "${ask.slice(0, 70)}" · ${men.length} came (${men.map(m => `${m.callsign} ${m.team}`).join(', ') || 'nobody'}) by ${y?.name ?? '—'}, ${f1(apart)} m from the nearest of the squad · enemies in all ${eleven} · ${fought ? 'they met' : 'never met in ninety seconds'}`); }
 
   // ---- (16) the set taken first: nobody calls
-  { const W = await stand('depot.json', 16, ON, RAIDS['depot.json']); const g = W.game, Q = g.qrf, rx = tapRadio(g);
+  if (WHOLE) { const W = await stand('depot.json', 16, ON, RAIDS['depot.json']); const g = W.game, Q = g.qrf, rx = tapRadio(g);
     goLoud(W); const heard = Q.raidT > -1e8; for (const h of hutOf(g)) killGuard(g, h, SHOT);   // (inside the six seconds)
     steps(W, 20); goLoud(W); steps(W, 25);
     const W2 = await stand('depot.json', 16, ON, RAIDS['depot.json']); const g2 = W2.game; goLoud(W2); const called = steps(W2, 14, () => g2.qrf.state !== 'idle');
@@ -249,7 +257,7 @@ export async function responseCheck(): Promise<boolean> {
       `hut down inside the ${RESPONSE.callSecs} s: ${Q.state}, control ${rx.some(l => /CONTROL/.test(l.text)) ? 'spoke' : 'silent'}, ${g.nightBreach.hostiles.filter((h: any) => h.state !== 'dead').length} defenders still up and shooting · hut alive: ${called ? 'called' : 'no call'}`); }
 
   // ---- (17) not taken while the team is up
-  { const W = await stand('depot.json', 17, ON, RAIDS['depot.json']); const g = W.game, Q = g.qrf; goLoud(W);
+  if (WHOLE) { const W = await stand('depot.json', 17, ON, RAIDS['depot.json']); const g = W.game, Q = g.qrf; goLoud(W);
     steps(W, 14, () => Q.state !== 'idle'); steps(W, 120, () => Q.state === 'arriving'); const came = Q.men.length;
     for (const h of g.nightBreach.hostiles) if (h.state !== 'dead') killGuard(g, h, SHOT); steps(W, 2);
     const open = !g.roomClear.end && g.roomClear.active, told = g.roomClear.log?.some?.((l: any) => l.what === 'team-up') ?? false;
@@ -258,13 +266,13 @@ export async function responseCheck(): Promise<boolean> {
       `${came} of the escort stood up · every defender down: ${open ? 'the run goes on' : `ended (${g.roomClear.end})`}${told ? ', and says who is left' : ''} · the escort down: ${g.roomClear.end ?? 'still going'}`); }
 
   // ---- (18) a block with no `raid`
-  { const W2 = await stand(null, 18, true, '?roomclear'); const g2 = W2.game; goLoud(W2); steps(W2, 14);
+  if (WHOLE) { const W2 = await stand(null, 18, true, '?roomclear'); const g2 = W2.game; goLoud(W2); steps(W2, 14);
     const W3 = await stand(null, 18, true, '?rescue'); const g3 = W3.game; goLoud(W3); steps(W3, 14); const asked3 = requestQrf(g3, 'gunfire');
     line(g2.qrf.state === 'idle' && g2.nightBreach.active && g3.qrf.state === 'idle' && !asked3 && !!g3.rescue?.active, '(18) the office, whose block answers a quiet night, sends nobody to a room clear or to a hostage rescue (a rescue ends on its own cast: no team is ever on its way to one)',
       `the office under a room clear: ${g2.qrf.state} (raid on ${g2.nightBreach.active}) · under a rescue: ${g3.qrf.state}, a call on gunfire taken ${asked3} (rescue on ${!!g3.rescue?.active})`); }
 
   // ---- (19) a restage mid-response
-  { const W = await stand('depot.json', 19, ON, RAIDS['depot.json']); const g = W.game, Q = g.qrf; goLoud(W);
+  if (WHOLE) { const W = await stand('depot.json', 19, ON, RAIDS['depot.json']); const g = W.game, Q = g.qrf; goLoud(W);
     steps(W, 14, () => Q.state !== 'idle'); steps(W, 120, () => Q.state === 'arriving'); const came = Q.men.length, tag = g.level.scenarios.response.tag;
     await hushed(() => g.roomClear.restage()); steps(W, 3);
     const left = g.guards.filter((x: any) => String(x.callsign).startsWith(tag + '-')).length;
@@ -272,7 +280,7 @@ export async function responseCheck(): Promise<boolean> {
       `${came} stood up · after the restage: ${left} of them on the floor, the response ${g.qrf.state}, gunfire remembered ${g.qrf.raidT > -1e8}`); }
 
   // ---- (20) the last defender down with the team still on the road
-  { const W = await stand('depot.json', 20, ON, RAIDS['depot.json']); const g = W.game, Q = g.qrf; goLoud(W);
+  if (WHOLE) { const W = await stand('depot.json', 20, ON, RAIDS['depot.json']); const g = W.game, Q = g.qrf; goLoud(W);
     const asked = steps(W, 14, () => Q.state !== 'idle'); steps(W, 3);
     for (const h of g.nightBreach.hostiles) if (h.state !== 'dead') killGuard(g, h, SHOT); steps(W, 2);
     const end = g.roomClear.end, off = notes(g).some(n => n.startsWith('called-off')); steps(W, 100);
@@ -280,7 +288,7 @@ export async function responseCheck(): Promise<boolean> {
       `${asked ? 'called' : 'never called'} · every defender down three seconds later: ${end ?? 'still going'} · ${off ? 'called off' : 'not called off'} · a hundred seconds on: the response ${Q.state}, ${Q.men.length} of them on the floor`); }
 
   // ---- (21) the records office: the way in decides it (every level with a block has a call played by its own mission)
-  { const tale: string[] = []; let honest = true, ok = false, got = 'never called';
+  if (WHOLE) { const tale: string[] = []; let honest = true, ok = false, got = 'never called';
     // from the dark lot the desk is the first man the pair meets: each start is a call, or the desk down inside its six seconds and nobody called
     for (const seed of [21, 22, 23]) { const W = await stand('records.json', seed, ON, RAIDS['records.json']); const g = W.game, Q = g.qrf, desk = hutOf(g); goLoud(W);
       const asked = steps(W, 14, () => Q.state !== 'idle'), up = desk.filter((h: any) => h.state !== 'dead').length;

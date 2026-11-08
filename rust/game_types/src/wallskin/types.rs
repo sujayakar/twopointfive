@@ -68,7 +68,7 @@ impl Default for Seat { fn default() -> Self { Self::zeroed() } }
 /// (TypeScript: WallSkin, src/game/wallskin.ts:115)
 #[derive(Clone, Debug)]
 pub struct WallSkin {
-    pub cut: JsMap<crate::Num, Vec<BoxId>>,
+    pub cut: JsMap<crate::Num, Vec<FrameBoxId>>,
     pub out: JsSet<crate::Num>,
     pub laid: JsMap<crate::Num, Vec<crate::wallskin::WallSkinLaidValueItem>>,
     pub seats: JsMap<crate::Num, Vec<crate::wallskin::Seat>>,

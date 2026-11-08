@@ -371,6 +371,13 @@ export function validateLevelData(d: LevelData): string[] {
   const boxes = recs('boxes', d.boxes);
   const boxIds = uniq('boxes', boxes.map(b => (b as any)?.id));
   // (ONE BOX'S RULE — the level's own boxes, and the boxes a Team & kit way adds for its picture: scenarios.kitView below)
+  /** A ROUND THING: the cylinder about its own y, and nothing that would turn, tilt or cut it */
+  const roundRule = (w: string, b: BoxData) => {
+    if (b.round === undefined) return;
+    if (b.round !== true) err(`${w}.round`, 'is true or absent');
+    if (isVec(b.h) && b.h[0] !== b.h[2]) err(`${w}.round`, 'its radius is h[0] and h[2]: they are equal');
+    for (const k of ['yaw', 'rot', 'flags', 'shape'] as const) if (b[k] !== undefined) err(`${w}.round`, `a round thing says no ${k}`);
+  };
   const boxRule = (w: string, b: (typeof boxes)[number]) => {
     known(w, b, KEYS.box); floorOk(w, b.floor);
     if (!isVec(b.c)) err(w, 'c must be Vec3'); if (!(isVec(b.h) && b.h.every(x => x >= 0))) err(w, 'h must be Vec3 ≥ 0');
@@ -383,11 +390,7 @@ export function validateLevelData(d: LevelData): string[] {
     if (b.cutHeight !== undefined && !isNum(b.cutHeight)) err(w, 'cutHeight must be a number');
     if (b.name !== undefined && !isStr(b.name)) err(w, 'name must be a non-empty string'); if (b.group !== undefined && !isStr(b.group)) err(w, 'group must be a non-empty string');
     marksOk(w, b.markings, b.h, b.rot !== undefined);
-    if (b.round !== undefined) {   // A ROUND THING: the cylinder about its own y, and nothing that would turn, tilt or cut it
-      if (b.round !== true) err(`${w}.round`, 'is true or absent');
-      if (isVec(b.h) && b.h[0] !== b.h[2]) err(`${w}.round`, 'its radius is h[0] and h[2]: they are equal');
-      for (const k of ['yaw', 'rot', 'flags', 'shape'] as const) if (b[k] !== undefined) err(`${w}.round`, `a round thing says no ${k}`);
-    }
+    roundRule(w, b);
     if (b.shape !== undefined) {   // A SHAPE (scene/shapes.ts shapeErrors: keys, one form, the record's limit) and its pieces' paint, finish and flags as a box's
       if (b.rot !== undefined) err(`${w}.shape`, 'a box with rot cannot say a shape');
       if (isObj(b.shape) && ((b.shape as any).round !== undefined || (b.shape as any).arc !== undefined || (b.shape as any).cut !== undefined)) {   // (a FORM cuts the box: what reads the whole box must not be said beside it)
@@ -797,7 +800,7 @@ export function validateLevelData(d: LevelData): string[] {
           // (A PICTURE'S BOX — a set's, a way's `add`: the level format's own record. LOOK TWINS: one block serves the plain file and its look file — the box's
           //  `material` may be alternatives 'a|b', the first the file's palette holds: src/host/kitViewSet.ts kitSetPaint)
           const kvPaint = (b: any) => { const alt = isStr(b.material) && b.material.includes('|') ? b.material.split('|').find((m: string) => Object.prototype.hasOwnProperty.call(mats, m)) : undefined; return alt !== undefined ? { ...b, material: alt } : b; };
-          const kvBox = (bw: string, b: any) => { if (!isObj(b) || !isStr(b.id) || !isVec(b.c) || !isVec(b.h)) { err(bw, 'a box: id, c, h'); return; } known(bw, b, KEYS.box); paintOk(bw, kvPaint(b)); stuffOk(bw, b); if (b.shape !== undefined) err(bw, 'a kit view box says no shape'); };
+          const kvBox = (bw: string, b: any) => { if (!isObj(b) || !isStr(b.id) || !isVec(b.c) || !isVec(b.h)) { err(bw, 'a box: id, c, h'); return; } known(bw, b, KEYS.box); paintOk(bw, kvPaint(b)); stuffOk(bw, b); roundRule(bw, b); if (b.shape !== undefined) err(bw, 'a kit view box says no shape'); };
           // (BESPOKE SETS — scenarios.ts KitViewSet: the shapes only; what stands where is src/host/kitViewPlan.ts's to measure, tools/qa/kitview-plan.ts)
           const sets: Record<string, any> = isObj(K.sets) ? K.sets : {}; if (K.sets !== undefined && !isObj(K.sets)) err(`${w}.sets`, 'must be an object of sets by name');
           for (const [name, T] of Object.entries(sets)) { const tw = `${w}.sets.${name}`; if (!isObj(T)) { err(tw, 'must be an object'); continue; }

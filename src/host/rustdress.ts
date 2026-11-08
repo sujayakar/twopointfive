@@ -2,7 +2,7 @@
 // The Rust tick runs every rule; the lines below are the ones of `Game.stepSeats`, `stepFxAndDynBoxes` and `drawCharacters` (src/game/game.ts) that it
 // leaves out because they decide nothing: the rows of DRESS (src/game/dress.ts) and the picture-only calls beside them, in the tick's own order. They read
 // the puppet as the apply left it, which is the end of the tick and not the moment each stood at inside it: measured on three missions, what a dress line
-// reads that the tick then changes is the wind's gust, a box the air's obstacle map reads, and a man's place for the par clock, each one tick newer and
+// reads that the tick then changes is the wind's gust and a box the air's obstacle map reads, each one tick newer and
 // none wrong.
 //
 // NOT HERE, because the Rust tick does them and their answer comes back in the apply or as out events: the lamps' paint (updateTargets), the doors',
@@ -32,7 +32,6 @@ import { gpuFx } from '../game/particleFx';
 import { WIND } from '../game/wind';
 import { blastFeelStages } from '../game/blastFeel';
 import { updateSnowBreath } from '../game/snowBreath';
-import { recapTick } from '../game/deathrecap';
 import { civiliansShown } from '../game/civilians';
 
 /** ms of the last dress step by line, and the lines that threw (each named once: a picture-only line that throws must not stop the game) */
@@ -73,10 +72,6 @@ export function dressStep(g: Game, dt: number, side: SideList): void {
   run('men', () => { G.menAll = all; G.menStatured = statured; G.menBare = false; G.drawMen(all, statured, false, DRESS.men); });
   run('snowBreath', () => updateSnowBreath(g, dt));
   if (DRESS.snow) run('snowTracks', () => G.stepSnowTracks(dt));
-  // THE PAR CLOCK AND THE VERDICT stay TypeScript: they read the game and write only their own record
-  run('par', () => G.par?.tick());
-  run('verdict', () => G.verdict?.tick());
-  if (DRESS.recap) run('recap', () => recapTick(g));
   // ---- the side list onto the frame's list, past a filter of its own: with the fog of war off everything; else a box with no thing's key where the team
   // sees its cell, and a keyed one as it is (the moths). STAND-IN: a fixture's piece is treated as unkeyed, so one that fell unseen is not kept where it
   // was last seen. Belongs in the Rust tick (these boxes made there, before its own fog pass), with WallSkin's boxes, which nothing here makes.

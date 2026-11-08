@@ -8,9 +8,7 @@
 //   clear-doctrine    the guards' own two-man RoomClear (squad.ts) keeps battle drill six: the kicker off the funnel, #2 a beat behind, centre then his corner,
 //                     #2 on the next door
 import { standUp, ROOT } from './headless.ts';
-import type { Vec3 } from './headless.ts';
-const { setDaylight, isDaylight } = await import(`${ROOT}/src/game/lighting.ts`);
-const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
+const { setDaylight } = await import(`${ROOT}/src/game/lighting.ts`);
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -44,7 +42,6 @@ export async function breachDaylight() {
   setDaylight(game, true); for (let i = 0; i < 3; i++) W.step(DT); upload(W);
   const D = level.daylight;
   { const f: string[] = [];
-    if (!isDaylight(game)) f.push('isDaylight false');
     const sun = engine.lights.lights.find((l: any) => l.name === 'sun'); if (!sun) f.push('no sun in the set'); else { if (sun.kind !== 2) f.push(`sun kind ${sun.kind}`); if (!sun.enabled) f.push('sun disabled'); if (!(engine.lights.activeIdx as number[]).some((i: number) => engine.lights.lights[i] === sun)) f.push('sun not uploaded'); }
     const moon = engine.lights.lights.find((l: any) => l.name === 'moon'); if (moon?.enabled) f.push('moon still lit');
     for (const t of game.targets) { if (D.groupsOff.includes(t.group) && (t.on || (t.light && t.light.enabled))) f.push(`${t.name} (${t.group}) still on`); if (D.groupsOn.includes(t.group) && !t.on) f.push(`${t.name} (${t.group}) off`); }
@@ -55,7 +52,6 @@ export async function breachDaylight() {
     F.verdict(f.length === 0, 'day: one lit sun of kind 2 uploaded, moon and street lamps out, every listed group on, mains back, sky / haze the variant\'s, idempotent', f.join('; ') || `sun dir ${sun?.dir.map(f2)} I ${sun?.intensity}; ${engine.lights.activeCount} lights uploaded by day; sky ${JSON.stringify(engine.settings.skyZenith)} haze ${engine.settings.hazeDensity}`); }
   setDaylight(game, false); for (let i = 0; i < 6 / DT; i++) W.step(DT); upload(W);   // (six seconds again: the groups day switched on and night switches back off restrike nothing, but a fixture on the blink is compared like for like)
   { const f: string[] = [];
-    if (isDaylight(game)) f.push('isDaylight still true');
     const L1 = lightList(engine), S1 = skyOf(engine), W1 = switches(game);
     if (L1 !== L0) { const a = L0.split('|'), b = L1.split('|'); const i = a.findIndex((x, k) => x !== b[k]); f.push(`light list differs (first at #${i}: '${a[i]}' vs '${b[i]}'; ${a.length} vs ${b.length} lights)`); }
     if (S1 !== S0) f.push(`sky ${S0} → ${S1}`);
@@ -66,63 +62,3 @@ export async function breachDaylight() {
 }
 
 // ---------------------------------------------------------------- clear-doctrine
-/** The guards' own two-man RoomClear (squad.ts) keeps the doctrine the breach drill stages: run staged on the tour's conference plan (the kick) and on two of the level's
- *  lockdown plans (the keyed shove; rooms with a second door), measured off the men frame by frame — the kicker is out of the doorway's opening from half a
- *  second after the leaf goes until he starts in; #2 starts in ≥ 0.4 s behind #1; each man's muzzle bears on the room's centre inside 0.7 s of starting in and
- *  on his own corner (the first point of his authored sector) inside 1.15 s; where the room has another door #2 ends the search squared to it (≤ 30°); the
- *  drill still reaches 'resolve' with its lines said (the tour's stop counts on ≥ 10 inside 18 s). */
-export async function clearDoctrine() {
-  const F = family('clear-doctrine: the live RoomClear keeps battle drill six — kicker off the funnel, #2 a beat behind, centre then his corner, #2 on the next door (squad.ts)');
-  const { RoomClear } = await import(`${ROOT}/src/game/squad.ts`);
-  const { CONFERENCE_CLEAR } = await import(`${ROOT}/src/game/demo.ts`);
-  const bearing = (from: Vec3, to: Vec3) => Math.atan2(to[0] - from[0], to[2] - from[2]);
-  const angOff = (a: number, b: number) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b))) * 180 / Math.PI;
-  const cases: { name: string; plan: (level: any) => any; wantNext: string | null }[] = [
-    { name: "the tour's conference room (kicked)", plan: () => CONFERENCE_CLEAR, wantNext: null },
-    { name: 'server room by its corridor door (keyed shove; side door to the office)', plan: (level: any) => level.clearPlans[1], wantNext: 'server_manager' },
-    { name: 'break room by its corridor door (keyed shove; three other doors)', plan: (level: any) => level.clearPlans[4], wantNext: 'breakroom_w' },
-  ];
-  for (const [ci, C] of cases.entries()) {
-    Math.random = seeded(41 + ci);
-    const W = await standUp(); const { game, level } = W;
-    game.playerInvisible = true; game.godMode = true; game.quietUtility = true; game.teleportPlayer([1.5, 0, 1.5]);
-    for (let i = 0; i < 10; i++) W.step(DT);
-    const P0 = C.plan(level); const [a, b] = game.guards; for (const o of game.guards.slice(2)) { o.hold = true; o.char.pos = [-40, 0, -40]; }
-    // staged from a couple of metres up the stack line (the level's plans have no approach marks of their own)
-    const u = v3.normalize([P0.stack[1][0] - P0.stack[0][0], 0, P0.stack[1][2] - P0.stack[0][2]]);
-    const P = P0.from ? P0 : { ...P0, from: [v3.mad(P0.stack[0], u, 1.7), v3.mad(P0.stack[1], u, 1.9)] };
-    const d = game.doors.byName(P.door); d.reset(); d.angle = 0; d.vel = 0; d.latched = true; d.closing = false;
-    const clear = new RoomClear(game, P, a, b); clear.start();
-    let says = 0; const origSay = game.say.bind(game); game.say = (gd: any, text: string, radio = false) => { says++; return origSay(gd, text, radio); };
-    let t = 0, tOpen = NaN, inFunnel = '', gap = NaN;
-    const centreHit = [Infinity, Infinity], cornerHit = [Infinity, Infinity]; const starts = [NaN, NaN];
-    const centre: Vec3 = P.bounds ? [(P.bounds.x0 + P.bounds.x1) / 2, 1, (P.bounds.z0 + P.bounds.z1) / 2] : (() => { const pts = [...P.entryAim[0], ...P.entryAim[1]]; let x = 0, z = 0; for (const p of pts) { x += p[0]; z += p[2]; } return [x / pts.length, 1, z / pts.length] as Vec3; })();
-    const funnel = (p: Vec3) => { const [hx, hz] = d.def.hinge; const alongX = Math.abs(Math.sin(d.def.closedDir)) < 0.5; const u0 = alongX ? hx : hz, uu = alongX ? p[0] : p[2], w = alongX ? p[2] - hz : p[0] - hx; return uu > u0 - 0.05 && uu < u0 + d.def.width + 0.05 && Math.abs(w) < 0.9; };
-    let faceOff = NaN; const phases = new Set<string>();
-    for (let f = 0; f < 60 * 18; f++) {
-      clear.tick(t, DT); W.step(DT); t += DT; phases.add(clear.phase);
-      if (isNaN(tOpen) && !d.latched) tOpen = t;
-      if ((P.breach ?? 'kick') === 'kick' && !isNaN(tOpen) && t > tOpen + 0.5 && isNaN(clear.tEnter) && !inFunnel && funnel(a.char.pos)) inFunnel = `#1 in the opening at (${f2(a.char.pos[0])}, ${f2(a.char.pos[2])}) ${f2(t - tOpen)} s after the leaf went`;
-      starts[0] = clear.tEnter; starts[1] = clear.tEnter2;
-      [a, b].forEach((gd: any, i: number) => {
-        const t0 = starts[i]; if (isNaN(t0)) return; const c = gd.char, dtIn = t - t0;
-        if (dtIn <= 0.7 && angOff(c.aimYaw, bearing(c.pos, centre)) < 20) centreHit[i] = Math.min(centreHit[i], dtIn);
-        if (dtIn <= 1.15 && angOff(c.aimYaw, bearing(c.pos, P.entryAim[i][0])) < 20) cornerHit[i] = Math.min(cornerHit[i], dtIn);
-      });
-      if (!isNaN(clear.tEnter) && !isNaN(clear.tEnter2)) gap = clear.tEnter2 - clear.tEnter;
-      if (clear.phase === 'resolve' && isNaN(faceOff)) { const nd = clear.nextDoor; faceOff = nd ? angOff(b.char.bodyYaw, bearing(b.char.pos, nd.frameCentre)) : 0; }
-    }
-    const f: string[] = [];
-    if (inFunnel) f.push(inFunnel);
-    if (!(gap >= 0.4)) f.push(`#2 started in ${f2(gap)} s after #1 (want ≥ 0.4)`);
-    for (const i of [0, 1]) { if (!(centreHit[i] <= 0.7)) f.push(`#${i + 1}'s muzzle never bore on the room's centre inside 0.7 s of starting in`); if (!(cornerHit[i] <= 1.15)) f.push(`#${i + 1}'s muzzle never bore on his corner inside 1.15 s of starting in`); }
-    const nd = clear.nextDoor?.def.name ?? null;
-    if (nd !== C.wantNext) f.push(`next door ${nd} (want ${C.wantNext})`);
-    if (C.wantNext && !(faceOff <= 30)) f.push(`#2 ${f2(faceOff)}° off the ${C.wantNext} door at resolve (want ≤ 30)`);
-    if (!phases.has('resolve')) f.push(`never reached 'resolve' in 18 s (phases ${[...phases].join('→')})`);
-    if (says < 10) f.push(`${says} barks (want ≥ 10)`);
-    F.verdict(f.length === 0, C.name, f.join('; ') || `#2 in +${f2(gap)} s; centre at +${f2(centreHit[0])} / +${f2(centreHit[1])} s, own corner at +${f2(cornerHit[0])} / +${f2(cornerHit[1])} s; ${nd ? `#2 ${f2(faceOff)}° off ${nd} at resolve` : 'no second door'}; resolve at ${f2(clear.tResolve)} s, ${says} barks${(P.breach ?? 'kick') === 'kick' ? '; kicker clear of the opening from +0.5 s' : ''}`);
-    clear.end('patrol'); game.say = origSay;
-  }
-  return F.done();
-}

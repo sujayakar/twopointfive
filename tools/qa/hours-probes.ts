@@ -21,7 +21,7 @@ const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { SCENARIOS, pickSearch } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
-const { HOUR, HOURS, HOUR_IDS, applyHour, hourOf, hourSun, hourLightAt, hourIdOf, hourHref, initHour, setSunStrength, sunStrength } = HR;
+const { HOUR, HOURS, HOUR_IDS, applyHour, hourOf, hourSun, hourLightAt, hourIdOf, hourHref, hourAsked, setSunStrength, sunStrength } = HR;
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
 function family(title: string): { verdict: Verdict; done: () => boolean } {
@@ -144,6 +144,7 @@ export async function hoursTeam(): Promise<boolean> {
     const team = g.guards.filter((x: any) => x.team === 'operative' && x.unit);
     // the team told to stack on the front door, from the yard, Sam's own light on — which frees theirs (nvg.ts: 'your light'): what burns is then the light
     // rule's alone (guards.ts LIGHTS — off wherever the place itself reads lit)
+    W.step(1 / 60);   // (what a point is, is the Rust game's answer: it stands from the first step)
     const door = g.doors.byName('front'), O = g.orders; await quiet(() => O.give('stack', O.targetAt(door.frameCentre))); g.player.pistol.lightOn = true; g.player.rifle.lightOn = true;
     // (…and, where the page's wall rule is on, a light it holds off the wall at his muzzle is not a light the hour put out: a man is counted `walled` when
     //  that rule is what put his light out (guards.ts wallPutOut: the other light rules had it burning) and the check's own reading of his beam, after the
@@ -164,7 +165,7 @@ export async function hoursTeam(): Promise<boolean> {
 export async function hoursSheet(): Promise<boolean> {
   const F = family('hours-sheet: ?hour= and the mission sheet\'s Hour row');
   { const ids = ['dawn', 'midday', 'overcast', 'dusk', 'night'].map(hourIdOf).join(','), al = ['noon', 'day', 'afternoon', 'sunset', 'DUSK', '', 'teatime', null].map(hourIdOf).join(',');
-    const keep = { ...HOUR }; let a: any, b: any, c: any, d: any; try { initHour(new URLSearchParams('?levelFile=compound.json&roomclear&hour=noon&sun=0.4')); a = { ...HOUR }; HOUR.sun = 1; initHour(new URLSearchParams('?roomclear')); b = { ...HOUR }; initHour(new URLSearchParams('?hour=dusk&noweather')); c = { ...HOUR }; initHour(new URLSearchParams('?hour=constructor')); d = { ...HOUR }; } finally { Object.assign(HOUR, keep); }
+    const a = hourAsked(new URLSearchParams('?levelFile=compound.json&roomclear&hour=noon&sun=0.4')), b = hourAsked(new URLSearchParams('?roomclear')), c = hourAsked(new URLSearchParams('?hour=dusk&noweather')), d = hourAsked(new URLSearchParams('?hour=constructor'));
     F.verdict(ids === 'dawn,midday,overcast,dusk,night' && al === 'midday,midday,overcast,dusk,dusk,night,night,night' && a.id === 'midday' && a.sun === 0.4 && b.id === 'night' && b.sun === 1 && c.id === 'dusk' && c.dry === false && d.id === 'night' && hourIdOf('__proto__') === 'night',
       '?hour= takes the five names and a few plain words for them; anything else, or no flag, is the night; ?sun= is the strength; ?noweather leaves the storm to its own flag', `${ids} · ${al} · ${JSON.stringify(a)} · ${JSON.stringify(b)}`);
     const h = [hourHref('?levelFile=compound.json&roomclear&squad4', 'dusk'), hourHref('?roomclear&hour=dusk&mute', 'midday'), hourHref('?roomclear&hour=dusk&mute', 'night'), hourHref('?hour=dawn', 'night'), hourHref('', 'dawn'), hourHref('?hourly=1&hour', 'night')];

@@ -1,4 +1,4 @@
-// Level lint from the shell — the CLI over src/editor/lint.ts (the same function the editor's LINT button and __ed.lint() run; pure, no GPU):
+// Level lint from the shell — the CLI over src/scene/lint.ts (pure, no GPU):
 // nav reachability spawn → objectives → exfil on the guards' own grid, doors walkable both sides / clear / sealing, overlapping statics,
 // zero extents, lights inside solids / absurd, budgets, route legs, floor coverage.
 //   bun run tools/qa/level-lint.ts [levels/office.json …] [--json] [--quiet]      exit 1 if any file has an ERROR finding (warnings print, pass)
@@ -7,7 +7,7 @@ import { resolve } from 'node:path';
 import { existsSync, readFileSync } from 'node:fs';
 import { ROOT } from './headless.ts';
 
-const { lintLevel, formatLint } = await import(`${ROOT}/src/editor/lint.ts`);
+const { lintLevel, formatLint } = await import(`${ROOT}/src/scene/lint.ts`);
 const { validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 
 const args = process.argv.slice(2); const flags = new Set(args.filter(a => a.startsWith('--'))); const files = args.filter(a => !a.startsWith('--'));

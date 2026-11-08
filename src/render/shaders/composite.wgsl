@@ -48,7 +48,7 @@ fn linearDepth(d: f32, pix: vec2f) -> f32 { return distance(worldFromDepth(pix, 
 /// a guide's normal: the g-buffer's — on the look page (look.wgsl) the box's own FACE where the look tilted it, so every weight below is the one it always was
 fn geoN(p: vec2i) -> vec3f {
   let n = textureLoad(gNormal, p, 0).xyz * 2.0 - 1.0;
-  if (LOOK && textureLoad(gNormal, p, 0).a < 0.17) { return lookGeoN(normalize(n), textureLoad(gId, p, 0).x); }   // THE LOOK PROTOTYPE
+  if (textureLoad(gNormal, p, 0).a < 0.17) { return lookGeoN(normalize(n), textureLoad(gId, p, 0).x); }   // THE LOOK'S OWN LINE
   return n;
 }
 fn upsampleIndirect(pix: vec2i, pin: vec2f, z: f32, N: vec3f) -> vec3f {   // pin = the pixel's position on the INTERNAL raster (= pixf; under SHARP pixf × in∕out)
@@ -409,7 +409,7 @@ fn wetCoatSpec(id: u32, P: vec3f, N: vec3f, z: f32, EdS: vec3f, EdB: vec3f, Ei: 
     // it is a highlight of the bulb's strength where the SUN would mirror, through the roof, on every bead that faces it, coming and going with the noise in the
     // shadowed light. A light whose own unshadowed light here is over WET_HIDDEN times all the shadowed light its class delivered cannot be arriving (what
     // arrives is at least each seen light's share), so it is left out of the lobes and of the sum the ratio is taken against.
-    // ON THE LOOK PAGE BY DAY, under its Steady bounce row (frame.lampCfg.z; `?look=steady:0` = the highlight as it was, and so is every other page), and
+    // ON THE LOOK PAGE BY DAY, under its Steady bounce row (frame.lampCfg.z; `?look=steady:0` = the highlight as it was), and
     // faded out over the half of WET_HIDDEN below it, so that a penumbra's edge is not a line where the glint ends.
     var keep = 1.0;
     if (frame.lampCfg.z > 0.0) { keep = 1.0 - smoothstep(0.5 * WET_HIDDEN, WET_HIDDEN, luminance(ev.E) * NdotL / max(luminance(select(EdS, EdB, broad)), 1e-6)); if (keep <= 0.0) { continue; } }
@@ -472,7 +472,7 @@ const SNOW_GLOW_REACH: f32 = 0.12;                        // metres: the stencil
 const SNOW_GLOW_CONF: f32 = 0.03;                         // the stencil's mean N·L (per class) under which the term fades out
 const SNOW_GLOW_SHADE: vec3f = vec3f(0.93, 1.0, 1.11);    // × the bounce and the sky's light on snow in full shade (luminance kept): never dead grey
 fn snowGlowAmt(a: f32) -> f32 {
-  if (LOOK && a < 0.17) { return 0.0; }   // THE LOOK PROTOTYPE: the alpha's fourth code is a wall's relief, not snow
+  if (a < 0.17) { return 0.0; }   // THE LOOK'S OWN LINE: the alpha's fourth code is a wall's relief, not snow
   return clamp((1.0 - a) * 1.5, 0.0, 1.0); }
 fn snowGlow(sPix: vec2i, P: vec3f, N: vec3f, z: f32, EdS: vec3f, EdB: vec3f) -> vec3f {
   var fac = vec4f(0.0); var kS = vec3f(0.0); var kB = vec3f(0.0); let V = (frame.camPos - P) / max(z, 1e-4);   // SNOW SPARKLE (below): this pixel's facet, what it flashes per class
@@ -697,7 +697,7 @@ fn lookPowder(P: vec3f, V: vec3f) -> vec3f {
 // (EXPO_BAND, EXPO_KEY, EXPO_MOST, EXPO_TOP, the place field's cells and words, the shoulder and the gains: place_common.wgsl, pasted in front of this kernel)
 // (THE PIXEL'S PLACE, lookPlaceLevels and the two walks it makes over the floor plan: place_common.wgsl, pasted in front of this kernel. The particles' splat asks it too.)
 /** the pixel's place as lookExpoGain found it for this pixel: its three gains (place_common.wgsl lookGains) and 1 once it has (0 = no gain by the place
- *  at this pixel: at night, off the look page, with the shade row at 0, a section cap) */
+ *  at this pixel: at night, with the shade row at 0, a section cap) */
 var<private> lookNow: vec4f;
 /** `here` = the light the pixel's place holds and `near` = the brightest place a stride away (lookPlaceLevels: the place field's, by the floor plan). Sam's
  *  place is the field's own eye, eased on the GPU; until there is one he is taken to stand in the open. → the gain the place is shown by now; what the
@@ -788,7 +788,7 @@ fn refractedRead(pixf: vec2f, P0: vec3f, N0: vec3f, gp: GlassPath) -> GlassRead 
 struct BeamSeg { a: vec4f, b: vec4f, e: vec4f };
 struct Beams { n: u32, p0: u32, p1: u32, p2: u32, k: vec4f, seg: array<BeamSeg, 8>, fireN: vec4u, fire: array<FireRec, 4>, fireLook: FireLook };   // (… and, behind the segments, THE OPEN FIRES: passes.ts setFires — fire.wgsl FireRec, fireN.x of them, and the look's numbers they are all drawn with, FireLook; the reflection pass's own struct stops at the segments)
 @group(1) @binding(15) var<uniform> beams: Beams;
-@group(1) @binding(16) var powderTex: texture_2d<f32>;   // THE LOOK PROTOTYPE: the loose snow in the air (render/powderField.ts: r = its column, g = column × height); a 1×1 "none" anywhere else, read only under LOOK with frame.veilA.z > 0
+@group(1) @binding(16) var powderTex: texture_2d<f32>;   // THE LOOK PROTOTYPE: the loose snow in the air (render/powderField.ts: r = its column, g = column × height); a 1×1 "none" until it is live, read only with frame.veilA.z > 0
 @group(1) @binding(17) var<uniform> placeBuf: PlaceBuf;   // THE LOOK PROTOTYPE: the place field (render/placeField.ts; lookExpoGain). A buffer, not a texture: this stage has no sampled texture left. All zeros = no field
 const BEAM_R0 = 0.0022;                           // combat.ts beamBoxes: the beam's own half-width, m
 fn beamOutdoors(p: vec2f) -> bool {
@@ -871,60 +871,6 @@ fn fireOver(c: vec3f, pixf: vec2f, rd: vec3f, tMax: f32) -> vec3f {
   }
   return col;
 }
-/** THE SMOKE LAB'S TWO PICTURES (host/smokelab.ts; `/smokelab`). smoke[0].show is the solver's word, 0 on every other page (nothing below runs then): bit 0 = THE BRICKS,
- *  the wire of every 8³-cell brick that holds something to fetch, the coarse lattice's in blue and the fine one's in amber, drawn where the pixel's ray meets a brick's
- *  near face (and, fainter, its far one) and hidden behind what is solid; bit 1 = THE SPIN, the coarse smoke drawn again by how hard the air in it turns (the curl the
- *  step keeps: smoke.wgsl publish leaves density × spin in the texel's .y while the bit is up), still air blue, the full spin red, over the smoke as it is lit. Both are
- *  drawn at a fixed brightness on the screen (÷ the frame's exposure), so they read the same at any hour. A lab's picture: 48 steps and no care for cost. */
-fn labEdge(f: vec3f, w: f32) -> f32 { let n = step(vec3f(0.5 - w), abs(f - 0.5)); return step(1.5, n.x + n.y + n.z); }
-fn labBox(ro: vec3f, rd: vec3f, inv: vec3f, c: vec3i, e: f32, tin: f32, tmax: f32) -> f32 {
-  let ex = spgExit(ro, rd, inv, c, vec3f(e)); let tout = min(ex.x, min(ex.y, ex.z)); let w = clamp(0.0018 * tin / e, 0.015, 0.12);
-  var a = 0.0;
-  if (tin < tmax) { a = labEdge((ro + rd * tin) / e - vec3f(c), w); }
-  if (tout < tmax) { a = max(a, 0.45 * labEdge((ro + rd * tout) / e - vec3f(c), w)); }
-  return a;
-}
-fn smokeLabOver(color: vec3f, ro: vec3f, rd: vec3f, tmax: f32, jit: f32) -> vec3f {
-  let word = u32(smoke[0].show); var c = color; let lit = 0.5 / max(frame.exposure, 1e-9); let inv = safeInv(rd);
-  if ((word & 2u) != 0u) {
-    let sp = smokeSegment(ro, rd, tmax);
-    if (sp.mask != 0u && sp.tExit > sp.tEnter) {
-      let dt = (sp.tExit - sp.tEnter) / 48.0; var T = 1.0; var acc = vec3f(0.0);
-      for (var i = 0.0; i < 48.0 && T > 0.02; i += 1.0) {
-        let x = smokeTexelAt(ro + rd * (sp.tEnter + (i + jit) * dt));
-        if (x.x > 0.002) {
-          let s = clamp(x.y / x.x, 0.0, 1.0); let a = 1.0 - exp(-x.x * 6.0 * dt);
-          acc += T * a * mix(mix(vec3f(0.08, 0.25, 1.0), vec3f(1.0, 0.9, 0.1), smoothstep(0.0, 0.5, s)), vec3f(1.0, 0.12, 0.04), smoothstep(0.5, 1.0, s)); T *= 1.0 - a;
-        }
-      }
-      c = c * T + acc * lit;
-    }
-  }
-  if ((word & 1u) != 0u) {
-    let e = SPG_B0; let tb = isectBounds(ro, inv, vec3f(0.0), vec3f(SPG_N0) * e);
-    var t = max(tb.x, 0.0) + 1e-3; let tend = min(tb.y, tmax); var a0 = 0.0; var a1 = 0.0;
-    for (var i = 0; i < 160 && t < tend; i++) {
-      let b = vec3i(floor((ro + rd * t) / e)); let ex = spgExit(ro, rd, inv, b, vec3f(e)); let tout = min(ex.x, min(ex.y, ex.z));
-      if (all(b >= vec3i(0)) && all(b < SPG_N0)) {
-        let p = textureLoad(smokePage, b + vec3i(0, SPG_TEXY0, 0), 0).x;
-        if ((p & 0x7fffffffu) != 0u) { a0 = max(a0, labBox(ro, rd, inv, b, e, t - 1e-3, tmax)); }
-        if ((p >> 31u) != 0u) {
-          var tf = t; let tfe = min(tout, tend);
-          for (var j = 0; j < 12 && tf < tfe; j++) {
-            let f = vec3i(floor((ro + rd * tf) / SPG_B1)); let fx = spgExit(ro, rd, inv, f, vec3f(SPG_B1)); let tfo = min(fx.x, min(fx.y, fx.z));
-            if (all(f >= vec3i(0)) && all(f < SPG_N1)) { if (textureLoad(smokePage, f, 0).x != 0u) { a1 = max(a1, labBox(ro, rd, inv, f, SPG_B1, tf - 1e-3, tmax)); } }
-            tf = max(tfo, tf) + 1e-3;
-          }
-        }
-      }
-      t = max(tout, t) + 1e-3;
-    }
-    c = mix(c, vec3f(0.1, 0.8, 1.0) * lit, 0.85 * a0); c = mix(c, vec3f(1.0, 0.55, 0.08) * lit, 0.85 * a1);
-  }
-  return c;
-}
-/** the hot gas of a fire the smoke solver carries (fire.wgsl fireFlameG): the fine lattice's heat there */
-fn fireGas(p: vec3f) -> f32 { return spgFineHot(p).y; }
 /** THE SHIMMER OF THE HOT AIR OVER A FIRE (fire.wgsl fireShimmer; game/fire.ts FIRE.look.shimmer, `?fireheat=0`): how far, in pixels, this pixel reads the
  *  picture aside — the whole composite is a function of the pixel, so the picture behind a fire's column is that function a little off. Nothing nearer than
  *  the column is moved, and nothing nearer is read in its place (the depth here and the depth where it would read both say), and a fire the fog of war
@@ -1020,14 +966,14 @@ fn compositePixel(pix0: vec2f) -> vec3f {
     let albedo = albedo4.rgb;                   // (.a = the decals' gloss-keep: exactly 1 unless a mark's soot lies on this pixel — gbuffer.wgsl fsBox)
     id = textureLoad(gId, sPix, 0).x;
     var N = normalize(textureLoad(gNormal, sPix, 0).xyz * 2.0 - 1.0);
-    let Nl = N; if (LOOK && textureLoad(gNormal, sPix, 0).a < 0.17) { N = lookGeoN(Nl, id); }   // (Nl: the stored normal. THE LOOK PROTOTYPE, look.wgsl: where the look tilted it, N below is the box's own face — the guides' and the cache's normal, as ever — and Nl only leans the bounce)
+    let Nl = N; if (textureLoad(gNormal, sPix, 0).a < 0.17) { N = lookGeoN(Nl, id); }   // (Nl: the stored normal. THE LOOK'S OWN LINE, look.wgsl: where the look tilted it, N below is the box's own face — the guides' and the cache's normal, as ever — and Nl only leans the bounce)
     let boxIdx = id & 0xFFFFFu;
     let P = worldFromDepth(sPixf, sDepth);
     let z = distance(P, frame.camPos);
     let EdS = textureLoad(directTex, sPix, 0).rgb; let EdB = textureLoad(softTex, sPix, 0).rgb;   // the shadowed direct per emitter class (sharp, broad)
     let Ed = EdS + EdB;
     var Ei = upsampleIndirect(sPix, sPin, z, N);
-    if (LOOK) { Ei *= clamp(1.0 + LOOK_BOUNCE * (Nl.y - N.y), 0.45, 1.6); }   // the relief in bounced light: most of it comes from above (the sky, a ceiling's wash), so a facet leaning up takes more of it
+    Ei *= clamp(1.0 + LOOK_BOUNCE * (Nl.y - N.y), 0.45, 1.6);   // the relief in bounced light: most of it comes from above (the sky, a ceiling's wash), so a facet leaning up takes more of it
     var emissive = vec3f(0.0);
     var glossPix = false;                       // this pixel is the polished top of a BOX_GLOSS floor box (world geometry, never a character)
     if (((id >> 28u) & 1u) == 0u && boxIdx != 0xFFFFFu) {
@@ -1068,7 +1014,7 @@ fn compositePixel(pix0: vec2f) -> vec3f {
         if (lv(SNOW_SPARKLE)) { sparkle = snowSparkleL * (sa * snowSparkleFresh(textureLoad(gMat, sPix, 0).x)); }
       }
     }
-    if (LOOK) { if (frame.veilA.z > 0.0 && ((id >> 29u) & 1u) == 0u && P.y < POWDER_TOP) {   // THE LOOK PROTOTYPE: loose snow in the air (lookPowder above) — any pixel under the layer's top: the snow, a boot, a wall's foot; never a section cap's
+    if (frame.veilA.z > 0.0 && ((id >> 29u) & 1u) == 0u && P.y < POWDER_TOP) {   // THE LOOK'S OWN LINE: loose snow in the air (lookPowder above) — any pixel under the layer's top: the snow, a boot, a wall's foot; never a section cap's
       let vv = lookPowder(P, normalize(frame.camPos - P));
       if (vv.x > 0.0 || vv.y < 1.0) {
         let sunK = clamp(frame.veilA.w / max(luminance(Ed), 1e-4), 0.0, 1.0);   // the share of this pixel's direct light the sun can have given: the powder's shade and its sunny side are the sun's, never a lamp's
@@ -1085,9 +1031,9 @@ fn compositePixel(pix0: vec2f) -> vec3f {
         // (and the powder has grains of its own that catch the sun for a moment: a few in a thousand of 3 cm spots, new ten times a second)
         dif += POWDER_ALBEDO * Ed * (sunsOwn * vv.x * step(0.994, hash13(vec3f(floor(P.xz / 0.03), floor(frame.time * 10.0)))) * (2.0 / PI));
       }
-    } }
+    }
     var shadeG = 1.0;   // (1 anywhere but the look page by day: every × below is then the number it was)
-    if (LOOK) { if (frame.shadeCfg.x > 0.0 && ((id >> 29u) & 1u) == 0u) { shadeG = lookShadeGain(P, N, luminance(Ed) + luminance(Ei) / max(frame.indirectScale, 0.05)); dif = lookShow(dif, shadeG); } }   // THE LOOK PROTOTYPE: the place's gain (above) — the surface's reflected light only
+    if (frame.shadeCfg.x > 0.0 && ((id >> 29u) & 1u) == 0u) { shadeG = lookShadeGain(P, N, luminance(Ed) + luminance(Ei) / max(frame.indirectScale, 0.05)); dif = lookShow(dif, shadeG); }   // THE LOOK'S OWN LINE: the place's gain (above) — the surface's reflected light only
     if (metalK > 0.0) { dif *= 1.0 - 0.7 * metalK; }   // metalK: 0 unless the reflections are traced AND this is a metal under the cutoff
     color = (dif + emissive) * glassT + crackL;
     var spec = vec3f(0.0);                      // glossy floors (FLAG_GLOSS) / glass (FLAG_GLASS): the reflection radiance, added as it is — specular is not tinted by the diffuse albedo; both flags off = never read, colour untouched
@@ -1105,7 +1051,7 @@ fn compositePixel(pix0: vec2f) -> vec3f {
     if (((id >> 29u) & 1u) == 1u) { color = mix(frame.capColor.rgb, albedo * frame.capColor.rgb * 4.0, frame.capColor.a); }
     if (dbg == 1u) { color = select(albedo, albedo * glassT + vec3f(0.0, 0.08, 0.06), glassPix); }   // (albedo view: pixels behind glass carry the tint and a faint teal wash, so the panes can be found)
     else if (dbg == 2u) { color = Nl * 0.5 + 0.5; }
-    else if (dbg == 3u) { color = Ed * (shadeG / PI); }   // (× shadeG, here and in 4, 7, 8: on the look page by day a room's light is thousands of times under the yard's and the picture shows each place by its own gain; without it every room of these views was black by day, and a leak of daylight into one could not be found in them. 1 at night and off the look page)
+    else if (dbg == 3u) { color = Ed * (shadeG / PI); }   // (× shadeG, here and in 4, 7, 8: on the look page by day a room's light is thousands of times under the yard's and the picture shows each place by its own gain; without it every room of these views was black by day, and a leak of daylight into one could not be found in them. 1 at night)
     else if (dbg == 4u) { color = Ei * (shadeG / PI); }
     else if (dbg == 6u) { color = vec3f(1.0 - exp(-z * 0.06)); }   // view distance, monotonic (white = far)
     else if (dbg == 7u) { color = diceIrradiance(P + N * 0.27, N) * (shadeG / PI); }
@@ -1136,6 +1082,5 @@ fn compositePixel(pix0: vec2f) -> vec3f {
       color = wxFogApplySurf(color, dirS, zg, select(Ng.xz, vec2f(0.0), ((idg >> 20u) & 0x1FFu) != 0u));
     } else { color = wxFogApply(color, select(dirS, rdT, sky), select(zg, 0.0, sky), sky); }
   } }
-  if (SMOKE_LAB && frame.numSmoke > 0u && smoke[0].show != 0.0) { let dl = worldFromDepth(pixf, min(depth, 1.0)) - frame.camPos; let far = length(dl); color = smokeLabOver(color, frame.camPos, dl / max(far, 1e-6), select(far, 1e4, depth >= 1.0), ign(pixf + f32(frame.frameIdx & 63u) * 5.588238)); }   // (THE SMOKE LAB's pictures, over everything: smokeLabOver above; one read of a uniform on every other page)
   return max(color, vec3f(0.0));
 }

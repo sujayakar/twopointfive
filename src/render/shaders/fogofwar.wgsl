@@ -149,7 +149,8 @@ fn fowSeen(P: vec3f, N: vec3f) -> f32 {
   for (var k = 0u; k < n; k++) {
     let e = fow.eyes[k]; if (e.w < 0.5) { continue; }
     let top = N.y > 0.5 && P.y > e.y - 0.05;                       // a top face at or above this eye: its own box is between the eye and it
-    let q = vec3f(P.x + N.x * FOW_FACE_OFF, e.y, P.z + N.z * FOW_FACE_OFF);
+    let off = standOff(N, FOW_FACE_OFF);
+    let q = vec3f(P.x + off.x, e.y, P.z + off.y);
     let to = q - e.xyz; let d = length(to);
     let pad = select(FOW_FACE_OFF, max(fow.cfg.w, FOW_FACE_OFF), top);
     if (d <= pad + 0.02) { return 1.0; }                           // at the eye's own feet

@@ -11,7 +11,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// The player the row is for (one seat today).   (defuse.ts who)
-pub fn who(g: &mut crate::game::Game) -> PlayerId { g.player }
+pub fn who(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> PlayerId { seat.player }
 
 /// Seconds as m:ss, rounded up, never below zero.   (defuse.ts mmss)
 pub fn mmss(s: f64) -> String {
@@ -97,7 +97,7 @@ pub fn defuse_tick(g: &mut crate::game::Game, _dt: f64) {
         Some(d) => d,
         None => { g.defuse.sam = None; return; }
     };
-    let pl = who(g);
+    let pl = who(g, &crate::seats::here(g));
     let p = g.ch[g.pl[pl].ch].pos;
     if !defuse_mine(g) {   // a fresh run
         g.defuse.run = Some(g.mission.serial);
@@ -286,7 +286,7 @@ pub fn defuse_sam_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut d
     g.defuse.marker = None;
     let d = match defuse_data(g) { Some(d) => d, None => return };
     if !defuse_mine(g) || g.defuse.end.is_some() { return; }
-    let pl = who(g);
+    let pl = who(g, &crate::seats::here(g));
     let mut best = f64::INFINITY;
     for (i, dev) in d.devices.iter().enumerate() {
         if g.defuse.states.get(i) != Some(&ChargeState::Armed) { continue; }
@@ -324,7 +324,7 @@ pub fn defuse_sam_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut d
 
 /// The row performed starts it; he stays on it workSecs; a step, a sprint, full hands or another verb lets go and the work starts over.   (defuse.ts Defuse.samTick)
 pub fn defuse_sam_tick(g: &mut crate::game::Game, d: &crate::scene_scenarios::DefuseData) {
-    let pl = who(g);
+    let pl = who(g, &crate::seats::here(g));
     let c = g.pl[pl].ch;
     let p = g.ch[c].pos;
     let (acting, mine) = match &g.act {
@@ -350,7 +350,7 @@ pub fn defuse_sam_tick(g: &mut crate::game::Game, d: &crate::scene_scenarios::De
     let need = defuse_work_secs(g);
     let t = g.time - s.t0;
     let more = crate::handwork::WorkAtMore {
-        hand: if js::truthy(crate::handwork::sam_work_hand(g)) { None } else { Some(0.0) },
+        hand: if js::truthy(crate::handwork::sam_work_hand(g, &crate::seats::here(g))) { None } else { Some(0.0) },
         ..Default::default()
     };
     crate::handwork::work_at(g, c, crate::character::WorkKind::Take, [dev.pos[0], dev.pos[1], dev.pos[2]], n3(dev), t, need, Some(&more));
@@ -402,12 +402,12 @@ pub fn defuse_running_row(g: &mut crate::game::Game, running: &mut dyn FnMut(&mu
     running(g, it, crate::game::Verb::Defuse, text, k)
 }
 
-/// The objective while a charge is live or one has gone off (None: the room clear's own).   (defuse.ts Defuse.objective)
-pub fn defuse_objective(g: &mut crate::game::Game) -> Option<crate::defuse::DefuseObjective> {
+/// The objective while a charge is live or one has gone off (None: the room clear's own).
+pub fn defuse_objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::defuse::DefuseObjective> {
     let d = defuse_data(g)?;
     if !defuse_mine(g) { return None; }
     if g.defuse.end == Some(DefuseEnd::Safe) || g.defuse.end == Some(DefuseEnd::Over) { return None; }
-    let pl = who(g);
+    let pl = who(g, seat);
     if g.pl[pl].down || g.room_clear.end == Some(crate::roomclear::RoomClearEnd::Wiped) { return None; }   // (the run is over another way: the room clear's own word)
     if g.defuse.end == Some(DefuseEnd::Failed) {
         let mut names: Vec<&str> = Vec::new();
@@ -419,7 +419,7 @@ pub fn defuse_objective(g: &mut crate::game::Game) -> Option<crate::defuse::Defu
     let mut live: Vec<(usize, Option<String>)> = Vec::new();
     for i in 0..d.devices.len() {
         if g.defuse.states.get(i) == Some(&ChargeState::Armed) {
-            let by = defuse_on_it(g, i as f64);
+            let by = defuse_on_it(g, seat, i as f64);
             live.push((i, by));
         }
     }
@@ -457,7 +457,7 @@ pub fn defuse_objective(g: &mut crate::game::Game) -> Option<crate::defuse::Defu
     let how = if !safe.is_empty() || any_by {
         String::new()
     } else {
-        format!(" · press Space at one{}", if crate::orders::squad_orders_active(g) { ", or X on it" } else { "" })
+        format!(" · press Space at one{}", if crate::orders::squad_orders_active(g, seat) { ", or X on it" } else { "" })
     };
     let done = if !safe.is_empty() { format!(" · {}", safe.join(" · ")) } else { String::new() };
     Some(DefuseObjective {
@@ -467,9 +467,9 @@ pub fn defuse_objective(g: &mut crate::game::Game) -> Option<crate::defuse::Defu
 }
 
 /// Who is at charge i or on his way to it by an order, as the row says it (None: nobody).   (defuse.ts Defuse.onIt)
-pub fn defuse_on_it(g: &crate::game::Game, i: f64) -> Option<String> {
+pub fn defuse_on_it(g: &crate::game::Game, seat: &crate::seats::SeatRef, i: f64) -> Option<String> {
     if g.defuse.sam.map_or(false, |s| s.dev == i) { return Some(String::from("you on it")); }
-    let w = crate::workthings::work_things_on_device(g, i)?;
+    let w = crate::workthings::work_things_on_device(g, seat, i)?;
     Some(format!("{} {}", g.gd[w.gd].callsign, if w.on { "on it" } else { "going" }))
 }
 
@@ -479,7 +479,7 @@ pub fn defuse_restore(g: &mut crate::game::Game, s: Option<&crate::defuse::Defus
     g.defuse.run = None;
     g.defuse.sam = None;
     let (d, s) = match (d, s) { (Some(d), Some(s)) => (d, s), _ => return };
-    let pl = who(g);
+    let pl = who(g, &crate::seats::here(g));
     let p = g.ch[g.pl[pl].ch].pos;
     if s.st.len() != d.devices.len() || !s.ran.is_finite() { return; }
     // (the end is what the charges say, whatever the file's own word: one blown = failed, all safe = safe, a live one = running)
@@ -541,7 +541,7 @@ fn pack_at(p: V3, cs: f64, sn: f64, lx: f64, y: f64) -> V3 { [p[0] + lx * cs, p[
 
 /// `g.fx.push({ box: makeBox(…), ttl: 1e-3 })`: one frame's drawn box.
 fn push_fx(g: &mut Game, p: crate::scene_boxes::MakeBoxP) {
-    let b = crate::scene_boxes::make_box(g, &p);
+    let b = crate::scene_boxes::make_box_kept(g, &p);
     g.fx.push(crate::game::GameFxItem { box_: b, ttl: 1e-3 });
 }
 

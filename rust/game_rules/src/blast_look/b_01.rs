@@ -40,7 +40,7 @@ pub fn burst_at(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> V
 /// NOT a boundary no-op, though it is "look only": a set charge's thirteen boxes are on the FRAME'S LIST (which the fog of war, the listing of the box
 /// world and every table numbered by reach count), and the flash it warms is a light of the engine's list, which the light estimate reads.
 /// (blastLook.ts:162 blastLookTick)
-pub fn blast_look_tick(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn blast_look_tick(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let who = g.ch[g.pl[g.player].ch].id;
     let was = crate::fogofwar::fog_of_war_begin(g, Some(who));
     blast_look_tick_raw(g, out);
@@ -48,8 +48,8 @@ pub fn blast_look_tick(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
 }
 
 /// (blastLook.ts:163 blastLookTickRaw)
-pub fn blast_look_tick_raw(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
-    let key = crate::seats::view_key(g);
+pub fn blast_look_tick_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
+    let key = crate::seats::view_key(g, &crate::seats::here(g));
     // (`g.wallCharge` is always there in the Rust game)
     if !live(g) {
         if let Some(s) = g.m.blast_look.state.get_mut(key) { s.seen.clear(); s.queue.clear(); }
@@ -105,16 +105,16 @@ pub fn run_of(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64
 }
 
 /// the frame of strip, the blinking lamp, the firing line and its reel: thirteen boxes of the frame   (blastLook.ts:190 chargeBoxes)
-pub fn charge_boxes(g: &mut crate::game::Game, s: crate::blast_look::Seen, out: &mut Vec<BoxId>) {
+pub fn charge_boxes(g: &mut crate::game::Game, s: crate::blast_look::Seen, out: &mut Vec<AnyBoxId>) {
     let k = charge_look();
     let w = g.tab.wallcharge_set_wall_charge[s.c].wall.clone();
     let h = g.k.wallcharge.height;
     let bf = crate::scene_boxes::box_flag();
     let flags = (js::to_i32(bf.dynamic) | js::to_i32(bf.no_shadow)) as f64;
     let yaw = if w.along_x { 0.0 } else { core::f64::consts::PI / 2.0 };
-    fn bx(g: &mut Game, out: &mut Vec<BoxId>, yaw: f64, flags: f64, c: V3, h: V3, albedo: V3, emissive: V3) {
+    fn bx(g: &mut Game, out: &mut Vec<AnyBoxId>, yaw: f64, flags: f64, c: V3, h: V3, albedo: V3, emissive: V3) {
         let b = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c, h, yaw: Some(yaw), albedo: Some(albedo), emissive: Some(emissive), flags: Some(flags), ..Default::default() });
-        out.push(b);
+        out.push(b.into());
     }
     let spill = |albedo: V3, lamp: V3, kk: f64| -> V3 { [albedo[0] * lamp[0] * kk, albedo[1] * lamp[1] * kk, albedo[2] * lamp[2] * kk] };
     // the lamp on the slab's head: dark, and lit for blinkOn of every blinkEvery since it was set
@@ -190,7 +190,7 @@ pub fn warm_of(g: &crate::game::Game, c_2: V3) -> V3 {
 
 /// this view's state, made on first ask   (blastLook.ts:151 stateOf)
 fn state_mut(g: &mut Game) -> &mut State {
-    let key = crate::seats::view_key(g);
+    let key = crate::seats::view_key(g, &crate::seats::here(g));
     g.m.blast_look.state.get_or_insert_with(key, || State { seen: Vec::new(), queue: Vec::new(), serial: 1.0, first: false, last: -1.0 })
 }
 
@@ -276,7 +276,7 @@ pub fn door_charge_at(g: &mut crate::game::Game, at: V3, dt: f64) -> Option<crat
 /// (blastLook.ts:246 blastSparks)
 pub fn blast_sparks(g: &mut crate::game::Game, at: V3) -> bool {
     if !live(g) { return false; }
-    let key = crate::seats::view_key(g);
+    let key = crate::seats::view_key(g, &crate::seats::here(g));
     let seen = state_mut(g).seen.clone();
     let set = g.wall_charge.set.clone();
     let mut wall: Option<crate::wallcharge::WallSpot> = None;

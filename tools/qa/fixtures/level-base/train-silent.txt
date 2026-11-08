@@ -1,3 +1,4 @@
 # 11-05, a yard lamp's arm ends at its pole's face and at its head's: the arm's box is shorter, nothing added or removed, every light where it was and as bright; before it: the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
 # every box says what it does (the does key, src/scene/materials.ts): the words are what its colours said, and nothing else moved
-0ba150ffbbb62ec7fdd4c9e029dca86d777509bc
+# version 2: a round thing is one box, the file converted by tools/levels/round-convert.ts: no box moved
+0393d18ea790f4e0b764098743ab8a2f053b5864

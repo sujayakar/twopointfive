@@ -385,7 +385,7 @@ pub fn schedule_trip(g: &mut crate::game::Game, gd: GuardId, kind: crate::needs:
     let lead = g.k.needs.announce_lead;
     let wp = g.gd[gd].wp;
     let name = spot.name.clone();
-    crate::owner::claim_man(g, gd, crate::owner::own().needs, now, None);
+    crate::owner::claim(g, gd, crate::owner::by::NEEDS, now, None);
     mem(g, gd).trip = Some(Trip {
         kind,
         spot,
@@ -440,7 +440,7 @@ pub fn cancel_trip(g: &mut crate::game::Game, gd: GuardId, why: &str) {
         return;
     }
     let now = g.time;
-    crate::owner::release_man(g, gd, crate::owner::own().needs, now);
+    crate::owner::release(g, gd, crate::owner::by::NEEDS, now);
     let Some(t) = mem(g, gd).trip.take() else { return };
     mem(g, gd).cancels += 1.0;
     g.stats.needs.cancelled += 1;
@@ -762,7 +762,7 @@ pub fn needs_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk: f64) 
                     t.back_at = now;
                     (t.left_at, t.arrived_at, t.dwell_until)
                 };
-                crate::owner::release_man(g, gd, crate::owner::own().needs, now);
+                crate::owner::release(g, gd, crate::owner::by::NEEDS, now);
                 {
                     let r = row!(g, gd);
                     r.trip = None;

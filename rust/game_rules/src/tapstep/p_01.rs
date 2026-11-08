@@ -28,12 +28,8 @@ pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::tapstep::St 
 }
 
 /// Is he stepping this frame: the footfalls are the plants', not the cycle's. (tapstep.ts tapHeld)
-pub fn tap_held(g: &crate::game::Game) -> bool {
-    let on = g.k.tapstep.on;
-    match g.m.tapstep.state.get(g.player) {
-        Some(s) => on && s.at >= 0.0 && g.time - s.at < 0.1,
-        None => false,
-    }
+pub fn tap_held(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+    false
 }
 
 /// A man's footfall: a plant just after it is under it. (tapstep.ts tapHears)
@@ -113,7 +109,7 @@ pub fn plant(g: &mut crate::game::Game, pl: PlayerId) {
     let under = g.time - mask_t <= t.mask_secs;
     let base = t.quiet + (t.scuff - t.quiet) * rush;
     let pos = g.ch[c].pos;
-    let heard = base * crate::kitload::load_heard(g, crate::kitload::LoadHeardWho::Player);
+    let heard = base * crate::kitload::load_heard(g, &crate::seats::here(g), crate::kitload::LoadHeardWho::Player);
     let level = crate::floor::tread(g, pos, heard, true) * (if under { t.mask } else { 1.0 });
     let pos = g.ch[c].pos;
     let (time, serial) = (g.time, g.serial());
@@ -168,114 +164,6 @@ fn legs_follow(s: &mut St, legs: f64, dt: f64) {
     let want = if s.st == 1.0 { v3::clamp(s.done / m::max(s.len, 0.05), 0.0, 1.0) } else { 1.0 };
     s.u += m::max(0.0, want - s.u) * (1.0 - m::exp(-legs * dt));
     if s.st == 2.0 && 1.0 - s.u < 0.01 { s.u = 1.0; }
-}
-
-/// A frame of it, crouched with his feet his own: the keys in, the step out. (tapstep.ts tapTick)
-pub fn tap_tick(g: &mut crate::game::Game, mx: f64, mz: f64, ml: f64, dt: f64) -> crate::tapstep::TapMove {
-    state_of(g);
-    let t = g.k.tapstep;
-    let c = g.pl[g.player].ch;
-    let pos = g.ch[c].pos;
-    let now = g.time;
-    let (fresh, moved, asked) = {
-        let s = row!(g);
-        let fresh = ml > 0.0 && !s.keys;
-        let moved = match s.prev { Some(q) => m::hyp2(pos[0] - q[0], pos[2] - q[2]), None => 0.0 };
-        let asked = s.asked;
-        s.keys = ml > 0.0; s.at = now; s.prev = Some([pos[0], pos[1], pos[2]]);
-        (fresh, moved, asked)
-    };
-
-    let st = row!(g).st;
-    if st == 2.0 {
-        let s = row!(g);
-        s.t -= dt;
-        if fresh {
-            let rush = v3::clamp(s.t / t.settle, 0.0, 1.0);
-            let pl = g.player;
-            lift(g, pl, mx, mz, rush, t.tap_m);
-        } else if s.t <= 0.0 { s.st = 0.0; s.t = 0.0; }
-    } else if st == 0.0 {
-        row!(g).t += dt;
-    }
-
-    let st = row!(g).st;
-    if st == 0.0 && ml > 0.0 {
-        let beat = fresh && row!(g).t <= t.beat;
-        if beat { g.stats.tapstep.beats += 1; }
-        let pl = g.player;
-        lift(g, pl, mx, mz, 0.0, if beat { t.beat_m } else { t.tap_m });
-    } else if st == 1.0 {
-        if asked > 0.2 * dt && moved < 0.25 * asked {
-            let s = row!(g);
-            s.stuck += 1.0;
-            if s.stuck >= 3.0 { let pl = g.player; plant(g, pl); }
-        } else { row!(g).stuck = 0.0; }
-    }
-
-    if row!(g).st == 1.0 {
-        { let s = row!(g); s.age += dt; s.left -= dt; }
-        let k = 1.0 - m::exp(-t.turn * dt);
-        if let Some(man) = row!(g).man {
-            let SpotOf { x, z } = spot_of(g, man);
-            let p = g.ch[c].pos;
-            let (ax, az) = (x - p[0], z - p[2]);
-            let d = m::hyp2(ax, az);
-            // (the keys taken away from it, or the chance gone: a plain step from here)
-            if !crate::stalk::stalk_could(g, man) || (ml > 0.0 && ax * mx + az * mz < 0.0) { row!(g).man = None; }
-            else {
-                if d > 0.02 { bend(g, ax / d, az / d, k); }
-                let s = row!(g);
-                s.len = m::min(s.done + d, t.land_m + 0.25);
-            }
-        }
-        if row!(g).man.is_none() {
-            if ml > 0.0 { bend(g, mx, mz, k); }
-            let dir = row!(g).dir;
-            let ahead = back_of(g, dir[0], dir[1], 99.0);
-            let gv = ahead.map(|a| g.ch[g.gd[a.gd].ch].vel);
-            let gain = match gv { Some(v) => t.follow * m::max(0.0, v[0] * dir[0] + v[2] * dir[1]), None => 0.0 };
-            let reach = t.reach_m + gain * (t.secs + t.settle);
-            if ml > 0.0 {
-                if row!(g).set {
-                    let secs = step_secs(g, reach);
-                    let s = row!(g);
-                    s.left = m::max(s.left, secs - s.age);
-                }
-                let s = row!(g);
-                s.len = m::max(s.len, reach);
-                s.set = false;
-            } else if !row!(g).set {
-                // (the key let go fixes where it lands: the soonest he can stop softly, a tap's at the least)
-                let least = row!(g).least;
-                let secs = step_secs(g, least);
-                key_let_go(row!(g), secs);
-            }
-        }
-        // (the least-jerk way from where the step is to rest at its end, walked exactly and on its own numbers)
-        let s = row!(g);
-        walk(s, dt);
-        if s.left <= dt / 2.0 { let pl = g.player; plant(g, pl); }
-    }
-
-    let s = row!(g);
-    legs_follow(s, t.legs, dt);
-    let (u, n, way) = (s.u, s.n, s.way);
-    let an = &mut g.ch[c].anim;
-    an.tap_u = u; an.tap_n = n; an.tap_way = way;
-    let s = row!(g);
-    if s.st != 1.0 { s.go = 0.0; }
-    s.asked = s.go * dt;
-    TapMove { mx: s.dir[0], mz: s.dir[1], speed: s.go }
-}
-
-/// His feet are not the step's this frame (he stood, ran, took a wall): the next press starts clean. (tapstep.ts tapOff)
-pub fn tap_off(g: &mut crate::game::Game, ml: f64) {
-    if let Some(s) = g.m.tapstep.state.get_mut(g.player) {
-        s.st = 0.0; s.t = 9.0; s.v = 0.0; s.man = None; s.keys = ml > 0.0; s.asked = 0.0; s.prev = None; s.at = -1.0;
-    }
-    let c = g.pl[g.player].ch;
-    g.ch[c].anim.tap_u = -1.0;
 }
 
 

@@ -213,50 +213,6 @@ pub fn signed_area(p: &[[f64; 2]]) -> f64 {
     a / 2.0
 }
 
-/// what fragment_of_box reads of a box: (c, h, yaw, rot, albedo). With a table of Box rows the body is `let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw, x.rot, x.albedo)`.
-fn seam_box_read(g: &Game, b: BoxId) -> (V3, V3, f64, Option<Quat>, V3) { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw, x.rot, x.albedo) }
-
-/// the base's shard BOX read back as the fragment it stands for: its long sides the outline, its thin one the pane's normal, signed as thrown.   (shards.ts fragmentOfBox)
-pub fn fragment_of_box(g: &crate::game::Game, box_: BoxId, v: V3, w: V3, who: f64, seed: f64) -> crate::shards::GlassFragmentLike {
-    let (c, h, yaw, rot, albedo) = seam_box_read(g, box_);
-    let rot = match rot {
-        Some(r) => r,
-        None => v3::quat::yaw(yaw),
-    };
-    let mut ax: [usize; 3] = [0, 1, 2];
-    js::sort_by(&mut ax, |&p, &q| h[p] - h[q]);
-    let e: [V3; 3] = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]];
-    let mut n = v3::quat::rotate(rot, e[ax[0]]);
-    if v3::dot(n, v) < 0.0 {
-        n = v3::scale(n, -1.0);
-    }
-    let (a, b) = (v3::quat::rotate(rot, e[ax[1]]), v3::quat::rotate(rot, e[ax[2]]));
-    let (ha, hb) = (h[ax[1]], h[ax[2]]);
-    let corner = |sa: f64, sb: f64| -> V3 {
-        [c[0] + a[0] * ha * sa + b[0] * hb * sb, c[1] + a[1] * ha * sa + b[1] * hb * sb, c[2] + a[2] * ha * sa + b[2] * hb * sb]
-    };
-    let tinted = m::abs(albedo[0] - albedo[2]) > 0.02 || albedo[0] < 0.9;
-    crate::shards::GlassFragmentLike {
-        pane: -1.0,
-        type_: crate::glasspen::PaneType::Annealed,
-        kind: if hb > 2.2 * ha { crate::shards::GlassFragmentLikeKind::Dagger } else { crate::shards::GlassFragmentLikeKind::Piece },
-        outline: vec![corner(-1.0, -1.0), corner(1.0, -1.0), corner(1.0, 1.0), corner(-1.0, 1.0)],
-        centre: v3::copy(c),
-        normal: n,
-        thickness: 2.0 * h[ax[0]],
-        area: 4.0 * ha * hb,
-        velocity: v3::copy(v),
-        spin: v3::copy(w),
-        tint: if tinted { v3::copy(albedo) } else { [0.72, 0.8, 0.82] },
-        grain: 0.0,
-        cause: crate::shards::GlassFragmentLikeCause::Hit,
-        who,
-        seed,
-        fall: None,
-        landed: None,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

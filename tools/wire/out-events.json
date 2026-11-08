@@ -329,29 +329,6 @@
 "answer": null
 },
 {
-"call": "SessionRecorder.cut",
-"rust": "crate::journal::session_recorder_cut",
-"sites": 1,
-"ts": "cut",
-"of": "SessionRecorder",
-"file": "src/game/journal.ts",
-"why": "this",
-"params": [
-{
-"ts": "why",
-"rust": "why"
-},
-{
-"ts": "lost",
-"rust": "lost"
-}
-],
-"sig": "pub fn session_recorder_cut(g: &mut crate::game::Game, why: &str, lost: Option<bool>)",
-"bodyFile": "journal/b_01.rs",
-"mode": "body",
-"answer": null
-},
-{
 "call": "SmokeSystemLike.clearAll",
 "rust": "crate::smoke_types::smoke_system_like_clear_all",
 "sites": 5,
@@ -501,49 +478,6 @@
 "mode": "body",
 "answer": null,
 "gFirst": true
-},
-{
-"call": "deathrecap#recapRound",
-"rust": "crate::deathrecap::recap_round",
-"sites": 1,
-"ts": "recapRound",
-"of": null,
-"file": "src/game/deathrecap.ts",
-"why": "param",
-"params": [
-{
-"ts": "victim",
-"rust": "victim"
-},
-{
-"ts": "wasDown",
-"rust": "was_down"
-},
-{
-"ts": "shooter",
-"rust": "shooter"
-},
-{
-"ts": "muzzle",
-"rust": "muzzle"
-},
-{
-"ts": "hit",
-"rust": "hit"
-},
-{
-"ts": "def",
-"rust": "def"
-},
-{
-"ts": "blind",
-"rust": "blind"
-}
-],
-"sig": "pub fn recap_round(g: &mut crate::game::Game, victim: Option<CharId>, was_down: bool, shooter: CharId, muzzle: V3, hit: V3, def: &crate::weapons::WeaponDef, blind: Option<bool>)",
-"bodyFile": "deathrecap/b_01.rs",
-"mode": "body",
-"answer": null
 },
 {
 "call": "floormess#messBurst",
@@ -808,6 +742,54 @@
 "sig": "pub fn wall_feel(g: &mut crate::game::Game, at: V3)",
 "mode": "push",
 "hostArm": "wallFeel"
+},
+{
+"call": "floormess#messEvicted",
+"rust": "crate::floormess::mess_evicted",
+"sites": 1,
+"ts": "messEvicted",
+"of": null,
+"file": "src/game/floormess.ts",
+"why": "param",
+"params": [
+{
+"ts": "c",
+"rust": "c"
+},
+{
+"ts": "h",
+"rust": "h"
+},
+{
+"ts": "yaw",
+"rust": "yaw"
+},
+{
+"ts": "rot",
+"rust": "rot"
+},
+{
+"ts": "mat",
+"rust": "mat"
+},
+{
+"ts": "kind",
+"rust": "kind"
+}
+],
+"sig": "pub fn mess_evicted(g: &mut crate::game::Game, c: V3, h: V3, yaw: f64, rot: Option<Quat>, mat: Option<crate::break_table::Mat>, kind: crate::debris::ChunkKind)",
+"mode": "push"
+},
+{
+"call": "EndCard",
+"rust": "crate::out_events::end_card",
+"ts": "endCard",
+"file": "tools/blitz/out-dispatch.ts",
+"why": "this",
+"params": [],
+"sig": "pub fn end_card(g: &mut crate::game::Game)",
+"mode": "push",
+"hostArm": "endCard"
 }
 ],
 "listed": [
@@ -926,13 +908,6 @@
 "sites": 1,
 "why": "answers a value (bool)",
 "body": "let t = g.time; if !is_shout(text) || g.gd[gd].state == crate::game::GuardState:"
-},
-{
-"call": "Debris.cap",
-"rust": "crate::debris::debris_cap",
-"sites": 1,
-"why": "answers a value (f64)",
-"body": "let c = g.engine.settings.debris_cap; m::max(4.0, m::floor(c))"
 },
 {
 "call": "Debris.feet",

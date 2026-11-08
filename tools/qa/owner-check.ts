@@ -31,7 +31,7 @@ const GONE = ['runnerOwns', 'moraleOwns', 'lastStandMan', 'lastStandOwns', 'squa
   'runnerFled', 'squadStaysIn', 'squadHolds', 'laneWarns', 'powerOutMan', 'silentHolds', 'pairHolds', 'spottedHolds', 'silentGlassHolds', 'silentOnMan', 'holdFireOnMan', 'silentMan', 'unseenMan', 'gunHoldKeeps', 'gunHoldRuns', 'darkFoeCarries',
   'noShoveMan', 'onLitMan', 'seatHas', 'doorwayHeld', 'handleHeld', 'startleHolds', 'rearHolds', 'startleMan'];
 /** the switches the shipped game leaves down, up: what the runs cannot show otherwise */
-const ALL_ON = { LASTSTAND: { regroup: true }, BUDDY: { on: true }, PRESSURE: { on: true }, DIGIN: { on: true } };
+const ALL_ON = { PRESSURE: { on: true }, DIGIN: { on: true } };
 
 { const names: string[] = O.ownerRanks(), bits = names.map(n => O.OWN[n] as number);
   const down = bits.every((b, i) => i === 0 || b < bits[i - 1]), one = bits.every(b => b > 0 && (b & (b - 1)) === 0);
@@ -67,45 +67,49 @@ async function arm(label: string, set: object): Promise<void> {
   const scns: string[] = process.env.OWNER_SCN ? process.env.OWNER_SCN.split(',') : SCENARIOS.map((e: { id: string }) => e.id);
   const seeds = (process.env.OWNER_SEEDS ?? '1,2').split(',').map(Number), jobs = Number(process.env.OWNER_JOBS ?? 4);
   const todo = scns.flatMap(scn => seeds.map(seed => ({ scn, seed }))), dir = mkdtempSync(join(tmpdir(), 'owner-'));
-  const reads: Record<string, [number, number]> = {}, held: Record<string, number> = {}, first: string[] = [], lost: string[] = []; let next = 0, bad = 0, ticks = 0;
+  const tot: Audit = { ticks: 0, bad: 0, first: [], reads: {}, held: {} }, lost: string[] = []; let next = 0;
   await Promise.all(Array.from({ length: jobs }, async () => { for (;;) {
     const j = todo[next++]; if (!j) return;
     const file = join(dir, `${j.scn}-${j.seed}`);
     const pr = Bun.spawn(['bun', '--preload', resolve(import.meta.dir, 'owner-audit.ts'), resolve(import.meta.dir, 'playthrough.ts'), '--one', `${j.scn}:${j.seed}`, '--out', `${file}.run`, '--set', JSON.stringify(set)],
       { cwd: ROOT, env: { ...process.env, OWNER_OUT: `${file}.json`, OWNER_DROP: BREAK ? String(~0 >>> 0) : '0' }, stdout: 'ignore', stderr: 'pipe' });
     const err = await new Response(pr.stderr).text(); await pr.exited;
-    try { const o = JSON.parse(readFileSync(`${file}.json`, 'utf8'));
-      ticks += o.ticks; bad += o.bad; for (const f of o.first) if (first.length < 12) first.push(`${j.scn}:${j.seed} ${f}`);
-      for (const [k, v] of Object.entries(o.reads) as [string, [number, number]][]) { const R = reads[k] ??= [0, 0]; R[0] += v[0]; R[1] += v[1]; }
-      for (const [k, v] of Object.entries(o.held) as [string, number][]) held[k] = (held[k] ?? 0) + v; }
+    try { addAudit(tot, auditOf(`${file}.json`), `${j.scn}:${j.seed}`); }
     catch { lost.push(`${j.scn}:${j.seed} — ${err.trim().split('\n').slice(-2).join(' ').slice(0, 200)}`); }
   } }));
   rmSync(dir, { recursive: true, force: true });
-  const rules: string[] = O.ownerWitnessed(), never = rules.filter(r => !held[r]);
+  const { ticks, bad, first, reads, held } = tot, rules: string[] = O.ownerWitnessed(), never = rules.filter(r => !held[r]);
   const row = (r: string) => `${r}: held ${held[r] ?? 0} man-ticks, read ${reads[r]?.[0] ?? 0} times, ${reads[r]?.[1] ?? 0} of them true`;
   verdict(bad === 0 && !lost.length && ticks > 0, `runs, ${label}: at every read and every tick's end the record says what each rule's own state says`,
     `${todo.length} runs, ${ticks} ticks · ${bad} disagreements${first.length ? `\n    ${first.join('\n    ')}` : ''}${lost.length ? `\n    no count: ${lost.join('\n    ')}` : ''}\n    ${rules.map(row).join('\n    ')}${never.length ? `\n    never held in these runs: ${never.join(', ')}` : ''}`);
 }
 await arm('as the stand has them', {});
-if (!process.env.OWNER_SCN || process.env.OWNER_ALLON) await arm('with last stand, buddy, pressure and dig-in up', ALL_ON);
+if (!process.env.OWNER_SCN || process.env.OWNER_ALLON) await arm('with pressure and dig-in up', ALL_ON);
 
+/** what the audit's preload wrote (tools/qa/owner-audit.ts): a line a process that stepped a game under it, summed. Throws where no process wrote one. */
+type Audit = { ticks: number; bad: number; first: string[]; reads: Record<string, [number, number]>; held: Record<string, number> };
+function addAudit(into: Audit, o: Audit, label = ''): void {
+  into.ticks += o.ticks; into.bad += o.bad; for (const f of o.first) if (into.first.length < 12) into.first.push(label ? `${label} ${f}` : f);
+  for (const [k, v] of Object.entries(o.reads)) { const R = into.reads[k] ??= [0, 0]; R[0] += v[0]; R[1] += v[1]; }
+  for (const [k, v] of Object.entries(o.held)) into.held[k] = (into.held[k] ?? 0) + v; }
+function auditOf(file: string): Audit {
+  const sum: Audit = { ticks: 0, bad: 0, first: [], reads: {}, held: {} };
+  for (const l of readFileSync(file, 'utf8').split('\n')) if (l) addAudit(sum, JSON.parse(l));
+  return sum; }
 /** the rules' own families, whose checks put a man where the missions never do: the breaker's party, the rescue's walker, a trip for a coffee, the silent and unseen squads, a standoff */
 const FAMILIES = (process.env.OWNER_FAMS ?? 'rescuecheck,powerout,needs,gunhold,silent,unseen,spotted,holdfire,laststand,enemysquads,runner,morale,netquiet,startle').split(',').filter(Boolean);
-{ const dir = mkdtempSync(join(tmpdir(), 'owner-fam-')), reads: Record<string, [number, number]> = {}, held: Record<string, number> = {}, first: string[] = [], lost: string[] = [], reds: string[] = []; let next = 0, bad = 0, ticks = 0;
+{ const dir = mkdtempSync(join(tmpdir(), 'owner-fam-')), tot: Audit = { ticks: 0, bad: 0, first: [], reads: {}, held: {} }, lost: string[] = [], reds: string[] = []; let next = 0;
   const jobs = Number(process.env.OWNER_JOBS ?? 4);
   await Promise.all(Array.from({ length: jobs }, async () => { for (;;) {
     const fam = FAMILIES[next++]; if (!fam) return;
     const file = join(dir, `${fam}.json`);
-    const pr = Bun.spawn(['bun', '--preload', resolve(import.meta.dir, 'owner-audit.ts'), resolve(import.meta.dir, 'probes.ts'), fam], { cwd: ROOT, env: { ...process.env, OWNER_OUT: file, OWNER_DROP: BREAK ? String(~0 >>> 0) : '0' }, stdout: 'ignore', stderr: 'ignore' });
+    const pr = Bun.spawn(['bun', '--preload', resolve(import.meta.dir, 'owner-audit.ts'), resolve(import.meta.dir, 'probes.ts'), fam], { cwd: ROOT, env: { ...process.env, QA_JOBS: '1', OWNER_OUT: file, OWNER_DROP: BREAK ? String(~0 >>> 0) : '0' }, stdout: 'ignore', stderr: 'ignore' });   // (QA_JOBS: this check's own pool is the fan-out; a family's runner under it runs its probes one at a time)
     const exit = await pr.exited; if (exit) reds.push(`${fam} (exit ${exit})`);
-    try { const o = JSON.parse(readFileSync(file, 'utf8'));
-      ticks += o.ticks; bad += o.bad; for (const f of o.first) if (first.length < 12) first.push(`${fam} ${f}`);
-      for (const [k, v] of Object.entries(o.reads) as [string, [number, number]][]) { const R = reads[k] ??= [0, 0]; R[0] += v[0]; R[1] += v[1]; }
-      for (const [k, v] of Object.entries(o.held) as [string, number][]) held[k] = (held[k] ?? 0) + v; }
+    try { addAudit(tot, auditOf(file), fam); }
     catch { lost.push(fam); }
   } }));
   rmSync(dir, { recursive: true, force: true });
-  if (FAMILIES.length) { const rules: string[] = O.ownerWitnessed(), never = rules.filter(r => !held[r]);
+  if (FAMILIES.length) { const { ticks, bad, first, reads, held } = tot, rules: string[] = O.ownerWitnessed(), never = rules.filter(r => !held[r]);
     verdict(bad === 0 && !lost.length && (ticks > 0), `runs, the rules' own families (${FAMILIES.join(' ')}): the same, where the missions never put a man`,
       `${ticks} ticks · ${bad} disagreements${reds.length ? ` · a family's own checks were red, which this line does not judge (tools/qa/gate.sh does): ${reds.join(', ')}` : ''}${first.length ? `\n    ${first.join('\n    ')}` : ''}${lost.length ? `\n    no count: ${lost.join(', ')}` : ''}\n    ${rules.map(r => `${r}: held ${held[r] ?? 0} man-ticks, read ${reads[r]?.[0] ?? 0} times, ${reads[r]?.[1] ?? 0} of them true`).join('\n    ')}${never.length ? `\n    never held in these runs: ${never.join(', ')}` : ''}`); } }
 

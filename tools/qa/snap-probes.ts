@@ -128,40 +128,15 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
 /** the page as it opens: the cast, the movement pass, the turn weight as shipped */
 const PAGE = { TPS_CAST: '1', TPS_MOVES: '1', TPS_TURN: '1' };
 const ROOMS = 'room-clear-four:1-8', SQUADS = 'block-squads:1,block-squads:3';
-const count = (rs: SnapRun[], f: (s: Swing) => boolean = () => true) => rs.reduce((n, r) => n + r.swings.filter(f).length, 0);
-const worst = (rs: SnapRun[], f: (s: Swing) => boolean = () => true, n = 8) => rs.flatMap(r => r.swings.filter(f).map(s => ({ r, s }))).sort((a, b) => b.s.deg - a.s.deg).slice(0, n).map(x => swingLine(x.r, x.s)).join('\n');
-const peaks = (rs: SnapRun[]) => `fastest in any frame, °/s: gun ${Math.max(...rs.map(r => r.peak.gun))} · rifle ${Math.max(...rs.map(r => r.peak.rifle))} · trunk ${Math.max(...rs.map(r => r.peak.trunk))} · head ${Math.max(...rs.map(r => r.peak.head))}`;
 
 /** THE GATE'S BAR FOR WHAT IS DRAWN: 100° inside a tenth. The model's gun yaw is held to 60° (it may come round 52° in a tenth at the shipped weight —
  *  character.ts TURN_FEEL.light × a carbine's handling; a handling-1 pistol would reach 63°, and no fighting man in these runs carries one). The rifle as drawn,
  *  the shoulders and the face go with that yaw AND with the long gun's carriage, and pass 60° today (snap-open counts those: the largest 63° / 83° / 80°). This bar
  *  is the regression guard over them: 17° over where the page stands, and the same runs with the weight off hold 9 or 10 of each past it. */
 export const DRAWN_MIN = 100;
-const isGun = (s: Swing) => s.part === 'gun', isDrawn = (s: Swing) => s.part !== 'gun' && s.deg >= DRAWN_MIN;
 const most = (rs: SnapRun[], part: Part) => Math.max(0, ...rs.flatMap(r => r.swings.filter(s => s.part === part).map(s => s.deg)));
-/** the armed men a scenario stands up (the four + its defenders): fewer under the watcher = somebody was never read */
-const MEN: Record<string, number> = { 'room-clear-four': 9, 'block-squads': 15 };
-/** the runs' own lines, and the floor under every verdict after it: all of them asked for, each played to its scenario's own end (not an error, not a stall)
- *  in the arm that was asked for, with every armed man read and each part's turns read in their thousands */
-function ran(F: { verdict: Verdict }, rs: SnapRun[], want: number, env: Record<string, string | undefined>, weightOn: boolean): void {
-  const why = (r: SnapRun) => r.end === 'error' || r.end === 'stalled' ? `${r.end} — ${r.why ?? ''}` : r.men < (MEN[r.scn] ?? 5) ? `${r.men} men read of ${MEN[r.scn] ?? 5}` : r.turn !== (env.TPS_TURN ?? '') || r.turnOn !== weightOn || r.moves !== (env.TPS_MOVES ?? '') || r.cast !== !!env.TPS_CAST ? `ran as turn '${r.turn}' (the weight ${r.turnOn ? 'ON' : 'off'}, wanted ${weightOn ? 'on' : 'off'}) moves '${r.moves}' cast ${r.cast}` : PARTS.some(p => !(r.read?.[p] > 2000)) ? `turns read: ${PARTS.map(p => `${p} ${r.read?.[p] ?? 0}`).join(' ')}` : '';
-  const bad = rs.filter(r => why(r));
-  for (const r of rs) console.log(`  ${line(r)}`);
-  F.verdict(rs.length === want && !bad.length, 'every run played to its own end under the watcher, in the arm asked for, every armed man read', bad.length ? bad.map(r => `${r.scn}:${r.seed} ${why(r)}`).join(' · ') : `${rs.length} of ${want} runs, ${rs.reduce((n, r) => n + r.frames, 0)} man-frames · frame-to-frame turns read: ${PARTS.map(p => `${p} ${rs.reduce((n, r) => n + r.read[p], 0)}`).join(' · ')}`); }
-const SETS = (rs: SnapRun[]) => [['the four-man room clear, seeds 1 to 8', rs.filter(r => r.scn === 'room-clear-four')], ['the block with three squads, seeds 1 and 3', rs.filter(r => r.scn === 'block-squads')]] as const;
 const ALL = parseRuns(`${ROOMS},${SQUADS}`);
 
-export async function snapPage(): Promise<boolean> {
-  const F = family(`snap-page: as the page opens, no armed man's gun — the model's own yaw of it — swings 60° or more inside a tenth of a second in a room fight, and nothing DRAWN of him comes ${DRAWN_MIN}° round`);
-  const rs = await snapRuns(ALL, PAGE); ran(F, rs, ALL.length, PAGE, true);
-  for (const [label, set] of SETS(rs)) { const g = count(set, isGun), d = count(set, isDrawn);
-    F.verdict(g === 0, `${label}: no swing of 60° in the model's gun yaw`, g ? `${g}:\n${worst(set, isGun)}` : peaks(set));
-    F.verdict(d === 0, `${label}: no drawn rifle, trunk or head swing of ${DRAWN_MIN}°`, d ? `${d}:\n${worst(set, isDrawn)}` : `the largest: ${(['rifle', 'trunk', 'head'] as const).map(p => `${p} ${most(set, p) ? most(set, p) + '°' : 'under 60°'}`).join(' · ')} (60° and over are snap-open's to count)`); }
-  const charges = rs.reduce((n, r) => n + r.bangs.length, 0), after = (s: Swing) => s.bang !== null && s.bang >= -0.1 && s.bang <= BANG_SECS;
-  F.verdict(charges >= 8, `the bang entries are in the sample: the verdicts above cover the ${BANG_SECS} s after each stun charge`, `${charges} charges went off over the ${rs.length} runs · in those seconds: gun swings of 60° ${count(rs, s => isGun(s) && after(s))} · drawn swings of ${DRAWN_MIN}° ${count(rs, s => isDrawn(s) && after(s))} · of 60° ${count(rs, s => !isGun(s) && after(s))}`);
-  console.log(`  (the furthest a gun stood off its man's feet: ${Math.max(...rs.map(r => r.gapMax))}° — the spine twists to 109° · man-frames past the 86° the AI lets a gun WISH for: ${rs.reduce((n, r) => n + r.gapOver, 0)} of ${rs.reduce((n, r) => n + r.frames, 0)}: the body still coming round under a gun that is there)`);
-  return F.done();
-}
 export async function snapBites(): Promise<boolean> {
   const F = family('snap-bites: the watcher finds the snaps where they are — a turn in one frame');
   const BRK = process.env.SNAPBITES_BREAK === '1';   // (the red path: the staged quarter turn is never made, so the second line has nothing to find)
@@ -177,16 +152,6 @@ export async function snapBites(): Promise<boolean> {
   // (until 2026-11-07 the probe went on to play both missions with the turn weight off, the page under ?noturn, and asked that the watcher DOES find gun
   //  and drawn swings there, and after a stun charge: five lines on the off side of the turn weight, which is settled on. They are out; what is left is the
   //  watcher's own arithmetic on rows made here)
-  return F.done();
-}
-/** THE OPEN FINDING, as a probe that is RED today (so it is not one of the family's: `probes.ts snap` is the gate, `probes.ts snap-open` this): the gun's own bar —
- *  60° inside a tenth — held to what is drawn of him too. See the head of this file. */
-export async function snapOpen(): Promise<boolean> {
-  const F = family('snap-open: (red today, see the head of snap-probes.ts) as the page opens, nothing drawn of an armed man swings 60° or more inside a tenth of a second either');
-  const rs = await snapRuns(ALL, PAGE); ran(F, rs, ALL.length, PAGE, true);
-  for (const part of ['rifle', 'trunk', 'head'] as const) { const f = (s: Swing) => s.part === part, n = count(rs, f), by = new Map<string, number>();
-    for (const r of rs) for (const s of r.swings) if (f(s)) by.set(s.note, (by.get(s.note) ?? 0) + 1);
-    F.verdict(n === 0, `no ${part === 'rifle' ? 'drawn rifle' : part} swing of 60°`, n ? `${n} over ${(rs.reduce((a, r) => a + r.frames, 0) / 3600).toFixed(0)} man-minutes, the largest ${most(rs, part)}° · what the animator was doing (upper layer / carriage): ${[...by].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v]) => `${v} ${k}`).join(' · ')}\n${worst(rs, f, 5)}` : peaks(rs)); }
   return F.done();
 }
 

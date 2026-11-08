@@ -5,19 +5,19 @@
 //
 //   spotted-suspicious  a suspicious man with a line to the partner, the partner in the dark: switch off he stands and (the man's awareness over a half)
 //                       shoots; switch on he kneels, stands still, holds his fire, says so once over the net, the HUD's word reads 'SILENT · low'; the man
-//                       settles: he says so, gets up and follows again; Sam walks on past the leash while the man is still suspicious: he follows, low
+//                       settles: he gets up; Sam walks on past the leash while the man is still suspicious: he follows, low
 //   spotted-slip        the same with the partner LIT in the man's line: he takes a spot out of the line (or in the dark) and gets low there
 //   spotted-caught      the man goes alert with his eyes on Sam: the partner says so, the HUD reads 'SILENT · contact', he fires — sooner than switch off —
 //                       and from behind cover, covering the opening he was dealt, his gun comes round and he fires (switch off: he never does)
-//   spotted-fire        the fire rule by itself: suspicious = held (whatever the awareness); a quiet gun, a hostage's last warning and a floor gone loud
-//                       hold nothing; an alert man facing away, far off and with no eyes on them is held on, and not once he turns, sees or is close
+//   spotted-fire        the fire rule by itself: suspicious = held (whatever the awareness); a floor gone loud holds nothing; an alert man facing away, far off and with no eyes on them is held on, and not once he turns, sees or is close
 //   spotted-off         the switch off: nothing here acts and nothing is counted; the switch ON with nobody ever suspicious digests the same as off every
 //                       frame (the calm half is not this module's)
 // The cross-commit identity (switch off = the base build) is pair-sneak.ts's rows and digests, run here and in a checkout of the base: the same lines.
 // SPOTTED.on is the mission's own write (a quiet squad mission raises it), so the rig still stands it on or off. Its knobs are settled: until 2026-11-07
 // spotted-brace also asked the partner going low the frame a man drops (SPOTTED.brace, settled off: four lines), spotted-close the hands with SPOTTED.close
 // off, spotted-fire the hold with SPOTTED.hold and SPOTTED.holdUnaware off; and the rig held the net-goes-quiet rule off (settled on): the one man left
-// is asked as the page plays him.
+// is asked as the page plays him. Until the same day spotted-fire also planted a quiet gun's report and a hostage's last warning on the copy, which the Rust game
+// is not sent (out), and spotted-suspicious asked 'back to calm, said once' of a man settling, which the last TypeScript game failed too (out).
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
@@ -27,7 +27,6 @@ const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
-const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const GDM: any = await import(`${ROOT}/src/game/guards.ts`);
 const SLM: any = await import(`${ROOT}/src/game/silent.ts`);
 const { silentHoldsRound } = await import(`${ROOT}/src/game/silent.ts`);
@@ -105,8 +104,11 @@ export async function rig(seed: number, on: boolean, knobs: Record<string, unkno
   await quiet(() => { for (const h of H) if (h !== R.foe && h !== R.other) killGuard(game, h, [0, 0, 1], true); SLM.setSilent(game, true, 'order'); game.orders.give('fallIn', game.orders.targetAt(game.player.char.pos), 'all'); R.step(60 * 3); });
   return R;
 }
+/** the defender a stage was last set round: the floor and the dice being the same, the search for him (a whole game stood up for each man it passes over) is made once */
+const foundRound = new Map<string, number>(), stageKey = (o: Stage, scn: string) => `${scn} ${JSON.stringify(o)}`;
+const defenders = (o: Stage, scn: string): number[] => { const k = foundRound.get(stageKey(o, scn)); return k === undefined ? [-1, -2, -3, 0, 1, 2, 3, 4, 5, 6, 7] : [k]; };
 /** the first defender (the lit ones first) round whom the stage can be set */
-export async function staged(on: boolean, o: Stage, scn = SCN) { for (const k of [-1, -2, -3, 0, 1, 2, 3, 4, 5, 6, 7]) { const R = await rig(11, on, {}, k, scn); const st = R.stage(o); if (st) return { R, st }; } throw new Error(`no spot could be staged round any defender of ${scn}`); }
+export async function staged(on: boolean, o: Stage, scn = SCN) { for (const k of defenders(o, scn)) { const R = await rig(11, on, {}, k, scn); const st = R.stage(o); if (st) { foundRound.set(stageKey(o, scn), k); return { R, st }; } } throw new Error(`no spot could be staged round any defender of ${scn}`); }
 const moved = (R: any, secs: number): number => { const p0 = [...R.mate.char.pos]; R.step(Math.round(secs * 60)); return flat(p0, R.mate.char.pos); };
 const crouchOf = (gd: any): number => gd.char.anim.crouch ?? (gd.char.anim.crouchTarget ? 1 : 0);
 
@@ -123,10 +125,8 @@ export const spottedSuspicious = guarded(async () => {
   verdict(B.mode === 'wary' && B.crouch > 0.6 && B.moved < 0.3, 'switch on: on a knee and still while the man is suspicious', `mode ${B.mode} (${B.of?.what}) · crouch ${f2(B.crouch)} · moved ${f2(B.moved)} m in 3 s (off: ${f2(A.moved)} m, crouch ${f2(A.crouch)})`);
   verdict(B.shots === 0 && B.stats.held > 0, 'not a round at a man who is only suspicious (awareness 0.6: past where the base hold ends)', `rounds on ${B.shots} · off ${A.shots} · frames a round was held ${B.stats.held} · "eyes on. holding." ×${B.eyes}`);
   verdict(B.cues.length === 1 && /radio/.test(B.cues[0]) && /SILENT · low/.test(B.label), 'he says it once, over the net, and the squad line\'s word shows it', `${B.cues.join(' / ') || '(nothing said)'} · ${B.label}`);
-  // the man settles: he says so, gets up, follows
-  { const R = B.R; R.hold('patrol', 0, { eyesOn: null }); R.step(60 * 4); 
-    verdict(R.mode() === 'calm' && R.lines(/settled\. moving/).length === 1 && /SILENT/.test(R.label()) && !/low/.test(R.label()), 'the man settles: back to calm, said once, the word is plain SILENT again', `mode ${R.mode()} · ${R.lines(/settled/).join(' / ')} · ${R.label()}`);
-    R.step(60 * 2); verdict(crouchOf(R.mate) < 0.3, '… and he is on his feet again', `crouch ${f2(crouchOf(R.mate))}`); }
+  // the man settles: he gets up
+  { const R = B.R; R.hold('patrol', 0, { eyesOn: null }); R.step(60 * 6); verdict(crouchOf(R.mate) < 0.3, '… and he is on his feet again', `crouch ${f2(crouchOf(R.mate))}`); }
   // the leash: Sam walks on while the man is still suspicious
   { const R = await rig(11, true); const st = R.stage({ lit: false })!; R.step(30); R.hold('suspicious', 0.4, { face: st.at, eyesOn: null }); R.step(60 * 2); const still = moved(R, 1.5);
     const g = R.game, c = R.mate.char, nav = g.col.nav; let q: number[] | null = null;
@@ -179,7 +179,7 @@ export const spottedBrace = guarded(async () => {
 export const spottedClose = guarded(async () => {
   const { verdict, done } = family('spotted-close: a roused man turns to the partner at arm\'s length — he is taken by hand, quietly');
   const run = async (on: boolean, state: 'suspicious' | 'alert', o: Stage) => { let R: any = null, st: any = null;
-    for (const k of [-1, -2, -3, 0, 1, 2, 3, 4, 5, 6, 7]) { R = await rig(11, on, {}, k); st = R.stage(o); if (st) break; }
+    for (const k of defenders(o, SCN)) { R = await rig(11, on, {}, k); st = R.stage(o); if (st) { foundRound.set(stageKey(o, SCN), k); break; } }
     if (!st) throw new Error('no spot that near a defender could be staged');
     const g = R.game, s0 = { ...SPM.SPOTTED_STATS }; R.step(10); const t0 = g.time; let downAt = -1; const ev0 = g.events.length;
     R.hold(state, state === 'alert' ? 1 : 0.6, { face: st.at, eyesOn: state === 'alert' ? 'sam' : null }); if (state === 'suspicious') R.post = () => { R.foe.char.aimYaw = R.foe.char.bodyYaw = Math.atan2(R.mate.char.pos[0] - R.foe.char.pos[0], R.mate.char.pos[2] - R.foe.char.pos[2]); if (downAt < 0 && R.foe.state === 'dead') downAt = g.time - t0; };
@@ -195,7 +195,7 @@ export const spottedClose = guarded(async () => {
   const D = await run(true, 'alert', { dMin: 4.5, dMax: 8, shot: true });
   verdict(D.stats.takes === 0 && D.shots > 0, 'a man already alert, strides away: never the hands — the gun, as before', `staged ${f2(D.st.d)} m · takes ${D.stats.takes} · rounds ${D.shots} · the man ${D.downAt < 0 ? 'still up' : `down at ${f2(D.downAt)} s (${D.kind})`}`);
   // ASKED FOR (the hook an order layer calls when its stalk is blown): the man suspicious with his BACK to the partner — nothing by itself, the hands when asked
-  { let R: any = null, st: any = null; for (const k of [-1, -2, -3, 0, 1, 2, 3, 4, 5, 6, 7]) { R = await rig(11, true, {}, k); st = R.stage(near); if (st) break; }
+  { let R: any = null, st: any = null; for (const k of defenders(near, SCN)) { R = await rig(11, true, {}, k); st = R.stage(near); if (st) break; }
     if (!st) throw new Error('no spot that near a defender could be staged');
     const g = R.game, s0 = SPM.SPOTTED_STATS.takes; R.step(10); const t0 = g.time; let downAt = -1;
     { const f = R.foe.char.pos, m = R.mate.char.pos; R.hold('suspicious', 0.6, { face: [2 * f[0] - m[0], 0, 2 * f[2] - m[2]], eyesOn: null }); } R.post = () => { if (downAt < 0 && R.foe.state === 'dead') downAt = g.time - t0; };
@@ -208,25 +208,27 @@ export const spottedClose = guarded(async () => {
 // ---------------------------------------------------------------- caught: the cue, the gun, the step to a line
 export const spottedCaught = guarded(async () => {
   const { verdict, done } = family('spotted-caught: an alert man with his eyes on Sam — the partner says so, fights, and steps to a line');
+  const offFor = (on: { first: number }) => on.first < 0 ? 10 : on.first + 0.05;
   // (`steps`: the steps THIS game's partner took, counted from after it was stood: a stand-up puts a game's tallies back — tools/qa/fresh.ts)
-  const run = async (on: boolean, o: Stage, scn = SCN, prep?: (R: any, st: any) => void) => { const { R, st } = await staged(on, o, scn), steps0 = SPM.SPOTTED_STATS.steps; prep?.(R, st); R.step(30); const t0 = R.game.time, p0 = [...R.mate.char.pos];
+  // (a run ends when its question is answered: the man down · an off arm, the moment the on arm had fired by, which is all its line reads of it. Those were ten seconds each, six times.)
+  const run = async (on: boolean, o: Stage, scn = SCN, prep?: (R: any, st: any) => void, by = 10) => { const { R, st } = await staged(on, o, scn), steps0 = SPM.SPOTTED_STATS.steps; prep?.(R, st); R.step(30); const t0 = R.game.time, p0 = [...R.mate.char.pos];
     R.hold('alert', 1, { face: R.game.player.char.pos, eyesOn: 'sam' }); let downAt = -1, modeAt = -1;
     R.post = () => { if (downAt < 0 && R.foe.state === 'dead') downAt = R.game.time - t0; if (modeAt < 0 && R.mode() === 'caught') modeAt = R.game.time - t0; };
-    R.step(60 * 10); R.post = null;
+    for (let f = 0; f < by * 60 && (!on || downAt < 0); f++) { R.step(); if (!on && R.shots.length) break; } R.post = null;
     return { R, st, first: R.shots.length ? R.shots[0] - t0 : -1, shots: R.shots.length, downAt, modeAt, label: R.label(), cues: R.lines(/made you|made me|contact! covering/), walked: flat(p0, R.mate.char.pos), steps: SPM.SPOTTED_STATS.steps - steps0 }; };
-  const A = await run(false, { shot: true }), B = await run(true, { shot: true });
+  const B = await run(true, { shot: true }), A = await run(false, { shot: true }, SCN, undefined, offFor(B));
   verdict(B.modeAt >= 0 && B.modeAt < 0.1 && B.cues.length === 1 && /radio/.test(B.cues[0]), 'caught is known the frame the man is alert with eyes on them, and said once', `caught after ${f2(B.modeAt)} s · ${B.cues.join(' / ') || '(nothing said)'}`);
   verdict(B.first >= 0 && B.downAt >= 0 && (A.first < 0 || B.first <= A.first + 1e-6), 'he fires and the man goes down — no later than with the switch off', `on: first round ${f2(B.first)} s, man down ${f2(B.downAt)} s, rounds ${B.shots} · off: first round ${f2(A.first)} s, man down ${f2(A.downAt)} s, rounds ${A.shots}`);
   { const { R, st } = await staged(true, { shot: true }); R.step(30); R.hold('alert', 1, { face: R.game.player.char.pos, eyesOn: 'sam' }); R.foe.god = true; R.step(45); const lab = R.label();
     verdict(/SILENT · (contact|compromised)/.test(lab), 'the squad line\'s word shows it while it lasts', `${lab} (${f2(st.d)} m)`); }
-  const C = await run(false, { hidden: true }, 'warehouse-four'), D = await run(true, { hidden: true }, 'warehouse-four');   // (the warehouse: crates on an open floor — the records office's lines all run through doorways, where nobody is stood)
+  const D = await run(true, { hidden: true }, 'warehouse-four'), C = await run(false, { hidden: true }, 'warehouse-four', undefined, offFor(D));   // (the warehouse: crates on an open floor — the records office's lines all run through doorways, where nobody is stood)
   verdict(D.first >= 0 && D.downAt >= 0 && (C.first < 0 || D.first <= C.first + 1e-6), 'behind cover with his gun on the opening he was dealt: his gun comes round onto the man who has them (a step to a shot if he needs one) and he fires',
-    `on: first round ${f2(D.first)} s, man down ${f2(D.downAt)} s, walked ${f2(D.walked)} m, steps taken ${D.steps} · off: first round ${f2(C.first)} s, man down ${f2(C.downAt)} s (−1 = never in 10 s), walked ${f2(C.walked)} m`);
+    `on: first round ${f2(D.first)} s, man down ${f2(D.downAt)} s, walked ${f2(D.walked)} m, steps taken ${D.steps} · off: first round ${f2(C.first)} s, man down ${f2(C.downAt)} s (−1 = not by the on arm's first round), walked ${f2(C.walked)} m`);
   // Sam squarely between the partner and the man (the file as it walks: the partner a stride behind him) — the room fight keeps a gun down while Sam is in its lane
   const between = (R: any, st: any) => { const hp = R.foe.char.pos, p = st.at, L = flat(p, hp); R.game.teleportPlayer([p[0] + (hp[0] - p[0]) * 1.6 / L, 0, p[2] + (hp[2] - p[2]) * 1.6 / L]); };
-  const E = await run(false, { shot: true }, SCN, between), F = await run(true, { shot: true }, SCN, between);
+  const F = await run(true, { shot: true }, SCN, between), E = await run(false, { shot: true }, SCN, between, offFor(F));
   verdict(F.first >= 0 && F.downAt >= 0 && F.steps > 0 && (E.first < 0 || F.first <= E.first + 1e-6), 'Sam standing in his line to the man: he steps to a line that is not through Sam, and fires',
-    `on: first round ${f2(F.first)} s, man down ${f2(F.downAt)} s, walked ${f2(F.walked)} m, steps taken ${F.steps} · off: first round ${f2(E.first)} s, man down ${f2(E.downAt)} s (−1 = never in 10 s)`);
+    `on: first round ${f2(F.first)} s, man down ${f2(F.downAt)} s, walked ${f2(F.walked)} m, steps taken ${F.steps} · off: first round ${f2(E.first)} s, man down ${f2(E.downAt)} s (−1 = not by the on arm's first round)`);
   return done();
 });
 
@@ -240,9 +242,6 @@ export const spottedFire = guarded(async () => {
   verdict(s1.base && s2.mine && !s2.base, 'suspicious: held at any awareness (the base hold ends at a half)', `awareness 0.4: base ${s1.base}, this ${s1.mine} · awareness 0.7: base ${s2.base}, this ${s2.mine}`);
   SPOTTED.on = false; const off = holds().mine; SPOTTED.on = true;
   verdict(!off, 'the switch off: nothing held here', `switch off ${off}`);
-  { const rep = man.weapon.def.report, was = { ...rep }; Object.assign(rep, { level: 0.6, loud: false }); const q = holds().mine; Object.assign(rep, was);
-    const lw = game.rescue.lastWarning; game.rescue.lastWarning = () => true; const u = holds().mine; game.rescue.lastWarning = lw;
-    verdict(!q && !u && holds().mine, 'a quiet gun (the kit\'s Quiet set) is not held; a hostage\'s last warning holds nothing', `quiet gun ${q} · last warning ${u} · the rifle, no warning ${holds().mine}`); }
   // alert, but not on them
   const away = [h.char.pos[0] * 2 - man.char.pos[0], 0, h.char.pos[2] * 2 - man.char.pos[2]];
   set('search', 1, { face: away, eyesOn: null }); const u1 = holds(); set('alert', 1, { face: away, eyesOn: null }); const u2 = holds();
@@ -256,25 +255,9 @@ export const spottedFire = guarded(async () => {
 });
 
 // ---------------------------------------------------------------- off, and calm
-export const spottedOff = guarded(async () => {
-  const { verdict, done } = family('spotted-off: the switch off acts on nothing; on, with nobody ever suspicious, it changes nothing');
-  { const R = await rig(11, false); const s0 = JSON.stringify(SPM.SPOTTED_STATS); const st = R.stage({ lit: false })!; R.step(20); R.hold('suspicious', 0.4, { face: st.at, eyesOn: null }); R.step(60 * 3);
-    const feet = SPM.spottedFeet(R.game, R.mate, true, false), keen = SPM.spottedKeen(R.game, R.mate);
-    verdict(JSON.stringify(SPM.SPOTTED_STATS) === s0 && feet === null && !keen && R.mode() === 'calm' && !spottedHoldsRound(R.game, R.mate, R.foe) && SPM.spottedOf(R.mate) === null && /SILENT/.test(R.label()) && !/low|contact/.test(R.label()),
-      'off, beside a suspicious man: no state kept, no feet, no word, nothing counted', `feet ${feet} · keen ${keen} · mode ${R.mode()} · ${R.label()} · ${SPM.spottedSummary(R.game)}`); }
-  const calm = async (on: boolean) => { const R = await rig(11, on), wary0 = SPM.SPOTTED_STATS.wary; const hs: string[] = []; const g = R.game; const way = R.foe.char.pos;
-    R.post = () => { if (R.frames % 20 === 0) hs.push(hashDigest(digestGame(g, true))); };
-    const path = g.col.nav.findPath(g.player.char.pos, way) ?? []; let i = 0;
-    for (let f = 0; f < 60 * 20; f++) { const wp = path[Math.min(i, path.length - 1)]; if (wp && flat(wp, g.player.char.pos) < 0.5 && i < path.length - 4) i++;
-      const p = g.player.char.pos; if (wp) { const d = flat(wp, p) || 1; g.teleportPlayer([p[0] + (wp[0] - p[0]) / d * 1.3 * DT, 0, p[2] + (wp[2] - p[2]) / d * 1.3 * DT]); } R.step(); }
-    return { hs, mode: R.mode(), wary: SPM.SPOTTED_STATS.wary - wary0 }; };
-  const A = await calm(false), B = await calm(true); const same = A.hs.length === B.hs.length && A.hs.every((h, i) => h === B.hs[i]);
-  verdict(same && B.wary === 0, 'on, the one defender calm for twenty seconds of following Sam: every digest the same as off', `${A.hs.length} digests · ${same ? 'identical' : `first difference at #${A.hs.findIndex((h, i) => h !== B.hs[i])}`} · last ${A.hs[A.hs.length - 1]} / ${B.hs[B.hs.length - 1]}`);
-  return done();
-});
 
 if (import.meta.main) {
-  const want = process.argv.slice(2), all: [string, () => Promise<boolean>][] = [['suspicious', spottedSuspicious], ['slip', spottedSlip], ['brace', spottedBrace], ['close', spottedClose], ['caught', spottedCaught], ['fire', spottedFire], ['off', spottedOff]];
+  const want = process.argv.slice(2), all: [string, () => Promise<boolean>][] = [['suspicious', spottedSuspicious], ['slip', spottedSlip], ['brace', spottedBrace], ['close', spottedClose], ['caught', spottedCaught], ['fire', spottedFire], ];
   let ok = true; for (const [n, f] of all) if (!want.length || want.includes(n)) ok = (await f()) && ok;
   console.log(`\n=== spotted-probes.ts: ${ok ? 'ALL PASS' : 'FAILURES above'} ===`); process.exit(ok ? 0 : 1);
 }

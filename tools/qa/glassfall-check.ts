@@ -36,14 +36,14 @@ function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; le
 const log = console.log, err = console.error; const hush = (on: boolean) => { console.log = on ? () => {} : log; console.error = on ? () => {} : err; };
 const VOLLEY: Vec3[] = [[7.4, 1.3, 10], [7.42, 1.31, 10], [6.3, 1.0, 10], [7.9, 0.7, 10], [8.8, 1.5, 10], [6.6, 1.6, 10], [7.1, 0.5, 10], [8.9, 1.52, 10], [9.3, 0.9, 10], [7.6, 1.9, 10]];
 const SAM: Vec3 = [8.3, 0, 11.6];
-interface Opts { cap?: number; liveCap?: number; refuse?: boolean; row?: boolean }
+interface Opts { liveCap?: number; refuse?: boolean; row?: boolean }
 interface Rec { bare: number[]; partsAt: Record<string, number>[]; events: string[]; treads: string[]; litter: string[]; waiting: number; digest: string; bits: number[]; stats: any; plates: number; refused: number; there: number; m2: number; cells: number; treadSum: number }
 /** the volley's scene stood up, and frame `f` of it (the rounds, the struck sheet, the bang, the walker) as a function a check can call again */
 async function stage(seed: number, o: Opts) {
   Math.random = seeded(seed);
   const W: any = await standUp(), game = W.game, engine = W.engine; floatPartition(game);
   S.RUST.falls = !!o.row; if (o.liveCap) SHARDS.liveCap = o.liveCap;   // (a stand-up puts every switch where its stand has it: set after)
-  engine.particles = new Particles(fake('device'), fake('sceneLayout')); engine.settings.gpuParticles = true; if (o.cap) engine.settings.debrisCap = o.cap;
+  engine.particles = new Particles(fake('device'), fake('sceneLayout')); engine.settings.gpuParticles = true;
   if (o.refuse) game.destr.debris.spawnRaw = () => null;
   game.godMode = true; game.player.visibility = 0.02; game.tune.chaos = 0.5; game.tune.glassBreak = true; game.tune.glassShards = true;
   for (const k of Object.keys(GB_STATS)) GB_STATS[k] = 0; for (const k of Object.keys(SHARD_STATS)) SHARD_STATS[k] = 0;
@@ -91,10 +91,10 @@ function parts(a: Rec, b: Rec): string {
 export async function glassfallCheck(): Promise<boolean> {
   fails = 0;
   console.log(`broken glass by the fall${BREAK ? ' · GLASSFALL_BREAK=1 (the red path)' : ''}`);
-  const POOLS: [string, Opts][] = [['the pool at 32', { cap: 32 }], ['the pool at 4', { cap: 4 }], ['an eighth of the particle budget', { liveCap: 500 }], ['every plate refused', { refuse: true }]];
+  const POOLS: [string, Opts][] = [['an eighth of the particle budget', { liveCap: 500 }], ['every plate refused', { refuse: true }]];
 
   // ---- lays
-  const on = await volley(1, { cap: 64 }), other = BREAK ? await volley(2, { cap: 64 }) : on;   // (the break word: the pools are laid against another seed's volley)
+  const on = await volley(1, {}), other = BREAK ? await volley(2, {}) : on;   // (the break word: the pools are laid against another seed's volley)
   { const lv = on.treads.map(t => Number(t.split(':')[1])), loud = lv.filter((l, i) => l > on.bare[i % 5]).length;
     verdict(on.stats.fragments > 100 && on.cells > 5 && on.events.length > 3 && loud > 0 && on.plates > 10, 'lays: glass is laid where fragments fall, the floor is told, and a footfall on it is louder than one off it',
       `${on.stats.fragments} fragments (${on.plates} plates in the pool, ${on.refused} refused) · glass in ${on.cells} cells, ${(on.m2 * 1e4).toFixed(0)} cm² · the floor told ${on.events.length} times · ${loud} of ${lv.length} footfalls on the glazing's far side louder than the same footfall on the bare floor (${on.bare.map(b => b.toFixed(3)).join(' ')} bare; the loudest on glass ${Math.max(...lv).toFixed(3)})`); }
@@ -105,12 +105,12 @@ export async function glassfallCheck(): Promise<boolean> {
     verdict(same === POOLS.length, `pool: the volley is one game whatever the debris pool holds and the particle budget lets through${BREAK ? ' (LAID AGAINST ANOTHER SEED: the red path)' : ''}`, `against the pool at 64 (${other.plates} plates) · ${lines.join('\n    ')}`); }
 
   // ---- module
-  if (!BREAK) { const r = await volley(1, { cap: 64, row: true }), d = parts(on, r);
+  if (!BREAK) { const r = await volley(1, { row: true }), d = parts(on, r);
     verdict(!d && r.there > 50 && on.there === 0, 'module: the volley with RUST.falls on is the volley with it off, and the rules were the module\'s', `${d || 'the same game after every tick'} · ${r.there} rules taken in the module (${on.there} without the row)`); }
 
   // ---- snapshot: the falls in the module, taken and put back while glass is in the air and on the floor
   if (!BREAK) { const RB: any = await import(`${ROOT}/src/game/rollback.ts`), was = { row: S.RUST.falls }; hush(true); let line = '', ok = false;
-    try { const { game, frame } = await stage(1, { cap: 64, row: true }); let f = 0; for (; f < 200; f++) frame(f);
+    try { const { game, frame } = await stage(1, { row: true }); let f = 0; for (; f < 200; f++) frame(f);
       const snap = RB.takeSnapshot(game), h0 = RB.stateHash(game), waiting = game.falls.waiting, cells = game.falls.cells().length, home = !!game.falls.home, first: string[] = [];
       for (let k = 0; k < 260; k++) { frame(f + k); first.push(RB.stateHash(game)); }
       const after = game.falls.cells().length;

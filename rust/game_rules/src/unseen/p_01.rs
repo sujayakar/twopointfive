@@ -30,7 +30,7 @@ fn new_state() -> State {
 
 /// this view's row, made if it is not there (unseen.ts stateOf)
 pub fn state_of<'g>(g: &'g mut Game) -> &'g mut State {
-    let k = crate::seats::view_key(g);
+    let k = crate::seats::view_key(g, &crate::seats::here(g));
     g.m.unseen.states.get_or_insert_with(k, new_state)
 }
 
@@ -91,10 +91,10 @@ pub fn unseen_live(g: &mut Game) -> bool {
     if now < s.cue_t { s.cue_t = -1e9; }
     let pl = lead(g);
     let why;
-    if !crate::orders::squad_orders_active(g) {
+    if !crate::orders::squad_orders_active(g, &crate::seats::here(g)) {
         why = String::from("no squad under orders");
     } else {
-        let mut men = crate::orders::squad_orders_squad(g);
+        let mut men = crate::orders::squad_orders_squad(g, &crate::seats::here(g));
         men.retain(|&m| g.gd[m].state != crate::game::GuardState::Dead);
         if men.is_empty() {
             why = String::from("no squad under orders");
@@ -126,7 +126,7 @@ pub fn unseen_live(g: &mut Game) -> bool {
         }
         if live {
             g.stats.unseen.spells += 1;
-            let k = crate::seats::view_key(g);
+            let k = crate::seats::view_key(g, &crate::seats::here(g));
             cue(g, k);
         } else {
             state_of(g).hold = None;
@@ -142,7 +142,7 @@ pub fn cue(g: &mut Game, pl: PlayerId) {
         return;
     }
     let mut who = None;
-    for m in crate::orders::squad_orders_squad(g) {
+    for m in crate::orders::squad_orders_squad(g, &crate::seats::here(g)) {
         let state = g.gd[m].state;
         if state != crate::game::GuardState::Dead && state != crate::game::GuardState::Alert && g.gd[m].held.is_none() {
             who = Some(m);
@@ -159,12 +159,12 @@ pub fn cue(g: &mut Game, pl: PlayerId) {
 
 /// this teammate is unseen this frame (unseen.ts underUnseen)
 pub fn under_unseen(g: &mut Game, gd: GuardId) -> bool {
-    in_view(g, gd, &mut |g: &mut Game| mate(g, gd) && unseen_live(g) && !entering(g, gd))
+    in_view(g, gd, &mut |g: &mut Game| mate(g, gd) && unseen_live(g) && !entering(g, &crate::seats::here(g), gd))
 }
 
 /// he is one of a door tool's men right now: that work is the door's own (unseen.ts entering)
-pub fn entering(g: &Game, gd: GuardId) -> bool {
-    g.door_tools.ops.iter().any(|&op| g.tab.doortools_door_op[op].men.contains(&gd))
+pub fn entering(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
+    seat.door_tools.ops.iter().any(|&op| g.tab.doortools_door_op[op].men.contains(&gd))
 }
 
 /// Sam on a wall, and no place on it for this man right now (unseen.ts offWall)
@@ -312,11 +312,6 @@ pub fn unseen_step(g: &mut Game, gd: GuardId) -> Option<f64> {
         let c = g.gd[gd].ch;
         Some(if g.ch[c].anim.crouch > 0.5 { g.k.unseen.low_step } else { g.k.unseen.walk_step })
     })
-}
-
-/// his light is held off because Sam's is: UNSEEN.lights is off on the page, so never (unseen.ts unseenDark)
-pub fn unseen_dark(g: &Game, gd: GuardId) -> bool {
-    false
 }
 
 /// (unseen.ts unseenHush)

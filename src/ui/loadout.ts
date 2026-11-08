@@ -4,10 +4,9 @@
 // words and its store are game/loadout.ts's; this file is the DOM and the keys. Plain DOM in an overlay of its own (#loadout, over the start card's #menu), its
 // styles injected here, so nothing of the card is re-rendered under it and index.html is not touched.
 //
-// THE FLOW (wireMissions below, called once by main.ts): start card ▸ Missions (ui/missions.ts) ▸ a pick opens THIS screen for that mission (the list closes
+// THE FLOW (wireMissions below, called once by main.ts): the mission list (ui/missions.ts) ▸ a pick opens THIS screen for that mission (the list closes
 // first; MISSIONS.onPick) ▸ Deploy loads the mission's URL — the list's own href, so the sheet's Standard | Hard rides along — with the size on it. Back / Esc
-// reopens the list on the same row; Esc there is the start card. Also reached by URL: `?loadout=<mission id>` (main.ts, once the start card is up;
-// `&squad=N` beside it preselects). THE SOLO NIGHT comes through here too (kind 'solo': the team row is greyed at solo, your own card is the only one) and
+// reopens the list on the same row. THE SOLO NIGHT comes through here too (kind 'solo': the team row is greyed at solo, your own card is the only one) and
 // Deploy loads `?solo`, where main.ts puts your card on the plain night's player (game/kit.ts kitSolo).
 //
 // WHAT IS ON IT, top to bottom: the mission · TEAM (the size) · the five member slots, each with its man's kit in a line — one of those who come is PICKED ·
@@ -33,17 +32,17 @@
 import type { ScenarioEntry } from '../scene/scenarios';
 import { lessonGroup } from '../scene/scenarios';
 import { pickSearch, levelWords, SCENARIO_KEYS } from '../scene/scenarioList';
-import { MISSIONS, SOLO_NIGHT, SOLO_KEY, unplayed, missionList, missionHref, openMissions, closeMissions, issuedWalls, issuedKit, type IssuedKit, type Mission } from './missions';
+import { MISSIONS, SOLO_NIGHT, SOLO_KEY, unplayed, missionHref, openMissions, closeMissions, issuedWalls, issuedKit, type IssuedKit, type Mission } from './missions';
 import { difficultyHref, leversHref, leversMixed, leversLine, structureOfLevel, fogOffNow } from '../game/difficulty';
 import { leverRows, leversOpenOn, type LeverRowsUi } from './levers';
 import { fogOfQuery, fogOfLink, quietCamsOfLink, sameFog } from '../game/scenarioRun';
-import { QUIETFOG, quietFogHref, quietFogRow, quietFogAside, soloFogRow } from '../game/quietfog';
+import { quietFogHref, quietFogRow, quietFogAside, soloFogRow } from '../game/quietfog';
 import { STICKY } from '../game/stickycam';   // (read inside the screen only: what a quiet mission hands you — lentNow)
 import { WAND } from '../game/wand';         // (likewise)
 import { hourLive, hourIdOf } from '../game/hours';
 import { weatherOfSearch } from '../game/weatherKinds';
-import { squadChoices, squadSearch, squadOfQuery, startSize, storeSquad, rosterOf, sizeWords, kitAsIssued, lessonNote, issueNote, type SquadSize, type SquadChoice, type LoadoutKind } from '../game/loadout';
-import { KIT, KIT_SOLO, SLOTS, SUITS, bigOf, kitPacks, kitDefault, type MemberKit, kitGun, kitRowCan, kitChanged, kitCost, kitLoadout, kitLoadoutOf, kitLoadouts, kitMission, kitIssueWhole, kitPool, kitRingsLent, kitStealthHand, kitStealthOn, kitRows, kitShown, kitSmokes, kitTeam, kitTreeOn, kitWalls, kitWords, kitWorn, squadCost } from '../game/kit';
+import { squadChoices, squadSearch, startSize, storeSquad, rosterOf, sizeWords, kitAsIssued, lessonNote, issueNote, type SquadSize, type SquadChoice, type LoadoutKind } from '../game/loadout';
+import { KIT, SLOTS, SUITS, bigOf, kitPacks, kitDefault, type MemberKit, kitGun, kitRowCan, kitChanged, kitCost, kitLoadout, kitLoadoutOf, kitLoadouts, kitMission, kitIssueWhole, kitPool, kitRingsLent, kitStealthHand, kitStealthOn, kitRows, kitShown, kitSmokes, kitTeam, kitTreeOn, kitWalls, kitWords, kitWorn, squadCost } from '../game/kit';
 import { memberCard, tintCss, clipWorn, clipKey, gunCanOf, KIT_CAN, KIT_CLIP, KIT_LENT, type MemberCard, type MemberCardOpts } from './kitCard';
 import { menuTheme } from './theme';
 import { typedInto } from '../host/keymap';
@@ -77,7 +76,7 @@ export interface LoadoutOpts {
     /** a key the highlighted row did not take, before the screen's own Enter / Esc / W A S D: true = it was the host's (the one starting page's walkthrough — ui/kitGuide.ts: an open pop-up's Esc is the card's first) */ rest?(code: string, repeat: boolean): boolean };
   /** Deploy is about to load `search` with `n` teammates (told before the load or `deploy`; nothing is replaced) */
   onDeploy?: (search: string, n: SquadSize) => void;
-  /** told at the end of every paint (the one starting page draws the picked man from it: ui/kitFigure.ts) */
+  /** told at the end of every paint (the one starting page's picture of the team follows it: ui/kitView.ts) */
   onPaint?: (s: LoadoutScreen) => void;
   /** the words on the block that deploys (absent: 'Deploy' and the team's size). A host that deploys its own way says what its way is (ui/coop.ts) */
   deployWords?: string;
@@ -170,9 +169,9 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
   // (ui/kitCard.ts `lent`), where it read 'none' beside a thing you were about to be handed, and so does the kit you are drawn in (worn()). Asked live: the
   // fog lever and the Cameras row are on this screen — read once for a link and a gun, not once a tile.
   let lentKey = '', lentIs = { fog: false, n: 0, cams: 0, wand: 0 };
-  const lentOf = () => { const href = quietFogHref(base, quietRow), gun = KIT.members[0]?.weapon, key = `${href}|${gun}|${STICKY.on}|${WAND.on}|${QUIETFOG.wand}|${fogOffNow()}`;
+  const lentOf = () => { const href = quietFogHref(base, quietRow), gun = KIT.members[0]?.weapon, key = `${href}|${gun}|${STICKY.on}|${WAND.on}|${fogOffNow()}`;
     if (key !== lentKey) { lentKey = key; const q = new URLSearchParams(href.replace(/^[^?]*\?/, '')), fog = fogOfQuery(q), n = fog && STICKY.on ? quietCamsOfLink(q) : 0;
-      lentIs = { fog, n, cams: gun === 'rifle' ? n : 0, wand: n > 0 && WAND.on && QUIETFOG.wand ? 1 : 0 }; }
+      lentIs = { fog, n, cams: gun === 'rifle' ? n : 0, wand: n > 0 && WAND.on ? 1 : 0 }; }
     return lentIs; };
   // (… and under the card as a tree — game/kittree.ts — its sponge rounds: a quiet mission and the solo night hand you the launcher's five over a card that carries none)
   const stealthKind = entry.kind === 'quiet' || entry.kind === 'solo';
@@ -310,8 +309,8 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
       const to = S.search(); close(); opts.onDeploy?.(to, squad);
       if (opts.deploy) { opts.deploy(to, squad); return; }
       // the solo night off the real start card over the plain night: Start, as it has always been — no load (ui/missions.ts's own shortcut, taken here now that
-      // this screen stands between the list and the run); the card's Start puts your kit on the player (main.ts onStart → kitFresh)
-      if (entry.kind === 'solo' && MISSIONS.startSolo && hourIdOf(new URLSearchParams(to).get('hour')) === hourLive() && weatherOfSearch(to) === weatherOfSearch(pageSearch) && !SCENARIO_KEYS.some(k => k !== SOLO_KEY && new URLSearchParams(pageSearch).has(k)) && sameFog(to, pageSearch)) { KIT_SOLO.on = true; MISSIONS.startSolo(); return; }   // (…at the hour and in the weather the page stands at — game/hours.ts, game/weatherKinds.ts: another of either is a load — and in the fog it stands in: the solo night under the fog off a plain page is a load of its own link, game/quietfog.ts QUIETFOG.solo)
+      // this screen stands between the list and the run); `startSolo(true)` closes the card and then puts your kit on this game's player (ui/menu.ts → kit.ts kitSolo)
+      if (entry.kind === 'solo' && MISSIONS.startSolo && hourIdOf(new URLSearchParams(to).get('hour')) === hourLive() && weatherOfSearch(to) === weatherOfSearch(pageSearch) && !SCENARIO_KEYS.some(k => k !== SOLO_KEY && new URLSearchParams(pageSearch).has(k)) && sameFog(to, pageSearch)) { MISSIONS.startSolo(true); return; }   // (…at the hour and in the weather the page stands at — game/hours.ts, game/weatherKinds.ts: another of either is a load — and in the fog it stands in: the solo night under the fog off a plain page is a load of its own link, game/quietfog.ts QUIETFOG.solo)
       const url = location.pathname + to + location.hash;
       if (url === location.pathname + location.search + location.hash) location.reload(); else location.assign(url);
     },
@@ -409,12 +408,6 @@ export function loadoutForMission(m: Mission, href?: string, opts: LoadoutOpts =
 }
 /** ONE FLOW (main.ts, once): a pick on the mission list opens this screen instead of loading the row; the list's button says so. */
 export function wireMissions() { MISSIONS.onPick = (m, href) => { loadoutForMission(m, href); }; MISSIONS.pickLabel = 'Loadout ›'; MISSIONS.next = { isOpen: () => !!current, close: closeLoadout }; }
-/** the page's `?loadout=<mission id>` (main.ts, once the start card is up): that mission's loadout screen. Returns it, or null (no flag, no such mission). */
-export function loadoutFromQuery(search: string | URLSearchParams, list: Mission[] = missionList()): LoadoutScreen | null {
-  const q = typeof search === 'string' ? new URLSearchParams(search) : search, id = q.get('loadout');
-  const m = id ? list.find(x => x.id === id) : undefined;
-  return m ? loadoutForMission(m, undefined, { squad: squadOfQuery(q, false) ?? undefined }) : null;   // (`?loadout=<id>&squad=N` opens on N)
-}
 
 // every key is the screen's while it is up (registered at module load: ahead of main.ts's Esc — which would close the start card under it — and of the game's Input)
 const eaten = new Set<string>();
@@ -425,7 +418,7 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
     if (chord && clip) { const t = e.target as { tagName?: string; isContentEditable?: boolean } | null;   // (… the chord only while it is not the browser's own: no text field has the keys, no text on the page is selected)
       if (typedInto(e.target) || t?.isContentEditable || String(window.getSelection?.() ?? '')) return; }   // (the hidden text box of a framed page is no field: host/keymap.ts)
     else if (e.ctrlKey || e.metaKey || e.altKey) return;   // (the browser's own: reload, devtools)
-    if (/^F\d+$/.test(e.code)) return;   // (the recorders' keys and the browser's stay theirs, and BEFORE the stop below: F7 to F10 never reached their listeners behind this one)
+    if (/^F\d+$/.test(e.code)) return;   // (the recorders' keys and the browser's stay theirs, and BEFORE the stop below: F7 to F9 never reached their listeners behind this one)
     e.stopImmediatePropagation(); if (!chord) eaten.add(e.code);   // (a chord's release is not waited for: macOS sends no keyup for a key let go under Cmd, and one left here would eat the game's next release of that key)
     (window as unknown as { __attract?: { poke?: () => void } }).__attract?.poke?.();   // (main.ts's own idle listener is behind this one: somebody is here)
     e.preventDefault();

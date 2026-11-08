@@ -34,8 +34,8 @@
 // WHAT WALKS MEETS THE PLAIN LEVEL, by construction and not by a rule its author must keep: a shaped box is pushed against as its UNCUT box (cut.ts's own
 // rule), which is the plain box, and a piece is met by nobody. The rules that mark a level's boxes by their size as it is stood up (thin things, a window's
 // bars: host/standup.ts) read the plain boxes too: shapes are given after them.
-// WHAT AN ENGINE CUTS UP ITSELF SAYS NO FORM: a window's bar (game/winbars.ts breaks it into lengths) is left plain by shapeLevel, a slab of one of the kit's
-// octagons is refused by the lint (scene/round.ts makes the four one round box), and tools/qa/shapes-check.ts is red on a level file whose shape does not
+// WHAT AN ENGINE CUTS UP ITSELF SAYS NO FORM: a window's bar (game/winbars.ts breaks it into lengths) is left plain by shapeLevel, a round thing is
+// refused a shape by the lint (scene/round.ts), and tools/qa/shapes-check.ts is red on a level file whose shape does not
 // stand.
 // A BLAST: a box whose shape has a form is one cell to the wall engine and never a wall cut into cells (its cells would be cut from the whole box); its
 // trim is out of the picture the moment the box is (above), and joins, loads and hangs on nothing meanwhile.

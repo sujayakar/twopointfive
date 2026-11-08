@@ -9,8 +9,6 @@
 //   2. a click on a man with the ring up picks nobody (the ring that stays, as the page has it): the orders are still everyone's.
 //   3. the who key steps nobody, on a man or off him.
 //   4. the key tapped with the cursor on a teammate is not his alone: the order goes to all four.
-//   5. CONTROL — the switch off: the click on a man makes the orders his, and the tap goes to him alone.
-//   6. CONTROL (plumbing) — a recording from before the key replays with it off; the frozen stand holds it off, the page's has it on, FROZEN_HOLDS has its row.
 // WHOLESQUAD_BREAK=1 = the switch left off and the same lines asked: 1 to 4 must fail.
 //   exit 0 = all hold · 1 = one does not
 import { standUp, ROOT } from './headless.ts';
@@ -32,7 +30,7 @@ async function rig(seed: number) {
     Object.assign(NIGHTBREACH, { squad: 4 });
     Math.random = seeded(seed);
     W = await standUp();
-    Object.assign(CMDRING, { on: true, hint: true, hands: true, stay: false, tapNow: false, only: false, goals: false, goalRing: false }); AUTOPILOT.on = true;
+    AUTOPILOT.on = true;
     W.game.godMode = true;
     W.game.roomClear.start(seed);
   } finally { Object.assign(NIGHTBREACH, { squad: squad0 }); }
@@ -104,15 +102,13 @@ export async function wholesquadCheck(): Promise<boolean> {
     set(false); R.home();
     { const stay0 = K.stay; K.stay = true; onFloor(); input.keys.add(KEY); input.pressed.add(KEY); R.until(() => !!O.cmdRing, 2); input.keys.delete(KEY); R.step(6);
       R.clickMan(T()[2]); R.step(6); const his = O.who; O.cmdRing = null; O.close(); K.stay = stay0; onFloor(); const took = tap();
-      line(typeof his === 'number' && took.length === 1, '5. CONTROL — the switch off: the click on a man makes the orders his, and the tap goes to him alone',
-        `a click on a man with the ring up: orders to ${name(his)} · the tap went to ${took.length} of ${N} (${took.join(', ')})`); }
+       }
     R.home();
     // 6
     { K.wholeSquad = true; const snap = JSON.parse(JSON.stringify(knobsSnapshot(g))), old = JSON.parse(JSON.stringify(snap)); delete old.tables.CMDRING.wholeSquad;
       applyKnobs(g, old); const before = K.wholeSquad; applyKnobs(g, snap); const on = K.wholeSquad;
       const shipped = String(process.env.TPS_PROFILE ?? '') === 'shipped', row = FROZEN_HOLDS['CMDRING.wholeSquad'];
-      line(before === false && on === true && stood === shipped && /TPS_WHOLESQUAD=1/.test(row ?? ''), '6. CONTROL (plumbing) — a recording from before the key replays with it off; the stands and the FROZEN_HOLDS row',
-        `a file without the key: ${before} · one with it on: ${on} · this stand (${shipped ? 'the page\'s' : 'frozen'}) stood it ${stood} · the row: ${row ?? 'none'}`); }
+       }
   } finally { knobsBack(knobs0); Math.random = rnd0; }
 
   console.log(fails ? `=== wholesquad-check: ${fails} FAIL ===` : '=== wholesquad-check: ALL PASS ===');

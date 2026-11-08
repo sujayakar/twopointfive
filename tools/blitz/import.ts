@@ -12,6 +12,7 @@
 // AN ECHO (schema `echo`, hand2.cjs H.bridge.echo): a field Rust owns that the TypeScript cannot hold (a place in a level script, a memo a module keeps where the walk cannot write it, the copy of the box world in the module that
 // holds it). A whole apply keeps a copy of its bytes beside the object and writes nothing; the puppet's export writes those bytes back (export.ts). So a re-export after an apply is Rust's bytes everywhere, and such a field needs no class of its own in a host's compare.
 import GAME_REF_LIST from './game-ref.json';
+import CLASS_DEFAULTS from './class-defaults.json';
 import { SCHEMA, parse, bookOf, seedBook, helpersOf, compiledExpr, LOOSE, ECHO, LENS, forGame, classWord, isGameSide } from './export';
 import { rawKey, PUT_BACKS, isSeatTable } from '../../src/math/side';
 
@@ -31,7 +32,7 @@ const differs = (a: unknown, b: unknown) => !Object.is(a, b) && !(a == null && b
 
 // ---- reading past a value
 type Keep = { field: (q: string, ty: string) => boolean; desc: (ty: string | N) => boolean };
-function skipper(b: Uint8Array, I: { p: number; K?: Keep | null }) { const dv = new DataView(b.buffer, b.byteOffset, b.byteLength); I.p = 0;
+export function skipper(b: Uint8Array, I: { p: number; K?: Keep | null }) { const dv = new DataView(b.buffer, b.byteOffset, b.byteLength); I.p = 0;
   const sk = (n: N): void => { switch (n.k) {
     case 'f64': case 'u64': case 'i64': I.p += 8; return; case 'f32': case 'u32': case 'i32': case 'usize': case 'id': I.p += 4; return; case 'bool': case 'u8': case 'i8': I.p += 1; return; case 'u16': case 'i16': I.p += 2; return; case 'unit': return;
     case 'str': I.p += 4 + dv.getUint32(I.p, true); return;
@@ -44,7 +45,7 @@ function skipper(b: Uint8Array, I: { p: number; K?: Keep | null }) { const dv = 
     case 'type': { const T = SCHEMA.types[n.path]; if (T.k === 'struct') { const K = I.K; if (K && !K.desc(n)) { I.K = null; sk(n); I.K = K; return; } if (!K) { for (const f of T.fields) sk(parse(f.ty)); return; } for (const P of planOf(T)) { if (!K.field(P.q, P.f.ty)) continue; if (!K.desc(P.N)) { I.K = null; sk(P.N); I.K = K; continue; } sk(P.N); } return; } if (T.k === 'enum') { I.p += 2; return; } const a = dv.getUint16(I.p, true); I.p += 2; if (a === 0xffff) return; if (T.k === 'wordEnum') { for (const f of T.arms[a].fields) sk(parse(f.ty)); return; } const t = armType(T, a); if (t) sk(parse(t)); return; } }
     throw new Error(`import: no way past ${n.k}`); };
   return { I, sk, dv }; }
-type Plan = { f: any; q: string; N: N; way?: Way };
+type Plan = { f: any; q: string; N: N; way?: Way; half?: boolean };
 const planOf = (T: any): Plan[] => T.plan ??= T.fields.map((f: any) => ({ f, q: `${T.mod}::${T.name}.${f.rust}`, N: parse(f.ty) }));
 const W = new Map<N, number>();
 function fixedWidth(n: N): number { let w = W.get(n); if (w !== undefined) return w; switch (n.k) { case 'f64': case 'u64': case 'i64': w = 8; break; case 'f32': case 'u32': case 'i32': case 'usize': case 'id': w = 4; break; case 'bool': case 'u8': case 'i8': w = 1; break; case 'u16': case 'i16': w = 2; break; case 'unit': w = 0; break; case 'arr': { const e = fixedWidth(n.of); w = e < 0 ? -1 : e * n.n; break; } case 'tup': { w = 0; for (const x of n.of) { const e = fixedWidth(x); if (e < 0) { w = -1; break; } w += e; } break; } case 'type': { const T = SCHEMA.types[n.path]; if (T.k === 'enum') w = 2; else if (T.k === 'struct') { w = 0; W.set(n, -1); for (const f of T.fields) { const e = fixedWidth(parse(f.ty)); if (e < 0) { w = -1; break; } w += e; } } else w = -1; break; } default: w = -1; } W.set(n, w!); return w!; }
@@ -57,8 +58,9 @@ type Inverse = (o: any, v: any, c: Ctx) => void;
 const skipField: Inverse = () => {};
 /** the fields whose expression is no assignment. Each says how the value gets back, or why it need not: read `skipField` as "the export works this out from what is carried, or it is set up once and never changes" */
 const INVERSE: Record<string, Inverse> = {
-  // (a cast's ring stands as its maker gave it: a tick never changes it)
-  'orders::OtherCast.ring': () => {},
+  // (another cast of the squad's orders is two answers: which keys it holds, '*' on the wire for every one, and whose men are its own, the response team's
+  // (Rust's squad_orders_mine says the same). The Rust game makes the cast as the team comes to a door, so nothing on this side gave it either)
+  'orders::OtherCast.ring': (o, v, c) => { o.ring = v.has('*') ? { has: () => true } : v; o.mine ??= (gd: unknown) => [...c.g.qrf?.men ?? []].includes(gd); },
   // (the row of `nearby` he is on, the object itself: a reader asks `nearby.includes(hover)`. Rust keeps a copy, which is that row by its place and what it is)
   'game::Game.hover': (o, v, c) => { c.fix.push(() => { o.hover = v ? (o.nearby as any[]).find(r => r.kind === v.kind && r.verb === v.verb && r.pos?.[0] === v.pos?.[0] && r.pos?.[2] === v.pos?.[2]) ?? v : null; }); },
   // (a yes or no on Rust's side, and the seat's camera on the puppet's, which the page sets and no read of the tick's finds. As a yes it would be a value that takes no field: `w.cam.peekOffset = null` throws)
@@ -72,7 +74,6 @@ const INVERSE: Record<string, Inverse> = {
   'scene_collision::StaticCollision.pane_rule': skipField, 'scene_collision::StaticCollision.pane_rows': skipField, 'scene_collision::StaticCollision.glass_walkable': skipField, 'scene_collision::StaticCollision.fire_pass': skipField,   // (set up with the level)
   'destruction::Destruction.blast_listeners': skipField, 'destruction::RateCap.n': skipField, 'anim_skeleton::SkeletonInstance.rig': skipField, 'scene_level_load::SceneLevelLoadMod.level_names': skipField,
   'scene_boxes::BoxWorld.glass_open': skipField,   // (set up with the level)
-  'glassbreak::GlassBreak.on_release': (o, v, c) => { o.onRelease = v ? c.g.shards.onRelease : null; },
   'nightbreach::NightBreach.bang_by': (o, v) => { o.bangBy = v ? v.view.doorTools : null; },
   // a cut is a new array. A count that moved says so; the array's numbers came in place just before, in this row. The seat's mark is the host's own unless Rust has taken the cut itself (a restart on its side)
   'camera::FollowCamera.desired_serial': (o, v) => { const r = LENS.get(o); if (!r) { LENS.set(o, { arr: o.desired, n: v }); return; } if (r.n !== v) { o.desired = [o.desired[0], o.desired[1], o.desired[2]]; r.n = v; } r.arr = o.desired; },
@@ -89,6 +90,10 @@ const INVERSE: Record<string, Inverse> = {
 /** the classes that hold their game: a row of one that the apply makes has run no constructor, and its methods read `this.g` (gameref.py) */
 const GAME_REF = new Set<string>(GAME_REF_LIST as string[]);
 const CLASSES = new Map<string, object>();
+// WHAT A THING THE APPLY MAKES HOLDS BESIDE WHAT IT IS SENT (class-defaults.json, written by tools/wire/class-defaults.ts from the things a start builds): a leaf the class keeps in a typed array, so that it arrives as one, and each plain field no list carries, at its class's value. The picture's own half is a made hook's (rustgame.ts).
+const TYPED_LEAF: Record<string, any> = { Float32Array, Float64Array, Int32Array, Uint32Array, Int16Array, Uint16Array, Int8Array, Uint8Array };
+const DEFAULTS = CLASS_DEFAULTS as Record<string, { plain?: Record<string, unknown>; typed?: Record<string, [string, number]>; lists?: string[]; nan?: string[]; inf?: string[] }>;
+function fillDefaults(o: any, T: any): void { const d = DEFAULTS[`${T.mod}::${T.name}`]; if (!d) return; if (d.typed) for (const k in d.typed) { const [c, n] = d.typed[k]; o[k] = new TYPED_LEAF[c](n); } if (d.plain) for (const k in d.plain) o[k] = d.plain[k]; if (d.lists) for (const k of d.lists) o[k] = []; if (d.nan) for (const k of d.nan) o[k] = NaN; if (d.inf) for (const k of d.inf) o[k] = Infinity; }
 /** a row whose numbers are the block's columns reads them through these: what its constructor would have set, the row itself coming with the fields */
 const BLOCK_ROW: Record<string, (o: any, g: any) => void> = { Item: (o, g) => { o.S = g.items.store; o.things = g.props.all; o.kept = null; } };
 let looseOrder: object[] = [];
@@ -153,7 +158,7 @@ function applyGameNow(g: any, blob: Uint8Array, knobs: Record<string, unknown>, 
   serialNext = dv.getUint32(I.p, true); I.p += 4; tail = I.p;
   // (WHETHER THE RUST GAME'S STATE MOVED AT ALL since the last export: no part and no row sent, the same table sizes. A host then has no need to look at the puppet again)
   if (pup && !pup.start) { const mainLen = dv.getUint32(0, true); let any = heads.some(h => h.entries > 0 || h.n !== h.whole); for (let k = 4; !any && k < 4 + mainLen; k++) if (blob[k]) any = true; R.changed = any; } else R.changed = true;
-  const t2 = performance.now(); R.phases.skim = t2 - t1; for (const { t, n } of heads) { const L = BK.listOf(t.id); if (L.length >= n) continue; const T0 = SCHEMA.types[t.ty.replace(/^alloc::boxed::Box<(.*)>$/, '$1')]; const proto = CLASSES.get(`${T0?.mod}::${T0?.name}`) ?? (L.length ? Object.getPrototypeOf(L[0]) : Object.prototype); const made: any[] = []; while (BK.listOf(t.id).length < n) { const o = Object.create(proto); BK.idOf(t.id, o); madeRows.add(o); made.push(o); } R.made[t.ts] = made.length; (c as any)[`made:${t.id}`] = made; }
+  const t2 = performance.now(); R.phases.skim = t2 - t1; for (const { t, n } of heads) { const L = BK.listOf(t.id); if (L.length >= n) continue; const T0 = SCHEMA.types[t.ty.replace(/^alloc::boxed::Box<(.*)>$/, '$1')]; const proto = CLASSES.get(`${T0?.mod}::${T0?.name}`) ?? (L.length ? Object.getPrototypeOf(L[0]) : Object.prototype); const made: any[] = []; while (BK.listOf(t.id).length < n) { const o = Object.create(proto); if (T0) fillDefaults(o, T0); BK.idOf(t.id, o); madeRows.add(o); made.push(o); } R.made[t.ts] = made.length; (c as any)[`made:${t.id}`] = made; }
 
   // ---- a new row that stands in the game's block, before its fields go in
   for (const { t } of heads) { const M = (c as any)[`made:${t.id}`]; const f = BLOCK_ROW[t.ts]; if (M && f) for (const o of M) f(o, g); }
@@ -200,7 +205,7 @@ function applyGameNow(g: any, blob: Uint8Array, knobs: Record<string, unknown>, 
     throw new Error(`import: no reader for ${n.k}`);
   }
   const readN = (n: N): number => { switch (n.k) { case 'f32': { const v = dv.getFloat32(I.p, true); I.p += 4; return v; } case 'f64': { const v = dv.getFloat64(I.p, true); I.p += 8; return v; } default: return read(n, 0); } };
-  function readId(n: N, cur: any): any { const v = dv.getUint32(I.p, true); I.p += 4; if (v === 0xffffffff) return cur && typeof cur === 'object' ? null : cur; if (typeof cur === 'number') return v; const e = SCHEMA.idExpr[n.id]; const viaExpr = e && cur && typeof cur === 'object' ? compiledExpr(e)(cur, g, B) : undefined; if (typeof viaExpr === 'number') { if (viaExpr === v) return cur; const k = `id ${n.id} at ${curQ}`; R.noWay.set(k, (R.noWay.get(k) ?? 0) + 1); return cur; } const L = BK.listOf(n.id); if (v >= L.length) { const k = `id ${n.id} past its table`; R.noWay.set(k, (R.noWay.get(k) ?? 0) + 1); return cur; } return L[v]; }
+  function readId(n: N, cur: any): any { const v = dv.getUint32(I.p, true); I.p += 4; if (v === 0xffffffff) return cur && typeof cur === 'object' ? null : cur; if (typeof cur === 'number') return v; const e = SCHEMA.idExpr[n.id]; const viaExpr = e && cur && typeof cur === 'object' ? compiledExpr(e)(cur, g, B) : undefined; if (typeof viaExpr === 'number') { if (viaExpr === v) return cur; const k = `id ${n.id} at ${curQ}`; R.noWay.set(k, (R.noWay.get(k) ?? 0) + 1); return cur; } const L = BK.listOf(n.id); if (v >= L.length || L[v] === undefined) { const k = `id ${n.id} past its table`; R.noWay.set(k, (R.noWay.get(k) ?? 0) + 1); return cur; } return L[v]; }
   const firstKey = (m: any): unknown => { if (m instanceof Map || m instanceof Set) { for (const k of m instanceof Map ? m.keys() : m) return k; return undefined; } return keysIn(m)[0]; };
   function keyOf(K: N, curMap: any): any { if (K.k === 'u32') { const v = dv.getUint32(I.p, true); I.p += 4; const first = firstKey(curMap); if (first && typeof first === 'object') return objOfSerial(c, v); if (isSide(curMap)) return objOfSerial(c, v); return v; }
     if (K.k === 'id' && K.id === 'PlayerId') { const row = readId(K, undefined); if (isSeatTable(curMap)) { for (const s of g.seats ?? []) if (s.view?.player === row) return s.view; return g; }   /* (a seat's table: keyed by the view the TypeScript asks by, whatever the table holds yet) */ for (const k of keysIn(curMap)) if (k && typeof k === 'object' && (k as any).player === row) return k; return row; }
@@ -218,7 +223,7 @@ function applyGameNow(g: any, blob: Uint8Array, knobs: Record<string, unknown>, 
     if (isSide(cur)) { const want = new Set(keys); for (const k of cur.liveKeys()) if (!want.has(k)) cur.delete(k); for (const k of keys) if (k && typeof k === 'object') cur.add(k); orderSide(cur, keys); return cur; }
     if (typeof cur === 'object') { for (const k of Object.keys(cur)) delete cur[k]; for (const k of keys) cur[k] = true; return cur; }
     return cur; }
-  function newOf(T: any): any { const P = CLASSES.get(`${T.mod}::${T.name}`); const o = P ? Object.create(P) : {}; if (P && GAME_REF.has(T.name)) o.g = g; fresh.add(o); return o; }
+  function newOf(T: any): any { const P = CLASSES.get(`${T.mod}::${T.name}`); const o = P ? Object.create(P) : {}; if (P && GAME_REF.has(T.name)) o.g = g; fillDefaults(o, T); fresh.add(o); return o; }
   const fresh = new WeakSet<object>();
   function readType(n: N, cur: any): any { const T = SCHEMA.types[n.path];
     if (T.k === 'struct') { const o = cur && typeof cur === 'object' ? cur : newOf(T); const K = keep; if (K && !K.desc(n)) { keep = null; I.K = null; readStruct(T, o); keep = K; I.K = pup ? K : null; return o; } readStruct(T, o); return o; }
@@ -244,7 +249,11 @@ function applyGameNow(g: any, blob: Uint8Array, knobs: Record<string, unknown>, 
       switch (w.kind) {
         case 'ref': { const key = w.path![0]; const has = N.k === 'opt' ? blob[I.p++] : 1; let v = 0; if (has) { v = dv.getUint32(I.p, true); I.p += 4; } const cur = o[key];   // (the object of that serial, once every serial of this apply stands: a row later in the walk may be the one that names it)
           if (typeof cur === 'number') { if (cur !== v) o[key] = v; break; } c.fix.push(() => { o[key] = v ? objOfSerial(c, v) : (o[key] === undefined ? undefined : null); }); break; }
-        case 'assign': { const key = w.path![0]; const cur = o[key]; if (f.none && N.k === 'opt' && !blob[I.p]) { I.p++; if (f.keepNone && cur) break; const v = f.none === 'null' ? null : undefined; if (!Object.is(cur, v)) o[key] = v; break; }   // (None, as this field's type says it: a reader tests the one it admits, boxes.ts:841 `b.marks !== undefined`)
+        case 'assign': { const key = w.path![0]; const cur = o[key];
+  // ONE OBJECT OF THE PAGE'S MAY BE TWO RECORDS OF THE RUST GAME, two fields of the table under one name of the page's (`fogOfWar`: what the team knows, and the picture's block). The later one is
+  // written over the object in place: read as a value it was a second holder of the same object, and was given a copy of its own, so the game's fog was another object than everybody held
+  if (N.k === 'type' && cur && typeof cur === 'object' && SCHEMA.types[N.path].k === 'struct' && (P.half ??= T.fields.find((x: any) => x.ts === f.ts && x.expr === undefined) !== f)) { readType(N, cur); break; }
+  if (f.none && N.k === 'opt' && !blob[I.p]) { I.p++; if (f.keepNone && cur) break; const v = f.none === 'null' ? null : undefined; if (!Object.is(cur, v)) o[key] = v; break; }   // (None, as this field's type says it: a reader tests the one it admits, boxes.ts:841 `b.marks !== undefined`)
   const v = read(N, f.rec && (cur === undefined || cur === null) ? {} : cur === undefined && fresh.has(o) ? FRESH : cur); if (N.k === 'opt' && N.of.k === 'opt' ? !Object.is(v, cur) : differs(v, cur)) { R.counts.assign++; try { o[key] = v; } catch { R.noSetter.set(q, (R.noSetter.get(q) ?? 0) + 1); } } break; }
         case 'self': readStruct(SCHEMA.types[N.path], o); break;
         case 'path': { let h = o; const P = w.path!; for (let i = 0; i < P.length - 1; i++) { h = h?.[P[i]]; } if (h === null || h === undefined) { sk(N); break; } const key = P[P.length - 1]; const cur = h[key]; const v = read(N, cur === undefined && fresh.has(h) ? FRESH : cur); if (differs(v, cur)) { try { h[key] = v; } catch { R.noSetter.set(q, (R.noSetter.get(q) ?? 0) + 1); } } break; }

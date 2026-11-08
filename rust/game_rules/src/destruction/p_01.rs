@@ -437,7 +437,8 @@ fn foot_knobs(g: &Game) -> crate::debris::FootKnobs {
 /// Per frame: rubble at men's feet, the pools, the heat's decay, the queued dust.   (destruction.ts Destruction.update)
 pub fn destruction_update(g: &mut crate::game::Game, dt: f64) {
     if !g.touring || g.destr.show_chaos.is_some() {
-        let men: Vec<crate::debris::FootMan> = destruction_on_foot(g).into_iter().map(|c| crate::debris::FootMan { pos: g.ch[c].pos, vel: g.ch[c].vel }).collect();
+        let mut men: Vec<crate::debris::FootMan> = destruction_on_foot(g).into_iter().map(|c| crate::debris::FootMan { pos: g.ch[c].pos, vel: g.ch[c].vel, body: false }).collect();
+        if !g.destr.debris.list.is_empty() || !g.destr.edge_look.rubble.is_empty() { destruction_bodies(g, &mut men); }
         let knobs = foot_knobs(g);
         if !g.destr.debris.list.is_empty() {
             crate::debris::debris_feet(g, &men, knobs, None, None);
@@ -492,6 +493,29 @@ pub fn destruction_update(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
+/// THE MEN DOWN, as the places a piece may not lie: a place under each of a lying man's main bones, at his floor's height (below him: `debris_feet` asks a place's height of what lies there).
+fn destruction_bodies(g: &mut Game, out: &mut Vec<crate::debris::FootMan>) {
+    use crate::character::Bone;
+    const BONES: [Bone; 9] = [Bone::Head, Bone::Chest, Bone::Hips, Bone::ThighL, Bone::ThighR, Bone::ShinL, Bone::ShinR, Bone::FootL, Bone::FootR];
+    let mut men: Vec<CharId> = g.guards.iter().filter(|&&gd| g.gd[gd].wound.is_some() || g.ch[g.gd[gd].ch].ragdoll.is_some()).map(|&gd| g.gd[gd].ch).collect();
+    for cv in crate::civilians::civilians_shown(g) {
+        if g.ch[g.gd[cv].ch].ragdoll.is_some() { men.push(g.gd[cv].ch); }
+    }
+    for s in g.seats.clone() {
+        let c = g.pl[crate::cmd::seat_man(g, s)].ch;
+        if g.ch[c].ragdoll.is_some() { men.push(c); }
+    }
+    for c in men {
+        // (his floor is under his lowest bone: a ragdoll's own place says nothing of the height it lies at. A bone well over that is a limb propped up, with nothing under it)
+        let bones: Vec<V3> = BONES.iter().filter_map(|&k| g.ch[c].bones.get(k).copied()).collect();
+        let low = bones.iter().fold(m::INF, |l, p| m::min(l, p[1]));
+        for p in bones {
+            if p[1] < low + 0.6 { out.push(crate::debris::FootMan { pos: [p[0], low - 0.1, p[2]], vel: [0.0; 3], body: true }); }
+        }
+    }
+}
+
+
 /// The men on their feet this frame, bar a seated civilian.   (destruction.ts Destruction.onFoot)
 pub fn destruction_on_foot(g: &mut crate::game::Game) -> Vec<CharId> {
     let mut men: Vec<CharId> = crate::seats::men_up(g).into_iter().map(|pl| g.pl[pl].ch).collect();
@@ -509,7 +533,7 @@ pub fn destruction_on_foot(g: &mut crate::game::Game) -> Vec<CharId> {
 }
 
 /// The rigid debris' and the blown walls' shadow-casting boxes, for the picture.   (destruction.ts Destruction.boxes)
-pub fn destruction_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn destruction_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     crate::debris::debris_boxes(g, out);
     crate::edge_look::edge_look_boxes(g, out);
     crate::wallskin::wall_skin_boxes(g, out);   // (…and what stands of a holed wall's paint: wallskin.ts)

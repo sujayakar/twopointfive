@@ -133,16 +133,6 @@ pub fn director_new(g: &crate::game::Game, script: Option<crate::scene_level::Le
     d
 }
 
-/// Hand the director the camera and the input. (director.ts Director.attach)
-pub fn director_attach(g: &mut crate::game::Game, o: crate::director::DirectorAttachO) {
-    if o.cam.is_some() {
-        g.director.cam = o.cam;
-    }
-    if o.input.is_some() {
-        g.director.input = o.input;
-    }
-}
-
 /// The script's programs by name. (director.ts Director.programs)
 pub fn director_programs(g: &crate::game::Game) -> Vec<String> {
     match &g.director.manifest {
@@ -387,13 +377,9 @@ pub fn director_on_encounter_restart(g: &mut crate::game::Game) {
 
 // ---------------------------------------------------------------- the tick
 /// Once a frame from Game.update, before tacticsTick. (director.ts Director.tick)
-pub fn director_tick(g: &mut crate::game::Game, dt: f64, input: Option<InputId>, cam: Option<CameraId>) {
-    if input.is_some() {
-        g.director.input = input;
-    }
-    if cam.is_some() {
-        g.director.cam = cam;
-    }
+/// (`_input`, `_cam`: the call surface's row still carries them, and nothing reads them: the host's camera and keys are the game's `host_cam` /
+/// `host_input`, handed at the stand)
+pub fn director_tick(g: &mut crate::game::Game, dt: f64, _input: Option<InputId>, _cam: Option<CameraId>) {
     let Some(r) = running(g) else { return };
     let rr = &mut g.tab.director_run[r];
     rr.t += dt;
@@ -402,7 +388,6 @@ pub fn director_tick(g: &mut crate::game::Game, dt: f64, input: Option<InputId>,
     if let Some(shot) = rr.show.as_mut().and_then(|s| s.shot.as_mut()) {
         shot.t += dt;
     }
-    director_tick_tracks(g, r, dt);
     director_tick_bursts(g, r);
     director_tick_kicks(g, r);
     director_tick_shown(g);
@@ -422,7 +407,7 @@ pub fn director_tick(g: &mut crate::game::Game, dt: f64, input: Option<InputId>,
         let rr = &g.tab.director_run[r];
         let s = &rr.signals[rr.sig_seen as usize];
         let s = SignalViewS { name: s.name.clone(), t: s.t, data: s.data.clone() };
-        fresh.push(signal_view(g, r, &s));
+        fresh.push(signal_view(g, &crate::seats::here(g), r, &s));
         g.tab.director_run[r].sig_seen += 1.0;
     }
     director_fire_triggers(g, r, &fresh);
@@ -699,15 +684,12 @@ pub fn director_fail_beat(g: &mut crate::game::Game, r: DirectorRunId, b: Direct
         }
     }
     if g.tab.director_live_beat[b].pinned_camera {
-        if let Some(cam) = g.director.cam {
+        if let Some(cam) = g.host_cam {
             g.tab.camera[cam].pin = None;
             if let Some(s) = g.tab.director_run[r].show.as_mut() {
                 s.shot = None;
             }
         }
-    }
-    if g.director.strict {
-        panic!("{}", msg);
     }
     let rr = &mut g.tab.director_run[r];
     if rr.show.is_some() && !rr.finishing {
@@ -760,7 +742,7 @@ pub fn director_tail(g: &mut crate::game::Game, r: DirectorRunId, dt: f64) {
             return;
         }
     } else {
-        if s.shot.is_some() && g.director.cam.is_some() && !s.handed_over {
+        if s.shot.is_some() && g.host_cam.is_some() && !s.handed_over {
             let shot = s.shot.clone().unwrap();
             director_frame_shot(g, r, &shot, dt);
         }
@@ -804,7 +786,7 @@ pub fn director_frame_shot(g: &mut crate::game::Game, s_key: DirectorRunId, shot
         Some(to) => spec.dist + (to - spec.dist) * u,
         None => spec.dist,
     };
-    let cam = g.director.cam.unwrap();
+    let cam = g.host_cam.unwrap();
     g.tab.camera[cam].pin = Some(crate::camera::FollowCameraPin { look, yaw, pitch: spec.pitch * v3::DEG, dist });
 }
 
@@ -817,7 +799,7 @@ pub fn director_look_of(g: &crate::game::Game, s: &crate::director::CameraShotSp
 // ---------------------------------------------------------------- showcase plumbing
 /// (director.ts Director.enterShow)
 pub fn director_enter_show(g: &mut crate::game::Game, r: DirectorRunId) {
-    let cam = g.director.cam.map(|c| { let c = &g.tab.camera[c]; ShowStateSavedCam { yaw: c.yaw, pitch: c.pitch, dist: c.desired_distance } });
+    let cam = g.host_cam.map(|c| { let c = &g.tab.camera[c]; ShowStateSavedCam { yaw: c.yaw, pitch: c.pitch, dist: c.desired_distance } });
     let saved = ShowStateSaved { ai: g.ai_enabled, god: g.god_mode, invisible: g.player_invisible, quiet: g.quiet_utility, touring: g.touring, cam };
     let look = v3::copy(crate::game::game_follow_pos(g, None));
     g.tab.director_run[r].show = Some(ShowState {
@@ -845,7 +827,7 @@ pub fn director_enter_show(g: &mut crate::game::Game, r: DirectorRunId) {
     g.pl[p].crouch = false;
     g.pl[p].nv = false;
     g.pl[p].nv_amount = 0.0;
-    if let Some(input) = g.director.input {
+    if let Some(input) = g.host_input {
         let mut only = JsSet::new();
         only.add(String::from("KeyP"));
         let i = &mut g.tab.input[input];
@@ -878,7 +860,7 @@ fn blackout_off_unless_permanent(g: &mut Game) {
     }
 }
 fn keys_back(g: &mut Game) {
-    if let Some(input) = g.director.input {
+    if let Some(input) = g.host_input {
         let i = &mut g.tab.input[input];
         i.lock_except = None;
         i.keys.clear();
@@ -887,7 +869,7 @@ fn keys_back(g: &mut Game) {
 }
 /// the follow camera at the framing he had, onto where the player now is
 fn camera_back(g: &mut Game, sv: &ShowStateSaved) {
-    let Some(cam) = g.director.cam else { return };
+    let Some(cam) = g.host_cam else { return };
     if let Some(c) = sv.cam {
         let k = &mut g.tab.camera[cam];
         k.yaw = c.yaw;
@@ -922,7 +904,7 @@ pub fn director_exit_show(g: &mut crate::game::Game, r: DirectorRunId) {
     crate::smoke_types::smoke_system_like_clear_all(g);
     crate::out_events::push_smoke_system_like_clear_all(g);
     crate::game::game_restart_encounter(g);
-    if let Some(cam) = g.director.cam {
+    if let Some(cam) = g.host_cam {
         g.tab.camera[cam].pin = None;
     }
     g.ai_enabled = sv.ai;
@@ -1068,9 +1050,6 @@ pub fn director_tick_bursts(g: &mut crate::game::Game, r: DirectorRunId) {
     g.tab.director_run[r].bursts.retain(|b| b.left > 0.0);
 }
 
-/// R.tracks is only ever pushed for a c.order with aimAt a unit, which no script on the page gives: always empty, so this returns at its first line. (director.ts Director.tickTracks)
-pub fn director_tick_tracks(g: &crate::game::Game, r: DirectorRunId, dt: f64) {}
-
 /// Kicks in the air: on the animator's impact frame (or the instant the clip is somehow over) doors.ts kickIn does the boot's work from where he stands. (director.ts Director.tickKicks)
 pub fn director_tick_kicks(g: &mut crate::game::Game, r: DirectorRunId) {
     if g.tab.director_run[r].kicks.is_empty() {
@@ -1206,7 +1185,7 @@ pub fn director_query_signalled(g: &crate::game::Game, r: DirectorRunId, n: &str
 /// (director.ts Query.routed)
 pub fn director_query_routed(g: &mut crate::game::Game, r: DirectorRunId, u: &crate::director::UnitRef) -> bool {
     match director_guard_of(g, r, u) {
-        Ok(gd) => crate::owner::has_him(g, gd, crate::owner::own().runner),
+        Ok(gd) => crate::owner::has(g, gd, crate::owner::by::RUNNER),
         Err(_) => false,
     }
 }

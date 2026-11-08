@@ -6,6 +6,9 @@ declare module 'tps-bridge/export' {
   export function hostHalf(g: any, knobs: Record<string, unknown>, cmds: readonly any[]): Uint8Array;
   export function shownSeat(g: any): number;
   export function bookOf(g: object): any;
+  export function parse(ty: string): any;
+  export const compiledExpr: (expr: string) => (o: any, g: any, B: any) => any;
+  export function helpersOf(g: any, knobs: Record<string, unknown>): any;
   export function report(): Map<string, { n: number; eg: string }>;
 }
 declare module 'tps-bridge/import' {
@@ -22,7 +25,7 @@ declare module 'tps-bridge/puppet-apply' {
 }
 declare module 'tps-bridge/out-dispatch' {
   export const OUT: Record<string, (g: any, e: any) => void>;
-  export const OUT_HOST: { checkpoint?: (g: any, what: string, e: any) => void; wallFeel?: (g: any, at: [number, number, number]) => void };
+  export const OUT_HOST: { checkpoint?: (g: any, what: string, e: any) => void; wallFeel?: (g: any, at: [number, number, number]) => void; endCard?: (g: any) => void };
   export function dispatchOut(g: any, events: { arm: string; e: any }[]): void;
 }
 declare module 'tps-bridge/puppet-lists.json' {
@@ -38,10 +41,6 @@ declare module 'tps-bridge/poke' {
 declare module 'tps-bridge/ask' {
   export function askNothing(kind: number, name: string): Uint8Array;
   export function installAsks(g: any, knobs: Record<string, unknown>, ask: (kind: number, row: number, seat: number, bytes: Uint8Array) => Uint8Array | number, reapply: () => void): { after(): void; give(S: any, id: string, t?: any, who?: any, o?: any): string | null; refused: { n: number; rows: Record<string, string> } };
-}
-declare module 'tps-bridge/switches.json' {
-  const list: { rows: { row: string; page: unknown; kind: string }[] };
-  export default list;
 }
 declare module 'tps-bridge/surface' {
   export function surfaceHost(H: { g: any; knobs: Record<string, unknown>; surfaceOpen(): boolean; surfaceDispatching(): boolean; surfaceCall(row: number, bytes: Uint8Array, view?: number): Uint8Array } | null, gone?: unknown): void;

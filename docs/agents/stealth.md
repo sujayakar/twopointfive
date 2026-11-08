@@ -45,7 +45,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   looked at and empty = not in the picture; unkeyed one-frame boxes (a tracer's streak among them) only where seen; a long thing counts as seen where its middle or either end is (`thingSeen`: it is rigid); what
   men carry, leaves, wall devices and the moths pass (`thingKeyOf` = −1; a broken fixture's body — fixtureBreak.ts's six `hang` boxes — is one thing, each piece that came off it a thing by itself, seen where it lies); the first 30 updates of an encounter
   (or after the switch comes on) take the floor as it stands. IT REWRITES THE LIST IN PLACE (the headless harness re-points `world.dynamics` at `game.dynBoxes` every frame), so
-  a reader of `g.dynBoxes` after drawCharacters sees the picture's list (`Game.dynRaw` = the game's own count before the rewrite, which edgeLook.ts budgets by), and so does
+  a reader of `g.dynBoxes` after drawCharacters sees the picture's list (`Game.dynRaw` = the game's own count before the rewrite, on the TypeScript game; the Rust game budgets a broken wall by `scene_boxes::FRAME_BOXES`), and so does
   `BoxWorld.raycast`: the cursor's ray lands on the thing as drawn (1 of 26 shipped Standard run digests moves — Sam's yaw for twelve seconds of block-squads:1 — off = the base
   26 of 26), a decal on a remembered thing is hidden while it is remembered, and a tripwire's DRAWN beam ends on a remembered box — its SENSOR does not: while the fog runs the sensor's reach (devices.ts `LaserRt.sense`) is asked of the statics, the leaves where they stand and the props, not of this list (devices sense under the fog only on a quiet mission's rung or a solo `?fow`; never in a team scenario). In a checkpoint since 10-24 for furniture (`FOG.filed`, its own bullet below: held and left-out pieces are filed and no opening half second follows a load; items and rubble still re-prime). `FOG.flat` (0 = off = ships;
   `?fogflat[=0.2]`, Tab ▸ 'fog of war ▸ own light') = the radiance half: fogofwar.wgsl takes the G-buffer albedo (group 1 binding 5) and an unseen pixel is that paint under one
@@ -158,9 +158,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   nothing: it reads the quiet fog's own rows, so a frozen run of the solo night under the fog is `TPS_QUIETFOG=1 TPS_QUIETDEF=team TPS_STICKY=1
   TPS_QUIETWAND=1 TPS_SOLOFOG=1` (and the wand's own word) with `?solo` staged. Older checks that state the solo night as it was hold the switch
   down for that row or follow it (`missions-probes`, `loadout-probes`, `kitlent-check`, `quietfog-check`; `levers-probes` follows it). KNOWN, LEFT:
-  (1) the old start card's own Start (`?cards`, `ui/menu.ts`) closes the card over the plain page: a solo night with no fog, as it was; the starting
-  page's solo row is the fogged one. (2) `?solo&levelFile=<level>` is read as a solo night too and gets the fog, though the mission list has no such
-  row. (3) Alone, the rung 'own eyes' plays as 'cones' does. (4) `tools/qa/solo-night.ts`, the tour and the soak play a game stood up PLAIN: their
+  (1) `?solo&levelFile=<level>` is read as a solo night too and gets the fog, though the mission list has no such
+  row. (2) Alone, the rung 'own eyes' plays as 'cones' does. (3) `tools/qa/solo-night.ts`, the tour and the soak play a game stood up PLAIN: their
   tallies, on either stand, are of the solo night with every guard shown, not of the page's fogged one. (5) The kit note reads 'Alone on the office
   floor.' under the fog (`game/loadout.ts noteOf`), its old second half where it is off. Measured on the bundled office, one seed, both stands. Never
   seen on a GPU and never played: whether the office night is fair under the fog with two cameras and a wand is unmeasured (the quiet missions were
@@ -389,7 +388,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   off. THE LETTER IS NOT THE ROW'S while it is freed and unbound: `keyText` rewrites no line for it. WHAT FOLLOWS, all through one helper
   (`wallWay()` in ui/options.ts: 'key' | 'walk' | 'none'): the Controls list keeps the row, its cap a dashed — that is not marked as moved, its
   words 'Back to a wall: walk into it' ('none' = he unbound it AND switched the walk-in off: 'no key: click the cap to give it one'); the start
-  card's and the boot card's list show a 'Wall' row for the 'Q' one (`controlRows`, ui/menu.ts; no row for 'none'); Options ▸ Game's walk-in row
+   Options ▸ Game's walk-in row
   says 'Off, Q takes it instead'; two lesson lines no longer name Q (train-move 'Walk into the container and keep walking: your back goes to it',
   train-hands 'Back to the wall in the dark corner beside it'); the README's Play table. WHAT ONLY THE KEY DID, gone from the page's board unless
   he binds one: taking a wall with a pistol out while anyone is alert (`pressCalm` keeps the walk-in from putting his gun away in a fight; the
@@ -1256,29 +1255,6 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   test can no longer come true (no shipped step asks it). NOT MENDED, other owners': a grabbed civilian's 'he had a KNIFE at me' line (`dialogue.ts`), the
   knife as an item of kit (`character.ts KitItem`, `kitanim.ts`: never asked for with the key up), the debrief's 'the knife' wording for old runs. The
   bare-handed tell and hold are seen only as CPU mesh stills; never in the page by a person, never on a GPU.
-- **The lab's five scenarios (10-25; `SCENES` in `src/host/sneaklab.ts`, `?sneaklab&scene=N`).** The maintainer: "let's also rework sneaklab a bit to be more like our tutorials.
-  no hand holding but just a few curated scenarios we want to tune": a man standing, a man walking, a dark room, a dark corridor, a corner. A button in Right now restarts the
-  floor and puts Sam at that scenario's start, hands empty and low, with one line at the top of the page and nothing else; 'start over' and Shift+Enter bring the same one back.
-  The dark room and corridor are new floor outside the yard's walls (`tools/levels/sneak-lab.ts`: nothing joins them to it, the button puts Sam in), with three and two men of
-  their own, five dim pools and 'they can't notice you' off. The level's fingerprint moved: old recordings of it are refused. THE CHECK is `sneaklab-check.ts` (the five starts,
-  the held click closing on the walker, a way through each dark place, nobody seeing him at either start for twelve seconds, the corner man coming past) and `stalk-page.cjs`
-  (the five buttons on the real page). THE HARNESS'S METER HAS NO MOON: how dark they are was seen only on the software adapter, never on a GPU, and nobody has played them.
-- **The sneak lab (`/sneaklab` on the dev server = `?levelFile=sneak-lab.json&solo&sneaklab`; `src/host/sneaklab.ts`, `tools/levels/sneak-lab.ts`).** The
-  maintainer, 10-23: "can you make a debug level / workbench where we can play with this and tweak it? … make it workbench like where we can tweak things
-  live". The level is the kit yard's floor, lit, with six men each walking one case (a man who stands · a long straight beat · a loop round a block · through
-  the bunkhouse's two doors · down an alley and round a corner · inside the store). The word `sneaklab` gives the panel its own system, open from the first
-  frame: every number of `STALK` and the few of `CLOSE` / `TWOGEARS` it leans on as live sliders (the two arcs in degrees), the build's numbers back by the
-  section's reset, 'copy them' (one line of JSON on the clipboard and in the panel), 'put everyone back' (`game.restart()`), 'sit one down', 'they can't
-  notice you' (`playerInvisible`) and 'nothing hurts you' (god mode), both on to begin with and written every page step, a line that says what the stalk is
-  doing and why the last one ended (`STALK_STATS.last`), and the stalk's geometry on the floor (`src/ui/stalkviz.ts`, `STALKVIZ.on`: the two range rings, the
-  arc's edges, the station point, the grab's ring, Sam's line). Not a row of the start card, no mission of its own (the plain night on that floor). CHECK:
-  `bun run tools/qa/sneaklab-check.ts` (probe `sneaklab`; the file is its generator's, eleven men of whom ten walk and all stay calm over 40 s, the held click
-  takes the man who stands in 2.52 s with the real guards running, every number of `STALK` has its row); `SNEAKLAB_BREAK=1` must fail men and creep. The
-  page: `tools/qa/stalk-page.cjs`. The panel covered the middle of the page, where Sam stands, so a press on the man landed on a slider: with 'keep Sam
-  clear of this panel' (`SNEAKLAB.clear`, on) the view's follow point is shifted (`camera.ts hostShift`, host only, null in a game) so he stands in the
-  middle of what the panel leaves. The corner list's lone hint row ('LMB  hold to grab him') was never drawn when it was also the hovered row
-  (`ui/overlay.ts deriveInteractions`): a hovered row with no verb is now a hint, not the lead. `map-check.ts sneak-lab` says FAIL for the missing room clear, as it does of `quiet-yard`. Never played by a person; its
-  two floods are bare lights and its light has never been seen on a GPU.
 - **The way in shows on his body, and ends in one step (`STALK.tell`, `STALK.catchSecs`; `stalk.ts stalkTell`, `close.ts closeTick`, `character.ts
   READY_BARE`).** The maintainer, 10-23: "we want very very smooth transitions from regular crouching to the closer than ever state. then, once you click and
   hold its very smooth to gradually shift the animation until you end on a grab, and you can be interrupted any time". With the stalk on, Sam's pose behind a
@@ -1677,26 +1653,6 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   away), upright, grab (held on frame 29 either way), harness. Judged on CPU stills next to the footage's frames
   (`close-stills.ts` scene `stalk-rifle`, the page's stand). One
   seed: a fixed staging. Nobody has seen the new shape on a GPU.
-- **Drag to steer the creep, a prototype (10-23; `STALK.drag`, `dragDead` 14 px, `dragFull` 140 px; `stalk.ts dragged`; lab only:
-  `?sneaklab` raises it, `?stalkdrag=1` anywhere, `?stalkdrag=0` in the lab; `TPS_STALKDRAG=1`).** The maintainer: "you click on the guy
-  and then you can drag towards him to move in that direction. like a joystick centered on the guy. that would make things feel more
-  controlled than right now which feels automatic." THE RULE: the press on a man still begins the creep (the same arc, range and
-  cursor test) and the screen point it was made at is the stick's middle. While the button is down the mouse's way from there is the
-  way Sam creeps (screen up = the camera's forward, as the move keys have it, so the camera following him does not feed the stick) and
-  its length from `dragDead` to `dragFull` is the share of `pace`. Left at the press he holds still in the pose. He faces the man
-  throughout; the way into the man is taken off the stick over the last 20 cm before `keyM`, so he stops there and can still go round.
-  Everything else is the creep's (the arc ends it, a wall ends it, the key grabs). NOT the switch rule on purpose: it changes how the
-  hold plays everywhere (the tutorials teach "hold left click"), so it is down in the plain page and on both stands until the
-  maintainer has tried it; there is no `FROZEN_HOLDS` row because the stands agree. The line over the man reads "press and drag to
-  sneak up on him" while it is up. THE CHECK is `stalkdrag-check.ts` (`probes.ts stalkdrag`; `STALKDRAG_BREAK=1` reds four of seven),
-  both stands: still (2 s, 0 cm moved), toward (the whole drag 1.6 m/s, half of it 0.8), side (across, 2° off the man), stops (0.79 m
-  behind him, the key takes him), outside, off, harness. OFF THE VIEW: a press made on the view goes on being the stick with the mouse
-  over the panel or the HUD (`input.ts` window `mousemove`), only while `Input.dragOff`, which `Game.update` writes on the host's input
-  from `STALK.on && STALK.drag` each frame (the editor imports `Input`, so input.ts does not import stalk.ts). It asks the event's own
-  `buttons` (a button let go outside the window sends no mouseup), calls `modsUp` first, keeps tracking through a lock as the view's
-  listener does, and follows no press begun off the view (a lab slider). The `outside` line drives it on a window of lists. The page
-  drive drags the real mouse in the lab (on the real page the drag goes over the panel: 139 px of 140 read with the listener, 46 without). No hand has held it and nobody has
-  seen it on a GPU.
 - **Weight in it: his trunk and arms go with his legs (10-25; `STALK.heft`, numbers `heft*` in `stalk.ts`, springs in `character.ts CREEP.heft`; `?stalkheft=0`,
   `TPS_STALKHEFT=1`; acts only under `STALK.wide`).** The maintainer, of the arms in the creep on a GPU: "(1) looks weird, but (2) also just looks like very static. the chaos
   theory animations have some real weight but also smoothness and precision to them". Read frame by frame off the footage (Nos. 24 and 59): the back bows hard, the shoulders
@@ -1731,14 +1687,6 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   within 6 cm), letgo (walked into reach in 2.6 s), off (a move key ends it), harness. `stalk-check` and `stalkdrag-check` hold it down
   (their cards are of a key that ends the creep and of the stick's own way). The real page (`stalk-page.cjs`) drives it with a real button and key and picks the clearest of the four. Nobody
   has played it and it was never seen on a GPU; the harness has no hand on the keys. One seed: a fixed staging.
-- **The sneak lab's knobs in groups (10-23; `src/host/sneaklab.ts` GROUPS, NUMS, TOGS).** The maintainer, of the panel on his GPU:
-  "it's hard to tweak the knobs in the debug panel, illegible. maybe more grouping, shorter names, alt text would help? and some
-  explanation of what to look for / test in the alt text?" The one long "The creep" list is ten sections that fold (Start and stop,
-  Pace, Pose, The grab, Right click, Passing guards, Fast crouch walk, Corner wait, When he turns, Old pose), the first three of the
-  game's own feel open; each has its own '↺', a header hover saying what to watch, and a live "N moved" summary; every switch sits in
-  its group; every slider has a revert dot. Names are short enough for the 372 px column; each hover says what the number is, what
-  to look for and what to try. The page drive reads it: 12 sections, 79 rows, none cut short, none without a hover. Panel code
-  (`src/ui/panel.ts`) is unchanged. A new STALK number still needs its row here (`sneaklab-check` words).
 - **The grab's disarm, second pass (`HOLD.strip`, `HOLD.bareGrip`; `disarm.ts`, `character.ts`).** The move itself is `HOLD.disarm` (`?disarm=0`,
   `TPS_DISARM=1` with `TPS_HOLDDROP=1`): Sam's right hand takes the gun out of the man's hand 0.2 s into the grab and lets it go at 0.5 s; its voices are
   `docs/agents/sounds.md`'s. Judged on stills, the first pass set the gun down at his thigh (it slid down his leg and lay under his foot) and the held man's
@@ -1857,4 +1805,3 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   asks; (f) the room fight's turn-to lines and the player's line for the net are held only as written (the check counts the calls and asks the bare
   line across one pair), not by a fought run that needs them; (g) `lanes.ts gunsManned` and `pointInView` (a teammate's view of a place or a
   body) still stop at a thin thing.
-- **Tap to step (`src/game/tapstep.ts` TAPSTEP, a prototype; `tools/qa/tapstep-check.ts`, also `probes.ts tapstep`).** The maintainer, 2026-10-25: "i love the tap to step idea! curious how we can make this feel awesome. and also generalize between creeping on a guy to grab him vs slithering through guards". Crouched, the move keys are steps: a press lifts the foot, the key kept down reaches (`reachM`), let go plants it (a tap is `tapM`), and between steps he stands dead still. A step is a least-jerk curve from rest to rest over `secs` (less for a shorter one), walked on its own numbers: his first cut, a trapezoid at 2 m/s, drew "the rhythm of them is nice but it looks like it'd be loud. the legs move in abrupt movements"; now 0.12 m/s at most in a frame, top 1.66 m/s, and the legs nearly stopped as the foot comes down. The legs go from wherever they stand to the next plant, and a creep let go of hands them over untouched: the first cut forced them back to its last plant, half a cycle in one frame, which he read as a snap to idle ("the animation can be paused at any point"). After a plant his weight settles for `settle` s: a held key waits it out, so holding is always the safe pace (about 0.75 m/s); a press inside it steps at once, quicker by `rushed`, and scuffs (up to `scuff`); a press just after it is on the beat, a `beatM` tap. A plant just after a near man's footfall is under it (`mask`). A press toward the back of a man he could stalk, inside `landM` of the spot `STALK.keyM` behind him and `landCos` of its line, bends onto that spot, settled at the press, and keys turned away take it back; on the spot a key is a plain step. His replay of the first cut: "weird snapping to the guard, stuck on them afterwards" (a tap carried 1.1 m, then every key was a step of no length). Behind a walker `follow` of his speed goes into the step. Shift is still the quick crouch walk. Switch: up in the lab and with `?tapstep=1`, `?tapstep=0` puts it down in the lab; down in the plain page and on the frozen stand (`TPS_TAPSTEP=1`), so no FROZEN_HOLDS row, as with `stalkdrag`. Rides a recording; one from before the key replays with it down. `TAPSTEP_BREAK=1` fails on both stands' lines; soft, away and letgo were also run against the first cut and fail there. Every number has a row under Tap to step in the lab. A replay of the lab can't be rerun headless yet (its scene is staged by the page, not on the tape). Never seen on a GPU.

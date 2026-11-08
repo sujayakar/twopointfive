@@ -24,9 +24,9 @@ fn solid_blocked(g: &mut Game, a: V3, b: V3) -> bool { crate::scene_collision::s
 fn segment_blocked(g: &mut Game, a: V3, b: V3) -> bool { crate::scene_collision::segment_blocked(g, a, b, None, None, None) }
 
 /// the men of the orders let go on this order's word (doortools.ts bangSpot, bang)
-fn word_ops(g: &Game, op: DoorOpId) -> Vec<DoorOpId> {
+fn word_ops(g: &Game, seat: &crate::seats::SeatRef, op: DoorOpId) -> Vec<DoorOpId> {
     match dop!(g, op).word {
-        Some(w) => g.door_tools.ops.iter().copied().filter(|o| dop!(g, *o).word == Some(w)).collect(),
+        Some(w) => seat.door_tools.ops.iter().copied().filter(|o| dop!(g, *o).word == Some(w)).collect(),
         None => Vec::new(),
     }
 }
@@ -140,12 +140,12 @@ pub fn door_tools_bang_spot(g: &mut crate::game::Game, op: DoorOpId, from: V3) -
     }
     if floor.len() < 6 { return None; }
     // ours in a flash: the men this can would blind, not the ones bang() spares
-    let word = word_ops(g, op);
+    let word = word_ops(g, &crate::seats::here(g), op);
     let gate = gate_ops(g, op);
-    let sams = crate::orders::squad_orders_sams(g);
+    let sams = crate::orders::squad_orders_sams(g, &crate::seats::here(g));
     let mut ours: Vec<V3> = Vec::new();
     for x in g.guards.clone() {
-        let mine = if sams { g.gd[x].team == crate::teams::Team::Operative && g.gd[x].unit.is_some() } else { crate::orders::squad_orders_mine(g, x) };
+        let mine = if sams { g.gd[x].team == crate::teams::Team::Operative && g.gd[x].unit.is_some() } else { crate::orders::squad_orders_mine(g, &crate::seats::here(g), x) };
         if !mine || dead(g, x) { continue; }
         let at = pos(g, x);
         if on_entry(g, op, &word, &gate, x) || near_door(g, d, side, at) { continue; }
@@ -153,7 +153,7 @@ pub fn door_tools_bang_spot(g: &mut crate::game::Game, op: DoorOpId, from: V3) -
     }
     let pl = g.player;
     let sam_at = g.ch[g.pl[pl].ch].pos;
-    if !(g.pl[pl].down || (sams && near_door(g, d, side, sam_at))) { ours.push(crate::orders::squad_orders_sam_stood(g)); }
+    if !(g.pl[pl].down || (sams && near_door(g, d, side, sam_at))) { ours.push(crate::orders::squad_orders_sam_stood(g, &crate::seats::here(g))); }
     let (into_min, throw_m, air_h, flash_m, lit) = (g.k.doortools.bang_into_min, g.k.doortools.thr_throw_m, g.k.doortools.air_h, g.k.doortools.thr_flash_m, g.k.doortools.bang_into_lit);
     // (at, n, sc, deep)
     let mut cands: Vec<(V3, f64, f64, f64)> = Vec::new();
@@ -225,22 +225,22 @@ pub fn door_tools_bang(g: &mut crate::game::Game, op: DoorOpId, it: ItemId) {
     let all = g.guards.clone();
     crate::throwables::item_set_fired(g, it, true);
     let (d, side) = (dop!(g, op).door, dop!(g, op).side);
-    let word = word_ops(g, op);
+    let word = word_ops(g, &crate::seats::here(g), op);
     let gate = gate_ops(g, op);
-    let sams = crate::orders::squad_orders_sams(g);
+    let sams = crate::orders::squad_orders_sams(g, &crate::seats::here(g));
     let pl = g.player;
     let sam_pos = g.ch[g.pl[pl].ch].pos;
     let sam_ours = sams && near_door(g, d, side, sam_pos);
-    let team = match dop!(g, op).threw { Some(th) => g.gd[th].team, None => crate::orders::squad_orders_team(g) };
+    let team = match dop!(g, op).threw { Some(th) => g.gd[th].team, None => crate::orders::squad_orders_team(g, &crate::seats::here(g)) };
     g.tab.item[it].side = Some(team);
     let mut rest: Vec<GuardId> = Vec::new();
     for x in all.iter().copied() {
-        let ours = on_entry(g, op, &word, &gate, x) || ((if sams { g.gd[x].team == crate::teams::Team::Operative } else { crate::orders::squad_orders_mine(g, x) }) && { let at = pos(g, x); near_door(g, d, side, at) });
+        let ours = on_entry(g, op, &word, &gate, x) || ((if sams { g.gd[x].team == crate::teams::Team::Operative } else { crate::orders::squad_orders_mine(g, &crate::seats::here(g), x) }) && { let at = pos(g, x); near_door(g, d, side, at) });
         if !ours { rest.push(x); }
     }
     let was: Vec<f64> = rest.iter().map(|x| g.gd[*x].stagger_until).collect();
     g.guards = rest.clone();
-    let order_team = crate::orders::squad_orders_team(g);
+    let order_team = crate::orders::squad_orders_team(g, &crate::seats::here(g));
     crate::combat::detonate_stun(g, it, Some(false), Some(crate::combat::DetonateStunSam { side: Some(order_team), spare: Some(sam_ours) }));
     g.guards = all;
     for (i, x) in rest.iter().enumerate() {
@@ -309,8 +309,8 @@ pub fn door_tools_on_point(g: &crate::game::Game, gd: GuardId, a: OrdersAssignme
 }
 
 /// Has he a corner of an entry still to check, with a mate through the frame behind him. (doortools.ts DoorTools.owesCorner)
-pub fn door_tools_owes_corner(g: &crate::game::Game, gd: GuardId) -> bool {
-    for op in g.door_tools.ops.iter().copied() {
+pub fn door_tools_owes_corner(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
+    for op in seat.door_tools.ops.iter().copied() {
         let o = &dop!(g, op);
         if o.phase != Phase::Enter { continue; }
         if let Some(c) = o.corner.get(gd) {
@@ -568,7 +568,7 @@ pub fn door_tools_first_in(g: &mut crate::game::Game, op: DoorOpId, at: Option<V
     }
     let threw = dop!(g, op).threw;
     let hands: Vec<GuardId> = fronts.iter().copied().filter(|x| Some(*x) != threw || *x == lead || fronts.len() < 2).collect();
-    let rw = crate::rearwatch::rear_watcher(g, op);
+    let rw = crate::rearwatch::rear_watcher(g, &crate::seats::here(g), op);
     let able: Vec<GuardId> = match rw {
         Some(r) if hands.iter().any(|x| *x != r) => hands.iter().copied().filter(|x| *x != r).collect(),
         _ => hands,
@@ -589,13 +589,13 @@ pub fn door_tools_seen_most(g: &mut crate::game::Game, lead: GuardId, men: &[Gua
     let cells: Vec<f64> = g.tab.roomfight_room[room].cells.iter().map(|c| c.0).collect();
     let mut best = if men.contains(&lead) { lead } else { men[0] };
     let mut bn = if best == lead {
-        crate::floorseen::floor_seen_count(g, lead, &cells, since) + m::max(0.0, g.k.doortools.lead_seen_min - 1.0)
+        crate::floorseen::floor_seen_count(g, &crate::seats::here(g), lead, &cells, since) + m::max(0.0, g.k.doortools.lead_seen_min - 1.0)
     } else {
-        crate::floorseen::floor_seen_count(g, best, &cells, since)
+        crate::floorseen::floor_seen_count(g, &crate::seats::here(g), best, &cells, since)
     };
     for x in men.iter().copied() {
         if x == best { continue; }
-        let k = crate::floorseen::floor_seen_count(g, x, &cells, since);
+        let k = crate::floorseen::floor_seen_count(g, &crate::seats::here(g), x, &cells, since);
         if k > bn { bn = k; best = x; }
     }
     best
@@ -622,9 +622,9 @@ pub fn door_tools_on_sector(g: &mut crate::game::Game, gd: GuardId, a: OrdersAss
 }
 
 /// The men an ended entry has holding one of its room's other doors. (doortools.ts DoorTools.doorKeepers)
-pub fn door_tools_door_keepers(g: &crate::game::Game) -> Vec<(GuardId, DoorId, OrdersAssignmentId)> {
+pub fn door_tools_door_keepers(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<(GuardId, DoorId, OrdersAssignmentId)> {
     let mut out = Vec::new();
-    for (gd, r) in g.door_tools.held.iter() {
+    for (gd, r) in seat.door_tools.held.iter() {
         if let Some(d) = r.door { out.push((gd, d, r.a)); }
     }
     out
@@ -640,7 +640,7 @@ pub fn door_tools_keep_sectors(g: &mut crate::game::Game) {
     // (a copy of the keys: the body removes only the entry it stands on)
     for gd in g.door_tools.held.keys() {
         let mut r = match g.door_tools.held.get(gd) { Some(r) => *r, None => continue };
-        if dead(g, gd) || crate::orders::squad_orders_of(g, gd) != Some(r.a) { g.door_tools.held.delete(gd); continue; }
+        if dead(g, gd) || crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) != Some(r.a) { g.door_tools.held.delete(gd); continue; }
         if r.door.is_some() && (!crate::nvg::nvg_worn(g, gd) || crate::nvg::nvg_black(g, gd)) { asg!(g, r.a).search_t = Some(t); }
         keep_sector(g, gd, &mut r, t);
         *g.door_tools.held.get_mut(gd).unwrap() = r;
@@ -750,7 +750,7 @@ pub fn door_tools_other_doors(g: &mut crate::game::Game, op: DoorOpId, ended: Op
         if dead(g, x) || !dop!(g, op).pod.has(x) { continue; }
         let mine = dop!(g, op).mine.get(x).copied();
         // (`of` answers null, `mine.get` undefined: no order on either side is not a match)
-        let of = crate::orders::squad_orders_of(g, x);
+        let of = crate::orders::squad_orders_of(g, &crate::seats::here(g), x);
         if of.is_none() || of != mine { continue; }
         if ended && g.door_tools.held.get(x).map(|h| h.a) != mine { continue; }
         inside.push(x);
@@ -793,13 +793,13 @@ pub fn door_tools_other_doors(g: &mut crate::game::Game, op: DoorOpId, ended: Op
             for x in inside.iter().copied() {
                 let h = g.door_tools.held.get(x).copied();
                 let arrived = dop!(g, op).mine.get(x).copied().map_or(false, |a| asg!(g, a).arrived);
-                if (dop!(g, op).on_pod.has(x) || (ended && arrived)) && !door_tools_on_other(g, op, x) && !h.map_or(false, |h| h.out.unwrap_or(false) || h.door.is_some()) && g.time >= g.gd[x].dazzled_until { free.push(x); }
+                if (dop!(g, op).on_pod.has(x) || (ended && arrived)) && !door_tools_on_other(g, op, x) && !h.map_or(false, |h| h.out.unwrap_or(false) || h.door.is_some()) && !crate::control::man::blind(g, x) { free.push(x); }
             }
         }
         let mut still = 0usize;
         for x in dop!(g, op).men.clone() {
             if dead(g, x) { continue; }
-            let of = crate::orders::squad_orders_of(g, x);
+            let of = crate::orders::squad_orders_of(g, &crate::seats::here(g), x);
             if of.is_some() && of == dop!(g, op).mine.get(x).copied() { still += 1; }
         }
         let spare = if still < 3 { 0.0 } else { m::floor(inside.len() as f64 / 2.0) };
@@ -903,7 +903,7 @@ pub fn door_tools_hold_doors(g: &mut crate::game::Game, op: DoorOpId) {
     let ours: Vec<GuardId> = g.guards.iter().copied().filter(|x| g.gd[*x].team == crate::teams::Team::Operative && g.gd[*x].unit.is_some() && !dead(g, *x)).collect();
     let mut stood: JsMap<GuardId, V3> = JsMap::new();
     for x in ours.iter().copied() { stood.set(x, pos(g, x)); }
-    let sam = crate::orders::squad_orders_sam_stood(g);
+    let sam = crate::orders::squad_orders_sam_stood(g, &crate::seats::here(g));
     let fc0 = frame(g, d);
     let mut doors: Vec<crate::roomfight::Entry> = Vec::new();
     for e in g.tab.roomfight_room[room].entries.clone() {
@@ -986,16 +986,13 @@ pub fn door_tools_hold_doors(g: &mut crate::game::Game, op: DoorOpId) {
                 let there = match dealt.get(x) {
                     Some(q) => *q,
                     None => {
-                        let of_post = crate::orders::squad_orders_of(g, x).and_then(|a| asg!(g, a).post);
+                        let of_post = crate::orders::squad_orders_of(g, &crate::seats::here(g), x).and_then(|a| asg!(g, a).post);
                         match of_post { Some(q) => q, None => pos(g, x) }
                     }
                 };
                 taken.push(there);
             }
-            // (offSwing moves P.pos in place, and P.pos is `post`)
-            let mut moved = crate::doortools::DoorToolsOffSwingP { pos: to, watch: None };
-            door_tools_off_swing(g, &moved, Some(d), side, &taken, Some(at));
-            post = Some(moved.pos);
+            post = Some(to);
         }
         let from = match post { Some(p) => p, None => pos(g, gd) };
         let yaw = v3::yaw_to(from, w);

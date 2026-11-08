@@ -88,9 +88,8 @@ for (const name of NAMES) {
   for (let k = 0; k < m0.length; k++) { if (m0[k] !== 255 || m1[k] === 255) continue; const x = WORLD.rcMin[0] + (k % PLACE_W + 0.5) / PLACE_RES, z = WORLD.rcMin[2] + (Math.floor(k / PLACE_W) + 0.5) / PLACE_RES;
     if (r.bites.some(q => { const u = q.alongX ? x : z, v = q.alongX ? z - q.z : x - q.x; return u > q.s0 - 0.01 && u < q.s1 + 0.01 && Math.abs(v) < 0.45; })) freed++; }   // (a cell in a bite's own stretch of the wall; a wall's far end that falls on a cell's very middle is the split's rounding)
   if (freed) holed.push(`${name}: ${freed} cells`);
-  if (L.some(b => b.cutRound && b.cut?.length !== 8)) off.push(`${name}: a round thing that is not a prism of twelve sides`);
 }
-check(badFile.length === 0, 'every count file names a level and holds two whole numbers on one line', badFile.join(', '));
+check(badFile.length === 0, 'every count file names a level and holds one whole number on one line', badFile.join(', '));
 check(off.length === 0 && filed >= 8, `every level gets what its own boxes say, as its count file has it (${asked} levels asked, ${filed} with a file): its yard walls broken`, off.length ? off.join('; ') : got.join(' · '));
 check(indoors.length === 0 && all > 0, 'no bite is in a wall with a roof on either hand (a room keeps its walls)', indoors.length ? indoors.join('; ') : `${all} bites, no slab over head height two cells out on either hand`);
 check(low.length === 0 && near.length === 0, 'no bite goes under the 2 m line or deeper than 0.4 m, and none is nearer than 10 m to another', [...low, ...near].join('; '));

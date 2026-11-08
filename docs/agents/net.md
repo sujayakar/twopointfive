@@ -60,8 +60,8 @@ line).
     on both). 30 of 310 state words differ and 897,180 paths of the export, in four kinds: the picture's and the host's own carried in the state (the
     quality preset under `g.engine.settings`, the cast's meshes, the look's materials on box rows, the page's wind handed to its particles, caches
     and counters); the page's extra camera and Input rows (3 and 2 against 2 and 1), so a seat's camera is `CameraId(1)` there and `CameraId(0)` in
-    bun; the order rows (bun's table holds `thrWord` twice, 25 rows against 24); and three unplaced (`m.kit.issued_player{…}.slot`,
-    `m.kit.kit_solo.stand`, `g.director.strict`). So the whole words cannot be the alarm between a page and a server until the host's-own list
+    bun; the order rows (bun's table holds `thrWord` twice, 25 rows against 24); and two unplaced (`m.kit.issued_player{…}.slot`,
+    `g.director.strict`; a third, the harness's solo flag, is the game's own `stood.solo_stand` now, and an address stands it down on every host). So the whole words cannot be the alarm between a page and a server until the host's-own list
     covers the first kind and the rows are numbered alike. The probe and the path list: the Library's
     `rebuild/multiplayer/coop-on-rust/page-vs-bun/`.
     READ AGAIN ON THE RUST GOAL'S FOURTH BATCH (step 1905): a game of two on four bun machines agrees on every one of 307 parts, and the whole exports of
@@ -140,7 +140,7 @@ line).
   cursor, the view's size and nine pose numbers — about a hundred bytes — and one working makes the view everywhere. Numbers cross as JSON to the bit
   (`cmd.ts numWord` / `wordNum`: −0, NaN and the infinities as words).
 - **One tick, the same everywhere** (`src/net/step.ts netStep`): `Game.stepSeats(1 / 60, cmds)`, then what a host does between two ticks that the next one
-  reads — `lights.update`, `world.relist` (the list the game reads; the pack for the picture waits for a draw, `docs/agents/overview.md`), `hudExpireBubbles`. A client's page must step confirmed ticks through this function and nothing else.
+  reads — `lights.update`, `world.relist` (the list the game reads; the pack for the picture waits for a draw, `docs/agents/overview.md`). A client's page must step confirmed ticks through this function and nothing else.
 - **The server's authority over input is one rule** (`src/net/timeline.ts SeatLine.take`, asked once a seat a tick): the seat's own record for that tick if
   it came in time; else the newest record the seat is known by with its one-tick edges off (keys and buttons stay held, the view stays); a record that came
   LATE is not lost — it becomes the newest known and its edges (a press, a click, the wheel) land on the next tick; a seat nobody sits in holds nothing.
@@ -175,7 +175,7 @@ line).
   moved to does not carry it, so a visit's record never holds it (a browser that keeps nothing leaves it on the address). WHO STEPS THE GAME is the
   loop's seam, `host/loop.ts LoopCtx.tick` (absent = `game.update` then the lights, the loop as it was): on a page tick the player's input is sampled
   (`sampleCmd`, off the page's own camera) and sent, the game is stepped only through the server's confirmed ticks by `netStep`, and the host's half
-  of a tick is done round them (`Game.hostBefore` / `hostAfter`: `update`'s own lines, named — the peek's nudge, a blast's kick, a cut, the live view
+  of a tick is done round them (`Game.hostAfter`: `update`'s own lines, named — the peek's nudge, a blast's kick, a cut, the live view
   put back). HOW FAST: one confirmed tick a page tick, two while more than `NET.lead` wait; from `NETPAGE.far` waiting (it joined late, its tab slept)
   the page CATCHES UP as a replay seeks — the mixer shut, as many ticks as fit in `NETPAGE.farMs`, the hands off the keys (decided before the tick's
   record is made), nothing drawn between two of those ticks, the picture's queues let go when it is level (`engineplay.ts unseenDone`, the seek's own). No playout buffer: a tick that comes late is a tick drawn late. THE GAME IS THE SERVER'S: a card's Restart and a checkpoint's load are refused in words
@@ -351,8 +351,8 @@ line).
   mission's address to `coop.ts host` instead of loading it (one game a press). WHAT THE HOST HANDS OVER (`coopScenario`): that address — level, hour,
   weather, way in, difficulty — without this visit's own words (`VISIT_FLAGS`, the sending words), with `squad=4&seats=2` on it (each player brings two
   teammates: `seats.ts dealSeats`) and the difficulty levers this machine keeps written out (the server keeps nothing), and a fresh die. THE SERVER
-  READS THE ADDRESS'S DIFFICULTY (`tools/mp/stand.ts freshRecipe` calls `initDifficulty` as the page does at boot; before this a host's Hard was the
-  server's Standard). NOT CARRIED: the kit this machine keeps (both play the kit as issued) and knob tables changed in the debugger (Team feel rows).
+  READS THE ADDRESS'S DIFFICULTY (the harness's addressed stand does, `tools/qa/headless.ts standUp({ address })` by `standup.ts difficultyOfAddress`, with the
+  setup's tables laid over it as `tables`; before this a host's Hard was the server's Standard). NOT CARRIED: the kit this machine keeps (both play the kit as issued) and knob tables changed in the debugger (Team feel rows).
   The control plane takes a scenario up to 400 characters (`games.ts MP.scenarioMax`; it was a word of 120). THE HOST'S PAGE LOADS THE MISSION AT ONCE
   and stands in the first seat while the server waits (its rule: no tick until every seat's client has stood its game); `coopInvite` shows the code,
   the link and Copy link until the fight starts, and 'Your friend is joining' once the control plane says the second seat is connected. REFUSALS are

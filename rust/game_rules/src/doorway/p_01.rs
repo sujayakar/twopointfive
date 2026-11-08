@@ -216,9 +216,6 @@ pub fn leaf_stalled(g: &mut crate::game::Game, gd: GuardId) -> bool {
     false
 }
 
-/// STAND: is the file's switch on: settled, always.   (doorway.ts doorwayFile)
-pub fn doorway_file(g: &crate::game::Game) -> bool { true }
-
 /// The first frame his walk goes through within `reach`.   (doorway.ts doorAhead)
 pub fn door_ahead(g: &crate::game::Game, gd: GuardId) -> Option<crate::doorway::DoorAhead> {
     let pos = g.ch[g.gd[gd].ch].pos;
@@ -285,9 +282,9 @@ pub fn step_to(g: &mut crate::game::Game, gd: GuardId, p: V3, pace: f64, dt: f64
 }
 
 /// Is `p` floor nobody has, by `apart`, nor is waiting at.   (doorway.ts spotFree)
-pub fn spot_free(g: &crate::game::Game, gd: GuardId, p: V3, apart: f64) -> bool {
+pub fn spot_free(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, p: V3, apart: f64) -> bool {
     if nav_blocked(g, p[0], p[2]) { return false; }
-    if g.gd[gd].team == crate::teams::Team::Operative && !g.pl[g.player].down && flat(g.ch[g.pl[g.player].ch].pos, p) < apart { return false; }
+    if g.gd[gd].team == crate::teams::Team::Operative && !g.pl[seat.player].down && flat(g.ch[g.pl[seat.player].ch].pos, p) < apart { return false; }
     let t = g.time;
     for i in 0..g.guards.len() {
         let o = g.guards[i];
@@ -311,7 +308,7 @@ pub fn jamb_spot(g: &mut crate::game::Game, gd: GuardId, d: DoorId, side: f64) -
         for lat in [f.w + jamb_past + kf * file_gap, -(jamb_past + kf * file_gap)] {
             let p: V3 = [f.hx + f.ux * lat + f.nx * side * jamb_out, 0.0, f.hz + f.uz * lat + f.nz * side * jamb_out];
             let dd = flat(pos, p);
-            if dd >= bd || !spot_free(g, gd, p, apart) { continue; }
+            if dd >= bd || !spot_free(g, &crate::seats::here(g), gd, p, apart) { continue; }
             if crate::scene_collision::solid_blocked(g, [pos[0], 0.45, pos[2]], [p[0], 0.45, p[2]], None) { continue; }
             let mut bad = false;
             for i in 0..g.doors.list.len() {
@@ -362,15 +359,15 @@ fn gap_k(g: &crate::game::Game, d: f64) -> f64 {
 }
 
 /// The mark his order gave him, if any.   (doorway.ts:340, 344 `g.orders.of(x)?.post`)
-fn order_post(g: &crate::game::Game, gd: GuardId) -> Option<V3> {
-    let a = crate::orders::squad_orders_of(g, gd)?;
+fn order_post(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> Option<V3> {
+    let a = crate::orders::squad_orders_of(g, seat, gd)?;
     g.tab.orders_assignment[a].post
 }
 
 /// On the mark his order gave him.   (doorway.ts:344 onOwn)
-fn on_own(g: &crate::game::Game, o: Option<GuardId>) -> bool {
+fn on_own(g: &crate::game::Game, seat: &crate::seats::SeatRef, o: Option<GuardId>) -> bool {
     let Some(o) = o else { return false };
-    let Some(post) = order_post(g, o) else { return false };
+    let Some(post) = order_post(g, seat, o) else { return false };
     flat(g.ch[g.gd[o].ch].pos, post) < g.k.doormanners.own_m
 }
 
@@ -425,7 +422,7 @@ pub fn doorway_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64)
     let mut end_by = false;
     if !by_door {
         if let Some(pg) = path_goal {
-            if goal_left <= g.k.doormanners.own_end_m && order_post(g, gd).is_some() {
+            if goal_left <= g.k.doormanners.own_end_m && order_post(g, &crate::seats::here(g), gd).is_some() {
                 for i in 0..g.doors.list.len() {
                     let d = g.doors.list[i];
                     if flat(pg, g.dr[d].frame_centre) <= 2.5 { end_by = true; break; }
@@ -472,7 +469,7 @@ pub fn doorway_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64)
         if s == 1.0 && !h && !mine && !waiting && d_o < gap && (js::truthy(hx) || js::truthy(hz)) {   // a man ahead of him on his line by a door: followed at the gap, never walked into
             let (ux, uz) = ((o.pos[0] - pos[0]) / js::or(d_o, 1.0), (o.pos[2] - pos[2]) / js::or(d_o, 1.0));
             if ux * hx + uz * hz > 0.7 {
-                let own = v_o < 0.6 && on_own(g, o.gd);   // on his own mark: standing, whatever his last steps onto it say
+                let own = v_o < 0.6 && on_own(g, &crate::seats::here(g), o.gd);   // on his own mark: standing, whatever his last steps onto it say
                 if !by_door && !own { continue; }
                 if !own && v_o > 0.4 && o.vel[0] * hx + o.vel[2] * hz > 0.3 * v_o {
                     s = gap_k(g, d_o);
@@ -500,7 +497,7 @@ pub fn doorway_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64)
             let sgn = if (pos[0] - rp[0]) * px + (pos[2] - rp[2]) * pz >= 0.0 { 1.0 } else { -1.0 };
             for sd in [sgn, -sgn] {
                 let cand: V3 = [rp[0] + px * sd * round_out, 0.0, rp[2] + pz * sd * round_out];
-                if nav_blocked(g, cand[0], cand[2]) || crate::scene_collision::solid_blocked(g, [pos[0], 0.45, pos[2]], [cand[0], 0.45, cand[2]], None) || !spot_free(g, gd, cand, 0.6) { continue; }
+                if nav_blocked(g, cand[0], cand[2]) || crate::scene_collision::solid_blocked(g, [pos[0], 0.45, pos[2]], [cand[0], 0.45, cand[2]], None) || !spot_free(g, &crate::seats::here(g), gd, cand, 0.6) { continue; }
                 let at = g.gd[gd].path_i;
                 g.gd[gd].path.insert(at, cand);
                 g.stats.doorway.round += 1;

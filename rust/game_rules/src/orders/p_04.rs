@@ -66,8 +66,8 @@ fn target_at(t: &OrderTarget) -> V3 {
     }
 }
 /// `{ kind: 'none', at: [p[0], 0, p[2]] }`, p where Sam stands
-fn at_sam(g: &Game) -> OrderTarget {
-    let p = g.ch[g.pl[g.player].ch].pos;
+fn at_sam(g: &Game, seat: &crate::seats::SeatRef) -> OrderTarget {
+    let p = g.ch[g.pl[seat.player].ch].pos;
     OrderTarget::None(OrderTargetNone { at: [p[0], 0.0, p[2]], man: None })
 }
 fn opts_men(men: Vec<GuardId>, ack: Option<String>) -> GiveOpts {
@@ -105,23 +105,23 @@ pub fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId, cam: C
             if !crate::input::input_down(g, input, &key) {
                 g.orders.cmd_press = None;
                 g.stats.cmdring.quick += 1;
-                let goal = (p.add.unwrap_or(false) || shift_down(g, input)) && crate::planmode::goals_on(g);
+                let goal = (p.add.unwrap_or(false) || shift_down(g, input)) && crate::planmode::goals_on(g, &crate::seats::here(g));
                 squad_orders_tap_give(g, &p.t, input, Some(goal));
                 return true;
             }
             let digit = squad_orders_ring_digit(g, input);
             if !digit && g.time - p.t0 < crate::cmdring::ring_hold_secs(g) - 1e-6 { return false; }
             g.orders.cmd_press = None;
-            if !squad_orders_back_free(g) { return false; }
+            if !squad_orders_back_free(g, &crate::seats::here(g)) { return false; }
             let add = p.add.unwrap_or(false) || shift_down(g, input);
             let part = match goal_part_or_nobody(g, &p.t, add) { Some(part) => part, None => return true };
             let t0 = g.time - g.k.cmdring.tap_secs;
             if !squad_orders_ring_up(g, &p.t, input, canvas, t0, Some(cam), part.as_ref()) { return false; }
             return if digit { squad_orders_ring_input(g, input, cam, canvas) } else { true };
         }
-        if !crate::input::input_hit(g, input, &key) || !squad_orders_ring_free(g, input) { return false; }
+        if !crate::input::input_hit(g, input, &key) || !squad_orders_ring_free(g, &crate::seats::here(g), input) { return false; }
         pressed_delete(g, input, &key);
-        let add = crate::planmode::goals_on(g) && shift_down(g, input);
+        let add = crate::planmode::goals_on(g, &crate::seats::here(g)) && shift_down(g, input);
         if g.k.cmdring.hold_secs > 0.0 && !crate::input::input_down(g, input, &key) {
             g.stats.cmdring.quick += 1;
             let t = squad_orders_target_under(g, input, cam, canvas);
@@ -212,7 +212,7 @@ pub fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId, cam: C
     if lmb {
         // on a man: the orders are his, and the ring starts again for him · anywhere else the click gives the lit wedge, below
         let part = g.orders.menu.as_ref().unwrap().part.is_some();
-        let k = if squad_orders_whole(g) || part { -1.0 } else { squad_orders_man_at(g, input, cam, canvas) };
+        let k = if squad_orders_whole(g, &crate::seats::here(g)) || part { -1.0 } else { squad_orders_man_at(g, input, cam, canvas) };
         clicked_off(g, input, 1);
         buttons_off(g, input, 1);
         swallow_if_seat(g, input);
@@ -364,7 +364,7 @@ fn goal_part_or_nobody(g: &mut Game, t: &OrderTarget, add: bool) -> Option<Optio
 /// Shift with the key: the men a tap of it on `t` would have sent; the ring is theirs. `None` = null (nobody is free: said, no ring) ·
 /// `Some(None)` = undefined (the ring it always was) · `Some(Some(_))` = the men the ring is for. (orders.ts goalPart)
 pub fn squad_orders_goal_part(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, add: bool) -> Option<Option<crate::orders::SquadOrdersGoalPart>> {
-    if !add || !crate::planmode::goal_ring_on(g) { return Some(None); }
+    if !add || !crate::planmode::goal_ring_on(g, &crate::seats::here(g)) { return Some(None); }
     let men = match crate::planmode::goal_men(g, t) {
         Some(men) => men,
         None => {
@@ -382,18 +382,13 @@ pub fn squad_orders_goal_part(g: &mut crate::game::Game, t: &crate::orders::Orde
 }
 
 /// The ring's key would open a ring now. (orders.ts ringFree)
-pub fn squad_orders_ring_free(g: &crate::game::Game, input: InputId) -> bool {
-    !crate::planmode::goal_shift(g, input) && squad_orders_back_free(g)
+pub fn squad_orders_ring_free(g: &crate::game::Game, seat: &crate::seats::SeatRef, input: InputId) -> bool {
+    !crate::planmode::goal_shift(g, seat, input) && squad_orders_back_free(g, seat)
 }
 
 /// The ring's key is free: no menu up and nothing the key backs out of instead. (orders.ts backFree)
-pub fn squad_orders_back_free(g: &crate::game::Game) -> bool {
-    g.orders.menu.is_none() && g.pl[g.player].launch_held.is_none() && !crate::interact::hands_busy(g)
-}
-
-/// What the key would open on, for a hint: CMDRING.bareHint draws none. (orders.ts hintView)
-pub fn squad_orders_hint_view(g: &crate::game::Game, kept: Option<&mut crate::orders::HoverKept>) -> Option<crate::orders::SquadOrdersHintView> {
-    None
+pub fn squad_orders_back_free(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+    seat.orders.menu.is_none() && g.pl[seat.player].launch_held.is_none() && !crate::interact::hands_busy(g, seat)
 }
 
 /// The menu's own highlight follows the lit wedge. (orders.ts ringSel)
@@ -429,7 +424,7 @@ pub fn squad_orders_seats(g: &mut crate::game::Game, m: &crate::orders::Menu, r:
     }
     // the flat tree's first ring: a row that says what wedge 1 says has no wedge of its own, and its digit is wedge 1's
     let q = if flat { squad_orders_menu_quick(g, m) } else { None };
-    let mt = if text(&q) { squad_orders_menu_target(g) } else { None };
+    let mt = if text(&q) { squad_orders_menu_target(g, &crate::seats::here(g)) } else { None };
     if let (true, Some(mt)) = (text(&q), mt) {
         for d in 2..=wedges {
             let i = s_row[d];
@@ -494,33 +489,29 @@ pub fn squad_orders_twice_on(g: &crate::game::Game) -> bool {
 
 /// Every teammate falls in; not said twice over a 'fall in' the first tap gave them all. (orders.ts allIn)
 pub fn squad_orders_all_in(g: &mut crate::game::Game) {
-    let men = squad_orders_men(g, Some(SquadOrdersMenSel::All), None);
-    let t = at_sam(g);
+    let men = squad_orders_men(g, &crate::seats::here(g), Some(SquadOrdersMenSel::All), None);
+    let t = at_sam(g, &crate::seats::here(g));
     g.stats.cmdring.twice += 1;
     let mut every = true;
     for &gd in &men {
-        let fell_in = match squad_orders_of(g, gd) {
+        let fell_in = match squad_orders_of(g, &crate::seats::here(g), gd) {
             Some(a) => { let a = &g.tab.orders_assignment[a]; a.order == "fallIn" && a.post.is_none() }
             None => false,
         };
         if !fell_in { every = false; break; }
     }
     if every { return; }
-    g.orders.by_hand = true;
     squad_orders_give(g, "fallIn", Some(&t), None, Some(&opts_men(men, None)));
-    g.orders.by_hand = false;
 }
 
 /// The quick key's own order on `t`, given by hand: the entry the men pick, else the target's first row. (orders.ts quickGive)
 pub fn squad_orders_quick_give(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) {
-    g.orders.by_hand = true;
     if !crate::autopilot::auto_quick(g, t) {
         if let Some(d) = squad_orders_default_for(g, t) {
             let id = g.tab.orders_order_def[d].id.clone();
             squad_orders_give(g, &id, Some(t), None, None);
         }
     }
-    g.orders.by_hand = false;
 }
 
 /// The quick key's order on `t` for exactly these men. (orders.ts quickFor)
@@ -537,15 +528,13 @@ pub fn squad_orders_quick_for(g: &mut crate::game::Game, men: &[GuardId], t: &cr
         g.stats.autopilot.again += 1;
         return None;
     }
-    let here = at_sam(g);
-    g.orders.by_hand = true;
+    let here = at_sam(g, &crate::seats::here(g));
     if a.word {
         squad_orders_give(g, "go", Some(&here), None, Some(&opts_men(to, None)));
     } else if text(&a.id) {
         let ack = crate::squadnet::why_words(g, &a).map(|w| w.ack);
         squad_orders_give(g, a.id.as_deref().unwrap(), Some(t), None, Some(&opts_men(to, ack)));
     }
-    g.orders.by_hand = false;
     if let Some(row) = g.orders.log.last_mut() {
         if Some(row.serial) != tail { row.auto = Some(true); }
     }
@@ -557,10 +546,8 @@ pub fn squad_orders_quick_for(g: &mut crate::game::Game, men: &[GuardId], t: &cr
 /// Those men cover toward `at` from where they stand (true: somebody took it). (orders.ts coverFor)
 pub fn squad_orders_cover_for(g: &mut crate::game::Game, men: &[GuardId], at: V3) -> bool {
     let n = g.orders.group;
-    g.orders.by_hand = true;
     let t = OrderTarget::Floor(OrderTargetFloor { at, wall: None, thing: None, serial: 0 });
     squad_orders_give(g, "cover", Some(&t), None, Some(&opts_men(men.to_vec(), None)));
-    g.orders.by_hand = false;
     g.orders.group != n
 }
 
@@ -581,7 +568,7 @@ pub fn squad_orders_menu_quick(g: &mut crate::game::Game, m: &crate::orders::Men
 
 /// The man of the squad the cursor is on, or whose feet are nearest it on the screen (his place on the roster; -1: nobody). (orders.ts manAt)
 pub fn squad_orders_man_at(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) -> f64 {
-    let squad = squad_orders_squad(g);
+    let squad = squad_orders_squad(g, &crate::seats::here(g));
     let t = squad_orders_target_under(g, input, cam, canvas);
     if let OrderTarget::None(OrderTargetNone { man: Some(man), .. }) = t {
         if let Some(k) = squad.iter().position(|&gd| gd == man) {
@@ -630,7 +617,7 @@ pub fn squad_orders_ring_view(g: &mut crate::game::Game) -> Option<crate::cmdrin
         (Some(r), Some(menu)) => (r, menu),
         _ => return None,
     };
-    let mt = squad_orders_menu_target(g).unwrap();
+    let mt = squad_orders_menu_target(g, &crate::seats::here(g)).unwrap();
     let mut wedges = Vec::new();
     let seat = squad_orders_seats(g, &menu, Some(r));
     let n = g.k.cmdring.wedges as usize;
@@ -653,8 +640,8 @@ pub fn squad_orders_ring_view(g: &mut crate::game::Game) -> Option<crate::cmdrin
         OrderTarget::None(n) => n.man.map_or(String::new(), |man| g.gd[man].callsign.clone()),
         t => squad_orders_hover_words(g, Some(t)),
     };
-    let who = squad_orders_who_tag(g).tag;
-    let tone = squad_orders_tone_of(g, &menu.men).map(|t| String::from(t.as_str()));
+    let who = squad_orders_who_tag(g, &crate::seats::here(g)).tag;
+    let tone = squad_orders_tone_of(g, &crate::seats::here(g), &menu.men).map(|t| String::from(t.as_str()));
     let caption = if !what.is_empty() && what != who { format!("{} \u{2192} {}", who, what) } else { who };
     Some(crate::cmdring::RingView { x: r.ax, y: r.ay, zoom: r.z, lit: r.lit, tone, caption, wedges })
 }
@@ -667,13 +654,13 @@ pub fn squad_orders_sync(g: &mut crate::game::Game) -> Vec<GuardId> {
     while at < g.guards.len() {
         let gd = g.guards[at];
         at += 1;
-        if squad_orders_mine(g, gd) {
+        if squad_orders_mine(g, &crate::seats::here(g), gd) {
             if g.orders.roster.get(i) != Some(&gd) { same = false; }
             i += 1;
         }
     }
     if !same || i != g.orders.roster.len() {
-        let squad = squad_orders_squad(g);
+        let squad = squad_orders_squad(g, &crate::seats::here(g));
         g.orders.roster = squad.clone();
         g.orders.who = Who::All;
         g.orders.menu = None;
@@ -681,13 +668,12 @@ pub fn squad_orders_sync(g: &mut crate::game::Game) -> Vec<GuardId> {
         for gd in g.orders.asg.keys() {
             if !squad.contains(&gd) { squad_orders_drop(g, gd); }
         }
-        crate::planlay::lay_fresh(g);
     }
     let stands = match g.orders.who {
         Who::Num(k) => g.orders.roster.get(k as usize).map_or(true, |&gd| g.gd[gd].state != crate::game::GuardState::Dead),
         Who::All => true,
-        Who::Red => !squad_orders_men(g, Some(SquadOrdersMenSel::Red), None).is_empty(),
-        Who::Blue => !squad_orders_men(g, Some(SquadOrdersMenSel::Blue), None).is_empty(),
+        Who::Red => !squad_orders_men(g, &crate::seats::here(g), Some(SquadOrdersMenSel::Red), None).is_empty(),
+        Who::Blue => !squad_orders_men(g, &crate::seats::here(g), Some(SquadOrdersMenSel::Blue), None).is_empty(),
     };
     if !stands {
         // the man the orders went to is down: a menu that was theirs goes with them, never on to everybody else
@@ -698,8 +684,8 @@ pub fn squad_orders_sync(g: &mut crate::game::Game) -> Vec<GuardId> {
 }
 
 /// Sam is standing. (orders.ts samStopped)
-pub fn squad_orders_sam_stopped(g: &crate::game::Game) -> bool {
-    g.orders.sam_v <= 0.3
+pub fn squad_orders_sam_stopped(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+    seat.orders.sam_v <= 0.3
 }
 
 /// A man's order goes, and with it the pin the fight seam put on him. (orders.ts drop)

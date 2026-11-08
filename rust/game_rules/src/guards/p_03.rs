@@ -13,8 +13,8 @@ fn bone(g: &Game, c: CharId, b: crate::character::Bone) -> Option<V3> {
 }
 
 /// Is the shield up: a living man in Sam's arm, Sam on his feet, in any phase of the hold. (guards.ts shieldUp)
-pub fn shield_up(g: &crate::game::Game) -> bool {
-    let p = g.player;
+pub fn shield_up(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+    let p = seat.player;
     let held = match &g.pl[p].holding {
         Some(h) => h.g,
         None => return false,
@@ -30,9 +30,9 @@ pub fn shield_up(g: &crate::game::Game) -> bool {
 }
 
 /// The pair as the observers reason about it this frame; None when nobody is held. `key` is the hold's serial. (guards.ts pairOf)
-pub fn pair_of(g: &crate::game::Game) -> Option<crate::guards::Pair> {
-    let p = g.player;
-    if g.pl[p].holding.is_none() || !shield_up(g) {
+pub fn pair_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::guards::Pair> {
+    let p = seat.player;
+    if g.pl[p].holding.is_none() || !shield_up(g, seat) {
         return None;
     }
     let (key, held) = match &g.pl[p].holding {
@@ -60,7 +60,7 @@ pub fn pair_of(g: &crate::game::Game) -> Option<crate::guards::Pair> {
 
 /// The pair in this man's open view: either body's chest or head inside his cone and range with nothing solid between. (guards.ts pairInView)
 pub fn pair_in_view(g: &mut crate::game::Game, gd: GuardId, p: &crate::guards::Pair) -> bool {
-    if g.player_invisible || g.time < g.gd[gd].dazzled_until || g.gd[gd].smoke_trans < 0.3 || crate::pairorders::pair_gripped(g, gd) || crate::doze::doze_asleep(g, gd) {
+    if g.player_invisible || crate::control::man::blind(g, gd) || g.gd[gd].smoke_trans < 0.3 || crate::pairorders::pair_gripped(g, gd) || crate::doze::doze_asleep(g, gd) {
         return false;
     }
     let c = g.gd[gd].ch;
@@ -108,7 +108,7 @@ pub fn pair_sight_rate(g: &mut crate::game::Game, gd: GuardId, p: &crate::guards
     let lit = m::pow(light, 1.5);
     let smoke = v3::clamp((g.gd[gd].smoke_trans - 0.3) / 0.5, 0.0, 1.0);
     let keen = if escalation_of(g) >= 1.0 { KEEN } else { 1.0 };
-    let load = crate::kitload::load_seen(g, crate::kitload::LoadSeenWho::Player);
+    let load = crate::kitload::load_seen(g, &crate::seats::here(g), crate::kitload::LoadSeenWho::Player);
     let mut rate = detect * lit * dist_f * smoke * keen * PAIR_LEGIBLE * load;
     if dist < 1.8 {
         rate = m::max(rate, 3.5);
@@ -172,7 +172,7 @@ pub fn standoff_perceive(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>
     if g.quiet_utility || g.gd[gd].hold || g.gd[gd].pinned {
         return false;
     }
-    let p = match pair_of(g) {
+    let p = match pair_of(g, &crate::seats::here(g)) {
         Some(p) if p.held != gd => p,
         _ => return false,
     };
@@ -535,7 +535,7 @@ pub fn standoff_bark(g: &mut crate::game::Game, gd: GuardId, moment: crate::guar
 pub fn step_along_path(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64) -> bool {
     let c = g.gd[gd].ch;
     let paced = crate::condition::condition_pace(g, gd, speed);
-    let speed = team_legs(g, gd, paced);
+    let speed = team_legs(g, &crate::seats::here(g), gd, paced);
     if unstick_first(g, gd, dt) {
         return false;
     }

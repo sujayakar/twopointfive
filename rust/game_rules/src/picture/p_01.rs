@@ -397,12 +397,12 @@ pub fn on_net(g: &mut crate::game::Game, a: Option<GuardId>, b: Option<GuardId>)
     if !fighter(g, bo) || g.gd[bo].held.is_some() {
         return false;
     }
-    let runner = crate::owner::own().runner;
-    if crate::owner::has_him(g, bo, runner) {
+    let runner = crate::owner::by::RUNNER;
+    if crate::owner::has(g, bo, runner) {
         return false;
     }
     if let Some(ao) = a {
-        if crate::owner::has_him(g, ao, runner) {
+        if crate::owner::has(g, ao, runner) {
             return false;
         }
     }
@@ -1075,11 +1075,11 @@ pub fn picture_step(g: &mut crate::game::Game, gd: GuardId, key: u32, mark: V3, 
 
 // ---------------------------------------------------------------- showing it (the host's floor view; nothing of the tick calls these)
 /// whose picture the floor shows: the fighter nearest the aim point, None with the view not on the cursor (picture.ts pictureShown)
-pub fn picture_shown(g: &crate::game::Game) -> Option<GuardId> {
+pub fn picture_shown(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<GuardId> {
     if g.k.picture.show != crate::knobs::PictureKShow::Cursor {
         return None;
     }
-    let aim = g.aim_point;
+    let aim = seat.aim_point;
     let mut best = None;
     let mut bd = 2.5;
     let mut i = 0;
@@ -1161,7 +1161,7 @@ pub fn picture_views(g: &mut crate::game::Game) -> Vec<crate::picture::PictureVi
         }
         return out;
     }
-    let shown = picture_shown(g);
+    let shown = picture_shown(g, &crate::seats::here(g));
     state_of(g);
     let gd = match shown {
         Some(gd) => gd,

@@ -54,38 +54,6 @@ pub enum BeatFrame {
     TutRoadEase(crate::script_tut_road::TutRoadEaseFrame),
     TutRoadGate(crate::script_tut_road::TutRoadGateFrame),
     TutRoadOpen(crate::script_tut_road::TutRoadOpenFrame),
-    TutSkyHold(crate::script_tut_sky::TutSkyHoldFrame),
-    TutSkyAmbush(crate::script_tut_sky::TutSkyAmbushFrame),
-    TutSkyPinned(crate::script_tut_sky::TutSkyPinnedFrame),
-    TutSkySmoke(crate::script_tut_sky::TutSkySmokeFrame),
-    TutSkyBreak(crate::script_tut_sky::TutSkyBreakFrame),
-    TutSkyOrdered(crate::script_tut_sky::TutSkyOrderedFrame),
-    TutSkyBlind(crate::script_tut_sky::TutSkyBlindFrame),
-    TutSkyPush(crate::script_tut_sky::TutSkyPushFrame),
-    TutSkyIndoors(crate::script_tut_sky::TutSkyIndoorsFrame),
-    TutSkyWall(crate::script_tut_sky::TutSkyWallFrame),
-    TutSkyDark(crate::script_tut_sky::TutSkyDarkFrame),
-    TutSkyNv(crate::script_tut_sky::TutSkyNvFrame),
-    TutSkyTorches(crate::script_tut_sky::TutSkyTorchesFrame),
-    TutSkyInside(crate::script_tut_sky::TutSkyInsideFrame),
-    TutSkyOut(crate::script_tut_sky::TutSkyOutFrame),
-    TutSoloHold(crate::script_tut_solo::TutSoloHoldFrame),
-    TutSoloCease(crate::script_tut_solo::TutSoloCeaseFrame),
-    TutSoloRoad(crate::script_tut_solo::TutSoloRoadFrame),
-    TutSoloWay(crate::script_tut_solo::TutSoloWayFrame),
-    TutSoloGun(crate::script_tut_solo::TutSoloGunFrame),
-    TutSoloBags(crate::script_tut_solo::TutSoloBagsFrame),
-    TutSoloGap(crate::script_tut_solo::TutSoloGapFrame),
-    TutSoloBlind(crate::script_tut_solo::TutSoloBlindFrame),
-    TutSoloShop(crate::script_tut_solo::TutSoloShopFrame),
-    TutSoloRoom(crate::script_tut_solo::TutSoloRoomFrame),
-    TutSoloLoose(crate::script_tut_solo::TutSoloLooseFrame),
-    TutSoloTrucks(crate::script_tut_solo::TutSoloTrucksFrame),
-    TutSquadPicket(crate::script_tut_squad::TutSquadPicketFrame),
-    TutSquadStore(crate::script_tut_squad::TutSquadStoreFrame),
-    TutSquadShop(crate::script_tut_squad::TutSquadShopFrame),
-    TutSquadHall(crate::script_tut_squad::TutSquadHallFrame),
-    TutSquadGun(crate::script_tut_squad::TutSquadGunFrame),
     TutTeamHold(crate::script_tut_team::TutTeamHoldFrame),
     TutTeamCook(crate::script_tut_team::TutTeamCookFrame),
     TutTeamAmbush(crate::script_tut_team::TutTeamAmbushFrame),
@@ -121,9 +89,6 @@ pub enum ScriptVars {
     TutQueue(crate::script_tut_queue::TutQueueVars),
     TutQuiet(crate::script_tut_quiet::TutQuietVars),
     TutRoad(crate::script_tut_road::TutRoadVars),
-    TutSky(crate::script_tut_sky::TutSkyVars),
-    TutSolo(crate::script_tut_solo::TutSoloVars),
-    TutSquad(crate::script_tut_squad::TutSquadVars),
     TutTeam(crate::script_tut_team::TutTeamVars),
 }
 
@@ -167,10 +132,7 @@ pub struct Director {
     pub log: Vec<crate::director::LogRow>,
     pub run: Option<DirectorRunId>,
     pub last_run: Option<crate::director::DirectorLastRun>,
-    pub strict: bool,
     pub frame: Option<crate::director::DirectorFrame>,
-    pub cam: Option<CameraId>,
-    pub input: Option<InputId>,
     pub serial: f64,
     pub seen: JsSet<u32>,
     pub exiting: bool,
@@ -188,10 +150,7 @@ impl Director {
             log: Vec::new(),
             run: None,
             last_run: None,
-            strict: false,
             frame: None,
-            cam: None,
-            input: None,
             serial: 0.0,
             seen: JsSet::new(),
             exiting: false,
@@ -2198,22 +2157,6 @@ impl LintManifestLevel {
 }
 impl Default for LintManifestLevel { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/director.ts:453 attach(o), src/game/director.ts:453)
-#[derive(Clone, Copy, Debug)]
-pub struct DirectorAttachO {
-    pub cam: Option<CameraId>,
-    pub input: Option<InputId>,
-}
-impl DirectorAttachO {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DirectorAttachO {
-            cam: None,
-            input: None,
-        }
-    }
-}
-impl Default for DirectorAttachO { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/director.ts:478 objective ->, src/game/director.ts:478)
 #[derive(Clone, Debug)]

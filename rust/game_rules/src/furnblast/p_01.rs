@@ -417,7 +417,7 @@ fn break_static_in(g: &mut Game, i: f64, ghost: bool, at: V3, shatter: bool, kk:
         furniture_chips(g, near, [dir[0], 0.9, dir[2]], b, who, 36.0); return true;
     }
     let cls = box_class(g, b); let row = furn_break_row(cls);
-    let steel = if cls == BreakClass::Metal && crate::scene_cut::cut_boxes_on(g) {
+    let steel = if cls == BreakClass::Metal {
         let md = if shatter && !(*budget < STEEL_SHEETS_ROOM) { FurnitureSteelMode::Shatter } else { FurnitureSteelMode::Apart };
         furniture_steel(g, b, md, dir, i)
     } else { None };

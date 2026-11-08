@@ -326,11 +326,6 @@ pub fn stalk_step(g: &mut crate::game::Game, lmb: bool, lmb_hit: bool, own_keys:
         let pace = g.k.stalk.pace;
         return Some(orbited(g, me, gd, &p, at, dist, k.mx / l, k.mz / l, pace, k.dt));
     }
-    if g.k.stalk.drag {
-        if let (Some(st), Some(mid)) = (stick, g.m.stalk.state.get(me).unwrap().stick) {
-            return Some(dragged(g, me, gd, &p, at, dist, st, mid, 1.0 / 60.0));
-        }
-    }
     // toward the point behind his back
     let yaw = g.ch[c].body_yaw;
     let station = g.k.stalk.station_m;
@@ -516,16 +511,16 @@ pub fn stalk_wait(g: &mut crate::game::Game) -> Option<crate::stalk::StalkWait> 
 }
 
 /// A man is being stalked, or the stalk has just become a grab: this frame's left click is no blow. (stalk.ts stalkHas)
-pub fn stalk_has(g: &crate::game::Game) -> bool {
-    match g.m.stalk.state.get(g.player) {
+pub fn stalk_has(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+    match g.m.stalk.state.get(seat.player) {
         Some(s) => s.t == g.time && (s.on.is_some() || s.grab.is_some()),
         None => false,
     }
 }
 
 /// The man the stalk reached this frame: the grab to take now. (stalk.ts stalkGrab)
-pub fn stalk_grab(g: &crate::game::Game) -> Option<GuardId> {
-    match g.m.stalk.state.get(g.player) {
+pub fn stalk_grab(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<GuardId> {
+    match g.m.stalk.state.get(seat.player) {
         Some(s) if s.t == g.time => s.grab,
         _ => None,
     }
@@ -551,8 +546,8 @@ pub fn stalk_key_took(g: &mut crate::game::Game) {
 }
 
 /// The man being stalked right now. (stalk.ts stalkOn)
-pub fn stalk_on(g: &crate::game::Game) -> Option<GuardId> {
-    g.m.stalk.state.get(g.player).and_then(|s| s.on)
+pub fn stalk_on(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<GuardId> {
+    g.m.stalk.state.get(seat.player).and_then(|s| s.on)
 }
 
 /// A reset of the floor's men, a load: nothing is stalked. (stalk.ts stalkReset)

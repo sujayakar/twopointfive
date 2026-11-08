@@ -1,5 +1,5 @@
 // The 'wxkinds' family (game/weatherKinds.ts + game/weather.ts — the weather a level can be STARTED in: ?weather=<kind>), run through probes.ts:
-//   bun run tools/qa/probes.ts wxkinds | wxkinds-default | wxkinds-roofs | wxkinds-sight | wxkinds-hearing | wxkinds-save | wxkinds-journal | wxkinds-url
+//   bun run tools/qa/probes.ts wxkinds | wxkinds-default | wxkinds-roofs | wxkinds-sight | wxkinds-hearing | wxkinds-save | wxkinds-url
 // PASS / FAIL each, all headless:
 //   wxkinds-default   no kind picked = the game as it was: the office's two footprints, the frame's three weather words 0, hearPath() hands back propagate()'s own
 //                     object, airTrans() is exactly 1 — and a seeded 20 s of the office digests the same after a kind was put on and taken off again
@@ -11,10 +11,9 @@
 //                     downpour, does again under a roof (a third of the bed); a gunshot is heard in anything; a thunderclap drowns more for WX_SIM.thunderSecs
 //   wxkinds-save      the kind rides in the checkpoint: a fog run's file loaded into a game born in the level's own weather puts it in fog (roofs, fog, wind),
 //                     and the other way about; a file from before kinds (no field) = none
-//   wxkinds-journal   … and so in a session journal's frame 0: the scripted session (journal-probes.ts recordScripted: walk, crouch, whistle, canister, a light shot
-//                     out, sprint) recorded in a DOWNPOUR replays identically into a fresh game born in the level's own weather — and the same recording's
-//                     digests differ from one made with no kind picked (the weather really was in the simulation it journals)
 //   wxkinds-url       ?weather= reads back, an unknown name is none, the mission list's links carry the pick and lose it to the character when it is taken off
+//                     … and the address's record: addressBeforeGame answers the whole StoodWith, moves no pick, and a game stood from it holds exactly that (one stood plain is
+//                     not locked). STOOD_BREAK=1 in front alters one field of what the line expects, and it must FAIL
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { standUp, ROOT } from './headless.ts';
@@ -180,33 +179,15 @@ export async function wxSave() {
   return F.done();
 }
 
-// ---------------------------------------------------------------- wxkinds-journal
-export async function wxJournal() {
-  const F = family("wxkinds-journal: a session recorded in a picked weather replays identically into a game born without it (the kind is in frame 0's checkpoint)");
-  const { recordScripted, undone } = await import('./journal-probes.ts'); const { replaySession } = await import('./replay.ts');
-  const log = console.log; const rec = async (kind: string | null) => { K.WEATHER_BOOT.kind = kind; console.log = () => {}; try { return await recordScripted(6011, false, 45); } finally { K.WEATHER_BOOT.kind = null; console.log = log; } };
-  const A = await rec('downpour'), B = await rec(null);
-  const kindIn = A.file.save?.weather?.kind ?? null;
-  // (staging: the line below reads the weather off what the script's canister does in it; a script that threw nothing says nothing of the weather)
-  const left = [...new Set([...undone(A.deeds), ...undone(B.deeds)])];
-  F.verdict(!left.length, 'staging: the scripted session did its deeds in both recordings (a whistle, a canister thrown, a round fired)', left.join(', ') || 'both did');
-  if (left.length) return F.done();
-  console.log = () => {}; let R: any; try { R = await replaySession(JSON.parse(JSON.stringify(A.file)), 'downpour', { invariants: true, quiet: true }); } finally { console.log = log; }
-  const same = JSON.stringify(A.file.digests.map((d: any) => d[1])) === JSON.stringify(B.file.digests.map((d: any) => d[1]));
-  F.verdict(kindIn === 'downpour' && R.ok && R.lastDigestOk && R.digestsChecked > 0, "45 s recorded in a downpour: the file's frame 0 says so, and it replays identically into a fresh game born in the level's own weather", `frame 0 kind ${kindIn} · ${R.replayed}/${R.frames} frames replayed, ${R.digestsChecked} digests checked${R.ok ? '' : ' · ' + (R.bad || (R.digestMismatch ? `digest mismatch after frame ${R.digestMismatch.f}: ${R.digestMismatch.diffs.slice(0, 3).join(' · ')}` : R.sensor.first ? `sensor ${R.sensor.first.kind} '${R.sensor.first.key}'` : 'violations'))}`);
-  F.verdict(!same, 'the same script with no kind picked digests differently (the weather was in the simulation the journal carries, not beside it)', same ? 'every digest equal: the downpour changed nothing the digest sees' : `first differing digest: #${A.file.digests.findIndex((d: any, i: number) => JSON.stringify(d[1]) !== JSON.stringify(B.file.digests[i]?.[1]))} of ${A.file.digests.length}`);
-  return F.done();
-}
-
 // ---------------------------------------------------------------- wxkinds-url
 export async function wxUrl() {
   const F = family('wxkinds-url: ?weather= and the links of the mission list (weatherKinds.ts)');
   { const f: string[] = [];
-    for (const k of K.WEATHER_KINDS) { if (K.weatherOfSearch(`?squad4&weather=${k}&mute`) !== k) f.push(`${k} not read`); if (K.initWeather(new URLSearchParams(`weather=${k}`)) !== k || K.WEATHER_BOOT.kind !== k) f.push(`${k} not booted`); }
+    for (const k of K.WEATHER_KINDS) { if (K.weatherOfSearch(`?squad4&weather=${k}&mute`) !== k) f.push(`${k} not read`); if (K.weatherAsked(new URLSearchParams(`weather=${k}`)) !== k) f.push(`${k} not booted`); }
     const warn = console.warn; let warned = 0; console.warn = () => { warned++; };
-    try { if (K.initWeather(new URLSearchParams('weather=snow')) !== null || K.WEATHER_BOOT.kind !== null) f.push('an unknown name booted something'); } finally { console.warn = warn; }
+    try { if (K.weatherAsked(new URLSearchParams('weather=snow')) !== null) f.push('an unknown name booted something'); } finally { console.warn = warn; }
     if (warned !== 1) f.push(`an unknown name warned ${warned} times`);
-    if (K.initWeather(new URLSearchParams('mute')) !== null) f.push('no flag booted something');
+    if (K.weatherAsked(new URLSearchParams('mute')) !== null) f.push('no flag booted something');
     if (K.weatherSearch('', null) !== '' || K.weatherSearch('?a&&b', null) !== '?a&&b' || K.weatherSearch('', 'fog') !== '?weather=fog') f.push('an empty / odd search is rewritten');
     F.verdict(f.length === 0, 'every kind reads back from the URL and boots; an unknown name says so once and boots the level as it is; no flag = none', f.join('; ') || K.WEATHER_KINDS.join(' · ')); }
   { const f: string[] = []; const L = missionList(); const FLAGS = '?quality=high&mute';
@@ -216,20 +197,40 @@ export async function wxUrl() {
       if (K.weatherSearch(K.weatherSearch(fog, 'dust'), null) !== base) f.push(`${m.id}: fog → dust → none is not the link it was`);
       const kept = missionHref(m, FLAGS + '&weather=rain'); if (K.weatherOfSearch(kept) !== 'rain') f.push(`${m.id}: a visitor's ?weather= does not ride along (${kept})`); }
     F.verdict(f.length === 0, `all ${L.length} missions: the pick goes on the link after the mission's own flags, comes off to the character, and a visitor's ?weather= rides along through a pick`, f.join('; ') || `${missionHref(L[L.length - 1], FLAGS)} → ${K.weatherSearch(missionHref(L[L.length - 1], FLAGS), 'fog')}`); }
-  // THE PAGE's weather is its URL's (initWeather locks it: the renderer's half is compiled at boot): another kind is refused, and so is a checkpoint made in one
+  // THE ADDRESS'S RECORD (host/standup.ts addressBeforeGame, game/stood.ts): whole, off the words alone, and nothing of the process is written
+  { const f: string[] = []; const { addressBeforeGame } = await import(`${ROOT}/src/host/standup.ts`), H = await import(`${ROOT}/src/game/hours.ts`), KT = await import(`${ROOT}/src/game/kit.ts`);
+    const plain = { weather: null, locked: true, hour: 'night', sun: 1, sunGiven: false, dry: true, soloStand: false };
+    const want = (o: Record<string, unknown>) => ({ ...plain, ...o, ...(process.env.STOOD_BREAK === '1' ? { dry: !('dry' in o ? o.dry : plain.dry) } : {}) });
+    const whole = (x: object) => JSON.stringify(Object.entries(x).sort()), same = (a: object, b: object) => whole(a) === whole(b);
+    const picks = () => JSON.stringify([K.WEATHER_BOOT, { id: H.HOUR.id, sun: H.HOUR.sun, sunGiven: H.HOUR.sunGiven, dry: H.HOUR.dry }, KT.KIT_SOLO]), picks0 = picks();
+    const warn = console.warn; console.warn = () => {};
+    try {
+      for (const [q, o] of [['weather=fog', { weather: 'fog' }], ['hour=dusk&sun=0.25', { hour: 'dusk', sun: 0.25, sunGiven: true }], ['hour=midday&noweather', { hour: 'midday', dry: false }], ['weather=nosuch', {}],
+        ['levelFile=pass.json&roomclear&squad4&weather=fog', { weather: K.SNOW.on ? 'snow' : 'fog' }]] as [string, Record<string, unknown>][]) {
+        const got = addressBeforeGame(new URLSearchParams(q)); if (!same(got, want(o))) f.push(`${q}: ${JSON.stringify(got)} (want ${JSON.stringify(want(o))})`); }
+    } finally { console.warn = warn; }
+    if (picks() !== picks0) f.push(`the picks moved: ${picks0} -> ${picks()}`);
+    const log = console.log; console.log = () => {};
+    try {
+      const A = 'levelFile=compound.json&roomclear&squad4&hour=dusk&sun=0.5&weather=rain', S: any = await standUp({ address: A, level: levelOf('compound') }), P: any = await standUp({ level: levelOf('compound') });
+      const wa = want({ weather: 'rain', hour: 'dusk', sun: 0.5, sunGiven: true }); if (!same(S.game.stood, wa)) f.push(`stood from ${A}: ${JSON.stringify(S.game.stood)} (want ${JSON.stringify(wa)})`);
+      if (P.game.stood.locked !== false) f.push(`a game stood plain: ${JSON.stringify(P.game.stood)}`);
+      if (picks() !== picks0) f.push(`a stand-up moved the picks: ${picks0} -> ${picks()}`);
+    } finally { console.log = log; }
+    F.verdict(f.length === 0, 'an address is read into the whole of a game\'s record (the weather, an unknown one as none, the hour and its sun, ?noweather, a snow level\'s own kind; locked, and no plain-stand flag), the picks do not move, a game stood from it holds exactly that, and one stood plain is not locked', f.join('; ') || 'five addresses, one game from an address, one plain'); }
+  // THE PAGE's weather is its URL's (Game.stood.locked, as an address stands it: the renderer's half is fixed at boot): another kind is refused, and so is a checkpoint made in one
   { const f: string[] = []; const warn = console.warn; console.warn = () => {};
     try {
       const A = await born('fog', 'compound'); const fogFile = A.snapshot('wx', true);
       const B = await born(null, 'compound'); const plainFile = B.snapshot('wx', true);
-      K.WEATHER_BOOT.locked = true; K.WEATHER_BOOT.kind = null;
+      B.game.stood.locked = true; B.game.stood.weather = null;
       if (B.game.weather.setKind('fog') !== false || B.game.weather.kind !== null) f.push('a locked page took another kind');
       if (!canLoad(B.game, fogFile)) f.push('a fog file loads into a page opened in the level\'s own weather'); if (canLoad(B.game, plainFile)) f.push(`its own file refused: ${canLoad(B.game, plainFile)}`);
-      K.WEATHER_BOOT.kind = 'fog';
+      A.game.stood.locked = true; A.game.stood.weather = 'fog';
       if (canLoad(A.game, fogFile)) f.push(`a fog page refuses a fog file: ${canLoad(A.game, fogFile)}`); if (!canLoad(A.game, plainFile)) f.push('a plain file loads into a fog page');
       A.game.weather.setEnabled(false); if (!A.game.weather.enabled) f.push('a picked weather was switched off under the simulation');
-    } finally { K.WEATHER_BOOT.locked = false; K.WEATHER_BOOT.kind = null; console.warn = warn; }
+    } finally { console.warn = warn; }
     F.verdict(f.length === 0, 'in the page (locked) the weather is the URL\'s: another kind is refused, a checkpoint made in other weather is refused with the reason, its own loads, and a picked weather cannot be switched off', f.join('; ') || 'setKind → false · canLoad → "made in other weather…"'); }
-  K.WEATHER_BOOT.kind = null; K.WEATHER_BOOT.locked = false;
   // a headless tool hands its query to scenarioRun.ts startFromQuery: ?weather= is read there too, and a query without it leaves the game as it stands
   { const f: string[] = []; const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`); const log = console.log; console.log = () => {};
     try {

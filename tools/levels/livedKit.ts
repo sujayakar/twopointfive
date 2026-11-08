@@ -64,12 +64,12 @@ export function livedKit(K: Kit) {
   const round = (x: number, z: number, y0: number, y1: number, r: number, albedo: Vec3, yaw = 0, o: { lid?: Vec3; ribs?: boolean; drawn?: boolean } = {}) => {
     if (!(y1 - y0 > 0.008)) throw new Error(`livedKit: a round ${((y1 - y0) * 1000).toFixed(0)} mm thick at (${x}, ${z}) — lay a flat piece (mat, sheet) for a thing that thin`);
     const onFace = (h: Vec3, first: boolean) => { const marks: MarkingDef[] = [];
-      const on = (f: MarkFace, res: 'base' | 'coarse', pal: Parameters<typeof tileMarks>[4], fn: Parameters<typeof tileMarks>[5]) => { const { hu, hv } = faceHalf(h, faceIndex(f)); if (marks.length < MAX_MARKS_PER_BOX) marks.push(...tileMarks(f, res, hu, hv, pal, fn)); };
+      const on = (f: MarkFace, res: 'base' | 'coarse', pal: Parameters<typeof tileMarks>[4], fn: Parameters<typeof tileMarks>[5]) => { const { hu, hv } = faceHalf(h, faceIndex(f)); if (marks.length < MAX_MARKS_PER_BOX) marks.push(...tileMarks(f, res, hu, hv, pal, fn, K.TX, 0, 1)); };
       if (K.MARKS && first && o.lid) on('+y', 'base', [{ albedo: o.lid }], (i, j, W, Hc) => Math.hypot(i - (W - 1) / 2, j - (Hc - 1) / 2) < Math.min(W, Hc) / 2 ? 1 : 0);
       if (K.MARKS && o.ribs) for (const f of (first ? ['+x', '-x', '+z'] : ['+x', '-x']) as MarkFace[]) on(f, 'coarse', [{ mul: 0.62 }], (_i, j, _W, Hc) => j === Math.floor(Hc / 3) || j === Math.floor(2 * Hc / 3) ? 1 : 0);
       return marks; };
     if (r >= ROUND_FROM && !o.drawn) {
-      const { a, t } = roundFace(r), R = roundRadius(a), marks = roundMarks([onFace([a, (y1 - y0) / 2, t], true)], R);
+      const { a, t } = roundFace(r), R = roundRadius(a), marks = roundMarks([onFace([a, (y1 - y0) / 2, t], true)], R, K.TX);
       add({ c: [x, (y0 + y1) / 2, z], h: [R, (y1 - y0) / 2, R], round: true, albedo, ...(marks ? { marks } : {}) });
       return;
     }

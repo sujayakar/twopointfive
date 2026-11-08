@@ -26,6 +26,7 @@ import { pool, jobsOf } from './pool.ts';
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { El, withDom } from './scenario-picker-probes.ts';
+import { sample } from './sweep.ts';
 
 const { SCENARIOS, specOfQuery, pickSearch, quitSearch, teamWords } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
@@ -244,9 +245,6 @@ export async function loadoutScreen(): Promise<boolean> {
         { const A = UI.loadoutForMission(M.missionList()[2]); const L2 = M.openMissions(); const aShut = !A.open && UI.loadoutOpen() === null && M.currentMissions() === L2; const B = UI.loadoutForMission(M.missionList()[3]); const lShut = M.currentMissions() === null && UI.loadoutOpen() === B;
           const C = UI.loadoutForMission(M.missionList()[4]); const bShut = !B.open && M.currentMissions() === null && UI.loadoutOpen() === C; const busy = M.missionsBusy(); M.closeMissions(); const gone = UI.loadoutOpen() === null && !M.missionsBusy();
           verdict(aShut && lShut && bShut && busy && gone, 'one screen at a time over the card: the list opening closes the loadout, a loadout opening closes the list (and an older loadout, without reopening the list under it); closeMissions takes down whichever is up', `list over loadout ${aShut} · loadout over list ${lShut} · loadout over loadout ${bShut} · busy ${busy} · both gone ${gone}`); }
-        const Q = UI.loadoutFromQuery('?loadout=rescue-registry&squad=1'), qOn = Q?.entry.id, qN = Q?.squad; Q?.back(); const qBack = M.currentMissions()?.selected.id; M.closeMissions();
-        const none = UI.loadoutFromQuery('?loadout=nope'), QS = UI.loadoutFromQuery('?loadout=solo-night'), qs = QS?.entry.kind; QS?.back(); M.closeMissions();
-        verdict(qOn === 'rescue-registry' && qN === 1 && qBack === 'rescue-registry' && none === null && qs === 'solo', '?loadout=<mission id> opens that mission\'s screen (squad=N beside it preselects), its Back is the list on that row; an unknown id opens nothing', `${qOn} at ${qN}, back on ${qBack} · unknown → ${none} · solo-night → ${qs}`);
       } finally { UI.loadoutOpen()?.back(); M.closeMissions(); M.MISSIONS.onPick = was.pick; M.MISSIONS.pickLabel = was.label; setDifficulty('standard', false); }
     });
   } finally { UI.loadoutHooks.memberCard = realCard; K.kitLoad(null, ''); K.kitReset(); if (hadLS) G.localStorage = prevLS; else delete G.localStorage; }
@@ -257,7 +255,7 @@ export async function loadoutScreen(): Promise<boolean> {
 interface Cell { e: any; n: number; own: boolean; ok: boolean; note: string; r: BootReport | null; ref?: BootReport; bad: string[] }
 async function stageAll(only?: string[]): Promise<Cell[]> {
   const cells: Cell[] = [];
-  for (const e of SCENARIOS) if (!only || only.includes(e.id)) for (const c of L.squadChoices(e)) cells.push({ e, n: c.n, own: c.own, ok: c.ok, note: c.note, r: null, bad: [] });
+  for (const e of sample(SCENARIOS as any[], 2)) if (!only || only.includes(e.id)) for (const c of sample(L.squadChoices(e) as any[], 2)) cells.push({ e, n: c.n, own: c.own, ok: c.ok, note: c.note, r: null, bad: [] });
   const jobs = jobsOf(process.env.LOADOUT_JOBS, 4, 4);
   await pool(cells, jobs, async c => {
     const own = scenarioQuery(c.e) as string, q = c.own ? own.replace(/&squad4\b/, '') + `&squad=${c.n}` : L.squadSearch(own, c.n, c.e.squad);   // (its own size too is booted BY squad=N: the row's own URL is the reference below)

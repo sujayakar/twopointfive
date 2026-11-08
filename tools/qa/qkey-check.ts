@@ -152,10 +152,10 @@ export async function qkeyCheck(): Promise<boolean> {
         for (const d of [...g.doors.list].sort((a: any, b: any) => dist(a.frameCentre, g.player.char.pos) - dist(b.frameCentre, g.player.char.pos))) { const t = O.targetAt(d.frameCentre); if (t.kind !== 'door' || t.door !== d) continue; const far = g.cleared.roomBy(t.door, t.side > 0 ? -1 : 1); if (!far || g.cleared.isKnown(far)) continue; if (!O.whyNot(stackDef, O.forMen(t, all()), all()) && aimOf(R, d)) { D = d; break; } }
         const spot = floorSpot(R);
         if (!D || !spot) return { log: '', digest: '', rows: [] as string[], filed, lag: -1, why: !D ? 'no door to stack on' : 'no open floor round Sam' };
-        R.aim(spot); const n0 = O.log.length; press(); let lag = O.log.length - n0; R.step(1); if (CMDRING.on) lag = lag === 0 && O.log.length - n0 === 1 ? 1 : -1; R.step(89);   // (with the orders ring on — the page — a tap is given as the key is seen up, the tick after the press; off, on the press's own tick)
+        R.aim(spot); const n0 = O.log.length; press(); let lag = O.log.length - n0; R.step(1); if (CMDRING.on) lag = lag === 0 && O.log.length - n0 === 1 ? 1 : -1; R.step(29);   // (with the orders ring on — the page — a tap is given as the key is seen up, the tick after the press; off, on the press's own tick)
         aimOf(R, D); press(); R.until(() => R.stacked(), 40); R.step(30);
-        aimOf(R, D); press(); R.step(240);
-        R.aim(spot); press(); R.step(120);
+        aimOf(R, D); press(); R.step(60);
+        R.aim(spot); press(); R.step(60);
         const rows: string[] = O.log.map((r: any) => `${r.t.toFixed(3)} ${r.order}${r.auto ? '*' : ''} ${r.who.join('+')} ${r.target}`);
         return { log: rows.join('\n'), digest: hashDigest(digestGame(g, true)) as string, rows, filed, lag, why: null as string | null };
       };

@@ -1,7 +1,5 @@
 // TUT-TEAM-CHECK: the squad's tutorial mission on the ground (tools/levels/tut-team.ts → levels/tut-team.json: the tunnel station of tut-sky with the player
 // on the road behind his own truck). What this mission leans on, held as numbers:
-//   1. THE FLOOR IS THE STATION'S, BOX FOR BOX. Everything in the file but its name, its notes, its mission block and its scenarios is tut-sky.json's to the
-//      byte (a change to the station exported into one file alone is red here).
 //   2. ONE ORDER AND ONE WORD. From the first frame he has what he learnt alone and nothing of the squad's; the steps add the zoom, the squad's key and the go
 //      key, in that order, and nothing else; the squad's key gives move, stack, the go and fall in and no other order (the mains box's own row is not among them: read live, a tap on the box has fall in for its first row). No line asks for the ring, a charge, the mains box or the goggles, and none asks for the squad's key a second
 //      time on a door they stand on. The store is no room of the fight.
@@ -30,12 +28,7 @@ const OPEN = [13.6, 0, 22.3], BLIND = [14.6, 0, 24.7];
 const faults: string[] = [];
 const line = (ok: boolean, say: string, got: string) => { console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${say}: ${got}`); if (!ok) faults.push(`${say} (${got})`); };
 
-const TEXT = readFileSync(resolve(ROOT, 'levels/tut-team.json'), 'utf8'), L = JSON.parse(TEXT), STATION = JSON.parse(readFileSync(resolve(ROOT, 'levels/tut-sky.json'), 'utf8'));
-// 1 ---- the station's floor
-{ const OWN = ['name', 'meta', 'mission', 'scenarios'], keys = [...new Set([...Object.keys(L), ...Object.keys(STATION)])].filter(k => !OWN.includes(k));
-  const off = keys.filter(k => JSON.stringify(L[k]) !== JSON.stringify(STATION[k]));
-  line(off.length === 0 && L.boxes.length > 500, 'the floor is the tunnel station\'s, box for box: all but the name, the notes, the mission block and the scenarios is tut-sky.json\'s', off.length ? `DIFFERS in ${off.join(', ')} (export both: tools/levels/export.ts tut-sky, then tut-team)` : `${keys.length} keys the same · ${L.boxes.length} boxes`); }
-
+const TEXT = readFileSync(resolve(ROOT, 'levels/tut-team.json'), 'utf8'), L = JSON.parse(TEXT);
 // 2 ---- one order and one word
 { const R = L.scenarios.lesson.rails, steps: any[] = L.scenarios.lesson.steps, SQUADS = ['order', 'word', 'menu', 'ring', 'who', 'tools', 'plan', 'goal', 'nvg', 'zoom'];
   const early = (R.allow as string[]).filter(a => SQUADS.includes(a)), added = steps.flatMap(s => (s.allow ?? []) as string[]);

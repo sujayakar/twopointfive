@@ -62,7 +62,6 @@ pub fn default_settings() -> RenderSettings {
     s.one_smoke_solve = true;
     s.fire_smoke_shed = true;
     s.fire_smoke = true;
-    s.smoke_keep = 1.0;
     s.dn_spec_iters = 1.0;
     s.dn_spec_cap = 16.0;
     s.dn_spec_clamp_k = 1.0;
@@ -106,7 +105,6 @@ pub fn default_settings() -> RenderSettings {
     s.direct_history = 1.0;
     s.direct_blur_cap = 10.0;
     s.sec_min_e = 0.006;
-    s.flashlight_radius = 0.07;
     s.light_reach = true;
     s.gi_firefly_k = 4.0;
     s.gather_third = false;
@@ -124,21 +122,8 @@ pub fn default_settings() -> RenderSettings {
     s.wx_air_steps = 0.0;
     s.smoke_diffuse_weight = game::root_settings::RenderSettingsSmokeDiffuseWeight::Bilinear;
     s.smoke_multi_scatter = 0.0;
-    s.smoke_march_lights = 0.0;
     s.smoke_shadow_steps = 8.0;
-    s.froxel_vol = true;
-    s.froxel_h = 135.0;
-    s.froxel_d = 64.0;
-    s.froxel_k = 4.0;
-    s.froxel_history = 0.93;
-    s.froxel_near = 0.5;
-    s.froxel_far = 56.0;
-    s.froxel_curve = 2.0;
-    s.froxel_top_rays = 2.0;
-    s.froxel_sharp = false;
-    s.froxel_bias = 0.0;
     s.particle_births = 6144.0;
-    s.debris_cap = 64.0;
     s.torch_bounce_cards = false;
     s.gloss = false;
     s.decals = true;

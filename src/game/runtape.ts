@@ -4,10 +4,10 @@
 // the camera's pose is kept and they are rebuilt from it, as the session journal does) and every value the game READ off the GPU that step (Game.sensors). What
 // reaches the game from OUTSIDE a step is taped where it can be seen: a restart from a card (the player is a new object between two steps), a sandbox switch, a
 // knob moved on the Tab panel, the player put somewhere (a 'pose' row: where he stands at the first step and after every restart — a page that stages its own scene,
-// host/sneaklab.ts, stands him there — and wherever he was moved between two steps, a debug teleport; 'posein': where a restart made INSIDE a step, Shift+Enter,
+// a lab's page, stood him there — and wherever he was moved between two steps, a debug teleport; 'posein': where a restart made INSIDE a step, Shift+Enter,
 // left him once the page's own wrap of Game.restart had staged its scene — the game's restart is wrapped on this Game's instance to see it, as the sensors' read is).
 // A control worked on the page between two steps (`touched()`: ui/replaykey.ts hears the document's input, change and click) has every table looked at before the
-// next step, so a number moved on a panel while playing is taped at the step it first acts on, not on the tables' slow round. What cannot be followed — a scenario started or quit from a menu, a checkpoint loaded between two steps, an F10 recording started — ends the tape with its reason (`dead`),
+// next step, so a number moved on a panel while playing is taped at the step it first acts on, not on the tables' slow round. A save of this run loaded from a card is taped by its slot: the walk has made the same save. What cannot be followed — a scenario started or quit from a menu, a file's checkpoint or another run's loaded — ends the tape with its reason (`dead`),
 // and the replay is then a trace only. It never touches the game: the sensors' read is WRAPPED on this Game's instance (the value passes through untouched).
 // A re-run is exact as far as the page's arithmetic and bun's agree; the tool measures that against the trace instead of promising it.
 import type { Game } from './game';
@@ -68,12 +68,12 @@ export function tapePoses(g: Game): { row(f: number, kind: string, data: unknown
     due.push([f, data]); return true; } };
 }
 /** What reached the game from OUTSIDE a step that no tape can follow, as the replay buffer saw it before the step ran (replaybuf.ts `look` — the one place it is
- *  asked, for the tape and the trace alike): a checkpoint loaded, an F10 recording started (it re-enters a checkpoint of the moment and puts its own die in). */
-export type Outside = 'load' | 'rec' | null;
-/** checkpoints loaded into this game so far (savestate.ts Checkpoints.load — the one road a page's load takes) */
-export const loadsOf = (g: Game): number => (g.saves as { stats?: { loads?: number } } | undefined)?.stats?.loads ?? 0;
-/** the F10 recorder: running, and the last file it made (a new object each stop: a recording stopped and started again between two looks is seen by it) */
-export const recOf = (g: Game): { on: boolean; last: object | null } => { const J = g.journal as { recording?: boolean; last?: object | null } | undefined; return { on: !!J?.recording, last: J?.last ?? null }; };
+ *  asked, for the tape and the trace alike): a checkpoint loaded. */
+export type Outside = 'load' | null;
+/** checkpoints loaded into this game so far (savestate.ts Checkpoints.load — the one road a page's load takes), and times the host put it back to its start
+ *  (Checkpoints.startedAgain). Both move the clock; only these counts say which it was */
+export const loadsOf = (g: Game): number => g.saves?.stats?.loads ?? 0;
+export const restartsOf = (g: Game): number => g.saves?.stats?.restarts ?? 0;
 const kitNow = (): string => JSON.stringify({ on: KIT.on, members: KIT.members, ...(kitOwn() ? { own: true } : {}), ...(kitStealthCard() ? { stealth: kitStealthCard() } : {}) });   // (`own`: the cards are the player's own layout, worn as written — kit.ts KITDEAL; absent = a tape from before, or cards a team of three or four wears dealt)
 
 /** THE RECIPE OF A GAME AS IT STANDS (format.ts RunTape.recipe, but for the page's address, which its host knows): its die, the scenario that is up, the journal's
@@ -109,7 +109,7 @@ export class RunTapeRec {
   private sens: RunTape['sens']['rows'] = [];
   private seq: number[] = []; private vals: (number | undefined)[] = []; private prevSeq: number[] = []; private prevVals: (number | undefined)[] = [];
   private x: RunTape['x'] = [];
-  private playerRef: object | null = null; private timeEnd = 0; private flagsKey = ''; private tuneKey = ''; private tableKeys: Record<string, string> = {}; private kitKey = ''; private pose: number[] = []; private poseNow: number[] = []; private lookAll = false; private reg: Record<string, Record<string, unknown>> | null = null; private tableNames: string[] | null = null; private tableAt = 0;
+  private playerRef: object | null = null; private timeEnd = 0; private loads = 0; private restarts = 0; private shelf = 0; private flagsKey = ''; private tuneKey = ''; private tableKeys: Record<string, string> = {}; private kitKey = ''; private pose: number[] = []; private poseNow: number[] = []; private lookAll = false; private reg: Record<string, Record<string, unknown>> | null = null; private tableNames: string[] | null = null; private tableAt = 0;
 
   /** a control was worked on the page from outside a step (ui/replaykey.ts): every table, the tune and the kit are looked at before the next one */
   touched(): void { this.lookAll = true; }
@@ -121,8 +121,7 @@ export class RunTapeRec {
     const f = this.ticks;
     // (a LOAD is not a restart, whatever its clock says — earlier, later (a checkpoint of an earlier visit) or the same to the bit; a load made INSIDE a step, the
     // bare Enter once down, is the step's own input and is walked again like any other)
-    if (outside) { this.kill(f, outside === 'rec' ? 'an F10 recording was started' : 'a checkpoint was loaded'); return; }
-    if (f === 0) { if (!this.begin(g)) return; } else if (!this.between(g, f)) return;
+    if (f === 0) { if (outside) { this.kill(f, 'a checkpoint was loaded'); return; } if (!this.begin(g)) return; } else if (!this.between(g, f)) return;
     if (f >= RUNTAPE.minutes * 3600) { this.kill(f, `the page's game had run more than ${RUNTAPE.minutes} min of steps`); return; }
     { const L = this.dt[this.dt.length - 1]; if (L && L[1] === dt) L[0]++; else this.dt.push([1, dt]); }
     { const k = `${cmd.w},${cmd.h},${cmd.pw},${cmd.ph}`; if (k !== this.viewKey) { this.viewKey = k; this.view.push([f, cmd.w, cmd.h, cmd.pw, cmd.ph]); } }
@@ -160,14 +159,14 @@ export class RunTapeRec {
     if (same) { let ch: (number | TapeVal)[] | null = null; for (let i = 0; i < V.length; i++) if (!Object.is(V[i], Q[i])) (ch ??= []).push(i, tapeF32(V[i])); if (ch) this.sens.push([f, null, ch]); }
     else this.sens.push([f, S.slice(), V.map(v => tapeF32(v))]);
     this.prevSeq = S.slice(); this.prevVals = V.slice();
-    this.ticks = f + 1; this.playerRef = g.player; this.timeEnd = g.time; poseOf(g, this.pose);
+    this.ticks = f + 1; this.playerRef = g.player; this.timeEnd = g.time; this.loads = loadsOf(g); this.restarts = restartsOf(g); this.shelf = g.saves?.shelfChanges ?? 0; poseOf(g, this.pose);
   }
   private sensed(key: string, v: number | undefined): void {
     if (!this.inTick || this.dead) return;
     let ki = this.keyIdx.get(key); if (ki === undefined) { ki = this.keys.length; this.keys.push(key); this.keyIdx.set(key, ki); }
     this.seq.push(ki); this.vals.push(v);
   }
-  private flagsOf(g: Game) { return { godMode: !!g.godMode, aiEnabled: g.aiEnabled !== false, infiniteAmmo: !!g.infiniteAmmo, playerInvisible: !!g.playerInvisible }; }
+  private flagsOf(g: Game) { return { godMode: !!g.godMode, aiEnabled: g.aiEnabled !== false, infiniteAmmo: !!g.infiniteAmmo, playerInvisible: !!g.playerInvisible, autosave: g.saves?.enabled !== false }; }
   private begin(g: Game): boolean {
     if (g.time !== 0) { this.kill(0, 'the tape was not there from the game\'s first step'); return false; }
     const tables = tablesNow(), kit = kitNow();
@@ -175,13 +174,13 @@ export class RunTapeRec {
     this.kitKey = kit;
     if (this.playerRef && g.player !== this.playerRef) this.x.push([0, 'restart']);
     this.x.push([0, 'pose', poseOf(g, []).map(enc)]);
-    this.flagsKey = JSON.stringify(this.flagsOf(g)); this.tuneKey = JSON.stringify(g.tune);
+    this.flagsKey = JSON.stringify(this.flagsOf(g)); this.x.push([0, 'flags', JSON.parse(this.flagsKey)]); this.tuneKey = JSON.stringify(g.tune);
     this.tableKeys = tables;
     if (!this.wrapped) {   // every value the game reads off the renderer passes through here on its way (sensors.ts read: its sugar calls it too)
       const S = g.sensors as unknown as { read(key: string): number | undefined }, read = S.read, self = this;
       S.read = function (this: unknown, key: string) { const v = read.call(this, key); self.sensed(key, v); return v; };
       // …and a restart made INSIDE a step (Shift+Enter, the bare Enter once down) is followed to where it left the player: a page that wraps the restart to
-      // stage its own scene (host/sneaklab.ts, at boot — before this) has staged it by then, and nothing between two steps would show that it had
+      // stage its own scene (at boot — before this) has staged it by then, and nothing between two steps would show that it had
       afterRestart(g, () => { if (self.inTick && !self.dead) self.x.push([self.ticks, 'posein', poseOf(g, []).map(enc)]); });
       this.wrapped = true;
     }
@@ -191,13 +190,15 @@ export class RunTapeRec {
   private lookTable(f: number, name: string): boolean { const k = tableKey(name, this.reg![name]); if (k === this.tableKeys[name]) return false; this.tableKeys[name] = k; this.x.push([f, 'table', [name, JSON.parse(k)]]); return true; }
   /** what was done to the game between two steps, from outside one: taped where it can be re-done, the tape's end where it cannot */
   private between(g: Game, f: number): boolean {
-    const fresh = g.player !== this.playerRef;
-    if (fresh) {
-      if (activeScenario(g) !== this.recipe!.scenario) { this.kill(f, 'a scenario was started or quit from a menu'); return false; }
-      if (g.time !== this.timeEnd) { this.kill(f, 'a checkpoint was loaded'); return false; }   // (a restart leaves the clock where the last step left it)
-    } else if (g.time !== this.timeEnd) { this.kill(f, 'the game clock was moved between two steps'); return false; }
+    // (a restart: the host's counts itself and moves the clock back to the start's; the TypeScript's, of a game not yet started, makes a new player and leaves
+    // the clock. A load counts itself too, and is done again where it was one load, of a save this run made in memory: the walk has made the same save)
+    const again = restartsOf(g) !== this.restarts, loads = loadsOf(g) - this.loads, fresh = again || g.player !== this.playerRef, key = loads === 1 && !fresh ? g.saves.loadedKey : null;
+    if (fresh && activeScenario(g) !== this.recipe!.scenario) { this.kill(f, 'a scenario was started or quit from a menu'); return false; }
+    if ((loads && key === null) || (fresh && !again && g.time !== this.timeEnd)) { this.kill(f, 'a checkpoint was loaded'); return false; }
+    if ((g.saves?.shelfChanges ?? 0) !== this.shelf) { this.kill(f, 'the saves in memory were changed from a panel'); return false; }   // (a save written there, a file taken in, the shelf emptied: the walk's slots would be other saves)
+    if (!fresh && key === null && g.time !== this.timeEnd) { this.kill(f, 'the game clock was moved between two steps'); return false; }
     { const k = JSON.stringify(this.flagsOf(g)); if (k !== this.flagsKey) { this.flagsKey = k; this.x.push([f, 'flags', JSON.parse(k)]); } }
-    const now = fresh || this.lookAll; this.lookAll = false;   // (a restart, or a control worked on the page since the last step: everything is looked at now)
+    const now = fresh || key !== null || this.lookAll; this.lookAll = false;   // (a restart, or a control worked on the page since the last step: everything is looked at now)
     if (now || f % RUNTAPE.tuneEvery === 0) { const k = JSON.stringify(g.tune); if (k !== this.tuneKey) { this.tuneKey = k; this.x.push([f, 'tune', JSON.parse(k)]); } }
     // (the tables one or so a step, round and round, each looked at once every `tablesEvery` steps: all hundred-odd on one step was most of a millisecond of
     // that step. ALL of them on the step one is found changed — what was written with it, a difficulty or a reset of the feel rows, goes on the tape together —
@@ -208,9 +209,9 @@ export class RunTapeRec {
       if (all) for (const name of names) this.lookTable(f, name);
       if (all || f % every === 0) { const k = kitNow(); if (k !== this.kitKey) { this.kitKey = k; this.x.push([f, 'kit', JSON.parse(k)]); } }   // (a card changed on the loadout screen: the next staging deals it)
     }
-    if (fresh) this.x.push([f, 'restart']);
+    if (fresh) this.x.push(again ? [f, 'restart', 'start'] : [f, 'restart']); else if (key !== null) this.x.push([f, 'load', key]);
     // (…and where he stands now, when that is not where the last step left him — after a restart always, ahead of nothing: a page that stages its own scene does it there)
-    { const P = poseOf(g, this.poseNow), Q = this.pose; let moved = fresh; for (let i = 0; !moved && i < POSE_N; i++) moved = !Object.is(P[i], Q[i]); if (moved) this.x.push([f, 'pose', P.map(enc)]); }
+    { const P = poseOf(g, this.poseNow), Q = this.pose; let moved = fresh || key !== null; for (let i = 0; !moved && i < POSE_N; i++) moved = !Object.is(P[i], Q[i]); if (moved) this.x.push([f, 'pose', P.map(enc)]); }
     return true;
   }
   private kill(f: number, why: string): void {

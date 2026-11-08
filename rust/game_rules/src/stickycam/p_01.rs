@@ -44,8 +44,8 @@ pub fn sticky_issue(g: &mut crate::game::Game, pl: PlayerId, n: f64, listed: Opt
 }
 
 /// Where to send one for what the cursor names: over that spot at the flight's height. (stickycam.ts camAimPoint)
-pub fn cam_aim_point(g: &crate::game::Game, from: V3) -> V3 {
-    let ap = g.aim_point;
+pub fn cam_aim_point(g: &crate::game::Game, seat: &crate::seats::SeatRef, from: V3) -> V3 {
+    let ap = seat.aim_point;
     let (mut x, mut z) = (ap[0], ap[2]);
     let (dx, dz) = (x - from[0], z - from[2]);
     let d = m::hyp2(dx, dz);
@@ -372,7 +372,7 @@ pub fn take_cam(g: &mut crate::game::Game, pl: PlayerId) -> bool {
 }
 
 /// Drawn: a dark block on its surface and a lens proud of it, keyed as a wall device's so the fog lets them through; the lens is red on the one that sends. (stickycam.ts stickyBoxes)
-pub fn sticky_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn sticky_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let pl = g.player;
     let flag = crate::scene_boxes::box_flag();
     let flags = (js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64;
@@ -389,10 +389,10 @@ pub fn sticky_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
         let c1 = v3::mad(c.pos, z, if c.vel.is_some() { 0.02 } else { 0.034 });
         let key = device + CAM_KEY + js::rem(c.id, 4096.0) * 2.0;
         let b0 = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: c0, h: body_h, yaw: Some(yaw), albedo: Some(v3::copy(body())), flags: Some(flags), mkey: Some(key), ..Default::default() });
-        out.push(b0);
+        out.push(b0.into());
         let paint = if sending(g, id) { lens_live() } else { lens() };
         let b1 = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: c1, h: lens_h, yaw: Some(yaw), albedo: Some(v3::copy(paint)), flags: Some(flags), mkey: Some(key + 1.0), ..Default::default() });
-        out.push(b1);
+        out.push(b1.into());
     }
 }
 
@@ -410,8 +410,8 @@ pub fn sending(g: &mut crate::game::Game, c: StickyCamId) -> bool {
 }
 
 /// A camera of his is still in the air. (stickycam.ts stickyFlying)
-pub fn sticky_flying(g: &crate::game::Game) -> bool {
-    let pl = g.player;
+pub fn sticky_flying(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+    let pl = seat.player;
     g.pl[pl].cams.iter().any(|c| g.tab.stickycam_sticky_cam[*c].vel.is_some())
 }
 
@@ -448,11 +448,11 @@ mod tests {
     fn aim_point_pushes_a_near_cursor_out_to_a_throw() {
         let (mut g, _) = game();
         g.aim_point = [1.1, 0.0, 0.7];
-        let p = cam_aim_point(&mut g, [0.3, 1.2, -0.4]);
+        let p = cam_aim_point(&g, &crate::seats::here(&g), [0.3, 1.2, -0.4]);
         assert_eq!((p[0].to_bits(), p[2].to_bits()), (0x3ff2ea86e39b87ec, 0x3fea04f2f1ebb5c9));
         assert_eq!(p[1], g.k.sticky.aim_y);
         g.aim_point = [10.25, 0.0, -3.5];
-        let p = cam_aim_point(&mut g, [0.3, 1.2, -0.4]);
+        let p = cam_aim_point(&g, &crate::seats::here(&g), [0.3, 1.2, -0.4]);
         assert_eq!((p[0].to_bits(), p[2].to_bits()), (0x4024800000000000, 0xc00c000000000000));
     }
 
@@ -499,9 +499,9 @@ mod tests {
         let rf = g.pl[pl].rifle;
         g.fa[rf].cams = 1.0;
         cam(&mut g, pl, 1.0, false);
-        assert!(!sticky_flying(&mut g));
+        assert!(!sticky_flying(&g, &crate::seats::here(&g)));
         cam(&mut g, pl, 2.0, true);
-        assert!(sticky_flying(&mut g));
+        assert!(sticky_flying(&g, &crate::seats::here(&g)));
         assert_eq!(sticky_left(&mut g, pl), 2.0);
         g.fa[rf].cams = g.k.sticky.carry;
         assert_eq!(sticky_left(&mut g, pl), g.k.sticky.carry);

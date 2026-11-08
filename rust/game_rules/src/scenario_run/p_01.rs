@@ -150,6 +150,44 @@ pub fn start_from_query(g: &mut crate::game::Game, search: &crate::scenario_run:
     StartFromQuery { spec, why }
 }
 
+/// A MISSION'S ADDRESS IS READ IN TWO PLACES by whoever starts a game from one. BEFORE THE GAME IS MADE, on the blank game: the mission row's own
+/// hour and weather written onto the words, then the weather the game is BORN in (`?weather=`, or snow on a level built for it), locked (the
+/// address's for the life of a game this start stands, as a page's is), and the visit's hour (`?hour=`, `?sun=`), which the stand lays over the level. A Weather born in its kind lays its roofs, its wet ground and its wind once; a host that stood the level's
+/// own storm first and changed the kind afterwards had another box table than a page.   (src/host/standup.ts addressBeforeGame)
+pub fn address_before_game(g: &mut crate::game::Game, q: &mut crate::query::Query) -> Option<crate::weather_kinds::WeatherKind> {
+    crate::rowset::row_settings(g, q);
+    // (weatherKinds.ts weatherAsked, then snowLevelOfQuery: a level built for snow is in snow whatever the address said)
+    let snow = q.get("levelFile").and_then(|f| f.strip_suffix(".json")).map_or(false, |n| crate::weather_kinds::snow_level(g, Some(n)));
+    let kind = if snow { Some(crate::weather_kinds::WeatherKind::Snow) } else { crate::weather_kinds::weather_of(q) };
+    // (hours.ts hourAsked: the visit's hour, which the stand lays over the level once the game is made)
+    let sun = q.float("sun").filter(|s| s.is_finite());
+    g.stood = crate::game::StoodWith { weather: kind, locked: true, hour: crate::hours::hour_id_of(q.get("hour")), sun: sun.map_or(1.0, |s| s.clamp(0.0, 1.0)), sun_given: sun.is_some(), dry: !q.has("noweather"), solo_stand: false };
+    kind
+}
+
+/// …AND THE DIFFICULTY IT ASKS FOR, before the game is made, on the blank game's own knob tables, as a page reads it: a Training lesson's address reads no lever, as its page
+/// doesn't. It is the address's alone: no host but a page keeps a level.   (src/host/standup.ts difficultyOfAddress)
+pub fn difficulty_of_address(g: &mut crate::game::Game, q: &crate::query::Query) {
+    let file = q.get("levelFile");
+    let plain = crate::scene_scenario_list::lesson_missions().iter().any(|e| file.is_some() && e.level.as_deref() == file && e.group == Some(crate::scene_scenarios::MissionGroup::Tutorial));
+    if let Some(a) = crate::difficulty::difficulty_asked(g, q, plain) { crate::difficulty::difficulty_lay(g, &a); }
+}
+
+/// …AND OF THE STOOD GAME: the mission the address names, staged, then the solo card's question (the plain night, or a quiet mission alone, wears
+/// the player's own card; a squad's mission leaves the kit to its own staging).   (src/host/standup.ts startAtAddress, soloOfAddress)
+pub fn start_at_address(g: &mut crate::game::Game, q: &crate::query::Query) -> crate::scenario_run::StartFromQuery {
+    // (?noweather: the level's own storm off from the start, as the page puts it off once its game is stood)
+    if q.has("noweather") { crate::weather::weather_set_enabled_2(g, false); }
+    let r = start_from_query(g, &StartFromQuerySearch::URLSearchParams(q.clone()));
+    // (a Training level is left as it stands: no host but the page says the lesson's page yet, standup.ts startAtAddress)
+    let lesson = g.level.scenarios.as_ref().and_then(|s| s.lesson.as_ref()).map_or(false, |l| !l.steps.is_empty());
+    if !lesson {
+        let solo = q.has("solo") || !g.quiet.active;
+        crate::kit::kit_solo_if(g, solo);
+    }
+    r
+}
+
 /// Which scenario is up on this game right now; the room clear is asked first, being the night breach on its own layout.   (scenarioRun.ts activeScenario)
 pub fn active_scenario(g: &crate::game::Game) -> Option<crate::scenario_run::ActiveScenario> {
     if crate::roomclear::room_clear_scenario_active(g) {

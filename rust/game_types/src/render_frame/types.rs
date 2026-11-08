@@ -253,21 +253,6 @@ impl RenderFrameModBounceWallsConfig {
 }
 impl Default for RenderFrameModBounceWallsConfig { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/frame.ts:340 wallSidesConfig, src/render/frame.ts:340)
-#[derive(Clone, Copy, Debug)]
-pub struct RenderFrameModWallSidesConfig {
-    pub on: bool,
-}
-impl RenderFrameModWallSidesConfig {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RenderFrameModWallSidesConfig {
-            on: false,
-        }
-    }
-}
-impl Default for RenderFrameModWallSidesConfig { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/render/frame.ts:343 smokeLabConfig, src/render/frame.ts:343)
 #[derive(Clone, Copy, Debug)]
 pub struct RenderFrameModSmokeLabConfig {
@@ -286,7 +271,6 @@ impl Default for RenderFrameModSmokeLabConfig { fn default() -> Self { Self::zer
 /// (TypeScript: inline at src/render/frame.ts:351 lookConfig, src/render/frame.ts:351)
 #[derive(Clone, Copy, Debug)]
 pub struct RenderFrameModLookConfig {
-    pub on: bool,
     pub kept: f64,
     pub pressed: f64,
     pub bounce: f64,
@@ -325,7 +309,6 @@ impl RenderFrameModLookConfig {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         RenderFrameModLookConfig {
-            on: false,
             kept: 0.0,
             pressed: 0.0,
             bounce: 0.0,
@@ -468,8 +451,6 @@ pub struct RenderFrameMod {
     pub rain_walls_config: crate::render_frame::RenderFrameModRainWallsConfig,
     /// (src/render/frame.ts:332 bounceWallsConfig)
     pub bounce_walls_config: crate::render_frame::RenderFrameModBounceWallsConfig,
-    /// (src/render/frame.ts:340 wallSidesConfig)
-    pub wall_sides_config: crate::render_frame::RenderFrameModWallSidesConfig,
     /// (src/render/frame.ts:343 smokeLabConfig)
     pub smoke_lab_config: crate::render_frame::RenderFrameModSmokeLabConfig,
     /// (src/render/frame.ts:351 lookConfig)
@@ -501,9 +482,8 @@ impl RenderFrameMod {
             rain_scale_config: crate::render_frame::RenderFrameModRainScaleConfig { on: true },
             rain_walls_config: crate::render_frame::RenderFrameModRainWallsConfig { on: true },
             bounce_walls_config: crate::render_frame::RenderFrameModBounceWallsConfig { on: true },
-            wall_sides_config: crate::render_frame::RenderFrameModWallSidesConfig { on: false },
             smoke_lab_config: crate::render_frame::RenderFrameModSmokeLabConfig { on: false },
-            look_config: crate::render_frame::RenderFrameModLookConfig { on: false, kept: 0.0, pressed: 1.0, bounce: 0.7, air: 1.0, sky: 1.0, shade: 0.7, lamps: 1.0, exposure: None, puffs: 1.0, veil: 1.0, snow: None, eyes: 1.0, eye_at: None, door_gaps: None, night_sky: None, fire_smoke: 1.0, fire_fit: 1.0, long_foot: 1.0, walked: 1.0, fire_snow: 1.0, rooms: 1.0, steady: 1.0, room_bright: 1.0, order: 1.0, dark: 1.0, windows: 1.0, glare: 0.1, stir: 1.0, grade_exp: 1.0, grade_c: 1.35, grade_h: 0.0, grade_s: 0.0, grade_sat: 1.0 },
+            look_config: crate::render_frame::RenderFrameModLookConfig { kept: 0.0, pressed: 1.0, bounce: 0.7, air: 1.0, sky: 1.0, shade: 0.7, lamps: 1.0, exposure: None, puffs: 1.0, veil: 1.0, snow: None, eyes: 1.0, eye_at: None, door_gaps: None, night_sky: None, fire_smoke: 1.0, fire_fit: 1.0, long_foot: 1.0, walked: 1.0, fire_snow: 1.0, rooms: 1.0, steady: 1.0, room_bright: 1.0, order: 1.0, dark: 1.0, windows: 1.0, glare: 0.1, stir: 1.0, grade_exp: 1.0, grade_c: 1.35, grade_h: 0.0, grade_s: 0.0, grade_sat: 1.0 },
             refl_walls_config: crate::render_frame::RenderFrameModReflWallsConfig { on: true },
             sharp_cap_config: crate::render_frame::RenderFrameModSharpCapConfig { on: true },
             sun_glint_config: crate::render_frame::RenderFrameModSunGlintConfig { on: true },

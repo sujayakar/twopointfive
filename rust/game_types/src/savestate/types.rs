@@ -1022,8 +1022,6 @@ pub struct SaveState {
     pub fog: Option<crate::fogofwar::FogSnap>,
     pub quiet: Option<crate::quiet::QuietSnap>,
     pub lesson: Option<crate::lesson::LessonSnap>,
-    pub par: Option<crate::par::ParSnap>,
-    pub lay: Option<crate::planlay::LaySnap>,
     pub snatch: Option<crate::snatch::SnatchSnap>,
     pub defuse: Option<crate::defuse::DefuseSnap>,
     pub player: crate::savestate::PlayerSnap,
@@ -1102,8 +1100,6 @@ impl SaveState {
             fog: None,
             quiet: None,
             lesson: None,
-            par: None,
-            lay: None,
             snatch: None,
             defuse: None,
             player: crate::savestate::PlayerSnap::zeroed(),
@@ -1458,7 +1454,6 @@ impl SlotInfoKind {
 pub struct MemSave {
     pub info: crate::savestate::SlotInfo,
     pub pic: Option<String>,
-    pub take: f64,
 }
 impl MemSave {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -1466,45 +1461,10 @@ impl MemSave {
         MemSave {
             info: crate::savestate::SlotInfo::zeroed(),
             pic: None,
-            take: 0.0,
         }
     }
 }
 impl Default for MemSave { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: TapeSlots, src/game/savestate.ts:874)
-#[derive(Clone, Debug)]
-pub struct TapeSlots {
-    pub index: Option<String>,
-    pub last_auto: Option<crate::savestate::TapeSlotsLastAuto>,
-}
-impl TapeSlots {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TapeSlots {
-            index: None,
-            last_auto: None,
-        }
-    }
-}
-impl Default for TapeSlots { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/savestate.ts:874 TapeSlots.lastAuto, src/game/savestate.ts:874)
-#[derive(Clone, Debug)]
-pub struct TapeSlotsLastAuto {
-    pub key: String,
-    pub t: f64,
-}
-impl TapeSlotsLastAuto {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TapeSlotsLastAuto {
-            key: String::new(),
-            t: 0.0,
-        }
-    }
-}
-impl Default for TapeSlotsLastAuto { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: MemShelf, src/game/savestate.ts:878)
 #[derive(Clone, Debug)]

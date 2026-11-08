@@ -255,7 +255,7 @@ pub fn morale_man_down(g: &mut crate::game::Game, victim: GuardId) {
         i += 1;
         if gd == victim || !ours(g, gd) || rescued(g, gd) || training_of(g, gd) != TrainingOf::Green || leader_of(g, gd) != Some(victim) { continue; }
         mind(g, gd).leader_down = true;
-        if g.time < g.gd[gd].dazzled_until || !crate::guards::can_see_char(g, gd, vc, false).visible { continue; }
+        if crate::control::man::blind(g, gd) || !crate::guards::can_see_char(g, gd, vc, false).visible { continue; }
         let n = nerved(g, g.k.morale.leader_shock);
         let cap = g.k.morale.shock_cap;
         let r = g.m.morale.state_of.get_mut(gd).unwrap();
@@ -293,13 +293,13 @@ pub fn morale_reset(g: &mut crate::game::Game, men: Option<bool>) {
     g.m.morale.blasts_of = None;
     if men.unwrap_or(false) {
         let mut i = 0;
-        let rule = crate::owner::own().morale;
+        let rule = crate::owner::by::MORALE;
         while i < g.guards.len() {
             let gd = g.guards[i];
             i += 1;
             g.m.morale.state_of.delete(gd);
             let t = g.time;
-            crate::owner::release_man(g, gd, rule, t);
+            crate::owner::release(g, gd, rule, t);
         }
     }
 }
@@ -387,7 +387,7 @@ pub fn end(g: &mut crate::game::Game, gd: GuardId) {
 /// the enemies plainly in his eyes this frame (morale.ts seenBy)
 pub fn seen_by(g: &mut crate::game::Game, gd: GuardId, hole: Option<V3>) -> Vec<CharId> {
     let mut out: Vec<CharId> = Vec::new();
-    if g.time < g.gd[gd].dazzled_until { return out; }
+    if crate::control::man::blind(g, gd) { return out; }
     let gc = g.gd[gd].ch;
     let eye = head_of(g, gc);
     let ge = g.k.guard_eye;
@@ -649,13 +649,13 @@ pub fn morale_tick(g: &mut crate::game::Game, dt: f64) {
         if r.act != MoraleAct::None { step(g, gd, dt); }
     }
     // who this file's script has this frame, as it stands when the sequences have all been stepped
-    let rule = crate::owner::own().morale;
+    let rule = crate::owner::by::MORALE;
     let mut i = 0;
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
         let t = g.time;
-        if g.m.morale.state_of.get(gd).map_or(false, |s| s.drive) { crate::owner::claim_man(g, gd, rule, t, None); } else { crate::owner::release_man(g, gd, rule, t); }
+        if g.m.morale.state_of.get(gd).map_or(false, |s| s.drive) { crate::owner::claim(g, gd, rule, t, None); } else { crate::owner::release(g, gd, rule, t); }
     }
 }
 

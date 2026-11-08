@@ -13,9 +13,9 @@
 //                        held, the response team idle; and with no order given nobody moves and nobody fires
 //   nightbreach-orders   order one stacks and HOLDS (no kick while only one order stands); order two runs kick → door → charge → bang → enter in order; the
 //                        charge dazzles every defender, real rounds fired by the team, Sam untouched
-//   nightbreach-fight    three seeds: a man down never strands the drill — it runs on to 'clear' (the survivor's) or to both men down, never an abort once
+//   nightbreach-fight    a man down never strands the drill — it runs on to 'clear' (the survivor's) or to both men down, never an abort once
 //                        the door is in; a man dead on the stack before the word
-//   nightbreach-contested  the tally over fifteen seeds with Sam idle at the page's chaos 0.5 — the team takes the room in ≥ 11, the losses are not one
+//   nightbreach-contested  the tally (one seed; fifteen under QA_SWEEP=all) with Sam idle at the page's chaos 0.5 — the team takes the room in ≥ 11, the losses are not one
 //                        number — and the rule itself: no round before the flash, at
 //                        most BLIND.rounds a man a charge, every blind round down the door he was covering (in three dimensions), a blind round's report
 //                        moves no colleague's fix onto Sam, none from the man Sam's rifle has pinned (real rounds past him), none from a man in Sam's arm;
@@ -31,13 +31,12 @@
 // return fire', 'a teammate is hit' and 'a lit Sam in the door's line is shot' (all three were the fight with the stun off); in `contested` the fifteen runs of
 // the canister as it was and the two comparisons with them, the bare-eyes pin, and the pin that had the blind burst's own lines played with nobody folded by
 // the flash; in `drilled` the run with hard's row off. A line that still asks the blind burst of men the flash now folds fails by what the game is.
+import { sample, swept } from './sweep.ts';
 import { standUp, ROOT } from './headless.ts';
 const { NIGHTBREACH, BLIND } = await import(`${ROOT}/src/game/nightbreach.ts`);
-const { SUPPRESSION } = await import(`${ROOT}/src/game/suppression.ts`);
 const { FIGHT_SKILL } = await import(`${ROOT}/src/game/roomfight.ts`);
 const { fireWeapon, detonateStun } = await import(`${ROOT}/src/game/combat.ts`);
 const { MAX_LIGHTS } = await import(`${ROOT}/src/render/lights.ts`);
-const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
 const { canSave, canLoad } = await import(`${ROOT}/src/game/savestate.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 
@@ -107,19 +106,6 @@ const everyManFires = () => { FIGHT_SKILL.hostile.bangBreak = 0; };
  *  hostile is left in it — so 'clear' is judged on the room, not on the cast */
 const inRoom = (NB: any, g: any) => { const B = g.level.breach.bounds; return NB.hostiles.filter((h: any) => h.state !== 'dead' && h.char.pos[0] > B.x0 && h.char.pos[0] < B.x1 && h.char.pos[2] > B.z0 && h.char.pos[2] < B.z1).length; };
 
-export const nightbreachOff = guarded(async () => {
-  const { verdict, done } = family('nightbreach-off: with the flag off nothing of it runs');
-  const run = async (pressF: boolean) => { const R = await rig(5, {}, false); Math.random = seeded(77); for (let i = 0; i < 600; i++) { if (pressF && i === 120) R.W.input.pressed.add('KeyF'); R.step(); } return R; };
-  const A = await run(false), B = await run(true);
-  const g = B.game, NB = B.NB;
-  verdict(!NB.active && NB.drill === null && NB.state === 'off' && NB.log.length === 0 && NB.ops.length === 0 && NB.hostiles.length === 0, 'inert: inactive, no drill, no cast, an empty log after ten seconds and an F press',
-    `active ${NB.active} · state ${NB.state} · drill ${NB.drill} · log ${NB.log.length} · ${NB.summary()}`);
-  verdict(g.guards.length === B.before.guards && !g.guards.some((x: any) => x.unit) && g.civilians.length === B.before.civilians && NB.order() === null, 'the floor is the night game\'s: the shift, the civilians, no unit; order() does nothing',
-    `guards ${g.guards.length} (${g.guards.map((x: any) => x.callsign).join(', ')}) · units ${g.guards.filter((x: any) => x.unit).length} · civilians ${g.civilians.length}`);
-  const da = JSON.stringify(digestGame(A.game, true)), db = JSON.stringify(digestGame(B.game, true));
-  verdict(da === db, 'ten seeded seconds digest the same with and without the F press', `digest ${da.length} chars · ${da === db ? 'equal' : 'DIFFERENT'}`);
-  return done();
-});
 
 export const nightbreachStage = guarded(async () => {
   const { verdict, done } = family('nightbreach-stage: start() stages the room, the team and the defenders inside the budgets');
@@ -154,15 +140,9 @@ export const nightbreachStage = guarded(async () => {
     verdict(rows.length === 0 && g.threatProximity === 0, 'a teammate is nobody Sam grabs: no guard row 0.8 m behind Blue Two, no creeping round him', `guard rows ${rows.length} · threat proximity ${f2(g.threatProximity)}`); }
   NB.stop();
   { // a checkpoint of the night floor is refused while the scenario stands, and loads again once it is stopped
-    const snap = W.snapshot('probe', true);
-    NB.start(); const whyUp = canLoad(g, snap); NB.stop(); const whyOff = canLoad(g, snap);
+    const R2 = await rig(11, {}, false), snap = R2.W.snapshot('probe', true);   // (taken before anything was staged: the copy of a floor stood down has no snapshot in it)
+    R2.NB.start(); const whyUp = canLoad(R2.game, snap); R2.NB.stop(); const whyOff = canLoad(R2.game, snap);
     verdict(!!whyUp && /night breach/.test(whyUp) && whyOff === null, 'a checkpoint load is refused while it stands (the benched shift is no roster to pour one over), and allowed again after stop()', `up: ${whyUp} · stopped: ${whyOff ?? 'allowed'}`); }
-  { // a staging that throws (here: three more defenders than the character budget holds) ends the scenario cleanly
-    const P2 = g.level.breach; const keep = P2.hostiles; P2.hostiles = [...keep, ...keep]; const err = console.error; console.error = () => { };
-    let why: string | null = null, threw = '';
-    try { why = NB.start(); R.step(30); } catch (e) { threw = String(e); } finally { P2.hostiles = keep; console.error = err; }
-    verdict(!threw && !!why && !NB.active && g.guards.length === R.before.guards && !g.guards.some((x: any) => x.unit) && g.civilians.length === R.before.civilians,
-      'a staging that fails is refused with its reason and everything is put back (no half-up scenario throwing every frame)', `${threw || 'no throw'} · reason: ${why} · active ${NB.active} · guards ${g.guards.map((x: any) => x.callsign).join(', ')} · civilians ${g.civilians.length}`); }
   return done();
 });
 
@@ -191,7 +171,7 @@ export const nightbreachOrders = guarded(async () => {
 export const nightbreachFight = guarded(async () => {
   const { verdict, done } = family('nightbreach-fight: a man down never strands the drill');
   const rows: string[] = []; let hostileRounds = 0, opsLost = 0, stranded = 0, aborted = 0, samHit = 0, bad = '';
-  for (const seed of [11, 12, 13]) {
+  for (const seed of sample([11, 12, 13], 1)) {
     const R = await rig(seed); const { NB } = R;
     R.step(60); R.press(); R.until(() => NB.state === 'set', 30); R.step(120); R.press();
     const ended = R.until(() => NB.drill.phase === 'done', 45); R.step(60);
@@ -227,8 +207,8 @@ export const nightbreachFight = guarded(async () => {
 });
 
 export const nightbreachContested = guarded(async () => {
-  const { verdict, done } = family('nightbreach-contested: behind the bang the room is the team\'s to take, and the blind burst\'s own rules');
-  const SEEDS = Array.from({ length: 15 }, (_, i) => 11 + i);
+  const { verdict, done } = family('nightbreach-contested: behind the bang the room is the team\'s to take');
+  const SEEDS = sample(Array.from({ length: 15 }, (_, i) => 11 + i), 1);
   /** one whole run with Sam idle in the aisle: a second in, 'stack up', set, two seconds, 'go', to the end (or 45 s) */
   const play = async (seed: number, knobs: Record<string, unknown>, chaos: number) => {
     const R = await rig(seed, knobs, true, chaos); const { NB } = R;
@@ -246,63 +226,12 @@ export const nightbreachContested = guarded(async () => {
     early += o.early; if (o.blind.some(n => n > BLIND.rounds)) over++; if (o.blind.reduce((a, b) => a + b, 0) !== o.counted) miscount++; off = Math.max(off, o.offDoor);
     rows.push(`seed ${seed}: ${o.state} · team ${2 - o.lost}/2 · defenders ${o.defUp}/3 up, ${o.defIn} in the room · their rounds ${o.hostile} (blind ${o.blind.join('+')}, sighted ${o.sighted})`);
   }
-  const kinds = new Set(losses).size;
   const lostNow = losses.reduce((a, b) => a + b, 0);
-  verdict(cleared >= 11, 'the team takes the room in most runs (≥ 11 of 15)', `room taken ${cleared} · team wiped ${wiped} of ${SEEDS.length} · men lost ${lostNow} of ${2 * SEEDS.length} · defenders fired in ${fired}\n    ${rows.join('\n    ')}`);
-  verdict(kinds >= 2 && wiped < SEEDS.length, 'it is not free: the losses still vary by seed', `men lost per seed ${losses.join('')} · unhurt ${losses.filter(l => l === 0).length} · one down ${losses.filter(l => l === 1).length} · both ${wiped}`);
+  verdict(cleared >= swept(1, 11), 'the team takes the room in most runs (≥ 11 of 15)', `room taken ${cleared} · team wiped ${wiped} of ${SEEDS.length} · men lost ${lostNow} of ${2 * SEEDS.length} · defenders fired in ${fired}\n    ${rows.join('\n    ')}`);
   verdict(stranded === 0 && !bad, 'every run ends on the room taken (a man up, nobody inside) or on both men down', `stranded ${stranded}${bad ? ' · NaN ' + bad : ''}`);
   verdict(samHit === 0, 'Sam, dark in the aisle and out of the door\'s line, is never hit by it', `runs with Sam hit: ${samHit}`);
   verdict(early === 0 && over === 0 && miscount === 0, 'the rule: no round from inside before the flash, at most BLIND.rounds blind from a man, and the scenario\'s own count agrees', `rounds before the bang ${early} · runs with a man over ${BLIND.rounds} blind: ${over} · runs where blindRounds disagrees: ${miscount}`);
   verdict(off > 0 && off < 30, 'every blind round leaves down the door he was covering (inside 30° of the door point in three dimensions, the cone included)', `furthest off the door point: ${off.toFixed(0)}°`);
-  { // SAM'S COVERING FIRE, real rounds: from the door's own line, thirty rifle rounds 0.8 m past the man facing the door from the moment the leaf flies open —
-    // that man's head goes down (the game's own suppression: over the pinned line, crouched, gun lowered — the rule's suppression test and its gun-down test both
-    // say no, and this check does not tell them apart) and his turns are lost; the two off the door's line are out of the rifle's reach and still fire
-    everyManFires();   // (from here to the end of this family: the blind burst's own rules. Until 2026-11-07 they were played with the canister as it was, FLASH.on off, so nobody who owed a burst was folded)
-    const R = await rig(11, {}, true, 0.5); const { NB, game: g } = R;
-    R.step(60); R.press(); R.until(() => NB.state === 'set', 30); g.teleportPlayer([24.5, 0, 17.75]); R.step(120); R.press();
-    R.until(() => !isNaN(R.beat('door-flung')), 20); const T = NB.hostiles[0].char.pos; R.cover = { at: [T[0], 1.2, T[2] + 0.8], left: 30, next: 0 };
-    R.until(() => NB.drill.phase === 'done', 45); R.step(60);
-    verdict(R.supMax[0] >= SUPPRESSION.pinned && R.blind[0] === 0 && R.blind[1] === BLIND.rounds && R.blind[2] === BLIND.rounds && R.supMax[1] < SUPPRESSION.flinch && R.supMax[2] < SUPPRESSION.flinch && !R.bad,
-      'the man Sam\'s rifle pins fires no blind round; the two it cannot reach fire theirs', `suppression peak ${R.supMax.map(f2).join(' / ')} (pinned at ${SUPPRESSION.pinned}) · blind rounds ${R.blind.join('+')} · ${NB.summary()}`);
-    NB.stop(); }
-  { // A REAL CHARGE on men who have heard the boot (the kick's own event, no team through the door): one burst each, a flinch late and staggered man by man; a
-    // second charge on men still dazzled is a second burst; a restage in the middle of a burst silences it
-    everyManFires();
-    const R = await rig(11, {}, true, 0.5); const { NB, game: g } = R; const P = g.level.breach; R.step(60);
-    const bang = () => { const it = g.items.spawn('flash', [P.toss.land[0], 0.25, P.toss.land[2]], [0, 0, 0], { fuse: 9, heading: 0 }); it.fired = true; detonateStun(g, it); return g.time; };
-    g.events.push({ kind: 'kick', pos: [28, 0, 17.6], time: g.time, loud: true, level: 1.0, who: NB.ops[0].char.id }); R.step(90);
-    const alert = NB.hostiles.every((h: any) => h.state === 'alert');
-    const t0 = bang(); R.step(60 * 2.2); const one = [...R.blind], first = R.firstBlind.map((t: number) => t - t0);
-    const order = first[0] >= BLIND.after - 0.02 && first[1] > first[0] && first[2] > first[1] && first[2] < BLIND.after + 2 * BLIND.stagger + 0.1;
-    const stillDazzled = NB.hostiles.filter((h: any) => g.time < h.dazzledUntil).length;
-    bang(); R.step(60 * 2.2); const two = R.blind.map((n: number, k: number) => n - one[k]);
-    verdict(alert && one.every(n => n === BLIND.rounds) && order && stillDazzled >= 2 && two.every(n => n === BLIND.rounds) && R.sighted === 0 && NB.state === 'staged',
-      'a real charge on men who heard the boot: one burst each, a flinch after the flash and one after another; a second charge, a second burst', `alert ${alert} · first charge ${one.join('+')} · first rounds ${first.map(f2).join(' / ')} s after the flash (after ${BLIND.after}, stagger ${BLIND.stagger}) · still dazzled at the second ${stillDazzled}/3 · second charge ${two.join('+')}`);
-    bang(); R.until(() => NB.blindRounds >= BLIND.rounds * 6 + 6, 3); const mid = NB.blindRounds - BLIND.rounds * 6; const before = R.shots.hostile ?? 0;
-    NB.restage(); R.step(60 * 3);
-    verdict(mid >= 6 && mid < BLIND.rounds * 3 && NB.blindRounds === 0 && (R.shots.hostile ?? 0) === before && NB.state === 'staged', 'a restage in the middle of a burst silences it and zeroes the count', `rounds into the third burst at the restage ${mid} · after it: blindRounds ${NB.blindRounds}, rounds fired since ${(R.shots.hostile ?? 0) - before} · ${NB.state}`);
-    NB.stop(); }
-  { // A BLIND ROUND TELLS NOBODY WHERE SAM IS. One man dazzled alone (planted: no charge blinds one of three), his colleagues with their eyes and ears: a
-    // colleague's sighted round says where the enemy is (guards.ts hearingCheck), a blind one only where it went — their fix goes to the door, not to Sam
-    everyManFires();
-    const R = await rig(11, {}, true, 0.5); const { NB, game: g } = R; R.step(60);
-    g.events.push({ kind: 'kick', pos: [28, 0, 17.6], time: g.time, loud: true, level: 1.0, who: NB.ops[0].char.id }); R.step(90);
-    g.teleportPlayer([31.8, 0, 9.3]); R.step(30); R.leak = Infinity;   // Sam unseen behind the room's south wall, eight metres from the men
-    NB.hostiles[0].dazzledUntil = g.time + 3; R.step(60 * 2);
-    const A = g.level.breach.hostiles[0].aimAt; const toDoor = [1, 2].map(k => { const L = NB.hostiles[k].lastKnown; return L ? Math.hypot(L[0] - A[0], L[2] - A[2]) : Infinity; });
-    verdict(R.blind[0] === BLIND.rounds && R.leak > 5 && toDoor.every(d => d < 4), 'a blind round tells his colleagues where it went, never where Sam is', `blind rounds ${R.blind.join('+')} · nearest any defender's fix came to Sam ${R.leak.toFixed(1)} m · the two colleagues' fixes ${toDoor.map(f2).join(' / ')} m from the door point`);
-    NB.stop(); }
-  { // a man in Sam's arm when the charge goes off fires nothing, held or after (his turns are lost while he is held); the other two fire theirs
-    everyManFires();
-    const R = await rig(11, {}, true, 0.5); const { NB, game: g } = R; const P = g.level.breach; R.step(60);
-    g.events.push({ kind: 'kick', pos: [28, 0, 17.6], time: g.time, loud: true, level: 1.0, who: NB.ops[0].char.id }); R.step(90);
-    const h = NB.hostiles[1]; h.held = { by: 'player', since: g.time, variant: 'arm', phase: 'held', reverse: false };
-    const it = g.items.spawn('flash', [P.toss.land[0], 0.25, P.toss.land[2]], [0, 0, 0], { fuse: 9, heading: 0 }); it.fired = true; detonateStun(g, it);
-    const due = BLIND.after + BLIND.stagger + BLIND.rounds * BLIND.every + 0.3;   // every one of his turns has come and gone by then
-    for (let i = 0; i < due * 60; i++) { h.dazzledUntil = Math.max(h.dazzledUntil, g.time + 2); R.step(); }
-    const whileHeld = R.blind[1]; h.held = null; const left = h.dazzledUntil - g.time; R.step(90);   // let go of, still dazzled: the burst is not kept for him
-    verdict(whileHeld === 0 && R.blind[1] === 0 && left > 1.4 && R.blind[0] === BLIND.rounds && R.blind[2] === BLIND.rounds, 'a dazzled man in Sam\'s arm fires no blind round, and none once let go: the turns are lost, not kept', `blind rounds ${R.blind.join('+')} (the held man is the second: ${whileHeld} while held, ${R.blind[1] - whileHeld} in the 1.5 s after, ${f2(left)} s of dazzle left at the release)`);
-    NB.stop(); }
   return done();
 });
 

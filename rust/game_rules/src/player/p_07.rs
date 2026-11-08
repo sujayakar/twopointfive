@@ -200,7 +200,7 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
             rows.push(row(&base, crate::game::Verb::Comply, &format!("“stay down, stay quiet” — lets {} go, cowering", her), ""));
             rows.push(row(&base, crate::game::Verb::Whip, &format!("pistol-whip {} — knocks {} out, but a CIVILIAN costs −10 on the card", her, her), &format!("E  holster — to question {}", her)));
         } else if let Some(cv) = cv {
-            let tk = held_talk(g, &hold);
+            let tk = held_talk(g, &crate::seats::here(g), &hold);
             let (she, her) = (g.cv[cv].she.clone(), g.cv[cv].her.clone());
             let stage = g.tab.game_talk[g.gd[gd].talk].stage;
             let told = {
@@ -229,7 +229,7 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
             rows.push(row(&base, crate::game::Verb::Whip, "pistol-whip him — quick, a thud", &format!("LMB  {}  ·  E  holster — to question him", if ready { "fire past him" } else { "fire past him (empty)" })));
         } else {
             let q = crate::dialogue::prompt_for(g, gd);
-            let tk = held_talk(g, &hold);
+            let tk = held_talk(g, &crate::seats::here(g), &hold);
             let verb = if q.spent { String::from("he's said his piece — ask anyway") } else { format!("“{}”", q.text) };
             let ask = if tk.asking {
                 String::from("you're asking — he answers in a beat")
@@ -420,7 +420,7 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
                 }
                 verbs.push(row(&it, crate::game::Verb::Wand, "look under it — the wand, quiet", ""));
             }
-            let free = reach && !busy && !crate::wallcharge::wall_charge_setting(g);
+            let free = reach && !busy && !crate::wallcharge::wall_charge_setting(g, &crate::seats::here(g));
             crate::doortools::door_tools_sam_rows(g, &mut it, d, &mut verbs, free, &mut |_g: &mut Game, base: crate::game::Interactable, verb: crate::game::Verb, text: String, hints: Option<String>| -> crate::game::Interactable {
                 row(&base, verb, &text, hints.as_deref().unwrap_or(""))
             });
@@ -469,7 +469,7 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
                 if can && !busy {
                     verbs.push(if g.pl[pl].holstered {
                         row(&it, crate::game::Verb::Grab, "grab him", "LMB  takedown — silent")
-                    } else if grab_variant(g) == crate::character::HoldVariant::Gun {
+                    } else if grab_variant(g, &crate::seats::here(g)) == crate::character::HoldVariant::Gun {
                         row(&it, crate::game::Verb::Grab, "grab him — pistol to his head", "E  holster for the LMB takedown")
                     } else if crate::game::player_rifle_up(g, pl) {
                         row(&it, crate::game::Verb::Grab, "grab him — the rifle goes on your back", "E  sling it for the LMB takedown")
@@ -534,7 +534,7 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
             if can && !busy {
                 verbs.push(if g.pl[pl].holstered {
                     row(&it, crate::game::Verb::Grab, &format!("grab {} — a hand over the mouth", her), "LMB  takedown — quiet, and −10")
-                } else if grab_variant(g) == crate::character::HoldVariant::Gun {
+                } else if grab_variant(g, &crate::seats::here(g)) == crate::character::HoldVariant::Gun {
                     row(&it, crate::game::Verb::Grab, &format!("grab {} — pistol to {} head", her, her), "E  holster for the LMB takedown")
                 } else {
                     row(&it, crate::game::Verb::Grab, &format!("grab {}", her), "E  holster for the LMB takedown")
@@ -616,7 +616,7 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
         crate::wallcharge::wall_charge_rows(g, p, busy, row_cb!(crate::wallcharge::WallChargeRowsRowOver), offer_cb!(list, things));
         crate::snatchout::snatch_out_rows_2(g, p, busy, row_cb!(crate::snatchout::SnatchOutRows2RowOver), offer_cb!(list, things));
         crate::rescueend::rescue_end_rows_2(g, p, busy, row_cb!(crate::rescueend::RescueEndRows2RowOver), offer_cb!(list, things));
-        let setting = crate::wallcharge::wall_charge_setting(g);
+        let setting = crate::wallcharge::wall_charge_setting(g, &crate::seats::here(g));
         crate::defuse::defuse_rows(g, p, busy || setting, row_cb!(crate::defuse::DefuseRowsRowOver), offer_cb!(list, things));
         let working = setting || crate::defuse::defuse_working(g);
         crate::stickycam::sticky_rows(g, pl, busy || working, row_cb!(crate::stickycam::StickyRowsRowOver), offer_cb!(list, things));
@@ -652,9 +652,9 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
             }
         } else if let Some(door) = g.pl[pl].charging.as_ref().map(|c| c.door) {
             let base = marker(g, &list, door);
-            let progress = crate::doortools::door_tools_sam_progress(g);
+            let progress = crate::doortools::door_tools_sam_progress(g, &crate::seats::here(g));
             rows = vec![running(&base, crate::game::Verb::Charge, "setting the charge… — Space or a step breaks it off", Some(progress))];
-        } else if crate::wallcharge::wall_charge_setting(g) {
+        } else if crate::wallcharge::wall_charge_setting(g, &crate::seats::here(g)) {
             rows = vec![crate::wallcharge::wall_charge_running_row(g, &mut running_cb)];
         } else if crate::defuse::defuse_working(g) {
             rows = vec![crate::defuse::defuse_running_row(g, &mut running_cb)];
@@ -711,7 +711,7 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
         }
     }
     if crate::game::player_list_open(g, pl) && rows.iter().any(|r| r.verb.is_some() && r.running != Some(true)) {
-        let c = cancel_row(g);
+        let c = cancel_row(g, &crate::seats::here(g));
         rows.push(c);
     }
     g.interactables = list;
@@ -773,8 +773,8 @@ pub fn pick_hover(g: &mut crate::game::Game) {
 }
 
 /// the selector's bottom row while it is open: letting go of Space on it does nothing   (player.ts cancelRow)
-pub fn cancel_row(g: &crate::game::Game) -> crate::game::Interactable {
-    let p = g.ch[g.pl[g.player].ch].pos;
+pub fn cancel_row(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::game::Interactable {
+    let p = g.ch[g.pl[seat.player].ch].pos;
     let mut it = mark(crate::game::InteractableKind::Cancel, [p[0], 1.3, p[2]], String::from("cancel"), String::from("let go here — nothing happens"), true, false);
     it.verb = Some(crate::game::Verb::Cancel);
     it.running = Some(false);
@@ -791,8 +791,8 @@ pub fn thing_dist(g: &crate::game::Game, it: &crate::game::Interactable, p: V3) 
 }
 
 /// how many of a kind are on the belt   (player.ts throwCount)
-pub fn throw_count(g: &crate::game::Game, kind: crate::game::ThrowKind) -> f64 {
-    let pl = g.player;
+pub fn throw_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, kind: crate::game::ThrowKind) -> f64 {
+    let pl = seat.player;
     match kind {
         crate::game::ThrowKind::Frag => g.pl[pl].frags,
         crate::game::ThrowKind::Flash => g.pl[pl].flashbangs,

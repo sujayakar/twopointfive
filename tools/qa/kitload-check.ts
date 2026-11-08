@@ -41,10 +41,10 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
 }
 const hushed = async <T>(fn: () => Promise<T> | T): Promise<T> => { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-/** the kit table, the switch, the plain night's flag and the dice as they stood, put back after `fn` */
+/** the kit table, the switch and the dice as they stood, put back after `fn` */
 async function kept<T>(fn: () => Promise<T> | T): Promise<T> {
-  const cards = K.KIT.members.map((m: any) => ({ ...m })), on = KITLOAD.on, slots = K.SLOTS.on, big = K.BIGSLOT.on, solo = { ...K.KIT_SOLO }, rnd = Math.random;
-  try { rules(); return await fn(); } finally { K.BIGSLOT.on = big; K.SLOTS.on = slots; for (let i = 0; i < cards.length; i++) K.KIT.members[i] = cards[i]; KITLOAD.on = on; Object.assign(K.KIT_SOLO, solo); Math.random = rnd; }
+  const cards = K.KIT.members.map((m: any) => ({ ...m })), on = KITLOAD.on, slots = K.SLOTS.on, big = K.BIGSLOT.on, rnd = Math.random;
+  try { rules(); return await fn(); } finally { K.BIGSLOT.on = big; K.SLOTS.on = slots; for (let i = 0; i < cards.length; i++) K.KIT.members[i] = cards[i]; KITLOAD.on = on; Math.random = rnd; }
 }
 /** the two kit rules the cards below are cut for, raised on either stand (the frozen stand holds both off as a game stands up: written again after each
  *  stand-up) — a card is weighed by the rows it HAS, and the hammer's row is the big slot's */

@@ -43,7 +43,7 @@ pub fn step(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
         let st = g.m.morale.state_of.get_mut(gd).unwrap();
         if st.calls > 0.0 { st.call_t += dt; }
     }
-    let rooted = g.time < g.gd[gd].stagger_until;
+    let rooted = crate::control::man::staggered(g, gd);
     let act = row(g, gd).act;
     if act == MoraleAct::Duck {
         {
@@ -307,7 +307,7 @@ pub fn morale_release(g: &mut crate::game::Game, gd: GuardId) {
         if s.act != MoraleAct::None || s.drive { end(g, gd); }
     }
     let t = g.time;
-    crate::owner::release_man(g, gd, crate::owner::own().morale, t);
+    crate::owner::release(g, gd, crate::owner::by::MORALE, t);
 }
 
 /// A position as three numbers, NaN for none. (morale.ts n3)

@@ -44,7 +44,7 @@ pub fn mine(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// One of his who is neither dazzled nor staggering.   (lanes.ts fit)
 pub fn fit(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    mine(g, gd) && g.time >= g.gd[gd].dazzled_until && g.time >= g.gd[gd].stagger_until
+    mine(g, gd) && !crate::control::man::blind(g, gd) && !crate::control::man::staggered(g, gd)
 }
 
 /// The rule runs: a room fight is live, the AI on, no tour. (LANES.on settled on.)   (lanes.ts live)
@@ -64,11 +64,11 @@ pub fn lane_of(g: &crate::game::Game, gd: GuardId) -> Option<LanesLaneId> {
 
 /// The owner's record says what this file's state says of him.   (lanes.ts laneSay)
 pub fn lane_say(g: &mut crate::game::Game, gd: GuardId) {
-    let (rule, t) = (crate::owner::own().lane, g.time);
+    let (rule, t) = (crate::owner::by::LANE, g.time);
     if lane_of(g, gd).is_some() {
-        crate::owner::claim_man(g, gd, rule, t, None);
+        crate::owner::claim(g, gd, rule, t, None);
     } else {
-        crate::owner::release_man(g, gd, rule, t);
+        crate::owner::release(g, gd, rule, t);
     }
 }
 
@@ -98,12 +98,12 @@ pub fn peek_off(g: &mut crate::game::Game, gd: GuardId) {
 
 /// Every man this file had, let go of: the state goes with them.   (lanes.ts letGo)
 pub fn let_go(g: &mut crate::game::Game) {
-    let (rule, t) = (crate::owner::own().lane, g.time);
+    let (rule, t) = (crate::owner::by::LANE, g.time);
     for gd in s(g).held.keys() {
-        crate::owner::release_man(g, gd, rule, t);
+        crate::owner::release(g, gd, rule, t);
     }
     for gd in s(g).peek.keys() {
-        crate::owner::release_man(g, gd, rule, t);
+        crate::owner::release(g, gd, rule, t);
     }
 }
 
@@ -156,12 +156,12 @@ fn knows_row(l: &Lane, gd: GuardId) -> bool {
 }
 
 /// An enemy he saw this close inside the last second: a fight already.   (lanes.ts closeFight)
-pub fn close_fight(g: &crate::game::Game, gd: GuardId) -> bool {
+pub fn close_fight(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
     if g.time - g.gd[gd].last_seen_t >= 1.0 {
         return false;
     }
     let fc = match g.gd[gd].foe {
-        Some(crate::game::Foe::Player) => g.pl[g.player].ch,
+        Some(crate::game::Foe::Player) => g.pl[seat.player].ch,
         Some(crate::game::Foe::Guard(o)) => g.gd[o].ch,
         None => return false,
     };

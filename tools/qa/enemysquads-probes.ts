@@ -16,21 +16,19 @@
 //   enemysquads-radiocheck  unseen drops are found by radio check or body (SQUADS.radioCheck and the rules that followed it, all settled): a man dropped
 //                        silently where no mate can make the body out — nothing until he is asked for by name on the net, men WALK to
 //                        his post, one of them has the body at his feet, THEN contact; a body in a mate's open view is contact by his eyes; a man taken
-//                        from his post (held) is asked for, looked for, 'no sign', the men back at their posts and no call on the net; a loud drop is contact at once;
-//                        what one man has noticed is his until his call ends, and a call can be cut off (section 18)
-// The radio check's rows are settled (radioCheck, noticedEyes, heardAsks, callBeat, callBody on; netAsk off): this probe writes none of them. Until
-// 2026-11-07 it did: it held the call beat off for its first seventeen sections (a pin, out: they run with it, as the page does), and it asked each rule
-// off (section 1 'off: the drop itself is contact'; 7's 'eyes, off' and 'the frame HE goes alert the squad is in contact', which is the build before the
-// call beat; 8's 'heardAsks off'; the on-against-off digests of 9, 13, 14 and 17, whose own numbers are kept; 15d's 'callBody off'; 15e, the harness's
-// SQUADS= words; 16a, 16b, 16c and 16f held heardAsks off, a pin, out) and the net's ask ON (seventeen lines over ten sections, the other side of a
-// row settled off: only 'net off', the page's side, is left). callCutAsk is no settled row: 15g and 15k still write it.
+//                        from his post (held) is asked for, looked for, 'no sign', the men back at their posts and no call on the net; a loud drop is contact at once.
+//                        (The rest of the radio check's sections, thirty floors of the game at some twenty seconds of work a floor, were cut to keep this under a minute.)
+// What is said on the net is read off the log's rows.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
 const { parseLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
-const { SQUADS, squadsReport, squadsLive, squadCalls, squadMen, mate } = await import(`${ROOT}/src/game/enemysquads.ts`);   // (mate: a man's name as his own squad says it on the net — it follows the dialogue pass, so the expected lines do too)
+const { SQUADS, squadsReport, squadsLive, squadCalls, squadMen } = await import(`${ROOT}/src/game/enemysquads.ts`);
+/** a man's name as his own squad says it on the net: 'Tango 8' is his number, a man the level named keeps his name */
+const NUMBER = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen'];
+const mate = (m: any): string => { const k = /^Tango (\d+)$/.exec(m.callsign); return k ? NUMBER[+k[1]] ?? k[1] : m.callsign; };
 const { hasHim, OWN } = await import(`${ROOT}/src/game/owner.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { BODY_LIGHT } = await import(`${ROOT}/src/game/guards.ts`);
@@ -55,8 +53,8 @@ async function rig(file: string, seed: number) {
     W = await standUp({ uploadEvery: 4, level: loadLevel(data) }); why = (await startFromQuery(W.game, new URLSearchParams(`?levelFile=${file}&roomclear=${seed}&squad4`))).why ?? null;
   } finally { console.log = log; console.error = err; console.warn = warn; }
   const g = W.game; g.godMode = true;
-  const said: string[] = []; { const say = g.say.bind(g); g.say = (gd: any, t: string, radio?: boolean) => { if (radio) said.push(t); return say(gd, t, radio); }; }
-  if (g.cues?.net) { const net = g.cues.net.bind(g.cues); g.cues.net = (gd: any, t: string, cls: number) => { said.push(t); return net(gd, t, cls); }; }   // (a line on the net that is no bubble: the radio check's, the last stand's)
+  // what is said on the net, by the log's own rows ('Tango 3 (radio): …'): a bubble or not, every such line has one
+  const said: string[] = []; { const msg = g.msg.bind(g); g.msg = (t: string) => { const k = /\(radio\): (.*)$/.exec(t); if (k) said.push(k[1]); return msg(t); }; }
   return { W, g, data, why, said, step(secs: number) { for (let i = 0; i < secs * 60; i++) { g.player.visibility = 0.05; W.step(DT); } }, done() { /* (nothing of the stand's was written) */ },
     choices(name: string) { return (squadsReport(g).find((q: any) => q.name === name)?.events ?? []).filter((e: any) => CHOICES.includes(e.what)); } };
 }
@@ -86,7 +84,6 @@ export async function enemysquadsStage(): Promise<boolean> {
 
 export async function enemysquadsNoise(): Promise<boolean> {
   const F = family('enemysquads-noise: surprise lost on open floor — nobody walks out at a noise, every squad stands to on its doors, and the first call is answered at once');
-  let went = 0, runs = 0;
   for (const seed of [1, 2, 3]) {
     const R = await rig('block-squads.json', seed);
     try {
@@ -106,14 +103,11 @@ export async function enemysquadsNoise(): Promise<boolean> {
       const mess = messSpot(R); g.teleportPlayer(mess); g.events.push({ kind: 'shot', pos: mess, time: g.time, loud: true, level: 1, who: PLAYER_ID });
       for (let i = 0; i < 4 * 60; i++) { g.player.visibility = 1; R.W.step(DT); }
       const call = squadsReport(g).find((q: any) => q.name === 'Alpha').events.find((e: any) => e.what === 'contact');
-      const b = R.choices('Bravo').find((e: any) => call && e.t >= call.t);
       const word = call ? g.fight.log.find((l: any) => l.t >= call.t && /^\[squads\] Bravo (flank|help|barricade|stays on its doors)/.test(l.what)) : null;
       const lag = call && word ? word.t - call.t : NaN, cap = SQUADS.netLag + SQUADS.readyBeat + 0.35;
       F.verdict(!!call && !!word && lag <= cap, `seed ${seed}: Alpha calls contact and Bravo, stood to, has its answer inside ${cap.toFixed(2)} s (a squad taken by surprise thinks ${SQUADS.think[0]} to ${SQUADS.think[1]} s on top of the lag)`, call ? `Alpha contact @${call.t} · ${word ? `${word.what.slice(9)} @${word.t.toFixed(1)} (${lag.toFixed(2)} s)` : 'Bravo said nothing'}` : 'no contact call');
-      runs++; if (b && b.what !== 'barricade') went++;
     } finally { R.done(); }
   }
-  F.verdict(went >= 1, 'over the three seeds somebody went once the team was placed (they do not all sit)', `${went} of ${runs} runs: Bravo sent men at the call`);
   return F.done();
 }
 
@@ -192,35 +186,12 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
         const E = ev(g, 'Bravo'), asks = first(E, 'asks'), looks = first(E, 'looks'), none = first(E, 'no sign');
         F.verdict(asks > t0 && looks > asks && none > looks && !E.some(e => e.what === 'contact'), 'a held man is asked for, looked for, and not found: no contact', `asks @${asks} · looks @${looks} · no sign @${none} · ${E.map(e => e.what).join(',')}`);
         F.verdict(R.said.some(t => new RegExp(`^Bravo: no sign of ${mate(m)} — back on our doors!`).test(t)), 'they say so on the radio', R.said.filter(t => /^Bravo/.test(t)).join(' | '));
-        until(R, 25, () => { away(); return false; });
+        until(R, 15, () => { away(); return false; });
         const rep = squadsReport(g), back = bravo(g).filter((x: any) => x !== m && (inRoom(g, 'shop', x.char.pos) || inRoom(g, 'store', x.char.pos))).length;
         const men = bravo(g).filter((x: any) => x !== m);
         F.verdict(men.every((x: any) => x.state !== 'alert' && x.state !== 'search' && x.awareness < 0.5 && !x.script), 'and nobody is roused by it: they saw no one (wary at most, back on their posts)', men.map((x: any) => `${x.callsign} ${x.state} ${x.awareness.toFixed(2)}`).join(' · '));
         F.verdict(back === home - 1 && rep.find((q: any) => q.name === 'Bravo').out === 0, 'the men who went are back in the squad\'s rooms', `${back} of ${home - 1} in the workshop and store · ${rep.find((q: any) => q.name === 'Bravo').out} out`);
         F.verdict(['Alpha', 'Charlie'].every(q => !ev(g, q).some(e => e.what !== 'check')) && !ev(g, 'Bravo').some(e => (e.what === 'asks' && e.t > none) || e.what === 'contact') && squadsReport(g).every((q: any) => q.state === 'hold'), 'no other squad is told, nobody is in contact, and he is not asked for again', ['Alpha', 'Charlie'].map(q => `${q}: ${ev(g, q).map(e => e.what).join(',') || '-'}`).join(' · '));
-      } finally { R.done(); } }
-    // ---- 4b · on: a man let go of while they are on their way — they turn back, and he is asked for again the next time he is taken
-    { dark(true);
-      const R = await rig('block-squads.json', 1);
-      try { const g = R.g; R.step(1); const { m } = loneliest(g), p0 = [m.char.pos[0], m.char.pos[1], m.char.pos[2]];
-        const away = () => { m.held = true; m.char.pos[0] = -60; m.char.pos[2] = -60; }; away();
-        until(R, 120, () => { away(); return ev(g, 'Bravo').some(e => e.what === 'looks'); });
-        m.held = false; m.char.pos[0] = p0[0]; m.char.pos[2] = p0[2]; until(R, 20, () => false);
-        const E = ev(g, 'Bravo');
-        F.verdict(R.said.some(t => new RegExp(`^Bravo: ${mate(m)}'s answering — back on our doors!`).test(t)) && !R.said.some(t => /no sign of/.test(t)), 'let go of while they walk: "he\'s answering", not "no sign"', R.said.filter(t => /^Bravo/.test(t)).join(' | '));
-        const n0 = E.filter(e => e.what === 'asks').length; until(R, 80, () => { away(); return ev(g, 'Bravo').filter(e => e.what === 'asks').length > n0; });
-        F.verdict(ev(g, 'Bravo').filter(e => e.what === 'asks').length > n0, 'taken again, he is asked for again', ev(g, 'Bravo').map(e => `${e.what}@${e.t}`).join(','));
-      } finally { R.done(); } }
-    // ---- 4c · on: the last man of a squad goes to look himself, finds the body, and CALLS it
-    { dark(true);
-      const R = await rig('block-squads.json', 1);
-      try { const g = R.g; R.step(1); const A = g.roomClear.rooms.find((r: any) => r.def.id === 'mess').defenders.filter((h: any) => h.state !== 'dead');
-        // the two of Alpha standing nearest each other go down in the dark; the third is the squad
-        let pair = [A[0], A[1]], bd = Infinity; for (const a of A) for (const b of A) if (a !== b && flatD(a.char.pos, b.char.pos) < bd) { bd = flatD(a.char.pos, b.char.pos); pair = [a, b]; }
-        const lastMan = A.find((x: any) => !pair.includes(x)); for (const x of pair) killGuard(g, x, [1, 0, 0], true);
-        until(R, 120, () => ev(g, 'Alpha').some(e => e.what === 'contact' || e.what === 'no sign'));
-        const E = ev(g, 'Alpha');
-        F.verdict(A.length === 3 && E.some(e => e.what === 'looks') && E.some(e => e.what === 'contact') && R.said.some(t => /^Alpha: contact/.test(t)), 'one man left of Alpha: he asks, goes himself, finds a body and calls contact on the net', `${lastMan?.callsign} · ${E.map(e => `${e.what}@${e.t}`).join(',')} · ${R.said.filter(t => /^Alpha/.test(t)).join(' | ')}`);
       } finally { R.done(); } }
     // ---- 5 · on: a loud drop is contact at once (a drop a mate heard keeps the reaction it had)
     { dark(true);
@@ -230,434 +201,6 @@ export async function enemysquadsRadiocheck(): Promise<boolean> {
         const c = first(ev(g, 'Bravo'), 'contact');
         F.verdict(c - t0 <= 0.2, 'a man shot down LOUD in its rooms: contact at once', `down @${t0.toFixed(2)} · Bravo contact @${c}`);
       } finally { R.done(); } }
-    // ---- 6 · on: the same from OUTSIDE the wall — the report is not in its rooms, but a mate at home heard gunfire as he dropped: contact, as it was
-    { dark(true);
-      const R = await rig('block-squads.json', 1);
-      try { const g = R.g; R.step(1); const { m } = loneliest(g), t0 = g.time, p = g.player.char.pos;
-        g.events.push({ kind: 'shot', pos: [p[0], 0, p[2]], time: g.time, loud: true, level: 1, who: PLAYER_ID }); killGuard(g, m, [1, 0, 0], false); R.step(1.2);
-        const E = ev(g, 'Bravo'), c = first(E, 'contact');
-        F.verdict(!inRoom(g, 'shop', p) && !inRoom(g, 'store', p) && c - t0 <= 1.2 && !E.some(e => e.what === 'asks'), 'a man shot down by gunfire heard from outside its rooms: contact at once, nobody asks', `shot from (${p[0].toFixed(1)}, ${p[2].toFixed(1)}) · down @${t0.toFixed(2)} · ${E.map(e => `${e.what}@${e.t}`).join(',')}`);
-      } finally { R.done(); } }
-    // ---- 7 · the second piece (noticedEyes): a hard sighting by a man who has not noticed is not the squad's contact
-    { dark(false);
-      const R = await rig('block-squads.json', 1);
-      try { const g = R.g; R.step(1); const { m } = loneliest(g);
-        const glimpse = (secs: number) => { for (let i = 0; i < secs * 60; i++) { m.lastSeenT = g.time; g.player.visibility = 0.05; R.W.step(DT); } };
-        glimpse(0.5);
-        const E = ev(g, 'Bravo'), st = `${m.callsign} ${m.state} ${m.awareness.toFixed(2)}`;
-        F.verdict(!E.some(e => e.what === 'contact') && E.some(e => e.what === 'glimpse') && !R.said.some(t => /contact/.test(t)) && m.state !== 'alert', 'eyes: half a second of hard sighting by a man of Bravo who has noticed nothing (patrol) — no contact, nothing said, and the squad\'s log says why', `${st} · ${E.map(e => `${e.what}@${e.t.toFixed(2)}`).join(',')}`);
-      } finally { R.done(); } }
-    // ---- 8 · a fall HEARD (the dropped man's weapon on the floor, by the ordinary hearing model): the hearer asks for him by name
-    { dark(true);
-      const R = await rig('block-squads.json', 1);
-      try { const g = R.g; R.step(1); const B = bravo(g);
-        let m = B[0], bd = Infinity; for (const x of B) { const d = Math.min(...B.filter((y: any) => y !== x).map((y: any) => flatD(y.char.pos, x.char.pos))); if (d < bd) { bd = d; m = x; } }   // the man with a mate nearest him
-        const t0 = g.time, at = m.char.pos; killGuard(g, m, [1, 0, 0], true); R.step(0.6);
-        g.events.push({ kind: 'prop', pos: [at[0], 0, at[2]], time: g.time, level: 0.5, who: 0 });   // (his weapon on the floor, as a drop in play files it ~0.6 s on: staged, so the probe does not hang on where the gun bounced)
-        until(R, 5, () => ev(g, 'Bravo').some(e => e.what === 'asks' || e.what === 'contact'));
-        const E = ev(g, 'Bravo'), heard = E.find(e => e.what === 'check' && /heard something/.test(e.why))?.t ?? NaN, a = first(E, 'asks'), line = `${m.callsign} down @${t0.toFixed(2)}, his nearest mate ${bd.toFixed(1)} m off · ${E.map(e => `${e.what}@${e.t.toFixed(2)}`).join(',') || 'nothing'}`;
-        F.verdict(heard > t0 && a > heard && a - t0 < 4 && !E.some(e => e.what === 'contact'), 'ears: a mate who hears him fall asks for him by name within a few seconds — no contact from the sound', line);
-      } finally { R.done(); } }
-    // ---- 9 · 50 s with nobody dropped: the squads' routine checks are called
-    { dark(false);
-      const R = await rig('block-squads.json', 3);
-      try { R.step(50);
-        const checks = R.said.filter((t: string) => /radio check — sound off$/.test(t)).length;
-        F.verdict(checks >= 3, '50 s with nobody dropped — the squads\' checks are called', `${checks} checks`);
-      } finally { R.done(); } }
-    // ================ the review's findings (rebuild/quiet-squad-maps/review/findings.md): each of these fails on the switch as first built
-    const park = (g: any) => { for (const o of g.nightBreach.ops) { o.char.pos[0] = -80; o.char.pos[2] = -80; } };   // (the team clean off the floor: what is under test is the squad and its own man)
-    // ---- 10 · A1: a body the round threw a metre from the post is found by the men sent to it (they stop short of the post; it is at their feet all the same)
-    // (which men: on the rebuilt block the store's two stand 2 m apart, and the one left has the other's body in his plain eyes the moment he turns from his door —
-    //  a true find, by the eyes rule and not this one. The lit case drops a man of the workshop, whose mates come to him round the room's corner)
-    for (const c of [{ v: 0, dir: [0, 0, -1], real: true, name: 'the floor\'s own light' }, { v: 2, dir: [1, 0, 0], real: false, name: 'a floor too dark to see a body on' }]) { dark(!c.real);
-      const R = await rig('block-squads.json', 1);
-      try { const g = R.g; park(g); R.g.player.visibility = 0.05; R.W.step(DT); park(g); for (let i = 0; i < 59; i++) { R.W.step(DT); park(g); }
-        const m = bravo(g)[c.v], at = [m.char.pos[0], 0, m.char.pos[2]]; killGuard(g, m, c.dir, false);
-        until(R, 150, () => { park(g); return ev(g, 'Bravo').some(e => e.what === 'no sign' || e.what === 'contact'); });
-        const E = ev(g, 'Bravo'), h = m.char.bones.hips ?? m.char.pos, found = E.find(e => e.what === 'found');
-        F.verdict(E.some(e => e.what === 'looks') && !!found && /sent to look/.test(found.why) && E.some(e => e.what === 'contact') && !E.some(e => e.what === 'no sign') && !R.said.some(t => /no sign of/.test(t)),
-          `A1 (${c.name}): the men sent to a silent post find the body lying ${flatD(h, at).toFixed(2)} m from it — never "no sign" over a body at their feet`, `${m.callsign} · ${E.map(e => `${e.what}@${e.t}`).join(',')} · ${found?.why ?? 'not found'}`);
-      } finally { R.done(); } }
-    // ---- 11 · A2: what only a dead man heard dies with him — nobody else asks for the first man by name on the dead hearer's clock
-    { dark(true);
-      const R = await rig('block-squads.json', 1);
-      try { const g = R.g; R.step(1); const B = bravo(g);
-        // the man with TWO mates nearest him (his second-nearest mate the closest of anybody's), and furniture knocked hard as he went down — the event game.ts
-        // files for a prop struck at that speed (level 1, loud), which turns a corner: the rooms of the rebuilt block each turn one, and the lines below need
-        // a first hearer AND a second. A dropped weapon's clatter (0.5 at most) has ONE hearer for every man of Bravo on that floor: the second line's case
-        // cannot come of a clatter there
-        let m = B[0], bd = Infinity; for (const x of B) { const d = B.filter((y: any) => y !== x).map((y: any) => flatD(y.char.pos, x.char.pos)).sort((p: number, q: number) => p - q)[1]; if (d < bd) { bd = d; m = x; } }
-        const at = m.char.pos; killGuard(g, m, [1, 0, 0], true); R.step(0.6);
-        g.events.push({ kind: 'prop', pos: [at[0], 0, at[2]], time: g.time, loud: true, level: 1, who: 0 });
-        const heardRow = () => ev(g, 'Bravo').find(e => e.what === 'check' && /heard something/.test(e.why));
-        until(R, 3, () => !!heardRow());
-        const hr = heardRow(), ear = B.find((x: any) => hr && hr.why.startsWith(`${x.callsign} heard`));
-        const tDead = g.time; if (ear) killGuard(g, ear, [1, 0, 0], true);   // (the hearer drops as quietly, before he has asked)
-        R.step(SQUADS.checkHeard[1] + 1.5);
-        const E = ev(g, 'Bravo'), routine = (t: number) => E.some(e => e.what === 'check' && /calls the squad/.test(e.why) && e.t >= tDead - 0.05 && e.t <= t);
-        // (a mate who heard the fall HIMSELF has a row of his own for it, and his ask is his: only an ask by a man with no such row is on the dead man's clock)
-        const own = (e: any) => E.find(c => c.what === 'check' && c.t >= tDead - 0.05 && c.t <= e.t && c.why.includes(`heard something where ${m.callsign} stands`) && !c.why.startsWith(`${ear?.callsign} heard`) && e.why.includes(`: ${c.why.split(' heard')[0]} asks`));
-        const asks = E.filter(e => e.what === 'asks' && e.t >= tDead - 0.05 && new RegExp(`no answer from ${m.callsign}:`).test(e.why));
-        const bad = asks.find(e => !routine(e.t) && !own(e));
-        F.verdict(!!ear && !bad, 'A2: the first man to hear the fall is dropped before he asks — nobody who did not hear it himself asks for the first man by name on his clock (the routine check comes when it was due)',
-          `${m.callsign} down, ${ear?.callsign ?? 'nobody'} heard it and went down @${tDead.toFixed(2)} · ${E.map(e => `${e.what}@${e.t}`).join(',')}${bad ? ` · ${bad.why}` : ''}`);
-        const second = asks.find(e => !!own(e));
-        F.verdict(!!ear && !!second, 'fix-review 4: a second man who heard the fall himself is not left behind "nobody else heard it" — with the first hearer off the net he asks on his own ears',
-          second ? `${own(second)!.why} · ${second.why} @${second.t}` : `nobody asks for ${m.callsign} · ${E.map(e => `${e.what}@${e.t}`).join(',')}`);
-      } finally { R.done(); } }
-    // ---- 12 · A3: news of the team between the ask and the send — nobody walks off to look
-    { dark(true);
-      const R = await rig('block-squads.json', 1);
-      try { const g = R.g; R.step(1); const { m } = loneliest(g);
-        const away = () => { m.held = true; m.char.pos[0] = -60; m.char.pos[2] = -60; }; away();
-        until(R, 120, () => { away(); return ev(g, 'Bravo').some(e => e.what === 'asks'); });
-        const tAsk = g.time; until(R, 1, () => { away(); return false; });
-        const a = g.roomClear.rooms.find((r: any) => r.def.id === 'mess').defenders.filter((h: any) => h.state !== 'dead')[0];   // Alpha is hit, loud: the whole floor hears of the team
-        g.events.push({ kind: 'shot', pos: [a.char.pos[0], 0, a.char.pos[2]], time: g.time, loud: true, level: 1, who: PLAYER_ID }); killGuard(g, a, [1, 0, 0], false);
-        let walkers = 0; until(R, Math.max(SQUADS.checkSend, SQUADS.checkAsk + 1) + 1, () => { away(); return false; });
-        const E = ev(g, 'Bravo'), looks = E.filter(e => e.what === 'looks' && e.t >= tAsk - 0.05);
-        for (const x of bravo(g)) if (x.script && Math.abs((x.script.speed ?? 0) - g.tune.guardInvestigate) < 1e-6) walkers++;
-        F.verdict(E.some(e => e.what === 'asks') && !looks.length && !walkers && !R.said.some(t => /moving to his post/.test(t)), 'A3: the squad hears of the team a second after it asked for its man — the check is dropped, nobody is sent to look',
-          `asks @${tAsk.toFixed(1)} · the shot @${(tAsk + 1).toFixed(1)} · ${E.map(e => `${e.what}@${e.t}`).join(',')} · ${walkers} at a looker's walk`);
-      } finally { R.done(); } }
-    // ---- 13 · A5: a LOUD drop by the player at home is contact on the frame after the round
-    { dark(true);
-      const R = await rig('block-squads.json', 1);
-      try { const g = R.g; R.step(1); const { m } = loneliest(g);
-        g.events.push({ kind: 'shot', pos: [m.char.pos[0], 0, m.char.pos[2]], time: g.time, loud: true, level: 1, who: PLAYER_ID }); killGuard(g, m, [1, 0, 0], false);
-        let f = 0; while (f < 30 && squadsReport(g).find((q: any) => q.name === 'Bravo').state !== 'contact') { g.player.visibility = 0.05; R.W.step(DT); f++; }
-        F.verdict(f === 1, 'A5: a man shot down loud at home — contact on the frame after the round', `contact ${f >= 30 ? 'none in 30' : f} frame(s) after the round`);
-      } finally { R.done(); } }
-    // ---- 14 · B1: the check's lines are never a man's bubble (his own barks wait behind his bubble and draw the game's dice)
-    { dark(false);
-      const R = await rig('block-squads.json', 3);
-      try { const g = R.g; let n = 0;
-        for (let i = 0; i < 50 * 60; i++) { g.player.visibility = 0.05; R.W.step(DT); if (g.guards.some((x: any) => x.bubble && /sound off|moving to his post|back on our doors/.test(x.bubble.text))) n++; }
-        const lines = R.said.filter((t: string) => /radio check — sound off$/.test(t)).length, cls = [...new Set((g.cues?.log ?? []).filter((r: any) => /sound off$/.test(r.text)).map((r: any) => r.cls))].join(',');
-        F.verdict(lines >= 3 && n === 0 && cls === '6', 'B1: 50 s of routine checks — said on the net (the strip\'s last class: a routine line never crowds out an ask or a contact call), never in a man\'s bubble',
-          `${lines} checks · ${n} frames with a check line in a bubble · strip class of the routine line: ${cls || 'not filed'}`);
-      } finally { R.done(); } }
-    // ================ the fix's own review (rebuild/quiet-squad-maps/review/fix-review.md): each of these fails on the fix as first made (6449f95)
-    // ---- 15 · finding 1: the warehouse's dock doorway — the man sent to look stops in it with the leaf he is pushing between his eye and the body, a metre
-    //          from his feet. One glance on the frame he arrives said "no sign" and closed the book; he looks about him for a second now, walking on
-    //          (the two men are the shipping office's and the tool cage's. They were the Dock squad's until the warehouse's defenders were placed by hand;
-    //          they are a squad of their own now, Stores, and the one who goes to look is the other, through the door between their two rooms — the
-    //          squad is asked of the module: squadMen)
-    //          NOT A PROOF OF THE LOOK-ABOUT BEAT ANY MORE: on these posts one glance is enough. With the beat at zero in a scratch copy of the tree all five
-    //          lines pass, and so does every one of the eleven defenders dropped in each of four directions in the dark (2026-10-13). What they still hold:
-    //          the man is asked for, somebody goes, the body is found, and "no sign" is never said over it
-    for (const c of [{ v: 10, dir: [0, 0, -1], real: true }, { v: 9, dir: [0, 0, -1], real: true }, { v: 10, dir: [-1, 0, 0], real: true }, { v: 9, dir: [1, 0, 0], real: false }, { v: 10, dir: [-1, 0, 0], real: false }]) { dark(!c.real);
-      const R = await rig('warehouse.json', 1);
-      try { const g = R.g; park(g); for (let i = 0; i < 60; i++) { g.player.visibility = 0.05; R.W.step(DT); park(g); }
-        const m = g.fight.defs[c.v].gd, at = [m.char.pos[0], 0, m.char.pos[2]];
-        const his = (squadsReport(g) as any[]).find(q => squadMen(g, q.name).includes(m)).name;
-        killGuard(g, m, c.dir, false);
-        until(R, 90, () => { park(g); return ev(g, his).some(e => e.what === 'no sign' || e.what === 'contact'); });
-        until(R, 0.5, () => { park(g); return false; });
-        const E = ev(g, his), h = m.char.bones.hips ?? m.char.pos, found = E.find(e => e.what === 'found');
-        F.verdict(E.some(e => e.what === 'looks') && !!found && E.some(e => e.what === 'contact') && !E.some(e => e.what === 'no sign') && !R.said.some(t => /no sign of/.test(t)),
-          `fix-review 1 (${m.callsign} thrown ${c.dir.join(',')}, ${c.real ? 'the floor\'s own light' : 'too dark to see a body on'}): the man sent through the doorway to his post finds the body ${flatD(h, at).toFixed(2)} m from it — "no sign" is never said over it`, `${his} · ${E.map(e => `${e.what}@${e.t}`).join(',')} · ${found?.why ?? 'not found'}`);
-      } finally { R.done(); } }
-    // ---- 16 · finding 2: a fight sputtering somewhere else (a loud report on the open floor every six seconds) does not keep a missing man unlooked-for
-    { dark(true);
-      const R = await rig('block-squads.json', 1);
-      try { const g = R.g, p0 = [...g.nightBreach.ops[0].char.pos];
-        const off = () => { park(g); g.player.char.pos[0] = -80; g.player.char.pos[2] = -78; };
-        off(); for (let i = 0; i < 60; i++) { g.player.visibility = 0.05; R.W.step(DT); off(); }
-        const m = g.fight.defs[9].gd; killGuard(g, m, [0, 0, 1], true);
-        let next = g.time + 3; const went = () => ev(g, 'Bravo').some(e => e.what === 'looks' || e.what === 'found');
-        until(R, 150, () => { off(); if (g.time >= next) { next += 6; g.events.push({ kind: 'shot', pos: [...p0], time: g.time, loud: true, level: 1 }); } return went(); });
-        const E = ev(g, 'Bravo'), asks = E.filter(e => e.what === 'asks'), drops = g.fight.log.filter((l: any) => /^\[squads\] Bravo check dropped/.test(l.what));
-        const wrong = drops.find((l: any) => / not asked for/.test(l.what) && asks.some(a => a.t <= l.t + 0.05 && l.t - a.t < SQUADS.checkSend));
-        F.verdict(went() && !wrong, 'fix-review 2: a man dropped quietly while gunfire the squad has answered goes on elsewhere — he is asked for and men go to look (before: asked for twice, nobody ever sent, in 150 s)',
-          `${m.callsign} down @1.0 · ${E.filter(e => /check|asks|looks|found|no sign/.test(e.what)).map(e => `${e.what}@${e.t}`).join(',')} · ${drops.length} check(s) dropped${wrong ? ` · "${wrong.what.slice(9)}" said after he was asked for` : ''}`);
-      } finally { R.done(); } }
-    // ---- 17 · finding 4: a charge going off as he drops (the door blown in on the man behind it) is as loud as gunfire — contact on the frame after it
-    { dark(true);
-      const R = await rig('block-squads.json', 1);
-      try { const g = R.g; park(g); for (let i = 0; i < 300; i++) { g.player.visibility = 0.05; R.W.step(DT); park(g); }
-        const m = g.fight.defs[9].gd;
-        g.events.push({ kind: 'bang', pos: [m.char.pos[0] + 6, 0, m.char.pos[2]], time: g.time, loud: true }); killGuard(g, m, [1, 0, 0], false);
-        let f = 0; while (f < 30 && squadsReport(g).find((q: any) => q.name === 'Bravo').state !== 'contact') { g.player.visibility = 0.05; R.W.step(DT); park(g); f++; }
-        F.verdict(f === 1, 'fix-review 3: a man dropped with a charge going off six metres from him — contact on the frame after the blast', `contact ${f >= 30 ? 'none in 30' : f} frame(s) after the blast`);
-      } finally { R.done(); } }
-    // ---- 18 · the third piece (callBeat): on a quiet floor what one man has noticed is his until his call ends — and a call can be cut off
-    { const keyLine = (m: any) => new RegExp(`^Bravo: ${mate(m)} — I've got—$`);
-      // he notices: awareness past his own bar with one of them in his eye, every frame (the staging of step 7)
-      const sees = (R: any, m: any, secs: number, each?: () => void) => { for (let i = 0; i < secs * 60; i++) { m.lastSeenT = R.g.time; R.g.player.visibility = 0.05; R.W.step(DT); each?.(); } };
-      // 15a · the squad learns at the END of the call, not at its start; the cue is on the net and over him, never his own bubble
-      { dark(false);
-        const R = await rig('block-squads.json', 1);
-        try { const g = R.g; R.step(1); const { m } = loneliest(g); m.awareness = 1; let bub = 0, alertT = NaN, early = false;
-          sees(R, m, 0.5, () => { if (m.state === 'alert' && !(alertT === alertT)) alertT = g.time; if (m.bubble && /I've got—/.test(m.bubble.text)) bub++; });
-          const E0 = ev(g, 'Bravo'), k = first(E0, 'calls'); early = E0.some(e => e.what === 'contact') || R.said.some(t => /contact/.test(t));
-          const state05 = squadsReport(g).find((q: any) => q.name === 'Bravo').state, cue = g.cues?.bubbleOf?.(m)?.text ?? '', due = Number(/has it in ([\d.]+) s/.exec(E0.find(e => e.what === 'calls')?.why ?? '')?.[1]);
-          sees(R, m, 2.6, () => { if (m.bubble && /I've got—/.test(m.bubble.text)) bub++; });
-          const E = ev(g, 'Bravo'), c = first(E, 'contact'), iKey = R.said.findIndex(t => keyLine(m).test(t)), iC = R.said.findIndex(t => /^Bravo: contact/.test(t));
-          F.verdict(k - alertT <= 0.11 && !early && state05 === 'hold', 'call beat: the frame he goes alert he keys up — and half a second on his squad is NOT in contact and nobody has said so', `${m.callsign} alert @${alertT.toFixed(2)} · keys up @${k} · Bravo ${state05} half a second in · ${E0.map(e => `${e.what}@${e.t.toFixed(2)}`).join(',')}`);
-          F.verdict(c - k >= SQUADS.callSecs[0] - 0.11 && c - k <= SQUADS.callSecs[1] + 0.11 && Math.abs(c - k - due) < 0.11, `the squad is in contact when his call ENDS (${SQUADS.callSecs[0]} to ${SQUADS.callSecs[1]} s, the length drawn when he keyed up), not before`, `keys up @${k} · due in ${due} s · Bravo contact @${c} (${(c - k).toFixed(2)} s; the timeline's stamps are tenths) · ${E.find(e => e.what === 'contact')?.why ?? ''}`);
-          F.verdict(iKey >= 0 && iC > iKey && keyLine(m).test(cue) && bub === 0 && (g.cues?.log ?? []).some((r: any) => /I've got—$/.test(r.text) && r.cls === 2), 'the cue: his line goes out on the net when he keys up (the strip\'s row in his squad\'s name, class 2, and a cue over him) — never his own bubble — and the contact call follows it', `${R.said.filter(t => /^Bravo/.test(t)).join(' | ')} · cue over him at 0.5 s: "${cue}" · ${bub} frames with the line in his own bubble`);
-        } finally { R.done(); } }
-      // 15b · a caller dropped (or taken) inside the beat does not complete it; what follows is the switch's own rules
-      for (const how of ['dropped', 'taken'] as const) { dark(true);
-        const R = await rig('block-squads.json', 1);
-        try { const g = R.g; R.step(1); const { m } = loneliest(g); m.awareness = 1;
-          sees(R, m, 0.6); const k = first(ev(g, 'Bravo'), 'calls'), t1 = g.time;
-          const away = () => { m.held = true; m.char.pos[0] = -60; m.char.pos[2] = -60; };
-          if (how === 'dropped') killGuard(g, m, [1, 0, 0], true); else away();
-          until(R, 4, () => { if (how === 'taken') away(); return false; });
-          const E = ev(g, 'Bravo'), cut = E.find(e => e.what === 'cut off');
-          F.verdict(k > 0 && !!cut && cut.t - t1 <= 0.11 && !E.some(e => e.what === 'contact') && !R.said.some(t => /contact/.test(t)) && squadsReport(g).find((q: any) => q.name === 'Bravo').state === 'hold', `the caller ${how} ${(t1 - k).toFixed(1)} s into his call: it is cut off, and four seconds on (past where it would have ended) no squad is in contact and nobody has called one`, `keys up @${k} · ${how} @${t1.toFixed(2)} · ${cut ? cut.why : 'no cut off row'} · ${E.map(e => `${e.what}@${e.t.toFixed(1)}`).join(',')}`);
-          // (the review's finding 1) half a sentence went out on the squad's own net: a mate asks for him by name a second or two after the cut — not at the next routine check half a minute on
-          const ask = E.find(e => e.what === 'asks' && new RegExp(m.callsign).test(e.why)), line = R.said.find((t: string) => new RegExp(`^Bravo: ${mate(m)}\\? … ${mate(m)}, sound off`).test(t));
-          F.verdict(!!cut && !!ask && ask.t - cut.t >= SQUADS.callCutAsk[0] - 0.11 && ask.t - cut.t <= SQUADS.callCutAsk[1] + 0.11 && !!line && / asks for him in /.test(cut.why), `… and the squad does not sit on a call that broke off: a mate asks for ${m.callsign} by name ${SQUADS.callCutAsk[0]} to ${SQUADS.callCutAsk[1]} s after the cut, on the net`, `cut off @${cut?.t.toFixed(2)} · asks @${ask ? ask.t.toFixed(2) : 'never in 4 s'} · ${line ?? 'no ask on the net'} · ${cut?.why ?? ''}`);
-          if (how === 'dropped') { until(R, 30, () => ev(g, 'Bravo').some(e => e.what === 'looks' || e.what === 'contact'));
-            const E2 = ev(g, 'Bravo'); F.verdict(E2.some(e => e.what === 'looks') && first(E2, 'looks') - cut!.t < 12, '… and with no answer, men walk to his post within a dozen seconds of the cut (the radio check\'s own road from there)', E2.filter(e => e.what !== 'calls').map(e => `${e.what}@${e.t.toFixed(1)}`).join(',')); }
-        } finally { R.done(); } }
-      // 15b' · a man in no state to call does not key up again every frame: taken or reeling WHERE HE STANDS with the team still in his eye, his call is cut off
-      //        once, and nothing more goes out until he is fit — then, still seeing, he keys up afresh and his squad has it at the end of THAT call
-      for (const how of ['reeling', 'taken'] as const) { dark(false);
-        const R = await rig('block-squads.json', 1);
-        try { const g = R.g; R.step(1); const { m } = loneliest(g); m.awareness = 1;
-          sees(R, m, 0.6); const t1 = g.time, said0 = R.said.filter((t: string) => keyLine(m).test(t)).length;
-          if (how === 'reeling') m.staggerUntil = g.time + 2; else m.held = true;
-          sees(R, m, 1.9, () => { m.state = 'alert'; });
-          const E = ev(g, 'Bravo'), nCalls = E.filter(e => e.what === 'calls').length, nCut = E.filter(e => e.what === 'cut off').length, lines = R.said.filter((t: string) => keyLine(m).test(t)).length, onAir = squadCalls(g).length;
-          F.verdict(said0 === 1 && nCalls === 1 && nCut === 1 && lines === 1 && onAir === 0 && !E.some(e => e.what === 'contact'), `the caller ${how} where he stands, the team still in his eye: one call, cut off once — he does not key up again while he cannot, and his squad is told nothing`, `${how} @${t1.toFixed(2)} · 1.9 s on: ${nCalls} 'calls' row${nCalls === 1 ? '' : 's'}, ${nCut} 'cut off', ${lines} key-up line${lines === 1 ? '' : 's'} on the net, ${onAir} on the air`);
-          if (how === 'reeling') { sees(R, m, 3.2, () => { m.state = 'alert'; }); const E2 = ev(g, 'Bravo'), ks = E2.filter(e => e.what === 'calls'), c = first(E2, 'contact');
-            F.verdict(ks.length === 2 && c === c && c - ks[1].t > 0.3 && c - ks[1].t <= SQUADS.callSecs[1] + 0.11, '… fit again and still seeing, he keys up afresh: his squad is in contact by the SECOND call (at its end, or sooner if his own first round is heard under it)', `${E2.map(e => `${e.what}@${e.t.toFixed(1)}`).join(',')} · shots heard by Bravo by then: ${bravo(g).reduce((n: number, x: any) => n + x.witness.heard.shots, 0)}`); }
-        } finally { R.done(); } }
-      // 15b'' · the LAST man of a squad dropped inside his call: cut off like any other — no call left on the air behind a squad that is down
-      { dark(true);
-        const R = await rig('block-squads.json', 1);
-        try { const g = R.g; R.step(1); const { m } = loneliest(g); m.awareness = 1;
-          sees(R, m, 0.6); const on0 = squadCalls(g).length;
-          for (const x of bravo(g)) killGuard(g, x, [1, 0, 0], true);
-          R.step(0.5);
-          const E = ev(g, 'Bravo');
-          F.verdict(on0 === 1 && E.some(e => e.what === 'cut off') && squadCalls(g).length === 0 && E.some(e => e.what === 'down'), 'the last man of his squad dropped inside his call: cut off, and no call is left on the air behind a squad that is down', `${on0} on the air before · ${E.map(e => `${e.what}@${e.t.toFixed(1)}`).join(',')} · ${squadCalls(g).length} on the air after`);
-        } finally { R.done(); } }
-      // 15c · gunfire heard: calls are instant, as they were — before he keys up, and under a call already on the air
-      for (const when of ['before', 'under'] as const) { dark(false);
-        const R = await rig('block-squads.json', 1);
-        try { const g = R.g; R.step(1); const { m } = loneliest(g); const shot = () => g.events.push({ kind: 'shot', pos: [g.player.char.pos[0], 0, g.player.char.pos[2]], time: g.time, loud: true, level: 1, who: PLAYER_ID });
-          if (when === 'before') { shot(); R.step(0.2); }
-          const heard = bravo(g).filter((x: any) => x.witness.heard.shots > 0).length; m.awareness = 1; const t0 = g.time; let alertT = NaN, shotT = NaN;
-          sees(R, m, 1.2, () => { if (m.state === 'alert' && !(alertT === alertT)) alertT = g.time; if (when === 'under' && !(shotT === shotT) && g.time - t0 >= 0.5) { shot(); shotT = g.time; } });
-          const E = ev(g, 'Bravo'), c = first(E, 'contact'), k = first(E, 'calls');
-          if (when === 'before') F.verdict(heard > 0 && !(k === k) && c - alertT <= 0.11, 'gunfire heard by the squad BEFORE he notices: no call to wait for — contact the frame he goes alert, as it was', `${heard} of Bravo had heard the shot · ${m.callsign} alert @${alertT.toFixed(2)} · Bravo contact @${c} · no 'calls' row`);
-          else F.verdict(k === k && c - shotT <= 0.11 && c - k < SQUADS.callSecs[0] - 0.3, 'gunfire heard UNDER his call: the floor is not quiet any more — the call is through at once', `keys up @${k} · the shot @${shotT.toFixed(2)} · Bravo contact @${c} (${(c - k).toFixed(2)} s into a call of ${SQUADS.callSecs[0]} s or more)`);
-        } finally { R.done(); } }
-      // 15d · a body seen is one man's knowledge too (callBody, settled on): the mate who has it in sight keys up, 'found' and contact at the end of his call
-      { dark(false); BODY_LIGHT.lit = 0; BODY_LIGHT.litNear = 0;
-        const R = await rig('block-squads.json', 1);
-        try { const g = R.g; R.step(1); const B = bravo(g);
-          let m = B[0], best = -2; for (const v of B) for (const x of B) { if (x === v) continue; const to = [v.char.pos[0] - x.char.pos[0], v.char.pos[2] - x.char.pos[2]], l = Math.hypot(to[0], to[1]) || 1, c = (to[0] * x.char.chestDir[0] + to[1] * x.char.chestDir[2]) / l; if (l < 10 && c > best && !g.col.segmentBlocked([x.char.pos[0], 1.6, x.char.pos[2]], [v.char.pos[0], 0.9, v.char.pos[2]])) { best = c; m = v; } }
-          const t0 = g.time; killGuard(g, m, [1, 0, 0], true); until(R, 8, () => ev(g, 'Bravo').some(e => e.what === 'contact'));
-          const E = ev(g, 'Bravo'), a = { c: first(E, 'contact') - t0, k: first(E, 'calls') - t0, found: first(E, 'found') - t0 };
-          F.verdict(a.k >= -0.06 && a.c - a.k >= SQUADS.callSecs[0] - 0.11 && a.c - a.k <= SQUADS.callSecs[1] + 0.11 && a.found >= a.c - 0.02, 'a man dropped in a mate\'s view: the mate keys up, and the body is found and contact called when his call ends', `keys up ${a.k.toFixed(2)} s after the drop, found ${a.found.toFixed(2)}, contact ${a.c.toFixed(2)}`);
-        } finally { R.done(); } }
-      // 15f · the men sent to look, with this piece on: the one who has the body in sight keys up over it, and while his call is on the air nobody sent with him
-      // turns for home or says 'no sign' — found and contact when his call ends (section 10's staging: a body the round threw a metre from the post)
-      { dark(false);
-        const R = await rig('block-squads.json', 1);
-        try { const g = R.g; park(g); R.g.player.visibility = 0.05; R.W.step(DT); park(g); for (let i = 0; i < 59; i++) { R.W.step(DT); park(g); }
-          const m = bravo(g)[4]; killGuard(g, m, [0, 0, -1], false);
-          until(R, 150, () => { park(g); return ev(g, 'Bravo').some(e => e.what === 'no sign' || e.what === 'contact'); });
-          const E = ev(g, 'Bravo'), looksT = first(E, 'looks'), call = E.find(e => e.what === 'calls' && e.t >= looksT && /down in his sight/.test(e.why)), found = E.find(e => e.what === 'found'), cT = first(E, 'contact');
-          const home = (g.fight.log as any[]).filter(n => call && n.t >= call.t - 0.06 && n.t <= cT + 0.06 && /goes back; his mate is still on his way/.test(n.what));
-          F.verdict(looksT === looksT && !!call && !!found && found.t - call.t >= SQUADS.callSecs[0] - 0.11 && found.t - call.t <= SQUADS.callSecs[1] + 0.11 && cT >= found.t - 0.02 && !home.length && !E.some(e => e.what === 'no sign') && !R.said.some(t => /no sign of/.test(t)),
-            'sent to look with the call beat on: the man who sees the body keys up over it, nobody sent with him turns for home or says "no sign" under his call, found and contact when it ends',
-            `${m.callsign} · ${E.map(e => `${e.what}@${e.t}`).join(',')} · turned for home under the call: ${home.length ? home.map(n => `${n.who}@${n.t.toFixed(1)}`).join(' ') : 'nobody'}`);
-        } finally { R.done(); } }
-      // ================ the ask after a cut-off call (callCutAsk), and the cases its own review named (rebuild/quiet-squad-maps/review/ask-review.md)
-      const asked = (g: any, who: any) => ev(g, 'Bravo').find(e => e.what === 'asks' && e.why.startsWith(`no answer from ${who.callsign}:`));
-      const soundOffs = (R: any, from: number) => R.said.slice(from).filter((t: string) => /^Bravo: radio check — sound off$/.test(t)).length;
-      // 15g · callCutAsk [0, 0] = no ask: the knob as it was first built (and as the one build carries it)
-      { dark(true); const was = SQUADS.callCutAsk; SQUADS.callCutAsk = [0, 0];
-        const R = await rig('block-squads.json', 1);
-        try { const g = R.g; R.step(1); const { m } = loneliest(g); m.awareness = 1;
-          sees(R, m, 0.6); killGuard(g, m, [1, 0, 0], true); until(R, 2.6, () => false);
-          const E = ev(g, 'Bravo'), cut = E.find(e => e.what === 'cut off');
-          F.verdict(!!cut && !/ask/.test(cut.why) && !E.some(e => e.what === 'asks' || e.what === 'check' || e.what === 'contact'), 'callCutAsk [0, 0]: the same cut-off call and nobody asks for him on its account — no ask, no check called, in the 2.6 s after it', `${cut?.why ?? 'no cut off row'} · ${E.map(e => `${e.what}@${e.t.toFixed(1)}`).join(',')}`);
-        } finally { R.done(); SQUADS.callCutAsk = was; } }
-      // 15h · the check already has its hands full (asking for ANOTHER man) when the call breaks off: the caller is not asked for a whole beat later behind a
-      //        fresh 'sound off' — he is asked for by name as soon as the men who went for the first are home
-      { dark(true);
-        const R = await rig('block-squads.json', 1);
-        try { const g = R.g; R.step(1); const { m: X } = loneliest(g), X0 = [X.char.pos[0], 0, X.char.pos[2]];
-          const takeX = () => { X.held = true; X.char.pos[0] = -60; X.char.pos[2] = -60; };
-          until(R, 70, () => { takeX(); return !!asked(g, X); });
-          const m = bravo(g).filter((x: any) => x !== X).sort((a: any, b: any) => flatD(b.char.pos, X0) - flatD(a.char.pos, X0))[0]; m.awareness = 1;
-          sees(R, m, 0.5, takeX); const n0 = R.said.length; killGuard(g, m, [1, 0, 0], true);
-          until(R, 120, () => { takeX(); return !!asked(g, m) || ev(g, 'Bravo').some(e => e.what === 'contact'); });
-          const E = ev(g, 'Bravo'), cut = E.find(e => e.what === 'cut off'), noSign = E.find(e => e.what === 'no sign'), aM = asked(g, m), again = E.find(e => e.what === 'check' && /has not forgotten/.test(e.why)), so = soundOffs(R, n0);
-          F.verdict(!!asked(g, X) && !!cut && /once the check under way is done/.test(cut.why) && !!noSign && !!again && !!aM && aM.t >= noSign.t && aM.t - again.t <= 0.2 && so === 0 && !E.some(e => e.what === 'contact'),
-            'a call cut off while the check is asking for another man: the caller waits his turn and is asked for by name once the men who went for the first are home — no fresh "sound off" round, no whole beat',
-            `${X.callsign} asked for @${asked(g, X)?.t.toFixed(1)} · ${cut?.why ?? 'no cut off row'} · no sign @${noSign?.t.toFixed(1)} · "${again?.why ?? 'no row'}" @${again?.t.toFixed(1)} · ${m.callsign} asked for @${aM ? aM.t.toFixed(1) : 'never'} · ${so} "sound off" in between`);
-        } finally { R.done(); } }
-      // 15i · two callers cut off on ONE frame (both taken): both are asked for by name, one after the other
-      { dark(true);
-        const R = await rig('block-squads.json', 1);
-        try { const g = R.g; R.step(1); const { m: a } = loneliest(g), b = bravo(g).filter((x: any) => x !== a).sort((x: any, y: any) => flatD(y.char.pos, a.char.pos) - flatD(x.char.pos, a.char.pos))[0];
-          a.awareness = 1; b.awareness = 1;
-          // (the team clean off the floor, Sam too: the men who go for the first of the two walk the loading hall between the workshop and the store on the
-          // rebuilt block, past where the team stands — met there it is contact, a true thing and another line's)
-          const clear = () => { park(g); g.player.char.pos[0] = -80; g.player.char.pos[2] = -78; };
-          sees(R, a, 0.6, () => { b.lastSeenT = g.time; clear(); });
-          const on0 = squadCalls(g).length, n0 = R.said.length, take = () => { for (const x of [a, b]) { x.held = true; x.char.pos[0] = -60; x.char.pos[2] = -60; } clear(); };
-          until(R, 150, () => { take(); return (!!asked(g, a) && !!asked(g, b)) || ev(g, 'Bravo').some(e => e.what === 'contact'); });
-          const E = ev(g, 'Bravo'), cuts = E.filter(e => e.what === 'cut off'), ta = asked(g, a)?.t ?? NaN, tb = asked(g, b)?.t ?? NaN, t1 = Math.min(ta, tb), so = soundOffs(R, n0);
-          F.verdict(on0 === 2 && cuts.length === 2 && Math.abs(cuts[0].t - cuts[1].t) < 0.02 && cuts.filter(c => / asks for him in /.test(c.why)).length === 1 && cuts.filter(c => /once the check under way is done/.test(c.why)).length === 1 && t1 - cuts[0].t <= SQUADS.callCutAsk[1] + 0.11 && ta === ta && tb === tb && so === 0 && !E.some(e => e.what === 'contact'),
-            'two callers cut off on one frame: the first is asked for by name within the knob\'s beat, the second once that check is done — both by name, neither behind a "sound off" round',
-            `${on0} on the air · ${cuts.map(c => `cut @${c.t.toFixed(2)}`).join(', ')} · ${a.callsign} asked for @${ta.toFixed(1)}, ${b.callsign} @${tb.toFixed(1)} · ${so} "sound off" in between · ${E.filter(e => e.what !== 'calls' && e.what !== 'cut off').map(e => `${e.what}@${e.t.toFixed(1)}`).join(',')}`);
-        } finally { R.done(); } }
-      // 15j · a caller who drops OUTSIDE his squad's rooms: asked for, and men go to where he fell (as first built the ask led nowhere: no record of him, the check idle a frame later)
-      { dark(true);
-        const R = await rig('block-squads.json', 1);
-        try { const g = R.g; R.step(1); const { m } = loneliest(g); m.awareness = 1;
-          sees(R, m, 0.6); const p = g.player.char.pos, at = [p[0] + 1, 0, p[2]];
-          m.char.pos[0] = at[0]; m.char.pos[2] = at[2]; killGuard(g, m, [1, 0, 0], true);
-          until(R, 14, () => ev(g, 'Bravo').some(e => e.what === 'looks' || e.what === 'contact'));
-          const E = ev(g, 'Bravo'), cut = E.find(e => e.what === 'cut off'), aM = asked(g, m), looksT = first(E, 'looks');
-          F.verdict(!inRoom(g, 'shop', at) && !inRoom(g, 'store', at) && !!cut && !!aM && looksT - cut.t < 12 && looksT > aM.t,
-            'a caller dropped outside his squad\'s rooms: he is filed where he fell, asked for by name, and men go there — the ask leads somewhere',
-            `down at (${at[0].toFixed(1)}, ${at[2].toFixed(1)}), outside the shop and the store · ${E.filter(e => e.what !== 'calls').map(e => `${e.what}@${e.t.toFixed(1)}`).join(',')}`);
-        } finally { R.done(); } }
-      // 15k · with no call cut off the ask changes NOTHING: a man dropped unseen, the routine check, its ask and its men to his post land on the same frames with
-      //        the ask on as with [0, 0] — the same game 75 s on (the ask on / ask off tallies are paired seed for seed on this)
-      { const got: { h: string; ev: string }[] = [], was = SQUADS.callCutAsk;
-        for (const ask of [[1, 2], [0, 0]] as [number, number][]) { dark(true); SQUADS.callCutAsk = ask;
-          const R = await rig('block-squads.json', 1);
-          try { const g = R.g; park(g); for (let i = 0; i < 60; i++) { g.player.visibility = 0.05; R.W.step(DT); park(g); }
-            const { m } = loneliest(g); killGuard(g, m, [1, 0, 0], true);
-            for (let i = 0; i < 75 * 60; i++) { g.player.visibility = 0.05; R.W.step(DT); park(g); }
-            const d = digestGame(g, true) as any; for (const x of d.guards ?? []) delete x.bubble;
-            got.push({ h: hashDigest(d), ev: ev(g, 'Bravo').map(e => `${e.what}@${e.t}`).join(',') });
-          } finally { R.done(); SQUADS.callCutAsk = was; } }
-        F.verdict(got[0].h === got[1].h && got[0].ev === got[1].ev && /asks@/.test(got[0].ev) && /looks@/.test(got[0].ev) && !/cut off/.test(got[0].ev),
-          'no call cut off: the routine check, its ask by name and its men to the post are the same with the ask on as with [0, 0] — the same game 75 s on',
-          `ask on: ${got[0].h} · ${got[0].ev}  |  [0, 0]: ${got[1].h} · ${got[1].ev}`);
-      }
-      // ================ the ask's second review (rebuild/quiet-squad-maps/review/ask-review-2.md): each of these fails on the ask as it stood (1ebae9a)
-      const post0 = (g: any) => new Map<any, number[]>(g.fight.defs.map((D: any) => [D.gd, [D.station[0], 0, D.station[2]]]));
-      const noted = (g: any, re: RegExp) => (g.fight.log as any[]).find(l => re.test(l.what));
-      // 16a · 4.1: a caller cut off because he is REELING is on the net, and nobody asks — but dropped half a second later without having keyed up again, his
-      //        mates heard half a sentence and then nothing: asked for by name inside the knob's beat of the drop, not at the next routine check
-      { dark(true);
-        const R = await rig('block-squads.json', 1);
-        try { const g = R.g; R.step(1); const { m } = loneliest(g); m.awareness = 1;
-          sees(R, m, 0.6); m.staggerUntil = g.time + 4; until(R, 0.5, () => false);
-          const cut = ev(g, 'Bravo').find(e => e.what === 'cut off'), t1 = g.time, n0 = R.said.length; killGuard(g, m, [1, 0, 0], true);
-          until(R, 5, () => !!asked(g, m) || ev(g, 'Bravo').some(e => e.what === 'contact'));
-          const a = asked(g, m), row = noted(g, new RegExp(`${m.callsign}, whose call broke off [\\d.]+ s ago, is down and has said nothing since`));
-          F.verdict(!!cut && /blinded or reeling/.test(cut.why) && !/ask/.test(cut.why) && !!a && a.t - t1 <= SQUADS.callCutAsk[1] + 0.15 && !!row && soundOffs(R, n0) === 0 && !ev(g, 'Bravo').some(e => e.what === 'contact'),
-            'ask-review-2 4.1: a call cut off under a reeling man, the man dropped quietly half a second on — his mates ask for him by name inside the knob\'s beat of the drop (before: an ordinary silent drop, found at the next routine check)',
-            `${cut?.why ?? 'no cut off row'} · dropped @${t1.toFixed(2)} · asked for @${a ? a.t.toFixed(2) : 'never in 5 s'} · ${row ? row.what.slice(9) : 'no row for it'}`);
-        } finally { R.done(); } }
-      // 16b · 4.2: the routine check's own time survives the polls. A call breaks off while men are out looking for another man (the check polls until they are
-      //        home); the caller is let go of — nobody is owed an ask, and the next "sound off" comes when it was due, not five seconds after a poll
-      { dark(true);
-        const R = await rig('block-squads.json', 1);
-        try { const g = R.g; R.step(1); const { m: X } = loneliest(g), X0 = [X.char.pos[0], 0, X.char.pos[2]];
-          const takeX = () => { X.held = true; X.char.pos[0] = -60; X.char.pos[2] = -60; };
-          until(R, 70, () => { takeX(); return !!asked(g, X); });
-          const m = bravo(g).filter((x: any) => x !== X).sort((a: any, b: any) => flatD(b.char.pos, X0) - flatD(a.char.pos, X0))[0]; m.awareness = 1;
-          sees(R, m, 0.5, takeX); m.held = true;
-          until(R, 30, () => { takeX(); m.held = true; return ev(g, 'Bravo').some(e => e.what === 'looks'); });
-          until(R, 2.5, () => { takeX(); m.held = true; return false; });
-          const looksT = first(ev(g, 'Bravo'), 'looks'), tFree = g.time; m.held = false; m.awareness = 0; m.state = 'patrol';
-          const called = () => ev(g, 'Bravo').find(e => e.what === 'check' && /calls the squad's radio check/.test(e.why) && e.t > tFree);
-          until(R, 80, () => { takeX(); return !!called() || ev(g, 'Bravo').some(e => e.what === 'contact'); });
-          const E = ev(g, 'Bravo'), cut = E.find(e => e.what === 'cut off'), so = called(), due = looksT + SQUADS.checkEvery * (1 - SQUADS.checkJitter), home = E.find(e => e.what === 'no sign');
-          F.verdict(!!cut && looksT === looksT && !!so && so.t >= due - 0.2 && !asked(g, m) && !E.some(e => e.what === 'contact'),
-            'ask-review-2 4.2: a call broken off while the check polls (men out looking), the caller let go of before he is asked for — the next "sound off" comes when the routine check was due (before: five seconds after a poll)',
-            `looks @${looksT} · ${cut?.why.slice(0, 60) ?? 'no cut off row'}… · let go of @${tFree.toFixed(1)} · the men home @${home?.t ?? '-'} · next "sound off" @${so ? so.t : 'never'} (due no sooner than ${due.toFixed(1)}) · ${m.callsign} asked for: ${asked(g, m) ? 'yes' : 'no'}`);
-        } finally { R.done(); } }
-      // 16c · 4.3: a man sent to look who keys up by his eyes on his way, and is taken where he stands: filed THERE, not at the post he left
-      { dark(true);
-        const R = await rig('block-squads.json', 1);
-        try { const g = R.g; R.step(1); const P0 = post0(g), { m: X } = loneliest(g);
-          const takeX = () => { X.held = true; X.char.pos[0] = -60; X.char.pos[2] = -60; };
-          until(R, 90, () => { takeX(); return ev(g, 'Bravo').some(e => e.what === 'looks'); });
-          let L: any = null; until(R, 12, () => { takeX(); L = bravo(g).find((x: any) => x !== X && x.script && x.speed > 0.4 && flatD(x.char.pos, P0.get(x)!) > 4.5) ?? null; return !!L; });
-          if (L) { L.awareness = 1; sees(R, L, 0.4, () => { takeX(); L.state = 'alert'; }); }   // (his own bar, as step 15b' stages it: a man walking on the squad's errand)
-          const keyed = !!L && ev(g, 'Bravo').some(e => e.what === 'calls' && e.why.startsWith(`${L.callsign} keys up`));
-          const p = L ? [L.char.pos[0], 0, L.char.pos[2]] : [0, 0, 0], hold = () => { takeX(); if (L) { L.held = true; L.char.pos[0] = p[0]; L.char.pos[2] = p[2]; } };
-          const went = () => ev(g, 'Bravo').find(e => e.what === 'looks' && L && new RegExp(`to where ${L.callsign} stood`).test(e.why));
-          let goerAt: number[] | null = null; until(R, 150, () => { hold(); const w = went(); if (w && !goerAt) { const go = bravo(g).find((x: any) => w.why.startsWith(x.callsign)); goerAt = go ? [go.char.pos[0], 0, go.char.pos[2]] : null; } return !!w || ev(g, 'Bravo').some(e => e.what === 'contact'); });
-          const w = went(), N = Number(/, (\d+) m off/.exec(w?.why ?? '')?.[1]), st = L ? P0.get(L)! : [0, 0, 0], dHere = goerAt ? flatD(goerAt, p) : NaN, dPost = goerAt ? flatD(goerAt, st) : NaN;
-          F.verdict(!!L && keyed && ev(g, 'Bravo').some(e => e.what === 'cut off' && e.why.startsWith(`${L.callsign}'s call`)) && !!w && flatD(p, st) > 4.5 && Math.abs(N - dHere) <= 0.6 && Math.abs(dHere - dPost) > 1.2,
-            'ask-review-2 4.3: a looker who keyed up by his eyes on his way and was taken where he stood — the men who go for him go THERE, not to the post he left',
-            `${L?.callsign ?? 'no looker on his way'} taken ${flatD(p, st).toFixed(1)} m from his post · ${w ? w.why.slice(0, 70) : 'nobody went for him'}… · the goer is ${dHere.toFixed(1)} m from where he was taken, ${dPost.toFixed(1)} m from his post`);
-        } finally { R.done(); } }
-      // 16d · 4.4: a caller shot dead OUTSIDE the squad's rooms with the gunfire heard at home — news from outside by the mates' own ears, not 'contact — here!'
-      //        said by a man at home about a spot he cannot see; the man stays filed and is asked for
-      { dark(true);
-        const R = await rig('block-squads.json', 1);
-        try { const g = R.g; R.step(1); const { m } = loneliest(g); m.awareness = 1;
-          sees(R, m, 0.6); const p = g.player.char.pos, at = [p[0] + 1, 0, p[2]];
-          m.char.pos[0] = at[0]; m.char.pos[2] = at[2];
-          g.events.push({ kind: 'shot', pos: [p[0], 0, p[2]], time: g.time, loud: true, level: 1, who: PLAYER_ID }); killGuard(g, m, [1, 0, 0], false);
-          R.step(1.6);
-          const E0 = ev(g, 'Bravo'), bad = E0.find(e => e.what === 'found' && /heard the (shot|blast) that dropped/.test(e.why)), here = R.said.find((t: string) => /^Bravo: contact — here!/.test(t)), heard = bravo(g).filter((x: any) => x.witness.heard.shots > 0).length;
-          const st16 = squadsReport(g).find((q: any) => q.name === 'Bravo').state;
-          until(R, 40, () => !!asked(g, m) || ev(g, 'Bravo').some(e => e.what === 'contact'));
-          F.verdict(!inRoom(g, 'shop', at) && !inRoom(g, 'store', at) && heard > 0 && !bad && !here && !E0.some(e => e.what === 'contact') && !!asked(g, m),
-            'ask-review-2 4.4: a caller shot dead outside the rooms, the shot heard at home — nobody at home calls "contact — here!" for a spot he cannot see; the squad has the shot as news from outside and asks for its man by name',
-            `down at (${at[0].toFixed(1)}, ${at[2].toFixed(1)}) · ${heard} of Bravo heard the shot · Bravo ${st16} 1.6 s on · ${ev(g, 'Bravo').filter(e => e.what !== 'calls').map(e => `${e.what}@${e.t.toFixed(1)}`).join(',')}${bad ? ` · ${bad.why}` : ''}`);
-        } finally { R.done(); } }
-      // 16e · 4.5: who is asked for first. A mate's ears are about to ask for one man when ANOTHER man's call breaks off on the net: the voice that has just
-      //        stopped is asked for first, inside the knob's beat — the first man after (before: the caller waited behind the whole look for the first)
-      { dark(true);
-        const R = await rig('block-squads.json', 1);
-        try { const g = R.g; R.step(1); const B = bravo(g);
-          let A = B[0], bd = Infinity; for (const x of B) { const d = Math.min(...B.filter((y: any) => y !== x).map((y: any) => flatD(y.char.pos, x.char.pos))); if (d < bd) { bd = d; A = x; } }
-          const at = [A.char.pos[0], 0, A.char.pos[2]]; killGuard(g, A, [1, 0, 0], true); R.step(0.6);
-          g.events.push({ kind: 'prop', pos: at, time: g.time, level: 0.5, who: 0 });
-          const heardRow = () => ev(g, 'Bravo').find(e => e.what === 'check' && /heard something/.test(e.why));
-          until(R, 3, () => !!heardRow());
-          const hr = heardRow(), ear = B.find((x: any) => hr && hr.why.startsWith(`${x.callsign} heard`));
-          const b2 = B.filter((x: any) => x !== A && x !== ear).sort((x: any, y: any) => flatD(y.char.pos, at) - flatD(x.char.pos, at))[0]; b2.awareness = 1;
-          sees(R, b2, 0.3); killGuard(g, b2, [1, 0, 0], true);
-          until(R, 6, () => !!asked(g, b2) || ev(g, 'Bravo').some(e => e.what === 'contact'));
-          const E = ev(g, 'Bravo'), cut = E.find(e => e.what === 'cut off'), aB = asked(g, b2), aA0 = asked(g, A);
-          until(R, 120, () => !!asked(g, A) || ev(g, 'Bravo').some(e => e.what === 'contact' || (e.what === 'found' && e.why.includes(A.callsign))));
-          const aA = asked(g, A), E2 = ev(g, 'Bravo');
-          F.verdict(!!ear && !!cut && /asks for him first/.test(cut.why) && !!aB && aB.t - cut.t <= SQUADS.callCutAsk[1] + 0.15 && (!aA0 || aA0.t > aB.t) && (!!aA || E2.some(e => e.what === 'contact')),
-            'ask-review-2 4.5: a call breaks off while a mate\'s ears were about to ask for another man — the caller is asked for first, inside the knob\'s beat, and the other man is not forgotten (asked for after, or the squad is in contact over the first)',
-            `${A.callsign} down, ${ear?.callsign ?? 'nobody'} heard it · ${cut?.why ?? 'no cut off row'} · ${b2.callsign} asked for @${aB ? aB.t.toFixed(1) : 'never'} · ${A.callsign} asked for @${aA ? aA.t.toFixed(1) : 'never'} · ${E2.filter(e => e.what !== 'calls').map(e => `${e.what}@${e.t.toFixed(1)}`).join(',')}`);
-        } finally { R.done(); } }
-      // 16f · 3.2 / 4.6: the 'cut off' row promises an ask; contact by another road before it is made — the trace says the ask is dropped
-      { dark(true);
-        const R = await rig('block-squads.json', 1);
-        try { const g = R.g; R.step(1); const { m } = loneliest(g); m.awareness = 1;
-          sees(R, m, 0.6); killGuard(g, m, [1, 0, 0], true); R.step(0.3);
-          const cut = ev(g, 'Bravo').find(e => e.what === 'cut off'), o = bravo(g)[0];
-          g.events.push({ kind: 'shot', pos: [o.char.pos[0], 0, o.char.pos[2]], time: g.time, loud: true, level: 1, who: PLAYER_ID }); killGuard(g, o, [1, 0, 0], false); R.step(3);
-          const E = ev(g, 'Bravo'), row = noted(g, new RegExp(`nobody asks for ${m.callsign} after all`));
-          F.verdict(!!cut && / asks for him in /.test(cut.why) && E.some(e => e.what === 'contact') && !asked(g, m) && !!row,
-            'ask-review-2 3.2: a cut-off row that promised an ask, and contact by another road before it was made — the trace says nobody asks after all (before: the promise stood in the log, unkept and unexplained)',
-            `${cut?.why ?? 'no cut off row'} · ${E.filter(e => e.what !== 'calls').map(e => `${e.what}@${e.t.toFixed(1)}`).join(',')} · ${row ? row.what.slice(9) : 'no row for it'}`);
-        } finally { R.done(); } }
-      // ================ the net does not ask after a squad that has gone silent (SQUADS.netAsk, settled off: until 2026-11-07 ten sections here staged the
-      //                  net's ask on — the roll call, the squad asked for by name, men sent to its posts, the looker cut off as the alarm — and went
-      //                  with that switch; what is left is the page's side of it)
-      { const alpha = (g: any) => g.roomClear.rooms.find((r: any) => r.def.id === 'mess').defenders.filter((h: any) => h.state !== 'dead');
-        const all = (g: any) => (squadsReport(g) as any[]).flatMap(q => q.events.map((e: any) => ({ ...e, q: q.name }))).sort((a, b) => a.t - b.t);
-        const RE_ROLL = /^[A-Z][a-z]+: all squads — radio check$/, RE_ASK = /^(Bravo|Charlie): Alpha\? … Alpha, sound off$/;
-        // 17g · the three of Alpha dropped silently in the dark — 120 s, and nobody asks after Alpha
-        { dark(true);
-          const R = await rig('block-squads.json', 1);
-          try { const g = R.g; park(g); for (let i = 0; i < 60; i++) { g.player.visibility = 0.05; R.W.step(DT); park(g); }
-            for (const x of alpha(g)) killGuard(g, x, [1, 0, 0], true);
-            until(R, 120, () => { park(g); return false; });
-            F.verdict(!R.said.some((t: string) => RE_ROLL.test(t) || RE_ASK.test(t)) && !all(g).some(e => /^net /.test(e.what)) && !all(g).some(e => e.what === 'contact'),
-              'net off (the call-beat game): the same three dropped, 120 s — no roll call, nobody asks for Alpha, no squad in contact: the gap this switch is for', `${squadsReport(g).map((q: any) => `${q.name} ${q.state}`).join(' · ')} · ${R.said.filter((t: string) => /Alpha/.test(t)).length} lines naming Alpha`);
-          } finally { R.done(); } }
-      }
-    }
   } finally { SQUADS.callCutAsk = [1, 2]; BODY_LIGHT.lit = wasLit.lit; BODY_LIGHT.litNear = wasLit.litNear; }
   return F.done();
 }

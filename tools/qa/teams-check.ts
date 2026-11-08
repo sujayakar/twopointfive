@@ -95,7 +95,7 @@ try {
   // ---- down
   show(0); const was = p1.down; p1.down = true; const C = fill().mates.filter(m => m.on);
   show(1); const E = fill(), e = E.mates.filter(m => m.on), mineStill = E.on && E.strength === 0 && e.length === 5 && !!byId(e, p0.char.id);   // (his own page: he is down, the team is not)
-  const was0 = p0.down; p0.down = true; const allOff = !fill().on; p0.down = was0; p1.down = was; show(0);
+  const allDownWas = g.recap.allDown; g.recap.allDown = true; const allOff = !fill().on; g.recap.allDown = allDownWas; p1.down = was; show(0);
   F.setFindMe('mates', 0); const D = fill(), alone = D.on && D.mates.every(m => !m.on); F.setFindMe('mates', F.FINDME_START.mates);
   say(two && C.length === 4 && !byId(C, p1.char.id) && mineStill && allOff && alone, 'down: a player who is down gives his place up on the other screen and keeps the team\'s rims on his own; both down, none; the teammates\' row at none leaves his own rim alone',
     `the second player down: ${C.length} others rimmed on the first's screen (4 wanted), his among them ${!!byId(C, p1.char.id)}; on his own screen his rim's strength ${E.strength} and ${e.length} others (5 wanted) · both down: the frame ${allOff ? 'off' : 'ON'} · teammates' row at none: his own ${D.on ? 'on' : 'OFF'}, others ${D.mates.filter(m => m.on).length}`);

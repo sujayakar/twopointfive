@@ -54,9 +54,9 @@ pub fn near_lamp(g: &crate::game::Game, t: FixtureId, legs: &[crate::aimcost::Ro
 }
 
 /// A guard's own hands: the row's spread off the man he is firing at. (combat.ts aiWide)
-pub fn ai_wide(g: &crate::game::Game, sg: Option<GuardId>, shooter: CharId, def: &crate::weapons::WeaponDef) -> f64 {
+pub fn ai_wide(g: &crate::game::Game, seat: &crate::seats::SeatRef, sg: Option<GuardId>, shooter: CharId, def: &crate::weapons::WeaponDef) -> f64 {
     let foe = match sg { Some(s) => crate::teams::foe_char(g, s), None => None };
-    let tc = match foe { Some(c) => c, None => g.pl[g.player].ch };
+    let tc = match foe { Some(c) => c, None => g.pl[seat.player].ch };
     let tv = m::hyp2(g.ch[tc].vel[0], g.ch[tc].vel[2]);
     let range = v3::dist(g.ch[shooter].pos, g.ch[tc].pos);
     let s = def.ai_spread;
@@ -315,7 +315,7 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
     let ff_on = crate::friendlyfire::ff_live(g);
     let ff_ours = ff_on && (is_player || crate::friendlyfire::ff_side(g, sg));
     if ff_ours && !is_player && pel.is_none() {
-        let wide = if steady { 0.0 } else { ai_wide(g, sg, shooter, &def) };
+        let wide = if steady { 0.0 } else { ai_wide(g, &crate::seats::here(g), sg, shooter, &def) };
         let cone = match &pellets { Some(p) => p.cone * 2.0, None => 0.0 };
         let at = g.ch[shooter].muzzle;
         if crate::friendlyfire::ff_unpressed(g, sg, at, target, spread + wide + cone, &def) { return; }
@@ -327,7 +327,7 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
     if is_player && lead { crate::mission::tally(g, crate::mission::TallyK::Shots); crate::holdfire::hold_fire_shot(g, shooter); }
     let muzzle = g.ch[shooter].muzzle;
     let mut dir = v3::normalize(v3::sub(target, muzzle));
-    if !is_player && !steady { spread += ai_wide(g, sg, shooter, &def); }
+    if !is_player && !steady { spread += ai_wide(g, &crate::seats::here(g), sg, shooter, &def); }
     if spread > 0.0 {
         let rx = crate::math_dice::sim_random(g);
         let ry = crate::math_dice::sim_random(g);
@@ -341,7 +341,7 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
     if lead {
         let card = crate::effects::muzzle_card();
         let bf = crate::scene_boxes::box_flag();
-        let b = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
+        let b = crate::scene_boxes::make_box_kept(g, &crate::scene_boxes::MakeBoxP {
             c: v3::mad(muzzle, dir, mf.card_ahead),
             h: mf.card_half,
             yaw: Some(v3::yaw_of(dir)),
@@ -575,7 +575,7 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
     }
     // bullet wake through smoke: each straight leg one line on the look page, else the row of soft dots
     let mut lined = false;
-    if third && g.m.render_frame.look_config.on && g.m.render_frame.look_config.stir > 0.0 {
+    if third && g.m.render_frame.look_config.stir > 0.0 {
         let far = m::min(t_hit, 25.0);
         if let Some(p) = &pen {
             for k in &p.path.segs {

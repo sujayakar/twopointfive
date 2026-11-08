@@ -87,11 +87,6 @@ pub fn update_fire(g: &mut Game, dt: f64) {
         i += 1;
     }
     if !any {
-        let told = match g.engine.host_books.as_mut().and_then(|b| b.fire.as_mut()) {
-            Some(p) if p.kept.map_or(false, js::truthy) => { p.kept = Some(0.0); true }
-            _ => false,
-        };
-        if told { crate::smoke_types::smoke_system_like_keep_hot(g, 0.0); }
         return;
     }
     state_of(g);   // makes the row; each write below gets it again, since calls that take g lie between them
@@ -125,7 +120,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
     let mut lit = 0.0;
     let look = g.m.render_frame.look_config;
     let mut jets: Vec<crate::smoke_types::WindGpuSource> = Vec::new();
-    let snow_lift = look.on && look.fire_snow > 0.0;
+    let snow_lift = look.fire_snow > 0.0;
     if moved { state_of(g).frames += 1.0; }
     let mut i = 0;
     while i < g.targets.len() {
@@ -278,7 +273,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
                 p.smokes += 1.0;
                 let sk = if wl > 8.0 { 8.0 / wl } else { 1.0 };
                 let dir = [wv[0] * sk * b.lean, 1.0, wv[2] * sk * b.lean];
-                let l = if look.on && look.fire_smoke > 0.0 { Some(fl_smoke) } else { None };
+                let l = if look.fire_smoke > 0.0 { Some(fl_smoke) } else { None };
                 let a = match l { Some(l) if fit => Some(axis_at(g, height * l.up, wind)), _ => None };
                 smoke_emit(g, &crate::smoke_types::SmokeEmitter {
                     pos: [mouth.pos[0] + a.map_or(0.0, |a| a[0]), mouth.pos[1] + height * l.map_or(b.up, |l| l.up), mouth.pos[2] + a.map_or(0.0, |a| a[1])],
@@ -300,7 +295,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
                 });
             }
             // the look prototype: the fire puffs, a short burst of thicker, hotter gas, a few a second
-            if look.on && look.fire_smoke > 0.0 {
+            if look.fire_smoke > 0.0 {
                 let l = fl_smoke;
                 let ps = m::floor(time / l.puff_every);
                 if ps != m::floor(was / l.puff_every) || !goes {
@@ -333,49 +328,12 @@ pub fn update_fire(g: &mut Game, dt: f64) {
             }
         }
         // the flame as gas: a short source on the solver's fine lattice at the coals, filed afresh every `every` s while the fire is near the view
-        let gs = g.k.fire.gas;
-        if moved && drawing && gs.on && d < gs.view_r {
-            let slot = m::floor(time / gs.every);
-            let p = book(g);
-            let n = p.n;
-            let kept = p.gas.get(ix).copied() == Some(n - 1.0);
-            put_at(&mut p.gas, ix, n, NO_FRAME);
-            if slot != m::floor(was / gs.every) || !kept {
-                p.gases += 1.0;
-                smoke_emit(g, &crate::smoke_types::SmokeEmitter {
-                    pos: [mouth.pos[0], mouth.pos[1] + height * gs.up, mouth.pos[2]],
-                    dir: [0.0, 1.0, 0.0],
-                    speed: gs.speed,
-                    radius: gs.radius,
-                    min_voxels: Some(gs.cells),
-                    density: gs.density * heat,
-                    temperature: gs.temp * heat,
-                    ttl: gs.every,
-                    age: 0.0,
-                    kind: crate::smoke_types::SmokeEmitterKind::Cloud,
-                    push: Some(gs.push),
-                    jitter: Some(gs.jitter),
-                    lattice: Some(crate::smoke_types::SmokeEmitterLattice::Fine),
-                    look: Some(true),
-                    ..crate::smoke_types::SmokeEmitter::zeroed()
-                });
-            }
-        }
     }
     if moved {
         if let Some(stir) = g.engine.host_books.as_mut().and_then(|b| b.fire.as_mut()).and_then(|p| p.stir.as_mut()) {
             stir.clear();
         }
-        if look.on && crate::particle_fx::gpu_fx(g) { crate::render_particles::particles_set_heat(g, &jets); }
-        // the solver keeps hot gas on its fine lattice only while a fire's flame is that gas
-        let (gas_on, keep) = (g.k.fire.gas.on, g.k.fire.gas.keep);
-        let p = book(g);
-        let n = p.n;
-        let hot = if gas_on && p.gas.iter().any(|&x| x == n) { keep } else { 0.0 };
-        if p.kept != Some(hot) {
-            p.kept = Some(hot);
-            crate::smoke_types::smoke_system_like_keep_hot(g, hot);
-        }
+        if crate::particle_fx::gpu_fx(g) { crate::render_particles::particles_set_heat(g, &jets); }
     }
     let s = state_of(g);
     s.fires = fires;
