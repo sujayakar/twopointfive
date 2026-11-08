@@ -319,3 +319,118 @@ fn a_follower_goes_by_the_doors_sam_took() {
         assert_eq!(inside, 0, "seed {s}: the control: the short way is the yard's door");
     }
 }
+
+// ---------------------------------------------------------------- which face, and which way round
+
+/// The team in the west room with its door to the east room standing open, Sam in the yard at the east room's yard door, the east room's man off the floor as is every other. `known`: somebody has stood in the east room.
+fn taken_west(seed: u32, known: bool) -> (Play, DoorId, [f64; 2]) {
+    let mut sc = Scene::new("taken-west");
+    sc.room("west", 10.0, 10.0, 18.0, 16.0).room("east", 18.0, 10.0, 26.0, 16.0);
+    sc.door("west-yard", Axis::X, 16.0, 13.4).door("east-yard", Axis::X, 16.0, 21.4 + nudge(seed, 53)).door("between", Axis::Z, 18.0, 12.4);
+    sc.bulb(14.0, 13.0).bulb(22.0, 13.0).moon();
+    let c = sc.door_centre("east-yard");
+    sc.team([c[0], c[1] + 2.0], NORTH, &[[15.0, 12.0], [16.5, 12.0], [15.0, 14.0], [16.5, 14.0]]);
+    sc.defender("west", [11.25, 11.25], "west-yard").defender("east", [24.25, 12.25], "east-yard");
+    let mut p = Play::scene(&sc, &four(seed));
+    p.sam_unhurt();
+    p.run(0.2);
+    p.drop_all_but(&[]);
+    let (b, w, d) = (p.door("between"), p.door("west-yard"), p.door("east-yard"));
+    p.leaf_put_open(b, 1.5);
+    p.leaf_stays(b);
+    p.leaf_put_open(w, 1.5);
+    p.leaf_stays(w);
+    if known {
+        let m = p.men()[0];
+        for _ in 0..30 { p.man_stands(m, [22.0, 13.0]); p.frame(); }
+        p.man_stands(m, [16.5, 12.0]);
+    }
+    p.run(0.3);
+    (p, d, c)
+}
+
+/// THE RULE: "they'll go through uncleared rooms to get there!". The squad's stack on an ordered door is dealt the face whose floor the team knows, whatever the walks come to: on the yard's side, nobody setting foot in the room nobody has been in. The control is that room known: the walks decide, and its own side is the short one.
+/// A FAILURE MEANS: a stack walks through the room it is about to clear to stand on the door's far side.
+#[test]
+fn a_stack_is_dealt_the_face_whose_floor_is_known() {
+    let in_east = |a: [f64; 2]| a[0] > 18.0 && a[0] < 26.0 && a[1] > 10.0 && a[1] < 16.0;
+    for s in SEEDS {
+        let (mut p, _, c) = taken_west(s, false);
+        let men = p.men();
+        p.order("stack", c, Who::All);
+        let mut inside = 0;
+        p.until(40.0, |p| { for &m in &men { if in_east(p.at(m)) { inside += 1; } } men.iter().all(|&m| p.arrived(m)) }).unwrap_or_else(|| panic!("seed {s}: not all set: {}", p.roll()));
+        assert_eq!(inside, 0, "seed {s}: man-frames in the room nobody has been in");
+        for &m in &men { assert!(p.at(m)[1] > 16.0, "seed {s}: on the yard's side: {:?}", p.at(m)); }
+        drop(p);
+
+        let (mut p, _, c) = taken_west(s, true);
+        let men = p.men();
+        p.order("stack", c, Who::All);
+        p.until(40.0, |p| men.iter().all(|&m| p.arrived(m))).unwrap_or_else(|| panic!("seed {s}: the control: not all set: {}", p.roll()));
+        assert!(men.iter().all(|&m| p.at(m)[1] < 16.0), "seed {s}: the control: the room known, the walks decide, and they stack on its side: {}", p.roll());
+    }
+}
+
+/// THE RULE: a door face with no floor at either jamb and no marks authored for it is no reason to refuse: the men work out marks of their own, on free floor, off the line of the opening, a body's room apart. (The office's keypad door from the server room: racks down one side of the aisle, a cart on the hinge jamb, the corner on the latch's.) The control is that door's premise: neither jamb has floor.
+/// A FAILURE MEANS: every door order on such a face is refused again ('no room on that door.').
+#[test]
+fn a_door_with_no_floor_at_its_jambs_gets_marks_of_the_mens_own() {
+    for s in SEEDS {
+        for squad in [2, 4] {
+            let mut p = Play::mission("office.json", &format!("?levelFile=office.json&roomclear&squad{squad}"), &Opts { seed: s, squad, ..Default::default() });
+            p.sam_unhurt();
+            p.run(0.2);
+            p.drop_all_but(&[]);
+            let d = p.door("server_manager");
+            let mut spots = vec![[18.6, 8.6], [17.8, 8.2], [17.8, 9.0], [17.0, 8.2], [17.0, 9.0]].into_iter();
+            p.sam_put(spots.next().unwrap());
+            for m in p.men() { p.man_stands(m, spots.next().unwrap()); }
+            p.run(0.2);
+            let side = p.face(d, p.sam_at());
+            for along in [-0.42, p.door_w(d) + 0.42] { let at = p.on_face(d, along, 0.45 * side); assert!(!p.floor_free(at), "seed {s}: the premise: this jamb has floor at {at:?}"); }
+            let c = p.frame_at(d);
+            assert_eq!(p.row("stack", c).1, None, "seed {s}, {squad} men: the row is grey");
+            p.order("stack", c, Who::All);
+            let men = p.men();
+            p.until(25.0, |p| men.iter().all(|&m| p.arrived(m))).unwrap_or_else(|| panic!("seed {s}, {squad} men: not on their marks: {}", p.roll()));
+            p.run(1.0);
+            for &m in &men {
+                assert!(dist(p.at(m), p.post_of(m).unwrap()) < 0.3 && !p.in_doorway(d, p.at(m)), "seed {s}, {squad} men: {:?}", p.at(m));
+                assert!(p.floor_free(p.post_of(m).unwrap()), "seed {s}: his mark is on free floor");
+                for &o in &men { if o != m { assert!(dist(p.at(m), p.at(o)) > 0.6, "seed {s}, {squad} men: {:.2} m apart", dist(p.at(m), p.at(o))); } }
+            }
+        }
+    }
+}
+
+/// The queue lesson's level: a pair side by side at the front of the hall told to stack on its back door, `gap` metres between them. The furthest they get from each other on the way, and how many got there.
+fn round_the_hall(s: u32, gap: f64) -> (f64, usize) {
+    let mut p = Play::mission("tut-queue.json", "?levelFile=tut-queue.json&roomclear=1&squad4", &Opts { seed: s, ..Default::default() });
+    p.sam_unhurt();
+    p.run(0.5);
+    p.drop_all_but(&[]);
+    p.sam_put([30.8, 20.6]);
+    let (two, rest) = (p.blue(), p.red());
+    for (i, &m) in rest.iter().enumerate() { p.man_stands(m, [16.0 + i as f64 * 1.2, 9.0]); }
+    let (x, z) = (30.1, 8.0 + nudge(s, 54).abs());
+    p.man_stands(two[0], [x, z]);
+    p.man_stands(two[1], [x + gap, z]);
+    p.order("stack", [30.8, 19.0], Who::Blue);
+    let mut far = 0.0f64;
+    p.until(50.0, |p| { far = far.max(dist(p.at(two[0]), p.at(two[1]))); p.arrived(two[0]) && p.arrived(two[1]) });
+    (far, two.iter().filter(|&&m| p.arrived(m)).count())
+}
+
+/// THE RULE: two men of a pair handed one order on one door from one spot walk round a building by the same side, and both stand on their marks. The control is the pair stood 12 m apart when told: then the two are apart from the first frame, as a man round each side would be.
+/// A FAILURE MEANS: the pair's two ways part round the hall, a building between them.
+#[test]
+fn a_pair_goes_round_a_building_one_way() {
+    for s in SEEDS {
+        let (far, there) = round_the_hall(s, 1.4);
+        assert_eq!(there, 2, "seed {s}: both on their marks");
+        assert!(far <= 6.0, "seed {s}: the furthest the two got from each other: {far:.1} m");
+        let (far, _) = round_the_hall(s, 12.0);
+        assert!(far > 6.0, "seed {s}: the control: {far:.1} m");
+    }
+}
