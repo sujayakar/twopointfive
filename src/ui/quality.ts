@@ -47,12 +47,12 @@ export const LADDER = { cutFps: 45, aimFps: 50, restoreFps: 58, starvedFps: 40, 
  *  busy 9 ms of every 16.7 sits at its tier's starting scale for ever. With GPU timings the ladder can: over 1-s windows in which the frame rate held the display rate (≥ LADDER.restoreFps) AND
  *  the UNION of the compute passes' GPU intervals stayed under `headroom` × the frame budget (1000 / budgetFps ms), for `windows` windows running, it takes ONE step up — the render scale by
  *  SCALE_STEP past the tier's own start up to 1.0; at 1.0 with the union still under `divisorRoom` × the budget, the lossy divisors in a fixed order (the gather ⅓ → ½, then the volumetrics
- *  ¼ → ½); then, only with settings.capClimb, the output cap toward the window's device rows in `capStep`-row steps — with ≥ `climbGap` s between climbs. A window over `backoff` × the
+ *  ¼ → ½) — with ≥ `climbGap` s between climbs. A window over `backoff` × the
  *  budget or under `backoffFps` with a climb standing UNDOES the last step at once and remembers the rung that failed for `failSecs` (no oscillation); the plain ladder's cut / preset logic
  *  runs on top as ever. Every step is one the pool + history resampling (passes.ts) make cheap. Off = the ladder as it was, byte for byte. */
-export const CLIMB = { budgetFps: 60, headroom: 0.60, divisorRoom: 0.65, backoff: 0.80, backoffFps: 55, windows: 3, climbGap: 4.0, failSecs: 60, capStep: 100 };
+export const CLIMB = { budgetFps: 60, headroom: 0.60, divisorRoom: 0.65, backoff: 0.80, backoffFps: 55, windows: 3, climbGap: 4.0, failSecs: 60 };
 /** one rung the climb has taken, newest last (undone in reverse) */
-type ClimbStep = { kind: 'scale'; from: number; to: number } | { kind: 'gather' } | { kind: 'vol' } | { kind: 'cap'; from: number; to: number };
+type ClimbStep = { kind: 'scale'; from: number; to: number } | { kind: 'gather' } | { kind: 'vol' };
 /** THE LADDER'S ONE TARGET (settings.ladderAim, DEFAULT 60 since the maintainer's pick of 10-10; ?aim=asnow|60|90|120|display, ?aim=0 = asnow; rebuild/performance/auto-quality.md). 0 = 'as now': every band is the literal LADDER / CLIMB / PLAN_BUDGET_MS number
  *  above and no line below takes another road — the ladder byte for byte as it was (aims at a 60 Hz budget, spends headroom on resolution, cuts only under 45 fps). N > 0 = HOLD N fps (never more
  *  than the display has been seen to show — Quality.displayHz; AIM_DISPLAY = that rate itself): the climb, the cut and the preset hop all work to N.
@@ -108,7 +108,7 @@ export const SHED = { holdSecs: 60, seenCap: 3, backSecs: 900 };
  *  again. So while the count is up sample() drops its window and moves none of its clocks — the ladder neither judges its last step nor takes another. `maxSecs`: no longer
  *  than this in one wait (a compile that slow, or a set that long, must not leave a page with no ladder at all); `Quality.standsInFor` says how long it has waited. The boot
  *  calibration waits the same way and no longer (calibrateTick: past `maxSecs` it measures the picture as it is, `early`, and measures once more when the set is in). With the
- *  row 'Start on first frame shaders' off the count is never above 0 and none of this runs. */
+ *  first-frame start off the count is never above 0 and none of this runs. */
 export const STANDS_IN = { maxSecs: 30 };
 /** THE SAME CHECK UNDER AN AIM (settings.ladderHeld, default on, `?ladderheld=0`; off = an aim as it was: `holdBound` alone decides, and every line below is skipped). An aim stepped a
  *  held page down on the union's SIZE alone (two windows over the back-off band; over its budget, by rate) and gave the pixels back only with the union priced under `restore` of that
@@ -160,7 +160,7 @@ export function displayRateOf(intervals: ArrayLike<number>, tol = 0.03): number 
   for (let i = 0; i + K <= intervals.length; i++) { let sum = 0, min = Infinity; for (let j = i; j < i + K; j++) { const d = intervals[j]; sum += d; if (d < min) min = d; } if (sum - min < best) best = sum - min; }
   return best > 0 && best < Infinity ? snapRate(1000 * (K - 1) / best, tol) : 0;
 }
-const rungKey = (s: ClimbStep) => s.kind === 'scale' ? `scale:${s.to.toFixed(2)}` : s.kind === 'cap' ? `cap:${s.to}` : s.kind;
+const rungKey = (s: ClimbStep) => s.kind === 'scale' ? `scale:${s.to.toFixed(2)}` : s.kind;
 const probesOf = (p: Preset, one = true) => { const g = rcGridOf(p, one); return g.nx * g.ny * g.nz; };   // (rcGridOf: under the table below)
 
 /** the lossy trade-offs a preset switches (engine settings of the same names; engine.render mirrors them into passes.setDivisors / rc.halfRate
@@ -589,7 +589,7 @@ export class Quality {
   calibrateTick(rawDt: number) {
     if (!this.calibrating || pageHidden()) return;
     const waited = this.standsInFor, c = this.calib;
-    if (this.standsIn(rawDt)) return;   // (the row 'Start on first frame shaders': a pass is still drawing with a fallback, so these are not the settings' own times; never with the row off. A frame a compile stalled counts to the wait too: it is the wall clock's)
+    if (this.standsIn(rawDt)) return;   // (the first-frame start: a pass is still drawing with a fallback, so these are not the settings' own times; never with the row off. A frame a compile stalled counts to the wait too: it is the wall clock's)
     if (laterProgress.pending > 0) this.early = true;   // (the wait ran out: what is measured from here is the stand-ins' picture)
     else if (waited > 0 && c.frames) { c.frames = 0; c.t = 0; c.gpu = []; c.fixed = []; c.dts = []; this.early = false; }   // (the set landed while that measure was under way: over again, on the settings' own picture alone)
     if (rawDt >= 0.5) return;
@@ -753,7 +753,7 @@ export class Quality {
         }
       }
       // THE CLIMB itself: display rate held AND the GPU under the headroom band for CLIMB.windows windows running, the last climb long enough ago → one rung up (scale → its top, then the
-      // divisors, then — capClimb — the output cap), skipping rungs that failed lately
+      // divisors), skipping rungs that failed lately
       else if (climbOn && unionAvg > 0 && !autoWantsPreset && !sharpFits) {   // (SHARP SHED: room that fits sharp direct back is its room first, auto's block below)   // (under auto a cheaper preset with room for the next goes UP A PRESET first — the cruising rule below; the climb spends what is left at the top of auto's ladder, under a preset the next will not fit over, or on a preset pinned from a menu)
         const roomyNow = avg < 1 / B.cruisingFps && unionAvg < CLIMB.headroom * budget;   // (the rate gate sits UNDER any display's refresh — a 60 Hz panel's rAF never averages better than 60.0 — and the headroom itself is read off the GPU union, never off the rate)
         this.roomy = roomyNow ? this.roomy + 1 : 0;   // (never reached in an unsure window: unionAvg is 0 then and this branch is skipped — the count simply waits)
@@ -809,7 +809,7 @@ export class Quality {
   private shedSeenMs(rows: number = this.outRows()): number { const s = this.shedSeen; return s && this.clock < s.until ? s.ms * (rows / s.rows) ** 2 : 0; }
   /** the live rows with every rung the climb holds taken off again: the tier's own picture as it would stand now */
   private ownPreset(live: Preset): Preset {
-    return this.climbed.reduceRight<Preset>((p, s) => s.kind === 'scale' ? { ...p, scale: Math.min(p.scale, Math.max(this.maxScale, s.from)) } : s.kind === 'gather' ? { ...p, lossy: { ...p.lossy, gatherThird: true } } : s.kind === 'vol' ? { ...p, lossy: { ...p.lossy, volQuarter: true } } : { ...p, maxH: Math.min(p.maxH, s.from) }, live);
+    return this.climbed.reduceRight<Preset>((p, s) => s.kind === 'scale' ? { ...p, scale: Math.min(p.scale, Math.max(this.maxScale, s.from)) } : s.kind === 'gather' ? { ...p, lossy: { ...p.lossy, gatherThird: true } } : { ...p, lossy: { ...p.lossy, volQuarter: true } }, live);
   }
   /** let sharp direct go where a cut from `from` would have been taken; `judge` = the paced check judges it as it would that cut (a shed that bought no frame rate goes back with the
    *  chain's pixels, pacedStep); `mark` = this window's union is the 'before' of its measure. Returns the move's words */
@@ -847,25 +847,20 @@ export class Quality {
    *  has nothing to decouple, so sharp direct, its decoupled jitter and GBAA all switch off — the '1.0 + TAA' picture docs/internal/image-quality.md measured worse on every column than 0.9 + C3j
    *  (why ultra starts at 0.9); the divisor rungs come after 0.95 instead */
   private scaleTop(): number { const S = this.engine.settings; return (S.sharpDirect || this.shed) && S.taau !== false ? +(1.0 - SCALE_STEP).toFixed(2) : 1.0; }   // (SHARP SHED: shed is not gone — the size it comes back at is kept)
-  /** the next rung from here, in the fixed order (scale by SCALE_STEP up to scaleTop() → the gather's divisor 3 → 2 → the volumetrics' 4 → 2 → the output cap by CLIMB.capStep toward the window's device
-   *  rows), passing over rungs that failed lately; `divisorsToo` = the union leaves CLIMB.divisorRoom (the divisor / cap rungs cost more than a scale step); null = nothing left to spend on */
+  /** the next rung from here, in the fixed order (scale by SCALE_STEP up to scaleTop() → the gather's divisor 3 → 2 → the volumetrics' 4 → 2), passing over rungs that failed lately; `divisorsToo` = the union leaves CLIMB.divisorRoom (the divisor rungs cost more than a scale step); null = nothing left to spend on */
   private nextRung(scale: number, divisorsToo: boolean): ClimbStep | null {
     const S = this.engine.settings; const topScale = this.scaleTop();
     if (scale < topScale - 1e-3) { const to = +Math.min(topScale, snapDown(scale + 1e-6) + SCALE_STEP).toFixed(2); const step: ClimbStep = { kind: 'scale', from: scale, to }; return this.failed.has(rungKey(step)) ? null : step; }   // (a failed scale rung blocks the ones above it too: no leap-frogging a ceiling that just cost frames)
     if (!divisorsToo) return null;
     if (S.gatherThird && !this.failed.has('gather')) return { kind: 'gather' };
     if (S.volQuarter && !this.failed.has('vol')) return { kind: 'vol' };
-    if (S.capClimb) {   // (the cap's rungs cost mostly the RENDER passes' per-output-pixel work — the g-buffer raster, composite, post — which the union the trigger reads excludes: the frame-rate back-off is the backstop for them; and each re-makes both target sets, so the ReSTIR reservoirs restart per rung)
-      const cv = this.engine.gpu.canvas as HTMLCanvasElement; const rows = Math.floor((cv.clientHeight || 0) * (window.devicePixelRatio || 1));
-      if (rows > S.maxInternalHeight + 8) { const to = Math.min(rows, S.maxInternalHeight + CLIMB.capStep); const step: ClimbStep = { kind: 'cap', from: S.maxInternalHeight, to }; if (!this.failed.has(rungKey(step))) return step; }
-    }
     return null;
   }
   private climb(step: ClimbStep, unionAvg: number, B: Bands = AS_NOW) {
     const S = this.engine.settings;
-    if (step.kind === 'scale') S.renderScale = step.to; else if (step.kind === 'gather') S.gatherThird = false; else if (step.kind === 'vol') S.volQuarter = false; else S.maxInternalHeight = step.to;
+    if (step.kind === 'scale') S.renderScale = step.to; else if (step.kind === 'gather') S.gatherThird = false; else S.volQuarter = false;
     this.climbed.push(step); this.sinceClimb = 0; this.lastClimbAt = this.clock; this.undidForDip = false; this.cooldown = LADDER.stepCooldown; this.fast = 0;
-    this.lastChange = `climb ↑ ${step.kind === 'scale' ? `scale ${step.to.toFixed(2)}` : step.kind === 'gather' ? 'gather ½ res' : step.kind === 'vol' ? 'volumetrics ½ res' : `cap ${step.to} rows`} (gpu ∪ ${unionAvg.toFixed(1)} ms of ${B.hold ? `${B.planBudget.toFixed(1)}, holding ${B.target.toFixed(0)} fps` : (1000 / CLIMB.budgetFps).toFixed(1)})`;
+    this.lastChange = `climb ↑ ${step.kind === 'scale' ? `scale ${step.to.toFixed(2)}` : step.kind === 'gather' ? 'gather ½ res' : 'volumetrics ½ res'} (gpu ∪ ${unionAvg.toFixed(1)} ms of ${B.hold ? `${B.planBudget.toFixed(1)}, holding ${B.target.toFixed(0)} fps` : (1000 / CLIMB.budgetFps).toFixed(1)})`;
   }
   /** an aim's cut, with GPU timings: the scale the cost model says lands the frame on the aim — the frame is the union + an overhead that stays, and only the per-pixel share of the union
    *  (presetCost at the live rows, as hopRatio prices a hop) shrinks with the scale²; 0 = no scale would (the caller's 0.2-a-step and floor clamps take it from there) */
@@ -992,7 +987,7 @@ export class Quality {
     if (B.hold) { const key = `scale:${from.toFixed(2)}`; (this.lastCut.marks ??= []).push([key, this.failCount.get(key) ?? 0, this.failed.get(key)]); }   // (called BEFORE the cut's holdLeft: the failed-rung state as the cut found it)
     const pb = this.pacedBack; if (this.clock - pb.at < PACED.backSecs) { pb.n++; pb.until = this.clock + CLIMB.failSecs * Math.min(16, 2 ** (pb.n - 1)); pb.at = -1e9; }   // (cut again right after a take-back: that take-back was wrong — the next is held off, doubling)
   }
-  private undoStep(step: ClimbStep) { const S = this.engine.settings; if (step.kind === 'scale') S.renderScale = +Math.min(S.renderScale, Math.max(this.maxScale, step.from)).toFixed(2); else if (step.kind === 'gather') S.gatherThird = true; else if (step.kind === 'vol') S.volQuarter = true; else S.maxInternalHeight = Math.min(S.maxInternalHeight, step.from); }   // (min: a scale / cap the player has since set LOWER by hand stays where they put it)
+  private undoStep(step: ClimbStep) { const S = this.engine.settings; if (step.kind === 'scale') S.renderScale = +Math.min(S.renderScale, Math.max(this.maxScale, step.from)).toFixed(2); else if (step.kind === 'gather') S.gatherThird = true; else S.volQuarter = true; }   // (min: a scale the player has since set LOWER by hand stays where they put it)
   /** every rung down at once — the climb switched off, adaptive off, or the frame rate under the band with rungs standing (`markNewest`: hold off just the newest rung; the rest may be re-earned) */
   private unclimbAll(why: string, markNewest = false) {
     let hold = 0; if (markNewest && this.climbed.length) hold = this.fail(this.climbed[this.climbed.length - 1]);

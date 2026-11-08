@@ -316,8 +316,8 @@ export async function portalCheck(): Promise<boolean> {
         && common.includes('    if (i > 0) { let e = portalEnds(li, q, pz, F); L = portalMean(skyRadiance(e[0]), skyRadiance(e[1]), dot(e[0], N), dot(e[1], N)); }\n    s += L * w;')
         && common.includes('r.E = portalFlux(li, P, N) * (portalArea(li) * lightWindow(dist, li.range)); r.ok = any(r.E > vec3f(0.0));') && common.includes('fn portalArea(li: Light) -> f32 { return 4.0 * li.cosOuter * portalHigh(li); }')
         && common.includes('return mix(mix(frame.skyHorizon, frame.skyZenith, t), frame.skyHorizon * 0.15, below);') && !common.includes('fn skyLum(')],
-      ['the light evaluation every pass pastes knows nothing of a portal (the final gather has no stack for it), nor do the passes whose ray stops short', !/lightPortal|PORTAL|portal/.test(common.slice(common.indexOf('fn evalLightRaw('), common.indexOf('fn directIrradiance(') + 2600).split('\n// ---- torch bounce cards')[0])
-        && [gc, text('src/render/shaders/probe.wgsl')].every(t => !/portal|PORTAL/.test(t))],
+      ['the light evaluation every pass pastes knows nothing of a portal (the final gather has no stack for it), nor does the gather whose ray stops short; the error tool\'s probe adds one up as the drawn light does', !/lightPortal|PORTAL|portal/.test(common.slice(common.indexOf('fn evalLightRaw('), common.indexOf('fn directIrradiance(') + 2600).split('\n// ---- torch bounce cards')[0])
+        && !/portal|PORTAL/.test(gc) && text('src/render/shaders/probe.wgsl').includes('if (lightPortal(L)) { E += portalAtPoint(L, q.pos, N, q.skipOwner); continue; }')],
       ['its shadow ray is aimed by what each point sends, runs on to the sky or clear of the opening, and answers yes or no', dc.includes('tmax = lightDist - 0.03 + past;') && dc.includes('w[i] = luminance(portalPoint(li, toC + T * (at.x * li.cosOuter) + B * (at.y * hh), N, soft, ground)); sum += w[i]; }') && dc.includes('past = portalPast(li, Po, d / dl, dl);')
         && dc.includes('var x = fract(ur * 61.0 + ua * 37.0 + 0.5) * sum;') && dc.includes('for (var i = 0; i < PORTAL_POINTS; i++) { x -= w[i]; if (x < 0.0) { sel = i; break; } }') && !/skyK\b|PORTAL_HEAD/.test(dc + common)
         && dc.includes('var d = (li.pos + T * (cos(a) * r) + B * (sin(a) * r)) - Po; var past = 0.0;')],   // (… and any other light's ray is written as it was, to the last rounding)
@@ -377,10 +377,8 @@ export async function portalCheck(): Promise<boolean> {
     let mono = true; for (let m = 0.01; m < 2; m *= 1.3) for (let w = 0.2; w < 30; w *= 1.4) { const r = openingReach(m, w, 1, old); if (openingReach(m * 1.3, w, 1, old) < r || openingReach(m, w * 1.4, 1, old) < r || openingReach(m, w, 1.5, old) < r) mono = false; }
     const eng = text('src/engine.ts'), op = text('src/scene/openings.ts');
     verdict(night > 4 && night < 6 && noon > 8 && noon < 9.5 && slit === K.near && Math.abs(wide - (2.75 + K.past)) < 1e-9 && wall === K.far && mono && Math.abs(was - 17.9) < 0.1 && piece < 3.1 && strip > 4.5
-      && eng.includes('l.range = openingReach(m * this.settings.exposure, Math.max(whole, o.of), l.radius, this.settings.portalWorth > 0 ? this.settings.portalWorth : undefined);') && count(eng, 'l.range = ') === 1
+      && eng.includes('l.range = openingReach(m * this.settings.exposure, Math.max(whole, o.of), l.radius);') && count(eng, 'l.range = ') === 1
       && op.includes('for (let i = first0; i < out.length; i++) out[i].of = sum;')
-      && text('src/main.ts').includes("{ const pw = Number(q.get('portalworth')); if (pw > 0) engine.settings.portalWorth = pw; }")
-      && /VISIT_FLAGS = \[[^\]]*'portalworth'/.test(text('src/ui/replaykey.ts')) && /LOOK_PAGE_WORDS[^\n]*'portalworth'/.test(text('src/scene/look.ts'))
       && common.includes('keep = 1.0 - lightWindow(distance(O, lights[i].pos), lights[i].range); break;'),
       'an opening\'s own light reaches as far as it is worth a ray, by one rule at every hour, and the bounce has the sky past it',
       `the consulate's widest opening on its night ${night.toFixed(1)} m (it was ${was.toFixed(1)}), a door at midday ${noon.toFixed(1)} m, a slit at dusk ${slit} m, a wide opening on a dim night ${wide.toFixed(2)} m (never short of its own corners), a glass wall ${wall} m; one piece of a strip of glass alone ${piece} m, as a piece of its strip ${strip.toFixed(1)} m; never shorter for a brighter sky, a larger opening or a longer rectangle`); }

@@ -172,7 +172,7 @@ export function benchReport(r: BenchResult): string {
   const L: string[] = [], M = r.machine, row = (k: string, v: string) => L.push(k.padEnd(10) + v);
   L.push(`twopointsix benchmark · ${r.at.slice(0, 16).replace('T', ' ')} UTC${r.commit ? ` · build ${r.commit.slice(0, 8)}` : ''}${r.set ? ` · scenes ${r.set}` : ''}`);
   row('address', r.query || '(no flags)');
-  if (r.rows) row('shaders', r.rows.length ? `on: ${r.rows.map(shaderRowLabel).join(', ')}` : 'no Shaders row is on (Options, Graphics)');   // (a row can be on from Options with nothing on the address, so the address alone does not say)
+  if (r.rows) row('shaders', r.rows.length ? `on: ${r.rows.map(shaderRowLabel).join(', ')}` : 'no Shaders row is on');   // (a row can be on from Options with nothing on the address, so the address alone does not say)
   row('GPU', `${M.webgl || M.webgpu}${M.fallback ? ' · SOFTWARE RENDERING (no GPU in use)' : ''}`);
   if (M.webgl) row('', `WebGPU says: ${M.webgpu}`);
   row('browser', [M.browser, M.os].filter(Boolean).join(' · ') || M.userAgent);
@@ -412,7 +412,7 @@ export class Bench {
     if (this.state === 'waiting') {
       if (away) { this.t0 = now; this.frames = 0; return; }   // (opened in a tab nobody was looking at: the wait starts when it is looked at)
       { const c = this.deps.covered?.() ?? null; if (c) { this.finish(c, false); return; } }
-      // SHADERS STILL BUILDING BEHIND THE START (the row 'Start on first frame shaders', on where a person sits: the start card does not wait for the heaviest
+      // SHADERS STILL BUILDING BEHIND THE START (the first-frame start, on where a person sits: the start card does not wait for the heaviest
       // programs, and a pass draws its stand-in until its own is in). A window timed meanwhile is that simpler picture's price, so the wait, and auto quality's
       // measure (main.ts holds it back while this page waits), begin when nothing stands in. Every page of a set comes through here, and nothing is asked of
       // the compiler after the boot, so no timed window can meet a stand-in this wait did not. standInMs in all; past it the lines are timed as they are and

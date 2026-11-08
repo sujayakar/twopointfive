@@ -87,7 +87,7 @@ const READ = async (label) => {
     // a card up when the picture arrives: the save, its frame and the pause card in one task — the tile is laid plain and is the same node when it has its picture
     const card = await page.evaluate(async () => { const S = window.__save, M = window.__menu, dev = window.__engine.device;
       const r = S.save('third'); if (!r || !r.ok) return { err: `save refused: ${r && r.why}` };
-      window.__runFrames(1, 1 / 60); M.openRun();
+      window.__runFrames(1, 1 / 60); M.run = true; M.open('pause');
       const all = [...document.querySelectorAll('.saves .tile')], tile = all.find(t => t.dataset.save === `${r.info.key}@${r.info.savedAt}`), plain = !!tile && !tile.style.backgroundImage;
       for (let i = 0; i < 200 && S.pic().pending > 0; i++) { await dev.queue.onSubmittedWorkDone(); await new Promise(r => setTimeout(r, 20)); }
       const got = !!tile && tile.isConnected && tile.style.backgroundImage.length > 100; M.close();
