@@ -123,7 +123,7 @@ pub fn cover_spare(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
 pub fn cover_free(g: &mut Game, gd: GuardId) -> Option<OrdersAssignmentId> {
     if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].script.is_none() || crate::control::man::blind(g, gd) || g.gd[gd].held.is_some() { return None; }
     let a = crate::seats::order_of(g, gd)?;
-    let plain = g.tab.orders_assignment[a].order == "fallIn" || (g.tab.orders_assignment[a].order == "hold" && g.tab.orders_assignment[a].watch.is_none());
+    let plain = crate::orders::rows::is(g, a, crate::orders::Is::Follows) || (crate::orders::rows::is(g, a, crate::orders::Is::Holds) && g.tab.orders_assignment[a].watch.is_none());
     if !(plain || cover_spare(g, gd, a)) { return None; }
     if crate::roomfight::room_fight_engaged(g, gd) { return None; }
     if let Some(op) = crate::roomfight::room_fight_op_of(g, gd) {
@@ -765,7 +765,7 @@ pub fn cover_step_deal(g: &mut Game, list: &[(GuardId, OrdersAssignmentId)], asg
         let (post, goal, t0) = (g.tab.orders_assignment[a].post, g.tab.orders_assignment[a].goal, g.tab.orders_assignment[a].t0);
         let may_step = if post.is_none() { sam_stopped(g, gd) } else {
             let row = &g.tab.orders_assignment[a];
-            row.order == "hold" && row.watch.is_none() && !yes(row.spare) && row.via.is_empty()
+            crate::orders::rows::id_is(&row.order, crate::orders::Is::Holds) && row.watch.is_none() && !yes(row.spare) && row.via.is_empty()
         };
         let placed = post.is_some() || !(k.step_place_m > 0.0) || v3::dist_xz(p, goal) <= k.step_place_m;
         if may_step && still && placed && Some(gd) != rear_man && t - m::max(*g.cover.stood.get(gd).unwrap(), t0) >= k.step_after && t >= g.cover.no_step.get(gd).copied().unwrap_or(0.0) { ready.push(gd); }

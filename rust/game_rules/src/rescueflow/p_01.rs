@@ -662,7 +662,7 @@ pub fn rescue_flow_tick(g: &mut crate::game::Game) {
                 i += 1;
                 if g.gd[op].state != crate::game::GuardState::Dead && !crate::rescue::rescue_owns(g, op) {
                     if let Some(a) = crate::orders::squad_orders_of(g, &crate::seats::here(g), op) {
-                        if g.tab.orders_assignment[a].order == "fallIn" {
+                        if crate::orders::rows::is(g, a, crate::orders::Is::Follows) {
                             file += 1;
                         }
                     }
@@ -750,7 +750,7 @@ pub fn rescue_flow_free(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> 
             continue;
         }
         let Some(a) = crate::orders::squad_orders_of(g, seat, gd) else { continue };
-        if g.tab.orders_assignment[a].order != "fallIn" {
+        if !crate::orders::rows::is(g, a, crate::orders::Is::Follows) {
             continue;
         }
         if (g.gd[gd].script.is_none() && g.gd[gd].state == crate::game::GuardState::Alert) || crate::roomfight::room_fight_engaged(g, gd) {

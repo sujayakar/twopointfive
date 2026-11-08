@@ -879,7 +879,7 @@ pub fn door_tools_holders(g: &crate::game::Game, seat: &crate::seats::SeatRef, d
     for gd in crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None) {
         if men.contains(&gd) { continue; }
         let a = match crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) { Some(a) => a, None => continue };
-        let (is_stack, door, post) = { let x = &g.tab.orders_assignment[a]; (x.order == "stack", x.door, x.post) };
+        let (is_stack, door, post) = { let x = &g.tab.orders_assignment[a]; (crate::orders::rows::id_is(&x.order, crate::orders::Is::Stacks), x.door, x.post) };
         if !is_stack || door != Some(d) { continue; }
         let p = match post { Some(p) => p, None => continue };
         let r = flat(p, fc);

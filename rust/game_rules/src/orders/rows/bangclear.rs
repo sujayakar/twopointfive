@@ -1,13 +1,14 @@
 //! BANG AND CLEAR: a bang through the door, then in; from a held threshold, bang and go in.
 use crate::game::Game;
 use crate::ids::*;
-use crate::orders::rows::Row;
+use crate::orders::rows::{Is, Row};
 use crate::orders::*;
 use crate::doortools::DoorToolsCanThresholdThenWhat as What;
 use crate::doortools::DoorToolsEntryVerb as Verb;
 use alloc::{format, string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
+    is: &[Is::LiftsFire, Is::Loud, Is::Enters],
     only: Some(crate::doortools::row_held_or_all),
     valid: Some(valid),
     ..Row::new("bangClear", label, issue)

@@ -4,6 +4,7 @@
 //! here (`orders/rows/<name>.rs`, with a `pub const ORDER: Row`) and one line of `rows!` below. `OrderDef.row` is the
 //! row the menu holds it by.
 //!
+//!   is      what a rule that does not know it by name needs to know of it (`Is`: is it loud, does it lift the held fire, ...)
 //!   label   the words of its row on the menu, for this target
 //!   can     this man can do his part (None), or the word for why not
 //!   only    the men, of those addressed, the order is for
@@ -24,7 +25,7 @@
 //!   `assign(g, &ORDER, man, a)`  hand a man his task under this order: where he stands, which way he faces, how he carries his gun, the two
 //!                              lines he says (`squad_orders_assign`, with the order's own id)
 //!
-pub use super::Row;
+pub use super::{Is, Row};
 use crate::game::Game;
 use crate::ids::*;
 use crate::orders::{GiveOpts, OrderDef, OrderTarget};
@@ -115,3 +116,9 @@ pub fn plain_valid(w: Option<String>) -> Result<(), Option<String>> {
 
 /// the order of that id
 pub fn by_id(id: &str) -> Option<&'static Row> { ROWS.iter().copied().find(|r| r.id == id) }
+
+/// Is the order of that id such an order? An id on no line of the list is nothing.
+pub fn id_is(id: &str, what: Is) -> bool { by_id(id).map_or(false, |r| r.is.contains(&what)) }
+
+/// Is the man under this assignment under such an order?
+pub fn is(g: &Game, a: OrdersAssignmentId, what: Is) -> bool { id_is(&g.tab.orders_assignment[a].order, what) }

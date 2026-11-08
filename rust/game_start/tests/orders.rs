@@ -134,3 +134,31 @@ fn every_row_holds_its_own_order_and_reading_a_game_back_deals_it_the_same() {
     game::io::deal_closures(&mut p.g);
     assert_eq!(rows_now(&p), was, "reading a game back deals a row other than it was made with");
 }
+
+/// THE RULE: what an order says of itself is what the lists of names used to say, word for word: every id that was in such a list is a row
+/// that says it, and no other row does. (The old lists also held words no row has: threshold, outside, thrStep and thrBang.)
+/// A FAILURE MEANS: an order says something it did not, or stopped saying it, and a rule that asks now treats that order another way.
+#[test]
+fn every_order_says_what_the_old_lists_said() {
+    use game::orders::rows::{self, Is};
+    let lists: [(Is, &[&str]); 13] = [
+        (Is::Follows, &["fallIn"]),
+        (Is::Holds, &["hold"]),
+        (Is::Covers, &["cover"]),
+        (Is::Stacks, &["stack"]),
+        (Is::Resumed, &["move", "stack", "cover", "hold", "fallIn"]),
+        (Is::KeepsLane, &["cover", "stack", "move", "hold"]),
+        (Is::WalksLow, &["move", "cover"]),
+        (Is::LiftsFire, &["openClear", "bigClear", "bangClear", "fragClear", "charge", "thresholdHold", "thrWord", "go", "wallCharge", "fragThere", "stunThere", "shellThere"]),
+        (Is::Blows, &["charge", "wallCharge"]),
+        (Is::Loud, &["bangClear", "bigClear", "charge", "fragClear", "wallCharge", "fragThere", "stunThere", "shellThere"]),
+        (Is::Enters, &["openClear", "bangClear", "charge"]),
+        (Is::Pair, &["pairMark", "pairWatch", "pairTake", "pairDark", "pairGo"]),
+        (Is::Take, &["pairMark", "pairTake"]),
+    ];
+    for (what, ids) in lists {
+        for id in ids { assert!(rows::by_id(id).is_some(), "{} is no row", id); assert!(rows::id_is(id, what), "{} no longer says {:?}", id, what); }
+        for r in rows::ROWS { assert_eq!(r.is.contains(&what), ids.contains(&r.id), "{} and {:?}", r.id, what); }
+    }
+    assert!(!rows::id_is("thrBang", Is::Loud), "an id on no line is nothing");
+}
