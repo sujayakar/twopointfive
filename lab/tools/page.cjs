@@ -1,0 +1,11 @@
+// The page itself, driven as a person would: node lab/tools/page.cjs → $OUT/page-*.png, and what it says of itself
+const fs = require('fs'), path = require('path'), http = require('http'); let chromium; for (const p of ['/opt/node-tools/node_modules/playwright', 'playwright-core', 'playwright']) { try { chromium = require(p).chromium; break; } catch { } }
+const OUT = path.resolve(process.env.OUT || 'out'); fs.mkdirSync(OUT, { recursive: true });
+(async () => {
+  const s = http.createServer((q, r) => { r.writeHead(200, { 'content-type': 'text/html' }); r.end(fs.readFileSync(path.join(__dirname, '..', 'rooftop.html'))); }).listen(0), b = await chromium.launch({ args: ['--enable-unsafe-webgpu'] }), p = await b.newPage({ viewport: { width: 1600, height: 900 } });
+  p.on('pageerror', e => console.log('pageerror', String(e).slice(0, 800))); p.on('console', m => { if (m.type() === 'error' && !/404/.test(m.text())) console.log('console', m.text().slice(0, 800)); });
+  const t0 = Date.now(); await p.goto(`http://localhost:${s.address().port}/`); await p.waitForFunction('window.lab && window.lab.frameNo > 30', null, { timeout: 120000 }); console.log('first frames in', Date.now() - t0, 'ms');
+  const say = async n => { console.log(n, (await p.evaluate(() => [document.getElementById('stats').textContent.split('\n').slice(0, 3).join(' '), document.getElementById('error').textContent].join(' | '))).slice(0, 400)); await p.screenshot({ path: path.join(OUT, `page-${n}.png`) }); }, wait = ms => p.waitForTimeout(ms);
+  await wait(4000); await say('start'); await p.keyboard.press('3'); await p.keyboard.press('o'); await wait(5000); await say('ground'); await p.evaluate(() => { lab.hour = 21.5; }); await p.keyboard.press('f'); await p.mouse.move(700, 480); await wait(5000); await say('night');
+  await p.keyboard.press('p'); await wait(6000); await say('reference'); await p.keyboard.press('p'); await p.keyboard.press('v'); await wait(1500); await say('vis'); for (let i = 0; i < 5; i++) await p.keyboard.press('v'); await p.keyboard.press('1'); await p.keyboard.press('c'); await wait(20000); await say('tour'); await p.setViewportSize({ width: 1100, height: 700 }); await wait(2500); await say('resized'); await b.close(); process.exit(0);
+})().catch(e => { console.error(e); process.exit(2); });

@@ -226,7 +226,7 @@ export function makeBuilding(): Building {
   who(C.teal as V3, 1.45, true, [{ at: [-14, 0, 6] }, { at: [-14, 0, 11.4] }, { at: [-4, 0, 11.6] }, { at: [2.5, 0, 11.4], wait: 2.4, face: 2.9 }, { at: [-4, 0, 11.0] }, { at: [-13.4, 0, 10.6] }, { at: [-14.2, 0, -2], wait: 2, face: 1.4 }]);
   who(C.teal as V3, 1.1, true, [{ at: [-9.5, Y, -2.6] }, { at: [-6.0, Y, -2.2] }, { at: [-5.4, Y, -5.6], wait: 2.6, face: -2.2 }, { at: [-7.2, Y, -7.0] }, { at: [-10.9, Y, -3.2], wait: 2.2, face: 0.5 }]);
   who(C.red as V3, 1.2, true, [{ at: [5.6, 0.02, -5.8] }, { at: [10.6, 0.02, -5.6], wait: 2.2, face: 2.6 }, { at: [10.8, 0.02, -2.0] }, { at: [5.2, 0.02, -1.6], wait: 1.8, face: -0.6 }]);
-  who(C.red as V3, 1.3, false, [{ at: [14.6, 0, 6.5] }, { at: [14.4, 0, -1.5], wait: 2.6, face: -1.6 }, { at: [14.6, 0, -7.8] }, { at: [14.2, 0, 1.2] }]);
+  who(C.red as V3, 1.3, false, [{ at: [14.6, 0, 6.5] }, { at: [14.4, 0, -1.5], wait: 2.6, face: -1.6 }, { at: [13.9, 0, -5.6] }, { at: [14.2, 0, 1.2] }]);
   void r; void smooth; void rotZ; void taper; void ({} as Kit);
   return { world: w, doors, people, levels: [{ name: 'Roof', cut: 1e9, look: [0, 3.2, 0] }, { name: 'Upper floor', cut: FL + 2.55, look: [0, 3.4, 0] }, { name: 'Ground floor', cut: 2.55, look: [0, 0.6, 0] }], pool: [px0, pz0, px1, pz1], poolTop, poolDeep: poolTop - pf };
 }
