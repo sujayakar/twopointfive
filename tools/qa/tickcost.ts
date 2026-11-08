@@ -18,7 +18,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const RUNS = ['compound-four:1', 'warehouse-four:1', 'pass-four:1', 'hostage-rescue:1'];
+const RUNS = ['compound-four:1', 'warehouse-four:1', 'pass-four:1', 'hostage-rescue:1', 'block-squads:1'];
 const WARM = 120;   // the first two seconds of a run are left out of the times (the JIT warming up, the first paths)
 interface Row { scn: string; seed: number; ticks: number; end: string; digest: string; bits: string; engine: string; /** the rows of src/sim/sim.ts RUST that were on while it ticked (the shipped stand has some on by default: two files whose rows differ timed different work for the same bits) */ rust?: string
   update: Stat; step: Stat; over4: number; over8: number; over16: number }

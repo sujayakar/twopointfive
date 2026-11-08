@@ -21,7 +21,7 @@ fn row_of(level: &str) -> Option<Row> {
     let r = |out: V3, inside: Option<V3>, stuff: Said| Some(Row { out, inside, stuff });
     match level {
         "white-roof" => r([0.88, 0.24, 0.03], Some([0.74, 0.74, 0.73]), Said::All(BoxStuff::Enamel)),
-        "block" => r([0.22, 0.4, 0.1], None, Said::Nothing),
+        "block" | "block-squads" => r([0.22, 0.4, 0.1], None, Said::Nothing),
         "warehouse" => r([0.6, 0.42, 0.04], None, Said::Sides(Some(BoxStuff::Paint), None)),
         "registry" => r([0.1, 0.1, 0.105], None, Said::Sides(Some(BoxStuff::Paint), None)),
         "records" => r([0.2, 0.2, 0.22], Some([0.47, 0.36, 0.22]), Said::Sides(None, Some(BoxStuff::Wood))),

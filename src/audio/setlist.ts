@@ -22,6 +22,7 @@ export const SETLISTS: Record<string, readonly string[]> = {
   'records': ['Paper Walls', 'Cold Storage'],              // thin partitions and a strong room: the piece named for it
   'depot': ['Dead Freight', 'Wire Act'],                   // a motor pool: freight (E minor to A minor, a fifth: the easy handover)
   'block': ['Wire Act', 'Dead Freight'],                   // a lit leg and a dark turn in every room: balance, then drive
+  'block-squads': ['Dead Freight', 'Wire Act'],            // the same block held by eleven: the drive first
   'warehouse': ['Cold Storage', 'Dead Freight'],           // a racked hall and a loading dock
   'compound': ['Undertow', 'Glass Rain'],                  // eleven behind a wall at night: the bells, then frame drum and dulcimer
   'barracks': ['Wire Act', 'Undertow'],                    // two galleries that look across at each other

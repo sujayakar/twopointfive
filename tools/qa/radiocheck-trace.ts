@@ -1,7 +1,7 @@
 // A pair-sneak run with the defender squads' timeline in step with it: every row the squads file in the room fight's log (enemysquads.ts: check / asks /
 // looks / found / no sign / contact / …) and every line said on a radio is printed the frame it is made, between the tool's own rows, so a trace shows
 // what the net knew and when. The switch itself is the harness's env (SQUADS=radiocheck) or left off:
-//   SQUADS=radiocheck bun run tools/qa/radiocheck-trace.ts --one compound-four:433 --arm pair --trace
+//   SQUADS=radiocheck bun run tools/qa/radiocheck-trace.ts --one block-squads:433 --arm pair --trace
 // Everything after the script's name goes to tools/qa/pair-sneak.ts as it stands (one run in this process: --one). Nothing here changes a run: it only reads.
 // RC_DIGEST=1 adds a `[dg] <movement digest>` row every half second (game/digest.ts with nobody's speech bubble in it), so a run with the switch on can be
 // laid beside the same seed with it off: the two agree row for row until the first frame the switch changes something (the squads' check keeps its own dice).

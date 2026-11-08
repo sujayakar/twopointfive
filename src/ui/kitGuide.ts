@@ -27,6 +27,8 @@ import type { LoadoutScreen } from './loadout';
 import type { KitBrief } from './kitBrief';
 import type { PlaceNeeds } from './missions';
 import { countWords } from './kitBrief';
+import { sizeWords } from '../game/loadout';
+import { kitWorn } from '../game/kit';
 import { rectZoom } from './textsize';
 
 export const KITGUIDE = { on: true, again: false, /** a script drives this browser: nothing is played unasked */ driven: false };
@@ -41,8 +43,8 @@ export type BeatRow = 'map' | 'squad' | 'squadkit' | 'members' | 'kit' | 'action
  *  grenades the teammates who come carry between them · `kits` = the named kits the step offers) */
 export interface GuideState { squad: number; kit: string; member: number; worn: string; mapSeen: boolean; mapBig: boolean; frags: number; smoke: number; bangs: number; kits: readonly string[] }
 export interface BeatWords { title: string; text: string }
-/** what a card's words turn on: the words of the mission's own team size · what its place asks of a kit (and whether its map marks the way in) · a rescue · the step as it stands */
-export interface BeatAsk { own: string; needs: PlaceNeeds | null; rescue: boolean; now: GuideState }
+/** what a card's words turn on: the mission's own team size · what its place asks of a kit (and whether its map marks the way in) · a rescue · the step as it stands */
+export interface BeatAsk { own: number; needs: PlaceNeeds | null; rescue: boolean; now: GuideState }
 /** ONE BEAT of a walkthrough: the row its card sits by, its words for this mission, and what counts as having done it */
 export interface Beat {
   id: string; row: BeatRow;
@@ -65,7 +67,7 @@ export const GENERIC: GuideScript = { id: 'generic', ls: KITGUIDE_LS, again: 'Ho
   { id: 'job', row: 'map', done: (_was, now) => now.mapSeen && !now.mapBig,
     words: ({ needs }) => ({ title: 'The job', text: `Look at the map before you pick${needs?.marked ? '. The dot is where you go in' : ''}.\nPress [M] or click to open it and read the job, and again to close it.` }) },
   { id: 'team', row: 'squad', done: (was, now) => now.squad !== was.squad,
-    words: ({ own }) => ({ title: 'Who comes', text: `Press [A] or [D], or click, to set how many come with you.\nThis mission is built for ${own}.` }) },
+    words: ({ own }) => ({ title: 'Who comes', text: `Press [A] or [D], or click, to set how many come with you.\nThis mission is built for ${sizeWords(own)}.` }) },
   { id: 'kit', row: 'squadkit', done: (was, now) => now.kit !== was.kit && now.kit !== '',   // (a named kit put on — not a card changed by hand, which leaves none lit)
     words: ({ needs, rescue, now }) => { const asks: string[] = [];
       if (rescue) asks.push('There are hostages inside, and a frag on their floor will hit them too.');
@@ -170,10 +172,11 @@ export function mountKitGuide(root: HTMLElement, brief: KitBrief | null, head: H
   const stale = () => { read = null; };
   const stateOf = (s: LoadoutScreen, b: Beat | null): GuideState => { const wears = !!b?.wears && !!s.card;
     if (read && read.s === s && (read.wears || !wears)) return wears || !read.wears ? read.v : { ...read.v, worn: '' };
-    const T = s.team, v: GuideState = { squad: s.squad, kit: s.kitName, member: s.member, worn: wears ? s.worn() : '', mapSeen, mapBig: !!brief?.big,   // (what he wears is read for the one beat that watches it)
-      frags: T.frags, smoke: T.smoke, bangs: T.bangs, kits: kitsOf() };
+    const you = s.card ? kitWorn(s.squad)[0] : null;
+    const v: GuideState = { squad: s.squad, kit: s.kitName, member: s.member, worn: wears ? JSON.stringify(s.worn()) : '', mapSeen, mapBig: !!brief?.big,   // (what he wears is read for the one beat that watches it)
+      frags: you?.frags ?? 0, smoke: you?.smoke ?? 0, bangs: s.card ? s.pool().bangs : 0, kits: kitsOf() };
     read = { s, wears, v }; return v; };
-  const askOf = (s: LoadoutScreen, b: Beat | null): BeatAsk => ({ own: s.team.sizes[s.entry.squad]?.words ?? '', needs: brief?.needs ?? null, rescue: s.entry.kind === 'rescue', now: stateOf(s, b) });
+  const askOf = (s: LoadoutScreen, b: Beat | null): BeatAsk => ({ own: s.entry.squad, needs: brief?.needs ?? null, rescue: s.entry.kind === 'rescue', now: stateOf(s, b) });
   /** this mission's step has the beat's row, and the thing it asks for can be done on it */
   const has = (b: Beat, s: LoadoutScreen): boolean => {
     const r = rowOf(b); if (!shown(r)) return false;

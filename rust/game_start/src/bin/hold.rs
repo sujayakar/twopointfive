@@ -40,7 +40,7 @@ use game::game::GuardState;
 use game_start::play::{dist, Button, Opts, Play};
 use std::io::{Read, Write};
 
-const DEFAULT_LEVELS: [&str; 21] = ["barracks:clear", "block:clear", "compound:clear", "defuse:clear", "depot:clear", "floodlit:clear", "glasshouse:clear",
+const DEFAULT_LEVELS: [&str; 22] = ["barracks:clear", "block:clear", "block-squads:clear", "compound:clear", "defuse:clear", "depot:clear", "floodlit:clear", "glasshouse:clear",
     "hall:clear", "killhouse:clear", "mousehole:clear", "records:clear", "pass:clear", "snatch:clear",
     "office", "consulate", "registry", "bazaar", "lights-out", "crossing", "police-post", "library-hall"];
 const MAGIC: &[u8; 8] = b"hold 2\n\0";

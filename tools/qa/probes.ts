@@ -2162,7 +2162,8 @@ if (on('tabcard', 'ui', 'all')) await run('tabcard', async () => (await import('
 if (on('tabback', 'orders', 'all')) await run('tabback', async () => (await import('./tabback-check.ts')).tabBackCheck());   // Esc is only the pause and Tab backs out of the order menu, the Space list, a running verb, the launcher's arc (src/game/backkey.ts, BACKKEY.tab / ?tabback=0 / TPS_TABBACK=1)
 if (on('handslot', 'player', 'all')) await run('handslot', async () => (await import('./handslot-check.ts')).handSlotCheck());   // empty hands are a slot (game/handslot.ts HANDSLOT.on, the board's layer for it in host/keymap.ts; HANDSLOT_BREAK=1 must fail)
 if (on('handring', 'player', 'all')) await run('handring', async () => (await import('./handring-check.ts')).handRingCheck());   // his own actions are a ring that stays (game/handring.ts HANDRING.on, interact.ts, the whistle's wedge, the board's layer in host/keymap.ts; HANDRING_BREAK=1 must fail)
-if (on('camspace', 'player', 'all')) await run('camspace', async () => (await import('./camspace-check.ts')).camSpaceCheck());   // the camera's key is the Space bar while it is no row's (src/host/keymap.ts camKey, game/input.ts): the board, held, Ctrl, the wheel, off
+if (on('camspace', 'player', 'all')) await run('camspace', async () => (await import('./camspace-check.ts')).camSpaceCheck());   // the camera's key is the Space bar while it is no row's (src/host/keymap.ts camKey, game/input.ts, host/findme.ts): held, twice, Ctrl, off
+if (on('autocam', 'player', 'all')) await run('autocam', async () => (await import('./autocam-check.ts')).autocamCheck());   // the camera running itself (src/host/autocam.ts, host/loop.ts): the key twice puts it on, the key held with the mouse or a walk key gives the view back; what it frames, when it turns, his aim through a turn
 if (on('throwback', 'player', 'all')) await run('throwback', async () => (await import('./throwback-check.ts')).throwBackCheck());   // a can in the wind-up goes back on the belt when a kick or a pick begins (game/throwback.ts THROWBACK.on, player.ts): a kick, a pick, untouched, off, recordings
 if (on('ownblow', 'player', 'all')) await run('ownblow', async () => (await import('./ownblow-check.ts')).ownBlowCheck());   // his own charge goes off from his own actions — a row of his list, a wedge of his ring — and the squad's key no longer blows it (game/ownblow.ts OWNBLOW; OWNBLOW_BREAK=1 must fail)
 if (on('keybinds', 'player', 'all')) await run('keybinds', async () => (await import('./keybinds-check.ts')).keybindsCheck());   // the player's own keys (src/host/keymap.ts, Options ▸ Controls): the table, the keyboard listener, and one script of hands played by codes, by the keyboard as built and by a rebound board ending in one digest; KEYBINDS_BREAK=1 must fail; run it on both stands
@@ -2373,6 +2374,7 @@ if (on('kitdeal-more', 'kitdeal', 'kit', 'all')) await run('kitdeal-more', async
 if (on('kitstealth', 'kit', 'all')) await run('kitstealth', async () => (await import('./kitstealth-check.ts')).kitStealth());   // KITDEAL.stealth: a stealth mission's kit is what your card starts at there — nothing handed over a card, a stealth card of your own beside the loud one (KITSTEALTH_BREAK=1 must fail)
 if (on('issuewhole', 'kit', 'all')) await run('issuewhole', async () => (await import('./issuewhole-check.ts')).issueWhole());   // ISSUE.whole: a mission's own issue is the whole kit — no sponge round, camera or wand its block does not name; the solo tutorial as its page stands it (ISSUEWHOLE_BREAK=1 must fail)
 if (on('kitdeal-run', 'kitdeal', 'kit', 'all')) await run('kitdeal-run', async () => (await import('./kitdeal-check.ts')).dealRun());   // the men carry the dealt cards and the lent tools; cards dealt for four staged smaller; a mission's own issue
+if (on('kitdeal-screen', 'kitdeal', 'kit', 'all')) await run('kitdeal-screen', async () => (await import('./kitdeal-check.ts')).dealScreen());   // the roster of four on the Team & kit screen
 // THE BALLISTIC SHIELD IS GONE FROM THE GAME (10-18; tools/qa/noshield-check.ts: there is no switch left for the lines to differ in)
 if (on('noshield-gone', 'noshield', 'all')) await run('noshield-gone', async () => (await import('./noshield-check.ts')).noshieldGone());            // no module, no knob table, no stand's word, no Tab row, no key of the kit view
 if (on('noshield-card', 'noshield', 'kit', 'all')) await run('noshield-card', async () => (await import('./noshield-check.ts')).noshieldCard());        // no card offers one; a stored or pasted card that says shield is a card without, and is saved without the word
@@ -2409,6 +2411,7 @@ if (on('stealthpose-creep', 'stealthpose', 'close', 'all')) await run('stealthpo
 if (on('stealthpose-cable', 'stealthpose', 'wand', 'all')) await run('stealthpose-cable', async () => (await import('./stealthpose-check.ts')).stealthposeCable());      // the look under a door: the drawn skeleton and the bones are one, the head bowed under the shoulders, a nod inside the look shows
 if (on('stealthpose-standdown', 'stealthpose', 'all')) await run('stealthpose-standdown', async () => (await import('./stealthpose-check.ts')).stealthposeStanddown()); // a gun drawn: the layer out inside 0.3 s
 if (on('wand-kit', 'wand', 'kit', 'all')) await run('wand-kit', async () => (await import('./wand-check.ts')).wandKit());   // the row on your card with the switch, a pouch, the store, staging, the checkpoint slice
+if (on('wand-tile', 'wand', 'kit', 'all')) await run('wand-tile', async () => (await import('./wand-check.ts')).wandTile());   // Team & kit on a stand-in DOM: a carried wand / camera says 'no use here' on a mission with no fog, carried where there is one
 if (on('wand-look', 'wand', 'fog', 'all')) await run('wand-look', async () => (await import('./wand-check.ts')).wandLook());   // who is offered the row; hidden through the feed, seen through the lens inside its wedge; the lens in his eye's place
 if (on('wand-costs', 'wand', 'all')) await run('wand-costs', async () => (await import('./wand-check.ts')).wandCosts());   // the pan's rate and stops, the low lens, what pulls it out, the stow, the mark, the checkpoint gate
 if (on('wand-doors', 'wand', 'all')) await run('wand-doors', async () => (await import('./wand-check.ts')).wandDoors());   // every door face of every squad level: the lens beyond the leaf, in the open
@@ -2760,9 +2763,10 @@ if (on('handleside-tools', 'handleside', 'all')) await run('handleside-tools', a
 // ---------------------------------------------------------------- a teammate shuts a door when told, and only then (shutdoor-probes.ts; game/shutdoor.ts — 'shut that door' on the door tools' page): 'shutdoor'
 for (const [n, f] of [['shutdoor-menu', 'shutdoorMenu'], ['shutdoor-refuse', 'shutdoorRefuse'], ['shutdoor-man', 'shutdoorMan'], ['shutdoor-who', 'shutdoorWho'], ['shutdoor-file', 'shutdoorFile'], ['shutdoor-lock', 'shutdoorLock'], ] as const)
   if (on(n, 'shutdoor', 'all')) await run(n, async () => (await import('./shutdoor-probes.ts'))[f]());
-// ---------------------------------------------------------------- defender squads (enemysquads-probes.ts; game/enemysquads.ts on levels/compound.json): 'enemysquads' = the family
+// ---------------------------------------------------------------- defender squads (enemysquads-probes.ts; game/enemysquads.ts on levels/block-squads.json): 'enemysquads' = the family
 if (on('enemysquads-stage', 'enemysquads', 'all')) await run('enemysquads-stage', async () => (await import('./enemysquads-probes.ts')).enemysquadsStage());
 if (on('enemysquads-noise', 'enemysquads', 'all')) await run('enemysquads-noise', async () => (await import('./enemysquads-probes.ts')).enemysquadsNoise());
+if (on('enemysquads-contact', 'enemysquads', 'all')) await run('enemysquads-contact', async () => (await import('./enemysquads-probes.ts')).enemysquadsContact());
 if (on('enemysquads-radiocheck', 'enemysquads', 'all')) await run('enemysquads-radiocheck', async () => (await import('./enemysquads-probes.ts')).enemysquadsRadiocheck());
 // ---------------------------------------------------------------- the defenders' cues (cues-probes.ts; game/cues.ts — their net on the radio strip, a line for the silent decisions): 'cues' = the family
 if (on('cues-lines', 'cues', 'all')) await run('cues-lines', async () => (await import('./cues-probes.ts')).cuesLines());
@@ -2918,7 +2922,11 @@ if (on('picker-rescue', 'picker', 'all')) await run('picker-rescue', async () =>
 // ---------------------------------------------------------------- THE MISSION LIST, the level select (missions-probes.ts; ui/missions.ts off ui/menu.ts's cards): 'missions' = the family — the list as data
 // (the solo night + every SCENARIOS row, each to its own URL and back), the real screen on a fake DOM (rows, the sheet, the keys, a pick = a load of the row's own URL, the onPick seam, Esc),
 // every mission's URL booted in a process of its own (it starts as that row with the team and the defenders its sheet says)
+if (on('missions-list', 'missions', 'all')) await run('missions-list', async () => (await import('./missions-probes.ts')).missionsList());
+if (on('missions-screen', 'missions', 'all')) await run('missions-screen', async () => (await import('./missions-probes.ts')).missionsScreen());
 if (on('missions-start', 'missions', 'all')) await run('missions-start', async () => (await import('./missions-probes.ts')).missionsStart());
+if (on('offlist', 'missions', 'all')) await run('offlist', async () => (await import('./offlist-check.ts')).offlistCheck());   // the rows cut from the mission list (scene/scenarios.ts offList; ui/missions.ts OFFLIST_UI, on in the page, ?offlist=0 off): drawn on no list, each still read back from its own address and drawn once for a visit that names it; OFFLIST_BREAK=1 must fail
+if (on('unplayed', 'missions', 'all')) await run('unplayed', async () => (await import('./unplayed-check.ts')).unplayedCheck());   // the unplayed rows stand apart (ui/missions.ts unplayedClass; unplayed-check.ts: a group's untuned rows off the short list come last, drawn quieter, the first under a break — cards and list on the fake DOM; UNPLAYED_BREAK=1 must fail)
 // ---------------------------------------------------------------- THE QUIET MISSION on any level (quiet-probes.ts; game/quiet.ts, scene/scenarios.ts QuietData): 'quiet' = the family — the block in the
 // level file and against its built floor, a start alone (the deal, the roster, the level's own words, the stop), the run to its end by each way out, the run with one partner under the pair
 // rules, checkpoints carrying the deal, and the office-only places (errands, phones, the response team, the weather) the level's own or off
@@ -2929,10 +2937,12 @@ for (const [name, fn] of [['quiet-data', 'quietData'], ['quiet-start', 'quietSta
 // (each row's URL carries its mission, team, difficulty, hour, weather and switches; ?pick= answers once; a quit takes them off), the real Menu on a fake DOM (the rows, a click = a load, the 'next'
 // on a pause card, the switch off = no row), every row's URL booted in a process of its own with the page's start-up order (the settings in force) and thirty seconds of play
 if (on('picks-list', 'picks', 'all')) await run('picks-list', async () => (await import('./picks-probes.ts')).picksList());
+if (on('picks-card', 'picks', 'all')) await run('picks-card', async () => (await import('./picks-probes.ts')).picksCard());
 if (on('picks-boot', 'picks', 'all')) await run('picks-boot', async () => (await import('./picks-probes.ts')).picksBoot());
 // ---------------------------------------------------------------- THE DIFFICULTY LEVERS (levers-probes.ts; game/difficulty.ts LEVERS, ui/levers.ts): 'levers' = the family — the rules (a level puts
 // every lever on its rung; a lever moved alone writes its own rows; kept per machine, the URL over it; links), the rows on the mission sheet and the loadout on a fake DOM, and the levers in a run
 if (on('levers-rules', 'levers', 'ui', 'all')) await run('levers-rules', async () => (await import('./levers-probes.ts')).leversRules());
+if (on('levers-screens', 'levers', 'ui', 'all')) await run('levers-screens', async () => (await import('./levers-probes.ts')).leversScreens());
 if (on('levers-run', 'levers', 'all')) await run('levers-run', async () => (await import('./levers-probes.ts')).leversRun());   // (a minute or two: sixteen runs of the scripted commander)
 if (on('levers-address', 'levers', 'all')) await run('levers-address', async () => (await import('./levers-probes.ts')).leversAddress());   // (a mission's address names the difficulty, and the harness's addressed stand reads it where a page does)
 // ---------------------------------------------------------------- THE HOUR (hours-probes.ts; src/game/hours.ts): 'hours' = the family — night is no record (every hour laid over each squad
@@ -2945,14 +2955,17 @@ if (on('hours-sheet', 'hours', 'all')) await run('hours-sheet', async () => (awa
 // ---------------------------------------------------------------- the LOADOUT screen and the squad sizes behind it (loadout-probes.ts; game/loadout.ts, ui/loadout.ts, the staging in nightbreach.ts / rescue.ts): 'loadout' = the family —
 // the size as data (?squad=N, the roster, Deploy's query, the store), the real screen on a fake DOM (slots, keys, Deploy, Back, a greyed size), every scenario on the list booted at every size 0 to 4 with its teammates counted
 if (on('loadout-pure', 'loadout', 'all')) await run('loadout-pure', async () => (await import('./loadout-probes.ts')).loadoutPure());
+if (on('loadout-screen', 'loadout', 'all')) await run('loadout-screen', async () => (await import('./loadout-probes.ts')).loadoutScreen());
 if (on('loadout-stage', 'loadout', 'all')) await run('loadout-stage', async () => (await import('./loadout-probes.ts')).loadoutStage());
 // ---------------------------------------------------------------- each member's KIT AND UNIFORM (kit-probes.ts; game/kit.ts, ui/kitCard.ts): 'kit' = the family
 if (on('kit-table', 'kit', 'all')) await run('kit-table', async () => (await import('./kit-probes.ts')).kitTable());
 if (on('kit-stage', 'kit', 'all')) await run('kit-stage', async () => (await import('./kit-probes.ts')).kitStage());
 if (on('kit-pool', 'kit', 'all')) await run('kit-pool', async () => (await import('./kit-probes.ts')).kitPoolAgree());
 if (on('kit-solo', 'kit', 'all')) await run('kit-solo', async () => (await import('./kit-probes.ts')).kitSoloNight());
+if (on('kit-card', 'kit', 'all')) await run('kit-card', async () => (await import('./kit-probes.ts')).kitCard());
 // the POUCHES rule (kit-pouch-probes.ts; game/kit.ts SLOTS + game/slots.json): 'pouches' = the family, also under 'kit'
 if (on('pouch-table', 'pouches', 'kit', 'all')) await run('pouch-table', async () => (await import('./kit-pouch-probes.ts')).pouchTable());
+if (on('pouch-card', 'pouches', 'kit', 'all')) await run('pouch-card', async () => (await import('./kit-pouch-probes.ts')).pouchCard());
 if (on('pouch-stage', 'pouches', 'kit', 'all')) await run('pouch-stage', async () => (await import('./kit-pouch-probes.ts')).pouchStage());
 if (on('pouch-wall', 'pouches', 'kit', 'all')) await run('pouch-wall', async () => (await import('./kit-pouch-probes.ts')).pouchWall());
 // ---------------------------------------------------------------- TEAMMATES' SMOKE ON ORDER (squadsmoke-probes.ts; game/squadsmoke.ts, kit.ts kitSmokes): 'squadsmoke' = the family, run with 'kit' too
@@ -3234,6 +3247,7 @@ if (on('hourwx-storm', 'hourwx', 'all')) await run('hourwx-storm', async () => (
 if (on('hourwx-save', 'hourwx', 'all')) await run('hourwx-save', async () => (await import('./hour-weather-probes.ts')).hourwxSave());
 if (on('hourwx-query', 'hourwx', 'all')) await run('hourwx-query', async () => (await import('./hour-weather-probes.ts')).hourwxQuery());
 if (on('hourwx-air', 'hourwx', 'all')) await run('hourwx-air', async () => (await import('./hour-weather-probes.ts')).hourwxAir());
+if (on('hourwx-sheet', 'hourwx', 'all')) await run('hourwx-sheet', async () => (await import('./hour-weather-probes.ts')).hourwxSheet());
 // ---------------------------------------------------------------- character materials (charmats-probes.ts — a man shaded per material slot): 'charmats' = the family
 if (on('charmats-slots', 'charmats', 'all')) await run('charmats-slots', async () => (await import('./charmats-probes.ts')).charmatsSlots());
 if (on('charmats-tables', 'charmats', 'all')) await run('charmats-tables', async () => (await import('./charmats-probes.ts')).charmatsTables());
@@ -3293,14 +3307,14 @@ if (KNOWN.has(which) && which.startsWith('review-') && which !== 'review-b') her
 { const bf = async (name: string, fn: string) => { if (on(name, 'breaks', 'all')) await run(name, async () => ((await import('./breaks-probes.ts')) as any)[fn]()); };
   await bf('breaks-shapes', 'breaksShapes'); await bf('breaks-wall', 'breaksWall'); await bf('breaks-studs', 'breaksStuds'); await bf('breaks-furniture', 'breaksFurniture'); await bf('breaks-caps', 'breaksCaps');
   }   // (breaks-off went 2026-11-07: cut pieces are settled, there is no wreck without them to ask)
-// ---------------------------------------------------------------- the wall charge (src/game/wallcharge.ts, wallcharge-probes.ts — which runs it on three maps by itself): 'wallcharge' = the family on the block
+// ---------------------------------------------------------------- the wall charge (src/game/wallcharge.ts, wallcharge-probes.ts — which runs it on three maps by itself): 'wallcharge' = the family on block-squads
 { for (const f of ['menu', 'squad', 'sam', 'refusals', 'trigger', 'reset', 'hold', 'cost', 'standoff']) if (on(`wallcharge-${f}`, 'wallcharge')) await run(`wallcharge-${f}`, async () => ((await import('./wallcharge-probes.ts')) as any).wallchargeFamily(f)); }
-// ---------------------------------------------------------------- a wall charge on an OUTER wall (WALLCHARGE.outer — src/game/wallcharge.ts outerWall, wallbreak.ts adopt; outerwall-probes.ts runs it on three maps by itself): 'outerwall' = the family on the block
+// ---------------------------------------------------------------- a wall charge on an OUTER wall (WALLCHARGE.outer — src/game/wallcharge.ts outerWall, wallbreak.ts adopt; outerwall-probes.ts runs it on three maps by itself): 'outerwall' = the family on block-squads
 { for (const f of ['squad', 'sam', 'hard', 'rooms', 'reset', ]) if (on(`outerwall-${f}`, 'outerwall', 'wallcharge')) await run(`outerwall-${f}`, async () => ((await import('./outerwall-probes.ts')) as any).outerwallFamily(f)); }
 // ---------------------------------------------------------------- what a wall charge going off sounds like, throws about and does to the camera (src/game/blastFeel.ts, blastfeel-probes.ts): picture and sound only, held to that
 if (on('blastfeel', 'wallcharge')) await run('blastfeel', async () => ((await import('./blastfeel-probes.ts')) as any).blastfeelFamily());
-// ---------------------------------------------------------------- both sides react when the level breaks (src/game/wallreact.ts, wallreact-probes.ts — which runs it on three maps by itself): 'wallreact' = the family on the compound
-{ for (const f of ['Cover', 'Crate', 'Hole', ]) if (on(`wallreact-${f.toLowerCase()}`, 'wallreact')) await run(`wallreact-${f.toLowerCase()}`, async () => ((await import('./wallreact-probes.ts')) as any)[`wallreact${f}`]('compound', 'compound')); }   // (the second word is the crate probe's: the level it asks when the block has no crate to stage)
+// ---------------------------------------------------------------- both sides react when the level breaks (src/game/wallreact.ts, wallreact-probes.ts — which runs it on three maps by itself): 'wallreact' = the family on block-squads
+{ for (const f of ['Cover', 'Crate', 'Hole', ]) if (on(`wallreact-${f.toLowerCase()}`, 'wallreact')) await run(`wallreact-${f.toLowerCase()}`, async () => ((await import('./wallreact-probes.ts')) as any)[`wallreact${f}`]('block-squads', 'compound')); }   // (the second word is the crate probe's: the level it asks when the block has no crate to stage)
 if (on('blastflood', 'wallreact', 'all')) await run('blastflood', async () => (await import('./blastflood-check.ts')).blastfloodCheck());   // one blast that opens two walls floods the rooms once: the defenders keep what they knew of every door (wallreact.ts blastFlood)
 // ---------------------------------------------------------------- every room the defenders can shut has another way in (tools/qa/second-way-check.ts — a program of its own: its exit code the verdict)
 // every squad mission's and squad lesson's level, as shipped: whatever the defenders wedge, the squad still walks from its start to every room with men at home — by a door no wedge holds, a window a man steps through, or the clinic's issued wall charges (~15 s; SECONDWAY_BREAK=1 must fail)

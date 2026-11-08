@@ -2,7 +2,7 @@
 // leaves the SAME masks as the tick it replaced.
 //
 //   bun run tools/qa/reach-cost.ts                         every loud level: blast up to --blasts partitions, time the call that queues and every tick after it
-//     --levels depot,block,warehouse,office   which levels
+//     --levels depot,block,warehouse,block-squads,office   which levels
 //     --blasts 6                                           partitions blasted per level
 //     --dump <file.json>                                   every light's mask after every blast has settled (and each tick's count) → a file;  then on another
 //                                                          checkout:  --against <file.json>  → exit 1 if a mask differs once the queue has drained
@@ -19,7 +19,7 @@ const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 
 type Vec3 = [number, number, number];
 const arg = (k: string, d: string) => { const i = process.argv.indexOf(k); return i >= 0 ? process.argv[i + 1] : d; };
-const LEVELS = arg('--levels', 'depot,block,warehouse,office').split(','), BLASTS = +arg('--blasts', '6');
+const LEVELS = arg('--levels', 'depot,block,warehouse,block-squads,office').split(','), BLASTS = +arg('--blasts', '6');
 const DUMP = arg('--dump', ''), AGAINST = arg('--against', '');
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }

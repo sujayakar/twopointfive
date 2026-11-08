@@ -526,10 +526,10 @@ pub fn own(key: crate::difficulty::LeverKey) -> bool {
     key == LeverKey::Fog || key == LeverKey::Told
 }
 
-/// move one lever; None = back to the level's own. Answers whether the level's name is kept anew with it. (difficulty.ts setLever)
-pub fn set_lever(g: &mut crate::game::Game, key: crate::difficulty::LeverKey, rung: Option<&str>, keep: Option<bool>, structure: Option<&str>) -> bool {
+/// move one lever; None = back to the level's own. (difficulty.ts setLever)
+pub fn set_lever(g: &mut crate::game::Game, key: crate::difficulty::LeverKey, rung: Option<&str>, keep: Option<bool>, structure: Option<&str>) {
     let keep = keep.unwrap_or(true);
-    if rung.is_some() && !is_rung(g, key, rung) { return false; }
+    if rung.is_some() && !is_rung(g, key, rung) { return; }
     if keep {
         if let Some(h) = g.m.difficulty.held {
             let s = &mut g.m.difficulty.set;
@@ -575,7 +575,6 @@ pub fn set_lever(g: &mut crate::game::Game, key: crate::difficulty::LeverKey, ru
         if stood || !own(key) { let base = g.m.difficulty.base; store_name_in(g, base); }
     }
     write(g, Some(own(key)));
-    keep && (stood || !own(key))
 }
 
 /// round the kept feel rows being read back: the fog lever's rung over them again. (difficulty.ts leversFog)
@@ -677,38 +676,8 @@ pub fn levers_kept(g: &crate::game::Game) -> bool {
     })
 }
 
-/// the rung one lever stands moved to by hand. (difficulty.ts leversSet()[key])
-pub fn lever_set(g: &crate::game::Game, key: crate::difficulty::LeverKey) -> Option<&'static str> { set_word(&g.m.difficulty.set, key) }
-
-/// the rung of one lever in a line ('' = it stands on none). (difficulty.ts leverWords)
-pub fn lever_words(g: &crate::game::Game, key: crate::difficulty::LeverKey, rung: Option<&str>) -> String {
-    let Some(rung) = rung else { return String::new() };
-    levers_now(g).into_iter().find(|l| l.key == key).and_then(|l| l.rungs.into_iter().find(|r| r.id == rung)).map_or(String::new(), |r| r.words)
-}
-
-/// the text this machine keeps of the levers moved, in the order they were moved ('' = it keeps none). (difficulty.ts storeLevers)
-pub fn levers_text(g: &crate::game::Game, order: &[crate::difficulty::LeverKey]) -> String {
-    let rows: Vec<(&str, Option<&str>)> = order.iter().map(|k| (k.as_str(), lever_set(g, *k))).collect();
-    levers_json(&rows).unwrap_or_default()
-}
-
-/// the text this machine keeps of the level ('' = standard, which keeps nothing). (difficulty.ts storeName)
-pub fn level_text(g: &crate::game::Game) -> String {
-    let base = g.m.difficulty.base;
-    if base == Difficulty::Standard { String::new() } else { String::from(base.as_str()) }
-}
-
-/// how a row's Hard is worded: the row's own fact, or squads cut from the rooms of a room clear whose file names none. (difficulty.ts squadsHeld)
-pub fn squads_held(e: &crate::scene_scenarios::ScenarioEntry) -> crate::difficulty::DifficultyWordsSquads {
-    use crate::difficulty::DifficultyWordsSquads as S;
-    if e.squads == Some(true) { return e.level.clone().filter(|l| !l.is_empty()).map_or(S::Bool(true), S::Text); }
-    S::Bool(e.kind == crate::scene_scenarios::ScenarioEntryKind::Roomclear)
-}
-
 /// a scenario link with the level the tables stand at on it. (difficulty.ts difficultyHref)
-pub fn difficulty_href(g: &crate::game::Game, href: &str) -> String { difficulty_href_kept(g, href, levers_kept(g)) }
-/// The same, by whoever knows whether this machine keeps the levers as they stand (no store is read on this side: `levers_kept`).
-pub fn difficulty_href_kept(g: &crate::game::Game, href: &str, kept: bool) -> String {
+pub fn difficulty_href(g: &crate::game::Game, href: &str) -> String {
     let now = difficulty_now(g);
     let (path, all) = href_parts(href);
     let keys: Vec<&str> = all.iter().copied().filter(|k| !is_level_key(k)).collect();
@@ -716,19 +685,17 @@ pub fn difficulty_href_kept(g: &crate::game::Game, href: &str, kept: bool) -> St
         if !shown_whole(g) { return String::from(href); }
         let mut q: Vec<String> = keys.iter().map(|k| String::from(*k)).collect();
         q.push(alloc::format!("difficulty={}", g.m.difficulty.base.as_str()));
-        return levers_href_kept(g, &alloc::format!("{}?{}", path, q.join("&")), kept);
+        return levers_href(g, &alloc::format!("{}?{}", path, q.join("&")));
     }
     if now == DifficultyNow::Custom { return String::from(href); }
-    if now == DifficultyNow::Standard && keys.len() == all.len() { return levers_href_kept(g, href, kept); }
+    if now == DifficultyNow::Standard && keys.len() == all.len() { return levers_href(g, href); }
     let mut q: Vec<String> = keys.iter().map(|k| String::from(*k)).collect();
     q.push(alloc::format!("difficulty={}", now.as_str()));
-    levers_href_kept(g, &alloc::format!("{}?{}", path, q.join("&")), kept)
+    levers_href(g, &alloc::format!("{}?{}", path, q.join("&")))
 }
 
 /// a link naming its own level, with the moved levers put right on it. (difficulty.ts leversHref)
-pub fn levers_href(g: &crate::game::Game, href: &str) -> String { levers_href_kept(g, href, levers_kept(g)) }
-/// The same, by whoever knows whether this machine keeps the levers as they stand.
-pub fn levers_href_kept(g: &crate::game::Game, href: &str, kept: bool) -> String {
+pub fn levers_href(g: &crate::game::Game, href: &str) -> String {
     if any_set(g) && !shown_whole(g) { return String::from(href); }
     let (path, all) = href_parts(href);
     let now = levers_now(g);
@@ -738,7 +705,7 @@ pub fn levers_href_kept(g: &crate::game::Game, href: &str, kept: bool) -> String
     }).collect();
     if !any_set(g) && keys.len() == all.len() { return String::from(href); }
     let mut q: Vec<String> = keys.iter().map(|k| String::from(*k)).collect();
-    if any_set(g) && !kept {
+    if any_set(g) && !levers_kept(g) {
         let s = g.m.difficulty.set;
         for l in now.iter() {
             if let Some(w) = set_word(&s, l.key) { q.push(alloc::format!("{}={}", l.param, w)); }

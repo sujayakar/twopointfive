@@ -90,7 +90,7 @@ watchPieces(null);
 levels.sort();
 const onList = new Set(ALL_MISSIONS.filter(s => !s.offList).map(s => (s.level ?? 'office.json').replace(/\.json$/, '')));
 /** a level file's name as its generator's (the two differ for one level) */
-const fileOf = (level: string) => level.replace(/-gwot$/, '');
+const fileOf = (level: string) => level.replace(/^blocksquads/, 'block-squads').replace(/-gwot$/, '');
 
 // ------------------------------------------------------------------ paints: every colour that has a name, by its numbers ----
 const key = (a: Vec3) => a.map(v => Number(v).toFixed(4)).join(',');

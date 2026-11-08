@@ -21,15 +21,32 @@
 // tool that stands a Menu on a fake DOM measures the cards as they were. A page-only screen: no game rule reads it and no knob table carries it.
 // Plain DOM in a layer of its own (#brief, made here), styled with ui/theme.ts's tokens; its rules are injected once. Nothing at module level uses another
 // module's exports. tools/qa/loadbrief-check.ts holds the words and the hand-over on a fake DOM; tools/qa/loadbrief-page.cjs looks at the real page.
-import { drawMissionMap, reopenMissionsAfterLoad } from './missions';
-import { desk } from '../view/desk';
-import type { BriefView } from '../view/read';
+import { ALL_MISSIONS, specOfQuery } from '../scene/scenarioList';
+import { MISSION_GROUPS } from '../scene/scenarios';
+import { pickQuitSearch } from '../scene/picks';
+import { SOLO_NIGHT, missionOf, missionOfQuery, drawMissionMap, teamWordsOf, leanWords, reopenMissionsAfterLoad, type Mission } from './missions';
+import { openOptions, closeOptions, optionsOpen } from './options';
 import { menuTheme } from './theme';
 import { textZoom, rectZoom, TEXT_EVENT } from './textsize';
 
-/** the options layer over the brief: the page's own to hand over (ui/options.ts), which holds the game's rows. None: no Controls button */
-export interface BriefOptions { open(): void; close(): void; up(): boolean }
-export const LOADBRIEF: { on: boolean; options: BriefOptions | null } = { on: false, options: null };
+export const LOADBRIEF = { on: false };
+
+/** what the brief says: the list's row, and the team as THIS page deploys it (a row deployed at another size than its own is still that row) */
+export interface BriefWords { mission: Mission; group: string; team: string }
+/** the mission a query string boots, in the list's words — its own row (ui/missions.ts missionOfQuery: the list's own answer, the plain solo night for
+ *  `?solo` alone); deployed at a size no row has, the row of that kind on that level. Null: the address names no mission of the list (a plain page, a
+ *  hand-typed combination on a level no row is on), or it picks its level by `?level=` (the office as it was): the list's rows are
+ *  written for the levels the list names, and a level being built is played the moment it loads. */
+export function briefOfQuery(search: string | URLSearchParams): BriefWords | null {
+  const q = typeof search === 'string' ? new URLSearchParams(search) : search; if (q.has('level')) return null;
+  const spec = specOfQuery(q), rows = [SOLO_NIGHT, ...ALL_MISSIONS.map(missionOf)];
+  const words = (m: Mission, squad: number): BriefWords => ({ mission: m, group: MISSION_GROUPS.find(g => g.id === m.group)?.title ?? '', team: teamWordsOf({ squad: squad as Mission['squad'] }) });
+  const own = missionOfQuery(q.toString(), rows); if (own) return words(own, spec?.squad ?? 0);
+  if (!spec) return null;
+  const here = rows.filter(m => m.scenario?.kind === spec.kind && (m.scenario.level ?? '') === (spec.level ?? ''));
+  const m = here.find(x => x.squad === spec.squad) ?? here[0];
+  return m ? words(m, spec.squad) : null;
+}
 
 export interface LoadBrief {
   /** the boot's status line, as the boot card takes it ('compiling shaders 40 / 97 …'): the block fills by its 'N / M' */
@@ -46,7 +63,7 @@ export interface LoadBrief {
   readonly up: boolean;
   /** live or holding, and not yet started: the world behind it is held still */
   readonly held: boolean;
-  readonly words: BriefView;
+  readonly words: BriefWords;
 }
 
 const STYLE = 'brief-style';
@@ -113,26 +130,26 @@ function el(tag: string, cls?: string, text?: string) { const e = document.creat
  *  card then, as before). One a page. */
 export function loadBrief(search: string = typeof location !== 'undefined' ? location.search ?? '' : ''): LoadBrief | null {
   if (!LOADBRIEF.on || typeof document === 'undefined') return null;
-  const W = desk().brief(search); if (!W.id) return null;
-  const opt = LOADBRIEF.options, optionsOpen = () => !!opt?.up(), closeOptions = () => opt?.close();
+  const W = briefOfQuery(search); if (!W) return null;
+  const m = W.mission;
   styles();
   const host = document.getElementById('app') ?? document.body;
   document.getElementById('brief')?.remove?.();
-  const root = el('div'); root.id = 'brief'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-label', W.title); root.setAttribute('data-mission', W.id);
+  const root = el('div'); root.id = 'brief'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-label', m.title); root.setAttribute('data-mission', m.id);
   const column = el('div', 'bcol');
   const col = el('div', 'bin'); column.appendChild(col);
-  col.appendChild(el('div', 'bk', W.groupTitle));
-  col.appendChild(el('h1', 'bt', W.title));
-  col.appendChild(el('div', 'bplace', W.place));
+  col.appendChild(el('div', 'bk', W.group));
+  col.appendChild(el('h1', 'bt', m.title));
+  col.appendChild(el('div', 'bplace', m.place));
   // A TUTORIAL MISSION (its row carries a `scene`): where we are and why, then what it teaches — in place of the job's line and the three cells, which the
   // scene and a mission on rails make needless, so the card still fits a short window
-  const scene = W.scene, teaches = W.teaches;
+  const scene = m.scenario?.scene, teaches = m.scenario?.teaches;
   if (scene) { col.appendChild(el('div', 'bscene', scene));
-    if (teaches.length) { const t = el('div', 'bteach'); t.appendChild(el('b', undefined, 'You will learn')); const ul = el('ul'); for (const line of teaches) ul.appendChild(el('li', undefined, line)); t.appendChild(ul); col.appendChild(t); } }
-  else { if (W.blurb) col.appendChild(el('div', 'bjob', W.blurb));
+    if (teaches?.length) { const t = el('div', 'bteach'); t.appendChild(el('b', undefined, 'You will learn')); const ul = el('ul'); for (const line of teaches) ul.appendChild(el('li', undefined, line)); t.appendChild(ul); col.appendChild(t); } }
+  else { if (m.blurb) col.appendChild(el('div', 'bjob', m.blurb));
     const facts = el('div', 'bfacts');
     const fact = (label: string, value: string) => { if (!value || value === '—') return; const f = el('div', 'bf'); f.appendChild(el('b', undefined, label)); f.appendChild(el('span', undefined, value)); facts.appendChild(f); };
-    fact('Team', W.team); fact('Approach', W.leanWords);   // (the mission sheet's own three cells and their names: ui/missions.ts)
+    fact('Team', W.team); fact('Approach', leanWords(m.lean));   // (the mission sheet's own three cells and their names: ui/missions.ts)
     col.appendChild(facts); }
   const go = el('button', 'bgo') as HTMLButtonElement, fill = el('i'), words = el('div', 'bstatus', 'starting the GPU…');
   go.type = 'button'; go.setAttribute('aria-busy', 'true'); go.appendChild(fill); go.appendChild(el('span', undefined, 'Start')); go.appendChild(el('kbd', undefined, 'Enter'));
@@ -153,7 +170,7 @@ export function loadBrief(search: string = typeof location !== 'undefined' ? loc
     if (map.style) map.style.display = '';   // (hidden by a draw whose file did not come: shown again to be measured, and asked again)
     const r = map.getBoundingClientRect?.(), w = Math.max(480, Math.min(2880, Math.round((r?.width || 760) / rectZoom() * textZoom() * (window.devicePixelRatio || 1))));
     if (w === mapW) return; mapW = w;
-    void drawMissionMap(map, W.level, W.kind, W.way, w).then(ok => { if (!up) return; if (ok) map.classList.add('in'); else if (mapW === w) mapW = 0; }).catch(() => { if (mapW === w) mapW = 0; });
+    void drawMissionMap(map, m, search, w).then(ok => { if (!up) return; if (ok) map.classList.add('in'); else if (mapW === w) mapW = 0; }).catch(() => { if (mapW === w) mapW = 0; });
   };
   const resized = () => { setTimeout(drawMap, 0); };
   window.addEventListener('resize', resized); window.addEventListener(TEXT_EVENT, resized);
@@ -171,7 +188,7 @@ export function loadBrief(search: string = typeof location !== 'undefined' ? loc
   const leave = () => {   // BACK: the mission list, by a page load (this one is still booting) — the address a quit of this mission leaves (main.ts's own quit)
     const s = location.search ?? '';
     reopenMissionsAfterLoad();
-    location.assign(location.pathname + desk().leave(s) + location.hash);
+    location.assign(location.pathname + pickQuitSearch(s) + location.hash);
   };
   // THE KEYS are the brief's while it is up (first in line at the window: main.ts makes it before the game's Input exists, so no key of the game's, and no Esc
   // of the pause card's, is read under it): Enter / Space start, Esc is Back, Tab walks its three buttons. Left alone: a chord and the F-keys (the browser's,
@@ -191,7 +208,7 @@ export function loadBrief(search: string = typeof location !== 'undefined' ? loc
   go.onclick = start; back.onclick = leave;
   // CONTROLS: the options layer gives the focus back to what had it (ui/options.ts closeOptions) — START, so Enter after reading is Start, not Controls again;
   // and a press kept from the boot is taken back: the player chose to read, and the run does not start under the page they are reading.
-  if (opt) keys.onclick = () => { if (!live) arm(false); go.focus?.(); opt.open(); }; else keys.style.display = 'none';
+  keys.onclick = () => { if (!live) arm(false); go.focus?.(); openOptions({ tab: 'controls' }); };
   setTimeout(() => { if (up && !optionsOpen() && (document.activeElement ?? document.body) === document.body) go.focus?.(); }, 0);
 
   return {

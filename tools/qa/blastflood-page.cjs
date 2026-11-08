@@ -10,7 +10,7 @@ const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow';
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
-// (blastflood-check.ts on the block, seed 6: the charge, and the two defenders' posts and faces)
+// (blastflood-check.ts on block-squads, seed 6: the charge, and the two defenders' posts and faces)
 const PLACE = { mid: [21.0, 12.0], charge: [21.0, 11.7], p1: [23.2, 14.4], f1: [21.0, 13.2], p2: [21.0, 9.6], f2: [21.0, 10.8] };
 
 const STAGE = async (PLACE) => {
@@ -41,7 +41,7 @@ const STAGE = async (PLACE) => {
     const page = await (await browser.newContext({ viewport: { width: 1024, height: 576 }, deviceScaleFactor: 1 })).newPage();
     const errs = []; page.on('pageerror', e => errs.push(String(e).slice(0, 300))); page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text().slice(0, 300)); });
     page.on('response', r => { if (r.status() >= 400) log(`  (${r.status()} ${r.url()})`); });   // (a file the server has not got is named, not counted: the game's own errors are)
-    const url = `http://localhost:${PORT}/?levelFile=block.json&roomclear=6&squad4&${job.query}paused&quality=${QUALITY}&mute`; log(`${job.name}: ${url}`);
+    const url = `http://localhost:${PORT}/?levelFile=block-squads.json&roomclear=6&squad4&${job.query}paused&quality=${QUALITY}&mute`; log(`${job.name}: ${url}`);
     let r; try { await page.goto(url); r = await page.evaluate(STAGE, PLACE); } catch (e) { r = { err: String(e).slice(0, 300) }; }
     await page.close();
     if (r.err) { red++; console.log(`- FAIL — ${job.name}: ${r.err}${errs.length ? ` · ${errs[0]}` : ''}`); continue; }

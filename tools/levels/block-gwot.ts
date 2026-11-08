@@ -10,6 +10,7 @@
 // two ways to a far leg on the floor: the store's goes ROUND the turn; the comms room's and the workshop's come in by the HEEL door (the comms room's other
 // one stops at the racks, short of the turn). The mess has none: no cable has business there. Every fifth plate along the floor's length is a lifting plate
 // in the dado's paint. Drum rings in the store. No letters, no numbers, no lines, no bays, no tiles.
+// tools/levels/blocksquads-gwot.ts (the same floor, other defenders) wears this SKIN.
 import { build as buildPlain, NOTES as PLAIN_NOTES, BLOCK_ROOMS, BLOCK_SPACES, BLOCK_MOUTHS } from './block';
 import { GWOT_MATERIALS } from '../../src/scene/gwotKit';
 import { GWOT_PALETTE as P, type GwotMat } from '../../src/scene/gwotPalette';

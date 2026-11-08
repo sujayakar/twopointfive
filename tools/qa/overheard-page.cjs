@@ -36,7 +36,7 @@ const DRIVE = async () => {
     const errs = []; page.on('pageerror', e => errs.push(String(e).slice(0, 400)));
     page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource/.test(m.text())) errs.push('console: ' + m.text().slice(0, 300)); });
     page.on('response', r => { if (r.status() >= 400 && !/favicon/.test(r.url())) errs.push(`${r.status()}: ${r.url().replace(/^https?:\/\/[^/]+/, '')}`); });   // (a resource that did not load, by its path — the console's own line does not say which)
-    const url = `http://localhost:${PORT}/?levelFile=compound.json&roomclear=2&squad4&${job.query}paused&quality=verylow&mute`;
+    const url = `http://localhost:${PORT}/?levelFile=block-squads.json&roomclear=2&squad4&${job.query}paused&quality=verylow&mute`;
     log(`${job.name}: ${url}`);
     let r;
     try { await page.goto(url); r = await page.evaluate(DRIVE); }

@@ -1,5 +1,5 @@
 // 'wallbreak-wear' (src/game/wallwear.ts — what a breakable SHOWS while it is shot, before it gives), run through probes.ts in the 'wallbreak' family:
-//   bun run tools/qa/probes.ts wallbreak-wear [--level block]
+//   bun run tools/qa/probes.ts wallbreak-wear [--level block-squads]
 // Headless = nothing is drawn; what is asserted is that the look is ONLY a look:
 //   (marks)      a counted round's own bullet mark becomes decal kind 'damage' look 3, param in [3, 4), on the partition's mid-plane with both faces inside its
 //                sphere; the ring's COUNT is what it was; the cell's earlier marks grow as its count goes up and never shrink; when the port opens the cell's
@@ -27,7 +27,7 @@ const wallPen0 = WALLPEN.on;
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
-const LEVEL = (() => { const i = process.argv.indexOf('--level'); return i >= 0 ? process.argv[i + 1] : 'block'; })();
+const LEVEL = (() => { const i = process.argv.indexOf('--level'); return i >= 0 ? process.argv[i + 1] : 'block-squads'; })();
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const f3 = (x: number) => x.toFixed(3);
 const DEFAULTS = JSON.parse(JSON.stringify(WALLS));

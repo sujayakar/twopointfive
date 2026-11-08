@@ -5,7 +5,7 @@
 //   2. a restart with NOTHING spent is issued again (the count is read after the run's own reset, not before it)
 //   3. a restart after some were spent is back at the level's count
 //   4. a count the kit gave that is larger stands (the issue raises, never lowers)
-//   5. a level without the field (levels/block.json) is not touched: issueStage answers null and the count is what the kit left
+//   5. a level without the field (levels/block-squads.json) is not touched: issueStage answers null and the count is what the kit left
 //   6. the plain night with no room clear staged: issueStage answers null
 //   WALLISSUE_BREAK=1 bun run tools/qa/wallissue-check.ts   = the field taken off the level before it is staged and the same lines asked: must FAIL (exit 1)
 // exit 0 = all hold · 1 = one does not
@@ -41,7 +41,7 @@ export async function wallIssueCheck(): Promise<boolean> {
     g.wallCharge.setCarried(want + 2); const r = issueStage(g);
     line(r === want + 2 && g.wallCharge.carried === want + 2, `the kit gave ${want + 2}: the issue leaves ${g.wallCharge.carried}`); }
 
-  { const { g } = await stage('block.json'), has = g.wallCharge.carried, r = issueStage(g);
+  { const { g } = await stage('block-squads.json'), has = g.wallCharge.carried, r = issueStage(g);
     line(g.roomClear.active && g.roomClear.structure.wallCharges === undefined && r === null && g.wallCharge.carried === has, `a level without the field: issueStage answers ${r}, the bag is the kit's own (${has === null ? 'the cost rule' : has})`); }
 
   { const { g } = await stage(null), has = g.wallCharge.carried, r = issueStage(g);

@@ -109,6 +109,8 @@ export function snowLevel(name: string | null | undefined): boolean { return SNO
 export function snowLevelOfQuery(q: URLSearchParams): boolean { const lf = q.get('levelFile'); return !!lf && /^[\w.-]+\.json$/.test(lf) && snowLevel(lf.replace(/\.json$/, '')); }
 /** a kind a checkpoint may carry: one of the row's, or a level's own */
 export function isAnyKind(s: unknown): s is WeatherKind { return typeof s === 'string' && Object.prototype.hasOwnProperty.call(WEATHER_PRESETS, s); }
+export function weatherTitle(k: WeatherKind | null): string { return k ? WEATHER_PRESETS[k].title : 'As it is'; }
+export function weatherWords(k: WeatherKind | null): string { return k ? WEATHER_PRESETS[k].words : "the level's own weather, as it has always played"; }
 
 // ---- the fog in 32 bits (frame.cardCfg.w; 0 = no fog): σ0 8 bits of 0.001 ∕ m · H 5 bits of 0.5 m · leak 3 bits ∕ 7 · tint 3 × 4 bits ∕ 15 · gain 4 bits of 0.25
 const q = (x: number, step: number, max: number) => Math.max(0, Math.min(max, Math.round(x / step)));

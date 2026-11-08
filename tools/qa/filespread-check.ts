@@ -1,6 +1,6 @@
 // 'Fall in', Sam stopped: no two places of the file fall on one spot (game/orders.ts ORDERS.fileSpread, apartSlot).
 //   bun run tools/qa/filespread-check.ts [--verbose]      (probes.ts filespread, in family squadorders)
-// Found by the wall charge's own check on the block: Sam put down at (13.6, 10.3) with no trail behind him and the four told to fall in, Blue One's and Blue
+// Found by the wall charge's own check on block-squads: Sam put down at (13.6, 10.3) with no trail behind him and the four told to fall in, Blue One's and Blue
 // Two's places came out at (11.69, 7.37) and (11.55, 7.16): the file's places run straight back from Sam past the end of his trail and both stop where the floor does.
 //   1. that staging: every man still, no two places within a bare body's width and no two men within 0.6 m, everybody arrived
 //   2. no floor and no stopping short: he holds, he is not sent into a mate. room-clear-four's storage corner, Sam at (33.00, 7.03), staged: the storage door stood
@@ -48,8 +48,8 @@ export const filespreadCheck = guarded(async () => {
   try {
     // ---- 1, 2. the staging it was found on
     // (blue put where the frozen stand's own walk in leaves the pair, on either stand: the page's lived-in mess table, and where it stands, decides how the two come to the corner — moved
-    //  clear of the stack marks (levels/block.json, 10-13), the walk in ended with one man stopped 'near enough' short of the shared place and the fault not showing, though it is there)
-    { const at = [13.6, 0, 10.3], blue = { men: [[2, [11.36, 0, 6.99]], [3, [11.73, 0, 7.44]]] as [number, number[]][] }, on = await stand('block-four', at, blue);
+    //  clear of the stack marks (levels/block-squads.json, 10-13), the walk in ended with one man stopped 'near enough' short of the shared place and the fault not showing, though it is there)
+    { const at = [13.6, 0, 10.3], blue = { men: [[2, [11.36, 0, 6.99]], [3, [11.73, 0, 7.44]]] as [number, number[]][] }, on = await stand('block-squads', at, blue);
       if (VERBOSE) console.log(`    on:  ${on.say}`);
       F.verdict(on.ok && on.movers === 0 && on.bare === 0 && on.nearMen === 0 && on.arrived, `every man stands still, no two places nearer than a bare body's width (${ORDERS.fileTight} m: the rebuilt block's corner has no floor for more, and a pair that near sends nobody on while nobody moves), no two men within 0.6 m`, `${on.movers} moving, ${on.bare} pair of places within ${ORDERS.fileTight} m (${on.tight} within 0.85 m) and ${on.nearMen} of men within 0.6 m, furthest ${on.far.toFixed(1)} m · ${on.say}`); }
     // ---- 4. the corner with no floor, staged the same on either stand: the key holds him where he stands

@@ -13,7 +13,7 @@
 // A row is dropped, and the window with it, across a staging (moved more than character.ts TURN.jump in a frame), a ragdoll, a gap in his clock.
 //   TPS_CAST=1 TPS_MOVES=1 TPS_TURN=1 bun run tools/qa/snap-probes.ts --one room-clear-four:1 [--min 60] [--win 0.1] [--cap 300] [--out f.json]
 //                                                               [--trace 'Red Two' --from 16 --to 17.2]   that man's yaws every frame of the stretch
-//   bun run tools/qa/snap-probes.ts --runs room-clear-four:1-8,compound-four:1,compound-four:3 [--turn 1|0|light|medium|heavy] [--jobs 4] [--json f.json]   the table, as the probes make it
+//   bun run tools/qa/snap-probes.ts --runs room-clear-four:1-8,block-squads:1,block-squads:3 [--turn 1|0|light|medium|heavy] [--jobs 4] [--json f.json]   the table, as the probes make it
 //   bun run tools/qa/probes.ts snap          THE GATE. snap-page (the page's defaults: no swing of 60° in the model's gun yaw; nothing drawn — rifle, trunk,
 //                                            head — comes DRAWN_MIN° round inside a tenth; the bang entries are in the sample) · snap-bites (the watcher's
 //                                            arithmetic on rows made by hand: what is a swing and what is not; SNAPBITES_BREAK=1 must fail)
@@ -100,7 +100,7 @@ const swingLine = (r: SnapRun, s: Swing) => `    ${r.scn}:${r.seed} @ ${s.at} s 
 /** how long after a stun charge goes off a swing still counts as 'after a bang entry' */
 export const BANG_SECS = 8;
 
-/** `room-clear-four:1-8,compound-four:1,compound-four:3` → the runs */
+/** `room-clear-four:1-8,block-squads:1,block-squads:3` → the runs */
 export function parseRuns(spec: string): { scn: string; seed: number }[] {
   return spec.split(',').flatMap(p => { const [scn, rg] = p.split(':'), [a, b = a] = (rg ?? '1').split('-').map(Number);
     if (!scn || !Number.isInteger(a) || !Number.isInteger(b) || a < 1 || b < a) throw new Error(`runs are <scenario>:<seed> or <scenario>:<lo>-<hi>, got '${p}'`);
@@ -127,7 +127,7 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
 }
 /** the page as it opens: the cast, the movement pass, the turn weight as shipped */
 const PAGE = { TPS_CAST: '1', TPS_MOVES: '1', TPS_TURN: '1' };
-const ROOMS = 'room-clear-four:1-8', SQUADS = 'compound-four:1,compound-four:3';
+const ROOMS = 'room-clear-four:1-8', SQUADS = 'block-squads:1,block-squads:3';
 
 /** THE GATE'S BAR FOR WHAT IS DRAWN: 100° inside a tenth. The model's gun yaw is held to 60° (it may come round 52° in a tenth at the shipped weight —
  *  character.ts TURN_FEEL.light × a carbine's handling; a handling-1 pistol would reach 63°, and no fighting man in these runs carries one). The rifle as drawn,

@@ -1,5 +1,5 @@
 // The 'breaks' probe family (src/game/breakTable.ts — walls, cover and what the destruction lane knocks loose break BY MATERIAL into cut pieces), run through probes.ts:
-//   bun run tools/qa/probes.ts breaks | breaks-shapes | breaks-wall | breaks-again | breaks-caps | breaks-determinism [--level block]
+//   bun run tools/qa/probes.ts breaks | breaks-shapes | breaks-wall | breaks-again | breaks-caps | breaks-determinism [--level block-squads]
 // CUT PIECES ARE A SETTLED RULE (scene/cut.ts CUT.on; 2026-11-07): nothing here asks the wreck with the cut switch off or writes it. Until then a probe `off` did, with
 // an off run beside the on run in `wall`, `studs`, `furniture` and `look`; those runs, their lines and the furniture rule's pin in `wall` are out.
 // Headless = the Proxy device: nothing is drawn. What is asserted is the TABLE and the BUDGET:
@@ -33,7 +33,7 @@ const { hash01 } = await import(`${ROOT}/src/game/debris.ts`);
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
-const LEVEL = (() => { const i = process.argv.indexOf('--level'); return i >= 0 ? process.argv[i + 1] : 'block'; })();
+const LEVEL = (() => { const i = process.argv.indexOf('--level'); return i >= 0 ? process.argv[i + 1] : 'block-squads'; })();
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const f2 = (x: number) => x.toFixed(2), f3 = (x: number) => x.toFixed(3);
 type Verdict = (ok: boolean, label: string, detail: string) => void;

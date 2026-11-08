@@ -41,8 +41,4 @@ export class Commands extends Writer {
   knob(name: string, value: number): void { this.u32(17); this.text(name); this.f64(value); }
   /** the cards as the player's machine keeps them (before a game is made: what its men are staged in) */
   kit(kept: string): void { this.u32(18); this.text(kept); }
-  /** the rung a quiet mission is played under, as this machine keeps it (a word that is no rung is nothing) */
-  quietFog(rung: string): void { this.u32(19); this.text(rung); }
-  /** the cameras a quiet mission hands out, as this machine keeps them */
-  quietCams(on: number): void { this.u32(20); this.u32(on); }
 }

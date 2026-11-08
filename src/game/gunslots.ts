@@ -56,6 +56,8 @@ export function gunPicks(slot: GunSlot): string[] { const ids = PICKS.filter(p =
 export function pickRow(id: unknown, suppressed: boolean): WeaponId | null { const p = gunPick(id); if (!p) return null; const bare = GUNSLOTS.bare ? p.bare : p.bareWas ?? p.bare; return (suppressed ? [p.can, bare] : [bare, p.can]).find(w => w && WEAPONS[w].enabled) ?? null; }
 /** the pick's name on its tile: its row's short name, as the card would hand it to him */
 export function pickWord(id: unknown, suppressed = true): string { if (id === NO_PRIMARY) return 'none'; const w = pickRow(id, suppressed); return w ? WEAPONS[w].short : String(id); }
+/** which of the card's gun drawings stands for a pick (ui/kitIcons.ts), by its row's class — null: none carried */
+export function pickIcon(id: unknown): 'rifle' | 'pistol' | 'shotgun' | null { const w = pickRow(id, true) ?? pickRow(id, false); if (!w) return null; const c = WEAPONS[w].cls; return c === 'pistol' ? 'pistol' : c === 'shotgun' ? 'shotgun' : 'rifle'; }
 
 // ------------------------------------------------------------ a teammate's second gun
 /** kit.ts kitStage: he is handed the gun that is not in his hands (null row: none — the pistol alone is his whole kit) */

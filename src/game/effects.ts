@@ -170,7 +170,7 @@ export const tracerFx = {
 
 /** Smoke hung off the first `bang.trailCount` sparks: inherits each fragment's direction, arc and bounce, so the cloud's arms are irregular for free. */
 export const trail = {
-  radius: 0.036, minVoxels: 1,                        // ref 0.06 m, under a coarse cell → floored to one (0.0625) or it deposits nothing
+  radius: 0.036, minVoxels: 1,                        // ref 0.06 m = 0.65 coarse cells → floored to one cell (0.055) or it deposits nothing
   density: 8.6, temp: 45, life: 0.9, attack: 0.01,    // ref 95 /s, 30 /s; life matched to the sparks so the trail draws the fall, not just the throw
 };
 

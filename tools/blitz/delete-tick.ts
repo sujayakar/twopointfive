@@ -468,7 +468,7 @@ const fnUnits = UNITS.filter(u => u.fnLike);
 // and where it is written. A reader in the simulation's folders counts where its function keeps a body in the plan; "seen on the page" says the census
 // saw that function run in a page play. Read from the tree BEFORE the deletion (this program does not run on a tree it has been through).
 if (opt('--readers')) {
-  const kindOf = (file: string): string => SIM.test(file) ? 'sim' : /^src\/(render|gpu|smoke|dress)\/|^src\/engine\.ts$|^src\/host\/(rustdress|tween|ahead|loop)\.ts$/.test(file) ? 'picture' : /^src\/(audio|sounds|music)\//.test(file) ? 'sound' : /^src\/ui\/|^src\/host\/hud\.ts$/.test(file) ? 'hud' : /^src\/(editor|viewer|workbench|replay)\/|^src\/(workbench|viewerGizmo)\.ts$/.test(file) ? 'otherPages' : /^src\/(net|cloud)\//.test(file) ? 'net' : file.startsWith('src/') ? 'host' : HOSTS.has(file) ? 'bridge' : 'tool';
+  const kindOf = (file: string): string => SIM.test(file) ? 'sim' : /^src\/(render|gpu|smoke|dress)\/|^src\/engine\.ts$|^src\/host\/(rustdress|tween|ahead|loop|autocam)\.ts$/.test(file) ? 'picture' : /^src\/(audio|sounds|music)\//.test(file) ? 'sound' : /^src\/ui\/|^src\/host\/hud\.ts$/.test(file) ? 'hud' : /^src\/(editor|viewer|workbench|replay)\/|^src\/(workbench|viewerGizmo)\.ts$/.test(file) ? 'otherPages' : /^src\/(net|cloud)\//.test(file) ? 'net' : file.startsWith('src/') ? 'host' : HOSTS.has(file) ? 'bridge' : 'tool';
   const KINDS = ['picture', 'sound', 'hud', 'host', 'simKept', 'otherPages', 'net', 'bridge', 'tool', 'gone'] as const;
   interface Row { decl: string; n: Record<string, number>; files: Map<string, number>; seenOnPage: number; writesKept: number; writesGone: number; writeFiles: Set<string> }
   const rows = new Map<string, Row>();

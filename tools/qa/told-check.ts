@@ -141,6 +141,42 @@ export async function toldCheck(): Promise<boolean> {
       verdict(std.digest === gui.digest && gui.digest === bare.digest, 'the three runs digest the same: the mark is the HUD\'s alone, a run is the same run on every rung', `standard ${std.digest} · guided ${gui.digest} · bare ${bare.digest}`);
     });
 
+    // ───────────────────────────── the screens
+    // (the page installs no call surface, so its screens run setLever and kitRows whole; a game stood in this process has put one up, and it is taken down for them)
+    const surface = CROSSING.RUST_SURFACE; CROSSING.setSurface(null);
+    await withStore({}, async store => { await withDom('?quality=high&mute', async () => {
+      G.location.pathname = '/'; G.location.hash = ''; G.location.assign = () => { }; G.location.reload = () => { };
+      const M = await import(`${ROOT}/src/ui/missions.ts`);
+      const rowsOf = (root: El) => root.all(e => !!e.attrs['data-lever'] && e.attrs['data-lever'] !== 'cams').map(r => ({ key: r.attrs['data-lever'], na: r.cls.has('na'), moved: r.cls.has('moved'),
+        btns: r.all(e => e.tagName === 'BUTTON'), shown: r.all(e => e.tagName === 'BUTTON' && (e as any).style.display !== 'none').map(b => b.attrs['data-rung']).join('|'), lit: r.all(e => e.tagName === 'BUTTON' && e.cls.has('on')).map(b => b.attrs['data-rung']).join(','), note: r.all(e => e.tagName === 'SPAN').at(-1)?.textContent ?? '' }));
+      const press = (root: El, key: string, rung: string) => { const b = rowsOf(root).find(r => r.key === key)?.btns.find(b => b.attrs['data-rung'] === rung); if (!b?.onclick) throw new Error(`no ${key}:${rung} button`); b.onclick(); };
+      const sheet = () => { QF.quietFogForget(); fresh(); const host = new El('DIV') as any, list: any[] = M.missionList();
+        const S = M.openMissions({ root: host, select: 'room-clear-four', search: '?quality=high&mute', onPick: () => { } }); return { S, root: S.root as unknown as El, list }; };
+      const said = (rows: ReturnType<typeof rowsOf>) => rows.map(r => `${r.key} [${r.shown}] lit ${r.lit}${r.na ? ' greyed' : ''}${r.moved ? ' moved' : ''}`).join(' · ');
+      const { S, root, list } = sheet(), r0 = rowsOf(root), four = list.find(m => m.id === 'room-clear-four');
+      verdict(r0.map(x => `${x.key} [${x.shown}]`).join(' ') === 'fog [off|team|cones|own] ai [standard|hard] kit [none|stuns] told [guided|standard|bare]' && r0.map(x => x.lit).join('/') === 'team/standard/none/standard' && r0.every(x => !x.na && !x.moved && x.note.length > 20),
+        'the sheet of a squad mission: a fourth row under Enemy kit lit on Standard, and the fog row has its bottom rung', `${said(r0)}\n    told: '${r0[3]?.note}'`);
+      press(root, 'told', 'guided'); const r1 = rowsOf(root), dn1 = root.all(e => !!e.attrs['data-difficulty'] && e.cls.has('on')).length, mix1 = root.all(e => e.cls.has('dn'))[0]?.textContent ?? '';
+      verdict(r1[3]?.lit === 'guided' && r1[3].moved && !r1[0].moved && dn1 === 0 && /^your own mix: .*told: guided$/.test(mix1) && store.get('twopointsix.levers') === '{"told":"guided"}' && T.toldNow() === 'guided',
+        'Guided pressed: that row alone is moved and kept on this machine, neither Standard nor Hard is lit, and the Difficulty row says your own mix', `${said(r1)} · kept ${store.get('twopointsix.levers')} · '${mix1}'`);
+      press(root, 'fog', 'off'); const r2 = rowsOf(root), go2 = S.hrefOf(S.selected);
+      verdict(r2[0].lit === 'off' && r2[0].moved && !r2[0].na && /you and your team always know where every enemy is/.test(r2[0].note) && !r2[3].na && r2[3].lit === 'guided' && D.fogOffNow() && !RUN.fogOfQuery(Q(go2)) && store.get('twopointsix.levers') === '{"told":"guided","fog":"off"}',
+        'the fog row\'s bottom rung pressed: lit, still live, its line says the team knows every enemy too, the mission\'s link would start with no fog, and the fourth row stays live beside it (the lever is for more signs than the fog\'s mark)', `${said(r2)}\n    '${r2[0].note}' · go '${go2}'`);
+      const quietM = list.find(m => m.scenario?.kind === 'quiet' && m.scenario.group !== 'training' && m.scenario.group !== 'tutorial'), lessonM = list.find(m => m.scenario?.group === 'training');
+      if (quietM) S.select(quietM.id); const rq = quietM ? rowsOf(root) : []; const qHref = quietM ? S.hrefOf(quietM) : ''; if (lessonM) S.select(lessonM.id); const rl = lessonM ? rowsOf(root) : []; S.select(four.id);
+      verdict((!quietM || (rq[0].lit === QF.quietFog() && !rq[0].na && !rq[3].na && rq[1].na && RUN.fogOfQuery(Q(qHref)) === (QF.quietFog() !== 'off'))) && rl.every(x => x.na),
+        'a quiet mission\'s row: its fog lever is its own pick (the squad\'s off is not put on it) and the fourth row is live there; a lesson greys all four', `${quietM ? `${quietM.id}: ${said(rq)} · its link's fog ${RUN.fogOfQuery(Q(qHref))}` : '(no quiet mission)'}\n    ${lessonM ? `${lessonM.id}: ${said(rl)}` : '(no lesson)'}`);
+      root.all(e => e.attrs['data-difficulty'] === 'standard')[0].onclick!(); const r3 = rowsOf(root);
+      if (lessonM) S.select(lessonM.id); const rl3 = lessonM ? rowsOf(root) : []; S.select(four.id);
+      verdict(r3.map(x => x.lit).join('/') === 'team/standard/none/standard' && r3.every(x => !x.moved) && !D.fogOffNow() && T.toldNow() === 'standard' && store.get('twopointsix.levers') === undefined && (!lessonM || rl3[0].shown === 'team|cones|own'),
+        'Standard pressed: all four rows back on standard\'s rungs and nothing kept; a Training lesson\'s fog row then offers no off', `${said(r3)} · kept ${store.get('twopointsix.levers') ?? '(none)'}${lessonM ? `\n    ${lessonM.id}: ${said(rl3)}` : ''}`);
+      root.all(e => e.attrs['data-difficulty'] === 'hard')[0].onclick!(); const r4 = rowsOf(root), hardLit = root.all(e => e.attrs['data-difficulty'] === 'hard')[0]?.cls.has('on');
+      verdict(r4[3]?.lit === 'bare' && !r4[3].moved && !!hardLit && T.toldNow() === 'bare', 'Hard pressed: the fourth row is on Bare, its own rung there, and no mark is left', said(r4));
+      root.all(e => e.attrs['data-difficulty'] === 'standard')[0].onclick!(); S.close();
+      const words = [D.TOLD_LEVER.label, ...D.TOLD_LEVER.rungs.map((x: any) => `${x.label} ${x.words}`), D.FOG_OFF_RUNG.words].join(' ');
+      verdict(!/[6-9]|\d\d/.test(words) && !/\b(north|south|east|west)/i.test(words) && !/hit points|\bHP\b/i.test(words), 'the new rows\' words: no digit above 5, no compass word, nothing about hit points', words);
+    }); });
+    CROSSING.setSurface(surface);
 
   } catch (e) { verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
   finally {

@@ -1,7 +1,7 @@
 // WHO HAS THIS MAN (src/game/owner.ts): is the record one fact, written one way, and is it true?
 //   bun run tools/qa/owner-check.ts                        every line below on the frozen stand; exit 0 = all pass, 1 = one failed (named)
 //   TPS_PROFILE=shipped bun run tools/qa/owner-check.ts    the same on the shipped stand
-//   OWNER_SCN=block-four,depot-four OWNER_SEEDS=1 …      fewer runs · OWNER_JOBS=4 how many at once
+//   OWNER_SCN=block-squads,depot-four OWNER_SEEDS=1 …      fewer runs · OWNER_JOBS=4 how many at once
 //   OWNER_BREAK=1 bun run tools/qa/owner-check.ts …        the red path: the record's own rules read wrong, every claim dropped in the runs, a lint line planted: every line must FAIL
 // WHAT IS HELD:
 //   table      the ranks are one table: no rule twice, a bit each, stronger is higher

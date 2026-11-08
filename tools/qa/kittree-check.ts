@@ -16,6 +16,7 @@ const { GUNSLOTS, gunPicks, pickRow } = await import(`${ROOT}/src/game/gunslots.
 const K = await import(`${ROOT}/src/game/kit.ts`);
 const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
 const { spawnUnit } = await import(`${ROOT}/src/game/guards.ts`);
+const { GUN_STATS, gunStats } = await import(`${ROOT}/src/ui/gunStats.ts`);
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
 function family(title: string): { verdict: Verdict; done: () => boolean } {
@@ -114,6 +115,14 @@ export async function kittreeGuns(): Promise<boolean> {
       const was = K.rowGet(r, m), moved = K.kitSet(1, f, !was) && K.rowGet(r, K.KIT.members[1]) !== was;
       (can === !word && moved === can ? fixed : loose).push(`${id}: ${word || 'on / off'}${moved ? '' : ' (held)'}`); }
     F.verdict(!loose.length && fixed.some(x => x.includes('held')) && fixed.some(x => !x.includes('held')), 'every gun: its suppressor row moves only where the gun can be had both ways, and says why where it cannot', loose.length ? `WRONG ${loose.join(' · ')}` : fixed.join(' · '));
+    // the four bars: no two guns of a slot read alike, a bare muzzle is less quiet
+    issue(); const bars: Record<string, Record<string, number>> = {};
+    for (const slot of ['primary', 'secondary'] as const) for (const id of gunPicks(slot) as string[]) { if (id === 'none') continue; issue(); K.kitSet(1, slot, id); const d = K.kitSlotDef(1, K.KIT.members[1], slot); if (d) bars[`${slot}:${id}`] = gunStats(d); }
+    const ids = Object.keys(bars), near: string[] = [], range = (v: Record<string, number>) => Object.values(v).every(x => x >= 0 && x <= 1);
+    for (const p of ids) for (const q of ids) if (p < q && p.split(':')[0] === q.split(':')[0] && !(GUN_STATS as any[]).some(S => Math.abs(bars[p][S.id] - bars[q][S.id]) >= 0.1)) near.push(`${p} = ${q}`);
+    F.verdict(ids.length >= 6 && !near.length && ids.every(k => range(bars[k])), 'every gun a row offers has four bars inside the track, and no two guns of a slot are within a tenth on all four', near.length ? near.join(' · ') : ids.map(k => `${k.split(':')[1]} ${(GUN_STATS as any[]).map(S => f2(bars[k][S.id])).join('/')}`).join(' · '));
+    issue(); const d1 = K.kitSlotDef(0, K.KIT.members[0], 'primary'); K.kitSet(0, 'suppressed', false); const d0 = K.kitSlotDef(0, K.KIT.members[0], 'primary');
+    F.verdict(!!d1 && !!d0 && gunStats(d0).quiet < gunStats(d1).quiet && gunStats(d0).reach === gunStats(d1).reach, 'the suppressor off your primary: its quiet bar drops and nothing else moves', d1 && d0 ? `quiet ${f2(gunStats(d1).quiet)} → ${f2(gunStats(d0).quiet)}` : 'no row');
   });
   return F.done();
 }

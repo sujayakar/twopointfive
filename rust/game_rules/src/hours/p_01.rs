@@ -28,35 +28,6 @@ pub fn hour_id_of(v: Option<&str>) -> crate::hours::HourId {
     match alias().get(s) { Some(a) => hour_word(a).unwrap_or(HourId::Night), None => HourId::Night }
 }
 
-/// The order of a day, the night last: the order the sheet's row walks. (hours.ts HOUR_IDS)
-pub const HOUR_ROW: [HourId; 5] = [HourId::Dawn, HourId::Midday, HourId::Overcast, HourId::Dusk, HourId::Night];
-
-/// The hour's label on the sheet. (hours.ts hourLabel)
-pub fn hour_label(id: HourId) -> String { if id == HourId::Night { night().label } else { hours().get(String::from(id.as_str())).map_or(String::new(), |h| h.label.clone()) } }
-/// The local time it stands for. (hours.ts hourClock)
-pub fn hour_clock(id: HourId) -> String { if id == HourId::Night { night().clock } else { hours().get(String::from(id.as_str())).map_or(String::new(), |h| h.clock.clone()) } }
-/// The sheet's sentence. (hours.ts hourWords)
-pub fn hour_words(id: HourId) -> String { if id == HourId::Night { night().words } else { hours().get(String::from(id.as_str())).map_or(String::new(), |h| h.words.clone()) } }
-/// The cloud already in an hour's numbers. (hours.ts HOURS[h].cloud ?? 0)
-pub fn hour_cloud(id: HourId) -> f64 { hours().get(String::from(id.as_str())).and_then(|h| h.cloud).unwrap_or(0.0) }
-
-/// A link with the hour on it (night = none): whatever hour it carried is replaced. (hours.ts hourHref)
-pub fn hour_href(href: &str, id: HourId) -> String {
-    let mut split = href.split('?');
-    let path = split.next().unwrap_or("");
-    let mut keys: Vec<String> = split.next().unwrap_or("").split('&').filter(|k| !k.is_empty() && *k != "hour" && !k.starts_with("hour=")).map(String::from).collect();
-    if id != HourId::Night { keys.push(alloc::format!("hour={}", id.as_str())); }
-    if keys.is_empty() { String::from(path) } else { alloc::format!("{}?{}", path, keys.join("&")) }
-}
-
-/// The Hour row's line, the weather over it. `own`: the weather is the mission's own, and no Weather row is drawn below to pick it on. (missions.ts hourNote)
-pub fn hour_note(h: HourId, wx: bool, own: bool) -> String {
-    let what = if h == HourId::Night && wx {
-        alloc::format!("the level as it was built, with the moon and the lights outside, in {}", if own { "the mission's own weather" } else { "the weather picked below" })
-    } else { hour_words(h) };
-    alloc::format!("{} \u{b7} {}", hour_clock(h), what)
-}
-
 /// The hour off a query handed to a running game; no `hour` key = nothing touched. (hours.ts hourFromQuery)
 pub fn hour_from_query(g: &mut crate::game::Game, q: &crate::query::Query) {
     if !q.has("hour") { return; }

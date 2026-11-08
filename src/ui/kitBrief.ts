@@ -108,7 +108,7 @@ export function mountKitBrief(root: HTMLElement, sheet: HTMLElement): KitBrief |
   const draw = (m: Mission) => { for (const c of cells) c.remove?.(); cells.length = 0; if (!facts) return;
     const cell = (label: string, value: string, why: string, before: Element | null) => { const c = document.createElement('div'), l = document.createElement('i'), v = document.createElement('b');
       c.className = 'mfact kb'; c.setAttribute('data-fact', label.toLowerCase().replace(/\s+/g, '-')); if (why) c.title = why; l.textContent = label; v.textContent = value; c.append(l, v); facts.insertBefore(c, before); cells.push(c); };
-    for (const [label, value, why] of needCells(needs, m.kind === 'rescue')) cell(label, value, why, null); };
+    for (const [label, value, why] of needCells(needs, m.scenario?.kind === 'rescue')) cell(label, value, why, null); };
   const told = () => { try { api.onChange?.(); } catch (e) { console.error('the kit brief: onChange threw', e); } };
   const onMap = (e: Event) => { if (shut || !root.classList.contains('pane-loadout')) return; e.stopPropagation(); api.setBig(!big); };
   map?.addEventListener?.('click', onMap);

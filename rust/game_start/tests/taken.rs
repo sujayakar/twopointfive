@@ -98,7 +98,7 @@ fn a_man_with_a_fresh_sighting_is_dealt_no_opening() {
 /// A FAILURE MEANS: the whole stack watches the door.
 #[test]
 fn a_stack_of_four_keeps_its_rear() {
-    for (level, door) in [("office.json", "stairwell"), ("block.json", "m_s")] {
+    for (level, door) in [("office.json", "stairwell"), ("block-squads.json", "m_s")] {
         let mut p = Play::mission(level, &format!("?levelFile={level}&roomclear&squad4"), &Opts { seed: 5, ..Default::default() });
         p.sam_unhurt();
         p.run(0.5);

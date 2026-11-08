@@ -100,7 +100,6 @@ pub unsafe extern "C" fn face_start(p: *const u8, n: usize, slot: i32, seed: u32
         stood.game.engine.particles = Some(game::render_particles::Particles { collide: true, spark_bounce: true, ..game::render_particles::Particles::blank() });
         stood.game.engine.reach = Some(game::render_reach_keep::ReachKeep::blank());
     }
-    game::scene_collision::light_ready(&mut stood.game);
     let h = super::put(super::Held::new(stood.game));
     crate::memo::forget(h);
     h
@@ -115,8 +114,7 @@ pub unsafe extern "C" fn face_new_at(state: *const u8, n: usize, slot: usize) ->
     // (the start's own lines take a block as bytes and write it into the slot: handed the slot's own bytes, the block stands as it stood)
     let len = core::mem::size_of::<sim::state::State>();
     let block = std::slice::from_raw_parts(sim::state::addr(slot) as *const u8, len).to_vec();
-    let (mut g, said) = game_run::start(super::bytes(state, n), &block, slot);
-    game::scene_collision::light_ready(&mut g);
+    let (g, said) = game_run::start(super::bytes(state, n), &block, slot);
     super::out(said.join("\n").into_bytes());
     let h = super::put(super::Held::new(g));
     crate::memo::forget(h);

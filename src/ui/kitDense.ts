@@ -1,7 +1,7 @@
 // THE DENSE KIT CARD (the maintainer on Team & kit, 10-20, beside a loadout card of Door Kickers 2: "this menu is pretty unwieldy … we shouldn't copy it
 // but maybe we have a popup menu per gun, more information density, etc."). The picked man's card on the one starting page (ui/startpage.ts), laid out
 // to be read at a glance and to fit the window with nothing scrolled:
-//   · THE TWO GUNS SIDE BY SIDE, each one tile: its drawing large, its name, the four bars of what it is good at (ui/kitCard.ts), and in the tile's corner
+//   · THE TWO GUNS SIDE BY SIDE, each one tile: its drawing large, its name, the four bars of what it is good at (ui/gunStats.ts), and in the tile's corner
 //     what rides on it as CHIPS — its suppressor, the light, what the launcher fires — lit where fitted or carried (a count beside a round), faint where not;
 //   · A GUN'S TILE OPENS ITS OWN POP-UP (a click on it; Enter with the keys on it): the guns the tile could be, side by side, each with its drawing, its
 //     name and the same four bars under one another so two guns are compared by eye, and under them that gun's fittings and rounds as the tiles they

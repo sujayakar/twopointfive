@@ -30,35 +30,8 @@ macro_rules! commands {
             }
             Ok(())
         }
-
-        /// the bytes of the commands in `b`, by their numbers, done to nothing
-        fn each(b: &[u8], mut f: impl FnMut(u32, &[u8])) {
-            let mut r = Bytes::of(b);
-            while r.at < b.len() {
-                let n = u32::read(&mut r);
-                let from = r.at;
-                match n {
-                    $($i => { $(let _ = <$t as Field>::read(&mut r);)* })*
-                    _ => return,
-                }
-                f(n, &b[from..r.at]);
-            }
-        }
     };
 }
-
-/// the lever words in a list of commands, in its order: (key, rung)
-pub fn levers_said(b: &[u8]) -> Vec<(String, String)> {
-    let mut out = Vec::new();
-    each(b, |n, args| if n == LEVER {
-        let mut r = Bytes::of(args);
-        let key = <&str as Field>::read(&mut r);
-        let rung = <&str as Field>::read(&mut r);
-        out.push((String::from(key), String::from(rung)));
-    });
-    out
-}
-const LEVER: u32 = 13;
 
 fn lever(key: &str) -> Option<game::difficulty::LeverKey> {
     use game::difficulty::LeverKey as K;
@@ -103,8 +76,4 @@ commands! {
     17 Knob { name: &str, value: f64 } = |g, name, value| { let _ = crate::knobs::set(g, name, value); };
     /// the cards as the player's machine keeps them (before a game is made: what its men are staged in)
     18 Kit { kept: &str } = |g, kept| crate::kept::read(g, kept);
-    /// the rung a quiet mission is played under, as this machine keeps it (a word that is no rung is nothing)
-    19 QuietFog { rung: &str } = |g, rung| game::quietfog::quiet_fog_kept(g, rung);
-    /// the cameras a quiet mission hands out, as this machine keeps them
-    20 QuietCams { on: u32 } = |g, on| game::quietfog::quiet_cams_kept(g, on != 0);
 }

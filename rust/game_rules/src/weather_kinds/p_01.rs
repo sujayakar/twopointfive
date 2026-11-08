@@ -66,32 +66,6 @@ pub fn weather_words(g: &crate::game::Game, k: Option<crate::weather_kinds::Weat
     }
 }
 
-/// The kinds the Weather row offers, 'As it is' first. (weatherKinds.ts WEATHER_KINDS)
-pub const WEATHER_ROW: [Option<WeatherKind>; 7] = [None, Some(WeatherKind::Clear), Some(WeatherKind::Overcast), Some(WeatherKind::Rain), Some(WeatherKind::Downpour), Some(WeatherKind::Fog), Some(WeatherKind::Dust)];
-
-/// The Weather row's line, the hour under it. (missions.ts weatherNote)
-pub fn weather_note(g: &crate::game::Game, wx: Option<crate::weather_kinds::WeatherKind>, h: crate::hours::HourId) -> String {
-    if h == crate::hours::HourId::Night { return weather_words(g, wx); }
-    let Some(kind) = wx else { return String::from("no weather picked, so it's a dry day (the level's own storm stays with its night)"); };
-    let c = g.m.weather_kinds.weather_presets.get(kind).unwrap().cloud;
-    let sky = if c <= crate::hours::hour_cloud(h) || c < 0.15 { "" }
-        else if c >= 0.99 { " \u{b7} by day there's no sun at all, just dim gray light and no shadows" }
-        else if c >= 0.85 { " \u{b7} by day the sun is behind clouds, with flat gray light and soft shadows" }
-        else if c >= 0.5 { " \u{b7} by day a pale sun comes through it" }
-        else { " \u{b7} by day the sun is a little dimmer" };
-    alloc::format!("{}{}", weather_words(g, wx).replacen(". At night it's the same as clear", "", 1), sky)
-}
-
-/// The query string with the weather put on it (None = taken off), every other flag kept in order; with nothing to take off, the string it was. (weatherKinds.ts weatherSearch)
-pub fn weather_search(search: &str, kind: Option<crate::weather_kinds::WeatherKind>) -> String {
-    let all: Vec<&str> = search.strip_prefix('?').unwrap_or(search).split('&').collect();
-    let named = |p: &&str| p.split('=').next() == Some(WEATHER_KEY);
-    if kind.is_none() && !all.iter().any(|p| named(p)) { return String::from(search); }
-    let mut parts: Vec<String> = all.iter().filter(|p| !p.is_empty() && !named(p)).map(|p| String::from(*p)).collect();
-    if let Some(k) = kind { parts.push(alloc::format!("{}={}", WEATHER_KEY, k.as_str())); }
-    alloc::format!("?{}", parts.join("&"))
-}
-
 /// `x` in steps of `step`, held to 0‥max. (weatherKinds.ts q)
 pub fn q(x: f64, step: f64, max: f64) -> f64 {
     m::max(0.0, m::min(max, m::round(x / step)))

@@ -227,8 +227,40 @@ export async function dealRun(): Promise<boolean> {
   return F.done();
 }
 
+export async function dealScreen(): Promise<boolean> {
+  const F = family('kitdeal-screen: Team & kit shows things on every man of a team of four');
+  const G = globalThis as any, hadLS = 'localStorage' in G, prevLS = G.localStorage;
+  await kept(async () => {
+    try {
+      await withDom('?quality=high&mute', async () => {
+        G.localStorage = memStore(); G.location.pathname = '/'; G.location.hash = ''; G.location.assign = () => { }; G.location.reload = () => { };
+        const M = await import(`${ROOT}/src/ui/missions.ts`), UI = await import(`${ROOT}/src/ui/loadout.ts`);
+        const SEARCH = '?quality=high&mute', list: any[] = M.missionList(), up: any[] = [];
+        try {
+          const read = () => {
+            K.KIT.on = true; K.SLOTS.on = true; K.BIGSLOT.on = true; K.kitLoad(null, ''); K.kitTeam(4); K.kitReset();
+            const m = list.find(x => x.id === 'pass-four'); if (!m) throw new Error('no mission \'pass-four\' on the list');
+            const host = new El('DIV') as any, L = UI.openLoadout(UI.entryOfMission(m), { host, search: M.missionHref(m, SEARCH), deploy: () => { }, back: () => { } }); up.push(L); L.setSquad(4);
+            const root = L.root as unknown as El, slot = (i: number) => root.all(e => e.cls.has('lo-slot')).find(s => s.attrs['data-slot'] === String(i));
+            const of = (i: number, c: string) => slot(i)?.all(e => e.cls.has(c))[0]?.textContent ?? '';
+            L.pick(4); const rows4 = root.all(e => e.cls.has('kc-row')), big4 = rows4.find(r => r.attrs['data-field'] === 'big')?.all(e => e.cls.has('kc-val'))[0]?.textContent ?? '', rows4Changed = rows4.filter(r => r.cls.has('changed')).map(r => r.attrs['data-field']);
+            L.pick(3); const rows = root.all(e => e.cls.has('kc-row')), val = (f: string) => rows.find(r => r.attrs['data-field'] === f)?.all(e => e.cls.has('kc-val'))[0]?.textContent ?? '';
+            return { big: big4, rows4Changed, card: `charges '${val('charges')}' frags '${val('frags')}' stun '${val('bangs')}'`, rowsChanged: rows.filter(r => r.cls.has('changed')).map(r => r.attrs['data-field']), pouch: [1, 2, 3, 4].map(i => of(i, 'lo-pouch')), sum: [1, 2, 3, 4].map(i => of(i, 'lo-sum')), chips: [1, 2, 3, 4].map(i => slot(i)?.all(e => e.cls.has('lo-ic')).length ?? 0), changed: [1, 2, 3, 4].filter(i => slot(i)?.all(e => e.cls.has('lo-name'))[0]?.cls.has('changed')), pool: root.all(e => e.cls.has('lo-pool'))[0]?.textContent ?? '', kit: root.all(e => e.cls.has('lo-kits'))[0]?.all(e => e.cls.has('on')).map(b => b.textContent).join(',') ?? '' };
+          };
+          const on = read();
+          F.verdict(on.pouch.every(p => /^pouches [1-4] \/ 4$/.test(p)) && /3 stun · 2 charges · 2 frags/.test(on.pool), 'THE PASS, FOUR, AS ISSUED: every teammate on the roster has something in his pouches, and the squad\'s line reads three stun, two charges, two frags', `pouches ${on.pouch.join(' · ')} · ${on.pool}${B}`);
+          F.verdict(on.changed.length === 0 && /as issued/i.test(on.kit) && on.rowsChanged.length === 0, 'no worn card is marked as changed, the squad kit row still lights As issued, and Blue One\'s own card has no tile marked', `marked changed: ${on.changed.map(i => NAMES[i]).join(', ') || 'nobody'} · lit: ${on.kit} · Blue One's card: ${on.card} · tiles marked: ${on.rowsChanged.join(', ') || 'none'}${B}`);
+          F.verdict(BROKEN || (/hammer/i.test(on.big) && on.changed.length === 0 && on.rowsChanged.length === 0 && on.rows4Changed.length === 0 && /as issued/i.test(on.kit)), 'A TOOL EACH PAIR ON THE SCREEN: Blue Two\'s Big slot tile reads the hammer, no tile of his or of Blue One\'s and no man is marked changed, and As issued is still lit', `Blue Two's big slot: '${on.big}' · marked: ${on.changed.map(i => NAMES[i]).join(', ') || 'nobody'}, tiles ${[...on.rowsChanged, ...on.rows4Changed].join(', ') || 'none'} · lit: ${on.kit} · pouches ${on.pouch.join(' · ')}${B}`);
+        } finally { for (const L of up) try { L.close?.(); } catch { /* a screen already closed */ } }
+      });
+    } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
+    finally { if (hadLS) G.localStorage = prevLS; else delete G.localStorage; }
+  });
+  return F.done();
+}
+
 if (import.meta.main) {
   let ok = true;
-  for (const f of [dealCards, dealMore, dealRun]) ok = (await f()) && ok;
+  for (const f of [dealCards, dealMore, dealRun, dealScreen]) ok = (await f()) && ok;
   process.exit(ok ? 0 : 1);
 }

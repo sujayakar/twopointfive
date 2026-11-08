@@ -6,8 +6,8 @@ import { WORLD } from '../scene/world';
 export const smokeGridConfig = {
   /** pool size in bricks of 8³ cells (4096 = 2.1 M cells) */
   cap: 4096,
-  /** voxel size per level: 0 the coarse lattice (canisters, dust: A BRICK OF IT IS ONE CELL OF THE GAME'S OWN SMOKE, half a metre, rust/sim/src/bricks.rs CELL), 1 the fine one (gun gas) */
-  voxel: [0.0625, 0.022] as [number, number],
+  /** voxel size per level: 0 the coarse lattice (canisters, dust), 1 the fine one (gun gas) */
+  voxel: [0.055, 0.022] as [number, number],
   /** how high each lattice reaches (m) */
   height: [WORLD.max[1], 4.2] as [number, number],
   /** bricks per edge of a bounding tile (smoke.wgsl boxes) */

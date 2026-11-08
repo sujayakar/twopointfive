@@ -1,6 +1,6 @@
 // The 'pouches' family (the pouches rule of game/kit.ts: breaching tools and throwables come out of each man's pouches, and the four teammates' together out
 // of the squad's; the costs are game/slots.json, the balance's table), run through probes.ts and also under 'kit':
-//   bun run tools/qa/probes.ts pouches | pouch-table | pouch-stage
+//   bun run tools/qa/probes.ts pouches | pouch-table | pouch-card | pouch-stage
 // PASS / FAIL each, all headless. The MECHANICS are held on the probe's own table (T0 below, in slots.json's shape: a swap of slots.json for other numbers
 // must not move them); the SHIPPED table is held by what must be true of any table: the issued kit a legal fill, each set and each named loadout a legal fill
 // for all five, no walk of the rows, the sets and kitSet ever outside the rule.
@@ -10,6 +10,9 @@
 //                 kit over the rule comes back inside it (only what it added over the issued kit given up, last man first for the squad, the store
 //                 untouched, a line for the card); the build before's store is read; a table that breaks the issued kit or a set is refused whole; the switch
 //                 off (?noslots) = the rows, sets and counts of the build before the rule, word for word (fixtures/kit-rows-base.json) and nothing is refused
+//   pouch-card    the real memberCard and loadout screen on a fake DOM: pips and 'n / m', the squad's line on a teammate, each priced row's cost in words, a
+//                 refused press says why on its row (mouse and keys; a held key and a digit do nothing) and changes nothing, a trade across two cards, a set
+//                 refused, a passed choice named, a sanitized save says so; off: no meter, no cost words, the Cans row
 //   pouch-wall    the wall charge row: there only in a build whose wall charge takes its count from the cards (wallHere — held here with a stand-in for
 //                 that hook where the build has none), two pouches, one to a squad; kitStage tells the wall charge at every staging; the squad kit row;
 //                 and, with every squad kit there to walk, the card in a line (kitWords) names each tool that fills a pouch, on every kit and set
@@ -270,6 +273,83 @@ export async function pouchTable(): Promise<boolean> {
   return F.done();
 }
 
+// ───────────────────────────────────────────────────────────── the card and the screen ─────────────────
+export async function pouchCard(): Promise<boolean> {
+  const F = family('pouch-card: pouches on the member card and the loadout screen (fake DOM)');
+  try {
+    under(T0);
+    const { memberCard } = await import(`${ROOT}/src/ui/kitCard.ts`);
+    type Deck = { hosts: El[]; cards: any[]; changes: () => number; rowOf: (i: number, f: string) => El; note: (i: number, f: string) => string; val: (i: number, f: string) => string; arrows: (i: number, f: string) => El[]; meter: (i: number) => { off: boolean; n: number; lit: number; words: string; squad: string }; refresh: () => void };
+    const deck = (root: El): Deck => {
+      const hosts = Array.from({ length: KIT_MEMBERS }, () => { const h = new El('DIV'); root.appendChild(h); return h; }); let n = 0;
+      const cards: any[] = []; for (let i = 0; i < KIT_MEMBERS; i++) cards.push(memberCard(hosts[i] as unknown as HTMLElement, i, { onChange: () => { n++; for (const c of cards) c.refresh(); } }));   // (as the kit page does: one card's change redraws them all)
+      const rowOf = (i: number, f: string) => byCls(hosts[i], 'kc-row').find(r => r.attrs['data-field'] === f)!;
+      return { hosts, cards, changes: () => n, rowOf, note: (i, f) => text(byCls(rowOf(i, f), 'kc-note')[0]), val: (i, f) => text(byCls(rowOf(i, f), 'kc-val')[0]), arrows: (i, f) => byCls(rowOf(i, f), 'kc-step'),
+        meter: i => { const p = byCls(hosts[i], 'kc-pouch')[0], pips = byCls(p, 'kc-pips')[0].children as El[]; return { off: p.cls.has('off'), n: pips.length, lit: pips.filter(x => x.cls.has('on')).length, words: text(p), squad: text(byCls(p, 'kc-squad')[0]) }; },
+        refresh: () => { for (const c of cards) c.refresh(); } };
+    };
+    await withDom('', async root => {
+      const D = deck(root), mt = D.hosts.map((_h, i) => D.meter(i));
+      const cost = (i: number, f: string) => text(byCls(D.rowOf(i, f), 'kc-cost')[0] ?? new El('I')), costs = ([[0, 'smoke'], [0, 'bangs'], [0, 'frags'], [0, 'shells'], [1, 'bangs'], [1, 'charges'], [1, 'frags'], [1, 'walls'], [1, 'weapon'], [3, 'bangs']] as [number, string][]).map(([i, f]) => `${i}.${f}: '${cost(i, f)}'`);
+      const plain = ['suppressed', 'light', 'nvg', 'suit', 'trim'].every(f => byCls(D.rowOf(1, f), 'kc-cost').length === 0);
+      const sqLit = [0, 1, 2, 3, 4].map(i => !!byCls(byCls(D.hosts[i], 'kc-pouch')[0], 'kc-squad')[0]?.cls.has('full')), narrow = (i: number, f: string) => byCls(D.rowOf(i, f), 'kc-val')[0].cls.has('num');
+      // the mouse: Red One's stun › is refused by his own pouches
+      const st = () => D.arrows(1, 'bangs'), dim0 = st()[1].cls.has('off'), tip = st()[1].title, was = snap(), ch0 = D.changes();
+      // (pressed AS A BROWSER DELIVERS IT: the arrow's handler, then every ancestor's unless the arrow stopped it — the row under the arrow listens for clicks too)
+      const press = (e: any) => { const ev = { stopped: false, stopPropagation() { this.stopped = true; } }; for (let n = e; n && !ev.stopped; n = n.parentElement) n.onclick?.(ev); };
+      press(st()[1]); const said = D.note(1, 'bangs'), flagged = D.rowOf(1, 'bangs').cls.has('refused');
+      // the trade across two cards, by mouse: Blue One's stun › is the squad's to refuse; Red One's frag ‹ frees a pouch of the squad's; Blue One takes it
+      const blueTip = D.arrows(3, 'bangs')[1].title, blueDim = D.arrows(3, 'bangs')[1].cls.has('off');
+      D.arrows(1, 'frags')[0].onclick?.(); const cleared = !D.rowOf(1, 'bangs').cls.has('refused'), m1 = D.meter(1), blueOpen = !D.arrows(3, 'bangs')[1].cls.has('off'), blueSq = D.meter(3).squad;
+      D.arrows(3, 'bangs')[1].onclick?.(); const m3 = D.meter(3), redShut = D.arrows(1, 'frags')[1].cls.has('off'), redTip = D.arrows(1, 'frags')[1].title, redOwn = D.meter(1);
+      // the keys: on your card, S to the smoke row, D is refused; a held key and a digit do nothing; A A then S D D goes through
+      const c0 = D.cards[0]; c0.focus(); const smokeAt = K.kitRows(0).findIndex((r: any) => r.field === 'smoke'); for (let n = 0; n < smokeAt; n++) c0.key(keyEv('s'));
+      const before = snap(); c0.key(keyEv('d')); const kSaid = D.note(0, 'smoke'), kSame = snap() === before; c0.key(keyEv('s')); const moved = !D.rowOf(0, 'smoke').cls.has('refused'); c0.key(keyEv('w'));
+      c0.key({ ...keyEv('a'), repeat: true }); const held = snap() === before; const digit = c0.key({ ...keyEv('3'), code: 'Digit3' }), digitSame = snap() === before && digit === false;
+      c0.key(keyEv('a')); const s0 = M()[0].smoke, m0 = D.meter(0); c0.key(keyEv('s')); c0.key(keyEv('d')); const b2 = M()[0].bangs, m0b = D.meter(0);
+      F.verdict(c0.at() === smokeAt + 1 && kSame && /none free \(4 of 4 full\)/.test(kSaid) && moved && held && digitSame && s0 === 0 && m0.lit === 3 && b2 === 2 && m0b.lit === 4 && D.val(0, 'bangs') === '2',
+        'the keys alone: D on your smoke row as issued is refused and says why; moving off the row clears it; a key held down (a repeat) and a digit change nothing; A gives up your pouch of smoke, S D spends it on stun', `D: '${kSaid}' · smoke ${s0} (${m0.words}) · stun ${b2} (${m0b.words})`);
+      for (const c of D.cards) c.destroy();
+    });
+    // a set the squad has no room for, and a choice walked past
+    under(T0);
+    await withDom('', async root => {
+      const D = deck(root), setBtn = (i: number, id: string) => byCls(D.hosts[i], 'kc-set').find(b => b.attrs['data-set'] === id)!, wordsOf = (i: number) => byCls(D.hosts[i], 'kc-words')[0];
+      D.arrows(2, 'weapon')[1].onclick?.(); const first = D.note(2, 'weapon'); D.arrows(2, 'weapon')[1].onclick?.(); const passed = D.note(2, 'weapon'), gun = M()[2].weapon, mark = D.rowOf(2, 'weapon').cls.has('refused');
+      K.kitPreset(2, 'quiet'); D.refresh(); const afterQuiet = D.meter(2).squad; D.arrows(3, 'bangs')[1].onclick?.(); D.arrows(3, 'bangs')[1].onclick?.();
+      const b = setBtn(2, 'issued'), dim = b.cls.has('off'), was = snap(); b.onclick?.(); const w = text(wordsOf(2)), flagged = wordsOf(2).cls.has('refused'), same = snap() === was;
+      D.arrows(2, 'suit')[1].onclick?.(); const gone = !wordsOf(2).cls.has('refused');
+      for (const c of D.cards) c.destroy();
+    });
+    // a sanitized save says so on the card, until the next change
+    await withDom('', async root => {
+      K.kitLoad(memStore(JSON.stringify({ v: 2, members: [null, { ...K.kitDefault(1), bangs: 3, charges: 2, frags: 2 }, null, null, null] })), '');
+      const h = new El('DIV'); root.appendChild(h); const c = memberCard(h as unknown as HTMLElement, 1, {}), w0 = text(byCls(h, 'kc-words')[0]);
+      byCls(byCls(h, 'kc-row').find(r => r.attrs['data-field'] === 'suit')!, 'kc-step')[1].onclick?.(); const w1 = text(byCls(h, 'kc-words')[0]); c.destroy();
+      F.verdict(/Your saved kit was over the pouches: 1 stun canister, 1 frag, 1 door charge left behind\./.test(w0) && !/left behind/.test(w1), 'a saved kit brought inside the pouches on load says so under the card\'s rows, until the card is next changed', `'${w0}' → '${w1}'`);
+    });
+    // the loadout screen: each man who comes shows his pouches, the squad's beside the count line; the count line is as it was
+    under(T0);
+    { const UI = await import(`${ROOT}/src/ui/loadout.ts`), E = (SCENARIOS as any[]).find(e => e.id === 'room-clear-four');
+      const shot = async (search: string) => withDom(search, async () => { const host = new El('BODY') as any, S = UI.openLoadout(E, { search: '', host, deploy: () => {} }); const one = (c: string) => host.all((x: El) => x.cls.has(c))[0] as El | undefined;
+        const p = host.all((x: El) => x.cls.has('lo-pouch')).map((x: El) => text(x)), pool = text(one('lo-pool')!), squad = text(one('lo-squadp') ?? new El('I')), meterOff = one('kc-pouch')?.cls.has('off'), fields = host.all((x: El) => x.cls.has('kc-row')).map((x: El) => x.attrs['data-field']), costs = host.all((x: El) => x.cls.has('kc-cost')).length; S.back(); return { p, pool, squad, meterOff, fields, costs }; });
+      const on = await shot('');
+      // … and driven: a pair's cards cut on the screen, the size stepped up to four and back
+      const live = await withDom('', async () => { const host = new El('BODY') as any, S = UI.openLoadout(E, { search: '', host, deploy: () => {}, squad: 2 }); const one = (c: string) => text((host.all((x: El) => x.cls.has(c))[0] as El | undefined) ?? new El('I')), pouches = () => host.all((x: El) => x.cls.has('lo-pouch')).map((x: El) => text(x)).join(' · ');
+        const arrow = (f: string, k: number) => (host.all((x: El) => x.cls.has('kc-row')).find((r: El) => r.attrs['data-field'] === f) as El).all((x: El) => x.cls.has('kc-step'))[k];
+        const open2 = `${pouches()} · ${one('lo-squadp')}`; S.pick(1); arrow('frags', 0).onclick?.(); const traded = `${pouches()} · ${one('lo-squadp')} · ${one('lo-pool')}`; S.pick(2); arrow('bangs', 1).onclick?.(); const filled = `${pouches()} · ${one('lo-squadp')}`, dim = arrow('charges', 1).cls.has('off');
+        K.kitSet(3, 'bangs', 2); const hidden = one('lo-squadp'); S.setSquad(4); const four = `${pouches()} · ${one('lo-squadp')}`, blue = M()[3].bangs; S.pick(3); const says = one('kc-words'); S.setSquad(2); const pair = one('lo-squadp'); S.back(); return { open2, traded, filled, dim, hidden, four, blue, says, pair }; });
+      under(T0);
+      F.verdict(live.open2 === 'pouches 4 / 4 · pouches 4 / 4 · pouches 3 / 4 · Squad pouches 7 / 7' && live.traded === 'pouches 4 / 4 · pouches 3 / 4 · pouches 3 / 4 · Squad pouches 6 / 7 · Squad carries · 3 stun · 2 charges · 1 frag' && live.filled === 'pouches 4 / 4 · pouches 3 / 4 · pouches 4 / 4 · Squad pouches 7 / 7' && live.dim && live.hidden === 'Squad pouches 7 / 7' && live.four === 'pouches 4 / 4 · pouches 3 / 4 · pouches 4 / 4 · pouches 0 / 4 · pouches 0 / 4 · Squad pouches 7 / 7' && live.blue === 0 && /No room in the squad's pouches with this team: 2 stun canisters left behind\./.test(live.says) && live.pair === 'Squad pouches 7 / 7',
+        'the loadout screen driven: on a pair the slots, the squad\'s pouches and the count line follow each press on a card (a frag given up, a stun canister taken by the other man, his next arrow dimmed); a man who is not coming does not count against the pair; stepped up to four, the squad is brought back inside its seven and the card of the man who gave something up says so',
+        `pair: ${live.open2} → ${live.traded} → ${live.filled} · with Blue One (not coming) on 2 stun: ${live.hidden} · as four: ${live.four} · Blue One's card: '…${live.says.slice(-78)}'`);
+      K.kitLoad(null, '?noslots'); K.kitReset(); const off = await shot('?noslots'); under(T0);
+      F.verdict(off.p.length === 0 && off.squad === '' && off.meterOff === true && off.costs === 0 && off.fields.includes('cans') && !off.fields.includes('smoke') && off.pool === on.pool,
+        'the switch off on the screen: no pouches anywhere (no slot line, no squad line, no meter, no cost words), your Cans row as the build before had it', `rows ${off.fields.join(' ')}`); }
+  } finally { shipped(); }
+  return F.done();
+}
+
 // ───────────────────────────────────────────────────────────── staged ──────────────────────────────────
 function levelOfFile(file: string): any { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); }
 async function stageOf(id: string, seed = 0x51c4) {
@@ -366,6 +446,21 @@ export async function pouchWall(): Promise<boolean> {
       shipped(); K.kitLoad(memStore(JSON.stringify({ v: 2, members: [null, { walls: 1, bangs: 0 }, null, null, null] })) as any, ''); const fit = `${M()[1].walls} wall, ${fill(1)}`, n1 = KIT_NOTE[1];
       K.kitLoad(memStore(JSON.stringify({ v: 2, members: [null, { walls: 1 }, null, null, null] })) as any, ''); const over = `${M()[1].walls} wall, ${fill(1)}`, n2 = KIT_NOTE[1];
       F.verdict(fit === '1 wall, 4/4' && !n1 && over === '0 wall, 4/4' && /1 wall charge left behind/.test(n2), 'a stored wall charge is read back; one stored over his pouches is left behind and his card says so', `fits: ${fit} · over: ${over}, '${n2}'`);
+      // the loadout screen's squad kit row
+      shipped();
+      const UI = await import(`${ROOT}/src/ui/loadout.ts`), E = (SCENARIOS as any[]).find(e => e.id === 'room-clear-four');
+      const scr = await withDom('', async () => { const host = new El('BODY') as any, S = UI.openLoadout(E, { search: '', host, deploy: () => {} }); const one = (c: string) => text((host.all((x: El) => x.cls.has(c))[0] as El | undefined) ?? new El('I'));
+        const btns = () => host.all((x: El) => x.cls.has('lo-set')) as El[], lit = () => btns().filter(b => b.cls.has('on')).map(b => text(b)).join(','), names = btns().map(b => text(b)), lit0 = lit(), rowAt = S.rows.findIndex((r: any) => r.el.attrs?.['data-row'] === 'squadkit');
+        const sel = () => S.rows.map((r: any) => (r.el.cls.has('sel') ? '■' : '□')).join(''), walk = [sel()]; for (const k of ['KeyS', 'KeyS', 'KeyW', 'KeyW', 'KeyW', 'KeyS']) { S.key(k); walk.push(sel()); }
+        btns()[1].onclick?.(); const pressed = { lit: lit(), pool: one('lo-pool'), sq: one('lo-squadp'), red1: M()[1].walls, pouch: host.all((x: El) => x.cls.has('lo-pouch')).map((x: El) => text(x)).join(' · ') };
+        const picked = () => btns().filter(b => b.cls.has('pick')).map(b => text(b)).join(','); S.sel = rowAt; S.paint(); S.key('KeyD'); const moved = `${picked()}/${lit()}`; S.key('Enter'); const right = lit(); S.key('KeyA'); S.key('KeyA'); S.key('Space'); const left = lit(), poolBack = one('lo-pool'); S.key('KeyA'); S.key('Enter'); const edge = lit();
+        S.pick(1); (host.all((x: El) => x.cls.has('kc-row')).find((r: El) => r.attrs['data-field'] === 'frags') as El).all((x: El) => x.cls.has('kc-step'))[0].onclick?.(); const own = { lit: lit(), says: one('lo-kits-own') };
+        K.kitLoadout('issued');
+        S.back(); return { names, lit0, rowAt, pressed, right, left, poolBack, edge, own, moved, walk: walk.join(' ') }; });
+      K.kitLoad(null, '?noslots'); K.kitReset(); const offRow = await withDom('?noslots', async () => { const host = new El('BODY') as any, S = UI.openLoadout(E, { search: '', host, deploy: () => {} }); const n = host.all((x: El) => x.cls.has('lo-set')).length, rows = S.rows.length; S.back(); return { n, rows }; });
+      shipped();
+      F.verdict(scr.names[0] === 'As issued' && scr.names[1] === 'One wall charge' && scr.names.length === SHIPPED.loadouts.length + 1 && scr.lit0 === 'As issued' && scr.rowAt === 1 && scr.walk === '■□□□□ □■□□□ □□■□□ □■□□□ ■□□□□ □□□□■ ■□□□□' && scr.pressed.lit === 'One wall charge' && scr.pressed.red1 === 1 && /· 0 charges · .* · 1 wall charge$/.test(scr.pressed.pool) && scr.pressed.sq === (SHIPPED.squad?.pouches == null ? '' : `Squad pouches ${SHIPPED.squad.pouches} / ${SHIPPED.squad.pouches}`) && scr.moved === 'Stun heavy/One wall charge' && scr.right === 'Stun heavy' && scr.left === 'As issued' && !/wall charge/.test(scr.poolBack) && scr.edge === 'As issued' && scr.own.lit === '' && scr.own.says === 'a mix of your own' && offRow.n === 0,
+        'the loadout screen: a Squad kit row under the team row — "As issued", then "One wall charge" beside it, then the table\'s other loadouts — the lit one is what the cards are; one press puts the wall loadout on all five and the count line says the squad carries a wall charge; W / S walk onto it like any row (five rows now, and they wrap), A / D move a pick along it that changes nothing until Enter or Space puts it on; a row changed by hand reads as a mix of your own; with nobody along the row is dimmed, says why and puts nothing on, by the mouse or the keys, and works again once a teammate comes; with the rule off there is no such row', `${scr.names.join(' | ')} · S S W W W S: ${scr.walk} · pressed: lit '${scr.pressed.lit}', ${scr.pressed.pouch}, '${scr.pressed.sq}', '${scr.pressed.pool}' · D: picked/lit '${scr.moved}', Enter: '${scr.right}' · A A Space: '${scr.left}' · after a frag given up: '${scr.own.says}' · ?noslots: ${offRow.n} buttons`);
       // the free rows are the base's still, hook or no hook
       K.kitLoad(null, '?noslots'); K.kitReset(); const offFields = [1, 2, 3, 4].some(i => fields(i).includes('walls')); shipped();
       F.verdict(!offFields, 'with the pouches rule off no card has a wall charge row, hook or no hook (the free rows are the build-before\'s)', `walls row with ?noslots: ${offFields ? 'THERE' : 'none'}`);

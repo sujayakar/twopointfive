@@ -94,6 +94,19 @@ export async function quietfogCheck(): Promise<boolean> {
       const quit = quitSearch('?levelFile=bazaar.json&quiet&quietfog=cones&mute'), zero = quitSearch('?levelFile=bazaar.json&quiet&quietfog=0&mute'), next = pickSearch((SCENARIOS as any[])[0], '?levelFile=bazaar.json&quiet&quietfog=own&mute'), nextQ = pickSearch((QUIET_MISSIONS as any[])[0], '?roomclear&quietfog=own&mute');
       F.verdict(quit === '?mute' && zero === '?quietfog=0&mute' && !/quietfog/.test(next) && !/quietfog/.test(nextQ), 'a quit, and a pick of another mission from a quiet mission\'s page, take the rung off the link (it is one mission\'s pick, as the way in is); the rule\'s own quietfog=0 stays', `quit ${quit} · with quietfog=0: ${zero} · next mission ${next} · a bare pick of a quiet row ${nextQ}`); }
     // ───────────────────────────── screens
+    await withStore({}, async store => { await withDom('?quality=high&mute', async () => {
+      const G = globalThis as any; G.location.pathname = '/'; G.location.hash = ''; G.location.assign = () => { }; G.location.reload = () => { };
+      fresh();
+      const M = await import(`${ROOT}/src/ui/missions.ts`), UI = await import(`${ROOT}/src/ui/loadout.ts`), { QUIET_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
+      const SEARCH = '?quality=high&mute';
+      const host = new El('DIV') as any, list: any[] = M.missionList(), four = list.find(m => m.id === 'room-clear-four'), quietM = list.find(m => m.id === 'bazaar-quiet'), twoM = list.find(m => m.id === 'lights-out-two'), lessonM = list.find(m => m.scenario?.group === 'tutorial' && m.scenario.kind === 'quiet');
+      const S = M.openMissions({ root: host, select: quietM.id, search: SEARCH, onPick: () => { } }), root = S.root as unknown as El;
+      const href0 = S.hrefOf(quietM);   // (until 2026-11-07 a line here asked the sheet as it opened: the lever lit on off, the other levers all greyed, the link naming no rung)
+      press(root, 'fog', 'cones');   // (until 2026-11-07 a line here asked of the press what the links and the store then said: red on the last TypeScript game as on this one)
+      // (until 2026-11-07 a line here asked that a squad mission's row never shows the off rung: the squad lever has that rung now)
+      S.close(); D.setDifficulty('standard');
+      QF.setQuietFog('off'); fresh();
+    }); });
     // ───────────────────────────── runs
     for (const [file, two] of [['bazaar.json', false], ['lights-out.json', true]] as [string, boolean][]) {
       const lines: string[] = []; let ok = true;

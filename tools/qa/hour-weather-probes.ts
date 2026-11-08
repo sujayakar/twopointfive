@@ -10,6 +10,7 @@
 //   hourwx-query      'hour=…&weather=…' on the query a scenario is started from, in either order, is the run a boot at that hour in that weather plays
 //   hourwx-air        the two things the joined build changed under a picked weather: a stroke of lightning is in the meter's stand-in (open sky, not under a
 //                     roof; never with no weather picked), and a loud sound is placed off the dry path while a small one is still drowned
+//   hourwx-sheet      the mission sheet: the Hour row and the Weather row together — both keys on every link, each once, either taken off alone
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
@@ -206,3 +207,33 @@ export async function hourwxAir(): Promise<boolean> {
   return F.done();
 }
 
+export async function hourwxSheet(): Promise<boolean> {
+  const F = family('hourwx-sheet: the mission sheet\'s Hour row and Weather row together');
+  await withDom('?quality=high&mute', async () => {
+    const M = await import(`${ROOT}/src/ui/missions.ts`); const host = new El('DIV'); const S = M.openMissions({ root: host as any, search: '?quality=high&mute&hourwx' });
+    try {
+      const ownWx = (h: string) => WK.snowLevelOfQuery(new URLSearchParams(h.slice(h.indexOf('?') + 1)));   // (a level built for snow keeps its own weather: its row's link never carries the Weather row's pick — game/weatherKinds.ts SNOW_LEVELS)
+      const hrefs = () => host.all(e => e.cls.has('mrow')).map(e => e.attrs.href ?? ''), once = (h: string, k: string) => (h.match(new RegExp(`[?&]${k}=`, 'g')) ?? []).length === 1;
+      const rowsOf = () => host.all(e => e.cls.has('mdiff') && !(e.cls.has('mway') && e.cls.has('na')) && e.style.display !== 'none').map(e => e.cls.has('mhour') ? 'hour' : e.cls.has('mwx') ? 'weather' : e.cls.has('mway') ? 'way' : e.cls.has('mlever') ? 'lever' : 'defenders').join(',');   // (the Way in row is the room clear's: shown only where the mission names more than one way in; the lever rows — fog of war, enemy AI, enemy kit and, where the stand has it up, how much the game tells you (told.ts): how many is the levers' own check's to say — sit right under the defenders' switch; a row the sheet is not showing — the sticky cameras' lever off a quiet mission, ui/levers.ts — is not a row under the plan)
+      S.select('compound-four'); const h0 = hrefs();
+      S.hour('midday'); S.setWeather('rain'); const h1 = hrefs(), go1 = S.hrefOf(S.selected), sel1 = S.hrefOf(S.selected);
+      S.hour('night'); const h2 = hrefs();
+      S.hour('dawn'); S.setWeather(null); const h3 = hrefs();
+      const rowsTwo = rowsOf(); S.select('rescue-registry'); const rowsOne = rowsOf(); S.select('compound-four');
+      F.verdict(/^defenders(,lever)+,hour,weather,way$/.test(rowsTwo) && /^defenders(,lever)+,hour,weather$/.test(rowsOne) && h0.every(h => !/hour=|weather=/.test(h)) && h1.every(h => once(h, 'hour') && /hour=midday/.test(h) && (ownWx(h) ? !/weather=/.test(h) : once(h, 'weather') && /weather=rain/.test(h))) && go1 === sel1 && /levelFile=compound\.json/.test(go1)
+        && h2.every(h => !/hour=/.test(h) && (ownWx(h) ? !/weather=/.test(h) : /weather=rain/.test(h))) && h3.every(h => /hour=dawn/.test(h) && !/weather=/.test(h)),
+        'three rows under the plan (defenders with its levers under it, hour, weather), and a fourth, the way in, only on a mission with more than one; nothing picked = no key on any link; Midday and Rain picked = both keys, once each, on every row\'s link and the start button\'s; either taken off alone leaves the other', `compound: ${rowsTwo} · registry: ${rowsOne} · ${go1} · night + rain: ${h2[0]} · dawn alone: ${h3[0]}`);
+      { const again = () => { M.closeMissions(); return M.openMissions({ root: host as any, search: '?quality=high&mute&hourwx' }); };
+        S.setWeather(null); const seq: string[] = []; for (let i = 0; i < 7; i++) { M.missionsKey({ code: 'KeyJ' }); seq.push(S.weather ?? 'as it is'); } M.missionsKey({ code: 'KeyJ', shiftKey: true } as any); const backOne = S.weather;
+        const keys = seq.join(' ') === 'clear overcast rain downpour fog dust as it is' && backOne === 'dust';
+        S.hour('dusk'); S.setWeather('dust'); const R = again(), kept = R.hourNow === 'dusk' && R.weather === 'dust'; R.hour('night'); R.setWeather(null); const R2 = again();
+        const n = { dayRain: M.weatherNote('rain', 'midday'), dayNone: M.weatherNote(null, 'midday'), nightRain: M.weatherNote('rain', 'night'), greyFog: M.weatherNote('fog', 'overcast'), nightIn: M.hourNote('night', 'rain'), night: M.hourNote('night', null) };
+        F.verdict(keys && kept && R2.hourNow === 'night' && R2.weather === null && /by day/.test(n.dayRain) && /^no weather picked/.test(n.dayNone) && n.nightRain === WK.weatherWords('rain') && !/by day/.test(n.greyFog) && !/storm/.test(n.nightIn) && /storm/.test(n.night),
+          'J walks the weathers as H walks the hours (Shift+J back); the list closed and opened again on the same page remembers both picks alike; the two lines of words follow the pair (a weather by day says what its cloud does to the sun, no weather by day says the day is dry, a weather at night does not promise the level\'s storm)', `J ×7: ${seq.join(' → ')}, Shift+J: ${backOne} · reopened at dusk in dust: ${kept ? 'yes' : 'NO'} · "${n.dayRain}" · "${n.dayNone}" · "${n.nightIn}"`); }
+      M.closeMissions(); const S2 = M.openMissions({ root: host as any, search: '?levelFile=compound.json&roomclear&squad4&hour=dusk&weather=fog&mute' });
+      const href = S2.hrefOf(S2.selected);
+      F.verdict(S2.hourNow === 'dusk' && S2.weather === 'fog' && once(href, 'hour') && once(href, 'weather'), 'opened over a page already at an hour in a weather (a quit back to the list): both rows open on them and the links carry each once', `${S2.hourNow} · ${S2.weather} · ${href}`);
+    } finally { M.closeMissions(); }
+  });
+  return F.done();
+}

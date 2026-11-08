@@ -1,5 +1,5 @@
 // 'wallbreak-looks' (the looks merged on the destruction build — wallwear.ts, edgeLook.ts, dustLook.ts), run through probes.ts in the 'wallbreak' family:
-//   bun run tools/qa/probes.ts wallbreak-looks [--level block]
+//   bun run tools/qa/probes.ts wallbreak-looks [--level block-squads]
 // Headless = nothing is drawn; what is asserted is what a CHECKPOINT does with the marks laid only for the picture (lookDecals.ts):
 //   (tagged)     a wall charge lays tagged soot marks; the digest's decal count leaves them out;
 //   (carried)    a save carries each as `look: 1` and a load puts it back TAGGED — so the digest's count is the same carrying on, loaded into the same
@@ -21,7 +21,7 @@ const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
 const { DECAL_CAP } = await import(`${ROOT}/src/render/decals.ts`);
 
 const DT = 1 / 60;
-const LEVEL = (() => { const i = process.argv.indexOf('--level'); return i >= 0 ? process.argv[i + 1] : 'block'; })();
+const LEVEL = (() => { const i = process.argv.indexOf('--level'); return i >= 0 ? process.argv[i + 1] : 'block-squads'; })();
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const DEFAULTS = JSON.parse(JSON.stringify(WALLS));
 

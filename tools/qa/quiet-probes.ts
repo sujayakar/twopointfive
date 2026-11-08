@@ -321,5 +321,10 @@ export const quietFixes = guarded(async () => {
     await start(W, '?quiet=1'); const nb = g.nightBreach.canStart(), rs = g.rescue.canStart();
     F.verdict(typeof nb === 'string' && /quiet/.test(nb) && typeof rs === 'string' && /quiet/.test(rs), 'with a quiet mission up the night breach and the rescue refuse to start over it (as it refuses over them)', `night breach: '${nb}' · rescue: '${rs}'`);
     await hushed(() => quitScenario(g)); }
+  { // (the owners' by-eye note on the join) the sheet's Defenders row is live only where the pick changes something: greyed on the solo night AND on a quiet row
+    const UI = await import(`${ROOT}/src/ui/missions.ts`); const L = UI.missionList();
+    const quiet = L.filter((m: any) => m.scenario?.kind === 'quiet'), squad = L.filter((m: any) => m.scenario && m.scenario.kind !== 'quiet'), solo = L.filter((m: any) => !m.scenario);
+    F.verdict(quiet.length > 0 && squad.length > 0 && solo.length > 0 && quiet.every((m: any) => !UI.diffLive(m)) && solo.every((m: any) => !UI.diffLive(m)) && squad.every((m: any) => UI.diffLive(m)),
+      'Standard | Hard is live on every squad row and greyed on the solo night and on every quiet row (its shift is the level\'s own on either)', `${squad.length} squad rows live · ${quiet.length} quiet + ${solo.length} solo greyed`); }
   return F.done();
 });

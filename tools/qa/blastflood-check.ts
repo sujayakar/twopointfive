@@ -55,7 +55,7 @@ export async function blastfloodCheck(): Promise<boolean> {
   try {
     // THE STAGE: a place where one charge opens two walls beside a defender who knows two doors or more, looked for by trying the two-wall places in turn
     let pick: { level: string; k: number; got: NonNullable<Awaited<ReturnType<typeof stage>>['got']> } | null = null, tried = 0; const seen: string[] = [];
-    for (const level of ['compound', 'block', 'warehouse']) { if (pick) break;
+    for (const level of ['compound', 'block-squads', 'warehouse']) { if (pick) break;
       for (let k = 0; k < 6 && !pick; k++) { const r = await quiet(() => stage(level, k)); if (!r.got) { seen.push(`${level}: ${r.places} two-wall places`); break; } tried++;
         if (r.got.walls >= 2 && r.got.doors0 >= 2) pick = { level, k, got: r.got }; } }
     verdict(!!pick, 'the staging: a wall place where one charge opens two walls beside a defender who knows two doors or more', pick ? `${pick.level}, wall #${pick.got.wall} at (${f1(pick.got.at[0])}, ${f1(pick.got.at[2])}) · ${pick.got.how} · walls opened ${pick.got.walls}, breaches ${pick.got.breaches} · ${pick.got.who} knew ${pick.got.doors0} doors · ${tried} places tried` : `no such place in ${tried} tried (${seen.join(' · ') || 'three floors'})`);
@@ -63,7 +63,7 @@ export async function blastfloodCheck(): Promise<boolean> {
       verdict(G.walls >= 2 && G.same && G.evLen, 'the defenders either side hold the SAME room and each has a figure a door', `walls opened ${G.walls}, breaches ${G.breaches} · the same room ${G.same} · evidence as long as the doors ${G.evLen} (${G.doors} doors)`);
       verdict(G.kept === G.doors0, 'what he knew of every door is still his, door by door', `${G.who}: ${G.kept} of ${G.doors0} kept · before ${G.was} · after ${G.after}`); }
     // TWO BLASTS THAT HAVE NOTHING TO DO WITH EACH OTHER, in one frame: flooded together, nothing is joined that stood apart
-    { type Apart = Awaited<ReturnType<typeof apart>>; let A = null as Apart; for (const level of ['block', 'warehouse', 'compound']) { A = await quiet(() => apart(level)); if (A) break; }
+    { type Apart = Awaited<ReturnType<typeof apart>>; let A = null as Apart; for (const level of ['block-squads', 'warehouse', 'compound']) { A = await quiet(() => apart(level)); if (A) break; }
       verdict(!!A && A.one1 && A.one2 && A.two, 'two charges in one frame at two places apart, one wall each: each pair of rooms is one, and the two pairs are not each other', A ? `${A.level}, ${f1(A.far)} m apart · first pair one ${A.one1} · second pair one ${A.one2} · the two apart ${A.two} · rooms over the floor's wall places ${A.rooms}` : 'no two lone-wall places 6 m apart between four rooms on any of the three floors'); }
   } finally { console.log = log; knobsBack(knobs0); Math.random = rnd0; }
   console.log(`=== blastflood: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);

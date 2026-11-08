@@ -1,5 +1,5 @@
 // The 'outerwall' probes (WALLCHARGE.outer — src/game/wallcharge.ts outerWall, src/game/wallbreak.ts adopt: a wall charge on a building's outer wall), their own program:
-//   bun run tools/qa/outerwall-probes.ts [all | sites | squad | sam | hard | rooms | reset | live] [--scn block-four,compound-four,warehouse-four] [--verbose]
+//   bun run tools/qa/outerwall-probes.ts [all | sites | squad | sam | hard | rooms | reset | live] [--scn block-squads,compound-four,warehouse-four] [--verbose]
 // Headless = the Proxy device: nothing is drawn. Each family runs on every scenario of --scn. The probes raise the destruction's switch, the wall charge's and
 // WALLCHARGE.outer themselves, at the page's chaos 0.5.
 // 2026-11-07: charges on outer walls are a settled rule. The lines that asked the build without it went: the families 'inside' (a partition's run with the rule on = with it
@@ -41,7 +41,7 @@ type Vec3 = [number, number, number];
 const DT = 1 / 60;
 const argv = process.argv.slice(2), flag = (n: string) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
 const VERBOSE = argv.includes('--verbose');
-const SCNS = (flag('--scn') ?? 'block-four,compound-four,warehouse-four').split(',');
+const SCNS = (flag('--scn') ?? 'block-squads,compound-four,warehouse-four').split(',');
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const f2 = (x: number) => (Number.isFinite(x) ? x.toFixed(2) : String(x));
 const at = (p: number[]) => `(${p[0].toFixed(1)}, ${p[2].toFixed(1)})`;
@@ -211,7 +211,7 @@ async function probeSam(scn: string): Promise<boolean> {
   if (!Q) F.note('no place on another outer wall with room to work from inside on this level — the inside-out blast is not checked here');
   else { D.alone(DOORTOOLS.charges); C.setCarried(null); game.teleportPlayer(wallPt(Q.W, 0, 0.55)); R.aim(Q.top); const ok = game.selectVerb('wall', 'charge'); R.press('Space'); const set = R.until(() => C.set.length === 1, DOORTOOLS.setSecs + 1);
     const Wq = C.set[0]?.wall ?? Q.W; if (C.set[0]) samBlows(R.W, C.set[0], R.each); const h2 = C.holeAt(Wq);
-    F.verdict(ok && set && !!h2 && h2.half * 2 >= 1.0 /* (holeAt's width is twice the way through's distance to the gap's nearer end: lived-in furniture at a face — the block's wall 28 — moves the way through off the gap's middle, 1.13 m of the same 1.5 m hole) */, 'from INSIDE, outward: the same row, the same hole (the charge asks which wall, not which face)', `wall ${Q.W.index} at ${at(Q.p)} · row ${ok} · set ${set} · hole ${h2 ? f2(h2.half * 2) : '—'} m`); }
+    F.verdict(ok && set && !!h2 && h2.half * 2 >= 1.0 /* (holeAt's width is twice the way through's distance to the gap's nearer end: lived-in furniture at a face — block-squads' wall 28 — moves the way through off the gap's middle, 1.13 m of the same 1.5 m hole) */, 'from INSIDE, outward: the same row, the same hole (the charge asks which wall, not which face)', `wall ${Q.W.index} at ${at(Q.p)} · row ${ok} · set ${set} · hole ${h2 ? f2(h2.half * 2) : '—'} m`); }
   return F.done();
 }
 
@@ -295,7 +295,7 @@ async function probeReset(scn: string): Promise<boolean> {
 const FAMILIES: Record<string, (scn: string) => Promise<boolean>> = { squad: probeSquad, sam: probeSam, hard: probeHard, rooms: probeRooms, reset: probeReset };
 export { rig, outerSites, partition };
 /** probes.ts's door in (family 'outerwall'): one family on one map, the switches, the knobs and the dice put back as they were found */
-export async function outerwallFamily(name: string, scn = 'block-four'): Promise<boolean> {
+export async function outerwallFamily(name: string, scn = 'block-squads'): Promise<boolean> {
   const rnd = Math.random, sw = DESTRUCTION.on, wc = WALLCHARGE.on;
   try { return await FAMILIES[name](scn); } finally { restoreKnobs(); Math.random = rnd; DESTRUCTION.on = sw; WALLCHARGE.on = wc; }
 }

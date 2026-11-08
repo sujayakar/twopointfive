@@ -81,14 +81,13 @@ pub mod men;
 pub mod resets;
 pub mod rims;
 pub mod sky;
-pub mod smoke;
 pub mod traffic;
 pub mod snow;
 pub mod view;
 pub mod wet;
 pub mod winds;
 
-groups! { fog view sky boxes lights men doorways rims events fires decals air level_look snow smoke }
+groups! { fog view sky boxes lights men doorways rims events fires decals air level_look snow }
 
 sections! {
     fog: fog::Fog = fog;
@@ -143,9 +142,6 @@ sections! {
     things: snow::Thing = snow.things;
     blasts: snow::SnowBlast = snow.blasts;
     snow_words: snow::SnowWord = snow.words;
-    smoke: smoke::SmokeHead = smoke.head;
-    smoke_at: boxes::Word = smoke.at;
-    smoke_bricks: smoke::SmokeBrick = smoke.bricks;
 }
 
 /// the numbers of a page's look (src/draw/look.ts writes them in this order): the boxes', then the men's
@@ -178,7 +174,6 @@ pub struct Drawn {
     pub winds: winds::Winds,
     pub resets: Vec<resets::Reset>,
     pub snow: snow::Snow,
-    pub smoke: smoke::Smoke,
 }
 impl Drawn {
     /// A TICK HAS RUN: the sections of `want`, made again from the game as it stands
@@ -200,7 +195,6 @@ impl Drawn {
         if want & want::fires != 0 { self.fires.clear(); fires::fill(g, &mut self.fires, &mut self.fire_table); }
         if want & want::air != 0 { self.winds.take(g, again && self.had & want::air != 0); }
         if want & want::snow != 0 { self.snow.take(g); }
-        if want & want::smoke != 0 { self.smoke.take(g); }
         self.had = if again { self.had | want } else { want };
         if want & want::doorways != 0 && self.doorways.len() != g.level.doors.len() { self.doorways.clear(); doorways::fill(g, &mut self.doorways); }
     }
@@ -212,7 +206,7 @@ impl Drawn {
         if self.want & want::decals != 0 { self.marks.frame(g, &self.boxes); }
     }
     /// the game is another than the one last drawn (a start, a game put back, another seat): nothing is drawn through it
-    pub fn cut(&mut self) { self.boxes.cut(); self.lights.cut(); self.men.cut(); self.events.cut(); self.marks.cut(); self.smoke.cut(); self.tick = None; self.stood += 1; }
+    pub fn cut(&mut self) { self.boxes.cut(); self.lights.cut(); self.men.cut(); self.events.cut(); self.marks.cut(); self.tick = None; self.stood += 1; }
     /// what the page says of its look
     pub fn look(&mut self, v: &[f64]) { let (boxes, men) = v.split_at(boxes::LOOK); self.boxes.set_look(boxes::Look::read(boxes)); self.men.swaps = core::array::from_fn(|i| men[i] as u32); }
     pub fn table(&mut self) -> &[u32] {

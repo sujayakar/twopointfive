@@ -1367,8 +1367,3 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   it no longer goes off. With no menu up nothing outlives the frame. Before, up to a second could stand between what was shown and what was thrown (4 of 337 presses differed, never in the man). No
   switch. CHECK: native, `rust/game_start/tests/throw.rs`, six levels by two seeds: shown is given, 70 presses of 70 (66 of 66 before: not a fault mended; two simpler forms failed it, 33 of 84 and 7 of
   76). Never seen on a GPU, never played.
-- **Is this way seen has one answer** (2026-11-08; `pairorders pair_orders_stalk`, `sneak seen_along`). The way to a man's back is priced and read by the sneak's own eye (`sneak_walk`,
-  `sneak_walk_cost`) whether `PAIRUP.on` is thrown or not: the second test of the floor (`front`, `frontM`, `coneM`, `coneLit`) is gone. A quiet mission always threw the switch, so the page
-  plays as it did; only `?pairorders` alone changes: its row now names who has him ("waiting · Tango 1 is facing this way") and dark floor 2.1 to 3.6 m in front of a man no longer reads as seen.
-  A way round is a way: on the office's placement 10 the man faces the aisle door, the floor behind him is dark, and the partner goes round by the corridor door and sets up, so `pair-mark`'s last
-  line ("the only way lies across his eyes") stages a place where it does not. Check: `tests/pair.rs a_way_across_his_eyes_is_waited_on_by_one_eye`, `a_dark_way_round_is_a_way`, one seed each. Never seen on a GPU.

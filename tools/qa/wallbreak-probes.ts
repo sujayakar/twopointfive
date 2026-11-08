@@ -1,6 +1,6 @@
 // The 'wallbreak' probe family (src/game/wallbreak.ts — interior walls and cover coming apart under rounds and blasts), run through probes.ts:
 //   bun run tools/qa/probes.ts wallbreak | wallbreak-blast | wallbreak-fire | wallbreak-cover | wallbreak-seams | wallbreak-caps | wallbreak-reset |
-//                               wallbreak-determinism | wallbreak-checkpoint | wallbreak-off [--verbose] [--level block]
+//                               wallbreak-determinism | wallbreak-checkpoint | wallbreak-off [--verbose] [--level block-squads]
 //   ROOM_BREAK=1 … wallbreak-caps   the red path of the level's room (WallBreak.room): the room is not made small, and its three lines must FAIL
 // Headless = the Proxy device: nothing is drawn. What is asserted is the ONE MODEL — after each break the questions the game asks of the level agree:
 //   (blast)        a charge against a partition on a loud level opens a hole a man fits through: before, the round's ray / the sight test / the sound test / the feet /
@@ -45,7 +45,7 @@ const { DESTRUCTION, FURNBLAST } = await import(`${ROOT}/src/game/destructionSwi
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
 const VERBOSE = process.argv.includes('--verbose');
-const LEVEL = (() => { const i = process.argv.indexOf('--level'); return i >= 0 ? process.argv[i + 1] : 'block'; })();
+const LEVEL = (() => { const i = process.argv.indexOf('--level'); return i >= 0 ? process.argv[i + 1] : 'block-squads'; })();
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const f2 = (x: number) => x.toFixed(2);
 type Verdict = (ok: boolean, label: string, detail: string) => void;

@@ -6,12 +6,16 @@
 //   kitload-you     the plain night with your card on you (kit.ts kitSolo), W held: a light card's top walk and sprint are quicker than the issued card's
 //                   and a heavy card's slower; the first footfall is quieter light and louder heavy; a guard's eye builds its notice of you more slowly
 //                   light and faster heavy, and the point-blank floor is the same for all three
+//   kitload-card    the real card on a fake DOM: two bars, the issued card's grey to their notch, the highlighted row's share outlined past the bar's end
+//                   (dashed: what one more would take, on a row that carries none), a lighter card's gain and a heavier one's loss; nothing shown with
+//                   the switch off; no digit anywhere on the bars
 //   kitload-save    a checkpoint holds the two scores
 // KITLOAD_BREAK=1 = the floor ignores the scores with the switch on: kitload-you must fail (the table and the card
 // hold either way: they read no floor).
 // exit 0 = all hold · 1 = one does not
 // THE HARNESS HAS NO GPU: a pace is a number, a footfall an event's level, a bar a width on a fake element. Nobody has seen or played any of this.
 import { standUp, ROOT } from './headless.ts';
+import { El, withDom } from './scenario-picker-probes.ts';
 
 const K = await import(`${ROOT}/src/game/kit.ts`);
 const L = await import(`${ROOT}/src/game/kitload.ts`);
@@ -132,6 +136,41 @@ export async function kitloadYou(): Promise<boolean> {
   return F.done();
 }
 
+export async function kitloadCard(): Promise<boolean> {
+  const F = family('kitload-card: the two bars on a man\'s card');
+  await kept(async () => {
+    const { memberCard } = await import(`${ROOT}/src/ui/kitCard.ts`);
+    const bars = (root: El) => root.all(e => e.cls.has('kc-bar')).map(b => ({ k: b.attrs['data-load'], score: parseFloat(b.attrs['data-score'] ?? 'NaN'), share: parseFloat(b.attrs['data-share'] ?? 'NaN'), fill: b.all(e => e.cls.has('fill'))[0]?.style.width ?? '', gain: b.all(e => e.cls.has('gain'))[0]?.style.width ?? '', loss: !!b.all(e => e.cls.has('gain'))[0]?.cls.has('loss'), more: !!b.all(e => e.cls.has('part'))[0]?.cls.has('more'), shown: b.all(e => e.cls.has('part'))[0]?.style.display !== 'none', part: b.all(e => e.cls.has('part'))[0]?.style.width ?? '', ref: b.all(e => e.cls.has('ref'))[0]?.style.left ?? '', text: b.textContent }));
+    const pct = (x: number) => `${Math.round(x * 1000) / 10}%`;
+    await withDom('', async root => {
+      for (let i = 0; i < K.KIT_MEMBERS; i++) K.KIT.members[i] = K.kitDefault(i);
+      KITLOAD.on = true; K.KIT.members[0] = card(0, YOU.issued);
+      const host = new El('DIV') as any; root.appendChild(host); const c = memberCard(host, 0), R = L.loadRef(0);
+      const B = bars(host), want = L.loadOf(0, K.KIT.members[0]);
+      F.verdict(B.length === 2 && B[0].k === 'mob' && B[1].k === 'con' && B[0].fill === pct(want.mob) && B[1].fill === pct(want.con) && B[0].ref === pct(R.mob) && B[1].ref === pct(R.con) && B[0].fill === B[0].ref && B[1].fill === B[1].ref && B.every(b => b.gain === '0%'),
+        'your card as issued: two bars, mobility then concealment, each grey to its score — and that is the notch, nothing gained or lost on it', B.map(b => `${b.k} fill ${b.fill} notch ${b.ref} gain ${b.gain}`).join(' · '));
+      F.verdict(B.every(b => !/[0-9]/.test(b.text)), 'no digit on the bars: a label and a bar each', B.map(b => `'${b.text}'`).join(' · '));
+      // the highlighted row's share: the top row is the guns
+      const rows = K.kitRows(0) as any[], gunField = rows.some(r => r.field === 'primary') ? 'primary' : 'weapon', gun = rows.findIndex(r => r.field === gunField); c.go(gun);   // (the long gun's row: Primary where a card has two gun rows)
+      const G = bars(host), share = L.loadShare(0, K.KIT.members[0], gunField);
+      F.verdict(!!share && G[0].part === pct(share.mob) && G[1].part === pct(share.con) && share.mob > 0 && G.every(b => b.shown && !b.more), 'the highlight on the guns row: the outline past each bar\'s end is what the guns take', G.map(b => `${b.k} share ${b.part}`).join(' · '));
+      { const big = rows.findIndex(r => r.field === 'big'); c.go(big); const H = bars(host), one = L.loadOf(0, { ...K.KIT.members[0], big: K.kitPeek(0, 'big', 1).value }), d = { mob: want.mob - one.mob, con: want.con - one.con };
+        F.verdict(big >= 0 && d.mob > 0 && H[0].more && H[0].shown && H[0].part === pct(d.mob) && H[1].part === pct(d.con), 'the highlight on the big slot, which carries nothing: dashed, what the next thing there would take', H.map(b => `${b.k} one more ${b.part}${b.more ? ' dashed' : ''}`).join(' · ')); }
+      // a row stepped: the bars move with it (the guns row to the pistol alone)
+      K.kitSet(0, 'weapon', 'pistol'); c.refresh(); const P = bars(host), now = L.loadOf(0, K.KIT.members[0]);
+      F.verdict(P[0].fill === pct(R.mob) && P[1].fill === pct(R.con) && P[0].gain === pct(now.mob - R.mob) && P[1].gain === pct(now.con - R.con) && P.every(b => !b.loss) && now.mob > want.mob && now.con > want.con && P[0].ref === pct(R.mob), 'the guns row stepped to the pistol alone: both bars gain past the notch (green), which stays', P.map(b => `${b.k} grey ${b.fill} + gained ${b.gain}, notch ${b.ref}`).join(' · '));
+      if (gunField === 'primary') { c.go(gun); const Q = bars(host);   // (two gun rows: the Primary row now carries none — its `one more` is the long gun, written through the row's own setter)
+        const m0 = K.KIT.members[0], upc: any = { ...m0 }; rows[gun].set(upc, K.kitPeek(0, 'primary', 1).value); const a0 = L.loadOf(0, m0), a1 = L.loadOf(0, upc), d = { mob: a0.mob - a1.mob, con: a0.con - a1.con };
+        F.verdict(Q[0].more && Q[1].more && d.con > 0.2 && Q[0].part === pct(d.mob) && Q[1].part === pct(d.con), 'the highlight on a Primary row that carries none: dashed, what the long gun would take', Q.map(b => `${b.k} one more ${b.part}${b.more ? ' dashed' : ''}`).join(' · ')); }
+      K.KIT.members[0] = card(0, YOU.heavy); c.refresh(); { const Hv = bars(host), hv = L.loadOf(0, K.KIT.members[0]);
+        F.verdict(Hv[0].loss && Hv[0].fill === pct(hv.mob) && Hv[0].gain === pct(R.mob - hv.mob), 'four smoke and the hammer: mobility falls under the notch, and what is lost is amber', Hv.map(b => `${b.k} grey ${b.fill} ${b.loss ? 'lost' : 'gained'} ${b.gain}`).join(' · ')); }
+      KITLOAD.on = false; c.refresh();
+      c.destroy();
+    });
+  });
+  return F.done();
+}
+
 // ───────────────────────────────────────────────────────────── a checkpoint
 export async function kitloadSave(): Promise<boolean> {
   const F = family('kitload-save: a checkpoint keeps the two scores');
@@ -145,7 +184,7 @@ export async function kitloadSave(): Promise<boolean> {
 }
 
 export async function kitloadCheck(only?: string): Promise<boolean> {
-  const all: [string, () => Promise<boolean>][] = [['kitload-table', kitloadTable], ['kitload-you', kitloadYou], ['kitload-save', kitloadSave]];
+  const all: [string, () => Promise<boolean>][] = [['kitload-table', kitloadTable], ['kitload-you', kitloadYou], ['kitload-save', kitloadSave], ['kitload-card', kitloadCard]];
   let ok = true; for (const [n, fn] of all) if (!only || only === n) ok = (await fn()) && ok;
   if (BROKEN) console.log('(KITLOAD_BREAK=1: kitload-you is expected to FAIL)');
   return ok;

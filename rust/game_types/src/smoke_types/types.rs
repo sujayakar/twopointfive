@@ -48,8 +48,6 @@ pub struct SmokeEmitter {
     pub anchor: Option<V3>,
     pub min_voxels: Option<f64>,
     pub look: Option<bool>,
-    /// the game's own smoke holds what it lets out (said as it goes out to the host: out_events)
-    pub held: Option<bool>,
     pub track_vel: Option<bool>,
     pub tint: Option<V3>,
 }
@@ -78,7 +76,6 @@ impl SmokeEmitter {
             anchor: None,
             min_voxels: None,
             look: None,
-            held: None,
             track_vel: None,
             tint: None,
         }

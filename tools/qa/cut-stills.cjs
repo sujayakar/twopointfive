@@ -1,4 +1,4 @@
-// cut-stills.cjs — BEFORE / AFTER stills of broken walls, cover and furniture (the loud level levels/block.json; the warehouse's front office for `office`), drawn by the real page in headless
+// cut-stills.cjs — BEFORE / AFTER stills of broken walls, cover and furniture (the loud level levels/block-squads.json; the warehouse's front office for `office`), drawn by the real page in headless
 // Chromium on the software WebGPU adapter (SwiftShader: the cloud box has no GPU). One FRESH BOOT per scene, every step scripted, so two runs of the
 // same checkout give the same scene: same seed, same pinned camera, same frame counts.
 //
@@ -38,7 +38,7 @@ const SETTLE = Number(flag('--settle', 40)), PHYSICS = Number(flag('--physics', 
 const ROUNDS = Number(flag('--rounds', 6)), CHAOS = Number(flag('--chaos', 0.5)), SEED = 4242;
 const WANT = flag('--scene', 'all');
 const DEG = Math.PI / 180;
-const LEVEL = 'block.json';
+const LEVEL = 'block-squads.json';
 const LIT = ['shop'];   // light groups switched ON for every scene (game.setGroup): the workshop's second ceiling panel, (20.5, 2.98, 17) — off as authored — so pieces by the partition cast shadows; its first, (17, 2.98, 19.5), is on anyway
 const PARK = [30, 0, 2];   // Sam's place for every still: outside the north wall, 18 m or more from every look-at point
 

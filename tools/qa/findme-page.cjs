@@ -5,12 +5,14 @@
 //   live     each row moved by its own control: the table is kept in the page's store at once and the camera's lead follows the pan
 //   picture  with the rows on, the overlay draws the ring at his feet, and the renderer has the outline's frame for the player's own man, its one program
 //            compiled on this adapter and the rim drawn with no GPU error
-//   hand     the camera's key held + a real mouse drag turns the view the reversed way by the same angle; a real press held for most of a second, and a real double
-//            tap of it, turn nothing and leave the game's cursor on the mouse (the double tap went with the auto camera, 2026-11-08; a kept line naming either reads as if it did not)
+//   hand     the camera's key held + a real mouse drag turns the view the reversed way by the same angle; a real double tap of it brings the view round to his facing, and
+//            with the mouse off to one side he still faces what he faced, until a real move of the mouse; a real press held for most of a second does nothing
 //   kept     after a reload the rows and the camera's lead are as they were left; Reset to defaults puts them all back (the store then keeps nothing)
 //   THE CAMERA'S KEY is read from the page (`__keys.camCap()`, host/keymap.ts: Space while the board leaves it spare, else Ctrl; a page from before the key
-//   could move has no such word and is Ctrl): the hand's lines press that key, so the page is checked as it opens.
+//   could move has no such word and is Ctrl): the last row is looked for under that name and the hand's lines press that key, so the page is checked as it opens.
 //   WHICH key the page opens on is not this check's to say (keybinds-page.cjs pins it): this one follows whatever the page names, and says it in its first line.
+//   THE PAGE IS OPENED WITH `autocam=0`: the last row here is the double tap as a row of its own. The page as it opens gives that tap to the camera that runs
+//   itself (host/autocam.ts) and shows its row instead: that page is autocam-page.cjs's.
 //   exit 0 = all of it with no page error · 1 = otherwise. The verdict is the page's DOM and the game's numbers: nothing here judges a picture. With an
 //   outDir it also keeps two pictures (the ring; the outline) (the software adapter's frame with the page's own overlay laid on it) for a person to look at, never for the verdict.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
@@ -51,7 +53,8 @@ const DOM = () => { const q = s => document.querySelector(s), on = e => !!e && e
   return { group: !!q('.findme'), ring: on(q('.findme .fr')) ? (q('.findme .fr').getAttribute('points') || '').split(' ').length : 0, gone: !q('.findme path') && !q('.findme use') && !q('.findme filter'), fatal: (q('#fatal') || {}).textContent || '' }; };
 // in the page: the outline's frame and its pass (render/outline.ts)
 const OUT = () => { const E = window.__engine, F = E.outline, P = E.passes.outlinePass; return { frame: F ? { on: F.on, owner: F.owner, whole: F.whole } : null, pass: P ? { pipe: !!P.pipe, bad: !!P.bad, drawn: P.drawn } : null }; };
-const VIEW = () => ({ yaw: window.__cam.yaw, orbit: window.__input.orbitDX });
+const VIEW = () => { const g = window.__game, c = window.__cam, f = c.planarBasis().fwd, a = g.player.char.aimYaw; return { yaw: c.yaw, aim: a, orbit: window.__input.orbitDX, dot: f[0] * Math.sin(a) + f[2] * Math.cos(a) }; };
+const DOT = (a) => { const f = window.__cam.planarBasis().fwd; return f[0] * Math.sin(a) + f[2] * Math.cos(a); };
 
 (async () => {
   let red = 0; const check = (ok, what, detail = '') => { if (!ok) red++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}${detail ? `\n    ${detail}` : ''}`); };
@@ -59,7 +62,7 @@ const VIEW = () => ({ yaw: window.__cam.yaw, orbit: window.__input.orbitDX });
   const page = await (await browser.newContext({ viewport: { width: 1024, height: 576 }, deviceScaleFactor: 1 })).newPage();
   page.setDefaultNavigationTimeout(900000);   // (a boot on the software adapter is minutes, and the reload is a second one)
   const errs = []; page.on('pageerror', e => errs.push(String(e).slice(0, 300))); page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text().slice(0, 300)); });
-  const url = `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute`, wait = ms => new Promise(r => setTimeout(r, ms));
+  const url = `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&autocam=0`, wait = ms => new Promise(r => setTimeout(r, ms));
   const boot = async (again) => { if (again) await page.reload(); else await page.goto(url); await page.evaluate(async () => { await window.__ready; }); await page.evaluate(STEP, 20); };
   const still = async (name, frames = 4) => { if (!outDir && frames === 4) return; const u = await page.evaluate(DRAW, frames);   // (the outline's picture is given the frames the resolve takes to bring a new line up)
     if (!u || !outDir) return;
@@ -68,21 +71,21 @@ const VIEW = () => ({ yaw: window.__cam.yaw, orbit: window.__input.orbitDX });
     await page.evaluate(() => document.getElementById('findme-still')?.remove()); log(shot ? `kept ${name}` : `no picture ${name}: the screenshot did not come`); };
   try {
     log(url); await boot(false); log('booted');
-    // the camera's key, as this page has it: the key the hand's lines press
-    const cap = await page.evaluate(() => (window.__keys && window.__keys.camCap ? window.__keys.camCap() : 'Ctrl')), KEY = cap === 'Ctrl' ? 'Control' : cap, LABELS = ROW_NAMES;
+    // the camera's key, as this page has it: the name on the last row, and the key the hand's lines press
+    const cap = await page.evaluate(() => (window.__keys && window.__keys.camCap ? window.__keys.camCap() : 'Ctrl')), KEY = cap === 'Ctrl' ? 'Control' : cap, TAP = `Double tap ${cap}`, LABELS = [...ROW_NAMES, TAP];
     if (cap !== 'Ctrl' && cap !== 'Space') throw new Error(`the page names a camera key this check cannot press: ${cap}`);
     log(`the camera's key on this page: ${cap}`);
     // rows
     let e = await page.evaluate(OPEN); if (e) throw new Error(e);
-    const a = await page.evaluate(ROWS), startRows = { 'Ring at your feet': 'Off', 'Outline in the dark': 'On', 'Aim pan': 'None', 'Turn direction': 'Reversed' };
-    const atStart = r => LABELS.every(l => r.rows[l] === startRows[l]) && !['Outline width', 'Outline strength', 'Outline fades by', 'Outline shows under light', 'Outline full under light', 'Teammate outline width', 'Outline colour', 'Auto camera', `Double tap ${cap}`].some(l => l in r.rows);
+    const a = await page.evaluate(ROWS), startRows = { 'Ring at your feet': 'Off', 'Outline in the dark': 'On', 'Aim pan': 'None', 'Turn direction': 'Reversed', [TAP]: 'Off' };
+    const atStart = r => LABELS.every(l => r.rows[l] === startRows[l]) && !['Outline width', 'Outline strength', 'Outline fades by', 'Outline shows under light', 'Outline full under light', 'Teammate outline width', 'Outline colour'].some(l => l in r.rows);
     check(LABELS.every(l => l in a.rows) && !('Shape through walls' in a.rows) && a.heads.some(h => /^Finding yourself/.test(h)) && a.heads.some(h => /^Camera/.test(h)) && atStart(a) && a.kept === null && a.lead === 0, 'Options > Game has the rows (the shape through walls is shelved: no row, and the outline\'s tuning rows are settled: none), all at their starts, nothing kept, no lead on the camera',
       `${LABELS.map(l => `${l}: ${a.rows[l]}`).join(' · ')} · kept ${a.kept} · lead ${a.lead} · the camera's key ${cap}`);
     // live
     e = await page.evaluate(MOVE, ['Outline in the dark', 'flip']); if (e) throw new Error(e); const dark0 = await page.evaluate(ROWS); e = await page.evaluate(MOVE, ['Outline in the dark', 'flip']); if (e) throw new Error(e);
     check(dark0.rows['Outline in the dark'] === 'Off' && dark0.kept === JSON.stringify({ outline: false }), 'the outline row put Off is kept as Off', `${dark0.rows['Outline in the dark']} · kept ${dark0.kept}`);
-    for (const m of [['Ring at your feet', 'flip'], ['Aim pan', 100]]) { e = await page.evaluate(MOVE, m); if (e) throw new Error(e); }
-    const b = await page.evaluate(ROWS), want = { pan: 1, ring: true }, movedRows = { 'Ring at your feet': 'On', 'Outline in the dark': 'On', 'Aim pan': '100 %', 'Turn direction': 'Reversed' };
+    for (const m of [['Ring at your feet', 'flip'], ['Aim pan', 100], [TAP, 'flip']]) { e = await page.evaluate(MOVE, m); if (e) throw new Error(e); }
+    const b = await page.evaluate(ROWS), want = { pan: 1, ring: true, behind: true }, movedRows = { 'Ring at your feet': 'On', 'Outline in the dark': 'On', 'Aim pan': '100 %', 'Turn direction': 'Reversed', [TAP]: 'On' };
     const keptOk = r => { try { return JSON.stringify(JSON.parse(r.kept)) === JSON.stringify(want); } catch { return false; } }, moved = r => LABELS.every(l => r.rows[l] === movedRows[l]);
     check(moved(b) && keptOk(b) && b.lead === 0.18, 'each row moved by its own control: shown, kept in the page\'s store at once, the camera\'s lead following the pan', `${LABELS.map(l => `${l}: ${b.rows[l]}`).join(' · ')} · kept ${b.kept} · lead ${b.lead}`);
     await page.evaluate(SHUT);
@@ -103,13 +106,22 @@ const VIEW = () => ({ yaw: window.__cam.yaw, orbit: window.__input.orbitDX });
     await page.keyboard.down(KEY); await page.mouse.move(450, 300); await page.mouse.move(500, 300); await page.keyboard.up(KEY);
     const v1 = await page.evaluate(VIEW); await page.evaluate(STEP, 1); const v2 = await page.evaluate(VIEW);
     check(v1.orbit > 0 && Math.abs((v2.yaw - v0.yaw) + v1.orbit * 0.006) < 1e-9, `${cap} held + a real mouse drag to the right, with the turn reversed: the view turns the other way by the same angle`, `the drag read as ${v1.orbit} px · yaw ${(v2.yaw - v0.yaw).toFixed(4)} rad (as it was: +${(v1.orbit * 0.006).toFixed(4)})`);
-    // hand: a press held does nothing, and nor do two taps (the view's yaw, and the game's cursor on the mouse)
+    // hand: a press held does nothing; two taps bring the view round
     await page.evaluate(() => window.__cam.rotate(1.5)); await page.evaluate(STEP, 2); const h0 = await page.evaluate(VIEW);
     await page.keyboard.down(KEY); await wait(700); await page.keyboard.up(KEY); await page.evaluate(STEP, 30); const h1 = await page.evaluate(VIEW);
-    await page.mouse.move(300, 520); await page.evaluate(STEP, 40); const hs = await page.evaluate(VIEW);   // (the mouse to one side of him: what a double tap used to come round to)
-    for (let i = 0; i < 3; i++) { await wait(500); await page.keyboard.press(KEY, { delay: 40 }); await wait(60); await page.keyboard.press(KEY, { delay: 40 }); await page.evaluate(STEP, 90); }
-    const t1 = await page.evaluate(VIEW), c1 = await page.evaluate(() => ({ mx: window.__input.mouseX, my: window.__input.mouseY }));
-    check(h1.yaw === h0.yaw && t1.yaw === hs.yaw && c1.mx === 300 && c1.my === 520, `a real press of ${cap} held 0.7 s turns nothing, and three real double taps of it turn nothing and leave the cursor on the mouse`, `held: yaw ${h0.yaw.toFixed(4)} → ${h1.yaw.toFixed(4)} · two taps, three times: ${hs.yaw.toFixed(4)} → ${t1.yaw.toFixed(4)} · the game's cursor ${c1.mx}, ${c1.my} with the mouse at 300, 520`);
+    await page.mouse.move(300, 520); await page.evaluate(STEP, 40); const hs = await page.evaluate(VIEW);   // (the mouse to one side of him: he faces it, and it is not ahead of the view)
+    let t1 = hs, tries = 0; const a0 = hs.aim;
+    for (; tries < 3 && !(t1.yaw !== hs.yaw); tries++) { await wait(500); await page.keyboard.press(KEY, { delay: 40 }); await wait(60); await page.keyboard.press(KEY, { delay: 40 }); await page.evaluate(STEP, 90); t1 = await page.evaluate(VIEW); }
+    const dot = await page.evaluate(DOT, a0);
+    check(h1.yaw === h0.yaw && dot > 0.999999, `a real press of ${cap} held 0.7 s turns nothing; a real double tap of it brings the view round to look where he looked`, `held: yaw ${h0.yaw.toFixed(4)} → ${h1.yaw.toFixed(4)} · two taps (try ${tries}): view · his facing at the tap ${DOTS(hs, a0)} → ${dot.toFixed(6)}`);
+    // …and his aim came round with it: he faces what he faced with the mouse where it lay; a real move of the mouse and the cursor is the mouse again
+    const off = (x, y) => Math.abs(Math.atan2(Math.sin(x - y), Math.cos(x - y))) * 180 / Math.PI;
+    const c1 = await page.evaluate(() => ({ mx: window.__input.mouseX, my: window.__input.mouseY }));
+    await page.mouse.move(380, 520); await page.evaluate(STEP, 1); const c2 = await page.evaluate(() => ({ mx: window.__input.mouseX, my: window.__input.mouseY }));
+    await page.evaluate(STEP, 60); const t2 = await page.evaluate(VIEW);
+    check(hs.dot < 0.9 && off(t1.aim, a0) < 1 && Math.hypot(c1.mx - 300, c1.my - 520) > 20 && c2.mx === 380 && c2.my === 520 && off(t2.aim, a0) > 5,
+      'with the mouse to one side at the double tap he still faces what he faced when the view has come round; a real move of the mouse and he turns to it',
+      `at the tap the view was ${DOTS(hs, a0)} off his facing · after: his facing ${off(t1.aim, a0).toFixed(2)}° off the tap's, the game's cursor at ${c1.mx.toFixed(0)}, ${c1.my.toFixed(0)} with the mouse at 300, 520 · the mouse moved to 380, 520: the cursor ${c2.mx}, ${c2.my}, and he has turned ${off(t2.aim, a0).toFixed(0)}°`);
     // kept
     await boot(true); log('reloaded'); const k0 = await page.evaluate(() => window.__cam.aimLead);
     e = await page.evaluate(OPEN); if (e) throw new Error(e); const c = await page.evaluate(ROWS);
@@ -121,3 +133,4 @@ const VIEW = () => ({ yaw: window.__cam.yaw, orbit: window.__input.orbitDX });
   await browser.close();
   console.log(red ? `\nfindme-page: FAIL (${red})` : '\nfindme-page: ALL PASS'); process.exit(red ? 1 : 0);
 })();
+function DOTS(v, a) { return (-Math.sin(v.yaw) * Math.sin(a) - Math.cos(v.yaw) * Math.cos(a)).toFixed(4); }

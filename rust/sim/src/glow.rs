@@ -8,7 +8,7 @@
 //! what leaves its own surfaces (the mean, with the lamps'), which is what the other metres' lines read. So light goes from room to room by the ways light goes,
 //! and a step (a tenth of a second, after the smoke's) works a slice of the metres out again: a SWEEP is the whole plan, and every sweep is one more
 //! bounce. Where the lamps are not those of the last step the sweep goes QUICK steps to a round for ROUNDS rounds, so the light off the walls
-//! follows its lamp within a few seconds, most of it in the first; a new field is swept whole in each of its first FIRST steps.
+//! follows its lamp within a few seconds, most of it in the first; a new field is swept FIRST times whole in its first step.
 //!
 //! HOW LIGHT A PLACE IS, for eyes that are used to it: the light on a face that looks up, smoothed over REACH metres and never through a wall, a pane or a doorway, so that a
 //! room has one level and the yard outside its door another (the picture's own place field, render/shaders/place_field.wgsl, by its own numbers).
@@ -67,14 +67,14 @@ const BARE: f64 = 0.25;
 const LEAF: f64 = 0.3;
 const NEAR: f64 = 12.0;
 const MOST: usize = 24;
-/// a new field's first steps, a whole sweep each · steps to a round once the lamps have changed, and how many such rounds
+/// whole sweeps in a new field's first step · steps to a round once the lamps have changed, and how many such rounds
 const FIRST: usize = 4;
 /// HOW LIGHT A PLACE IS: how far it is smoothed (m; scene/placePlan.ts PLACE.reach), the solve's over-relaxation (the best for a pull this hard over cells a metre wide: the
-/// picture's 1.93 is its 0.4 m cells'), its rounds a step (a change is nine tenths in within one) and in each of a new field's first; no reading under
+/// picture's 1.93 is its 0.4 m cells'), its rounds a step (a change is nine tenths in within one) and in a new field's first; no reading under
 /// this is told from the dark, and what a metre that holds none counts for
 const REACH: f64 = 8.0;
 const OMEGA: f64 = 1.84;
-const LEVELS: [usize; 2] = [12, 40];
+const LEVELS: [usize; 2] = [12, 160];
 const NOTHING: f64 = 1e-6;
 const DARK: f64 = 0.02;
 /// A DOORWAY: a way through no wider than this (four whole cells of the picture's, PLACE.doorCells: 1.6 m to just under 2), that is wider by this within a metre on both sides (a passage that stays narrow is one place); in steps of a quarter metre
@@ -85,17 +85,16 @@ const JOIN: f32 = 2.6;
 pub const QUICK: f64 = 8.0;
 const ROUNDS: f64 = 6.0;
 
-/// WHERE A LINE ENDS: how far (cm), what it meets (the metre before the surface, or one of the words below), whose surface (what that sends back is its box's to say, as it
-/// is painted: its place in the list and one, 0 = bare floor), and the sun's cosine there (of 255; 0 = it is in shade)
+/// WHERE A LINE ENDS: how far (cm), what it meets (the metre before the surface, or one of the words below), how much that sends back (of 255), and the
+/// sun's cosine there (of 255; 0 = it is in shade)
 #[repr(C)]
 #[derive(Clone, Copy)]
 struct Ray {
     cm: u16,
     to: u16,
-    of: u16,
+    back: u8,
     sun: u8,
 }
-const _: () = assert!(MAX_BOXES < 0xffff);
 const TO_SKY: u16 = 0xffff;
 const TO_GROUND: u16 = 0xfffe;
 /// a surface under the open sky, seen out by an opening over the horizon
@@ -124,8 +123,7 @@ struct Cast {
     word: [u64; MAX_BOXES],
     at: [[f32; 4]; MAX_BOXES],
 }
-// (all zeros: a table that is not would be in the module's file)
-const NO_RAY: Ray = Ray { cm: 0, to: 0, of: 0, sun: 0 };
+const NO_RAY: Ray = Ray { cm: 0, to: 0, back: 0, sun: 0 };
 const NO_CAST: Cast = Cast {
     rays: [[NO_RAY; RAYS]; MAX_GLOW],
     cast: [false; MAX_GLOW],
@@ -200,9 +198,9 @@ fn plan_of(r: &[f64]) -> [f32; 4] {
 fn over(a: &[f32; 4], b: &[f32; 4]) -> bool {
     a[0] <= b[2] && b[0] <= a[2] && a[1] <= b[3] && b[1] <= a[3]
 }
-/// a word of static `i`'s row: its sixteen numbers, its planes and its flags (what it sends back is read as it is)
+/// a word of static `i`'s row: its sixteen numbers, its planes, its flags and what it sends back
 fn word_of(o: &World, i: usize) -> u64 {
-    let mut h: u64 = 0xcbf29ce484222325 ^ o.flags[i] as u64;
+    let mut h: u64 = 0xcbf29ce484222325 ^ ((o.flags[i] as u64) << 8 | o.back[i] as u64);
     let r = &o.rec[i * REC..(i + 1) * REC];
     let planes = if r[R_KIND] as u32 & K_CUT != 0 { &o.cut[r[R_CUT] as usize * CUT_PLANES * 4..][..js_min(r[R_CUTN], CUT_PLANES as f64) as usize * 4] } else { &[] };
     for v in r.iter().chain(planes) {
@@ -345,9 +343,9 @@ fn cast(c: &mut Cast, w: usize, m: usize) {
         let hit = first(w, a, d, FAR);
         let down = if d[1] < -1e-6 { a[1] / -d[1] } else { FAR };
         // (the floor is a box in most places; where it is not, it is bare)
-        let (far, normal, of) = match hit {
-            Some((t, n, bi)) if t < down + 0.05 => (t, n, bi as u16 + 1),
-            _ => (down, [0.0, 1.0, 0.0], 0),
+        let (far, normal, back) = match hit {
+            Some((t, n, bi)) if t < down + 0.05 => (t, n, world_read(w).back[bi]),
+            _ => (down, [0.0, 1.0, 0.0], (BARE * 255.0) as u8),
         };
         let mut out = None;
         let mut t = 0.1;
@@ -397,7 +395,7 @@ fn cast(c: &mut Cast, w: usize, m: usize) {
                 None => (TO_DARK, 0),
             }
         };
-        c.rays[m][i] = Ray { cm: js_min(65535.0, end * 100.0) as u16, to, of, sun };
+        c.rays[m][i] = Ray { cm: js_min(65535.0, end * 100.0) as u16, to, back, sun };
     }
     c.reach[m] = [box_[0] as f32 - 0.6, box_[1] as f32 - 0.6, box_[2] as f32 + 0.6, box_[3] as f32 + 0.6];
     c.cast[m] = true;
@@ -427,17 +425,14 @@ fn joined(w: usize, x: f64, z: f64, along_x: bool) -> bool {
     };
     !(opens(0.0, -1.0) && opens(1.0, 1.0))
 }
-fn join(c: &mut Cast, w: usize, m: usize) {
-    if c.joined[m] == 0 {
-        let (x, z) = ((m % c.nx) as f64 + 0.5, (m / c.nx) as f64 + 0.5);
-        c.joined[m] = 4 | if m % c.nx + 1 < c.nx && joined(w, x, z, true) { 1 } else { 0 } | if m / c.nx + 1 < c.nz && joined(w, x, z, false) { 2 } else { 0 };
-    }
-}
 /// THE LEVEL OF EVERY PLACE, some rounds of it: each metre under a roof is pulled to its own reading and, hard, to the metres it is one place with. `open` = the open air's
-fn levels(c: &mut Cast, w: usize, set: i32, st: &mut [f64; LEN], new: bool, rounds: usize, open: f64) {
+fn levels(c: &mut Cast, w: usize, set: i32, st: &mut [f64; LEN], rounds: usize, open: f64) {
     let (nx, nz) = (c.nx, c.nz);
     for m in 0..nx * nz {
-        join(c, w, m);
+        if c.joined[m] == 0 {
+            let (x, z) = ((m % nx) as f64 + 0.5, (m / nx) as f64 + 0.5);
+            c.joined[m] = 4 | if m % nx + 1 < nx && joined(w, x, z, true) { 1 } else { 0 } | if m / nx + 1 < nz && joined(w, x, z, false) { 2 } else { 0 };
+        }
     }
     let mut way = c.joined;
     // (a leaf across a way that is no doorway's: a gate, a shutter)
@@ -463,9 +458,10 @@ fn levels(c: &mut Cast, w: usize, set: i32, st: &mut [f64; LEN], new: bool, roun
     let open = log(js_max(open, NOTHING));
     let pull = REACH * REACH;
     let mut read = [0.0; MAX_GLOW];
+    let first = rounds == LEVELS[1];
     for m in 0..nx * nz {
         read[m] = if roof(c, w, (m % nx) as f64 + 0.5, (m / nx) as f64 + 0.5) { log(js_max(st[O_GLOW_UP + m], NOTHING)) } else { open };
-        if new {
+        if first {
             st[O_GLOW_PLACE + m] = read[m];
         }
     }
@@ -528,7 +524,7 @@ fn work(c: &mut Cast, w: usize, set: i32, st: &mut [f64; LEN], m: usize, k: &K) 
     for (i, r) in c.rays[m].iter().enumerate() {
         let d = w_.d[i];
         let t = r.cm as f64 / 100.0;
-        let back = if r.of == 0 { BARE } else { o.back[r.of as usize - 1] as f64 / 255.0 };
+        let back = r.back as f64 / 255.0;
         // (a line that goes out is followed a leaf's width on: the leaf hangs in the opening's frame or stands open before it)
         let l = if n > 0 && shut(a, d, if r.to >= TO_OUTSIDE { t + 1.0 } else { t }) {
             LEAF / PI * st[O_GLOW_A + m]
@@ -579,20 +575,14 @@ pub fn step(w: usize, set: i32, st: &mut [f64; LEN], nbx: usize, nbz: usize, k: 
     let c = fresh(w, nx, nz, Some(k.sky.to_sun));
     let lamps = light::word(k.lamps, k.rows);
     let new = st[O_GLOW_LAMPS] == 0.0;
-    // (how many metres are to go at the quick pace; past that, whole sweeps of a new field)
-    let quick = n as f64 * ROUNDS;
-    if new {
-        st[O_GLOW_LEFT] = quick + (n * FIRST) as f64;
-    } else if st[O_GLOW_LAMPS] != lamps {
-        st[O_GLOW_LEFT] = js_max(st[O_GLOW_LEFT], quick);
+    if st[O_GLOW_LAMPS] != lamps {
+        st[O_GLOW_LEFT] = n as f64 * ROUNDS;
     }
     st[O_GLOW_LAMPS] = lamps;
-    let young = st[O_GLOW_LEFT] > quick;
     let pace = if st[O_GLOW_LEFT] > 0.0 && QUICK < k.sweep { QUICK } else { k.sweep };
-    let per = if young { n } else { (-floor(-(n as f64) / pace)) as usize };
+    let per = if new { n * FIRST } else { (-floor(-(n as f64) / pace)) as usize };
     let mut i = if st[O_GLOW_AT] >= 0.0 && st[O_GLOW_AT] < n as f64 { st[O_GLOW_AT] as usize } else { 0 };
-    let left = js_max(0.0, st[O_GLOW_LEFT] - per as f64);
-    st[O_GLOW_LEFT] = if young && left <= quick { 0.0 } else { left };
+    st[O_GLOW_LEFT] = if new { 0.0 } else { js_max(0.0, st[O_GLOW_LEFT] - per as f64) };
     st[O_GLOW_AT] = ((i + per) % n) as f64;
     unsafe { SWEPT = [per, 0] };
     for _ in 0..per {
@@ -604,22 +594,7 @@ pub fn step(w: usize, set: i32, st: &mut [f64; LEN], nbx: usize, nbz: usize, k: 
         }
         i += 1;
     }
-    levels(c, w, set, st, new, LEVELS[young as usize], open_air(&k.sky));
-}
-/// THE TABLE MADE BEFORE IT IS ASKED FOR, as a game stands: the lines of every metre under a roof and which metres are one place. No state is in it: a step that finds it
-/// wanting makes what it wants.
-pub fn ready(w: usize, nbx: usize, nbz: usize, to_sun: [f64; 3]) {
-    let (nx, nz) = (nbx * PER, nbz * PER);
-    if nx * nz == 0 || nx * nz > MAX_GLOW {
-        return;
-    }
-    let c = fresh(w, nx, nz, Some(to_sun));
-    for m in 0..nx * nz {
-        join(c, w, m);
-        if !c.cast[m] && roof(c, w, (m % nx) as f64 + 0.5, (m / nx) as f64 + 0.5) {
-            cast(c, w, m);
-        }
-    }
+    levels(c, w, set, st, LEVELS[new as usize], open_air(&k.sky));
 }
 /// what is said of a metre: the mean of the six faces, the best of them, and how light the place it is in is
 #[derive(Clone, Copy, Debug)]

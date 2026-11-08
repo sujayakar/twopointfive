@@ -1,5 +1,5 @@
 // The 'picks' family (THE SHORT LIST — scene/picks.ts PICKS, ui/picks.ts for ui/menu.ts's cards, main.ts's ?pick= redirect), run through probes.ts:
-//   bun run tools/qa/probes.ts picks | picks-list | picks-boot          (or this file: bun run tools/qa/picks-probes.ts [name …])
+//   bun run tools/qa/probes.ts picks | picks-list | picks-card | picks-boot          (or this file: bun run tools/qa/picks-probes.ts [name …])
 //   bun run tools/qa/probes.ts picks-play                          (minutes; not in the family) every scenario row played to its end by the scripted commander, its settings on
 // PASS / FAIL each, all headless. Nothing here looks at a picture.
 //   picks-list   the table as data: ids unique and URL-safe, every mission on the build, a plain line on each, two to seven rows; each row's URL names its
@@ -8,6 +8,8 @@
 //                the row after each; a quit out of a pick takes its settings off the URL and leaves every other URL as the build's quit leaves it; the rules the
 //                maintainer set for the list (a four-person loud breach on a squad map first; every row at its level's own night
 //                and weather; no kit on a row); and THE ONE CHOICE: every scenario row's URL at the other difficulty differs in that one value and is the same pick
+//   picks-card   the real Menu on a fake DOM: the pause card of a run a pick started offers the next row, carrying a difficulty chosen over the row's own;
+//                with the switch off no 'next'
 //   picks-boot   every row's URL booted in a process of its own with the page's own start-up order (the URL where modules read it, the difficulty, the weather,
 //                the hour, the level file, startFromQuery): it starts unrefused as its mission on its level, with the row's team, difficulty, hour, weather and
 //                switches in force (on a machine that keeps the OTHER difficulty; the harness stands most page-default feature switches off, so 'in force' is the
@@ -20,6 +22,7 @@
 import { sample, swept } from './sweep.ts';
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
+import { groupsFit } from './listed.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
 const TAG = 'PICKS-BOOT ';
@@ -111,12 +114,21 @@ function hrefSays(p: any, href: string, d?: string): string | null {
 // ───────────────────────────────────────────────────────────── list ─────────────────────────────────────────────────────────────
 export async function picksList(): Promise<boolean> {
   const F = family('picks-list: the short list as data — every row a mission on the build, its settings written out on its own URL');
-  const L: any[] = P.PICKS;
+  const L: any[] = P.PICKS, MS = await import(`${ROOT}/src/ui/missions.ts`);
   F.verdict(L.length >= 2 && L.length <= 7 && new Set(L.map(p => p.id)).size === L.length && L.every(p => /^[a-z0-9]+(-[a-z0-9]+)*$/.test(p.id) && !/^\d+$/.test(p.id)),
     'two to seven rows, each under an id of its own that is safe on a URL (and never a bare number: that is a place on the list)', L.map((p, i) => `${i + 1} ${p.id}`).join(' · '));
-  { const bad = L.filter(p => P.pickEntry(p) === undefined), ids = ['solo-night', ...ALL_MISSIONS.map((m: any) => m.id)];
-    F.verdict(bad.length === 0 && L.every(p => ids.includes(p.mission)), "every row's mission is on the mission list (the solo night under the list's own id and flag)",
+  { const bad = L.filter(p => P.pickEntry(p) === undefined), ids = MS.missionList().map((m: any) => m.id);
+    F.verdict(bad.length === 0 && L.every(p => ids.includes(p.mission)) && P.SOLO_ID === MS.SOLO_NIGHT.id && MS.SOLO_KEY === 'solo', "every row's mission is on the mission list (the solo night under the list's own id and flag)",
       L.map(p => `${p.id} → ${p.mission}`).join(' · ') + (bad.length ? ` — NOT ON THE BUILD: ${bad.map(p => p.mission).join(', ')}` : '')); }
+  // THE ONE STARTING PAGE's rows (ui/startpage.ts): off in a harness (no window to listen on), so every older probe measures the cards; its order as data
+  // (IN THE LIST'S GROUPS since 10-11: every mission once under its own group, the groups in the list's order, and inside a group the short list's missions
+  // first, in play order, then the rest in the list's own)
+  { const SP = await import(`${ROOT}/src/ui/startpage.ts`), all = MS.missionList(), list = SP.startPageList(), top = [...new Set(L.map(p => p.mission))];
+    const groups = [...new Set(all.map((m: any) => m.group))], want = groups.flatMap(g => { const of = all.filter((m: any) => m.group === g); return [...top.flatMap(id => of.filter((m: any) => m.id === id)), ...of.filter((m: any) => !top.includes(m.id))]; });
+    F.verdict(SP.startPageWanted('') === true && SP.startPageWanted('?roomclear') === false && list.length === all.length && new Set(list.map((m: any) => m.id)).size === all.length && want.every((m: any, i: number) => list[i].id === m.id && list[i].group === m.group)
+      && top.every(id => SP.pickOfMission(id)?.mission === id) && list.filter((m: any) => !top.includes(m.id)).every((m: any) => SP.pickOfMission(m.id) === null) && groupsFit(MS, list, groups as string[]),   // (listed.ts: no group draws more than eight; a row cut from the list is not counted)
+      "the one starting page is the way in on an address that names nothing; its rows as data: the list's groups in their order, inside a group the short list's missions first in play order, then the rest in the list's own, each mission exactly once and no row outside a group",
+      `${list.length} of ${all.length}:\n    ${groups.map(g => `${g}: ${list.filter((m: any) => m.group === g).map((m: any) => (top.includes(m.id) ? '*' : '') + m.id).join(', ')}`).join('\n    ')}`); }
   F.verdict(L.every(p => typeof p.line === 'string' && p.line.length >= 30 && p.line.length <= 110 && !/[—;]/.test(p.line) && /[.?!]$/.test(p.line)), 'one plain line on each: 30 to 110 characters, a whole sentence, no dash or semicolon',
     L.map(p => `${p.id} (${p.line.length}): ${p.line}`).join('\n    '));
   F.verdict(L.every(p => (!p.difficulty || ['standard', 'hard'].includes(p.difficulty)) && (p.squad === undefined || (Number.isInteger(p.squad) && p.squad >= 0 && p.squad <= 4 && P.pickEntry(p)))),
@@ -194,6 +206,46 @@ async function withStore<T>(fn: (store: Map<string, string>) => Promise<T> | T):
   G.localStorage = { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, String(v)); }, removeItem: (k: string) => { m.delete(k); } };
   try { return await fn(m); } finally { if (had) G.localStorage = prev; else delete G.localStorage; }
 }
+export async function picksCard(): Promise<boolean> {
+  const F = family('picks-card: the real Menu on a fake DOM — the pause card of a run a pick started offers the next row');
+  const SEARCH = '?quality=high&mute', L: any[] = P.PICKS;
+  try {
+    await withStore(store => withDom(SEARCH, async (root) => {
+      const { Menu } = await import(`${ROOT}/src/ui/menu.ts`), UI = await import(`${ROOT}/src/ui/picks.ts`);
+      const loads: string[] = []; Object.assign((globalThis as any).location, { pathname: '/', hash: '', assign: (u: string) => { loads.push(u); }, reload: () => { loads.push('(reload)'); } });
+      Math.random = seeded(0x51c4); setDifficulty('standard', false);
+      const W = await quiet(() => standUp({ uploadEvery: 4 })); let starts = 0;
+      let up: any = null, refused: string | null = null;   // (what main.ts's scenario seam would say is running under the card)
+      const menu = new Menu(menuDeps(W, { onStart() { starts++; }, scenario: { current: () => up, refused: () => refused, quit() {} } }) as any);
+      menu.open('start');
+      // ---- the pause card of a run a pick started: the next row
+      { const loc = (globalThis as any).location, was = loc.search; loads.length = 0;
+        const RUN = { title: 'Night breach', team: 'you + the pair', kind: 'nightbreach' };
+        loc.search = P.pickHref(L[0], SEARCH); up = null; menu.open('pause'); const notUp = startsWith(root, 'Next: ');   // (the URL is the pick's, its scenario is not up: refused at boot, the plain night played)
+        up = RUN; menu.open('pause'); const nx = startsWith(root, 'Next: '); nx?.onclick?.();
+        const okNext = !!nx && nx.textContent === `Next: ${UI.pickTitle(L[1])} ›` && loads.length === 1 && loads[0] === '/' + P.pickHref(L[1], SEARCH);
+        up = P.pickEntry(L[L.length - 1]) ? RUN : null; loc.search = P.pickHref(L[L.length - 1], SEARCH); menu.open('pause'); const last = startsWith(root, 'Next: ');
+        up = RUN; loc.search = '?roomclear&quality=high'; menu.open('pause'); const plain = startsWith(root, 'Next: ');
+        // (the first row started at the OTHER difficulty: the choice goes on to the row after, where that is a scenario and not already its own)
+        { const d = otherOf(wantOf(L[0]).difficulty), carries = !!P.pickEntry(L[1]) && d !== wantOf(L[1]).difficulty; loads.length = 0;
+          loc.search = P.pickHref(L[0], SEARCH, undefined, undefined, d); up = RUN; menu.open('pause'); const cx = startsWith(root, 'Next: '); cx?.onclick?.();
+          const want = P.pickHref(L[1], SEARCH, undefined, undefined, carries ? d : undefined);
+          F.verdict(!!cx && cx.textContent === `Next: ${UI.pickTitle(L[1])}${carries ? ` · ${d}` : ''} ›` && loads.length === 1 && loads[0] === '/' + want, "a run started at the row's other difficulty still offers the next row, and carries that choice on to it (said on the button)",
+            `${cx?.textContent ?? 'none'} → ${loads[0] ?? 'no load'}`); loads.length = 0; }
+        // (every row to the one after it, started at the other difficulty: carried only onto a row that offers that difficulty and does not open on it)
+        { const bad: string[] = [], said: string[] = [];
+          for (let i = 0; i + 1 < L.length; i++) { const a = L[i], b = L[i + 1], d = P.pickOtherDifficulty(a); if (!d) continue;
+            const got = UI.nextPickOf(P.pickHref(a, SEARCH, undefined, undefined, d)), carries = P.pickOtherDifficulty(b) !== null && d !== wantOf(b).difficulty, want = P.pickHref(b, SEARCH, undefined, undefined, carries ? d : undefined);
+            said.push(`${a.id} at ${d} → ${got?.title ?? 'none'}`); if (!got || got.href !== want || got.title !== UI.pickTitle(b) + (carries ? ` · ${d}` : '')) bad.push(`${a.id} at ${d} → ${got?.title ?? 'none'} (${got?.href ?? 'no URL'}), wanted ${want}`); }
+          F.verdict(bad.length === 0 && said.length > 0, "down the whole list: a difficulty chosen over a row's own goes on to the next row only where that row offers it and does not already open on it (a row with one difficulty, and the solo night, open as they are)", bad.length ? bad.join('\n    ') : said.join(' · ')); }
+        loc.search = was; up = null;
+        F.verdict(okNext && !last && !plain && !notUp, "the pause card of a run a pick started offers 'Next: <the row after>' = that row's own page load; the last row's offers none, a run started any other way offers none, and neither does a pick's page whose scenario is not what is up; no rows on a pause card",
+          `after ${L[0].id}: ${nx?.textContent ?? 'none'} → ${loads[0] ?? 'no load'} · after the last: ${last?.textContent ?? 'none'} · ?roomclear: ${plain?.textContent ?? 'none'} · the pick's URL with no scenario up: ${notUp?.textContent ?? 'none'}`); }
+      menu.close();
+    }));
+  } catch (e: any) { F.verdict(false, 'the card probe ran to its end', String(e?.stack ?? e).split('\n').slice(0, 4).join(' | ')); }
+  return F.done();
+}
 
 // ───────────────────────────────────────────────────────────── boot ─────────────────────────────────────────────────────────────
 async function bootChild(query: string, secs: number, kept: string): Promise<any> {
@@ -204,7 +256,7 @@ async function bootChild(query: string, secs: number, kept: string): Promise<any
 }
 export async function picksBoot(secs = swept(6, 30)): Promise<boolean> {
   const F = family(`picks-boot: a sample of the rows' URLs booted in a process of its own on a machine that keeps the other difficulty — its level, its team, the URL's settings in force — then ${secs} s of the simulation`);
-  const L: any[] = P.PICKS, missions: any[] = ALL_MISSIONS;
+  const L: any[] = P.PICKS, MS = await import(`${ROOT}/src/ui/missions.ts`), missions: any[] = MS.missionList();
   // (every row at its own difficulty, and the first row once more at the other: the one choice the card offers on a row)
   const C: { p: any; i: number; d?: string }[] = sample([...L.map((p, i) => ({ p, i })), ...(P.pickEntry(L[0]) ? [{ p: L[0], i: 0, d: otherOf(wantOf(L[0]).difficulty) }] : [])], 3);
   const hrefOf = (c: { p: any; d?: string }) => P.pickHref(c.p, '?quality=high&mute', undefined, undefined, c.d);
@@ -241,6 +293,7 @@ if (import.meta.main) {
   const want = process.argv.slice(2).filter(a => !a.startsWith('-')); const on = (n: string) => !want.length || want.includes(n) || want.includes('picks');
   let ok = true;
   if (on('picks-list')) ok = (await picksList()) && ok;
+  if (on('picks-card')) ok = (await picksCard()) && ok;
   if (on('picks-boot')) ok = (await picksBoot()) && ok;
   process.exit(ok ? 0 : 1);
 }

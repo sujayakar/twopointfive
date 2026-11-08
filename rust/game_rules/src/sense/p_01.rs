@@ -31,21 +31,17 @@ pub fn smoke_between(g: &crate::game::Game, a: V3, b: V3) -> f64 {
     sim::bricks::trans(g.sim, sim::state::stamp(g.sim), a, b, g.k.sense.smoke.sigma)
 }
 
-/// WHAT THE GAME HOLDS of a source: how wide it is and what it lets out a second. A source of the picture's alone (`look`) is nothing to the game; one too small to hide anybody is the picture's alone too, and takes no room of the budget.
-fn held(g: &crate::game::Game, e: &crate::smoke_types::SmokeEmitter) -> Option<(f64, f64)> {
+/// Something lets smoke out. A source of the picture's alone (`look`) is nothing to the game; one too small to hide anybody is the picture's alone too, and takes no room of the budget.
+pub fn smoke_emit(g: &mut crate::game::Game, e: &crate::smoke_types::SmokeEmitter) {
+    if e.look == Some(true) {
+        return;
+    }
+    let k = g.k.sense.smoke;
     let r = m::max(e.radius, 0.05);
     let rate = e.density * PI15 * r * r * r;
-    if e.look != Some(true) && rate * e.ttl >= g.k.sense.smoke.least { Some((r, rate)) } else { None }
-}
-
-/// Does the game's own smoke hold what this source lets out? (The picture's is bent toward it, of such a source's alone.)
-pub fn smoke_held(g: &crate::game::Game, e: &crate::smoke_types::SmokeEmitter) -> bool {
-    held(g, e).is_some()
-}
-
-/// Something lets smoke out.
-pub fn smoke_emit(g: &mut crate::game::Game, e: &crate::smoke_types::SmokeEmitter) {
-    let Some((r, rate)) = held(g, e) else { return };
+    if !(rate * e.ttl >= k.least) {
+        return;
+    }
     smoke_home(g);
     sim::bricks::emit(g.sim, e.pos[0], e.pos[1], e.pos[2], r, rate, e.ttl);
 }

@@ -14,7 +14,7 @@ import { pool, jobsOf } from './pool.ts';
 const ROOT = resolve(import.meta.dir ?? '.', '../..'), args = process.argv.slice(2), BREAK = process.env.WEATHER_BREAK === '1';
 const flag = (n: string) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
 const RUNS = ['compound-four:1::', 'compound-four:1:clear:', 'compound-four:1:overcast:', 'compound-four:1:rain:', 'compound-four:1:downpour:', 'compound-four:1:fog:', 'compound-four:1:dust:',
-  'pass-four:1::', 'warehouse-four:1:rain:', 'hostage-rescue:1::', 'compound-four:1:rain:midday', 'compound-four:1::midday'];
+  'pass-four:1::', 'warehouse-four:1:rain:', 'block-squads:1:downpour:', 'hostage-rescue:1::', 'compound-four:1:rain:midday', 'compound-four:1::midday'];
 /** every name a run of this check must reach */
 const NAMES = ['wind.jet', 'wind.storm', 'wind.stormRoofs', 'wind.noise', 'fog.tau', 'snow.bog', 'weather.roofsOf', 'weather.strokeMean', 'weather.underRoof', 'weather.rainBed', 'weather.hearMask', 'weather.airTrans', 'weather.strike', 'weather.thunder', 'weather.lot', 'weather.gap', 'weather.strokeDue', 'wet.openSky', 'wet.step', 'air.settle', 'air.update'];
 const CAP = 80;   // seconds of a run

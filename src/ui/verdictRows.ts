@@ -6,22 +6,20 @@
 // so a list drawn again (a group opened, the page reopened) is dressed again by itself. Training rows are lessons, not runs to be won: they get none.
 // Off with the verdict's own switch (`VERDICT.on`, ?noverdict): no row is touched. Styled in index.html (`#missions .mrow > .vpips`).
 import type { KeptNote } from '../game/verdict';
-import { desk } from '../view/desk';
+import { difficultyNow } from '../game/difficulty';
+import { ALL_MISSIONS } from '../scene/scenarioList';
 import { recordOf, verdictKey, keptWays } from './verdictStore';
 import { pipsEl } from './verdictPips';
+import { lessonGroup } from '../scene/scenarios';
 
 /** a mission that can be won some way (every row but the training lessons and ids the list does not know) */
-let earning: Set<string> | null = null;
-export function rowEarns(id: string): boolean { return (earning ??= new Set(desk().start(location.search).rows.filter(r => !r.lesson).map(r => r.id))).has(id); }
-/** the level picked, as any row's sheet lights it */
-const levelNow = (): string => desk().sheet('solo-night').settings.find(s => s.key === 'difficulty')?.choices.find(c => c.on)?.id ?? 'custom';
+export function rowEarns(id: string): boolean { const e = ALL_MISSIONS.find(m => m.id === id); return e ? !lessonGroup(e.group) : id === 'solo-night'; }
 
 /** Dress every mission row under `root` (default the page's `#missions`). Idempotent: a row whose pips already say what is kept is left alone. Returns how
  *  many rows carry pips. `ways` (the checks) = a reader other than this machine's store. */
 export function dressMissionRows(root: ParentNode | null = typeof document !== 'undefined' ? document.getElementById('missions') : null,
-  given?: (id: string) => KeptNote['ways']): number {
+  ways: (id: string) => KeptNote['ways'] = id => keptWays(recordOf(verdictKey(id, difficultyNow())))): number {
   if (!root) return 0;
-  const level = given ? '' : levelNow(), ways = given ?? (id => keptWays(recordOf(verdictKey(id, level))));
   let n = 0;
   for (const row of Array.from(root.querySelectorAll('.mrow[data-mission]')) as HTMLElement[]) {
     const id = row.getAttribute('data-mission') ?? '', had = Array.from(row.children).find(c => (c as HTMLElement).className?.split?.(' ').includes('vpips')) as HTMLElement | undefined;

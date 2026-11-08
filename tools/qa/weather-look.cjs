@@ -36,6 +36,10 @@ const VIEWS = {
     wide: { look: [20, 0, 14.6], yaw: 0, pitch: 55, dist: 48 },
     yard: { look: [35.6, 0, 16.9], yaw: 90, pitch: 55, dist: 14 },       // the loading dock's strip under yard_lamp_e, looking west at the dock doors
   },
+  'block-squads.json': {
+    wide: { look: [20, 0, 14.6], yaw: 0, pitch: 55, dist: 48 },
+    yard: { look: [35.8, 0, 13.6], yaw: 90, pitch: 55, dist: 13 },       // the east strip under street_lamp_e, the fire exit
+  },
 };
 const DEFAULT_VIEWS = { wide: { look: [20, 0, 14.6], yaw: 0, pitch: 55, dist: 48 }, yard: { look: [20, 0, 26], yaw: -22, pitch: 55, dist: 13 } };
 // drawn frames a still needs before it stops changing, per quality (measured; see the hand-over note)

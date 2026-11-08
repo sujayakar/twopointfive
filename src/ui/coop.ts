@@ -17,12 +17,11 @@ import { cloudFind, cloudUrl } from '../cloud/cloud';
 import { wire } from '../cloud/wire';
 import { keptLevers, leversNow } from '../game/difficulty';
 import { seatsKind } from '../game/seats';
+import { lessonGroup } from '../scene/scenarios';
 import { openList } from './startpage';
 import { myName, setMyName } from '../host/names';
 import { NET } from '../net/wire';
-import type { Mission } from './missions';
-import { ALL_MISSIONS } from '../scene/scenarioList';
-import { desk } from '../view/desk';
+import { listedMissions, type Mission } from './missions';
 
 const TAB = 'tps.coop.tab', ID = /^[a-z0-9]{24,64}$/;
 let mem = '';
@@ -73,10 +72,10 @@ async function enter(L: Lobby, code: string, told: (words: string) => void): Pro
 }
 
 /** the missions two can play: a kind the game seats two in (game/seats.ts), and not a lesson (on rails, for one) or a row built for its own size only */
-export const coopCan = (m: Mission): boolean => { const e = ALL_MISSIONS.find(x => x.id === m.id); return !!e && seatsKind(e.kind) && !e.only && !m.lesson; };
+export const coopCan = (m: Mission): boolean => !!m.scenario && seatsKind(m.scenario.kind) && !m.scenario.only && !lessonGroup(m.group);
 /** HOST: the starting page, picking a mission for two. Its block hands the mission's address here */
 export function coopHostList(select?: string): void {
-  (window as unknown as { __coop?: unknown }).__coop = { hostable: () => desk().start(location.search).rows.filter(coopCan).map(m => ({ id: m.id, group: m.group, kind: m.kind })) };   // (a check's: which rows the page was handed)
+  (window as unknown as { __coop?: unknown }).__coop = { hostable: () => listedMissions().filter(coopCan).map(m => ({ id: m.id, group: m.group, kind: m.scenario?.kind ?? '' })) };   // (a check's: which rows the page was handed)
   openList({ backLabel: '‹ Main menu', ...(select ? { select } : {}), coop: { title: 'Host a co-op game', words: 'Host game', can: coopCan, deploy: (search, m) => void host(search, m) } });
 }
 let hosting = false;   // (one game a press: a second press while the first is being made would make a second server)

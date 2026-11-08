@@ -28,5 +28,3 @@ let standing: Desk | null = null;
 /** the page's one desk */
 export function desk(): Desk { if (!standing) throw new Error('the desk is asked before the page has set it'); return standing; }
 export function setDesk(d: Desk): void { standing = d; }
-/** a desk stands (a headless stand of the old page's Menu has none: what it would ask is not drawn there) */
-export function deskStands(): boolean { return standing !== null; }

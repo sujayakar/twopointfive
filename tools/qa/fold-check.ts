@@ -92,8 +92,9 @@ if (mode === '--fold') {   // QA_FOLD=1: what the fold does
   if (process.env.FOLD_BREAK === '1') F.foldSettled(reg, { 'PRESSURE.second': false }, true);   // (the red path of (6): the list as it stood before 2026-11-06, with a row Hard writes called settled)
   { let threw = '', hard = '', standard = ''; F.foldTake();                                                                                                           // (6) the page's own roads
     try { const W = await quiet(() => H.standUp()); for (let i = 0; i < 120; i++) W.step(1 / 60);
-      const D = await import(`${H.ROOT}/src/game/difficulty.ts`);
+      const D = await import(`${H.ROOT}/src/game/difficulty.ts`), C = await import(`${H.ROOT}/src/host/autocam.ts`);
       D.setDifficulty('hard', false); hard = String(D.difficultyNow()); for (let i = 0; i < 30; i++) W.step(1 / 60); D.setDifficulty('standard', false); standard = String(D.difficultyNow());
+      for (const m of Object.keys(C.AUTO_MODES)) { C.setAutoMode(m); for (let i = 0; i < 10; i++) W.step(1 / 60); } C.resetAutoTune();
     } catch (e: any) { threw = String(e?.message ?? e); }
     out.stood = { threw, hard, standard, refused: F.foldTake(), lost: F.foldLost() }; }
   console.log(JSON.stringify({ result: out })); process.exit(0);

@@ -15,7 +15,7 @@ const runs = new Map<string, Map<string, Map<number, Run>>>();   // scn → arm 
 for (const f of readdirSync(dir)) { const m = f.match(new RegExp(`^(.+?)\\.(${ARMS})(?:\\.(.+))?\\.jsonl$`)); if (!m || (!ALLTAGS && (m[3] ?? '') !== TAG)) continue; if (wantArms.length && !wantArms.includes(m[2])) continue; if (ALLTAGS && m[3]) m[2] = m[2] + SEP + m[3];
   for (const l of readFileSync(resolve(dir, f), 'utf8').split('\n')) { if (!l.trim()) continue; let r: Run; try { r = JSON.parse(l); } catch { continue; }
     if (!runs.has(m[1])) runs.set(m[1], new Map()); const A = runs.get(m[1])!; if (!A.has(m[2])) A.set(m[2], new Map()); A.get(m[2])!.set(r.seed, r); } }
-const ORDER = ['night-breach', 'room-clear-pair', 'room-clear-four', 'hostage-rescue', 'records-pair', 'rescue-registry', 'depot-four', 'block-four', 'warehouse-four', 'compound-four', 'barracks-four'];
+const ORDER = ['night-breach', 'room-clear-pair', 'room-clear-four', 'hostage-rescue', 'records-pair', 'rescue-registry', 'depot-four', 'block-four', 'block-squads', 'warehouse-four', 'compound-four', 'barracks-four'];
 const scns = [...runs.keys()].sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b));
 const ARM_ORDER = ARMS.split('|'), armCmp = (a: string, b: string) => ARM_ORDER.indexOf(baseOf(a)) - ARM_ORDER.indexOf(baseOf(b)) || tagOf(a).localeCompare(tagOf(b)), armsOf = (scn: string) => [...runs.get(scn)!].sort((a, b) => armCmp(a[0], b[0]));
 /** every arm key in the folder, in order · those with a partner */

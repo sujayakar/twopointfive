@@ -6,7 +6,7 @@
 # A folder is ONE arm of ONE build: its `arm.txt` holds the commit, the PT_* environment and the --set it was started with, and a resume under anything
 # else is refused (exit 2). What a failed run printed is in the folder's errors.log.
 set -e
-D=${1:?out dir}; SEEDS=${2:-1-144}; SCNS=${3:-night-breach,room-clear-pair,room-clear-four,hostage-rescue,records-pair,depot-four,block-four,warehouse-four,compound-four,barracks-four,rescue-registry}; JOBS=${4:-4}; SET=${5:-'{}'}
+D=${1:?out dir}; SEEDS=${2:-1-144}; SCNS=${3:-night-breach,room-clear-pair,room-clear-four,hostage-rescue,records-pair,depot-four,block-four,block-squads,warehouse-four,compound-four,barracks-four,rescue-registry}; JOBS=${4:-4}; SET=${5:-'{}'}
 HERE=$(cd "$(dirname "$0")" && pwd); mkdir -p "$D"
 ARM="commit $(git -C "$HERE" rev-parse --short HEAD 2>/dev/null || echo unknown)$(git -C "$HERE" diff --quiet HEAD -- src tools/qa/playthrough.ts tools/qa/line-watch.ts tools/qa/headless.ts 2>/dev/null || echo ' +local changes') · env $(env | grep '^PT_' | grep -v '^PT_LINE=\|^PT_DIGEST=' | sort | tr '\n' ' ')· set $SET"
 if [ -f "$D/arm.txt" ]; then [ "$(cat "$D/arm.txt")" = "$ARM" ] || { echo "$D holds another arm: $(cat "$D/arm.txt") — this one is: $ARM" >&2; exit 2; }; else echo "$ARM" > "$D/arm.txt"; fi

@@ -39,7 +39,7 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
 const guarded = (fn: () => Promise<boolean>) => async () => { try { return await fn(); } catch (e) { console.log(`- FAIL — the probe threw\n    ${e instanceof Error ? e.stack : String(e)}`); return false; } };
 const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); };
 /** every level a mission is played on, and the two yards (undefined = the office the harness stands by default) */
-const ALL_LEVELS: (string | undefined)[] = [undefined, 'records.json', 'depot.json', 'block.json', 'barracks.json', 'compound.json', 'warehouse.json', 'registry.json', 'kit-yard.json', 'test-rooms.json'];
+const ALL_LEVELS: (string | undefined)[] = [undefined, 'records.json', 'depot.json', 'block.json', 'block-squads.json', 'barracks.json', 'compound.json', 'warehouse.json', 'registry.json', 'kit-yard.json', 'test-rooms.json'];
 /** STAY_LEVELS=office,depot (env): the wait over those levels only */
 const LEVELS = process.env.STAY_LEVELS ? ALL_LEVELS.filter(f => process.env.STAY_LEVELS!.split(',').includes((f ?? 'office.json').replace('.json', ''))) : ALL_LEVELS;
 

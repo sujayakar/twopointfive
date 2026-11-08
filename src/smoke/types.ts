@@ -19,14 +19,13 @@ export interface SmokeEmitter {
                         // pushes its neighbours apart (a radial velocity splat would be projected away in the same step); density pays exp(-expand·dt)
   attack?: number;      // seconds: emission envelope min(1, age/attack), fading over the last quarter of ttl — replaces the per-kind envelopes when set
   jitter?: number;      // per-frame direction (± jitter/2 per axis) and speed (± jitter/2 relative) wobble; default by kind (0.08 jets / 0.35 plumes)
-  lattice?: 'fine' | 'coarse';   // which lattice to land on (default: canister → coarse 6.25 cm, everything else → fine 2.2 cm)
+  lattice?: 'fine' | 'coarse';   // which lattice to land on (default: canister → coarse 5.5 cm, everything else → fine 2.2 cm)
   confined?: boolean;   // dropped when its track() dies (spark trails, barrel wisps)
   prio?: number;        // when more emitters are live than the solver packs per step: 2 = keep (screens), 1 = default, 0 = first to go (spark trails)
   anchor?: Vec3;        // (nothing in the page reads it: where the old box solver centred a fresh box)
   minVoxels?: number;   // floor the radius at this many voxels of whatever lattice it lands on (a splat under one cell deposits ~nothing, and flickers)
   look?: boolean;       // LOOK ONLY, and nobody's to count: never against `budget` (what a blast may still hang off its sparks is not such a source's to change), nothing to the game's
                         // own smoke (game/sense.ts CpuSmoke), and the first cut when a step holds more emitters than it packs — under every `prio`
-  held?: boolean;       // the game's own smoke holds what it lets out (rust/game_rules/src/sense): the drawn smoke of it is bent toward that (smoke.wgsl THE GAME'S SMOKE)
   trackVel?: boolean;   // its track()'s `dir` is the gas's VELOCITY (m/s), taken turn by turn, heading and speed both: a source on a mouth that turns and walks
   tint?: Vec3;          // LOOK ONLY (game/dustLook.ts): the scattering colour of what this emitter raises — it rides with the smoke per cell, which is drawn tinted toward it and with the dust
                         // shape (render/shaders/dust_look.wgsl); the solver, the shadow rays and the light probe's sight lines never see it
