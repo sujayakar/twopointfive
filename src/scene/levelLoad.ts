@@ -10,13 +10,11 @@ import type { Vec3 } from '../math/vec';
 import { Box, BoxFlag, makeBox, ROUGH_DEFAULT, type BoxStuff, type DoesWord } from './boxes';
 import { DOES_DEFAULT, doesSaid } from './materials';
 import type { Level, LightDef, PropDef, PropPart, LevelDoorDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DaylightDef, DeviceDef, CivilianDef, VentDef, VolumeDef, MarkDef } from './level';
-import { withScript } from './level';
-import { LEVEL_SCRIPTS } from './levelScripts';
 import { LevelData, LEVEL_DATA_VERSION, BoxData, ShapeData, ShapePieceData, DoorData, LightData, PropData, MaterialData, FloorData, SurfacesData, RoomClearPlanData, BreachPlanData, ObjectiveData, DeviceData, CivilianData, VentData, MarkData, validateLevelData, flagsToBits, bitsToFlags } from './levelData';
 import { copyMarkings } from './markings';
 import { formOf, type BoxShape, type ShapePiece } from './shapes';
 import { LIVED, isLived } from './lived';   // (no imports of its own: the lived-in rooms' switch and what counts as lived)
-import { DESTRUCTION, DRESS_GROUP } from '../game/destructionSwitch';   // (no imports of its own: the one switch + the dressing group's name)
+import { DESTRUCTION, DRESS_GROUP } from './dressing';   // (no imports of its own: the switch + the dressing group's name)
 
 const V = (v: readonly number[]): Vec3 => [v[0], v[1], v[2]];
 const VV = (a: readonly (readonly number[])[]): Vec3[] => a.map(V);
@@ -155,7 +153,6 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean; dressing?
   // data.surfaces → Level.surfaces, what game/floor.ts reads for this level's footsteps: non-enumerable, so a Level compared or written as data is what it was
   // (a file with none: floor.ts's own office map, which level-probes.ts holds equal to the office file's block).
   if (data.surfaces) Object.defineProperty(level, 'surfaces', { value: clone(data.surfaces), enumerable: false, writable: true, configurable: true });
-  { const script = LEVEL_SCRIPTS[data.name]; if (script) withScript(level, script); }   // (a level that carries a script: scene/levelScripts.ts)
   levelNames.set(level, data.name);
   return level;
 }

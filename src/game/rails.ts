@@ -124,7 +124,11 @@ const ACTS: Record<string, Act> = {
   //  word plays as it did. A step denies it where a man must not be gone for by hand, and keeps the interaction key)
   stalk: {},
   hands: { keys: ['KeyE', 'Digit0'] }, use: { keys: ['Space', 'ArrowUp', 'ArrowDown'] }, whistle: { keys: ['KeyV'] }, light: { keys: ['KeyL'] }, nvg: { keys: ['KeyN'] },
-  order: { keys: ['KeyB'] }, ring: {}, menu: { keys: ['KeyX'], buttons: 4 }, who: { keys: ['KeyT'] }, word: { keys: ['KeyF'] }, tools: { keys: ['KeyG', 'KeyH'] },
+  order: { keys: ['KeyB'] }, ring: {},
+  // (`ringPart`: THE WHEEL FOR A PART ONLY. The command key kept down is the ring with Shift down, for the men a Shift tap would have sent; with no Shift the key is seen
+  //  let go, so the press is a tap, which on a `noTap` step gives nothing and shows the note. So a step can teach the part's wheel with everyone's shut. Needs `goal`: railsFaults)
+  ringPart: {},
+  menu: { keys: ['KeyX'], buttons: 4 }, who: { keys: ['KeyT'] }, word: { keys: ['KeyF'] }, tools: { keys: ['KeyG', 'KeyH'] },
   // (Shift with the command key ADDS A GOAL — planmode.ts planGoal: a part of the squad takes it and the rest go on as they were. No key of its own: the
   //  pair is the command key's and his sprint's. A lesson that lists `goal` on a step has goals from that step — planmode.ts goalsOn asks `locks('goal')` —
   //  and until then Shift with the key is the plain key, as on every lesson that never lists it. With the goal rule itself off (CMDRING.goals) the pair is
@@ -162,11 +166,12 @@ export function railsFaults(L: LessonData): string[] {
   const bad = (w: string, a: unknown) => { if (a === undefined) return; if (!Array.isArray(a)) { out.push(`${w}: a list of actions`); return; } for (const x of a) if (!ACTS[x as string]) out.push(`${w}: no action '${String(x)}' (${RAILS_ACTIONS.join(', ')})`); };
   bad('rails.allow', R.allow);
   if (Array.isArray(R.allow) && R.allow.includes('stalk')) out.push("rails.allow: 'stalk' is open unless a step denies it, so naming it in the frame's list means nothing (a step's deny takes it, a later step's allow gives it back)");
-  const cues = new Set<string>(), open = new Set<string>(Array.isArray(R.allow) ? R.allow : []); let goalSaid = false;
+  const cues = new Set<string>(), open = new Set<string>(Array.isArray(R.allow) ? R.allow : []); let goalSaid = false, partSaid = false;
   L.steps.forEach((T, i) => { const w = `steps[${i}] '${T.id}'`; bad(`${w}.allow`, T.allow); bad(`${w}.deny`, T.deny);
     // (`goal` owns no key: Shift is `sprint`'s, and the gate takes it out of the tick on a step that does not let him run — so a goal with no sprint is a pair nobody can press)
     if (Array.isArray(T.allow)) for (const a of T.allow) open.add(a); if (Array.isArray(T.deny)) for (const a of T.deny) open.delete(a);
     if (open.has('goal') && !open.has('sprint') && !goalSaid) { goalSaid = true; out.push(`${w}: 'goal' is open here and 'sprint' is not — goal needs sprint: Shift is his sprint's key`); }
+    if (open.has('ringPart') && !open.has('goal') && !partSaid) { partSaid = true; out.push(`${w}: 'ringPart' is open here and 'goal' is not — the wheel for a part is for the men a goal would send`); }
     if (T.explain && (T.explain.text.length > CARD_CHARS || (T.explain.title?.length ?? 0) > 40)) out.push(`${w}.explain: a card is a heading of at most 40 characters and at most ${CARD_CHARS} of text (it is ${T.explain.title?.length ?? 0} and ${T.explain.text.length}): a card nobody reads teaches nothing`);
     // (a card's words and the frame's other lines are written out by lessonLine as a step's line is: a move's token in one is held the same way, by what the
     //  player reads — lesson.ts lessonTokenFaults — and a card's TITLE is shown as written, so a brace in it would be shown too)

@@ -16,7 +16,6 @@ pub struct FireRecord {
     pub flick: f64,
     pub bed: Option<f64>,
     pub fog: Option<f64>,
-    pub gas: Option<f64>,
     pub soot: Option<f64>,
 }
 impl FireRecord {
@@ -33,7 +32,6 @@ impl FireRecord {
             flick: 0.0,
             bed: None,
             fog: None,
-            gas: None,
             soot: None,
         }
     }

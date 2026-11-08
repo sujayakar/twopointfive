@@ -96,7 +96,7 @@ export interface RenderSettings {
    *  smoke, as it was. Read when a preset is applied. */
   fireSmokeShed: boolean;
   /** what the preset on says of an open fire's smoke (written by ui/quality.ts when a preset is applied; game/fire.ts reads it beside the solver's `drawing`): false = this
-   *  preset draws the fire without its smoke. Picture only, and never the game's own table (FIRE.smoke.on, the page's ?firesmoke=0, puts it off at every preset). */
+   *  preset draws the fire without its smoke. Picture only, and never the game's own table. */
   fireSmoke: boolean;
   dnSpecIters: number; dnSpecCap: number; dnSpecClampK: number; dnSpecSigmaL: number; dnSpecRough: number;
   dnDepthK: number; dnNormalPow: number; dnMotionVectors: boolean;

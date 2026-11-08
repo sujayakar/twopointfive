@@ -323,7 +323,7 @@ export const foursquadClear = guarded(async () => {
 // ---------------------------------------------------------------- the F drill
 export const foursquadDrill = guarded(async () => {
   const { verdict, done } = family('foursquad-drill: F\'s breach is the red pair\'s; blue is not owned by it');
-  const R = await rig(4, { stage: 'nb' }); const { game: g, O, NB } = R; const [r1, b1, b2] = NB.ops;
+  const R = await rig(4, { stage: 'nb' }); const { game: g, O, NB } = R; const [r1, , b1, b2] = NB.ops;
   verdict(R.why === null && NB.ops.length === 4 && NB.hostiles.length === 3 && 1 + g.guards.length === 8, 'the night breach alone with four: Sam, four teammates, three defenders', `start ${R.why} · ${names(NB.ops)} · ${1 + g.guards.length} characters`);
   R.input.pressed.add('KeyF'); R.step(); R.step(60);
   const own = NB.ops.map((x: any) => O.owners.some((o: any) => o.owns(x)));

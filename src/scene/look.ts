@@ -1,10 +1,9 @@
 // THE DEFAULT LOOK — 2010s GWOT (the levels goal: "lean into 2010s GWOT for the assets to just have something default"): mud-brick and render, dust and
-// gravel, rugs and cots and oil drums for the places (scene/gwotKit.ts is the kit; the loud levels that already read as such places have a second file in
-// it), helmets and plate carriers against local dress for the men (dress only: weapons, goggles and kit are the gear part's own switch). LOOK ONLY: nothing a man
-// collides with, hides behind or sees through differs between a level's two files, no weapon number is touched, and no dice are drawn by any of it — headless no
-// run differs by it. ON THE PAGE the repainted walls bounce other light, the GPU meter reads that bounce, and a sighting can so differ between a level's two files.
-// ONE SWITCH (and under it `suit`, the sneaking suit: on whenever the look is, looks only). OFF in this module, so everything headless (every probe, frozen digest and level load) stands as it was; the PAGE turns it on at boot before the
-// level and the cast are fetched (host/profile.ts pageSwitches: on unless the URL carries ?look=plain), a harness run under TPS_LOOK=1.
+// gravel, rugs and cots and oil drums for the places (scene/gwotKit.ts is the kit, tools/levels/gwotSkin.ts dresses the loud levels' files in it), helmets and plate carriers against local dress for the men (dress only: weapons, goggles and kit are the gear part's own switch). The men's dress is LOOK ONLY:
+// no weapon number is touched and no dice are drawn by any of it. A level's paint is that level's file: a wall's colour is in the light that comes round a room, which
+// a man's eye reads (sim/glow.rs), so paint plays.
+// ONE SWITCH (and under it `suit`, the sneaking suit: on whenever the look is, looks only). OFF in this module; the PAGE turns it on at boot before the cast is
+// fetched (host/profile.ts pageSwitches), a harness run under TPS_LOOK=1. It says what the men wear and how a leaf is painted, never which file a level is.
 // No imports here: scene/, game/ and the tools all read it.
 import type { BoxStuff } from './boxes';
 export const LOOK = {
@@ -28,7 +27,7 @@ export function suitAs(): 'quiet' | null | undefined { return suitAsked; }
  *  variants) the men are dressed as they were before the look: the first cast file and its tables, and of its defenders only the ones dressed for a building
  *  (game/cast.ts officeDress: no straw hat, no bandolier). The sneaking suit is the look's on every level (LOOK.suit). Not a knob: it is a fact of the level the
  *  PAGE booted on, said once at boot (main.ts, before the cast is fetched); everything headless leaves it true, so `LOOK.on` alone still means the look's dress there.
- *  `?look=plain` = no look at all, as ever. Looks only. */
+ *  Looks only. */
 let lookPlace = true;
 /** the page says what its level is: true = one of the look's places (every level but the office family) */
 export function setLookPlace(gwot: boolean) { lookPlace = gwot; }
@@ -42,14 +41,6 @@ export function placeOfQuery(q: URLSearchParams): boolean {
   return false;
 }
 
-/** the levels that have a file in the look: today's file → the look's (same rooms, doors, marks and squads; tools/levels/<name>-gwot.ts builds it from the
- *  same generator) */
-export const LOOK_LEVELS: Readonly<Record<string, string>> = {
-  'compound.json': 'compound-gwot.json', 'barracks.json': 'barracks-gwot.json', 'warehouse.json': 'warehouse-gwot.json', 'depot.json': 'depot-gwot.json',
-  'registry.json': 'registry-gwot.json', 'block.json': 'block-gwot.json', 'records.json': 'records-gwot.json',
-  'consulate.json': 'consulate-gwot.json', 'defuse.json': 'defuse-gwot.json', 'floodlit.json': 'floodlit-gwot.json', 'mousehole.json': 'mousehole-gwot.json',
-  'killhouse.json': 'killhouse-gwot.json', 'hall.json': 'hall-gwot.json',
-};
 /** DOOR LEAVES per level (picture only; scene/leafPaint.ts paintLeaves): the paint of the outside leaves and, where a level has its own, of the inside ones — for
  *  the levels whose accent is not one of the three paints paintLeaves counts off a level's boxes (the compound's blue, the barracks' green, the depot's oxide
  *  red). Without a row here every such level got the barracks' green doors. Keyed by the level's own file, colours as plain numbers (no imports here).
@@ -70,21 +61,14 @@ export const LOOK_DOORS: Readonly<Record<string, { out: readonly [number, number
   'killhouse.json': { out: [0.26, 0.12, 0.42], in: [0.55, 0.43, 0.27], stuff: { in: 'wood' } },   // the shoot house: its marking paint's violet, darker, outside; raw plywood inside
   'hall.json': { out: [0.16, 0.36, 0.47] },                                      // the scouts' barrack wing: its range card's pale sky blue, darker
 };
-/** the file to LOAD for a level the URL / a mission row names: the look's while the switch is on and the level has one, else the file itself */
-export function lookLevelFile(file: string): string { return LOOK.on ? LOOK_LEVELS[file] ?? file : file; }
-/** what a page's query says: on unless `?look=plain` (or `?look=0` / `?look=off` / `?nolook`) */
-export function lookOfQuery(q: URLSearchParams): boolean { return !(q.has('nolook') || q.getAll('look').some(dressOff)); }   // (any `look` word of the address: a row of the look's lab may stand beside the dress's word in either order)
-function dressOff(v: string | null): boolean { return v === 'plain' || v === '0' || v === 'off'; }
-/** a value of `look` on an address is the DRESS's off word (the level a run plays), not a row of the look prototype's page: the two share the word */
-export const lookDressWord = (v: string | null): boolean => dressOff(v);
-/** …and of the sneaking suit: on unless `?suit=0` (or `?suit=off` / `?nosuit`) */
+/** the sneaking suit: on unless `?suit=0` (or `?suit=off` / `?nosuit`) */
 export function suitOfQuery(q: URLSearchParams): boolean { const v = q.get('suit'); return !(q.has('nosuit') || v === '0' || v === 'off'); }
 
 // THE LOOK (the material picture: render/frame.ts lookConfig, shaders/look.wgsl; not the dress above, though they share the word): what on an address is its.
 // One reader, so that the page and a run of several pages that is to be ONE look from its first page to its last (ui/benchrun.ts) cannot come to read an
-// address two ways. A `look` value is one of two things: the DRESS's off word (above), or a ROW of the look.
-/** a `look` value that is a row of the look's: bare, or `key:value`. Any other word is neither the dress's nor a row and asks for nothing (`look=old` drew
- *  the picture before this one; an address that still says it is an ordinary page, not the lab) */
+// address two ways. A `look` value is a ROW of the look.
+/** a `look` value that is a row of the look's: bare, or `key:value`. Any other word is no row and asks for nothing (`look=old` drew
+ *  the picture before this one, `look=plain` the level's other file: an address that still says one is an ordinary page, not the lab) */
 const lookRow = (v: string): boolean => v === '' || v.includes(':');
 /** its rows (`?look`, `?look=key:value`) */
 export function lookPageRows(q: URLSearchParams): string[] { return q.getAll('look').filter(lookRow); }

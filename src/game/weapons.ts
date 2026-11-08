@@ -15,7 +15,8 @@ import type { MuzzleFxKey } from './effects';
 import { GEAR, GEAR_NAMES, GEAR_MAG } from './gear';   // (a leaf: the issue kit's switch — read only inside the getters of Sam's two rows below, never as this module loads)
 import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
-export type WeaponId = 'fiveseven' | 'guard9mm' | 'aks74u' | 'ak74m' | 'akms' | 'fn2000' | 'm870' | 'mk12' | 'mp7' | 'mk46' | 'm1014' | 'hk45' | 'g18' | 'pkm' | 'mk18bare' | 'g19bare';
+import type { WeaponId } from '../scene/weaponIds';
+export type { WeaponId };
 export type FireMode = 'semi' | 'auto' | 'burst';
 export type WeaponClass = 'pistol' | 'carbine' | 'rifle' | 'shotgun';
 /** what leaves a dying (or downed) hand that held it: a throwables.ts ItemKind (combat.ts dropFromHand) — 'rifle' has no body of its own until R2 gives it one */

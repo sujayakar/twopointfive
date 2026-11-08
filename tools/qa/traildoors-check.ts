@@ -15,7 +15,7 @@
 import { ROOT } from './headless.ts';
 import { guarded, family } from './thresholdmenu-probes.ts';
 const { walk } = (await import('./registry-probes.ts')) as any;
-const { REGISTRY_ROOMS } = (await import(`${ROOT}/tools/levels/registry.ts`)) as any;
+const { REGISTRY_ROOMS } = (await import(`${ROOT}/tools/levels/registry-floor.ts`)) as any;
 const { knobsCopy, knobsBack } = (await import(`${ROOT}/src/game/knobs.ts`)) as any;
 
 type Rect = { x0: number; x1: number; z0: number; z1: number };

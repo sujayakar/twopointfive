@@ -245,8 +245,8 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
       all = !!l && u.getAll('look').join() === ',roomb:0.9,eyes:0' && u.get('longfoot') === '0' && u.has('nocutboxes') && u.get('quality') === 'high' && !u.has('lookkit') && !u.has('fow') && !u.has('hour') && !u.has('round') && u.get('benchrun') === String(i);
       if (l && i < BENCH_SCENES.length - 1) { l.leg.onward({ steps: l.leg.steps, notes: l.leg.notes, scenes: l.leg.scenes, boot: null, away: 0 }); at = searchOf(pg.went[0] ?? ''); } else l?.leg.over(); }
     check(all && seen.length === BENCH_SCENES.length && store.size === 0, `a run asked for on the look prototype's page keeps the look's rows and its boot words on EVERY scene, written plain or percent-coded, and nothing of the visitor's kit, fog, hour or rule switches (${seen[seen.length - 1]})`);
-    const tp = tab('?look=plain&longfoot=0&bench'), ok = benchBegin(false, tp) === null && tp.went.length === 1, up = new URLSearchParams(searchOf(tp.went[0] ?? ''));
-    check(ok && !up.has('look') && up.get('longfoot') === '0', `the dress's own word is not the look's and does not ride along; the page is the look's all the same, so a word of the look's beside it does (${tp.went[0]})`);
+    const tp = tab('?longfoot=0&bench'), ok = benchBegin(false, tp) === null && tp.went.length === 1, up = new URLSearchParams(searchOf(tp.went[0] ?? ''));
+    check(ok && !up.has('look') && up.get('longfoot') === '0', `the page is the look's on every address, so a word of the look's rides along (${tp.went[0]})`);
     store.clear();
     // the cut boxes' switch kept off on this machine: the run times the look that page shows, and its address says so
     const kept = new Map<string, string>([['twopointsix.cutboxes', '0']]); (globalThis as any).localStorage = { getItem: (k: string) => kept.get(k) ?? null };

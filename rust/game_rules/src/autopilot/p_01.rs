@@ -81,41 +81,44 @@ pub fn auto_pick(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: &crate:
     AutoPick { id: Some(e.ids[0].clone()), men: Some(w.men), word: false, why, t: tm, kept: e.kept }
 }
 
-/// The quick key, pressed on `t`: true when the press was the autopilot's (given and stamped, refused aloud, or a charge left on its word).   (autopilot.ts autoQuick)
-pub fn auto_quick(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> bool {
+/// The quick key tapped on `t`: everyone it goes to.   (autopilot.ts autoQuick)
+pub fn auto_quick(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> bool { quick(g, t, None) }
+
+/// WHAT THE QUICK KEY MEANS ON `t`, GIVEN: to everyone it goes to, or with Shift to `men` alone. One answer (`auto_pick`), so a part of the squad is given
+/// what all of it would be. True: a new group of men was sent.
+pub fn quick(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: Option<&[GuardId]>) -> bool {
     use crate::autopilot::AutoPickWhy;
-    let p = auto_pick(g, &crate::seats::here(g), t, None, None);
-    let tail = g.orders.log.last().map(|row| row.serial); // the last row, asked by identity in the TypeScript: its serial
+    let p = auto_pick(g, &crate::seats::here(g), t, None, men);
+    let (tail, group) = (g.orders.log.last().map(|row| row.serial), g.orders.group); // the last row, asked by identity in the TypeScript: its serial
+    let to = p.men.clone().or_else(|| men.map(|m| m.to_vec()));
     g.stats.autopilot.presses += 1;
-    if p.why == AutoPickWhy::Pending { return true; }
+    if p.why == AutoPickWhy::Pending { return false; }
     if p.why == AutoPickWhy::Set {
         let lines = crate::autopilot::restack_lines();
-        let men = p.men.as_deref().unwrap_or(&[]);
-        crate::orders::squad_orders_again(g, crate::orders::rows::stack::ORDER.id, t, men, &lines);
+        crate::orders::squad_orders_again(g, crate::orders::rows::stack::ORDER.id, t, to.as_deref().unwrap_or(&[]), &lines);
         g.stats.autopilot.again += 1;
-        return true;
+        return false;
     }
-    let no: Option<String>;
-    if p.word {
+    let no = if p.word {
         let at = g.ch[g.pl[g.player].ch].pos;
-        no = if crate::orders::squad_orders_big(g, &crate::seats::here(g)) {
+        if men.is_some() || crate::orders::squad_orders_big(g, &crate::seats::here(g)) {
             let none = crate::orders::OrderTarget::None(crate::orders::OrderTargetNone { at: [at[0], 0.0, at[2]], man: None });
-            let opts = crate::orders::GiveOpts { men: p.men.clone(), ack: None, on_word: None };
+            let opts = crate::orders::GiveOpts { men: to, ack: None, on_word: None };
             crate::orders::squad_orders_give(g, crate::orders::rows::go::ORDER.id, Some(&none), None, Some(&opts))
         } else {
             let who = g.orders.who;
             crate::doortools::door_tools_go(g, Some(who))
-        };
+        }
     } else if let Some(id) = &p.id {
         let ack = crate::squadnet::why_words(g, &p).map(|w| w.ack);
-        let opts = crate::orders::GiveOpts { men: p.men.clone(), ack, on_word: None };
-        no = crate::orders::squad_orders_give(g, id, Some(t), None, Some(&opts));
+        let opts = crate::orders::GiveOpts { men: to, ack, on_word: None };
+        crate::orders::squad_orders_give(g, id, Some(t), None, Some(&opts))
     } else {
         return false;
-    }
+    };
     if no.is_some() {
         g.stats.autopilot.refused += 1;
-        return true;
+        return false;
     }
     if !p.word && crate::squadnet::why_words(g, &p).is_some() { g.squad_net.stats.whys += 1.0; }
     if let Some(row) = g.orders.log.last_mut() {
@@ -135,7 +138,7 @@ pub fn auto_quick(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> 
     } else {
         g.stats.autopilot.open += 1;
     }
-    true
+    g.orders.group != group
 }
 
 /// The quick key's words: the row's own for the squad's first choice on `t` (None: nothing). Read by the ring's seats as well as the HUD.   (autopilot.ts autoHint)

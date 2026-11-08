@@ -11,7 +11,7 @@ pub fn eyes(g: &mut Game, gd: GuardId, dt: f64, staff: bool) -> Eyes {
     let mut seen = false;
     if staff && crate::teams::is_hostile(g, crate::teams::Team::Guard, crate::teams::Team::Operative) {
         acquire_foe(g, gd);
-        if g.gd[gd].foe.is_none() { g.gd[gd].foe = Some(crate::game::Foe::Player); }
+        if g.gd[gd].foe.is_none() { crate::mind::foe(g, gd, Some(crate::game::Foe::Player), "guards"); }
     } else if !staff { acquire_foe(g, gd); }
     let f = g.gd[gd].foe.clone();
     let fc = crate::teams::foe_char(g, gd);

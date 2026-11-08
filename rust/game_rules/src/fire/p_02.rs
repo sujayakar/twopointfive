@@ -101,7 +101,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
         if stale {
             books.fire = Some(FireShown {
                 n: 0.0, time: 0.0, stir: None, stir_at: None, bed: Vec::new(), smoke: Vec::new(), smokes: 0.0, beds: 0.0,
-                ember: Vec::new(), embers: 0.0, gas: Vec::new(), gas_mix: Vec::new(), gases: 0.0, soot_mix: None, kept: None,
+                ember: Vec::new(), embers: 0.0, soot_mix: None,
                 serial: 0,   // the picture's to deal, never g.serial(): a load rewinds that and the book stays. Only the bed's voice compares it, and that is not here.
             });
         }

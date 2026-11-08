@@ -12,11 +12,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 pub fn row_file(g: &crate::game::Game) -> Option<String> {
     let name = crate::scene_level_load::level_name_of(g)?;
     if name.is_empty() || name == "office" { return None; }
-    let file = alloc::format!("{}.json", name);
-    for (k, v) in crate::scene_look::look_levels().iter() {
-        if *v == file { return Some(k); }
-    }
-    Some(file)
+    Some(alloc::format!("{}.json", name))
 }
 
 /// The mission that is up is the stealth game's kind on a row that leans loud: nothing grades that run as a sneak. VERDICT.loudCard is settled ON on the page.   (verdict.ts loudRow)

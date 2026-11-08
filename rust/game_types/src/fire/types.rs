@@ -45,11 +45,7 @@ pub struct FireShown {
     pub beds: f64,
     pub ember: Vec<f64>,
     pub embers: f64,
-    pub gas: Vec<f64>,
-    pub gas_mix: Vec<f64>,
-    pub gases: f64,
     pub soot_mix: Option<Vec<f64>>,
-    pub kept: Option<f64>,
     /// INVENTED by a review: see the proposals
     pub serial: u32,
 }
@@ -67,11 +63,7 @@ impl FireShown {
             beds: 0.0,
             ember: Vec::new(),
             embers: 0.0,
-            gas: Vec::new(),
-            gas_mix: Vec::new(),
-            gases: 0.0,
             soot_mix: None,
-            kept: None,
             serial: 0,
         }
     }
@@ -169,11 +161,7 @@ pub struct FireShown2 {
     pub beds: f64,
     pub ember: Vec<f64>,
     pub embers: f64,
-    pub gas: Vec<f64>,
-    pub gas_mix: Vec<f64>,
-    pub gases: f64,
     pub soot_mix: Option<Vec<f64>>,
-    pub kept: Option<f64>,
     /// INVENTED by a review: see the proposals
     pub serial: u32,
 }
@@ -191,11 +179,7 @@ impl FireShown2 {
             beds: 0.0,
             ember: Vec::new(),
             embers: 0.0,
-            gas: Vec::new(),
-            gas_mix: Vec::new(),
-            gases: 0.0,
             soot_mix: None,
-            kept: None,
             serial: 0,
         }
     }

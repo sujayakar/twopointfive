@@ -200,6 +200,6 @@ export const smokeRestart = guarded(async () => {
 });
 
 if (import.meta.main) {
-  const all: Record<string, () => Promise<boolean>> = { 'squadsmoke-table': smokeTable, 'squadsmoke-issued': smokeIssued, 'squadsmoke-restart': smokeRestart };
+  const all: Record<string, () => Promise<boolean>> = { 'squadsmoke-table': smokeTable, 'squadsmoke-issued': smokeIssued, 'squadsmoke-order': smokeOrder, 'squadsmoke-restart': smokeRestart };
   process.exit(exitCode(await asProbes(all, wanted())));
 }

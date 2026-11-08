@@ -805,7 +805,7 @@ pub fn dig_in_set_on(g: &crate::game::Game, gd: GuardId, d: DoorId) -> bool {
     match s.men.get(gd) { Some(x) => x.phase == Phase::Set, None => false }
 }
 
-/// laststand.ts: this man is TOLD to dig in where he holds; false = already at it, no room with a door, or the team has been in it   (digin.ts digInOrder)
+/// this man is TOLD to dig in where he holds; false = already at it, no room with a door, or the team has been in it   (digin.ts digInOrder)
 pub fn dig_in_order(g: &mut crate::game::Game, def: RoomfightDefId, know: V3, beat: f64) -> bool {
     let (gd, mode, my_room) = { let x = &g.tab.roomfight_def[def]; (x.gd, x.mode, x.room) };
     let phase = state_of(g).men.get_or_insert_with(gd, new_man).phase;
@@ -818,7 +818,7 @@ pub fn dig_in_order(g: &mut crate::game::Game, def: RoomfightDefId, know: V3, be
     true
 }
 
-/// laststand.ts: where his dig-in stands ('idle' = not at it)   (digin.ts digInPhase)
+/// where his dig-in stands ('idle' = not at it)   (digin.ts digInPhase)
 pub fn dig_in_phase(g: &crate::game::Game, gd: GuardId) -> String {
     let phase = g.m.digin.states.as_ref().and_then(|s| s.men.get(gd)).map_or(Phase::Idle, |x| x.phase);
     String::from(phase.as_str())

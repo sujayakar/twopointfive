@@ -2361,7 +2361,7 @@ if (on('gunroles-deal', 'gunroles', 'all')) await run('gunroles-deal', async () 
 if (on('gunroles-entry', 'gunroles', 'all')) await run('gunroles-entry', async () => (await import('./gunroles-check.ts')).gunrolesEntry());      // four on a door: the MP7 at the frame and first through, the Mk 12 and the Mk 46 on the rear marks and last; issue carbines as off
 if (on('gunroles-fight', 'gunroles', 'all')) await run('gunroles-fight', async () => (await import('./gunroles-check.ts')).gunrolesFight());      // string length by gun: a defender's PKM against the carbines, a teammate's Mk 46 and Mk 12 against the pair
 if (on('gunroles-lanes', 'gunroles', 'all')) await run('gunroles-lanes', async () => (await import('./gunroles-check.ts')).gunrolesLanes());      // the belt-fed defender is not taken from his gun's place; the far opening is worth more to the long gun, less to a pistol
-// ONE BIG SLOT A CARD, AND ITS TWO TOOLS ON A LOCK (src/game/kit.ts BIGSLOT, src/game/bigkit.ts; tools/qa/bigslot-check.ts raises the switch itself, so it asks the same on either stand; BIGKIT_BREAK=1 must fail)
+// ONE BIG SLOT A CARD, AND ITS TWO TOOLS ON A LOCK (src/game/kit.ts BIGSLOT, src/game/bigkit.ts; tools/qa/bigslot-check.ts raises the switch itself, so it asks the same on either stand; BIGKIT_BREAK=1 deals no tool: mate and shut must fail)
 if (on('bigslot-card', 'bigslot', 'kit', 'all')) await run('bigslot-card', async () => (await import('./bigslot-check.ts')).bigCard());             // one big row a card, the shotgun off the weapon row, never two big things, never a pouch; old stores
 if (on('bigslot-mate', 'bigslot', 'doortools', 'all')) await run('bigslot-mate', async () => (await import('./bigslot-check.ts')).bigMate());      // a teammate's shotgun off its sling and back, his hammer, the face the leaf opens toward
 if (on('bigslot-shut', 'bigslot', 'doortools', 'all')) await run('bigslot-shut', async () => (await import('./bigslot-check.ts')).bigShut());      // any shut door, from beside the frame, the door ends open; the squad's row on H
@@ -2768,7 +2768,7 @@ if (on('enemysquads-radiocheck', 'enemysquads', 'all')) await run('enemysquads-r
 // ---------------------------------------------------------------- the defenders' cues (cues-probes.ts; game/cues.ts — their net on the radio strip, a line for the silent decisions): 'cues' = the family
 if (on('cues-lines', 'cues', 'all')) await run('cues-lines', async () => (await import('./cues-probes.ts')).cuesLines());
 if (on('cues-run', 'cues', 'all')) await run('cues-run', async () => (await import('./cues-probes.ts')).cuesRun());
-// the last few defenders of a room clear (game/laststand.ts — the call out, settled on, and the regroup, an open decision the page has off): tools/qa/laststand-probes.ts
+// the last few defenders of a room clear (game/laststand.ts: the call out): tools/qa/laststand-probes.ts
 if (on('laststand-callout', 'laststand', 'all')) await run('laststand-callout', async () => (await import('./laststand-probes.ts')).lastStandCallOut());
 if (on('laststand-few', 'laststand', 'all')) await run('laststand-few', async () => (await import('./laststand-probes.ts')).lastStandFew());
 if (on('laststand-fled', 'laststand', 'all')) await run('laststand-fled', async () => (await import('./laststand-probes.ts')).lastStandFled());
@@ -2978,7 +2978,7 @@ if (on('qonly', 'squadorders', 'all')) await run('qonly', async () => (await imp
 // one word, two doors on one signal (doortools.ts goMen); no squad can into a room teammates already hold (DOORTOOLS.tossMate) — onesignal-check.ts
 if (on('onesignal', 'squadorders', 'all')) await run('onesignal', async () => (await import('./onesignal-check.ts')).onesignalCheck());
 if (on('wheelidle', 'squadorders', 'all')) await run('wheelidle', async () => (await import('./wheelidle-check.ts')).wheelidleCheck());   // the wheel with the ring up steps nobody (CMDRING.wheelIdle): the recorded scroll leaves the orders with everyone; off, it steps who and the choice stays
-if (on('goals', 'squadorders', 'all')) await run('goals', async () => (await import('./goals-check.ts')).goalsCheck());   // Shift + the key adds a goal (CMDRING.goals): a second door takes one pair and the word sends both in; a second spot splits who covers what
+if (on('goals', 'squadorders', 'all')) await run('goals', async () => (await import('./goals-check.ts')).goalsCheck());   // Shift + the key adds a goal (CMDRING.goals): a second door takes one pair and the word sends both in; a second spot parts who moves where, and covering a spot is the wheel's
 // the first goal sends half the squad, and the key tapped twice is 'fall in' (cmdring.ts CMDRING.goalHalf / ?goalhalf=0 / TPS_GOALHALF=1 and CMDRING.twice / ?qtwice=0 / TPS_QTWICE=1; halftwice-check.ts; GOALHALF_BREAK=1 and QTWICE_BREAK=1 must each fail)
 if (on('halftwice', 'squadorders', 'all')) await run('halftwice', async () => (await import('./halftwice-check.ts')).halftwiceCheck());
 if (on('plainentry', 'squadorders', 'all')) await run('plainentry', async () => (await import('./plainentry-check.ts')).plainEntryCheck());   // the key never picks a tool: on a door they are stacked on the squad goes in by the plain open and clear, as the word's key sends it (AUTOPILOT.plain)

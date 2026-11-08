@@ -3,7 +3,7 @@
 // What the headless lesson run cannot see: that the bundle boots the level and its script on the frame (game/rails.ts) from the Tutorial group's row, that the
 // one big line is up with the player's own keys on key caps, that Shift with the squad's key is the plain key until its step and adds a goal from it with plan
 // mode never up, that one press of the word's key starts an entry on each door, that a hand walks to each ring and finds the next mark on its picture, that on
-// the last gate a Shift tap gives nothing and says to keep the key down, that the pair kept down opens the ring for a pair with the step's own line on it, and
+// each gate a Shift tap gives nothing and says to keep the key down, that the pair kept down opens the ring for a pair with the step's own line on it, and
 // that the mission plays to its end with every card met and closed and no page error.
 //   PORT=5233 node tools/qa/tut-queue-page.cjs        (a dev server on that port: PORT=5233 bun run tools/serve.ts)
 //   env: QUALITY (default verylow) · GOD=0 (the player can be hit; by default he cannot, so that a slow hand on a slow adapter still ends the run: the
@@ -117,19 +117,23 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   ok = await walk(at('yard'), [[23.3, 0, 20.4], [23.3, 0, 13.0]]); R = await until(x => x.i >= 10, 8);   // (back round the hall's end, over open ground: the way through the hall is the scripted player's — tools/qa/lessons/tut-queue.ts)
   check(ok && R.id === 'gateA' && R.markOn, "walked out to the yard's mark: the road gate's spot is on the picture", `reached ${ok} at ${R.pos} · step '${R.id}' · mark on the picture ${R.markOn}`);
   await run(120);   // (the file closes up behind him, as a hand waits for it)
-  await point(at('gateA')); await shiftTap(); R = await until(x => x.i >= 11, 6); { const e = at('gateA'), k = `${e[0].toFixed(1)},${e[2].toFixed(1)}`;
-    check(R.id === 'gateB' && (R.watch[k] ?? []).length === 2 && cards.some(c => c.h === 'Pick their order'), 'Shift with the key by the road gate: two of them turn to watch it from where they stand, and the wheel\'s card comes', `step '${R.id}' · watching: ${JSON.stringify(R.watch)} · cards: ${cards.map(c => c.h).join(' · ')}`); }
-  // (the last gate is the wheel's: a Shift tap gives nothing and says to keep the key down)
-  R = await until(x => x.up && !!x.line, 3);
-  { const n0 = R.orders; await point(at('gateB')); await shiftTap(); const a = await read();
-    check(a.orders === n0 && /held down/.test(a.note) && !a.ring, 'on the wheel\'s step a Shift tap gives no order and the line says to keep the key down', `orders ${n0} → ${a.orders} · the note "${a.note}" · "${a.line}" keys [${a.keys}]`); }
-  await point(at('gateB')); await page.keyboard.down('ShiftLeft'); await run(2); await page.keyboard.down('KeyQ'); await run(50); await point(at('gateB')); R = await read();
-  { const want = L.steps.find(T => T.id === 'gateB').flat.replace(/\[([^\]]+)\]/g, '$1');
-    check(!!R.ring && R.ring.part && R.ring.flat && R.ring.men.length === 2 && R.ring.rows.indexOf('cover') === 1 && R.ring.rows.length <= 5 && R.line.replace(/\s+/g, ' ').trim() === want && R.keys.includes('2'),
-      'Shift and the key kept down: the one ring is up for two of them, no more than five wedges, and the line is the step\'s own for the wedge to press, its digit a key cap', `ring ${JSON.stringify(R.ring)} · "${R.line}" keys [${R.keys}]`); }
-  await page.keyboard.down('Digit2'); await run(2); await page.keyboard.up('Digit2'); await run(3); await page.keyboard.up('KeyQ'); await page.keyboard.up('ShiftLeft'); await run(6); R = await until(x => x.i >= 12, 6);
+  // (both gates are the wheel's: a Shift tap gives nothing and says to keep the key down; kept down, the ring is a pair's and its second wedge is theirs)
+  const gate = async (id, why) => { R = await until(x => x.up && !!x.line && x.id === id, 6);
+    if (id === 'gateA') check(cards.some(c => c.h === 'Pick their order' && c.closed), 'the wheel\'s card comes before the press by the road gate', `cards: ${cards.map(c => c.h).join(' · ')}`);
+    { const n0 = R.orders; await point(at(id)); await page.keyboard.down('KeyQ'); await run(50); await point(at(id)); const a = await read(); await page.keyboard.up('KeyQ'); await run(6); const b = await read();
+      check(!a.ring && b.orders === n0 && /held down/.test(b.note), `by ${why}, the key kept down with no Shift opens no ring and gives no order`, `ring ${JSON.stringify(a.ring)} · orders ${n0} → ${b.orders} · the note "${b.note}"`); }
+    { const n0 = R.orders; await point(at(id)); await shiftTap(); const a = await read();
+      check(a.orders === n0 && /held down/.test(a.note) && !a.ring, `by ${why}, a Shift tap gives no order and the line says to keep the key down`, `step '${a.id}' · orders ${n0} → ${a.orders} · the note "${a.note}" · "${a.line}" keys [${a.keys}]`); }
+    await point(at(id)); await page.keyboard.down('ShiftLeft'); await run(2); await page.keyboard.down('KeyQ'); await run(50); await point(at(id)); R = await read();
+    { const want = L.steps.find(T => T.id === id).flat.replace(/\[([^\]]+)\]/g, '$1');
+      check(!!R.ring && R.ring.part && R.ring.flat && R.ring.men.length === 2 && R.ring.rows.indexOf('cover') === 1 && R.ring.rows.length <= 5 && R.line.replace(/\s+/g, ' ').trim() === want && R.keys.includes('2'),
+        `by ${why}, Shift and the key kept down: the one ring is up for two of them, no more than five wedges, and the line is the step's own for the wedge to press, its digit a key cap`, `ring ${JSON.stringify(R.ring)} · "${R.line}" keys [${R.keys}]`); }
+    await page.keyboard.down('Digit2'); await run(2); await page.keyboard.up('Digit2'); await run(3); await page.keyboard.up('KeyQ'); await page.keyboard.up('ShiftLeft'); await run(6); };
+  await gate('gateA', 'the road gate'); R = await until(x => x.id === 'gateB', 6); { const e = at('gateA'), k = `${e[0].toFixed(1)},${e[2].toFixed(1)}`;
+    check(R.id === 'gateB' && (R.watch[k] ?? []).length === 2 && !R.ring, 'its second wedge: two of them turn to watch the road gate from where they stand', `step '${R.id}' · watching: ${JSON.stringify(R.watch)} · cards: ${cards.map(c => c.h).join(' · ')}`); }
+  await gate('gateB', 'the back gate'); R = await until(x => x.id === 'hold', 6);
   { const e = at('gateA'), n = at('gateB'), ke = `${e[0].toFixed(1)},${e[2].toFixed(1)}`, kn = `${n[0].toFixed(1)},${n[2].toFixed(1)}`;
-    check(R.id === 'hold' && (R.watch[ke] ?? []).length === 2 && (R.watch[kn] ?? []).length === 2 && !R.ring && !R.plan, 'its second wedge: that pair turns to the back gate, the other pair stays on the road gate, the ring is away', `step '${R.id}' · watching: ${JSON.stringify(R.watch)}`); }
+    check(R.id === 'hold' && (R.watch[ke] ?? []).length === 2 && (R.watch[kn] ?? []).length === 2 && !R.ring && !R.plan, 'its second wedge: the other pair turns to the back gate, the first pair stays on the road gate, the ring is away', `step '${R.id}' · watching: ${JSON.stringify(R.watch)}`); }
   R = await until(x => x.over && x.men === 0, 90);
   check(R.over && R.men === 0 && R.mates === 4, 'both gates are held: every step is done, all eight enemies are down and nobody of his is lost', `over ${R.over} at ${R.t} s · ${R.men} enemies left · ${R.mates} teammates · end ${JSON.stringify(R.end)}`);
   await run(240); R = await read();

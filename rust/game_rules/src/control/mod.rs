@@ -16,7 +16,7 @@
 //! Today a rule's `transition` runs only when no rule above it has him, just before its `propose`, as the one function it was cut from did.
 //!
 //! WHAT A RULE MAY ASK FOR (`Ask`), and so where in a man's frame it is asked (`Stage`):
-//!   `GuardScript`  asked before he senses anything (`Stage::Body`): his whole body follows the script for the tick and nothing else of his
+//!   `GuardScript`  asked once his ears and eyes have run (`Stage::Body`): his whole body follows the script for the tick and nothing else of his
 //!                  frame runs (guards::update_guard's `lent`). Below these rules stands his own script (`gd.script`, which 71 files read
 //!                  and so stays where it is), and below that his own state.
 //!   `TakeCover`    asked in the fight, after his senses and his state (`Stage::Cover`): he gets down where he is or goes crouched to a
@@ -76,7 +76,7 @@ impl TakeCover {
     pub fn to(spot: V3, pace: f64) -> Self { TakeCover { to: Some(spot), pace, ..TakeCover::down() } }
 }
 
-/// What a rule asks of a man is the stage of his frame it is asked at: a script before he senses, cover in his fight.
+/// What a rule asks of a man is the stage of his frame it is asked at: a script before anything of his own, cover in his fight.
 pub trait Ask: Copy {
     const STAGE: Stage;
     fn intent(self) -> Intent;
@@ -280,7 +280,7 @@ pub fn grant_from(g: &mut Game, gd: GuardId, dt: f64, stage: Stage, rules: &[Lis
     None
 }
 
-/// the arbiter over the game's list, before he senses: the rule that has him and the script his body follows
+/// the arbiter over the game's list, before anything of his own: the rule that has him and the script his body follows
 pub fn grant_body(g: &mut Game, gd: GuardId, dt: f64) -> Option<(RuleId, GuardScript)> {
     match grant_from(g, gd, dt, Stage::Body, RULES)? { (r, Intent::Script(s)) => Some((r, s)), _ => None }
 }

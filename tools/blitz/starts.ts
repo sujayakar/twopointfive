@@ -53,8 +53,8 @@ if (has('--one')) { const id = opt('--one')!, row = ROWS.find(r => r.id === id);
     const { standUp } = await import(`${ROOT}/tools/qa/headless.ts`);   // (the page's stand: profile.ts shippedBoot has run its `pageSwitches` of no word)
     const { pageSwitches } = await import(`${ROOT}/src/host/profile.ts`), { LESSON_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`), { lessonGroup } = await import(`${ROOT}/src/scene/scenarios.ts`), { kitLessonPage } = await import(`${ROOT}/src/game/kit.ts`);
     const { initDifficulty } = await import(`${ROOT}/src/game/difficulty.ts`);
-    const { quitScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`), { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { lookLevelFile } = await import(`${ROOT}/src/scene/look.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-    const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync((f => existsSync(f) ? f : resolve(ROOT, 'levels', file))(resolve(ROOT, 'levels', lookLevelFile(file))), 'utf8')); return loadLevel(data); };
+    const { quitScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`), { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
+    const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); };
     // BEFORE THE GAME EXISTS, in main.ts's order
     pageSwitches(q);
     const lessonRow = LESSON_MISSIONS.find((e: any) => e.level === q.get('levelFile')) ?? null; kitLessonPage(lessonRow && lessonGroup(lessonRow.group) ? lessonRow : null);

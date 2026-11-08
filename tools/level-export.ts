@@ -16,7 +16,7 @@ const { levelToData, loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`
 const { stampDoes } = await import('./levels/doesWas.ts');   // (what a box nobody spoke for does: the word its colour had. src/scene/materials.ts)
 const { validateLevelData, serializeLevelData, parseLevelData, levelDataDigest, structuralDiff, canonicalLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
-const { FINISHES, BUILDING, GRASS_EDGE } = await import(`${ROOT}/src/game/floor.ts`);
+const { FINISHES, BUILDING, GRASS_EDGE } = await import(`${ROOT}/src/scene/officeFloor.ts`);
 
 const argv = process.argv.slice(2);
 const CHECK = argv.includes('--check');
@@ -30,7 +30,7 @@ const level = buildOfficeProcedural(trace, TEXEL !== undefined ? { texel: TEXEL,
 if (trace.groups.length !== level.boxes.length) throw new Error(`trace: ${trace.groups.length} groups for ${level.boxes.length} boxes`);
 if (TEXEL !== undefined) level.markTexel = TEXEL;   // (the Level's own: levelToData writes it into the file's meta, the loader hands it back. How kept the office is goes the same way: `level.kept`, set by the builder)
 
-// 2. annotations the runtime Level has no slot for: the palette as materials, the footstep surface map (floor.ts owns it today — mirrored here and
+// 2. annotations the runtime Level has no slot for: the palette as materials, the footstep surface map (officeFloor.ts —
 //    cross-checked by tools/qa/level-probes.ts), one floor, the traceable world bounds
 stampDoes(level);   // (Box.does, as tools/levels/export.ts gives it: each box the word its colour had, unless its maker said one)
 const materials: Record<string, { albedo: [number, number, number]; rough?: number; metal?: boolean; does?: string }> = {};
@@ -40,7 +40,7 @@ const materials: Record<string, { albedo: [number, number, number]; rough?: numb
     materials[name] = { albedo: [alb[0], alb[1], alb[2]], ...((OFFICE_FINISH as Record<string, { rough: number; metal?: boolean }>)[name] ?? {}), ...rowWord(name), ...rowDoes(name) };   // + the finish (rough / metal) the reflection pass reads, where the palette names one
   } }
 const zoneIds = ['corridor_lino', 'lobby_stone', 'server_tile', 'breakroom_lino'];
-if (FINISHES.length !== zoneIds.length) throw new Error('floor.ts FINISHES changed: name the zones here');
+if (FINISHES.length !== zoneIds.length) throw new Error('officeFloor.ts FINISHES changed: name the zones here');
 const surfaces = {
   building: { ...BUILDING }, grassEdge: GRASS_EDGE, inside: 'carpet', outside: 'asphalt', verge: 'grass',
   zones: FINISHES.map((f: any, i: number) => ({ id: zoneIds[i], mat: f.mat, x0: f.x0, z0: f.z0, x1: f.x1, z1: f.z1, notes: f.room })),

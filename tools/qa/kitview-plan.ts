@@ -9,19 +9,16 @@
 //      its `ref`; what a set or an `add` lays passes the validator; a man walks from Sam's place through the opening on the nav grid's cells.
 //      NEVER A FAILURE: `- WARNING —` where a way names a box by its generated id (`box_NNNN`, its place in the file) · `note —` where a written `hide` takes a box in no line of the camera's, or leaves one
 //      standing in them, or where a lamp behind the anchor goes out with the room lights.
-//   C2. A LEVEL AND ITS LOOK TWIN CARRY THE SAME BLOCK, to the byte: the kit screen reads `X.json` and the picture's page loads `X-gwot.json` (scene/look.ts LOOK_LEVELS).
 //   C3. EVERY CARD OPEN, EVERY SQUAD SIZE: no two men within a body of each other, the fourth man's acting place on free floor.
 //   D. A QUIET MISSION'S WAY hangs its pool lamp over a glowing box on a wall (no box, no fixture to shoot out).
 //   E. THE WORD `laid` is the loader's and a file may not write it; a broken block does not refuse a level to play (parseLevelData `kitView: 'drop'`), and is refused everywhere else.
 // Lines are `- PASS — …` / `- FAIL — …` (tools/qa/gate.sh counts them). The first line printed names the levels that carry a block (nothing else lists them). Exit 0 = all pass · 1 = a row failed · 2 = an
 // unknown level, or a module with no `face_kit_plan` (it is older than this tool: bun run tools/blitz/face-build.ts).
-// KITPLAN_BREAK=1: what is asked is spoiled (the side worked out read flipped, a block's second place moved onto the wall's line, every way's door read as steel, a look twin's block read with its first way
-// gone, the way in asked of a point past the floor, the fourth man's place on Sam's): rows of B, C, C2 and C3 must FAIL, exit 1.
+// KITPLAN_BREAK=1: what is asked is spoiled (the side worked out read flipped, a block's second place moved onto the wall's line, every way's door read as steel, the way in asked of a point past the floor, the fourth man's place on Sam's): rows of B, C and C3 must FAIL, exit 1.
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { faceHere, FACE_WASM } from '../blitz/face-build';
 import { parseLevelData, validateLevelData } from '../../src/scene/levelData';
-import { LOOK_LEVELS } from '../../src/scene/look';
 import { ALL_MISSIONS } from '../../src/scene/scenarioList';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -145,19 +142,6 @@ function generic() {
   if (!withBlock.length) say('  (no level asked about carries a block)');
 }
 
-// ---- C2
-function twins() {
-  say('\n=== C2. a level and its look twin carry the same block');
-  let n = 0;
-  for (const [base, twin] of Object.entries(LOOK_LEVELS).map(([a, b]) => [a.replace(/\.json$/, ''), String(b).replace(/\.json$/, '')])) {
-    if (!names.includes(base) && !names.includes(twin)) continue; if (!files.includes(base) || !files.includes(twin)) continue;
-    const A = levelOf(base).data.scenarios?.kitView, B0 = levelOf(twin).data.scenarios?.kitView; if (A === undefined && B0 === undefined) continue; n++;
-    const B = BREAK && B0 ? { ...B0, ways: (B0.ways as Data[]).slice(1) } : B0;   // (the break: the twin's first way gone)
-    const a = JSON.stringify(A ?? null), b = JSON.stringify(B ?? null), where = (() => { if (!A || !B) return ''; for (const k of new Set([...Object.keys(A), ...Object.keys(B)])) if (JSON.stringify(A[k]) !== JSON.stringify(B[k])) { if (k !== 'ways') return ` — they differ in \`${k}\``; const i = (A.ways as Data[]).findIndex((y, j) => JSON.stringify(y) !== JSON.stringify(B.ways?.[j])); return ` — they differ in way ${i < 0 ? (A.ways as Data[]).length : i}`; } return ''; })();
-    row(a === b, `${base} and ${twin}: the same \`scenarios.kitView\` in both files${a === b ? '' : !A ? ` — ONLY ${twin}.json has a block (the kit screen reads ${base}.json: no picture is ever asked for)` : !B ? ` — ONLY ${base}.json has a block (the picture's page loads ${twin}.json: it says \`none\`)` : where}`); }
-  if (!n) say('  (no level asked about has a look twin and a block)');
-}
-
 // ---- C3
 /** who stands where: the file's first `squad` + 1 places, the fourth man on his acting place with his own card open */
 const stands = (slots: number[][], a4: number[], squad: number, card: number) => { const o: number[][] = []; for (let i = 0; i <= Math.min(4, squad) && i < slots.length; i++) o.push(i === 4 && card === 4 ? a4 : slots[i]); return o; };
@@ -192,7 +176,6 @@ console.log(`levels with a kitView block (${withBlock.length}${asked.length ? ' 
 if (BREAK) console.log('KITPLAN_BREAK=1: what is asked is spoiled — rows below must FAIL');
 if (!asked.length || asked.includes('records')) parity();
 generic();
-twins();
 acting();
 quietWays();
 theWords();

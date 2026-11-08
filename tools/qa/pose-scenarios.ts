@@ -144,7 +144,7 @@ export function register(SC: Record<string, any>, CH: any) {
   SC['stay-down'] = { title: 'told to stay down (the quiet game\'s "stay down, stay quiet"): hands on the head until the promise runs out', run(S: any) { keptDown(S, 2); } };
   SC['clutch'] = { title: 'knocked about and still up: a defender folded by a blast he did not see, the support hand to his ribs for as long as the game roots him', opts: { side: 'left' }, run(S: any) {
     const c = S.man({ rifle: true, tone: 1 }); c.anim.trained = 0.12; c.anim.upper = 'aim'; S.run(0.8); S.shot('carbine up');
-    const keep = CH.MOVES.fold; if ('fold' in CH.MOVES) CH.MOVES.fold = 1;   // drawn WITH the fold (in the game it comes up with ?wounds or ?fold; without it the arm alone)
+    const keep = CH.MOVES.fold; if ('fold' in CH.MOVES) CH.MOVES.fold = 1;   // drawn WITH the fold (in the game a hurt man's condition gives it; without it the arm alone)
     try {
       c.anim.upper = 'none'; c.anim.stance = 'lowReady'; c.anim.hitFrom?.([0, 0, 1]); c.anim.clutch = 1;
       { const t0 = S.t; for (const t of [0.12, 0.3, 0.7, 0.95, 1.4]) { S.run(t - (S.t - t0)); S.shot(`${t.toFixed(2)} s`); } }

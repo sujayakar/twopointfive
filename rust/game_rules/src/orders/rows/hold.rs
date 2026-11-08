@@ -7,7 +7,7 @@ use crate::m;
 use crate::v3::V3;
 use alloc::{format, string::String, vec, vec::Vec};
 
-pub const ORDER: Row = Row { is: &[Is::Holds, Is::Resumed, Is::KeepsLane], ..Row::new("hold", label, issue) };
+pub const ORDER: Row = Row { is: &[Is::Holds, Is::LooksAbout, Is::Resumed, Is::KeepsLane], ..Row::new("hold", label, issue) };
 
 fn label(_g: &mut Game, _t: &OrderTarget) -> String { String::from("hold position") }
 

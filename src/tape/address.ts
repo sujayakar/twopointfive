@@ -1,6 +1,5 @@
 // THE ADDRESS OF A RUN BEING PLAYED AGAIN (a replay's page, a networked game's): which words of an address are the run's, and which the visit's that plays it. A leaf: no game.
 import { SHADER_ROW_WORDS } from '../ui/shaderrows';
-import { lookDressWord } from '../scene/look';
 
 export const PLAYTAPE = 'playtape';
 /** the address words a replay page keeps from the VISIT, not from the run it plays (replay/engineplay.ts tapeSearch): how the page is looked at and listened to is the
@@ -9,12 +8,10 @@ export const PLAYTAPE = 'playtape';
 export const VISIT_FLAGS = ['paused', 'mute', 'quality', 'adapt', 'hud', 'oldsounds', 'newsounds', 'soundlanes', 'fogedge', 'fogdesat', 'fogair', 'fogkept', 'nobouncewalls', 'noreflwalls', 'sharpcap', 'allproxies', 'framecap', 'pace', 'giveway', 'flight', 'look', 'nosunglint', 'glintpick', 'holedepth', 'kept', 'hireach',
   ...SHADER_ROW_WORDS, 'pipequeue', 'shadertrim', 'shaderfold', 'fell', 'smokeindirect'];   // (the second line: how THIS machine builds its shaders — ui/shaderrows.ts, the compile queue and the trim, gpu/ — a word of the visit's address read once as the page loads; without them here a replay opened with one was sent on to an address without it and built the plain way. nobouncewalls: the picture's walled bounce read off — render/frame.ts bounceWallsConfig — so a page tool can play one replay both ways)
 // (…and `fell`: the count of questions the TypeScript answered while its row was up, sim.ts FELL — a page sent on to a recipe's address keeps the word. The Rust module's rows have no word: they are not switches)
-/** A WORD OF AN ADDRESS, WITH ITS VALUE, IS THE VISIT'S: one of VISIT_FLAGS, but `look` is two things under one word (scene/look.ts). The dress's
- *  `look=plain|0|off` names the LEVEL a run plays, so it is the run's: it stays in a tape's recipe and in a co-op invite. Every other value is a row of the look
- *  prototype's page, which is how the page is looked at: the visit's. Ask by pair, never by the list alone, wherever a word is kept or dropped. */
-export const visitWord = (k: string, v: string): boolean => VISIT_FLAGS.includes(k) && (k !== 'look' || !lookDressWord(v));
+/** a word of an address is the visit's: one of VISIT_FLAGS */
+export const visitWord = (k: string): boolean => VISIT_FLAGS.includes(k);
 /** the visit's words on an address, pair by pair in the list's order (a word can stand more than once: the look page's rows) */
-export const visitPairs = (q: URLSearchParams): [string, string][] => VISIT_FLAGS.flatMap(k => q.getAll(k).filter(v => visitWord(k, v)).map(v => [k, v] as [string, string]));
+export const visitPairs = (q: URLSearchParams): [string, string][] => VISIT_FLAGS.flatMap(k => q.getAll(k).map(v => [k, v] as [string, string]));
 /** keys of the tape's query that are this visit's and not the run's (the tape's seed is said by its recipe) */
 const NOT_THE_RUNS = ['paused', 'mute', 'quality', 'seed', 'pick', 'loadout', 'noreplay', 'hud', 'oldsounds', 'newsounds', 'onetheme', 'shuffle', 'soundlanes', PLAYTAPE, 'at', 'player', 'net', 'netgame', 'netkey'];
 /** THE SENDING WORDS (cloud/cloud.ts: whether this browser sends, and what) are the viewer's, not the run's — a tape recorded against one backend does not
@@ -27,10 +24,10 @@ export const SAYS_OFF = /^(0|off|false|no)$/i;
  *  `net` words — src/net/page.ts): what the page must be booted on to be that run's page */
 export function recipeSearch(recipe: { search?: string; seed?: number | null }, now: URLSearchParams, own: Record<string, string>): string {
   const out = new URLSearchParams();
-  for (const [k, val] of new URLSearchParams(recipe.search ?? '')) if (SENDING_WORDS.includes(k) ? SAYS_OFF.test(val) : !NOT_THE_RUNS.includes(k) && !visitWord(k, val)) out.append(k, val);   // (a visit's word is never the run's, whichever list a goal put it on: a tape recorded under one does not put it on the page that replays it)
+  for (const [k, val] of new URLSearchParams(recipe.search ?? '')) if (SENDING_WORDS.includes(k) ? SAYS_OFF.test(val) : !NOT_THE_RUNS.includes(k) && !visitWord(k)) out.append(k, val);   // (a visit's word is never the run's, whichever list a goal put it on: a tape recorded under one does not put it on the page that replays it)
   out.set('seed', recipe.seed === null || recipe.seed === undefined ? 'off' : String(recipe.seed));
   out.set('noreplay', '');   // (no tape of a tape: the page's own buffer stays off)
-  for (const [k, v] of visitPairs(now)) out.append(k, v);   // (pair by pair: the dress's `look` word is the run's and stays as the recipe has it, ui/replaykey.ts visitWord)
+  for (const [k, v] of visitPairs(now)) out.append(k, v);   // (pair by pair)
   for (const k of SENDING_WORDS) if (now.has(k)) out.set(k, now.get(k) ?? '');
   for (const [k, val] of Object.entries(own)) out.set(k, val);
   return '?' + out.toString();

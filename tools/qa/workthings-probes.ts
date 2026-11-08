@@ -91,7 +91,7 @@ export const workBreaker = () => keep(async () => {
   verdict(!R.why && ops.length === 2, 'staged: the room clear on the office with its pair', `refusal ${R.why} · teammates ${ops.map(o => o.callsign).join(', ')}`);
   lookAtPanel(R);
   // the office keeps its breaker behind the storage room's LOCKED door: with it locked the row is there, greyed, in the man's own words
-  { R.aim = panel(g); R.step(2); ringUp(R.input, R); const i = R.rows().findIndex((d: any) => d.id === 'work'), why = O.menu?.why[i] ?? null; ringDown(R.input); R.step(); R.aim = null;
+  { R.aim = panel(g); R.step(20); ringUp(R.input, R); const i = R.rows().findIndex((d: any) => d.id === 'work'), why = O.menu?.why[i] ?? null; ringDown(R.input); R.step(); R.aim = null;
     verdict(i === 0 && typeof why === 'string' && /locked/.test(why), 'behind a locked door the row is listed greyed, with why: the men cannot get to it', `row ${i} · "${why}"`); }
   unlock(g); R.step(70);
   const th = g.work.things().find((x: any) => x.kind === 'breaker');
@@ -298,7 +298,7 @@ export const workFace = () => keep(async () => {
   { const W = await stand(null, RULE), E = quiet(() => breakerErrand(W.game)), bp = W.game.level.breaker.pos;
     verdict(!!E && E.goal[0] === bp[0] - 0.4 && E.goal[2] === bp[2] - 0.9 && E.mid[2] === bp[2] - 0.6, 'the office: the errand keeps the fixed spot and reach (a man has floor there and a line to the panel)', E ? `goal (${f2(E.goal[0])}, ${f2(E.goal[2])}) mid (${f2(E.mid[0])}, ${f2(E.mid[2])})` : 'no errand read'); }
   // --- every level with a panel: the errand's spot is floor a man can stand on with a line to it, inside the reach
-  { const names = readdirSync(`${ROOT}/levels`).filter((f: string) => f.endsWith('.json') && !f.endsWith('-gwot.json')).map((f: string) => f.slice(0, -5)).sort();
+  { const names = readdirSync(`${ROOT}/levels`).filter((f: string) => f.endsWith('.json')).map((f: string) => f.slice(0, -5)).sort();
     const bad: string[] = [], moved: string[] = [], wrong: string[] = [], skipped: string[] = []; let n = 0;
     for (const name of names) {
       let W: any; try { W = await stand(name, RULE); } catch { skipped.push(name); continue; }

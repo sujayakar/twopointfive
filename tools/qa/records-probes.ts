@@ -17,7 +17,7 @@ type V3 = [number, number, number];
 const { parseLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
-const { RECORDS_ROOMS, RECORDS_STRUCTURE, RECORDS_START } = await import(`${ROOT}/tools/levels/records.ts`);
+const { RECORDS_ROOMS, RECORDS_STRUCTURE, RECORDS_START } = await import(`${ROOT}/tools/levels/records-floor.ts`);
 const { checkStructure, placeDefenders } = await import(`${ROOT}/src/game/roomclear.ts`);
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
 
@@ -49,8 +49,9 @@ async function data() {
   // (small = the BUILT floor: walls, doors, fixed furniture. The lived-in things (src/scene/lived.ts, group lived.<room>: 301 of this file's 571 boxes) are
   //  dressing a profile can leave out, and the office authors none under that tag, so they are counted apart and not against the bound)
   const built = (x: any): number => x.boxes.filter((b: any) => !isLived(b.group)).length, small = (x: any): boolean => built(x) < office.boxes.length / 2 && x.lights.length <= office.lights.length;
-  check(small(d), `small: ${built(d)} built boxes (+ ${d.boxes.length - built(d)} lived-in things = ${d.boxes.length}) · ${d.lights.length} lights · ${d.switchables.length} switchables · ${d.doors.length} doors (the office: ${built(office)} built of ${office.boxes.length} · ${office.lights.length} · ${office.switchables.length} · ${office.doors.length})`);
-  check(!small(office) && !small({ ...d, boxes: [...d.boxes, ...office.boxes.slice(0, Math.ceil(office.boxes.length / 2) - built(d))] }), 'the same measure bites: the office is not small by it, nor this floor with enough built boxes added to reach half the office');
+  const { floorFiles } = await import(`${ROOT}/tools/levels/floors.ts`), floor = parseLevelData(readFileSync(floorFiles(['records'])('records'), 'utf8'));   // (the file is the floor in its skin, and the skin's boxes are no walls: the floor alone is what is held small)
+  check(small(floor), `small: ${built(floor)} built boxes (+ ${floor.boxes.length - built(floor)} lived-in things = ${floor.boxes.length}) · ${floor.lights.length} lights · ${floor.switchables.length} switchables · ${floor.doors.length} doors (the office: ${built(office)} built of ${office.boxes.length} · ${office.lights.length} · ${office.switchables.length} · ${office.doors.length})`);
+  check(!small(office) && !small({ ...floor, boxes: [...floor.boxes, ...office.boxes.slice(0, Math.ceil(office.boxes.length / 2) - built(floor))] }), 'the same measure bites: the office is not small by it, nor this floor with enough built boxes added to reach half the office');
   const B = RECORDS_ROOMS, inWorld = Object.values(B).every((r: any) => r.bounds.x0 > WORLD.min[0] && r.bounds.x1 < WORLD.max[0] && r.bounds.z0 > WORLD.min[2] && r.bounds.z1 < WORLD.max[2]);
   check(inWorld, 'every room lies inside the 40 × 28 m world');
   const names = new Set(d.doors.map((x: any) => x.id)); const named = Object.values(B).flatMap((r: any) => r.doors as string[]);

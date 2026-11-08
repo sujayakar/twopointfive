@@ -33,7 +33,7 @@ import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from '.
 import type { GwotMat } from '../../src/scene/gwotPalette';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
-import { findCarLamps } from '../../src/game/carlamps';
+import { carLampsIn } from '../../src/scene/carLamps';
 import { LAST_IN, LAST_MEN, YARD_IN, YARD_MEN } from '../../levels/tut-kit.script';
 import { PANEL_GREY } from '../../src/scene/stuff';
 
@@ -221,7 +221,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // is a glowing sliver a hair off the van's own and a little wider, so a round at a lamp meets the sliver first and puts it out; the van's own lens behind
   // it stays the dead glass the lamp check finds (carlamps.ts, whose own search finds the lenses here: the kit's sizes are named in one place)
   const VAN_AT = [4.5, 15.0] as const, van0 = K.boxes.length; G.van(VAN_AT[0], VAN_AT[1], HALF + 0.12);
-  { const lenses = findCarLamps(K.boxes.slice(van0)).map(l => ({ what: l.what, b: K.boxes[van0 + l.box] })), heads = lenses.filter(l => l.what === 'head lamp').map(l => l.b), tails = lenses.filter(l => l.what === 'tail lamp').map(l => l.b);
+  { const lenses = carLampsIn(K.boxes.slice(van0)).map(l => ({ what: l.what, b: K.boxes[van0 + l.box] })), heads = lenses.filter(l => l.what === 'head lamp').map(l => l.b), tails = lenses.filter(l => l.what === 'tail lamp').map(l => l.b);
     if (heads.length !== 2 || tails.length !== 2) throw new Error(`tut-kit: the van's lamps were not found (${heads.length} head, ${tails.length} tail): the kit's lenses have moved`);
     const mid = [(heads[0].c[0] + heads[1].c[0]) / 2, (heads[0].c[2] + heads[1].c[2]) / 2], l = Math.hypot(mid[0] - VAN_AT[0], mid[1] - VAN_AT[1]), nx = (mid[0] - VAN_AT[0]) / l, nz = (mid[1] - VAN_AT[1]) / l;
     heads.forEach((b, k) => {

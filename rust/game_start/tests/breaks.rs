@@ -108,6 +108,7 @@ fn man_down(p: &mut Play, at: [f64; 2]) -> game::ids::GuardId {
     let gd = p.mates().into_iter().filter(|&gd| p.up(gd)).last().expect("somebody to lay down");   // (the charge is set: the order needs nobody now)
     let c = p.g.gd[gd].ch;
     p.g.ch[c].pos = [at[0], 0.0, at[1]];
+    (p.g.ch[c].body_yaw, p.g.ch[c].aim_yaw) = (0.0, 0.0);   // (turned along the wall, whatever he was looking at: how he falls is the scene's. One who falls against its foot is a case of its own)
     p.frame();
     game::combat::kill_guard(&mut p.g, gd, [1.0, 0.0, 0.0], Some(true), None, None, None);
     p.run(3.0);   // (he falls, and is still)

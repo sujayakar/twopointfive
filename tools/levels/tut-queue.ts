@@ -23,8 +23,9 @@
 //     the other, one word — and it wins because two men cannot watch two doors.
 //   · the hall is the room one stack loses. Its gun sits behind bags at the far end and looks down the room's length at the front door: men who come in
 //     by it are taken from the side. The back door is at the gunner's shoulder. A pair on each, sent by one word, and the gun is turned to the wrong door.
-//   · then more come, by the two gates at once: Shift with the key on one gate and then on the other, and the squad parts to watch both from behind the
-//     bags he has walked them to. A spot to watch is the same pair of keys as a second door, and two gates are the reason to want two of them.
+//   · then more come, by the two gates at once: Shift with the key KEPT DOWN by one gate and then by the other opens the wheel for a part of the squad, and
+//     its `cover` wedge turns that part to the gate from behind the bags he has walked them to. (A tap gives a spot what the key gives it, a move. The
+//     maintainer, 11-08: "you should need to open the radial menu to get covering a point".)
 //   · HE AND THE FOUR START inside the track gate by their truck, behind blocks no door and no gate of the post has a line to.
 //
 //   bun run tools/levels/export.ts tut-queue [--check]     → levels/tut-queue.json
@@ -214,13 +215,13 @@ export function build() {
   const HALL_EYE = { at: [28.4, 1.9, 16.0] as Vec3, yaw: 0, fov: 360 };   // the hall's lookout: the player sees the gunner from the card to the go
   // WHAT EACH STEP TEACHES is its line; `cue` starts the level script's beat of that name as the step comes up; `checkpoint` = the frame keeps one as it
   // comes up. A key is written by the game's own code letter in brackets: the page draws the player's key ([B] is the squad's command key).
-  // WHAT HE HAS: his body and his rifle (the first mission's), the command key's tap and the word (the second's). His kit and the squad's ring are the
-  // third mission's and are not asked for here, so they stay shut: the one new thing is Shift with the command key, the frame's action `goal`, from the
-  // step that teaches it. THE WORD IS SHUT UNTIL BOTH STACKS STAND, at the guardroom and again at the hall: a word given to one stack alone takes the
+  // WHAT HE HAS: his body and his rifle (the first mission's), the command key's tap and the word (the second's). His kit is the third mission's and is not
+  // asked for here, so it stays shut, and the squad's ring stays shut until the yard: the one new thing is Shift with the command key, the frame's action `goal`,
+  // from the step that teaches it. THE WORD IS SHUT UNTIL BOTH STACKS STAND, at the guardroom and again at the hall: a word given to one stack alone takes the
   // room by one door, and the step that was for the second door is gone before it was read.
   const lesson = {
     title: 'The relay post, in pairs',
-    // (the squad's wheel is one ring here, as on the missions before this one, and holds only the orders this mission gives: a tap's own — move, stack, go, fall in — and a spot to watch.
+    // (the squad's wheel is one ring here, as on the missions before this one, and holds only the orders this mission gives: a tap's own — move, stack, go, fall in — and a spot to watch, which is the wheel's alone.
     //  The list is the tap's too: an order off it is not given by the key either)
     // (`rows`: the interaction key is never his in this mission, and with a list no row is drawn while that key is locked. Without one the corner of the
     //  screen offered a door's row at every door and "throw it — kill the lights" at the breaker box, for a key that did nothing)
@@ -245,21 +246,24 @@ export function build() {
       // (the cue says a stack stands on EACH door: from here whichever leaf moves first, the gun is on the wrong one — levels/tut-queue.script.ts)
       { id: 'word2', line: 'Press [F] to send them in through both doors', done: taken('hall'), at: [28.4, 1, 16.0], eye: HALL_EYE, cue: 'breach', allow: ['word'] },
       // 3 · A SPOT TO WATCH: more come by two gates at once. He calls the four to him (men he has called are on nothing: on the page, where the first goal
-      // is half the squad's, the first spot takes the nearer pair and the second the other; with that rule off the first spot is everybody's and the
-      // second parts a pair off it) and walks them out between the bags and the barrier; Shift with the key by a gate turns them to it
-      { id: 'call', line: 'Press [B] on yourself to call your squad back to you', explain: { quiet: true, title: 'Cover two gates', text: "More enemies are on the way, and they'll come through the road gate and the back gate at the same time.\nHold [Shift] and press [B] on a spot, and two of them will turn to watch it from where they stand." },
+      // is half the squad's, the first spot's wheel is for the nearer pair and the second's for the other) and walks them out between the bags and the
+      // barrier. A SPOT IS WATCHED ONLY FROM THE WHEEL: a tap there, Shift or no, sends men to stand on it (the maintainer, 11-08: "i think shift Q on a point
+      // should just move the squad there, should match what regular Q does. you should need to open the radial menu to get covering a point")
+      { id: 'call', line: 'Press [B] on yourself to call your squad back to you', explain: { quiet: true, title: 'Cover two gates', text: "More enemies are on the way, and they'll come through the road gate and the back gate at the same time.\nYou'll have two teammates watch each gate." },
         done: or({ is: 'following' }, watch(WATCH_E, 1), taken('road'), taken('lane')), checkpoint: 'the gates' },
       { id: 'yard', line: "Walk out to the marked spot in the yard, and they'll follow you", done: or(near(SPOT_YARD), watch(WATCH_E, 1), taken('road'), taken('lane')), at: SPOT_YARD },
-      { id: 'gateA', line: 'Hold [Shift] and press [B] on the marked spot by the road gate to have two of them watch it', done: or(watch(WATCH_E, 2), taken('road')), at: WATCH_E },
-      // (the same goal by the wheel: Shift and the key KEPT DOWN open it for the part of the squad a tap would have sent, and the wedge picked is theirs alone.
-      //  A tap on this step gives nothing and says to keep the keys down — rails.ts `noTap`, which the tap with Shift asks too: orders.ts tapGive.
-      //  THE KEY KEPT DOWN WITH NO SHIFT is the wheel he learnt a mission ago, for everyone, and its second wedge turns all four to this gate with nobody
-      //  left on the first: the step passes on two of them here whoever watches the road, and `split` asks for the road gate again — a Shift tap there
-      //  parts a pair off the four. With a pair on each gate as this step ends, `split` is done as it comes up and no line of it is read)
-      { id: 'gateB', line: 'Now hold [Shift] and keep [B] held down on the marked spot by the back gate', flatLine: 'Press [2] to have two of them watch the back gate', menuLine: 'Press [2] to have two of them watch the back gate', noTap: 'Keep [Shift] and [B] held down',
+      // (Shift and the key KEPT DOWN open the wheel for the part of the squad a tap would have sent, and the wedge picked is theirs alone: the frame's `ringPart`. A tap on these
+      //  steps gives nothing and says to keep the keys down — rails.ts `noTap`, which the tap with Shift asks too: orders.ts tapGive — and the key kept down with NO Shift is
+      //  a tap, so all four cannot come to one gate. A tap ON HIMSELF still calls them back: the way out when stray taps have left nobody free for the wheel.
+      //  EACH STEP ENDS ON THE GATE IT NAMES, by one man (the part is half of the biggest group, and after stray taps that may be one man), so no press leaves him with a line he
+      //  cannot finish. The tap on himself at `gateB` calls the road gate's men off too: `split` asks for that gate again, and is done as it comes up where it is still watched)
+      { id: 'gateA', line: 'Hold [Shift] and keep [B] held down on the marked spot by the road gate', flatLine: 'Press [2] to have them watch the road gate', menuLine: 'Press [2] to have them watch the road gate', noTap: 'Keep [Shift] and [B] held down',
         explain: { quiet: true, title: 'Pick their order', text: "If you keep [Shift] and [B] held down, the squad's wheel opens for part of your squad.\nThey'll take the order you pick, and the others will keep doing what they were doing." },
-        allow: ['ring'], done: or(watch(WATCH_N, 2), and(watch(WATCH_N, 1), watch(WATCH_E, 1)), taken('lane')), at: WATCH_N },
-      { id: 'split', line: 'Hold [Shift] and press [B] on the marked spot by the road gate to turn two of them back to it', done: or(and(watch(WATCH_N, 1), watch(WATCH_E, 1)), taken('road'), taken('lane')), at: WATCH_E },
+        allow: ['ringPart'], done: or(watch(WATCH_E, 1), taken('road')), at: WATCH_E },
+      { id: 'gateB', line: 'Now hold [Shift] and keep [B] held down on the marked spot by the back gate', flatLine: 'Press [2] to have them watch the back gate', menuLine: 'Press [2] to have them watch the back gate', noTap: 'Keep [Shift] and [B] held down',
+        done: or(watch(WATCH_N, 1), taken('lane')), at: WATCH_N },
+      { id: 'split', line: "Nobody's watching the road gate now, so hold [Shift] and keep [B] held down on its marked spot", flatLine: 'Press [2] to have them watch the road gate', menuLine: 'Press [2] to have them watch the road gate', noTap: 'Keep [Shift] and [B] held down',
+        done: or(watch(WATCH_E, 1), taken('road'), taken('lane')), at: WATCH_E },
       { id: 'hold', line: 'Hold both gates with your squad', done: and(taken('road'), taken('lane')), cue: 'gates' },
     ],
   } as LessonData;

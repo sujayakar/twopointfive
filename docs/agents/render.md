@@ -1405,33 +1405,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   solver, the maintainer's pick and the next step, is what makes the smoke real; until then `plume` is a slider and `?fireplume=0` a word).
   A recording from before `FIRE.look` replays with no shimmer, no drawn smoke and no embers.
   NEVER SEEN ON A GPU: the look was set on the software adapter's stills (`tools/qa/fire-lab.cjs`, which now emulates the bloom and the tone curve: `LOOK='k=v,…'`).
-  THE FLAME AS GAS (`FIRE.gas`, OFF in the page until it has been seen: `?firegas=1`, and a row in the fire lab; 2026-10-23, the maintainer on a card asking
-  how much of the flame should be real fluid sim: "Drive it from our 3D smoke solver", then "i'm curious how far we can push our existing smoke solver.
-  curious if we can make the finer cells work well with our existing brick stuff"). A fire within `viewR` 12 m of the view files a second look-only source
-  every half second on the solver's FINE lattice (2.2 cm cells, the breath's and the gun gas's, the same brick pool; `lattice: 'fine'`) at the coals: HEAT
-  with next to no smoke in it (`temp` 22, `density` 0.3 a second, leaving at 1.8 m/s). The solver lifts it by its own buoyancy, curls it and leans it in the wind, and the
-  picture draws the flame from that heat (`fire.wgsl fireFlameG` through `composite.wgsl fireGas` = `smoke_read.wgsl spgFineHot`): white-hot at `ref`, no
-  flame under `lo` of it, the noise only tearing the skin finer than a cell. A fire's record carries how far it has eased to its gas (`FireRecord.gas`, the
-  host's book), so a fire far from the view, on a preset that sheds fire smoke or with no solver is the flame of noise; while it is gas the drawn smoke is
-  off. TWO CHANGES TO THE SOLVER (`src/smoke`, no thread's own: the last change there was the breath's, 10-20), both nothing while the switch is off:
-  (1) HOT GAS ON THE FINE LATTICE IS KEPT — `sparse.fineKeep` (0 = no such rule, the solver as it was; the uniform's spare word): the fine lattice fades
-  gas under `thinBelow` 0.25 and the heat in it at up to 3 /s (THE FINE LATTICE LETS GO), which made the first gas flame (drawn from density) a lick whose
-  length hung on how dense it was and which lost its lift and lay over 45° in the yard's 0.7 m/s; with the rule a cell hotter than `fineKeep` is not thin
-  and cools only at the solver's own 1.2 /s, so the flame's height is its cooling time. The fire raises it (`SmokeSystemLike.keepHot`, `FIRE.gas.keep` 0.8)
-  while a fire's flame is gas and puts it back to 0; WHILE IT IS UP gun gas and breath that hot linger as long too (nobody has measured how hot they run).
-  (2) A FINE BRICK'S HEAT IS PUBLISHED in its atlas texel's last channel (`publish`; nobody read that channel of a fine brick: `smoke_read.wgsl` is the
-  atlas's only reader and takes `.x` of a fine brick), always, switch or no switch: a brick that holds heat and no density was already kept and published
-  (its box counts either), so the page and the marches see what they saw. WHAT THE GAS IS TO THE GAME: its little density is the solver's own, so in the
-  page a sight line through the flame loses what that smoke takes (thin by design; `density` is a lab slider), and the headless stands have no solver.
-  FIRST CUT, kept in the log (d0e94537): the flame drawn from the fine lattice's DENSITY with no solver change; measured in the page (software adapter,
-  lines asked of the game's sensors): the published gas ran about a fifth of the source's `density` at the heart, 0.8 a second was a half-metre lick and
-  1.6 a metre and a half, the pool read 787 to 896 bricks three seconds in. CHECK: the fire check's `gas` line (heat sources as the table says, the solver
-  told to keep hot gas and told to stop, the record's share, none without a solver or put off, an old recording off). IN THE PAGE (software adapter, the
-  pass, the storm 0.5 m/s at the drum, five stills): a white heart, orange body, red tip, no haze; one streamer about a metre and a half long that the wind
-  leans some 45° and curls (one streamer, not a field of tongues: one soft source, two-centimetre cells); a sensor's line through its heart keeps 0.90 of
-  its light, every other line through the flame 0.97 or more; the pool 802 bricks three seconds in (275 fine) and 1,374 six seconds in with `temp` 22
-  (445 fine; the pass's own cold smoke and the fire's coarse plume are in those). A gas flame is marched 56 steps (40 and 16 more) in a cylinder up to 0.8 m wider than the
-  noise's (`fireGasWide`), so it costs half as much again a pixel over more pixels: not timed. NEVER SEEN ON A GPU, never seen moving.
+  THE FLAME AS GAS (`FIRE.gas`, `?firegas=1`, a second source on the solver's fine lattice, tried 2026-10-23 and never on in the page) left the tree 2026-11-08: the flame is the noise's.
   UNDER THE FOG OF WAR A FIRE IS DRAWN AS THE TEAM LAST SAW IT (`FIRE.fog`, on; `?firefog=0`; a recording from before the key replays with it
   off; 2026-10-23, the maintainer, playing the pass in plan mode on hard: "weird that fire doesn't show up in fog of war … I think we should at least show
   everything in the environment visible at the start of the level all the time?"). The first cut hid the flame over ground the fog hides, by the fog's rule for
@@ -1457,7 +1431,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   wind at the drum, a plume fifteen seconds old; the light each line keeps, a line starts to count smoke under 0.8): across the plume at 1.3, 1.5 and 1.7 m, over
   the drum and 0.8 and 2 m downwind, 1.00 every one; at 1.9 m 0.94 over the drum, 1.00 downwind; ALONG the wind (2 m upwind to 6 m down) 0.98 at 1.3 m, 1.00 at
   1.6 m, 0.92 at 1.9 m; overhead 0.55 at 2.6 m and 0.23 at 3.4 m (the smoke is there); with `?fire=0` every one of them 1.00. ONE wind, one level, open sky: a fire
-  under a low roof or in still air may pool lower, and nobody measured that. `?firesmoke=0` (`FIRE.smoke.on`) is the fire with no smoke.
+  under a low roof or in still air may pool lower, and nobody measured that. The look panel's fire smoke row at 0 is the fire with no smoke.
   THE SOUND: `fireBed` (a 7 s loop held as a follow voice, handed on every 12 s, asked again when a fire is lit again) and `fireCrack` with each pop — the mixer's
   alone, no event: nobody in the game hears a fire.
   WHAT IT COSTS, by the model and timed on no GPU: no light is added. The flame, coals and embers run in the composite, which every preset draws as its compute twin
@@ -1474,7 +1448,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   stepped (497, 942, 1,119, 1,216 at 5, 10, 15 and 20 s, against 110 to 140 with the fire off) and the DRAWN page's pool read 2,242 fifteen seconds in against 901 with
   the fire off (the pass's own cold-weather smoke), so about 1,300 bricks: by the solver's own figures on the maintainer's Mac (0.39 µs a stepping brick, and 0.43
   ms for being awake at all on a level where nothing else smokes) 0.5 ms on the pass and about 0.95 ms where the fire is the only smoke. The plume was still
-  growing slowly at twenty seconds. `?firesmoke=0` is the same fire without it, to weigh that on a GPU. BY PRESET, and the
+  growing slowly at twenty seconds. The look panel's fire smoke row at 0 is the same fire without it, to weigh that on a GPU. BY PRESET, and the
   one rung that draws the fire without its smoke: FIRE SMOKE SHED, the next bullet.
   THE THIRD LOOK ON A GPU (2026-10-23, the maintainer playing the pass with the third cut: "this is looking better but still seems way too dark, especially
   relative to the other lights in the scene"; "i'd also expect the color from the fire to be more warm"; "would also expect the fire to be affected by the wind,
@@ -1533,8 +1507,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   takes the ghost's strength from that steady record (it was the level's, a fifth dimmer, paler and shorter, at the lid). It is held from the very frame it
   goes out, one frame ahead of the fog's say. ONLY under the fog's full picture with `FIRE.fog` on: with `?fogfull=0` or `?firefog=0` the fog remembers the
   level's lamp, as before. NEVER SEEN ON A GPU. (2) `fireStir`'s gap is each fire's own: a grenade between two braziers stirs both. (3) The player's round stirs a fire on the older lamp
-  search too (`AIMCOST.lamp` off, or a show on the stage), and that search goes on past the fire to a lamp behind it. (4) A floor with no fire tells the solver
-  to let hot gas go (`keepHot(0)`); the page stands one game on a fresh solver a level, so nothing reaches this today. The check's fog, hardy and gas
+  search too (`AIMCOST.lamp` off, or a show on the stage), and that search goes on past the fire to a lamp behind it. The check's fog and hardy
   lines hold each; (3) stirs on a round that STOPPED in the drum, the newer search's own rule. RUN SINCE, and it found the rule itself short: a fire's own box is its glowing lid, a finger thick, and the drum is four boxes of the level's that name no fire, so a round into the drum stirred nothing on any path (the line of October 23 called `fireStir` itself and never fired a round). `fire.ts fireStruck` now says a round stopped in a fire when it stopped in the fire's box OR in a box that stands on the fire's axis under its mouth, within the drum's wall (1.7 lids, 0.3 m at least; a wall behind the drum or the ground beside it is no drum); the player's two lamp searches and `destruction.ts fixtureRound` (everyone else's rounds) ask it. `fire-check`'s hardy line fires a real round into the drum from three metres by each search: one stir each, still burning.
   CHECK: `bun run tools/qa/probes.ts fire` (`tools/qa/fire-check.ts`, families `render`, `all`; twenty-three lines, both stands; `FIRE_BREAK=1` fails twenty-one): the lamp's swing
   and place, a second game the same frame for frame, the bed and the cracks, out and lit again, a checkpoint load (and the bed asked for again behind it; kept through frames that move no clock; asked for again behind a restart), the smoke's sources (look-only, coarse, foot over
@@ -1653,7 +1626,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   and a graphics preset must not write it), the tick files a fire's smoke with the word `fire` and `smoke.ts emit` drops it by this setting; a fire that gets its smoke back (a hop up the ladder)
   smokes again at its next source (within a second; so does one near the view after a load), and one that loses it just stops filing: the plume there thins out by itself and the solver sleeps when its bricks are let go. SWITCH:
   `settings.fireSmokeShed`, default on, `?fireshed=0` = every preset keeps the fire's smoke, as it was (render-side like ONE SMOKE SOLVE: no `FROZEN_HOLDS` row, no
-  journal line; `?firesmoke=0` still puts the smoke off at every preset). WHAT IT IS NOT: a game rule on any stand (the source is look-only, and no headless stand
+  journal line; the look panel's fire smoke row at 0 still puts the smoke off at every preset). WHAT IT IS NOT: a game rule on any stand (the source is look-only, and no headless stand
   has a solver that draws) — but in the PAGE a sight line reads the solver, so beside a fire a line over a standing man's head (the fire's notes: 0.92 to 0.94 kept
   at 1.9 m, 0.55 at 2.6 m, all of it at 1.7 m and under) reads the plume on low and up and none on verylow. Nobody in the game looks along such a line today.
   ALSO RENDER-SIDE BY WAIVER, to be confirmed: the key is read inside the game's update (beside `drawing`, itself a render setting). What it
@@ -1723,8 +1696,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   merged and then try to fix forward, especially as we clean everything up and simplify the code").** Until this the look's layers drew only with a
   `look` row on the address (the bullet below, which still says how they are made). Now there is no switch: the engine draws it on every page, with what stands on it (the walls' two sides, the men's side rows, the smoke's shorter step, the
   stirred smoke and the fire's column, the maps made on workers). `?look=key:value` still
-  opens the page with a row's amount; `?look=plain|0|off` is still the GWOT dress's word, read from any `look` word of the address, and no longer
-  decides the picture's layers. THE OTHER WAY IS DELETED (the same day, the second commit): the prelude's `const LOOK`, its 35 branches in eleven
+  opens the page with a row's amount. THE OTHER WAY IS DELETED (the same day, the second commit): the prelude's `const LOOK`, its 35 branches in eleven
   shaders, every reader of `lookConfig.on` in the page, the stub functions the g-buffer was given without it, `?look=old` (which drew the picture as it was
   for a few hours of the build) and the pricing run's second page. The tools' page boot counts 47 distinct shader texts over its settings (one of them with the walls row
   down) where it counted 53. `lookConfig.on` ITSELF IS GONE from both sides (the Rust
@@ -1777,7 +1749,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   Mac on earlier builds; the look with the round things' GPU half compiled in was drawn there only as "the look, its trials off" on 11-04, on an
   older tree. NOT MEASURED HERE: what the look costs a frame (the bar: `rebuild/look-join/bar.md` in the project's files) and a load.
 - **THE LOOK PROTOTYPE** (`?look` at boot, or the page `/look` = the game's page with `look` on the pass at night unless the link names its own `levelFile`; `?look=relief:1.4,air:2` opens it with those
-  amounts, each held to 0‥4, and `?look=plain|0|off` stays the GWOT dress's word and does not raise it; `render/frame.ts lookConfig`,
+  amounts, each held to 0‥4; `render/frame.ts lookConfig`,
   `shaders/look.wgsl`, `render/lookTex.ts`, the panel `ui/lookpanel.ts`; OFF on every other page). A place to find out how far materials carry a world of boxes,
   NOT the look when it was made; the maintainer said yes to a material look on 11-01 and `STYLE.md`'s rule 1 and Surfaces are rewritten for it on this branch (the bullet THE MATERIAL MAPS ARE THE LOOK NOW, below, has what changed with that). Where the surfaces try above writes a pattern in the shader, this one samples MAPS:
   eleven tiling materials (the try's eight classes and three more for what stood untouched beside them: cloth, bare metal and painted metal; the class is
@@ -3258,8 +3230,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   rust" in a kept office are cured by saying them as `steel`, `enamel` or `brushed`, not by this word. A stuff's own `fades` and `soaks`
   now say what it does where nobody keeps it, and the kept cousins (stucco and skim of plaster, cast panel and gloss block of block, paver
   of slab) are no longer the only way to a clean wall; folding each pair into one stuff is not done. WHO SAYS IT: a generator, `export
-  const KEPT = 0.8`; the exporter writes the file's `meta.kept`, and gives a look's second file (`<name>-gwot.ts`, what the look's page
-  loads) the word of the level it dresses unless it says its own (`tools/levels/keptWord.ts`, which the check runs too); a level built on
+  const KEPT = 0.8`; the exporter writes the file's `meta.kept`; a level built on
   another's floor with no `DRESS_AS` re-exports the word; the office would say it as `level.kept` in its builder (`levelToData` writes
   the file's meta from the Level and drops either key from a caller's `meta`, a marks' texel the same way now). Every way a level enters
   the page goes through `main.ts hostLevel`, so the bundled office that stands in for an editor level that cannot stand takes its own

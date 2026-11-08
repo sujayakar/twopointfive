@@ -1,7 +1,7 @@
 //! THE KIT PICTURE ON EVERY LEVEL THAT HAS ONE: every level file with a `scenarios.kitView` block, every way of it, each mission kind the mission list has for that level, stands from its link with `kitview`
 //! in it as the page's frame stands it, says it has a picture (the view's word 1), has its lamps and pin in finite numbers, and holds for five seconds with nobody of the level roused. The list is read off its own
 //! file (src/scene/scenarioList.ts), so a new row or a new way is asked here with nothing to write. What a level's AUTHOR runs is tools/qa/kitview-plan.ts: that one reads the plan, this one stands the game.
-//! A look twin (`x-gwot.json`) has its plain file's rows; a level with a block and no row of the list has the kind its own file writes.
+//! A level with a block and no row of the list has the kind its own file writes.
 use game_start::json::{self, Json};
 use game_start::play::{Opts, Play};
 use std::collections::BTreeMap;
@@ -64,7 +64,7 @@ fn every_way_of_every_block_stands_for_every_kind_the_list_has() {
         let ways = data.get("scenarios").get("kitView").get("ways").items().len();
         if ways == 0 { continue; }
         blocks += 1;
-        let kinds = listed.get(f).or_else(|| listed.get(&f.replace("-gwot", ""))).cloned().unwrap_or_else(|| own_kinds(&data));
+        let kinds = listed.get(f).cloned().unwrap_or_else(|| own_kinds(&data));
         for kind in &kinds {
             let base = words_of(kind).unwrap_or("");
             work.push((f.clone(), String::from(base)));
@@ -74,6 +74,6 @@ fn every_way_of_every_block_stands_for_every_kind_the_list_has() {
         // (the solo night is the bundled office's, and no row of the list)
         if f == "office.json" { work.push((f.clone(), String::new())); }
     }
-    assert!(blocks >= 30 && work.len() >= 40, "{} blocks, {} stagings: too few, the reader above has lost them", blocks, work.len());
+    assert!(blocks >= 20 && work.len() >= 34, "{} blocks, {} stagings: too few, the reader above has lost them", blocks, work.len());
     for (f, words) in &work { staged(f, words); }
 }

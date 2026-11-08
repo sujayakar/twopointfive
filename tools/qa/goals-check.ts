@@ -3,6 +3,8 @@
 // and F tells all of them to go in. shift Q on a spot to watch automatically has them split up angles".
 //   bun run tools/qa/goals-check.ts            (also `probes.ts goals`, in family squadorders)
 //   TPS_PROFILE=shipped bun run tools/qa/goals-check.ts      — the same lines on the page's stand
+// … AND A TAP ON A SPOT IS WHAT THE KEY GIVES THERE (the maintainer, 11-08: "i think shift Q on a point should just move the squad there, should match what
+// regular Q does. you should need to open the radial menu to get covering a point"): a move, to a part of the squad; covering a spot is a wedge of the ring.
 // PASS / FAIL each, headless: the relay post (levels/tut-queue.json, the queueing tutorial's floor), the room clear with the squad of four under
 // god mode, ONE deal (seed 1: the rule has no die in it). The check raises the ring and the rule itself, so both stands ask the
 // same lines. The keys are pressed as a hand presses them: Shift down, the squad's key, the cursor on the thing.
@@ -11,18 +13,20 @@
 //   3. both stacked, ONE press of the word's key: an entry starts on each door, the two on one word of the door tools, and men are through both doors
 //      within two seconds of each other.
 //   4. the key WITHOUT Shift on the first door, after a split: everyone is on that door again — one goal.
-//   5. Shift + the key on a spot of floor, nobody on anything: all four cover it. On a second spot: two cover each. On a third: two, one and one.
+//   5. Shift + the key on a spot of floor, nobody on anything: all four MOVE there and nobody covers. On a second spot: two and two, each a whole pair. On a third: two, one and one.
 //   6. every group down to one man: Shift + the key on one more spot gives nothing, and the squad says so.
 //   7. Shift + the key KEPT DOWN with nobody on anything is still everyone's ring: it comes up, and no goal is added by it.
+//   8. the key with Shift and the key without it, on one spot: the same order (move), and nobody covers it.
 // … AND KEPT DOWN IT IS THE RING FOR THAT PART (CMDRING.goalRing, orders.ts ringUp; the maintainer, 10-26, having played the first nine: "okay this
 // feels good. let's make shift-Q long press open the radial menu to append another order too"):
 //  10. all four stacked on one door, Shift + the key KEPT DOWN on the second: the ring comes up for one whole pair, named on it, and nobody is told
 //      anything yet. Its first wedge given: that pair is sent to stack on the second door and the other pair is still stacked on the first.
-//  11. all four covering a spot, Shift + the key kept down on a second spot and 'cover' picked: two cover each. Kept down on a third and the first
-//      wedge picked: ONE man is sent there (the tap would have had him cover it) and three still cover.
+//  11. all four sent to a spot, Shift + the key kept down on a second spot and 'cover' picked: that pair covers it, the only way a spot is covered, and the
+//      other pair is still sent. Kept down on a third and the first wedge picked: ONE man is sent there, as the tap would have sent him, and the rest keep theirs.
 //  12. every group down to one man: Shift + the key kept down on one more spot puts no ring up and gives nothing.
-// GOALS_BREAK=1 = the switch left off and the same lines asked: 1 to 7 and 10 to 12 must fail.
-// GOALRING_BREAK=1 = only the ring's switch left off: 10 to 12 must fail.
+// GOALS_BREAK=1 = the hand leaves Shift off where a line presses it with the key (the switch itself is a settled row, tools/qa/fold.ts, and a write to it is refused: this is what it
+// was off), the same lines asked: 2 to 6 and 10 to 12 must fail. (1 and 8 hold: with nothing going the first goal is everyone's here, and two plain keys give one order. 7 presses its own Shift.)
+// GOALRING_BREAK=1 = the hand leaves Shift off only where the key is kept down: 10 to 12 must fail.
 //   exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
 import { ROOT, standUp } from './headless.ts';
@@ -72,9 +76,9 @@ export async function rig(on: boolean, more: Record<string, unknown> = {}, squad
         if (t.kind === 'floor' && !t.thing && O.men('all').every((m: any) => flat(m.char.pos, t.at) > 1.2 && O.hasLine(m, t))) return [t.at[0], 0, t.at[2]]; }
       return null; },
     /** the squad's key where the cursor is, Shift held or not, as a hand presses it */
-    key(shift: boolean) { if (shift) I.keys.add('ShiftLeft'); I.keys.add(KEY); I.pressed.add(KEY); R.step(); I.keys.delete(KEY); R.step(2); if (shift) { I.keys.delete('ShiftLeft'); R.step(); } },
+    key(shift0: boolean) { const shift = shift0 && !BREAK; if (shift) I.keys.add('ShiftLeft'); I.keys.add(KEY); I.pressed.add(KEY); R.step(); I.keys.delete(KEY); R.step(2); if (shift) { I.keys.delete('ShiftLeft'); R.step(); } },
     /** Shift and the squad's key kept down where the cursor is, until the ring is up (false: none came) */
-    hold(): boolean { I.keys.add('ShiftLeft'); I.keys.add(KEY); I.pressed.add(KEY); return R.until(() => !!O.cmdRing, 1.5); },
+    hold(): boolean { if (!BREAK && !RBREAK) I.keys.add('ShiftLeft'); I.keys.add(KEY); I.pressed.add(KEY); return R.until(() => !!O.cmdRing, 1.5); },
     /** … a wedge of it given by its digit — the first, or the one whose words fit — and every key let go (its words; null: no such wedge, the ring put away) */
     wedge(w: number | RegExp): string | null { const V = O.g.view.ring, x = (V?.wedges ?? []).find((y: any) => typeof w === 'number' ? y.key === w : w.test(y.text));
       if (!x) { R.away(); return null; } I.pressed.add(`Digit${x.key}`); R.step(); I.keys.clear(); R.step(4); if (O.cmdRing) R.away(); return x.text; },
@@ -87,6 +91,10 @@ export async function rig(on: boolean, more: Record<string, unknown> = {}, squad
     /** everything put away and the men back round Sam */
     home() { I.keys.clear(); I.buttons = 0; ringDown(I); R.step(); O.who = 'all';
       O.give('fallIn', O.targetAt(g.player.char.pos), 'all'); R.until(() => D.ops.length === 0, 40); R.until(() => O.men('all').every((m: any) => flat(m.char.pos, g.player.char.pos) < 5), 30); R.step(30); },
+    /** how the men are parted: the size of each group on an order (an order given at once is one group), biggest first */
+    parts(): string { const by = new Map<number, number>(); for (const m of O.men('all')) { const A = O.of(m); if (A && A.post !== null) by.set(A.group, (by.get(A.group) ?? 0) + 1); } return [...by.values()].sort((x, y) => y - x).join(' + ') || 'nobody on anything'; },
+    /** the men on that order */
+    onOrder(id: string): any[] { return O.men('all').filter((m: any) => O.of(m)?.order === id); },
     /** the men covering, by the point each watches */
     watches(): Map<string, string[]> { const out = new Map<string, string[]>(); for (const m of O.men('all')) { const A = O.of(m); if (A?.order !== 'cover' || !A.watch) continue; const k = `${A.watch[0].toFixed(1)},${A.watch[2].toFixed(1)}`; out.set(k, [...(out.get(k) ?? []), m.callsign]); } return out; },
   };
@@ -98,7 +106,7 @@ export async function goalsCheck(): Promise<boolean> {
   let fails = 0;
   const line = (ok: boolean, what: string, got: string) => { console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${what} — ${got}`); if (!ok) fails++; };
   const knobs0 = knobsCopy(), K = CMDRING;
-  console.log(`Shift + the key adds a goal (src/game/planmode.ts planGoal, CMDRING.goals; kept down, the ring for that part: CMDRING.goalRing)${BREAK ? ' — GOALS_BREAK=1: the switch left off, lines 1 to 7 and 10 to 12 must fail' : RBREAK ? ' — GOALRING_BREAK=1: the ring\'s switch left off, lines 10 to 12 must fail' : ''}`);
+  console.log(`Shift + the key adds a goal (src/game/planmode.ts planGoal, CMDRING.goals; kept down, the ring for that part: CMDRING.goalRing)${BREAK ? ' — GOALS_BREAK=1: no Shift in the hand, lines 2 to 6 and 10 to 12 must fail' : RBREAK ? ' — GOALRING_BREAK=1: no Shift with the key kept down, lines 10 to 12 must fail' : ''}`);
   try {
     const R = await rig(!BREAK), g = R.g, O = R.O, D = R.D, N = O.men('all').length;
     const A = R.door('guard'), B = R.door('guard_side'), names = (l: any[]) => l.map((m: any) => m.callsign).sort().join(', ') || 'nobody';
@@ -134,14 +142,20 @@ export async function goalsCheck(): Promise<boolean> {
         `split two and two first: ${split} · after the plain key: on the first ${a.length || inA} of ${N}, on the second ${names(b)}`); }
     // 5, 6
     R.home();
-    { const spots: V[] = []; const sizes = (): string => [...R.watches().values()].map((l: string[]) => l.length).sort((x: number, y: number) => y - x).join(' + ') || 'nobody covering';
-      const add = (): string => { const p = R.onSpot(spots); if (!p) return 'no spot'; spots.push(p); R.key(true); R.step(10); return sizes(); };
-      const s1 = add(), s2 = add(), s3 = add();
-      line(s1 === '4' && s2 === '2 + 2' && s3 === '2 + 1 + 1', '5. Shift + the key on a spot, nobody on anything: all four cover it. A second spot: two cover each. A third: two, one and one',
-        `covering after the first: ${s1} · the second: ${s2} · the third: ${s3}`);
+    { const spots: V[] = [], add = (): string => { const p = R.onSpot(spots); if (!p) return 'no spot'; spots.push(p); R.key(true); R.step(10); return R.parts(); };
+      const pairs = (): boolean => { const by = new Map<number, any[]>(); for (const m of O.men('all')) { const G = O.of(m)?.group; by.set(G, [...(by.get(G) ?? []), m]); } return [...by.values()].every(l => l.length === 2 && O.pairOf(l[0]) === O.pairOf(l[1])); };
+      const s1 = add(), m1 = R.onOrder('move').length, c1 = R.onOrder('cover').length, s2 = add(), whole = pairs(), s3 = add(), m3 = R.onOrder('move').length, c3 = R.onOrder('cover').length;
+      line(s1 === '4' && m1 === N && c1 === 0 && s2 === '2 + 2' && whole && s3 === '2 + 1 + 1' && m3 === N && c3 === 0, '5. Shift + the key on a spot, nobody on anything: all four move there and nobody covers. A second spot: two and two, each a whole pair. A third: two, one and one',
+        `after the first: ${s1} (moving ${m1}, covering ${c1}) · the second: ${s2}, whole pairs ${whole} · the third: ${s3} (moving ${m3}, covering ${c3})`);
       const s4 = add(), n0 = O.log.length, g0 = PM.PLAN_STATS.goals, s5 = add(), gave = O.log.length - n0, asked = PM.PLAN_STATS.goals - g0;
       line(s4 === '1 + 1 + 1 + 1' && s5 === s4 && gave === 0 && asked === 1, '6. every group down to one man: Shift + the key on one more spot gives nothing',
         `after the fourth: ${s4} · after a fifth: ${s5} · orders it gave: ${gave} · the key read as a goal: ${asked === 1} · the squad's words for it: "${PM.GOAL_NONE}"`); }
+    // 8 (the same spot, from the same place: the plain key, then all put back and the key with Shift)
+    R.home();
+    { const p = R.onSpot(); W8: { if (!p) { line(false, '8. the key with Shift and without it on one spot: the same order', 'no spot'); break W8; }
+        R.W.cursorAt([p[0], 0.04, p[2]]); R.step(2); const n0 = O.log.length; R.key(false); R.step(4); const plain = O.log.length > n0 ? O.log[O.log.length - 1].order : 'nothing', cp = R.onOrder('cover').length;
+        R.home(); R.W.cursorAt([p[0], 0.04, p[2]]); R.step(2); const n1 = O.log.length; R.key(true); R.step(4); const shifted = O.log.length > n1 ? O.log[O.log.length - 1].order : 'nothing', cs = R.onOrder('cover').length;
+        line(plain === 'move' && shifted === plain && cp === 0 && cs === 0, '8. the key with Shift and the key without it, on one spot: the same order, and nobody covers it', `the plain key: ${plain} (covering ${cp}) · with Shift: ${shifted} (covering ${cs})`); } }
     // 7
     R.home();
     { const g0 = PM.PLAN_STATS.goals, n0 = O.log.length, onA = R.onDoor(A); R.I.keys.add('ShiftLeft'); R.I.keys.add(K.key); R.I.pressed.add(K.key); const ring = R.until(() => !!O.cmdRing, 1.5), whole = !O.menu?.part;
@@ -159,21 +173,21 @@ export async function goalsCheck(): Promise<boolean> {
         `all four stacked first: ${all} · the ring ${ring ? 'up' : 'NOT up'}, for ${names(part)}, under it '${cap}', orders while it was up ${told} · the wedge '${text}' · on the first: ${names(a)} · on the second: ${names(b)}`); }
     // 11
     R.home();
-    { const spots: V[] = [], sizes = (): string => [...R.watches().values()].map((l: string[]) => l.length).sort((x: number, y: number) => y - x).join(' + ') || 'nobody covering';
+    { const spots: V[] = [];
       const spot = (): boolean => { const p = R.onSpot(spots); if (p) spots.push(p); return !!p; };
-      spot(); R.key(true); R.step(10); const s1 = sizes();
-      const on2 = spot(), ring2 = on2 && R.hold(), n2 = (O.menu?.part ?? []).length, w2 = ring2 ? R.wedge(/cover/i) : null; if (!ring2) R.away(); R.step(10); const s2 = sizes();
-      const on3 = spot(), ring3 = on3 && R.hold(), one: any[] = O.menu?.part ?? [], w3 = ring3 ? R.wedge(1) : null; if (!ring3) R.away(); R.step(10); const s3 = sizes(), went = one.length === 1 ? O.of(one[0])?.order : 'nobody';
-      line(s1 === '4' && n2 === 2 && !!w2 && s2 === '2 + 2' && one.length === 1 && s3 === '2 + 1' && went === 'move',
-        '11. all four covering a spot, the ring kept down on a second and \'cover\' picked: two cover each. On a third, its first wedge: one man is sent there and three still cover',
-        `covering after the tap: ${s1} · the second ring for ${n2}, '${w2}' picked: ${s2} · the third ring for ${names(one)}, '${w3}' picked: his order is ${went}, covering ${s3}`); }
+      spot(); R.key(true); R.step(10); const s1 = R.parts(), c1 = R.onOrder('cover').length;
+      const on2 = spot(), ring2 = on2 && R.hold(), part2: any[] = [...(O.menu?.part ?? [])], w2 = ring2 ? R.wedge(/cover/i) : null; if (!ring2) R.away(); R.step(10); const s2 = R.parts(), cov = R.onOrder('cover'), moving = R.onOrder('move').length, theirs = names(cov) === names(part2);
+      const others0 = new Map<any, string>(O.men('all').map((m: any) => [m, O.of(m)?.order])); const on3 = spot(), ring3 = on3 && R.hold(), one: any[] = [...(O.menu?.part ?? [])], w3 = ring3 ? R.wedge(1) : null; if (!ring3) R.away(); R.step(10); const s3 = R.parts(), went = one.length === 1 ? O.of(one[0])?.order : 'nobody'; const rest3 = O.men('all').filter((m: any) => !one.includes(m)), kept3 = rest3.length === 3 && rest3.every((m: any) => O.of(m)?.order === others0.get(m)), by3 = rest3.map((m: any) => `${m.callsign} ${O.of(m)?.order}`).join(', '), cov3 = rest3.filter((m: any) => O.of(m)?.order === 'cover').length, mov3 = rest3.filter((m: any) => O.of(m)?.order === 'move').length;
+      line(s1 === '4' && c1 === 0 && part2.length === 2 && !!w2 && s2 === '2 + 2' && theirs && moving === 2 && one.length === 1 && s3 === '2 + 1 + 1' && went === 'move' && kept3 && cov3 + mov3 === 3,
+        '11. all four sent to a spot, the ring kept down on a second and \'cover\' picked: that pair covers it and the other is still sent. On a third, its first wedge: one man is sent there and the rest keep theirs',
+        `after the tap: ${s1}, covering ${c1} · the second ring for ${names(part2)}, '${w2}' picked: ${s2}, covering ${names(cov)}, moving ${moving} · the third ring for ${names(one)}, '${w3}' picked: his order is ${went}, parts ${s3}, the other three keep theirs ${kept3} (${by3})`); }
     // 12
     R.home();
-    { const spots: V[] = [], sizes = (): string => [...R.watches().values()].map((l: string[]) => l.length).sort((x: number, y: number) => y - x).join(' + ') || 'nobody covering';
+    { const spots: V[] = [];
       for (let i = 0; i < 4; i++) { const p = R.onSpot(spots); if (!p) break; spots.push(p); R.key(true); R.step(10); }
-      const s4 = sizes(), p5 = R.onSpot(spots), n0 = O.log.length, r0 = PM.PLAN_STATS.rings, no0 = PM.PLAN_STATS.none, ring = !!p5 && R.hold(), said = PM.PLAN_STATS.none - no0, part = (O.menu?.part ?? []).length; R.away(); R.step(10);
-      line(s4 === '1 + 1 + 1 + 1' && !!p5 && !ring && said === 1 && O.log.length === n0 && PM.PLAN_STATS.rings === r0 && sizes() === s4, '12. every group down to one man: Shift + the key kept down on one more spot puts no ring up and gives nothing',
-        `covering first: ${s4} · the ring ${ring ? `UP (for ${part || 'everyone'})` : 'not up'} · the squad said nobody is free: ${said === 1} · orders given ${O.log.length - n0} · covering after: ${sizes()}`); }
+      const s4 = R.parts(), p5 = R.onSpot(spots), n0 = O.log.length, r0 = PM.PLAN_STATS.rings, no0 = PM.PLAN_STATS.none, ring = !!p5 && R.hold(), said = PM.PLAN_STATS.none - no0, part = (O.menu?.part ?? []).length; R.away(); R.step(10);
+      line(s4 === '1 + 1 + 1 + 1' && !!p5 && !ring && said === 1 && O.log.length === n0 && PM.PLAN_STATS.rings === r0 && R.parts() === s4, '12. every group down to one man: Shift + the key kept down on one more spot puts no ring up and gives nothing',
+        `parted first: ${s4} · the ring ${ring ? `UP (for ${part || 'everyone'})` : 'not up'} · the squad said nobody is free: ${said === 1} · orders given ${O.log.length - n0} · parted after: ${R.parts()}`); }
   } finally { knobsBack(knobs0); }
 
   console.log(fails ? `=== goals-check: ${fails} FAIL ===` : '=== goals-check: ALL PASS ===');

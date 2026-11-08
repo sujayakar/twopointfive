@@ -3,12 +3,10 @@
 // walk through the level, its logic, leading the player for game play". A story that leads the player starts where he starts and goes through the doors he
 // will use, so this asks every level whether the rule reaches them. (The rule's own arithmetic is tools/qa/ways-check.ts's, the look task's.)
 // ASKED OF THE LEVEL AS THE PAGE LOADS IT, the only reader the ways have: its file with the lived rooms laid and its dressing in, said to the loader by
-// word (`lived`, `dressing`) whatever stand the caller's harness is on (their furniture is on the walk grid). A look twin stands on its plain file's floor with its plain file's scenarios: the plain
-// file is asked, a twin asked by name is its plain file (scene/look.ts LOOK_LEVELS), and line 1 holds that the twin does stand on it: the same walk
-// grid, the same doors, the same ways.
+// word (`lived`, `dressing`) whatever stand the caller's harness is on (their furniture is on the walk grid).
 // WHAT IS HELD:
 //   1 found     no way is without a path, no name a level's own `scenarios.walked` asks for is missing (levelWays' `lost` and `unknown`), and every
-//               count file is a level's and names only a start or a door that level has; and a look twin walks as its plain file does
+//               count file is a level's and names only a start or a door that level has
 //   2 starts    from every START the level stands, a way LEAVES: a team's way or the author's own begins there and runs two metres or more. A start is
 //               anything in the level's scenarios that says where `sam` stands (tools/qa/said.ts saidIn, as marksight-check reads its men: no kind of mission is named, so a
 //               kind the rule does not read yet is owed the day it is written), and the level's own SPAWN where it stands none or where the plain night
@@ -34,17 +32,15 @@ import { loadLevel } from '../../src/scene/levelLoad.ts';
 import { parseLevelData } from '../../src/scene/levelData.ts';
 import { StaticCollision } from '../../src/scene/collision.ts';
 import { levelWays, doorMid } from '../../src/scene/ways.ts';
-import { LOOK_LEVELS } from '../../src/scene/look.ts';
 import { listedLevels, levelWords } from '../../src/scene/scenarioList.ts';
 
 const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.WALKED_BREAK === '1', DIR = `${ROOT}/tools/qa/fixtures/walked`;
 type V3 = number[];
-const PLAIN_OF = new Map(Object.entries(LOOK_LEVELS).map(([plain, twin]) => [twin, plain]));
-/** a level file's name as this check asks it: a look twin is its plain file */
-export const plainOf = (name: string): string => { const f = `${name.replace(/\.json$/, '')}.json`; return (PLAIN_OF.get(f) ?? f).replace(/\.json$/, ''); };
+/** a level file's name as this check asks it */
+const nameOf = (file: string): string => file.replace(/\.json$/, '');
 
 /** A LEVEL AS THE PAGE WALKS IT: its file loaded with the lived rooms and the dressing in, the office with its script, the walk grid of its boxes (the
- *  one the page's own reader is handed: game.ts gives buildWearMap `col.nav`) and its ways. tools/levels/walked-overlay.ts draws the same.
+ *  one the page's own reader is handed: game.ts gives buildWearMap `col.nav`) and its ways.
  *  `bare` = the red path's: no routes, no scenarios */
 export function pageWays(name: string, bare = false) {
   { const data = parseLevelData(readFileSync(`${ROOT}/levels/${name}.json`, 'utf8')), level: any = loadLevel(data, { lived: true, dressing: true });
@@ -61,7 +57,7 @@ export async function walkedCheck(args: string[] = []): Promise<number> {
   const write = args.includes('--write') && !BREAK, bad = args.filter(a => a.startsWith('--') && a !== '--write');
   if (bad.length) { console.error(`walked: no such word ${bad.join(' ')}     bun run tools/qa/walked-check.ts [level …] [--write]`); return 2; }
   const files = readdirSync(`${ROOT}/levels`).filter(f => f.endsWith('.json') && !f.includes('.lint.')).map(f => f.replace(/\.json$/, ''));
-  const every = [...new Set(files.map(plainOf))].sort(), asked = [...new Set(args.filter(a => !a.startsWith('--')).map(plainOf))];
+  const every = [...new Set(files.map(nameOf))].sort(), asked = [...new Set(args.filter(a => !a.startsWith('--')).map(nameOf))];
   for (const n of asked) if (!existsSync(`${ROOT}/levels/${n}.json`)) { console.log(`walked: no level ${n}`); return 2; }
   const levels = asked.length ? asked : every, listed = new Set<string>(listedLevels().map(l => l.level));
   console.log(`\n=== walked: a level's starts and its doors are on a way, as the page loads it${BREAK ? ' (WALKED_BREAK: no routes, no scenarios)' : ''} ===`);
@@ -70,9 +66,6 @@ export async function walkedCheck(args: string[] = []): Promise<number> {
   const len = (p: V3[]) => p.reduce((n, q, k) => k ? n + Math.hypot(q[0] - p[k - 1][0], q[2] - p[k - 1][2]) : 0, 0), near = (a: V3, b: V3, r: number) => Math.hypot(a[0] - b[0], a[2] - b[2]) <= r;
   for (const name of levels) {
     const { level, nav, ways: A } = pageWays(name, BREAK), paths = (A.paths as { kind: string; points: V3[] }[]).filter(w => len(w.points) >= 2); ways += A.paths.length;
-    { const twin = LOOK_LEVELS[`${name}.json`]?.replace(/\.json$/, ''); if (twin && existsSync(`${ROOT}/levels/${twin}.json`)) { const T = pageWays(twin, BREAK), doorsOf = (l: any) => JSON.stringify(l.doors.map((d: any) => [d.name, d.hinge, d.closedDir, d.width, !!d.exterior]));
-      const differs = [T.nav.blocked.length !== nav.blocked.length || T.nav.blocked.some((v: number, k: number) => v !== nav.blocked[k]) ? 'walk grid' : '', doorsOf(T.level) !== doorsOf(level) ? 'doors' : '', JSON.stringify(T.ways.paths) !== JSON.stringify(A.paths) ? 'ways' : ''].filter(x => x);
-      if (differs.length) sick.push(`${twin} does not walk as ${name} does (${differs.join(', ')}): the page loads the twin, and this asks the plain file`); } }
     if (A.lost) sick.push(`${name}: ${A.lost} with no path`); if (A.unknown.length) sick.push(`${name}: no such ${A.unknown.join(', ')}`);
     // a NAMED MARK is where a person stands (LevelData.marks): on floor the walk grid calls open, or no way can end at it
     for (const m of (level.marks ?? []) as { name: string; pos: V3 }[]) if (nav.isBlocked(m.pos[0], m.pos[2])) sick.push(`${name}: the mark '${m.name}' at (${m.pos[0]}, ${m.pos[2]}) stands where nobody can (the walk grid's cell is shut)`);

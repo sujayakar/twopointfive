@@ -193,7 +193,7 @@ fn a_mans_senses_are_about_the_player_he_faces() {
         for seat in 0..2 {
             let near = |p: &Play, t: GuardId| p.g.gd[t].last_known.map_or(false, |k| ((k[0] - 20.6f64).powi(2) + (k[2] - AISLE).powi(2)).sqrt() < 1.0);
             let (mut p, t1) = man_at_arms(s, seat);
-            let r = game::squad::perceive(&mut p.g, t1, 1.0 / 60.0, 0.0);
+            let r = game::squad::perceive(&mut p.g, t1, 0.0);
             assert!(r.is_some() || near(&p, t1), "seed {s}: the clearing man has nothing");
             assert!(near(&p, t1), "seed {s}: seat {seat}'s man at arm's length and the clearing man fixes {:?}", p.g.gd[t1].last_known);
             drop(p);
