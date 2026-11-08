@@ -20,6 +20,7 @@ export function machineBefore(q: URLSearchParams, level: string, C: Commands): v
     for (const [key, said] of LEVERS) { const rung = q.get(said); if (rung) C.lever(key, rung); }
   }
   { const cards = kept(KIT_KEPT); if (cards !== null && !q.has('nokit')) C.kit(cards); }
+  { const rung = kept('twopointsix.quietfog'), cams = kept('twopointsix.quietcams'); if (rung !== null) C.quietFog(rung); if (cams === '1' || cams === '0') C.quietCams(cams === '1' ? 1 : 0); }
   if (q.has('digin')) C.digIn(1);
   if (q.has('pressure')) C.pressure(q.get('pressure') !== '0' ? 1 : 0);
   if (q.has('fogcone')) C.fogCone(q.get('fogcone') !== '0' ? 1 : 0);
