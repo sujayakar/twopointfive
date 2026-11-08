@@ -47,8 +47,9 @@ async function main() {
   // ---- the torch at the pointer: a lamp like any other
   const hand = lab.building.world.lamps.length; lab.building.world.lamps.push({ kind: 'spot', at: [0, -50, 0], u: [0.03, 0, 0], v: [0, -1, 0], radiance: [52000, 49000, 43000], cos: 0.93, name: 'hand', on: 0 });
   if (Q.has('bench')) {
-    $('load').remove(); auto = false; canvas.width = 1920; canvas.height = 1080; lab.resize([1440, 810], [1920, 1080]); present.set(lab, true); const text = await run(lab, rt, Number(Q.get('bench')) || 600, l => tourStep(l, act), s => { $('stats').textContent = 'Benchmark ' + s; });
-    $('stats').textContent = text; (window as never as { benchText: string }).benchText = text; return;
+    $('load').remove(); auto = false; const [bw, bh] = (Q.get('size') ?? '1920x1080').split('x').map(Number) as [number, number]; canvas.width = bw; canvas.height = bh; lab.resize([Math.round(bw * 0.75), Math.round(bh * 0.75)], [bw, bh]); present.set(lab, true); document.body.classList.add('bare'); const out = $('bench'); out.hidden = false;
+    const text = await run(lab, rt, Number(Q.get('bench')) || 600, l => tourStep(l, act), (s, k) => { out.textContent = `Benchmark, ${s}\n${'█'.repeat(Math.round(k * 30))}${'·'.repeat(30 - Math.round(k * 30))}`; }, (e, result) => present.run(e, lab, result, lab.gpu.context!.getCurrentTexture().createView(), lab.gpu.format, 'rt'));
+    out.textContent = text; const b = document.createElement('button'); b.className = 'on'; b.textContent = 'Copy'; b.onclick = () => { void navigator.clipboard.writeText(text).then(() => { b.textContent = 'Copied'; }, () => { getSelection()?.selectAllChildren(out); }); }; out.prepend(b, '\n\n'); (window as never as { benchText: string }).benchText = text; return;
   }
   // ?watch: every write looked at, and the first stage to make a bad number named. Nothing is cleaned meanwhile
   const watch = Q.has('watch') ? await new Watch(lab.graph).init() : null; let looking = false;
