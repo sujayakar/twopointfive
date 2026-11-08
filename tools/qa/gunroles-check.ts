@@ -21,7 +21,6 @@ const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
-const { lookLevelFile } = await import(`${ROOT}/src/scene/look.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { GUNROLES, GUNROLES_STATS, gunRole, gunKeepsPost, gunFileCost, gunFileRanks, gunBlindGap, gunHand } = await import(`${ROOT}/src/game/gunroles.ts`);
 const { sideOut } = await import(`${ROOT}/src/game/gunslots.ts`);
@@ -38,7 +37,7 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
 const hushed = async <T>(fn: () => Promise<T> | T): Promise<T> => { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
 const J = (o: unknown) => JSON.stringify(o), f2 = (x: number) => (Number.isFinite(x) ? x.toFixed(2) : String(x));
 const seeded = (s: number) => () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
-const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync((f => existsSync(f) ? f : resolve(ROOT, 'levels', file))(resolve(ROOT, 'levels', lookLevelFile(file))), 'utf8')); return loadLevel(data); };
+const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync((f => existsSync(f) ? f : resolve(ROOT, 'levels', file))(resolve(ROOT, 'levels', file)), 'utf8')); return loadLevel(data); };
 /** a mission of the start card staged as the page stages it; the note the deal leaves is read back: who was given what, on how long a line */
 async function stage(id: string, seed: number) {
   const E = SCENARIOS.find((e: any) => e.id === id); if (!E) throw new Error(`no mission '${id}'`);

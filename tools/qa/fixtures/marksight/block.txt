@@ -1,4 +1,4 @@
-# how many of 21 lines each man of block has open to the ground his gun rests on: his name, his count (tools/qa/marksight-check.ts --write; a line that starts # under this one is a note and is kept)
+# how many of 21 lines each man of block-gwot has open to the ground his gun rests on: his name, his count (tools/qa/marksight-check.ts --write; a line that starts # under this one is a note and is kept)
 roomClear.mess.marks#0 21
 roomClear.mess.marks#1 15
 roomClear.comms.marks#0 21

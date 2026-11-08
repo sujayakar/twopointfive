@@ -1,4 +1,4 @@
-# how many of 21 lines each man of compound has open to the ground his gun rests on: his name, his count (tools/qa/marksight-check.ts --write; a line that starts # under this one is a note and is kept)
+# how many of 21 lines each man of compound-gwot has open to the ground his gun rests on: his name, his count (tools/qa/marksight-check.ts --write; a line that starts # under this one is a note and is kept)
 roomClear.sala.marks#0 12
 roomClear.sala.marks#1 15
 roomClear.sala.marks#2 15

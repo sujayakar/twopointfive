@@ -12,13 +12,13 @@ import { FollowCamera } from '../../src/game/camera';
 import { Section, Head, View } from '../../src/draw/sections';
 
 const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.PLAY_BREAK === '1';
-const { ALL_MISSIONS, pickSearch } = await import(`${ROOT}/src/scene/scenarioList.ts`), { lookLevelFile, LOOK } = await import(`${ROOT}/src/scene/look.ts`);
+const { ALL_MISSIONS, pickSearch } = await import(`${ROOT}/src/scene/scenarioList.ts`), { LOOK } = await import(`${ROOT}/src/scene/look.ts`);
 LOOK.on = true;
 const wasm = faceHere(); if (!wasm) { console.error('play-check: no module of these sources (tools/blitz/face-build.ts)'); process.exit(1); }
 const instance = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array(readFileSync(wasm))), { env: { face_roll: () => { throw new Error('the game asked a die'); } } });
 const [mannequin, mannequinBin, cast, castLook] = characterFiles(ROOT), only = process.argv.slice(2);
 let fails = 0; const line = (ok: boolean, what: string, why = '') => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}${why ? `\n    ${why}` : ''}`); };
-const bytes = (f: string): Uint8Array => { try { return new Uint8Array(readFileSync(resolve(ROOT, 'levels', lookLevelFile(f)))); } catch { return new Uint8Array(readFileSync(resolve(ROOT, 'levels', f))); } };
+const bytes = (f: string): Uint8Array => new Uint8Array(readFileSync(resolve(ROOT, 'levels', f)));
 
 { const stray = only.filter(id => !(ALL_MISSIONS as { id: string }[]).some(m => m.id === id)); if (stray.length) { console.error(`play-check: no mission ${stray.join(', ')}`); process.exit(2); } }
 /** from above nobody on the floor is the hand's to walk */

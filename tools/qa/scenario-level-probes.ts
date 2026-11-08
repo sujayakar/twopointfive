@@ -219,14 +219,14 @@ const TRAPPED: Record<string, string> = {
   'mousehole.json': "the lit corridor every door opens on, under the duty room's hatch gun; ward, exam room and store have one door each, wedged from inside, and are reached by their walls",
   'pass.json': 'the white, lit yard between the lorry and the doors, watched through glass from two sides',
 };
-const trapOf = (file: string): string | undefined => TRAPPED[basename(file).replace('-gwot.json', '.json')];
+const trapOf = (file: string): string | undefined => TRAPPED[basename(file)];
 /** THE FLOOR'S TEAM, read off the mission list (src/scene/scenarioList.ts), not kept in a table here. A level whose room clear rows are ALL four-man rows was
  *  built for the four: the pair still has to stage, walk and finish on it, but "it can be won" is NOT ASKED of the pair there (the count is printed). A level
  *  with a pair row, or with no row at all, keeps the line. PAIRTEAM_BREAK=1 asks it of every pair again (the compound's pair on the shipped stand must fail). */
 async function fourManRowsOf(file: string): Promise<string[]> {
   if (process.env.PAIRTEAM_BREAK === '1') return [];
   const { SCENARIOS } = await import('../../src/scene/scenarioList.ts');
-  const rows = SCENARIOS.filter(r => r.kind === 'roomclear' && r.level === basename(file).replace('-gwot.json', '.json'));
+  const rows = SCENARIOS.filter(r => r.kind === 'roomclear' && r.level === basename(file));
   return rows.length && rows.every(r => r.squad === 4) ? rows.map(r => r.id) : [];
 }
 interface ClearOut { seed: number; staged: string[]; end: string; why: string; t: number; opsUp: number; ops: number; rooms: string; entered: string[]; roomIds: string[]; walked: number; orders: number; refused: string[]; note: string; trace: string[]; fell: string[] }

@@ -1,4 +1,4 @@
-# how many of 21 lines each man of depot has open to the ground his gun rests on: his name, his count (tools/qa/marksight-check.ts --write; a line that starts # under this one is a note and is kept)
+# how many of 21 lines each man of depot-gwot has open to the ground his gun rests on: his name, his count (tools/qa/marksight-check.ts --write; a line that starts # under this one is a note and is kept)
 roomClear.crew.marks#0 12
 roomClear.crew.marks#1 12
 roomClear.crew.marks#2 12

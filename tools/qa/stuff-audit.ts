@@ -3,7 +3,7 @@
 //                                                           compares words with words: give --before a ref from before the rule to see what the colour rule drew)
 //   bun run tools/qa/stuff-audit.ts --before <ref|dir>      "before" = that commit's files (git show), or the files of a folder
 //   bun run tools/qa/stuff-audit.ts --after <dir>           "after" = the files of a folder (a generator's fresh output, say)
-//   bun run tools/qa/stuff-audit.ts barracks compound-gwot  only those
+//   bun run tools/qa/stuff-audit.ts barracks compound  only those
 //   … --list 20     name up to 20 boxes of each kind of change (default 4)     … --strict    a box that GAINED a material fails too
 // BEFORE is what the game drew a box as: by the old rule (tools/levels/stuffWas.ts, frozen: the box's word, the first row of its colour by name, the colour
 // itself exactly and darkened) for a file whose rows say nothing; by today's rule for a file that already says. AFTER is today's rule: the box's own word,

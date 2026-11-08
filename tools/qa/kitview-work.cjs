@@ -75,7 +75,7 @@ const askedPicks = (process.env.PICKS || '').split(',').map(s => s.trim()).filte
 { const known = [...PICKS, ...SETS].map(p => p.name), not = askedPicks.filter(n => !known.includes(n)); if (not.length) { console.log(`kitview-work: no such pick — ${not.join(', ')} (the picks: ${known.join(', ')})`); process.exit(2); } }
 
 const asked = (process.env.LEVEL || '').split(',').map(s => s.trim().replace(/\.json$/, '')).filter(Boolean);
-const names = asked.length ? asked : [...fs.readdirSync(DIR).filter(f => f.endsWith('.json') && !f.endsWith('-gwot.json') && !f.includes('.lint.') && f !== 'office.json').map(f => f.slice(0, -5)), 'office'].sort();
+const names = asked.length ? asked : [...fs.readdirSync(DIR).filter(f => f.endsWith('.json') && !f.includes('.lint.') && f !== 'office.json').map(f => f.slice(0, -5)), 'office'].sort();
 /** the mission's own link, as tools/qa/kitview-levels.cjs builds it (scene/scenarios.ts scenarioQuery, game/loadout.ts squadSearch — through bun) */
 const missionQuery = (name, kind, n) => { if (kind === 'solo') return name === 'office' ? 'solo' : `solo&levelFile=${name}.json`;
   const code = `import { ALL_MISSIONS } from ${JSON.stringify(path.join(SRC, 'scene/scenarioList.ts'))}; import { scenarioQuery } from ${JSON.stringify(path.join(SRC, 'scene/scenarios.ts'))}; import { squadSearch } from ${JSON.stringify(path.join(SRC, 'game/loadout.ts'))};

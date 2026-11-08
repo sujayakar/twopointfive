@@ -74,7 +74,7 @@ const levels: string[] = [], unbuilt: { level: string; why: string }[] = [], bui
 for (const f of readdirSync(HERE).filter(f => f.endsWith('.ts')).sort()) {
   if (!/^export (?:function|const) build\b/m.test(readFileSync(resolve(HERE, f), 'utf8'))) continue;   // (a file with no build() is a kit or a tool: importing export.ts would run it)
   const gen = await import(resolve(HERE, f)), name = basename(f, '.ts');
-  // A LOOK FILE (`<name>-gwot.ts`) builds with its plain level's generator, which is counted under the plain level's name; what the look file lays itself is
+  // A SKINNED LEVEL (`<name>.ts`) builds with its floor's generator (`<name>-floor.ts`), which is counted under the floor's name; what the skin lays itself is
   // its `finish` (the skin's rugs, skirts and patches, its own dressing), run here on a level built unheard
   const look = typeof gen.finish === 'function';
   building = look ? '' : name; open.length = 0;
@@ -90,7 +90,7 @@ watchPieces(null);
 levels.sort();
 const onList = new Set(ALL_MISSIONS.filter(s => !s.offList).map(s => (s.level ?? 'office.json').replace(/\.json$/, '')));
 /** a level file's name as its generator's (the two differ for one level) */
-const fileOf = (level: string) => level.replace(/-gwot$/, '');
+const fileOf = (level: string) => level.replace(/-floor$/, '');
 
 // ------------------------------------------------------------------ paints: every colour that has a name, by its numbers ----
 const key = (a: Vec3) => a.map(v => Number(v).toFixed(4)).join(',');
@@ -400,7 +400,7 @@ function usesPage(): string {
   const L: string[] = [], played = levels.filter(l => !SHOWROOMS.includes(l));
   const kitsOf = (level: string) => KITS.filter(k => catalogue.some(p => p.kit === k.name && level in p.uses)).map(k => k.name);
   L.push('# The library: which level lays which piece', '', 'Written by `bun run tools/levels/library.ts --uses FILE`. A piece laid from inside another piece is counted as the outer one;',
-    'a look file (`<name>-gwot`) is counted for what its own finish step lays on top of its plain level. The four levels built on `src/scene/levelKit.ts`',
+    'a skinned level (`<name>`) is counted for what its own finish step lays on top of its floor (`<name>-floor`). The four levels built on `src/scene/levelKit.ts`',
     '(defuse, floodlit, mousehole, records) lay the office\'s pieces through plain functions no kit hands out, so those calls are not counted.', '',
     '## The generators', '', '| Level | On the mission list | Kits it lays from | Pieces laid |', '|---|---|---|---|');
   for (const l of played) L.push(`| ${l} | ${onList.has(fileOf(l)) ? 'yes' : ''} | ${kitsOf(l).join(', ')} | ${catalogue.reduce((n, p) => n + (p.uses[l] ?? 0), 0)} |`);

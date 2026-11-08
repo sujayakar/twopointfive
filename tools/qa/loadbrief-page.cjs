@@ -95,7 +95,7 @@ const runs = async (page, from, secs = 300) => { for (const end = Date.now() + s
       const gone = !r.after.brief && !r.after.menu && !!r.clock && r.clock.held.length === 0;
       let mid = true;
       if (job.how === 'early') mid = /live/.test(r.early.was) || (/armed/.test(r.early.cls) && r.early.brief);   // (pressed while it boots: kept, and nothing more is asked of the player; on a machine that booted before the press could be made, the press was an ordinary start)
-      else mid = /live/.test(r.ready.cls) && r.heldFor[0] === r.heldFor[1] && r.still.brief && r.still.picture && (r.still.level || '').replace(/-gwot(?=\.json$)/, '') === job.map;   // (the level's file as the page loads it: its dressed one under the default look)
+      else mid = /live/.test(r.ready.cls) && r.heldFor[0] === r.heldFor[1] && r.still.brief && r.still.picture && r.still.level === job.map;   // (the level's file as the page loads it: its dressed one under the default look)
       if (job.how === 'controls') mid = mid && r.keysUp.options && r.keysWords.length > 200 && /sprint/i.test(r.keysWords) && !r.keysShut.options && r.keysShut.brief && !r.keysShut.menu && r.keysClock === r.heldFor[1] && /bgo/.test(r.keysFocus);
       if (job.how === 'script') mid = mid && Math.abs(r.script - 3 / 60) < 1e-6;
       ok = words && mid && gone;

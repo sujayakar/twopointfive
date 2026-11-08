@@ -93,15 +93,14 @@ export async function winbarsCheck(): Promise<boolean> {
       for (const f of files) {
         const data = dataOf(f); let L: any; try { L = loadLevel(data, { validate: false }); } catch { continue; }
         const n = barLevel(L.boxes); counts[f] = n; total += n;
-        const gf = data.materials?.glassFrame?.albedo as Vec3 | undefined; if (!gf || f.endsWith('-gwot.json')) continue;   // (a GWOT twin repaints its frames: it is held to its plain level's count below)
+        const gf = data.materials?.glassFrame?.albedo as Vec3 | undefined; if (!gf) continue;
         const kit = L.boxes.filter((b: any) => !(b.flags & BoxFlag.Glass) && Math.abs(b.albedo[0] - gf[0]) + Math.abs(b.albedo[1] - gf[1]) + Math.abs(b.albedo[2] - gf[2]) < 1e-6 && b.h[1] > Math.max(b.h[0], b.h[2]) && Math.abs(2 * Math.min(b.h[0], b.h[2]) - 0.08) < 1e-6);
         const sill = kit.filter((b: any) => b.c[1] - b.h[1] > 0.1), floor = kit.length - sill.length; kitTotal += sill.length;
         const miss = sill.filter((b: any) => !(b.flags & BoxFlag.Bar)).length, extra = L.boxes.filter((b: any) => b.flags & BoxFlag.Bar && !sill.includes(b)).length;
         if (miss || extra) bad.push(`${f}: ${miss} missed, ${extra} extra`);
         if (f === 'office.json') office = `${floor} floor-to-ceiling uprights left as structure`;
       }
-      const twins = files.filter(f => f.endsWith('-gwot.json') && counts[f.replace('-gwot', '')] !== undefined), odd = twins.filter(f => counts[f] !== counts[f.replace('-gwot', '')]);
-      line(total > 0 && !bad.length && !odd.length && counts['pass.json'] === 4, `the rule names every upright the kit stood in a window and nothing else: ${total} bars over ${files.length} level files, ${kitTotal} told by the kit's paint on the plain ones (${bad.length ? bad.join(' · ') : 'none missed, none extra'}); ${twins.length} GWOT twins carry their plain level's count (${odd.length ? `NOT ${odd.join(', ')}` : 'all'}); The Pass has ${counts['pass.json']}; the office: ${office || 'no kit paint read'}`); }
+      line(total > 0 && !bad.length && counts['pass.json'] === 4, `the rule names every upright the kit stood in a window and nothing else: ${total} bars over ${files.length} level files, ${kitTotal} told by the kit's paint on the plain ones (${bad.length ? bad.join(' · ') : 'none missed, none extra'}); The Pass has ${counts['pass.json']}; the office: ${office || 'no kit paint read'}`); }
 
     // ------------------------------------------------------------ the levels the rounds are fired on
     const W0 = await world('barracks.json'), g0 = W0.game; const P = across(g0, 1.6, false);

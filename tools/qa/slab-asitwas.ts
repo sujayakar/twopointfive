@@ -23,7 +23,7 @@ const ROOT = resolve(import.meta.dir, '../..');
 const WAS: Record<string, { frozen: string; shipped: string; blob?: string }> = {
   'office.json': { frozen: 'd0o14', shipped: '37swmc' },
   'compound.json': { frozen: '5oi12u', shipped: '7hpfku', blob: 'cb36d7328bb8aa5ac67a996101ff4cea6668cdff' },
-  'consulate-gwot.json': { frozen: '12z4nxn', shipped: '62n6ih', blob: 'f86faaa599c67dfdc066cccc286775e924aabcb6' },
+  'consulate.json': { frozen: '12z4nxn', shipped: '62n6ih', blob: 'f86faaa599c67dfdc066cccc286775e924aabcb6' },
   'mousehole.json': { frozen: 'so0egn', shipped: '84y77m', blob: '49d62b2968cfdf16d1b5856095c0aadd3cf4eee0' },
 };
 let bad = 0;

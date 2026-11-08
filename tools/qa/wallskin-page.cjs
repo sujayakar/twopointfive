@@ -12,12 +12,12 @@
 //   CORNER=1      at a corner where two partitions overlap instead: one wall's two end columns opened, every thin sheet at the corner asked (the band on
 //                 the wall that stands is whole, and so is the opened wall's band over the standing one's end)
 //   PITCH=<rad> DIST=<m>  the stills' camera (0.5 and 6.5 at a wall; 0.8 and 5.5 at a corner, steeper: a corner's rooms are small). At a corner the camera stands on the side most of its paint faces
-//   LEVEL=<file>  the level (default block-gwot.json) · EXTRA=<query> more of the query string for both runs (EXTRA='hour=midday')
+//   LEVEL=<file>  the level (default block.json) · EXTRA=<query> more of the query string for both runs (EXTRA='hour=midday')
 //   PLAYWRIGHT=<dir>  where playwright (or playwright-core) is, if not /opt/node-tools/node_modules/playwright · CHROMIUM=<path> a browser to run
 // exit 0 = both, with no page error · 1 = otherwise. The verdict is the box lists only: nothing here judges a picture, and the software adapter is not a GPU.
 const { chromium } = require(process.env.PLAYWRIGHT || '/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), path = require('path');
-const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', STILLS = process.env.STILLS || '', EXTRA = process.env.EXTRA ? `${process.env.EXTRA}&` : '', LEVEL = process.env.LEVEL || 'block-gwot.json', FAR = process.env.FAR === '1', CORNER = process.env.CORNER === '1', PITCH = +(process.env.PITCH || (CORNER ? 0.8 : 0.5)), DIST = +(process.env.DIST || (CORNER ? 5.5 : 6.5));
+const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', STILLS = process.env.STILLS || '', EXTRA = process.env.EXTRA ? `${process.env.EXTRA}&` : '', LEVEL = process.env.LEVEL || 'block.json', FAR = process.env.FAR === '1', CORNER = process.env.CORNER === '1', PITCH = +(process.env.PITCH || (CORNER ? 0.8 : 0.5)), DIST = +(process.env.DIST || (CORNER ? 5.5 : 6.5));
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
 

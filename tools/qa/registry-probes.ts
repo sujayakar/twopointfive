@@ -41,7 +41,7 @@ const { SQUAD4_BUDGET } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { parseLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { lintLevel } = await import(`${ROOT}/src/scene/lint.ts`);
-const { REGISTRY_ROOMS } = await import(`${ROOT}/tools/levels/registry.ts`);
+const { REGISTRY_ROOMS } = await import(`${ROOT}/tools/levels/registry-floor.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const { BoxFlag, MAX_GLASS } = await import(`${ROOT}/src/scene/boxes.ts`);
 

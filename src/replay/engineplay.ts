@@ -44,7 +44,7 @@
 // Nothing here is read by the game: no table, no knob, no state a step reads. The page without ?playtape never calls into this file past `tapeFromUrl`'s first line.
 import type { ReplayFile, ReplayNote, RunTape, Decoded } from './format';
 import { reportWarning } from '../cloud/report';
-import { PLAYER_NAME, TAPE_SHIELD, backToGame, checkReplay, clock, decode, isErrorMark, replayBlob, sampleAt, tapeShield } from './format';
+import { PLAYER_NAME, TAPE_OLD_FILE, TAPE_SHIELD, backToGame, checkReplay, clock, decode, isErrorMark, replayBlob, sampleAt, tapeOldFile, tapeShield } from './format';
 import type { LineMark, MapFit, MapMan, MapScene } from './minimap';
 import { drawFloor, drawLine, drawScene, mapFit, mapSize, mapToWorld, MAP_RING } from './minimap';
 import { TapeWalk } from './tapewalk';
@@ -151,7 +151,7 @@ export async function tapeFromUrl(q: URLSearchParams): Promise<TapePlay | 'moved
     }
   } catch (e) { why = `Could not read ${v}: ${(e as Error).message}`; }
   if (F && !why) why = checkReplay(F);
-  if (F && !why) { const T = F.rerun; if (!T) why = 'This replay has no run tape (saved by an older build, or with the tape off): the map viewer plays it.'; else if ('dead' in T) why = `This replay’s run tape ended early (${T.dead}): the map viewer plays it.`; else if (tapeShield(T)) why = `${TAPE_SHIELD}: the map viewer plays it.`; }
+  if (F && !why) { const T = F.rerun; if (!T) why = 'This replay has no run tape (saved by an older build, or with the tape off): the map viewer plays it.'; else if ('dead' in T) why = `This replay’s run tape ended early (${T.dead}): the map viewer plays it.`; else if (tapeShield(T)) why = `${TAPE_SHIELD}: the map viewer plays it.`; else if (tapeOldFile(T)) why = `${TAPE_OLD_FILE}: the map viewer plays it.`; }
   if (!F || why) return new TapePlay(F, id, v, why || 'No replay.');
   const tape = F.rerun as RunTape, want = tapeSearch(tape, q, v);
   if (new URLSearchParams(location.search).toString() !== new URLSearchParams(want).toString()) { location.replace(location.pathname + want + location.hash); return 'moved'; }
@@ -170,7 +170,7 @@ export function tapeSearch(tape: RunTape, now: URLSearchParams, v: string): stri
  *  `net` words — src/net/page.ts): what the page must be booted on to be that run's page */
 export function recipeSearch(recipe: RunTape['recipe'], now: URLSearchParams, own: Record<string, string>): string {
   const out = new URLSearchParams();
-  for (const [k, val] of new URLSearchParams(recipe.search ?? '')) if (SENDING_WORDS.includes(k) ? SAYS_OFF.test(val) : !NOT_THE_RUNS.includes(k) && !visitWord(k, val)) out.append(k, val);   // (a visit's word is never the run's, whichever list a goal put it on: a tape recorded under one does not put it on the page that replays it)
+  for (const [k, val] of new URLSearchParams(recipe.search ?? '')) if (SENDING_WORDS.includes(k) ? SAYS_OFF.test(val) : !NOT_THE_RUNS.includes(k) && !visitWord(k)) out.append(k, val);   // (a visit's word is never the run's, whichever list a goal put it on: a tape recorded under one does not put it on the page that replays it)
   out.set('seed', recipe.seed === null || recipe.seed === undefined ? 'off' : String(recipe.seed));
   out.set('noreplay', '');   // (no tape of a tape: the page's own buffer stays off, and nothing else takes Game.sensors.read)
   for (const [k, v] of visitPairs(now)) out.append(k, v);   // (pair by pair: the dress's `look` word is the run's and stays as the recipe has it, ui/replaykey.ts visitWord)

@@ -37,12 +37,10 @@ export interface RerunReport {
 }
 export interface Rerun { W: Headless | null; refuse: string; report: RerunReport | null; D: Decoded; }
 
-/** the level a page's `?levelFile=` names, as the page loads it (the look's file where it has one) */
+/** the level a page's `?levelFile=` names, as the page loads it */
 export async function levelOf(file: string): Promise<any> {
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-  const L = await import(`${ROOT}/src/scene/level.ts`), look = await import(`${ROOT}/src/scene/look.ts`).catch(() => null);
-  const named = resolve(ROOT, 'levels', file), lk = look?.lookLevelFile ? resolve(ROOT, 'levels', look.lookLevelFile(file)) : named;
-  const data = parseLevelData(readFileSync(existsSync(lk) ? lk : named, 'utf8'));
+  const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8'));
   return loadLevel(data);
 }
 

@@ -17,7 +17,7 @@ type V3 = [number, number, number];
 const { parseLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
-const { RECORDS_ROOMS, RECORDS_STRUCTURE, RECORDS_START } = await import(`${ROOT}/tools/levels/records.ts`);
+const { RECORDS_ROOMS, RECORDS_STRUCTURE, RECORDS_START } = await import(`${ROOT}/tools/levels/records-floor.ts`);
 const { checkStructure, placeDefenders } = await import(`${ROOT}/src/game/roomclear.ts`);
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
 

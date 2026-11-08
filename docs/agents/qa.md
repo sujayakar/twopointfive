@@ -1027,7 +1027,7 @@ but synthetic writes still work.
   its whole box under a timed line, as it always did (that set is not in `standsIn`). NOT DONE either: the engine replay's address (`ui/replaykey.ts
   VISIT_FLAGS`) drops the same words. Checked by `bench-check` (the fake page and tab) and once on a page on the software adapter: never run on a GPU. THE LOOK PROTOTYPE (11-02) rides along too: a run asked for on the look's page keeps the look (`?bench&look`): every
   `look=key:value` row and the page's other boot words (`scene/look.ts lookPageWord`: hills, geo, front, lorry, dress, seat, the cut boxes' switch and the
-  rest; never the dress's `look=plain|0|off`) ride along, since the page reads them at boot into its shader text and its level. Before, such a run timed
+  rest; the look's rows) ride along, since the page reads them at boot into its shader text and its level. Before, such a run timed
   the plain build on every scene and said nothing. A TRIAL THE LOOK PANEL'S BUTTON KEEPS OFF on the machine goes on the address as its own word
   (`lookTrialsKept`, `hills=0`; the kept cut boxes' switch with them), so the run times the look the page it was asked on shows and the report's address says which. A SCENE'S ADDRESS IS
   NOBODY'S TO TUNE (`main.ts`, on the word `benchrun`, as the load brief and the GPU retry are; so also a scene's address opened with no run under way): the

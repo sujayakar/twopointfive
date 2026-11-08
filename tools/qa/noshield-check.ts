@@ -146,7 +146,7 @@ export async function noshieldTape(): Promise<boolean> {
       const says = (o: Parameters<typeof tape>[0]): boolean => BROKEN ? false : RF.tapeShield(tape(o)) as boolean;   // (NOSHIELD_BREAK: the lie — every tape waved through)
       const rows: [string, boolean, boolean][] = [
         ['in, on a teammate\'s card', says({ on: true, card: true }), true], ['in (the table kept outside the recording\'s), on a card', says({ on: true, card: true, where: 'tables' }), true],
-        ['in, the long hall', says({ on: true, file: 'levels/hall.json' }), true], ['in, the long hall in its other look', says({ on: true, file: '/levels/hall-gwot.json' }), true],
+        ['in, the long hall', says({ on: true, file: 'levels/hall.json' }), true], ['in, a tape on the long hall\'s old second file', says({ on: true, file: '/levels/hall-gwot.json' }), true],
         ['in, the long hall with ?noissue', says({ on: true, file: 'levels/hall.json', search: '?noissue' }), false], ['in, on nobody\'s card, another level', says({ on: true }), false],
         ['out, the key still on a card', says({ on: false, card: true }), false], ['no table at all (a tape made now), the long hall', says({ file: 'levels/hall.json' }), false]];
       F.verdict(rows.every(r => r[1] === r[2]) && /ballistic shield/.test(RF.TAPE_SHIELD), 'a run tape made with a shield man in it is refused before a re-run, in words; one made without is not', rows.map(r => `${r[0]}: ${r[1] ? 'refused' : 're-run'}${r[1] === r[2] ? '' : ' (WRONG)'}`).join(' · ') + ` · the words: "${RF.TAPE_SHIELD}"${B}`);

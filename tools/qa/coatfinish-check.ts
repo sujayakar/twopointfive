@@ -15,7 +15,7 @@ const { makeBox, matWord, wordOf, ROUGH_DEFAULT, sentAlbedo, glassDark, solidGla
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
 
-const DT = 1 / 60, BREAK = process.env.COATFINISH_BREAK === '1', GLASS_BREAK = process.env.SOLIDGLASS_BREAK === '1', FILE = 'gwot-yard.json', TWIN = 'depot-gwot.json';
+const DT = 1 / 60, BREAK = process.env.COATFINISH_BREAK === '1', GLASS_BREAK = process.env.SOLIDGLASS_BREAK === '1', FILE = 'gwot-yard.json', TWIN = 'depot.json';
 function seeded(seed: number) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 async function hushed<T>(f: () => T | Promise<T>): Promise<T> { const log = console.log, warn = console.warn; console.log = console.warn = () => { }; try { return await f(); } finally { console.log = log; console.warn = warn; } }
 const levelOf = (file: string) => loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${file}`, 'utf8')));

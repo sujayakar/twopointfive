@@ -118,9 +118,9 @@ let bad = 0, rows = 0;
 const row = (ok, what, detail) => { rows++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); if (!ok) bad++; };
 const SAM = ['weapon', 'light', 'smoke', 'bangs', 'frags', 'charges', 'wand', 'cams', 'shells', 'walls'], MATE = ['weapon', 'smoke', 'bangs', 'frags', 'charges'], THROWN = ['smoke', 'bangs', 'frags'];
 
-// the level-ways: every level file with a block (a look twin is the page's to open: `<name>-gwot` is asked about only by name)
+// the level-ways: every level file with a block
 const asked = (process.env.LEVEL || '').split(',').map(s => s.trim().replace(/\.json$/, '')).filter(Boolean);
-const names = asked.length ? asked : [...fs.readdirSync(DIR).filter(f => f.endsWith('.json') && !f.endsWith('-gwot.json') && !f.includes('.lint.') && f !== 'office.json').map(f => f.slice(0, -5)), 'office'].sort();
+const names = asked.length ? asked : [...fs.readdirSync(DIR).filter(f => f.endsWith('.json') && !f.includes('.lint.') && f !== 'office.json').map(f => f.slice(0, -5)), 'office'].sort();
 /** THE MISSION'S OWN LINK (no leading '?'): the mission list's row of that kind on that level (none: a row of the kind's own size) deployed with `n` teammates, built
  *  by the two functions the start page builds it with (scene/scenarios.ts scenarioQuery, game/loadout.ts squadSearch) — through bun, the repo's own runner. The
  *  solo night's is `solo` (ui/missions.ts SOLO_KEY). A link that cannot be built is no run: the tool stops (exit 1). */

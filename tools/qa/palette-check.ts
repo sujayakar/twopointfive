@@ -68,28 +68,6 @@ const shapeOf = (b: Box) => JSON.stringify(b.shape ? { ...b.shape, with: b.shape
     `1 the kit over a host that hands it paints: every call the showrooms make of a piece lays, box for box and part for part as in the kit's own palette; every box and every loose thing's part DOES what it did; the game finds the same lamps; and but for a lamp's lens nothing is left in a row of the kit's`,
     `${asked} calls of ${names.size} of the kit's ${kitPieces.size} pieces laid alone both ways${unasked.length ? ` · NOT ASKED: ${unasked.join(', ')}` : ''} (${leaned} that take another call's thing not asked), ${nBoxes} boxes · ${said} boxes say what they do, in ${words.size} words · ${lenses} lenses found over the second paints${threw.length ? ` · DO NOT LAY OVER THE SECOND PAINTS: ${threw.slice(0, 4).join(' · ')}` : ''}${moved.length ? ` · MOVED: ${moved.slice(0, 5).join(', ')}` : ''}${does.length ? ` · ${does.length} DO ANOTHER THING: ${does.slice(0, 4).join(' · ')}` : ''}${lamps.length ? ` · LAMPS: ${lamps.slice(0, 3).join(' · ')}` : ''}${left.length ? ` · ${left.length} LEFT IN THE KIT'S PAINT: ${left.slice(0, 6).join(', ')}` : ''}`); }
 
-// 2. A LOOK FILE'S SKIN IN THE SECOND PAINTS: the skin's shared rules over every plain level that has a look file, once in the kit's palette, once in the second
-{ const LV = resolve(import.meta.dir, '../../levels'), plains = readdirSync(LV).filter(f => f.endsWith('-gwot.json')).map(f => f.replace(/-gwot\.json$/, '')).sort();
-  const open = (name: string) => { const data = parseLevelData(readFileSync(resolve(LV, `${name}.json`), 'utf8')) as LevelData; return { level: loadLevel(data, { lived: true, dressing: true } as never), n: 0 }; };
-  const bad: string[] = []; let asked = 0, repainted = 0, decals = 0, laidInKit = 0;
-  for (const name of plains) { const A = open(name), B = open(name), O = open(name), n0 = A.level.boxes.length;   // (O: the plain level, untouched)
-    const groups = (parseLevelData(readFileSync(resolve(LV, `${name}.json`), 'utf8')) as LevelData).boxes.map(b => (b as { group?: string }).group ?? '');
-    if (groups.length !== n0) { bad.push(`${name}: ${groups.length} groups for ${n0} boxes (the file's lived or dressed boxes are not its own list): not asked`); continue; }
-    const sa = skinLevel(A.level, [...groups], {}), sb = skinLevel(B.level, [...groups], BREAK === '2' ? {} : { of: SECOND });
-    if (sa.repainted !== sb.repainted || sa.kept !== sb.kept) bad.push(`${name}: ${sa.repainted} repainted and ${sa.kept} kept in the kit's palette, ${sb.repainted} and ${sb.kept} in the second`);
-    for (let i = 0; i < n0; i++) { const a = A.level.boxes[i], b = B.level.boxes[i]; asked++;
-      if (key(a.c) !== key(b.c) || key(a.h) !== key(b.h) || a.flags !== b.flags) bad.push(`${name} box ${i} moved`);
-      if (a.does !== b.does) bad.push(`${name} box ${i} did ${a.does}, does ${b.does}`);
-      const was = key(O.level.boxes[i].albedo), painted = key(a.albedo) !== was;   // (the first skin repainted it)
-      if (painted !== (key(b.albedo) !== was)) bad.push(`${name} box ${i}: ${painted ? 'the first skin repaints it and the second does not' : 'the second skin repaints it and the first does not'}`);
-      if (painted && kitKeys.has(key(b.albedo))) bad.push(`${name} box ${i} is in the kit's paint under the second skin`);
-      if (!painted && kitKeys.has(was)) laidInKit++; }
-    for (let i = n0; i < B.level.boxes.length; i++) { decals++; if (kitKeys.has(key(B.level.boxes[i].albedo))) bad.push(`${name}: a decal of the second skin (box ${i}) is in a row of the kit's`); if (!(B.level.boxes[i].flags & BoxFlag.NoShadow)) bad.push(`${name}: the second skin added a box that is no decal`); }
-    A.level.props.forEach((p, k) => p.parts.forEach((part, j) => { const q = B.level.props[k]?.parts[j], was = O.level.props[k]?.parts[j]; if (!q || !was || (part as { does?: string }).does !== (q as { does?: string }).does) bad.push(`${name} loose thing ${k} part ${j}`); else if (key(part.albedo) !== key(was.albedo) && kitKeys.has(key(q.albedo))) bad.push(`${name}: a part of loose thing ${k} is in the kit's paint under the second skin`); }));
-    repainted += sb.repainted; }
-  check(!bad.length && plains.length >= 10 && repainted > 2000, `2 a look file's skin handed the second paints repaints the boxes the first skin repaints and no others, every box and part does what it did, and nothing it paints or lays is left in a row of the kit's`,
-    `${plains.length} plain levels that have a look file, ${asked} boxes asked, ${repainted} repainted and ${decals} decals laid in the second paints · LEFT AS LAID, and so in the kit's paint under any skin: ${laidInKit} boxes a plain file's own generator laid with the kit (a level that wears a second palette lays those over a host that hands the kit its paints: line 1)${bad.length ? ` · ${bad.length} NOT SO: ${bad.slice(0, 6).join(' · ')}` : ''}`); }
-
 // 3. OF A PALETTE A FILE CARRIES ONLY THE ROWS IT WEARS
 { const row = (a: Vec3) => ({ albedo: a }), pal = { red: row([0.5, 0.1, 0.1]), green: row([0.1, 0.5, 0.1]), blue: row([0.1, 0.1, 0.5]), gold: row([0.5, 0.4, 0.1]), grey: row([0.4, 0.4, 0.4]) };
   const data = { materials: { wall: row([0.6, 0.6, 0.6]), ...pal, grey2: row([0.3, 0.3, 0.3]) },

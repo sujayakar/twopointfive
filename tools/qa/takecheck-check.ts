@@ -29,7 +29,7 @@ const hushed = async <T>(fn: () => Promise<T> | T): Promise<T> => { const log = 
 
 /** the levels that carry a quiet block, by file */
 function quietLevels(): string[] {
-  return readdirSync(resolve(ROOT, 'levels')).filter(f => f.endsWith('.json') && !f.endsWith('-gwot.json')).filter(f => { try { return !!JSON.parse(readFileSync(resolve(ROOT, 'levels', f), 'utf8')).scenarios?.quiet; } catch { return false; } }).sort();
+  return readdirSync(resolve(ROOT, 'levels')).filter(f => f.endsWith('.json')).filter(f => { try { return !!JSON.parse(readFileSync(resolve(ROOT, 'levels', f), 'utf8')).scenarios?.quiet; } catch { return false; } }).sort();
 }
 async function stand(seed: number, file: string | null) {
   Math.random = seeded(0x7a4e + seed * 7919);

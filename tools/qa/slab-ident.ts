@@ -28,7 +28,7 @@ type Vec3 = [number, number, number];
 
 const argv = process.argv.slice(2); const flag = (n: string) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
 const N = Number(flag('--n') ?? 4000), SEED = Number(flag('--seed') ?? 1), BREAK = process.env.SLABS_BREAK === '1' || process.env.RUST_BREAK === '1';
-const files = (flag('--levels') ?? 'office.json,compound.json,consulate-gwot.json,mousehole.json,office.json:panes,compound.json:panes').split(',');   // (`:panes` = the level with three statics in ten made panes of glass, a quarter of them gone: rays end on panes all the time, open and shut)
+const files = (flag('--levels') ?? 'office.json,compound.json,consulate.json,mousehole.json,office.json:panes,compound.json:panes').split(',');   // (`:panes` = the level with three statics in ten made panes of glass, a quarter of them gone: rays end on panes all the time, open and shut)
 let s32 = SEED >>> 0; const rnd = () => { s32 = (s32 + 0x6D2B79F5) >>> 0; let t = s32; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 const pick = <T,>(a: readonly T[]): T => a[Math.floor(rnd() * a.length)];
 { const no = SIM.simWhyNot(); if (no) { console.log(`=== slab-ident: the module does not run here (${no}) — FAIL ===`); process.exit(1); } }

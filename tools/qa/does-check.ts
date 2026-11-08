@@ -88,7 +88,7 @@ async function answers(file: string, paint: (o: { albedo: number[]; does?: strin
       counts: { walls: walls.filter((w: string) => w.includes(':wall:')).length, cover: walls.filter((w: string) => w.includes(':cover:')).length, through: thin.length, outer: outer.length, furniture: (JSON.parse(furn) as unknown[]).length, index: items.length, snow: snow.length } };
   } finally { DESTRUCTION.on = was; }
 }
-{ const LEVELS = ['office.json', 'barracks.json', 'barracks-gwot.json', 'depot-gwot.json', 'white-roof.json', 'pass.json'].filter(f => existsSync(resolve(ROOT, 'levels', f)));
+{ const LEVELS = ['office.json', 'barracks.json', 'depot.json', 'white-roof.json', 'pass.json'].filter(f => existsSync(resolve(ROOT, 'levels', f)));
   // (another colour for each colour: two boxes in one paint stay in one paint)
   const h = (a: number[], c: number) => { let x = 0x811c9dc5; for (const ch of `${a.join(',')}|${c}`) { x ^= ch.charCodeAt(0); x = Math.imul(x, 0x01000193) >>> 0; } x ^= x >>> 15; x = Math.imul(x, 0x2c1b3c6d) >>> 0; x ^= x >>> 12; return (x >>> 0) / 4294967296; };
   const bad: string[] = [], said: string[] = []; let total = { walls: 0, cover: 0, through: 0 };

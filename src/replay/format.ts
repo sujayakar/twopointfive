@@ -185,6 +185,9 @@ export function tapeShield(T: RunTape): boolean {
   return carded || issued;
 }
 export const TAPE_SHIELD = 'This replay was recorded with a ballistic shield, which is no longer in the game';
+/** A TAPE RECORDED ON A LEVEL'S OLD SECOND FILE (`hall-gwot.json`): each level has one file now, under its own name, and a run does not replay on another file. */
+export const tapeOldFile = (T: RunTape): boolean => /-gwot\.json$/.test(T.recipe.levelFile ?? '');
+export const TAPE_OLD_FILE = 'This replay was recorded on a level file that has since been replaced';
 
 /** a file's sanity, in words ('' = fine) */
 export function checkReplay(F: Partial<ReplayFile> | null | undefined): string {
