@@ -171,8 +171,7 @@ import { ANYTIME } from './scene/collision';
 import { knobRegistry, knobsCopy, knobsBack } from './game/knobs';   // (last on purpose: every game module above is already loaded, so this import changes nobody's load order)
 import type { Gpu } from './gpu/device';
 import { RENDER_PASSES } from './gpu/timer';
-import { PLAYTAPE, tapeFromUrl, tapeMapUrl } from './replay/engineplay';
-import { GAME_PAGE } from './replay/format';
+import { PLAYTAPE, tapeFromUrl } from './replay/engineplay';
 import { NETPLAY, NET_JOIN, netFromUrl, netKeyed, netLeave } from './net/page';
 import { netRows } from './ui/netrows';
 import { COOP } from './net/lobby';
@@ -197,9 +196,6 @@ boot.expose();
 
 async function main() {
   const q = new URLSearchParams(location.search);
-  // A REPLAY'S ADDRESS ON A GAME PAGE THAT PLAYS NO TAPES (replay/format.ts GAME_PAGE) is the map viewer's, which draws the file's trace: this window goes there
-  // before anything boots. A served file, and a build with no viewer page, get a plain card
-  if (q.has(PLAYTAPE) && !GAME_PAGE.playsTapes) { const to = tapeMapUrl(q); if (to === null) throw Object.assign(new Error('this address has no game on this build'), { name: 'NoGameHere' }); location.replace(to); return; }
   // THE KEPT PAGE (gpu/keep.ts, host/keeppage.ts): the tab's own page keeps the GPU device and shows the game in a frame of this address, so a mission start —
   // a load of that frame — compiles no shader this visit has compiled already. A shell boots nothing more; ?keeppage=0 = every load a whole page, as it was
   const keep = keepPageBoot(q, ownPage(q), kitViewOn);   // (a run of any kind keeps its own page: host/runpage.ts; the Team & kit picture draws with its page's device, on a lease beside it)
@@ -971,7 +967,7 @@ async function main() {
     }
   }
   // ---- READY: every hook above is on window. The real start card replaces the boot card (or the boot card goes, for a boot that opens no card: ?solo, a scenario, a replay), __ready resolves, the loop starts.
-  tape?.attach({ game, canvas, cam, input, loop, engine: engine as never, smoke: smoke as never, audio, pre: () => { stressTick(game); lookTidy(engine.world, game.destr.walls.skins.live && cutBoxesOn()); }, fingerprint: () => saveMod.levelFingerprint(game).fp });
+  tape?.attach({ game, canvas, cam, input, loop, engine: engine as never, smoke: smoke as never, audio, pre: () => { stressTick(game); lookTidy(engine.world, game.destr.walls.skins.live && cutBoxesOn()); }, tools: { wrote: () => rustGame.rustToolsWrote(), hold: () => rustGame.rustToolsHold() }, fingerprint: () => saveMod.levelFingerprint(game).fp });
   net?.attach({ game, engine: engine as never, smoke: smoke as never, audio, loop, ahead: aheadDraw });
   if (net) coopInvite(net, q);   // (a co-op game's host is shown the code and the link while the server waits for the second player: ui/coop.ts)
   if (tape) soundLanes(tape, audio);   // the replay page's sound lanes: what the mixer was asked for, laid under the timeline (replay/soundlanes.ts)
@@ -1512,5 +1508,5 @@ FATAL.tell = (r, card) => {
   try { setTimeout(once, 1500); void fetch('/qa/commit', { cache: 'no-store' }).then(x => x.ok ? x.text() : '').then(t => once(t.trim()), () => once()); } catch { once(); }
 };
 
-main().catch(e => { console.error(e); if (kitViewOn) kitViewFatal(); if ((e as Error)?.name === 'NoGameHere') showFatal("This link opens a replay, and this build can't play those yet. You can still play every mission from the title."); else if (e instanceof NoWasmError) showFatal(NO_WASM_WORDS, { report: { message: e.message.slice(0, 400), stage: 'wasm' } }); else if ((e as Error)?.name === 'RustGameError') showFatal((e as Error).message, { report: { message: (e as Error).message.slice(0, 400), stage: 'rust game' } });   // (?rust=1: the Rust game's own failure, in its plain words: host/rustgame.ts)
+main().catch(e => { console.error(e); if (kitViewOn) kitViewFatal(); if (e instanceof NoWasmError) showFatal(NO_WASM_WORDS, { report: { message: e.message.slice(0, 400), stage: 'wasm' } }); else if ((e as Error)?.name === 'RustGameError') showFatal((e as Error).message, { report: { message: (e as Error).message.slice(0, 400), stage: 'rust game' } });   // (?rust=1: the Rust game's own failure, in its plain words: host/rustgame.ts)
   else showFatalError(e); readyReject(e); });

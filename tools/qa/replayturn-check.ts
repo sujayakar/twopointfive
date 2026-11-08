@@ -7,7 +7,7 @@
 //     with the row flipped, are the page tool's `turn` section.)
 // REPLAYTURN_BREAK=1 makes the replay's turn not ask the row: 'the other way with the row flipped' must fail.
 //   bun run tools/qa/replayturn-check.ts          exit 0 = all pass · 1 = a line failed
-// On the page: engine-replay-page.cjs `turn` (the row flipped) and `fog` (the row as built), both under `findtuned=0`. The row's own page check: findme-page.cjs.
+// On the page: engine-replay-page.cjs `turn` (the row flipped) and `fog` (the row as the page starts it). The row's own page check: findme-page.cjs.
 import { ROOT } from './headless.ts';
 import { readFileSync } from 'node:fs';
 const { ctrlTurn } = await import(`${ROOT}/src/replay/engineplay.ts`) as { ctrlTurn: (dx: number) => number };
