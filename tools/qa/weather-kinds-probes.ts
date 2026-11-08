@@ -26,7 +26,7 @@ const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { canLoad } = await import(`${ROOT}/src/game/savestate.ts`);
-const { missionList, missionHref } = await import(`${ROOT}/src/ui/missions.ts`);
+const { ALL_MISSIONS, pickSearch } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -188,13 +188,13 @@ export async function wxUrl() {
     if (K.weatherAsked(new URLSearchParams('mute')) !== null) f.push('no flag booted something');
     if (K.weatherSearch('', null) !== '' || K.weatherSearch('?a&&b', null) !== '?a&&b' || K.weatherSearch('', 'fog') !== '?weather=fog') f.push('an empty / odd search is rewritten');
     F.verdict(f.length === 0, 'every kind reads back from the URL and boots; an unknown name says so once and boots the level as it is; no flag = none', f.join('; ') || K.WEATHER_KINDS.join(' · ')); }
-  { const f: string[] = []; const L = missionList(); const FLAGS = '?quality=high&mute';
-    for (const m of L) { const base = missionHref(m, FLAGS), fog = K.weatherSearch(base, 'fog');
+  { const f: string[] = []; const L: any[] = ALL_MISSIONS; const FLAGS = '?quality=high&mute';
+    for (const m of L) { const base = pickSearch(m, FLAGS), fog = K.weatherSearch(base, 'fog');
       if (K.weatherSearch(base, null) !== base) f.push(`${m.id}: taking nothing off changed the link`);
       if (K.weatherOfSearch(fog) !== 'fog' || !fog.startsWith(base)) f.push(`${m.id}: ${fog}`);
       if (K.weatherSearch(K.weatherSearch(fog, 'dust'), null) !== base) f.push(`${m.id}: fog → dust → none is not the link it was`);
-      const kept = missionHref(m, FLAGS + '&weather=rain'); if (K.weatherOfSearch(kept) !== 'rain') f.push(`${m.id}: a visitor's ?weather= does not ride along (${kept})`); }
-    F.verdict(f.length === 0, `all ${L.length} missions: the pick goes on the link after the mission's own flags, comes off to the character, and a visitor's ?weather= rides along through a pick`, f.join('; ') || `${missionHref(L[L.length - 1], FLAGS)} → ${K.weatherSearch(missionHref(L[L.length - 1], FLAGS), 'fog')}`); }
+      const kept = pickSearch(m, FLAGS + '&weather=rain'); if (K.weatherOfSearch(kept) !== 'rain') f.push(`${m.id}: a visitor's ?weather= does not ride along (${kept})`); }
+    F.verdict(f.length === 0, `all ${L.length} missions: the pick goes on the link after the mission's own flags, comes off to the character, and a visitor's ?weather= rides along through a pick`, f.join('; ') || `${pickSearch(L[L.length - 1], FLAGS)} → ${K.weatherSearch(pickSearch(L[L.length - 1], FLAGS), 'fog')}`); }
   // THE ADDRESS'S RECORD (host/standup.ts addressBeforeGame, game/stood.ts): whole, off the words alone, and nothing of the process is written
   { const f: string[] = []; const { addressBeforeGame } = await import(`${ROOT}/src/host/standup.ts`), H = await import(`${ROOT}/src/game/hours.ts`), KT = await import(`${ROOT}/src/game/kit.ts`);
     const plain = { weather: null, locked: true, hour: 'night', sun: 1, sunGiven: false, dry: true, soloStand: false };

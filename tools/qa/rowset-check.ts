@@ -70,29 +70,6 @@ export async function rowsetCheck(): Promise<boolean> {
       say(mine === 'dusk/dust' && asked === 'dusk/dust', 'started by its own query, the game stands at the row\'s hour and in its weather, with another hour on the query too', `${mine} · with hour=dawn: ${asked} (before: ${at0})`);
       say(kept, 'the caller\'s query is not written on', was);
     }
-    await withDom('?quality=high&mute', async () => { // the mission sheet (a search of its own: the sheet remembers a pick by the search it was opened on)
-      const M = await import(`${ROOT}/src/ui/missions.ts`);
-      const host = new El('DIV'); const S = M.openMissions({ root: host as any, search: '?quality=high&mute&rowsetcheck' });
-      try {
-        const rowsOf = () => host.all((e: any) => e.cls.has('mdiff') && e.style.display !== 'none').map((e: any) => e.cls.has('mhour') ? 'hour' : e.cls.has('mwx') ? 'weather' : '').filter(Boolean).join(',');
-        const noteOf = (c: string) => host.all((e: any) => e.cls.has('dn') && e.parentElement?.cls.has(c))[0]?.textContent ?? '';
-        const me = S.list.find((m: any) => m.scenario === L), other = S.list.find((m: any) => m.scenario === E);
-        if (!me || !other) { say(false, 'the sheet lists the two borrowed rows', `${!!me} ${!!other}`); return; }
-        const again = () => { S.select(other.id); S.select(me.id); };   // (a repaint of the row)
-        S.select(me.id); const plainRows = rowsOf(), p0 = S.hrefOf(me);
-        own(L, 'dusk', 'dust'); again(); const rows = rowsOf(), h0 = S.hrefOf(me);
-        const key = (code: string) => M.missionsKey({ code, repeat: false }); key('KeyH'); key('KeyJ'); const keyH = S.hourNow, keyJ = S.weather;
-        S.hour('midday'); S.setWeather('overcast'); const h1 = S.hrefOf(me), o1 = S.hrefOf(other);
-        own(L, 'dusk'); again(); const rowsHourOnly = rowsOf(), noteMine = noteOf('mwx');
-        own(L); S.hour('dusk'); again(); const notePlain = noteOf('mwx'); S.hour('night'); again(); const noteNight = noteOf('mwx');
-        own(L, undefined, 'dust'); again(); const rowsWxOnly = rowsOf(), hourNote = noteOf('mhour');
-        const once = (h: string, k: string, v: string) => (h.match(new RegExp(`[?&]${k}=`, 'g')) ?? []).length === 1 && new RegExp(`[?&]${k}=${v}(&|$)`).test(h);
-        say(plainRows === 'hour,weather' && rows === '' && keyH === 'night' && keyJ === null, 'the Hour and Weather rows are not drawn for the row, and H and J do nothing on it', `plain: '${plainRows}' · its own: '${rows}' · after H and J: ${keyH}, ${keyJ}`);
-        say(h0 === p0 && !/hour=|weather=/.test(h0) && once(h1, 'hour', 'midday') && once(h1, 'weather', 'overcast') && once(o1, 'hour', 'midday'), 'its link is any row\'s link: no key unpicked, the visitor\'s picks once picked', `${h0} · ${h1}`);
-        say(rowsHourOnly === 'weather' && noteMine !== '' && noteMine === notePlain && noteMine !== noteNight, 'a row that names only an hour keeps its Weather row, and the note reads for the row\'s hour', `'${noteMine}' · at night it reads '${noteNight}'`);
-        say(rowsWxOnly === 'hour' && /the mission's own weather/.test(hourNote), 'a row that names only a weather keeps its Hour row, and the note says the weather is the mission\'s own', `'${hourNote}'`);
-      } finally { own(L); own(E); try { S.hour('night'); S.setWeather(null); } catch { /* the sheet is gone */ } M.closeMissions(); }
-    });
     {
       // (the tape's tables are a RECIPE's since the page can also play a game server's ticks: main.ts lays them with its own recipeTables() at each point of the boot
       //  that wrote over them, and the first of those calls is the one the rule must come after. ROWSET_ORDER_BREAK=1 reads the source with the rule's call moved
