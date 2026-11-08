@@ -1,6 +1,6 @@
 // THE BIG SLOT (src/game/kit.ts BIGSLOT — every card has ONE big slot beside its pouches: the wall charge, the breaching shotgun, the dynamic
 // hammer; src/game/bigkit.ts — the last two on a locked door: yours a row in the boot's place, a teammate's on a door order), headless:
-//   bun run tools/qa/bigslot-check.ts [card|off|you|mate|shut|moves|weight|wiring]      (BIGKIT_BREAK=1 = the tools do nothing to a lock: every 'the lock is gone' line must fail)
+//   bun run tools/qa/bigslot-check.ts [card|off|you|mate|shut|moves|weight|wiring]      (BIGKIT_BREAK=1 = no card is dealt its tool: every line of 'mate' and 'shut' that a tool's door hangs on must fail; 'card' asks the cards alone and stays green)
 // The maintainer, 10-14: "you have a single big slot on the bottom that can fit larger kit items and then smaller pouches for other stuff" · "i do think we
 // should change the breaching shotgun to not take up a primary weapon slot" · "and then we should also add a dynamic hammer".
 //   card    the switch on: one 'big' row a card, the weapon row a rifle or a pistol, no wall charge row; no step of the row puts two big
@@ -43,7 +43,7 @@
 // before one of them is cut (both knobs off, the moves off, the weight off, the first-pass timing, a recording from before each key). BIGSLOT.on is
 // still a variable of a run, so `off` and the card's switch-off lines stand. Where a verdict needs a state no level of the repo has (a lock keyed to
 // the face a leaf opens toward, a wedge under a leaf) the check sets it by hand and the verdict's line says so.
-// BIGKIT_BREAK and BIGWEIGHT_BREAK are bigkit.ts's own. Nothing here looks at
+// Nothing here looks at
 // a picture: neither tool has ever been seen on a GPU.
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
@@ -75,7 +75,7 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
 const hushed = async <T>(fn: () => Promise<T> | T): Promise<T> => { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const J = (o: unknown) => JSON.stringify(o), DT = 1 / 60, f2 = (x: number) => (Number.isFinite(x) ? x.toFixed(2) : String(x));
-const STAND = harnessProfile() as string, BROKEN = process.env.BIGKIT_BREAK === '1', WEIGHT_BROKEN = process.env.BIGWEIGHT_BREAK === '1';
+const STAND = harnessProfile() as string, BROKEN = process.env.BIGKIT_BREAK === '1';
 const memStore = (init: Record<string, string> = {}) => { const m = new Map(Object.entries(init)); return { m, getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, String(v)); }, removeItem: (k: string) => { m.delete(k); } }; };
 const fields = (i: number): string[] => K.kitRows(i).map((r: any) => r.field as string);
 const rowOf = (i: number, f: string) => K.kitRows(i).find((r: any) => r.field === f);
@@ -101,7 +101,7 @@ async function rig(seed: number, o: { cards?: Record<number, Record<string, unkn
   Math.random = seeded(0x51b6 + seed * 7919);
   for (let i = 0; i < K.KIT_MEMBERS; i++) K.KIT.members[i] = K.kitDefault(i);   // (nothing of the game before this one: its cards)
   const W: any = await hushed(() => standUp()); const game = W.game; K.BIGSLOT.on = o.on ?? true;
-  for (let i = 0; i < K.KIT_MEMBERS; i++) K.KIT.members[i] = { ...K.kitDefault(i), ...(o.cards?.[i] ?? {}) };
+  for (let i = 0; i < K.KIT_MEMBERS; i++) K.KIT.members[i] = { ...K.kitDefault(i), ...(o.cards?.[i] ?? {}), ...(BROKEN ? { big: 'none' } : {}) };
   game.godMode = true;
   const said: string[] = []; { const msg = game.msg.bind(game); game.msg = (t: string) => { said.push(String(t)); msg(t); }; }   // (every line the HUD is handed)
   const why = o.stage === false ? null : await hushed(() => game.roomClear.start(seed));
@@ -487,7 +487,7 @@ export async function gunSwap(to: 'pistol' | 'rifle', front: boolean) {
 /** the file's probes, by the names the runner calls them (the holds each is owed — the card's one gun row, the table's layout — are tools/qa/holds.ts's) */
 const PROBES = { 'bigslot-card': bigCard, 'bigslot-mate': bigMate, 'bigslot-shut': bigShut, 'bigslot-wiring': bigWiring };
 async function bigslotCheck(want: readonly string[]): Promise<boolean | null> {
-  console.log(`bigslot-check on the ${STAND.toUpperCase()} stand${BROKEN ? ' — BIGKIT_BREAK=1: the tools do nothing to a lock, the lock lines below must FAIL' : ''}`);
+  console.log(`bigslot-check on the ${STAND.toUpperCase()} stand${BROKEN ? ' — BIGKIT_BREAK=1: no card is dealt its tool, the lines of mate and shut below must FAIL' : ''}`);
   const ok = await asProbes(PROBES, want);
   console.log(`\nbigslot-check (${STAND} stand): ${ok === null ? 'NOTHING RAN' : ok ? 'ALL PASS' : 'FAILED'}`);
   return ok;
