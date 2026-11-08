@@ -39,8 +39,18 @@ export async function capture(lab: Lab, method: Method, reference: Method, paths
 
 /** poison every history with NaN and Inf, then see how many frames until the picture holds none, and that it comes back to what it was */
 export async function poison(lab: Lab, m: Method): Promise<{ frames: number; apart: number }> {
-  await lab.use(m); for (let i = 0; i < 60; i++) { lab.draw(); if (i % 4 === 3) await lab.gpu.device.queue.onSubmittedWorkDone(); } const before = await picture(lab, m), d = lab.gpu.device;
+  await lab.use(m); for (let i = 0; i < (lab.graph.output[0] > 200 ? 400 : 60); i++) { lab.draw(); if (i % 4 === 3) await lab.gpu.device.queue.onSubmittedWorkDone(); } const before = await picture(lab, m), d = lab.gpu.device;
   for (const [name, s] of lab.graph.signals) { if (!s.history || s.format !== 'rgba16float') continue; for (const ref of [name, name + '@prev']) { const t = lab.graph.texture(ref), bad = new Uint16Array(t.width * t.height * 4); for (let i = 0; i < bad.length; i++) bad[i] = i % 3 ? 0x7e00 : 0x7c00; d.queue.writeTexture({ texture: t }, bad, { bytesPerRow: t.width * 8 }, [t.width, t.height]); } }
-  { const c = lab.graph.buffers.get('cells'); if (c) { const now = new Float32Array(await lab.readBuffer('cells')); for (let i = 0; i < now.length; i += 8) if (now[i + 3]! > 0) { now[i] = NaN; now[i + 1] = Infinity; now[i + 3] = NaN; now[i + 7] = NaN; } d.queue.writeBuffer(c, 0, now); } const e = lab.graph.buffers.get('exposure'); if (e) d.queue.writeBuffer(e, 0, new Float32Array([NaN, NaN, NaN, NaN])); }
-  let frames = -1; for (let i = 0; i < 400; i++) { lab.draw(); await d.queue.onSubmittedWorkDone(); if (frames < 0 && i < 12) { const p = await picture(lab, m); if (!p.some(x => Math.abs(x) > 65000)) frames = i + 1; } } return { frames, apart: apart(await picture(lab, m), before) };
+  { const c = lab.graph.buffers.get('cells'); if (c) { const now = new Float32Array(await lab.readBuffer('cells')); for (let i = 0; i < now.length; i += 8) if (now[i + 3]! > 0) { now[i] = NaN; now[i + 1] = Infinity; now[i + 3] = NaN; now[i + 7] = NaN; } d.queue.writeBuffer(c, 0, now); d.queue.writeBuffer(lab.graph.buffers.get('fresh')!, 0, now); } const e = lab.graph.buffers.get('exposure'); if (e) d.queue.writeBuffer(e, 0, new Float32Array([NaN, NaN, NaN, NaN])); }
+  let frames = -1; for (let i = 0; i < (lab.graph.output[0] > 200 ? 400 : 60); i++) { lab.draw(); await d.queue.onSubmittedWorkDone(); if (frames < 0 && i < 12) { const p = await picture(lab, m); if (!p.some(x => Math.abs(x) > 65000)) frames = i + 1; } } return { frames, apart: apart(await picture(lab, m), before) };
+}
+
+/** the same run every time: the tour's ticks from the first, at a fixed size. Mean GPU time of each pass, and the picture's fingerprint at four ticks */
+export async function run(lab: Lab, m: Method, ticks: number, script: (lab: Lab) => void, say: (t: string) => void): Promise<string> {
+  await lab.use(m); lab.frameNo = 0; const sum = new Map<string, number>(), marks: string[] = []; let n = 0, worst = 0;
+  for (let i = 1; i <= ticks; i++) {
+    script(lab); lab.step(); lab.draw(); await lab.gpu.device.queue.onSubmittedWorkDone(); if (i > 60) { n++; let t = 0; for (const [k, v] of lab.graph.timer.last) { sum.set(k, (sum.get(k) ?? 0) + v); t += v; } worst = Math.max(worst, t); }
+    if (i % Math.floor(ticks / 4) === 0) { marks.push(fnv(await picture(lab, m))); say(`${i} of ${ticks}`); }
+  }
+  const total = [...sum.values()].reduce((a, b) => a + b, 0) / Math.max(1, n); return `${lab.gpu.info}\n${lab.graph.render.join('x')} to ${lab.graph.output.join('x')}, ${ticks} ticks\nGPU mean ${total.toFixed(2)} ms, worst ${worst.toFixed(2)}\n${[...sum].sort((a, b) => b[1] - a[1]).map(([k, v]) => k.padEnd(16) + (v / n).toFixed(3)).join('\n')}\npicture ${marks.join(' ')}`;
 }

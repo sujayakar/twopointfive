@@ -3,7 +3,7 @@ import type { Gpu } from './gpu';
 import type { Lab } from './lab';
 import { CURVE, exposeKnobs } from './stages/expose';
 export class Present {
-  bias = -0.25; lift = 2.6; hold = 2.1; private pipes = new Map<string, GPURenderPipeline>(); private sampler: GPUSampler; private mod!: GPUShaderModule; private knob: GPUBuffer; private dummy: GPUTexture;
+  bias = -0.1; lift = 2.5; hold = 1.8; private pipes = new Map<string, GPURenderPipeline>(); private sampler: GPUSampler; private mod!: GPUShaderModule; private knob: GPUBuffer; private dummy: GPUTexture;
   constructor(private g: Gpu) { const d = g.device; this.sampler = d.createSampler({ magFilter: 'linear', minFilter: 'linear' }); this.knob = d.createBuffer({ size: 32, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST }); this.dummy = d.createTexture({ size: [1, 1], format: 'rgba16float', usage: GPUTextureUsage.TEXTURE_BINDING }); }
   async init() {
     this.mod = this.g.device.createShaderModule({ label: 'present', code: CURVE + `
@@ -24,7 +24,7 @@ fn lum(c: vec3f) -> f32 { return dot(c, vec3f(0.2126, 0.7152, 0.0722)); }
     for (var y = -1; y <= 1; y++) { for (var x = -1; x <= 1; x++) { let q = b + vec2i(x, y); let t = textureLoad(fuse, clamp(q, vec2i(0), hi), 0).xy; let o = vec2f(q) - p; let w = exp(-dot(o, o) * 0.9); m += vec4f(t.y, t.x, t.y * t.x, t.y * t.y) * w; ws += w; } }
     m /= ws; let va = max(m.w - m.x * m.x, 0.0); let ratio = m.y / max(m.x, 0.02); let a = clamp((m.z - m.x * m.y + 0.004 * ratio) / (va + 0.004), 0.0, 4.0); let l = lum(c); let pl = curve(l); let f = clamp(a * pl + m.y - a * m.x, 0.0, 0.985); c *= clamp(uncurve(f) / max(l, 1e-5), 0.2, 9.0) ; mm = ws;
   }
-  let q = (v.uv - 0.5) * vec2f(1.0, 0.8); c *= 1.0 - 0.30 * dot(q, q); let l = lum(c); c = max(vec3f(0.0), l + (c - l) * 1.05);
+  let q = (v.uv - 0.5) * vec2f(1.0, 0.8); c *= 1.0 - 0.30 * dot(q, q); let l = lum(c); c = max(vec3f(0.0), l + (c - l) * 1.10);
   c = srgb(clamp(neutral(c), vec3f(0.0), vec3f(1.0))); let g = h(vec2u(v.p.xy)) - 0.5; return vec4f(c + g * (1.0 / 255.0 + 0.010 * k[0].w * (1.0 - dot(c, vec3f(0.33)))), 1.0);
 }` });
     const bad = (await this.mod.getCompilationInfo()).messages.find(m => m.type === 'error'); if (bad) throw new Error('present:' + bad.lineNum + ' ' + bad.message);

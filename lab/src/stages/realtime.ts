@@ -33,22 +33,23 @@ export interface UpscalePart { name: string; stages(g: Graph): { stages: Stage[]
 
 /** light on surfaces, in a table */
 export function hashCache(): CachePart {
-  const bind: Stage['buffers'] = { keys: ['keys', 'array<atomic<u32>>', 'read_write'], cand: ['cand', 'array<atomic<u32>>', 'read_write'], cells: ['cells', 'array<vec4f>', 'read_write'] };
+  const bind: Stage['buffers'] = { keys: ['keys', 'array<atomic<u32>>', 'read_write'], cand: ['cand', 'array<atomic<u32>>', 'read_write'], cells: ['cells', 'array<vec4f>', 'read'] };
   const groups = { groups: (): [number, number, number] => [SLOTS / 64 / 8, 8, 1] }, lin = (t: string) => t.replaceAll('let s = id.x;', `let s = id.x + id.y * ${SLOTS / 8}u;`);
-  const claimS: Stage = { name: 'cache claim', over: groups, buffers: { ...bind, norms: ['norms', 'array<u32>', 'read_write'], hits: ['hits', 'array<vec4f>', 'read'] }, code: cacheLib + lin(claim) };
-  const updateS: Stage = { name: 'cache', over: groups, buffers: { ...bind, norms: ['norms', 'array<u32>', 'read_write'], ...CHANGES }, code: signals + cacheLib + lin(update) };
+  const claimS: Stage = { name: 'cache claim', over: groups, buffers: { ...bind, norms: ['norms', 'array<u32>', 'read_write'], hits: ['hits', 'array<vec4f>', 'read'], fresh: ['fresh', 'array<vec4f>', 'read_write'] }, code: cacheLib + lin(claim) };
+  const keep: Stage = { name: 'cache keep', over: groups, code: '', async make() { return (enc, g) => { if (keep.when && !keep.when()) return; enc.copyBufferToBuffer(g.buffers.get('fresh')!, 0, g.buffers.get('cells')!, 0, SLOTS * 32); }; } };
+  const updateS: Stage = { name: 'cache', over: groups, buffers: { ...bind, norms: ['norms', 'array<u32>', 'read'], fresh: ['fresh', 'array<vec4f>', 'read_write'], ...CHANGES }, code: signals + cacheLib + lin(update) };
   let at: [number, number] = [0, 0]; const warmS: Stage = { name: 'cache warm', over: { groups: () => [Math.ceil((at[1] - at[0]) / 64), 1, 1] }, buffers: { ...bind, hits: ['hits', 'array<vec4f>', 'read'], warmAt: ['warmAt', 'vec4u', 'uniform'] }, code: cacheLib + warm };
   const again = (k: number): Stage => ({ ...updateS, name: 'cache', when: () => (part.rush ?? 0) > k, code: updateS.code.replace('rngKey(key, 91u)', `rngKey(key, ${92 + k}u)`) });
   const part: CachePart = {
-    name: 'hash', lib: cacheLib, bind, stages: [claimS, updateS, again(0), again(1), again(2)],
+    name: 'hash', lib: cacheLib, bind, stages: [claimS, updateS, keep, ...[0, 1, 2].flatMap(k => [again(k), { ...keep, when: () => (part.rush ?? 0) > k }])],
     async init(lab) {
-      lab.buffer('keys', SLOTS * 4); lab.buffer('cells', SLOTS * 32); lab.buffer('norms', SLOTS * 4); lab.buffer('hits', HITS * 16); lab.uniform('warmAt', new Uint32Array(4));
+      lab.buffer('keys', SLOTS * 4); lab.buffer('cells', SLOTS * 32, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST); lab.buffer('fresh', SLOTS * 32, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST); lab.buffer('norms', SLOTS * 4); lab.buffer('hits', HITS * 16); lab.uniform('warmAt', new Uint32Array(4));
       const c = lab.buffer('cand', SLOTS * 4); lab.gpu.device.queue.writeBuffer(c, 0, new Uint32Array(SLOTS).fill(0xffffffff));
-      await lab.graph.build([claimS, warmS]);
+      await lab.graph.build([claimS, warmS, keep]);
       const pts = facePoints(lab), chunk = 49152; // 48 k at a time
       for (let a = 0; a < pts.length / 4; a += chunk) {
         const b = Math.min(pts.length / 4, a + chunk); at = [a, b]; lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('hits')!, 0, pts.buffer as ArrayBuffer, a * 16, (b - a) * 16); lab.uniform('warmAt', new Uint32Array([a, b, 0, 0]));
-        const e = lab.gpu.device.createCommandEncoder(); lab.graph.run(e, [warmS, claimS]); lab.gpu.device.queue.submit([e.finish()]);
+        const e = lab.gpu.device.createCommandEncoder(); lab.graph.run(e, [warmS, claimS, keep]); lab.gpu.device.queue.submit([e.finish()]);
       }
       (lab as never as { warmed: number }).warmed = pts.length / 4;
     },

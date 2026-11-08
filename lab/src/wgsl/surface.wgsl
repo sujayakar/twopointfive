@@ -67,7 +67,7 @@ fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
       base *= 1.0 - 0.10 * smoothstep(0.5, 0.75, nB) * select(0.4, 1.0, an.y < 0.5) - 0.12 * foot; s.rough = clamp(s.rough + 0.16 * (nB - 0.5), 0.3, 1.0); }
     case 2u: { base *= 0.95 + 0.1 * nA; let scuff = smoothstep(0.56, 0.74, nB); s.rough = mix(s.rough, s.rough * 2.6, scuff * 0.8); }
     case 3u: { let cell = floor(uv / m.scale); base *= 0.93 + 0.1 * hash21(cell + 3.0); let g = gridLine(uv, vec2f(m.scale)); let k2 = band(g, 0.003, fp); base = mix(base, m.b2, k2); s.rough = mix(s.rough * (0.8 + 0.5 * hash21(cell)), 0.8, k2); base *= 0.96 + 0.08 * nA; }
-    case 4u: { s.rough *= 0.8 + 0.5 * nC; base *= 0.92 + 0.12 * nA; }
+    case 4u: { s.rough *= 0.92 + 0.16 * nC; base *= 0.95 + 0.08 * nA; }
     case 5u: { base *= 0.92 + 0.12 * nA; let g = abs(fract(uv.x / 1.5 + 0.5) - 0.5) * 1.5; base *= 1.0 - 0.10 * band(g, 0.02, fp); let pud = smoothstep(0.52, 0.66, nB); s.rough = mix(s.rough, 0.36, pud * 0.6); base *= 1.0 - 0.10 * pud; }
     case 6u: { let pl = floor(uv.y / 0.14); base *= 0.78 + 0.34 * hash21(vec2f(pl, floor(uv.x / 2.1 + hash21(vec2f(pl, 5.0))))); base *= 0.9 + 0.2 * nC; base *= 1.0 - 0.75 * band(0.07 - abs(abs(fract(uv.y / 0.14) - 0.5) * 0.14), 0.004, fp); }
     case 7u: { // a tower across the street: floors of windows, some of them lit

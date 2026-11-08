@@ -56,7 +56,7 @@ export async function readTexture(g: Gpu, t: GPUTexture): Promise<{ data: ArrayB
 
 /** GPU time of each pass, a few frames late; nothing where the browser gives no timestamps */
 export class Timer {
-  readonly ms = new Map<string, number>();
+  readonly ms = new Map<string, number>(); last = new Map<string, number>();
   private set: GPUQuerySet | null = null; private resolve!: GPUBuffer; private reads: GPUBuffer[] = []; private names: string[] = [];
   constructor(private g: Gpu, private max = 48) {
     if (!g.timestamps) return;
@@ -76,7 +76,7 @@ export class Timer {
     return () => r.mapAsync(GPUMapMode.READ, 0, n * 16).then(() => {
       const t = new BigUint64Array(r.getMappedRange(0, n * 16)), sum = new Map<string, number>();
       for (let i = 0; i < n; i++) sum.set(names[i]!, (sum.get(names[i]!) ?? 0) + Number(t[i * 2 + 1]! - t[i * 2]!) / 1e6);
-      for (const k of [...this.ms.keys()]) if (!sum.has(k)) this.ms.delete(k);
+      this.last = sum; for (const k of [...this.ms.keys()]) if (!sum.has(k)) this.ms.delete(k);
       for (const [k, v] of sum) this.ms.set(k, v < 0 || v > 1000 ? 0 : (this.ms.get(k) ?? v) * 0.9 + v * 0.1);
       r.unmap(); this.reads.push(r);
     }).catch(() => {});

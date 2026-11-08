@@ -4,7 +4,8 @@ import { pathTracer } from './stages/path';
 import { Present } from './present';
 import { realtime, noDenoise, noCache, bilinear } from './stages/realtime';
 import type { V3 } from './math';
-import { bench, poison } from './bench';
+import { bench, poison, run } from './bench';
+import { tourStep, plainAct } from './tour';
 export interface View { w: number; h: number; hour?: number; cut?: number; look?: V3; yaw?: number; pitch?: number; dist?: number; fov?: number; samples: number; method?: string; tick?: number; doors?: Record<string, number> | number; lamps?: 'auto' | 'on' | 'off'; bias?: number; scale?: number; warm?: number; jpeg?: boolean; run?: boolean; signal?: string; gain?: number; person?: number; go?: boolean; spin?: number; want?: Record<string, number> | number; groups?: Record<string, number> }
 const methods: Record<string, () => Method> = { reference: () => pathTracer(), realtime: () => realtime(), raw: () => realtime({ name: 'raw', denoise: noDenoise }), nocache: () => realtime({ name: 'nocache', cache: noCache() }), bilinear: () => realtime({ name: 'bilinear', upscale: bilinear }) };
 export function register(name: string, m: () => Method) { methods[name] = m; }
@@ -21,7 +22,7 @@ export async function shots() {
     const { readTexture } = await import('./gpu'); const r = await readTexture(lab.gpu, out); const cv = document.createElement('canvas'); cv.width = v.w; cv.height = v.h; cv.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(r.data), v.w, v.h), 0, 0); out.destroy(); const gpu = Object.fromEntries([...lab.graph.timer.ms].map(([k, v]) => [k, +v.toFixed(3)])); return { png: v.jpeg ? cv.toDataURL('image/jpeg', 0.93) : cv.toDataURL('image/png'), ms, gpu, sum: +Object.values(gpu).reduce((a, b) => a + b, 0).toFixed(2), render: lab.graph.render };
   };
   const stage = (v: View) => { lab.haze = 0; if (v.tick !== undefined) lab.seek(v.tick); lab.hour = v.hour ?? 15.2; lab.cut = lab.wantCut = v.cut ?? 1e9; lab.lampsMode = v.lamps ?? 'auto'; const c = lab.camera; Object.assign(c.want, { look: v.look ?? [0, 3, 0], yaw: v.yaw ?? 0.62, pitch: v.pitch ?? 0.94, dist: v.dist ?? 44 }); c.snap(); for (const d of lab.building.doors) d.open = d.want = typeof v.doors === 'number' ? v.doors : 0; lab.pose(); present.set(lab, true); };
-  return { lab, shot, poison: async (v: View) => { stage(v); lab.resize([v.w, v.h], [v.w, v.h]); return poison(lab, made.get('realtime') ?? (made.set('realtime', methods.realtime!()), made.get('realtime')!)); }, counts: lab.scene.counts, bench: (views: (View & { name: string })[], names: string[], o: object) => bench(lab, views, Object.fromEntries(['reference', ...names].map(n => [n, methods[n]!])), { ...o, stage }) };
+  return { lab, shot, tour: (ticks: number, w: number, h: number, scale: number) => { lab.resize([Math.round(w * scale), Math.round(h * scale)], [w, h]); present.set(lab, true); const act = plainAct(lab); let m = made.get('realtime'); if (!m) made.set('realtime', m = methods.realtime!()); return run(lab, m, ticks, l => tourStep(l, act), () => {}); }, poison: async (v: View) => { stage(v); lab.resize([v.w, v.h], [v.w, v.h]); return poison(lab, made.get('realtime') ?? (made.set('realtime', methods.realtime!()), made.get('realtime')!)); }, counts: lab.scene.counts, bench: (views: (View & { name: string })[], names: string[], o: object) => bench(lab, views, Object.fromEntries(['reference', ...names].map(n => [n, methods[n]!])), { ...o, stage }) };
 }
 (globalThis as never as { shots: unknown }).shots = shots;
 /** does a piece of shader compile here? (for finding what a driver chokes on) */

@@ -4,6 +4,8 @@ import { realtime } from './stages/realtime';
 import { pathTracer } from './stages/path';
 import { Present } from './present';
 import { showError } from './gpu';
+import { run } from './bench';
+import { tourStep } from './tour';
 import { type V3, add, mul, sub, dot, clamp, norm } from './math';
 import { boundsOf } from './scene/world';
 
@@ -27,6 +29,7 @@ async function main() {
     row('doors', [['Doors open', () => false, () => act.doors(1)], ['shut', () => false, () => act.doors(0)], ['swing', () => lab.doorsAuto, () => act.doors(lab.doorsAuto ? 0 : 'auto')]]);
     row('lamps', (['auto', 'on', 'off'] as const).map(k => ['Lamps ' + k, () => lab.lampsMode === k, () => { lab.lampsMode = k; }] as [string, () => boolean, () => void]));
     row('view', views.map((v, i) => [v, () => viewIx === i, () => { viewIx = i; }] as [string, () => boolean, () => void]));
+    row('groups', ['atrium', 'orange', 'green', 'blue', 'gallery', 'studio', 'lounge'].map(k => [k, () => (lab.lampGroup[k] ?? 1) > 0, () => { lab.lampGroup[k] = (lab.lampGroup[k] ?? 1) > 0 ? 0 : 1; }] as [string, () => boolean, () => void]));
     $('mode').textContent = method === rt ? 'Real time' : 'Reference, path traced';
     $<HTMLInputElement>('hour').value = String(lab.hour);
   }
@@ -41,6 +44,10 @@ async function main() {
   onkeyup = e => held.delete(e.key.toLowerCase()); onblur = () => held.clear(); onresize = fit;
   // ---- the torch at the pointer: a lamp like any other
   const hand = lab.building.world.lamps.length; lab.building.world.lamps.push({ kind: 'spot', at: [0, -50, 0], u: [0.03, 0, 0], v: [0, -1, 0], radiance: [52000, 49000, 43000], cos: 0.93, name: 'hand', on: 0 });
+  if (Q.has('bench')) {
+    $('load').remove(); auto = false; canvas.width = 1920; canvas.height = 1080; lab.resize([1440, 810], [1920, 1080]); present.set(lab, true); const text = await run(lab, rt, Number(Q.get('bench')) || 600, l => tourStep(l, act), s => { $('stats').textContent = 'Benchmark ' + s; });
+    $('stats').textContent = text; (window as never as { benchText: string }).benchText = text; return;
+  }
   let acc = 0, last = performance.now(), slow = 0, seen = 0, ms = 16, frames = 0, bad = false; setTimeout(() => { $('load').style.opacity = '0'; setTimeout(() => $('load').remove(), 900); }, 300);
   const loop = () => {
     requestAnimationFrame(loop); if (bad) return; const now = performance.now(), dt = Math.min(0.1, (now - last) / 1000); last = now; ms = ms * 0.95 + dt * 1000 * 0.05;
@@ -60,9 +67,5 @@ async function main() {
     } catch (e) { bad = true; showError(String((e as Error).stack ?? e)); }
   };
   requestAnimationFrame(loop);
-}
-/** the tour: a pure function of the tick */
-function tourStep(lab: Lab, act: { level(i: number): void; doors(v: number | 'auto'): void }) {
-  const t = lab.tick * TICK, c = lab.camera.want, leg = Math.floor(t / 14) % 5; c.yaw = 0.62 + t * 0.045; c.pitch = 0.80 + 0.16 * Math.sin(t * 0.11); c.dist = [52, 34, 38, 30, 46][leg]!; const look: V3[] = [[1, 3, 0], [7.5, 3.6, 0.5], [-4, 3.4, -1], [2, 0.6, 0], [0, 0.6, 0]]; c.look = look[leg]!; const lv = [0, 0, 1, 2, 2][leg]!; if (lv !== lab.level) act.level(lv); if (!lab.doorsAuto) act.doors('auto'); lab.hour = 7.5 + ((t * 0.12) % 14.5);
 }
 main().catch(e => { console.error(e); showError(String(e.stack ?? e)); $('what').textContent = String(e.message ?? e); });
