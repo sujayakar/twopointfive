@@ -138,7 +138,7 @@ pub fn who(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> PlayerId { se
 /// the door a teammate is on a plain 'stack up' on, by name; None: none (lesson.ts onStack)
 pub fn on_stack(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: GuardId) -> Option<String> {
     let a = crate::orders::squad_orders_of(g, seat, m)?;
-    if g.tab.orders_assignment[a].order != "stack" { return None; }
+    if !crate::orders::rows::is(g, a, crate::orders::Is::Stacks) { return None; }
     let d = g.tab.orders_assignment[a].door?;
     Some(g.dr[d].def.name.clone())
 }
@@ -361,7 +361,7 @@ fn ok_taken(g: &Game, room: &str) -> bool {
 fn ok_following(g: &Game, seat: &crate::seats::SeatRef) -> bool {
     if !crate::orders::squad_orders_active(g, seat) { return false; }
     let men = squad_men(g, seat, crate::orders::SquadOrdersMenSel::All);
-    !men.is_empty() && men.iter().all(|&m| crate::orders::squad_orders_of(g, seat, m).map_or(false, |a| g.tab.orders_assignment[a].order == "fallIn"))
+    !men.is_empty() && men.iter().all(|&m| crate::orders::squad_orders_of(g, seat, m).map_or(false, |a| crate::orders::rows::is(g, a, crate::orders::Is::Follows)))
 }
 
 fn ok_mate(g: &Game, seat: &crate::seats::SeatRef, area: Option<crate::scene_scenarios::Rect>, at: Option<V3>, r: Option<f64>, by: Option<f64>, away: Option<f64>) -> bool {
@@ -408,7 +408,7 @@ fn ok_watching(g: &Game, seat: &crate::seats::SeatRef, a: V3, r: Option<f64>, n:
     let hits = men.iter().filter(|&&m| {
         let Some(id) = crate::orders::squad_orders_of(g, seat, m) else { return false };
         let row = &g.tab.orders_assignment[id];
-        row.order == "cover" && row.watch.map_or(false, |w| m::hyp2(w[0] - a[0], w[2] - a[2]) < r)
+        crate::orders::rows::id_is(&row.order, crate::orders::Is::Covers) && row.watch.map_or(false, |w| m::hyp2(w[0] - a[0], w[2] - a[2]) < r)
     }).count();
     hits as f64 >= n.unwrap_or(1.0)
 }

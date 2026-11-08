@@ -7,8 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// the orders whose walk to a mark goes low while Sam is low (unseen.ts POSTED)
-static POSTED: [&str; 2] = ["move", "cover"];
 
 // ------------------------------------------------------------ the state
 
@@ -201,7 +199,7 @@ pub fn unseen_follow(g: &mut Game, gd: GuardId, sam_v: f64, d: f64, walk: f64, s
 
 /// a walk to a mark an order gave him: the pace he keeps to, low; None: the order's own carriage (unseen.ts unseenPost)
 pub fn unseen_post(g: &mut Game, gd: GuardId, order: &str) -> Option<f64> {
-    in_view(g, gd, &mut |g: &mut Game| if POSTED.contains(&order) && unseen_low(g, gd) { Some(g.k.unseen.low_pace) } else { None })
+    in_view(g, gd, &mut |g: &mut Game| if crate::orders::rows::id_is(order, crate::orders::Is::WalksLow) && unseen_low(g, gd) { Some(g.k.unseen.low_pace) } else { None })
 }
 
 /// A follower's place while Sam is on a wall; None: his place in the file as ever (unseen.ts unseenWallSlot)

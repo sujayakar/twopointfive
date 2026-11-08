@@ -496,7 +496,7 @@ pub fn squad_orders_all_in(g: &mut crate::game::Game) {
     let mut every = true;
     for &gd in &men {
         let fell_in = match squad_orders_of(g, &crate::seats::here(g), gd) {
-            Some(a) => { let a = &g.tab.orders_assignment[a]; a.order == "fallIn" && a.post.is_none() }
+            Some(a) => { let a = &g.tab.orders_assignment[a]; crate::orders::rows::id_is(&a.order, crate::orders::Is::Follows) && a.post.is_none() }
             None => false,
         };
         if !fell_in { every = false; break; }

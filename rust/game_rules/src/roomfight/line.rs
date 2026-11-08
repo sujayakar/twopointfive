@@ -95,7 +95,7 @@ pub fn room_fight_cover_passes(g: &crate::game::Game, seat: &crate::seats::SeatR
     let a = match crate::orders::squad_orders_of(g, seat, g.tab.roomfight_op[o].gd) { Some(a) => a, None => return false };
     let (watch, post) = {
         let row = &g.tab.orders_assignment[a];
-        if row.order != "cover" { return false; }
+        if !crate::orders::rows::id_is(&row.order, crate::orders::Is::Covers) { return false; }
         match (row.watch, row.post) { (Some(w), Some(p)) => (w, p), _ => return false }
     };
     let cp = g.ch[g.gd[g.tab.roomfight_op[o].gd].ch].pos;

@@ -877,6 +877,3 @@ pub const STUN_THERE: &str = "stunThere";
 
 /// (src/game/squadthrow.ts:143 TICK_KEPT: a table nothing writes)
 pub fn tick_kept() -> Vec<String> { alloc::vec![String::from("frag.WALLS_FOR"), String::from("seenwalk.shared")] }
-
-/// (src/game/squadthrow.ts:244 RESUMED: a table nothing writes)
-pub fn resumed() -> Vec<String> { alloc::vec![String::from("move"), String::from("stack"), String::from("cover"), String::from("hold"), String::from("fallIn")] }

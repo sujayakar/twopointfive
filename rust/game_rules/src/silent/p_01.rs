@@ -7,9 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// `LOUD_ROWS.includes(id)`   (silent.ts:248, :249)
-fn is_loud_row(id: &str) -> bool { loud_rows().iter().any(|r| r == id) }
-
 /// a state as the TypeScript's literal makes it   (silent.ts:123, :259)
 fn new_state(cast: Vec<GuardId>, since: f64) -> State {
     State { cast, silent: false, since, hot: false, was: None, booted: None }
@@ -285,11 +282,11 @@ pub fn posture_word(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Opti
 }
 /// `posture.mark`   (silent.ts:248): what the posture's seam should call
 pub fn posture_mark(g: &crate::game::Game, seat: &crate::seats::SeatRef, def: OrdersOrderDefId) -> &'static str {
-    if squad_silent(g, seat) && is_loud_row(&g.tab.orders_order_def[def].id) { " · LOUD" } else { "" }
+    if squad_silent(g, seat) && crate::orders::rows::id_is(&g.tab.orders_order_def[def].id, crate::orders::Is::Loud) { " · LOUD" } else { "" }
 }
 /// `posture.given`   (silent.ts:249): what the posture's seam should call
 pub fn posture_given(g: &mut crate::game::Game, def: OrdersOrderDefId) {
-    let loud = is_loud_row(&g.tab.orders_order_def[def].id);
+    let loud = crate::orders::rows::id_is(&g.tab.orders_order_def[def].id, crate::orders::Is::Loud);
     silent_tool(g, loud);
 }
 fn seam_posture(g: &mut Game) -> crate::orders::SquadOrdersPosture { crate::orders::SquadOrdersPosture {} }   // (the one maker of a posture is this module: a posture that is Some IS these three functions, and p_orders_03 calls silent_tool on that reading)

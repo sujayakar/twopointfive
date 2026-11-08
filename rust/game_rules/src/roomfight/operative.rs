@@ -537,7 +537,7 @@ pub fn room_fight_cue(g: &mut crate::game::Game, o: RoomfightOpId) {
     let arc = match a {
         Some(id) => {
             let row = &g.tab.orders_assignment[id];
-            match row.watch { Some(w) if row.order == "hold" && row.arrived => Some(v3::yaw_to(g.ch[c].pos, w)), _ => None }
+            match row.watch { Some(w) if crate::orders::rows::id_is(&row.order, crate::orders::Is::Holds) && row.arrived => Some(v3::yaw_to(g.ch[c].pos, w)), _ => None }
         }
         None => None,
     };
