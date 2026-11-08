@@ -57,7 +57,7 @@ pub fn dealt(g: &mut crate::game::Game, reason: crate::qrf::QrfReason) -> crate:
     let eta = r.eta.unwrap_or([qrf_eta, qrf_eta]);
     let mut open: Vec<usize> = Vec::new();
     for (i, y) in r.ways.iter().enumerate() { if way_open(g, y) { open.push(i); } }
-    let a = crate::dice::draw_world(g, "qrf::dealt#1");   // (three draws whatever the level allows)
+    let a = crate::dice::draw_world(g, "qrf::dealt#1");
     let b = crate::dice::draw_world(g, "qrf::dealt#2");
     let c = crate::dice::draw_world(g, "qrf::dealt#3");
     let mut clear: Vec<usize> = Vec::new();
