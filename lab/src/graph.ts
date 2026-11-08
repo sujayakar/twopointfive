@@ -42,7 +42,7 @@ export class Graph {
   private drawn = new Map<Stage, (enc: GPUCommandEncoder, g: Graph) => void>(); private groups = new Map<string, GPUBindGroup>(); private parity = 0;
   private external = new Map<string, GPUTexture>();
   render: [number, number] = [1, 1]; output: [number, number] = [1, 1];
-  readonly timer: Timer; private empty: GPUBindGroupLayout | null = null; private emptyGroup: GPUBindGroup | null = null;
+  readonly timer: Timer; private made = new Map<string, Promise<{ pipe: GPUComputePipeline; layout: GPUBindGroupLayout }>>(); private empty: GPUBindGroupLayout | null = null; private emptyGroup: GPUBindGroup | null = null;
   /** what is checked for bad numbers as it is written: histories (play), everything (to measure that), nothing (while watched: see watch.ts). Set before any stage is built */
   guard: 'kept' | 'all' | 'off' = 'kept';
   /** a stage broken on purpose: one bad block at one frame. For the checks of the checks */
@@ -105,11 +105,16 @@ export class Graph {
       for (const n of Object.values(s.writes ?? {})) { entries.push({ binding: k++, visibility, storageTexture: { access: 'write-only', format: this.signals.get(n)!.format, viewDimension: this.signals.get(n)!.solid ? '3d' : '2d' } }); names.push([n, 'w']); }
       for (const [b, , access] of Object.values(s.buffers ?? {})) { entries.push({ binding: k++, visibility, buffer: { type: access === 'uniform' ? 'uniform' : access === 'read' ? 'read-only-storage' : 'storage' } }); names.push([b, 'b']); }
       const layout = d.createBindGroupLayout({ label: s.name, entries }), code = this.source(s);
-      const module = d.createShaderModule({ label: s.name, code });
-      const info = await module.getCompilationInfo(); const bad = info.messages.filter(m => m.type === 'error');
-      if (bad.length) { const lines = code.split('\n'); throw new Error(bad.slice(0, 6).map(m => `${s.name}:${m.lineNum}:${m.linePos} ${m.message}\n    ${lines[m.lineNum - 1]?.trim().slice(0, 160)}`).join('\n')); }
-      const pipe = await d.createComputePipelineAsync({ label: s.name, layout: d.createPipelineLayout({ bindGroupLayouts: [s.alone ? (this.empty ??= d.createBindGroupLayout({ entries: [] })) : this.shared.layout, layout] }), compute: { module, entryPoint: s.entry ?? 'main' } });
-      this.built.set(s, { pipe, layout, names });
+      // (stages that differ in nothing but when they run share one pipeline)
+      const key = code + '|' + (s.entry ?? 'main') + (s.alone ? '|alone' : ''); let one = this.made.get(key);
+      if (!one) this.made.set(key, one = (async () => {
+        const module = d.createShaderModule({ label: s.name, code });
+        const info = await module.getCompilationInfo(); const bad = info.messages.filter(m => m.type === 'error');
+        if (bad.length) { const lines = code.split('\n'); throw new Error(bad.slice(0, 6).map(m => `${s.name}:${m.lineNum}:${m.linePos} ${m.message}\n    ${lines[m.lineNum - 1]?.trim().slice(0, 160)}`).join('\n')); }
+        const pipe = await d.createComputePipelineAsync({ label: s.name, layout: d.createPipelineLayout({ bindGroupLayouts: [s.alone ? (this.empty ??= d.createBindGroupLayout({ entries: [] })) : this.shared.layout, layout] }), compute: { module, entryPoint: s.entry ?? 'main' } }); return { pipe, layout };
+      })());
+      const { pipe, layout: shared } = await one;
+      this.built.set(s, { pipe, layout: shared, names });
     }));
     this.stages = stages; this.groups.clear();
   }

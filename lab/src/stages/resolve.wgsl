@@ -14,7 +14,7 @@ fn upMirror(mirror: texture_2d<f32>, id: vec2u, p: Px, f: vec4u, front: bool) ->
   if (ws <= 0.0) { return vec4f(0.0, 0.0, 0.0, -1.0); } return a / ws;
 }
 /** how much of the light round a leaf reaches its two sides, past its own neighbours (which send some on themselves) */
-fn leafAo(p: Px) -> vec2f { let w = 0.55 * lum(p.albedo) * 1.8; return p.ao / (1.0 - (1.0 - p.ao) * min(w, 0.6)); }
+fn leafAo(p: Px) -> vec2f { let w = 0.55 * lum(p.albedo) * 1.8; return mix(vec2f(1.0), p.ao / (1.0 - (1.0 - p.ao) * min(w, 0.6)), 0.6); }   /* (six tenths: a blocker is not black, and sends on what its own side gets) */
 @compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) {
   let dim = vec2u(frame.size.xy); if (id.x >= dim.x || id.y >= dim.y) { return; }
   let rd = pxRay(id.xy); let V = -rd; let f = textureLoad(frontT, id.xy, 0); let p = underWater(unpackPx(textureLoad(surf, id.xy, 0), rd), f, rd); let em = textureLoad(emit, id.xy, 0); var c = em.rgb * part(0u); var mir = vec4f(0.0, 0.0, 0.0, -1.0); if (!p.leaf && (p.rough < 0.43 || p.metal > 0.5)) { mir = upMirror(mirror, id.xy, p, f, false); }

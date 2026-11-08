@@ -125,3 +125,9 @@ export async function converge(lab: Lab, m: Method, ref: Method, w: number, h: n
   for (const q of pics) { const p = soft(q, w, h), v = new Float32Array(w * h); for (let i = 0; i < v.length; i++) { const o = i * 3; v[i] = Math.min(100, 100 * (Math.abs(p[o]! - t[o]!) + Math.abs(p[o + 1]! - t[o + 1]!) + Math.abs(p[o + 2]! - t[o + 2]!)) / (t[o]! + t[o + 1]! + t[o + 2]! + 3 * fl)); } for (const [k, x] of Object.entries(byKind(v, kinds))) (at[k] ??= []).push(x.mean); }
   for (const [k, l] of Object.entries(at)) { const end = l[l.length - 1]!, i = l.findIndex((x, n) => l.slice(n).every(y => y <= end * 1.1 + 0.2) && x >= 0); frames[k] = AFTER[Math.max(0, i)]!; } return { at, frames };
 }
+
+export async function refFloor(lab: Lab, ref: Method, w: number, h: number, paths: number): Promise<ByKind> {
+  const idle = () => lab.gpu.device.queue.onSubmittedWorkDone(), kinds = await kindsOf(lab, w, h), pics: Float32Array[] = []; await lab.use(ref);
+  for (const seed of [0, 77]) { lab.seed = seed; ref.reset?.(lab); lab.frameNo = 0; for (let i = 0; i < paths; i++) { lab.draw(); if (i % 4 === 3) await idle(); } pics.push(soft(await picture(lab, ref), w, h)); } lab.seed = 0;
+  const [p, t] = pics as [Float32Array, Float32Array]; let mean = 0; for (const x of t) mean += x; const fl = mean / t.length * 0.02 + 1e-5, v = new Float32Array(w * h); for (let i = 0; i < v.length; i++) { const o = i * 3; v[i] = Math.min(100, 100 * (Math.abs(p[o]! - t[o]!) + Math.abs(p[o + 1]! - t[o + 1]!) + Math.abs(p[o + 2]! - t[o + 2]!)) / (t[o]! + t[o + 1]! + t[o + 2]! + 3 * fl)) * Math.SQRT1_2; } return byKind(v, kinds);
+}
