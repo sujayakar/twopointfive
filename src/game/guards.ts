@@ -11,7 +11,6 @@ import { manLeaves } from '../sim/men/store';
 import './character';
 import { BoxFlag } from '../scene/boxes';
 import { BAKE_Y } from '../scene/collision';
-import { senseTool } from './sense';   // (read inside functions only)
 import { FOG, fogThrough } from './fogofwar';
 import { Door } from './doors';
 import { rigLightPose, rigTorchPos, torchCarryDir, torchCarryWant, torchLightDef, RIG, sc20kLightPose } from './rigProps';
@@ -892,11 +891,11 @@ export function crossesDoor(a: Vec3, b: Vec3, d: Door): { t: number; side: 1 | -
 
 /** THE LIGHT THAT STANDS ON A POINT, as the Rust game has it (rust/game_rules/src/guards light_at): for a preview on the page and for a tool, between ticks; no rule
  *  asks it here. `skipOwner`: whose carried lamps are left out · `steadyOnly`: what the PLACE lights, with nothing that passes · `leave`: lamps of the level's own left
- *  out, by what feeds them (sim/lightshome.ts ROW_BIT). With no Rust game under it, it throws by name (sense.ts senseTool). */
+ *  out, by what feeds them (sim/lightshome.ts ROW_BIT). It applies nothing. With no Rust game under it, it throws by name (sense.ts senseTool). */
 export function lightEstimateAt(g: Game, P: Vec3, skipOwner?: (owner: number) => boolean, steadyOnly = false, leave = 0): number {
   const owners: number[] = [];
   if (skipOwner) for (const l of g.engine.lights.lights) if (l.owner && !owners.includes(l.owner) && skipOwner(l.owner)) owners.push(l.owner);
-  return senseTool(g, 0, [steadyOnly ? 1 : 0, leave, owners.length, ...owners, P[0], P[1], P[2]])[0];
+  return g.ask.light(P, owners, steadyOnly, leave);
 }
 
 // ------------------------------------------------------------ the right hand: what his state puts in it, what is actually there, and the reload beat

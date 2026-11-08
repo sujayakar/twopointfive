@@ -476,6 +476,8 @@ export class RustHost {
     return { blocked: (a: any, b: any) => ask(() => X.face_line(this.h, 0, a[0], a[1], a[2], b[0], b[1], b[2]) !== 0), solid: (a: any, b: any) => ask(() => X.face_line(this.h, 1, a[0], a[1], a[2], b[0], b[1], b[2]) !== 0),
       ray: (o: any, d: any, max: number) => ask(() => { if (!X.face_ray(this.h, o[0], o[1], o[2], d[0], d[1], d[2], max)) return null; const r = out(5); return { t: r[0], n: [r[1], r[2], r[3]] }; }),
       hear: (s: any, d: any) => ask(() => { X.face_hear(this.h, s[0], s[1], s[2], d[0], d[1], d[2]); return this.B.heardOf(out(10)); }),
+      // (a tool's own writes go first on every question, as they did on a crossing: a tool writes a lamp or puts a game back and asks again in the same step)
+      light: (p: any, o: readonly number[], st: boolean, l: number) => ask(() => { if (!this.inStep && !this.quietOn && this.busy === 0) this.scanFlush(); return o.length ? this.F.hand(new Uint8Array(Float64Array.from(o).buffer), (q: number, n: number) => X.face_light(this.h, p[0], p[1], p[2], st ? 1 : 0, l, q, n)) : X.face_light(this.h, p[0], p[1], p[2], st ? 1 : 0, l, 0, 0); }),
       way: (a: any, b: any, maxIter: number) => ask(() => { const n = X.face_way(this.h, a[0], a[2], b[0], b[2], maxIter); if (n < 0) return null; const r = out(n * 2), w: any[] = []; for (let i = 0; i < n; i++) w.push([r[i * 2], 0, r[i * 2 + 1]]); return w; }), together: (f: any) => f() }; }
   private askedAt = -1;
   /** how the mission ended, off the record the Rust game's own tick latches (`face_verdict`: null while it is played). For a host with no puppet, and
