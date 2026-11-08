@@ -24,7 +24,6 @@ pub fn ask(g: &mut crate::game::Game, kind: u32, row: u32, seat: u32, args: &[u8
 /// A row with an id this does not know stands at its blank: export.ts names it in its report.
 pub fn deal_closures(g: &mut crate::game::Game) {
     use crate::orders::*;
-    use crate::squadthrow::SquadThrowKind::{Frag as F, Stun as S};
     let small = g.door_tools.go_key == Some(Some(String::from("small")));
     // (the block's voices, on a game handed over by a host that registers none: each reader answers for itself whether it has anything to say)
     for f in [OrderNoteFn::DoorToolsHud, OrderNoteFn::DoorToolsWord, OrderNoteFn::Pair, OrderNoteFn::SquadSmoke, OrderNoteFn::WallCharge, OrderNoteFn::Squad40, OrderNoteFn::SquadThrow] {
@@ -35,14 +34,11 @@ pub fn deal_closures(g: &mut crate::game::Game) {
         let d = &mut g.tab.orders_order_def[id];
         match d.id.as_str() {
             "held" => { let data = d.clone(); *d = rows::def(rows::by_id("held").unwrap(), data); d.gone = None; if let Some(s) = d.stands_in.as_mut() { s.when = OrderWhen::DoorHeld; } }
-            "throwThere" => { d.label = OrderLabel::ThrowOpen; d.can = None; d.only = None; d.valid = None; d.issue = OrderIssue::Nothing; d.tick = None; d.gone = None; }
             "charge" => { let data = d.clone(); *d = rows::def(rows::by_id("charge").unwrap(), data); d.gone = Some(OrderGone::DoorCharge); }
             "bigClear" => { let data = d.clone(); *d = rows::def(rows::by_id("bigClear").unwrap(), data); d.gone = Some(OrderGone::DoorBigClear); }
             "shutDoor" => { let data = d.clone(); *d = rows::def(rows::by_id("shutDoor").unwrap(), data); d.gone = None; if let Some(s) = d.stands_in.as_mut() { s.when = OrderWhen::ShutDoor; } }
             "wallCharge" => { let data = d.clone(); *d = rows::def(rows::by_id("wallCharge").unwrap(), data); d.gone = Some(OrderGone::WallRow); }
             "loud" => { let data = d.clone(); *d = rows::def(rows::by_id("loud").unwrap(), data); d.gone = None; if let Some(s) = d.stands_in.as_mut() { s.when = OrderWhen::Loud; } }
-            "fragThere" => { d.label = OrderLabel::ThrowRow { kind: F }; d.can = None; d.only = Some(OrderOnly::ThrowRow { kind: F }); d.valid = Some(OrderValid::ThrowRow { kind: F }); d.issue = OrderIssue::ThrowRow { kind: F }; d.tick = Some(OrderTick::ThrowRow); d.gone = None; }
-            "stunThere" => { d.label = OrderLabel::ThrowRow { kind: S }; d.can = None; d.only = Some(OrderOnly::ThrowRow { kind: S }); d.valid = Some(OrderValid::ThrowRow { kind: S }); d.issue = OrderIssue::ThrowRow { kind: S }; d.tick = Some(OrderTick::ThrowRow); d.gone = None; }
             "pairMark" => { d.label = OrderLabel::Text { text: String::from("take him · on your mark") }; d.can = Some(OrderCan::PairTake); d.only = Some(OrderOnly::PairTake); d.valid = Some(OrderValid::PairTake); d.issue = OrderIssue::PairTake { mode: crate::pairorders::JobMode::Mark }; d.tick = Some(OrderTick::PairTake); d.gone = None; }
             "pairTake" => { d.label = OrderLabel::Text { text: String::from("take him now") }; d.can = Some(OrderCan::PairTake); d.only = Some(OrderOnly::PairTake); d.valid = Some(OrderValid::PairTake); d.issue = OrderIssue::PairTake { mode: crate::pairorders::JobMode::Now }; d.tick = Some(OrderTick::PairTake); d.gone = None; }
             "pairWatch" => { d.label = OrderLabel::Text { text: String::from("watch him") }; d.can = Some(OrderCan::PairWatch); d.only = None; d.valid = Some(OrderValid::PairWatch); d.issue = OrderIssue::PairWatch; d.tick = Some(OrderTick::PairWatch); d.gone = None; }
