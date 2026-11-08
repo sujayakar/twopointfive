@@ -195,3 +195,134 @@ pub struct DebriefView {
     /// who of ours fell and how (None: somebody still plays, or nobody of ours went down)
     pub recap: Option<crate::deathrecap::DeathRecap>,
 }
+
+/// a card's two weights: how readily its man moves, and how little of him is seen
+#[derive(Clone, Copy, Debug, Default)]
+pub struct CardLoad {
+    pub mob: f64,
+    pub con: f64,
+}
+
+/// a bar of what a gun is good at, 0 to 1, and where the gun he is issued stands on it
+#[derive(Clone, Copy, Debug, Default)]
+pub struct CardBar {
+    pub now: f64,
+    pub issued: f64,
+}
+
+/// a gun a slot could hold
+#[derive(Clone, Debug, Default)]
+pub struct CardPick {
+    pub id: String,
+    pub word: String,
+    pub note: String,
+    /// why it may not be picked (empty: it may)
+    pub why: String,
+    /// it is the one on the card
+    pub now: bool,
+    /// it is drawn with its suppressor
+    pub can: bool,
+    /// none where it is no gun
+    pub bars: Vec<f64>,
+}
+
+/// what a row of a card is
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum CardKind {
+    Count,
+    Flag,
+    Choice,
+}
+
+/// a row of a man's card
+#[derive(Clone, Debug)]
+pub struct CardRow {
+    pub field: String,
+    pub label: String,
+    pub kind: crate::view::CardKind,
+    /// what it is at, by its own id
+    pub value: String,
+    /// how many (a count), or 1 (a thing he has)
+    pub n: f64,
+    pub word: String,
+    /// what that changes in a run
+    pub note: String,
+    /// what it fills and its rate (empty: it is no pouch)
+    pub cost: String,
+    /// the gun's row it rides under (empty: its own)
+    pub under: String,
+    /// it is one of the two colors
+    pub look: bool,
+    /// he carries none of it
+    pub none: bool,
+    /// the gun leaves no choice
+    pub fixed: bool,
+    /// it is not as he is issued
+    pub changed: bool,
+    /// he carries it and the mission has no use for it
+    pub idle: bool,
+    /// how many of it the mission hands him, where that is more than he carries
+    pub lent: f64,
+    /// why the step to the value before (after) is refused; empty: it is not
+    pub less: String,
+    pub more: String,
+    /// the gun of the row wears a suppressor
+    pub can: bool,
+    /// how loud the thing is when used: 0 none, 1 nearby, 2 the floor, 3 a blast
+    pub noise: f64,
+    /// what it takes of the two weights, or what one more would
+    pub takes: Option<crate::view::CardLoad>,
+    pub would: Option<crate::view::CardLoad>,
+    /// a gun's: reach, volume, handling, quiet
+    pub bars: Vec<crate::view::CardBar>,
+    /// the guns the slot could hold
+    pub picks: Vec<crate::view::CardPick>,
+}
+impl Default for CardRow { fn default() -> Self { CardRow { field: String::new(), label: String::new(), kind: CardKind::Count, value: String::new(), n: 0.0, word: String::new(), note: String::new(), cost: String::new(), under: String::new(), look: false, none: false, fixed: false, changed: false, idle: false, lent: 0.0, less: String::new(), more: String::new(), can: false, noise: 0.0, takes: None, would: None, bars: Vec::new(), picks: Vec::new() } } }
+
+/// pouches, full and in all
+#[derive(Clone, Copy, Debug, Default)]
+pub struct CardPouches {
+    pub used: f64,
+    pub total: f64,
+}
+
+/// a man's card as it is shown: the rows it has as it stands, a gun before what rides on it
+#[derive(Clone, Debug, Default)]
+pub struct CardView {
+    pub who: f64,
+    pub changed: bool,
+    pub pouches: crate::view::CardPouches,
+    /// the big slot (None: the table gives none)
+    pub big: Option<crate::view::CardPouches>,
+    /// what the squad carries between them (None: no limit, or not one of those who come)
+    pub squad: Option<crate::view::CardPouches>,
+    pub load: crate::view::CardLoad,
+    pub load_issued: crate::view::CardLoad,
+    pub rows: Vec<crate::view::CardRow>,
+    /// the whole card is as issued
+    pub issued: bool,
+    /// why it may not be put back as issued (empty: it may)
+    pub reset_why: String,
+    /// a card is copied
+    pub copied: bool,
+    /// he wears the copied card
+    pub clip: bool,
+    /// why the copied card may not be put on him (empty: it may, or nothing is copied)
+    pub paste_why: String,
+    /// the card in a line, and what was left behind of a kept one
+    pub words: String,
+    /// the colors picked (None: as issued)
+    pub suit: Option<V3>,
+    pub trim: Option<V3>,
+}
+
+/// what a press on a card did: taken, or why not; what it walked past; the rows it moved; and the cards as they are kept now
+#[derive(Clone, Debug, Default)]
+pub struct Pressed {
+    pub ok: bool,
+    pub why: String,
+    pub passed: String,
+    pub changed: Vec<String>,
+    pub kept: String,
+}

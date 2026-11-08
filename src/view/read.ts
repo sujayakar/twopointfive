@@ -116,3 +116,27 @@ export function readDeathRecap(b: Uint8Array): DeathRecap { const I = new In(b),
 export interface DebriefView { debrief: Debrief; rows: DebriefRow[]; dropped: number; path: number[]; rooms: DebriefRoom[]; recap: DeathRecap | null }
 function readDebriefViewIn(I: In): DebriefView { return { debrief: readDebriefIn(I), rows: I.list(() => readDebriefRowIn(I)), dropped: I.float64(), path: I.list(() => I.float32()), rooms: I.list(() => readDebriefRoomIn(I)), recap: I.bool() ? readDeathRecapIn(I) : null }; }
 export function readDebriefView(b: Uint8Array): DebriefView { const I = new In(b), r = readDebriefViewIn(I); if (I.p !== b.length) throw new Error(`the view: DebriefView is ${b.length} bytes and ${I.p} were read`); return r; }
+export type CardKind = 'count' | 'flag' | 'choice';
+const CardKindWords: readonly CardKind[] = ['count', 'flag', 'choice'];
+function readCardKindIn(I: In): CardKind { return I.word(CardKindWords, 'CardKind'); }
+export interface CardLoad { mob: number; con: number }
+function readCardLoadIn(I: In): CardLoad { return { mob: I.float64(), con: I.float64() }; }
+export function readCardLoad(b: Uint8Array): CardLoad { const I = new In(b), r = readCardLoadIn(I); if (I.p !== b.length) throw new Error(`the view: CardLoad is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface CardBar { now: number; issued: number }
+function readCardBarIn(I: In): CardBar { return { now: I.float64(), issued: I.float64() }; }
+export function readCardBar(b: Uint8Array): CardBar { const I = new In(b), r = readCardBarIn(I); if (I.p !== b.length) throw new Error(`the view: CardBar is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface CardPick { id: string; word: string; note: string; why: string; now: boolean; can: boolean; bars: number[] }
+function readCardPickIn(I: In): CardPick { return { id: I.str(), word: I.str(), note: I.str(), why: I.str(), now: I.bool(), can: I.bool(), bars: I.list(() => I.float64()) }; }
+export function readCardPick(b: Uint8Array): CardPick { const I = new In(b), r = readCardPickIn(I); if (I.p !== b.length) throw new Error(`the view: CardPick is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface CardRow { field: string; label: string; kind: CardKind; value: string; n: number; word: string; note: string; cost: string; under: string; look: boolean; none: boolean; fixed: boolean; changed: boolean; idle: boolean; lent: number; less: string; more: string; can: boolean; noise: number; takes: CardLoad | null; would: CardLoad | null; bars: CardBar[]; picks: CardPick[] }
+function readCardRowIn(I: In): CardRow { return { field: I.str(), label: I.str(), kind: readCardKindIn(I), value: I.str(), n: I.float64(), word: I.str(), note: I.str(), cost: I.str(), under: I.str(), look: I.bool(), none: I.bool(), fixed: I.bool(), changed: I.bool(), idle: I.bool(), lent: I.float64(), less: I.str(), more: I.str(), can: I.bool(), noise: I.float64(), takes: I.bool() ? readCardLoadIn(I) : null, would: I.bool() ? readCardLoadIn(I) : null, bars: I.list(() => readCardBarIn(I)), picks: I.list(() => readCardPickIn(I)) }; }
+export function readCardRow(b: Uint8Array): CardRow { const I = new In(b), r = readCardRowIn(I); if (I.p !== b.length) throw new Error(`the view: CardRow is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface CardPouches { used: number; total: number }
+function readCardPouchesIn(I: In): CardPouches { return { used: I.float64(), total: I.float64() }; }
+export function readCardPouches(b: Uint8Array): CardPouches { const I = new In(b), r = readCardPouchesIn(I); if (I.p !== b.length) throw new Error(`the view: CardPouches is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface CardView { who: number; changed: boolean; pouches: CardPouches; big: CardPouches | null; squad: CardPouches | null; load: CardLoad; loadIssued: CardLoad; rows: CardRow[]; issued: boolean; resetWhy: string; copied: boolean; clip: boolean; pasteWhy: string; words: string; suit: Vec3 | null; trim: Vec3 | null }
+function readCardViewIn(I: In): CardView { return { who: I.float64(), changed: I.bool(), pouches: readCardPouchesIn(I), big: I.bool() ? readCardPouchesIn(I) : null, squad: I.bool() ? readCardPouchesIn(I) : null, load: readCardLoadIn(I), loadIssued: readCardLoadIn(I), rows: I.list(() => readCardRowIn(I)), issued: I.bool(), resetWhy: I.str(), copied: I.bool(), clip: I.bool(), pasteWhy: I.str(), words: I.str(), suit: I.bool() ? [I.float64(), I.float64(), I.float64()] : null, trim: I.bool() ? [I.float64(), I.float64(), I.float64()] : null }; }
+export function readCardView(b: Uint8Array): CardView { const I = new In(b), r = readCardViewIn(I); if (I.p !== b.length) throw new Error(`the view: CardView is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface Pressed { ok: boolean; why: string; passed: string; changed: string[]; kept: string }
+function readPressedIn(I: In): Pressed { return { ok: I.bool(), why: I.str(), passed: I.str(), changed: I.list(() => I.str()), kept: I.str() }; }
+export function readPressed(b: Uint8Array): Pressed { const I = new In(b), r = readPressedIn(I); if (I.p !== b.length) throw new Error(`the view: Pressed is ${b.length} bytes and ${I.p} were read`); return r; }
