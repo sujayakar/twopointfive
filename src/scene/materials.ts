@@ -22,13 +22,10 @@
 
 /** what a round knocks out of a thing, and the class a wall of it is to the wall engine, a round and a charge */
 export type Surf = 'metal' | 'plastic' | 'glass' | 'wood' | 'cardboard' | 'drywall' | 'concrete' | 'carpet' | 'fabric' | 'foliage';
-export const SURFS: readonly Surf[] = ['metal', 'plastic', 'glass', 'wood', 'cardboard', 'drywall', 'concrete', 'carpet', 'fabric', 'foliage'];
 /** how a blast breaks a piece of furniture (game/furnblast.ts FURN_BREAK has a row a class) */
 export type BreakClass = 'wood' | 'board' | 'metal' | 'hard' | 'soft';
-export const BREAK_CLASSES: readonly BreakClass[] = ['wood', 'board', 'metal', 'hard', 'soft'];
 /** lying snow, by how trodden it is (render/snowField.ts, game/snowBog.ts) */
 export type SnowKind = 'snow' | 'snowPacked' | 'snowOld';
-export const SNOW_KINDS: readonly SnowKind[] = ['snow', 'snowPacked', 'snowOld'];
 
 /** WHAT A MATERIAL DOES: every column a rule reads. An absent flag is false; an absent word is none. */
 export interface Does {
@@ -124,8 +121,6 @@ const ROWS: ReadonlyMap<string, Does> = new Map(Object.entries(MATERIALS as Reco
 const DEFAULT: Does = ROWS.get(DOES_DEFAULT)!;
 /** every word that has a `does`, in the table's order */
 export const DOES_WORDS: readonly string[] = [...ROWS.keys()];
-/** every word the look draws, in the table's order (a check holds it equal to the look's own list: render/lookTex.ts) */
-export const LOOKS_WORDS: readonly string[] = Object.entries(MATERIALS as Record<string, Material>).filter(([, m]) => m.looks).map(([w]) => w);
 export const doesWordOk = (v: unknown): v is DoesWord => typeof v === 'string' && ROWS.has(v);
 /** the columns of a word (the default row's for a word the table does not have: a file opened leniently can carry any string) */
 export const doesOfWord = (w: string | undefined): Does => (w !== undefined && ROWS.get(w)) || DEFAULT;
@@ -135,12 +130,3 @@ export const doesOf = (b: { does?: string } | null | undefined): Does => (b && b
 export const doesWet = (b: { does?: string } | null | undefined): Does => { const d = doesOf(b); return d.wet !== undefined ? doesOfWord(d.wet) : d; };
 /** the word a box carries for `w`: nothing for the default row (absent = default everywhere a box is kept) */
 export const doesSaid = (w: string | undefined): { does?: DoesWord } => w !== undefined && w !== DOES_DEFAULT && doesWordOk(w) ? { does: w } : {};
-/** THE `does` COLUMNS AS NUMBERS, a row a word, for a module that reads no strings (the Rust crate, when a reader moves there): the host hands this
- *  table over at boot and writes each box's row number from the same list in the same build. The numbers are places in SURFS, BREAK_CLASSES and
- *  SNOW_KINDS (+ 1; 0 = none); `wet` is a row number, the row's own where it is the same wet as dry. Never written to a file. */
-export function doesRows(): { words: readonly string[]; cols: readonly string[]; rows: number[][] } {
-  const cols = ['surf', 'breaks', 'steel', 'wall', 'board', 'cover', 'struct', 'counter', 'casing', 'paper', 'screen', 'snow', 'wet'];
-  const rows = DOES_WORDS.map((w, i) => { const d = ROWS.get(w)!; return [SURFS.indexOf(d.surf), BREAK_CLASSES.indexOf(d.breaks), d.steel ? 1 : 0, d.wall === 'board' ? 1 : d.wall === 'screen' ? 2 : 0, d.board ? 1 : 0,
-    d.cover === 'wood' ? 1 : d.cover === 'cardboard' ? 2 : 0, d.struct ? 1 : 0, d.counter ? 1 : 0, d.casing ? 1 : 0, d.paper ? 1 : 0, d.screen ? 1 : 0, d.snow ? 1 + SNOW_KINDS.indexOf(d.snow) : 0, d.wet !== undefined ? DOES_WORDS.indexOf(d.wet) : i]; });
-  return { words: DOES_WORDS, cols, rows };
-}
