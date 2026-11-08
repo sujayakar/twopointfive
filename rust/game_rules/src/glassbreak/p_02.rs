@@ -346,26 +346,24 @@ pub fn glass_break_stand_in(g: &mut crate::game::Game, v: crate::glassbreak::Pan
         }
         k += 1.0;
     }
-    if crate::particle_fx::gpu_fx(g) {
-        let n_chips = m::round(m::max(if grains { 3.0 } else { g.k.glassbreak.chips_min }, f.area * (if grains { g.k.glassbreak.dice_chips_per_m2 } else { g.k.glassbreak.chips_per_m2 })));
-        let color = v3::copy(g.k.glassbreak.chip_color);
-        let o = crate::render_particles::EmitOpts {
-            shape: Some(crate::render_particles::EmitShape::Cone),
-            speed: 1.1,
-            speed_jit: Some(0.8),
-            spread: Some(1.2),
-            life: 30.0,
-            life_jit: Some(0.4),
-            size: if grains { 0.012 } else { 0.008 },
-            size_jit: Some(0.6),
-            aspect: Some(1.4),
-            pos_jit: Some(m::sqrt(f.area) * 0.45),
-            color: Some(color),
-            ..Default::default()
-        };
-        crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, f.centre, f.normal, n_chips, o);
-        g.m.glassbreak.gb_host.chips += n_chips;
-    }
+    let n_chips = m::round(m::max(if grains { 3.0 } else { g.k.glassbreak.chips_min }, f.area * (if grains { g.k.glassbreak.dice_chips_per_m2 } else { g.k.glassbreak.chips_per_m2 })));
+    let color = v3::copy(g.k.glassbreak.chip_color);
+    let o = crate::render_particles::EmitOpts {
+        shape: Some(crate::render_particles::EmitShape::Cone),
+        speed: 1.1,
+        speed_jit: Some(0.8),
+        spread: Some(1.2),
+        life: 30.0,
+        life_jit: Some(0.4),
+        size: if grains { 0.012 } else { 0.008 },
+        size_jit: Some(0.6),
+        aspect: Some(1.4),
+        pos_jit: Some(m::sqrt(f.area) * 0.45),
+        color: Some(color),
+        ..Default::default()
+    };
+    crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, f.centre, f.normal, n_chips, o);
+    g.m.glassbreak.gb_host.chips += n_chips;
 }
 
 // ---------------------------------------------------------------- which glass

@@ -10,17 +10,6 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// A box's row. Every box read or written in this file goes through here, so this one body is all that changes when the table of Box rows is back.
 fn bx<'g>(g: &'g mut Game, b: impl Into<AnyBoxId>) -> &'g mut crate::scene_boxes::Box { &mut g.tab[b.into()] }
 
-/// The live GPU particle system or None, as a place to write `ours`: `gpu_fx` answers only whether there is one.   (fogofwar.ts `gpuFx(this.g)`, particleFx.ts:25)
-fn gpu_particles(g: &mut Game) -> Option<&mut crate::render_particles::Particles> {
-    if !crate::particle_fx::gpu_fx(g) { return None; }
-    g.engine.particles.as_mut()
-}
-
-
-
-
-
-
 /// Is the fixture lit, as it stands.   (fogofwar.ts FogOfWar.lampLit)
 pub fn fog_of_war_lamp_lit(g: &crate::game::Game, t: FixtureId) -> bool {
     let on = crate::sim_lightshome::fixture_on(g, t);
@@ -462,16 +451,16 @@ pub fn fog_of_war_light_by(g: &mut crate::game::Game, l: LightId, who: Option<f6
 /// What is filed from here to `done` is `who`'s doing. Returns what `done` puts back (−1: nothing).   (fogofwar.ts FogOfWar.begin)
 pub fn fog_of_war_begin(g: &mut crate::game::Game, who: Option<f64>) -> f64 {
     if !who.map_or(false, js::truthy) { return -1.0; }
-    let was = match gpu_particles(g) { Some(p) => p.ours, None => return -1.0 };
+    let was = g.fog_of_war.filing_ours;
     let ours = fog_of_war_ours_id(g, who);
-    if let Some(p) = gpu_particles(g) { p.ours = ours; }
+    g.fog_of_war.filing_ours = ours;
     if was { 1.0 } else { 0.0 }
 }
 
 /// Puts back what `begin` returned.   (fogofwar.ts FogOfWar.done)
 pub fn fog_of_war_done(g: &mut crate::game::Game, was: f64) {
     if was < 0.0 { return; }
-    if let Some(p) = gpu_particles(g) { p.ours = was == 1.0; }
+    g.fog_of_war.filing_ours = was == 1.0;
 }
 
 /// `begin` / `done` round `fn_`.   (fogofwar.ts FogOfWar.doing)
@@ -484,7 +473,7 @@ pub fn fog_of_war_doing<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, 
 
 /// The rest of this doing is not shown; the `done` that closes it puts the mark back.   (fogofwar.ts FogOfWar.hush)
 pub fn fog_of_war_hush(g: &mut crate::game::Game) {
-    if let Some(p) = gpu_particles(g) { p.ours = false; }
+    g.fog_of_war.filing_ours = false;
 }
 
 /// What a hidden man puts into the air is not filed: true = `c` is out of the picture.   (fogofwar.ts FogOfWar.airHides)

@@ -4859,10 +4859,6 @@ pub fn take_host_half(g: &mut crate::game::Game, b: &[u8]) -> Vec<crate::cmd::Pl
     let nc = u32::r(&mut r) as usize; let cams: Vec<crate::camera::FollowCamera> = (0..nc).map(|_| Io::r(&mut r)).collect();
     let ni = u32::r(&mut r) as usize; let ins: Vec<crate::input::Input> = (0..ni).map(|_| Io::r(&mut r)).collect();
     let ns = u32::r(&mut r) as usize; let marks: Vec<u32> = (0..ns).map(|_| u32::r(&mut r)).collect();
-    // which of the host's objects exist (the tick asks only that, and of the particle pool its two switches): bit 0 a pool, bit 1 a reach keeper, bit 2 its particles collide, bit 3 its sparks bounce
-    let has = u32::r(&mut r);
-    if has & 1 != 0 { let p = g.engine.particles.get_or_insert_with(crate::render_particles::Particles::blank); p.collide = has & 4 != 0; p.spark_bounce = has & 8 != 0; } else { g.engine.particles = None; }
-    if has & 2 != 0 { if g.engine.reach.is_none() { g.engine.reach = Some(crate::render_reach_keep::ReachKeep::blank()); } } else { g.engine.reach = None; }
     for s in g.tab.cmd_seat.ids().collect::<Vec<_>>() { if s.ix() < marks.len() { g.tab.cmd_seat[s].mark = marks[s.ix()]; } }
     assert!(r.p == b.len(), "bridge: {} bytes left over in the host's half", b.len() - r.p);
     let seats: Vec<CameraId> = g.seats.iter().map(|s| g.tab.cmd_seat[*s].cam).collect();
