@@ -7,7 +7,7 @@ import { reportWarning } from '../cloud/report';
 import { button, el } from './runcard';
 
 const CSS = `
-#menu.title .actions .xlist{max-height:min(58vh,560px);overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;width:min(540px,100%)}
+#menu.title .actions .xlist{max-height:min(calc(58vh / var(--tz, 1)),560px);overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;width:min(540px,100%)}
 #menu.title .actions .xlist .one{position:relative}
 #menu.title .actions .xlist .btn.xrow{padding-right:52px}
 #menu.title .actions .xlist .btn.xrow i{display:block;font:500 13px/1.4 var(--h-font,sans-serif);letter-spacing:.02em;text-transform:none;color:var(--m-soft)}
