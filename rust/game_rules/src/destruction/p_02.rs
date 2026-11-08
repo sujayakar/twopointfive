@@ -202,6 +202,7 @@ pub fn destruction_blast_raw(g: &mut crate::game::Game, at: V3, opts: crate::wal
     let who = js::or(opts.who.unwrap_or(0.0), crate::consts::NOBODY_ID);
     let mut ev = crate::wallbreak::BlastEvent { at, radius, power, who, res };
     for l in g.destr.blast_listeners.clone() { tell_listener(g, &l, &mut ev); }   // (a copy: as `[...this.blastListeners]`)
+    crate::snow_blast::snow_blast_at(g, &at, radius);
     res = ev.res;   // (the event's `res` IS `res` in the TypeScript)
     let tear = radius * g.k.walls.blast.door_k;
     res.doors += crate::doors::doors_blast(g, at, tear, who).len() as f64;

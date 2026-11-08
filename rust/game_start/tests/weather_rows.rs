@@ -1,6 +1,7 @@
-//! WHAT THE PICTURE IS TOLD OF THE WEATHER, THE AIR AND THE FIRES (rust/game_draw): drawn on levels that have them. What each number is against the copy of the game is
+//! WHAT THE PICTURE IS TOLD OF THE WEATHER, THE AIR, THE FIRES AND THE SNOW (rust/game_draw): drawn on levels that have them. What each number is against the copy of the game is
 //! tools/draw/weather-check.ts's; these hold what is true on any host.
-use game_draw::Drawn;
+use game::out_events::OutEvent;
+use game_draw::{want, Drawn};
 use game_start::play::{Opts, Play};
 
 const ALL: u32 = u32::MAX;
@@ -36,6 +37,74 @@ fn the_winds_are_whole_every_tick() {
     assert_eq!(d.winds.active.len(), p.g.wind.active.len());
     assert!(d.winds.air[0].master > 0.0, "the pass has its wind");
     assert!(d.winds.active.iter().any(|w| w.kind == 1), "the storm blows on the pass");
+}
+
+/// THE RULE: a fire's hot air is told on the ticks the rule files it, and what a restart clears is said in one row of that tick.
+#[test]
+fn heat_and_what_goes_are_told() {
+    let mut p = pass(5);
+    (p.g.m.dress.dress.wind, p.g.m.dress.dress.fires) = (true, true);
+    p.g.engine.particles = Some(game::render_particles::Particles { collide: true, spark_bounce: true, ..game::render_particles::Particles::blank() });   // (as a page's game has them: the heat goes to its particles)
+    let (mut d, mut hot) = (Drawn::default(), false);
+    let t = (0..p.g.targets.len()).map(|i| p.g.targets[i]).find(|&t| game::fire::is_fire(&p.g, t)).expect("the pass has a brazier");
+    p.g.engine.view_focus = Some(game::fire::mouth_of(&p.g, t).pos);
+    for _ in 0..60 { p.g.out = game_start::stand::frame(&mut p.g, &p.host, 1.0 / 60.0); d.take(&p.g, ALL); hot |= !d.winds.heat.is_empty(); p.g.out.clear(); }
+    assert!(hot, "beside a burning fire its hot air is told");
+    p.g.out = game_start::stand::frame(&mut p.g, &p.host, 1.0 / 60.0);
+    p.g.out.clear();
+    game::game::game_restart_encounter(&mut p.g);
+    d.take(&p.g, ALL);
+    assert_eq!(d.resets.len(), 1, "one row a tick");
+    let w = d.resets[0].what;
+    assert!(w & 4 != 0 && w & 8 != 0 && w & 16 != 0, "the blasts, the marks and the prints go: {w}");
+}
+
+/// THE RULE: a level in the snow says what snow its statics are, on another says nothing; its men are told; and the sky says it is a snow level.
+#[test]
+fn a_snow_level_says_what_lies_on_it() {
+    let mut p = pass(5);
+    for _ in 0..10 { p.frame(); }
+    let mut d = Drawn::default();
+    d.take(&p.g, ALL);
+    assert_eq!(d.sky[0].snow_level, 1, "the pass is a snow level");
+    assert_eq!(d.snow.words.len(), p.g.engine.world.statics.len());
+    assert!(d.snow.words.iter().any(|w| w.w == 1), "the pass has fresh snow");
+    let me = p.g.ch[p.g.pl[p.g.player].ch].id as u32;
+    let f = d.snow.feet.iter().find(|f| f.id == me).expect("Sam stands on it");
+    assert_eq!(f.says & game_draw::snow::ALIVE, game_draw::snow::ALIVE);
+    drop(p);
+    let mut o = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed: 5, ..Default::default() });
+    for _ in 0..4 { o.frame(); }
+    let mut d = Drawn::default();
+    d.take(&o.g, ALL);
+    assert_eq!(d.sky[0].snow_level, 0);
+    assert!(d.snow.words.is_empty() && d.snow.feet.is_empty(), "the office tells nothing of snow");
+}
+
+/// THE RULE: a blast over the snow reaches the picture: a row with its id, once. RED BEFORE: `snow_blast_at` did nothing, and a blast left the snow as it lay.
+#[test]
+fn a_blast_over_the_snow_is_told() {
+    let mut p = pass(6);
+    for _ in 0..4 { p.frame(); }
+    let at = p.sam_at();
+    game::game::game_drop_throwable(&mut p.g, game::game::ThrowKind::Frag, [at[0] + 3.0, 0.0, at[1]]);
+    let (mut told, mut d) = (0, Drawn::default());
+    for _ in 0..360 {
+        p.g.god_mode = true;
+        p.g.out = game_start::stand::frame(&mut p.g, &p.host, 1.0 / 60.0);
+        d.take(&p.g, ALL);
+        if p.g.out.iter().any(|e| matches!(e, OutEvent::SnowBlast(_))) { assert!(!d.snow.blasts.is_empty()); }
+        told += d.snow.blasts.len();
+        p.g.out.clear();
+    }
+    assert_eq!(told, 1, "a frag went off on the pass: one blast is told, once");
+}
+
+/// THE RULE: drawing the rows of the snow is no part of the game.
+#[test]
+fn the_snow_rows_change_nothing() {
+    let played = |draw: bool| { let mut p = pass(7); let mut d = Drawn::default(); (0..120).map(|_| { p.frame(); if draw { d.take(&p.g, want::fires | want::air | want::snow | want::events); } p.words() }).collect::<Vec<_>>() };
+    assert_eq!(played(false), played(true));
 }
 
 /// THE RULE: what the rain wets is told in the box's rows: under a picked rain the open ground is darker and glossy, and the box in the game is as it was.
