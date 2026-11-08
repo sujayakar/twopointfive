@@ -232,6 +232,8 @@ pub trait DoorsAsk {
     fn rescue_blind(&self) -> f64;
     /// STAGING: the clock's knobs, and the mission staged again on them: seconds to the first shot, then the second, seconds for a man to be set
     fn rescue_on(&mut self, first: f64, second: f64, set: f64);
+    /// STAGING: no man abroad to meet the pair, and the door's man inside
+    fn rescue_quiet_floor(&mut self);
     /// the room fight's notes of a man
     fn fight_notes(&self, name: &str) -> Vec<String>;
     /// how long he lines up on her
@@ -338,6 +340,29 @@ pub trait DoorsAsk {
     fn smoke_cans(&mut self) -> Vec<([f64; 2], bool)>;
     /// the kit's cards set to carry these cans, by card, and the game restarted as the page does on the kit
     fn cards_carry(&mut self, cards: &[(usize, f64)]);
+    /// a round fired dead straight from a man's gun at a place, whoever is in the way
+    fn round_from(&mut self, m: GuardId, at: [f64; 3]);
+    /// is Sam down, and what he has left
+    fn sam_down_hits(&self) -> (bool, f64);
+    /// how a man went down, and by whom
+    fn down_how(&self, m: GuardId) -> Option<(game::game::DownKind, game::game::DownBy)>;
+    /// the rescue's mode, and its result
+    fn rescue_free(&self) -> bool;
+    fn rescue_jobs(&self) -> usize;
+    fn cans_left(&self) -> f64;
+    fn frags_left(&self) -> f64;
+    /// who has a throw on a spot now, and who after a walk: the man and where he would stand
+    fn throw_now(&mut self, men: &[GuardId], at: [f64; 2]) -> bool;
+    fn throw_after_walk(&mut self, men: &[GuardId], at: [f64; 2]) -> Option<(GuardId, [f64; 2])>;
+    /// frag cans in the world: where they came to rest
+    fn frags_out(&self) -> Vec<[f64; 2]>;
+    /// the shotgun's stats: pellets into men, men dropped, men peppered
+    fn shell_stats(&self) -> (i32, i32, i32);
+    /// a shell from a man's bore at `from`, at a place, its spread as a man's hands make it: did it take him
+    fn shell_from(&mut self, m: GuardId, from: [f64; 2], at: [f64; 3], spread: f64);
+    fn shotgun_rule(&mut self) -> (f64, f64, bool, Vec<bool>);
+    /// has a man a line from his eyes to the doorway as he sees it
+    fn sees_doorway(&mut self, m: GuardId, d: DoorId) -> bool;
     /// is the squad's ring up, who is it for, what it says under it, its wedges
     fn ring_up(&self) -> bool;
     fn ring_part(&self) -> Vec<GuardId>;
@@ -585,6 +610,7 @@ impl DoorsAsk for Play {
     fn rescue_men(&self) -> Vec<GuardId> { self.g.rescue.hostiles.clone() }
     fn rescue_hostages(&self) -> Vec<GuardId> { self.g.rescue.hostages.clone() }
     fn rescue_blind(&self) -> f64 { self.g.rescue.blind_rounds }
+    fn rescue_quiet_floor(&mut self) { self.g.k.rescue.roamers = 0.0; self.g.k.rescue.door_man = game::knobs::RescueKDoorMan::Inside; }
     fn rescue_on(&mut self, first: f64, second: f64, set: f64) {
         let k = &mut self.g.k.rescue;
         (k.resolve_spread, k.resolve_secs, k.second_hostage_secs, k.set_secs) = (0.0, first, second, set);
@@ -746,6 +772,43 @@ impl DoorsAsk for Play {
             if n > 0.0 { (c.frags, c.charges) = (0.0, 0.0); }   // (the pouches: room made for it, as the card's own row asks)
         }
         game::game::game_restart(&mut self.g, None);
+    }
+    fn round_from(&mut self, m: GuardId, at: [f64; 3]) { let c = self.g.gd[m].ch; let o = game::combat::FireOpts { spread: Some(0.0), weapon: None, steady: Some(true), blind: None }; game::combat::fire_weapon(&mut self.g, c, at, false, Some(&o)); }
+    fn sam_down_hits(&self) -> (bool, f64) { let p = &self.g.pl[self.g.player]; (p.down, p.hits_left) }
+    fn down_how(&self, m: GuardId) -> Option<(game::game::DownKind, game::game::DownBy)> { let h = &self.g.gd[m]; Some((h.down_kind?, h.down_by?)) }
+    fn rescue_free(&self) -> bool { game::rescue::rescue_mode(&self.g) == game::rescue::RescueMode::Free }
+    fn rescue_jobs(&self) -> usize { self.g.rescue.flow.jobs.len() }
+    fn cans_left(&self) -> f64 { self.g.door_tools.bangs }
+    fn frags_left(&self) -> f64 { self.g.door_tools.frags }
+    fn throw_now(&mut self, men: &[GuardId], at: [f64; 2]) -> bool { game::squadthrow::squad_thrower(&mut self.g, men, [at[0], 0.0, at[1]], game::squadthrow::SquadThrowKind::Frag).is_some() }
+    fn throw_after_walk(&mut self, men: &[GuardId], at: [f64; 2]) -> Option<(GuardId, [f64; 2])> {
+        let t = game::squadthrow::squad_throw_plan(&mut self.g, men, [at[0], 0.0, at[1]], game::squadthrow::SquadThrowKind::Frag, Some(true), None)?;
+        let q = t.post?;
+        Some((t.gd, [q[0], q[2]]))
+    }
+    fn frags_out(&self) -> Vec<[f64; 2]> { self.g.items.items.iter().copied().filter(|&i| game::throwables::item_kind(&self.g, i) == game::throwables::ItemKind::Frag).map(|i| { let q = game::throwables::item_pos(&self.g, i); [q[0], q[2]] }).collect() }
+    fn shell_stats(&self) -> (i32, i32, i32) { let s = &self.g.stats.shotgun; (s.in_men, s.dropped, s.peppered) }
+    fn shell_from(&mut self, m: GuardId, from: [f64; 2], at: [f64; 3], spread: f64) {
+        let c = self.g.gd[m].ch;
+        self.g.ch[c].muzzle = [from[0], 1.35, from[1]];
+        let def = self.g.m.weapons.weapons.get(game::weapons::WeaponId::M870).unwrap().clone();
+        let o = game::combat::FireOpts { spread: Some(spread), weapon: Some(def), steady: Some(true), blind: None };
+        game::combat::fire_weapon(&mut self.g, c, at, false, Some(&o));
+    }
+    fn shotgun_rule(&mut self) -> (f64, f64, bool, Vec<bool>) {
+        let def = self.g.m.weapons.weapons.get(game::weapons::WeaponId::M870).unwrap().clone();
+        let p = def.pellets.unwrap();
+        let mk = |d: &game::weapons::WeaponDef| game::shotgun::Shell { def: d.clone(), i: 0.0, dir: None, men: game::js::JsMap::new(), ends: Vec::new(), glass: game::js::JsMap::new(), late: Vec::new() };
+        let (mut a, mut b) = (mk(&def), mk(&def));
+        let near = game::shotgun::pellet_drops(&mut self.g, &mut a, None, p.drop_m - 0.5, [1.0, 0.0, 0.0]);
+        let far: Vec<bool> = (0..p.need as usize).map(|_| game::shotgun::pellet_drops(&mut self.g, &mut b, None, p.drop_m + 6.0, [1.0, 0.0, 0.0])).collect();
+        (p.drop_m, p.need, near, far)
+    }
+    fn sees_doorway(&mut self, m: GuardId, d: DoorId) -> bool {
+        let (p, c) = (self.at(m), self.frame_at(d));
+        let q = 0.35 / game_start::play::dist(p, c);
+        let at = [c[0] + (p[0] - c[0]) * q, 1.1, c[1] + (p[1] - c[1]) * q];
+        !game::scene_collision::segment_blocked(&mut self.g, [p[0], 1.55, p[1]], at, None, None, None)
     }
     fn ring_up(&self) -> bool { self.g.orders.cmd_ring.is_some() }
     fn ring_part(&self) -> Vec<GuardId> { self.g.orders.menu.as_ref().and_then(|m| m.part.clone()).unwrap_or_default() }
