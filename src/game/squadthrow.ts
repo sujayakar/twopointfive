@@ -45,7 +45,7 @@
 // State is per Game in a WeakMap: whether the rows are on, each man's last throw (the toss has to finish), what the squad block is showing, the stun row's
 // warning as last read. None of it is in a checkpoint — none is taken with a unit on the floor, and all of it is seconds old at most. No dice of its own:
 // the thrown thing draws the game's die as any thrown item does (throwables.ts spawn). 'Nobody of ours in it' is asked AT THE THROW, of where each stands then.
-// Check: tools/qa/squadthrow-check.ts (`probes.ts squadthrow`).
+// Check: rust/game_start/tests/throws.rs.
 import { rollbackVar } from '../math/side';
 import type { Vec3 } from '../math/vec';
 
