@@ -287,7 +287,6 @@ pub fn box_mirror_boot(g: &mut crate::game::Game) {
     }
     x.scratch_len = sim::sim_scratch_len() as f64;
     x.lamp_cap = sim::light_cap() as f64;
-    x.blob_cap = sim::smoke_cap() as f64;
     x.wind_cap = sim::grid_wind_cap() as f64;
     x.nav_cap = sim::nav_cap(0) as f64;
     x.cut_of = vec![-1; c.boxes as usize];

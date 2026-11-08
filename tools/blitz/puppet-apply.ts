@@ -1646,10 +1646,6 @@ export function puppetRows(C: Ctx) {
   function f_orders_OrderTargetFoe(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getUint32(C.p, true); C.p += 4; const c = o.foe; if (typeof c === 'number') { if (c !== v) o.foe = v; } else if (v === 0xffffffff) { if (c !== null && typeof c === 'object') o.foe = null; } else { const r = T_GuardId()[v]; if (r !== c) o.foe = r; } }   // foe
   }
-  function f_scene_collision_LampRows(o: any, m: number) {
-    if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = dv.getFloat64(C.p, true); C.p += 8; const c = o.leave; if (c !== v ? !(c !== c && v !== v) && !(c === undefined && v === 0) : v === 0 && 1 / v !== 1 / c) { if (typeof c === 'boolean') o.leave = v !== 0 as any; else o.leave = v; } }   // leave
-    if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const v = b[C.p++] !== 0; const c = o.steady; if (typeof c === 'boolean') { if (c !== v) o.steady = v; } else if (c === null) { if (v) o.steady = v; } else if (typeof c === 'object') { if (!v) o.steady = null; } else if (!(c === undefined && !v)) o.steady = v; }   // steady
-  }
   function f_game_Interactable(o: any, m: number) {
     if (b[MP + ((m + 0) >> 3)] & (1 << ((m + 0) & 7))) { const v = WORDS_51[dv.getUint16(C.p, true)]; C.p += 2; if (v !== undefined && o.kind !== v) o.kind = v; }   // kind
     if (b[MP + ((m + 1) >> 3)] & (1 << ((m + 1) & 7))) { const c = o.pos; let same = c !== null && c !== undefined && c.length === 3; const p0 = C.p; if (same) for (let i = 0; i < 3; i++) { const x = dv.getFloat64(p0 + 8 * i, true); if (!Object.is(x, c[i])) { same = false; break; } } C.p += 24; if (!same) { if (c && ArrayBuffer.isView(c)) { for (let i = 0; i < 3; i++) (c as any)[i] = dv.getFloat64(p0 + 8 * i, true); } else { const a = new Array(3); for (let i = 0; i < 3; i++) a[i] = dv.getFloat64(p0 + 8 * i, true); o.pos = a; } } }   // pos

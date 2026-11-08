@@ -1,6 +1,5 @@
-//! THE LIGHT ON A POINT — src/game/guards.ts lightEstimateAt: the direct light of every lamp in reach on the six faces of the meter, each lamp shadowed by
-//! one line to it. The hour's sun and sky and a stroke of lightning are added to the same six faces by the host afterwards (hours.ts hourLight,
-//! weather.ts strokeLight), as they were.
+//! THE LIGHT ON A POINT: the direct light of every lamp in reach on the six faces of the meter, each lamp shadowed by one line to it. The hour's sun and sky and a stroke of
+//! lightning are added to the same six faces afterwards (game_rules guards light_at).
 //!
 //! WHERE A QUESTION'S LAMPS COME FROM. The lamps the level's fixtures feed are READ WHERE THEY STAND: the rows of the lights' part of the game's block
 //! (lights.rs), in the order of the engine's list, each through the reader's own gates (`row`). Every other lamp (a man's torch, a flash, a tracer's
@@ -13,7 +12,6 @@
 use crate::bricks;
 use crate::lights::{Lights, ROWS, R_DAY, R_ON, R_STEADY};
 use crate::lines;
-use crate::smoke;
 use crate::state::state;
 use crate::maths::cos;
 use crate::world::{ASK_HOST, clamp, js_max, js_max3, js_min, smoothstep, DEG, F_GLASS};
@@ -207,20 +205,14 @@ pub fn asked(w: usize, set: i32, n: usize, p: [f64; 3], shade: &Shade, more: boo
     out[..6].copy_from_slice(sum);
     r
 }
-/// THE SMOKE'S SHADOW of a question (sense.ts SENSE.bounce), `sigma` > 0: a lamp no wall hides is dimmed by the smoke of the coarse grid of the game
-/// in slot `g`, whose block's stamp is `stamp`, along the very line the wall test took (bricks.rs trans under this much extinction a metre a unit of
-/// density). WHERE THE GRID CANNOT ANSWER THAT LINE — it holds more smoke than bricks, or `stands` is false: the host's last step found no grid
-/// standing on this level — the game's blobs do, as sense.ts CpuSmoke.along has it: the first `nb` blobs the host wrote (smoke.rs: none = clear air)
-/// under the model's numbers `k` (spread, widest, rise, rise rate; the extinction is `sigma`). 0 = no shadow, and none of the rest is read.
+/// THE SMOKE'S SHADOW of a question, `sigma` > 0: a lamp no wall hides is dimmed by the smoke of the coarse grid of the game in slot `g` (`stamp`: its block's) along the
+/// line to it, under that `sigma` (extinction per metre per unit of density). 0 = no shadow.
 pub struct Shade {
     pub sigma: f64,
     pub g: usize,
     pub stamp: f64,
-    pub stands: bool,
-    pub nb: usize,
-    pub k: [f64; 4],
 }
-pub const NO_SHADE: Shade = Shade { sigma: 0.0, g: 0, stamp: 0.0, stands: false, nb: 0, k: [0.0; 4] };
+pub const NO_SHADE: Shade = Shade { sigma: 0.0, g: 0, stamp: 0.0 };
 
 /// the six axis normals the renderer's meter takes its best face over (guards.ts METER_NORMALS)
 const N6: [[f64; 3]; 6] = [[1.0, 0.0, 0.0], [-1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, 1.0], [0.0, 0.0, -1.0]];
@@ -303,14 +295,7 @@ fn one(w: usize, set: i32, p: [f64; 3], shade: &Shade, l: &Lamp, least: f64, acc
             Some(false) => {}
         }
         if shade.sigma > 0.0 {
-            let mut t = if shade.stands { bricks::trans(shade.g, shade.stamp, p, end, shade.sigma) } else { -1.0 };
-            if t < 0.0 {
-                t = 1.0;
-                if shade.nb > 0 && smoke::trans(w, set, shade.nb, p, end, shade.sigma, shade.k[0], shade.k[1], shade.k[2], shade.k[3], &mut t) == ASK_HOST {
-                    return ASK_HOST;
-                }
-            }
-            lum *= t;
+            lum *= bricks::trans(shade.g, shade.stamp, p, end, shade.sigma);
         }
     }
     for k in 0..6 {

@@ -1564,9 +1564,6 @@ pub const MOTION_HUNT_FLOOR: f64 = 0.7;
 /// (src/game/guards.ts:368 BODY_LIGHT_DEFAULTS: a table nothing writes)
 pub fn body_light_defaults() -> crate::guards::BODYLIGHTDEFAULTS { crate::guards::BODYLIGHTDEFAULTS { lit: 0.22, lit_near: 0.04, near_m: 2.0, far_m: 5.0, smoke: 0.3 } }
 
-/// (src/game/guards.ts:374 BODY_PROBE_BUDGET)
-pub const BODY_PROBE_BUDGET: f64 = 6.0;
-
 /// (src/game/guards.ts:403 BODY_LIGHT_LS)
 pub const BODY_LIGHT_LS: &str = "twopointsix.bodyLight";
 
