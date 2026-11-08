@@ -7,8 +7,8 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// This frame's light readings for a plan: his share of the frame's budget queued round-robin over the spots still worth asking about (all of them once those
-/// are done), and whatever answers have arrived folded in, each kept DARK_WINDOW_SECS, the darkest live one mapped through the meter's own curve.   (guards.ts searchProbes)
+/// This frame's light readings for a plan: his share of the frame's readings, round-robin over the spots still worth asking about (all of them once those
+/// are done), each kept DARK_WINDOW_SECS, the darkest live one mapped through the meter's own curve.   (guards.ts searchProbes)
 pub fn search_probes(g: &mut crate::game::Game, gd: GuardId) {
     let n = g.gd[gd].search_plan.as_ref().unwrap().spots.len();
     if n == 0 { return; }
@@ -26,20 +26,14 @@ pub fn search_probes(g: &mut crate::game::Game, gd: GuardId) {
         tries += 1;
         let at = js::rem(p.rr, n as f64) as usize;
         p.rr += 1.0;
-        let s = &p.spots[at];
+        let s = &mut p.spots[at];
         if live && (s.visited || s.unreachable) { continue; }   // (the budget goes on the spots still in play while any are)
-        crate::game::game_light_query(g, &s.key, [s.pos[0], PROBE_HEIGHT, s.pos[2]], None);
+        let e = crate::guards::light_estimate_at(g, [s.pos[0], PROBE_HEIGHT, s.pos[2]], None, None, None);
+        s.samples.push(SearchSpotSamplesItem { t: g.time, e });
         g.search_probe_n += 1.0;
         k += 1.0;
     }
     for s in p.spots.iter_mut() {
-        let e = crate::game::game_light_at(g, &s.key);
-        if let Some(e) = e {
-            if e.is_finite() {
-                s.samples.push(SearchSpotSamplesItem { t: g.time, e });
-                crate::game::game_light_forget(g, &s.key);
-            }
-        }
         while !s.samples.is_empty() && g.time - s.samples[0].t > DARK_WINDOW_SECS { s.samples.remove(0); }
         if s.samples.len() > 200 { let over = s.samples.len() - 200; s.samples.drain(0..over); }
         if !s.samples.is_empty() {

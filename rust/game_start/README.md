@@ -102,8 +102,7 @@ Three rules keep the tests honest and alive:
    a man's awareness or a pushed event: that tests the test.
 3. **Hold a rule, not a run.** Several seeds, a control, and what a man DID (where he went, what he said), not the name of the script he was on.
 
-A game is stood with **the senses worked out by the game itself** (`SENSE.cpu`, and the sky's light in its estimate). A host with no picture has
-no light meter, and with them off every man stands in the dark for good, so "lit" and "dark" would be one thing. The page plays with them off.
+A game senses for itself on every host, so "lit", "dark" and "behind smoke" are the same thing here as on the page.
 
 **One game at a time in a process.** `rust/sim` keeps a game's block and several tables in statics, so a `Play` holds a lock until it is dropped
 and `cargo test`'s threads take turns. A test that stands a second game drops the first (`drop(p)`), or is told so.
@@ -185,7 +184,7 @@ that the picture, the sound, the HUD and the menus read (`src/host/rustgame.ts`,
    TypeScript on the puppet. This start stands with those rows down.
 5. **The host's own half.** `stand` makes a host that draws nothing: default picture settings (`settings.rs`, a copy of `defaultSettings()`: the
    page's are the player's own, with his quality preset), a canvas of 1600 by 1000, a detached Input, no smoke solver (the page builds its own
-   between the level's boxes going to the world and the Game), `SENSE.cpu` for eyes where asked. The page would hand each of these in.
+   between the level's boxes going to the world and the Game). The page would hand each of these in.
 6. **The character's files twice.** `gltf.rs` reads the rig, the clips and the cast's variants for the simulation. The picture's meshes and
    skins are read from the same files by `src/anim/gltf.ts`. One reader, or two that must agree.
 7. **Which file.** The page loads a level's file in the look that is on (`scene/look.ts lookLevelFile`) and fetches it. Here the caller hands
@@ -232,7 +231,7 @@ tools/blitz/start.sh kit-yard.json                                   # a level o
 tools/blitz/start.sh kit-yard.json --scenario roomclear --frames 1800
 tools/blitz/start.sh depot-gwot.json --link '?levelFile=depot.json&roomclear&squad4' --frames 300   # started as the page starts it
 tools/blitz/start.sh --mission depot-four --frames 300               # a row of the mission list: its file, started from its link
-tools/blitz/start.sh rust/game_start/target/scenes/two-rooms.json --scenario roomclear --cpu --frames 900
+tools/blitz/start.sh rust/game_start/target/scenes/two-rooms.json --scenario roomclear --frames 900
 bun run tools/blitz/start-levels.ts --write                          # every mission, and LEVELS.md written from the result (--seats 2: as games of two)
 bun run tools/blitz/start-levels.ts --again                          # every mission stood a SECOND time in one process, held to its first start (below)
 bun run tools/blitz/start-levels.ts --words '&hard'                  # every mission with those words on its link, both sides, in a folder of its own (never --write)
@@ -249,7 +248,7 @@ bun run tools/blitz/start-levels.ts --words '&hard'                  # every mis
    count and every part of the block compared after every frame (the bytes themselves), then the two end states by path. This holds what a path diff of two starts
    cannot see (state the bridge does not carry, what the import mends as it reads).
 
-`--cpu` raises the game's own senses on both sides, as the tests stand. The tests' scenes are written to `target/scenes/` by
+The tests' scenes are written to `target/scenes/` by
 `cargo test the_scenes_are_level_files`.
 
 `rust/game_start/target/debug/start --lacks levels/*.json` lists, a file a line, what the reader does not carry of it.

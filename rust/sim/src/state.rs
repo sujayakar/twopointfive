@@ -136,6 +136,26 @@ pub fn state(g: usize) -> &'static mut State {
 pub fn state_read(g: usize) -> &'static State {
     unsafe { &(*core::ptr::addr_of!(ALL))[g] }
 }
+/// how many times each slot's block was written whole (`put`)
+static mut PUTS: [u32; GAMES] = [0; GAMES];
+/// THE ONE WAY A BLOCK IS WRITTEN WHOLE: a new game's (no bytes: zeros under the layout's word), one put back, one moved here. Tables made from a block and
+/// kept beside it (bricks.rs, air.rs) go by `stamp`, so none is ever read of a block that is not the one it was made from.
+pub fn put(g: usize, bytes: &[u8]) {
+    let n = if bytes.len() < LEN { bytes.len() } else { LEN };
+    unsafe {
+        let at = addr(g) as *mut u8;
+        core::ptr::write_bytes(at.add(n), 0, LEN - n);
+        core::ptr::copy_nonoverlapping(bytes.as_ptr(), at, n);
+        (*core::ptr::addr_of_mut!(PUTS))[g] = (*core::ptr::addr_of!(PUTS))[g].wrapping_add(1);
+    }
+    if n == 0 {
+        state(g).head.layout = LAYOUT;
+    }
+}
+/// which writing of slot `g`'s block this is: no two alike, and none a number a host deals (those count up from 1)
+pub fn stamp(g: usize) -> f64 {
+    -1.0 - unsafe { (*core::ptr::addr_of!(PUTS))[g] } as f64
+}
 /// where slot `g`'s block is (a byte address in the module's memory)
 pub fn addr(g: usize) -> usize {
     state(g) as *mut State as usize

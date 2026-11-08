@@ -2645,11 +2645,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("rescueflush.smoke_k", offset_of!(Knobs, rescueflush.smoke_k), false),
     ("rescueflush.at_door_m", offset_of!(Knobs, rescueflush.at_door_m), false),
     ("posemath.singles", offset_of!(Knobs, posemath.singles), true),
-    ("sense.cpu", offset_of!(Knobs, sense.cpu), true),
-    ("sense.grid", offset_of!(Knobs, sense.grid), true),
-    ("sense.bounce", offset_of!(Knobs, sense.bounce), true),
-    ("sense.drift", offset_of!(Knobs, sense.drift), true),
-    ("sense.moon", offset_of!(Knobs, sense.moon), true),
     ("sense.glow.albedo", offset_of!(Knobs, sense.glow.albedo), false),
     ("sense.glow.share", offset_of!(Knobs, sense.glow.share), false),
     ("sense.glow.passes", offset_of!(Knobs, sense.glow.passes), false),
@@ -3022,7 +3017,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("roomfight.door_look_secs", offset_of!(Knobs, roomfight.door_look_secs), false),
     ("roomfight.door_shot_m", offset_of!(Knobs, roomfight.door_shot_m), false),
     ("roomfight.hold_short_secs", offset_of!(Knobs, roomfight.hold_short_secs), false),
-    ("roomfight.pairs", offset_of!(Knobs, roomfight.pairs), false),
     ("roomfight.move_engage_m", offset_of!(Knobs, roomfight.move_engage_m), false),
     ("roomfight.lamp", offset_of!(Knobs, roomfight.lamp), false),
     ("roomfight.preaim_deg", offset_of!(Knobs, roomfight.preaim_deg), false),
@@ -5982,11 +5976,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.rescueflush.smoke_k;
     let _: &f64 = &k.rescueflush.at_door_m;
     let _: &bool = &k.posemath.singles;
-    let _: &bool = &k.sense.cpu;
-    let _: &bool = &k.sense.grid;
-    let _: &bool = &k.sense.bounce;
-    let _: &bool = &k.sense.drift;
-    let _: &bool = &k.sense.moon;
     let _: &f64 = &k.sense.glow.albedo;
     let _: &f64 = &k.sense.glow.share;
     let _: &f64 = &k.sense.glow.passes;
@@ -6357,7 +6346,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.roomfight.door_look_secs;
     let _: &f64 = &k.roomfight.door_shot_m;
     let _: &f64 = &k.roomfight.hold_short_secs;
-    let _: &f64 = &k.roomfight.pairs;
     let _: &f64 = &k.roomfight.move_engage_m;
     let _: &f64 = &k.roomfight.lamp;
     let _: &f64 = &k.roomfight.preaim_deg;

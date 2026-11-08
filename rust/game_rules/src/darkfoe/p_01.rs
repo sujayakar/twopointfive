@@ -49,7 +49,7 @@ pub fn dark_foe_lit(g: &crate::game::Game, gd: GuardId) -> bool {
 
 /// The meter's reading of a point of floor: everything steady but the lights `skip` names.   (darkfoe.ts floorLight)
 pub fn floor_light(g: &mut crate::game::Game, x: f64, z: f64, skip: &mut dyn FnMut(&mut crate::game::Game, f64) -> bool) -> f64 {
-    let e = crate::guards::light_estimate_at(g, [x, 1.2, z], Some(skip), Some(true), None, None, None);
+    let e = crate::guards::light_estimate_at(g, [x, 1.2, z], Some(skip), Some(true), None);
     crate::game::game_visibility_of(g, e)
 }
 

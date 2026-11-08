@@ -983,11 +983,13 @@ pub extern "C" fn grid_step(g: usize, stamp: f64, w: usize, copy: f64, set: i32,
     let windy = real(wind_x) && real(wind_z) && real(wind_low) && real(wind_gain) && real(wind_full_at) && real(wind_keep) && wind_low >= 0.0 && wind_gain >= 0.0 && wind_full_at > 0.0;
     let (wind_x, wind_z) = if windy { (wind_x, wind_z) } else { (0.0, 0.0) };
     let k = bricks::K { decay, spread, rise, rise_rate, gone, wind_x, wind_z, wind_low, wind_gain, wind_full_at, wind_keep };
-    let emits = &scratch()[..if emits > SCRATCH_LEN / 6 { SCRATCH_LEN / 6 * 6 } else { emits * 6 }];
+    for e in scratch()[..if emits > SCRATCH_LEN / 6 { SCRATCH_LEN / 6 * 6 } else { emits * 6 }].chunks_exact(6) {
+        bricks::emit(g, e[0], e[1], e[2], e[3], e[4], e[5]);
+    }
     if lamps < 0 {
-        bricks::step(g, stamp, w, copy, set, n, emits, &k, None)
+        bricks::step(g, stamp, w, copy, set, n, &k, None)
     } else {
-        bricks::step(g, stamp, w, copy, set, n, emits, &k, Some(&glow::K { albedo, share, passes, sweep, lamps: lamps as usize, rows: light_rows(lg, leave, how) }))
+        bricks::step(g, stamp, w, copy, set, n, &k, Some(&glow::K { albedo, share, passes, sweep, lamps: lamps as usize, rows: light_rows(lg, leave, how) }))
     }
 }
 /// where the host writes the wind's share of each square metre of the plan before a step that has wind (bricks.rs WIND: `grid_wind_cap` doubles, row

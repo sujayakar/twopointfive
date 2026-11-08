@@ -197,7 +197,7 @@ pub fn door_tools_thr_lit_cell(g: &mut crate::game::Game, t_key: DoorOpId, sr: D
         return c == 1;
     }
     let mut every = |_: &mut Game, _: f64| true;
-    let e = crate::guards::light_estimate_at(g, [q[0], 1.2, q[2]], Some(&mut every), None, None, None, None);
+    let e = crate::guards::light_estimate_at(g, [q[0], 1.2, q[2]], Some(&mut every), None, None);
     let c = if crate::game::game_visibility_of(g, e) >= g.k.lights.lit_at { 1 } else { 0 };
     g.tab.doortools_door_op[t_key].thr.as_mut().unwrap().lit_c.as_mut().unwrap()[i] = c;
     c == 1
