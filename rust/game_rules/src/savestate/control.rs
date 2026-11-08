@@ -93,7 +93,6 @@ fn busy(g: &Game, seat: &crate::seats::SeatRef) -> Option<&'static str> {
     if p.easing.is_some() { return Some("easing a door"); }
     if p.door_move.is_some() { return Some("working a door"); }
     if crate::wallcharge::wall_charge_setting(g, seat) || p.charging.is_some() || p.work_stow.is_some() { return Some("setting a charge"); }
-    if crate::defuse::defuse_working(g) { return Some("at a charge"); }
     if p.kick.is_some() || (p.door_kick_tail && crate::character::anim_kicking(g, p.ch)) { return Some("kicking a door"); }
     if p.pending_throw.is_some() || p.throw_held || crate::character::anim_in_throw(g, p.ch) { return Some("throwing"); }
     if p.launch_held.is_some() { return Some("lining up the launcher"); }

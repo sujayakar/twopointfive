@@ -12568,41 +12568,6 @@ impl LessonK {
 }
 impl Default for LessonK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/defuse.ts:31 DEFUSE, src/game/defuse.ts:31)
-#[derive(Clone, Copy, Debug)]
-pub struct DefuseK {
-    pub on: bool,
-    pub work_secs: f64,
-    pub reach: f64,
-    pub marker_m: f64,
-    pub shift: f64,
-    pub start_m: f64,
-    pub lethal_m: f64,
-    pub wound_m: f64,
-    pub radius: f64,
-    pub power: f64,
-    pub warn_secs: f64,
-}
-impl DefuseK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DefuseK {
-            on: false,
-            work_secs: 0.0,
-            reach: 0.0,
-            marker_m: 0.0,
-            shift: 0.0,
-            start_m: 0.0,
-            lethal_m: 0.0,
-            wound_m: 0.0,
-            radius: 0.0,
-            power: 0.0,
-            warn_secs: 0.0,
-        }
-    }
-}
-impl Default for DefuseK { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/game/kit.ts:1170 ISSUE, src/game/kit.ts:1170)
 #[derive(Clone, Copy, Debug)]
 pub struct IssueK {
@@ -13789,10 +13754,6 @@ pub fn page_lesson() -> LessonK {
 }
 
 
-pub fn page_defuse() -> DefuseK {
-    crate::knobs::DefuseK { on: true, work_secs: 6.0, reach: 1.3, marker_m: 5.0, shift: 0.45, start_m: 1.2, lethal_m: 5.0, wound_m: 9.0, radius: 3.5, power: 1.0, warn_secs: 10.0 }
-}
-
 pub fn page_issue() -> IssueK {
     crate::knobs::IssueK { on: true, whole: true, picked: true }
 }
@@ -14065,7 +14026,6 @@ pub struct Knobs {
     pub nightbreach: NightbreachK,
     pub roomclear: RoomclearK,
     pub lesson: LessonK,
-    pub defuse: DefuseK,
     pub issue: IssueK,
     pub verdict: VerdictK,
     pub unseen: UnseenK,
@@ -14310,7 +14270,6 @@ impl Knobs {
             nightbreach: page_nightbreach(),
             roomclear: page_roomclear(),
             lesson: page_lesson(),
-            defuse: page_defuse(),
             issue: page_issue(),
             verdict: page_verdict(),
             unseen: page_unseen(),

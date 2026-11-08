@@ -14,7 +14,7 @@ function make(g: Game, u: Under): OrderTarget | null {
   switch (u.kind) {
     case 'floor': { const w = u.wall, box = w ? g.col.boxes[w.index] : undefined, t = u.thing;
       return { kind: 'floor', at: u.at, ...(w && box ? { wall: { index: w.index, box, alongX: w.alongX, u: w.u, side: w.side as 1 | -1, ok: w.ok, why: w.why, ...(w.outer ? { outer: true } : {}) } } : {}),
-        ...(t ? { thing: { kind: t.kind, face: t.face, n: t.n, stand: t.stand, name: t.name, ...(t.dev === null ? {} : { dev: t.dev }) } } : {}) }; }
+        ...(t ? { thing: { kind: t.kind, face: t.face, n: t.n, stand: t.stand, name: t.name } } : {}) }; }
     case 'door': { const door = u.door === null ? null : g.doors.byName(u.door); return door ? { kind: 'door', at: u.at, door, side: u.side as 1 | -1 } : null; }
     case 'foe': { const foe = man(u.man); return foe ? { kind: 'foe', at: u.at, foe } : null; }
     case 'none': { if (u.man < 0) return { kind: 'none', at: u.at }; const m = man(u.man); return m ? { kind: 'none', at: u.at, man: m } : null; }

@@ -229,7 +229,6 @@ fn work_spot_back(g: &mut Game, pl: PlayerId, w: &crate::handwork::SamWork) {
     match w.kind {
         SamWorkKind::Wall => if let Some(s) = g.wall_charge.sam.as_mut() { s.at = at; },
         SamWorkKind::Door => if let Some(s) = g.pl[pl].charging.as_mut() { s.at = at; },
-        SamWorkKind::Defuse => if let Some(s) = g.defuse.sam.as_mut() { s.at = at; },
         SamWorkKind::Breaker | SamWorkKind::Drive | SamWorkKind::Switch => {}
     }
 }

@@ -32,7 +32,7 @@ What a row does NOT hold:
 - Nothing here has been seen on a GPU: both games stand on a host that draws nothing, with the rows that only dress the picture down.
 
 <!-- table -->
-32 of 32 missions start in Rust equal to the TypeScript start (die seed 20942, 300 frames).
+31 of 31 missions start in Rust equal to the TypeScript start (die seed 20942, 300 frames).
 
 | mission | the file the page loads | starts in Rust | paths not known at the start | 300 frames beside the TypeScript start | paths not known as they end | what the start lacks |
 |---|---|---|---|---|---|---|
@@ -55,7 +55,6 @@ What a row does NOT hold:
 | `barracks-four` (off the list) | `barracks-gwot.json` | yes | 0 | 300 in step | 0 |  |
 | `rescue-registry` (off the list) | `registry-gwot.json` | yes | 0 | 300 in step | 0 |  |
 | `rescue-consulate` | `consulate-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `defuse-four` (off the list) | `defuse-gwot.json` | yes | 0 | 300 in step | 0 |  |
 | `floodlit-four` (off the list) | `floodlit-gwot.json` | yes | 0 | 300 in step | 0 |  |
 | `killhouse-four` (off the list) | `killhouse-gwot.json` | yes | 0 | 300 in step | 0 |  |
 | `mousehole-four` | `mousehole-gwot.json` | yes | 0 | 300 in step | 0 |  |
@@ -77,7 +76,7 @@ one a host hands a seat it has none for. What two players DO is not held here, o
 TypeScript start makes for two, and that the two stay in step while nobody moves.
 
 <!-- table seats=2 -->
-20 of 20 missions the game stages for 2 players start in Rust equal to the TypeScript start (die seed 20942, 300 frames, 2 seats); 12 the game refuses for 2 players.
+19 of 19 missions the game stages for 2 players start in Rust equal to the TypeScript start (die seed 20942, 300 frames, 2 seats); 12 the game refuses for 2 players.
 
 | mission | the file the page loads | starts in Rust | paths not known at the start | 300 frames beside the TypeScript start | paths not known as they end | what the start lacks |
 |---|---|---|---|---|---|---|
@@ -100,7 +99,6 @@ TypeScript start makes for two, and that the two stay in step while nobody moves
 | `barracks-four` (off the list) | `barracks-gwot.json` | yes | 0 | 300 in step | 0 |  |
 | `rescue-registry` (off the list) | `registry-gwot.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
 | `rescue-consulate` | `consulate-gwot.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
-| `defuse-four` (off the list) | `defuse-gwot.json` | yes | 0 | 300 in step | 0 |  |
 | `floodlit-four` (off the list) | `floodlit-gwot.json` | yes | 0 | 300 in step | 0 |  |
 | `killhouse-four` (off the list) | `killhouse-gwot.json` | yes | 0 | 300 in step | 0 |  |
 | `mousehole-four` | `mousehole-gwot.json` | yes | 0 | 300 in step | 0 |  |
