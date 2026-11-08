@@ -68,7 +68,7 @@ export async function bounceWallsCheck(): Promise<boolean> {
     const kept = n(fg, /\{ L \+= albedo \* diceIrradianceFace\(Ph, hit\.n\) \* \(1\.0 \/ 3\.14159265\); \}/g), walks = (body.match(/occludedTBoxes\(/g) ?? []).length;   // (the software adapter's room: the walk written once, and the gather asks the read at its rays' hits, in `trace` — its gloss and pane reads keep the old one)
     const bare = n(fg, /diceIrradianceFrom\(/g) + n(fg + rf, /\{ (?:h\.)?Eh \+= (?:diceIrradiance\(Ph \+ hit\.n \* c0Spacing\(\), hit\.n\)|diceIrradianceFace\(Ph, hit\.n\)); \}/g);   // every one of the old reads must now sit in the else of a site above
     const pre = /const BOUNCE_WALLS: bool = \$\{bounceWallsConfig\.on \? 'true' : 'false'\};/.test(readFileSync(resolve(ROOT, 'src/render/frame.ts'), 'utf8'));
-    const flag = /if \(q\.has\('nobouncewalls'\)\) bounceWallsConfig\.on = false;/.test(readFileSync(resolve(ROOT, 'src/main.ts'), 'utf8'));
+    const flag = /if \(q\.has\('nobouncewalls'\)\) bounceWallsConfig\.on = false;/.test(readFileSync(resolve(ROOT, 'src/host/pictureopens.ts'), 'utf8'));
     verdict(body === WANT && sites.cache === 1 && sites.gloss === 0 && kept === 2 && walks === 1 && sites.gather === 1 && sites.refl === 1 && sites.coat === 1 && bare === 2 && noWall && isMan && pre && flag,
       'the shader\'s rule is the one weighed below, every read off a man asks it, and the prelude and the page\'s flag carry the switch',
       `diceWalledPoint ${body === WANT ? 'matches' : 'DIFFERS'} · asked by: the cache's probes ${sites.cache}/1, the gather's rays ${sites.gather}/1 (its gloss and pane rays keep the old read: ${kept}/2, ${sites.gloss} walled), the box walk written ${walks} time(s) in the read, the reflections ${sites.refl}/1, a wet coat's sheen ${sites.coat}/1 · old reads left, each in a site's else ${bare}/3 · bounceLeftNoWall ${noWall ? 'as weighed' : 'DIFFERS'} · a carried box is the man, and no cell seen is no read: ${isMan} · prelude const ${pre} · ?nobouncewalls ${flag}`); }
@@ -190,7 +190,7 @@ export async function bounceWallsCheck(): Promise<boolean> {
   // does in the shader. A read that sees no cell is no read (dark): counted, and held to a few in a hundred, so a walk that answered "nothing seen" everywhere
   // could not pass as a mend.
   { const RB = process.env.REFLWALLS_BREAK === '1', RULE5 = !RB, n = (t: string, re: RegExp) => (t.match(re) ?? []).length;
-    const frameTs = readFileSync(resolve(ROOT, 'src/render/frame.ts'), 'utf8'), mainTs = readFileSync(resolve(ROOT, 'src/main.ts'), 'utf8');
+    const frameTs = readFileSync(resolve(ROOT, 'src/render/frame.ts'), 'utf8'), mainTs = readFileSync(resolve(ROOT, 'src/host/pictureopens.ts'), 'utf8');
     const metal = /let reflWalls = select\(0u, 0x100u \| owner, REFL_WALLS && metalness > 0\.25\);/g, calls = /(?:shadeReflHit|reflHitParts)\(hit, Po, dir, kEmit, reflWalls\)/g, any = /(?:shadeReflHit|reflHitParts)\(hit, Po, dir, kEmit[,)]/g;
     const pre = /const REFL_WALLS: bool = \$\{reflWallsConfig\.on \? 'true' : 'false'\};/.test(frameTs), on = /export const reflWallsConfig = \{ on: true \};/.test(frameTs), flag = /if \(q\.has\('noreflwalls'\)\) reflWallsConfig\.on = false;/.test(mainTs);
     verdict(n(rf, metal) === 1 && n(rf, calls) === 1 && n(rf, any) === 1 && pre && on && flag,

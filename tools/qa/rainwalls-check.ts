@@ -79,7 +79,7 @@ export async function rainWallsCheck(): Promise<boolean> {
   // (4) who asks, and the switch
   { const F = await import(`${ROOT}/src/render/frame.ts`) as any, was = F.rainWallsConfig.on; let onT = '', offT = '';
     try { F.rainWallsConfig.on = true; onT = F.scenePrelude(); F.rainWallsConfig.on = false; offT = F.scenePrelude(); } finally { F.rainWallsConfig.on = was; }
-    const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8');
+    const main = readFileSync(`${ROOT}/src/host/pictureopens.ts`, 'utf8');
     const asked = /if \(depth >= 1\.0 \|\| outdoorsXZ\(Pend\.xz\) \|\| \(RAIN_WALLS && !wxUnderRoof\(Pend\.xz\)\)\) \{/.test(vol) && /else if \(RAIN_WALLS && rainOverWall\(Pend\)\) \{ \}[^\n]*\n\s*else if \(!rainOutdoors\(Pend\.xz\)\) \{ discard; \}/.test(draw) && /fn rainOverWall\(P: vec3f\) -> bool \{\s*let p = P\.xz;\s*return !wxUnderRoof\(p\) && /.test(pc);
     const rings = /if \(depth < 1\.0 && outdoorsXZ\(Pend\.xz\)\) \{ let sp = splashAt\(Pend\);/.test(vol);
     verdict(was === true && body === WANT && IN === 0.2 && asked && rings && /const RAIN_WALLS: bool = true;/.test(onT) && /const RAIN_WALLS: bool = false;/.test(offT) && /q\.has\('norainwalls'\)\) rainWallsConfig\.on = false;/.test(main),

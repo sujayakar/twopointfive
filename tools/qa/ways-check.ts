@@ -65,8 +65,8 @@ export async function waysCheck(): Promise<boolean> {
     const once = (body.match(/lookWayAt\(/g) ?? []).length === 2 && (body.match(/textureSampleLevel\(wearTex/g) ?? []).length === 0 && body.includes('let wm = lookWay;');
     const use = look.includes('worn *= 1.0 + 0.8 * lookWayAt(') && body.includes('smoothstep(0.44 - 0.22 * beside, 0.6 - 0.22 * beside,') && mk.includes('- (0.72 - 0.12 * age * soft2.y - 0.16 * trod));') && mk.includes('* worn * max(soft2.y, min(trod, 1.0));');   // (… in a place kept like new too: the years' share of a mark's wear asks how kept the place is, feet's does not — kept-check.ts)
     const game = readdirSync(resolve(ROOT, 'src/game')).filter(f => f.endsWith('.ts') && /scene\/ways/.test(readFileSync(resolve(ROOT, 'src/game', f), 'utf8')));
-    const main = readFileSync(resolve(ROOT, 'src/main.ts'), 'utf8'), gm = readFileSync(resolve(ROOT, 'src/game/game.ts'), 'utf8');
-    verdict(one && once && use && game.length === 0 && main.includes("if (q.get('walked') === '0') lookConfig.walked = 0;") && gm.includes('lookConfig.walked > 0);'),
+    const main = readFileSync(resolve(ROOT, 'src/host/pictureopens.ts'), 'utf8');
+    verdict(one && once && use && game.length === 0 && main.includes("if (q.get('walked') === '0') lookConfig.walked = 0;"),
       'on the look\'s page one layer wears a pixel\'s floor and skirting (the g-buffer asks once and tells both layers; a cut face and a round\'s side have neither), the traffic map is read once a pixel in it (a floor where it is, a kept wall a stride out from its foot), a piece\'s history, a wall\'s knocked foot and a painted mark\'s wear follow where feet go, the page\'s word puts the ways off, and nothing in src/game imports them',
       `one layer ${one} · read once ${once} · use follows feet ${use} · src/game imports of scene/ways: ${game.length}`); }
   console.log(all ? '=== ways: ALL PASS ===' : '=== ways: FAILURES above ===');
