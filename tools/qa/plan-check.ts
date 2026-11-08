@@ -5,6 +5,7 @@
 // key's bar on a door, and the order mode (`menuOnly`, settled on).
 //   exit 0 = all hold · 1 = one does not
 import { standUp, ROOT } from './headless.ts';
+import { ringUp, ringDown } from './squadwords';
 
 const FP: any = await import(`${ROOT}/src/game/floorplan.ts`);
 const PF: any = await import(`${ROOT}/src/ui/planfloor.ts`);
@@ -104,11 +105,11 @@ async function planLines(): Promise<boolean> {
   }
   // 5. the menu's rings
   {
-    O.close(); const none = floorPlan(g).who.length, you0 = floorPlan(g).you;
-    O.open(O.targetAt(spot ?? g.player.char.pos)); R.step(2);
+    ringDown(R.W.input); R.step(); const none = floorPlan(g).who.length, you0 = floorPlan(g).you;
+    R.W.cursorAt(spot ?? g.player.char.pos); ringUp(R.W.input, R); R.step(2);
     const who: any[] = floorPlan(g).who, menuMen = O.menu?.men ?? [], you = floorPlan(g).you;
     const ok = none === 0 && who.length === menuMen.length && who.length > 0 && who.every(q => menuMen.includes(q.gd) && dist(q.at, q.gd.char.pos) < 0.01);
-    O.close(); R.step(1);
+    ringDown(R.W.input); R.step(1);
     line(ok && floorPlan(g).who.length === 0, 'the menu up rings the men it goes to', `${who.length} ringed of ${menuMen.length} in the menu · none before, none after`);
     line(!you0 && !!you && dist(you, g.player.char.pos) < 0.01 && !floorPlan(g).you, 'the menu up rings the player, at his feet', `${you ? 'ringed' : 'NOT ringed'} with the menu up · ${you0 ? 'ringed' : 'none'} before, ${floorPlan(g).you ? 'ringed' : 'none'} after`);
   }
@@ -196,9 +197,9 @@ async function planLines(): Promise<boolean> {
     // a module's own re-assign (no order given) stamps him anew: still nothing
     const m0 = Q.team[0], A0 = QO.of(m0); QO.assign(m0, { order: A0.order, post: A0.post, face: A0.face, going: A0.going, there: A0.there }); Q.step(2);
     const reassigned = n();
-    QO.open(QO.targetAt(sp ?? game.player.char.pos)); Q.step(2);
+    Q.W.cursorAt(sp ?? game.player.char.pos); ringUp(Q.W.input, Q); Q.step(2);
     const up = n(), upMode = floorPlan(game).mode;
-    QO.close(); Q.step(2);
+    ringDown(Q.W.input); Q.step(2);
     const down = n();
     line(!w && flash === 4 && !flashMode && walking > 0 && quiet === 0 && reassigned === 0 && up === 4 && upMode && down === 0, 'only in the order mode: an order given shows and goes, normal play is clean, the menu up shows what stands',
       w ? `refused: ${w}` : `just given ${flash} · ${f1(PLAN.freshSecs + 0.5)} s on ${quiet} listed with ${walking} still walking · a module's re-assign ${reassigned} · menu up ${up} · closed ${down}`);

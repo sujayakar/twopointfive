@@ -73,6 +73,9 @@ const PLAY = (secs) => {
       log(job.name, 'goto', url);
       await page.goto(url);
       const ready = await page.evaluate(async () => { await window.__ready; window.__testVisible = true; return { fatal: document.getElementById('fatal')?.textContent || '', pipelines: window.__boot?.pipelines, internal: [window.__engine.width, window.__engine.height] }; });
+      // the ring as a hand puts it up on a place: the place under the middle of the view and the squad's key kept down past its hold; put away by Esc
+      await page.evaluate(() => { window.__ringOn = (at) => { window.__stage({ look: [at[0], at[1] || 0, at[2]], yaw: 0, pitch: 1.1, dist: 10 }, {}); const c = document.getElementById('view'); window.__mouse(c.clientWidth / 2, c.clientHeight / 2); window.__runFrames(1); window.__input.pressed.add('KeyB'); window.__runFrames(20, 1 / 60, ['KeyB']); window.__runFrames(1); };
+        window.__ringDown = () => { window.__input.pressed.add('Escape'); window.__runFrames(1); window.__stage(null, {}); }; });
       log(job.name, 'ready', JSON.stringify(ready)); if (ready.fatal) R.errors.push('fatal: ' + ready.fatal);
       await page.screenshot({ path: path.join(outDir, `${job.name}-card-page.png`) });
       // the start card away, smoke off, the scenario as staged
@@ -116,7 +119,7 @@ const PLAY = (secs) => {
         threw = await page.evaluate(PLAY, 1); if (threw) R.errors.push('play threw: ' + threw);
       }
       if (process.env.THROW && staged.squad) {
-        // THROW=1: a spot of floor nobody has a throw to from where he stands (game/squadthrow.ts walks a man to one): the order menu on it turned to the throw page for a still
+        // THROW=1: a spot of floor nobody has a throw to from where he stands (game/squadthrow.ts walks a man to one): the squad's ring on it for a still
         // (the picture's preview: who, his walk, the arc), then 'frag there' given and a still of him on his way, then of the floor once it is thrown
         const th = await page.evaluate(() => {
           const g = window.__game, O = window.__orders, T = window.__squadthrow, P = g.player.char.pos, nav = g.col.nav; if (!T) return { err: 'no __squadthrow hook' };
@@ -132,7 +135,7 @@ const PLAY = (secs) => {
           const mid = [(best.at[0] + best.from[0]) / 2, 0.5, (best.at[2] + best.from[2]) / 2], span = Math.hypot(best.at[0] - best.from[0], best.at[2] - best.from[2]);
           window.__stage({ look: mid, yaw: 0, pitch: 1.1, dist: Math.max(10, span * 1.5) }, {});
           g.fogOfWar.on = false;
-          O.open(O.targetAt(best.at)); window.__input.pressed.add('KeyG');
+          window.__ringOn(best.at);
           return best;
         });
         R.throw = th; log(job.name, 'throw', JSON.stringify(th));
@@ -141,7 +144,7 @@ const PLAY = (secs) => {
           th.menu = await page.evaluate(() => { const O = window.__orders, M = O.menu; return { page: M?.page ?? null, rows: M ? M.rows.map((r, i) => `${r.key} ${r.id}${M.why[i] ? ' — ' + M.why[i] : ''}`) : [], plans: window.__squadthrow.plans().map(p => ({ who: p.gd.callsign, kind: p.kind, preview: !!p.preview, walk: p.walk?.length ?? 0, pts: p.points.length })), svg: document.querySelector('#traj .squadthrow')?.childElementCount ?? -1 }; });
           await save('throwmenu', await page.evaluate(DRAW, 2));
           th.svgMenu = await page.evaluate(() => document.querySelector('#traj .squadthrow')?.innerHTML.length ?? -1);
-          await page.evaluate(() => window.__input.pressed.add('Digit1'));
+          await page.evaluate(() => { const O = window.__orders; O.give('fragThere', O.menu?.target ?? O.targetAt(window.__game.aimPoint), 'all'); window.__ringDown(); });
           threw = await page.evaluate(PLAY, 1.5); if (threw) R.errors.push('play threw: ' + threw);
           th.going = await page.evaluate(() => ({ plans: window.__squadthrow.plans().map(p => ({ who: p.man, preview: !!p.preview, walk: p.walk?.length ?? 0 })), status: JSON.stringify(window.__game.view.squad).slice(0, 400), stats: { ...window.__squadthrow.stats } }));
           await save('throwwalk', await page.evaluate(DRAW, 2));
@@ -150,22 +153,22 @@ const PLAY = (secs) => {
           await save('throwout', await page.evaluate(DRAW, 2));
           log(job.name, 'throw done', JSON.stringify({ menu: th.menu, svgMenu: th.svgMenu, going: th.going, thrown: th.thrown }));
         }
-        await page.evaluate(() => { window.__orders.close(); window.__stage(null, {}); });
+        await page.evaluate(() => { window.__ringDown(); window.__stage(null, {}); });
       }
       if (process.env.SHUT && staged.squad) {
-        // SHUT=1: the nearest door stood open, the order menu on it turned to the door tools' page (X, 5) — where 'shut that door' stands on 3 — kept up for a still
+        // SHUT=1: the nearest door stood open, the squad's ring on it kept up for a still
         const sh = await page.evaluate(() => {
           const g = window.__game, O = window.__orders, P = g.player.char.pos, far = (d) => Math.hypot(d.frameCentre[0] - P[0], d.frameCentre[2] - P[2]);
           const d = g.doors.list.filter(x => !x.off && O.targetAt(x.frameCentre)?.kind === 'door').sort((a, b) => far(a) - far(b))[0]; if (!d) return { door: null };
           if (d.latched || Math.abs(d.angle) < 0.6) { d.latched = false; d.angle = d.swing * 1.3; d.vel = 0; d.closing = false; d.quietT = -3600; d.place(); }
-          O.open(O.targetAt(d.frameCentre)); const opener = O.menu?.rows.find(r => r.opens); if (opener) window.__input.pressed.add('Digit' + opener.key);
-          return { door: d.def.name, angle: +d.angle.toFixed(2), opener: opener?.id ?? null };
+          window.__ringOn(d.frameCentre);
+          return { door: d.def.name, angle: +d.angle.toFixed(2) };
         });
         threw = await page.evaluate(PLAY, 0.3); if (threw) R.errors.push('play threw: ' + threw);
         sh.page = await page.evaluate(() => { const O = window.__orders, M = O.menu; return M ? { page: M.page, rows: M.rows.map((r, i) => `${r.key} ${r.id}${M.why[i] ? ' — ' + M.why[i] : ''}`), hud: (O.menu ? O.menu.rows.map((d, i) => ({ kind: 'row', opts: [{ key: d.key ? String(d.key) : (d.hotKey || '').replace(/^Key|^Digit/, ''), text: `${O.labelOf(d, O.menuTarget())}${d.opens ? ' ▸' : ''}${O.menu.why[i] ? ` — ${O.menu.why[i]}` : ''}` }], off: !!O.menu.why[i] })) : []).map(r => r.opts.map(o => `${o.key} ${o.text}`).join(' / ')) } : null; });
         R.shut = sh; log(job.name, 'shut', JSON.stringify(sh));
         await save('shutmenu', await page.evaluate(DRAW, 1));
-        await page.evaluate(() => window.__orders.close());
+        await page.evaluate(() => window.__ringDown());
       }
       if (staged.squad && process.env.FOE) {
         const ord = await page.evaluate(() => {
@@ -177,13 +180,13 @@ const PLAY = (secs) => {
         threw = await page.evaluate(PLAY, 0.6); if (threw) R.errors.push('play threw: ' + threw);
         Object.assign(ord, await page.evaluate(() => {
           const g = window.__game, O = window.__orders, h = g.guards.find(x => x.team === 'hostile');
-          const t = O.targetAt([h.char.pos[0], 0, h.char.pos[2]]), given = t ? O.give('pairMark', t, 'all') : 'no target'; O.open(t);   // (the order first: a loud teammate shoots a defender he sees in the open)
+          const t = O.targetAt([h.char.pos[0], 0, h.char.pos[2]]), given = t ? O.give('pairMark', t, 'all') : 'no target'; window.__ringOn(h.char.pos);   // (the order first: a loud teammate shoots a defender he sees in the open)
           return { kind: t && t.kind, given, menu: !!O.menu, rows: (O.menu ? O.menu.rows.map((d, i) => ({ kind: 'row', opts: [{ key: d.key ? String(d.key) : (d.hotKey || '').replace(/^Key|^Digit/, ''), text: `${O.labelOf(d, O.menuTarget())}${d.opens ? ' ▸' : ''}${O.menu.why[i] ? ` — ${O.menu.why[i]}` : ''}` }], off: !!O.menu.why[i] })) : []).map(r => `${r.opts?.[0]?.key ?? ''} ${r.opts?.[0]?.text ?? r.label}${r.off ? ' (greyed)' : ''}`) };
         }));
         log(job.name, 'foe menu', JSON.stringify(ord));
         threw = await page.evaluate(PLAY, 0.2); if (threw) R.errors.push('play threw: ' + threw);
         await save('foemenu', await page.evaluate(DRAW, 1));
-        const took = {}; await page.evaluate(() => window.__orders.close());
+        const took = {}; await page.evaluate(() => window.__ringDown());
         for (let i = 0; i < 40 && !took.set; i++) { threw = await page.evaluate(PLAY, 0.5); if (threw) { R.errors.push('play threw: ' + threw); break; }
           took.set = await page.evaluate(() => { const P = window.__pair, m = window.__orders.squad()[0]; return !!P.jobOf(m)?.set; }); }
         took.hud = await page.evaluate(() => JSON.stringify(window.__game.view.squad).slice(0, 600)).catch(() => null);
@@ -201,14 +204,14 @@ const PLAY = (secs) => {
           for (const d of doors) {
             const t = O.targetAt(d.frameCentre); if (!t || t.kind !== 'door') continue;
             const why = O.give('bangClear', t, 'all');
-            if (!why) { O.open(O.targetAt(d.frameCentre)); return { door: d.def.name, menu: !!O.menu, rows: O.hud?.().length ?? null }; }
+            if (!why) { window.__ringOn(d.frameCentre); return { door: d.def.name, menu: !!O.menu, rows: O.hud?.().length ?? null }; }
           }
           return { door: null };
         });
         R.order = ord; log(job.name, 'order', JSON.stringify(ord));
         threw = await page.evaluate(PLAY, 0.2); if (threw) R.errors.push('play threw: ' + threw);
         await save('menu', await page.evaluate(DRAW, 1));
-        await page.evaluate(() => window.__orders.close());
+        await page.evaluate(() => window.__ringDown());
       }
       threw = await page.evaluate(PLAY, SECS); if (threw) R.errors.push('play threw: ' + threw);
       R.after = await page.evaluate(() => { const g = window.__game; return { time: +g.time.toFixed(1), guards: g.guards.map(x => `${x.callsign}:${x.team}:${x.state}`), sam: g.player.down ? 'down' : 'up', ops: window.__doortools.log?.slice(-6) ?? null }; });

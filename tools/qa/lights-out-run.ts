@@ -43,7 +43,7 @@
 // where he is (`wait`) and the way he is walking (`path`) — every plan times its moves off those, the lone arms as much as the pair. --moon adds the moon
 // to the PLAYER's meter only (the partner's is the stand-in's: he waits in the cage's shadow either way).
 // LIGHTSOUT_BREAK=1 = the check's own red path: `pair` never gives the breaker order and walks at the live door.
-import { menuKey } from './squadwords';
+import { ringUp, ringDown } from './squadwords';
 import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -220,13 +220,13 @@ async function one(plan: Plan, seed: number, deal: number | null, trace: boolean
   function order(what: string, p: number[], want: string, alt?: number[]): boolean {
     for (let k = 0; k < 4; k++) {
       const q = k % 2 && alt ? alt : p, n0 = O.log.length;
-      aim(q); step(2); aim(q); menuKey(O); step(2);
+      aim(q); step(2); aim(q); ringUp(I, { step }); step(2);
       const M = O.menu;
       if (!M) { say(`  ${what}: X opened no menu on ${at(q)}`); step(10); continue; }
       const i = M.rows.findIndex((r: any) => r.id === want);
-      if (i < 0 || M.why[i]) { say(`  ${what}: the menu on ${M.target.kind}${M.target.thing ? ` ▸ ${M.target.thing.name}` : ''} at ${at(M.target.at)} ${i < 0 ? `has no '${want}' row (rows: ${M.rows.map((r: any) => r.id).join(' ')})` : `refuses it: ${M.why[i]}`}`); menuKey(O); step(14); continue; }
+      if (i < 0 || M.why[i]) { say(`  ${what}: the menu on ${M.target.kind}${M.target.thing ? ` ▸ ${M.target.thing.name}` : ''} at ${at(M.target.at)} ${i < 0 ? `has no '${want}' row (rows: ${M.rows.map((r: any) => r.id).join(' ')})` : `refuses it: ${M.why[i]}`}`); ringDown(I); step(14); continue; }
       const key = M.rows[i].key ?? i + 1; aim(q); I.pressed.add(`Digit${key}`); step(2);
-      if (O.log.length === n0 || O.log[O.log.length - 1].order !== want) { say(`  ${what}: ${key} was pressed and no '${want}' order was logged`); if (O.menu) { menuKey(O); step(2); } continue; }
+      if (O.log.length === n0 || O.log[O.log.length - 1].order !== want) { say(`  ${what}: ${key} was pressed and no '${want}' order was logged`); if (O.menu) { ringDown(I); step(2); } continue; }
       say(`  X, ${key}: ${what} (he is ${mateIs()})`); out.orders++; return true;
     }
     const why = want === 'work' ? O.give('work', (() => { const th = g.work?.things?.().find((x: any) => x.kind === 'breaker'); return th ? { kind: 'floor', at: th.stand, thing: th } : O.targetAt(p as any); })()) : O.give(want, O.targetAt(p as any), 'all');

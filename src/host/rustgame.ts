@@ -409,13 +409,11 @@ export function rustAttach(g: Game): void {
       if (held.inStep || held.stale || !held.h) return give.call(this, id, t, who, opts);
       settle(held);
       return held.asks!.give(this, id, t ?? this.targetAt(g.aimPoint), who, opts); }; }
-  // THE MENU'S OWN CALLS FROM OUTSIDE A TICK (a tool's `__orders.open()`, `.pick()`, `.close()`, a panel): the same road as the key. The key's press is in
-  // the record and the Rust tick opens the menu; a call from outside ran the TypeScript on the puppet, which built rows of its own that the Rust game had
-  // never seen (and asked it about them). Each now crosses by the call table's row (tools/blitz/surface.ts) to the Rust function the tick itself runs, and
-  // the puppet takes the state again. Inside a tick, and while the puppet IS the game (before a start, while one is due), the method runs as it was.
+  // THE MENU'S ONE CALL FROM OUTSIDE A TICK (`ORDERS_CROSSES`, a tool's `__orders.pick()`): it crosses by the call table's row (tools/blitz/surface.ts) to the
+  // Rust function the tick itself runs, and the puppet takes the state again. Putting the ring up and down is the player's key's, in the input record, and has no call.
   { const O = G.orders; surfaceHost({ g, knobs: reg(), surfaceOpen: () => !!held.h && !held.inStep && !held.stale, surfaceDispatching: () => false,
       surfaceCall: (row: number, bytes: Uint8Array, view = -1) => { settle(held); pokes(held); if (held.toolScan) scanFlush(held); else held.settings?.flush(); handHost(held); call('face_call', () => hand(bytes, (p, n) => X!.face_call(held.h, row, view, p, n))); const out = outBytes().slice(); grown(g); apply(held, false); return out; } });
-    for (const m of ['open', 'close', 'turn', 'pageBack', 'pick', 'cycleWho', 'address']) { const was = O[m]; if (typeof was !== 'function') continue;
+    for (const m of ORDERS_CROSSES) { const was = O[m]; if (typeof was !== 'function') continue;
       O[m] = function (this: any, ...a: unknown[]) { if (RUST_PANIC.dead) return undefined; if (held.inStep || held.stale || !held.h) return was.apply(this, a); RUST_GAME.crossed[m] = (RUST_GAME.crossed[m] ?? 0) + 1; try { return crossing(`SquadOrders.${m}`, this, a); } catch (e) { if (RUST_PANIC.dead) return undefined; throw e; } }; } }
   // WHAT THE HUD IS TOLD (src/view/seatview.ts): asked of the Rust game once after whatever moved it, and kept till the next (`viewAt`: an apply, a whole apply
   // and a write into the game each put it off). While no Rust game stands, or one is stopped, the last word stands. The HUD reads it every drawn frame: a
@@ -934,6 +932,8 @@ function scanFlush(S: Held): void { tellShown(S); const t = performance.now(); S
 function scanRebase(S: Held): void { const t = performance.now(); S.settings?.rebase(); const K = RUST_GAME.scan; K.rebases++; K.ms += performance.now() - t; }
 /** the Game's methods that cross to the Rust game when called between ticks on the page (rustAttach) */
 const GAME_CROSSES = ['teleportPlayer'];
+/** the orders' methods that do (`wire.ts gen` is red on a name in either list with no row of the call table) */
+const ORDERS_CROSSES = ['pick'];
 /** A CALL BY NAME FROM A TOOL (`window.__rust.call('Game.teleportPlayer', game, [p])`): the Rust function the tick itself runs, by the call table's row
  *  (tools/blitz/surface.ts `crossing`), and the puppet takes the state again. It throws where no Rust game stands, inside a tick, or where the table has
  *  no such row: a method with no row runs a rule the Rust game cannot be asked for from here. */
