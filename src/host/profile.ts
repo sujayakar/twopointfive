@@ -403,7 +403,6 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'ORDERS.roundCap': 'TPS_ROUNDCAP=1',
   'ORDERS.sameWay': 'TPS_SAMEWAY=1',
   'ORDERS.trailDoors': 'TPS_TRAILDOORS=1',
-  'ORDERS.selfBody': 'TPS_SELFBODY=1',
   'PAIR.steady': 'TPS_PAIRSTEADY=1',
   'ROOMFIGHT.coverKeep': 'TPS_COVERKEEP=1',
   'ROOMFIGHT.doorShots': 'TPS_DOORSHOTS=1',
