@@ -7,11 +7,8 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Debug)]
 pub enum OrderLabel {
     Text { text: String },
-    WallRow,
     ThrowRow { kind: crate::squadthrow::SquadThrowKind },
     ThrowOpen,
-    Work,
-    Smoke,
     PairGo,
     /// an order written as a module (orders/rows/): its own function
     Row(&'static crate::orders::Row),
@@ -19,8 +16,6 @@ pub enum OrderLabel {
 /// OrderDef.can: this man can do his part (true in the TypeScript), or the word for why not. The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
 #[derive(Clone, Copy, Debug)]
 pub enum OrderCan {
-    WallRow,
-    Work,
     PairTake,
     PairWatch,
     PairDark,
@@ -30,12 +25,7 @@ pub enum OrderCan {
 /// OrderDef.only: the men among those addressed this order is for. The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
 #[derive(Clone, Debug)]
 pub enum OrderOnly {
-    SilentAll,
-    ShutDoor,
     ThrowRow { kind: crate::squadthrow::SquadThrowKind },
-    Wand,
-    Work,
-    Smoke,
     PairTake,
     PairGo,
     /// an order written as a module (orders/rows/): its own function
@@ -44,12 +34,7 @@ pub enum OrderOnly {
 /// OrderDef.valid: these men together can carry it out here (true), or not (false, or the word for why). The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
 #[derive(Clone, Debug)]
 pub enum OrderValid {
-    WallRow,
-    ShutDoor,
     ThrowRow { kind: crate::squadthrow::SquadThrowKind },
-    Wand,
-    Work,
-    Smoke,
     PairTake,
     PairWatch,
     PairGo,
@@ -60,14 +45,7 @@ pub enum OrderValid {
 #[derive(Clone, Debug)]
 pub enum OrderIssue {
     Nothing,
-    WallRow,
-    Silent,
-    Loud,
-    ShutDoor,
     ThrowRow { kind: crate::squadthrow::SquadThrowKind },
-    Wand,
-    Work,
-    Smoke,
     PairTake { mode: crate::pairorders::JobMode },
     PairWatch,
     PairDark,
@@ -78,10 +56,7 @@ pub enum OrderIssue {
 /// OrderDef.tick: once a frame for each man under the order, before he is posed. The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
 #[derive(Clone, Copy, Debug)]
 pub enum OrderTick {
-    ShutDoor,
     ThrowRow,
-    Wand,
-    Work,
     PairTake,
     PairWatch,
     PairDark,

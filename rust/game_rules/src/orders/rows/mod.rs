@@ -58,6 +58,14 @@ rows! {
     gobig;
     bigclear;
     thrword;
+    wallrow;
+    walltools;
+    silent;
+    loud;
+    shutdoor;
+    wand;
+    work;
+    smokethere;
 }
 
 /// The row of the menu for an order: `data` is what only it knows (its page, its targets, its key), and the functions
@@ -105,6 +113,11 @@ pub fn at(t: &OrderTarget) -> crate::v3::V3 {
 
 /// `issue` of a row that only opens a page: `give` refuses such a row before it comes to this
 pub fn opens_a_page(_g: &mut Game, _men: &[GuardId], _t: &OrderTarget, _o: Option<&GiveOpts>) -> Option<String> { None }
+
+/// `valid` from a word for why not: none is valid
+pub fn plain_valid(w: Option<String>) -> Result<(), Option<String>> {
+    match w { Some(w) => Err(Some(w)), None => Ok(()) }
+}
 
 /// the order of that id, if it is written as a module
 pub fn by_id(id: &str) -> Option<&'static Row> { ROWS.iter().copied().find(|r| r.id == id) }
