@@ -74,12 +74,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   Windows, at a text size other than the first, on the debrief of a finished squad mission, or the squad-down card's replay picture where the pair wraps.
 - **A quiet mission's gear screen** (2026-10-17; the maintainer: "quiet missions should have different gear screen stuff i think. be creative!", with
   show, not tell). The PANEL side of Team & kit; the picture beside it is the kit figure's. WHEN: the mission's kind is quiet or it is the solo night
-  (`ui/kitNoise.ts quietGear`), on the Team & kit step only: the root wears `quiet` (`ui/startpage.ts`, where `nokit` is set). `kitloud` on the address = the
+  (`ui/startpage.ts quietGear`), on the Team & kit step only: the root wears `quiet` (`ui/startpage.ts`, where `nokit` is set). `kitloud` on the address = the
   panel as it was. No FROZEN row and no knob: it is DOM and a look, nothing of the simulation reads it. WHAT: (1) THE LIGHTS ARE OUT: on that step
   `--m-accent` is the bright sand, so nothing on it is orange and the night picture is the brightest thing in the window. The cursor is told from 'on' by
   weight, not hue: 4 px of bright sand under a tab or beside a tile where 'on' is 2 px of the soft ink, and the roster's standing bar a step dimmer. Deploy is
   a hollow block: a 2 px bright frame over a faint fill. (2) THE TILES ARE SOLID PLATES (the panel colour at 0.94; they were the edge colour at 0.06), so the
-  room does not show through them. (3) THE KIT READS BY NOISE, no word added: every tile carries `data-noise` 0‥3 (`ui/kitCard.ts`, from `kitNoise.ts`), and
+  room does not show through them. (3) THE KIT READS BY NOISE, no word added: every tile carries `data-noise` 0‥3 (`ui/kitCard.ts`, the row's `noise`: `kit/card.rs kit_noise`), and
   on this screen a tile above 0 wears a sound mark after its VALUE (the name's line is cut with an ellipsis in a narrow tile and holds the arrows): a source
   and one arc = heard nearby and no alarm (an event with `loud: false`: the suppressed pistol's report, a smoke can's pop, a sticky camera fired and
   striking), two arcs = the floor hears it (`loud: true`: every other gun, a stun can, a charge, a hammer), three = the blast (`level: 2`, frag.ts blast(): a
@@ -90,8 +90,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   ground colour with its words at 0.65 (0.9 under the cursor). (5) AN EMPTY BIG SLOT is a tile like the rest, not the card's widest; with something in
   it, it is wide as before. NOT DONE: the tiles keep their order (the keys walk the card's own order); the picture's fade under the panel is the kit
   figure's (`ui/kitView.ts`). A loud mission's screen is untouched (every rule is under `#missions.one.quiet.pane-loadout`). CHECKS:
-  `bun run tools/qa/kitnoise-check.ts` (a gun's step follows `WEAPONS[...].report` for Sam's three picks and six teammate cards; each fixed step still has
-  the line of the game it copies; which missions take the look; `KITNOISE_BREAK=1` must fail) and `PORT=<port> node tools/qa/quietgear-page.cjs [outDir]`
+  the walk (`tools/qa/cards-page.ts`: every tile's `noise`) and `PORT=<port> node tools/qa/quietgear-page.cjs [outDir]`
   (the real page in headless Chromium, no adapter needed: the look, the steps, a mark on every noisy tile and no other, the big slot, the quiet set's gun at
   one arc, `kitloud`, the solo night, a loud mission as it was, no page error; `QUIETGEAR_BREAK=1` must fail). SEEN: stills of the real page's DOM at
   1440 × 900 with no picture behind it, looked at twice by a reviewer. NOT SEEN BY ANYONE: the panel over the real night picture, on a GPU, in a Mac's
@@ -114,7 +113,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   QUERY: a query that changes (less its team size) drops the element and makes another — no entry in the tab's history, and a message counts only from the
   current element's own window. The child says `boot` (its listener is up; on every load of its page the parent answers with
   `{kv:'frame', cx, cy, h, w, man, door, left, right, keep}` off the `.onefig` column's rectangle and, where the tiles moved since its query, the kit), `ready`, `none`, and — still mode only — `held` (`dip` / `undip` are gone, 10-14: the child dissolves inside itself, below; the parent ignores the two words from an older child). A kit
-  tile or the size is `{kv:'kit', members: KIT.members, squad}` at once on the first change (the LEADING edge; `kitMs` 150 only folds the clicks that follow into one more), and nothing else: the CHILD works out what moved. The loop's two more: `{kv:'sel', who, field}` (the open card's member and the highlighted tile's field, null on the sets;
+  tile or the size is `{kv:'kit', members, squad}` (members: `KitViewAsk.worn`, each place's kept text off the desk's TeamView, as objects) at once on the first change (the LEADING edge; `kitMs` 150 only folds the clicks that follow into one more), and nothing else: the CHILD works out what moved. The loop's two more: `{kv:'sel', who, field}` (the open card's member and the highlighted tile's field, null on the sets;
   said when either changes and again at every `boot`) and `{kv:'pause', on}` (on = the step is not showing: `show(null)`). THE PARENT'S HOOKS, all there are: `MemberCardOpts.onSelect(i, field)` (kitCard.ts, told from `draw()` when the highlighted row is another: a move changes no value, so `onChange` never said it), `loadout.ts` routes it to its `onPaint`, `startpage.ts paintFigure` passes `member: s.member, row: s.card?.at()` to `show()`. NOBODY STANDS IN FOR THE PICTURE (10-20; the maintainer: "we show the original gear screen before the new one fades in. let's just remove the old one with
   the figure?"). The standing man (the software-drawn kit figure, removed 2026-11-07) used to be drawn while the child booted past a 2.5 s grace (`KIT_VIEW.grace`, `?kitgrace`: both gone) and
   wherever there was no picture; a second game slower than the grace therefore showed him for a moment and then faded the picture in over him. Now `show()` answers true for every case the column is the picture's:
@@ -982,9 +981,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **Copy and paste for loadouts** (2026-10-15; the maintainer: "we should have copy and paste for loadouts"). On Team & kit, **C** copies the picked
   man's kit and **V** pastes the copied kit onto the picked man, from any row of the screen (Ctrl / Cmd with either is the same press while no text on the
   page is selected and no text field has the keys; the two go by the LETTER on the key, `kitCard.ts clipKey`, the screen's other keys by their place);
-  the mouse has two buttons, Copy and Paste, at the end of the card's sets line (`.kc-clip`, not `.kc-set`: the sets are still three). `src/ui/kitCard.ts
-  KIT_CLIP {card}` holds the one copied card for the page's life (UI only: nothing in the game reads it, so it is no knob table and no journal row;
-  the headless probes' cards carry the two buttons as the page's do). THE
+  the mouse has two buttons, Copy and Paste, at the end of the card's sets line (`.kc-clip`, not `.kc-set`: the sets are still three). The desk
+  holds the one copied card for the page's life (`rust/game_run/src/desk.rs`: nothing in the game reads it, so it is no knob table and no journal row). THE
   PASTE IS `src/game/kit.ts kitPaste(i, card)` (`kitPastePeek` = the same, nothing written): every ROW of the man's own card takes the copied card's
   value where his row offers it, a count over his row's most comes down to it, a row that cannot show the copied value at all keeps what it had (a
   teammate's wall charge onto you with your own charges off: your big slot is left alone; your cans as one of four splits with the pouches rule off), a field his card has no row for is never
@@ -1009,12 +1007,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   such keyboard has pressed them. Never seen on a GPU, and never with the door picture up behind the tiles; nobody has played it.
 - **What a mission hands you shows on your card** (2026-10-16; a claim from the stealth goal's mission wand). A quiet mission played under the fog hands Sam
   its sticky cameras for the visit (`scenarioRun.ts` → `stickyVisitSet`, to a card with the rifle) and, where `quietfog.ts QUIETFOG.wand` is up (`?quietwand=0` off), an
-  optical wand with them; the Team & kit card read his CARD alone and said 'none' beside both. Now `ui/kitCard.ts MemberCardOpts.lent(field)` (how many the mission
-  hands him) marks a tile `lent` where that is more than his card carries: the thing drawn lit, the mission's count and `LENT_WORD` ('mission’s') where the
+  optical wand with them; the Team & kit card read his CARD alone and said 'none' beside both. Now `CardRow.lent` (how many the mission
+  hands him; `kit/card.rs card_row`) marks a tile `lent` where that is more than his card carries: the thing drawn lit, the mission's count and `LENT_WORD` ('mission’s') where the
   value is (his own count stays in front where he carries some: '1 · mission’s 2', so an arrow pressed still moves a number he can see), the row's line for
-  a man who has it, no pouch rate on a tile the mission alone fills, the reason on the tile (`LENT_WHY`). `ui/loadout.ts lentNow` answers it from the link
-  the screen would deploy, by the game's own rule (`scenarioRun.ts quietCamsOfLink`, the one `startFromQuery` hands to `stickyVisitSet`; the fog lever and
-  the Sticky cameras row are on that screen: moved, the card is drawn again); you only, quiet missions only, never a lesson, no cameras beside a pistol.
+  a man who has it, no pouch rate on a tile the mission alone fills, the reason on the tile (`LENT_WHY`). The desk answers it from the link
+  the screen would deploy, by the game's own rule (`scenario_run quiet_cams_of_link`; the fog lever and
+  the Sticky cameras row are on that screen: moved, the desk is told and the card is drawn again); you only, quiet missions only, never a lesson, no cameras beside a pistol.
   `worn()` lays the same kit over the card it hands the drawn man, so the figure beside the card is dressed in what he will deploy with. NOTHING OF THE
   CARD OR THE POUCHES IS WRITTEN: whether lent kit stays free is the maintainer's open call on the stealth page, and a card that carries its own wand still
   pays its pouch. CHECK: `bun run tools/qa/kitlent-check.ts` (`probes.ts kitlent`, also in `kit`; a headless DOM, it sets its
@@ -1144,12 +1142,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   frames, one seed: the same digest on as off; a pair and one man count what they counted; the long hall, whose block names nobody since the shield left the game, counts the same;
   60,000 seeded presses (eight seeds, sizes stepped) left no stored or worn card outside the rule on either stand. Never seen on a GPU; nobody has
   played it.
-- **The gear screen is a tree, the same for every man** (`src/game/kittree.ts KITTREE`, `kit.ts buildRowsTree`, `ui/kitCard.ts`, `ui/gunStats.ts`; the
+- **The gear screen is a tree, the same for every man** (`src/game/kittree.ts KITTREE`, `kit.ts buildRowsTree`, `ui/kitCard.ts`, `kit/card.rs`; the
   maintainer on Team & kit, 10-19: "have some way of distinguishing different guns (some stats?), attachments like silencer should be per gun", "should
   be symmetric between self and teammates (e.g. 40mm should work for squad)", "sponge should show up, should only be part of stealth builds by default",
   "ideally rifle attachments should be hierarchical under the rifle", "weird that we have both per person defaults (as issued, quiet set, etc.) and
   then squad kits too"). With the switch on a card is ONE list of rows for you and a teammate. Each gun is a box: its tile, FOUR BARS of what it is
-  good at (Reach, Volume, Handling, Quiet: `gunStats(def)` read off its `weapons.ts` row, no number shown), and under it, set in off a rule, what
+  good at (Reach, Volume, Handling, Quiet: `kit/card.rs gun_stats` read off its weapon's row, no number shown), and under it, set in off a rule, what
   rides on it (`KitRow.under`): its own suppressor (`suppressed` the primary's, `sideCan` the secondary's, new), the weapon light, and on a gun with
   the tube (`KitRow.has`) sponge rounds (`rings`, a row for the first time), 40 mm grenades and sticky cameras. A suppressor row on a gun that has no
   choice reads what it is and has no arrows (`KitRow.fixed`), and its flag is put back on when the gun leaves the card (`homeCans`): a paste or a kit
@@ -1173,9 +1171,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   build before, row for row: one Suppressor row for both a teammate's guns, your guns always suppressed, five sponge rounds with every launcher, the
   two rows of sets. CHECK: `bun run tools/qa/kittree-check.ts` (`probes.ts kittree`: `kittree-rows`, `-guns`, `-sponge`, `-off`, `-mate40`; 31 lines on both
   stands, `KITTREE_BREAK=1` fails 18 on the frozen stand and 19 on the shipped one); a deploy off the card,
-  `tools/qa/kittree-deploy-page.cjs` (two mission boots on the software adapter, slow). The older card probes that read a row's place (`wand-kit`,
-  `wand-tile`) hold the tree off on every stand (`tools/qa/holds.ts ROWS_BEFORE_THE_TREE`), as `gunslots-check.ts` does in its own `raise`; `loadout-screen`
-  reads 'bare' in a man's line where it read the old row's name, and `kitpaste-page.cjs` counts the one Reset on a tree card. A MAN'S LINE under his
+  `tools/qa/kittree-deploy-page.cjs` (two mission boots on the software adapter, slow). The older card probes that read a row's place (`wand-kit`) hold the tree off on every stand (`tools/qa/holds.ts ROWS_BEFORE_THE_TREE`), as `gunslots-check.ts` does in its own `raise`, and `kitpaste-page.cjs` counts the one Reset on a tree card. A MAN'S LINE under his
   name (`kitWords`) names his guns by their picks under the tree, with `bare` after one whose suppressor the card has taken off. LEFT, the
   maintainer's calls: a sponge round costs a pouch and on a quiet run buys nothing over the lent five; the Quiet kit names no sponge; which four
   bars, and their scale (untuned, nobody has compared guns by them in play); a bare Mk 18 in a teammate's hands is the old unsuppressed row, in yours
@@ -2084,3 +2080,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the arrows, and a letter typed into a field is the field's (`keymap.ts typedInto`).
 - **The software-drawn kit figure and the `?kit` preview are gone** (2026-11-07, the maintainer's list). The start page's column is the team at its door or empty; `ui/kitBoot.ts` reads the
   kit store and puts up the `__kit` hook. What the figure's check held of the game stays in `tools/qa/cast-deal-check.ts` (a teammate wears his place's variant, not his id's; `ROSTER_BREAK=1` must fail).
+
+- **THE DESK** (the cards before a game hold no rule on the page). Where the rules are: `rust/game_rules/src/kit/card.rs` (a man's card, `CardView`) and `team.rs` (the team, `TeamView`),
+  asked of one blank game by `rust/game_run/src/desk.rs`, which is done the same commands a start is done (`src/host/machine.ts machineBefore`), so a man is staged with what his card shows.
+  HOW A CARD ASKS: `src/view/desk.ts` (`desk()`, set at the page's boot beside `kitBoot`, on the module the page has booted) and its generated caller `src/draw/asks.ts`. `ui/kitCard.ts memberCard` asks
+  `desk().card(i)` at each draw that can have changed the card and keeps that view for a move of the highlight (a row's `takes` and `would` are already on it; a move asks nothing); `ui/loadout.ts` says
+  `desk().for(mission, link, issue, walls)` as it opens and when the fog lever or the level's file changes that, and asks `desk().team()` after each press. A press (`step`, `choose`, `reset`, `copy`, `paste`, `size`, `named`) answers `Pressed`: a refusal's
+  words, and what is kept, which the desk's owner stores (the old page then runs `kitLoad`, which is all its own start reads). The page's are only its layout, the labels of buttons, tooltips and how a value is put together with `IDLE_WORD` and `LENT_WORD`.
+  ADD A ROW: `kit/p_02.rs` rows, its note in `card.rs row_note`, a drawing in `ui/kitIcons.ts`. ADD AN ASK: one line of `asks!` in `desk.rs`, a struct by `tools/wire` if it answers a new one, then `bun run tools/draw/gen.ts`.
+  STILL THE PAGE'S UNTIL THE NEXT PIECE: the link functions of the fog lever and the levers, `squadSearch`, `startSize`, `storeSquad`, the hour and weather compare at Deploy. THE WALK: `CHROME=… bun run tools/qa/cards-page.ts OUT [--face PATH]`, then `--diff A B`: every mission, size, man, step, pick, copy and paste written down in about 245,000 lines, and two trees compared; it replaced the fake-page probes `kit-card`, `pouch-card`, `loadout-screen`, `kitload-card`, `wand-tile`, `kitdeal-screen`, `kitnoise-check`, and the bars' verdicts of `kittree-guns` (the module's own tests: `rust/game_run` desk tests). The picture beside the card (`ui/kitView.ts`) is stubbed there: never seen against the desk on a GPU.
