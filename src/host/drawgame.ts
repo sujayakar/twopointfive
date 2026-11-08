@@ -113,8 +113,11 @@ export class DrawGame {
   /** the picture's clock: seconds of the game's, between its ticks as the frame is */
   get time(): number { return Math.max(0, this.drawn.u[this.drawn.at[Section.view] + View.tick] - 1 + this.between) / 60; }
   /** where a man is drawn standing, by his character's id; null = nothing is drawn of him */
-  at(id: number): [number, number, number] | null {
-    const { f, u, n, at } = this.drawn; for (let i = 0, o = at[Section.men]; i < n[Section.men]; i++, o += Man.row) if (u[o + Man.id] === id) return [f[o + Man.feet], f[o + Man.feet + 1], f[o + Man.feet + 2]];
+  at(id: number): [number, number, number] | null { return this.of(id, Man.feet); }
+  /** … and where his head is */
+  head(id: number): [number, number, number] | null { return this.of(id, Man.head); }
+  private of(id: number, word: Man): [number, number, number] | null {
+    const { f, u, n, at } = this.drawn; for (let i = 0, o = at[Section.men]; i < n[Section.men]; i++, o += Man.row) if (u[o + Man.id] === id) return [f[o + word], f[o + word + 1], f[o + word + 2]];
     return null;
   }
   /** what this page says of its look, when it is another than it last said */

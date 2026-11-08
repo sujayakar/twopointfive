@@ -352,7 +352,7 @@ async function main(): Promise<void> {
   requestAnimationFrame(loop);
 }
 tapConsole();   // (before the page boots: its own complaints are held until the backend's side is up, and nothing on a build with none)
-tellRedCards(() => new URLSearchParams(location.search).has('kitview'));
+tellRedCards(() => kitPicture);
 const uncaught = (head: string, e: unknown): void => { if (document.getElementById('fatal')?.style.display !== 'flex') showFatal(`${head}\n\n${(e as Error)?.stack ?? e}`); };
 window.addEventListener('error', ev => { if (!/ResizeObserver loop/.test(ev.message) && !(ev.error instanceof GameLost)) uncaught('Uncaught error:', ev.error ?? ev.message); });
 window.addEventListener('unhandledrejection', ev => { if (!(ev.reason instanceof GameLost)) uncaught('Unhandled promise rejection:', ev.reason); });
