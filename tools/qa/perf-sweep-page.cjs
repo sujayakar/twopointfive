@@ -27,8 +27,8 @@ fs.mkdirSync(OUT, { recursive: true });
 // in the page: everything the sweep may move, as one string
 const STATE = () => {
   const S = window.__engine.settings, o = {}; for (const k of Object.keys(S)) { const v = S[k]; if (k !== 'nvAmount' && k !== 'hitFlash' && (typeof v !== 'object' || Array.isArray(v))) o[k] = v; }   // (the loop writes those two every frame)
-  return JSON.stringify({ settings: o, preset: window.__quality.current, auto: window.__quality.auto, adaptive: window.__quality.adaptive, climb: window.__quality.climbState.standing, fog: window.__draw.fog.on, fogFrame: !!window.__engine.fogFrame?.on, fogEdge: window.__engine.fogFrame?.edge ?? null,
-    smoke: { enabled: window.__draw.smoke.params.enabled, rb: window.__draw.smoke.params.rbIters }, wisps: window.__snow ? { motes: window.__snow.wisps.motes, stretch: window.__snow.wisps.stretch } : null });
+  return JSON.stringify({ settings: o, preset: window.__quality.current, auto: window.__quality.auto, adaptive: window.__quality.adaptive, climb: window.__quality.climbState.standing, fog: window.__game.fogOfWar.on, fogFrame: !!window.__engine.fogFrame?.on, fogEdge: window.__engine.fogFrame?.edge ?? null,
+    smoke: { enabled: window.__smoke.params.enabled, rb: window.__smoke.params.rbIters }, wisps: window.__snow ? { motes: window.__snow.wisps.motes, stretch: window.__snow.wisps.stretch } : null });
 };
 
 // two STATE strings that should be equal: every setting and switch that is not
@@ -46,14 +46,14 @@ const printDiff = (x, y, name = '') => { if (x === y) return; const a = JSON.par
   log(url);
   try {
     await page.goto(url);
-    await page.evaluate(async () => { await window.__ready; if (window.__draw.pause.up) window.__draw.run(0); });
+    await page.evaluate(async () => { await window.__ready; window.__testVisible = true; if (window.__menu.isOpen) window.__menu.close(); });
   } catch (e) { console.log(`- FAIL — the page did not come ready — ${String(e).slice(0, 300)}${errs.length ? ` · ${errs[0]}` : ''}`); await browser.close(); process.exit(1); }
   const frames = async n => page.evaluate(n => new Promise(res => { let k = 0; const f = () => (++k >= n ? res(k) : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
   await frames(3);
   log('ready; the loop is running');
   if (GOGGLES) { await page.evaluate(() => { const K = window.__knobs?.registry?.().IRLIGHT; if (K && 'auto' in K) K.auto = false; });   // (the stand prices the lights: they burn whenever the goggles are down here, not only where the place is too dark — game/irlight.ts IRLIGHT.auto)
     await page.keyboard.press('KeyN');
-    const up = await page.evaluate(ms => new Promise(res => { const t0 = performance.now(); let k = 0; const f = () => { const L = window.__engine.lights; k++; if ((L.tube && L.irCount > 0) || performance.now() - t0 > ms) return res({ tube: !!L.tube, n: L.irCount ?? null, frames: k }); requestAnimationFrame(f); }; requestAnimationFrame(f); }), Number(process.env.GOGGLES_WAIT || 6) * 60000);
+    const up = await page.evaluate(ms => new Promise(res => { const t0 = performance.now(); let k = 0; const f = () => { const L = window.__engine.lights; k++; if ((L.tube && L.irCount > 0) || performance.now() - t0 > ms) return res({ tube: !!L.tube, n: L.irCount ?? null, frames: k, nv: window.__game.player.nv }); requestAnimationFrame(f); }; requestAnimationFrame(f); }), Number(process.env.GOGGLES_WAIT || 6) * 60000);
     check(up.tube && up.n > 0, `goggles down: the picture is the tube's and the renderer takes infrared light (${JSON.stringify(up)})`);
     if (!(up.tube && up.n > 0)) { console.log('  (no infrared light to sweep on this stand: a kit without goggles, ?noirlight, or goggles that were already down — nothing further is run)'); await browser.close(); process.exit(1); } }
   const before = await page.evaluate(STATE), t0 = await page.evaluate(() => window.__game.time);

@@ -158,7 +158,7 @@ async function main(): Promise<void> {
   const face = await fetchFace(say, () => { throw new Error('the game asked a die the page never hands in'); });
   // THE DESK: the cards before a game ask the module, and what a press keeps goes in this machine's store, where the next page's start reads it
   { const C = new Commands(); setDesk(new Desk(face.exports as unknown as DeskFace, face.exports.memory as WebAssembly.Memory, (key, text) => { try { if (text) localStorage.setItem(key, text); else localStorage.removeItem(key); } catch { /* no store: nothing is kept */ } }));
-    machineBefore(q, name, C); desk().do(C); }
+    C.words(location.search); machineBefore(q, name, C); desk().do(C); }
   // (an address that plays a mission comes up on that mission's brief, one that plays nothing on the title; either is live from here, and the game is made behind it)
   LOADBRIEF.on = q.get('loadbrief') !== '0'; settleOfQuery(q);
   LOADBRIEF.options = { open: () => openOptions({ tab: 'controls' }), close: closeOptions, up: optionsOpen };
@@ -178,7 +178,7 @@ async function main(): Promise<void> {
     // (the run's tape: not of a title's floor, which nobody plays, nor of a page that measures)
     if (!title && !unkept && !q.has('noreplay')) game.tape = new HandTape(HAND.count);
     if (game.tape) built = await buildName();
-    machineBefore(q, name, game.commands);
+    machineBefore(q, name, game.commands, game.shown());
     game.start({ level, words: location.search, mannequin, mannequinBin, cast, castLook, seed, named: { level: name, build: built } });
     machineAfter(game.commands, !benchSceneWaits() && !heldPage(q));
   }
@@ -221,7 +221,7 @@ async function main(): Promise<void> {
   const made = Promise.all([engine.init({ ...pictureMakes(q), onGroup: group }), timed('smoke', smoke.init()), timed('particles', engine.particles!.init()), timed('materials', engine.gbuffer.needLook()), timed('meshShadows', shadows.init()), timed('skin', engine.gbuffer.prepareSkin(chars.jointsFormat))]);
   made.catch(() => { /* awaited below */ });
   // (while the programs compile: the ticks a run begins with, still, walking and firing)
-  if (!play && !net && !kitPicture && !title) { const eye = new FollowCamera(), o = view() + View.follow, none = new Set<string>(), walk = new Set(['KeyW']), w = Math.max(1, canvas.clientWidth), h = Math.max(1, canvas.clientHeight);
+  if (!play && !kitPicture && !title) { const eye = new FollowCamera(), o = view() + View.follow, none = new Set<string>(), walk = new Set(['KeyW']), w = Math.max(1, canvas.clientWidth), h = Math.max(1, canvas.clientHeight);
     eye.target = [D.f[o], D.f[o + 1], D.f[o + 2]]; eye.aspect = w / h; eye.rebuild();
     await game.warm(WARM, (N, i) => sampleHand(N, { keys: i >= WARM / 3 ? walk : none, pressed: none, buttons: i >= WARM * 2 / 3 ? 1 : 0, clicked: 0, wheel: 0, mouseX: w * 0.6, mouseY: h * 0.4 }, eye, canvas), nextTask); }
   await made;

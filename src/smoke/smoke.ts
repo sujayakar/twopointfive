@@ -246,10 +246,6 @@ export class SmokeSystem implements SmokeSystemLike {
     if (half > 0.025) this.push({ pos: v3.mad(from, dir, len / 2), dir, speed: W.speed, radius: W.radius, line: half, push: W.push });
     return true;
   }
-  spawnCanister(pos: Vec3, duration?: number) {
-    const P = this.params;
-    this.emit({ pos: v3.add(pos, [0, 0.12, 0]), dir: [0, 1, 0], speed: P.canisterSpeed, radius: P.canisterRadius, density: P.canisterDensity, temperature: P.canisterTemp, ttl: duration ?? P.canisterDuration, age: 0, kind: 'canister' });
-  }
   get queue(): GPUQueue { return this.engine.device.queue; }
   /** THE GAME'S SMOKE, as it lies where the game left it: `rows(buffer, plan, bricks)` sends the plan's words and the bricks' rows to these places (bytes) of the buffer. Asked for when `made`
    *  is another than the one held */
@@ -487,29 +483,7 @@ export class SmokeSystem implements SmokeSystemLike {
   }
 
   private perOp: ((name: string) => void) | null = null;
-  /** Tools: one step with every kernel in a submit of its own, waited for — wall ms per kernel (a software renderer's numbers mean something this way; a real GPU's are mostly submit latency) */
-  async profileStep(dt: number): Promise<Record<string, number>> {
-    const e = this.engine, device = e.device, out: Record<string, number> = {}; e.lastDt = dt;
-    e.world.ensurePacked();   // (as stepAlone: no draw comes before this step)
-    const cuts: { name: string; cb: GPUCommandBuffer }[] = []; let enc = device.createCommandEncoder();
-    this.perOp = name => { cuts.push({ name, cb: enc.finish() }); enc = device.createCommandEncoder(); };
-    const proxy = { beginComputePass: (d: GPUComputePassDescriptor) => enc.beginComputePass(d), copyBufferToBuffer: (...a: [GPUBuffer, number, GPUBuffer, number, number]) => enc.copyBufferToBuffer(...a) } as unknown as GPUCommandEncoder;
-    try { this.encode(proxy, () => undefined); } finally { this.perOp = null; }
-    await device.queue.onSubmittedWorkDone();
-    for (const c of cuts) { const t = performance.now(); device.queue.submit([c.cb]); await device.queue.onSubmittedWorkDone(); out[c.name] = (out[c.name] ?? 0) + performance.now() - t; }
-    device.queue.submit([enc.finish()]); this.afterSubmit();
-    return out;
-  }
 
-  stepAlone(dt: number, focus?: Vec3) {
-    if (!(dt > 0) || !this.live()) return;
-    const e = this.engine; e.lastDt = dt; if (focus) e.viewFocus = focus;
-    e.world.ensurePacked();   // (a step with no draw before it: the obstacle bake reads the box rows on the device, and an undrawn tick leaves them the last pack's — scene/boxes.ts relist)
-    const enc = e.device.createCommandEncoder({ label: 'smokeAlone' });
-    this.encode(enc, () => undefined);
-    e.device.queue.submit([enc.finish()]);
-    this.afterSubmit();
-  }
 
   afterSubmit() {
     const r = this.statQueued; if (r < 0) return;

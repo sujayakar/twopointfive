@@ -8,7 +8,7 @@ const ROOT = join(import.meta.dir, '../..'), S = JSON.parse(readFileSync(join(RO
 /** a table the host keeps for itself, and no copy of the game's */
 const NOT_BACK: Record<string, string> = {};
 const every = new Set<string>(L.everyTick); if (process.env.BACK_BREAK) every.delete('destruction::DestructionMod.destr_log');
-const toolText = readdirSync(join(ROOT, 'tools/qa')).filter(f => f.endsWith('.ts')).map(f => readFileSync(join(ROOT, 'tools/qa', f), 'utf8')).join('\n') + readFileSync(join(ROOT, 'src/main.ts'), 'utf8');
+const toolText = readdirSync(join(ROOT, 'tools/qa')).filter(f => f.endsWith('.ts')).map(f => readFileSync(join(ROOT, 'tools/qa', f), 'utf8')).join('\n');
 const WRITES = (r: string) => new RegExp(`\\.${r}\\b\\s*(?:=[^=]|\\+=|-=|\\.push|\\.insert|\\.clear|\\.remove|\\.pop|\\.extend|\\.retain|\\.truncate|\\.drain|\\.entry|\\.splice|\\.get_mut|\\.iter_mut)|&mut [\\w.]*\\.${r}\\b`);
 const lost: string[] = []; let held = 0;
 for (const T of Object.values<any>(S.types)) { if (T.k !== 'struct' || !T.name.endsWith('Mod')) continue; const dir = join(ROOT, 'rust/game_rules/src', T.mod); if (!existsSync(dir)) continue; const body = readdirSync(dir).filter(f => f.endsWith('.rs')).map(f => readFileSync(join(dir, f), 'utf8')).join('\n');

@@ -46,7 +46,7 @@ function read(profile) {
 
 (async () => {
   const browser = await chromium.launch({ args: ['--enable-unsafe-webgpu'] }), ctx = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
-  await ctx.addInitScript(() => { });
+  await ctx.addInitScript(() => { window.__testVisible = true; });
   const page = await ctx.newPage(), cdp = await ctx.newCDPSession(page), errors = [], said = [], takes = [];
   page.on('pageerror', e => { errors.push(String(e).slice(0, 300)); log('PAGEERROR', String(e).slice(0, 200)); });
   page.on('console', m => { const x = m.text(); if (/^[A-Z]{4,} \{/.test(x)) said.push(x); if (m.type() === 'error') errors.push(x.slice(0, 300)); });
@@ -59,7 +59,7 @@ function read(profile) {
   await page.addInitScript(() => { window.__prof = { start: () => window.__profStart(), stop: tag => window.__profStop(tag) }; });
   log('goto', QUERY); await page.goto(`http://localhost:${PORT}/?${QUERY}`, { waitUntil: 'commit' });
   await page.waitForFunction(() => !!window.__ready, null, { timeout: LIMIT }); await Promise.race([page.evaluate(() => window.__ready.then(() => true)), new Promise((_, rej) => setTimeout(() => rej(new Error('the page was not ready in time')), LIMIT))]);
-  await page.evaluate(() => { try { window.__draw.run(0); } catch { } });
+  await page.evaluate(() => { try { window.__menu.close(); } catch { } });
   const adapter = await page.evaluate(async () => { const a = navigator.gpu && await navigator.gpu.requestAdapter(); return a ? `${a.info.vendor} ${a.info.architecture}` : 'no adapter'; });
   log('ready on', adapter, '· running the script');
   await Promise.race([page.evaluate(`(async () => { ${DO} })()`), new Promise((_, rej) => setTimeout(() => rej(new Error('the script did not end in time')), LIMIT))]);

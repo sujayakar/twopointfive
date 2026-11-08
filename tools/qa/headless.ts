@@ -323,9 +323,6 @@ async function standBody(opts: { /** a recipe's or a tape's knob tables, laid ov
   // THE GAME STOOD HERE IS A PUPPET OF THE RUST GAME, which steps it from the first `game.update`: with no word, as with `TPS_GAME=rust` in front of the tool
   // (`audit`: the same, audited; `none`: nothing is loaded, a game that can be read and not stepped). Which is tools/blitz/word.ts's to say, the one switch.
   { const S = (await import('../blitz/word.ts')).resolve(STAND_AT_LOAD === 'frozen'); if (S.word) await (await import(RUST_HOST)).standRust(game, S.word, { dress: !!opts.dress, ...(opts.scan === false ? { scan: false } : {}), ...(opts.draws === false ? { draws: false } : {}) }); }
-  // QA_PERTURB=<seed> in front of any headless tool: a seeded stream of the things a person does between two ticks (orders, throws, kills, saves and loads)
-  // laid over the tool's own play (tools/blitz/perturb.ts; PLAY.md, "The fuzz"). Unset: nothing is loaded.
-  if (process.env.QA_PERTURB) await (await import('../blitz/perturb.ts')).lay(W);
   return W;
 }
 

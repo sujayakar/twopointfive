@@ -159,6 +159,10 @@ pub fn weather_set_thunders_are(g: &mut crate::game::Game, l: &[crate::weather::
     for t in l { ::sim::weather::thunder_push(w, t.at, t.dist_km, t.bearing, t.loud); }
 }
 
+/// the wind the storm blows, x and z, m/s
+pub fn weather_wind(g: &crate::game::Game) -> [f64; 2] { g.weather.wind }
+pub fn weather_set_wind(g: &mut crate::game::Game, v: [f64; 2]) { g.weather.wind = v; }
+
 /// When the next stroke is due (game time). (weather.ts Weather.nextFlashAt)
 pub fn weather_next_flash_at(g: &crate::game::Game) -> f64 { wx_read(g).next_flash_at }
 

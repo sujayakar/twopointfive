@@ -1,4 +1,4 @@
-// THE ONE DOOR A FILE LEAVES THE PAGE BY (src/host/savefile.ts), on a fake page. A kind that has given its download up (a take, a result, a journal, an exported checkpoint) goes to
+// THE ONE DOOR A FILE LEAVES THE PAGE BY (src/host/savefile.ts), on a fake page. A kind that has given its download up (a take, a result, a journal) goes to
 // whoever listens and to nobody else: no download is asked for, with a listener or without, and the door answers what became of the file ('sent', 'held',
 // false) so its saver can say so; `?downloads=1` (SAVE_UP.on = false) is the door as it was. No kind is downloaded for its own sake any more (the level editor's document was the last, and went with the editor); with downloads put back a file is asked for once under its name and the listener told after it; a download that cannot be asked for THROWS (a
 // caller must not mark the file handed over) and nobody is told. A listener that throws, or whose promise is refused, loses nothing. A saver hears
@@ -186,8 +186,8 @@ page();
       ['a.ts', `${door}const w = saveFile('perf', name, body);`], ['b.ts', `${door}// (it used to leave by saveFile('bench', n, b))`], ['c.ts', `${door}tellSaved('net-log', n, b); saveFile('odd', n, b);`],
       ['d.ts', `${door}saveFile(kindOf(x), n, b);`], ['e.ts', `${door}const kind: SavedKind = 'ninth'; export function put(kind: SavedKind) { return saveFile(kind, n, b); }`], ['f.ts', "saveFile('ninth', n, b);"],
       ['g.ts', "import { saveFile as put } from '../host/savefile'; put(k, n, b);"], ['h.ts', `${door}saveFile("ninth", n, b); saveFile((k as SavedKind), n, b);`], ['host/savefile.ts', "saveFile('bench', n, b);"]]));
-    const k = savedBy(`${door}const KIND: SavedKind = 'modelerr'; saveFile(KIND, n, b);`);
-    check(t.unsaved.join() === 'bench' && t.strange.join() === 'c.ts: odd' && t.unread.join() === 'd.ts,e.ts,f.ts,g.ts,h.ts' && t.savers.get('perf')!.join() === 'a.ts' && t.savers.get('net-log')!.join() === 'c.ts' && t.savers.get('ninth')!.join() === 'f.ts' && k.kinds.join() === 'modelerr' && k.unread === 0,
+    const k = savedBy(`${door}const KIND: SavedKind = 'ninth'; saveFile(KIND, n, b);`);
+    check(t.unsaved.join() === 'bench' && t.strange.join() === 'c.ts: odd' && t.unread.join() === 'd.ts,e.ts,f.ts,g.ts,h.ts' && t.savers.get('perf')!.join() === 'a.ts' && t.savers.get('net-log')!.join() === 'c.ts' && t.savers.get('ninth')!.join() === 'f.ts' && k.kinds.join() === 'ninth' && k.unread === 0,
       `the walk on lines of its own: a kind only a note speaks of has nobody, a kind off the list is strange, and a save whose kind is not said outright or by one const is not read (nobody: ${t.unsaved.join()} · strange: ${t.strange.join()} · not read: ${t.unread.join()})`); }
   const { savers, unread, strange, unsaved } = saversOf(SAVED_KINDS, texts);
   const sets = files.filter(f => /SAVED\.sink\s*=[^=]/.test(readFileSync(f, 'utf8'))).map(f => f.slice(root.length + 1)), door = readFileSync(join(root, 'cloud/door.ts'), 'utf8'), pages = /\n  doorTo\(cloud\);/.test(readFileSync(join(root, 'host/drawcloud.ts'), 'utf8'));

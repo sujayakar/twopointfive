@@ -40,7 +40,7 @@ const until = async (f, ms = 15000) => { const t = Date.now(); for (;;) { const 
       });
     }
     await ctx.addInitScript(() => {
-      
+      window.__testVisible = true;
       if (new URLSearchParams(location.search).get('stub') !== 'none' || !navigator.gpu) return;
       const real = navigator.gpu.requestAdapter.bind(navigator.gpu);
       navigator.gpu.requestAdapter = o => Promise.resolve(o?.forceFallbackAdapter ? real(o) : null);
@@ -81,8 +81,8 @@ const until = async (f, ms = 15000) => { const t = Date.now(); for (;;) { const 
     if (ONLY !== 'card') {
       const C = await profile(); log('booting the game…');
       await C.page.goto(`http://localhost:${PORT}/?paused&quality=verylow&mute&roomclear${BREAK}`, { waitUntil: 'load', timeout: NAV });
-      const up = await C.page.evaluate(async () => { await window.__ready; const e = window.__engine; e.render = () => {}; try { window.__draw.smoke.params.enabled = false; } catch { /* */ }
-        window.__draw.run(0); await window.__runFrames(120, 1 / 60, []); return { sid: window.__cloud?.sid ?? null, fatal: document.getElementById('fatal')?.style.display === 'flex' }; });
+      const up = await C.page.evaluate(async () => { await window.__ready; const e = window.__engine; e.render = () => {}; try { window.__smoke.params.enabled = false; } catch { /* */ }
+        window.__menu.close(); await window.__runFrames(120, 1 / 60, []); return { sid: window.__cloud?.sid ?? null, fatal: document.getElementById('fatal')?.style.display === 'flex' }; });
       await C.page.evaluate(() => { setTimeout(() => { throw new Error('page check: thrown on purpose'); }, 0); });
       await C.page.waitForFunction(() => document.getElementById('fatal')?.style.display === 'flex', null, { timeout: 30000 });
       const c5 = await C.card();

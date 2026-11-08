@@ -307,8 +307,6 @@ export function hypot(): number { return kahanN(arguments as unknown as ArrayLik
 /** the engine's own, as they were when this module loaded (presentation that wants the engine's speed and does not feed the game may call these) */
 export const SYS = { sin: Math.sin, cos: Math.cos, tan: Math.tan, asin: Math.asin, acos: Math.acos, atan: Math.atan, atan2: Math.atan2, exp: Math.exp, log: Math.log, log2: Math.log2, log10: Math.log10, pow: Math.pow, tanh: Math.tanh, hypot: Math.hypot };
 const OWN: typeof SYS = { sin, cos, tan, asin, acos, atan, atan2, exp, log, log2, log10, pow, tanh, hypot };
-/** the functions of Math that an engine may round as it likes and that are NOT replaced: nothing in the simulation may call one (exact-check.ts) */
-export const EXACT_UNCOVERED: readonly string[] = ['cbrt', 'expm1', 'log1p', 'sinh', 'cosh', 'asinh', 'acosh', 'atanh'];
 let installed = false;
 /** how many times the switch has changed: a value KEPT from one of the functions (a prop's cached frame, a sorted table) is remade when this has moved */
 export let mathsEpoch = 0;

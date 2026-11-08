@@ -871,13 +871,6 @@ export class LightingPasses {
   }
 
   setFxaa(on: boolean) { this.fxaaEnabled = on; if (this.width) this.writeFxaaParams(); }
-  /** Test hook (main.ts __resetClock): zero the per-frame counters that feed the grain seed and the history parities, so a scripted capture renders
-   *  the same frames whatever ran during boot. */
-  /** __resetClock (automation): put the frame-keyed CLOCKS back — the grain seed here, engine.frameIdx by the caller — so a scripted capture repeats. The ping-pong PARITIES are deliberately left
-   *  as they are (review R2.7): every one of them is a symmetric flip-then-index pair (this frame reads [1 − p], writes [p]) whose value never reaches a shader, so zeroing them bought no
-   *  determinism — the same call sequence from boot yields the same parities anyway — but DID hand every history client the two-frames-old slot as 'last frame' (and the gather last frame's
-   *  moments from the wrong slot) for the frame after a mid-run reset. */
-  resetClocks() { this.grainSeed = 0; }
   private grainSeed = 0;
   /** the final blit's numbers: the OUTPUT texel size, its mode (0 plain · 1 FXAA · 2 the RCAS sharpen TAAU ends with — FXAA after a temporal resolve would only blur it), grain, seed, sharpen strength */
   private fxaaData = new Float32Array(8); private postData = new Float32Array(16); private postBits = new Uint32Array(this.postData.buffer); private postSent = new Uint32Array(16);   // (rewritten every frame in place — review R1.4)
@@ -942,22 +935,6 @@ export class LightingPasses {
     ] });
   }
 
-  /** Measurement aid (console: `await __engine.passes.softTileStats()`): reads back the tile mask of the last frame rendered with
-   *  the tile pass-through and reports the threshold it was built with, the fraction of 8x8 tiles the whole chain passes through (≈ the
-   *  fraction of the chain's per-pixel work saved; a retired tile costs one broadcast texel load + a 2-texel copy per step) and the tile
-   *  count per distance 0 .. skipT (the scan saturates at skipT: "at least that far"). */
-  async softTileStats(): Promise<{ tiles: number; skipT: number; skipped: number; byDistance: number[]; steps: { stride: number; ownT: number }[] } | null> {
-    if (!this.tileDist || !this.lastSkipT) return null;
-    const tw = this.tw, th = this.th, bpr = Math.ceil(tw * 4 / 256) * 256, T = this.lastSkipT;
-    const buf = this.device.createBuffer({ size: bpr * th, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ });
-    const enc = this.device.createCommandEncoder(); enc.copyTextureToBuffer({ texture: this.tileDist }, { buffer: buf, bytesPerRow: bpr }, [tw, th]); this.device.queue.submit([enc.finish()]);
-    await buf.mapAsync(GPUMapMode.READ);
-    const u = new Uint32Array(buf.getMappedRange().slice(0)); buf.unmap(); buf.destroy();
-    const byDistance = new Array<number>(T + 1).fill(0); let skipped = 0;
-    for (let y = 0; y < th; y++) for (let x = 0; x < tw; x++) { const v = u[y * (bpr / 4) + x]; byDistance[Math.min(v & 255, T)]++; if (v & 256) skipped++; }
-    let travel = 0; const steps = DN_STRIDES.slice(0, dnIters(this.den.knobs.shIters)).map(stride => ({ stride, ownT: skipThreshold(travel += stride) }));   // (the shadow client's à-trous passes)
-    return { tiles: tw * th, skipT: T, skipped: skipped / (tw * th), byDistance, steps };
-  }
 
   /** Forget every cached bind group (they name texture views): rebuilt lazily on the next encode. Costs microseconds and touches no texture — NOT a history restart. */
   private dropBindGroups() { this.bgFGX = null; this.bgDirect = this.bgVol = this.bgFxaa = null; this.bgRefl = null; this.bgTileDist = null; this.bgCompFG = null; this.bgBloomDown0 = []; this.bgBloomDown = []; this.bgBloomUp = []; this.bgPost = []; this.bgTaau = [null, null]; this.bgSharpU = null; this.bgCompS = null; this.bgTaauS = [null, null]; this.bgGbaa = null; this.den.dropBindGroups(); }

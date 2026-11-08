@@ -34,7 +34,7 @@ import type { GwotMat } from '../../src/scene/gwotPalette';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { carLampsIn } from '../../src/scene/carLamps';
-import { LAST_IN, LAST_MEN, YARD_IN, YARD_MEN } from '../../levels/tut-kit.script';
+import { LAST_IN, LAST_MEN, YARD_IN, YARD_MEN } from './tutKitMarks';
 import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'tut-kit';
