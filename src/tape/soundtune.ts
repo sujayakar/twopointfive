@@ -1,4 +1,4 @@
-// A SOUND TUNED ON ITS CARD (the sound lanes, replay pages only: replay/soundlanes.ts). The maintainer, 10-13: "having a few options, ways to tune them (i'm familiar
+// A SOUND TUNED ON ITS CARD (the sound lanes, replay pages only: tape/soundlanes.ts). The maintainer, 10-13: "having a few options, ways to tune them (i'm familiar
 // with audio engineering!), parameters for the generation, etc. would go a long way to cut down on iteration times". A voice of the table is a recipe of instrument
 // calls (audio/synth.ts: hiss, ring, blast, tail, slaps, piezo, throat, drive); under the instruments' hook (`TUNING`) each call is a numbered LAYER whose numbers can be
 // replaced, which can be muted or heard alone, and the whole can be made off another seed. This file is the tune as it is KEPT (plain JSON in the pick, read back as

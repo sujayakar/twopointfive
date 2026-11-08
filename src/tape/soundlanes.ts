@@ -1,4 +1,4 @@
-// Sound lanes under the engine replay's timeline (`?playtape=…`): one row per sound the tape has asked the mixer for, a mark each time it was asked, the row's
+// Sound lanes under a replay's bar (`?playtape=…&soundlanes`): one row per sound the tape has asked the mixer for, a mark each time it was asked, the row's
 // name lit while it sounds. The maintainer, 10-12: "a special replay viewer mode where we have the audio tracks in the timeline below, and I can see what's playing
 // and then flag individual ones. and being able to pick between a few options (or maybe even parameterize them) would go a long way".
 //
@@ -6,7 +6,7 @@
 // its pitch, tone and level, a flag and a few words. The takes and the three numbers are laid on live by the mixer (audio.ts `trims`), on replay pages only; the
 // picks are this browser's (localStorage) and leave as ONE line of text ('copy picks') to paste into the chat.
 //
-// A TAKE CAN BE TUNED (replay/soundtune.ts): the card lists the take's LAYERS — the instrument calls it is made of — each with its numbers in ms / Hz / dB / cents,
+// A TAKE CAN BE TUNED (soundtune.ts): the card lists the take's LAYERS — the instrument calls it is made of — each with its numbers in ms / Hz / dB / cents,
 // a mute and a solo, the seed it is made off, and a high-pass and a bell over the result. What he changed is the pick's `tune`; the voice made under it is one more
 // take of the mixer's, 'tuned', rendered again a moment after a dial moves.
 //
@@ -21,12 +21,20 @@ import { buildSfx } from '../audio/sfx';
 import type { SfxNameWas } from '../audio/sfxWas';
 import { WAS_IN_GAME, wasOnly } from '../audio/sfxWas';
 import { altPicked, altTake, altTakes } from '../audio/sfxAlt';
-import type { TapePlay } from './engineplay';
 import { rectZoom, textZoom } from '../ui/textsize';
 import { typedInto } from '../host/keymap';
 import { SoundFilm } from './soundfilm';
 import { BELL_DB, BELL_HI, BELL_LO, HP_HI, HP_LO, Q_HI, Q_LO, SEED_MAX, dBOf, layerSays, madeOf, paramsOf, pulledOf, renderTune, said, shown, spectrum, tuneEmpty, tuneOf, tuneText, typed, type SoundTune, type Unit } from './soundtune';
 
+/** the run being played, as the lanes ask it (host/drawpage.ts) */
+export interface LaneTape {
+  readonly ticks: number; /** what this replay is kept under, and called */ readonly key: string; readonly label: string;
+  /** the tick it stands after · its pace · a place is being played to · it plays */
+  readonly f: number; readonly speed: number; readonly seeking: boolean; readonly playing: boolean;
+  play(): void; pause(): void; seek(f: number): void;
+  /** called right after each frame is drawn, in its task */
+  drawn: (() => void) | null;
+}
 /** what he picked for one sound (every field optional: none = the game's own) */
 export interface SoundPick extends Kept { flag?: boolean; at?: string; note?: string; mine?: Kept[] }
 /** how one sound plays: the take ('tuned' = `tune`'s base take made under it), the mixer's three trims (rate = pitch, tone = a low-pass in Hz, gain), the tune.
@@ -226,7 +234,7 @@ export class SoundLanes {
   private re: { f0: number; f1: number; t: number; end: number; list: Ev[]; i: number; last: number; resume: boolean; at: number; wait: number } | null = null;
   /** ⟳ = the stretch heard again REPEATS (LOOP_GAP after a pass ends the next one starts, under the takes and dials as they stand THEN) until it is stopped; `reg` = a
    *  stretch dragged out on the strip, [first step, the step it stops short of): what "again" hears while it is set; `rePass` = passes begun of the stretch last started */
-  film: SoundFilm | null = null; private reShown = true; private frameWas: ((dt: number) => void) | null = null; private frameOwn = false; private noTag: HTMLElement | null = null; private filmTag: HTMLElement | null = null; private filmOn = false; private filmSaid = ''; private peakEl: HTMLElement | null = null; private styleEl: HTMLStyleElement | null = null;
+  film: SoundFilm | null = null; private reShown = true; private noTag: HTMLElement | null = null; private filmTag: HTMLElement | null = null; private filmOn = false; private filmSaid = ''; private peakEl: HTMLElement | null = null; private styleEl: HTMLStyleElement | null = null;
   /** THE WINDOW HOLDS STILL under a stretch heard again and under a held drag: `win` = the window as it stood when that began (widened or shifted ONCE if the stretch
    *  did not fit it), null = it follows the tape's step */
   private win: { t0: number; span: number } | null = null; private zoomF = SPAN_DEF; private spanT = 0; private escTheirs = -1e9;
@@ -239,11 +247,11 @@ export class SoundLanes {
   private tunedKey = new Map<string, string>(); private tunedBuf = new Map<string, SfxBuffer>(); private due = new Set<string>(); private dueT = 0; private lazy = false; private hold = false;
   private openL = -1; private solo: number | undefined; private soloOf = ''; private bellF = 1000; private bellQ = 1; private spec: HTMLCanvasElement | null = null; private specOf = new Map<string, Float32Array>();
   private open: boolean; private dirty = true; private unsaved = 0; private geo = ''; private mute = false;
-  private late: Ev[] = []; private stale = false; private fullAt = 0;   // late = marks heard since the last draw (drawn alone); stale = marks on the canvas that a second pass replaced (a whole redraw, at most every REDRAW_MS)
+  private lastF = 0; private late: Ev[] = []; private stale = false; private fullAt = 0;   // late = marks heard since the last draw (drawn alone); stale = marks on the canvas that a second pass replaced (a whole redraw, at most every REDRAW_MS)
   private flagN = 0; private said = ''; private dead = false;
   private timer = 0; private onHide = () => { this.keep(); if (this.spanT) this.keepOpen(); }; private onVis = () => { if (document.hidden) this.onHide(); };
   // ESC: the first press stops a stretch being heard again (a loop too), the next shuts the card; with neither it is not the lanes' key. Read on its KEYUP: the replay
-  // bar's keydown listener (engineplay.ts, made before this one) keeps the page's keys from every later listener. An Esc that a field used (it let go of the keyboard:
+  // bar's keydown listener (bar.ts, made before this one) keeps the page's keys from every later listener. An Esc that a field used (it let go of the keyboard:
   // main.ts panelWantsEsc, the bar's note box) or that shut the bar's big map is not the lanes' — nothing here stops the event for anyone else.
   private onFocusOut = (e: FocusEvent) => { if (typedInto(e.target)) this.escTheirs = performance.now(); };   // (a field he types in, never Input's off-screen box on a framed page — host/keymap.ts: focus leaving THAT is no field letting go, and the next Esc is still the lanes')
   private onKeyDown = (e: KeyboardEvent) => { if (e.code === 'Escape') this.escTheirs = performance.now(); };   // (an Esc keydown that gets this far was typed in a field: the bar lets those through)
@@ -253,19 +261,15 @@ export class SoundLanes {
     if (this.re) this.reStop(true); else if (this.card) this.shut();
   });
 
-  constructor(private tape: TapePlay, private audio: AudioEngine) {
+  constructor(private tape: LaneTape, private audio: AudioEngine) {
    try {   // (a throw part-way leaves nothing of the lanes on the page: `undo`)
-    const T = tape.tape!, tAt = this.tAt = new Float64Array(T.ticks + 1);
-    { let f = 0, t = 0; for (const [n, dt] of T.dt) for (let i = 0; i < n && f < T.ticks; i++) { t += dt; tAt[++f] = t; }
-      const d = T.dt[T.dt.length - 1]?.[1] ?? 1 / 60; while (f < T.ticks) { t += d; tAt[++f] = t; } }
+    const T = tape, tAt = this.tAt = new Float64Array(T.ticks + 1); for (let f = 1; f <= T.ticks; f++) tAt[f] = f / 60;
     this.tEnd = Math.max(tAt[T.ticks], 1e-3);
-    // THE HEAR-AGAIN PICTURE (replay/soundfilm.ts): a small strip of the frames drawn while the replay PLAYS, taken right after each frame's render and in its task (a WebGPU
-    // canvas is only good until it is presented: the lanes' own paint runs before the render and would read black), shown over the view under the stretch being heard again
+    // THE HEAR-AGAIN PICTURE (soundfilm.ts): a small strip of the frames drawn while the replay PLAYS, taken right after each frame's render and in its task (a WebGPU canvas is only good until
+    // it is presented: the lanes' own paint runs before the render and would read black), shown over the view under the stretch being heard again
     { const view = document.getElementById('view');
-      if (view instanceof HTMLCanvasElement) { const film = this.film = new SoundFilm(view), fr = this.frameWas = tape.frame; film.box = () => this.above(); this.frameOwn = Object.prototype.hasOwnProperty.call(tape, 'frame');
-        tape.frame = (dt: number) => { const sought = tape.seekTo > tape.f; fr.call(tape, dt);   // (the frame a seek lands on is not taken: the next played one is)
-          if (!sought && !this.dead && !this.re && tape.playing && !(tape.seekTo > tape.f)) film.capture(tAt[Math.min(tape.f, tAt.length - 1)]); }; } }
-    this.label = tape.id != null ? `shelf ${tape.id}` : (tape.src.split('/').pop() ?? '').replace(/\.json(\.gz)?$/, '');
+      if (view instanceof HTMLCanvasElement) { const film = this.film = new SoundFilm(view); film.box = () => this.above(); tape.drawn = () => { if (!this.dead && !this.re && tape.playing && !tape.seeking) film.capture(tAt[Math.min(tape.f, tAt.length - 1)]); }; } }
+    this.label = tape.label;
     // what this browser kept is read as what it MAY be: a value of another shape is dropped, never thrown on (an uncaught error here is the page's fatal card)
     this.store = Object.create(null) as Record<string, SoundPick>;
     const picks = read<unknown>(store('localStorage'), PICKS_LS, null);
@@ -305,7 +309,7 @@ export class SoundLanes {
    *  and trims, the timers and listeners, the style, the dock, the card, the tag on the view, the body's class and the root's height */
   private undo() {
     const steps: (() => void)[] = [   // (each by itself: whatever threw must not keep the rest on the page)
-      () => { if (this.frameWas) { if (this.frameOwn) this.tape.frame = this.frameWas; else delete (this.tape as { frame?: unknown }).frame; this.frameWas = null; } },
+      () => { this.tape.drawn = null; },
       () => { this.audio.tap = null; }, () => { this.audio.trims.clear(); }, () => { this.film?.dispose(); this.film = null; },
       () => { clearInterval(this.timer); clearTimeout(this.spanT); clearTimeout(this.dueT); },
       () => { removeEventListener('pagehide', this.onHide); document.removeEventListener('visibilitychange', this.onVis); },
@@ -315,7 +319,7 @@ export class SoundLanes {
     ];
     for (const step of steps) try { step(); } catch { /* the next one all the same */ }
   }
-  private get key() { return this.tape.id != null ? `shelf:${this.tape.id}` : this.tape.src; }
+  private get key() { return this.tape.key; }
 
   // ---- what the tape asked for ----
   private add(f: number, name: string, heard: 0 | 1 | 2, gain: number, dur: number, mix?: SoundMix) {
@@ -332,7 +336,9 @@ export class SoundLanes {
   private heard(a: SoundAsk) {
     if (this.mute) return;
     const f = Math.min(this.tape.f, this.tAt.length - 1);
-    if (!this.fresh.has(f)) {                     // this step again (a reload walked back over it): what was heard then is kept where this pass is deaf (a seek runs with the mixer off)
+    if (f < this.lastF) for (const x of this.fresh) if (x >= f) this.fresh.delete(x);   // (sought back: what is heard from here on is heard again)
+    this.lastF = f;
+    if (!this.fresh.has(f)) {                     // this step again: what was heard then is kept where this pass is deaf (a seek runs with the mixer off)
       this.fresh.add(f); const was = this.byStep.get(f);
       if (was) { for (const e of was) this.count[e.n]--; this.byStep.set(f, []); (this.byStep.get(f) as Ev[] & { was?: Ev[] }).was = was; if (was.length) this.stale = true; }
     }
@@ -464,7 +470,7 @@ export class SoundLanes {
   relisten(from?: number): boolean {
     const A = this.audio, fNow = Math.min(this.tape.f, this.tAt.length - 1), reg = from === undefined && this.reg && this.reg[1] <= fNow ? this.reg : null; let f0 = from ?? this.againFrom();
     if (from === undefined && f0 < 0) f0 = this.stepAt(Math.max(0, this.tAt[fNow] - BACK_S));
-    f0 = Math.max(0, Math.floor(f0)); if (!(f0 < fNow) || this.tape.seekTo > this.tape.f) return false;   // (a seek under way runs unheard, the mixer off: nothing to hear until it lands)
+    f0 = Math.max(0, Math.floor(f0)); if (!(f0 < fNow) || this.tape.seeking) return false;   // (a seek under way runs unheard, the mixer off: nothing to hear until it lands)
     A.start(); this.sync(); this.flush(); if (!A.started) return false;
     const resume = this.re ? this.re.resume : this.tape.playing; this.re = null;
     if (this.tape.playing) this.tape.pause(); A.hush();
@@ -836,7 +842,7 @@ export class SoundLanes {
     this.sync();
     const n = this.names.length, flags = this.flagN, W = Math.max(1, (this.body.clientWidth || innerWidth) - GUT), dpr = Math.min(2, devicePixelRatio || 1);
     if (this.root.classList.contains('shut') === this.open) { this.root.classList.toggle('shut', !this.open); this.geo = ''; }   // (before anything is measured: the lanes' width hangs on it)
-    // (THE BAR IS ONE OF THE TEXT SIZE'S LAYERS and the dock is not: the bar's height is read in the WINDOW's pixels, as engineplay.ts lay() reads it. It is part of
+    // (THE BAR IS ONE OF THE TEXT SIZE'S LAYERS and the dock is not: the bar's height is read in the WINDOW's pixels, as bar.ts lay() reads it. It is part of
     //  the key, so a text size step lays the dock again on the next frame.)
     const barH = Math.round(bar.getBoundingClientRect().height * textZoom() / rectZoom());
     const geo = `${W},${barH},${n},${this.open},${this.cardOf},${this.cpN},${this.head.offsetHeight}`;
@@ -942,11 +948,8 @@ export class SoundLanes {
   takesOf(name: string) { return { takes: this.takes(name), game: this.gameTake(name), trim: this.audio.trims.get(name) ?? null }; }
 }
 
-/** stand the lanes up on a replay page (main.ts, once the tape's player is attached); nothing on a page whose replay was refused */
-export function soundLanes(tape: TapePlay, audio: AudioEngine): SoundLanes | null {
-  if (!tape.tape) return null;
-  // A DEBUG MODE, OFF BY DEFAULT: the lanes exist only on a page whose address says `soundlanes` (`soundlanes=0` = off). Without it nothing of this file is on the
-  // page — no dock, no style, no tap on the mixer, no hook — and the replay viewer is as if the file were not there
+/** the lanes on a replay's page. A DEBUG MODE: only on a page whose address says `soundlanes` (`=0`, or not at all: nothing of this file is there) */
+export function soundLanes(tape: LaneTape, audio: AudioEngine): SoundLanes | null {
   { const q = new URLSearchParams(location.search); if (!q.has('soundlanes') || q.get('soundlanes') === '0') return null; }
   try {
     const L = new SoundLanes(tape, audio);

@@ -457,10 +457,10 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
   says the same); `TPS_PROFILE=frozen` is the old stand, kept for the switch cleanup only. A tool's own "as shipped" arm from
   before that is not the page's stand.
 - **The sound replays saved on the level.** `public/assets/replays` holds recorded runs the sounds page plays: the office
-  has four (office-loud, chairs, reloads, doors), Mousehole one (wall-charge). A step that moves the level's fingerprint
-  or how it plays parts them: **seen** a hit seeded another way parted the loud office at its first firefight. **check**
-  `PORT=<dev server> node tools/qa/sound-tapes.cjs --check` (a real page, minutes a replay). Red: record again with the
-  same tool, and say in the hand-over which were recorded and what each now plays.
+  has five (office-loud, chairs, reloads, doors, cans), Mousehole, the compound and the block one each. A step that moves
+  the level or how it plays parts them: **seen** a hit seeded another way parted the loud office at its first firefight.
+  **check** `PORT=<dev server> node tools/draw/sound-tapes.cjs --check` (a real page). Red: `--again` plays the same hands
+  anew, and says what they no longer reach; say in the hand-over which were played again and what is lost.
 - **Boot the real page once** on the mission's link (`.claude/skills/verify`), no console errors. No GPU in the cloud: say
   "never seen on a GPU" of what was not, and name what nobody has played.
 - **Write it up** at the foot of `docs/agents/missions.md` or `levels.md`: the sentence, the hand placement, the checks and
