@@ -10,7 +10,7 @@ use game::kit::{self, CardFor, KitPreset, MemberKit, TeamFor};
 use game::loadout::entry_of;
 use game::query::Query;
 use game::scene_scenarios::IssueData;
-use game::view::{CardView, Pressed, TeamView};
+use game::view::{CardView, KeptText, Pressed, TeamView};
 use game_start::json::{parse, Json};
 use game_start::read::FromJson;
 
@@ -30,7 +30,7 @@ impl Desk {
 
     /// a press as it went: what the cards are kept as now goes with it
     fn pressed(&mut self, ok: bool, why: String, passed: String, changed: Vec<String>) -> Pressed {
-        Pressed { ok, why, passed, changed, kept: kept::write(&mut self.g) }
+        Pressed { ok, why, passed, changed, kept: vec![KeptText { key: String::from(kept::KIT), text: kept::write(&mut self.g) }] }
     }
 
     /// The cards are for this mission, played by this link. The same mission asked again with another link has its hand moved, as the fog lever moves it; another mission is a screen

@@ -4,6 +4,9 @@ use game::js::JsMap;
 use game::kit::{self, KitValue, KitWeapon, MemberKit};
 use game_start::json::{parse, Json};
 
+/// the name the cards are kept under
+pub const KIT: &str = "twopointsix.kit";
+
 /// the fields of one kept card
 fn fields(j: &Json) -> Option<JsMap<String, KitValue>> {
     let (Json::Obj(..) | Json::Arr(..)) = j else { return None };
