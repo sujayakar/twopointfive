@@ -314,7 +314,7 @@ function render(S: Screen) {
       'This is the exposure before the tone map. Raise it if your display crushes the dark rooms, or lower it if the lights blow out. Each mission sets its own for its hour, so this only changes the mission you\'re in.');
     textRow();
     const ro = (globalThis as unknown as { __readout?: { on: boolean; set(v: boolean): void } }).__readout;
-    if (ro) flip(body, 'Show frame rate', () => ro.on, v => ro.set(v), 'Show the readout in the top-left corner, with the frame rate, the GPU\'s milliseconds per pass, the counts, your light meter and each character\'s state.');
+    if (ro) flip(body, 'Show frame rate', () => ro.on, v => ro.set(v), 'Show the readout in the top-left corner, with the frame rate, the GPU\'s milliseconds per pass and how much is being drawn.');
     const search = globalThis.location?.search ?? '';
     reset = () => { if (TEXTSIZE.on) setTextStep(null); if (wrote === G.exposure && turned > 0) G.exposure /= turned; turned = 1; wrote = null; ro?.set(false); if (!visitTier(search)) quality.setAuto(); quality.visit(search); };   // (the defaults, then the address's own words by their one reader, ui/quality.ts visit: Auto, unless the address names a tier (that tier is put on, with no setAuto under it: auto can start from the tier the page stands on, the address's, and would write it as this machine's pick); and with `?adapt=0` nothing adapting again)
   } else if (S.tab === 'audio') {
