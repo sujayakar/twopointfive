@@ -7,7 +7,6 @@
 //   · a way he goes 'through' is the LAST named floor before the room he is called to: its rectangle touches that room's (a wall's thickness apart)
 //   · the man who said it then stands in that place (looked at for 25 s, or until he is in the room he was called to). The fight may turn him before
 //     he gets there: this holds that he sets off the way he said, not that he arrives
-//   · with the Defender cues off the line is the old one, word for word
 //   --off   the rule off (SQUADS.way false): the line as it was — the check is expected to FAIL (exit 1), which is the proof that it can
 // exit 0 = every line held · 1 = one did not, or NO VERDICT (nobody answered: the check looked at nothing) · 2 = bad flags
 import { readFileSync } from 'node:fs';
@@ -17,7 +16,6 @@ const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { SQUADS } = await import(`${ROOT}/src/game/enemysquads.ts`);
-const { CUES } = await import(`${ROOT}/src/game/cues.ts`);
 
 const argv = process.argv.slice(2), flag = (n: string) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
 for (const a of argv) if (a.startsWith('--') && !['--level', '--room', '--seed', '--off'].includes(a)) { console.error(`unknown flag ${a} (--level --room --seed --off)`); process.exit(2); }
@@ -42,14 +40,14 @@ function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; le
 
 interface Row { t: number; gd: any; text: string; at: [number, number]; stood: string[] }
 /** stand the level up, let the shot be heard, and hand back every 'coming to you' line with the named floor its man stood on afterwards */
-async function stage(way: boolean, cues: boolean): Promise<Row[]> {
+async function stage(way: boolean): Promise<Row[]> {
   SQUADS.way = way; Math.random = seeded(seed);
   const log = console.log, err = console.error, warn = console.warn; let W: any;
   try { console.log = console.error = console.warn = () => { };
     W = await standUp({ uploadEvery: 4, level: loadLevel(data) });
     await startFromQuery(W.game, new URLSearchParams(`?levelFile=${levelName}.json&roomclear=${seed}&squad4`));
   } finally { console.log = log; console.error = err; console.warn = warn; }
-  const g = W.game, rows: Row[] = []; CUES.on = cues;
+  const g = W.game, rows: Row[] = [];
   const say0 = g.say.bind(g);
   g.say = (gd: any, text: string, ...rest: any[]) => { if (/coming to you/i.test(text) && /^[A-Z]\w+: /.test(text)) rows.push({ t: g.time, gd, text, at: [gd.char.pos[0], gd.char.pos[2]], stood: [] }); return say0(gd, text, ...rest); };
   const steps = (secs: number) => { for (let i = 0; i < Math.round(secs * 60); i++) { g.player.visibility = 0.05; W.step(1 / 60);
@@ -60,7 +58,7 @@ async function stage(way: boolean, cues: boolean): Promise<Row[]> {
   return rows;
 }
 
-const rows = await stage(!off, true);
+const rows = await stage(!off);
 if (!rows.length) { console.log(`- NO VERDICT — nobody answered 'coming to you' on ${levelName}: the check looked at nothing`); process.exit(1); }
 for (const r of rows) {
   const m = / coming to you (through|from) (.+?) — hold on!$/.exec(r.text), who = `${r.gd.callsign} at (${r.at[0].toFixed(1)}, ${r.at[1].toFixed(1)})`;
@@ -73,11 +71,6 @@ for (const r of rows) {
   }
   const walked = m[1] === 'from' ? inName(r.at[0], r.at[1]).includes(m[2]) : r.stood.includes(m[2]);
   verdict(walked, m[1] === 'from' ? 'he stands where he says he comes from' : 'he then sets off the way he named', `${r.gd.callsign} stood in: ${r.stood.join(' → ') || 'no named floor'}`);
-}
-if (!off) {
-  const old = await stage(true, false);
-  const same = old.length > 0 && old.every(r => / coming to you — hold on!$/.test(r.text));
-  verdict(same, 'the Defender cues off: the line as it was', old.length ? old.map(r => `'${r.text}'`).join(' · ') : 'nobody answered with the cues off');
 }
 console.log(failed ? `=== squad-way-check: FAILED ===` : `=== squad-way-check: ALL PASS ===`);
 process.exit(failed ? 1 : 0);

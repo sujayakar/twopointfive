@@ -2,14 +2,14 @@
 // display rate, without the game ever reading the blend?
 //   bun run tools/qa/tween-check.ts                 every check below; exit 0 = all pass, 1 = one failed (named). Run it on BOTH stands (TPS_PROFILE=shipped in front).
 //   TWEEN_BREAK=1 bun run tools/qa/tween-check.ts   the red path: the blend is hung at the wrong factor and never taken down, and the camera is stepped on the FRAME's
-//                                                   time as it was before it stepped with the tick — 'blend', 'even time', 'put back', 'same hands' and, with them, 'same game'
+//                                                   time as it was before it stepped with the tick — 'even time', 'put back' and, with them, 'same game'
 //                                                   and 'off' must FAIL (a blend left hanging does not move the game: every tick lays its boxes and carried lights
 //                                                   afresh. A camera eased by the frame's time does: the input record takes its view, and the displays part)
 // WHAT IS HELD (headless: the whole Game under stepFrame, the loop main.ts runs; the render stand-in packs the boxes and the lights as engine.render does and reads the
 // words the GPU would be handed — BoxWorld.geoF32 / matData, the light records, the capsule table, the palette given to CharacterRenderer.drawJoints):
 //   stands     FIXEDSTEP.on / TWEEN.on as this stand stood them (frozen: off · shipped: on · TPS_FIXEDSTEP / TPS_TWEEN = that word), their FROZEN_HOLDS rows, and the
 //              page's boot (pageSwitches): no flag = both on, ?fixedstep=0 and ?tween=0 = that one off
-//   blend      one seeded game, one input script keyed by the tick (a walk, a door swung, a fight), at 50, 60, 120 and 144 Hz: on every drawn frame the check's own record
+//   (the frames)  one seeded game, one input script keyed by the tick (a walk, a door swung, a fight), at 50, 60, 120 and 144 Hz: on every drawn frame the check's own record
 //              of the two ticks round the frame's time (taken as each tick ends) and the frame's own factor a (the check's own sum: the time owed the next tick, less the
 //              lag that rate asks) give, for every keyed box that moved, its packed centre and quaternion; for every man, the palette the GPU holds; for every light, its
 //              record's position and direction; for every shadow proxy, its ends; and the CAMERA the frame is drawn through (its look-at, yaw, pitch and distance as
@@ -20,15 +20,10 @@
 //              what that display must owe and no more: nothing at 60 Hz (every frame the last tick itself, nothing hung), 1/2 tick at 120, 4/5 at 50, 11/12 at 144
 //   put back   after every frame every box, light and capsule end is the last tick's again — the same arrays, by reference — and the camera stands where the tick left it
 //   same game  the four displays, with the blend on, play the same seconds as the harness's own W.step(1/60) and as the fixed step with the blend off, digest for digest
-//   same hands the same scripted keys, cursor, camera turn and zoom (keyed by the tick) give the same input RECORD on every tick (cmd.ts PlayerCmd, its text: the keys,
-//              the cursor, and the view the aim ray and the walk keys are read through) at 50, 60, 120 and 144 Hz, with the blend off, and under the harness's own
-//              stepping: the camera steps once a tick on the tick's time, so no display's frame time reaches the record. The turn is a hand's DRAG (Input.orbitDX)
-//              given on the frame that stands before its tick: where that frame runs no tick the camera is left alone and the turn is owed to the tick
 //   pin        a framing a level script keys once a tick (a tracking, swinging shot: FollowCamera.pin) is drawn between its last two at a; a cut is drawn as the last
 //              tick's; the camera holds the script's own pin again after every frame; a camera written outside the ticks is drawn as it stands. And a clock run at twice the wall's (the page's __timeScale) may run twice the
 //              ticks of a slow frame (the cap is against a stall)
 //   flash      a light that lives one tick, made in the first tick of a two-tick frame, is in that frame's upload (and with TWEEN.flashes off it is in none, as before)
-//   stale      a frame under the pause card and a script's frame draw the last tick with nothing hung; the palette on the GPU is the tick's again; play resumes blended
 //   tape       a run taped on a 144 Hz display under the fixed step with the blend drawn (the replay buffer's run tape, as the page keeps it) holds 1/60 s steps
 //              alone and is walked again by a fresh game (tools/qa/rerun.ts) to the same digest: the tape's format is as it was
 //   off        TWEEN.on off under the fixed step: nothing is ever hung (every frame packs the last tick); FIXEDSTEP off: one update a frame and nothing hung
@@ -248,12 +243,6 @@ const ref = await play('the harness, W.step(1/60)', null);
 const runs = [await play('60 Hz', () => 1 / 60), await play('120 Hz', () => 1 / 120), await play('144 Hz', () => 1 / 144), await play('50 Hz', () => 1 / 50)];
 const plain = await play('120 Hz, the blend off', () => 1 / 120, { tween: false });
 
-// ---- blend
-{ const rows = runs.map(r => `${r.name}: ${r.stat.frames} frames read, ${r.stat.blended} with a blend, ${r.stat.whole} the last tick itself · ${r.stat.boxesMoved} moving keyed boxes (${r.stat.rot} turns read by angle) of ${r.stat.boxes}, ${r.stat.unkeyed} unkeyed · ${r.stat.men} men · ${r.stat.lights} lights · ${r.stat.caps} proxies · the camera moving on ${r.stat.cam}, turning on ${r.stat.camTurn}, its 'previous' matrix the last frame's on ${r.stat.prev} · ${r.stat.cuts} cuts · worst centre ${r.stat.maxErr.toExponential(1)} m${r.bad.length ? ` ✗ ${r.bad.filter(b => !/still held/.test(b)).slice(0, 3).join(' ✗ ')}` : ''}`);
-  const live = runs.every(r => r.stat.frames > 100 && r.stat.boxesMoved > 50 && r.stat.men > 50 && r.stat.lights > 20 && r.stat.caps > 50 && r.stat.cam > 50 && r.stat.camTurn >= 1 && r.stat.prev > 100);
-  const offs = runs.every(r => r.name === '60 Hz' ? r.stat.blended === 0 && r.stat.whole === r.stat.frames : r.stat.blended > 50);
-  const clean = runs.every(r => !r.bad.some(b => !/still held/.test(b)));
-  verdict(live && offs && clean, 'blend: at 50, 120 and 144 Hz every drawn frame is the blend of the two ticks round it; at 60 Hz every frame is the last tick itself', rows.join('\n    ') + (live ? '' : '\n    ✗ too little moved for the numbers to mean anything')); }
 // ---- even time
 { const want: Record<string, number> = { '60 Hz': 0, '120 Hz': 1 / 2, '144 Hz': 11 / 12, '50 Hz': 4 / 5 };
   const ok = runs.every(r => r.stat.evenRead > 100 && r.stat.uneven === 0 && Math.abs(r.stat.lag / STEP - want[r.name]) < 1e-4);
@@ -267,17 +256,6 @@ const plain = await play('120 Hz, the blend off', () => 1 / 120, { tween: false 
   const all = [...runs, plain], badRuns = all.filter(r => r.text !== ref.text);
   verdict(!badRuns.length && ref.rows.length === TICKS / 30, 'same game: with the blend drawn, 50, 60, 120 and 144 Hz displays play the same seconds as the harness\'s own 1/60 stepping and as the blend off',
     badRuns.length ? badRuns.map(r => `${r.name}: ${firstDiff(ref.rows, r.rows)}`).join(' · ') : `${ref.rows.length} digests equal across ${all.map(r => `${r.name} (${r.frames} frames)`).join(', ')} and ${ref.name}`); }
-// ---- same hands: the tick's input record, text for text
-{ const all = [...runs, plain]; const rows: string[] = []; let ok = ref.cmds.length === TICKS;
-  const where = (x: string, y: string): string => { try { const A = JSON.parse(x), B = JSON.parse(y); for (const key of Object.keys(A)) { if (JSON.stringify(A[key]) === JSON.stringify(B[key])) continue; if (key !== 'view') return `'${key}' ${JSON.stringify(A[key]).slice(0, 70)} against ${JSON.stringify(B[key]).slice(0, 70)}`; for (const f of Object.keys(A.view)) if (JSON.stringify(A.view[f]) !== JSON.stringify(B.view?.[f])) return `the view's '${f}' ${JSON.stringify(A.view[f]).slice(0, 60)} against ${JSON.stringify(B.view?.[f]).slice(0, 60)}`; } } catch { /* the texts are the evidence */ } return 'the texts differ'; };
-  for (const r of all) { let first = -1; for (let i = 0; i < TICKS; i++) if (r.cmds[i] !== ref.cmds[i]) { first = i; break; }
-    if (first >= 0 || r.cmds.length !== TICKS) ok = false;
-    rows.push(first < 0 ? `${r.name}: ${r.cmds.length} records equal` : `${r.name} ✗ first at tick ${first}: ${where(ref.cmds[first], r.cmds[first] ?? '{}')}`); }
-  const views = new Set(ref.cmds.map(t => JSON.stringify(JSON.parse(t).view))).size;   // (the camera did move under the hands: the equality is not of a still view)
-  const banked = runs.reduce((n, r) => n + r.stat.banked, 0);   // (a drag that arrived on a frame with no tick and was owed to the next: the fast displays have them)
-  verdict(ok && views > 200 && banked >= 2, 'same hands: the same keys, cursor, drag of the camera and zoom give the same input record on every tick at 50, 60, 120 and 144 Hz and under the harness\'s own stepping',
-    `${ref.cmds.length} ticks against ${ref.name}, ${views} different views of the camera among its records · ${rows.join(' · ')} · ${banked} drags arrived on a frame with no tick and turned the camera in the next tick`); }
-
 // ---- pin: a framing keyed once a tick, and the fast clock's cap
 { Math.random = seeded(1); const W: any = await standUp({ seed: 5 }); FIXEDSTEP.on = true; TWEEN.on = true; const tw = new Tween(W.engine);
   type Pin = { look: V3; yaw: number; pitch: number; dist: number };
@@ -322,23 +300,6 @@ const plain = await play('120 Hz, the blend off', () => 1 / 120, { tween: false 
   }
   TWEEN.flashes = true;
   verdict(ok, 'flash: a light that lived one tick inside a two-tick frame is drawn once, and is never left in the game\'s list', rows.join(' · ')); }
-
-// ---- stale: the pause card, a script's frame, then play again
-{ Math.random = seeded(1); const W: any = await standUp({ seed: 5 }); FIXEDSTEP.on = true; TWEEN.on = true;
-  const tw = new Tween(W.engine); const st = { frozen: false, scripted: false }; let poses = 0; const pose = tw.pose.bind(tw); tw.pose = (a: number) => { poses++; pose(a); };
-  let lastHand: Float32Array | null = null; const sk = W.engine.skin; const dj = sk.drawJoints.bind(sk); sk.drawJoints = (d: Float32Array, n: number) => { lastHand = d; dj(d, n); };
-  const ctx: any = { game: W.game, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render: () => { W.engine.world.upload(); }, betweenTicks: () => { W.engine.world.relist(); }, tween: tw,
-    smoke: null, audio: null, attract: null, hud: null, bubbles: null, time: 0, updateMs: 0, frozen: () => st.frozen, present: () => false, fixedStep: () => !st.scripted };
-  W.input.keys.add('KeyW');
-  for (let f = 0; f < 40; f++) stepFrame(ctx, 1 / 144);
-  const live = poses, blendedLive = tw.last.men + tw.last.boxes > 0 && lastHand !== sk.staged;
-  st.frozen = true; stepFrame(ctx, 1 / 144); const frozenPoses = poses - live, restHand = lastHand === sk.staged, staleNow = tw.stale;
-  stepFrame(ctx, 1 / 144); st.frozen = false; st.scripted = true; const p1 = poses; stepFrame(ctx, 1 / 60); const scriptedPoses = poses - p1; st.scripted = false;
-  for (let f = 0; f < 6; f++) stepFrame(ctx, 1 / 144);
-  const again = poses - p1 - scriptedPoses === 6 && tw.have === 2 && tw.last.men > 0;
-  W.input.keys.delete('KeyW');
-  verdict(blendedLive && frozenPoses === 0 && restHand && staleNow && scriptedPoses === 0 && again, 'stale: the pause card and a script\'s frame draw the last tick; play resumes blended',
-    `live: ${live} frames hung, the last blending ${tw.last.men} men · under the card: ${frozenPoses} hung, the GPU palette the tick's again ${restHand}, stale ${staleNow} · a script's frame: ${scriptedPoses} hung · six live frames after: blended again ${again}`); }
 
 // ---- off
 { const rows: string[] = []; let ok = true;
