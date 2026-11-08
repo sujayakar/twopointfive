@@ -60,9 +60,9 @@ section! {
     }
 }
 
-pub fn fill(g: &Game, out: &mut Vec<Fog>) {
+pub fn fill(g: &Game, out: &mut Vec<Fog>, bared: bool) {
     out.push(Fog::ZERO);
-    if !fogofwar::fog_of_war_active(g) { return; }
+    if bared || !fogofwar::fog_of_war_active(g) { return; }
     let (f, k) = (out.last_mut().unwrap(), &g.k.fog);
     f.on = 1;
     f.dim = k.dim as f32;

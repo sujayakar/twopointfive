@@ -28,6 +28,7 @@
 //!   face_draw_name(h, i)               a name that crosses by its number (a sound's), at face_out
 //!   face_draw_look(h, p, n)                 what the page says of its look (game_draw::LOOK numbers), once and when it changes
 //!   face_draw_lead(h, id, p)           once a tick, of a networked host: its own man's place ahead of the tick (game_draw::lead); id 0 = nobody is ahead
+//!   face_draw_as(h, bared, tube)       a viewer's own picture of a run (Drawn::view_as); from the first call the game keeps what such a picture is made from, tick by tick
 //!   face_draw_hold(h)                  a tick of the host's in which the game was not stepped: what moves stands where the last tick left it
 //!   face_draw_cut(h)                   the picture goes on from where the game stands now, and blends from nothing before it (ticks were stepped that were not drawn)
 //!   face_draw_layout() -> stamp        the stamp of the sections' declarations (and their text at face_out): a page whose offsets are of another is refused
@@ -222,6 +223,11 @@ pub unsafe extern "C" fn face_draw_look(h: u32, p: *const f64, n: usize) {
 pub unsafe extern "C" fn face_draw_lead(h: u32, id: u32, p: *const f64) {
     let stand = |v: &[f64]| game_draw::lead::Stand { pos: [v[0], v[1], v[2]], yaw: v[3] };
     super::with(h, |x| if id == 0 { x.drawn.lead.rest() } else { let v = std::slice::from_raw_parts(p, 8); x.drawn.lead.tick(id, stand(&v[..4]), stand(&v[4..])) });
+}
+/// `tube`: 0 as the run had it, 1 on, 2 off
+#[no_mangle]
+pub extern "C" fn face_draw_as(h: u32, bared: u32, tube: u32) {
+    super::with(h, |x| { x.g.fog_picture.viewer = true; x.drawn.view_as(bared != 0, match tube { 1 => Some(true), 2 => Some(false), _ => None }); });
 }
 #[no_mangle]
 pub extern "C" fn face_draw_hold(h: u32) { super::with(h, |x| x.drawn.hold()); }

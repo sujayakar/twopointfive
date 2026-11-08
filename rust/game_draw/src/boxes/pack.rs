@@ -25,8 +25,8 @@ pub fn key(b: &Box) -> u32 { b.mkey.map_or(super::NO_KEY, |k| k as i64 as u32) }
 pub fn round(b: &Box) -> bool { b.round == Some(true) }
 pub fn cut(b: &Box) -> bool { b.cut.as_ref().map_or(false, |c| !c.is_empty()) }
 /// the picture's emission, where it is not the box's own (a lamp's face under the fog as the team last saw it)
-pub fn emission(b: &Box) -> [f64; 3] { b.fog_emit.unwrap_or(b.emissive) }
-fn gain(b: &Box) -> f64 { b.fog_mark.or(b.mark_gain).unwrap_or(1.0) }
+pub fn emission(b: &Box, bared: bool) -> [f64; 3] { if bared { b.emissive } else { b.fog_emit.unwrap_or(b.emissive) } }
+pub fn gain(b: &Box, bared: bool) -> f64 { (if bared { None } else { b.fog_mark }).or(b.mark_gain).unwrap_or(1.0) }
 fn solid_glass(b: &Box) -> bool { b.stuff == Some(BoxStuff::Glass) && flags(b) & GLASS == 0 }
 fn lum(a: [f64; 3]) -> f64 { 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2] }
 
@@ -95,7 +95,7 @@ pub fn place(geo: &mut Geo, mat: &mut Mat, c: [f64; 3], yaw: f64, rot: Option<[f
 pub fn pack(b: &Box, c: [f64; 3], h: [f64; 3], moves: bool, look: &Look, marks: &mut Marks, geo: &mut Geo, mat: &mut Mat, cut_rows: &mut Cut) {
     let (own, is_round) = (flags(b), look.round && round(b));
     let mut f = (own & if look.round { 0xf7 } else { 0xff }) | if is_round { ROUND_BIT } else { 0 } | (((b.owner as i64 as u32) & 0xff) << 8) | if b.rot.is_some() { ROT } else { 0 } | (own & GLASS);
-    let em = emission(b);
+    let em = emission(b, look.bared);
     if em[0] + em[1] + em[2] > 0.0 { f |= EMISSIVE; }
     let a = sent(b, look);
     let mut s = a;
@@ -114,7 +114,7 @@ pub fn pack(b: &Box, c: [f64; 3], h: [f64; 3], moves: bool, look: &Look, marks: 
     geo.w[7] = f;
     mat.w[3] = b.cut_height as f32;
     mat.w[7] = (finish(b, look) + 8.0 * word(b, moves && key(b) >> 24 != SKIN, look)) as f32;
-    mat.w[15] = gain(b) as f32;
+    mat.w[15] = gain(b, look.bared) as f32;
 }
 
 const PLANES: usize = 8;
