@@ -76,7 +76,7 @@ fn the_rack_errand_goes_to_the_nearest_man_free_to_go() {
 fn pop(s: u32, sam: [f64; 2]) -> (Play, game::ids::GuardId) {
     let mut sc = Scene::new("pop");
     sc.room("room", 10.0, 8.0, 20.0, 14.0).room("corridor", 10.0, 14.0, 20.0, 18.0).door("door", Axis::X, 14.0, 14.4).door("yard", Axis::Z, 10.0, 15.4);
-    sc.patrol("out", &[[13.25 + 0.2 * nudge(s, 0), 15.25], [13.25 + 0.2 * nudge(s, 0), 15.75]], 60.0).sam(sam[0], sam[1]);
+    sc.patrol("out", &[[13.75 + 0.1 * nudge(s, 0), 15.25], [13.75 + 0.1 * nudge(s, 0), 15.75]], 60.0).sam(sam[0], sam[1]);
     let mut p = Play::scene(&sc, &seed(s));
     p.g.player_invisible = true;
     p.door_stands_open("door");
@@ -101,7 +101,7 @@ fn pistol_at_the_far_wall(p: &mut Play) {
 #[test]
 fn a_routed_shot_puts_his_fix_at_the_corner_it_came_round() {
     for s in SEEDS {
-        let sam = [13.0, 12.6 + 0.3 * nudge(s, 1)];
+        let sam = [13.6, 12.7 + 0.2 * nudge(s, 1)];
         let (mut p, m) = pop(s, sam);
         let q = p.at(m);
         let r = game::scene_collision::sound_paths_propagate(&mut p.g, [sam[0], 1.0, sam[1]], [q[0], 1.5, q[1]], None);
