@@ -72,7 +72,7 @@ pub fn doze_mark(g: &crate::game::Game, gd: GuardId) -> &'static str {
 }
 /// the run is one a man may doze in (doze.ts live)
 pub fn live(g: &mut crate::game::Game) -> bool {
-    g.ai_enabled && !g.quiet_utility && !g.touring && !g.puppet.is_some() && !g.pl[g.player].down
+    g.ai_enabled && !g.quiet_utility && !g.touring && !g.puppet.is_some() && !crate::seats::all_down(g)
         && !g.level.scenarios.as_ref().map_or(false, |s| s.lesson.is_some())
         && crate::guards::escalation_of(g) == 0.0 && !g.alarm.episode
         && !crate::sim_lightshome::mains_active(g)

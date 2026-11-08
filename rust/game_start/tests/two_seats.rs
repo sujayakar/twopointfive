@@ -47,3 +47,37 @@ fn a_round_in_flight_stops_at_either_player() {
         }
     }
 }
+
+/// THE RULE: the team is down when all of it is: one man down and the other up, the floor goes on as if they are up. A rule about one man asks that man.
+/// A failure means the first player's fall stops the alarm's rise and the guards' dozing for both.
+#[test]
+fn the_team_is_down_when_all_of_it_is() {
+    for s in SEEDS {
+        for seat in 0..2 {
+            let (mut p, t1) = two(s);
+            p.pin_man(t1, [21.0, AISLE], 0.0, game::game::GuardState::Patrol, 0.0);
+            assert!(game::doze::live(&mut p.g), "seed {s}: CONTROL: both up, a calm floor dozes");
+            let m = man(&p, seat);
+            p.g.pl[m].down = true;
+            assert!(game::doze::live(&mut p.g), "seed {s}: seat {seat}'s man down and the other up: the floor is still calm");
+            p.g.gd[t1].team = game::teams::Team::Guard;   // (the floor's alarm is the guards': a level's night, not this room clear's defenders)
+            p.g.alarm.episode = true;
+            let was = p.g.escalation;
+            p.pin_man(t1, [21.0, AISLE], 0.0, game::game::GuardState::Patrol, 0.0);
+            p.frame();
+            assert!(p.g.escalation > was, "seed {s}: an alarm over with seat {seat}'s man down and the other up raises the floor: {} from {was}", p.g.escalation);
+            drop(p);
+            let (mut q, t2) = two(s);
+            let (a, b) = (man(&q, 0), man(&q, 1));
+            q.g.pl[a].down = true;
+            q.g.pl[b].down = true;
+            assert!(!game::doze::live(&mut q.g), "seed {s}: CONTROL: both down, nobody is left to doze for");
+            q.g.gd[t2].team = game::teams::Team::Guard;
+            q.g.alarm.episode = true;
+            let was = q.g.escalation;
+            q.pin_man(t2, [21.0, AISLE], 0.0, game::game::GuardState::Patrol, 0.0);
+            game::guards::update_escalation(&mut q.g, 1.0 / 60.0);
+            assert_eq!(q.g.escalation, was, "seed {s}: CONTROL: both down, an alarm over raises nothing");
+        }
+    }
+}
