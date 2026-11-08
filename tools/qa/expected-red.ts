@@ -23,5 +23,4 @@ export const EXPECTED_RED: Record<string, RedRow> = {
   'floodlit': { is: 'maybe', whose: "the senses' or the level's owner", line: "mains out: the yard 0.13 to 0.28 where under 0.2 is asked, the hall 0.27, the radio room's tube 0.94 against the moon's; wants one read of the game's own meter" },
   'depot-stage': { is: 'maybe', whose: "the senses' or the level's owner", line: "mains out: the open park 0.28 where under 0.25 is asked; wants one read of the game's own meter" },
   'checkpoint-identity': { is: 'maybe', whose: RUST, line: "save(load(s)) is the identity: a mark's radius 0.167 comes back 0.166, the digests equal" },
-  'scenario-levels-rescue': { is: 'real', whose: RUST, line: "'it can be won': the test rooms' rescue by a scripted bang and clear was a clean win in 41.4 s up to step 2207 and is lost on every seed from 2213 (one way of sensing): the bang at 16.7 s, the pair dead at the door at 17.2 (entry:lost), both hostages shot at 43.3 and 52.5. Before, the captor and the roamer learned of them 2.1 s after the order and the men entered 0.7 s after the bang; now both learn it at the bang" },
 };
