@@ -29,7 +29,7 @@ export function showError(text: string) {
 
 export function buffer(g: Gpu, label: string, data: ArrayBufferView | number, usage: number): GPUBuffer {
   const bytes = typeof data === 'number' ? data : data.byteLength;
-  const b = g.device.createBuffer({ label, size: Math.max(16, (bytes + 15) & ~15), usage: usage | GPUBufferUsage.COPY_DST });
+  const b = g.device.createBuffer({ label, size: Math.max(16, (bytes + 15) & ~15), usage: usage | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC });
   if (typeof data !== 'number') g.device.queue.writeBuffer(b, 0, data.buffer as ArrayBuffer, data.byteOffset, data.byteLength);
   return b;
 }

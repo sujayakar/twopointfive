@@ -12,7 +12,7 @@ import { blueNoise } from './noise';
 
 export class SceneGpu {
   readonly layout: GPUBindGroupLayout; private bg!: GPUBindGroup;
-  readonly frame: GPUBuffer; private nodes: GPUBuffer; readonly pieces: GPUBuffer; private extra: GPUBuffer; private insts: GPUBuffer; readonly lamps: GPUBuffer; private openings: GPUBuffer; private mats: GPUBuffer;
+  readonly frame: GPUBuffer; readonly nodes: GPUBuffer; readonly pieces: GPUBuffer; private extra: GPUBuffer; readonly insts: GPUBuffer; readonly lamps: GPUBuffer; private openings: GPUBuffer; private mats: GPUBuffer;
   readonly per: [number, number, number, number]; readonly node0: [number, number, number, number]; readonly piece0: [number, number, number, number]; readonly stepOf: [number, number, number, number]; private moveTree: Bvh | null = null; private moveAge = 0; private instTree: Bvh | null = null; readonly lists: GPUBuffer; readonly leafDraws: { first: number; count: number; leaves: number }[] = []; readonly counts: { pieces: number; moving: number; leaves: number; instances: number };
   private clusterAt: { node: number; per: number; leaf: number }[] = []; private maxMoving: number; private maxInst: number; private nodeData: ArrayBuffer;
   readonly lampOn: Float32Array; readonly standing: Piece[];

@@ -7,6 +7,8 @@ fn neutral(c0: vec3f) -> vec3f {                 // Khronos PBR Neutral: base co
   let start = 0.8 - 0.04; let des = 0.15; let x = min(c0.r, min(c0.g, c0.b)); let off = select(0.04, x - 6.25 * x * x, x < 0.08); var c = c0 - off;
   let peak = max(c.r, max(c.g, c.b)); if (peak < start) { return c; } let d = 1.0 - start; let np = 1.0 - d * d / (peak + d - start); c *= np / peak; let g = 1.0 - 1.0 / (des * (peak - np) + 1.0); return mix(c, vec3f(np), g);
 }
+/** how bright a color is to the curve: a strong color clips by its strongest part, not by its luminance */
+fn bright(c: vec3f) -> f32 { return mix(dot(c, vec3f(0.2126, 0.7152, 0.0722)), max(c.r, max(c.g, c.b)), 0.55); }
 fn curve(l: f32) -> f32 { return sqrt(clamp(neutral(vec3f(max(l, 0.0))).x, 0.0, 1.0)); }
 fn uncurve(p: f32) -> f32 { let y = clamp(p, 0.0, 0.995) * clamp(p, 0.0, 0.995); if (y < 0.04) { return sqrt(y / 6.25); } let z = y; if (z < 0.76) { return z + 0.04; } let d = 0.24; return d * d / max(1.0 - z, 1e-3) - d + 0.76 + 0.04; }
 `;
@@ -23,7 +25,7 @@ var<workgroup> s: array<vec2f, 256>;
   if (i == 0u) { let mean = finite(s[0].x / max(s[0].y, 1e-4), 30.0); let want = exp2(clamp(-1.75 - mean * 0.86, -7.0, 6.0)); let was = finite(e[0], 1e6); let r = select(0.05, 1.0, was <= 0.0 || e[1] != 1.0 || k.w > 0.0); e[0] = exp2(mix(log2(max(was, 1e-6)), log2(want), r)); e[1] = 1.0; e[2] = mean; }
 }` });
   out.push({ name: 'exposures', over: sz(0), reads: { [small]: 'src' }, writes: { outL: `${pre}Lum0`, outW: `${pre}Wt0` }, buffers: E, code: CURVE + `
-@compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) { let d = textureDimensions(outL); if (id.x >= d.x || id.y >= d.y) { return; } let l = lum(textureLoad(src, min(id.xy, textureDimensions(src) - 1u), 0).rgb) * e[0] * exp2(k.x);
+@compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) { let d = textureDimensions(outL); if (id.x >= d.x || id.y >= d.y) { return; } let l = bright(textureLoad(src, min(id.xy, textureDimensions(src) - 1u), 0).rgb) * e[0] * exp2(k.x);
   let v = vec3f(curve(l * exp2(-k.z)), curve(l), curve(l * exp2(k.y))); var w = exp(-0.5 * (v - 0.55) * (v - 0.55) / (0.21 * 0.21)) * vec3f(0.5, 1.0, 0.95) + 1e-4; w /= w.x + w.y + w.z; textureStore(outL, id.xy, vec4f(v, 1.0)); textureStore(outW, id.xy, vec4f(w, 1.0)); }` });
   for (let i = 1; i <= LEVELS; i++) for (const t of ['Lum', 'Wt']) out.push({ name: 'exposures', over: sz(i), reads: { [`${pre}${t}${i - 1}`]: 'src' }, writes: { outT: `${pre}${t}${i}` }, code: `
 @compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) { let d = textureDimensions(outT); if (id.x >= d.x || id.y >= d.y) { return; } let m = vec2i(textureDimensions(src)) - 1; var a = vec4f(0.0); for (var y = -1; y <= 2; y++) { for (var x = -1; x <= 2; x++) { a += textureLoad(src, clamp(vec2i(id.xy) * 2 + vec2i(x, y), vec2i(0), m), 0) * (select(1.0, 3.0, x == 0 || x == 1) * select(1.0, 3.0, y == 0 || y == 1) / 64.0); } } textureStore(outT, id.xy, a); }` });
