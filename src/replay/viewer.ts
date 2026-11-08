@@ -108,7 +108,7 @@ async function showKept() {
       if (beingWritten(r)) { say('That one is being played, or was a moment ago: try again in a minute'); return; }   // (its page would go on writing pieces to a visit with no start)
       if (!confirm('Remove this replay from this browser?')) return;
       await keptStore().drop(r.sid); void showKept(); };
-    row.onclick = () => { if (r.hands) location.assign(new URL(`draw.html?playtape=${r.sid}`, document.baseURI).href); else void openKept(r.sid); }; row.append(s, n, x); list.append(row);   // (a tape of hands has no trace: the page that draws plays it)
+    row.onclick = () => { if (r.hands) location.assign(new URL(`index.html?playtape=${r.sid}`, document.baseURI).href); else void openKept(r.sid); }; row.append(s, n, x); list.append(row);   // (a tape of hands has no trace: the page that draws plays it)
   }
 }
 async function openKept(sid: string) {
