@@ -1,0 +1,206 @@
+// THE BUILDING: white outside, one strong color a room inside, a garden and a pool on the terrace, doors that swing.
+import { type V3, type Rot, rotY, rotX, rotZ, compose, apply, add, mul, sub, norm, rng, smooth } from '../math';
+import { World, F, type Piece, type Mark, taper } from './world';
+import { M, C } from './materials';
+import { plantKit, tree, tuft, type Kit } from './plants';
+
+export interface Door { name: string; hinge: V3; yaw: number; swing: number; open: number; want: number; leaf: Piece[]; local: { at: V3; half: V3 }[]; slide?: V3 }
+export interface Person { body: Piece[]; path: V3[]; speed: number; phase: number; torch: number; color: V3; stand?: boolean }
+export interface Building { world: World; doors: Door[]; people: Person[]; levels: { name: string; cut: number; look: V3 }[]; pool: [number, number, number, number]; poolTop: number; poolDeep: number }
+type Hole = { a: number; b: number; y0: number; y1: number; kind: 'door' | 'window' | 'open'; glass?: boolean; frame?: V3; sky?: 1 | -1; bars?: number };
+const FL = 3.4, H = 3.2;                                              // floor to floor; clear height
+
+export function makeBuilding(): Building {
+  const w = new World(), doors: Door[] = [], people: Person[] = []; const kit = plantKit(w), r = rng(7);
+  const cut = { flags: F.CUT };
+  const bx = (x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, mat: number, tint: V3 = C.white as V3, more: Partial<Piece> = {}) => w.box([x0, y0, z0], [x1, y1, z1], mat, { tint, flags: F.CUT, ...more });
+
+  /** a wall along x (or z): two skins back to back, each its own room's color, with holes. `lo` faces −, `hi` faces + */
+  const wall = (axis: 'x' | 'z', from: number, to: number, at: number, y0: number, y1: number, t: number, lo: [number, V3], hi: [number, V3], holes: Hole[] = []) => {
+    const put = (a: number, b: number, ya: number, yb: number) => {
+      if (b - a < 0.005 || yb - ya < 0.005) return;
+      for (const [s, skin] of [[-1, lo], [1, hi]] as const) { const p = s < 0 ? at - t / 2 : at, q = s < 0 ? at : at + t / 2; if (axis === 'x') bx(a, ya, p, b, yb, q, skin[0], skin[1]); else bx(p, ya, a, q, yb, b, skin[0], skin[1]); }
+    };
+    const hs = [...holes].sort((p, q) => p.a - q.a); let x = from;
+    for (const h of hs) {
+      put(x, h.a, y0, y1); put(h.a, h.b, y0, h.y0); put(h.a, h.b, h.y1, y1); x = h.b;
+      const fr = h.frame ?? (C.white as V3), e = 0.045, d = t / 2 + 0.02;
+      const bar = (a: number, b: number, ya: number, yb: number, dd = d) => { if (axis === 'x') bx(a, ya, at - dd, b, yb, at + dd, M.paint!, fr); else bx(at - dd, ya, a, at + dd, yb, b, M.paint!, fr); };
+      if (h.kind !== 'open') { bar(h.a, h.a + e, h.y0, h.y1); bar(h.b - e, h.b, h.y0, h.y1); bar(h.a + e, h.b - e, h.y1 - e, h.y1); if (h.kind === 'window') bar(h.a + e, h.b - e, h.y0, h.y0 + e); }
+      if (h.kind === 'window') {
+        const n = h.bars ?? Math.max(1, Math.round((h.b - h.a) / 1.4)), step = (h.b - h.a - e) / n; for (let i = 1; i < n; i++) bar(h.a + e / 2 + i * step - 0.02, h.a + e / 2 + i * step + 0.02, h.y0 + e, h.y1 - e, 0.03);
+        if (h.glass !== false) for (let i = 0; i < n; i++) { const a = h.a + e / 2 + i * step + 0.02, b = h.a + e / 2 + (i + 1) * step - 0.02; const g: Partial<Piece> = { flags: F.GLASS | F.CUT, tint: [0.93, 0.975, 0.965] }; if (axis === 'x') w.box([a, h.y0 + e, at - 0.006], [b, h.y1 - e, at + 0.006], M.glass!, g); else w.box([at - 0.006, h.y0 + e, a], [at + 0.006, h.y1 - e, b], M.glass!, g); }
+      }
+      if (h.sky) { const c: V3 = axis === 'x' ? [(h.a + h.b) / 2, (h.y0 + h.y1) / 2, at] : [at, (h.y0 + h.y1) / 2, (h.a + h.b) / 2], u: V3 = axis === 'x' ? [(h.b - h.a) / 2, 0, 0] : [0, 0, (h.b - h.a) / 2]; w.openings.push({ at: c, u, v: [0, (h.y1 - h.y0) / 2, 0], n: axis === 'x' ? [0, 0, -h.sky] : [-h.sky, 0, 0] }); }
+    }
+    put(x, to, y0, y1);
+  };
+  const PL: [number, V3] = [M.plaster!, C.white as V3], EXT: [number, V3] = [M.concrete!, [1.06, 1.06, 1.06]];
+  const paint = (c: number[]): [number, V3] => [M.paint!, c as V3];
+  /** a ceiling panel that is a lamp */
+  const panel = (name: string, x: number, y: number, z: number, hx: number, hz: number, rad: V3, opts: { night?: boolean; on?: number } = {}) => {
+    const lamp = w.lamp({ kind: 'rect', at: [x, y - 0.035, z], u: [hx, 0, 0], v: [0, 0, hz], n: [0, -1, 0], radiance: rad, name, on: opts.on ?? 1, night: opts.night ?? true });
+    const m = Math.max(...rad); w.box([x - hx, y - 0.03, z - hz], [x + hx, y, z + hz], M.glow!, { tint: [Math.sqrt(rad[0] / m), Math.sqrt(rad[1] / m), Math.sqrt(rad[2] / m)], flags: F.CUT | F.GLOW | F.NOSHADOW, lamp, seed: Math.round(m * 10) });
+    return lamp;
+  };
+  const strip = (name: string, a: V3, b: V3, n: V3, half: number, rad: V3) => {               // a bright line in a wall or a floor
+    const c = mul(add(a, b), 0.5), u = mul(sub(b, a), 0.5), d = norm(u), v = mul(norm([d[1] * n[2] - d[2] * n[1], d[2] * n[0] - d[0] * n[2], d[0] * n[1] - d[1] * n[0]]), half); const m = Math.max(...rad);
+    const lamp = w.lamp({ kind: 'rect', at: add(c, mul(n, 0.03)), u, v, n, radiance: rad, name, on: 1, night: true }); const e: V3 = [Math.abs(u[0]) + Math.abs(v[0]) + Math.abs(n[0]) * 0.02, Math.abs(u[1]) + Math.abs(v[1]) + Math.abs(n[1]) * 0.02, Math.abs(u[2]) + Math.abs(v[2]) + Math.abs(n[2]) * 0.02];
+    w.add({ at: c, half: e, mat: M.glow!, tint: [Math.sqrt(rad[0] / m), Math.sqrt(rad[1] / m), Math.sqrt(rad[2] / m)], flags: F.CUT | F.GLOW | F.NOSHADOW, lamp, seed: Math.round(m * 10) });
+  };
+  const door = (name: string, hinge: V3, yaw: number, width: number, color: V3, swing: number, height = 2.25) => {
+    const local = [{ at: [width / 2, height / 2, 0] as V3, half: [width / 2 - 0.008, height / 2 - 0.006, 0.022] as V3 }, { at: [width - 0.09, 1.02, 0.045] as V3, half: [0.07, 0.014, 0.012] as V3 }, { at: [width - 0.09, 1.02, -0.045] as V3, half: [0.07, 0.014, 0.012] as V3 }, { at: [width / 2, 0.14, 0.0235] as V3, half: [width / 2 - 0.05, 0.10, 0.003] as V3 }];
+    const marks: Mark[] = [{ face: 5, at: [0, 0.35], size: [0.62, 0.62], art: name.length < 3 ? name : 'runner', color: [1, 1, 1] }, { face: 4, at: [0, 0.35], size: [0.62, 0.62], art: name.length < 3 ? name : 'runner', color: [1, 1, 1] }];
+    const leaf = local.map((l, i) => w.add({ at: l.at, half: l.half, mat: i === 0 ? M.paint! : M.steel!, tint: i === 0 ? color : [0.9, 0.9, 0.9], flags: F.CUT | F.MOVES, ...(i === 0 ? { marks } : {}), rig: 'door:' + name }));
+    doors.push({ name, hinge, yaw, swing, open: 0, want: 0, leaf, local });
+  };
+
+  // ---------------------------------------------------------------- the roof it stands on, and the city
+  w.box([-19, -0.5, -14], [19, -0.0, 14], M.roof!, {}); for (const [a, b] of [[[-19, 0, -14], [19, 0.9, -13.75]], [[-19, 0, 13.75], [19, 0.9, 14]], [[-19, 0, -13.75], [-18.75, 0.9, 13.75]], [[18.75, 0, -13.75], [19, 0.9, 13.75]]] as [V3, V3][]) { w.box(a, b, M.concrete!, { tint: [1.08, 1.08, 1.08] }); w.box([a[0] - 0.04, b[1], a[2] - 0.04], [b[0] + 0.04, b[1] + 0.06, b[2] + 0.04], M.steel!, { tint: [0.95, 0.95, 0.96] }); }
+  w.box([-19, -46, -14], [19, -0.5, 14], M.tower!, { seed: 3, flags: F.FAR });
+  const city = rng(41); for (let gx = -6; gx <= 6; gx++) for (let gz = -6; gz <= 6; gz++) {
+    const X = gx * 44 + (city() - 0.5) * 8, Z = gz * 36 + (city() - 0.5) * 8; if (Math.abs(gx) < 1 && Math.abs(gz) < 1) continue; const near = Math.max(Math.abs(gx), Math.abs(gz)) <= 1;
+    const hx = 12 + city() * 6, hz = 9 + city() * 5, top = near ? -14 - city() * 14 : -26 + city() * 40; w.box([X - hx, -46, Z - hz], [X + hx, top, Z + hz], M.tower!, { seed: 5 + Math.floor(city() * 40), tint: [0.95 + city() * 0.1, 0.95 + city() * 0.1, 0.96 + city() * 0.1], flags: F.FAR });
+    w.box([X - hx + 0.4, top, Z - hz + 0.4], [X + hx - 0.4, top + 0.15, Z + hz - 0.4], M.roof!, { tint: [0.95, 0.95, 0.96], flags: F.FAR }); for (let k = 0; k < 4; k++) { const ax = X + (city() - 0.5) * hx * 1.4, az = Z + (city() - 0.5) * hz * 1.4, s = 0.8 + city() * 1.8; const acc = city(); w.box([ax - s, top, az - s * 0.7], [ax + s, top + 1 + city() * 1.6, az + s * 0.7], acc < 0.16 ? M.paint! : M.concrete!, { tint: acc < 0.08 ? (C.red as V3) : acc < 0.16 ? (C.orange as V3) : [1, 1, 1], flags: F.FAR }); }
+  }
+  w.box([-400, -47, -400], [400, -46, 400], M.concrete!, { tint: [0.55, 0.56, 0.58], flags: F.FAR });
+
+  // ---------------------------------------------------------------- storey 0
+  const T = 0.18, floor = (x0: number, z0: number, x1: number, z1: number, y: number, mat: number, tint: V3) => bx(x0, y - 0.04, z0, x1, y, z1, mat, tint);
+  floor(-4, -8, 4, 8, 0.02, M.stone!, [1.08, 1.08, 1.08]); floor(4, -8, 12, 0, 0.02, M.epoxy!, C.orange as V3); floor(4, 0, 12, 8, 0.02, M.epoxy!, [0.86, 0.95, 0.88]); floor(-12, -8, -4, 0, 0.02, M.epoxy!, [0.5, 0.56, 0.66]); floor(-12, 0, -4, 8, 0.02, M.wood!, [1.25, 1.2, 1.12]);
+  const win = (a: number, b: number, y0: number, y1: number, sky: 1 | -1, frame: V3 = C.white as V3): Hole => ({ a, b, y0, y1, kind: 'window', sky, frame });
+  // outside walls (− side first): north z = −8, south z = 8, west x = −12, east x = 12. Openings' normals point in
+  wall('x', -12.09, -4, -8, 0, H, T, EXT, paint(C.blue), []); wall('x', -4, 4, -8, 0, H, T, EXT, PL, [{ a: -1.6, b: 1.6, y0: 0, y1: 2.6, kind: 'window', sky: -1, frame: C.red as V3, bars: 3 }]); wall('x', 4, 12.09, -8, 0, H, T, EXT, paint(C.orange), [win(6.2, 9.8, 1.0, 2.3, -1)]);
+  wall('x', -12.09, -4, 8, 0, H, T, paint(C.white), EXT, [win(-11, -5, 0.9, 2.5, 1)]); wall('x', -4, 4, 8, 0, H, T, PL, EXT, [{ a: -1.1, b: -0.05, y0: 0, y1: 2.3, kind: 'door', frame: C.red as V3 }, win(0.8, 3.4, 0.4, 2.6, 1)]); wall('x', 4, 12.09, 8, 0, H, T, paint(C.green), EXT, [win(4.8, 11.4, 0.15, 2.75, 1)]);
+  wall('z', -7.91, 0, -12, 0, H, T, EXT, paint(C.blue), []); wall('z', 0, 7.91, -12, 0, H, T, EXT, paint(C.yellow), [win(2.2, 5.8, 0.9, 2.5, -1)]); wall('z', -7.91, 0, 12, 0, H, T, paint(C.orange), EXT, [win(-6.4, -1.8, 0.7, 2.4, 1)]); wall('z', 0, 7.91, 12, 0, H, T, paint(C.white), EXT, [win(2.4, 6.4, 0.7, 2.4, 1)]);
+  // inside walls
+  wall('z', -7.91, 7.91, -4, 0, H, 0.16, paint(C.white), PL, [{ a: -4.6, b: -3.55, y0: 0, y1: 2.3, kind: 'door', frame: C.blue as V3 }, { a: 2.6, b: 5.2, y0: 0, y1: 2.5, kind: 'open' }]);
+  wall('z', -7.91, 7.91, 4, 0, H, 0.16, PL, paint(C.white), [{ a: -5.1, b: -4.05, y0: 0, y1: 2.3, kind: 'door', frame: C.orange as V3 }, { a: 3.6, b: 4.65, y0: 0, y1: 2.3, kind: 'door', frame: C.green as V3 }]);
+  wall('x', -11.91, -4.08, 0, 0, H, 0.16, paint(C.blue), paint(C.white), []); wall('x', 4.08, 11.91, 0, 0, H, 0.16, paint(C.orange), paint(C.green), [{ a: 9.2, b: 10.25, y0: 0, y1: 2.3, kind: 'door', frame: C.white as V3 }]);
+  // color on the white walls' far faces: thin sheets a hand wide apart from anything else
+  bx(-4.10, 0.02, -7.9, -4.085, H, -4.7, M.paint!, C.blue as V3); bx(-4.10, 0.02, -3.45, -4.085, H, -0.1, M.paint!, C.blue as V3); bx(4.085, 0.02, -7.9, 4.10, H, -5.2, M.paint!, C.orange as V3); bx(4.085, 0.02, -3.95, 4.10, H, -0.1, M.paint!, C.orange as V3); bx(4.085, 0.02, 0.1, 4.10, H, 3.5, M.paint!, C.green as V3);
+  door('12', [-4, 0.02, -4.55], -Math.PI / 2, 0.95, C.blue as V3, 1); door('07', [4, 0.02, -4.1], Math.PI / 2, 0.95, C.orange as V3, 1); door('04', [4, 0.02, 4.6], Math.PI / 2, 0.95, C.green as V3, 1); door('A', [9.25, 0.02, 0], 0, 0.95, C.white as V3, -1); door('exit', [-1.05, 0.02, 8], 0, 0.95, C.red as V3, 1);
+
+  // the slab between: a hole over the atrium, the pool sunk in the terrace
+  const slab = (x0: number, z0: number, x1: number, z1: number, under: V3 = C.white as V3) => { bx(x0, H, z0, x1, H + 0.06, z1, M.plaster!, under); bx(x0, H + 0.06, z0, x1, FL - 0.03, z1, M.concrete!); };
+  slab(-12.09, -8.09, -4, 8.09); slab(-4, -8.09, 4, -4.2); slab(-4, 4.2, 4, 8.09); slab(-4, -4.2, -2.4, 4.2); slab(4, -8.09, 12.09, 8.09); slab(2.8, -4.2, 4, 4.2);
+  const edge = (x0: number, z0: number, x1: number, z1: number) => bx(x0, H - 0.02, z0, x1, FL + 0.02, z1, M.paint!, C.red as V3); edge(-2.4, -4.24, 2.8, -4.2); edge(-2.4, 4.2, 2.8, 4.24); edge(-2.44, -4.24, -2.4, 4.24); edge(2.8, -4.24, 2.84, 4.24);
+
+  // the stair up through the atrium
+  for (let i = 0; i < 17; i++) { const y = (i + 1) * 0.2, z = 3.4 - i * 0.29; bx(-2.3, y - 0.06, z - 0.31, -1.0, y, z, M.wood!, [1.3, 1.25, 1.15]); if (i % 2 === 0) { w.cylinder([-1.02, y + 0.45, z - 0.15], 0.012, 0.45, M.steel!, { tint: [0.9, 0.9, 0.9], ...cut }); } }
+  w.add({ at: [-1.02, 2.25, 0.93], half: [0.022, 0.022, 2.95], rot: rotX(0.604), mat: M.paint!, tint: C.red as V3, ...cut }); w.add({ at: [-2.28, 1.55, 0.93], half: [0.03, 0.12, 2.95], rot: rotX(0.604), mat: M.paint!, tint: C.red as V3, ...cut }); w.add({ at: [-1.03, 1.55, 0.93], half: [0.03, 0.12, 2.95], rot: rotX(0.604), mat: M.paint!, tint: C.red as V3, ...cut });
+
+  // ---------------------------------------------------------------- storey 1 (the west two thirds), and the terrace
+  const Y = FL; floor(-12, -8, -4, 2, Y, M.epoxy!, [0.93, 0.93, 0.93]); floor(-12, 2, -4, 8, Y, M.wood!, [1.3, 1.25, 1.18]); floor(-4, -8, 4, -4.2, Y, M.stone!, [1.1, 1.1, 1.1]); floor(-4, 4.2, 4, 8, Y, M.stone!, [1.1, 1.1, 1.1]); floor(-4, -4.2, -2.4, 4.2, Y, M.stone!, [1.1, 1.1, 1.1]); floor(2.8, -4.2, 4, 4.2, Y, M.stone!, [1.1, 1.1, 1.1]);
+  wall('x', -12.09, -4, -8, Y, Y + H, T, EXT, paint(C.red), [win(-11, -5.2, Y + 0.5, Y + 2.6, -1)]); wall('x', -4, 4.09, -8, Y, Y + H, T, EXT, PL, [win(-2.6, 2.6, Y + 0.4, Y + 2.7, -1)]);
+  wall('x', -12.09, -4, 8, Y, Y + H, T, paint(C.cyan), EXT, [win(-10.6, -5.6, Y + 0.6, Y + 2.5, 1)]); wall('x', -4, 4.09, 8, Y, Y + H, T, PL, EXT, [win(-2.6, 2.6, Y + 0.4, Y + 2.7, 1)]);
+  wall('z', -7.91, 2, -12, Y, Y + H, T, EXT, paint(C.white), [win(-6.6, 0.4, Y + 0.5, Y + 2.6, -1)]); wall('z', 2, 7.91, -12, Y, Y + H, T, EXT, paint(C.white), [win(3.4, 6.6, Y + 0.9, Y + 2.4, -1)]);
+  wall('z', -7.91, 7.91, 4, Y, Y + H, T, PL, EXT, [win(-6.6, -2.0, Y + 0.1, Y + 2.6, 1), { a: 0.6, b: 1.65, y0: Y, y1: Y + 2.3, kind: 'door', frame: C.red as V3 }, win(3.2, 6.8, Y + 0.1, Y + 2.6, 1)]);
+  wall('z', -7.91, 7.91, -4, Y, Y + H, 0.16, paint(C.white), PL, [{ a: -3.2, b: -2.15, y0: Y, y1: Y + 2.3, kind: 'door', frame: C.red as V3 }, { a: 4.4, b: 6.4, y0: Y, y1: Y + 2.5, kind: 'open' }]); wall('x', -11.91, -4.08, 2, Y, Y + H, 0.16, paint(C.red), paint(C.cyan), []);
+  bx(-4.10, Y, -7.9, -4.085, Y + H, -3.3, M.paint!, C.red as V3); bx(-4.10, Y, -2.05, -4.085, Y + H, 1.9, M.paint!, C.red as V3);
+  door('B', [-4, Y, -2.2], Math.PI / 2, 0.95, C.red as V3, 1); door('R', [4, Y, 0.65], -Math.PI / 2, 0.95, C.red as V3, -1);
+  const glassRail = (a: V3, b: V3) => { const d = norm(sub(b, a)), l = Math.hypot(...sub(b, a)), yaw = Math.atan2(-d[2], d[0]), c = mul(add(a, b), 0.5); w.add({ at: add(c, [0, 0.5, 0]), half: [l / 2 - 0.02, 0.46, 0.007], rot: rotY(yaw), mat: M.glass!, flags: F.GLASS | F.CUT, tint: [0.92, 0.975, 0.965] }); w.add({ at: add(c, [0, 1.0, 0]), half: [l / 2, 0.02, 0.028], rot: rotY(yaw), mat: M.steel!, ...cut }); const n = Math.max(2, Math.round(l / 1.6)); for (let i = 0; i <= n; i++) { const p = add(a, mul(d, l * i / n)); w.cylinder(add(p, [0, 0.5, 0]), 0.018, 0.5, M.steel!, cut); } };
+  glassRail([-2.34, Y, -4.1], [2.74, Y, -4.1]); glassRail([2.9, Y, -4.1], [2.9, Y, 4.1]); glassRail([-0.8, Y, 4.1], [2.74, Y, 4.1]); glassRail([-2.5, Y, -1.4], [-2.5, Y, 4.1]);
+  // its roof, with a skylight over the atrium
+  const R = Y + H, roof = (x0: number, z0: number, x1: number, z1: number) => { bx(x0, R, z0, x1, R + 0.05, z1, M.plaster!); bx(x0, R + 0.05, z0, x1, R + 0.25, z1, M.roof!); };
+  roof(-12.09, -8.09, -2.6, 8.09); roof(-2.6, -8.09, 3.0, -3.4); roof(-2.6, 3.4, 3.0, 8.09); roof(3.0, -8.09, 4.09, 8.09);
+  for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) w.box([-2.55 + i * 1.4, R + 0.3, -3.35 + j * 1.7], [-1.2 + i * 1.4, R + 0.312, -1.7 + j * 1.7], M.glass!, { flags: F.GLASS | F.CUT, tint: [0.95, 0.98, 0.975] });
+  for (let i = 0; i <= 4; i++) bx(-2.6 + i * 1.4 - 0.03, R + 0.2, -3.45, -2.6 + i * 1.4 + 0.03, R + 0.34, 3.45, M.paint!, C.white as V3); for (let j = 0; j <= 4; j++) bx(-2.65, R + 0.2, -3.4 + j * 1.7 - 0.03, 3.05, R + 0.339, -3.4 + j * 1.7 + 0.03, M.paint!, C.white as V3);
+  w.openings.push({ at: [0.2, R + 0.2, 0], u: [2.8, 0, 0], v: [0, 0, 3.4], n: [0, -1, 0] });
+  for (const [a, b] of [[[-12.2, R + 0.25, -8.2], [4.2, R + 0.62, -8.0]], [[-12.2, R + 0.25, 8.0], [4.2, R + 0.62, 8.2]], [[-12.2, R + 0.25, -8.0], [-12.0, R + 0.62, 8.0]], [[4.0, R + 0.25, -8.0], [4.2, R + 0.62, 8.0]]] as [V3, V3][]) w.box(a, b, M.paint!, { ...cut });
+
+  // ---------------------------------------------------------------- the terrace: pool, deck, garden
+  bx(4.09, FL - 0.03, -8.09, 12.09, FL, 8.09, M.stone!, [1.06, 1.06, 1.06]);
+  const px0 = 5.6, pz0 = -7.0, px1 = 11.4, pz1 = -2.6, pt = FL + 0.62, pf = FL + 0.04;
+  bx(px0 - 0.5, FL, pz0 - 0.5, px1 + 0.5, pt + 0.05, pz0, M.stone!, [1.12, 1.12, 1.12]); bx(px0 - 0.5, FL, pz1, px1 + 0.5, pt + 0.05, pz1 + 0.5, M.stone!, [1.12, 1.12, 1.12]); bx(px0 - 0.5, FL, pz0, px0, pt + 0.05, pz1, M.stone!, [1.12, 1.12, 1.12]); bx(px1, FL, pz0, px1 + 0.5, pt + 0.05, pz1, M.stone!, [1.12, 1.12, 1.12]);
+  bx(px0, FL, pz0, px1, pf, pz1, M.poolTile!); for (const [a, b] of [[[px0, pf, pz0], [px1, pt + 0.02, pz0 + 0.03]], [[px0, pf, pz1 - 0.03], [px1, pt + 0.02, pz1]], [[px0, pf, pz0 + 0.03], [px0 + 0.03, pt + 0.02, pz1 - 0.03]], [[px1 - 0.03, pf, pz0 + 0.03], [px1, pt + 0.02, pz1 - 0.03]]] as [V3, V3][]) w.box(a, b, M.poolTile!, cut);
+  w.box([px0 + 0.03, pt - 0.07, pz0 + 0.03], [px1 - 0.03, pt - 0.05, pz1 - 0.03], M.water!, { flags: F.WATER | F.CUT }); const poolTop = pt - 0.05;
+  for (const x of [6.6, 8.5, 10.4]) strip('pool', [x - 0.35, pf + 0.28, pz0 + 0.045], [x + 0.35, pf + 0.28, pz0 + 0.045], [0, 0, 1], 0.05, [5, 22, 26]);
+  bx(4.3, FL, -1.6, 12.0, FL + 0.05, 1.9, M.wood!, [1.15, 1.1, 1.02]);
+  const rail: V3[] = [[4.2, FL, -8.0], [12.0, FL, -8.0], [12.0, FL, 8.0], [4.2, FL, 8.0]]; for (let i = 0; i < 3; i++) glassRail(rail[i]!, rail[i + 1]!);
+  const planter = (x0: number, z0: number, x1: number, z1: number, h: number, tint: V3 = C.white as V3) => { const y = FL; bx(x0, y, z0, x1, y + h, z0 + 0.07, M.paint!, tint); bx(x0, y, z1 - 0.07, x1, y + h, z1, M.paint!, tint); bx(x0, y, z0 + 0.07, x0 + 0.07, y + h, z1 - 0.07, M.paint!, tint); bx(x1 - 0.07, y, z0 + 0.07, x1, y + h, z1 - 0.07, M.paint!, tint); bx(x0 + 0.07, y, z0 + 0.07, x1 - 0.07, y + h - 0.06, z1 - 0.07, M.soil!); return y + h - 0.06; };
+  const garden = (x0: number, z0: number, x1: number, z1: number, h: number, trees: [number, number, number][], seed: number, tint: V3 = C.white as V3) => { const y = planter(x0, z0, x1, z1, h, tint), q = rng(seed); for (const [x, z, ht] of trees) tree(w, kit, [x, y, z], ht, seed + Math.round(x * 13 + z * 7)); const n = Math.round((x1 - x0) * (z1 - z0) * 5.5); for (let i = 0; i < n; i++) tuft(w, kit, [x0 + 0.2 + q() * (x1 - x0 - 0.4), y, z0 + 0.2 + q() * (z1 - z0 - 0.4)], 0.22 + q() * 0.3, seed * 31 + i, q() < 0.16 ? [0.78, 0.52, 0.80] : q() < 0.5 ? [0.58, 0.66, 0.26] : [0.48, 0.60, 0.30]); };
+  garden(4.6, 2.4, 11.8, 4.2, 0.55, [[5.7, 3.3, 3.4], [8.4, 3.2, 4.0], [10.8, 3.4, 3.1]], 11); garden(9.9, 4.9, 11.8, 7.7, 0.5, [[10.9, 6.4, 3.6]], 23); garden(4.6, 6.4, 7.6, 7.7, 0.5, [[6.2, 7.0, 2.7]], 37, C.red as V3);
+  tree(w, kit, [1.2, 0.35, -6.4], 2.75, 90); w.cylinder([1.2, 0.2, -6.4], 0.42, 0.2, M.paint!, { tint: C.white as V3, ...cut }); w.cylinder([1.2, 0.36, -6.4], 0.37, 0.03, M.soil!, cut);
+  // loungers, a table
+  const lounger = (x: number, z: number, c: V3, yaw: number) => { const rt = rotY(yaw), P = (lx: number, ly: number, lz: number): V3 => add([x, FL + 0.05, z], apply(rt, [lx, ly, lz])); w.add({ at: P(0, 0.24, 0), half: [0.34, 0.045, 0.62], rot: rt, mat: M.fabric!, tint: c, ...cut }); w.add({ at: P(0, 0.42, -0.82), half: [0.34, 0.045, 0.34], rot: compose(rt, rotX(-0.75)), mat: M.fabric!, tint: c, ...cut }); for (const sx of [-0.3, 0.3]) for (const sz of [-0.5, 0.5]) w.cylinder(P(sx, 0.1, sz), 0.02, 0.1, M.steel!, cut); };
+  lounger(6.0, 0.2, C.white as V3, 0.25); lounger(7.4, 0.1, C.orange as V3, 0.1); lounger(8.8, 0.15, C.white as V3, -0.05); w.cylinder([10.6, FL + 0.46, 0.2], 0.55, 0.025, M.paint!, { tint: C.red as V3, ...cut }); w.cylinder([10.6, FL + 0.24, 0.2], 0.035, 0.22, M.steel!, cut); for (let i = 0; i < 4; i++) w.cylinder([10.6 + 0.85 * Math.cos(i * 1.57 + 0.5), FL + 0.28, 0.2 + 0.85 * Math.sin(i * 1.57 + 0.5)], 0.2, 0.22, M.fabric!, { tint: i % 2 ? (C.white as V3) : (C.grey as V3), ...cut });
+
+  // ---------------------------------------------------------------- what stands in the rooms
+  const table = (x: number, y: number, z: number, hx: number, hz: number, h: number, top: V3) => { bx(x - hx, y + h - 0.04, z - hz, x + hx, y + h, z + hz, M.paint!, top); for (const sx of [-1, 1]) for (const sz of [-1, 1]) bx(x + sx * (hx - 0.05) - 0.02, y, z + sz * (hz - 0.05) - 0.02, x + sx * (hx - 0.05) + 0.02, y + h - 0.04, z + sz * (hz - 0.05) + 0.02, M.steel!); };
+  const chair = (x: number, y: number, z: number, yaw: number, c: V3) => { const rt = rotY(yaw), P = (lx: number, ly: number, lz: number): V3 => add([x, y, z], apply(rt, [lx, ly, lz])); w.add({ at: P(0, 0.46, 0), half: [0.22, 0.03, 0.22], rot: rt, mat: M.plastic!, tint: c, ...cut }); w.add({ at: P(0, 0.75, -0.22), half: [0.21, 0.2, 0.02], rot: compose(rt, rotX(-0.12)), mat: M.plastic!, tint: c, ...cut }); for (const sx of [-0.18, 0.18]) for (const sz of [-0.18, 0.18]) w.cylinder(P(sx, 0.22, sz), 0.014, 0.22, M.steel!, cut); };
+  const sofa = (x: number, y: number, z: number, yaw: number, l: number, c: V3) => { const rt = rotY(yaw), P = (lx: number, ly: number, lz: number): V3 => add([x, y, z], apply(rt, [lx, ly, lz])); w.add({ at: P(0, 0.2, 0), half: [l / 2, 0.2, 0.42], rot: rt, mat: M.fabric!, tint: c, ...cut }); w.add({ at: P(0, 0.55, -0.34), half: [l / 2, 0.25, 0.1], rot: compose(rt, rotX(-0.15)), mat: M.fabric!, tint: c, ...cut }); for (const s of [-1, 1]) w.add({ at: P(s * (l / 2 + 0.09), 0.3, 0), half: [0.09, 0.3, 0.42], rot: rt, mat: M.fabric!, tint: c, ...cut }); for (let i = 0; i < Math.round(l / 0.75); i++) w.add({ at: P(-l / 2 + 0.37 + i * 0.75, 0.45, 0.05), half: [0.36, 0.06, 0.36], rot: rt, mat: M.fabric!, tint: mul(c, 0.96), ...cut }); };
+  const shelf = (x: number, y: number, z: number, yaw: number, wd: number, hgt: number, q: () => number, c: V3) => { const rt = rotY(yaw), P = (lx: number, ly: number, lz: number): V3 => add([x, y, z], apply(rt, [lx, ly, lz])); for (const s of [-1, 1]) w.add({ at: P(s * wd / 2, hgt / 2, 0), half: [0.02, hgt / 2, 0.17], rot: rt, mat: M.paint!, tint: c, ...cut }); const n = Math.round(hgt / 0.42); for (let i = 0; i <= n; i++) { const yy = 0.04 + i * (hgt - 0.06) / n; w.add({ at: P(0, yy, 0), half: [wd / 2 - 0.02, 0.015, 0.17], rot: rt, mat: M.paint!, tint: c, ...cut }); if (i < n) { let bx0 = -wd / 2 + 0.08; while (bx0 < wd / 2 - 0.12) { const tw = 0.03 + q() * 0.06, th = 0.16 + q() * 0.16; if (q() < 0.78) { const pal = [C.red, C.orange, C.white, C.blue, C.yellow, C.grey, C.teal, C.white]; w.add({ at: P(bx0 + tw / 2, yy + 0.016 + th / 2, 0.02 - q() * 0.04), half: [tw / 2 - 0.002, th / 2, 0.11], rot: rt, mat: M.plastic!, tint: pal[Math.floor(q() * 8)] as V3, ...cut }); } bx0 += tw + (q() < 0.12 ? 0.18 : 0.004); } } } };
+  const crate = (x: number, y: number, z: number, s: number, yaw: number, c: V3, art: string) => w.add({ at: [x, y + s / 2, z], half: [s / 2, s / 2, s / 2], rot: rotY(yaw), mat: M.plastic!, tint: c, ...cut, marks: [0, 1, 4, 5].map(f => ({ face: f, at: [0, 0] as [number, number], size: [s * 0.62, s * 0.62] as [number, number], art, color: [1, 1, 1] as V3 })).concat([{ face: 3, at: [0, 0], size: [s * 0.8, s * 0.8], art: 'cross', color: [1, 1, 1] }]) });
+  // atrium
+  sofa(0.6, 0.02, 6.3, Math.PI, 2.2, C.red as V3); table(0.6, 0.02, 4.9, 0.55, 0.35, 0.36, C.white as V3); bx(2.3, 0.02, -2.2, 3.1, 1.02, 1.0, M.paint!, C.white as V3, { marks: [{ face: 0, at: [0, 0], size: [0.8, 0.8], art: 'atrium', color: C.red as V3 }] }); bx(2.2, 1.02, -2.3, 3.2, 1.07, 1.1, M.paint!, C.red as V3); w.add({ at: [2.75, 1.25, -0.4], half: [0.02, 0.17, 0.28], rot: rotY(0.3), mat: M.rubber!, ...cut }); chair(3.5, 0.02, -0.7, -1.5, C.white as V3);
+  // orange: crates and a bench
+  crate(10.9, 0.02, -7.0, 0.9, 0.12, C.orange as V3, '07'); crate(9.8, 0.02, -7.1, 0.8, -0.2, C.white as V3, 'hex'); crate(10.8, 0.92, -6.95, 0.7, 0.5, C.white as V3, 'A'); table(7.4, 0.02, -3.2, 1.4, 0.5, 0.75, C.white as V3); for (const [x, yw] of [[6.6, 0], [7.5, 0.2], [8.3, -0.1]] as [number, number][]) chair(x, 0.02, -4.1, yw, C.white as V3); w.ellipsoid([7.2, 0.97, -3.2], [0.2, 0.2, 0.2], M.mirror!, cut); w.ellipsoid([7.8, 0.89, -3.1], [0.11, 0.11, 0.11], M.plastic!, { tint: C.red as V3, ...cut });
+  // green: a lab bench, a partition
+  table(8.2, 0.02, 2.4, 1.6, 0.55, 0.9, C.white as V3); for (let i = 0; i < 6; i++) w.cylinder([7.0 + i * 0.42, 1.02, 2.3 + (i % 2) * 0.25], 0.05 + 0.02 * (i % 3), 0.10 + 0.04 * (i % 2), i % 2 ? M.plastic! : M.steel!, { tint: [C.green, C.white, C.yellow][i % 3] as V3, ...cut }); sofa(6.3, 0.02, 6.9, Math.PI, 1.5, C.white as V3); w.cylinder([11.2, 0.6, 1.0], 0.3, 0.6, M.paint!, { tint: C.green as V3, ...cut }); tree(w, kit, [11.1, 0.42, 6.9], 2.4, 71); w.cylinder([11.1, 0.22, 6.9], 0.34, 0.2, M.paint!, { tint: C.white as V3, ...cut }); w.cylinder([11.1, 0.4, 6.9], 0.3, 0.03, M.soil!, cut);
+  // blue: racks and light, no windows
+  for (let i = 0; i < 5; i++) { const x = -11.2 + i * 1.35; bx(x, 0.02, -2.2, x + 0.7, 2.1, -1.2, M.paint!, C.black as V3, { marks: [{ face: 4, at: [0, 0.3], size: [0.55, 1.1], art: 'dots', color: [0.3, 0.75, 1.0] }] }); bx(x + 0.05, 0.3, -2.215, x + 0.65, 0.34, -2.2, M.glow!, [0.2, 0.75, 1.0], { seed: 40 }); } bx(-11.6, 0.02, -7.5, -9.4, 1.0, -6.7, M.paint!, C.white as V3); w.add({ at: [-10.5, 1.25, -7.3], half: [0.5, 0.25, 0.02], rot: rotX(-0.1), mat: M.glow!, tint: [0.35, 0.8, 1.0], seed: 22, ...cut }); chair(-10.4, 0.02, -6.1, Math.PI, C.blue as V3);
+  // yellow gallery
+  const gq = rng(5); shelf(-11.6, 0.02, 1.3, Math.PI / 2, 1.8, 2.2, gq, C.white as V3); shelf(-8.0, 0.02, 0.35, 0, 2.4, 2.2, gq, C.white as V3); sofa(-8.2, 0.02, 4.2, 0, 2.2, C.yellow as V3); table(-8.2, 0.02, 5.6, 0.6, 0.4, 0.36, C.white as V3); w.add({ at: [-5.2, 0.9, 6.6], half: [0.34, 0.86, 0.34], rot: rotY(0.5), mat: M.paint!, tint: C.red as V3, planes: [[norm([1, 1.2, 0.2]), 0.62], [norm([-1, 0.9, 0.5]), 0.55], [norm([0.1, 1, -1]), 0.58]], ...cut });
+  // red studio
+  table(-9.2, Y, -5.4, 1.5, 0.6, 0.75, C.white as V3); for (const [x, z, yw] of [[-10, -4.4, Math.PI], [-8.6, -4.5, Math.PI + 0.3], [-9.6, -6.4, 0]] as number[][]) chair(x!, Y, z!, yw!, C.red as V3); w.add({ at: [-9.0, Y + 1.0, -5.5], half: [0.42, 0.24, 0.015], rot: rotY(0.4), mat: M.rubber!, ...cut }); shelf(-6.2, Y, 1.65, Math.PI, 2.6, 2.4, gq, C.white as V3); crate(-4.8, Y, -6.9, 0.8, 0.3, C.white as V3, 'R'); w.ellipsoid([-10.9, Y + 0.42, 0.9], [0.42, 0.42, 0.42], M.plastic!, { tint: C.white as V3, ...cut });
+  // cyan lounge
+  sofa(-8.6, Y, 3.0, 0, 2.6, C.white as V3); sofa(-10.9, Y, 5.4, Math.PI / 2, 1.6, C.cyan as V3); table(-8.6, Y, 4.9, 0.7, 0.45, 0.36, C.cyan as V3); w.cylinder([-5.2, Y + 0.9, 7.1], 0.16, 0.9, M.steel!, cut); bx(-6.6, Y, 7.4, -4.6, Y + 0.9, 7.85, M.paint!, C.white as V3);
+
+  // ---------------------------------------------------------------- the roofs: plant, pipes, the runner's red
+  const ac = (x: number, y: number, z: number, yaw: number, c: V3 = C.white as V3) => { const rt = rotY(yaw), P = (lx: number, ly: number, lz: number): V3 => add([x, y, z], apply(rt, [lx, ly, lz])); w.add({ at: P(0, 0.62, 0), half: [0.95, 0.5, 0.7], rot: rt, mat: M.paint!, tint: c, flags: F.CUT, marks: [{ face: 5, at: [0, 0.05], size: [0.8, 0.8], art: 'hvac', color: C.black as V3 }] }); w.add({ at: P(0, 0.06, 0), half: [0.9, 0.06, 0.6], rot: rt, mat: M.rubber!, ...cut }); for (const s of [-0.45, 0.45]) { w.add({ at: P(s, 1.15, 0), half: [0.36, 0.05, 0.36], rot: rt, mat: M.steel!, quad: [1 / 0.36 ** 2, 0, 1 / 0.36 ** 2, 0], flags: F.CUT | F.QUAD }); w.add({ at: P(s, 1.17, 0), half: [0.31, 0.045, 0.31], rot: rt, mat: M.rubber!, quad: [1 / 0.31 ** 2, 0, 1 / 0.31 ** 2, 0], flags: F.CUT | F.QUAD }); for (let k = 0; k < 3; k++) w.add({ at: P(s, 1.2, 0), half: [0.3, 0.012, 0.04], rot: compose(rt, rotY(k * 1.047)), mat: M.steel!, flags: F.CUT }); } };
+  const ry = R + 0.25; ac(-9.8, ry, -5.6, 0.05); ac(-7.2, ry, -5.7, 0.0); ac(-10.2, ry, 4.8, 1.57, C.white as V3); ac(14.8, 0, -9.5, 0.1); ac(-15.4, 0, 8.5, 1.5);
+  const pipe = (pts: V3[], rad: number, c: V3, mat = M.paint!) => { for (let i = 0; i + 1 < pts.length; i++) { w.taper(pts[i]!, pts[i + 1]!, rad, rad * 0.9999, mat, { tint: c, ...cut }); if (i) w.ellipsoid(pts[i]!, [rad * 1.02, rad * 1.02, rad * 1.02], mat, { tint: c, ...cut }); const d = sub(pts[i + 1]!, pts[i]!), l = Math.hypot(...d); for (let k = 1; k < l / 2.2; k++) { const p = add(pts[i]!, mul(d, k * 2.2 / l)), q = add(p, mul(norm(d), 0.06)); w.taper(p, q, rad * 1.22, rad * 1.219, M.steel!, cut); } } };
+  pipe([[-11.4, ry + 0.3, 7.2], [-11.4, ry + 0.3, -2.0], [-4.2, ry + 0.3, -2.0], [-4.2, ry + 0.3, -7.2]], 0.14, C.red as V3); pipe([[-11.0, ry + 0.22, 7.2], [-11.0, ry + 0.22, -1.6], [-4.6, ry + 0.22, -1.6]], 0.08, C.white as V3); pipe([[12.6, 0.25, -12.9], [12.6, 0.25, 9.0], [17.5, 0.25, 9.0]], 0.18, C.white as V3); pipe([[13.15, 0.2, -12.9], [13.15, 0.2, 8.4], [17.5, 0.2, 8.4]], 0.12, C.red as V3);
+  w.cylinder([-6.0, ry + 1.6, 5.8], 0.03, 1.6, M.steel!, cut); for (const y of [0.9, 1.6, 2.3, 2.9]) w.add({ at: [-6.0, ry + y, 5.8], half: [0.5 - y * 0.1, 0.012, 0.012], rot: rotY(y), mat: M.steel!, ...cut }); w.ellipsoid([-6, ry + 3.22, 5.8], [0.06, 0.06, 0.06], M.glow!, { tint: C.red as V3, seed: 80, flags: F.CUT | F.NOSHADOW });
+  w.add({ at: [-14.4, 0.62, -3], half: [1.1, 0.04, 2.0], rot: rotX(0.32), mat: M.paint!, tint: C.red as V3, marks: [{ face: 3, at: [0, 0], size: [1.2, 1.2], art: 'arrowUp', color: [1, 1, 1] }] }); w.box([-15.3, 0, -4.7], [-13.5, 1.15, -4.4], M.steel!, {}); // a ramp
+  w.box([-17.6, 0, 1.0], [-15.2, 2.4, 4.6], M.paint!, { tint: [1, 1, 1], marks: [{ face: 1, at: [0, 0.1], size: [1.5, 1.5], art: '04', color: C.red as V3 }, { face: 5, at: [0, 0.2], size: [1.2, 1.2], art: 'caution', color: C.orange as V3 }] }); w.box([-17.7, 2.4, 0.9], [-15.1, 2.5, 4.7], M.paint!, { tint: C.red as V3 }); w.box([14.2, 0, 3.2], [17.6, 1.0, 5.0], M.paint!, { tint: C.white as V3, marks: [{ face: 0, at: [0, 0], size: [0.8, 0.8], art: 'stripes', color: C.orange as V3 }] }); for (let i = 0; i < 4; i++) w.cylinder([14.8 + i * 0.75, 1.3, 4.1], 0.24, 0.3, M.steel!, { tint: [0.95, 0.95, 0.95] });
+  for (let i = 0; i < 6; i++) w.box([-18.2, 0.0, -10.5 + i * 0.5], [-16.2, 0.045 + i * 0.0, -10.2 + i * 0.5], M.wood!, {}); crate(-17.2, 0.05, -9.6, 1.0, 0.1, C.white as V3, 'caution'); crate(-16.0, 0.0, -11.6, 0.9, 0.4, C.orange as V3, '12'); crate(16.8, 0, -4.0, 1.1, 0.2, C.red as V3, '04'); crate(15.6, 0, -3.2, 0.8, -0.3, C.white as V3, 'hex');
+  w.box([-12.6, 0, 8.6], [-12.4, 2.2, 8.8], M.hazard!, {}); w.box([12.4, 0, 8.6], [12.6, 2.2, 8.8], M.hazard!, {});
+
+  // big paint on walls and floors
+  const paintOn = (find: (p: Piece) => boolean, m: Mark) => { const p = w.pieces.find(find); if (p) (p.marks ??= []).push(m); };
+  const isBox = (x: number, y: number, z: number, e = 0.4) => (p: Piece) => !p.quad && Math.abs(p.at[0] - x) < e && Math.abs(p.at[1] - y) < e && Math.abs(p.at[2] - z) < e;
+  paintOn(isBox(8, 0.0, -4, 0.2), { face: 3, at: [0, 0], size: [5, 5], art: '07', color: [1, 1, 1] }); paintOn(isBox(8, 0.0, 4, 0.2), { face: 3, at: [1.2, 1.0], size: [3.4, 3.4], art: 'ring', color: C.green as V3 }); paintOn(isBox(-8, 0.0, -4, 0.2), { face: 3, at: [1, -0.5], size: [4.6, 4.6], art: '12', color: [0.35, 0.75, 1.0] }); paintOn(isBox(0, 0.0, 0, 0.2), { face: 3, at: [1.0, 3.4], size: [1.6, 1.6], art: 'arrowUp', color: C.red as V3 }); paintOn(isBox(-8, Y - 0.02, -3, 0.2), { face: 3, at: [-0.5, 1.8], size: [4.4, 4.4], art: 'runner', color: C.red as V3 });
+  paintOn(isBox(0, -0.25, 0, 0.3), { face: 3, at: [-15, 0], size: [2.6, 2.6], art: 'arrowUp', color: C.red as V3 }); paintOn(isBox(0, -0.25, 0, 0.3), { face: 3, at: [0, 11], size: [3.2, 3.2], art: 'cross', color: C.orange as V3 }); paintOn(isBox(0, -0.25, 0, 0.3), { face: 3, at: [15.6, -11], size: [3.4, 3.4], art: 'stripes', color: C.yellow as V3 }); paintOn(isBox(0, -0.25, 0, 0.3), { face: 3, at: [-8, -11], size: [4, 4], art: '04', color: [0.45, 0.46, 0.47] });
+
+  // ---------------------------------------------------------------- lamps
+  const K: V3 = [9, 8.1, 6.6]; panel('atrium', 0.6, H, 5.8, 0.6, 0.6, K); panel('atrium', 0.6, H, -6.2, 0.6, 0.6, K); for (const x of [6, 10]) panel('orange', x, H, -4, 0.7, 0.35, [10, 7.6, 4.8]); for (const x of [6, 10]) panel('green', x, H, 4, 0.7, 0.35, [7.6, 9.2, 7.8]); strip('blue', [-11.8, 2.9, -7.88], [-4.3, 2.9, -7.88], [0, 0, 1], 0.05, [3, 14, 34]); strip('blue', [-11.88, 0.12, -7.6], [-11.88, 0.12, -0.3], [1, 0, 0], 0.04, [3, 12, 30]); panel('gallery', -8, H, 3.0, 0.9, 0.3, [10, 8.6, 6.2]); panel('gallery', -8, H, 6.2, 0.9, 0.3, [10, 8.6, 6.2]);
+  for (const z of [-5.4, -1.0]) panel('studio', -8.4, R, z, 0.9, 0.45, [10, 8.2, 6.4]); panel('lounge', -8, R, 5.0, 0.8, 0.8, [8, 7.6, 6.6]); panel('landing', 0.4, R, -6.0, 0.5, 0.5, K); panel('landing', 0.4, R, 6.0, 0.5, 0.5, K);
+  for (const [x, z] of [[4.35, -1.0], [4.35, 1.9]] as number[][]) { const lamp = w.lamp({ kind: 'sphere', at: [x! + 0.12, FL + 2.3, z!], u: [0.09, 0, 0], v: [0, 0, 0], radiance: [60, 42, 22], name: 'terrace', on: 1, night: true }); w.ellipsoid([x! + 0.12, FL + 2.3, z!], [0.09, 0.09, 0.09], M.glow!, { tint: [1, 0.84, 0.6], lamp, seed: 600, flags: F.CUT | F.GLOW | F.NOSHADOW }); }
+
+  // ---------------------------------------------------------------- people
+  const person = (path: V3[], speed: number, phase: number, color: V3, torch: boolean, stand = false) => {
+    const body: Piece[] = []; const P = (half: V3, mat: number, tint: V3, quad?: 'ell' | 'cyl') => { const p = w.add({ at: [0, -100, 0], half, mat, tint, flags: F.MOVES | F.CUT, quad: quad === 'ell' ? [1 / half[0] ** 2, 1 / half[1] ** 2, 1 / half[2] ** 2, 0] : quad === 'cyl' ? [1 / half[0] ** 2, 0, 1 / half[2] ** 2, 0] : undefined } as never); body.push(p); return p; };
+    const suit: V3 = [0.42, 0.43, 0.46]; P([0.155, 0.23, 0.11], M.cloth!, suit, 'ell'); P([0.18, 0.20, 0.125], M.plastic!, color); P([0.145, 0.13, 0.11], M.cloth!, suit, 'ell'); P([0.088, 0.115, 0.10], M.skin!, [1, 1, 1], 'ell'); P([0.105, 0.085, 0.118], M.plastic!, C.black as V3, 'ell'); P([0.085, 0.03, 0.03], M.mirror!, [0.9, 0.6, 0.3]);
+    for (let i = 0; i < 8; i++) P([0.06, 0.2, 0.06], i % 4 === 3 ? M.rubber! : M.cloth!, suit, 'ell'); for (let i = 0; i < 2; i++) P([0.05, 0.04, 0.125], M.rubber!, [1, 1, 1], 'ell'); for (let i = 0; i < 2; i++) P([0.042, 0.05, 0.042], M.skin!, [1, 1, 1], 'ell'); P([0.025, 0.035, 0.34], M.rubber!, [1, 1, 1]); P([0.02, 0.1, 0.04], M.rubber!, [1, 1, 1]);
+    const t = torch ? w.lamp({ kind: 'spot', at: [0, 1, 0], u: [0.02, 0, 0], v: [0, 0, 1], radiance: [26000, 24500, 21000], cos: 0.9, name: 'torch', on: 0, night: true }) : -1; people.push({ body, path, speed, phase, torch: t, color, stand });
+  };
+  person([[-1.5, 0, 6.8], [2.6, 0, 3.0], [2.0, 0, -4.0], [-2.6, 0, -6.4], [-3.0, 0, 1.0]], 1.1, 0, C.orange as V3, true); person([[5.2, FL, 1.2], [11.2, FL, 1.2], [11.4, FL, -1.2], [5.2, FL, -1.2]], 0.9, 3, C.orange as V3, true); person([[-14, 0, 6], [-14, 0, 11], [10, 0, 11.4], [14.6, 0, 11], [14.4, 0, 0], [10, 0, 11.4]], 1.3, 5, C.teal as V3, true); person([[-9.5, Y, -2.6], [-6.0, Y, -2.2], [-5.4, Y, -6.0], [-7.2, Y, -7.0], [-10.8, Y, -2.6]], 0.9, 2, C.teal as V3, true);
+  void r; void smooth; void rotZ; void taper;
+  return { world: w, doors, people, levels: [{ name: 'Roof', cut: 1e9, look: [0, 3.2, 0] }, { name: 'Upper floor', cut: FL + 2.55, look: [0, 3.4, 0] }, { name: 'Ground floor', cut: 2.55, look: [0, 0.6, 0] }], pool: [px0, pz0, px1, pz1], poolTop, poolDeep: poolTop - pf };
+}
+
+// ---------------------------------------------------------------- what moves, as a pure function of the tick
+export function poseDoor(d: Door) {
+  const a = d.yaw + d.swing * d.open * 1.75, rt: Rot = rotY(a); d.leaf.forEach((p, i) => { const l = d.local[i]!; p.at = add(d.hinge, apply(rt, l.at)); p.rot = rt; p.half = l.half; });
+}
+export interface Torch { lamp: number; at: V3; dir: V3 }
+/** a person walking their round: body pieces posed from the distance walked */
+export function posePerson(p: Person, t: number): Torch | null {
+  let total = 0; const n = p.path.length, seg: number[] = []; for (let i = 0; i < n; i++) { const d = sub(p.path[(i + 1) % n]!, p.path[i]!); seg.push(Math.hypot(...d)); total += seg[i]!; }
+  let s = ((t * p.speed + p.phase * 2.1) % total + total) % total, k = 0; while (s > seg[k]!) { s -= seg[k]!; k = (k + 1) % n; }
+  const a = p.path[k]!, b = p.path[(k + 1) % n]!, pos = add(a, mul(sub(b, a), s / seg[k]!)); const yawOf = (i: number) => { const d = sub(p.path[(i + 1) % n]!, p.path[i]!); return Math.atan2(d[0], d[2]); };
+  let yaw = yawOf(k); const turn = (from: number, to: number, w: number) => { let d = to - from; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return from + d * w; };
+  if (s < 0.5) yaw = turn(yawOf((k + n - 1) % n), yaw, 0.5 + s); else if (seg[k]! - s < 0.5) yaw = turn(yaw, yawOf((k + 1) % n), 0.5 - (seg[k]! - s));
+  const walked = t * p.speed + p.phase * 2.1, ph = walked * 4.3, rt = rotY(yaw), bob = Math.abs(Math.sin(ph)) * 0.025; const W = (x: number, y: number, z: number): V3 => add(pos, apply(rt, [x, y, z]));
+  const set = (i: number, at: V3, rot: Rot = rt) => { p.body[i]!.at = at; p.body[i]!.rot = rot; }; const bone = (i: number, u: V3, v: V3, r: number) => { const q = p.body[i]!, d = sub(v, u), l = Math.hypot(...d), y = norm(d), hx = norm([y[1] * apply(rt, [0, 0, 1])[2] - y[2] * apply(rt, [0, 0, 1])[1], y[2] * apply(rt, [0, 0, 1])[0] - y[0] * apply(rt, [0, 0, 1])[2], y[0] * apply(rt, [0, 0, 1])[1] - y[1] * apply(rt, [0, 0, 1])[0]]); q.at = mul(add(u, v), 0.5); q.rot = [hx, y, [hx[1] * y[2] - hx[2] * y[1], hx[2] * y[0] - hx[0] * y[2], hx[0] * y[1] - hx[1] * y[0]]]; q.half = [r, l / 2 + r * 0.8, r]; q.quad = [1 / r ** 2, 1 / q.half[1] ** 2, 1 / r ** 2, 0]; };
+  const lean = compose(rt, rotX(0.06)); set(0, W(0, 1.22 + bob, 0.01), lean); set(1, W(0, 1.26 + bob, 0.012), lean); set(2, W(0, 0.96 + bob, 0)); set(3, W(0, 1.62 + bob, 0.03)); set(4, W(0, 1.685 + bob, 0.012)); set(5, W(0, 1.635 + bob, 0.115));
+  for (const side of [0, 1]) {
+    const sg = side ? 1 : -1, sw = Math.sin(ph + side * Math.PI), hip = W(sg * 0.095, 0.94 + bob, 0), foot = W(sg * 0.10, 0.07 + Math.max(0, Math.cos(ph + side * Math.PI)) * 0.11, sw * 0.30), mid = add(mul(add(hip, foot), 0.5), apply(rt, [0, 0.02, 0.075 + Math.max(0, Math.cos(ph + side * Math.PI)) * 0.09]));
+    bone(6 + side * 2, hip, mid, 0.078); bone(7 + side * 2, mid, foot, 0.058); set(14 + side, add(foot, apply(rt, [0, -0.025, 0.06])));
+    const sh = W(sg * 0.2, 1.42 + bob, 0), hand = side ? W(0.10, 1.16 + bob, 0.30) : W(0.02, 1.15 + bob, 0.46), el = add(mul(add(sh, hand), 0.5), apply(rt, [sg * 0.07, -0.11, -0.03])); bone(10 + side * 2, sh, el, 0.052); bone(11 + side * 2, el, hand, 0.043); set(16 + side, hand);
+  }
+  set(18, W(0.07, 1.19 + bob, 0.42)); set(19, W(0.075, 1.10 + bob, 0.32));
+  const sweep = Math.sin(t * 0.8 + p.phase) * 0.35, dir = apply(compose(rt, compose(rotY(sweep), rotX(0.16))), [0, 0, 1]); return p.torch < 0 ? null : { lamp: p.torch, at: W(0.07, 1.22 + bob, 0.80), dir };
+}
