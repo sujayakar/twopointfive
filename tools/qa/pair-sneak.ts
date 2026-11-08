@@ -40,6 +40,7 @@
 // THE FIRST COMPROMISE (`first`): the first of {a defender noticed, something loud}, with what did it: who he had eyes on (Sam / the partner), what he last
 // heard and whose noise it was, where the partner stood (how far from Sam, in a doorway, lit, in the defender's line), who fired the first loud round.
 // THE HARNESS HAS NO GPU: no bounce light, no smoke, no picture, no sound. Nothing here was seen or heard.
+import { sneakWordOf } from './squadwords';
 import { mkdirSync, existsSync, readFileSync, appendFileSync, writeFileSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -150,7 +151,7 @@ async function one(scn: string, seed: number, arm: Arm, cap: number, verbose: bo
   function after() {
     frames++;
     if (WHERE && t >= WHERE[0] && t <= WHERE[1] && frames % 6 === 0) { const hs = hostiles().filter((h: any) => h.state !== 'dead');   // (PS_WHERE=a-b: where everybody stands, ten times a second)
-      say(`   @ Sam ${at(pl.char.pos)} ${pl.crouch ? 'low' : 'up'} v ${f1(Math.hypot(pl.char.vel[0], pl.char.vel[2]))} vis ${r2(pl.visibility)}${mate && mate.state !== 'dead' ? ` · ${mate.callsign} ${at(mate.char.pos)} ${mate.char.anim?.crouchTarget ? 'low' : 'up'} v ${f1(Math.hypot(mate.char.vel[0], mate.char.vel[2]))} vis ${r2(mate.visibility)} ${g.orders.of(mate)?.order ?? '—'} sneak ${SN?.sneakWord?.(g, mate) ?? '—'} spotted ${SP?.spottedMode?.(g, mate) ?? '—'} door ${doorNear(mate.char.pos) ?? '—'}` : ''} · ${hs.map((h: any) => `${h.callsign} ${at(h.char.pos)} ${h.state} aw ${r2(h.awareness)}${mate && mate.state !== 'dead' ? ` mate ${f1(flat(h.char.pos, mate.char.pos))} m${inView(h, mate.char).los ? ' LOS' : ''}${inView(h, mate.char).cone ? ' CONE' : ''}` : ''} sam ${f1(flat(h.char.pos, pl.char.pos))} m${inView(h, pl.char).los ? ' LOS' : ''}${inView(h, pl.char).cone ? ' CONE' : ''}`).join(' | ')}`); }
+      say(`   @ Sam ${at(pl.char.pos)} ${pl.crouch ? 'low' : 'up'} v ${f1(Math.hypot(pl.char.vel[0], pl.char.vel[2]))} vis ${r2(pl.visibility)}${mate && mate.state !== 'dead' ? ` · ${mate.callsign} ${at(mate.char.pos)} ${mate.char.anim?.crouchTarget ? 'low' : 'up'} v ${f1(Math.hypot(mate.char.vel[0], mate.char.vel[2]))} vis ${r2(mate.visibility)} ${g.orders.of(mate)?.order ?? '—'} sneak ${sneakWordOf(g, mate) ?? '—'} spotted ${SP?.spottedMode?.(g, mate) ?? '—'} door ${doorNear(mate.char.pos) ?? '—'}` : ''} · ${hs.map((h: any) => `${h.callsign} ${at(h.char.pos)} ${h.state} aw ${r2(h.awareness)}${mate && mate.state !== 'dead' ? ` mate ${f1(flat(h.char.pos, mate.char.pos))} m${inView(h, mate.char).los ? ' LOS' : ''}${inView(h, mate.char).cone ? ' CONE' : ''}` : ''} sam ${f1(flat(h.char.pos, pl.char.pos))} m${inView(h, pl.char).los ? ' LOS' : ''}${inView(h, pl.char).cone ? ' CONE' : ''}`).join(' | ')}`); }
     const H = hostiles();
     // this frame's events: what was loud, who made it — and the quiet ones kept a moment for 'what did he hear'
     for (const e of g.events) { if (seenEv.has(e)) continue; seenEv.add(e); const src = srcOfEv(e);

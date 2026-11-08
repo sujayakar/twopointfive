@@ -35,8 +35,8 @@
 //                  (F), the rescue's flow sending him to a mark, the fight AI having him: he is not free and his job goes that deal — and he is dealt to again
 //                  when he is handed back ('fall in'), with no word from Sam.
 //
-// The seam is in orders.ts tick() (poseFor: the watch point, the facing, whether he back-pedals) and one line in its hud() (the squad block says what each man is
-// on: 'Red One · with you · on the server door'; statusOf itself is the base's). Off (COVER.on false, ?nocover): tick() returns on its first line, poseFor
+// The seam is in orders.ts tick() (poseFor: the watch point, the facing, whether he back-pedals) and the view's squad line (the block says what each man is
+// on: 'Red One · with you · on the server door'; a man's line in the view: its base, then this tail). Off (COVER.on false, ?nocover): tick() returns on its first line, poseFor
 // answers null and the men are the base's, frame for frame.
 //   A STEP TO SEE  the one place the cover moves a man's FEET (COVER.step): stood still, dealt an open door he has no line through (its leaf is between him and
 //                  the doorway) or nothing with such a door near him, he takes a step or two to where he sees through it, never into an opening, and the
@@ -346,9 +346,6 @@ export class Cover {
   has(gd: Guard): boolean { const J = this.onOf(gd); return !!J && !J.off; }
   /** the opening his gun is on: dealt, or let go of and still his for the moment (REAR.settle) */
   private onOf(gd: Guard): CoverJob | undefined { return this.jobs.get(gd) ?? this.kept.get(gd)?.J; }
-  /** what he is on, in words ('' with nothing dealt) · the same as the tail of his row in the squad block (orders.ts: 'Red One · with you · on the server door') */
-  words(gd: Guard): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Cover.words', this, [gd]); if (__r !== RUST_PASS) return __r as any; } } const J = this.onOf(gd); return J && !J.off ? `on ${this.nameOf(J.o, gd.char.pos)}` : ''; }
-  tail(gd: Guard): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Cover.tail', this, [gd]); if (__r !== RUST_PASS) return __r as any; } } const w = this.words(gd); return w ? ` · ${w}` : ''; }
   /** one line for the console */
   summary(): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Cover.summary', this, []); if (__r !== RUST_PASS) return __r as any; } }
     if (!COVER.on) return 'cover: off';

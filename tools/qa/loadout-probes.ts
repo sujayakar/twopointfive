@@ -21,6 +21,7 @@
 // SINCE 2026-11-07 loadout-screen writes no settled switch. GONE BY A LATER SETTLED RULE: 'off the start card over the plain night the solo night's Deploy
 // is Start itself — no page load' put the solo night's fog (QUIETFOG.solo, settled on) down to ask "the start as it was"; under the fog that Deploy is a
 // load of its own link (solofog-check.ts asks that).
+import { menuKey } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 import { pool, jobsOf } from './pool.ts';
 import { resolve } from 'node:path';
@@ -74,7 +75,7 @@ async function boot(query: string): Promise<BootReport> {
     const { why } = startFromQuery(g, q); R.why = why;
     R.start = shotOf(W, levelFile, line);
     // ten seconds of play with the keys a player presses first: F (the drill's word, or the rescue's), then X twice (the order menu up and away)
-    for (let i = 0; i < 600; i++) { g.player.visibility = 0.05; if (i === 60 || i === 200) W.input.pressed.add('KeyF'); if (i === 320 || i === 340) W.input.pressed.add('KeyX'); W.step(DT); if (i === 4) R.start5 = shotOf(W, levelFile); }
+    for (let i = 0; i < 600; i++) { g.player.visibility = 0.05; if (i === 60 || i === 200) W.input.pressed.add('KeyF'); if (i === 320 || i === 340) menuKey(g.orders); W.step(DT); if (i === 4) R.start5 = shotOf(W, levelFile); }
     R.after = shotOf(W, levelFile);
     g.restartEncounter();
     for (let i = 0; i < 5; i++) { g.player.visibility = 0.05; W.step(DT); }

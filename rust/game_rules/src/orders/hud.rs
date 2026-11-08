@@ -1,0 +1,51 @@
+//! WHAT A SEAT'S HUD IS TOLD OF ITS SQUAD (`view::tick_view`): who the next order goes to, each man and what he is doing, the block's notes. Each line is worded by the
+//! rule it is about, and comes in the order the seat's rules registered their voices. A read: asking it writes nothing.
+use crate::game::Game;
+use crate::seats::SeatRef;
+use crate::view::{MateLine, Note, Pair, SquadView};
+use alloc::{string::String, vec::Vec};
+
+/// the squad's words for the seat (None: no squad answers to it)
+pub fn squad_view(g: &Game, seat: &SeatRef) -> Option<SquadView> {
+    if !super::squad_orders_active(g, seat) { return None; }
+    let squad = super::squad_orders_squad(g, seat);
+    let to = super::squad_orders_recipients(g, seat, None, None);
+    let up = squad.iter().filter(|&&gd| g.gd[gd].state != crate::game::GuardState::Dead).count();
+    let picked = to.len() < up;
+    let paired = super::squad_orders_paired(g, seat);
+    let mates = squad.iter().map(|&gd| MateLine {
+        man: g.ch[g.gd[gd].ch].id,
+        name: g.gd[gd].callsign.clone(),
+        doing: alloc::format!("{}{}", super::squad_orders_status_of(g, seat, gd), crate::cover::cover_tail(g, gd)),
+        addressed: picked && to.contains(&gd),
+        pair: if paired { g.gd[gd].unit.as_ref().and_then(|u| u.pair).map(pair_word) } else { None },
+        down: g.gd[gd].state == crate::game::GuardState::Dead,
+    }).collect();
+    let notes = seat.orders.notes.iter().flat_map(|&n| notes_of(g, seat, n)).collect();
+    Some(SquadView {
+        posture: if seat.orders.posture.is_some() { crate::silent::posture_word(g, seat) } else { None },
+        who: super::squad_orders_who_tag(g, seat).tag,
+        picked,
+        mates,
+        notes,
+    })
+}
+/// a voice registers for the block once, in the order they come
+pub fn squad_orders_voice(g: &mut Game, f: crate::orders::OrderNoteFn) { if !g.orders.notes.contains(&f) { g.orders.notes.push(f); } }
+
+/// one registered voice's lines (`SquadOrders.notes`, in the order they were registered): an order or a part with a line for the block has an arm here and a reader of the seat
+fn notes_of(g: &Game, seat: &SeatRef, n: crate::orders::OrderNoteFn) -> Vec<Note> {
+    use crate::orders::OrderNoteFn as F;
+    match n {
+        F::DoorToolsHud => crate::doortools::door_tools_hud_notes(g, seat).into_iter().map(|text| Note { key: String::new(), text }).collect(),
+        F::DoorToolsWord => crate::doortools::door_tools_word_note(g, seat),
+        F::WallCharge => crate::wallcharge::wall_charge_hud_notes(g, seat),
+        F::Pair => crate::pairorders::pair_orders_mark_note(g, seat),
+        F::Squad40 => crate::squad40::notes(g, seat),
+        F::SquadThrow => crate::squadthrow::notes(g, seat),
+        F::SquadSmoke => crate::squadsmoke::notes(g, seat),
+    }
+}
+fn pair_word(p: crate::game::PairId) -> Pair {
+    match p { crate::game::PairId::Red => Pair::Red, crate::game::PairId::Blue => Pair::Blue }
+}

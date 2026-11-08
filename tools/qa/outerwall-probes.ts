@@ -15,6 +15,7 @@
 //             un-adopted; after the breach, more of the same widen nothing;
 //   (live)    both sides awake through a breach: nothing throws, nobody ends in a wall, the change goes out on the engine's feed;
 //   (reset)   a restart after a breach: the wall is whole and structure again (the engine has let it go); a checkpoint taken after a breach, loaded: the hole is there.
+import { menuKey } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 import { samBlows, samBreach } from './charge-rig.ts';
 import { listen } from './heard.ts';
@@ -85,7 +86,7 @@ async function rig(scn: string, seed: number, o: { squad?: boolean; still?: bool
     step(n = 1) { for (let i = 0; i < n; i++) { R.each(); W.step(DT); ears.poll(); } },
     until(pred: () => boolean, secs: number) { for (let i = 0; i < secs * 60 && !pred(); i++) R.step(); return pred(); },
     press(code: string) { input.pressed.add(code); R.step(); },
-    pick(p: number[], ...n: number[]) { W.cursorAt([p[0], p[1], p[2]]); input.pressed.add(ORDERS.key); R.step(); R.step(20); for (const k of n) { input.pressed.add(`Digit${k}`); R.step(); R.step(6); } },
+    pick(p: number[], ...n: number[]) { W.cursorAt([p[0], p[1], p[2]]); menuKey(O); R.step(); R.step(20); for (const k of n) { input.pressed.add(`Digit${k}`); R.step(); R.step(6); } },
     beats(op: any): string { return (op?.beats ?? []).map((b: any) => `${f2(b.t)} ${b.what}`).join(' | '); },
     free(p: number[]) { return !game.col.nav.isBlocked(p[0], p[2]); },
     pathLen(a: number[], b: number[]): number { const path = game.col.nav.findPath(a, b); if (!path) return Infinity; let L = 0, q = a; for (const w of path) { L += flat(q, w); q = w; } return L + flat(q, b); },

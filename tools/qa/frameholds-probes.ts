@@ -20,6 +20,7 @@
 //                      it starts no kick; from the push face his rows as ever
 //   frameholds-wedge   the last three defenders of the compound ordered into one room (LASTSTAND.regroup, an open switch: raised here), that room's doors hung
 //                      to open OUT of it: nobody wedges one and each door passed over is counted; hung to open INTO it: wedged; one out and the rest in
+import { listedOf, menuKey } from './squadwords';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
@@ -84,10 +85,10 @@ async function rig(seed: number, o: { charges?: number; big?: boolean } = {}) {
     beats(op: any): string { return (op?.beats ?? []).map((b: any) => b.what).join(' | '); },
     /** X on the door, its tools page read off the panel, Esc */
     tools(name: string): { id: string; text: string; off: boolean; why: string | null }[] {
-      const p = R.door(name).frameCentre; W.cursorAt([p[0], 2.2, p[2]]); input.pressed.add(ORDERS.key); R.step(); R.step(24);   // (the cursor on its lintel: nothing stands between that and the camera)
+      const p = R.door(name).frameCentre; W.cursorAt([p[0], 2.2, p[2]]); menuKey(O); R.step(); R.step(24);   // (the cursor on its lintel: nothing stands between that and the camera)
       const opener = O.menu?.rows.find((r: any) => r.opens); if (!opener) { R.note = `menu ${O.menu ? `${O.menu.target.kind}: ${O.menu.rows.map((r: any) => r.id).join(' ')}` : 'did not come up'}`; input.pressed.add('Escape'); R.step(); return []; }
       input.pressed.add(`Digit${opener.key}`); R.step(); R.step(4);
-      const M = O.menu, body = (O.hud().menu?.rows ?? []).slice(1).filter((r: any) => r.kind !== 'cancel');
+      const M = O.menu, body = (listedOf(O)?.rows ?? []);
       const rows = M && M.page === opener.opens ? M.rows.map((d: any, i: number) => ({ id: d.id as string, text: String(body[i]?.opts?.[0]?.text ?? ''), off: !!body[i]?.off, why: (M.why[i] ?? null) as string | null })) : [];
       for (let i = 0; i < 3 && O.menu; i++) { input.pressed.add('Escape'); R.step(); }
       return rows; },

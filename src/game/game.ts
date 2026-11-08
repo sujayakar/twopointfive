@@ -95,6 +95,7 @@ import './netquiet';
 import './samstun';
 import './sprintdoor';
 import './deathrecap';
+import './planmode';   // (its tables are on the wire)
 import { bodyLightSummary, groundFresh } from './guards';
 import { CpuSmoke } from './sense';
 import { DRESS } from './dress';

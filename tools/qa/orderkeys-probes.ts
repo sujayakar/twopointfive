@@ -6,9 +6,9 @@
 // on scenarioQuery(entry), on its own level file), plus the one hand-typed combination that stages a team the list does not (?nightbreach&squad4).
 //   orderkeys-walk    in each scenario: X pressed on a spot of floor, on Sam, on a teammate and on a door, and the menu opened on EVERY door of the level;
 //                     every page of every one of those menus is walked BY ITS KEYS (the row that opens a page pressed, Esc back, a right click back, X to
-//                     close) and every row read twice — as the order table has it (OrderDef.key / hotKey) and as the panel shows it (hud().menu). A row FAILS
+//                     close) and every row read off the order table (OrderDef.key / hotKey). A row FAILS
 //                     when its digit is above ORDER_DIGITS, when it has no key at all, when its key is not one of the left hand's (X T B F, 1 to 5), when two
-//                     rows of a page share a digit, or when the panel shows another key than the one that gives it. The hint line may name no digit.
+//                     rows of a page share a digit.
 //   orderkeys-give    in each scenario: every row of every page, on each kind of target, GIVEN by the keys the walk read — X, then the digits — on a fresh
 //                     staging: the order is logged as that order and the menu is gone (a row greyed there, with its reason, must be refused and log
 //                     nothing: it is counted apart). A FREE row (the silent word, a throw: it takes nobody off his order and give() logs no order for
@@ -19,6 +19,7 @@
 //                     (the threshold's page where the tools page turns to one; where 'clear from outside' is a plain row on 4, that is what is held)
 //   orderkeys-table   the table itself: ORDER_DIGITS is 5, the keys the orders read are X T B F and nothing else, register() never deals a digit above it
 //                     (a page of twelve rows: five digits, the rest on the wheel), and no line of the order path names a digit key above it
+import { menuKey } from './squadwords';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
@@ -119,7 +120,7 @@ async function rig(scn: Scn, seed = 21) {
       return man;
     },
     /** X pressed on what the cursor is on, then a few frames with every key up: the menu (or null) */
-    openX(wait = 6): any { R.press(ORDERS.key); R.step(wait); return O.menu; },
+    openX(wait = 6): any { (menuKey(O), R.step()); R.step(wait); return O.menu; },
   };
   // the family's own red paths (ORDERKEYS_BREAK=1 bun run tools/qa/probes.ts orderkeys-walk must FAIL): one tool put back on a digit out of reach; `four`: row 4 of the door tools on 6
   if (BREAK === '1') { const d = O.defs.find((x: any) => x.id === 'bangClear'); if (d) d.key = 7; }
@@ -129,33 +130,23 @@ async function rig(scn: Scn, seed = 21) {
 }
 type Rig = Awaited<ReturnType<typeof rig>>;
 
-/** A page of an open menu, read both ways: the order table's rows and the panel's. */
-interface RowRead { id: string; digit: number | null; hot: string | null; opens: string | null; why: string | null; shown: string }
-interface PageRead { page: string | null; rows: RowRead[]; wait: { shown: string; digit: number } | null; hint: string; bad: string[]; /** the keys that turn the menu to it (walkMenu's): a digit, or the code of an opener's own letter */ via?: (number | string)[] }
+/** A page of an open menu, as the order table has it. */
+interface RowRead { id: string; digit: number | null; hot: string | null; opens: string | null; why: string | null }
+interface PageRead { page: string | null; rows: RowRead[]; bad: string[]; /** the keys that turn the menu to it (walkMenu's): a digit, or the code of an opener's own letter */ via?: (number | string)[] }
 function readPage(O: any): PageRead {
-  const M = O.menu, hud = O.hud().menu; const bad: string[] = [];
-  // the panel: [who row, …one row an order…, (the wait row), the cancel row]
-  const panel = (hud?.rows ?? []).slice(1, 1 + M.rows.length);
-  const rows: RowRead[] = M.rows.map((d: any, i: number) => ({ id: d.id, digit: d.key ?? null, hot: d.hotKey ? nameOf(d.hotKey) : null, opens: d.opens ?? null, why: M.why[i] ?? null, shown: String(panel[i]?.opts?.[0]?.key ?? '') }));
+  const M = O.menu; const bad: string[] = [];
+  const rows: RowRead[] = M.rows.map((d: any, i: number) => ({ id: d.id, digit: d.key ?? null, hot: d.hotKey ? nameOf(d.hotKey) : null, opens: d.opens ?? null, why: M.why[i] ?? null }));
   const where = `page ${M.page ?? 'first'}`;
   const digits = rows.filter(r => r.digit !== null).map(r => r.digit as number);
   for (const r of rows) {
     if (r.digit !== null && !(Number.isInteger(r.digit) && r.digit >= 1 && r.digit <= ORDER_DIGITS)) bad.push(`${where}: '${r.id}' is on digit ${r.digit}`);
     if (r.digit === null && !r.hot) bad.push(`${where}: '${r.id}' has no key at all`);
     const want = r.digit !== null ? String(r.digit) : r.hot ?? '';
-    if (r.shown !== want) bad.push(`${where}: '${r.id}' is given by ${want || 'nothing'} but the panel shows "${r.shown}"`);
-    if (!leftKey(r.shown)) bad.push(`${where}: '${r.id}' shows "${r.shown}", not a key of the left hand`);
+    if (!leftKey(want)) bad.push(`${where}: '${r.id}' is on "${want}", not a key of the left hand`);
   }
   if (new Set(digits).size !== digits.length) bad.push(`${where}: two rows share a digit (${digits.join(' ')})`);
   if (digits.length > ORDER_DIGITS) bad.push(`${where}: ${digits.length} rows on digits`);
-  let wait: PageRead['wait'] = null;
-  if (M.wordRow) { const w = hud?.rows?.[1 + M.rows.length], shown = String(w?.opts?.[0]?.key ?? ''); wait = { shown, digit: /^[1-9]$/.test(shown) ? Number(shown) : 0 };
-    if (w?.label !== WORD_HEAD || !/wait for my word/.test(w?.opts?.[0]?.text ?? '')) bad.push(`${where}: the wait row is not where the panel has it`);
-    if (!leftKey(shown)) bad.push(`${where}: the wait row shows "${shown}"`);
-    if (wait.digit && digits.includes(wait.digit)) bad.push(`${where}: the wait row shares digit ${wait.digit} with an order`); }
-  const hint = String(hud?.hint ?? ''); if (/\d/.test(hint)) bad.push(`${where}: the hint line names a digit ("${hint}")`);
-  for (const r of hud?.rows ?? []) for (const o of r.opts ?? []) if (/^\d+$/.test(o.key) && !(Number(o.key) >= 1 && Number(o.key) <= ORDER_DIGITS)) bad.push(`${where}: the panel shows key "${o.key}" (${o.text})`);
-  return { page: M.page ?? null, rows, wait, hint, bad };
+  return { page: M.page ?? null, rows, bad };
 }
 
 /** The open menu walked by its keys: its first page read, each row that opens a page pressed (the page read — and the pages behind ITS openers, the same way;
@@ -204,8 +195,8 @@ export const orderkeysHigh = guarded(async () => {
       const same = O.menu === M && (!M || (M.page === page && M.sel === sel && M.onWord === onWord && M.rows.length === rows)), quietLog = O.log.length === l0 && D.ops.length === ops0 && g.player.slot === slot0;
       ok &&= same && quietLog; out.push(`${what}: ${same ? 'as it was' : 'CHANGED'}${quietLog ? '' : ' · SOMETHING WAS GIVEN'}`); };
     R.aim = null; R.step(2); hit('no menu');
-    R.onFloor(); R.openX(); hit('floor menu'); R.press(ORDERS.key);
-    R.onSam(); R.openX(); hit('Sam menu'); R.press(ORDERS.key);
+    R.onFloor(); R.openX(); hit('floor menu'); (menuKey(O), R.step());
+    R.onSam(); R.openX(); hit('Sam menu'); (menuKey(O), R.step());
     if (door) { R.atDoor(door); const M = R.openX(); hit('door menu, first page'); const k = M?.rows.find((r: any) => r.opens)?.key; R.press(`Digit${k}`); ok &&= !!O.menu && O.menu.page !== null; hit('door menu, tools page');
       // (…and the page under the tools page, where the menu has one: the threshold's. Where 'clear from outside' is a plain row of the tools page
       //  — doortools.ts DOORTOOLS.outsidePlain — there is no page to turn to, and the line says so instead of pressing a key that opens nothing)
@@ -213,7 +204,7 @@ export const orderkeysHigh = guarded(async () => {
       if (k2 !== undefined) { R.press(`Digit${k2}`); ok &&= !!O.menu && O.menu.page !== null && O.menu.page !== 'tools'; hit('door menu, threshold page'); }
       else { const M2 = O.menu, four = M2?.rows[3], plain = !!M2 && M2.page === 'tools' && DOORTOOLS.outsidePlain === true && four?.id === 'thresholdHold' && String(four.key) === '4' && !M2.rows.some((r: any) => r.opens);
         ok &&= plain; out.push(plain ? 'no page under the tools page (outside is a plain row there, on 4)' : !M2 ? 'THE MENU WAS GONE FROM THE TOOLS PAGE' : `NO PAGE UNDER THE TOOLS PAGE (page ${M2.page}, rows ${M2.rows.map((r: any) => `${r.key} ${r.id}`).join(' · ')})`); }
-      R.press(ORDERS.key); }
+      (menuKey(O), R.step()); }
     verdict(ok && O.menu === null, `${scn.name} (${scn.query}): ${HIGH.map(nameOf).join(' ')} pressed with each menu page up and with none — no order, no page turned, Sam's slot as it was`, `${out.join(' · ')} · orders logged ${O.log.length - l0} · slot ${slot0} → ${g.player.slot}`);
   }
   return done();
@@ -222,7 +213,7 @@ export const orderkeysHigh = guarded(async () => {
 // ---------------------------------------------------------------- the table and the code
 export const orderkeysTable = guarded(async () => {
   const { verdict, done } = family('orderkeys-table: the order table deals no digit above the reach, and the keys the orders read are the left hand\'s');
-  const keys: [string, string][] = [[ORDERS.key, 'the menu'], [ORDERS.whoKey, 'who'], [ORDERS.quickKey, 'the quick order'], [ORDERS.waitKey, 'wait for my word'], [ORDERS.waitAlt, 'wait for my word (second key)'], [DOORTOOLS.blowKey, 'the word / the trigger']];
+  const keys: [string, string][] = [[ORDERS.whoKey, 'who'], [ORDERS.quickKey, 'the quick order'], [ORDERS.waitKey, 'wait for my word'], [ORDERS.waitAlt, 'wait for my word (second key)'], [DOORTOOLS.blowKey, 'the word / the trigger']];
   const okKeys = keys.every(([k]) => leftKey(nameOf(k)));
   verdict(ORDER_DIGITS === 5 && okKeys, `ORDER_DIGITS is 5, and every key an order is read from is one of ${LETTERS.join(' ')} or 1 to 5`, keys.map(([k, v]) => `${nameOf(k)} ${v}`).join(' · '));
   { // every row the game registers, for the pair and for the four
