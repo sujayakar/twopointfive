@@ -99,7 +99,6 @@ fn st_of(g: &mut Game) -> &mut State { g.m.laststand.states.as_mut().unwrap() }
 /// the check that is open (st.check), by its path: tick_check's C
 fn check_of(g: &mut Game) -> &mut Check { st_of(g).check.as_mut().unwrap() }
 /// (:405) member, which needs nothing of g
-fn stand_has(s: &Stand, d: RoomfightDefId) -> bool { s.in_.has(d) || s.out.has(d) || s.movers.iter().any(|m| m.d == d) }
 /// JavaScript's truth of an optional string
 fn id_truthy(id: &Option<String>) -> bool { id.as_deref().map_or(false, |s| !s.is_empty()) }
 /// where this man's body stands
@@ -335,7 +334,6 @@ pub fn tick_moved(g: &mut crate::game::Game) {
         let st = st_of(g);
         let said = st.at.get_mut(d).unwrap();
         if flat(p, said.still_at) > 0.4 { said.still_at = v3::copy(p); said.still_t = time; }
-        if st.stand.as_ref().map_or(false, |s| stand_has(s, d)) { continue; }
         let w = spoken(g, p);
         let free = g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Free;
         let now: Option<&str> = match &w.id { Some(id) => Some(id.as_str()), None => w.spot.as_ref().map(|s| s.name.as_str()) };
@@ -516,12 +514,9 @@ pub fn choose(g: &mut crate::game::Game, men: &[RoomfightDefId], known: &[V3], m
 
 /// one of the fit asks the net who is still up; every other man up gets his beat to answer (laststand.ts startCheck)
 pub fn start_check(g: &mut crate::game::Game) {
-    let stand = st_of(g).stand.clone();
     let men = up_defs(g);
     let can: Vec<RoomfightDefId> = men.iter().copied().filter(|&d| calm(g, d)).collect();
-    let in_stand = stand.as_ref().and_then(|s| can.iter().copied().find(|&d| s.in_.has(d)));
-    let caller = in_stand
-        .or_else(|| can.iter().copied().find(|&d| g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Hold))
+    let caller = can.iter().copied().find(|&d| g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Hold)
         .or_else(|| can.first().copied());
     let time = g.time;
     let st = st_of(g);
@@ -531,22 +526,15 @@ pub fn start_check(g: &mut crate::game::Game) {
     st.stats.checks += 1.0;
     let checks = st.stats.checks;
     let caller_gd = g.tab.roomfight_def[caller].gd;
-    // (the room's men in the room with him: only with a room, and him in it)
-    let caller_in_room = stand.as_ref().map_or(false, |s| s.room.is_some() && s.in_.has(caller));
-    match stand.as_ref() {
-        Some(s) if caller_in_room && s.in_.len() + s.movers.len() > 1 => {
-            net(g, caller_gd, LineKind::CheckStand, Some(&vars_of(&[("the", s.the.as_str())])), None, None);
-        }
-        _ if lone_now => net_at(g, caller, LineKind::CheckLoneAt, &LaterRedo::CheckLone { d: caller }),
-        _ => net(g, caller_gd, if first { LineKind::Check1 } else { LineKind::CheckN }, None, None, None),
-    }
+    if lone_now { net_at(g, caller, LineKind::CheckLoneAt, &LaterRedo::CheckLone { d: caller }); }
+    else { net(g, caller_gd, if first { LineKind::Check1 } else { LineKind::CheckN }, None, None, None); }
     let answer = g.k.laststand.answer;
     let between = g.k.laststand.between;
     let listen = g.k.laststand.listen;
     let mut at = g.time + pick(g, answer);
     let mut due: Vec<CheckDueItem> = Vec::new();
     for &d in &men {
-        if d == caller || (caller_in_room && stand.as_ref().map_or(false, |s| s.in_.has(d))) { continue; }
+        if d == caller { continue; }
         due.push(CheckDueItem { d, at });
         at += pick(g, between);
     }
@@ -580,21 +568,15 @@ pub fn tick_check(g: &mut crate::game::Game) {
         st_of(g).stats.answers += 1.0;
     }
     if g.time < check_of(g).close_at { return; }
-    let (time, again, every) = (g.time, g.k.laststand.again, g.k.laststand.every);
+    let (time, every) = (g.time, g.k.laststand.every);
     let st = st_of(g);
     let got = st.check.take().unwrap().got;
-    let stand = st.stand.clone();
-    st.next_at = time + if stand.as_ref().map_or(false, |s| s.set_said) { again } else { every };
-    let with_: Vec<RoomfightDefId> = match stand.as_ref() {
-        Some(s) if s.room.is_some() && s.in_.has(caller) => { let all = s.in_.keys(); all.into_iter().filter(|&d| alive(g, d)).collect() }
-        _ => Vec::new(),
-    };
+    st.next_at = time + every;
     let mut heard: Vec<RoomfightDefId> = Vec::new();
     if alive(g, caller) { heard.push(caller); }
     for &d in &got { if alive(g, d) { heard.push(d); } }
     let mut known = JsSet::new();
     for &d in &heard { known.add(d); }
-    for &d in &with_ { known.add(d); }
     let up = up_defs(g).len() as f64;
     let silent: Vec<GuardId> = g.fight.defs.iter().filter(|&&d| !known.has(d)).map(|&d| g.tab.roomfight_def[d].gd).collect();
     let heard_gds: Vec<GuardId> = heard.iter().map(|&d| g.tab.roomfight_def[d].gd).collect();
@@ -606,8 +588,7 @@ pub fn tick_check(g: &mut crate::game::Game) {
     let mut names = st.named.keys();
     names.extend(st.spots.keys());
     for d in names {
-        let held = stand.as_ref().map_or(false, |s| stand_has(s, d));
-        if !known.has(d) && !held { name(g, d, None); }
+        if !known.has(d) { name(g, d, None); }
     }
     let signs: Vec<String> = known.keys().iter().map(|&d| g.gd[g.tab.roomfight_def[d].gd].callsign.clone()).collect();
     note(g, Some(caller_gd), &alloc::format!("check closes: {} known up ({})", known.len(), signs.join(", ")));
@@ -645,13 +626,6 @@ pub fn tell_only(g: &mut crate::game::Game, c_2: RoomfightDefId) {
     }
 }
 
-/// where a man coming in is put beside: a man of theirs in the room, else the spot the room was picked by (laststand.ts anchorOf)
-pub fn anchor_of(g: &crate::game::Game, s: &crate::laststand::Stand) -> V3 {
-    for d in s.in_.keys() {
-        if alive(g, d) { return man_pos(g, d); }
-    }
-    s.anchor
-}
 
 #[cfg(test)]
 mod tests {
