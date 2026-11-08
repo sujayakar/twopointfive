@@ -1,9 +1,7 @@
-// A TAKE OUT OF A PAGE THAT CANNOT DOWNLOAD (the look prototype as a hosted page: ui/lookpanel.ts). The F9 recorder's take (ui/perfrec.ts) leaves a page as a
-// file in the downloads; a page in a sandbox that starts no download keeps it. Here the same take goes two more ways: a SHORT READ of it (takeRead: the frame
-// times, the slow frames one by one with what each cost, the passes) that fits a text box, and the WHOLE take, its own JSON gzipped and cut in parts, into a
-// store the HOSTING page hands in (window.__takeStore: put(path, document)). No page of this repo hands one in: there the read sits in a box with a Copy
-// button and nothing is sent anywhere. A sweep's rows are NOT priced here: tools/qa/perf-report.ts prices them off the whole take, by its own rules.
-import { serializeDump, type PerfDump, type PerfFrame } from './perfrec';
+// THE SHORT READ OF A TAKE (ui/lookpanel.ts). The F9 recorder's take (ui/perfrec.ts) leaves a page as a file; here is a short read of it (takeRead: the frame
+// times, the slow frames one by one with what each cost, the passes) that fits a text box with a Copy button. A sweep's rows are NOT priced here:
+// tools/qa/perf-report.ts prices them off the whole take, by its own rules.
+import type { PerfDump, PerfFrame } from './perfrec';
 
 const r2 = (v: number) => Math.round(v * 100) / 100;
 const mean = (a: number[]) => a.length ? a.reduce((s, v) => s + v, 0) / a.length : 0;
@@ -47,31 +45,4 @@ export function takeWords(r: TakeRead): string[] {
   const out = [`${r.frames} frames in ${r.seconds} s`, `a frame: ${r.dt.p50} ms in the middle, ${r.dt.p95} at the 95th, ${r.dt.worst} at worst`, `slow frames: ${r.over['25ms']} over 25 ms, ${r.over['33ms']} over 33, ${r.over['50ms']} over 50`];
   if (r.sweep) out.push(`the sweep: ${r.sweep.rows} rows, ${r.sweep.segments} segments; its rows are priced when the take is read`);
   return out;
-}
-
-const PART = 180000;   // characters of base64 a part holds (a document of the store is 256 KiB at most)
-async function gzip64(parts: string[]): Promise<string> {
-  const buf = new Uint8Array(await new Response(new Blob(parts).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer());
-  let s = ''; for (let i = 0; i < buf.length; i += 0x8000) s += String.fromCharCode(...buf.subarray(i, i + 0x8000));
-  return btoa(s);
-}
-/** what a hosting page hands in as window.__takeStore: one JSON document kept under a path ("a/b" or "a/b/c/d"), a document under 256 KiB */
-interface TakeStore { put(path: string, doc: Record<string, unknown>): Promise<void> }
-let sending: Promise<unknown> = Promise.resolve();
-/** the take into the store: its read as one document (`takes/<id>`), then the whole take in parts under it. One take at a time (a second waits for the first), a
- *  write that fails is tried once more. Returns what to tell the person */
-export function sendTake(dump: PerfDump, read: TakeRead, say: (s: string) => void): Promise<string> {
-  const run = async (): Promise<string> => {
-    const st = (window as unknown as { __takeStore?: TakeStore }).__takeStore;
-    if (!st?.put) return 'no store on this page: the read is in the box, to copy';
-    const put = async (path: string, doc: Record<string, unknown>) => { try { await st.put(path, doc); } catch { await new Promise(r => setTimeout(r, 700)); await st.put(path, doc); } };
-    try {
-      say('packing the take'); const b64 = await gzip64(serializeDump(dump)), n = Math.ceil(b64.length / PART), head = { ...read, parts: n, chars: b64.length, packing: 'gzip, base64' };
-      await put(`takes/${read.id}`, { ...head, sent: false });
-      for (let i = 0; i < n; i++) { say(`sending part ${i + 1} of ${n}`); await put(`takes/${read.id}/parts/${String(i).padStart(4, '0')}`, { i, of: n, b64: b64.slice(i * PART, (i + 1) * PART) }); }
-      await put(`takes/${read.id}`, { ...head, sent: true });
-      return `sent: take ${read.id}`;
-    } catch (e) { return `not sent (${String((e as { code?: string; message?: string })?.code ?? (e as Error)?.message ?? e).slice(0, 80)}): the read is in the box, to copy`; }
-  };
-  const mine = sending.then(run, run); sending = mine; return mine;
 }
