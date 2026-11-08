@@ -38,7 +38,6 @@ import { TexturePool, TargetOps, texBytes } from './texpool';
 import { capUsage } from './framecap';
 import { Denoiser, dnTravel, dnIters, DN_STRIDES } from './denoise';
 import type { Box } from '../scene/boxes';
-import { tuned } from './shaderTune';   // the scene tweak panel's constant overrides (empty map = compositeSrc itself)
 import { FogPass, type FogFrame } from './fogofwar';   // FOG OF WAR (game/fogofwar.ts): one in-place pass over the composite while its switch is on — nothing while off
 import { OutlinePass, type OutlineFrame } from './outline';   // THE OUTLINE IN THE DARK (host/findme.ts): one scissored blend onto the composite while its Options row is on — nothing while off
 
@@ -71,8 +70,6 @@ const BEAM_MAX = 8, BEAM_HEAD = 32, BEAM_SEG_BYTES = BEAM_HEAD + BEAM_MAX * 48, 
 export interface FireRecord { pos: ArrayLike<number>; r: number; h: number; heat: number; seed: number; time: number; wind: ArrayLike<number>; flick: number; /** the bed of coals' radius, m (0 or absent = none drawn) */ bed?: number; /** under the fog of war (RtLight.fog's numbers): 0 or absent = drawn wherever it stands · 1 = only where the team sees · 2 = only where it does not */ fog?: number; /** how much of its flame is the smoke solver's gas (0‥1; game/fire.ts FIRE.gas) */ gas?: number; /** how far its smoke is the smoke solver's soot (0‥1; game/fire.ts FIRE_LOOK_SMOKE, the look page's ONE COLUMN): the drawn soot hands over by that much */ soot?: number }
 const RESTIR_U_HEAD = 192, RESTIR_U_FWD = 64, RESTIR_U_INV = 128;
 const TF = { Reset: 1, Bypass: 2, Particles: 4, Velocity: 8 } as const;   // TaauParams.flags (TF_* in taau.wgsl)
-/** composite.wgsl as bundled (the scene tweak panel lists its constants off it: render/shaderTune.ts shaderConsts) */
-export function compositeText(): string { return compositeSrc; }
 
 export class LightingPasses {
   width = 0; height = 0;
@@ -474,7 +471,7 @@ export class LightingPasses {
       { binding: 2, visibility: CS, buffer: { type: 'uniform' } },
     ] });
     this.restirU = makeBuffer(device, this.restirUData.byteLength, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'restirU');
-    this.compText = (sharp: boolean, p: string = pre) => p + lightingCommon + decalWgslConsts(10) + decalsSrc + markingsSrc + `const SHARP: bool = ${sharp};\n` + refractCommonSrc + fireSrc + placeCommonSrc + tuned(compositeSrc);   // + decals.wgsl for the glass cracks (its DK_GLASS path; the g-buffer kinds are dead code here) + markings.wgsl (markEmissiveAt); SHARP = the sharp-direct twin (composite.wgsl header)
+    this.compText = (sharp: boolean, p: string = pre) => p + lightingCommon + decalWgslConsts(10) + decalsSrc + markingsSrc + `const SHARP: bool = ${sharp};\n` + refractCommonSrc + fireSrc + placeCommonSrc + compositeSrc;   // + decals.wgsl for the glass cracks (its DK_GLASS path; the g-buffer kinds are dead code here) + markings.wgsl (markEmissiveAt); SHARP = the sharp-direct twin (composite.wgsl header)
     this.buildGbaa = () => { this.pGbaa = device.createComputePipeline(this.gbaaDesc()); };   // (on first use, unless init({ gbaa }) prepared it)
     this.buildSharp = (traced: boolean) => {   // SHARP DIRECT's pipelines, on first use (ensureSharp) unless init({ sharp }) prepared the first three: the composite's compute twin, sharpU (SLIVER_RAYS false — no tracer compiled in — and, only once the sliver rule asks for it, true), the 1 : 1 resolve
       if (!this.pSharpU) {
@@ -579,39 +576,6 @@ export class LightingPasses {
           vertex: { module: compMod, entryPoint: 'vs' }, fragment: { module: compMod, entryPoint: 'fs', targets: [{ format: 'rgba16float' }] }, primitive: { topology: 'triangle-list' } }; };
       if (lateC) setL(() => laterRenderPipelineAsync(device, desc()), () => !!this.pComp, p => { this.pComp = p; });
       else set(renderPipelineAsync(device, desc()), p => { this.pComp = p; }); }
-  }
-  /** SCENE TWEAK PANEL (ui/sceneTweak.ts over render/shaderTune.ts): rebuild the composite's programs from its text as SHADER_TUNE has it now — the fragment one, and the compute one
-   *  where this page has built it. All or nothing: every live pipeline stays on an error. Takes its turn behind an earlier retune, so the newest text is the one left installed. */
-  retuneComposite(): Promise<{ ok: boolean; messages: string[] }> {
-    const run = this.retuning.catch(() => { /* its caller has it */ }).then(() => this.retuneCompositeNow());
-    this.retuning = run.then(() => { /* the queue carries no value */ }, () => { /* its caller has it */ });
-    return run;
-  }
-  private retuning: Promise<void> = Promise.resolve();
-  private compTunedAs = compositeSrc;   // the composite text the installed programs were built from (a retune skips a text that already runs; a set built later reads the same text)
-  private async retuneCompositeNow(): Promise<{ ok: boolean; messages: string[] }> {
-    const d = this.device, body = tuned(compositeSrc), bodyLines = body.split('\n').length;
-    if (body === this.compTunedAs) return { ok: true, messages: [] };
-    const wantS = !!this.pSharpU;   // (the compute one only where this page has it)
-    const mods: { key: string; label: string; sharp: boolean; mod: GPUShaderModule; off: number }[] = [];
-    for (const sharp of wantS ? [false, true] : [false]) {
-      const code = this.compText(sharp, scenePrelude()), label = `composite${sharp ? 'S' : ''}`;
-      mods.push({ key: `pComp${sharp ? 'S' : ''}`, label, sharp, mod: d.createShaderModule({ code, label }), off: code.split('\n').length - bodyLines });
-    }
-    const infos = await Promise.all(mods.map(m => m.mod.getCompilationInfo()));
-    const messages = infos.flatMap((info, i) => info.messages.map(m => `${mods[i].label} ${m.type} ${m.lineNum - mods[i].off}:${m.linePos} ${m.message}`));   // (line numbers are composite.wgsl's own)
-    if (infos.some(info => info.messages.some(m => m.type === 'error'))) return { ok: false, messages };
-    const layF = d.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lComp] }), layS = d.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lCompS] });
-    let ps: (GPUComputePipeline | GPURenderPipeline)[];
-    try {
-      ps = await Promise.all(mods.map(({ label, sharp, mod }): Promise<GPUComputePipeline | GPURenderPipeline> => sharp
-        ? d.createComputePipelineAsync({ label, layout: layS, compute: { module: mod, entryPoint: 'cs' } })
-        : d.createRenderPipelineAsync({ label, layout: layF, vertex: { module: mod, entryPoint: 'vs' }, fragment: { module: mod, entryPoint: 'fs', targets: [{ format: 'rgba16float' }] }, primitive: { topology: 'triangle-list' } })));
-    } catch (e) { return { ok: false, messages: [...messages, `pipeline: ${(e as Error)?.message ?? e}`] }; }
-    const o = this as unknown as Record<string, unknown>;
-    mods.forEach((m, i) => { o[m.key] = ps[i]; });
-    this.compTunedAs = body;
-    return { ok: true, messages };
   }
 
   /** Dev / measurement hook (main.ts __hotVol): rebuild the volumetric pipeline from `src` (a volumetrics.wgsl variant; the same prelude is prepended) so an
