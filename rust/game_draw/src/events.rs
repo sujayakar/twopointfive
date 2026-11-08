@@ -18,6 +18,11 @@ fn f3(v: [f64; 3]) -> [f32; 3] { v.map(|x| x as f32) }
 /// `speed` m/s along `dir`, which says where and need not be a unit (a fire's leans with the wind): the solver takes the same two apart
 fn along(dir: [f64; 3], speed: f64) -> [f32; 3] { let n = (dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2]).sqrt(); f3(if n > 0.0 { dir.map(|d| d / n * speed) } else { [0.0; 3] }) }
 
+/// a moving man as the air is told of him: from how fast (m/s); his capsule's radius, from `foot` over the floor to `above` over his hips; and a stride's kick, `back` behind and `low` under his hips,
+/// `kick` of his speed over a radius of `kick_r`, left out while the sine that picks its side is under `gap`
+struct Wake { least: f64, body: f64, foot: f64, above: f64, back: f64, low: f64, kick: f64, kick_r: f64, gap: f64 }
+const WAKE: Wake = Wake { least: 0.25, body: 0.24, foot: 0.12, above: 0.5, back: 0.3, low: 0.2, kick: 0.9, kick_r: 0.17, gap: 0.35 };
+
 event! {
     /// particles thrown
     pub struct Emit {
@@ -58,7 +63,7 @@ event! {
 event! {
     /// the air is pushed
     pub struct AirPush {
-        /// 0 at a point, 1 along a line, 2 by a standing body, 3 a jet, 4 outward
+        /// 0 at a point, 1 along a line, 2 by a standing body, 3 a jet, 4 outward, 5 a round's path, 6 a walking man's stride
         pub shape: u32,
         pub pos: [f32; 3],
         /// the velocity the air is taken to, and which way the shape lies
@@ -199,6 +204,7 @@ impl Events {
         for r in &g.rolls { self.rolls.push(Roll { voice: r.voice as u32, at: [r.x as f32, r.z as f32], hard: r.k as f32 }); }
         // (what the marks and the feels threw this tick)
         if let Some(s) = game::render_decals::mark_set(g) { for e in &s.thrown { self.one(tick, g, e); } }
+        self.wakes(tick, g);
         self.anchors.clear();
         let mut rides = core::mem::take(&mut self.rides);
         rides.retain(|(key, t, until)| {
@@ -268,6 +274,27 @@ impl Events {
             more: [o.spread, o.speed_jit, o.life_jit, o.size_jit, o.lift, o.radius, o.pos_jit, o.top, o.aspect, o.tumble, o.nrm_jit, o.steam, o.ember].map(opt),
             vadd: o.vadd.map_or([NONE; 3], f3), color: o.color.map_or([NONE; 3], f3),
         });
+    }
+
+    /// MEN WADING THROUGH THE AIR. His body is a standing capsule from his shins to his shoulders: the air inside it goes with him, and the solver sends what he displaces round his sides. His stride
+    /// throws the air just behind him out to one side and then the other, a side a step, as his walk cycle has it.
+    fn wakes(&mut self, tick: u32, g: &Game) {
+        use game::character::Bone;
+        let men = g.seats.iter().map(|&s| g.pl[game::cmd::seat_man(g, s)].ch).chain(g.guards.iter().map(|&m| g.gd[m].ch)).chain(game::civilians::civilians_shown(g).into_iter().map(|m| g.gd[m].ch));
+        for c in men {
+            let q = &g.ch[c];
+            let sp = (q.vel[0] * q.vel[0] + q.vel[2] * q.vel[2]).sqrt();
+            let Some(&h) = q.bones.get(Bone::Hips) else { continue };
+            if sp < WAKE.least { continue; }
+            let (hx, hz, top) = (q.vel[0] / sp, q.vel[2] / sp, h[1] + WAKE.above);
+            let mut put = |shape: u32, pos: [f64; 3], dir: [f64; 3], speed: f64, radius: f64, len: f64| {
+                let serial = self.pushes.len() as u32;
+                self.pushes.push(AirPush { tick, serial, shape, pos: f3(pos), vel: along(dir, speed), dir: f3(dir), radius: radius as f32, len: len as f32, hard: NONE, expand: NONE, ttl: 0.0, lattice: 0 });
+            };
+            put(2, [h[0], (top + WAKE.foot) / 2.0, h[2]], [hx, 0.0, hz], sp, WAKE.body, ((top - WAKE.foot) / 2.0 - WAKE.body).max(0.0));
+            let side = (2.0 * core::f64::consts::PI * q.anim.phase).sin();
+            if side.abs() > WAKE.gap { let k = side.signum(); put(6, [h[0] - hx * WAKE.back, h[1] - WAKE.low, h[2] - hz * WAKE.back], [-hz * k, 0.0, hx * k], sp * WAKE.kick, WAKE.kick_r, 0.0); }
+        }
     }
 
     fn push(&mut self, tick: u32, p: &SmokePush) {
