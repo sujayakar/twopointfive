@@ -1384,21 +1384,6 @@ impl SquadOrdersSeats {
 }
 impl Default for SquadOrdersSeats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum SquadOrdersQuickFor {
-    First,
-    Entry,
-}
-impl SquadOrdersQuickFor {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SquadOrdersQuickFor::First => "first",
-            SquadOrdersQuickFor::Entry => "entry",
-        }
-    }
-}
-
 /// (TypeScript: inline at src/game/orders.ts:1844 ownMarkFirst(ask), src/game/orders.ts:1844)
 #[derive(Clone, Copy, Debug)]
 pub struct SquadOrdersOwnMarkFirstAskRetItem {

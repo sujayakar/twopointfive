@@ -300,10 +300,10 @@ pub fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId, cam: C
         g.stats.cmdring.quick += 1;
         if n.part.is_some() {
             squad_orders_part_give(g, &n, &mut |g: &mut Game| {
-                if squad_orders_quick_for(g, &n.men, &n.target).is_some() { None } else { Some(String::from("refused")) }
+                if crate::autopilot::quick(g, &n.target, Some(&n.men)) { None } else { Some(String::from("refused")) }
             });
         } else {
-            squad_orders_quick_give(g, &n.target);
+            crate::autopilot::auto_quick(g, &n.target);
         }
     } else if js::truthy(lit) && i >= 0.0 {
         squad_orders_pick(g, Some(i));
@@ -455,7 +455,9 @@ fn flat_row(g: &Game, id: OrdersOrderDefId) -> crate::cmdring::FlatRow {
 
 /// A tap's order on `t`: nothing where a tutorial step teaches the key held; a second tap in the same place is 'fall in'. (orders.ts tapGive)
 pub fn squad_orders_tap_give(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, input: InputId, goal: Option<bool>) {
-    if crate::cmdring::ring_hold_secs(g) > 0.0 && crate::rails::rails_tap_off(g) { return; }
+    // (a tap ON HIMSELF is never stopped: the key on himself always calls them back, and it is the way out when a step that teaches the hold finds nobody free)
+    let on_himself = matches!(t, OrderTarget::None(OrderTargetNone { man: None, .. }));
+    if !on_himself && crate::cmdring::ring_hold_secs(g) > 0.0 && crate::rails::rails_tap_off(g) { return; }
     if goal.unwrap_or(false) {
         g.orders.tap_was = None;
         crate::planmode::plan_goal(g, t);
@@ -480,7 +482,7 @@ pub fn squad_orders_tap_give(g: &mut crate::game::Game, t: &crate::orders::Order
         }
     }
     g.orders.tap_was = Some(SquadOrdersTapWas { at: now, t: t.clone(), x, y });
-    squad_orders_quick_give(g, t);
+    crate::autopilot::auto_quick(g, t);
 }
 
 /// CMDRING.twice is asked here: the ring's key, and on a tutorial mission only from a step that lists it. (orders.ts twiceOn)
@@ -503,53 +505,6 @@ pub fn squad_orders_all_in(g: &mut crate::game::Game) {
     }
     if every { return; }
     squad_orders_give(g, crate::orders::rows::fallin::ORDER.id, Some(&t), None, Some(&opts_men(men, None)));
-}
-
-/// The quick key's own order on `t`, given by hand: the entry the men pick, else the target's first row. (orders.ts quickGive)
-pub fn squad_orders_quick_give(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) {
-    if !crate::autopilot::auto_quick(g, t) {
-        if let Some(d) = squad_orders_default_for(g, &crate::seats::here(g), t) {
-            let id = g.tab.orders_order_def[d].id.clone();
-            squad_orders_give(g, &id, Some(t), None, None);
-        }
-    }
-}
-
-/// The quick key's order on `t` for exactly these men. (orders.ts quickFor)
-pub fn squad_orders_quick_for(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<crate::orders::SquadOrdersQuickFor> {
-    use crate::autopilot::AutoPickWhy as Why;
-    let n = g.orders.group;
-    let tail = g.orders.log.last().map(|row| row.serial);
-    let a = crate::autopilot::auto_pick(g, &crate::seats::here(g), t, Some(true), Some(men));
-    if a.why == Why::Pending { return None; }
-    let to: Vec<GuardId> = a.men.clone().unwrap_or_else(|| men.to_vec());
-    if a.why == Why::Set {
-        let lines = crate::autopilot::restack_lines();
-        squad_orders_again(g, crate::orders::rows::stack::ORDER.id, t, &to, &lines);
-        g.stats.autopilot.again += 1;
-        return None;
-    }
-    let here = at_sam(g, &crate::seats::here(g));
-    if a.word {
-        squad_orders_give(g, crate::orders::rows::go::ORDER.id, Some(&here), None, Some(&opts_men(to, None)));
-    } else if text(&a.id) {
-        let ack = crate::squadnet::why_words(g, &a).map(|w| w.ack);
-        squad_orders_give(g, a.id.as_deref().unwrap(), Some(t), None, Some(&opts_men(to, ack)));
-    }
-    if let Some(row) = g.orders.log.last_mut() {
-        if Some(row.serial) != tail { row.auto = Some(true); }
-    }
-    if g.orders.group == n { None }
-    else if a.why == Why::First { Some(SquadOrdersQuickFor::First) }
-    else { Some(SquadOrdersQuickFor::Entry) }
-}
-
-/// Those men cover toward `at` from where they stand (true: somebody took it). (orders.ts coverFor)
-pub fn squad_orders_cover_for(g: &mut crate::game::Game, men: &[GuardId], at: V3) -> bool {
-    let n = g.orders.group;
-    let t = OrderTarget::Floor(OrderTargetFloor { at, wall: None, thing: None, serial: 0 });
-    squad_orders_give(g, crate::orders::rows::cover::ORDER.id, Some(&t), None, Some(&opts_men(men.to_vec(), None)));
-    g.orders.group != n
 }
 
 /// The quick key's words for the HUD and the ring's first wedge. (orders.ts quickWords)

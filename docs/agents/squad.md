@@ -59,7 +59,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   rebuild/commanding/command-mode.md). SWITCH: OFF in the module, OFF in the page, OFF on BOTH stands (no `FROZEN_HOLDS` row: the stands do
   not differ); `?cmd` on the address or the debugger's tick 'Tab ▸ the orders ring (to try)' puts it on; the table is in the knob registry and the journal
   (a recording from before the key replays with it off). Off = the build as it was: Tab is nobody's, and the only shared code moved is the quick key's give and
-  its HUD words, now `SquadOrders.quickGive` / `quickWords` (after it the squadorders, checkpoints and calls families are all green on the frozen stand; on
+  its HUD words, now the autopilot's `auto_quick` / `SquadOrders.quickWords` (after it the squadorders, checkpoints and calls families are all green on the frozen stand; on
   shipped all green but orders-cover, orders-stack, checkpoint-autosave, checkpoint-civilians and calls-rally, each red the same way on the untouched build
   head of that day). WHAT IT IS: Tab DOWN puts the order
   menu up as a ring at the cursor (the menu itself: `open` / `turn` / `pick`, so every row, refusal and reason is the menu's; `SquadOrders.cmdRing` beside it
@@ -118,7 +118,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the ring, 10-20: "let's focus on just single tab for now (the reworked B equivalent)", "it does feel like a bit of a regression from B on a single
   playthrough", "we shouldn't open the radial menu on just a single tab press, only after some (very short) delay"). THE RULE: the key going down opens
   nothing. It remembers what the cursor was on (`cmdPress.t`) and the cursor hint's outline goes as bright as the ring's, so the press is seen to land
-  (`hintView().press`; the glyph stays beside the cursor). Let go inside `holdSecs`, the quick key's own order is given on that thing (`quickGive`:
+  (`hintView().press`; the glyph stays beside the cursor). Let go inside `holdSecs`, the quick key's own order is given on that thing (`auto_quick`:
   B's order, word for word, the autopilot's pick included) and no menu was ever up. Still down when the hold is over, the ring goes up for that thing,
   at the cursor where it now is, and the cursor counts at once (the hold was the wait; `tapSecs` guards a tap only with the hold at 0). WHAT THE TAP
   NO LONGER LOSES, each a way the first build's tap could differ from B: a ring was opened and shut for it (a flash, and a tap slower than `tapSecs`
@@ -289,7 +289,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   be able to right click drag on a path and have them check that direction, like door kickers" · "if they're given an angle while not moving, they
   should probably just cover that" · "we expect squad mates to be very smart on their own and not need micromanaging like this"): a right press
   dragged `planLookPx` (24, three times a left drag's `planDragPx`: a trackpad's click slides) is an order with a way. Down on the floor: the click's own order, its stop keeps the way (drawn as an arrow), the men cover
-  that way once they stand there (`orders.ts coverFor`: the plain 'cover' order on a point `planLookM` out), and a chain with more stops walks on
+  that way once they stand there (the plain 'cover' order on a point `planLookM` out), and a chain with more stops walks on
   after `planLookSecs` (phase 'look'). Down on a man, on Sam or on nothing: nobody walks, the man (the picked men) cover that way where they stand, the way measured from
   where THEY stand to where the button came up. With Shift, off a man who is on a plan: nobody is taken off it and its last floor stop keeps the way
   (men already stood on their last stop turn now). A stop whose cover every man refuses (a wall at each shoulder) is not waited at.
@@ -457,7 +457,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   on, the squad's key gives no entry. Nobody is re-assigned and no order-book row is written; the panel shows Sam's line ("you: … stack up · the
   door") and one man answers 'stacked up.' or "we're ready to go.", the men and the lines by turns. The HUD's line for the key and the ring's
   first wedge read 'stack up' there; 'open and clear' keeps a wedge of its own. The same answer is given to a goal asked of the men on their own
-  door (Shift + the key, `orders.ts quickFor`). The way in is the go key (the plain clear, `doortools.ts fromStack`) or a row of the ring. NOT
+  door (Shift + the key, autopilot `quick`). The way in is the go key (the plain clear, `doortools.ts fromStack`) or a row of the ring. NOT
   CHANGED: a tap while they still walk is 'stack up' given again, a door they wait on a word at takes the word from the key, and a set charge is
   blown by it. TWO CASES ARE NOT THE RULE'S (a review's finds, the same day): when some of the men the key speaks to are NOT on that stack (a goal
   took a pair elsewhere, two fell in) the key is 'stack up' for all of them, given, and the two still on the door do not answer for the rest; and a
@@ -497,10 +497,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   as the key always is. Shift counts down as the key goes down OR as it comes up, and at a run as at a walk: a tap out of a sprint, with men
   on something, splits them (it sets `planRun`'s reading aside: there is no view to be stopped in). WHO TAKES IT: the men with nothing to do first (no order, or in the file behind him: with nobody on
   anything that is everyone, and the tap is the key's own order); else the biggest group on one thing gives up half of itself, a whole pair where
-  it holds two (the pair nearer the new thing; on a spot, the men with a line to it first). A group is a door's men, whoever sent them, or the
+  it holds two (the pair nearer the new thing). A group is a door's men, whoever sent them, or the
   men of one giving of any other order. ON A DOOR that part stacks on it, and the word's key sends every stack in together: that is the squad of
-  four's own word (`doortools.ts goMen`), nothing new. ON A BARE SPOT of floor, by a wall or not, they cover it from where they stand (the
-  order book's `cover`). On a door some of them are on already it is the key's order there for those men. On himself it is the key's own order,
+  four's own word (`doortools.ts goMen`), nothing new. ON A BARE SPOT of floor, by a wall or not, they MOVE there, as the key gives everyone
+  (since 11-08, the bullet below; it was `cover`, from where they stood). On a door some of them are on already it is the key's order there for those men. On himself it is the key's own order,
   everyone's. Every group down to one man: nothing is given and the squad says "nobody's free for that." The key WITHOUT Shift is everyone's and
   one goal, as `wholeSquad` has it. No chain is laid: the men are on plain orders. ON A TUTORIAL MISSION the rule is the frame's action `goal` (`rails.ts ACTS`,
   `planmode.ts goalsOn` asks `rails.locks('goal')`): Shift + the key is the plain key until a step lists `goal`, a lesson that never lists it
@@ -511,24 +511,24 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   mode: Shift + the key adds a goal". CHECK: `probes.ts goals` (family squadorders; `tools/qa/goals-check.ts`), nine lines on both stands on
   the plan mission's level with its frame off (the guardroom's two doors): the first goal is everyone's, a second door takes one pair, one
   press of the word starts both entries on one word with men through both doors inside two seconds, the plain key is one goal again, spots
-  split 4, 2 + 2, 2 + 1 + 1 and 1 + 1 + 1 + 1 then refuse, Shift held with nobody on anything is everyone's ring; `GOALS_BREAK=1` fails lines 1 to 7. HELD OFF in the rigs
+  part 4, 2 + 2, 2 + 1 + 1 and 1 + 1 + 1 + 1 then refuse, Shift held with nobody on anything is everyone's ring; `GOALS_BREAK=1` fails lines 2 to 6. HELD OFF in the rigs
   that toggle plan mode with the pair: `planmode-check` (and every check on its rig), `cmdring-check`, `qring-check`, `qonly-check`, and
   by `&goals=0` on `planlook-page.cjs`. THE PAGE: `PORT=<port> node tools/qa/goals-page.cjs` (headless Chromium, the software adapter: the
   first goal, the split on a second door, the word, and `?goals=0`).
   MEASURED: one deal. NOT BUILT: a mark on the floor for who took the goal beyond the order's own plan drawing; a line on the HUD for what
-  Shift + the key would give; a third thing to do on a spot (go there); the Controls page and the Options rows still name plan mode. Nobody
+  Shift + the key would give; the Controls page and the Options rows still name plan mode. Nobody
   has played it; never seen on a GPU.
 - **The first goal sends half the squad, and the key tapped twice is 'fall in'** (2026-11-02; `CMDRING.goalHalf` in `planmode.ts goalMen`,
   `CMDRING.twice` in `orders.ts tapGive` / `twiceOn` / `allIn`). The maintainer, passing on a play tester's notes: "double tap Q -> cancel
   everything and fall in" and "first shift Q should just send half the squad, whoever's closest".
   GOALHALF: with nobody on anything a goal was everyone's (`how: 'all'`), so only the second Shift + key split the squad. Now a squad with nothing
   going gives up half of itself by the rule a group on one thing already had: a whole pair where it holds two, the pair nearer what the cursor is
-  on (on a spot to watch: the pair with more men who can see it, then the nearer), else the nearer half of its men (`how: 'split'`). The rest stay
+  on, else the nearer half of its men (`how: 'split'`). The rest stay
   with him and take the next goal (`'idle'`). One teammate alone is still everyone; the cursor on himself is still everyone. TWO teammates (the
   default squad): the nearer man goes alone and the next goal is the other's. THREE: the nearer of the whole pair and the odd man (half of an odd
   squad may be the bigger half: `l.length * 2 <= G.length + 1`, for this case only). The ring kept down
   with Shift follows, as it asks the same rule: with nothing going it is that half's ring. The fourth tutorial's yard steps still close (two men
-  watching a gate is what each asks); its `gateA` line and the card before it now say two of them, and the tutorial's checks follow the
+  watching a gate is what each asks); its lines say two of them, and the tutorial's checks follow the
   rule on each stand (`tutqueue-check` lines 8 and 9, `rails-check`'s goal step with the frame off, `tut-queue-page.cjs`), and the scripted
   player's frozen arm raises `TPS_GOALHALF` with the goals. With `?goalhalf=0` those two texts still say two while all four turn: the off word
   is for a comparison, and the lesson has no second wording.
@@ -556,22 +556,35 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   T1 to T12, P); `GOALHALF_BREAK=1` fails H1 to H4, H7 and H8, `QTWICE_BREAK=1` fails T1, T2 and T9 to T11. On the real page:
   `PORT=<port> node tools/qa/halftwice-page.cjs` (software adapter). MEASURED: one deal. Nobody has played either; never seen on a GPU. NOT
   BUILT: a hint on the HUD for the double tap; cutting the first tap's spoken line when a second follows.
+- **Shift with the squad's key gives what the key gives; a spot is covered from the wheel** (2026-11-08; A CHANGE OF PLAY, default on, no switch; `rust/game_rules/src/autopilot quick`,
+  `planmode goal_men` / `plan_goal`). The maintainer: "i think shift Q on a point should just move the squad there, should match what regular Q does. you should need to open the radial
+  menu to get covering a point". ONE FUNCTION ANSWERS WHAT THE KEY MEANS: `quick(g, t, men)` over `auto_pick`. A plain tap gives it to everyone (`auto_quick`), Shift gives the same to the
+  part `goal_men` picks (pairs, then who is nearest; the line of sight is out of that rule), and the ring's first wedge for a part is the same call. So on a spot a Shift tap is a `move`,
+  the nearer whole pair, and the others keep what they had; `cover` is a wedge of the ring kept down, that part's alone. WHAT WENT: `quickFor`, `coverFor`, `quick_give` and the wire's call
+  and type for them. THE ONE TARGET WHERE THE TWO KEYS LOG APART: a door one pair stands on and the others do not. The line says 'stack up' both ways, the plain key logs `stack` for all
+  four, and with Shift the men on it answer and nothing is logged, as the 10-26 bullet on a stacked door has it. WHERE THE WORDS AND THE PRESS CAN STILL PART: the hover line is the plain key's and
+  does not read Shift, so it never says who goes (only the ring's caption does); with every group down to one man it says 'move there' and a Shift tap gets "nobody's free for that." instead.
+  THE PART FOR THE WHEEL IS BY NEARNESS TOO, so `cover` may be refused by a pair that stands at a wall ("no line from here."). EVERY SHIFT TAP ON A NEW SPOT takes free men first, then half of the biggest group, down to one man ("nobody's free for that."): the same as before, now for moving. THE FRAME: a new action `ringPart` beside `ring` (`rails.ts ACTS`, Rust `rails_gate`): the key kept down is kept only with Shift down, else it is seen let go and the press is a tap, which on a `noTap` step gives nothing and shows the note; `railsFaults` asks `goal` open beside it. A tap ON HIMSELF is never stopped by `noTap` (`tap_give`): the key on himself always calls them back. THE TUTORIAL: both of `tut-queue`'s gates are the wheel for a part now, and each of its steps ends on the gate it names (docs/agents/missions.md). CHECK: native `rust/game_start/tests/shift.rs`, eight rules on three seeds by the keys (a door nobody
+  is on, a door they are stacked on, a door with a charge set, a bare spot, a spot by a wall, the breaker box, himself, a teammate, a hostage; a foe through `auto_quick` and `plan_goal`; the part; line,
+  first wedge and order; cover from the wheel); run on the rule before this, `every_kind_of_target_gets_the_same_order` fails with `move` against `cover` and the nearer pair's rule with
+  `cover` against `move`. `goals-check` lines 5, 6, 8, 11, 12 and `halftwice-check` H3, H3b; `GOALS_BREAK=1` (2 to 6, 10 to 12) and `GOALRING_BREAK=1` (10 to 12) now take Shift out of the hand, because the two switches are settled rows a write cannot move (`tools/qa/fold.ts`), so those words had gone green; `GOALHALF_BREAK=1` stays red. No tally moved that a soak was run for: not soaked.
+  Nobody has played it; never seen on a GPU.
 - **Shift + the key kept down is the ring for the part that takes the goal: a PROTOTYPE** (2026-10-26; `CMDRING.goalRing`, `planmode.ts
   goalMen` / `goalRingOn`, `orders.ts ringUp` / `Menu.part` / `partGive`). The maintainer, having played the goals: "okay this feels good.
   let's make shift-Q long press open the radial menu to append another order too". ON, with `goals`: Shift + the key kept down puts the ring up
   on what the cursor is on, as ever, but FOR THE MEN A TAP OF IT THERE WOULD HAVE SENT (`goalMen`, the one rule both ask: the men with nothing
   to do, else half of the biggest group, a whole pair where it holds two; on a door some of them are on already, those men). The ring names
   them under it ("red → guard side door") and wears their colour, its rows are greyed for THEM, and the wedge picked is theirs alone: the rest
-  stay on what they were doing. Its first wedge is the key's own order for those men (`quickFor`): on a door they stack on it, on a door they
-  wait on it is their way in, and on a bare spot they GO there, where the tap has them cover it ('cover' is a wedge of its own). Every group
+  stay on what they were doing. Its first wedge is what the tap gives those men (autopilot `quick`): on a door they stack on it, on a door they
+  wait on it is their way in, and on a bare spot they GO there, and 'cover' is a wedge of its own: since 11-08 the only way to have them cover a spot. Every group
   down to one man: no ring goes up and the squad says "nobody's free for that." With nobody on anything, on himself, or on a teammate under
   the cursor it is the ring it always was. A ring put away gives nothing and counts no goal. SWITCH: ON in the page with `goals`
   (`?goalring=0` = kept down it is everyone's ring, as the goals were first built), OFF in the module and on the frozen stand
   (`TPS_GOALRING=1`, beside `TPS_GOALS=1` and `TPS_QPLAN=1`); a recording from before the key replays with it off; debugger tick "Tab ▸ plan
-  mode ▸ no plan mode ▸ held, the wheel is for that part". CHECK: `probes.ts goals`, lines 10 to 13 on both stands (a second door from a stack
+  mode ▸ no plan mode ▸ held, the wheel is for that part". CHECK: `probes.ts goals`, lines 10 to 12 (a second door from a stack
   of four: the ring is one whole pair's, named, nobody told while it is up, its first wedge stacks that pair there and the other pair stays;
-  spots: 'cover' picked splits 2 + 2, the first wedge on a third sends ONE man there; all singles: no ring, nothing given; the control with the
-  switch off: everyone's ring, no part); `GOALRING_BREAK=1` fails 10 to 12, and `GOALS_BREAK=1` fails them with 1 to 7. MEASURED: one deal.
+  spots: 'cover' picked has that pair cover it and the other go on, the first wedge on a third sends ONE man there; all singles: no ring, nothing given; the control with the
+  switch off: everyone's ring, no part); `GOALRING_BREAK=1` fails 10 to 12, and `GOALS_BREAK=1` fails them with 2 to 6. MEASURED: one deal.
   NOT BUILT: the men the ring is for are named on it but not marked on the floor before it goes up; the hover line before the press still
   says the whole squad. Nobody has played it; never seen on a GPU.
 - **The key never picks a tool: on a stacked door it is the plain clear, as the word's key gives it** (2026-10-26; `AUTOPILOT.plain`,
@@ -582,7 +595,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   says 'open and clear'. THE TWO KEYS NOW DIFFER ONLY IN WHO GOES: the key is that door's men, now; the word is everyone who waits, on one
   word. The word's key is unchanged (it never picked a tool). A stun, a charge or a threshold row is asked for on the ring (the key kept down
   on the door), and still works on a stack. A tap while they walk to their marks is 'stack up' again, as before. A chain's step and a goal's
-  first wedge ask the same pick (`quickFor`), so they are plain too. OPEN, the maintainer has not said: whether a second tap on a stacked door
+  first wedge ask the same pick (autopilot `quick`), so they are plain too. OPEN, the maintainer has not said: whether a second tap on a stacked door
   should do nothing at all, leaving the word's key the only way in. SWITCH: ON in the page with the quick key's autopilot (`?plainentry=0` =
   the entry they pick, as it was), OFF in the module and on the frozen stand (`TPS_PLAINENTRY=1`, beside `TPS_AUTOPILOT=1`); a recording
   from before the key replays with it off; debugger tick "B ▸ the squad picks the entry ▸ never a tool: always the plain clear". CHECK:
@@ -668,7 +681,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   their feet, a click on nothing is everyone. Everyone, a whole pair and one man are kept as the who key's own `who`; any other set is
   `plan.pick` (callsigns), which `recipients()` reads ahead of `who` ONLY when the caller names no `who` (`give(id, t)` and the quick key go to the
   pick; a scenario's `give(id, t, 'all')` never does); T or the ring's click on a man lets it go. RIGHT BUTTON ORDERS, BY STARCRAFT'S RULES: a plain
-  right click is `SquadOrders.quickFor(men, t)` — the squad's own choice there (`autoPick`, asked whether or not the quick key's switch is on) —
+  right click is the key's order for those men — the squad's own choice there (`autoPick`, asked whether or not the quick key's switch is on) —
   and REPLACES the chain those men were on; refused, nothing changes. THE BUTTON IS READ WHEN IT COMES UP (`plan.rmbT`), because KEPT DOWN
   `planHoldSecs` IT IS THE RING ("long right click opens the radial menu"): `SquadOrders.ringByButton` puts the order menu up as the ring at the
   cursor for the picked men (`RingState.rmb`: kept up by that button, no tap guard), the button let go gives the lit wedge — the first is the
@@ -1313,7 +1326,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   several rows or a line's width from where the way to him leaves the view.
   WHY (`SQUADNET.why`, `?qwhy=0`, `TPS_QWHY=1`; since the key never picks a tool the row carries no reason: the words below are the history, and the page's `whyWords` is gone): the reason came when the autopilot's pick on a door the men wait
   on is not a plain open: at the end of the quick key's row (`orders.ts hud()`, one `autoPick` a frame for the words and the reason) and in the
-  answer of the man who takes the order (`GiveOpts.ack`, in place of the row's own; `autoQuick` and a plan's `quickFor` both pass it):
+  answer of the man who takes the order (`GiveOpts.ack`, in place of the row's own; autopilot `quick` passes it):
   `nobody's been in there` / `banging it. nobody's been in there.` · `they see one inside` / `banging it. i see one in there.` · `they're saving
   the last bang` / `going in. i'm saving the last bang.` (`AutoPick.kept`: an unknown room opened plain because `AUTOPILOT.keepBangs` holds
   the last stun) · `they can't open it` / `we can't open it. setting a charge.` (the press only: the HUD's line asks no lock). A plain open, a
