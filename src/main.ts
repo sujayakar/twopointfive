@@ -183,7 +183,7 @@ const readout = { on: localStorage.getItem('twopointsix.readout') === '1', set(v
 
 // THE READINESS CONTRACT for scripts: `await window.__ready` — a Promise that exists from this module's first tick and resolves once the boot has finished (every kernel compiled, the ones the start card does not wait for too: gpu/device.ts laterIdle,
 // the Game built, EVERY automation hook below assigned, the start card live); it rejects if the boot dies. The hooks themselves (__engine, __game, __runFrames …) are put
-// on window when the start card goes live (`window.__started`). On a page a script drives that is the same moment as `__ready`: the row 'Start on first frame shaders' starts
+// on window when the start card goes live (`window.__started`). On a page a script drives that is the same moment as `__ready`: the first-frame start starts
 // off there (ui/shaderrows.ts), so nothing compiles behind the card and the older wait loops that poll for the hooks + #view.clientWidth stay correct. A tool that asks for
 // the row (`?firstframe=1`) and polls for a hook begins on the stand-ins' picture: it waits on `__ready`. window.__boot has the boot's timeline (ui/boot.ts).
 let readyResolve!: () => void, readyReject!: (e: unknown) => void;
@@ -301,7 +301,7 @@ async function main() {
   urlFlagsBeforeEngine(q);
   if (q.get('framecap') === '0') FRAMECAP.on = false;   // ?framecap=0: the render targets are made without COPY_SRC, no texture is watched and F6 does nothing, as it was before the frame capture (render/framecap.ts FRAMECAP)
   if (FRAMECAP.on) watchTextures(gpu.device);   // (a frame capture knows every texture made from here on: render/framecap.ts)
-  if (kitViewOn) PIPE_QUEUE.later = false;   // (the Team & kit picture waits for every program, whatever the row 'Start on first frame shaders' says: its still picture is drawn once and would keep the stand-ins')
+  if (kitViewOn) PIPE_QUEUE.later = false;   // (the Team & kit picture waits for every program, whatever the first-frame start says: its still picture is drawn once and would keep the stand-ins')
   const engine = new Engine(gpu);
   { const _host: HostApi = engine; void _host; }   // the WebGPU Engine IS a HostApi (src/host/api.ts): the one place the structural conformance is asserted — the game takes the interface
   boot.mark('engine');

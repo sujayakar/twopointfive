@@ -108,7 +108,7 @@ export const SHED = { holdSecs: 60, seenCap: 3, backSecs: 900 };
  *  again. So while the count is up sample() drops its window and moves none of its clocks — the ladder neither judges its last step nor takes another. `maxSecs`: no longer
  *  than this in one wait (a compile that slow, or a set that long, must not leave a page with no ladder at all); `Quality.standsInFor` says how long it has waited. The boot
  *  calibration waits the same way and no longer (calibrateTick: past `maxSecs` it measures the picture as it is, `early`, and measures once more when the set is in). With the
- *  row 'Start on first frame shaders' off the count is never above 0 and none of this runs. */
+ *  first-frame start off the count is never above 0 and none of this runs. */
 export const STANDS_IN = { maxSecs: 30 };
 /** THE SAME CHECK UNDER AN AIM (settings.ladderHeld, default on, `?ladderheld=0`; off = an aim as it was: `holdBound` alone decides, and every line below is skipped). An aim stepped a
  *  held page down on the union's SIZE alone (two windows over the back-off band; over its budget, by rate) and gave the pixels back only with the union priced under `restore` of that
@@ -589,7 +589,7 @@ export class Quality {
   calibrateTick(rawDt: number) {
     if (!this.calibrating || pageHidden()) return;
     const waited = this.standsInFor, c = this.calib;
-    if (this.standsIn(rawDt)) return;   // (the row 'Start on first frame shaders': a pass is still drawing with a fallback, so these are not the settings' own times; never with the row off. A frame a compile stalled counts to the wait too: it is the wall clock's)
+    if (this.standsIn(rawDt)) return;   // (the first-frame start: a pass is still drawing with a fallback, so these are not the settings' own times; never with the row off. A frame a compile stalled counts to the wait too: it is the wall clock's)
     if (laterProgress.pending > 0) this.early = true;   // (the wait ran out: what is measured from here is the stand-ins' picture)
     else if (waited > 0 && c.frames) { c.frames = 0; c.t = 0; c.gpu = []; c.fixed = []; c.dts = []; this.early = false; }   // (the set landed while that measure was under way: over again, on the settings' own picture alone)
     if (rawDt >= 0.5) return;

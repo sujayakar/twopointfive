@@ -549,7 +549,7 @@ export class LightingPasses {
     const lay = (...ls: GPUBindGroupLayout[]) => device.createPipelineLayout({ bindGroupLayouts: ls });
     const set = <V,>(p: Promise<V>, f: (v: V) => void) => jobs.push(p.then(f));
     // LATER (gpu/device.ts PIPE_QUEUE.later, 2026-10-26: a cold boot on Windows compiles every one of these through DXC, 5–25 s apiece before this work): in the BOOT's set the
-    // twins no first frame draws with the default settings are not waited for — compiled after the boot in the queue's background lane — and their pass takes the other twin until they are in. PIPE_QUEUE.later false (the row 'Start on first frame shaders' off) = the boot waits for these too, as it always did.
+    // twins no first frame draws with the default settings are not waited for — compiled after the boot in the queue's background lane — and their pass takes the other twin until they are in. PIPE_QUEUE.later false (the first-frame start off) = the boot waits for these too, as it always did.
     const late = PIPE_QUEUE.later;
     const cpL = (desc: GPUComputePipelineDescriptor) => late ? laterPipelineAsync(device, desc) : cp(desc);
     const setL = <V,>(make: () => Promise<V | null>, filled: () => boolean, put: (v: V | null) => void) => {   // (`make` is run here, where the pipeline was always made: its module is created inside it, in the order it always was)
