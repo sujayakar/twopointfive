@@ -10,7 +10,7 @@ pub const ORDER: Row = Row {
     only: Some(only),
     valid: Some(valid),
     tick: Some(crate::squadthrow::walk_tick),
-    ..Row::new("stunThere", label, issue)
+    ..Row::new(crate::squadthrow::STUN_THERE, label, issue)
 };
 
 fn label(g: &mut Game, t: &OrderTarget) -> String {
