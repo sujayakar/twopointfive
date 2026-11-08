@@ -8,7 +8,6 @@
 //   hard     the sentences that say what Hard is name no number of enemies
 //   asks     no screen reads a row's `defenders` or the tally's roster for itself: nothing under src/ui names `.defenders` or `.roster`
 // MYSTERY_BREAK=1 reads the old rows' and Hard's old sentences as theirs: 'total' and 'hard' must FAIL.
-// The page's own half (the cells not drawn, the large map left by a click beside it): tools/qa/mystery-page.cjs.
 const ROOT = new URL('../..', import.meta.url).pathname.replace(/\/$/, '');
 import { readFileSync, readdirSync } from 'node:fs';
 

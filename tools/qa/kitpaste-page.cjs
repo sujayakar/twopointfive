@@ -6,8 +6,7 @@
 // Copy is lit and Paste dim on their cards, and the tile the highlight was on has not moved.
 // And a mission whose level file issues its own kit: no cards, and the key line stops naming the two keys.
 //   node tools/qa/kitpaste-page.cjs [outDir]      env: PORT (the dev server's, default 5199)
-// Then the Cmd key of a Mac (no keyup for the letter) and a Dvorak board, by key events built by hand. (A Deploy with a pasted kit, end to end, is the
-// slow tools/qa/kitpaste-deploy-page.cjs.)
+// Then the Cmd key of a Mac (no keyup for the letter) and a Dvorak board, by key events built by hand.
 // PASS / FAIL lines, exit 1 on a FAIL or a page error. Nothing here needs a GPU, and nothing here has been seen on one: the door picture behind the tiles
 // (ui/kitView.ts) is not up on this adapter.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');

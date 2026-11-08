@@ -14,7 +14,6 @@
 //                                                        and `missions` / `both` where asked for) and (2) EVERY ROW of RUST must have answers OF ITS OWN
 //                                                        that differed in the section that holds it (HELD). Exit 1 = red as it must · exit 3 = a section
 //                                                        or a row the red path left green, named: what holds it proves nothing until that is mended
-// The page's half (Chromium, a dev server) is tools/qa/rust-page.cjs.
 // WHAT IS HELD:
 //   built     src/sim/built.ts is the build of rust/sim as it stands (the hash of the sources; where there is a Rust compiler, the bytes built again), is
 //             small enough for a page to compile in one step, and carries no path of the machine that built it (tools/sim/build.ts --check)
@@ -190,7 +189,7 @@ if (args[0] === '--server') {
   const st = await standRecipe(JSON.parse(args[1])), W = st.W, I = W.input, ticks = Number(args[2]);
   let inRust = 0; const broke = BREAK && S.RUST.maths; if (broke) wrongMaths(S, X);
   // (…and the red path of a stand with no maths row, the page's own rows: the module's answer to every line through the statics is "clear" — a wrong walk
-  //  that still plays, as rust-page.cjs breaks the page. A stale leaf and a turned answer of the fog's, the missions' break, move no word in 600 ticks: tried)
+  //  that still plays. A stale leaf and a turned answer of the fog's, the missions' break, move no word in 600 ticks: tried)
   if (BREAK && !S.RUST.maths) { const P = (await import(`${ROOT}/src/scene/boxMirror.ts`) as any).BoxMirror.prototype, open = P.open; P.open = function (this: any, ...a: unknown[]) { open.apply(this, a); if (!this.broke) { this.broke = true; this.x = Object.assign({}, this.x, { lines_blocked: () => 0 }); } }; }
   for (let n = 0; n < ticks; n++) {
     I.keys.clear(); I.pressed.clear(); I.clicked = 0; I.buttons = 0; I.wheel = 0;
