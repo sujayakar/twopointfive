@@ -12,7 +12,7 @@ import { lookConfig } from '../../src/render/frame';
 import { lookExpoFrame, lookExpoBound, lookNightSkyE, LOOK_EXPO } from '../../src/render/lookexpo';
 import { lookGrade, lookGradeFrame, LOOK_GRADE } from '../../src/render/lookgrade';
 import { hourExposure, LUX_PER_UNIT, HOUR_SUN_LUX } from '../../src/render/photometry';
-import { HOURS } from '../../src/game/hours';
+import { HOURS } from './sunrow';
 import { PLACE, PLACE_W, PLACE_H, PLACE_BYTES, PLACE_WORDS, PLACE_NEAR, SKY_WORDS } from '../../src/render/placeField';
 import { placeMask, placeWall, placeRoof, doorStep, DOOR_STEPS, DOOR_PER_STOP } from '../../src/scene/placePlan';
 import { makeBox, BoxFlag } from '../../src/scene/boxes';
