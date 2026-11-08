@@ -1,12 +1,12 @@
 // THE ONE STARTING PAGE LOOK (ui/startpage.ts): the page on the REAL build in headless Chromium:
 // what is on it, that every mission is on it and goes through its loadout to Deploy, the keys through both halves, real page loads.
 // The page's two steps: MISSION (the list, the briefing, the Setup rail of value rows) and TEAM & KIT (the loadout's rows); the rail's rows stand in for the list's own setting rows, which stay in the page unseen.
-//   node tools/qa/startpage-look.cjs <outDir>      env: PORT (the dev server's, default 5199) · SIZE (default 1440x900) · QUALITY (default verylow) · ALL=1 (deploy EVERY mission) · STILLS=0 (no stills) · GPU=1 (see below)
+//   node tools/qa/startpage-look.cjs [outDir]      env: PORT (the dev server's, default 5199) · SIZE (default 1440x900) · QUALITY (default verylow) · ALL=1 (deploy EVERY mission) · STILLS=0 (no stills) · GPU=1 (see below)
 // PASS / FAIL lines, stills beside a report.json, exit 1 on a FAIL or a page error.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs');
 const path = require('path');
-const outDir = process.argv[2] || 'startpage-look';
+const outDir = process.argv[2] || require('fs').mkdtempSync(require('path').join(require('os').tmpdir(), 'startpage-look-'));
 const PORT = process.env.PORT || 5199;
 const [W, H] = (process.env.SIZE || '1440x900').split('x').map(Number);
 const QUALITY = process.env.QUALITY || 'verylow';

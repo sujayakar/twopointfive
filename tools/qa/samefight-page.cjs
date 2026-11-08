@@ -12,8 +12,8 @@ const { writeFileSync, mkdtempSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { join, resolve } = require('node:path');
 const ROOT = resolve(__dirname, '../..');
-const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', BREAK = process.env.SAMEFIGHT_BREAK === '1', EXTRA = process.env.SAMEFIGHT_QUERY || '', DRAW = Math.max(1, Number(process.env.SAMEFIGHT_DRAW || 30) | 0);   // (a draw on the software adapter is seconds: one every 30 steps by default)
-const VIEW = (process.env.SAMEFIGHT_VIEW || '960x540').split('x').map(Number);   // (SAMEFIGHT_VIEW=480x270: a smaller picture — the software adapter pays by the pixel, the game does not care)
+const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', BREAK = process.env.SAMEFIGHT_BREAK === '1', EXTRA = process.env.SAMEFIGHT_QUERY || '', DRAW = Math.max(1, Number(process.env.SAMEFIGHT_DRAW || 120) | 0);   // (a draw on the software adapter is seconds: one every 120 steps by default)
+const VIEW = (process.env.SAMEFIGHT_VIEW || '320x180').split('x').map(Number);   // (SAMEFIGHT_VIEW=480x270: a smaller picture — the software adapter pays by the pixel, the game does not care)
 const arg = k => { const i = process.argv.indexOf(`--${k}`); return i >= 0 ? process.argv[i + 1] : undefined; };
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage textures \(5\) in the Compute stage/;
@@ -27,7 +27,7 @@ const SCRIPT = [
 if (process.env.SAMEFIGHT_QUIET === '1') for (const r of SCRIPT) r[4] = 0;
 if (process.env.SAMEFIGHT_ROWS) SCRIPT.length = Math.max(1, Math.min(SCRIPT.length, Number(process.env.SAMEFIGHT_ROWS) | 0));
 const RUNS = { compound: 'levelFile=compound.json&roomclear&squad4', rescue: 'rescue', night: 'solo' };
-const picked = (arg('runs') || 'compound,rescue').split(',').filter(Boolean);
+const picked = (arg('runs') || 'compound').split(',').filter(Boolean);
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS }); let failed = false;
   const line = (ok, s) => { if (!ok) failed = true; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}`); };

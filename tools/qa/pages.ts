@@ -1,7 +1,7 @@
 // THE PAGE SCRIPTS: the real page in headless Chromium on the software WebGPU adapter, one script at a time (a page takes the whole box), against one dev server started here.
 //   bun run tools/qa/pages.ts [group | name …] [--list]     groups: boot · play · menus · coop · saves · cloud · replay · all (every group but tools) · tools (named one by one: never run by a group)
 //   env: QA_PAGE_CAP (minutes a script may take, default 10; its whole process group is stopped there) · the script's own words pass through (SHOTS=0, JOBS=…)
-// A .ts row is run by bun with a fresh folder and its own --port. A script reads PORT, PLAYWRIGHT_MODULE, CHROMIUM and CHROME from here. Exit 0 every script green · 1 one red (a FAIL line, a non-zero exit or the cap) · 2 an unknown name.
+// A .ts row is run by bun with a fresh file and its own --port. A script reads PORT, PLAYWRIGHT_MODULE, CHROMIUM and CHROME from here. Exit 0 every script green · 1 one red (a FAIL line, a non-zero exit or the cap) · 2 an unknown name.
 // holds-check.ts (10) is red on a tools/qa/*.cjs that is neither a row here nor required by one.
 import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -119,8 +119,9 @@ interface Read { script: string; ms: number; ok: boolean; fails: string[]; code:
 async function runOne(script: string, port: number, capMs: number): Promise<Read> {
   const env: Record<string, string | undefined> = { ...process.env, PORT: String(OWN_SERVER.has(script) ? freePort() : port) };
   const pw = '/opt/node-tools/node_modules'; if (existsSync(pw)) { env.NODE_PATH = pw; env.PLAYWRIGHT_MODULE ??= `${pw}/playwright`; }
+  if (script.startsWith('tut-')) env.SHOTS ??= '0';   // (their pictures: a minute each here, for a person who asks)
   if (existsSync('/usr/bin/chromium')) { env.CHROMIUM ??= '/usr/bin/chromium'; env.CHROME ??= '/usr/bin/chromium'; }
-  const t0 = performance.now(), c = Bun.spawn(script.endsWith('.ts') ? ['bun', 'run', resolve(import.meta.dir, script), mkdtempSync(resolve(tmpdir(), 'page-')), '--port', String(freePort())] : ['node', resolve(import.meta.dir, script)], { cwd: ROOT, detached: true, stdout: 'pipe', stderr: 'pipe', env }), fails: string[] = [];
+  const t0 = performance.now(), c = Bun.spawn(script.endsWith('.ts') ? ['bun', 'run', resolve(import.meta.dir, script), resolve(mkdtempSync(resolve(tmpdir(), 'page-')), 'out.txt'), '--port', String(freePort())] : ['node', resolve(import.meta.dir, script)], { cwd: ROOT, detached: true, stdout: 'pipe', stderr: 'pipe', env }), fails: string[] = [];
   let capped = false; const timer = setTimeout(() => { capped = true; stopAll(c.pid); }, capMs);
   LIVE.add(c.pid);
   const gone = c.exited.then(code => { stop(-c.pid, 'SIGKILL'); return code; });   // (nothing it started outlives it, so the pipes close)
