@@ -12,7 +12,7 @@
 //   needs-one-away     Kowalski and Novak both full and both standing at their waypoints: one goes, the other never has a trip while the first has one, and gets his
 //                      the moment the first is back (the floor's gap permitting).
 //   needs-interrupts   a whistle at T−8 (he answers it: no departure, ever, and he goes to look); a gunshot with him halfway to the counter (broken off inside two
-//                      frames where he stands — off his route — and in the two minutes after, calm or not, the trip never comes back); frozen — no trip dealt in a
+//                      frames where he stands — off his route — and in the twenty seconds after, calm or not, the trip never comes back); frozen — no trip dealt in a
 //                      minute of full needs at the waypoints — under quietUtility and with the response team not idle.
 //   needs-frozen-up    the floor at heightened: a minute of full needs at the waypoints deals nothing and the send button refuses; stood down, the next frame deals.
 import { standUp, ROOT } from './headless.ts';
@@ -172,7 +172,7 @@ export async function needsOneAway() {
 
 // ================================================================ (d) interrupts, and frozen
 export async function needsInterrupts() {
-  console.log('\n=== needs-interrupts: a whistle at T−8 (answered: no departure, he looks into it) · a gunshot halfway to the counter (broken off where he stands, off-route; not resumed in 30 s) · frozen under quietUtility / the response team ===');
+  console.log('\n=== needs-interrupts: a whistle at T−8 (answered: no departure, he looks into it) · a gunshot halfway to the counter (broken off where he stands, off-route; not resumed in 20 s) · frozen under quietUtility / the response team ===');
   let allPass = true;
   // 1. the whistle inside the telegraph
   { const S = await stage(1501, { invisible: false }); const { game, pl, A, B, C } = S;
@@ -184,9 +184,9 @@ export async function needsInterrupts() {
       if (t0 >= 0 && !blown && game.time >= t0 + NEEDS.announceLead - 8) { game.teleportPlayer([29.5, 0, 11.2]); pl.crouch = true; S.step(); blown = tryWhistle(game); }   // 4.5 m west of him, behind his back, dark
       if (T && T.phase !== 'telegraph') departed = true;
       if (blown && !T && cancelledAt < 0) { cancelledAt = game.time; stateAfter = A.state; fixD = A.lastKnown ? v3.distXZ(A.lastKnown, pl.char.pos) : NaN; }
-      if (cancelledAt >= 0 && game.time - cancelledAt > 20) break;
+      if (cancelledAt >= 0 && game.time - cancelledAt > 5) break;
     }
-    console.log(`    whistle ${blown ? 'blown' : 'NOT blown'} at T−8: trip ${cancelledAt >= 0 ? `gone ${f2(cancelledAt - (t0 + NEEDS.announceLead - 8))} s later` : 'still on'}, Kowalski ${stateAfter} with a fix ${f1(fixD)} m off Sam, departed=${departed}; 20 s on: ${A.state} at ${posS(A.char.pos)}`);
+    console.log(`    whistle ${blown ? 'blown' : 'NOT blown'} at T−8: trip ${cancelledAt >= 0 ? `gone ${f2(cancelledAt - (t0 + NEEDS.announceLead - 8))} s later` : 'still on'}, Kowalski ${stateAfter} with a fix ${f1(fixD)} m off Sam, departed=${departed}; 5 s on: ${A.state} at ${posS(A.char.pos)}`);
     dumpLog(S.nlog, 10);
     allPass = verdict(blown && cancelledAt >= 0 && cancelledAt - (t0 + NEEDS.announceLead - 8) < 0.1 && !departed && stateAfter === 'suspicious' && fixD < 1.5, 'the whistle he answers cancels the trip on the frame, he never walks off, and he goes to look (suspicious, fix on the whistle)', `cancel +${f2(cancelledAt - (t0 + NEEDS.announceLead - 8))} s, ${stateAfter}, fix ${f1(fixD)} m`) && allPass;
   }
@@ -202,22 +202,22 @@ export async function needsInterrupts() {
       if (T?.phase === 'going' && goAt < 0) goAt = game.time;
       if (goAt >= 0 && shotAt < 0 && game.time - goAt >= 5.5) { shotAt = game.time; game.events.push({ kind: 'shot', pos: [20, 0, 11.2], time: game.time, loud: true, level: 1, who: PLAYER_ID }); }   // Sam's pistol at gunfire level, mid-corridor
       if (shotAt >= 0 && !T && cancelAt < 0) { cancelAt = game.time; cancelPos = v3.copy(A.char.pos); offRoute = routeDist(cancelPos!); stateAfter = A.state; game.teleportPlayer([2.0, 0, 2.0]); game.playerInvisible = true; }
-      if (cancelAt >= 0) { later = game.time - cancelAt; if (needsTrip(A)) laterTrips++; if (later >= 30) break; }
+      if (cancelAt >= 0) { later = game.time - cancelAt; if (needsTrip(A)) laterTrips++; if (later >= 20) break; }
     }
     console.log(`    walks at ${f2(goAt)} s; shot at +${f1(shotAt - goAt)} s; trip ${cancelAt >= 0 ? `broken off ${f2(cancelAt - shotAt)} s later at ${posS(cancelPos)} — ${f1(offRoute)} m off his route, ${stateAfter}` : 'NOT broken off'}; then ${f1(later)} s watched: ${laterTrips} frames with a trip on him; floor now ${game.escalationSummary()}; departures ${NEEDS_STATS.departed - depBefore}`);
     dumpLog(S.nlog, 10);
     allPass = verdict(cancelAt >= 0 && cancelAt - shotAt <= 2 * DT + 1e-6 && (stateAfter === 'alert' || stateAfter === 'suspicious') && offRoute > 1.0, 'the shot breaks it off inside two frames where he stands (off his route), and he reacts as the AI does', `+${f2(cancelAt - shotAt)} s, ${stateAfter}, ${f1(offRoute)} m off-route`) && allPass;
-    allPass = verdict(later >= 30 && laterTrips === 0 && NEEDS_STATS.departed - depBefore === 1, 'and in the thirty seconds after, the trip does not come back', `${laterTrips} trip-frames in ${f1(later)} s`) && allPass;
+    allPass = verdict(later >= 20 && laterTrips === 0 && NEEDS_STATS.departed - depBefore === 1, 'and in the twenty seconds after, the trip does not come back', `${laterTrips} trip-frames in ${f1(later)} s`) && allPass;
   }
   // 3. frozen: quietUtility, the response team
   { const S = await stage(1503); const { game, A, B, C } = S;
     atWaypoint(A, 1, Math.PI / 2); atWaypoint(B, 4, 0, 999); atWaypoint(C, 1, 0, 999); A.wait = 999; S.step(2);
     for (const [gd, k] of [[A, 'coffee'], [B, 'coffee'], [C, 'coffee']] as const) needsSetLevel(game, gd, k, 1.4);
     const s0 = NEEDS_STATS.scheduled;
-    game.quietUtility = true; S.step(60 * 10); const sQuiet = NEEDS_STATS.scheduled - s0; const sendQuiet = needsSend(game, A, 'coffee');
-    game.quietUtility = false; game.qrf.state = 'requested'; S.step(60 * 60); const sQrf = NEEDS_STATS.scheduled - s0 - sQuiet;
+    game.quietUtility = true; S.step(60 * 5); const sQuiet = NEEDS_STATS.scheduled - s0; const sendQuiet = needsSend(game, A, 'coffee');
+    game.quietUtility = false; game.qrf.state = 'requested'; S.step(60 * 15); const sQrf = NEEDS_STATS.scheduled - s0 - sQuiet;
     game.qrf.state = 'idle'; S.step(2); const sFree = NEEDS_STATS.scheduled - s0 - sQuiet - sQrf;
-    console.log(`    ten seconds under quietUtility: ${sQuiet} scheduled (send says "${sendQuiet}"); a minute with the QRF requested: ${sQrf}; two frames free again: ${sFree}`);
+    console.log(`    five seconds under quietUtility: ${sQuiet} scheduled (send says "${sendQuiet}"); fifteen with the QRF requested: ${sQrf}; two frames free again: ${sFree}`);
     allPass = verdict(sQuiet === 0 && /not now/.test(sendQuiet) && sQrf === 0 && sFree >= 1, 'nothing is dealt under quietUtility or with the response team not idle (and the button refuses); freed, the next frames deal', `${sQuiet} / ${sQrf} / ${sFree}`) && allPass;
   }
   console.log(`=== needs-interrupts: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);

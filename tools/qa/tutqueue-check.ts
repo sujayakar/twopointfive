@@ -28,6 +28,7 @@
 // TUTQUEUE_BREAK=1 = no step gives `goal` (the lesson as any other tutorial's): lines 3, 4, 8 and 9 must fail.   exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
 import { ROOT, standUp } from './headless.ts';
+import { swept } from './sweep.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
@@ -156,8 +157,8 @@ export async function tutqueueCheck(): Promise<boolean> {
       verdict(onCall && following && there && clear && e1.length === first && kept && tapped === 0 && /held down/.test(note) && !!M?.part && !!M.flat && M.men.length === 2 && rows.indexOf('cover') === 1 && rows.length <= 5 && line === g.level.scenarios.lesson.steps.find((T: any) => T.id === 'gateB').flatLine && e2.length === 2 && pair,
         `the yard: called and walked out through the hall, every man has a line to the spot by each gate; the first gate turns ${CMDRING.goalHalf ? 'a whole pair, who stay on it' : 'all four'}; at the second a Shift tap gives nothing, and the pair kept down is the ring for a whole pair, whose wedge turns them to it`,
         `the key on himself: all four fall in ${following} · he reached the ring: ${there} (${pl.char.pos[0].toFixed(1)}, ${pl.char.pos[2].toFixed(1)}) · ${lines.join(' · ')} · turned to the road gate: ${names(e1)} · a Shift tap by the back gate: ${tapped ? 'AN ORDER' : 'nothing'}, the note "${note}" · kept down, the ring for: ${ring} · its rows: ${rows.join(', ') || 'none'} · the line "${line}" · wedge ${rows.indexOf('cover') + 1}: to the back gate ${names(n2)}, left on the road gate ${names(e2)}`); }
-    // ---- 9 (a second game: both door fights taken by hand, the lesson walked on to the yard's steps, the squad called and stood in the yard's ring)
-    { const R = await rig(), g = R.g, O = R.O, pl = g.player, at = (id: string): V => R.stepOf(id).at;
+    // ---- 9 (a second game: both door fights taken by hand, the lesson walked on to the yard's steps, the squad called and stood in the yard's ring. A third of the probe's cost: QA_SWEEP=all asks it)
+    if (swept(0, 1)) { const R = await rig(), g = R.g, O = R.O, pl = g.player, at = (id: string): V => R.stepOf(id).at;
       for (const gd of g.guards) if (gd.team !== 'operative' && /^Tango [1-4]$/.test(gd.callsign) && gd.state !== 'dead') killGuard(g, gd, [1, 0, 0], false, 'shot', 'player');
       for (const r of g.roomClear.rooms) if (r.def.id === 'guardroom' || r.def.id === 'hall') r.cleared = true;
       R.stand([28.4, 0, 16.0]); R.until(() => R.up() === 'call', 60); R.W.cursorAt(pl.char.pos); R.step(2); R.key(false); R.step(10);
