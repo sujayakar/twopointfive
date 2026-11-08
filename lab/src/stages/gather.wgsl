@@ -7,7 +7,7 @@
   for (var k = 0u; k < N; k++) {
     let side = p.leaf && rnd() < 0.45; let n = select(p.n, -p.n, side); let u = blue2(id.xy, 1u + k); let w = wideDir(select(x, p.x - p.ng * 0.02, side), n, u, rnd()); if (w.w <= 0.0) { continue; }
     if (dot(w.xyz, p.ng) * select(1.0, -1.0, side) <= 0.0) { continue; }
-    let h = nearest(select(x, p.x - p.ng * 0.02, side), w.xyz, 2e-3, 600.0, 0u, 1e9); var L = vec3f(0.0);
+    let h = nearest(select(x, p.x - p.ng * 0.02, side) + w.xyz * select(0.0, 0.2, p.leaf), w.xyz, 2e-3, 600.0, 0u, 1e9); var L = vec3f(0.0);
     if (h.piece == NOTHING) { L = skyLod(w.xyz, 3.0); dist += 12.0; }
     else {
       let q = surfaceMean(x, w.xyz, h); let c = cacheRead(q.x, q.ng, rnd2()); let own = (h.piece & LEAF_HIT) == 0u && (pieces[h.piece].lamp & 255u) != 255u; L = select(q.glow, vec3f(0.0), own); dist += min(h.t, 12.0);

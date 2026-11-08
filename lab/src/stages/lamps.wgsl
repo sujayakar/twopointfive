@@ -1,5 +1,10 @@
 // SIGNAL 1, LAMP VISIBILITY: three fractions, 0‥1. x = of the standing lamps' light, y = of the changing ones' (torches), w = of the sun's disc. A lamp is
 // drawn by what it would send, so the mean of "was it seen" is the seen share of their light; how much that light is, is exact, and never filtered (lampU: rgb the standing ones', a the torches').
+/** the sun through the leaves, from the sun's own picture of them */
+fn leafSun(x: vec3f, n: vec3f, r: vec2f) -> f32 {
+  let o = x + n * 0.015 + frame.sunDir.xyz * 0.05; let q = sunMap(o); if (any(q.xy < vec2f(0.002)) || any(q.xy > vec2f(0.998))) { return 1.0; } let d = vec2f(textureDimensions(sunLeaves)); var s = 0.0; let a = r.x * 6.2832; let m = mat2x2f(cos(a), sin(a), -sin(a), cos(a));
+  for (var k = 0u; k < 4u; k++) { let off = m * (array<vec2f, 4>(vec2f(0.3, 0.1), vec2f(-0.2, 0.55), vec2f(-0.75, -0.3), vec2f(0.45, -0.8))[k]); let p = vec2i(vec2f(q.x, 1.0 - q.y) * d + off * 1.3); s += select(0.12, 1.0, textureLoad(sunLeaves, p, 0) < q.z + 0.0004); } return s * 0.25;
+}
 @compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) {
   let dim = vec2u(frame.size.xy); if (id.x >= dim.x || id.y >= dim.y) { return; }
   let rd = pxRay(id.xy); let p = unpackPx(textureLoad(surf, id.xy, 0), rd);
@@ -11,10 +16,10 @@
   }
   var v = vec4f(1.0, 1.0, 0.0, 0.0); let o0 = 0.003 * (1.0 + p.t * 0.02);
   for (var k = 0u; k < 3u; k++) {
-    var d: vec3f; var far = 400.0; fineLeaves = k == 0u;
+    var d: vec3f; var far = 400.0; fineLeaves = false; noLeaves = k == 0u;
     if (k == 0u) { d = coneDir(frame.sunDir.xyz, frame.sunDir.w, bn); if (max3(frame.sunE.xyz) <= 0.0 || (dot(p.ng, d) <= 0.0 && !p.leaf)) { continue; } }
     else { let l = pick[k - 1u]; if (l < 0) { continue; } let a = aimLamp(u32(l), p.x, select(vec2f(b2.y, b3.y), vec2f(b3.y, b2.y), k == 2u)); d = a.dir; far = a.dist - 0.02; if (max3(a.E) <= 0.0 || (dot(p.ng, d) <= 0.0 && !p.leaf)) { v[k - 1u] = 0.0; continue; } }
-    let T = lum(visible(p.x + p.ng * select(-o0, o0, dot(p.ng, d) > 0.0), d, 1e-3, far)); if (k == 0u) { v.w = T; } else { v[k - 1u] = T; }
+    let T = lum(visible(p.x + p.ng * select(-o0, o0, dot(p.ng, d) > 0.0), d, 1e-3, far)); if (k == 0u) { v.w = T; if (T > 0.0) { v.w = T * leafSun(p.x, p.ng * select(-1.0, 1.0, dot(p.ng, d) > 0.0), b3); } } else { v[k - 1u] = T; }
   }
   textureStore(outVis, id.xy, v); textureStore(outU, id.xy, vec4f(U, W.y));
 }

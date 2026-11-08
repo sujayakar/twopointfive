@@ -20,6 +20,7 @@ import resolve from './resolve.wgsl' with { type: 'text' };
 import taau from './taau.wgsl' with { type: 'text' };
 import { glowStages } from './glow';
 import { exposeStages } from './expose';
+import { rasterStage } from './raster';
 import claim from './cacheclaim.wgsl' with { type: 'text' };
 import warm from './cachewarm.wgsl' with { type: 'text' };
 import update from './cacheupdate.wgsl' with { type: 'text' };
@@ -83,7 +84,7 @@ export const noDenoise: DenoisePart = { name: 'none', stages: ({ signal }) => ({
 export const taauUp: UpscalePart = { name: 'taau', stages(g) { g.signal('picture', 'rgba16float', 'output', true); return { result: 'picture', stages: [{ name: 'upscale', over: 'output', reads: { color: 'color', 'picture@prev': 'hist', aux: 'auxT' }, writes: { outT: 'picture' }, buffers: { taauK: ['taauK', 'vec4f', 'uniform'] }, code: taau }] }; } };
 
 export function realtime(o: { name?: string; cache?: CachePart; denoise?: DenoisePart; upscale?: UpscalePart } = {}): Method & { glow: string } {
-  const cache = o.cache ?? hashCache(), dn = o.denoise ?? svgf, up = o.upscale ?? taauUp; let last = '', quiet = 0, fresh = true, prevOn = new Float32Array(64);
+  const cache = o.cache ?? hashCache(), dn = o.denoise ?? svgf, up = o.upscale ?? taauUp; let last = '', lastHour = -1, quiet = 0, fresh = true, prevOn = new Float32Array(64);
   const m: Method & { glow: string; warm?: Promise<void> } = {
     name: o.name ?? 'realtime', result: 'picture', glow: 'rt',
     signals(g, lab) {
@@ -93,13 +94,15 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
     },
     stages(lab) {
       const g = lab.graph, c = { ...cache.bind, ...CHANGES };
+      const raster = rasterStage(lab, g);
       const S = (name: string, code: string, over: Size, reads: Record<string, string>, writes: Record<string, string>, buffers: Stage['buffers'] = {}, consts?: Record<string, number>): Stage => ({ name, code: signals + code, over, reads, writes, buffers: { ...CHANGES, ...buffers }, ...(consts ? { consts } : {}) });
       const dVis = dn.stages({ signal: 'vis', div: 1, cap: 18, rounds: 3, fractions: true }, g), dB = dn.stages({ signal: 'bounce', div: 2, cap: 36, rounds: 4 }, g), dM = dn.stages({ signal: 'mirror', div: 2, cap: 26, rounds: 2, narrow: true }, g), u = up.stages(g); m.result = u.result;
       const glows = [...glowStages(g, u.result, 'rt'), ...exposeStages(lab, g, u.result, 'rtGlow2', 'rt')];
       return [
-        S('first hit', surf, 'render', {}, { outSurf: 'surf', outAux: 'aux', outEmit: 'emit', outFront: 'front' }, { past: ['past', 'array<vec4f>', 'read'] }),
+        raster,
+        S('first hit', surf, 'render', { id: 'idT', idClear: 'idC', depth: 'depthT' }, { outSurf: 'surf', outAux: 'aux', outEmit: 'emit', outFront: 'front' }, { past: ['past', 'array<vec4f>', 'read'] }),
         ...cache.stages,
-        S('lamps', lamps, 'render', { surf: 'surf' }, { outVis: 'vis', outU: 'lampU' }),
+        S('lamps', lamps, 'render', { surf: 'surf', sunLeaves: 'sunLeaves' }, { outVis: 'vis', outU: 'lampU' }),
         S('gather', cache.lib + gather, 'half', { surf: 'surf' }, { outE: 'bounce' }, { ...c, hits: ['hits', 'array<vec4f>', 'read_write'] }),
         S('mirror', cache.lib + mirror, 'half', { surf: 'surf', front: 'frontT' }, { outM: 'mirror' }, c, { DIV: 2 }),
         ...dVis.stages, ...dB.stages, ...dM.stages,
@@ -114,7 +117,7 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
       const mv = lab.building.world.moving, f = new Float32Array(mv.length * 16); for (const p of mv) { const s = lab.slots.get(p); if (s === undefined) continue; const q = lab.prevAt.get(p) ?? p, o = (s - lab.scene.piece0[2]) * 16; f.set(q.at, o); f.set(q.rot[0], o + 4); f.set(q.rot[1], o + 8); f.set(q.rot[2], o + 12); } if (mv.length) lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('past')!, 0, f);
       const ch = new Float32Array(36); let n = 0; for (const d of lab.building.doors) if (Math.abs(d.want - d.open) > 1e-3 && n < 8) { ch.set([d.hinge[0], d.hinge[1] + 1, d.hinge[2], 7.5], n * 4); n++; }
       lab.building.world.lamps.forEach((l, i) => { if (Math.abs(lab.scene.lampOn[i]! - prevOn[i]!) > 0.02 && l.kind !== 'spot' && n < 8) { ch.set([...l.at, 9], n * 4); n++; } }); prevOn = lab.scene.lampOn.slice();
-      const key = lab.hour.toFixed(3) + lab.lampsMode; if (key !== last) { last = key; quiet = 24; } quiet = Math.max(0, quiet - 1); ch[32] = 1 - 0.85 * (quiet / 24); lab.uniform('changes', ch);
+      const key = lab.hour.toFixed(3) + lab.lampsMode; if (key !== last) { last = key; quiet = 24; if (Math.abs(lab.hour - lastHour) > 0.25) ch[33] = 1; lastHour = lab.hour; } quiet = Math.max(0, quiet - 1); ch[32] = 1 - 0.85 * (quiet / 24); lab.uniform('changes', ch);
       lab.uniform('taauK', new Float32Array([0.25 * (lab.exposure || 1), fresh ? 1 : 0, 0, 0])); fresh = false;
     },
     reset() { fresh = true; },

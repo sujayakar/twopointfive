@@ -3,9 +3,9 @@ import { type V3, type Rot, rotY, rotX, rotZ, compose, apply, add, mul, sub, nor
 import { World, F, type Piece, type Mark, taper } from './world';
 import { M, C } from './materials';
 import { plantKit, tree, tuft, type Kit } from './plants';
+import { Person, type Stop } from './people';
 
 export interface Door { name: string; hinge: V3; yaw: number; swing: number; open: number; want: number; leaf: Piece[]; local: { at: V3; half: V3 }[]; slide?: V3 }
-export interface Person { body: Piece[]; path: V3[]; speed: number; phase: number; torch: number; color: V3; stand?: boolean }
 export interface Building { world: World; doors: Door[]; people: Person[]; levels: { name: string; cut: number; look: V3 }[]; pool: [number, number, number, number]; poolTop: number; poolDeep: number }
 type Hole = { a: number; b: number; y0: number; y1: number; kind: 'door' | 'window' | 'open'; glass?: boolean; frame?: V3; sky?: 1 | -1; bars?: number };
 const FL = 3.4, H = 3.2;                                              // floor to floor; clear height
@@ -200,37 +200,18 @@ export function makeBuilding(): Building {
   for (const [x, z] of [[4.35, -1.0], [4.35, 1.9]] as number[][]) { const lamp = w.lamp({ kind: 'sphere', at: [x! + 0.12, FL + 2.3, z!], u: [0.09, 0, 0], v: [0, 0, 0], radiance: [60, 42, 22], name: 'terrace', on: 1, night: true }); w.ellipsoid([x! + 0.12, FL + 2.3, z!], [0.09, 0.09, 0.09], M.glow!, { tint: [1, 0.84, 0.6], lamp, seed: 600, flags: F.CUT | F.GLOW | F.NOSHADOW }); }
 
   // ---------------------------------------------------------------- people
-  const person = (path: V3[], speed: number, phase: number, color: V3, torch: boolean, stand = false) => {
-    const body: Piece[] = []; const P = (half: V3, mat: number, tint: V3, quad?: 'ell' | 'cyl') => { const p = w.add({ at: [0, -100, 0], half, mat, tint, flags: F.MOVES | F.CUT, quad: quad === 'ell' ? [1 / half[0] ** 2, 1 / half[1] ** 2, 1 / half[2] ** 2, 0] : quad === 'cyl' ? [1 / half[0] ** 2, 0, 1 / half[2] ** 2, 0] : undefined } as never); body.push(p); return p; };
-    const suit: V3 = [0.42, 0.43, 0.46]; P([0.155, 0.23, 0.11], M.cloth!, suit, 'ell'); P([0.18, 0.20, 0.125], M.plastic!, color); P([0.145, 0.13, 0.11], M.cloth!, suit, 'ell'); P([0.088, 0.115, 0.10], M.skin!, [1, 1, 1], 'ell'); P([0.105, 0.085, 0.118], M.plastic!, C.black as V3, 'ell'); P([0.085, 0.03, 0.03], M.mirror!, [0.9, 0.6, 0.3]);
-    for (let i = 0; i < 8; i++) P([0.06, 0.2, 0.06], i % 4 === 3 ? M.rubber! : M.cloth!, suit, 'ell'); for (let i = 0; i < 2; i++) P([0.05, 0.04, 0.125], M.rubber!, [1, 1, 1], 'ell'); for (let i = 0; i < 2; i++) P([0.042, 0.05, 0.042], M.skin!, [1, 1, 1], 'ell'); P([0.025, 0.035, 0.34], M.rubber!, [1, 1, 1]); P([0.02, 0.1, 0.04], M.rubber!, [1, 1, 1]);
-    const t = torch ? w.lamp({ kind: 'spot', at: [0, 1, 0], u: [0.02, 0, 0], v: [0, 0, 1], radiance: [26000, 24500, 21000], cos: 0.9, name: 'torch', on: 0, night: true }) : -1; people.push({ body, path, speed, phase, torch: t, color, stand });
-  };
-  person([[-1.5, 0, 6.8], [2.6, 0, 3.0], [2.0, 0, -4.0], [-2.6, 0, -6.4], [-3.0, 0, 1.0]], 1.1, 0, C.orange as V3, true); person([[5.2, FL, 1.2], [11.2, FL, 1.2], [11.4, FL, -1.2], [5.2, FL, -1.2]], 0.9, 3, C.orange as V3, true); person([[-14, 0, 6], [-14, 0, 11], [10, 0, 11.4], [14.6, 0, 11], [14.4, 0, 0], [10, 0, 11.4]], 1.3, 5, C.teal as V3, true); person([[-9.5, Y, -2.6], [-6.0, Y, -2.2], [-5.4, Y, -6.0], [-7.2, Y, -7.0], [-10.8, Y, -2.6]], 0.9, 2, C.teal as V3, true);
-  void r; void smooth; void rotZ; void taper;
+  const who = (color: V3, pace: number, torch: boolean, stops: Stop[]) => people.push(new Person(w, stops, pace, color, people.length, { torch }));
+  who(C.orange as V3, 1.25, true, [{ at: [-1.5, 0.02, 6.9] }, { at: [2.4, 0.02, 2.6] }, { at: [2.1, 0.02, -4.2], wait: 2.6, face: 2.2 }, { at: [-2.9, 0.02, -6.2] }, { at: [-3.2, 0.02, 1.0], wait: 2.2, face: -1.5 }]);
+  who(C.orange as V3, 1.05, true, [{ at: [5.2, FL + 0.05, 1.2] }, { at: [9.6, FL + 0.05, 1.3], wait: 3.0, face: 1.6 }, { at: [11.3, FL + 0.05, 0.6] }, { at: [11.4, FL, -1.9] }, { at: [5.2, FL, -2.0], wait: 2.0, face: 0.2 }, { at: [4.9, FL, -1.0] }]);
+  who(C.teal as V3, 1.45, true, [{ at: [-14, 0, 6] }, { at: [-14, 0, 11.4] }, { at: [-4, 0, 11.6] }, { at: [2.5, 0, 11.4], wait: 2.4, face: 2.9 }, { at: [-4, 0, 11.0] }, { at: [-13.4, 0, 10.6] }, { at: [-14.2, 0, -2], wait: 2, face: 1.4 }]);
+  who(C.teal as V3, 1.1, true, [{ at: [-9.5, Y, -2.6] }, { at: [-6.0, Y, -2.2] }, { at: [-5.4, Y, -5.6], wait: 2.6, face: -2.2 }, { at: [-7.2, Y, -7.0] }, { at: [-10.9, Y, -3.2], wait: 2.2, face: 0.5 }]);
+  who(C.red as V3, 1.2, true, [{ at: [5.6, 0.02, -5.8] }, { at: [10.6, 0.02, -5.6], wait: 2.2, face: 2.6 }, { at: [10.8, 0.02, -2.0] }, { at: [5.2, 0.02, -1.6], wait: 1.8, face: -0.6 }]);
+  who(C.red as V3, 1.3, false, [{ at: [14.6, 0, 6.5] }, { at: [14.4, 0, -1.5], wait: 2.6, face: -1.6 }, { at: [14.6, 0, -7.8] }, { at: [14.2, 0, 1.2] }]);
+  void r; void smooth; void rotZ; void taper; void ({} as Kit);
   return { world: w, doors, people, levels: [{ name: 'Roof', cut: 1e9, look: [0, 3.2, 0] }, { name: 'Upper floor', cut: FL + 2.55, look: [0, 3.4, 0] }, { name: 'Ground floor', cut: 2.55, look: [0, 0.6, 0] }], pool: [px0, pz0, px1, pz1], poolTop, poolDeep: poolTop - pf };
 }
 
 // ---------------------------------------------------------------- what moves, as a pure function of the tick
 export function poseDoor(d: Door) {
   const a = d.yaw + d.swing * d.open * 1.75, rt: Rot = rotY(a); d.leaf.forEach((p, i) => { const l = d.local[i]!; p.at = add(d.hinge, apply(rt, l.at)); p.rot = rt; p.half = l.half; });
-}
-export interface Torch { lamp: number; at: V3; dir: V3 }
-/** a person walking their round: body pieces posed from the distance walked */
-export function posePerson(p: Person, t: number): Torch | null {
-  let total = 0; const n = p.path.length, seg: number[] = []; for (let i = 0; i < n; i++) { const d = sub(p.path[(i + 1) % n]!, p.path[i]!); seg.push(Math.hypot(...d)); total += seg[i]!; }
-  let s = ((t * p.speed + p.phase * 2.1) % total + total) % total, k = 0; while (s > seg[k]!) { s -= seg[k]!; k = (k + 1) % n; }
-  const a = p.path[k]!, b = p.path[(k + 1) % n]!, pos = add(a, mul(sub(b, a), s / seg[k]!)); const yawOf = (i: number) => { const d = sub(p.path[(i + 1) % n]!, p.path[i]!); return Math.atan2(d[0], d[2]); };
-  let yaw = yawOf(k); const turn = (from: number, to: number, w: number) => { let d = to - from; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return from + d * w; };
-  if (s < 0.5) yaw = turn(yawOf((k + n - 1) % n), yaw, 0.5 + s); else if (seg[k]! - s < 0.5) yaw = turn(yaw, yawOf((k + 1) % n), 0.5 - (seg[k]! - s));
-  const walked = t * p.speed + p.phase * 2.1, ph = walked * 4.3, rt = rotY(yaw), bob = Math.abs(Math.sin(ph)) * 0.025; const W = (x: number, y: number, z: number): V3 => add(pos, apply(rt, [x, y, z]));
-  const set = (i: number, at: V3, rot: Rot = rt) => { p.body[i]!.at = at; p.body[i]!.rot = rot; }; const bone = (i: number, u: V3, v: V3, r: number) => { const q = p.body[i]!, d = sub(v, u), l = Math.hypot(...d), y = norm(d), hx = norm([y[1] * apply(rt, [0, 0, 1])[2] - y[2] * apply(rt, [0, 0, 1])[1], y[2] * apply(rt, [0, 0, 1])[0] - y[0] * apply(rt, [0, 0, 1])[2], y[0] * apply(rt, [0, 0, 1])[1] - y[1] * apply(rt, [0, 0, 1])[0]]); q.at = mul(add(u, v), 0.5); q.rot = [hx, y, [hx[1] * y[2] - hx[2] * y[1], hx[2] * y[0] - hx[0] * y[2], hx[0] * y[1] - hx[1] * y[0]]]; q.half = [r, l / 2 + r * 0.8, r]; q.quad = [1 / r ** 2, 1 / q.half[1] ** 2, 1 / r ** 2, 0]; };
-  const lean = compose(rt, rotX(0.06)); set(0, W(0, 1.22 + bob, 0.01), lean); set(1, W(0, 1.26 + bob, 0.012), lean); set(2, W(0, 0.96 + bob, 0)); set(3, W(0, 1.62 + bob, 0.03)); set(4, W(0, 1.685 + bob, 0.012)); set(5, W(0, 1.635 + bob, 0.115));
-  for (const side of [0, 1]) {
-    const sg = side ? 1 : -1, sw = Math.sin(ph + side * Math.PI), hip = W(sg * 0.095, 0.94 + bob, 0), foot = W(sg * 0.10, 0.07 + Math.max(0, Math.cos(ph + side * Math.PI)) * 0.11, sw * 0.30), mid = add(mul(add(hip, foot), 0.5), apply(rt, [0, 0.02, 0.075 + Math.max(0, Math.cos(ph + side * Math.PI)) * 0.09]));
-    bone(6 + side * 2, hip, mid, 0.078); bone(7 + side * 2, mid, foot, 0.058); set(14 + side, add(foot, apply(rt, [0, -0.025, 0.06])));
-    const sh = W(sg * 0.2, 1.42 + bob, 0), hand = side ? W(0.10, 1.16 + bob, 0.30) : W(0.02, 1.15 + bob, 0.46), el = add(mul(add(sh, hand), 0.5), apply(rt, [sg * 0.07, -0.11, -0.03])); bone(10 + side * 2, sh, el, 0.052); bone(11 + side * 2, el, hand, 0.043); set(16 + side, hand);
-  }
-  set(18, W(0.07, 1.19 + bob, 0.42)); set(19, W(0.075, 1.10 + bob, 0.32));
-  const sweep = Math.sin(t * 0.8 + p.phase) * 0.35, dir = apply(compose(rt, compose(rotY(sweep), rotX(0.16))), [0, 0, 1]); return p.torch < 0 ? null : { lamp: p.torch, at: W(0.07, 1.22 + bob, 0.80), dir };
 }

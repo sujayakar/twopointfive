@@ -4,14 +4,14 @@ import { pathTracer } from './stages/path';
 import { Present } from './present';
 import { realtime, noDenoise } from './stages/realtime';
 import type { V3 } from './math';
-export interface View { w: number; h: number; hour?: number; cut?: number; look?: V3; yaw?: number; pitch?: number; dist?: number; fov?: number; samples: number; method?: string; tick?: number; doors?: Record<string, number> | number; lamps?: 'auto' | 'on' | 'off'; bias?: number; scale?: number; warm?: number; jpeg?: boolean; run?: boolean; signal?: string; gain?: number }
+export interface View { w: number; h: number; hour?: number; cut?: number; look?: V3; yaw?: number; pitch?: number; dist?: number; fov?: number; samples: number; method?: string; tick?: number; doors?: Record<string, number> | number; lamps?: 'auto' | 'on' | 'off'; bias?: number; scale?: number; warm?: number; jpeg?: boolean; run?: boolean; signal?: string; gain?: number; person?: number }
 const methods: Record<string, () => Method> = { reference: () => pathTracer(), realtime: () => realtime(), raw: () => realtime({ name: 'raw', denoise: noDenoise }) };
 export function register(name: string, m: () => Method) { methods[name] = m; }
 export async function shots() {
   const lab = new Lab(); await lab.open(null); const present = new Present(lab.gpu); await present.init();
   const made = new Map<string, Method>();
   const shot = async (v: View) => {
-    lab.tick = v.tick ?? 0; lab.hour = v.hour ?? 15.2; lab.cut = lab.wantCut = v.cut ?? 1e9; lab.lampsMode = v.lamps ?? 'auto'; present.bias = v.bias ?? 0; const c = lab.camera; Object.assign(c.want, { look: v.look ?? [0, 3, 0], yaw: v.yaw ?? 0.62, pitch: v.pitch ?? 0.94, dist: v.dist ?? 44 }); c.fov = v.fov ?? 0.40; c.snap();
+    lab.seek(v.tick ?? 0); lab.hour = v.hour ?? 15.2; lab.cut = lab.wantCut = v.cut ?? 1e9; lab.lampsMode = v.lamps ?? 'auto'; present.bias = v.bias ?? 0; const c = lab.camera; if (v.person !== undefined) { const q = lab.building.people[v.person]!.pos; v.look = [q[0], q[1] + 1, q[2]]; } Object.assign(c.want, { look: v.look ?? [0, 3, 0], yaw: v.yaw ?? 0.62, pitch: v.pitch ?? 0.94, dist: v.dist ?? 44 }); c.fov = v.fov ?? 0.40; c.snap();
     for (const d of lab.building.doors) d.open = d.want = typeof v.doors === 'number' ? v.doors : v.doors?.[d.name] ?? 0; lab.pose();
     const s = v.scale ?? 1; lab.resize([Math.round(v.w * s), Math.round(v.h * s)], [v.w, v.h]); const name = v.method ?? 'reference'; let m = made.get(name); if (!m) made.set(name, m = methods[name]!()); await lab.use(m); lab.frameNo = 0;
     const t0 = performance.now(); lab.graph.timer.ms.clear(); for (let i = 0; i < v.samples; i++) { if (v.run) lab.step(); present.set(lab, true); lab.draw(); if (i % 2 === 1) await lab.gpu.device.queue.onSubmittedWorkDone(); } await lab.gpu.device.queue.onSubmittedWorkDone(); const ms = (performance.now() - t0) / v.samples;

@@ -1,7 +1,8 @@
 // LIGHT ON SURFACES, one more sample an entry: the sun, one lamp, and one ray to see what else is out there, read from the table as it stands.
 @compute @workgroup_size(64) fn main(@builtin(global_invocation_id) id: vec3u) {
   let s = id.x; if (s >= SLOTS) { return; } if (norms[s] == 0u) { return; }
-  let a = cells[2u * s]; let b = cells[2u * s + 1u]; let x0 = b.xyz; let st = steady(x0);
+  var a = cells[2u * s]; let b = cells[2u * s + 1u]; let x0 = b.xyz; let st = steady(x0);
+  if (changes.all.y > 0.5) { a.w = min(a.w, 1.0); }
   if (a.w > 24.0 && st > 0.9 && (s & 3u) != (frame.counts.z & 3u)) { return; }
   let key = atomicLoad(&keys[s]); rngKey(key, 91u); let n = octUnpack(norms[s] & 0xfffffffeu); fineLeaves = false;
   // a little about its point, so that a cell is the mean of its patch

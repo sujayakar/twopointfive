@@ -5,7 +5,7 @@ export interface Bvh { order: number[]; nodes: ArrayBuffer; perOctant: number }
 const BINS = 12;
 type Node = { mn: number[]; mx: number[]; axis: number; a?: Node; b?: Node; first: number; count: number };
 
-export function buildBvh(items: Bounds[], leaf = 2): Bvh {
+export function buildBvh(items: Bounds[], leaf = 2, octants = 8): Bvh {
   const order = items.map((_, i) => i), cen = items.map(b => [0, 1, 2].map(k => (b.mn[k]! + b.mx[k]!) / 2));
   const bound = (f: number, n: number) => { const mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9]; for (let i = f; i < f + n; i++) { const b = items[order[i]!]!; for (let k = 0; k < 3; k++) { mn[k] = Math.min(mn[k]!, b.mn[k]!); mx[k] = Math.max(mx[k]!, b.mx[k]!); } } return { mn, mx }; };
   const area = (mn: number[], mx: number[]) => { const x = mx[0]! - mn[0]!, y = mx[1]! - mn[1]!, z = mx[2]! - mn[2]!; return x < 0 ? 0 : x * y + y * z + z * x; };
@@ -34,8 +34,8 @@ export function buildBvh(items: Bounds[], leaf = 2): Bvh {
     node.axis = Math.max(0, axis); node.count = 0; node.a = make(first, mid - first); node.b = make(mid, first + count - mid); return node;
   };
   const root = items.length ? make(0, items.length) : null, per = Math.max(1, total);
-  const nodes = new ArrayBuffer(per * 32 * 8), f = new Float32Array(nodes), u = new Uint32Array(nodes);
-  for (let o = 0; o < 8; o++) {
+  const nodes = new ArrayBuffer(per * 32 * octants), f = new Float32Array(nodes), u = new Uint32Array(nodes);
+  for (let o = 0; o < octants; o++) {
     let n = 0;
     const put = (x: Node) => {
       const at = (o * per + n++) * 8; f.set(x.mn, at); f.set(x.mx, at + 4);
@@ -45,4 +45,15 @@ export function buildBvh(items: Bounds[], leaf = 2): Bvh {
     if (root) put(root); else { f.set([1e9, 1e9, 1e9], o * 8); f.set([1e9, 1e9, 1e9], o * 8 + 4); u[o * 8 + 3] = 1; u[o * 8 + 7] = 0; }
   }
   return { order, nodes, perOctant: per };
+}
+
+/** new bounds in an old tree (one order): the same shape, refitted from the leaves up */
+export function refitBvh(b: Bvh, bound: (item: number) => Bounds) {
+  const f = new Float32Array(b.nodes), u = new Uint32Array(b.nodes);
+  for (let i = b.perOctant - 1; i >= 0; i--) {
+    const o = i * 8, leaf = u[o + 7]!, n = leaf & 15; let x0 = 1e9, y0 = 1e9, z0 = 1e9, x1 = -1e9, y1 = -1e9, z1 = -1e9;
+    if (n) { for (let k = 0; k < n; k++) { const q = bound(b.order[(leaf >>> 4) + k]!); x0 = Math.min(x0, q.mn[0]); y0 = Math.min(y0, q.mn[1]); z0 = Math.min(z0, q.mn[2]); x1 = Math.max(x1, q.mx[0]); y1 = Math.max(y1, q.mx[1]); z1 = Math.max(z1, q.mx[2]); } }
+    else { const a = (i + 1) * 8, c = u[a + 3]! * 8; for (const q of [a, c]) { x0 = Math.min(x0, f[q]!); y0 = Math.min(y0, f[q + 1]!); z0 = Math.min(z0, f[q + 2]!); x1 = Math.max(x1, f[q + 4]!); y1 = Math.max(y1, f[q + 5]!); z1 = Math.max(z1, f[q + 6]!); } }
+    f[o] = x0; f[o + 1] = y0; f[o + 2] = z0; f[o + 4] = x1; f[o + 5] = y1; f[o + 6] = z1;
+  }
 }

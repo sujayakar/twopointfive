@@ -29,7 +29,7 @@ fn leafSurf(h: Hit, x: vec3f, rd: vec3f) -> Surf {
   let b = bitcast<vec4u>(extra[h.code * 2u + 1u]); let ln = octUnpack(b.x);
   var n = normalize((*I).r0.xyz * ln.x + (*I).r1.xyz * ln.y + (*I).r2.xyz * ln.z); if (dot(n, rd) > 0.0) { n = -n; }
   var s: Surf; s.x = x; s.ng = n; s.n = n; let t = unpackTint((*I).tint); let tone = bitcast<f32>(b.z);
-  s.albedo = t * t * mix(0.62, 1.25, tone); s.through = s.albedo * vec3f(0.95, 1.15, 0.35) * select(0.85, 0.5, b.w == 1u); s.rough = 0.45; s.f0 = 0.035; s.metal = 0.0; s.glow = vec3f(0.0); s.kind = 14u; s.piece = h.piece; s.flags = MOVES; return s;
+  s.albedo = t * t * mix(0.62, 1.25, tone) * select(1.0, 0.7, b.w == 1u); s.through = s.albedo * vec3f(0.95, 1.15, 0.35) * select(0.85, 0.5, b.w == 1u); s.rough = 0.45; s.f0 = 0.035; s.metal = 0.0; s.glow = vec3f(0.0); s.kind = 14u; s.piece = h.piece; s.flags = MOVES; return s;
 }
 fn localNormal(k: u32, code: u32, lp: vec3f) -> vec3f {
   if (code < 6u) { var n = vec3f(0.0); n[code >> 1u] = select(-1.0, 1.0, (code & 1u) == 1u); return n; }

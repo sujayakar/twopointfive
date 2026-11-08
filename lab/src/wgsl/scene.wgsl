@@ -11,6 +11,7 @@ struct Frame {
   counts: vec4u,       // lamps, openings, frame, seed
   per: vec4u,          // nodes per octant of the four trees: standing pieces the section cuts, standing pieces it does not, moving pieces, leaf clusters
   node0: vec4u,        // where each starts in nodes
+  step: vec4u,         // from one octant's order to the next (0: one order serves all)
   piece0: vec4u,       // where each one's pieces start (the fourth's are instances)
   pool: vec4f,         // the water: x0 z0 x1 z1
   pool2: vec4f,        // its level, its depth
@@ -116,8 +117,10 @@ fn meetLeaf(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> f32 {
   return select(-1.0, t, abs(u) < 1.0 && abs(v) < w);
 }
 
+/** where a point is in the sun's map of the leaves: 0‥1, 0‥1, and how far along (1 = toward the sun) */
+fn sunMap(x: vec3f) -> vec3f { let b = basis(frame.sunDir.xyz); let d = x - vec3f(4.0, 4.0, 0.0); return vec3f(dot(d, b[0]) / 30.0 + 0.5, dot(d, b[1]) / 30.0 + 0.5, dot(d, frame.sunDir.xyz) / 80.0 + 0.5); }
 /** leaves one by one, or as a ball of them: a medium. Rays from what the camera sees take them one by one; the rest do not need to */
-var<private> fineLeaves: bool = true;
+var<private> fineLeaves: bool = true; var<private> noLeaves: bool = false;
 const BALL_SIGMA = 0.80;                                            // per unit of the ball's radius, with the clumping a ball of leaves has (three quarters of its even density)
 fn ballStay(o: vec3f, d: vec3f, tmin: f32, tmax: f32) -> vec2f { let a = dot(d, d); let b = dot(o, d); let c = dot(o, o) - 1.0; let q = b * b - a * c; if (q <= 0.0) { return vec2f(1.0, 0.0); } let s = sqrt(q); return vec2f(max((-b - s) / a, tmin), min((-b + s) / a, tmax)); }
 /** NEAREST: what is out there. `cut` < 1e8 is the camera's section; `skip` = flags a ray does not meet. Glass is passed, and what it lets through is in thru */
@@ -126,7 +129,7 @@ fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) ->
   var g0 = vec2f(1e30, 0.0); var g1 = vec2f(1e30, 0.0); var gp = NOTHING; var gc = 0u;   // the two nearest panes: (t, tint)
   let t0 = select(tmin, max(tmin, (cut - ro.y) / rd.y), cut < 1e8 && ro.y > cut && rd.y < -1e-5);   // above the section nothing it cuts is there
   for (var s = 0u; s < 3u; s++) {
-    let per = frame.per[s]; let b0 = frame.node0[s] + oc * per; let pb = frame.piece0[s]; let tm = select(t0, tmin, s == 1u);
+    let per = frame.per[s]; let b0 = frame.node0[s] + oc * frame.step[s]; let pb = frame.piece0[s]; let tm = select(t0, tmin, s == 1u);
     var i = 0u;
     while (i < per) {
       let n = &nodes[b0 + i];
@@ -143,7 +146,7 @@ fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) ->
       i++;
     }
   }
-  { let per = frame.per.w; let b0 = frame.node0.w + oc * per; var i = 0u;
+  { let per = frame.per.w; let b0 = frame.node0.w + oc * frame.step.w; var i = 0u;
     while (i < per) {
       let n = &nodes[b0 + i];
       if (!boxHit(n, ro, inv, tmin, best)) { i = (*n).skip; continue; }
@@ -172,7 +175,7 @@ fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) ->
 fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f {
   var T = vec3f(1.0); let inv = safeInv(rd); let oc = octant(rd);
   for (var s = 0u; s < 3u; s++) {
-    let per = frame.per[s]; let b0 = frame.node0[s] + oc * per; let pb = frame.piece0[s];
+    let per = frame.per[s]; let b0 = frame.node0[s] + oc * frame.step[s]; let pb = frame.piece0[s];
     var i = 0u;
     while (i < per) {
       let n = &nodes[b0 + i];
@@ -189,7 +192,7 @@ fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f {
       i++;
     }
   }
-  { let per = frame.per.w; let b0 = frame.node0.w + oc * per; var i = 0u;
+  if (!noLeaves) { let per = frame.per.w; let b0 = frame.node0.w + oc * frame.step.w; var i = 0u;
     while (i < per) {
       let n = &nodes[b0 + i];
       if (!boxHit(n, ro, inv, tmin, tmax)) { i = (*n).skip; continue; }

@@ -5,7 +5,7 @@ import { Graph, type Stage } from './graph';
 import { SceneGpu } from './scenegpu';
 import { Sky, hourOf, type Hour } from './sky';
 import { Camera } from './camera';
-import { makeBuilding, poseDoor, posePerson, type Building } from './scene/building';
+import { makeBuilding, poseDoor, type Building } from './scene/building';
 import type { Piece } from './scene/world';
 import { type V3, clamp, norm } from './math';
 import math from './wgsl/math.wgsl' with { type: 'text' };
@@ -35,17 +35,20 @@ export class Lab {
   resize(render: [number, number], output: [number, number]) { if (this.graph.resize(render, output)) { for (const { m } of this.methods.values()) m.reset?.(this); this.frameNo = 0; } }
   /** one tick of the world: doors, people, trees, the section, the camera */
   step() {
-    const b = this.building; this.tick++;
+    const b = this.building; this.tick++; this.walked++;
     if (this.doorsAuto) b.doors.forEach((d, i) => { d.want = Math.sin(this.tick * TICK * 0.45 + i * 1.9) > 0.1 ? 1 : 0; });
     for (const d of b.doors) { const v = clamp(d.want - d.open, -TICK * 0.9, TICK * 0.9); d.open += v; }
     this.cut += clamp(this.wantCut - this.cut, -TICK * 6, TICK * 6); if (this.wantCut > 1e8) this.cut = this.cut < 9.5 ? Math.min(9.5, this.cut + TICK * 6) : 1e9; else if (this.cut > 1e8) this.cut = 9.4;
-    this.camera.step(TICK); this.pose();
+    for (const p of b.people) p.step(TICK); this.camera.step(TICK); this.pose();
   }
+  /** the world at a tick, from the start (only what has a memory is stepped) */
+  seek(tick: number) { while (this.walked < tick) { this.walked++; for (const p of this.building.people) p.step(TICK); } this.tick = tick; }
+  private walked = 0;
   pose() {
     const b = this.building, t = this.tick * TICK, on = this.scene?.lampOn; for (const d of b.doors) poseDoor(d);
     const h = hourOf(this.hour), dark = this.lampsMode === 'on' ? 1 : this.lampsMode === 'off' ? 0 : h.night, inside = this.lampsMode === 'auto' ? Math.max(dark, 0.45) : dark; this.hourNow = h;
     b.world.lamps.forEach((l, i) => { if (on && l.kind !== 'spot') on[i] = l.on * (l.name === 'terrace' || l.name === 'pool' ? dark : inside) * (this.lampGroup[l.name] ?? 1); });
-    for (const p of b.people) { const s = posePerson(p, t); if (s) { const l = b.world.lamps[s.lamp]!; l.at = s.at; l.v = s.dir; if (on) on[s.lamp] = h.night > 0.5 ? 1 : 0; } }
+    for (const p of b.people) if (p.torch >= 0) { const l = b.world.lamps[p.torch]!; l.at = p.torchAt; l.v = p.torchDir; if (on) on[p.torch] = h.night > 0.5 ? 1 : 0; } void t;
   }
   /** the frame's numbers to the GPU */
   private send() {
@@ -54,7 +57,7 @@ export class Lab {
     v(c.pos); v(c.right); v(c.up); v(c.fwd); v(p.pos); v(p.right); v(p.up); v(p.fwd); v(h.sun, h.radius); v(h.sunE, 1);
     f.set([rw, rh, ow, oh], o); o += 4; f.set([this.jitter[0], this.jitter[1], this.prevJitter[0], this.prevJitter[1]], o); o += 4; f.set([this.tick * TICK, this.cut, this.exposure, h.haze], o); o += 4; f.set([this.knobs[0]!, this.knobs[1]!, this.knobs[2]!, h.night * 2.2], o); o += 4;
     this.slots = this.scene.moved(this.tick * TICK, this.wind); this.scene.sendLamps();
-    u.set([Math.min(64, b.world.lamps.length), Math.min(32, b.world.openings.length), this.frameNo, this.seed], o); o += 4; u.set(this.scene.per, o); o += 4; u.set(this.scene.node0, o); o += 4; u.set(this.scene.piece0, o); o += 4; f.set(b.pool, o); o += 4; f.set([b.poolTop, b.poolDeep, 0, 0], o);
+    u.set([Math.min(64, b.world.lamps.length), Math.min(32, b.world.openings.length), this.frameNo, this.seed], o); o += 4; u.set(this.scene.per, o); o += 4; u.set(this.scene.node0, o); o += 4; u.set(this.scene.stepOf, o); o += 4; u.set(this.scene.piece0, o); o += 4; f.set(b.pool, o); o += 4; f.set([b.poolTop, b.poolDeep, 0, 0], o);
     this.gpu.device.queue.writeBuffer(this.scene.frame, 0, f); this.prev = c; this.prevJitter = this.jitter;
   }
   /** draw one frame with the current method; `then` may add its own passes (the canvas) */

@@ -23,6 +23,8 @@ export interface Stage {
   wg?: [number, number];
   consts?: Record<string, number>;
   when?: () => boolean;
+  /** a stage that rasterizes does it itself; made once by `make`, then called each frame */
+  make?: (g: Graph) => Promise<(enc: GPUCommandEncoder, g: Graph) => void>;
 }
 
 const SCALAR: Record<string, string> = { rgba32uint: 'u32', rg32uint: 'u32', r32uint: 'u32' };
@@ -33,12 +35,12 @@ export class Graph {
   readonly buffers = new Map<string, GPUBuffer>();
   private tex = new Map<string, GPUTexture[]>(); private views = new Map<GPUTexture, GPUTextureView>();
   private stages: Stage[] = []; private built = new Map<Stage, { pipe: GPUComputePipeline; layout: GPUBindGroupLayout; names: [string, 'r' | 'w' | 'b'][] }>();
-  private groups = new Map<string, GPUBindGroup>(); private parity = 0;
+  private drawn = new Map<Stage, (enc: GPUCommandEncoder, g: Graph) => void>(); private groups = new Map<string, GPUBindGroup>(); private parity = 0;
   private external = new Map<string, GPUTexture>();
   render: [number, number] = [1, 1]; output: [number, number] = [1, 1];
   readonly timer: Timer;
   private ids = new WeakMap<object, number>(); private nextId = 1;
-  constructor(readonly g: Gpu, readonly prelude: () => string, private shared: { layout: GPUBindGroupLayout; group: () => GPUBindGroup }) { this.timer = new Timer(g); }
+  constructor(readonly g: Gpu, readonly prelude: () => string, readonly shared: { layout: GPUBindGroupLayout; group: () => GPUBindGroup }) { this.timer = new Timer(g); }
 
   signal(name: string, format: GPUTextureFormat, size: Size, history = false) { this.signals.set(name, { format, size, history }); return this; }
   bind(name: string, t: GPUTexture) { this.external.set(name, t); this.signals.set(name, { format: t.format, size: [t.width, t.height] }); }
@@ -57,7 +59,7 @@ export class Graph {
     let list = this.tex.get(name);
     if (!list) {
       const [w, h] = this.px(s.size);
-      const usage = GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST;
+      const usage = s.format.startsWith('depth') ? GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING : GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST | (s.format === 'r32uint' ? GPUTextureUsage.RENDER_ATTACHMENT : 0);
       list = Array.from({ length: s.history ? 2 : 1 }, (_, i) => this.g.device.createTexture({ label: name + i, size: [w, h], format: s.format, usage }));
       this.tex.set(name, list);
     }
@@ -70,7 +72,7 @@ export class Graph {
   source(s: Stage): string {
     let k = 0; const out: string[] = [this.prelude()];
     for (const [c, v] of Object.entries(s.consts ?? {})) out.push(`const ${c} = ${Number.isInteger(v) ? v : v.toFixed(8)};`);
-    for (const [ref, v] of Object.entries(s.reads ?? {})) { const f = this.signals.get(ref.split('@')[0]!)?.format; if (!f) throw new Error(`${s.name} reads ${ref}, which nothing declares`); out.push(`@group(1) @binding(${k++}) var ${v}: texture_2d<${SCALAR[f] ?? 'f32'}>;`); }
+    for (const [ref, v] of Object.entries(s.reads ?? {})) { const f = this.signals.get(ref.split('@')[0]!)?.format; if (!f) throw new Error(`${s.name} reads ${ref}, which nothing declares`); out.push(`@group(1) @binding(${k++}) var ${v}: ${f.startsWith('depth') ? 'texture_depth_2d' : `texture_2d<${SCALAR[f] ?? 'f32'}>`};`); }
     for (const [v, n] of Object.entries(s.writes ?? {})) { const f = this.signals.get(n)?.format; if (!f) throw new Error(`${s.name} writes ${n}, which nothing declares`); out.push(`@group(1) @binding(${k++}) var ${v}: texture_storage_2d<${f}, write>;`); }
     for (const [v, [, type, access]] of Object.entries(s.buffers ?? {})) out.push(`@group(1) @binding(${k++}) var<${access === 'uniform' ? 'uniform' : 'storage, ' + access}> ${v}: ${type};`);
     out.push(s.code); return out.join('\n');
@@ -78,9 +80,10 @@ export class Graph {
   async build(stages: Stage[]) {
     const d = this.g.device;
     await Promise.all(stages.map(async s => {
-      if (this.built.has(s)) return;
+      if (this.built.has(s) || this.drawn.has(s)) return;
+      if (s.make) { this.drawn.set(s, await s.make(this)); return; }
       const entries: GPUBindGroupLayoutEntry[] = [], names: [string, 'r' | 'w' | 'b'][] = []; let k = 0; const visibility = GPUShaderStage.COMPUTE;
-      for (const ref of Object.keys(s.reads ?? {})) { const f = this.signals.get(ref.split('@')[0]!)!.format; entries.push({ binding: k++, visibility, texture: { sampleType: SCALAR[f] ? 'uint' : UNFILTERABLE.has(f) ? 'unfilterable-float' : 'float' } }); names.push([ref, 'r']); }
+      for (const ref of Object.keys(s.reads ?? {})) { const f = this.signals.get(ref.split('@')[0]!)!.format; entries.push({ binding: k++, visibility, texture: { sampleType: f.startsWith('depth') ? 'depth' : SCALAR[f] ? 'uint' : UNFILTERABLE.has(f) ? 'unfilterable-float' : 'float' } }); names.push([ref, 'r']); }
       for (const n of Object.values(s.writes ?? {})) { entries.push({ binding: k++, visibility, storageTexture: { access: 'write-only', format: this.signals.get(n)!.format } }); names.push([n, 'w']); }
       for (const [b, , access] of Object.values(s.buffers ?? {})) { entries.push({ binding: k++, visibility, buffer: { type: access === 'uniform' ? 'uniform' : access === 'read' ? 'read-only-storage' : 'storage' } }); names.push([b, 'b']); }
       const layout = d.createBindGroupLayout({ label: s.name, entries }), code = this.source(s);
@@ -95,6 +98,7 @@ export class Graph {
   run(enc: GPUCommandEncoder, stages = this.stages) {
     for (const s of stages) {
       if (s.when && !s.when()) continue;
+      const own = this.drawn.get(s); if (own) { own(enc, this); continue; }
       const b = this.built.get(s); if (!b) continue;
       const res = b.names.map(([n, kind]) => kind === 'b' ? { buffer: this.buffers.get(n) ?? fail('no buffer ' + n) } : this.view(n));
       const key = s.name + ':' + this.id(s) + ':' + res.map(r => this.id('buffer' in r ? r.buffer : r)).join(',');

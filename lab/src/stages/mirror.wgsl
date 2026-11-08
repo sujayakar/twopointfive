@@ -5,7 +5,7 @@
   let full = min(id.xy * u32(DIV), vec2u(frame.size.xy) - 1u); let rd = pxRay(full); let p = unpackPx(textureLoad(surf, full, 0), rd); let f = textureLoad(frontT, full, 0); var s = pxSurf(p); var on = !p.sky && p.kind != 99u && (p.rough < 0.43 || p.metal > 0.5) && !p.leaf; var off = 0.004 * (1.0 + p.t * 0.02);
   if (f.x != 0u) { let t = bitcast<f32>(f.x); s.x = frame.camPos.xyz + rd * t; s.n = octUnpack(f.y); s.ng = select(s.n, vec3f(0.0, 1.0, 0.0), (f.z >> 24u) == 2u); if (dot(s.n, rd) > 0.0) { s.n = -s.n; s.ng = -s.ng; } s.metal = 0.0; s.f0 = select(0.04, 0.02, (f.z >> 24u) == 2u); s.rough = select(0.015, 0.06, (f.z >> 24u) == 2u); on = true; off = 0.01; }
   if (!on) { textureStore(outM, id.xy, vec4f(0.0, 0.0, 0.0, -1.0)); return; }
-  rngInit(id.xy, 29u); let V = -rd; let l = coatDir(s, V, blue2(id.xy, 5u)); fineLeaves = true;
+  rngInit(id.xy, 29u); let V = -rd; let l = coatDir(s, V, blue2(id.xy, 5u)); fineLeaves = false;
   var d = l.dir; if (dot(d, s.ng) <= 0.005) { d = reflect(d, s.ng); }
   let o = s.x + s.ng * off; let h = nearest(o, d, 2e-3, 1500.0, 0u, 1e9); var L = vec3f(0.0);
   if (h.piece == NOTHING) { L = skyLod(d, s.rough * 5.0); }
