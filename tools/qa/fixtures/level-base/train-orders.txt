@@ -1,4 +1,0 @@
-# every box says what it does (the does key, src/scene/materials.ts): the words are what its colours said, and nothing else moved
-# the look's stand-ins wear their rows' own numbers: colours only, at most 0.0024 a channel
-# version 2: a round thing is one box, the file converted by tools/levels/round-convert.ts: no box moved
-7801dde10854aabc5ff002d840792ab44bbfeff9

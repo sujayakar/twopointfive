@@ -1,5 +1,5 @@
 // A PARTNER'S MEN ARE ON SAM'S CARD — the check behind src/game/teamtally.ts (TEAMTALLY.on, settled on: the check asks the page's side alone and writes no
-// switch; until 2026-11-07 it also asked the card with the switch off, (1), and the run digests on against off, (7)). A quiet mission as two (levels/train-silent.json, `?quiet&squad=1`) is staged headless and defenders are put down the way
+// switch; until 2026-11-07 it also asked the card with the switch off, (1), and the run digests on against off, (7)). A quiet mission as two (levels/lights-out.json, `?quiet&squad=1`) is staged headless and defenders are put down the way
 // combat.ts, pairorders.ts and spotted.ts do it for the partner — killGuard(…, 'guard'), `killerId` his where a round was his — then one step is played and the
 // run's numbers, badges and timeline are read.
 //   bun run tools/qa/teamtally-check.ts        (also `probes.ts teamtally`)        exit 0 = all hold · 1 = one does not
@@ -17,12 +17,12 @@ export async function teamTallyCheck(): Promise<boolean> {
   const BREAK = process.env.TEAMTALLY_BREAK === '1';
   let allPass = true; const line = (ok: boolean, label: string) => { allPass &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}`); };
   const hush = <T>(f: () => T): T => { const l = console.log, w = console.warn; console.log = console.warn = () => { }; try { return f(); } finally { console.log = l; console.warn = w; } };
-  const text = readFileSync(resolve(ROOT, 'levels/train-silent.json'), 'utf8');
+  const text = readFileSync(resolve(ROOT, 'levels/lights-out.json'), 'utf8');
 
   async function stage(squad: 0 | 1 = 1) {
     const W: any = await hush(() => standUp({ uploadEvery: 4, level: loadLevel(parseLevelData(text)), seed: 3 }));
     const g = W.game;
-    const started = hush(() => startFromQuery(g, `?levelFile=train-silent.json&quiet${squad ? '&squad=1' : ''}`));
+    const started = hush(() => startFromQuery(g, `?levelFile=lights-out.json&quiet${squad ? '&squad=1' : ''}`));
     if (!started.spec) throw new Error(`the quiet mission did not start: ${started.why}`);
     const step = (n = 1) => hush(() => { for (let i = 0; i < n; i++) W.step(1 / 60); });
     step(3);

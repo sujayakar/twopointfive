@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 5199, BREAK = process.env.SHADERWAIT_BREAK === 
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog', '--autoplay-policy=no-user-gesture-required'];
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
 let red = 0; const check = (ok, what) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${what}`); if (!ok) red++; };
-const BASE = `http://localhost:${PORT}/?quality=medium&levelFile=train-move.json&quiet`;
+const BASE = `http://localhost:${PORT}/?quality=medium&levelFile=lights-out.json&quiet`;
 
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });

@@ -17,13 +17,12 @@
 // Headless, on the tape's own level and door, the order given as the menu's row gives it ('clear from outside' = thresholdHold). The defender is the level's
 // own man in that room, where the level stands him. Nothing here says how any of it LOOKS: the lean is measured off the bones, never seen on a GPU.
 import { ROOT } from './headless.ts';
-import { yardRow } from './yards.ts';
 import { stage, quiet, guarded, family } from './thresholdmenu-probes.ts';
 const { DOORTOOLS, doorPt, alongOf, offOf } = await import(`${ROOT}/src/game/doortools.ts`);
 const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`) as any;
 
 const BREAK = !!process.env.THRPIE_BREAK, BREAK1 = !!process.env.THRPIEONE_BREAK;
-const LEVEL = 'train-orders', DOOR = 'hut_d', SAM = [18.5, 0, 14.2];
+const ROW = { id: 'depot-comms', title: 'the depot', kind: 'roomclear', squad: 2, level: 'depot.json', seed: 1 }, DOOR = 'b_n', SAM = [25.75, 0, 7];
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const f2 = (v: number) => v.toFixed(2);
 
@@ -32,8 +31,9 @@ interface Out { why: string | null; told: number; unseen: number; cells: number;
 
 /** the tape's door, the order given, run until the lead says the door is held (or `secs`) and a second more */
 async function held(K: { blind?: boolean; /** the word is given while a man is out on his lean */ wordLean?: boolean }, secs = 40): Promise<Out> {
-  const E = yardRow(LEVEL); if (!E) throw new Error(`no yard ${LEVEL}`);
-  const R = await stage(E, 1), g = R.g, d = g.doors.byName(DOOR); if (!d) throw new Error(`no door ${DOOR}`);
+  const R = await stage(ROW, 1), g = R.g, d = g.doors.byName(DOOR); if (!d) throw new Error(`no door ${DOOR}`);
+  // (the pair starts across the depot: it is fetched to him first, so that the order's clock is the door's and not the walk)
+  await quiet(() => { R.team.forEach((m: any, i: number) => { m.char.pos[0] = SAM[0] + (i ? 1.1 : -1.1); m.char.pos[2] = 8.6; }); R.step(10); });
   const on = await quiet(() => R.place(SAM, d)); if (!on) throw new Error(`X does not open on ${DOOR} from the spot`);
   const t = g.orders.targetUnder(R.input, R.W.cam, R.W.canvas), side = t.side as 1 | -1, W = d.def.width;
   const why = BREAK1 ? 'not given (THRPIEONE_BREAK)' : await quiet(() => g.orders.give('thresholdHold', t)) as string | null;
@@ -72,7 +72,7 @@ async function held(K: { blind?: boolean; /** the word is given while a man is o
 /** a teammate stood in the open with his gun in his shoulder, leaned each way through an order's own field: where his head, his muzzle, the middle of his
  *  trunk and his hips are, to his right of where his hips were */
 async function pose() {
-  const E = yardRow(LEVEL), R = await stage(E, 1), g = R.g, m = R.team[0], c = m.char, p = [c.pos[0], 0, c.pos[2]];
+  const R = await stage({ id: 'tut-queue', title: 'the queue yard', kind: 'roomclear', squad: 2, level: 'tut-queue.json', seed: 1 }, 1), g = R.g, m = R.team[0], c = m.char, p = [c.pos[0], 0, c.pos[2]];
   let yaw = 0; const hold = (lean: number) => g.orders.assign(m, { order: 'move', post: p, face: yaw, watch: [p[0] + Math.sin(yaw) * 6, 1.2, p[2] + Math.cos(yaw) * 6], stance: 'none', upper: 'aim', going: 'x', there: 'x', ...(lean ? { lean } : {}) });
   for (const y of [0, 1.57, 3.14, -1.57, 0.8, -0.8, 2.4, -2.4]) { yaw = y; await quiet(() => { hold(0); R.step(60); }); if (!m.muzzleDown) break; }   // (a way to face with nobody and nothing in front of the gun)
   const h0 = [...(c.bones.hips ?? c.pos)], right = [-Math.cos(yaw), Math.sin(yaw)], lat = (q: number[] | undefined) => q ? (q[0] - h0[0]) * right[0] + (q[2] - h0[2]) * right[1] : NaN;
@@ -92,7 +92,7 @@ export const thrpieCheck = guarded(async () => {
     // (1) one man cuts, the other holds; one lean when the cuts are done; no knee
     { const leadOf = (o: Out) => o.men.find(m => m.stations > 0), farOf = (o: Out) => o.men.find(m => m.stations === 0);
       const L = leadOf(one), Fr = farOf(one), LD = leadOf(oneDeep), FD = farOf(oneDeep), say = (o: Out) => o.men.map(m => `${m.name}: ${m.stations ? `sent to ${[...m.sent].map(i => i + 1).join(',')} of ${m.stations}, stood on ${[...m.stood].map(i => i + 1).join(',')}` : `no cuts, strayed ${f2(m.strayed)} m`}, lowest ${f2(m.low)}, leans ${m.leans}`).join(' · ');
-      F.verdict(one.why === null && !isNaN(one.told) && one.told < DOORTOOLS.thrCap - 2 && !isNaN(oneDeep.told) && oneDeep.told < one.told + 4 && !!LD && (L?.across ?? 9) < 0.05 && LD.across < 0.05 && one.men.length === 2 && !!L && !!Fr && L.stations >= 4 && L.sent.size >= 2 && [...L.sent].every(i => L.stood.has(i)) && L.fin && Fr.strayed < 0.3 && one.lost === 0
+      F.verdict(one.why === null && !isNaN(one.told) && one.told < DOORTOOLS.thrCap - 2 && !isNaN(oneDeep.told) && oneDeep.told < one.told + 4 && !!LD && (L?.across ?? 9) < 0.05 && LD.across < 0.05 && one.men.length === 2 && !!L && !!Fr && L.stations >= 2 && L.sent.size >= 2 && [...L.sent].every(i => L.stood.has(i)) && L.fin && Fr.strayed < 0.3 && one.lost === 0
         && !!LD && !!FD && LD.walked + 1 === LD.stations && FD.strayed < 0.3 && [one, oneDeep].every(o => o.men.every(m => m.low < 0.1)),
         'ONE man cuts: the lead walks the cuts, his hips on every one he is sent to and never in front of the opening, and is done before the door is called; the far jamb\'s man has no cuts and does not leave his diagonal once the cutting begins; nobody goes on a knee, not even with every cut walked; nobody is lost',
         `told at ${f2(one.told)} s, ${f2(oneDeep.told)} s with every cut walked · ${one.unseen} of ${one.cells} cells unseen · the man in the middle: seen ${one.foeSeen}, down ${one.foeDown} · lost ${one.lost} · ${say(one)} · every cut walked: ${say(oneDeep)}`);

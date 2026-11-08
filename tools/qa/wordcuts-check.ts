@@ -5,7 +5,7 @@
 // walked them off their cuts to the door's middle at once, and they were shot in its width before either had seen him, on ten of sixteen. Left to finish
 // the cuts the same pair finds him and drops him from the frame. With the rule the word given early is owed to the end of the cuts.
 //
-// The scene is that lesson's yard with no lesson (levels/train-orders.json stood up as a room-clear floor, LESSON off; nothing of a scripted player):
+// The scene is that lesson's yard with no lesson (levels/depot.json stood up as a room-clear floor, LESSON off; nothing of a scripted player):
 // every defender but the kitchen's taken off the floor as the order is given, the kitchen's own man put on alert and pinned on his mark, with the door as what
 // he knows, as the pair sets on the jambs (the fight for the other houses had him so in the lesson), the pair told to hold the kitchen's door from outside by code
 // (doorTools.thresholdOn(door, 'all', side, true)), then the word (doorTools.go) WAIT_S after they are on the jambs, and the door watched for twelve
@@ -33,8 +33,8 @@ const { parseLevelData } = (await import(`${ROOT}/src/scene/levelData.ts`)) as a
 const { loadLevel } = (await import(`${ROOT}/src/scene/levelLoad.ts`)) as any;
 const { knobsCopy, knobsBack } = (await import(`${ROOT}/src/game/knobs.ts`)) as any;
 
-const DT = 1 / 60, WAIT_S = 1.5, WATCH_S = 12, SEEDS = (process.env.WORDCUTS_SEEDS ?? '2,3,5').split(',').map(Number), YARD = 'train-orders.json', DOOR = 'hut_d';
-const KITCHEN = { x0: 13.5, x1: 18.5, z0: 16.4, z1: 20.8 };
+const DT = 1 / 60, WAIT_S = 1.5, WATCH_S = 12, SEEDS = (process.env.WORDCUTS_SEEDS ?? '2,3,5').split(',').map(Number), YARD = 'depot.json', DOOR = 'b_n';
+const KITCHEN = { x0: 24.12, x1: 29.38, z0: 9.62, z1: 14.88 };   // (the comms room: one door)
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 async function quiet<T>(fn: () => T | Promise<T>): Promise<T> { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } }
 

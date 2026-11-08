@@ -38,7 +38,7 @@ export interface BriefWords { mission: Mission; group: string; team: string }
  *  hand-typed combination on a level no row is on), or it picks its level by `?level=` (the office as it was): the list's rows are
  *  written for the levels the list names, and a level being built is played the moment it loads. */
 export function briefOfQuery(search: string | URLSearchParams): BriefWords | null {
-  const q = typeof search === 'string' ? new URLSearchParams(search) : search; if (q.has('level')) return null;
+  const q = typeof search === 'string' ? new URLSearchParams(search) : search;
   const spec = specOfQuery(q), rows = [SOLO_NIGHT, ...ALL_MISSIONS.map(missionOf)];
   const words = (m: Mission, squad: number): BriefWords => ({ mission: m, group: MISSION_GROUPS.find(g => g.id === m.group)?.title ?? '', team: teamWordsOf({ squad: squad as Mission['squad'] }) });
   const own = missionOfQuery(q.toString(), rows); if (own) return words(own, spec?.squad ?? 0);
