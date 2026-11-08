@@ -20,8 +20,7 @@ pub enum Json {
     Obj(Vec<(String, Json)>, Asked),
 }
 
-/// which members of an object a reader asked for, by their place (one flag a member, made with the object: a member pushed onto an object
-/// afterwards has none and reads as never asked for). Not part of the value: two objects are equal by their members alone.
+/// which members of an object a reader asked for, by their place (one flag a member, made with the object, and made again as `set_member` adds one). Not part of the value: two objects are equal by their members alone.
 #[derive(Debug, Default)]
 pub struct Asked(Vec<AtomicBool>);
 impl PartialEq for Asked { fn eq(&self, _: &Asked) -> bool { true } }
@@ -77,7 +76,17 @@ impl Json {
     pub fn v3(&self) -> Option<[f64; 3]> { let a = self.items(); if a.len() == 3 { Some([a[0].num()?, a[1].num()?, a[2].num()?]) } else { None } }
     /// the member `k` takes this value, in its place where it has one, at the end where it has none (as the language's spread and overwrite keep a key's place)
     pub fn set_member(&mut self, k: &str, v: Json) {
-        if let Json::Obj(m, _) = self { match m.iter_mut().find(|(n, _)| n == k) { Some(e) => e.1 = v, None => m.push((String::from(k), v)) } }
+        if let Json::Obj(m, asked) = self {
+            match m.iter_mut().find(|(n, _)| n == k) {
+                Some(e) => e.1 = v,
+                None => {
+                    m.push((String::from(k), v));
+                    let more = Asked::of(m.len());
+                    for i in 0..m.len() - 1 { if asked.is(i) { more.mark(i); } }
+                    *asked = more;
+                }
+            }
+        }
     }
     /// a copy with the member `k` gone
     pub fn without(&self, k: &str) -> Json {
