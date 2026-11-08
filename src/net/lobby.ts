@@ -13,7 +13,7 @@
 // THE SWITCH: COOP.on — on for a real page, `?coop=0` = the page as it was (no Co-op row on the title, a `?join=` on the address is not read). Nothing a tick
 // reads: a game is the server's recipe whatever this says.
 import type { Wire } from '../cloud/wire';
-import { NETPLAY, NET_GAME, NET_KEY, NET_JOIN } from './page';
+import { NETPLAY, NET_GAME, NET_KEY, NET_JOIN } from './address';
 import { bare } from '../scene/scenarioList';
 
 export const COOP = {
@@ -76,8 +76,8 @@ export function gameWhy(v: GameView | null): string {
 export class Lobby {
   constructor(readonly wire: Wire, readonly pid: string, readonly build: string) {}
   /** a game of `scenario` (coopScenario) on a fresh die: the host holds its first seat */
-  make(scenario: string, seed: number = freshSeed()): Promise<GameView> {
-    return this.wire.mutation<GameView>('games:make', { pid: this.pid, build: this.build, setup: { scenario, seed, knobs: {}, seats: Array.from({ length: COOP.seats }, () => ({})) } });
+  make(scenario: string, seed: number = freshSeed(), knobs: Record<string, unknown> = {}): Promise<GameView> {
+    return this.wire.mutation<GameView>('games:make', { pid: this.pid, build: this.build, setup: { scenario, seed, knobs, seats: Array.from({ length: COOP.seats }, () => ({})) } });
   }
   join(code: string): Promise<GameView> { return this.wire.mutation<GameView>('games:join', { pid: this.pid, code, build: this.build }); }
   get(code: string): Promise<GameView | null> { return this.wire.query<GameView | null>('games:get', { pid: this.pid, code }); }

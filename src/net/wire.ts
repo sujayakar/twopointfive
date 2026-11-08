@@ -1,16 +1,16 @@
 // THE WIRE OF A NETWORKED GAME (two-player co-op: a game server with authority, src/net/server.ts, and its clients, src/net/client.ts). What travels is the
 // INPUT TIMELINE, never the state: the game plays the same fight to the bit from its recipe and its seats' records on every machine (tools/qa/mpclient-page.cjs holds a
 // Chromium page to a bun server state word by state word), so the server decides which record each seat's tick ran on and tells everybody; a state word
-// (net/step.ts netWord: the game's own words, chained) twice a second is the alarm. Messages are JSON text over a WebSocket, numbers to the bit (cmd.ts numWord / wordNum).
-//   A RECORD ON THE WIRE (WireCmd) is a PlayerCmd minus what the game works out again for a seat it does not trust (cmd.ts checkCmd: the eye, the forward, both
+// (words.ts foldWord: the game's own words, chained) twice a second is the alarm. Messages are JSON text over a WebSocket, numbers to the bit (numtext.ts).
+//   A RECORD ON THE WIRE (WireCmd) is a PlayerCmd minus what the game works out again for a seat it does not trust (game/cmd.ts checkCmd: the eye, the forward, both
 //   view matrices, from the look-at, the angles, the distance and the lens). EVERY seat of a networked game is such a seat on EVERY machine — the server and each
 //   client, a client's own seat too — so one working makes the view everywhere and about a hundred bytes travel a tick, not a kilobyte.
-//   THE RECIPE (replay/format.ts RunTape.recipe) is the game's setup: the die, the page's address, every knob table, the kit. The server makes it of the game it
-//   stood and every client stands its own game from it, as a replay's re-run does from a tape's. A networked game IS a run tape written live by the server.
-// Host-neutral: no DOM, no bun; game imports are used inside functions only (src/game is one import cycle).
-import type { PlayerCmd } from '../game/cmd';
-import { numWord, wordNum } from '../game/cmd';
-import type { RunTape } from '../replay/format';
+//   WHAT A GAME IS STOOD FROM rides the welcome: a START (start.ts: the level's file, the address's words, the die, the seats, the host's commands), which every machine
+//   hands the game's own start in the module; or, for a page that holds a TypeScript game, a RECIPE (recipe.ts). Every client stands its own game from it.
+// Host-neutral: no DOM, no bun, no game: client.ts, server.ts, timeline.ts, foresee.ts, delay.ts, words.ts, modgame.ts and this import nothing of src/game.
+import { numWord, wordNum } from './numtext';
+import type { NetStart } from './start';
+import type { Recipe } from './recipe';
 
 /** `proto`: the wire's version (a hello of another is refused). `hz`: ticks a second (the fixed step's). `wordEvery`: ticks between state words. `lead`: how many
  *  of a seat's records the server likes to hold ahead of the tick it is running (the jitter buffer: Rocket League's input buffer) and `leadMax` the most before
@@ -26,7 +26,7 @@ export const NET = { proto: 1, hz: 60, wordEvery: 30, lead: 2, leadMax: 6, margi
  *  picture — no control characters, no format characters but the two joiners a script or an emoji is written with (no direction overrides, no zero
  *  width space), none of the letters that draw as nothing, its spaces single, at most NET.nameMax characters as a reader counts them. Anything else — no
  *  name, a record, a blank — is no name: ''. Asked at BOTH trust boundaries: a server of a client's hello, a client of a server's state; and a page
- *  always writes one as text, never as markup. (The wire spells four numbers as words — cmd.ts numWord — and reads them back as numbers wherever they
+ *  always writes one as text, never as markup. (The wire spells four numbers as words — numtext.ts numWord — and reads them back as numbers wherever they
  *  stand: a player called 'nan' or 'inf' is given his word back here.) */
 const BLANKS = /[\u115F\u1160\u2800\u3164\uFFA0]/g, READS = /[\p{L}\p{N}\p{Extended_Pictographic}]/u;
 export function cleanName(raw: unknown): string {
@@ -39,37 +39,10 @@ export function cleanName(raw: unknown): string {
   return READS.test(cut) ? cut : '';
 }
 
-export type Recipe = RunTape['recipe'];
-/** the knob tables a networked game stands on, whatever its maker says (the game's own maths, the same bits on every engine, are no table: every game
- *  plays on them): every seat's record checked (the view worked out again from its pose: fromWire sends none), and the run's verdict kept (how a server knows the
- *  mission is over). Whoever makes a recipe forces them; whoever stands one refuses a recipe without them (`recipeWhy`) */
-export const NET_TABLES: Record<string, Record<string, unknown>> = { CMDCHECK: { on: true }, VERDICT: { on: true } };
-/** why a networked game cannot be stood from `r` ('' = it can) */
-export function recipeWhy(r: Recipe): string {
-  if (!r || typeof r !== 'object' || !r.tables) return 'the recipe carries no knob tables';
-  const T = { ...((r.knobs as { tables?: object } | null)?.tables ?? {}), ...r.tables } as Record<string, Record<string, unknown> | undefined>;   // (a recipe keeps its tables in two places: the journal's own and every other, game/runtape.ts recipeOf)
-  if (r.knobs !== null && typeof r.knobs !== 'object') return 'the recipe\'s knobs are not a record';
-  if (!r.scenario) return 'the recipe has no mission up';
-  for (const [name, want] of Object.entries(NET_TABLES)) for (const [k, v] of Object.entries(want)) if (T[name]?.[k] !== v) return `the recipe has ${name}.${k} at ${JSON.stringify(T[name]?.[k])}: a networked game needs ${JSON.stringify(v)}`;
-  return '';
-}
-
 /** a seat's record as it travels: keys held · keys gone down · buttons held · buttons gone down · the wheel · the cursor · the view's size (CSS w h, backing w h) ·
  *  the view's pose (look-at x y z, yaw, pitch, distance, fov, aspect, aim lead). The one-tick EDGES are `p`, `c` and `w`: absent = none */
 export interface WireCmd { k: string[]; p?: string[]; b: number; c?: number; w?: number; m: [number, number]; s: [number, number, number, number]; v: number[]; }
 
-export function toWire(c: PlayerCmd): WireCmd {
-  const V = c.view, out: WireCmd = { k: c.keys.slice(), b: c.buttons, m: [c.mx, c.my], s: [c.w, c.h, c.pw, c.ph], v: [V.target[0], V.target[1], V.target[2], V.yaw, V.pitch, V.distance, V.fov, V.aspect, V.aimLead] };
-  if (c.pressed.length) out.p = c.pressed.slice(); if (c.clicked) out.c = c.clicked; if (c.wheel) out.w = c.wheel;
-  return out;
-}
-/** the record a tick runs on, from the wire's: the matrices and the eye are left for the game to work out (NaN: cmd.ts checkCmd builds them for a remote seat,
- *  and for any seat whose matrices are not numbers) */
-export function fromWire(w: WireCmd): PlayerCmd {
-  const v = w.v;
-  return { keys: w.k.slice(), pressed: w.p ? w.p.slice() : [], buttons: w.b, clicked: w.c ?? 0, wheel: w.w ?? 0, mx: w.m[0], my: w.m[1], w: w.s[0], h: w.s[1], pw: w.s[2], ph: w.s[3],
-    view: { vp: new Array<number>(16).fill(NaN), ivp: new Array<number>(16).fill(NaN), pos: [0, 0, 0], forward: [0, 0, 0], target: [v[0], v[1], v[2]], yaw: v[3], pitch: v[4], distance: v[5], fov: v[6], aspect: v[7], aimLead: v[8] } };
-}
 const keysOk = (a: unknown): a is string[] => Array.isArray(a) && a.every(k => typeof k === 'string');
 const numsOk = (a: unknown, n: number): a is number[] => Array.isArray(a) && a.length === n && a.every(x => typeof x === 'number' && Number.isFinite(x));
 /** `c` is a record as the wire says one is: every field there, of its kind and finite. A server asks before it keeps what a client sent. (A SHAPE only: how
@@ -121,8 +94,8 @@ export interface Lost { k: 'lost'; t: number; w: string; }
 export type ToServer = Hello | Ready | In | Lost;
 
 // ---- server → client
-/** the answer to a hello: the seat (−1 a watcher) of how many, the recipe to stand the game from, and how many ticks have run (they follow, as `tape` messages) */
-export interface Welcome { k: 'welcome'; proto: number; game: string; build: string; seat: number; seats: number; hz: number; recipe: Recipe; tick: number; state: NetState; }
+/** the answer to a hello: the seat (−1 a watcher) of how many, what to stand the game from, and how many ticks have run (they follow, as `tape` messages) */
+export interface Welcome { k: 'welcome'; proto: number; game: string; build: string; seat: number; seats: number; hz: number; /** what the game is stood from: one of the two */ recipe?: Recipe; start?: NetStart; tick: number; state: NetState; }
 /** tick `t` as it ran: each seat's record (0 = the seat's record of the tick before with its edges off), and every `wordEvery` ticks the state word after it */
 export interface Tick { k: 't'; t: number; c: (WireCmd | 0)[]; w?: string; /** with `w`: the wider word (net/step.ts netWatch), watched and never an alarm */ v?: string; }
 /** a stretch of the run for whoever is behind (a joiner; a connection that was backed up): ticks `from` on, each as a Tick's `c` (and `w` where the tick carried
