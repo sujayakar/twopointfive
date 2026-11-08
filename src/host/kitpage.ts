@@ -16,13 +16,14 @@ const post = (kv: string): void => { try { if (window.parent !== window) window.
 /** there is no picture here: the kit screen drops the frame, shown or not (nothing new said twice) */
 export function kitNone(): void { post('none'); }
 
-interface Frame { cx: number; cy: number; h: number; w: number; man: number; door?: number; left?: number; right?: number; keep?: number; top?: number; bottom?: number }
+/** a `frame` message's numbers, as the command has them (the module keeps the rule of each) */
+const SAT = ['cx', 'cy', 'h', 'w', 'man', 'door', 'left', 'right', 'keep', 'top', 'bottom'] as const;
 
 export class KitPage {
   /** the kit screen's step is not showing: nothing is stepped or drawn (but for the first picture, which it waits for) */
   get rests(): boolean { return this.gone || (this.paused && this.said); }
   private paused = false; private said = false; private gone = false; private drawn = 0;
-  private frame: Frame | null = null; private aspect = 0; private who = 0;
+  private frame: number[] = SAT.map(() => NaN); private aspect = 0; private who = 0;
   /** the last picture's copy: laid over it as a team is staged again (`left` frames drawn under it yet, 0 as it fades) */
   private veil: HTMLCanvasElement | null = null; private left = -1; private due: (() => void)[] = [];
 
@@ -32,6 +33,8 @@ export class KitPage {
       const m = e.data as Record<string, unknown> | null; if (!m || typeof m !== 'object') return;
       if (m.kv === 'kit') this.kit(m); else if (m.kv === 'sel') this.sel(m); else if (m.kv === 'pause') this.paused = m.on === true; else if (m.kv === 'frame') this.sit(m);
     });
+    // (whatever kills this window's page: nobody can see a card in here)
+    for (const ev of ['error', 'unhandledrejection'] as const) window.addEventListener(ev, e => { if (!/ResizeObserver loop/.test((e as ErrorEvent).message ?? '')) this.none(); });
     post('boot');
   }
   private kit(m: Record<string, unknown>): void {
@@ -43,19 +46,8 @@ export class KitPage {
     if (who === this.who) { open(); return; }
     this.who = who; this.under(open);   // (another card: its man is stood at the head of the file)
   }
-  private sit(m: Record<string, unknown>): void {
-    const n = (k: string): number => typeof m[k] === 'number' && Number.isFinite(m[k]) ? m[k] as number : NaN, share = (x: number): number => x > 0.02 && x <= 1 ? x : 1, edge = (x: number): number => Math.max(-1, Math.min(1, x));
-    if (![n('cx'), n('cy'), n('h')].every(Number.isFinite) || !(n('h') > 0.02 && n('h') <= 1)) return;
-    const f: Frame = { cx: edge(n('cx')), cy: edge(n('cy')), h: n('h'), w: share(n('w')), man: share(n('man')) };
-    // (hung on the door: all three of its lines, in order and inside the view, or the men's middle · the column's own top and foot in the window)
-    if (n('left') >= -1 && n('right') <= 1 && n('left') < n('door') && n('door') < n('right')) Object.assign(f, { door: n('door'), left: n('left'), right: n('right'), keep: n('keep') > 0 && n('keep') <= 1 ? n('keep') : 1 });
-    if (n('top') <= 1.5 && n('bottom') >= -1.5 && n('top') - n('bottom') > 0.2) Object.assign(f, { top: n('top'), bottom: n('bottom') });
-    this.frame = f; this.tellFrame();
-  }
-  private tellFrame(): void {
-    const f = this.frame ?? { cx: 0, cy: 0, h: 0, w: 1, man: 1 };   // (no share of the height: nobody has said where they should sit)
-    this.commands.kitStageFrame(this.aspect, f.cx, f.cy, f.h, f.w, f.man, f.door === undefined ? 0 : 1, f.door ?? 0, f.left ?? 0, f.right ?? 0, f.keep ?? 1, f.top === undefined ? 0 : 1, f.top ?? 0, f.bottom ?? 0);
-  }
+  private sit(m: Record<string, unknown>): void { this.frame = SAT.map(k => typeof m[k] === 'number' ? m[k] as number : NaN); this.tellFrame(); }
+  private tellFrame(): void { const [cx, cy, h, w, man, door, left, right, keep, top, bottom] = this.frame; this.commands.kitStageFrame(this.aspect, cx, cy, h, w, man, door, left, right, keep, top, bottom); }
   /** before a frame is stepped: the window's shape, where it has changed */
   before(aspect: number): void { if (Math.abs(aspect - this.aspect) < 1e-4) return; this.aspect = aspect; this.tellFrame(); }
 

@@ -44,10 +44,10 @@ fn answer(r: &Json, ch: &files::CharacterFiles) -> Json {
     o.push(("staged", staged(g)));
     kitstage::frame(g, 1.6, None);
     o.push(("pin0", pin(g)));
-    kitstage::frame(g, 1.6, kitstage::frame_ask(-0.4, 0.0, 0.6, 0.5, 0.19, Some([-0.2, -0.9, 0.1, 0.85]), None));
+    kitstage::frame(g, 1.6, kitstage::frame_ask(-0.4, 0.0, 0.6, 0.5, 0.19, [-0.2, -0.9, 0.1, 0.85], [f64::NAN; 2]));
     o.push(("pin1", pin(g)));
     if let Some(n) = r.get("size").num() {
-        kitstage::cards(g, n as i32);
+        kitstage::cards(g, n as i32); kitstage::restage(g);
         let none = g.kit_stage.as_ref().map_or(true, |k| k.none);
         o.push(("restaged", if none { Json::Null } else { staged(g) }));
     }
