@@ -5,7 +5,7 @@
 "autopilot::AutoPick":["id","men"],
 "breach::BreachDrill":["can","live"],
 "break_table::Breaks":["look"],
-"camera::FollowCamera":["peekOffset","pin","beforePin","hostShift","kick","kickHeld","kickDrawn","drawHeld","yawGoal"],
+"camera::FollowCamera":["peekOffset","pin","beforePin","kick","kickHeld","kickDrawn","drawHeld","yawGoal"],
 "character::Anim":["wallTakeFeet","wtk","watchAt","slipAt","holdPose","heldPose","doorPush","work","haul","longStance","longShown","bigTool","bigSide","rawClip","act","wound","wdClip","actClip","steadyMean","dazzle","reloadRow","feed","kit","kitLie","armsPre","armsBuf","ready","readyAt","widePole","creepAt","crPh","bw","tk","rcInv","hdFrom","rdHandL","hdFix","rdAt","hlLast","handPre","swBuf","handBuf","underBuf","stealth","sp","thrLast","thrCarry","kickFrom","nv","smoke","hnFlat","bigBuf"],
 "character::AnimDp":["last"],
 "character::AnimKit":["from","to"],

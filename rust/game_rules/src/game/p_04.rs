@@ -20,21 +20,11 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
     g.seats = crate::seats::seats_stand(g, n_seats);
     g.local_seat = Some(g.seats[0]);
     // what this machine kept. A load is called where the skeleton has it, and its storage is its own module's or the host's
-    crate::qrf::load_qrf_tune(g);
-    crate::difficulty::levers_fog(g, &mut |v: &mut Game| crate::teamfeel::load_team_feel(v));
+    crate::difficulty::levers_fog(g);
     crate::fogofwar::fog_flags(g);
     crate::irlight::ir_flags(g);
-    crate::needs::load_needs(g);
     crate::destruction::load_chaos(g);
     g.tune.wind = g.k.wind.def;   // (loadWind's first line; the rest of it is storage and it left the game)
-    crate::glass::load_glass_fx(g);
-    let mut gb = crate::glassbreak::GbTune { glass_break: Some(g.tune.glass_break) };   // (lent and written back: `tune` is this.tune)
-    crate::glassbreak::load_glass_break(g, &gb);
-    if let Some(on) = gb.glass_break { g.tune.glass_break = on; }
-    crate::particle_fx::load_dust(g);
-    crate::devices::load_device_tune(g);
-    crate::civilians::load_civ_tune(g);
-    crate::guards::load_body_light(g);
     let name = crate::scene_level_load::level_name_of(g);
     g.col = crate::scene_collision::new(g, &ids, name.as_deref());
     crate::particle_fx::apply_dust_look(g);   // the dust LOOK table onto the kind the host attached, whether or not the switch is on yet; no system = nothing to do (game.ts:1108)

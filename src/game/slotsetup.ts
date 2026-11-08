@@ -45,8 +45,6 @@ export const SLOTSETUP = {
   pop: false,
   /** with `pop` off: seconds the setup stays up with nothing pressed in it (0: until it is shut) */
   secs: 1.5,
-  /** a pick leaves the setup up for another (false: a pick shuts it — the same two presses every time) */
-  stay: false,
   /** the gun's digit pressed again while the gun is still coming to his hands opens its setup at once: a double tap off another slot is the draw
    *  and the setup (`settle` and the swap's own time are not waited for, where his own press drew it). Off in the module and on the frozen stand
    *  (`TPS_SETUPDRAW=1`, a word of its own: `TPS_SLOTSETUP=1` alone is the rule with the double tap as the draw); on in the page (`?setupdraw=0`:

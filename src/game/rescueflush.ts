@@ -48,9 +48,6 @@ export const RESCUEFLUSH = {
   smokeK: 0.3,
   /** a man sent round has reached a mark of his way inside this many metres of it: on to the next, and from the side door in */
   atDoorM: 1.8,
-  /** the covered lanes only CHOOSE a man's door, and only a man they hold at a corridor's mouth waits (false = the build before: a man the lanes warned
-   *  off where he was sent was kept back, and where he is sent is at the team's own guns — so nobody came once a lane was known) */
-  lanesChoose: true,
 };
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);

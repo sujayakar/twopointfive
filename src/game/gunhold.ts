@@ -45,8 +45,6 @@ import { goneWithTick } from './crossing';
 export const GUNHOLD = {
   /** the whole rule. Module default OFF (the frozen stand); the page raises it (src/host/profile.ts pageSwitches; `?nogunhold` holds it off) */
   on: false,
-  /** once Sam has fired from behind the man, a man on the clean line at his back takes it. false = cover and the way round as ever, the line held silent */
-  fire: true,
   /** how far a man will run for cover, metres of floor */
   coverM: 10,
   /** nobody's cover, and nobody's way round, inside this of the pair */

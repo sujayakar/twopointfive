@@ -431,9 +431,6 @@ export const GUARD_EYE = { range: 16, halfDeg: 58, nearM: 3.5, nearDeg: 100,
   /** A LIT MAN IS SEEN FROM FURTHER (eyeReach below): on in the page (?nofarsight), off here and on the frozen harness stand (TPS_FARSIGHT=1) = every eye stops
    *  at `range` whatever the light, as it was. One rule for every man's eye on every man: a guard's on Sam, a defender's on a teammate, a teammate's on a defender */
   far: false,
-  /** A FAR GLIMPSE IS NOT YET A PLACE TO WALK TO (farFaint below; nothing without `far`): on in the page (?nofarcalm), off here and on the frozen harness stand
-   *  (TPS_FARCALM=1) = every glimpse past `range` writes his fix the frame it lands, as `far` first shipped */
-  farCalm: false,
   /** …the awareness from which a WARY man's glimpse from past `range` is his fix (under it he has not watched long enough to know where) */
   farFixAt: 0.5,
   /** …how far the eye reaches for a man in full light (m); the light on him (his meter, 0‥1) under which the reach is `range` and nothing changes, and from which it is whole */
