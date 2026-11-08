@@ -1,5 +1,7 @@
 // THE TWO PAGES SIDE BY SIDE: the game's page and draw.html at the same address, die, tick and camera; a still of each, how far the two pictures are apart, and what each costs. Stepped by hand, nothing played.
 //   PORT=<a dev server> node tools/draw/pair-page.cjs --out <dir> [--size 1280x720] [--quality high] [--places office,pass] [--time] [--ticks 180]
+// --play <minutes>: instead, one place (--places pass) played on each page by the same scripted hand (walks, shots, throws, orders; he cannot be hurt, his rounds are not counted), and every half minute
+//   where a frame of the page's goes: its update by parts, its render, the HUD, the heap.
 // --time: instead of stills, each page's own frames for a while: GPU ms of its passes, its own ms, the page's memory and the time to its first picture. A card's numbers only.
 const { chromium } = (() => { try { return require('playwright'); } catch { return require('/opt/node-tools/node_modules/playwright'); } })();
 const { mkdirSync, writeFileSync } = require('node:fs');
@@ -22,8 +24,32 @@ const t0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - t0) / 1000
   for (const name of want) {
     const pair = {};
     for (const [side, page] of [['old', 'index.html'], ['new', 'draw.html']]) {
-      const words = `${PLACES[name]}&seed=7&quality=${QUALITY}&adapt=0&mute&loadbrief=0&cloud=0&noreplay${has('time') ? '' : '&paused'}`, { p, errors, ctx } = await open(page, words);
-      if (has('time')) {
+      const words = `${PLACES[name]}&seed=7&quality=${QUALITY}&adapt=0&mute&loadbrief=0&cloud=0&noreplay${has('time') || has('play') ? '' : '&paused'}`, { p, errors, ctx } = await open(page, words);
+      if (has('play')) {
+        const r = await p.evaluate(async minutes => {
+          const D = window.__draw, G = window.__game, canvas = document.getElementById('view'), mid = a => a.length ? +a.slice().sort((x, y) => x - y)[a.length >> 1].toFixed(2) : null, hi = a => a.length ? +a.slice().sort((x, y) => x - y)[Math.floor(a.length * 0.95)].toFixed(2) : null;
+          let n = 77; const roll = () => { n = Math.imul(n ^ n >>> 15, n | 1); n ^= n + Math.imul(n ^ n >>> 7, n | 61); return ((n ^ n >>> 14) >>> 0) / 4294967296; };
+          const god = () => { if (D) { D.game.commands.god(1); D.game.commands.ammo(1); } else { G.godMode = true; G.infiniteAmmo = true; } }; god();
+          const key = (type, code) => window.dispatchEvent(new KeyboardEvent(type, { code, key: code, bubbles: true, cancelable: true })), held = new Set(), hold = codes => { for (const c of held) if (!codes.includes(c)) { key('keyup', c); held.delete(c); } for (const c of codes) if (!held.has(c)) { key('keydown', c); held.add(c); } };
+          const mouse = (type, x, y, button = 0) => (type === 'mouseup' ? window : canvas).dispatchEvent(new MouseEvent(type, { clientX: x, clientY: y, button, buttons: type === 'mousedown' ? 1 : 0, bubbles: true, cancelable: true }));
+          const tap = async c => { key('keydown', c); await new Promise(r => setTimeout(r, 60)); key('keyup', c); };
+          const begin = performance.now(), until = begin + minutes * 60000, buckets = []; let B = null, nextHand = 0, lastTicks = -1;
+          while (performance.now() < until) {
+            await new Promise(r => requestAnimationFrame(r)); const now = performance.now();
+            if (!B || now - B.t0 >= 30000) { B = { t0: now, frames: 0, parts: {} }; buckets.push(B); }
+            const put = (k, v) => { if (Number.isFinite(v)) (B.parts[k] ??= []).push(v); }, ticks = D ? D.game.ticks : window.__rust.ticks; B.frames++;
+            if (ticks !== lastTicks) { lastTicks = ticks;
+              if (D) { put('update', D.told.update); put('step', D.game.ms.step); put('rows', D.game.ms.draw); put('rest', D.told.update - D.game.ms.step - D.game.ms.draw); put('render', D.told.render); put('hud', D.told.hud); }
+              else { const L = window.__rust.last, P = window.__perfrec; put('update', P.cpuUpdate); put('step', L.step); put('export', L.export); put('apply', L.apply); put('out', L.out); put('dress', L.dress); put('host', L.host); put('rest', P.cpuUpdate - L.step - L.export - L.apply - L.out - L.dress - L.host); put('render', P.cpuRender); } }
+            B.heap = performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : null; B.wasm = D ? Math.round(D.game.memory.buffer.byteLength / 1048576) : window.__rust.memory ? Math.round(window.__rust.memory / 1048576) : null;
+            if (now >= nextHand) { nextHand = now + 900; const keys = ['KeyW', 'KeyA', 'KeyS', 'KeyD'].filter(() => roll() < 0.35); hold(keys);
+              const x = 0.2 + 0.6 * roll(), y = 0.2 + 0.5 * roll(), X = x * canvas.clientWidth, Y = y * canvas.clientHeight; mouse('mousemove', X, Y); const what = roll();
+              if (what < 0.5) { await tap('Digit2'); mouse('mousedown', X, Y); setTimeout(() => mouse('mouseup', X, Y), 400); } else if (what < 0.62) { await tap(['Digit3', 'Digit4', 'Digit5'][Math.floor(roll() * 3)]); mouse('mousedown', X, Y); setTimeout(() => mouse('mouseup', X, Y), 350); } else if (what < 0.75) await tap('KeyQ'); else if (what < 0.82) await tap('KeyF'); else if (what < 0.88) await tap('KeyE'); god(); }
+          }
+          hold([]); return buckets.map((b, i) => ({ min: i / 2, fps: Math.round(b.frames / 30), heap: b.heap, wasm: b.wasm, ...Object.fromEntries(Object.entries(b.parts).map(([k, a]) => [k, mid(a)])), update95: hi(b.parts.update || []) }));
+        }, Number(arg('play', 5)));
+        rows.push({ name, side, play: r, errors: errors.length }); log(name, side, errors.slice(0, 2).join(' | ')); for (const b of r) log('  ', JSON.stringify(b));
+      } else if (has('time')) {
         const r = await p.evaluate(async () => {
           const wait = ms => new Promise(r => setTimeout(r, ms)), E = window.__engine, T = E.timer, gpu = [], page = [], own = window.__draw ? window.__draw.told : null; await wait(8000);
           const until = performance.now() + 12000; let last = -1; while (performance.now() < until) { if (T.resolved !== last) { last = T.resolved; const ms = T.unionMs(); if (ms > 0) gpu.push(ms); } if (own) page.push(own.update + own.render + own.hud); else if (window.__perfrec) page.push(window.__perfrec.cpuUpdate + window.__perfrec.cpuRender); await new Promise(r => requestAnimationFrame(r)); }
