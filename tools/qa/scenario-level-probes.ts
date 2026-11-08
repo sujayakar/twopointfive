@@ -23,7 +23,7 @@
 //   load (game/samestart.ts), and 1 to 3 are three dealt floors of the same file. The rescue keeps 1, 2, 3 (its seed is the roamers' and the clock's die).
 //   --seeds, when given, is taken by both. A seed is the placement AND the run's die, so the page's floor is ONE run here: 'it can be won' can still pass on a
 //   dealt floor alone (the seed lines say which). The page's floor over many dice is a tally's job: PT_SAMEFLOOR=1 tools/qa/playthrough.ts.
-//   THE EXCEPTION, by a table of five files (TRAPPED below: depot, block, block-squads, mousehole, pass): floors authored so that the plan this commander walks is the trap. There
+//   THE EXCEPTION, by a table of four files (TRAPPED below: depot, block, mousehole, pass): floors authored so that the plan this commander walks is the trap. There
 //   WALKED asks that the team left its marks (where it fell is printed) and the room clear's 'it can be won' is not asked of this plan.
 //   THE FLOOR'S TEAM: 'it can be won' is not asked of the PAIR on a level the mission list plays only with the four (fourManRowsOf below reads the list;
 //   the pair's count is still printed, and it still has to stage, walk and finish). A level with a pair row, or with no row, keeps the line.
@@ -216,7 +216,6 @@ class Clear {
 const TRAPPED: Record<string, string> = {
   'depot.json': "the lit yard, between the signals hut's slit and the store's hatch",
   'block.json': 'the lit near leg of each held room, its men round the turn',
-  'block-squads.json': 'the lit near leg of each held room, its men round the turn',
   'mousehole.json': "the lit corridor every door opens on, under the duty room's hatch gun; ward, exam room and store have one door each, wedged from inside, and are reached by their walls",
   'pass.json': 'the white, lit yard between the lorry and the doors, watched through glass from two sides',
 };

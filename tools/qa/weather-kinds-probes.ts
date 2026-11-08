@@ -43,7 +43,7 @@ async function born(kind: string | null, level?: string): Promise<any> {
   K.WEATHER_BOOT.kind = kind;
   try { return await standUp(level ? { level: levelOf(level) } : {}); } finally { K.WEATHER_BOOT.kind = null; console.log = log; }
 }
-const SQUAD_MAPS = ['compound', 'block-squads', 'barracks', 'warehouse'];
+const SQUAD_MAPS = ['compound', 'barracks', 'warehouse'];
 
 // ---------------------------------------------------------------- wxkinds-default
 export async function wxDefault() {
@@ -72,7 +72,6 @@ export async function wxRoofs() {
     compound: { n: 4, open: [[11.5, 12], [22, 21.5], [2, 2]], roofed: [[20, 12], [7, 21], [6.5, 6], [28, 22.5]] },                 // the walled yard, the gate; the house and its three sheds
     barracks: { n: 3, open: [[20, 14], [30, 14], [2, 14]], roofed: [[20, 7], [20, 21], [8, 14]] },                                // the courtyard; both wings and the west link
     warehouse: { n: 1, open: [[2, 2], [38, 16]], roofed: [[20, 14]] },
-    'block-squads': { n: 2, open: [[38, 13], [2, 2]], roofed: [[20, 14], [2.5, 11]] },
   };
   for (const name of SQUAD_MAPS) {
     const W = await born('rain', name); const g = W.game, w = g.weather; W.step(DT);

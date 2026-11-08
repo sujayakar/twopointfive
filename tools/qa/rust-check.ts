@@ -99,7 +99,7 @@ const flag = (n: string): string | undefined => { const i = args.indexOf(n); ret
 const BREAK = process.env.RUST_BREAK === '1';
 /** the runs of `missions` and `both`: a play-through's scenario and seed, and `:hard` = that run on Hard (game/difficulty.ts: the defenders' and, what matters
  *  here, the fog's CONE — the only run whose eyes are wedges, which is how the page is played on Hard) */
-const RUNS = ['compound-four:1', 'warehouse-four:1', 'pass-four:1', 'hostage-rescue:1', 'block-squads:1', 'hostage-rescue:1:hard', 'warehouse-four:1@frag', 'compound-four:1@frag'];   // (the last two: frags ordered through doors, which takes leaves off their hinges — the one thing of the things' rows no other run does)
+const RUNS = ['compound-four:1', 'warehouse-four:1', 'pass-four:1', 'hostage-rescue:1', 'hostage-rescue:1:hard', 'warehouse-four:1@frag', 'compound-four:1@frag'];   // (the last two: frags ordered through doors, which takes leaves off their hinges — the one thing of the things' rows no other run does)
 const NAMES = ['sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'atan2', 'exp', 'log', 'log2', 'log10', 'pow', 'tanh', 'hypot'] as const;
 type Fns = Record<string, (...a: number[]) => number>;
 const engine = (globalThis as any).Bun ? `bun ${(globalThis as any).Bun.version} (JavaScriptCore)` : `node ${process.version} (V8 ${process.versions.v8})`;

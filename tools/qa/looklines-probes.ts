@@ -1,5 +1,5 @@
 // 'wallbreak-looklines', run through probes.ts in the 'wallbreak' family:
-//   bun run tools/qa/probes.ts wallbreak-looklines [--level block-squads]
+//   bun run tools/qa/probes.ts wallbreak-looklines [--level block]
 // A blown wall's picture-only slabs (edgeLook.ts) cast the shadow they draw under the cut switch, so their flags no longer keep them out of BoxWorld.raycast;
 // their motion key does (boxes.ts MKEY.look). Every ray that asks the world where something LANDS must pass them, as the round along that line does:
 //   (aim)       the cursor's aim point        player.ts updateAim
@@ -28,7 +28,7 @@ const { laserReach } = await import(`${ROOT}/src/game/combat.ts`);
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
-const LEVEL = (() => { const i = process.argv.indexOf('--level'); return i >= 0 ? process.argv[i + 1] : 'block-squads'; })();
+const LEVEL = (() => { const i = process.argv.indexOf('--level'); return i >= 0 ? process.argv[i + 1] : 'block'; })();
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const DEFAULTS = JSON.parse(JSON.stringify(WALLS));
 const mad = (a: Vec3, b: Vec3, s: number): Vec3 => [a[0] + b[0] * s, a[1] + b[1] * s, a[2] + b[2] * s];

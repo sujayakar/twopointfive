@@ -351,7 +351,6 @@ export function squadsHeld(e: { level?: string; squads?: boolean; kind?: string 
 /** what hard is on each squad map, in a sentence (enemysquads.ts DRILL_AT is the rows; record rebuild/hard-everywhere/round2-squad-maps.md),
  *  by level file and by structure name: the mission sheet knows the one, a running game the other */
 const SQUAD_HARD: { file: string; structure: string; words: string }[] = [
-  { file: 'block-squads.json', structure: 'the block, three squads', words: "They don't run at the first noise. You'll hear them hold on the radio and let you commit to a room, and then the pair that comes around will be set at its other door while you're still going in" },
   { file: 'compound.json', structure: 'the compound', words: "A squad gets to one of its rooms faster when you hit it, and nobody walks into a room that's already lost. You'll hear them call it gone on the radio, and they'll be on their own doors when you get there" },
   { file: 'barracks.json', structure: 'the barracks', words: 'A pair sent around to hold a lost room\'s other door won\'t stay out there once the squad it went to help stops answering. You\'ll hear them call "back on our doors", and they\'ll be in their own rooms again and come at you when you take the next one' },
   { file: 'warehouse.json', structure: 'the warehouse', words: '' },
