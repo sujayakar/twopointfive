@@ -1820,82 +1820,6 @@ row on his machine is the answer, and the word puts the count back on any machin
   SEEN: on the software adapter only (round one: the compound at midday; round two: the pass at night; squad of four, very low, one seed, 119 of 119 pipelines, no GPU or console error). Never seen on
   a GPU: the look at the play resolution, motion, shimmer, and the cost (anisotropic array reads are raster work, which no trusted timer covers; read the
   page's fps with the panel's "stay plain" box on and off: that measures everything but the class test a corner and the wider bind group).
-- **A GEOMETRY TRIAL** (`src/scene/geoTry.ts`; on only on the look page, `?look`, with cut boxes on; `?geo=0` or the look panel's Shapes button
-  leaves it out; no switch table and no state of its own: `main.ts geoTryOn` reads the link). Asked 2026-10-23: "how viable other modeling systems
-  (low poly triangles, analytic surfaces, SDFs) are for geometry", then the trial picked from a card. The answer tried is the CUT BOX
-  (`scene/cut.ts`), because the raster, every GPU ray and every CPU ray already meet it as one solid: nothing new to keep in step. It runs once,
-  after the level file loads and before its boxes go to the world (`bootLevel`), and sets `cutConfig.swap` false at boot (its cut boxes stand for
-  the whole visit, so the one set of ray programs with the cut rule is compiled from the start).
-  ROUND THINGS (`roundStacks`): the kit's octagon (`gwotKit.ts round`: four slabs 45° apart) becomes ONE regular twelve-sided prism, the box's four
-  faces + eight planes (the record's whole room), with `Box.cutRound = 2` (packed in the core row's w as 1024 × (1 + the axis); never with glass. Until the merge of 10-25 it was 128 ×: the build's ROUND THINGS, `scene/round.ts`, took 128 as their own bit, a cylinder about the box's y that every ray meets; `gbuffer_cut.wgsl cutRoundAxis` reads both and shades both with the one block, so on the look page a level's drum is the build's round thing and the trial's prisms are the lorry's wheels and the logs).
-  The other three slabs stay in the list, hidden (`NoPrimary | NoShadow`, shrunk): a level file's box indices are names. In `gbuffer_cut.wgsl
-  fsBoxCut` a round's side faces are one face: the normal turns with the point, marks run round it (the long face's band is put on all four sides;
-  a lid's one-paint patch is drawn again as a disc; a drum's two-paint lid is let go and the shader draws a rolled rim). The look's paint and its clinging snow
-  are rules that run along a flat face, so each is asked a quarter of the round at a time (the box face the normal leans to) and what it leans the
-  normal by is added back onto the round; such a pixel is never marked as a tilted normal (`common.wgsl lookGeoN` would snap it to a box axis). The
-  silhouette, the shadow and every ray keep the twelve flat faces. The snow hook knows a round about y only. On the pass: 19 octagons (drums, tyres, two stoves, the oven), so 57 fewer boxes for a ray to meet.
-  A BROKEN WALL TOP (`breakWallTops`): a yard wall gets one bite where nothing tall stands against it and no lamp or alarm hangs, no nearer than 10 m to
-  another bite (`BITE_APART`). A YARD WALL IS A WALL WITH THE SKY ON BOTH HANDS (changed 11-02; asked that day: "new assets or things for other
-  levels", because the tests will run on more than the pass): a plain upright box 3.4 m or longer and under 0.4 m thick, standing on the ground, with
-  free floor under the open sky two cells out on both sides of it the bite's whole length, on the renderer's own floor plan (`render/placeField.ts
-  skyPlan`: the plan the light of a place is read on, made of the level's boxes before the trial). A house's wall has a roof on one hand and is never
-  one. Until then the test was a coping slab of the wall's own length on its top, which only `gwotKit.ts` lays, and "something tall against it" was
-  asked by a thing's LONGER side both ways, so a wall ten metres long five metres off kept every bite away: the rule fired on the pass alone (2), and
-  on no level built before the kit. Now, from the files as they are: the pass 3, the compound 4, the crossing 6, the police post 5, the bazaar 3, the
-  depot 2; the block, the records office, the warehouse and the barracks none (they have no wall in the open). A coping is one thin plain slab in
-  the wall's line that runs on past the bite both ways, whatever its length (one slab may cap several walls), and is broken with the wall, as is the
-  snow a level laid on it; anything else lying on the top there, or drawn on the wall's face by it (an alarm's housing is two boxes no ray meets),
-  keeps the bite off. A BITE IS THREE TO FIVE STRETCHES, NONE UNDER 0.42 m (`PIECE_MIN`, `BITE_LINE`): the floor plan takes an upright box under
-  0.4 m long for a post, and the five stretches a bite was until then were five posts to it, a gap in the wall on the plan `wallSides.ts` keeps the
-  light of two places apart by (so on the pass's two bites for as long as the trial has stood). `breakWallTops` returns the bites it made.
-  The check: `bun run tools/qa/geotry-check.ts` (11 lines: a yard built by hand, a roof on one hand, one coping and its snow over two walls, posts,
-  lamps and alarms, every level's counts, no slab over either hand of a bite, the 2 m line, nothing left in a gap, the floor plan's wall cells;
-  `GEOTRY_BREAK=1` takes every spot for open sky and fails three). A LEVEL'S COUNTS ARE A FILE OF ITS OWN since the join (11-04):
-  `tools/qa/fixtures/geotry/<level>.txt`, "<round things> <bites>", no file = none of either, written in the commit that changes the level (the
-  folder's README). Until then a table of ten levels stood in the check's source, every level commit met in it, and it was stale the day the kit's
-  tyres and drums became round things (the depot: 10 for 0). EVERY level file is asked now, 44 of them and 106 bites where ten levels gave 32, which
-  found one fault of the check's own: it measured a turned box by its unturned size, so a container stood across the gwot yard read as hanging in a
-  bite three metres away. THE FINGERPRINT MOVED on every level that gained or lost a bite, the pass among
-  them (one of its two bites moved 4.9 m along the road wall and a third came in the west wall): look-page checkpoints and recordings of those
-  levels from before are refused, and `?geo=0` still takes the round things out with the bites. Seen: stills of the compound and the pass on the software
-  adapter at midday (the bite by the pass's road gate reads as a notch with its coping and snow broken), each booted with no GPU error. NEVER SEEN ON A GPU, and nobody has played
-  a level with them (a bite's top is above a standing eye and the 2 m line a sound is carried over; no run tally was taken).
-  ROUND THINGS on the other levels are what their kit says: the crossing 28, the police post 19, the bazaar 6, the compound 3; the levels furnished
-  by the older kit (`tools/levels/livedKit.ts`: a drum and a tyre are ONE square box there, and a loose drum, a bucket and a stool are props) have
-  NONE, and nothing in a level file says such a box is round. Making them round is a change to that kit and a new export of those levels (the build
-  branch's, not done). Of a bite:
-  the wall and coping are split at the bite and three to five cut boxes with slanted tops, each a step off its
-  neighbour, fill it; the level's snow caps on the coping are cut back to both sides of it; five picture-only lumps lie at the foot. The pieces are `Box.cutOld`
-  (512 in the core row's w): on the look page their cut faces take the look's paint as a face of the core's stuff, and the snow lies on the ones
-  that look up. A blast's fresh cut never sets it. A bite's middle stops at 2.0 m and its lowest edge at 1.98 m: no standing eye gains a line, and the
-  wall still stands over the 2 m line a sound is carried across (`collision.ts`). New boxes are APPENDED (nothing is removed), so `levelFileOf(level).boxes` is shorter than `level.boxes` on that page.
-  Known wrong: what pushes against a box meets the UNCUT box, so a man slides round a drum's square, a hand's width out from the round at its four
-  corners (the octagon was nearer); the bank of clinging snow steps at the four quarter lines of a round; the authored snow caps on a drum and a
-  tyre stack are still the kit's squares; a blast next to a round cannot cut it further (its record is full), and a wall charge on a piece of the bite
-  rebuilds it with a square top (`wallcharge.ts` does not read `cut`); the lumps cast no shadow. The trial changes what a ray and a body meet with no
-  knob and no journal key: only the level's fingerprint tells a save or a recording made with it from one made without (each is refused on the other).
-- **GROUND THAT RAYS CAN SEE, A TRIAL** (`src/scene/groundField.ts`; asked 10-23 after the geometry trial: "do both that and rays on the ground"). On
-  THE LOOK PROTOTYPE's page only (`?hills=0`, or the look panel's Ground button, puts it off; the page loads again). The snow hills were PICTURE ONLY: a ray
-  met the level's snow boxes under them, never the hill. Here the hills' height, as their mesh draws it (`snowField.ts` `mound`, 10 texels a metre, a texel
-  with nothing on it a finger under the ground as the mesh's corners are), rides in `boxMat`'s LAST rows (after the cut table: no new binding, 452 KB),
-  with a head row and the highest hill of each 1 m plan cell in front. `common.wgsl ghHit` marches the stretch of a ray that runs between the ground and
-  the highest hill, 0.1 m a step and 40 steps at most (a longer stretch in longer steps), one row a step over a cell with no hill, and answers the last
-  place the ray stood above the surface (four halvings), so what is shaded or traced on from a hit starts outside the hill. A ray that STARTS under the
-  surface meets nothing: the hills are a skin seen from above. It is asked by `occluded` (after the boxes leave the ray clear), `occludedT` and the
-  direct light's soft-character path (the hill is the cap a nearer box still beats) and both closest-hit walks (the hit is the ground slab's, its normal
-  the hill's slope; `fgather.wgsl giPointOnBox` lets such a sample keep its history). `occludedTBoxes` itself is untouched, so the fog of war's sight
-  and the walled cache read are as they were. Every pass that traces light takes it: the direct light's shadows, the gather, the cascades, reflections,
-  the volumes, the particles AND THE LIGHT METER (`probe.wgsl`): on that page a man behind a bank is darker to the meter than the headless stand-in
-  says. The game hands the rows over where it hands the field to the g-buffer (`game.ts syncSnowLook`), and whole again after a blast digs a hill
-  (`stepSnowTracks`).
-  Switch: the prelude's `const GROUND_RAYS` from `groundRayConfig.on`, raised by `main.ts` at boot; off = the reads are dead code and the buffer no longer
-  (the prelude gains one line of text on every page, the same on each). Not a rule of the game: no knob table, no journal key, no check of its own.
-  THE OPEN GROUND ROLLS (`?roll=<m>`, 0 to 0.25, off unless asked; `buildSnowField`'s `roll`): the lying snow under the open sky is baked with a slow
-  swell that deep at most, thinner where it is trodden or old (a path reads as a trench through it), none on cleared ground, under a roof or in a wall.
-  The mesh then covers the whole yard (88 k quads on the pass at 0.14, 40 k without) and the rays meet it. Nothing in the update reads it: a man's feet
-  stand on the level's flat ground, up to the swell's depth under the picture's snow.
-  Not in it: the hills' fine relief (the swell, the wind's ridges) and the boot prints, which stay a matter of the shading normal; a hill's own pixels
-  start their rays a finger and a half off the mesh and `GH_BIAS` (8 mm) is all that keeps the mesh's triangles and the march's four-texel blend apart.
 - **THE LOOK PANEL IS A PAGE OF THE DEBUGGER** (10-31; `ui/lookpanel.ts buildLookPanel(panel, …)`, `LOOK_SYSTEM` = 'Materials prototype', 'Look' on the
   rail; `ui/panel.ts` is not changed). The maintainer: "there's also some flickering where the debug panel would help -- could you make the materials
   prototype menu just another tab in the debug panel?" The look's rows were a fixed box of their own in the debugger's corner and over it, so on the look
@@ -3941,21 +3865,6 @@ row on his machine is the answer, and the word puts the count back on any machin
   opening's light is not one). SEEN on the software smoke lab at dusk, the same boot script before and after: the ground before the red front takes
   its red, the smoke crossing the blue front is lit by it (brighter and cooler there than the plume's far side). NOT SEEN: a GPU; the compound or
   the records office by day; midday or overcast anywhere.
-- **THE LOOK PAGE WITH A GEOMETRY TRIAL ON IS COMPILED WITHOUT THE ROUND TEST** (`main.ts urlFlagsBeforeEngine`: `roundConfig.gpu` is false when
-  a trial has put `cutConfig.swap` off; `?round=1` compiles it in; 10-25). After the build's round things came in by merge, the look
-  page lost its SOFTWARE device on its first drawn frame ("A valid external Instance reference no longer exists") where the plain page at the same
-  quality drew. Runs that settled it: look with every trial off and `round=0` draws; look with every trial on and `round=0` draws; look with every
-  trial on and rounds compiled in dies. The reading (the software adapter's room, above; not bisected further): a trial keeps the cut twin of every ray
-  walk live from the first frame and `ROUND_BOXES` adds the round test to each copy. `ROUND.on` (the game's own switch, the debugger's row) is NOT
-  moved: only the shader's half. On the pass nothing is lost, because the trial turns the kit's octagons into its own cut prisms before a round thing
-  is looked for. NOT so everywhere: the trial takes only octagons stepped 2 mm ± 1 mm (`geoTry.ts octagonAt`) where `round.ts` takes 0.5 to 4.5 mm, so
-  on a level whose octagons are stepped otherwise (block, consulate, records) and wherever the panel's Shapes row leaves an octagon alone, a round
-  thing is drawn and traced as its square box on this page while the game plays it round. The one-file hosted page takes no address flags, so it
-  cannot ask for `round=1`. Whether `?look&round=1` draws on a real GPU: never tried.
-  SINCE 10-26 the cut set traces a round as the picture's prism and its box walks no longer hold the round test (`docs/agents/levels.md`, the round
-  things' bullet, THE CUT SET): `?look&round=1` with every trial on DREW on the software adapter (119 of 119 pipelines) and lost its device again with
-  `&roundexact=1`. The exclusion in `main.ts` is LEFT IN all the same: taking it out changes what this page draws on levels other than the pass, and
-  that has not been looked at.
 - **THE LOOK PANEL'S PERFORMANCE ROWS** (`ui/lookpanel.ts perfRows`, `ui/perfsend.ts`; the maintainer, 10-25: "it'd be good to have a way to collect a lot
   of perf data so you can see how it runs on my laptop", "i do worry that we have a few stuttering frames even if overall fps is pretty high"). The
   measuring is the F9 recorder and the F8 sweep as they are (`ui/perfrec.ts`, `ui/perfsweep.ts`); the panel adds two buttons and a way out of a page that
@@ -3969,13 +3878,6 @@ row on his machine is the answer, and the word puts the count back on any machin
   Where a store is handed in the recorder's own download is NOT tried (a hosted page starts none, and the try only raises the host's notice over a
   take that did get out). FIRST TAKE FROM THE MAINTAINER'S MAC (10-25, the pass at night, high at half scale, world frozen, 20 rows × 3 rounds): base 15.5
   ms of GPU; every layer of the look together gives back 0.8 ms (5 %), no single layer is outside the noise, the shade row is free. A third button, **Sharp direct**, is `?nosharp` from the panel (`sharpForce.v = false`, then the current preset put on again so its other resolve rows follow; again = as the preset): a hosted page's address takes no flags, and the debugger's own row only holds until the ladder's next preset. Asked for by the performance lane, 10-25, for a take on Auto with it off; not while a take or a sweep runs.
-- **POSTS SEATED IN A WALL'S END** (`scene/lookMend.ts seatPosts`, the look page only, `?seat=0` off; the maintainer, 10-25: "seems like a sorting issue
-  that's flickering to right of the red door"). The pass's gate post (0.34 m square) stands with one face exactly in the end face of the yard wall it
-  closes, so two faces shared a plane and the depth test flipped between the post's render and the wall's stone plinth. On the look page a post (tall,
-  8 to 30 cm half both ways, square to the world, drawn, no glass) with a face in the END face on the SAME side of a wall whose section is inside the
-  post's grows 4 mm in x and z when the level loads, and rises 4 mm where the two tops are level. A post that only stands AGAINST a wall is not matched.
-  Over every level file: 12 posts (pass 2, gwot-yard 2, police-post 2, tut-sky 2, snatch 2, depot 1, depot-gwot 1); the console says how many. The level
-  file is not touched: the right mend is in the level's own numbers, found by `tools/qa/zfight-check.ts` (`levels.md`). Never seen on a GPU.
 - **A HOUSE FRONT DRESSED BY HAND: WAS A TRIAL, IS THE KIT'S** (the maintainer, 10-23, of the pass's tea house seen from over its yard: "this looks a
   bit too "regular" -- especially the face of the building we're looking at", and a minute before "the art style just needs a lot of iteration. right
   now it does look a bit procedural"). The answer tried was AUTHORING, not another layer of noise: one wall gone over piece by piece on the look page
@@ -3986,38 +3888,6 @@ row on his machine is the answer, and the word puts the count back on any machin
   keeps its open form. KEPT FROM THE TRIAL: what closes a window is a REAL box, as is what stands on the ground and the beam ends over every head;
   only what lies flat on the wall is picture only. A tilted box (`Box.rot`) takes no map and no clinging snow from the look and says no shape; a wall
   charge there leaves the pieces above a hand's height hanging (`scene/lookTidy.ts` takes a decal with its wall only from the foot).
-- **A LORRY WITH CURVES, A TRIAL** (`src/scene/lorryTry.ts dressLorry`; the look page only, with cut boxes on; `?lorry=0` = the lorry as its file has
-  it, or the look panel's 'Curved' button, kept on the machine as `twopointsix.lorrytry`; the page loads again). The maintainer, 10-24, on a GPU picture of the pass's yard: "some curved surfaces on the truck would go a long way". The
-  pass's lorry (twenty boxes under four flat slabs of snow) is gone over by hand after the level loads, as the house front is; `levels/pass.json` is not
-  touched and the pieces are found by where the generator put them (`tools/levels/pass.ts LORRY`): any one missing = nothing is touched. The tilt is bowed
-  over four hoops with its snow on the bow; the cab's roof is an arch from a leaned windscreen back; the bonnet is a narrow engine cover with a round top
-  between two fenders that arch over the front wheels; wheels, hubs, lamp pods and a tank under the bed each side are round. 21 boxes added, 16 changed.
-  AN ARC (`Box.cutArc`, new): a round prism (`cutRound`) turns its normal about the box's own middle, which makes a drum but not a roof. With `cutArc` =
-  k metres the axis lies k UNDER the box's centre, so a box whose top is cut to seven facets of a wide circle (its top face + six planes) is shaded as
-  that circle. It rides in the record's unused LAST row (`cut.ts packCut`: `CUT_PAD`'s w + k; every reader of a plane stops at the first zero normal),
-  so an arc carries seven planes at most (an eighth plane drops the arc without a word); about x or z only. In `gbuffer_cut.wgsl` its facets and top
-  turn (the box's own upright faces and underside stay flat), the look's paint is read straight down each quarter (no unrolling), its ends get no drum's
-  rim, and an arc in the snow paint gets `snowBox`'s snow (grain, glow, the wandering edge) asked as the box's top face, and is drawn as a SHEET: its
-  upright faces and ends are discarded (they stood as straight lines where the wandering edge drew back), so a cap lies two centimetres over its roof.
-  Picture only: every ray meets the facets. A round's rolled rim is now on both end faces (a wheel shows one to each side).
-  WHAT A RAY AND A BODY MEET CHANGES on that page: the bonnet (1.5 m high, 0.98 m a side) is a hump 0.56 m a side that tops out at 1.46 m, with a
-  fender of at most 1.08 m beside it and, for 0.63 m in front of each fender, only the 0.78 m bumper; the tilt's eaves come down from 1.95 m to 1.6 m;
-  a tank closes a metre of the gap under the bed each side. No knob and no journal key, as the geometry trial.
-  KNOWN: no clinging snow from the look on an arc (the round's snow hook is about y only), so the authored caps are all the snow there is; the level's banks against the lorry are as they were; the lorry is found by twenty
-  numbers copied from the generator, and the console says so when one misses.
-  Checked: `dressLorry` on `levels/pass.json` under bun (21 added, 16 changed, every record seven planes or fewer where it is an arc); the page booted
-  on the software adapter with 0 console errors; four pictures (play camera, the nose, from above, dusk). Never seen on a GPU.
-- **THE LORRY'S FITTINGS, A TRIAL ON THE TRIAL** (`src/scene/lorryTry.ts kitLorry`; the look page only, with the lorry's curves on; `?lorrykit=0` = the
-  curved lorry without them; no panel button). The maintainer, 10-30, on a GPU picture of it at midday: "truck could use some dressing up. but overall the
-  round surfaces look nice". 43 boxes added after the curves (twelve of them cut prisms), found by the chassis rail: an exhaust stack in a heat shield up the cab's back corner,
-  a mirror on an arm each side, a beacon, a step, a door seam and a handle a side, an air cleaner on the cowl, a winch drum between two cheeks, two
-  hooks and a plate on the bumper, four stakes down each sideboard, three jerry cans racked on one of them, mud flaps, tail lamps, and the spare wheel
-  upright on the tailboard. Rounds are prisms of twelve sides (`ring`), colours are palette rows (none under 0.55 of its row; the beacon's orange and
-  the cans' olive are `gwotAs(…, 'metal')`, so a round into them throws metal, not a plant's or a cloth's debris). ONE MODEL: each is a real
-  box to rays and bodies; the spare stands 0.3 m off the tailboard from 0.75 to 1.71 m, a mirror as far out as the bank of snow along that side.
-  SEEN on the software adapter only (midday, 480 × 300, from over the cab and from behind): the stack, the beacon, the mirrors, the stakes, the air
-  cleaner and the racked cans read; the winch, the steps and the spare were not in those two frames. NEVER SEEN ON A GPU; its cost there is not measured
-  (`?lorrykit=0` against the page as it opens is the pair).
 - **THE PASS DRESSED WITH ROUND THINGS: WAS A TRIAL, IS THE KIT'S** (the maintainer, 10-29, asking what rounds cost and whether to use them through a
   level: "dressing up the pass level we have would be another good experiment"). It was `src/scene/passTry.ts`, on the look page only (`?dress=0`, a
   panel button). On 11-05 it went into the kit and the level's file: `gwotKit.ts pipes`, `log` and `choppingBlock` are pieces, the fuel drums, the
