@@ -1,0 +1,6 @@
+# DOWN: Sam can be hurt, grenades land on him, and Enter is pressed every few seconds: once he is down it takes him to the run's newest save, or starts the mission over.
+# REACHES: a bare Enter from inside a step, a load in a step and a restart in a step, with a man down and whatever put him there.
+# DOES NOT REACH: Shift+Enter, a restart from a card.
+every 6 from 1    order move nearest all
+every 12 from 6   frag sam
+every 3 from 8    enter
