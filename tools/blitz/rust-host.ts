@@ -17,6 +17,7 @@
 //                        ticks. It is named, counted and handed to the Rust game whole (`face_import_into`). Slow (two walks of the state a tick):
 //                        the way to find a write the fast way has no call for.
 import { NO_VIEW } from '../../src/view/seatview';
+import { useDice } from '../../src/math/dice';
 import { faceHere, FACE_WASM } from './face-build.ts';
 import { recorded } from './record';
 import { Drawn, drawRefused } from '../../src/draw/drawn';
@@ -164,7 +165,7 @@ const hang = (o: any, k: string, v: unknown) => { Object.defineProperty(o, k, { 
 /** the objects whose calls the host has already taken (a start may meet new ones: a mission started by the tool makes its own menu, fight and saves) */
 const TAPPED = new WeakSet<object>();
 const TAPPED_LIST = new WeakSet<object>();
-/** RH_OFF=<names, comma>: a stand-in left out, to see whether a run still needs it: ends · doors · marks · last · own (a weak table lists every game's keys) */
+/** RH_OFF=<names, comma>: a stand-in left out, to see whether a run still needs it: ends · doors · marks · own (a weak table lists every game's keys) · waiting (a game takes its first start at its first step, whatever came between) · standing (calls cross while a game stands) */
 const OFF = new Set((process.env.RH_OFF ?? '').split(','));
 const enc = new TextEncoder();
 type Tally = Map<string, { n: number; eg: string; ticks: number; last: number }>;
@@ -217,7 +218,7 @@ export class RustHost {
    *  ticks (an order: on-screen-or-not) reads the camera of now and not the record of the tick before */
   private viewLive(): void { const X = this.F.X; if (!X.face_view_live || OFF.has('view')) return; try { X.face_view_live(this.h); } catch (e) { throw new Error(`the Rust game panicked taking the host's view (face_view_live): ${this.F.panicText() || String(e)}`); } }
   // A call's game is named by the call (surface.ts `hostOf`). Nothing crosses while any hosted game of the process is inside its update or the host's own lines (`BUSY`): the modules' tables are one, and they hold that game's state.
-  surfaceOpen(): boolean { return !!this.h && this.busy === 0 && BUSY.n === 0 && !this.audit && !this.startDue; }
+  surfaceOpen(): boolean { return !!this.h && this.busy === 0 && BUSY.n === 0 && !this.audit && !this.startDue && !RustHost.standing; }
   /** A CALL TO A FUNCTION WITH NO TYPESCRIPT BODY on a game that stands and has never started starts it, then crosses. A function with a body runs on the puppet, which the start takes across, and a game that has given up its slot or whose puppet has taken over starts by its own road. */
   surfaceStart(): boolean { if (this.starting || this.busy !== 0 || BUSY.n !== 0 || this.audit || this.h || this.starts > 0) return false; this.startNow(); return this.surfaceOpen(); }
   private starting = false;
@@ -282,15 +283,34 @@ export class RustHost {
     hang(g, 'rustHost', H); hang(g, 'debriefAsk', () => H.debriefView()); hang(g, 'rustSurface', H); hang(g, 'stateWords', () => ({ die: H.dieN(), parts: H.hashes() })); hang(g, 'wholeWords', () => H.wholeWords()); hang(g, 'wholeNames', () => H.wholeNames()); hang(g, 'verdictNow', () => H.verdict()); hang(g, 'viewAsk', () => H.view()); hang(g, 'cursorAsk', (i: any, c: any, v: any, s?: number) => H.cursor(i, c, v, s)); hang(g, 'underAsk', (p: any, s?: number) => H.under(p, s)); Object.defineProperty(g, 'askHost', { configurable: true, enumerable: false, get: () => H.ask() }); hang(g, 'quietRun', (on: boolean) => { if (on) H.quietBegin(); else H.quietEnd(); }); B.surfaceHost(H); (globalThis as any).__tpsCall.inHook = () => H.inHook(); { const up = g.update; hang(g, 'update', function (this: any, ...a: any[]) { H.busy++; BUSY.n++; try { return up.apply(this, a); } finally { H.busy--; BUSY.n--; H.auditGap = SCAN_AUDIT > 0 && H.k % SCAN_AUDIT === 0; H.scanRebase(); if (STALE_EVERY && process.env.RH_STALE && H.k > 0 && H.k % STALE_EVERY === 0 && H.busy === 0) H.staleLook(); } }); } H.taps(g);
     if (process.env.TPS_GAME_SAY) process.on('exit', () => { const L = [...H.calls].sort((a, b) => b[1] - a[1]).slice(0, 60); process.stderr.write(`rust-host: ${H.k} ticks; scan ${(H.T.scan / Math.max(1, H.k)).toFixed(2)} ms a tick; ${H.pokeSyncs} exports after a walk that poked; ${H.scan?.stats?.().deepMissed ?? 0} WRITES THE WALK'S CHEAP WORD DID NOT SEE (found by its audit: ${(H.scan?.stats?.().missed ?? []).join(', ')}); ${H.asksRefused} asks refused; ${H.scan?.stats?.().refused ?? 0} WRITES NOT SENT (a leaf that named a row the Rust game has not got: ${(H.scan?.stats?.().refusedLeaves ?? []).join(', ')}); ${JSON.stringify(H.scan?.stats?.() ?? null)}\n` + L.map(([n, c]) => `  ${c} ${n}\n`).join('')); });
     if (o.out) for (const f of ['writeback.txt', 'gives.txt']) writeFileSync(`${o.out}/${f}`, '');
+    RustHost.waiting.add(new WeakRef(H)); RustHost.last = null;
     return H; }
+  /** THE GAMES STOOD AND NOT YET STARTED. A first start reads what the TypeScript keeps at its modules' tops (the kit's staged men, a tally, a log), and those
+   *  are the process's: the next stand-up writes them for ITS game, and another game's step writes them with its rows. So a game takes its start while they
+   *  are its own: before another game is stood (`standComing`, as a stand-up opens) and before another game steps. A game that started later than either was
+   *  handed the other's men and tallies as its own: rows of a Rust game with no poses in its block, a man who stands with no skeleton and aims a ray of no
+   *  number (thrice --weave). Held weakly, and the process's other holds on it let go first: a game the tool has dropped is not started for nothing.
+   *  FROM A STAND-UP TO THE NEXT START NO CALL CROSSES. A stand asks about things a process shares (the cast's rig, numbered in the book of the game that met it
+   *  first, so the call names that game), and the answer's apply wrote the older game's rows over what `freshStart` had just put back: its men, some of them
+   *  made in Rust with no rig, stood in the new game's start (`SkeletonInstance.rig: no object for RigId`). So a stand and its staging run their TypeScript,
+   *  as the process's first stand does (tools/blitz/stand-after.ts). */
+  private static waiting = new Set<WeakRef<RustHost>>(); private static standing = false; private startThrew: unknown = null;
+  private beCurrent(): void { useDice(this.g.dice); this.g.quiet?.current?.(); }   // (what `Game.update` opens with: a start outside its own game's update reads this game's)
+  static standComing(collect: () => void): void { (globalThis as any).__tpsCall?.newGame?.(); const c = (globalThis as any).__tpsCall; if (c) c.inHook = undefined; RustHost.last = null; collect();
+    if (!OFF.has('waiting')) RustHost.startWaiting(); if (!OFF.has('standing')) RustHost.standing = true; }
+  /** a stand-up that ended with no game on this word (refused, or stood with no word): nothing stands */
+  static standEnded(): void { RustHost.standing = false; }
+  static startWaiting(but: RustHost | null = null): void { let any = false; for (const r of [...RustHost.waiting]) { const H = r.deref(); if (H === but) continue; RustHost.waiting.delete(r); if (!H || H.starts > 0) continue; any = true;
+    H.beCurrent(); try { H.startNow(); } catch (e) { H.startThrew = e; H.count(`THE START THREW as another game came: ${String((e as any)?.message ?? e).slice(0, 100)}`); } }
+    if (any) but?.beCurrent(); }
   private startDue = false;
   /** the Rust game is let go (its slot is free for another) and the game steps in TypeScript again */
-  detach(): void { this.unkeepAll(); letGo(this.cell); if (RustHost.last === this) RustHost.last = null; delete this.g.stepSeats; delete this.g.rustHost; delete this.g.debriefAsk; delete this.g.stateWords; delete this.g.wholeWords; delete this.g.wholeNames; delete this.g.verdictNow; delete this.g.viewAsk; delete this.g.cursorAsk; delete this.g.underAsk; delete this.g.askHost; delete this.g.quietRun; delete this.g.rustSurface; delete this.g.update; delete this.g.restartEncounter; this.B.surfaceHost(null, this); }
+  detach(): void { for (const r of [...RustHost.waiting]) if (r.deref() === this) RustHost.waiting.delete(r); this.unkeepAll(); letGo(this.cell); if (RustHost.last === this) RustHost.last = null; delete this.g.stepSeats; delete this.g.rustHost; delete this.g.debriefAsk; delete this.g.stateWords; delete this.g.wholeWords; delete this.g.wholeNames; delete this.g.verdictNow; delete this.g.viewAsk; delete this.g.cursorAsk; delete this.g.underAsk; delete this.g.askHost; delete this.g.quietRun; delete this.g.rustSurface; delete this.g.update; delete this.g.restartEncounter; this.B.surfaceHost(null, this); }
   /** the hosts whose Rust game stands in a slot, and when each last stepped */
   private static clock = 0; private static last: RustHost | null = null; private stamp = 0; evicted = 0;
   /** this game's slot goes to another: the puppet takes the whole state, the Rust game is let go; a later step starts a new one from the puppet */
   private giveUp(): void { const X = this.F.X; if (!this.h) return;
-    try { this.applyWhole('its slot went to another game'); } catch (e) { this.count(`THE WHOLE APPLY THREW as the slot was given up: ${String((e as any)?.message ?? e).slice(0, 100)}`); }
+    try { this.scanFlush(); this.applyWhole('its slot went to another game'); } catch (e) { this.count(`THE WHOLE APPLY THREW as the slot was given up: ${String((e as any)?.message ?? e).slice(0, 100)}`); }
     // THE GAME'S BYTES ARE KEPT (a clone of the Rust `Game` and its block, in the module): if the tool steps this game again it stands again as it was
     // (`restep`), with no export of the puppet. Only the last few games that gave a slot up keep theirs; an older one's re-step is refused.
     if (X.face_keep && !OFF.has('keep')) { this.keptOff = X.face_keep(this.h, 0) || -1; if (this.keptOff > 0) { OFF_KEPT.push(this.cell); while (OFF_KEPT.length > OFF_CAP) { const o = OFF_KEPT.shift()!; X.face_kept_drop(o.keptOff); o.keptOff = -1; } } }
@@ -484,6 +504,7 @@ export class RustHost {
   /** the host's own lines: what they call runs on the puppet, and starts nothing */
   private start(why = 'the first step'): void { const was = this.starting; this.starting = true; try { this.startBody(why); } finally { this.starting = was; } }
   private startBody(why: string): void {
+    RustHost.standing = false;
     const g = this.g, X = this.F.X, B = this.B, t = now();
     // (iii) A GAME WHOSE KEPT BYTES WERE LET GO (it gave its slot up more than a few games ago) IS NOT STEPPED AGAIN: its puppet is what the last whole
     // apply left, and a start from it would be another game than the one that stood
@@ -495,9 +516,6 @@ export class RustHost {
       if (men.length) throw new Error(`rust-host: a new start is asked for (${why}) from a puppet that holds ${men.length} men the apply made (${[...new Set(men)].slice(0, 6).join(', ')}): a man the Rust game made has no store row or pose store on the TypeScript side, so this puppet cannot be the start of a game. Asked by ${toolLine()}`); }
     this.startDue = false; this.dueWhy = ''; this.unkeepAll(); if (this.keptOff > 0) { X.face_kept_drop(this.keptOff); const i = OFF_KEPT.indexOf(this.cell); if (i >= 0) OFF_KEPT.splice(i, 1); } this.keptOff = 0; this.made = {};
     this.B.surfaceHost(this); this.taps(g);   // (the tool may have started another mission since the game was stood: its menu, its fight and its saves are new objects)
-    // (ANOTHER GAME OF THIS PROCESS STEPPED LAST: the modules' own tables and variables, which every game of a process shares and a start reads, hold what
-    // the filtered apply left of it. Its puppet takes the whole state first, so that this start reads what the TypeScript tick would have left there.)
-    { const L = RustHost.last; if (L && L !== this && L.h && !L.audit && !OFF.has('last')) try { L.applyWhole('another game of the process starts'); } catch (e) { L.count(`THE WHOLE APPLY THREW as another game started: ${String((e as any)?.message ?? e).slice(0, 100)}`); } }
     g.sim.settle(g);
     const start: Uint8Array = this.B.startExport(g, this.B.reg, (w: string) => this.count(w));
     const block = this.tsBlock().slice();
@@ -759,6 +777,8 @@ export class RustHost {
 
   // ---- THE STEP, in place of `stepSeats`
   step(dt: number, cmds: readonly any[]): void {
+    if (this.startThrew) { const e = this.startThrew; this.startThrew = null; throw e; }
+    RustHost.standing = false; this.stamp = ++RustHost.clock; if (RustHost.last !== this && !OFF.has('waiting')) RustHost.startWaiting(this);
     const g = this.g, X = this.F.X, B = this.B, k = ++this.k; let t = now();
     if (!this.wall0) this.wall0 = t; this.wallLast = t;
     this.wholeNow = false; this.inStep = true; this.lastCmds = cmds; this.stamp = ++RustHost.clock; if (RustHost.last !== this) B.surfaceHost(this); RustHost.last = this; if (this.rec) { this.rec.k = k; this.rec.quiet = this.quietSteps; if (SITES) site(this.rec); } if (CAP_AT && (k & 31) === 0 && Date.now() > CAP_AT) process.exit(143);
@@ -902,6 +922,7 @@ export class RustHost {
 // game, each green alone. The harness puts them back as it stands a game with no word (`__tpsDressBack`).
 // STAND-IN: rows of the process where the stand is a game's. Belongs with the stand: a game's own dress rows, or the word's stand not touching them.
 let DRESS_WAS: Record<string, boolean> | null = null;
+(globalThis as any).__tpsStandComing = (collect: () => void) => RustHost.standComing(collect); (globalThis as any).__tpsStandEnded = () => RustHost.standEnded();
 function dressDown(B: any): void { DRESS_WAS ??= { ...B.DRESS }; B.dressAll(false); (globalThis as any).__tpsDressBack = () => { Object.assign(B.DRESS, DRESS_WAS); }; }
 // ---- THE HARNESS'S WORD (tools/qa/headless.ts `standUp`): TPS_GAME=rust the game the harness stands is a puppet of the Rust game; TPS_GAME=audit the
 // same with the audit; TPS_GAME=ts the SAME STAND (the game's own die, the dress rows down) stepped by the TypeScript tick, for a tally to hold the Rust
