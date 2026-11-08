@@ -606,7 +606,7 @@ camera drifts under scripts and framed walls instead of the subject for a whole 
 write becomes a walk that stops at the first wall). **The boot is asynchronous** (every pipeline through `createComputePipelineAsync`, `Engine.init()` awaited
 behind a start card that counts them in): `window.__ready` is a Promise that exists from the first tick and resolves once every hook above is assigned, the
 card is live AND every kernel is in (rejects if the boot dies) — `await window.__ready` is the one line a script needs. Since 2026-10-27 the start card of a
-PERSON'S browser does not wait for the heaviest kernels (the row Start on first frame shaders starts on there: `docs/agents/render.md`). A browser a script
+PERSON'S browser does not wait for the heaviest kernels (the start on first frame shaders is on there: `docs/agents/render.md`). A browser a script
 drives (`navigator.webdriver`: every page tool) starts with that row OFF, so there the card still waits for everything and `__ready`, the hooks and the first
 picture are as they were. `window.__started` is true from the moment the card is live (on a mission's page a person sits at the brief's block is live later, at `__boot.marks.settled`: `docs/agents/menus.md`, the brief's Start waits for the picture; `?settle=0` off); with the row on (`?firstframe=1` on a tool's address) the later set
 may still be compiling then and its passes drawing stand-ins, the hooks are already assigned, and `__ready` resolves only once the set is in (`gpu/device.ts
