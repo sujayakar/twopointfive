@@ -3327,6 +3327,71 @@ if (on('walked', 'missions', 'all')) await run('walked', async () => (await Bun.
 // ---------------------------------------------------------------- aimed fire chews cover (src/game/coverfire.ts, coverfire-probes.ts — a program of its own: run as one, its exit code the verdict)
 {  }
 
+// ---------------------------------------------------------------- CHECK FILES THAT ARE SCRIPTS OF THEIR OWN: [name, file, families]. Until 2026-11-08 nothing ran them, and half were red.
+for (const [name, file, ...fams] of [
+  ['bench', 'bench-check.ts', 'perf'],
+  ['cast-deal', 'cast-deal-check.ts', 'cast', 'squadorders'],
+  ['claude-md', 'claude-md-check.ts', 'docs'],
+  ['death-summary', 'death-summary-check.ts', 'debrief'],
+  ['fixedstep', 'fixedstep-check.ts', 'perf', 'replay'],
+  ['framecap', 'framecap-check.ts', 'perf'],
+  ['gpulost', 'gpulost-check.ts', 'shaders'],
+  ['ground-pieces', 'ground-pieces-check.ts', 'level'],
+  ['gunfire-table', 'gunfire-table-check.ts', 'sounds'],
+  ['hud-look', 'hud-look-check.ts', 'menus'],
+  ['keeppage', 'keeppage-check.ts', 'shaders'],
+  ['kit-stores', 'kit-stores-check.ts', 'level'],
+  ['levelset', 'levelset-check.ts', 'shaders', 'level'],
+  ['lookexpo', 'lookexpo-check.ts', 'look', 'render'],
+  ['lookgrade', 'lookgrade-check.ts', 'look', 'render'],
+  ['lookunits', 'lookunits-check.ts', 'look', 'render'],
+  ['menustills', 'menustills-check.ts', 'menus'],
+  ['moonlight', 'moonlight-check.ts', 'fog'],
+  ['nogpu', 'nogpu-check.ts', 'shaders'],
+  ['palette', 'palette-check.ts', 'level'],
+  ['parse', 'parse-check.ts', 'tools'],
+  ['perfrec', 'perfrec-check.ts', 'perf'],
+  ['pipequeue', 'pipequeue-check.ts', 'shaders'],
+  ['pricerun', 'pricerun-check.ts', 'perf'],
+  ['ready-pose', 'ready-pose-probes.ts', 'stealth'],
+  ['replayturn', 'replayturn-check.ts', 'replay'],
+  ['settle', 'settle-check.ts', 'menus', 'shaders'],
+  ['sfxwarm', 'sfxwarm-check.ts', 'sounds'],
+  ['shaderfold', 'shaderfold-check.ts', 'shaders'],
+  ['shaderrows', 'shaderrows-check.ts', 'shaders'],
+  ['shadertrim', 'shadertrim-check.ts', 'shaders'],
+  ['sharpcap', 'sharpcap-check.ts', 'render', 'shaders'],
+  ['smokeline', 'smokeline-check.ts', 'smoke'],
+  ['slomo', 'slomo-check.ts', 'replay'],
+  ['smokelook', 'smokelook-check.ts', 'smoke'],
+  ['smokestir', 'smokestir-check.ts', 'smoke'],
+  ['sound-takes', 'sound-takes-check.ts', 'sounds'],
+  ['steadybounce', 'steadybounce-check.ts', 'render'],
+  ['stack-marks', 'stack-marks-check.ts', 'squadorders', 'level'],
+  ['sweep-ir', 'sweep-ir-check.ts', 'perf'],
+  ['backkeep', 'backkeep-check.ts', 'squadorders'],
+  ['barracks', 'barracks-check.ts', 'level', 'squadorders'],
+  ['cmdcheck', 'cmdcheck-check.ts', 'tools'],
+  ['kitnoise', 'kitnoise-check.ts', 'menus'],
+  ['leaf-round', 'leaf-round-check.ts', 'doors'],
+  ['lens', 'lens-check.ts', 'replay'],
+  ['lived-stack', 'lived-stack-check.ts', 'level', 'squadorders'],
+  ['lookmaps', 'lookmaps-check.ts', 'look', 'render'],
+  ['lookveil', 'lookveil-check.ts', 'look', 'shaders'],
+  ['opening', 'opening-check.ts', 'missions'],
+  ['openings', 'openings-check.ts', 'look', 'level'],
+  ['own-can', 'own-can-check.ts', 'doors', 'squadorders'],
+  ['placedoors', 'placedoors-check.ts', 'look', 'doors'],
+  ['podframes', 'podframes-check.ts', 'doors', 'level'],
+  ['qrf-silent', 'qrf-silent-check.ts', 'qrf'],
+  ['records-front', 'records-front-check.ts', 'squadorders', 'glass'],
+  ['replaybuf', 'replaybuf-probes.ts', 'replay'],
+  ['replaykeep', 'replaykeep-probes.ts', 'replay'],
+  ['savefile', 'savefile-check.ts', 'checkpoints'],
+  ['squad-way', 'squad-way-check.ts', 'enemysquads'],
+  ['tut-team', 'tut-team-check.ts', 'missions'],
+  ['tween', 'tween-check.ts', 'perf'],
+] as [string, string, ...string[]][]) if (on(name, ...fams, 'all')) await run(name, () => runScript(file));
 // ---------------------------------------------------------------- the runner's own self-tests (never in 'all'): `selftest-fail` must turn the verdict and gate.sh red, `selftest-throw` likewise without
 // stopping the probe after it, `selftest-pass` green, `selftest-quiet` = a probe that checks nothing → NO VERDICT (gate.sh: ERROR)
 if (on('selftest-fail', 'selftest')) await run('selftest-fail', () => { console.log('- FAIL — deliberately: the runner\'s red path'); return false; });
@@ -3387,31 +3452,24 @@ if (which === 'list') {   // `probes.ts list`: the name index (grouped by name P
   { // THE REDS AGAINST THE LIST (tools/qa/expected-red.ts): which of this run's red PROBES are old and explained, which are NEW, and which listed red came back green.
     // A table for the reader — the exit code is the verdict's, unchanged: red is red. By probe name: a family's own banner name in the verdict line (it counts its
     // members) is not a row here unless no probe of the run is red to account for it; GREEN AGAIN wants a probe that checked something (a NO VERDICT is not green).
-    // ONE LIST, AND EVERY RUN OF A STAND AS IT OPENS IS READ AGAINST IT, folded or not: the fold is how the page's stand IS since the TypeScript tick was deleted
-    // (tools/qa/fold.ts). (Until 2026-11-07 a folded probe's red was read against no row, which after the deletion was every red of every run with no word.)
-    // Read by stand: a row is the page's stand's unless its `on` says the old stand too, or alone. Two runs are read against no row at all, and say so
-    // where they have a red: one started with a word of the stand given by hand (stand.ts BY_HAND: a probe turned green by its own rule held off would read GREEN
-    // AGAIN), and one of a single case of a probe (a case's number as the third argument: `aim-door 0` passes without ever running the line its row is about).
+    // Two runs are read against no row, and say so where they have a red: one started with a word of the stand given by hand (stand.ts BY_HAND), and one of a
+    // single case of a probe (a case's number as the third argument: `aim-door 0` passes without ever running the line its row is about).
     // A RUN STARTED WITH A BREAK WORD (stand.ts BREAK_WORDS) is still read against the list, and closes with one line more, because a row can hide the word:
     // a probe that is red by its row prints EXPECTED RED whether the word bit or not (the runner's (12) under RUNNER12_BREAK on the page's stand, 11-06). The
     // line says DID NOT BITE where nothing failed, names the reds with no row as the word's to explain, and says BITE NOT SHOWN where every red has a row.
     // With more words than one it cannot say which of them bit.
-    const { EXPECTED_RED: LIST, rowSays, LIST_READ_ON } = await import('./expected-red.ts'), { STAND, BY_HAND, BREAK_WORDS } = await import('./stand.ts');
+    const { EXPECTED_RED: LIST, rowSays } = await import('./expected-red.ts'), { STAND, BY_HAND, BREAK_WORDS } = await import('./stand.ts');
     const other = BY_HAND.length ? `the run was started with ${BY_HAND.join(' ')} by hand, and the list is of a stand as it opens` : /^\d+$/.test(process.argv[3] ?? '') ? `the run is of one case (${process.argv[3]}), and a row is of a whole probe` : '';
-    const reads = (n: string): boolean => !other && n in LIST && (STAND === 'shipped' ? LIST[n].on !== 'old' : !!LIST[n].on);
+    const reads = (n: string): boolean => !other && STAND === 'shipped' && n in LIST;
     const reds = FAILED.filter(n => RAN_NAMES.includes(n)), banners = FAILED.filter(n => !RAN_NAMES.includes(n));
     const old = reds.filter(reads), fresh = [...reds.filter(n => !reads(n)), ...(reds.length ? [] : banners)];
     const back = RAN_NAMES.filter(n => reads(n) && !FAILED.includes(n) && RAN_CHECKED.has(n));
-    /** what to do with a listed red that passed: the row goes, unless it is red on the other stand as well, where only this stand comes out of it */
-    const mend = (n: string): string => { const shares = Object.keys(LIST).filter(m => LIST[m] === LIST[n]).length - 1, own = shares ? ` (${shares} other name${shares > 1 ? 's' : ''} share${shares > 1 ? '' : 's'} its row: this one goes, or gets a row of its own, and theirs stays)` : '';
-      return (LIST[n].on !== 'both' ? 'take it off the list' : STAND === 'shipped' ? "it is the old stand's alone now: its `on` is 'old'" : "it is the page's stand's alone now: take its `on` out") + own; };
     if (other) { if (FAILED.length) console.log(`  the reds are not read against the list (tools/qa/expected-red.ts): ${other}`); }
     else if (old.length || fresh.length || back.length) {
-      console.log(`  the reds against the list (tools/qa/expected-red.ts${STAND === 'shipped' ? '' : ", the rows that are red on the old stand"}): ${old.length} expected · ${fresh.length} NEW · ${back.length} listed and green again`);
-      if (LIST_READ_ON && STAND === 'shipped' && [...old, ...back].some(n => !LIST[n].rust)) console.log(`    (${LIST_READ_ON}${[...old, ...back].some(n => LIST[n].rust) ? ' · not so of a row that says ON THE RUST GAME: that one was read on it' : ''})`);
+      console.log(`  the reds against the list (tools/qa/expected-red.ts): ${old.length} expected · ${fresh.length} NEW · ${back.length} listed and green again`);
       for (const n of old) console.log(`    EXPECTED RED  ${n}${sideTag(n)} — ${rowSays(LIST[n])}`);
       for (const n of fresh) console.log(`    NEW RED       ${n}${sideTag(n)}`);
-      for (const n of back) console.log(`    GREEN AGAIN   ${n} — listed as an expected red and it passed here: ${mend(n)}`);
+      for (const n of back) console.log(`    GREEN AGAIN   ${n} — listed as an expected red and it passed here: take it off the list`);
     }
     for (const e of foldOnlyErrors()) console.log(`error: ${e}`);   // (QA_FOLD_ONLY that could not do what it was asked: an error, so that a check that had to be folded is never a green run unfolded)
     if (BREAK_WORDS.length) { const many = BREAK_WORDS.length > 1, w = `BREAK WORD${many ? 'S' : ''} ${BREAK_WORDS.join(' ')}`, all = [...reds, ...(reds.length ? [] : banners)];
