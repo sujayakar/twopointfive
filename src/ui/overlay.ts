@@ -35,6 +35,10 @@ import { AttentionViz } from './attentionviz';
 import { PictureViz } from './pictureviz';
 import { menuTheme } from './theme';
 import { textZoom } from './textsize';
+import { locked } from '../view/seatview';
+import { objectiveWords } from './tabcard';
+/** the men the big line keeps clear of, found by the ids the view names them by */
+const lineMen = (game: Game, ids: readonly number[]) => { const out = game.guards.map(gd => gd.char).filter(c => ids.includes(c.id)); if (ids.includes(game.player.char.id)) out.push(game.player.char); return out; };
 
 const EDGE = 1.1;   // markers / dots / the throw arc stay drawn until they are 10 % of the view past its edge (FollowCamera.project margin)
 /** The way off a lost man to where the round came from, as it lies on the screen: the turn, in degrees, of one right-pointing arrow ('' = the squad does not
@@ -297,7 +301,7 @@ export class Overlay implements HudLike {
     // usual case from this camera), faded out within a couple of metres so it never fights the F reticle / door marker that takes over there
     // A TUTORIAL MISSION (game/rails.ts): its step is the one instruction on screen — big, low in the middle, each key it names drawn as a key ('[B]' in the
     // line), a pip for every step. The small row at the top stands down while it is up, and the seat with nobody on the floor hides the rows of a man's own kit.
-    const rail = game.rails.prompt();
+    const frame = game.view.lesson?.rails ?? null, rail = frame?.prompt ?? null;
     // (each cap in brackets is one key, asked of the key map by itself: a line of several — '[W] [A] [S] [D]' — follows a rebind of any of them)
     const caps = (line: string) => line.split(/(\[[^\]]+\])/).map(t => /^\[[^\]]+\]$/.test(t) ? (t === '[X]' && KEYMAP.qOnly ? `Hold <kbd>${esc(keyCap('B'))}</kbd>` : `<kbd>${esc(t === '[Ctrl]' ? camCap() : keyCap(t.slice(1, -1)))}</kbd>`) : esc(keyText(t))).join('').replace(/(<kbd>[^<]*<\/kbd>)([:,.;!?])/g, '<span class="nb">$1$2</span>');   // (…and a cap is never parted from the mark after it: a second row that begins ': behind the van')
     const railWords = rail ? caps(rail.line) : '', railNote = rail?.note ? caps(rail.note) : '';   // (a note: the words under the line after a tap the step refused)
@@ -308,16 +312,16 @@ export class Overlay implements HudLike {
           let pips = ''; for (let i = 1; i <= rail.of; i++) pips += `<i class="${i < rail.n ? 'done' : i === rail.n ? 'now' : ''}"></i>`;
           this.railEl.innerHTML = `<div class="line${rail.watch ? ' watch' : ''}">${words}</div><div class="note"></div><div class="pips">${pips}</div>`; this.railNote = '';
           this.railEl.className = ''; void this.railEl.offsetWidth; this.railEl.className = 'on'; } }
-      this.card.update(this.cards ? game.rails.card() : null, caps);
+      this.card.update(this.cards ? frame?.card ?? null : null, caps);
       // (the note is its own piece: it comes and goes under a line that stays put, and the line is shaken once as it comes)
       if (rail && railNote !== this.railNote) { this.railNote = railNote; const n = this.railEl.querySelector?.('.note'), l = this.railEl.querySelector?.('.line') as HTMLElement | null;
         if (n) n.innerHTML = railNote; if (l) { l.classList.remove('nudge'); if (railNote) { void l.offsetWidth; l.classList.add('nudge'); } } }
-      const sky = game.rails.skyOn; if (sky !== this.skyWas) { this.skyWas = sky; document.body.classList.toggle('skyseat', sky); }
-      const on = game.rails.live; if (on !== this.railsWas) { this.railsWas = on; document.body.classList.toggle('onrails', on); } }   // (…and on any tutorial mission the place the line points at is marked big: index.html .objmark)
+      const sky = !!frame?.sky; if (sky !== this.skyWas) { this.skyWas = sky; document.body.classList.toggle('skyseat', sky); }
+      const on = !!frame; if (on !== this.railsWas) { this.railsWas = on; document.body.classList.toggle('onrails', on); } }   // (…and on any tutorial mission the place the line points at is marked big: index.html .objmark)
     // …and the line stays clear of your own men (ui/railclear.ts): with the view led up the screen, or in a short window, it lay over the player and his
     // partner. Where it lies is measured once a line (offsets are the layout's: no transform, no animation in them). With a ring up it is at home: the
     // ring's own step of it (ui/cmdring.ts) is the only one. At the bottom edge it is where the radio's rows live, so they go up over it (`--raillog`)
-    { let s = 0; const men = rail && !this.cmdRing.ringUp ? game.rails.lineMen() : [], E = this.railEl, O = this.railRestOf;
+    { let s = 0; const men = rail && !this.cmdRing.ringUp && RAILS.lineClear ? lineMen(game, frame!.lineMen) : [], E = this.railEl, O = this.railRestOf;
       if (men.length) {
         if (O[0] !== this.railKey || O[1] !== this.railNote || O[2] !== w || O[3] !== h) { O[0] = this.railKey; O[1] = this.railNote; O[2] = w; O[3] = h;
           const W = E.offsetWidth, H = E.offsetHeight, L = E.offsetLeft, T = E.offsetTop; this.railRest = W > 0 && H > 0 ? { l: L - W / 2, r: L + W / 2, t: T, b: T + H } : null; }
@@ -331,7 +335,7 @@ export class Overlay implements HudLike {
       //  step down and has a higher top, and the rows stood in its first row of words)
       { const log = s > 0 && this.railRest ? `${(h - this.railRest.t - s + 6).toFixed(0)}px` : '';
         if (log !== this.railLog) { this.railLog = log; const st = document.body.style; if (log) st?.setProperty?.('--raillog', log); else st?.removeProperty?.('--raillog'); } } }
-    const ot = rail || this.cornerObj ? '' : keyText(game.objectiveText());   // (HANDRING.corner: the objective is a section of the corner panel, not a line up here)
+    const ot = rail || this.cornerObj ? '' : objectiveWords(game);   // (HANDRING.corner: the objective is a section of the corner panel, not a line up here)
     if (ot !== this.objKey) { this.objKey = ot; const W = 'objective ▸', cut = ot.indexOf(W);   // the line's own word is set apart as its label (a par clock in front of it is not part of it); the text read back is unchanged
       if (cut < 0) this.objEl.textContent = ot; else this.objEl.innerHTML = `${esc(ot.slice(0, cut))}<b>${W}</b>${esc(ot.slice(cut + W.length))}`;
       this.objEl.className = game.mission.stage; }
@@ -347,11 +351,11 @@ export class Overlay implements HudLike {
       const F = game.saves.flash; const on = !!F && game.time - F.t >= 0 && game.time - F.t < CKPT.flashSecs; const key = on ? F!.text : '';
       if (key !== this.ckKey && this.ckEl) { this.ckKey = key; this.ckEl.className = on ? 'on' : ''; if (on) this.ckEl.innerHTML = `<b></b>${key}`; } }
     const op = game.objectivePos();
-    const skySeat = game.rails.skyOn;   // (nobody on the floor is the player: the marker is a place to point at, not a walk to it — no fade near it, no metres)
-    const far = op ? v3.distXZ(op, game.player.char.pos) : 0, od = op ? (skySeat || game.rails.arrow() ? 99 : far) : 0;   // (…nor near a step's arrow: it is drawn for the last pace, where the diamond would have faded out)
+    const skySeat = !!frame?.sky;   // (nobody on the floor is the player: the marker is a place to point at, not a walk to it — no fade near it, no metres)
+    const far = op ? v3.distXZ(op, game.player.char.pos) : 0, od = op ? (skySeat || frame?.arrow ? 99 : far) : 0;   // (…nor near a step's arrow: it is drawn for the last pace, where the diamond would have faded out)
     const floor = game.mission.stage === 'drive' && game.hover?.kind !== 'objective' ? 0.35 : 0;   // the rack has no marker of its own: keep a faint diamond on it until the cursor finds it (doors have their own dot / reticle)
     const alpha = op ? Math.max(floor, Math.min(0.9, (od - 1.6) / 1.5)) : 0;
-    if (!op || alpha < 0.03 || rail?.watch) this.objMark.style.display = 'none';   // (a line that asks for nothing marks no place to press on: rails.ts prompt)
+    if (!op || alpha < 0.03 || rail?.watch) this.objMark.style.display = 'none';   // (a line that asks for nothing marks no place to press on)
     else {
       const vp = cam.viewProj; const cw = vp[3] * op[0] + vp[7] * op[1] + vp[11] * op[2] + vp[15];
       let nx = vp[0] * op[0] + vp[4] * op[1] + vp[8] * op[2] + vp[12], ny = vp[1] * op[0] + vp[5] * op[1] + vp[9] * op[2] + vp[13];
@@ -360,11 +364,11 @@ export class Overlay implements HudLike {
       const el = this.objMark, mx0 = (nx * 0.5 + 0.5) * w, my0 = (1 - (ny * 0.5 + 0.5)) * h;
       // (…and a tutorial step's mark under a ring that is up, the squad's or his own, is not drawn: it lay over the ring's middle and its inner digits, and
       //  with the ring up there the place is found — rails.ts RAILS.markClear; the rings are last frame's, as drawn)
-      if (game.rails.live && RAILS.markClear && this.cmdRing.covers(mx0, my0)) el.style.display = 'none';
+      if (frame && RAILS.markClear && this.cmdRing.covers(mx0, my0)) el.style.display = 'none';
       else {
       el.style.display = 'block'; el.style.opacity = alpha.toFixed(2);
       // (a tutorial step's `toward`: the mark is an arrow lying from the place to where it points, turned as the view has the two — never at the picture's edge, where the ring says 'that way')
-      const to = k > 1 ? null : game.rails.arrow(); let turn = '';
+      const to = k > 1 ? null : frame?.arrow ?? null; let turn = '';
       if (to) { const [ax, ay, av] = cam.project(op, w, h, EDGE), [bx, by] = cam.project(to, w, h); if (av && Math.hypot(bx - ax, by - ay) > 4) turn = `${(Math.atan2(by - ay, bx - ax) * 180 / Math.PI).toFixed(1)}deg`; }
       el.className = k > 1 ? 'objmark edge' : turn ? 'objmark arrow' : 'objmark'; if (turn !== this.objTurn) { this.objTurn = turn; el.style.setProperty?.('--turn', turn || '0deg'); }
       el.style.left = `${mx0.toFixed(1)}px`; el.style.top = `${my0.toFixed(1)}px`;
@@ -475,7 +479,7 @@ export class Overlay implements HudLike {
         if (emptyWord(game, T) === S.word) rows.push({ kind: T ? T.it.kind : 'wall', label: S.word, opts: [], inReach: false, off: false, dist: T && T.why === EMPTY_WHY.far ? T.d : undefined }); } }
     const primary = hv ? list.indexOf(hv) : -1;
     if (cornerOn(!!game.puppet)) {   // (ui/corner.ts: the objective, his key's line, the squad key's line — and what the block and a door's heading said that it would lose: doortools.ts cornerNotes, a key's line kept back where the mission's frame keeps the squad's notes back, a warning never)
-      const C = cornerRows(rows, primary, sq.status, game.rails.prompt() ? '' : keyText(game.objectiveText()), game.doorTools.cornerNotes().filter(o => !o.key || (game.orders.active && !game.rails.locks('menu'))), game.mission.stage);
+      const C = cornerRows(rows, primary, sq.status, game.view.lesson?.rails?.prompt ? '' : objectiveWords(game), game.doorTools.cornerNotes().filter(o => !o.key || (game.orders.active && !locked(game.view, 'menu'))), game.mission.stage);
       return { rows: C.rows, primary: C.primary, more: 0, open: false }; }
     rows.push(...sq.status);   // … and otherwise the squad's block under the Space rows: who the orders go to, what each man is doing (nothing without a squad)
     return { rows, primary: primary >= 0 && primary < cap ? primary : -1, more: Math.max(0, list.length - cap), open: game.player.listOpen };   // (up as a ring — cmdring.ts CMDRING.hands — the panel's list is the list at rest)

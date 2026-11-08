@@ -363,8 +363,7 @@ pub fn view_live(g: &mut game::game::Game) {
 }
 
 /// HOST STEP AFTER THE TICK (the headless host's `cam.update(dt, view.followPos(), …)`, for each seat a host shows): the host's camera asks the game where
-/// to look. On a tutorial's sky seat that ask is not idle: `rails.look()` eases the view's centre toward the men still up by the time since it was last
-/// asked and stamps it, so a game nobody asks between ticks holds another centre (the ninth digit while the tick asks too, a stale stamp where it does not).
+/// to look. The ask changes nothing now: the tick itself eases a tutorial's sky seat, as its last step (`rails_ease_mid`).
 pub fn follow(g: &mut game::game::Game) {
     for s in g.seats.clone() { game::seats::with_seat(g, s, &mut |g| { let _ = game::game::game_follow_pos(g, None); }); }
 }

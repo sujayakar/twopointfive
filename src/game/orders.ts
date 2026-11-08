@@ -107,6 +107,8 @@ import './noshove';   // (read inside update only)
 import './close';   // (read inside input() only: the left click that shuts the menu with a man in the arm)
 import './silent';
 import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
+import { locked } from '../view/seatview';
+import { RAILS } from './rails';   // (read inside targetUnder only: src/game is one import cycle)
 /** where Sam 'stands' while the stack's makers are asked as if he were not there (ownMarkFirst): a place no mark is near */
 const NOWHERE: Vec3 = [1e7, 0, 1e7];
 /** … and how near a mark handed out must be to the post a man stands on to be that same mark, metres */
@@ -709,10 +711,11 @@ export class SquadOrders {
    *  listed — greyed, with whyNot's word) */
   rowsFor(t: OrderTarget, page: string | null = null, men?: Guard[]): OrderDef[] {
     const on = workRows(this.g, t, page, wallRows(this.g, t, page, this.defs.filter(d => (d.listed ?? d.targets).includes(t.kind) && (d.page ?? null) === page)));   // (wallcharge.ts: a wall's menu · workthings.ts: a thing's own order where 'move there' is)
-    if (!on.some(d => d.standsIn)) return this.g.rails ? this.g.rails.orderRows(on) : on;   // (rails.ts: a tutorial mission's menu lists only the orders it names)
+    const only = this.g.view.lesson?.rails?.orders, named = (rows: OrderDef[]): OrderDef[] => only ? rows.filter(d => only.includes(d.id)) : rows;   // (a tutorial mission's menu lists only the orders it names)
+    if (!on.some(d => d.standsIn)) return named(on);
     // a row that STANDS IN for another (OrderDef.standsIn): in while its `when` says so — the row it stands in for out — and out otherwise
     const who = men ?? this.recipients(t), ins = on.filter(d => d.standsIn?.when(this, t, who)), out = new Set(ins.map(d => d.standsIn!.for));
-    const all = on.filter(d => d.standsIn ? ins.includes(d) : !out.has(d.id)); return this.g.rails ? this.g.rails.orderRows(all) : all;
+    return named(on.filter(d => d.standsIn ? ins.includes(d) : !out.has(d.id)));
   }
   /** (cmdring.ts CMDRING.flat) a ring put up now is one of the flat tree — on a tutorial mission only where its level says so (rails.ts flatRing:
    *  a mission's lines teach the menu's pages and their digits until they are written for this tree) */
@@ -1854,10 +1857,10 @@ export class SquadOrders {
     const words = hov ? this.quickWords(hov, P) : null;   // (autopilot.ts: the squad's first choice on a door it waits on)
     const why = P && words ? whyWords(P)?.row ?? null : null;   // (squadnet.ts: why the squad's pick is not a plain open; null with its switch off)
     const quick = hov && words ? `${words}${hov.kind === 'none' && !hov.man ? '' : ` · ${this.hoverWords(hov)}`}${why ? ` · ${why}` : ''}` : null;   // (what the quick key would give on what the cursor is on)
-    const lk = (act: string) => !!this.g.rails?.locks(act);   // (rails.ts, a tutorial mission: a key the mission has not taught yet is not named on the panel either)
+    const lk = (act: string) => locked(this.g.view, act);   // (a tutorial mission: a key the mission has not taught yet is not named on the panel either)
     return { menu: null, status: [{ kind: 'objective', label: lk('who') ? 'squad' : `squad · ${posture ? `${posture} · ` : ''}orders to ${this.whoTag().tag}`, inReach: true, off: false, tone,
       opts: [...S.map(gd => ({ key: '', text: `${some ? (men.includes(gd) ? '▸ ' : '· ') : ''}${gd.callsign} · ${this.statusOf(gd)}${this.g.cover.tail(gd)}`, tone: this.paired ? this.pairOf(gd) ?? undefined : undefined, gone: gd.state === 'dead' && lostShown(), lost: gd.state === 'dead' ? lostOf(this.g, gd.char.id) ?? undefined : undefined })), ...(lk('menu') ? [] : [...this.notes.flatMap(f => f()).map(x => typeof x === 'string' ? { key: '', text: x } : x)]),
-        ...(quick && !lk('order') && !(CMDRING.on && ringHoldSecs() > 0 && this.g.rails?.teachesHold()) ? [{ key: keyName(ORDERS.quickKey), text: quick }] : []), ...(lk('menu') || CMDRING.only ? [] : [{ key, text: hov ? `orders · ${this.hoverWords(hov)}` : 'orders' }]), ...(lk('who') || CMDRING.only ? [] : [{ key: whoKey, text: onMan && next === S.indexOf(onMan) ? `who · ${onMan.callsign} (under the cursor)` : onMan && next === 'all' ? `who · back to ${this.paired ? 'gold' : 'all'}` : `who · ${this.whoStrip()}` }]) ] }] };   // (cmdring.ts `only`: the orders key and the who key have no key — the ring is the menu, and who is its wheel or a click on a man)
+        ...(quick && !lk('order') && !(CMDRING.on && ringHoldSecs() > 0 && this.g.view.lesson?.rails?.teachesHold) ? [{ key: keyName(ORDERS.quickKey), text: quick }] : []), ...(lk('menu') || CMDRING.only ? [] : [{ key, text: hov ? `orders · ${this.hoverWords(hov)}` : 'orders' }]), ...(lk('who') || CMDRING.only ? [] : [{ key: whoKey, text: onMan && next === S.indexOf(onMan) ? `who · ${onMan.callsign} (under the cursor)` : onMan && next === 'all' ? `who · back to ${this.paired ? 'gold' : 'all'}` : `who · ${this.whoStrip()}` }]) ] }] };   // (cmdring.ts `only`: the orders key and the who key have no key — the ring is the menu, and who is its wheel or a click on a man)
   }
   /** Where the menu that is up is frozen, for a mark in the world (the page's overlay rings it — Sam may have walked on and be aiming elsewhere): the point, a
    *  word for it, the addressed element's colour. Null: no menu, or one opened on nothing (himself, nowhere). */

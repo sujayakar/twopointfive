@@ -68,13 +68,11 @@ function lessonTexts(name: string, L: any): Text[] {
   return out;
 }
 
-/** a lesson's line or card as the page writes it out, on each of the four ways the stalk and the knife can stand (game/lesson.ts lessonLine): the
+/** a lesson's line or card as the page writes it out, on each of the four ways the stalk and the knife can stand (game/lesson.ts tokenLine; the Rust game's lesson_line is the same writer at the page's stand): the
  *  distinct sentences a player can be shown for one written text. The two switches are put back as they were found. */
-interface Writer { lessonLine: (s: string) => string; STALK: { on: boolean; only: boolean; key: boolean }; CLOSE: { on: boolean; noKnife: boolean } }
+interface Writer { tokenLine: (s: string, held: boolean, bare: boolean) => string }
 function writtenOut(W: Writer, text: string): string[] {
-  const { STALK, CLOSE } = W, was = [STALK.on, STALK.only, CLOSE.on, CLOSE.noKnife, STALK.key] as const, out = new Set<string>();
-  try { for (const k of [0, 1, 2, 3, 5, 7]) { STALK.on = STALK.only = !!(k & 1); CLOSE.on = CLOSE.noKnife = !!(k & 2); STALK.key = !!(k & 4); out.add(W.lessonLine(text)); } }
-  finally { [STALK.on, STALK.only, CLOSE.on, CLOSE.noKnife, STALK.key] = was; }
+  const out = new Set<string>(); for (const k of [0, 1, 2, 3]) out.add(W.tokenLine(text, !!(k & 1), !!(k & 2)));
   return [...out];
 }
 /** …and a list of texts with every line and card replaced by what is written out of it (a title, a row and a list entry are shown as written) */
@@ -98,7 +96,7 @@ export async function writingCheck(): Promise<boolean> {
   console.log(`\n=== writing: the text a player reads, by the guide${BREAK ? ' — WRITING_BREAK: the old sentences are read as a level\'s' : ''} ===`);
   let all = true; const line = (ok: boolean, label: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}${detail ? `\n    ${detail}` : ''}`); };
   const { ALL_MISSIONS, TUTORIAL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
-  const lessonMod = await import(`${ROOT}/src/game/lesson.ts`), W: Writer = { lessonLine: BREAK ? (t: string) => lessonMod.lessonLine(t).replace(/press \[Space\] to grab/gi, '[Space]: grab') : lessonMod.lessonLine, STALK: (await import(`${ROOT}/src/game/stalk.ts`)).STALK, CLOSE: (await import(`${ROOT}/src/game/close.ts`)).CLOSE };
+  const lessonMod = await import(`${ROOT}/src/game/lesson.ts`), W: Writer = { tokenLine: BREAK ? (t: string, h: boolean, b: boolean) => lessonMod.tokenLine(t, h, b).replace(/press \[Space\] to grab/gi, '[Space]: grab') : lessonMod.tokenLine };
 
   // ---- the lessons
   const texts: Text[] = []; const levels = readdirSync(join(ROOT, 'levels')).filter(f => f.endsWith('.json') && !f.endsWith('.lint.json')).sort(); let lessons = 0;

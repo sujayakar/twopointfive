@@ -263,6 +263,8 @@ export function typedInto(t: EventTarget | null): boolean { const el = t as { ta
 export const camKey = (): string | null => KEYMAP.camSpace && gameCode('Space') === '' ? 'Space' : null;
 /** …and its name on a list of keys */
 export const camCap = (): string => camKey() ? 'Space' : 'Ctrl';
+/** a line with its keys by their codes in brackets, as the Rust game words a lesson's, as plain words: the camera's key by its name now, the rest for keyText to read */
+export const capsPlain = (s: string): string => s.replace(/\[([^\]]+)\]/g, (_m, k: string) => (k === 'Ctrl' ? camCap() : k));
 /** a line of words with the keys it names as they are bound now. `all` = the line is a list of keys (the Controls list's key column): the walk keys and the
  *  digits are keys there too. Handed back untouched, the same string, while nothing is rebound */
 export function keyText(s: string, all = false): string {

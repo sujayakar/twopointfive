@@ -774,7 +774,7 @@ function tail(S: Held, dt: number, cmds: readonly PlayerCmd[], tHost: number, tS
   // STAND-IN: F5, the save by hand (player.ts:498, a line of the TypeScript tick the Rust tick does not have): read off the tick's own record here.
   // Belongs in the Rust tick (the controller's `hand`, read back with `face_saves_asked`).
   if (cmds[g.seats.indexOf(g.hostSeat())]?.pressed.includes('F5') && !g.player.down) G.saves?.askSave();
-  { const sv = G.saves, D = G.director, R = G.rails, authored = !!sv?.authored && !!R?.live, stop = D?.stop, resume = R?.resume;
+  { const sv = G.saves, D = G.director, R = G.rails, authored = !!sv?.authored && !!g.view.lesson?.rails, stop = D?.stop, resume = R?.resume;
     // (an authored checkpoint of a tutorial mission: the controller stops the level's program for the take, savestate.ts:991. That is the Rust game's
     //  to do, and `take` does it there in the same order; the TypeScript's two calls would run on a puppet's program, which holds no beat)
     if (authored) { D.stop = () => {}; R.resume = () => {}; }

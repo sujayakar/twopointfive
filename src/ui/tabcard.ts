@@ -6,7 +6,7 @@
 // markup. Called from the page's Tab key only (main.ts): nothing here runs at module load.
 import { objectiveParts } from './corner';
 import { kitWords, kitIndex, kitOf } from '../game/kit';
-import { keyText } from '../host/keymap';
+import { capsPlain, keyText } from '../host/keymap';
 import type { Game } from '../game/game';
 
 export interface TabMan { name: string; doing: string; kit: string; down: boolean }
@@ -40,10 +40,12 @@ export function tabCard(objective: string, men: TabMan[], carry: string[], who =
 /** a kit line with its counted things said as what he set out with: the squad's throwables and charges are one pool once the run is on (doortools.ts),
  *  and its count is the note under the men, so a man's own count is what his card gave him, not what he has left */
 export const staged = (kit: string): string => kit.split(' · ').map(p => (/^\d+ stun\b/.test(p) ? `started with ${p}` : p)).join(' · ');
+/** the mission's line in the player's keys */
+export const objectiveWords = (game: Game): string => { const m = game.view.mission; return keyText(m?.of === 'lesson' ? capsPlain(m.text) : game.objectiveText()); };
 export function tabCardOf(game: Game): TabCard {
   const O = game.orders, S = O.active ? O.squad() : [], block = O.hud().status[0];
   const men = S.map(gd => { const i = kitIndex(gd), m = kitOf(gd); return { name: gd.callsign, doing: keyText(O.statusOf(gd) + game.cover.tail(gd)), kit: i && m ? staged(kitWords(i, m)) : '', down: gd.state === 'dead' }; });
-  return tabCard(keyText(game.objectiveText()), men, block ? block.opts.slice(S.length).filter(o => !o.key).map(o => keyText(o.text)) : [], block ? block.label.replace(/^squad(\s*·\s*)?/, '') : '');
+  return tabCard(objectiveWords(game), men, block ? block.opts.slice(S.length).filter(o => !o.key).map(o => keyText(o.text)) : [], block ? block.label.replace(/^squad(\s*·\s*)?/, '') : '');
 }
 const esc = (s: string): string => s.replace(/[&<>"]/g, c => (c === '&' ? '&amp;' : c === '<' ? '&lt;' : c === '>' ? '&gt;' : '&quot;'));
 /** the card's markup (index.html #tabcard): a section for the objective and one for the squad, each only while it has something to say; a line with no

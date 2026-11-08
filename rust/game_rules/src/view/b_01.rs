@@ -16,6 +16,7 @@ pub fn tick_view(g: &Game, seat: &crate::seats::SeatRef) -> TickView {
     let me = &g.ch[g.pl[seat.player].ch];
     TickView {
         mission: crate::mission::objective(g, seat),
+        lesson: crate::lesson::lesson_view(g, seat),
         radio: crate::cues::radio_rows(g),
         bubbles: crate::cues::bubbles_view(g, seat),
         me: me.id,

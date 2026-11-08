@@ -38,6 +38,7 @@ import { TWEEN, type Tween } from './tween';
 import { FINDME, AUTOVIEW, setAutoView, ctrlTurn, behindYaw, behindStep, aimCarry, carryStep, CARRY_KEYS, type AimCarry } from './findme';
 import { AUTOCAM, AUTOCAM_STATS, autoCam, autoBegin, autoRest, autoSway, swayDrop, swayCoast, autoZoom, autoHand, autoFree, autoRead, autoFrame, turnGoal, turnEase, turnCoast, walkKey, type AutoCam } from './autocam';
 import { camKey } from './keymap';
+import { locked } from '../view/seatview';
 
 /** the start card's attract mode (game/attract.ts Attract) as the loop sees it */
 export interface AttractLike { readonly active: boolean; update(dt: number): Vec3 | null; }
@@ -135,9 +136,9 @@ function stepFrameIn(ctx: LoopCtx, dt: number): void {
   if (frozen) ctx.thaw = true; else if (ctx.thaw) { ctx.thaw = false; input.pressed.add('Paused'); input.pressed.add('Thawed'); }   // (game/backkey.ts: the first tick after the card is told the card was up — a held list or arc is let go unsent IN the tick, where a recording has it)
   ctx.afterFreeze?.(frozen);
   const auto = ctx.auto ??= autoCam();   // (the camera running itself: host/autocam.ts)
-  if (!frozen && input.wheelCtrl && !game.rails.locks('zoom')) { cam.zoom(input.wheelCtrl); if (auto && AUTOVIEW.on) autoZoom(auto, cam, input.wheelCtrl); }                 // the camera's key + wheel (or a pinch) zooms; the plain wheel is Sam's walking pace (player.ts)
+  if (!frozen && input.wheelCtrl && !locked(game.view, 'zoom')) { cam.zoom(input.wheelCtrl); if (auto && AUTOVIEW.on) autoZoom(auto, cam, input.wheelCtrl); }                 // the camera's key + wheel (or a pinch) zooms; the plain wheel is Sam's walking pace (player.ts)
   const fixed = !frozen && FIXEDSTEP.on && !!ctx.fixedStep?.() && view.clientWidth > 0 && view.clientHeight > 0;
-  const orbit = !frozen && input.orbitDX && !game.rails.locks('camera') ? ctrlTurn(input.orbitDX) : 0;       // hold the camera's key and move the mouse to orbit (Ctrl, or the Space bar while it is spare: host/keymap.ts camKey)
+  const orbit = !frozen && input.orbitDX && !locked(game.view, 'camera') ? ctrlTurn(input.orbitDX) : 0;       // hold the camera's key and move the mouse to orbit (Ctrl, or the Space bar while it is spare: host/keymap.ts camKey)
   if (orbit && !fixed) cam.rotate(orbit);                                  // (the fixed step turns the camera in the frame's first TICK, below: a turn on a frame with no tick would reach the next tick's record through the frame's own rebuild, and two displays would be two games)
   // The camera's key tapped twice (host/findme.ts `behind`, off unless the player's Options say so): the view comes round to look where his man looked at that moment — a step
   // with each camera step below (a frame's on the free step, a tick's on the fixed one, as the orbit is). The tap's own frame may carry a pixel of orbit (a hand's
@@ -146,12 +147,12 @@ function stepFrameIn(ctx: LoopCtx, dt: number): void {
   // THE AUTO CAMERA'S MODE (host/autocam.ts; AUTOCAM.on): that double tap puts it ON — and brings the view round as the Options row's does, whatever the row says, so
   // the hand sees it took (in the mode, a double tap is that turn again) — and the hand on the camera puts it OFF: the key held with the mouse moved past a tremor, or
   // held longer than a tap with a walk key down. A turn of the mode's own ends where it is under a walk key or a button (the keys are read through the view)
-  if (auto && !AUTOVIEW.on) { if (auto.base > 0 && !game.rails.locks('zoom')) cam.desiredDistance = auto.base; auto.base = NaN; auto.turnV = 0; if (auto.sway || auto.swayV) swayDrop(auto); }   // (off, by the hand or by the Options row: the zoom goes back to the hand's own, and that is what it comes on with next)
-  const autoTap = !!auto && !game.rails.locks('camera') && autoFree(game);   // (where the mode would frame nothing — the sky seat, a puppet, him down — the tap is not its)
+  if (auto && !AUTOVIEW.on) { if (auto.base > 0 && !locked(game.view, 'zoom')) cam.desiredDistance = auto.base; auto.base = NaN; auto.turnV = 0; if (auto.sway || auto.swayV) swayDrop(auto); }   // (off, by the hand or by the Options row: the zoom goes back to the hand's own, and that is what it comes on with next)
+  const autoTap = !!auto && !locked(game.view, 'camera') && autoFree(game);   // (where the mode would frame nothing — the sky seat, a puppet, him down — the tap is not its)
   const carryOn = () => { const c = game.player.char, was = ctx.carry; ctx.carry = aimCarry(c.aimYaw, c.pos, game.aimPoint, was ? was.realX : input.mouseX, was ? was.realY : input.mouseY); if (was) { ctx.carry.putX = was.putX; ctx.carry.putY = was.putY; } };   // (a carry begun under a carry: the mouse is where the first one knows it to be, not where the game's cursor was put)
   if (auto && !frozen) {
     const held = !!input.camHeld || (!camKey() && (input.down('ControlLeft') || input.down('ControlRight')));
-    if (autoHand(auto, input, game.rails.locks('camera') ? 0 : input.orbitDX, held, dt) && AUTOVIEW.on) { setAutoView(false); autoRest(auto); AUTOCAM_STATS.off++; if (ctx.behindAuto || auto.turnV) ctx.behind = null; }   // (…or an eased swing: the rest of it would be the quick one)
+    if (autoHand(auto, input, locked(game.view, 'camera') ? 0 : input.orbitDX, held, dt) && AUTOVIEW.on) { setAutoView(false); autoRest(auto); AUTOCAM_STATS.off++; if (ctx.behindAuto || auto.turnV) ctx.behind = null; }   // (…or an eased swing: the rest of it would be the quick one)
     if (ctx.behind != null && (ctx.behindAuto ? walkKey(input) || input.clicked : !!auto.turnV && input.clicked)) ctx.behind = null;   // (an eased swing is seconds long too: a shot ends it where it is — a walk key does not, he may tap it on the run)
   }
   if (ctx.behind == null) ctx.behindAuto = false;
@@ -260,7 +261,7 @@ function stepFrameIn(ctx: LoopCtx, dt: number): void {
     const shotPos: Vec3 | null = (dshow ? dshow.look : null) ?? attractPos;   // a scripted look-at this frame: the level script's pinned shot / attract mode's
     ctx.host.settings.nvAmount = game.player.nvAmount; ctx.host.settings.hitFlash = game.player.hitFlash;
     if (ctx.audio) {
-      const lp = ((attract?.active ?? false) || !!dshow) && shotPos ? shotPos : game.rails.skyOn ? game.followPos() : game.player.char.pos;   // (a showcase parks Sam 30 m away outdoors exactly as attract does: listen from the shot, not from him — review 08-10 #3)
+      const lp = ((attract?.active ?? false) || !!dshow) && shotPos ? shotPos : game.view.lesson?.rails?.sky ? game.followPos() : game.player.char.pos;   // (a showcase parks Sam 30 m away outdoors exactly as attract does: listen from the shot, not from him — review 08-10 #3)
       ctx.audio.setListener([lp[0], lp[1] + 1.6, lp[2]], cam.forward); ctx.audio.update(dt, ctx.time);   // ← these two MUST stay statements: an 08-09 comment reshuffle swallowed them into the line above for three days (listener stuck at the lot corner, finished voices never released)
     }
     ctx.smoke?.update(dt);
