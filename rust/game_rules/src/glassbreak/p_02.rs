@@ -130,7 +130,6 @@ pub fn glass_break_asking<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game
 
 /// a question or a rule of the module's, over this game's block and the copy of its box world as it stands: `fn_` gets the block's slot and the world's, and asks `::sim::panes_*` under the context set here (glassbreak.ts GlassBreak.ask)
 pub fn glass_break_ask<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game, f64, f64) -> T) -> T {
-    crate::shards::glass_shards_hook(g);
     crate::scene_collision::window(g, &mut |g| {
         crate::scene_collision::rules_statics(g);
         if !crate::scene_collision::standing(g) { panic!("glass: the box world's copy will not stand for the rule: rust/sim/src/panes.rs has nothing to ask"); }
@@ -139,7 +138,7 @@ pub fn glass_break_ask<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, f
         let set = crate::scene_box_mirror::box_mirror_leaves(g, &dynamic);
         if set == -2.0 { panic!("glass: more leaves than a list of the module holds"); }
         let (s, w) = (g.sim, g.col.mirror.slot);
-        let shards = g.glass_break.on_release.is_some() && g.tune.glass_shards && glass_break_live(g);
+        let shards = crate::shards::shards_live(g);
         ::sim::panes_ctx(s, w as usize, set as i32, g.time, if shards { 1 } else { 0 }, crate::shard_model::shard().gravity);
         let r = fn_(g, s as f64, w);
         if ::sim::panes::take_wrote() { crate::scene_collision::wrote(g); }
@@ -253,9 +252,9 @@ pub fn glass_break_let_go(g: &mut crate::game::Game, f: &crate::glassbreak::Glas
         crate::audio_iface::game_audio_like_play(g, "glassCrack", Some(f.centre), Some(if dicing { 1.0 } else { 0.75 }), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
         crate::glass::glass_event(g, box_at(g, f.bi).unwrap(), f.centre, 1.0, f.who);
     }
-    if g.glass_break.on_release.is_some() {
+    if crate::shards::shards_live(g) {
         g.m.glassbreak.gb_host.hooked += 1.0;
-        crate::shards::glass_shards_on_release(g, &fragment_like(f));
+        crate::shards::glass_shards_release(g, &fragment_like(f));
         return;
     }
     glass_break_stand_in(g, v, &fragment_of(f), key, f.bi);
@@ -883,7 +882,7 @@ pub fn glass_break_summary(g: &mut crate::game::Game) -> String {
     let t = g.m.glassbreak.gb_host;
     let at = tally_at();
     let mut s = format!("glass breaking {} ▸ {} panes touched · {} impacts · {} stars · {} run · {} fragments out ({} clumps) · diced {}", state, panes.len(), stat(t.impacts, at.impacts), stat(t.sites, at.sites), stat(t.runs, at.runs), stat(t.dropped, at.dropped), stat(t.clumps, at.clumps), stat(t.diced, at.diced));
-    if g.glass_break.on_release.is_some() {
+    if crate::shards::shards_live(g) {
         s.push_str(&format!(" · {} to the shards hook", stat(t.hooked, at.hooked)));
     } else {
         s.push_str(&format!(" · stand-in: {} shards ({} refused), {} chips", stat(t.shards, at.shards), stat(t.refused, at.refused), stat(t.chips, at.chips)));

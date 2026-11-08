@@ -617,23 +617,9 @@ pub fn glass_shards_step(g: &mut crate::game::Game, pos: V3, level: f64) -> f64 
     r.level
 }
 
-/// The release hook follows the model: while it is live the fragments are its own. Asked each frame and by the glass's rule before it can let
-/// anything go, so a pane that breaks before the first frame's update goes the way every other pane goes.
-pub fn glass_shards_hook(g: &mut crate::game::Game) -> bool {
-    let live = shards_live(g);
-    use crate::glassbreak::GlassBreakOnRelease as Hook;
-    let ours = matches!(g.glass_break.on_release, Some(Hook::Shards));
-    if live && !g.shards.was_live && g.glass_break.on_release.is_none() { g.glass_break.on_release = Some(Hook::Shards); }
-    else if !live && g.shards.was_live && ours { g.glass_break.on_release = None; }
-    g.shards.hooked = matches!(g.glass_break.on_release, Some(Hook::Shards));
-    g.shards.was_live = live;
-    live
-}
-
-/// Per frame: the release hook's edges, waiting records, the live estimate, breaks, landings due.   (shards.ts GlassShards.update)
+/// Per frame: waiting records, the live estimate, breaks, landings due.   (shards.ts GlassShards.update)
 pub fn glass_shards_update(g: &mut crate::game::Game, _dt: f64) {
-    let live = glass_shards_hook(g);
-    if !live {
+    if !shards_live(g) {
         if js::truthy(crate::sim_fallshome::fall_store_waiting(g)) { crate::sim_fallshome::fall_store_clear(g, Some(true), None); }
         g.shards.deferred.clear();
         g.shards.deferred_n = 0.0;
@@ -673,8 +659,6 @@ pub fn glass_shards_update(g: &mut crate::game::Game, _dt: f64) {
     g.shards.sounds_this_frame = 0.0;
 }
 
-/// The fracture part's release hook.   (shards.ts GlassShards.onRelease)
-pub fn glass_shards_on_release(g: &mut crate::game::Game, f: &crate::shards::GlassFragmentLike) { glass_shards_release(g, f); }
 
 /// A restart: nothing pending, no litter.   (shards.ts GlassShards.reset)
 pub fn glass_shards_reset(g: &mut crate::game::Game) {
