@@ -1,5 +1,5 @@
 // THE DEBUGGER'S NETWORK PAGE (2026-11-02), on a page that is a client of a networked game and on no other. Two players on one good network see none of
-// what a real connection does to a game, so this page's connection can be made worse from here, LIVE, with no reload (net/page.ts NETWAY has where the
+// what a real connection does to a game, so this page's connection can be made worse from here, LIVE, with no reload (net/door.ts NETWAY has where the
 // numbers live and how long they are kept; net/delay.ts what each does). A page's numbers are its own: each player sets them on their own page.
 //   Connection        a named kind of connection (a row of numbers below), or 'Your own numbers'
 //   Delay each way    every message that much later, up and down: the round trip grows by twice this
