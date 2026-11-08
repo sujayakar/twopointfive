@@ -47,8 +47,6 @@ const SLOT_ROW: [string[], string, string?] = [['0'], 'Empty hands', 'put away w
 /** the action key's row and the whistle's while his own actions are a ring that stays (game/handring.ts): the list's wheel is gone, the whistle is a wedge */
 const ACT_WHAT = 'Do the highlighted action', WHISTLE_WHAT = 'Whistle';
 const RING_SMALL = 'hold it a moment for a ring of everything you can do here, then pick with 1 to 5 or a click', WHISTLE_SMALL = 'the nearest guard will come to look. the whistle is on the ring';
-/** the auto camera's row (host/autocam.ts): the camera's key tapped twice */
-const AUTO_WHAT = 'Tap twice for the auto camera';
 /** THE WHO ROW (the orders' who key, code 'KeyT'). While quick orders are the whole squad's (game/cmdring.ts `wholeSquad`: the key steps
  *  nobody) a row with no key is not listed, so there is no dashed cap to put a dead key on; one the player gave a key earlier stays his to see and move,
  *  and says where it still works. */
@@ -90,7 +88,6 @@ export const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
     [['Q'], WALL_WHAT, WALL_SMALL],   // (wallLine below: its words while the row has no key)
     [['Ctrl', 'Mouse'], 'Orbit the camera'],
     [['Ctrl', 'Wheel'], 'Zoom'],
-    [['Ctrl'], AUTO_WHAT, 'turn the view yourself to take it back'],   // (host/autocam.ts: no row while AUTOCAM.on is off)
   ] },
   { group: 'Hands', rows: [
     [['Space'], ACT_WHAT, 'hold it to pick another with the wheel, then let go to do it'],

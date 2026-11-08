@@ -22,7 +22,6 @@ src/game/squadnet.ts:whyWords	decides	orders menu and hand ring	worded off the p
 src/game/mission.ts:*	decides	HUD mission lines	"is the mission live" and how far the rack is are worked out again on the copy
 src/game/nightbreach.ts:*	decides	HUD mission lines	the plain night's state is worked out again on the copy
 src/game/roomclear.ts:*	decides	HUD mission lines	whether the room clear is up and where it starts are worked out again on the copy
-src/game/rescue*.ts:*	decides	HUD mission lines	who is a hostage is worked out again on the copy
 src/game/scenarioRun.ts:*	decides	HUD mission lines	which scenario is running and whose team a man is on are worked out again on the copy
 src/game/doors.ts:Doors.*	decides	HUD door and charge notes	which door is which by name, which side a man is on and whether he is locked out are worked out again on the copy
 src/game/doortools.ts:*	decides	HUD door and charge notes	the door notes (who waits, on which word, TOO CLOSE and who it names) are worked out by TypeScript on the copy each frame, and a door found shut is learnt on the copy only
@@ -31,7 +30,6 @@ src/game/doorblast.ts:*	decides	HUD door and charge notes	how far a door's blast
 src/game/frag.ts:*	decides	HUD door and charge notes	who a burst would catch and through which leaves is worked out again on the copy for the notes and the previews
 src/game/cleared.ts:*	decides	HUD door and charge notes	which rooms are known and cleared is worked out again on the copy (the plan, the door words)
 src/game/floorplan.ts:*	decides	HUD door and charge notes	the Tab plan's doors and who waits on which key are worked out again on the copy
-src/game/close.ts:*	decides	HUD door and charge notes	the close-in marks and windows are worked out again on the copy
 src/game/doorway.ts:*	decides	HUD door and charge notes	a doorway's lane price is worked out again on the copy
 src/game/roomfight.ts:*	decides	HUD door and charge notes	which door operation a room fight belongs to is worked out again on the copy
 src/game/teampace.ts:*	decides	HUD door and charge notes	the team's pace at a blast is worked out again on the copy
@@ -42,8 +40,6 @@ src/game/interact.ts:*	decides	orders menu and hand ring	the hand ring's rows (w
 src/game/autopilot.ts:*	decides	orders menu and hand ring	the quick order the HUD offers is picked by TypeScript on the copy
 src/game/pairorders.ts:*	decides	orders menu and hand ring	which pair is up and waiting is worked out again on the copy
 src/game/cmdring.ts:*	decides	orders menu and hand ring	the ring's pin is written on the copy
-src/game/handwork.ts:*	decides	orders menu and hand ring	what Sam's hands are at is worked out again on the copy
-src/game/lightswitch.ts:*	decides	orders menu and hand ring	whether a switch's plant is broken is worked out again on the copy
 src/game/whistle.ts:*	decides	orders menu and hand ring	who would blow is worked out again on the copy
 src/game/stickycam.ts:*	decides	orders menu and hand ring	whether a sticky camera is live and sending is worked out again on the copy
 src/game/qrf.ts:*	decides	orders menu and hand ring	who the reaction force owns is worked out again on the copy
@@ -101,8 +97,6 @@ src/game/cmd.ts:*	host	the Rust host	the player's record sampled from the Input 
 src/game/input.ts:*	host	the Rust host	the page's Input rows	3
 src/game/camera.ts:*	host	the Rust host	the host's camera: its ease, zoom, kick and draw-in are the page's own between ticks	14
 src/host/loop.ts:*	host	the Rust host	the frame's loop: the Input's rows cleared, the camera stepped	3
-src/game/roomread.ts:*	picture	the picture's feel	the camera's own framing reads the room the player is in	1
-src/host/autocam.ts:*	host	the Rust host	the camera's own framing	2
 tools/blitz/out-dispatch.ts:*	host	the Rust host	the out events' dispatcher: what the tick told the host is made as today's calls on the page's objects (sound, particles, decals, smoke)	1
 src/game/savestate.ts:*	host	saves	the save controller's rhythm and shelf (saves and replays are not this list's)	15
 src/game/sensors.ts:*	host	saves	the recorder's sensor stream	2
