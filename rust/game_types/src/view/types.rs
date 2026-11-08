@@ -321,14 +321,22 @@ pub struct CardView {
     pub trim: Option<V3>,
 }
 
-/// what a press on a card did: taken, or why not; what it walked past; the rows it moved; and the cards as they are kept now
+/// a text this machine keeps, by the name it is kept under
+#[derive(Clone, Debug, Default)]
+pub struct KeptText {
+    pub key: String,
+    /// empty: kept no longer
+    pub text: String,
+}
+
+/// what a press on a card did: taken, or why not; what it walked past; the rows it moved; and what is kept from now
 #[derive(Clone, Debug, Default)]
 pub struct Pressed {
     pub ok: bool,
     pub why: String,
     pub passed: String,
     pub changed: Vec<String>,
-    pub kept: String,
+    pub kept: Vec<crate::view::KeptText>,
 }
 
 /// a size of the team
