@@ -30,6 +30,7 @@ struct SP {
   calmCells: f32, farCells: f32, calmMax: u32, dtCap: f32,        // WHO STEPS (buildList): cells a brick's fastest air may cross between two of its steps, in sight / out of sight; the longest wait in frames (1 = every brick every frame, 2, 4); the most time one step integrates
   bend: f32, snap: f32, fineDecay: f32, fineShare: f32,           // THE GAME'S SMOKE (below): how fast the coarse lattice is bent toward it (0 = not) · 1 = at once · THE FINE LATTICE LETS GO below
   fineEps: f32, fineHeat: f32, fineRing: u32, pull: f32,          // pull: how hard smoke is drawn toward where the game has more of it (THE GAME'S SMOKE)
+  shape: vec4f,
   levels: array<Level, 2>,
   dirty: array<vec4f, 16>,                                        // ≤ 8 boxes (lo, hi) whose obstacles changed since the last step
   windBound: array<vec4f, 8>,                                     // per wind source: bounding sphere (w < 0 = the storm: everywhere)
@@ -842,13 +843,13 @@ fn bentHere(c: vec3i) -> vec2f {
 }
 /** the game's smoke in a cell, bent: `g` of it stands there, the grid holds h.x about it and h.y is drawn. The mean over a brick moves by the share of the way the rate says, whatever is in its cells. */
 fn bendTo(g: f32, h: vec2f, P: vec3f, dt: f32) -> f32 {
-  let a = select(1.0 - exp(-sp.bend * abs(bentThrough(h.x) - bentThrough(h.y)) * dt), 1.0, sp.snap > 0.0);
+  let a = select(1.0 - exp(-sp.bend * pow(abs(exp(-sp.shape.x * h.x) - exp(-sp.shape.x * h.y)), sp.shape.y) * dt), 1.0, sp.snap > 0.0);
   let d = h.x - h.y;
   let thick = 2.0 * g / max(g + h.y, 1e-6);   // (1 where a cell holds what the brick does, toward 2 in its billows, 0 in its gaps)
   if (d <= 0.0) { return g * max(1.0 + a * d / max(h.y, 1e-6) * (2.0 - thick), 0.0); }
   let q = P * 4.0 + vec3f(0.0, -sp.time * 0.7, sp.time * 0.3);
   let n = sin(q.x + 1.7 * sin(q.y * 1.3)) * sin(q.z + 1.3 * sin(q.x * 1.6)); let wisp = 3.2 * max(n, 0.0) + 0.2;
-  return g * (1.0 + a * d / h.x * thick) + a * d * (1.0 - h.y / h.x) * wisp;
+  return g * (1.0 + a * mix(d / h.x, min(d / max(h.y, 1e-6), 2.0), sp.shape.w) * thick) + a * d * pow(1.0 - h.y / h.x, sp.shape.z) * wisp;
 }
 var<workgroup> wgLo: array<atomic<i32>, 3>;
 var<workgroup> wgHi: array<atomic<i32>, 3>;
