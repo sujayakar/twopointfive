@@ -94,8 +94,7 @@ pub unsafe extern "C" fn face_start(p: *const u8, n: usize, slot: i32, seed: u32
     let slot = if slot < 0 { match super::free_slot() { Some(s) => s, None => return 0 } } else { slot as usize };
     if slot >= sim::state::GAMES { return 0; }
     let o = game_start::stand::StartOpts { seed, seats, slot, dress: flags & 1 != 0, ..Default::default() };
-    let mut stood = game_start::handed::stand_handed(super::bytes(p, n), &o, &mut |g, b| if let Err(why) = game_run::command::apply(g, b) { panic!("face_start: {why}") });
-    game::scene_collision::light_ready(&mut stood.game);
+    let stood = game_start::handed::stand_handed(super::bytes(p, n), &o, &mut |g, b| if let Err(why) = game_run::command::apply(g, b) { panic!("face_start: {why}") });
     let h = super::put(super::Held::new(stood.game));
     crate::memo::forget(h);
     h
@@ -110,8 +109,7 @@ pub unsafe extern "C" fn face_new_at(state: *const u8, n: usize, slot: usize) ->
     // (the start's own lines take a block as bytes and write it into the slot: handed the slot's own bytes, the block stands as it stood)
     let len = core::mem::size_of::<sim::state::State>();
     let block = std::slice::from_raw_parts(sim::state::addr(slot) as *const u8, len).to_vec();
-    let (mut g, said) = game_run::start(super::bytes(state, n), &block, slot);
-    game::scene_collision::light_ready(&mut g);
+    let (g, said) = game_run::start(super::bytes(state, n), &block, slot);
     super::out(said.join("\n").into_bytes());
     let h = super::put(super::Held::new(g));
     crate::memo::forget(h);

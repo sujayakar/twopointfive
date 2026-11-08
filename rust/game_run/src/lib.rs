@@ -53,6 +53,8 @@ pub fn start(state: &[u8], block: &[u8], slot: usize) -> (Box<game::game::Game>,
     game::io::set_slot(&mut g, slot);
     // (the level's script and its define pass are the import's own now: io::deal_scripts)
     if let Some(sc) = g.level.script { said.push(format!("the level's script, as the import dealt it: {:?}", sc)); }
+    // (what the light under a roof is worked out from is made behind the loading, and not in the first step, whichever host stands it)
+    game::scene_collision::light_ready(&mut g);
     (g, said)
 }
 

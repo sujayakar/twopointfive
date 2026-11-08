@@ -186,6 +186,8 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
         if let Some(why) = game::scenario_run::start_scenario(&mut g, spec) { panic!("the game refused the {}: {}", spec.kind.as_str(), why); }
         settle(&mut g);   // (the men the mission made: their poses go home as a tick's opening would take them)
     }
+    // (what the light under a roof is worked out from is made behind the loading, and not in the first step, whichever host stands it)
+    game::scene_collision::light_ready(&mut g);
     Stood { game: g, host, level: loaded, rig }
 }
 
