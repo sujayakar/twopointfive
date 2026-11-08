@@ -6,7 +6,7 @@
 //   bun run tools/qa/lookunits-check.ts   (exit 0 = all pass; LOOKUNITS_BREAK=1 uploads at the night's exposure whatever the hour and must fail)
 import { LightSet, type RtLight } from '../../src/render/lights';
 import { LUX_PER_UNIT, HOUR_SUN_LUX, TRUE_CD, FLASH_TRUE, EMISSIVE_TRUE, FACE_TRUE, hourExposure, lightClass, lightDayK, emissiveDayK } from '../../src/render/photometry';
-import { HOURS } from '../../src/game/hours';
+import { HOURS } from './sunrow';
 let red = 0; const check = (ok: boolean, w: string) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${w}`); if (!ok) red++; };
 const BREAK = process.env.LOOKUNITS_BREAK === '1';
 (globalThis as any).GPUBufferUsage ??= new Proxy({}, { get: () => 0 });

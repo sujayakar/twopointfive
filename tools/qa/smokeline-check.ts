@@ -2,7 +2,7 @@
 // Stirred smoke row up). It used to be a row of soft shoves 7 cm across for one step, which moved nothing anyone could see. No GPU here: the cut of a line to a lattice's smoke is
 // run as it stands, the solver's distance is mirrored as numbers and its text is read. What the smoke then DOES is never seen here.
 //   bun run tools/qa/smokeline-check.ts   (exit 0 = all pass; SMOKELINE_BREAK=1 measures a line as a point, sends a leg uncut and wakes bricks by its middle: must fail)
-import '../../src/host/gpuEnums';   // (first: the solver's module reads GPU enums as it loads)
+import './here';   // (first: the solver's module reads GPU enums as it loads)
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { SmokeSystem } from '../../src/smoke/smoke';
