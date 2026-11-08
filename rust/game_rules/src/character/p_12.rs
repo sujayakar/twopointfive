@@ -414,11 +414,6 @@ pub fn character_turn_weigh_ask(g: &mut crate::game::Game, id: CharId, dt: f64) 
     ch.tn = if js::truthy(c[0]) { Some(CharacterTn { body: c[1], aim: c[2], wb: c[3], wa: c[4], ib: c[5], ia: c[6], x: c[7], z: c[8] }) } else { None };
     ch.anim.turn_lead = c[9]; ch.body_yaw = c[10]; ch.aim_yaw = c[11];
 }
-/// His yaws become the ones that were drawn, and no turn is carried on. (Character.turnDrop)
-pub fn character_turn_drop(g: &mut crate::game::Game, id: CharId) {
-    let c = &mut g.ch[id];
-    if let Some(t) = c.tn { c.body_yaw = t.body; c.aim_yaw = t.aim; c.tn = None; }
-}
 /// His AI is about to ease his yaws: they read back as it left them; one written since is the new wish. (Character.turnBegin)
 pub fn character_turn_begin(g: &mut crate::game::Game, id: CharId) {
     let c = &mut g.ch[id];
