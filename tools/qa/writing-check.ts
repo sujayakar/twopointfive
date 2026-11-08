@@ -2,9 +2,8 @@
 // rules out. It reads what is DATA: every level's lesson block (the big line, its other lines, the after lines, the cards) and every mission row (blurb,
 // opening scene, the "You will learn" rows, the row's `only` line).
 // A LESSON'S LINE IS READ AS THE PLAYER READS IT: a line or a card names a move by a token (`{grab him}`, game/lesson.ts TOKENS) and the build writes the
-// token out by the keys it has, so each is put through `lessonLine` on all four ways the two switches can stand (the held click or the grab's key, the knife
-// or none) and every sentence that comes out is held to the rules. The four tokens are written out of 'him' on their own as well, so a token no level uses
-// yet is read too.
+// token out by the keys it has, so each is put through `lessonLine` as the page stands and the sentence that comes out is held to the rules. The four tokens
+// are written out of 'him' on their own as well, so a token no level uses yet is read too.
 //   bun run tools/qa/writing-check.ts [--list]      (also `probes.ts writing`, in families ui and words; no stand: nothing of the game runs)
 //   key      a key is pressed by "you": no key cap followed by a colon ("[B]: stack up"), no sentence of a line or a card that opens on a key cap
 //            ("[B] on the door"; `[X]` is drawn "Hold Q" and may open one)
@@ -68,17 +67,8 @@ function lessonTexts(name: string, L: any): Text[] {
   return out;
 }
 
-/** a lesson's line or card as the page writes it out, on each of the four ways the stalk and the knife can stand (game/lesson.ts lessonLine): the
- *  distinct sentences a player can be shown for one written text. The two switches are put back as they were found. */
-interface Writer { lessonLine: (s: string) => string; STALK: { on: boolean; only: boolean; key: boolean }; CLOSE: { on: boolean; noKnife: boolean } }
-function writtenOut(W: Writer, text: string): string[] {
-  const { STALK, CLOSE } = W, was = [STALK.on, STALK.only, CLOSE.on, CLOSE.noKnife, STALK.key] as const, out = new Set<string>();
-  try { for (const k of [0, 1, 2, 3, 5, 7]) { STALK.on = STALK.only = !!(k & 1); CLOSE.on = CLOSE.noKnife = !!(k & 2); STALK.key = !!(k & 4); out.add(W.lessonLine(text)); } }
-  finally { [STALK.on, STALK.only, CLOSE.on, CLOSE.noKnife, STALK.key] = was; }
-  return [...out];
-}
-/** …and a list of texts with every line and card replaced by what is written out of it (a title, a row and a list entry are shown as written) */
-const asRead = (W: Writer, T: Text[]): Text[] => T.flatMap(t => t.kind !== 'line' && t.kind !== 'card' ? [t] : writtenOut(W, t.text).map((text, i, all) => ({ ...t, text, where: all.length > 1 ? `${t.where} (written out ${i + 1}/${all.length})` : t.where })));
+/** a list of texts with every line and card replaced by what the page writes out of it (a title, a row and a list entry are shown as written) */
+const asRead = (lessonLine: (s: string) => string, T: Text[]): Text[] => T.map(t => t.kind !== 'line' && t.kind !== 'card' ? t : { ...t, text: lessonLine(t.text) });
 
 /** the sentences the guide was written from, and their rewrites */
 const BEFORE = [
@@ -98,7 +88,7 @@ export async function writingCheck(): Promise<boolean> {
   console.log(`\n=== writing: the text a player reads, by the guide${BREAK ? ' — WRITING_BREAK: the old sentences are read as a level\'s' : ''} ===`);
   let all = true; const line = (ok: boolean, label: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}${detail ? `\n    ${detail}` : ''}`); };
   const { ALL_MISSIONS, TUTORIAL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
-  const lessonMod = await import(`${ROOT}/src/game/lesson.ts`), W: Writer = { lessonLine: BREAK ? (t: string) => lessonMod.lessonLine(t).replace(/press \[Space\] to grab/gi, '[Space]: grab') : lessonMod.lessonLine, STALK: (await import(`${ROOT}/src/game/stalk.ts`)).STALK, CLOSE: (await import(`${ROOT}/src/game/close.ts`)).CLOSE };
+  const lessonMod = await import(`${ROOT}/src/game/lesson.ts`), W: (s: string) => string = BREAK ? (t: string) => lessonMod.lessonLine(t).replace(/press \[Space\] to grab/gi, '[Space]: grab') : lessonMod.lessonLine;
 
   // ---- the lessons
   const texts: Text[] = []; const levels = readdirSync(join(ROOT, 'levels')).filter(f => f.endsWith('.json') && !f.endsWith('.lint.json')).sort(); let lessons = 0;
@@ -107,11 +97,11 @@ export async function writingCheck(): Promise<boolean> {
   if (BREAK) BEFORE.forEach((t, i) => texts.push({ where: `the break word's sentence ${i + 1}`, kind: 'card', text: t, lesson: true }));
   const report = (T: Text[]) => { const bad = T.map(t => ({ t, f: faults(t) })).filter(x => x.f.length); return { n: bad.length, text: bad.slice(0, LIST ? 999 : 12).map(x => `${x.t.where}: "${x.t.text.replace(/\n/g, ' / ').slice(0, 90)}" — ${x.f.join(' · ')}`).join('\n    ') + (bad.length > 12 && !LIST ? `\n    … and ${bad.length - 12} more (--list shows all)` : '') }; };
   { const read = asRead(W, texts), R = report(read), brace = read.filter(t => (t.kind === 'line' || t.kind === 'card') && /[{}]/.test(t.text));
-    line(lessons >= 8 && R.n === 0 && !brace.length,   // (eight lesson levels, 2026-10-26: plan mode's mission went, and the road, the kit and the queue missions came)
+    line(lessons >= 6 && R.n === 0 && !brace.length,   // (six lesson levels: road, team, kit, queue, quiet and pair)
       `every lesson's lines and cards hold to the guide as the page writes them out (${lessons} levels, ${texts.length} texts, ${read.length} as read)`,
       [R.n ? R.text : '', ...brace.slice(0, 6).map(t => `${t.where}: a brace is left in what the player reads ("${t.text.slice(0, 70)}")`)].filter(Boolean).join('\n    ')); }
 
-  // ---- the tokens' own words: each of the four, of 'him', small and capital, on the four ways the keys can stand
+  // ---- the tokens' own words: each of the four, of 'him', small and capital
   { const names: string[] = lessonMod.LESSON_TOKENS, cap = (n: string) => n.charAt(0).toUpperCase() + n.slice(1);
     const T: Text[] = names.flatMap(n => [`When he stops, ${`{${n}}`}`, `{${cap(n)}}`].map(text => ({ where: `token {${n}}`, kind: 'line' as Kind, text, lesson: true })));
     const read = asRead(W, T), R = report(read), left = read.filter(t => /[{}]/.test(t.text));
@@ -129,7 +119,7 @@ export async function writingCheck(): Promise<boolean> {
 
   // ---- the rules themselves
   { const missed = BEFORE.filter(t => !faults({ where: '', kind: 'card', text: t, lesson: true }).length);
-    const wrong = AFTER.flatMap(t => writtenOut(W, t)).map(t => ({ t, f: [...faults({ where: '', kind: 'card', text: t, lesson: true }), ...(/[{}]/.test(t) ? ['a brace left in it'] : [])] })).filter(x => x.f.length);
+    const wrong = AFTER.map(t => W(t)).map(t => ({ t, f: [...faults({ where: '', kind: 'card', text: t, lesson: true }), ...(/[{}]/.test(t) ? ['a brace left in it'] : [])] })).filter(x => x.f.length);
     line(!missed.length && !wrong.length, `the rules catch the ${BEFORE.length} sentences the guide was written from and pass their ${AFTER.length} rewrites`,
       [...missed.map(t => `not caught: "${t}"`), ...wrong.map(x => `caught: "${x.t}" — ${x.f.join(' · ')}`)].join('\n    ')); }
 
