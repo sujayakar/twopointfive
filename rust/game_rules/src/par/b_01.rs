@@ -4,7 +4,7 @@
 //!   THE CLOCK STARTS on the first thing anybody DOES: a squad's first order (a row on a seat's orders log), a player's first stride off the mark the
 //!   staging stood him on (`PAR_START_M`), or the first round or throw. Reading the house from the start line is free, doing anything is not.
 //!   IT STOPS when the room clear ends 'taken', at the room clear's own end time. A run that ends 'wiped' has no time.
-//!   EVERY TEAMMATE LOST (down at the end: dead, out cold or wounded) adds `loss_secs`.
+//!   EVERY TEAMMATE LOST (down at the end: dead or out cold) adds `loss_secs`.
 //!   THE MEDAL IS JUDGED ON WHAT IS SHOWN: the total in whole seconds, as the clock words it (65.4 s reads 1:05 and is inside a 1:05 gold).
 //!
 //! The record (`Game.par`) is the game's: two machines of one game read the same clock, the same result and the same line. It moves nobody and

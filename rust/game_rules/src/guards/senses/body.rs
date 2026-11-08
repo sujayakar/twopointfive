@@ -24,7 +24,7 @@ pub fn body(g: &mut Game, gd: GuardId, c: CharId, staff: bool, lvl: f64) {
             crate::netquiet::net_quiet_body(g, Some(gd), &men);
             let mut before = 0;
             for i in 0..g.guards.len() { let x = g.guards[i]; if g.gd[x].state == St::Dead && g.gd[x].found { before += 1; } }
-            let (mut n, mut cold, mut hurt) = (0, 0, 0);
+            let (mut n, mut cold) = (0, 0);
             let mut i = 0;
             while i < g.guards.len() {
                 let x = g.guards[i];
@@ -74,7 +74,7 @@ pub fn body(g: &mut Game, gd: GuardId, c: CharId, staff: bool, lvl: f64) {
     }
 }
 
-/// what the finder calls in: `n` men here, `cold` of them breathing, `hurt` of them shot
+/// what the finder calls in: `n` men here, `cold` of them breathing
 fn words(g: &mut Game, o: GuardId, n: i32, cold: i32) -> String {
     let in_here = if !crate::dialogue::is_office(g) { "someone's here" } else { "someone's in here" };
     let who = crate::teams::spoken_name(g, o).unwrap_or_else(|| String::from("one of ours"));

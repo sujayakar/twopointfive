@@ -229,7 +229,7 @@ export function witnessKill(g: Game, victim: Guard, how: DownKind, by: DownBy) {
   const at = victim.char.bones.chest ?? v3.add(victim.char.pos, [0, 1.1, 0]);
   for (const o of g.guards) {
     if (o === victim || o.state === 'dead' || g.time < o.dazzledUntil || dozeAsleep(o)) continue;   // (doze.ts: a man asleep saw nothing)
-    if ((!g.playerInvisible && pointInView(g, o, at)) || o.sawPlayerThisFrame) o.witness.sawAct = { kind: how, victim: victim.callsign, t: g.time };   // (a man shot down WOUNDED was seen shot: the questions asked of the witness are the shooting's)
+    if ((!g.playerInvisible && pointInView(g, o, at)) || o.sawPlayerThisFrame) o.witness.sawAct = { kind: how, victim: victim.callsign, t: g.time };
   }
 }
 /** One compact line of a man's witness record for the panel / the QA probes ('' = nothing yet): peak awareness, what made him alert, what he heard, what he saw. */

@@ -120,7 +120,6 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/game/calmtorch.ts posing': 'SCRATCH · raised by calmTorchRestore and dropped by calmTorchPosed (savestate.ts:671, in a finally) inside one checkpoint load; false at every other moment',
   'src/game/charLook.ts sd': 'SCRATCH · (no initialiser; same line as `ver`). Written by charLookFrame at the top of every frame\'s look pass (charLook.ts:64) before lookOf reads it; renderer side',
   'src/game/charLook.ts ver': 'SCRATCH · written by charLookFrame at the top of every frame\'s look pass (charLook.ts:64, = charMatsVersion()) before lookOf reads it; renderer side only. (`sd` on the same line, missed by the scan, is the same.)',
-  'src/game/character.ts FOLD_WITH': 'CONST · its one write is a top-level statement of wounds.ts:43 (installs the function at module load); never written again',
   'src/game/civilians.ts CIV_STATS': 'TALLY · counted in civilians.ts; no read in src/game, src/scene or src/anim; shown by main.ts',
   'src/game/stalk.ts STALK_STATS': 'TALLY · counted in stalk.ts (begun, grabs, why each ended); read by no file under src/game, src/scene or src/anim (the checks and the page\'s hook read it)',
   'src/game/close.ts CLOSE_STATS': 'TALLY · counted in close.ts (188, 268, 294); read only by closeSummary (391) and the page\'s hook (main.ts:1264)',

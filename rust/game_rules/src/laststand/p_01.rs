@@ -98,7 +98,6 @@ fn line_slot(g: &mut Game, kind: LineKind, vars: Option<&JsMap<String, String>>)
 fn st_of(g: &mut Game) -> &mut State { g.m.laststand.states.as_mut().unwrap() }
 /// the check that is open (st.check), by its path: tick_check's C
 fn check_of(g: &mut Game) -> &mut Check { st_of(g).check.as_mut().unwrap() }
-/// (:405) member, which needs nothing of g
 /// JavaScript's truth of an optional string
 fn id_truthy(id: &Option<String>) -> bool { id.as_deref().map_or(false, |s| !s.is_empty()) }
 /// where this man's body stands
@@ -182,14 +181,6 @@ pub fn fit(g: &crate::game::Game, d: RoomfightDefId) -> bool {
 pub fn calm(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
     let gd = g.tab.roomfight_def[d].gd;
     fit(g, d) && g.time - g.gd[gd].last_seen_t > g.k.laststand.quiet
-}
-
-/// calm, holding a post, nobody else's man, his hands not on a door (laststand.ts movable)
-pub fn movable(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
-    let gd = g.tab.roomfight_def[d].gd;
-    calm(g, d) && g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Hold && g.tab.roomfight_def[d].rally_at != f64::INFINITY
-        && !crate::owner::has(g, gd, crate::owner::by::SQUAD_WORD) && !crate::owner::has(g, gd, crate::owner::by::SQUAD_LEG) && !crate::owner::has(g, gd, crate::owner::by::PRESS) && !crate::pressure::press_keeps_home(g, d, None)
-        && (crate::digin::dig_in_phase(g, gd) == "idle" || crate::digin::dig_in_phase(g, gd) == "set")
 }
 
 /// where a point is, by the structure's own rooms (laststand.ts where)
@@ -393,57 +384,6 @@ pub fn team_known(g: &crate::game::Game, near: V3) -> crate::laststand::TeamKnow
     TeamKnown { pts, last: v3::copy(last.unwrap_or(near)) }
 }
 
-/// a free spot of a room a couple of strides from its anchor, off its doorways and off the spots given out (laststand.ts spotIn)
-pub fn spot_in(g: &mut crate::game::Game, r: RoomfightRoomId, p0: V3, taken: &[V3]) -> V3 {
-    let defs = g.fight.defs.clone();
-    for rad in [1.8, 2.6, 1.2, 3.4] {
-        for a in 0..8 {
-            let turn = (a as f64) * core::f64::consts::PI / 4.0;
-            let p: V3 = [p0[0] + m::cos(turn) * rad, 0.0, p0[2] + m::sin(turn) * rad];
-            if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) || !room_has(g, r, p) { continue; }
-            if g.tab.roomfight_room[r].entries.iter().any(|e| flat(e.at, p) < 1.5) { continue; }
-            if defs.iter().any(|&x| alive(g, x) && flat(man_pos(g, x), p) < 0.9) || taken.iter().any(|&q| flat(q, p) < 0.9) { continue; }
-            if crate::scene_collision::segment_blocked(g, [p0[0], 1.2, p0[2]], [p[0], 1.2, p[2]], None, None, None) { continue; }
-            return p;
-        }
-    }
-    [p0[0], 0.0, p0[2]]
-}
-
-/// his way to `spot`: its length, or none: no way, too long, or past where the team is known to be (laststand.ts wayTo)
-pub fn way_to(g: &mut crate::game::Game, d: RoomfightDefId, spot: V3, known: &[V3]) -> Option<f64> {
-    let from = man_pos(g, d);
-    let path = crate::scene_collision::nav_grid_find_path(g, from, spot, None, None)?;
-    match path.last() { Some(&end) if !(flat(end, spot) > 0.8) => {} _ => return None }
-    let mut len = 0.0;
-    let mut q = from;
-    let mut bad = false;
-    let clear = g.k.laststand.clear_m;
-    for &w in &path {
-        let dist = flat(q, w);
-        let n = m::max(1.0, m::ceil(dist / 0.5));
-        if clear > 0.0 {
-            let mut i = 1.0;
-            while i <= n && !bad {
-                let p: V3 = [q[0] + (w[0] - q[0]) * i / n, 0.0, q[2] + (w[2] - q[2]) * i / n];
-                if known.iter().any(|&f| flat(f, p) < clear) { bad = true; }
-                i += 1.0;
-            }
-        }
-        len += dist;
-        q = w;
-    }
-    if bad || len > g.k.laststand.max_m { None } else { Some(len) }
-}
-
-/// may this man walk to that spot (laststand.ts canCome)
-pub fn can_come(g: &mut crate::game::Game, x: RoomfightDefId, spot: V3, known: &[V3]) -> Option<f64> {
-    if !movable(g, x) { return None; }
-    let gd = g.tab.roomfight_def[x].gd;
-    if g.gd[gd].stays_in_rooms && !crate::enemysquads::in_squad_rooms(g, gd, spot) { return None; }
-    way_to(g, x, spot, known)
-}
-
 /// a room the stand could be made in, as one of the men holding it stands (laststand.ts standRoom)
 pub fn stand_room(g: &mut crate::game::Game, d: RoomfightDefId, known: &[V3]) -> Option<crate::laststand::StandRoom> {
     if g.tab.roomfight_def[d].mode != crate::roomfight::DefMode::Hold { return None; }
@@ -466,50 +406,6 @@ pub fn home_room(g: &mut crate::game::Game, d: RoomfightDefId, known: &[V3]) -> 
     if g.tab.roomfight_room[room].entries.is_empty() || where_(g, anchor).id.as_deref() != Some(def.id.as_str()) { return None; }
     if crate::digin::dig_in_entered(g, room) || known.iter().any(|&q| in_room(g, Some(room), q)) { return None; }
     Some(HomeRoom { room, id: def.id, anchor })
-}
-
-/// which room: most men in or able to reach it, then most doors wedged, most men there, farthest from the team, least walking (laststand.ts choose)
-pub fn choose(g: &mut crate::game::Game, men: &[RoomfightDefId], known: &[V3], min: Option<f64>) -> Option<crate::laststand::Plan> {
-    let min = min.unwrap_or(2.0);
-    let mut cands: JsMap<RoomfightRoomId, (String, V3, Vec<RoomfightDefId>)> = JsMap::new();
-    for &d in men {
-        let r = match stand_room(g, d, known) { Some(r) => r, None => continue };
-        if let Some(c) = cands.get_mut(r.room) { c.2.push(d); } else { let p = man_pos(g, d); cands.set(r.room, (r.id, p, vec![d])); }
-    }
-    for &d in men {
-        if let Some(r) = home_room(g, d, known) {
-            if !cands.has(r.room) { cands.set(r.room, (r.id, r.anchor, Vec::new())); }
-        }
-    }
-    let mut best: Option<Plan> = None;
-    let mut bs: [f64; 5] = [0.0; 5];
-    for room in cands.keys() {
-        let (id, anchor, inside) = cands.get(room).unwrap().clone();
-        let mut come: Vec<PlanComeItem> = Vec::new();
-        let mut taken: Vec<V3> = Vec::new();
-        let mut walk = 0.0;
-        for &x in men {
-            if inside.contains(&x) { continue; }
-            let spot = spot_in(g, room, anchor, &taken);
-            let l = match can_come(g, x, spot, known) { Some(l) => l, None => continue };
-            come.push(PlanComeItem { d: x, spot, l });
-            taken.push(spot);
-            walk += l;
-        }
-        let far = if known.is_empty() { 0.0 } else {
-            let dists: Vec<f64> = known.iter().map(|&p| flat(p, anchor)).collect();
-            m::min_n(&dists)
-        };
-        let s: [f64; 5] = [(inside.len() + come.len()) as f64, crate::digin::dig_in_wedged(g, room).len() as f64, inside.len() as f64, m::round(far), -walk];
-        let mut better = best.is_none();
-        if best.is_some() {
-            for i in 0..s.len() {
-                if s[i] != bs[i] { better = s[i] > bs[i]; break; }
-            }
-        }
-        if better { best = Some(Plan { room, id, anchor, inside, come }); bs = s; }
-    }
-    if best.is_some() && bs[0] >= min { best } else { None }
 }
 
 /// one of the fit asks the net who is still up; every other man up gets his beat to answer (laststand.ts startCheck)
