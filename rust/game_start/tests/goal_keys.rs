@@ -26,19 +26,6 @@ fn on(p: &Play, d: DoorId) -> Vec<GuardId> { p.men().into_iter().filter(|&m| p.d
 fn set(p: &Play, d: DoorId, n: usize) -> bool { let o = on(p, d); o.len() == n && o.iter().all(|&m| p.arrived(m)) }
 fn fallen(p: &Play) -> usize { p.men().into_iter().filter(|&m| p.doing(m).as_deref() == Some("fallIn")).count() }
 fn one_pair(p: &Play, m: &[GuardId]) -> bool { m.len() == 2 && p.callsign(m[0]).split(' ').next() == p.callsign(m[1]).split(' ').next() }
-/// the groups covering, biggest first
-fn covering(p: &Play) -> Vec<usize> {
-    let mut by: Vec<([i64; 2], usize)> = Vec::new();
-    for m in p.men() {
-        if p.doing(m).as_deref() != Some("cover") { continue; }
-        let Some(w) = p.watch_of(m) else { continue };
-        let k = [(w[0] * 10.0) as i64, (w[1] * 10.0) as i64];
-        match by.iter_mut().find(|x| x.0 == k) { Some(x) => x.1 += 1, None => by.push((k, 1)) }
-    }
-    let mut n: Vec<usize> = by.into_iter().map(|x| x.1).collect();
-    n.sort_by(|a, b| b.cmp(a));
-    n
-}
 const SPOTS: [[f64; 2]; 5] = [[9.0, 24.0], [19.0, 25.0], [23.0, 24.0], [27.0, 22.0], [7.0, 21.0]];
 
 /// THE RULE: "first shift Q should just send half the squad, whoever's closest": nobody on anything, Shift and the key on a door: one whole pair goes, the nearer, the rest stay with him. On the second door the two
@@ -66,22 +53,6 @@ fn the_first_goal_sends_the_nearer_pair_and_the_second_door_the_rest() {
         p.goal_half_off();
         p.shift_tap(chest(ca));
         assert_eq!(on(&p, a).len(), 4, "seed {s}: the control: the switch off, the first goal is everyone's");
-    }
-}
-
-/// THE RULE: nobody on anything, Shift and the key on a spot: two cover it. A second spot: two cover each. A third: two, one and one. Every group down to one man: one more spot gives nothing and the squad says so.
-/// A FAILURE MEANS: "shift Q on a spot to watch automatically has them split up angles" has gone, or a man is taken off a goal he was given to make a fifth.
-#[test]
-fn goals_on_spots_split_the_squad_until_there_is_nobody_left() {
-    for s in SEEDS {
-        let (mut p, ..) = yard_of(s, 4);
-        let mut want = vec![vec![2], vec![2, 2], vec![2, 1, 1], vec![1, 1, 1, 1]].into_iter();
-        for &q in &SPOTS[..4] { p.shift_tap(floor(q)); p.run(0.2); assert_eq!(covering(&p), want.next().unwrap(), "seed {s}"); }
-        let (n0, said0) = (p.orders_given(), p.said.len());
-        p.shift_tap(floor(SPOTS[4]));
-        p.run(0.3);
-        assert_eq!((covering(&p), p.orders_given()), (vec![1, 1, 1, 1], n0), "seed {s}: a fifth gave something");
-        let _ = said0;
     }
 }
 
@@ -128,7 +99,7 @@ fn one_word_sends_both_pairs_in_and_the_plain_key_makes_one_goal_again() {
 }
 
 /// THE RULE: "let's make shift-Q long press open the radial menu to append another order too". All four on a door, the keys kept down on the second: the ring is one whole pair's, named on it, nobody is told anything; its first
-/// wedge sends that pair there and the other stays. Nobody on anything, kept down on a door: one pair's too. All four covering, on a spot: two; a third spot: one. Every group down to one man: no ring, and nothing given.
+/// wedge sends that pair there and the other stays. Nobody on anything, kept down on a door: one pair's too. Every group down to one man: no ring, and nothing given. (What the ring gives on a spot, and that Shift on a spot is a move: shift.rs.)
 /// A FAILURE MEANS: the ring gives before it is asked, or gives to everyone.
 #[test]
 fn kept_down_the_key_is_that_parts_ring() {
@@ -158,25 +129,11 @@ fn kept_down_the_key_is_that_parts_ring() {
         drop(p);
 
         let (mut p, ..) = yard_of(s, 4);
-        p.shift_tap(floor(SPOTS[0]));
-        p.run(0.2);
-        p.shift_tap(floor(SPOTS[1]));
-        p.run(0.2);
-        assert_eq!(covering(&p), vec![2, 2], "seed {s}");
-        assert!(p.shift_held(floor(SPOTS[2])), "seed {s}");
-        assert_eq!(p.ring_part().len(), 1, "seed {s}: the third spot's ring is one man's");
-        let one = p.ring_part()[0];
-        p.wedge_taken(None);
-        p.run(0.2);
-        assert_eq!((p.doing(one).as_deref(), covering(&p)), (Some("move"), vec![2, 1]), "seed {s}: its first wedge");
-        drop(p);
-
-        let (mut p, ..) = yard_of(s, 4);
         for &q in &SPOTS[..4] { p.shift_tap(floor(q)); p.run(0.2); }
         let n0 = p.orders_given();
         assert!(!p.shift_held(floor(SPOTS[4])), "seed {s}: every group is one man and a ring came up");
         p.keys_let_go();
-        assert_eq!((p.orders_given(), covering(&p)), (n0, vec![1, 1, 1, 1]), "seed {s}");
+        assert_eq!(p.orders_given(), n0, "seed {s}: it gave something");
     }
 }
 

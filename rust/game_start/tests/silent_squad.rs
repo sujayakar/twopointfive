@@ -50,13 +50,13 @@ fn a_silent_squad_picks_the_lock_it_would_have_booted() {
         drop(p);
         let (mut p, d, at) = at_a_locked_door(s);
         p.order("openClear", at, Who::All);
-        p.run(30.0);
+        p.until(30.0, |p| p.op_ended_on(d)).unwrap_or_else(|| panic!("seed {s}: the control: the order never ended"));
         assert!(p.door_locked_now(d) && !p.keep_broken(d) && p.hands_on_lock().is_none(), "seed {s}: the control: loud, the door is left as it was found");
         assert_eq!(p.said_count("locked. picking.").0, 0, "seed {s}: the control");
     }
 }
 
-/// the two rooms with their men up, the squad in the yard, silent or not, told into the west room; both men kept unaware the whole 25 seconds
+/// the two rooms with their men up, the squad in the yard, silent or not, told into the west room; both men kept unaware
 fn in_on_men_who_have_not_noticed(s: u32, silent: bool) -> (Play, Vec<GuardId>) {
     let (sc, at) = yard(s);
     let mut p = Play::scene(&sc, &Opts { seed: s, ..Default::default() });
@@ -65,10 +65,14 @@ fn in_on_men_who_have_not_noticed(s: u32, silent: bool) -> (Play, Vec<GuardId>) 
     let foes = vec![p.defender_at([11.25, 11.25]), p.defender_at([24.25, 12.25])];
     if silent { go_silent(&mut p); }
     p.order("openClear", at, Who::All);
-    for _ in 0..25 * 60 {
+    let mut past = None;   // (a silent squad watched on for three seconds after it first holds a round; a loud one to its first round)
+    for f in 0..25 * 60 {
         p.pin_man(foes[0], [11.25, 11.25], 0.0, GuardState::Patrol, 0.0);
         p.pin_man(foes[1], [24.25, 12.25], 0.0, GuardState::Patrol, 0.0);
         p.frame();
+        if p.squad_rounds() > 0.0 { break; }
+        if silent && past.is_none() && p.said_count("eyes on. holding.").0 > 0 { past = Some(f + 3 * 60); }
+        if past == Some(f) { break; }
     }
     (p, foes)
 }
@@ -86,8 +90,8 @@ fn a_silent_squad_holds_its_fire_until_it_is_noticed() {
         assert!(eyes > 0 && net, "seed {s}: they say so on the net: {eyes}");
         assert!(!p.compromised(), "seed {s}: nothing loud yet");
         for &f in &foes { let a = p.at(f); p.pin_man(f, a, 0.0, GuardState::Alert, 1.0); }
-        p.run(15.0);
-        assert!(p.squad_rounds() > 0.0 && (!p.up(foes[0]) || !p.up(foes[1])), "seed {s}: noticed, they fire: {} rounds", p.squad_rounds());
+        p.until(15.0, |p| p.squad_rounds() > 0.0 && (!p.up(foes[0]) || !p.up(foes[1]))).unwrap_or_else(|| panic!("seed {s}: noticed, they fire: {} rounds", p.squad_rounds()));
+        p.run(1.0);
         assert!(p.silent() && p.compromised(), "seed {s}: the order stands, compromised");
         assert_eq!(p.said_count("compromised."), (1, true), "seed {s}: said once, over the net");
         drop(p);
