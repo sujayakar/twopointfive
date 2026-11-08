@@ -60,15 +60,14 @@ pub fn park(g: &mut Game) -> (u32, u32) {
         crate::character::pos_replace(g, c, [-40.0 - k * 3.0, 0.0, -40.0]);
         k += 1.0;
         g.tab.light[light].enabled = false;
-        let r = &mut g.gd[x];
-        r.hold = true;
-        r.pinned = true;
-        r.heard_up_to = DEAF;
-        r.awareness = 0.0;
-        r.last_known = None;
-        if r.state != GuardState::Dead {
-            if r.state != GuardState::Patrol { men += 1; }
-            r.state = GuardState::Patrol;
+        g.gd[x].hold = true;
+        g.gd[x].pinned = true;
+        g.gd[x].heard_up_to = DEAF;
+        crate::mind::set(g, x, 0.0, "kitstage");
+        crate::mind::fix_keep(g, x, None, "kitstage");
+        if g.gd[x].state != GuardState::Dead {
+            if g.gd[x].state != GuardState::Patrol { men += 1; }
+            crate::mind::set_state(g, x, GuardState::Patrol, "kitstage");
         }
     }
     if g.escalation == 0.0 {
