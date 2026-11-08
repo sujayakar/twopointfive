@@ -17,6 +17,7 @@ export const PAGES: readonly PageRow[] = [
   ['tut-road-page.cjs', 'play', "the first tutorial mission with real keys, first line to debrief", 1.6],
   ['../draw/weather-page.cjs', 'play', "a snow level, a wet night and a fire reach the picture", 4.5],
   ['panel-keys.cjs', 'play', "the debugger's key and Tab, pressed for real", 1.5],
+  ['runbooks-page.cjs', 'play', "a run's page is nobody's try: no end card, nothing on the books", 3.1],
   ['startpage-look.cjs', 'menus', "every mission on the start page goes through its loadout to Deploy", 0.9],
   ['cards-page.ts', 'menus', "the start page walked: every mission, row and card written down as the page shows them", 2.3],
   ['kitdense-page.cjs', 'menus', "the dense kit card: tiles, pop-ups, fits at four window sizes", 0.5],

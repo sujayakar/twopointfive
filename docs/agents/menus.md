@@ -225,11 +225,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (every row of the table drawn: the Tutorial group draws nine today) and a visit that names a cut row (`?loadout=<id>` draws that one row that once; a group
   with eight drawn rows and a cut one would draw nine). `startpage-look.cjs` asks its own count of eight on the real page with the cut rows off. RUN: the three
   probes ALL PASS on both stands; `UNPLAYED_BREAK=1` still fails `unplayed`. Nothing here was seen on a GPU.
-- **A run's page is nobody's try** (2026-11-08; `main.ts offBooks`, `host/runpage.ts ownPage`: `benchrun`, `pricerun`, `bench`, `pricelevels` on the address; no switch, a rule of the page). The fight on such
-  an address files no try and no par best, opens no end card, for a win or for Sam down, and writes no `run` on the cloud. The address is what it goes by, so a reloaded scene (its record dropped) and a refused
-  `?bench` (no session store) play on with no card either. It stands where `?noverdict` once did, a word that stopped doing anything when `VERDICT.on` settled, so that for a while a benchmark's
-  won scene froze behind a card and filed a try. CHECK: `tools/qa/runbooks-page.cjs`, the kill house on the page by `__killGuard`, seed 1: won on a plain address (card, try and time filed), won on all three other addresses, and Sam shot down on a plain and a scene's address.
-  Without the rule (the head before it) every run-page line of card and books is red, but the par best on a loss, which files no time. NOT RUN: `bench-page.cjs` (a whole run is hours); the cloud line, read only (the check boots `cloud=0`); the stealth game's own end. Never seen on a GPU.
+- **A run's page is nobody's try** (2026-11-08; `host/runpage.ts ownPage`, asked in `host/drawpage.ts`: `benchrun`, `pricerun`, `bench`, `pricelevels` on the address; no switch, a rule of the page). The fight on such
+  an address files no try and no par best, opens no end card, and writes no `run` on the cloud. The address is what it goes by, so a reloaded scene (its record dropped) and a refused
+  `?bench` (no session store) play on with no card either. CHECK: `tools/qa/runbooks-page.cjs` on the game's page, software adapter, the kill house on hard, seed 1, Sam alone with a frag at his feet by real keys: a plain address raises the card and files the try;
+  `benchrun`, `pricerun` and a refused `bench` end the same run with no card and both stores byte for byte as seeded. With the page's two `ownPage` gates taken out, `benchrun` is red on card and books. A loss files no par time, so a par best moving is not held by this check; the books are told one thing behind one gate.
+  NOT RUN: a whole benchmark or pricing run (`bench-page.cjs`, hours); the cloud line, read only (the check boots `cloud=0`); a win on this page. Never seen on a GPU.
 - **A Training lesson ends on the verdict card too, graded as a lesson** (`VERDICT`): lessons 5 and 6 are room clears, so their end is the
   room clear's `'taken'` / `'wiped'` and the card comes up a beat later like any squad mission's (before the verdict a room clear had no card at all: only the row 'structure taken
   — shift+enter stages it again'); lessons 1 to 4 and 7 end at the exfil on the stealth mission's own card. On a lesson's card NOTHING IS GRADED OR KEPT: no ways pips, no tries
