@@ -23,6 +23,7 @@ const CASES: &[(&str, &str, usize)] = &[
     ("office.json", "nightbreach&squad=4", 4),
     ("killhouse.json", "roomclear&squad=0", 0),
     ("depot.json", "roomclear&squad=1&way=2", 1),
+    ("records.json", "roomclear&squad=2&fog=team", 2),
 ];
 
 fn stood(level: &str, words: &str) -> Play {
@@ -69,7 +70,7 @@ fn every_kind_of_way_stands_stays_and_is_lit() {
         let mut p = stood(level, words);
         assert!(!st(&p).none, "{}: nothing staged", what);
         assert_eq!(st(&p).order.len(), mates, "{}: the men", what);
-        assert!(!p.g.fog_of_war.on, "{}: the fog of war is on", what);
+        assert!(!p.g.fog_of_war.on && !game::fogofwar::fog_of_war_active(&p.g), "{}: the fog of war is on", what);
         on_their_places(&p, &what, 0.05);
         let plan = st(&p).plan.clone().unwrap();
         // the plan's places, but on the quiet picture's rest
