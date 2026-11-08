@@ -20,8 +20,9 @@
 //!                                      until the next call. Once a tick.
 //!   face_frame(h, a, x, y, z) -> p     A FRAME IS DRAWN, `a` of the way from the tick before to the last (1 = where the last left everything), looking at
 //!                                      x y z: the rows that move stand there, and the table again
-//!   face_saves(h)                      this run's saves as a card lays them out, at face_out: the mission's clock (f64), the key of the one to go back to (text), how many,
+//!   face_saves(h)                      this run's saves as a card lays them out, at face_out: the mission's clock (f64), would one by hand be made now (u32), the key of the one to go back to (text), how many,
 //!                                      then each: its key and label (text), 1 by hand and 2 regretted (u32), the clock it was made at and which came after which (f64)
+//!   face_saves_told(h) -> n            what the save controller tells the player, at face_out: its tag while it is up, then a line for each thing it has said since it was last asked (0: nothing of either)
 //!   face_knobs(h)                      every knob a person may turn, at face_out: its name's length (its top bit: a yes or no), the name, what it is turned to (f64)
 //!   face_draw_name(h, i)               a name that crosses by its number (a sound's), at face_out
 //!   face_draw_look(h, p, n)                 what the page says of its look (game_draw::LOOK numbers), once and when it changes
@@ -210,12 +211,25 @@ pub unsafe extern "C" fn face_draw_look(h: u32, p: *const f64, n: usize) {
     super::with(h, |k| k.drawn.look(v));
 }
 #[no_mangle]
+pub extern "C" fn face_saves_told(h: u32) -> usize {
+    let t = super::with(h, |x| {
+        let (f, secs) = (x.g.saves.flash.as_ref(), x.g.k.ckpt.flash_secs);
+        let mut t = String::from(f.filter(|f| x.g.time >= f.t && x.g.time - f.t < secs).map_or("", |f| f.text.as_str()));
+        for s in x.said.drain(..) { t.push('\n'); t.push_str(&s); }
+        t
+    });
+    let n = t.len();
+    super::out(t.into_bytes());
+    n
+}
+#[no_mangle]
 pub extern "C" fn face_saves(h: u32) {
     let b = super::with_ref(h, |x| {
         let g = &x.g;
         let mut b = Vec::new();
         let text = |b: &mut Vec<u8>, s: &str| { b.extend_from_slice(&(s.len() as u32).to_le_bytes()); b.extend_from_slice(s.as_bytes()); };
         b.extend_from_slice(&g.mission.stats.elapsed.to_le_bytes());
+        b.extend_from_slice(&(game::savestate::control::hand_no(g).is_none() as u32).to_le_bytes());
         let offer = game::savestate::checkpoints_newest(g, Some(true), Some(g.mission.stats.elapsed)).filter(|i| game::savestate::checkpoints_is_this_run(g, i));
         text(&mut b, offer.as_ref().map_or("", |i| i.key.as_str()));
         let rows = game::savestate::control::timeline(g);
@@ -364,8 +378,10 @@ pub fn saves(h: u32, x: &mut super::Held, dt: f64) {
         Some(Do::Back { key }) => {
             let was = control::abandoned(&x.g);
             let kept = SHELF.with(|s| s.borrow().get(&(h, key.clone())).map(|e| e.k));
-            if kept.is_some_and(|k| back(x, k)) { control::put_back(&mut x.g, &key, was); crate::memo::forget(h); } else { control::gone(&mut x.g, &key); }
+            let told = if kept.is_some_and(|k| back(x, k)) { let told = control::put_back(&mut x.g, &key, was); crate::memo::forget(h); told } else { control::gone(&mut x.g, &key) };
+            x.said.push(told);
         }
+        Some(Do::Say(words)) => x.said.push(words),
         None => {}
     }
     // (a run's saves go with the run; its first step is kept, for a game that is lost before anything else is)
@@ -412,7 +428,7 @@ pub extern "C" fn face_recover(h: u32, newest: u32) -> u32 {
             let m = KEPT.with(|v| match v.borrow().get((e.k as usize).wrapping_sub(1)).and_then(|x| x.as_ref()) { Some(Kept::Own(g, _)) => g.saves.shelf.m.get(key.clone()).cloned(), _ => None });
             if let Some(mut m) = m { if e.regret && m.info.regret.is_none() { m.info.regret = Some(String::from("the floor came down straight after")); } x.g.saves.shelf.m.set(key.clone(), m); }
         }
-        if key != START { let was = game::savestate::control::abandoned(&x.g); game::savestate::control::put_back(&mut x.g, &key, was); }
+        if key != START { let was = game::savestate::control::abandoned(&x.g); let told = game::savestate::control::put_back(&mut x.g, &key, was); x.said.push(told); }
         x.drawn.cut();
     });
     super::out(e.label.into_bytes());

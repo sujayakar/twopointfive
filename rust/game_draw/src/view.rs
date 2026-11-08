@@ -39,6 +39,8 @@ section! {
         pub target: [f32; 3],
         /// what a lesson does not let the hand do to the view: 1 turn it · 2 zoom it
         pub locks: u32,
+        /// the back key is the game's now: 1 it would put something away (a list, an open order menu, a running verb, a held throw, a gun's setup) · 2 a level's script has the view
+        pub backs: u32,
         /// saves made of this game so far: moves when there is another
         pub saves: u32,
         /// what the game is set to, for a screen that sets it: hits do nothing to him, the men think, unlimited ammunition, it saves by itself, the wall hold's feel, walking into a wall takes
@@ -50,6 +52,8 @@ section! {
         pub wall_feel: u32,
         pub wall_press: u32,
         pub fall_in: u32,
+        /// what each man is thinking is said over him
+        pub labels: u32,
         /// the run's end card is due: 1 it was lost, 2 won (0: not yet)
         pub ended: u32,
         /// this run, for whoever keeps what was won: 1 its try has begun · 2 it is over (what there is to keep is asked: face_run_view)
@@ -86,7 +90,9 @@ pub fn fill(g: &Game, stood: u32, desired: f64, out: &mut Vec<View>) {
     { let (begun, over) = game::verdict::run_on(g); r.run = begun as u32 | (over as u32) << 1; }
     r.saves = (g.saves.stats.autosaves + g.saves.stats.manual) as u32;
     (r.god, r.thinks, r.ammo, r.autosave) = (g.god_mode as u32, g.ai_enabled as u32, g.infinite_ammo as u32, g.saves.enabled as u32);
+    r.labels = g.show_debug as u32;
     (r.wall_feel, r.wall_press, r.fall_in) = (g.k.wallsnap.on as u32, g.k.wallsnap.press as u32, game::orders::squad_orders_twice_on(g) as u32);
+    { let s = game::seats::seat(g, seat); r.backs = (s.orders.menu.is_some() || g.pl[pl].launch_held.is_some() || game::interact::backable_interact(g, &s) || g.pl[pl].setup.is_some()) as u32 | (game::director::director_showing(g) as u32) << 1; }
     r.locks = game::rails::rails_locks(g, "camera") as u32 | (game::rails::rails_locks(g, "zoom") as u32) << 1;
     out.push(View {
         tick: crate::tick(g),
