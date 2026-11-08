@@ -443,7 +443,7 @@ export class Overlay implements HudLike {
     { const E = game.view.empty; if (E && !list.length) rows.push({ kind: E.kind as InteractRow['kind'], label: E.word, opts: [], inReach: false, off: false, dist: E.dist ?? undefined }); }
     const primary = hv ? list.indexOf(hv) : -1;
     if (cornerOn(!!game.puppet)) {   // (ui/corner.ts: the objective, his key's line, the squad key's line, and what the block and a door's heading said that it would lose: a key's line kept back where the mission's frame keeps the squad's notes back, a warning never)
-      const V = game.view.squad, shut = locked(game.view, 'menu'), quick = game.orders.quickLine();
+      const V = game.view.squad, shut = locked(game.view, 'menu'), quick = V?.quick ?? null;
       const men: InteractRow['opts'] = (V?.mates ?? []).map(M => ({ key: '', text: `${V!.picked ? (M.addressed ? '▸ ' : '· ') : ''}${M.name} · ${M.doing}`, tone: M.pair ?? undefined, gone: M.down }));
       const squad: InteractRow[] = V ? [{ kind: 'objective', label: '', opts: [...men, ...(shut ? [] : V.notes), ...(quick ? [quick] : [])], inReach: true, off: false }] : [];
       const C = cornerRows(rows, primary, squad, game.view.lesson?.rails?.prompt ? '' : objectiveWords(game), game.view.corner.filter(o => !o.key || (!!V && !shut)), game.mission.stage);
