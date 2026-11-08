@@ -35,20 +35,16 @@ import type { Stand } from '../host/ahead';
 import { RecipeStand } from '../replay/recipestand';
 import { recipeSearch, unseenDone } from '../replay/engineplay';
 import { NetClient } from './client';
-import type { Recipe } from './wire';
-import { NET, recipeWhy } from './wire';
+import type { WireCmd } from './wire';
+import { NET } from './wire';
+import { recipeWhy, fromWire, toWire, type Recipe } from './recipe';
 import { FORESEE, Foresee } from './foresee';
+import { NETPLAY, NET_GAME, NET_KEY, NET_JOIN, NET_PREDICT, NET_LAG, NET_JITTER, NET_LOSS } from './address';
 import { onWay, wayOff, type Way } from './delay';
-import { netStep, netStand, netWord, netWatch, netQuiet, netWhole, wordTick, NET_WORD_SEED, type StepHost } from './step';
+import { netStep, netStand, netWord, netWatch, netQuiet, netWhole, netAhead, type StepHost } from './step';
+import { wordTick, NET_WORD_SEED } from './words';
 import { myName, setSeatNames } from '../host/names';
 
-/** the address's words: the server's WebSocket address, the game's id, the seat's key (read once, then kept for the tab under KEEP) */
-export const NETPLAY = 'net', NET_GAME = 'netgame', NET_KEY = 'netkey';
-/** …and four for whoever tries it on one machine or on one good network: `netpredict=0` draws his own man where the game has him (foresee.ts FORESEE.on off);
- *  `netlag=<ms>`, `netjitter=<ms>` and `netloss=<percent>` make this page's connection to the server that much worse, each way (NETWAY: delay.ts) */
-/** …and one the lobby put there (lobby.ts JOIN: the code of the co-op game this is, so the page in the game can show it and a reload finds the game) */
-export const NET_JOIN = 'join';
-export const NET_PREDICT = 'netpredict', NET_LAG = 'netlag', NET_JITTER = 'netjitter', NET_LOSS = 'netloss';
 const KEEP = 'tps.net.seat', KEEP_TRY = 'tps.net.try';
 /** `helloMs`: how long the page waits for the server's welcome. `walkMs`: past it a page tick that is level does not walk its second tick (one is always
  *  walked, two at most: see HOW FAST).
@@ -215,7 +211,7 @@ export class NetPlay {
     const h = this.host; if (!h) { const a = this.alone; if (a) { a.game.update(_dt, input, cam, view); a.engine.lights.update(_dt, a.game.time); } return; }   // (refused once stood: the loop's own tick)
     const g = h.game, c = this.client, now = performance.now();
     if (c.behind >= NETPAGE.far) this.catching(true);   // (BEFORE the record: a page that wakes far behind sends no key made at a picture seconds old)
-    if (c.seat >= 0 && c.state !== 'waiting') { if (this.audioWas === null) c.beat(this.cmd = sampleCmd(g.hostSeat().view, input, cam, view, this.cmd), now); else c.rest(now); }
+    if (c.seat >= 0 && c.state !== 'waiting') { if (this.audioWas === null) c.beat(toWire(this.cmd = sampleCmd(g.hostSeat().view, input, cam, view, this.cmd)), now); else c.rest(now); }
     this.walk(); this.foresee();
     this.label();
     g.hostAfter(input, cam, view);
@@ -226,7 +222,7 @@ export class NetPlay {
   private label(): void { const c = this.client; if (this.host && c.names !== this.named) setSeatNames(this.host.game, this.named = c.names); }
 
   /** the look ahead, at the end of a page tick (foresee.ts): the picture is told where the game has his man and where his records take him (host/ahead.ts) */
-  private foresee(): void { const h = this.host!, F = this.fore.look(h.game, this.client, this.audioWas !== null); if (F) h.ahead?.capture(F.id, F.from, F.to); else h.ahead?.rest(); }
+  private foresee(): void { const h = this.host!, seat = this.client.seat >= 0 ? h.game.seats[this.client.seat] : null, F = this.fore.look(seat && (cmds => netAhead(seat, cmds)), this.client, this.audioWas !== null); if (F) h.ahead?.capture(F.id, F.from, F.to); else h.ahead?.rest(); }
   private fore = new Foresee();
   /** how far ahead of where the game has him the player's man is drawn, and where his newest record aims (the loop's `lead`: host/loop.ts); null = he is drawn where the game has him */
   lead(): { by: number[]; aim: [number, number, number] | null } | null { return this.fore.last; }
@@ -235,11 +231,11 @@ export class NetPlay {
     const h = this.host!, g = h.game, c = this.client, t0 = performance.now(); let n = 0;
     if (c.behind >= NETPAGE.far) this.catching(true);
     const far = this.audioWas !== null, most = far ? Infinity : c.behind > NET.lead ? 2 : 1, ms = far ? NETPAGE.farMs : NETPAGE.walkMs;
-    const step = (cmds: PlayerCmd[]) => {
+    const step = (cmds: WireCmd[]) => {
       if (this.first) { this.first = false; this.rs?.tables(); g.fogOfWar.pageLook(); this.rs?.tune(g); }   // (the last word over what the boot wrote after the staging, as a replay's first step has it)
       this.rs?.env(h.engine.settings); this.rs?.flags(g);
       { const d = h.ahead?.draws ?? 0; if (d !== this.drawsAt) { this.drawsAt = d; h.engine.world.relist(); } }   // (THE LIST A TICK READS IS THE LAST TICK'S, as on the server: a draw since then listed the boxes as it DREW them — between two ticks, his own man ahead — and the world's ray reads that list. So the first tick after a draw lists them again as the game has them)
-      this.stepping = true; try { netStep(g, h.engine, cmds); } finally { this.stepping = false; }
+      this.stepping = true; try { netStep(g, h.engine, cmds.map(fromWire)); } finally { this.stepping = false; }
       this.word = netWord(g, this.word); if (wordTick(c.confirmed)) this.watch = netWatch(g); if (this.keepWhole && wordTick(c.confirmed)) { const A = netWhole(g); if (A) this.whole = { t: c.confirmed + 1, ...A }; }   // (inside the client's walk: `confirmed` is still the tick this step ran)
       if (far) { h.smoke?.update(1 / NET.hz); const tw = h.loop.tween; if (tw && !tw.stale) tw.rest(); }   // (unseen ticks: the smoke keeps the game's time, and nothing is drawn between two of them — as under a replay's seek)
     };

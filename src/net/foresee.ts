@@ -11,11 +11,15 @@
 //   played another record than the one sent, somebody stood in his way, a round moved him). The difference is not shown at once: the drawn man keeps his
 //   place and is brought over, FORESEE.ease of the distance left a tick later; past FORESEE.snap it is a cut.
 //   NOT AHEAD: a man who is down, a page that is catching up or has parted from its server, a watcher.
-import type { Game } from '../game/game';
-import { walkAhead } from '../game/walkahead';   // (called inside `look` only: src/game is one import cycle)
-import type { Stand } from '../host/ahead';
 import type { NetClient } from './client';
-import { NET, fromWire } from './wire';
+import type { WireCmd } from './wire';
+
+/** a man's place and the way his gun points */
+export interface Stand { pos: ArrayLike<number>; yaw: number }
+/** WHERE A SEAT'S MAN WOULD BE AFTER RECORDS THE GAME HAS NOT HAD, as the game answers it (game/walkahead.ts, the module's face_ahead), writing nothing: the man · is
+ *  he down · where the game has him, his aim, and the normal of a wall he holds (x z) · are his legs his own this tick · where the records take him, his
+ *  aim there, what his seat's camera would follow with him there, the point the newest record aims at · his place after each record */
+export interface Ahead { id: number; down: boolean; at: [number, number, number]; yaw: number; wall: [number, number] | null; free: boolean; pos: [number, number, number]; aimYaw: number; follow: [number, number, number]; aim: [number, number, number] | null; path: ArrayLike<number>[] }
 
 /** `on`: the switch — off here as every switch is, raised by a networked page (page.ts netFromUrl; `?netpredict=0` leaves it off) and by the scripted
  *  client's `--predict`. Off = his own man is drawn where the game has him. `max`: the most records a look ahead plays. `ease`: what
@@ -35,23 +39,23 @@ export class Foresee {
   /** what is left of a correction (m) */
   get rest(): number { return Math.hypot(this.off[0], this.off[1], this.off[2]); }
 
-  /** the end of a tick of the host. `held`: the host has its hands off the picture (it is catching up). null = nobody is ahead */
-  look(g: Game, c: NetClient, held = false): Foreseen | null {
-    const seat = c.seat >= 0 ? g.seats[c.seat] : null, pl = seat?.view.player, off = this.off;
-    const wire = !FORESEE.on || !seat || !pl || pl.down || held || c.state !== 'playing' || c.bad || c.broken || c.bye ? null : c.unplayed(FORESEE.max);
-    if (!seat || !pl || !wire) { off[0] = off[1] = off[2] = 0; return this.last = null; }
-    const t0 = performance.now(), ch = pl.char, dt = 1 / NET.hz, was = this.last, n = wire.cmds.length;
+  /** the end of a tick of the host. `walk`: the host's game asked where its seat's man would be. `held`: the host has its hands off the picture (it is
+   *  catching up). null = nobody is ahead */
+  look(walk: ((cmds: WireCmd[]) => Ahead) | null, c: NetClient, held = false): Foreseen | null {
+    const off = this.off, wire = !FORESEE.on || !walk || c.seat < 0 || held || c.state !== 'playing' || c.bad || c.broken || c.bye ? null : c.unplayed(FORESEE.max);
+    const t0 = performance.now(), now = wire && walk ? walk(wire.cmds) : null;
+    if (!wire || !now || now.down) { off[0] = off[1] = off[2] = 0; return this.last = null; }
+    const was = this.last, n = wire.cmds.length, path = now.path;
     const k = was ? was.end - wire.t : -1;   // (how many of these records the last look ahead played too; under 0: the game has passed where that one ended)
-    const path: ArrayLike<number>[] = [], now = walkAhead(seat, wire.cmds.map(fromWire), dt, path as never);
-    const at = k === 0 ? ch.pos : k > 0 && k <= n ? path[k - 1] : null, mid = at ? [at[0], at[1], at[2]] : null;   // (where THIS look has him on the tick the last one ended on)
-    if (was && mid) { const m = mid, fix = Math.hypot(was.pos[0] - m[0], was.pos[1] - m[1], was.pos[2] - m[2]);
+    const m = k === 0 ? now.at : k > 0 && k <= n ? path[k - 1] : null;   // (where THIS look has him on the tick the last one ended on)
+    if (was && m) { const fix = Math.hypot(was.pos[0] - m[0], was.pos[1] - m[1], was.pos[2] - m[2]);
       for (let i = 0; i < 3; i++) off[i] += was.pos[i] - m[i];
       if (fix > 0.01) { this.fixes++; if (fix > this.fixMax) this.fixMax = fix; } }
     for (let i = 0; i < 3; i++) off[i] *= FORESEE.ease;
     if (this.rest > FORESEE.snap) off[0] = off[1] = off[2] = 0;
-    const here = seat.view.followPos(), his = here === ch.pos;   // (the camera's on HIM: not on a man it is watching, not on a lesson's rail — Game.followPos. Elsewhere it is led nowhere)
+    const his = now.follow[0] === now.pos[0] && now.follow[1] === now.pos[1] && now.follow[2] === now.pos[2];   // (the camera's on HIM: not on a man it is watching, not on a lesson's rail. Elsewhere it is led nowhere)
     this.ms += (performance.now() - t0 - this.ms) * (this.ms ? 0.1 : 1);
-    return this.last = { id: ch.id, from: { pos: [ch.pos[0], ch.pos[1], ch.pos[2]], yaw: ch.aimYaw }, to: { pos: [now.pos[0] + off[0], now.pos[1] + off[1], now.pos[2] + off[2]], yaw: now.aimYaw },
-      by: his ? [now.follow[0] + off[0] - here[0], now.follow[1] + off[1] - here[1], now.follow[2] + off[2] - here[2]] : [0, 0, 0], aim: his && now.aim ? [now.aim[0], now.aim[1], now.aim[2]] : null, n, end: wire.t + n, free: now.free, pos: [now.pos[0], now.pos[1], now.pos[2]] };
+    return this.last = { id: now.id, from: { pos: now.at, yaw: now.yaw }, to: { pos: [now.pos[0] + off[0], now.pos[1] + off[1], now.pos[2] + off[2]], yaw: now.aimYaw },
+      by: his ? [now.pos[0] + off[0] - now.at[0], now.pos[1] + off[1] - now.at[1], now.pos[2] + off[2] - now.at[2]] : [0, 0, 0], aim: his ? now.aim : null, n, end: wire.t + n, free: now.free, pos: now.pos };
   }
 }

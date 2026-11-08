@@ -172,7 +172,8 @@ import { knobRegistry, knobsCopy, knobsBack } from './game/knobs';   // (last on
 import type { Gpu } from './gpu/device';
 import { RENDER_PASSES } from './gpu/timer';
 import { PLAYTAPE, tapeFromUrl } from './replay/engineplay';
-import { NETPLAY, NET_JOIN, netFromUrl, netKeyed, netLeave } from './net/page';
+import { NETPLAY, NET_JOIN } from './net/address';
+import { netFromUrl, netKeyed, netLeave } from './net/page';
 import { netRows } from './ui/netrows';
 import { COOP } from './net/lobby';
 import { coopFromUrl, coopInvite } from './ui/coop';

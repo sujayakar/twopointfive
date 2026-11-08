@@ -8,8 +8,10 @@
 //   MP_SETUP     THE SETUP RECORD as JSON, the one a host's page hands the control plane and the control plane hands on:
 //                  scenario  the mission's page address ("?roomclear&squad4", "?rescue&levelFile=consulate.json")       seed  the die, a whole number
 //                  knobs     knob tables laid over the page's own (the host's settings; optional)                        seats one entry a seat (read for its count)
+//                            or {stand: 'module', commands}: THE GAME STANDS ON THE MODULE ALONE (modstand.ts), its host's settings as commands
 //                  seatKeys  one key a seat: a player proves his seat with it. As many as the stood game has seats      build, game  as MP_BUILD, MP_GAME
-//                or {recipe, seatKeys} where whoever made the game already has a recipe
+//                or {recipe, seatKeys} or {start, seatKeys} where whoever made the game already has one
+//   MP_STAND     'module' or 'recipe': what a record that does not say stands on (default recipe)
 //   MP_SEATKEYS  the seat keys, comma separated, where the record carries none
 //   MP_CONTROL   a URL to POST heartbeats to (none: nobody is told) · MP_SECRET what proves a heartbeat is this server's
 //   MP_IDLE_S    seconds with nobody connected before it ends itself (default 60) · MP_MAX_S its longest life (default 3600) · MP_GRACE_S how long it runs
@@ -21,10 +23,11 @@
 // state 'ended' whatever it was doing. An answer of 410 = the control plane has no such game any more: the server stops.
 // IT EXITS 0 when the core is done (idle, ended, too old, told its game is gone) after a last heartbeat; 1 when it could not stand its game; 2 on a bad environment.
 import { resolve } from 'node:path';
-import type { Recipe } from '../../src/net/wire.ts';
+import type { Recipe } from '../../src/net/recipe.ts';
+import type { NetStart } from '../../src/net/start.ts';
+import type { WireCmd } from '../../src/net/wire.ts';
 import type { Conn } from '../../src/net/server.ts';
-import type { PlayerCmd } from '../../src/game/cmd.ts';
-import { standRecipe, buildName, type Setup } from './stand.ts';
+import { buildName, type Stood } from './stood.ts';
 
 const ROOT = resolve(import.meta.dir, '../..'), E = process.env;
 const say = (s: string) => console.log(`[mp ${new Date().toISOString().slice(11, 23)}] ${s}`);
@@ -32,12 +35,12 @@ const num = (k: string, d: number): number => { const v = E[k]; if (v === undefi
 const port = num('MP_PORT', 5300), hostname = E.MP_HOST ?? '127.0.0.1';
 
 /** the setup record (see the head) */
-let asked: { recipe?: Recipe; scenario?: unknown; seed?: unknown; knobs?: Setup['tables']; seatKeys?: unknown; build?: unknown; game?: unknown };
+let asked: { recipe?: Recipe; scenario?: unknown; seed?: unknown; knobs?: Record<string, unknown>; start?: NetStart; seatKeys?: unknown; build?: unknown; game?: unknown };
 try { asked = JSON.parse(E.MP_SETUP ?? ''); if (!asked || typeof asked !== 'object') throw new Error('not a record'); } catch { console.error('server.ts: MP_SETUP is not a setup record as JSON (want {"scenario":"?roomclear&squad4","seed":7,"seatKeys":["k0"]} or {"recipe":{…}})'); process.exit(2); }
 const game = E.MP_GAME ?? (typeof asked.game === 'string' ? asked.game : 'local'), build = E.MP_BUILD ?? (typeof asked.build === 'string' ? asked.build : buildName());
 
 /** the setup made into a recipe in a process of its own (tools/mp/setup.ts: the game it stands for it is thrown away) */
-async function recipeOfSetup(setup: Setup): Promise<Recipe> {
+async function recipeOfSetup(setup: { search: string; seed: number; tables?: Record<string, unknown> }): Promise<Recipe> {
   const p = Bun.spawn([process.execPath, 'run', resolve(import.meta.dir, 'setup.ts'), JSON.stringify(setup)], { stdout: 'pipe', stderr: 'pipe', cwd: ROOT, env: { ...E } });
   const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
   const line = out.split('\n').find(l => l.startsWith('MPSETUP '));
@@ -45,13 +48,22 @@ async function recipeOfSetup(setup: Setup): Promise<Recipe> {
   return JSON.parse(line.slice(8)) as Recipe;
 }
 
-let stood, recipe: Recipe;
+let stood: Stood, recipe: Recipe | undefined, start: NetStart | undefined;
 try {
-  recipe = asked.recipe ?? await recipeOfSetup({ search: String(asked.scenario ?? ''), seed: Number(asked.seed), ...(asked.knobs ? { tables: asked.knobs } : {}) });
-  stood = await standRecipe(recipe); stood.begin();   // (the Rust game's start is made here, before anybody is let in: the first tick of the fight then costs a tick)
+  const { stand = E.MP_STAND ?? 'recipe', commands = '', ...tables } = (asked.knobs ?? {}) as { stand?: string; commands?: string };
+  if (asked.start || (stand === 'module' && !asked.recipe)) {
+    const M = await import('./modstand.ts');
+    if (Object.keys(tables).length) throw new Error('a game on the module takes its host\'s settings as commands, not as knob tables');
+    start = asked.start ?? M.freshStart({ search: String(asked.scenario ?? ''), seed: Number(asked.seed), commands });
+    stood = await M.standStart(start);
+  } else {
+    recipe = asked.recipe ?? await recipeOfSetup({ search: String(asked.scenario ?? ''), seed: Number(asked.seed), ...(asked.knobs ? { tables } : {}) });
+    stood = await (await import('./stand.ts')).standRecipe(recipe);
+  }
+  stood.begin();   // (the Rust game's start is made here, before anybody is let in: the first tick of the fight then costs a tick)
 } catch (e) { console.error(`server.ts: ${(e as Error).message}`); process.exit(1); }
 for (const w of stood.warnings) say(`note: ${w}`);
-const seatsN = stood.W.game.seats.length as number;
+const seatsN = stood.seats;
 const seatKeys: string[] = Array.isArray(asked.seatKeys) ? asked.seatKeys.filter((k): k is string => typeof k === 'string' && k !== '') : (E.MP_SEATKEYS ?? '').split(',').filter(Boolean);
 if (seatKeys.length !== seatsN || new Set(seatKeys).size !== seatsN) { console.error(`server.ts: the stood game has ${seatsN} seat${seatsN === 1 ? '' : 's'} and wants as many different seat keys (the record's seatKeys, or MP_SEATKEYS): got ${seatKeys.length}`); process.exit(2); }
 
@@ -60,9 +72,9 @@ const { NetServer } = await import(`${ROOT}/src/net/server.ts`), { NET } = await
 // the copy of the game this process holds is brought up twice a second, and the verdict it is asked for every tick is read off that (at most
 // `wordEvery` ticks late). The state word is the game's own and needs no copy.
 let quiet = false;
-const step = (cmds: PlayerCmd[]): void => { if (!quiet) { stood.quiet(true); quiet = true; } stood.step(cmds); if (stood.ticks % NET.wordEvery === 0) { stood.quiet(false); quiet = false; } };
+const step = (cmds: WireCmd[]): void => { if (!quiet) { stood.quiet(true); quiet = true; } stood.step(cmds); if (stood.ticks % NET.wordEvery === 0) { stood.quiet(false); quiet = false; } };
 const core = new NetServer({ now: () => performance.now(), step, word: () => stood.word(), watch: () => stood.watch(), ended: () => stood.ended() },
-  { game, build, recipe, seatKeys, idleS: num('MP_IDLE_S', 60), maxS: num('MP_MAX_S', 3600), graceS: num('MP_GRACE_S', 15) });
+  { game, build, recipe, start, seatKeys, idleS: num('MP_IDLE_S', 60), maxS: num('MP_MAX_S', 3600), graceS: num('MP_GRACE_S', 15) });
 
 // ---- the heartbeat
 const control = E.MP_CONTROL ?? '', secret = E.MP_SECRET ?? '';
@@ -95,7 +107,7 @@ const server = Bun.serve({
     close(ws: WS) { core.closed(ws.data.conn); },
   },
 });
-say(`game ${game} · build ${build || '(none)'} · ${recipe.scenario} ${recipe.search} · seed ${recipe.seed} · ${seatsN} seat${seatsN === 1 ? '' : 's'} · ws://${hostname}:${server.port} · ${NET.hz} Hz`);
+say(`game ${game} · build ${build || '(none)'} · ${start ? `${start.file} ${start.words} · seed ${start.seed} · the module` : `${recipe!.scenario} ${recipe!.search} · seed ${recipe!.seed}`} · ${seatsN} seat${seatsN === 1 ? '' : 's'} · ws://${hostname}:${server.port} · ${NET.hz} Hz`);
 beat();
 
 const pulse = setInterval(beat, 10_000);

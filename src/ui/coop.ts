@@ -12,7 +12,8 @@
 import { COOP, Lobby, codeTyped, codeWhole, coopScenario, joinLink, netSearch, lobbyWhy, freshId, type GameView } from '../net/lobby';
 import { SENDING_WORDS } from '../replay/engineplay';
 import { visitWord } from './replaykey';
-import { NET_JOIN, buildName } from '../net/page';
+import { NET_JOIN } from '../net/address';
+import { buildName } from '../net/page';
 import { cloudFind, cloudUrl } from '../cloud/cloud';
 import { wire } from '../cloud/wire';
 import { keptLevers, leversNow } from '../game/difficulty';

@@ -5,6 +5,23 @@ back, WebSockets, CPU senses on the server. What is built so far is the server, 
 and a page is opened with `?net=`: a page without that word is the build as it was (the loop's `tick` seam is absent, `netFromUrl` returns on its first
 line).
 
+- **A GAME ON THE MODULE ALONE** (2026-11-08, for the page that draws: `draw.html`). The server and the scripted client can stand and step the game with no
+  TypeScript game beside it (`tools/mp/modstand.ts`): the setup record says `knobs: {stand: 'module', commands}` (or `MP_STAND=module`), the welcome
+  carries a START (`src/net/start.ts`: the level's file, the address's words, the die, the seats, the host's `machineBefore` commands as base64) in place of
+  the recipe, and every machine hands it the game's own start (`face_start`, dressed). The module's doors are `rust/game_face/src/net.rs`: `face_networked`
+  (every seat refereed), `face_record` (a seat's record as the wire has it; it is no hand: no host camera moves), `face_ahead` (the look ahead).
+  `src/net/modgame.ts NetGame` steps it, folds its words and asks it; a page uses the same class. `face_step` runs LIGHTS alone; no command is sent after
+  the start (letting go is the record's 'Paused' word); a host clears the outs each tick. THE WORD BESIDE THE STATE WORD IS OF EVERY PART there (no
+  list): server and clients had all 296 alike. Read here: a game stands in 0.4 to 1.0 s, a tick with the look ahead is about 6 ms against 16, a process
+  230 MB. The recipe road stays for the page with a TypeScript game and goes with it.
+  - **src/net knows no game**: `wire`, `client`, `server`, `timeline`, `foresee`, `delay`, `words`, `modgame`, `start`, `address` import nothing of `src/game`
+    (hosts are handed WIRE records). What the old page alone needs is `recipe.ts` (PlayerCmd to and from the wire), `step.ts` and `page.ts`.
+  - **What a machine looks at parts nothing** (`rust/game_start/tests/coop.rs where_a_machine_looks…`: one machine looks at the pass's fire with its camera
+    turning, the other at nothing; and `a_look_ahead_is_where_the_game_then_has_him`). KNOWN: `g.wind.to_pool` (the gusts the picture's particles take)
+    follows the host's view and is in the wider word's `wind`; nothing of a tick reads it. A level with more jets than the pool near one view and not the
+    other's would count there, never in the alarm: it wants to be the drawing's own list.
+  - NOT DONE: the page (its owner's `host/drawnet.ts`); Host game through the control plane with this setup; a kit the host keeps rides `commands`
+    already (machineBefore's own), nobody sends one yet.
 - **CO-OP IS ON THE RUST GAME** (2026-11-07). The TypeScript tick is deleted; the game server, the scripted clients and the page in a game step the Rust
   game, and the Co-op screen is up again (for some hours of 2026-11-07 it answered "Co-op can’t be played on this build yet": `COOP.down`, gone once
   the two faults a game of two had at its start in Rust were mended there: a wall charge's roster by seat, and the budget of men counting the seats). A

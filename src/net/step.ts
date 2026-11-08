@@ -3,11 +3,14 @@
 // for a draw). The order is the page's own between two ticks of one frame
 // (host/loop.ts betweenTicks) and a re-run's (tools/qa/rerun.ts). dt is exactly 1 / NET.hz.
 import type { Game } from '../game/game';
-import type { PlayerCmd } from '../game/cmd';
+import type { PlayerCmd, Seat } from '../game/cmd';
 import { dressAll } from '../game/dress';   // (called inside netStand only)
-import { NET } from './wire';
+import { walkAhead } from '../game/walkahead';   // (called inside netAhead only: src/game is one import cycle)
+import { NET, type WireCmd } from './wire';
+import { fromWire } from './recipe';
+import type { Ahead } from './foresee';
 import { SIM_PARTS } from '../sim/state';
-import { NET_AGREED } from './agreed';
+import { agreedOf, foldWhole, foldWord } from './words';
 
 /** the two things of a host's engine a tick's end touches (the page's engine, the headless stand-in) */
 export interface StepHost { lights: { update(dt: number, t: number): void }; world: { relist(): void }; }
@@ -26,17 +29,12 @@ export function netStep(g: Game, host: StepHost, cmds: readonly PlayerCmd[]): vo
  *                   (what the picture, the HUD and a tool read) until the run ends, and then once. A walk of one tick is the same step as ever. */
 export interface StateWords { die: number; parts: ArrayLike<number>; }
 interface Stepper { stateWords?(): StateWords | null; wholeWords?(): ArrayLike<number> | null; wholeNames?(): string[]; quietRun?(on: boolean): void; }
-export const NET_WORD_SEED = 0x811C9DC5;
-/** true for a tick (0-based) after which the server says its state word (wire.ts `wordEvery`) */
-export const wordTick = (t: number): boolean => (t + 1) % NET.wordEvery === 0;
 /** THE STATE'S WORD after a tick, chained from the word before it (wire.ts: after a word tick it is the alarm). The game's own words, never a walk of the
  *  host's copy of it, which inside a quiet run is not the game. */
 export function netWord(g: Game, from: number): number {
   const W = (g as unknown as Stepper).stateWords?.();
   if (!W) throw new Error('netWord: no game steps here (a host hangs stateWords on the game beside stepSeats)');
-  let h = Math.imul((from ^ W.die) >>> 0, 0x01000193) >>> 0;
-  for (let i = 0; i < W.parts.length; i++) h = Math.imul(h ^ W.parts[i], 0x01000193) >>> 0;
-  return h;
+  return foldWord(from, W.die, W.parts);
 }
 /** THE WHOLE GAME'S WORDS as they stand, with the parts' names: for whoever asks WHICH part two machines disagree on (tools/mp/words-diff.ts, a check).
  *  They are NOT the alarm: a page and a game server do not agree on every part yet (docs/agents/net.md: the picture's own carried in the game's
@@ -53,9 +51,8 @@ export function netWhole(g: Game): { names: string[]; words: number[] } | null {
 let WATCH: { names: readonly string[]; ix: number[] } | null = null;
 export function netWatch(g: Game): string | null {
   const S = g as unknown as Stepper, A = S.wholeWords?.(); if (!A) return null;
-  const N = S.wholeNames?.() ?? []; if (!WATCH || WATCH.names !== N) { const on = new Set(NET_AGREED); WATCH = { names: N, ix: N.map((n, i) => on.has(n) ? i : -1).filter(i => i >= 0) }; }
-  let h = NET_WORD_SEED; for (const i of WATCH.ix) h = Math.imul(h ^ A[i], 0x01000193) >>> 0;
-  return h.toString(36);
+  const N = S.wholeNames?.() ?? []; if (!WATCH || WATCH.names !== N) WATCH = { names: N, ix: agreedOf(N) };
+  return foldWhole(A, WATCH.ix);
 }
 /** a quiet run of networked ticks begins / ends (a server between two state words, a client's walk of the ticks its server has confirmed) */
 export function netQuiet(g: Game, on: boolean): void { (g as unknown as Stepper).quietRun?.(on); }
@@ -64,3 +61,8 @@ export function netQuiet(g: Game, on: boolean): void { (g as unknown as Stepper)
  *  table, a page has it up and a host that draws nothing may have put it down, and in the game that steps the rows are not picture alone (a debris
  *  chunk and a glass plate are rows of the game's box table; a storm's wind source). So the stand does not leave it to how a host happened to be stood */
 export function netStand(g: Game): void { for (const s of g.seats) s.remote = true; dressAll(true); }
+/** where a seat's man would be after records the game has not had, off a host's own copy of the game (foresee.ts) */
+export function netAhead(seat: Seat, cmds: readonly WireCmd[]): Ahead {
+  const pl = seat.view.player, ch = pl.char, path: [number, number, number][] = [], three = (p: ArrayLike<number>): [number, number, number] => [p[0], p[1], p[2]], now = walkAhead(seat, cmds.map(fromWire), 1 / NET.hz, path as never);
+  return { id: ch.id, down: pl.down, at: three(ch.pos), yaw: ch.aimYaw, wall: pl.wall ? [pl.wall.n[0], pl.wall.n[2]] : null, free: now.free, pos: three(now.pos), aimYaw: now.aimYaw, follow: three(now.follow), aim: now.aim ? three(now.aim) : null, path };
+}
