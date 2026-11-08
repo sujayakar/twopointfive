@@ -139,6 +139,12 @@ const probeNames = [...known].filter(n => ran.has(n)).sort(), heldNames = probeN
   const files = readdirSync(HERE).filter(f => f.endsWith('-check.ts')), here = new Set(BREAK ? [...files, 'no-such-check.ts'] : files), code = srcLines.map(l => l.replace(/(^|\s)\/\/.*$/, '')).join('\n'), lost = [...here].filter(f => !code.includes(f) && !(f in UNRUN)).sort(), dead = Object.keys(UNRUN).filter(f => !files.includes(f) || code.includes(f));
   line(!lost.length && !dead.length, '(10) every check file of tools/qa is run by a line of the runner, or is listed with the reason it is not', lost.length || dead.length ? `run by nothing: ${few(lost, 8) || 'none'} · listed and run, or gone: ${few(dead, 8) || 'none'}` : `${files.length} files, ${Object.keys(UNRUN).length} run by hand`); }
 
+// (10) AND EVERY PAGE SCRIPT: a row of pages.ts's table, or required by one (writetrap.cjs).
+{ const { PAGES } = await import('./pages.ts'), rows = new Set(PAGES.map(r => r[0])), scripts = readdirSync(HERE).filter(f => f.endsWith('.cjs'));
+  const required = new Set(scripts.filter(f => rows.has(f)).flatMap(f => [...readFileSync(resolve(HERE, f), 'utf8').matchAll(/require\(['"]\.\/([\w-]+\.cjs)['"]\)/g)].map(m => m[1])));
+  const lost = [...scripts, ...(BREAK ? ['no-such-page.cjs'] : [])].filter(f => !rows.has(f) && !required.has(f)), dead = [...rows].filter(f => !scripts.includes(f));
+  line(!lost.length && !dead.length, '(10) every tools/qa/*.cjs is a row of pages.ts or required by one', lost.length || dead.length ? `no row: ${few(lost, 8)} · a row with no file: ${few(dead, 8)}` : `${scripts.length} scripts`); }
+
 // (9) A BREAK WORD IS SAID, AND WHETHER IT BIT (stand.ts BREAK_WORDS, the close of probes.ts): the runner's own green and red self tests in children started
 // with a word no check reads. Green: DID NOT BITE. Red, no row: named as the word's to explain. WHAT (9) CANNOT SEE: the third reading, BITE NOT SHOWN, which
 // wants a probe that is red by a row (a game stood up, and a list that changes). HOLDS_BREAK: the children are started without the word.
