@@ -45,6 +45,7 @@ import { DrawReach, doorways } from '../draw/reach';
 import { DrawMen } from '../draw/men';
 import { DrawLights } from '../draw/lights';
 import { DrawDecals } from '../draw/marks';
+import { dustFrom, trafficFrom } from '../draw/levellook';
 import { DrawWorld } from '../draw/world';
 import { lookNumbers } from '../draw/look';
 import { sampleHand } from '../draw/hand';
@@ -95,7 +96,7 @@ async function main(): Promise<void> {
   let world!: DrawWorld; const engine = new Engine(gpu, undefined, d => world = new DrawWorld(d, D)), smoke = new SmokeSystem(engine);
   engine.setParticles(new Particles(engine.device, engine.sceneLayout));
   engine.setSmoke(smoke.binding); engine.afterSubmit.push(() => smoke.afterSubmit());
-  engine.setDecals(new DrawDecals(engine.device, D));
+  engine.setDecals(new DrawDecals(engine.device, D)); trafficFrom(engine.gbuffer, D);
   engine.settings.markingTexel = D.f[sky() + Sky.markTexel] || MARKING_TEXEL;
   pipelineProgress.onChange = () => say(`compiling shaders ${pipelineProgress.done} / ${pipelineProgress.total} …`);
   // the men: the mesh and its skinning, the tree that shadows him, the cones the rays meet of him
@@ -189,7 +190,7 @@ async function main(): Promise<void> {
     // (the run's end card, once each time one is due; a restart or a load is another end to come)
     { const e = D.u[view() + View.ended]; if (e !== ended) { ended = e; if (e) onEnded(); } }
     D.fresh();
-    skyFrom(engine, D); fogFrom(fog, D); rimsFrom(rims, D, dt); weather.frame(cam);
+    skyFrom(engine, D); fogFrom(fog, D); rimsFrom(rims, D, dt); weather.frame(cam); dustFrom(engine.particles!, D);
     { const o = view(); engine.settings.nvAmount = D.f[o + View.night]; engine.settings.hitFlash = D.f[o + View.hit]; }
     game.look(lookNumbers(engine.settings, engine.world, !!ch.cast));
     const t1 = performance.now();
