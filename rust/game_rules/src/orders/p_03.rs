@@ -24,10 +24,10 @@ fn at_of(t: &OrderTarget) -> V3 {
     }
 }
 /// `recipients(t)` with its `who` left to the standing choice
-fn recipients_of(g: &Game, seat: &crate::seats::SeatRef, t: &OrderTarget) -> Vec<GuardId> {
+pub(crate) fn recipients_of(g: &Game, seat: &crate::seats::SeatRef, t: &OrderTarget) -> Vec<GuardId> {
     squad_orders_recipients(g, seat, Some(t), None)
 }
-fn on(b: Option<bool>) -> bool {
+pub(crate) fn on(b: Option<bool>) -> bool {
     b.unwrap_or(false)
 }
 /// `if (word)` of an optional string
@@ -86,216 +86,15 @@ fn drop_stock_word(s: &str) -> &str {
 fn seam_box_owner(g: &Game, b: AnyBoxId) -> f64 { g.tab[b].owner }
 /// `b.flags`. As seam_box_owner
 fn seam_box_flags(g: &Game, b: AnyBoxId) -> f64 { g.tab[b].flags }
-// BRING-UP: THE DOOR ROWS' CLOSURES (doortools.ts:808-846 the constructor's rows, :864 thrRows on the page's `outsidePlain`, :908-938 sync's `go` and the big
-// slot's row). The skeleton has their arms and no named function for their bodies, so the first door order given stopped here (room-clear-four tick 1009, 'bangClear').
-// SKELETON-GAP: a public name in doortools for each Door* arm's body (label / valid / issue), as squadthrow has row_label / row_valid / row_issue; then these are calls.
-fn tt_of(t: &OrderTarget) -> crate::doortools::DoorToolsThresholdThenT {
-    use crate::doortools::DoorToolsThresholdThenT as T;
-    match t { OrderTarget::Floor(x) => T::Floor(x.clone()), OrderTarget::Door(x) => T::Door(x.clone()), OrderTarget::None(x) => T::None(x.clone()), OrderTarget::Foe(x) => T::Foe(x.clone()) }
-}
-fn ct_of(t: &OrderTarget) -> crate::doortools::DoorToolsCanThresholdThenT {
-    use crate::doortools::DoorToolsCanThresholdThenT as T;
-    match t { OrderTarget::Floor(x) => T::Floor(x.clone()), OrderTarget::Door(x) => T::Door(x.clone()), OrderTarget::None(x) => T::None(x.clone()), OrderTarget::Foe(x) => T::Foe(x.clone()) }
-}
-/// `stackable(t, men)` as a row's `valid` answers it
-fn door_stackable(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
-    match crate::doortools::door_tools_stackable(g, t, men) {
-        crate::doortools::DoorToolsStackable::Text(w) => Err(Some(w)),
-        crate::doortools::DoorToolsStackable::Bool(true) => Ok(()),
-        crate::doortools::DoorToolsStackable::Bool(false) => Err(None),
-    }
-}
-/// `canThresholdThen(what, t, men)` as a row's `valid` answers it
-fn door_can_then(g: &mut Game, what: crate::doortools::DoorToolsCanThresholdThenWhat, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
-    match crate::doortools::door_tools_can_threshold_then(g, what, Some(&ct_of(t)), men) {
-        crate::doortools::DoorToolsCanThresholdThen::Text(w) => Err(Some(w)),
-        crate::doortools::DoorToolsCanThresholdThen::Bool(true) => Ok(()),
-        crate::doortools::DoorToolsCanThresholdThen::Bool(false) => Err(None),
-    }
-}
-/// `who === 'you' ? wg(…) : `${who} is behind that door.``
-fn behind_words(g: &Game, who: String) -> String {
-    if who == "you" { let (now, was) = (String::from("you're behind that door."), String::from("you are behind that door.")); crate::words::wg(g, &now, &was) } else { format!("{} is behind that door.", who) }
-}
-fn seam_arm_label(g: &mut Game, arm: &OrderLabel, t: &OrderTarget) -> String {
-    use crate::doortools::DoorToolsEntryVerb as Verb;
-    match arm {
-        // doortools.ts:808 `held(t) ? 'go in and clear · no bang' : `${this.entryVerb(t)} and clear${known(t)}``
-        OrderLabel::DoorOpenClear => {
-            let men = recipients_of(g, &crate::seats::here(g), t);
-            if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, &men) { return String::from("go in and clear · no bang"); }
-            let verb = crate::doortools::door_tools_entry_verb(g, t);
-            let known = match t { OrderTarget::Door(x) if crate::doortools::door_tools_entry_verb(g, t) != Verb::Open => format!(" · {}", crate::doortools::door_tools_shut_why(g, x.door)), _ => String::new() };
-            format!("{} and clear{}", verb.as_str(), known)
-        }
-        // doortools.ts:812
-        OrderLabel::DoorBangClear => {
-            let men = recipients_of(g, &crate::seats::here(g), t);
-            if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, &men) { return format!("bang, then go in · {} left", g.door_tools.bangs); }
-            let first = if crate::doortools::door_tools_entry_verb(g, t) == Verb::Open { String::from("bang") } else { format!("{}, bang", crate::doortools::door_tools_entry_verb(g, t).as_str()) };
-            format!("{} and clear · {} left", first, g.door_tools.bangs)
-        }
-        // doortools.ts:819 (OWNCHARGE.on is on on the page)
-        OrderLabel::DoorCharge => {
-            if let OrderTarget::Door(x) = t {
-                if crate::doortools::door_tools_loose_on(g, &crate::seats::here(g), t) { return String::from("stand off · in behind the charge"); }
-                if crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), x.door).is_some() {
-                    let c = crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), x.door).unwrap();
-                    return format!("blow the charge{}", crate::doortools::door_tools_close_words(g, c));
-                }
-            }
-            format!("breach with a charge · {} left", g.door_tools.charges)
-        }
-        // doortools.ts:838
-        OrderLabel::DoorFragClear => format!("frag and clear · {} left", g.door_tools.frags),
-        // doortools.ts:864 (thrRows on `outsidePlain`)
-        OrderLabel::DoorThresholdHold => {
-            let men = recipients_of(g, &crate::seats::here(g), t);
-            String::from(if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, &men) { "clear from outside · holding it" } else { "clear from outside" })
-        }
-        // doortools.ts:908 / :916
-        OrderLabel::DoorGoSmall => { let men = recipients_of(g, &crate::seats::here(g), t); let w = crate::doortools::door_tools_stack_words(g, &crate::seats::here(g), &men); if w.is_empty() { String::from("go") } else { format!("go · {}", w) } }
-        OrderLabel::DoorGoBig => { let men = recipients_of(g, &crate::seats::here(g), t); let w = crate::doortools::door_tools_waiting_words(g, &crate::seats::here(g), &men); if w.is_empty() { String::from("go") } else { format!("go · {}", w) } }
-        // doortools.ts:929
-        OrderLabel::DoorBigClear => { let men = recipients_of(g, &crate::seats::here(g), t); format!("{} and clear", crate::doortools::door_tools_big_word(g, t, &men).as_str()) }
-        // doortools.ts:935
-        OrderLabel::DoorThrWord => {
-            if !squad_orders_big(g, &crate::seats::here(g)) {
-                return String::from(if crate::silent::silent_no_cans(g, &crate::seats::here(g)) || crate::doortools::door_tools_word_quiet(g, &crate::seats::here(g)) { "go · step in · no bang" } else { "go · bang the blind pockets, step in" });
-            }
-            let men = recipients_of(g, &crate::seats::here(g), t); let w = crate::doortools::door_tools_waiting_words(g, &crate::seats::here(g), &men);
-            if w.is_empty() { String::from("go") } else { format!("go · {}", w) }
-        }
-        // (the arms order_label takes itself, named so that a new row of the enum is a build error here and never a stop in play)
-        OrderLabel::Text { .. } | OrderLabel::WallRow | OrderLabel::ThrowRow { .. } | OrderLabel::ThrowOpen | OrderLabel::Row(_) | OrderLabel::Work | OrderLabel::Smoke | OrderLabel::PairGo => unreachable!("order_label answers this arm itself"),
-    }
-}
-/// Err(None): false, Err(Some): the word for why not
-fn seam_arm_valid(g: &mut Game, arm: &OrderValid, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
-    use crate::doortools::DoorToolsCanThresholdThenWhat as What;
-    match arm {
-        // doortools.ts:810
-        OrderValid::DoorOpenClear => if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, men) { door_can_then(g, What::Step, t, men) } else { door_stackable(g, t, men) },
-        // doortools.ts:814-817
-        OrderValid::DoorBangClear => {
-            if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, men) { return door_can_then(g, What::Bang, t, men); }
-            if g.door_tools.bangs <= 0.0 { return Err(Some(String::from("no bangs left."))); }
-            let who = match t { OrderTarget::Door(x) => crate::doortools::door_tools_can_behind(g, x.door, x.side, men), _ => None };
-            if let Some(who) = who { return Err(Some(behind_words(g, who))); }
-            door_stackable(g, t, men)
-        }
-        // doortools.ts:821-830
-        OrderValid::DoorCharge => {
-            let OrderTarget::Door(x) = t else { return Err(None) };
-            let fits = |r: crate::doortools::DoorToolsStandoffFits| match r { crate::doortools::DoorToolsStandoffFits::Text(w) => Err(Some(w)), crate::doortools::DoorToolsStandoffFits::Bool(true) => Ok(()), crate::doortools::DoorToolsStandoffFits::Bool(false) => Err(None) };
-            if crate::doortools::door_tools_loose_on(g, &crate::seats::here(g), t) { return fits(crate::doortools::door_tools_standoff_fits(g, men, t, Some(true))); }
-            if crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), x.door).is_some() { return Ok(()); }
-            if on(g.dr[x.door].def.steel) { return Err(Some(String::from("steel. a charge won't cut it."))); }
-            let open = crate::doortools::door_tools_known_open(g, x.door);
-            if open { return Err(Some(String::from("it's open."))); }
-            if g.door_tools.charges <= 0.0 { return Err(Some(String::from("no charges left."))); }
-            let ops = g.door_tools.ops.clone();
-            if ops.iter().any(|&o| { let op = &g.tab.doortools_door_op[o]; op.kind == crate::doortools::DoorToolKind::Charge && op.door == x.door && op.phase == crate::doortools::Phase::Place }) { return Err(Some(String::from("already on it."))); }
-            fits(crate::doortools::door_tools_standoff_fits(g, men, t, None))
-        }
-        // doortools.ts:839-842 (FRAG.on is on on the page)
-        OrderValid::DoorFragClear => {
-            if g.door_tools.frags <= 0.0 { return Err(Some(String::from("no frags left."))); }
-            let hostages = g.rescue.hostages.clone();
-            if hostages.iter().any(|&h| g.gd[h].state != crate::game::GuardState::Dead) { return Err(Some(String::from("not with hostages on the floor."))); }
-            let mate = match t { OrderTarget::Door(x) => crate::doortools::door_tools_frag_behind(g, x.door, x.side, men), _ => None };
-            if let Some(mate) = mate { return Err(Some(behind_words(g, mate))); }
-            door_stackable(g, t, men)
-        }
-        // doortools.ts:865
-        OrderValid::DoorThresholdHold => {
-            if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, men) { return Err(Some(String::from("already holding it."))); }
-            match crate::doortools::door_tools_can_threshold(g, t, men) {
-                crate::doortools::DoorToolsCanThreshold::Text(w) => Err(Some(w)),
-                crate::doortools::DoorToolsCanThreshold::Bool(true) => Ok(()),
-                crate::doortools::DoorToolsCanThreshold::Bool(false) => Err(None),
-            }
-        }
-        // doortools.ts:910 / :918
-        OrderValid::DoorGoSmall => if !crate::doortools::door_tools_stack_waits(g, &crate::seats::here(g), men).is_empty() || !crate::doortools::door_tools_frag_held(g, men).is_empty() { Ok(()) } else { Err(Some(String::from("nobody waiting."))) },
-        OrderValid::DoorGoBig => if !crate::doortools::door_tools_waiting_any(g, &crate::seats::here(g), men).is_empty() || !crate::doortools::door_tools_frag_held(g, men).is_empty() { Ok(()) } else { Err(Some(String::from("nobody waiting."))) },
-        // doortools.ts:931-936 (SHOTGUN.on, SILENT.toolsLoud and DOORTOOLS.testDoor are on on the page: the silent refusal is not on its path)
-        OrderValid::DoorBigClear => {
-            let OrderTarget::Door(x) = t else { return Err(None) };
-            if crate::doortools::is_open(g, x.door) { return Err(Some(String::from("it's open."))); }
-            if on(g.dr[x.door].def.steel) { return Err(Some(String::from("steel. no way through."))); }
-            let mut any = false;
-            for &m in men { if crate::bigkit::carries_hammer(g, m) || (g.gd[m].state != crate::game::GuardState::Dead && crate::kit::kit_big(g, m) == crate::kit::BigKit::Shotgun) { any = true; break; } }
-            if !any { return Err(Some(String::from("nobody here carries one."))); }
-            if crate::doors::door_locked(g, x.door) && g.dr[x.door].lock_id.starts_with("wedge:") {
-                let mut hammer = false;
-                for &m in men { if crate::bigkit::carries_hammer(g, m) { hammer = true; break; } }
-                if !hammer && crate::doortools::door_tools_known_shut(g, x.door, x.side) {
-                    let (now, was) = (String::from("it's wedged. a shell won't open it."), String::from("wedged. no shell shifts it."));
-                    return Err(Some(crate::words::wg(g, &now, &was)));
-                }
-            }
-            door_stackable(g, t, men)
-        }
-        // doortools.ts:937 `this.heldOn(t, men).some(op => !op.word) || wg(…)`
-        OrderValid::DoorThrWord => {
-            let ops = crate::doortools::door_tools_held_on(g, &crate::seats::here(g), t, men);
-            if ops.iter().any(|&o| g.tab.doortools_door_op[o].word.is_none()) { return Ok(()); }
-            let (now, was) = (String::from("nobody's holding that door."), String::from("nobody is holding that door."));
-            Err(Some(crate::words::wg(g, &now, &was)))
-        }
-        // (the arms order_valid takes itself, named so that a new row of the enum is a build error here and never a stop in play)
-        OrderValid::WallRow | OrderValid::ShutDoor | OrderValid::ThrowRow { .. } | OrderValid::Wand | OrderValid::Row(_) | OrderValid::Work | OrderValid::Smoke | OrderValid::PairTake | OrderValid::PairWatch | OrderValid::PairGo => unreachable!("order_valid answers this arm itself"),
-    }
-}
 /// Some: refused, in those words
 fn seam_arm_issue(g: &mut Game, arm: &OrderIssue, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
-    use crate::doortools::{DoorToolKind as Kind, DoorToolsIssue, DoorToolsThenOnWord, DoorToolsThenOnWordWhat, DoorToolsThresholdThen, DoorToolsThresholdThenWhat};
-    let on_word = o.map_or(false, |o| on(o.on_word));
-    let issued = |r: DoorToolsIssue| match r { DoorToolsIssue::Text(w) => Some(w), DoorToolsIssue::Arm1(()) => None };
-    // `this.heldPlain(t, men) ? (o?.onWord ? this.thenOnWord(what, men, t) : this.thresholdThen(what, men, t)) : this.issue(kind, men, t, !!o?.onWord)`   (doortools.ts:811, :818)
-    fn entry(g: &mut Game, bang: bool, men: &[GuardId], t: &OrderTarget, on_word: bool) -> Option<String> {
-        if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, men) {
-            if on_word {
-                return match crate::doortools::door_tools_then_on_word(g, if bang { DoorToolsThenOnWordWhat::Bang } else { DoorToolsThenOnWordWhat::Step }, men, t) { DoorToolsThenOnWord::Text(w) => Some(w), DoorToolsThenOnWord::Arm1(()) => None };
-            }
-            return match crate::doortools::door_tools_threshold_then(g, if bang { DoorToolsThresholdThenWhat::Bang } else { DoorToolsThresholdThenWhat::Step }, men, Some(&tt_of(t))) { DoorToolsThresholdThen::Text(w) => Some(w), DoorToolsThresholdThen::Arm1(()) => None };
-        }
-        match crate::doortools::door_tools_issue(g, if bang { Kind::BangClear } else { Kind::OpenClear }, men, t, Some(on_word)) { DoorToolsIssue::Text(w) => Some(w), DoorToolsIssue::Arm1(()) => None }
-    }
     match arm {
-        OrderIssue::DoorOpenClear => entry(g, false, men, t, on_word),
-        OrderIssue::DoorBangClear => entry(g, true, men, t, on_word),
-        // doortools.ts:831
-        OrderIssue::DoorCharge => {
-            let OrderTarget::Door(x) = t else { return Some(String::from("no door")) };
-            let started = |r: crate::doortools::DoorToolsStartCharge| match r { crate::doortools::DoorToolsStartCharge::Text(w) => Some(w), crate::doortools::DoorToolsStartCharge::Arm1(()) => None };
-            if crate::doortools::door_tools_loose_on(g, &crate::seats::here(g), t) { return started(crate::doortools::door_tools_start_charge(g, men, t, Some(true))); }
-            if let Some(c) = crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), x.door) { crate::doortools::door_tools_trigger(g, Some(c)); return None; }
-            started(crate::doortools::door_tools_start_charge(g, men, t, None))
-        }
-        // doortools.ts:843 `this.fragNext = true; try { return this.issue('bangClear', …) } finally { this.fragNext = false }`
-        OrderIssue::DoorFragClear => { g.door_tools.frag_next = true; let r = crate::doortools::door_tools_issue(g, Kind::BangClear, men, t, Some(on_word)); g.door_tools.frag_next = false; issued(r) }
-        // doortools.ts:865
-        OrderIssue::DoorThresholdHold => match crate::doortools::door_tools_threshold_hold(g, men, t, Some(on_word)) { crate::doortools::DoorToolsThresholdHold::Text(w) => Some(w), crate::doortools::DoorToolsThresholdHold::Arm1(()) => None },
-        // doortools.ts:910 `this.goMen(men, this.stackWaits(men)) ?? undefined`
-        OrderIssue::DoorGoSmall => {
-            let only: Vec<crate::doortools::DoorToolsGoMenOnlyItem> = crate::doortools::door_tools_stack_waits(g, &crate::seats::here(g), men).into_iter().map(|x| crate::doortools::DoorToolsGoMenOnlyItem { stack: x.stack, men: x.men }).collect();
-            crate::doortools::door_tools_go_men(g, men, Some(&only))
-        }
-        // doortools.ts:918 `{ this.goMen(men); }`
-        OrderIssue::DoorGoBig => { crate::doortools::door_tools_go_men(g, men, None); None }
-        // doortools.ts:937
-        OrderIssue::DoorBigClear => { g.door_tools.big_next = true; let r = crate::doortools::door_tools_issue(g, Kind::OpenClear, men, t, Some(on_word)); g.door_tools.big_next = false; issued(r) }
-        // doortools.ts:938 `(S.big ? this.goMen(men) : this.pairWord(men) ? null : 'nobody\'s waiting for you to say go.') ?? undefined`
-        OrderIssue::DoorThrWord => if squad_orders_big(g, &crate::seats::here(g)) { crate::doortools::door_tools_go_men(g, men, None) } else if crate::doortools::door_tools_pair_word(g, men) { None } else { Some(String::from("nobody's waiting for you to say go.")) },
         // squad40.ts:208, squadsmoke.ts:135, pairorders.ts:211 / :227 / :240. These bodies are not in the skeleton's sig.rs: the paths resolve only in the joined crate
         OrderIssue::Smoke => crate::squadsmoke::p_01::row_smoke_issue(g, men, t, o),
         OrderIssue::PairTake { mode } => crate::pairorders::p_01::take_issue(g, *mode, men, t),
         OrderIssue::PairWatch => crate::pairorders::p_01::watch_issue(g, men, t),
         OrderIssue::PairDark => crate::pairorders::p_01::dark_issue(g, men, t),
-        // (the arms order_issue takes itself, named so that a new row of the enum is a build error here and never a stop in play)
-        OrderIssue::Nothing | OrderIssue::Silent | OrderIssue::Loud | OrderIssue::ShutDoor | OrderIssue::ThrowRow { .. } | OrderIssue::WallRow | OrderIssue::Wand | OrderIssue::Work | OrderIssue::PairGo | OrderIssue::Row(_) => unreachable!("order_issue answers this arm itself"),
+        _ => unreachable!("order_issue answers this arm itself"),
     }
 }
 
@@ -334,7 +133,6 @@ pub fn order_label(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::or
             }
             format!("mark · {}", parts.join(" · "))
         }
-        arm => seam_arm_label(g, &arm, t),
     }
 }
 /// `d.can(S, gd, t)`, the match over OrderCan: None he can, or the row has no `can`; Some the word he says (orders.ts:850, :868)
@@ -379,21 +177,6 @@ pub fn order_only(g: &mut crate::game::Game, d: OrdersOrderDefId, men: &[GuardId
     let Some(arm) = g.tab.orders_order_def[d].only.clone() else { return men.to_vec() };
     let at = at_of(t);
     match arm {
-        OrderOnly::DoorHeldOrAll => if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, men) { crate::doortools::door_tools_held_men(g, &crate::seats::here(g), men, t) } else { men.to_vec() },
-        OrderOnly::DoorGoSmall => {
-            let mut waits: Vec<GuardId> = Vec::new();
-            for x in crate::doortools::door_tools_stack_waits(g, &crate::seats::here(g), men) { waits.extend(x.men); }
-            let held = crate::doortools::door_tools_frag_held(g, men);
-            men.iter().copied().filter(|m| waits.contains(m) || held.iter().any(|&o| g.tab.doortools_door_op[o].men.contains(m))).collect()
-        }
-        OrderOnly::DoorGoBig => {
-            let waits = crate::doortools::door_tools_waiting_men(g, men);
-            if !waits.is_empty() { return waits; }
-            let held = crate::doortools::door_tools_frag_held(g, men);
-            men.iter().copied().filter(|m| held.iter().any(|&o| g.tab.doortools_door_op[o].men.contains(m))).collect()
-        }
-        // doortools.ts:936 `S.big ? this.waitingMen(men) : this.heldMen(men, t)`
-        OrderOnly::DoorThrWord => if squad_orders_big(g, &crate::seats::here(g)) { crate::doortools::door_tools_waiting_men(g, men) } else { crate::doortools::door_tools_held_men(g, &crate::seats::here(g), men, t) },
         OrderOnly::SilentAll => squad_orders_men(g, &crate::seats::here(g), None, None),
         OrderOnly::ShutDoor => {
             let OrderTarget::Door(x) = t else { return men.to_vec() };
@@ -481,7 +264,6 @@ pub fn order_valid(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::or
             let (now, was) = (String::from("nobody's waiting on your mark."), String::from("nobody is waiting on your mark."));
             Err(Some(crate::words::wg(g, &now, &was)))
         }
-        arm => seam_arm_valid(g, &arm, t, men),
     }
 }
 /// `d.issue(S, men, t, opts)`, the match over OrderIssue: Some is the refusal, the string the closure returned (orders.ts:877)

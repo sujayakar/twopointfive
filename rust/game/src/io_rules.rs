@@ -34,17 +34,11 @@ pub fn deal_closures(g: &mut crate::game::Game) {
     for id in g.tab.orders_order_def.ids().collect::<Vec<_>>() {
         let d = &mut g.tab.orders_order_def[id];
         match d.id.as_str() {
-            "tools" => { d.label = OrderLabel::Text { text: String::from("door tools") }; d.can = None; d.only = None; d.valid = None; d.issue = OrderIssue::Nothing; d.tick = None; d.gone = None; }
-            "held" => { d.label = OrderLabel::Text { text: String::from("threshold held") }; d.can = None; d.only = None; d.valid = None; d.issue = OrderIssue::Nothing; d.tick = None; d.gone = None; if let Some(s) = d.stands_in.as_mut() { s.when = OrderWhen::DoorHeld; } }
+            "held" => { let data = d.clone(); *d = rows::def(rows::by_id("held").unwrap(), data); d.gone = None; if let Some(s) = d.stands_in.as_mut() { s.when = OrderWhen::DoorHeld; } }
             "walltools" => { d.label = OrderLabel::Text { text: String::from("wall tools") }; d.can = None; d.only = None; d.valid = None; d.issue = OrderIssue::Nothing; d.tick = None; d.gone = None; }
             "throwThere" => { d.label = OrderLabel::ThrowOpen; d.can = None; d.only = None; d.valid = None; d.issue = OrderIssue::Nothing; d.tick = None; d.gone = None; }
-            "openClear" => { d.label = OrderLabel::DoorOpenClear; d.can = None; d.only = Some(OrderOnly::DoorHeldOrAll); d.valid = Some(OrderValid::DoorOpenClear); d.issue = OrderIssue::DoorOpenClear; d.tick = None; d.gone = None; }
-            "bangClear" => { d.label = OrderLabel::DoorBangClear; d.can = None; d.only = Some(OrderOnly::DoorHeldOrAll); d.valid = Some(OrderValid::DoorBangClear); d.issue = OrderIssue::DoorBangClear; d.tick = None; d.gone = None; }
-            "charge" => { d.label = OrderLabel::DoorCharge; d.can = None; d.only = None; d.valid = Some(OrderValid::DoorCharge); d.issue = OrderIssue::DoorCharge; d.tick = None; d.gone = Some(OrderGone::DoorCharge); }
-            "fragClear" => { d.label = OrderLabel::DoorFragClear; d.can = None; d.only = None; d.valid = Some(OrderValid::DoorFragClear); d.issue = OrderIssue::DoorFragClear; d.tick = None; d.gone = None; }
-            "thresholdHold" => { d.label = OrderLabel::DoorThresholdHold; d.can = None; d.only = None; d.valid = Some(OrderValid::DoorThresholdHold); d.issue = OrderIssue::DoorThresholdHold; d.tick = None; d.gone = None; }
-            "bigClear" => { d.label = OrderLabel::DoorBigClear; d.can = None; d.only = None; d.valid = Some(OrderValid::DoorBigClear); d.issue = OrderIssue::DoorBigClear; d.tick = None; d.gone = Some(OrderGone::DoorBigClear); }
-            "thrWord" => { d.label = OrderLabel::DoorThrWord; d.can = None; d.only = Some(OrderOnly::DoorThrWord); d.valid = Some(OrderValid::DoorThrWord); d.issue = OrderIssue::DoorThrWord; d.tick = None; d.gone = None; }
+            "charge" => { let data = d.clone(); *d = rows::def(rows::by_id("charge").unwrap(), data); d.gone = Some(OrderGone::DoorCharge); }
+            "bigClear" => { let data = d.clone(); *d = rows::def(rows::by_id("bigClear").unwrap(), data); d.gone = Some(OrderGone::DoorBigClear); }
             "shutDoor" => { d.label = OrderLabel::Text { text: String::from("shut that door") }; d.can = None; d.only = Some(OrderOnly::ShutDoor); d.valid = Some(OrderValid::ShutDoor); d.issue = OrderIssue::ShutDoor; d.tick = Some(OrderTick::ShutDoor); d.gone = None; if let Some(s) = d.stands_in.as_mut() { s.when = OrderWhen::ShutDoor; } }
             "work" => { d.label = OrderLabel::Work; d.can = Some(OrderCan::Work); d.only = Some(OrderOnly::Work); d.valid = Some(OrderValid::Work); d.issue = OrderIssue::Work; d.tick = Some(OrderTick::Work); d.gone = None; }
             "wallCharge" => { d.label = OrderLabel::WallRow; d.can = Some(OrderCan::WallRow); d.only = None; d.valid = Some(OrderValid::WallRow); d.issue = OrderIssue::WallRow; d.tick = None; d.gone = Some(OrderGone::WallRow); }
@@ -59,7 +53,7 @@ pub fn deal_closures(g: &mut crate::game::Game) {
             "pairWatch" => { d.label = OrderLabel::Text { text: String::from("watch him") }; d.can = Some(OrderCan::PairWatch); d.only = None; d.valid = Some(OrderValid::PairWatch); d.issue = OrderIssue::PairWatch; d.tick = Some(OrderTick::PairWatch); d.gone = None; }
             "pairDark" => { d.label = OrderLabel::Text { text: String::from("move there · hold in the dark") }; d.can = Some(OrderCan::PairDark); d.only = None; d.valid = None; d.issue = OrderIssue::PairDark; d.tick = Some(OrderTick::PairDark); d.gone = None; if let Some(s) = d.stands_in.as_mut() { s.when = OrderWhen::PairDark; } }
             "pairGo" => { d.label = OrderLabel::PairGo; d.can = None; d.only = Some(OrderOnly::PairGo); d.valid = Some(OrderValid::PairGo); d.issue = OrderIssue::PairGo; d.tick = None; d.gone = None; }
-            "go" => { if small { d.label = OrderLabel::DoorGoSmall; d.only = Some(OrderOnly::DoorGoSmall); d.valid = Some(OrderValid::DoorGoSmall); d.issue = OrderIssue::DoorGoSmall; } else { d.label = OrderLabel::DoorGoBig; d.only = Some(OrderOnly::DoorGoBig); d.valid = Some(OrderValid::DoorGoBig); d.issue = OrderIssue::DoorGoBig; } }
+            "go" => { let data = d.clone(); *d = rows::def(if small { &rows::gosmall::ORDER } else { &rows::gobig::ORDER }, data); }
             other => { let Some(r) = rows::by_id(other) else { panic!("the order {} has no closures: it is neither an arm here nor a line of orders/rows", other) }; let data = d.clone(); *d = rows::def(r, data); d.gone = None; }
         }
     }
