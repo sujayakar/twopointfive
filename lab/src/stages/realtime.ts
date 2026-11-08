@@ -20,6 +20,7 @@ import blur from './blur.wgsl' with { type: 'text' };
 import air from './air.wgsl' with { type: 'text' };
 import airblur from './airblur.wgsl' with { type: 'text' };
 import resolve from './resolve.wgsl' with { type: 'text' };
+import { looseStages, LOOSE } from './loose';
 import { rainStages, rainKnobs } from './raindraw';
 import taau from './taau.wgsl' with { type: 'text' };
 import { glowStages } from './glow';
@@ -103,7 +104,7 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
     signals(g, lab) {
       g.signal('surf', 'rgba32uint', 'render', true).signal('aux', 'rgba16float', 'render').signal('emit', 'rgba16float', 'render').signal('front', 'rgba32uint', 'render');
       g.signal('vis', 'rgba16float', 'render').signal('lampU', 'rgba16float', 'render').signal('bounce', 'rgba16float', 'half').signal('mirror', 'rgba16float', 'half').signal('shine', 'rgba16float', 'half').signal('lampC', 'rgba16float', 'render').signal('air', 'rgba16float', 'half').signal('airA', 'rgba16float', 'half').signal('airB', 'rgba16float', 'half').signal('airD', 'rgba16float', 'half').signal('airH', 'rgba16float', 'half', true).signal('airM', 'rgba16float', 'half', true).signal('color', 'rgba16float', 'render');
-      lab.buffer('past', Math.max(1, lab.building.world.moving.length) * 64); lab.buffer('pastLeaves', Math.max(1, lab.building.world.instances.length) * 48); lab.uniform('changes', new Float32Array(36)); lab.uniform('taauK', new Float32Array(4)); const pl = new Float32Array(72), ps = lab.building.world.plumes.slice(0, 8); ps.forEach((p, i) => { pl.set([...p.at, p.r], i * 4); pl.set([p.h, p.k, 0, 0], 36 + i * 4); }); pl[32] = ps.length; lab.uniform('plumes', pl);
+      lab.buffer('past', Math.max(1, lab.building.world.moving.length) * 64); lab.buffer('pastLeaves', (Math.max(1, lab.building.world.instances.length) + LOOSE) * 48); lab.uniform('changes', new Float32Array(36)); lab.uniform('taauK', new Float32Array(4)); const pl = new Float32Array(72), ps = lab.building.world.plumes.slice(0, 8); ps.forEach((p, i) => { pl.set([...p.at, p.r], i * 4); pl.set([p.h, p.k, 0, 0], 36 + i * 4); }); pl[32] = ps.length; lab.uniform('plumes', pl);
     },
     stages(lab) {
       const g = lab.graph, c = { ...cache.bind, ...CHANGES };
@@ -112,7 +113,7 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
       const dVis = dn.stages({ signal: 'vis', div: 1, cap: 18, rounds: 3, fractions: true }, g), dB = dn.stages({ signal: 'bounce', div: 2, cap: 36, rounds: 4 }, g), dM = dn.stages({ signal: 'mirror', div: 2, cap: 40, rounds: 4, narrow: true }, g), dS = dn.stages({ signal: 'shine', div: 2, cap: 26, rounds: 2, narrow: true, layer: 1 }, g), u = up.stages(g); m.result = u.result;
       const rains = rainStages(lab, g); const glows = [...glowStages(g, u.result, 'rt'), ...exposeStages(lab, g, u.result, 'rtGlow2', 'rt')];
       return [
-        raster,
+        ...looseStages(lab, g), raster,
         S('first hit', surf, 'render', { id: 'idT', idClear: 'idC', depth: 'depthT' }, { outSurf: 'surf', outAux: 'aux', outEmit: 'emit', outFront: 'front' }, { past: ['past', 'array<vec4f>', 'read'], pastLeaves: ['pastLeaves', 'array<vec4f>', 'read'] }),
         S('water', waterpx, 'render', { idClear: 'idC', depth: 'depthT' }, { outSurf: 'surf', outAux: 'aux', outEmit: 'emit', outFront: 'front' }),
         ...cache.stages, ...lab.smoke.stages(g, c, cache.lib, bounceLib),

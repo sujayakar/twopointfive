@@ -111,3 +111,17 @@ export async function moving(lab: Lab, m: Method, ref: Method, w: number, h: num
   let mean = 0; for (const x of t) mean += x; const fl = mean / t.length * 0.02 + 1e-5, off = (q: Float32Array) => { const p = soft(q, w, h), v = new Float32Array(w * h); for (let i = 0; i < v.length; i++) { const o = i * 3; v[i] = Math.min(100, 100 * (Math.abs(p[o]! - t[o]!) + Math.abs(p[o + 1]! - t[o + 1]!) + Math.abs(p[o + 2]! - t[o + 2]!)) / (t[o]! + t[o + 1]! + t[o + 2]! + 3 * fl)); } return v; };
   const A = off(a), S = off(s); return { moving: byKind(A, kinds), still: byKind(S, kinds), maps: [A, S] };
 }
+
+/** HOW SOON IT IS RIGHT AGAIN: after the camera has turned for 90 frames and stopped, and after a door has been thrown open; mean % off the reference at these many frames on, by what a pixel shows, and
+ *  how many frames until it is within a tenth of where it ends */
+export const AFTER = [1, 2, 4, 8, 16, 32, 64, 128, 240];
+export async function converge(lab: Lab, m: Method, ref: Method, w: number, h: number, how: 'turn' | 'doors', paths = 400): Promise<{ at: Record<string, number[]>; frames: Record<string, number> }> {
+  const idle = () => lab.gpu.device.queue.onSubmittedWorkDone(), c = lab.camera, yaw = c.want.yaw, doors = lab.building.doors.map(d => d.open); await lab.use(m); lab.frameNo = 0; const set = (open: boolean) => { lab.building.doors.forEach((d, i) => { d.open = d.want = open ? 0.85 : 0; void i; }); lab.pose(); };
+  if (how === 'turn') { c.want.yaw = yaw - 0.36; c.snap(); } else set(false); for (let i = 0; i < 160; i++) { lab.draw(); if (i % 4 === 3) await idle(); }
+  if (how === 'turn') for (let i = 0; i < 90; i++) { c.want.yaw += 0.004; c.snap(); lab.draw(); if (i % 4 === 3) await idle(); } else set(true);
+  const pics: Float32Array[] = []; for (let i = 1; i <= AFTER[AFTER.length - 1]!; i++) { lab.draw(); await idle(); if (AFTER.includes(i)) pics.push(await picture(lab, m)); } const kinds = await kindsOf(lab, w, h);
+  await lab.use(ref); lab.frameNo = 0; for (let i = 0; i < paths; i++) { lab.draw(); if (i % 4 === 3) await idle(); } const t = soft(await picture(lab, ref), w, h); c.want.yaw = yaw; c.snap(); lab.building.doors.forEach((d, i) => { d.open = d.want = doors[i]!; }); lab.pose();
+  let mean = 0; for (const x of t) mean += x; const fl = mean / t.length * 0.02 + 1e-5, at: Record<string, number[]> = {}, frames: Record<string, number> = {};
+  for (const q of pics) { const p = soft(q, w, h), v = new Float32Array(w * h); for (let i = 0; i < v.length; i++) { const o = i * 3; v[i] = Math.min(100, 100 * (Math.abs(p[o]! - t[o]!) + Math.abs(p[o + 1]! - t[o + 1]!) + Math.abs(p[o + 2]! - t[o + 2]!)) / (t[o]! + t[o + 1]! + t[o + 2]! + 3 * fl)); } for (const [k, x] of Object.entries(byKind(v, kinds))) (at[k] ??= []).push(x.mean); }
+  for (const [k, l] of Object.entries(at)) { const end = l[l.length - 1]!, i = l.findIndex((x, n) => l.slice(n).every(y => y <= end * 1.1 + 0.2) && x >= 0); frames[k] = AFTER[Math.max(0, i)]!; } return { at, frames };
+}

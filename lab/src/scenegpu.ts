@@ -10,18 +10,20 @@ import type { V3 } from './math';
 import { cross, len, norm } from './math';
 import { blueNoise } from './noise';
 import { LM } from './lampmap';
+import { LOOSE } from './stages/loose';
 
 export class SceneGpu {
   readonly layout: GPUBindGroupLayout; private bg!: GPUBindGroup;
   readonly frame: GPUBuffer; readonly nodes: GPUBuffer; readonly pieces: GPUBuffer; private extra: GPUBuffer; readonly insts: GPUBuffer; readonly lamps: GPUBuffer; private openings: GPUBuffer; private mats: GPUBuffer;
   readonly per: [number, number, number, number]; readonly node0: [number, number, number, number]; readonly piece0: [number, number, number, number]; readonly stepOf: [number, number, number, number]; private moveTree: Bvh | null = null; private moveAge = 0; private instTree: Bvh | null = null; readonly lists: GPUBuffer; readonly leafDraws: { first: number; count: number; leaves: number }[] = []; readonly counts: { pieces: number; moving: number; leaves: number; instances: number };
   private clusterAt: { node: number; per: number; leaf: number }[] = []; private maxMoving: number; private maxInst: number; private nodeData: ArrayBuffer;
-  readonly lampOn: Float32Array; /** where the dice's blue noise starts in extra */ readonly noiseAt: number; readonly lampTex: GPUTexture; readonly smokeTex: GPUTexture; readonly smokePage: GPUTexture; readonly standing: Piece[];
+  readonly lampOn: Float32Array; /** where the dice's blue noise starts in extra */ readonly noiseAt: number; readonly lampTex: GPUTexture; readonly smokeTex: GPUTexture; readonly smokePage: GPUTexture; /** the one leaf every loose one is */ readonly looseLeaf: number = 0; readonly standing: Piece[];
   constructor(private g: Gpu, readonly world: World, sky: GPUTexture, caustic: GPUTexture) {
     const d = g.device, S = GPUBufferUsage.STORAGE, U = GPUBufferUsage.UNIFORM;
     // ---- what stands: pieces in the tree's order
     const sets = [world.pieces.filter(p => p.flags & F.CUT), world.pieces.filter(p => !(p.flags & F.CUT))], bs = sets.map(s => buildBvh(s.map(boundsOf), 2)), order = this.standing = sets.flatMap((s, k) => bs[k]!.order.map(i => s[i]!)); this.maxMoving = world.moving.length; this.maxInst = world.instances.length;
     // ---- leaves, planes, marks share one buffer
+    if (!world.clusters.some(c => c.leaves.length === 1)) world.clusters.push({ leaves: [{ at: [0, 0, 0], n: [0, 1, 0], t: [1, 0, 0], size: 1, tone: 0.55 }], kind: 0 });
     const packed = world.clusters.map(packCluster); let leafRows = 0; for (const p of packed) leafRows += p.data.byteLength / 16;
     const rows: number[] = [], planeAt = new Map<Piece, number>(), markAt = new Map<Piece, number>(); let row = leafRows;
     for (const p of [...order, ...world.moving]) { if (p.planes?.length) { planeAt.set(p, row); for (const [n, dd] of p.planes) { rows.push(...n, dd); row++; } } if (p.marks?.length) { markAt.set(p, row); for (const m of p.marks) { const a = artRect(m.art); rows.push(m.at[0], m.at[1], m.size[0], m.size[1], a[0], a[1], a[2], a[3], m.color[0], m.color[1], m.color[2], m.face); row += 3; } } }
@@ -38,9 +40,10 @@ export class SceneGpu {
     this.nodeData = new ArrayBuffer(n * 32); { const u = new Uint8Array(this.nodeData); u.set(new Uint8Array(bs[0]!.nodes), 0); u.set(new Uint8Array(bs[1]!.nodes), rest * 32); packed.forEach((p, i) => u.set(new Uint8Array(p.bvh.nodes), this.clusterAt[i]!.node * 32)); }
     this.nodes = buffer(g, 'nodes', new Uint8Array(this.nodeData), S);
     this.pieces = buffer(g, 'pieces', (order.length + Math.max(1, this.maxMoving)) * PIECE_FLOATS * 4, S);
-    this.insts = buffer(g, 'insts', Math.max(1, this.maxInst) * 64, S); this.lists = buffer(g, 'lists', (order.length + this.maxMoving + this.maxInst * 2 + 4) * 4, S); this.listData = new Uint32Array(order.length + this.maxMoving + this.maxInst * 2 + 4); this.box = new Float32Array(order.length * 5); order.forEach((p, i) => { const b = boundsOf(p); this.box.set([p.at[0], p.at[1], p.at[2], Math.hypot(...p.half), (b.mx[1] - b.mn[1]) / 2], i * 5); }); this.instData = new Float32Array(this.maxInst * 16);
+    this.insts = buffer(g, 'insts', (Math.max(1, this.maxInst) + LOOSE) * 64, S); this.lists = buffer(g, 'lists', (order.length + this.maxMoving + (this.maxInst + LOOSE) * 2 + 4) * 4, S); this.listData = new Uint32Array(order.length + this.maxMoving + (this.maxInst + LOOSE) * 2 + 4); this.box = new Float32Array(order.length * 5); order.forEach((p, i) => { const b = boundsOf(p); this.box.set([p.at[0], p.at[1], p.at[2], Math.hypot(...p.half), (b.mx[1] - b.mn[1]) / 2], i * 5); }); this.instData = new Float32Array(this.maxInst * 16);
     { const f = new Float32Array(order.length * PIECE_FLOATS), u = new Uint32Array(f.buffer); order.forEach((p, i) => packPiece(p, f, u, i * PIECE_FLOATS, planeAt.get(p) ?? 0, markAt.get(p) ?? 0)); d.queue.writeBuffer(this.pieces, 0, f); }
     this.planeAt = planeAt; this.markAt = markAt; this.per = [bs[0]!.perOctant, bs[1]!.perOctant, perMoving, perInst]; this.stepOf = [bs[0]!.perOctant, bs[1]!.perOctant, 0, 0]; this.node0 = [0, rest, movingAt, instAt]; this.piece0 = [0, sets[0]!.length, order.length, 0];
+    this.looseLeaf = leaf - 1;
     this.counts = { pieces: order.length, moving: this.maxMoving, leaves: leaf, instances: this.maxInst };
     // ---- the rest
     this.frame = buffer(g, 'frame', 512, U); this.lamps = buffer(g, 'lamps', 64 * 80, U); this.lampOn = new Float32Array(64).fill(1);
@@ -73,7 +76,7 @@ export class SceneGpu {
     const m = this.world.moving; if (this.moveTree) this.moveTree.order.forEach((src, i) => { const p = m[src]!, hy = Math.abs(p.rot[0][1]) * p.half[0] + Math.abs(p.rot[1][1]) * p.half[1] + Math.abs(p.rot[2][1]) * p.half[2]; put(p, this.piece0[2] + i, p.at[0], p.at[1], p.at[2], Math.hypot(...p.half), hy); });
     const D = this.listData; let o = 0; for (const k of ['plain', 'fancy', 'clear', 'clearFancy'] as const) { this.draws[k] = [o, L[k]!.length]; D.set(L[k]!, o); o += L[k]!.length; }
     this.leafDraws.length = this.sunDraws.length = 0; const wld = this.world, order = this.instTree?.order ?? [];
-    for (const leaves of new Set(wld.clusters.map(c => c.leaves.length))) { const all: number[] = [], near: number[] = []; order.forEach((src, i) => { const n = wld.instances[src]!, c = wld.clusters[n.cluster]!; if (c.leaves.length !== leaves) return; all.push(i); const a = this.posed[src]!.at, e = n.scale * (c.kind ? 2.1 : 1.22); if (((n.open && cut > OPEN_FLOOR) || a[1] - e < cut) && seen(a[0], a[1], a[2], e)) near.push(i); });
+    for (const leaves of new Set(wld.clusters.map(c => c.leaves.length))) { if (leaves === 1) { for (let i = 0; i < LOOSE; i++) D[o + i] = this.maxInst + i; this.leafDraws.push({ first: o, count: LOOSE, leaves }); this.sunDraws.push({ first: o, count: LOOSE, leaves }); o += LOOSE; continue; } const all: number[] = [], near: number[] = []; order.forEach((src, i) => { const n = wld.instances[src]!, c = wld.clusters[n.cluster]!; if (c.leaves.length !== leaves) return; all.push(i); const a = this.posed[src]!.at, e = n.scale * (c.kind ? 2.1 : 1.22); if (((n.open && cut > OPEN_FLOOR) || a[1] - e < cut) && seen(a[0], a[1], a[2], e)) near.push(i); });
       this.leafDraws.push({ first: o, count: near.length, leaves }); D.set(near, o); o += near.length; this.sunDraws.push({ first: o, count: all.length, leaves }); D.set(all, o); o += all.length; }
     this.g.device.queue.writeBuffer(this.lists, 0, D, 0, o);
   }
