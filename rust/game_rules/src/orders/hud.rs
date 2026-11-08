@@ -20,6 +20,7 @@ pub fn squad_view(g: &Game, seat: &SeatRef) -> Option<SquadView> {
         addressed: picked && to.contains(&gd),
         pair: if paired { g.gd[gd].unit.as_ref().and_then(|u| u.pair).map(pair_word) } else { None },
         down: g.gd[gd].state == crate::game::GuardState::Dead,
+        kit: String::from(crate::kit::kit_line(g, gd)),
     }).collect();
     let notes = seat.orders.notes.iter().flat_map(|&n| notes_of(g, seat, n)).collect();
     Some(SquadView {

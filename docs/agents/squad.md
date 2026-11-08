@@ -315,7 +315,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **An order's line starts on the leg he is on** (`floorplan.ts wayOf`; picture only, no switch). A way kept from a stride ago starts behind the
   man, so its line began "from the corner nearest him" of its first six: on a way that doubles back that skipped the corners between and the line cut
   the wall. Now from the end of the leg he is nearest on, looked for over the way's first two metres (`Leg.from` is where it was asked), the same way
-  `attention.ts attentionWay` draws a guard's thread. Checked by `probes.ts plan` on both stands; the doubling-back case itself has no line of its own
+  `ui/attentionviz.ts attentionWay` draws a guard's thread. Checked by `probes.ts plan` on both stands; the doubling-back case itself has no line of its own
   here (the attention thread's check plays it for its copy). THE KEPT LEGS ARE THE ASKER'S (2026-10-23): `floorplan.legs` was a side table of the game and its search ran on the
   grid's own tables, so a game drawn and one not drawn differed in the full state hash. Now `floorPlan(g, kept)` takes the asker's own store
   (`PlanKept`: the overlay's in `ui/planfloor.ts`, a check's own from `planKept()`; with none, nothing is kept past the one ask) and searches with
@@ -1299,7 +1299,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   checkpoint loads is not called; a roster stood up again under the same names is. NOT DONE: a line said on the screen whose man the camera
   then leaves moves to the near place with no click; a cue's own bubble (`cues.aside`) on a far teammate is drawn near and does not click.
   AT THE EDGE (`SQUADNET.edge`, `?netedge=0`, `TPS_NETEDGE=1`): his note on playing the first rule, "the off screen 'red two: moving' is nice,
-  but it should be more towards the edge of the screen". `squadnet.ts netPlace()` is the one place `bubbles.ts` asks where a far line goes:
+  but it should be more towards the edge of the screen". `ui/netplace.ts netPlace()` is the one place `bubbles.ts` asks where a far line goes:
   with the rule, where the straight way from you (the middle of the view while you are off it) to the man leaves the view, `SQUADNET.edgeIn`
   (0.04 of the view's shorter side, a slider under Tab ▸ 'Squad net') inside the border with the line's own box kept whole, or at him where
   he is inside that; off, `near` out from you and up a row from a taken one, as it was. Where you stand out by the border yourself the way is

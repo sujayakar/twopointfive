@@ -338,7 +338,7 @@ pub extern "C" fn face_slot(h: u32) -> usize {
 #[no_mangle]
 pub unsafe extern "C" fn face_import_into(h: u32, p: *const u8, n: usize) {
     let b = bytes(p, n);
-    with_unsaid(h, |x| game::io::import_into(&mut x.g, b));
+    with_unsaid(h, |x| { game::io::import_into(&mut x.g, b); game::kit::kit_words_again(&mut x.g); });
 }
 
 /// # Safety

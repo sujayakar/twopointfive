@@ -159,7 +159,7 @@ function run(name: string, o: { cap?: number; pace?: number } = {}): TapeRun {
       const ended = script.ended ?? ((gg: any) => gg.mission.stage === 'done');
       if (!ended(g)) script.finish?.(B);
       if (!until(() => ended(g), 5)) throw new Stop(`the run did not end after the script's finish (stage ${g.mission.stage}, player at ${at(pos())}${g.player.down ? ', DOWN' : ''})`);
-      say(`ended: ${g.objectiveText()}`);
+      say(`ended: ${(g.view.mission?.text ?? '')}`);
       step(90);   // the end's own sounds, and a beat for whoever watches
     }
   } catch (e) {

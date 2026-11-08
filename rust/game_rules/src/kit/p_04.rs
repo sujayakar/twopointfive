@@ -141,6 +141,18 @@ pub fn kit_reset(g: &mut crate::game::Game) {
 /// The card a staged teammate was staged with (a copy taken then).   (kit.ts kitOf)
 pub fn kit_of(g: &crate::game::Game, gd: GuardId) -> Option<crate::kit::MemberKit> { g.m.kit.man_of.get(gd).map(|e| e.kit.clone()) }
 
+/// The card he was staged with in a line, for the HUD ('' = none): worked out as he is staged, ten microseconds a squad, so no tick asks it
+pub fn kit_line(g: &crate::game::Game, gd: GuardId) -> &str { g.m.kit.man_of.get(gd).map_or("", |e| e.words.as_str()) }
+/// Each staged man's line said again, for a game read in from the wire, which does not carry them
+pub fn kit_words_again(g: &mut crate::game::Game) {
+    let men = g.m.kit.man_of.keys();
+    for gd in men {
+        let Some(e) = g.m.kit.man_of.get(gd).cloned() else { continue };
+        let words = if e.i != 0.0 { kit_card_words(g, e.i, &e.kit) } else { String::new() };
+        g.m.kit.man_of.set(gd, crate::kit::KitModManOfValue { words, ..e });
+    }
+}
+
 /// Which member a staged teammate is (1 to 4), or 0.   (kit.ts kitIndex)
 pub fn kit_index(g: &crate::game::Game, gd: GuardId) -> f64 { g.m.kit.man_of.get(gd).map_or(0.0, |e| e.i) }
 
@@ -415,7 +427,8 @@ pub fn kit_stage(g: &mut crate::game::Game, ops: &[GuardId]) {
         } else {
             worn[i].clone()
         };
-        g.m.kit.man_of.set(gd, KitModManOfValue { i: i as f64, kit: m.clone() });
+        let words = if i != 0 { kit_card_words(g, i as f64, &m) } else { String::new() };
+        g.m.kit.man_of.set(gd, KitModManOfValue { i: i as f64, kit: m.clone(), words });
         let held = if issuing_on(g) { None } else { Some(&m) };
         crate::kitload::load_man(g, gd, i as f64, held, Some(n));
         let gun = kit_gun(g, &m);
@@ -558,13 +571,13 @@ mod tests {
         let gd = GuardId(0);
         let mut kit = g.m.kit.kit.members[1].clone();
         kit.big = BigKit::Hammer;
-        g.m.kit.man_of.set(gd, KitModManOfValue { i: 1.0, kit: kit.clone() });
+        g.m.kit.man_of.set(gd, KitModManOfValue { i: 1.0, kit: kit.clone(), words: String::new() });
         g.k.bigslot.on = false;
         assert_eq!(kit_big(&mut g, gd), BigKit::None);
         g.k.bigslot.on = true;
         assert_eq!(kit_big(&mut g, gd), BigKit::Hammer);
         kit.walls = 1.0;
-        g.m.kit.man_of.set(gd, KitModManOfValue { i: 1.0, kit });
+        g.m.kit.man_of.set(gd, KitModManOfValue { i: 1.0, kit, words: String::new() });
         assert_eq!(kit_big(&mut g, gd), BigKit::None);
     }
 
