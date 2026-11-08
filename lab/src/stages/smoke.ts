@@ -6,7 +6,9 @@ import head from './smoke.wgsl' with { type: 'text' };
 import signals from '../wgsl/signals.wgsl' with { type: 'text' };
 export const SMOKE = { slots: 3072, pages: [75, 24, 60] as const, pairs: 6, atlas: [160, 160, 120] as const };
 const CELLS = SMOKE.slots * 512, PG = 108000, WORDS = PG + 33 * 3072 + 16;
-const ONE = { groups: (): [number, number, number] => [SMOKE.slots / 64, 1, 1] }, BRICK = { groups: (): [number, number, number] => [64, SMOKE.slots / 64, 1] };
+const ONE = { groups: (): [number, number, number] => [SMOKE.slots / 64, 1, 1] }, BRICK = { groups: (): [number, number, number] => [64, brickRows, 1] };
+/** rows of 64 bricks to ask for: in a run all of them; in the page as many as were lately live, with room to grow (an idle group is not free) */
+let brickRows = SMOKE.slots / 64;
 /** a group a live brick: s its slot, b its brick */
 const perBrick = (body: string, n = 256, extra = '') => `${extra}
 @compute @workgroup_size(${n}) fn main(@builtin(workgroup_id) wg: vec3u, @builtin(local_invocation_index) li: u32) {
@@ -128,6 +130,8 @@ const publishCode = FETCH + `const HALF = SLOTS_S * 512u;` + perBrick(`
 const pageCode = `@compute @workgroup_size(64) fn main(@builtin(global_invocation_id) id: vec3u) { let i = id.x; if (i >= PAGES) { return; } var p = M[M_PAGE + i]; if (p == NONE) { p = 0u; } if (p != 0u) { if (bitcast<f32>(M[M_DENSE + p - 1u]) < 0.002) { p = 0u; } } textureStore(page, brickOf(i), vec4u(p)); }`;
 export class Smoke {
   on = false; sources: { at: V3; born: number; last: number; rate: number }[] = []; private lastTick = -1; private doorKey = ''; dt = 0; private faceNow = true; private fresh = true; private steps = 0; private flip = 0;
+  private counting = false; private lately = SMOKE.slots;
+  private count() { if (this.counting || this.steps % 5) return; this.counting = true; const d = this.lab.gpu.device, b = d.createBuffer({ size: 16, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ }), e = d.createCommandEncoder(); e.copyBufferToBuffer(this.lab.graph.buffers.get('smokeM')!, (PG + 32 * SMOKE.slots) * 4, b, 0, 16); d.queue.submit([e.finish()]); void b.mapAsync(GPUMapMode.READ).then(() => { this.lately = new Uint32Array(b.getMappedRange())[1]!; b.destroy(); this.counting = false; }, () => { this.counting = false; }); }
   constructor(private lab: Lab) {}
   /** a canister where it lies: it burns for `last` seconds */
   drop(at: V3, last = 14, rate = 1) { this.on = true; this.sources.push({ at: [at[0], Math.max(at[1], 0.05) + 0.14, at[2]], born: this.lab.tick, last, rate }); if (this.sources.length > 10) this.sources.shift(); }
@@ -142,6 +146,7 @@ export class Smoke {
     const lab = this.lab, steam = lab.steam > 0 ? lab.building.world.plumes : []; if (steam.length) this.on = true; if (!this.on) { this.dt = 0; return; } const d = Math.max(0, Math.min(3, lab.tick - this.lastTick)); this.dt = this.lastTick < 0 ? 1 / 60 : d / 60; this.lastTick = lab.tick; if (this.dt <= 0 && !this.fresh) return; this.steps++; this.flip ^= 1;
     if (this.fresh) { this.fresh = false; const m = new Uint32Array(WORDS); lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('smokeM')!, 0, m); this.dt = this.dt || 1 / 60; }
     else lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('smokeM')!, (PG + 32 * SMOKE.slots + 1) * 4, new Uint32Array([0, 0]));
+    if (lab.smooth) { this.count(); const young = this.sources.some(q => lab.tick - q.born < 120); brickRows = Math.min(SMOKE.slots / 64, Math.ceil((this.lately * 1.35 + (young ? 700 : 160)) / 64)); } else brickRows = SMOKE.slots / 64;
     const key = lab.building.doors.map(x => x.open.toFixed(3)).join(); this.faceNow = key !== this.doorKey; this.doorKey = key; void this.faceNow;
     const boxes = lab.building.doors.map(x => x.leaf[0]!), f = new Float32Array(16 * 16); boxes.slice(0, 16).forEach((p, i) => { for (let k = 0; k < 3; k++) { const r = p.rot[k]!; f.set([r[0], r[1], r[2], -(r[0] * p.at[0] + r[1] * p.at[1] + r[2] * p.at[2])], i * 16 + k * 4); } f.set(p.half, i * 16 + 12); }); lab.uniform('smokeDoors', f);
     const s = new Float32Array(16 * 8); let n = 0; for (const q of this.sources) { const age = (lab.tick - q.born) / 60; if (age > q.last || n >= 10) continue; const k = Math.min(1, age / 0.5) * Math.min(1, (q.last - age) / 2); s.set([...q.at, 0.34, 300 * q.rate * k, 1.1 * k, 1.0 * k, 95 * q.rate * k], n++ * 8); }

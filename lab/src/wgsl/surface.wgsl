@@ -141,7 +141,8 @@ fn wetFilm(s0: Surf, fp: f32) -> Surf {
   // down a wall it runs in streaks
   var runs = 0.0; if (up < 0.3) { let across = select(s.x.x, s.x.z, abs(s.ng.x) > abs(s.ng.z)); let q = across * 5.0; runs = w * smoothstep(0.50, 0.72, vnoise(vec2f(q, s.x.y * 0.35 + 7.0)) * shows(5.0, fp)); }
   let film = w * clamp(0.55 * up + 0.25 + 0.5 * runs, 0.0, 1.0);
-  s.albedo *= mix(1.0, mix(0.78, 0.46, soaks), clamp(film + 0.25 * damp, 0.0, 1.0)); let shine = clamp(max(film * (1.0 - 0.75 * soaks), max(damp * 0.75, runs * 0.8)), 0.0, 1.0);
+  // what has soaked is seen through water: light that the stuff sends back is partly turned back in by the water's own surface (Lekner and Dorf)
+  let wetA = 0.98 * s.albedo * 0.52 / (1.0 - 0.48 * s.albedo); s.albedo = mix(s.albedo, mix(s.albedo * 0.85, wetA, soaks), clamp(film + 0.25 * damp, 0.0, 1.0) * select(1.0, 0.3, s.metal > 0.5)); let shine = clamp(max(film * (1.0 - 0.75 * soaks), max(damp * 0.75, runs * 0.8)), 0.0, 1.0);
   s.rough = mix(s.rough, max(0.07, s.rough * 0.28), shine); s.f0 = max(s.f0, mix(s.f0, 0.03, shine));
   if (pud > 0.0) { s.rough = mix(s.rough, 0.022, pud); s.albedo *= mix(1.0, 0.72, pud); var n = vec2f(0.0); if (frame.weather.y > 0.0 && fp < 0.12) { n = rainRings(s.x.xz * 1.25, frame.misc.x, frame.weather.y) * shows(4.0, fp); } s.n = normalize(mix(s.n, normalize(s.ng - vec3f(n.x, 0.0, n.y)), pud)); }
   return s;
@@ -246,6 +247,9 @@ fn smithV(a: f32, nv: f32, nl: f32) -> f32 { let a2 = a * a; return 0.5 / (nl * 
 fn fresnel(f0: vec3f, c: f32) -> vec3f { let u = 1.0 - sat(c); let u2 = u * u; return f0 + (1.0 - f0) * (u2 * u2 * u); }
 fn coatF0(s: Surf) -> vec3f { return mix(vec3f(s.f0), s.albedo, s.metal); }
 fn matteOf(s: Surf) -> vec3f { return s.albedo * (1.0 - s.metal); }
+/** how rough a matte is, in the small: what makes a full moon flat and plaster not go dark toward its edge (Oren and Nayar's facets, Fujii's form, next to Lambert = 1) */
+fn matteRough(kind: u32) -> f32 { switch (kind) { case 1u, 22u: { return 0.55; } case 11u, 5u: { return 0.4; } case 10u, 21u: { return 0.65; } case 13u, 15u, 16u: { return 0.7; } default: { return 0.0; } } }
+fn roughMatte(kind: u32, alb: vec3f, n: vec3f, V: vec3f, L: vec3f) -> vec3f { let g = matteRough(kind); if (g <= 0.0) { return vec3f(1.0); } let nl = max(dot(n, L), 1e-3); let nv = max(dot(n, V), 1e-3); let s = dot(L, V) - nl * nv; let t = select(1.0, max(nl, nv), s > 0.0); let a = 1.0 / (1.0 + (0.5 - 2.0 / (3.0 * PI)) * g); return vec3f(a * (1.0 + g * s / t)) + alb * (g * a * 0.12); }
 /** a facet the eye can see (Heitz), in the normal's frame */
 fn visibleNormal(v: vec3f, a: f32, u: vec2f) -> vec3f {
   let vh = normalize(vec3f(a * v.x, a * v.y, v.z)); let l2 = vh.x * vh.x + vh.y * vh.y; var t1 = vec3f(1.0, 0.0, 0.0); if (l2 > 1e-7) { t1 = vec3f(-vh.y, vh.x, 0.0) * inverseSqrt(l2); }

@@ -1,0 +1,211 @@
+[
+ {
+  "name": "s1-atrium",
+  "w": 1600,
+  "h": 900,
+  "dist": 30,
+  "hour": 21.5,
+  "cut": 2.55,
+  "look": [
+   2,
+   0.6,
+   -1
+  ],
+  "doors": 0.9,
+  "samples": 300,
+  "run": true,
+  "smoke": [
+   [
+    0.5,
+    0.02,
+    1.5
+   ],
+   [
+    6.5,
+    0.02,
+    -3
+   ]
+  ],
+  "method": "realtime",
+  "tick": 600,
+  "scale": 0.8
+ },
+ {
+  "name": "s1-atrium-ref",
+  "w": 1600,
+  "h": 900,
+  "dist": 30,
+  "hour": 21.5,
+  "cut": 2.55,
+  "look": [
+   2,
+   0.6,
+   -1
+  ],
+  "doors": 0.9,
+  "samples": 500,
+  "method": "reference",
+  "tick": 600,
+  "scale": 1,
+  "still": true
+ },
+ {
+  "name": "s2-later",
+  "go": true,
+  "w": 1600,
+  "h": 900,
+  "dist": 30,
+  "hour": 21.5,
+  "cut": 2.55,
+  "look": [
+   2,
+   0.6,
+   -1
+  ],
+  "samples": 400,
+  "run": true,
+  "method": "realtime",
+  "scale": 0.8
+ },
+ {
+  "name": "s3-day",
+  "w": 1600,
+  "h": 900,
+  "dist": 34,
+  "hour": 15,
+  "cut": 2.55,
+  "look": [
+   0,
+   0.6,
+   0
+  ],
+  "doors": 0.9,
+  "samples": 420,
+  "run": true,
+  "smoke": [
+   [
+    0.5,
+    0.02,
+    1.5
+   ],
+   [
+    -7,
+    0.02,
+    -5
+   ]
+  ],
+  "method": "realtime",
+  "tick": 600,
+  "scale": 0.8
+ },
+ {
+  "name": "s3-day-ref",
+  "w": 1600,
+  "h": 900,
+  "dist": 34,
+  "hour": 15,
+  "cut": 2.55,
+  "look": [
+   0,
+   0.6,
+   0
+  ],
+  "doors": 0.9,
+  "samples": 500,
+  "method": "reference",
+  "tick": 600,
+  "scale": 1,
+  "still": true
+ },
+ {
+  "name": "s4-terrace",
+  "w": 1600,
+  "h": 900,
+  "dist": 30,
+  "hour": 16.5,
+  "look": [
+   7,
+   4,
+   1
+  ],
+  "pitch": 0.5,
+  "samples": 300,
+  "run": true,
+  "smoke": [
+   [
+    7,
+    3.45,
+    0.5
+   ]
+  ],
+  "method": "realtime",
+  "tick": 600,
+  "scale": 0.8
+ },
+ {
+  "name": "s5-torch",
+  "w": 1600,
+  "h": 900,
+  "dist": 20,
+  "hour": 22,
+  "cut": 2.55,
+  "look": [
+   1,
+   0.6,
+   1
+  ],
+  "doors": 0.9,
+  "lamps": "off",
+  "samples": 300,
+  "run": true,
+  "smoke": [
+   [
+    0.5,
+    0.02,
+    1.5
+   ]
+  ],
+  "method": "realtime",
+  "tick": 600,
+  "scale": 0.8
+ },
+ {
+  "name": "s5-torch-ref",
+  "w": 1600,
+  "h": 900,
+  "dist": 20,
+  "hour": 22,
+  "cut": 2.55,
+  "look": [
+   1,
+   0.6,
+   1
+  ],
+  "doors": 0.9,
+  "lamps": "off",
+  "samples": 500,
+  "method": "reference",
+  "tick": 600,
+  "scale": 1,
+  "still": true
+ },
+ {
+  "name": "s6-roof",
+  "w": 1600,
+  "h": 900,
+  "dist": 40,
+  "hour": 16.5,
+  "look": [
+   0,
+   6,
+   0
+  ],
+  "pitch": 0.45,
+  "yaw": 2.2,
+  "samples": 300,
+  "run": true,
+  "method": "realtime",
+  "tick": 600,
+  "scale": 0.8
+ }
+]
