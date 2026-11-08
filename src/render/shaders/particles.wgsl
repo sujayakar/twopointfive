@@ -157,7 +157,7 @@ fn sparkBounce(vel: vec3f, n: vec3f, seed: u32, salt: u32) -> vec3f {
   pool.parts[slot] = p;
 }
 
-// ================================================================== the sheet (game/sheetModel.ts is the CPU reference of these two — keep them in step)
+// ================================================================== the sheet (render/sheetModel.ts is the CPU reference of these two — keep them in step)
 /** Free flight: gravity, the anisotropic drag (through-slip × airspeed, along-slip barely), the flutter torque off the offset centre of pressure, ω damped and
  *  kept ⊥ n, n turned by ω. k0 = (g, KT, KN_LIN, KN_Q), k1.z = FLUT. `gust` = s of blast wind still carrying it (an impulse set it; 0 for every other leaf):
  *  drag and torque × (1 − GUST_K·g) against the co-moving air, g held at 1 then ramped out over the gust's last GUST_RAMP share — × exactly 1 in still air.
@@ -179,7 +179,7 @@ fn sheetAir(p: ptr<function, Particle>, n: ptr<function, vec3f>, w: ptr<function
   nn = normalize(nn + cross(ww, nn) * dt);
   (*p).vel = v + vAir; *n = nn; *w = ww;                        // … and back out of it
 }
-/** A kicked sheet's SHAPE response (game/sheetModel.ts sheetImpulse's tail): handed the gust a kick of `kick` m/s earns, set tumbling about an in-plane axis, and — if it
+/** A kicked sheet's SHAPE response (render/sheetModel.ts sheetImpulse's tail): handed the gust a kick of `kick` m/s earns, set tumbling about an in-plane axis, and — if it
  *  was LYING (`lay`) — tipped off flat toward a hashed side and lifted by its dipped edge (one already in the air keeps its attitude: a second kick must not snap it).
  *  `hseed` = what the three hashes come off (an impulse's seed, a wind wake's window hash), mixed with the slot. Shared by the impulses and the wind's wake. */
 fn sheetKickShape(p: ptr<function, Particle>, slot: u32, sn: ptr<function, vec3f>, sw: ptr<function, vec3f>, gust: ptr<function, f32>, aspect: f32, kick: f32, hseed: u32, lay: bool) {
@@ -207,7 +207,7 @@ fn sheetKickShape(p: ptr<function, Particle>, slot: u32, sn: ptr<function, vec3f
  *  rest are credited at UNTRACED_CREDIT. Returns front, back. */
 // (the walk: pLight mode 1, below)
 
-// ================================================================== the glass shard (game/shardModel.ts is the CPU reference of the flight and the touch — keep them in step)
+// ================================================================== the glass shard (render/shardModel.ts is the CPU reference of the flight and the touch — keep them in step)
 /** Free flight: gravity, drag by size (k0.y is the rate at SHARD_REF_SIZE: area ÷ mass ∝ 1 ÷ size — the fines are stopped by the air, a palm-sized piece is not), a tumble
  *  the air barely damps; n turned by ω, the part of ω along n turns the outline. */
 fn shardAir(p: ptr<function, Particle>, n: ptr<function, vec3f>, w: ptr<function, vec3f>, k0: vec4f, dt: f32) {
@@ -319,7 +319,7 @@ fn pLight(mode: u32, P: vec3f, N: vec3f, wrap: f32, owner: u32, credit: f32, V: 
   return pl;
 }
 
-// ================================================================== impulses (particles_common.wgsl ImpulseRec; game/sheetModel.ts impulseKick + sheetImpulse = the CPU reference)
+// ================================================================== impulses (particles_common.wgsl ImpulseRec; render/sheetModel.ts impulseKick + sheetImpulse = the CPU reference)
 fn numImpulses() -> u32 { return (em.flags >> 8u) & 31u; }
 
 // ================================================================== wind (game/wind.ts; the records ride behind the impulses — particles_common.wgsl; wind_field.wgsl is the field)
@@ -506,13 +506,13 @@ fn applyImpulses(p: ptr<function, Particle>, kind: u32, slot: u32, sn: ptr<funct
           p.pos += rd * max(0.0, hit.t - pad);
           var n = hit.n;
           let vn = dot(p.vel, n);
-          if (isSheet) {   // paper does not bounce: an up face lays it toward flat and rubs the slide (game/sheetModel.ts sheetGround); a wall lets it slide down, half aligned to it
+          if (isSheet) {   // paper does not bounce: an up face lays it toward flat and rubs the slide (render/sheetModel.ts sheetGround); a wall lets it slide down, half aligned to it
             let sgn = select(-1.0, 1.0, dot(sn, n) >= 0.0);
             if (vn < 0.0) { p.vel -= n * (vn * 1.05); }
             if (n.y > 0.6) { p.vel *= 0.6; sn = normalize(mix(sn, n * sgn, 0.7)); sw *= 0.3; }
             else { p.vel *= 0.85; sn = normalize(mix(sn, n * sgn, 0.35)); sw *= 0.6; }
             if (length(p.vel) < k1.x && n.y > 0.6) { asleep = true; p.bits |= PB_ASLEEP; p.vel = vec3f(0.0); sw = vec3f(0.0); sn = n * sgn; gust = 0.0; p.pos += n * (0.001 + 0.0012 * f32(slot % 5u)); }   // (a hair of stacking order: two sheets settling on one spot do not fight for the same plane)
-          } else if (isShard) {   // glass: a lively hop of its own height each touch, the slide thrown to a hashed side by the corner it struck (the skitter), a fresh tumble; slow enough on an up face and it lies down a little off flat (game/shardModel.ts shardTouch)
+          } else if (isShard) {   // glass: a lively hop of its own height each touch, the slide thrown to a hashed side by the corner it struck (the skitter), a fresh tumble; slow enough on an up face and it lies down a little off flat (render/shardModel.ts shardTouch)
             let hs = p.seed ^ (bitcast<u32>(p.age) * 0x85EBCA6Bu);
             let h0 = rnd(hs, 41u); let h1 = rnd(hs, 42u); let h2 = rnd(hs, 43u); let h3 = rnd(hs, 44u);
             let onFloor = n.y > 0.6;

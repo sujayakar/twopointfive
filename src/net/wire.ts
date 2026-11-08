@@ -10,7 +10,6 @@
 // Host-neutral: no DOM, no bun, no game: client.ts, server.ts, timeline.ts, foresee.ts, delay.ts, words.ts, modgame.ts and this import nothing of src/game.
 import { numWord, wordNum } from './numtext';
 import type { NetStart } from './start';
-import type { Recipe } from './recipe';
 
 /** `proto`: the wire's version (a hello of another is refused). `hz`: ticks a second (the fixed step's). `wordEvery`: ticks between state words. `lead`: how many
  *  of a seat's records the server likes to hold ahead of the tick it is running (the jitter buffer: Rocket League's input buffer) and `leadMax` the most before
@@ -95,6 +94,8 @@ export type ToServer = Hello | Ready | In | Lost;
 
 // ---- server → client
 /** the answer to a hello: the seat (−1 a watcher) of how many, what to stand the game from, and how many ticks have run (they follow, as `tape` messages) */
+/** what a game is stood from when a networked game stands through the TypeScript game: the die, the page's address, every knob table, the kit, as a tape carries them (net/recipe.ts) */
+export interface Recipe { seed: number | null; search: string; levelFile?: string; scenario: string | null; env: unknown; knobs: unknown; stand?: 'page' | 'shipped' | 'frozen'; words?: Record<string, string>; tables?: Record<string, unknown>; kit?: { on: boolean; members: unknown[] } }
 export interface Welcome { k: 'welcome'; proto: number; game: string; build: string; seat: number; seats: number; hz: number; /** what the game is stood from: one of the two */ recipe?: Recipe; start?: NetStart; tick: number; state: NetState; }
 /** tick `t` as it ran: each seat's record (0 = the seat's record of the tick before with its edges off), and every `wordEvery` ticks the state word after it */
 export interface Tick { k: 't'; t: number; c: (WireCmd | 0)[]; w?: string; /** with `w`: the wider word (net/step.ts netWatch), watched and never an alarm */ v?: string; }

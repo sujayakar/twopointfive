@@ -14,8 +14,8 @@ import { resolve } from 'node:path';
 import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { standOf } from '../../src/host/standEnv.ts';
 import type { Headless } from './headless.ts';   // (the harness itself is imported inside rerun(), once the stand the tape was made on is known: it reads TPS_PROFILE as it loads)
-import type { ReplayFile, RunTape, Decoded } from '../../src/replay/format.ts';
-import { decode, clock, tapeWhy } from '../../src/replay/format.ts';
+import type { ReplayFile, RunTape, Decoded } from '../../src/tape/format.ts';
+import { decode, clock, tapeWhy } from '../../src/tape/format.ts';
 import { TapeWalk } from '../../src/replay/tapewalk.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');

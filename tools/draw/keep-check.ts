@@ -1,11 +1,11 @@
-// A RUN IS KEPT AS IT IS PLAYED (src/tape/keep.ts over replay/keeper.ts and keepstore.ts), with no page and no module: a tape of hands grows, goes to the store in beats and comes back out of it
+// A RUN IS KEPT AS IT IS PLAYED (src/tape/keep.ts over tape/keeper.ts and keepstore.ts), with no page and no module: a tape of hands grows, goes to the store in beats and comes back out of it
 // byte for byte; killed between two beats it comes back up to the last; a piece lost ends it there; a visit removed under it is begun again whole; a hand-over file's lines give the same.
 //   bun run tools/draw/keep-check.ts      exit 0 · 1
 //   KEEP_BREAK=1 …      a piece says it is from a byte further on: what comes back must be cut short
 import { HAND } from '../../src/draw/hand';
-import { ReplayKeeper } from '../../src/replay/keeper';
-import { bodyText, memoryStore } from '../../src/replay/keepstore';
-import { parseLines } from '../../src/replay/kept';
+import { ReplayKeeper } from '../../src/tape/keeper';
+import { bodyText, memoryStore } from '../../src/tape/keepstore';
+import { parseLines } from '../../src/tape/kept';
 import { HandTape, HandWalk } from '../../src/tape/handtape';
 import { handSource, handsOf, keptHands } from '../../src/tape/keep';
 

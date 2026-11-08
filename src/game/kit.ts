@@ -56,7 +56,7 @@ import type { Vec3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import { Firearm, Pistol, Rifle, WEAPONS, type WeaponDef, type WeaponId } from './weapons';
 import { loadKeys, lightKeys } from './slotsetup';   // (read when a row's note is asked for: the presses that step the launcher's load)
-import { gearText } from './gear';   // (a leaf: the kit's names as issued — applied where a row's words are asked for, never as this module loads)
+import { gearText } from '../host/gear';   // (a leaf: the kit's names as issued — applied where a row's words are asked for, never as this module loads)
 import { HE40 } from './he40';   // (read inside a row's note only: src/game is one import cycle)
 import { DOORTOOLS } from './doortools';   // (read inside kitPool only: nothing of it is touched at load)
 import { FRAG } from './frag';             // (likewise: read inside kitPool / kitStage only)

@@ -1,6 +1,6 @@
 // THE BAR OVER A RUN BEING PLAYED AGAIN: back to the game, play and pause, the pace, the clock, the line it is sought on (the notes and the tries stand on it), the run's own view, notes. The run is whoever
 // plays it (host/drawplay.ts, through `Played`); nothing here is the game's.
-import { clock, type ReplayNote } from '../replay/format';
+import { clock, type ReplayNote } from './format';
 import { rectZoom, textZoom, TEXT_EVENT } from '../ui/textsize';
 import type { FreeCam } from './freecam';
 import type { TapeMap } from './map';

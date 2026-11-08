@@ -6,7 +6,7 @@
 //   SINKKEY_BREAK=1 = the test as the three listeners spelled it (any text area is a field) where 'the hidden text box' is asked: must FAIL
 //   MOVEWORDS_BREAK=1 = the fast crouch walk (game/player.ts CROUCHRUN) left off where the words for Shift are asked with it on: must FAIL
 // WHAT IT HOLDS:
-//   the hidden box in somebody else's frame game/input.ts keeps the keys in a text box nobody sees: a key aimed at it is no typing (host/keymap.ts typedInto), so
+//   the hidden box in somebody else's frame host/input.ts keeps the keys in a text box nobody sees: a key aimed at it is no typing (host/keymap.ts typedInto), so
 //                  F7 (ui/replaykey.ts), F8 (main.ts) and the kit's copy and paste (ui/loadout.ts) are not dropped there; a real field still is
 //   the words      while Shift in a crouch is a fast crouch walk, Options' Sprint row (ui/options.ts sprintSmall) and the old start card's list
 //                  say what Shift does crouched and that it's louder; off, no line (the drawn rows are not asked)
@@ -14,7 +14,7 @@
 //                  own code, the key it left gives nothing, the names follow · a key another row has is a swap, and after 4,000 moves by a die no key has
 //                  two rows and no row a key that is not its own · the page's own keys are refused · no key · Reset · a kept table is cleaned as it is read ·
 //                  it is written to the machine's store and read back the same · `?keybinds=0` plays the build's keys and leaves the kept ones kept
-//   the keyboard   game/input.ts's own listeners, on a window that is a list of them: a script of keys down and up files, with nothing rebound, exactly the
+//   the keyboard   host/input.ts's own listeners, on a window that is a list of them: a script of keys down and up files, with nothing rebound, exactly the
 //                  codes it filed before this file existed (each press's code, once; let go when let go); with rows moved it files the SAME codes off the
 //                  new keys; a key rebound while it is down still lets go of what its press put down
 //   the game       on the stand this run is on: one script of hands (walk, turn, crouch, the rifle, a reload, the wall, Space) played three ways into a fresh
@@ -39,7 +39,7 @@ export async function keybindsCheck(): Promise<boolean> {
   const G: any = globalThis, had = { localStorage: G.localStorage, window: G.window, document: G.document };
   const stubs: string[] = [];
   const store = new Map<string, string>(); G.localStorage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => { store.set(k, String(v)); }, removeItem: (k: string) => { store.delete(k); } };
-  const K = await import(`${ROOT}/src/host/keymap.ts`); const { Input } = await import(`${ROOT}/src/game/input.ts`);
+  const K = await import(`${ROOT}/src/host/keymap.ts`); const { Input } = await import(`${ROOT}/src/host/input.ts`);
   const { digestGame, hashDigest, diffDigest } = await import(`${ROOT}/src/game/digest.ts`);
   const log = console.log, err = console.error, warn = console.warn;
   const quiet = async <T>(f: () => T | Promise<T>): Promise<T> => { console.log = console.error = console.warn = () => { }; try { return await f(); } finally { console.log = log; console.error = err; console.warn = warn; } };
@@ -105,7 +105,7 @@ export async function keybindsCheck(): Promise<boolean> {
       verdict(kept.length > 2 && again && off && clean, 'a moved key is written to the machine and read back the same on the next load; with ?keybinds=0 the board is the build\'s and the kept table is left alone; a kept table gone wrong is cleaned row by row',
         `kept: ${kept} · read back the same: ${again} · off: the build's keys, the table kept ${off} · a bad table: one row per key, the page's keys and strangers dropped ${clean}`); }
 
-    // ---- the keyboard: game/input.ts's own listeners, on a window that is a list of them
+    // ---- the keyboard: host/input.ts's own listeners, on a window that is a list of them
     const listeners: Record<string, ((e: any) => void)[]> = {};
     for (const n of ['HTMLInputElement', 'HTMLSelectElement', 'HTMLTextAreaElement', 'HTMLElement']) if (!G[n]) { G[n] = class { }; stubs.push(n); }   // (what the listener asks of a key's target)
     const win: any = { addEventListener: (t: string, f: (e: any) => void) => { (listeners[t] ??= []).push(f); } }; win.top = win.self = win;
@@ -239,14 +239,14 @@ export async function keybindsCheck(): Promise<boolean> {
       const old = (t: any) => !!t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName ?? ''), test: (t: any) => boolean = SB ? old : K.typedInto;
       const el = (tagName: string, label?: string, has = true) => has ? { tagName, getAttribute: (k: string) => k === 'aria-label' ? label ?? null : null } : { tagName };
       const edit = test({ tagName: 'DIV', isContentEditable: true }), sink = test(el('TEXTAREA', K.SINK_LABEL)), area = test(el('TEXTAREA')), named = test(el('TEXTAREA', 'notes')), input = test(el('INPUT')), select = test(el('SELECT')), bare = test(el('TEXTAREA', undefined, false)), div = test(el('DIV', K.SINK_LABEL)), none = test(null);
-      const input_ts = readFileSync(`${ROOT}/src/game/input.ts`, 'utf8'), labelled = /setAttribute\('aria-label', SINK_LABEL\)/.test(input_ts) && K.SINK_LABEL === 'game input';
+      const input_ts = readFileSync(`${ROOT}/src/host/input.ts`, 'utf8'), labelled = /setAttribute\('aria-label', SINK_LABEL\)/.test(input_ts) && K.SINK_LABEL === 'game input';
       const SITES: [string, RegExp, string, string][] = [['src/ui/replaykey.ts', /^const f7 = .*$/m, 'F7', '&& !typedInto(e.target);'], ['src/main.ts', /^.*e\.code === 'F8'.*perfsweep\.toggle.*$/m, 'F8', '&& !keymap.typedInto(e.target)) {'], ['src/ui/loadout.ts', /^.*isContentEditable \|\| String\(window\.getSelection.*$/m, 'the kit\'s copy and paste', 'if (typedInto(e.target) ||']];
       // (…and the one that spells the test itself names the same box: the replay player is its own page)
       const SPELT = ['src/replay/engineplay.ts'], spelt = SPELT.filter(f => !readFileSync(`${ROOT}/${f}`, 'utf8').includes(`getAttribute?.('aria-label') !== '${K.SINK_LABEL}'`) && !readFileSync(`${ROOT}/${f}`, 'utf8').includes(`getAttribute('aria-label') !== '${K.SINK_LABEL}'`));
       const sites = SITES.map(([file, re, what, asks]) => { const line = (readFileSync(`${ROOT}/${file}`, 'utf8').match(re)?.[0] ?? '').split('   // ')[0]; return { what, ok: line.includes(asks) && !/INPUT\||TEXTAREA\||SELECT\|/.test(line) }; });   // (the call itself, the way round it is asked, and no tag test of its own left beside it)
       verdict(!sink && area && named && input && select && bare && !div && !none && (edit || SB) && labelled && sites.every(s => s.ok) && !spelt.length,
         'the hidden text box of a framed page is no field: a key aimed at it is not typing, a real field still is, and F7, F8 and the kit\'s copy and paste ask that test',
-        `the hidden box: typing ${sink} · a text area ${area}, one with another label ${named}, an input ${input}, a select ${select}, a text area that cannot say its label ${bare} · a div with the box's label ${div}, editable text ${edit} · no target ${none} · game/input.ts labels its box '${K.SINK_LABEL}' ${labelled} · ${sites.map(s => `${s.what} asks it ${s.ok}`).join(' · ')} · the one file that spells the test itself names the same box: ${spelt.length ? `NOT ${spelt.join(', ')}` : 'yes'}`); }
+        `the hidden box: typing ${sink} · a text area ${area}, one with another label ${named}, an input ${input}, a select ${select}, a text area that cannot say its label ${bare} · a div with the box's label ${div}, editable text ${edit} · no target ${none} · host/input.ts labels its box '${K.SINK_LABEL}' ${labelled} · ${sites.map(s => `${s.what} asks it ${s.ok}`).join(' · ')} · the one file that spells the test itself names the same box: ${spelt.length ? `NOT ${spelt.join(', ')}` : 'yes'}`); }
   } finally { K.setKeys({}); K.KEYMAP.letGo = false; K.KEYMAP.onlyWhen = null; K.KEYMAP.throwWhen = null; K.KEYMAP.on = false; K.KEYMAP.qFree = false; K.KEYMAP.qCmd = false; K.KEYMAP.setFree = false; K.KEYMAP.qOnly = false; K.KEYMAP.camSpace = false; K.KEYMAP.pinchOnly = false; K.KEYMAP.freeWhen = null; for (const n of stubs) delete G[n]; for (const k of ['localStorage', 'window', 'document'] as const) { if (had[k] === undefined) delete G[k]; else G[k] = had[k]; } }
   console.log(`=== keybinds: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;

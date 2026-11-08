@@ -28,7 +28,7 @@ import { TexturePool } from './render/texpool';
 import { reachLevel } from './render/reach';
 import { ReachKeep, type KeepGuest } from './render/reachKeep';
 import { WORLD } from './scene/world';
-import { FollowCamera } from './game/camera';
+import { FollowCamera } from './host/camera';
 import { Vec3, m4, v3, smoothstep } from './math/vec';
 
 import { RenderSettings, defaultSettings } from './settings';

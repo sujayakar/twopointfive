@@ -9,12 +9,12 @@ const P_DEBRIS: u32 = 1u;   // chips knocked out of drywall / wood / concrete: L
 const P_DUST: u32 = 2u;     // a puff: LIT soft blob, drag-dominated, grows and fades over ~1.5 s (bullet impacts, the stun charge's ring, a kicked door)
 const P_CASING: u32 = 3u;   // spent brass: LIT + a glint off the strongest light, ejected per shot, bounces, lies on the floor
 const P_SHEET: u32 = 4u;    // a leaf of office paper (destruction.ts: a burst raking a desk turns its paper stacks into these): a LIT two-sided oriented quad,
-                            // gravity + anisotropic drag + flutter torque (game/sheetModel.ts is the CPU reference of the same equations), slides / settles
+                            // gravity + anisotropic drag + flutter torque (render/sheetModel.ts is the CPU reference of the same equations), slides / settles
                             // flat on what it lands on and sleeps like a chip; casts no shadow (a splat, not a box)
 const P_RAIN: u32 = 5u;     // a rain drop (game/rainFx.ts): born on top of the weather's rain slab over the outdoor ground near the view, falls at terminal speed with the wind
                             // field's air, LIT like a chip (the strongest lights shadow-rayed) + refracting / glinting in the splat, dies where it hits and becomes its own
                             // splash crown there (PB_ASLEEP = splashed); its own ring past the two gameplay rings (EmitBlock.rainWin)
-const P_SHARD: u32 = 6u;    // a fragment of a broken glass pane (game/shards.ts files them where the fracture model lets a piece go; game/shardModel.ts is the CPU reference of its
+const P_SHARD: u32 = 6u;    // a fragment of a broken glass pane (game/shards.ts files them where the fracture model lets a piece go; render/shardModel.ts is the CPU reference of its
 // the shard branches of the three particle modules exist only in a build compiled with glass breaking (the scene prelude's GLASS_BREAK, raised at boot — render/frame.ts):
 // with it false every `SHARDS_ON && …` test folds away and the kernels are the ones the other kinds always ran (a kind-6 record would then fly and draw as a chip).
 const SHARDS_ON: bool = GLASS_BREAK;
@@ -40,7 +40,7 @@ struct Particle {
   ori: u32, omg: u32, omgZ: u32, aux: u32,       // SHEET: unit normal (octahedral, 2 × snorm16), angular velocity rad/s (x, y as f16 × 2 | z as f16, high half spare); aux = pack2x16float(aspect = length ÷ width, SHEET: gust s — the blast wind still carrying it, 0 in still air) — every kind carries aspect (a splinter is a chip with aspect 3; 1 = the chip as it was)
 };
 
-// the shard's constants the kind block has no slot for (game/shardModel.ts SHARD.<NAME> — tools/qa/shards-probes.ts compares them by name)
+// the shard's constants the kind block has no slot for (render/shardModel.ts SHARD.<NAME> — tools/qa/shards-probes.ts compares them by name)
 const SHARD_REF_SIZE: f32 = 0.01;
 const SHARD_DRAG_MAX: f32 = 6.0;
 const SHARD_ANG_DAMP: f32 = 0.3;
@@ -90,10 +90,10 @@ fn shardRestSpread(size: f32) -> f32 {
 fn shardRestScatter(size: f32, seed: u32) -> f32 {   // (seed bits 20‥27: the outline has the low 16, the facet's roughness 12‥19)
   return mix(SHARD_REST_SCATTER_BIG, mix(SHARD_REST_SCATTER_LO, SHARD_REST_SCATTER_HI, f32((seed >> 20u) & 255u) / 255.0), shardFrost(size));
 }
-// the sheet's two constants the kind block has no slot for (game/sheetModel.ts SHEET.ANG_DAMP / SPIN_MAX)
+// the sheet's two constants the kind block has no slot for (render/sheetModel.ts SHEET.ANG_DAMP / SPIN_MAX)
 const SHEET_ANG_DAMP: f32 = 1.8;
 const SHEET_SPIN_MAX: f32 = 3.0;
-// the sheet's IMPULSE response (game/sheetModel.ts SHEET_IMP / SHEET_GUST — the probes compare them): a kicked leaf is tipped off flat by up to TILT rad toward a hashed
+// the sheet's IMPULSE response (render/sheetModel.ts SHEET_IMP / SHEET_GUST — the probes compare them): a kicked leaf is tipped off flat by up to TILT rad toward a hashed
 // side, set tumbling at TUMBLE rad/s per m/s of kick (|ω| ≤ WMAX), and carried by the blast's wind for GUST_TAU × clamp((kick − GUST0) / GUST1) s, during which drag
 // and flutter torque are taken against the co-moving air: × (1 − GUST_K·g), g = 1 until the last GUST_RAMP share of TAU, then falling to 0
 const SHEET_IMP_TILT: f32 = 0.9;
@@ -104,9 +104,9 @@ const SHEET_IMP_GUST1: f32 = 1.5;
 const SHEET_GUST_TAU: f32 = 0.4;
 const SHEET_GUST_K: f32 = 0.98;
 const SHEET_GUST_RAMP: f32 = 0.35;
-/** below this scalar kick (m/s) an impulse leaves a particle alone (game/sheetModel.ts IMP_MIN_KICK) */
+/** below this scalar kick (m/s) an impulse leaves a particle alone (render/sheetModel.ts IMP_MIN_KICK) */
 const IMP_MIN_KICK: f32 = 0.03;
-/** per-particle raggedness of a push (game/sheetModel.ts IMP_JITTER): the kick × (1 − MAG/2 ‥ 1 + MAG/2), plus SIDE × the kick along a hashed bearing — a pile does not lift as one clump */
+/** per-particle raggedness of a push (render/sheetModel.ts IMP_JITTER): the kick × (1 − MAG/2 ‥ 1 + MAG/2), plus SIDE × the kick along a hashed bearing — a pile does not lift as one clump */
 const IMP_JITTER_MAG: f32 = 0.6;
 const IMP_JITTER_SIDE: f32 = 0.35;
 /** octahedral unit-vector codec (2 × snorm16 in a u32) for the sheet's normal */
@@ -136,8 +136,8 @@ fn sheetFrame(n: vec3f, spin: f32) -> mat2x3f {
 //   k0 = (gravity m/s², drag 1/s, restitution, tangential keep on a bounce)
 //   k1 = (sleep speed m/s — below it after a bounce on an up face the particle rests; SPARK: hold fraction · others: fade-out seconds at the end of life;
 //         SPARK/DEBRIS/CASING: streak shutter s · DUST: growth factor over life; SPARK: brightness × · DUST: peak opacity · others: 1)
-//   SHEET reads the same slots as (gravity, KT along-slip drag, KN_LIN, KN_Q) and (sleepV, fade s, FLUT torque gain, TRANS translucency) — game/sheetModel.ts SHEET
-//   SHARD reads them as (gravity, drag 1/s at SHARD_REF_SIZE, restitution, slide keep) and (sleepV, fade s, ROUGH = the glint lobe's α, SCATTER = diffuse share) — game/shardModel.ts SHARD
+//   SHEET reads the same slots as (gravity, KT along-slip drag, KN_LIN, KN_Q) and (sleepV, fade s, FLUT torque gain, TRANS translucency) — render/sheetModel.ts SHEET
+//   SHARD reads them as (gravity, drag 1/s at SHARD_REF_SIZE, restitution, slide keep) and (sleepV, fade s, ROUGH = the glint lobe's α, SCATTER = diffuse share) — render/shardModel.ts SHARD
 struct Window { start: u32, size: u32, tail: u32, live: u32 };   // ring `start .. start+size`, live slots begin at offset `tail` (mod size), `live` of them
 
 // The frame's uniform block (render/particles.ts writes it): the emit queue + the live windows + the per-kind numbers. The simulation reads all of it, the
@@ -153,7 +153,7 @@ struct EmitRec {
 };
 const MAX_EMITS: u32 = 128u;
 // IMPULSES (render/particles.ts Particles.impulse; game/destruction.ts is where they come from — a stun charge, a round landing beside settled litter, a body /
-// boot / shoved desk thumping the floor; game/sheetModel.ts impulseKick + sheetImpulse are the CPU reference of what particles.wgsl applyImpulses does with one):
+// boot / shoved desk thumping the floor; render/sheetModel.ts impulseKick + sheetImpulse are the CPU reference of what particles.wgsl applyImpulses does with one):
 // up to MAX_IMPS a frame, applied in the update kernel to every LIVE particle of the kinds each names within its radius — Δv = strength × gain(kind) ×
 // (1 − d/radius) × (radial with its downward part dropped + up × upK(kind) × ŷ + bias), |v| capped per kind — and WAKING the resting ones it kicks
 // harder than wake(kind), so paper already on the floor goes up again. numImps rides in EmitBlock.flags bits 8‥12: 0 = the kernel never touches the array
@@ -178,7 +178,7 @@ struct EmitBlock {
   numRecs: u32, totalNew: u32, frameSeed: u32, flags: u32,   // flags (+ bit 24 = sparks come back off surfaces and their birth stretch is swept — particles.wgsl sparkBounce): 1 = shadow rays for the three strongest lights (else all unshadowed and whole), 2 = collide at all, 4 = fog the splats by the volumetric transmittance, 8 = glass at rest shows as frost (SHARD_REST_*); bits 8‥12 = numImps this frame; bits 16‥20 = numWinds (behind them)
   win: array<Window, 2>,
   kp: array<vec4f, 14>,           // per kind k: kp[2k] = k0, kp[2k+1] = k1 (above) — 2 × P_KINDS rows
-  ki: array<vec4f, 7>,            // per kind k, its IMPULSE response (game/sheetModel.ts IMP_RESPONSE, live from the panel): x gain on the record's strength (0 = the kind ignores impulses: sparks), y × its upward share, z |v| cap after the kick (m/s), w the least kick (m/s) that wakes a resting one — P_KINDS rows
+  ki: array<vec4f, 7>,            // per kind k, its IMPULSE response (render/sheetModel.ts IMP_RESPONSE, live from the panel): x gain on the record's strength (0 = the kind ignores impulses: sparks), y × its upward share, z |v| cap after the kick (m/s), w the least kick (m/s) that wakes a resting one — P_KINDS rows
   recs: array<EmitRec, MAX_EMITS>,
   imps: array<ImpulseRec, MAX_IMPS>,
   rainWin: Window,                // the RAIN ring's window (experiment; render/particles.ts RAIN_RING) — in the tail so everything above sits where it always sat; live 0 unless it rains particles

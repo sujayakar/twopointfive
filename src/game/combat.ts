@@ -20,7 +20,7 @@ import { stowHang, stowFired } from './workstow';   // (called inside guardProps
 import { bigCarried, bigFired } from './bigkit';   // (called inside handProps only: the big slot's tool a man carries — null with its switch off)
 import { tally } from './mission';
 import { chronShot, chronLightShot, chronDown, chronHit } from './chronicle';
-import { plainShort } from './gear';   // (a leaf: a weapon's name as a chronicle row writes it — the same on and off the 2010s kit)
+import { plainShort } from '../host/gear';   // (a leaf: a weapon's name as a chronicle row writes it — the same on and off the 2010s kit)
 import { witnessKill, hostageHitBark, inHand, rigOf } from './guards';
 import { runnerBare } from './runner';
 import { handworkOn, swapHeld, beltTorch } from './handwork';

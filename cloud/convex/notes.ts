@@ -1,5 +1,5 @@
 // WHAT A PLAYER WROTE ON A REPLAY (src/cloud/notes.ts): the notes put on a kept visit in the viewer, and the saved windows of the F7 shelf with theirs.
-// Each is one LINE of the kept tapes' hand-over format (src/replay/kept.ts: `{k:'notes'}`, `{k:'f7'}`), kept as the text the page made, under a key the
+// Each is one LINE of the kept tapes' hand-over format (src/tape/kept.ts: `{k:'notes'}`, `{k:'f7'}`), kept as the text the page made, under a key the
 // page chose (`visit:<sid>`, `f7:<session>:<savedAt>`). The newest text under a key stands. Written by the page, read back by a deploy key.
 import { v } from "convex/values";
 import { internalQuery, mutation } from "./_generated/server";

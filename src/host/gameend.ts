@@ -1,6 +1,6 @@
 // A CARD OF A RUN, on the page that holds its game (view/runend.ts RunEnd). It goes with that page: the marks and their words are rust/game_face end.rs's too.
 import type { Game } from '../game/game';
-import { gearText } from '../game/gear';
+import { gearText } from './gear';
 import { mapOf } from '../game/replaybuf';
 import { indoors } from '../game/rooms';
 import type { RunEnd, RunMark } from '../view/runend';

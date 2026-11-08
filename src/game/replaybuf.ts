@@ -2,7 +2,7 @@
 // Game.update's last statement hands every finished step to tick() (Game.replayTap — null on a game nobody gave a buffer: the build as it was); tick() READS the
 // game and writes only its own ring: where every man stood and which way he faced, what he was doing and why (his state, the order he is on, who has his feet,
 // where they are going and by which route, who his gun is on, what he said), the doors, the things in the air, the rounds and blasts and kicks (the hearing
-// model's own events), the HUD's lines, the orders given. file() turns the ring into a ReplayFile (src/replay/format.ts) — the page's F7 (ui/replaykey.ts).
+// model's own events), the HUD's lines, the orders given. file() turns the ring into a ReplayFile (src/tape/format.ts) — the page's F7 (ui/replaykey.ts).
 //
 // It is a trace, not a re-simulation: nothing here can make a later frame differ (it draws no die, asks no sensor, writes no field of the Game), and a saved
 // file is read without the game. A step that throws inside tick() switches the buffer OFF with one console line: a bug here must never be a bug in the game.
@@ -11,9 +11,9 @@
 // (so its head is always a keyframe and a file needs no state from before it).
 import { SideMap, SideSet } from '../math/side';
 import type { Game, Guard } from './game';
-import type { CastRow, ManDo, ManPos, Sample, ReplayEvent, ReplayLine, ReplayFile, ReplayMap, DoorPos, ItemPos } from '../replay/format';
-import { PLAYER_NAME, REPLAY_VERSION, ERROR_MARK, RESTART_MARK, isErrorMark } from '../replay/format';
-import type { KeptPiece, KeptHead } from '../replay/kept';
+import type { CastRow, ManDo, ManPos, Sample, ReplayEvent, ReplayLine, ReplayFile, ReplayMap, DoorPos, ItemPos } from '../tape/format';
+import { PLAYER_NAME, REPLAY_VERSION, ERROR_MARK, RESTART_MARK, isErrorMark } from '../tape/format';
+import type { KeptPiece, KeptHead } from '../tape/kept';
 
 /** page-error lines: the same words are one line inside this many seconds of PLAY, and the ring holds this many error lines over that stretch whatever the words */
 const ERR_SAME_SECS = 60, ERR_LINES = 8;
@@ -230,7 +230,7 @@ export class ReplayBuffer {
   get seconds(): number { const S = this.samples; return S.length ? S[S.length - 1].r - S[0].r : 0; }
   summary(): string { return this.broke ? `replay buffer OFF: ${this.broke}` : !this.on ? 'replay buffer off' : `replay buffer: last ${this.seconds.toFixed(0)} s of play · ${this.samples.length} samples · ${this.cast.length} cast · ${this.events.length} events · ${this.tape.summary()}`; }
 
-  /** THE KEPT TAPE (src/replay/kept.ts, ui/replaykey.ts keep() — every run kept in the browser with no key pressed): what the ring and the run tape have gained since the
+  /** THE KEPT TAPE (src/tape/kept.ts, ui/replaykey.ts keep() — every run kept in the browser with no key pressed): what the ring and the run tape have gained since the
    *  last call, as one piece on the ring's own clock and cast indices (the reader rebases, as file() does). Asked BETWEEN two steps. Pieces laid end to end are the
    *  whole page visit, however long: the ring still forgets after `seconds`, the pieces were handed over before it did. `gap` = it forgot rows nobody had taken
    *  (nothing asked for longer than the ring keeps): this piece then starts at the ring's head, a keyframe. null = nothing new. Only reads; file() is what it was. */

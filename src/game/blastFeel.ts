@@ -35,7 +35,7 @@ import { firstOf } from './seats';
 import { SideMap } from '../math/side';
 import type { Game } from './game';
 import type { Particles, EmitOpts, PKind } from '../render/particles';
-import type { FollowCamera } from './camera';
+import type { FollowCamera } from '../host/camera';
 import type { SetWallCharge, WallSpot } from './wallcharge';
 import { Vec3, v3 } from '../math/vec';
 import { DESTRUCTION } from './destructionSwitch';

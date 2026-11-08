@@ -1,7 +1,7 @@
 // THE TITLE, LEFT ALONE: after a few seconds with nobody touching anything the camera cuts round a loop of framings of the floor behind it, under a black veil, while the guards walk their
 // beats through them. The first key, click, wheel tick or real mouse movement puts a fresh floor and the view back, and the world still. (The game's page has the same programme as
 // game/attract.ts, which goes with it.)
-import type { FollowCamera } from '../game/camera';
+import type { FollowCamera } from './camera';
 import { DEG, smoothstep, v3, type Vec3 } from '../math/vec';
 
 /** seconds of nobody before it starts; a shot's hold; how far the yaw drifts and the distance closes across a hold; the first veil's seconds */

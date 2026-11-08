@@ -16,7 +16,7 @@
 //                  the walk-in going off and on, no key has two rows
 //   the game       on the stand this run is on, the room clear with its squad of four: the same hand — the floor, a door, the door again once they are
 //                  stacked on it, the floor — once with the code written straight in (what B was, and what every tool and recording writes) and once
-//                  off the Q key through game/input.ts's own listeners leaves the same order book, row for row and to the millisecond, and the same
+//                  off the Q key through host/input.ts's own listeners leaves the same order book, row for row and to the millisecond, and the same
 //                  game by its run digest; the B key through the listeners files nothing and orders nothing
 //   exit 0 = all hold · 1 = one does not
 import { standUp, ROOT } from './headless.ts';
@@ -25,7 +25,7 @@ const AP: any = await import(`${ROOT}/src/game/autopilot.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const OR: any = await import(`${ROOT}/src/game/orders.ts`);
 const K: any = await import(`${ROOT}/src/host/keymap.ts`);
-const { Input } = await import(`${ROOT}/src/game/input.ts`);
+const { Input } = await import(`${ROOT}/src/host/input.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { ORDERS } = OR, { AUTOPILOT } = AP;
 const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);

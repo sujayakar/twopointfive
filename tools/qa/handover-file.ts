@@ -1,10 +1,10 @@
-// A HAND-OVER FILE, MADE FOR THE CHECKS (src/replay/kept.ts has the format): everything a kept store holds as the one file of gzip members a reader takes —
+// A HAND-OVER FILE, MADE FOR THE CHECKS (src/tape/kept.ts has the format): everything a kept store holds as the one file of gzip members a reader takes —
 // `{k:'dump'}` first, then each visit's head, its pieces as the store holds them, and the notes on its row. The page made this file itself ('Hand over
 // replays', and /replay's two buttons) until that was taken out on 2026-10-27; tools/cloud/pull.ts still writes the same file from a hosted build's backend,
 // and every tape sent before is one. So the READER stays (tools/qa/replay-dump.ts over kept.ts visitsOf / assemble; no page opens this file, /replay reads a visit out of
 // the store with keepstore.ts readVisit), and replaykeep-probes.ts holds it over files made here. Nothing of a page calls this.
 import { ROOT } from './headless.ts';
-const KP = await import(`${ROOT}/src/replay/kept.ts`), KS = await import(`${ROOT}/src/replay/keepstore.ts`);
+const KP = await import(`${ROOT}/src/tape/kept.ts`), KS = await import(`${ROOT}/src/tape/keepstore.ts`);
 
 export interface HandOver { blob: Blob; name: string; visits: number; pieces: number }
 /** every visit of `store` with a piece, oldest first, as one file's bytes (null: nothing kept) */

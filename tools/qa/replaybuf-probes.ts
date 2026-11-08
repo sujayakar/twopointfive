@@ -1,4 +1,4 @@
-// The REPLAY BUFFER's probes (src/game/replaybuf.ts → src/replay/format.ts):   bun run tools/qa/replaybuf-probes.ts [--write <file.json>] [--scenario '<query>'] [--level <file.json>] [--secs N]
+// The REPLAY BUFFER's probes (src/game/replaybuf.ts → src/tape/format.ts):   bun run tools/qa/replaybuf-probes.ts [--write <file.json>] [--scenario '<query>'] [--level <file.json>] [--secs N]
 //   ring       the ring keeps `seconds` of play and no more, its head is always a keyframe, the file passes its own check and decodes
 //   content    the trace holds what a bug report needs: every man each sample, a route for a walking man, a round with where it went, a door that moved
 //   notes      a note put on the file survives the trip through JSON
@@ -12,7 +12,7 @@
 import { writeFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 const { ReplayBuffer, REPLAY } = await import(`${ROOT}/src/game/replaybuf.ts`);
-const F = await import(`${ROOT}/src/replay/format.ts`);
+const F = await import(`${ROOT}/src/tape/format.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
 const { levelFingerprint } = await import(`${ROOT}/src/game/savestate.ts`);
@@ -202,7 +202,7 @@ console.log('\n=== replay buffer ===');
       check(!off && on && !dead && texts(key.file('probe')).join('|') === 'still|while off', 'crash: a buffer that is off or has stopped itself files no line and says so, and files the same error once it runs again'); }
     // WHAT F7 DID IS SAID ON THE PAGE ITSELF: the note handed in (the message line, the debug read-out) is drawn nowhere on a page that never asked for the read-out,
     // so the key's file keeps a tag of its own — one element, the last line said, shown — and a save that throws or a shelf that never answers still ends in words
-    { const { SHELF } = await import(`${ROOT}/src/replay/shelf.ts`);
+    { const { SHELF } = await import(`${ROOT}/src/tape/shelf.ts`);
       const tags = () => made.filter(e => e.id === 'replaytag'), tagNow = () => String(tags()[0]?.textContent ?? ''), last = () => notes[notes.length - 1] ?? '';
       const hadIdb = Object.getOwnPropertyDescriptor(G, 'indexedDB'), idb = (v: any) => Object.defineProperty(G, 'indexedDB', { value: v, configurable: true, writable: true });
       // a shelf that answers, as far as shelf.ts asks: two stores, requests that succeed a microtask on, a transaction that completes a task on

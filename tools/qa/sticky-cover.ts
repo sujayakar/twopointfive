@@ -59,7 +59,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, mkdtempSync, rmSync
 import { resolve, dirname, basename } from 'node:path';
 import { tmpdir } from 'node:os';
 import type { Headless } from './headless.ts';
-import type { ReplayFile } from '../../src/replay/format.ts';
+import type { ReplayFile } from '../../src/tape/format.ts';
 
 const argv = process.argv.slice(2); const flag = (n: string) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; }; const has = (n: string) => argv.includes(n);
 const ALLQ = has('--all-quiet'), TAPE = flag('--tape'), GHOST_ARG = flag('--ghost'), LISTED = has('--listed'), MEETINGS = has('--meetings'), LIVE = flag('--live'), FOV = flag('--fov'), OUT = resolve(flag('--out') ?? resolve(tmpdir(), 'sticky-cover', 'results.json'));

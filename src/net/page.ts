@@ -18,8 +18,8 @@
 // word for it (wire.ts restOf: 'Paused'), so the server does not walk the man on with his last keys or send a held round; the confirmed ticks are still walked under a card (the game is live: it is not this player's to stop).
 // Nothing here is read by the game. The page without ?net never calls into this file past `netFromUrl`'s first line.
 import type { Game } from '../game/game';
-import type { FollowCamera } from '../game/camera';
-import type { Input } from '../game/input';
+import type { FollowCamera } from '../host/camera';
+import type { Input } from '../host/input';
 import type { View } from '../host/hud';
 import type { PlayerCmd } from '../game/cmd';
 import { sampleCmd } from '../game/cmd';                    // (game exports are called inside functions only: src/game is one import cycle)

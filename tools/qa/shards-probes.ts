@@ -22,7 +22,7 @@ const PM = await import(`${ROOT}/src/render/particles.ts`);
 const { Particles } = PM;
 const GBM = await import(`${ROOT}/src/game/glassbreak.ts`);
 const SM = await import(`${ROOT}/src/game/shards.ts`);
-const MM = await import(`${ROOT}/src/game/shardModel.ts`);
+const MM = await import(`${ROOT}/src/render/shardModel.ts`);
 const { tread } = await import(`${ROOT}/src/game/floor.ts`);
 const { cutBoxesOn } = await import(`${ROOT}/src/scene/cut.ts`);   // (CUTBOXES=1: a dagger is then ONE plate cut to its cell, not two or three rectangles along it)
 const { GB_STATS } = GBM; const { SHARDS, SHARD_STATS } = SM; const { SHARD } = MM;

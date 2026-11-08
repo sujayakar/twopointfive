@@ -65,7 +65,7 @@ async function arm(name: Arm, dump: string | null) {
   const { SHADER_ROWS } = await import(`${ROOT}/src/ui/shaderrows.ts`) as typeof import('../../src/ui/shaderrows');
   (await import(`${ROOT}/src/gpu/wgslTrim.ts`) as typeof import('../../src/gpu/wgslTrim')).SHADER_FOLD.on = false;   // (which writing of a kernel reaches the device is read off declarations as written and off the switches' own lines: the fold of constant switches cuts both and changes neither answer; its own check is shaderfold-check.ts)
   const { Engine } = await import(`${ROOT}/src/engine.ts`);
-  const { FollowCamera } = await import(`${ROOT}/src/game/camera.ts`);
+  const { FollowCamera } = await import(`${ROOT}/src/host/camera.ts`);
   const { FrameFlags } = await import(`${ROOT}/src/render/frame.ts`);
   const { PIPE_QUEUE, pipelineProgress, laterIdle } = await import(`${ROOT}/src/gpu/device.ts`) as typeof import('../../src/gpu/device');
   const { Particles } = await import(`${ROOT}/src/render/particles.ts`);

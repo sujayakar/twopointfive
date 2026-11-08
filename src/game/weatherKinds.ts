@@ -7,11 +7,12 @@
 // roof. composite.wgsl draws it along every pixel's ray (common.wgsl wxFogTau) and the men's eyes are cut by exactly it (weather.ts airTrans → guards.ts). So both
 // read the SAME numbers the fog is QUANTISED into the 32 bits the renderer gets (packFog), and the simulation uses what unpackFog hands back.
 import type { Vec3 } from '../math/vec';
+import type { WeatherKind } from '../scene/words';
 import { sim } from '../sim/sim';
 import { WX_WATCH } from '../sim/weatherhome';
 
 export type Rect = [number, number, number, number];   // x0, z0, x1, z1
-export type WeatherKind = 'clear' | 'overcast' | 'rain' | 'downpour' | 'fog' | 'dust' | 'snow';
+export type { WeatherKind };
 /** the kinds a level can be STARTED in — the Weather row, `?weather=`. NOT 'snow': snow is a LEVEL's own weather (SNOW_LEVELS below), never picked for another */
 export const WEATHER_KINDS: readonly WeatherKind[] = ['clear', 'overcast', 'rain', 'downpour', 'fog', 'dust'];
 

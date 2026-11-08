@@ -573,7 +573,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     that sends nobody (the wall charge goes at once, no order is logged) counts where the step's `after` has only a `word`. (4) SHIFT WITH THE COMMAND KEY: while the step does not allow `plan`, Shift down with the command key was a
     press thrown away (six taps, no order, `give` never called): the one way found to make the stack's step do nothing. `RAILS.shiftTap` takes the Shift off
     and passes the tap. Whether his Shift was down is a GUESS (a screenshot shortcut's key-up never reaches a page); so the page's input also lets go of a
-    modifier the next key or mouse event says is up, and takes a key that goes down again unrepeated as a fresh press (`game/input.ts modsUp`). (5) THE GATE'S
+    modifier the next key or mouse event says is up, and takes a key that goes down again unrepeated as a fresh press (`host/input.ts modsUp`). (5) THE GATE'S
     BEAT IS SHORT: the roadblock's two sandbag walls overlapped, and the road is a lane their side knows the squad covers (`lanes.ts lanePenalty`), so its men
     went round the whole halt: 11 to 13 s of a line that asks for nothing in a scripted run, more in play. The walls now leave a gap a man walks through, a
     scripted order's `direct: true` (`GuardScript.direct`, `director.ts OrderPatch`) sends a man the short way with no lane price, and the `push` beat waits

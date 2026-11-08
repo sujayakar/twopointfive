@@ -116,7 +116,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   'out cold — breathing' on his body row and in the log, 'knocked out (breathing)' on the debrief card.
   QA: `probes.ts fn2000` (alias `sc20k`: rifle-cadence/reload/spread/slot/suppression + `kit-slots` — digits, fist per slot, column, RMB matrix,
   loadout off — + `airfoil` head/torso/miss/preview/hostage; kit-slots is in `player` too), `soak.ts --rifle-per-min N`.
-- **The issue kit = 2010s GWOT over the Splinter Cell kit** (`src/game/gear.ts`, ONE switch `GEAR.on`: ON in the page — `?oldgear` = the kit as the bullet above has
+- **The issue kit = 2010s GWOT over the Splinter Cell kit** (`src/host/gear.ts`, ONE switch `GEAR.on`: ON in the page — `?oldgear` = the kit as the bullet above has
   it, Tab ▸ Sandbox ▸ Player, doors & props ▸ '2010s issue kit', `__gear` — OFF in the module and on the frozen harness stand, `TPS_GEAR=1`; a `FROZEN_HOLDS` row, in
   the knob registry and a journal's tables). WORDS AND DRAWN BOXES, AND ONE NUMBER (the maintainer, 10-10: "yeah switch to 15 rounds for the glock, 40mm sponge
   round sgtm (and redo the assets), and just call it the mk18"): off = the build by run digest; on = the same RUNS, but the digest's `player.pistol` field reads
@@ -551,7 +551,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   the word; a save never named one; a level whose issue card says `shield` is REFUSED with the reason in words (`scene/levelData.ts`: 'the ballistic shield is out of the game:
   take the key out'; levels/hall.json and hall-gwot.json now issue nothing); an F10 session whose knobs carry the `SHIELD` table LOADS (the table is passed over) — where a shield
   man was in it the replay parts from the file's digests and says the frame, since the file does not say who carried what; a run tape that old is of
-  another version and is refused before a re-run, in words (`replay/format.ts tapeWhy`). QA:
+  another version and is refused before a re-run, in words (`tape/format.ts tapeWhy`). QA:
   `bun run tools/qa/noshield-check.ts [gone|card|staged|tape]` (`probes.ts noshield`, in all-quick; the same 24 lines on BOTH stands; `NOSHIELD_BREAK=1` lies to the check — a
   shield value on the big row — and must fail a card line). The `shield-*` probes, `shield-tally.ts` and `pellets-shield` went with it.
   `tools/qa/lived-check.ts` holds a level to its file at a base commit and loads that file with today's reader: a base whose issue block hands out the shield (the long hall's)
@@ -588,7 +588,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   tools/qa/probes.ts standoff-flank` (red with `flankAt` raised past a walk). Never seen on a GPU or played by anybody.
 - **On screen he is "the player", not Sam** (the maintainer, 10-15: "let's rename "sam" to just "player""). Every STRING the page can show says player: the Team & kit
   slot (You · point man), a room clear's end line and objective row ('player down'), save refusals ('the player is down'), the names on the debrief, the death recap and
-  a replay's cast row ('Player', `src/replay/format.ts PLAYER_NAME`), the debugger's hover text, the showcase captions, the viewer's and the editor's sheets. No switch:
+  a replay's cast row ('Player', `src/tape/format.ts PLAYER_NAME`), the debugger's hover text, the showcase captions, the viewer's and the editor's sheets. No switch:
   it is a word, not a rule (no digest carries his name; `?oldwords` lines say player too). CODE still says Sam and a new string must not: identifiers, level keys
   (`team.sam`, `samYaw`), the dialogue speaker key `'sam'`, CSS classes, probe names (`sup-sam`), comments, these notes' older bullets, and three values no screen shows
   (`doortools.ts SAM_BY`, `wallcharge.ts` a set charge's `by`). Old files: a saved defuse row and a kept replay's cast row read back
@@ -1074,7 +1074,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   NOT DONE HERE: the shared latch helper (the camera moved to the spare Space bar in the next bullet).
   Nobody has played it; never seen on a GPU.
 - **The hidden text box of a framed page is no field** (`src/host/keymap.ts typedInto(target)`, `SINK_LABEL`; 2026-10-27; no switch, a mend). In
-  somebody else's frame (the playable artifact) `game/input.ts` keeps the keys in a text box nobody sees, labelled 'game input'. Three listeners
+  somebody else's frame (the playable artifact) `host/input.ts` keeps the keys in a text box nobody sees, labelled 'game input'. Three listeners
   took any TEXTAREA for typing and dropped the key there: F7 (`ui/replaykey.ts`), F8 (`main.ts`, the performance sweep) and the kit's copy and
   paste (`ui/loadout.ts`). They now ask `typedInto`, which is true of an input, a select, a text area or editable text and never of that box; on
   a page with nothing above it there is no such box and nothing changes. `host/findme.ts`, `editor/app.ts` and `replay/engineplay.ts` spell the same test
@@ -1092,14 +1092,14 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   ONLY WHILE SPACE IS NO ROW'S: `camKey()` is `'Space'` when the switch is on AND the Space key gives the game nothing (`gameCode('Space') === ''`:
   his actions a ring on E, `handring.ts`, with empty hands a slot, `handslot.ts`, and no row put on Space by hand in Options). With `?handring=0` or
   `?handslot=0`, or a row he put on Space, the camera is on Ctrl again, by itself, and the words follow.
-  HELD (`game/input.ts`, `Input.camHeld`: the key on the board that is down, '' = none): the mouse's travel is the view's turn (`orbitDX`) and the
+  HELD (`host/input.ts`, `Input.camHeld`: the key on the board that is down, '' = none): the mouse's travel is the view's turn (`orbitDX`) and the
   wheel is the zoom (`wheelCtrl`), not his pace. The key files nothing for the game. Let go, the page out of focus, or a browser menu opened (which
   swallows the key's coming up) lets go of it. It is a latch where Ctrl was read off every mouse event: a keyup lost some other way leaves the
   view turning until Space is tapped. While Space is
   the camera's, Ctrl and the mouse turn NOTHING; a wheel that says Ctrl still zooms, because that is what a trackpad pinch sends.
   CTRL AND THE WHEEL (2026-10-24; `KEYMAP.pinchOnly`, `?pinchonly=0`; the maintainer: "ctrl-scroll still zooms in and out, should remove"): while
   Space is the camera's, the wheel under a Ctrl key that is DOWN is nothing, neither the zoom nor his pace. A PINCH STILL ZOOMS: Chrome and Firefox
-  send a trackpad pinch as a wheel that says Ctrl with no Ctrl key down, and `game/input.ts` tells the two apart by `ctrlDown`, the `ctrlKey` of the
+  send a trackpad pinch as a wheel that says Ctrl with no Ctrl key down, and `host/input.ts` tells the two apart by `ctrlDown`, the `ctrlKey` of the
   last key or mouse event on the window (first in line, behind no gate: a field with the focus, a lock, a Control he put on another key and a Ctrl
   pressed in another frame all say it; a lost focus keeps it and a plain wheel clears it). So zoom is Space and the wheel, or a pinch. Space pressed
   UNDER a held Ctrl was never a key of ours (a system's own chord), so with Ctrl down first there is neither the turn nor, now, the zoom. With the camera on
@@ -1119,7 +1119,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   NOT A ROW (a reviewer's note, left as it is): the camera's key cannot be moved in Options, and a row put on Space takes Space from it with no
   swap shown. Making the camera hold a row of the board would give it caps, words and a swap by the board's own machinery. The engine replay's own view still
   turns on Ctrl (`replay/engineplay.ts`). A laptop touchpad that goes dead while a key is held would not turn the view under Space: not tried.
-  CHECK: `bun run tools/qa/probes.ts camspace` (family `player`), 5 lines: the board, held, Ctrl, the wheel (above), off; on game/input.ts's own listeners,
+  CHECK: `bun run tools/qa/probes.ts camspace` (family `player`), 5 lines: the board, held, Ctrl, the wheel (above), off; on host/input.ts's own listeners,
   stood on a window and a canvas that are lists of them. `CAMSPACE_BREAK=1` fails 4 (the `off` line is the build as it was).
   `tools/qa/keybinds-page.cjs` reads the camera's cap in its last line.
   Never seen on a GPU; nobody has felt Space held under a thumb while the same hand walks.
