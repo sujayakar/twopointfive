@@ -30,9 +30,11 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
 }
 function lightList(engine: any): string {
-  return engine.lights.lights.map((l: any) => `${l.name}:${l.kind}:${l.enabled ? 1 : 0}:${l.peakIntensity.toFixed(3)}:${l.color.map((c: number) => c.toFixed(3)).join(',')}:${/^beacon|^flashlight|pistol_light|^cam_/.test(l.name) ? '-' : l.dir.map((c: number) => c.toFixed(3)).join(',')}:${l.radius.toFixed(3)}`).join('|');
+  return engine.lights.lights.map((l: any) => `${l.name}:${l.kind}:${/^flashlight/.test(l.name) ? '-' : l.enabled ? 1 : 0}:${l.peakIntensity.toFixed(3)}:${l.color.map((c: number) => c.toFixed(3)).join(',')}:${/^beacon|^flashlight|pistol_light|^cam_/.test(l.name) ? '-' : l.dir.map((c: number) => c.toFixed(3)).join(',')}:${l.radius.toFixed(3)}`).join('|');
 }
 function upload(W: any) { W.engine.lights.upload(W.game.time); }
+/** the lights uploaded, the men's torches left out: a man's own rules light and put out his */
+const uploaded = (engine: any) => engine.lights.activeCount - engine.lights.lights.filter((l: any) => /^flashlight/.test(l.name) && l.enabled).length;
 /** park everybody: nobody walks, hears or shoots — the storm alone acts */
 function quiet(W: any) { const { game } = W; game.playerInvisible = true; game.godMode = true; for (const gd of game.guards) { gd.hold = true; gd.pinned = true; } }
 
@@ -46,14 +48,14 @@ export async function weatherFlash() {
     const W = await standUp(); quiet(W); const { game, engine } = W;
     const wx = game.weather; wx.storm = 0;   // no scheduled strokes: only the one fired here
     for (let i = 0; i < 30; i++) W.step(dt);
-    upload(W); const n0 = engine.lights.lights.length, up0 = engine.lights.activeCount, L0 = lightList(engine);
+    upload(W); const n0 = engine.lights.lights.length, up0 = uploaded(engine), L0 = lightList(engine);
     const fl = wx.strike({ bearing: Math.PI, elevDeg: 30, distKm: 2.0, peak: 18 });
     const f: string[] = [];
     if (!fl) f.push('strike() returned null');
     const li = engine.lights.lights.find((l: any) => l.name === 'lightning');
     if (!li) f.push("no 'lightning' in the set after strike()");
     else { if (li.kind !== 2) f.push(`kind ${li.kind}`); if (!li.transient) f.push('not flagged transient'); if (li.ttl >= 0) f.push(`ttl ${li.ttl} (the LightSet envelope would fight the stroke's)`); if (!(li.intensity > 0)) f.push(`intensity ${li.intensity} on the strike frame`); if (Math.abs(v3.len(li.dir) - 1) > 1e-6) f.push('dir not unit'); if (!(li.dir[1] < 0)) f.push('dir does not point down'); }
-    upload(W); if (engine.lights.activeCount !== up0 + 1) f.push(`${engine.lights.activeCount} uploaded on the strike frame (want ${up0 + 1})`);
+    upload(W); if (uploaded(engine) !== up0 + 1) f.push(`${uploaded(engine)} uploaded on the strike frame (want ${up0 + 1})`);
     // step through the flash: integrate what the frames showed (step i draws the envelope over [(i − 1)·dt, i·dt] — weather.ts update)
     let energy = 0, frames = 0, maxI = li?.intensity ?? 0, goneAt = -1, everTwo = false;
     for (let i = 1; i <= Math.ceil(1.0 / dt); i++) {
@@ -68,7 +70,7 @@ export async function weatherFlash() {
     if (goneAt < 0) f.push('light still in the set a second later'); else if (goneAt > 0.5 + 3 * dt + 1e-9) f.push(`light gone only at ${f2(goneAt)} s (FLASH_SECS 0.5)`);
     if (everTwo) f.push('two lightning lights at once');
     upload(W); const L1 = lightList(engine);
-    if (engine.lights.lights.length !== n0 || engine.lights.activeCount !== up0) f.push(`set ${engine.lights.lights.length}/${n0}, uploaded ${engine.lights.activeCount}/${up0} after`);
+    if (engine.lights.lights.length !== n0 || uploaded(engine) !== up0) f.push(`set ${engine.lights.lights.length}/${n0}, uploaded ${uploaded(engine)}/${up0} after`);
     if (L1 !== L0) f.push('light list after ≠ before');
     if (wx.flash) f.push('weather.flash still set');
     F.verdict(f.length === 0, `${Math.round(1 / dt)} fps: one 'lightning' (kind 2, transient, ttl −1, pointing down) lit on the strike frame, +1 uploaded, energy = peak × Σ amp·τ within 3 %, gone by FLASH_SECS (+2 frames), set and upload count restored, list identical`,
