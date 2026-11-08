@@ -217,6 +217,22 @@ fn the_verdicts_men_carry_pair_colours_only_where_there_are_two_pairs() {
     assert!(four.won && four.men.len() == 5 && of(Red) == 2 && of(Blue) == 2, "four: won {}, {} rows, {} red, {} blue", four.won, four.men.len(), of(Red), of(Blue));
 }
 
+/// THE RULE: Sam going down is the verdict DOWN, not won, his own row dead, with no approach to its name, once the try has started.
+/// A FAILURE MEANS: the card reads a lost run as anything else.
+#[test]
+fn sam_going_down_is_the_verdict_down() {
+    let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed: 1, ..Default::default() });
+    p.run(0.1);
+    let at = p.sam_at();
+    p.sam_put([at[0] + 2.0, at[1]]);
+    p.run(0.3);
+    p.seat_goes_down(0);
+    p.run(0.2);
+    let v = p.g.verdict.res.clone().unwrap_or_else(|| panic!("no verdict: {}", p.roll()));
+    assert_eq!((v.won, v.word.as_str()), (false, "DOWN"));
+    assert!(v.approach.is_none() && v.men[0].human && v.men[0].state == game::verdict::ManState::Dead, "approach {:?}, his row {:?}", v.approach, v.men[0].state);
+}
+
 // ---------------------------------------------------------------- the suit a quiet mission wears
 
 fn wears(p: &Play, c: game::ids::CharId, part: &str) -> bool {
