@@ -1,6 +1,6 @@
 // THE START PAGE, WALKED: every mission, its setting rows, its team sizes, every man's card and every step of every row, the named kits, copy and paste, and the link
 // Deploy loads, each written down as the words and states the page shows. Two trees' walks are compared: a swap of what is behind the cards changes no line.
-//   bun run tools/qa/cards-page.ts OUT [--port N] [--missions id,id]     a real browser (CHROME=…), no GPU asked for, about a minute
+//   bun run tools/qa/cards-page.ts OUT [--port N] [--missions id,id] [--face PATH]     a real browser (CHROME=…), no GPU asked for, about a minute; --face: the module (default: what this checkout builds)
 //   bun run tools/qa/cards-page.ts --diff OUT OTHER                        exit 1 and the first lines that differ
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -15,6 +15,7 @@ if (args[0] === '--diff') {
 const out = args[0]; if (!out || out.startsWith('--')) { console.error('usage: bun run tools/qa/cards-page.ts OUT'); process.exit(2); }
 const word = (k: string) => { const i = args.indexOf(k); return i < 0 ? undefined : args[i + 1]; };
 const port = Number(word('--port') ?? 5991), deep = word('--missions')?.split(',');
+const faceAt: string = word('--face') ?? await (async () => { const r = await (await import(resolve(ROOT, 'tools/blitz/face-build.ts'))).faceWasm(); if ('why' in r) { console.error(r.why); process.exit(2); } return r.path; })();
 
 const pageBridge = (await import(resolve(ROOT, 'tools/blitz/page-plugin.ts'))).default;   // (a bundler's plugin: no part of this folder's type check)
 const built = await Bun.build({ entrypoints: [resolve(import.meta.dir, 'cards-entry.ts')], target: 'browser', plugins: [pageBridge,
@@ -27,6 +28,7 @@ const server = Bun.serve({ port, fetch(req: Request) {
   const path = decodeURIComponent(new URL(req.url).pathname);
   if (path === '/') return new Response(html, { headers: { 'content-type': 'text/html' } });
   if (path === '/cards.js') return new Response(js, { headers: { 'content-type': 'text/javascript' } });
+  if (path === '/game_face.wasm') return new Response(Bun.file(faceAt) as unknown as Blob, { headers: { 'content-type': 'application/wasm' } });
   for (const dir of ['', 'public', 'dist']) { const f = resolve(ROOT, dir, '.' + path); if (f.startsWith(ROOT) && existsSync(f)) return new Response(Bun.file(f) as unknown as Blob); }
   return new Response('no', { status: 404 });
 } });
