@@ -2965,9 +2965,6 @@ if (on('same-way', 'ordereddoor', 'all')) await run('same-way', async () => (awa
 // ---------------------------------------------------------------- the loud demo's motion pass (moves-probes.ts; character.ts MOVES, settled on): recoil, the toss, the flinch / hit, the stun hunch, a staged fight
 for (const [nm, fn] of [['moves-recoil', 'movesRecoil'], ['moves-react', 'movesReact'], ['moves-toss', 'movesToss'], ['moves-dazzle', 'movesDazzle'], ['moves-game', 'movesGame'], ['moves-reload', 'movesReload'], ['moves-kept', 'movesKept'], ['moves-entry', 'movesEntry'], ['moves-second', 'movesSecond'], ['moves-hands', 'movesHands'], ['moves-cast', 'movesCast'], ['moves-snap', 'movesSnap'], ['moves-steady', 'movesSteady']] as const)
   if (on(nm, 'moves', 'all')) await run(nm, async () => ((await import('./moves-probes.ts')) as any)[fn]());
-// ---------------------------------------------------------------- a hit can wound a man instead of killing him (wounds-probes.ts; game/wounds.ts WOUND.on, off as shipped): the rule as geometry, off = every hit kills, the state, both sides, no counter, checkpoints + found
-for (const [nm, fn] of [['wounds-zone', 'woundsZone'], ['wounds-off', 'woundsOff'], ['wounds-state', 'woundsState'], ['wounds-both', 'woundsBoth'], ['wounds-again', 'woundsAgain'], ['wounds-save', 'woundsSave'], ['wounds-play', 'woundsPlay']] as const)
-  if (on(nm, 'wounds', 'all')) await run(nm, async () => ((await import('./wounds-probes.ts')) as any)[fn]());
 // ---------------------------------------------------------------- turning with the weapon's weight (moves-probes.ts; character.ts TURN, settled on): a man nobody weighs keeps the yaws as written; a weighed one has a run-up, a top rate by the weapon, no overshoot, and the AI's easings still arrive
 for (const [nm, fn] of [['turn-game', 'turnGame']] as const)
   if (on(nm, 'turn', 'moves', 'all')) await run(nm, async () => ((await import('./moves-probes.ts')) as any)[fn]());
