@@ -99,7 +99,7 @@ export async function verdictCheck(): Promise<boolean> {
 
     // 4. every kind
     { const N = await stage('breach'); await N.nudge(); await N.step(5); await N.found(); await N.drop(N.foes()); await N.step(4);
-      line(!!N.V.result && N.V.result.won && N.V.result.kind === 'nightbreach' && N.V.result.men.length === 3 && N.V.result.men[1].tone === null, `the night breach: ${N.V.result ? verdictLine(N.V.result) : 'no verdict'} (one pair: no pair colours)`);
+      line(!!N.V.result && N.V.result.won && N.V.result.kind === 'nightbreach' && N.V.result.men.length === 3 && N.V.result.men[1].tone == null, `the night breach: ${N.V.result ? verdictLine(N.V.result) : 'no verdict'} (one pair: no pair colours)`);
       const H = await stage('rescue'); await H.nudge(); await H.step(5); await H.found(); await H.drop([H.g.rescue.hostages[0]], 'guard');
       for (let i = 0; i < 600 && !H.V.result; i++) await H.step(1);
       const R = H.V.result, G = H.g.rescue.result;

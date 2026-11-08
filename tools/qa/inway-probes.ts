@@ -5,7 +5,7 @@
 // Headless, staged the same on either stand; nothing here looks at a picture or hears a voice (the line is read off Game.say and the order's own answer).
 //   tight   the barracks, the south gallery's west door from the gallery (sg_w): the four put on that face a few metres back, the stack's four places read
 //           with Sam away, Sam then stood on the LAST of them. 'stack up' for all four is refused, and the words — the order's answer, the line a man says,
-//           the menu's greyed word, the door tools' own test of the same face — are IN_WAY_WORDS with the key on, 'no room on that door.' with it off.
+//           the menu's greyed word (the door tools' own test is the native test's) — are IN_WAY_WORDS with the key on, 'no room on that door.' with it off.
 //   off     the same door, Sam stepped off: the order is taken, each of the four dealt a place of his own, one of them the place Sam stood on (so the line was true)
 //   none    the compound, the hall's north door from the yard (hall_n): no room for four with Sam nowhere near, and none with him stood in front of it:
 //           'no room on that door.' with the key on as with it off (the line is never said of a door that has no room without him)
@@ -34,7 +34,7 @@ const quiet = async <T>(fn: () => T | Promise<T>): Promise<T> => { const l = con
 const frame = (d: any, side: 1 | -1) => { const th = d.def.closedDir, u = [Math.cos(th), Math.sin(th)], n = [-u[1] * side, u[0] * side], c = d.frameCentre;
   return { at: (b: number, l: number): number[] => [c[0] + n[0] * b + u[0] * l, 0, c[2] + n[1] * b + u[1] * l] }; };
 interface Man { who: string; order: string; door: string; post: number[] | null; pos: number[] }
-interface Case { why: string | null; said: string[]; menu: string | null; tool: unknown; /** every man as the order left him, the moment it was given */ dealt: Man[]; /** … and after the seconds played */ men: Man[] }
+interface Case { why: string | null; said: string[]; menu: string | null; /** every man as the order left him, the moment it was given */ dealt: Man[]; /** … and after the seconds played */ men: Man[] }
 
 /** a level stood up with the four and nobody to fight, the key set AFTER the stand-up (the frozen stand pins it off, the page's raises it) */
 async function fresh(scn: string, key: boolean) {
@@ -46,9 +46,9 @@ async function fresh(scn: string, key: boolean) {
   const men = (): Man[] => team.map(m => { const A = O.of(m); return { who: m.callsign, order: A?.order ?? '-', door: A?.door?.def.name ?? '-', post: A?.post ? [A.post[0], 0, A.post[2]] : null, pos: [m.char.pos[0], 0, m.char.pos[2]] }; });
   /** 'stack up' on that face for all four, as the menu gives it: the order's answer, what was said, the greyed word and the door tools' test, then `secs` played */
   const give = async (d: any, side: 1 | -1, secs: number, bare = false): Promise<Case> => { const t = { kind: 'door', at: [d.frameCentre[0], 0, d.frameCentre[2]], door: d, side }, n0 = said.length;
-    const menu = bare ? null : O.whyNot(O.defs.find((x: any) => x.id === 'stack'), O.forMen(t, team), team), tool = bare ? null : g.doorTools.canThreshold(O.forMen(t, team), team);   // (`bare`: the order alone — nothing asks the door before it)
+    const menu = bare ? null : O.whyNot(O.defs.find((x: any) => x.id === 'stack'), O.forMen(t, team), team);   // (`bare`: the order alone — nothing asks the door before it)
     const why = await quiet(() => O.give('stack', t, 'all')), dealt = men(); await quiet(() => S.step(Math.max(1, Math.round(60 * secs))));   // (what the game said reaches the copy with the next step)
-    return { why: why ?? null, said: said.slice(n0).filter(s => team.some((m: any) => s.startsWith(`${m.callsign}: `))), menu, tool, dealt, men: men() }; };   // (the step lets the far side's radio in with it: the question is what the team says)
+    return { why: why ?? null, said: said.slice(n0).filter(s => team.some((m: any) => s.startsWith(`${m.callsign}: `))), menu, dealt, men: men() }; };   // (the step lets the far side's radio in with it: the question is what the team says)
   const put = async (p: number[]) => { await quiet(() => g.teleportPlayer([p[0], 0, p[2]] as any)); };
   return { S, g, O, team, give, put, men };
 }
@@ -101,16 +101,16 @@ export async function stackInWay(): Promise<boolean> {
   try {
     const on = await play(!BREAK), off = await play(false);
     const refused = (c: Case, words: string) => c.why === words && c.said.length === 1 && c.said[0].endsWith(`: ${words}`) && c.menu === words && c.dealt.every(m => m.order !== 'stack') && c.men.every(m => m.order !== 'stack');
-    const say = (c: Case) => `give → ${c.why === null ? 'taken' : `REFUSED "${c.why}"`} · said: ${c.said.join(' / ') || 'nothing'} · the menu's greyed word: ${c.menu ?? 'none'} · the door tools' test: ${c.tool}`;
+    const say = (c: Case) => `give → ${c.why === null ? 'taken' : `REFUSED "${c.why}"`} · said: ${c.said.join(' / ') || 'nothing'} · the menu's greyed word: ${c.menu ?? 'none'}`;
     const taken = (c: Case, r: typeof on) => c.why === null && c.dealt.length === 4 && c.dealt.every(m => m.order === 'stack' && m.door === 'sg_w' && !!m.post) && c.dealt.every((m, i) => c.dealt.every((o, j) => i === j || flat(m.post!, o.post!) > 0.6))
       && c.dealt.filter(m => flat(m.post!, r.last) < 0.02).length === 1 && c.men.every(m => m.order === 'stack' && m.door === 'sg_w');   // (the places are dealt afresh at the order — the men have moved since they were read with Sam away — but the one Sam stood on is among them)
-    verdict(on.places.length === 4 && flat(on.stood, on.last) < 0.7 && refused(on.tight, IN_WAY_WORDS) && on.tight.tool === IN_WAY_WORDS,
+    verdict(on.places.length === 4 && flat(on.stood, on.last) < 0.7 && refused(on.tight, IN_WAY_WORDS),
       'tight (key on): Sam on the last of the four places at the barracks\' sg_w — the stack is refused, and the man says he is in the way',
       `the places with Sam away ${on.places.map(at).join(' ')} · Sam stood at ${at(on.stood)}, ${flat(on.stood, on.last).toFixed(2)} m off the last · ${say(on.tight)}`);
     verdict(taken(on.off, on),
       'off (key on): the same door with Sam stepped off — the order is taken, each of the four dealt a place of his own, one of them the place Sam stood on',
       `Sam at ${at(on.aside)} · ${say(on.off)} · ${on.off.dealt.map(m => `${m.who} → ${m.post ? at(m.post) : '-'}`).join(' · ')}`);
-    verdict(on.bare === null && on.samFar > 6 && refused(on.none, PLAIN) && on.none.tool === PLAIN && on.samNear < 1.5 && refused(on.noneNear, PLAIN) && on.noneNear.tool === PLAIN,
+    verdict(on.bare === null && on.samFar > 6 && refused(on.none, PLAIN) && on.samNear < 1.5 && refused(on.noneNear, PLAIN),
       'none (key on): a door with no room without him — the compound\'s hall_n — says \'no room on that door.\', Sam far off or stood in front of it',
       `places with Sam away: ${on.bare === null ? 'none' : 'some'} · Sam ${on.samFar.toFixed(1)} m off: ${say(on.none)} · Sam ${on.samNear.toFixed(1)} m off: ${say(on.noneNear)}`);
     const cases: [string, Case, Case][] = [['tight', on.tight, off.tight], ['off', on.off, off.off], ['none', on.none, off.none], ['none, Sam near', on.noneNear, off.noneNear]];

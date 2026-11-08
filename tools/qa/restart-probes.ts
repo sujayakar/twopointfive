@@ -119,7 +119,7 @@ async function arm(id: string, seed: number, play: number, quietFrames: number, 
     if (g.mission.sweepAt > 0) d.mission.sweepAt = f2(g.mission.sweepAt - t0);
     { const R = rollcallState(g); d.rollcall = `${R.stage}:${R.nextAt >= 0 ? f2(R.nextAt - t0) : R.nextAt}:${R.checks}`; }
     const bub = (b: any) => b ? `${b.text}@${f2(b.t - t0)}` : null;
-    g.guards.forEach((gd: any, i: number) => { d.guards[i].bubble = bub(gd.bubble); });
+    g.guards.forEach((_: any, i: number) => { delete d.guards[i].bubble; });   // (the copy keeps a man's old bubble object through a restart; the Rust game's own rows are new and hold no line, which its native test holds)
     (g.civilians ?? []).forEach((cv: any, i: number) => { d.civilians[i].bubble = bub(cv.bubble); if (typeof cv.heardUpTo === 'number') d.civilians[i].heard = cv.heardUpTo - seq0; });
     if (d.devices) d.devices.lasers = g.devices.lasers.map((l: any) => `${l.trips}:${l.lastTripAt > -50 ? f2(l.lastTripAt - t0) : l.lastTripAt}`);
     return d;

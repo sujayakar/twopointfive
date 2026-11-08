@@ -214,10 +214,9 @@ export async function witness() {
   {
     const S = await stage(402); const { W, game, A, B, C, los, lines } = S;
     const fails: string[] = []; if (!los.bSeesA) fails.push('staging: A not in B\'s view');
-    B.hold = false;   // free to walk up and call it
-    startTakedown(game, A);
+    startTakedown(game, A);   // (B held with his head on A: the witness asks the same eye as everything else, and a man looking about may not see the blow)
     let actB: any = null; let foundAt = -1;
-    for (let i = 0; i < 60 * 8; i++) { W.step(DT); if (!actB && B.witness.sawAct) actB = { ...B.witness.sawAct, at: game.time }; if (foundAt < 0 && A.found) foundAt = game.time; }
+    for (let i = 0; i < 60 * 8; i++) { W.step(DT); if (!actB && B.witness.sawAct) actB = { ...B.witness.sawAct, at: game.time }; if (actB) B.hold = false; /* free to walk up and call it */ if (foundAt < 0 && A.found) foundAt = game.time; }
     if (A.downKind !== 'struck' || !isBreathing(A)) fails.push(`A ${A.downKind} breathing ${isBreathing(A)}`);
     if (!actB || actB.kind !== 'struck' || actB.victim !== A.callsign) fails.push(`B.sawAct ${JSON.stringify(actB)} (want struck / ${A.callsign})`);
     if (foundAt < 0) fails.push('B never called the body in 8 s');
