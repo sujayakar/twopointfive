@@ -683,12 +683,6 @@ pub fn wall_charge_under_fire(g: &mut crate::game::Game, w: Option<&crate::wallc
     WallChargeUnderFire { score: fire_new(g, w, all) }
 }
 
-/// (wallcharge.ts fireAt)
-pub fn wall_charge_fire_at(g: &mut crate::game::Game, q: V3, w: Option<&crate::wallcharge::WallSpot>) -> f64 {
-    let mut fire = wall_charge_under_fire(g, w, None);
-    wall_charge_fire_score(g, &mut fire.score, q)
-}
-
 /// How much of the blast a place on the charge's own side takes: 0 = none, up to 1 at the wall. (wallcharge.ts blastShare)
 pub fn wall_charge_blast_share_of(g: &crate::game::Game, w: &crate::wallcharge::WallSpot, p: V3, r: Option<crate::wallcharge::WallChargeAwayMarksValueR>, leaves: Option<bool>) -> f64 {
     let r = match r { Some(r) => r, None => safe_radius_of(g, w) };

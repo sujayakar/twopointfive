@@ -433,12 +433,6 @@ pub fn glass_break_impact(g: &mut crate::game::Game, bi: f64, x: V3, dir: Option
     res
 }
 
-/// the base's name for a round's impact at energy 1 (glassbreak.ts GlassBreak.hit)
-pub fn glass_break_hit(g: &mut crate::game::Game, bi: f64, x: V3, dir: Option<V3>, who: f64, energy: Option<f64>) {
-    let energy = energy.unwrap_or(1.0);
-    glass_break_impact(g, bi, x, dir, energy, who, None);
-}
-
 /// a pellet through glass its own shell has just broken: no blow filed, but a standing piece of an annealed pane goes with it; fragments let go (glassbreak.ts GlassBreak.widen)
 pub fn glass_break_widen(g: &mut crate::game::Game, bi: f64, x: V3) -> f64 {
     if !glass_break_live(g) { return 0.0; }
@@ -769,22 +763,6 @@ pub fn glass_break_row_state(g: &mut crate::game::Game, s: f64, r: f64) -> crate
         walkable: st.walkable != 0,
         log: Vec::new(),
     }
-}
-
-/// a burst's reckoning, for a tool: is the glass of pane bi at x on its way out (glassbreak.ts GlassBreak.goingAt)
-pub fn glass_break_going_at(g: &mut crate::game::Game, bi: f64, x: V3) -> bool {
-    glass_break_see_through(g, GlassBreakSeeThroughView::Blown, [0.0, 0.0, 0.0], GlassBlastOpts::zeroed(), &mut |g| glass_break_rule_open(g, bi, x))
-}
-
-/// a burst's reckoning, for a tool: would a blast of this size at `at` take pane bi out of the way (glassbreak.ts GlassBreak.wouldGive)
-pub fn glass_break_would_give(g: &mut crate::game::Game, bi: f64, at: V3, opts: Option<crate::glassbreak::GlassBlastOpts>, x: Option<V3>) -> bool {
-    if !glass_break_live(g) { return false; }
-    let opts = opts.unwrap_or_default();
-    let view = if x.is_some() { GlassBreakSeeThroughView::Counted } else { GlassBreakSeeThroughView::Wary };
-    glass_break_see_through(g, view, at, opts, &mut |g| {
-        let p = match x { Some(x) => x, None => { let b = box_at(g, bi).unwrap(); seam_box(g, b).c } };
-        glass_break_rule_open(g, bi, p)
-    })
 }
 
 /// the record for the renderer, GB_RECORD_ROWS vec4 rows: reads the pane, writes nothing of it (glassbreak.ts GlassBreak.fill)

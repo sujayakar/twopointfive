@@ -410,7 +410,7 @@ pub fn sending(g: &crate::game::Game, pl: PlayerId, c: StickyCamId) -> bool {
 
 /// A small lens on each of his own stuck cameras while the fog is live. (stickycam.ts stickyMarks)
 pub fn sticky_marks(g: &crate::game::Game, pl: PlayerId) -> Vec<crate::view::CamMark> {
-    if !g.k.sticky.on || !g.k.sticky.mark || !crate::fogofwar::fog_of_war_active(g) { return Vec::new(); }
+    if !crate::fogofwar::fog_of_war_active(g) { return Vec::new(); }
     g.pl[pl].cams.iter().filter(|&&c| g.tab.stickycam_sticky_cam[c].vel.is_none()).map(|&c| crate::view::CamMark { at: cam_lens(g, c), sends: sending(g, pl, c) }).collect()
 }
 

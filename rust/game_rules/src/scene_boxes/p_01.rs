@@ -221,12 +221,6 @@ pub fn box_world_list(g: &mut crate::game::Game) -> f64 {
     n_stat as f64
 }
 
-/// The list without the pack, for a tick nothing is drawn after. (boxes.ts BoxWorld.relist)
-pub fn box_world_relist(g: &mut crate::game::Game) {
-    box_world_list(g);
-    g.engine.world.pack_behind = true;
-}
-
 /// words a ray's bits stand in: a bit a static
 pub const MET: usize = 128;
 /// the nearest a ray has met so far: how far, which box of `all` (−1 none), the face

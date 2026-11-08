@@ -586,20 +586,6 @@ pub fn work_things_note(g: &mut crate::game::Game, gd: GuardId, what: &str) {
     if g.work.log.len() > 200 { g.work.log.drain(0..50); }
 }
 
-/// One line for a probe. (workthings.ts WorkThings.summary)
-pub fn work_things_summary(g: &crate::game::Game) -> String {
-    let th = work_things_things(g, &crate::seats::here(g));
-    let mut n = 0;
-    for gd in g.work.jobs.keys() {
-        if work_things_working(g, &crate::seats::here(g), gd) { n += 1; }
-    }
-    let parts: Vec<String> = th.iter().map(|x| format!("{}{}", x.name, if x.stand.is_some() { "" } else { " (no place to stand)" })).collect();
-    let joined = parts.join(" · ");
-    let things = if joined.is_empty() { String::from("nothing to work") } else { joined };
-    let s = &g.stats.workthings;
-    format!("{} · {} at work · given {} done {} moot {}", things, n, s.given, s.done, s.moot)
-}
-
 /// orders.ts targetAt: a thing a teammate can work near a point. (workthings.ts workNear)
 pub fn work_near(g: &crate::game::Game, seat: &crate::seats::SeatRef, at: V3) -> Option<crate::workthings::WorkNear> {
     work_things_near(g, seat, at).map(|x| WorkNear { d: x.d, target: x.target })

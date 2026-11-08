@@ -59,11 +59,6 @@ fn order_kind(kind: crate::doortools::DoorToolsOrderKind) -> crate::doortools::D
     match kind { crate::doortools::DoorToolsOrderKind::Outside => crate::doortools::DoorToolKind::Outside, crate::doortools::DoorToolsOrderKind::BangClear => crate::doortools::DoorToolKind::BangClear, crate::doortools::DoorToolsOrderKind::OpenClear => crate::doortools::DoorToolKind::OpenClear, crate::doortools::DoorToolsOrderKind::Threshold => crate::doortools::DoorToolKind::Threshold }
 }
 
-/// a `Who` as `men()` takes it
-fn who_sel(who: crate::orders::Who) -> crate::orders::SquadOrdersMenSel {
-    match who { crate::orders::Who::Num(n) => crate::orders::SquadOrdersMenSel::Num(n), crate::orders::Who::All => crate::orders::SquadOrdersMenSel::All, crate::orders::Who::Red => crate::orders::SquadOrdersMenSel::Red, crate::orders::Who::Blue => crate::orders::SquadOrdersMenSel::Blue }
-}
-
 /// `t` as canThresholdThen takes it
 fn can_t(t: &crate::orders::OrderTarget) -> crate::doortools::DoorToolsCanThresholdThenT {
     match t { crate::orders::OrderTarget::Floor(x) => crate::doortools::DoorToolsCanThresholdThenT::Floor(x.clone()), crate::orders::OrderTarget::Door(x) => crate::doortools::DoorToolsCanThresholdThenT::Door(x.clone()), crate::orders::OrderTarget::None(x) => crate::doortools::DoorToolsCanThresholdThenT::None(x.clone()), crate::orders::OrderTarget::Foe(x) => crate::doortools::DoorToolsCanThresholdThenT::Foe(x.clone()) }
@@ -648,26 +643,6 @@ pub fn door_tools_can_threshold(g: &mut crate::game::Game, t: &crate::orders::Or
     }
 }
 
-/// the threshold by a door's name: the men `who` names, on the face they can walk to unless `side` says (doortools.ts DoorTools.thresholdOn)
-pub fn door_tools_threshold_on(g: &mut crate::game::Game, door: &str, who: Option<crate::orders::Who>, side: Option<f64>, hold: Option<bool>) -> crate::doortools::DoorToolsThresholdOn {
-    let who = who.unwrap_or(crate::orders::Who::All);
-    let hold = hold.unwrap_or(false);
-    door_tools_sync(g);
-    let Some(d) = crate::doors::doors_by_name(g, door) else { return crate::doortools::DoorToolsThresholdOn::Text(format!("no door called {}", door)) };
-    let men = crate::orders::squad_orders_men(g, &crate::seats::here(g), Some(who_sel(who)), None);
-    if men.is_empty() { return crate::doortools::DoorToolsThresholdOn::Text(String::from("nobody to take it")); }
-    let at = g.ch[g.pl[g.player].ch].pos;
-    let sam = crate::orders::side_of(g, d, at);
-    let face = match side {
-        Some(s) => s,
-        None => if crate::orders::squad_orders_big(g, &crate::seats::here(g)) { crate::orders::squad_orders_side_for(g, d, &men, sam) } else { sam },
-    };
-    match door_tools_order(g, crate::doortools::DoorToolsOrderKind::Threshold, &men, d, face, None, Some(hold)) {
-        crate::doortools::DoorToolsOrder::Text(s) => crate::doortools::DoorToolsThresholdOn::Text(s),
-        crate::doortools::DoorToolsOrder::DoorOp(op) => crate::doortools::DoorToolsThresholdOn::DoorOp(op),
-    }
-}
-
 /// the rooms being worked from the threshold whose men are still outside on the jambs, among these men (doortools.ts DoorTools.thresholdHeld)
 pub fn door_tools_threshold_held(g: &crate::game::Game, seat: &crate::seats::SeatRef, men: &[GuardId], door: Option<DoorId>) -> Vec<DoorOpId> {
     let mut out = Vec::new();
@@ -792,29 +767,6 @@ pub fn door_tools_to_step(g: &mut crate::game::Game, op: DoorOpId) {
         g.tab.doortools_door_op[op].phase = crate::doortools::Phase::Wait;
     } else {
         door_tools_enter(g, op);
-    }
-}
-
-/// from the console or a probe: every held threshold of the men `who` names, or only the door named. None when it went (doortools.ts DoorTools.thresholdTell)
-pub fn door_tools_threshold_tell(g: &mut crate::game::Game, what: crate::doortools::DoorToolsThresholdTellWhat, door: Option<&str>, who: Option<crate::orders::Who>) -> Option<String> {
-    let who = who.unwrap_or(crate::orders::Who::All);
-    let door = door.filter(|s| !s.is_empty());
-    let d = match door { Some(n) => crate::doors::doors_by_name(g, n), None => None };
-    if let (Some(n), None) = (door, d) { return Some(format!("no door called {}", n)); }
-    let men = crate::orders::squad_orders_men(g, &crate::seats::here(g), Some(who_sel(who)), None);
-    let t = match d {
-        Some(d) => {
-            let c = g.dr[d].frame_centre;
-            let at = g.ch[g.pl[g.player].ch].pos;
-            let side = crate::orders::side_of(g, d, at);
-            Some(crate::doortools::DoorToolsThresholdThenT::Door(crate::orders::OrderTargetDoor { at: [c[0], 0.0, c[2]], door: d, side }))
-        }
-        None => None,
-    };
-    let then = match what { crate::doortools::DoorToolsThresholdTellWhat::Bang => crate::doortools::DoorToolsThresholdThenWhat::Bang, crate::doortools::DoorToolsThresholdTellWhat::Step => crate::doortools::DoorToolsThresholdThenWhat::Step, crate::doortools::DoorToolsThresholdTellWhat::Leave => crate::doortools::DoorToolsThresholdThenWhat::Leave };
-    match door_tools_threshold_then(g, then, &men, t.as_ref()) {
-        crate::doortools::DoorToolsThresholdThen::Text(s) => Some(s),
-        crate::doortools::DoorToolsThresholdThen::Arm1(()) => None,
     }
 }
 

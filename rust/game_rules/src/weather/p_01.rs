@@ -358,12 +358,6 @@ pub fn weather_air_trans(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
     ::sim::weather::air_trans(wx_read(g), a, b)
 }
 
-/// The weather's dice, reseeded. (weather.ts Weather.seed)
-pub fn weather_seed(g: &mut crate::game::Game, n: f64) {
-    weather_set_die(g, js::to_u32(n) as f64);
-    weather_set_next_flash_at(g, -1.0);
-}
-
 /// Everything the storm's next minutes hang on; a stroke in progress is not carried. hours.ts holds a level's own storm in one, so it is a rule's call and not only a checkpoint's. (weather.ts Weather.snapshot)
 pub fn weather_snapshot(g: &crate::game::Game) -> crate::weather::WeatherSnap {
     let kind = g.weather.kind_now;

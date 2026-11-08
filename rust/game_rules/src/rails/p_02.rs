@@ -130,8 +130,6 @@ pub fn rails_settles(g: &mut crate::game::Game, l: &crate::scene_scenarios::Less
     let t = g.time - done_t;
     t >= 0.0 && (t < g.k.rails.card_beat_secs || (e.quiet.unwrap_or(false) && t < g.k.rails.card_max && g.time - rails_fight(g) < g.k.rails.card_quiet))
 }
-/// no teammate shows an aiming laser on this level (rails.ts Rails.noLasers)
-pub fn rails_no_lasers(g: &crate::game::Game) -> bool { rails_data(g).map_or(false, |d| d.lasers == Some(false)) }
 /// the step teaches the hold: a tap gives nothing, and is noted for the page (rails.ts Rails.tapOff)
 pub fn rails_tap_off(g: &mut crate::game::Game) -> bool {
     if !rails_teaches_hold(g) { return false; }

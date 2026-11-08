@@ -145,14 +145,6 @@ pub fn director_beat_unit(g: &crate::game::Game, r: DirectorRunId, callsign: &st
     }
     found.map(|gd| unit_ref_of(g, gd))
 }
-/// c.show (director.ts:921)
-pub fn director_beat_show(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, u: &crate::director::UnitRef, on: Option<bool>) -> Result<(), String> {
-    let on = on.unwrap_or(true);
-    let gd = director_guard_of(g, r, u)?;
-    director_show_man(g, gd, on);
-    push(g, b, DirectorPushRowKind::Note, format!("{} {}", if on { "show" } else { "unshow" }, u.callsign), None);
-    Ok(())
-}
 /// c.rout (director.ts:922)
 pub fn director_beat_rout(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, u: &crate::director::UnitRef) -> Result<bool, String> {
     if g.tab.director_run[r].units.has(crate::Num(u.id)) { return Ok(false); }
@@ -228,16 +220,6 @@ pub fn director_beat_door_open(g: &mut crate::game::Game, d: &crate::director::D
     if hold == Some(true) { crate::doors::door_set_quiet_t(g, door, -3600.0); } // (an hour of quiet is a leaf on its stay; Door.reset puts it back)
     Ok(())
 }
-/// c.doors.shut (director.ts:988)
-pub fn director_beat_door_shut(g: &mut crate::game::Game, d: &crate::director::DoorRef) -> Result<(), String> {
-    let door = director_door_of(g, d)?;
-    if !crate::doors::door_latched(g, door) {
-        crate::doors::door_set_closing(g, door, true);
-        let v = -m::sign(crate::doors::door_angle(g, door)) * 1.2;
-        crate::doors::door_set_vel(g, door, v);
-    }
-    Ok(())
-}
 // ---- world: stimulus (ts 999)
 /// c.stimulus.charge: a CAUSE, never a result: the item's own fuse detonates it (director.ts:1000)
 pub fn director_beat_charge(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, at: &crate::director::Place, by: &crate::director::UnitRef, kind: Option<crate::throwables::ItemKind>, fuse: Option<f64>, toss: Option<bool>) -> Result<(), String> {
@@ -258,10 +240,6 @@ pub fn director_beat_charge(g: &mut crate::game::Game, r: DirectorRunId, b: Dire
         ("at", Some(Json::Array(vec![Some(Json::Num(fixed2(to[0]))), Some(Json::Num(0.0)), Some(Json::Num(fixed2(to[2])))]))),
     ])));
     Ok(())
-}
-/// c.stimulus.cease (director.ts:1008)
-pub fn director_beat_cease(g: &mut crate::game::Game, r: DirectorRunId, u: &crate::director::UnitRef) {
-    for x in g.tab.director_run[r].bursts.iter_mut() { if x.u.id == u.id { x.left = 0.0; } }
 }
 /// c.stimulus.burst: the cond it hands back asks of the burst's own record, by its serial (director.ts:1009)
 pub fn director_beat_burst(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, u: &crate::director::UnitRef, at: crate::director::RunBurstsItemAt, rounds: f64, cadence: Option<f64>, spread: Option<f64>) -> Result<crate::director::Cond, String> {

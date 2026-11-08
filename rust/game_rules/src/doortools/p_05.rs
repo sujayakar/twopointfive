@@ -530,20 +530,6 @@ pub fn door_tools_word_early(g: &mut crate::game::Game, men: &[GuardId]) -> bool
     g.door_tools.word_key_t = g.time;
     true
 }
-/// would the word's key, pressed now with the menu that is up, be a held threshold's word (doortools.ts wordKeyHeld)
-pub fn door_tools_word_key_held(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
-    if crate::orders::squad_orders_big(g, seat) || g.pl[seat.player].down {
-        return false;
-    }
-    let men = crate::orders::squad_orders_recipients(g, seat, None, None);
-    for op in door_tools_threshold_held(g, seat, &men, None) {
-        if dop!(g, op).word.is_none() {
-            return true;
-        }
-    }
-    let ops = seat.door_tools.ops.clone();
-    ops.into_iter().any(|op| can_first_on(g, op) && any_shared(&dop!(g, op).men, &men))
-}
 /// the word as Sam gives it: a set charge goes with it, and the key is stamped (doortools.ts pairWord)
 pub fn door_tools_pair_word(g: &mut crate::game::Game, men: &[GuardId]) -> bool {
     if !door_tools_word_on_hold(g, men) {
