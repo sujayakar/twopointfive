@@ -1,7 +1,7 @@
 // The best par total this machine has run (game/par.ts times a run; keeping a record is the PAGE's, never a rule's: nothing in src/game reads this, and with
 // no localStorage — headless, a private window — it keeps nothing and says nothing). One key, a small map: run key → whole seconds. The key is the caller's
-// (main.ts): level file + way in + squad size + difficulty, so a time is only ever held against the same run.
-import { clock } from '../game/par';
+// (the game's own words of it, ui/runBooks.ts): level file + way in + squad size + difficulty, so a time is only ever held against the same run.
+import { clock } from './clock';
 
 const KEY = 'twopointsix.parbest';
 

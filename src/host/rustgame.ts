@@ -44,7 +44,7 @@ import { SNAPS, levelFingerprint, type SlotInfo } from '../game/savestate';
 import type { Snapshot } from '../game/rollback';
 import type { Game } from '../game/game';
 import { NO_VIEW, type TickView } from '../view/seatview';
-import { readCursorView, readDebriefView, readTickView, readUnder, type CursorView } from '../view/read';
+import { readCursorView, readDebriefView, readRunView, readTickView, readUnder, type CursorView } from '../view/read';
 import { CURSOR_DOUBLES, sampleCursor } from '../view/cursor';
 import { heardOf, wayOf, type WorldAsk } from '../view/worldask';
 import { pageSay } from '../view/pagesaid';
@@ -297,7 +297,7 @@ export async function rustBoot(): Promise<void> {
   //  by the page's readers, are handed on as they are)
   { const raw = M.exports as unknown as Record<string, unknown>, W: Record<string, unknown> = {}; for (const k of Object.keys(raw)) { const f = raw[k]; W[k] = typeof f === 'function' && k.startsWith('face_') ? guard(k, f as (...a: number[]) => number) : f; } X = W as unknown as Face; }
   MEM = X.memory; BUF = MEM.buffer;
-  for (const n of ['face_new_at', 'face_show_seat', 'face_puppet', 'face_host_half', 'face_step', 'face_ask', 'face_tick_view', 'face_debrief_view', 'face_line', 'face_ray', 'face_hear', 'face_way', 'face_cursor_view', 'face_under', 'face_poke', 'face_write', 'face_keep', 'face_back', 'face_loaded', 'face_saves_in', 'face_saves_asked']) if (typeof X[n] !== 'function') throw new FaceError(`?rust=1: game_face.wasm has no ${n}: it was built from another tree (tools/blitz/face-build.ts builds this one's)`);
+  for (const n of ['face_new_at', 'face_show_seat', 'face_puppet', 'face_host_half', 'face_step', 'face_ask', 'face_tick_view', 'face_debrief_view', 'face_run_view', 'face_line', 'face_ray', 'face_hear', 'face_way', 'face_cursor_view', 'face_under', 'face_poke', 'face_write', 'face_keep', 'face_back', 'face_loaded', 'face_saves_in', 'face_saves_asked']) if (typeof X[n] !== 'function') throw new FaceError(`?rust=1: game_face.wasm has no ${n}: it was built from another tree (tools/blitz/face-build.ts builds this one's)`);
   { const no = drawRefused(X as unknown as DrawFace); if (no) throw new FaceError(`?rust=1: ${no} (tools/blitz/face-build.ts builds this checkout's)`); }
   // (the module and this page's half of the bridge must be of one generation: a module of another reads garbage)
   if ((X.face_layout?.() >>> 0) !== SCHEMA.layout) throw new FaceError(`?rust=1: game_face.wasm is of another generation than this page's bridge (its layout ${(X.face_layout?.() ?? 0) >>> 0}, the page's ${SCHEMA.layout}): the checkout's module is stale, tools/blitz/face-build.ts builds this one's`);
@@ -433,6 +433,9 @@ export function rustAttach(g: Game): void {
   g.debriefAsk = () => { if (!held.h || held.stale || RUST_PANIC.dead) return NO_DEBRIEF;
     try { settle(held); if (held.toolScan && !held.inRun && !held.inStep) scanFlush(held); tellShown(held); call('face_debrief_view', () => X!.face_debrief_view(held.h)); const r = readDebriefView(outBytes()); grown(g); return r; }
     catch (e) { if (!RUST_PANIC.dead) throw e; return NO_DEBRIEF; } };   // (a trap here is no throw of the frame's, or the panic card's key would never be read: as `viewAsk`)
+  g.runAsk = () => { if (!held.h || held.stale || RUST_PANIC.dead) return null;
+    try { settle(held); if (held.toolScan && !held.inRun && !held.inStep) scanFlush(held); call('face_run_view', () => X!.face_run_view(held.h)); const r = readRunView(outBytes()); grown(g); return r; }
+    catch (e) { if (!RUST_PANIC.dead) throw e; return null; } };
   // THE BOX WORLD ASKED (src/view/worldask.ts): the Rust game's, as its boxes stand. While none stands, or one is stopped, the page's own copy answers
   { const ask = rustAsk(held); Object.defineProperty(g, 'askHost', { configurable: true, enumerable: false, get: () => held.h && !held.stale && !RUST_PANIC.dead ? ask : null }); }
   // THE GAME'S OWN METHODS A TOOL OR A PANEL CALLS BETWEEN TICKS (`GAME_CROSSES`): run as TypeScript they move the puppet only, and the Rust game keeps

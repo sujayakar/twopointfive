@@ -888,8 +888,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   dark, a man by a hole a blast made = walls, else doors — `clean` (nobody lost) and `void` (a cheat on during the try; its own latch — `m.stats.sandbox` latches before
   the try too). The mission's own card flag (`m.debrief`) raises the card where it has one; every other end is polled by main.ts `postUpdate` (`takeDue()`, a beat after).
   THE PAGE keeps what a machine has won (`src/ui/verdictStore.ts`, localStorage `twopointsix.verdicts`, key = mission id | difficulty: tries, the streak since the last
-  win, per way the fewest tries and whether clean): main.ts `vBooks()` counts a try the frame it starts (a checkpoint load is another try; never under a cheat or a
-  tape) and files the end BEFORE the card opens (`Verdict.kept`). The card: `src/ui/verdictCard.ts` (head, men, `verdictPanels` = the slot other goals' panels fill)
+  win, per way the fewest tries and whether clean): `src/ui/runBooks.ts` counts a try the frame it starts (a checkpoint load is another try; never under a cheat or a
+  tape) and files the end BEFORE the card opens (`Verdict.kept`); the game says what there is to keep (`face_run_view`, view `RunView`) and either page tells the books (`runbooks-check.ts`; `RUNBOOKS_BREAK=1` must fail). The card: `src/ui/verdictCard.ts` (head, men, `verdictPanels` = the slot other goals' panels fill)
   hosted by ui/debrief.ts (`.vd-squad` hides the stealth game's rating / numbers / timeline, `.vd-solo` keeps them), pips `src/ui/verdictPips.ts`; the START PAGE's
   mission rows get the same pips from `src/ui/verdictRows.ts` (`watchMissionRows()`, a MutationObserver on `#missions` — the list's own files are not edited; no pips on
   Training rows). QA: `bun run tools/qa/verdict-check.ts` (`probes.ts verdict`; `VERDICT_BREAK=1` must fail), `node tools/qa/verdict-look.cjs <dir> [win|down|solo|off|cards]`
@@ -916,7 +916,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **A Training lesson ends on the verdict card too, graded as a lesson** (`VERDICT`): lessons 5 and 6 are room clears, so their end is the
   room clear's `'taken'` / `'wiped'` and the card comes up a beat later like any squad mission's (before the verdict a room clear had no card at all: only the row 'structure taken
   — shift+enter stages it again'); lessons 1 to 4 and 7 end at the exfil on the stealth mission's own card. On a lesson's card NOTHING IS GRADED OR KEPT: no ways pips, no tries
-  ticks, no record under `twopointsix.verdicts` (`main.ts vBooks`: the running row's `group === 'training'` → `KeptNote.lesson`; `verdictCard.ts verdictHead` draws the word and the
+  ticks, no record under `twopointsix.verdicts` (`ui/runBooks.ts`, by `RunView.lesson`: the running row's group → `KeptNote.lesson`; `verdictCard.ts verdictHead` draws the word and the
   clock only; `verdictLine` leaves the approach out). A lesson WON leads with `Next: <the next Training row's title> ›` (`src/ui/verdictNext.ts nextLessonOf`, wired in
   `menu.ts debrief`: the first button, primary, the focus; the row's own page load by `missionHref`; none after lesson 7 or on a loss; since 2026-10-26 it is the next lesson the lists draw, a row cut from the list being skipped: `missions.md`, the two missions off the tutorial's list). The room can fall
   before the lesson's last step is done (lesson 5's scripted run: the card was due 5.7 s before the last line went by): the card wins, as the row already did. QA:
