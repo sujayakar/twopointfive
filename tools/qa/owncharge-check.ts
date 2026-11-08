@@ -19,6 +19,7 @@
 //           the lock and nothing more spent, and F sends them in behind it
 //   save    alone: a checkpoint's player slice carries the counts with a set charge back in them, a load puts them back
 // Nothing here looks at a picture.
+import { blockOf, cornerOf, notesOf } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 import { rig } from './doortools-probes.ts';
 
@@ -188,8 +189,8 @@ export async function ownchargeSquad(): Promise<boolean> {
     const off = R.ops.map((x: any) => dist(x.char.pos, d.frameCentre)), lock = (op?.beats ?? []).some((b: any) => /^set|setter|sets it/.test(b.what));
     F.verdict(/^stand off · in behind the charge/.test(row?.text ?? '') && !row.off && w === null && armed && D.charges === n1 && D.set.length === 1 && !lock && off.every((x: number) => x > K0.backblastM) && d.latched,
       'told the charge row on that door ("stand off · in behind the charge") they stand off past the backblast: nobody goes to the lock, nothing more is spent, nothing goes off', `row 3: ${row?.text} · ${R.beats(op)} · count ${n1} → ${D.charges} · set ${D.set.length} · the pair ${off.map(f2).join(' / ')} m off (backblast ${K0.backblastM})`);
-    const hud = O.hud().status.flatMap((r: any) => r.opts.map((o: any) => o.text)).join(' / ');
-    g.teleportPlayer(doorPt(d, d.def.width / 2, 0.8, side)); R.step(20); const close = D.closeWords(D.set[0]), hudNear = (D.hudNotes() as string[]).join(' / '), doorLine = doorRows(g).map((r: any) => r.line1).join(' | '); g.teleportPlayer([25.0, 0, 18.9]); R.step(4);
+    const hud = blockOf(O).flatMap((r: any) => r.opts.map((o: any) => o.text)).join(' / ');
+    g.teleportPlayer(doorPt(d, d.def.width / 2, 0.8, side)); R.step(20); const close = (cornerOf(g).map(n => n.text).join(' ').match(/ · (TOO CLOSE|BEHIND THE DOOR):.*$/)?.[0] ?? '').replace('TOO CLOSE:', 'too close:').replace('BEHIND THE DOOR:', 'behind the door:'), hudNear = notesOf(g).join(' / '), doorLine = doorRows(g).map((r: any) => r.line1).join(' | '); g.teleportPlayer([25.0, 0, 18.9]); R.step(4);
     R.press('KeyF'); const crossed = R.until(() => op.crossed.size > 0, 8);
     F.verdict(D.stats.blown === 1 && crossed && (isOpen(d) || !!d.off), 'F: it goes, and they are in behind it as behind their own', `${R.beats(op)}`);
     F.verdict(/charge set/.test(hud), 'the squad block says a charge is set and which key blows it', hud);

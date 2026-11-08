@@ -2,6 +2,7 @@
 // always stood up on the shipped stand): what each line asks, through the input only, in the order a new player would do it. He is mortal in his own half:
 // the fights are the level's script's (levels/tut-kit.script.ts) and none of them is aimed at a man who does what the line says. In the squad's half he
 // gives the orders the lines ask for (the command key tapped on a thing, held for its ring and a digit, the word) and shoots only on the last line.
+import { cornerOf } from '../squadwords';
 import { OWNBLOW } from '../../../src/game/ownblow';
 import type { Bot } from '../lesson-run';
 import { AXIS, JAMB, INNER_X, INNER_Z, INNER_FROM, BAGS_END, GAP, BARRIER, BACK, NEST, LAMP, SHOP_DOOR, STORE_DOORWAY, STUN_AT, ARCH_MOUTH, LAUNCH_FROM, LAST_MEN, BREAKER, BUNK_DOOR, WALL_MARK, FRAG_AT, YARD_FROM, COURT, INSIDE } from '../../levels/tut-kit';
@@ -145,7 +146,7 @@ export const steps: Record<string, (B: Bot) => void> = {
   back: B => { B.go(BACK, 10, { near: 0.5 }); B.step(20); },
   // (the page's way: his own charge is a row of his own list — ownblow.ts — and stood clear it is the only one, so a tap gives it; the frozen stand's: the squad's key)
   blow: B => {
-    const T = B.g.doorTools, c = T.set[0]; if (c && /too close:[^·]*\byou\b/.test(T.closeWords(c))) B.fail('the mark that says stand clear is inside his own charge\'s backblast');
+    const T = B.g.doorTools, c = T.set[0]; if (c && cornerOf(B.g).some(n => /TOO CLOSE:[^·]*\byou\b/.test(n.text))) B.fail('the mark that says stand clear is inside his own charge\'s backblast');
     B.press(blowOn() ? 'Space' : 'KeyF', 30); },
   // out from beside the door, square to the doorway (from its edge the rounds go into the jamb), and the pistol
   shop: B => {

@@ -22,6 +22,7 @@
 // the page's stand ((b5), (b8) of frag-mates) are asked always, and (b5) no longer holds the newer pace rule off for its two moments.
 // THE BREAK WORDS no longer leave a rule off (none can be): each takes a piece of its staging away, as said at each probe. FLEELOOK_BREAK is gone: (b7)
 // has no red path of its own, and (b8) fails under FRAGMATES_BREAK.
+import { listedOf, menuKey } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 import { sample, swept } from './sweep.ts';
 const { FRAG, FRAG_LOG, FRAG_STATS, FRAG_WHY, fragStatsReset, blast, exposure, exposedTo, lying, lyingShows, ownClear } = await import(`${ROOT}/src/game/frag.ts`);
@@ -420,10 +421,10 @@ async function orderRig(seed: number, door: string) {
     room(id: string) { return RC.rooms.find((r: any) => r.def.id === id); },
     beats(op: any): string { return (op?.beats ?? []).map((b: any) => `${f2(b.t - R.t0)} ${b.what}`).join(' | '); },
     /** X on p: the menu's first page, then its door tools' page, as rows of key + text (left up on the tools' page) */
-    toolsPage(p: number[]) { W.cursorAt([p[0], p[1], p[2]]); input.pressed.add(ORDERS.key); R.step(); R.step(24);
-      const opener = O.menu?.rows.find((r: any) => r.opens); if (!opener) return null; const first = (O.hud().menu?.rows ?? []).slice(1).map((r: any) => `${r.opts[0]?.key} ${r.opts[0]?.text}`);
+    toolsPage(p: number[]) { W.cursorAt([p[0], p[1], p[2]]); menuKey(O); R.step(); R.step(24);
+      const opener = O.menu?.rows.find((r: any) => r.opens); if (!opener) return null; const first = (listedOf(O)?.rows ?? []).map((r: any) => `${r.opts[0]?.key} ${r.opts[0]?.text}`);
       input.pressed.add(`Digit${opener.key}`); R.step(); R.step(4);
-      const rows = (O.hud().menu?.rows ?? []).slice(1).filter((r: any) => r.kind !== 'cancel').map((r: any) => ({ key: r.opts[0]?.key as string, text: r.opts[0]?.text as string, off: !!r.off }));
+      const rows = (listedOf(O)?.rows ?? []).map((r: any) => ({ key: r.opts[0]?.key as string, text: r.opts[0]?.text as string, off: !!r.off }));
       return { first, rows, ids: O.menu?.rows.map((r: any) => r.id).join(' ') }; },
   };
   R.step(30); game.teleportPlayer(SAM[door]); R.step(5); R.t0 = game.time;

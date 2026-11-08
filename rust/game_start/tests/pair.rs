@@ -43,7 +43,7 @@ fn pair_with_body(seed: u32, body: Option<[f64; 2]>) -> ((Play, GuardId, GuardId
 }
 /// the defender held where he is with his back to the pair: his senses are not what is asked here
 fn pin(p: &mut Play, h: GuardId, state: GuardState, aware: f64) { p.pin_man(h, AISLE_MID, EAST, state, aware); }
-fn word(p: &mut Play) -> String { game::silent::posture_word(&mut p.g).unwrap_or_default() }
+fn word(p: &mut Play) -> String { p.view().squad.and_then(|v| v.posture).unwrap_or_default() }
 
 /// THE RULE: the word on the squad line says what the partner is doing about it while it lasts: 'SILENT · low' with a suspicious man about,
 /// 'SILENT · contact' once an alert man has them, plain 'SILENT' before.

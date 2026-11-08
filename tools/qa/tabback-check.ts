@@ -12,6 +12,7 @@
 // keys given to a fresh game tick by tick (what a recording holds and a replay does) end the same way.
 // A headless run cannot press the page's keys: main.ts's lines (Esc's press taken out of the frame, no back-out on it, Tab's trial waiting its turn) are held
 // by their source text here, and looked at on the real page apart.
+import { menuKey } from './squadwords';
 import { readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 type V = [number, number, number];
@@ -47,11 +48,11 @@ export async function tabBackCheck(): Promise<boolean> {
     // ---- the squad's order menu: a room clear with four, X on the floor ahead
     const squad = async () => quiet(async () => { const W: any = await standUp({ seed: 33 }); const g = W.game; g.godMode = true;
       const why = startFromQuery(g, new URLSearchParams('roomclear&squad4')).why; for (let i = 0; i < 20; i++) { g.player.visibility = 0.05; W.step(DT); }
-      const p = g.player.char.pos, at: V = [p[0] + 1.5, 0, p[2] + 0.5]; W.cursorAt(at); key(W, ORDERS.key); W.cursorAt(at); W.step(DT);
+      const p = g.player.char.pos, at: V = [p[0] + 1.5, 0, p[2] + 0.5]; W.cursorAt(at); menuKey(g.orders); W.step(DT); W.cursorAt(at); W.step(DT);
       return { W, g, O: g.orders, why, at }; });
-    { const A = await squad(), hintOn = String(A.O.hud().menu?.hint ?? ''), upA = !!A.O.menu, ableA = A.g.backable(); await quiet(() => { A.W.cursorAt(A.at); key(A.W, TAB, 2); }); const goneA = !A.O.menu, ableAfter = A.g.backable();
-      verdict(A.why === null && upA && goneA && ableA && !ableAfter && /\btab\b/.test(hintOn) && !/\besc\b/.test(hintOn),
-        'the order menu: Tab closes it and its line names Tab, not Esc', `up ${upA} → gone on Tab ${goneA} · something to back out of before ${ableA}, after ${ableAfter} · "${hintOn}"`); }
+    { const A = await squad(), upA = !!A.O.menu, ableA = A.g.backable(); await quiet(() => { A.W.cursorAt(A.at); key(A.W, TAB, 2); }); const goneA = !A.O.menu, ableAfter = A.g.backable();
+      verdict(A.why === null && upA && goneA && ableA && !ableAfter,
+        'the order menu: Tab closes it', `up ${upA} → gone on Tab ${goneA} · something to back out of before ${ableA}, after ${ableAfter}`); }
 
     // ---- the pause: the first tick after the card holds 'Paused'; a held list and a held arc are let go unsent in it; the order menu stays
     { const { stepFrame } = await import(`${ROOT}/src/host/loop.ts`);

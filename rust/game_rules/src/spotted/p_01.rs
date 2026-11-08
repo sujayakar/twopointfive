@@ -96,11 +96,12 @@ pub fn spotted_mode(g: &mut crate::game::Game, gd: GuardId) -> crate::spotted::S
 }
 
 /// the squad line's word while a silent squad is not yet compromised: any man caught, else any man wary; None: nothing to add (spotted.ts spottedWord)
-pub fn spotted_word(g: &mut crate::game::Game) -> Option<&'static str> {
-    if !g.k.spotted.on { return None; }
+pub fn spotted_word(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<&'static str> {
+    if !g.k.spotted.on || !crate::silent::squad_silent(g, seat) { return None; }
     let mut wary = false;
-    for gd in crate::orders::squad_orders_squad(g, &crate::seats::here(g)) {
-        match spotted_mode(g, gd) {
+    for gd in crate::orders::squad_orders_squad(g, seat) {
+        if g.gd[gd].state == crate::game::GuardState::Dead { continue; }
+        match g.m.spotted.men.get(gd).map_or(crate::spotted::SpottedMode::Calm, |r| r.mode) {
             crate::spotted::SpottedMode::Caught => return Some("SILENT · contact"),
             crate::spotted::SpottedMode::Wary => wary = true,
             crate::spotted::SpottedMode::Calm => {}

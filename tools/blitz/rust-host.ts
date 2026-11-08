@@ -157,7 +157,7 @@ const SCAN_AUDIT = +(process.env.RH_SCAN_AUDIT ?? 64);
 // Each row there carries the sentence of that contract and the check that holds it; the host treats it as a row of the first list.
 let READS: Set<number> | null = null;
 function reads(): Set<number> { if (READS) return READS; READS = new Set(); try { const dir = new URL('.', import.meta.url).pathname, keys = new Set<string>(JSON.parse(readFileSync(`${dir}reads.json`, 'utf8')).rows ?? []); try { for (const r of JSON.parse(readFileSync(`${dir}reads-contract.json`, 'utf8')).rows as { key: string }[]) keys.add(r.key); } catch { /* no second list */ } if (keys.size) for (const r of JSON.parse(readFileSync(`${dir}calls.json`, 'utf8')).rows as { id: number; key: string }[]) if (keys.has(r.key)) READS.add(r.id); } catch { /* no list: every row may write */ } return READS; }
-const ASKS = ['label', 'can', 'only', 'valid', 'when', 'gone', 'word', 'mark', 'given', 'issue', 'give'];
+const ASKS = ['label', 'can', 'only', 'valid', 'when', 'gone', 'mark', 'given', 'issue', 'give'];
 /** how many hosted games of the process are inside their own update now (see `surfaceOpen`) */
 const BUSY = { n: 0 };
 /** a field hung on a game's object that a walk of its own keys does not meet */

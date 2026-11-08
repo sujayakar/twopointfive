@@ -226,11 +226,6 @@ pub fn call(g: &mut game::game::Game, k: usize, rule: &str) -> String {
             let c = game::stickycam::fire_cam(g, pl, [n[0], n[1], n[2]], [n[3], n[4], n[5]]);
             format!("  the case's call before tick {}: a sticky camera fired ({:?}); {} out", k, c, g.pl[pl].cams.len())
         }
-        // (a lesson's player asks the words of a set door charge: the answer is kept a quarter second and the tick's own ask reads it, doortools.ts closeAt)
-        "door_close_words" => match arg.and_then(|x| x.parse::<usize>().ok()).and_then(|i| g.door_tools.set.get(i).copied()) {
-            Some(c) => { let said = game::doortools::door_tools_close_words(g, c); format!("  the driver's ask before tick {}: door_close_words -> {:?}", k, said) }
-            None => format!("  NOTE tick {}: the driver asked the words of a set charge this game does not hold: {:?}", k, arg),
-        },
         "frag_step_off" => { let r = game::frag::frag_step_off(g, None); if r.is_some() { format!("  the driver's ask before tick {}: frag_step_off -> {:?}", k, r) } else { String::new() } }
         // (BLITZ_CALL, mission.ts: a rule of the game called before a tick on both sides, to hold the Rust game's restart to the TypeScript's)
         "restart_encounter" => { game::game::game_restart_encounter(g); format!("  the rule called before tick {}: restart_encounter; {} guards, time {}", k, g.guards.len(), g.time) }

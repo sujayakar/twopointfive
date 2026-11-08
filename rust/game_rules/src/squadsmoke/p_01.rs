@@ -50,7 +50,7 @@ pub fn squad_smoke_stage(g: &mut crate::game::Game, cans: f64) {
     let s = g.m.squadsmoke.states.get_mut(key).unwrap();
     if !s.noted {
         s.noted = true;
-        g.orders.notes.push(crate::orders::OrderNoteFn::SquadSmoke);
+        crate::orders::squad_orders_voice(g, crate::orders::OrderNoteFn::SquadSmoke);
     }
 }
 
@@ -205,10 +205,9 @@ pub fn row_smoke_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTa
 }
 
 /// The squad's HUD block: what is left, while this staging brought any. (squadsmoke.ts notes)
-pub fn notes(g: &mut crate::game::Game) -> Vec<crate::orders::OrderNote> {
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
-    match g.m.squadsmoke.states.get(key) {
-        Some(s) if s.brought > 0.0 => vec![crate::orders::OrderNote::Text(format!("smoke {}", js::num_str(s.cans)))],
+pub fn notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::view::Note> {
+    match g.m.squadsmoke.states.get(crate::seats::view_key(g, seat)) {
+        Some(s) if s.brought > 0.0 => vec![crate::view::Note { key: String::new(), text: format!("smoke {}", js::num_str(s.cans)) }],
         _ => Vec::new(),
     }
 }
