@@ -112,19 +112,41 @@ const health = async () => { try { return await (await fetch(`http://127.0.0.1:$
       // hands taken off as a hidden tab or a card does (one record: he stays). Each time the page wakes far behind and catches up to the server's word.
       const main = { base, confirmed: S().confirmed, wordsOk: S().wordsOk, words: S().wordsOk - w0, secs: +((performance.now() - tm) / 1000).toFixed(1) };
       const yieldNow = () => new Promise(r => setTimeout(r, 0)), at = () => [g.player.char.pos[0], g.player.char.pos[2]];
+      // (HIS BACK TO A WALL: a nap's held key walks him on for seconds, and a key held into a wall takes the hold — player.ts wallPress. On it he has no look
+      //  ahead by rule, and a lone key within WALLSNAP.alongDeg of the wall's line only sidles him, so where the camera stands across that line no one key
+      //  takes him off. The keys nearest square away from the wall do, as a player's two fingers would)
+      const WAYS = [[['KeyW'], 1, 0], [['KeyS'], -1, 0], [['KeyD'], 0, 1], [['KeyA'], 0, -1], [['KeyW', 'KeyD'], 1, 1], [['KeyW', 'KeyA'], 1, -1], [['KeyS', 'KeyD'], -1, 1], [['KeyS', 'KeyA'], -1, -1]];
+      const offWall = () => { const w = g.player.wall; if (!w || !window.__cam) return null; const B = window.__cam.planarBasis(); let best = null, top = -2;
+        for (const [ks, f, r] of WAYS) { const x = B.fwd[0] * f + B.right[0] * r, z = B.fwd[2] * f + B.right[2] * r, d = (x * w.n[0] + z * w.n[2]) / Math.hypot(x, z); if (d > top) { top = d; best = ks; } }
+        return best; };
       // (LEVEL WITH ITS SERVER, as level as a driven page gets: the ten frames of one turn here take their time, and the server confirms a tick every sixtieth of
       //  a second of it, so right after a turn the page is that many ticks behind however fast it walks. Asked to be within two of the server it never was on a
       //  small box (6 to 8 behind at every look, with a turn of 110 ms) and each call ran out its three minutes; the bar is two past what the turn itself cost,
       //  and never past ten: a page that is catching up takes long turns, and that page is not level)
-      const level = async keys => { const t = performance.now(); let far = false, owed = 0; while ((S().behind > 2 + owed || S().far) && !S().bad && performance.now() - t < 180000) { const a = performance.now(); window.__runFrames(10, 1 / 60, keys, 'none'); owed = Math.min(8, Math.ceil((performance.now() - a) * 60 / 1000)); far = far || S().far; await yieldNow(); } return far; };
-      const walk = async (key, n) => { const a = at(); for (let i = 0; i < n; i++) { window.__runFrames(10, 1 / 60, [key], 'none'); await yieldNow(); } await level([key]); const b = at(); return Math.hypot(b[0] - a[0], b[1] - a[1]); };
-      // (the floor for the walk: the way a nap walks is back over floor he has just walked, so a wall at his shoulder says nothing. He walks each way two
-      //  seconds until one gives him two metres; the nap's key is the one that takes him back)
+      let owed = 0; const turn = keys => { const a = performance.now(); window.__runFrames(10, 1 / 60, keys, 'none'); owed = Math.min(8, Math.ceil((performance.now() - a) * 60 / 1000)); };
+      const over = () => S().bad || S().broken || S().bye, uneven = () => S().behind > 2 + owed || S().far;
+      const level = async keys => { const t = performance.now(); let far = false; owed = 0; while (uneven() && !over() && performance.now() - t < 180000) { turn(keys); far = far || S().far; await yieldNow(); } return far; };
+      // (AT REST: hands off, level, and nothing he held still on its way. A record is aimed up to a second past the server on a starved page, so he goes on
+      //  after the key is up; the look ahead plays every record the server has not said, and with it and the game both still there is none with a walk in it)
+      const rested = async () => { const t = performance.now(); let q = at(), n = 0; owed = 0; while ((n < 3 || uneven()) && !over() && performance.now() - t < 30000) { turn([]); const r = at(); n = Math.hypot(r[0] - q[0], r[1] - q[1]) < 1e-6 && moving() < 1e-6 ? n + 1 : 0; q = r; await yieldNow(); } };
+      const stood = async () => { await rested(); for (let i = 0; i < 40 && !over(); i++) { const off = offWall(); if (!off) return; turn(off); await yieldNow(); if (!offWall()) await rested(); } };   // (at rest and off any wall he holds)
+      // (A WAY WALKED until he is three metres on or a thing has stopped him, by THE GAME'S ticks: a key takes up to a second to reach the game, and a burst of
+      //  frames is as long as the box makes it. From rest, off any wall he holds — a walk that ends at a wall takes the hold, and on it a lone key only sidles —
+      //  and to rest again, so that what is measured is this key's and no other's)
+      const walk = async key => { await stood();
+        const a = at(), t0 = performance.now(), c0 = S().confirmed; let d = 0, since = -1;
+        while (d < 3 && S().confirmed - (since < 0 ? c0 + 120 : since) < 48 && !over() && performance.now() - t0 < 30000) { turn([key]); await yieldNow(); const p = at(), m = Math.hypot(p[0] - a[0], p[1] - a[1]); if (m > d + 0.05) { d = m; since = S().confirmed; } }
+        await rested(); const b = at(); return Math.hypot(b[0] - a[0], b[1] - a[1]); };
+      // (THE FLOOR FOR THE NAP is the floor of his LAST walk, back the way he came: the first way that gives him two and a half metres. Each way is followed by
+      //  its opposite, so the second walks the whole of a room the first reached one end of. With no such floor the best way is walked once more from its far
+      //  end. Back over an EARLIER walk he was past its start: the walks after it brought him round, and the key took him on to whatever stands there, 0 m)
       const BACK = { KeyW: 'KeyS', KeyS: 'KeyW', KeyA: 'KeyD', KeyD: 'KeyA' };
       const nap = async rest => {
-        let out = 'KeyW', room = -1; for (const k of ['KeyW', 'KeyD', 'KeyS', 'KeyA']) { const d = await walk(k, 12); if (d > room) { room = d; out = k; } if (d >= 2) break; }
-        // (turned back for two bursts and asleep AT ONCE: `walk` would go on with the key down until the page is level with its server, and a page that
-        //  takes a while over that walks all the way back to the wall he started from; asleep there he walks nowhere, whatever the server holds)
+        let out = '', room = -1, last = ''; for (const k of ['KeyW', 'KeyS', 'KeyD', 'KeyA']) { const d = await walk(k); last = k; if (d > room) { room = d; out = k; } if (d >= 2.5) break; }
+        if (last !== out) { await walk(BACK[out]); room = await walk(out); }
+        await stood();
+        // (turned back for two bursts and asleep AT ONCE, not level first: a page that takes a while over that walks all the way back to the wall he started
+        //  from; asleep there he walks nowhere, whatever the server holds)
         const key = BACK[out]; for (let i = 0; i < 2; i++) { window.__runFrames(10, 1 / 60, [key], 'none'); await yieldNow(); }
         const a = at(), down = !!g.player.down; if (rest) window.__net.client.rest(performance.now());
         await new Promise(r => setTimeout(r, 3500));
@@ -136,13 +158,6 @@ const health = async () => { try { return await (await fetch(`http://127.0.0.1:$
       // each: everything else is asked first, early in the fight). He walks until the look has him ahead, the frame is drawn with him moved, and the ticks
       // after it read the world as the game has it: the state words after the draws say so.
       const on = () => !S().bad && !S().broken && !S().bye;
-      // (HIS BACK TO A WALL: a nap's held key walks him on for seconds, and a key held into a wall takes the hold — player.ts wallPress. On it he has no look
-      //  ahead by rule, and a lone key within WALLSNAP.alongDeg of the wall's line only sidles him, so where the camera stands across that line no one key
-      //  takes him off. The keys nearest square away from the wall do, as a player's two fingers would)
-      const WAYS = [[['KeyW'], 1, 0], [['KeyS'], -1, 0], [['KeyD'], 0, 1], [['KeyA'], 0, -1], [['KeyW', 'KeyD'], 1, 1], [['KeyW', 'KeyA'], 1, -1], [['KeyS', 'KeyD'], -1, 1], [['KeyS', 'KeyA'], -1, -1]];
-      const offWall = () => { const w = g.player.wall; if (!w || !window.__cam) return null; const B = window.__cam.planarBasis(); let best = null, top = -2;
-        for (const [ks, f, r] of WAYS) { const x = B.fwd[0] * f + B.right[0] * r, z = B.fwd[2] * f + B.right[2] * r, d = (x * w.n[0] + z * w.n[2]) / Math.hypot(x, z); if (d > top) { top = d; best = ks; } }
-        return best; };
       for (let d = 0; d < 2 && BREAK !== true && on(); d++) {
         let keys = ['KeyW'], tries = 0;
         while (tries < 60 && on() && (S().far || moving() <= 0.02)) { const off = offWall(); if (off) ahead.walls++; keys = off ?? [['KeyW', 'KeyD', 'KeyS', 'KeyA'][Math.floor(tries / 4) % 4]]; window.__runFrames(10, 1 / 60, keys, 'none'); tries++; await tick0(); }
@@ -184,9 +199,7 @@ const health = async () => { try { return await (await fetch(`http://127.0.0.1:$
     line(M.confirmed >= M.base + N && !S.bad && M.words >= words && M.wordsOk >= Math.floor(M.confirmed / 30) && !S.broken && !out.fatal, `same fight: the page walked ${M.confirmed} ticks (the last ${M.confirmed - M.base} in ${M.secs} s, walking and firing) and matched ${M.wordsOk} of ${Math.floor(M.confirmed / 30)} state words${S.bad ? ` (FIRST DIFFERENT after tick ${S.bad.t}: server ${S.bad.server}, its own ${S.bad.mine})` : ''}${S.broken ? ` (${S.broken})` : ''}; a confirmed tick cost ${S.walkMs.toFixed(1)} ms here${out.line ? `; the page said "${out.line}"` : ''}`);
     // THE WIDER WORD, WATCHED (src/net/step.ts netWatch): the whole game's words of the parts every kind of host agrees on (src/net/agreed.ts), which the page
     // holds against its server's on every word tick and only counts. A page beside a bun server is the pair that list was made for
-    // (WITH TWO SEATS the count is said and not held: the second seat's machine numbers its rows differently from the server until the Rust game's start
-    //  numbers them alike, and the list was made from few games of two)
-    line(TWO ? S.watchOk + S.watchOff > 0 : S.watchOk > 0 && !S.watchOff, `wider word: beside the state word the page held the wider one (the parts a page and a server agree on) against its server's on ${S.watchOk + S.watchOff} word ticks and had it on ${S.watchOk}${S.watchOff ? ` (FIRST DIFFERENT after tick ${S.watchFirst})` : ''}; it is watched, never an alarm`);
+    line(S.watchOk > 0 && !S.watchOff, `wider word: beside the state word the page held the wider one (the parts a page and a server agree on) against its server's on ${S.watchOk + S.watchOff} word ticks and had it on ${S.watchOk}${S.watchOff ? ` (FIRST DIFFERENT after tick ${S.watchFirst})` : ''}; it is watched, never an alarm`);
     line(S.seat === MINE && S.sent > 20 && !!hEnd && hEnd.lines[MINE].own > 20 && out.moved > 0.5 && out.mine === MINE, `its own man: seat ${S.seat}${TWO ? ` of ${hEnd?.lines.length} (the page shows seat ${out.mine}'s man)` : ''}, ${S.sent} records sent, the server ran ${hEnd?.lines[MINE].own} ticks on them (${hEnd?.lines[MINE].late} late, ${hEnd?.lines[MINE].held} on a held one), the man moved ${out.moved} m; it aims ${S.margin} ticks past the server's`);
     { const K = out.key, A = out.ahead, a = S.ahead;
       line(K.rec >= 0 && K.ahead > 1e-4 && K.game < 1e-6 && K.later > 0 && A.on > A.samples / 2 && ((A.drawn === 2 && A.moved === A.drawn && A.men === 1 && A.caps === 1 && A.boxes > 0) || (!!A.gave && (A.gave.down || A.gave.over) && A.moved === A.drawn)) && !S.bad && out.after.wordsOk >= Math.floor(out.after.confirmed / 30),
