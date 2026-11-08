@@ -12,8 +12,8 @@
 //                (--second-first: the second game is stepped before the first every tick, to tell a slot's fault from a fault of whoever steps second)
 //   --reserve MB a run of memory asked of the module and freed before the start: does the memory then still grow inside a tick (FACE.md, memory)
 //   --max-mb N   stop, still in step, once the module's linear memory is over N MB (every made box is a row for good: a long mission nears wasm32's 4 GB)
-//   --one-call   face_step with LIGHTS and VIEW as its flags: the one call a tick of a host that plays. The lights' update then runs before the hashes are
-//                taken (the TypeScript's are taken before its host's), so a part that update writes may differ: such a part is named once and left out
+//   --one-call   face_step with VIEW as its flag: the one call a tick of a host that plays.
+//                (A flash's envelope is the tick's last line, and the TypeScript's hashes are taken before its host's update: where only the part `lights` differs it is named once and left out)
 // Exit: 0 in step · 1 the block or the die parted · 2 the Rust tick panicked (its words are printed) · 3 a file is missing or the module does not stand.
 import { readFileSync, existsSync } from 'node:fs';
 const argv = process.argv.slice(2), has = (n: string) => argv.includes(n), arg = (n: string, d: string) => { const i = argv.indexOf(n); return i < 0 ? d : argv[i + 1]; };
@@ -99,7 +99,7 @@ function outside(slot: number): number[] {
 { const mb = +arg('--reserve', '0'); if (mb > 0) { const n = mb * 1048576, p = X.face_alloc(n); X.face_free(p, n); say(`wasm-run: ${mb} MB asked for and given back; memory ${(mem.buffer.byteLength / 1048576).toFixed(1)} MB`); } }
 const start = readFileSync(`${dir}/c1.bin`), block = readFileSync(`${dir}/s0.bin`);
 say(`wasm-run: rust/sim's block is ${X.state_len()} bytes here, ${block.length} in s0.bin; layout word ${X.state_layout() >>> 0}; the start ${start.length} bytes`);
-const LIGHTS = 2, VIEW = 4;
+const VIEW = 4;
 let k = 0;
 try {
   const games: number[] = [];
@@ -120,7 +120,7 @@ try {
       for (const l of hostwrites) if (+l.split(' ')[0] === k) { const r = hand(enc.encode(l), (ptr, n) => X.face_hostwrite(h, k, ptr, n)); if (r === 1 && !QUIET) say(outText() + tag); if (r === 0) say(`  NOTE tick ${k}: a line of hostwrites.txt the face does not know: ${l}`); }
       if (meter.length >= k) X.face_meter(h, meter[k - 1]);
       const b0 = mem.buffer.byteLength, a = performance.now();
-      X.face_step(h, dt, ONE ? LIGHTS | VIEW : 0);
+      X.face_step(h, dt, ONE ? VIEW : 0);
       const el = performance.now() - a;
       if (gi === 0) { spent += el; if (el > worst) { worst = el; worstAt = k; } if (mem.buffer.byteLength !== b0) { grewTicks++; firstGrow ||= k; } }
       const said = outText(); if (said && !QUIET) say(said.trimEnd() + tag);
@@ -132,10 +132,10 @@ try {
       }
       const got = inside(slot), die = X.face_die_n(h);
       if (gi === 0 && (k === 1 || k === ticks || (JS_EVERY > 0 && k % JS_EVERY === 0))) { const mine = outside(slot); jsChecks++; if (mine.join() !== got.join()) { say(`TICK ${k}: the hashes taken here over the module's memory are not the module's own: ${mine} / ${got}`); process.exit(3); } }
-      if (!ONE) { const a2 = performance.now(); X.face_lights(h, dt); X.face_view(h); if (gi === 0) lightsSpent += performance.now() - a2; }
+      if (!ONE) { const a2 = performance.now(); X.face_view(h); if (gi === 0) lightsSpent += performance.now() - a2; }
       let off = p ? NAMES.filter((_, i) => p[4 + i] !== String(got[i])) : ['no line of post.txt'];
       const poolOff = off.includes(NAMES[POSES]); off = off.filter(n => n !== NAMES[POSES]);
-      if (ONE && off.length && off.every(n => n === 'lights')) { if (!S.left.size) say(`TICK ${k}: the part \`lights\` differs after the lights' update ran inside the step (the TypeScript's hash is taken before its host's): left out from here${tag}`); S.left.add(NAMES.indexOf('lights')); off = []; }
+      if (off.length && off.every(n => n === 'lights')) { if (!S.left.size) say(`TICK ${k}: the part \`lights\` differs after the tick's own update of the lights (the TypeScript's hash is taken before its host's): left out from here${tag}`); S.left.add(NAMES.indexOf('lights')); off = []; }
       const same = off.length === 0;
       if (same && poolOff && !S.poolParted) { S.poolParted = k; say(`TICK ${k}: the part \`poses\` parts and every other part is the same: from here the alarm is the block without \`poses\`${tag}`); }
       const dieSame = !!p && p[1] === String(die);
@@ -158,7 +158,7 @@ try {
   const S = st[0], bad = st.some(s => s.parted || s.dieParted);
   say(`${bad ? 'STOPPED' : 'DONE'}: ${done} ticks through wasm${TWO ? ', two games' : ''}${ONE ? ', one call a tick' : ''}; the die's count ${st.every(s => !s.dieParted) ? 'the same after every tick' : `FIRST PARTED AT TICK ${st.map(s => s.dieParted)}`}; the block without \`poses\`${S.left.size ? ' and `lights`' : ''} ${st.every(s => !s.parted) ? 'the same after every tick' : `PARTED AT TICK ${st.map(s => s.parted)}`}; \`poses\` ${S.poolParted ? `parted at tick ${st.map(s => s.poolParted)}` : 'the same after every tick'}`);
   say(`  checked: ${done} ticks x ${NAMES.length - 1 - S.left.size} parts by the module's own hashes, ${jsChecks} of those ticks also hashed here over the module's memory in place`);
-  say(`  the step (face_step alone${ONE ? ', the lights\' update inside' : ''}): mean ${(spent / Math.max(1, done)).toFixed(3)} ms, worst ${worst.toFixed(1)} ms at tick ${worstAt}${ONE ? '' : `; the lights' update and the host's view after it: mean ${(lightsSpent / Math.max(1, done)).toFixed(4)} ms`}`);
+  say(`  the step (face_step alone, the lights' update inside): mean ${(spent / Math.max(1, done)).toFixed(3)} ms, worst ${worst.toFixed(1)} ms at tick ${worstAt}${ONE ? '' : `; the host's view after it: mean ${(lightsSpent / Math.max(1, done)).toFixed(4)} ms`}`);
   say(`  memory: ${(mem.buffer.byteLength / 1048576).toFixed(1)} MB of linear memory at the end (${mem.buffer.byteLength} bytes), ${X.face_rows(games[0])} rows of the box table; it grew inside ${grewTicks} of ${done} steps, first in tick ${firstGrow}`);
   process.exit(bad ? 1 : 0);
 } catch (e) {

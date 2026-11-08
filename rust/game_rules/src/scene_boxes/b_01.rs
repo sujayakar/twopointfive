@@ -33,7 +33,7 @@ pub fn box_world_listed(g: &mut Game) {
 fn boxes_frame_reset(g: &mut Game) {
     let rows = core::mem::take(&mut g.box_frame_rows);
     let mut live = vec![false; g.tab.frame_boxes.len()];
-    for b in g.dyn_boxes.iter() { if let AnyBoxId::Frame(f) = *b { live[f.ix()] = true; } }
+    for b in g.dyn_boxes.iter().chain(g.engine.world.dynamics.iter()) { if let AnyBoxId::Frame(f) = *b { live[f.ix()] = true; } }
     for id in rows {
         if live[id.ix()] { g.box_frame_rows.push(id); continue; }
         // (what a maker noted beside the box that stood in this row, a thin line's width or an infrared mark, goes with the box)
