@@ -1,5 +1,5 @@
 // SIGNAL 1, LAMP VISIBILITY: three fractions, 0‥1. x = of the standing lamps' light, y = of the changing ones' (torches), z = of the standing lamps' highlight, w = of the sun's disc. A lamp is
-// drawn by what it would send, so the mean of "was it seen" is the seen share of their light; how much that light is, is exact, and never filtered (lampU: rgb the standing ones', a the torches').
+// drawn by what it would send, so the mean of "was it seen" is the seen share of their light; how much that light is, is exact, and never filtered; where no such lamp reaches the fraction is −1, and has no say (lampU: rgb the standing ones', a the torches').
 /** the sun through the leaves, from the sun's own picture of them */
 fn leafSun(x: vec3f, n: vec3f, r: vec2f) -> f32 {
   let o = x + n * 0.015 + frame.sunDir.xyz * 0.05; let q = sunMap(o); if (any(q.xy < vec2f(0.002)) || any(q.xy > vec2f(0.998))) { return 1.0; } let d = vec2f(textureDimensions(sunLeaves)); var s = 0.0; let a = r.x * 6.2832; let m = mat2x2f(cos(a), sin(a), -sin(a), cos(a));
@@ -16,7 +16,7 @@ fn leafSun(x: vec3f, n: vec3f, r: vec2f) -> f32 {
     let e = lampE(i, p.x, n) * reach[j]; let w = lum(e); if (w <= 1e-5) { continue; } let c = select(0u, 1u, lamps[i].kind == 2u); if (c == 0u) { U += e; } W[c] += w; let q = w / W[c]; if (u[c] < q) { pick[c] = i32(i); u[c] = u[c] / q; } else { u[c] = (u[c] - q) / (1.0 - q); }
     if (shines) { let h = lampCoat(i, s, -rd) * reach[j]; let m = lum(h); if (c == 1u) { C.a += m; } else if (m > 0.0) { C = vec4f(C.rgb + h, C.a); WC += m; let g = m / WC; if (uc < g) { pick.z = i32(i); uc = uc / g; } else { uc = (uc - g) / (1.0 - g); } } }
   } }
-  var v = vec4f(1.0, 1.0, 1.0, 0.0); let o0 = 0.003 * (1.0 + p.t * 0.02);
+  var v = vec4f(-1.0, -1.0, -1.0, 0.0); let o0 = 0.003 * (1.0 + p.t * 0.02);
   for (var k = 0u; k < 4u; k++) {
     var d: vec3f; var far = 400.0; fineLeaves = ((u32(FINE) >> k) & 1u) != 0u; noLeaves = k == 0u && !fineLeaves; if (k == 3u && WC < 0.02 * lum(U) + 1e-4) { continue; }
     if (k == 0u) { d = coneDir(frame.sunDir.xyz, frame.sunDir.w, bn); if (max3(frame.sunE.xyz) <= 0.0 || (dot(p.ng, d) <= 0.0 && !p.leaf)) { continue; } }

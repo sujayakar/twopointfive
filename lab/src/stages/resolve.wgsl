@@ -18,7 +18,7 @@ fn upMirror(mirror: texture_2d<f32>, id: vec2u, p: Px, f: vec4u, front: bool) ->
   let rd = pxRay(id.xy); let V = -rd; let f = textureLoad(frontT, id.xy, 0); let p = underWater(unpackPx(textureLoad(surf, id.xy, 0), rd), f, rd); let em = textureLoad(emit, id.xy, 0); var c = em.rgb * part(0u); var mir = vec4f(0.0, 0.0, 0.0, -1.0); if (!p.leaf && (p.rough < 0.43 || p.metal > 0.5)) { mir = upMirror(mirror, id.xy, p, f, false); }
   if (p.kind == 63u) { c = vec3f(0.0); }
   else if (!p.sky) {
-    let s = pxSurf(p); let vz = textureLoad(vis, id.xy, 0); let b = up(id.xy, p); let nv = max(dot(p.n, V), 0.02); let F = fresnel(coatF0(s), nv); let m = matteOf(s) * (1.0 - lum(F)) / PI; let L = frame.sunDir.xyz; let cs = dot(p.n, L);
+    let s = pxSurf(p); let vz = max(textureLoad(vis, id.xy, 0), vec4f(0.0)); let b = up(id.xy, p); let nv = max(dot(p.n, V), 0.02); let F = fresnel(coatF0(s), nv); let m = matteOf(s) * (1.0 - lum(F)) / PI; let L = frame.sunDir.xyz; let cs = dot(p.n, L);
     var sun = frame.sunE.xyz * vz.a * poolLight(p.x) * part(1u);
     if (cs > 0.0) { c += sun * (m * cs + coatOf(s, V, L, 0.006)); } else if (p.leaf) { c += sun * s.through * (-cs / PI); }
     let u = textureLoad(lampU, id.xy, 0); let El = u.rgb * vz.x + vec3f(1.06, 0.99, 0.87) * u.a * vz.y; var Cl = vec3f(0.0);
