@@ -36,7 +36,7 @@ const { ReplayBuffer } = await import(`${ROOT}/src/game/replaybuf.ts`);
 const F = await import(`${ROOT}/src/replay/format.ts`);
 const KP = await import(`${ROOT}/src/replay/kept.ts`);
 const KS = await import(`${ROOT}/src/replay/keepstore.ts`);
-const { ReplayKeeper } = await import(`${ROOT}/src/replay/keeper.ts`);
+const { ReplayKeeper, ringSource } = await import(`${ROOT}/src/replay/keeper.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
 const { levelFingerprint } = await import(`${ROOT}/src/game/savestate.ts`);
@@ -82,7 +82,7 @@ async function run(secs: number, o: { sid?: string; store?: any; gz?: any; mid?:
   const buf = new ReplayBuffer(), store = o.store ?? KS.memoryStore(), sid = o.sid ?? 'visit-a';
   const meta = () => ({ url: '?roomclear&squad4', commit: 'abc1234', userAgent: 'probe', fp: levelFingerprint(W.game), session: sid });
   let now = 0;
-  const K = new ReplayKeeper(buf, { sid, store, played: () => true, head: () => { const { session: _s, ...m } = meta(); return buf.head(W.game, m); },
+  const K = new ReplayKeeper(ringSource(buf), { sid, store, played: () => true, head: () => { const { session: _s, ...m } = meta(); return buf.head(W.game, m); },
     now: () => new Date(Date.UTC(2026, 9, 26, 12, 0, now++)).toISOString(), ...(o.gz !== undefined ? { gz: o.gz } : {}) });
   buf.tape.born(W.game); W.game.replayTap = (dt: number, cmd?: unknown) => { if (cmd) buf.top(W.game, dt, cmd); else buf.tick(W.game, dt, W.cam); };
   const R: Rig = { W, buf, K, store, hashes: [], meta };

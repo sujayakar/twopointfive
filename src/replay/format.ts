@@ -265,26 +265,28 @@ export function replayBlob(F: ReplayFile): { name: string; blob: Blob } {
 // ── ONE WINDOW (the maintainer, 10-15: "replays should just play in the current window, not open a new tab"): the game page leaves a mark when it goes to a
 //    replay, and each replay page's '‹ Game' reads it. Here, not in ui/replaykey.ts, because the map viewer's page reads it too and carries none of the game.
 /** where this window was when it left for a replay (sessionStorage: this tab's own): the address, the history SLOT it was in (the Navigation API's entry key —
- *  the count of entries cannot tell where a window stands once it has gone Back) and the shelf entry it left for. ONE TRIP'S: a game page that is up again drops it
- *  (ReplayKey's constructor, and its pageshow for a page handed back as it was left), so a replay reached later by another road finds none and goes to the
+ *  the count of entries cannot tell where a window stands once it has gone Back) and the shelf entry or kept visit it left for. ONE TRIP'S: a game page that is up again drops it
+ *  (`gameUp`), so a replay reached later by another road finds none and goes to the
  *  game's own page. */
 export const CAME_FROM = 'twopointsix.replay.from';
 type Slots = { currentEntry?: { key?: string } | null; entries?: () => { key: string }[]; traverseTo?: (key: string) => { committed?: Promise<unknown>; finished: Promise<unknown> } };
 const slots = (): Slots | null => { try { return (globalThis as { navigation?: Slots }).navigation ?? null; } catch { return null; } };
+/** a game's page is up, booted or handed back by the browser as it was left: the last trip to a replay is over */
+export function gameUp(): void { const drop = (): void => { try { sessionStorage.removeItem(CAME_FROM); } catch { /* a private window */ } }; drop(); try { window.addEventListener('pageshow', e => { if (e.persisted) drop(); }); } catch { /* no page */ } }
 /** this window goes to a replay page — never a new tab — leaving the mark its way back reads */
-export function leaveFor(url: string, id: number): void {
+export function leaveFor(url: string, id: number | string): void {
   try { sessionStorage.setItem(CAME_FROM, JSON.stringify({ href: location.href, key: slots()?.currentEntry?.key ?? null, id })); } catch { /* a private window: Back is the browser's */ }
   location.assign(url);
 }
 /** the way back from a replay page on shelf entry `id` to the game it was left for: THAT entry of this window's history when it is still there (however many
  *  hops between the replay and the map lie between — the browser may hand the game page back as it was left), else the address left, else `home`. A mark left
  *  for another shelf entry, or by no game page, is not trusted. No Navigation API (an older browser): the address. */
-export function backToGame(id: number | null, home: string): void {
+export function backToGame(id: number | string | null, home: string): void {
   // (ONE PRESS, ONE GOING: a second inside the wait is not a second road — and the mark is READ, not taken: a press after the wait, on a page still here, goes the
   // same way again and not to `home`. The game page drops the mark when it is up again: ReplayKey's constructor, and its pageshow)
   const now = performance.now(); if (now - wentAt < BACK_MS) return; wentAt = now;
   try { window.addEventListener('pageshow', () => { wentAt = -1e9; }, { once: true }); } catch { /* */ }   // (this page handed back as it was left takes the next press at once)
-  let from: { href?: string; key?: string | null; id?: number } | null = null;
+  let from: { href?: string; key?: string | null; id?: number | string } | null = null;
   try { from = JSON.parse(sessionStorage.getItem(CAME_FROM) ?? 'null'); } catch { /* */ }
   if (from && (id === null || from.id !== id || typeof from.href !== 'string' || /[?&]playtape=/.test(from.href))) from = null;
   const to = from?.href ?? home, N = slots(), key = from?.key;

@@ -67,6 +67,8 @@ import { ctrlTurn as playTurn } from '../host/findme';
 import * as J from '../game/journal';
 import * as K from '../game/knobs';
 import { tapePoses } from '../game/runtape';
+import { TAPE_SPEEDS, speedName, speedStep } from '../tape/pace';
+export { TAPE_SPEEDS, speedName, speedStep };
 
 /** the URL's key */
 export { PLAYTAPE, SENDING_WORDS, recipeSearch } from '../tape/address';
@@ -74,13 +76,6 @@ export { PLAYTAPE, SENDING_WORDS, recipeSearch } from '../tape/address';
 const TOL = 0.15;
 /** steps run and not drawn in one frame at most (a slow display plays slow, it does not spiral) · milliseconds of a frame a seek may take */
 const BURST = 6, SEEK_MS = 14;
-/** THE PACES A REPLAY PLAYS AT, slow motion first. A pace is how fast the tape's steps are fed to the game and nothing else: a step is
- *  the recorded step whatever the pace — its inputs, its length, its sounds and what it is compared with — so slow motion is each recorded step held for longer,
- *  not a finer run (under 1× the PICTURE is drawn between the last two steps: slowBlend below). `replay.html`'s list is the same five (`probes.ts cardreplay` holds the two together). */
-export const TAPE_SPEEDS = [0.25, 0.5, 1, 2, 4];
-export const speedName = (s: number): string => s === 0.25 ? '¼×' : s === 0.5 ? '½×' : `${s}×`;
-/** One pace slower (`dir` < 0) or faster than `s`; the ends hold, and a pace off the list counts as 1×. */
-export const speedStep = (s: number, dir: number): number => { const i = TAPE_SPEEDS.indexOf(s); return TAPE_SPEEDS[clamp((i < 0 ? TAPE_SPEEDS.indexOf(1) : i) + Math.sign(dir), 0, TAPE_SPEEDS.length - 1)]; };
 /** ONE FRAME'S STEPS: `wall` seconds of the display at `speed`, on top of the time already `owed`, from step `f` of a tape whose step n starts at `tAt[n]` → how
  *  many steps this frame runs and the time still owed after them. A frame runs no more than BURST × speed steps (a slow display plays slow, it does not spiral),
  *  and one that hits that cap owes nothing after it. */

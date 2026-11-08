@@ -1,21 +1,33 @@
-// THE KEEPER: one page visit's tape written out as it is played (kept.ts has the format, keepstore.ts the store). Every `KEEP.secs` the page calls beat(): what the
-// replay ring and the run tape gained since the last beat is taken as a piece (game/replaybuf.ts since() — a few slices, asked between two steps), made a line of
-// JSON, gzipped and put in the store; flush() does the same at once and without the gzip, for a page that is going away. Nothing is asked of the player and
+// THE KEEPER: one page visit's tape written out as it is played (kept.ts has the format, keepstore.ts the store). Every `KEEP.secs` the page calls beat(): what its
+// source gained since the last beat (the replay ring and the run tape, `ringSource`: a few slices, asked between two steps; or a page's tape of hands,
+// tape/keep.ts) is taken as a piece, a line of JSON, gzipped and put in the store; flush() does the same at once and without the gzip, for a page that is going away. Nothing is asked of the player and
 // nothing is sent anywhere. A visit is filed only once it has been PLAYED (`played()`: the game has stepped in the player's hands — a title page left running its
 // attract reel keeps nothing); from then on every piece is, the reel included.
-// The keeper only reads its source. No game code is imported: the source is the buffer's two methods, the head a callback.
+// The keeper only reads its source. No game code is imported: the source is an interface, the head a callback.
 import type { KeptPiece, KeptHead } from './kept';
 import { reportWarning } from '../cloud/report';
 import { headLine, pieceLine } from './kept';
 import type { KeptStore, KeptRow, Body } from './keepstore';
 import { KEEP, gzip, pruneKept, keepBudget } from './keepstore';
 
-export interface KeepSource { since(): KeptPiece | null; }
+/** what came since the last piece, as its line, and the seconds of play kept with it; null: nothing. `again`: the pieces so far are gone, the next is the first */
+export interface KeepSource { since(): { line(sid: string, seq: number, at: string): string; seconds: number } | null; again(): void;
+  /** piece `seq` could not be kept (a source that can give it again does) */
+  missed?(seq: number): void; }
+/** what a visit's row says of it, and whatever else its head line has */
+export interface KeepHead extends Pick<KeptHead, 'url' | 'commit'> { level: { file?: string; scenario?: string }; hands?: number }
+/** the replay ring's and the run tape's pieces */
+export function ringSource(ring: { since(): KeptPiece | null }): KeepSource {
+  let r0 = NaN, rN = 0;
+  return { again: () => { r0 = NaN; }, since: () => { const P = ring.since(); if (!P) return null;
+    const S = P.samples; if (S.length) { if (Number.isNaN(r0)) r0 = S[0].r; rN = S[S.length - 1].r; }
+    return { line: (sid, seq, at) => pieceLine(sid, seq, at, P), seconds: Number.isNaN(r0) ? 0 : Math.round((rN - r0) * 10) / 10 }; } };
+}
 export interface KeeperOpts {
   sid: string; store: KeptStore;
   /** the game has been stepped in the player's hands (not a show's) */
   played: () => boolean;
-  head: () => KeptHead;
+  head: () => KeepHead;
   now?: () => string; gz?: ((text: string) => Promise<Blob>) | null;
   /** bytes of kept tapes allowed (default: keepstore.ts keepBudget) */
   budget?: () => Promise<number>;
@@ -33,9 +45,8 @@ export class ReplayKeeper {
   readonly sid: string;
   /** why keeping stopped ('' = it has not) */
   broke = '';
-  readonly stats = { pieces: 0, bytes: 0, failed: 0, let: 0, beats: 0, ms: 0, worstMs: 0, again: 0, ends: 0 };
+  readonly stats = { pieces: 0, bytes: 0, failed: 0, dropped: 0, let: 0, beats: 0, ms: 0, worstMs: 0, again: 0, ends: 0 };
   private row: KeptRow; private seq = 0; private headKey = ''; private started = false;
-  private r0 = NaN; private rN = 0;
   private q: Promise<void> = Promise.resolve(); private fails = 0;
   /** bytes of every kept visit as last counted, and the room there is */
   private total = -1; private max = Infinity;
@@ -62,11 +73,10 @@ export class ReplayKeeper {
       if (!this.headKey || sync || seq % HEAD_EVERY === 0) {
         const H = this.o.head(), key = JSON.stringify(H);
         if (key !== this.headKey) { this.headKey = key; head = headLine(this.sid, at, H); }
-        this.row.scenario = H.level.scenario ?? H.level.file ?? ''; this.row.url = H.url ?? ''; if (H.commit) this.row.commit = H.commit;
+        this.row.scenario = H.level.scenario ?? H.level.file ?? ''; this.row.url = H.url ?? ''; if (H.commit) this.row.commit = H.commit; if (H.hands) this.row.hands = true;
       }
-      text = pieceLine(this.sid, seq, at, P);
-      const S = P.samples; if (S.length) { if (Number.isNaN(this.r0)) this.r0 = S[0].r; this.rN = S[S.length - 1].r; }
-      this.row.lastAt = at; this.row.seconds = Number.isNaN(this.r0) ? 0 : Math.round((this.rN - this.r0) * 10) / 10;
+      text = P.line(this.sid, seq, at);
+      this.row.lastAt = at; this.row.seconds = P.seconds;
     } catch (e) { this.stop(`the tape could not be read (${String((e as Error)?.message ?? e)})`); return; }
     this.seq = seq + 1; this.stats.beats++;
     if (t0) { const ms = performance.now() - t0; this.stats.ms += ms; if (ms > this.stats.worstMs) this.stats.worstMs = ms; }
@@ -126,7 +136,7 @@ export class ReplayKeeper {
     const S = this.o.store, sid = this.sid;
     this.q = this.q.then(async () => {   // (asked once every write before it has settled: a piece still on its way is not a visit removed)
       try { if ((await S.head(sid)) !== null || (await S.rows()).some(r => r.sid === sid)) return; } catch { return; }
-      this.headKey = ''; this.row.bytes = 0; this.r0 = NaN; this.total = -1; this.stats.again++; });
+      this.headKey = ''; this.row.bytes = 0; this.src.again(); this.total = -1; this.stats.again++; });
   }
   private gone = false;
   private mark(gone: boolean): void {
@@ -146,7 +156,7 @@ export class ReplayKeeper {
       try { const out = await pruneKept(this.o.store, Math.max(0, (await this.room()) * 0.5), this.sid); this.stats.let += out.length; this.total = -1; } catch (e) { reportWarning('replay.keep.prune', e); }
       ok = await this.o.store.put({ ...this.row }, seq, body, head);
     }
-    if (!ok) { this.row.bytes -= len; if (head !== undefined) this.headKey = '';   // (the head goes again with the next piece)
+    if (!ok) { this.stats.dropped++; this.src.missed?.(seq); this.row.bytes -= len; if (head !== undefined) this.headKey = '';   // (the head goes again with the next piece)
       if (++this.fails >= 3) this.stop('this browser would not keep it (no storage, or none left)'); return; }
     this.fails = 0; this.stats.pieces++; this.stats.bytes += len;
     // the budget: counted once, then kept as a running sum; over it, the oldest visits are let go
