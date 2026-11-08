@@ -10,7 +10,6 @@ import type { SmokeSystemLike } from '../smoke/types';
 import type { GameAudioLike } from '../game/audio_iface';
 import { buildLevel } from '../scene/level';
 import { UNDERFOOT } from '../scene/collision';
-import { ROUND, roundLevel } from '../scene/round';
 import { SHAPES, shapeLevel, plainLevel } from '../scene/shapes';
 import { thinClear, thinLevel } from '../scene/thin';
 import { barClear, barLevel } from '../scene/bars';
@@ -276,8 +275,7 @@ export function nullSmoke(): SmokeSystemLike & { params?: Record<string, unknown
 
 /** the level's statics into the host's box world and its lights into the light set — the two loops main.ts and headless.ts ran before `new Game` */
 export function populateHost(host: HostApi, level: Level): void {
-  thinClear(level.boxes); barClear(level.boxes);   // (a level stood up a second time: last time's thin marks off before the round things are looked for)
-  roundLevel(level.boxes, ROUND.on, level.markTexel);   // ROUND THINGS (scene/round.ts): the kit's octagons as one round box each, or every box put back as its file has it — before a box goes to the world and before the Game's collision is built from the list
+  thinClear(level.boxes); barClear(level.boxes);   // (a level stood up a second time: last time's thin marks off)
   plainLevel(level.boxes);   // A BOX SAYS ITS SHAPE (scene/shapes.ts): what an earlier stand-up of this level gave is taken back first, so that the two rules below read the level's plain boxes whatever shapes say
   thinLevel(level.boxes, level.doors);   // THIN THINGS THAT STAND FREE (scene/thin.ts): marked for the fog of war's own eyes (FOG.thin) and a teammate's (FOG.mates), on the list as it now is
   barLevel(level.boxes);   // A WINDOW'S BARS (scene/bars.ts): marked for the one rule that reads them (game/winbars.ts WINBARS)
@@ -318,7 +316,6 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
   let ch = opts.ch;
   if (!ch) { if (!opts.gltfUrl) throw new Error('standGame: neither ch nor gltfUrl given'); ch = await loadGltfCharacter(opts.gltfUrl); }
   const smoke = opts.smoke ?? nullSmoke();
-  if (opts.harness && pinned('TPS_ROUND')) ROUND.on = String((globalThis as any).process?.env?.TPS_ROUND ?? '') === '1';   // round things are round (src/scene/round.ts; read as the level's boxes go to the world, so written before that): off, so a drum is the kit's octagon of four slabs to every ray and every foot, as when every frozen digest and tally was recorded
   if (opts.harness && pinned('TPS_SHAPES')) SHAPES.on = String((globalThis as any).process?.env?.TPS_SHAPES ?? '') === '1';   // a box says its shape (src/scene/shapes.ts; read as the level's boxes go to the world, so written before that): off, so every box of a level is the plain box its file has, as when every frozen digest was recorded
   if (opts.harness && pinned('TPS_COATFINISH')) COATFINISH.on = String((globalThis as any).process?.env?.TPS_COATFINISH ?? '') === '1';   // a named coat's finish goes wherever its word goes (src/scene/stuff.ts; a picture only, read where a box's finish is handed to the GPU): off, so a vehicle's body has the finish its file gives it, as it was
   if (opts.harness && pinned('TPS_SOLIDGLASS')) SOLIDGLASS.on = String((globalThis as any).process?.env?.TPS_SOLIDGLASS ?? '') === '1';   // a thing of solid glass is dark and smooth (src/scene/stuff.ts; a picture only, read where a box's colour and finish are handed to the GPU): off, so a vehicle's window is the grey its file gives it, as it was

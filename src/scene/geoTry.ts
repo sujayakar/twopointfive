@@ -1,64 +1,18 @@
 // A GEOMETRY TRIAL (the look page only: main.ts, with ?look; ?geo=0 leaves it out — off on every other page, and nothing here keeps state).
 // What else can a box-only level be made of? The answer tried here is the CUT BOX (scene/cut.ts): a box clipped by up to eight planes, which the raster, every GPU
-// ray and every CPU ray already meet as one solid. Two things are rebuilt from the level's own boxes, after it loads and before the world is filled:
-//   ROUND THINGS. The kit (scene/gwotKit.ts round) stands a drum, a tyre, a stove up as four slabs 45° apart: an octagon of four boxes. Here the first slab becomes
-//     a regular TWELVE-sided prism (the box's four faces + eight planes: the record's whole room), marked ROUND (Box.cutRound) so the picture shades its sides with
-//     one turning normal; the other three are left in the list (a level file's box indices are names) as specks no pass and no ray meets.
+// ray and every CPU ray already meet as one solid. One thing is rebuilt from the level's own boxes, after it loads and before the world is filled:
 //   A BROKEN WALL TOP. A yard wall (a long thin box with the open sky on both hands, on the renderer's floor plan) loses a bite out of its top: the wall is split at the bite, and the gap is
 //     three to five boxes whose tops are cut on a slant, each at its own height, so the line is ragged and the shadow it throws is too. The coping stops at the break, the
 //     snow lying on it is cut back, and the faces of the break show the wall's core. No bite goes lower than a standing man's eyes.
-// What pushes against a box still meets the UNCUT box: a man slides round the prism's square, a hand's width out from the round at its four corners.
 import { BoxFlag, type Box } from './boxes';
 import { cutPlane, cutRecord, fitCutBox } from './cut';
-import { MARKING_TEXEL, MAX_MARKS_PER_BOX, mkHash, texelOf, type MarkingDef, type MarkFace } from './markings';
+import { mkHash } from './markings';
 import type { Vec3 } from '../math/vec';
-import { onExact } from '../math/exact';
 
 const h01 = (s: number, a: number, b = 0) => mkHash(s, a, b) / 4294967296;
 /** take a box out of the picture and out of every ray's way without moving the list (a level file's box indices are names) */
 function hide(b: Box, at: Vec3) { b.flags |= BoxFlag.NoPrimary | BoxFlag.NoShadow; b.c = [at[0], at[1], at[2]]; b.h = [0.01, 0.01, 0.01]; delete b.marks; }
 const near = (a: number, b: number, e = 1e-4) => Math.abs(a - b) < e;
-let TAN8 = 0; onExact(() => { TAN8 = Math.tan(Math.PI / 8); });   // (made in onExact, not as the module loads, as scene/round.ts TAN8: a constant worked out at load is the engine's whatever the maths switch says)
-/** the kit's octagon: boxes[i‥i+3] are four slabs through one centre, 45° apart, tan 22.5° as deep as they are long, their tops stepped 2 mm */
-function octagonAt(B: readonly Box[], i: number): boolean {
-  const a = B[i];
-  if (i + 3 >= B.length || a.rot || a.cut || a.flags !== 0 || !near(a.h[2], a.h[0] * TAN8, a.h[0] * 0.01)) return false;
-  for (let k = 1; k < 4; k++) {
-    const b = B[i + k];
-    if (b.rot || b.cut || b.flags !== 0 || !near(b.c[0], a.c[0]) || !near(b.c[2], a.c[2]) || !near(b.h[0], a.h[0]) || !near(b.h[2], a.h[2])) return false;
-    if (!near(b.yaw - a.yaw, k * Math.PI / 4, 1e-3) || !near(b.c[1] - b.h[1], a.c[1] - a.h[1], 1e-3) || !near(b.c[1] + b.h[1], a.c[1] + a.h[1] - 0.002 * k, 1e-3)) return false;
-    if (b.albedo[0] !== a.albedo[0] || b.albedo[1] !== a.albedo[1] || b.albedo[2] !== a.albedo[2]) return false;
-  }
-  return true;
-}
-/** a round patch on a lid (a tyre's hole, an oven's mouth): the slab's own +y mark was cut to the slab, so it is drawn again as a disc of radius R */
-function discMark(like: MarkingDef, R: number, texel: number): MarkingDef {
-  const t = texelOf(like, texel), N = Math.min(32, 2 * Math.ceil(R / t) + 2), cells: string[] = [];
-  for (let j = N - 1; j >= 0; j--) { let row = ''; for (let i = 0; i < N; i++) row += Math.hypot(i + 0.5 - N / 2, j + 0.5 - N / 2) * t < R ? 'a' : '.'; cells.push(row); }
-  return { face: '+y', ...(like.res ? { res: like.res } : {}), at: [-N / 2, -N / 2], size: [N, N], pal: [like.pal[0]], cells };
-}
-const SIDES: readonly MarkFace[] = ['+x', '-x', '+z', '-z'];
-/** every octagon of the level → one round prism. Returns how many were made. */
-export function roundStacks(boxes: Box[], texel = MARKING_TEXEL): number {
-  let made = 0;
-  for (let i = 0; i + 3 < boxes.length; i++) {
-    if (!octagonAt(boxes, i)) continue;
-    const a = boxes[i], r = a.h[0] / 0.96, ap = r * 0.985;   // (the kit's slab is 0.96 r long; a twelve-sided prism of this apothem has the round's area to a percent)
-    const all = [0, 1, 2, 3].flatMap(k => boxes[i + k].marks ?? []);
-    const band = all.find(m => m.face === '+z' || m.face === '-z');   // a slab's long face carries the whole band (a drum's ribs); its short ends carry a cut of it
-    const lid = (a.marks ?? []).find(m => m.face === '+y');
-    const marks: MarkingDef[] = [];
-    if (lid && lid.pal.length === 1) marks.push(discMark(lid, r * 0.5, texel));   // (a lid of two paints is a drum's: its rim is the shader's, its bung is let go)
-    if (band) for (const f of SIDES) if (marks.length < MAX_MARKS_PER_BOX) marks.push({ ...band, face: f });
-    a.h = [ap, a.h[1], ap];
-    const planes = [30, 60, 120, 150, 210, 240, 300, 330].map(d => cutPlane([Math.cos(d * Math.PI / 180), 0, Math.sin(d * Math.PI / 180)], ap));
-    a.cut = cutRecord(a.h, planes).cut; a.cutRound = 2;
-    if (marks.length) a.marks = marks; else delete a.marks;
-    for (let k = 1; k < 4; k++) hide(boxes[i + k], a.c);
-    made++; i += 3;
-  }
-  return made;
-}
 
 /** m between two bites, middle to middle: a wall here and there has lost its top, not every stretch of every wall (a wall built of several boxes between its gates
  *  would otherwise take one a box) */
@@ -157,7 +111,7 @@ export function breakWallTops(boxes: Box[], lights: readonly { pos: Vec3 }[], op
 }
 
 /** the whole trial on a loaded level, before its boxes go to the world: { round things made, walls broken } */
-export function geoTryLevel(level: { boxes: Box[]; lights?: readonly { pos: Vec3 }[]; markTexel?: number }, open: (x: number, z: number) => boolean): { rounds: number; walls: number; bites: Bite[] } {
-  const rounds = roundStacks(level.boxes, level.markTexel ?? MARKING_TEXEL), bites = breakWallTops(level.boxes, level.lights ?? [], open);
-  return { rounds, walls: bites.length, bites };
+export function geoTryLevel(level: { boxes: Box[]; lights?: readonly { pos: Vec3 }[] }, open: (x: number, z: number) => boolean): { walls: number; bites: Bite[] } {
+  const bites = breakWallTops(level.boxes, level.lights ?? [], open);
+  return { walls: bites.length, bites };
 }

@@ -154,7 +154,6 @@ import { hourOf, hourIdOf, applyHour, setSunStrength, sunStrength, sunGiven, typ
 import type { DevicesSnap } from './devices';
 import type { DecalKind } from '../render/decals';
 import type { Box } from '../scene/boxes';
-import { authoredC, authoredH } from '../scene/round';   // (leaf helpers: a round thing's boxes as the level file has them)
 import { shapeStamp } from '../scene/shapes';   // (a leaf helper: a number of the shapes a level stands on)
 import { LOOK_DECALS, lookDecal } from './lookDecals';
 import { diceInUse } from '../math/dice';
@@ -391,7 +390,7 @@ export function levelFingerprint(g: Game): SaveState['level'] {
   const L = g.level, nBox = g.destr?.walls?.authored ?? L.boxes.length, st = shapeStamp(L.boxes, nBox);
   const cached = fpCache.get(L); if (cached && cached.st === st) return cached.fp;   // (nBox = the AUTHORED statics only: wall breaking appends pieces to the list at runtime — the level is still the level)
   let geo = 0x811c9dc5;   // + every static's centre and half-extents to the centimetre: a re-export that MOVES geometry under the same names and counts is another level to a checkpoint
-  for (let i = 0; i < nBox; i++) for (const v of [...authoredC(L.boxes[i]), ...authoredH(L.boxes[i])]) { geo ^= Math.round(v * 100) & 0xffffffff; geo = Math.imul(geo, 0x01000193) >>> 0; }
+  for (let i = 0; i < nBox; i++) for (const v of [...L.boxes[i].c, ...L.boxes[i].h]) { geo ^= Math.round(v * 100) & 0xffffffff; geo = Math.imul(geo, 0x01000193) >>> 0; }
   const s = `${nBox}|${L.doors.map(d => d.name).join(',')}|${L.routes.map(r => `${r.name}:${r.points.length}`).join(',')}|${g.targets.reduce((n, t) => n + (lampGlass(t) ? 0 : 1), 0)}|${L.props.length}|${geo.toString(16)}${st ? `|shapes:${st.toString(16)}` : ''}`;
   // (the count of light targets is the LEVEL's own: a vehicle's lamps — carlamps.ts — are made of the level's boxes by a rule that can be off, and a target is
   //  poured back by name, so a checkpoint or a recording from before that rule, or from a page with it off, is still this level's)

@@ -237,7 +237,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   raster's "drawn whole until the second set is in" (`gbuffer.ts`: a cut box is drawn cut from the first frame); `__cut.programs`,
   `__cut.stats.drawnWhole`, `?cutprograms`; the visit's `cut` record; the start's wait on the second set; tools/qa/cut-march.js. `cutConfig.swap`
   is GONE from the table and from the settled-switch list (11-07; its field on the wire to the Rust game goes with the Rust goal's next batch); the look page's
-  rule that a geometry trial drops the round's GPU half (`main.ts roundConfig.gpu`) asks for the trial itself now, and draws what it drew. THE COMPILE QUEUE's background
+  rule that a geometry trial dropped the round's GPU half asked for the trial itself (the rule went on 2026-11-07), and drew what it drew. THE COMPILE QUEUE's background
   lane (`gpu/device.ts`) was given by text, to any module holding the cut rule's line; it is now the LATER pipelines' alone, and a module's size is
   kept beside the module. WHAT MOVES: about twenty programs fewer compiled after each boot (21 s of background compile on the cloud's NVIDIA
   card; 72 of 141 s of ONE compiler thread by the compile-time work's serial table) and nothing swaps under play. THE BOOT'S OWN SET IS BIGGER
@@ -245,7 +245,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   dearer than its boot form on that card: the start card waits that much longer for its programs, a brief's Start (which waits for every
   program) much less. Not timed on Windows. If the g-buffer's cut pipeline fails to compile, cut pieces are DRAWN whole while rays meet the cut
   shape (the two-set build drew and traced them whole): said in the console line. A ROUND THING IS ITS PICTURE'S PRISM TO EVERY RAY AT ALL TIMES (`ROUND_AS_CUT`, `docs/agents/levels.md`),
-  where a calm room traced the cylinder; `?roundexact=1` still asks for the cylinder. THE COST, on that card (A10G, the tree before, the two
+  where a calm room traced the cylinder (`?roundexact=1` asked for the cylinder until 2026-11-07). THE COST, on that card (A10G, the tree before, the two
   sets pinned in turn in one page, 2026-11-07): the office in rain +1.9 % of a frame on High and +1.7 % on Medium; the squad lesson on the look
   page +0.5 % and 0 %. The 1.9 x fog pass once read there is not reproduced. HELD: the module list by label and text hash is IDENTICAL to the
   tree before forced to one set (title 36, snow 36, the look page 37 modules; `shaderinline-check --json`); shaderinline, shaderfold, pipequeue
@@ -3941,7 +3941,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   opening's light is not one). SEEN on the software smoke lab at dusk, the same boot script before and after: the ground before the red front takes
   its red, the smoke crossing the blue front is lit by it (brighter and cooler there than the plume's far side). NOT SEEN: a GPU; the compound or
   the records office by day; midday or overcast anywhere.
-- **THE LOOK PAGE WITH A GEOMETRY TRIAL ON IS COMPILED WITHOUT THE ROUND TEST** (`main.ts urlFlagsBeforeEngine`: `roundConfig.gpu` is false when
+- **THE LOOK PAGE WITH A GEOMETRY TRIAL ON WAS COMPILED WITHOUT THE ROUND TEST, UNTIL 2026-11-07** (the level files say round things now and no trial makes its own, so the exclusion would draw every round thing on that page as its square; it went, booted once on the software adapter, never seen on a GPU). What follows is the record. (`main.ts urlFlagsBeforeEngine`: `roundConfig.gpu` is false when
   a trial has put `cutConfig.swap` off; `?round=1` compiles it in; 10-25). After the build's round things came in by merge, the look
   page lost its SOFTWARE device on its first drawn frame ("A valid external Instance reference no longer exists") where the plain page at the same
   quality drew. Runs that settled it: look with every trial off and `round=0` draws; look with every trial on and `round=0` draws; look with every

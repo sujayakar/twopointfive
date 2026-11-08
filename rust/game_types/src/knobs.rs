@@ -10033,21 +10033,6 @@ impl UnderfootK {
 }
 impl Default for UnderfootK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/round.ts:35 ROUND, src/scene/round.ts:35)
-#[derive(Clone, Copy, Debug)]
-pub struct RoundK {
-    pub on: bool,
-}
-impl RoundK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RoundK {
-            on: false,
-        }
-    }
-}
-impl Default for RoundK { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/game/env.ts:21 ENV, src/game/env.ts:21)
 #[derive(Clone, Copy, Debug)]
 pub struct EnvK {
@@ -13896,10 +13881,6 @@ pub fn page_underfoot() -> UnderfootK {
     crate::knobs::UnderfootK { on: true }
 }
 
-pub fn page_round() -> RoundK {
-    crate::knobs::RoundK { on: true }
-}
-
 pub fn page_env() -> EnvK {
     crate::knobs::EnvK { exposure: 2.0, tube_gain: 475.0 }
 }
@@ -14325,7 +14306,6 @@ pub struct Knobs {
     pub music: MusicK,
     pub lived: LivedK,
     pub underfoot: UnderfootK,
-    pub round: RoundK,
     pub env: EnvK,
     pub shapes: ShapesK,
     pub flash: FlashK,
@@ -14573,7 +14553,6 @@ impl Knobs {
             music: page_music(),
             lived: page_lived(),
             underfoot: page_underfoot(),
-            round: page_round(),
             env: page_env(),
             shapes: page_shapes(),
             flash: page_flash(),

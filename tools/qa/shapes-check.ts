@@ -104,9 +104,7 @@ export async function shapesCheck(): Promise<boolean> {
         ['a centre or a size of its own on a shaped box', errs(d => { d.boxes[Y.bonnet].shape.h = [0.65, 0.1, 0.84]; }), 'unknown key'],
         ['a piece that says flags', errs(d => { d.boxes[Y.tub].shape.with[0].flags = ['Gloss']; }), 'trim'],
         ['a piece turned by no number', errs(d => { d.boxes[Y.tub].shape.with[0].yaw = 1e999; }), 'yaw'],
-        ['a shape on a slab of a kit octagon', errs(d => { const T = d.boxes[Y.tub], r = 0.3, t8 = Math.tan(Math.PI / 8);   // (four slabs as the kit writes a drum: one paint, turned 45° each, their tops stepped down 2 mm)
-          for (let k = 0; k < 4; k++) { const top = 1 - 0.002 * k; d.boxes.push({ id: `shapes_check_drum_${k}`, floor: T.floor, c: [T.c[0], top / 2, T.c[2] + 6], h: [r, top / 2, r * t8], yaw: k * Math.PI / 4, material: T.material }); }
-          d.boxes[d.boxes.length - 2].shape = { with: [{ off: [0, 0.6, 0], h: [0.05, 0.05, 0.05], albedo: [1, 1, 1] }] }; }), 'octagon'],
+        ['a shape on a round thing', errs(d => { const T = d.boxes[Y.tub]; d.boxes.push({ id: 'shapes_check_drum', floor: T.floor, c: [T.c[0], 0.5, T.c[2] + 6], h: [0.3, 0.5, 0.3], round: true, material: T.material, shape: { with: [{ off: [0, 0.6, 0], h: [0.05, 0.05, 0.05], albedo: [1, 1, 1] }] } }); }), 'round thing'],
         ['a form on a box with markings', errs(d => { const m = d.boxes.find((b: any) => b.markings && !b.rot && !b.shape); m.shape = { cut: [[1, 0, 0, 0]] }; }), 'markings'],
         ['a form on a pane of glass', errs(d => { d.boxes[Y.wheel].flags = ['Glass']; }), 'Glass'],
       ];

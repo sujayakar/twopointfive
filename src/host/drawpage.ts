@@ -12,7 +12,6 @@ import { charSlots, meshAuthored } from '../render/charMaterials';
 import { MeshShadows } from '../render/meshShadows';
 import { fitRig, fitRigCast } from '../render/sdfrig';
 import { cutConfig, initCutSwitch } from '../scene/cut';
-import { roundConfig } from '../scene/round';
 import { CAST_FILE, CAST_FILE_LOOK, castUrlFor, loadCharacterSet } from '../anim/gltf';
 import { CharacterRenderer } from '../anim/characters';
 import { COATFINISH, SOLIDGLASS } from '../scene/stuff';
@@ -87,7 +86,7 @@ async function main(): Promise<void> {
   lookConfig.kept = lookKeptOf(D.f[sky() + Sky.kept] < 0 ? undefined : D.f[sky() + Sky.kept], q.get('kept'));
   weatherKindConfig.on = true; snowConfig.on = D.u[sky() + Sky.snowLevel] !== 0;
   if (snowConfig.on) { snowLookConfig.surface = true; snowLookConfig.glow = true; snowLookConfig.sparkle = true; snowLookConfig.under = true; }
-  glassBreakConfig.on = true; initCutSwitch(); roundConfig.gpu = cutConfig.on;
+  glassBreakConfig.on = true; initCutSwitch();
   COATFINISH.on = true; SOLIDGLASS.on = true;
 
   const gpu = await initGpu(canvas, { retry: true });   // (the module's game has stood by now)

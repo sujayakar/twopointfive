@@ -155,8 +155,6 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   'SOLIDGLASS',
   // the paint on a wall goes with the wall (wallskin.ts WALLSKIN): picture only — a recording made with it on shows its holed walls' bands cut, one from before shows them whole
   'WALLSKIN',
-  // round things are round (scene/round.ts ROUND): a recording made with it on has its drums and tyres round to every ray and foot, one from before has the kit's octagons
-  'ROUND',
   // a box says its shape (scene/shapes.ts SHAPES): a recording made with it on has its vehicles' corners, bonnets and glass cut to every ray, one from before has the plain boxes
   'SHAPES',
   // the debris pool is dressing (debris.ts, destructionSwitch.ts DEBRIS): a recording made with it on replays the simulation's landings of thrown pieces, one from before
@@ -326,7 +324,6 @@ import { LOOK } from '../scene/look';
 import { MUSIC } from '../audio/pieces';   // (the score's pieces switch: not a game module, no cycle)
 import { LIVED } from '../scene/lived';
 import { UNDERFOOT } from '../scene/collision';   // (a scene table: no cycle)
-import { ROUND } from '../scene/round';   // (a scene table: no cycle)
 import { SHAPES } from '../scene/shapes';   // (a scene table: no cycle)
 import { CASTOR } from './props';
 
@@ -536,8 +533,6 @@ export function knobRegistry(): Record<string, object> {
     LIVED,
     // what the walk grid calls floor, feet cross (scene/collision.ts): a walker's circle test begins where the grid's bake begins
     UNDERFOOT,
-    // round things are round (scene/round.ts): whether a level's octagons are stood up as round boxes; read when a level is stood up
-    ROUND,
     // the game's own numbers of the picture (env.ts): the night's exposure and the tube's gain, which no player's Brightness moves
     ENV,
     // a box says its shape (scene/shapes.ts): whether a level's boxes that say a shape are stood up as it, with their pieces; read when a level is stood up

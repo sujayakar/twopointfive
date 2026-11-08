@@ -28,7 +28,6 @@ import { CIVILIAN_TASKS } from './level';
 import { BoxFlag, type Box } from './boxes';
 import { MarkingDef, MAX_MARKS_PER_BOX, MARKING_TEXEL, markingErrors } from './markings';
 import { shapeErrors, formOf, type ShapeForm } from './shapes';
-import { findOctagons } from './round';
 import { BOX_STUFFS, boxStuffOk } from './stuff';
 import { DOES_WORDS, doesWordOk } from './materials';
 import { DOOR_CAP } from '../sim/doorshome';
@@ -36,7 +35,9 @@ import { PROP_CAP, PROP_PARTS } from '../sim/propshome';
 import { LIGHT_CAPS } from '../sim/lightshome';
 export type { MarkingDef } from './markings';
 
-export const LEVEL_DATA_VERSION = 1 as const;
+export const LEVEL_DATA_VERSION = 2 as const;
+/** what a file of another version is told: version 1 wrote a round thing as four slabs, and one program turns such a file into this version */
+const versionWord = (v: unknown): string => v === 1 ? 'version 1 writes a round thing as four slabs: bun run tools/levels/round-convert.ts <file> makes it version 2' : `expected ${LEVEL_DATA_VERSION}, got ${JSON.stringify(v)}`;
 
 /** Box flags by NAME as they appear in a level file. Only the authored subset: Dynamic / Emissive / AreaLit / Rot are set by the runtime (props, upload,
  *  game.ts area lights, Box.rot presence) and SoundSeal is a CPU-only door-leaf state — none of them is ever authored, and the validator rejects them. */
@@ -89,6 +90,9 @@ export interface BoxData {
   yaw?: number;
   /** full orientation (unit quaternion x y z w) for the few tilted things (the bike's tubes); absent = yaw only */
   rot?: Quat;
+  /** A ROUND THING (scene/round.ts): to every ray, eye, foot and to the picture this box is the cylinder about its own y, radius h[0] (which equals h[2]), half
+   *  height h[1]. Not a shape: a shape is cut from a box that still walks as the plain box. Says no yaw, rot, flags or shape. */
+  round?: true;
   /** exactly one of material (a key of LevelData.materials) / albedo (inline linear rgb) */
   material?: string; albedo?: Vec3;
   /** emitted radiance (linear HDR); absent = none. Fixtures that switch (panels, screens, signs) are ALSO listed in `switchables` with their lit value. */
@@ -260,7 +264,7 @@ export const KEYS = {
   meta: ['grid', 'bounds', 'generator', 'notes', 'markTexel', 'kept'], bounds: ['min', 'max'], rect: ['x0', 'x1', 'z0', 'z1'],
   floor: ['id', 'name', 'y', 'ceiling'], material: ['albedo', 'rough', 'metal', 'stuff', 'does', 'notes'],
   surfaces: ['building', 'grassEdge', 'inside', 'outside', 'verge', 'zones'], zone: ['id', 'mat', 'x0', 'z0', 'x1', 'z1', 'notes'],
-  box: ['id', 'floor', 'group', 'name', 'c', 'h', 'yaw', 'rot', 'material', 'albedo', 'emissive', 'rough', 'metal', 'stuff', 'does', 'flags', 'cutHeight', 'markings', 'shape'],
+  box: ['id', 'floor', 'group', 'name', 'c', 'h', 'yaw', 'rot', 'round', 'material', 'albedo', 'emissive', 'rough', 'metal', 'stuff', 'does', 'flags', 'cutHeight', 'markings', 'shape'],
   prop: ['id', 'kind', 'name', 'floor', 'x', 'z', 'yaw', 'mass', 'parts', 'half', 'height'], part: ['off', 'h', 'yaw', 'material', 'albedo', 'stuff', 'does', 'markings'],
   marking: ['face', 'res', 'at', 'size', 'pal', 'cells'], markpal: ['albedo', 'mul', 'rough', 'emit'],   // (scene/markings.ts marking() / palEntry() write exactly these, in this order)
   light: ['id', 'kind', 'pos', 'dir', 'color', 'intensity', 'range', 'innerDeg', 'outerDeg', 'group', 'enabled', 'volumetric', 'radius', 'mains', 'broad', 'fixture'],
@@ -314,7 +318,7 @@ export function validateLevelData(d: LevelData): string[] {
   /** every key of record o must be one the format knows (KEYS): a typo'd key is data that would be ignored on load and dropped on save */
   const known = (where: string, o: unknown, keys: readonly string[]) => { if (!isObj(o)) return; for (const k of Object.keys(o as object)) if ((o as any)[k] !== undefined && !keys.includes(k)) err(where, `unknown key '${k}' (allowed: ${keys.join(', ')})`); };
   known('level', d, KEYS.top);
-  if (d.version !== LEVEL_DATA_VERSION) err('version', `expected ${LEVEL_DATA_VERSION}, got ${show((d as any).version)}`);
+  if (d.version !== LEVEL_DATA_VERSION) err('version', versionWord((d as any).version));
   if (!isStr(d.name)) err('name', 'missing');
   if (!isObj(d.meta)) err('meta', 'must be an object (may be {})');
   else {
@@ -367,6 +371,13 @@ export function validateLevelData(d: LevelData): string[] {
   const boxes = recs('boxes', d.boxes);
   const boxIds = uniq('boxes', boxes.map(b => (b as any)?.id));
   // (ONE BOX'S RULE — the level's own boxes, and the boxes a Team & kit way adds for its picture: scenarios.kitView below)
+  /** A ROUND THING: the cylinder about its own y, and nothing that would turn, tilt or cut it */
+  const roundRule = (w: string, b: BoxData) => {
+    if (b.round === undefined) return;
+    if (b.round !== true) err(`${w}.round`, 'is true or absent');
+    if (isVec(b.h) && b.h[0] !== b.h[2]) err(`${w}.round`, 'its radius is h[0] and h[2]: they are equal');
+    for (const k of ['yaw', 'rot', 'flags', 'shape'] as const) if (b[k] !== undefined) err(`${w}.round`, `a round thing says no ${k}`);
+  };
   const boxRule = (w: string, b: (typeof boxes)[number]) => {
     known(w, b, KEYS.box); floorOk(w, b.floor);
     if (!isVec(b.c)) err(w, 'c must be Vec3'); if (!(isVec(b.h) && b.h.every(x => x >= 0))) err(w, 'h must be Vec3 ≥ 0');
@@ -379,6 +390,7 @@ export function validateLevelData(d: LevelData): string[] {
     if (b.cutHeight !== undefined && !isNum(b.cutHeight)) err(w, 'cutHeight must be a number');
     if (b.name !== undefined && !isStr(b.name)) err(w, 'name must be a non-empty string'); if (b.group !== undefined && !isStr(b.group)) err(w, 'group must be a non-empty string');
     marksOk(w, b.markings, b.h, b.rot !== undefined);
+    roundRule(w, b);
     if (b.shape !== undefined) {   // A SHAPE (scene/shapes.ts shapeErrors: keys, one form, the record's limit) and its pieces' paint, finish and flags as a box's
       if (b.rot !== undefined) err(`${w}.shape`, 'a box with rot cannot say a shape');
       if (isObj(b.shape) && ((b.shape as any).round !== undefined || (b.shape as any).arc !== undefined || (b.shape as any).cut !== undefined)) {   // (a FORM cuts the box: what reads the whole box must not be said beside it)
@@ -392,13 +404,6 @@ export function validateLevelData(d: LevelData): string[] {
     }
   };
   boxes.forEach((b, i) => { if (isObj(b)) boxRule(`boxes[${i}] '${show(b.id)}'`, b); });
-  // A SLAB OF ONE OF THE KIT'S OCTAGONS SAYS NO SHAPE (scene/round.ts: the four slabs are one round box where round things are on, so a shape on one would
-  // stand by another switch's word). Found as round.ts finds them, on the boxes as the file has them (a box that carries flags is no slab of one).
-  if (boxes.some(b => isObj(b) && b.shape !== undefined) && boxes.every(b => isObj(b) && isVec(b.c) && isVec(b.h))) {
-    const mats: Record<string, any> = isObj(d.materials) ? d.materials as any : {}, none: Vec3 = [NaN, NaN, NaN];   // (NaN: a box with no paint is like no other)
-    const plain = boxes.map((b: any) => ({ c: b.c, h: b.h, yaw: typeof b.yaw === 'number' ? b.yaw : 0, rot: b.rot, flags: Array.isArray(b.flags) && b.flags.length ? 1 : 0, albedo: isVec(b.albedo) ? b.albedo : isVec(mats[b.material]?.albedo) ? mats[b.material].albedo : none }));
-    for (const i of findOctagons(plain as unknown as Box[])) for (let k = 0; k < 4; k++) if ((boxes[i + k] as any).shape !== undefined) err(`boxes[${i + k}] '${show((boxes[i + k] as any).id)}'.shape`, 'a slab of a kit octagon (a round thing) cannot say a shape');
-  }
   const boxOk = (where: string, id: unknown, more?: ReadonlySet<string>) => { if (!isStr(id) || !(boxIds.has(id) || more?.has(id))) err(where, `unknown box '${show(id)}'`); };
   // props
   const props = recs('props', d.props); uniq('props', props.map(p => (p as any)?.id));
@@ -795,7 +800,7 @@ export function validateLevelData(d: LevelData): string[] {
           // (A PICTURE'S BOX — a set's, a way's `add`: the level format's own record. LOOK TWINS: one block serves the plain file and its look file — the box's
           //  `material` may be alternatives 'a|b', the first the file's palette holds: src/host/kitViewSet.ts kitSetPaint)
           const kvPaint = (b: any) => { const alt = isStr(b.material) && b.material.includes('|') ? b.material.split('|').find((m: string) => Object.prototype.hasOwnProperty.call(mats, m)) : undefined; return alt !== undefined ? { ...b, material: alt } : b; };
-          const kvBox = (bw: string, b: any) => { if (!isObj(b) || !isStr(b.id) || !isVec(b.c) || !isVec(b.h)) { err(bw, 'a box: id, c, h'); return; } known(bw, b, KEYS.box); paintOk(bw, kvPaint(b)); stuffOk(bw, b); if (b.shape !== undefined) err(bw, 'a kit view box says no shape'); };
+          const kvBox = (bw: string, b: any) => { if (!isObj(b) || !isStr(b.id) || !isVec(b.c) || !isVec(b.h)) { err(bw, 'a box: id, c, h'); return; } known(bw, b, KEYS.box); paintOk(bw, kvPaint(b)); stuffOk(bw, b); roundRule(bw, b); if (b.shape !== undefined) err(bw, 'a kit view box says no shape'); };
           // (BESPOKE SETS — scenarios.ts KitViewSet: the shapes only; what stands where is src/host/kitViewPlan.ts's to measure, tools/qa/kitview-plan.ts)
           const sets: Record<string, any> = isObj(K.sets) ? K.sets : {}; if (K.sets !== undefined && !isObj(K.sets)) err(`${w}.sets`, 'must be an object of sets by name');
           for (const [name, T] of Object.entries(sets)) { const tw = `${w}.sets.${name}`; if (!isObj(T)) { err(tw, 'must be an object'); continue; }
@@ -1019,12 +1024,12 @@ export function parseLevelData(text: string, opts: { kitView?: 'drop' } = {}): L
 }
 /** JSON.parse + validate WITHOUT refusing a document that has problems — for the editor's RESTORE paths (the autosave slot, a session's own text), where a level
  *  with, say, one marking off its face must still open, its problems listed, rather than be silently replaced by another level and then overwritten (review
- *  T4.1). Throws only when the text is not JSON, not a v1 level object, or so misshapen that its canonical form cannot be built (a collection that is not an
+ *  T4.1). Throws only when the text is not JSON, not a level object of this version, or so misshapen that its canonical form cannot be built (a collection that is not an
  *  array, a record that is not an object) — those nobody can edit back into shape from inside the editor. `data` is the CANONICAL deep copy. */
 export function parseLevelDataLenient(text: string): { data: LevelData; errors: string[] } {
   const d = JSON.parse(text) as LevelData;
   if (!d || typeof d !== 'object' || Array.isArray(d)) throw new Error('level: the text is JSON but not a level object');
-  if ((d as any).version !== LEVEL_DATA_VERSION) throw new Error(`level: version ${JSON.stringify((d as any).version)} — this build reads v${LEVEL_DATA_VERSION} only`);
+  if ((d as any).version !== LEVEL_DATA_VERSION) throw new Error(`level: ${versionWord((d as any).version)}`);
   const errors = validateLevelData(d);
   let data: LevelData;
   try { data = canonicalLevelData(d); }
