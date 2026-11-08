@@ -11,6 +11,7 @@ pub mod glass;
 pub mod grid;
 pub mod marks;
 pub mod pack;
+pub use pack::{GLASS, NO_SHADOW};
 pub mod rank;
 
 /// no key: the box is another thing each frame
@@ -116,6 +117,8 @@ section! {
 /// WHAT THE PAGE SAYS OF ITS LOOK, once and when it changes (src/draw/look.ts writes the same numbers in the same order)
 #[derive(Clone)]
 pub struct Look {
+    /// drawn with the fog off: no face as the team last knew it (a viewer's, and no number of a page's look)
+    pub bared: bool,
     pub on: bool,
     pub marks: bool,
     pub cut: bool,
@@ -141,12 +144,12 @@ impl Look {
     pub fn read(v: &[f64]) -> Look {
         let at = |i: usize| v[11 + i];
         Look {
-            on: v[0] != 0.0, marks: v[1] != 0.0, cut: v[2] != 0.0, round: v[3] != 0.0, motion: v[4] != 0.0, panes: v[5] != 0.0, mirrors: v[6] != 0.0, air: v[7] != 0.0, glass_lum: v[8], glass_rough: v[9], texel: v[10],
+            bared: false, on: v[0] != 0.0, marks: v[1] != 0.0, cut: v[2] != 0.0, round: v[3] != 0.0, motion: v[4] != 0.0, panes: v[5] != 0.0, mirrors: v[6] != 0.0, air: v[7] != 0.0, glass_lum: v[8], glass_rough: v[9], texel: v[10],
             stuff: core::array::from_fn(|i| at(i) as u32), coat: core::array::from_fn(|i| at(STUFFS + i)),
         }
     }
 }
-impl Default for Look { fn default() -> Look { Look { on: false, marks: true, cut: true, round: true, motion: true, panes: true, mirrors: false, air: false, glass_lum: -1.0, glass_rough: 0.0, texel: 0.025, stuff: [0; STUFFS], coat: [-1.0; STUFFS] } } }
+impl Default for Look { fn default() -> Look { Look { bared: false, on: false, marks: true, cut: true, round: true, motion: true, panes: true, mirrors: false, air: false, glass_lum: -1.0, glass_rough: 0.0, texel: 0.025, stuff: [0; STUFFS], coat: [-1.0; STUFFS] } } }
 
 /// what a static's rows were packed of: where it stands, and everything else of it as one word
 #[derive(Clone, Copy, PartialEq)]
@@ -155,9 +158,9 @@ impl Was {
     pub fn of(b: &Box, look: &Look) -> Was {
         let mut k = 0xcbf2_9ce4_8422_2325u64;
         let mut eat = |v: u64| { k = (k ^ v).wrapping_mul(0x0000_0100_0000_01b3); k ^= k >> 29; };
-        for v in pack::sent(b, look).iter().chain(pack::emission(b).iter()) { eat(v.to_bits()); }
+        for v in pack::sent(b, look).iter().chain(pack::emission(b, look.bared).iter()) { eat(v.to_bits()); }
         eat(pack::finish(b, look).to_bits());
-        eat(b.fog_mark.or(b.mark_gain).unwrap_or(1.0).to_bits());
+        eat(pack::gain(b, look.bared).to_bits());
         eat(b.owner.to_bits());
         eat(b.stuff.map_or(99, |s| s as u64));
         if let Some(list) = b.marks.as_ref() { eat(list.as_ptr() as u64); eat(list.len() as u64); }
@@ -212,9 +215,11 @@ pub struct Boxes {
 impl Boxes {
     pub fn set_look(&mut self, l: Look) {
         if l.texel != self.look.texel { self.marks.texel = l.texel; self.marks.again(); }
-        self.look = l;
+        self.look = Look { bared: self.look.bared, ..l };
         self.epoch += 1;
     }
+    /// …with the fog off, or on again
+    pub fn bare(&mut self, on: bool) { if on != self.look.bared { self.look.bared = on; self.epoch += 1; } }
     /// nothing is drawn through what went before: the game is another than the one last drawn
     pub fn hold(&mut self) { self.have = self.have.min(1); }
     pub fn cut(&mut self) { self.have = 0; self.drawn.clear(); self.glass.cut(); }
@@ -273,7 +278,17 @@ impl Boxes {
         self.own.clear();
         self.leaves.clear();
         let ir = &g.m.irlaser.ir_made;
-        for &id in w.dynamics.iter().take(total - n) {
+        // (a viewer's own picture: the list before the fog cut it, or the infrared lines of a tube the run's picture was not)
+        let raw = &g.fog_picture.raw_list;
+        let bare = self.look.bared && g.fog_picture.viewer;
+        let mut list: Vec<AnyBoxId> = if bare { raw.clone() } else { w.dynamics.clone() };
+        if !bare && night && g.fog_picture.viewer { for &id in raw { if ir.has(id) && !list.contains(&id) { list.push(id); } } }
+        list.truncate(MAX - n);
+        let total = n + list.len();
+        self.geo.resize(total, Geo::ZERO);
+        self.mat.resize(total, Mat::ZERO);
+        self.cut.resize(total, Cut::ZERO);
+        for id in list {
             if !night && ir.has(id) { continue; }
             let b = &g.tab[id];
             let (c, h) = match b.dc { Some(c) => (c, b.dh.unwrap_or(b.h)), None => (b.c, b.h) };

@@ -276,6 +276,10 @@ async function main(): Promise<void> {
   const played: Played & { to: number; readonly ends: string } = { paused: !!play, pace: 1, to: firstAt > 0 ? firstAt : -1, get seeking() { return this.to >= 0; }, get at() { return play?.at ?? 0; }, get total() { return play?.total ?? 0; }, get ends() { return play?.ends ?? ''; }, get parted() { return play?.parted?.tick ?? null; }, get lost() { return play?.lost?.words.split('\n')[0] ?? null; }, get tries() { return play?.tries ?? []; }, seek(t: number): void { played.to = Math.max(0, Math.min(played.total, Math.round(t))); } };
   if (!play && !kitPicture) gameUp();
   let bar: TapeBar | null = null; const runView = (): { look: [number, number, number]; yaw: number; pitch: number; dist: number; fov: number } => { const n = play?.next; return n && play!.total ? { look: [n[HAND.target], n[HAND.target + 1], n[HAND.target + 2]], yaw: n[HAND.yaw], pitch: n[HAND.pitch], dist: n[HAND.distance], fov: n[HAND.fov] } : { look: [cam.target[0], cam.target[1], cam.target[2]], yaw: cam.yaw, pitch: cam.pitch, dist: cam.distance, fov: cam.fov }; };
+  // whoever watches a run sees it his own way: the fog off his picture, a tube or none whatever the run's goggles were (null: as the run had it), eased by the page's clock
+  const watched = { fog: true, tube: null as boolean | null, k: 0 }, seesAs = (fog: boolean, tube: boolean | null): void => { watched.fog = fog; watched.tube = tube; if (hud) hud.page.bared = !fog; game.viewAs(!fog, tube); };
+  const tubeOf = (runs: number, dt: number): number => { if (!play) return runs; const to = watched.tube === null ? runs : watched.tube ? 1 : 0, by = dt * 4; if (watched.tube === null && Math.abs(runs - watched.k) <= by) return watched.k = runs; return watched.k += Math.max(-by, Math.min(by, to - watched.k)); };
+  if (play) seesAs(true, null);
   const freeCam = play ? new FreeCam(canvas, runView, () => cam.aspect, () => !!bar?.busy, ctrlTurn) : null;
   /** the run's own view of the next tick, or wherever the picture's camera was taken; false = the page follows him itself */
   const posed = (): boolean => {
@@ -343,7 +347,7 @@ async function main(): Promise<void> {
     if (!sought()) return;
     if (play && game.lost) { input.endFrame(); return; }
     dt *= played.pace; if (freeCam && played.paused) { posed(); pair.cut(); }
-    const still = ticks === undefined && !net && stopped(); if (still) dt = 0;   // (the world holds still under a card: what only the picture moves with it)
+    const wall = dt, still = ticks === undefined && !net && stopped(); if (still) dt = 0;   // (the world holds still under a card: what only the picture moves with it)
     time += dt;
     const t0 = performance.now(), plan = ticks !== undefined ? { ticks, acc, drift } : still ? { ticks: 0, acc, drift } : planTicks(acc, dt, FIXEDSTEP, drift); acc = plan.acc; drift = plan.drift;
     const locks = D.u[view() + View.locks];
@@ -361,7 +365,7 @@ async function main(): Promise<void> {
     if (!measure.freezing) { skyFrom(engine, D); fogFrom(fog, D); }   // (a take over a held world flips what these write)
     smokeFrom(smoke, D);
     weather.frame(cam); dustFrom(engine.particles!, D);
-    { const o = view(); engine.settings.nvAmount = D.f[o + View.night]; engine.settings.hitFlash = D.f[o + View.hit]; }
+    { const o = view(); engine.settings.nvAmount = tubeOf(D.f[o + View.night], wall); engine.settings.hitFlash = D.f[o + View.hit]; }
     game.look(lookNumbers(engine.settings, engine.world, !!ch.cast));
     const t1 = performance.now();
     if (!drawn) { input.endFrame(); if (still) thaw = true; return; }
@@ -441,7 +445,7 @@ async function main(): Promise<void> {
   loading.style.display = 'none'; debuggerPanel({ game, engine, smoke, cam, quality, input, chars: ch, marks: decals, over: hud, card: e => !pause.up && !!hud?.overlay.cardUp && hud.overlay.cardKey(e), hud: () => ({ fps: told.fps, union: engine.timer.unionMs(rendered) }) });
   // (for a tool: the page's parts, and frames stepped by hand)
   const steps = (n: number, keys: string[] = [], drawn: 'none' | 'last' | 'all' = 'last'): void => { if (title || brief?.up) { title = false; reel.poke(); brief?.off(); card.off(); } for (const k of keys) input.keys.add(k); try { for (let i = 0; i < n; i++) frame(1 / 60, 1, drawn === 'all' || (drawn === 'last' && i === n - 1)); } finally { for (const k of keys) input.keys.delete(k); } };
-  Object.assign(window, { __draw: { game, hud, played: play ? played : null, books, kit, measure, reel, pics, engine, world, audio, pause, cam, input, quality, told, fog, weather, smoke, get held() { return held; }, set held(v: boolean) { held = v; last = performance.now(); }, run: steps } });
+  Object.assign(window, { __draw: { game, hud, played: play ? played : null, seesAs, get watched() { return watched; }, books, kit, measure, reel, pics, engine, world, audio, pause, cam, input, quality, told, fog, weather, smoke, get held() { return held; }, set held(v: boolean) { held = v; last = performance.now(); }, run: steps } });
   // (…and by the names every page of the game has them under)
   const G = window as unknown as Record<string, unknown>; G.__engine = engine; G.__prewarmed = true; G.__timeScale = 1;
   Object.defineProperty(window, '__pauseLoop', { configurable: true, get: () => held, set: (v: boolean) => { held = v; last = performance.now(); } });
