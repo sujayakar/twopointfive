@@ -94,7 +94,7 @@ pub fn player_canister_sel(g: &crate::game::Game, id: PlayerId) -> Option<crate:
 }
 
 /// A living friend stands in the lane his gun points down. Geometry only. (game.ts friendBeforeMuzzle)
-pub fn friend_before_muzzle(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
+pub fn friend_before_muzzle(g: &crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     let y = crate::character::character_gun_yaw(g, c);
     let at = g.ch[c].pos;
@@ -104,11 +104,10 @@ pub fn friend_before_muzzle(g: &crate::game::Game, seat: &crate::seats::SeatRef,
             return true;
         }
     }
-    let pl = seat.player;
-    if g.pl[pl].down || crate::teams::hostile_to(g, gd, crate::teams::HostileToO::Player) {
+    if crate::teams::hostile_to(g, gd, crate::teams::HostileToO::Player) {
         return false;
     }
-    in_lane(g.ch[g.pl[pl].ch].pos, at, y)
+    crate::seats::men(g).into_iter().any(|pl| !g.pl[pl].down && in_lane(g.ch[g.pl[pl].ch].pos, at, y))
 }
 
 /// The `lane` closure of friendBeforeMuzzle.

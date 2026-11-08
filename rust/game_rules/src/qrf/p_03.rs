@@ -641,7 +641,7 @@ pub fn call_perimeter(g: &mut crate::game::Game, why: Option<&str>) -> bool {
     if crate::mission::mission_live(g) { g.mission.stats.qrf = 2.0; }
     // who mans it
     let mut outside: Vec<V3> = Vec::new();   // (a mark an enemy stands by stands nobody up: the rear men go out instead)
-    for &o in mk.outside.iter() { if clear_of_foes(g, &crate::seats::here(g), o) { outside.push(o); } }
+    for &o in mk.outside.iter() { if clear_of_foes(g, o) { outside.push(o); } }
     let room = room_for(g);
     let most = most_men(g);
     let up = alive(g).len() as f64;

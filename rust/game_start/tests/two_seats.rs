@@ -101,3 +101,73 @@ fn a_defenders_foe_is_the_player_he_faces() {
         }
     }
 }
+
+// (the calls whose seat goes in the mend: one place each)
+fn muzzle(p: &Play, gd: GuardId) -> bool { game::game::friend_before_muzzle(&p.g, gd) }
+fn clear(p: &Play, at: [f64; 3]) -> bool { game::qrf::clear_of_foes(&p.g, at) }
+fn foes(p: &Play, gd: GuardId) -> Vec<game::runner::Foe> { game::runner::foes(&p.g, gd) }
+
+/// THE RULE: what is about the team is about every man on the floor: a friend before the muzzle, a place clear of foes, whom a runner runs from, who sees a hole in a wall.
+/// A failure means the second player is not on the floor for that rule.
+#[test]
+fn the_team_is_both_players() {
+    let mut red: Vec<String> = Vec::new();
+    for s in SEEDS {
+        for seat in 0..2 {
+            let (mut p, t1) = two(s);
+            let mates = p.mates();
+            for &m in &mates { p.man_stands(m, [3.5, 3.5]); }
+            p.seat_stands(0, [3.0, 3.0]);
+            p.seat_stands(1, [3.0, 3.0]);
+            // a place clear of foes
+            let at = [21.0, 0.0, AISLE];
+            assert!(clear(&p, at), "seed {s}: CONTROL: nobody near");
+            p.seat_stands(seat, [21.0, AISLE]);
+            if clear(&p, at) { red.push(format!("seed {s}: seat {seat}'s man stands on the place and it is called clear of foes")); }
+            // a friend before the muzzle: the man who shoots stands off down the aisle, the player in his lane
+            let m = mates[0];
+            let c = p.g.gd[m].ch;
+            p.man_stands(m, [12.0, AISLE]);
+            let y = game::character::character_gun_yaw(&p.g, c);
+            let ahead = (0..32).map(|i| i as f64 * std::f64::consts::TAU / 32.0).map(|a| [1.5 * a.sin(), 1.5 * a.cos()])
+                .find(|d| game::character::in_dip_lane(d[0], d[1], y)).expect("a lane has a place 1.5 m out");
+            let pc = p.g.pl[man(&p, seat)].ch;
+            p.g.ch[pc].pos = [12.0 + ahead[0], 0.0, AISLE + ahead[1]];
+            if !muzzle(&p, m) { red.push(format!("seed {s}: seat {seat}'s man stands in the lane and no friend is before the muzzle")); }
+            // whom a runner runs from
+            p.pin_man(t1, [21.0, AISLE], 0.0, game::game::GuardState::Patrol, 0.0);
+            p.g.ch[pc].pos = [20.0, 0.0, AISLE];
+            if !foes(&p, t1).iter().any(|f| (f.pos[0] - 20.0).abs() < 0.01 && (f.pos[2] - AISLE).abs() < 0.01) { red.push(format!("seed {s}: seat {seat}'s man is the player nearest the runner and not among his foes")); }
+            // who sees a hole in a wall
+            if let Some(why) = wall_seen(&mut p, seat) { red.push(format!("seed {s}: {why}")); }
+        }
+    }
+    assert!(red.is_empty(), "{}", red.join("\n"));
+}
+
+/// a hole in the office's wall, blown by the game's own call, that nobody on the team knows of; one player stands looking at it, everybody else is far off: `None` if the team learns of it
+fn wall_seen(p: &mut Play, seat: usize) -> Option<String> {
+    const WALL: [f64; 3] = [12.06, 0.0, 13.78];
+    game::wallcharge::wall_charge_raise_carried(&mut p.g, 2.0);
+    p.sam_put([14.6, 15.2]);
+    p.frame();
+    if let Some(why) = game::wallcharge::wall_charge_order(&mut p.g, WALL, None) { return Some(format!("the wall charge was refused: {why}")); }
+    for _ in 0..3600 { p.frame(); if !p.g.wall_charge.set.is_empty() { break; } }
+    let Some(&c) = p.g.wall_charge.set.first() else { return Some(String::from("a minute and no charge is on the wall")) };
+    game::wallcharge::wall_charge_blow(&mut p.g, Some(c), Some(true));
+    for _ in 0..30 { p.frame(); }
+    let Some(&b) = p.g.m.wallreact.wall_react.breaches.first() else { return Some(String::from("the blast left no hole the rule knows")) };
+    p.g.tab.wallreact_breach[b].ops = -1.0;
+    let at = p.g.tab.wallreact_breach[b].at;
+    for m in p.mates() { p.man_stands(m, [3.5, 3.5]); }
+    p.seat_stands(0, [3.0, 3.0]);
+    p.seat_stands(1, [3.0, 3.0]);
+    let n = p.g.tab.wallreact_breach[b].n;
+    let stand = [at[0] + n[0] * 3.0, at[2] + n[1] * 3.0];
+    let pc = p.g.pl[man(p, seat)].ch;
+    p.g.ch[pc].pos = [stand[0], 0.0, stand[1]];
+    p.g.ch[pc].aim_yaw = (at[0] - stand[0]).atan2(at[2] - stand[1]);
+    game::wallreact::wall_react_notice(&mut p.g);
+    if p.g.tab.wallreact_breach[b].ops < 0.0 { return Some(format!("seat {seat}'s man looks at the hole from {stand:?} and the team does not know of it")); }
+    None
+}
