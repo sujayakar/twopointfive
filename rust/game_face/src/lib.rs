@@ -49,6 +49,7 @@
 //!   face_verdict(h) -> 0 | 1 | 2              how the mission ended, off the record the game's tick latches: 0 not yet, 1 lost, 2 won (then the record as lines at face_out)
 //!   face_tick_view(h)                         what a HUD is told of the game as its last tick left it (a TickView at face_out); a read: no word of the state is written, and a copy of the boxes a writer put down is stood first
 //!   face_debrief_view(h)                      what the end card shows of the run (a DebriefView at face_out); a read, nothing kept
+//!   face_run_view(h)                          what a machine keeps of the run (a RunView at face_out); a read, nothing kept
 //!   face_line(h, what, a…, b…) -> 0 | 1 · face_ray(h, o…, d…, max) -> 0 | 1 · face_hear(h, s…, d…) · face_way(h, ax, az, bx, bz, iters) -> corners | -1
 //!                                             the box world asked of the game shared: the camera's, the sound's, the cursor's questions; nothing is kept
 //!   face_die_n(h) -> f64 · face_time(h) -> f64 · face_rows(h) -> usize
@@ -149,6 +150,17 @@ pub extern "C" fn face_verdict(h: u32) -> i32 {
         Some((won, s)) => { out(s.into_bytes()); if won { 2 } else { 1 } }
     }
 }
+/// what a measuring take notes of the game, as JSON: each man by what he is at and whether he carries a light, the reaction force, the alarm, the run's saves
+#[no_mangle]
+pub extern "C" fn face_tally(h: u32) {
+    let s = with_ref(h, |x| {
+        let g = &x.g;
+        let men: Vec<String> = g.guards.iter().map(|&gd| { let m = &g.gd[gd]; format!("[\"{}\",{}]", m.state.as_str(), g.tab.light[m.flashlight].enabled as u32) }).collect();
+        let s = &g.saves.stats;
+        format!("{{\"men\":[{}],\"qrf\":\"{}\",\"escalation\":{},\"autosaves\":{},\"manual\":{},\"loads\":{}}}", men.join(","), g.qrf.state.as_str(), g.escalation, s.autosaves, s.manual, s.loads)
+    });
+    out(s.into_bytes());
+}
 /// WHAT A HUD IS TOLD of the game as its last tick left it (`view::tick_view`), about the seat this machine shows: a `TickView`'s bytes at face_out, read
 /// by the host with the table's own reader. A read: no word of the game's state is written and no seat is changed over; where a writer put the copy of the boxes down it is
 /// stood first, as for every question of it.
@@ -162,6 +174,12 @@ pub extern "C" fn face_tick_view(h: u32) {
 pub extern "C" fn face_debrief_view(h: u32) {
     use game::io::Io;
     out(with_ref(h, |x| { let g = &x.g; let mut o = game::io::W::new(); game::view::debrief_view(g, &game::seats::seat(g, g.local_seat.unwrap_or(g.seat))).w(&mut o); o.b }))
+}
+/// what a machine keeps of the run (a RunView at face_out): asked as the try begins and as the run ends; a read
+#[no_mangle]
+pub extern "C" fn face_run_view(h: u32) {
+    use game::io::Io;
+    out(with_ref(h, |x| { let mut o = game::io::W::new(); game::verdict::run_view(&x.g).w(&mut o); o.b }))
 }
 // ---- the box world, asked of the game shared (game::ask::WorldAsk): the host's camera, its sound, its cursor. The copy stands from a tick's end; where a writer put it
 // down the first question stands it again, and no question proves it for itself

@@ -579,20 +579,6 @@ pub fn work_things_note(g: &mut crate::game::Game, gd: GuardId, what: &str) {
     if g.work.log.len() > 200 { g.work.log.drain(0..50); }
 }
 
-/// One line for a probe. (workthings.ts WorkThings.summary)
-pub fn work_things_summary(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> String {
-    let th = work_things_things(g, &crate::seats::here(g));
-    let mut n = 0;
-    for gd in seat.work.jobs.keys() {
-        if work_things_working(g, &crate::seats::here(g), gd) { n += 1; }
-    }
-    let parts: Vec<String> = th.iter().map(|x| format!("{}{}", x.name, if x.stand.is_some() { "" } else { " (no place to stand)" })).collect();
-    let joined = parts.join(" · ");
-    let things = if joined.is_empty() { String::from("nothing to work") } else { joined };
-    let s = &g.stats.workthings;
-    format!("{} · {} at work · given {} done {} moot {}", things, n, s.given, s.done, s.moot)
-}
-
 /// orders.ts targetAt: a thing a teammate can work near a point. (workthings.ts workNear)
 pub fn work_near(g: &crate::game::Game, seat: &crate::seats::SeatRef, at: V3) -> Option<crate::workthings::WorkNear> {
     work_things_near(g, seat, at).map(|x| WorkNear { d: x.d, target: x.target })
@@ -649,7 +635,7 @@ pub fn work_coming(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
 
 /// A pose layer's read beside workHand: what that hand is doing (None whenever workHand is). (workthings.ts workJob)
 pub fn work_job(g: &mut crate::game::Game, c_2: CharId) -> Option<crate::workthings::WorkJob> {
-    if work_things_hand(g, c_2).is_some() { work_things_job(g, &crate::seats::here(g), c_2) } else { None }
+    crate::seats::first_of(g, &mut |v: &mut Game| if work_things_hand(v, c_2).is_some() { work_things_job(v, &crate::seats::here(v), c_2) } else { None })
 }
 
 /// lighting.ts: is the breaker none of this man's business unless he is told. (workthings.ts workNotHis)

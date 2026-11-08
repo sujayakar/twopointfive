@@ -205,13 +205,6 @@ pub fn squad_look_since(g: &crate::game::Game, gd: GuardId) -> Option<f64> {
     let q = squad_id_of(g, gd)?;
     g.tab.enemysquads_squad[q].sent.iter().find(|x| x.gd == gd && x.role == SentRole::Look).map(|s| s.t0)
 }
-/// is this point in one of his squad's rooms; no squad = anywhere (enemysquads.ts inSquadRooms)
-pub fn in_squad_rooms(g: &crate::game::Game, gd: GuardId, p: V3) -> bool {
-    match squad_id_of(g, gd) {
-        None => true,
-        Some(q) => g.tab.enemysquads_squad[q].rooms.iter().any(|r| p[0] >= r.bounds.x0 && p[0] <= r.bounds.x1 && p[2] >= r.bounds.z0 && p[2] <= r.bounds.z1),
-    }
-}
 /// a squad's men at home and free to be told something (enemysquads.ts home)
 pub fn home(g: &mut crate::game::Game, q: EnemysquadsSquadId) -> Vec<RoomfightDefId> {
     let mut out = Vec::new();

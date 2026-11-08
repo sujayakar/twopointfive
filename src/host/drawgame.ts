@@ -7,8 +7,10 @@ import { Commands } from '../draw/commands';
 import { HAND } from '../draw/hand';
 import type { SaveRow } from '../ui/runcard';
 import { CURSOR_DOUBLES, sampleCursor, type CursorAt, type CursorCanvas, type CursorLens } from '../view/cursor';
-import { readCursorView, readDebriefView, readTickView, type CursorView, type DebriefView, type TickView } from '../view/read';
+import { readCursorView, readDebriefView, readRunView, readTickView, type CursorView, type DebriefView, type RunView, type TickView } from '../view/read';
 
+/** what a measuring take notes: each man by what he is at and whether he carries a light, the reaction force, the alarm, the run's saves */
+export interface Tally { men: [state: string, lit: 0 | 1][]; qrf: string; escalation: number; autosaves: number; manual: number; loads: number }
 /** what a start is handed beside the level (rust/game_start/src/handed.rs PARTS) */
 export interface Start { level: Uint8Array; words: string; mannequin: Uint8Array; mannequinBin: Uint8Array; cast: Uint8Array; castLook: Uint8Array; seed: number; seats?: number }
 
@@ -136,8 +138,16 @@ export class DrawGame {
   }
   /** what the end card shows of the run, asked as it opens */
   debrief(): DebriefView { this.X.face_debrief_view(this.h); return readDebriefView(this.bytes()); }
+  /** what a machine keeps of the run, asked as its try begins and as it ends */
+  run(): RunView { this.X.face_run_view(this.h); return readRunView(this.bytes()); }
   /** how the run ended, in a word, and why; null while it is being played */
   verdict(): { won: boolean; word: string; why: string } | null { const r = this.X.face_verdict(this.h); if (!r) return null; const [word, ...why] = this.answer().split('\n'); return { won: r === 2, word, why: why.join(' ') }; }
+  private tallied: { tick: number; h: number; t: Tally } | null = null;
+  /** what a measuring take notes of the game as its last tick left it */
+  tally(): Tally {
+    const T = this.tallied; if (T && T.tick === this.ticks && T.h === this.h) return T.t;
+    this.X.face_tally(this.h); const t = JSON.parse(this.answer()) as Tally; this.tallied = { tick: this.ticks, h: this.h, t }; return t;
+  }
   /** this run's saves as a card lays them out, the one to go back to, and the mission's clock now */
   saves(): { elapsed: number; offer: string; rows: SaveRow[] } {
     this.X.face_saves(this.h); const p = this.X.face_out_ptr() >>> 0, n = this.X.face_out_len() >>> 0, b = this.memory.buffer.slice(p, p + n), d = new DataView(b); let at = 8;

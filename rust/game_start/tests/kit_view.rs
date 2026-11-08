@@ -145,7 +145,7 @@ fn the_setup_is_told_while_it_is_open_and_only_then() {
         p.g.fa[rf].rings = 3.0;
         p.run(0.8);   // (a gun just come to his hands does not open its setup)
         let k = kit(&p);
-        assert!(k.setup.is_none() && k.takes == ["Digit2"] && !k.slots.iter().any(|s| s.taken), "seed {}: shut, and told {:?} {:?}", seed, k.setup, k.takes);
+        assert!(k.setup.is_none() && !k.slots.iter().any(|s| s.taken), "seed {}: shut, and told {:?}", seed, k.setup);
         press(&mut p, "Digit2");
         let k = kit(&p);
         let s = k.setup.as_ref().unwrap_or_else(|| panic!("seed {}: its gun's digit again and no setup", seed));
@@ -160,8 +160,6 @@ fn the_setup_is_told_while_it_is_open_and_only_then() {
         assert_eq!(s.rows[2].words[0].text, "LIGHT", "seed {}", seed);
         assert_eq!(s.rows[2].words[0].on, p.g.fa[rf].light_on, "seed {}", seed);
         for (t, taken) in [(KitThing::Pistol, true), (KitThing::Rifle, false), (KitThing::Smoke, true), (KitThing::Flash, false)] { assert_eq!(place(&k, t).taken, taken, "seed {}: {:?}", seed, t); }
-        for code in ["Digit1", "Digit2", "Digit3"] { assert!(k.takes.iter().any(|c| c == code), "seed {}: {} is a row and is not said to be taken: {:?}", seed, code, k.takes); }
-        assert!(!k.takes.iter().any(|c| c == "Digit4"), "seed {}: {:?}", seed, k.takes);
         // a pick steps its row and shuts it
         let mode = p.g.fa[rf].mode;
         press(&mut p, "Digit1");
@@ -170,10 +168,9 @@ fn the_setup_is_told_while_it_is_open_and_only_then() {
         // CONTROL: a can has nothing to set, and its digit is the slot it always was
         tap(&mut p, "Digit3");
         let k = kit(&p);
-        assert!(k.setup.is_none() && k.takes.is_empty() && p.g.pl[pl].slot == SlotKind::Smoke, "seed {}: {:?}", seed, k.takes);
+        assert!(k.setup.is_none() && p.g.pl[pl].slot == SlotKind::Smoke, "seed {}: {:?}", seed, k.setup);
         // the pistol has its own
         tap(&mut p, "Digit1");
-        assert_eq!(kit(&p).takes, ["Digit1"], "seed {}", seed);
         press(&mut p, "Digit1");
         let k = kit(&p);
         assert_eq!(k.setup.expect("the pistol's digit again").rows.last().map(|r| r.key.clone()), Some(String::from("Digit3")), "seed {}", seed);
@@ -337,7 +334,6 @@ fn in_a_game_of_two_each_column_is_its_own_mans() {
         tap_seat(&mut p, b, "Digit1", 2);
         let (ka, kb) = (p.view_of(0).kit, p.view_of(1).kit);
         assert!(kb.setup.is_some() && ka.setup.is_none(), "seed {}: the second man opened his setup: {:?} {:?}", seed, ka.setup, kb.setup);
-        assert!(kb.takes.iter().any(|c| c == "Digit1") && !ka.takes.iter().any(|c| c == "Digit1") , "seed {}: {:?} {:?}", seed, ka.takes, kb.takes);
         // what he holds and what he took
         let (pa, pb) = (game::seats::seat(&p.g, a).player, game::seats::seat(&p.g, b).player);
         // the gun in HIS hands, his goggles

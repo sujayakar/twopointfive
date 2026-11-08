@@ -16,8 +16,6 @@ pub fn gpu_fx(g: &crate::game::Game) -> bool {
 
 // ---------------------------------------------------------------- dust: every puff goes through one table
 
-/// Nothing of the game's: the table is kept in the browser's storage, the host's; with no storage the TypeScript's own try does nothing. (particleFx.ts loadDust)
-pub fn load_dust(g: &crate::game::Game) {}
 
 /// The shipped table back, the look onto the live system. Forgetting the kept copy is the host's. (particleFx.ts resetDust)
 pub fn reset_dust(g: &mut crate::game::Game) {

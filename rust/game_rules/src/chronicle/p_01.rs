@@ -43,17 +43,6 @@ fn data_string(d: &RowData, k: &str) -> String {
         None => String::from("undefined"),
     }
 }
-fn data_from_add(d: &JsMap<String, Option<ChronicleAddDataValue>>) -> RowData {
-    let mut o = JsMap::new();
-    for (k, v) in d.iter() {
-        o.set(k, v.as_ref().map(|v| match v {
-            ChronicleAddDataValue::Text(s) => ChronEventDataValue::Text(s.clone()),
-            ChronicleAddDataValue::Num(x) => ChronEventDataValue::Num(*x),
-            ChronicleAddDataValue::Bool(b) => ChronEventDataValue::Bool(*b),
-        }));
-    }
-    o
-}
 fn data_from_generic(d: &JsMap<String, Option<ChronicleDataValue>>) -> RowData {
     let mut o = JsMap::new();
     for (k, v) in d.iter() {
@@ -233,11 +222,6 @@ pub fn indoors(p: V3) -> bool {
 }
 
 // ------------------------------------------------------------ the record
-
-/// The core append; `None` when the caps refuse it, else the row's place in `events`.   (chronicle.ts Chronicle.add)
-pub fn chronicle_add(g: &mut crate::game::Game, t: f64, kind: crate::chronicle::ChronKind, pos: V3, data: &JsMap<String, Option<crate::chronicle::ChronicleAddDataValue>>) -> Option<usize> {
-    add_row(g, t, kind, pos, data_from_add(data))
-}
 
 /// The row a hearing event made, as its place in `events`.   (chronicle.ts Chronicle.heardRow)
 pub fn chronicle_heard_row<'g>(g: &'g mut crate::game::Game, e: u32) -> Option<&'g mut usize> {
@@ -561,9 +545,7 @@ pub fn chron_down(g: &mut crate::game::Game, gd: GuardId, how: crate::game::Down
         };
         return live_row(g, ChronKind::Kill, row_data(vec![("who", tx(&callsign)), ("weapon", ChronEventDataValue::Text(weapon))]), Some(p));
     }
-    let method = if how == DownKind::Wounded {
-        "wounded"
-    } else if how == DownKind::Choked {
+    let method = if how == DownKind::Choked {
         "choke"
     } else if l.starts_with("ring") {
         "ring"
@@ -582,8 +564,7 @@ pub fn chron_body_found(g: &mut crate::game::Game, body: GuardId, by: GuardId) -
     let c = g.gd[body].ch;
     let h = match g.ch[c].bones.get(crate::character::Bone::Hips) { Some(b) => *b, None => g.ch[c].pos };
     let breathing = match g.gd[body].down_kind { Some(k) => k != crate::game::DownKind::Shot, None => false };
-    let mut pairs = vec![("who", tx(&man_callsign(g, body))), ("by", tx(&man_callsign(g, by))), ("breathing", yes(breathing))];
-    if g.gd[body].wound.is_some() { pairs.push(("wounded", yes(true))); }
+    let pairs = vec![("who", tx(&man_callsign(g, body))), ("by", tx(&man_callsign(g, by))), ("breathing", yes(breathing))];
     live_row(g, ChronKind::BodyFound, row_data(pairs), Some([h[0], 0.0, h[2]]))
 }
 

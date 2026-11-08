@@ -149,6 +149,14 @@ pub fn standing_for<R>(g: &mut crate::game::Game, gd: GuardId, f: &mut dyn FnMut
     with_seat(g, v, f)
 }
 
+/// `f` with this seat standing; in a game of one, or for no seat, as things stand
+pub fn on_seat<R>(g: &mut crate::game::Game, s: Option<SeatId>, f: &mut dyn FnMut(&mut crate::game::Game) -> R) -> R {
+    match s {
+        Some(s) if g.seats.len() > 1 => with_seat(g, s, f),
+        _ => f(g),
+    }
+}
+
 /// can a mission of this kind be played by two (seats.ts seatsKind)
 pub fn seats_kind(kind: &str) -> bool { crate::seats::seat_kinds().iter().any(|k| k == kind) }
 

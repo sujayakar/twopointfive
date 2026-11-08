@@ -311,7 +311,7 @@ pub fn ring_hits_character(g: &mut crate::game::Game, r: crate::launcher::Ring, 
                 Some(cv) => format!("ring to the head — {}, the {}, is out cold. breathing — but a civilian: that costs, and they may find {}", g.cv[cv].name, g.cv[cv].label, g.cv[cv].her),
                 None => format!("ring to the head — {} is out cold", g.gd[gd].callsign),
             };
-            crate::combat::kill_guard(g, gd, [dir[0], 0.0, dir[2]], Some(true), Some(crate::game::DownKind::Struck), Some(if by_player { crate::game::DownBy::Player } else { crate::game::DownBy::Guard }), Some(&line), None);
+            crate::combat::kill_guard(g, gd, [dir[0], 0.0, dir[2]], Some(true), Some(crate::game::DownKind::Struck), Some(if by_player { crate::game::DownBy::Player } else { crate::game::DownBy::Guard }), Some(&line));
             let (pos, level) = (v3::copy(g.ch[c].pos), g.k.ring.ko_noise);
             prop_event(g, pos, level, shooter_id, None);
             if let Some(pl) = crate::seats::man_by_id(g, shooter_id) { g.pl[pl].noise = m::max(g.pl[pl].noise, level); }

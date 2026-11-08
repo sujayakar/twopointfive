@@ -1,7 +1,7 @@
 // Written by tools/draw/gen.ts from rust/game_draw. To change a section, change it there.
 
 /** the stamp of the sections this was made from: a module of another stamp is refused (drawn.ts) */
-export const LAYOUT = 2909350278;
+export const LAYOUT = 2855716381;
 /** what a host may ask for: what is made together is asked for together */
 export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, air = 2048, levelLook = 4096, snow = 8192, all = 16383 }
 /** each section's place in the table the module answers with */
@@ -131,12 +131,14 @@ export const enum View {
   fallIn = 45,
   /** u32: the run's end card is due: 1 it was lost, 2 won (0: not yet) */
   ended = 46,
+  /** u32: this run, for whoever keeps what was won: 1 its try has begun · 2 it is over (what there is to keep is asked: face_run_view) */
+  run = 47,
   /** f32: night vision's amount, and how hard he has just been hit */
-  night = 47,
+  night = 48,
   /** f32 */
-  hit = 48,
+  hit = 49,
   /** words a row */
-  row = 49,
+  row = 50,
 }
 
 /** the sky: one row */

@@ -149,9 +149,13 @@ const health = async () => { try { return await (await fetch(`http://127.0.0.1:$
         //  from; asleep there he walks nowhere, whatever the server holds)
         const key = BACK[out]; for (let i = 0; i < 2; i++) { window.__runFrames(10, 1 / 60, [key], 'none'); await yieldNow(); }
         const a = at(), down = !!g.player.down; if (rest) window.__net.client.rest(performance.now());
+        // (PAST THE LAST TICK HE SAID ANYTHING FOR, half a second let him come to a stand: what the server does with a man nobody speaks for. Of his way from
+        //  the moment the page slept the first part is his own records still on their way, up to a second of them on a starved page)
+        const C = window.__net.client, said = Math.max(C.confirmed, ...C.pending.map(q => q[0])), was = C.walk; let quiet = null;
+        C.walk = (host, max) => was.call(C, { step: c => { const t = C.confirmed; host.step(c); if (!quiet && t >= said + 30) quiet = at(); }, word: () => host.word(), watch: () => host.watch?.() ?? null }, max);
         await new Promise(r => setTimeout(r, 3500));
-        const behind = S().behind, far = await level([]), b = at();
-        return { behind, far, key, down, room: +room.toFixed(2), walked: +Math.hypot(b[0] - a[0], b[1] - a[1]).toFixed(2) };
+        const behind = S().behind, far = await level([]), b = at(), gone = p => p ? +Math.hypot(b[0] - p[0], b[1] - p[1]).toFixed(2) : -1; delete C.walk;
+        return { behind, far, key, down, room: +room.toFixed(2), walked: gone(a), after: gone(quiet) };
       };
       const naps = BREAK === true || S().bad || S().broken || S().bye ? null : { held: await nap(false), rest: await nap(true), words: S().wordsOk, heard: S().heard, bad: !!S().bad };
       // TWO FRAMES DRAWN, last of the fight's own asks (the software adapter is a minute at a drawn frame with every core, and the page falls thousands of ticks behind after
@@ -159,8 +163,9 @@ const health = async () => { try { return await (await fetch(`http://127.0.0.1:$
       // after it read the world as the game has it: the state words after the draws say so.
       const on = () => !S().bad && !S().broken && !S().bye;
       for (let d = 0; d < 2 && BREAK !== true && on(); d++) {
-        let keys = ['KeyW'], tries = 0;
-        while (tries < 60 && on() && (S().far || moving() <= 0.02)) { const off = offWall(); if (off) ahead.walls++; keys = off ?? [['KeyW', 'KeyD', 'KeyS', 'KeyA'][Math.floor(tries / 4) % 4]]; window.__runFrames(10, 1 / 60, keys, 'none'); tries++; await tick0(); }
+        let keys = ['KeyW'], tries = 0; const t0 = performance.now();
+        // (a turn spent catching up is not a try: a page far behind draws no man ahead, by rule)
+        while (tries < 60 && performance.now() - t0 < 240000 && on() && (S().far || moving() <= 0.02)) { const far = S().far; const off = offWall(); if (off) ahead.walls++; keys = off ?? [['KeyW', 'KeyD', 'KeyS', 'KeyA'][Math.floor(tries / 4) % 4]]; window.__runFrames(10, 1 / 60, keys, 'none'); if (!far) tries++; await tick0(); }
         // (he never got ahead in 60 tries: WHY is kept. A man shot down and a mission that is over are states with no look ahead by rule — foresee.ts, and a
         //  card that freezes the page takes the hands off — so the drawn frames are then not asked, as the sleeping tab's walk is not of a man who is down)
         if (!on() || S().far || !(moving() > 0.02)) { ahead.gave = { down: !!g.player.down, over: !!S().outcome, far: S().far, state: S().state, behind: S().behind, pending: S().pending, tick: S().confirmed, tries,
@@ -189,6 +194,9 @@ const health = async () => { try { return await (await fetch(`http://127.0.0.1:$
         window.__panel.toggle();
         return o;
       })();
+      // (THE LAST LOOK IS A LEVEL PAGE'S: the software adapter can hold a page for half a minute at any call long after a drawn frame was handed to it, and a
+      //  look taken then finds the page far behind for no fault of its own)
+      await even([]);
       const after = { confirmed: S().confirmed, wordsOk: S().wordsOk };
       const p = g.player.char.pos;
       return { naps, main, key, ahead, after, netrows, boxed, mine: g.seats.indexOf(g.localSeat), state: S(), moved: +Math.hypot(p[0] - start[0], p[2] - start[2]).toFixed(3), scenario: window.__scenarios.current()?.kind ?? null, fatal: (document.getElementById('fatal') || {}).textContent || '', line: (document.getElementById('netline') || {}).textContent || '' };
@@ -209,7 +217,7 @@ const health = async () => { try { return await (await fetch(`http://127.0.0.1:$
         `network page: ${W.rows ? `the debugger's Network page has its rows (${W.kinds.length} kinds of connection). Picking "${W.kinds[BAD_WAY ? 0 : 3]}" set this page's connection to ${T.lagMs} ms each way, up to ${T.jitterMs} ms more and ${T.lossPct}% resent (the delay's own row then read ${W.slider}; kept for the tab: ${W.kept ? 'yes' : 'NO'}), and the server's messages, which had waited ${W.held0.toFixed(0)} ms in the page's queue, then waited ${W.held.toFixed(0)} ms${W.held >= 70 ? '' : ' (NO LONGER A WAY)'}; ${NO_AHEAD ? 'the look ahead\'s box was left alone on this path' : !X.asked ? (X.down ? 'his man was down or the mission over by then, so the look ahead\'s box was NOT asked' : 'the look ahead\'s box was NOT FOUND') : `earlier, in the fight, with the look ahead's box off he was drawn ${X.off === null ? 'where the game has him' : 'STILL AHEAD'}, and on again ${X.on} ticks ahead${X.on > 0 || !X.down ? '' : ' (he was down by then)'}`}; the stall's button ("${W.stallText}") kept the server unheard for ${W.stalled} ms and the page caught up; back on "${W.kinds[0]}" they waited ${W.heldBack.toFixed(0)} ms (his inputs on their way through the three: ${W.before}, ${W.far}, ${W.back}, the page aiming ${W.margins.join(', ')} ticks past the server's; on this box the aim is the starved page's own and says little)` : 'the debugger has NO Network page with its rows'}`); }
     if (out.naps) { const Z = out.naps;
       const up = !Z.held.down && !Z.rest.down;   // (a man shot down walks nowhere: then only the waking is asked)
-      line(Z.held.far && Z.rest.far && !Z.bad && !S.far && (!up || (Z.held.walked > 1 && Z.rest.walked < Z.held.walked / 3)), `a tab that sleeps: ${up ? `asleep 3.5 s with a walk key down (${Z.held.key}, back over ${Z.held.room} m he had just walked) and nothing said, the server walked the man on ${Z.held.walked} m; with the hands taken off first (${Z.rest.key}), ${Z.rest.walked} m` : 'the man was down by then, so how far he walks on was NOT asked'}; each time the page woke ${Z.held.behind} and ${Z.rest.behind} ticks behind, caught up with the mixer shut and still matched every state word (${Z.words} by tick ${Z.heard})`); }
+      line(Z.held.far && Z.rest.far && !Z.bad && !S.far && (!up || (Z.held.walked > 1 && Z.rest.after >= 0 && Z.rest.after < 0.05)), `a tab that sleeps: ${up ? `asleep 3.5 s with a walk key down (${Z.held.key}, back over ${Z.held.room} m he had just walked) and nothing said, the server walked the man on ${Z.held.walked} m (${Z.held.after} of them past the last record he sent and half a second); with the hands taken off first (${Z.rest.key}, his records on their way took him ${Z.rest.walked} m), ${Z.rest.after} m past that` : 'the man was down by then, so how far he walks on was NOT asked'}; each time the page woke ${Z.held.behind} and ${Z.rest.behind} ticks behind, ${Z.held.far && Z.rest.far && !S.far ? 'caught up with the mixer shut' : `caught up with the mixer ${Z.held.far && Z.rest.far ? 'shut' : 'NOT SHUT'}${S.far ? ' and at the end STILL FAR BEHIND' : ''}`} and still matched every state word (${Z.words} by tick ${Z.heard})`); }
     line(errs.length === 0, `no page error${errs.length ? `: ${errs.slice(0, 3).join(' | ')}` : ''}`);
     if (WORDS) { const P = await page.evaluate(() => ({ names: window.__mpcNames || '', rows: window.__mpcWords || [] })); if (P.names) require('node:fs').writeFileSync(`${WORDS}/page.0.words`, `names ${P.names}\n${P.rows.join('\n')}\n`); console.log(`  (--words: the page's whole words of ${P.rows.length} word ticks, the server's and the bun client's, are in ${WORDS})`); }
     await page.close();

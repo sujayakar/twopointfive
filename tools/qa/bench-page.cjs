@@ -62,7 +62,7 @@ const printDiff = (x, y) => { if (x === y) return; const a = JSON.parse(x), b = 
   if (!(await ready('the first scene'))) { await browser.close(); process.exit(1); }
   await frames(3);
   const scenes = await SCENES(), q0 = new URL(page.url()).searchParams;
-  check(/benchrun=0/.test(page.url()) && q0.get('roomclear') === String(scenes[0].seed) && q0.get('seed') === String(scenes[0].seed) && q0.has('noverdict') && q0.has('nokeep') && q0.has('mute') && !q0.has('bench') && q0.get('quality') === 'medium', `?bench on the address: the page went to the first scene's own address (${page.url().replace(/^https?:\/\/[^/]+/, '')})`);
+  check(/benchrun=0/.test(page.url()) && q0.get('roomclear') === String(scenes[0].seed) && q0.get('seed') === String(scenes[0].seed) && q0.has('nokeep') && q0.has('mute') && !q0.has('bench') && q0.get('quality') === 'medium', `?bench on the address: the page went to the first scene's own address (${page.url().replace(/^https?:\/\/[^/]+/, '')})`);
   const first = await page.evaluate(() => ({ active: window.__bench.active, freezing: window.__bench.freezing, state: window.__bench.state, veil: document.getElementById('bench-veil')?.textContent ?? null, staged: !!window.__roomclear.state, squad: window.__game.orders.squad().length }));
   const rec0 = await record();
   check(first.active && first.freezing && /^Benchmark \d+ % · Esc stops$/.test(first.veil ?? '') && first.staged && first.squad === 4 && rec0 && rec0.live === 0 && rec0.warm === false && rec0.from === '/' + REST, `a run is under way on the staged mission, the world held, its record in the tab's session store (${JSON.stringify(first)} · from ${rec0?.from})`);

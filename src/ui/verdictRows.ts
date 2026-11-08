@@ -4,7 +4,7 @@
 // The mission list is the menus' (ui/missions.ts, ui/startpage.ts) and is not edited: this file only DRESSES the rows it finds — every
 // `#missions .mrow[data-mission]` gets one `.vpips` child, made again when what is kept or the difficulty changes — from a MutationObserver on `#missions`,
 // so a list drawn again (a group opened, the page reopened) is dressed again by itself. Training rows are lessons, not runs to be won: they get none.
-// Off with the verdict's own switch (`VERDICT.on`, ?noverdict): no row is touched. Styled in index.html (`#missions .mrow > .vpips`).
+// Styled in index.html (`#missions .mrow > .vpips`).
 import type { KeptNote } from '../game/verdict';
 import { desk } from '../view/desk';
 import { recordOf, verdictKey, keptWays } from './verdictStore';

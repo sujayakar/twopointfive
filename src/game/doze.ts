@@ -70,7 +70,7 @@ export const DOZE = { on: false, minWait: 20, maxWait: 90, chairM: 4.5, nodSecs:
    *  this long he is at work · `ears` / `noises`: headphones on — a footfall and every other small noise at his
    *  ear, as shares · `sayFirst` / `sayEvery` [from, to] s: his first mutter at the screen, and the gap to each one after · `idleSecs`: a screen a man was got up from, or hauled away from, stays lit this long with nobody at it, then blanks ·
    *  `lend`: at work his attention is lent to the screen (attention.ts: the narrowed eye, the thread, the ring) — off = his eyes whole, as before the wiring */
-  screen: true, screenM: 1.5, pullM: 0.5, napWait: 40, settleSecs: 1.2, ears: 0.5, noises: 0.6, sayFirst: [5, 11], sayEvery: [16, 30], idleSecs: 60, lend: true };
+  screen: true, screenM: 1.5, pullM: 0.5, napWait: 40, settleSecs: 1.2, ears: 0.5, noises: 0.6, sayFirst: [5, 11], sayEvery: [16, 30], idleSecs: 60, };
 
 export type DozeWhy = 'noise' | 'light' | 'bump' | 'alarm' | 'net' | 'time' | 'taken';
 type Phase = 'no' | 'going' | 'down' | 'asleep' | 'work' | 'stir' | 'up' | 'spent';

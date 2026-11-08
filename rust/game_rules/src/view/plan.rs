@@ -35,7 +35,7 @@ pub fn plan_tag(callsign: &str) -> String {
     out.chars().take(3).collect()
 }
 /// a key's code as its cap says it
-fn key_cap(code: &str) -> String { String::from(code.strip_prefix("Key").or(code.strip_prefix("Digit")).unwrap_or(code)) }
+pub fn key_cap(code: &str) -> String { String::from(code.strip_prefix("Key").or(code.strip_prefix("Digit")).unwrap_or(code)) }
 fn ang_diff(a: f64, b: f64) -> f64 {
     let tau = core::f64::consts::PI * 2.0;
     let mut d = (a - b) % tau;
@@ -150,7 +150,7 @@ fn waits_on_key(g: &Game, seat: &SeatRef, paired: bool, out: &mut Vec<PlanDoor>)
         }
     }
     // the quiet pair's mark: the first reader of the key. The key a step ahead of each man who waits, on his gun's line: nothing of the man he waits on. A lesson that still holds the word shut lists no mark
-    let marked = crate::pairorders::pair_orders_waiting(g);
+    let marked = crate::pairorders::pair_orders_waiting(g, seat);
     let pair_first = up && !marked.is_empty();
     if !crate::rails::rails_locks(g, "word") {
         for (gd, j) in marked.iter() {

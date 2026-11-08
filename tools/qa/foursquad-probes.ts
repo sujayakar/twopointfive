@@ -36,7 +36,6 @@ const { ORDERS, sideOf } = await import(`${ROOT}/src/game/orders.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { spawnUnit } = await import(`${ROOT}/src/game/guards.ts`);
 const { MAX_LIGHTS } = await import(`${ROOT}/src/render/lights.ts`);
-const { MAX_QUERIES } = await import(`${ROOT}/src/render/probe.ts`);
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -345,12 +344,6 @@ export const foursquadBudget = guarded(async () => {
   const steady = L.filter((l: any) => l.ttl < 0).length, lit = L.filter((l: any) => l.ttl < 0 && l.enabled && l.intensity > 0).length;
   R.step(2);
   verdict(steady < MAX_LIGHTS && lit < MAX_LIGHTS, `lights: ${steady} steady lights of ${MAX_LIGHTS} by spawnUnit's own count (${MAX_LIGHTS - steady} spare), ${lit} of them lit and uploaded (${MAX_LIGHTS - lit} spare for flashes and tracers)`, `every man is booked a torch whether it burns or not`);
-  // the probe's table (render/probe.ts MAX_QUERIES a frame, the rest dropped): what the game asks of it in a frame with everybody up
-  { const P = g.probe as any, real = P.query, realS = P.querySegment; let n = 0; const keys: string[] = [];
-    P.query = (k: string, ...r: any[]) => { n++; keys.push(k); return real?.call(P, k, ...r); }; P.querySegment = (k: string, ...r: any[]) => { n++; keys.push(k); return realS?.call(P, k, ...r); };
-    let worst = 0, lines = 0; for (let i = 0; i < 30; i++) { n = 0; keys.length = 0; R.step(); if (n > worst) { worst = n; lines = keys.filter(k => /^smoke\d/.test(k)).length; } }
-    P.query = real; P.querySegment = realS;
-    verdict(worst > 0 && worst <= MAX_QUERIES && lines === NB.hostiles.length, `the probe's ${MAX_QUERIES} queries a frame: ${worst} asked with all ten up (${MAX_QUERIES - worst} spare) — the smoke sight lines to Sam are asked for the ${lines} defenders only`, `fog of war off in this rig: its smoke lines (up to six more) queue last and are the first dropped`); }
   // an eleventh man is refused, by the caller's own budget; a caller with none still gets the eight
   let e1 = '', e2 = '';
   try { spawnUnit(g, { team: 'hostile', pos: [15, 0, 17.6], budget: SQUAD4_BUDGET }); } catch (e) { e1 = (e as Error).message; }

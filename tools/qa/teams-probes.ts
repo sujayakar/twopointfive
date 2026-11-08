@@ -197,7 +197,7 @@ export async function teamsDark() {
     const op = spawnUnit(game, { team: 'operative', pos: [22.0, 0, 11.3], yaw: -Math.PI / 2, name: 'Archer', light: false });
     const ho = spawnUnit(game, { team: 'hostile', pos: DARK_BREAK ? [16.5, 0, 11.3] : [16.5, 0, 7.5], yaw: Math.PI / 2, name: 'Vasquez', light: false });
     op.hold = false; op.pinned = true; op.state = 'alert'; op.awareness = 1; op.reactT = 0; op.lastKnown = null;   // alert with nothing, planted (pinned: he covers, he does not wander off to search)
-    ho.heardUpTo = 1e12; ho.dazzledUntil = 1e9;   // the hostile is a prop here: deaf and blind, he stands
+    ho.heardUpTo = 1e12; ho.hold = true; ho.pinned = true; ho.state = 'patrol'; ho.awareness = 0;   // the hostile is a prop here: deaf behind his wall, he stands, calm (a dazzled man fires blind, and this one fires only below)
     W.step(DT); W.step(DT);
     const wall = game.col.segmentBlocked(eyeOf(op.char), chestOf(ho.char)) && game.col.segmentBlocked(eyeOf(op.char), eyeOf(ho.char));
     let everFoe = false;

@@ -20,7 +20,7 @@ export function cornerOf(g: any): { key: string; text: string }[] { return g.vie
 /** the squad's block, a line a man, the notes and the quick key's line, under its title: what the page lays out (ui/overlay.ts), as one row */
 export function blockOf(O: any): any[] {
   const V = O.g.view.squad; if (!V) return [];
-  const lk = (act: string) => !!O.g.rails?.locks(act), quick = O.quickLine();
+  const open: string[] | undefined = O.g.view.lesson?.rails?.open, lk = (act: string) => !!open && !open.includes(act), quick = V.quick;
   return [{ kind: 'objective', tone: O.toneOf(O.recipients()), label: lk('who') ? 'squad' : `squad · ${V.posture ? `${V.posture} · ` : ''}orders to ${V.who}`, inReach: true, off: false,
     opts: [...V.mates.map((m: any) => ({ key: '', text: `${V.picked ? (m.addressed ? '▸ ' : '· ') : ''}${m.name} · ${m.doing}`, tone: m.pair ?? undefined, gone: m.down })), ...(lk('menu') ? [] : V.notes), ...(quick ? [quick] : [])] }];
 }
@@ -28,7 +28,7 @@ export function blockOf(O: any): any[] {
 export function listedOf(O: any): any {
   const M = O.menu; if (!M) return null;
   const mt = O.menuTarget(), kind = M.target.kind === 'door' ? 'door' : 'objective', n = M.men.length, far = mt.kind === 'door' && M.target.kind === 'door' && mt.side !== M.target.side;
-  const opener = M.page !== null ? O.defs.find((d: any) => d.opens === M.page) : undefined, where = `on ${O.hoverWords(M.target)}${far ? ' · far side' : ''}`;
+  const opener = M.page !== null ? O.defs.find((d: any) => d.opens === M.page) : undefined, where = `on ${String(O.g.view.ring?.caption ?? '').split(' → ')[1] ?? ''}${far ? ' · far side' : ''}`;
   const head = opener ? `${O.labelOf(opener, mt)} · ${where}` : where, headOf = (d: any) => d.head ?? head;
   const words = (d: any) => d.opens ? `${O.labelOf(d, mt)} ▸` : (M.onWord && d.onWord ? 'wait · ' : '') + O.labelOf(d, mt);
   const rows: any[] = M.rows.map((d: any, i: number) => ({ kind, label: headOf(d), opts: [{ key: d.key ? String(d.key) : d.hotKey ? keyName(d.hotKey) : '', text: words(d) + (O.posture?.mark(d) ?? '') + (M.why[i] ? ` — ${M.why[i]}` : '') }], inReach: n > 0 && !M.why[i], off: !!M.why[i], cont: i > 0 && headOf(M.rows[i - 1]) === headOf(d) }));

@@ -44,7 +44,6 @@ export async function rescueflushCheck(): Promise<boolean> {
   const floor = async (id: string, seed: number, on: boolean, o: { loud: boolean; out?: boolean; end?: boolean; lanes?: boolean }) => await pin({ TPS_RESCUEFLUSH: on, TPS_RESCUEEND: o.end ?? true, ...(o.lanes ? { TPS_LANES: true } : {}) }, async () => {   // (word left out on purpose: `lanes` not asked is the covered lanes as the stand has them)
     Math.random = seeded(seed);
     const E = (ALL_MISSIONS as any[]).find(e => e.id === id), { W, g, why } = await answerStand(E); if (why) throw new Error(`${id}: ${why}`);
-    if (process.env.RESCUEFLUSH_BREAK === 'lanes') RESCUEFLUSH.lanesChoose = false;   // (the build before the mend, on every floor: (g) and (h) must fail)
     const R = g.rescue, B = R.bounds, log = console.log, inB = (p: number[]) => p[0] >= B.x0 && p[0] <= B.x1 && p[2] >= B.z0 && p[2] <= B.z1;
     const shotAt: { who: string; at: number[]; by: string | null; byAt: number[] | null }[] = []; let acts = 0;
     const step = (s: number, until?: () => boolean) => { console.log = () => {}; try { for (let i = 0; i < Math.round(s / DT); i++) {

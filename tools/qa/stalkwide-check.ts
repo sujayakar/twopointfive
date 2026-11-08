@@ -6,7 +6,8 @@
 // them before he sinks and once the man is gone, a good way off the key down's in the creep, held within a frame of the key down), the part `upright`
 // (the key changes nothing upright: a comparison alone) and the harness part went with that.
 //   out       hands empty, crouched, the click held on a man three metres ahead: under two metres each hand is a little outside its own shoulder and
-//             never a wing's reach out, well under it, the left leading, and no higher than his own neck.
+//             never a wing's reach out, well under it, and no higher than his own neck. (Which hand leads is not asked: the arms swing with his gait,
+//             the die sets where in it he starts, and over a whole gait neither hand leads: -0.02 to 0.02 m on four dice.)
 //   grab      the key takes the man out of the stance: he is `held`.
 // STALKWIDE_BREAK=1 = the click is never held, so he never closes on the man: out and grab must FAIL.   exit 0 = all hold · 1 = one does not
 // THE HARNESS HAS NO GPU: nothing here says how the stance LOOKS (tools/qa/close-stills.ts scene stalk-rifle draws it on the CPU).
@@ -51,9 +52,9 @@ async function creep(crouch = true) {
 async function out() {
   console.log('\n=== out: his arms come out as he sinks ===');
   const a = await creep();
-  verdict(a.high < 0 && a.out > 0 && a.out < 0.25 && a.under > 0.2 && a.lead > 0.05,
-    'hands empty, crouched, the click held on a man three metres ahead: under two metres the footage\'s creep: each hand a little outside its own shoulder and never a wing\'s reach out, well under it, the left leading, no hand above his own neck',
-    `his hands apart before he sinks ${f2(a.far)} m · under two metres: ${f2(a.near)} m apart, the furthest out of its shoulder ${f2(a.out)} m, the least under it ${f2(a.under)} m, the left ahead by ${f2(a.lead)} m · the higher hand against his neck ${f2(a.high)} m`);
+  verdict(a.high < 0 && a.out > 0 && a.out < 0.25 && a.under > 0.2,
+    'hands empty, crouched, the click held on a man three metres ahead: under two metres the footage\'s creep: each hand a little outside its own shoulder and never a wing\'s reach out, well under it, no hand above his own neck',
+    `his hands apart before he sinks ${f2(a.far)} m · under two metres: ${f2(a.near)} m apart, the furthest out of its shoulder ${f2(a.out)} m, the least under it ${f2(a.under)} m, the left ahead by ${f2(a.lead)} m (a part of a gait, shown) · the higher hand against his neck ${f2(a.high)} m`);
 }
 async function grab() {
   console.log('\n=== grab: the key takes the man out of the stance ===');

@@ -596,7 +596,7 @@ fn perceive_here(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
                 let the = crate::words::w(g, &"", &"the ");
                 let room = crate::dialogue::room_name(g, bp);
                 let many = if n > 1 { format!(" — {} of them", n) } else { String::new() };
-                let how = if g.gd[o].wound.is_some() { "hit, breathing" } else if crate::game::is_breathing(g, o) { "out cold, breathing" } else { "dead" };
+                let how = if crate::game::is_breathing(g, o) { "out cold, breathing" } else { "dead" };
                 let text = format!("{} down in {}{}{}, {}. pushing on", victim, the, room, many, how);
                 radio(g, Some(m), &text);
             }
@@ -836,86 +836,6 @@ pub fn sweep_places(g: &crate::game::Game) -> Vec<crate::qrf::SweepPlacesItem> {
     }
     if let Some(a) = g.level.scenarios.as_ref().and_then(|s| s.places.as_ref()) {
         for r in &a.areas { out.push(SweepPlacesItem { name: r.name.clone(), pos: mid(&r.bounds) }); }
-    }
-    out
-}
-
-fn cr_at(p: V3) -> String { format!("({}, {})", js::num_str(p[0]), js::num_str(p[2])) }
-fn cr_free(g: &Game, p: V3) -> bool { !nav_blocked(g, p[0], p[2]) }
-fn cr_walk(g: &mut Game, a: V3, b: V3) -> f64 { path_len(g, [a[0], 0.0, a[2]], [b[0], 0.0, b[2]]) }
-fn cr_apart(out: &mut Vec<String>, ps: &[V3], what: &str) {
-    for i in 0..ps.len() {
-        for j in i + 1..ps.len() {
-            if flat(ps[i], ps[j]) < 0.6 { out.push(format!("{}: marks {} and {} are {} m apart", what, i + 1, j + 1, js::to_fixed(flat(ps[i], ps[j]), 2))); }
-        }
-    }
-}
-
-/// The level's block against its built floor: what is wrong, in words (nothing: the block stands).   (qrf.ts checkResponse)
-pub fn check_response(g: &mut crate::game::Game) -> Vec<String> {
-    let mut out: Vec<String> = Vec::new();
-    let r = match response_of(g) { Some(r) => r, None => return out };
-    let floor = match g.level.routes.first() {
-        Some(&id) => g.tab.route[id].points.first().copied().unwrap_or(g.level.player_spawn),
-        None => g.level.player_spawn,
-    };
-    for (k, y) in r.ways.iter().enumerate() {
-        let way = format!("way {} '{}'", k + 1, y.name);
-        if let Some(name) = word(&y.door) {
-            if crate::doors::doors_by_name(g, name).is_none() { out.push(format!("{}: no door '{}' on this level", way, name)); }
-        }
-        for (i, &p) in y.muster.iter().enumerate() {
-            if !cr_free(g, p) { out.push(format!("{}: muster mark {} {} is not free floor", way, i + 1, cr_at(p))); }
-        }
-        for (i, &p) in y.entry.iter().enumerate() {
-            if !cr_free(g, p) { out.push(format!("{}: fan mark {} {} is not free floor", way, i + 1, cr_at(p))); }
-        }
-        cr_apart(&mut out, &y.muster, &format!("{} muster", way));
-        cr_apart(&mut out, &y.entry, &format!("{} fan", way));
-        for (i, &p) in y.muster.iter().enumerate() {
-            let e = match y.entry.get(i) { Some(&e) => e, None => continue };
-            if !cr_free(g, p) || !cr_free(g, e) { continue; }
-            let l = cr_walk(g, p, e);
-            if !(l <= 30.0) {
-                let how = if l == f64::INFINITY { String::from("no walk at all") } else { format!("{} m", js::to_fixed(l, 1)) };
-                out.push(format!("{}: man {}'s walk from muster to his fan mark is {} (30 m at most)", way, i + 1, how));
-            }
-        }
-        if let Some(&e0) = y.entry.first() {
-            if cr_free(g, e0) && cr_walk(g, e0, floor) == f64::INFINITY { out.push(format!("{}: no walk from the fan {} to the level's floor {}", way, cr_at(e0), cr_at(floor))); }
-        }
-        if let Some(name) = word(&y.door) {
-            if let (Some(d), Some(&m0), Some(&e0)) = (crate::doors::doors_by_name(g, name), y.muster.first(), y.entry.first()) {
-                if crate::doors::doors_pull_face(g, d, m0) == crate::doors::doors_pull_face(g, d, e0) { out.push(format!("{}: the muster and the fan are on the same side of '{}'", way, name)); }
-            }
-        }
-    }
-    let clear_m = g.k.response.clear_m;
-    let starts = g.level.scenarios.as_ref().and_then(|s| s.quiet.as_ref()).map_or(Vec::new(), |q| q.starts.clone());
-    for s in &starts {
-        if !r.ways.iter().any(|y| flat(s.sam, y.muster[0]) >= clear_m) {
-            let name = s.name.clone().unwrap_or_else(|| cr_at(s.sam));
-            out.push(format!("start '{}': every way's muster is within {} m of it", name, js::num_str(clear_m)));
-        }
-    }
-    let outside = r.outside.clone().unwrap_or_default();
-    for (i, p) in r.posts.iter().flatten().enumerate() {
-        if !cr_free(g, p.pos) { out.push(format!("post {} '{}' {} is not free floor", i + 1, p.name, cr_at(p.pos))); continue; }
-        let mut reached = false;
-        for &o in &outside {
-            if cr_free(g, o) && cr_walk(g, o, p.pos) < f64::INFINITY { reached = true; break; }
-        }
-        if !reached { out.push(format!("post {} '{}': no walk to it from any outside mark", i + 1, p.name)); }
-    }
-    for (i, &p) in outside.iter().enumerate() {
-        if !cr_free(g, p) { out.push(format!("outside mark {} {} is not free floor", i + 1, cr_at(p))); }
-    }
-    let first = r.ways.first().and_then(|y| y.entry.first().copied());
-    for (i, p) in r.sweep.iter().flatten().enumerate() {
-        if !cr_free(g, p.pos) { out.push(format!("sweep place {} '{}' {} is not free floor", i + 1, p.name, cr_at(p.pos))); }
-        else if let Some(e0) = first {
-            if cr_walk(g, e0, p.pos) == f64::INFINITY { out.push(format!("sweep place {} '{}': no walk to it from the first way in", i + 1, p.name)); }
-        }
     }
     out
 }

@@ -52,7 +52,7 @@ export const FRIENDLYFIRE_STATS = { samOnMate: 0, mateOnMate: 0, mateOnSam: 0, u
 
 /** is the rule running: on, and nobody's show on the stage (a show's rounds are its script's) */
 export function ffLive(g: Game): boolean { return FRIENDLYFIRE.on && !g.touring && !g.director.showing && !g.puppet; }
-/** a man of Sam's own side whose body a round of that side can find (combat.ts fireWeapon): living and on his feet (a man down wounded is passed, as a body on the floor is), not a show's cast */
+/** a man of Sam's own side whose body a round of that side can find (combat.ts fireWeapon): living and on his feet (a man down is passed, as a body on the floor is), not a show's cast */
 export function ffBody(gd: Guard): boolean { return gd.state !== 'dead' && gd.char.alive && !gd.god && !gd.civ && !isHostile('player', gd.team); }
 /** is this shooter's side Sam's (an operative; never the night staff or a defender) */
 export function ffSide(sg: Guard | null): boolean { return !!sg && !sg.civ && !isHostile(sg.team, 'player') && !isHostile('player', sg.team); }

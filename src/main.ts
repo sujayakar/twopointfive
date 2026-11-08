@@ -117,10 +117,8 @@ import { SQUAD40, SQUAD40_STATS, SQUAD40_LOG, squad40Left, squad40Brought, squad
 import { squadSmokeStage } from './game/squadsmoke';   // (the same: game/kit.ts has loaded it)
 import { checkQuiet } from './game/quiet';
 import { LESSON_STATS, checkLesson } from './game/lesson';
-import { parBest } from './ui/parBest';
-import { verdictKey, recordOf, tryStarted, runEnded, APPROACHES, type MissionRecord } from './ui/verdictStore';
+import { RunBooks } from './ui/runBooks';
 import { watchMissionRows } from './ui/verdictRows';
-import { SOLO_ID } from './scene/picks';
 import { SCENARIOS, ALL_MISSIONS, LESSON_MISSIONS, pickSearch } from './scene/scenarioList';
 import { lessonGroup } from './scene/scenarios';
 import { DOORWAY } from './game/doors';
@@ -133,10 +131,12 @@ import { SNOWTRACKS, TRACK_RES } from './game/snowTracks';
 import { HOUR, HOURS, HOUR_IDS, applyHour, hourOf, hourSummary, hourLightAt, setSunStrength, sunStrength, sunToCloud, hourSun, hourWorldChanged } from './game/hours';
 import { lightEstimateAt } from './game/guards';
 import { STRESS, standExtra, stressTick, stressSummary, extraSpots } from './game/stress';
-import { Quality, ladderAimOf, rtVeto, sharpForce, gbaaForce, iqForce } from './ui/quality';
+import { Quality, ladderAimOf } from './ui/quality';
+import { urlFlagsOnEngine } from './host/engineflags';
 import { buildPanel } from './ui/bindings';
 import { frameCanvas, postShot } from './ui/capture';
-import { FrameCap, FRAMECAP, watchTextures } from './render/framecap';
+import { FRAMECAP, watchTextures } from './render/framecap';
+import { captureKey, frameCapture } from './host/capture';
 import { reachBinding } from './render/frame';
 import { hourExposure } from './render/photometry';
 import { POWDER } from './render/powderField';
@@ -259,7 +259,7 @@ async function main() {
   // THE DIFFICULTY SWITCH (game/difficulty.ts) before the card paints its row: the level this machine keeps, then ?hard / ?hard=0 / ?difficulty=hard|standard for
   // the visit, then ?pressure / ?pressure=0 and ?digin — the two tables under the switch (game/pressure.ts, game/digin.ts) one at a time — over that
   initDifficulty(q, lessonGroup(lessonRow?.group));   // (…and the LEVERS this machine keeps over the level — fog of war, enemy AI, enemy kit — but not on a Training lesson's page: it is taught on the level as it is)
-  watchMissionRows();   // each mission's card on the start page shows the ways it has been won (ui/verdictRows.ts: this machine's record at the difficulty picked; none under ?noverdict) — here, before the boot card paints: the start page is live long before the renderer is
+  watchMissionRows();   // each mission's card on the start page shows the ways it has been won (ui/verdictRows.ts: this machine's record at the difficulty picked) — here, before the boot card paints: the start page is live long before the renderer is
   { const n = parseInt(q.get('smokepool') || q.get('sparsesmoke') || '', 10); if (n >= 256) smokeGridConfig.cap = Math.min(8192, Math.ceil(n / 256) * 256); }   // ?smokepool=N: the smoke solver's pool in bricks (smoke/smokeGrid.ts; 4096 ships) — buffer sizes and shader constants, so it is read at boot. (?sparsesmoke[=N] = the flag the pool was tried behind: still read for its N, otherwise nothing)
   // (a mission's address BEFORE THE GAME IS MADE, as every host reads it: host/standup.ts addressBeforeGame. Its lines:)
   // the row's own settings: a mission row's own hour and weather (game/rowset.ts; ScenarioEntry.hour / weather: a tutorial level is built for them) written over this visit's query, never the address — ?rowset=0 = the link's as ever
@@ -294,6 +294,7 @@ async function main() {
   await tick();
   const tGpu = performance.now();
   const rigPage = q.has('bench') || runPage(q) || navigator.webdriver === true;   // a measurement or a driven page: it keeps its own page and its own timings
+  const offBooks = ownPage(q);   // A RUN'S PAGE IS NOBODY'S TRY (host/runpage.ts): the fight on it was the run's, not the visitor's. Its end files no try and no par best, opens no end card and writes no `run` to the cloud; a driven page that is no run keeps all of them, so a check can read them
   const gpu = await initGpu(canvas, { retry: !kitViewOn && !rigPage, canvasRead: !kitViewOn, keeper: keep.keeper, seat: keep.seat });   // (a real loss of the device loads this page again — gpu/device.ts GPU_LOST; never the kit picture's window: the start page is told below and draws its standing man; never a benchmark or a driven page, which must see the card)
   startCallClock(gpu.device);   // (the load's clock on its buffer, texture and submit calls, to the boot's freeze: gpu/keep.ts)
   if (kitViewOn) void gpu.device.lost.then(() => kitViewFatal());   // (?kitview: the device's own card — gpu/device.ts — is seen by nobody in there: the start page is told there is no picture)
@@ -487,6 +488,7 @@ async function main() {
   const savePending = () => !!savePend && game.mission === savePend.m && game.time === savePend.time;   // (…of the SAME moment: a restart or a save loaded while the card is up drops it)
   const pics = new SavePics<saveMod.SlotInfo>(gpu, canvas, () => saveMod.SAVETIMELINE.picPx, () => saveMod.SAVETIMELINE.picQ, (info, url) => { if (game.saves.setPicture(info, url)) menu.pictureCame(info, url); }, e => reportWarning('save.picture', e));   // (setPicture drops one whose save has gone from its slot by then; a card already showing the saves is handed the picture for its tile)
   game.saves.picture = info => pics.want(info);
+  let vRun: object | null = null; const books = new RunBooks();
   { const host = game.saves.onPutBack; game.saves.onPutBack = info => { host?.(info); cutToHim(); vRun = null; }; }   // (…and the run's books below start over: the Mission is the same OBJECT put back, and a load is another try, as a file's is — an end already filed must not stand for the end to come)
   // the start card's sandbox row (god mode / no AI / unlimited ammo) as this machine last left it — but not on a benchmark scene's page: its fight is the set's, and with
   // 'no AI' kept the mission below refuses to start at all (nobody would move), so the row has to stand off BEFORE the scenario is staged, not at the scene's start
@@ -650,25 +652,8 @@ async function main() {
   if (new URLSearchParams(location.search).has('paused')) { window.__pauseLoop = true; automated = true; }   // ?paused: nothing runs until a script steps it (deterministic captures from frame 0) — and attract mode never, even if the loop is let go later
   window.__timeScale = 1;
   if (new URLSearchParams(location.search).has('hud')) readout.set(true);
-  // F6: A FRAME CAPTURE (render/framecap.ts): every target the renderer wrote, the whole picture over 2 frames (Shift+F6: a window at the cursor over 8 frames, a tenth the size), with the
-  // trace of what the renderer changed and each frame's length. One file, to the dev server's captures/ folder (a page served from anywhere else hands it to the save door, host/savefile.ts); read with tools/qa/capture-read.ts.
-  // `__framecap.arm()` waits for the renderer's next change (a quality step, its targets re-made) and captures from that frame.
-  const framecap = new FrameCap(gpu.device, {
-    state: () => ({ internal: `${engine.width}×${engine.height}`, out: `${engine.outWidth}×${engine.outHeight}`, scale: +engine.settings.renderScale.toFixed(3), quality: quality.label, ladder: quality.lastChange,
-      taau: !!engine.settings.taau, sharp: engine.sharpOn, view: engine.settings.debugView, targets: `${engine.passes.reallocs}: ${engine.passes.lastRealloc}`, hidden: document.hidden }),
-    out: () => [engine.outWidth || engine.width, engine.outHeight || engine.height],
-    gpu: () => { const o: Record<string, number> = {}; for (const [k, v] of engine.timer.results) o[k] = +v.toFixed(3); return o; },
-    parked: t => engine.pool.isParked(t), adapter: gpu.adapterInfo,
-    save: async (name, gz) => {   // (the dev server is a thing of a page served from this machine: a page opened from anywhere else is asked for nothing but a download)
-      if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) try { const r = await fetch(`/capture?name=${name}`, { method: 'POST', body: gz as BodyInit, headers: { 'X-Frame-Capture': '1', 'Content-Type': 'application/octet-stream' } }); const m = r.ok ? /^captured(?: in (\d+) pieces)?$/.exec(await r.text()) : null; if (m) return `→ captures/${name}.tpscap.gz${m[1] ? ` · to hand it on: its ${m[1]} pieces, ${name}.part1of${m[1]} …` : ''}`; } catch { /* no dev server behind this page */ }
-      const w = saveFile('capture', `${name}.tpscap.gz`, new Blob([gz as BlobPart]));   // (anywhere else it leaves by the page's one door, host/savefile.ts: to whoever keeps the page's files, and to the browser only with ?downloads=1)
-      return w.local ? '→ your downloads' : savedWords('The capture', w.went);
-    },
-    said: pageSay,
-  });
-  (window as any).__framecap = framecap;
+  const framecap = frameCapture(gpu, engine, quality), capShift = captureKey();   // F6: a frame capture (host/capture.ts). The key itself is read with F9 below, so it works wherever it does
   const capAt = (): [number, number] => [input.mouseX / Math.max(1, canvas.clientWidth), input.mouseY / Math.max(1, canvas.clientHeight)];
-  let capShift = false; window.addEventListener('keydown', e => { if (FRAMECAP.on && e.code === 'F6' && !e.metaKey && !e.ctrlKey && !e.altKey) { capShift = e.shiftKey; e.preventDefault(); } }, true);   // (the key itself is read with F9 and F10 below, so it works wherever they do; this only keeps the browser's own F6 off the page and notes Shift)
   // F9: the perf recorder (ui/perfrec.ts) — a stress-test dump the maintainer hands back: per-frame GPU passes + CPU sections + state + events → the one door (host/savefile.ts: a backend's intake, no download) + shot server
   const perfrec = new PerfRecorder(engine, game, cam, quality, s => { perfNote = s; perfNoteT = 4; pageSay(s); });   // (also on the message line, so REC start / saved shows without the debug read-out)
   let perfNote = '', perfNoteT = 0;
@@ -810,7 +795,7 @@ async function main() {
       if (!kitView) attract.tick(rawDt);   // (never under ?kitview: the world runs there with no card up) idle seconds on the start card → the attract programme (its opening veil on the wall clock, then live; and off again the moment it may not run)
       step(dt);
       if ((away || room > 0) && behind.drawn !== drawnLast) { drawnLast = behind.drawn; const w = pace.sent(performance.now()), end = () => pace.done(w, performance.now(), away && engine.timer.enabled ? engine.timer.unionMs(GPU_RENDER_PASSES) : 0); gpu.device.queue.onSubmittedWorkDone().then(end, end); }   // (waiting for the GPU, and giving way: the queue's word that this frame's work is done is what lets a later one begin, and a window giving way waits after it by the GPU's own timing of a frame where there is one. Asked only of a frame that drew: a card that hides the picture hands the GPU nothing. A queue that fails has said so too, and a lost device has its own card)
-      perfrec.frame(rawDt, fpsSm); if (cloud) { cloud.frame(rawDt, game.view.live && !menu.isOpen && !brief?.held && !document.hidden && !rested, endStage(game.mission.stage, game.verdict.result), cloudGpuMs, gpu.device.queue); cloudGpuMs = NaN; } perfsweep.tick(); bench.tick(rawDt); if (handsHeld && !bench.active) handsOff(); if (perfNoteT > 0) perfNoteT -= rawDt;
+      perfrec.frame(rawDt, fpsSm); if (cloud) { cloud.frame(rawDt, game.view.live && !menu.isOpen && !brief?.held && !document.hidden && !rested, endStage(offBooks ? '' : game.mission.stage, offBooks ? null : game.verdict.result), cloudGpuMs, gpu.device.queue); cloudGpuMs = NaN; } perfsweep.tick(); bench.tick(rawDt); if (handsHeld && !bench.active) handsOff(); if (perfNoteT > 0) perfNoteT -= rawDt;
       requestAnimationFrame(frame);
     } catch (e) { console.error(e); replaykey.crashed(e); fatalOnce('The frame loop threw and has been stopped:', e); }   // no re-arm: stepping on with broken state would only bury this message under a cascade (scripted __runFrames still works for poking at it)
   }
@@ -890,14 +875,14 @@ async function main() {
       if (!frozen && input.hit('Backquote')) panel.toggle();   // the debugger (the tweak panel) is on backtick's code: the backslash key while empty hands are a slot (host/keymap.ts SLOT); Tab is left to the game, and the debug views are a row on its Frame page (no key steps them)
       if (frozen) { if ((menu.mode === 'pause' || tabUp) && !missionsBusy() && !optionsOpen() && input.hit('F5') && input.saveKey?.()) { savePend = { m: game.mission, time: game.time }; if (tabUp) tabShow(false); else menu.saveAsked(); } }   // (F5 on the pause card itself, no screen over it: the save by hand is written as play goes on — it is the recording's own input, so it goes through a tick like any press; a refusal is said on the feed there as ever)
       else if (savePend) { if (savePending()) input.pressed.add('F5'); else savePend = null; }   // (…handed over on every live frame until a tick has moved the clock: a frame with no tick keeps the press for the next one — host/loop.ts — and a card that came up again before any tick still has it)
-      if (FRAMECAP.on && input.hit('F6')) framecap.start({ whole: !capShift, at: capAt() });   // a frame capture (render/framecap.ts): frozen or not
+      if (FRAMECAP.on && input.hit('F6')) framecap.start({ whole: !capShift(), at: capAt() });   // a frame capture (render/framecap.ts): frozen or not
       if (input.hit('F9')) perfrec.toggle();   // the perf recorder: works frozen or not (a pause-menu frame is data too)
       if (!frozen && input.hit('KeyP') && (game.director.showing || game.director.handedOver)) endShow();   // P: over a level-script program stops it to the start card — and starts nothing: the showcases it once started are gone
     },
     postUpdate: () => {
       vBooks();   // (what this machine keeps of the run that just ended, before its card is drawn)
-      if (END_CARD.due) { END_CARD.due = false; menu.open('debrief'); }   // the game's word for the end card, out with the drive or a beat after he is down (freezes the world like the pause menu; Esc / Keep playing resume, Again restarts)
-      else if (game.verdict.takeDue()) menu.open('debrief');   // a squad's mission ended (taken, wiped, rescued, lost): the same card, a beat after — game/verdict.ts says when
+      if (END_CARD.due) { END_CARD.due = false; if (!offBooks) menu.open('debrief'); }   // the game's word for the end card, out with the drive or a beat after he is down (freezes the world like the pause menu; Esc / Keep playing resume, Again restarts)
+      else if (game.verdict.takeDue() && !offBooks) menu.open('debrief');   // a squad's mission ended (taken, wiped, rescued, lost): the same card, a beat after — game/verdict.ts says when
     },
     render: (camR, t, dt, present) => {
       if (viewHidden() || (leanBurst && !lastOfBurstNow)) { if (leanBurst) engine.world.relist(); behind.skipped++; perfrec.cpuRender = 0; return; }   // (an undrawn step of a lean burst still lists the world its tick left: the cursor's ray reads that list — the pack is the next draw's)
@@ -927,26 +912,14 @@ async function main() {
     fire: (man, at) => { const c = man ? man.char : game.player.char, w = firearmOf(game, c, !man); if (!w.fire()) { w.rearm(); w.fire(); }   // (as every fire site: Firearm.fire() cycles the round out FIRST — the gun's own counters are what tracers.ts isTracerRound reads; a dry or reloading gun is stood up fresh for it. The view tops the magazine up as the row ends)
       fireWeapon(game, c, at, !man, { steady: true }); }, panes: () => glassMod.glassPanes(game).map(i => game.level.boxes[i]),
     mendGlass: () => { glassMod.resetGlass(game); resetGlassPen(game); } }) : null;
-  let parCheat = false;   // (a sandbox flag was on at some frame while this run's par clock ran: its time is not filed)
-  // the verdict's bookkeeping (game/verdict.ts names how a run went; what this MACHINE keeps of it is the page's: ui/verdictStore.ts): `vRun` = the run the
-  // three below belong to, `vKey` = the key it is kept under (mission + difficulty, read when the try starts), `vStreak` = which try of the streak it is
-  // (0: not counted), `vDone` = its end has been filed
-  let vRun: object | null = null, vKey = '', vStreak = 0, vCounted = false, vDone = false;
-  const vNote = (rec: MissionRecord | null, streak: number, fresh: boolean) => { const ways: Record<string, { first: boolean; clean: boolean }> = {}; let n = 0; if (rec) for (const a of APPROACHES) { const w = rec.w[a]; if (w) { ways[a] = { first: w.tries === 1, clean: w.clean }; n++; } } return { streak, fresh, gold: n >= 2, ways }; };
-  // a try started / a run ended (game/verdict.ts): counted and kept here, the page's side. A try is counted the frame it STARTS (so one given up is a
-  // try all the same) and never under a cheat; a run loaded from a checkpoint is ANOTHER try (the load is the retry). The card is told what was kept
-  // (`kept`) — so this runs before the card is opened (postUpdate: the stealth game's card opens on the very frame its run ends).
-  const vBooks = () => { if (tape || net || kitViewOn) return; const VD = game.verdict;   // (?kitview: a beat at the door is nobody's run — no try counted, no end filed, no par below; nor is a networked game's, a run the server decided with another player in it)
-    if (VD.current !== vRun) { vRun = VD.current; vKey = ''; vStreak = 0; vCounted = false; vDone = false; }
-    const lesson = () => lessonGroup(runningScenario(game, levelFileQ)?.entry?.group);   // a Training lesson is not a run to be won: no try counted, no way kept, and its card grades nothing
-    if (VD.live && VD.started && !vCounted) { vCounted = true;
-      vKey = verdictKey(runningScenario(game, levelFileQ)?.entry?.id ?? (levelFileQ ? `night:${levelFileQ}` : SOLO_ID), difficultyNow());
-      vStreak = VD.cheat || lesson() ? 0 : tryStarted(vKey); }
-    const R = VD.result;
-    if (R && !vDone) { vDone = true;
-      if (lesson()) VD.kept = { streak: 0, fresh: false, gold: false, ways: {}, lesson: true };
-      else if (R.void || !vStreak) VD.kept = vNote(vKey ? recordOf(vKey) : null, 0, false);
-      else { const K = runEnded(vKey, vStreak, { won: R.won, approach: R.approach, clean: R.clean, secs: R.secs }); VD.kept = vNote(K.rec, K.streak, K.fresh); } } };
+  // the books of what this machine keeps of the runs played (ui/runBooks.ts), told as a run's try begins and as it ends, before its card is opened (postUpdate: the stealth game's card opens on the very
+  // frame its run ends). `vRun` = the run they are of. Not a replay's, a networked game's (the server decides it, with another player in it) nor the kit view's, nobody's run, nor a benchmark's or a pricing run's
+  const vBooks = () => { if (tape || net || kitViewOn || offBooks) return; const VD = game.verdict;
+    if (VD.current !== vRun) { vRun = VD.current; books.anew(); }
+    if (!books.due(VD.live && VD.started, !!VD.result)) return;
+    const R = game.runView(); if (!R) return;
+    books.tell(R);
+    if (books.note) { VD.kept = books.note; if (books.best) game.par.best(books.best); } };
   function step(dt: number, lastOfBurst = true) {
     lastOfBurstNow = lastOfBurst;
     stressTick(game);   // (?extra=N / the panel's stress row: the asked-for extra enemies stood again after a restart — a return on its first line while off)
@@ -954,12 +927,6 @@ async function main() {
     if (tape) tape.frame(dt); else { stepFrame(loop, dt); if (net && loop.frozen()) net.rest(input, cam, canvas); }   // (a replay owns the frame: the tape's steps, then the picture — replay/engineplay.ts; a networked game goes on under a card that freezes this page — net/page.ts)
     modelErrFrame();   // (?modelerr: a return on its first line otherwise)
     perfrec.cpuUpdate = loop.updateMs;
-    // a par run just ended (game/par.ts): this machine's best for THIS run — level file, way in, squad size, difficulty — is filed here, the page's side,
-    // and its words ride the result where this page shows it (the card, the debrief). Never under a sandbox flag (god mode, no AI, unlimited ammo): that time is not a record —
-    // and the flag counts if it was on at ANY frame while the clock ran (`parCheat`), not only on the frame the result appears.
-    if (!tape && !net && !kitViewOn) { const R = game.par.result();
-      if (!game.par.started) parCheat = false; else if (game.godMode || !game.aiEnabled || game.infiniteAmmo) parCheat = true;
-      if (R && !game.par.bestSaid) game.par.best(parCheat ? '' : parBest(`${levelFileQ ?? 'office'}|way${(game.roomClear.way ?? 0) + 1}|squad${game.nightBreach.ops.length}|${difficultyNow()}`, R.shown)); }   // (once a run: the words are kept with the run they are about)
     vBooks();   // (the verdict's bookkeeping again, for a try that started this frame and an end no card followed)
     simSm = simSm * 0.95 + loop.updateMs * 0.05;   // (the read-out's 'sim ms': Game.update on the CPU, eased as the fps row is)
 
@@ -1044,32 +1011,6 @@ function urlFlagsBeforeEngine(q: URLSearchParams) {
   { const ds = Number(q.get('decalStress')); if (ds > 1) decalDebug.repeat = Math.min(64, ds | 0); }   // measurement only (?decalStress=N): the decal lookup N× per g-buffer fragment (render/decals.ts decalDebug), so its cost can be read above the timer's noise; must be set before the Engine builds the g-buffer shader
 }
 
-/** the URL flags written onto the fresh Engine's settings (before the level loads and any preset applies), and __sharp */
-function urlFlagsOnEngine(engine: Engine) {
-  if (new URLSearchParams(location.search).has('noleakfix')) engine.settings.dnShadowOccl = false;   // ?noleakfix: the shadow denoiser's occluded-light reading off from boot (settings.dnShadowOccl) — a hidden torch's cone can show faintly on a lit floor behind its wall, as it did
-  if (new URLSearchParams(location.search).has('notaau')) engine.settings.taau = false;   // ?notaau: renderer v3 phase 1 off from boot — no jitter, output = internal, FXAA + the browser's bilinear: the old chain byte for byte (decided before the presets apply: they start at their TAAU scale only with it on)
-  if (new URLSearchParams(location.search).has('nosharp')) { sharpForce.v = false; engine.settings.sharpDirect = false; }   // ?nosharp: sharp direct (decoupled resolution — engine.ts RenderSettings.sharpDirect) off from boot AND for every preset applied: main's frame under TAAU, for A/B and the identity hashes
-  else if (new URLSearchParams(location.search).has('sharp')) { sharpForce.v = true; engine.settings.sharpDirect = true; }
-  if (new URLSearchParams(location.search).has('gbaa')) { gbaaForce.on = true; engine.settings.gbaa = true; engine.settings.taauPhases = 0; }
-  if (new URLSearchParams(location.search).has('noiq')) { iqForce.off = true; engine.settings.sharpDirect = false; engine.settings.sharpDecouple = false; engine.settings.gbaa = false; engine.settings.taauHistSharp = 0; }   // ?noiq: the image-quality program's resolve configuration all off = the resolve as it was (the identity A/B against main)   // ?gbaa: geometric edge AA on + the TAA's jitter off (the image-quality program's C3 by hand; the presets' own placement otherwise)
-  if (new URLSearchParams(location.search).has('nomv')) engine.settings.motionIds = false;   // ?nomv: motion identity off — the g-buffer index-matches dynamic boxes as before (identity A/B)   // ?sharp: forced ON at every tier for the visit (the presets' own placement: ui/quality.ts Preset.iq)
-  (window as any).__sharp = {   // sharp direct from the console: on / off, what it runs at, its memory
-    get on() { return engine.settings.sharpDirect; }, set on(v: boolean) { engine.settings.sharpDirect = !!v; },
-    get live() { return engine.sharpOn; },
-    knobs: () => { const S = engine.settings; return { planeK: S.sharpPlaneK, sliver: S.sharpSliver, sliverCap: S.sharpSliverCap, gbaaClamp: S.gbaaClamp, heldRays: S.heldRays, hueSplit: S.restirHueSplit }; },
-    set: (k: Partial<{ planeK: number; sliver: number; sliverCap: number; gbaaClamp: boolean; heldRays: number; hueSplit: boolean }>) => { const S = engine.settings; if (k.planeK !== undefined) S.sharpPlaneK = k.planeK;
-      if (k.sliver !== undefined) S.sharpSliver = k.sliver; if (k.sliverCap !== undefined) S.sharpSliverCap = k.sliverCap; if (k.gbaaClamp !== undefined) S.gbaaClamp = !!k.gbaaClamp; if (k.heldRays !== undefined) S.heldRays = k.heldRays; if (k.hueSplit !== undefined) S.restirHueSplit = !!k.hueSplit; return (window as any).__sharp.knobs(); },   // (+ the direct-quality lane's knobs: the sliver rule / cap, GBAA's clamp, the hybrid estimator's K — docs/internal/direct-quality.md)
-    /** the sliver census of the LAST frame: sharpE[0]'s alpha carries the fallback code per output pixel (sharp_direct.wgsl SLIVERS) → counts {px, live, ring, sliver, traced, unshadowedDefault} + the per-row mask if asked (harness: tools/qa/dq-scenes.js) */
-    census: async (mask = false) => { const t = engine.passes.sharpE[0]; if (!engine.sharpOn || !t) return null; const dev = engine.device; const w = t.width, h = t.height; const bpr = Math.ceil(w * 8 / 256) * 256; const buf = dev.createBuffer({ size: bpr * h, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ }); const enc = dev.createCommandEncoder(); enc.copyTextureToBuffer({ texture: t }, { buffer: buf, bytesPerRow: bpr }, [w, h]); dev.queue.submit([enc.finish()]); await buf.mapAsync(GPUMapMode.READ); const u16 = new Uint16Array(buf.getMappedRange().slice(0)); buf.unmap(); buf.destroy();
-      const f16 = (x: number) => { const e = (x >> 10) & 31, m = x & 1023; return e === 0 ? m * 5.960464477539063e-8 : (1 + m / 1024) * Math.pow(2, e - 15); }; let ring = 0, sliver = 0, traced = 0, unsh = 0; const m8 = mask ? new Uint8Array(w * h) : null;
-      for (let y = 0; y < h; y++) { const row = y * bpr / 2; for (let x = 0; x < w; x++) { const c = Math.round(f16(u16[row + x * 4 + 3])); const k = c & 3; if (k === 1) ring++; else if (k === 2) sliver++; if (c & 4) traced++; if (c & 8) unsh++; if (m8) m8[y * w + x] = c; } }
-      return { w, h, px: w * h, ring, sliver, traced, unshadowedDefault: unsh, sliverPct: +(100 * sliver / (w * h)).toFixed(3), tracedPct: +(100 * traced / (w * h)).toFixed(3), mask: m8 }; },
-    summary: () => `sharp direct ${engine.settings.sharpDirect ? 'ON' : 'off'}${engine.sharpOn ? ` — live: g-buffer / U / composite / TAA at ${engine.outWidth}×${engine.outHeight}, stochastic terms at ${engine.width}×${engine.height} (+${((engine.passes.sharpBytes + engine.gbuffer.sharpBytes) / 1048576).toFixed(0)} MB: the output-size raster, the direct pair, the larger HDR target)` : engine.settings.sharpDirect ? ` — idle (${!engine.settings.taau ? 'TAAU off' : engine.settings.debugView ? 'debug view' : 'render scale 1.0: nothing to decouple'})` : ''}`,
-  };
-  if (new URLSearchParams(location.search).has('nortreflect')) { rtVeto.on = true; engine.settings.rtReflect = false; }
-  { const dv = new URLSearchParams(location.search).get('detail'); if (dv !== null && isFinite(parseFloat(dv))) engine.settings.detail = Math.max(0, Math.min(1, parseFloat(dv))); }
-  if (new URLSearchParams(location.search).has('nomarkings')) engine.settings.markings = false;   // ?nomarkings: the markings lane's pixel-art signifiers off from boot — nothing evaluated, no marking lights registered (with ?level=relief the frame main draws)
-}
 
 /** ?kitview only: the level that was built is a bespoke set's (bootLevel) */
 let kitSetUp = false;
@@ -1156,7 +1097,7 @@ function pageAudio(game: Game) {
 function worldHooks(engine: Engine, game: Game, audio: AudioEngine) {
   window.__engine = engine; window.__game = game; window.__audio = audio;
   (window as any).__anim = { LIFE, FEET };   // the animation's life layer / foot lock constants (character.ts): renderer noise measurements zero LIFE.on / FEET.on so a still man's silhouette holds still to the pixel (tools/qa/perf-harness.js)
-  (window as any).__killGuard = (i: number, how: 'shot' | 'struck' | 'wounded' = 'shot', zone?: 'side' | 'leg', dir: Vec3 = [1, 0, 0]) => { const gd = game.guards[i]; if (!gd || gd.state === 'dead') return false; killGuard(game, gd, dir, how === 'struck', how, 'player', undefined, how === 'wounded' ? zone ?? 'side' : undefined); return true; };   // staging: drop guard i where he stands (a body on the floor for renderer captures — the torch-shadow boil scene)
+  (window as any).__killGuard = (i: number, how: 'shot' | 'struck' = 'shot', dir: Vec3 = [1, 0, 0]) => { const gd = game.guards[i]; if (!gd || gd.state === 'dead') return false; killGuard(game, gd, dir, how === 'struck', how, 'player'); return true; };   // staging: drop guard i where he stands (a body on the floor for renderer captures — the torch-shadow boil scene)
   // __glass: the glass panes' console handles — on/off (the renderer's pane list), the knobs, a crack on the pane under the cursor or on a named pane, the numbers
   (window as any).__glass = {
     get on() { return engine.settings.glass; }, set on(v: boolean) { engine.settings.glass = !!v; },

@@ -4,7 +4,7 @@
 //   THE CLOCK STARTS on the first thing anybody DOES: the squad's first order (a row on orders.log), Sam's first stride off the mark the staging stood him on
 //   (PAR_START_M), or his first round or throw — whichever comes first: reading the house from the start line is free, doing anything is not.
 //   IT STOPS when the room clear ends 'taken' (roomclear.ts `end`, at its own `endAt`). A run that ends 'wiped' has no time.
-//   EVERY TEAMMATE LOST (down at the end: dead, out cold or wounded — the floor keeps all three as state 'dead') adds `lossSecs`: the total is what the medals
+//   EVERY TEAMMATE LOST (down at the end: dead or out cold — the floor keeps both as state 'dead') adds `lossSecs`: the total is what the medals
 //   are held against, so a run that loses men ranks under a clean one of the same pace.
 //   THE MEDAL IS JUDGED ON WHAT IS SHOWN: the total in whole seconds, as the clock words it (65.4 s reads 1:05 and is inside a 1:05 gold).
 //
@@ -12,7 +12,7 @@
 // record, and the bridge carries all of it to the page (tools/wire: `par::Par`). Nothing here writes that record: this file is what
 // the page reads it WITH (is a par live, has the clock started, the result). The room clear's row with the clock on it is the Rust game's too
 // (`par::par_objective`, through `mission::objective`, in the view).
-// A BEST TIME is the page's to keep, a machine's own (main.ts + ui/parBest.ts): it hands its words in through `best()`, and they ride the result where
+// A BEST TIME is the page's to keep, a machine's own (ui/runBooks.ts): it hands its words in through `best()`, and they ride the result where
 // THIS page shows it (the card, the debrief) and never the game's log, which every machine of one game reads the same.
 //
 // (src/game is one import cycle: nothing here is built from another game module's exports at module load.)

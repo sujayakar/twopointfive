@@ -20,5 +20,5 @@ export const TEAMTALLY = { on: false };
  *  that kills a man already down and breathing swaps his knockout for a kill, and a partner's burst is on the card as the player's own is). */
 export function teamTallied(g: Game, gd: Guard): boolean {
   if (!TEAMTALLY.on || !g.quiet?.active || gd.state !== 'dead' || gd.downBy !== 'guard' || gd.civ || gd.team === 'operative' || !hostileTo(gd, 'player')) return false;
-  return !(gd.downKind === 'shot' || gd.downKind === 'wounded') || teamOf(g).some(m => m.char.id === gd.killerId);
+  return gd.downKind !== 'shot' || teamOf(g).some(m => m.char.id === gd.killerId);
 }

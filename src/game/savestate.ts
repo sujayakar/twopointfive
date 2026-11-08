@@ -92,7 +92,6 @@ import { KITLOAD, type KitWorn } from './kitload';
 import type { QuietSnap } from './quiet';
 import type { FogSnap } from './fogofwar';
 import type { LessonSnap } from './lesson';
-import { woundRestore, type Wound } from './wounds';
 import type { GameEvent, LightTarget, MissionStage, Mission, SlotKind, ThrowKind, Witness, GuardState, DownKind, DownBy, GuardTask } from './game';
 import { Firearm, Pistol, Rifle, WEAPONS } from './weapons';
 import { aimWeightSnapshot, aimWeightRestore } from './aimweight';
@@ -115,7 +114,6 @@ import { gunWallSnapshot, gunWallRestore } from './gunwall';
 import { wallHoldSnapshot, wallHoldRestore, type WallSnap } from './player';
 import { CLOSE, closeModeSnapshot, closeModeRestore } from './close';
 import { stalkReset } from './stalk';
-import { tapReset } from './tapstep';
 import { calmTorchSnapshot, calmTorchRestore, calmTorchPosed, type CalmTorchSnap } from './calmtorch';
 import { dozeSnapshot, dozeRestore, type DozeSnap } from './doze';
 import { moraleSnapshot, moraleRestore, type MoraleSnap } from './morale';
@@ -198,7 +196,6 @@ export interface GuardSnap {
   turn?: number[];
   wp: number; wait: number; awareness: number; lastKnown: V3 | null; lastSeenT: number;
   found: boolean; downKind: DownKind | null; downBy: DownBy | null; keys: string[];
-  wound?: Wound & { clock?: number };   // (wounds.ts: down wounded — posed, not a ragdoll: `rag` is null for him and the pose is laid again from this; absent on everybody else)
   missedAt: number; missingRaised: boolean;
   muzzleDown: boolean; muzzleClearT: number; muzzleEvalT: number; lineBarkT: number; lineInT: number;
   leaderSeenT: number; leaderSeenPos: V3; leaderStillT: number;
@@ -432,7 +429,6 @@ export function canSave(g: Game, force = false): string | null {
     if (g.weather?.kind && g.weather.flash) return 'a stroke of lightning is on the floor';   // (under a picked weather the stroke is in the meter's stand-in — weather.ts strokeLight — and a load ends it: the file waits the half second out; with no weather picked, as it was)
     if (g.items.items.some(it => !it.settled || ((it.kind === 'smoke' || it.kind === 'flash' || it.kind === 'frag') && !it.fired))) return 'a thrown thing is still in the air or on its fuse';
     const falling = g.guards.find(x => x.char.ragdoll && !x.char.ragdoll.sleeping) ?? g.civilians.find(x => x.char.ragdoll && !x.char.ragdoll.sleeping); if (falling) return `${falling.callsign}'s body is still falling`;
-    const sinking = g.guards.find(x => x.wound && x.char.anim.woundDown < 1); if (sinking) return `${sinking.callsign} is still going down`;   // (a man going down WOUNDED is filed down: wounds.ts)
       // (a body is filed as a SETTLED corpse at its particles: one written mid-fall would hang there — review finding, reproduced)
     if (g.rings.length) return gearText('a ring airfoil is in flight');
     if (g.shells.length) return 'a 40 mm grenade is in flight';
@@ -532,7 +528,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
       id: c.id, routeI: gd.routeI, callsign: gd.callsign, state,
       pos: c3(c.pos), vel: dead || scripted ? [0, 0, 0] : c3(c.vel), bodyYaw: c.bodyYaw, aimYaw: c.aimYaw, aimPitch: c.aimPitch, crouch: scripted ? 0 : c.anim.crouchTarget, animPhase: c.anim.phase, ...(turn ? { turn } : null),
       wp: gd.wp, wait: gd.wait, awareness: gd.awareness, lastKnown: c3n(gd.lastKnown), lastSeenT: gd.lastSeenT,
-      found: gd.found, downKind: gd.downKind, downBy: gd.downBy, keys: [...gd.keys], ...(gd.wound ? { wound: { ...gd.wound, clock: gd.char.anim.woundClock } } : null),
+      found: gd.found, downKind: gd.downKind, downBy: gd.downBy, keys: [...gd.keys],
       missedAt: gd.missedAt, missingRaised: gd.missingRaised,
       muzzleDown: false, muzzleClearT: gd.muzzleClearT, muzzleEvalT: gd.muzzleEvalT, lineBarkT: gd.lineBarkT, lineInT: gd.lineInT,
       leaderSeenT: gd.leaderSeenT, leaderSeenPos: c3(gd.leaderSeenPos), leaderStillT: gd.leaderStillT,
@@ -741,8 +737,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
     if (dead) {
       // the body: a corpse settled at the file's joint positions (see the head) — hand the fresh figure to a ragdoll where it lies, then lay every particle down
       c.update(0);
-      if (S.wound) woundRestore(gd, S.wound);   // (a man down WOUNDED is a posed figure, never a ragdoll: wounds.ts lays him down again, already settled)
-      else c.ragdollize(g.col, [Math.sin(c.bodyYaw), 0, Math.cos(c.bodyYaw)], true);
+      c.ragdollize(g.col, [Math.sin(c.bodyYaw), 0, Math.cos(c.bodyYaw)], true);
       if (S.rag && S.rag.x?.length === RAG_COUNT * 3 && c.ragdoll) { c.ragdoll.settleAt(S.rag.x, S.rag.rot, S.rag.own === true); if (S.rag.sleeping === false) c.ragdoll.wake(); }   // (a body the file caught still falling — only a forced / harness save can — falls on from rest where it was)
       c.vel = [0, 0, 0]; gd.speed = 0; c.anim.speed = 0;
       c.update(0);
@@ -811,7 +806,6 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
   g.messages.length = 0; for (const m of (s.messages ?? []).slice(-5)) g.messages.push({ text: String(m.text), t: fin(m.t) }); g.cues.adopt(g.messages);
   gunWallRestore(g, s.gunWall);
   if (SAVETIMELINE.holds) { wallHoldRestore(g, s.wallHold); if (CLOSE.on) closeModeRestore(g, s.player.closeOn); }
-  tapReset(g);
   stalkReset(g);   // (stalk.ts: nothing is stalked after a load — the button is pressed afresh)
   needsRestore(g, s.needs); whistleRestore(g, s.whistle); tacticsRestore(g, s.tactics); lanesRestore(g, s.lanes); dialogueRestore(g, s.dialogue);   // (whistle: the blower is keyed by the fresh Player, the men's halves by roster index — both exist by now)
   civiliansRestore(g, s.civilians);   // (after the men — she runs to / tells / was found by one of them by callsign — and after eventSeq: the fresh civilians' ears were stamped off the abandoned future's count; a file without the slice keeps them fresh on their marks, ears set right)

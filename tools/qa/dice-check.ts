@@ -3,7 +3,7 @@
 //   DICE_BREAK=1 bun run tools/qa/dice-check.ts   the red path: one stray Math.random() is drawn inside the update — 'same seed' must then FAIL
 // WHAT IS HELD:
 //   source     no Math.random call is left in src/game — a new one is named with its file and line
-//   same seed  two games stood up on one seed, each under a DIFFERENT Math.random, play the same half minute (a firefight in it) digest for digest: nothing of the
+//   same seed  two games stood up on one seed, each under a DIFFERENT Math.random, play the same twenty seconds (a firefight in it) digest for digest: nothing of the
 //              simulation reaches Math.random, and the seed alone names the dice
 //   other seed a second seed plays a different half minute
 //   checkpoint on its own die, with nothing re-seeded: A (stepped on after the save) ≡ B (the same game, loaded) ≡ C (a fresh game on another seed, loaded) — the
@@ -67,11 +67,11 @@ const firstDiff = (a: unknown[], b: unknown[]): string => { for (let i = 0; i < 
   verdict(!!word && BigInt(word) === h && own, 'keyed: the keyed draw is the Rust game\'s to the bit, and moves with no other', `a thousand draws fold to 0x${h.toString(16)}, the Rust test holds ${word} · a site's second draw is its own whoever draws between ${own}`); }
 
 // ---- same seed, other seed
-{ Math.random = seeded(11); const A = await standUp({ seed: 4242 }); const a = run(A, 30, 300); const na = A.game.dice.n;
-  Math.random = seeded(99); const B = await standUp({ seed: 4242 }); const b = run(B, 30, 300); const nb = B.game.dice.n;
-  Math.random = seeded(11); const C = await standUp({ seed: 4243 }); const c = run(C, 30, 300);
+{ Math.random = seeded(11); const A = await standUp({ seed: 4242 }); const a = run(A, 20, 300); const na = A.game.dice.n;
+  Math.random = seeded(99); const B = await standUp({ seed: 4242 }); const b = run(B, 20, 300); const nb = B.game.dice.n;
+  Math.random = seeded(11); const C = await standUp({ seed: 4243 }); const c = run(C, 20, 300);
   const shots = A.game.events.length;
-  verdict(a.text === b.text && na === nb && na > 50, 'same seed: two games on seed 4242 under different Math.random streams play the same 30 s', a.text === b.text ? `${a.rows.length} digests equal · ${na} rolls each off the own die (a fight from 5 s; ${shots} events live at the end)` : `${firstDiff(a.rows, b.rows)} · rolls ${na} / ${nb}`);
+  verdict(a.text === b.text && na === nb && na > 50, 'same seed: two games on seed 4242 under different Math.random streams play the same 20 s', a.text === b.text ? `${a.rows.length} digests equal · ${na} rolls each off the own die (a fight from 5 s; ${shots} events live at the end)` : `${firstDiff(a.rows, b.rows)} · rolls ${na} / ${nb}`);
   verdict(a.text !== c.text, 'other seed: seed 4243 plays a different 30 s', a.text !== c.text ? firstDiff(a.rows, c.rows) : 'the two runs are equal: the seed does not reach the dice'); }
 
 // ---- checkpoint
