@@ -33,6 +33,9 @@ impl Desk {
         Pressed { ok, why, passed, changed, kept: vec![KeptText { key: String::from(kept::KIT), text: kept::write(&mut self.g) }] }
     }
 
+    /// a press that changes no kept card: what the cards are for, how many come, what is copied. Nothing is written for a machine that has changed nothing
+    fn left(ok: bool, why: String) -> Pressed { Pressed { ok, why, passed: String::new(), changed: Vec::new(), kept: Vec::new() } }
+
     /// The cards are for this mission, played by this link. The same mission asked again with another link has its hand moved, as the fog lever moves it; another mission is a screen
     /// closed and one opened. A mission that is none is no mission.
     fn go(&mut self, mission: &str, link: &str, issue: &str, walls: u32) {
@@ -119,20 +122,20 @@ asks! {
     /// the whole card as issued
     3 Reset { who: u32 } -> Pressed = |d, who| { let r = kit::kit_preset(&mut d.g, who as f64, KitPreset::Issued); d.pressed(r.ok, r.why, String::new(), Vec::new()) };
     /// his card is the copied one
-    4 Copy { who: u32 } -> Pressed = |d, who| { let c = kit::kit_shown(&mut d.g, who as f64); d.clip = Some(c); d.pressed(true, String::new(), String::new(), Vec::new()) };
+    4 Copy { who: u32 } -> Pressed = |d, who| { let c = kit::kit_shown(&mut d.g, who as f64); d.clip = Some(c); Desk::left(true, String::new()) };
     /// the copied card put on him
     5 Paste { who: u32 } -> Pressed = |d, who| match d.clip.clone() {
         Some(c) => { let r = kit::kit_paste(&mut d.g, who as f64, &c); let moved = r.changed.iter().map(|f| f.as_str().to_string()).collect(); d.pressed(r.ok, r.why, String::new(), moved) }
         None => d.pressed(false, String::new(), String::new(), Vec::new()),
     };
     /// the mission the cards are for, the link it would be played by, the kit its level issues (the level file's own block; empty: none) and the wall charges it hands out
-    6 For { mission: &str, link: &str, issue: &str, walls: u32 } -> Pressed = |d, mission, link, issue, walls| { d.go(mission, link, issue, walls); d.pressed(true, String::new(), String::new(), Vec::new()) };
+    6 For { mission: &str, link: &str, issue: &str, walls: u32 } -> Pressed = |d, mission, link, issue, walls| { d.go(mission, link, issue, walls); Desk::left(true, String::new()) };
     /// no mission: your own cards stand again
-    7 Done {} -> Pressed = |d| { d.leave(); d.pressed(true, String::new(), String::new(), Vec::new()) };
+    7 Done {} -> Pressed = |d| { d.leave(); Desk::left(true, String::new()) };
     /// the team as it would go
     8 Team {} -> TeamView = |d| d.team();
     /// how many come
-    9 Size { n: u32 } -> Pressed = |d, n| { let why = d.size(n); d.pressed(why.is_empty(), why, String::new(), Vec::new()) };
+    9 Size { n: u32 } -> Pressed = |d, n| { let why = d.size(n); Desk::left(why.is_empty(), why) };
     /// a named kit on all five cards (going alone: on yours)
     10 Named { id: &str } -> Pressed = |d, id| { let why = d.named(id); d.pressed(why.is_none(), why.unwrap_or_default(), String::new(), Vec::new()) };
 }
