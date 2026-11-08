@@ -60,7 +60,7 @@ async function one(plan: Plan, seed: number, deal: number | null, trace: boolean
   const { lightEstimateAt, escalationOf, rollcallState } = await import(`${ROOT}/src/game/guards.ts`);
   const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
   const { sweepYaw } = await import(`${ROOT}/src/game/devices.ts`);
-  const { debriefOf } = await import(`${ROOT}/src/game/chronicle.ts`);
+  const { debriefOf, rowsOf, rowLine } = await import('./debrief-read.ts');;
   const log = console.log, err = console.error, warn = console.warn;
   const hush = () => { if (!has('--verbose')) console.log = console.error = console.warn = () => { }; }, unhush = () => { console.log = log; console.error = err; console.warn = warn; };
   const lines: string[] = [];
@@ -377,7 +377,7 @@ async function one(plan: Plan, seed: number, deal: number | null, trace: boolean
 
   try { step(20 + Math.round(delay * 60)); if (plan === 'code') code(); else round(DEV(plan)); out.ok = g.mission.stage === 'done'; }
   catch (e) { unhush(); out.why = e instanceof Stop ? e.message : `threw: ${(e as Error).stack ?? e}`; say(`!! ${out.why}`); }
-  if (trace) { const { fmtEvent } = await import(`${ROOT}/src/game/chronicle.ts`); for (const e of g.chronicle.events) log(`   chron ${e.t.toFixed(1).padStart(6)} ${e.kind} ${fmtEvent(e)}`); for (const r of g.devices.log) log(`   device ${JSON.stringify(r)}`); }
+  if (trace) { for (const e of rowsOf(g)) log(`   chron ${e.t.toFixed(1).padStart(6)} ${e.kind} ${rowLine(e)}`); for (const r of g.devices.log) log(`   device ${JSON.stringify(r)}`); }
   out.secs = Number(t.toFixed(1)); out.stage = g.mission.stage; out.down = !!g.player.down;
   for (const r of g.devices.log as { device: string; what: string }[]) { out.devices[r.what] = (out.devices[r.what] ?? 0) + 1; if (r.what === 'trip' || r.what === 'suspicion' || r.what === 'alarm') out.tripped.push(`${r.device}:${r.what}`); }
   out.roused = [...roused]; out.alert = [...alert]; out.escalation = peakEsc;
