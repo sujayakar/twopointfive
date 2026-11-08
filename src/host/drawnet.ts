@@ -38,7 +38,7 @@ export class DrawNet {
   ready(): void {
     const c = this.door.client; if (c.seat >= 0) c.ready();
     document.addEventListener('visibilitychange', () => { if (document.hidden) c.rest(performance.now()); });
-    const me = this; (window as unknown as { __net: unknown }).__net = { client: c, get state() { return me.state(); }, whole: () => me.net.whole(true), way: NETWAY, get tried() { return netTried(); }, try: netTry, stall: netStall };
+    const me = this; (window as unknown as { __net: unknown }).__net = { client: c, get state() { return me.state(); }, whole: () => me.net.whole(true), man: (seat = Math.max(0, c.seat)) => me.net.ahead(seat, []), way: NETWAY, get tried() { return netTried(); }, try: netTry, stall: netStall };
   }
   state(): ReturnType<NetDoor['state']> { return this.door.state(this.net.word()); }
 

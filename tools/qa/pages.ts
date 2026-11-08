@@ -36,7 +36,7 @@ export const PAGES: readonly PageRow[] = [
   ['kitpaste-page.cjs', 'menus', "copy and paste for loadouts", 0.2],
   ['keybinds-page.cjs', 'menus', "the player's own keys on Options > Controls", 0.2],
   ['textsize-page.cjs', 'menus', "the game's own text size, the screens at each size", 1.5],
-  ['mpclient-page.cjs', 'coop', "the page as a client of a real game server", 4.5],
+  ['mpclient-page.cjs', 'coop', "the page as a client of a real game server", 3.5],
   ['lobby-page.cjs', 'coop', "host or join a co-op game, two windows", 0],
   ['savetimeline-page.cjs', 'saves', "the save timeline: F5, the strip, a click goes back", 5.8],
   ['savedoor-page.cjs', 'saves', "a saved file goes to the backend, no download", 0],
