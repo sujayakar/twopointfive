@@ -40,7 +40,7 @@
 import { kitViewWays } from './missions';
 import { rectZoom, uiMatch } from './textsize';
 import { KEEP_PAGE, keeperAbove } from '../gpu/keep';   // (a leaf: the picture's seat on the kept page's device)
-import { kitViewQuietKind } from '../host/kitViewSet';   // (pure: the mission's kind, read off its link — the quiet picture's)
+import { kitViewQuietKind } from '../host/kitViewQuiet';   // (pure: the mission's kind, read off its link — the quiet picture's)
 
 /** the picture is LIVE and the open card's man acts in it (`?stillkit` = off: the still picture, every change a plain restage) · ms after a kit message in which further changes are folded into ONE more */
 export const KIT_VIEW = { acts: true, kitMs: 150, quiet: true };
