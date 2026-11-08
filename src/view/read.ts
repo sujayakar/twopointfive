@@ -128,9 +128,6 @@ export function readCardBar(b: Uint8Array): CardBar { const I = new In(b), r = r
 export interface CardPouches { used: number; total: number }
 function readCardPouchesIn(I: In): CardPouches { return { used: I.float64(), total: I.float64() }; }
 export function readCardPouches(b: Uint8Array): CardPouches { const I = new In(b), r = readCardPouchesIn(I); if (I.p !== b.length) throw new Error(`the view: CardPouches is ${b.length} bytes and ${I.p} were read`); return r; }
-export interface Pressed { ok: boolean; why: string; passed: string; changed: string[]; kept: string }
-function readPressedIn(I: In): Pressed { return { ok: I.bool(), why: I.str(), passed: I.str(), changed: I.list(() => I.str()), kept: I.str() }; }
-export function readPressed(b: Uint8Array): Pressed { const I = new In(b), r = readPressedIn(I); if (I.p !== b.length) throw new Error(`the view: Pressed is ${b.length} bytes and ${I.p} were read`); return r; }
 export interface CardPick { id: string; word: string; note: string; why: string; now: boolean; can: boolean; icon: string; bars: number[] }
 function readCardPickIn(I: In): CardPick { return { id: I.str(), word: I.str(), note: I.str(), why: I.str(), now: I.bool(), can: I.bool(), icon: I.str(), bars: I.list(() => I.float64()) }; }
 export function readCardPick(b: Uint8Array): CardPick { const I = new In(b), r = readCardPickIn(I); if (I.p !== b.length) throw new Error(`the view: CardPick is ${b.length} bytes and ${I.p} were read`); return r; }
@@ -155,3 +152,9 @@ export function readTeamMan(b: Uint8Array): TeamMan { const I = new In(b), r = r
 export interface TeamView { size: number; sizes: TeamSize[]; note: string; cards: boolean; asIssued: boolean; squad: string; pool: string; walls: boolean; kits: TeamKit[]; men: TeamMan[]; frags: number; smoke: number; bangs: number }
 function readTeamViewIn(I: In): TeamView { return { size: I.float64(), sizes: I.list(() => readTeamSizeIn(I)), note: I.str(), cards: I.bool(), asIssued: I.bool(), squad: I.str(), pool: I.str(), walls: I.bool(), kits: I.list(() => readTeamKitIn(I)), men: I.list(() => readTeamManIn(I)), frags: I.float64(), smoke: I.float64(), bangs: I.float64() }; }
 export function readTeamView(b: Uint8Array): TeamView { const I = new In(b), r = readTeamViewIn(I); if (I.p !== b.length) throw new Error(`the view: TeamView is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface KeptText { key: string; text: string }
+function readKeptTextIn(I: In): KeptText { return { key: I.str(), text: I.str() }; }
+export function readKeptText(b: Uint8Array): KeptText { const I = new In(b), r = readKeptTextIn(I); if (I.p !== b.length) throw new Error(`the view: KeptText is ${b.length} bytes and ${I.p} were read`); return r; }
+export interface Pressed { ok: boolean; why: string; passed: string; changed: string[]; kept: KeptText[] }
+function readPressedIn(I: In): Pressed { return { ok: I.bool(), why: I.str(), passed: I.str(), changed: I.list(() => I.str()), kept: I.list(() => readKeptTextIn(I)) }; }
+export function readPressed(b: Uint8Array): Pressed { const I = new In(b), r = readPressedIn(I); if (I.p !== b.length) throw new Error(`the view: Pressed is ${b.length} bytes and ${I.p} were read`); return r; }

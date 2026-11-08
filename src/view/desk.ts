@@ -9,8 +9,8 @@ export interface DeskFace { face_alloc(n: number): number; face_free(p: number, 
 export const KIT_KEPT = 'twopointsix.kit';
 
 export class Desk extends Asks {
-  /** `keeps`: told the cards' kept text after a press that was taken */
-  constructor(private readonly X: DeskFace, private readonly memory: WebAssembly.Memory, private readonly keeps: (kept: string) => void) {
+  /** `keeps`: told a text this machine keeps after a press that was taken, by the name it is kept under (empty: kept no longer) */
+  constructor(private readonly X: DeskFace, private readonly memory: WebAssembly.Memory, private readonly keeps: (key: string, text: string) => void) {
     super(asked => { if (!this.handed(asked, X.face_desk_ask)) throw new Error(`the desk: ${this.words()}`); return this.out(); });
   }
   private handed(b: Uint8Array, f: (p: number, n: number) => number): boolean {
@@ -21,7 +21,7 @@ export class Desk extends Asks {
   private words(): string { return new TextDecoder().decode(this.out()); }
   /** what this machine keeps and what the address says, done as a start is done it */
   do(c: Commands): void { if (c.length && !this.handed(c.take(), this.X.face_desk_do)) throw new Error(`the desk: ${this.words()}`); }
-  protected override told(p: Pressed): Pressed { if (p.ok) this.keeps(p.kept); return p; }
+  protected override told(p: Pressed): Pressed { if (p.ok) for (const k of p.kept) this.keeps(k.key, k.text); return p; }
 }
 
 let standing: Desk | null = null;
