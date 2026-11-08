@@ -298,9 +298,6 @@ pub mod sim_fallshome { pub mod types; pub use types::*; }
 pub mod sim_itemshome { pub mod types; pub use types::*; }
 pub mod sim_lightshome { pub mod types; pub use types::*; }
 pub mod sim_load { pub mod types; pub use types::*; }
-pub mod sim_men_cols { pub mod types; pub use types::*; }
-pub mod sim_men_schema { pub mod types; pub use types::*; }
-pub mod sim_men_store { pub mod types; pub use types::*; }
 pub mod sim_propshome { pub mod types; pub use types::*; }
 pub mod sim_sim { pub mod types; pub use types::*; }
 pub mod sim_slabshome { pub mod types; pub use types::*; }

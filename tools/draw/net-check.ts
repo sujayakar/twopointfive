@@ -37,7 +37,7 @@ B.show(1);
 
 // ---- the first: the page's half
 const wasm = faceHere(); if (!wasm) { console.error('net-check: no module of these sources'); process.exit(1); }
-const instance = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array(readFileSync(wasm))), { env: { face_roll: () => { throw new Error('the game asked a die'); } } });
+const instance = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array(readFileSync(wasm))));
 const [mannequin, mannequinBin, cast, castLook] = characterFiles(ROOT);
 const game = new DrawGame({ exports: instance.exports, bytes: 0, fetchMs: 0, compileMs: 0 }), D = game.drawn, aWire = { conn: null as Conn | null };
 const door = new NetDoor('', 'g', 'a', 'Ada'); (door as unknown as { ws: unknown }).ws = { readyState: 1, send: (t: string) => later(() => server.message(aWire.conn!, t)), close: () => { /* */ } }; joined(door.client, aWire);

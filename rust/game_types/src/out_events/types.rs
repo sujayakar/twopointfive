@@ -38,7 +38,6 @@ pub enum OutEvent {
     ClearSnowBlast,
     ClearSnowMarks,
     ClearSnowTracks,
-    Tap(crate::out_events::OutTap),
     WallFeel(crate::out_events::OutWallFeel),
     EndCard,
     SnowBlast(crate::out_events::OutSnowBlast),
@@ -209,13 +208,6 @@ pub struct OutChipMark {
 pub struct OutKickScuff {
     pub d: DoorId,
     pub from: V3,
-}
-
-#[derive(Clone, Debug)]
-pub struct OutTap {
-    pub row: u32,
-    pub args: Vec<u8>,
-    pub answer: Vec<u8>,
 }
 
 #[derive(Clone, Debug)]

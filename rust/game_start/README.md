@@ -1,14 +1,12 @@
 # rust/game_start: the game's own start, and tests that stand a scene
 
-The simulation's tick is Rust (`rust/game`), but until this crate a game could only *begin* in TypeScript: the level was loaded, the men made and
-the `Game` put together by `src/host/standup.ts`, and the result handed across the bridge. Here is the start in Rust. A level file's text and the
-character's files go in, a `Game` the tick can run comes out, and nothing in between was made by TypeScript.
+How every game begins. A level file's text and the character's files go in, and a `Game` the tick can run comes out.
 
 Two things stand on it:
 
 - **A test of a behaviour in ten lines.** A scene (rooms, doors, lamps, men) is said in Rust, stood, run for a few seconds and asked what a man
   did. `cargo test` in this folder runs them all in about half a minute.
-- **The road to starting every level in Rust.** The scene builder is not a second way to make a game: it WRITES A LEVEL FILE, and one start stands
+- **One start.** The scene builder is not a second way to make a game: it WRITES A LEVEL FILE, and one start stands
   any level file. What the start does not carry yet it refuses by name (below), and the gate's `start` rows hold what it makes to a pin, part by part.
 
 Nothing here has been seen on a GPU: the host these games stand on draws nothing.
@@ -119,7 +117,7 @@ and `cargo test`'s threads take turns. A test that stands a second game drops th
 | the level file read into the `Level`, its boxes and routes as rows | `level.rs`: `tools/levels/lib/levelLoad.ts loadLevel` in Rust; the records the game keeps as its own types (a mission's `scenarios`, the footsteps' map, devices, civilians, vents, the drill plans) and the file's own records the game crate has a type for (a box with its shape and markings, a light, a door) through `read.rs` and `records.rs`, a line a type |
 | thin things and window bars marked; each box that says a shape given its record and its trim; statics into the world, lights into the set | `passes.rs` (`thin.ts`, `bars.ts`, `shapes.ts`); the game's `cut_record`, `box_world_add_static`, `light_from_def` |
 | the die, seeded before the men are made | the game's `sim_dice_new` |
-| collision, the walk grid, sound paths, fixtures, doors, guards, civilians, orders, the fog, the room fight, every module | **the game's own constructor, `game_new`** (`rust/game/src/game/p_04.rs`), which had never run before this crate |
+| collision, the walk grid, sound paths, fixtures, doors, guards, civilians, orders, the fog, the room fight, every module | **the game's own constructor, `game_new`** (`rust/game_rules/src/game/p_04.rs`), which had never run before this crate |
 | the moving state at home in the block | `settle` (the die, the pose pool, the smoke grid) |
 | the host's Input and camera | the game's `input_detached`, `FollowCamera`, `follow_camera_rebuild` |
 | the address's words, where one is handed (`StartOpts.link`), BEFORE the game is made | the game's `address_before_game`: the row's own hour and weather onto the words, the weather the game is born in, the visit's hour (`src/host/standup.ts addressBeforeGame`); then `difficulty_of_address`, the difficulty it asks for (`&hard`, `&difficulty=`, the levers, `&digin`, `&pressure`, `&fogcone`), on this game's own knob tables, unless `StartOpts.difficulty` is false: a host that handed commands (`stand_handed`) has read its address onto them itself (`src/host/standup.ts difficultyOfAddress`) |
@@ -132,8 +130,8 @@ NOT MADE, because no rule of the tick reads them: the character renderer, the me
 
 ### What the start reads of a level file, and what it does not
 
-Every file under `levels/` is read whole: `start --lacks levels/*.json` (the bin, below) names for each file what the reader does not carry of
-it, and today it names nothing. `stand` REFUSES a file with anything on that list: a level stood without part of itself is another level.
+Every file under `levels/` is read whole. `stand` REFUSES a file with anything the reader does not carry, and names it: a level stood without part
+of itself is another level.
 
 - **The file's own tree keeps the account** (`json.rs`). An object remembers which of its members were asked for, so when a file has been read,
   whatever nobody asked for is named by its place (`doors[0].auto`, `elevators`): a record the reader has no line for, a member a record gained
@@ -148,78 +146,6 @@ it, and today it names nothing. `stand` REFUSES a file with anything on that lis
   reader with its place in the file, a wrong level does not.
 
 Every row of the mission list is stood, twice over, by the gate's `start` rows ("The gate", below).
-
-## What stands between this and the page starting a level in Rust
-
-A list, not a plan. Today the page stands the game in TypeScript, sends the whole state across once, and keeps the TypeScript `Game` as a puppet
-that the picture, the sound, the HUD and the menus read (`src/host/rustgame.ts`, "A START").
-
-1. **The address.** DONE IN THE GAME, NOT YET ON THE PAGE. The page starts a mission by `startFromQuery(g, search)`: the row's hour and
-   weather, the fog of war, a quiet mission's fog rung and cameras, the team's size, then the mission. An address's words are a type of the
-   game crate now (`rust/game/src/query.rs`, `Query`: the browser's rules for reading the text and the calls the game makes on it, `has`,
-   `get`, `set`, `delete`, held to the browser's own reader case by case), every reader of them takes it (`start_from_query`,
-   `spec_of_query`, `hour_from_query`, `weather_of_search`, `fog_of_query`, `quiet_rung_of_query`, `row_settings`, the loadout's, the
-   gear's, the words'), and the one stand-in each module kept for `has` and `get` is gone, with three private copies of the text reader.
-   `StartOpts.link` is the address's text and `stand` starts the mission by `start_from_query` on it; the gate's `start` rows start every mission from
-   its row's link.
-   The address's difficulty is read too, by one reader on each side (`difficulty_asked`, `difficultyAsked`). `tests/hard.rs` holds the rule.
-   What is left: the page hands `location.search` across once and the Rust game starts from it. Two things to know when that is written.
-   An address's words are NOT on the wire (the table declares that arm of a `string | URLSearchParams` argument as holding nothing, and a
-   `Query` writes nothing and reads back empty): a host hands the TEXT. And the page reads more off the address before the stand-up. THE
-   WEATHER AND THE HOUR ARE DONE (2026-11-07): `address_before_game` reads them onto the blank game before `game_new`, as the page's
-   `addressBeforeGame` does, and a game
-   stood from an address no longer has the harness's solo card put on at the stand (`stood.solo_stand` stays down, as on a page), and the
-   address's own question is asked once the mission is staged. STILL THE PAGE'S ALONE: the kit this machine keeps and the words. The game
-   crate's readers of those were called by nothing and went with the dead code; they come back, taking a `&Query`, with the page's start.
-2. **The puppet's objects.** The picture reads TypeScript objects that only the TypeScript start builds, and the apply writes onto objects it
-   finds: of a man, his rig, his row of the men's columns, his capsules and his entry in the light probe's table; of the level, the box world
-   the GPU is packed from (`BoxWorld`: the pack, the cut and round tables, the glass listed to the GPU), the light set, the marks' texture, the
-   fixtures, the wall skin. A game started in Rust has none of them on the page's side. (The same gap shows for a man made while a game runs.
-   This item is from reading `rustgame.ts` and from the host's own notes, not from a page run: nothing here has opened a page.)
-3. **What this start leaves unmade because no rule of the tick reads it:** the character renderer, the mesh shadows' tree, the proxy fits of
-   the rig (`rig_fits`), a snow level's field and prints, the trig memos.
-   The page needs every one that is the picture's.
-4. **The dress step** (`src/host/rustdress.ts`, `src/game/dress.ts`): what the TypeScript tick did for the picture only still runs in
-   TypeScript on the puppet. This start stands with those rows down.
-5. **The host's own half.** `stand` makes a host that draws nothing: default picture settings (`settings.rs`, a copy of `defaultSettings()`: the
-   page's are the player's own, with his quality preset), a canvas of 1600 by 1000, a detached Input, no smoke solver (the page builds its own
-   between the level's boxes going to the world and the Game). The page would hand each of these in.
-6. **The character's files twice.** `gltf.rs` reads the rig, the clips and the cast's variants for the simulation. The picture's meshes and
-   skins are read from the same files by `src/anim/gltf.ts`. One reader, or two that must agree.
-7. **Which file.** The page fetches the level's file. Here the caller hands
-   the file's text in. (The office was the one level whose missions were not in its file: they are now, and it starts as the others do.)
-8. **The file's checks.** `validateLevelData` is TypeScript. A page that starts in Rust still validates in TypeScript, or the rules move.
-9. **What stands a game again from outside a tick.** A mission staged from a menu, a show, a kit view that sinks boxes: each is a TypeScript
-   call on the puppet today, after which the Rust game is started again from the puppet. With a Rust start each becomes a call into the module.
-10. **Two players.** `StartOpts.seats` reaches `game_new`, and the gate's `start` rows stand every mission as a game of two: those the game stages for two
-    are pinned part by part, and those it refuses for two are pinned with its words. Nobody at the second seat's controls, no server, no rollback here.
-11. **The module.** DONE AS FAR AS THE START ITSELF. The page's module carries this crate (`rust/game_face` links it without its `std`
-    feature), and `face_start` stands a game inside the module from one run of handed bytes (`src/handed.rs`: the level file's text, the
-    address's words, the character's files, the host's commands). Nothing plays a game started that way yet: item 13.
-12. **A MISSION'S TEAM NUMBERS BELONG ON THE GAME, AND THE RUST START IS WHERE THAT LANDS.** Today they are written into the process's knob
-    tables, so a game whose start does not write a table finds it as the last mission left it: the one thing a second start in one process
-    still differs in. **The team's start is the office's until a
-    start says otherwise.** The rescue's and the night breach's knob tables are made holding the
-    office's team start (`samAt`, `samYaw`, `opsAt`): the TypeScript reads them off `levels/office.json` as the module loads, the Rust holds
-    them as the table's values (`knobs.rs`), and each keeps `applied`, the start the knobs were last written from, so that a start on a level
-    that names another writes its own over them and a knob moved by hand stays moved. A game made in Rust is made before any level, so it
-    cannot read a file for them. The end to aim at: the team's start is the level's alone (`level.scenarios`), and the knob is an override
-    that starts empty. That touches, in both languages: the two knob tables and their rows in the registry and on the wire, `applied` and
-    the compare in each start (`rescue.ts`, `nightbreach.ts`; `rescue/p_01.rs`, `nightbreach/p_01.rs`), the debugger's rows for them, and
-    every check that moves a team's start by its knob before a start. It goes with the start moving to Rust, not before.
-13. **THE PUPPET'S BOOK IS NUMBERED BY THE TYPESCRIPT'S WALK, AND A RUST-STARTED GAME BY ITS OWN MAKING.** The one thing a game started in
-    the module needs that the old road never did. The bridge's book (`tools/blitz/export.ts Book`) gives a TypeScript object its number when
-    the export's walk first meets it; on the old road the Rust game is MADE FROM those numbers, so every later apply finds its object. The
-    Rust start numbers a row when it makes it, and keeps rows that were made and dropped (a gun the kit replaced, the men a staging took off
-    the floor). The two starts were the same game BY REACH; by raw row number they differ in tens of
-    thousands of paths (clips, characters, lights, guns, guards, the players). A tally played on a module-started game with the puppet's book
-    as it stood stopped in half a second on the wrong object. Two ways out. The book rekeyed to the Rust game's rows at the start (the
-    pairs by reach, which `diff.ts index` numbers for a tool; the host's own Input and camera paired by role, since neither walk reaches
-    them before the first update; the rows only Rust holds made or left out): a puppet one program built paired with rows another made, by
-    the shape of a walk, and thrown away the day the page makes its picture from the game's rows. Or no puppet kept at all: every object
-    the picture reads MADE from the Rust game's rows, as a man the tick makes at run time already is (items 2 to 6). THE SECOND IS THE WAY:
-    a start, a restart and a man made in play then become one act. Until then a module-started game is whole for a host with NO puppet (a
-    game server stands N seats from a level's text today), and the page keeps its road.
 
 ## Levels: what a level owes whoever plays it (`src/bin/levels.rs`)
 
@@ -240,8 +166,7 @@ Each stands the level (or every mission of it) by this crate's start and asks th
 
 ## Hold: is this build the same game as that one (`src/bin/hold.rs`)
 
-For a change that is meant to change nothing of play. It needs no page, no TypeScript, no module build and no file of the wire, so a
-change of the wire does not strand it.
+For a change that is meant to change nothing of play. It needs no page, no TypeScript and no module build.
 
 ```
 cd rust/game_start
@@ -302,7 +227,7 @@ other game came to.
 
 ## The gate: what a build is held to (`src/bin/gate/`)
 
-One native command, with nothing of TypeScript in it: no page, no module and no bridge. It stands every mission on the game's own list and plays a few of them, each as the page and the server
+One native command, with nothing of TypeScript in it: no page and no module. It stands every mission on the game's own list and plays a few of them, each as the page and the server
 stand a game (`dress`, seed 9, the mission's own link).
 
 ```

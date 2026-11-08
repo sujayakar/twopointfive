@@ -1069,15 +1069,8 @@ pub fn readers_now(root: &Path) -> Result<Vec<String>, String> {
     Ok(out)
 }
 
-/// The report, and (with `calls`, the text of tools/blitz/calls.json) the rows of the call surface whose function
-/// cannot write the game, as JSON: `{"rows": [key, …]}`.
-/// The keys of the contract file: `rows` holds a key as a string, or a row with its `key`.
-fn contract_keys(c: &serde_json::Value) -> Vec<String> {
-    let Some(rows) = c["rows"].as_array() else { return Vec::new() };
-    rows.iter().filter_map(|r| r.as_str().or_else(|| r["key"].as_str())).map(str::to_string).collect()
-}
-
-pub fn report(root: &Path, state: &Path, bare: Option<&str>, calls_json: Option<&str>) -> Result<(String, Option<String>), String> {
+/// The report.
+pub fn report(root: &Path, state: &Path, bare: Option<&str>) -> Result<String, String> {
     use std::fmt::Write as _;
     let demoted = load_state(state);
     let files = bodies(root)?;
@@ -1086,11 +1079,8 @@ pub fn report(root: &Path, state: &Path, bare: Option<&str>, calls_json: Option<
     let tainted = tainted_fns(root, &files, &parsed, &all);
     // by module: functions, taking the game, of those `&Game`, of those sure readers
     let mut by_module: BTreeMap<String, (usize, usize, usize, usize)> = BTreeMap::new();
-    // a name is a reader only if every function of that module and name is one
     let mut readers: HashSet<(String, String)> = HashSet::new();
-    let mut not_readers: HashSet<(String, String)> = HashSet::new();
     let mut lying: Vec<String> = Vec::new();
-    let mut no_game: HashSet<(String, String)> = HashSet::new();
     for (fi, fns) in all.iter().enumerate() {
         let module = module_of(&files[fi].1);
         for f in fns {
@@ -1124,17 +1114,9 @@ pub fn report(root: &Path, state: &Path, bare: Option<&str>, calls_json: Option<
                     if !is_mut && !any_mut && !taint {
                         e.3 += 1;
                         readers.insert(k);
-                    } else {
-                        not_readers.insert(k);
                     }
                 }
-                None => {
-                    if any_mut || taint {
-                        not_readers.insert(k);
-                    } else {
-                        no_game.insert(k);
-                    }
-                }
+                None => {}
             }
         }
     }
@@ -1155,42 +1137,6 @@ pub fn report(root: &Path, state: &Path, bare: Option<&str>, calls_json: Option<
     let _ = writeln!(o, "\n## Take `&Game` and can write past it ({})\n", lying.len());
     let _ = writeln!(o, "Each names `sim::` (the block behind the game's slot), a static or a cell, or calls a function that does. The taint is by the word,\nso a pure query of `sim::` is here too: the signature says reader, this program cannot.\n");
     let _ = writeln!(o, "{}", lying.join(", "));
-    // the call surface: a row of calls.json is `"rust": "crate::module::name"` under its key
-    let mut reads_json = None;
-    if let Some(text) = calls_json {
-        let v: serde_json::Value = serde_json::from_str(text).map_err(|e| format!("calls.json: {e}"))?;
-        let rows = v["rows"].as_array().ok_or("calls.json has no rows")?;
-        let (mut keys, mut pure_keys, mut with_game) = (Vec::new(), Vec::new(), 0);
-        for r in rows {
-            let (Some(key), Some(rust)) = (r["key"].as_str(), r["rust"].as_str()) else { continue };
-            let mut it = rust.trim_start_matches("crate::").split("::");
-            let k = (it.next().unwrap_or("").to_string(), it.next().unwrap_or("").to_string());
-            if readers.contains(&k) || not_readers.contains(&k) {
-                with_game += 1;
-            }
-            if readers.contains(&k) && !not_readers.contains(&k) {
-                keys.push(key.to_string());
-            } else if no_game.contains(&k) && !not_readers.contains(&k) && !readers.contains(&k) {
-                pure_keys.push(key.to_string());
-            }
-        }
-        let _ = writeln!(o, "\n## Rows of the call surface whose function is a sure reader ({} of {} rows; {} more take no game and write nothing)\n", keys.len(), rows.len(), pure_keys.len());
-        let _ = writeln!(o, "{}\n\n### Take no game, no `&mut`, and name no `sim::`, static or cell ({})\n\n{}", keys.join(", "), pure_keys.len(), pure_keys.join(", "));
-        let _ = with_game;
-        let mut all_keys: Vec<&String> = keys.iter().chain(pure_keys.iter()).collect();
-        all_keys.sort();
-        let note = "The keys of calls.json's rows whose Rust function cannot write the game: it takes the game by a shared borrow, has no `&mut` anywhere in its parameters, and neither it nor anything it uses is unsafe, names a static or a cell, or is handed a block of the sim to write (the compiler's proof, then the taint of tools/fold/readers.sh). After a crossing of one the host exports and applies nothing. Written by `tools/fold/readers.sh --reads`: run it again when bodies change.";
-        reads_json = Some(format!("{{\"_\": {}, \"rows\": [\n{}\n]}}\n", serde_json::to_string(note).unwrap(), all_keys.iter().map(|k| format!("  {}", serde_json::to_string(k).unwrap())).collect::<Vec<_>>().join(",\n")));
-        // rows that read BY CONTRACT (tools/blitz/reads-contract.json, kept by hand): one this pass now proves has its place in the
-        // file written here and leaves that one
-        if let Ok(text) = std::fs::read_to_string(root.join("tools/blitz/reads-contract.json")) {
-            let c: serde_json::Value = serde_json::from_str(&text).map_err(|e| format!("reads-contract.json: {e}"))?;
-            let proved = contract_keys(&c).into_iter().filter(|k| all_keys.iter().any(|a| *a == k)).collect::<Vec<_>>();
-            if !proved.is_empty() {
-                let _ = writeln!(o, "\n## PROVED NOW: take these rows out of tools/blitz/reads-contract.json ({})\n\nEach read by contract; the compiler and the taint now say the same, so the row is in the reads file this pass writes.\n\n{}", proved.len(), proved.join(", "));
-            }
-        }
-    }
     // the compiler's bare answer, taken before the taint: a map of who touches the Game struct, not a proof of who moves nothing
     if let Some(b) = bare {
         let names: Vec<&str> = b.lines().filter(|l| !l.is_empty()).collect();
@@ -1199,7 +1145,7 @@ pub fn report(root: &Path, state: &Path, bare: Option<&str>, calls_json: Option<
         let _ = writeln!(o, "The second number is the functions that touch no field of the Game struct for writing, yet take another `&mut`, name `sim::`, a static\nor a cell, or call one that does.\n");
         let _ = writeln!(o, "{}", only.join(", "));
     }
-    Ok((o, reads_json))
+    Ok(o)
 }
 
 #[cfg(test)]
@@ -1265,12 +1211,6 @@ mod tests {
     }
 
     /// `read` in a name is no licence: only a function that hands back `&'static` and no `mut` is a reading twin.
-    #[test]
-    fn the_contract_file_gives_its_keys_as_strings_or_rows() {
-        let c: serde_json::Value = serde_json::from_str(r#"{"_": "note", "rows": ["a", {"key": "b", "contract": "puts back what it takes", "check": "x"}, 3]}"#).unwrap();
-        assert_eq!(contract_keys(&c), vec!["a".to_string(), "b".to_string()]);
-        assert!(contract_keys(&serde_json::json!({})).is_empty());
-    }
 
     #[test]
     fn a_function_only_named_read_is_no_twin() {

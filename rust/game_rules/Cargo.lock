@@ -11,7 +11,6 @@ name = "game_rules"
 version = "0.1.0"
 dependencies = [
  "game_types",
- "game_wire",
  "prim",
  "sim",
 ]
@@ -21,15 +20,6 @@ name = "game_types"
 version = "0.1.0"
 dependencies = [
  "game_derive",
- "prim",
- "sim",
-]
-
-[[package]]
-name = "game_wire"
-version = "0.1.0"
-dependencies = [
- "game_types",
  "prim",
  "sim",
 ]

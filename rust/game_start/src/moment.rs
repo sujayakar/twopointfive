@@ -13,7 +13,7 @@ impl Moment {
     pub fn laid(&self, slot: usize) -> Box<Game> {
         sim::state::put(slot, &self.block);
         let mut g = self.game.clone();
-        game::io::set_slot(&mut g, slot);
+        game::game::stand_in(&mut g, slot);
         // (the box world's copy in rust/sim stands outside the block and is the abandoned moment's: written whole again, by `whole`)
         g.col.mirror.put_backs = -1.0;
         g

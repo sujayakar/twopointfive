@@ -15,7 +15,7 @@ import { Man, Section, View } from '../../src/draw/sections';
 
 const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.WALK_BREAK === '1';
 const wasm = faceHere(); if (!wasm) { console.error('walk-check: no module of these sources (tools/blitz/face-build.ts)'); process.exit(1); }
-const instance = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array(readFileSync(wasm))), { env: { face_roll: () => { throw new Error('the game asked a die'); } } });
+const instance = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array(readFileSync(wasm))));
 const [mannequin, mannequinBin, cast, castLook] = characterFiles(ROOT), own = { mannequin, mannequinBin, cast, castLook };
 let fails = 0; const line = (ok: boolean, what: string, why = ''): void => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}${why ? `\n    ${why}` : ''}`); };
 const fresh = (): DrawGame => new DrawGame({ exports: instance.exports, bytes: 0, fetchMs: 0, compileMs: 0 });

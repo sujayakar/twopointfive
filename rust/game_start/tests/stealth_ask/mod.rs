@@ -295,7 +295,7 @@ impl StealthAsk for Play {
         got
     }
     fn fog_up(&mut self) { self.g.fog_of_war.on = true; }
-    fn fogged(&self, gd: GuardId) -> bool { game::fogofwar::fog_of_war_hidden__body(&self.g, gd) }
+    fn fogged(&self, gd: GuardId) -> bool { game::fogofwar::fog_of_war_hidden(&self.g, gd) }
     fn things_kept(&self) -> Vec<([f64; 2], bool)> { self.g.fog_of_war.thing_recs.values().map(|r| ([r.x, r.z], r.held)).collect() }
     fn furniture(&self) -> Vec<game::ids::PropId> { self.g.props.props.iter().copied().collect() }
     fn prop_at(&self, it: game::ids::PropId) -> [f64; 2] { [game::props::prop_x(&self.g, it), game::props::prop_z(&self.g, it)] }

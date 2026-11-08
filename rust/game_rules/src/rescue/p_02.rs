@@ -1107,23 +1107,12 @@ pub fn rescue_captor(g: &mut crate::game::Game) -> Option<GuardId> {
 }
 
 /// The captor's last warning, as the men at a door have it. (rescue.ts Rescue.lastWarning)
-#[doc(hidden)] pub fn rescue_last_warning__body(g: &mut crate::game::Game, d: DoorId) -> bool {
+pub fn rescue_last_warning(g: &mut crate::game::Game, d: DoorId) -> bool {
     if !g.rescue.active || rescue_over(g) || g.rescue.t0.is_nan() { return false; }
     let s = match rescue_data(g) { Some(s) => s, None => return false };
     let name = g.dr[d].def.name.as_str();
     if name != s.room.door && Some(name) != s.side.as_ref().map(|x| x.door.as_str()) { return false; }
     (g.rescue.step == RescueStep::AboutTo || g.rescue.act.is_some() || g.rescue.executed.len() > 0) && rescue_captor(g).is_some()
-}
-
-
-#[doc(hidden)] pub fn rescue_last_warning(g: &mut crate::game::Game, d: DoorId) -> bool {
-    use crate::io::Io;
-    if g.taps & (1u64 << 16) == 0 { return rescue_last_warning__body(g, d); }
-    let mut o = crate::io::W::new(); d.w(&mut o);
-    let r = rescue_last_warning__body(g, d);
-    let mut a = crate::io::W::new(); r.w(&mut a);
-    crate::out_events::push_tap(g, 16, &o.b, &a.b);
-    r
 }
 
 #[cfg(test)]

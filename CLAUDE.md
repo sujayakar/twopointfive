@@ -120,7 +120,7 @@ happened when; the live queue is outside the repo.
   process and its environment, the page as a client (`?net=`), the lobby (host or join a co-op game, `?join=`), their checks.
 - `rust.md` — the game in Rust: its crates and their build, what Rust code owes the game, the view, the worlds it asks, and how it was
   moved out of TypeScript.
-- `ai-architecture.md` — the AI's design: a man's records, assignment and control, `rust/game/src/control/` (the list of rules, adding one).
+- `ai-architecture.md` — the AI's design: a man's records, assignment and control, `rust/game_rules/src/control/` (the list of rules, adding one).
 - `sounds.md` — the game's sound table, sound lanes on the engine replay, takes, tuning, the score and its pieces.
 - `writing.md` — how player text is written: the rules above at length, by kind of text (prompt, card, list row, menu, radio line),
   with before and after pairs from the game.

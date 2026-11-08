@@ -7,7 +7,7 @@
 //!   the level file read                                                        (scene/levelLoad.ts; `level.rs`)
 //!   the level's marks, its statics into the world, its lights into the set     (standup.ts populateHost; `passes.rs`)
 //!   the die, seeded: the men's construction dice are its first draws           (standup.ts: newDice, useDice)
-//!   the Game's constructor                                                     (game.ts; rust/game `game_new`)
+//!   the Game's constructor                                                     (game.ts; `game_new`)
 //!   the state that still moves, at home in the block                           (sim/state.ts settle)
 //!   the host's own Input and camera, the camera on the level's spawn           (headless.ts standUp)
 //!
@@ -161,7 +161,7 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
     if !o.dress { g.m.dress.dress = game::dress::DressModDRESS::default(); }
     // the host with no picture: an empty world and light set, the picture's settings, effectiveScale 1, no skin (stub.ts stubHost)
     g.engine.world = game::scene_boxes::box_world_new(&mut g, game::Opaque, None);
-    game::io::set_slot(&mut g, o.slot);   // (the slot is held twice: the game's own word and the box mirror's, which the world's lookups read)
+    game::game::stand_in(&mut g, o.slot);
     g.engine.lights = game::render_lights::LightSet::blank();
     g.engine.settings = settings::default_settings();
     g.engine.effective_scale = 1.0;
@@ -206,7 +206,7 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
 }
 
 /// ONE FRAME OF A HOST WITH NO PICTURE (headless.ts `step`): the game's update on the host's Input and camera, the camera after the man, the lights'
-/// envelopes, the Input's frame ended. Answers WHAT THE STEP TOLD ITS HOST (tools/blitz/OUT-EVENTS.md: the sounds to
+/// envelopes, the Input's frame ended. Answers WHAT THE STEP TOLD ITS HOST (the sounds to
 /// play, the marks to draw, the lines said): the list is a step's output and the host drains it, or it grows for the life of the game.
 pub fn frame(g: &mut Game, h: &Host, dt: f64) -> Vec<game::out_events::OutEvent> {
     step(g, h, dt);

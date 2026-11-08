@@ -329,17 +329,6 @@ pub fn resume() -> i32 {
     unsafe { *core::ptr::addr_of_mut!(N_WANT) = 0 };
     go(&mut Asked)
 }
-/// a search that waits is let go (the host's price threw): its tables are blank again, and the next search is a new one
-pub fn drop_run() {
-    let run = unsafe { &mut *core::ptr::addr_of_mut!(RUN) };
-    if !run.live {
-        return;
-    }
-    if !run.smoothing {
-        blank(run.n_seen);
-    }
-    end(0);
-}
 /// the search's four tables as they stood before it: every cell it wrote is in SEEN
 fn blank(n_seen: usize) {
     let (g, f, came, closed, seen) = unsafe { (&mut *core::ptr::addr_of_mut!(G), &mut *core::ptr::addr_of_mut!(F), &mut *core::ptr::addr_of_mut!(CAME), &mut *core::ptr::addr_of_mut!(CLOSED), &*core::ptr::addr_of!(SEEN)) };

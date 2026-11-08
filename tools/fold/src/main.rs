@@ -19,7 +19,6 @@
 mod dead;
 mod fields;
 mod fold;
-mod gone;
 mod knobdrop;
 mod layout;
 mod readers;
@@ -490,7 +489,7 @@ fn sharp_main(cmd: &str, args: &[String]) -> ! {
     }
 }
 
-/// `fold readers-demote | readers-restore [--diag FILE] [--taint] | readers-now | readers-report [--bare FILE] [--reads FILE]`, each with `--state FILE`:
+/// `fold readers-demote | readers-restore [--diag FILE] [--taint] | readers-now | readers-report [--bare FILE]`, each with `--state FILE`:
 /// whether a function writes, said by its signature (readers.rs; tools/fold/readers.sh drives them).
 fn readers_main(cmd: &str, args: &[String]) -> ! {
     let mut root = PathBuf::from(".");
@@ -499,13 +498,11 @@ fn readers_main(cmd: &str, args: &[String]) -> ! {
     let mut taint = false;
     let mut soften = false;
     let mut bare: Option<String> = None;
-    let mut reads: Option<String> = None;
     let mut it = args.iter();
     while let Some(a) = it.next() {
         let mut val = || it.next().cloned().unwrap_or_default();
         match a.as_str() {
             "--root" => root = PathBuf::from(val()),
-            "--reads" => reads = Some(val()),
             "--state" => state = PathBuf::from(val()),
             "--diag" => diag = Some(val()),
             "--taint" => taint = true,
@@ -544,17 +541,8 @@ fn readers_main(cmd: &str, args: &[String]) -> ! {
         }
         "readers-report" => {
             let b = bare.map(|f| std::fs::read_to_string(&f).unwrap_or_else(|e| fail(format!("cannot read {f}: {e}"))));
-            // (--reads FILE: the rows of tools/blitz/calls.json whose function cannot write the game, by key)
-            let calls = reads.as_ref().and_then(|_| std::fs::read_to_string(root.join("tools/blitz/calls.json")).ok());
-            match readers::report(&root, &state, b.as_deref(), calls.as_deref()) {
-                Ok((s, json)) => {
-                    print!("{s}");
-                    if let (Some(f), Some(j)) = (&reads, json) {
-                        if let Err(e) = std::fs::write(f, j) {
-                            fail(format!("cannot write {f}: {e}"));
-                        }
-                    }
-                }
+            match readers::report(&root, &state, b.as_deref()) {
+                Ok(s) => print!("{s}"),
                 Err(e) => fail(e),
             }
         }
@@ -573,47 +561,9 @@ fn readers_main(cmd: &str, args: &[String]) -> ! {
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if let Some(c) = args.first() {
-        if c == "fields-gone" {
-            // `fold fields-gone --type mod::Type --ts FILE [--interface NAME] [--root DIR]`: the fields of a struct of the wire's table
-            // that the TypeScript interface it mirrors no longer declares (gone.rs), a `mod::Type.field` a line: the list for
-            // `tools/wire/wire.ts drop --file` and `fold fields-drop --file`. What it counted goes to stderr.
-            let mut root = PathBuf::from(".");
-            let (mut ty, mut ts, mut interface) = (None, None, None);
-            let mut it = args[1..].iter();
-            while let Some(a) = it.next() {
-                match a.as_str() {
-                    "--root" => root = PathBuf::from(it.next().cloned().unwrap_or_default()),
-                    "--type" => ty = it.next().cloned(),
-                    "--ts" => ts = it.next().cloned(),
-                    "--interface" => interface = it.next().cloned(),
-                    x => {
-                        eprintln!("fold fields-gone: no option {x}");
-                        std::process::exit(64);
-                    }
-                }
-            }
-            let (Some(ty), Some(ts)) = (ty, ts) else {
-                eprintln!("fold fields-gone: --type mod::Type --ts FILE");
-                std::process::exit(64);
-            };
-            match gone::gone(&root, &ty, &ts, interface.as_deref()) {
-                Ok(g) => {
-                    eprintln!("fold: {ty} has {} fields on the wire; {ts} declares {} members; {} fields of the wire are declared no more{}", g.on_wire, g.declared, g.names.len(), if g.not_on_wire.is_empty() { String::new() } else { format!("; declared and not on the wire: {}", g.not_on_wire.join(", ")) });
-                    if !g.names.is_empty() {
-                        println!("{}", g.names.join("\n"));
-                    }
-                    std::process::exit(0);
-                }
-                Err(e) => {
-                    eprintln!("fold: {e}");
-                    std::process::exit(3);
-                }
-            }
-        }
         if c == "types-drop" {
             // `fold types-drop --file LIST [--write] [--root DIR]`: each `mod::Type` of LIST out of the Rust source, its declaration
-            // and its impls (knobdrop.rs), after `bun run tools/wire/wire.ts drop-type` has taken it off the wire. Exit 4, and nothing
-            // written, while anything still names one.
+            // and its impls (knobdrop.rs). Exit 4, and nothing written, while anything still names one.
             let mut root = PathBuf::from(".");
             let (mut file, mut write) = (None, false);
             let mut it = args[1..].iter();
@@ -648,8 +598,8 @@ fn main() {
             }
         }
         if c == "fields-drop" || c == "knobs-drop" {
-            // `fold fields-drop --file LIST [--write] [--root DIR]`: each `mod::Type.field` of LIST out of the Rust source (knobdrop.rs),
-            // after `bun run tools/wire/wire.ts drop --file LIST` has taken it off the wire (`knobs-drop` is its first name, for a table's rows)
+            // `fold fields-drop --file LIST [--write] [--root DIR]`: each `mod::Type.field` of LIST out of the Rust source (knobdrop.rs;
+            // `knobs-drop` is its first name, for a table's rows)
             let mut root = PathBuf::from(".");
             let (mut file, mut write) = (None, false);
             let mut it = args[1..].iter();
@@ -1089,13 +1039,13 @@ fn main() {
                 sc.table_uses.get(&pre).copied().unwrap_or(0) > 0 || ty.map(|t| named.get(&t).copied().unwrap_or(0) > 0).unwrap_or(false)
             })
         };
-        // the Rust files that are not bodies (a module's types.rs and sig.rs; never the tables' own file or the wire's):
+        // the Rust files that are not bodies (a module's types.rs and sig.rs; never the tables' own file):
         // a leaf one of them names after `.k.` is read there
         let mut elsewhere: HashSet<String> = HashSet::new();
         let leaf_set: HashSet<&str> = leaves.iter().map(|l| l.0.as_str()).collect();
         for p in lay.game_files(&root) {
             let name = p.file_name().and_then(|n| n.to_str()).unwrap_or("");
-            if body_paths.contains(&p) || matches!(name, "knobs.rs" | "io.rs" | "puppet.rs" | "call_gen.rs") {
+            if body_paths.contains(&p) || name == "knobs.rs" {
                 continue;
             }
             let Ok(t) = std::fs::read_to_string(&p) else { continue };

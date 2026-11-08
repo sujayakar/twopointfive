@@ -165,9 +165,6 @@ shape. A tainted function keeps `&mut` on its parameters. One that was WRITTEN `
 
 The report counts by module the SURE READERS (`&Game`, no `&mut` parameter of any type, not tainted), lists the functions the taint
 contradicts, and gives the compiler's bare answer before the taint as a second list (a map of who touches the struct, not a proof).
-`--reads FILE` writes the rows of the call surface (`tools/blitz/calls.json`, by key) whose function cannot write the game: a sure
-reader, or one that takes no game, no `&mut` and is not tainted.
-
 How it runs: the files as they were are kept beside the state file, and every round writes each file whole from that text plus what
 still stands changed, so words move inside their lines and no line is added or lost (an error's line is the same line of the file
 from before). An error inside a macro is placed where the macro was called; a function handed on as a value where a `&mut` one is
@@ -176,25 +173,19 @@ wanted is found by the compiler's note on its signature; an error that fits noth
 it `mut` for every user), or follow a read through the sim crate's own private accessors (a function of the sim that reads a
 `static mut` is tainted like one that writes it).
 
-## A field the TypeScript no longer declares
-
-A struct of the wire's table mirrors a TypeScript interface. When the interface loses a member, the mirror keeps the field: carried
-over the wire and read by nothing.
+## A field nothing reads
 
 ```sh
-fold fields-gone --type root_settings::RenderSettings --ts src/settings.ts > gone.txt   # the list, by program: `mod::Type.field` a line
-bun run tools/wire/wire.ts drop --file gone.txt                                         # off the wire (table, io.rs, the page's half)
-fold fields-drop --file gone.txt --write                                                # out of the Rust source
-bun run tools/wire/wire.ts drop-type root_settings::RenderSettingsDenoiser              # a type whose last field went: off the wire,
-fold types-drop --file types.txt --write                                                # and out of the Rust source (`mod::Type` a line)
+fold fields-drop --file gone.txt --write      # `mod::Type.field` a line: out of the Rust source
+fold types-drop --file types.txt --write      # a type whose last field went (`mod::Type` a line)
 ```
 
 `fields-drop` (first named `knobs-drop`, for a table's rows) takes each field out of its struct, out of every literal and pattern of
 that struct, and deletes a statement that only sets it (`s.field = …;`) where the text itself says `s` is of the struct: a parameter
 of that type, a `let s: Type`, a `let s = Type { … }` or `Type::f(…)` with `f` a function of the type that hands back `Self`. It
 looks in the game's crates and the crates that use them. A read that is left is a compile error, which is the check: run `cargo check
---all-targets` in every crate after it. A type only a dropped field used (an enum of a setting's words) goes with `wire.ts drop-type`
-and then `fold types-drop`: its declaration and its impls. `types-drop` writes nothing and says the places while anything still names
+--all-targets` in every crate after it. A type only a dropped field used (an enum of a setting's words) goes with
+`fold types-drop`: its declaration and its impls. `types-drop` writes nothing and says the places while anything still names
 the type.
 
 ## The report

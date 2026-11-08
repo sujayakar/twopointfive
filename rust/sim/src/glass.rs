@@ -38,7 +38,6 @@ const D_HU: usize = 2;
 const D_HV: usize = 3;
 const D_LAST: usize = 4;
 const D_LAST_K: usize = 5;
-pub const GW_BI: usize = 0;
 pub const GW_FLAGS: usize = 1;
 pub const GW_COLS: usize = 2;
 pub const GW_ROWS: usize = 3;

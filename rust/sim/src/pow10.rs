@@ -1,5 +1,5 @@
 //! The decimal powers 1e-323 … 1e308 as the language reads them (maths.rs log10): each one the double nearest the decimal, by its bits.
-//! Written by tools/sim/pow10.ts; the check in tools/qa/rust-check.ts holds every row to `Number(`1e${k}`)`.
+//! tools/qa/rust-rules-check.ts holds every row to `Number(`1e${k}`)`.
 pub const POW10_MIN: i32 = -323;
 pub const POW10: [u64; 632] = [
     0x0000000000000002, 0x0000000000000014, 0x00000000000000ca, 0x00000000000007e8, 0x0000000000004f10, 0x00000000000316a2,
