@@ -39,6 +39,8 @@ section! {
         pub target: [f32; 3],
         /// what a lesson does not let the hand do to the view: 1 turn it · 2 zoom it
         pub locks: u32,
+        /// saves made of this game so far: moves when there is another
+        pub saves: u32,
         /// what the game is set to, for a screen that sets it: hits do nothing to him, the men think, unlimited ammunition, it saves by itself, the wall hold's feel, walking into a wall takes
         /// it, the command key tapped twice calls the squad in
         pub god: u32,
@@ -80,6 +82,7 @@ pub fn fill(g: &Game, stood: u32, desired: f64, out: &mut Vec<View>) {
     }
     r.ended = ended(g);
     { let (begun, over) = game::verdict::run_on(g); r.run = begun as u32 | (over as u32) << 1; }
+    r.saves = (g.saves.stats.autosaves + g.saves.stats.manual) as u32;
     (r.god, r.thinks, r.ammo, r.autosave) = (g.god_mode as u32, g.ai_enabled as u32, g.infinite_ammo as u32, g.saves.enabled as u32);
     (r.wall_feel, r.wall_press, r.fall_in) = (g.k.wallsnap.on as u32, g.k.wallsnap.press as u32, game::orders::squad_orders_twice_on(g) as u32);
     r.locks = game::rails::rails_locks(g, "camera") as u32 | (game::rails::rails_locks(g, "zoom") as u32) << 1;
