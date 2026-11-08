@@ -100,7 +100,7 @@ fn in_a_game_of_two_each_squad_line_says_low_for_its_own_men() {
                 }
                 p.frame();
             }
-            let say = |p: &mut Play, i: usize| { let seat = p.g.seats[i]; game::seats::with_seat(&mut p.g, seat, &mut |g| game::silent::posture_word(g).unwrap_or_default()) };
+            let say = |p: &mut Play, i: usize| { let seat = p.g.seats[i]; game::seats::with_seat(&mut p.g, seat, &mut |g| game::silent::posture_word(g, &game::seats::here(g)).unwrap_or_default()) };
             assert_eq!(say(&mut p, near), "SILENT · low", "seed {s}: the suspicious man is near seat {near}'s men: {}", p.roll());
             assert_eq!(say(&mut p, 1 - near), "SILENT", "seed {s}: he is out of reach of seat {}'s men: {}", 1 - near, p.roll());
         }
