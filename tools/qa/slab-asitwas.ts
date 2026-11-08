@@ -14,7 +14,7 @@
 // level dressed or rebuilt since leaves this check alone. A new word is written with the blob it was folded over. The office is the game's own level
 // (no file is handed to the stand for it), so its word does follow that level.
 const STAND = process.env.TPS_PROFILE === 'frozen' ? 'frozen' : 'shipped';
-process.env.TPS_PROFILE = STAND; process.env.TPS_CPUSENSE = '1';
+process.env.TPS_PROFILE = STAND;
 import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { resolve } from 'path';
 import { spawnSync } from 'node:child_process';

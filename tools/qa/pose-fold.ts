@@ -12,7 +12,7 @@ import { resolve } from 'node:path';
 const [run, root] = process.argv.slice(2); const [scn, seed] = (run ?? '').split(':');
 if (!scn || !seed) { console.error('pose-fold: bun run tools/qa/pose-fold.ts <scenario:seed> [root of another checkout]'); process.exit(2); }
 const ROOT = resolve(root ?? resolve(import.meta.dir, '../..'));
-process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.PT_DIGEST ??= '1';
+process.env.TPS_PROFILE ??= 'shipped'; process.env.PT_DIGEST ??= '1';
 const { Game } = await import(`${ROOT}/src/game/game.ts`);
 const PT = await import(`${ROOT}/tools/qa/playthrough.ts`);
 const { men } = await import(`${ROOT}/src/game/seats.ts`);

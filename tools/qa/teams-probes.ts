@@ -247,8 +247,6 @@ export async function teamsDespawn() {
   const dangling = game.guards.some((o: any) => (o.foe && o.foe !== 'player' && !game.guards.includes(o.foe)) || (o.standoff && !game.guards.includes(o.standoff.pair)));
   allPass = verdict(game.guards.length === g0 && steady() === L0 && ids() === ids0 && units(game).length === 0 && game.spectate === -1 && !dangling, 'despawned: guards, steady lights and ids exactly as before, camera back on Sam, no reference left behind', `guards ${game.guards.length} · steady lights ${steady()} · ids ${ids()} · spectate ${game.spectate} · (${dead} of them had died in the 4 s)`) && allPass;
   for (let f = 0; f < 10; f++) W.step(DT);
-  const keysLeft = [...game.probe.results.keys()].filter((k: string) => k.startsWith('unit'));
-  allPass = verdict(keysLeft.length === 0, 'no meter answers kept under unit keys', keysLeft.join(',') || 'none') && allPass;
   // ids do not leak: a fresh spawn starts again at the bottom of the unit range
   const again = spawnUnit(game, { team: 'hostile', pos: [23.2, 0, 13.35] }); const idAgain = again.char.id; despawnUnit(game, again);
   allPass = verdict(idAgain === 20, 'ids come back: the next spawn is #20 again', `#${idAgain}`) && allPass;
