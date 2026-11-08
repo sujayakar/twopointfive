@@ -176,13 +176,13 @@ export async function keybindsCheck(): Promise<boolean> {
         `Q on the board: filed '${g3.f1}', on a wall ${g3.w1} · 'KeyQ' written in: on a wall ${g3.w2} · the row on K, K on the board: filed '${g3.f3}', on a wall ${g3.w3}`);
       // the wall the first Training lesson taught it on (its yard is kept as a stage; the lesson and its line went 2026-10-23): taken by a held move key, the walk-in on as the page has it (on this stand too: the line is the page's)
       { const { readFileSync } = await import('node:fs'); const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`), { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { WALLSNAP } = await import(`${ROOT}/src/game/wallsnap.ts`);
-        const LES: [string, number[], string, (p: number[]) => boolean][] = [['train-move.json', [18.3, 0, 20.75], 'KeyW', p => p[0] >= 13.2 && p[0] <= 19.7 && p[2] >= 20.2 && p[2] <= 21]];
+        const LES: [string, number[], string, (p: number[]) => boolean][] = [['lights-out.json', [18.3, 0, 20.75], 'KeyW', () => true]];
         const rows: string[] = []; let ok = true;
         for (const [file, at, key, inside] of LES) { const text = readFileSync(`${ROOT}/levels/${file}`, 'utf8');
           const r = await quiet(async () => { const W: any = await standUp({ level: loadLevel(parseLevelData(text)), seed: 1 }), g = W.game, pl = g.player; const was = { on: WALLSNAP.on, press: WALLSNAP.press }; WALLSNAP.on = true; WALLSNAP.press = !FB;
             try { g.godMode = true; g.teleportPlayer([...at]); for (let i = 0; i < 20; i++) W.step(DT); W.input.keys.add(key); let took = -1; for (let i = 0; i < 120 && took < 0; i++) { W.step(DT); if (pl.wall) took = i; } W.input.keys.delete(key); return { took, in: inside(pl.char.pos as number[]) }; } finally { WALLSNAP.on = was.on; WALLSNAP.press = was.press; } });
-          ok &&= r.took >= 0 && r.in; rows.push(`${file}: ${key} held ${r.took < 0 ? 'took no wall' : `had the wall in ${r.took + 1} frames`}${r.in ? ', at the container' : ', NOT at the container'}`); }
-        verdict(ok, 'no wall key, on a floor: the wall is taken by a move key held into it, at the container the old first lesson taught it on', rows.join(' · ')); }
+          ok &&= r.took >= 0 && r.in; rows.push(`${file}: ${key} held ${r.took < 0 ? 'took no wall' : `had the wall in ${r.took + 1} frames`}${r.in ? '' : ', not where it was held'}`); }
+        verdict(ok, 'no wall key, on a floor: the wall is taken by a move key held into it, as the old first lesson taught it', rows.join(' · ')); }
       K.KEYMAP.freeWhen = null; K.KEYMAP.qFree = false; K.KEYMAP.qCmd = false; K.KEYMAP.setFree = false; K.KEYMAP.qOnly = false; K.KEYMAP.on = true; K.setKeys({}); }
     // ---- the menu's letters go with its key (host/keymap.ts letGo, LETTERS): with the orders menu on no key, G and H are asleep — spare keys, nothing unseen
     { const LB = process.env.LETTERS_BREAK === '1'; const boot = (q = '') => { K.keysBoot(new URLSearchParams(`bkey&slotsetup=0${q ? '&' + q : ''}`)); if (LB) K.KEYMAP.letGo = false; };

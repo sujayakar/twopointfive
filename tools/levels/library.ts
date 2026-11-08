@@ -8,7 +8,7 @@
 // HOW IT KNOWS. A kit hands its pieces out through src/scene/library.ts `pieces(kit, fns)`; with a watcher set, each piece laid is told. So this file
 //   1. builds EVERY generator under tools/levels with the watcher on (and runs a look file's `finish` on what its plain generator built): which piece each
 //      level lays, how often, and with what arguments;
-//   2. takes for each piece the call a SHOWROOM makes (levels/gwot-yard.json stands the look's kit, levels/library-hall.json the older kits'), else the first
+//   2. takes for each piece the call a SHOWROOM makes (tools/levels/gwot-yard.ts stands the look's kit, levels/library-hall.json the older kits'), else the first
 //      call any level makes, and lays that one call alone in a fresh kit: the boxes, loose parts and lamps it adds are the piece — its size, what it costs,
 //      what it is to a man, its paints; and, from the door again, WHOSE piece it is: a piece that lays nothing of its own, only one piece of another kit
 //      (the lived kit's chair is the office's, named as a room's lived thing), is that piece, and is not a second way of building the name;

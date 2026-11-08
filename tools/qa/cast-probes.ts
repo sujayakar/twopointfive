@@ -316,8 +316,8 @@ export async function castLook() {
     { // THE OFFICE IS NOT ONE OF THE LOOK'S PLACES (scene/look.ts setLookPlace / lookDress / lookOffice; game/cast.ts officeDress): the look on, the page booted on
       // the office family → the first cast file and its tables, its defenders dressed for a building, Sam's sneaking suit as on any level
       const Q = (q: string) => placeOfQuery(new URLSearchParams(q));
-      verdict(!Q('') && !Q('level=relief') && !Q('levelFile=office.json&roomclear') && !Q('levelFile=office-t20.json') && Q('levelFile=compound.json&roomclear') && Q('levelFile=bazaar.json&quiet') && Q('levelFile=train-move.json') && Q('levelFile=officers-mess.json') && !Q('levelFile=compound') && !Q('levelFile=../compound.json'),
-        'the place by the page\'s query: no levelFile, ?level=relief and office / office-* files are the office; every other level file is one of the look\'s places; a name the boot will not fetch is the office it falls back to');
+      verdict(!Q('') && !Q('levelFile=office.json&roomclear') && !Q('levelFile=office-t20.json') && Q('levelFile=compound.json&roomclear') && Q('levelFile=bazaar.json&quiet') && Q('levelFile=train-move.json') && Q('levelFile=officers-mess.json') && !Q('levelFile=compound') && !Q('levelFile=../compound.json'),
+        'the place by the page\'s query: no levelFile and office / office-* files are the office; every other level file is one of the look\'s places; a name the boot will not fetch is the office it falls back to');
       const CM: any = await import(`${ROOT}/src/render/charMaterials.ts`), wasSuit = LOOK.suit;
       try {
         LOOK.on = true; LOOK.suit = true; const vLook = CM.charMatsVersion(); setLookPlace(false);

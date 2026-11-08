@@ -114,7 +114,7 @@ const CARD3 = async () => {
 
 (async () => {
   let red = 0;
-  const defs = { on: '', lesson: 'levelFile=train-orders.json&roomclear=1&', off: 'savetimeline=0&', card: '' };
+  const defs = { on: '', lesson: 'levelFile=compound.json&roomclear=1&', off: 'savetimeline=0&', card: '' };
   for (const name of JOBS) {
     const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });   // (a browser per job: one that dies under the software adapter costs its own job only)
     const page = await (await browser.newContext({ viewport: { width: 1024, height: 576 }, deviceScaleFactor: 1 })).newPage();
