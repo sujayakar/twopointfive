@@ -89,7 +89,7 @@ fn main() {
                 if k == frames { println!("BESIDE: {} frames, the die's count and every part of the block the same after every frame (die n={}, time {:.4})", frames, na, s.game.time); }
             }
             if beside.is_none() && (k % 60 == 0 || k == frames) {
-                println!("frame {} time {:.4} die n={} parts {}", k, s.game.time, sim::state::state(0).dice.n, block::part_hashes(0).iter().map(|h| h.to_string()).collect::<Vec<_>>().join(" "));
+                println!("frame {} time {:.4} die n={} parts {}", k, s.game.time, sim::state::state(s.game.sim).dice.n, block::part_hashes(s.game.sim).iter().map(|h| h.to_string()).collect::<Vec<_>>().join(" "));
             }
         }
     }).unwrap();

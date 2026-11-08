@@ -33,8 +33,10 @@ pub struct Opts {
     /// THE ROWS THAT ONLY DRESS THE PICTURE (game/dress.ts DRESS), as a page has them: the debris pool tumbling a break's pieces, above all. Off (the default) as
     /// on any host that draws nothing: a thrown piece is then only its one landing told to the floor, and the pool stays empty.
     pub dress: bool,
+    /// a mission the game refuses is said (`Play.refused`) and no stop
+    pub may_refuse: bool,
 }
-impl Default for Opts { fn default() -> Self { Opts { seed: 1, squad: 4, seats: 1, dress: false } } }
+impl Default for Opts { fn default() -> Self { Opts { seed: 1, squad: 4, seats: 1, dress: false, may_refuse: false } } }
 
 /// What stands on a level's floor: its boxes (the round things, the boxes that stand shaped and the pieces of trim among them), and who and what
 /// the game made of the file's civilians, devices and vents.
@@ -70,8 +72,10 @@ pub struct Play {
     pub smoke: Vec<game::out_events::OutEvent>,
     /// each man's last bubble heard: when it was said, and its words
     spoke: Vec<(GuardId, f64, String)>,
-    /// where the hand's cursor points in the world, kept there as the camera moves (None: where the host left it)
-    cursor: Option<[f64; 3]>,
+    /// where the hand's cursor points in the world, kept there as the camera moves (None: where the host left it). The host's and no part of the game: whoever puts a game back puts this back too
+    pub cursor: Option<[f64; 3]>,
+    /// the game's own words where the address's mission was refused (`Opts.may_refuse`)
+    pub refused: Option<String>,
     _one: MutexGuard<'static, ()>,
 }
 
@@ -83,10 +87,10 @@ fn start_by(data: &Json, room_clear: bool, link: Option<&str>, o: &Opts) -> Play
     let one = ONE_GAME.lock().unwrap_or_else(|p| p.into_inner());
     let ch = CHARACTER.get_or_init(files::CharacterFiles::read);
     let scenario = if room_clear { Some(game::scene_scenario_list::ScenarioSpec { kind: game::scene_scenario_list::ScenarioSpecKind::Roomclear, squad: o.squad as f64, level: None, seed: None }) } else { None };
-    let Stood { mut game, host, .. } = stand::stand(data, ch.assets(), &StartOpts { seed: o.seed, seats: o.seats, scenario, link: link.map(String::from), dress: o.dress, ..Default::default() });
+    let Stood { mut game, host, refused, .. } = stand::stand(data, ch.assets(), &StartOpts { seed: o.seed, seats: o.seats, scenario, link: link.map(String::from), dress: o.dress, may_refuse: o.may_refuse, ..Default::default() });
     game.out.clear();
     HOLDS.with(|h| h.set(true));   // (only once a Play exists to put it down: a stand that panicked holds nothing)
-    let mut p = Play { g: game, host, frames: 0, said: Vec::new(), sounds: Vec::new(), end_cards: Vec::new(), smoke: Vec::new(), cursor: None, spoke: Vec::new(), _one: one };
+    let mut p = Play { g: game, host, frames: 0, said: Vec::new(), sounds: Vec::new(), end_cards: Vec::new(), smoke: Vec::new(), cursor: None, refused, spoke: Vec::new(), _one: one };
     p.hear();
     p
 }
@@ -110,17 +114,23 @@ impl Play {
         let data = json::parse(&files::level_text(name)).unwrap_or_else(|e| panic!("{}: {}", name, e));
         start_by(&data, false, Some(link), o)
     }
+    /// The same on a level file's tree a caller has already read (and perhaps changed).
+    pub fn mission_of(data: &Json, link: &str, o: &Opts) -> Play { start_by(data, false, Some(link), o) }
 
     /// one frame of the host; what the step told its host is kept (`said`, `sounds`)
-    pub fn frame(&mut self) {
+    pub fn frame(&mut self) { self.frame_shown(|_| {}); }
+    /// …with what a host does between the tick and the emptying of its out list: draws, as a page does, while `g.out` still holds what was told
+    pub fn frame_shown(&mut self, show: impl FnOnce(&mut Play)) {
         use game::out_events::OutEvent as E;
         if let Some(at) = self.cursor {
             let (w, h) = (self.host.canvas.client_width, self.host.canvas.client_height);
             let (sx, sy, front) = game::camera::follow_camera_project(&mut self.g, self.host.cam, at, w, h, None, None);
             if front { self.g.tab.input[self.host.input].mouse_x = sx; self.g.tab.input[self.host.input].mouse_y = sy; }
         }
-        let out = stand::frame(&mut self.g, &self.host, DT);
+        stand::step(&mut self.g, &self.host, DT);
         self.frames += 1;
+        show(self);
+        let out = core::mem::take(&mut self.g.out);
         let t = self.g.time;
         for e in out {
             match e {
@@ -147,22 +157,31 @@ impl Play {
     /// get the same hands and only the shown seat differs. Each seat's command is sampled from its own Input through its own camera (idle, unless
     /// a test writes them). Between frames the first seat stands on the game, for the test to read.
     pub fn net_frame(&mut self, shown: usize) {
+        let cmds = self.net_sample();
+        self.net_step(&cmds, shown);
+    }
+    /// each seat's command, sampled from its own Input through its own camera
+    pub fn net_sample(&mut self) -> Vec<game::cmd::PlayerCmd> {
         let seats = self.g.seats.clone();
         let canvas = self.host.canvas;
-        let cmds: Vec<game::cmd::PlayerCmd> = seats.iter().map(|&s| {
+        seats.iter().map(|&s| {
             let (input, cam) = (self.g.tab.cmd_seat[s].input, self.g.tab.cmd_seat[s].cam);
             game::seats::with_seat(&mut self.g, s, &mut |g| game::cmd::sample_cmd(g, input, cam, canvas, None))
-        }).collect();
+        }).collect()
+    }
+    /// the game steps on every seat's command, on a machine that shows the seat `shown`
+    pub fn net_step(&mut self, cmds: &[game::cmd::PlayerCmd], shown: usize) {
+        let seats = self.g.seats.clone();
         game::seats::show_seat(&mut self.g, seats[shown]);
-        game::game::game_step_seats(&mut self.g, DT, &cmds);
+        game::game::game_step_seats(&mut self.g, DT, cmds);
         game::seats::show_seat(&mut self.g, seats[0]);
         self.g.out.clear();
         self.frames += 1;
     }
-    /// Every part of the game's state, a word a part (`game::state_words::state_names` names them): what two machines of one game must agree on.
+    /// Every part of the game's state, a word a part (`parts::names` names them), rust/sim's block with the rest: what two machines of one game must agree on.
     pub fn words(&mut self) -> Vec<u32> {
         let (mut w, mut out) = (game::bytes::W::new(), Vec::new());
-        game::state_words::state_words(&mut self.g, &mut w, &mut out);
+        crate::parts::words(&mut self.g, &mut w, &mut out);
         out
     }
     /// Run `secs` of game time.
@@ -498,8 +517,7 @@ pub fn nudge(seed: u32, k: u32) -> f64 {
 /// The first frame at which two games' words differ, and the parts of the state that do.
 pub fn parting(a: &[Vec<u32>], b: &[Vec<u32>]) -> Option<(usize, String)> {
     let k = a.iter().zip(b).position(|(x, y)| x != y)?;
-    let parts: Vec<String> = game::state_words::state_names().into_iter().zip(a[k].iter().zip(&b[k])).filter(|(_, (x, y))| x != y).map(|(n, _)| n).collect();
-    Some((k, parts.join(", ")))
+    Some((k, crate::parts::differ(&crate::parts::names(), &a[k], &b[k]).join(", ")))
 }
 
 /// metres between two places in plan

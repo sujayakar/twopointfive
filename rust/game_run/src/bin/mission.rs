@@ -179,8 +179,8 @@ fn main() {
                     println!("KNOBS: {} of {} written by knobs_to_rust differ from the TypeScript module's table ({} doubles){}", bad.len(), n, want.len() / 8, if bad.is_empty() { String::new() } else { format!(": lines {:?}", &bad[..bad.len().min(12)]) });
                 }
             }
-            let d = &sim::state::state(0).dice;
-            let w = unsafe { std::slice::from_raw_parts(sim::state::addr(0) as *const u32, len / 4) };
+            let d = &sim::state::state(g.sim).dice;
+            let w = unsafe { std::slice::from_raw_parts(sim::state::addr(g.sim) as *const u32, len / 4) };
             // (BLITZ_POST=<file>: this game's OWN series, in post.txt's form, to keep a run whose series is the Rust game's where the TypeScript's was
             //  another on purpose, or was never made: tools/blitz/keep.sh)
             if let Some(f) = post_file.as_mut() { use std::io::Write; let mut l = format!("{} {} {} {}", k, d.n, d.s, g.time); for P in sim::state::PARTS.iter() { l.push(' '); l.push_str(&part_hash(&w[P.off / 4..(P.off + P.len) / 4]).to_string()); } writeln!(f, "{}", l).unwrap(); f.flush().unwrap(); }
@@ -205,7 +205,7 @@ fn main() {
             }
             if first_part || keep.iter().any(|(a, b)| k >= *a && k <= *b) || (every > 0 && k % every == 0) {
                 std::fs::write(format!("{}/n{}.bin", dir, k), game::io::export(&g)).unwrap();
-                let b = unsafe { std::slice::from_raw_parts(sim::state::addr(0) as *const u8, len) };
+                let b = unsafe { std::slice::from_raw_parts(sim::state::addr(g.sim) as *const u8, len) };
                 std::fs::write(format!("{}/ns{}.bin", dir, k), b).unwrap();
             }
             if !skip("view") { game_run::view(&mut g); }

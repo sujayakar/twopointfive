@@ -37,6 +37,7 @@
 //! WHAT IT PROVES: two builds that write the same bytes played the same game on these floors under these hands, part for part.
 //! WHAT IT DOES NOT: anything the hands do not reach. Each hand's file says what it reaches and what it does not.
 use game::game::GuardState;
+use game_start::parts;
 use game_start::play::{dist, Button, Opts, Play};
 use std::io::{Read, Write};
 
@@ -171,9 +172,10 @@ fn drawn(dir: &str, r: &Run) -> Result<String, String> {
     let (mut boxes, mut men, mut lights) = (0, 0, 0);
     for k in 0..frames {
         while next < hand.at.len() && hand.at[next].0 <= k { let _ = act(&mut p, &hand.at[next].1); next += 1; }
-        p.frame();
-        let before = if k % 60 == 0 { Some(p.words()) } else { None };
         let mut between = 0.0;
+        let mut wrong = None;
+        p.frame_shown(|p| {
+        let before = if k % 60 == 0 { Some(p.words()) } else { None };
         for (i, (_, want)) in DRAWN.iter().enumerate() {
             let t = std::time::Instant::now();
             d[i].take(&p.g, *want);
@@ -185,7 +187,7 @@ fn drawn(dir: &str, r: &Run) -> Result<String, String> {
             d[i].frame(&p.g, 0.5, focus);
             d[i].frame(&p.g, 1.0, focus);
             between += t.elapsed().as_secs_f64() * 1e6 / 2.0;
-            if d[i].table().is_empty() { return Err(String::from("no section lies anywhere")); }
+            if d[i].table().is_empty() { wrong = Some(String::from("no section lies anywhere")); }
         }
         let n = DRAWN.len();
         cost[n].0 += between;
@@ -194,8 +196,10 @@ fn drawn(dir: &str, r: &Run) -> Result<String, String> {
         lights = lights.max(d[4].lights.rows.len());
         men = men.max(d[5].men.men.len());
         let h = d[3].boxes.head[0];
-        if h.count as usize != d[3].boxes.geo.len() || h.visible as usize + h.visible_cut as usize != d[3].boxes.visible.len() { return Err(format!("frame {}: the boxes' head does not say what their lists hold", k)); }
-        if let Some(b) = before { if b != p.words() { return Err(format!("frame {}: drawing the game changed it", k)); } }
+        if h.count as usize != d[3].boxes.geo.len() || h.visible as usize + h.visible_cut as usize != d[3].boxes.visible.len() { wrong = Some(format!("frame {}: the boxes' head does not say what their lists hold", k)); }
+        if let Some(b) = before { if b != p.words() { wrong = Some(format!("frame {}: drawing the game changed it", k)); } }
+        });
+        if let Some(why) = wrong { return Err(why); }
     }
     let said: Vec<String> = DRAWN.iter().map(|x| x.0).chain(["between ticks"]).zip(&cost).map(|(n, c)| format!("{n} {:.0} ({:.0})", c.0 / frames as f64, c.1)).collect();
     Ok(format!("{} frames · at most {} boxes, {} lights, {} men · microseconds a frame, mean (worst): {}", frames, boxes, lights, men, said.join(", ")))
@@ -208,7 +212,7 @@ fn one(dir: &str, r: &Run, check: bool, but: &[String]) -> Result<String, String
     let hand = read_hand(&std::fs::read_to_string(format!("{}/{}.hand", dir, r.hand)).map_err(|e| format!("{}/{}.hand: {}", dir, r.hand, e))?, frames);
     let file = format!("{}/{}.h", dir, r.tag());
     // the parts: the game's own (game::state_words), then rust/sim's block (`sim.dice`, `sim.poses`, …)
-    let names: Vec<String> = game::state_words::state_names().into_iter().chain(game_start::block::PART_NAMES.iter().map(|s| format!("sim.{}", s))).collect();
+    let names = parts::names();
     let n = names.len();
     let mut kept: Vec<u8> = Vec::new();
     // (then: the kept file's part names, where its frames begin and how wide one is; pairs: the parts compared, as (its place now, its place then))
@@ -246,13 +250,9 @@ fn one(dir: &str, r: &Run, check: bool, but: &[String]) -> Result<String, String
     for k in 0..frames {
         while next < hand.at.len() && hand.at[next].0 <= k { match act(&mut p, &hand.at[next].1) { Ok(()) => { done += 1; did[hand.at[next].2] += 1; } Err(why) => { undone += 1; why_not[hand.at[next].2] = why; } } next += 1; }
         p.frame();
-        w.b.clear();
-        // (the game's own parts, then rust/sim's block a part at a time)
-        game::state_words::state_words(&mut p.g, &mut w, &mut words);
-        words.extend(game_start::block::part_hashes(0));
-        let mut all = 0xcbf2_9ce4_8422_2325u64;
-        for (i, x) in words.iter().enumerate() { all = (all ^ *x as u64).wrapping_mul(0x0000_0100_0000_01b3); row[8 + i] = (*x ^ (*x >> 8) ^ (*x >> 16) ^ (*x >> 24)) as u8; }
-        row[..8].copy_from_slice(&all.to_le_bytes());
+        parts::words(&mut p.g, &mut w, &mut words);
+        for (i, x) in words.iter().enumerate() { row[8 + i] = (*x ^ (*x >> 8) ^ (*x >> 16) ^ (*x >> 24)) as u8; }
+        row[..8].copy_from_slice(&parts::fold(&words).to_le_bytes());
         match &mut out {
             Some(f) => f.write_all(&row).unwrap(),
             None => {
