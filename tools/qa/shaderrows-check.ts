@@ -105,9 +105,9 @@ async function arm(name: Arm, dump: string | null) {
   (engine.settings as unknown as Record<string, unknown>).volLightCap = 4;   // (as high has it: RenderSettings' own 0 is before any preset, and has its own line below)
   const base = JSON.stringify(engine.settings);
   const restirU = (engine.passes as unknown as { restirUData: ArrayBuffer }).restirUData;   // (the restir pass's uniform as the engine last packed it; cfg.y is word 1)
-  const frame = (set: (s: Record<string, unknown>) => void) => {
+  const frame = (set: (s: Record<string, unknown>) => void, moved = false) => {
     Object.assign(engine.settings, JSON.parse(base)); set(engine.settings as unknown as Record<string, unknown>); S.drawn.length = 0; S.wrote.length = 0;
-    try { engine.render(cam, 1, 1 / 60, false); engine.render(cam, 1 + 1 / 60, 1 / 60, false); } catch (e) { return { err: String((e as Error)?.message ?? e).split('\n')[0], by: {} as Record<string, string[]>, none: [] as string[], flags: 0, restirSent: false, cfgY: 0 }; }
+    try { engine.render(cam, 1, 1 / 60, false); if (moved) cam.update(1 / 60, [24, 0, 14], null); engine.render(cam, 1 + 1 / 60, 1 / 60, false); if (moved) cam.update(1, [20, 0, 14], null); } catch (e) { return { err: String((e as Error)?.message ?? e).split('\n')[0], by: {} as Record<string, string[]>, none: [] as string[], flags: 0, restirSent: false, cfgY: 0 }; }
     const by: Record<string, string[]> = {}; const none: string[] = [];
     for (const d of S.drawn) { if (d.pipe === null) none.push(d.pass); else (by[d.pass] ??= []).push(d.pipe); }
     return { err: '', by, none, flags: new Uint32Array(engine.frameData)[62], restirSent: S.wrote.includes(restirU), cfgY: new Uint32Array(restirU)[1] };
@@ -127,7 +127,7 @@ async function arm(name: Arm, dump: string | null) {
     }
     { const fr = frame(s => { s.volumetrics = true; }), got = fr.by.volumetrics ?? []; check(!fr.err && got.length > 0 && got.every(l => l === 'vol'), `${when}: the volumetric pass draws with the one march program`, fr.err || got.join(', ')); }
     // the motion levers are bits of the one program's uniform: a frame the camera moved carries its taps beside the spatial count, whatever has landed
-    const mv = frame(s => { s.restirMotion = 7; s.restirMotionStatic = true; s.restirMotionTaps = 6; }), mvGot = mv.by.direct ?? [], taps = (mv.cfgY >>> 8) & 15;
+    const mv = frame(s => { s.restirMotion = 7; s.restirMotionTaps = 6; }, true), mvGot = mv.by.direct ?? [], taps = (mv.cfgY >>> 8) & 15;
     check(!mv.err && mvGot.length > 0 && mvGot.every(l => l === 'restir') && taps === 6, `${when}: a frame the camera moved runs the one direct program with its motion taps packed beside the spatial count`, mv.err || `direct: ${mvGot.join(', ')}, cfg.y 0x${mv.cfgY.toString(16)}`);
   };
   if (wantFirst) {
