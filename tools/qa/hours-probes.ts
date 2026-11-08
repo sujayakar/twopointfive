@@ -81,7 +81,7 @@ export async function hoursLight(): Promise<boolean> {
     for (const h of DAY) {
       applyHour(g, h); const D = HOURS[h], sun = hourSun(g), at = L.indexOf(sun);
       const okRig = !!sun && sun.kind === 2 && at === moonAt + 1 && L.filter((l: any) => l.kind === 2 && l.enabled).length === 1 && !L[moonAt].enabled && sun.intensity === D.sun.intensity && Math.abs(-sun.dir[1] - Math.sin(D.sun.elevDeg * Math.PI / 180)) < 1e-9
-        && ext.every((t: any, i: number) => t.on === (D.lamps ? extOn0[i] : false)) && g.engine.settings.exposure === D.exposure && g.weather.enabled === false && g.targets.filter((t: any) => t.group !== 'exterior').every((t: any) => t.on === true || t.on === false);
+        && ext.every((t: any, i: number) => t.on === (D.lamps ? extOn0[i] : false)) && g.engine.settings.exposure === D.exposure && !g.weather.strike({}) && g.targets.filter((t: any) => t.group !== 'exterior').every((t: any) => t.on === true || t.on === false);   // (the storm held: it has no stroke to give)
       if (!okRig) rigBad.push(`${id}@${h}`);
       // the meter's stand-in: the open (the brightest fifth of the points) reads as the hour should; points the hour does not reach read no brighter than at night (eyes used to a place can read it darker)
       const E = P.map(p => lightEstimateAt(g, p)), add = E.map((e, i) => e - night[i]), sorted = [...E].sort((a, b) => b - a), open = vis(g, sorted[Math.floor(P.length * 0.1)]), same = add.filter(a => a <= 1e-9).length;
