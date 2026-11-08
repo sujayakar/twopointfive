@@ -5,6 +5,23 @@ back, WebSockets, CPU senses on the server. What is built so far is the server, 
 and a page is opened with `?net=`: a page without that word is the build as it was (the loop's `tick` seam is absent, `netFromUrl` returns on its first
 line).
 
+- **A GAME ON THE MODULE ALONE** (2026-11-08, for the page that draws: `draw.html`). The server and the scripted client can stand and step the game with no
+  TypeScript game beside it (`tools/mp/modstand.ts`): the setup record says `knobs: {stand: 'module', commands}` (or `MP_STAND=module`), the welcome
+  carries a START (`src/net/start.ts`: the level's file, the address's words, the die, the seats, the host's `machineBefore` commands as base64) in place of
+  the recipe, and every machine hands it the game's own start (`face_start`, dressed). The module's doors are `rust/game_face/src/net.rs`: `face_networked`
+  (every seat refereed), `face_record` (a seat's record as the wire has it; it is no hand: no host camera moves), `face_ahead` (the look ahead).
+  `src/net/modgame.ts NetGame` steps it, folds its words and asks it; a page uses the same class. `face_step` runs LIGHTS alone; no command is sent after
+  the start (letting go is the record's 'Paused' word); a host clears the outs each tick. THE WORD BESIDE THE STATE WORD IS OF EVERY PART there (no
+  list): server and clients had all 296 alike. Read here: a game stands in 0.4 to 1.0 s, a tick with the look ahead is about 6 ms against 16, a process
+  230 MB. The recipe road stays for the page with a TypeScript game and goes with it.
+  - **src/net knows no game**: `wire`, `client`, `server`, `timeline`, `foresee`, `delay`, `words`, `modgame`, `start`, `address` import nothing of `src/game`
+    (hosts are handed WIRE records). What the old page alone needs is `recipe.ts` (PlayerCmd to and from the wire), `step.ts` and `page.ts`.
+  - **What a machine looks at parts nothing** (`rust/game_start/tests/coop.rs where_a_machine_looks…`: one machine looks at the pass's fire with its camera
+    turning, the other at nothing; and `a_look_ahead_is_where_the_game_then_has_him`). KNOWN: `g.wind.to_pool` (the gusts the picture's particles take)
+    follows the host's view and is in the wider word's `wind`; nothing of a tick reads it. A level with more jets than the pool near one view and not the
+    other's would count there, never in the alarm: it wants to be the drawing's own list.
+  - NOT DONE: the page (its owner's `host/drawnet.ts`); Host game through the control plane with this setup; a kit the host keeps rides `commands`
+    already (machineBefore's own), nobody sends one yet.
 - **CO-OP IS ON THE RUST GAME** (2026-11-07). The TypeScript tick is deleted; the game server, the scripted clients and the page in a game step the Rust
   game, and the Co-op screen is up again (for some hours of 2026-11-07 it answered "Co-op can’t be played on this build yet": `COOP.down`, gone once
   the two faults a game of two had at its start in Rust were mended there: a wall charge's roster by seat, and the budget of men counting the seats). A
@@ -390,7 +407,7 @@ line).
   looked at. OPEN: a seat claimed at the door is held until the game is over (no `games:leave`: a friend who opens the link and closes the tab keeps
   the seat, and only that tab can come back to it); a restart is still either player's record; a full game's address pasted into a third tab watches,
   as any keyless `?net=` address does; the scenario's 400 characters need the control plane's functions deployed again.
-- **Two players, two teams to the eye** (2026-11-03; `src/game/seats.ts seatTone` / `playerName`, `src/ui/findme.ts findMeOutline`, `src/game/floorplan.ts
+- **Two players, two teams to the eye** (2026-11-03; `src/game/seats.ts seatTone` / `playerName`, `src/ui/findmeviz.ts findMeOutline`, `src/game/floorplan.ts
   PlanFor` / `PLAN.others`, `src/ui/planfloor.ts plansToDraw`, `src/game/verdict.ts roster`, `src/game/deathrecap.ts manOf`). The maintainer, from the
   first game of two anybody played (two windows, his own GPU): "works on my m4! overall looks great. no outlines for the other player character (maybe
   we should have yellow + red team and then purple + blue team)", "seeing your teammates squad path overlays (but probably fainter than yours) would be
@@ -564,4 +581,4 @@ line).
   game (its text is kept for joiners: about 20 KB a second with two seats sending every tick, 80 MB over the longest life); a real socket backing up (the
   check's dropping socket is made up; bun's own `drain` was not seen to fire).
 
-- **Every player on the floor (2026-11-08).** In a game of two the world's lines of the tick run with the first seat standing, so a rule that read `g.player` there answered for the first player alone. `tools/blitz/sweeps/seat-tick.py` lists what they reach. Rounds in flight, the team's being down (`seats::all_down`: down when all are), a defender's foe (`teams::foe_char`), friends in a lane, a place clear of foes, a hole in a wall, and a man's senses when another rule runs them (`seats::standing_for`) now go by every player. No switch; a game of one is the same by `hold` (110 of 110). Checks: `rust/game_start/tests/two_seats.rs`, two seeds, each seat in turn, red for the second seat before. Left as it was: a camera looks at the nearest player only, a shared HUD line such as 'a ring airfoil in the ribs' names nobody, and a runner's picture holds one place for the players. Nobody has played these as two; never seen on a GPU.
+- **Every player on the floor (2026-11-08).** In a game of two the world's lines of the tick run with the first seat standing, so a rule that read `g.player` there answered for the first player alone. `tools/blitz/sweeps/seat-tick.py` lists what they reach. Rounds in flight, the team's being down (`seats::all_down`: down when all are), a defender's foe (`teams::foe_char`), friends in a lane, a place clear of foes, a hole in a wall, a man's senses when another rule runs them (`seats::standing_for`), a man's walk through a door, what a hand at work says, a hand planted on a light switch, a defender's grenade called out, the partner's rows and the go word (each player's own: `pair_orders_waiting(g, seat)`), a camera's cone, a charge's sparks and a blast kill's row in the debrief now go by every player. No switch; a game of one is the same by `hold` (110 of 110). Checks: `rust/game_start/tests/two_seats.rs`, two seeds, each seat in turn, red for the second seat before. Left as it was: a shared line in `game.messages` such as 'a ring airfoil in the ribs' names nobody (the page's HUD does not draw that list), and a runner's picture holds one place for the players. Nobody has played these as two; never seen on a GPU.

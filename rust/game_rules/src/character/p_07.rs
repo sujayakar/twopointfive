@@ -20,8 +20,6 @@ pub fn anim_throw_off(g: &crate::game::Game, c: CharId) -> bool { g.ch[c].anim.t
 pub fn anim_aim_shown(g: &crate::game::Game, c: CharId) -> f64 { g.ch[c].anim.upper_w.aim }
 /// How far the torch is up in the hand that holds it, 0..1.   (character.ts torchUp)
 pub fn anim_torch_up(g: &crate::game::Game, c: CharId) -> f64 { g.ch[c].anim.tu_k }
-/// His long gun is off its line and his eyes are at its magazine well.   (character.ts atWell)
-pub fn anim_at_well(g: &crate::game::Game, c: CharId) -> bool { m::max(g.ch[c].anim.rlc.k, g.ch[c].anim.rlc.h) > 0.5 }
 /// Nothing but the aim or the carry has the gun arm this frame.   (character.ts gunArmOwn)
 pub fn anim_gun_arm_own(g: &crate::game::Game, c: CharId) -> bool {
     let a = &g.ch[c].anim;
@@ -283,23 +281,6 @@ pub fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
     if g_h > 0.0 { rate = v3::lerp(rate, v3::lerp((w_walk / (pr.walk_speed * d_walk) + w_jog / (pr.jog_speed * d_jog * kj) + w_sprint / (pr.sprint_speed * d_sprint)) / wsum, 1.0 / (pr.crouch_speed * d_crouch * stride_d), a.crouch) * a.cr_v, g_h); }
     let rev = if a.reverse { -1.0 } else { 1.0 };
     a.phase = js::rem(a.phase + dt * rate * rev + 100.0, 1.0);
-    if a.tap_u >= 0.0 && g_h > 0.0 {   // (tapstep.ts: the stride belongs to the step)
-        if a.tap_was < 0.0 { a.tap_seen = a.tap_n; a.tap_from = a.phase; a.tap_to = a.phase; }
-        else if a.tap_n != a.tap_seen {
-            a.tap_seen = a.tap_n;
-            let p = anim_creep_plant(g, c)[1];
-            let a = &mut g.ch[c].anim;
-            let w = a.tap_way;
-            let off = js::rem(js::rem(a.phase - p, 0.5) + 0.5, 0.5);
-            let go = if w > 0.0 { 0.5 - off } else { off };
-            a.tap_from = a.phase;
-            a.tap_to = a.phase + w * (if go < 0.2 { go + 0.5 } else { go });
-        }
-        let a = &mut g.ch[c].anim;
-        a.phase = js::rem(a.tap_from + (a.tap_to - a.tap_from) * v3::clamp(a.tap_u, 0.0, 1.0) + 100.0, 1.0);
-    }
-    let a = &mut g.ch[c].anim;
-    a.tap_was = if g_h > 0.0 { a.tap_u } else { -1.0 };
     if g.k.wallsnap.on {   // the wall hold's own step clock, signed along the wall
         if a.stance == Stance::Wall {
             let st_ = wall_pose().gait.step;
@@ -953,11 +934,6 @@ pub fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
     if m::abs(look) > 1e-3 {
         a.twists.push(crate::anim_skeleton::TwistSpec { node: nd.neck as f64, yaw: look * 0.4, pitch: 0.0 });
         a.twists.push(crate::anim_skeleton::TwistSpec { node: nd.head as f64, yaw: look * 0.6, pitch: 0.0 });
-    }
-    if a.look_pitch_extra != 0.0 {
-        let e = a.look_pitch_extra;
-        a.twists.push(crate::anim_skeleton::TwistSpec { node: nd.neck as f64, yaw: 0.0, pitch: e * 0.4 });
-        a.twists.push(crate::anim_skeleton::TwistSpec { node: nd.head as f64, yaw: 0.0, pitch: e * 0.6 });
     }
     if a.nv.is_some() || a.smoke.is_some() {   // what turns the head after the layers, kept for the hand's reach next frame
         a.nv_tw = [0.0; 4];

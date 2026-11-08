@@ -28,16 +28,11 @@ pub fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, 
     let tear = g.k.doorblast.tear_m.stun;
     let who = crate::throwables::item_who(g, it);
     crate::doors::doors_blast(g, at, tear, who);
-    let gpu = crate::particle_fx::gpu_fx(g);
     let seed = g.fx_seed;
     g.fx_seed += 1.0;
-    let o = if gpu {
-        Some(crate::effects::SpawnBurstO { spark_count: Some(m::min(b.spark_count, if crate::effects::flags().trails { b.trail_count } else { 0.0 })) })
-    } else {
-        None
-    };
-    let l = crate::effects::spawn_burst(g, at, seed, o);
-    if gpu { crate::particle_fx::bang_fx(g, at); }
+    let o = crate::effects::SpawnBurstO { spark_count: Some(m::min(b.spark_count, if crate::effects::flags().trails { b.trail_count } else { 0.0 })) };
+    let l = crate::effects::spawn_burst(g, at, seed, Some(o));
+    crate::particle_fx::bang_fx(g, at);
     let flash = crate::render_lights::light_set_flash(g, l.pos, l.color, l.intensity, l.range, l.ttl, 0.0);
     let light = crate::fogofwar::fog_of_war_light_by(g, flash, Some(who));
     if let Some(r) = l.radius {

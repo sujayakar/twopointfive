@@ -125,8 +125,8 @@
   // ---- the live-switchable variants (each returns its teardown). Reload-level variants (vol full-res, composite-side diffusion) are separate builds/flags.
   const VARIANTS = {
     base:      { note: 'as shipped: density 1.6 · MS 1.0 · diffusion 1.0 (post, τ-linear, bilinear weight, Gaussian levels) · classic march K4/every2 · vol ÷2', apply: () => () => {} },
-    dens10:    { note: 'render density 1.0 (Aug-9 value)', apply: (s, g) => { const d = g.smoke.params.densityScale; g.smoke.params.densityScale = 1.0; g.smoke.refreshDomains(); return () => { g.smoke.params.densityScale = d; g.smoke.refreshDomains(); }; } },
-    dens13:    { note: 'render density 1.3', apply: (s, g) => { const d = g.smoke.params.densityScale; g.smoke.params.densityScale = 1.3; g.smoke.refreshDomains(); return () => { g.smoke.params.densityScale = d; g.smoke.refreshDomains(); }; } },
+    dens10:    { note: 'render density 1.0 (Aug-9 value)', apply: (s, g) => { const d = g.smoke.params.densityScale; g.smoke.params.densityScale = 1.0; return () => { g.smoke.params.densityScale = d; }; } },
+    dens13:    { note: 'render density 1.3', apply: (s, g) => { const d = g.smoke.params.densityScale; g.smoke.params.densityScale = 1.3; return () => { g.smoke.params.densityScale = d; }; } },
     ms0:       { note: 'multiple scattering off (single scattering)', apply: s => { const v = s.smokeMultiScatter; s.smokeMultiScatter = 0; return () => { s.smokeMultiScatter = v; }; } },
     ms15:      { note: 'multiple scattering 1.5', apply: s => { const v = s.smokeMultiScatter; s.smokeMultiScatter = 1.5; return () => { s.smokeMultiScatter = v; }; } },
     nodiff:    { note: 'diffusion off (attenuation only)', apply: (s, g, e) => { const v = e.passes.smokeDiffuse; e.passes.smokeDiffuse = 0; return () => { e.passes.smokeDiffuse = v; }; } },
@@ -137,7 +137,7 @@
     taareact:  { note: 'TAAU treats smoke pixels as reactive × 0.6 (fresh march over a stale clamped plume)', apply: s => { const v = s.smokeTaaReact; s.smokeTaaReact = 0.6; return () => { s.smokeTaaReact = v; }; } },
     volfull:   { note: 'the volumetric pass at FULL internal resolution (÷1 instead of ÷2)', apply: (s, g, e) => { const gd = e.passes.gatherDiv, vd = e.passes.volDiv; e.passes.setDivisors(gd, 1); return () => { e.passes.setDivisors(gd, vd); }; } },
     fixpack:   { note: 'upsample relax + TAAU smoke-reactive 0.6 + vol at full res together', apply: (s, g, e) => { const b = s.smokeUpsampleRelax, c = s.smokeTaaReact, gd = e.passes.gatherDiv, vd = e.passes.volDiv; s.smokeUpsampleRelax = true; s.smokeTaaReact = 0.6; e.passes.setDivisors(gd, 1); return () => { s.smokeUpsampleRelax = b; s.smokeTaaReact = c; e.passes.setDivisors(gd, vd); }; } },
-    d13ms12nd: { note: 'density 1.3 · MS 1.2 · diffusion off', apply: (s, g, e) => { const d = g.smoke.params.densityScale, m = s.smokeMultiScatter, f = e.passes.smokeDiffuse; g.smoke.params.densityScale = 1.3; g.smoke.refreshDomains(); s.smokeMultiScatter = 1.2; e.passes.smokeDiffuse = 0; return () => { g.smoke.params.densityScale = d; g.smoke.refreshDomains(); s.smokeMultiScatter = m; e.passes.smokeDiffuse = f; }; } },
+    d13ms12nd: { note: 'density 1.3 · MS 1.2 · diffusion off', apply: (s, g, e) => { const d = g.smoke.params.densityScale, m = s.smokeMultiScatter, f = e.passes.smokeDiffuse; g.smoke.params.densityScale = 1.3; s.smokeMultiScatter = 1.2; e.passes.smokeDiffuse = 0; return () => { g.smoke.params.densityScale = d; s.smokeMultiScatter = m; e.passes.smokeDiffuse = f; }; } },
   };
   async function battery(scenes = Object.keys(SCENES), variants = Object.keys(VARIANTS), opts = {}) {
     const out = []; I.busy = { at: 'start' };

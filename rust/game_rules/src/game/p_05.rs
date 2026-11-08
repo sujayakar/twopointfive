@@ -146,7 +146,6 @@ pub fn game_reset_guards(g: &mut crate::game::Game) {
     crate::seats::each_seat(g, &mut |v: &mut Game| {
         crate::close::close_reset(v);
         crate::stalk::stalk_reset(v);
-        crate::tapstep::tap_reset(v);
     });
     crate::roomfight::room_fight_reset(g);
     crate::cover::cover_reset(g);
@@ -173,11 +172,6 @@ pub fn game_escalate(g: &mut crate::game::Game) {
 /// Panel: straight back to calm. (game.ts Game.standDown)
 pub fn game_stand_down(g: &mut crate::game::Game) {
     crate::guards::stand_down_escalation(g);
-}
-
-/// Panel: the human shield's standoff. (game.ts Game.standoffSummary)
-pub fn game_standoff_summary(g: &mut crate::game::Game) -> String {
-    crate::guards::standoff_summary(g)
 }
 
 /// Panel: what each unfound body reads on the light meter. (game.ts Game.bodyLightSummary)
@@ -291,7 +285,7 @@ pub fn game_clear_nearest_room(g: &mut crate::game::Game) { crate::guards::force
 pub fn game_follow_pos(g: &mut crate::game::Game, at: Option<V3>) -> V3 {
     let gd = if g.spectate >= 0.0 { g.guards.get(g.spectate as usize).copied() } else { None };
     if let Some(gd) = gd { let c = g.gd[gd].ch; return g.ch[c].pos; }
-    if let Some(p) = crate::rails::rails_look(g) { return p; }
+    if let Some(p) = crate::rails::rails_look(g, &crate::seats::here(g)) { return p; }
     if let Some(a) = at { return a; }
     let c = g.pl[g.player].ch;
     g.ch[c].pos

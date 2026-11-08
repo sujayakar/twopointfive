@@ -1,19 +1,19 @@
 // THE RUN TAPE: what a headless game needs to be walked through the same run a replay was saved from (tools/qa/rerun.ts) — the replay buffer's second half
 // (replaybuf.ts owns one). The TRACE says where everybody was; the tape holds what went INTO the simulation from the first step of the page's game: the recipe (the
 // game's die, the page's query, the knobs and sandbox switches as they stood), then per step its dt, the player's record (cmd.ts PlayerCmd, minus the two matrices —
-// the camera's pose is kept and they are rebuilt from it, as the session journal does) and every value the game READ off the GPU that step (Game.sensors). What
+// the camera's pose is kept and they are rebuilt from it, as the session journal does). Nothing of the picture's is on it: the game senses for itself. What
 // reaches the game from OUTSIDE a step is taped where it can be seen: a restart from a card (the player is a new object between two steps), a sandbox switch, a
 // knob moved on the Tab panel, the player put somewhere (a 'pose' row: where he stands at the first step and after every restart — a page that stages its own scene,
 // a lab's page, stood him there — and wherever he was moved between two steps, a debug teleport; 'posein': where a restart made INSIDE a step, Shift+Enter,
-// left him once the page's own wrap of Game.restart had staged its scene — the game's restart is wrapped on this Game's instance to see it, as the sensors' read is).
+// left him once the page's own wrap of Game.restart had staged its scene — the game's restart is wrapped on this Game's instance to see it).
 // A control worked on the page between two steps (`touched()`: ui/replaykey.ts hears the document's input, change and click) has every table looked at before the
 // next step, so a number moved on a panel while playing is taped at the step it first acts on, not on the tables' slow round. A save of this run loaded from a card is taped by its slot: the walk has made the same save. What cannot be followed — a scenario started or quit from a menu, a file's checkpoint or another run's loaded — ends the tape with its reason (`dead`),
-// and the replay is then a trace only. It never touches the game: the sensors' read is WRAPPED on this Game's instance (the value passes through untouched).
+// and the replay is then a trace only. It never touches the game.
 // A re-run is exact as far as the page's arithmetic and bun's agree; the tool measures that against the trace instead of promising it.
 import type { Game } from './game';
 import type { PlayerCmd } from './cmd';
 import type { RunTape, TapeInput, TapeVal } from '../replay/format';
-import { tapeF32, tapeNum } from '../replay/format';
+import { TAPE_VERSION, tapeNum } from '../replay/format';
 import type { TapePiece } from '../replay/kept';
 import { envSnapshot, knobsSnapshot } from './journal';
 import { activeScenario } from './scenarioRun';
@@ -105,9 +105,6 @@ export class RunTapeRec {
    *  import cycle); the yaw the matrices were last KNOWN to be built with (NaN: not known) */
   private lens: TapeVal[][] = []; private scratch: FollowCamera | null = null; private builtYaw = NaN;
   private input: [number, TapeInput][] = []; private keysKey = ''; private buttons = 0; private mx = NaN; private my = NaN;
-  private keys: string[] = []; private keyIdx = new Map<string, number>();
-  private sens: RunTape['sens']['rows'] = [];
-  private seq: number[] = []; private vals: (number | undefined)[] = []; private prevSeq: number[] = []; private prevVals: (number | undefined)[] = [];
   private x: RunTape['x'] = [];
   private playerRef: object | null = null; private timeEnd = 0; private loads = 0; private restarts = 0; private shelf = 0; private flagsKey = ''; private tuneKey = ''; private tableKeys: Record<string, string> = {}; private kitKey = ''; private pose: number[] = []; private poseNow: number[] = []; private lookAll = false; private reg: Record<string, Record<string, unknown>> | null = null; private tableNames: string[] | null = null; private tableAt = 0;
 
@@ -148,23 +145,12 @@ export class RunTapeRec {
       if (cmd.mx !== this.mx || cmd.my !== this.my) { this.mx = cmd.mx; this.my = cmd.my; rec.m = [cmd.mx, cmd.my]; any = true; }
       if (cmd.wheel) { rec.w = cmd.wheel; any = true; }
       if (any) this.input.push([f, rec]); }
-    this.seq.length = 0; this.vals.length = 0; this.inTick = true;
+    this.inTick = true;
   }
   /** the step has run */
   end(g: Game): void {
     if (this.dead || !this.inTick) return;
-    this.inTick = false; const f = this.ticks, S = this.seq, V = this.vals, P = this.prevSeq, Q = this.prevVals;
-    let same = S.length === P.length; for (let i = 0; same && i < S.length; i++) same = S[i] === P[i];
-    // (a renderer's answer is a 32-bit float: nine digits of it on the tape, not seventeen — most of a fight's tape is these; only what changed is put into text)
-    if (same) { let ch: (number | TapeVal)[] | null = null; for (let i = 0; i < V.length; i++) if (!Object.is(V[i], Q[i])) (ch ??= []).push(i, tapeF32(V[i])); if (ch) this.sens.push([f, null, ch]); }
-    else this.sens.push([f, S.slice(), V.map(v => tapeF32(v))]);
-    this.prevSeq = S.slice(); this.prevVals = V.slice();
-    this.ticks = f + 1; this.playerRef = g.player; this.timeEnd = g.time; this.loads = loadsOf(g); this.restarts = restartsOf(g); this.shelf = g.saves?.shelfChanges ?? 0; poseOf(g, this.pose);
-  }
-  private sensed(key: string, v: number | undefined): void {
-    if (!this.inTick || this.dead) return;
-    let ki = this.keyIdx.get(key); if (ki === undefined) { ki = this.keys.length; this.keys.push(key); this.keyIdx.set(key, ki); }
-    this.seq.push(ki); this.vals.push(v);
+    this.inTick = false; this.ticks++; this.playerRef = g.player; this.timeEnd = g.time; this.loads = loadsOf(g); this.restarts = restartsOf(g); this.shelf = g.saves?.shelfChanges ?? 0; poseOf(g, this.pose);
   }
   private flagsOf(g: Game) { return { godMode: !!g.godMode, aiEnabled: g.aiEnabled !== false, infiniteAmmo: !!g.infiniteAmmo, playerInvisible: !!g.playerInvisible, autosave: g.saves?.enabled !== false }; }
   private begin(g: Game): boolean {
@@ -176,14 +162,9 @@ export class RunTapeRec {
     this.x.push([0, 'pose', poseOf(g, []).map(enc)]);
     this.flagsKey = JSON.stringify(this.flagsOf(g)); this.x.push([0, 'flags', JSON.parse(this.flagsKey)]); this.tuneKey = JSON.stringify(g.tune);
     this.tableKeys = tables;
-    if (!this.wrapped) {   // every value the game reads off the renderer passes through here on its way (sensors.ts read: its sugar calls it too)
-      const S = g.sensors as unknown as { read(key: string): number | undefined }, read = S.read, self = this;
-      S.read = function (this: unknown, key: string) { const v = read.call(this, key); self.sensed(key, v); return v; };
-      // …and a restart made INSIDE a step (Shift+Enter, the bare Enter once down) is followed to where it left the player: a page that wraps the restart to
-      // stage its own scene (at boot — before this) has staged it by then, and nothing between two steps would show that it had
-      afterRestart(g, () => { if (self.inTick && !self.dead) self.x.push([self.ticks, 'posein', poseOf(g, []).map(enc)]); });
-      this.wrapped = true;
-    }
+    // a restart made INSIDE a step (Shift+Enter, the bare Enter once down) is followed to where it left the player: a page that wraps the restart to
+    // stage its own scene (at boot — before this) has staged it by then, and nothing between two steps would show that it had
+    if (!this.wrapped) { this.wrapped = true; afterRestart(g, () => { if (this.inTick && !this.dead) this.x.push([this.ticks, 'posein', poseOf(g, []).map(enc)]); }); }
     return true;
   }
   /** one table against what the tape last had of it: a row if it moved */
@@ -216,29 +197,29 @@ export class RunTapeRec {
   }
   private kill(f: number, why: string): void {
     this.dead = why; this.deadAt = f; this.inTick = false;
-    this.dt = []; this.view = []; this.cam = []; this.lens = []; this.builtYaw = NaN; this.input = []; this.sens = []; this.x = []; this.keys = []; this.keyIdx.clear(); this.recipe = null;
+    this.dt = []; this.view = []; this.cam = []; this.lens = []; this.builtYaw = NaN; this.input = []; this.x = []; this.recipe = null;
   }
   /** the tape as the file carries it (a tape that ended: its reason) */
   file(search: string, levelFile?: string): RunTape | { dead: string; tick: number } | undefined {
     if (this.dead) return { dead: this.dead, tick: this.deadAt };
     if (!this.recipe || !this.ticks) return undefined;
-    return { v: 1, ticks: this.ticks, recipe: { ...this.recipe, search, ...(levelFile ? { levelFile } : {}) }, dt: this.dt.map(r => [r[0], r[1]] as [number, number]), view: this.view.slice(), cam: this.cam.slice(), input: this.input.slice(),
-      sens: { keys: this.keys.slice(), rows: this.sens.slice(), f32: 1 }, x: this.x.slice(), lens: this.lens.slice() };
+    return { v: TAPE_VERSION, ticks: this.ticks, recipe: { ...this.recipe, search, ...(levelFile ? { levelFile } : {}) }, dt: this.dt.map(r => [r[0], r[1]] as [number, number]), view: this.view.slice(), cam: this.cam.slice(), input: this.input.slice(),
+      x: this.x.slice(), lens: this.lens.slice() };
   }
   /** THE KEPT TAPE (src/replay/kept.ts, ui/replaykey.ts keep()): the rows taped since the last call, as a piece a kept tape appends — asked BETWEEN two steps. The first
    *  piece carries the recipe; a tape that ended hands its reason once (the rows it had not yet handed over went with it) and nothing after. null = nothing new.
    *  Only reads the tape: file() is what it was. */
-  private took = { ticks: 0, view: 0, cam: 0, input: 0, keys: 0, sens: 0, x: 0, lens: 0, recipe: false, dead: false };
+  private took = { ticks: 0, view: 0, cam: 0, input: 0, x: 0, lens: 0, recipe: false, dead: false };
   since(): TapePiece | { dead: string; tick: number } | null {
     const T = this.took;
     if (this.dead) { if (T.dead) return null; T.dead = true; return { dead: this.dead, tick: this.deadAt }; }
     if (!this.recipe || this.inTick || this.ticks === T.ticks) return null;
     // (the last run of `dt` is counted up in place: the steps since the last piece are read off the tail)
     const dt: [number, number][] = []; for (let left = this.ticks - T.ticks, i = this.dt.length - 1; left > 0 && i >= 0; i--) { const n = Math.min(left, this.dt[i][0]); dt.unshift([n, this.dt[i][1]]); left -= n; }
-    const P: TapePiece = { ticks: this.ticks, ...(T.recipe ? {} : { recipe: this.recipe, f32: 1 as const }), dt, view: this.view.slice(T.view), cam: this.cam.slice(T.cam), input: this.input.slice(T.input),
-      keys: this.keys.slice(T.keys), sens: this.sens.slice(T.sens), x: this.x.slice(T.x), ...(!T.recipe || this.lens.length > T.lens ? { lens: this.lens.slice(T.lens) } : {}) };
-    this.took = { ticks: this.ticks, view: this.view.length, cam: this.cam.length, input: this.input.length, keys: this.keys.length, sens: this.sens.length, x: this.x.length, lens: this.lens.length, recipe: true, dead: false };
+    const P: TapePiece = { ticks: this.ticks, ...(T.recipe ? {} : { recipe: this.recipe, v: TAPE_VERSION }), dt, view: this.view.slice(T.view), cam: this.cam.slice(T.cam), input: this.input.slice(T.input),
+      x: this.x.slice(T.x), ...(this.lens.length > T.lens ? { lens: this.lens.slice(T.lens) } : {}) };
+    this.took = { ticks: this.ticks, view: this.view.length, cam: this.cam.length, input: this.input.length, x: this.x.length, lens: this.lens.length, recipe: true, dead: false };
     return P;
   }
-  summary(): string { return this.dead ? `no re-run: ${this.dead} (step ${this.deadAt})` : `re-run tape: ${this.ticks} steps · ${this.input.length} input rows · ${this.cam.length} camera rows${this.lens.length ? ` (${this.lens.length} with a lens of their own)` : ''} · ${this.sens.length} sensor rows · ${this.x.length} outside changes`; }
+  summary(): string { return this.dead ? `no re-run: ${this.dead} (step ${this.deadAt})` : `re-run tape: ${this.ticks} steps · ${this.input.length} input rows · ${this.cam.length} camera rows${this.lens.length ? ` (${this.lens.length} with a lens of their own)` : ''} · ${this.x.length} outside changes`; }
 }

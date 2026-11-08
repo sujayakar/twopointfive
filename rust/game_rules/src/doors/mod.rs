@@ -11,4 +11,4 @@ pub use p_03::*;
 pub mod p_04;
 pub use p_04::*;
 pub mod paint;
-pub use paint::paint_leaves;
+pub(crate) use paint::paint_leaves;

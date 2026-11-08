@@ -14,8 +14,11 @@ export interface RedRow {
 export function rowSays(r: RedRow): string { return `${r.is === 'real' ? 'REAL' : 'COULD BE REAL'} · ${r.whose} · ${r.line}`; }
 const RUST = "the Rust game's";
 export const EXPECTED_RED: Record<string, RedRow> = {
-  'aim-door': { is: 'real', whose: "the enemies' owner (the defenders at a door: docs/agents/enemies.md)", line: "[8], the break room's corridor door shut, Sam dark and planted right behind the leaf: the guard opens it at 3 s and the leaf stops on Sam's body; from 5 s he stands in the frame 0.9 m from Sam, alert and not moving, and fires nothing until 11 to 12 s" },
   'pair-mark': { is: 'maybe', whose: RUST, line: "the only way to the marked man's back lies across his eyes: the partner should wait short of it and give up after a few seconds; he moves up at once, 36 s round, 'set', and is seen a second later (way.exposed comes out false; perhaps the eye change moved the walk's cost)" },
-  'pairup-clatter': { is: 'maybe', whose: RUST, line: "the partner's quiet takedown files one 'prop' event, level 0.27, 1.1 s after the man is down; none was filed before. Perhaps the body's own thud" },
   'wallbreak-checkpoint': { is: 'maybe', whose: RUST, line: "two seconds after a load the list of marks holds the undone future's too: 114 against 86. A whole apply does not rebuild the picture's decals" },
+  'glasshouse': { is: 'maybe', whose: "the senses' or the level's owner", line: "both starts under 0.1 of light: 0.27 and 0.27 to 0.28 by the TypeScript estimate; wants one read of the game's own meter" },
+  'pass': { is: 'maybe', whose: "the senses' or the level's owner", line: "both starts under 0.1 of light: 0.21 and 0.14 to 0.21 by the TypeScript estimate; wants one read of the game's own meter" },
+  'floodlit': { is: 'maybe', whose: "the senses' or the level's owner", line: "mains out: the yard 0.13 to 0.28 where under 0.2 is asked, the hall 0.27, the radio room's tube 0.94 against the moon's; wants one read of the game's own meter" },
+  'depot-stage': { is: 'maybe', whose: "the senses' or the level's owner", line: "mains out: the open park 0.28 where under 0.25 is asked; wants one read of the game's own meter" },
+  'checkpoint-identity': { is: 'maybe', whose: RUST, line: "save(load(s)) is the identity: a mark's radius 0.167 comes back 0.166, the digests equal" },
 };

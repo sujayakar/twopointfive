@@ -111,7 +111,7 @@ export const LANES = {
    *  sooner than `pinGap` s after the last, `pinMax` of them, then `pinRest` s of quiet · a round goes wide by this (the round's own spread number: 0.24 = up
    *  to 1.2 m off the place at 10 m on each axis, on top of where his bore sits inside `pinAimDeg` — fire AT A PLACE to keep heads down, far wider than any aimed round of his; it can still hit a man who stands on it) ·
    *  his gun must be within this of the place before a round leaves, deg · his pace out, m/s */
-  pin: true, pinRounds: 3, pinEvery: 0.12, pinSnap: 0.6, pinGap: 4, pinMax: 4, pinRest: 20, pinSpread: 0.24, pinAimDeg: 9, pinPace: 2,
+  pinRounds: 3, pinEvery: 0.12, pinSnap: 0.6, pinGap: 4, pinMax: 4, pinRest: 20, pinSpread: 0.24, pinAimDeg: 9, pinPace: 2,
   /** the longest end of a way round the guns may see, with this on, m · nobody fires from a corner nearer the guns than this, m */
   pinShowM: 12, pinMinM: 7,
   /** …AND GO IN UNDER IT (off: measured — over six holds on The block the run-in cost the defenders 7 more men and the team none): on the first round of a
@@ -123,7 +123,7 @@ export const LANES = {
   /** WHERE HE STOPS (off = planted where the gate caught him, as it was): never in a door's opening or sweep, never where a gun of the lane a stride to either
    *  side of where it fired from has him — he backs to cover first, and a held man since moved onto such floor backs out again; the point he watches is never
    *  nearer than `lookM`; a man whose own look cleared the lane is not planted on it afterwards */
-  stopClear: true, lookM: 1.5,
+  lookM: 1.5,
   /** ROUNDS HE NOTICED (off = any round passing within `nearM` on the plan counts, as it was): a round past a LIVING man counts only once his own senses
    *  have it, inside `reactSecs` — it rattled him, he heard gunfire, or he was roused already; a quiet round over a calm man's head tells him nothing */
   roused: true,
@@ -137,18 +137,6 @@ export const LANES = {
    *  arm round it; with no arc from there he steps toward where the lane opens, no further than the first place his arm has one and never onto the
    *  lane's own floor (his arm goes into the guns' line, he does not), and goes back. */
   frag: true, fragThink: 4, fragGap: 30, fragLook: 1.5, fragStepM: 0.9,
-  /** FROM HIS SHOUT TO THE THROW HE IS THIS RULE'S (10-15: on that day's build 2 of 14 men who shouted for a lane were taken by dig-in inside the wind-up's
-   *  second — the room fight plants a man who has arrived, dig-in adopts a planted man and walks him to its cover — and said 'no — holding it!' a metre off
-   *  their arc; that place is then never asked again by him). On = roomfight.ts keeps dig-in's hands off him until the grenade has left his hand or stayed in
-   *  it (`laneThrows`: a second and a half at most; that file's once-a-frame bookkeeping for HIM waits that long too). Off = the build before it. */
-  fragOwn: true,
-  /** THE DOORWAY DRILL IS ASKED AGAIN (10-18: with every level's defenders in squads the men come to a hit room together, on the fight's own chase, and
-   *  the doorway drill takes them at the door a mate has just dropped in — in the second before anybody has called the lane. The drill asked this rule once,
-   *  as it took a man, and never again: on the maintainer's own hold of the records office two more men then sliced the same door into a lane their side had
-   *  called six seconds before, one after the other). On = a man the drill has, who has not yet committed, is asked again each frame: his jamb, the
-   *  station he is slicing to, or the floor past the doorway in a lane his side knows of, and the drill lets him go — this rule's gate then has him like any
-   *  man whose way lies down it. A charge about to go in on those guns still goes (`laneDoor`'s own clause). Off = asked once, as it was. */
-  drill: true,
   /** lanes a side keeps at once */
   max: 6,
 };

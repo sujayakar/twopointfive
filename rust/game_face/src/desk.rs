@@ -15,7 +15,7 @@ fn desk<T>(f: impl FnOnce(&mut Desk) -> T) -> T { DESK.with(|d| f(d.borrow_mut()
 pub unsafe extern "C" fn face_desk_do(p: *const u8, n: usize) -> u32 {
     super::hook();
     let b = super::bytes(p, n);
-    match desk(|d| game_run::command::apply(&mut d.g, b)) { Ok(()) => 1, Err(why) => { super::out(why.into_bytes()); 0 } }
+    match desk(|d| d.machine(b)) { Ok(()) => 1, Err(why) => { super::out(why.into_bytes()); 0 } }
 }
 
 /// # Safety

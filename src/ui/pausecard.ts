@@ -1,8 +1,8 @@
-// THE CARDS OVER A RUN of a page that holds no game (#menu, styled in index.html): paused (Resume, the saves, Restart, the way out) and ended (how, and what to do about it).
+// THE CARDS OVER A RUN of a page that holds no game (#menu, styled in index.html): paused (Resume, the saves, Restart, Options, the way out) and ended (how, and what to do about it).
 // The world holds still under either.
-import { typedInto } from '../host/keymap';
 import { menuTheme } from './theme';
-import { button, checkpointButton, el, saveStrip, walkMenu, type RunSaves } from './runcard';
+import { closeOptions, openOptions } from './options';
+import { button, checkpointButton, el, saveStrip, type RunSaves } from './runcard';
 
 export interface PauseDeps {
   /** what is paused, under the wordmark */
@@ -10,7 +10,7 @@ export interface PauseDeps {
   saves: RunSaves;
   /** how the run ended, or null */
   verdict(): { won: boolean; word: string; why: string } | null;
-  /** may a card go up (the game may be lost to a panic, which has a card of its own) */
+  /** may a card go up: a run is on, and not lost to a panic (which has a card of its own) */
   may(): boolean;
   restart(): void;
   /** leave the mission */
@@ -26,9 +26,11 @@ export class PauseCard {
     menuTheme();
     this.root.addEventListener('mousedown', e => e.stopPropagation());   // (a click on the card is no shot)
     this.root.addEventListener('contextmenu', e => e.preventDefault());
-    addEventListener('keydown', e => { if (e.code === 'Escape' && !e.repeat) { e.preventDefault(); this.toggle(); } else if (this.up) walkMenu(e, typedInto); }, { capture: true });
+    addEventListener('keydown', e => { if (e.code === 'Escape' && !e.repeat) { e.preventDefault(); this.toggle(); } }, { capture: true });
   }
   toggle(): void { if (this.up) this.close(); else this.open(); }
+  /** a save's picture came after its tile was laid: the tile takes it */
+  pictured(save: string, url: string): void { for (const t of this.root.querySelectorAll<HTMLElement>('.saves .tile')) if (t.dataset.save === save) t.style.backgroundImage = `url("${url}")`; }
   /** the run's end card */
   end(): void { if (this.up) this.close(); this.ended = true; this.open(); }
   open(): void {
@@ -36,7 +38,7 @@ export class PauseCard {
     this.lay();   // (it asks the game: a game lost to the asking is no card)
     this.up = true; this.root.classList.add('on', 'paused'); this.d.turned(true);
   }
-  close(): void { this.up = false; this.ended = false; this.root.classList.remove('on', 'paused'); this.root.textContent = ''; this.d.turned(false); }
+  close(): void { closeOptions(); this.up = false; this.ended = false; this.root.classList.remove('on', 'paused'); this.root.textContent = ''; this.d.turned(false); }
   private lay(): void {
     const r = this.root, card = el('div', 'card'), side = el('div', 'side'), head = el('div', 'head'), actions = el('div', 'actions'), gap = (): void => { actions.appendChild(el('div', 'gap')); };
     r.textContent = ''; r.appendChild(card); card.appendChild(side);
@@ -51,6 +53,7 @@ export class PauseCard {
     if (lost && b) again.classList.remove('primary');
     for (const x of !this.ended ? [resume, b, strip, again] : lost && b ? [b, again, strip, resume] : [again, b, strip, resume]) if (x) actions.appendChild(x);
     gap();
+    if (!this.ended) { actions.appendChild(button('Options', () => openOptions())); gap(); }
     actions.appendChild(button('Quit to missions', () => { if (armed()) this.d.quit(); }, 'quit'));
     side.appendChild(actions);
     { const foot = el('div', 'foot'); foot.textContent = this.ended ? 'Esc keeps playing · W S choose' : 'Esc resumes · W S choose'; side.appendChild(foot); }

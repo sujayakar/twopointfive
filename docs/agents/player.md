@@ -137,7 +137,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   under the ring's own flags, as the ring's three slats; the flight, rule, counts, item kind and the `'ring to the head'` log line the chronicle keys on are
   untouched), and the kit column's second launcher tag reads `HE ×3` for `40MM ×3` (`shellTag()`; the reticle's and the draw line's '40 MM' are as they were). A chronicle row WRITES a weapon by its old name whichever kit is issued (`plainShort(def)`: saves and recordings read the same
   on and off) and is worded where it is shown. The OCP stays. Every player-facing line that names the kit goes through `gearText()` WHERE IT IS SHOWN (kit card, HUD column and
-  reticle word, controls list, captions, the debrief's rows) — a new line that says FN2000 / Five-seveN / ring airfoil needs the same. QA: `bun run
+  reticle word, controls list, captions, the debrief's rows; Options, which holds no game, says the issued kit's words in its one line that names it) — a new line that says FN2000 / Five-seveN / ring airfoil needs the same. QA: `bun run
   tools/qa/gear-check.ts` (`GEAR_BREAK=1` must fail; it holds the fifteen, the Mk 18 and the slug both ways); the fn2000 family's WORD checks ask for their lines
   through `gearText` / `ringTag`, so `TPS_GEAR=1 probes.ts fn2000` and `he40` are green as the frozen stand's are; rifle-slot, nvg-rig and the soak's rifle-box
   count follow the switch. Not seen on a GPU; `RIG.m4` / the tubes are first-pass numbers for the viewer.
@@ -550,10 +550,10 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   DATA DOES: a stored or pasted card that says `shield` is a card without one — `kitSanitize` takes only what a row offers, and the next change of a row writes the store without
   the word; a save never named one; a level whose issue card says `shield` is REFUSED with the reason in words (`scene/levelData.ts`: 'the ballistic shield is out of the game:
   take the key out'; levels/hall.json and hall-gwot.json now issue nothing); an F10 session whose knobs carry the `SHIELD` table LOADS (the table is passed over) — where a shield
-  man was in it the replay parts from the file's digests and says the frame, since the file does not say who carried what; an F7 run tape made with a shield man is refused before
-  a re-run, in words (`replay/format.ts tapeShield`: the table on AND a teammate's card carrying it or the long hall's issue; the map viewer plays its samples as ever). QA:
+  man was in it the replay parts from the file's digests and says the frame, since the file does not say who carried what; a run tape that old is of
+  another version and is refused before a re-run, in words (`replay/format.ts tapeWhy`). QA:
   `bun run tools/qa/noshield-check.ts [gone|card|staged|tape]` (`probes.ts noshield`, in all-quick; the same 24 lines on BOTH stands; `NOSHIELD_BREAK=1` lies to the check — a
-  shield value on the big row, every tape waved through — and must fail a card line and the tape line). The `shield-*` probes, `shield-tally.ts` and `pellets-shield` went with it.
+  shield value on the big row — and must fail a card line). The `shield-*` probes, `shield-tally.ts` and `pellets-shield` went with it.
   `tools/qa/lived-check.ts` holds a level to its file at a base commit and loads that file with today's reader: a base whose issue block hands out the shield (the long hall's)
   has its issue block and the level's note read as today's, said in a line, and takes no new base revision; `tools/qa/level-needs.ts` reads a level's issue cards as written.
   LEFT AS IT IS: the riot shields stacked in the barracks' bunk room (`tools/levels/barracks.ts`: set dressing, nobody carries one). MEASURED, headless only: see the long hall's
@@ -624,7 +624,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   your card's (the next bullet). No checkpoint slice: a floor with a spawned unit on it takes no
   checkpoint (`savestate.ts canSave`), and every teammate is one.
   UI: the two rows are drawn as their class of gun (`ui/kitIcons.ts` by `pickIcon`: the same three drawings; no long gun = an empty board), wear the can by
-  `kit.ts kitRowCan`, carry their own noise mark (`ui/kitNoise.ts`), and the kit view plays the gun's demo for either (`host/kitView.ts TILES`).
+  `CardRow.can`, carry their own noise mark (`CardRow.noise`), and the kit view plays the gun's demo for either (`host/kitView.ts TILES`).
   Check: `bun run tools/qa/gunslots-check.ts` (families `gunslots-card -mate -fight -guns -off` in `probes.ts`, in `all-quick`), ALL PASS on both stands;
   `GUNSLOTS_BREAK=1` fails every family. Probes written against the one gun row (`bigslot- kitpaste- kitlent- kitcan- sticky-`) run with the
   switch held off (`tools/qa/holds.ts GUN_ROW_AS_IT_WAS`); the card family has its own paste, set, issue-card and old-row verdicts under it. `gunslots-fight` is the measure: two teammates with a round each and three men five metres in front of them —
@@ -981,7 +981,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   off the software-adapter page.
 - **The kit's column reads the game's record** (`game.view.kit`, `rust/game_rules/src/kit/b_01.rs kit_view`; drawn by `src/ui/handbox.ts`, which imports nothing of the game; 2026-11-08).
   One column is left: the old one `SLOTSETUP` off drew is deleted with the two-line box, the `leftBar` nothing set, the PACE row (his pace is 1 at the head of every update: it could not show), `?magboxes` and `MAGBOXES_BREAK`, and `slotsetup.ts`'s questions on the copy (the
-  rules and their words are `slotsetup::setup_view` and `setup_takes`; the host's carried aim and `Game.backable` read `kit.takes` and `kit.setup`). No switch: it moves no rule. Native:
+  rules and their words are `slotsetup::setup_view`; `Game.backable` reads `kit.setup`). No switch: it moves no rule. Native:
   `rust/game_start/tests/kit_view.rs` (three seeds, a control in each, the second seat shown). Set against the column before it on one scripted run, 62 steps over two seeds: the same. The
   kit screen before a mission still reads `kit.ts`'s tables (the cards'). NOBODY HAS seen it on a GPU or played it.
 - **Empty hands are a slot on backtick; E is spare; the debugger is on backslash** (`src/game/handslot.ts HANDSLOT {on}`, `HANDSLOT_KEY`, 10-22; the
@@ -1112,19 +1112,15 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   touchpad drivers, some mice) cannot be told from the chord and is nothing: `?pinchonly=0`, there is no Options row; (3) Ctrl held and the wheel
   turned over a page that never saw the key go down (another frame, the address bar or devtools has the keys) still zooms until the mouse moves; (4) Safari sends a
   pinch as its own gesture events and no wheel, so a pinch there was never the zoom (not checked here). NOBODY HAS TRIED IT ON A TRACKPAD.
-  TWICE (`host/findme.ts watchCtrlTaps(win, idle, key)`; main.ts hands it `camKey`): the "Double tap" option of Options, Game (off unless he turns
-  it on) is two taps of the camera's key, wherever it is. findme.ts still imports nothing.
-  A tap of Space with Shift held counts (Shift is his sprint; with Ctrl it is a browser chord and still does not). With a text box focused (the
-  debugger's search) Space types a space and turns nothing, where Ctrl still turned: left so.
+  With a text box focused (the debugger's search) Space types a space and turns nothing, where Ctrl still turned: left so.
   THE WORDS: Options, Controls draws the two camera rows' cap plain (`ui/options.ts camCapEl`: Ctrl or Space; never keyCapEl's 'Space', which is the
   action's row and reads "E"); Options,
-  Game says "Double tap Space" and "hold Space and move the mouse" (`ui/findme.ts`, `camCap()`).
+  Game says "hold Space and move the mouse" (`ui/findme.ts`, `camCap()`).
   NOT A ROW (a reviewer's note, left as it is): the camera's key cannot be moved in Options, and a row put on Space takes Space from it with no
-  swap shown. Making the camera hold a row of the board would give it caps, words and a swap by the board's own machinery. `tools/qa/findme-page.cjs`
-  (the settings thread's) reads "Double tap Ctrl" and presses Control: it needs `&camspace=0` or the new words. The engine replay's own view still
+  swap shown. Making the camera hold a row of the board would give it caps, words and a swap by the board's own machinery. The engine replay's own view still
   turns on Ctrl (`replay/engineplay.ts`). A laptop touchpad that goes dead while a key is held would not turn the view under Space: not tried.
-  CHECK: `bun run tools/qa/probes.ts camspace` (family `player`), 6 lines: the board, held, Ctrl, the wheel (above), twice, off; on game/input.ts's own listeners and
-  the double tap's, stood on a window and a canvas that are lists of them. `CAMSPACE_BREAK=1` fails 5 (the `off` line is the build as it was).
+  CHECK: `bun run tools/qa/probes.ts camspace` (family `player`), 5 lines: the board, held, Ctrl, the wheel (above), off; on game/input.ts's own listeners,
+  stood on a window and a canvas that are lists of them. `CAMSPACE_BREAK=1` fails 4 (the `off` line is the build as it was).
   `tools/qa/keybinds-page.cjs` reads the camera's cap in its last line.
   Never seen on a GPU; nobody has felt Space held under a thumb while the same hand walks.
 - **A can in the wind-up goes back on the belt when his hands start something else** (`src/game/throwback.ts THROWBACK.on`, 10-22; the deep
@@ -1212,6 +1208,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   rest, writes `--railshift` on it: down past the ring if the window has the room, else up over it (index.html: the line's transform, eased). The
   line stays readable: it is often what says which wedge to press. The older `ringover` (the status column faint under the squad's ring) is as it
   was. Page-only: no headless check sees it; read on the software adapter by the boxes' places, never seen on a GPU, no picture taken.
+- (Since 2026-11-08 `emptyThing`, `emptyWord` and `handRingView` below are `rust/game_rules/src/interact`'s and `view/rings.rs`'s: the HUD reads `view.empty` and `view.hand`.)
 - **A tap that finds no row beside a thing names the thing and why** (`HANDRING.near`, handring.ts; interact.ts `emptyThing` / `emptyWord`; on and off
   with `on`, as `empty` is: `?handring=0`, `TPS_HANDRING=1`, a `FROZEN_HOLDS` row, a recording from before the key replays with it off). The
   maintainer, 10-22, on the stealth tutorial with the back door open at his elbow: "nothing in reach to close the door?". THE CAUSE was not reach:
@@ -1483,7 +1480,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   middle of the screen says nothing while the section has it, and says it again while the squad's menu is the panel; the diamond on the objective
   stays), then BLOCKS UNDER NO HEADING: of his own rows every line a key gives, each by itself (the highlighted row's, its key lit; on a man in
   reach both clicks), a row no key gives whole (a running verb's own words, how to stop it and its bar; a committed move's line; for a moment the
-  word an empty tap left, with how far), then every line of the squad's that a key gives (the keyed lines of `game.view.squad.notes` and `orders.quickLine()`: the quick
+  word an empty tap left, with how far), then every line of the squad's that a key gives (the keyed lines of `game.view.squad.notes` and `game.view.squad.quick`: the quick
   key's, a plan's go, a wall charge to blow; and `game.view.corner`, what the block and a door's heading said that the corner would
   lose: a set door charge as the squad's key's line while that key by itself blows it, with who it would catch; a set charge that key does not
   blow so (his own, or one that goes with the word) only while it would catch somebody, as a warning under no key, shown whatever a lesson's frame

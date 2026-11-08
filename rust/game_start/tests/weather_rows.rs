@@ -44,7 +44,6 @@ fn the_winds_are_whole_every_tick() {
 fn heat_and_what_goes_are_told() {
     let mut p = pass(5);
     (p.g.m.dress.dress.wind, p.g.m.dress.dress.fires) = (true, true);
-    p.g.engine.particles = Some(game::render_particles::Particles { collide: true, spark_bounce: true, ..game::render_particles::Particles::blank() });   // (as a page's game has them: the heat goes to its particles)
     let (mut d, mut hot) = (Drawn::default(), false);
     let t = (0..p.g.targets.len()).map(|i| p.g.targets[i]).find(|&t| game::fire::is_fire(&p.g, t)).expect("the pass has a brazier");
     p.g.engine.view_focus = Some(game::fire::mouth_of(&p.g, t).pos);

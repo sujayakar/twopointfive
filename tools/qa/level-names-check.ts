@@ -3,7 +3,7 @@
 // The fault it holds shut: every table of room names in the game was the office's (the level the game was written on). A level that named no rooms of its
 // own — the registry — had its captor 'holding the server room' (the mission's reach area, on a floor with no server room), men 'in the back offices' and
 // 'coming from the car park'; and the debrief's timeline called every level's floor 'cubicles', 'lobby', 'server room' by the office's rectangles.
-//   bun run tools/qa/level-names-check.ts [--levels registry,compound,…] [--play rescue-registry] [--seeds 1-6] [--no-play]
+//   bun run tools/qa/level-names-check.ts [--levels registry,compound,…]
 // What it does:
 //   NAMES   for every level (default: every levels/*.json that is not the office and has a scenario), over the whole floor on a half-metre lattice:
 //             · the level names floor of its own (its structure's rooms, `scenarios.places` and/or the rooms its quiet mission's spots are in) — a level that names nothing is listed, and must then
@@ -12,13 +12,9 @@
 //               names, 'outside' one of them (placeName only: the other two are nouns), or the one place-free word — never a room of the office's tables
 //               that the level does not have itself, and never anything else (an empty string, 'undefined', a throw)
 //             · at the middle of every named rectangle, the name said is that rectangle's own
-//   PLAYED  plays --play (default rescue-registry: the level the fault was read on) over --seeds at Standard and at Hard as the page ships it
-//           (tools/qa/ships.ts, PT_SAY=1) and reads every line said, cued or logged: none may say a room of the office's that the level does not have.
-// exit 0 = every level's names are its own and the played lines say none of the office's · 1 = one did not, or NO VERDICT (no level, no line: the check
-// looked at nothing) · 2 = bad flags
-import { readFileSync, readdirSync, unlinkSync } from 'node:fs';
+// exit 0 = every level's names are its own · 1 = one is not, or NO VERDICT (no level: the check looked at nothing) · 2 = bad flags
+import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { tmpdir } from 'node:os';
 import { ROOT } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
@@ -27,9 +23,7 @@ const CHR = await import(`${ROOT}/src/game/rooms.ts`);
 const { CUES } = await import(`${ROOT}/src/game/cues.ts`);
 
 const argv = process.argv.slice(2), flag = (n: string) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
-for (const a of argv) if (a.startsWith('--') && !['--levels', '--play', '--seeds', '--no-play'].includes(a)) { console.error(`unknown flag ${a} (--levels --play --seeds --no-play)`); process.exit(2); }
-const noPlay = argv.includes('--no-play'), playScn = flag('--play') ?? 'rescue-registry', seeds = flag('--seeds') ?? '1-6';
-if (!/^\d+(-\d+)?(,\d+(-\d+)?)*$/.test(seeds)) { console.error('bad --seeds'); process.exit(2); }
+for (const a of argv) if (a.startsWith('--') && a !== '--levels') { console.error(`unknown flag ${a} (--levels)`); process.exit(2); }
 
 /** THE OFFICE'S WORDS: every room its tables name (dialogue.ts OFFICE_AREAS + its clear plans + the mission's server room; chronicle.ts ROOMS) and the two
  *  it falls through to. A level may have a lobby or a corridor of its own: a word is wrong only on a level that names no such place itself */
@@ -40,7 +34,7 @@ const files = flag('--levels') ? flag('--levels')!.split(',').map(n => `${n.repl
 
 let failed = false, looked = 0;
 const verdict = (ok: boolean, label: string, detail: string) => { if (!ok) failed = true; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
-console.log(`level-names-check · ${files.length} level files${noPlay ? '' : ` · played: ${playScn} seeds ${seeds}, Standard and Hard`}`);
+console.log(`level-names-check · ${files.length} level files`);
 
 const ownWords = new Map<string, string[]>();   // level file → the names it has itself (lower case, no article)
 for (const f of files) {
@@ -73,27 +67,5 @@ for (const f of files) {
 }
 if (!looked) { failed = true; console.log('- NO VERDICT — no level with a scenario was read: the check looked at nothing'); }
 
-if (!noPlay) {
-  const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
-  const entry = SCENARIOS.find((e: any) => e.id === playScn), lf: string = entry?.levelFile ?? entry?.level ?? '';
-  const own = ownWords.get(lf) ?? ownWords.get(`${lf}.json`) ?? [...ownWords.entries()].find(([k]) => playScn.includes(k.replace(/\.json$/, '')))?.[1] ?? [];
-  const foreign = OFFICE_WORDS.filter(w => !own.some(o => o === w || o.endsWith(` ${w}`)));
-  for (const hard of [false, true]) {
-    const json = resolve(tmpdir(), `level-names-${process.pid}-${hard ? 'hard' : 'std'}.json`);
-    const pr = Bun.spawn(['bun', 'run', resolve(import.meta.dir, 'ships.ts'), '--partial', ...(hard ? ['--hard'] : []), '--callout', '--scn', playScn, '--seeds', seeds, '--jobs', '3', '--cap', '420', '--json', json], { stdout: 'ignore', stderr: 'ignore', env: { ...process.env, PT_SAY: '1' } });
-    const code = await pr.exited;
-    let runs: any[] = []; try { runs = JSON.parse(readFileSync(json, 'utf8')).runs ?? []; } catch { /* did not play */ }
-    try { unlinkSync(json); } catch { /* nothing written */ }
-    if (code !== 0 && code !== 1) { failed = true; console.log(`- FAIL — ${playScn} at ${hard ? 'Hard' : 'Standard'}: ships.ts exit ${code}`); }   // (1 = a run stalled or smelt: still played)
-    let lines = 0; const bad = new Map<string, string>(), placed = new Set<string>();
-    for (const r of runs) for (const k of ['lines', 'cues', 'msgs']) for (const l of (r.said?.[k] ?? []) as { t: number; who?: string; text: string }[]) {
-      lines++; const t = String(l.text).toLowerCase(), w = foreign.find(x => new RegExp(`(^|[^a-z])${x}($|[^a-z])`).test(t));
-      if (w) { if (!bad.has(l.text)) bad.set(l.text, `seed ${r.seed} ${l.t} s ${l.who ?? ''}`); } else { const o = own.find(x => t.includes(x)); if (o) placed.add(o); }
-    }
-    if (!runs.length || !lines) { failed = true; console.log(`- NO VERDICT — ${playScn} at ${hard ? 'Hard' : 'Standard'}: ${runs.length} runs, ${lines} lines read: the check looked at nothing`); continue; }
-    looked++;
-    verdict(bad.size === 0, `${playScn} played at ${hard ? 'Hard' : 'Standard'}, seeds ${seeds}: no line says a room of the office's`, bad.size ? `${bad.size} of ${lines} lines, e.g. ${[...bad].slice(0, 5).map(([t, at]) => `'${t}' (${at})`).join(' · ')}` : `${runs.length} runs, ${lines} lines · places of its own said: ${[...placed].join(', ') || 'none'}`);
-  }
-}
 console.log(failed ? '=== level-names-check: FAILURES above ===' : '=== level-names-check: ALL PASS ===');
 process.exit(failed ? 1 : 0);

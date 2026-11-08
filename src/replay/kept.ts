@@ -18,14 +18,13 @@ import type { CastRow, Sample, ReplayEvent, ReplayLine, ReplayNote, ReplayFile, 
 
 export const KEPT_VERSION = 1;
 
-/** the run tape's rows since the piece before (game/runtape.ts since()); `ticks` = steps taped so far, the first piece of a visit carries the recipe — and
- *  `f32`, how the visit's sensor values are written (format.ts RunTape.sens.f32: absent = every number the double itself) */
+/** the run tape's rows since the piece before (game/runtape.ts since()); `ticks` = steps taped so far, the first piece of a visit carries the recipe and
+ *  the tape's version (format.ts TAPE_VERSION; absent = a visit from before it was said, 1) */
 export interface TapePiece {
-  ticks: number; recipe?: Omit<RunTape['recipe'], 'search' | 'levelFile'>; f32?: 1;
+  ticks: number; recipe?: Omit<RunTape['recipe'], 'search' | 'levelFile'>; v?: number;
   dt: [number, number][]; view: number[][]; cam: RunTape['cam']; input: RunTape['input'];
-  /** sensor keys first met in this piece (appended to the visit's list: a row's indices are into the whole list) */
-  keys: string[]; sens: RunTape['sens']['rows']; x: RunTape['x'];
-  /** the lens rows of these steps (format.ts RunTape.lens): where there were any, and — empty or not — on a visit's first piece (the tape keeps them) */
+  x: RunTape['x'];
+  /** the lens rows of these steps (format.ts RunTape.lens), where there were any */
   lens?: TapeVal[][];
 }
 /** what the ring gained since the piece before, on the ring's own clock and cast indices; `cast` = rows first met in this piece (appended to the visit's cast) */
@@ -107,9 +106,9 @@ export function assemble(v: Visit, why = 'kept'): Assembled | null {
     const T = P.tape;
     if (T && tapeOpen) {
       if (!tape) { if (!T.recipe) { tapeOpen = false; tapeEnd = 'the first piece of the run tape is missing'; continue; }
-        tape = { v: 1, ticks: 0, recipe: { ...T.recipe, search: v.head.url ?? '', ...(v.head.level.file ? { levelFile: v.head.level.file } : {}) }, dt: [], view: [], cam: [], input: [], sens: { keys: [], rows: [], ...(T.f32 ? { f32: 1 as const } : {}) }, x: [] }; }
+        tape = { v: T.v ?? 1, ticks: 0, recipe: { ...T.recipe, search: v.head.url ?? '', ...(v.head.level.file ? { levelFile: v.head.level.file } : {}) }, dt: [], view: [], cam: [], input: [], x: [], lens: [] }; }
       for (const run of T.dt) { const D = tape.dt[tape.dt.length - 1]; if (D && D[1] === run[1]) D[0] += run[0]; else tape.dt.push([run[0], run[1]]); }
-      add(tape.view, T.view); add(tape.cam, T.cam); add(tape.input, T.input); add(tape.sens.keys, T.keys); add(tape.sens.rows, T.sens); add(tape.x, T.x); if (T.lens && (tape.lens || T.recipe)) add(tape.lens ??= [], T.lens);   /* (a visit whose first piece had none is a tape from before the rows: none are laid on it) */ tape.ticks = T.ticks;
+      add(tape.view, T.view); add(tape.cam, T.cam); add(tape.input, T.input); add(tape.x, T.x); if (T.lens) add(tape.lens, T.lens); tape.ticks = T.ticks;
     }
   }
   if (!S.length) return null;

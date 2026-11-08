@@ -52,7 +52,6 @@ import { LIVED, livedOfQuery } from '../scene/lived';
 import { SHAPES } from '../scene/shapes';
 import { ROOMCLEAR } from '../game/roomclear';
 import { FIXEDSTEP } from './loop';
-import { autoTuneApply } from './autocam';
 import { TWEEN } from './tween';
 import { EVENPACE, FLIGHT_PAGE } from './pace';
 import { findMeStarts } from './findme';
@@ -88,11 +87,9 @@ export function pageSwitches(q: URLSearchParams): void {
   AIR_SIM.on = q.get('air') !== '0';   // THE AIR AS ONE SIMULATED FIELD (game/airSim.ts, render/airField.ts): the wind as a small fluid simulation over every level's floor plan, fed by the wind's own sources, walls and door leaves standing in it — a picture only (today the blown snow rides it): ON in the page; ?air=0 = no field is built or stepped, the build as it was
   if (q.get('doorcost') === '0') { DOORSHOT.toll = 1; }   // shooting a door out is a cost — twelve rifle rounds, twenty-four pistol, whatever the destruction scale (DOORSHOT.toll 2 and .flat, the module's own words): ?doorcost=0 = drywall's own six and twelve, riding the scale, as it was
   if (q.get('wallmenu') === 'direct') WALLCHARGE.menu = 'direct';   // the wall charge's own switch (game/wallcharge.ts; it also needs the destruction's) · ?wallmenu=direct: X, 5 instead of X, 5, 3
-  if (q.get('doorpath') === 'gun') DOORPATH.gun = true;   // ?doorpath=gun: a room entry's walk through the door (doorpath.ts) with the gun rule too (a rifle is not carried through a leaf: it ships off)
   WALLSNAP.on = !q.has('nowallsnap');   // back to the wall, the feel pass (game/wallsnap.ts): the take on one eased clock with stepping feet and a settle, the way off keeping his momentum, and Q with the rifle in hand STACKS on the wall (low ready; the cursor round an open end steps him out): ON in the page; ?nowallsnap = the hold as it was
   WALLSNAP.press = q.get('wallpress') !== '0';   // …taken without the key (game/wallsnap.ts `press`, player.ts wallPress): a move key held into a wall takes it as its key does (while this is on the hold has no key on the page's board: host/keymap.ts qFree) — ON in the page (Options ▸ Game has its row, kept per machine); ?wallpress=0 = Q alone, as it was
   WALLSNAP.leanGun = q.has('noleangun') ? 0 : LEAN_GUN_M;   // …and the step-out round an end goes as far as the RIFLE needs (wallsnap.ts `leanGun`): round an end on his gun side the eyes' 0.6 m left the rifle in the jamb and its rounds in the wood; ?noleangun = 0.6 m whichever side, as it was
-  autoTuneApply();   // the camera's key tapped twice and the camera frames things itself (host/autocam.ts: the door ahead, the squad's orders, the men he could shoot; the key held with the mouse moved, or with a walk key, takes it back): ON in the page; `?autocam=0` = the double tap is the Options row's, as it was (`?autoturn=0` = it never turns the view, `?autozoom=0` = it never zooms)
   TEAMPACE.doorBrisk = q.get('doorbrisk') !== '0';   // nobody sprints to a stack: a teammate on a stack order who would run to cover on his way to the door goes at the fight's pace with his gun up (game/teampace.ts teamDash). ?doorbrisk=0 = he sprints there with his gun low, as he did
   TEAMPACE.pacing = q.get('pacing') !== '0';   // a teammate paces himself on you: he walks to an order's mark at your walk, slows only while you are behind him and walking after him, and steps up to a brisk walk when you are ahead and bound the same way (game/teampace.ts teamWalkOf). ?pacing=0 = the flat four fifths of your walk, as it was
   findMeStarts();   // the outline in the dark is ON for a machine that has kept nothing, at the maintainer's own numbers for its width, his teammates' and its colour, and the camera starts as he plays it: the aim pan at none and the turn the other way (host/findme.ts FINDME_TUNED; a row a hand has moved stays where the hand put it) — ON in the page; ?findtuned=0 = those rows start as built: no rim until Options > Game asks, the view leaning toward the aim point and turning as it did
@@ -178,7 +175,6 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'FRAG.fleeWise': 'TPS_FLEEWISE=1',
   'FRAG.restProps': 'TPS_FLEEMATES=1',
   'FRAG.fleeApart': 'TPS_FLEEMATES=1',
-  'FRAG.fleeOnto': 'TPS_FLEEMATES=1',
   'FRAG.fleeSam': 'TPS_FLEEMATES=1',
   'FRAG.fleeLook': 'TPS_FLEEMATES=1',
   'FRAG.wallFlee': 'TPS_WALLFLEE=1',
@@ -201,26 +197,14 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'WALLSNAP.leanGun': 'TPS_LEANGUN=1',
   'HANDSLOT.on': 'TPS_HANDSLOT=1',
   'HANDRING.on': 'TPS_HANDRING=1',
-  'HANDRING.early': 'TPS_HANDRING=1',
   'HANDRING.empty': 'TPS_HANDRING=1',
   'HANDRING.near': 'TPS_HANDRING=1',
   'HANDRING.lone': 'TPS_HANDRING=1',
   'HANDRING.loneWrap': 'TPS_HANDRING=1',
-  'HANDRING.onThing': 'TPS_HANDRING=1',
   'HANDRING.bare': 'TPS_HANDRING=1',
   'HANDRING.turn': 'TPS_HANDRING=1',
   'HANDRING.corner': 'TPS_HANDRING=1',
   'THROWBACK.on': 'TPS_THROWBACK=1',
-  'AUTOCAM.on': 'TPS_AUTOCAM=1 (the mode itself is the seat\'s, off until the camera\'s key is tapped twice: read only by a tool that steps through host/loop.ts stepFrame)',
-  'AUTOCAM.sway': 'TPS_AUTOSWAY=1 (the mode\'s slow turn in a fight and on the move; nothing with the mode off)',
-  'AUTOCAM.lock': 'TPS_AUTOLOCK=1 (the mode\'s soft lock: the frame and the zoom come in on a man who is not onto him as the player closes; nothing with the mode off)',
-  'AUTOCAM.tune': 'TPS_AUTOTUNE=1 (the mode\'s numbers are the player\'s: a mode and rows on Options, the gentle mode where nobody has chosen; nothing with the mode off)',
-  'AUTOCAM.restAhead': 'TPS_AUTOTUNE=1 (the gentle mode\'s own number, no turn at rest for the thing on the lens\'s side: host/autocam.ts AUTO_MODES)',
-  'AUTOCAM.turnCap': 'TPS_AUTOTUNE=1 (the gentle mode\'s own number, a turn of its own eased under a top speed: host/autocam.ts AUTO_MODES)',
-  'AUTOCAM.swingCap': 'TPS_AUTOTUNE=1 (the gentle mode\'s own number, the double tap\'s swing eased under a top speed: host/autocam.ts AUTO_MODES)',
-  'AUTOCAM.swayFightMax': 'TPS_AUTOTUNE=1 (the gentle mode\'s own number, the fight\'s lean smaller: host/autocam.ts AUTO_MODES)',
-  'AUTOCAM.swayMove': 'TPS_AUTOTUNE=1 (the gentle mode\'s own number, no lean for the way he walks: host/autocam.ts AUTO_MODES)',
-  'AUTOCAM.swayRate': 'TPS_AUTOTUNE=1 (the gentle mode\'s own number, the lean slower: host/autocam.ts AUTO_MODES)',
   'OWNBLOW.on': 'TPS_OWNBLOW=1',
   'THROWBACK.restMark': 'none: settled, the Rust view asks it no more',
   'THROWBACK.reach': 'none: the Rust view reads it',
@@ -246,7 +230,6 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'CLOSE.on': 'TPS_CLOSE=1',
   'CLOSE.heldClicks': 'TPS_HELDCLICKS=1',
   'CLOSE.reachUp': 'TPS_REACHUP=1',
-  'CLOSE.handsLow': 'TPS_HANDSLOW=1',
   'CLOSE.noKnife': 'TPS_NOKNIFE=1',
   'CLOSE.rmbHold': 'TPS_RMBHOLD=1',
   'FOOTFALL.once': 'TPS_FOOTFALL=1',
@@ -280,7 +263,6 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'HOLD.apart.tip': 'TPS_STALKPOLISH=1 (acts only in a bare-handed hold: with TPS_NOKNIFE=1)',
   'HOLD.yank.arch': 'TPS_STALKPOLISH=1 (acts only with bare hands on a stalk: with TPS_STALK=1 and TPS_NOKNIFE=1)',
   'GUARD_EYE.far': 'TPS_FARSIGHT=1',
-  'GUARD_EYE.farCalm': 'TPS_FARCALM=1',
   'KITANIM.on': 'TPS_KITANIM=1',
   'THROW_BY.on': 'TPS_THROWBY=1',
   'START.fallIn': 'TPS_FALLIN=1',
@@ -298,7 +280,6 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'RUNNER.on': 'TPS_RUNNER=1',
   'RUNNER.anyway': 'TPS_RUNANYWAY=1',
   'RUNNER.nobody': 'TPS_RUNNOBODY=1',
-  'STARTLE.on': 'TPS_STARTLE=1',
   'ROWSET.on': 'TPS_ROWSET=1',
   'SMOKEBREAK.on': 'TPS_SMOKEBREAK=1',
   'SHOWWHY.on': 'TPS_SHOWWHY=1',
@@ -322,8 +303,6 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'ATTENTION.on': 'TPS_ATTENTION=1',
   'PICTURE.on': 'TPS_PICTURE=1',
   'RESPONSE.on': 'TPS_RESPONSE=1',
-  'RELOAD.auto': 'TPS_AUTORELOAD=1',
-  'RELOAD.lastMag': 'TPS_LASTMAG=1',
   'SAMSTUN.on': 'TPS_SAMSTUN=1',
   'TEAMTALLY.on': 'TPS_TEAMTALLY=1',
   'AIMWEIGHT.on': 'TPS_AIMWEIGHT=1',
@@ -331,7 +310,6 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'TEAMPACE.on': 'TPS_TEAMPACE=1',
   'TEAMPACE.doorBrisk': 'TPS_DOORBRISK=1',
   'TEAMPACE.pacing': 'TPS_PACING=1',
-  'TEAMPACE.walkAim': 'TPS_WALKAIM=1',
   'NOSHOVE.on': 'TPS_NOSHOVE=1',
   'RAILS.on': 'TPS_RAILS=1',
   'RAILS.cardBeat': 'TPS_CARDBEAT=1 (acts only with the frame up: TPS_RAILS=1)',
@@ -395,8 +373,6 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'ORDERS.roundCap': 'TPS_ROUNDCAP=1',
   'ORDERS.sameWay': 'TPS_SAMEWAY=1',
   'ORDERS.trailDoors': 'TPS_TRAILDOORS=1',
-  'PAIR.steady': 'TPS_PAIRSTEADY=1',
-  'ROOMFIGHT.coverKeep': 'TPS_COVERKEEP=1',
   'ROOMFIGHT.doorShots': 'TPS_DOORSHOTS=1',
   'COVER.rearRead': 'TPS_REARREAD=1',
   'COVER.backTurn': 'TPS_BACKTURN=1',
@@ -404,8 +380,6 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'SHAPES.on': 'TPS_SHAPES=1',
   'COATFINISH.on': 'TPS_COATFINISH=1 (a picture only)',
   'SOLIDGLASS.on': 'TPS_SOLIDGLASS=1 (a picture only)',
-  'SNEAK.stalkAmbient': 'TPS_STALKAMBIENT=1',
-  'SNEAK.byEye': 'TPS_BYEYE=1',
   'SNEAK.noiseWalk': 'TPS_NOISEWALK=1',
   'DOORTOOLS.testDoor': 'TPS_DOORTEST=1',
   'DOORTOOLS.thrPie': 'TPS_THRPIE=1',
@@ -434,13 +408,10 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'SEENWALK.on': 'TPS_SEENWALK=1',
   'DOORTOOLS.haltBack': 'TPS_HALTBACK=1',
   'DOORTOOLS.behindSam': 'TPS_BEHINDSAM=1',
-  'DOORTOOLS.tossMate': 'TPS_TOSSMATE=1',
   'DOORTOOLS.chargeAnswer': 'TPS_CHARGEANSWER=1',
   'DOORTOOLS.podFrames': 'TPS_PODFRAMES=1',
   'DOORTOOLS.thrHand': 'TPS_THRHAND=1',
-  'DOORTOOLS.thrNoCan': 'TPS_THRNOCAN=1 (acts only with the can\'s wait for a hand up as well: TPS_THRHAND=1)',
   'DOORTOOLS.thrFragHold': 'TPS_THRFRAGHOLD=1',
-  'DOORTOOLS.thrDoorsLeaf': 'TPS_THRDOORSLEAF=1 (asked of one-way doors only: ONEWAY=1)',
   'DOORTOOLS.fragHold': 'TPS_FRAGHOLD=1 (this rule alone: the threshold\'s half has its own word above)',
   'DOORWAY.sideKick': 'TPS_SIDEKICK=1',
   'DOORWAY.kickGlass': 'TPS_KICKGLASS=1 (acts only with the side kick and rounds through glass up as well: TPS_SIDEKICK=1 GLASSFX=on)',

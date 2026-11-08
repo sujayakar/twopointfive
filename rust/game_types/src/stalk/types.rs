@@ -4,7 +4,7 @@ use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum Why {
     Keys,
     Wall,
@@ -36,7 +36,6 @@ pub struct St {
     pub t: f64,
     pub wait: Option<bool>,
     pub armed: Option<bool>,
-    pub stick: Option<[f64; 2]>,
     pub orbit_r: Option<f64>,
     pub orbit_t: Option<f64>,
     pub orbit_ask: Option<[f64; 4]>,
@@ -51,7 +50,6 @@ impl St {
             t: 0.0,
             wait: None,
             armed: None,
-            stick: None,
             orbit_r: None,
             orbit_t: None,
             orbit_ask: None,
@@ -102,27 +100,6 @@ impl StalkMove {
     }
 }
 impl Default for StalkMove { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: StalkStick, src/game/stalk.ts:235)
-#[derive(Clone, Copy, Debug)]
-pub struct StalkStick {
-    pub x: f64,
-    pub y: f64,
-    pub fwd: V3,
-    pub right: V3,
-}
-impl StalkStick {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StalkStick {
-            x: 0.0,
-            y: 0.0,
-            fwd: [0.0; 3],
-            right: [0.0; 3],
-        }
-    }
-}
-impl Default for StalkStick { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: StalkKeys, src/game/stalk.ts:237)
 #[derive(Clone, Copy, Debug)]

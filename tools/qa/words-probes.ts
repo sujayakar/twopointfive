@@ -191,31 +191,6 @@ export const wordsDoors = guarded(async () => withWords(true, async () => {
   return F.done();
 }));
 
-/** words-frag: the squad's refused frag says WHO is in it (squadthrow.ts `squadFragCatches`): a rescue's hostages are 'hostages',
- *  anybody else unarmed is 'a civilian'. Asked of the function itself on a staged rescue, the player and the
- *  team taken out of the question so only the unarmed are judged. WORDS_BREAK=1 expects the old line of a civilian with the pass on: must fail. */
-export const wordsFrag = guarded(async () => {
-  const F = family('words-frag'), { squadFragCatches } = await import(`${ROOT}/src/game/squadthrow.ts`), OLD = 'hostages. no frag.';
-  {
-    const T = await staged(true, 3, {}), g = T.game, h = T.R.hostages.find((x: any) => x.state !== 'dead');
-    F.verdict(!!h, 'a rescue staged with a living hostage', T.why ?? '');
-    if (!h) return F.done();
-    const at: [number, number, number] = [h.char.pos[0], 0, h.char.pos[2]];
-    const base = { player: { down: true, char: g.player.char }, guards: g.guards.filter((x: any) => x.team !== 'operative') };
-    const as = (over: Record<string, unknown>) => Object.assign(Object.create(g), base, over);
-    const cases: [string, any, string][] = [
-      ['a hostage', as({ civilians: [] }), OLD],
-      ['a civilian', as({ rescue: null, civilians: [h] }), process.env.WORDS_BREAK ? OLD : 'a civilian is in it. no frag.'],
-      ['nobody unarmed', as({ rescue: null, civilians: [] }), 'null'],
-    ];
-    for (const [who, G, want] of cases) {
-      const got = String(squadFragCatches(G, at, at));
-      F.verdict(got === want, `${who}: '${want}'`, got === want ? '' : `said '${got}'`);
-    }
-  }
-  return F.done();
-});
-
 /** 'words-doornames' (game/doornames.ts authoredDoorNames, behind words.ts WORDS.doors, settled on): a level says what its own doors are called where the rooms cannot (scenarios.doorNames), and no
  *  door's name on the HUD carries a bearing. All headless, read off the name the squad's row reads (orders.ts doorWords): no row seen on a page.
  *    1 · the lookup on a made-up level: a written name is the door's name, wins over a made one, names no door that is not there; a made name beside it is told

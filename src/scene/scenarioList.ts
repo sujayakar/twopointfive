@@ -42,9 +42,6 @@ export const SCENARIOS: ScenarioEntry[] = [
   { id: 'block-four', title: 'The block', kind: 'roomclear', squad: 4, level: 'block.json', ways: ['the loading hall, on the main hall', 'the loading hall, on the tool crib'], untuned: true, group: 'strongholds', offList: true,
     place: 'Four rooms off one hall, a turn in each', lean: 'loud', defenders: 8, squads: true,
     blurb: 'Every held room turns a corner, so the enemies wait in the dark past a lit doorway. Each has a second door from the small room beside it.' },
-  { id: 'block-squads', title: 'The block, three squads', kind: 'roomclear', squad: 4, level: 'block-squads.json', ways: ['the loading hall, on the main hall', 'the loading hall, on the tool crib'], untuned: true, offList: true, group: 'strongholds',
-    place: 'The block again, held by squads', lean: 'loud', defenders: 11, squads: true,
-    blurb: 'The enemies hold the block in squads, and each squad has its own rooms. Hit one squad and listen to what the others do.' },
   { id: 'warehouse-four', title: 'The warehouse', kind: 'roomclear', squad: 4, level: 'warehouse.json', ways: ['the south-west corner', 'the south-east corner'], untuned: true, group: 'strongholds', offList: true,
     place: 'A racked hall, a loading dock, a ring of small rooms', lean: 'loud', defenders: 11, squads: true,
     blurb: 'The building is laid out as a ring, so whichever door you fight at, someone can walk around behind you.' },
@@ -178,8 +175,7 @@ export function listedLevels(): { level: string; rows: ScenarioEntry[] }[] {
 }
 
 /** the query keys a scenario owns: a pick replaces them, a quit drops them, everything else on the URL (?quality=, ?mute, ?hud …) rides along.
- *  (`?level=` is NOT: a scenario on the
- *  relief office is a thing to want.) `solo` is the mission list's flag for the plain night straight in (ui/missions.ts): a pick or
+ *  `solo` is the mission list's flag for the plain night straight in (ui/missions.ts): a pick or
  *  a quit drops it like the rest. */
 export const SCENARIO_KEYS = ['levelFile', 'nightbreach', 'roomclear', 'rescue', 'quiet', 'squad4', 'squad', 'loadout', 'solo'];   // (`squad=N`: the loadout's size, game/loadout.ts; `loadout=<id>`: its screen, ui/loadout.ts)
 

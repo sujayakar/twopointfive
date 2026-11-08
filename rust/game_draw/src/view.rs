@@ -15,8 +15,6 @@ section! {
         /// where he stands, and where the view follows (him, a man spectated, the squad from the sky)
         pub at: [f32; 3],
         pub follow: [f32; 3],
-        /// which way he aims, on the plan
-        pub aim_yaw: f32,
         /// where his aim meets the world
         pub aim: [f32; 3],
         /// the view is another man's: nothing leans on the cursor
@@ -41,11 +39,26 @@ section! {
         pub target: [f32; 3],
         /// what a lesson does not let the hand do to the view: 1 turn it · 2 zoom it
         pub locks: u32,
+        /// saves made of this game so far: moves when there is another
+        pub saves: u32,
+        /// what the game is set to, for a screen that sets it: hits do nothing to him, the men think, unlimited ammunition, it saves by itself, the wall hold's feel, walking into a wall takes
+        /// it, the command key tapped twice calls the squad in
+        pub god: u32,
+        pub thinks: u32,
+        pub ammo: u32,
+        pub autosave: u32,
+        pub wall_feel: u32,
+        pub wall_press: u32,
+        pub fall_in: u32,
         /// the run's end card is due: 1 it was lost, 2 won (0: not yet)
         pub ended: u32,
+        /// this run, for whoever keeps what was won: 1 its try has begun · 2 it is over (what there is to keep is asked: face_run_view)
+        pub run: u32,
         /// night vision's amount, and how hard he has just been hit
         pub night: f32,
         pub hit: f32,
+        /// this game is the Team & kit picture: 1 staged, 2 nothing to stage (0: it is no picture)
+        pub kit: u32,
     }
 }
 
@@ -70,6 +83,10 @@ pub fn fill(g: &Game, stood: u32, desired: f64, out: &mut Vec<View>) {
         }
     }
     r.ended = ended(g);
+    { let (begun, over) = game::verdict::run_on(g); r.run = begun as u32 | (over as u32) << 1; }
+    r.saves = (g.saves.stats.autosaves + g.saves.stats.manual) as u32;
+    (r.god, r.thinks, r.ammo, r.autosave) = (g.god_mode as u32, g.ai_enabled as u32, g.infinite_ammo as u32, g.saves.enabled as u32);
+    (r.wall_feel, r.wall_press, r.fall_in) = (g.k.wallsnap.on as u32, g.k.wallsnap.press as u32, game::orders::squad_orders_twice_on(g) as u32);
     r.locks = game::rails::rails_locks(g, "camera") as u32 | (game::rails::rails_locks(g, "zoom") as u32) << 1;
     out.push(View {
         tick: crate::tick(g),
@@ -77,7 +94,6 @@ pub fn fill(g: &Game, stood: u32, desired: f64, out: &mut Vec<View>) {
         man: g.ch[ch].id as u32,
         at: f3(at),
         follow: f3(spectated.or(sky).unwrap_or(at)),
-        aim_yaw: g.ch[ch].aim_yaw as f32,
         aim: f3(g.aim_point),
         spectating: (g.spectate >= 0.0) as u32,
         peek: cam.peek_offset.map_or([0.0; 3], f3),
@@ -86,6 +102,7 @@ pub fn fill(g: &Game, stood: u32, desired: f64, out: &mut Vec<View>) {
         cut: f3(cam.desired),
         night: g.pl[pl].nv_amount as f32,
         hit: g.pl[pl].hit_flash as f32,
+        kit: g.kit_stage.as_ref().map_or(0, |k| if k.none { 2 } else { 1 }),
         ..r
     });
 }

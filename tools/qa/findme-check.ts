@@ -1,15 +1,13 @@
-// FINDING YOUR OWN MAN, AND THE CAMERA UNDER THE HAND — the check behind src/host/findme.ts, src/ui/findme.ts and src/render/outline.ts (settings in Options > Game, every one
+// FINDING YOUR OWN MAN, AND THE CAMERA UNDER THE HAND — the check behind src/host/findme.ts, src/ui/findmeviz.ts and src/render/outline.ts (settings in Options > Game, every one
 // starting where the game stood before it had them but the outline and the camera's two, which the PAGE starts at the maintainer's own).
 //   bun run tools/qa/findme-check.ts        (also `probes.ts findme`; the same on both stands)
 // Headless: the whole Game under stepFrame, the loop the page runs, with nothing drawn; where the HUD would draw the ring is asked of findMeRing itself, and
 // the outline's pass is run on a stand-in device that writes down what it was asked for (what the rim LOOKS like is the page's to show: findme-page.cjs).
 //   table    (1) a harness has no store: the table is the starts; a kept line that is missing, broken or out of range reads as the starts, a good one as itself, and a line
-//                that names a row that is no longer one (the outline's width, strength, fade, light rows, teammates' width, colour) reads as if it did not;
+//                that names a row that is no longer one (the outline's width, strength, fade, light rows, teammates' width, colour; the double tap's) reads as if it did not;
 //                a row moved is kept alone (the rows still at their starts are not written, so a start tuned later reaches them), and moved back, nothing is;
 //   as was   (3) the ring and the outline ON, and asked every frame, against both off: one seed, one scripted hand — the same game digest for digest and
 //                the same view to the bit (picture only: nothing a man senses, nothing the light meter reads);
-//   double   (7) what is a double tap: two short presses, and only that — never one held press however long it repeats, never a tap and a hold, a press with
-//                another key or an orbit in it, or two taps far apart; three quick taps are one;
 //   picture  (8) the ring is at his feet, gone when he is down and nothing with its row off; the shelved setting (his shape through a wall) is not in the
 //                table and a kept line that names it reads without it;
 //            (10) the outline: its frame is off with the row off, every man down or the page saying his marks are hidden; on, it names his owner byte and
@@ -31,9 +29,8 @@ export async function findmeCheck(): Promise<boolean> {
   const { mulberry32: seeded } = await import(`${ROOT}/src/math/dice.ts`);
   const F = await import(`${ROOT}/src/host/findme.ts`) as typeof import('../../src/host/findme.ts');
   const { OutlinePass, makeOutlineFrame, makeOutlineMan, outlineBox, outlineBoxes, outlineRadius, OUTLINE, OUTLINE_MEN } = await import(`${ROOT}/src/render/outline.ts`) as typeof import('../../src/render/outline.ts');
-  const { findMeRing, findMeOutline } = await import(`${ROOT}/src/ui/findme.ts`) as typeof import('../../src/ui/findme.ts');
-  const { FINDME, FINDME_START, findMeRead, TapTwice, TAPTWICE, behindYaw } = F;
-  const { AUTOCAM } = await import(`${ROOT}/src/host/autocam.ts`) as typeof import('../../src/host/autocam.ts');
+  const { findMeRing, findMeOutline } = await import(`${ROOT}/src/ui/findmeviz.ts`) as typeof import('../../src/ui/findmeviz.ts');
+  const { FINDME, FINDME_START, findMeRead } = F;
   const BREAK = process.env.FINDME_BREAK === '1';
   const set: typeof F.setFindMe = BREAK ? () => {} : F.setFindMe;
   let all = true;
@@ -43,18 +40,18 @@ export async function findmeCheck(): Promise<boolean> {
   F.findMeStarts();   // (the starts follow the switch as this stand left it: a probe run before this one may have booted the page's switches and put the knob back)
   const tunedWas = F.FINDTUNED.on, startsWas = { ...FINDME_START }, foundWas = { ...FINDME };   // (the shipped stand boots the page's switches: the tuned starts. The frozen one holds the switch off)
   F.FINDTUNED.on = false; F.findMeStarts();   // (1) to (11) are the rows' own, on the starts as built
-  const fixedWas = FIXEDSTEP.on, startWas = { ...FINDME }, autoWas = AUTOCAM.on;
+  const fixedWas = FIXEDSTEP.on, startWas = { ...FINDME };
   const ctxOf = (W: any, extra: Record<string, unknown> = {}): any => ({ game: W.game, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render: () => { W.engine.world.upload(); }, betweenTicks: () => { W.engine.world.relist(); },
     smoke: null, audio: null, attract: null, hud: null, bubbles: null, time: 0, updateMs: 0, frozen: () => false, present: () => false, fixedStep: () => true, ...extra });
-  const stand = async (seed: number) => { Math.random = seeded(1); const W = await standUp({ seed }) as any; AUTOCAM.on = false; F.setAutoView(false); F.FINDTUNED.on = false; F.findMeStarts(); return W; };   // (the camera that runs itself, host/autocam.ts, takes the double tap where it is on — the page's stand: these lines are the row's own, with it off; autocam-check.ts holds the tap with it on)
+  const stand = async (seed: number) => { Math.random = seeded(1); const W = await standUp({ seed }) as any; F.FINDTUNED.on = false; F.findMeStarts(); return W; };
   // (…and the starts as built: a stand-up under TPS_FINDTUNED=1 raises the tuned ones each time — src/host/standup.ts — and these lines are the rows' own)
   const DT = 1 / 60;
   try {
     // (1) the table
     { const start = same(startWas, FINDME_START);
-      const bad = [null, '', 'no', '[]', '{"pan":"x","ring":1,"turn":2,"behind":"yes"}', '{"pan":NaN}'].every(t => same(findMeRead(t), FINDME_START));
-      const good = findMeRead('{"pan":0.4,"ring":true,"outline":true,"shape":true,"turn":-1,"behind":true}'), goodOk = same(good, { pan: 0.4, ring: true, outline: true, turn: -1, behind: true }), clamp = findMeRead('{"pan":7}').pan === 1 && findMeRead('{"pan":-3}').pan === 0;   // (a line kept by the build that had six)
-      const named = findMeRead('{"pan":0,"outline":true,"width":0.25,"opacity":1,"picture":false,"lit":0.9,"dark":0.1,"picLit":0.9,"picDark":0.1,"mates":0.8,"colour":0.5,"turn":-1}'), gone = same(Object.keys(named).sort(), ['behind', 'outline', 'pan', 'ring', 'turn']);
+      const bad = [null, '', 'no', '[]', '{"pan":"x","ring":1,"turn":2}', '{"pan":NaN}'].every(t => same(findMeRead(t), FINDME_START));
+      const good = findMeRead('{"pan":0.4,"ring":true,"outline":true,"shape":true,"turn":-1,"behind":true}'), goodOk = same(good, { pan: 0.4, ring: true, outline: true, turn: -1 }), clamp = findMeRead('{"pan":7}').pan === 1 && findMeRead('{"pan":-3}').pan === 0;   // (a line kept by the build that had six)
+      const named = findMeRead('{"pan":0,"outline":true,"width":0.25,"opacity":1,"picture":false,"lit":0.9,"dark":0.1,"picLit":0.9,"picDark":0.1,"mates":0.8,"colour":0.5,"turn":-1}'), gone = same(Object.keys(named).sort(), ['outline', 'pan', 'ring', 'turn']);
       // what is kept: only the rows that are not at their starts (a store stood in for the page's; F.setFindMe itself, whatever FINDME_BREAK says)
       const kept: string[] = [], had = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
       Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: { getItem: () => kept.at(-1) ?? null, setItem: (_k: string, v: string) => { kept.push(v); } } });
@@ -78,27 +75,6 @@ export async function findmeCheck(): Promise<boolean> {
       const A = await run(false), B = await run(true), diff = diffDigest(A.d, B.d);
       line(!diff.length && same(A.view, B.view) && B.asked === 480 && A.moved > 1, 'the ring and the outline on and asked every frame: the same game digest for digest, the same view to the bit',
         `eight seconds, a walk, an orbit, a shot · he moved ${A.moved.toFixed(1)} m · asked ${B.asked} times · ${diff.length ? `digests differ: ${diff.slice(0, 3).join('; ')}` : 'digests equal'} · view ${same(A.view, B.view) ? 'equal' : 'DIFFERS'}`); }
-
-    // (7) what is a double tap (no setting in it: the same with the break)
-    { const T0 = TAPTWICE, play = (ev: [string, number, number?][]) => { const T = new TapTwice(); let n = 0; for (const [k, t, px] of ev) { if (k === 'd') T.down(t); else if (k === 'u') { if (T.up(t)) n++; } else if (k === 'o') T.other(); else T.moved(px ?? 0); } return n; };
-      const held: [string, number][] = [['d', 0]]; for (let t = 30; t < 3000; t += 30) held.push(['d', t]); held.push(['u', 3000]);
-      const cases: [string, number, number][] = [
-        ['two taps', play([['d', 0], ['u', 80], ['d', 200], ['u', 280]]), 1],
-        ['one press held three seconds, repeating', play(held), 0],
-        ['one tap', play([['d', 0], ['u', 80]]), 0],
-        ['a tap, then a hold', play([['d', 0], ['u', 80], ['d', 200], ['u', 200 + T0.tapMs + 50]]), 0],
-        ['a hold, then a tap', play([['d', 0], ['u', T0.tapMs + 50], ['d', T0.tapMs + 150], ['u', T0.tapMs + 230]]), 0],
-        ['two taps too far apart', play([['d', 0], ['u', 80], ['d', 80 + T0.gapMs + 50], ['u', 80 + T0.gapMs + 130]]), 0],
-        ['…and a third soon after', play([['d', 0], ['u', 80], ['d', 500], ['u', 580], ['d', 700], ['u', 780]]), 1],
-        ['another key between the taps', play([['d', 0], ['u', 80], ['o', 120], ['d', 200], ['u', 280]]), 0],
-        ['another key inside a tap (Ctrl + a letter)', play([['d', 0], ['o', 40], ['u', 80], ['d', 200], ['u', 280]]), 0],
-        ['a short orbit, then a tap', play([['d', 0], ['m', 40, T0.driftPx + 20], ['u', 80], ['d', 200], ['u', 280]]), 0],
-        ['a hand\'s tremor inside the taps', play([['d', 0], ['m', 40, 3], ['u', 80], ['d', 200], ['m', 240, 3], ['u', 280]]), 1],
-        ['three quick taps', play([['d', 0], ['u', 80], ['d', 200], ['u', 280], ['d', 400], ['u', 480]]), 1],
-        ['four quick taps', play([['d', 0], ['u', 80], ['d', 200], ['u', 280], ['d', 400], ['u', 480], ['d', 600], ['u', 680]]), 2],
-      ];
-      const wrong = cases.filter(c => c[1] !== c[2]);
-      line(!wrong.length, 'a double tap is two short presses with nothing else in them, and never one held press', wrong.length ? wrong.map(c => `${c[0]}: ${c[1]} (want ${c[2]})`).join(' · ') : cases.map(c => `${c[0]}: ${c[1]}`).join(' · ')); }
 
     // (8) the picture
     { const W = await stand(5), ctx = ctxOf(W); FIXEDSTEP.on = true; for (let i = 0; i < 30; i++) stepFrame(ctx, DT);
@@ -190,7 +166,7 @@ export async function findmeCheck(): Promise<boolean> {
           'his teammates: each living man of his squad rimmed in his pair\'s colour, his rim four fifths of what the player\'s covers; one pass, a draw a man under his own box, the player\'s last; nothing of the game\'s written',
           `men ${men.length}, rimmed ${on.length}${each ? '' : ' ✗'} · inks: yellow for him, two red, two blue ${hues ? 'yes' : 'NO ✗'} · on the device ${shareDrawn ? 'the share drawn' : '✗'} · a man dead: ${gone ? 'his place given up' : '✗'}${backIn ? '' : ' (not taken back ✗)'} · the pass: ${vis.length} men on the picture, slots ${slots.map(u => u.o).join(' ')}, his own last, a box each${drawsOk ? '' : ' ✗'}; ${OUTLINE_MEN + 3} teammates: ${crowded ? `${OUTLINE_MEN} draws, his the last` : '✗'}; a box across the lens off to the side: ${aside ? 'empty' : '✗'} · digests ${pure && stepped ? 'unmoved' : 'MOVED ✗'} · off ${offAll}`); }
     }
-  } finally { F.FINDTUNED.on = tunedWas; F.findMeStarts(); Object.assign(FINDME, foundWas); FIXEDSTEP.on = fixedWas; AUTOCAM.on = autoWas; }
+  } finally { F.FINDTUNED.on = tunedWas; F.findMeStarts(); Object.assign(FINDME, foundWas); FIXEDSTEP.on = fixedWas; }
   console.log(all ? '\nfindme: ALL PASS' : '\nfindme: FAIL');
   return all;
 }

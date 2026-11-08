@@ -185,19 +185,6 @@ fn ensure_index(g: &mut Game) {
 }
 /// the index made ahead of the blast, off the frame the wall goes on (furnblast.ts Furniture.warm)
 pub fn furniture_warm(g: &mut crate::game::Game) { if g.m.destruction_switch.blast_pace.on { ensure_index(g); } }
-/// counts for the panel and probes (furnblast.ts Furniture.inventory)
-pub fn furniture_inventory(g: &mut crate::game::Game) -> crate::furnblast::FurnitureInventory {
-    ensure_index(g);
-    let groups = g.destr.furn.groups.as_ref().unwrap();
-    let tab = &g.tab.furnblast_member;
-    FurnitureInventory {
-        groups: groups.len() as f64,
-        members: groups.iter().map(|x| x.members.len()).sum::<usize>() as f64,
-        hidden: g.destr.furn.hidden.len() as f64,
-        gone_props: g.destr.furn.gone_props,
-        list: groups.iter().map(|x| FurnitureInventoryListItem { id: x.id, members: x.members.iter().map(|&mi| tab[mi].i).collect(), a: x.a, heavy: x.heavy, surf: x.surf }).collect(),
-    }
-}
 /// does this part still stand; a cover panel, while any cell of it does (furnblast.ts Furniture.stands)
 pub fn furniture_stands(g: &mut crate::game::Game, m: FurnblastMemberId) -> bool {
     let i = g.tab.furnblast_member[m].i;
@@ -499,7 +486,6 @@ pub fn furniture_hung_goes(g: &mut crate::game::Game, b: BoxId, at: V3, n: V3, w
             crate::break_table::breaks_dress(g, c);
         } else { g.stats.furnblast.demoted += 1; furniture_chips(g, fc, v, b, who, 14.0); }
     }
-    if !crate::particle_fx::gpu_fx(g) { return; }
     let (c, albedo) = (seam_box(g, b).c, seam_box(g, b).albedo);
     let bursts: [(V3, usize); 2] = [([n[0], 0.5, n[2]], 0), ([-n[0], 0.3, -n[2]], 1)];   // (splinters back into the room, and through)
     for (d, i) in bursts { emit_debris(g, c, v3::normalize(d), k.chips[i], k.chip_v[i], 0.006, 3.0, v3::copy(albedo), who); }
@@ -810,7 +796,6 @@ pub fn furniture_away(g: &mut crate::game::Game, at: V3, p: V3) -> V3 {
 }
 /// a burst of chips (furnblast.ts Furniture.chips)
 pub fn furniture_chips(g: &mut crate::game::Game, c_2: V3, v: V3, b: BoxId, who: f64, n: f64) {
-    if !crate::particle_fx::gpu_fx(g) { return; }
     let wood = box_does(g, b).surf == Surf::Wood;
     let albedo = seam_box(g, b).albedo;
     emit_debris(g, c_2, v3::normalize([v[0], m::max(0.3, v[1]), v[2]]), n, 2.4, if wood { 0.006 } else { 0.01 }, if wood { 3.0 } else { 1.0 }, v3::copy(albedo), who);

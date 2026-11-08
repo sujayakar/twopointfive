@@ -143,7 +143,7 @@ const PLAY = (secs) => {
           th.svgMenu = await page.evaluate(() => document.querySelector('#traj .squadthrow')?.innerHTML.length ?? -1);
           await page.evaluate(() => window.__input.pressed.add('Digit1'));
           threw = await page.evaluate(PLAY, 1.5); if (threw) R.errors.push('play threw: ' + threw);
-          th.going = await page.evaluate(() => ({ plans: window.__squadthrow.plans().map(p => ({ who: p.gd.callsign, preview: !!p.preview, walk: p.walk?.length ?? 0 })), status: JSON.stringify(window.__game.view.squad).slice(0, 400), stats: { ...window.__squadthrow.stats } }));
+          th.going = await page.evaluate(() => ({ plans: window.__squadthrow.plans().map(p => ({ who: p.man, preview: !!p.preview, walk: p.walk?.length ?? 0 })), status: JSON.stringify(window.__game.view.squad).slice(0, 400), stats: { ...window.__squadthrow.stats } }));
           await save('throwwalk', await page.evaluate(DRAW, 2));
           for (let i = 0; i < 40; i++) { threw = await page.evaluate(PLAY, 0.5); if (threw) { R.errors.push('play threw: ' + threw); break; } if (await page.evaluate(() => window.__squadthrow.stats.walked + window.__squadthrow.stats.gaveUp > 0)) break; }
           th.thrown = await page.evaluate(() => ({ stats: { ...window.__squadthrow.stats }, plans: window.__squadthrow.plans().length, items: (window.__game.items.list ?? window.__game.items.items ?? []).length }));

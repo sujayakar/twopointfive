@@ -33,7 +33,7 @@ const still = async (page, name) => { if (!outDir) return; const ok = await page
 // backslash, and gives the orders menu's row and the who row no key (Q and F are the squad's only keys: the ring is the menu).
 // &slotsetup=0 on every line: the selector and the light on Z and L and the kit column as it was — the rows a gun's setup frees and its box are
 // slotsetup-page.cjs's)
-const url = (more = '', board = '&qfree=0&handslot=0&handring=0&qonly=0') => `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&slotsetup=0${board}${more ? '&' + more : ''}`;
+const url = (more = '', board = '&qfree=0&qonly=0') => `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&slotsetup=0${board}${more ? '&' + more : ''}`;
 const openControls = async page => { await page.waitForSelector('#menu .actions button', { timeout: 60000 });
   await page.evaluate(() => [...document.querySelectorAll('#menu .actions button')].find(b => /^Options/.test(b.textContent))?.click()); await page.waitForSelector('#options.on', { timeout: 10000 });
   await page.evaluate(() => document.querySelector('#options .op-tab[data-tab="controls"]').click()); await page.waitForTimeout(150); };   // (a click by the page's own hand: under the software adapter the frame is seconds late and a pointer waits for it)
@@ -42,14 +42,15 @@ const CAPS = () => Object.fromEntries([...document.querySelectorAll('#options bu
 const KEPT = () => localStorage.getItem('twopointsix.keys');
 const SCREEN = () => ({ up: !!document.querySelector('#options.on'), tab: document.querySelector('#options .op-tab.on')?.dataset.tab, desc: document.querySelector('#options .op-desc')?.textContent ?? '', plain: [...document.querySelectorAll('#options .op-caps kbd')].map(k => k.textContent) });
 
+const marksOf = c => c.replace(/\b(sel|none)\b/g, '').trim();   // (a marked cap's classes: a row the build gives no key reads `none`, unmarked)
 async function screen(browser) {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 }), page = await ctx.newPage(); watch(page, 'screen', false);
   await page.goto(url(), { waitUntil: 'domcontentloaded' }); await openControls(page);
   const key = async k => { await page.keyboard.press(k); await page.waitForTimeout(60); };
-  { const caps = await page.evaluate(CAPS), S = await page.evaluate(SCREEN), want = { KeyW: 'W', KeyA: 'A', KeyS: 'S', KeyD: 'D', ShiftLeft: 'Shift', KeyC: 'C', KeyQ: 'Q', Space: 'Space', KeyV: 'V', KeyN: 'N', KeyR: 'R', KeyZ: 'Z', KeyL: 'L', KeyE: 'E', Digit1: '1', Digit2: '2', Digit3: '3', Digit4: '4', Digit5: '5', KeyX: 'X', KeyB: 'B', KeyT: 'T', KeyF: 'F', KeyG: 'G', KeyH: 'H', Backquote: '`' };
-    const off = Object.keys(want).filter(k => caps[k]?.t !== want[k] || caps[k].c.replace('sel', '').trim()), fixed = ['Ctrl', 'Mouse', 'Wheel', 'LMB', 'RMB', 'Esc', 'Enter', 'F7'].filter(k => !S.plain.includes(k));
-    check(!off.length && Object.keys(caps).length === Object.keys(want).length && !fixed.length && await page.evaluate(KEPT) === null, 'Options ▸ Controls: every key that can move is a cap to click, reading the build\'s key and unmarked; the mouse, the camera\'s Ctrl and the page\'s own keys are plain caps',
-      `${Object.keys(caps).length} caps to click${off.length ? `, wrong: ${off.join(' ')}` : ''} · plain caps missing: ${fixed.join(' ') || 'none'}`); await still(page, 'controls-as-built.png'); }
+  { const caps = await page.evaluate(CAPS), S = await page.evaluate(SCREEN), want = { KeyW: 'W', KeyA: 'A', KeyS: 'S', KeyD: 'D', ShiftLeft: 'Shift', KeyC: 'C', KeyQ: 'Q', Space: 'E', KeyV: '—', KeyN: 'N', KeyR: 'R', KeyZ: 'Z', KeyL: 'L', Digit0: '`', Digit1: '1', Digit2: '2', Digit3: '3', Digit4: '4', Digit5: '5', KeyB: 'B', KeyT: 'T', KeyF: 'F', Backquote: '\\' };
+    const off = Object.keys(want).filter(k => caps[k]?.t !== want[k] || marksOf(caps[k].c)), fixed = ['Mouse', 'Wheel', 'LMB', 'RMB', 'Esc', 'Enter', 'F7'].filter(k => !S.plain.includes(k));
+    check(!off.length && Object.keys(caps).length === Object.keys(want).length && !fixed.length && await page.evaluate(KEPT) === null, 'Options ▸ Controls: every key that can move is a cap to click, reading the build\'s key and unmarked; the mouse and the page\'s own keys are plain caps',
+      `${Object.keys(caps).length} caps to click${off.length ? `, wrong: ${off.map(k => `${k} '${caps[k]?.t}' [${caps[k]?.c}]`).join(' · ')}` : ''} · plain caps missing: ${fixed.join(' ') || 'none'}`); await still(page, 'controls-as-built.png'); }
   { await page.click('#options button.op-key[data-key="KeyC"]'); await page.waitForTimeout(80); const w = (await page.evaluate(CAPS)).KeyC, d = (await page.evaluate(SCREEN)).desc; await still(page, 'controls-waiting.png');
     await key('k'); const c = (await page.evaluate(CAPS)).KeyC, kept = await page.evaluate(KEPT), S = await page.evaluate(SCREEN);
     check(w.t === '…' && /wait/.test(w.c) && /Press its new key/.test(d) && c.t === 'K' && /moved/.test(c.c) && !/wait/.test(c.c) && kept === '{"KeyC":"KeyK"}' && S.up && S.tab === 'controls',
@@ -71,7 +72,7 @@ async function screen(browser) {
   { await page.goto(url('keybinds=0'), { waitUntil: 'domcontentloaded' }); await openControls(page); const n = Object.keys(await page.evaluate(CAPS)).length, S = await page.evaluate(SCREEN), kept = await page.evaluate(KEPT), reset = await page.evaluate(() => !!document.querySelector('#options [data-act="reset"]'));
     check(n === 0 && S.plain.includes('C') && S.plain.includes('Q') && S.plain.includes('R') && !reset && /KeyQ/.test(kept || ''), '?keybinds=0: the plain list of the build\'s keys, nothing to click and no Reset, and the kept table left as it was', `caps to click ${n} · C Q R plain: ${['C', 'Q', 'R'].map(k => S.plain.includes(k))} · Reset ${reset} · kept ${kept}`); }
   { await page.goto(url(), { waitUntil: 'domcontentloaded' }); await openControls(page); await page.click('#options [data-act="reset"]'); await page.waitForTimeout(80);
-    const caps = await page.evaluate(CAPS), off = Object.entries(caps).filter(([, v]) => v.c.replace('sel', '').trim()).map(([k]) => k), kept = await page.evaluate(KEPT);
+    const caps = await page.evaluate(CAPS), off = Object.entries(caps).filter(([, v]) => marksOf(v.c)).map(([k]) => k), kept = await page.evaluate(KEPT);
     check(caps.KeyC.t === 'C' && caps.KeyQ.t === 'Q' && caps.KeyR.t === 'R' && caps.Digit2.t === '2' && !off.length && kept === null, 'Reset: every cap is the build\'s again, none marked, and nothing is kept', `C Q R 2: ${caps.KeyC.t} ${caps.KeyQ.t} ${caps.KeyR.t} ${caps.Digit2.t} · still marked: ${off.join(' ') || 'none'} · kept ${kept}`); }
   { await page.goto(url('bkey', ''), { waitUntil: 'domcontentloaded' }); await openControls(page);   // (the wall hold's rule by itself, the squad's command left on B: with it on Q, as the page opens, Q given to the wall is a swap — tools/qa/qkey-check.ts)
     const row = () => page.evaluate(() => { const b = document.querySelector('#options button.op-key[data-key="KeyQ"]'), r = b?.closest('.op-krow'); return { t: b?.textContent ?? '', c: (b?.className ?? '').replace('op-key', '').replace('sel', '').trim(), what: r?.querySelector('.op-what')?.firstChild?.textContent ?? '', small: r?.querySelector('small')?.textContent ?? '' }; });

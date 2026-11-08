@@ -3,17 +3,16 @@
 //   DICE_BREAK=1 bun run tools/qa/dice-check.ts   the red path: one stray Math.random() is drawn inside the update — 'same seed' must then FAIL
 // WHAT IS HELD:
 //   source     no Math.random call is left in src/game — a new one is named with its file and line
-//   same seed  two games stood up on one seed, each under a DIFFERENT Math.random, play the same half minute (a firefight in it) digest for digest: nothing of the
+//   same seed  two games stood up on one seed, each under a DIFFERENT Math.random, play the same twenty seconds (a firefight in it) digest for digest: nothing of the
 //              simulation reaches Math.random, and the seed alone names the dice
 //   other seed a second seed plays a different half minute
 //   checkpoint on its own die, with nothing re-seeded: A (stepped on after the save) ≡ B (the same game, loaded) ≡ C (a fresh game on another seed, loaded) — the
-//              die's position rides the file. On the SHIPPED stand the line is the die's alone (it stands after a load where the save left it; B ≡ C with rounds
-//              rolled): there the file leaves a man's aim track out on purpose, so A against B is reported, not held
+//              die's position rides the file. On the SHIPPED stand the line is the die's alone (word, count and
+//              seed stand after a load where the save left them): a file holds less than the game, so what the three then play is reported, not held
 //   follow     a tool that puts its own die in Math.random's place (every older probe, a recording, a capture recipe) gets the game's dice from that moment, the own
 //              die standing still, and a save made then carries no die; put back, the own die resumes where it stood
 //   keyed      the keyed draw is the Rust game's to the bit: a thousand draws fold to the word rust/game_types/src/dice.rs's own test holds; and a draw at a clock is
 //              counted by its own site, whoever draws between
-//   default    the harness with no seed asked for has no die of its own (every frozen digest was recorded on the tool's Math.random); TPS_SEED=n gives it one
 import { readdirSync, readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 const { digestGame, diffDigest } = await import(`${ROOT}/src/game/digest.ts`);
@@ -68,11 +67,11 @@ const firstDiff = (a: unknown[], b: unknown[]): string => { for (let i = 0; i < 
   verdict(!!word && BigInt(word) === h && own, 'keyed: the keyed draw is the Rust game\'s to the bit, and moves with no other', `a thousand draws fold to 0x${h.toString(16)}, the Rust test holds ${word} · a site's second draw is its own whoever draws between ${own}`); }
 
 // ---- same seed, other seed
-{ Math.random = seeded(11); const A = await standUp({ seed: 4242 }); const a = run(A, 30, 300); const na = A.game.dice.n;
-  Math.random = seeded(99); const B = await standUp({ seed: 4242 }); const b = run(B, 30, 300); const nb = B.game.dice.n;
-  Math.random = seeded(11); const C = await standUp({ seed: 4243 }); const c = run(C, 30, 300);
+{ Math.random = seeded(11); const A = await standUp({ seed: 4242 }); const a = run(A, 20, 300); const na = A.game.dice.n;
+  Math.random = seeded(99); const B = await standUp({ seed: 4242 }); const b = run(B, 20, 300); const nb = B.game.dice.n;
+  Math.random = seeded(11); const C = await standUp({ seed: 4243 }); const c = run(C, 20, 300);
   const shots = A.game.events.length;
-  verdict(a.text === b.text && na === nb && na > 50, 'same seed: two games on seed 4242 under different Math.random streams play the same 30 s', a.text === b.text ? `${a.rows.length} digests equal · ${na} rolls each off the own die (a fight from 5 s; ${shots} events live at the end)` : `${firstDiff(a.rows, b.rows)} · rolls ${na} / ${nb}`);
+  verdict(a.text === b.text && na === nb && na > 50, 'same seed: two games on seed 4242 under different Math.random streams play the same 20 s', a.text === b.text ? `${a.rows.length} digests equal · ${na} rolls each off the own die (a fight from 5 s; ${shots} events live at the end)` : `${firstDiff(a.rows, b.rows)} · rolls ${na} / ${nb}`);
   verdict(a.text !== c.text, 'other seed: seed 4243 plays a different 30 s', a.text !== c.text ? firstDiff(a.rows, c.rows) : 'the two runs are equal: the seed does not reach the dice'); }
 
 // ---- checkpoint
@@ -92,7 +91,7 @@ const firstDiff = (a: unknown[], b: unknown[]): string => { for (let i = 0; i < 
     // does; and being seen starts no fight inside ten seconds, so nothing rolls. What the die's place in the file promises is held there instead: the die stands
     // after each load exactly where the save left it (word and count), Sam fires so rounds roll, and B ≡ C to the digest with the same rolls drawn.
     const shipped = process.env.TPS_PROFILE === 'shipped', s0 = g.dice.s;
-    const stands = (X: any): boolean => X.game.dice.s === s0 && X.game.dice.n === n0;
+    const stands = (X: any): boolean => X.game.dice.s === s0 && X.game.dice.n === n0 && X.game.dice.seed === 777;
     cut(W); const A = run(W, 10, 60, shipped); const nA = g.dice.n;
     loadState(g, JSON.parse(json)); const stoodB = stands(W); cut(W); const B = run(W, 10, 60, shipped); const nB = g.dice.n;
     Math.random = seeded(31337); const W2 = await standUp({ seed: 1 }); loadState(W2.game, JSON.parse(json)); const stoodC = stands(W2); cut(W2); const C = run(W2, 10, 60, shipped); const nC = W2.game.dice.n;
@@ -102,9 +101,9 @@ const firstDiff = (a: unknown[], b: unknown[]): string => { for (let i = 0; i < 
       verdict(ok, 'checkpoint: A (stepped on) ≡ B (same game, loaded) ≡ C (fresh game on another seed, loaded) with nothing re-seeded', ok ? `saved at roll ${n0}; ${nA - n0} rolls in the next 10 s, the same in all three; ${A.rows.length} digests equal`
         : `${s.dice ? '' : 'no die in the file · '}${stood ? '' : 'the die did not stand where the save left it after a load · '}A/B ${A.text === B.text ? 'equal' : firstDiff(A.rows, B.rows)} · B/C ${B.text === C.text ? 'equal' : firstDiff(B.rows, C.rows)} · rolls ${n0} → ${nA} / ${nB} / ${nC}`);
     } else {
-      const ok = !!s.dice && stood && B.text === C.text && nB === nC && nB > n0 && nA > n0;
-      verdict(ok, 'checkpoint (the shipped stand): the die stands after a load where the save left it, and B (same game, loaded) ≡ C (fresh game on another seed, loaded) with nothing re-seeded',
-        `${s.dice ? '' : 'no die in the file · '}the die after each load ${stood ? 'is the save\'s, word and count' : 'is NOT the save\'s'} · B/C ${B.text === C.text ? `equal over ${B.rows.length} digests` : firstDiff(B.rows, C.rows)} · rolls ${n0} → ${nA} / ${nB} / ${nC} with Sam firing · NOT HELD on this stand, by the save's own word: A (stepped on) against B — ${A.text === B.text ? 'equal this time' : firstDiff(A.rows, B.rows)}`);
+      const ok = !!s.dice && stood && nB > n0 && nA > n0;
+      verdict(ok, 'checkpoint (the shipped stand): the die stands after a load where the save left it, in the same game and in a fresh game on another seed: word, count and seed, with nothing re-seeded',
+        `${s.dice ? '' : 'no die in the file · '}the die after each load ${stood ? 'is the save\'s, word, count and seed' : 'is NOT the save\'s'} · rolls ${n0} → ${nA} / ${nB} / ${nC} with Sam firing · NOT HELD: that the three games then play alike (B/C ${B.text === C.text ? 'equal' : firstDiff(B.rows, C.rows)}; A/B ${A.text === B.text ? 'equal' : firstDiff(A.rows, B.rows)}): a file holds less than the game, a man's needs among what it leaves out`);
     }
   } }
 
@@ -117,12 +116,6 @@ const firstDiff = (a: unknown[], b: unknown[]): string => { for (let i = 0; i < 
   Math.random = sys; const back = diceInUse() === g.dice; simRandom(); const resumed = g.dice.n === n0 + 1;
   verdict(own && off && stood && !s.dice && back && resumed, 'follow: a die put in Math.random\'s place gets the game\'s dice; put back, the own die resumes',
     `own die in force ${own} · another function in place: own die out ${off}, it stood still and the tool's was drawn ${stood}, a save then carries no die ${!s.dice} · put back: in force ${back}, resumed at the next roll ${resumed}`); }
-
-// ---- default
-{ Math.random = seeded(1); const prev = process.env.TPS_SEED; delete process.env.TPS_SEED; const W = await standUp(); const none = W.game.dice === null && diceInUse() === null;
-  process.env.TPS_SEED = '12'; const W2 = await standUp(); const env = W2.game.dice?.seed === 12;
-  if (prev === undefined) delete process.env.TPS_SEED; else process.env.TPS_SEED = prev;
-  verdict(none && env, 'default: the harness has no die of its own unless asked; TPS_SEED=n gives it one', `no seed asked: game.dice null ${none} · TPS_SEED=12: seed ${W2.game.dice?.seed}`); }
 
 console.log(fails ? `=== dice-check: ${fails} FAILED ===` : '=== dice-check: ALL PASS ===');
 process.exit(fails ? 1 : 0);

@@ -179,9 +179,6 @@ export const DOORTHROW = { on: false,
   startle: 1.0, wary: 0.5,
   /** an opened leaf only startles (false = the first cut, which a recording made on it replays: any driven leaf short of a boot folds him for `pushSecs`) */
   soft: true,
-  /** the startled defender gets the shared start (startle.ts giveStartle: the jolt toward the door, his gun down for the beat; false = the animator's flinch,
-   *  which a recording from before the shared start replays) */
-  jolt: true,
   /** m/s a swinging leaf must still be doing where it meets him (slower, it comes to rest against him as ever) */
   minSpeed: 0.9,
   /** rad/s a hand must turn a leaf at for it to be a push (the silent ease is 0.55; the hand's own push 2.6) */
@@ -398,8 +395,7 @@ export class Door {
     // (what the fields' own initialisers were)
     this.vel = 0; this.quietT = 10; this.lastWho = -1; this.sinceBash = 10; this.closing = false; this.lockBroken = false; this.noticed = false; this.noticedT = -1000; this.pick = 0; this.picking = false;
     this.pickIdle = 0; this.pickClock = 0; this.pickN = 0; this.rattleT = 0; this.guardT = -100; this.passers = 0; this.outward = 0; this.clearway = 0; this.pullT = 0; this.p(DC.velSeen, 0); this.swept = false;
-    this.drive = null; this.solidT = 0; this.pressT = 0; this.openT = 10; this.mirrored = 0; this.p(DC.angleSeen, 0); this.off = false; this.shot = 0; this.creakArmed = true; this.p(DC.posAngle, NaN); this.p(DC.posX, 0); this.p(DC.posZ, 0);
-    this.height = def.height ?? LEAF_H; this.thick = def.thickness ?? 0.05;
+    this.drive = null; this.solidT = 0; this.pressT = 0; this.openT = 10; this.mirrored = 0; this.p(DC.angleSeen, 0); this.off = false; this.shot = 0; this.creakArmed = true; this.height = def.height ?? LEAF_H; this.thick = def.thickness ?? 0.05;
     this.minAuth = def.minAngle ?? -1.92; this.maxAuth = def.maxAngle ?? 1.92;
     this.dealt = def.swing ?? (Math.sign(def.angle ?? 0) || (this.maxAuth >= -this.minAuth ? 1 : -1)) as 1 | -1;   // (until dealSwings: the way it is authored standing open, else its wider side)
     this.locked = !!def.locked; this.keySide = def.keySide ?? 1; this.lockId = def.lock ?? FLOOR_KEY;
@@ -413,9 +409,7 @@ export class Door {
     this.frameCentre = [def.hinge[0] + Math.cos(def.closedDir) * def.width * 0.5, 1.0, def.hinge[1] + Math.sin(def.closedDir) * def.width * 0.5];
     this.place();
   }
-  /** Leaf centre (1 m up) at the current angle, a fresh array. A READER WRITES NOTHING, as in Rust (door_pos): the centre kept for an angle is columns of the
-   *  block (posAngle, posX, posZ: the step's own, for the noises it lists), and the block is what two machines of a networked game hold to each other. Kept
-   *  here too, a HUD row that asked a swung leaf's centre between two ticks moved this machine's block alone, and its game was told it was out of step. */
+  /** Leaf centre (1 m up) at the current angle, a fresh array. A READER WRITES NOTHING, as in Rust (door_pos). */
   get pos(): Vec3 {
     if (this.off) return [this.frameCentre[0], this.frameCentre[1], this.frameCentre[2]];   // (off its hinges: 'the door' is its doorway — the slab on the floor is nobody's to use, and the fog looks for the frame)
     const u = this.dir(); return [this.def.hinge[0] + u[0] * this.def.width * 0.5, 1.0, this.def.hinge[1] + u[1] * this.def.width * 0.5];

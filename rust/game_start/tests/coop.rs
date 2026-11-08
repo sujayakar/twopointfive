@@ -78,7 +78,7 @@ fn each_players_pair_is_through_a_locked_door() {
 /// fog let the last of them be drawn.)
 #[test]
 fn a_game_of_two_holds_no_more_men_than_the_picture_draws() {
-    for level in ["office.json", "barracks.json", "block-squads.json", "compound.json", "warehouse.json", "depot.json", "records.json", "block.json"] {
+    for level in ["office.json", "barracks.json", "block.json", "compound.json", "warehouse.json", "depot.json", "records.json"] {
         let p = Play::mission(level, &format!("?levelFile={level}&roomclear&squad4"), &Opts { seed: 5, seats: 2, ..Default::default() });
         let men = p.g.seats.len() + p.g.guards.len() + p.g.civilians.len();
         assert!(men as f64 <= game::anim_characters::MAX_CHARS, "{level}: {men} men for a picture of {}", game::anim_characters::MAX_CHARS);
@@ -102,5 +102,63 @@ fn a_burst_does_not_part_the_two_machines() {
             }).collect()
         };
         if let Some((k, parts)) = parting(&play(0), &play(1)) { panic!("seed {s}: a grenade beside the door, and the machine that shows the other player parts in {parts} {:.1} s on", (k + 1) as f64 * 0.1); }
+    }
+}
+
+/// THE RULE: two machines that look at different places, one of them drawing and one of them drawing nothing, hold the same game in every part of its state: on a level with
+/// a fire, a wind and snow.
+/// A FAILURE MEANS: the tick has come to ask where THIS machine's picture looks.
+#[test]
+fn where_a_machine_looks_does_not_part_the_two_machines() {
+    let play = |shown: usize, looks: bool| -> Vec<Vec<u32>> {
+        let mut p = Play::mission("pass.json", "?levelFile=pass.json&roomclear&squad4", &Opts { seed: SEEDS[0], seats: 2, dress: true, ..Default::default() });
+        let fire = (0..p.g.targets.len()).map(|i| p.g.targets[i]).find(|&t| game::fire::is_fire(&p.g, t)).map(|t| game::fire::mouth_of(&p.g, t).pos).expect("the pass has a brazier");
+        (0..90).filter_map(|k| {
+            if looks {
+                p.g.engine.view_focus = Some(fire);
+                let c = &mut p.g.tab.camera[p.host.cam];
+                (c.target, c.pos, c.yaw, c.distance) = (fire, [fire[0], fire[1] + 12.0, fire[2] + 9.0], 0.4 + k as f64 * 0.01, 14.0);
+            }
+            p.net_frame(shown);
+            (k % 6 == 5).then(|| p.words())
+        }).collect()
+    };
+    if let Some((k, parts)) = parting(&play(0, false), &play(1, true)) { panic!("the machine that looks at the fire parts in {parts} {:.1} s on", (k + 1) as f64 / 10.0); }
+}
+
+/// THE RULE: a look ahead over a player's records answers where the game then has his man, to the bit, record by record, and writes no word of the game.
+/// A FAILURE MEANS: the walk of a look ahead and the tick's own walk have come apart, or a look writes what a tick reads.
+#[test]
+fn a_look_ahead_is_where_the_game_then_has_him() {
+    for (seed, keys) in [(SEEDS[0], "KeyW"), (SEEDS[1], "KeyD"), (SEEDS[2], "KeyS")] {
+        let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed, seats: 2, ..Default::default() });
+        for s in p.g.seats.clone() { p.g.tab.cmd_seat[s].remote = true; }
+        game::game::game_aside_lens(&mut p.g);
+        for _ in 0..30 { p.net_frame(0); }
+        let (seats, canvas) = (p.g.seats.clone(), p.host.canvas);
+        let mut sample = |s: game::ids::SeatId| {
+            let (input, cam) = (p.g.tab.cmd_seat[s].input, p.g.tab.cmd_seat[s].cam);
+            game::seats::with_seat(&mut p.g, s, &mut |g| game::cmd::sample_cmd(g, input, cam, canvas, None))
+        };
+        let mut cmds: Vec<game::cmd::PlayerCmd> = seats.iter().map(|&s| sample(s)).collect();
+        cmds[1].keys = vec![String::from(keys)];
+        // (as a record comes off the wire: the eye and the matrices are for the game to work out)
+        for c in cmds.iter_mut() { (c.view.vp, c.view.ivp) = (vec![f64::NAN; 16], vec![f64::NAN; 16]); }
+        let before = p.words();
+        let mut path = Vec::new();
+        let a = game::walkahead::walk_ahead(&mut p.g, seats[1], &vec![cmds[1].clone(); 24], 1.0 / 60.0, Some(&mut path));
+        assert!(a.free, "seed {seed}: his legs are not his own");
+        let after = p.words();
+        let wrote: Vec<&str> = game::state_words::STATE_NAMES.iter().zip(before.iter().zip(&after)).filter(|(n, (x, y))| x != y && !["col", "alone_own", "m.scene_box_mirror", "m.scene_collision"].contains(n)).map(|(n, _)| *n).collect();
+        assert!(wrote.is_empty(), "seed {seed}: a look ahead wrote {}", wrote.join(", "));
+        let man = game::cmd::seat_man(&p.g, seats[1]);
+        let ch = p.g.pl[man].ch;
+        let from = p.g.ch[ch].pos;
+        for (i, at) in path.iter().enumerate() {
+            game::game::game_step_seats(&mut p.g, 1.0 / 60.0, &cmds);
+            p.g.out.clear();
+            assert_eq!(p.g.ch[ch].pos, *at, "seed {seed}: record {i} of a walk on {keys}");
+        }
+        assert!(game_start::play::dist([from[0], from[2]], [a.pos[0], a.pos[2]]) > 0.3, "seed {seed}: he did not walk");
     }
 }

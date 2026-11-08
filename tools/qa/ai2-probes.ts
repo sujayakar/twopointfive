@@ -1,7 +1,5 @@
 // The 'ai-pass-2' probe family (run through probes.ts: `bun run tools/qa/probes.ts ai-pass-2 | darkness | pieing`): the search that deals hide spots round the fix
-// and reads the renderer's light (guards.ts searchPlanFor / searchProbes / scoreSpots), and threshold discipline at doorways (guards.ts pieDoorway). The GPU never
-// answers headless, so the darkness probes swap the Game's light seam (lightQuery / lightAt / lightForget) for a table keyed by where the query was put: the west
-// half of the cubicle farm pitch dark, the east half lit — and one run leaves the seam alone to show the plan completing on neutral readings. PASS / FAIL each.
+// and reads the game's own light on them (guards.ts searchPlanFor / scoreSpots), and threshold discipline at doorways (guards.ts pieDoorway). PASS / FAIL each.
 import { standUp, ROOT } from './headless.ts';
 const { v3, wrapAngle } = await import(`${ROOT}/src/math/vec.ts`);
 const G = await import(`${ROOT}/src/game/guards.ts`);
@@ -21,18 +19,6 @@ function dropSearcher(game: any, gd: any, at: Vec3, fix: Vec3) {
   gd.hold = false; gd.pinned = false; gd.dazzledUntil = -1; gd.heardUpTo = 1e12; gd.script = null; gd.task = null; gd.bodyDuty = null;
   gd.state = 'search'; gd.searchT = 0; gd.reactT = 0; gd.awareness = 0.8; gd.lastKnown = v3.copy(fix); gd.searchPlan = null; gd.fixRef = null;   // (fixRef null: trackFix stamps the fix as placed now)
 }
-/** The light seam swapped for a table: `E(pos)` W/m² wherever a query is put (answered the same frame — the real probe is a frame or two behind, which the logic
- *  treats the same: no answer yet = neutral). Returns a restore function. */
-function fakeLight(game: any, E: (p: Vec3) => number): () => void {
-  const q0 = game.lightQuery, a0 = game.lightAt, f0 = game.lightForget; const posOf = new Map<string, Vec3>();
-  game.lightQuery = (key: string, pos: Vec3) => { posOf.set(key, v3.copy(pos)); };
-  game.lightAt = (key: string) => { const p = posOf.get(key); return p ? E(p) : undefined; };
-  game.lightForget = (key: string) => { posOf.delete(key); };
-  return () => { game.lightQuery = q0; game.lightAt = a0; game.lightForget = f0; };
-}
-/** west of x = 20 pitch dark (0.005 W/m²: visibility 0), east of it lit like a desk under a panel (3 W/m²: visibility ≈ 0.92) */
-const WEST_DARK = (p: Vec3) => p[0] < 20 ? 0.005 : 3.0;
-
 // ================================================================ darkness
 /** (A) one searcher at a central fix in the cubicle farm, west half dark: his first three spots are in the dark half and are cover spots (not open floor);
  *  (B) two searchers on the same fix: no two visited spots within a metre of each other, ≤ 8 light queries any frame;
@@ -45,7 +31,7 @@ export async function darkness() {
   let allPass = true; const verdict = (ok: boolean, label: string, detail: string) => { allPass &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
   const FIX: Vec3 = [19.9, 0, 18.4];   // the middle aisle of the cubicle farm, between the four clusters
   const spotStr = (s: any) => `${s.kind}${s.hidden ? '/hid' : ''}@(${s.pos[0].toFixed(1)}, ${s.pos[2].toFixed(1)}) dark ${s.dark.toFixed(2)}${s.E === undefined ? '?' : ''} cov ${s.cover.toFixed(2)} pl ${s.plaus.toFixed(2)}`;
-  // ---- (A) one man, west dark
+  // ---- (A) one man. (As the game's own lamps light the spots: the score weighs his walk too, so what is asked is that he opens on a dark one, that all three are cover, and that they are darker than the lot he was dealt.)
   {
     Math.random = seeded(301);
     const W = await standUp(); const { game } = W;
@@ -53,25 +39,24 @@ export async function darkness() {
     for (let i = 0; i < 10; i++) W.step(DT);
     parkFrom(game, 1); const gd = game.guards[0];
     dropSearcher(game, gd, FIX, FIX);
-    const restore = fakeLight(game, WEST_DARK);
     W.step(DT);
     const P0 = gd.searchPlan; const dealt = P0 ? P0.spots.map(spotStr) : [];
-    const looks: any[] = []; let lastPhase = ''; let maxN = 0; const t0 = game.time; let tSusp = -1, tPatrol = -1; let aimErr = 0, aimPitch = 0, aimN = 0;
+    const looks: any[] = []; let lot = 1, lastPhase = ''; let maxN = 0; const t0 = game.time; let tSusp = -1, tPatrol = -1; let aimErr = 0, aimPitch = 0, aimN = 0;
     for (let f = 0; f < 60 * 45; f++) {
       W.step(DT); maxN = Math.max(maxN, game.searchProbeN);
       const P = gd.searchPlan;
-      if (P && P.phase !== lastPhase) { lastPhase = P.phase; if (P.phase === 'look') looks.push({ ...P.spots[P.current], t: game.time - t0 }); }
+      if (P && P.phase !== lastPhase) { lastPhase = P.phase; if (P.phase === 'look') { if (!looks.length) lot = P.spots.reduce((n: number, s: any) => n + s.dark, 0) / P.spots.length; looks.push({ ...P.spots[P.current], t: game.time - t0 }); } }
       if (P && P.phase === 'look' && P.phaseT > 0.5) { const s = P.spots[P.current]; aimErr += Math.abs(wrapAngle(gd.char.aimYaw - Math.atan2(s.pos[0] - gd.char.pos[0], s.pos[2] - gd.char.pos[2]))); aimPitch += gd.char.aimPitch; aimN++; }   // torch INTO the spot: his aim on its bearing (a hand's wobble across it) and pitched down at the floor there
       if (tSusp < 0 && gd.state === 'suspicious') tSusp = game.time - t0;
       if (tPatrol < 0 && gd.state === 'patrol') { tPatrol = game.time - t0; break; }
     }
-    restore();
     const first3 = looks.slice(0, 3); const errDeg = aimN ? aimErr / aimN * 180 / Math.PI : 99, pitchDeg = aimN ? aimPitch / aimN * 180 / Math.PI : 0;
-    const ok = !!P0 && P0.spots.length >= 10 && first3.length === 3 && first3.every(s => s.pos[0] < 20 && s.kind !== 'open' && s.cover >= 0.3) && tSusp > 12 && tPatrol > tSusp && maxN <= 8 && errDeg < 20 && pitchDeg < -15;
-    verdict(ok, '(A) one searcher, central fix, west half dark', `${P0 ? P0.spots.length : 0} spots dealt (want ≥ 10); looked into ${looks.length}: ${looks.map(s => `${s.kind}@(${s.pos[0].toFixed(1)},${s.pos[2].toFixed(1)}) d${s.dark.toFixed(2)} +${s.t.toFixed(1)}s`).join(' → ')}; first three all west of x=20 and cover spots: ${first3.every(s => s.pos[0] < 20 && s.kind !== 'open')}; while looking into one: aim ${errDeg.toFixed(1)}° off its bearing (want < 20), pitched ${pitchDeg.toFixed(1)}° (want below −15: down into it); search → suspicious +${tSusp.toFixed(1)} s → patrol +${tPatrol.toFixed(1)} s; most light queries in a frame ${maxN} (budget 8)`);
+    const mean3 = first3.reduce((n, s) => n + s.dark, 0) / 3, darkCover = first3.length === 3 && first3[0].dark > 0.5 && mean3 > lot && first3.every(s => s.kind !== 'open' && s.cover >= 0.3);
+    const ok = !!P0 && P0.spots.length >= 10 && darkCover && tSusp > 12 && tPatrol > tSusp && maxN <= 8 && errDeg < 20 && pitchDeg < -15;
+    verdict(ok, '(A) one searcher, central fix: he opens on a dark spot, and the first three he looks into are cover and darker than the lot he was dealt', `${P0 ? P0.spots.length : 0} spots dealt (want ≥ 10); looked into ${looks.length}: ${looks.map(s => `${s.kind}@(${s.pos[0].toFixed(1)},${s.pos[2].toFixed(1)}) d${s.dark.toFixed(2)} +${s.t.toFixed(1)}s`).join(' → ')}; the first three are ${mean3.toFixed(2)} dark, the lot ${lot.toFixed(2)}; while looking into one: aim ${errDeg.toFixed(1)}° off its bearing (want < 20), pitched ${pitchDeg.toFixed(1)}° (want below −15: down into it); search → suspicious +${tSusp.toFixed(1)} s → patrol +${tPatrol.toFixed(1)} s; most light queries in a frame ${maxN} (budget 8)`);
     console.log('    dealt: ' + dealt.join('\n           '));
   }
-  // ---- (B) two men, same fix. (Which spots are dark is not asked here: the light is the Rust game's, and a lightAt planted on the copy does not reach its tick.)
+  // ---- (B) two men, same fix.
   {
     Math.random = seeded(302);
     const W = await standUp(); const { game } = W;
@@ -103,7 +88,6 @@ export async function darkness() {
     dw.locked = locked;   // (its keyed face is the cubicle side: Doors.side +1 for x < 28)
     const fix: Vec3 = [26.6, 0, 17.6];   // the aisle a stride west of that door
     dropSearcher(game, gd, fix, fix);
-    const restore = fakeLight(game, () => 0.005);   // all dark: only cover and plausibility tell the spots apart
     W.step(DT);
     const P0 = gd.searchPlan; const inBreak = (s: any) => s.pos[0] > 28.3 && s.pos[2] > 12.4;
     const br0 = P0 ? P0.spots.filter(inBreak) : [];
@@ -115,7 +99,6 @@ export async function darkness() {
     for (let f = 0; f < 60 * 5; f++) W.step(DT);   // ~10 s on: re-flooded and re-scored since
     const P1 = gd.searchPlan; if (P1) G.scoreSpots(game, gd, P1);
     const plLate = P1 ? P1.spots.filter(inBreak).map((s: any) => s.plaus) : [];
-    restore();
     if (locked) verdict(!!P0 && P0.spots.length >= 6 && br0.length === 0, '(C1) fix by the break room\'s west door, that leaf latched and LOCKED against him, the corridor door latched', `${P0?.spots.length ?? 0} spots dealt, ${br0.length} of them inside the break room (want 0: no key, and round by the corridor is beyond ${9} m); dealt: ${(P0?.spots ?? []).map((s: any) => `${s.kind}@(${s.pos[0].toFixed(1)},${s.pos[2].toFixed(1)})`).join(' ')}`);
     else verdict(!!P0 && br0.length > 0 && plEarly.every((p: number) => p === 0) && !!firstPick && !inBreak(firstPick) && !earlyVisit && plLate.length > 0 && plLate.every((p: number) => p >= 0.99), '(C2) the same with the leaf latched but unlocked: dealt, implausible at first, plausible once there has been time to slip through and let it swing to',
       `${br0.length} break-room spots dealt; their plausibility at the first pick (+1.2 s): [${plEarly.map((p: number) => p.toFixed(2)).join(' ')}] (want all 0); first pick ${firstPick ? `${firstPick.kind}@(${firstPick.pos[0].toFixed(1)},${firstPick.pos[2].toFixed(1)})` : 'none'} (want this side of the door); a break-room spot looked into inside 4.5 s of the fix: ${earlyVisit} (want false); their plausibility ~10 s on: [${plLate.map((p: number) => p.toFixed(2)).join(' ')}] (want all 1)`);

@@ -219,7 +219,7 @@ function cancelReloads(pl: Player) { pl.pistol.cancelReload(); pl.rifle.cancelRe
 export function legsOwn(g: Game): boolean {
   const pl = g.player;
   return !(pl.down || pl.takedown || pl.holding || pl.kick || pl.picking || pl.wanding || pl.coding || pl.wall || pl.dragging || pl.haul || pl.doorMove || g.puppet || g.touring
-    || samWork(g) || (STALK.on && stalkOn(g)) || g.rails?.allowed());   // (rails.ts: a lesson's gate takes keys out of the tick)
+    || samWork(g) || (STALK.on && stalkOn(g)) || g.view.lesson?.rails);   // (rails.ts: a lesson's gate takes keys out of the tick)
 }
 /** THE TOP PACE OF A WALK OF HIS OWN this tick, before a tap step, a creep or a door in his hand have their say: by what his legs are doing (`m`: the
  *  player's own flags in the tick; a look ahead's scratch flags — walkahead.ts) and what his card weighs. One working for both. */
@@ -255,7 +255,7 @@ export function sprintStance(g: Game, m: Legs, wantSprint: boolean, stalk: boole
   m.dash = dashes && wantSprint && m.crouch && !m.dragging && !stalk;   // (CROUCHRUN: Shift in a crouch stays down and goes quickly)
 }
 /** ONE STRIDE: his pace taken up or let go, his place moved by it, the walls and then the men he meets given their say. `tap` / `stalk`: the step or the creep
- *  that has his legs this tick (tapstep.ts, stalk.ts) — null for a plain walk. `now`: the clock the tick runs at. */
+ *  that has his legs this tick (stalk.ts) — null for a plain walk. `now`: the clock the tick runs at. */
 export function strideStep(g: Game, m: Legs, mx: number, mz: number, ml: number, tap: { speed: number } | null, stalk: { pace: number; keep?: boolean } | null, dt: number, now = g.time): void {
   const c = m.char;
   let maxSpeed = freePace(g, m, ml);
@@ -441,7 +441,7 @@ const wsPend = new SideMap<Player, { t: number; at: number; blocked: boolean }>(
  *  there the wall is his as he arrives and the row is there from the hold; a body's row, and any row in the crouched dash, is in reach and has the long
  *  wait.) The hold it takes carries the keys of that run (WallHold.ran): while they are held as they were, Shift is not a way off it (wallRanOn). */
 const wsPress = new SideMap<Player, { t: number; at: number; n: Vec3 | null; dx: number; dz: number; held: boolean; until: number }>('player.wsPress');
-/** the things that stand where they are and are worked by hand (the wall press's touch; interact.ts emptyThing: what an empty tap can be beside) */
+/** the things that stand where they are and are worked by hand (the wall press's touch; the view's `empty`: what an empty tap can be beside) */
 export const PRESS_THINGS: ReadonlySet<string> = new Set(['door', 'switch', 'breaker', 'objective', 'cam', 'body']);
 
 // ---- the hold in a checkpoint (savestate.ts SaveState.wallHold, under SAVETIMELINE.holds). No file held a hold before the wall could be taken by walking: a
@@ -802,7 +802,7 @@ export function toggleDrag(g: Game, which?: Guard) { { const __s = RUST_SURFACE;
   if (pl.dragging) { releaseBody(g); g.msg('body dropped'); return; }
   if (pl.down || pl.sprinting) return;
   let best: Guard | null = which && which.state === 'dead' ? which : null;
-  if (!best) { let bd = 1.3; for (const gd of [...g.guards, ...civiliansShown(g)]) { if (gd.state !== 'dead' || gd.wound) continue; const d = bodyDist(g, gd, 1.3); if (d < bd) { bd = d; best = gd; } } }   // (a civilian on the floor is a body to haul like any)
+  if (!best) { let bd = 1.3; for (const gd of [...g.guards, ...civiliansShown(g)]) { if (gd.state !== 'dead') continue; const d = bodyDist(g, gd, 1.3); if (d < bd) { bd = d; best = gd; } } }   // (a civilian on the floor is a body to haul like any)
   if (!best || !best.char.ragdoll) { g.msg('no body within reach'); return; }
   releaseWall(g);   // (you take hold of a body off the wall, crouched to it)
   pl.dragging = best; pl.crouch = true; pl.dragNoiseT = 0.3; pl.dragStuckT = 0; best.char.ragdoll.wake(); haulBegin(g, best); g.msg(pl.haul?.carry ? 'picking him up — Space puts him down, sprint drops him' : pl.haul?.end === 'head' ? 'got him under the arms — Space lets go, sprint drops him' : 'dragging the body — Space lets go, sprint drops it');

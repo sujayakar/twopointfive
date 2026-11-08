@@ -37,6 +37,9 @@ fn set_pin(c: &mut FollowCamera, p: Option<FollowCameraSetPinP>) -> Option<Follo
     c.pin
 }
 
+/// Hold the view (none: let it go). (camera.ts FollowCamera.setPin)
+pub fn follow_camera_set_pin(g: &mut Game, id: CameraId, p: Option<FollowCameraSetPinP>) -> Option<FollowCameraPin> { set_pin(&mut g.tab.camera[id], p) }
+
 /// A drawn frame and a tick's follow, together. (camera.ts FollowCamera.update)
 pub fn follow_camera_update(g: &mut Game, id: CameraId, dt: f64, follow: V3, aim_point: Option<V3>) {
     update(&mut g.tab.camera[id], dt, follow, aim_point)

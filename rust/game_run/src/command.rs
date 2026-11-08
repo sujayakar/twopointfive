@@ -30,8 +30,35 @@ macro_rules! commands {
             }
             Ok(())
         }
+
+        /// the bytes of the commands in `b`, by their numbers, done to nothing
+        fn each(b: &[u8], mut f: impl FnMut(u32, &[u8])) {
+            let mut r = Bytes::of(b);
+            while r.at < b.len() {
+                let n = u32::read(&mut r);
+                let from = r.at;
+                match n {
+                    $($i => { $(let _ = <$t as Field>::read(&mut r);)* })*
+                    _ => return,
+                }
+                f(n, &b[from..r.at]);
+            }
+        }
     };
 }
+
+/// the lever words in a list of commands, in its order: (key, rung)
+pub fn levers_said(b: &[u8]) -> Vec<(String, String)> {
+    let mut out = Vec::new();
+    each(b, |n, args| if n == LEVER {
+        let mut r = Bytes::of(args);
+        let key = <&str as Field>::read(&mut r);
+        let rung = <&str as Field>::read(&mut r);
+        out.push((String::from(key), String::from(rung)));
+    });
+    out
+}
+const LEVER: u32 = 13;
 
 fn lever(key: &str) -> Option<game::difficulty::LeverKey> {
     use game::difficulty::LeverKey as K;
@@ -76,4 +103,24 @@ commands! {
     17 Knob { name: &str, value: f64 } = |g, name, value| { let _ = crate::knobs::set(g, name, value); };
     /// the cards as the player's machine keeps them (before a game is made: what its men are staged in)
     18 Kit { kept: &str } = |g, kept| crate::kept::read(g, kept);
+    /// the rung a quiet mission is played under, as this machine keeps it (a word that is no rung is nothing)
+    19 QuietFog { rung: &str } = |g, rung| game::quietfog::quiet_fog_kept(g, rung);
+    /// the cameras a quiet mission hands out, as this machine keeps them
+    20 QuietCams { on: u32 } = |g, on| game::quietfog::quiet_cams_kept(g, on != 0);
+    /// nobody plays, and the floor is looked at: the player stands aside, out of everybody's senses, and what is done is none of the mission's, the log's or the alarm's; 0 puts a fresh
+    /// encounter back
+    21 Aside { on: u32, x: f64, z: f64 } = |g, on, x, z| {
+        (g.quiet_utility, g.touring, g.player_invisible) = (on != 0, on != 0, on != 0);
+        if on == 0 { game::game::game_restart(g, None); }
+        else { game::game::game_clear_aftermath(g); game::game::game_teleport_player(g, [x, 0.0, z]); }
+    };
+    /// the kit picture: the team's cards (as Kit's text) and how many come (under 0: as it stands), staged again
+    30 KitStageCards { kept: &str, size: i32 } = |g, kept, size| { crate::kept::read(g, kept); game::kitstage::cards(g, size); };
+    /// whose card is open (0 the player) and the row under its highlight
+    31 KitStageOpen { who: u32, field: &str } = |g, who, field| game::kitstage::open(g, who, field);
+    /// where the picture's men should sit in the view: its shape, then their middle, their share of its height and width and a man's, the door's line and the edges it is hung between, and the column's top and
+    /// foot (a number that is none: not said)
+    32 KitStageFrame { aspect: f64, cx: f64, cy: f64, h: f64, w: f64, man: f64, door: f64, left: f64, right: f64, keep: f64, top: f64, bottom: f64 } = |g, aspect, cx, cy, h, w, man, door, left, right, keep, top, bottom| {
+        game::kitstage::frame(g, aspect, game::kitstage::frame_ask(cx, cy, h, w, man, [door, left, right, keep], [top, bottom]));
+    };
 }

@@ -20,7 +20,7 @@ process.env.QA_STAND_SAID = '1';
  *  raised or held off by name) and a check's own arm (QA_HOLD). Read once, here, before any tool's own line: a tool that sets a word itself, or a probe that
  *  writes one and deletes it, does not change what the run was started with. A run with any of them is not the stand as it opens. */
 export const BY_HAND: readonly string[] = handWords();
-/** …and the same question asked now (tools/qa/ident-pin.ts asks it after its tool has set its own words): `WORD=value` for every such word in the environment */
+/** …and the same question asked now: `WORD=value` for every such word in the environment */
 export function handWords(): string[] { return [...STAND_ENV, 'QA_HOLD'].filter(k => k !== 'TPS_PROFILE' && process.env[k] !== undefined).sort().map(k => `${k}=${process.env[k]}`); }
 /** THE BREAK WORDS THIS PROCESS WAS STARTED WITH: `WORD=value` for every `<NAME>_BREAK` of the environment that is neither empty nor 0, the spelling of a
  *  check's red path (one older word is spelt another way and named here: DOORPATH_OLD). Read once, as BY_HAND is. A run with one is some check's red path:
@@ -30,7 +30,7 @@ export const BREAK_WORDS: readonly string[] = Object.keys(process.env).filter(k 
 if (BREAK_WORDS.length && process.env.QA_BREAK_SAID !== BREAK_WORDS.join(' ')) console.error(`BREAK WORD${BREAK_WORDS.length > 1 ? 'S' : ''} SET: ${BREAK_WORDS.join(' ')}. A check that reads ${BREAK_WORDS.length > 1 ? 'one' : 'it'} plays its red path and must fail.`);
 if (BREAK_WORDS.length) process.env.QA_BREAK_SAID = BREAK_WORDS.join(' ');
 /** THE WORDS A HELD ROW IS RAISED BY: the first WORD=value of each row's note in src/host/profile.ts FROZEN_HOLDS, once each (a row whose note names no word
- *  of its own has none). What tools/qa/stand-bisect.ts searches over, and what a row of tools/qa/expected-red.ts may name. */
+ *  of its own has none). What tools/qa/stand-bisect.ts searches over. */
 export function heldWords(holds: Record<string, string>): string[] {
   const words: string[] = [];
   for (const note of Object.values(holds)) { const w = wordOf(note); if (w && !words.includes(w)) words.push(w); }

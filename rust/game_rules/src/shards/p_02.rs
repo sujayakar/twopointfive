@@ -539,13 +539,11 @@ pub fn glass_shards_send(g: &mut crate::game::Game, pos: V3, dir: V3, count: f64
     g.stats.shards.emits += 1;
     g.stats.shards.born += count as i32;
     g.stats.shards.peak_live = g.stats.shards.peak_live.max(g.shards.live_est as i32);
-    if crate::particle_fx::gpu_fx(g) {
-        use crate::render_particles::{EmitOpts, EmitShape, PKind};
-        crate::render_particles::particles_emit(g, PKind::Shard, pos, dir, count, EmitOpts {
-            shape: Some(EmitShape::Cone), speed: o.speed, speed_jit: Some(o.speed_jit), spread: Some(o.spread), life: o.life, life_jit: Some(o.life_jit), size: o.size, size_jit: Some(o.size_jit),
-            aspect: Some(o.aspect), tumble: Some(o.tumble), nrm_jit: Some(o.nrm_jit), pos_jit: Some(o.pos_jit), vadd: o.vadd, color: Some(o.color), seed: Some(seed), ..EmitOpts::zeroed()
-        });
-    }
+    use crate::render_particles::{EmitOpts, EmitShape, PKind};
+    crate::render_particles::particles_emit(g, PKind::Shard, pos, dir, count, EmitOpts {
+        shape: Some(EmitShape::Cone), speed: o.speed, speed_jit: Some(o.speed_jit), spread: Some(o.spread), life: o.life, life_jit: Some(o.life_jit), size: o.size, size_jit: Some(o.size_jit),
+        aspect: Some(o.aspect), tumble: Some(o.tumble), nrm_jit: Some(o.nrm_jit), pos_jit: Some(o.pos_jit), vadd: o.vadd, color: Some(o.color), seed: Some(seed), ..EmitOpts::zeroed()
+    });
 }
 
 /// Where and when a fragment let go at `c` with velocity `v` reaches what is under it.   (shards.ts GlassShards.fallOf)

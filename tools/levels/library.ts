@@ -8,7 +8,7 @@
 // HOW IT KNOWS. A kit hands its pieces out through src/scene/library.ts `pieces(kit, fns)`; with a watcher set, each piece laid is told. So this file
 //   1. builds EVERY generator under tools/levels with the watcher on (and runs a look file's `finish` on what its plain generator built): which piece each
 //      level lays, how often, and with what arguments;
-//   2. takes for each piece the call a SHOWROOM makes (levels/gwot-yard.json stands the look's kit, levels/library-hall.json the older kits'), else the first
+//   2. takes for each piece the call a SHOWROOM makes (tools/levels/gwot-yard.ts stands the look's kit, levels/library-hall.json the older kits'), else the first
 //      call any level makes, and lays that one call alone in a fresh kit: the boxes, loose parts and lamps it adds are the piece — its size, what it costs,
 //      what it is to a man, its paints; and, from the door again, WHOSE piece it is: a piece that lays nothing of its own, only one piece of another kit
 //      (the lived kit's chair is the office's, named as a room's lived thing), is that piece, and is not a second way of building the name;
@@ -90,7 +90,7 @@ watchPieces(null);
 levels.sort();
 const onList = new Set(ALL_MISSIONS.filter(s => !s.offList).map(s => (s.level ?? 'office.json').replace(/\.json$/, '')));
 /** a level file's name as its generator's (the two differ for one level) */
-const fileOf = (level: string) => level.replace(/^blocksquads/, 'block-squads').replace(/-gwot$/, '');
+const fileOf = (level: string) => level.replace(/-gwot$/, '');
 
 // ------------------------------------------------------------------ paints: every colour that has a name, by its numbers ----
 const key = (a: Vec3) => a.map(v => Number(v).toFixed(4)).join(',');
@@ -307,7 +307,10 @@ for (const k of KITS) for (const name of pieceNames.get(k.name) ?? []) for (cons
   const seen = shownThere(c.level, S.boxes); hiddenWhereLaid += Math.max(alone.length - seen.length, 0); if (!seen.length) continue;
   const id = `${k.name}.${name}`, was = flickers.get(id); if (!was || seen.length > was.n) flickers.set(id, { n: seen.length, level: c.level, big: seen[0].size });
 }
-const showroomFlicker = SHOWROOMS.map(s => { const f = resolve(ROOT, 'levels', `${s}.json`); return { s, n: existsSync(f) ? zfight(JSON.parse(readFileSync(f, 'utf8'))).pairs.filter(p => p.verdict === 'seen').length : -1 }; }).filter(r => r.n);
+// (a showroom with no file of its own, gwot-yard's, is asked of what its generator builds)
+const showroomFlicker: { s: string; n: number }[] = [];
+for (const s of SHOWROOMS) { const f = resolve(ROOT, 'levels', `${s}.json`), data = existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : { boxes: (await import(resolve(HERE, `${s}.ts`))).build().level.boxes.map(asFile) };
+  const n = zfight(data).pairs.filter(p => p.verdict === 'seen').length; if (n) showroomFlicker.push({ s, n }); }
 
 // ------------------------------------------------------------------ the library's rules ----
 const problems: string[] = [], plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
@@ -319,7 +322,7 @@ if (banded.length) problems.push(`${plural(banded.length, 'piece tops', 'pieces 
 if (skewed.length) problems.push(`${plural(skewed.length, 'piece', 'pieces')} laid on a wall's face ${skewed.length === 1 ? 'does' : 'do'} not lie the same on all four ways a wall can face: ${skewed.map(p => `${p.id} (${p.skew})`).join('; ')}`);
 if (broken.length) problems.push(`${plural(broken.length, 'piece', 'pieces')} could not be laid alone: ${broken.map(p => `${p.id} (${p.error})`).join(', ')}`);
 if (flickers.size) problems.push(`${plural(flickers.size, 'piece flickers', 'pieces flicker')} by ${flickers.size === 1 ? 'itself' : 'themselves'} (two faces of one call in one plane, drawn differently: end one box at the other or sink a face): ${[...flickers].map(([id, f]) => `${id} (${plural(f.n, 'patch', 'patches')} as ${f.level} lays it, the biggest ${f.big[0]} × ${f.big[1]} m)`).join(', ')}`);
-if (showroomFlicker.length) problems.push(`${plural(showroomFlicker.length, 'showroom has', 'showrooms have')} a patch that flickers, or no file to ask (bun run tools/qa/zfight-check.ts ${showroomFlicker.map(r => r.s).join(' ')}): ${showroomFlicker.map(r => r.n < 0 ? `${r.s} has no file` : `${r.s} ${r.n}`).join(', ')}`);
+if (showroomFlicker.length) problems.push(`${plural(showroomFlicker.length, 'showroom has', 'showrooms have')} a patch that flickers (bun run tools/qa/zfight-check.ts ${showroomFlicker.map(r => r.s).join(' ')}): ${showroomFlicker.map(r => r.n < 0 ? `${r.s} has no file` : `${r.s} ${r.n}`).join(', ')}`);
 if (noRow.length) problems.push(`${plural(noRow.length, 'kit hands', 'kits hand')} pieces out and has no row in tools/levels/library.ts KITS: ${noRow.join(', ')}`);
 if (noPieces.length) problems.push(`${plural(noPieces.length, 'row', 'rows')} of KITS named no kit that hands pieces out (a kit renamed, or a name mistyped in its pieces() call): ${noPieces.join(', ')}`);
 if (unbuilt.length) problems.push(`${plural(unbuilt.length, 'generator', 'generators')} did not build: ${unbuilt.map(u => `${u.level} (${u.why})`).join(', ')}`);
@@ -347,7 +350,7 @@ function page(): string {
     '- **Size** is length × width × height in metres of the call that was laid. A wall, a rug or a line is as long as it was asked for.',
     '- **Boxes** is what the piece costs: solid boxes, drawn-only boxes, loose things and their parts, round things, marking bitmaps, lamps.',
     '- **Paints** are rows of the tables under Paints below, most boxes first; `row × 0.60` is a row darkened; a colour a kit writes as numbers shows as its numbers.',
-    `- **The showrooms**: ${SHOWROOMS.map(s => `\`?levelFile=${s}.json&solo&hour=midday\``).join(' and ')}. Between them one of each piece stands, and its line in the`,
+    `- **The showrooms**: \`tools/levels/gwot-yard.ts\` and \`?levelFile=library-hall.json&solo&hour=midday\`. Between them one of each piece stands, and its line in the`,
     '  showroom\'s generator is the call to copy.',
     '- Which level lays which piece is not on this page (it moves with every generator): `bun run tools/levels/library.ts --uses FILE` writes it.', '');
   L.push('## The kits', '', '| Kit | File | Pieces | Its sections |', '|---|---|---|---|');

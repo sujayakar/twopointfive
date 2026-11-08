@@ -77,7 +77,7 @@ export const STALK = {
    *  of the grab's reach, growing to `cornerReach[1]` as the nearest man he could take comes from `cornerSee` m to `cornerM`; he comes up out of the coil over
    *  `cornerRise` s of the step in. `cornerShow` off = the wall stance alone, as it was.
    *  (Of the polish, so DOWN here: `jolt` 0 and `cornerShow` off — and above, `catchLong` 1, `turnIn` and `yankWith` off. stalkPolish(true) writes POLISH_UP's.) */
-  jolt: 0, joltFace: 50, joltSecs: 0.6, joltAtOnce: false, cornerShow: false, cornerSee: 3.2, cornerReach: [0.25, 0.55] as [number, number], cornerCoil: 0.3, cornerRise: 0.24,  /** THE KEY FINISHES IT (the maintainer, having played the creep: "one change we should make is that I think you should really have to hit E to finish
+  jolt: 0, joltFace: 50, joltSecs: 0.6, cornerShow: false, cornerSee: 3.2, cornerReach: [0.25, 0.55] as [number, number], cornerCoil: 0.3, cornerRise: 0.24,  /** THE KEY FINISHES IT (the maintainer, having played the creep: "one change we should make is that I think you should really have to hit E to finish
    *  the grab. it feels weird having it happen automatically"). With `key` up the held click only walks him in: inside the grab's reach he eases to a stop `keyM` m
    *  behind the man and waits there — keeping station, at the man's own speed, if the man walks on — and the grab is the row's own, 'grab him' on the interaction's key (E in the page), back
    *  whatever `only` says and taken AS the stalk's: the step in, the landing, the haul back (game.ts, stalkKeyGrab). He may also walk in on his own keys
@@ -109,18 +109,10 @@ export const STALK = {
    *  The arms hang from the shoulders with a bent elbow (`heftPole`): `heftOut` m out, `heftDown` m under, `heftFwd` m ahead (behind, so the hands sit by his hips; the left
    *  `heftLead` m further). Ahead of the shoulder they read from the game's camera, side on, as arms held out (his note on a GPU: "almost zombie like"), though not from behind. ON in the page (?stalkheft=0: the arms as they were), OFF here and on the frozen stand. */
   heft: false, heftTwist: 20, heftSwing: 0.11, heftSide: 0.04, heftLean: 4, heftDip: 0.02, heftSurge: 1, heftOut: 0.18, heftDown: 0.4, heftFwd: -0.2, heftLead: 0, heftPole: [0.6, 0, -0.8] as Vec3,
-  /** THE STICK (the maintainer: "you click on the guy and then you can drag towards him to move in that direction. like a joystick centered on the guy.
-   *  that would make things feel more controlled than right now which feels automatic"). With `drag` up, the press on a man still begins the creep, and the
-   *  point on the screen it was made at is the stick's middle: while the button is held, the mouse's way from there is the way Sam creeps (screen up = the
-   *  camera's forward, as the move keys have it), and how far it is, from `dragDead` px (nothing) to `dragFull` px (all of it), is how much of `pace`. The
-   *  mouse left where it was pressed = he holds still in the pose. He faces the man throughout; he is never walked closer than `keyM` (the way into the man
-   *  is taken off the stick there, the way round him is not); the rest is the creep's own rules (the arc, the walls, the key's grab). PROTOTYPE: OFF here,
-   *  on the frozen stand AND in the plain page; up with ?stalkdrag=1. */
-  drag: false, dragDead: 14, dragFull: 140,
-  /** ROUND HIM (the maintainer: "when you're clicking on an enemy and moving around them, you should really be "orbiting" them"). With `orbit` up, a move
+/** ROUND HIM (the maintainer: "when you're clicking on an enemy and moving around them, you should really be "orbiting" them"). With `orbit` up, a move
    *  key while the button holds a man no longer ends the creep: the way the keys point is taken round the man, not past him. The part of it toward or away from
    *  him closes or opens the gap; the part across him carries Sam round on the circle he is on (he keeps facing the man, and a pull of `orbitK` per metre off
-   *  that circle holds him to it), at the creep's `pace`, and a man who walks takes the circle with him. The stick (`drag`) is taken the same way. He goes no
+   *  that circle holds him to it), at the creep's `pace`, and a man who walks takes the circle with him. He goes no
    *  further round than `orbitEdge` short of the grab's own arc (close.ts BEHIND_COS, inside where the creep ends), and no closer than `keyM`. Keys let go: the held button walks him in as before. With it up he faces the man in any creep, the aim's weight (aimweight.ts, which turned him
    *  to the cursor's floor point, left where the press was) has no say there. A key that is within `orbitSnap` of straight across him (its share toward him,
    *  0.3 ≈ 17°) is taken as all the way across: the screen's keys are seldom square to the man, and one a little off would spiral Sam in or out. ON in the page
@@ -135,13 +127,13 @@ export const STALK_STATS = { begun: 0, grabs: 0, corner: 0, out: { let: 0, far: 
 type Why = keyof typeof STALK_STATS.out;
 
 interface St { on: Guard | null; grab: Guard | null; t: number; /** on a wall with the button held and nothing in the way of a grab: he is lying in wait */ wait?: boolean; /** the button went down and has not come up or taken a man since: a stalk may begin */ armed?: boolean;
-  /** STALK.drag: where on the screen (px) the press that began this stalk was made — the stick's middle */ stick?: [number, number] | null;
+
   /** STALK.orbit: the circle round the man he is held to (m), the frame it was last held on, and the way asked for as it was taken: on the floor, then its
    *  share into the man and its share round him (+ = the way round that turns left about him) */ orbitR?: number; orbitT?: number; orbitAsk?: [number, number, number, number];
   /** the man who broke a stalk off by turning, and when: if he comes round to FACE Sam inside STALK.joltSecs, Sam ducks */ broke?: { gd: Guard; t: number; /** where Sam stood */ at: Vec3 } | null }
 const STATE = new SideMap<Game, St>('stalk.STATE');
 /** every key from birth and in one order: a restart's state is compared with an untouched level's, key for key, whatever order play reached them in */
-const fresh = (): St => ({ on: null, grab: null, t: -1, wait: false, armed: false, stick: null, orbitR: undefined, orbitT: undefined, orbitAsk: undefined, broke: null });
+const fresh = (): St => ({ on: null, grab: null, t: -1, wait: false, armed: false, orbitR: undefined, orbitT: undefined, orbitAsk: undefined, broke: null });
 function end(S: St, why: Why) { if (S.on) { S.armed = false; S.on = null; STALK_STATS.out[why]++; STALK_STATS.last = why; } S.orbitR = S.orbitT = undefined; S.orbitAsk = undefined; }
 
 /** are Sam's hands free for it at all (empty, and nothing else has him) */
@@ -155,7 +147,7 @@ const free = (g: Game): boolean => hands(g) && !shut(g);
  *  nothing that asks whether he could — the row's hint, the pose that tells — says he can. IT IS THE CLICK THAT IS TAKEN, NOT THE GRAB: the row's key
  *  still grabs a man he has walked up behind, with the stalk's own step in (`stalkKeyCan` asks `hands`), and where the click was the one way to a man
  *  the row is back (`stalkClickOnly`) */
-const shut = (g: Game): boolean => !!g.rails?.shuts('stalk');
+const shut = (g: Game): boolean => !!g.view.lesson?.rails?.stalkShut;
 /** the gate game.ts puts on a grab, so nothing is handed over that it would refuse: not folded by a blast, no hand on a breaker's lever */
 const able = (g: Game): boolean => !samStaggered(g) && !g.player.breakerMove;
 /** why this man cannot be stalked from `p` right now, or null when he can (`begin`: the stricter test a press must pass — the rear arc itself) */

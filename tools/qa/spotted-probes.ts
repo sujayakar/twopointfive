@@ -116,8 +116,7 @@ const crouchOf = (gd: any): number => gd.char.anim.crouch ?? (gd.char.anim.crouc
 // ---------------------------------------------------------------- suspicious: low, still, holding
 export const spottedSuspicious = guarded(async () => {
   const { verdict, done } = family('spotted-suspicious: a suspicious man with a line to the partner — he gets low, stands still and holds his fire, and says so');
-  const run = async (on: boolean) => { const R = await rig(11, on); const s0 = { ...SPM.SPOTTED_STATS }; const st = R.stage({ lit: false });
-    if (!st) throw new Error('no dark spot in the man\'s line could be staged'); R.step(30);
+  const run = async (on: boolean) => { const { R, st } = await staged(on, { lit: false }); const s0 = { ...SPM.SPOTTED_STATS }; R.step(30);
     R.hold('suspicious', 0.6, { face: st.at, eyesOn: null }); R.step(60 * 2); const m = moved(R, 3);
     return { R, st, crouch: crouchOf(R.mate), moved: m, shots: R.shots.length, mode: R.mode(), of: R.of(), label: R.label(), cues: R.lines(/heard something|looking\. holding still|moving off it/), eyes: R.lines(/eyes on\. holding/).length, stats: Object.fromEntries(Object.keys(s0).map(k => [k, SPM.SPOTTED_STATS[k] - (s0 as any)[k]])) as any }; };
   const A = await run(false), B = await run(true);
@@ -129,11 +128,12 @@ export const spottedSuspicious = guarded(async () => {
   // the man settles: he gets up
   { const R = B.R; R.hold('patrol', 0, { eyesOn: null }); R.step(60 * 6); verdict(crouchOf(R.mate) < 0.3, '… and he is on his feet again', `crouch ${f2(crouchOf(R.mate))}`); }
   // the leash: Sam walks on while the man is still suspicious
-  { const R = await rig(11, true); const st = R.stage({ lit: false })!; R.step(30); R.hold('suspicious', 0.4, { face: st.at, eyesOn: null }); R.step(60 * 2); const still = moved(R, 1.5);
+  { const { R, st } = await staged(true, { lit: false }); R.step(30); R.hold('suspicious', 0.4, { face: st.at, eyesOn: null }); R.step(60 * 2); const still = moved(R, 1.5);
     const g = R.game, c = R.mate.char, nav = g.col.nav; let q: number[] | null = null;
     for (let r = 9; r <= 13 && !q; r += 1) for (let k = 0; k < 24 && !q; k++) { const a = k * Math.PI / 12, s = [c.pos[0] + Math.sin(a) * r, 0, c.pos[2] + Math.cos(a) * r]; if (!nav.isBlocked(s[0], s[2]) && flat(s, R.foe.char.pos) > st.d && (nav.findPath(c.pos, s)?.length ?? 0) > 0) q = s; }
-    if (!q) throw new Error('no spot past the leash'); g.teleportPlayer(q); const d0 = flat(c.pos, g.player.char.pos); const m = moved(R, 4);
-    verdict(still < 0.3 && d0 > SPOTTED.leashM && m > 1 && crouchOf(R.mate) > 0.5, 'Sam goes on past the leash: the partner follows, still low', `still ${f2(still)} m · Sam ${f2(d0)} m off (leash ${SPOTTED.leashM}) · then moved ${f2(m)} m in 4 s, crouch ${f2(crouchOf(R.mate))}`); }
+    if (!q) throw new Error('no spot past the leash'); g.teleportPlayer(q); const d0 = flat(c.pos, g.player.char.pos), p0 = [...c.pos]; let seen = 0, low = 1;   // (low is asked while the man has a line to him: once the way has taken him out of it he walks)
+    for (let i = 0; i < 240; i++) { R.step(); const f = R.foe.char.pos; if (!g.col.segmentBlocked([c.pos[0], 1.2, c.pos[2]], [f[0], 1.5, f[2]])) { seen++; low = Math.min(low, crouchOf(R.mate)); } } const m = flat(p0, c.pos);
+    verdict(still < 0.3 && d0 > SPOTTED.leashM && m > 1 && seen > 0 && low > 0.5, 'Sam goes on past the leash: the partner follows, low while the man has a line to him', `still ${f2(still)} m · Sam ${f2(d0)} m off (leash ${SPOTTED.leashM}) · then moved ${f2(m)} m in 4 s, ${seen} frames in the man's line, crouch at the least ${f2(low)}`); }
   return done();
 });
 

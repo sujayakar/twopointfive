@@ -82,10 +82,6 @@ export const REARWATCH = {
   roomSecs: 8,
   /** … and never further than this from Sam (m): a room big enough for Sam to walk that far inside it is not one he is kept at the far end of — 0 = no limit */
   roomM: 8,
-  /** 'the last man has passed him' also waits for every mate who is on his way OUT of the room (his place under 'fall in' is not in it) to be out: freed with
-   *  the others a metre off, queueing at the one doorway, the keeper was through the frame ahead of one of them as often as not — he follows LAST. A mate whose
-   *  place is in the room is not waited for, and `roomSecs` / `roomM` still let him go. false = freed the moment the men who stood behind him have come by, as it was */
-  roomLast: true,
 };
 /** QA, since the page loaded: frames-with-a-group that had a way behind · … that had it pinned · … with a way and no rear mark that sees it · pins handed out
  *  (a new man or a new way) · entries the rear man was held back in · … let go on the clock instead of the others' crossing · turns he was moved to the end of ·

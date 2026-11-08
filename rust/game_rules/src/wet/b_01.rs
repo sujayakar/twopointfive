@@ -85,10 +85,6 @@ fn open_sky_of(g: &mut Game, c: CharId) -> bool {
 /// TypeScript's did. (src/game/wet.ts:75 openSky)
 pub fn open_sky(g: &mut Game, c_2: CharId) -> bool { open_sky_of(g, c_2) }
 
-/// Is `p` under one of the roofs the rain is cut by: the weather's own footprints in force. (src/game/wet.ts:64 underRoofRect; its arm for a caller with
-/// no game, the office's two fixed rectangles, has no caller here: a Rust game always has its weather)
-pub fn under_roof_rect(g: &mut Game, p: V3) -> bool { crate::weather::weather_under_roof(g, p[0], p[2]) }
-
 /// Sam indoors after the rain: his print budget and his drip clock. The drops themselves are GPU particles (`drip` below: nothing with no particle
 /// system), but the ask of the sky is the rule's and moves his sky's memory, which the next soak reads. (src/game/wet.ts:115 samAftermath)
 pub fn sam_aftermath(g: &mut crate::game::Game, dt: f64) {
@@ -121,7 +117,6 @@ const DRIP_FROM: [crate::character::Bone; 5] = [crate::character::Bone::HandL, c
 
 /// One drop off him: from a hand, the chin or the hem of the jacket. With no particle system nothing moves, as in the TypeScript. (src/game/wet.ts:129 drip)
 pub fn drip(g: &mut crate::game::Game, c_2: CharId) {
-    if !crate::particle_fx::gpu_fx(g) { return; }
     let n = g.m.wet.drip_n;
     g.m.wet.drip_n = n + 1.0;
     let k = DRIP_FROM[js::rem(n, 5.0) as usize];

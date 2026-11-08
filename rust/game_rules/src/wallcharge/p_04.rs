@@ -177,8 +177,7 @@ pub fn wall_charge_hud_notes(g: &crate::game::Game, seat: &crate::seats::SeatRef
     let mut out = Vec::new();
     if let Some(n) = W.carried { if W.brought.unwrap_or(0.0) > 0.0 { out.push(Note { key: String::new(), text: alloc::format!("wall charges {}", n) }); } }
     if W.set.is_empty() { return out; }
-    let mine = crate::orders::squad_orders_squad(g, seat);
-    let mark = crate::pairorders::pair_orders_waiting(g).iter().any(|(gd, _)| mine.contains(gd));   // (while his partner waits on a mark, the key is the mark first: the note says so)
+    let mark = !crate::pairorders::pair_orders_waiting(g, seat).is_empty();   // (while his partner waits on a mark, the key is the mark first: the note says so)
     let f = g.k.doortools.blow_key.replacen("Key", "", 1);
     let p = g.ch[g.pl[seat.player].ch].pos;
     for own in [false, true] {

@@ -38,7 +38,7 @@ pub fn note(g: &mut crate::game::Game, gd: GuardId, d: DoorId, what: &str) {
 }
 
 /// Does d stand open (off its hinges it reads wide open: its row is there, greyed). (shutdoor.ts standsOpen)
-pub fn stands_open(g: &mut crate::game::Game, d: DoorId) -> bool {
+pub fn stands_open(g: &crate::game::Game, d: DoorId) -> bool {
     !crate::doors::door_latched(g, d) && m::abs(crate::doors::door_angle(g, d)) >= k().open
 }
 
@@ -472,18 +472,12 @@ pub fn order_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders
 
 /// The row, on the door tools' page in the charge's place while the door stands open. (shutdoor.ts registerShutDoor)
 pub fn register_shut_door(g: &mut crate::game::Game) {
-    let def = crate::orders::OrderDef {
-        id: String::from(SHUT_ID),
-        label: crate::orders::OrderLabel::Text { text: String::from("shut that door") },
+    let def = crate::orders::rows::def(&crate::orders::rows::shutdoor::ORDER, crate::orders::OrderDef {
         targets: vec![crate::orders::TargetKind::Door],
         ack: Some(vec![String::from("shutting it."), String::from("got the door.")]),
-        stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from(STOOD), when: crate::orders::OrderWhen::ShutDoor }),
-        only: Some(crate::orders::OrderOnly::ShutDoor),
-        valid: Some(crate::orders::OrderValid::ShutDoor),
-        issue: crate::orders::OrderIssue::ShutDoor,
-        tick: Some(crate::orders::OrderTick::ShutDoor),
+        stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from(STOOD) }),
         ..crate::orders::OrderDef::zeroed()
-    };
+    });
     let id = crate::orders::squad_orders_row(g, def);
     crate::orders::squad_orders_register(g, id, None);
 }

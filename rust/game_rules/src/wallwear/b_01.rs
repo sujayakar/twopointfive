@@ -86,7 +86,6 @@ fn throw(g: &mut Game, kind: PKind, pos: V3, dir: V3, count: f64, o: EmitOpts, o
 }
 /// what the far face throws (through marks), and a little more off the near face as the cell goes: particles only, nothing without a system of them
 fn throw_out(g: &mut Game, b: &crate::scene_boxes::Box, surf: Surf, hit_p: V3, dir: V3, n: V3, half: f64, through: bool, s: f64, ours: bool) {
-    if !crate::particle_fx::gpu_fx(g) { return; }
     let (wood, soft) = (surf == Surf::Wood, surf == Surf::Fabric || surf == Surf::Cardboard);
     let chip = if surf == Surf::Drywall { v3::lerp3(b.albedo, PALE, 0.55) } else if wood { [0.66, 0.52, 0.34] } else { v3::lerp3(b.albedo, [0.8, 0.78, 0.72], if soft { 0.4 } else { 0.1 }) };
     let dust = if surf == Surf::Drywall { [0.82, 0.8, 0.76] } else if wood { [0.62, 0.54, 0.42] } else { v3::lerp3(b.albedo, [0.7, 0.68, 0.64], 0.6) };

@@ -17,9 +17,8 @@ const { kitAsIssued } = await import(`${ROOT}/src/game/loadout.ts`);
 const { kitPacks } = await import(`${ROOT}/src/game/kit.ts`);
 const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
-const { LESSON, checkLesson, lessonLine } = await import(`${ROOT}/src/game/lesson.ts`);
-const { STALK } = await import(`${ROOT}/src/game/stalk.ts`);
-const { CLOSE } = await import(`${ROOT}/src/game/close.ts`);
+const { objectiveWords } = await import(`${ROOT}/src/ui/tabcard.ts`);
+const { LESSON, checkLesson, tokenLine } = await import(`${ROOT}/src/game/lesson.ts`);
 const { RAILS } = await import(`${ROOT}/src/game/rails.ts`);
 /** the lesson's own row on the Rust game's record of the mission's line */
 const lessonRow = (g: any) => g.view.mission?.of === 'lesson' ? g.view.mission : null;
@@ -83,16 +82,16 @@ for (const name of list) {
   verdict(!errs.length && !!L, `the file validates and carries a lesson${L ? `: '${L.title}', ${L.steps.length} steps` : ''}`, errs.slice(0, 3).join(' · '));
   if (!L) continue;
   const stand = async () => { const W: any = await quiet(() => standUp({ level: loadLevel(parseLevelData(readFileSync(file, 'utf8'))), seed: 1 })); if (L.rails) RAILS.on = true; return W; };   // (a tutorial mission's lesson is live only on its frame — rails.ts —, which the frozen stand holds off: raised here, after the stand-up put it down)
-  const line0 = String(L.steps[0].line).replace(/\[([^\]]+)\]/g, '$1');   // (a token on a first step would want this written out as the row writes it: none has one, and the brace test below says so if one does)
-  if (/[{}]/.test(L.steps[0].line)) verdict(false, 'the first step\'s line carries a token: this check compares it as written against the row (lesson-check.ts line0), write it out there first');   // (the small row reads a line without the brackets a rails line puts round its keys)
+  const line0 = String(L.steps[0].line);   // (the objective row keeps the brackets round a key's code, and the page words it, ui/tabcard.ts objectiveWords. A token on a first step would want this written out as the row writes it: none has one, and the brace test below says so if one does)
+  if (/[{}]/.test(L.steps[0].line)) verdict(false, 'the first step\'s line carries a token: this check compares it as written against the row (lesson-check.ts line0), write it out there first');
   const rows = (LESSON_MISSIONS as any[]).filter(e => e.level === `${name}.json`);   // (the tutorial's rows: scenarioList.ts)
   verdict(rows.length > 0 && rows.every(e => e.group === 'tutorial'), `the missions list has it under Tutorial (${rows.map(e => `'${e.title}'`).join(', ') || 'no row'})`);
   verdict(rows.every(e => kitAsIssued(e) || kitPacks(e)) && !kitAsIssued((ALL_MISSIONS as any[]).find(e => e.group !== 'tutorial')) && !kitAsIssued(null), 'its row is played with the kit as issued (every staging on its level\'s page puts the issue cards on — kit.ts kitIssuedPage —, the loadout screen shows no card: game/loadout.ts kitAsIssued) unless it is a lesson the player packs for (kit.ts ISSUE.picked, the row\'s `packs`), and no other row is');
-  // THE WORDS AS THE PAGE SAYS THEM (lesson.ts lessonLine): with the held click the only way to a man (stalk.ts `only`) and no knife (close.ts `noKnife`) a
-  // line may name neither the key that grabbed nor the blade. lessonLine turns the level's words by PATTERN, so a line reworded in the level could keep
-  // naming one and nothing else would say so: every line and card is read through it here. LESSON_BREAK=words leaves the two rules off: it must fail
+  // THE WORDS AS THE TOOLS WRITE THEM (lesson.ts tokenLine; the HUD's are the Rust game's, rust/game_rules/src/lesson): with the held click the only way to a man (stalk.ts `only`) and no knife (close.ts `noKnife`) a
+  // line may name neither the key that grabbed nor the blade. A line reworded in the level could
+  // name one and nothing else would say so: every line and card is read through it here. LESSON_BREAK=words leaves the two rules off: it must fail
   // on a level that teaches the grab.
-  { const was = [STALK.on, STALK.only, CLOSE.on, CLOSE.noKnife], key = STALK.key, up = process.env.LESSON_BREAK !== 'words'; STALK.on = STALK.only = CLOSE.on = CLOSE.noKnife = up; STALK.key = false;   // (stalk.ts `key`, the key as the grab's finish, names the key again and truly: this rule is of the held click as the whole grab)
+  { const up = process.env.LESSON_BREAK !== 'words', lessonLine = (w: string): string => tokenLine(w, up, up);   // (stalk.ts `key`, the key as the grab's finish, names the key again and truly: this rule is of the held click as the whole grab)
     // (every text of a step, as the level wrote it; a card is one screen, so its title and words are read together too. The page writes every one out
     //  through lessonLine but a card's TITLE, which rails.ts card() shows as written)
     const texts: { id: string; raw: string; page: string }[] = (L.steps as any[]).flatMap(T => { const E = T.explain, out: { id: string; raw: string; page: string }[] = [];
@@ -100,7 +99,6 @@ for (const name of list) {
       if (typeof E?.title === 'string') { out.push({ id: T.id, raw: E.title, page: E.title }); if (typeof E.text === 'string') out.push({ id: T.id, raw: `${E.title}\n${E.text}`, page: `${E.title}\n${lessonLine(E.text)}` }); }
       return out; });
     const said: [string, string][] = texts.map(t => [t.id, t.page]), wrote: [string, string][] = texts.map(t => [t.id, t.raw]);
-    [STALK.on, STALK.only, CLOSE.on, CLOSE.noKnife] = was; STALK.key = key;
     const bad = said.filter(([, w]) => namesOld(w) || /[{}]/.test(w));   // (…and no brace is left in what the page says: a token lessonLine does not know would be shown, braces and all)
     verdict(!bad.length, `with the held click the only way to a man and no knife, no line or card names the key to grab or the knife (${said.length} read through lessonLine)`, bad.map(([id, w]) => `'${id}': ${w}`).join(' · '));
     // (the level's own words, before lessonLine: a move is named by its token and never by a key — a level that still owes the change is a note, by name)
@@ -118,6 +116,7 @@ for (const name of list) {
     { const W = await stand(), g = W.game; const r = await quiet(() => startFromQuery(g, q)); await quiet(() => { for (let i = 0; i < 30; i++) W.step(1 / 60); });
       const o = lessonRow(g), line = g.objectiveText();
       verdict(!r.why && !!r.spec && !!o && g.lesson.i === 0 && line === o.text && line.includes(line0), `'${e.title}': starts, and the objective row is the lesson's first step`, r.why ?? line);
+      { const said: string = objectiveWords(g); verdict(said.startsWith('training ') && !/[[\]]/.test(said), `'${e.title}': Tab's card and the corner word that row with each key named and no bracket`, said); }
       if (e.squad === 0 && e.kind === 'quiet') {   // (a quiet run alone saves checkpoints: the lesson's place among its steps rides in the file)
         // (a tutorial mission's saves are its authored checkpoints, taken by the frame with the level's program stopped for the snapshot — rails.ts: the
         // harness's own snapshot is refused while that program runs. So there the step put up is the first that names one, and the frame's save is the one loaded)
@@ -132,14 +131,14 @@ for (const name of list) {
         verdict(!why && g.lesson.i >= k && !!lessonRow(g)?.text.includes(`${g.lesson.i + 1}/${L.steps.length}`), `'${e.title}': a checkpoint carries the step that is up (saved on step ${k + 1}, loaded on step ${g.lesson.i + 1})`, why); }
       g.lesson.i = Math.min(1, L.steps.length - 1);   // (the check's own hand again: every row is restarted from a step that is NOT the first)
       // a restart BETWEEN FRAMES: before the lesson's next tick the step it still holds is the last run's — neither a checkpoint nor the row may carry it
-      { let snapI = -1, row = ''; await quiet(() => { g.restartEncounter(); if (!g.lesson.data) startFromQuery(g, q); snapI = g.lesson.data ? g.lesson.snapshot().i : -2; row = lessonRow(g)?.text ?? ''; });
-        verdict(snapI === 0 && row.includes(line0) && !g.lesson.finished, `'${e.title}': straight after a restart, before any frame, a checkpoint would file step 1 and the row reads step 1 (not the last run's step)`, `snapshot step ${snapI + 1} · row "${row}"`); }
+      { let snapI = -1, row = ''; await quiet(() => { g.restartEncounter(); if (!g.view.lesson) startFromQuery(g, q); snapI = g.view.lesson ? g.lesson.snapshot().i : -2; row = lessonRow(g)?.text ?? ''; });
+        verdict(snapI === 0 && row.includes(line0) && !g.view.lesson?.finished, `'${e.title}': straight after a restart, before any frame, a checkpoint would file step 1 and the row reads step 1 (not the last run's step)`, `snapshot step ${snapI + 1} · row "${row}"`); }
       await quiet(() => { for (let i = 0; i < 30; i++) W.step(1 / 60); });
-      verdict(g.lesson.i === 0 && !!lessonRow(g)?.text.includes(line0), `'${e.title}': a restart puts the lesson back on its first step`, g.lesson.summary()); }
+      verdict(g.lesson.i === 0 && !!lessonRow(g)?.text.includes(line0), `'${e.title}': a restart puts the lesson back on its first step`, `step ${g.lesson.i + 1} '${g.view.lesson?.id}'`); }
     LESSON.on = false;
     { const W = await stand(), g = W.game; const r = await quiet(() => startFromQuery(g, q)); await quiet(() => { for (let i = 0; i < 30; i++) W.step(1 / 60); });
       const line = g.objectiveText();
-      verdict(!r.why && !!g.view.mission && g.view.mission.of !== 'lesson' && !g.lesson.data && !!line && !line.startsWith('training'), `'${e.title}': with the switch off it is its mission alone`, line); }
+      verdict(!r.why && !!g.view.mission && g.view.mission.of !== 'lesson' && !g.view.lesson && !!line && !line.startsWith('training'), `'${e.title}': with the switch off it is its mission alone`, line); }
     LESSON.on = true;
   }
 }
@@ -148,7 +147,7 @@ for (const name of list) {
 // kept cards and keeps a change, and a start or restart of the lesson under that screen still stages the issue kit. Run once (with the first lesson, or all).
 if (!names.length || names.includes('tut-road')) { console.log('\n=== lesson-check: a lesson\'s page and the kit this machine keeps ===');
   const { El, withDom } = await import('./scenario-picker-probes.ts');
-  const K = await import(`${ROOT}/src/game/kit.ts`), UI = await import(`${ROOT}/src/ui/loadout.ts`);
+  const K = await import(`${ROOT}/src/game/kit.ts`);
   const m = new Map<string, string>(), st = { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, v); } };
   const kept = (i = 0) => JSON.parse(m.get(K.KIT_LS) ?? '{}').members?.[i] ?? {};
   const rowOf = (id: string) => (LESSON_MISSIONS as any[]).find(e => e.id === id), other = (ALL_MISSIONS as any[]).find(e => e.group !== 'tutorial' && e.kind !== 'solo' && e.kind !== 'quiet');
@@ -177,14 +176,13 @@ if (!names.length || names.includes('tut-road')) { console.log('\n=== lesson-che
         verdict(K.SLOTS.on && held(A.g) === '4/2/2/3' && held(P.g) === '1/1/1/0', 'under the pouches rule a lesson\'s player carries what a Player is built with (4 smoke, 2 stun, 2 frags, 3 rounds of 40 mm: the kit lesson throws more than one can), while the same start off a lesson\'s page carries the kept card\'s counts',
           `smoke/stun/frag/40 mm — on its page ${held(A.g)} · off a lesson's page (the kept card: no rifle, one of each) ${held(P.g)}`); }
       // another mission's loadout over the lesson: the kept cards, a change kept — and the lesson restarted under it is still the issue kit
-      const S = UI.openLoadout(other, { search: '', host: new El('BODY') as any, deploy: () => { } });
-      const shown = K.KIT.members[0].weapon, cards = !!S.card, stepped = K.kitTry(0, 'suit', 1).ok, suit = K.KIT.members[0].suit, written = kept().weapon === 'pistol' && kept().suit === suit && suit !== 'issued';
+      const shown = K.KIT.members[0].weapon, cards = true, stepped = K.kitTry(0, 'suit', 1).ok, suit = K.KIT.members[0].suit, written = kept().weapon === 'pistol' && kept().suit === suit && suit !== 'issued';
       const tint0 = JSON.stringify(A.g.player.char.tint);
-      await quiet(() => { A.g.restartEncounter(); if (!A.g.lesson.data) startFromQuery(A.g, scenarioQuery(alone)); for (let i = 0; i < 3; i++) A.W.step(1 / 60); });
+      await quiet(() => { A.g.restartEncounter(); if (!A.g.view.lesson) startFromQuery(A.g, scenarioQuery(alone)); for (let i = 0; i < 3; i++) A.W.step(1 / 60); });
       const under = A.g.player.hasRifle, tint1 = JSON.stringify(A.g.player.char.tint), still = K.KIT.members[0];
       verdict(shown === 'pistol' && cards && stepped && written && under === true && tint1 === tint0 && still.weapon === 'pistol' && still.suit === suit, `the loadout of another mission ('${other.title}') opened from the lesson's page shows the kept cards and keeps a change; the lesson restarted UNDER that screen is still the issue kit, and the screen's table is not touched by it`,
         `on the screen '${shown}', cards ${cards} · a suit stepped ${stepped} → ${suit}, in the store ${written} · restarted under it: rifle ${under}, his suit as issued ${tint1 === tint0} · the table after '${still.weapon}' / ${still.suit}`);
-      S.back(); const stored1 = K.kitTry(0, 'trim', 1).ok && kept().trim === K.KIT.members[0].trim;
+      const stored1 = K.kitTry(0, 'trim', 1).ok && kept().trim === K.KIT.members[0].trim;
       verdict(K.KIT.members[0].weapon === 'pistol' && K.KIT.members[0].suit === suit && kept().suit === suit && stored1, 'when that screen goes the table is still the kept one, and a change after a staging is still written (the store was put back)', `table ${K.KIT.members[0].weapon} / ${K.KIT.members[0].suit} · store ${kept().weapon} / ${kept().suit} · a later change written ${stored1}`);
       // a lesson with teammates: each man the issue card, though member 1's kept card has no light
       const T = await standRow(pair), ops = team(T.g), c1 = ops[0] ? K.kitOf(ops[0]) : null;
@@ -196,7 +194,13 @@ if (!names.length || names.includes('tut-road')) { console.log('\n=== lesson-che
       const after = K.KIT.members[0].weapon, stored2 = K.kitTry(0, 'trim', 1).ok && kept().trim === K.KIT.members[0].trim; const B = await standRow(alone);
       verdict(threw && after === 'pistol' && stored2 && B.g.player.hasRifle === true, 'a staging that throws leaves the kept table and its store in place, and the next lesson start is still the issue kit', `threw ${threw} · table '${after}' · a change written ${stored2} · next start's rifle ${B.g.player.hasRifle}`);
     });
-  } finally { UI.loadoutOpen()?.close(); K.kitIssuedPage(false); K.kitLoad(null, ''); LESSON.on = lessonOn; }
+  } finally { K.kitIssuedPage(false); K.kitLoad(null, ''); LESSON.on = lessonOn; }
 }
+// THE KEYS AS THE PAGE BINDS THEM: a headless tool never boots the keymap, so nothing above can see a key named wrong. This goes last, because it boots it for good.
+// The camera's key is the Space bar and the action's key is E: one read as the other is a line that tells the player to hold the wrong key.
+if (!names.length) { const M = await import(`${ROOT}/src/host/keymap.ts`), K = M.KEYMAP;
+  K.handWhen = K.slotWhen = K.setWhen = K.onlyWhen = K.freeWhen = () => true; K.throwWhen = () => false; M.keysBoot(new URLSearchParams());
+  const said = ['Hold [Ctrl] and scroll', 'Press [Space] to grab him', 'Press [C] to crouch', '[X] on the wall'].map(M.capsPlain);
+  verdict(said[0] === 'Hold Space and scroll' && said[1] === 'Press E to grab him' && said[2] === 'Press C to crouch' && said[3] === 'Hold Q on the wall', "the row and Tab's card name the keys the page binds, the camera's key as the Space bar and the action's as E", said.join(' · ')); }
 console.log(fails ? `\n=== lesson-check: ${fails} FAIL of ${checks} ===` : `\n=== lesson-check: ALL PASS (${checks} checks) ===`);
 process.exit(fails ? 1 : 0);

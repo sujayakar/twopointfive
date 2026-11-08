@@ -176,7 +176,7 @@ pub fn aim_weigh_launch_keep(g: &mut Game, pl: PlayerId, dt: f64) -> bool {
 pub fn aim_gun_point(g: &Game, seat: &crate::seats::SeatRef) -> Option<V3> {
     let pl = &g.pl[seat.player];
     let w = &pl.aimw;
-    if !w.live || !g.k.aimweight.on { return None; }
+    if !w.live { return None; }
     if w.landed { return Some(seat.aim_point); }
     let c = &g.ch[pl.ch];
     Some([c.pos[0] + m::sin(c.aim_yaw) * w.r, w.y, c.pos[2] + m::cos(c.aim_yaw) * w.r])
@@ -184,7 +184,7 @@ pub fn aim_gun_point(g: &Game, seat: &crate::seats::SeatRef) -> Option<V3> {
 /// Is the circle on the cursor (true when nothing is weighing his aim). (aimweight.ts aimGunOn)
 pub fn aim_gun_on(g: &Game, pl: PlayerId) -> bool {
     let w = &g.pl[pl].aimw;
-    !(w.live && g.k.aimweight.on) || w.on
+    !w.live || w.on
 }
 
 #[cfg(test)]

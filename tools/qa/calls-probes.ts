@@ -24,7 +24,7 @@ const SHIPPED: [string, string, unknown, string][] = [
   ['DOORTOOLS', 'thrHandsOff', false, 'true: no what-next on the step-in form'], ['DOORTOOLS', 'thrHeldAll', false, 'true: held page only when all hold'],
   ['DOORTOOLS', 'thrMenuWord', true, 'false: F with another menu up is not the word'], ['DOORTOOLS', 'thrBangs', 2, '1: one can a room'], ['DOORTOOLS', 'thrLight', 1, '2: both jamb men lit'],
   ['DOORTOOLS', 'thrSlice', false, 'true: the opener slices'], ['DOORTOOLS', 'charges', 2, 'kit'], ['DOORTOOLS', 'bangs', 3, 'kit'],
-  ['ROOMFIGHT', 'rally', true, 'false: nobody leaves his room'], ['ROOMFIGHT', 'rallyK', 1, 'under 1: fewer leave'], ['FOG', 'lastSeen', 0, 'seconds of a last-seen mark'],
+  ['ROOMFIGHT', 'rallyK', 1, 'under 1: fewer leave'], ['FOG', 'lastSeen', 0, 'seconds of a last-seen mark'],
   ['COVER', 'on', true, 'false: nobody watches openings unasked'], ['ORDERS', 'doorRay', true, 'false: the old pick'], ['LASER', 'enemy', false, 'true: enemies show lasers'],
 ];
 

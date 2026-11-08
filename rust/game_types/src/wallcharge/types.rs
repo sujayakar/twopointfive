@@ -186,7 +186,7 @@ impl WallChargeDoneItem {
 impl Default for WallChargeDoneItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum Phase {
     Wait,
     Place,
@@ -1058,14 +1058,11 @@ impl Default for WallChargeSamJob { fn default() -> Self { Self::zeroed() } }
 pub struct WallchargeMod {
     /// (src/game/wallcharge.ts:302 skyMemo)
     pub sky_memo: Option<JsMap<crate::Num, f64>>,
-    /// (src/game/wallcharge.ts:303 standIns)
-    pub stand_ins: JsMap<OrdersOrderDefId, OrdersOrderDefId>,
 }
 impl WallchargeMod {
     pub fn blank() -> Self {
         WallchargeMod {
             sky_memo: None,
-            stand_ins: JsMap::new(),
         }
     }
 }

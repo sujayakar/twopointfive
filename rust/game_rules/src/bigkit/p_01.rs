@@ -235,11 +235,6 @@ pub fn sam_big_pose(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Opti
     Some(crate::character::AnimBigTool { kind, t: t_now, equip, windup, stow, blows, end, at, snug: Some(true) })
 }
 
-/// The tool changes hands with the weight of a gun swap: on, on the page.   (bigkit.ts weighed)
-pub fn weighed(g: &crate::game::Game) -> bool {
-    true
-}
-
 /// Seconds from the hand leaving for the tool to the tool in his hands.   (bigkit.ts bigEquip)
 pub fn big_equip(g: &crate::game::Game, kind: crate::bigkit::BigEquipKind) -> f64 {
     match kind {

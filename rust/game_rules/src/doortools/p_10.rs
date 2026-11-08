@@ -605,7 +605,7 @@ pub fn door_tools_word_note(g: &Game, seat: &crate::seats::SeatRef) -> Vec<crate
     }
     let mine = door_tools_waiting_words(g, seat, &word_men);
     if !mine.is_empty() {
-        return vec![if g.k.doortools.word_on_key { Note { key: f, text: format!("go · {} waiting", mine) } } else { Note { key: String::new(), text: format!("{} waiting for you to say go", mine) } }];
+        return vec![Note { key: f, text: format!("go · {} waiting", mine) }];
     }
     let mut words = Vec::new();
     for x in door_tools_waiting_any(g, seat, &all) {

@@ -1,4 +1,4 @@
-// THE CAMERA'S KEY IS THE SPACE BAR (src/host/keymap.ts KEYMAP.camSpace, camKey; game/input.ts; host/findme.ts watchCtrlTaps). The page has it on
+// THE CAMERA'S KEY IS THE SPACE BAR (src/host/keymap.ts KEYMAP.camSpace, camKey; game/input.ts). The page has it on
 // (`?camspace=0` = Ctrl, as it was); the module's own stand has it off, so both of the harness's stands start with Ctrl and this check raises it itself.
 //   bun run tools/qa/probes.ts camspace        (family `player`)        CAMSPACE_BREAK=1 = the switch left off and the same lines asked: must FAIL (all but `off`)
 //
@@ -9,7 +9,6 @@
 //   Ctrl          while Space is the camera's, Ctrl and the mouse turn nothing; a pinch (a wheel that says Ctrl) still zooms
 //   wheel         while Space is the camera's, the wheel under a HELD Ctrl key is nothing (KEYMAP.pinchOnly, `?pinchonly=0`); a pinch, a wheel that says
 //                 Ctrl with no Ctrl key down, still zooms; the camera on Ctrl, or the rule off: as it was. PINCHONLY_BREAK=1 = the rule left off: must FAIL
-//   twice         the double tap is of the camera's key: Space twice says so and Ctrl twice does not; a tap with the mouse dragged is no tap
 //   off           the switch off: all of it on Ctrl, as it was, and Space held is nothing to the camera
 import { ROOT } from './headless.ts';
 
@@ -17,7 +16,7 @@ export async function camSpaceCheck(): Promise<boolean> {
   const BRK = process.env.CAMSPACE_BREAK === '1'; let all = true;
   const verdict = (ok: boolean, what: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };
   console.log(`\n=== camspace: the camera's key is the Space bar${BRK ? ' (the switch off: must fail)' : ''} ===`);
-  const K = await import(`${ROOT}/src/host/keymap.ts`); const { Input } = await import(`${ROOT}/src/game/input.ts`); const { watchCtrlTaps, TAPTWICE } = await import(`${ROOT}/src/host/findme.ts`);
+  const K = await import(`${ROOT}/src/host/keymap.ts`); const { Input } = await import(`${ROOT}/src/game/input.ts`);
   const M = K.KEYMAP, was = { on: M.on, qFree: M.qFree, qCmd: M.qCmd, setFree: M.setFree, camSpace: M.camSpace, pinchOnly: M.pinchOnly, slotWhen: M.slotWhen, handWhen: M.handWhen };
   const G: any = globalThis, had = { window: G.window, ls: G.localStorage }, stubs: string[] = []; const store = new Map<string, string>();
   G.localStorage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => { store.set(k, String(v)); }, removeItem: (k: string) => { store.delete(k); } };
@@ -25,16 +24,14 @@ export async function camSpaceCheck(): Promise<boolean> {
   try {
     // the page's own board: the player's keys live, empty hands a slot, his actions a ring, and the camera's switch as asked
     const page = (cam: boolean, ring = true, slot = true) => { M.on = true; M.qFree = true; M.qCmd = true; M.setFree = true; M.slotWhen = () => slot; M.handWhen = () => ring; M.camSpace = cam && !BRK; K.resetKeys(); };
-    // game/input.ts's own listeners and the double tap's, on a window and a canvas that are lists of them
+    // game/input.ts's own listeners, on a window and a canvas that are lists of them
     const board = () => { const L: Record<string, ((e: any) => void)[]> = {}; const add = (t: string, f: (e: any) => void) => { (L[t] ??= []).push(f); };
       const win: any = { addEventListener: add }; win.top = win.self = win; const el = { addEventListener: add, getBoundingClientRect: () => ({ left: 0, top: 0 }) };
       G.window = win; let I: any; try { I = new Input(el as any); } finally { if (had.window === undefined) delete G.window; else G.window = had.window; }
-      const twice = watchCtrlTaps(win, () => false, K.camKey); let now = 1000;
-      const fire = (t: string, e: any) => { for (const f of L[t] ?? []) f({ repeat: false, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false, target: {}, timeStamp: now, movementX: 0, movementY: 0, clientX: 0, clientY: 0, deltaY: 0, button: 0, preventDefault() { }, stopPropagation() { }, ...e }); };
+      const fire = (t: string, e: any) => { for (const f of L[t] ?? []) f({ repeat: false, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false, target: {}, movementX: 0, movementY: 0, clientX: 0, clientY: 0, deltaY: 0, button: 0, preventDefault() { }, stopPropagation() { }, ...e }); };
       const ctrls = new Set<string>(); let ctrl = false;   // (a Ctrl key is down on this board: every key and mouse event after it says so, as a browser's do, until the last of them comes up — or `lose`, a key-up the page never saw)
       const key = (t: 'keydown' | 'keyup', code: string) => { if (/^Control/.test(code)) { if (t === 'keydown') ctrls.add(code); else ctrls.delete(code); ctrl = ctrls.size > 0; } fire(t, { code, key: /^Control/.test(code) ? 'Control' : code === 'Space' ? ' ' : code, ctrlKey: ctrl }); };
-      const tap = (code: string, ms = 60, drag = 0, shift = false) => { fire('keydown', { code, key: /^Control/.test(code) ? 'Control' : ' ', ctrlKey: /^Control/.test(code), shiftKey: shift }); if (drag) fire('mousemove', { movementX: drag, ctrlKey: /^Control/.test(code) }); now += ms; key('keyup', code); now += 80; };
-      return { I, key, tap, twice, fire, lose: () => { ctrls.clear(); ctrl = false; }, move: (dx: number, c = ctrl) => fire('mousemove', { movementX: dx, ctrlKey: c }), wheel: (dy: number, c = ctrl) => fire('wheel', { deltaY: dy, ctrlKey: c }), blur: () => fire('blur', {}), menu: () => fire('contextmenu', {}), wait: (ms: number) => { now += ms; } }; };
+      return { I, key, fire, lose: () => { ctrls.clear(); ctrl = false; }, move: (dx: number, c = ctrl) => fire('mousemove', { movementX: dx, ctrlKey: c }), wheel: (dy: number, c = ctrl) => fire('wheel', { deltaY: dy, ctrlKey: c }), blur: () => fire('blur', {}), menu: () => fire('contextmenu', {}) }; };
     const read = (I: any) => { const r = { orbit: I.orbitDX, zoom: I.wheelCtrl, pace: I.wheel, filed: [...I.pressed].join('+'), keys: [...I.keys].join('+') }; I.endFrame(); return r; };
     // ---- the board
     { page(true); const on = K.camKey(), cap = K.camCap(); page(true, false); const noRing = K.camKey(); page(true, true, false); const noSlot = K.camKey();
@@ -76,20 +73,12 @@ export async function camSpaceCheck(): Promise<boolean> {
           && one.zoom === 0 && both.zoom === 120 && bothC.zoom === 0 && bothUp.zoom === 0 && bothUp.pace === 0 && field === 0 && caps === 0 && blurred === 0 && framed === 0 && onCtrl.zoom === 120 && off.zoom === 120 && /^on as the page opens, off under/.test(word),
         'while Space is the camera\'s, the wheel under a held Ctrl key is nothing, neither the zoom nor his pace; a pinch still zooms; with the camera on Ctrl, or the rule off, Ctrl and the wheel zoom as they did',
         `left Ctrl held, the wheel 120 then −30: zoom ${left.zoom}, pace ${left.pace} · right Ctrl: zoom ${right.zoom}, pace ${right.pace} · both down and one let go: zoom ${one.zoom} · a pinch (a wheel that says Ctrl, no key down): zoom ${pinch.zoom} · a plain wheel: pace ${plain.pace}, zoom ${plain.zoom} · a Ctrl key whose coming up was never seen, then the mouse moved, then a pinch: zoom ${stale.zoom}; then a plain wheel instead, then a pinch: pace ${staleW.pace}, zoom ${staleW.zoom} · Space then Ctrl held: zoom ${both.zoom} · Ctrl then Space (never the camera's): zoom ${bothC.zoom}, and Space let go under it: zoom ${bothUp.zoom} · Ctrl pressed in a field: zoom ${field} · Control on the Caps Lock key: zoom ${caps} · Ctrl down through a lost focus: zoom ${blurred} · Ctrl pressed in another frame, the mouse saying so: zoom ${framed} · the camera on Ctrl: zoom ${onCtrl.zoom} · the rule off: zoom ${off.zoom} · the page: ${word}`); }
-    // ---- twice
-    { page(true); const B = board(); B.tap('Space'); const one = B.twice(); B.tap('Space'); const two = B.twice(), once = B.twice(); B.wait(2000);
-      B.tap('ControlLeft'); B.tap('ControlLeft'); const ctrl = B.twice(); B.wait(2000); B.tap('Space', 60, TAPTWICE.driftPx + 8); B.tap('Space'); const dragged = B.twice(); B.wait(2000);
-      B.tap('Space'); B.wait(TAPTWICE.gapMs + 200); B.tap('Space'); const slow = B.twice(); B.wait(2000);
-      B.key('keydown', 'Space'); M.camSpace = false; B.wait(60); B.key('keyup', 'Space'); B.wait(2000); B.tap('ControlLeft'); B.tap('ControlLeft'); const handed = B.twice(); M.camSpace = !BRK; B.wait(2000); B.tap('Space', 60, 0, true); B.tap('Space', 60, 0, true); const sprint = B.twice();   // (the camera's key changing hands with a tap under way: the tap is let go as what it was, and the next double tap is whole)
-      verdict(!one && two && !once && !ctrl && !dragged && !slow && handed && sprint, 'the double tap is of the camera\'s key: Space twice, never Ctrl twice; a tap with the view dragged, or two too far apart, is none',
-        `Space once ${one}, twice ${two} (asked again ${once}) · Ctrl twice ${ctrl} · a dragged tap then a tap ${dragged} · two a long gap apart ${slow} · the key moved to Ctrl under a held Space, then Ctrl twice ${handed} · Space twice with Shift held (his sprint) ${sprint}`); }
     // ---- off
     { page(false); const B = board(); B.key('keydown', 'Space'); B.move(15); B.wheel(120); const sp = read(B.I); B.key('keyup', 'Space'); B.I.endFrame();
-      B.key('keydown', 'ControlLeft'); B.move(15, true); B.wheel(120, true); const ct = read(B.I); B.key('keyup', 'ControlLeft'); B.wait(2000);
-      B.tap('ControlLeft'); B.tap('ControlLeft'); const t2 = B.twice(); B.wait(2000); B.tap('Space'); B.tap('Space'); const s2 = B.twice(); B.wait(2000); B.tap('ControlLeft', 60, 0, true); B.tap('ControlLeft', 60, 0, true); const sh2 = B.twice();
-      const ok = sp.orbit === 0 && sp.zoom === 0 && sp.pace === 120 && ct.orbit === 15 && ct.zoom === 120 && t2 && !s2 && !sh2 && K.camCap() === 'Ctrl';
+      B.key('keydown', 'ControlLeft'); B.move(15, true); B.wheel(120, true); const ct = read(B.I); B.key('keyup', 'ControlLeft');
+      const ok = sp.orbit === 0 && sp.zoom === 0 && sp.pace === 120 && ct.orbit === 15 && ct.zoom === 120 && K.camCap() === 'Ctrl';
       verdict(ok, 'the switch off: the camera is on Ctrl as it was, and Space held is nothing to it',
-        `Space held: turn ${sp.orbit}, zoom ${sp.zoom}, pace ${sp.pace} · Ctrl held: turn ${ct.orbit}, zoom ${ct.zoom} · Ctrl twice ${t2}, Space twice ${s2}, Ctrl twice with Shift held ${sh2} · cap ${K.camCap()}`); }
+        `Space held: turn ${sp.orbit}, zoom ${sp.zoom}, pace ${sp.pace} · Ctrl held: turn ${ct.orbit}, zoom ${ct.zoom} · cap ${K.camCap()}`); }
   } finally {
     Object.assign(M, was); K.resetKeys(); for (const n of stubs) delete G[n];
     if (had.ls === undefined) delete G.localStorage; else G.localStorage = had.ls;

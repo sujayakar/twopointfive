@@ -9,7 +9,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// A new row, every key from birth. (stalk.ts fresh)
 pub fn fresh() -> crate::stalk::St {
-    St { on: None, grab: None, t: -1.0, wait: Some(false), armed: Some(false), stick: None, orbit_r: None, orbit_t: None, orbit_ask: None, broke: None }
+    St { on: None, grab: None, t: -1.0, wait: Some(false), armed: Some(false), orbit_r: None, orbit_t: None, orbit_ask: None, broke: None }
 }
 
 /// This seat's row, made if it is not there. (stalk.ts stateOf)
@@ -241,7 +241,7 @@ pub fn broke_duck(g: &mut crate::game::Game, pl: PlayerId) {
 }
 
 /// Once a frame from updatePlayer, before his keys become a step: what the stalk asks of his feet, or None = his own. (stalk.ts stalkStep)
-pub fn stalk_step(g: &mut crate::game::Game, lmb: bool, lmb_hit: bool, own_keys: bool, stick: Option<crate::stalk::StalkStick>, keys: Option<crate::stalk::StalkKeys>) -> Option<crate::stalk::StalkMove> {
+pub fn stalk_step(g: &mut crate::game::Game, lmb: bool, lmb_hit: bool, own_keys: bool, keys: Option<crate::stalk::StalkKeys>) -> Option<crate::stalk::StalkMove> {
     let me = g.player;
     let now = g.time;
     let r = state_of(g);
@@ -275,7 +275,6 @@ pub fn stalk_step(g: &mut crate::game::Game, lmb: bool, lmb_hit: bool, own_keys:
             let r = g.m.stalk.state.get_mut(me).unwrap();
             r.on = Some(gd);
             r.armed = Some(false);
-            r.stick = stick.map(|k| [k.x, k.y]);
             g.stats.stalk.begun += 1;
         }
     }
@@ -341,24 +340,6 @@ pub fn stalk_step(g: &mut crate::game::Game, lmb: bool, lmb_hit: bool, own_keys:
     }
     let pace = m::min(g.k.stalk.pace, his + g.k.stalk.close_min + v3::clamp(dist - grab_m, 0.0, 4.0) * g.k.stalk.low_k);
     Some(StalkMove { mx: bx / bl, mz: bz / bl, pace, at, keep: None })
-}
-
-/// The stick's step: the mouse's way from the press as a way across the floor, taken round the man. (stalk.ts dragged)
-pub fn dragged(g: &mut crate::game::Game, pl: PlayerId, gd: GuardId, p: &[f64], at: V3, dist: f64, st: crate::stalk::StalkStick, mid: [f64; 2], dt: f64) -> crate::stalk::StalkMove {
-    let (dx, dy) = (st.x - mid[0], st.y - mid[1]);
-    let mag = m::hyp2(dx, dy);
-    let k = v3::clamp((mag - g.k.stalk.drag_dead) / m::max(1.0, g.k.stalk.drag_full - g.k.stalk.drag_dead), 0.0, 1.0);
-    if k <= 0.0 {
-        return StalkMove { mx: 0.0, mz: 0.0, pace: 0.0, at, keep: Some(true) };
-    }
-    // screen down is the camera's back
-    let mut mx = st.right[0] * dx - st.fwd[0] * dy;
-    let mut mz = st.right[2] * dx - st.fwd[2] * dy;
-    let l = js::or(m::hyp2(mx, mz), 1.0);
-    mx /= l;
-    mz /= l;
-    let pace = g.k.stalk.pace * k;
-    orbited(g, pl, gd, p, at, dist, mx, mz, pace, dt)
 }
 
 /// The share of a way into the man left to it at `dist`: all until 20 cm outside `keyM`, none from 4 cm outside. (stalk.ts intoKeep)

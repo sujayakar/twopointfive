@@ -662,6 +662,7 @@ export async function airfoilMiss() {
   const wallPt: Vec3 = [A.char.pos[0] - 3.0, 1.0, 10.05];
   const tap = eventTap(game); const audio = listen(W);
   const from = v3.add(pl.char.pos, [0.4, 1.3, 0]); fireRing(game, pl.char, from, wallPt);
+  game.playerInvisible = true;   // (judged from the shot on: the man's own torch falls on Sam, and it is the clack that is asked)
   let clack: any = null; const aw0 = A.awareness;
   for (let f = 0; f < 120; f++) { W.step(DT); tap.pump(); clack ??= tap.evs.find(e => e.kind === 'prop' && e.who === 0 && Math.abs(e.level - RING.clackNoise) < 0.2); }
   const ring = game.items.items.find((it: any) => it.kind === 'ring');

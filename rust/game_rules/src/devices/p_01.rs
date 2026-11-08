@@ -197,20 +197,25 @@ pub fn update_camera(g: &mut crate::game::Game, c_2: CameraRtId, dt: f64, live: 
     if has(pan, bit.down) && live { device_down(g, &d.name, &format!("camera {}", index), d.pos); }
     if !has(pan, bit.ok) || !live { return; }
     let dd = crate::scene_level_data::device_defaults();
-    let pl = if g.seats.len() == 1 { g.player } else {
-        match crate::seats::nearest_man(g, &d.pos) { Some(p) => p, None => crate::seats::men(g)[0] }
-    };
-    let pc = g.pl[pl].ch;
     let range = d.range.unwrap_or(dd.range);
     let half = d.fov_deg.unwrap_or(dd.fov_deg) / 2.0;
     let look = lens_dir(crate::sim_lightshome::camera_machine_yaw(g, c), d.pitch.unwrap_or(dd.pitch));
     let e = crate::guards::Eye { pos: d.pos, look, range, half_deg: half, near_m: 0.0, near_deg: half, v_half_deg: Some(half) };
-    let chest = bone_or(g, pc, crate::character::Bone::Chest, [0.0, 1.1, 0.0]);
-    let air = crate::sense::smoke_between(g, d.pos, chest) * crate::weather::air_trans(g, d.pos, chest);
-    let vis = crate::guards::eye_contact(g, e, pc, true, false, air, None);
-    let gain = if vis.visible { let s = crate::seats::seat_of_char(g, Some(pc)).unwrap_or(g.seat); lens_gain(g, &crate::seats::seat(g, s), vis.dist, range, air) } else { 0.0 };
+    // (every player the lens can see: the feed goes by the one it sees best; none in sight, by the nearest, as a lens with nobody in it)
+    let first = crate::seats::nearest_or_first(g, &d.pos);
+    let (mut pc, mut seen, mut gain) = (g.pl[first].ch, false, 0.0);
+    for pl in crate::seats::men(g) {
+        if g.pl[pl].down { continue; }
+        let c = g.pl[pl].ch;
+        let chest = bone_or(g, c, crate::character::Bone::Chest, [0.0, 1.1, 0.0]);
+        let air = crate::sense::smoke_between(g, d.pos, chest) * crate::weather::air_trans(g, d.pos, chest);
+        let vis = crate::guards::eye_contact(g, e, c, true, false, air, None);
+        if !vis.visible { continue; }
+        let got = lens_gain(g, &crate::seats::seat(g, crate::seats::seat_of_man(g, pl)), vis.dist, range, air);
+        if !seen || got > gain { (pc, seen, gain) = (c, true, got); }
+    }
     let (now, at, sus, alarm) = (g.time, g.ch[pc].pos, g.tune.camera_suspicion_secs, g.tune.camera_alarm_secs);
-    let r = crate::sim_lightshome::light_home_camera_see(g, slot, now, dt, vis.visible, gain, at, sus, alarm);
+    let r = crate::sim_lightshome::light_home_camera_see(g, slot, now, dt, seen, gain, at, sus, alarm);
     if has(r, bit.suspect) { camera_suspect(g, c); }
     if has(r, bit.alarm) { camera_alarm(g, c); }
 }
@@ -654,8 +659,6 @@ pub fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
 }
 
 // ---------------------------------------------------------------- the panel's knobs (their storage is the host's: lights.md trap 12)
-/// `localStorage` is the host's: what it keeps arrives written in `g.tune`, so nothing here reads.   (devices.ts loadDeviceTune)
-pub fn load_device_tune(g: &crate::game::Game) {}
 // ---------------------------------------------------------------- geometry
 /// Closest points between segments p and b: the distance and the point on b.   (devices.ts segSegClosest)
 pub fn seg_seg_closest(p0: V3, p1: V3, b0: V3, b1: V3) -> crate::devices::SegSegClosest {

@@ -196,18 +196,17 @@ export const quietPair = guarded(async () => {
     // Sam walks (put) 9 m into the yard by its own floor: the partner follows on his own feet
     const to = freeNear(g, [S.sam[0] + Math.sin(S.samYaw) * 9, 0, S.sam[2] + Math.cos(S.samYaw) * 9], 2)!;
     const path = g.col.nav.findPath(g.player.char.pos, to, 20000) as number[][] | null; let far = 0;
+    const shift = g.guards.filter((x: any) => !x.unit); for (const x of shift) x.dazzledUntil = g.time + 60;   // (no eyes: by the one meter the yard is lit, and a follower rightly waits on a man who has a line; asked here is the following)
     if (path) for (const p of path) { g.teleportPlayer([p[0], 0, p[2]]); steps(W, 0.7); far = Math.max(far, flat(m.char.pos, g.player.char.pos)); }
-    steps(W, 6); const gap = flat(m.char.pos, g.player.char.pos);
+    steps(W, 6); const gap = flat(m.char.pos, g.player.char.pos); for (const x of shift) x.dazzledUntil = -1;
     F.verdict(!!path && gap < 4.5 && flat(m.char.pos, S.mate ?? S.sam) > 4 && m.state !== 'dead', 'told to fall in at the start, he follows Sam across the floor on his own feet and closes up when Sam stops',
       `Sam to ${at(to)} · partner at ${at(m.char.pos)}, ${gap.toFixed(1)} m from Sam (furthest behind on the way ${far.toFixed(1)} m) · the shift calm at the start: ${calm0}`); }
   { // a guard with the partner standing lit a few metres in front of him notices the PARTNER (Sam is out of every eye: invisible, as the probes' own flag)
     const gd = g.guards.find((x: any) => !x.unit && x.state === 'patrol')!, yaw = gd.char.bodyYaw;
     const front = freeNear(g, [gd.char.pos[0] + Math.sin(yaw) * 3.0, 0, gd.char.pos[2] + Math.cos(yaw) * 3.0], 1.0);
-    const light = g.lightAt; g.lightAt = () => 1.2;   // (a lit floor: the harness has no GPU meter — the CPU stand-in every teammate's meter falls back on)
     g.orders.give('hold', g.orders.targetAt(m.char.pos), 'all');
     if (front) { m.char.pos = [front[0], 0, front[2]]; m.char.update(0); }
     const a0 = gd.awareness, saw = !!front && steps(W, 5, () => gd.state !== 'patrol' || gd.awareness > 0.5);
-    g.lightAt = light;
     F.verdict(saw, 'a guard with the partner standing lit three metres in front of him NOTICES him — the partner can get the pair seen, so sneaking as two is a thing to do', `${gd.callsign}: awareness ${a0.toFixed(2)} → ${gd.awareness.toFixed(2)}, state ${gd.state}${front ? '' : ' (no free floor in front of him)'}`); }
   { // the cast despawned under it by something short of a restart (a bare resetGuards): staged again on the next tick, partner and all
     await hushed(() => { g.resetGuards(); steps(W, 0.3); }); const m2 = g.quiet.ops[0];
@@ -279,7 +278,7 @@ export const quietFixes = guarded(async () => {
     gd.state = 'alert'; gd.awareness = 1; gd.foe = m; gd.lastKnown = [m.char.pos[0], 0, m.char.pos[2]]; gd.lastSeenT = g.time;
     await hushed(() => killGuard(g, m, [0, 0, 1], false, 'shot', 'ai')); m.killerId = gd.char.id;
     const said: string[] = []; const states: string[] = [];
-    let fired = 0, seenSam = false; g.playerInvisible = false; g.lightAt = () => 0; g.player.visibility = 0;   // (Sam there to be shot at for the first two thirds of a second, in the dark where he started)
+    let fired = 0, seenSam = false; g.playerInvisible = false;   // (Sam there to be shot at for the first two thirds of a second, in the dark where he started)
     for (let i = 0; i < 360; i++) { W.step(DT); if (i < 40) { fired += g.events.filter((e: any) => e.kind === 'shot' && e.who === gd.char.id && e.time >= g.time - DT / 2).length; seenSam ||= gd.sawPlayerThisFrame; } if (i === 40) g.playerInvisible = true; if (gd.bubble && !said.includes(gd.bubble.text)) said.push(gd.bubble.text); if (states[states.length - 1] !== gd.state) states.push(gd.state); }
     F.verdict(seenSam || fired === 0, 'in the half second after the partner falls he puts no round at a Sam he has not seen (the sighting was of the man who fell)', `rounds from ${gd.callsign} in the first 0.67 s: ${fired} · saw Sam in that time: ${seenSam}`);
     F.verdict(m.state === 'dead' && gd.foe === 'player' && !states.includes('suspicious') && !states.includes('patrol') && !said.some(t => /all of them/.test(t)), 'a guard on the partner who sees him drop is on Sam again and goes on hunting: no \'that\'s all of them\', no walk back to his mark',
@@ -321,10 +320,5 @@ export const quietFixes = guarded(async () => {
     await start(W, '?quiet=1'); const nb = g.nightBreach.canStart(), rs = g.rescue.canStart();
     F.verdict(typeof nb === 'string' && /quiet/.test(nb) && typeof rs === 'string' && /quiet/.test(rs), 'with a quiet mission up the night breach and the rescue refuse to start over it (as it refuses over them)', `night breach: '${nb}' · rescue: '${rs}'`);
     await hushed(() => quitScenario(g)); }
-  { // (the owners' by-eye note on the join) the sheet's Defenders row is live only where the pick changes something: greyed on the solo night AND on a quiet row
-    const UI = await import(`${ROOT}/src/ui/missions.ts`); const L = UI.missionList();
-    const quiet = L.filter((m: any) => m.scenario?.kind === 'quiet'), squad = L.filter((m: any) => m.scenario && m.scenario.kind !== 'quiet'), solo = L.filter((m: any) => !m.scenario);
-    F.verdict(quiet.length > 0 && squad.length > 0 && solo.length > 0 && quiet.every((m: any) => !UI.diffLive(m)) && solo.every((m: any) => !UI.diffLive(m)) && squad.every((m: any) => UI.diffLive(m)),
-      'Standard | Hard is live on every squad row and greyed on the solo night and on every quiet row (its shift is the level\'s own on either)', `${squad.length} squad rows live · ${quiet.length} quiet + ${solo.length} solo greyed`); }
   return F.done();
 });

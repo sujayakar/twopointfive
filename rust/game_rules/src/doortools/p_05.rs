@@ -316,7 +316,7 @@ pub fn door_tools_waiting_any(g: &crate::game::Game, seat: &crate::seats::SeatRe
     out
 }
 /// what of these men's waits on THAT door, and who (doortools.ts waitsOn)
-pub fn door_tools_waits_on(g: &mut crate::game::Game, men: &[GuardId], d: DoorId) -> Option<crate::doortools::DoorToolsWaitsOn> {
+pub fn door_tools_waits_on(g: &crate::game::Game, men: &[GuardId], d: DoorId) -> Option<crate::doortools::DoorToolsWaitsOn> {
     let mut st: Option<Vec<GuardId>> = None;
     for x in door_tools_waiting_any(g, &crate::seats::here(g), men) {
         match x {
@@ -529,20 +529,6 @@ pub fn door_tools_word_early(g: &mut crate::game::Game, men: &[GuardId]) -> bool
     }
     g.door_tools.word_key_t = g.time;
     true
-}
-/// would the word's key, pressed now with the menu that is up, be a held threshold's word (doortools.ts wordKeyHeld)
-pub fn door_tools_word_key_held(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
-    if crate::orders::squad_orders_big(g, seat) || g.pl[seat.player].down {
-        return false;
-    }
-    let men = crate::orders::squad_orders_recipients(g, seat, None, None);
-    for op in door_tools_threshold_held(g, seat, &men, None) {
-        if dop!(g, op).word.is_none() {
-            return true;
-        }
-    }
-    let ops = seat.door_tools.ops.clone();
-    ops.into_iter().any(|op| can_first_on(g, op) && any_shared(&dop!(g, op).men, &men))
 }
 /// the word as Sam gives it: a set charge goes with it, and the key is stamped (doortools.ts pairWord)
 pub fn door_tools_pair_word(g: &mut crate::game::Game, men: &[GuardId]) -> bool {
@@ -1419,6 +1405,7 @@ pub fn door_tools_tick(g: &mut crate::game::Game) {
     let seen_m = g.k.doortools.lead_seen_m;
     crate::floorseen::floor_seen_tick(g, &roster, seen_m);
     door_tools_keep_sectors(g);
+    door_tools_forget(g);
     door_tools_test_stacks(g);
     door_tools_walk_tried(g);
     for op in g.door_tools.watches.clone() {

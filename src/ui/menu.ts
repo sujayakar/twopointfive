@@ -7,114 +7,32 @@
 // the down card (Restart): the rating word and score, the numbers, the badges, the floor map with his path and the pins, the timeline. While any of them is
 // open main.ts freezes the simulation and keeps rendering the frozen frame underneath. Plain DOM, styled in index.html (#menu…) with ui/theme.ts's tokens.
 import { kitSolo } from '../game/kit';   // (the mission list's solo night off the start card: your card, on this game)
-export { loadSandbox } from '../game/sandbox';
+export { loadSandbox } from '../host/sandbox';
+export { bootCard } from './title';
 import { Engine } from '../engine';
 import { Game } from '../game/game';
 import { renderDebrief } from './debrief';
 import { Quality } from './quality';
 import { AudioEngine } from '../audio/audio';
 import { Overlay } from './overlay';
-import { MISSIONS, closeMissions, missionsBusy, missionsReopenAsked } from './missions';
+import { MISSIONS, closeMissions, missionsBusy } from './missions';
 import { nextPickOf } from './picks';
 import { nextLessonOf } from './verdictNext';
-import { pickEntry } from '../scene/picks';
-import { quitSearch } from '../scene/scenarioList';
-import { openList, openStartPage, startPageWanted, startPageFromQuery } from './startpage';
+import { openList } from './startpage';
 import { menuTheme } from './theme';
-import { keyText, typedInto } from '../host/keymap';
-import { openOptions, closeOptions, optionsOpen, setOptionsDeps, refreshOptions } from './options';
+import { keyText } from '../host/keymap';
+import { openOptions, closeOptions, optionsOpen, setOptionsDeps, refreshOptions, type OptionsGame } from './options';
+import { CMDRING } from '../game/cmdring';
+import { WALLSNAP } from '../game/wallsnap';
 import { cloudNote } from './cloudnote';
 import { COOP } from '../net/lobby';
 import { coopRows } from './coop';
+import { TITLE, cheatWords, titleScreen } from './title';
 import type { SlotInfo } from '../game/savestate';
-import { button, checkpointButton, el, saveStrip, walkMenu, type Press, type RunSaves } from './runcard';
+import { button, checkpointButton, el, saveStrip, type Press, type RunSaves } from './runcard';
+import { locked } from '../view/seatview';
 
-/** the title screen's line under the wordmark */
-const TITLE_LINE = 'Squad tactics and stealth. Every light, shadow and wisp of smoke is live.';
-const TITLE_FOOT = 'W S choose · Enter select · Esc back · ` the debugger';
-/** the card's one button to the one starting page (ui/startpage.ts) */
-const PLAY = 'Play ›';
-
-/** THE BOOT CARD: the title screen, up from the first tick of main.ts while the GPU process compiles the renderer's kernels in the background (engine.ts init), with a
- *  one-line status ('compiling shaders 40 / 97 …') main.ts rewrites as they resolve. Menu.open('start') renders the live title over it the moment everything is ready; `off()`
- *  clears it for boots that open no card (?solo, a scenario). An address that names a mission with no load brief has nothing to choose: the head and the status line, no buttons. */
-export function bootCard(): { status(text: string): void; off(): void } {
-  menuTheme();
-  const root = document.getElementById('menu')!;
-  root.innerHTML = '';
-  const card = el('div', 'card'); root.appendChild(card);
-  const one = startPageWanted();   // (the address names nothing to play: PLAY, its one button to the starting page — ui/startpage.ts)
-  const status = el('div', 'note bootstatus'), words = el('span'), fill = el('i'); words.textContent = 'starting the GPU…';
-  { const bar = el('i', 'bbar'); bar.appendChild(fill); status.appendChild(words); status.appendChild(bar); }
-  root.classList.add('title'); root.classList.remove('paused');
-  card.appendChild(titleHead());
-  if (one) { const ta = titleActions(); card.appendChild(ta.actions); setTimeout(() => { if (!missionsBusy() && !optionsOpen() && (document.activeElement ?? document.body) === document.body) ta.play.focus(); }, 0); }   // (PLAY, OPTIONS and CONTROLS are live from the first tick: a deploy is a page load, and the controls need nothing of the renderer; Play has the focus from that tick too, as on the live title, so Enter is Play)
-  card.appendChild(el('div', 'tfill'));
-  card.appendChild(status);
-  if (one) { const foot = el('div', 'foot'); foot.textContent = keyText(TITLE_FOOT); card.appendChild(foot); }
-  root.classList.add('on');
-  // A FRESH VISIT OPENS ON THE TITLE. The starting page is up by itself only where the address or the last page asked for it: `?loadout=<id>` names a mission,
-  // or a mission was quit by a page load ('Quit to scenarios' lands on the missions, not the title). Never under ?paused (the automation boot: scripts drive
-  // the card; PLAY still opens the page)
-  if (one) { const s = typeof location !== 'undefined' ? location.search ?? '' : ''; if (!startPageFromQuery(s) && !new URLSearchParams(s).has('paused') && missionsReopenAsked()) openStartPage(); }
-  return { status(text: string) { words.textContent = text; const m = /(\d+) \/ (\d+)/.exec(text); if (fill.style) fill.style.width = m && +m[2] > 0 ? `${Math.min(100, Math.round(100 * +m[1] / +m[2]))}%` : /ready|setting up/.test(text) ? '100%' : '0'; },
-    off() { root.classList.remove('on'); root.classList.remove('title'); root.innerHTML = ''; closeMissions(); closeOptions(); } };   // (no card = a run is live underneath: the list goes with it)
-}
-
-/** the title screen's head and its main menu (the boot card and the real start card build the same screen) */
-function titleHead(): HTMLElement { const head = el('div', 'head'); head.innerHTML = `<div class="t1">two<b>point</b>six</div><div class="t2">${TITLE_LINE}</div>`; return head; }
-/** EXTRAS (the title screen's fourth entry: the maintainer, 10-11 — "the showcase and editor and whatever other tools we have … should all be linked in the main menu"): the
- *  tool pages, each a LINK — a tool is its own page (the `.html` names: the dev server forwards them to its routes, the build has them as files); a row whose link is a key of this page (`?bench`) keeps the visitor's other flags (`showHref`) and, ON THE LIVE TITLE, STARTS IN PLACE
- *  (Menu.title hands `TitleShows`) — no page load, the click is the gesture the sound needs; the link is what such a row is while the page still boots, or in a new tab.
- *  (The two showcases that were this list's first section — the night and the day — were removed.) What is listed and what is not, and why: rebuild/menus/tools.md. */
-export const EXTRAS: { head: string; rows: { id: string; label: string; line: string; href: string }[] }[] = [
-  { head: 'Tools', rows: [
-    { id: 'replay', label: 'Replays', line: 'Scrub through the last minutes of a run on a map. Press F7 to keep one while you play.', href: 'replay.html' },
-    { id: 'sounds', label: 'Sounds', line: 'Hear every sound in the game on one page.', href: 'sounds.html' },
-    { id: 'bench', label: 'Benchmark', line: 'It plays three floors by itself, then times each quality level on this machine. You get text to copy.', href: '?bench' } ] },
-];
-/** the link of a row that is a key of this page (`?bench`): its key, then the visitor's own flags as every mission link keeps them (`?mute&quality=low` rides along; another mission's keys do not) */
-function showHref(href: string): string { if (href[0] !== '?') return href; const rest = quitSearch(typeof location !== 'undefined' ? location.search ?? '' : ''); return href + (rest ? '&' + rest.slice(1) : ''); }
-/** a row started in place, by its id: true = started (or refused aloud), false = not from here — the row's link loads it */
-type TitleShows = Partial<Record<string, () => boolean>>;
-/** which page of the title's menu is up: the main one, or EXTRAS (kept through the boot card handing over to the real title) */
-let titleExtras = false;
-/** …or CO-OP (ui/coop.ts fills the column; kept through the same handover, with what was typed) */
-let titleCoop = false;
-let titleShownAt = 0;   // (when the live title was last drawn: an Esc that ENDED a running programme drew it, and that same press must not also step its Extras list back)
-let titleAgain: (() => void) | null = null;   // (the live title's own 'Options closed' — the boot card's buttons, made before there was a Menu, reach it through here)
-function titleActions(onClose?: () => void, shows?: TitleShows): { actions: HTMLElement; play: HTMLElement } {
-  const onOptionsClose = onClose ?? (() => titleAgain?.());
-  const actions = el('div', 'actions'); let play!: HTMLElement;
-  const fill = (focus?: 'first' | 'extras' | 'coop') => {
-    actions.innerHTML = ''; actions.classList.toggle('extras', titleExtras);
-    if (titleCoop && COOP.on && !titleExtras) { coopRows(actions, () => { titleCoop = false; fill('coop'); }, !!focus); play = actions.querySelector('.btn') as HTMLElement; return; }
-    if (titleExtras) {
-      for (const sec of EXTRAS) {
-        const rows = sec.rows; if (!rows.length) continue;
-        const h = el('div', 'xhead'); h.textContent = sec.head; actions.appendChild(h);
-        for (const r of rows) {
-          const a = el('a', 'btn xrow') as HTMLAnchorElement; a.href = showHref(r.href); a.dataset.extra = r.id; a.innerHTML = `<b>${esc(r.label)}</b>`; a.title = r.line;   // (show, not tell: a row is its name; its sentence is the tooltip)
-          actions.appendChild(a);
-          const go = shows?.[r.id]; if (go) a.addEventListener('click', e => { if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; if (go()) e.preventDefault(); });   // (a plain click or Enter; a new-tab click stays the link's)
-        }
-      }
-      const back = button('‹ Main menu', () => { titleExtras = false; fill('extras'); }, 'xback'); actions.appendChild(back);
-      play = actions.querySelector('.xrow') as HTMLElement;
-      if (focus) play.focus();
-      return;
-    }
-    play = button(PLAY, () => { openList({ backLabel: '‹ Main menu' }); }, 'primary');
-    actions.appendChild(play);
-    if (COOP.on) { const co = button('Co-op', () => { titleCoop = true; fill('first'); }); co.dataset.coop = 'open'; actions.appendChild(co); if (focus === 'coop') co.focus(); }   // (two players: host a game or join one by its code — ui/coop.ts fills this column and hands it back)
-    actions.appendChild(button('Options', () => openOptions({ onClose: onOptionsClose })));
-    actions.appendChild(button('Controls', () => openOptions({ tab: 'controls', onClose: onOptionsClose })));
-    const extras = button('Extras', () => { titleExtras = true; fill('first'); }, 'xopen'); actions.appendChild(extras);
-    if (focus === 'extras') extras.focus();
-  };
-  fill();
-  return { actions, get play() { return play; } };
-}
+TITLE.coop = () => (COOP.on ? coopRows : null);
 
 export interface MenuDeps { engine: Engine; game: Game; quality: Quality; audio: AudioEngine; overlay: Overlay; stopTour?: () => void; onStart: () => void; focusGame?: () => void;
   /** the benchmark (ui/bench.ts): Extras ▸ Benchmark on the live title begins it (a page load of its first scene: ui/benchrun.ts) */
@@ -130,6 +48,18 @@ export interface MenuDeps { engine: Engine; game: Game; quality: Quality; audio:
    *  replay key is made after the menu; null or absent: no viewer page or no buffer, and the end card has no Replay button */
   replay?: () => (() => void) | null; }
 
+/** what Options sets of this page's game (ui/options.ts) */
+function settingsOf(game: Game, overlay: Overlay): OptionsGame {
+  return {
+    get autosave() { return game.saves.enabled; }, set autosave(v) { game.saves.setEnabled(v); },
+    get god() { return game.godMode; }, set god(v) { game.godMode = v; },
+    get thinks() { return game.aiEnabled; }, set thinks(v) { game.aiEnabled = v; },
+    get ammo() { return game.infiniteAmmo; }, set ammo(v) { game.infiniteAmmo = v; },
+    get wallFeel() { return WALLSNAP.on; }, get wallPress() { return WALLSNAP.press; }, set wallPress(v) { WALLSNAP.press = v; },
+    get fallIn() { return CMDRING.twice && !locked(game.view, 'twice'); },
+    get hints() { return overlay.showLightDots; }, set hints(v) { overlay.showLightDots = v; },
+  };
+}
 export class Menu {
   private root: HTMLElement; private body!: HTMLElement; private run = false;   // (run: the pause card's 'Run so far' is open beside its menu)
   mode: 'start' | 'pause' | 'debrief' | 'closed' = 'closed';
@@ -138,7 +68,7 @@ export class Menu {
     this.root = document.getElementById('menu')!;
     this.root.addEventListener('mousedown', e => e.stopPropagation());      // clicks in the menu never reach the game canvas
     this.root.addEventListener('contextmenu', e => e.preventDefault());
-    setOptionsDeps({ engine: d.engine, game: d.game, quality: d.quality, audio: d.audio, overlay: d.overlay });   // (ui/options.ts: the boot is over — its Graphics, Audio and Game tabs come alive, and what this machine kept is applied)
+    setOptionsDeps({ engine: d.engine, quality: d.quality, audio: d.audio, game: settingsOf(d.game, d.overlay) });   // (ui/options.ts: the boot is over — its Graphics, Audio and Game tabs come alive, and what this machine kept is applied)
   }
   /** main.ts hands the scenario hooks over once the scenario is started (after this card is constructed) */
   setScenario(s: MenuDeps['scenario']) { this.d.scenario = s; }
@@ -171,25 +101,15 @@ export class Menu {
     this.title(card);
   }
 
-  /** THE TITLE SCREEN: the wordmark, PLAY · OPTIONS · CONTROLS, and — only when one is on — the cheats, named, a click from where they are switched */
+  /** THE TITLE SCREEN (ui/title.ts) */
   private title(card: HTMLElement) {
-    const g = this.d.game, cheats = () => [g.godMode ? 'god mode' : '', !g.aiEnabled ? 'enemies don\'t think' : '', g.infiniteAmmo ? 'unlimited ammo' : ''].filter(Boolean).join(' · ');
     // A MISSION REFUSED FOR 'NO AI' IS TRIED AGAIN when Options closes with that cheat off (off a tape of play, 10-13: the kept switch refused a rescue at boot, he
     // switched it off and was on a floor with no mission while the card still said 'did not start'): its own link is loaded again, as Deploy would — a start is a
     // page load, and the switch has just been kept. Any other refusal stays said.
-    const stuck = !g.aiEnabled && !!this.d.scenario?.refused?.();
-    const was = cheats(), again = () => { if (stuck && g.aiEnabled && typeof location !== 'undefined') { location.reload(); return; } if (this.mode === 'start' && cheats() !== was) this.render(); };   // (the chip follows what Options ▸ Game did)
-    card.appendChild(titleHead());
-    this.refused(card);
-    titleAgain = again; titleShownAt = typeof performance !== 'undefined' ? performance.now() : 0;
-    const ta = titleActions(again, {
-      bench: () => { const sb = this.d.startBench; if (!sb) return false; sb(); return true; } }), actions = ta.actions;
-    card.appendChild(actions);
-    card.appendChild(el('div', 'tfill'));
-    if (was) { const c = button(`Cheats on: ${was}`, () => openOptions({ tab: 'game', onClose: again })); c.className = 'cheats'; c.title = 'switch them in Options ▸ Game'; card.appendChild(c); }
-    cloudNote(card, () => openOptions({ tab: 'game', onClose: again }));   // (ui/cloudnote.ts: a hosted build's one line on what it sends; nothing on a build with no backend)
-    const foot = el('div', 'foot'); foot.textContent = keyText(TITLE_FOOT); card.appendChild(foot);
-    setTimeout(() => { if (!missionsBusy() && !optionsOpen()) ta.play.focus(); }, 0);   // (the starting page opened off the boot card is still up over this screen: the focus stays its own)
+    const g = this.d.game, set = settingsOf(g, this.d.overlay), stuck = !g.aiEnabled && !!this.d.scenario?.refused?.();
+    titleScreen(card, { cheats: () => cheatWords(set), closed: moved => { if (stuck && g.aiEnabled && typeof location !== 'undefined') { location.reload(); return; } if (this.mode === 'start' && moved) this.render(); },   // (the chip follows what Options ▸ Game did)
+      shows: { bench: () => { const sb = this.d.startBench; if (!sb) return false; sb(); return true; } },
+      said: c => this.refused(c), note: cloudNote });   // (ui/cloudnote.ts: a hosted build's one line on what it sends; nothing on a build with no backend)
   }
 
   /** THE PAUSE CARD: what is paused, then the menu — Resume first; 'Run so far' opens the debrief of the run as it stands beside it */
@@ -230,7 +150,7 @@ export class Menu {
     const cur = this.d.scenario?.current() ?? null, scn = !!cur;   // down under a scenario: the restart stages it again, and the picker is one press away (no checkpoint button: none is written with a team on the floor, and a solo run's is refused there — but a scenario that SAVES, a quiet mission alone, offers its own)
     const ck = info ? this.checkpointButton(mine ? 'primary' : '', () => performance.now() - shown >= 500) : null;
     const strip = down ? this.saveStrip(() => performance.now() - shown >= 500) : null;   // (this run's saves laid out in time: any of them is one press away, the default stays the newest sound one)
-    const nl = V && V.won && !down && g.verdict.kept?.lesson ? nextLessonOf(cur?.entry?.id) : null;   // a Training lesson done (the row that is UP, as the books read it — main.ts vBooks): the next lesson leads the card (ui/verdictNext.ts; none under ?noverdict)
+    const nl = V && V.won && !down && g.verdict.kept?.lesson ? nextLessonOf(cur?.entry?.id) : null;   // a Training lesson done (the row that is UP, as the books read it — main.ts vBooks): the next lesson leads the card (ui/verdictNext.ts)
     const lead = nl ? button(`Next: ${nl.title} ›`, () => { if (performance.now() - shown < 500) return; this.d.stopTour?.(); nl.start(); }, 'primary next') : null;
     const primary = button(down ? (scn ? 'Restart scenario' : 'Restart encounter') : 'Again', restart, (ck && mine) || lead ? '' : 'primary');
     const actions: HTMLElement[] = down ? (ck ? (mine ? [ck, primary] : [primary, ck]).concat([button('Back to the floor', () => this.close())]) : [primary, button('Back to the floor', () => this.close())]) : [primary, button('Keep playing', () => this.close())];
@@ -259,7 +179,7 @@ export class Menu {
   /** 'Next: <title>' while the page is a run the short list started (scene/picks.ts pickOfQuery) and a row follows it: that row's own page load. Null otherwise. */
   private nextPickButton(armed: () => boolean = () => true): HTMLElement | null {
     const nx = nextPickOf(); if (!nx) return null;
-    if (!!pickEntry(nx.from) !== !!this.d.scenario?.current()) return null;   // (the URL is a pick's, but what is up is not it: its scenario was refused at boot and the plain night is being played — or a scenario is up on the solo pick's page)
+    if (nx.scenario !== !!this.d.scenario?.current()) return null;   // (the URL is a pick's, but what is up is not it: its scenario was refused at boot and the plain night is being played — or a scenario is up on the solo pick's page)
     return button(`Next: ${nx.title} ›`, () => { if (!armed()) return; this.d.stopTour?.(); nx.start(); }, 'next');
   }
   /** the slot the cards offer: this run's newest at or before now on the mission clock, else an earlier run's newest (null: none / no loader) */
@@ -277,14 +197,6 @@ export class Menu {
     for (const t of this.root.querySelectorAll<HTMLElement>('.saves .tile')) if (t.dataset.save === `${info.key}@${info.savedAt}`) t.style.backgroundImage = `url("${url}")`;
   }
 }
-
-// W S / ↑ ↓ walk the title screen's and the pause card's menu (Enter and Space are the focused button's own). Registered here, at module load, like the other
-// screens' keys; it only ever moves the focus, and stands down while a screen is up over the card (#menu is inert then) or the focus is somewhere else.
-if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') window.addEventListener('keydown', e => {
-  if (e.code === 'Escape' && (titleExtras || titleCoop)) { const m = document.getElementById('menu'); if (e.timeStamp >= titleShownAt && m?.classList.contains('on') && m.classList.contains('title') && !m.hasAttribute('inert')) { (m.querySelector('.actions .xback') as HTMLElement | null)?.click(); e.preventDefault(); } return; }   // (Esc on the title's EXTRAS or CO-OP page = back to its main menu; the title itself has nothing to back out of)
-  if (e.code === 'Space' && !e.repeat && titleExtras) { const a = document.activeElement as HTMLElement | null; if (a?.classList?.contains('xrow') && document.getElementById('menu')?.contains(a)) { a.click(); e.preventDefault(); } return; }   // (a row of EXTRAS is a link, and Space does not follow a link: here it does, as it presses every other entry of this menu)
-  walkMenu(e, typedInto);
-}, { capture: true });
 
 // ---- tiny DOM helpers (menu-local styling lives in index.html)
 function esc(t: string) { return t.replace(/[&<>"]/g, c => c === '&' ? '&amp;' : c === '<' ? '&lt;' : c === '>' ? '&gt;' : '&quot;'); }

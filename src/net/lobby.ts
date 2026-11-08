@@ -13,7 +13,7 @@
 // THE SWITCH: COOP.on — on for a real page, `?coop=0` = the page as it was (no Co-op row on the title, a `?join=` on the address is not read). Nothing a tick
 // reads: a game is the server's recipe whatever this says.
 import type { Wire } from '../cloud/wire';
-import { NETPLAY, NET_GAME, NET_KEY, NET_JOIN } from './page';
+import { NETPLAY, NET_GAME, NET_KEY, NET_JOIN } from './address';
 import { bare } from '../scene/scenarioList';
 
 export const COOP = {

@@ -65,19 +65,6 @@ pub fn wall_charge_sync(g: &mut crate::game::Game) -> bool {
     live
 }
 
-/// A row the wall's fifth has taken the digit of: itself, digitless, one stand-in a row. (wallcharge.ts undigit)
-pub fn wall_charge_undigit(g: &mut crate::game::Game, d: OrdersOrderDefId) -> OrdersOrderDefId {
-    let mut row = g.tab.orders_order_def[d].clone();
-    row.key = None;
-    if let Some(x) = g.m.wallcharge.stand_ins.get(d).copied() {
-        g.tab.orders_order_def[x] = row;
-        return x;
-    }
-    let x = g.tab.orders_order_def.push(row);   // (a second row of the same id ON PURPOSE: made once a row, kept in stand_ins, written in place above)
-    g.m.wallcharge.stand_ins.set(d, x);
-    x
-}
-
 /// Puts the rows on the menu as the mode says. (wallcharge.ts seat)
 pub fn wall_charge_seat(g: &mut crate::game::Game) {
     crate::orders::squad_orders_unregister(g, WALL_PAGE);
@@ -681,12 +668,6 @@ fn fire_new(g: &mut Game, w: Option<&WallSpot>, all: Option<&[V3]>) -> WallCharg
 /// How much under the known enemies' fire a place is: what its two answers close over. (wallcharge.ts underFire)
 pub fn wall_charge_under_fire(g: &mut crate::game::Game, w: Option<&crate::wallcharge::WallSpot>, all: Option<&[V3]>) -> crate::wallcharge::WallChargeUnderFire {
     WallChargeUnderFire { score: fire_new(g, w, all) }
-}
-
-/// (wallcharge.ts fireAt)
-pub fn wall_charge_fire_at(g: &mut crate::game::Game, q: V3, w: Option<&crate::wallcharge::WallSpot>) -> f64 {
-    let mut fire = wall_charge_under_fire(g, w, None);
-    wall_charge_fire_score(g, &mut fire.score, q)
 }
 
 /// How much of the blast a place on the charge's own side takes: 0 = none, up to 1 at the wall. (wallcharge.ts blastShare)

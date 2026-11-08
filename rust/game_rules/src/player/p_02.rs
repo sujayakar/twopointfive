@@ -196,10 +196,7 @@ fn cursor_pitch(g: &Game, seat: &crate::seats::SeatRef, pl: PlayerId, c: CharId,
     let mut target_y = ap[1] + 0.03;
     if let Some(t) = seat.aim_target { target_y = v3::clamp(g.tab.sim_lightshome_fixture[t].pos[1], 0.3, 2.95); }
     else if let Some(gd) = seat.aim_guard {
-        target_y = match seat.aim_snap {
-            Some(snap) if g.gd[gd].wound.is_some() => snap[1],
-            _ => man_aim(g, seat, gd, 1.2)[1],
-        };
+        target_y = man_aim(g, seat, gd, 1.2)[1];
     }
     else if level_on(g) { return 0.0; }
     let gun_y = g.ch[c].pos[1] + (if g.pl[pl].crouch { 0.95 } else { 1.4 });
@@ -214,10 +211,7 @@ fn shot_target(g: &Game, seat: &crate::seats::SeatRef) -> V3 {
     }
     if let Some(t) = seat.aim_target { return v3::copy(g.tab.sim_lightshome_fixture[t].pos); }
     if let Some(gd) = seat.aim_guard {
-        return match seat.aim_snap {
-            Some(snap) if g.gd[gd].wound.is_some() => v3::copy(snap),
-            _ => man_aim(g, seat, gd, 1.25),
-        };
+        return man_aim(g, seat, gd, 1.25);
     }
     free_aim(g, seat, None)
 }
@@ -438,8 +432,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     }
     let stalk = {
         let (lmb, lmb_hit) = (input_lmb(g, input), input_lmb_hit(g, input));
-        let stick = None;
-        crate::stalk::stalk_step(g, lmb, lmb_hit, mx != 0.0 || mz != 0.0, stick, Some(crate::stalk::StalkKeys { mx, mz, dt }))
+        crate::stalk::stalk_step(g, lmb, lmb_hit, mx != 0.0 || mz != 0.0, Some(crate::stalk::StalkKeys { mx, mz, dt }))
     };
     if let Some(st) = stalk { mx = st.mx; mz = st.mz; g.pl[pl].crouch = true; }
     if g.puppet.is_some() {
@@ -882,7 +875,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     pose_gun_light(g);
     // footsteps, for audio and the AI's hearing
     let phase = g.ch[c].anim.phase;
-    let tread_speed = if crate::tapstep::tap_held(g, &crate::seats::here(g)) { 0.0 } else { speed };
+    let tread_speed = speed;
     let fall = footfall_due(g, dt, phase, tread_speed);
     if js::truthy(fall) {
         let base = if g.pl[pl].sprinting { 1.0 } else if g.pl[pl].dash { g.k.crouchrun.loud } else if g.pl[pl].crouch { 0.125 }

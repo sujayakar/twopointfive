@@ -48,11 +48,11 @@ const nose = (h: Vec3): Plane[] => [1, -1].flatMap(s => NOSE_A.map((a): Plane =>
 /** a bonnet's fall: the plane from the top face 0.2 m in from the end at +x down to 0.15 m under the top at that end */
 const fall = (h: Vec3): Plane => { const L = Math.hypot(0.15, 0.2), n = [0.15 / L, 0.2 / L]; return [n[0], n[1], 0, n[0] * h[0] + n[1] * (h[1] - 0.15)]; };
 
-/** THE YARD WITH A SHAPED PICKUP: levels/gwot-yard.json, its first pickup's body, one wheel and bonnet given a shape of each kind, and a wooden crate
+/** THE YARD WITH A SHAPED PICKUP: levels/crossing.json, its first pickup's body, one wheel and bonnet given a shape of each kind, and a wooden crate
  *  beside it that says a shape and has a plate hung on its side (the level's own data is not touched: a copy; the bonnet's copy gives up its markings, which
  *  a box that says a form may not carry). Returns the data and the boxes' places in the list. */
 function shapedYard(): { d: any; tub: number; wheel: number; bonnet: number; crate: number } {
-  const d = dataOf('gwot-yard.json'), B: any[] = d.boxes, near = (a: number, b: number) => Math.abs(a - b) < 1e-6;
+  const d = dataOf('crossing.json'), B: any[] = d.boxes, near = (a: number, b: number) => Math.abs(a - b) < 1e-6;
   for (const b of B) delete b.shape;   // (the yard's own vehicles say shapes of their own: this yard says only the ones written here)
   const tub = B.findIndex(b => near(b.h[0], 2.45) && near(b.h[1], 0.25) && near(b.h[2], 0.86)); if (tub < 0) throw new Error('shapes-check: the yard has no pickup body (2.45 × 0.25 × 0.86)');
   const T = B[tub], yaw = T.yaw ?? 0;
@@ -279,7 +279,7 @@ export async function shapesCheck(): Promise<boolean> {
             // an outer wall taken on by the engine, what hangs under the charge the charge's), then as a bare burst
             const spots = [up, down].map(h => WC.wallAt(h.game, at, t.c)), W0 = spots[0]; if ((W0?.index ?? -1) !== (spots[1]?.index ?? -1)) wdiffer++; else if (W0 && W0.ok) charges++;
             for (const [k, h] of [up, down].entries()) { const c0 = h.game.tune.chaos, W = spots[k]; try { h.game.tune.chaos = 0.5; await hushed(() => {
-              if (W && W.ok) { const br = W.outer && WC.WALLCHARGE.outer && h.game.destr.walls.adopt(W.index) ? { breach: W.index } : {}; h.game.destr.blast(WC.wallPt(W, 0, 0.02, 1.0), { who: PLAYER_ID, chaos: false, ...br, ...(WC.WALLCHARGE.hung ? { hung: { wall: W.index, r: WC.WALLCHARGE.hungM } } : {}) }); for (let i = 0; i < 10; i++) h.step(DT); }
+              if (W && W.ok) { h.step(1 / 60); const br = W.outer && WC.WALLCHARGE.outer && h.game.destr.walls.adopt(W.index) ? { breach: W.index } : {}; h.game.destr.blast(WC.wallPt(W, 0, 0.02, 1.0), { who: PLAYER_ID, chaos: false, ...br, ...(WC.WALLCHARGE.hung ? { hung: { wall: W.index, r: WC.WALLCHARGE.hungM } } : {}) }); for (let i = 0; i < 10; i++) h.step(DT); }
               h.game.destr.blast(at, { who: PLAYER_ID, radius: 2.4 }); for (let i = 0; i < 20; i++) h.step(DT); }); } finally { h.game.tune.chaos = c0; } }
             let d1 = 0; for (let i = 0; i < nOwn; i++) if (hidden(A[i]) !== hidden(Bv[i])) d1++; if (d1) differ++; if (wallsOf(up.game) !== wallsOf(down.game)) wdiffer++; } }
           { const fresh: any[] = lived(d).boxes; for (let i = 0; i < nOwn; i++) if (hidden(A[i]) && !hidden(fresh[i] ?? A[i])) took++; }   // (not what the level was authored hidden)

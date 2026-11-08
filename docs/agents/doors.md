@@ -198,6 +198,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`src/sim/doorshome.ts`): nothing reads differently, but a NEW field of that kind is a new column there and in `rust/sim/src/doors.rs`, never a plain
   field (a plain one is not carried into the module, and the two steps part). `Doors.update` is three roads now: `updateHere` (this file's step, as it
   always was), the module's (`handOver` / `takeBack`), and `updateBoth` for the checks. A CHANGE TO `updateHere`, `Door.place`, `leafPresses`, `carry`,
-  `solidCarry`, `driven`, `walked`, the doors' `standable` in `game.ts`, OR `player.ts settleSpot` / `bodyR` MUST BE MADE IN `doors.rs` TOO:
-  `bun run tools/qa/door-ident.ts` says in seconds whether the two still agree (and `rust-check`'s `doors` line compares their constants). `Door.drive`
+  `solidCarry`, `driven`, `walked`, the doors' `standable` in `game.ts`, OR `player.ts settleSpot` / `bodyR` MUST BE MADE IN `doors.rs` TOO (written while both stood: the TypeScript step and `door-ident`, which held the two together, are gone). `Door.drive`
   is a view of the door's own columns: write its fields or assign a record to it, never keep one across an assignment; `driveOf(d)` is the plain copy.
+- **A man low shoves furniture at half the noise, whoever he is** (2026-11-08; `game quiet_man`). It was Sam's alone: a teammate or a defender on his knees scraped a chair as loud as a man walking. No switch. A
+  defender in reach hears a teammate's chair as he hears Sam's; a quiet takedown files no noise of its own, and the one `prop` a check found 1.08 s after a man went down is the partner's own feet in a chair on his
+  way back to Sam. Check: `tests/pair.rs a_low_man_shoves_a_chair_at_half_the_noise`, `a_quiet_takedown_files_no_noise_of_its_own`, `a_man_hears_the_other_sides_chair_and_door_and_not_his_own`. Not measured on a mission's tally.
+- **A shut door opened on Sam's body** (2026-11-08). On the game's own senses the man who opens it steps past the leaf and fires: 46 stagings of Sam behind the break room's leaf, two seeds, longest he stood
+  alert with nothing fired 1.3 s, where the tree before them stood him in the frame for over six. Which line of that change cured it was not traced. Check: `tests/door_body.rs`. Never seen on a GPU.

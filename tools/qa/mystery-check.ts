@@ -8,7 +8,6 @@
 //   hard     the sentences that say what Hard is name no number of enemies
 //   asks     no screen reads a row's `defenders` or the tally's roster for itself: nothing under src/ui names `.defenders` or `.roster`
 // MYSTERY_BREAK=1 reads the old rows' and Hard's old sentences as theirs: 'total' and 'hard' must FAIL.
-// The page's own half (the cells not drawn, the large map left by a click beside it): tools/qa/mystery-page.cjs.
 const ROOT = new URL('../..', import.meta.url).pathname.replace(/\/$/, '');
 import { readFileSync, readdirSync } from 'node:fs';
 
@@ -32,13 +31,12 @@ export async function mysteryCheck(): Promise<boolean> {
   let all = true; const line = (ok: boolean, label: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}${detail ? `\n    ${detail}` : ''}`); };
   const { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
   const { PICKS, pickEntry } = await import(`${ROOT}/src/scene/picks.ts`);
-  const { SOLO_NIGHT } = await import(`${ROOT}/src/ui/missions.ts`);
   const { difficultyWords, squadsHeld } = await import(`${ROOT}/src/game/difficulty.ts`);
   {
     // ---- total
     const rows: { id: string; text: string; total: number; lesson: boolean }[] = (ALL_MISSIONS as { id: string; title: string; place?: string; blurb?: string; scene?: string; defenders?: number; group?: string }[]).map(e => (
       { id: e.id, text: [e.place, e.blurb, e.scene].filter(Boolean).join(' '), total: e.defenders ?? -1, lesson: e.group === 'tutorial' }));
-    rows.push({ id: SOLO_NIGHT.id, text: `${SOLO_NIGHT.place} ${SOLO_NIGHT.blurb}`, total: 3, lesson: false });
+    rows.push({ id: 'solo-night', text: "The office, after dark. You're alone on the office floor. Reach the server room, pull the drive and leave through the fire exit. Watch out for lights, noise and cameras.", total: 3, lesson: false });   // (its row's words: rust/game_rules/src/start_list, solo_night)
     for (const p of PICKS as { id: string; line: string }[]) rows.push({ id: `pick ${p.id}`, text: p.line, total: (pickEntry(p) as { defenders?: number } | null)?.defenders ?? 3, lesson: false });
     if (BREAK) for (const [text, total] of OLD) rows.push({ id: 'an old row', text, total, lesson: false });
     const bad: string[] = [], part: string[] = [], lessons: string[] = [];

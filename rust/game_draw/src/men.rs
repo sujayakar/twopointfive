@@ -33,6 +33,8 @@ section! {
         /// how much his proxies are darkened by a wet coat (1: dry)
         pub dry: f32,
         pub at: [f32; 3],
+        /// where he is drawn standing: between the last two ticks, as his bones are
+        pub feet: [f32; 3],
         /// the sphere round his proxies
         pub bound: [f32; 4],
     }
@@ -69,7 +71,7 @@ pub struct Men {
     pub caps: Vec<Cap>,
     now: Vec<Bones>,
     now_caps: Vec<Cap>,
-    before: Vec<(u32, Bones)>,
+    before: Vec<(u32, Bones, [f32; 3])>,
     before_caps: Vec<Cap>,
     have: u32,
 }
@@ -81,7 +83,7 @@ impl Men {
     pub fn take(&mut self, g: &Game, again: bool) {
         if !again {
             self.before.clear();
-            for (k, r) in self.men.iter().enumerate() { self.before.push((r.id, self.now[k])); }
+            for (k, r) in self.men.iter().enumerate() { self.before.push((r.id, self.now[k], r.at)); }
             core::mem::swap(&mut self.now_caps, &mut self.before_caps);
             self.have = (self.have + 1).min(2);
         }
@@ -107,7 +109,7 @@ impl Men {
         let bc = x([b[0], b[1], b[2]]);
         self.men.push(Man {
             id: c.id as u32, side: side as u32, suit: suit as u32, parts: c.parts as u32, alive: c.alive as u32, tint: f3(c.tint), tint2: f3(c.tint2), stature: s as f32,
-            dry: if g.engine.settings.wet_chars && c.wet > 0.0 { 1.0 - 0.35 * c.wet } else { 1.0 } as f32, at: f3(c.pos), bound: [bc[0] as f32, bc[1] as f32, bc[2] as f32, (b[3] * s) as f32],
+            dry: if g.engine.settings.wet_chars && c.wet > 0.0 { 1.0 - 0.35 * c.wet } else { 1.0 } as f32, at: f3(c.pos), feet: f3(c.pos), bound: [bc[0] as f32, bc[1] as f32, bc[2] as f32, (b[3] * s) as f32],
         });
         // ---- his instance
         let w = |v: f64| (v as f32).to_bits();
@@ -151,13 +153,16 @@ impl Men {
     pub fn frame(&mut self, a: f64) {
         self.bones.clone_from(&self.now);
         self.caps.clone_from(&self.now_caps);
+        for r in &mut self.men { r.feet = r.at; }
         if a >= 1.0 || self.have < 2 { return; }
         let a = a as f32;
-        for (k, r) in self.men.iter().enumerate() {
+        for (k, r) in self.men.iter_mut().enumerate() {
             let Some(j) = self.before.iter().position(|b| b.0 == r.id) else { continue };
             let (p, q) = (&self.before[j].1, &mut self.bones[k]);
             let d: [f32; 3] = core::array::from_fn(|i| q.w[12 + i] - p.w[12 + i]);
             if (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]) as f64 > SNAP * SNAP { continue; }
+            let was = self.before[j].2;
+            for i in 0..3 { r.feet[i] = was[i] + (r.at[i] - was[i]) * a; }
             for i in 0..JOINTS * 16 { q.w[i] = p.w[i] + (q.w[i] - p.w[i]) * a; }
             for i in 0..CAPS {
                 let (p, q) = (&self.before_caps[j * CAPS + i], &mut self.caps[k * CAPS + i]);
