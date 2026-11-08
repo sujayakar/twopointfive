@@ -128,7 +128,7 @@ pub fn edge_look_update(g: &mut crate::game::Game, dt: f64) {
         bx.c[0] = r.p0[0] + (r.p1[0] - r.p0[0]) * s; bx.c[2] = r.p0[2] + (r.p1[2] - r.p0[2]) * s;
         bx.c[1] = if s >= 1.0 { r.p1[1] } else { m::max(r.p1[1], r.p0[1] + r.vy * r.t - 4.9 * r.t * r.t) };
         bx.rot = Some(if s >= 1.0 { r.q1 } else { quat::slerp(r.q0, r.q1, s * s) });
-        if s < 1.0 { fl += 1.0; } else { let y = crate::debris::debris_rubble_height(g, r.box_, r.p1[1]); g.tab.boxes[r.box_].c[1] = y; }
+        if s < 1.0 { fl += 1.0; } else { let y = crate::debris::debris_rubble_height(g, r.box_.into(), r.p1[1]); g.tab.frame_boxes[r.box_].c[1] = y; }
         g.destr.edge_look.rubble[i].t = r.t;
     }
     g.destr.edge_look.flying = fl; g.stats.edge_look.flying = fl as i32;
