@@ -3,13 +3,6 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: a union)
-#[derive(Clone, Debug)]
-pub enum RowOfQuerySearch {
-    Text(String),
-    URLSearchParams(crate::query::Query),
-}
-
 /// (TypeScript: inline at src/game/rowset.ts:43 rowSettings ->, src/game/rowset.ts:43)
 #[derive(Clone, Copy, Debug)]
 pub struct RowSettings {
