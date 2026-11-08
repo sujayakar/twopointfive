@@ -65,7 +65,7 @@ fn a_press_refused_writes_nothing() {
     let p = step(&mut d, 0, "smoke", 1);
     assert!(!p.ok);
     assert!(p.why.starts_with("needs a pouch"), "{}", p.why);
-    assert_eq!(p.kept, kept_before);
+    assert_eq!(p.kept[0].text, kept_before);
     assert_eq!(cards, all_cards(&mut d));
 }
 
@@ -128,10 +128,10 @@ fn a_stealth_mission_stands_its_card_for_yours_and_leaving_puts_yours_back() {
     assert_eq!(row(&c, "rings").n, 5.0, "the stealth card carries the launcher's rounds");
     assert_eq!(row(&c, "primary").icon, "rifle");
     assert_eq!(members(&d)[0].trim, TrimId::Red, "your colours go with you");
-    assert_eq!(p.kept, kept_before, "what is kept is your own card");
+    assert_eq!(p.kept[0].text, kept_before, "what is kept is your own card");
     let p = press(&mut d, &DONE.to_le_bytes());
     assert_eq!(written(&d), yours);
-    assert_eq!(p.kept, kept_before);
+    assert_eq!(p.kept[0].text, kept_before);
 }
 
 #[test]
