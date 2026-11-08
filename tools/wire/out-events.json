@@ -811,6 +811,18 @@
 ],
 "sig": "pub fn snow_blast(g: &mut crate::game::Game, at: V3, radius: f64)",
 "mode": "push"
+},
+{
+"call": "SmokeSystemLike.shutCans",
+"rust": "crate::out_events::smoke_cans_shut",
+"sites": 1,
+"ts": "shutCans",
+"of": "SmokeSystemLike",
+"file": "src/smoke/types.ts",
+"why": "this",
+"params": [],
+"sig": "pub fn smoke_cans_shut(g: &mut crate::game::Game)",
+"mode": "push"
 }
 ],
 "listed": [

@@ -312,10 +312,10 @@ export async function movesSecond(): Promise<boolean> {
       F.verdict(hs.length > 0 && hs.every((x: any) => x.char.anim.bound === 1 && x.char.anim.mv2Shown.bound > 0.9), 'every living hostage is down with her wrists behind her', `${hs.length} hostages · bound ${hs.map((x: any) => `${x.char.anim.bound}/${x.char.anim.mv2Shown.bound.toFixed(2)}`).join(' ')}`);
       const ops = g.guards.filter((x: any) => x.team === 'operative' && x.state !== 'dead'); let dips = 0; for (let i = 0; i < 600; i++) { step(1); for (const x of ops) if (x.char.anim.dip > 0 || x.char.anim.mv2Shown.dip > 0) dips++; }
       F.verdict(dips === 0, 'with the entry switch off no man is dealt a dip in ten seconds of it', `${dips} man-frames with a dip`);
-      // a teammate the room fight makes reload (roomfight.ts reloadUntil — it plays no clip): the hand shows the change on the game's clock, and the fight's own state is what it was
+      // a teammate made to reload: the hand shows the change on the game's clock, and the fight's own state is what it was
       const tm = ops.map((x: any) => ({ x, O: g.fight.opOf(x) })).filter((r: any) => r.O && r.x.state !== 'dead' && r.x.char.anim.longGun)[0];
       if (!tm) F.verdict(BREAK, 'a teammate the room fight makes reload shows the change', 'no operative on the room fight\'s list in this stage');
-      else { const R = tm.x.weapon.def.reload; tm.O.reloadUntil = g.time + R.dur; let shown = 0, n = 0; for (let i = 0; i < Math.round(R.dur * 60) - 6; i++) { if (tm.x.state === 'dead') break; if (tm.O.reloadUntil <= g.time) break; step(1); const t = R.dur - (tm.O.reloadUntil - g.time); if (t > 0.4 && t < R.dur - 0.4) { n++; if (tm.x.char.anim.mv2Shown.reload > 0.5) shown++; } }
+      else { const R = tm.x.weapon.def.reload; tm.x.reloadT = R.dur; let shown = 0, n = 0; for (let i = 0; i < Math.round(R.dur * 60) - 6; i++) { if (tm.x.state === 'dead') break; if (tm.x.reloadT < 0) break; step(1); const t = R.dur - tm.x.reloadT; if (t > 0.4 && t < R.dur - 0.4) { n++; if (tm.x.char.anim.mv2Shown.reload > 0.5) shown++; } }
         F.verdict(n > 30 && shown >= n * 0.9, 'a teammate the room fight makes reload shows the change through the middle of it', `${tm.x.callsign}: ${n} frames mid-reload · the layer in the pose on ${shown}`); } }
     { const S: any = await quiet(() => stage('night-breach', 1)); const { g, W } = S; S.step(30);
       // the defenders down to their last round and Sam walked into their room in the light (god mode): the round that empties the box starts the game's own reload beat

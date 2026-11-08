@@ -46,6 +46,8 @@
 //!   face_verdict(h) -> 0 | 1 | 2              how the mission ended, off the record the game's tick latches: 0 not yet, 1 lost, 2 won (then the record as lines at face_out)
 //!   face_tick_view(h)                         what a HUD is told of the game as its last tick left it (a TickView at face_out); a read: no word of the state is written, and a copy of the boxes a writer put down is stood first
 //!   face_debrief_view(h)                      what the end card shows of the run (a DebriefView at face_out); a read, nothing kept
+//!   face_end(h)                               what an end card is drawn from beside its debrief, as JSON (end.rs): how the run ended with every man of it, the course's par, the map's floor and marks
+//!   face_floor(h) · face_map(h)               a map of the run, as JSON (map.rs): the floor, and who and what stands on it now
 //!   face_run_view(h)                          what a machine keeps of the run (a RunView at face_out); a read, nothing kept
 //!   face_line(h, what, a…, b…) -> 0 | 1 · face_ray(h, o…, d…, max) -> 0 | 1 · face_hear(h, s…, d…) · face_way(h, ax, az, bx, bz, iters) -> corners | -1
 //!   · face_light(h, p…, steady, leave, owners) -> f64
@@ -58,6 +60,7 @@
 //!                                             place (rust/sim's own `state_addr` / `state_len` / `state_part` say the same of the whole block)
 //!   face_part_hashes(slot) -> p               13 words: each part's hash as tools/blitz/mission.ts takes it (its words up to the last not zero)
 use std::cell::{Cell, RefCell};
+mod end;
 mod map;
 mod memo;
 mod moment;

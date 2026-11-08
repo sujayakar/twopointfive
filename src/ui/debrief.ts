@@ -4,12 +4,9 @@
 // marked — and the timeline itself as a scrollable list. Everything read comes from the Rust game, asked once as the card is built (src/view/debriefview.ts: counts, score,
 // badges, summary; the rows in words; the path; the recap), so the QA probes see the same numbers the card shows. Plain DOM, styled in index.html (#menu .db-…); builds headlessly too (no canvas context: the map's
 // pins and marks still land, the cells and the path are simply not painted).
-import { gearText } from '../game/gear';
-import type { Game } from '../game/game';
 import { mountRecap } from './recap';
-import { indoors } from '../game/rooms';
-import type { Debrief, DebriefRow, DeathRecap } from '../view/debriefview';
-import { verdictLine, type RunVerdict } from '../game/verdict';
+import type { Debrief, DeathRecap } from '../view/debriefview';
+import { verdictLine, type RunEnd } from '../view/runend';
 import { verdictHead, verdictMen, verdictSlot, verdictPanels, squadVerdict, fellWords, namedMen } from './verdictCard';
 
 /** the map's width in CSS px at most (the canvas is drawn at the nav grid's own resolution × an integer and scaled by CSS to the column it sits in) */
@@ -25,7 +22,7 @@ export interface DebriefUi { root: HTMLElement; debrief: Debrief; copyText: stri
  *  drawn, never as this module loads; `recapIn` = it drew this time, so the map's column does not get a second one. */
 let recapIn = false;
 let recapNow: DeathRecap | null | undefined = null;
-const recapPanel = (slot: HTMLElement, game: Game): void => { if (mountRecap(slot, game, recapNow)) recapIn = true; };
+const recapPanel = (slot: HTMLElement, end: RunEnd): void => { if (mountRecap(slot, end, recapNow)) recapIn = true; };
 /** the map's pins: which kinds get a glyph on the floor map, and the glyph */
 const PIN: Partial<Record<string, { glyph: string; cls: string; label: string }>> = {
   spotted: { glyph: '◉', cls: 'seen', label: 'spotted' },
@@ -51,14 +48,14 @@ const PIN: Partial<Record<string, { glyph: string; cls: string; label: string }>
 export const pinnedRow = (e: { kind: string; down: boolean }) => e.down ? null : PIN[e.kind] ?? null;
 /** mm:ss off seconds */
 function fmtMMSS(sec: number): string { const s = Math.max(0, Math.floor(sec)); return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; }
-export function renderDebrief(into: HTMLElement, game: Game, actions: HTMLElement[] = []): DebriefUi {
-  const W = game.debriefView(), D = W.debrief, c = D.counts; recapNow = W.recap;
+export function renderDebrief(into: HTMLElement, end: RunEnd, actions: HTMLElement[] = []): DebriefUi {
+  const W = end.view, D = W.debrief, c = D.counts; recapNow = W.recap;
   const root = el('div', 'db'); into.appendChild(root);
   // ---- the verdict (game/verdict.ts), once the run is over: its head leads the card. A squad's mission then shows the men (their rows, their paths) where the
   // stealth game's rating, numbers and timeline stand — those are built all the same and hidden by the card's class (index.html .vd-squad): one builder, and
   // the stealth game's card keeps every part it had under the verdict's head. No verdict (the run still going, the switch off) = the card as it was.
-  const V = game.verdict?.result ?? null, squad = !!V && squadVerdict(V);
-  if (V) { root.classList.add('vd-on', squad ? 'vd-squad' : 'vd-solo'); root.appendChild(verdictHead(game, V, game.verdict.kept)); }
+  const V = end.verdict, squad = !!V && squadVerdict(V);
+  if (V) { root.classList.add('vd-on', squad ? 'vd-squad' : 'vd-solo'); root.appendChild(verdictHead(end, V)); }
   // a row that leans LOUD is not graded as a sneak (game/verdict.ts loudRow, VERDICT.loudCard): no rating word, no score, no line of what was docked, no
   // badges, and the sneak's numbers stand untoned — five men shot on a mission that is a gunfight is a count, not a fault (a hit taken, a civilian hurt
   // keep their red). `db-loud` marks the card for a reader of the page; nothing styles it.
@@ -75,7 +72,7 @@ export function renderDebrief(into: HTMLElement, game: Game, actions: HTMLElemen
   head.appendChild(what); root.appendChild(head);
   // ---- actions (the host's) + copy summary
   const acts = el('div', 'actions db-actions'); for (const a of actions) acts.appendChild(a);
-  const copyText = V && squad ? verdictLine(V, game.verdict.kept) : D.summary;
+  const copyText = V && squad ? verdictLine(V, end.kept) : D.summary;
   const copy = el('button', 'btn db-copy') as HTMLButtonElement; copy.textContent = 'Copy summary'; copy.title = copyText;
   copy.onclick = () => { const done = (ok: boolean) => { copy.textContent = ok ? 'Copied' : 'Select + copy ↓'; if (!ok) { note.textContent = copyText; note.classList.add('show'); } setTimeout(() => { copy.textContent = 'Copy summary'; }, 1600); };
     try { const cb = (globalThis as any).navigator?.clipboard; if (cb?.writeText) cb.writeText(copyText).then(() => done(true), () => done(false)); else done(false); } catch { done(false); } };
@@ -85,14 +82,14 @@ export function renderDebrief(into: HTMLElement, game: Game, actions: HTMLElemen
   const grid = el('div', 'db-grid'); root.appendChild(grid);
   const left = el('div', 'db-left'), right = el('div', 'db-right'); grid.append(left, right);
   recapIn = false; if (!verdictPanels.includes(recapPanel)) verdictPanels.push(recapPanel);
-  if (V && (squad || V.of > 1)) { left.appendChild(verdictMen(game, V)); const slot = verdictSlot(game, V); if (slot) left.appendChild(slot); else recapIn = false; }
+  if (V && (squad || V.of > 1)) { left.appendChild(verdictMen(end, V)); const slot = verdictSlot(end, V); if (slot) left.appendChild(slot); else recapIn = false; }
   // stats grid
   const stats = el('div', 'db-stats'); left.appendChild(stats);
   const st = (k: string, v: string | number, cls = '', title = '') => { const s = el('div', `st${cls ? ' ' + cls : ''}`); const i = el('i'); i.textContent = k; const b = el('b'); b.textContent = String(v); s.append(i, b); if (title) s.title = title; stats.appendChild(s); };
-  { const P = game.par?.result(); if (P) st('par', P.medal === 'none' ? 'no medal' : P.medal, P.medal === 'none' ? 'warn' : 'good', game.par.shown ?? P.line); }   // (a level with a par block, its room clear taken: game/par.ts — one cell; the best time on its line is the page's, main.ts)
+  { const P = end.par; if (P) st('par', P.medal === 'none' ? 'no medal' : P.medal, P.medal === 'none' ? 'warn' : 'good', P.shown); }   // (a level with a par block, its room clear taken: game/par.ts — one cell; the best time on its line is the page's, main.ts)
   st('time', fmtMMSS(c.elapsed)); st('seen', c.seen ? `×${c.seen}` : '0', tone(c.seen ? 'bad' : 'good'), 'times an alert guard had eyes on you');
   st('alarms', c.alarms, tone(c.alarms ? 'bad' : 'good'), 'times someone went on alert when nobody else was'); st('floor up', c.esc1 + c.esc2 ? `×${c.esc1 + c.esc2}` : '0', tone(c.esc2 ? 'bad' : c.esc1 ? 'warn' : 'good'), 'times the floor went to heightened / lockdown');
-  st('bodies found', c.bodies, tone(c.bodies ? 'warn' : '')); st('KOs', c.kos, '', gearText('enemies you knocked out with a takedown, a choke, a pistol-whip or a ring to the head')); st('kills', c.kills, tone(c.kills ? 'bad' : 'good'));
+  st('bodies found', c.bodies, tone(c.bodies ? 'warn' : '')); st('KOs', c.kos, '', end.kit('enemies you knocked out with a takedown, a choke, a pistol-whip or a ring to the head')); st('kills', c.kills, tone(c.kills ? 'bad' : 'good'));
   st('shots', c.shots, '', `${c.shotsNearMen} of them into or near an enemy`); st('OCP', c.ocps); st('lights shot', c.lightsShot);
   st('doors kicked', c.kicked, tone(c.kicked ? 'warn' : '')); st('locks picked', c.picked); st('keys', c.keys); st('intel', c.intel, '', `${c.questioned} ${c.questioned === 1 ? 'enemy' : 'enemies'} questioned`); /* (the roster is the floor's head count) */ st('called in', c.devices, tone(c.devices ? 'warn' : ''), 'a camera or a tripwire radioed you in');
   if (c.thrown) st('thrown', c.thrown, '', 'smoke and stun canisters, frag grenades, and 40 mm grenades off the launcher'); if (c.hits) st('hits taken', c.hits, 'bad'); if (c.loads) st('checkpoint loads', c.loads, tone('warn')); if (c.blackout) st('blackout', 'used');
@@ -106,12 +103,12 @@ export function renderDebrief(into: HTMLElement, game: Game, actions: HTMLElemen
   if (!W.rows.length) { const e0 = el('div', 'ev empty'); e0.textContent = 'nothing yet — nobody has noticed a thing'; tl.appendChild(e0); }
   for (const e of W.rows) { const row = el('div', `ev k-${e.kind}${e.down ? ' down' : ''}`); const t = el('i'); t.textContent = fmtMMSS(e.t); const r = el('u'); r.textContent = e.room; const x = el('span'); x.textContent = e.text; row.append(t, r, x); tl.appendChild(row); }
   // map + legend
-  if (!recapIn) mountRecap(right, game, recapNow);   // every death explains itself (ui/recap.ts): who shot whom, from where — nothing while the run is still on. Over the map unless the verdict's slot took it
-  right.appendChild(buildMap(game, W.rows, W.path, V));
+  if (!recapIn) mountRecap(right, end, recapNow);   // every death explains itself (ui/recap.ts): who shot whom, from where — nothing while the run is still on. Over the map unless the verdict's slot took it
+  right.appendChild(buildMap(end));
   const legend = el('div', 'db-legend');
   const seenLabels = new Set<string>();
   for (const k of Object.keys(PIN)) { const p = PIN[k]!; if (seenLabels.has(p.label)) continue; seenLabels.add(p.label); const s = el('span', `lg ${p.cls}`); const g = el('i'); g.textContent = p.glyph; s.append(g, ` ${p.label}`); legend.appendChild(s); }
-  for (const [g, label] of [['S', 'insertion'], ['◎', game.view.quiet?.holder ?? 'the rack'], ['⇥', game.view.quiet ? 'a way out' : 'fire exit']] as const) { const s = el('span', 'lg mark'); const i = el('i'); i.textContent = g; s.append(i, ` ${label}`); legend.appendChild(s); }
+  for (const [g, label] of [['S', 'insertion'], ['◎', end.quiet?.holder ?? 'the rack'], ['⇥', end.quiet ? 'a way out' : 'fire exit']] as const) { const s = el('span', 'lg mark'); const i = el('i'); i.textContent = g; s.append(i, ` ${label}`); legend.appendChild(s); }
   { const s = el('span', 'lg path'); const i = el('i'); i.textContent = '━'; s.append(i, ' his path, early → late'); legend.appendChild(s); }
   right.appendChild(legend);
   return { root, debrief: D, copyText };
@@ -120,8 +117,9 @@ export function renderDebrief(into: HTMLElement, game: Game, actions: HTMLElemen
 /** The floor map: a canvas at the nav grid's resolution (walkable cells light — lighter indoors — blocked dark, so walls read as lines and doorways as gaps), the
  *  path as a polyline coloured by the clock (teal early → amber late; a jump longer than PATH_GAP_M is left as a gap), spawn / rack / exit marks; over it, one
  *  absolutely-placed glyph per pinned event (its timeline row as the tooltip). No room is named on it. */
-function buildMap(game: Game, events: DebriefRow[], P: ArrayLike<number>, V: RunVerdict | null = null): HTMLElement {
-  const box = el('div', 'db-map'); const nav = game.col.nav; const W = nav.W, H = nav.H, cell = nav.cell;
+function buildMap(end: RunEnd): HTMLElement {
+  const events = end.view.rows, P = end.view.path, V = end.verdict, F = end.floor, W = F.w, H = F.h, cell = F.cell;
+  const box = el('div', 'db-map');
   const wx = W * cell, wz = H * cell;   // world extent covered (40 × 28 m)
   const px = Math.max(2, Math.floor(MAP_MAX_W / W));   // canvas px per nav cell
   const cv = el('canvas', 'db-canvas') as HTMLCanvasElement; cv.width = W * px; cv.height = H * px; box.appendChild(cv);
@@ -129,10 +127,9 @@ function buildMap(game: Game, events: DebriefRow[], P: ArrayLike<number>, V: Run
   try { ctx = typeof cv.getContext === 'function' ? cv.getContext('2d') : null; } catch { ctx = null; }
   if (ctx) {
     ctx.fillStyle = '#0c0b09'; ctx.fillRect(0, 0, cv.width, cv.height);
-    const p: [number, number, number] = [0, 0, 0];
     for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) {
-      const blocked = nav.blocked[z * W + x] === 1; p[0] = (x + 0.5) * cell; p[2] = (z + 0.5) * cell;
-      ctx.fillStyle = blocked ? (indoors(p) ? '#1c1a16' : '#100f0c') : indoors(p) ? 'rgba(214,200,170,0.2)' : 'rgba(214,200,170,0.07)';
+      const blocked = F.blocked(x, z), inside = F.indoors(x, z);
+      ctx.fillStyle = blocked ? (inside ? '#1c1a16' : '#100f0c') : inside ? 'rgba(214,200,170,0.2)' : 'rgba(214,200,170,0.07)';
       ctx.fillRect(x * px, z * px, px, px);
     }
     // the team's paths under a verdict: every man's in his own colour (a squad's mission: the player's too — the clock-coloured line below is the stealth game's)
@@ -154,15 +151,9 @@ function buildMap(game: Game, events: DebriefRow[], P: ArrayLike<number>, V: Run
   }
   // marks + pins as DOM over the canvas (percent-placed, so they follow the CSS-scaled canvas)
   const place = (node: HTMLElement, x: number, z: number) => { node.style.left = `${(x / wx * 100).toFixed(2)}%`; node.style.top = `${(z / wz * 100).toFixed(2)}%`; box.appendChild(node); };
-  const L = game.level, M = L.mission;
-  const mark = (g: string, cls: string, x: number, z: number, title: string) => { const m = el('i', `mark ${cls}`); m.textContent = g; m.title = title; place(m, x, z); };
-  { const at = game.roomClear?.startAt ?? L.playerSpawn; mark('S', 'spawn', at[0], at[2], 'insertion point'); }   // (a room clear stands Sam on its team start — and on a level with two ways in, on the one this visit took)
-  const QW = game.view.quiet;   // (a quiet mission: its own holder, thing and ways out — game/quiet.ts; null on the plain night)
-  mark('◎', 'rack', M.rack.front[0], M.rack.front[2], QW ? `${QW.holder} — ${QW.thing}` : `rack ${M.rack.index + 1} — the drive`);
-  if (QW) { for (const X of game.quiet.exits) { const ex = game.doors.byName(X.door)?.frameCentre ?? [X.x, 0, X.z]; mark('⇥', 'exit', ex[0], ex[2], X.name); } }
-  else { const ex = game.doors.byName(M.exfilDoor)?.frameCentre; if (ex) mark('⇥', 'exit', ex[0], ex[2], 'the fire exit'); }
+  for (const M of end.marks) { const m = el('i', `mark ${M.cls}`); m.textContent = M.glyph; m.title = M.title; place(m, M.x, M.z); }
   for (const e of events) { const p = pinnedRow(e); if (!p) continue; const pin = el('i', `pin ${p.cls}`); pin.textContent = p.glyph; pin.title = `${fmtMMSS(e.t)} · ${e.room} · ${e.text}`; place(pin, e.pos[0], e.pos[2]); }
-  if (V) for (const m of namedMen(game, V)) { if (!m.downPos || (m.human && !squadVerdict(V))) continue; const x = el('i', `vfell t-${m.tone ?? 'mate'}`); x.textContent = m.state === 'dead' ? '✕' : 'z'; x.title = fellWords(m); place(x, m.downPos[0], m.downPos[1]); }   // (where each man of the team fell; not a `mark`: the three marks are the level's)
+  if (V) for (const m of namedMen(end, V)) { if (!m.downPos || (m.human && !squadVerdict(V))) continue; const x = el('i', `vfell t-${m.tone ?? 'mate'}`); x.textContent = m.state === 'dead' ? '✕' : 'z'; x.title = fellWords(m); place(x, m.downPos[0], m.downPos[1]); }   // (where each man of the team fell; not a `mark`: the three marks are the level's)
   box.title = 'the floor';
   return box;
 }

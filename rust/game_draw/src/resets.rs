@@ -6,7 +6,7 @@ use game::out_events::OutEvent;
 event! {
     /// the tick began a part of the picture again
     pub struct Reset {
-        /// 1 the level: every history · 2 the smoke · 4 the snow's blasts · 8 the things' marks · 16 the prints
+        /// 1 the level: every history · 2 the smoke · 4 the snow's blasts · 8 the things' marks · 16 the prints · 32 the cans venting stop, what they let out left in the air
         pub what: u32,
     }
 }
@@ -19,6 +19,7 @@ pub fn fill(g: &Game, out: &mut Vec<Reset>) {
         OutEvent::ClearSnowBlast => 4,
         OutEvent::ClearSnowMarks => 8,
         OutEvent::ClearSnowTracks => 16,
+        OutEvent::SmokeCansShut => 32,
         _ => 0,
     });
     if what != 0 { out.push(Reset { tick: crate::tick(g), serial: 0, what }); }
