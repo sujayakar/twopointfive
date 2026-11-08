@@ -1,5 +1,5 @@
 //! WHAT THE HUD IS TOLD OF A LESSON (the view's `lesson` section: rust/game_rules/src/lesson `lesson_view`, src/rails `rails_view`): the step that is up, its
-//! line, its card and its arrow, the actions open, the men the line keeps clear of, the sky seat's look. The page words none of it again.
+//! line, its card and its arrow, the actions open, the men the line keeps clear of. The page words none of it again.
 use game::orders::Who;
 use game::view::{LessonView, RailsView};
 use game_start::play::{Opts, Play};
@@ -23,17 +23,6 @@ fn put_on(p: &mut Play, id: &str) -> usize {
 fn step_text(p: &Play, id: &str, f: impl Fn(&game::scene_scenarios::LessonStep) -> Option<String>) -> String {
     let t = game::lesson::lesson_data(&p.g).unwrap().steps.iter().find(|t| t.id == id).unwrap();
     game::lesson::lesson_line(&p.g, &f(&t).expect("the step has that line"))
-}
-/// the middle of the men still up, as the view's sky seat rides it
-fn middle(p: &Play) -> [f64; 2] {
-    let men = p.mates(); let n = men.len() as f64;
-    men.iter().fold([0.0, 0.0], |c, &m| { let a = p.at(m); [c[0] + a[0] / n, c[1] + a[1] / n] })
-}
-/// a tutorial with nobody on the floor. (No level has one now: the rules stand, so they are stood on this one's own floor)
-fn sky_mission(seed: u32) -> Play {
-    let mut p = mission("tut-team", seed, 1);
-    p.g.level.scenarios.as_mut().and_then(|s| s.lesson.as_mut()).and_then(|l| l.rails.as_mut()).expect("a frame").sky = Some(game::scene_scenarios::RailsDataSky { park: [2.0, 0.0, 9.0], reach: Some(26.0), eye: None, low: Some(true) });
-    p
 }
 fn char_id(p: &Play, seat: usize) -> f64 { let s = p.g.seats[seat]; p.g.ch[p.g.pl[game::seats::seat(&p.g, s).player].ch].id }
 
@@ -63,7 +52,7 @@ fn the_hud_is_told_the_step_that_is_up_and_what_it_opens() {
         assert!(opens(&v, "zoom") && opens(&v, "camera") && !opens(&v, "order") && !opens(&v, "word"), "seed {}: {:?}", seed, f.open);
         assert!(p.view().squad.map_or(true, |q| q.quick.is_none()), "seed {}: the lesson holds the squad's key back, and its line is told", seed);
         assert_eq!(f.orders.as_deref().unwrap().join(" "), "move stack go fallIn", "seed {}", seed);
-        assert!(f.card.is_none() && f.arrow.is_none() && f.sky.is_none() && !f.teaches_hold && !f.stalk_shut, "seed {}: {:?}", seed, f);
+        assert!(f.card.is_none() && f.arrow.is_none() && !f.teaches_hold && !f.stalk_shut, "seed {}: {:?}", seed, f);
         assert_eq!(f.no_lasers, game::lesson::lesson_data(&p.g).unwrap().rails.as_ref().unwrap().lasers == Some(false), "seed {}", seed);
 
         // the view turned by the hand: the next step, and it asks for nothing
@@ -160,66 +149,38 @@ fn an_arrow_and_a_refused_tap_are_told() {
     }
 }
 
-/// A FAILURE MEANS: the camera of a tutorial with nobody on the floor stands still while the squad walks on (the point it rides was eased only while a step had a
-/// mark), or jumps. And nobody on the floor is one of the men the line keeps clear of.
+/// A FAILURE MEANS: the line runs through the player, or a man of the squad: all of them are men it keeps clear of.
 #[test]
-fn the_sky_seat_rides_the_squad_as_the_tick_eases_it() {
+fn the_line_keeps_clear_of_the_player_and_the_squad() {
     for seed in SEEDS {
-        let mut p = sky_mission(seed);
-        p.run(1.0);
-        let v = lesson(&p);
-        let f = frame_of(&v);
-        assert_eq!(up(&p), "zoom", "seed {}", seed);
-        let sky = f.sky.expect("the sky seat");
-        let men = p.mates();
-        assert_eq!(f.line_men.len(), men.len(), "seed {}: {:?}", seed, f.line_men);
-        assert!(!f.line_men.contains(&char_id(&p, 0)), "seed {}: nobody on the floor is the player", seed);
-        let c = middle(&p);
-        assert!((sky[0] - c[0]).hypot(sky[2] - c[1]) < 1.5, "seed {}: the view looks at {:?}, the squad's middle is {:?}", seed, sky, c);
-        // (the squad walks with the walk keys down, where nothing else asks where the view looks: it goes with them, a little a tick)
-        put_on(&mut p, "move");
+        let mut p = mission("tut-team", seed, 1);
         p.run(0.5);
-        let from = middle(&p);
-        p.order("move", [11.4, 16.4], Who::All);
-        p.key_down("KeyD");
-        let (mut last, mut most) = (frame_of(&lesson(&p)).sky.unwrap(), 0.0_f64);
-        for _ in 0..(8 * 60) { p.frame(); let s = frame_of(&lesson(&p)).sky.unwrap(); most = most.max((s[0] - last[0]).hypot(s[2] - last[2])); last = s; }
-        p.key_up("KeyD");
-        let (c, off) = (middle(&p), p.g.rails.sky.off);
-        let walked = (c[0] - from[0]).hypot(c[1] - from[1]);
-        assert!(walked > 2.0, "seed {}: the squad walked {} m", seed, walked);
-        assert!((last[0] - off[0] - c[0]).hypot(last[2] - off[2] - c[1]) < 2.0, "seed {}: the view is at {:?} less the hand's {:?}, the squad's middle at {:?}", seed, last, off, c);
-        assert!(most < 0.5, "seed {}: the view jumped {} m in a tick", seed, most);
-        drop(p);
-        // CONTROL: he is on the floor
-        let mut q = mission("tut-team", seed, 1);
-        q.run(0.5);
-        let v = lesson(&q);
-        assert!(frame_of(&v).sky.is_none() && frame_of(&v).line_men.contains(&char_id(&q, 0)), "seed {}: {:?}", seed, frame_of(&v));
+        let (v, men) = (lesson(&p), p.mates());
+        let f = frame_of(&v);
+        assert_eq!(f.line_men.len(), men.len() + 1, "seed {}: {:?}", seed, f.line_men);
+        assert!(f.line_men.contains(&char_id(&p, 0)), "seed {}: {:?}", seed, f.line_men);
     }
 }
 
-/// A FAILURE MEANS: asking what a HUD is told of a lesson changes the game (the sky seat's look used to ease as it was asked). The same run twice, one asked after
+/// A FAILURE MEANS: asking what a HUD is told of a lesson changes the game. The same run twice, one asked after
 /// every frame and one never, equal in every part of the state after every second.
 #[test]
 fn asking_about_a_lesson_writes_nothing() {
-    for name in ["tut-team", "the sky seat"] {
-        for seed in SEEDS {
-            let run = |ask: bool| -> Vec<Vec<u32>> {
-                let mut p = if name == "tut-team" { mission(name, seed, 1) } else { sky_mission(seed) };
-                let mut out = Vec::new();
-                for s in 0..10 {
-                    if s == 2 { p.order("move", [11.4, 16.4], Who::All); }
-                    for _ in 0..60 { p.frame(); if ask { assert!(p.view().lesson.is_some()); } }
-                    out.push(words(&mut p));
-                }
-                out
-            };
-            let (never, always) = (run(false), run(true));
-            for (s, (a, b)) in never.iter().zip(always.iter()).enumerate() {
-                let parts: Vec<usize> = (0..a.len()).filter(|&i| a[i] != b[i]).collect();
-                assert!(parts.is_empty(), "{} seed {}: after {} s the asked game differs in parts {:?}", name, seed, s + 1, parts);
+    for seed in SEEDS {
+        let run = |ask: bool| -> Vec<Vec<u32>> {
+            let mut p = mission("tut-team", seed, 1);
+            let mut out = Vec::new();
+            for s in 0..10 {
+                if s == 2 { p.order("move", [11.4, 16.4], Who::All); }
+                for _ in 0..60 { p.frame(); if ask { assert!(p.view().lesson.is_some()); } }
+                out.push(words(&mut p));
             }
+            out
+        };
+        let (never, always) = (run(false), run(true));
+        for (s, (a, b)) in never.iter().zip(always.iter()).enumerate() {
+            let parts: Vec<usize> = (0..a.len()).filter(|&i| a[i] != b[i]).collect();
+            assert!(parts.is_empty(), "seed {}: after {} s the asked game differs in parts {:?}", seed, s + 1, parts);
         }
     }
 }

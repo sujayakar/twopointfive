@@ -108,7 +108,7 @@ says NOTHING COMPARED and exits 3. Exit: 0 equal to the end and ended the same w
 
 1. The scripted player presses its keys and steps its world (`headless.ts W.step` → `Game.update`); its own lines run, the step is `RustHost.step`.
 2. The light meter, if the lesson's player wrote it. The check's hook (the driver's calls and the host's half held to the reference).
-3. `hostHalf` → `face_host_half`. `face_step`. The check's hook (the die, the block's hashes). `face_view`, `face_follow`. (A flash's envelope is the tick's own last line.)
+3. `hostHalf` → `face_host_half`. `face_step`. The check's hook (the die, the block's hashes). `face_follow`. (A flash's envelope is the tick's own last line.)
 4. `face_puppet(0)` → the filtered apply; the block copied; `asks.after()` (a row or a posture the apply made gets the closures that ask the Rust game).
 5. A whole apply if one is owed. The out events dispatched (`out-dispatch.ts`) on the puppet's host objects, in the order the rules made them.
 6. The dress step: `Verdict.tick` (in a `try`: it is the debrief's; the par clock is the Rust tick's), the autosave (`saves.tick`), whose checkpoint is made on the

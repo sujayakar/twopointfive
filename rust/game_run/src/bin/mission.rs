@@ -208,7 +208,6 @@ fn main() {
                 let b = unsafe { std::slice::from_raw_parts(sim::state::addr(0) as *const u8, len) };
                 std::fs::write(format!("{}/ns{}.bin", dir, k), b).unwrap();
             }
-            if !skip("view") { game_run::view(&mut g); }
             if !skip("follow") { game_run::follow(&mut g); }
             if parted > 0 && k >= parted + after {
                 beats_line(&g);
