@@ -81,6 +81,8 @@ struct Engine<'a> {
     /// functions that are plain readings (fold::pure_fns_of), to a fixed point over the tree as it stood
     pure: HashSet<(String, String)>,
     world: dead::World,
+    /// fold the calls of functions that answer a constant too (`--const-fns`)
+    const_fns: bool,
 }
 
 #[derive(Default)]
@@ -130,6 +132,15 @@ impl<'a> Engine<'a> {
         let whole = start.is_none();
         let mut changed: BTreeSet<usize> = BTreeSet::new();
         let mut work: Vec<usize> = start.unwrap_or_else(|| (0..texts.len()).collect());
+        if self.const_fns {
+            for (i, t) in texts.iter().enumerate() {
+                if let Ok(f) = syn::parse_file(t) {
+                    for (name, fact) in fold::constant_fns(&f) {
+                        out.fns.insert((self.bodies[i].module.clone(), name), fact);
+                    }
+                }
+            }
+        }
         loop {
             for &i in &work {
                 let b = &self.bodies[i];
@@ -680,6 +691,7 @@ fn main() {
     let mut write = false;
     let mut report_to: Option<String> = None;
     let mut settle_file: Option<String> = None;
+    let mut const_fns = false;
     let mut table_to: Option<String> = None;
     let mut knobs_to: Option<String> = None;
     let mut drop_to: Option<String> = None;
@@ -694,6 +706,7 @@ fn main() {
             "--unnamed" => unnamed = true,
             "--report" => report_to = Some(val()),
             "--settle" => settle_file = Some(val()),
+            "--const-fns" => const_fns = true,
             "--table" => table_to = Some(val()),
             "--knobs" => knobs_to = Some(val()),
             "--drop" => drop_to = Some(val()),
@@ -812,7 +825,7 @@ fn main() {
             }
         }
     }
-    let eng = Engine { rows: &rows, bodies: &bodies, modules: bodies.iter().map(|b| b.module.clone()).collect(), stems: bodies.iter().map(|b| b.path.file_stem().and_then(|n| n.to_str()).unwrap_or("").to_string()).collect(), mfns, pure, world: dead::world(&root, &body_paths) };
+    let eng = Engine { rows: &rows, bodies: &bodies, modules: bodies.iter().map(|b| b.module.clone()).collect(), stems: bodies.iter().map(|b| b.path.file_stem().and_then(|n| n.to_str()).unwrap_or("").to_string()).collect(), mfns, pure, world: dead::world(&root, &body_paths) , const_fns };
     let pristine: Vec<String> = bodies.iter().map(|b| b.was.clone()).collect();
     let no_fns: FnTable = HashMap::new();
 
