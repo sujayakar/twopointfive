@@ -59,7 +59,7 @@ export function lookCoreOf(): (b: Box) => number {
   return b => { const w = b.cutCoreStuff ?? b.stuff, stuff = w !== undefined ? lookStuffOf(w) : 0; lookSeen(stuff); return stuff; };
 }
 /** one turn of the event loop (a message, not a timer: a timer in a tab nobody is looking at is held to one a second) */
-function nextTask(): Promise<void> {
+export function nextTask(): Promise<void> {
   return new Promise(res => { if (typeof MessageChannel === 'undefined') { setTimeout(res, 0); return; } const ch = new MessageChannel(); ch.port1.onmessage = () => { ch.port1.close(); res(); }; ch.port2.postMessage(0); });
 }
 /** look.wgsl, behind the tables of lookTex.ts it reads as constants */
