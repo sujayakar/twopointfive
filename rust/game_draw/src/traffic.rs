@@ -14,8 +14,8 @@ use game::scene_scenarios::Rect;
 
 type V3 = [f64; 3];
 const RES: f64 = 8.0;
-const W: usize = 40 * 8;
-const H: usize = 28 * 8;
+/// the map's size, in texels (render/wear.ts: the world's floor at RES a metre)
+fn map_size() -> (usize, usize) { let w = game::scene_world::world(); ((w.grid_w * w.grid_cell * RES) as usize, (w.grid_h * w.grid_cell * RES) as usize) }
 const LANE_SIGMA: f64 = 0.34;
 const DOOR_SIGMA: f64 = 0.55;
 const DOOR_AMP: f64 = 1.4;
@@ -41,29 +41,30 @@ fn mid(r: &Rect) -> V3 { [(r.x0 + r.x1) / 2.0, 0.0, (r.z0 + r.z1) / 2.0] }
 pub struct Traffic { pub words: Vec<Word>, of: Option<alloc::string::String> }
 impl Traffic {
     pub fn take(&mut self, g: &Game) {
-        let name = game::scene_level_load::level_name_of(g);
-        if self.of == name && !self.words.is_empty() { return; }
-        self.of = name;
+        let name = g.m.scene_level_load.level_names.as_deref();
+        if self.of.as_deref() == name && !self.words.is_empty() { return; }
+        self.of = name.map(alloc::string::String::from);
         fill(g, &mut self.words);
     }
 }
 
 /// the rows of the map: a word holds two texels
 fn fill(g: &Game, out: &mut Vec<Word>) {
-    let mut t = vec![0f32; W * H];
+    let (mw, mh) = map_size();
+    let mut t = vec![0f32; mw * mh];
     {
         let mut stamp = |x: f64, z: f64, sigma: f64, amp: f64| {
             let (r, s2) = (sigma * 2.5, 2.0 * sigma * sigma);
             let x0 = m::max(0.0, m::floor((x - r) * RES)) as i64;
-            let x1 = m::min(W as f64 - 1.0, m::ceil((x + r) * RES)) as i64;
+            let x1 = m::min(mw as f64 - 1.0, m::ceil((x + r) * RES)) as i64;
             let z0 = m::max(0.0, m::floor((z - r) * RES)) as i64;
-            let z1 = m::min(H as f64 - 1.0, m::ceil((z + r) * RES)) as i64;
+            let z1 = m::min(mh as f64 - 1.0, m::ceil((z + r) * RES)) as i64;
             for tz in z0..=z1 {
                 let dz = (tz as f64 + 0.5) / RES - z;
                 for tx in x0..=x1 {
                     let dx = (tx as f64 + 0.5) / RES - x;
                     let d2 = dx * dx + dz * dz;
-                    if d2 <= r * r { let i = tz as usize * W + tx as usize; t[i] += (amp * m::exp(-d2 / s2)) as f32; }
+                    if d2 <= r * r { let i = tz as usize * mw + tx as usize; t[i] += (amp * m::exp(-d2 / s2)) as f32; }
                 }
             }
         };
@@ -86,8 +87,8 @@ fn fill(g: &Game, out: &mut Vec<Word>) {
     let band = band_by_faces(&boxes);
     let byte = |v: f64| m::min(255.0, m::max(0.0, m::round(v * 255.0))) as u32;
     out.clear();
-    out.resize(W * H / 2, Word::ZERO);
-    for i in 0..W * H {
+    out.resize(mw * mh / 2, Word::ZERO);
+    for i in 0..mw * mh {
         let traffic = 1.0 - m::exp(-TRAFFIC_K * t[i] as f64);
         let two = byte(traffic) | byte(band[i]) << 8;
         out[i / 2].w |= two << (i % 2 * 16);
@@ -221,7 +222,8 @@ fn face_runs(boxes: &[&Box]) -> Vec<f32> {
 
 /// THE BAND: each standing box lays its own, exact from its own rectangle, × how long the face is that the texel is nearest to; a texel keeps the most any box gives it
 fn band_by_faces(boxes: &[&Box]) -> Vec<f64> {
-    let mut prox = vec![0f64; W * H];
+    let (mw, mh) = map_size();
+    let mut prox = vec![0f64; mw * mh];
     let run = face_runs(boxes);
     let (half, pad) = (0.5 / RES, GRIME_REACH + 0.5 / RES);
     let weigh = |v: f32| { let t = m::min(1.0, m::max(0.0, (v as f64 - RUN_LO) / (RUN_HI - RUN_LO))); t * t * (3.0 - 2.0 * t) };
@@ -232,9 +234,9 @@ fn band_by_faces(boxes: &[&Box]) -> Vec<f64> {
         let (c, s) = (m::cos(b.yaw), m::sin(b.yaw));
         let (ex, ez) = (m::abs(c) * b.h[0] + m::abs(s) * b.h[2] + pad, m::abs(s) * b.h[0] + m::abs(c) * b.h[2] + pad);
         let x0 = m::max(0.0, m::floor((b.c[0] - ex) * RES)) as i64;
-        let x1 = m::min(W as f64 - 1.0, m::ceil((b.c[0] + ex) * RES)) as i64;
+        let x1 = m::min(mw as f64 - 1.0, m::ceil((b.c[0] + ex) * RES)) as i64;
         let z0 = m::max(0.0, m::floor((b.c[2] - ez) * RES)) as i64;
-        let z1 = m::min(H as f64 - 1.0, m::ceil((b.c[2] + ez) * RES)) as i64;
+        let z1 = m::min(mh as f64 - 1.0, m::ceil((b.c[2] + ez) * RES)) as i64;
         for tz in z0..=z1 {
             let pz = (tz as f64 + 0.5) / RES - b.c[2];
             for tx in x0..=x1 {
@@ -243,7 +245,7 @@ fn band_by_faces(boxes: &[&Box]) -> Vec<f64> {
                 let (dx, dz) = (m::abs(lx) - b.h[0], m::abs(lz) - b.h[2]);
                 let face = if dx >= dz { if lx >= 0.0 { 0 } else { 1 } } else if lz >= 0.0 { 2 } else { 3 };
                 let v = k[face] * m::max(0.0, 1.0 - m::max(0.0, m::hyp2(m::max(dx, 0.0), m::max(dz, 0.0)) - half) / GRIME_REACH);
-                let i = tz as usize * W + tx as usize;
+                let i = tz as usize * mw + tx as usize;
                 if v > prox[i] { prox[i] = v; }
             }
         }
