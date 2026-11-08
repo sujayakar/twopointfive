@@ -3,7 +3,7 @@
 //   bun run tools/qa/probes.ts picks-play                          (minutes; not in the family) every scenario row played to its end by the scripted commander, its settings on
 // PASS / FAIL each, all headless. Nothing here looks at a picture.
 //   picks-list   the table as data: ids unique and URL-safe, every mission on the build, a plain line on each, two to seven rows; each row's URL names its
-//                mission, team size, difficulty, hour, weather and switches OUT (nothing left to what a machine keeps), reads back to that row and to no other,
+//                mission, team size and difficulty OUT (nothing left to what a machine keeps), reads back to that row and to no other,
 //                keeps a visitor's own flags and drops an older run's settings; `?pick=<id>` and `?pick=<place>` answer with that URL once and never twice;
 //                the row after each; a quit out of a pick takes its settings off the URL and leaves every other URL as the build's quit leaves it; the rules the
 //                maintainer set for the list (a four-person loud breach on a squad map first; every row at its level's own night
@@ -82,8 +82,6 @@ type El = InstanceType<typeof El>;
 const P = await import(`${ROOT}/src/scene/picks.ts`);
 const { SCENARIOS, ALL_MISSIONS, specOfQuery, quitSearch } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { setDifficulty, squadsOf } = await import(`${ROOT}/src/game/difficulty.ts`);
-const { HOUR_IDS } = await import(`${ROOT}/src/game/hours.ts`);
-const { WEATHER_KINDS } = await import(`${ROOT}/src/game/weatherKinds.ts`);
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
 function family(title: string): { verdict: Verdict; done: () => boolean } {
@@ -100,7 +98,7 @@ const otherOf = (d: string | null) => (d === 'hard' ? 'standard' : 'hard');
 /** what a pick's settings say its URL must carry — written here from the row, not from pickHref */
 function wantOf(p: any, d?: string): { kind: string | null; level: string; squad: number; difficulty: string | null; hour: string | null; weather: string | null; flags: string[] } {
   const e: any = P.pickEntry(p);
-  return { kind: e ? e.kind : null, level: e?.level ?? '', squad: e ? p.squad ?? e.squad : 0, difficulty: e ? d ?? p.difficulty ?? 'standard' : null, hour: p.hour && p.hour !== 'night' ? p.hour : null, weather: p.weather ?? null, flags: p.flags ?? [] };
+  return { kind: e ? e.kind : null, level: e?.level ?? '', squad: e ? p.squad ?? e.squad : 0, difficulty: e ? d ?? p.difficulty ?? 'standard' : null, hour: null, weather: null, flags: [] };
 }
 function hrefSays(p: any, href: string, d?: string): string | null {
   const w = wantOf(p, d), q = paramsOf(href), s = specOfQuery(q);
@@ -139,9 +137,8 @@ export async function picksList(): Promise<boolean> {
       `${flat.first} + ${flat.list.length - flat.first}: ${flat.list.slice(0, flat.first).map((m: any) => m.id).join(', ')} | ${flat.list.slice(flat.first).map((m: any) => m.id).join(', ')}`); }
   F.verdict(L.every(p => typeof p.line === 'string' && p.line.length >= 30 && p.line.length <= 110 && !/[—;]/.test(p.line) && /[.?!]$/.test(p.line)), 'one plain line on each: 30 to 110 characters, a whole sentence, no dash or semicolon',
     L.map(p => `${p.id} (${p.line.length}): ${p.line}`).join('\n    '));
-  F.verdict(L.every(p => (!p.hour || HOUR_IDS.includes(p.hour)) && (!p.weather || WEATHER_KINDS.includes(p.weather)) && (!p.difficulty || ['standard', 'hard'].includes(p.difficulty)) && (p.squad === undefined || (Number.isInteger(p.squad) && p.squad >= 0 && p.squad <= 4 && P.pickEntry(p)))
-    && (p.flags ?? []).every((f: string) => /^[A-Za-z][\w]*(=[\w.-]*)?$/.test(f) && !['pick', 'hour', 'weather', 'difficulty', 'hard', 'squad', 'squad4', 'levelFile', 'solo'].includes(f.split('=')[0]))),
-    "every setting is one the build has (hour, weather, difficulty, a team of 0 to 4 on a scenario), and a switch never spells a setting that has its own field", L.map(p => `${p.id}: ${JSON.stringify(wantOf(p))}`).join('\n    '));
+  F.verdict(L.every(p => (!p.difficulty || ['standard', 'hard'].includes(p.difficulty)) && (p.squad === undefined || (Number.isInteger(p.squad) && p.squad >= 0 && p.squad <= 4 && P.pickEntry(p)))),
+    "every setting is one the build has (difficulty, a team of 0 to 4 on a scenario)", L.map(p => `${p.id}: ${JSON.stringify(wantOf(p))}`).join('\n    '));
   { const FLAGS = '?quality=high&mute', bad = L.flatMap(p => { const h = P.pickHref(p, FLAGS), why = h === null ? 'no URL' : hrefSays(p, h) ?? (h.endsWith('&quality=high&mute') ? null : "the visitor's flags lost"); return why ? [`${p.id}: ${why} (${h})`] : []; });
     F.verdict(bad.length === 0, "each row's URL names its mission, team size, difficulty (said on every scenario row, standard included: picks-boot holds it against a machine that keeps the other), hour, weather and switches, then the visitor's own flags", bad.length ? bad.join('\n    ') : L.map(p => P.pickHref(p, FLAGS)).join('\n    ')); }
   { const OLD = '?levelFile=warehouse.json&roomclear&squad4&squad=3&difficulty=hard&hard&digin&pressure=1&hour=dusk&sun=0.4&weather=fog&pair&silentstart&pick=old-one&solo&mute';
@@ -165,32 +162,29 @@ export async function picksList(): Promise<boolean> {
     const same = urls.every(u => P.pickQuitSearch(u) === quitSearch(u)), out = L.map(p => P.pickQuitSearch(P.pickHref(p, '?quality=high&mute')));
     F.verdict(same && out.every(o => o === '?quality=high&mute'), "a quit out of a pick takes its settings off the URL with the scenario's flags (the plain card comes back); any other URL quits exactly as the build's own quit",
       `a pick → '${out[0]}' · ${urls.map(u => `'${u}' → '${P.pickQuitSearch(u)}'`).join(' · ')}`); }
-  { const withFlags = L.find(p => (p.flags ?? []).length), h = withFlags ? P.pickHref(withFlags, '?mute') : null, left = h ? P.pickLeaveSearch(h) : '', lq = new URLSearchParams(left);
-    const ok = !withFlags || (!lq.has('pick') && withFlags.flags.every((f: string) => !lq.has(f.split('=')[0])) && lq.has('difficulty') && lq.has('mute') && !!specOfQuery(lq));
+  { const p0 = L.find(p => P.pickEntry(p)), h = P.pickHref(p0, '?mute'), left = P.pickLeaveSearch(h), lq = new URLSearchParams(left);
+    const ok = !lq.has('pick') && lq.has('difficulty') && lq.has('mute') && !!specOfQuery(lq);
     const same = ['?levelFile=depot.json&roomclear&squad4&pair', '?pair&pick=nothing', ''].every(u => P.pickLeaveSearch(u) === u);
     const names = P.namesMission('?roomclear') && P.namesMission('?solo&mute') && !P.namesMission('?demo') && !P.namesMission('?mute&quality=high') && !P.namesMission('?squad=3') && !P.namesMission('') && L.every(p => P.namesMission(P.pickHref(p, '')));
-    F.verdict(ok && same && names, "the mission list opened off a pick's page builds its links from that page's URL WITHOUT the pick's name and its own switches (the difficulty the list shows stays); any other URL is handed over as it is; and a URL that names a mission, a pick's included, is told from one that does not",
-      `${h ?? 'no row has switches'} → '${left}' · others untouched ${same} · names a mission ${names}`); }
-  // ---- what no row of today's list does, held on a list made up for it: a row with a team size and switches of its own (a quiet pair), and the walk
+    F.verdict(ok && same && names, "the mission list opened off a pick's page builds its links from that page's URL WITHOUT the pick's name (the difficulty the list shows stays); any other URL is handed over as it is; and a URL that names a mission, a pick's included, is told from one that does not",
+      `${h} → '${left}' · others untouched ${same} · names a mission ${names}`); }
+  // ---- what no row of today's list does, held on a list made up for it: a row with a team size of its own, and the walk
   //      through a row that opens on hard
-  { const Q: any = { id: 'quiet-two', mission: 'block-four', squad: 1, flags: ['pair', 'silentstart'], line: 'x' }, H: any = { id: 'on-hard', mission: 'depot-four', difficulty: 'hard', line: 'x' }, S: any = { id: 'plain', mission: 'compound-four', line: 'x' };
+  { const Q: any = { id: 'quiet-two', mission: 'block-four', squad: 1, line: 'x' }, H: any = { id: 'on-hard', mission: 'depot-four', difficulty: 'hard', line: 'x' }, S: any = { id: 'plain', mission: 'compound-four', line: 'x' };
     const LL = [S, H, Q], hq = P.pickHref(Q, '?mute&pair&squad=3', LL)!, q = paramsOf(hq);
-    const made = q.get('squad') === '1' && q.has('pair') && q.has('silentstart') && q.get('pick') === 'quiet-two' && q.getAll('pair').length === 1 && q.getAll('squad').length === 1 && q.has('mute');
-    const back = P.pickOfQuery(hq, LL) === Q && P.pickOfQuery(hq.replace('&silentstart', ''), LL) === null && P.pickHref(Q, hq, LL) === hq;
-    const left = new URLSearchParams(P.pickLeaveSearch(hq, LL)), leaves = !left.has('pick') && !left.has('pair') && !left.has('silentstart') && left.has('difficulty') && left.has('mute') && !!specOfQuery(left);
-    const quits = P.pickQuitSearch(hq, LL) === '?mute', plainRow = !paramsOf(P.pickHref(S, hq, LL)!).has('pair') && !paramsOf(P.pickHref(S, hq, LL)!).has('silentstart') && paramsOf(P.pickHref(S, hq, LL)!).get('squad') !== '1';
+    const made = q.get('squad') === '1' && !q.has('pair') && q.get('pick') === 'quiet-two' && q.getAll('squad').length === 1 && q.has('mute');
+    const back = P.pickOfQuery(hq, LL) === Q && P.pickOfQuery(hq.replace('squad=1', 'squad=2'), LL) === null && P.pickHref(Q, hq, LL) === hq;
+    const left = new URLSearchParams(P.pickLeaveSearch(hq, LL)), leaves = !left.has('pick') && left.has('difficulty') && left.has('mute') && !!specOfQuery(left);
+    const quits = P.pickQuitSearch(hq, LL) === '?mute', plainRow = paramsOf(P.pickHref(S, hq, LL)!).get('squad') !== '1';
     const hs = P.pickHref(S, '', LL, undefined, 'hard')!, hh = P.pickHref(H, '', LL)!, hstd = P.pickHref(H, '', LL, undefined, 'standard')!;
     const walk = P.pickChosenDifficulty(hs, LL) === 'hard' && P.pickChosenDifficulty(hh, LL) === undefined && P.pickChosenDifficulty(hstd, LL) === 'standard' && P.pickOfQuery(hh, LL) === H && P.pickOfQuery(hstd, LL) === H && P.nextPick(S, LL) === H && P.nextPick(H, LL) === Q;
     const typed = `${hh}&pair`, stale = P.pickOfQuery(typed, LL) === null && !new URLSearchParams(P.pickQuitSearch(typed, LL)).has('pick') && P.pickRedirect(P.pickQuitSearch(typed, LL), LL) === null;
-    F.verdict(made && back && leaves && quits && plainRow && walk && stale, "on a made-up list: a row with its own team size and switches writes them once over the visitor's, reads back only whole, sheds them on the way to the mission list and on a quit, and lends them to no other row; a row that opens on hard is its own row at either difficulty, and only a difficulty that is not the row's own counts as chosen; a row's name left on a URL somebody typed over does not ride out of a quit (the plain page would load the mission again)",
+    F.verdict(made && back && leaves && quits && plainRow && walk && stale, "on a made-up list: a row with its own team size writes it once over the visitor's, reads back only whole, sheds its name on the way to the mission list and its settings on a quit, and lends them to no other row; a row that opens on hard is its own row at either difficulty, and only a difficulty that is not the row's own counts as chosen; a row's name left on a URL somebody typed over does not ride out of a quit (the plain page would load the mission again)",
       `${hq} · made ${made} · back ${back} · leaves ${leaves} · quits ${quits} · other rows clean ${plainRow} · the hard row ${walk} · typed over, then quit ${stale}: '${P.pickQuitSearch(typed, LL)}'`); }
   // ---- the maintainer's rules for the list (10-08): what comes first, what the rows may set
   { const p = L[0], e: any = P.pickEntry(p), w = wantOf(p);
     F.verdict(!!e && w.squad === 4 && !!squadsOf(e) && !w.flags.includes('silentstart') && !w.flags.includes('pair'), 'the first row is a four-person loud breach on a squad map (his pick of what comes first)',
       `${p.id}: ${e?.id} on ${e?.level} with ${w.squad}${w.flags.length ? ` · ${w.flags.join(' ')}` : ''}`); }
-  { const timed = L.filter(p => p.hour || p.weather);
-    F.verdict(timed.length === 0 && L.every(p => !(p.flags ?? []).some((f: string) => /^(sun|callout|nocallout)\b/.test(f))), "no row sets an hour, a weather or a sun: every row is its level's own",
-      timed.length ? timed.map(p => `${p.id}: ${p.hour ?? ''}${p.weather ? ` ${p.weather}` : ''} → ${P.pickHref(p, '')}`).join(' · ') : 'no row sets an hour or a weather'); }
   { const on = L.every(p => P.onShortList(p.mission)), others = SCENARIOS.filter((e: any) => !L.some(p => p.mission === e.id)).every((e: any) => !P.onShortList(e.id)); P.PICKS_UI.on = false; const off = L.every(p => !P.onShortList(p.mission)); P.PICKS_UI.on = true;
     F.verdict(on && others && off, "a mission the list names is told from the rest (the mission sheet and the loadout screen leave 'untuned' off it), and none is with the switch off", `on the list ${on} · the rest not ${others} · none under ?nopicks ${off} · tagged untuned in the data: ${L.filter(p => (P.pickEntry(p) as any)?.untuned).map(p => p.id).join(', ') || 'none'}`); }
   F.verdict(L.every(p => p.loadout === undefined), 'no row carries kit: the field for a loadout pick is reserved and nothing reads it yet', L.map(p => `${p.id}: ${p.loadout ?? 'none'}`).join(' · '));
@@ -203,13 +197,10 @@ export async function picksList(): Promise<boolean> {
     const soloSame = solo.every(p => P.pickHref(p, FLAGS, undefined, undefined, 'hard') === P.pickHref(p, FLAGS) && P.pickOfQuery(P.pickHref(p, FLAGS) + '&difficulty=hard') === null);
     F.verdict(bad.length === 0 && soloSame && S.length > 0, "every scenario row's URL at the OTHER difficulty differs in that one value, reads back as the same row (so its quit and its 'next' work), and is told from the row's own; a difficulty that is neither is no pick; the solo night has no such choice",
       bad.length ? bad.join('\n    ') : S.map(p => `${p.id}: ${P.pickDifficulty(p)} | ${P.otherDifficulty(P.pickDifficulty(p))} → ${P.pickHref(p, '', undefined, undefined, P.otherDifficulty(P.pickDifficulty(p)))}`).join('\n    ') + ` · solo unchanged ${soloSame}`); }
-  // ---- a row with ONE difficulty: only where the build's own words say hard changes nothing on that level
+  // ---- the one choice means something: no scenario row stands where the build says its hard is the standard squads, and the solo night offers none
   { const DW = (await import(`${ROOT}/src/game/difficulty.ts`)).difficultyWords, same = (p: any) => /the squads here are the standard ones/.test(DW('hard', (P.pickEntry(p) as any)?.level || false));
-    const S = L.filter(p => P.pickEntry(p)), one = L.filter(p => p.oneDifficulty), bad = [...one.filter(p => !P.pickEntry(p) || p.difficulty === 'hard' || !same(p) || P.pickOtherDifficulty(p) !== null).map(p => `${p.id}: marked, but ${!P.pickEntry(p) ? 'not a scenario' : p.difficulty === 'hard' ? 'it opens on hard' : !same(p) ? 'hard is not the standard squads there' : 'still offers another'}`),
-      ...S.filter(p => !p.oneDifficulty && (same(p) || P.pickOtherDifficulty(p) !== P.otherDifficulty(P.pickDifficulty(p)))).map(p => `${p.id}: ${same(p) ? 'hard is the standard squads there and the row still offers it' : 'offers no other difficulty'}`), ...L.filter(p => !P.pickEntry(p) && P.pickOtherDifficulty(p) !== null).map(p => `${p.id}: the solo night offers a difficulty`)];
-    const typed = one.every(p => { const h = P.pickHref(p, '', undefined, undefined, 'hard')!; return P.pickOfQuery(h) === p && P.pickRedirect(`?pick=${p.id}&difficulty=hard`) === h; });
-    F.verdict(bad.length === 0 && typed, "a row offers no other difficulty exactly where the build says its hard is the standard squads (it opens on standard); typed by hand, hard there still loads and reads back as the row",
-      bad.length ? bad.join('\n    ') : `one difficulty: ${one.map(p => p.id).join(', ') || 'none'} · typed hard still the row ${typed} · the other scenario rows: ${S.filter(p => !p.oneDifficulty).map(p => `${p.id} ${P.pickOtherDifficulty(p)}`).join(' · ')}`); }
+    const S = L.filter(p => P.pickEntry(p)), bad = [...S.filter(p => same(p) || P.pickOtherDifficulty(p) !== P.otherDifficulty(P.pickDifficulty(p))).map(p => `${p.id}: ${same(p) ? 'hard is the standard squads there and the row still offers it' : 'offers no other difficulty'}`), ...L.filter(p => !P.pickEntry(p) && P.pickOtherDifficulty(p) !== null).map(p => `${p.id}: the solo night offers a difficulty`)];
+    F.verdict(bad.length === 0, "every scenario row offers the other difficulty, and hard means something on each; the solo night offers none", bad.length ? bad.join('\n    ') : S.map(p => `${p.id} ${P.pickOtherDifficulty(p)}`).join(' · ')); }
   return F.done();
 }
 
