@@ -357,8 +357,8 @@ export const pairupGrip = guarded(async () => {
     R.O.give('pairMark', R.foe(T1), 'all'); const ready = R.until(() => !!R.P.jobOf(m)?.set, 30) && R.P.mark('api') && R.until(() => (R.P.jobOf(m)?.t0 ?? -1) >= 0, 5);
     let frames = 0, gripped = 0, seen = 0, cutAt = -1, after = 0, afterGrip = 0, afterSeen = 0;
     R.post = () => { if (T1.state === 'dead') return;
-      if (cutAt >= 0) { after++; if (PM.pairGripped(g, T1)) afterGrip++; if (GDM.bodySeen(g, T1, T2)) afterSeen++; return; }   // (the hands came off: he is no longer blind to it)
-      if (cut && frames >= 5) { cutAt = R.frames; killGuard(g, m, [1, 0, 0], false, 'shot', 'guard'); return; }
+      if (cutAt >= 0) { R.turn(T1, yawTo(T1.char.pos, T2.char.bones?.hips ?? T2.char.pos)); after++; if (PM.pairGripped(g, T1)) afterGrip++; if (GDM.bodySeen(g, T1, T2)) afterSeen++; return; }   // (the hands came off: he is no longer blind to it, and still turned to it)
+      if (cut && frames >= 25) { cutAt = R.frames; killGuard(g, m, [1, 0, 0], false, 'shot', 'guard'); return; }   // (25: his head, which follows his body in about 20 frames, has come round by then)
       R.turn(T1, yawTo(T1.char.pos, m.char.pos)); frames++; if (PM.pairGripped(g, T1)) gripped++; if (GDM.bodySeen(g, T1, T2)) seen++; };
     R.turn(T1, yawTo(T1.char.pos, m.char.pos)); const down = R.until(() => T1.state === 'dead', cut ? 1 : 5); R.post = null;
     return { ok: ready && (down || cut), down, before, frames, gripped, seen, after, afterGrip, afterSeen, dist: flat(T1.char.pos, T2.char.bones?.hips ?? T2.char.pos), kind: T2.state as string };
@@ -368,7 +368,7 @@ export const pairupGrip = guarded(async () => {
   verdict(c.ok && !c.before && c.frames > 20 && c.gripped === c.frames && c.seen === 0, 'PAIR.gripBody: turned round onto a colleague\'s body with the hands on him, he finds none (the line below has him find it the frame the hands are off)', wb(c));
   // (the grip is the JOB's: it holds while the partner's job on the man stands, at most PAIR.secs + 0.5 s from the hands going on — and ends with the job)
   const e = await body(true);
-  verdict(e.ok && !e.down && e.frames >= 5 && e.seen === 0 && e.after > 20 && e.afterGrip === 0 && e.afterSeen === e.after, 'the partner shot with his hands on the man: the hold on the body ends with the hands — from the next frame he has it', `hands on ${e.frames} frames (bodySeen on ${e.seen}), then the partner shot: ${e.after} frames on, gripped ${e.afterGrip}, bodySeen on ${e.afterSeen}`);
+  verdict(e.ok && !e.down && e.frames >= 25 && e.seen === 0 && e.after > 20 && e.afterGrip === 0 && e.afterSeen === e.after, 'the partner shot with his hands on the man: the hold on the body ends with the hands — from the next frame he has it', `hands on ${e.frames} frames (bodySeen on ${e.seen}), then the partner shot: ${e.after} frames on, gripped ${e.afterGrip}, bodySeen on ${e.afterSeen}`);
   return done();
 });
 

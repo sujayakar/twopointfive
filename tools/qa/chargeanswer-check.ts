@@ -50,6 +50,8 @@ async function run(scn: string, door: string, how: How, pre: 'open' | 'empty' | 
   if (pre === 'open') { put(d, true); F.on = false; }   // (nothing hidden: the picture is the floor as it stands, and has the leaf open)
   if (pre === 'empty') { D.sync(); D.charges = 0; }
   await quiet(() => S.step(30));
+  // (a refusal's question is whether HE moves on it: the men are let finish the walk they are on from the deal first)
+  if (pre) for (let i = 0; i < 40; i++) { const was = team.map(m => [m.char.pos[0], 0, m.char.pos[2]]); await quiet(() => S.step(30)); if (Math.max(...team.map((m, k) => flat(m.char.pos, was[k]))) < 0.02) break; }
   const at0 = team.map(m => [m.char.pos[0], 0, m.char.pos[2]]), n0 = spoke.length;
   R.given = await quiet(() => O.give('charge', target(d), 'all')) as string | null;
   if (pre) { await quiet(() => S.step(120)); R.moved = Math.max(...team.map((m, i) => flat(m.char.pos, at0[i]))); R.said = spoke.slice(n0).filter(x => team.includes(x.who)).map(x => `${x.who.callsign}: ${x.text}`); R.ended = D.ops.some((o: any) => o.kind === 'charge') ? 'an order in the book' : 'no order'; return R; }
