@@ -29,8 +29,7 @@
 //   · HE AND THE FOUR START inside the track gate by their truck, behind blocks no door and no gate of the post has a line to.
 //
 //   bun run tools/levels/export.ts tut-queue [--check]     → levels/tut-queue.json
-//   bun run tools/qa/lesson-check.ts tut-queue              the lesson block against the built floor
-//   bun run tools/qa/lesson-run.ts tut-queue                the scripted player through every step
+//   bun run tools/qa/pages.ts tut-queue-page                      the page with real keys through every step
 //   page: ?levelFile=tut-queue.json&roomclear=1&squad4
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from '../../src/scene/level';

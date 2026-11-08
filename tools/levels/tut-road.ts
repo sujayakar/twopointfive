@@ -26,8 +26,7 @@
 //   z 21    the drop: a berm, pines below     (the tanker's cab is through the rail, burning)
 //
 //   bun run tools/levels/export.ts tut-road [--check]      → levels/tut-road.json
-//   bun run tools/qa/lesson-check.ts tut-road              the lesson block against the built floor
-//   bun run tools/qa/lesson-run.ts tut-road                the scripted player through every step to the debrief
+//   bun run tools/qa/pages.ts tut-road-page                      the page with real keys through every step to the debrief
 //   bun run tools/qa/tut-road-check.ts                     the lesson played as said, and failed the two ways its lines warn of
 //   page: ?levelFile=tut-road.json&quiet
 import type { Vec3 } from '../../src/math/vec';

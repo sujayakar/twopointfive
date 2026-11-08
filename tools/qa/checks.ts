@@ -29,8 +29,6 @@ const ROWS: readonly Row[] = [
 const BY_HAND: Readonly<Record<string, string>> = {
   'cloud-check.ts': 'the backend\'s packages', 'lobby-check.ts': 'the backend\'s packages', 'mp-control-check.ts': 'the backend\'s packages', 'mpserver-check.ts': 'three processes, minutes', 'teams-check.ts': 'co-op\'s',
   'knobs-check.ts': 'the gate',
-  'lesson-check.ts': 'the level skill',
-  'samestart-check.ts': 'the level skill',
   'stuff-check.ts': 'the level files: lines red before 2026-11-08', 'zfight-check.ts': 'the level skill',
 };
 

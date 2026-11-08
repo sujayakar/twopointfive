@@ -49,7 +49,7 @@ did not.
   (`row`), sixteen skinned characters the engine's.
 - **Curated, not shuffled.** The first of every list in the generator is what every try gets: each room's first `garrison`
   marks in file order, `starts[0]`, `spots[0]`, `patrols[0]`. Give more marks than men so another deal exists, but place the
-  first by hand. **check** `bun run tools/qa/samestart-check.ts <row>`.
+  first by hand. **check** nothing asks this on two dice now; the gate's `start <row>` pins one start at one seed.
 
 ## 2. The file
 
@@ -197,8 +197,8 @@ the player for game play", and of the look he wants: "it's all quite intentional
 level that already has its rooms, and moves nobody's fight. The office was the first (`docs/agents/levels.md`, "the office is hand-finished").
 
 - **Read the level first, and tie every item to the read.** Three sources, all headless: the level's marks and routes (`map-plan.ts <mission>
-  --png`), where its ways run (`src/scene/ways.ts`), and six seeds of each mission traced on the page's stand with everybody's place twice a
-  second (`TPS_PROFILE=shipped PT_WHERE=0-600 PT_FOES=<their call signs> bun run tools/qa/playthrough.ts --trace <mission>:<seed>`). Count
+  --png`), where its ways run (`src/scene/ways.ts`), and where men fall on six seeds of each mission (the tool that traced this went with the TypeScript copy, so a short native run of your own: a test in
+  `rust/game_start/tests` stands the mission, gives its orders and prints `p.roll()`). Count
   where men fall. **seen** on the office thirteen of thirty-one fell at one side door that nothing in the picture said was there.
 - **Worn paths are data.** `scenarios.walked` rows between names (a door, a route, a room, a named mark), each with a weight beside one lap of a
   patrol. Use a name that is one thing: **seen** `storage` was a door and a room, so the row took the door; a mark inside the room says which.
@@ -334,7 +334,7 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
 - **A door is named for its room, never by compass**: an id is said and shown. **seen** `n1 s4 mid` became
   `tyres bunks radio`. Same check.
 - **It ends.** **seen** "the two loud tutorial missions don't have termination conditions". **check**
-  `bun run tools/qa/missions-gate.ts` (every row, two seeds, ends as shipped).
+  `cd rust/game_start && cargo run --release --bin missions -- <LEVEL>` plays the room clears 75 s a seed and says when the floor was clear; nothing plays a quiet mission or a rescue to its end, so play it.
 - **On a rescue the way in is the way out, as the game is now**: a rescue is won when every living hostage has been led
   to within 3.5 m of the mark the team starts on (`scenarios.rescue.team.sam`), or when the floor is cleared; holding the
   hostage room no longer ends it. So the start wants room for the team and the hostages to stand, and a way back from
@@ -357,8 +357,7 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
   guard a man with a job; `wired: true` only where the holder really is on an alarm (**seen** "predictably getting a guard
   to come by when you pull the objective is a bit contrived"); a dark way exists and the short way crosses light; no deal
   is a walk and none is shut, over all deals; a long stand faces the right way on lap one. For a pair, the second man has
-  a job the numbers show. **check** `levels stands <name>`, `quiet-light.ts <name>`, `takecheck-check.ts`,
-  `TPS_PROFILE=shipped bun run tools/qa/solo-night.ts --level <name>.json --quiet`.
+  a job the numbers show. **check** `levels stands <name>`, `quiet-light.ts <name>`, `takecheck-check.ts`. Nothing plays a quiet night to its end: play it.
 - **A snatch**: the `snatch` block over the level's room clear (`docs/level-format.md`): the man and the marks he keeps
   to; at least two `exits` he runs for once it is loud, his nearest by walking first, so one can be covered while the
   team goes in by another; and `van`, the team's own vehicle by its way in, `pos` the spot at its open doors. As the
@@ -369,7 +368,7 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
 - **A lesson**: a line is one short sentence that names the key and what to do, written by the guide in CLAUDE.md ("Writing for
   the player": the way you'd say it aloud), in 96 characters, no compass word; a step never passes by itself and
   never becomes impossible; a line arrives with its prompt, inside reach; checked at a reader's pace on the shipped stand.
-  **check** `bun run tools/qa/lesson-gate.ts <name>`.
+  **check** `bun run tools/levels/export.ts <name> --check`, `level-lint`, `rust/game_start/tests/lesson_view.rs` (every line written out, no knife), and `bun run tools/qa/pages.ts <name>-page` (the real page with real keys).
 - **A place a line asks the player to click has room round it.** A hand lands a metre or more off the mark, and a move's places are the squad's own (a few
   steps round the click, a wall at the back). So for a metre and a half round the mark: no corner a man can be put behind with no line the way he is told to
   face, and no door within 2.5 m to its south (the door's picture stands over that ground and takes the click). **seen** a click 1.25 m off a post's mark: the
@@ -438,8 +437,8 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
 - **Seeds mean what they mean**: 3 says a row reaches an end, 24 that it runs and ends, 48 is a first look, 144 paired is
   a count. A dozen scatters by a third. The scripted commander never fires and cannot be hurt.
 - **A mission works only if measured**: it ends on 24 seeds as shipped; the idea matters (the same seeds using it and
-  ignoring it); fair at Standard; off = the build as it was. **check** the native gate's missions over the seeds;
-  `TPS_PROFILE=shipped bun run tools/qa/ships.ts --scn <row> --seeds 1-24`; `plan-fights.ts --scn <row>`.
+  ignoring it); fair at Standard; off = the build as it was. **check** `cargo run --release --bin missions -- --seeds 1-24 <LEVEL>`
+  in `rust/game_start`, and `gate start <row>` / `gate par <row>`.
 - **Some checks name their levels by hand** (a list inside the tool: the hour and weather probes, the blast and door
   probes, the squad deal). A new level is in none of them until added: `grep -ln "depot" tools/qa/*.ts` shows which.
 - **One stand, every check, once.** A tool with no word in front stands the game as the page opens it (`TPS_PROFILE=shipped`

@@ -20,8 +20,7 @@
 //   z 23            └──────────┴───────────────┴─  wash yard ▒ ▒   ▮──┘
 //
 //   bun run tools/levels/export.ts tut-kit [--check]      → levels/tut-kit.json
-//   bun run tools/qa/lesson-check.ts tut-kit              the lesson block against the built floor
-//   bun run tools/qa/lesson-run.ts tut-kit                the scripted player through every step to the debrief
+//   bun run tools/qa/pages.ts tut-kit-page                      the page with real keys through every step
 //   page: ?levelFile=tut-kit.json&roomclear=1&squad4&hour=night
 import type { Vec3 } from '../../src/math/vec';
 import { glowShape } from '../../src/scene/carShapes';
