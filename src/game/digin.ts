@@ -190,7 +190,7 @@ interface Def {
 interface Fight { g: Game; defs: Def[]; ops: { gd: Guard }[]; inRoom(R: Room | null, p: Vec3): boolean; freeNear(p: Vec3): Vec3 | null; note(gd: Guard | null, what: string): void }
 
 type Phase = 'idle' | 'think' | 'toRoom' | 'toProp' | 'haul' | 'toDoor' | 'shut' | 'wedge' | 'toCover' | 'set';
-interface Man { far: boolean; owe: number; haulBy: number; deep: boolean; look: Vec3 | null; triedDeep: boolean; gathered: boolean; gatherTo: Room | null; dugOnce: boolean; /** laststand.ts told him to (it says its own lines) */ ordered: boolean; phase: Phase; until: number; know: Vec3; knowT: number; room: Room | null; entry: number; brace: number; prop: Prop | null; stand: Vec3; rest: Vec3; scrapeT: number; setAt: number; spot: Vec3 | null; kept: boolean }
+interface Man { far: boolean; owe: number; haulBy: number; deep: boolean; look: Vec3 | null; triedDeep: boolean; gathered: boolean; gatherTo: Room | null; dugOnce: boolean; /** he was told to, and whoever told him said the lines */ ordered: boolean; phase: Phase; until: number; know: Vec3; knowT: number; room: Room | null; entry: number; brace: number; prop: Prop | null; stand: Vec3; rest: Vec3; scrapeT: number; setAt: number; spot: Vec3 | null; kept: boolean }
 type Cue = 'radio' | 'shout' | 'scrape' | 'tried' | 'kick';
 interface RoomSt { room: Room; expected: number; second: number; at: number; t0: number; men: Guard[]; bracer: Guard | null; wedged: number; cueAt: number; cues: Set<Cue>; enteredAt: number; readyAt: number; callout: boolean }
 interface St { men: WeakMap<Guard, Man>; rooms: Map<Room, RoomSt>; wedges: Map<Door, { keySide: 1 | -1; lockId: string; kicked: boolean; tried: boolean; byT: number }>; fix: { at: Vec3; t: number; room: Room | null; heard: boolean } | null; called: WeakSet<Guard>; used: Set<Prop>; away: Set<Door>; frameT: number; bangCall: number }
@@ -258,9 +258,9 @@ function watch(F: Fight, st: St) {
 }
 
 
-/** laststand.ts: where his dig-in stands ('idle' = not at it) */
+/** where his dig-in stands ('idle' = not at it) */
 export function digInPhase(g: Game, gd: Guard): string { return states.get(g)?.men.get(gd)?.phase ?? 'idle'; }
-/** laststand.ts: this room's doors that stand wedged (not yet booted) */
+/** this room's doors that stand wedged (not yet booted) */
 export function digInWedged(g: Game, room: unknown): { door: Door; at: Vec3 }[] { return goneWithTick('digInWedged') as any; }
 
 

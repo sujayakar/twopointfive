@@ -74,23 +74,6 @@ impl RenderFrameModMeshBinding {
 }
 impl Default for RenderFrameModMeshBinding { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/frame.ts:275 traceConfig, src/render/frame.ts:275)
-#[derive(Clone, Debug)]
-pub struct RenderFrameModTraceConfig {
-    pub variant: f64,
-    pub common: Option<String>,
-}
-impl RenderFrameModTraceConfig {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RenderFrameModTraceConfig {
-            variant: 0.0,
-            common: None,
-        }
-    }
-}
-impl Default for RenderFrameModTraceConfig { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/render/frame.ts:280 glassBreakConfig, src/render/frame.ts:280)
 #[derive(Clone, Copy, Debug)]
 pub struct RenderFrameModGlassBreakConfig {
@@ -412,8 +395,6 @@ pub struct RenderFrameMod {
     pub reach_binding: crate::render_frame::RenderFrameModReachBinding,
     /// (src/render/frame.ts:269 meshBinding)
     pub mesh_binding: crate::render_frame::RenderFrameModMeshBinding,
-    /// (src/render/frame.ts:275 traceConfig)
-    pub trace_config: crate::render_frame::RenderFrameModTraceConfig,
     /// (src/render/frame.ts:280 glassBreakConfig)
     pub glass_break_config: crate::render_frame::RenderFrameModGlassBreakConfig,
     /// (src/render/frame.ts:284 weatherKindConfig)
@@ -452,7 +433,6 @@ impl RenderFrameMod {
         RenderFrameMod {
             reach_binding: crate::render_frame::RenderFrameModReachBinding { storage: true },
             mesh_binding: crate::render_frame::RenderFrameModMeshBinding { enabled: true },
-            trace_config: crate::render_frame::RenderFrameModTraceConfig { variant: 0.0, common: None },
             glass_break_config: crate::render_frame::RenderFrameModGlassBreakConfig { on: false },
             weather_kind_config: crate::render_frame::RenderFrameModWeatherKindConfig { on: false },
             snow_config: crate::render_frame::RenderFrameModSnowConfig { on: false },

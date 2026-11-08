@@ -7,7 +7,7 @@
 // on every page: where a frag lands is everybody's to know. The maintainer, 11-03, playing two seats: "seeing your teammates squad path overlays (but probably fainter than yours) would be great".
 // THE WAY A MAN WILL WALK IS THE ONE THING WORKED OUT HERE, and it is a search: his own path if the view has one for this order, else `src.ask.way` for each leg, the answer kept by the
 // page's clock (`look.plan.reaskSecs`), never by the game.
-// index.html `.plan …` is the look; `view.plan` none (`?noplan`) = the group stays empty. An attribute is written only when it changes. Its numbers are the PLAN table's, told in `view.look.plan`.
+// index.html `.plan …` is the look. An attribute is written only when it changes. Its numbers are the PLAN table's, told in `view.look.plan`.
 import type { Vec3 } from '../math/vec';
 import type { HudCam, HudSource } from '../view/hud';
 import type { PlanMan, PlanWay, SeatPlan, TickView } from '../view/read';
@@ -55,7 +55,7 @@ export type DrawnPlan = Omit<SeatPlan, 'men'> & { men: DrawnMan[] };
 const drawn = (src: HudSource, reask: number, P: SeatPlan): DrawnPlan => ({ ...P, men: P.men.map(m => ({ ...m, path: m.way ? wayOf(src, reask, m.man, m.way) : [] })) });
 /** THE PLANS A FRAME DRAWS, the page's own seat's first and whole, at `k` 1; then each other player's at `k`, the table's `others`. Asked by the checks too */
 export function plansToDraw(src: HudSource, view: TickView = src.view): { P: DrawnPlan; k: number }[] {
-  const V = view.plan, { others: faint, reaskSecs: reask } = view.look.plan; if (!V) return [];
+  const V = view.plan, { others: faint, reaskSecs: reask } = view.look.plan;
   return [{ P: drawn(src, reask, V.own), k: 1 }, ...(faint > 0 ? V.others.map(P => ({ P: drawn(src, reask, P), k: faint })) : [])];
 }
 
