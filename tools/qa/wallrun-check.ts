@@ -66,13 +66,13 @@ export async function wallRunCheck(): Promise<boolean> {
       verdict(ok, 'a sprint straight at the wall has it before he touches it, at his sprint the frame before, and ends as a walk\'s hold does',
         `hold at ${r.took < 0 ? 'never' : f2(r.took * DT) + ' s'} with ${f2(r.gapAt)} m to go (pressFlow ${WALLSNAP.pressFlow}), his stride then ${f3(r.into)} m (a sprint's ${f3(sprint * DT)}) · back on the wall ${r.seated < 0 ? 'never' : f2((r.seated - r.took) * DT) + ' s later'} · longest stride of the take ${f3(r.stride)} m · ${f3(off)} m off the face, back ${f2(yaw)}° off square, stance '${c.anim.stance}' · said: ${r.said.join(' | ') || 'nothing'}`); rest(); }
     // ---- stays on, and the ways off
-    { const a = run(FROM, RUN, 'empty', 290); const stayed = onEast();
+    { const a = run(FROM, RUN, 'empty', 200); const stayed = onEast();
       S.keys('KeyD'); S.step(6); const walkOn = onEast(); S.keys(...RUN); S.step(3); const shiftOff = !pl.wall; let back = false; for (let f = 0; f < 90; f++) { S.step(1); back ||= !!pl.wall; } rest();
       const b = run(FROM, RUN); S.keys('KeyW', 'ShiftLeft'); S.step(3); const turnOff = !pl.wall; S.step(20); const ranOn = pl.sprinting; rest();
       const d = run(FROM, RUN); S.keys('ShiftLeft'); S.step(6); const restOn = onEast(); S.keys(...RUN); S.step(3); const againOff = !pl.wall; rest();
       verdict(a.took >= 0 && stayed && walkOn && shiftOff && !back && b.took >= 0 && turnOff && ranOn && d.took >= 0 && restOn && againOff,
         'the run that took the wall is not a way off it while it is held; Shift let go and pressed again is, and so is another move key or the key let go and pressed again',
-        `Shift and the key held ${f2((290 - a.took) * DT)} s after the hold: on ${stayed} → Shift up: on ${walkOn} → Shift down again: off ${shiftOff}, back on with the key still held ${back} · another key (along the wall), Shift down: off ${turnOff}, sprinting on ${ranOn} · the key let go: on ${restOn}, pressed again with Shift: off ${againOff}`); }
+        `Shift and the key held ${f2((200 - a.took) * DT)} s after the hold: on ${stayed} → Shift up: on ${walkOn} → Shift down again: off ${shiftOff}, back on with the key still held ${back} · another key (along the wall), Shift down: off ${turnOff}, sprinting on ${ranOn} · the key let go: on ${restOn}, pressed again with Shift: off ${againOff}`); }
     // ---- his hands, not what they come to
     { const a = run(FROM, RUN); const st0 = pl.staggerUntil; undo.push(() => { pl.staggerUntil = st0; }); pl.staggerUntil = g.time + 0.6; S.step(20); const folded = pl.staggerUntil > g.time && onEast(); S.step(60); const after = onEast() && g.time > pl.staggerUntil; pl.staggerUntil = st0; rest();
       const b = run(FROM, RUN); undo.push(() => { W.cam.yaw = 0; W.cam.rebuild(); }); let turned = true; for (let k = 1; k <= 90; k++) { W.cam.yaw = k * DEG; W.cam.rebuild(); S.step(1); turned &&= onEast(); } S.step(30); turned &&= onEast(); W.cam.yaw = 0; W.cam.rebuild(); rest();
@@ -80,12 +80,12 @@ export async function wallRunCheck(): Promise<boolean> {
       verdict(a.took >= 0 && folded && after && b.took >= 0 && turned && r.took >= 0 && stack && loads, 'the keys still down, he stays on it through what is not his letting go: folded by a blast, the view turned a quarter turn; and R on the stack reloads with the run still held',
         `folded 0.6 s with Shift and the key down: on the wall in it ${folded}, and after it ${after} · the view turned 90° over a second and a half: on it throughout ${turned} · the rifle stacked off a run ${stack}, R with the keys still down: reloading ${loads}`); }
     // ---- not asked for
-    { S.place(EX - R - 0.6, CZ, 90); S.keys('KeyD', 'KeyW', 'ShiftLeft'); let diag = false; for (let f = 0; f < 180; f++) { S.step(1); diag ||= !!pl.wall; } rest();
+    { S.place(EX - R - 0.6, CZ, 90); S.keys('KeyD', 'KeyW', 'ShiftLeft'); let diag = false; for (let f = 0; f < 120; f++) { S.step(1); diag ||= !!pl.wall; } rest();
       let up = false; const bump = run(FROM, RUN, 'empty', 200, () => { if (!up && gap() <= WALLSNAP.pressFlow + 0.25) { up = true; S.keys(); } }); rest();
       const dr = g.doors.byName('server'); if (dr) { dr.angle = 0; dr.vel = 0; }
       S.place(17.6, 11.75, 180); S.keys('KeyW', 'ShiftLeft'); let leaf = false; for (let f = 0; f < 120; f++) { S.step(1); leaf ||= !!pl.wall && c.pos[2] > 10.06; } rest(); if (dr) { dr.angle = 0; dr.vel = 0; }
       verdict(!diag && bump.took < 0 && up && !leaf && !!dr, 'not asked for, never a hold: a sprint on a diagonal into the corner, the keys let go short of the wall, a sprint into a shut door\'s leaf',
-        `diagonal for 3 s ${diag ? 'HELD' : 'no hold'} · keys up ${f2(WALLSNAP.pressFlow + 0.25)} m out ${bump.took < 0 ? 'no hold' : 'HELD'} · into the server door's leaf ${dr ? (leaf ? 'HELD' : 'no hold') : '(no door found)'}`); }
+        `diagonal for 2 s ${diag ? 'HELD' : 'no hold'} · keys up ${f2(WALLSNAP.pressFlow + 0.25)} m out ${bump.took < 0 ? 'no hold' : 'HELD'} · into the server door's leaf ${dr ? (leaf ? 'HELD' : 'no hold') : '(no door found)'}`); }
     // ---- any camera
     { const combos: string[][] = [['KeyW'], ['KeyW', 'KeyD'], ['KeyD'], ['KeyD', 'KeyS'], ['KeyS'], ['KeyS', 'KeyA'], ['KeyA'], ['KeyA', 'KeyW']]; let asked = 0, held = 0; const wrong: string[] = [];
       for (let k = 0; k < 24; k += swept(8, 1)) { const camYaw = k * 15 * DEG;

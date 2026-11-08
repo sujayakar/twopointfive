@@ -156,7 +156,9 @@ export const shotgunDoor = guarded(async () => {
    *  first one left */
   const run = async (kind: 'openClear' | 'bangClear', cards: Record<number, Record<string, unknown>>, o: { sam?: number[] } = {}) => { zero(); return await ran(kind, cards, o); };
   const ran = async (kind: 'openClear' | 'bangClear', cards: Record<number, Record<string, unknown>>, o: { sam?: number[] }) => {
-    const R = await rig(SEED, { door: 'manager', cards }); if (o.sam) { R.game.teleportPlayer(o.sam); R.step(5); } const d = R.door('manager'); const side = R.game.doors.side(d, R.game.player.char.pos) as 1 | -1;
+    const R = await rig(SEED, { door: 'manager', cards }); if (o.sam) { R.game.teleportPlayer(o.sam); R.step(5); } const d = R.door('manager');
+    { const nav = R.game.col.nav, sam = R.game.player.char.pos; R.ops.forEach((m: any, i: number) => { const a = i * 2.1 + 1, p = nav.nearestFreePoint(sam[0] + Math.cos(a) * 1.5, sam[2] + Math.sin(a) * 1.5) ?? sam; m.char.pos = [p[0], m.char.pos[1], p[2]]; m.char.vel = [0, 0, 0]; m.path = []; m.pathGoal = null; }); R.step(5); }   // (the squad at Sam's feet: the walk from the staging is most of the order's frames, and no line here is about it)
+     const side = R.game.doors.side(d, R.game.player.char.pos) as 1 | -1;
     const locked0 = d.locked && d.latched; let w = R.give(kind, 'manager'), op = R.op;
     let halt: { w: string | null; ended: string; beats: string; shells: number; kicks: number; shut: boolean; halted: number } | null = null;
     { R.until(() => !!op?.ended, 60); R.step(30);
