@@ -733,7 +733,6 @@ pub fn watch(g: &mut crate::game::Game) {
         g.stats.digin.tried += 1;
         let dn = crate::orders::door_words(g, d);                     // the line NAMES its door
         if m::abs(crate::doors::door_angle(g, d)) > 0.05 {            // a leaf standing open is no door to call wedged: the line is not said, his die is still drawn
-            if by.gd.is_some() { one_of(g, crate::dice::Who::Man(by.gd.unwrap()), &["", ""]); }
         } else if let Some(who) = by.gd {
             let lines = [format!("the {} is blocked. something heavy behind it.", dn), format!("the {} is wedged from inside. they know we're here.", dn)];
             let line = one_of(g, crate::dice::Who::Man(who), &lines);

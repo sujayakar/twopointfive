@@ -260,7 +260,7 @@ fn fight_trigger(g: &mut Game, gd: GuardId, c: CharId, s: &Sight, move_speed: f6
         && !round_past_colleague(g, gd, aim, None, None) && crate::aim::aim_ready(g, gd) && crate::weapons::firearm_fire(g, weapon) {
         let (cd, jitter) = { let w = g.m.weapons.weapons.get(g.fa[weapon].def).expect("a gun's def is a row"); (w.cd, w.cd_jitter) };
         let mods = crate::suppression::guard_fire_mods(g, gd);
-        g.gd[gd].fire_cd = (cd + crate::math_dice::sim_random(g) * jitter) * mods.gap;
+        g.gd[gd].fire_cd = (cd + crate::dice::draw_of(g, "guards::fight_trigger#1", gd) * jitter) * mods.gap;
         let round = crate::aim::guard_round(g, gd, mods.spread, None);
         crate::combat::fire_weapon(g, c, aim, false, Some(&round));
         crate::aim::note_bore(g, gd, aim);

@@ -247,7 +247,7 @@ fn pick_i(r: f64, len: f64, last: f64) -> f64 {
 
 /// A line from the pool, and the place it had written in the man's row.   (whistle.ts pick)
 pub fn pick(g: &mut crate::game::Game, pool: &[String], gd: GuardId, key: crate::whistle::PickKey) -> String {
-    let r = crate::math_dice::sim_random(g);
+    let r = crate::dice::draw_of(g, "whistle::pick#1", gd);
     let row = mem(g, gd);
     let last = match key { PickKey::LastLook => row.last_look, PickKey::LastTwice => row.last_twice };
     let i = pick_i(r, pool.len() as f64, last);

@@ -190,7 +190,7 @@ pub fn room_fight_choose_watch(g: &mut crate::game::Game, d: RoomfightDefId) {
         let watch = g.tab.roomfight_def[d].watch;
         let mut others: Vec<f64> = (0..ent.len()).map(|i| i as f64).filter(|&i| i != watch).collect();
         if watch >= 0.0 { others.push(-1.0); }
-        let r = crate::math_dice::sim_random(g);
+        let r = crate::dice::draw_def(g, "roomfight::room_fight_choose_watch#1", d);
         let to = others.get(m::floor(r * others.len() as f64) as usize).copied().unwrap_or(-1.0);
         let until = g.time + pick(g, crate::dice::Who::Def(d), s.glance);
         let next = until + pick(g, crate::dice::Who::Def(d), s.hold);
@@ -264,7 +264,7 @@ pub fn room_fight_blind(g: &mut crate::game::Game, d: RoomfightDefId, k: f64) {
     let bl = crate::nightbreach::blind();
     if g.gd[h].dazzled_until > g.tab.roomfight_def[d].burst.until + 1e-6 {
         let (until, next) = (g.gd[h].dazzled_until, g.time + bl.after + k * bl.stagger);
-        let broke = crate::math_dice::sim_random(g) < s.bang_break;
+        let broke = crate::dice::draw_def(g, "roomfight::room_fight_blind#1", d) < s.bang_break;
         let daze = if s.daze[1] > 0.0 { let p = pick(g, crate::dice::Who::Def(d), s.daze); p * (if room_fight_drilled(g) { g.k.drilled.shaken } else { 1.0 }) } else { 0.0 };
         let B = &mut g.tab.roomfight_def[d].burst;
         B.until = until; B.n = 0.0; B.next = next; B.broke = broke; B.daze = daze;
@@ -427,7 +427,7 @@ pub fn room_fight_break_off(g: &mut crate::game::Game, d: RoomfightDefId) {
         g.fight.stats.fell_back += 1.0;
         let what = alloc::format!("falls back through {} to {},{}", door_name(g, b.door), js::to_fixed(b.spot[0], 1), js::to_fixed(b.spot[2], 1));
         room_fight_note(g, Some(gd), &what);
-        let line = if crate::math_dice::sim_random(g) < 0.5 { "fall back \u{2014} fall back!" } else { "they're in \u{2014} get out!" };
+        let line = if crate::dice::draw_def(g, "roomfight::room_fight_break_off#1", d) < 0.5 { "fall back \u{2014} fall back!" } else { "they're in \u{2014} get out!" };
         crate::game::game_say(g, gd, line, None, None, None);
         return;
     }
@@ -605,14 +605,14 @@ pub fn room_fight_rally(g: &mut crate::game::Game, d: RoomfightDefId) {
     if g.tab.roomfight_def[d].rally_at.is_nan() {
         let t = g.time + pick(g, crate::dice::Who::Def(d), skill.rally);
         g.tab.roomfight_def[d].rally_at = t;
-        let go = crate::math_dice::sim_random(g) < skill.rally_chance * g.k.roomfight.rally_k;
+        let go = crate::dice::draw_def(g, "roomfight::room_fight_rally#1", d) < skill.rally_chance * g.k.roomfight.rally_k;
         g.tab.roomfight_def[d].rally_go = go;
         return;
     }
     if g.time < g.tab.roomfight_def[d].rally_at { return; }
     if !g.tab.roomfight_def[d].rally_go {
         g.tab.roomfight_def[d].rally_at = g.time + 6.0;
-        let go = crate::math_dice::sim_random(g) < skill.rally_chance * g.k.roomfight.rally_k;
+        let go = crate::dice::draw_def(g, "roomfight::room_fight_rally#2", d) < skill.rally_chance * g.k.roomfight.rally_k;
         g.tab.roomfight_def[d].rally_go = go;
         return;
     }
