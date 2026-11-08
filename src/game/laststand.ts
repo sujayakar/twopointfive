@@ -1,21 +1,20 @@
 // THE LAST DEFENDERS (the maintainer, 10-08, playing the compound: "it also took a while to find the last two stragglers. ready or not has this problem too for
-// the "bring order to chaos" objective. curious how we can make this more fun while still having the peril of barricaded defenders"). Two switches, both
-// `regroup` ships OFF, `callOut` ON (10-08: telling only, so the run is the run with both off) — with both off nothing here runs, no die is drawn and the room fight is run for run what it was (the seams: `lastStandTick` at the tail of
+// the "bring order to chaos" objective. curious how we can make this more fun while still having the peril of barricaded defenders").
+// `callOut` is ON (10-08: telling only, so the run is the run with it off) — with it off nothing here runs, no die is drawn and the room fight is run for run what it was (the seams: `lastStandTick` at the tail of
 // RoomFight.tick, `lastStandStop` in stop(), one clause each in rally(), lost(), the dig-in's gate / wedge rule / stand-down, the squads' home(), the press's
 // consider(), and the room clear's row, which the Rust game words).
 //
 //   WHEN. A room clear (not the hostage rescue), once `few` (3) or fewer of its defenders are up and no more than a third of the staging (the compound's
 //     eleven: three; the block's eight: two; the office's five: the last man). Until that frame a run with
-//     either switch on IS the run with both off: nothing is drawn or written before it, so a tally pairs by seed up to the endgame.
-//   THE RADIO CHECK (both switches). The survivors do not know they are the last by telepathy: one of them who is fit and has had nobody of the team in his
+//     the switch on IS the run with it off: nothing is drawn or written before it, so a tally pairs by seed up to the endgame.
+//   THE RADIO CHECK. The survivors do not know they are the last by telepathy: one of them who is fit and has had nobody of the team in his
 //     sight these `quiet` seconds asks the net who is still up. Whoever is fit and calm answers on his own beat; a man in a fight does not answer and is not
 //     counted. What the check closes with — who answered — is ALL the survivors know of each other. It is asked again every `every` seconds (`again` once they
 //     have made their stand): a man who was busy the first time answers the next.
 //   `callOut` — CALL OUT (telling only: nothing a man's AI, the dice of the simulation or a digest reads is written). Every answer says where the man is by
 //     the level's own rooms ('still up — in the kitchen'), and the one who asked says where he is. A man nobody answers knows he is the last, and says that
 //     and his room ('…if anyone can hear me, I'm in the office!'). Their net is on the HUD's radio strip (cues.ts), so the player hears where to go — said by
-//     men to each other, never to the team. (`regroup` says the same places: the one who picks the room has to know where they are. `callOut` is that
-//     telling half alone.)
+//     men to each other, never to the team.
 //   `places` — THE LINE IS TRUE OF WHERE HE STANDS (on; off = the lines as they were, word for word — `callOut` stays telling only either way). A man in floor
 //     nobody holds — the compound's front hall, a corridor, a yard — is 'in the front hall' by the level's own name for it (dialogue.ts placeIn: the structure's
 //     rooms, then `scenarios.places`), not 'outside' the nearest held room through a solid wall; a man on a room's threshold is in that room; and the HUD's
@@ -34,7 +33,6 @@ import './dialogue';
 import './digin';
 import './netquiet';
 import './enemysquads';
-import { claimMan, releaseMan, ownerWitness, OWN } from './owner';
 
 export const LASTSTAND = {
   /** CALL OUT (shipped ON since 10-08; telling only): the last defenders name their rooms on their net. `?callout=0`, the panel's row or `LASTSTAND=nocallout` in the harness's environment = off */
@@ -77,7 +75,6 @@ type LineKind = 'check1' | 'checkN' | 'checkStand' | 'checkLoneAt' | 'ansAt' | '
   | 'movedAt' | 'movedFree'
   | 'order' | 'orderFrom' | 'orderStay' | 'orderShut' | 'orderOut' | 'go' | 'cant' | 'in' | 'short' | 'set' | 'setOpen' | 'setLone' | 'setLoneOpen';
 
-interface Mover { D: Def; phase: 'beat' | 'run'; goAt: number; spot: Vec3; tries: number; stepT: number; t0: number; /** he has said where he is going already */ quiet: boolean }
 interface Check { caller: Def; t: number; closeAt: number; due: { D: Def; at: number }[]; got: Def[] }
 export interface LastStandSaid { t: number; who: string; kind: string; text: string; /** where he stood as he said it (x, z): for the checks — nothing in the game reads it */ at: [number, number] }
 const newStats = () => ({

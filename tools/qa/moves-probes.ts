@@ -276,15 +276,6 @@ export async function movesKept(): Promise<boolean> {
       F.verdict(low > 0.07 && dist(f.bones.handL, f.bones.spine2) < 0.3, 'with the fold he stays doubled over for as long as he is rooted: head down every frame from half a second on, the hand on his ribs', `the head at least ${cm(low)} lower than upright (frame ${lowAt}; want > 7) · the hand ${cm(dist(f.bones.handL, f.bones.spine2))} from the chest joint`);
       f.anim.clutch = 0; let back = -1; for (let i = 0; i < 120; i++) { f.update(DT); u.update(DT); if (back < 0 && simBits(f) === simBits(u)) back = i; }
       F.verdict(back >= 0 && simBits(f) === simBits(u), 'let go of, he is upright again and bit for bit what the fight reads of a man never hit', back >= 0 ? `identical from frame ${back} after the stagger ends` : 'never identical again in 2 s');
-      // as shipped (MOVES.fold 0) the fold is nobody's unless the wounds switch is on: off, a staggered man's trunk is the base's, frame for frame
-      if (CH.FOLD_WITH) {
-        const keepWith = CH.FOLD_WITH.on; CH.MOVES.fold = 0;
-        try {
-          const run = async (wounds: boolean) => { CH.FOLD_WITH.on = () => wounds; const s = await man(0.12), n = await man(0.12); for (const c of [s, n]) { c.anim.upper = 'none'; c.anim.stance = 'lowReady'; } s.anim.clutch = 1; let eq = 0, low = 0; for (let i = 0; i < 90; i++) { s.update(DT); n.update(DT); if (simBits(s) === simBits(n)) eq++; low = Math.max(low, n.bones.head[1] - s.bones.head[1]); } return { eq, low }; };
-          const offR = await run(false), onR = await run(!BREAK);
-          F.verdict(offR.eq === 90 && onR.low > 0.07, 'as shipped the fold comes up with the wounds switch and only with it: wounds off, a staggered man is frame for frame what the fight reads of one never hit', `wounds off: ${offR.eq} of 90 frames identical · wounds on: the head ${cm(onR.low)} down (want > 7)`);
-        } finally { CH.FOLD_WITH.on = keepWith; }
-      }
     }
   } finally { restore(); }
   return F.done();

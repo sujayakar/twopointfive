@@ -32,7 +32,7 @@
 // THE THROW is the door tools' own: the frag on FRAG.orderFuse from the hand, the canister on combat.ts flashFuse from its landing, the quick toss, his word
 // ('frag out!' / 'bang out!'). Each goes off by the game's own road (combat.ts updateItems → frag.ts / detonateStun) under the thrower's id: nothing borrowed.
 // SENSE, asked when the menu is read and again as the order is given (nothing is spent on a refusal):
-//   none left · no arc for anybody addressed · A FRAG NEVER ONTO ITS OWN: the player, any teammate still breathing (the thrower too; a man down wounded or out cold counts), a hostage, the man to take
+//   none left · no arc for anybody addressed · A FRAG NEVER ONTO ITS OWN: the player, any teammate still breathing (the thrower too; a man out cold counts), a hostage, the man to take
 //   alive or a civilian inside the reach the door tools ask of a frag (FRAG.woundM + 1, a line by frag.ts exposedTo) of where it would rest or of the spot
 //   itself = refused, naming who. A STUN is not refused for its own side — it is the player's call — but its row NAMES who of ours it would catch
 //   (' · too close: you, Red One'), by detonateStun's own tests asked from where it would rest and from the spot, each reach a metre long: it may over-warn.
