@@ -316,12 +316,12 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
     for (let u = a + 0.4; u < b - 0.2; u += 1.5) F(u - 0.03, u + 0.03, y - 0.02, y + 0.05, 0, 0.04, clip, false);
     if (drop !== undefined) { F(b - 0.03, b, drop, y, 0, 0.03, paint, false); F(b - 0.14, b + 0.11, drop - 0.3, drop, 0, 0.09, paint, solid); }
   };
-  /** a PIPE standing at (x, z) from y0 to y1, radius r: four slabs turned an eighth each. SOLID, the game stands it up as one round (scene/round.ts);
-   *  drawn only, it stays the eight-sided post the four slabs make (the round rule takes plain boxes). `rings` = what is round it, each [y0, y1, r]: a
-   *  flange at its foot, a collar half way */
+  /** a PIPE standing at (x, z) from y0 to y1, radius r. SOLID, one box that says it is round (scene/round.ts); drawn only, the eight-sided post of four slabs turned
+   *  an eighth each. `rings` = what is round it, each [y0, y1, r]: a flange at its foot, a collar half way */
   const pipe = (x: number, z: number, y0: number, y1: number, r: number, paint: Vec3, rings: readonly (readonly [number, number, number])[] = [], solid = false) => {
     const round = (y0: number, y1: number, r: number) => { const a = r * 0.96, w = a * 0.4142;
-      for (let k = 0; k < 4; k++) add({ c: [x, (y0 + y1 - 0.002 * k) / 2, z], h: [a, (y1 - 0.002 * k - y0) / 2, w], yaw: k * Math.PI / 4, albedo: paint, ...(solid ? {} : { flags: BoxFlag.NoShadow }) }); };
+      if (solid) { const R = a * 1.026; add({ c: [x, (y0 + y1) / 2, z], h: [R, (y1 - y0) / 2, R], round: true, albedo: paint }); return; }
+      for (let k = 0; k < 4; k++) add({ c: [x, (y0 + y1 - 0.002 * k) / 2, z], h: [a, (y1 - 0.002 * k - y0) / 2, w], yaw: k * Math.PI / 4, albedo: paint, flags: BoxFlag.NoShadow }); };
     round(y0, y1, r); for (const [ry0, ry1, rr] of rings) round(ry0, ry1, rr);
   };
   // ---- paint on what is there (markings: scene/markings.ts; the recipes and the painter's tins: scene/markingDefaults.ts) ----

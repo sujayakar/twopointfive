@@ -461,7 +461,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     const bx = (x0: number, x1: number, z0: number, z1: number, y0: number, y1: number, a: Vec3, ns = false) => slab(x0, y0, z0, x1, y1, z1, a, ns ? { flags: NS } : {});
     /** a turned box by its centre and half sizes */
     const yb = (x: number, z: number, hx: number, hz: number, y0: number, y1: number, a: Vec3, yaw = 0, ns = false) => add({ c: [x, (y0 + y1) / 2, z], h: [hx, (y1 - y0) / 2, hz], yaw, albedo: a, ...(ns ? { flags: NS } : {}) });
-    /** a round thing (a jar, an oven, a barrel, a wheel lying flat): the kit's (livedKit.ts round — from 0.2 m the octagon the round rule makes one round box of) */
+    /** a round thing (a jar, an oven, a barrel, a wheel lying flat): the kit's (livedKit.ts round — from 0.2 m one round box) */
     const oct = (x: number, z: number, r: number, y0: number, y1: number, a: Vec3, ns = false) => L.round(x, z, y0, y1, r, a, 0, { drawn: ns });
     /** a pot, a pan, a basket: the kit's round from 0.2 m; a smaller one is one square turned a little (it reaches 1.25 r from its centre) */
     const pot = (x: number, z: number, r: number, y0: number, y1: number, a: Vec3, ns = false) => r >= 0.2 ? oct(x, z, r, y0, y1, a, ns) : yb(x, z, r * 0.9, r * 0.9, y0, y1, a, 0.3, ns);

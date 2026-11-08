@@ -173,7 +173,7 @@ const PASSED_BY: [&str; 2] = ["floor", "notes"];
 
 fn read(g: &mut Game, data: &Json, dressing: bool, lived: bool) -> (Loaded, Vec<String>) {
     let mut lacks: Vec<String> = Vec::new();
-    if data.get("version").num() != Some(1.0) { lacks.push(format!("version {:?}: this reader reads version 1", data.get("version"))); }
+    if data.get("version").num() != Some(2.0) { lacks.push(match data.get("version").num() { Some(v) if v == 1.0 => String::from("version 1 writes a round thing as four slabs: bun run tools/levels/round-convert.ts <file> makes it version 2"), _ => format!("version {:?}: this reader reads version 2", data.get("version")) }); }
     if !data.get("connectors").items().is_empty() { lacks.push(format!("connectors[]: {} (a stair or a ladder between floors: the TypeScript loader passes them by too)", data.get("connectors").items().len())); }
     let name = text(data.get("name"), "name");
     // (the editor's and the generator's own words, the floors' list and the paint rows nothing wears: read by nobody in the game)
@@ -202,7 +202,7 @@ fn read(g: &mut Game, data: &Json, dressing: bool, lived: bool) -> (Loaded, Vec<
         p.emissive = Some(b.emissive.unwrap_or([0.0, 0.0, 0.0]));
         p.flags = Some(flags_to_bits(b.flags.as_deref().unwrap_or(&[])));
         p.rough = paint.rough(&said); p.metal = paint.metal(&said); p.stuff = paint.stuff(&said); p.does = paint.does(&said);
-        p.rot = b.rot; p.name = b.name; p.cut_height = b.cut_height;
+        p.rot = b.rot; p.round = b.round.filter(|&r| r); p.name = b.name; p.cut_height = b.cut_height;
         p.marks = laid_markings(b.markings);
         p.shape = b.shape.map(|s| shape_of(s, &paint));
         ids.push(b.id);
@@ -296,6 +296,6 @@ fn read(g: &mut Game, data: &Json, dressing: bool, lived: bool) -> (Loaded, Vec<
 /// `makeBox`'s argument with nothing said but a place and a size
 pub fn blank_box() -> MakeBoxP {
     MakeBoxP { c: [0.0; 3], h: [0.0; 3], yaw: None, albedo: None, emissive: None, flags: None, owner: None, cut_height: None, wet_k: None, rot: None, dc: None, dh: None, name: None, rough: None, metal: None, stuff: None, does: None,
-        aniso: None, marks: None, mark_gain: None, fog_emit: None, fog_mark: None, mkey: None, cut: None, cut_core: None, cut_glass: None, cut_round: None, cut_arc: None, cut_old: None, cut_core_stuff: None, round: None, was: None,
+        aniso: None, marks: None, mark_gain: None, fog_emit: None, fog_mark: None, mkey: None, cut: None, cut_core: None, cut_glass: None, cut_round: None, cut_arc: None, cut_old: None, cut_core_stuff: None, round: None,
         shape: None, shaped: None, piece: None, of: None, dress: None }
 }

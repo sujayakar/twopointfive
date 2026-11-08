@@ -288,7 +288,7 @@ export class WallSkin {
         p.cut = base.length ? base.map(c => ({ n: c.n, d: c.d - (c.n[0] * lc[0] + c.n[1] * lc[1] + c.n[2] * lc[2]) })) : undefined;   // (a shape's planes are in the box's own frame: the same planes about the piece's middle)
       }
       if (parts.length) { const more = outline(r, p.c as V3); if (more.length) { const own = cutRecord(p.h as V3, p.cut ?? []).cut?.length ?? 0, R = cutRecord(p.h as V3, [...(p.cut ?? []), ...more]); if (R.empty || (R.cut?.length ?? 0) > own) bit = true; if (R.empty) continue; p.cut = R.cut; } }
-      p.was = undefined; p.shape = undefined; p.shaped = undefined; p.piece = undefined; p.of = undefined;   // (a plain box of the sheet's paint: what the level's stand-up keeps on the authored one is not its)
+      p.shape = undefined; p.shaped = undefined; p.piece = undefined; p.of = undefined;   // (a plain box of the sheet's paint: what the level's stand-up keeps on the authored one is not its)
       pieces.push(p); kept.push(x);
     }
     if (!bit && area >= 4 * hu * hv - EPS) { uncut(); return; }   // (split at a ragged piece's bounds, and no plane of it bites the sheet: nothing has gone, the authored box, whole)
