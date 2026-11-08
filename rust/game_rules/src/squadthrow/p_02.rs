@@ -530,11 +530,6 @@ pub fn sync(g: &mut crate::game::Game) {
     for d in &made[1..] {
         crate::orders::squad_orders_register(g, *d, None);
     }
-    let s = state(g);
-    if !s.noted {
-        s.noted = true;
-        crate::orders::squad_orders_voice(g, crate::orders::OrderNoteFn::SquadThrow);
-    }
 }
 
 /// Once a frame after the menu's own input: the rows in step with the switch, and G with a floor menu's first page up turns it to the throws. True: the press was the row's. (squadthrow.ts squadThrowKey)

@@ -392,7 +392,6 @@ impl Default for Scratch { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Debug)]
 pub struct State {
     pub last: JsMap<GuardId, f64>,
-    pub noted: bool,
     pub shown: Option<crate::squadthrow::StateShown>,
     pub walks: JsMap<GuardId, crate::squadthrow::Walk>,
     /// the throws the menu shows, one a kind, as they were last worked out (Rust's own: not on the wire)
@@ -404,7 +403,6 @@ impl State {
     pub fn zeroed() -> Self {
         State {
             last: JsMap::new(),
-            noted: false,
             shown: None,
             walks: JsMap::new(),
             plans: JsMap::new(),

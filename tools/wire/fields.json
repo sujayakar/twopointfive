@@ -6312,7 +6312,6 @@
 "squad40::Squad40Stats.turned",
 "squad40::State.brought",
 "squad40::State.last",
-"squad40::State.noted",
 "squad40::State.rounds",
 "squad40::State.shown",
 "squad40::State.turns",
@@ -6384,7 +6383,6 @@
 "squadsmoke::State.brought",
 "squadsmoke::State.cans",
 "squadsmoke::State.last",
-"squadsmoke::State.noted",
 "squadthrow::Arc.from",
 "squadthrow::Arc.rest",
 "squadthrow::Arc.sol",
@@ -6421,7 +6419,6 @@
 "squadthrow::SquadthrowStats.walked",
 "squadthrow::SquadthrowStats.walks",
 "squadthrow::State.last",
-"squadthrow::State.noted",
 "squadthrow::State.scratch",
 "squadthrow::State.shown",
 "squadthrow::State.walks",
@@ -7838,10 +7835,6 @@
 {
 "key": "SquadNet.stats",
 "why": "its type is not in the bridge"
-},
-{
-"key": "SquadOrders.notes",
-"why": "its type holds what the bridge cannot read: Vec<crate::orders::OrderNoteFn>"
 },
 {
 "key": "WallSkin.failed",
