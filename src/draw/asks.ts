@@ -1,9 +1,12 @@
 // Written by tools/draw/gen.ts from rust/game_run/src/desk.rs. To change an ask, change it there.
 import { Writer } from './writer';
-import { readCardView, readPressed, readSheetView, readShortView, readStartView, readTeamView, type CardView, type Pressed, type SheetView, type ShortView, type StartView, type TeamView } from '../view/read';
+import { readBriefView, readCardView, readPressed, readSheetView, readShortView, readStartView, readTeamView, type BriefView, type CardView, type Pressed, type SheetView, type ShortView, type StartView, type TeamView } from '../view/read';
 
 /** an answer that is one word: its length, then its bytes */
 const readWord = (b: Uint8Array): string => new TextDecoder().decode(b.subarray(4));
+
+/** an answer that is one number */
+const readNumber = (b: Uint8Array): number => new DataView(b.buffer, b.byteOffset, b.byteLength).getUint32(0, true);
 
 /** what the cards before a game show and press; `answer` is the module's, to the bytes of an ask */
 export class Asks extends Writer {
@@ -46,4 +49,8 @@ export class Asks extends Writer {
   next(search: string): ShortView { this.u32(16); this.text(search); return readShortView(this.answer(this.take())); }
   /** the address with everything that started something taken off */
   leave(search: string): string { this.u32(17); this.text(search); return readWord(this.answer(this.take())); }
+  /** what a page says of the mission its address starts while it loads (id empty: it starts none of the list) */
+  brief(search: string): BriefView { this.u32(18); this.text(search); return readBriefView(this.answer(this.take())); }
+  /** 1 where the link starts what a page at this address already stands, so that it needs no page load; else 0 */
+  same(link: string, page: string): number { this.u32(19); this.text(link); this.text(page); return readNumber(this.answer(this.take())); }
 }
