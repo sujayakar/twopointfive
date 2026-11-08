@@ -841,16 +841,27 @@ fn bentHere(c: vec3i) -> vec2f {
   if (sum <= 0.0) { return vec2f(-1.0, 0.0); }
   return vec2f(y, m) / sum;
 }
+/** lumps a unit across, about -0.5..0.5, no two alike: a slope hashed at whole numbers, rounded between (two sines crossed show as stripes where a whole cloud comes up at once) */
+fn lumps(p: vec3f) -> f32 {
+  let i = vec3i(floor(p)); let f = p - floor(p); let u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0); var v = 0.0;
+  for (var j = 0; j < 8; j++) {
+    let o = vec3i(j & 1, (j >> 1u) & 1, j >> 2u); let w = select(1.0 - u, u, o == vec3i(1)); let c = bitcast<vec3u>(i + o);
+    var n = (c.x * 1664525u) ^ (c.y * 2246822519u) ^ (c.z * 3266489917u); n = (n ^ (n >> 15u)) * 2654435761u; n ^= n >> 13u;
+    let g = vec3f((vec3u(n) >> vec3u(2u, 12u, 22u)) & vec3u(1023u)) / 511.5 - 1.0;
+    v += w.x * w.y * w.z * dot(g, f - vec3f(o));
+  }
+  return v;
+}
 /** the game's smoke in a cell, bent: `g` of it stands there, the grid holds h.x about it and h.y is drawn. The mean over a brick moves by the share of the way the rate says, whatever is in its cells. */
 fn bendTo(g: f32, h: vec2f, P: vec3f, dt: f32) -> f32 {
   let o = bentThrough(h.x, 1.5) - bentThrough(h.y, 1.5); let a = select(1.0 - exp(-sp.bend * o * o * dt), 1.0, sp.snap > 0.0);
   let d = h.x - h.y;
   let thick = 2.0 * g / max(g + h.y, 1e-6);   // (1 where a cell holds what the brick does, toward 2 in its billows, 0 in its gaps)
   if (d <= 0.0) { return g * max(1.0 + a * d / max(h.y, 1e-6) * (2.0 - thick), 0.0); }
-  let q = P * 4.0 + vec3f(0.0, -sp.time * 0.7, sp.time * 0.3);
-  let n = sin(q.x + 1.7 * sin(q.y * 1.3)) * sin(q.z + 1.3 * sin(q.x * 1.6)); let wisp = 3.2 * max(n, 0.0) + 0.2;
-  let bare = 1.0 - h.y / h.x;
-  return g * (1.0 + a * min(d / max(h.y, 1e-6), 2.0) * thick) + a * d * bare * bare * bare * bare * wisp;
+  let was = g * (1.0 + a * min(d / max(h.y, 1e-6), 2.0) * thick); let bare = 1.0 - h.y / h.x; let due = a * d * bare * bare * bare * bare;
+  if (due < 1e-6) { return was; }
+  let q = P * 2.0 + vec3f(0.0, -sp.time * 0.35, sp.time * 0.15);
+  return was + due * (0.2 + 1.75 * smoothstep(-0.3, 0.5, lumps(q) + 0.5 * lumps(q * 2.1 + 17.0)));   // (wisps at two sizes, 0.85 in the mean)
 }
 var<workgroup> wgLo: array<atomic<i32>, 3>;
 var<workgroup> wgHi: array<atomic<i32>, 3>;

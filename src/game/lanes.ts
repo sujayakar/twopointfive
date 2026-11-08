@@ -271,9 +271,6 @@ export function laneKnownAt(g: Game, gd: Guard, to: Vec3 | null): boolean { retu
 /** tactics.ts tryEngage: this spot is in the line of guns his side knows of — no place to stack on a doorway (the jamb the holders see through the opening) */
 export function laneCovers(g: Game, gd: Guard, p: Vec3): boolean { return crossToRust('laneCovers', undefined, [g, gd, p]) as any; }
 
-/** a magazine change this rule starts for a man behind his corner and counts down itself (lanesTick: one count a frame, whoever else counts it).
- *  The caller's to ask that he is not already changing one */
-export function laneReload(g: Game, gd: Guard): void { return crossToRust('laneReload', undefined, [g, gd]) as any; }
 export function lanesReset(g: Game) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('lanesReset', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } } const st = states.get(g); if (st) { letGo(g, st); states.set(g, Object.assign(fresh(), { stats: st.stats })); } }
 export function lanesStats(g: Game): Record<string, number> { return { ...(states.get(g)?.stats ?? fresh().stats), live: states.get(g)?.lanes.filter(L => L.known).length ?? 0 }; }
 export function lanesSummary(g: Game): string {

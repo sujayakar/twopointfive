@@ -35,6 +35,8 @@ section! {
         pub at: [f32; 3],
         /// where he is drawn standing: between the last two ticks, as his bones are
         pub feet: [f32; 3],
+        /// … and where his head is drawn
+        pub head: [f32; 3],
         /// the sphere round his proxies
         pub bound: [f32; 4],
     }
@@ -64,6 +66,8 @@ pub type Swaps = [u32; 4];
 
 #[derive(Default)]
 pub struct Men {
+    /// drawn with the fog off: everybody
+    pub bared: bool,
     pub swaps: Swaps,
     pub men: Vec<Man>,
     pub insts: Vec<Inst>,
@@ -71,27 +75,34 @@ pub struct Men {
     pub caps: Vec<Cap>,
     now: Vec<Bones>,
     now_caps: Vec<Cap>,
-    before: Vec<(u32, Bones, [f32; 3])>,
+    /// each man's head, as the last tick left it, and the sphere round his proxies
+    heads: Vec<[f32; 3]>,
+    bounds: Vec<[f32; 4]>,
+    /// … and as the tick before left him: his id, his bones, his feet, his head
+    before: Vec<(u32, Bones, [f32; 3], [f32; 3])>,
     before_caps: Vec<Cap>,
     have: u32,
 }
 
 impl Men {
     pub fn cut(&mut self) { self.have = 0; }
+    pub fn hold(&mut self) { self.have = self.have.min(1); }
 
     /// a tick has run (`again`: the tick already taken)
     pub fn take(&mut self, g: &Game, again: bool) {
         if !again {
             self.before.clear();
-            for (k, r) in self.men.iter().enumerate() { self.before.push((r.id, self.now[k], r.at)); }
+            for (k, r) in self.men.iter().enumerate() { self.before.push((r.id, self.now[k], r.at, self.heads[k])); }
             core::mem::swap(&mut self.now_caps, &mut self.before_caps);
             self.have = (self.have + 1).min(2);
         }
         self.men.clear();
         self.insts.clear();
         self.now.clear();
+        self.heads.clear();
+        self.bounds.clear();
         self.now_caps.clear();
-        for c in shown(g).into_iter().take(MOST) { self.man(g, c); }
+        for c in shown(g, self.bared).into_iter().take(MOST) { self.man(g, c); }
     }
 
     fn man(&mut self, g: &Game, id: CharId) {
@@ -107,10 +118,13 @@ impl Men {
         let at = self.men.len();
         let b = caps.bound;
         let bc = x([b[0], b[1], b[2]]);
+        let head = c.bones.get(game::character::Bone::Head).copied().unwrap_or([c.pos[0], c.pos[1] + 1.6, c.pos[2]]);
+        self.heads.push(f3(head));
         self.men.push(Man {
             id: c.id as u32, side: side as u32, suit: suit as u32, parts: c.parts as u32, alive: c.alive as u32, tint: f3(c.tint), tint2: f3(c.tint2), stature: s as f32,
-            dry: if g.engine.settings.wet_chars && c.wet > 0.0 { 1.0 - 0.35 * c.wet } else { 1.0 } as f32, at: f3(c.pos), feet: f3(c.pos), bound: [bc[0] as f32, bc[1] as f32, bc[2] as f32, (b[3] * s) as f32],
+            dry: if g.engine.settings.wet_chars && c.wet > 0.0 { 1.0 - 0.35 * c.wet } else { 1.0 } as f32, at: f3(c.pos), feet: f3(c.pos), head: f3(head), bound: [bc[0] as f32, bc[1] as f32, bc[2] as f32, (b[3] * s) as f32],
         });
+        self.bounds.push(self.men[at].bound);
         // ---- his instance
         let w = |v: f64| (v as f32).to_bits();
         let swap = self.swaps[side as usize];
@@ -150,10 +164,23 @@ impl Men {
         }
     }
 
+    /// … and where the host's own man is drawn ahead of the tick, his bones and proxies with him
+    pub fn lead(&mut self, by: &crate::lead::Moved) {
+        let Some(k) = self.men.iter().position(|r| r.id == by.id) else { return };
+        let r = &mut self.men[k];
+        (r.feet, r.head) = (by.pt32(r.feet), by.pt32(r.head));
+        for m in self.bones[k].w.chunks_exact_mut(16) { by.mat(m); }
+        for c in &mut self.caps[k * CAPS..(k + 1) * CAPS] {
+            if c.w[3] <= 0.0 { continue; }
+            for at in [0, 4] { let p = by.pt32([c.w[at], c.w[at + 1], c.w[at + 2]]); c.w[at..at + 3].copy_from_slice(&p); }
+        }
+        let b = by.pt32([r.bound[0], r.bound[1], r.bound[2]]);
+        r.bound[..3].copy_from_slice(&b);
+    }
     pub fn frame(&mut self, a: f64) {
         self.bones.clone_from(&self.now);
         self.caps.clone_from(&self.now_caps);
-        for r in &mut self.men { r.feet = r.at; }
+        for ((r, h), b) in self.men.iter_mut().zip(&self.heads).zip(&self.bounds) { (r.feet, r.head, r.bound) = (r.at, *h, *b); }
         if a >= 1.0 || self.have < 2 { return; }
         let a = a as f32;
         for (k, r) in self.men.iter_mut().enumerate() {
@@ -161,8 +188,8 @@ impl Men {
             let (p, q) = (&self.before[j].1, &mut self.bones[k]);
             let d: [f32; 3] = core::array::from_fn(|i| q.w[12 + i] - p.w[12 + i]);
             if (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]) as f64 > SNAP * SNAP { continue; }
-            let was = self.before[j].2;
-            for i in 0..3 { r.feet[i] = was[i] + (r.at[i] - was[i]) * a; }
+            let (was, head) = (self.before[j].2, self.before[j].3);
+            for i in 0..3 { r.feet[i] = was[i] + (r.at[i] - was[i]) * a; r.head[i] = head[i] + (self.heads[k][i] - head[i]) * a; }
             for i in 0..JOINTS * 16 { q.w[i] = p.w[i] + (q.w[i] - p.w[i]) * a; }
             for i in 0..CAPS {
                 let (p, q) = (&self.before_caps[j * CAPS + i], &mut self.caps[k * CAPS + i]);
@@ -176,9 +203,9 @@ impl Men {
 fn players(g: &Game) -> impl Iterator<Item = CharId> + '_ { g.seats.iter().map(|&s| g.pl[game::cmd::seat_man(g, s)].ch) }
 
 /// the men who are drawn, in the order they take the skinning's places
-fn shown(g: &Game) -> Vec<CharId> {
+fn shown(g: &Game, bared: bool) -> Vec<CharId> {
     let all: Vec<CharId> = players(g).chain(g.guards.iter().map(|&gd| g.gd[gd].ch)).chain(game::civilians::civilians_shown(g).iter().map(|&gd| g.gd[gd].ch)).collect();
-    let mut drawn = game::fogofwar::fog_of_war_filter(g, &all);
+    let mut drawn = if bared { all } else { game::fogofwar::fog_of_war_filter(g, &all) };
     // (from the sky nobody on the floor is the player)
     if game::rails::rails_sky_on(g) { let me = g.pl[game::seats::host_man(g)].ch; drawn.retain(|c| *c != me); }
     // (more men than have a mesh of their own to throw a shadow by: the men down give up their places first)

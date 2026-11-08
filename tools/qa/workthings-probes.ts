@@ -91,7 +91,7 @@ export const workBreaker = () => keep(async () => {
   verdict(!R.why && ops.length === 2, 'staged: the room clear on the office with its pair', `refusal ${R.why} · teammates ${ops.map(o => o.callsign).join(', ')}`);
   lookAtPanel(R);
   // the office keeps its breaker behind the storage room's LOCKED door: with it locked the row is there, greyed, in the man's own words
-  { R.aim = panel(g); R.step(2); (menuKey(O), R.step()); const i = R.rows().findIndex((d: any) => d.id === 'work'), why = O.menu?.why[i] ?? null; O.close(); R.aim = null;
+  { R.aim = panel(g); R.step(20); (menuKey(O), R.step()); const i = R.rows().findIndex((d: any) => d.id === 'work'), why = O.menu?.why[i] ?? null; O.close(); R.aim = null;
     verdict(i === 0 && typeof why === 'string' && /locked/.test(why), 'behind a locked door the row is listed greyed, with why: the men cannot get to it', `row ${i} · "${why}"`); }
   unlock(g); R.step(70);
   const th = g.work.things().find((x: any) => x.kind === 'breaker');

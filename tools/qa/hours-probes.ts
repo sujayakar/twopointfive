@@ -22,7 +22,9 @@ const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { SCENARIOS, pickSearch } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
-const { HOUR, HOURS, HOUR_IDS, applyHour, hourOf, hourSun, hourLightAt, hourIdOf, hourHref, hourAsked, setSunStrength, sunStrength } = HR;
+const { HOUR, HOURS, HOUR_IDS, applyHour, hourOf, hourSun, hourIdOf, hourHref, hourAsked, setSunStrength, sunStrength } = HR;
+/** what the hour and the place's own steady lights put on a point, nothing anybody carries (the Rust game's light has no part that is the hour's alone) */
+const hourLightAt = (g: any, p: any): number => lightEstimateAt(g, p, () => true, true);
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
 function family(title: string): { verdict: Verdict; done: () => boolean } {
@@ -52,12 +54,12 @@ export async function hoursNight(): Promise<boolean> {
   const bad: string[] = [], detail: string[] = [];
   for (const id of SQUAD_MAPS) {
     const W = await stand(id), g = W.game, P = grid(g);
-    const rig0 = rigOf(g), est0 = P.map(p => lightEstimateAt(g, p)), add0 = P.map(p => hourLightAt(g, p));
+    const rig0 = rigOf(g), est0 = P.map(p => lightEstimateAt(g, p));
     let trips = 0, same = true;
     for (const h of [...DAY, 'dusk', 'midday']) { applyHour(g, h); if (rigOf(g) === rig0) same = false; applyHour(g, 'night'); if (rigOf(g) !== rig0) same = false; trips++; }
     applyHour(g, 'dawn'); applyHour(g, 'overcast'); applyHour(g, 'night'); if (rigOf(g) !== rig0) same = false;   // (hour → hour → night)
     const est1 = P.map(p => lightEstimateAt(g, p));
-    const ok = same && hourOf(g) === 'night' && hourSun(g) === null && add0.every(v => v === 0) && est0.every((v, i) => v === est1[i]);
+    const ok = same && hourOf(g) === 'night' && hourSun(g) === null && est0.every((v, i) => v === est1[i]);
     if (!ok) bad.push(id); detail.push(`${id}: ${trips + 1} round trips, rig ${same ? 'identical' : 'CHANGED'}, ${P.length} meter points ${est0.every((v, i) => v === est1[i]) ? 'identical' : 'CHANGED'}`);
   }
   F.verdict(bad.length === 0, 'every hour laid over each squad map and taken off again: the light list, every switch, sky, haze, exposure and the storm exactly as found, and the stand-in\'s meter reads what it read', detail.join(' · '));
@@ -79,7 +81,7 @@ export async function hoursLight(): Promise<boolean> {
     for (const h of DAY) {
       applyHour(g, h); const D = HOURS[h], sun = hourSun(g), at = L.indexOf(sun);
       const okRig = !!sun && sun.kind === 2 && at === moonAt + 1 && L.filter((l: any) => l.kind === 2 && l.enabled).length === 1 && !L[moonAt].enabled && sun.intensity === D.sun.intensity && Math.abs(-sun.dir[1] - Math.sin(D.sun.elevDeg * Math.PI / 180)) < 1e-9
-        && ext.every((t: any, i: number) => t.on === (D.lamps ? extOn0[i] : false)) && g.engine.settings.exposure === D.exposure && g.weather.enabled === false && g.targets.filter((t: any) => t.group !== 'exterior').every((t: any) => t.on === true || t.on === false);
+        && ext.every((t: any, i: number) => t.on === (D.lamps ? extOn0[i] : false)) && g.engine.settings.exposure === D.exposure && !g.weather.strike({}) && g.targets.filter((t: any) => t.group !== 'exterior').every((t: any) => t.on === true || t.on === false);   // (the storm held: it has no stroke to give)
       if (!okRig) rigBad.push(`${id}@${h}`);
       // the meter's stand-in: the open (the brightest fifth of the points) reads as the hour should; points the hour does not reach read no brighter than at night (eyes used to a place can read it darker)
       const E = P.map(p => lightEstimateAt(g, p)), add = E.map((e, i) => e - night[i]), sorted = [...E].sort((a, b) => b - a), open = vis(g, sorted[Math.floor(P.length * 0.1)]), same = add.filter(a => a <= 1e-9).length;

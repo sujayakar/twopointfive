@@ -62,8 +62,8 @@ fn a_burst_on_a_man_out_cold_moves_him_from_knockout_to_kill() {
     use game::chronicle::ChronKind::Kill;
     for (seed, by, sams, name, row) in [
         (3, DownBy::Player, false, None, "a teammate's frag grenade"),
-        (4, DownBy::Guard, true, Some("40 mm grenade"), "40 mm grenade"),
-        (5, DownBy::Player, true, None, "frag grenade"),
+        (4, DownBy::Guard, true, Some("40 mm grenade"), "the 40 mm grenade"),
+        (5, DownBy::Player, true, None, "the frag grenade"),
         (6, DownBy::Guard, false, None, "a teammate's frag grenade"),
     ] {
         let (mut p, man) = one_down(seed, by);
@@ -73,6 +73,9 @@ fn a_burst_on_a_man_out_cold_moves_him_from_knockout_to_kill() {
         assert_eq!(p.g.gd[man].down_kind, Some(DownKind::Shot), "{by:?}, thrown by Sam {sams}: the burst did not reach him");
         assert_eq!(card(&p), (1.0, 0.0), "{by:?}, thrown by Sam {sams}: kills, knockouts");
         assert!(timeline_has(&p, Kill, row), "{by:?}, thrown by Sam {sams}: no row names {row}");
+        let e = p.g.chronicle.events.iter().find(|e| e.kind == Kill).unwrap();
+        let said = game::chronicle::event_text(&p.g, e);
+        assert!(said.ends_with(&format!("killed — {row}")), "{by:?}, thrown by Sam {sams}: the row reads {said}");
     }
 }
 
@@ -461,5 +464,21 @@ fn men_getting_off_a_grenade_leave_by_a_door_that_stands_open_and_not_a_shut_one
             let id = p.id_of(m);
             assert!(!rep.hits.iter().any(|h| h.id == id && matches!(h.result, Killed | Wounded)), "a man through the doorway was hit");
         }
+    }
+}
+
+// ---------------------------------------------------------------- a Training level's kit
+
+/// THE RULE: a Training level is played with the kit its lesson is taught with: what a player is built with of his own four things, whatever the issue card
+/// counts out, as the address of its level says. The same address of a mission's level wears the card.
+/// A FAILURE MEANS: a lesson asks for a thing he has too few of, on a page that starts its game from the address.
+#[test]
+fn a_training_level_wears_its_lessons_kit() {
+    for s in [1, 2, 3] {
+        let start = |level: &str| Play::mission(level, &format!("?levelFile={level}&roomclear=1&squad4"), &Opts { seed: s, ..Default::default() });
+        let built = kit(&start("tut-team.json"));
+        assert_eq!((built.3, built.4, built.5, built.0), (4.0, 2.0, 2.0, 5.0), "seed {s}: smoke, stuns, frags and sponge rounds on a lesson");
+        let issued = kit(&start("killhouse.json"));
+        assert_eq!((issued.3, issued.4, issued.5), (1.0, 1.0, 1.0), "seed {s}: the control wears the issue card");
     }
 }

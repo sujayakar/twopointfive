@@ -300,7 +300,7 @@ pub fn finish(g: &mut crate::game::Game, gd: GuardId, j: Option<crate::shutdoor:
     let p = g.ch[c].pos;
     if j.map_or(false, |j| j.back) {
         let a = crate::orders::SquadOrdersAssignA {
-            order: String::from("fallIn"),
+            order: String::from(crate::orders::rows::fallin::ORDER.id),
             post: None,
             follow: Some(99.0),
             face: None,
@@ -317,7 +317,7 @@ pub fn finish(g: &mut crate::game::Game, gd: GuardId, j: Option<crate::shutdoor:
         None => String::from("holding"),
     };
     let a = crate::orders::SquadOrdersAssignA {
-        order: String::from("hold"),
+        order: String::from(crate::orders::rows::hold::ORDER.id),
         post: Some([p[0], 0.0, p[2]]),
         face: Some(g.ch[c].body_yaw),
         going: String::from("holding"),
@@ -475,7 +475,7 @@ pub fn register_shut_door(g: &mut crate::game::Game) {
     let def = crate::orders::rows::def(&crate::orders::rows::shutdoor::ORDER, crate::orders::OrderDef {
         targets: vec![crate::orders::TargetKind::Door],
         ack: Some(vec![String::from("shutting it."), String::from("got the door.")]),
-        stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from(STOOD) }),
+        stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from(crate::orders::rows::charge::ORDER.id) }),
         ..crate::orders::OrderDef::zeroed()
     });
     let id = crate::orders::squad_orders_row(g, def);

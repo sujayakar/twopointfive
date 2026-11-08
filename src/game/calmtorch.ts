@@ -25,7 +25,7 @@ import { SideMap } from '../math/side';
 import type { Game, Guard } from './game';
 import type { Vec3 } from '../math/vec';
 import { lightEstimateAt, handCarry } from './guards';
-import { hourOf, hourLightAt } from './hours';
+import { hourOf } from './hours';
 import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?calmtorch=0 = every patrol torch burns, as it did) and by the
@@ -65,7 +65,7 @@ export function workLit(g: Game, x: number, z: number, bar = TORCH.litAt): boole
   for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, sx = Math.sin(a), sz = Math.cos(a);
     for (let r = TORCH.spillM + 3; r <= TORCH.dayM + 1e-6; r += 3) { const qx = x + sx * r, qz = z + sz * r;
       if (g.col.segmentBlocked(eye, [qx, 1.5, qz])) break;
-      if (g.visibilityOf(hourLightAt(g, [qx, 1.2, qz])) >= bar) return true; } }
+      if (placeLight(g, qx, qz) >= bar) return true; } }
   return false;
 }
 /** his place read for the switch: 1 = LIT (where he stands, and the floor `aheadM` / 2 and `aheadM` down the way he faces as far as the first wall, all at

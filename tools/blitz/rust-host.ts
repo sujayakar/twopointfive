@@ -476,6 +476,8 @@ export class RustHost {
     return { blocked: (a: any, b: any) => ask(() => X.face_line(this.h, 0, a[0], a[1], a[2], b[0], b[1], b[2]) !== 0), solid: (a: any, b: any) => ask(() => X.face_line(this.h, 1, a[0], a[1], a[2], b[0], b[1], b[2]) !== 0),
       ray: (o: any, d: any, max: number) => ask(() => { if (!X.face_ray(this.h, o[0], o[1], o[2], d[0], d[1], d[2], max)) return null; const r = out(5); return { t: r[0], n: [r[1], r[2], r[3]] }; }),
       hear: (s: any, d: any) => ask(() => { X.face_hear(this.h, s[0], s[1], s[2], d[0], d[1], d[2]); return this.B.heardOf(out(10)); }),
+      // (a tool's own writes go first on every question, as they did on a crossing: a tool writes a lamp or puts a game back and asks again in the same step)
+      light: (p: any, o: readonly number[], st: boolean, l: number) => ask(() => { if (!this.inStep && !this.quietOn && this.busy === 0) this.scanFlush(); return o.length ? this.F.hand(new Uint8Array(Float64Array.from(o).buffer), (q: number, n: number) => X.face_light(this.h, p[0], p[1], p[2], st ? 1 : 0, l, q, n)) : X.face_light(this.h, p[0], p[1], p[2], st ? 1 : 0, l, 0, 0); }),
       way: (a: any, b: any, maxIter: number) => ask(() => { const n = X.face_way(this.h, a[0], a[2], b[0], b[2], maxIter); if (n < 0) return null; const r = out(n * 2), w: any[] = []; for (let i = 0; i < n; i++) w.push([r[i * 2], 0, r[i * 2 + 1]]); return w; }), together: (f: any) => f() }; }
   private askedAt = -1;
   /** how the mission ended, off the record the Rust game's own tick latches (`face_verdict`: null while it is played). For a host with no puppet, and
@@ -786,7 +788,7 @@ export class RustHost {
     // before it as without (19.8 against 19.5 ms, night-breach:1), and no step grows the memory once room is reserved. So the first tick's cost is the
     // game's own (what a game builds the first time it is asked), not the module's compiling.
     if (this.warmDue) { this.warmDue = false; const t1 = now(), n = this.o.warmSteps ?? 0, h2 = n > 0 && this.lastState && this.lastBlock ? this.F.hand(this.lastState, (p, m) => this.F.hand(this.lastBlock!, (bp, bn) => X.face_new(p, m, bp, bn))) : 0;
-      if (h2) { for (let i = 0; i < n; i++) { this.F.hand(hb, (p, m) => X.face_host_half(h2, p, m)); X.face_step(h2, dt, 0); X.face_lights(h2, dt); X.face_puppet(h2, i === 0 ? 1 : 0); } X.face_puppet_drop?.(h2); X.face_drop(h2); }
+      if (h2) { for (let i = 0; i < n; i++) { this.F.hand(hb, (p, m) => X.face_host_half(h2, p, m)); X.face_step(h2, dt, 0); X.face_puppet(h2, i === 0 ? 1 : 0); } X.face_puppet_drop?.(h2); X.face_drop(h2); }
       this.T.start += now() - t1; }
     this.memPages = this.F.mem.buffer.byteLength;
     t = now(); try { X.face_step(this.h, dt, 0); } catch (e) { throw new Error(`the Rust game's tick ${k} panicked: ${this.F.panicText() || String(e)}`); } const el = now() - t; this.T.step += el; if (el > this.worstStep) { this.worstStep = el; this.worstStepAt = k; }
@@ -802,8 +804,8 @@ export class RustHost {
     // (RH_HALF=<ticks, comma>: the host's half of those ticks, a line a field's value, for two runs to be held to each other by `diff`)
     if (process.env.RH_HALF?.split(',').includes(String(k))) halfSay(B, g, cmds, k);
     if (TICKS_DIR) { if (k === 1 || this.ticksFile === '') { this.ticksFile = ticksFile(this.audit ? 'audit' : 'rust'); writeFileSync(this.ticksFile, ''); } tickLine(this.F, this.ticksFile, k, this.dieN(), this.rustBlock(), hw, this.gave.map(l => { const w = l.split(' '); return `${w[0]}:${w[1]}`; }).join(',')); }
-    // ---- the host's steps after a tick, on the Rust side: the lights' update, the host's view of a level on rails, the camera's ask
-    t = now(); X.face_lights(this.h, dt); X.face_view(this.h); X.face_follow?.(this.h);
+    // ---- the host's steps after a tick, on the Rust side: the host's view of a level on rails, the camera's ask
+    t = now(); X.face_view(this.h); X.face_follow?.(this.h);
     this.T.after += now() - t;
     // ---- A QUIET STEP (`quietBegin`): the tool that asked for this run of steps has said none of its code runs between them, so nothing of the state
     // goes to the puppet until the run ends. The host's own camera needs two things of the game after every tick: asked for by `face_look`.

@@ -10,7 +10,7 @@ pub const ORDER: Row = Row {
     valid: Some(valid),
     tick: Some(crate::shutdoor::tick),
     when: Some(when),
-    ..Row::new(crate::shutdoor::SHUT_ID, label, issue)
+    ..Row::new("shutDoor", label, issue)
 };
 
 fn label(_g: &mut Game, _t: &OrderTarget) -> String { String::from("shut that door") }

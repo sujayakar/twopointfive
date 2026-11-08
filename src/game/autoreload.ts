@@ -9,7 +9,7 @@
 //     rack (a full magazine under an empty chamber) — as does a gun drawn dry;
 //   · never with nothing to seat (the line says so instead), never on unlimited ammo (that gun does not run dry), never under a show or the puppet (their beats
 //     press their own keys);
-//   · teammates and defenders have always reloaded by themselves (guards.ts startReloadBeat, roomfight.ts reloadUntil): nothing of theirs is touched.
+//   · teammates and defenders have always reloaded by themselves (guards: begin_reload): nothing of theirs is touched.
 // Type-only game imports: nothing here is built from another game module's exports at load (src/game is one import cycle).
 import type { Game, Player } from './game';
 import type { Firearm } from './weapons';

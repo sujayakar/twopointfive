@@ -5,6 +5,33 @@ back, WebSockets, CPU senses on the server. What is built so far is the server, 
 and a page is opened with `?net=`: a page without that word is the build as it was (the loop's `tick` seam is absent, `netFromUrl` returns on its first
 line).
 
+- **A GAME ON THE MODULE ALONE** (2026-11-08, for the page that draws: `draw.html`). The server and the scripted client can stand and step the game with no
+  TypeScript game beside it (`tools/mp/modstand.ts`): the setup record says `knobs: {stand: 'module', commands}` (or `MP_STAND=module`), the welcome
+  carries a START (`src/net/start.ts`: the level's file, the address's words, the die, the seats, the host's `machineBefore` commands as base64) in place of
+  the recipe, and every machine hands it the game's own start (`face_start`, dressed). The module's doors are `rust/game_face/src/net.rs`: `face_networked`
+  (every seat refereed), `face_record` (a seat's record as the wire has it; it is no hand: no host camera moves), `face_ahead` (the look ahead).
+  `src/net/modgame.ts NetGame` steps it, folds its words and asks it; a page uses the same class. `face_step` runs LIGHTS alone; no command is sent after
+  the start (letting go is the record's 'Paused' word); a host clears the outs each tick. THE WORD BESIDE THE STATE WORD IS OF EVERY PART there (no
+  list): server and clients had all 296 alike. Read here: a game stands in 0.4 to 1.0 s, a tick with the look ahead is about 6 ms against 16, a process
+  230 MB. The recipe road stays for the page with a TypeScript game and goes with it.
+  - **src/net knows no game**: `wire`, `client`, `server`, `timeline`, `foresee`, `delay`, `words`, `modgame`, `start`, `address` import nothing of `src/game`
+    (hosts are handed WIRE records). What the old page alone needs is `recipe.ts` (PlayerCmd to and from the wire), `step.ts` and `page.ts`.
+  - **The door** (`src/net/door.ts`): the page's half that knows no game, for both pages: the address's words, the seat's key, the socket and the connection made worse,
+    the hello to the welcome or the words that refuse it, how fast confirmed ticks are walked (`NetDoor.walk`, round them the host's `far` and `run`),
+    the look ahead, `state()`, the line the player is shown. A page stands the game, hands `step / word / watch` in, and draws.
+  - **What a machine looks at parts nothing** (`rust/game_start/tests/coop.rs where_a_machine_looks…`: one machine looks at the pass's fire with its camera
+    turning, the other at nothing; and `a_look_ahead_is_where_the_game_then_has_him`). KNOWN: `g.wind.to_pool` (the gusts the picture's particles take)
+    follows the host's view and is in the wider word's `wind`; nothing of a tick reads it. A level with more jets than the pool near one view and not the
+    other's would count there, never in the alarm: it wants to be the drawing's own list.
+  - **The page that draws** (`draw.html?net=`; `src/host/drawnet.ts`): the welcome's start stood as it is said, at the game's own address; a page tick samples the hand, sends it as a record, walks, and
+    draws. His own man is moved as one body where the look ahead has him (`rust/game_draw/src/lead.rs`: bones, proxies, what he wears, the lights in his hands, his rim), a page tick with nothing confirmed
+    holds what moves where it stands (`face_draw_hold`), several ticks in one are blended over them all (`face_draw_over`), ticks nobody sees are not drawn. A card takes the hands off and the game goes on;
+    Restart, a save and a load are refused in words; the title has Co-op (`ui/coop.ts` with no game under it; a hosted game's setup carries `stand: 'module'` and this machine's settings but the kit). Check:
+    `bun run tools/draw/net-check.ts` (the server's core, a second player and the page's half on a check's clock: the whole game's words through stalls, bunched ticks, a restart and a page asleep;
+    `NET_BREAK=1` fails). READ in Chromium in software against `tools/mp/server.ts` and a bot: 69 of 69 words of the whole game over 2,078 ticks. Players' picked names are not shown on it yet. Not seen on
+    a GPU, nor played by two.
+  - NOT DONE: Host game through the control plane with this setup; a kit the host keeps rides `commands`
+    already (machineBefore's own), nobody sends one yet.
 - **CO-OP IS ON THE RUST GAME** (2026-11-07). The TypeScript tick is deleted; the game server, the scripted clients and the page in a game step the Rust
   game, and the Co-op screen is up again (for some hours of 2026-11-07 it answered "Co-op can’t be played on this build yet": `COOP.down`, gone once
   the two faults a game of two had at its start in Rust were mended there: a wall charge's roster by seat, and the budget of men counting the seats). A
@@ -138,7 +165,7 @@ line).
   GAME IS A RUN TAPE WRITTEN LIVE: its setup is the tape's RECIPE (`game/runtape.ts recipeOf`: the die, the page's address, every knob table, the kit),
   made by the server of the game it stood, and every machine — the server too — stands its game FROM the recipe (headless: `tools/mp/stand.ts standRecipe`,
   which is `tools/qa/rerun.ts` on a tape of no steps), so all of them come to the game by one door. Four tables are forced on whatever a setup says
-  (`wire.ts NET_TABLES`): `EXACT.on`, `SENSE.cpu`, `CMDCHECK.on`, `VERDICT.on`; whoever STANDS a recipe refuses one without them (`wire.ts recipeWhy`:
+  (`wire.ts NET_TABLES`): `EXACT.on`, `CMDCHECK.on`, `VERDICT.on`; whoever STANDS a recipe refuses one without them (`wire.ts recipeWhy`:
   a record on the wire carries no view matrices, so a game that believed its seats would stand its men still), and refuses one whose mission does not
   come up. A setup's own `tables` are a host's settings: each key must be a knob this build has, of the knob's kind, or the setup is refused
   (`stand.ts layWhy`; laid with `knobs.ts assignDeep`).
@@ -283,7 +310,7 @@ line).
   lead; the outline and the weapon light riding with him; crouched under the tap step and stalking, where he is not ahead and answers a round trip
   late; `?netlag` by eye. NEXT, if the feel asks for it: the copy walking a crouched man (the tap step's rhythm), teammates carried along by their
   velocity in the copy, his muzzle flash and shot sound shown early.
-- **A worse connection on purpose: the debugger's Network page** (2026-11-02; `src/ui/netrows.ts` the rows, `src/net/page.ts NETWAY` the page's
+- **A worse connection on purpose: the debugger's Network page** (2026-11-02; `src/ui/netrows.ts` the rows, `src/net/door.ts NETWAY` the page's
   numbers, `src/net/delay.ts` what they do). WHY: the maintainer, about to try co-op on two laptops on one home network: "can you add something to the
   debug panel to simulate different network conditions?". Two machines on one good network see none of what a real connection does. WHAT: on a page
   that is a client of a networked game (and on no other: `main.ts` makes the page only then) the debugger has a Network page, last on the rail. Rows:

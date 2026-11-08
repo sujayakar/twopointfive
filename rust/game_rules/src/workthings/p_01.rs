@@ -271,7 +271,7 @@ pub fn work_things_rows(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: 
     let mut out = vec![seat.work.row];
     for &id in rows {
         let d = &g.tab.orders_order_def[id];
-        if d.id != "move" && d.stands_in.as_ref().map_or(true, |s| s.for_ != "move") && d.key != Some(1.0) { out.push(id); }
+        if d.id != crate::orders::rows::movethere::ORDER.id && d.stands_in.as_ref().map_or(true, |s| s.for_ != crate::orders::rows::movethere::ORDER.id) && d.key != Some(1.0) { out.push(id); }
     }
     out
 }
@@ -361,7 +361,7 @@ pub fn work_things_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::
         if let Some(post) = post {
             let there = format!("covering {}", g.gd[w].callsign);
             crate::orders::squad_orders_assign(g, mate, &crate::orders::SquadOrdersAssignA {
-                order: String::from("move"),
+                order: String::from(crate::orders::rows::movethere::ORDER.id),
                 post: Some(post),
                 face: Some(out),
                 stance: Some(crate::character::Stance::LowReady),
@@ -377,7 +377,7 @@ pub fn work_things_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::
         } else {
             let yaw = g.ch[g.gd[mate].ch].body_yaw;
             crate::orders::squad_orders_assign(g, mate, &crate::orders::SquadOrdersAssignA {
-                order: String::from("hold"),
+                order: String::from(crate::orders::rows::hold::ORDER.id),
                 post: Some([p[0], 0.0, p[2]]),
                 face: Some(yaw),
                 stance: Some(crate::character::Stance::LowReady),
@@ -518,7 +518,7 @@ pub fn work_things_settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate:
     let th = &j.thing;
     let face = if turn { m::atan2(th.n[0], th.n[2]) } else { g.ch[g.gd[gd].ch].body_yaw };
     crate::orders::squad_orders_assign(g, gd, &crate::orders::SquadOrdersAssignA {
-        order: String::from("hold"),
+        order: String::from(crate::orders::rows::hold::ORDER.id),
         post: Some([p[0], 0.0, p[2]]),
         face: Some(face),
         stance: Some(crate::character::Stance::LowReady),

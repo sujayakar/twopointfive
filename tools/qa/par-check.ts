@@ -49,7 +49,7 @@ export async function parCheck(): Promise<boolean> {
     const drop = (list: any[], by: 'player' | 'guard' = 'player') => quiet(() => { for (const h of list) killGuard(g, h, [1, 0, 0], false, 'shot', by); });
     const order = () => quiet(() => g.orders.give('fallIn', g.orders.targetAt(g.player.char.pos), 'all'));
     const nudge = (m: number) => quiet(() => { const p = g.player.char.pos; g.teleportPlayer([p[0] + m, 0, p[2]]); });
-    return { W, g, rc, par: g.par, step, foes, drop, order, nudge, row: () => g.objectiveText() as string };
+    return { W, g, rc, par: g.par, step, foes, drop, order, nudge, row: () => (g.view.mission?.text ?? '') as string };
   }
 
   try {

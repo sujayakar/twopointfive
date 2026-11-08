@@ -35,16 +35,17 @@ for (const m of [...ALL_MISSIONS, ...(only.length ? [] : [{ id: 'the plain addre
     const o = D.at[Section.view], f: [number, number, number] = [D.f[o + View.follow], D.f[o + View.follow + 1], D.f[o + View.follow + 2]]; cam.step(1 / 60, f, null);
     for (const a of [0.5, 1]) { game.frame(a, cam.target); D.fresh(); }
     const h = D.at[Section.head]; boxes = Math.max(boxes, D.u[h + Head.count]); sum += game.ms.draw; n++; worst = Math.max(worst, game.ms.draw);
-    if (D.u[h + Head.count] !== D.n[Section.geo] || D.n[Section.view] !== 1 || D.n[Section.sky] !== 1) throw new Error('the sections do not agree'); } };
+    if (D.u[h + Head.count] !== D.n[Section.geo] || D.n[Section.view] !== 1 || D.n[Section.sky] !== 1) throw new Error('the sections do not agree');
+    if (!game.at(game.view().me) || !game.head(game.view().me)) throw new Error('the HUD is told of a man who is not drawn'); } };
   try {
     game.start({ level: bytes(file), words, mannequin, mannequinBin, cast, castLook, seed: 5 });
     { const o = D.at[Section.view]; cam.target = [D.f[o + View.follow], D.f[o + View.follow + 1], D.f[o + View.follow + 2]]; cam.rebuild(); }
     game.commands.god(1);
     run(60, 'a second standing');
-    input.pressed.add('F5'); run(2, 'a save by hand');
+    input.pressed.add('F5'); run(2, 'a save by hand'); const saved = game.savesTold(), hand = game.saves().hand;
     const a = where(); input.keys.add('KeyW'); run(90, 'a walk'); input.keys.clear(); const b = where();
     input.buttons = 1; input.clicked = 1; run(30, 'a shot'); input.buttons = 0;
-    const s0 = stood(); game.commands.load(BREAK ? 'manual.9' : 'manual.0'); run(2, 'a load'); const c = where(), loaded = stood() !== s0, walked = Math.hypot(b[0] - a[0], b[1] - a[1]) > 0.3;
+    const s0 = stood(); game.commands.load(BREAK ? 'manual.9' : 'manual.0'); run(2, 'a load'); const put = game.savesTold(), c = where(), loaded = stood() !== s0, walked = Math.hypot(b[0] - a[0], b[1] - a[1]) > 0.3;
     // a panic: the game of that call is gone, and it stands again from the newest kept, with its saves
     at = 'a panic'; let label: string | null = null; try { game.X.face_debug_panic(game.h, 0); } catch { label = game.recover(true); }
     run(20, 'the frames after a panic'); const e = where(), up = label !== null && (/^tut-/.test(file) || (label === 'by hand' && Math.hypot(e[0] - a[0], e[1] - a[1]) < 0.6));
@@ -54,8 +55,9 @@ for (const m of [...ALL_MISSIONS, ...(only.length ? [] : [{ id: 'the plain addre
     const s1 = stood(); game.commands.restart(''); run(120, 'a restart'); const again = stood() !== s1;
     // (a tutorial keeps its own checkpoints and takes none by hand)
     const taught = /^tut-/.test(file), back = loaded && Math.hypot(c[0] - a[0], c[1] - a[1]) < 0.1;
+    const told = !hand ? taught : saved.tag === 'CHECKPOINT SAVED' && put.tag === 'CHECKPOINT LOADED' && put.lines[0] === 'checkpoint loaded — by hand' && !game.savesTold().lines.length;   // (…and the player is told of it, once)
     const went = walked || SKY.has(m.id);
-    line(again && went && up && start && (taught || back), `${m.id}: started, walked${walked ? '' : ' (nowhere)'}, shot, ${taught ? 'taught' : 'saved and went back'}, stood again after a panic, restarted`, `${boxes} boxes · sections ${(sum / n).toFixed(2)} ms a tick, worst ${worst.toFixed(1)}${start ? '' : ` · from the start: ${first}, at ${z.map(x => x.toFixed(1))}, kept ${kept}`}${up ? '' : ` · after the panic: ${label}, at ${e.map(x => x.toFixed(1))}`}${again ? '' : ' · the restart was not told'}${taught || back ? '' : ` · the load left him at ${c.map(x => x.toFixed(1))}, saved at ${a.map(x => x.toFixed(1))}`}`);
+    line(again && went && up && start && told && (taught || back), `${m.id}: started, walked${walked ? '' : ' (nowhere)'}, shot, ${taught ? 'taught' : 'saved and went back'}, stood again after a panic, restarted`, `${boxes} boxes · sections ${(sum / n).toFixed(2)} ms a tick, worst ${worst.toFixed(1)}${start ? '' : ` · from the start: ${first}, at ${z.map(x => x.toFixed(1))}, kept ${kept}`}${up ? '' : ` · after the panic: ${label}, at ${e.map(x => x.toFixed(1))}`}${again ? '' : ' · the restart was not told'}${told ? '' : ` · what was said of the saves: ${JSON.stringify([hand, saved, put])}`}${taught || back ? '' : ` · the load left him at ${c.map(x => x.toFixed(1))}, saved at ${a.map(x => x.toFixed(1))}`}`);
   } catch (e) { line(false, `${m.id}: stopped in ${at}`, String((e as Error)?.message ?? e).slice(0, 400)); }
   try { if (game.h) game.X.face_drop(game.h); } catch { /* lost to its panic */ }
 }

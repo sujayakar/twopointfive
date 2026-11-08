@@ -7,7 +7,7 @@
 // `stepSeats`, is this file's `step`, hung on the game object):
 //   the host's half   the knobs the module reads · each seat's record with every camera and
 //                     Input row (the bridge's `hostHalf` → `face_host_half`)
-//   the tick          `face_step`: the tick, the lights' update,
+//   the tick          `face_step`: the tick (a flash's envelope is its last line),
 //                     a rails level's host view
 //   the apply         `face_puppet`: only what the page reads and only what changed (tools/blitz/PUPPET.md) → `applyGame` onto the puppet, in place
 //   the out events    what the tick's rules told the host (a sound, particles, a decal, smoke): the generated dispatcher makes today's calls on the
@@ -244,7 +244,7 @@ export const RUST_GAME = {
   /** WHERE A STEP'S TIME GOES, finer (`prof.on`, for a check: the tick is then four calls into the module where play makes one). Sums in ms over `n` steps:
    *  the host's half (the knobs · the bridge's hand-over built and taken), the tick, the lights'
    *  update, the rails' view, the filtered export, the apply (the bridge's own walk, by its phases · the menu's questions · the doors' stand-in), the out events, the dress step, the save controller */
-  prof: { on: false, n: 0, knobs: 0, hostHalf: 0, tick: 0, lights: 0, view: 0, asked: 0, export: 0, applyWalk: 0, applyRows: 0, applyMain: 0, applyTables: 0, asks: 0, doors: 0, out: 0, dress: 0, saves: 0, phases: {} as Record<string, number> },
+  prof: { on: false, n: 0, knobs: 0, hostHalf: 0, tick: 0, view: 0, asked: 0, export: 0, applyWalk: 0, applyRows: 0, applyMain: 0, applyTables: 0, asks: 0, doors: 0, out: 0, dress: 0, saves: 0, phases: {} as Record<string, number> },
   /** quiet runs of steps (`rustQuiet`): how many ended in an apply, and the steps taken inside them */
   quiet: { runs: 0, ticks: 0 },
   outEvents: 0, outArms: {} as Record<string, number>, outThrew: {} as Record<string, string>, gives: [] as string[],
@@ -298,7 +298,7 @@ export async function rustBoot(): Promise<void> {
   //  by the page's readers, are handed on as they are)
   { const raw = M.exports as unknown as Record<string, unknown>, W: Record<string, unknown> = {}; for (const k of Object.keys(raw)) { const f = raw[k]; W[k] = typeof f === 'function' && k.startsWith('face_') ? guard(k, f as (...a: number[]) => number) : f; } X = W as unknown as Face; }
   MEM = X.memory; BUF = MEM.buffer;
-  for (const n of ['face_new_at', 'face_show_seat', 'face_puppet', 'face_host_half', 'face_step', 'face_ask', 'face_tick_view', 'face_debrief_view', 'face_run_view', 'face_line', 'face_ray', 'face_hear', 'face_way', 'face_cursor_view', 'face_under', 'face_poke', 'face_write', 'face_keep', 'face_back', 'face_loaded', 'face_saves_in', 'face_saves_asked']) if (typeof X[n] !== 'function') throw new FaceError(`?rust=1: game_face.wasm has no ${n}: it was built from another tree (tools/blitz/face-build.ts builds this one's)`);
+  for (const n of ['face_new_at', 'face_show_seat', 'face_puppet', 'face_host_half', 'face_step', 'face_ask', 'face_tick_view', 'face_debrief_view', 'face_run_view', 'face_line', 'face_ray', 'face_hear', 'face_light', 'face_way', 'face_cursor_view', 'face_under', 'face_poke', 'face_write', 'face_keep', 'face_back', 'face_loaded', 'face_saves_in', 'face_saves_asked']) if (typeof X[n] !== 'function') throw new FaceError(`?rust=1: game_face.wasm has no ${n}: it was built from another tree (tools/blitz/face-build.ts builds this one's)`);
   { const no = drawRefused(X as unknown as DrawFace); if (no) throw new FaceError(`?rust=1: ${no} (tools/blitz/face-build.ts builds this checkout's)`); }
   // (the module and this page's half of the bridge must be of one generation: a module of another reads garbage)
   if ((X.face_layout?.() >>> 0) !== SCHEMA.layout) throw new FaceError(`?rust=1: game_face.wasm is of another generation than this page's bridge (its layout ${(X.face_layout?.() ?? 0) >>> 0}, the page's ${SCHEMA.layout}): the checkout's module is stale, tools/blitz/face-build.ts builds this one's`);
@@ -392,7 +392,7 @@ export function rustAttach(g: Game): void {
   SNAPS.own = true;
   SNAPS.take = (gg, _since, label) => { if (gg !== g) throw new Error('rust=1: a save of another game than the one the Rust game steps'); return take(held, label) as unknown as Snapshot; };
   SNAPS.put = s => { const k = s as unknown as KeptGame; if (k.game !== g || !k.rust) throw new Error('rust=1: that save is not a game kept by the Rust game'); put(held, k); };
-  // THE LIGHTS' UPDATE (a flash's envelope and its retirement) is made on the Rust side as its step ends (`face_step`'s LIGHTS flag); the lights are rows of
+  // THE LIGHTS' UPDATE (a flash's envelope and its retirement) is the Rust tick's last line (game_tick_end); the lights are rows of
   // the one block, so made here too it would be made twice
   { const L = G.engine.lights; L.update = function () { /* the Rust side made it */ }; }
   // AN ORDER GIVEN FROM OUTSIDE A TICK (a tool's `__orders.give`, a panel's button) goes to the Rust game at once, in the words the headless host gives
@@ -456,6 +456,8 @@ function rustAsk(S: Held): WorldAsk {
     ray: (o, d, max) => ask(() => { if (!call('face_ray', () => X!.face_ray(S.h, o[0], o[1], o[2], d[0], d[1], d[2], max))) return null; const r = f64(5); return { t: r[0], n: [r[1], r[2], r[3]] as [number, number, number] }; }, null),
     hear: (from, to) => ask(() => { call('face_hear', () => X!.face_hear(S.h, from[0], from[1], from[2], to[0], to[1], to[2])); return heardOf(f64(10)); }, { direct: true, routed: false, pathLen: 0, via: [from[0], from[1], from[2]], apparent: [from[0], from[1], from[2]], muffle: 0, carry: 1 }),
     way: (a, b, maxIter) => ask(() => { const n = call('face_way', () => X!.face_way(S.h, a[0], a[2], b[0], b[2], maxIter)); return n < 0 ? null : wayOf(n ? f64(n * 2) : []); }, null),
+    // (a load not yet taken is taken first, and a tool's writes, as on a crossing: the rest of a crossing is what a preview cannot pay for)
+    light: (p, owners, steady, leave) => ask(() => { settle(S); if (S.toolScan) scanFlush(S); return call('face_light', () => owners.length ? hand(new Uint8Array(Float64Array.from(owners).buffer), (q, n) => X!.face_light(S.h, p[0], p[1], p[2], steady ? 1 : 0, leave, q, n)) : X!.face_light(S.h, p[0], p[1], p[2], steady ? 1 : 0, leave, 0, 0)); }, 0),
     together: f => f(),
   };
 }
@@ -716,7 +718,7 @@ function watched(g: Game): Watched[] {
   if (G.fogOfWar) L.push([g, ['fogOfWar', 'on'], G.fogOfWar.on]);
   // (a replay's viewer, or the kit's picture, may draw with the fog off: the tick then keeps the frame's list as it stood before the fog cut it. The picture's record is the other half of the page's fog object, named as the table names it)
   if (G.fogOfWar) L.push([g, ['fog_picture', 'viewer'], G.fogOfWar.viewer]);
-  // (where the picture looks, set by the engine once a render: host/loop.ts. The wind picks the jets for the particles round it, wind.ts `update`)
+  // (where the picture looks, set by the engine once a render: host/loop.ts. The particle pool's jets are picked round it, wind.ts `forParticles`)
   { const vf = G.engine?.viewFocus; if (vf && vf.length === 3) L.push([g, ['engine', 'viewFocus'], [vf[0], vf[1], vf[2]]]); }
   const P = G.player; if (P) L.push([P, ['wand'], P.wand], [P, ['bigKit'], P.bigKit]);
   return L;
@@ -726,7 +728,7 @@ function send(S: Held, w: Watched): boolean {
   try { S.poke!(w[0], w[1], w[2]); RUST_GAME.pokes++; RUST_GAME.poked[name] = (RUST_GAME.poked[name] ?? 0) + 1; return true; }
   catch (e) { RUST_GAME.pokeRefused[name] ??= String((e as Error)?.message ?? e).slice(0, 300); return false; }
 }
-const LIGHTS = 2, VIEW = 4;
+const VIEW = 4;
 /** ONE TICK, in place of `Game.stepSeats`: no tick while the game is stopped by a panic (Enter in the tick's own record puts a kept game back); a trap
  *  inside it stops the game and is no throw of the frame's; a throw of the apply is answered by the whole state once */
 function step(S: Held, dt: number, cmds: readonly PlayerCmd[]): void {
@@ -794,10 +796,10 @@ function stepOne(S: Held, dt: number, cmds: readonly PlayerCmd[]): void {
     tellShown(S); const hb = hostHalf(g, reg(), cmds); hand(hb, (p, n) => X!.face_host_half(S.h, p, n));
     if (PF.on) { PF.hostHalf += performance.now() - tp; PF.n++; }
     const tHost = performance.now() - t; t = performance.now();
-    const flags = LIGHTS | VIEW;
-    if (PF.on) call('face_step', () => {   // (the same three things in the same order, each timed)
+    const flags = VIEW;
+    if (PF.on) call('face_step', () => {   // (the same two things in the same order, each timed)
       let a = performance.now(), b = a;
-      X!.face_step(S.h, dt, 0); b = performance.now(); PF.tick += b - a; a = b; X!.face_lights(S.h, dt); b = performance.now(); PF.lights += b - a; a = b; X!.face_view(S.h); PF.view += performance.now() - a; });
+      X!.face_step(S.h, dt, 0); b = performance.now(); PF.tick += b - a; a = b; X!.face_view(S.h); PF.view += performance.now() - a; });
     else call('face_step', () => X!.face_step(S.h, dt, flags));
     grown(g);
     const tStep = performance.now() - t;
@@ -906,7 +908,7 @@ export function rustWarm(host: { input: unknown; cam: unknown; canvas: unknown }
       const cmd = stillCmd(sampleCmd(g.hostSeat().view as never, host.input as never, host.cam as never, host.canvas as never, null)), cmds = g.seats.map(() => cmd);
       for (let i = 0; i < ticks; i++) { const a = performance.now();
         tellShown(S); const hb = hostHalf(g, reg(), cmds); hand(hb, (p, n) => X!.face_host_half(S.h, p, n));
-        call('face_step (warming)', () => X!.face_step(S.h, 1 / 60, LIGHTS | VIEW)); X!.face_saves_asked(S.h); X!.face_puppet(S.h, 0); grown(g);
+        call('face_step (warming)', () => X!.face_step(S.h, 1 / 60, VIEW)); X!.face_saves_asked(S.h); X!.face_puppet(S.h, 0); grown(g);
         const ms = performance.now() - a; if (i === 0) W.firstTickMs = ms; W.lastTickMs = ms; W.ticks++; }
     } finally {
       // THE GAME AS IT WAS STARTED stands again, and what the filtered export last sent is filled again from it (the puppet never took the ticks above)

@@ -172,8 +172,8 @@ pub fn event_text(g: &crate::game::Game, e: &crate::chronicle::ChronEvent) -> St
         ChronKind::Kill => {
             if is(d, "weapon", "knife") {
                 format!("{} killed — the knife", s("who"))
-            } else if is(d, "weapon", "a wall charge") {
-                format!("{} killed — the wall charge", s("who"))
+            } else if on(d, "blast") {
+                format!("{} killed — {}", s("who"), crate::gear::gear_text(g, &s("weapon")))
             } else {
                 format!("{} shot dead ({})", s("who"), crate::gear::gear_text(g, &s("weapon")))
             }
@@ -335,7 +335,7 @@ mod tests {
         (ChronKind::Ko, "hall", vec![("who", T("A")), ("method", T("charge"))], "A out cold — the wall charge"),
         (ChronKind::Ko, "hall", vec![("who", T("A")), ("method", T("hand"))], "A out cold — the takedown"),
         (ChronKind::Kill, "hall", vec![("who", T("A")), ("weapon", T("knife"))], "A killed — the knife"),
-        (ChronKind::Kill, "hall", vec![("who", T("A")), ("weapon", T("a wall charge"))], "A killed — the wall charge"),
+        (ChronKind::Kill, "hall", vec![("who", T("A")), ("weapon", T("the wall charge")), ("blast", B(true))], "A killed — the wall charge"),
         (ChronKind::BodyFound, "hall", vec![("by", T("A")), ("who", T("B")), ("breathing", B(true)), ("civilian", B(true))], "A found B out cold — the floor goes up hard"),
         (ChronKind::BodyFound, "hall", vec![("by", T("A")), ("who", T("B"))], "A found B dead"),
         (ChronKind::Hit, "hall", vec![("by", T("A"))], "hit — A's round"),

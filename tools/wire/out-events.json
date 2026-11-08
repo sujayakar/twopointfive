@@ -811,6 +811,18 @@
 ],
 "sig": "pub fn snow_blast(g: &mut crate::game::Game, at: V3, radius: f64)",
 "mode": "push"
+},
+{
+"call": "SmokeSystemLike.shutCans",
+"rust": "crate::out_events::smoke_cans_shut",
+"sites": 1,
+"ts": "shutCans",
+"of": "SmokeSystemLike",
+"file": "src/smoke/types.ts",
+"why": "this",
+"params": [],
+"sig": "pub fn smoke_cans_shut(g: &mut crate::game::Game)",
+"mode": "push"
 }
 ],
 "listed": [
@@ -1149,18 +1161,11 @@
 "body": "if let Some(i) = g.engine.lights.lights.iter().position(|x| *x == l) { g.engine."
 },
 {
-"call": "Sensors.diverge",
-"rust": "crate::sensors::sensors_diverge",
-"sites": 1,
-"why": "a short body: it forwards or answers",
-"body": "diverge(&mut g.sensors.s, d)"
-},
-{
 "call": "SmokeSystemLike.budget",
 "rust": "crate::smoke_types::smoke_system_like_budget",
 "sites": 3,
 "why": "answers a value (Option<f64>)",
-"body": "if g.smoke_owned { Some(crate::sense::cpu_smoke_budget(g)) } else { None }"
+"body": "crate::sense::smoke_budget(g)"
 },
 {
 "call": "SmokeSystemLike.drawing",

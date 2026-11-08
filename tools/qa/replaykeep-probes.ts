@@ -9,7 +9,7 @@ const { ReplayBuffer, REPLAY } = await import(`${ROOT}/src/game/replaybuf.ts`);
 const F = await import(`${ROOT}/src/replay/format.ts`);
 const KP = await import(`${ROOT}/src/replay/kept.ts`);
 const KS = await import(`${ROOT}/src/replay/keepstore.ts`);
-const { ReplayKeeper } = await import(`${ROOT}/src/replay/keeper.ts`);
+const { ReplayKeeper, ringSource } = await import(`${ROOT}/src/replay/keeper.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
 const { levelFingerprint } = await import(`${ROOT}/src/game/savestate.ts`);
@@ -38,7 +38,7 @@ async function run(secs: number, o: { query?: string | null; keep?: boolean; eve
   const keep = o.keep !== false, buf = keep ? new ReplayBuffer() : null, store = o.store ?? KS.memoryStore();
   const meta = () => ({ url: o.query ? `?${o.query}` : '', commit: 'abc1234', userAgent: 'probe', fp: levelFingerprint(W.game), session: o.sid ?? 'visit-a' });
   let now = 0;
-  const K = buf ? new ReplayKeeper(buf, { sid: o.sid ?? 'visit-a', store, played: o.played ?? (() => true), head: () => { const { session: _s, ...m } = meta(); return buf.head(W.game, m); },
+  const K = buf ? new ReplayKeeper(ringSource(buf), { sid: o.sid ?? 'visit-a', store, played: o.played ?? (() => true), head: () => { const { session: _s, ...m } = meta(); return buf.head(W.game, m); },
     now: () => new Date(Date.UTC(2026, 9, 11, 12, 0, now++)).toISOString(), ...(o.gz !== undefined ? { gz: o.gz } : {}), ...(o.budget ? { budget: o.budget } : {}) }) : null;
   if (buf) { buf.tape.born(W.game); W.game.replayTap = (dt: number, cmd?: unknown) => { if (cmd) buf.top(W.game, dt, cmd); else buf.tick(W.game, dt, W.cam); }; }
   const R: Rig = { W, buf, K, store, hashes: [], meta };

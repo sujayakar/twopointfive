@@ -7,9 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// `LOUD_ROWS.includes(id)`   (silent.ts:248, :249)
-fn is_loud_row(id: &str) -> bool { loud_rows().iter().any(|r| r == id) }
-
 /// a state as the TypeScript's literal makes it   (silent.ts:123, :259)
 fn new_state(cast: Vec<GuardId>, since: f64) -> State {
     State { cast, silent: false, since, hot: false, was: None, booted: None }
@@ -235,7 +232,7 @@ pub fn rows(g: &mut crate::game::Game) -> [OrdersOrderDefId; 2] {
         listed: listed(),
         free: Some(true),
         ack: Some(vec![String::from("going loud."), String::from("copy. loud.")]),
-        stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from("silent") }),
+        stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from(crate::orders::rows::silent::ORDER.id) }),
         ..Default::default()
     }));
     [silent, loud]
@@ -251,7 +248,7 @@ pub fn loud_word(w: Option<&str>) -> String {
 
 /// the rows on the menu, off it with the switch off; work only when that changes   (silent.ts seat)
 pub fn seat(g: &mut crate::game::Game) {
-    let go = g.orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == "go");
+    let go = g.orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == crate::orders::rows::go::ORDER.id);
     let go_digit = match go {
         Some(d) => match &g.tab.orders_order_def[d].hot_key { Some(k) => k.is_empty(), None => true },
         None => false,
@@ -262,14 +259,14 @@ pub fn seat(g: &mut crate::game::Game) {
         if was.on == on && was.go_digit == go_digit { return; }
     }
     g.m.silent.seats.set(key, SilentModSeatsValue { on, go_digit });
-    crate::orders::squad_orders_unregister(g, "loud");
-    crate::orders::squad_orders_unregister(g, "silent");
+    crate::orders::squad_orders_unregister(g, crate::orders::rows::loud::ORDER.id);
+    crate::orders::squad_orders_unregister(g, crate::orders::rows::silent::ORDER.id);
     if !on { g.orders.posture = None; return; }
     if let Some(go) = go {
         if go_digit { crate::orders::squad_orders_register(g, go, None); }
     }
     let [silent, loud] = rows(g);
-    crate::orders::squad_orders_register(g, silent, Some("go"));
+    crate::orders::squad_orders_register(g, silent, Some(crate::orders::rows::go::ORDER.id));
     crate::orders::squad_orders_register(g, loud, None);
     g.orders.posture = Some(seam_posture(g));
 }
@@ -285,11 +282,11 @@ pub fn posture_word(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Opti
 }
 /// `posture.mark`   (silent.ts:248): what the posture's seam should call
 pub fn posture_mark(g: &crate::game::Game, seat: &crate::seats::SeatRef, def: OrdersOrderDefId) -> &'static str {
-    if squad_silent(g, seat) && is_loud_row(&g.tab.orders_order_def[def].id) { " · LOUD" } else { "" }
+    if squad_silent(g, seat) && crate::orders::rows::id_is(&g.tab.orders_order_def[def].id, crate::orders::Is::Loud) { " · LOUD" } else { "" }
 }
 /// `posture.given`   (silent.ts:249): what the posture's seam should call
 pub fn posture_given(g: &mut crate::game::Game, def: OrdersOrderDefId) {
-    let loud = is_loud_row(&g.tab.orders_order_def[def].id);
+    let loud = crate::orders::rows::id_is(&g.tab.orders_order_def[def].id, crate::orders::Is::Loud);
     silent_tool(g, loud);
 }
 fn seam_posture(g: &mut Game) -> crate::orders::SquadOrdersPosture { crate::orders::SquadOrdersPosture {} }   // (the one maker of a posture is this module: a posture that is Some IS these three functions, and p_orders_03 calls silent_tool on that reading)

@@ -3,11 +3,15 @@
 // no line per man of the squad, no counts of what the squad carries, no alternative under a key's line.
 //
 // This file is the reduction, with no page under it (ui/overlay.ts feeds it the rows it would have listed and draws what comes back;
-// handring-check asks it directly). Imports the rule's own table and types.
-import type { InteractRow } from './overlay';
+// handring-check asks it directly). Whether the panel is these three things at all is the view's (`interact.corner`: a tour's puppet keeps the list as it was).
 
-/** is the corner panel the three things: not under the tour's puppet (its list is the list as it was) */
-export const cornerOn = (puppet: boolean): boolean => !puppet;
+import type { ThingKind } from '../view/read';
+
+/** One block of the interaction panel — one ROW of the list (a verb Space can do, or a running one): what the thing is (`label`, shown only on the first row of a thing — `cont` marks the rows of the same
+ *  thing under it), the key → action pair plus hint lines (`opts`; key '' = a status / hint line such as 'picking… 40%' or 'or sprint into it'), whether it is within reach (else greyed, with `dist` in
+ *  metres when known), `off` (a thrown breaker), and `progress` 0‥1 for a bar (a lock being picked, the drive coming out, the leaf easing round). */
+export interface InteractRow { kind: ThingKind; label: string; opts: { key: string; text: string; tone?: string; /** a squad man down: his line is struck */ gone?: boolean }[]; inReach: boolean; off: boolean; dist?: number; progress?: number; cont?: boolean; /** the squad's element this row is about (orders.ts Tone: gold / red / blue) — #interact .t-<tone> */ tone?: string;
+  /** a block under no heading: a line a key gives, or the lines no key gives (its label alone where it has none) · the objective's section · the clock in front of the objective */ one?: boolean; sec?: boolean; note?: string; /** … and the mission's stage, for its colour */ stage?: string }
 
 /** The objective line in its parts (null: none). The line's own word ends on '▸' ('objective ▸ …', 'training 2/7 ▸ …' — the Rust game's
  *  `mission::objective`, in the view): `label` is that word, `note` what stands in front of it (a par or a clock), `text` the rest. A line with no such word (a run's end:

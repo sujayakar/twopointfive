@@ -1,13 +1,15 @@
 //! GO: the men waiting on the word go. A squad of one or two waits stacked on its door; a bigger one wherever the word holds it.
 use crate::game::Game;
 use crate::ids::*;
-use crate::orders::rows::Row;
+use crate::orders::rows::{Is, Row};
 use crate::orders::*;
 use alloc::{format, string::String, vec, vec::Vec};
 
 pub const ORDER: Row = Row {
+    is: &[Is::LiftsFire],
     only: Some(only),
     valid: Some(valid),
+    notes: Some(crate::doortools::door_tools_word_note),
     ..Row::new("go", label, issue)
 };
 

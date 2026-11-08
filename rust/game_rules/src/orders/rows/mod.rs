@@ -4,6 +4,7 @@
 //! here (`orders/rows/<name>.rs`, with a `pub const ORDER: Row`) and one line of `rows!` below. `OrderDef.row` is the
 //! row the menu holds it by.
 //!
+//!   is      what a rule that does not know it by name needs to know of it (`Is`: is it loud, does it lift the held fire, ...)
 //!   label   the words of its row on the menu, for this target
 //!   can     this man can do his part (None), or the word for why not
 //!   only    the men, of those addressed, the order is for
@@ -15,6 +16,8 @@
 //!   frame   once a frame for the order itself, after the menu's input: put its row on the menu or take it off
 //!           (`def` makes the row), end what has gone stale
 //!
+//!   notes   its lines in the squad's HUD block, for this seat (the block comes in the list's order)
+//!
 //! Only `id`, `label` and `issue` must be written: `Row { frame: Some(frame), ..Row::new(ID, label, issue) }`.
 //!
 //! What an order's functions call, so that its id is written once, in its `Row`:
@@ -24,7 +27,7 @@
 //!   `assign(g, &ORDER, man, a)`  hand a man his task under this order: where he stands, which way he faces, how he carries his gun, the two
 //!                              lines he says (`squad_orders_assign`, with the order's own id)
 //!
-pub use super::Row;
+pub use super::{Is, Row};
 use crate::game::Game;
 use crate::ids::*;
 use crate::orders::{GiveOpts, OrderDef, OrderTarget};
@@ -34,12 +37,11 @@ use alloc::vec::Vec;
 macro_rules! rows {
     ($($m:ident;)*) => {
         $(pub mod $m;)*
-        /// THE LIST: every order written as a module, in the order their `frame` runs.
+        /// THE LIST: every order written as a module, in the order their `frame` runs and their lines come in the squad's HUD block.
         pub const ROWS: &[&Row] = &[$(&$m::ORDER),*];
     };
 }
 rows! {
-    shell40;
     movethere;
     stack;
     cover;
@@ -55,22 +57,23 @@ rows! {
     go;
     bigclear;
     thrword;
-    wallrow;
-    walltools;
+    pairmark;
+    pairwatch;
+    pairtake;
+    pairdark;
+    pairgo;
     silent;
     loud;
     shutdoor;
     wand;
     work;
     smokethere;
+    wallrow;
+    walltools;
+    shell40;
     throwopen;
     fragthere;
     stunthere;
-    pairmark;
-    pairwatch;
-    pairtake;
-    pairdark;
-    pairgo;
 }
 
 /// The row of the menu for an order: `data` is what only it knows (its page, its targets, its key), and the functions
@@ -115,3 +118,9 @@ pub fn plain_valid(w: Option<String>) -> Result<(), Option<String>> {
 
 /// the order of that id
 pub fn by_id(id: &str) -> Option<&'static Row> { ROWS.iter().copied().find(|r| r.id == id) }
+
+/// Is the order of that id such an order? An id on no line of the list is nothing.
+pub fn id_is(id: &str, what: Is) -> bool { by_id(id).map_or(false, |r| r.is.contains(&what)) }
+
+/// Is the man under this assignment under such an order?
+pub fn is(g: &Game, a: OrdersAssignmentId, what: Is) -> bool { id_is(&g.tab.orders_assignment[a].order, what) }

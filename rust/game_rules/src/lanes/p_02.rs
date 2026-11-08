@@ -53,7 +53,7 @@ pub fn lanes_tick(g: &mut crate::game::Game, dt: f64) {
     use crate::roomfight::DefMode;
     if !live(g) {
         let busy = match &g.m.lanes.states {
-            Some(st) => !st.lanes.is_empty() || !st.held.is_empty() || !st.peek.is_empty() || !st.reloads.is_empty() || !st.near.is_empty(),
+            Some(st) => !st.lanes.is_empty() || !st.held.is_empty() || !st.peek.is_empty() || !st.near.is_empty(),
             None => false,
         };
         if busy { lanes_reset(g); }
@@ -160,16 +160,6 @@ pub fn lanes_tick(g: &mut crate::game::Game, dt: f64) {
     }
     if !s(g).peek.is_empty() {
         for gd in s(g).peek.keys() { peek_step(g, gd); }   // (a step only ever ends its own man's row)
-    }
-    // a magazine change this rule started behind his corner: the guard code counts a reload down only for a man with somebody to shoot, so it is counted here.
-    // ONE COUNT A FRAME: a clock that has moved since this rule last left it is being counted by somebody else, and is theirs while it keeps moving
-    if !s(g).reloads.is_empty() {
-        let list: Vec<(GuardId, f64)> = s(g).reloads.iter().map(|(gd, left)| (gd, *left)).collect();
-        for (gd, left) in list {
-            if is_dead(g, gd) || g.gd[gd].held.is_some() || g.gd[gd].reload_t < 0.0 { s(g).reloads.delete(gd); continue; }   // (in somebody's arm his hands are not on a magazine)
-            if g.gd[gd].reload_t == left && g.time - g.gd[gd].last_seen_t > 0.5 { crate::guards::tick_reload_beat(g, gd, dt); }
-            if g.gd[gd].reload_t < 0.0 { s(g).reloads.delete(gd); } else { let r = g.gd[gd].reload_t; s(g).reloads.set(gd, r); }
-        }
     }
     s(g).tick_t -= dt;
     if s(g).tick_t > 0.0 { return; }
@@ -876,7 +866,7 @@ fn pin_done(g: &mut Game, gd: GuardId, l: LanesLaneId, d: RoomfightDefId, fr: cr
     let id = g.tab.lanes_lane[l].id;
     note(g, Some(gd), &format!("lane {}: {}{}{}: back", id, why, shots, if fr.saw { ", they are still on it" } else { "" }));
     let w = g.gd[gd].weapon;
-    if crate::weapons::firearm_rounds_ready(g, w) < rounds && g.gd[gd].reload_t < 0.0 { lane_reload(g, gd); }
+    if crate::weapons::firearm_rounds_ready(g, w) < rounds && g.gd[gd].reload_t < 0.0 { crate::guards::start_reload_beat(g, gd); }
     peek_back(g, gd, d);
 }
 /// every frame, a man out at his corner to fire down a lane: the moment his muzzle has a line he stops and puts his burst there, wide, then gets back (lanes.ts pinStep)

@@ -8,7 +8,8 @@ use alloc::{format, string::String, vec, vec::Vec};
 pub const ORDER: Row = Row {
     only: Some(only),
     valid: Some(valid),
-    ..Row::new(crate::squadsmoke::SMOKE_ORDER, label, crate::squadsmoke::row_smoke_issue)
+    notes: Some(crate::squadsmoke::notes),
+    ..Row::new("smokeThere", label, crate::squadsmoke::row_smoke_issue)
 };
 
 fn label(g: &mut Game, t: &OrderTarget) -> String {

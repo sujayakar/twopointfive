@@ -397,7 +397,7 @@ pub fn wind_blows(g: &crate::game::Game) -> bool {
 }
 
 /// The storm's wind vector when it should be felt, none otherwise. (wind.ts Wind.stormWind)
-#[doc(hidden)] pub fn wind_storm_wind__body(g: &mut crate::game::Game) -> Option<V3> {
+#[doc(hidden)] pub fn wind_storm_wind__body(g: &crate::game::Game) -> Option<V3> {
     if !wind_blows(g) {
         return None;
     }
@@ -409,14 +409,13 @@ pub fn wind_blows(g: &crate::game::Game) -> bool {
     Some([wx, 0.0, wz])
 }
 
-/// Once a frame: every source's speed for this frame, the active list, and the hand-off to both GPU consumers. (wind.ts Wind.update)
+/// Once a frame: every source's speed for this frame, the active list, and the hand-off to the smoke. Which of them a particle pool is handed is the host's, made
+/// of the standing game where a pool is (wind.ts `forParticles`). (wind.ts Wind.update)
 pub fn wind_update(g: &mut crate::game::Game, dt: f64) {
     let master = wind_of(g);
     let relax = g.k.wind.smoke_relax;
     g.wind.active.clear();
-    g.wind.to_pool.list.clear();
     if master <= 0.0 {
-        crate::render_particles::particles_set_wind(g, &[], knobs0());
         crate::smoke_types::smoke_system_like_set_wind(g, &[], relax);
         return;
     }
@@ -519,31 +518,6 @@ pub fn wind_update(g: &mut crate::game::Game, dt: f64) {
         }
     }
     g.stats.wind.active += g.wind.active.len() as i32;
-    {
-        let f = match g.engine.view_focus {
-            Some(f) => f,
-            None => {
-                let c = g.pl[g.player].ch;
-                g.ch[c].pos
-            }
-        };
-        let near_m = g.k.wind.near_m;
-        let tab = &g.tab.wind_wind_source;
-        let mut pool: Vec<WindWindSourceId> = g.wind.active.iter().copied().filter(|&s| tab[s].kind == WindSourceKind::Jet && v3::dist(tab[s].bound.c, f) < near_m + tab[s].bound.r).collect();
-        let most = (crate::smoke_types::WIND_GPU_MAX - if sw.is_some() { 1.0 } else { 0.0 }) as usize;
-        if pool.len() > most {
-            js::sort_by(&mut pool, |&a, &b| v3::dist(tab[a].bound.c, f) - v3::dist(tab[b].bound.c, f));
-            pool.truncate(most);
-        }
-        if sw.is_some() && tab[g.wind.storm].speed > 0.0 {
-            pool.push(g.wind.storm);
-        }
-        let recs: Vec<crate::smoke_types::WindGpuSource> = pool.iter().map(|&s| gpu_of(&tab[s])).collect();
-        let knobs = [g.k.wind.sheet_wake, g.k.wind.sheet_kick, g.k.wind.debris_k];
-        g.wind.to_pool.list = pool;
-        crate::render_particles::particles_set_wind(g, &recs, knobs);
-        g.stats.wind.to_particles += recs.len() as i32;
-    }
     let recs: Vec<crate::smoke_types::WindGpuSource> = g.wind.active.iter().map(|&s| gpu_of(&g.tab.wind_wind_source[s])).collect();
     crate::smoke_types::smoke_system_like_set_wind(g, &recs, relax);
     g.stats.wind.to_smoke += recs.len() as i32;
@@ -551,7 +525,6 @@ pub fn wind_update(g: &mut crate::game::Game, dt: f64) {
 
 /// The air's velocity at p this frame, m/s: the sum over every active source. (wind.ts Wind.at)
 pub fn wind_at(g: &mut crate::game::Game, p: V3, out: Option<&mut V3>) -> V3 {
-    g.stats.wind.at_calls += 1;
     let sum = wind_sum(g, p);
     put(out, sum)
 }
@@ -764,7 +737,6 @@ mod tests {
         let mut o: V3 = [9.0, 9.0, 9.0];
         assert_eq!(bits(wind_at(&mut g, p, Some(&mut o))), bits(want));
         assert_eq!(o, want);
-        assert_eq!(g.stats.wind.at_calls, 1);
     }
 
     #[test]

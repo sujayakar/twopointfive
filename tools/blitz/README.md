@@ -202,7 +202,7 @@ the runner or a change to the loop, say so separately: that is not part of a men
 ## What the runner stands in for
 
 The Rust game is the tick alone. What the TypeScript's host does round a tick is not translated (`BRIDGE.md`, "What a Rust host calls round a step").
-Each of these is a few lines of `rust/game_run/src/bin/mission.rs`; `BLITZ_SKIP=lights` leaves that call out, to see by a run what it is for.
+Each of these is a few lines of `rust/game_run/src/bin/mission.rs`; `BLITZ_SKIP=view` leaves that call out, to see by a run what it is for.
 
 | stand-in | name | why |
 |---|---|---|
@@ -222,7 +222,6 @@ Each of these is a few lines of `rust/game_run/src/bin/mission.rs`; `BLITZ_SKIP=
 | the autosave's chronicle row (`hostwrites.txt chron_save`) | (always) | the save controller is the host's and writes one row into the game |
 | `game_follow_pos` for each seat after each tick | `follow` | the host's camera asks the game where to look; on a tutorial's sky seat the ask eases and stamps the view's centre (rails.ts look) |
 | a checkpoint PUT BACK (`hostwrites.txt chron_load`, the state in `L<k>.bin`) | (always) | the host's save controller replaces the whole game between two ticks; the runner takes the TypeScript's state as the next tick opens as a new start, and says so |
-| `light_set_update(dt)` after each tick | `lights` | the host retires flashes between ticks, and the next tick's light reads it |
 
 The Rust game writes a man's row of the block itself (`sim_men_store`), and the bridge carries the level's name, the dress table and the floats of a pose
 outside the pool: the runner hands none of those over.

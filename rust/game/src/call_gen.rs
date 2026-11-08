@@ -5,7 +5,6 @@ use crate::io::*; use crate::ids::*; use crate::js::*; use crate::{Quat, V3}; us
 pub static mut HOST_ROLL: Option<fn() -> f64> = None;
 fn die_of(given: bool) -> impl FnMut(&mut crate::game::Game) -> f64 { move |g| { if given { if let Some(f) = unsafe { HOST_ROLL } { return f(); } } crate::math_dice::sim_random(g) } }
 pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let known = crate::id_tables::id_tables(g); let mut i = R::measured(args, &known); let mut o = W::new(); match f {
-0 => { let a1: Vec<crate::scene_cut::CutPlane> = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let a3: f64 = Io::r(&mut i); let a4: f64 = Io::r(&mut i); let a5: f64 = Io::r(&mut i); let a6: f64 = Io::r(&mut i); let a7: f64 = Io::r(&mut i); let a8: f64 = Io::r(&mut i); let a9: f64 = Io::r(&mut i); let r = crate::scene_cut::cut_clip(g, &a1, a2, a3, a4, a5, a6, a7, a8, a9); r.w(&mut o);  }
 1 => { let a1: Vec<f64> = Io::r(&mut i); let a2: String = Io::r(&mut i); let a3: crate::scene_stuff::SayPaintSaid = Io::r(&mut i); crate::scene_stuff::say_paint(g, &a1, &a2, a3);  }
 2 => { let a1: crate::scene_stuff::BoxStuff = Io::r(&mut i); let a2: [f64; 3] = Io::r(&mut i); let a3: Option<crate::scene_stuff::MadeOfFinish> = Io::r(&mut i); let r = crate::scene_stuff::made_of(g, a1, a2, a3); r.w(&mut o);  }
 3 => { let a1: V3 = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let a3: AnyBoxId = Io::r(&mut i); let a4: f64 = Io::r(&mut i); let r = crate::scene_boxes::ray_box(g, a1, a2, a3, a4); r.w(&mut o);  }
@@ -136,7 +135,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 203 => { let a1: crate::debris::ChunkKind = Io::r(&mut i); let a2: BoxId = Io::r(&mut i); let a3: V3 = Io::r(&mut i); let a4: V3 = Io::r(&mut i); let a5: Option<f64> = Io::r(&mut i); let a6: Option<bool> = Io::r(&mut i); let r = crate::debris::debris_spawn_raw(g, a1, a2, a3, a4, a5, a6); r.w(&mut o);  }
 205 => { let mut a1: Vec<AnyBoxId> = Io::r(&mut i); crate::debris::debris_boxes(g, &mut a1); a1.w(&mut o); }
 208 => { let a1: f64 = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let r = crate::wind::wind_storm_share(g, a1, a2); r.w(&mut o);  }
-209 => {  let r = crate::wind::wind_storm_drift(g); r.w(&mut o);  }
 210 => { let a1: f64 = Io::r(&mut i); crate::wind::wind_update(g, a1);  }
 213 => { let a1: crate::devices::DevicesSnap = Io::r(&mut i); crate::devices::devices_restore(g, &a1);  }
 216 => { let a1: String = Io::r(&mut i); let a2: crate::devices::LearnCodeHow = Io::r(&mut i); let a3: Option<GuardId> = Io::r(&mut i); let r = crate::devices::learn_code(g, &a1, a2, a3); r.w(&mut o);  }
@@ -216,7 +214,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 312 => { let a1: Vec<GuardId> = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let a3: Option<String> = Io::r(&mut i); let a4: Option<GuardId> = Io::r(&mut i); let r = crate::tactics::plan_approach(g, &a1, a2, a3.as_deref(), a4); r.w(&mut o);  }
 315 => { let a1: GuardId = Io::r(&mut i); let a2: Option<crate::tactics::TacticsPenalty> = Io::r(&mut i); let r = crate::lanes::lane_penalty(g, a1, a2.as_ref()); r.w(&mut o);  }
 316 => { let a1: GuardId = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let r = crate::lanes::lane_covers(g, a1, a2); r.w(&mut o);  }
-317 => { let a1: GuardId = Io::r(&mut i); crate::lanes::lane_reload(g, a1);  }
 318 => {  crate::lanes::lanes_reset(g);  }
 320 => { let a1: RoomfightDefId = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let a3: Option<DoorId> = Io::r(&mut i); let a4: Option<f64> = Io::r(&mut i); crate::pressure::run(g, a1, a2, a3, a4);  }
 321 => { let a1: RoomfightDefId = Io::r(&mut i); let a2: DoorId = Io::r(&mut i); let a3: Option<RoomfightRoomId> = Io::r(&mut i); let r = crate::pressure::charge(g, a1, a2, a3); r.w(&mut o);  }
@@ -515,9 +512,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 790 => {  crate::hours::sun_to_cloud(g);  }
 791 => { let a1: crate::hours::HourId = Io::r(&mut i); let r = crate::hours::apply_hour(g, a1); r.w(&mut o);  }
 792 => {  crate::hours::hour_world_changed(g);  }
-793 => { let a1: V3 = Io::r(&mut i); let mut a2: Vec<f64> = Io::r(&mut i); crate::hours::hour_light(g, a1, &mut a2); a2.w(&mut o); }
-794 => { let a1: V3 = Io::r(&mut i); let mut a2: Vec<f64> = Io::r(&mut i); crate::hours::moon_light(g, a1, &mut a2); a2.w(&mut o); }
-795 => { let a1: V3 = Io::r(&mut i); let r = crate::hours::hour_light_at(g, a1); r.w(&mut o);  }
 796 => { let a1: crate::scene_scenario_list::ScenarioSpec = Io::r(&mut i); let r = crate::scenario_run::start_scenario(g, &a1); r.w(&mut o);  }
 797 => { let a1: Option<bool> = Io::r(&mut i); let r = crate::scenario_run::quit_scenario(g, a1); r.w(&mut o);  }
 800 => { let a1: crate::chronicle::ChronKind = Io::r(&mut i); let a2: Option<JsMap<String, Option<crate::chronicle::ChronicleDataValue>>> = Io::r(&mut i); let a3: Option<V3> = Io::r(&mut i); let r = crate::chronicle::chronicle(g, a1, a2.as_ref(), a3); r.w(&mut o);  }
@@ -560,7 +554,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 840 => { let a1: f64 = Io::r(&mut i); let a2: crate::kit::MemberKit = Io::r(&mut i); let r = crate::kit::kit_wears(g, a1, &a2); r.w(&mut o);  }
 841 => { let a1: f64 = Io::r(&mut i); let a2: Option<JsMap<String, crate::kit::KitValue>> = Io::r(&mut i); let r = crate::kit::kit_sanitize(g, a1, a2.as_ref()); r.w(&mut o);  }
 842 => { let a1: Option<bool> = Io::r(&mut i); crate::kit::kit_issued_page(g, a1);  }
-843 => { let a1: Option<crate::kit::KitLessonPageRow> = Io::r(&mut i); crate::kit::kit_lesson_page(g, a1);  }
 844 => {  crate::kit::kit_reset(g);  }
 845 => {  crate::kit::kit_player(g);  }
 846 => {  crate::kit::kit_solo(g);  }
@@ -608,7 +601,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 900 => { let a1: GuardId = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let a3: f64 = Io::r(&mut i); let r = crate::guards::follow_path(g, a1, a2, a3); r.w(&mut o);  }
 902 => { let a1: GuardId = Io::r(&mut i); let a2: Option<Vec<f32>> = Io::r(&mut i); crate::guards::score_spots(g, a1, a2.as_deref());  }
 904 => { let a1: GuardId = Io::r(&mut i); let a2: f64 = Io::r(&mut i); crate::guards::update_guard(g, a1, a2);  }
-905 => {  let r = crate::guards::steady_lamps(g); r.w(&mut o);  }
 907 => { let a1: GuardId = Io::r(&mut i); crate::guards::gun_back(g, a1);  }
 908 => { let a1: GuardId = Io::r(&mut i); crate::guards::start_reload_beat(g, a1);  }
 909 => { let a1: GuardId = Io::r(&mut i); let a2: f64 = Io::r(&mut i); crate::guards::tick_reload_beat(g, a1, a2);  }

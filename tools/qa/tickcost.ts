@@ -1,5 +1,5 @@
 // WHAT A TICK COSTS — the simulation's own CPU time, tick by tick, on the stand a game server plays: the shipped stand with the senses on the CPU
-// (TPS_CPUSENSE=1) and the game's own maths. A scripted play-through (tools/qa/playthrough.ts) is the load; the clock is read round Game.update alone and round
+// and the game's own maths. A scripted play-through (tools/qa/playthrough.ts) is the load; the clock is read round Game.update alone and round
 // the box list's pack and trace grid (BoxWorld.upload's CPU half, which rounds and the cursor read; the play-through packs it every 4th tick, the page every frame). After every update the raw bits
 // of what moves are hashed and chained (game/digest.ts rawBits), OUTSIDE the clock: two builds whose `bits` agree played the same run to
 // the last place, so their times are for the same work. Not game code: it reads.
@@ -29,7 +29,7 @@ const engineName = (): string => { const B = (globalThis as { Bun?: { version: s
 
 /** one run in THIS process */
 async function one(scn: string, seed: number): Promise<Row> {
-  process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.PT_DIGEST ??= '1';
+  process.env.TPS_PROFILE ??= 'shipped'; process.env.PT_DIGEST ??= '1';
   const { Game } = await import('../../src/game/game.ts');
   const PT = await import('./playthrough.ts');
   const { rawBits, RAW_BITS_SEED } = await import('../../src/game/digest.ts');
@@ -101,7 +101,7 @@ if (argv[0] === '--one') {
     for (let k = 0; k < rounds; k++) {
       const cmd = node ? ['node', '--no-warnings', '--import', loader, self, '--one', run]
         : ['bun', 'run', ...(prof ? ['--cpu-prof-md', `--cpu-prof-dir=${resolve(prof)}`, `--cpu-prof-name=${run.replace(':', '-')}.md`] : []), self, '--one', run];
-      const pr = Bun.spawn(cmd, { cwd: resolve(import.meta.dir, '../..'), stdout: 'pipe', stderr: 'pipe', env: { ...process.env, TPS_PROFILE: process.env.TPS_PROFILE ?? 'shipped', TPS_CPUSENSE: process.env.TPS_CPUSENSE ?? '1', PT_DIGEST: '1', ...(argv.includes('--each') ? { TICKCOST_EACH: '1' } : {}), ...(argv.includes('--list') ? { TICKCOST_LIST: '1' } : {}), ...(node ? { V8_ENTRY: self, FC_NOSTANDIN: '1' } : {}) } });
+      const pr = Bun.spawn(cmd, { cwd: resolve(import.meta.dir, '../..'), stdout: 'pipe', stderr: 'pipe', env: { ...process.env, TPS_PROFILE: process.env.TPS_PROFILE ?? 'shipped', PT_DIGEST: '1', ...(argv.includes('--each') ? { TICKCOST_EACH: '1' } : {}), ...(argv.includes('--list') ? { TICKCOST_LIST: '1' } : {}), ...(node ? { V8_ENTRY: self, FC_NOSTANDIN: '1' } : {}) } });
       const [out, err] = await Promise.all([new Response(pr.stdout).text(), new Response(pr.stderr).text()]); await pr.exited;
       const line = out.split('\n').find(l => l.startsWith(MARK));
       if (!line) { console.error(`  ${run} left nothing: ${err.trim().split('\n').slice(-3).join(' / ').slice(0, 400)}`); failed = true; break; }

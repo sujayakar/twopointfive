@@ -26,7 +26,7 @@ export async function sunGlintCheck(): Promise<boolean> {
   { const was = sunGlintConfig.on; let a: string | undefined, b: string | undefined;
     const word = (sw: boolean) => { sunGlintConfig.on = sw; return /const SUN_GLINT: bool = (true|false);/.exec(scenePrelude())?.[1]; };
     try { a = word(was && !BRK); b = word(false); } finally { sunGlintConfig.on = was; }
-    const wired = /if \(q\.has\('nosunglint'\)\) sunGlintConfig\.on = false;/.test(src('main.ts')) && /VISIT_FLAGS = \[[^\]]*'nosunglint'/.test(src('ui/replaykey.ts')) && /LOOK_PAGE_WORDS[^\n]*'nosunglint'/.test(src('scene/look.ts'));
+    const wired = /if \(q\.has\('nosunglint'\)\) sunGlintConfig\.on = false;/.test(src('main.ts')) && /VISIT_FLAGS = \[[^\]]*'nosunglint'/.test(src('tape/address.ts')) && /LOOK_PAGE_WORDS[^\n]*'nosunglint'/.test(src('scene/look.ts'));
     verdict(was === true && a === 'true' && b === 'false' && wired, 'the switch ships up; the prelude says the rule with the switch as it ships and not with it down; and ?nosunglint is wired (the page lowers the switch, a replay\'s visit keeps the word, a run of pages carries it)', `the switch ${was} · as it ships ${a} · switch down ${b} · the off word wired ${wired}`); }
   // 2. the text: the sun's head, its four numbers and rtGlints are ONE text in the two passes; without the word the sun's flag is a constant false and the
   //    lamps' skip is the old one; with it the sun is taken out of the contest before the four slots (never an unshadowed credit), has its own turn of the
@@ -68,7 +68,7 @@ export async function sunGlintCheck(): Promise<boolean> {
   { const { glintPickConfig } = await import(`${ROOT}/src/render/frame.ts`); const was = glintPickConfig.on; let a: string | undefined, b: string | undefined;
     const word = (sw: boolean) => { glintPickConfig.on = sw; return /const GLINT_PICK: bool = (true|false);/.exec(scenePrelude())?.[1]; };
     try { a = word(true); b = word(false); } finally { glintPickConfig.on = was; }
-    const wired = /if \(q\.get\('glintpick'\) === '1'\) glintPickConfig\.on = true;/.test(src('main.ts')) && /VISIT_FLAGS = \[[^\]]*'glintpick'/.test(src('ui/replaykey.ts')) && /LOOK_PAGE_WORDS[^\n]*'glintpick'/.test(src('scene/look.ts'));
+    const wired = /if \(q\.get\('glintpick'\) === '1'\) glintPickConfig\.on = true;/.test(src('main.ts')) && /VISIT_FLAGS = \[[^\]]*'glintpick'/.test(src('tape/address.ts')) && /LOOK_PAGE_WORDS[^\n]*'glintpick'/.test(src('scene/look.ts'));
     const cut = (t: string) => { const k = t.indexOf('fn rtGlints('), j = t.indexOf('\n}\n', k); return k < 0 || j < 0 ? '' : t.slice(k, j); }, f = texts.map(cut), t0 = f[0];
     const lines = t0.includes('var poolW = 0.0; var pu = pick;')
       && t0.includes('      var c = g;\n      if (w > g0.w) { c = g2; g2 = g1; g1 = g0; g0 = g; } else if (w > g1.w) { c = g2; g2 = g1; g1 = g; } else if (w > g2.w) { c = g2; g2 = g; }\n      if (c.w > 0.0) { rest += c.spec; let first = poolW == 0.0; poolW += c.w; if (first) { g3 = c; } else { let p = c.w / poolW; if (pu < p) { g3 = c; pu = pu / p; } else { pu = (pu - p) / (1.0 - p); } } }\n      continue;\n    }\n    if (w > g0.w) { rest += g3.spec;')

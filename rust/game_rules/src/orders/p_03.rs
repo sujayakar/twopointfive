@@ -161,7 +161,7 @@ pub fn target_under_of(g: &Game, seat: &crate::seats::SeatRef, now: &crate::view
         return OrderTarget::None(OrderTargetNone { at: [q[0], 0.0, q[2]], man: Some(gd) });
     }
     if let Some(h) = &hit {
-        let b = g.engine.world.all.get(h.index as usize).copied();
+        let b = crate::scene_boxes::box_world_at(g, h.index as usize);
         if let Some(wt) = crate::workthings::work_on(g, seat, b) { return wt; }
     }
     let self_to = match &hit { Some(h) => h.t, None => 200.0 };
@@ -173,7 +173,7 @@ pub fn target_under_of(g: &Game, seat: &crate::seats::SeatRef, now: &crate::view
     if matches!(base, OrderTarget::Door(_)) || crate::character::character_ray_hit(g, pc, ro, rd, best) >= 0.0 { return base; }
     let first = hit.as_ref().map(|h| SquadOrdersSceneHitFirst { t: h.t, index: h.index });
     let sc = squad_orders_scene_hit(g, seat, ro, rd, first);
-    let bx = if sc.index >= 0.0 { g.engine.world.all.get(sc.index as usize).copied() } else { None };
+    let bx = if sc.index >= 0.0 { crate::scene_boxes::box_world_at(g, sc.index as usize) } else { None };
     let land = if sc.index >= 0.0 { v3::mad(ro, rd, sc.t) } else { p };
     let own = bx.and_then(|b| g.doors.list.iter().copied().find(|&d| AnyBoxId::World(g.dr[d].box_) == b));
     let leaf = match (own, bx) {
@@ -201,7 +201,7 @@ pub fn squad_orders_scene_hit(g: &crate::game::Game, seat: &crate::seats::SeatRe
     let f = crate::scene_boxes::box_flag();
     let skip = (js::to_i32(f.no_shadow) | js::to_i32(f.no_primary) | js::to_i32(f.glass)) as f64;
     if let Some(h) = first {
-        if let Some(b) = g.engine.world.all.get(h.index as usize).copied() {
+        if let Some(b) = crate::scene_boxes::box_world_at(g, h.index as usize) {
             if !js::truthy(seam_box_owner(g, b)) && (js::to_i32(seam_box_flags(g, b)) & js::to_i32(f.glass)) == 0 {
                 return SquadOrdersSceneHit { t: h.t, index: h.index };
             }
@@ -213,7 +213,7 @@ pub fn squad_orders_scene_hit(g: &crate::game::Game, seat: &crate::seats::SeatRe
     for k in 0..16 {
         let from = if k != 0 { v3::mad(ro, rd, t0) } else { ro };
         let Some(hit) = crate::scene_boxes::box_world_raycast(g, from, rd, Some(200.0), Some(skip), Some(owner), None) else { break };
-        owner = match g.engine.world.all.get(hit.index as usize).copied() { Some(b) => seam_box_owner(g, b), None => 0.0 };
+        owner = match crate::scene_boxes::box_world_at(g, hit.index as usize) { Some(b) => seam_box_owner(g, b), None => 0.0 };
         t0 += hit.t;
         if !js::truthy(owner) { return SquadOrdersSceneHit { t: t0, index: hit.index }; }
     }
@@ -453,7 +453,7 @@ pub fn squad_orders_give(g: &mut crate::game::Game, id_2: &str, t: Option<&crate
         crate::game::game_say(g, by, &said, None, None, None);
     }
     if g.orders.posture.is_some() {
-        let loud = crate::silent::loud_rows().iter().any(|r| r == id_2);
+        let loud = crate::orders::rows::id_is(id_2, crate::orders::Is::Loud);
         crate::silent::silent_tool(g, loud);
     }
     let waits = opts.map_or(false, |o| on(o.on_word)) && squad_orders_big(g, &crate::seats::here(g));

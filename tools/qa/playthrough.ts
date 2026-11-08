@@ -54,7 +54,7 @@
 //                                          half second they first part at comes after a break. A bystander: it reads counters only
 //   PT_DESTR=1 (env)                       THE ONE SWITCH of the destruction goal raised (unset: the one build by digest); under it PT_WALLREACT=0 / PT_COVERFIRE=0 /
 //                                          PT_WALLCHARGE=0 drop one piece each (all three: the engine's own build by digest), and every run's JSON carries `destr`
-//                                          (the chaos lane's counts — puffs, tiles, lights out, the debris pool, PT_DUST's dust — and tools/qa/hole-watch.ts's: what broke, who walked through it, who was shot through it)
+//                                          (the chaos lane's counts — puffs, tiles, lights out, the debris pool — and tools/qa/hole-watch.ts's: what broke, who walked through it, who was shot through it)
 //   PT_KICK=1 (env, with PT_DESTR=1)       men kick rubble aside as they walk (game/debris.ts feet): every run's JSON carries `rubble` (the feet's counts beside
 //                                          the pool's). Unset = off: the build before it, by digest
 //   PT_POP=1 (env, with CUTBOXES=1)        a spawn over the debris cap takes the SMALLEST resting piece, which goes as chips by its size (game/breakTable.ts
@@ -110,8 +110,6 @@
 //                                          mean / p50 / p95 / p99 / max in ms, and `byAlive`: frames and mean ms against how many enemies were up that frame
 //   PT_SAY=1 (env)                         every run's JSON carries `said` (tools/qa/say-watch.ts): every line a guard says with its call site and what became of it on the
 //                                          player's side (bubble / radio strip / neither, the fog of war asked), every defender decision the fight's modules note, state changes
-//   PT_METER=sky (env)                    the light meter answered AS THE PAGE'S WOULD for direct light (tools/qa/hour-lib.ts installSkyMeter): the harness's own
-//                                          estimate leaves the moon, a sun and lightning out; the page's meter counts them. Off = the harness as it always was
 //   PT_MORTAL=1 (env)                      Sam can be seen and hurt (no god mode, his light meter at PT_LIT, 0.5): a player who dies ends the room clear 'wiped' (and the
 //                                          rescue 'lost'; the night breach has no end for it and runs to the cap) — for PT_AFTER
 //   PT_AFTER=90 (env, with PT_SAY)         the game stepped that many seconds past the run's end with nobody at the keys, a row a second per living defender in `said.after`;
@@ -208,7 +206,7 @@ const { lookLevelFile } = await import(`${ROOT}/src/scene/look.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 // DESTRUCTION (src/game/destructionSwitch.ts): PT_DESTR=1 plays the build the PAGE plays — the switch on; without it a playthrough is the one build
 // before the destruction goal, by digest (chaos.md), so every tally and frozen digest made before it measures what it measured. Only when this file is the program
-// (the runner and its --one children inherit the env): a probe importing `play` keeps whatever its process set. PT_DUST=1 also gives the harness the CPU dust stand-in (tools/qa/dust-standin.ts: a MODEL of what the dust does to sight lines; off, no dust is seen through).
+// (the runner and its --one children inherit the env): a probe importing `play` keeps whatever its process set.
 const { DESTR_STATS } = await import(`${ROOT}/src/game/destruction.ts`);
 const { GB_STATS } = await import(`${ROOT}/src/game/glassbreak.ts`);
 // PT_CUT=1: the first second of each kind of break, read off the lanes' own counters once a frame (cutWatch below; a bystander)
@@ -227,7 +225,6 @@ if (import.meta.main && pinned('PT_KICK')) RUBBLE.on = process.env.PT_KICK === '
 if (import.meta.main && pinned('PT_POP')) EVICT.on = process.env.PT_POP === '1';   // PT_POP=1 (with CUTBOXES=1): a spawn over the debris cap takes the SMALLEST resting piece, which goes as chips by its size (game/breakTable.ts pick / dissolve, the page's default; =0 its ?nopopfix) — unset on the frozen stand: off, the base by digest
 if (process.env.PT_FURN === '0') FURNBLAST.on = false;   // PT_FURN=0 (with PT_DESTR=1): charges leave the furniture standing (the page's ?nofurnblast) — the A/B of game/furnblast.ts
 if (process.env.PT_STUNLIGHTS === 'old') { const L = (await import(`${ROOT}/src/game/destruction.ts`)).CHAOS.loud; L.stunFixtureM = L.fixtureBlastM; L.stunPanels = true; }   // PT_STUNLIGHTS=old: a stun charge puts the lights out like a blast again (destruction.ts CHAOS.loud.stunFixtureM / stunPanels at their old values) — the build before that rule, by digest
-const { installDustStandin } = await import('./dust-standin.ts');
 const { openFloor } = await import(`${ROOT}/src/game/doortools.ts`);
 const { knobRegistry, knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);   // THE list of knob tables: what --set reaches and what a run puts back
 const { DOORSTAY } = await import(`${ROOT}/src/game/doors.ts`);   // (doors stay where they are left: --set '{"DOORSTAY":{"on":false}}' = every leaf with its closer, as before the switch)
@@ -763,7 +760,6 @@ class Player {
       if (goal && !g.player.down) { const dx = goal[0] - this.pos[0], dz = goal[2] - this.pos[2], d = Math.hypot(dx, dz);
         if (d > 0.2) { const { fwd, right } = this.cam.planarBasis(), a = (dx * fwd[0] + dz * fwd[2]) / d, b = (dx * right[0] + dz * right[2]) / d, T = 0.3827; if (a > T) I.keys.add('KeyW'); if (a < -T) I.keys.add('KeyS'); if (b > T) I.keys.add('KeyD'); if (b < -T) I.keys.add('KeyA'); this.W.cursorAt([this.pos[0] + dx / d * 4, 1.1, this.pos[2] + dz / d * 4]); } }
       g.player.visibility = MORTAL ? LIT : 0.05;
-      (this.W as any).dust?.tick();
       if (TIMES) { const t0 = performance.now(); this.W.step(DT); this.ms.push(performance.now() - t0); let n = 0; for (const x of g.guards) if (x.team === 'hostile' && x.state !== 'dead') n++; this.msAlive.push(n); } else this.W.step(DT);
       this.t += DT;
       if (g.blackout.active !== mainsOut) { mainsOut = g.blackout.active; MAINS.push([+this.t.toFixed(1), mainsOut ? 'out' : 'on']); this.say(mainsOut ? '(the mains are out)' : '(the mains are back on)'); }
@@ -1583,7 +1579,7 @@ async function playRun(scn: string, seed: number, cap: number, verbose: boolean,
     DOORBLAST.on = (rest.DOORBLAST?.on as boolean | undefined) ?? true;   // (and a blast takes a leaf off its hinges, as shipped: --set '{"DOORBLAST":{"on":false}}' = a charge flings it in on its hinge)
     for (const n of ['FRAG', 'MOVES', 'TURN', 'AIM', 'GLASSPEN']) if (rest[n]) put(n, rest[n]);   // (standUp has just put the harness's own pins back over these — no defenders' frags, the movement pass, the turn weight, wounds and rounds through glass off, the old aim: src/host/standup.ts — so a --set row of theirs is put again; without this it was read and then silently lost)
     if ((set as any).SILENT) put('SILENT', (set as any).SILENT);   // (… and the silent order off the menu: --set '{"SILENT":{"on":true,"start":true}}' = a squad that stands up SILENT, as the loadout screen's row starts it)
-    const destr0 = { ...DESTR_STATS }, gb0 = { ...GB_STATS } as Record<string, number>; if (process.env.PT_DUST === '1' && DESTRUCTION.on) W.dust = installDustStandin(W);
+    const destr0 = { ...DESTR_STATS }, gb0 = { ...GB_STATS } as Record<string, number>;
     (out as any).destr0 = [destr0, gb0];
     const fixWhy: Record<string, number> = {}; (out as any).destr0.push(fixWhy); if (DESTRUCTION.on) { const d = g.destr as any, kf = d.killFixture; d.killFixture = function (this: unknown, t: unknown, from: unknown, why: string, force?: boolean) { const ok = kf.call(this, t, from, why, force); if (ok) fixWhy[why] = (fixWhy[why] ?? 0) + 1; return ok; }; }   // (a bystander: what put each fixture out — blast / shaken / round — in the run's `destr.fixWhy`)
     if (rest.GUNWALL) put('GUNWALL', rest.GUNWALL);   // (and the weapons' wall rule: standUp's frozen stand has just pinned it off — TPS_GUNWALL — over a --set row)
@@ -1595,7 +1591,6 @@ async function playRun(scn: string, seed: number, cap: number, verbose: boolean,
     if (rest.HAULHOME) put('HAULHOME', rest.HAULHOME);   // (and the hauled furniture's last hand to the door: standUp's frozen stand has just pinned it off — TPS_HAULHOME — over a --set row)   // (and the brisk walk onto a stack mark at an open door: standUp's frozen stand has just pinned it off — TPS_STACKLINE — over a --set row)
     g.godMode = !MORTAL; g.tune.chaos = 0.5;   // (the page's default chaos; Sam cannot be hurt — the team is what is under test — but he is seen, heard and in the way)
     const { why } = await quiet(!verbose, () => W.start()); if (why) throw new Error(`start refused — ${why}`);
-    if (process.env.PT_METER === 'sky') { const { installSkyMeter } = await import('./hour-lib.ts'); installSkyMeter(g); } else if (process.env.PT_METER) throw new Error(`PT_METER=${process.env.PT_METER}: sky, or unset`);
     if (DOOR && !g.doors.byName(DOOR)) throw new Error(`PT_DOOR=${DOOR}: this level has no door of that name`);
     if (EXTRA > 0) { const { uncap, spawnPast } = await import('./uncapped.ts'); const { standExtra } = await import(`${ROOT}/src/game/stress.ts`); uncap(W); const r = await quiet(!verbose, () => standExtra(g, EXTRA, spawnPast)); out.note = `PT_EXTRA: ${r.stood} of ${EXTRA} extra enemies stood${r.why ? ` (${r.why})` : ''}`; }
     P = new Player(W, E.kind, cap, verbose); cuesOn = !!CUES.on; P.handw = new HandleWatch(g, verbose ? (x: string) => P!.say(x) : null); for (const k in HANDLE_STATS) HANDLE_STATS[k] = 0; HANDLE_DEBUG.log = verbose ? (x: string) => P!.say(`   ▯ ${x}`) : null;   // (as this run has it: the tables are put back before the tally is written)
@@ -1630,8 +1625,8 @@ async function playRun(scn: string, seed: number, cap: number, verbose: boolean,
       out.frameMs = { n: a.length, mean: +(P.ms.reduce((x, y) => x + y, 0) / a.length).toFixed(3), p50: at(0.5), p95: at(0.95), p99: at(0.99), max: +a[a.length - 1].toFixed(3), byAlive: by }; }
     { const [d0, g0, fixWhy] = (out as any).destr0 as Record<string, number>[]; delete (out as any).destr0; const d: Record<string, number> = {}; for (const [k, v] of Object.entries(DESTR_STATS)) if ((v as number) - (d0[k] ?? 0)) d[k] = (v as number) - (d0[k] ?? 0);
       const gbs: Record<string, number> = {}; for (const [k, v] of Object.entries(GB_STATS)) if (typeof v === 'number' && v - (g0[k] ?? 0)) gbs[k] = v - (g0[k] ?? 0);
-      const dark = P.g.targets.filter((t: any) => t.broken).length, dust = (P.W as any).dust;
-      (out as any).destr = { on: DESTRUCTION.on, ...d, dark, ...(Object.keys(fixWhy).length ? { fixWhy } : {}), debrisPeak: P.g.destr.debris.stats.peakLive, debrisRefused: P.g.destr.debris.stats.refused, inv: P.g.destr.inventory(), ...(Object.keys(gbs).length ? { glass: gbs } : {}), ...(dust ? { dust: { ...dust.stats, minT: +dust.stats.minT.toFixed(3) } } : {}) }; }
+      const dark = P.g.targets.filter((t: any) => t.broken).length;
+      (out as any).destr = { on: DESTRUCTION.on, ...d, dark, ...(Object.keys(fixWhy).length ? { fixWhy } : {}), debrisPeak: P.g.destr.debris.stats.peakLive, debrisRefused: P.g.destr.debris.stats.refused, inv: P.g.destr.inventory(), ...(Object.keys(gbs).length ? { glass: gbs } : {}) }; }
     out.endgame = P.endw.close(P.t, out.end); if (P.search) out.search = P.search.close();
     if (P.handw) out.handle = { ...P.handw.close(), stats: { ...HANDLE_STATS } };
     if (LASTM?.LASTSTAND && LASTM.LASTSTAND.callOut) { const r = LASTM.lastStandReport(P.g); out.lastStand = { on: r.on, stats: r.stats, room: r.room, in: r.in.length, out: r.out.length, named: r.named, said: r.said }; }

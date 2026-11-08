@@ -25,6 +25,8 @@ pub struct Desk {
     mission: Option<TeamFor>,
     /// what it was asked for by, to ask again when the list's settings move: the link handed (empty: the desk's own), the level's block, the wall charges
     asked: Option<(String, String, u32)>,
+    /// the cards as this machine keeps them, as far as it has been told
+    kept: String,
     /// the mission list's own: the address, what is picked on it, what the machine keeps of the levers
     list: Sitting,
 }
@@ -35,14 +37,22 @@ impl Desk {
     pub fn machine(&mut self, b: &[u8]) -> Result<(), String> {
         crate::command::apply(&mut self.g, b)?;
         self.list.said(crate::command::levers_said(b));
+        self.kept = kept::write(&mut self.g);
         Ok(())
     }
 
-    pub fn new() -> Desk { Desk { g: Box::new(Game::blank()), clip: None, on: CardFor::default(), mission: None, asked: None, list: Sitting::default() } }
+    pub fn new() -> Desk {
+        let mut g = Box::new(Game::blank());
+        let kept = kept::write(&mut g);
+        Desk { g, clip: None, on: CardFor::default(), mission: None, asked: None, kept, list: Sitting::default() }
+    }
 
-    /// a press as it went: what the cards are kept as now goes with it
+    /// a press as it went: what the cards are kept as now goes with it, where it changed a kept card
     fn pressed(&mut self, ok: bool, why: String, passed: String, changed: Vec<String>) -> Pressed {
-        Pressed { ok, why, passed, changed, kept: vec![KeptText { key: String::from(kept::KIT), text: kept::write(&mut self.g) }] }
+        let text = kept::write(&mut self.g);
+        let moved = text != self.kept;
+        if moved { self.kept = text.clone(); }
+        Pressed { ok, why, passed, changed, kept: if moved { vec![KeptText { key: String::from(kept::KIT), text }] } else { Vec::new() } }
     }
 
     /// a press that changes no kept card: what the cards are for, how many come, what is copied. Nothing is written for a machine that has changed nothing

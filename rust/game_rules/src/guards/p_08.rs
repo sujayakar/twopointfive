@@ -196,11 +196,6 @@ pub fn write_lamps(g: &mut crate::game::Game, p: Option<V3>, skip_owner: Option<
     true
 }
 
-/// A skip_owner that leaves out every lamp with an owner. (guards.ts CARRIED)
-pub fn carried() -> bool {
-    true
-}
-
 /// The lamps the light that comes round is swept from: writes the few of nobody's fixture and answers with how the rows are read. Bool(false) = more of those than the module's table holds. (guards.ts steadyLamps)
 pub fn steady_lamps(g: &mut crate::game::Game) -> crate::guards::SteadyLamps {
     if !write_lamps(g, None, Some(&mut |_g: &mut Game, _owner: f64| true), true) { return crate::guards::SteadyLamps::Bool(false); }
@@ -435,6 +430,11 @@ pub fn in_hand(g: &crate::game::Game, gd: GuardId) -> Option<crate::guards::InHa
 /// The magazine is empty: he stands there changing it, says so, and the clack plays at him. (guards.ts startReloadBeat)
 pub fn start_reload_beat(g: &mut crate::game::Game, gd: GuardId) {
     if g.gd[gd].second.is_some() && crate::gunslots::side_out_alert(g, gd) { return; }
+    begin_reload(g, gd);
+    crate::game::game_say(g, gd, "reloading!", None, None, None);
+}
+/// HIS MAGAZINE COMES OUT: the one way a man begins a change of magazine, whichever side he is on. His hands go on with it from here (`frame.rs hands`); he says his own word.
+pub fn begin_reload(g: &mut crate::game::Game, gd: GuardId) {
     let c = g.gd[gd].ch;
     let w = g.gd[gd].weapon;
     g.gd[gd].reload_t = crate::gunreload::feed_begin(g, w).dur;
@@ -447,7 +447,6 @@ pub fn start_reload_beat(g: &mut crate::game::Game, gd: GuardId) {
         let at = g.ch[c].pos;
         crate::audio_iface::game_audio_like_play(g, "magOut", Some(at), Some(0.5), None);
     }
-    crate::game::game_say(g, gd, "reloading!", None, None, None);
 }
 
 /// Counted down each frame he could otherwise fire; a staged row lets the empty go as the beat crosses `out`. (guards.ts tickReloadBeat)

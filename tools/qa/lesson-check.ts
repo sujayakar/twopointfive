@@ -114,9 +114,9 @@ for (const name of list) {
     verdict(entryOfQuery(q)?.id === e.id, `'${e.title}': its link reads back to its own row`, q);
     LESSON.on = true;
     { const W = await stand(), g = W.game; const r = await quiet(() => startFromQuery(g, q)); await quiet(() => { for (let i = 0; i < 30; i++) W.step(1 / 60); });
-      const o = lessonRow(g), line = g.objectiveText();
+      const o = lessonRow(g), line = (g.view.mission?.text ?? '');
       verdict(!r.why && !!r.spec && !!o && g.lesson.i === 0 && line === o.text && line.includes(line0), `'${e.title}': starts, and the objective row is the lesson's first step`, r.why ?? line);
-      { const said: string = objectiveWords(g); verdict(said.startsWith('training ') && !/[[\]]/.test(said), `'${e.title}': Tab's card and the corner word that row with each key named and no bracket`, said); }
+      { const said: string = objectiveWords(g.view); verdict(said.startsWith('training ') && !/[[\]]/.test(said), `'${e.title}': Tab's card and the corner word that row with each key named and no bracket`, said); }
       if (e.squad === 0 && e.kind === 'quiet') {   // (a quiet run alone saves checkpoints: the lesson's place among its steps rides in the file)
         // (a tutorial mission's saves are its authored checkpoints, taken by the frame with the level's program stopped for the snapshot — rails.ts: the
         // harness's own snapshot is refused while that program runs. So there the step put up is the first that names one, and the frame's save is the one loaded)
@@ -137,7 +137,7 @@ for (const name of list) {
       verdict(g.lesson.i === 0 && !!lessonRow(g)?.text.includes(line0), `'${e.title}': a restart puts the lesson back on its first step`, `step ${g.lesson.i + 1} '${g.view.lesson?.id}'`); }
     LESSON.on = false;
     { const W = await stand(), g = W.game; const r = await quiet(() => startFromQuery(g, q)); await quiet(() => { for (let i = 0; i < 30; i++) W.step(1 / 60); });
-      const line = g.objectiveText();
+      const line = (g.view.mission?.text ?? '');
       verdict(!r.why && !!g.view.mission && g.view.mission.of !== 'lesson' && !g.view.lesson && !!line && !line.startsWith('training'), `'${e.title}': with the switch off it is its mission alone`, line); }
     LESSON.on = true;
   }

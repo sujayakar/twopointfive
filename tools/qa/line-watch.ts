@@ -184,7 +184,7 @@ export class LineWatch {
       const E = S.ep, r = E.row; E.last = t; r.secs += dt; this.out.blocked += dt;
       const key = `${kind}|${name}`; E.sums.set(key, (E.sums.get(key) ?? 0) + dt);
       if (f === E.friend) { E.fMoved += flat(E.fLast, fc.pos); E.fLast = [fc.pos[0], 0, fc.pos[2]]; }
-      const ready = !O || !m.script || (g.time >= O.readyAt && g.time >= O.reloadUntil); if (ready) { r.ready += dt; this.out.ready += dt; }
+      const ready = !O || !m.script || (g.time >= O.readyAt && m.reloadT < 0); if (ready) { r.ready += dt; this.out.ready += dt; }
       if (kind === 'Sam') { r.bySam += dt; this.out.bySam += dt; if (samV < 0.3) r.samStill += dt;
         if (drive === 'post') { r.samPost += dt; const k = this.samCase(c.pos, hc.pos); if (k === 'free') r.samFree += dt; else if (k === 'boxed') r.samBoxed += dt; else r.samUnseen += dt; } else if (drive === 'walk') r.samWalk += dt; else r.samOff += dt; }
       else { if (kind === 'mate') { r.byMate += dt; this.out.byMate += dt; } else { r.byOther += dt; this.out.byOther += dt; }

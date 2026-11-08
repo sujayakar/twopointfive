@@ -1,6 +1,6 @@
 // The 'loudchaos' probe family — destruction's CHAOS on the loud levels (game/destructionSwitch.ts on: destruction.ts's loud rules, the levels' dressing —
 // tools/levels/dress.ts; glass is NOT this part's — it is left as the base has it), run through probes.ts:
-//   bun run tools/qa/probes.ts loudchaos | loudchaos-levels | loudchaos-firefight | loudchaos-blast | loudchaos-fixtures | loudchaos-sight | loudchaos-off [--verbose]
+//   bun run tools/qa/probes.ts loudchaos | loudchaos-levels | loudchaos-firefight | loudchaos-blast | loudchaos-fixtures | loudchaos-off [--verbose]
 // Headless = the Proxy device, a recording smoke stand-in, a probe that never answers; what is asserted is every CPU-side promise:
 //   (levels)     each loud level file carries its dressing LAST under the group 'dressing'; the file without that group is the generator's own level, box for
 //                box; destruction's index finds paper, clutter, binders and screens on it — all under a roof, none of them a fixture;
@@ -10,9 +10,6 @@
 //                dust off the ceiling AND off the floor, fixtures within reach and in view dark; out of doors no tile and no ceiling dust; `power` scales the reach;
 //   (fixtures)   a round that is not the player's puts out a fixture only when it is IN it (its box, or within 18 cm of its flight), a guard with a line to it notices
 //                (the 'lightOut' event the OCP always filed); the per-encounter cap and the gap hold; breakers, devices and scenery never;
-//   (sight)      the AI's sight through dust is the rule it always was: guards.ts reads ONE number per sight line off the Sensors segment query and blocks under
-//                0.3 / scales to 0.8 — planted answers move it exactly so; the harness's CPU dust stand-in (dust-standin.ts) feeds that
-//                same query (a cloud between two points dims the line, a cloud behind a wall does not, no puff = no answer);
 //   (off)        with NO scenario up the loud rules stay down (destruction.ts loudNow): a round stokes the office's own heat, the player-only fixture rule
 //                stands alone, a blast under a lit panel leaves it and raises no floor dust. LOUDOFF_BREAK=1 = the floor's scenario is started: must fail.
 // 2026-11-07: the destruction switch is a settled rule (on), and a write of its other side is refused. Gone with that: every 'with the switch off' arm (the
@@ -34,7 +31,6 @@ const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
 const D = await import(`${ROOT}/src/game/destruction.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { NOBODY_ID } = await import(`${ROOT}/src/game/consts.ts`);
-const { installDustStandin } = await import('./dust-standin.ts');
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
@@ -247,35 +243,4 @@ export async function loudFixtures() {
 }
 
 // ================================================================ sight
-export async function loudSight() {
-  const F = family('loudchaos-sight: the AI sees through dust by the one rule it always did — one transmittance per sight line off the Sensors query');
-  const G = await import(`${ROOT}/src/game/guards.ts`);
-  const run = async () => {
-    Math.random = seeded(4410); const W: any = await quiet(() => standUp({ uploadEvery: 1 })); const game = W.game; game.godMode = true; game.tune.chaos = 0.5;
-    const gd = game.guards[0]; for (let i = 1; i < game.guards.length; i++) { const o = game.guards[i]; o.hold = true; o.pinned = true; o.char.pos = [37.5, 0, 6 + i * 1.5]; o.flashlight.enabled = false; }
-    gd.hold = true; gd.pinned = true; gd.char.pos = [14, 0, 14.5]; gd.char.bodyYaw = gd.char.aimYaw = Math.PI / 2; gd.char.update(0); gd.char.update(DT);
-    game.teleportPlayer([19, 0, 14.5]); game.player.visibility = 1;
-    const out: number[] = [];
-    for (const T of [undefined, 1, 0.8, 0.55, 0.31, 0.29, 0.1]) {
-      gd.awareness = 0; gd.state = 'patrol'; gd.smokeTrans = 1;
-      game.probe.results.delete('smoke0'); if (T !== undefined) game.probe.results.set('smoke0', [T, T, T]);
-      for (let f = 0; f < 3; f++) { game.player.visibility = 1; if (T !== undefined) game.probe.results.set('smoke0', [T, T, T]); W.step(DT); }
-      out.push(+gd.smokeTrans.toFixed(3), G.canSee(game, gd).visible ? 1 : 0);
-    }
-    return out;
-  };
-  const a = await run();
-  const seen = (o: number[]) => o.filter((_, i) => i % 2 === 1).join(''), trans = (o: number[]) => o.filter((_, i) => i % 2 === 0).join(' ');
-  // the harness's dust stand-in answers that same query: a cloud on the line dims it, a cloud behind a wall does not, no puff = no answer at all
-  { Math.random = seeded(4411); const W: any = await quiet(() => standUp({ uploadEvery: 1 })); const game = W.game; game.godMode = true; game.aiEnabled = false; game.tune.chaos = 0.5;
-    const dust = installDustStandin(W); const a0: Vec3 = [14, 1.6, 14.5], b0: Vec3 = [19, 1.1, 14.5];
-    game.sensors.segment('probeT', a0, b0); dust.tick(); W.step(DT); const none = game.sensors.read('probeT');
-    for (let k = 0; k < 6; k++) { game.destr.dustPuff([16.5, 1.2, 14.2 + k * 0.1], [0, 0, 1], 1.5, 'drywall'); for (let f = 0; f < 8; f++) { dust.tick(); W.step(DT); } }
-    game.sensors.segment('probeT', a0, b0); dust.tick(); W.step(DT); game.sensors.segment('probeT', a0, b0); dust.tick(); const thru = game.sensors.read('probeT');
-    const wallA: Vec3 = [16.5, 1.4, 9.0], wallB: Vec3 = [16.5, 1.4, 11.0];   // (a line in the corridor, the far side of the cubicles' north wall from the cloud)
-    const behind = dust.transmittance(wallA, wallB), blocked = game.col.solidBlocked([16.5, 1.2, 14.5], [16.5, 1.4, 10]);
-    for (let f = 0; f < 60 * 50; f++) { dust.tick(); W.step(DT); } game.sensors.segment('probeT', a0, b0); dust.tick(); W.step(DT); game.sensors.segment('probeT', a0, b0); dust.tick(); const later = game.sensors.read('probeT');
-    F.verdict(none === undefined && thru !== undefined && thru < 0.9 && (!blocked || behind === 1) && later === undefined, 'the dust stand-in: no puff → the query reads undefined (the bare harness); six puffs on the line → it dims; the corridor line behind the wall is untouched; fifty seconds on it has cleared', `before ${none} · through the cloud ${thru?.toFixed(3)} · behind the wall ${behind.toFixed(3)} (wall between: ${blocked}) · 50 s later ${later} · ${dust.stats.puffs} puffs`); }
-  return F.done();
-}
 

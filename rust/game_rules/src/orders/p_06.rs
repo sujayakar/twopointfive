@@ -609,7 +609,7 @@ fn held_by(g: &Game, seat: &crate::seats::SeatRef, d: DoorId, men: &[GuardId], i
         if men.contains(&gd) || ignore.contains(&gd) { return false; }
         let a = &g.tab.orders_assignment[*id];
         if a.door != Some(d) { return false; }
-        match a.post { Some(post) => v3::dist_xz(post, p) < (if a.order == "stack" { 0.4 } else { 0.9 }), None => false }
+        match a.post { Some(post) => v3::dist_xz(post, p) < (if crate::orders::rows::id_is(&a.order, crate::orders::Is::Stacks) { 0.4 } else { 0.9 }), None => false }
     })
 }
 

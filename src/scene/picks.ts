@@ -7,7 +7,7 @@
 // A PICK IS A PAGE LOAD, like every start on this build: pickHref(p) is the mission's own query (scene/scenarioList.ts scenarioQuery, or `?solo`) with the
 // pick's settings written OUT on it — `squad=N` where it is not the mission's own size, `difficulty=` always on a scenario (so a machine that keeps Hard does
 // not turn a Standard pick hard, and the other way round; nothing is stored) — and
-// `pick=<id>` last, which names the pick to the page it loads (the pause card's 'next'). The visitor's other flags (?quality=, ?mute, ?glassfx=0 …) ride along;
+// `pick=<id>` last, which names the pick to the page it loads (the pause card's 'next'). The visitor's other flags (?quality=, ?mute …) ride along;
 // an older run's settings do not, and neither does a mission's own switch (a visitor's `?pair` is not carried into a pick). What a machine keeps in the Tab panel beyond the difficulty (the team feel rows, a stored pair switch) is the player's and is not pinned. `?pick=<id>` (or its place on the list, `?pick=3`) alone is a link that stays right when a row's settings change: main.ts
 // answers it with one redirect to pickHref.
 //

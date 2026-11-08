@@ -196,7 +196,7 @@ async function playLessonAs(name: string, o: LessonRunOpts = {}, loud = false): 
    *  see stood unseen in every run. By the sky's own numbers (common.wgsl skyRadiance: the zenith's colour from 24 degrees up, read live — a weather greys
    *  it): pi times its luminance on a face that looks up, times how much of the sky the point has — five rays against the statics and the leaves, the
    *  zenith's cap (a quarter of an up face's light) and four at 60 degrees off it (three sixteenths each). About 0.08 W/m2 in the open, 0.05 in a lane
-   *  between two walls (the page there: 0.044 to 0.05), nothing under a roof. Nothing by day: an authored hour's sky is in the estimate (hours.ts hourLight).
+   *  between two walls (the page there: 0.044 to 0.05), nothing under a roof. Nothing by day: an authored hour's sky is in the estimate.
    *  STILL NOT IN IT: the moon's bounce off lit ground into a shadow beside it (the page's low wall, 0.1), which is what --floor is for */
   const GLOW: [number, number, number, number][] = [[0, 1, 0, 0.25], ...[0, 1, 2, 3].map((k): [number, number, number, number] => [Math.cos(k * Math.PI / 2 + 0.6) * 0.866, 0.5, Math.sin(k * Math.PI / 2 + 0.6) * 0.866, 0.1875])];
   const glowAt = (P: Vec3): number => { if (!sky || o.glow === false || hourOf(g) !== 'night') return 0; const z = g.engine.settings.skyZenith; if (!z) return 0;
@@ -209,11 +209,6 @@ async function playLessonAs(name: string, o: LessonRunOpts = {}, loud = false): 
   // estimate where it was asked about (as guards.ts falls back to it: an authored hour's sun and sky are in it), plus the moon with --sky, never under the
   // floor with --floor. ONE hook and
   // one sum for him and for them: two models of one floor would let a man be lit to the squad and dark to himself.
-  if (sky || o.floor) { const asked = new Map<string, Vec3>(), q0 = g.lightQuery.bind(g), a0 = g.lightAt.bind(g), f0 = g.lightForget.bind(g), Ef = o.floor ? g.tune.visFloor * Math.exp(o.floor / g.tune.visSlope) : 0;
-    const mine = (k: string) => !k.startsWith('player') && !k.startsWith('srch:');
-    g.lightQuery = (k: string, p: Vec3, skip?: number) => { if (mine(k)) asked.set(k, [p[0], p[1], p[2]]); q0(k, p, skip); };
-    g.lightAt = (k: string) => { const p = mine(k) ? asked.get(k) : undefined; return p ? Math.max(Ef, lightEstimateAt(g, p) + (sky ? moonAt(p) + glowAt(p) : 0)) : a0(k); };   // (--nosky with a floor: the floor alone)
-    g.lightForget = (k: string) => { asked.delete(k); f0(k); }; }
   const cap = Number(flag('--cap') ?? 600);
   const upAt: number[] = [];   // (the run's clock when each step of the lesson first came up: how long a step the fight finished was there to be read)
   function step(n = 1) {
@@ -330,7 +325,7 @@ async function playLessonAs(name: string, o: LessonRunOpts = {}, loud = false): 
     const ended = script.ended ?? ((gg: any) => gg.mission.stage === 'done');
     if (!ended(g)) script.finish?.(B);
     if (!until(() => ended(g), 5)) throw new Stop(`the run did not end after the script's finish (stage ${g.mission.stage}, player at ${at(pos())}${g.player.down ? ', DOWN' : ''})`);
-    say(`ended: ${g.objectiveText()}`);
+    say(`ended: ${(g.view.mission?.text ?? '')}`);
   } catch (e) {
     unhush();
     if (!(e instanceof Stop)) { out.code = 1; out.why = `threw: ${(e as Error).stack ?? e}`; }

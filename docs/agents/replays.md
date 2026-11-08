@@ -5,25 +5,8 @@ One of the area files CLAUDE.md indexes. Everything below was moved here word fo
 title may now live in another file of this folder: `grep -l '<title>' docs/agents/*.md`. New bullets for this area go at the foot of this file.
 
 <!-- was CLAUDE.md lines 2765–2889 -->
-- **The sensors' seam** (`src/game/sensors.ts`; it began as the F10 session journal, which the maintainer cut on 2026-11-07 along with `ui/sessionrec.ts`, `tools/qa/replay.ts` and the fixtures; the F7 replay and its run tape are what is kept. The ask, 08-13:
-  "a record mode that journals all of the reads from the GPU for replay later … strict mode QA of the deterministic stuff"). The simulation is deterministic GIVEN ITS
-  INPUTS; the journal files the inputs. **`Game.sensors: Sensors` is THE seam between the GPU and the game**: every value the simulation takes off the renderer — Sam's
-  meter (`playerChest` / `playerHead`), a held man's / a unit's / a civilian's meter (`heldC/H<id>`, `unitC/H`, `civC/H`), the light on a body (`bodyL<id>`), a searcher's
-  spot readings (`srch:i:k`), the smoke transmittance of a sight line (`smoke<i>` guard → Sam, `bodyS<a>_<b>`, `smokeCam<n>`, `civS<id>`) — is ASKED (`ask / askSegment`,
-  queued for the probe) and READ (`read` → the last answer or undefined; sugar `segment / meterPair / lightAt`, `forget`) through it; `g.lightQuery / lightAt /
-  lightForget` (the harness-swappable hooks) route through it, the four sites that called `g.probe` directly now call `g.sensors` — **no other GPU readback reaches game
-  code** (the smoke solver's `inSmokeDomain / budget / stats.live` are read only to decide whether to emit MORE smoke; the timer / particle stats feed the ladder and the
-  panel). **THE STANDING RULE for anything new** (the maintainer, 08-12: "fine abandoning determinism for stuff like this if it lifts the ceiling"): a gameplay consumer of
-  a GPU field — chairs drifting on simulated water, fire spreading off a solver temperature — is ALLOWED provided it enters through a named `Sensors` query with a headless
-  stand-in (probes keep real verdicts, F10 journals it) and is flagged sensor-coupled; presentation-only consumers need nothing; what stays refused is `Math.random` /
-  wall-clock inside the core update (it kills the digests, exact repros and checkpoint identity for no gain — the browser was never bit-exact anyway: sensor answers land a
-  frame or two late; determinism holds under the harness). Modes: `live` = the probe verbatim through `g.probe` as it stands (probes that plant `probe.results` or swap `probe.get` still work; identity families
-  unchanged), `record` = live + every value DELIVERED that frame journaled — what the game consumed after the readback's latency, in a delta stream (`['K', f, keys…]`
-  = the read sequence from frame f, `[f, pos, enc…]` = value changes; enc: null = no answer, a number = an f32 to 9 digits decoded `Math.fround` (exact), `[x]` = an
-  exact double, `'nan' / 'inf' / '-0'`), `replay` = nothing asked of a GPU, `read(key)` serves the journaled value for (frame, key); a read the recording never made
-  there is a DIVERGENCE (`firstDivergence {f, kind 'unjournaled-read' | 'unasked', key}`, the last value that key had is served so the run completes) and values
-  delivered but never read are counted the same way. `beginFrame / endFrame` bracket Game.update (the recorder inside it; the replay tool around it); reads outside a
-  frame are `strays`. `record` and `replay` lost their one recorder with F10 and stay until one way of sensing takes them. `applyKnobs` and `knobsSnapshot` stayed in `journal.ts` for the kept replay's recipe.
+- **No value of the picture reaches a rule.** The game senses for itself (rust.md, ONE WAY OF SENSING). THE STANDING RULE for anything new: `Math.random` and the wall clock stay out of the update. The picture's own
+  readers (`render/probe.ts`, a page's tool) ask the probe by key and answer nobody's rule.
 - **The game's own die** (`src/math/dice.ts`; engine groundwork for two-player co-op, nothing networked): every roll of the simulation is `simRandom()`, never `Math.random()` —
   `bun run tools/qa/dice-check.ts` is red on a `Math.random` in src/game outside journal.ts (which installs a recording's die). A Game stood up with a seed
   (`standGame({ seed })`) OWNS a `SimDice` (`Game.dice`: one mulberry32 word `s`, the count `n`, the `seed`), made current by `useDice()` at stand-up, as `Game.update`'s first statement
@@ -140,7 +123,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   box world and light set, the mixer, the smoke solver's GPU fields, the GPU light meter's buffers and its readings in flight, the session journal), the character file, what a closure
   captured, a MEMO table, and it is references, not bytes (it cannot be sent to another process as it is).
   THE HOST'S OWN INSIDE A GAME OBJECT IS A `HostOwned` (`math/side.ts`; a class that extends it is held as it is: never copied, never put back, never compared, and
-  another game keeps its own). Two today: `sensors.ts` `SensorStream` (a recording's or a replay's stream: the journal bullet) and `render/probe.ts` `Plumbing`, the GPU side of the light meter the Game holds — the readback buffers that are free, the ones
+  another game keeps its own). One today: `render/probe.ts` `Plumbing`, the GPU side of the light meter the Game holds — the readback buffers that are free, the ones
   still out, the bind group, the packed table, the count last sent. It was walked and put back like the rest of the meter until a save in memory was first loaded
   on a real page. Found there, on the software adapter: with a readback still out (one always is at a page's frame rate), the load put that buffer back among the
   free ones, the next frame copied into it, and the browser refused the WHOLE frame ("used in submit while pending map"); the count book went back too, so a frame
@@ -189,7 +172,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   snatch-four) on seed 1, capped at 45 s each: 153 moments on the frozen stand, 143 on the shipped one, every line PASS (a few fresh-game moments by `stateAlike`,
   the line says how many); `ROLLBACK_BREAK=1` on night-breach and room-clear-four FAILS the same-game, ring and fresh-game lines on both stands, as it must. On the
   merge with the build that carries the game's own maths and the CPU senses: night-breach, room-clear-four and mousehole-four on both stands, and room-clear-four
-  and hostage-rescue on the shipped stand with `TPS_CPUSENSE=1`, every line PASS. One seed only; other seeds and longer runs were not run.
+  and hostage-rescue on the shipped stand, every line PASS. One seed only; other seeds and longer runs were not run.
   AT BUILD STEP 730 (the first build that calls it in play) the shipped stand's check was RED twice and nobody had run it: room-clear-four threw (the rain's spent
   generator, above) and mousehole-four's 'same game' parted at an autosave (below). With the three mends (the light meter's GPU side the host's, the drip walk plain data, the
   check putting the saves' shelf back): the whole check, the default eight scenarios on seed 1 with autosaves on, is 109 moments on the frozen stand and 100 on the shipped one, every line PASS,
@@ -201,16 +184,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the wet tallies; the memos `enemysquads.CTX`, `squadthrow.duckMates`, `guards.UNSTICK` that name one game's men) are shared by every Game in the
   process, so a snapshot is sound while ONE game ticks between its take and its restore (the check restores the first game before it steps the other); a server
   that runs several games in a process wants them on the Game. Another Game object is never walked into, but a memo that names another game's man is. CONFIG rows are
-  safe only while a rolled-back window never spans a scenario's start or stop, and a snapshot is put back under the maths (`EXACT.on`) and senses (`SENSE.cpu`)
-  settings it was taken under. A game that has NEVER stepped, given a snapshot, keeps the first game's closures where it has none of its own (under `SENSE.cpu`:
-  the wrap on the smoke solver and `Sensors.own`, which then read the FIRST game's smoke and walls — the check's two-games line found it). A closure in state is
+  safe only while a rolled-back window never spans a scenario's start or stop, and a snapshot is put back under the maths (`EXACT.on`)
+  setting it was taken under. A game that has NEVER stepped, given a snapshot, keeps the first game's closures where it has none of its own. A closure in state is
   taken by its code: `Throwable.onBounce` still captures a can's
   own `quiet` and kind, weather's dice and a few unsubscribe hooks are closures (the check prints every function in the state by where it hangs). `newRunId()` reads
   the wall clock inside the tick (marked, never compared; a server would name the run). The static pass does not see a class instance at the top of a module, an
   out-parameter, a class's `static` field. A SAVE IS A SIDE EFFECT OUTSIDE THE SNAPSHOT: the controller's shelf of saves in memory is deliberately not in one
   (`savestate.ts MemShelf`, a `HostOwned`: a load must not take the later saves away), so the same ticks played again after a put back write an autosave a second time, into the
   next slot, and the slot's name is in the state — whoever rolls a game back puts the shelf back with it: the check does (every snapshot it takes remembers the
-  shelf beside it), a rollback ring will have to. THE SENSORS' TAPE DOES NOT GO BACK EITHER (`sensors.ts SensorStream`, the host's): right for a save loaded
+  shelf beside it), a rollback ring will have to. A RECORDING'S STREAM DOES NOT GO BACK EITHER (the host's): right for a save loaded
   in play — the game goes back, the recording goes on — but a ring that undoes eight ticks and plays them again under a recording files them twice, and
   under a replay is served the wrong frames: whoever builds the ring winds the tape itself. The check never runs under a recording or a replay
   (`journalload-check.ts` does). THE BOOKS OF WHAT WAS LAST SENT ARE IN THE STATE (measured 10-23, the pass, thirty frames in): a snapshot put back
@@ -262,22 +244,6 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT DONE / NOT SEEN: node's V8 is not Chrome's build of it, and nobody has run this in Chrome, in Safari or on a Mac — the two-engine line is bun
   against node on one Linux machine; everything on the page (sound synthesis, the renderer's CPU side, the UI) also computes on these functions while
   the switch is on.
-- (HISTORY from here to the end of the bullet, and of the `Sensors` seam above: rust.md, ONE WAY OF SENSING, 2026-11-07.) **The senses on the CPU** (`src/game/sense.ts`, switch `SENSE.cpu`; DEFAULT OFF on the page and on both stands — `?cpusense`, `TPS_CPUSENSE=1`; whether the
-  page plays on it is the maintainer's call; engine groundwork, nothing networked): off, the men see by the renderer's values through `Game.sensors` — a fight
-  on the page is then its seed, its inputs AND a stream of GPU readbacks that land a drawn frame or two late (the run tape keeps them, so a tape re-runs; a
-  machine with no GPU cannot play the fight afresh). On, nothing is asked of the probe: every LIGHT meter falls to the estimate it already had for 'no answer
-  yet' (`guards.ts lightEstimateAt` — direct light with the walls between, the hour, lightning; what the harness has always run on), Sam's own meter reads that
-  estimate too (headless it never moved before), and a sight line's SMOKE is `CpuSmoke`: each emitter handed to the solver also feeds a blob (what it let out,
-  thinning at the solver's decay, widening, a wall between a blob and the line shuts it out), answered in the step that asks (`Sensors.own`). While it is on the
-  game's own smoke sits ON the solver object (`ownSmoke`: `emit` and `clearAll` feed both, whoever calls them; `budget()` is answered from the game's own count
-  of live emitters, aged by the step — the solver's count ages by the drawn frame). A solver the picture has turned off still gets no emitter; the game's does.
-  COST TO 'ONE MODEL FOR PICTURE AND AI': the estimate has no bounced light and no smoke shadow, and the blobs are a model of the solver's picture, not a copy
-  — a place lit only by bounce reads darker to the men than it looks, and a minute-old wisp will not match cell for cell. `CpuSmoke.blobs` is simulation state
-  that no checkpoint carries yet. CHECK, both stands: `bun run tools/qa/sense-check.ts` (off = the probe asked as ever and the solver as built; on = sixty steps ask the probe
-  nothing, an emitter handed straight to the solver reaches the game's smoke; Sam's meter bright under a lamp and dark in the dark; a canister on a 9 m line shuts it, 0.00 at 12 s, leaves another line at 0.98, is not seen
-  through a wall and has cleared 75 s on, and keeps its place among 68 puffs; a taped room clear with the four and a smoke canister thrown, at mixed step times, re-run from its
-  seed and inputs with the game answering its own senses — about 50,000 reads, none different — the same to the bit; `SENSE_BREAK=1` must fail). `TPS_CPUSENSE=1 bun run tools/qa/coop-check.ts` was its
-  two-engine line (that tool is deleted, see the own maths above). NOT SEEN: nobody has played with it on; how the blobs sit against the picture's smoke has never been looked at on a GPU.
 - **A record from anyone** (`src/game/cmd.ts checkCmd`, switch `CMDCHECK.on`; ON in the page, `?nocmdcheck` = believed as it comes; OFF on the frozen stand,
   `TPS_CMDCHECK=1`; engine groundwork, nothing networked): `Game.step` makes the tick's record one an honest seat could have sent before anything reads it (and
   before the tape keeps it) — an object of the right shape, finite numbers inside wide bounds, at most 24 key codes that look like key codes, five button bits,
@@ -547,12 +513,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   CHECK: `probes.ts textsize` reads `src/replay/*.ts` too (the layers exist, no bare viewport unit); on the page, a headless look at 3840 × 2160 and
   1280 × 720 (the bar's height against `--tape-h`, the kit and meters on it, the note field, the large map, a step from the keys). Never seen on a GPU.
 - **A replay across a save kept in memory** (10-22). With a team on the floor a save is the whole game kept in memory, and a load of it puts every game
-  object back, the `Sensors` object among them (`savestate.ts loadMem`, `rollback.ts`). The F7 tape keeps nothing in there (its
+  object back (`savestate.ts loadMem`, `rollback.ts`). The F7 tape keeps nothing in there (its
   rows are its own; the re-run's walk is outside the game too), and a save in memory is made ON the tape (F5's, an autosave's), so a load INSIDE a step
   (the bare Enter once down) leaves the tape alive and a re-run makes the save and the load again: `replaybuf-probes.ts`, the `load` lines "with a team
   on the floor" (a room clear with the four, F5, his own frag puts him down, Enter; the re-run equal to the digest), green on both stands. A load made
   BETWEEN two steps (a card, the panel) ends the tape in the words "a checkpoint was loaded", as a file's does. The F10 journal is another matter and
-  not this bullet's: there the sensors' recorded stream IS inside what a restore puts back.
+  not this bullet's: there the recorded stream IS inside what a restore puts back.
 - **A replay keeps the viewer's shader words** (10-27). The shader rows on trial (`ui/shaderrows.ts`: `compactshaders`, `firstframe`,
   `splitrays`; five when this was written, two taken out since: `render.md`), the compile queue's `pipequeue`, `shadertrim` and `shaderfold` are words of the VISIT (`ui/replaykey.ts VISIT_FLAGS`, the rows by `SHADER_ROW_WORDS`): how this
   machine builds its shaders, read once as the page loads. They were on neither list, so `?playtape=..&compactshaders=1` was sent on to the tape's address
@@ -663,7 +629,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   19,264, the bazaar alone 19,711, each replayed on a second page with the die and every block part equal at every step and no man over 0.007 m off the trace (its
   own rounding); night breach and rescue walked by `rerun.ts` to 0.01 m; a room clear of 1,505 steps on a page that does draw (software adapter) the same.
   CHECK: `probes.ts cardreplay`, `replaybuf-probes.ts`, `replaykeep-probes.ts`, and the page tool `engine-replay-page.cjs` (every section but `sent`,
-  on the software adapter). The five sound replays are of the version before and are refused until they are recorded again. Never seen on a GPU.
+  on the software adapter). The five sound replays (office-loud,
+  wall-charge, chairs, reloads, doors) were recorded again on the page after it and play back as recorded to their last step (seed 1 each; `sound-tapes.cjs --check`).
+  Their player plants no light meter any more: the game senses for itself. Never seen on a GPU.
 - **A run's tape lives over a restart and a loaded checkpoint, and a page's run walks again headless** (2026-11-07). The card's Restart puts the game back to the
   start it was kept at, clock and die and all, with the same player object (`host/rustgame.ts toStart`): the tape read that as 'the game clock was moved between
   two steps' and ended, and the trace marked it a loaded checkpoint, so the map viewer opened a card's file at the wrong try. The host now counts it
@@ -690,3 +658,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   and 31, squad men standing 106 and 142 of 384, enemies left 267 and 257 of 864, ever alert 790 and 791, the first notice and alert to the hundredth or four, a squad man fell in 90 and 83 runs; hall 11
   and 14 men up of 96, floodlit 31 and 42. So two seeds' losses were the seeds'. 50,000 draws of either die are flat in tenths. TWO MEN OF ONE NUMBER IN TWO LEVELS draw the same as they are made, at one
   seed: the level is not in the key. Never played.
+- **The new page's replay** (2026-11-08; the page that draws, `src/tape/`). A run there is what the module was handed (`handtape.ts`, rust.md), kept as it grows: `keep.ts` is a source of
+  the same keeper and store of kept runs the game's page has (`replay/keeper.ts`, `keepstore.ts`: a piece every five seconds, at once at a run's end, as the page goes and when the game is lost
+  to a panic; `{k:'hands'}` lines, base64 of the tape's bytes and where in it they go), so it goes to a build's backend on the tapes' own rounds and its notes on theirs. There is no shelf
+  and no trace: `?playtape=<visit>` plays it, a killed page's run plays up to its last piece, F7 says it is kept, Shift+F7 and the end card's Replay leave to watch it from the try that is on
+  (`run.ts`). `bar.ts` is the bar (the line with the tries and the notes on it, the pace, the run's own view, notes), `freecam.ts` the picture's camera off the run's view, `pace.ts` the paces (the
+  old player's too). A tape of another build whose mannequin, cast or hand is another is refused in words; else it is played and the bar says the second it is not the run any more. Replays
+  (`replay.html`) lists them with the rest and opens them there. READ ONE: `tools/draw/walk.ts <tape | kept lines>` walks it with no page; `replay-dump.ts` writes a hand-over's as `<visit>.tape`.
+  CHECKS: `tools/draw/tape-check.ts` (every mission, a hands-off player and a hand that does anything, with saves, a load and a restart, walked by a module that is asked nothing to the same
+  die, parts and whole state; `TAPE_BREAK=1`), `keep-check.ts` (`KEEP_BREAK=1`), `walk-check.ts` and the page's, `tape-page.cjs`. MEASURED: 17 to 348 KB a minute packed, 500 to 2,000 ticks a
+  second unseen in bun. NOT THERE YET: the fog off and the night vision of the picture's own, the map, a Send button, the sounds' lanes. Never seen on a GPU, never played by a person.

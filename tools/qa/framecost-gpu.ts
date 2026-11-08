@@ -185,7 +185,7 @@ export const FCG = {
   REC, view: { cssW: CSSW, cssH: CSSH, dpr: DPR, quality: QUALITY },
   /** the engine standUp() takes instead of stubHost(): a real Engine on the recording device */
   async engine(): Promise<any> {
-    // the scene prelude's compile-time switches, raised before the Engine exists as src/main.ts does: glass that breaks (engine.glassFracture, which game/glassbreak.ts asks for) and the weather kinds
+    // the scene prelude's compile-time switches, raised before the Engine exists as src/main.ts does: glass that breaks and the weather kinds
     const frameMod = await import(`${ROOT}/src/render/frame.ts`);
     if (process.env.GLASSFX === 'on' && process.env.GLASSBREAK !== 'off') frameMod.glassBreakConfig.on = true;
     if (process.env.FC_WEATHER === '1') frameMod.weatherKindConfig.on = true;

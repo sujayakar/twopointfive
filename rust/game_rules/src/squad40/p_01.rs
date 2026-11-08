@@ -76,7 +76,7 @@ pub fn squad40_stage(g: &mut crate::game::Game, carried: &[(GuardId, f64)]) {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     if g.m.squad40.states.get(key).is_none() {
         if !js::truthy(n) { return; }
-        g.m.squad40.states.set(key, State { rounds: JsMap::new(), brought: 0.0, last: JsMap::new(), turns: JsMap::new(), noted: false, shown: None, plan: None });
+        g.m.squad40.states.set(key, State { rounds: JsMap::new(), brought: 0.0, last: JsMap::new(), turns: JsMap::new(), shown: None, plan: None });
     }
     let s = g.m.squad40.states.get_mut(key).unwrap();
     s.rounds = rounds;
@@ -284,7 +284,7 @@ pub fn turn_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
             if w.is_some() { g.m.squad40.states.get_mut(key).unwrap().turns.delete(gd); }
             let face = g.ch[c].body_yaw;
             crate::orders::squad_orders_assign(g, gd, &crate::orders::SquadOrdersAssignA {
-                order: String::from("hold"),
+                order: String::from(crate::orders::rows::hold::ORDER.id),
                 post: Some([p[0], 0.0, p[2]]),
                 face: Some(face),
                 stance: Some(crate::character::Stance::LowReady),
@@ -398,10 +398,4 @@ pub fn squad40_tick(g: &mut crate::game::Game) {
     if g.orders.menu.is_some() { crate::orders::squad_orders_close(g); }
     if !want { crate::orders::rows::unlist(g, &crate::orders::rows::shell40::ORDER); return; }
     list(g);
-    // (`s.noted !== S`: a row is one view's and a view's SquadOrders is made once, as the game stands: game.ts:1373, squadcast.ts:25)
-    let s = g.m.squad40.states.get_mut(key).unwrap();
-    if !s.noted {
-        s.noted = true;
-        crate::orders::squad_orders_voice(g, crate::orders::OrderNoteFn::Squad40);
-    }
 }

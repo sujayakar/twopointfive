@@ -45,8 +45,15 @@ fn step_listed(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::PlayerCmd
     // (the tick opens by listing the box world, on every host at the same moment: this tick's rays meet the last tick's boxes and whatever was written since, and
     // the rows of the frames gone by are free again, after whoever showed the last frame has read it)
     crate::scene_boxes::box_world_listed(g);
-    if n == 1 { step_seats_on_first(g, dt, cmds); crate::verdict::verdict_tick(g); return; }
-    crate::seats::on_first_bare(g, &mut |g| { step_seats_on_first(g, dt, cmds); crate::verdict::verdict_tick(g); });
+    if n == 1 { step_seats_on_first(g, dt, cmds); crate::verdict::verdict_tick(g); game_tick_end(g, dt); return; }
+    crate::seats::on_first_bare(g, &mut |g| { step_seats_on_first(g, dt, cmds); crate::verdict::verdict_tick(g); game_tick_end(g, dt); });
+}
+
+/// THE TICK'S LAST LINE: every flash's envelope for the frame, and its retirement. The next tick's light reads what it leaves, so it is a rule's state and the tick steps it, on every host at
+/// the same moment, with no host's call round it.
+fn game_tick_end(g: &mut crate::game::Game, dt: f64) {
+    let now = g.time;
+    crate::render_lights::light_set_update(g, dt, now);
 }
 
 /// The tick's lines, with the first seat on Game.   (game.ts stepSeats)
@@ -213,7 +220,6 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     crate::glassbreak::glass_break_update(g, dt);
     crate::shards::glass_shards_update(g, dt);
     crate::fogofwar::fog_of_war_update(g, dt);
-    if g.m.dress.dress.fires { crate::fire::fire_draws(g); }   // (game.ts:1709: the fires' draws again behind the fog's turn; the Rust body makes only its asks of the wind)
     // characters: the seats' men, the guards, civilians last
     let mut all: Vec<CharId> = Vec::new();
     for &s in &seats { let c = man_char(g, s); all.push(c); }
@@ -373,10 +379,7 @@ pub fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
             let w = g.gd[gd].weapon;
             let r = crate::weapons::firearm_reload_row(g, w);
             let reload_t = g.gd[gd].reload_t;
-            let fo = if reload_t < 0.0 && !dead { crate::roomfight::room_fight_op_of(g, gd) } else { None };
-            let at = if dead { -1.0 }
-                else if reload_t >= 0.0 { r.dur - reload_t }
-                else { match fo { Some(o) if g.tab.roomfight_op[o].reload_until > now => m::max(0.0, r.dur - (g.tab.roomfight_op[o].reload_until - now)), _ => -1.0 } };
+            let at = if dead || reload_t < 0.0 { -1.0 } else { r.dur - reload_t };
             let row = crate::character::ReloadBeat { dur: r.dur, out: r.out, in_: r.in_, rack: r.rack.map(Some), keep: None, hand: None, exact: r.exact };
             let an = &mut g.ch[c].anim;
             an.reload_row = Some(row);

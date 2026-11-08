@@ -415,6 +415,7 @@
 "wxkinds"
 ],
 "unread": [
+"page-decides",
 "ai-pass-2",
 "all-quick",
 "checkpoints",
@@ -524,7 +525,6 @@
 "lookveil",
 "menus",
 "menustills",
-"moonlight",
 "nogpu",
 "opening",
 "openings",
@@ -977,7 +977,6 @@
 "loudchaos-dressing": "iv-a",
 "loudchaos-firefight": "iv-a",
 "loudchaos-fixtures": "iv-a",
-"loudchaos-sight": "iv-a",
 "magboxes": "iii",
 "materials-arealight": "iv-b",
 "materials-finish": "iv-b",

@@ -4,18 +4,18 @@
 // VIEWER (replay.html) on it in this window. A crash of the page (main.ts's fatal card) saves one by itself, and is filed in the buffer as a line at its moment. Off: ?noreplay for a visit, or localStorage
 // `twopointsix.replay` = '0' (__replay.on = false writes it) — then no buffer is made and the Game's tap stays null: the build as it was.
 // Its own key listener, as F8's: a replay must save from the pause card, the down card and a frozen frame alike.
+import { sessionId } from '../host/session';
 import type { Game } from '../game/game';
 import { reportWarning } from '../cloud/report';
 import { typedInto } from '../host/keymap';
-import { SHADER_ROW_WORDS } from './shaderrows';
-import { lookDressWord } from '../scene/look';
+import { visitPairs } from '../tape/address';
 import { ReplayBuffer, REPLAY } from '../game/replaybuf';
 import type { ReplayMeta } from '../game/replaybuf';
 import type { RunTape, ReplayFile } from '../replay/format';
 import { shelfPut } from '../replay/shelf';
-import { CAME_FROM, clock, replayBlob, errorMarks, lastRun, leaveFor, replayName, tapeWhy } from '../replay/format';
+import { CAME_FROM, clock, gameUp, replayBlob, errorMarks, lastRun, leaveFor, replayName, tapeWhy } from '../replay/format';
 export { CAME_FROM, leaveFor };
-import { ReplayKeeper } from '../replay/keeper';
+import { ReplayKeeper, ringSource } from '../replay/keeper';
 import { KEEP, keptSummary, pruneKept, keepBudget } from '../replay/keepstore';
 import { keptStore, keptWords } from '../replay/keptui';
 import { cloudUrl, cloudFile, cloudSendsFiles } from '../cloud/cloud';
@@ -59,7 +59,7 @@ export class ReplayKey {
   private played = false;
   constructor(private game: Game, cam: { target: ArrayLike<number>; yaw: number; distance: number }, private note: (s: string) => void, private meta: () => Partial<ReplayMeta> = () => ({})) {
     // (a game page is up — booted, or handed back by the browser as it was left: the last trip to a replay is over, and leaveFor's mark is one trip's)
-    try { if (!/[?&]playtape=/.test(location.search)) { sessionStorage.removeItem(CAME_FROM); window.addEventListener('pageshow', e => { if ((e as PageTransitionEvent).persisted) { try { sessionStorage.removeItem(CAME_FROM); } catch { /* */ } } }); } } catch { /* */ }
+    try { if (!/[?&]playtape=/.test(location.search)) gameUp(); } catch { /* */ }
     try { void fetch('/qa/commit', { cache: 'no-store' }).then(r => r.ok ? r.text() : '').then(t => { const c = t.trim(); if (/^[0-9a-f]{7,40}$/.test(c)) this.commit = c; }).catch(() => {}); } catch { /* no dev server */ }
     let on = true;
     try { if (new URLSearchParams(location.search).has('noreplay') || localStorage.getItem(LS) === '0') on = false; } catch { /* a sandboxed frame: on */ }
@@ -126,7 +126,7 @@ export class ReplayKey {
     try { if (new URLSearchParams(location.search).has('nokeep') || localStorage.getItem(LS_KEEP) === '0' || typeof indexedDB === 'undefined') return; if (onePage() && !cloudUrl(new URLSearchParams(location.search))) return; } catch { return; }
     try {
       const store = keptStore(), game = this.game;
-      const K = this.keeper = new ReplayKeeper(buf, { sid: this.session, store, played: () => this.played, say: s => this.say(s),
+      const K = this.keeper = new ReplayKeeper(ringSource(buf), { sid: this.session, store, played: () => this.played, say: s => this.say(s),
         head: () => { let search = ''; try { search = location.search; } catch { /* */ } return buf.head(game, { commit: this.commit, url: search, userAgent: navigator.userAgent, ...this.meta() }); } });
       const idle = (window as unknown as { requestIdleCallback?: (f: () => void, o?: { timeout: number }) => void }).requestIdleCallback;
       setInterval(() => { if (idle) idle(() => K.beat(), { timeout: 2000 }); else K.beat(); }, KEEP.secs * 1000);
@@ -263,18 +263,7 @@ export function viewerUrl(id: number): string { return new URL(`replay.html#id=$
  *  a restart made INSIDE a step (Shift+Enter, Enter once down: on no tape row), and the tape's last restart row (one older than the trace's window), the step
  *  after it so the still it opens on is the new try's. null: no tape to play (format.ts tapeWhy: it ended
  *  early — another run's checkpoint loaded, a scenario started from a menu, past the tape's length) — the map viewer plays that file */
-/** the address words a replay page keeps from the VISIT, not from the run it plays (replay/engineplay.ts tapeSearch): how the page is looked at and listened to is the
- *  viewer's — which sound table the mixer plays is the listener's, a replay holds no sound. The end card's Replay hands the game page's own on to its tab, bar the
- *  harness's `paused`: the replay of a run played at a chosen quality, or muted, opens the same way. */
-export const VISIT_FLAGS = ['paused', 'mute', 'quality', 'adapt', 'hud', 'oldsounds', 'newsounds', 'soundlanes', 'fogedge', 'fogdesat', 'fogair', 'fogkept', 'nobouncewalls', 'noreflwalls', 'sharpcap', 'allproxies', 'framecap', 'pace', 'giveway', 'flight', 'look', 'nosunglint', 'glintpick', 'holedepth', 'kept', 'hireach',
-  ...SHADER_ROW_WORDS, 'pipequeue', 'shadertrim', 'shaderfold', 'fell', 'smokeindirect'];   // (the second line: how THIS machine builds its shaders — ui/shaderrows.ts, the compile queue and the trim, gpu/ — a word of the visit's address read once as the page loads; without them here a replay opened with one was sent on to an address without it and built the plain way. nobouncewalls: the picture's walled bounce read off — render/frame.ts bounceWallsConfig — so a page tool can play one replay both ways)
-// (…and `fell`: the count of questions the TypeScript answered while its row was up, sim.ts FELL — a page sent on to a recipe's address keeps the word. The Rust module's rows have no word: they are not switches)
-/** A WORD OF AN ADDRESS, WITH ITS VALUE, IS THE VISIT'S: one of VISIT_FLAGS, but `look` is two things under one word (scene/look.ts). The dress's
- *  `look=plain|0|off` names the LEVEL a run plays, so it is the run's: it stays in a tape's recipe and in a co-op invite. Every other value is a row of the look
- *  prototype's page, which is how the page is looked at: the visit's. Ask by pair, never by the list alone, wherever a word is kept or dropped. */
-export const visitWord = (k: string, v: string): boolean => VISIT_FLAGS.includes(k) && (k !== 'look' || !lookDressWord(v));
-/** the visit's words on an address, pair by pair in the list's order (a word can stand more than once: the look page's rows) */
-export const visitPairs = (q: URLSearchParams): [string, string][] => VISIT_FLAGS.flatMap(k => q.getAll(k).filter(v => visitWord(k, v)).map(v => [k, v] as [string, string]));
+export { VISIT_FLAGS, visitWord, visitPairs } from '../tape/address';
 export function engineUrl(id: number, file: ReplayFile): string | null {
   if (tapeWhy(file)) return null;
   const T = file.rerun as RunTape;
@@ -283,9 +272,4 @@ export function engineUrl(id: number, file: ReplayFile): string | null {
   const at = Math.min(T.ticks, Math.max(seen, taped));
   const now = new URLSearchParams(location.search), visit = visitPairs(now).filter(([k]) => k !== 'paused').map(([k, v]) => `&${k}=${encodeURIComponent(v)}`).join('');
   return new URL(`index.html?playtape=${id}${at > 0 ? `&at=${at}` : ''}${visit}`, document.baseURI).href;
-}
-/** a name for this page visit: when it began, and enough dice that two tabs opened in one second differ */
-function sessionId(): string {
-  let r = ''; try { const a = new Uint32Array(1); crypto.getRandomValues(a); r = a[0].toString(36); } catch { r = Math.floor(Math.random() * 0xffffffff).toString(36); }
-  return `${new Date().toISOString().replace(/[-:.]/g, '').slice(0, 15)}-${r}`;
 }

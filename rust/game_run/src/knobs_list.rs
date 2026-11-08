@@ -2621,14 +2621,11 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("sense.smoke.sigma", offset_of!(Knobs, sense.smoke.sigma), false),
     ("sense.smoke.decay", offset_of!(Knobs, sense.smoke.decay), false),
     ("sense.smoke.spread", offset_of!(Knobs, sense.smoke.spread), false),
-    ("sense.smoke.widest", offset_of!(Knobs, sense.smoke.widest), false),
     ("sense.smoke.rise", offset_of!(Knobs, sense.smoke.rise), false),
     ("sense.smoke.rise_rate", offset_of!(Knobs, sense.smoke.rise_rate), false),
     ("sense.smoke.in_wind", offset_of!(Knobs, sense.smoke.in_wind), false),
     ("sense.smoke.least", offset_of!(Knobs, sense.smoke.least), false),
     ("sense.smoke.gone", offset_of!(Knobs, sense.smoke.gone), false),
-    ("sense.smoke.cap", offset_of!(Knobs, sense.smoke.cap), false),
-    ("sense.smoke.emitters", offset_of!(Knobs, sense.smoke.emitters), false),
     ("sense.smoke.reserve", offset_of!(Knobs, sense.smoke.reserve), false),
     ("cmdcheck.keys", offset_of!(Knobs, cmdcheck.keys), false),
     ("cmdcheck.key_len", offset_of!(Knobs, cmdcheck.key_len), false),
@@ -5884,14 +5881,11 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.sense.smoke.sigma;
     let _: &f64 = &k.sense.smoke.decay;
     let _: &f64 = &k.sense.smoke.spread;
-    let _: &f64 = &k.sense.smoke.widest;
     let _: &f64 = &k.sense.smoke.rise;
     let _: &f64 = &k.sense.smoke.rise_rate;
     let _: &f64 = &k.sense.smoke.in_wind;
     let _: &f64 = &k.sense.smoke.least;
     let _: &f64 = &k.sense.smoke.gone;
-    let _: &f64 = &k.sense.smoke.cap;
-    let _: &f64 = &k.sense.smoke.emitters;
     let _: &f64 = &k.sense.smoke.reserve;
     let _: &f64 = &k.cmdcheck.keys;
     let _: &f64 = &k.cmdcheck.key_len;
