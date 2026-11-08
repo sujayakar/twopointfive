@@ -7,12 +7,15 @@ A small WebGPU renderer, from scratch, with no dependencies: one world, one cloc
     node lab/tools/card.cjs lab/tools/bench.json --bench realtime,raw  # bias, noise, error against the reference
     node lab/tools/card.cjs lab/tools/poison.json --tour 900           # the fixed run, twice: times, and fingerprints that must agree
     node lab/tools/card.cjs lab/tools/poison.json --poison             # bad numbers in every history: does the picture heal?
+    node lab/tools/card.cjs lab/tools/poison.json --watch 600          # no stage makes a bad number; one broken on purpose is named, and heals
+    node lab/tools/card.cjs lab/tools/poison.json --guards 3           # what the checks cost
 
 The page: `?bench` plays the fixed run and prints it; `?scale=0.75` fixes the render scale; `?tour` starts the tour.
 
 ## How it is put together
 
-- `src/graph.ts` A stage names the signals it reads and writes; its bindings are written from those names, so its WGSL is the algorithm alone. Every float a stage writes is checked by its bits before it is kept.
+- `src/graph.ts` A stage names the signals it reads and writes; its bindings are written from those names, so its WGSL is the algorithm alone. In play only what is read back next frame is checked for bad numbers, by its bits.
+- `src/watch.ts` For development (`?watch`): every float every stage wrote is looked at and the first stage to make a bad number is named. Nothing is cleaned meanwhile, and without it nothing is paid.
 - `src/stages/realtime.ts` The real-time picture, from swappable parts with fixed signatures:
   - `CachePart` how light on surfaces is kept (`cacheRead`, `cacheFound`, and stages that fill it). `hashCache`, `noCache`.
   - `DenoisePart` signal to quieter signal. `svgf`, `noDenoise`.

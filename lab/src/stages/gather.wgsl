@@ -12,7 +12,7 @@
     else {
       let q = surfaceMean(x, w.xyz, h); let c = cacheRead(q.x, q.ng, rnd2()); let own = (h.piece & LEAF_HIT) == 0u && (pieces[h.piece].lamp & 255u) != 255u; L = select(q.glow, vec3f(0.0), own); dist += min(h.t, 12.0);
       if (c.n > 0.0) { L += matteOf(q) / PI * (c.E + frame.sunE.xyz * max(dot(q.ng, frame.sunDir.xyz), 0.0) * c.sun); }
-      if ((h.piece & LEAF_HIT) == 0u) { let w0 = who * 2u + k; if (w0 < HITS) { let wants = cacheWants(q.x, q.ng, (q.flags & MOVES) != 0u); if (wants != 0u) { hits[w0] = vec4f(q.x, bitcast<f32>(octPack(q.ng))); for (var l = 0u; l < 2u; l++) { if ((wants & (1u << l)) != 0u) { cacheFound(cacheKey(q.x, q.ng, l), w0); } } } } } else if (c.n <= 0.0) { L += (q.albedo + q.through) / PI * (frame.sunE.xyz * 0.22 + skyLod(vec3f(0.0, 1.0, 0.0), 6.0) * 1.2); }
+      if ((h.piece & LEAF_HIT) == 0u) { let w0 = who * 2u + k; if (w0 < HITS) { let wants = cacheWants(q.x, q.ng, (q.flags & MOVES) != 0u); if (wants != 0u) { hits[w0] = vec4u(bitcast<vec3u>(q.x), octPack(q.ng)); for (var l = 0u; l < 2u; l++) { if ((wants & (1u << l)) != 0u) { cacheFound(cacheKey(q.x, q.ng, l), w0); } } } } } else if (c.n <= 0.0) { L += (q.albedo + q.through) / PI * (frame.sunE.xyz * 0.22 + skyLod(vec3f(0.0, 1.0, 0.0), 6.0) * 1.2); }
     }
     E += min(L * h.thru * w.w, vec3f(50.0)) * select(1.0, 0.8, p.leaf);
   }

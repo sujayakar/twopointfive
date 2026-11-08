@@ -3,6 +3,8 @@
 //   node lab/tools/card.cjs <views.json> --tour 900           the fixed run: GPU time of each pass, and fingerprints that repeat
 //   node lab/tools/card.cjs <views.json> --trace 8            the first ticks twice, signal by signal: what does not repeat?
 //   node lab/tools/card.cjs <views.json> --poison              NaN and Inf in every history: does the picture heal?
+//   node lab/tools/card.cjs <views.json> --guards 3            what the checks cost: none, histories (play), everything, in turn, so many rounds
+//   node lab/tools/card.cjs <views.json> --watch 600           every write looked at over the fixed run; then stages broken on purpose, which must be named and must heal
 //   node lab/tools/card.cjs <views.json> --bench realtime,raw  methods against the reference → $OUT/bench.json
 const { execSync } = require('child_process'), fs = require('fs'), path = require('path'), http = require('http');
 let chromium; for (const p of ['/opt/node-tools/node_modules/playwright', 'playwright-core', 'playwright']) { try { chromium = require(p).chromium; break; } catch { } }
@@ -15,6 +17,22 @@ execSync(`bun build src/shot.ts --outfile "${SITE}/shot.js" --target browser --l
   await p.goto(`http://localhost:${port}/shot.html`); await p.waitForFunction('window.shots');
   const t0 = Date.now(); console.log('open', await p.evaluate(async () => { window.S = await window.shots(); return JSON.stringify({ gpu: window.S.lab.gpu.info, stamps: window.S.lab.gpu.timestamps, ...window.S.counts }); }), Date.now() - t0, 'ms');
   const times = {}; let failed = 0;
+  const again = async o => { await p.reload(); await p.waitForFunction('window.shots'); await p.evaluate(async o => { window.S = await window.shots(o); }, o); }, ask = (f, a) => p.evaluate(async ([f, a]) => { try { return await window.S[f](...a); } catch (e) { return 'FAILED ' + String(e.stack || e); } }, [f, a]);
+  if (process.argv.includes('--guards')) {
+    const rounds = +process.argv[process.argv.indexOf('--guards') + 1] || 3, modes = ['off', 'kept', 'all'], got = { off: [], kept: [], all: [] }, marks = new Set(), passes = { off: {}, kept: {}, all: {} };
+    for (let k = 0; k < rounds; k++) for (let j = 0; j < 3; j++) { const m = modes[(j + k) % 3]; await again({ guard: m }); const t = await ask('tour', [360, 1920, 1080, 0.75]); if (t.startsWith('FAILED')) { console.log(t); process.exit(1); } got[m].push(+/GPU mean ([\d.]+)/.exec(t)[1]); marks.add(/picture (.*)/.exec(t)[1]); for (const l of t.split('\n')) { const q = /^(\S.*?)\s+([\d.]+)$/.exec(l); if (q) (passes[m][q[1]] ??= []).push(+q[2]); } }
+    const mean = a => a.reduce((x, y) => x + y, 0) / a.length; for (const m of modes) console.log(m.padEnd(5), got[m].join(' '), ' mean', mean(got[m]).toFixed(3), 'ms'); console.log(marks.size === 1 ? 'the picture is the same to the bit in all three' : 'PICTURES DIFFER ' + [...marks].join(' | '));
+    for (const n of Object.keys(passes.off)) console.log(n.padEnd(18), modes.map(m => mean(passes[m][n]).toFixed(3)).join('  ')); process.exit(0);
+  }
+  if (process.argv.includes('--watch')) {
+    const n = +process.argv[process.argv.indexOf('--watch') + 1] || 300, [w, h] = (process.env.SIZE || '1440x810').split('x').map(Number), [sw, sh] = (process.env.SPOIL || '320x180').split('x').map(Number); let wrong = 0; const judge = (ok, t) => { if (!ok) wrong++; console.log(ok ? 'ok  ' : 'BAD ', t); };
+    await again({ guard: 'off' }); const s = await ask('watched', [n, w, h]); judge(/no bad number/.test(s), 'the run: ' + s);
+    for (const [stage, signal] of [['first hit', 'emit'], ['lamps', 'vis'], ['gather', 'bounce'], ['bounce history', 'bounceH'], ['mirror', 'mirror'], ['air', 'air'], ['resolve', 'color'], ['upscale', 'picture']]) {
+      await again({ guard: 'off', spoil: { stage, signal, frame: 5 } }); const t = await ask('watched', [10, sw, sh]); judge(t.startsWith('frame 6: ' + stage + ' wrote') && t.includes(signal), `${stage} → ${signal} broken: ${t}`);
+      await again({ spoil: { stage, signal, frame: 5 } }); const r = await ask('spoilt', [sw, sh]); judge(typeof r === 'object' && r.picture.slice(1).every(x => x === 0) && r.after === 0, `  in play: bad in the picture, that frame and after: ${r.picture ?? r}; left in histories ${r.after}`);
+    }
+    process.exit(wrong ? 1 : 0);
+  }
   if (process.argv.includes('--trace')) { const n = +process.argv[process.argv.indexOf('--trace') + 1] || 8, runs = []; for (let k = 0; k < 2; k++) { if (k) { await p.reload(); await p.waitForFunction('window.shots'); await p.evaluate(async () => { window.S = await window.shots(); }); } runs.push(await p.evaluate(async n => { try { return await window.S.trace(n, 1440, 810); } catch (e) { return [String(e.stack || e)]; } }, n)); } let d = 0; runs[0].forEach((l, i) => { if (l !== runs[1][i] && d++ < 40) console.log('parts:', l, '|', runs[1][i]); }); console.log(d ? d + ' of ' + runs[0].length + ' part' : 'all ' + runs[0].length + ' agree'); process.exit(0); }
   if (process.argv.includes('--tour')) { const n = +process.argv[process.argv.indexOf('--tour') + 1] || 600; for (let k = 0; k < 2; k++) { if (k) { await p.reload(); await p.waitForFunction('window.shots'); await p.evaluate(async () => { window.S = await window.shots(); }); } const said = await p.evaluate(async n => { try { return await window.S.tour(n, 1920, 1080, 0.75); } catch (e) { return 'FAILED ' + String(e.stack || e); } }, n); console.log(said); if (said.startsWith('FAILED')) process.exit(1); } process.exit(0); }
   if (process.argv.includes('--poison')) { const r = await p.evaluate(async v => { try { return JSON.stringify(await window.S.poison(v)); } catch (e) { return String(e.stack || e); } }, views[0]); console.log('poison', r); process.exit(r.startsWith('{') ? 0 : 1); }

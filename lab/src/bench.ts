@@ -4,6 +4,7 @@
 //   error  one frame against the reference: what is seen
 // All in linear light, relative to the reference's own brightness (so a dark room counts as a bright one does); medians over the picture, so that a few
 // fireflies in the reference do not speak for it. The run's picture has a fingerprint: the same build, card and seed give the same one.
+import { Watch } from './watch';
 import type { Lab, Method } from './lab';
 import type { View } from './shot';
 export interface Score { view: string; method: string; ms: number; bias: number; noise: number; error: number; hash: string; passes: Record<string, number> }
@@ -66,4 +67,16 @@ export async function trace(lab: Lab, m: Method, ticks: number, script: (lab: La
   await say('0');
   for (let i = 1; i <= ticks; i++) { script(lab); lab.step(); lab.draw(); await lab.gpu.device.queue.onSubmittedWorkDone(); await say(String(i)); lab.graph.flip(); for (const s of ['id', 'idClear', 'surf', 'aux', 'emit', 'front', 'vis', 'lampU', 'bounce', 'mirror', 'air', 'visH', 'bounceH', 'mirrorH', 'airH', 'color', m.result]) out.push(`${i} ${s} ${h8((await lab.read(s)).data)}`); lab.graph.flip(); out.push(`${i} exposure ${h8(await lab.readBuffer('exposure'))}`); }
   return out;
+}
+
+/** the fixed run with every write looked at (guards off), in clear weather and then in rain; stops at the first bad number */
+export async function watched(lab: Lab, m: Method, ticks: number, script: (lab: Lab) => void): Promise<string> {
+  const w = await new Watch(lab.graph).init(); lab.graph.watch = w; await lab.use(m); lab.frameNo = 0;
+  for (let i = 1; i <= ticks; i++) { if (i === Math.floor(ticks / 2)) lab.rain = 1; script(lab); lab.step(); lab.draw(); if ((await w.read()).length) break; } lab.graph.watch = null; return w.say();
+}
+/** a stage broken for one frame (graph.spoil), with the guards as in play: bad numbers in the picture at that frame and the ones after, and bad pixels left in any history */
+export async function spoilt(lab: Lab, m: Method, w: number, h: number): Promise<{ picture: number[]; after: number }> {
+  lab.resize([w, h], [w, h]); await lab.use(m); lab.frameNo = 0; const at = lab.graph.spoil!.frame, seen: number[] = [], count = (d: ArrayBuffer) => { const u = new Uint16Array(d); let k = 0; for (let i = 0; i < u.length; i++) if ((u[i]! & 0x7c00) === 0x7c00) k++; return k; };
+  for (let i = 0; i <= at + 3; i++) { lab.step(); lab.draw(); await lab.gpu.device.queue.onSubmittedWorkDone(); if (i >= at) { lab.graph.flip(); seen.push(count((await lab.read(m.result)).data)); lab.graph.flip(); } }
+  let after = 0; for (const [n, s] of lab.graph.signals) if (s.format === 'rgba16float' && s.history) after += count((await lab.read(n + '@prev')).data); return { picture: seen, after };
 }

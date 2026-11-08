@@ -5,6 +5,7 @@ import { pathTracer } from './stages/path';
 import { Present } from './present';
 import { showError } from './gpu';
 import { run } from './bench';
+import { Watch } from './watch';
 import { tourStep } from './tour';
 import { type V3, add, mul, sub, dot, clamp, norm } from './math';
 import { boundsOf } from './scene/world';
@@ -12,7 +13,7 @@ import { boundsOf } from './scene/world';
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T, canvas = $<HTMLCanvasElement>('c'), Q = new URLSearchParams(location.search);
 const say = (t: string, k: number) => { $('what').textContent = t; $('bar').style.width = Math.round(k * 100) + '%'; };
 async function main() {
-  const lab = new Lab(); say('Building the scene', 0.12); await lab.open(canvas); (window as never as { lab: Lab }).lab = lab;
+  const lab = new Lab(); say('Building the scene', 0.12); await lab.open(canvas); if (Q.has('watch')) lab.graph.guard = 'off'; (window as never as { lab: Lab }).lab = lab;
   const present = new Present(lab.gpu); await present.init(); const rt = realtime(), ref = pathTracer(); let method: Method = rt;
   let scale = Number(Q.get('scale') ?? 0.67), auto = !Q.has('scale'); const cap = Number(Q.get('px') ?? 2.4e6);
   const fit = () => { const dpr = window.devicePixelRatio || 1, w = Math.max(64, innerWidth * dpr), h = Math.max(64, innerHeight * dpr), k = Math.min(1, Math.sqrt(cap / (w * h))), ow = Math.round(w * k), oh = Math.round(h * k); if (canvas.width !== ow || canvas.height !== oh) { canvas.width = ow; canvas.height = oh; } lab.resize([Math.max(32, Math.round(ow * scale)), Math.max(32, Math.round(oh * scale))], [ow, oh]); };
@@ -49,6 +50,8 @@ async function main() {
     $('load').remove(); auto = false; canvas.width = 1920; canvas.height = 1080; lab.resize([1440, 810], [1920, 1080]); present.set(lab, true); const text = await run(lab, rt, Number(Q.get('bench')) || 600, l => tourStep(l, act), s => { $('stats').textContent = 'Benchmark ' + s; });
     $('stats').textContent = text; (window as never as { benchText: string }).benchText = text; return;
   }
+  // ?watch: every write looked at, and the first stage to make a bad number named. Nothing is cleaned meanwhile
+  const watch = Q.has('watch') ? await new Watch(lab.graph).init() : null; let looking = false;
   let acc = 0, last = performance.now(), slow = 0, seen = 0, ms = 16, frames = 0, bad = false; setTimeout(() => { $('load').style.opacity = '0'; setTimeout(() => $('load').remove(), 900); }, 300);
   const loop = () => {
     requestAnimationFrame(loop); if (bad) return; const now = performance.now(), dt = Math.min(0.1, (now - last) / 1000); last = now; ms = ms * 0.95 + dt * 1000 * 0.05;
@@ -63,7 +66,8 @@ async function main() {
       let gpu = 0; for (const v of lab.graph.timer.ms.values()) gpu += v;
       if (auto && method === rt && ++seen > 45) { const cost = lab.gpu.timestamps && gpu > 0.2 ? gpu : ms; if (cost > 15.0) slow++; else if (cost < 11.0) slow--; else slow = 0; if (slow > 14 && scale > 0.4) { scale = Math.max(0.4, scale - 0.07); slow = 0; seen = 0; fit(); } else if (slow < -90 && scale < 1) { scale = Math.min(1, scale + 0.06); slow = 0; seen = 0; fit(); } }
       const pre = method === ref ? 'ref' : 'rt';
-      present.set(lab); lab.draw((e, result) => { const v = views[viewIx]!, plain = v !== 'picture' && method === rt, src = plain ? lab.graph.texture(signalOf[v]!) : result; present.run(e, lab, src, lab.gpu.context!.getCurrentTexture().createView(), lab.gpu.format, pre, plain ? { plain: v === 'vis' || v === 'air' ? 1 : 0.25 } : {}); });
+      if (watch) lab.graph.watch = looking ? null : watch; present.set(lab); lab.draw((e, result) => { const v = views[viewIx]!, plain = v !== 'picture' && method === rt, src = plain ? lab.graph.texture(signalOf[v]!) : result; present.run(e, lab, src, lab.gpu.context!.getCurrentTexture().createView(), lab.gpu.format, pre, plain ? { plain: v === 'vis' || v === 'air' ? 1 : 0.25 } : {}); });
+      if (watch && !looking) { looking = true; void watch.read().then(b => { looking = false; if (b.length) { bad = true; showError(watch.say()); } }); }
       if (++frames % 12 === 0) { const t = [...lab.graph.timer.ms].sort((a, b) => b[1] - a[1]); $('stats').textContent = `${(1000 / ms).toFixed(0)} fps  ${lab.graph.render.join('×')} → ${lab.graph.output.join('×')}\n` + (method === ref ? `${ref.samples} paths a pixel\n` : '') + (gpu ? `GPU ${gpu.toFixed(1)} ms\n` + t.slice(0, 14).map(([k, v]) => k.padEnd(16) + v.toFixed(2)).join('\n') : lab.gpu.info); }
     } catch (e) { bad = true; showError(String((e as Error).stack ?? e)); }
   };
