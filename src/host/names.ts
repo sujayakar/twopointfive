@@ -6,12 +6,13 @@
 //   theirs    a networked page says its name in its hello, the server hands every client the seats' names with its state (net/wire.ts Hello.name,
 //             State.names; cleaned at both ends, `cleanName`), and the page keeps them here by the game (`setSeatNames`)
 //   shown     `shownName(g, id, was)`: what to call the man with that id where a page writes a player's name — the debrief's rows (ui/verdictCard.ts),
-//             the death recap (ui/recap.ts) — his picked name, else what the game itself calls him. A picked name that would not tell the players
-//             apart is not used: one another seat picked too, or one that reads as a seat's own number
+//             the death recap (ui/recap.ts) — his picked name, else what the game itself calls him (myname.ts shownAs, which the page that draws asks by the
+//             game's own word: it holds no seats)
 // NOT THE GAME'S STATE, on purpose: a name reaches each machine at its own moment, and the game's own names ('Player 1' in the verdict's tracks, the
 // recap's cast) are what every machine holds to the bit. Nothing a tick does reads this file; a page with no names reads as it did.
 import type { Game } from '../game/game';
 import { rawGame, seatOfId, playerName } from '../game/seats';
+import { shownAs } from './myname';
 
 export { myName, setMyName } from './myname';
 
@@ -20,8 +21,6 @@ const NAMES = new WeakMap<object, readonly string[]>();
 export function setSeatNames(g: Game, names: readonly string[]): void { NAMES.set(rawGame(g), names); }
 /** what a page calls the man with this id: a player's picked name, else his number (seats.ts playerName); for anybody else `was`, the game's own word */
 export function shownName(g: Game, id: number, was = ''): string {
-  const s = seatOfId(g, id); if (!s) return was;
-  const all = NAMES.get(rawGame(g)), mine = all?.[s.index] ?? '', own = playerName(g, s.view.player), fold = (t: string) => t.toLowerCase();
-  if (!mine || /^player( \d+)?$/i.test(mine) || all!.some((n, i) => i !== s.index && fold(n) === fold(mine))) return own;
-  return mine;
+  const s = seatOfId(g, id);
+  return s ? shownAs(playerName(g, s.view.player), NAMES.get(rawGame(g)) ?? []) : was;
 }
