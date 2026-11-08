@@ -164,7 +164,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   // west x=10: the records back door (raking the north lane), the records west window (onto its south lane), the hall's end window
   K.wallZ(k, 10, 7.12, 22.38, EXT, ext, [K.doorAt(k, 'records_west', 'z', 10, 8.0, { exterior: true }), win(11, 12.2, 1), win(14.2, 15.8, 1)]);
   // (the staff room's east door opens OUTWARD, and the front office's and the records room's hall doors open into the HALL: no wedge holds any of the three, so
-  //  each of those rooms keeps a way in its men cannot shut — tools/qa/second-way-check.ts. The records room's is its hall door because the team's second start
+  //  each of those rooms keeps a way in its men cannot shut — rust/game_start levels second-way. The records room's is its hall door because the team's second start
   //  is on its west one)
   // east x=30: the staff room's east door with its sidelight (a street lamp stands off it), the fire exit at the hall's end (steel: nobody falls back through it)
   K.wallZ(k, 30, 7.12, 16.88, EXT, ext, [K.doorAt(k, 'staff_east', 'z', 30, 8.4, { exterior: true, swing: -1 }), sidelight(9.9, 10.6), K.doorAt(k, 'fire_exit', 'z', 30, 14.4, { exterior: true, steel: true })]);

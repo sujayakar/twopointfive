@@ -315,7 +315,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   beacon(13.5, 20.2);                           // the bay
 
   // door leaves + frames (the kit's frame: jambs, head, the two stops in the leaf's plane). SWINGS: every held room has one door hung to open OUT of it
-  // (tools/qa/second-way-check.ts: no wedge holds that one) — a_e into the wash room, b_n into the generator room, c_w into the bay; the yard doors open in.
+  // (rust/game_start levels second-way: no wedge holds that one) — a_e into the wash room, b_n into the generator room, c_w into the bay; the yard doors open in.
   const X = 0, Z = Math.PI / 2;
   const doorDefs: LevelDoorDef[] = [
     { name: 'a_s', hinge: [11.82, 9.5], closedDir: X, width: 1.16, swing: -1 },             // the yard → the crew room; opens in

@@ -221,7 +221,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- doors (closedDir 0: the leaf runs +x from the hinge along an x-wall; π/2: +z along a z-wall). Every id is its room's plain name ----
   const doors: LevelDoorDef[] = [
-    // ANOTHER WAY IN (tools/qa/second-way-check.ts): a man wedges only a door that opens toward him. 'back' opens OUT onto the dark back lot, 'store' into the
+    // ANOTHER WAY IN (rust/game_start levels second-way): a man wedges only a door that opens toward him. 'back' opens OUT onto the dark back lot, 'store' into the
     // store and 'office' into the lab, so whatever the seven wedge the squad still walks back lot → store → lab → office / glasshouse opening each door by
     // hand from its own side. 'front', under the floodlights, and 'lab' stay theirs to wedge.
     { name: 'front', hinge: [19.42, 18.0], closedDir: 0, width: 1.16, exterior: true },

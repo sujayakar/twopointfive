@@ -417,7 +417,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     { name: 'o_n', hinge: [25.82, 14.5], closedDir: X, width: 1.16 },                        // corridor → the office
     { name: 'oc', hinge: [28.5, 15.82], closedDir: Z, width: 1.16 },                         // the office ↔ the spare room
     { name: 'c_n', hinge: [30.32, 14.5], closedDir: X, width: 1.16 },                        // corridor → the spare room
-    // the outbuildings. (*) ANOTHER WAY IN (tools/qa/second-way-check.ts): the kitchen, the garage, the shed and the hut each had two doors that could both stand
+    // the outbuildings. (*) ANOTHER WAY IN (rust/game_start levels second-way): the kitchen, the garage, the shed and the hut each had two doors that could both stand
     // wedged; the one away from the west gate is hung to open OUT of its room, which no wedge holds. The same for the two bedrooms at the house's east end,
     // which share one such door: the back bedroom's (b_s)
     { name: 'g_n', hinge: [6.82, 18.0], closedDir: X, width: 1.16 },         // west yard → the garage: the door the team comes to first, theirs to wedge
