@@ -324,7 +324,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     { name: 'l_s', hinge: [14.82, 8.0], closedDir: 0, width: 1.16 },                            // the lockers
     { name: 'b_s', hinge: [19.82, 8.0], closedDir: 0, width: 1.16 },                            // the break room
     { name: 'c_s', hinge: [26.82, 8.0], closedDir: 0, width: 1.16 },                            // the tool cage
-    { name: 'o_s', hinge: [31.82, 8.0], closedDir: 0, width: 1.16, swing: 1 },                  // the shipping office; opens OUT into the north corridor: no wedge holds it, so the shipping office and the tool cage behind `co` always have a way in (tools/qa/second-way-check.ts). The cage's own door, the one the team comes to first, stays theirs to wedge
+    { name: 'o_s', hinge: [31.82, 8.0], closedDir: 0, width: 1.16, swing: 1 },                  // the shipping office; opens OUT into the north corridor: no wedge holds it, so the shipping office and the tool cage behind `co` always have a way in (rust/game_start levels second-way). The cage's own door, the one the team comes to first, stays theirs to wedge
     { name: 'lb', hinge: [17.0, 5.82], closedDir: Math.PI / 2, width: 1.16 },                   // the lockers ↔ the break room
     { name: 'co', hinge: [30.0, 5.82], closedDir: Math.PI / 2, width: 1.16 },                   // the tool cage ↔ the shipping office
     // the offices, onto the west corridor

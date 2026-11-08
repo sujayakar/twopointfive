@@ -56,7 +56,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- walls: a blockwork shell 0.24 thick, blockwork along the hall too (0.12), painted partitions between the rooms ----
   grp('walls.exterior');
-  // ANOTHER WAY IN (tools/qa/second-way-check.ts): one WINDOW, in the bunks' outside wall round the corner from the porch — glass from a 0.15 m kerb (a walker is
+  // ANOTHER WAY IN (rust/game_start levels second-way): one WINDOW, in the bunks' outside wall round the corner from the porch — glass from a 0.15 m kerb (a walker is
   // stopped by anything standing 0.2 m high) to just under door-head height (tools/qa/door-size.ts reads a taller hole with no sill as a doorway without a leaf),
   // so once it is shot out a man steps through it. 'front' is the wing's one outside door and the hall's men can wedge it; no wedge shuts a pane. The bunks'
   // own door opens into the bunks, so from inside that room it opens by hand, and the walk comes out into the hall beside the front door: still in the far guns' view.
@@ -125,10 +125,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     { name: 'front', hinge: [9.0, 13.42], closedDir: Math.PI / 2, width: 1.16, exterior: true },
     { name: 'bunks', hinge: [14.02, 12.8], closedDir: 0, width: 1.16 },
     // (the kit room's and the ready room's doors open OUT INTO THE HALL: a wedge or hauled furniture inside holds neither (doors.ts wedgeHolds), so from the
-    // hall they open by hand; 'link' opens into the ready room and so by hand from there into the store — tools/qa/second-way-check.ts)
+    // hall they open by hand; 'link' opens into the ready room and so by hand from there into the store — rust/game_start levels second-way)
     { name: 'kit_room', hinge: [25.02, 12.8], closedDir: 0, width: 1.16, swing: 1 },
     { name: 'store', hinge: [18.02, 15.2], closedDir: 0, width: 1.16 },
-    { name: 'ready_room', hinge: [28.02, 15.2], closedDir: 0, width: 1.16, swing: -1 },   // opens out into the hall: the ready room's men can wedge 'link' alone (tools/qa/second-way-check.ts)
+    { name: 'ready_room', hinge: [28.02, 15.2], closedDir: 0, width: 1.16, swing: -1 },   // opens out into the hall: the ready room's men can wedge 'link' alone (rust/game_start levels second-way)
     { name: 'link', hinge: [22.0, 17.02], closedDir: Math.PI / 2, width: 1.16 },
     { name: 'post', hinge: [32.0, 13.42], closedDir: Math.PI / 2, width: 1.16 },
   ];

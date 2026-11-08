@@ -263,7 +263,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---------------- doors (closedDir 0: the leaf runs +x from the hinge, in a wall along x; π/2: +z, in a wall along z) ----------------
   const doors: LevelDoorDef[] = [
-    { name: 'visa', hinge: [14.82, 10.0], closedDir: 0, width: 1.16, swing: 1 },   // the room's one door opens out into the corridor: no wedge inside the room holds it (tools/qa/second-way-check.ts)
+    { name: 'visa', hinge: [14.82, 10.0], closedDir: 0, width: 1.16, swing: 1 },   // the room's one door opens out into the corridor: no wedge inside the room holds it (rust/game_start levels second-way)
     { name: 'records', hinge: [19.42, 10.0], closedDir: 0, width: 1.16, swing: 1 },   // opens out into the corridor, like 'visa': a man posted in the records room cannot wedge both of its doors
     { name: 'records_hall', hinge: [24.0, 8.42], closedDir: Math.PI / 2, width: 1.16, angle: 1.3, closer: false },   // left standing open, into the records room: whoever is in there sees the main door through it
     { name: 'kitchen', hinge: [21.17, 13.2], closedDir: 0, width: 1.16 },

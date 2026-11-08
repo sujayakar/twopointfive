@@ -61,7 +61,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- walls: a blockwork shell 0.24 thick, painted ply partitions 0.12 ----
   grp('walls.exterior');
-  // ANOTHER WAY IN (tools/qa/second-way-check.ts): the four rooms with one door each have a WINDOW on an outside wall — glass from a 0.15 m kerb (a walker is stopped by anything standing 0.2 m high) to just under
+  // ANOTHER WAY IN (rust/game_start levels second-way): the four rooms with one door each have a WINDOW on an outside wall — glass from a 0.15 m kerb (a walker is stopped by anything standing 0.2 m high) to just under
   // door-head height, so once it is shot out a man steps through it — on the far side from their doors and away from both ready lines (the store's stands west of every line from a mark inside to a man on the back door's ready line): a door wedged from inside is then
   // one choice, and the walk round to the glass, against the clock, is the other. Glass and not a second door: a door into the store was measured to cost the
   // team men (below); a pane is no way out for the man inside and no way for anybody's feet until it is broken.
@@ -129,7 +129,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // ---- doors (closedDir 0: the leaf runs +x from the hinge along a z-wall; π/2: +z along an x-wall) ----
   const doors: LevelDoorDef[] = [
     { name: 'front', hinge: [12.0, 12.62], closedDir: Math.PI / 2, width: 1.16, exterior: true },
-    { name: 'back', hinge: [24.62, 20.0], closedDir: 0, width: 1.16, exterior: true, swing: 1 },   // opens outward: the mess's men can wedge 'mess' alone (tools/qa/second-way-check.ts)
+    { name: 'back', hinge: [24.62, 20.0], closedDir: 0, width: 1.16, exterior: true, swing: 1 },   // opens outward: the mess's men can wedge 'mess' alone (rust/game_start levels second-way)
     { name: 'tyres', hinge: [14.02, 12.0], closedDir: 0, width: 1.16 },
     { name: 'bunks', hinge: [19.62, 12.0], closedDir: 0, width: 1.16 },
     { name: 'radio', hinge: [25.02, 12.0], closedDir: 0, width: 1.16 },
