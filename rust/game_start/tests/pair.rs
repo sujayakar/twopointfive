@@ -351,3 +351,43 @@ fn a_low_man_shoves_a_chair_at_half_the_noise() {
     let (up, low) = (shove(0.0), shove(1.0));
     assert!((low - 0.5 * up).abs() < 1e-9, "on his feet {up}, low {low}");
 }
+
+/// The office with Sam and the partner on the long corridor, one suspicious man down its length looking along it. `mate_x` is where the partner stands.
+/// What he does about it is left to run: `(slips, freezes, how lit his floor is at the end)`.
+fn in_a_mans_line(seed: u32, mate_x: f64) -> (i32, i32, f64) {
+    let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad=1", &Opts { seed, ..Default::default() });
+    p.g.god_mode = true;
+    p.g.k.pairup.on = true;
+    game::pairup::pair_up_apply(&mut p.g, None);
+    p.g.k.silent.on = true;
+    p.run(0.3);
+    let m = p.mates()[0];
+    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
+    p.drop_all_but(&foes[1..2]);
+    let man = foes[1];
+    game::silent::set_silent(&mut p.g, true, None);
+    let look = |p: &mut Play| p.pin_man(man, [8.5, 11.0], EAST, GuardState::Suspicious, 0.4);
+    look(&mut p);
+    p.sam_put([15.2, 11.0]);
+    let c = p.g.gd[m].ch;
+    p.g.ch[c].pos = [mate_x, 0.0, 11.0];
+    let t = game::orders::squad_orders_target_at(&mut p.g, [15.2, 0.0, 11.0]);
+    assert_eq!(game::orders::squad_orders_give(&mut p.g, "fallIn", Some(&t), Some(game::orders::Who::All), None), None, "seed {seed}: fall in was refused");
+    let (s0, f0) = (p.g.stats.spotted.slips, p.g.stats.spotted.freezes);
+    for _ in 0..60 * 5 { look(&mut p); p.frame(); }
+    let at = p.g.ch[c].pos;
+    (p.g.stats.spotted.slips - s0, p.g.stats.spotted.freezes - f0, game::spotted::lit_at(&mut p.g, &at))
+}
+
+/// THE RULE: a partner on lit floor in a suspicious man's line goes to dark floor if there is any within his reach, and with none he holds still, low,
+/// because walking is what gets him seen. The office's corridor is lit from the man's end to about 17 m, and the reach is 3.2 m.
+/// A FAILURE MEANS: he walks about in the light with nowhere better to go, or he stands in the light with the dark a few steps away.
+#[test]
+fn in_a_mans_line_he_goes_to_the_dark_or_holds_still() {
+    for s in SEEDS {
+        let (slips, _, lit) = in_a_mans_line(s, 15.8);
+        assert!(slips >= 1 && lit < 0.3, "seed {s}: dark floor in reach: slips {slips}, his floor lit {lit:.2}");
+        let (slips, freezes, _) = in_a_mans_line(s, 13.5);
+        assert!(slips == 0 && freezes >= 1, "seed {s}: nothing dark in reach: slips {slips}, freezes {freezes}");
+    }
+}
