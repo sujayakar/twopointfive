@@ -13,8 +13,7 @@
 //     band is no taller than the name alone was — the map a small mark, the name, the facts under it — and the job's sentence, for which
 //     there is no room without cutting it, is read there.
 //   · THE ELEMENTS ARE THE LIST'S: .mmap, .mcsum, .mfacts and .mblurb are shown on the kit step by the rules below and are otherwise untouched; the
-//     facts of this file's own are cells of the same .mfacts row, drawn on this step only. One of them WAS the list's Defenders cell again, a count past
-//     five written as a word ('eleven'). How many are inside is now a mystery (ui/missions.ts MYSTERY): neither cell is drawn unless `?mystery=0`.
+//     facts of this file's own are cells of the same .mfacts row, drawn on this step only. How many are inside is a mystery: no cell says it.
 //   · A CLICK OFF THE LARGE MAP PUTS IT BACK (the maintainer, 10-23: "clicking outside the map should close it"): large, the sheet reads as a card laid
 //     over the step, and a card is left by a click beside it. That click does nothing else: the kit under the sheet does not take it. KITBRIEF.outside,
 //     `?mapout=0` = as it was (a click on the map, M, Esc, Enter or Space).
@@ -22,7 +21,7 @@
 //   · THE SWITCH: KITBRIEF.on — on in the page, `?kitbrief=0` = the step as it was (the name alone). UI only: nothing under src/game reads it, no
 //     recording carries it, and it is mounted only by the one starting page (ui/startpage.ts), which no headless stand opens.
 // Plain DOM and one style block, injected once. Nothing at module level uses another module's exports.
-import { placeNeeds, defendersShown, type Mission, type PlaceNeeds } from './missions';
+import { placeNeeds, type Mission, type PlaceNeeds } from './missions';
 
 export const KITBRIEF = { on: true,
   /** a click anywhere off the large map puts it back, and does nothing else (`?mapout=0` = only the map itself, M and the keys that leave a card did) */
@@ -35,7 +34,7 @@ export function countWords(n: number): string { return WORDS[n] ?? 'many'; }
 /** the cells this file adds to the facts row: [label, value, the sentence its tooltip says] */
 /** a line of the list's with its counts as the menus write them ('11' → 'eleven', '3 holding hostages' as it is) */
 export function wordsOf(line: string): string { return line.replace(/\d+/g, n => countWords(Number(n))); }
-export function needCells(n: PlaceNeeds | null, rescue: boolean): [string, string, string][] {
+function needCells(n: PlaceNeeds | null, rescue: boolean): [string, string, string][] {
   const out: [string, string, string][] = [];
   if (rescue) out.push(['Hostages', n && n.hostages > 0 ? countWords(n.hostages) : 'inside', 'a frag thrown onto their floor will hit them too']);
   if (n && n.locked > 0) out.push(['Locked doors', countWords(n.locked), 'you can get through a locked door with a door charge, the breaching shotgun, the hammer or a pick']);
@@ -61,7 +60,6 @@ ${K} .mbrief { align-content: flex-start; gap: 0 18px; }
 ${K} .mcsum { display: block; }
 ${K} .mfacts { flex: 0 0 100%; display: flex; margin-top: 9px; }
 ${K} .mfact.kb { display: flex; }
-${K} .mfact[data-fact="defenders"]:not(.kb) { display: none; }
 ${K} .mfacts.nodef:not(:has(.mfact.kb)) { display: none; }
 ${K} .mblurb { flex: 0 0 100%; display: block; max-width: 74ch; margin-top: 9px; font-size: 13px; line-height: 1.45; }
 #missions .mfact.kb { display: none; }
@@ -110,7 +108,6 @@ export function mountKitBrief(root: HTMLElement, sheet: HTMLElement): KitBrief |
   const draw = (m: Mission) => { for (const c of cells) c.remove?.(); cells.length = 0; if (!facts) return;
     const cell = (label: string, value: string, why: string, before: Element | null) => { const c = document.createElement('div'), l = document.createElement('i'), v = document.createElement('b');
       c.className = 'mfact kb'; c.setAttribute('data-fact', label.toLowerCase().replace(/\s+/g, '-')); if (why) c.title = why; l.textContent = label; v.textContent = value; c.append(l, v); facts.insertBefore(c, before); cells.push(c); };
-    const held = defendersShown(m); if (held && held !== '—') cell('Defenders', wordsOf(held), '', facts.querySelector?.('.mfact[data-fact="defenders"]') ?? null);   // (the list's own cell writes the digits: on this step it is this one that shows)
     for (const [label, value, why] of needCells(needs, m.scenario?.kind === 'rescue')) cell(label, value, why, null); };
   const told = () => { try { api.onChange?.(); } catch (e) { console.error('the kit brief: onChange threw', e); } };
   const onMap = (e: Event) => { if (shut || !root.classList.contains('pane-loadout')) return; e.stopPropagation(); api.setBig(!big); };

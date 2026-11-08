@@ -217,7 +217,7 @@ export async function pickerCard(): Promise<boolean> {
       const L: any[] = MS.missionList().filter((m: any) => m.id !== MS.SOLO_NIGHT.id).map((m: any) => m.scenario);
       const mrowsOf = (r: El): Row[] => missionRows(r, MS.SOLO_NIGHT.id);
       F.verdict(rowsOf(root).length === 0 && !!buttonOf(root, 'Play ›') && !buttonOf(root, 'Quit to scenarios'), "the title carries no scenario rows: Play is the way to them", buttons(root).map(b => b.textContent).join(' · '));
-      MS.openMissions();
+      MS.openMissions({ onPick: () => { } });
       const mroot: El = MS.currentMissions()!.root as any, rows = mrowsOf(mroot);
       F.verdict(rows.length === L.length && L.length === ALL.length && ALL.every((e: any) => L.includes(e)) && rows.every((r, i) => r.id === L[i].id && r.title === L[i].title), 'the mission list holds every entry of every table, in the list\'s order, by its title (beside the solo night)', rows.map(r => r.title).join(' · '));
       F.verdict(rows.every((r, i) => r.href === pickSearch(L[i], SEARCH) && r.href.startsWith(scenarioQuery(L[i])) && r.href.endsWith('quality=high&mute') && entryOfQuery(r.href) === L[i]), "each row is a link to its entry's own URL, the visitor's other flags kept", rows.map(r => r.href).join(' · '));

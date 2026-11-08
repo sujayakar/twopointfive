@@ -9,21 +9,16 @@
 //     tiles and ends over the screen's foot: in a window too short for that it is drawn that much higher, over the foot of the tiles (kitCard.ts fit);
 //   · THE REST OF THE KIT IS ONE LINE OF SMALL TILES — the thing drawn, how many, its name —, the big slot among them;
 //   · THE COLOURS AND THE SETS (suit, trim; Reset, Copy, Paste) are a strip under the kit, and the pouches with the two weight bars one line over it.
-// It is the kit card itself (ui/kitCard.ts memberCard with `dense`: the same rows, values, refusals, lent and idle tiles, copy and paste) in another
+// It is the kit card itself (ui/kitCard.ts memberCard: the same rows, values, refusals, lent and idle tiles, copy and paste) in another
 // lay-out, so nothing of the kit's rules is here. THE KEYS are the card's: W S walk the tiles as they lie — the guns, the kit, the colours, the sets —,
 // A D change the tile the keys are on (a gun's tile: the next gun), and inside a pop-up W S walk the gun and its things, A D change, Esc shuts.
-// THE SWITCH: `KITDENSE.on`, on in the module; `?kitdense=0` on the address = the card as it was. UI only: nothing in the game reads it, nothing of it
-// is in a recording, and the card it lays out is a tree card (game/kittree.ts) — with the tree off the card is the older one whatever this says.
 // Plain strings: nothing at module level uses another module's exports.
-export const KITDENSE = { on: true };
-try { if (new URLSearchParams(location.search).get('kitdense') === '0') KITDENSE.on = false; } catch { /* no page (the harness) */ }
-
 const STYLE_ID = 'kc-dense-style';
 // (`.kc.kc-tree.kc-dense`: one class more than any rule of the start page's for the tree's tiles, so none of these wins by the order of the two sheets)
 const P = '#missions.one #loadout .lo-kit .kc.kc-tree.kc-dense', PL = '#missions.one.pane-loadout #loadout .lo-kit .kc.kc-tree.kc-dense';
 /** a quiet mission's gear screen (ui/startpage.ts QUIET_CSS), the row the keys are on */
 const QS = '#missions.one.quiet.pane-loadout #loadout .lo-kit .kc.kc-tree.kc-dense.focus';
-export const DENSE_CSS = `
+const DENSE_CSS = `
 ${P} { display: grid; grid-template-columns: minmax(0, 1fr) !important; row-gap: 6px; padding: 0 0 24px; }
 /* the pouches and the two weight bars: one line over the tiles */
 ${P} .kc-head { grid-column: 1; grid-row: auto; justify-content: flex-start; margin: 0 0 2px; }

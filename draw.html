@@ -367,7 +367,7 @@
     #missions .mrow:focus { outline: none; }
     #missions .mrow:hover { background: rgba(var(--m-hover-rgb),0.35); color: var(--m-bright); }
     #missions .mrow.sel { background: rgba(var(--m-edge),0.16); border-left-color: var(--m-accent); color: var(--m-bright); }
-    #missions .mrow.unplayed:not(.sel):not(:hover) > * { opacity: 0.5; }   /* (THE UNPLAYED ROWS, ui/missions.ts unplayedClass: drawn quieter, back to full under the cursor; ?unplayed=0 = no row wears the class) */
+    #missions .mrow.unplayed:not(.sel):not(:hover) > * { opacity: 0.5; }   /* (THE UNPLAYED ROWS, ui/missions.ts unplayedClass: drawn quieter, back to full under the cursor) */
     #missions .mlist:not(.tiles) .mrow.unplayed.first { position: relative; margin-top: 15px; }   /* (and a rule over the first of a group's, in the room above it and outside the row's own box, so its highlight is the size of any row's: they stand apart, with no word for it) */
     #missions .mlist:not(.tiles) .mrow.unplayed.first::before { content: ''; position: absolute; left: 0; right: 0; top: -8px; border-top: 1px solid rgba(var(--m-edge),0.14); opacity: 1; pointer-events: none; }
     #missions .mn { font: 11px ui-monospace, Menlo, monospace; color: var(--m-faint); }
@@ -540,7 +540,7 @@
     /* the same pips on a mission's card on the start page (ui/verdictRows.ts): at the right of the card's last line, small; four dim marks until a way is won */
     /* (on a mission's CARD: the foot line the menus keep empty for it — column 3 of row 3, 17 px tall. The strip is 17 px with its frame — an 11 px mark over 4 px
        of ticks — so a card is the height it was; it is no link and takes no pointer, the card under it is; colours are the menu's own tokens, the gold
-       frame a pale sand that is not the selection's orange. Text rows — ?nogroups, the older card's list — show none.) */
+       frame a pale sand that is not the selection's orange. Text rows show none.) */
     #missions .mrow > .vpips { display: none; }
     #missions.one .mgrid .mrow > .vpips { display: inline-flex; grid-column: 3; grid-row: 3; justify-self: end; align-self: center; margin: 0 5px 0 auto; padding: 0 3px; gap: 4px; pointer-events: none; }
     #missions .mrow > .vpips .vpip { gap: 0; cursor: default; color: rgba(147,139,118,0.38); }
