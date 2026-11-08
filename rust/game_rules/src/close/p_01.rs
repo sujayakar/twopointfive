@@ -326,7 +326,7 @@ pub fn close_ready(g: &mut crate::game::Game) -> Option<crate::close::CloseReady
     let o = match o { Some(o) if o.can => o, _ => return None };
     if g.pl[pl].down || g.pl[pl].holding.is_some() || g.pl[pl].takedown.is_some() || g.pl[pl].dragging.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some() || g.pl[pl].wanding.is_some()
         || crate::game::player_rifle_up(g, pl) || (crate::game::player_canister_sel(g, pl).is_some() && !g.pl[pl].holstered) { return None; }
-    if crate::handwork::sam_work(g).is_some() || (g.pl[pl].coding.is_some() && crate::handwork::live(g, crate::handwork::LiveHalf::Work)) { return None; }
+    if crate::handwork::sam_work(g).is_some() || g.pl[pl].coding.is_some() { return None; }
     if g.pl[pl].wall.is_some() { return None; }
     let c = g.gd[o.guard].ch;
     let neck = g.ch[c].bones.get(Bone::Neck).or_else(|| g.ch[c].bones.get(Bone::Head)).copied();
@@ -347,7 +347,7 @@ pub fn mode_now(g: &mut crate::game::Game, pl: PlayerId) -> Option<GuardId> {
     g.m.close.state.get_or_insert_with(pl, fresh_state).mode_d = m::INF;
     if g.touring || g.pl[pl].down || g.pl[pl].holding.is_some() || g.pl[pl].dragging.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some() || g.pl[pl].wanding.is_some()
         || crate::game::player_rifle_up(g, pl) || g.pl[pl].sprinting || g.pl[pl].wall.is_some() { return None; }
-    if crate::handwork::sam_work(g).is_some() || (g.pl[pl].coding.is_some() && crate::handwork::live(g, crate::handwork::LiveHalf::Work)) { return None; }
+    if crate::handwork::sam_work(g).is_some() || g.pl[pl].coding.is_some() { return None; }
     let c = g.pl[pl].ch;
     let p = g.ch[c].pos;
     let mut best: Option<GuardId> = None;
@@ -376,7 +376,7 @@ pub fn close_tick(g: &mut crate::game::Game) {
     state_of(g);
     let c = g.pl[pl].ch;
     let r = close_ready(g);
-    let tell = if r.map_or(true, |r| r.kind != ReadyKind::Seat) && crate::handwork::sam_work(g).is_none() && !(g.pl[pl].coding.is_some() && crate::handwork::live(g, crate::handwork::LiveHalf::Work)) { crate::stalk::stalk_tell(g) } else { None };
+    let tell = if r.map_or(true, |r| r.kind != ReadyKind::Seat) && crate::handwork::sam_work(g).is_none() && !g.pl[pl].coding.is_some() { crate::stalk::stalk_tell(g) } else { None };
     let best: Option<GuardId> = { let now = g.time; let s = state_of(g); if s.t == now { s.best.as_ref().map(|b| b.guard) } else { None } };
     let on_tell = tell.filter(|t| r.is_none() || best.is_none() || best == Some(t.gd));
     if let Some(t) = on_tell {
