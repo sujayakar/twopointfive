@@ -296,7 +296,7 @@ function applyGameNow(g: any, blob: Uint8Array, knobs: Record<string, unknown>, 
   // THE ONE CLOSURE A MADE RECORD HOLDS: the second cast's `mine` (qrf.ts squadCast's call). Rust answers it by the team's rows and carries no closure
   { const Q = g.qrf, O = Q?.cast?.orders?.cast; if (O && !O.mine) { O.mine = (gd: any) => Q.men.includes(gd); if (O.ring?.has('*')) O.ring.has = () => true; } }   // (orders.ts EVERY_KEY: a set that holds every key, carried as its one word)
   // ---- what the export keeps at the end
-  I.K = null; BK.nextSerial = serialNext; BK.rustDeals = true; I.p = tail; const nl = dv.getUint32(I.p, true); I.p += 4; if (!pup) BK.loose.clear();
+  keep = null; I.K = null; BK.nextSerial = serialNext; BK.rustDeals = true; I.p = tail; const nl = dv.getUint32(I.p, true); I.p += 4; if (!pup) BK.loose.clear();
   for (let i = 0; i < nl; i++) { const nodes = dv.getUint32(I.p, true); I.p += 4; const len = dv.getUint32(I.p, true); I.p += 4; const p: any = looseOrder[i]; if (p) { if (!p.own || p.own.length !== len) p.own = new Float32Array(len); p.home = null; for (let k = 0; k < len; k++) p.own[k] = dv.getFloat32(I.p + 4 * k, true); p.numNodes = nodes; BK.loose.set(p, i); } I.p += 4 * len; }
   if (pup) { const OE = SCHEMA.types['crate::out_events::OutEvent']; const n = dv.getUint32(I.p, true); I.p += 4; const out: { arm: string; e: any }[] = []; for (let i = 0; i < n; i++) { const a = dv.getUint16(I.p, true); I.p += 2; const A: string = OE.arms[a]; const m = A.match(/^(\w+)(?:\((.*)\))?$/)!; out.push({ arm: m[1], e: m[2] ? read(parse(m[2]), FRESH) : null }); } R.out = out; }
   for (const { t } of heads) { const M = (c as any)[`made:${t.id}`]; const h = hooks.made?.[t.ts]; if (M && h) for (const o of M) h(o, g); }

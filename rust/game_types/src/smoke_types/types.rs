@@ -27,6 +27,8 @@ pub enum SmokeEmitterLattice {
 /// (TypeScript: SmokeEmitter, src/smoke/types.ts:6)
 #[derive(Clone, Debug)]
 pub struct SmokeEmitter {
+    /// an open fire's: the graphics preset that sheds a fire's smoke drops it
+    pub fire: Option<bool>,
     pub pos: V3,
     pub dir: V3,
     pub speed: f64,
@@ -57,6 +59,7 @@ impl SmokeEmitter {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         SmokeEmitter {
+            fire: None,
             pos: [0.0; 3],
             dir: [0.0; 3],
             speed: 0.0,

@@ -553,7 +553,7 @@ export const enum SmokeSource {
   push = 3,
   /** u32: what it rides, if anything (`anchors`; 0: it stays) */
   anchor = 4,
-  /** u32: 1 the picture's alone · 2 gone when what it rides is · 4 its ride's direction is the smoke's velocity */
+  /** u32: 1 the picture's alone · 2 gone when what it rides is · 4 its ride's direction is the smoke's velocity · 8 the men see through it too · 16 a fire's, for the preset that sheds those */
   says = 5,
   /** u32 */
   lattice = 6,
