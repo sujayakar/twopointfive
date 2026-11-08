@@ -154,14 +154,17 @@ export class DrawGame {
     this.handed(new Uint8Array(N.buffer), p => this.X.face_draw_lead(this.h, L.id, p));
   }
   /** A VIEWER'S OWN PICTURE of the run: with the fog off it, and through a tube or not whatever the run's was (null: as the run had it). The first call has the game keep what such a picture is made from */
-  viewAs(bared: boolean, tube: boolean | null): void { this.X.face_draw_as(this.h, bared ? 1 : 0, tube === null ? 0 : tube ? 1 : 2); this.draw(); }
+  viewAs(bared: boolean, tube: boolean | null): void { this.as = [bared ? 1 : 0, tube === null ? 0 : tube ? 1 : 2]; if (this.lost) return; this.X.face_draw_as(this.h, ...this.as); this.draw(); }
+  private as: [number, number] | null = null;
   /** the floor as it stands, for a map of it (replay/minimap.ts), and who and what is on it now: everybody, seen or not */
   floor(): { bounds: [number, number, number, number]; boxes: number[] } { this.X.face_floor(this.h); return JSON.parse(this.answer()); }
   map(): { men: { id: number; x: number; z: number; aim: number; team: string; kind: 'player' | 'man' | 'civ'; down: boolean; name: string; state: string }[]; doors: { hx: number; hz: number; ux: number; uz: number; width: number; locked: boolean; broken: boolean; off: boolean }[] } { this.X.face_map(this.h); return JSON.parse(this.answer()); }
   /** THE MOMENT THE GAME STANDS AT, whole, to come back to exactly (a walk of a tape's): its number, 0 where it cannot be held */
   moment(): number { return this.X.face_moment(this.h); }
   /** the game stands there again, at tick `ticks` */
-  momentBack(k: number, ticks: number): boolean { if (!this.X.face_moment_back(this.h, k)) return false; this.lost = null; this.ticks = ticks; this.done++; return true; }
+  momentBack(k: number, ticks: number): boolean { const lost = this.lost; if (!this.X.face_moment_back(this.h, k)) return false; this.lost = null; if (lost) this.said = null;   // (a lost game's drawer is made again, and knows nothing of the page's look)
+    if (this.as) this.X.face_draw_as(this.h, ...this.as);   // (a moment from before the picture was anybody's own)
+    this.ticks = ticks; this.done++; return true; }
   /** ticks were stepped that nobody was shown: the picture is of where the game stands, and of nothing before it */
   show(): void { this.X.face_draw_cut(this.h); this.draw(); }
   momentDrop(k: number): void { this.X.face_moment_drop(k); }

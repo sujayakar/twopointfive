@@ -3,6 +3,7 @@
 import { clock, type ReplayNote } from '../replay/format';
 import { rectZoom, textZoom, TEXT_EVENT } from '../ui/textsize';
 import type { FreeCam } from './freecam';
+import type { TapeMap } from './map';
 import { speedName, speedStep, TAPE_SPEEDS } from './pace';
 
 /** a run being played again, as a bar turns it */
@@ -14,8 +15,10 @@ export interface Played {
   readonly parted: number | null; readonly lost: string | null; readonly tries: readonly number[];
   seek(tick: number): void;
 }
+/** how whoever watches sees it: the fog on the picture, and through a tube or not (null: as the run had it) */
+export interface Sees { readonly fog: boolean; readonly tube: boolean | null; /** there is a fog to take off · the picture's tube is on · the run's is */ readonly fogged: boolean; readonly lit: boolean; readonly runs: boolean; set(fog: boolean, tube: boolean | null): void }
 export interface BarDeps {
-  played: Played; cam: FreeCam; canvas: HTMLCanvasElement;
+  played: Played; sees: Sees; map: TapeMap; cam: FreeCam; canvas: HTMLCanvasElement;
   /** what is being played, in a word */
   title: string;
   notes: ReplayNote[];
@@ -65,7 +68,7 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = ''):
 
 export class TapeBar {
   private bar = el('div'); private play = el('button', 'pp', '▶'); private time = el('span', 'time'); private line = el('div', 'line'); private fill = el('div', 'fill'); private parted = el('div', 'parted'); private marks = el('div');
-  private speed = el('button', 'x', '1×'); private slow = el('button', '', '−'); private fast = el('button', '', '+'); private view = el('button', '', 'Player view'); private say = el('span', 'say');
+  private speed = el('button', 'x', '1×'); private slow = el('button', '', '−'); private fast = el('button', '', '+'); private view = el('button', '', 'Player view'); private fog = el('button', '', 'Fog'); private nv = el('button', '', 'NV'); private say = el('span', 'say');
   private big = el('div'); private box = el('div'); private field = el('input');
   /** a note is being typed: at which tick, on which spot of the floor, and was the run playing */
   private noting: { pos: [number, number] | null; tick: number; was: boolean } | null = null;
@@ -73,14 +76,14 @@ export class TapeBar {
 
   constructor(private d: BarDeps) {
     const css = el('style'); css.textContent = CSS; document.head.append(css);
-    const { played: P, line } = { played: d.played, line: this.line }, ghost = el('div', 'ghost'), back = el('button', '', '‹ Game'), note = el('button', '', 'Note'), pace = el('div', 'seg');
+    const { played: P, line } = { played: d.played, line: this.line }, ghost = el('div', 'ghost'), back = el('button', '', '‹ Game'), note = el('button', '', 'Note'), pace = el('div', 'seg'), sees = el('div', 'seg');
     this.bar.id = 'tapebar'; this.big.id = 'tapebig'; this.box.id = 'tapenote'; this.box.hidden = true; ghost.hidden = true; this.parted.hidden = true;
-    this.play.title = 'Space'; this.slow.title = '-'; this.fast.title = '+'; this.view.title = 'C'; note.title = 'N, or click the picture'; back.title = 'Back to the game';
+    this.play.title = 'Space'; this.slow.title = '-'; this.fast.title = '+'; this.view.title = 'C'; this.fog.title = 'F'; this.nv.title = 'V'; note.title = 'N, or click the picture'; back.title = 'Back to the game';
     const pressed = (b: HTMLButtonElement, f: () => void): void => { b.onclick = () => { b.blur(); f(); this.paint(); }; };   // (it lets go of the keyboard: Enter on a button that kept it would press it again)
     pressed(this.play, () => this.toggle()); pressed(this.slow, () => { P.pace = speedStep(P.pace, -1); }); pressed(this.fast, () => { P.pace = speedStep(P.pace, 1); }); pressed(this.speed, () => { P.pace = 1; });
-    pressed(this.view, () => d.cam.back()); pressed(note, () => this.noteOpen(null)); pressed(back, () => { this.noteClose(true); d.back(); }); note.hidden = !d.keep;
-    line.append(this.marks, this.parted, this.fill, ghost); pace.append(this.slow, this.speed, this.fast);
-    this.bar.append(back, el('i', 'gap'), this.play, pace, this.time, line, this.view, el('i', 'gap'), note, this.say);
+    pressed(this.view, () => d.cam.back()); pressed(this.fog, () => this.fogTurn()); pressed(this.nv, () => this.nvTurn()); pressed(note, () => this.noteOpen(null)); pressed(back, () => { this.noteClose(true); d.back(); }); note.hidden = !d.keep;
+    line.append(this.marks, this.parted, this.fill, ghost); pace.append(this.slow, this.speed, this.fast); sees.append(this.view, this.fog, this.nv);
+    this.bar.append(back, el('i', 'gap'), this.play, pace, this.time, line, sees, el('i', 'gap'), note, this.say);
     this.big.append(el('b', '', '▶'), el('span', '', `${d.title} · ${clock(P.total / HZ)}`)); this.big.onclick = () => this.toggle(); 
     this.field.type = 'text'; this.field.maxLength = 400; this.box.append(this.field);
     // the line is dragged to scrub: a ghost with its time follows the pointer, and the place is gone to when the button comes up
@@ -110,8 +113,11 @@ export class TapeBar {
     if (this.over) { P.seek(0); P.paused = false; } else P.paused = !P.paused;
     this.paint();
   }
+  private fogTurn(): void { const S = this.d.sees; if (S.fogged || !S.fog) S.set(!S.fog, S.tube); }
+  /** every press flips the picture; one that lands on what the run has follows the run again */
+  private nvTurn(): void { const S = this.d.sees, on = !S.lit; S.set(S.fog, on === S.runs ? null : on); }
   private key(e: KeyboardEvent): void {
-    const { played: P, cam } = this.d;
+    const { played: P, cam, map } = this.d;
     if (e.target === this.field) { if (e.code === 'Enter' || e.code === 'NumpadEnter') { e.preventDefault(); this.noteClose(true); } else if (e.code === 'Escape') { e.preventDefault(); this.noteClose(false); } e.stopImmediatePropagation(); return; }
     if (e.metaKey || e.ctrlKey || e.altKey) cam.letGo();   // (a key let go under Cmd sends no keyup on a Mac)
     if (e.metaKey || e.ctrlKey || e.altKey || /^F\d+$/.test(e.code) || e.code === 'Backslash') return;
@@ -121,7 +127,8 @@ export class TapeBar {
     if (cam.key(e.code, true) || e.repeat) return;
     if (e.code === 'Space') { e.preventDefault(); this.toggle(); }
     else if (e.code === 'KeyN') { e.preventDefault(); this.noteOpen(null); }
-    else if (e.code === 'KeyC') cam.back();
+    else if (e.code === 'KeyC') cam.back(); else if (e.code === 'KeyF') this.fogTurn(); else if (e.code === 'KeyV') this.nvTurn(); else if (e.code === 'KeyM') map.open();
+    else if (e.code === 'Escape' && map.up) map.open(false);
     // (the pace by the character the key types: - and + are other keys on other keyboards)
     else if (e.key === '-' || e.key === '_' || e.code === 'NumpadSubtract') P.pace = speedStep(P.pace, -1);
     else if (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd') P.pace = speedStep(P.pace, 1);
@@ -130,7 +137,7 @@ export class TapeBar {
   }
   private noteOpen(pos: [number, number] | null): void {
     const P = this.d.played; if (!this.d.keep || this.noting) return;
-    this.big.remove(); this.noting = { pos, tick: P.at, was: !P.paused }; P.paused = true; this.d.cam.letGo(); this.box.hidden = false; this.field.value = ''; this.field.placeholder = pos ? `Note on this spot at ${clock(P.at / HZ)}` : `Note at ${clock(P.at / HZ)}`; this.field.focus(); this.paint();
+    this.big.remove(); this.d.map.open(false); this.noting = { pos, tick: P.at, was: !P.paused }; P.paused = true; this.d.cam.letGo(); this.box.hidden = false; this.field.value = ''; this.field.placeholder = pos ? `Note on this spot at ${clock(P.at / HZ)}` : `Note at ${clock(P.at / HZ)}`; this.field.focus(); this.paint();
   }
   private noteClose(kept: boolean): void {
     const N = this.noting; if (!N) return;
@@ -150,11 +157,12 @@ export class TapeBar {
   }
   /** every frame: what it says of the run as it stands */
   paint(): void {
-    const { played: P, cam } = this.d, says = P.seeking ? '…' : this.unkept ? 'This browser wouldn’t keep that note.' : P.lost !== null ? 'The game stopped here.' : P.parted !== null ? `After ${clock(P.parted / HZ)}, this isn’t what really happened.` : '';
-    const ended = this.over, sig = `${P.paused}|${ended}|${Math.round(P.at / 6)}|${P.pace}|${says}|${!!cam.set}`; if (sig === this.painted) return; this.painted = sig;
+    if (!this.d.played.seeking && this.d.played.lost === null) this.d.map.frame();
+    const { played: P, cam, sees: S } = this.d, says = P.seeking ? '…' : this.unkept ? 'This browser wouldn’t keep that note.' : P.lost !== null ? 'The game stopped here.' : P.parted !== null ? `After ${clock(P.parted / HZ)}, this isn’t what really happened.` : '';
+    const ended = this.over, sig = `${P.paused}|${ended}|${Math.round(P.at / 6)}|${P.pace}|${says}|${!!cam.set}|${S.fog}|${S.fogged}|${S.lit}`; if (sig === this.painted) return; this.painted = sig;
     this.play.textContent = ended ? '↺' : P.paused ? '▶' : '❚❚'; this.time.textContent = `${clock(P.at / HZ)} / ${clock(P.total / HZ)}`; this.fill.style.width = `${100 * P.at / Math.max(1, P.total)}%`;
     this.speed.textContent = speedName(P.pace); this.speed.classList.toggle('on', P.pace !== 1); this.slow.classList.toggle('end', P.pace === TAPE_SPEEDS[0]); this.fast.classList.toggle('end', P.pace === TAPE_SPEEDS[TAPE_SPEEDS.length - 1]);
-    this.view.classList.toggle('on', !cam.set); this.parted.hidden = P.parted === null; if (P.parted !== null) this.parted.style.left = `${100 * P.parted / Math.max(1, P.total)}%`;
+    this.view.classList.toggle('on', !cam.set); this.fog.hidden = !S.fogged && S.fog; this.fog.classList.toggle('on', S.fog); this.nv.classList.toggle('on', S.lit); this.parted.hidden = P.parted === null; if (P.parted !== null) this.parted.style.left = `${100 * P.parted / Math.max(1, P.total)}%`;
     this.say.textContent = says; this.say.title = P.lost ?? '';
   }
 }
