@@ -7,6 +7,7 @@ import { SLOTSETUP } from '../../../src/game/slotsetup';
 import { DOORSHOT } from '../../../src/game/doorblast';
 import { WALLPEN } from '../../../src/game/wallpen';
 import { DESTRUCTION as DESTR_HERE } from '../../../src/game/destructionSwitch';
+import { locked } from '../../../src/view/seatview.ts';
 
 /** is a switch on IN THE GAME THIS RUN PLAYS: on a page the script is its own bundle, with its own copy of the table (the page's is `__knobs`) */
 const pageOn = (name: string, here: boolean): boolean => (globalThis as { __knobs?: { registry?: () => Record<string, { on?: boolean }> } }).__knobs?.registry?.()[name]?.on ?? here;
@@ -62,7 +63,7 @@ const offWall = (B: Bot) => { if (B.g.player.wall) B.press('KeyQ', 10); };
 /** the gateway's mouth: just through the lower wall's line, between the sentry and the truck he shoots */
 const GATEWAY_MOUTH = [POST.x0 + 0.6, (GATEWAY.a + GATEWAY.b) / 2 - 0.75];
 const once = new Set<string>();
-const stepIs = (B: Bot, id: string) => B.g.lesson.step?.id === id;
+const stepIs = (B: Bot, id: string) => B.g.view.lesson?.id === id;
 /** the rifle's rounds as the checkpoint 'the hut' was kept (its step coming up): what the boards cost is the die's, one round or a few */
 let hutRounds = -1;
 /** the checkpoint 'the hut' is kept with the door out, the rifle on full auto and as loaded as it was, and two men down: put back, none of that is asked again */
@@ -72,18 +73,18 @@ const againHut = (B: Bot) => { const d = B.g.doors.byName('hut')!, w = B.g.playe
 /** play these lines again, each when it is the one that is up */
 const replay = (B: Bot, ids: string[]) => { for (const id of ids) {
   const gone = () => idleOk.includes(id) && B.g.lesson.i > B.g.level.scenarios.lesson.steps.findIndex((T: { id: string }) => T.id === id);
-  if (!B.until(() => stepIs(B, id) || gone(), 4)) B.fail(`again: '${id}' did not come up after the checkpoint (the lesson is on '${B.g.lesson.step?.id}')`); if (gone()) continue; B.step(30); steps[id](B); B.step(30); } };
+  if (!B.until(() => stepIs(B, id) || gone(), 4)) B.fail(`again: '${id}' did not come up after the checkpoint (the lesson is on '${B.g.view.lesson?.id}')`); if (gone()) continue; B.step(30); steps[id](B); B.step(30); } };
 /** down as the line warns, then Enter */
 const downAndBack = (B: Bot, how: () => void, to: string) => {
   how(); if (!B.until(() => B.g.player.down, 4)) B.fail(`again: he was not hit (${to})`);
   B.step(20); B.press('Enter', 20);
-  if (B.g.player.down || !stepIs(B, to)) B.fail(`again: Enter did not put him back at '${to}' (down ${B.g.player.down}, the lesson is on '${B.g.lesson.step?.id}')`);
+  if (B.g.player.down || !stepIs(B, to)) B.fail(`again: Enter did not put him back at '${to}' (down ${B.g.player.down}, the lesson is on '${B.g.view.lesson?.id}')`);
   B.say(`  down, and back at '${to}' by Enter`);
 };
 /** the newest checkpoint of this run, put back by the harness */
 const handBack = (B: Bot, to: string) => {
   const g = B.g, ck = g.saves.newest(true, g.mission.stats.elapsed), why = ck ? g.saves.loadInStep(g, ck.key) : 'no checkpoint on the shelf'; B.step(20);
-  if (why || !stepIs(B, to)) B.fail(`again: the checkpoint was not put back at '${to}' (${why ?? `the lesson is on '${g.lesson.step?.id}'`})`);
+  if (why || !stepIs(B, to)) B.fail(`again: the checkpoint was not put back at '${to}' (${why ?? `the lesson is on '${g.view.lesson?.id}'`})`);
   B.say(`  the checkpoint put back: '${to}'`);
 };
 /** the lane behind the sandbags, from the side door's lee to its far end */
@@ -95,7 +96,7 @@ export const steps: Record<string, (B: Bot) => void> = {
   // (TUT_ROAD_ARM=east first walks the wrong side of the truck and stands in the sentry's line: he holds his fire for a man there, and nobody is hit)
   move: B => {
     once.clear();
-    if (B.g.rails && !B.g.rails.locks('camera')) B.fail('the view can be turned before the line that teaches it');
+    if (B.g.rails && !locked(B.g.view, 'camera')) B.fail('the view can be turned before the line that teaches it');
     if (brk() === 'east') { B.go([6.5, 0, 15.2], 12); B.go([6.6, 0, 13.4], 10); B.wait(6); if (B.g.player.down) B.fail('BREAK east: he stood in the sentry\'s line beside the truck and was hit'); B.go([6.5, 0, 15.6], 10); B.go([3.2, 0, 17.6], 12); }
     // (TUT_ROAD_ARM=mouth: the other thing nothing tells a new player not to do. Up the road on the first line and into the gateway's mouth, between the
     //  sentry and the truck he is shooting, and eight seconds there (he fires a burst every two or three, and reloads); then back for the line)
@@ -164,21 +165,21 @@ export const steps: Record<string, (B: Bot) => void> = {
       if ((g.doors as unknown as { frameRule?: boolean }).frameRule) { B.go([HUT.x0 - 2.6, 0, HUT_DOOR_Z], 6, { near: 0.3 }); B.go([HUT.x0 + 0.5, 0, HUT_DOOR_Z], 2.5, { sprint: true, noDoors: true }); B.until(() => !g.player.kick, 3); B.step(30);
         if (!d.locked || !d.isClosed()) B.fail('jamb: a sprint into the hut\'s door opened it (the lesson of the line is the trigger)'); B.say('  jamb: a sprint into the door did not open it'); }
       B.go(DOOR_FROM, 6, { near: 0.3 });
-      trigger(B, () => [HUT.x0, 1.1, HUT_DOOR_Z + 1.5], 8, () => !stepIs(B, 'door') || !!g.lesson.settling);
-      if (stepIs(B, 'door') && !g.lesson.settling) B.fail(`jamb: ${r0 - gun(B).roundsReady} rounds into the wall beside the door and the line is still up`);
+      trigger(B, () => [HUT.x0, 1.1, HUT_DOOR_Z + 1.5], 8, () => !stepIs(B, 'door') || !!g.view.lesson?.settling);
+      if (stepIs(B, 'door') && !g.view.lesson?.settling) B.fail(`jamb: ${r0 - gun(B).roundsReady} rounds into the wall beside the door and the line is still up`);
       if ((d as unknown as { off?: boolean }).off) B.fail('jamb: the leaf is off its hinges with every round in the wall beside it');
       B.until(() => !d.isClosed(), 4); if (d.isClosed()) B.fail('jamb: the line went by on his rounds and the door was not opened for him');
       B.say(`  jamb: ${r0 - gun(B).roundsReady} rounds into the wall, the line went by and the door was opened for him`); return; }
     // (slant: a long burst from a stand to one side with the cursor on the man in the back room himself: through the leaf, through the boards, and on
     //  past the leaf once it is out. He waits behind a wall until his own line: he must still be up for it)
     if (brk() === 'slant') { B.go([14.9, 0, 13.5], 6, { near: 0.2 }); const him = man(B, 'hut'), to = () => chest(him);   // (the cursor on him, through the leaf and all)
-      trigger(B, to, 6, () => !d.isClosed() || !stepIs(B, 'door') || !!g.lesson.settling); trigger(B, to, 1.5, () => gun(B).roundsReady === 0);
+      trigger(B, to, 6, () => !d.isClosed() || !stepIs(B, 'door') || !!g.view.lesson?.settling); trigger(B, to, 1.5, () => gun(B).roundsReady === 0);
       if (downed(B) !== 1) B.fail(`slant: ${r0 - gun(B).roundsReady} rounds at the door from the side and ${downed(B)} men are down: one of them found the man in the back room before his line`);
       B.say(`  slant: ${r0 - gun(B).roundsReady} rounds at the door from the side, and the man in the back room is still up`); return; }
     B.go(DOOR_FROM, 6, { near: 0.3 });
     // (where gunfire does not splinter a door — the switch off, or walls that do not break — the twentieth round ends the line and the script opens it)
-    if (!splinters) { trigger(B, () => at, 10, () => !stepIs(B, 'door') || !!g.lesson.settling);
-      if (stepIs(B, 'door') && !g.lesson.settling) B.fail(`gunfire does not splinter a door on this stand, and ${r0 - gun(B).roundsReady} rounds did not end the line`);
+    if (!splinters) { trigger(B, () => at, 10, () => !stepIs(B, 'door') || !!g.view.lesson?.settling);
+      if (stepIs(B, 'door') && !g.view.lesson?.settling) B.fail(`gunfire does not splinter a door on this stand, and ${r0 - gun(B).roundsReady} rounds did not end the line`);
       B.say(`  the hut's door: ${r0 - gun(B).roundsReady} round(s) and the line went by (gunfire does not splinter a door on this stand)`); return; }
     trigger(B, () => at, 6, () => !d.isClosed());
     const n = r0 - gun(B).roundsReady; B.say(`  the hut's door: ${d.isClosed() ? 'still standing' : 'out'} after ${n} round(s)`);
@@ -275,4 +276,4 @@ export const steps: Record<string, (B: Bot) => void> = {
 };
 /** A line stays up a beat after it is done where the level says so (a step's `settle`: the man falls, the door goes, the reload ends): each step waits
  *  that out, as a player does, before the runner asks whether the line has gone by */
-for (const id of Object.keys(steps)) { const f = steps[id]; steps[id] = B => { f(B); if (stepIs(B, id) && B.g.lesson.settling) B.until(() => !stepIs(B, id), 6); }; }
+for (const id of Object.keys(steps)) { const f = steps[id]; steps[id] = B => { f(B); if (stepIs(B, id) && B.g.view.lesson?.settling) B.until(() => !stepIs(B, id), 6); }; }

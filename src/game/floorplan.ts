@@ -55,6 +55,7 @@ import { squadThrowPlans, squadThrowKept, type SquadThrowKept } from './squadthr
 import { FRAG } from './frag';
 import { AUTOPILOT, showSecsOf } from './autopilot';   // (read inside floorPlan only)
 import { teamPaired } from './seats';   // (the same)
+import { locked } from '../view/seatview';
 
 export const PLAN = {
   on: true,
@@ -231,7 +232,7 @@ function waitsOnKey(g: Game, out: FloorPlan, toneOf: (gd: Guard) => Tone | null)
   // draws no bar for a pair under PLAN.keyLit (ui/planfloor.ts — there is no doorway under it; with the switch off, the bar as it was); and a lesson that still holds the word shut (rails.ts locks) lists no
   // mark at all: the key does nothing there, so nothing names it.
   const marked = g.pair.waiting(), pairFirst = up && marked.length > 0;
-  for (const [gd, J] of marked.length && !g.rails?.locks('word') ? marked : []) {
+  for (const [gd, J] of marked.length && !locked(g.view, 'word') ? marked : []) {
     const p = gd.char.pos, y = gd.char.aimYaw, fx = Math.sin(y), fz = Math.cos(y), cx = p[0] + fx * PLAN.pairBarM, cz = p[2] + fz * PLAN.pairBarM;
     out.doors.push({ door: null, a: [cx - fz * 0.3, 0, cz + fx * 0.3], b: [cx + fz * 0.3, 0, cz - fx * 0.3], tone: toneOf(gd), key: 'F', now: pairFirst, ready: J.set || !!J.watcher, why: 'pair' });
   }
@@ -262,7 +263,7 @@ function waitsOnKey(g: Game, out: FloorPlan, toneOf: (gd: Guard) => Tone | null)
   // cap — dark, the key struck out to the eye — and the player asked what the key was. While the step that is up holds the word shut the press does nothing
   // (rails.ts gate: the squad's key goes by under `word` and under nothing else, a set charge's blow and a wall's included), so no door names it: the bar
   // across the doorway stays (the men ARE waiting), the cap goes.
-  if (g.rails?.hushes('word')) for (const d of out.doors) if (d.why !== 'pair') { d.key = null; d.now = false; }
+  if (locked(g.view, 'word')) for (const d of out.doors) if (d.why !== 'pair') { d.key = null; d.now = false; }
 }
 
 /** The squad's plan as it stands this frame, for the overlay. Empty with the switch off, with no squad on the floor, and under any show.

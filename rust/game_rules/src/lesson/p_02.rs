@@ -236,6 +236,32 @@ pub fn lesson_over(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool 
         || (crate::roomclear::room_clear_scenario_active(g) && g.room_clear.end.is_some())
 }
 
+/// The step's deed is done and the moment is playing out: its own `settle`, or the beat before the next step's card.   (lesson.ts Lesson.settling)
+pub fn lesson_settling(g: &crate::game::Game) -> bool {
+    run_is_mission(g) && g.lesson.seen.as_ref().map_or(false, |s| s.done_t.is_some() && s.done_i == Some(g.lesson.i))
+}
+
+/// What a seat's HUD is told of the lesson that is live (None: none is).
+pub fn lesson_view(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::view::LessonView> {
+    let l = lesson_data(g)?;
+    let i = lesson_at(g);
+    let (of, id, asks_view) = {
+        let t = l.steps.get(i as usize);
+        (l.steps.len(), t.map(|t| t.id.clone()), t.map_or(false, |t| matches!(t.done, crate::scene_scenarios::LessonTestKind::View { .. })))
+    };
+    let frame = crate::rails::RailsLesson { l, i: m::min(i, of as f64) };
+    Some(crate::view::LessonView {
+        step: i as u32,
+        of: of as u32,
+        finished: id.is_none(),
+        id,
+        over: lesson_over(g, seat),
+        settling: lesson_settling(g),
+        asks_view,
+        rails: crate::rails::rails_view(g, seat, &frame),
+    })
+}
+
 /// The objective while a step is up (None: the scenario's own).
 pub fn lesson_objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::lesson::LessonObjective> {
     let l = lesson_data(g)?;
@@ -262,8 +288,8 @@ pub fn lesson_objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> 
     }
     let line = line_of(g, t);
     let said = lesson_line(g, &line);
-    let plain = keys_plain(&said, &mut |k| if k == "Ctrl" { crate::host_keymap::cam_cap(g) } else { String::from(k) });
-    let text = format!("training {}/{} \u{25b8} {}", i as usize + 1, l.steps.len(), plain);
+    // (each key by its code in brackets, as the big line's: the page has the player's keys, and words them)
+    let text = format!("training {}/{} \u{25b8} {}", i as usize + 1, l.steps.len(), said);
     let pos = match man {
         Some(x) => {
             let p = g.ch[g.gd[x].ch].pos;
@@ -306,29 +332,6 @@ fn add(s: &mut crate::lesson::StepSeen, k: String) {
 /// An optional string as a truthy test takes it: an empty one is no line.
 fn filled(o: &Option<String>) -> Option<&str> {
     o.as_deref().filter(|s| !s.is_empty())
-}
-
-/// `line.replace(/\[([^\]]+)\]/g, (_m, k) => say(k))`.
-fn keys_plain(line: &str, say: &mut dyn FnMut(&str) -> String) -> String {
-    let mut out = String::new();
-    let mut rest = line;
-    while let Some(open) = rest.find('[') {
-        let tail = &rest[open + 1..];
-        match tail.find(']') {
-            Some(close) if close > 0 => {
-                out.push_str(&rest[..open]);
-                out.push_str(&say(&tail[..close]));
-                rest = &tail[close + 1..];
-            }
-            Some(_) => {
-                out.push_str(&rest[..open + 1]);
-                rest = tail;
-            }
-            None => break,
-        }
-    }
-    out.push_str(rest);
-    out
 }
 
 /// `this.run === g.mission`: the same run, by the Mission's serial.   (lesson.ts:320, 330, 348)
@@ -410,26 +413,6 @@ fn done_test(t: &crate::scene_scenarios::LessonTestKind) -> crate::lesson::Lesso
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // Expected strings printed by node from the TypeScript's own expression.
-    #[test]
-    fn keys_plain_is_the_regexs() {
-        let rows: &[(&str, &str)] = &[
-            ("press [B] now", "press <B> now"),
-            ("[Ctrl] and [B]", "<Ctrl> and <B>"),
-            ("no keys", "no keys"),
-            ("[] stays", "[] stays"),
-            ("[]x]", "[]x]"),
-            ("[[x]", "<[x>"),
-            ("open [ only", "open [ only"),
-            ("] [a] ]", "] <a> ]"),
-            ("[] [a]", "[] <a>"),
-            ("\u{25b8} [\u{25b8}]", "\u{25b8} <\u{25b8}>"),
-        ];
-        for &(line, want) in rows {
-            assert_eq!(keys_plain(line, &mut |k| format!("<{k}>")), want, "{line}");
-        }
-    }
 
     // The one rule of the bridge that is more than a copy: a word no arm holds never passes, and an absent `who` stays absent (`?? 'all'`).
     #[test]

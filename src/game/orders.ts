@@ -102,6 +102,8 @@ import './noshove';   // (read inside update only)
 import './close';   // (read inside input() only: the left click that shuts the menu with a man in the arm)
 import './silent';
 import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
+import { locked } from '../view/seatview';
+import { RAILS } from './rails';   // (read inside targetUnder only: src/game is one import cycle)
 /** where Sam 'stands' while the stack's makers are asked as if he were not there (ownMarkFirst): a place no mark is near */
 const NOWHERE: Vec3 = [1e7, 0, 1e7];
 /** … and how near a mark handed out must be to the post a man stands on to be that same mark, metres */
@@ -693,10 +695,11 @@ export class SquadOrders {
    *  listed — greyed, with whyNot's word) */
   rowsFor(t: OrderTarget, page: string | null = null, men?: Guard[]): OrderDef[] {
     const on = workRows(this.g, t, page, wallRows(this.g, t, page, this.defs.filter(d => (d.listed ?? d.targets).includes(t.kind) && (d.page ?? null) === page)));   // (wallcharge.ts: a wall's menu · workthings.ts: a thing's own order where 'move there' is)
-    if (!on.some(d => d.standsIn)) return this.g.rails ? this.g.rails.orderRows(on) : on;   // (rails.ts: a tutorial mission's menu lists only the orders it names)
+    const only = this.g.view.lesson?.rails?.orders, named = (rows: OrderDef[]): OrderDef[] => only ? rows.filter(d => only.includes(d.id)) : rows;   // (a tutorial mission's menu lists only the orders it names)
+    if (!on.some(d => d.standsIn)) return named(on);
     // a row that STANDS IN for another (OrderDef.standsIn): in while its `when` says so — the row it stands in for out — and out otherwise
     const who = men ?? this.recipients(t), ins = on.filter(d => d.standsIn?.when(this, t, who)), out = new Set(ins.map(d => d.standsIn!.for));
-    const all = on.filter(d => d.standsIn ? ins.includes(d) : !out.has(d.id)); return this.g.rails ? this.g.rails.orderRows(all) : all;
+    return named(on.filter(d => d.standsIn ? ins.includes(d) : !out.has(d.id)));
   }
   /** (cmdring.ts CMDRING.flat) a ring put up now is one of the flat tree — on a tutorial mission only where its level says so (rails.ts flatRing:
    *  a mission's lines teach the menu's pages and their digits until they are written for this tree) */
@@ -1750,7 +1753,7 @@ export class SquadOrders {
     if (!this.active) return null;
     const hov = this.hover(), P = hov && AUTOPILOT.on ? autoPick(this.g, hov, false) : undefined;   // (asked once for the row's words and its reason)
     const words = hov ? this.quickWords(hov, P) : null;   // (autopilot.ts: the squad's first choice on a door it waits on)
-    if (!hov || !words || this.g.rails?.locks('order') || (CMDRING.on && ringHoldSecs() > 0 && this.g.rails?.teachesHold())) return null;   // (rails.ts: a key the mission has not taught yet is not named on the panel)
+    if (!hov || !words || locked(this.g.view, 'order') || (CMDRING.on && ringHoldSecs() > 0 && this.g.view.lesson?.rails?.teachesHold)) return null;   // (rails.ts: a key the mission has not taught yet is not named on the panel)
     const why = P ? whyWords(P)?.row ?? null : null;   // (squadnet.ts: why the squad's pick is not a plain open; null with its switch off)
     return { key: keyName(ORDERS.quickKey), text: `${words}${hov.kind === 'none' && !hov.man ? '' : ` · ${this.hoverWords(hov)}`}${why ? ` · ${why}` : ''}` };
   }
