@@ -105,24 +105,12 @@ export const BOTH = { on: false, asked: 0, differ: 0, stale: 0, first: '', thing
  *  itself alone, which is what a caller that asks many should open a window to save. Never a rule of play: the same answers, by `rust-check --both`. */
 export const ANYTIME = { on: true, proofs: 0, windows: 0, who: null as Record<string, number> | null };   // (`who`: a tool's table of who asked alone, when it wants one)
 /** a check's count of the senses' questions the module answered, a kind each: a kind that is never asked proves nothing */
-export const SENSED = { sight: 0, light: 0, smoke: 0, sound: 0, paths: 0 };
+export const SENSED = { sight: 0, sound: 0, paths: 0 };
 /** A WATCHER OF THE SENSES' ANSWERS (`see` is null in play; tools/qa/sense-ident.ts hangs one): shown every answer the module gives one of the senses'
- *  questions, as the numbers it is made of, under its kind's name — an eye's verdict and distance · the six faces of the light on a point · the smoke
- *  along a line · what the straight lines of a sound said, and its way round · a way's waypoints, and the cells a priced search asked the price of ·
+ *  questions, as the numbers it is made of, under its kind's name — an eye's verdict and distance · what the straight lines of a sound said, and its way round · a way's waypoints, and the cells a priced search asked the price of ·
  *  the eyes of a team that have a line. That is what a check folds into the words it holds the senses to (tools/qa/ident-pin.ts): nothing else in
  *  TypeScript answers one. Never a rule of play. */
 export const SENSE_WATCH: { see: ((row: keyof typeof SENSED | 'fog', v: ArrayLike<number>) => void) | null } = { see: null };
-/** a blob of the smoke as a question carries it (sense.ts Blob's six; rust/sim/src/smoke.rs BLOB), and the model's numbers that go with them (SENSE.smoke's) */
-export interface BlobRow { x: number; y0: number; z: number; r2: number; age: number; mass: number }
-export interface SmokeNumbers { sigma: number; spread: number; widest: number; rise: number; riseRate: number }
-/** …and of the times a light question's lamps did not fit the module's table and a part was sent on ahead (`lamp`) */
-export const LAMPS = { parts: 0 };
-/** WHAT A LIGHT QUESTION SAYS OF THE LEVEL'S OWN LAMPS (the rows of sim/lightshome.ts, read by the module where they stand: light.rs Rows): the block
- *  whose lights' part holds them · the rows' bits it leaves out (lightshome.ts ROW_BIT: who asks what the PLACE lights leaves the passing ones, a
- *  sleeper's face the screens') · whether a row that has a steady self is taken as that self */
-export interface LampRows { st: SimState; leave: number; steady: boolean }
-/** …as the module is told it (lib.rs light_rows: 1 the rows are read · 2 their steady selves) */
-const rowsHow = (R: LampRows | null): number => R ? (R.steady ? 3 : 1) : 0;
 /** …and of the rays the module answered (RUST.rays: raycast) */
 export const RAYS = { n: 0, host: 0 };
 /** …and of the searches with a penalty (NavGrid.findPath; rust/sim/src/nav.rs find_priced): how many, how many times one
@@ -132,9 +120,6 @@ export const PRICED = { n: 0, needs: 0, cells: 0, waits: false };
 /** eyes one question of a sight pass can name (four bits each, and the count above them: rust/sim/src/fog.rs) */
 const SIGHT_EYES = 7;
 const bothPanes: { bi: number; t: number }[] = [];   // (the check's: the panes the module listed for the question in hand)
-/** THE WIND THE COARSE GRID'S SMOKE DRIFTS BY (`gridStep`; game/wind.ts stormDrift): the vector (m/s), its rise with height (`low` of it at the ground,
- *  `gain` more by `fullAt` metres up) and the share of it each square metre of the plan has (0 under a roof … 1 in the open) */
-export interface GridWind { x: number; z: number; low: number; gain: number; fullAt: number; share: (x: number, z: number) => number }
 /** A SENSE'S QUESTION THE MODULE HANDED BACK. Nothing else answers a sense and no level makes one (a level is held to the copy's tables as it loads, a
  *  question's lamps go in parts, the floor is the build's): it is a mistake of the asker's — a line a thousand kilometres long, a point that is no
  *  number — and is said by name, with the line */
@@ -624,97 +609,8 @@ export class StaticCollision {
     SENSED.sight++; if (SENSE_WATCH.see) SENSE_WATCH.see('sight', [r, f64()[M.scratch]]);
     return { visible: (r & FACE.A_VISIBLE) !== 0, dist: f64()[M.scratch], inCone: (r & FACE.A_IN_CONE) !== 0 };
   }
-  /** THE LIGHT ON A POINT (guards.ts lightEstimateAt's lamps; rust/sim/src/light.rs): `lampsBegin` the question, then a `lamp` each of the question's
-   *  OWN that passed the caller's gates, then `lampsOn`, which leaves the six faces in `acc`.
-   *  `rows`: THE LEVEL'S OWN LAMPS ARE NOT WRITTEN. The module reads them where they stand, the rows of the lights' part of a game's block
-   *  (sim/lightshome.ts), through its own gates and the question's word of them (LampRows); a `lamp` says how many rows stand before it in the engine's
-   *  list, and the module takes the two as one list in that order. None: the written lamps are all there are.
-   *  IN PARTS: the module's table holds `lampCap` lamps; a lamp past that sends the table as a PART and begins it again, and the module keeps the six
-   *  faces and its place among the rows from part to part (light.rs SUM, AT), so any number of lamps in reach of a point is one sum in one order.
-   *  `shade`: the smoke's shadow (sense.ts SENSE.bounce) — each lamp no wall hides is dimmed along the line to it by the smoke of `shade.grid`, and
-   *  where that grid cannot answer (or none `stands`: sense.ts SmokeGrid.along) by `shade.blobs`, written here for the module's own smoke.rs under
-   *  the model's numbers `K` (its table holds them all: the game keeps no more, sense.ts CpuSmoke.emit, and more is an error by name) */
-  private readonly lampQ: { on: boolean; P: Vec3 | null; sim: SimState | null; stands: number; K: SmokeNumbers | null; nb: number; parts: number; rows: LampRows | null } = { on: false, P: null, sim: null, stands: 0, K: null, nb: 0, parts: 0, rows: null };
-  lampsBegin(P: Vec3, shade: { grid: { sim: SimState; stands: boolean }; blobs: readonly BlobRow[] } | null = null, K: SmokeNumbers | null = null, rows: LampRows | null = null): void {
-    const M = this.mirror, Q = this.lampQ; this.lampsOver(); M.lampSet = this.sense('light'); M.lampN = 0;
-    if (shade && K) { this.blobsFit(shade.blobs.length); M.blobN = 0; for (const b of shade.blobs) this.blob(b.x, b.y0, b.z, b.r2, b.age, b.mass);
-      Q.sim = shade.grid.sim; Q.stands = shade.grid.stands ? 1 : 0; Q.K = K; Q.nb = M.blobN; }
-    Q.P = P; Q.rows = rows; Q.on = true;
-  }
-  /** no question about the light stands (and nothing of the last one is held) */
-  private lampsOver(): void { const Q = this.lampQ; Q.on = false; Q.P = null; Q.sim = null; Q.K = null; Q.stands = 0; Q.nb = 0; Q.parts = 0; Q.rows = null; }
-  /** the lamps written so far, asked as a part of the question (`last`: no part follows, and the rows after the last written lamp are taken) */
-  private lampsPart(last = false): void {
-    const M = this.mirror, Q = this.lampQ, P = Q.P!, st = Q.sim, K = Q.K, more = Q.parts > 0 ? 1 : 0, R = Q.rows;
-    // (the blocks are bound a part: a call that reads state says where it stands NOW, sim/state.ts. The rows' first, then the grid's: the one bound last is never the one that gives way to the other)
-    const lg = R ? R.st.bind() : 0, how = rowsHow(R) | (last ? 4 : 0), leave = R ? R.leave : 0;
-    const r = st && K ? M.x.light_estimate(M.slot, M.lampSet, M.lampN, P[0], P[1], P[2], K.sigma, st.bind(), st.stamp, Q.stands, more, Q.nb, K.spread, K.widest, K.rise, K.riseRate, lg, leave, how)
-      : M.x.light_estimate(M.slot, M.lampSet, M.lampN, P[0], P[1], P[2], 0, 0, 0, 0, more, 0, 0, 0, 0, 0, lg, leave, how);
-    Q.parts++; M.lampN = 0;
-    if (r === -1) { this.lampsOver(); throw handedBack('light', 'a lamp\'s line too long to be one, or of no number', P, P); }
-  }
-  /** a lamp of the question in hand, or — no question standing — of the grid's sweep, which takes as many as the table holds and no more (false: the
-   *  table is full; `gridStep`'s caller says what that is). `rows`: how many of the level's rows stand before it in the engine's list. */
-  lamp(pos: Vec3, range: number, radius: number, kind: number, dir: Vec3, outerDeg: number, innerDeg: number, color: Vec3, intensity: number, rows = 0): boolean {
-    const M = this.mirror;
-    if (M.lampN >= M.lampCap) { if (!this.lampQ.on) return false;
-      LAMPS.parts++; this.lampsPart(); }
-    const m = f64(), o = M.lamps + M.lampN++ * FACE.LAMP;
-    m[o] = pos[0]; m[o + 1] = pos[1]; m[o + 2] = pos[2]; m[o + 3] = range; m[o + 4] = radius; m[o + 5] = kind; m[o + 6] = dir[0]; m[o + 7] = dir[1]; m[o + 8] = dir[2]; m[o + 9] = outerDeg; m[o + 10] = innerDeg;
-    m[o + 11] = color[0]; m[o + 12] = color[1]; m[o + 13] = color[2]; m[o + 14] = intensity; m[o + 15] = rows;
-    return true;
-  }
-  /** …the last part asked, and the six faces of the whole question read */
-  lampsOn(acc: number[]): void {
-    const M = this.mirror; if (!this.lampQ.on) throw new Error('light: lampsOn with no question begun (lampsBegin)');
-    this.lampsPart(true); this.lampsOver();
-    const m = f64(), at = M.scratch; for (let k = 0; k < 6; k++) acc[k] = m[at + k];
-    SENSED.light++; if (SENSE_WATCH.see) SENSE_WATCH.see('light', acc.slice(0, 6));
-  }
-  /** THE SMOKE ALONG A LINE (game/sense.ts CpuSmoke; rust/sim/src/smoke.rs): `begin` with this many blobs, a `blob` each, then the transmittance along
-   *  a → b under the model's numbers. */
-  blobsBegin(n: number): void { const M = this.mirror; M.blobSet = this.sense('smoke'); M.blobN = 0; this.blobsFit(n); }
-  /** a game keeps no more blobs than the module's table holds (sense.ts CpuSmoke.emit holds its knob to the table), so more is no content: a mistake, by name */
-  private blobsFit(n: number): void { const cap = this.mirror.blobCap; if (n > cap) throw new Error(`${n} blobs of smoke and the Rust module's table holds ${cap}: a game keeps no more than that (sense.ts CpuSmoke.emit), so somebody else filled the list`); }
-  blob(x: number, y0: number, z: number, r2: number, age: number, mass: number): void { const M = this.mirror, m = f64(), o = M.blobs + M.blobN++ * FACE.BLOB; m[o] = x; m[o + 1] = y0; m[o + 2] = z; m[o + 3] = r2; m[o + 4] = age; m[o + 5] = mass; }
-  blobsAlong(a: Vec3, b: Vec3, sigma: number, spread: number, widest: number, rise: number, riseRate: number): number {
-    const M = this.mirror; if (M.x.smoke_trans(M.slot, M.blobSet, M.blobN, a[0], a[1], a[2], b[0], b[1], b[2], sigma, spread, widest, rise, riseRate) === -1) throw handedBack('smoke', 'a line too long to be one, or of no number', a, b);
-    SENSED.smoke++; if (SENSE_WATCH.see) SENSE_WATCH.see('smoke', [f64()[M.scratch]]);
-    return f64()[M.scratch];
-  }
   /** a sound's or a search's question: the leaves' list and the pane rule to ask with (SoundPaths and NavGrid are this file's, and ask through here) */
   senseFor(row: 'sound' | 'paths'): { set: number; ask: number } { const set = this.sense(row); return { set, ask: this.sensePanes(row) }; }
-  // ---- THE GAME'S OWN SMOKE ON THE COARSE GRID (game/sense.ts SENSE.grid, SmokeGrid; rust/sim/src/bricks.rs). No row of RUST: the grid has no TypeScript
-  // twin, so where the module does not run, or the level's plan is larger than a grid stands on, the blobs answer as they did. The state is a part of a
-  // block in the module (sim/state.ts: the game's own, or a tool's), so a step copies nothing: it names the block and this world's copy.
-  /** the emitters handed over since the last step (x y z radius rate ttl each) join the list and `n` steps of a tenth of a second are taken, over the boxes and
-   *  leaves as they stand. The copy is the grid's to stand up: where no row of RUST has it standing for this tick, it is made the boxes as they are for
-   *  the step alone and let go again, with no question of the game's sent to it (so nobody who opens a tick has to know a grid is there). False = nothing
-   *  was done (the module does not run here, more leaves than a list holds, or no grid stands on this level): the state is as it was, the emitters not
-   *  taken.
-   *  `wind`: the smoke under the open sky drifts by this vector (m/s; sense.ts SENSE.drift), each square metre of the plan by the share of it `share`
-   *  gives (0 under a roof … 1 in the open) and by its rise with height (`low` of it at the ground, `gain` more by `fullAt` metres up), and
-   *  spreads of its own by less there (`K.inWind` of its spread where the wind blows whole). None, or a plan of more squares than the table holds: still air, the step as it was. */
-  gridStep(st: SimState, pending: readonly number[], n: number, K: { decay: number; spread: number; rise: number; riseRate: number; gone: number; inWind: number },
-    wind: GridWind | null = null): boolean {
-    const M = this.ready();
-    const mine = !M.live;
-    if (mine) { if (simWhyNot()) return false; M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, this.glassPanes, false, false, false); if (!M.live) return false; }
-    try {
-      const set = M.leaves(this.dynamicBoxes); if (set === -2) return false;
-      // (the emitters go in the scratch, written last: the step takes them once it knows a grid stands here, so one that does nothing has taken none.
-      // A step carries as many as the scratch holds, 170, the LATEST of them: the grid's own list holds 64, and `pending` is kept to that many by
-      // whoever fills it, sense.ts SmokeGrid.emit)
-      const x = M.x, m = f64(), at = M.scratch, all = pending.length - pending.length % 6, e = Math.min(all, M.scratchLen - M.scratchLen % 6); for (let i = 0, from = all - e; i < e; i++) m[at + i] = pending[from + i];
-      // (THE WIND, bricks.rs 3b: its share a square metre, row by row, two squares to a brick's side — the plan as the grid lays it, bricks.rs step)
-      let wx = 0, wz = 0, low = 1, gain = 0, fullAt = 1;
-      if (wind && (wind.x !== 0 || wind.z !== 0)) {
-        const nx = 2 * Math.ceil(this.W * this.cs / 2), nz = 2 * Math.ceil(this.H * this.cs / 2);
-        if (nx * nz <= M.windCap) { for (let z = 0, o = M.wind; z < nz; z++) for (let i = 0; i < nx; i++) m[o++] = wind.share(i + 0.5, z + 0.5); wx = wind.x; wz = wind.z; low = wind.low; gain = wind.gain; fullAt = wind.fullAt; }
-      }
-      return x.grid_step(st.bind(), st.stamp, M.slot, M.gridCopy(), set, n, e / 6, K.decay, K.spread, K.rise, K.riseRate, K.gone, wx, wz, low, gain, fullAt, K.inWind) !== -1;
-    } finally { if (mine) M.shut(); }
-  }
   /** segmentBlocked as this file answers it (and the whole of it wherever the module does not: outside a tick, with RUST.lines off) */
   segmentBlockedHere(a: Vec3, b: Vec3, shrink: number, through: number, panes: { bi: number; t: number }[] | null): boolean {
     // (the CPU-frame lane, second pass: the same walk, the same boxes in the same order and lineBox's own statements over scalars — so every answer, every pane noted
