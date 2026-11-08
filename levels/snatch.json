@@ -1,7 +1,7 @@
 {
   "version": 1,
   "name": "snatch",
-  "meta": { "bounds": { "min": [0, -0.25, 0], "max": [40, 8, 28] }, "generator": "tools/levels/snatch.ts build → tools/levels/export.ts", "notes": "The snatch: a house in a walled yard, eight men around one unarmed man to take alive; two doors of his wing lead to one back gate, and a dark hut with two men in it stands on that gate. Regenerate: bun run tools/levels/export.ts snatch" },
+  "meta": { "bounds": { "min": [0, -0.25, 0], "max": [40, 8, 28] }, "generator": "tools/levels/snatch.ts build → tools/levels/export.ts", "notes": "A house in a walled yard, eight men, a room clear; two doors of the far wing lead to one back gate, and a dark hut with two men in it stands on that gate. Regenerate: bun run tools/levels/export.ts snatch" },
   "floors": [
     { "id": "f0", "name": "ground floor", "y": 0, "ceiling": 3 }
   ],
@@ -695,36 +695,9 @@
         { "name": "the wash yard", "bounds": { "x0": 7.2, "x1": 11.8, "z0": 7.8, "z1": 18.2 } }
       ]
     },
-    "snatch": {
-      "man": { "name": "Daoud", "pos": [23.2, 0, 10.7], "face": -1.5707963267948966, "tint": [0.66, 0.62, 0.52], "tint2": [0.3, 0.27, 0.22], "points": [[23.2, 0, 10.7], [20.6, 0, 11.6]], "wait": [45, 20] },
-      "exits": [
-        { "name": "the back gate", "pos": [33.4, 0, 5.25] },
-        { "name": "the front gate", "pos": [16, 0, 24.6] }
-      ],
-      "van": { "name": "the van", "pos": [13.4, 0, 26.5] }
-    },
     "kitView": {
       "ways": [
         { "door": "front" }
-      ]
-    },
-    "response": {
-      "why": "The man the team came for keeps the village below in guns, and the house has a radio: gunfire any of its men lives to report brings the village's own guard up the hill to one of the yard's two gates, to take him back before he is driven off. The house silenced inside six seconds, or the man in the van before they are up, and they find nobody.",
-      "site": "the house",
-      "at": "at the house",
-      "team": "the village guard",
-      "tag": "VILLAGE",
-      "men": [2, 2],
-      "eta": [20, 40],
-      "raid": {  },
-      "ways": [
-        { "name": "the back gate", "coming": "coming in by the back gate", "clear": "nobody in the back gate", "muster": [[36.5, 0, 5.25], [36.5, 0, 4.2], [36.5, 0, 6.3], [37.6, 0, 5.25]], "entry": [[30.4, 0, 5.2], [29.4, 0, 4.4], [29.2, 0, 5.7], [28.2, 0, 5]], "entryFace": [-1.5707963267948966, -0.7707963267948965, -2.3707963267948964, -1.5707963267948966] },
-        { "name": "the front gate", "coming": "coming round the wall to the front gate", "clear": "nobody outside the front gate", "muster": [[36.2, 0, 25.6], [36.2, 0, 24.6], [36.2, 0, 26.6], [37.3, 0, 25.6]], "entry": [[24.8, 0, 25.2], [25.8, 0, 24.5], [25.8, 0, 26.1], [26.8, 0, 25.2]], "entryFace": [-1.5707963267948966, -0.7707963267948965, -2.3707963267948964, -1.5707963267948966] }
-      ],
-      "sweep": [
-        { "name": "his room", "pos": [22, 0, 10.6] },
-        { "name": "the courtyard", "pos": [16, 0, 20.4] },
-        { "name": "the front gate", "pos": [16, 0, 24.4] }
       ]
     }
   }

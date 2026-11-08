@@ -9161,49 +9161,6 @@ impl RescueflushK {
 }
 impl Default for RescueflushK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/snatchout.ts:31 SNATCHOUT, src/game/snatchout.ts:31)
-#[derive(Clone, Copy, Debug)]
-pub struct SnatchoutK {
-    pub on: bool,
-    pub hold: bool,
-    pub marker_m: f64,
-    pub reach_m: f64,
-    pub gap_m: f64,
-    pub send_m: f64,
-    pub send_him_m: f64,
-    pub in_m: f64,
-    pub carry_m: f64,
-    pub trail_m: f64,
-    pub close_m: f64,
-    pub turn_secs: f64,
-    pub lane_m: f64,
-    pub off_m: f64,
-    pub spot_m: f64,
-}
-impl SnatchoutK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SnatchoutK {
-            on: false,
-            hold: false,
-            marker_m: 0.0,
-            reach_m: 0.0,
-            gap_m: 0.0,
-            send_m: 0.0,
-            send_him_m: 0.0,
-            in_m: 0.0,
-            carry_m: 0.0,
-            trail_m: 0.0,
-            close_m: 0.0,
-            turn_secs: 0.0,
-            lane_m: 0.0,
-            off_m: 0.0,
-            spot_m: 0.0,
-        }
-    }
-}
-impl Default for SnatchoutK { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/anim/skeleton.ts:289 POSEMATH, src/anim/skeleton.ts:289)
 #[derive(Clone, Copy, Debug)]
 pub struct PosemathK {
@@ -12644,35 +12601,6 @@ impl LessonK {
 }
 impl Default for LessonK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/snatch.ts:38 SNATCH, src/game/snatch.ts:38)
-#[derive(Clone, Copy, Debug)]
-pub struct SnatchK {
-    pub on: bool,
-    pub give_up_m: f64,
-    pub halt_m: f64,
-    pub see_m: f64,
-    pub see_rate: f64,
-    pub cuff_m: f64,
-    pub cuff_secs: f64,
-    pub bolt_secs: f64,
-}
-impl SnatchK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SnatchK {
-            on: false,
-            give_up_m: 0.0,
-            halt_m: 0.0,
-            see_m: 0.0,
-            see_rate: 0.0,
-            cuff_m: 0.0,
-            cuff_secs: 0.0,
-            bolt_secs: 0.0,
-        }
-    }
-}
-impl Default for SnatchK { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/game/defuse.ts:31 DEFUSE, src/game/defuse.ts:31)
 #[derive(Clone, Copy, Debug)]
 pub struct DefuseK {
@@ -13628,9 +13556,6 @@ pub fn page_rescueflush() -> RescueflushK {
     crate::knobs::RescueflushK { on: true, after_secs: 4.0, gap_secs: 2.5, again_secs: 8.0, reach_m: 10.0, kill_secs: 3.0, busy_secs: 2.0, smoke_k: 0.3, at_door_m: 1.8, lanes_choose: true }
 }
 
-pub fn page_snatchout() -> SnatchoutK {
-    crate::knobs::SnatchoutK { on: true, hold: true, marker_m: 2.4, reach_m: 2.2, gap_m: 1.3, send_m: 3.5, send_him_m: 8.0, in_m: 1.1, carry_m: 2.2, trail_m: 12.0, close_m: 5.0, turn_secs: 4.0, lane_m: 1.0, off_m: 0.7, spot_m: 3.4 }
-}
 
 pub fn page_posemath() -> PosemathK {
     crate::knobs::PosemathK { singles: true }
@@ -13900,9 +13825,6 @@ pub fn page_lesson() -> LessonK {
     crate::knobs::LessonK { on: true }
 }
 
-pub fn page_snatch() -> SnatchK {
-    crate::knobs::SnatchK { on: true, give_up_m: 3.5, halt_m: 3.5, see_m: 14.0, see_rate: 0.05, cuff_m: 4.5, cuff_secs: 3.0, bolt_secs: 6.0 }
-}
 
 pub fn page_defuse() -> DefuseK {
     crate::knobs::DefuseK { on: true, work_secs: 6.0, reach: 1.3, marker_m: 5.0, shift: 0.45, start_m: 1.2, lethal_m: 5.0, wound_m: 9.0, radius: 3.5, power: 1.0, warn_secs: 10.0 }
@@ -14114,7 +14036,6 @@ pub struct Knobs {
     pub kitload: KitloadK,
     pub rescueend: RescueendK,
     pub rescueflush: RescueflushK,
-    pub snatchout: SnatchoutK,
     pub posemath: PosemathK,
     pub sense: SenseK,
     pub cmdcheck: CmdcheckK,
@@ -14182,7 +14103,6 @@ pub struct Knobs {
     pub nightbreach: NightbreachK,
     pub roomclear: RoomclearK,
     pub lesson: LessonK,
-    pub snatch: SnatchK,
     pub defuse: DefuseK,
     pub issue: IssueK,
     pub verdict: VerdictK,
@@ -14362,7 +14282,6 @@ impl Knobs {
             kitload: page_kitload(),
             rescueend: page_rescueend(),
             rescueflush: page_rescueflush(),
-            snatchout: page_snatchout(),
             posemath: page_posemath(),
             sense: page_sense(),
             cmdcheck: page_cmdcheck(),
@@ -14430,7 +14349,6 @@ impl Knobs {
             nightbreach: page_nightbreach(),
             roomclear: page_roomclear(),
             lesson: page_lesson(),
-            snatch: page_snatch(),
             defuse: page_defuse(),
             issue: page_issue(),
             verdict: page_verdict(),

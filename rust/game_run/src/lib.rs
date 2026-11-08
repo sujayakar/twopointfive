@@ -191,11 +191,11 @@ pub fn write_before(g: &mut game::game::Game, k: usize, l: &str) -> Option<Strin
         let r = game::wallcharge::wall_charge_blow(g, c, None);
         return Some(format!("  the driver before tick {}: blows the wall charge on wall {} ({}) -> {:?}", k, ix, if c.is_some() { "set" } else { "NOT SET HERE" }, r));
     }
-    // HARNESS STAND-IN: the scripted player gives the hostages (rescueend.ts `word`) or the man in hand (snatchout.ts `word`) the word by the module's own
+    // HARNESS STAND-IN: the scripted player gives the hostages (rescueend.ts `word`) the word by the module's own
     // call between ticks: `player` they follow the player, `none` they stay where they stand
-    if w.get(1) == Some(&"rescue_word") || w.get(1) == Some(&"snatch_word") {
+    if w.get(1) == Some(&"rescue_word") {
         let by = match w.get(2) { Some(&"player") => Some(g.pl[g.player].ch), Some(&"none") => None, x => return Some(format!("  NOTE tick {}: a word to follow somebody this runner cannot give: {:?}", k, x)) };
-        let ok = if w[1] == "rescue_word" { game::rescueend::rescue_end_word(g, by) } else { game::snatchout::snatch_out_word(g, by) };
+        let ok = game::rescueend::rescue_end_word(g, by);
         return Some(format!("  the driver before tick {}: {}({}) -> {}", k, w[1], w[2], ok));
     }
     // HARNESS STAND-IN: the scripted player puts the highlight on a row of the nearby list between ticks (it writes `Player.nearSel` and calls

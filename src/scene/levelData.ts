@@ -273,7 +273,7 @@ export const KEYS = {
   mission: ['playerSpawn', 'objectives'], reach: ['id', 'kind', 'area', 'door'], drive: ['id', 'kind', 'rackIndex', 'front', 'halfW'], exfil: ['id', 'kind', 'door', 'x', 'z', 'out'],
   breaker: ['pos', 'panel', 'led', 'fumble'], beacon: ['id', 'pos', 'box'], sky: ['zenith', 'horizon'], daylight: ['sun', 'sky', 'groupsOn', 'groupsOff', 'lightsOff', 'haze', 'exposure'],
   plans: ['roomClear', 'breach'],   // (the container only — what is INSIDE a plan is generic, see canonBlob)
-  scenarios: ['nightBreach', 'roomClear', 'rescue', 'places', 'quiet', 'lesson', 'par', 'snatch', 'defuse', 'issue', 'kitView', 'response', 'doorNames', 'walked'],   // (the container only, likewise: what is inside is scene/scenarios.ts's, carried as written)
+  scenarios: ['nightBreach', 'roomClear', 'rescue', 'places', 'quiet', 'lesson', 'par', 'defuse', 'issue', 'kitView', 'response', 'doorNames', 'walked'],   // (the container only, likewise: what is inside is scene/scenarios.ts's, carried as written)
 } as const;
 /** the keys a shape's piece (BoxData.shape.with) may carry beside its form, in the order they are written. ITS OWN LIST, read by hand in three places
  *  (levelLoad.ts loadLevel and levelToData, canonShape below): a key a box gains for its paint is added here and there together, or a piece would be allowed
@@ -852,25 +852,6 @@ export function validateLevelData(d: LevelData): string[] {
                 if (L.sam.on !== undefined && typeof L.sam.on !== 'boolean') err(`${yw}.light.sam.on`, 'true or false'); if (L.sam.aim !== undefined && !isVec(L.sam.aim)) err(`${yw}.light.sam.aim`, 'Vec3'); } } } }
             for (const k of ['hide', 'hideMore', 'hidePaint']) if (y[k] !== undefined && !(Array.isArray(y[k]) && y[k].every((v: unknown) => typeof v === 'string' && v.length > 0))) err(`${yw}.${k}`, 'a list of box ids / box groups');
             if (y.roomLights !== undefined && !(isNum(y.roomLights) && y.roomLights >= 0)) err(`${yw}.roomLights`, 'a number, 0 or more'); });
-        }
-      }
-      if (S.snatch !== undefined) {   // (scene/scenarios.ts SnatchData: the shapes only — whether he and his ways out stand on floor a man can walk is game/snatch.ts checkSnatch's, against the built floor)
-        const N = S.snatch, w = 'scenarios.snatch';
-        if (!isObj(N)) err(w, 'must be an object');
-        else {
-          known(w, N, ['man', 'exits', 'van']);
-          if (N.van !== undefined && !(isObj(N.van) && isStr(N.van.name) && isVec(N.van.pos))) err(`${w}.van`, 'name, pos Vec3');
-          if (S.roomClear === undefined) err(w, 'a snatch runs over a room clear: the level needs scenarios.roomClear');
-          const m = N.man;
-          if (!isObj(m) || !isStr(m.name) || !isVec(m.pos) || !isNum(m.face) || !isVec(m.tint)) err(`${w}.man`, 'name, pos Vec3, face, tint Vec3');
-          else {
-            known(`${w}.man`, m, ['name', 'pos', 'face', 'tint', 'tint2', 'points', 'wait']);
-            if (m.tint2 !== undefined && !isVec(m.tint2)) err(`${w}.man.tint2`, 'Vec3');
-            if (m.points !== undefined && !(Array.isArray(m.points) && m.points.length && m.points.every((p: unknown) => isVec(p)))) err(`${w}.man.points`, 'a non-empty list of Vec3');
-            if (m.wait !== undefined && !(Array.isArray(m.wait) && m.wait.every((x: unknown) => isNum(x) && (x as number) >= 0) && m.wait.length === (m.points?.length ?? 1))) err(`${w}.man.wait`, 'seconds ≥ 0, one per point');
-          }
-          const ex = recs(`${w}.exits`, N.exits); if (!ex.length) err(w, 'exits: at least one');
-          ex.forEach((e: any, i) => { if (!isObj(e)) return; known(`${w}.exits[${i}]`, e, ['name', 'pos']); if (!isStr(e.name) || !isVec(e.pos)) err(`${w}.exits[${i}]`, 'name, pos Vec3'); });
         }
       }
       if (S.defuse !== undefined) {   // (scene/scenarios.ts DefuseData: the shapes and the face's normal — whether a man can stand at a charge to work it is asked of the built floor by tools/qa/defuse-check.ts)

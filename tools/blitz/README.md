@@ -236,7 +236,7 @@ Each of these is a few lines of `rust/game_run/src/bin/mission.rs`; `BLITZ_SKIP=
 | `rails_host_view` after each tick | `view` | on a tutorial mission the host sets the first view again with its own camera (game.ts hostAfter) |
 | a tutorial's authored checkpoint (`chron_save` on rails) | (always) | the save controller stops the level's program for the take; the frame starts it again |
 | a lesson player's meter (`meter.txt`) and `selectVerb` (`hostwrites.txt select_verb`) | (always) | the scripted player of a tutorial feeds the player's light meter and picks a row between ticks |
-| the scripted player's word to the hostages or the man in hand (`hostwrites.txt rescue_word`, `snatch_word`) | (always) | the driver calls the module's own `word` between ticks |
+| the scripted player's word to the hostages (`hostwrites.txt rescue_word`) | (always) | the driver calls the module's own `word` between ticks |
 | the scripted player's pick of a row of the nearby list (`hostwrites.txt near_sel`) | (always) | the driver writes `player.nearSel` and calls `pickHover` between ticks |
 | the scripted player's ask before every step (`between.txt`: `call frag_step_off`) | `BLITZ_NO_BETWEEN=frag_step_off` leaves it out | the driver asks where a player who read a grenade's cue would go (`fragStepOff`); the ask makes the flee's guess of the grenade's rest and fills the memo of walls its burst opens, which the next tick's flee reads |
 | a lesson player's ask of a set door charge's words (`between.txt`: `call door_close_words <i>`) | `BLITZ_NO_BETWEEN=door_close_words` | the answer is kept a quarter second and answers the tick's own ask |
