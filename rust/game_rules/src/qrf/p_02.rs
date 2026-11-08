@@ -63,7 +63,7 @@ pub fn dealt(g: &mut crate::game::Game, reason: crate::qrf::QrfReason) -> crate:
     let b = crate::dice::draw_world(g, "qrf::dealt#2");
     let c = crate::dice::draw_world(g, "qrf::dealt#3");
     let mut clear: Vec<usize> = Vec::new();
-    for &i in &open { if clear_of_foes(g, &crate::seats::here(g), r.ways[i].muster[0]) { clear.push(i); } }
+    for &i in &open { if clear_of_foes(g, r.ways[i].muster[0]) { clear.push(i); } }
     let from = if !clear.is_empty() { clear } else { open };
     let step = g.k.response.eta_step;
     let span = men[1] - men[0] + 1.0;
@@ -298,10 +298,10 @@ pub fn re_deal(g: &mut crate::game::Game, quiet: bool) {
     let r = match response_of(g) { Some(r) => r, None => return };
     if r.ways.len() < 2 { return; }
     let way = g.qrf.way as usize;
-    if clear_of_foes(g, &crate::seats::here(g), r.ways[way].muster[0]) { return; }
+    if clear_of_foes(g, r.ways[way].muster[0]) { return; }
     let mut other = None;
     for (i, y) in r.ways.iter().enumerate() {
-        if i != way && way_open(g, y) && clear_of_foes(g, &crate::seats::here(g), y.muster[0]) { other = Some(i); break; }
+        if i != way && way_open(g, y) && clear_of_foes(g, y.muster[0]) { other = Some(i); break; }
     }
     let other = match other { Some(i) => i, None => return };
     g.qrf.way = other as f64;
