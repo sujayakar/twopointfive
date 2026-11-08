@@ -361,10 +361,9 @@ export async function nociviliansFresh() {
   try {
     G.location = { search: '?nocivilians' };
     game.tune.civilians = true; loadCivTune(game); const fresh = game.tune.civilians;
-    mem.set('twopointsix.civilians', JSON.stringify({ on: true, killFails: false, greet: true })); game.tune.civilians = true; loadCivTune(game); const stored = game.tune.civilians;
-    G.location = { search: '' }; game.tune.civilians = false; loadCivTune(game); const noFlag = game.tune.civilians;   // (the stored 'on' comes back with no flag)
+    G.location = { search: '' }; game.tune.civilians = false; mem.set('twopointsix.civilians', JSON.stringify({ on: true })); loadCivTune(game); const noFlag = game.tune.civilians;   // (an old machine's stored 'on' is read by nobody)
     game.tune.civilians = fresh; resetCivilians(game); const onFloor = game.civilians.length;
-    ok = verdict(fresh === false && stored === false && noFlag === true && onFloor === 0, 'fresh storage + ?nocivilians → off; a stored "on" + ?nocivilians → off; the stored "on" alone → on; and off means nobody spawned', `fresh ${fresh} · stored+flag ${stored} · stored alone ${noFlag} · civilians on the floor with it off: ${onFloor}`) && ok;
+    ok = verdict(fresh === false && noFlag === false && onFloor === 0, '?nocivilians → off; an old machine\'s stored "on" is read by nobody; and off means nobody spawned', `fresh ${fresh} · an old store and no flag ${noFlag} · civilians on the floor with it off: ${onFloor}`) && ok;
   } finally {
     if (hadLS) G.localStorage = ls0; else delete G.localStorage;
     if (hadLoc) G.location = loc0; else delete G.location;

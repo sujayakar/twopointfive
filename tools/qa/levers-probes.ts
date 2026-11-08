@@ -87,7 +87,7 @@ export async function leversRules(): Promise<boolean> {
       F.verdict(built.t === hard && built.f === 'cone' && built.now === 'hard' && !built.mix && h.t === hard && h.f === 'cone' && h.set === '{}' && soft.t === hard && soft.f === 'round' && soft.now === 'custom' && soft.mix && tables() === std && fog() === stdFog,
         'hard\'s rungs set lever by lever over standard ARE hard (rows to the byte, and it reads hard); the level\'s switch puts every lever back; hard with the fog let down is hard\'s defenders seen all round',
         `built: reads ${built.now} · hard, fog → team: reads ${soft.now}, fog ${soft.f}, press ${JSON.parse(soft.t).P.on}`); }
-    // ---- the fog's own kept option (teamfeel.ts FOG.own) is the lever's only while the lever is moved
+    // ---- the fog's own option (FOG.own) is the lever's only while the lever is moved
     { FOG.own = true; D.setDifficulty('hard', false); const kept = fog();
       D.setLever('fog', 'cones', false); const over = fog(); D.setLever('fog', null, false); const back = fog(); D.setDifficulty('standard', false); const std = fog(); FOG.own = false;
       F.verdict(kept === 'cone+own' && over === 'cone' && back === 'cone+own' && std === 'round+own', 'a machine that keeps the fog\'s own-eyes option: the level leaves it alone, the fog lever stands over it while moved, and it is back when the lever lets go', `hard ${kept} · lever on cones ${over} · let go ${back} · standard ${std}`); }

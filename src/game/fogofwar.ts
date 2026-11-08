@@ -86,7 +86,7 @@
 //      behind every teammate's back is not drawn, a leaf that moves behind them is remembered where it stood, the floor there is dimmed — the picture shows which
 //      flanks the team is watching. In the picture the wedge's edge comes in over FOG.coneSoftDeg (and the near field's over FOG.coneNearSoftM); the men are in
 //      or out on the cone's own line. Standard never raises the row: every eye all round, as it was.
-//   6b. ONLY THE PLAYER'S OWN EYES (FOG.own — an OPTION, off; the Tab row is kept per machine (teamfeel.ts), ?fogown / ?fogown=0 for a visit; his next lines:
+//   6b. ONLY THE PLAYER'S OWN EYES (FOG.own — an OPTION, off; ?fogown / ?fogown=0 for a visit; his next lines:
 //      'and maybe you should only see what your character does, not even your teammates' · 'we can make it an option and see how it feels'): the teammates are
 //      no eyes — what they see and he does not is out of the picture. On any level of difficulty (with the cone: his own cone alone; without: all round him
 //      alone). Hard ships with the team's eyes shared (the picture then shows the flanks nobody watches, which is the Door Kickers read).
@@ -157,7 +157,7 @@ export const FOG = {
   /** … and over this many metres outward from the near field's rim */
   coneNearSoftM: 0.6,
   /** ONLY THE PLAYER'S OWN EYES lift the fog: the teammates are no eyes (false = the team's sight is shared, as it was). An option on any level of difficulty:
-   *  the Tab row is kept per machine (teamfeel.ts), ?fogown / ?fogown=0 for a visit */
+   *  ?fogown / ?fogown=0 for a visit */
   own: false,
   /** THE TEAM CALLS WHAT THE CONE HIDES (only while `cone` or `own` is up): a teammate with eyes on an enemy the player's own eye has not, or with a step in his
    *  ears from a man nobody sees, says where — a bubble over him and a row on the radio strip. false = nobody says anything */

@@ -164,18 +164,7 @@ export function padDoorName(K: KeypadRt): string { return K.door.def.name === 's
 export function stopCoding(g: Game) { const pl = g.player; if (!pl.coding) return; pl.coding = null; pl.codeT = 0; }
 
 
-// ---------------------------------------------------------------- persistence of the panel's knobs (like qrf.ts / whistle.ts: per machine)
-const LS_KEY = 'twopointsix.devices';
 export const DEVICE_TUNE_DEFAULTS = { devices: true, lasers: true, cameraSuspicionSecs: 0.8, cameraAlarmSecs: 2.0, deviceCones: true };   // (lit-seconds to a report / to the alarm; Tab ▸ Sandbox ▸ Devices carries both — the maintainer, 08-12: 'keep cameras as they are' — structured hiding places for bodies come later as a system)
-export function loadDeviceTune(g: Game) {
-  try {
-    const raw = localStorage.getItem(LS_KEY); if (!raw) return; const o = JSON.parse(raw); const T = g.tune;
-    if (typeof o.devices === 'boolean') T.devices = o.devices; if (typeof o.lasers === 'boolean') T.lasers = o.lasers; if (typeof o.deviceCones === 'boolean') T.deviceCones = o.deviceCones;
-    if (Number.isFinite(o.cameraSuspicionSecs) && o.cameraSuspicionSecs > 0) T.cameraSuspicionSecs = o.cameraSuspicionSecs; if (Number.isFinite(o.cameraAlarmSecs) && o.cameraAlarmSecs > 0) T.cameraAlarmSecs = o.cameraAlarmSecs;
-  } catch { /* none / unavailable */ }
-}
-export function saveDeviceTune(g: Game) { const T = g.tune; try { localStorage.setItem(LS_KEY, JSON.stringify({ devices: T.devices, lasers: T.lasers, cameraSuspicionSecs: T.cameraSuspicionSecs, cameraAlarmSecs: T.cameraAlarmSecs, deviceCones: T.deviceCones })); } catch { /* */ } }
-export function resetDeviceTune(g: Game) { Object.assign(g.tune, DEVICE_TUNE_DEFAULTS); try { localStorage.removeItem(LS_KEY); } catch { /* */ } }
 
 // ---------------------------------------------------------------- geometry
 /** Closest points between segments p (p0→p1) and b (b0→b1): the distance and the point on b. (Ericson, Real-Time Collision Detection §5.1.9.) */

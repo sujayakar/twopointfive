@@ -19,7 +19,8 @@ const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { feelTables } = await import(`${ROOT}/src/game/teamfeel.ts`);
+const { knobsNamed } = await import(`${ROOT}/src/game/knobs.ts`);
+const feelTables = () => knobsNamed(['FLASH', 'PACE', 'LIGHTS', 'NVG', 'IR', 'IRLIGHT', 'FOG', 'LASER', 'DOORTOOLS', 'ROOMFIGHT', 'ORDERS', 'COVER', 'ENTRY', 'REAR', 'SILENT', 'FRAG', 'PAIR', 'DOORMANNERS']) as any;
 const FR: any = await import(`${ROOT}/src/game/frag.ts`);
 
 const DT = 1 / 60, FUSE = 2.4;
@@ -31,7 +32,7 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
   console.log(`\n=== ${title} ===`); let all = true;
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
 }
-/** the probe leaves the feel tables (teamfeel.ts: DOORTOOLS among them) as it found them, pass, fail or throw */
+/** the probe leaves the feel tables (DOORTOOLS among them) as it found them, pass, fail or throw */
 const guarded = (fn: () => Promise<boolean>) => async () => { const T = feelTables(), keep = JSON.parse(JSON.stringify(T)); try { return await fn(); } finally { for (const n of Object.keys(keep)) Object.assign(T[n], keep[n]); } };
 async function quiet<T>(fn: () => T | Promise<T>): Promise<T> { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } }
 const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); };

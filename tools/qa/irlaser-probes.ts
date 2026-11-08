@@ -226,9 +226,6 @@ export const irOff = guarded(async () => {
   // a flip in play
   { const S = await settled(IDS[0]); const { g, step } = S; g.player.nv = true; step(30); const was = samIr(g).length; IR.on = false; step(1); const mid = g.dynBoxes.filter(isIr).length; IR.on = true; step(1); const back = samIr(g).length;
     F.verdict(was > 0 && mid === 0 && back > 0, 'flipped in play: off inside a frame, on again inside a frame', `infrared boxes ${was} → ${mid} → ${back}`); }
-  // the panel's rows
-  { const TFM: any = await import(`${ROOT}/src/game/teamfeel.ts`); const rows = ['on', 'sam', 'carry', 'teamOff'], kept = rows.filter(k => TFM.feelRange('IR', k) === null);
-    F.verdict(kept.length === rows.length && TFM.feelTables().IR === IR && rows.every(k => k in IR) && IR_DEFAULTS.on === true, 'the Team feel rows: four switches, the table the module reads, shipped on', `kept as switches: ${kept.join(', ')} · feelTables().IR is irlaser.ts IR: ${TFM.feelTables().IR === IR} · shipped: ${JSON.stringify(IR_DEFAULTS)}`); }
   return F.done();
 });
 

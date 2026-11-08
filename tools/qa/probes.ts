@@ -2857,7 +2857,6 @@ if (on('flashweight-flash', 'flashweight', 'all')) await run('flashweight-flash'
 if (on('flashweight-night', 'flashweight', 'all')) await run('flashweight-night', async () => (await import('./flashweight-probes.ts')).flashweightNight());
 if (on('flashweight-fog', 'flashweight', 'all')) await run('flashweight-fog', async () => (await import('./flashweight-probes.ts')).flashweightFog());
 if (on('flashweight-corners', 'flashweight', 'all')) await run('flashweight-corners', async () => (await import('./flashweight-probes.ts')).flashweightCorners());
-if (on('flashweight-feel', 'flashweight', 'ui', 'all')) await run('flashweight-feel', async () => (await import('./flashweight-probes.ts')).flashweightFeel());
 // ---------------------------------------------------------------- the team's night vision: goggles while nobody knows, lights once it is loud, Sam's lead both ways (nvg-probes.ts; game/nvg.ts)
 if (on('nvg-quiet', 'nvg', 'all')) await run('nvg-quiet', async () => (await import('./nvg-probes.ts')).nvgQuiet());
 if (on('nvg-lead', 'nvg', 'all')) await run('nvg-lead', async () => (await import('./nvg-probes.ts')).nvgLead());

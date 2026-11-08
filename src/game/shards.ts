@@ -129,19 +129,6 @@ export const SHARDS = {
 export const SHARDS_DEFAULTS = JSON.parse(JSON.stringify(SHARDS)) as typeof SHARDS;
 export const SHARD_STATS = { fragments: 0, crossings: 0, plates: 0, platesRefused: 0, cutPlates: 0, cutSplit: 0, cutDropped: 0, crumbled: 0, breaks: 0, emits: 0, born: 0, trimmed: 0, recsDeferred: 0, sounds: 0, soundsMerged: 0, spalls: 0, events: 0, crunches: 0, peakLive: 0, peakPlates: 0 };
 type ShardsTune = { glassShards?: boolean };
-const LS_KEY = 'twopointsix.shards';
-/** the highest liveCap a row / a stored value may ask: overCap (1.25) × this stays inside the LONG ring's 10 240, which chips, brass and paper share */
-export const LIVE_CAP_MAX = 8000;
-export function loadShards(tune: ShardsTune) {
-  try {
-    const raw = localStorage.getItem(LS_KEY); if (!raw) return; const o = JSON.parse(raw);
-    if (typeof o.on === 'boolean') tune.glassShards = o.on;
-    if (typeof o.speed === 'number' && isFinite(o.speed)) SHARDS.speed = Math.max(0.25, Math.min(3, o.speed));
-    if (typeof o.underfoot === 'boolean') SHARDS.underfoot = o.underfoot;
-    if (typeof o.liveCap === 'number' && isFinite(o.liveCap)) SHARDS.liveCap = Math.max(500, Math.min(LIVE_CAP_MAX, Math.round(o.liveCap)));
-  } catch { /* no storage / bad JSON: defaults */ }
-}
-export function saveShards(g: Game) { try { localStorage.setItem(LS_KEY, JSON.stringify({ on: (g.tune as ShardsTune).glassShards !== false, speed: SHARDS.speed, underfoot: SHARDS.underfoot, liveCap: SHARDS.liveCap })); } catch { /* no storage */ } }
 /** the one gate: the switch on AND glass breaking live (its switch, chaos > 0, not the tour) */
 export function shardsLive(g: Game): boolean { return (g.tune as ShardsTune).glassShards !== false && glassBreakLive(g); }
 

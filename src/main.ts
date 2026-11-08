@@ -57,8 +57,8 @@ import { cutConfig, initCutSwitch, cutBoxesOn, type CutPlane } from './scene/cut
 import { ROUND, ROUND_STATS, roundConfig } from './scene/round';
 import { makeBox, BoxFlag, MKEY, BoxWorld } from './scene/boxes';
 import { MESH_MAX_CHARS } from './render/meshbvh';
-import { GLASSBREAK, GB_STATS, glassBreakPersisted, glassBreakLive, saveGlassBreak } from './game/glassbreak';
-import { SHARDS, SHARD_STATS, shardsLive, saveShards } from './game/shards';
+import { GLASSBREAK, GB_STATS, glassBreakLive } from './game/glassbreak';
+import { SHARDS, SHARD_STATS, shardsLive } from './game/shards';
 import lightingCommonSrc from './render/shaders/lighting_common.wgsl' with { type: 'text' };
 import { setDaylight, isDaylight } from './game/lighting';
 import { Game } from './game/game';
@@ -1101,7 +1101,7 @@ function urlFlagsBeforeEngine(q: URLSearchParams) {
   if (q.get('sunlooks') === 'old') REACH_OPTS.solidLooks = true;   // ?sunlooks=old: the sun's and the moon's reach masks as they were, a look that falls inside a wall counted as seeing the sky (render/reach.ts reachMaskForDirectional)
   (window as any).__reachOpts = REACH_OPTS;   // (a page run can set solidLooks and ask engine.reach.dir again, to draw the old mask and the new in one boot)
   if (q.has('reachUniform')) reachBinding.storage = false;   // A/B only: force the reach rows' uniform binding (the adapter fallback itself is the Engine's decision — render/frame.ts, engine.ts)
-  if (glassMod.glassFxBoot() && (q.has('glassbreak') ? q.get('glassbreak') !== '0' : glassBreakPersisted())) glassBreakConfig.on = true;   // GLASS BREAKING (game/glassbreak.ts): the renderer's half is the scene prelude's compile-time const — raised here, before the Engine builds a pipeline, from the switch kept on this machine (Tab ▸ Destruction ▸ Glass; ?glassbreak / ?glassbreak=0 force it for one boot without touching the stored switch); off = every shader is main's program   // ?trace=N: the ray-traversal lab's compile-time variant const in every scene shader (render/frame.ts traceConfig, docs/internal/trace-perf.md; only 0 = today's walk exists on main) — must be set before the Engine builds any pipeline
+  if (glassMod.glassFxBoot() && (!q.has('glassbreak') || q.get('glassbreak') !== '0')) glassBreakConfig.on = true;   // GLASS BREAKING (game/glassbreak.ts): the renderer's half is the scene prelude's compile-time const — raised here, before the Engine builds a pipeline, from the switch kept on this machine (Tab ▸ Destruction ▸ Glass; ?glassbreak / ?glassbreak=0 force it for one boot without touching the stored switch); off = every shader is main's program   // ?trace=N: the ray-traversal lab's compile-time variant const in every scene shader (render/frame.ts traceConfig, docs/internal/trace-perf.md; only 0 = today's walk exists on main) — must be set before the Engine builds any pipeline
   initCutSwitch();
   roundConfig.gpu = ROUND.on && cutConfig.on;   // (ROUND THINGS, scene/round.ts: the GPU's half — the prelude's ROUND_BOXES const, the round bit, the prism's rows — set once, before the first pipeline. It needs the cut switch, whose table and pipeline draw a round: without that one a round is drawn and traced as the box round it, and the game meets the cylinder all the same. THE LOOK PROTOTYPE with a geometry trial on (scene/geoTry.ts: its cut boxes stand from the first frame to the last) is compiled WITHOUT the round test unless `?round=1` asks: with it on top the software adapter lost its device on the first drawn frame where the plain page drew, docs/agents/render.md. `ROUND.on` is not moved: the game still plays a round thing round)   // CUT BOXES (scene/cut.ts): on in the page unless ?nocutboxes / ?cutboxes=0 / localStorage twopointsix.cutboxes = '0' — the scene prelude's CUT_BOXES const, the cut table's rows in boxMat and the second g-buffer pipeline all follow it, so it is read before the Engine exists (a reload flips it)
   { const ds = Number(q.get('decalStress')); if (ds > 1) decalDebug.repeat = Math.min(64, ds | 0); }   // measurement only (?decalStress=N): the decal lookup N× per g-buffer fragment (render/decals.ts decalDebug), so its cost can be read above the timer's noise; must be set before the Engine builds the g-buffer shader
@@ -1233,15 +1233,15 @@ function worldHooks(engine: Engine, game: Game, audio: AudioEngine) {
     hit: (bi: number, p: Vec3, dir: Vec3 | null = null) => glassMod.glassHit(game, bi, p, dir, 0, 'hand'),   // star pane bi at world point p as a round from `dir`'s side would (deterministic: the pattern is seeded off bi + p)
     get cracks() { return glassMod.crackCount(game); }, get listed() { return [...engine.world.glassList]; }, get panes() { return [...engine.world.glassStatics]; },
     state: () => glassMod.glassState(game), knobs: glassMod.GLASS,
-    get fx() { return glassMod.GLASSFX.on; }, set fx(v: boolean) { glassMod.GLASSFX.on = !!v; glassMod.saveGlassFx(); },   // THE ONE SWITCH over fracture + rounds through + shards (glass.ts GLASSFX; the picture follows at the next boot)
+    get fx() { return glassMod.GLASSFX.on; }, set fx(v: boolean) { glassMod.GLASSFX.on = !!v; },   // THE ONE SWITCH over fracture + rounds through + shards (glass.ts GLASSFX; the picture follows at the next boot)
   };
   // __shards: broken glass after it lets go (game/shards.ts) — the switch (persisted), the knobs, the counters, the live estimate, a hand test at a point
   (window as any).__shards = {
-    get on() { return (game.tune as { glassShards?: boolean }).glassShards !== false; }, set on(v: boolean) { (game.tune as { glassShards?: boolean }).glassShards = !!v; saveShards(game); },
+    get on() { return (game.tune as { glassShards?: boolean }).glassShards !== false; }, set on(v: boolean) { (game.tune as { glassShards?: boolean }).glassShards = !!v; },
     get live() { return shardsLive(game); }, knobs: SHARDS, stats: SHARD_STATS, get log() { return game.shards.log; }, get particles() { return game.shards.live; }, get plates() { return game.shards.plateCount; },
     litter: () => [...game.shards.litter.entries()], underfoot: (p: Vec3) => game.shards.underfoot(p),
     test: (at: Vec3, dir: Vec3 = [0, 0, 1], area = 0.06, kind: 'piece' | 'dagger' | 'clump' | 'sheet' = 'piece', type: 'annealed' | 'tempered' | 'laminated' = 'annealed') => game.shards.test(at, dir, area, kind, type),
-    save: () => saveShards(game), reset: () => game.shards.reset(), summary: () => game.shards.summary(),
+    reset: () => game.shards.reset(), summary: () => game.shards.summary(),
   };
   // __doorblast: a blast takes a door off its hinges (game/doorblast.ts) — the knobs, the counters, the log, which doors are off,
   // `blast(p, tearM?)` = the doors' side of a blast at p (no flash, no noise of its own), `tear(name, from?)` = that one leaf off away from `from` (default: Sam), `hang()` = all back
@@ -1255,7 +1255,7 @@ function worldHooks(engine: Engine, game: Game, audio: AudioEngine) {
   // __glassbreak: glass that comes apart into rigid shards (game/glassbreak.ts) — the switch (persisted; the GPU half follows at the next boot: `gpu`), the knobs, the counters, the pane
   // records, the same open-cell test the CPU raycast takes, the panel's break test, reset
   (window as any).__glassbreak = {
-    get on() { return !!(game.tune as { glassBreak?: boolean }).glassBreak; }, set on(v: boolean) { (game.tune as { glassBreak?: boolean }).glassBreak = !!v; saveGlassBreak(game); },
+    get on() { return !!(game.tune as { glassBreak?: boolean }).glassBreak; }, set on(v: boolean) { (game.tune as { glassBreak?: boolean }).glassBreak = !!v; },
     get gpu() { return glassBreakConfig.on; }, get live() { return glassBreakLive(game); },
     knobs: GLASSBREAK, stats: GB_STATS, get log() { return game.glassBreak.log; },
     panes: () => [...game.glassBreak.panes.values()].map(st => ({ bi: st.bi, type: st.type, exterior: st.exterior, sites: st.sites.length, run: st.run, hits: st.hits, energy: st.energy, out: st.nOpen, gone: st.gone, open: game.glassBreak.openFraction(st.bi), walkable: st.walkable, log: st.log.slice(-6) })),
@@ -1457,7 +1457,6 @@ function destructionWeatherFlagsAndHooks(engine: Engine, game: Game) {
   { const dm = destrMod;
     (window as any).__destr = {
       get chaos() { return game.tune.chaos; }, set chaos(v: number) { game.tune.chaos = Math.max(0, Math.min(1, Number(v) || 0)); },   // (NOT persisted: a measurement script's chaos must not become this profile's default — save() does that on purpose)
-      save: () => dm.saveChaos(game),
       get stats() { return dm.DESTR_STATS; }, get log() { return dm.DESTR_LOG; }, get knobs() { return dm.CHAOS; },
       get debris() { const D = game.destr.debris; return { n: D.list.length, moving: D.moving, cap: D.cap(), stats: D.stats, kinds: D.list.map(c => c.kind) }; },
       inventory: () => game.destr.inventory(), summary: () => game.destr.summary(),
@@ -1473,7 +1472,7 @@ function destructionWeatherFlagsAndHooks(engine: Engine, game: Game) {
       get impulses() { return game.tune.debrisImpulses !== false; }, set impulses(v: boolean) { game.tune.debrisImpulses = !!v; },
       /** `n` FN2000 rounds from Sam's muzzle at p, one per `every` frames of stepped game time (a scripted burst for captures / cost takes; god mode advised) */
       burst: (p?: Vec3, n = 12, every = 6) => { const tgt = p ?? [...game.aimPoint] as Vec3; for (let k = 0; k < n; k++) { if (k) window.__runFrames!(every, 1 / 60); fireWeapon(game, game.player.char, tgt, true, { weapon: WEAPONS.fn2000 }); } return n; },
-      reset: () => game.destr.reset(), defaults: () => dm.resetChaosKnobs(game),
+      reset: () => game.destr.reset(),
     }; }
   // __close: closer than ever (game/close.ts) — the switch and knobs, what Sam could do to a man from where he stands, the windows as drawn, a man sat down
   (window as any).__close = {

@@ -546,7 +546,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   gives each leaf its own tone and writes a LOW reactive weight at rest (litter keeps its TAA history). Sheets cast no shadow (a splat, not a box). Every kind
   now carries `aspect` (`EmitOpts.aspect/tumble/nrmJit` → the record's posB; 1 = the chip as it was — a splinter is a chip with aspect 3).
 - **Destruction under sustained fire** (`src/game/destruction.ts` + `debris.ts`, STATUS stage 3b; docs/internal/destruction.md, page docs/review/destruction.html):
-  ONE knob `tune.chaos` 0‥1 (default 0.5, persisted `twopointsix.chaos`, Tab ▸ Sandbox ▸ chaos rows; **0 = the game byte for byte as it was** — both hooks
+  ONE knob `tune.chaos` 0‥1 (default 0.5, Tab ▸ Sandbox ▸ chaos rows; **0 = the game byte for byte as it was** — both hooks
   return on their first line, `probes.ts destruction-identity` holds it; `chaosOf(g)` is also 0 while `touring`). Rounds (anybody's — combat.ts fireWeapon calls
   `g.destr.round(shooter, hitP, dir, hit, def)` right after impactFx) and stun charges (`g.destr.bang(at)` after bangScorch) pour HEAT into a 2 m grid with a 2 s
   memory; ESCALATION E = heat × 2 × chaos gates what a hit does ON TOP of the marks / bursts it always made: E ≥ 1 a `'damage'` decal by material (decals.ts kind 7,
@@ -674,7 +674,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   checks); notebook docs/internal/glassbreak.md (the first port's identity hashes and cost — its Voronoi model is superseded). NOT merged from that branch: wall-break (needs the checkpoint fingerprint over appended statics; since 10-08 walls DO break, by the destruction goal's own engine `src/game/wallbreak.ts` — not that branch's), fire × water,
   the showcase page.
 - **Rounds through glass** (`src/game/glasspen.ts`, notes rebuild/glass/penetration.md in the project files; `GLASSPEN.on` — the PAGE ships ON, `standGame({harness})` stands it OFF
-  (`glassPenHarness`: every frozen digest was recorded with rounds stopping in glass; `GLASSPEN=on` env / `?glasspen=0|1` force it; persisted `twopointsix.glasspen`, Tab ▸ Renderer fx ▸
+  (`glassPenHarness`: every frozen digest was recorded with rounds stopping in glass; `GLASSPEN=on` env / `?glasspen=0|1` force it, Tab ▸ Renderer fx ▸
   Glass ▸ 'rounds pass through glass'); off, or `Game.touring`, = the base digest for digest). A round carries ENERGY (`GLASSPEN.energy` by row: fn2000 1.0 · aks74u 0.9 · fiveseven 0.6 ·
   guard9mm 0.5); a SHEET takes `cost[type]` (annealed 0.10 · tempered 0.16 · laminated 0.42 — `GlassBreak.typeOf`'s typing) × thickness ∕ 12 mm × min(3, 1 ∕ cos θ) × ¼ through an earlier hole
   (`holeR` 4 cm); under `minEnergy` 0.12 left, past ~80° off the normal, or the 5th pane = SPENT in the pane (the old stop). Through: the round flies on from the far face turned ≤
@@ -688,7 +688,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (segmentBlocked) and the solid walk are untouched. Holes are saved (`SaveState.glassPen`, only when present) and put back by a load ONLY while the fracture model is not live (`glassPenRestore`: with it live a load leaves every pane whole, so the holes are dropped with the cracks — where a blow filed a plain star decal instead of cracks, the star does come back with the marks, on a pane that takes the full toll again, as a starred pane always did), the switch is journaled (`knobTables`). `GLASSPEN.foesThrough` (true; Tab row 'defenders shoot through glass', `?glassfoes=0`, kept with the switch): off = `shotEnergy` — and `sideShotEnergy` for the places picked ahead of the shot: tactics.ts `losOpen`'s corners, pressure.ts's stand-off spots — hands a side hostile to Sam no energy, so a standing pane is a wall to ITS lines of fire as on the base (rounds that meet glass still cross, so a pinned man, who fires without asking `clearShot`, still puts rounds through; Sam's side still shoots through, and enemysquads.ts's `fire` is the TEAM's reach, untouched). QA: `probes.ts glasspen` (player /
   ai / rule / lines + the no-tunnel brute force / near / off; all but -off ride `glass`, -off rides all-quick); whole-run identity = `PT_DIGEST=1 tools/qa/playthrough.ts` against the base.
 - **Glass, the three parts as one + the tuning rounds** (record rebuild/glass/tuning.md): ONE master switch `glass.ts GLASSFX` (`?glassfx=0|1`, env
-  `GLASSFX=on|off` under bun, Tab ▸ Destruction ▸ Glass breaking ▸ the first row, persisted `twopointsix.glassfx`; ON in the page) over the fracture (`tune.glassBreak`), rounds through
+  `GLASSFX=on|off` under bun, Tab ▸ Destruction ▸ Glass breaking ▸ the first row; ON in the page) over the fracture (`tune.glassBreak`), rounds through
   (`GLASSPEN.on`) and falling glass (`tune.glassShards`, `src/game/shards.ts`: plates + the `shard` particle kind + landing sounds + litter underfoot) — off = glass as it was
   before any of it, by run digest; the harness (standup.ts) stands all three OFF unless the run says `GLASSFX=on`, and then `GLASSBREAK=off` / `GLASSPEN=off` / `GLASSSHARDS=off`
   take one part out for an A/B (`GLASSPARTS=shipped` leaves the three as the page ships them whatever the master says: `GLASSFX=off GLASSPARTS=shipped` = the page under `?glassfx=0`, the

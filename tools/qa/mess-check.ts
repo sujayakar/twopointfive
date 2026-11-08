@@ -13,7 +13,7 @@
 // STILL BY HAND: the ring is filled with play's marks by `decals.add` on the tools' copy of the game, which the Rust game never gets.
 import { ROOT } from './headless.ts';
 import { floor, wallSpot, charge, burst, openAt, thickOf, offOf, type Floor } from './pall-check.ts';
-const { CHAOS, resetChaosKnobs } = await import(`${ROOT}/src/game/destruction.ts`);
+const { CHAOS } = await import(`${ROOT}/src/game/destruction.ts`);
 const { MESS_STATS, MESS_LOOK, messWall } = await import(`${ROOT}/src/game/floormess.ts`);
 const { LOOK_DECALS } = await import(`${ROOT}/src/game/lookDecals.ts`);
 const { wallPt } = await import(`${ROOT}/src/game/wallcharge.ts`);
@@ -126,8 +126,7 @@ export async function messCheck(): Promise<boolean> {
     { const S = await quiet(() => stand({ chaos: 0 })); await quiet(async () => { burst(S, 'frag'); }); const a = films(S.g).length;
       const S3 = await quiet(() => stand()); S3.g.destr.showChaos = 0.8; await quiet(async () => { burst(S3, 'frag'); }); const c = films(S3.g).length;
       verdict(a === 0 && c === 0, 'chaos 0, or a level script\'s show running on its own chaos (its cameras keep the picture they were set on): no mess', `chaos 0: ${a} · a show at 0.8: ${c}`);
-      const c0 = CHAOS.mess.burst.core; CHAOS.mess.burst.core = 9; resetChaosKnobs(S3.g); const kept = [CHAOS.mess.on, CHAOS.mess.burst.core === c0];
-      verdict(kept[0] === true && kept[1] === true, 'the panel\'s ↺ (resetChaosKnobs) puts the mess\'s numbers back and leaves its switch on', `on, the numbers back: ${kept}`); }
+      }
   } finally { console.log = log; CHAOS.mess.burst.core = core0; Math.random = rnd0; }
   console.log(`=== mess: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;

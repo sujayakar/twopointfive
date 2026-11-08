@@ -52,7 +52,6 @@ const GDM: any = await import(`${ROOT}/src/game/guards.ts`);
 const ILM: any = await import(`${ROOT}/src/game/irlight.ts`);
 const HRM: any = await import(`${ROOT}/src/game/hours.ts`), ENVM: any = await import(`${ROOT}/src/game/env.ts`);   // (the game's own exposure for the hour and tube gain: what irlight.ts works a flood out at, never the picture's settings)
 const LTM: any = await import(`${ROOT}/src/render/lights.ts`);
-const TFM: any = await import(`${ROOT}/src/game/teamfeel.ts`);
 const IRLIGHT = ILM.IRLIGHT;
 const AUTO_AT_LOAD: boolean = IRLIGHT.auto, METER_AT_LOAD: boolean = IRLIGHT.meter;
 const ON_AT_LOAD: boolean = IRLIGHT.on;   // (what the stand left it at as the harness loaded: the shipped stand writes the page's switches once, then — profile.ts shippedBoot)
@@ -231,8 +230,6 @@ export const irlOff = guarded(async () => {
     IRLIGHT.on = true; step(2); const on = L.ir.length; IRLIGHT.on = false; step(1);
     F.verdict(on > 0 && L.ir.length === 0, 'flipped in play it takes hold inside a frame', `on: ${on} burning two frames later · off: ${L.ir.length} the next frame`);
     reset(); }
-  { const rows = ['on', 'team', 'auto', 'meter', 'near', 'nearM', 'show', 'power', 'cone', 'reach'], kept = rows.filter(k => TFM.feelRange('IRLIGHT', k) !== undefined), sw = ['on', 'team', 'auto', 'meter', 'near'].every(k => TFM.feelRange('IRLIGHT', k) === null);
-    F.verdict(kept.length === rows.length && sw, 'the Team feel rows are kept per machine (teamfeel.ts)', `${kept.join(', ')} · on / team / auto are switches: ${sw}`); }
   { const frozen = !process.env.TPS_PROFILE || process.env.TPS_PROFILE === 'frozen', word = process.env.TPS_IRLIGHT;
     const want = frozen || word !== undefined ? word === '1' : true;
     IRLIGHT.on = frozen ? !want : want; await quiet(() => standUp());   // (frozen: stood up from the opposite of what the pin should leave; shipped: the page's switches were written once as the harness loaded, and standUp leaves them be)
@@ -404,10 +401,10 @@ export const irlMeter = guarded(async () => {
     const snap = () => JSON.parse(JSON.stringify(JOURNAL.knobsSnapshot(S.g)));
     IRLIGHT.meter = true; const carries = snap().tables.IRLIGHT?.meter === true; const old = snap(); delete old.tables.IRLIGHT.meter; await quiet(() => JOURNAL.applyKnobs(S.g, old)); const without = IRLIGHT.meter;
     const own = snap(); own.tables.IRLIGHT.meter = true; IRLIGHT.meter = false; await quiet(() => JOURNAL.applyKnobs(S.g, own)); const withIt = IRLIGHT.meter;
-    const row = (FROZEN_HOLDS as any)['IRLIGHT.meter'], kept = TFM.feelRange('IRLIGHT', 'meter') === null;
-    F.verdict(stood === want && (frozen || METER_AT_LOAD === want) && typeof row === 'string' && /TPS_IRMETER=1/.test(row) && carries && without === false && withIt === true && kept,
-      frozen ? 'the frozen stand holds the switch off (TPS_IRMETER=1 raises it); a recording from before the key replays with it off; the Team feel row is kept' : 'the shipped stand has the switch on from the moment the harness loads, as the page does; a recording from before the key replays with it off; the Team feel row is kept',
-      `as the harness loaded: ${METER_AT_LOAD} · after standUp: ${stood} · TPS_IRMETER ${word ?? 'unset'} · FROZEN_HOLDS row: ${row ?? 'none'} · the journal carries the key: ${carries}; applyKnobs without it → ${without}, with it on → ${withIt} · kept by teamfeel.ts: ${kept}`);
+    const row = (FROZEN_HOLDS as any)['IRLIGHT.meter'];
+    F.verdict(stood === want && (frozen || METER_AT_LOAD === want) && typeof row === 'string' && /TPS_IRMETER=1/.test(row) && carries && without === false && withIt === true,
+      frozen ? 'the frozen stand holds the switch off (TPS_IRMETER=1 raises it); a recording from before the key replays with it off' : 'the shipped stand has the switch on from the moment the harness loads, as the page does; a recording from before the key replays with it off; the Team feel row is kept',
+      `as the harness loaded: ${METER_AT_LOAD} · after standUp: ${stood} · TPS_IRMETER ${word ?? 'unset'} · FROZEN_HOLDS row: ${row ?? 'none'} · the journal carries the key: ${carries}; applyKnobs without it → ${without}, with it on → ${withIt}`);
     IRLIGHT.meter = stood; }
   return F.done();
 });

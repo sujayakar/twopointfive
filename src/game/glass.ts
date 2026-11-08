@@ -46,13 +46,10 @@ let fxForced: boolean | null = null;
 const FX_OFF = /^(0|off|false|no)$/i, FX_KEY = 'twopointsix.glassfx';
 try { const q = new URLSearchParams(location.search); if (q.has('glassfx')) GLASSFX.on = fxForced = !FX_OFF.test(q.get('glassfx') ?? ''); } catch { /* no page */ }
 try { const e = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.GLASSFX; if (e) GLASSFX.on = fxForced = !FX_OFF.test(e); } catch { /* */ }
-/** what a URL / env word said for this run (null: nothing — the stored choice, else on) */
+/** what a URL / env word said for this run (null: nothing, so on) */
 export function glassFxForced(): boolean | null { return fxForced; }
-/** Game constructor: the choice kept on this machine (a URL / env word wins for the visit) */
-export function loadGlassFx() { if (fxForced !== null) return; try { const raw = localStorage.getItem(FX_KEY); if (raw) { const o = JSON.parse(raw); if (typeof o.on === 'boolean') GLASSFX.on = o.on; if (typeof o.crackGap === 'number' && isFinite(o.crackGap)) GLASS.crackGap = Math.max(0, Math.min(0.2, o.crackGap)); } } catch { /* no storage / bad JSON: the default */ } }
-export function saveGlassFx() { try { localStorage.setItem(FX_KEY, JSON.stringify({ on: GLASSFX.on, crackGap: GLASS.crackGap })); } catch { /* */ } }
 /** main.ts, before a Game or an Engine exists: the switch as this boot will have it */
-export function glassFxBoot(): boolean { loadGlassFx(); return GLASSFX.on; }
+export function glassFxBoot(): boolean { return GLASSFX.on; }
 
 /** per-Game glass bookkeeping (a WeakMap, like the whistle's: nothing on Game itself but the hooks) */
 interface GlassState { panes: number[]; seen: WeakSet<object>; hits: number; lastHitT: number; log: string[]; crackAt: number; }

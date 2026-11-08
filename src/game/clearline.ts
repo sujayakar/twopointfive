@@ -108,15 +108,10 @@ export const CLEARLINE = {
    *  them are 8 m or more (rebuild/line-of-fire/fix.md). */
   stillFar: 0,
 };
-export const CLEARLINE_DEFAULTS: typeof CLEARLINE = { ...CLEARLINE };
 export const CLEARLINE_STATS = { blocked: 0, steps: 0, up: 0, planted: 0, covers: 0, kneels: 0, cues: 0, ended: 0, nothing: 0, behind: 0, moving: 0 };
 export interface ClearNote { t: number; who: string; what: 'step' | 'cover' | 'kneel' | 'end'; by: string; at: [number, number] | null; walk: number }
 export const CLEARLINE_LOG: ClearNote[] = [];
 
-const LS = 'twopointsix.clearline';
-const KEPT = ['after', 'afterEdge', 'inEntry', 'holdBehind', 'holdStep', 'still', 'stillFar', 'reachM', 'pace', 'cover', 'kneel', 'cue', 'holdMax'] as const;   // (the panel's rows)
-export function saveClearLine() { try { const o: Record<string, boolean | number> = {}; for (const k of KEPT) if (CLEARLINE[k] !== CLEARLINE_DEFAULTS[k]) o[k] = CLEARLINE[k]; if (Object.keys(o).length) globalThis.localStorage?.setItem(LS, JSON.stringify(o)); else globalThis.localStorage?.removeItem(LS); } catch { /* no store */ } }
-try { const o = JSON.parse(globalThis.localStorage?.getItem(LS) ?? 'null'); if (o) for (const k of KEPT) if (typeof o[k] === typeof CLEARLINE[k]) (CLEARLINE as Record<string, unknown>)[k] = o[k]; } catch { /* no store, or not ours */ }
 
 type What = 'step' | 'cover' | 'kneel';
 /** what he is doing about it: where, about which man, since when; `onT` = when that man was last his (roomfight's target), `until` = a cover's end */

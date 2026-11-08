@@ -50,7 +50,7 @@ import { SideMap } from '../math/side';
 import { Vec3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import { squadSilent, silentCompromised } from './silent';
-import { pairUp, keptOn, PAIRUP } from './pairup';
+import { pairUp } from './pairup';
 import { SPOTTED, spottedMode } from './spotted';
 import { lightEstimateAt } from './guards';
 import './teams';
@@ -139,11 +139,7 @@ export const SNEAK = {
   skill: 1,
 };
 export const SNEAK_DEFAULTS: typeof SNEAK = JSON.parse(JSON.stringify(SNEAK));
-const LS = 'twopointsix.sneak';
-/** the panel's rows are kept per machine; `?sneak` (`=0` off) sets the switch for the visit; the harness sets it by SNEAK=on */
-const KEPT = ['on', 'crouch', 'post', 'trail', 'look', 'stand', 'side', 'door', 'cue', 'patience', 'skill'] as const;
-export function saveSneak() { try { const o: Record<string, boolean | number> = {}; for (const k of KEPT) if (SNEAK[k] !== SNEAK_DEFAULTS[k] && !(k === 'on' && PAIRUP.on)) o[k] = SNEAK[k];   /* (on by pairup.ts's switch is that switch's to keep, not this row's: what the store held stands) */ if (PAIRUP.on) { const was = keptOn(LS); if (was !== undefined && was !== SNEAK_DEFAULTS.on) o.on = was; } if (Object.keys(o).length) globalThis.localStorage?.setItem(LS, JSON.stringify(o)); else globalThis.localStorage?.removeItem(LS); } catch { /* no store */ } }
-try { const o = JSON.parse(globalThis.localStorage?.getItem(LS) ?? 'null'); if (o) for (const k of KEPT) if (typeof o[k] === typeof SNEAK[k]) (SNEAK as Record<string, unknown>)[k] = o[k]; } catch { /* no store, or not ours */ }
+/** `?sneak` (`=0` off) sets the switch for the visit; the harness sets it by SNEAK=on */
 try { const q = new URLSearchParams(location.search); if (q.has('sneak')) SNEAK.on = q.get('sneak') !== '0'; } catch { /* no page (the harness) */ }
 try { const e = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.SNEAK; if (e) SNEAK.on = e !== '0' && e.toLowerCase() !== 'off'; } catch { /* no process (the page) */ }
 

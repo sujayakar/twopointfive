@@ -658,14 +658,11 @@ function hearScream(g: Game, gd: Guard) {
 
 
 // ================================================================ persistence (one key per machine: the switch and the fail rule)
-const LS_KEY = 'twopointsix.civilians';
-export function saveCivTune(g: Game) { try { localStorage.setItem(LS_KEY, JSON.stringify({ on: g.tune.civilians, killFails: g.tune.civilianKillFails, greet: CIV.greet })); } catch { /* no storage */ } }
 export function loadCivTune(g: Game) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('loadCivTune', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
-  try { const j = JSON.parse(localStorage.getItem(LS_KEY) ?? 'null'); if (j && typeof j === 'object') { if (typeof j.on === 'boolean') g.tune.civilians = j.on; if (typeof j.killFails === 'boolean') g.tune.civilianKillFails = j.killFails; if (typeof j.greet === 'boolean') CIV.greet = j.greet; } } catch { /* nothing stored, or not readable */ }   // (no early return: a FRESH profile has no record and must still read the URL flag below)
-  try { if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('nocivilians')) g.tune.civilians = false; } catch { /* no location (the harness) */ }   // ?nocivilians: nobody but the shift from boot — the frame and the floor byte for byte as before them — whatever the stored switch says
+  try { if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('nocivilians')) g.tune.civilians = false; } catch { /* no location (the harness) */ }   // ?nocivilians: nobody but the shift from boot — the frame and the floor byte for byte as before them
 }
 /** the switch flipped live (Tab panel / console): off = they leave the floor this frame (a held / dragged one let go of first); on = fresh ones on their marks */
-export function setCivilians(g: Game, on: boolean) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('setCivilians', undefined, [g, on]); if (__r !== RUST_PASS) return __r as any; } } g.tune.civilians = on; saveCivTune(g); resetCivilians(g); }
+export function setCivilians(g: Game, on: boolean) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('setCivilians', undefined, [g, on]); if (__r !== RUST_PASS) return __r as any; } } g.tune.civilians = on; resetCivilians(g); }
 
 // ================================================================ panel / QA
 /** 'civilians ▸ Marta WORK wipe @wp3 (14 s) aw 0.00 | Owen FLEE → Novak [gun, armed] aw 1.00' */
