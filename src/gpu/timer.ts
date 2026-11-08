@@ -115,7 +115,4 @@ export class GpuTimer {
     for (const [b, e] of iv) { if (ce < 0) { cs = b; ce = e; } else if (b <= ce) ce = Math.max(ce, e); else { total += ce - cs; cs = b; ce = e; } }
     return ce < 0 ? 0 : total + (ce - cs);
   }
-  /** Σ of the last resolved frame's unsmoothed per-pass durations over the passes not in `exclude` — the number every total used to be; minus unionMs() =
-   *  how much of it was double-counted overlap. */
-  sumMs(exclude: string[] = []): number { let s = 0; for (const [k, v] of this.lastFrame) if (!exclude.includes(k)) s += v; return s; }
 }

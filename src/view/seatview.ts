@@ -22,8 +22,6 @@ export const NO_VIEW: TickView = { mission: null, lesson: null, radio: [], bubbl
 /** what this man wears or carries that the drawer draws */
 export function wornBy(v: TickView, man: number): WornView | undefined { return v.worn.find(w => w.man === man); }
 
-/** the fog hides this man from the seat's team */
-export function fogHides(v: TickView, man: number): boolean { return v.marks.men.some(m => m.man === man && m.hidden); }
 
 /** is this action shut on the mission that is up: the press does nothing, and the HUD names no key of it (nothing is locked off a tutorial mission) */
 export function locked(v: TickView, action: string): boolean { const R = v.lesson?.rails; return !!R && !R.open.includes(action); }

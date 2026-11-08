@@ -133,7 +133,5 @@ export function kahanN(v: ArrayLike<number>): number {
   for (let i = 0; i < n; i++) { const k = Math.abs(+v[i]) / max, s = k * k - comp, p = sum + s; comp = (p - sum) - s; sum = p; }
   return Math.sqrt(sum) * max;
 }
-/** which way each arity went on this runtime (QA; `trials` = the inputs each candidate was held to — a sampled match, not a proof) */
-export const HYP = { two: pick2, three: pick3, four: pick4, trials: TRIALS, held };
 // the page says once which way it went (a browser nobody has measured shows here; headless stays silent: tools parse its output)
 try { if (typeof (globalThis as any).document !== 'undefined') console.info(`lengths: hyp2 ${pick2} · hyp3 ${pick3} · hyp4 ${pick4} (each held to Math.hypot on ${TRIALS} inputs at load${held ? '; ?nohyp' : ''})`); } catch { /* no console */ }
