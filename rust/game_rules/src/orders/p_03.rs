@@ -86,55 +86,23 @@ fn drop_stock_word(s: &str) -> &str {
 fn seam_box_owner(g: &Game, b: AnyBoxId) -> f64 { g.tab[b].owner }
 /// `b.flags`. As seam_box_owner
 fn seam_box_flags(g: &Game, b: AnyBoxId) -> f64 { g.tab[b].flags }
-/// Some: refused, in those words
-fn seam_arm_issue(g: &mut Game, arm: &OrderIssue, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
-    match arm {
-        _ => unreachable!("order_issue answers this arm itself"),
-    }
-}
-
-// ---- OrderDef's fields: the matches (the skeleton's INVENTED order_*: orders.ts calls these fields in this part's lines). An arm is the row's public name, or a few public calls written here; the rest wait in the seams above ----
+// ---- an order's functions, called through its row (orders/rows/) ----
 /// `d.label(t)`
-pub fn order_label(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::orders::OrderTarget) -> String {
-    let arm = g.tab.orders_order_def[d].label.clone();
-    match arm {
-        OrderLabel::Text { text } => text,
-        OrderLabel::Row(r) => (r.label)(g, t),
-    }
-}
-/// `d.can(S, gd, t)`, the match over OrderCan: None he can, or the row has no `can`; Some the word he says (orders.ts:850, :868)
+pub fn order_label(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::orders::OrderTarget) -> String { (g.tab.orders_order_def[d].row.label)(g, t) }
+/// `d.can(S, gd, t)`: None he can, or the row has no `can`; Some the word he says (orders.ts:850, :868)
 pub fn order_can(g: &mut crate::game::Game, d: OrdersOrderDefId, gd: GuardId, t: &crate::orders::OrderTarget) -> Option<String> {
-    let Some(arm) = g.tab.orders_order_def[d].can else { return None };
-    let at = at_of(t);
-    match arm {
-        OrderCan::Row(r) => match r.can { Some(f) => f(g, gd, t), None => None },
-    }
+    match g.tab.orders_order_def[d].row.can { Some(f) => f(g, gd, t), None => None }
 }
-/// `d.only(S, men, t)`, the match over OrderOnly. A row with no `only`: men, as a copy (orders.ts:865, :1006)
+/// `d.only(S, men, t)`. A row with no `only`: men, as a copy (orders.ts:865, :1006)
 pub fn order_only(g: &mut crate::game::Game, d: OrdersOrderDefId, men: &[GuardId], t: &crate::orders::OrderTarget) -> Vec<GuardId> {
-    let Some(arm) = g.tab.orders_order_def[d].only.clone() else { return men.to_vec() };
-    let at = at_of(t);
-    match arm {
-        OrderOnly::Row(r) => match r.only { Some(f) => f(g, men, t), None => men.to_vec() },
-    }
+    match g.tab.orders_order_def[d].row.only { Some(f) => f(g, men, t), None => men.to_vec() }
 }
-/// `d.valid(S, t, men)`, the match over OrderValid: Ok true, or the row has no `valid`; Err(None) false, whyNot's 'not here.'; Err(Some) the word (orders.ts:852)
+/// `d.valid(S, t, men)`: Ok true, or the row has no `valid`; Err(None) false, whyNot's 'not here.'; Err(Some) the word (orders.ts:852)
 pub fn order_valid(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
-    let Some(arm) = g.tab.orders_order_def[d].valid.clone() else { return Ok(()) };
-    let at = at_of(t);
-    match arm {
-        OrderValid::Row(r) => match r.valid { Some(f) => f(g, t, men), None => Ok(()) },
-    }
+    match g.tab.orders_order_def[d].row.valid { Some(f) => f(g, t, men), None => Ok(()) }
 }
-/// `d.issue(S, men, t, opts)`, the match over OrderIssue: Some is the refusal, the string the closure returned (orders.ts:877)
-pub fn order_issue(g: &mut crate::game::Game, d: OrdersOrderDefId, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> {
-    let arm = g.tab.orders_order_def[d].issue.clone();
-    match arm {
-        OrderIssue::Nothing => None,
-        OrderIssue::Row(r) => (r.issue)(g, men, t, o),
-        arm => seam_arm_issue(g, &arm, men, t, o),
-    }
-}
+/// `d.issue(S, men, t, opts)`: Some is the refusal, the string the closure returned (orders.ts:877)
+pub fn order_issue(g: &mut crate::game::Game, d: OrdersOrderDefId, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> { (g.tab.orders_order_def[d].row.issue)(g, men, t, o) }
 /// `d.gone?.(S, t, men)`, the match over OrderGone. False with no `gone` (orders.ts:831)
 pub fn order_gone(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::orders::OrderTarget, men: &[GuardId]) -> bool {
     let Some(arm) = g.tab.orders_order_def[d].gone else { return false };
@@ -381,7 +349,7 @@ pub fn squad_orders_why_not(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &
     if !g.tab.orders_order_def[d].targets.contains(&kind_of(t)) { return Some(String::from("not here.")); }
     if men.is_empty() { return Some(String::from("nobody to take it.")); }
     let mut first: Option<String> = None;
-    let able: Vec<GuardId> = if g.tab.orders_order_def[d].can.is_some() {
+    let able: Vec<GuardId> = if g.tab.orders_order_def[d].row.can.is_some() {
         let mut a = Vec::with_capacity(men.len());
         for &gd in &men {
             match order_can(g, d, gd, t) {
@@ -392,7 +360,7 @@ pub fn squad_orders_why_not(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &
         a
     } else { men };
     if able.is_empty() { return Some(first.unwrap_or_else(|| String::from("not here."))); }
-    if g.tab.orders_order_def[d].valid.is_none() { return None; }
+    if g.tab.orders_order_def[d].row.valid.is_none() { return None; }
     match order_valid(g, d, t, &able) {
         Ok(()) => None,
         Err(Some(w)) => Some(w),
@@ -421,7 +389,7 @@ pub fn squad_orders_give(g: &mut crate::game::Game, id_2: &str, t: Option<&crate
         None => squad_orders_recipients(g, &crate::seats::here(g), Some(&t), who),
     };
     if asked.is_empty() { crate::game::game_msg(g, "nobody to take that order"); return Some(String::from("nobody to take it")); }
-    if g.tab.orders_order_def[def].only.is_some() {
+    if g.tab.orders_order_def[def].row.only.is_some() {
         let o = order_only(g, def, &asked, &t);
         if !o.is_empty() { asked = o; }
     }
@@ -429,7 +397,7 @@ pub fn squad_orders_give(g: &mut crate::game::Game, id_2: &str, t: Option<&crate
     let t = squad_orders_for_men(g, &t, &asked);
     let flipped = g.orders.face_flip;
     let mut cant: Vec<(GuardId, String)> = Vec::new();
-    let all: Vec<GuardId> = if g.tab.orders_order_def[def].can.is_some() {
+    let all: Vec<GuardId> = if g.tab.orders_order_def[def].row.can.is_some() {
         let mut a = Vec::with_capacity(asked.len());
         for &gd in &asked {
             match order_can(g, def, gd, &t) {
@@ -877,7 +845,7 @@ pub fn squad_orders_refresh(g: &mut crate::game::Game) {
     let mut why: Vec<Option<String>> = Vec::with_capacity(m.rows.len());
     for (i, &d) in m.rows.iter().enumerate() {
         if later.as_ref().map_or(false, |l| l.contains(&(i as f64))) { why.push(None); continue; }
-        let o = if g.tab.orders_order_def[d].only.is_some() { order_only(g, d, &m.men, &mt) } else { m.men.clone() };
+        let o = if g.tab.orders_order_def[d].row.only.is_some() { order_only(g, d, &m.men, &mt) } else { m.men.clone() };
         let to: &[GuardId] = if o.is_empty() { &m.men } else { &o };
         why.push(squad_orders_why_not(g, d, &mt, Some(to)));
     }

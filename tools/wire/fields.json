@@ -7880,11 +7880,11 @@
 },
 {
 "key": "OrderDef.can",
-"why": "its type holds what the bridge cannot read: Option<crate::orders::OrderCan>"
+"why": "the order's own function: the host asks the row (tools/blitz/ask.ts)"
 },
 {
 "key": "OrderDef.label",
-"why": "its type holds what the bridge cannot read: crate::orders::OrderLabel"
+"why": "the order's own function: the host asks the row (tools/blitz/ask.ts)"
 },
 {
 "key": "OrderDef.standsIn.when",
@@ -7892,7 +7892,7 @@
 },
 {
 "key": "OrderDef.valid",
-"why": "its type holds what the bridge cannot read: Option<crate::orders::OrderValid>"
+"why": "the order's own function: the host asks the row (tools/blitz/ask.ts)"
 },
 {
 "key": "OrderTarget.kind",
