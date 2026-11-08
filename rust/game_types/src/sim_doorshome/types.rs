@@ -89,9 +89,6 @@ pub struct DC {
     pub off: f64,
     pub shot: f64,
     pub creak_armed: f64,
-    pub pos_angle: f64,
-    pub pos_x: f64,
-    pub pos_z: f64,
     pub drive: f64,
     pub drive_who: f64,
     pub drive_dir: f64,
@@ -142,9 +139,6 @@ impl DC {
             off: 0.0,
             shot: 0.0,
             creak_armed: 0.0,
-            pos_angle: 0.0,
-            pos_x: 0.0,
-            pos_z: 0.0,
             drive: 0.0,
             drive_who: 0.0,
             drive_dir: 0.0,
@@ -333,7 +327,6 @@ pub struct DE {
     pub sound: f64,
     pub who: f64,
     pub level: f64,
-    pub fresh: f64,
     pub px: f64,
     pub pz: f64,
 }
@@ -345,7 +338,6 @@ impl DE {
             sound: 0.0,
             who: 0.0,
             level: 0.0,
-            fresh: 0.0,
             px: 0.0,
             pz: 0.0,
         }
@@ -495,10 +487,10 @@ impl SimDoorshomeMod {
 pub const DOOR_CAP: f64 = 64.0;
 
 /// (src/sim/doorshome.ts:18 DC: a table nothing writes)
-pub fn dc() -> crate::sim_doorshome::DC { crate::sim_doorshome::DC { angle: 0.0, vel: 1.0, quiet_t: 2.0, latched: 3.0, last_who: 4.0, since_bash: 5.0, closing: 6.0, locked: 7.0, lock_broken: 8.0, noticed: 9.0, noticed_t: 10.0, pick: 11.0, picking: 12.0, pick_idle: 13.0, pick_clock: 14.0, pick_n: 15.0, rattle_t: 16.0, guard_t: 17.0, passers: 18.0, dealt: 19.0, outward: 20.0, clearway: 21.0, pull_t: 22.0, vel_seen: 23.0, swept: 24.0, solid_t: 25.0, press_t: 26.0, open_t: 27.0, mirrored: 28.0, angle_seen: 29.0, off: 30.0, shot: 31.0, creak_armed: 32.0, pos_angle: 33.0, pos_x: 34.0, pos_z: 35.0, drive: 36.0, drive_who: 37.0, drive_dir: 38.0, drive_kind: 39.0, drive_t: 40.0, drive_from: 41.0, drive_quiet: 42.0, drive_side: 43.0, drive_rate: 44.0, drive_px: 45.0, drive_pz: 46.0, drive_hit: 47.0 } }
+pub fn dc() -> crate::sim_doorshome::DC { crate::sim_doorshome::DC { angle: 0.0, vel: 1.0, quiet_t: 2.0, latched: 3.0, last_who: 4.0, since_bash: 5.0, closing: 6.0, locked: 7.0, lock_broken: 8.0, noticed: 9.0, noticed_t: 10.0, pick: 11.0, picking: 12.0, pick_idle: 13.0, pick_clock: 14.0, pick_n: 15.0, rattle_t: 16.0, guard_t: 17.0, passers: 18.0, dealt: 19.0, outward: 20.0, clearway: 21.0, pull_t: 22.0, vel_seen: 23.0, swept: 24.0, solid_t: 25.0, press_t: 26.0, open_t: 27.0, mirrored: 28.0, angle_seen: 29.0, off: 30.0, shot: 31.0, creak_armed: 32.0, drive: 33.0, drive_who: 34.0, drive_dir: 35.0, drive_kind: 36.0, drive_t: 37.0, drive_from: 38.0, drive_quiet: 39.0, drive_side: 40.0, drive_rate: 41.0, drive_px: 42.0, drive_pz: 43.0, drive_hit: 44.0 } }
 
 /// (src/sim/doorshome.ts:22 DOOR_COLS)
-pub const DOOR_COLS: f64 = 48.0;
+pub const DOOR_COLS: f64 = 45.0;
 
 /// (src/sim/doorshome.ts:24 DRIVE_KINDS: a table nothing writes)
 pub fn drive_kinds() -> [String; 4] { [String::from("boot"), String::from("swing"), String::from("body"), String::from("hand")] }
@@ -525,10 +517,10 @@ pub fn dk() -> crate::sim_doorshome::DK { crate::sim_doorshome::DK { x: 0.0, y: 
 pub fn kf() -> crate::sim_doorshome::KF { crate::sim_doorshome::KF { bash: 1.0, quiet: 2.0, weak: 4.0, key: 8.0, solid: 16.0, round: 32.0, vel: 64.0, run: 128.0, hand: 256.0 } }
 
 /// (src/sim/doorshome.ts:56 DE: a table nothing writes)
-pub fn de() -> crate::sim_doorshome::DE { crate::sim_doorshome::DE { door: 0.0, sound: 1.0, who: 2.0, level: 3.0, fresh: 4.0, px: 5.0, pz: 6.0 } }
+pub fn de() -> crate::sim_doorshome::DE { crate::sim_doorshome::DE { door: 0.0, sound: 1.0, who: 2.0, level: 3.0, px: 4.0, pz: 5.0 } }
 
 /// (src/sim/doorshome.ts:57 DOOR_EV)
-pub const DOOR_EV: f64 = 7.0;
+pub const DOOR_EV: f64 = 6.0;
 
 /// (src/sim/doorshome.ts:59 DP: a table nothing writes)
 pub fn dp() -> crate::sim_doorshome::DP { crate::sim_doorshome::DP { dt: 0.0, doors: 1.0, contacts: 2.0, flags: 3.0, hand_rate: 4.0, min_speed: 5.0, floor_rad: 6.0, rate: 7.0, slide: 8.0, again: 9.0, wmin_x: 10.0, wmax_x: 11.0, wmin_z: 12.0, wmax_z: 13.0, foot: 14.0, settle_y1: 15.0, events: 16.0, carried: 17.0, stopped: 18.0, passed: 19.0, reached: 20.0, held: 21.0, aside: 22.0, rounds: 23.0, wrong: 24.0, turned: 25.0 } }

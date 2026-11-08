@@ -61,22 +61,19 @@ pub const ANGLE_SEEN: usize = 29;
 pub const OFF: usize = 30;
 pub const SHOT: usize = 31;
 pub const CREAK_ARMED: usize = 32;
-pub const POS_ANGLE: usize = 33;
-pub const POS_X: usize = 34;
-pub const POS_Z: usize = 35;
-pub const DRIVE: usize = 36;
-pub const DRIVE_WHO: usize = 37;
-pub const DRIVE_DIR: usize = 38;
-pub const DRIVE_KIND: usize = 39;
-pub const DRIVE_T: usize = 40;
-pub const DRIVE_FROM: usize = 41;
-pub const DRIVE_QUIET: usize = 42;
-pub const DRIVE_SIDE: usize = 43;
-pub const DRIVE_RATE: usize = 44;
-pub const DRIVE_PX: usize = 45;
-pub const DRIVE_PZ: usize = 46;
-pub const DRIVE_HIT: usize = 47;
-pub const NCOL: usize = 48;
+pub const DRIVE: usize = 33;
+pub const DRIVE_WHO: usize = 34;
+pub const DRIVE_DIR: usize = 35;
+pub const DRIVE_KIND: usize = 36;
+pub const DRIVE_T: usize = 37;
+pub const DRIVE_FROM: usize = 38;
+pub const DRIVE_QUIET: usize = 39;
+pub const DRIVE_SIDE: usize = 40;
+pub const DRIVE_RATE: usize = 41;
+pub const DRIVE_PX: usize = 42;
+pub const DRIVE_PZ: usize = 43;
+pub const DRIVE_HIT: usize = 44;
+pub const NCOL: usize = 45;
 
 /// The doors' part of a game's block: a column a number of a leaf, a door an index (a truth is 1, a man is his id, a set of men its bits as a number).
 #[repr(C)]
@@ -168,10 +165,9 @@ pub const E_DOOR: usize = 0;
 pub const E_SOUND: usize = 1;
 pub const E_WHO: usize = 2;
 pub const E_LEVEL: usize = 3;
-pub const E_FRESH: usize = 4;
-pub const E_PX: usize = 5;
-pub const E_PZ: usize = 6;
-pub const NEV: usize = 7;
+pub const E_PX: usize = 4;
+pub const E_PZ: usize = 5;
+pub const NEV: usize = 6;
 pub const S_CREAK: f64 = 0.0;
 pub const S_BANG: f64 = 1.0;
 pub const S_LATCH: f64 = 2.0;
@@ -419,26 +415,18 @@ impl Step {
     fn has_closer(&self, i: usize) -> bool {
         self.f & F_STAY == 0 && self.io.def[D_CLOSER][i] != 0.0
     }
-    /// the Door's `pos` as an event reads it: its kept centre, made anew where the leaf has turned since it was kept → (fresh, x, z)
-    fn pos(&mut self, i: usize) -> (f64, f64, f64) {
-        let mut fresh = 0.0;
-        if self.s.c[ANGLE][i] != self.s.c[POS_ANGLE][i] {
-            self.s.c[POS_ANGLE][i] = self.s.c[ANGLE][i];
-            let u = self.dir(i);
-            self.s.c[POS_X][i] = self.io.def[D_HX][i] + u.0 * self.io.def[D_WIDTH][i] * 0.5;
-            self.s.c[POS_Z][i] = self.io.def[D_HZ][i] + u.1 * self.io.def[D_WIDTH][i] * 0.5;
-            fresh = 1.0;
-        }
-        (fresh, self.s.c[POS_X][i], self.s.c[POS_Z][i])
+    /// where an event says the door is: its hinge and half its width along the leaf, as it stands
+    fn pos(&self, i: usize) -> (f64, f64) {
+        let u = self.dir(i);
+        (self.io.def[D_HX][i] + u.0 * self.io.def[D_WIDTH][i] * 0.5, self.io.def[D_HZ][i] + u.1 * self.io.def[D_WIDTH][i] * 0.5)
     }
-    /// Doors.emit: a noise onto the list
     fn emit(&mut self, i: usize, sound: f64, who: f64, level: f64) {
-        let (fresh, x, z) = self.pos(i);
+        let (x, z) = self.pos(i);
         if self.ev >= MAXE {
             self.io.par[P_WRONG] = 1.0;
             return;
         }
-        self.io.ev[self.ev] = [i as f64, sound, who, level, fresh, x, z];
+        self.io.ev[self.ev] = [i as f64, sound, who, level, x, z];
         self.ev += 1;
     }
     /// Doors.rattle
