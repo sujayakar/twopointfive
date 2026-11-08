@@ -229,6 +229,11 @@ line).
   from its frame, `fatalOnce`, so no tick of it ever ran on them: who finds the tick's own now is a scripted page's next step and the record of the crash).
   `pose` and `unpose` are private. Not put back after a throw: his cull sphere where a rig fit is set (the next upload rebuilds it; only the GPU reads it). `bun run tools/qa/aheaddraw-check.ts` (headless, both stands; `AHEADDRAW_BREAK=1` = the pair as it stood, 'a pose that throws' must
   fail): moved inside the draw, put back after it, after a draw that throws and after a pose that throws.
+  ANOTHER PLAYER'S GOGGLES (2026-11-08): an infrared line is a box of the frame's list on every machine once ANY player wears his goggles (the Rust tick's
+  `ir_viewer` asks every seat's man; asked of the shown man, one player's goggles parted two machines). `AheadDraw.hides` is what a page leaves out of the
+  list for the length of a draw, the tick's own list standing again after it; `net/page.ts attach` hangs `irMade` while the page's own man is bare-eyed
+  in a game of more than one. Held by `aheaddraw-check` `left out` and `another's goggles` (`AHEADDRAW_BREAK=hides`). Headless only: not seen on a page
+  or a GPU.
   THE PICTURE (`AheadDraw.pose` right before the render and `unpose` right after, laid over the tween's: pose after its, unpose before, the tween's
   factor between the last two ticks' looks): ONE rigid move and turn about his feet of the rig's boxes keyed his (`MKEY.rig` with his id; NOT the owner
   byte, which a tracer in flight and a charge laid on a wall carry too), the lights he carries (his, with no `ttl`: not a muzzle flash, not a tracer's

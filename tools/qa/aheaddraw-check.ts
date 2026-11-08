@@ -10,9 +10,13 @@
 //   put back            after it every box, light and proxy is the tick's again: the same arrays by reference, the proxies value for value
 //   a draw that throws  the error comes out of `around`, and everything is put back
 //   a pose that throws  the palette write throws after his boxes and lights were hung moved: the error comes out, the draw never runs, everything is put back
+//   left out            what this player's picture leaves out of the frame's list (AheadDraw.hides) is out of it inside the draw and back after it, the tick's
+//                       own list by reference, through a draw that throws too; with nothing to leave out the list is never copied
+//   another's goggles   a game of two, the first player's goggles down: his infrared line is in the list on both machines, in the draw of the one that shows
+//                       him and not in the draw of the other (AHEADDRAW_BREAK=hides: the page's rule is not hung; it must FAIL, and no other line)
 import { standUp, ROOT } from './headless.ts';
 
-const BREAK = process.env.AHEADDRAW_BREAK === '1';
+const BREAK = process.env.AHEADDRAW_BREAK === '1', BREAK_HIDES = process.env.AHEADDRAW_BREAK === 'hides';
 const { AheadDraw } = await import(`${ROOT}/src/host/ahead.ts`);
 const { MKEY } = await import(`${ROOT}/src/scene/boxes.ts`);
 /** a box he wears or carries, as ahead.ts says it: the rig's own key with his id in it (a prop's key can hold the same byte, and is nobody's) */
@@ -20,7 +24,7 @@ const worn = (b: any, id8: number): boolean => b.mkey !== undefined && b.mkey >>
 let failed = 0;
 const line = (ok: boolean, text: string): void => { if (!ok) failed++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${text}`); };
 
-const W: any = await standUp({ seed: 5 });
+const W: any = await standUp({ seed: 5, dress: true });   // (with the dressing rows up: the men are handed to the renderer, so there are proxies and a palette to move)
 for (let i = 0; i < 30; i++) W.step(1 / 60);
 const E = W.engine, world = E.world, lights = E.lights, skin = E.skin;
 const id = world.capsuleU32[7] & 0xff;   // (the first man's: the player)
@@ -46,7 +50,7 @@ const say = (c: { boxes: number; lights: number; caps: number }): string => none
 
 const ad: any = new AheadDraw({ world, lights, skin, outline: null });
 // (the red path: the pair as it stood — the pose outside the try, so a pose that throws is never taken down)
-if (BREAK) ad.around = (a: number, blended: Float32Array | null, draw: () => void): void => { ad.pose(a, blended); try { draw(); } finally { ad.unpose(); } };
+if (BREAK) ad.around = (a: number, blended: Float32Array | null, draw: () => void): void => { ad.leaveOut(); ad.pose(a, blended); try { draw(); } finally { ad.unpose(); ad.listBack(); } };
 const me = { pos: [world.infoF32[24], 0, world.infoF32[26]], yaw: 0 }, MOVE = 0.4;
 const there = { pos: [me.pos[0] + MOVE, 0, me.pos[2]], yaw: 0.3 };
 ad.capture(id, me, there);
@@ -81,5 +85,34 @@ const K = keep();
   line(again > 0 && none(last), `the draw after it: ${again} boxes moved inside it, and ${say(last)}`);
 }
 
-console.log(failed ? `aheaddraw-check: ${failed} line${failed === 1 ? '' : 's'} FAILED${BREAK ? ' (AHEADDRAW_BREAK=1: \'a pose that throws\' must, and the draw after it with it)' : ''}` : '=== aheaddraw-check: ALL PASS ===');
+// ---- left out
+{ const list = world.dynamics, b0 = list[0], n = list.length; let inside = -1, had = true, same = false, threw = '';
+  ad.hides = () => (b: any) => b === b0; ad.around(1, null, () => { inside = world.dynamics.length; had = world.dynamics.includes(b0); });
+  const back = world.dynamics === list && list.length === n && list[0] === b0;
+  try { ad.around(1, null, () => { throw new Error('the render threw'); }); } catch (e) { threw = String((e as Error).message); }
+  const back2 = world.dynamics === list;
+  ad.hides = () => () => false; ad.around(1, null, () => { same = world.dynamics === list; }); ad.hides = null;
+  line(inside === n - 1 && !had && back && back2 && same && threw === 'the render threw',
+    `left out: one box asked out of the draw: ${inside} of ${n} in the list inside it, ${had ? 'IT AMONG THEM' : 'it not among them'}; after it the tick's own list ${back ? 'stands again' : 'IS GONE'}, after a draw that threw ${back2 ? 'too' : 'IT IS GONE'}; with nothing to leave out the list is ${same ? 'the same' : 'A COPY'}`);
+}
+// ---- another player's goggles (the page's rule: src/net/page.ts attach)
+{ const { irMade, irViewer } = await import(`${ROOT}/src/game/irlaser.ts`), { sampleCmd } = await import(`${ROOT}/src/game/cmd.ts`), { Input } = await import(`${ROOT}/src/game/input.ts`), { FollowCamera } = await import(`${ROOT}/src/game/camera.ts`);
+  const T: any = await standUp({ seed: 9, seats: 2, address: 'roomclear&squad4', dress: true }), r = T.start(); if (r.why) throw new Error(r.why); const g = T.game, w2 = T.engine.world;
+  const cam1: any = new FollowCamera(); cam1.aspect = T.cam.aspect; cam1.target = [...g.seats[1].view.player.char.pos]; cam1.rebuild();
+  const hands = [{ v: g.seats[0].view, I: T.input, cam: T.cam }, { v: g.seats[1].view, I: Input.detached() as any, cam: cam1 }];
+  g.seats[0].view.player.nv = true;
+  const ad2: any = new AheadDraw({ world: w2, lights: T.engine.lights, skin: T.engine.skin, outline: null });
+  if (!BREAK_HIDES) ad2.hides = () => g.seats.length > 1 && !irViewer(g) ? irMade : null;
+  const seen = (): { held: number; drawn: number } => { let drawn = -1; ad2.around(1, null, () => { drawn = w2.dynamics.filter(irMade).length; }); return { held: w2.dynamics.filter(irMade).length, drawn }; };
+  const R: { held: number; drawn: number }[] = [];
+  for (const show of [0, 1, 0]) { g.localSeat = g.seats[show];
+    for (let i = 0; i < 60; i++) { hands[0].I.buttons |= 4; hands[0].I.mouseX = 900; hands[0].I.mouseY = 400; g.stepSeats(1 / 60, hands.map(h => sampleCmd(h.v, h.I, h.cam, T.canvas))); T.engine.lights.update(1 / 60, g.time); w2.relist(); for (const h of hands) { h.cam.update(1 / 60, h.v.followPos(), h.v.aimPoint); h.I.endFrame(); } }
+    R.push(seen()); }
+  // (…and the very next draw after the seat is changed, with no tick between)
+  g.localSeat = g.seats[1]; const now = seen(); g.localSeat = g.seats[0]; const then = seen();
+  line(R.every(x => x.held > 0) && R[0].drawn === R[0].held && R[1].drawn === 0 && R[2].drawn === R[2].held && now.drawn === 0 && then.drawn === then.held,
+    `another's goggles: the first player's down and his gun up, ${R.map(x => x.held).join(', ')} infrared boxes in the list whoever is shown; drawn ${R[0].drawn} where he is, ${R[1].drawn} where the other player is, ${R[2].drawn} where he is again; with no tick between, ${now.drawn} and ${then.drawn}`);
+}
+
+console.log(failed ? `aheaddraw-check: ${failed} line${failed === 1 ? '' : 's'} FAILED${BREAK ? ' (AHEADDRAW_BREAK=1: \'a pose that throws\' must, and the draw after it with it)' : BREAK_HIDES ? ' (AHEADDRAW_BREAK=hides: another\'s goggles must, and no other line)' : ''}` : '=== aheaddraw-check: ALL PASS ===');
 process.exit(failed ? 1 : 0);
