@@ -182,22 +182,31 @@ pub(super) fn step_out(st: &KitStage, b: &Beat, metres: f64) -> V2 {
     let k = m::min(metres, l) / l;
     [b.home[0] + dx * k, b.home[1] + dz * k]
 }
-/// HOME: no row begins with a man far from his place, and a row of Sam's waits for the men on their own legs, `home_secs` at most: then, and at once for a man `far_m` off, the room is staged again under the dissolve. True: the row waits.
-/// (at a wall left open a restage would stand the wall: the men walk home over it, for as long as they need)
+/// AT A WALL LEFT OPEN a restage would stand the wall, so nobody is put back: the row after the charge waits for the men and Sam on their own legs, `swap_secs + home_secs` at most, and from then on a row waits only for the men the row before it moved, as long at most. A man whom a row's walk does not get home holds nothing again. True: the row waits.
+fn homing_at_hole(g: &mut Game, st: &mut KitStage) -> bool {
+    let now = g.time;
+    let (on, act, all) = (K.on_slot + 0.1, actor(g, st), st.a.hole_all);
+    let mut men = core::mem::take(&mut st.a.hole_men);
+    men.retain(|&x| off_home(g, st, x) > on);
+    let waiting = men.iter().any(|&x| all || act != Some(x)) || (all && flat(g.ch[g.pl[g.player].ch].pos, st.sam) > on);
+    if waiting && st.a.home_t.is_nan() { st.a.home_t = now; }
+    if !waiting || now - st.a.home_t >= K.swap_secs + K.home_secs { st.a.hole_all = false; st.a.home_t = f64::NAN; return false; }
+    st.a.hole_men = men;
+    true
+}
+/// HOME: no row begins with a man far from his place, and a row of Sam's waits for the men on their own legs, `home_secs` at most: then, and at once for a man `far_m` off, the room is staged again under the dissolve, and the row that waited begins at once. A man found off his place again after that is not staged again until he has been seen home. True: the row waits.
 pub(super) fn homing(g: &mut Game, st: &mut KitStage) -> bool {
     let now = g.time;
-    if st.hole {
-        if !away(g, st) { st.a.home_t = f64::NAN; return false; }
-        if st.a.home_t.is_nan() { st.a.home_t = now; }
-        if now - st.a.home_t >= K.swap_secs + K.home_secs { st.a.home_t = f64::NAN; return false; }
-        return true;
-    }
-    if st.order.iter().any(|&x| !st.a.walks.iter().find(|w| w.man == x).map_or(false, |w| w.lane) && off_home(g, st, x) > K.far_m) {
+    if st.hole { return homing_at_hole(g, st); }
+    if st.a.seated { st.a.seated = false; st.a.home_t = f64::NAN; return false; }
+    if !st.a.seat_tried && st.order.iter().any(|&x| !st.a.walks.iter().find(|w| w.man == x).map_or(false, |w| w.lane) && off_home(g, st, x) > K.far_m) {
         st.a.home_t = f64::NAN;
-        ask_veil(g, st);
+        seat(g, st);
         return true;
     }
-    if actor(g, st).is_some() || !away(g, st) { st.a.home_t = f64::NAN; return false; }
+    let is_away = away(g, st);
+    if !is_away { st.a.seat_tried = false; }
+    if actor(g, st).is_some() || !is_away { st.a.home_t = f64::NAN; return false; }
     if st.a.home_t.is_nan() { st.a.home_t = now; }
     for i in 0..st.order.len() {
         let x = st.order[i];
@@ -206,9 +215,15 @@ pub(super) fn homing(g: &mut Game, st: &mut KitStage) -> bool {
             if !w.lane && off > K.home_m && (w.pace < K.swap_pace || w.at > now) { w.pace = K.swap_pace; w.at = m::min(w.at, now); w.sent = None; }
         }
     }
-    if now - st.a.home_t >= K.home_secs { st.a.home_t = f64::NAN; ask_veil(g, st); }
+    if now - st.a.home_t >= K.home_secs {
+        st.a.home_t = f64::NAN;
+        if st.a.seat_tried { return false; }
+        seat(g, st);
+    }
     true
 }
+/// every man put back on his place under the dissolve, for the row that waited
+fn seat(g: &Game, st: &mut KitStage) { st.a.seat_tried = true; st.a.seated = true; ask_veil(g, st); }
 /// Where the leaf rests is its own business: the quiet picture rests it ajar, eased back there by the host's own hand after a row moved it
 pub(super) fn ease_leaf(g: &mut Game, st: &KitStage, d: DoorId) {
     let a0 = crate::doors::door_angle(g, d);

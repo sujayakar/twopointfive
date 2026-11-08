@@ -65,4 +65,6 @@ export class Commands extends Writer {
   kitStageFrame(aspect: number, cx: number, cy: number, h: number, w: number, man: number, door: number, left: number, right: number, keep: number, top: number, bottom: number): void { this.u32(32); this.f64(aspect); this.f64(cx); this.f64(cy); this.f64(h); this.f64(w); this.f64(man); this.f64(door); this.f64(left); this.f64(right); this.f64(keep); this.f64(top); this.f64(bottom); }
   /** the kit picture: the page has laid its copy over the picture, as the view's `veil` asked */
   kitStageUnder(): void { this.u32(33); }
+  /** the kit picture: the page has shown its first picture: the acts may begin */
+  kitStageShown(): void { this.u32(34); }
 }

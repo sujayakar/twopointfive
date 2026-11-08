@@ -101,13 +101,13 @@ pub fn told(g: &mut Game, st: &mut KitStage, size: Option<u32>) {
     }
     if hard {
         if st.a.beat.is_some() && !st.none { cut(g, st); }
-        if let Some(p) = play { st.a.asked = Some(if p == "swap" { "weapon" } else { p }); st.a.ask_t = g.time; }
+        if let Some(p) = play { st.a.asked = Some(if p == "swap" { "weapon" } else { p }); }
         if st.none { st.due = true; } else { ask_veil(g, st); }
         return;
     }
     let f = st.a.beat.as_ref().map(|b| b.field);
     pools(g, st, f);
-    if play.is_some() { pick(g, st, play); }
+    if play.is_some() { pick(st, play); }
 }
 /// whose card is open and the row under its highlight: another card's man walks to the head of the file, the same men; another tile plays at once
 pub fn opened(g: &mut Game, st: &mut KitStage, who: u32, field: &str) {
@@ -117,7 +117,7 @@ pub fn opened(g: &mut Game, st: &mut KitStage, who: u32, field: &str) {
     let f = thing(g, field, st.who);
     if changed {
         st.a.hi = f;
-        pick(g, st, f);
+        pick(st, f);
         if !st.none {
             if st.a.beat.is_some() { st.a.cut_now = false; cut(g, st); }
             let m0 = actor(g, st);
@@ -125,6 +125,6 @@ pub fn opened(g: &mut Game, st: &mut KitStage, who: u32, field: &str) {
         }
     } else if f != st.a.hi {
         st.a.hi = f;
-        pick(g, st, f);
+        pick(st, f);
     }
 }
