@@ -59,7 +59,6 @@ import './digin';
 import './gunroles';
 import { claimMan, releaseMan, ownerWitness, OWN } from './owner';
 import './pressure';
-import './buddy';
 import { goneWithTick } from './crossing';
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?nopowerout = the garrison stands in the dark, as it did)
