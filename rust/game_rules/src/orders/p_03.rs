@@ -102,12 +102,6 @@ pub fn order_label(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::or
     let arm = g.tab.orders_order_def[d].label.clone();
     match arm {
         OrderLabel::Text { text } => text,
-        OrderLabel::ThrowRow { kind } => crate::squadthrow::row_label(g, kind, at_of(t)),
-        OrderLabel::ThrowOpen => {
-            let frag = crate::squadthrow::left(g, crate::squadthrow::SquadThrowKind::Frag);
-            let stun = crate::squadthrow::left(g, crate::squadthrow::SquadThrowKind::Stun);
-            format!("throw · frag {} · bang {}{}", frag, stun, crate::squad40::squad40_word(g, &crate::seats::here(g)))
-        }
         OrderLabel::Row(r) => (r.label)(g, t),
         OrderLabel::PairGo => {
             let waiting = crate::pairorders::pair_orders_waiting(g);
@@ -158,7 +152,6 @@ pub fn order_only(g: &mut crate::game::Game, d: OrdersOrderDefId, men: &[GuardId
     let Some(arm) = g.tab.orders_order_def[d].only.clone() else { return men.to_vec() };
     let at = at_of(t);
     match arm {
-        OrderOnly::ThrowRow { kind } => crate::squadthrow::row_only(g, men, at, kind),
         OrderOnly::Row(r) => match r.only { Some(f) => f(g, men, t), None => men.to_vec() },
         OrderOnly::PairTake => {
             let OrderTarget::Foe(x) = t else { return Vec::new() };
@@ -179,7 +172,6 @@ pub fn order_valid(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::or
     let Some(arm) = g.tab.orders_order_def[d].valid.clone() else { return Ok(()) };
     let at = at_of(t);
     match arm {
-        OrderValid::ThrowRow { kind } => crate::squadthrow::row_valid(g, men, at, kind).map_err(Some),
         OrderValid::Row(r) => match r.valid { Some(f) => f(g, t, men), None => Ok(()) },
         OrderValid::PairTake => {
             let OrderTarget::Foe(x) = t else { return Err(None) };
@@ -210,7 +202,6 @@ pub fn order_issue(g: &mut crate::game::Game, d: OrdersOrderDefId, men: &[GuardI
     let arm = g.tab.orders_order_def[d].issue.clone();
     match arm {
         OrderIssue::Nothing => None,
-        OrderIssue::ThrowRow { kind } => crate::squadthrow::row_issue(g, men, t, kind),
         OrderIssue::PairGo => { crate::pairorders::pair_orders_mark(g, Some(crate::pairorders::PairOrdersMarkBy::Row)); None }
         OrderIssue::Row(r) => (r.issue)(g, men, t, o),
         arm => seam_arm_issue(g, &arm, men, t, o),
