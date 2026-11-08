@@ -40,7 +40,6 @@ src/game/attention.ts:*	decides	previews that run a planner	the attention overla
 src/game/wallbreak.ts:*	decides	previews that run a planner	what a blast would open and which pieces a wall has are planned again on the copy (the throw preview asks), and a plan's flags are written on the copy's boxes
 src/game/aim.ts:*	decides	aim and stance on the HUD	the player's aim, its cost and his feet are worked out again on the copy
 src/game/gunwall.ts:*	decides	aim and stance on the HUD	whether the gun is at a wall is worked out again on the copy
-src/game/player.ts:*	decides	aim and stance on the HUD	whether he can stand, what is in the way and how far a thing is are worked out again on the copy
 src/game/combat.ts:*	decides	aim and stance on the HUD	whether something solid lies between two points is worked out again on the copy
 src/game/samstun.ts:*	decides	squad status words	whether Sam is blind or staggered is worked out again on the copy
 src/game/nvg.ts:*	decides	squad status words	whether goggles are worn is worked out again on the copy
@@ -66,18 +65,17 @@ src/game/input.ts:*	host	the Rust host	the page's Input rows	2
 src/game/camera.ts:*	host	the Rust host	the host's camera: its ease, zoom, kick and draw-in are the page's own between ticks	13
 src/host/loop.ts:*	host	the Rust host	the frame's loop: the Input's rows cleared, the camera stepped	2
 tools/blitz/out-dispatch.ts:*	host	the Rust host	the out events' dispatcher: what the tick told the host is made as today's calls on the page's objects (sound, particles, decals, smoke)	1
-src/game/savestate.ts:*	host	saves	the save controller's rhythm and shelf (saves and replays are not this list's)	15
-src/game/sensors.ts:*	host	saves	the recorder's sensor stream	2
+src/game/savestate.ts:*	host	saves	the save controller's rhythm and shelf (saves and replays are not this list's)	14
 src/game/rollback.ts:*	host	saves	snapshots for the networked page and the recorder	5
 src/game/replaybuf.ts:*	host	saves	the replay buffer's own cursor	9
-src/game/runtape.ts:*	host	saves	the run tape's own cursor	8
+src/game/runtape.ts:*	host	saves	the run tape's own cursor	7
 src/game/rustknobs.ts:*	host	the bridge	the knob tables written across to the Rust game	2
 src/math/*	host	the bridge	the die's and the side tables' own book-keeping under the bridge	13
 src/sim/sim.ts:*	host	the bridge	the module's binding	6
 src/sim/state.ts:*	host	the bridge	the block's views	11
 src/sim/weatherhome.ts:*	host	the bridge	the weather's words in the block	2
-src/scene/boxMirror.ts:*	host	the bridge	the box world's mirror in the block	20
-src/scene/collision.ts:*	host	the bridge	the queries' own stamps and counters (a query asked from the page is answered by the block)	21
+src/scene/boxMirror.ts:*	host	the bridge	the box world's mirror in the block	19
+src/scene/collision.ts:*	host	the bridge	the queries' own stamps and counters (a query asked from the page is answered by the block)	18
 src/scene/cut.ts:*	host	the bridge	a cut's clip scratch	3
 src/game/seats.ts:*	host	the bridge	the seats' book: which man sits in which seat, looked up in the copy's own lists	12
 # ---- the picture's own
@@ -91,7 +89,7 @@ src/game/stature.ts:*	picture	the men drawn	a man's eased scale	4
 src/game/civilians.ts:*	picture	the men drawn	which civilians are drawn and where they lie	3
 src/game/packside.ts:*	picture	the men drawn	a pack's extents	1
 src/game/game.ts:Game.followPos	picture	the men drawn	where the camera looks	1
-src/game/game.ts:Player.*	picture	the men drawn	what is in the player's hands, for his pose and the HUD's icon	5
+src/game/game.ts:Player.*	picture	the men drawn	what is in the player's hands, for his pose and the HUD's icon	4
 src/game/game.ts:Game.stepSnowTracks	picture	weather and ground	the snow's tracks for the picture	1
 src/game/game.ts:Game.syncSnowLook	picture	weather and ground	the snow's look for the picture	1
 src/game/snow*.ts:*	picture	weather and ground	snow: flakes, tracks, marks, breath (the tick decides nothing by them)	46
@@ -113,14 +111,13 @@ src/game/doors.ts:Door.pos*	picture	the picture's feel	a door's leaf placed for 
 src/game/doors.ts:Door.dir	picture	the picture's feel	a door's leaf placed for the picture	1
 src/game/doors.ts:Door.swing	picture	the picture's feel	a door's leaf placed for the picture	1
 src/game/doors.ts:Door.off	picture	the picture's feel	a door's leaf placed for the picture	1
-src/game/doors.ts:DriveCols.*	picture	the picture's feel	a door's drive columns read for its leaf	1
 src/game/doors.ts:Door.*	decides	HUD door and charge notes	whether a door is closed, latched, locked, broken or noticed is worked out again on the copy from its angle and rows (a threshold written in two languages)
 src/game/wallwear.ts:*	picture	the picture's feel	a wall's wear from rounds, as decals (the tick tells the host of each round)	3
 src/game/lookDecals.ts:*	picture	the picture's feel	a mark's look	1
 src/game/moths.ts:*	picture	the picture's feel	the moths cleared for the picture	1
 src/ui/quality.ts:*	picture	the picture's feel	the quality ladder's own choice, kept in the browser's store	3
 src/game/marks.ts:*	picture	the picture's feel	marks on surfaces	4
-src/game/particleFx.ts:*	picture	the picture's feel	the particle pool	2
+src/game/particleFx.ts:*	picture	the picture's feel	the particle pool	1
 src/game/attract.ts:*	picture	the picture's feel	the attract mode's camera	4
 src/scene/*	picture	the box world	the box world packed for the renderer	38
 src/sim/lightshome.ts:*	picture	the box world	the lights' rows read for the renderer	2
@@ -128,17 +125,12 @@ src/engine.ts:*	picture	the box world	the renderer's own frame	2
 src/host/tween.ts:*	picture	the box world	boxes posed between two ticks for the draw, and put back	2
 src/host/ahead.ts:*	picture	the box world	boxes posed ahead for the draw, and put back	4
 # ---- the hand's own
-src/game/difficulty.ts:*	hand	menus	the cards' links and the pause card's levers read the difficulty's tables	7
 src/game/stress.ts:*	hand	the developer's hand	the developer's stress test: how many men it wants	1
 src/main.ts:main › top	hand	the developer's hand	an address word's loop: the cans topped up, the fog held off	1
 src/main.ts:readout › {set}	hand	the developer's hand	a readout's row kept	1
-src/ui/perf*.ts:*	hand	the developer's hand	the performance recorder and sweep	3
-src/ui/coop.ts:*	hand	menus	this tab's id	1
+src/ui/perf*.ts:*	hand	the developer's hand	the performance recorder and sweep	2
 src/ui/missions.ts:*	hand	menus	a plan fetched for the list	1
-src/host/names.ts:*	hand	menus	the player's name kept	1
 src/cloud/*	hand	the cloud	the backend's client	2
-src/net/*	hand	the cloud	the networked page's own	1
-src/main.ts:main › {save}*	hand	the cloud	a save's file sent	1
 src/main.ts:main › refreshFrozenStill*	host	the Rust host	the page holds its own keys up while it draws a frozen picture again (an update of no time): its input, put back after, and no state of the game	1
 src/draw/*	host	the page that draws	the new page's own plumbing: it hands the module's bytes on and asks it, and holds no game	6
 src/host/drawgame.ts:*	host	the page that draws	the new page's own plumbing: it steps the module and reads what it is told, and holds no game	1

@@ -22,7 +22,7 @@ export async function tabBackCheck(): Promise<boolean> {
   const verdict = (ok: boolean, what: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };
   const TAB = BRK ? 'KeyZ' : 'Tab';   // (the red path: a key that backs out of nothing)
   console.log(`\n=== tabback: Esc is only the pause, Tab backs out${BRK ? ' (TABBACK_BREAK: another key where Tab is pressed — must fail)' : ''} ===`);
-  const { backName } = await import(`${ROOT}/src/game/backkey.ts`); const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
+  const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
   const log = console.log, err = console.error, warn = console.warn;
   const quiet = async <T>(f: () => T | Promise<T>): Promise<T> => { console.log = console.error = console.warn = () => { }; try { return await f(); } finally { console.log = log; console.error = err; console.warn = warn; } };
@@ -66,11 +66,11 @@ export async function tabBackCheck(): Promise<boolean> {
         const ctx = under(W, stL); stepFrame(ctx, DT); stL.frozen = true; stepFrame(ctx, DT); W.input.keys.delete(IK); stepFrame(ctx, DT); stepFrame(ctx, DT); const under0 = !!pl.sel.open; stL.frozen = false; stepFrame(ctx, DT); const shut = !pl.sel.open;
         for (let i = 0; i < 30; i++) stepFrame(ctx, DT); return { open, under0, shut, did: Math.abs(d.angle - a0) > 0.02 || !!pl.easing || !!pl.picking }; });
       const T = await quiet(async () => { const { W, d, pl } = await door(); W.input.keys.add(IK); W.input.pressed.add(IK); for (let i = 0; i < 30 && !pl.sel.open; i++) W.step(DT); const open = !!pl.sel.open, a0 = d.angle;
-        W.input.keys.delete(IK); W.input.pressed.add('Paused'); W.step(DT); const shut = !pl.sel.open; for (let i = 0; i < 30; i++) W.step(DT); return { open, shut, did: Math.abs(d.angle - a0) > 0.02 || !!pl.easing || !!pl.picking }; });
+        W.input.keys.delete(IK); W.input.pressed.add('Paused'); W.step(DT); const shut = !pl.sel.open; for (let i = 0; i < 30; i++) W.step(DT); return { back: W.game.view.look.back as string, open, shut, did: Math.abs(d.angle - a0) > 0.02 || !!pl.easing || !!pl.picking }; });
       const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8'), never = !/game\.escape\(\)/.test(main), takes = /input\.pressed\.delete\('Escape'\); menu\.toggle\(\);/.test(main), trial = /input\.hit\('Tab'\) && !\(!frozen && game\.backable\(\)\)/.test(main);
-      verdict(up0 && up1 && stA.seen === 1 && L.open && L.under0 && L.shut && !L.did && stL.seen === 1 && stL.esc === 0 && T.open && T.shut && !T.did && never && takes && trial && backName() === 'Tab',
+      verdict(up0 && up1 && stA.seen === 1 && L.open && L.under0 && L.shut && !L.did && stL.seen === 1 && stL.esc === 0 && T.open && T.shut && !T.did && never && takes && trial && T.back === 'Tab',
         'the pause is the pause and nothing else: the first tick after the card holds \'Paused\' once, a Space list held as the card came up is shut with its row not done (and the same keys given tick by tick, as a replay gives them, end the same), the order menu is still up, and main.ts takes Esc\'s press out of the frame and never backs out on it',
-        `order menu up ${up0} → after the card ${up1}, ticks holding 'Paused' ${stA.seen} · Space list open ${L.open}, still open under the card ${L.under0} → shut on the first tick back ${L.shut}, anything done ${L.did}, ticks holding 'Paused' ${stL.seen} · the same keys tick by tick: shut ${T.shut}, anything done ${T.did} · main.ts: no back-out on Esc ${never}, the press leaves the frame ${takes}, Tab's trial waits its turn ${trial} · the hint rows name ${backName()}`); }
+        `order menu up ${up0} → after the card ${up1}, ticks holding 'Paused' ${stA.seen} · Space list open ${L.open}, still open under the card ${L.under0} → shut on the first tick back ${L.shut}, anything done ${L.did}, ticks holding 'Paused' ${stL.seen} · the same keys tick by tick: shut ${T.shut}, anything done ${T.did} · main.ts: no back-out on Esc ${never}, the press leaves the frame ${takes}, Tab's trial waits its turn ${trial} · the hint rows name ${T.back}`); }
 
   } finally { console.log = log; console.error = err; console.warn = warn; }
   console.log(`=== tabback: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);

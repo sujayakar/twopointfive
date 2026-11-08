@@ -1219,7 +1219,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   game knows exactly (`emptyThing`, in this order, the nearest of each): a thing worked by hand (player.ts `PRESS_THINGS`) in reach whose every
   row the frame kept back (buildInteractables marks its marker `framed`) says 'not in this mission'; a door in his hand's reach with no row while
   his hands are not his (a leaf already in his hand) 'not now'; a door his sprint alone keeps from him 'stop sprinting' (never one locked against
-  him: its own line there is the boot's); a door a step off, within `EMPTY_NEAR_M` (2.2 m, as its reach is measured: `thingDist`) and in sight (a
+  him: its own line there is the boot's); a door a step off, within `EMPTY_NEAR_M` (2.2 m, as its reach is measured: `thing_dist`) and in sight (a
   level line from his eye to `EMPTY_SHY_M` short of the leaf or the doorway: the door markers are the whole level's) 'step closer'. A door's reach
   is read as its distance and his feet (`Doors.USE_REACH`; the marker's `inReach` is also true from a stack's distance when the big slot's tool
   has a row). A door of the last two that the frame offers NO door row for (`SHUT_ROWS` / `OPEN_ROWS`, interact.ts: tut-quiet's open back door
@@ -1395,13 +1395,13 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   `HANDRING`, handring.ts, each with its own page word and all four off under `?handring=0` too; all four off in the module and on the frozen stand and raised there by the hands ring's own
   word, `TPS_HANDRING=1` (no new stand word), each a `FROZEN_HOLDS` row, each off for a recording from before its key). CHECK: `handring`, both
   stands, a line for each of rules 1, 3 + 2 and 4; `HANDRING_BREAK=1` fails all three. The maintainer's words are in handring.ts.
-  1. `lone`, `?lonepill=0` (`game/ringlone.ts` the shape, `ui/cmdring.ts RingDraw` draws it, `index.html .cmdring .lone / .ch`): a ring with ONE row
+  1. `lone`, `?lonepill=0` (`ui/ringlone.ts` the shape, `ui/cmdring.ts RingDraw` draws it, `index.html .cmdring .lone / .ch`): a ring with ONE row
      draws no slice: a small ring round the middle (the wheel's hole) and a pill out the way that row's wedge lay, the digit at the end by the
      middle, the words inside, set to the width counted for them (6.6 px a letter, `textLength`; never measured). BOTH RINGS (the squad's is the
      same drawing). And the pointing, both rings (`cmdring.ts ringWant`'s `lone`): the cursor anywhere on the pill is that row. A wedge is a fifth
      of a turn and a pill over the middle is wider, so its digit lay in the next wedge's fifth and a key let go there gave nothing. No other way
      out lights it: a row is still chosen, never fallen into. THE GAME READS NO WORDS OF A RING: it reads which digits have a wedge (`ringKeys`,
-     orders.ts and interact.ts, a bit each) and, for a pill, a PLACE as long as the longest pill (`pillBox`, `LONE.max` 20 letters) whatever the
+     orders.ts and interact.ts, a bit each) and, for a pill, a PLACE as long as the longest pill (`pill_box` in rust/game_rules/src/ringlone, `lone().max` 20 letters, told in `view.look.ring.lone`) whatever the
      row says, so a recorded cursor lights the same row after a label is reworded. The pill drawn is always inside that place (a longer label takes two lines under `loneWrap`, the bullet
      below; without it, it is drawn tighter); a cursor just past a short pill's end is still on its row. WHERE ONE ROW COMES UP (read
      headless on the page's stand, each tutorial mission at its first and last step): on tut-sky EVERY squad ring ('1 stack up' on a door, '1 go'
@@ -1420,7 +1420,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
      `ui/cmdring.ts pinned`). On his body it GOES WITH HIM as he walks under it (a frame behind his feet); a thing that moves (a man in his arm,
      a body he drags) takes it along; and when its rows change under it (he walked up to a thing, or off it) it stands on what the top row is
      now about. The cursor may be anywhere when it comes up, so (`ringWant`'s `shapes`, `RingState.clear`) the cursor ON a drawn wedge, its
-     fifth of the wheel from the hole out over its words to the ring's own box (`RING_BOX`: pointing at a row's words is pointing at the row)
+     fifth of the wheel from the hole out over its words to the ring's own box (``ring_box``: pointing at a row's words is pointing at the row)
      or the pill's place, lights it with no visit to the middle, but only once it has been off every drawn wedge since the ring last changed
      under it (a place of the wheel with no wedge is not one), and never while the hand is still: a cursor resting where a slice came up
      lights nothing and the key let go there leaves the ring standing, and only a wedge the HAND put the cursor on is pointed at
@@ -1447,15 +1447,15 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
 - **A lone pill's long label takes two lines** (2026-10-23; `HANDRING.loneWrap`, `?lonewrap=0`, off with `?lonepill=0` and `?handring=0`; off in
   the module and on the frozen stand, raised there by `TPS_HANDRING=1` with the rest of the ring (no new stand word); a `FROZEN_HOLDS` row; off for
   a recording from before the key). The maintainer, 10-23, with a shot of a wall's second ring in plan mode, one row, 'breach with a wall charge ·
-  3 left': "weird after hitting 5". A pill is drawn for at most `LONE.max` 20 letters and a longer label was set to that width (`textLength`), so
-  34 letters stood in the room of 20 and ran into each other. THE RULE (`game/ringlone.ts loneLines`, `lonePill`; `ui/cmdring.ts RingDraw.place`
+  3 left': "weird after hitting 5". A pill is drawn for at most `max` 20 letters and a longer label was set to that width (`textLength`), so
+  34 letters stood in the room of 20 and ran into each other. THE RULE (`ui/ringlone.ts loneLines`, `lonePill`; `ui/cmdring.ts RingDraw.place`
   writes the lines as two `tspan`s, once): a label longer than 20 letters takes two lines. It breaks at its ' · ' where both halves then fit in 20
   ('BANG AND CLEAR' / '3 LEFT', 'STAND OFF' / 'IN BEHIND THE CHARGE'; the dot is dropped, the line break says it), else at the space that leaves
   its longer line shortest ('BREACH WITH A WALL' / 'CHARGE · 3 LEFT'), never leaving the '▸' by itself. The pill is two lines tall (34
   px: `LONE.lead` 12 px taller, its lines that far apart) and grows AWAY from the middle, so its edge by the middle's ring is where a one-line pill's is. Each line is
   set to its own counted width: a letter is squeezed only where the best break still leaves a line over 20 (no space at all, over 40 letters, or
   words that will not split evenly: 'support hand grip' / 'point (arrows only) ▸' is 17 and 21). A label of 20 letters or fewer is the pill as it
-  was, to the last figure. WHAT THE GAME READS: the pill's place (`pillBox`) is two lines tall under the rule whatever the row says, so the pill
+  was, to the last figure. WHAT THE GAME READS: the pill's place (``pill_box``) is two lines tall under the rule whatever the row says, so the pill
   drawn is still always inside it and a recorded cursor never turns on a label's wording. So a SHORT pill's place gains a 12 px band too, away
   from the middle, where the cursor is on the row (less than the room the place already keeps past a short pill's end). CHECK: `handring`, its line
   'a lone pill's label longer than the pill…', both stands: 19 labels on five wedges (the lines, the door tools' own long rows by name, every word
@@ -1494,7 +1494,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   made as they were, so a lesson's frame that keeps a row back still keeps it back, and a key's line of `cornerNotes` is kept back where the frame
   keeps the squad's notes back. CHECK: `handring`, its 'corner panel' line, both stands; `HANDRING_BREAK=1` red, and `HANDRING_BREAK=corner` (this rule
   off, the rest on; likewise `lone`, `bare`, `onThing`, `turn`) red on that line alone. The line asks the reduction with rows shaped as the page
-  makes them (parseOpts on player.ts's second lines) and asks the page's own feed (`Overlay.deriveInteractions`, called with no page) at a door:
+  makes them (the view's rows, `row_opts` in interact/hud.rs on a row's second line) and asks the page's own feed (`Overlay.deriveInteractions` of the view, called with no page) at a door:
   the three things with the rule on, the list as it was with it off; and a charge set on that door by hand, him at it and away: what the
   block's line says of a key or of who it would catch is in `cornerNotes` and in the panel. The panel AS DRAWN is the page's: driven on the real page on the software
   adapter with the rule on and under `?corner=0` (the classes, the rows' text, the size, the top line, no console error). Two page checks read

@@ -197,7 +197,7 @@ export async function debriefRun() {
     const on = new Set(D.badges.filter((b: any) => b.on).map((b: any) => b.id));
     for (const [id, want] of [['unseen', true], ['quiet', true], ['nokills', true], ['pacifist', true], ['locksmith', true], ['speedrun', true], ['lightsout', false], ['talkative', false]] as const) if (on.has(id) !== want) fails.push(`badge '${id}' ${on.has(id) ? 'lit' : 'dim'} (want ${want ? 'lit' : 'dim'})`);
     if (!/^twopointsix — GHOST 99 · 00:\d\d · seen 0 · alarms 0 · bodies found 0 · KOs 0 · kills 0 · shots 1 · OCP 1 · doors kicked 0 \/ picked 1 · .*locksmith/.test(D.summary) || /run so far|went down/.test(D.summary)) fails.push(`summary line: "${D.summary}"`);
-    if (!/GHOST 99/.test(game.objectiveText())) fails.push(`objective line once done: "${game.objectiveText()}"`);
+    if (!/GHOST 99/.test((game.view.mission?.text ?? ''))) fails.push(`objective line once done: "${(game.view.mission?.text ?? '')}"`);
     // nothing more is written once done: a shot now changes neither the rows nor the shots
     { const n0 = ev.length, s0 = game.mission.stats.shots; game.player.holstered = false; steps(W, 0.2); fireWeapon(game, game.player.char, [30, 0.5, 20.6], true); steps(W, 0.6); if (game.chronicle.events.length !== n0 || game.mission.stats.shots !== s0) fails.push(`after 'done' a shot still wrote (rows ${n0} → ${game.chronicle.events.length}, shots ${s0} → ${game.mission.stats.shots})`); }
     notes.push(`timeline (${ev.length}): ${rowsOf(game).map(rowLine).join(' | ')}`);

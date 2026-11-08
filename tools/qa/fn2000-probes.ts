@@ -115,7 +115,7 @@ export function hudText(game: any): string {
   const mkEl = (tag: string): El => { const el: any = { tag, className: '', kids: [] as El[], text: '', style: {}, title: '', appendChild(c: El) { el.kids.push(c); return c; } }; Object.defineProperty(el, 'textContent', { get() { return el.text + el.kids.map((k: El) => k.textContent).join(''); }, set(v: string) { el.text = v ?? ''; el.kids = []; } }); return el as El; };
   const ser = (el: El): string => `${el.tag}${el.className.trim() ? '.' + el.className.trim().split(/\s+/).join('.') : ''}${el.text ? `{${el.text}}` : ''}${el.kids.length ? `(${el.kids.map(ser).join(' ')})` : ''}`;
   const G = globalThis as any; const had = 'document' in G; const prev = G.document; G.document = { createElement: (t: string) => mkEl(t) };
-  try { const ctx = { equip: mkEl('div'), equipKey: '' }; (Overlay.prototype as any).updateEquip.call(ctx, game); return ctx.equip.kids.map(ser).join(' | '); }
+  try { const ctx = { equip: mkEl('div'), equipKey: '' }; (Overlay.prototype as any).updateEquip.call(ctx, game.view.kit); return ctx.equip.kids.map(ser).join(' | '); }
   finally { if (had) G.document = prev; else delete G.document; }
 }
 /** collect gunfire / prop hearing events raised since the last call (by identity — game.events is re-filtered every frame) */

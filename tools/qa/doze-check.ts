@@ -37,7 +37,7 @@ export async function dozeCheck(): Promise<boolean> {
   const { raiseEscalation, lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);
   const { ROW_BIT } = await import(`${ROOT}/src/sim/lightshome.ts`);
   const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
-  const { attentionOf, attentionSideK, attentionMarks } = await import(`${ROOT}/src/game/attention.ts`);
+  const { attentionOf, attentionSideK } = await import(`${ROOT}/src/game/attention.ts`);
   const DT = 1 / 60, rnd0 = Math.random, was = { ears: DOZE.ears }, BREAK = process.env.DOZE_BREAK === '1'; let all = true;
   const line = (ok: boolean, s: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}${detail ? `\n    ${detail}` : ''}`); };
   console.log('\n=== doze: a calm man with a long wait in the dark sits in the chair there and sleeps; what wakes him ===');
@@ -159,7 +159,7 @@ export async function dozeCheck(): Promise<boolean> {
       // (n2) the attention rule (attention.ts): his attention is the screen's — a lent hold at the screen that the floor shows, and the headphones counted ONCE
       //      (the lend passes 1 and 1). Until 2026-11-07 the line also held his sight rate and his hearing to the same with that rule off and with `lend` off.
       { const x = back5(); for (const o of staff(g5)) if (o !== x) o.dazzledUntil = g5.time + 10; for (let i = 0; i < 6; i++) W5.step(DT);
-        const H = attentionOf(g5, x), front = attentionSideK(g5, x, mon.pos), marked = attentionMarks(g5).some((k: any) => k.gd === x && k.mode === 'lent') || !!H && g5.fogOfWar.hidden(x);
+        const H = attentionOf(g5, x), front = attentionSideK(g5, x, mon.pos), marked = g5.view.attention.some((k: any) => k.man === x.char.id && k.mode === 'lent') || !!H && g5.fogOfWar.hidden(x);
         const onA = { mode: H?.mode ?? 'none', ears: H?.ears ?? -1, noises: H?.noises ?? -1, off: H ? flat(H.at, mon.pos) : -1, front, marked };
         line(onA.mode === 'lent' && onA.off < 0.05 && onA.ears === 1 && onA.noises === 1 && onA.front === 1 && onA.marked,
           'his attention is the screen\'s: a lent hold at the screen that the floor shows, his eye whole at the screen, and the headphones counted once',

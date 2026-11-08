@@ -117,7 +117,7 @@ export const quietStart = guarded(async () => {
     `set ${d.patrol} [${set.join(', ')}] · on the floor [${on.join(', ')}] of routes [${L.routes.map((x: any) => x.name).join(', ')}]`);
   F.verdict(((g.devices?.cameras?.length ?? 0) + (g.devices?.lasers?.length ?? 0) + (g.devices?.keypads?.length ?? 0)) === (L.devices?.length ?? 0) && (g.civilians?.length ?? 0) === (L.civilians?.length ?? 0) && (L.civilians?.length ?? 0) > 0, 'the level\'s devices and civilians are live',
     `${g.devices?.list?.length ?? g.devices?.devices?.length ?? 0} device(s) of ${L.devices?.length ?? 0} · ${g.civilians?.length ?? 0} civilian(s) of ${L.civilians?.length ?? 0}`);
-  { W.step(DT); const M = L.mission, words = QM.quietWords(g), line = g.objectiveText();   // (the game's view is blank until its first tick)
+  { W.step(DT); const M = L.mission, words = QM.quietWords(g), line = (g.view.mission?.text ?? '');   // (the game's view is blank until its first tick)
     F.verdict(M.entryDoor === P.door && M.rack.index === P.rackIndex && flat(M.rack.front, P.front) < 1e-6 && M.serverRoom.x0 === P.area.x0 && words?.place === P.place && words?.holder === P.holder && words?.thing === Q.thing && line.includes(P.place) && !/server room|drive|fire exit/i.test(line),
       'the mission in force is the dealt spot\'s, said in the level\'s own words (nothing of the office\'s)', `objective: '${line}' · place '${words?.place}' · holder '${words?.holder}' · thing '${words?.thing}' · out by ${words?.outs}`); }
   { const k0 = dealKey(g), same: string[] = []; for (let i = 0; i < 3; i++) { await hushed(() => g.restartEncounter()); same.push(dealKey(g)); }
