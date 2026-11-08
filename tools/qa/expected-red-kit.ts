@@ -10,17 +10,6 @@ const CHECK = "the switch cleanup's (tools)";
 /** the tools' call surface (tools/blitz): what a tool is answered across it is not what the page's own TypeScript answers; nothing of the game's */
 const SURFACE = "the Rust game's owners (the tools' call surface)";
 export const RED_KIT: Record<string, RedRow> = {
-  'kittree-sponge': { is: 'maybe', rust: true, line: "read 2026-11-07 · throws: undefined is not an object (evaluating 'h.f32')", whose: RUST },
-  'cleanrestart': { is: 'real', rust: true, line: "read 2026-11-07 · saveState throws at civilians.ts:250, [...C.badTargets] null, saving with a civilian on the floor", whose: RUST },
-  'frag-down': { is: 'real', rust: true, line: "read 2026-11-07 · (f2) (f3) a knockout turned kill by a grenade: the card keeps the knockout, no row names a teammate's grenade", whose: RUST },
-  'cover-order': { is: 'real', rust: true, line: "read 2026-11-07 · dealt an opening 0.8 s after a sighting, contactSecs 4; orders cleared, the aim stays on all four", whose: RUST },
-  'slotsetup': { is: 'maybe', rust: true, line: "read 2026-11-07 · the load row has no he40 and no camera to step to: the same card as kitstealth", whose: RUST },
-  'wallsnap-kit': { is: 'maybe', rust: true, line: "read 2026-11-07 · the setup's attachment does not change on the stack: the same card as kitstealth", whose: RUST },
   'cover-settle': { is: 'maybe', rust: true, line: "read 2026-11-07 · 1 stack, behind the stack 0.0 s, on the door 14.0 s, no rear man found; ref 3 stacks, behind 40.8 s", whose: RUST },
   'cover-step': { is: 'maybe', rust: true, line: "read 2026-11-07 · 0 of 3 stagings dealt a man the doorway; not sure the check reaches the game (a leaf set by hand)", whose: RUST },
-  'gunwall': { is: 'maybe', rust: true, line: "read 2026-11-07 · at 0.70 m hot: up false, 0.19 m short; ref up true, 0.05 m; not sure the check reaches the game", whose: RUST },
-  'carbine-rig': { is: 'maybe', rust: true, line: "read 2026-11-07 · (4) lowLong and portLong: the animator shows patrolLong; not sure the check reaches the game", whose: RUST },
-  'heldclicks': { is: 'maybe', rust: true, line: "read 2026-11-07 · d the gun hold, RMB: 0 rounds, 0 OCP; not sure the check reaches the game", whose: RUST },
-  'frag-fleedoor': { is: 'maybe', rust: true, line: "read 2026-11-07 · (b) control, door shut: the four hurt and the leaf swung before the burst; not sure the check reaches the game", whose: RUST },
-  'shapes': { is: 'maybe', rust: true, line: "read 2026-11-07 · 10 the arc's top reads as its flat box, 11 no holes from 4 charges; the whole list panics at glassbreak/p_02.rs:341", whose: RUST },
 };
