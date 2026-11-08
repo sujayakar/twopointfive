@@ -3039,7 +3039,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("roomfight.move_engage_m", offset_of!(Knobs, roomfight.move_engage_m), false),
     ("roomfight.lamp", offset_of!(Knobs, roomfight.lamp), false),
     ("roomfight.preaim_deg", offset_of!(Knobs, roomfight.preaim_deg), false),
-    ("roomfight.sights_deg", offset_of!(Knobs, roomfight.sights_deg), false),
     ("orders.refresh_secs", offset_of!(Knobs, orders.refresh_secs), false),
     ("orders.door_pick_m", offset_of!(Knobs, orders.door_pick_m), false),
     ("orders.self_m", offset_of!(Knobs, orders.self_m), false),
@@ -6395,7 +6394,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.roomfight.move_engage_m;
     let _: &f64 = &k.roomfight.lamp;
     let _: &f64 = &k.roomfight.preaim_deg;
-    let _: &f64 = &k.roomfight.sights_deg;
     let _: &f64 = &k.orders.refresh_secs;
     let _: &f64 = &k.orders.door_pick_m;
     let _: &f64 = &k.orders.self_m;
