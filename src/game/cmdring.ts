@@ -52,7 +52,7 @@ export const CMDRING = {
   on: false,
   /** the key: the squad's command key — the quick order's own code (orders.ts ORDERS.quickKey), which the page's board has on Q (host/keymap.ts; the
    *  maintainer, 10-21: "let's move the squad command button to Q then too", "from tab"). It was Tab until then: a recording carries its own table, so
-   *  one made on Tab replays on Tab. Tab itself is the page's again — the way back (backkey.ts) and what ui/tabkey.ts has it do */
+   *  one made on Tab replays on Tab. Tab itself is the page's again — the way back (backkey.ts) and the objectives card (ui/tabcard.ts) */
   key: 'KeyB',
   /** wedges on the ring, clockwise from the top: the digits 1 … this (never above ORDER_DIGITS) */
   wedges: 5,
