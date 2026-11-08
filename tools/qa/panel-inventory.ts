@@ -119,7 +119,9 @@ function materialise(ref: string): { bindings: string; dir: string } {
   const dir = join(SCRATCH, ref.replace(/[^\w.-]/g, '_')); mkdirSync(dir, { recursive: true });
   const rewrite = (src: string) => src.replace(/from\s+'\.\/panel'/g, `from './panel.ts'`).replace(/from\s+'\.\.\/([^']+)'/g, (_m, p) => `from '${ROOT}/src/${p}.ts'`).replace(/from\s+'\.\/(?!panel\.ts)([^']+)'/g, (_m, p) => `from '${ROOT}/src/ui/${p}.ts'`);
   writeFileSync(join(dir, 'panel.ts'), rewrite(show('src/ui/panel.ts')));   // (its own imports re-pointed too: it has had some since the text size, and --ref died on them)
-  writeFileSync(join(dir, 'bindings.ts'), rewrite(show('src/ui/bindings.ts')));
+  const graphics = Bun.spawnSync(['git', '-C', ROOT, 'cat-file', '-e', `${ref}:src/ui/graphicspanel.ts`]).success;   // (the renderer's pages, where the ref has them in a file of their own)
+  if (graphics) writeFileSync(join(dir, 'graphicspanel.ts'), rewrite(show('src/ui/graphicspanel.ts')));
+  writeFileSync(join(dir, 'bindings.ts'), graphics ? rewrite(show('src/ui/bindings.ts')).replace(/from '[^']*\/graphicspanel\.ts'/, `from './graphicspanel.ts'`) : rewrite(show('src/ui/bindings.ts')));
   return { bindings: join(dir, 'bindings.ts'), dir };
 }
 

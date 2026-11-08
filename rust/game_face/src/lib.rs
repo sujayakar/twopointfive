@@ -150,6 +150,17 @@ pub extern "C" fn face_verdict(h: u32) -> i32 {
         Some((won, s)) => { out(s.into_bytes()); if won { 2 } else { 1 } }
     }
 }
+/// what a measuring take notes of the game, as JSON: each man by what he is at and whether he carries a light, the reaction force, the alarm, the run's saves
+#[no_mangle]
+pub extern "C" fn face_tally(h: u32) {
+    let s = with_ref(h, |x| {
+        let g = &x.g;
+        let men: Vec<String> = g.guards.iter().map(|&gd| { let m = &g.gd[gd]; format!("[\"{}\",{}]", m.state.as_str(), g.tab.light[m.flashlight].enabled as u32) }).collect();
+        let s = &g.saves.stats;
+        format!("{{\"men\":[{}],\"qrf\":\"{}\",\"escalation\":{},\"autosaves\":{},\"manual\":{},\"loads\":{}}}", men.join(","), g.qrf.state.as_str(), g.escalation, s.autosaves, s.manual, s.loads)
+    });
+    out(s.into_bytes());
+}
 /// WHAT A HUD IS TOLD of the game as its last tick left it (`view::tick_view`), about the seat this machine shows: a `TickView`'s bytes at face_out, read
 /// by the host with the table's own reader. A read: no word of the game's state is written and no seat is changed over; where a writer put the copy of the boxes down it is
 /// stood first, as for every question of it.
