@@ -52,12 +52,14 @@ for (const m of [...ALL_MISSIONS, ...(only.length ? [] : [{ id: 'the plain addre
     // …and a second time, from the start of the run, with the saves still kept
     at = 'a second panic'; let first: string | null = null; try { game.X.face_debug_panic(game.h, 0); } catch { first = game.recover(false); }
     run(3, 'the frames after the second'); const z = where(), kept = game.kept(), start = first === '' && Math.hypot(z[0] - a[0], z[1] - a[1]) < 2 && (/^tut-/.test(file) || kept === 'by hand');
+    // what a card of the run is drawn from: its record, how it ended, the map's floor and marks
+    at = 'the card of it'; const card = game.debrief(), E = game.end(), carded = card.rows !== undefined && E.floor.rows.length === E.floor.w * E.floor.h && /[01]/.test(E.floor.rows) && E.marks.some(m => m.cls === 'spawn') && E.marks.every(m => Number.isFinite(m.x + m.z) && m.title.length > 2);
     const s1 = stood(); game.commands.restart(''); run(120, 'a restart'); const again = stood() !== s1;
     // (a tutorial keeps its own checkpoints and takes none by hand)
     const taught = /^tut-/.test(file), back = loaded && Math.hypot(c[0] - a[0], c[1] - a[1]) < 0.1;
     const told = !hand ? taught : saved.tag === 'CHECKPOINT SAVED' && put.tag === 'CHECKPOINT LOADED' && put.lines[0] === 'checkpoint loaded — by hand' && !game.savesTold().lines.length;   // (…and the player is told of it, once)
     const went = walked || SKY.has(m.id);
-    line(again && went && up && start && told && (taught || back), `${m.id}: started, walked${walked ? '' : ' (nowhere)'}, shot, ${taught ? 'taught' : 'saved and went back'}, stood again after a panic, restarted`, `${boxes} boxes · sections ${(sum / n).toFixed(2)} ms a tick, worst ${worst.toFixed(1)}${start ? '' : ` · from the start: ${first}, at ${z.map(x => x.toFixed(1))}, kept ${kept}`}${up ? '' : ` · after the panic: ${label}, at ${e.map(x => x.toFixed(1))}`}${again ? '' : ' · the restart was not told'}${told ? '' : ` · what was said of the saves: ${JSON.stringify([hand, saved, put])}`}${taught || back ? '' : ` · the load left him at ${c.map(x => x.toFixed(1))}, saved at ${a.map(x => x.toFixed(1))}`}`);
+    line(again && went && up && start && told && carded && (taught || back), `${m.id}: started, walked${walked ? '' : ' (nowhere)'}, shot, ${taught ? 'taught' : 'saved and went back'}, stood again after a panic, restarted`, `${boxes} boxes · sections ${(sum / n).toFixed(2)} ms a tick, worst ${worst.toFixed(1)}${start ? '' : ` · from the start: ${first}, at ${z.map(x => x.toFixed(1))}, kept ${kept}`}${up ? '' : ` · after the panic: ${label}, at ${e.map(x => x.toFixed(1))}`}${again ? '' : ' · the restart was not told'}${carded ? '' : ` · the card: ${JSON.stringify([E.marks, E.floor.w, E.floor.h])}`}${told ? '' : ` · what was said of the saves: ${JSON.stringify([hand, saved, put])}`}${taught || back ? '' : ` · the load left him at ${c.map(x => x.toFixed(1))}, saved at ${a.map(x => x.toFixed(1))}`}`);
   } catch (e) { line(false, `${m.id}: stopped in ${at}`, String((e as Error)?.message ?? e).slice(0, 400)); }
   try { if (game.h) game.X.face_drop(game.h); } catch { /* lost to its panic */ }
 }
