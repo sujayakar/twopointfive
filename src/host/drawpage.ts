@@ -39,7 +39,7 @@ import { DrawHud } from './drawhud';
 import { DrawPlay } from './drawplay';
 import { tapeAddress, tapeAsked } from './tapepage';
 import { buildName } from './buildname';
-import { HandTape } from '../replay/handtape';
+import { HandTape } from '../tape/handtape';
 import { drawCloud } from './drawcloud';
 import { cloudAdopt } from '../cloud/cloud';
 import { tellRedCards } from '../cloud/redcards';

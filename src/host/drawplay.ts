@@ -1,6 +1,6 @@
-// A TAPE WALKED (replay/handtape.ts): the game it is of, started as it was and handed what it was handed. Who steps it asks for the next tick or for another place on it; the picture is whoever draws it.
+// A TAPE WALKED (tape/handtape.ts): the game it is of, started as it was and handed what it was handed. Who steps it asks for the next tick or for another place on it; the picture is whoever draws it.
 import { HAND } from '../draw/hand';
-import { ANOTHER, HandWalk, TapeRefused, type TapeMark, type TapeRow } from '../replay/handtape';
+import { ANOTHER, HandWalk, TapeRefused, type TapeMark, type TapePlace, type TapeRow } from '../tape/handtape';
 import { GameLost, partsOf, type DrawGame, type Start } from './drawgame';
 
 /** moments held for a seek back: one this many ticks apart, so many of them, each a copy of the whole game */
@@ -17,9 +17,9 @@ export class DrawPlay {
   parted: { tick: number; said: TapeMark; mine: TapeMark } | null = null;
   /** the walk was lost to a panic, as the run may have been (`ends`) */
   lost: GameLost | null = null;
-  private rows: HandWalk; private moments = new Map<number, number>();
+  private rows: HandWalk; private moments = new Map<number, { k: number; place: TapePlace }>();
 
-  constructor(private game: DrawGame, private bytes: Uint8Array) {
+  constructor(private game: DrawGame, bytes: Uint8Array) {
     this.walk = new HandWalk(bytes, HAND.count); this.rows = new HandWalk(bytes, HAND.count);
     let total = 0, ends = ''; for (let r = this.rows.next(); r; r = this.rows.next()) { if (r.kind === 'step') total++; else if (r.kind === 'end') ends = r.why; }
     this.total = total; this.ends = ends; this.rows = new HandWalk(bytes, HAND.count);
@@ -57,15 +57,15 @@ export class DrawPlay {
   private hold(): void {
     if (this.moments.has(this.at)) return;
     const k = this.game.moment(); if (!k) return;
-    this.moments.set(this.at, k);
-    while (this.moments.size > MOMENT.most) { const at = [...this.moments.keys()].sort((a, b) => a - b); let worst = 1, least = Infinity; for (let i = 1; i < at.length - 1; i++) { const gap = at[i + 1] - at[i - 1]; if (gap < least) { least = gap; worst = i; } } this.game.momentDrop(this.moments.get(at[worst])!); this.moments.delete(at[worst]); }
+    this.moments.set(this.at, { k, place: this.rows.place() });
+    while (this.moments.size > MOMENT.most) { const at = [...this.moments.keys()].sort((a, b) => a - b); let worst = 1, least = Infinity; for (let i = 1; i < at.length - 1; i++) { const gap = at[i + 1] - at[i - 1]; if (gap < least) { least = gap; worst = i; } } this.game.momentDrop(this.moments.get(at[worst])!.k); this.moments.delete(at[worst]); }
   }
   /** to tick `to`, unseen: back to the moment before it where that is behind, then on. Goes on for at most `ms`; true = it is there (or lost on the way), and the picture is of it */
   seek(to: number, ms = Infinity): boolean {
     const t0 = performance.now(); to = Math.max(0, Math.min(this.total, to));
     if (to < this.at) {
-      const from = Math.max(...[...this.moments.keys()].filter(t => t <= to)); if (!this.game.momentBack(this.moments.get(from)!, from)) throw new Error(`the moment at tick ${from} is gone`);
-      this.lost = null; this.rows = new HandWalk(this.bytes, HAND.count); this.read = null; this.due.length = 0; while (this.rows.ticks < from) this.rows.next();
+      const from = Math.max(...[...this.moments.keys()].filter(t => t <= to)), M = this.moments.get(from)!; if (!this.game.momentBack(M.k, from)) throw new Error(`the moment at tick ${from} is gone`);
+      this.lost = null; this.rows.back(M.place); this.read = null; this.due.length = 0;
       if (this.parted && this.parted.tick > from) this.parted = null;
     }
     while (this.at < to) { if (!this.tick(false)) break; if (performance.now() - t0 > ms) return this.at >= to; }

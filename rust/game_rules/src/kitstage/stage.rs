@@ -60,8 +60,8 @@ pub fn park(g: &mut Game) -> (u32, u32) {
         crate::character::pos_replace(g, c, [-40.0 - k * 3.0, 0.0, -40.0]);
         k += 1.0;
         g.tab.light[light].enabled = false;
-        g.gd[x].hold = true;
-        g.gd[x].pinned = true;
+        crate::control::set_hold(g, x, true, "kitstage");
+        crate::control::set_pinned(g, x, true, "kitstage");
         g.gd[x].heard_up_to = DEAF;
         crate::mind::set(g, x, 0.0, "kitstage");
         crate::mind::fix_keep(g, x, None, "kitstage");
@@ -113,7 +113,6 @@ pub fn sunk(g: &mut Game, idx: &[usize]) {
 }
 /// the game's own word that a static was written: the mirror compares them again, and what is drawn off the list sees it
 fn box_changed(g: &mut Game) {
-    g.engine.world.statics_dirty = true;
     g.engine.world.geom_serial += 1.0;
     crate::scene_collision::wrote(g);
 }
@@ -482,7 +481,7 @@ fn place(g: &mut Game, st: &mut KitStage) {
     }
     // the porch lamp's glowing box on the wall (a restart cuts the world back to its authored boxes: put again)
     {
-        if let Some(f) = st.fixture.take() { if let Some(i) = g.engine.world.statics.iter().position(|&b| b == f) { g.engine.world.statics.remove(i); g.engine.world.statics_dirty = true; } }
+        if let Some(f) = st.fixture.take() { if let Some(i) = g.engine.world.statics.iter().position(|&b| b == f) { crate::scene_boxes::box_world_drop_static(g, i); } }
         if let (Some(fx), true) = (plan.lamps.porch.fixture.as_ref(), porch_i > 0.0) {
             let (c, half) = (porch_color, or(o.porch.fix_half, T.fixture.half));
             let mut p = MakeBoxP::zeroed();

@@ -874,6 +874,8 @@ pub struct Game {
     pub ctl: crate::owned::Owned,
     /// the marks on the world (render_decals set.rs): what the picture draws of what happened; no rule reads them, and they are not on the wire
     pub mark_set: crate::owned::Owned,
+    /// the ray grid (scene_boxes `RayGrid`): made from the statics as a tick opens, so it is not on the wire
+    pub ray_grid: crate::owned::Owned,
     /// the stages to come of a wall charge's feel, the picture's half (blast_feel picture.rs)
     pub feel: crate::owned::Owned,
     /// this tick's count of keyed draws a (site, man) (dice.rs): empty between ticks; not on the wire
@@ -1038,6 +1040,7 @@ impl Game {
             stats: Stats::blank(),
             sim: 0,
             ctl: crate::owned::Owned::new(),
+            ray_grid: crate::owned::Owned::new(),
             mark_set: crate::owned::Owned::new(),
             feel: crate::owned::Owned::new(),
             keyed: crate::dice::Keyed::default(),
@@ -3201,8 +3204,6 @@ pub struct Mods {
     pub gpu_keep: crate::gpu_keep::GpuKeepMod,
     pub gpu_device: crate::gpu_device::GpuDeviceMod,
     pub math_side: crate::math_side::MathSideMod,
-    pub scene_cut: crate::scene_cut::SceneCutMod,
-    pub scene_ground_field: crate::scene_ground_field::SceneGroundFieldMod,
     pub math_exact: crate::math_exact::MathExactMod,
     pub scene_markings: crate::scene_markings::SceneMarkingsMod,
     pub scene_materials: crate::scene_materials::SceneMaterialsMod,
@@ -3370,8 +3371,6 @@ impl Mods {
             gpu_keep: crate::gpu_keep::GpuKeepMod::blank(),
             gpu_device: crate::gpu_device::GpuDeviceMod::blank(),
             math_side: crate::math_side::MathSideMod::blank(),
-            scene_cut: crate::scene_cut::SceneCutMod::blank(),
-            scene_ground_field: crate::scene_ground_field::SceneGroundFieldMod::blank(),
             math_exact: crate::math_exact::MathExactMod::blank(),
             scene_markings: crate::scene_markings::SceneMarkingsMod::blank(),
             scene_materials: crate::scene_materials::SceneMaterialsMod::blank(),

@@ -35,13 +35,10 @@
 //! the step
 //!   face_step(h, dt, flags)                   ONE TICK, and what tools/blitz/BRIDGE.md says a host calls round it, in its order:
 //!                                             `game_step` with the record face_host took (or the game's own `cmd_buf` where none was taken) ·
-//!                                             the autosave's rows face_hostwrite kept · flag 2 `LIGHTS`: the lights' update (a flash's envelope and
-//!                                             its retirement, which the next tick reads) · flag 4 `VIEW`: the host's view of a level on rails · flag 8 `SAVES`: the
+//!                                             the autosave's rows face_hostwrite kept · flag 4 `VIEW`: the host's view of a level on rails · flag 8 `SAVES`: the
 //!                                             save controller's turn (page.rs `saves`).
-//!                                             A host that plays calls this one thing a tick with LIGHTS and VIEW up. A host that compares the block
-//!                                             with the TypeScript's leaves them down, compares, and calls face_lights and face_view: the
-//!                                             TypeScript's hashes are taken before its host's half.
-//!   face_lights(h, dt) · face_view(h) · face_checkpoint(h, label, n)
+//!                                             A host that plays calls this one thing a tick with VIEW up. A flash's envelope is the tick's own last line.
+//!   face_view(h) · face_checkpoint(h, label, n)
 //!                                             the same by name, for a host that calls them itself (face_checkpoint when it has saved)
 //!
 //! reading back
@@ -469,7 +466,6 @@ pub extern "C" fn face_meter(h: u32, v: f64) {
 }
 
 // ---- the step
-pub const LIGHTS: u32 = 2;
 pub const VIEW: u32 = 4;
 pub const SAVES: u32 = 8;
 #[no_mangle]
@@ -481,7 +477,6 @@ pub extern "C" fn face_step(h: u32, dt: f64, flags: u32) {
         }
         let mut said = String::new();
         for (k, l) in core::mem::take(&mut x.after) { if let Some(t) = game_run::write_after(&mut x.g, k, &l) { said.push_str(&t); said.push('\n'); } }
-        if flags & LIGHTS != 0 { game_run::lights(&mut x.g, dt); }
         if flags & VIEW != 0 { game_run::view(&mut x.g); }
         if flags & SAVES != 0 { page::saves(h, x, dt); }
         said
@@ -491,10 +486,6 @@ pub extern "C" fn face_step(h: u32, dt: f64, flags: u32) {
 #[no_mangle]
 pub extern "C" fn face_view(h: u32) {
     with(h, |x| game_run::view(&mut x.g));
-}
-#[no_mangle]
-pub extern "C" fn face_lights(h: u32, dt: f64) {
-    with(h, |x| game_run::lights(&mut x.g, dt));
 }
 /// # Safety
 /// `p`, `n` name bytes the host wrote into memory from face_alloc.

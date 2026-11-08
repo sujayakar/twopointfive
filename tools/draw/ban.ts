@@ -8,8 +8,8 @@ const ROOT = resolve(import.meta.dir, '../..'), ENTRIES = ['src/host/drawpage.ts
 const BANNED = /^(src\/(game|sim|net|replay)\/|src\/anim\/skeleton\.ts$|src\/host\/(rustgame|rustdress|standup|profile|loop|tween|ahead)\.ts$|tools\/)|^tps-bridge\//;
 /** leaves that stand in those folders and hold nothing of the game: each goes to a folder of its own when src/game does */
 const LEAVES = new Set(['src/game/camera.ts', 'src/game/input.ts', 'src/game/crossing.ts', 'src/game/sheetModel.ts', 'src/game/shardModel.ts',
-  // (the replays this browser keeps, as files, and the bytes of a tape: no game)
-  'src/replay/shelf.ts', 'src/replay/format.ts', 'src/replay/handtape.ts']);
+  // (the replays this browser keeps, as files: no game)
+  'src/replay/shelf.ts', 'src/replay/format.ts']);
 
 const scan = new Bun.Transpiler({ loader: 'ts' }), from = new Map<string, string>(), queue = [...ENTRIES], bad: string[] = [];
 const rel = (p: string) => p.startsWith(ROOT) ? p.slice(ROOT.length + 1) : p;

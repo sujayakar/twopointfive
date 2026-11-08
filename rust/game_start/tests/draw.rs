@@ -178,3 +178,23 @@ fn a_source_says_whether_the_game_holds_its_smoke() {
         assert_eq!(d.events.sources.last().expect("the source is told").says & 8 != 0, held, "{what}: what the picture is told");
     }
 }
+
+/// THE RULE: a tracer's head that stops in something solid throws its ember, once, as it arrives: the sparks the table asks for. In a man, or on nothing, it just ends.
+#[test]
+fn a_tracer_that_stops_in_something_solid_throws_its_ember() {
+    use game::tracers::TracerImpact;
+    for (impact, solid) in [(TracerImpact::Solid, true), (TracerImpact::Flesh, false), (TracerImpact::None, false)] {
+        let mut p = office(6);
+        p.run(0.2);
+        let want_sparks = p.g.tracers.params.ember_sparks;
+        assert!(want_sparks > 0.0, "the table asks for no ember");
+        game::tracers::tracers_spawn(&mut p.g, [8.0, 1.4, 8.0], [1.0, 0.0, 0.0], 6.0, impact, [1.0, 0.6, 0.3], 0.0);
+        let mut out = Vec::new();
+        for _ in 0..4 { game::tracers::tracers_update(&mut p.g, 0.1, &mut out, None); }
+        let mut d = Drawn::default();
+        d.take(&p.g, want::events);
+        let spark = game::render_particles::PKind::Spark as u32;
+        let (sparks, thrown) = d.events.emits.iter().filter(|e| e.kind == spark).fold((0.0, 0), |(n, k), e| (n + e.count as f64, k + 1));
+        assert_eq!((sparks, thrown), if solid { (want_sparks, 1) } else { (0.0, 0) }, "{impact:?}");
+    }
+}

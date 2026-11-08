@@ -11,7 +11,7 @@
 //! the block are written (n<k>.bin, ns<k>.bin), `--after` more ticks run, and the exit code is 1. A panic prints `PANIC in tick <k>`, its message and
 //! place and the game's frames of the backtrace; the exit code is then 2. A kept tick (--keep / --every) writes n<k>.bin and ns<k>.bin for tools/blitz/diff.ts.
 //!
-//! BLITZ_SKIP=<names> leaves one of the host's calls round a step out (lights, view, follow), to see by a run what it is for.
+//! BLITZ_SKIP=<names> leaves one of the host's calls round a step out (view, follow), to see by a run what it is for.
 use game::ids::Id;
 use std::io::Write;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -208,8 +208,6 @@ fn main() {
                 let b = unsafe { std::slice::from_raw_parts(sim::state::addr(0) as *const u8, len) };
                 std::fs::write(format!("{}/ns{}.bin", dir, k), b).unwrap();
             }
-            // HOST STEP AFTER THE TICK (the headless host's `engine.lights.update(dt, game.time)`): every flash's envelope and retirement, which the next tick's light reads
-            if !skip("lights") { game_run::lights(&mut g, dt); }
             if !skip("view") { game_run::view(&mut g); }
             if !skip("follow") { game_run::follow(&mut g); }
             if parted > 0 && k >= parted + after {

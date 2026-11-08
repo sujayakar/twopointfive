@@ -24,7 +24,7 @@ Those times are for whole states with several processes running. `only` with the
 
 **One finding:** `src/game` only loads from game.ts. Entering the cycle elsewhere throws at player.ts:259 (`AIM_HOOKS`), against the rule in CLAUDE.md. `classes.ts` imports game.ts first for that reason.
 
-**Fields that don't come back on purpose** (`INVERSE` in import.ts, `skipField`): `door_owns`, `who`, `pane_rule`, `pane_rows`, `glass_walkable`, `fire_pass`, `blast_listeners`, `listeners`, `RateCap.n`, `ClipSide.at`, `SkeletonInstance.rig`, `level_names`: either worked out from rows or set up once. Knob tables are read past.
+**Fields that don't come back on purpose** (`INVERSE` in import.ts, `skipField`): `door_owns`, `who`, `pane_rule`, `pane_rows`, `glass_walkable`, `fire_pass`, `blast_listeners`, `listeners`, `RateCap.n`, `SkeletonInstance.rig`, `level_names`: either worked out from rows or set up once. Knob tables are read past.
 
 **Not exercised:**
 - A new man. No mission here made a Character after M, so his hook (rig, parts, block row) doesn't exist; `Item` is the only block row with one. `hooks.made` is where it goes.
@@ -37,7 +37,7 @@ Those times are for whole states with several processes running. `only` with the
 
 A field Rust owns and TypeScript can't hold (`schema` marks it `echo`; hand2.cjs `H.bridge.echo` is the list) isn't written onto the puppet. A whole apply keeps a copy of its bytes beside the object (so a blob that is a view of the module's memory is safe) and the puppet's export writes them back, so a re-export after an apply is Rust's bytes everywhere and such a field needs no class in a host's compare.
 
-Today: `Game.door_owns`, `AnimGltfMod.nvg_bits` and `suit_bits`, `WallBreak.listeners`, `ClipSide.at`, `StaticCollision.mirror`, `Mods.scene_box_mirror`, `WallreactMod.wall_react`, `LiveBeat.it`, `LiveBeat.waiting`, and every `blank` field (`H.bridge.blank`: fields only Rust has, carried as a counted blob; the TypeScript's walk writes none, and an import keeps what stands).
+Today: `Game.door_owns`, `AnimGltfMod.nvg_bits` and `suit_bits`, `WallBreak.listeners`, `StaticCollision.mirror`, `Mods.scene_box_mirror`, `WallreactMod.wall_react`, `LiveBeat.it`, `LiveBeat.waiting`, and every `blank` field (`H.bridge.blank`: fields only Rust has, carried as a counted blob; the TypeScript's walk writes none, and an import keeps what stands).
 
 A filtered apply doesn't keep echoes, so a filtered host hands nothing back whole. If TypeScript does write such a field on the puppet, the write is lost silently: that is what makes it Rust's.
 

@@ -1,4 +1,4 @@
-// A RUN'S TAPE PLAYS THE RUN (replay/handtape.ts, host/drawplay.ts), with no page: a run of the module's game is played with a walking, shooting, saving hand and commands between its ticks, taped as it
+// A RUN'S TAPE PLAYS THE RUN (tape/handtape.ts, host/drawplay.ts), with no page: a run of the module's game is played with a walking, shooting, saving hand and commands between its ticks, taped as it
 // goes, and the tape is walked on another game of the same module. Every mark is the run's, forward, and again after each seek back.
 //   bun run tools/draw/walk-check.ts [level.json …]        exit 0 · 1
 //   WALK_BREAK=1 …      one key of the walk is not handed over: the marks must part
@@ -9,7 +9,7 @@ import { characterFiles } from '../blitz/start-pack.ts';
 import { DrawGame } from '../../src/host/drawgame';
 import { DrawPlay } from '../../src/host/drawplay';
 import { HAND, sampleHand } from '../../src/draw/hand';
-import { HandTape, HandWalk, TapeRefused } from '../../src/replay/handtape';
+import { HandTape, HandWalk, TapeRefused } from '../../src/tape/handtape';
 import { FollowCamera } from '../../src/game/camera';
 import { Section, View } from '../../src/draw/sections';
 

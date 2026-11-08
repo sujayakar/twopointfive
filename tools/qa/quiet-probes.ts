@@ -204,11 +204,9 @@ export const quietPair = guarded(async () => {
   { // a guard with the partner standing lit a few metres in front of him notices the PARTNER (Sam is out of every eye: invisible, as the probes' own flag)
     const gd = g.guards.find((x: any) => !x.unit && x.state === 'patrol')!, yaw = gd.char.bodyYaw;
     const front = freeNear(g, [gd.char.pos[0] + Math.sin(yaw) * 3.0, 0, gd.char.pos[2] + Math.cos(yaw) * 3.0], 1.0);
-    const light = g.lightAt; g.lightAt = () => 1.2;   // (a lit floor: the harness has no GPU meter — the CPU stand-in every teammate's meter falls back on)
     g.orders.give('hold', g.orders.targetAt(m.char.pos), 'all');
     if (front) { m.char.pos = [front[0], 0, front[2]]; m.char.update(0); }
     const a0 = gd.awareness, saw = !!front && steps(W, 5, () => gd.state !== 'patrol' || gd.awareness > 0.5);
-    g.lightAt = light;
     F.verdict(saw, 'a guard with the partner standing lit three metres in front of him NOTICES him — the partner can get the pair seen, so sneaking as two is a thing to do', `${gd.callsign}: awareness ${a0.toFixed(2)} → ${gd.awareness.toFixed(2)}, state ${gd.state}${front ? '' : ' (no free floor in front of him)'}`); }
   { // the cast despawned under it by something short of a restart (a bare resetGuards): staged again on the next tick, partner and all
     await hushed(() => { g.resetGuards(); steps(W, 0.3); }); const m2 = g.quiet.ops[0];
@@ -280,7 +278,7 @@ export const quietFixes = guarded(async () => {
     gd.state = 'alert'; gd.awareness = 1; gd.foe = m; gd.lastKnown = [m.char.pos[0], 0, m.char.pos[2]]; gd.lastSeenT = g.time;
     await hushed(() => killGuard(g, m, [0, 0, 1], false, 'shot', 'ai')); m.killerId = gd.char.id;
     const said: string[] = []; const states: string[] = [];
-    let fired = 0, seenSam = false; g.playerInvisible = false; g.lightAt = () => 0; g.player.visibility = 0;   // (Sam there to be shot at for the first two thirds of a second, in the dark where he started)
+    let fired = 0, seenSam = false; g.playerInvisible = false;   // (Sam there to be shot at for the first two thirds of a second, in the dark where he started)
     for (let i = 0; i < 360; i++) { W.step(DT); if (i < 40) { fired += g.events.filter((e: any) => e.kind === 'shot' && e.who === gd.char.id && e.time >= g.time - DT / 2).length; seenSam ||= gd.sawPlayerThisFrame; } if (i === 40) g.playerInvisible = true; if (gd.bubble && !said.includes(gd.bubble.text)) said.push(gd.bubble.text); if (states[states.length - 1] !== gd.state) states.push(gd.state); }
     F.verdict(seenSam || fired === 0, 'in the half second after the partner falls he puts no round at a Sam he has not seen (the sighting was of the man who fell)', `rounds from ${gd.callsign} in the first 0.67 s: ${fired} · saw Sam in that time: ${seenSam}`);
     F.verdict(m.state === 'dead' && gd.foe === 'player' && !states.includes('suspicious') && !states.includes('patrol') && !said.some(t => /all of them/.test(t)), 'a guard on the partner who sees him drop is on Sam again and goes on hunting: no \'that\'s all of them\', no walk back to his mark',

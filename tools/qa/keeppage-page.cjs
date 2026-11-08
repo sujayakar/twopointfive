@@ -1,5 +1,5 @@
 // THE KEPT PAGE ON THE REAL PAGE (src/gpu/keep.ts, src/host/keeppage.ts): headless Chromium on the software WebGPU adapter (tools/qa/page-look.cjs's recipe).
-//   PORT=5199 node tools/qa/keeppage-page.cjs      (a dev server on that port: PORT=5199 bun run tools/serve.ts; JOBS=a,b = only those jobs)
+//   PORT=5199 node tools/qa/keeppage-page.cjs      (a dev server on that port: PORT=5199 bun run tools/serve.ts; JOBS=a,b = only those jobs; with no word kept and fresh, JOBS=all every job, half an hour)
 //   kept     a mission's address opened with ?keeppage=1: the tab's page is a SHELL (the keeper on it, the game's hooks not; its own __ready resolved) and the game
 //            boots in its frame on lease 1, compiling its pipelines. A second mission picked in the frame (__scenarios.pick, the mission list's own page load):
 //            the tab's document is the one that was opened (a mark left on it is still there, one device opened), the frame is on lease 2, and of the pipelines
@@ -46,7 +46,7 @@ const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const path = require('node:path'), cp = require('node:child_process'), fs = require('node:fs');
 const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', BREAK = process.env.KEEPPAGE_BREAK === '1', REAL = process.env.REAL === '1';
 const CPORT = Number(process.env.CLOUD_PORT) || 3217, CLOUD = `http://127.0.0.1:${CPORT}`, KEY = 'page-check-key', ROOT = path.resolve(__dirname, '../..');
-const ONLY = (process.env.JOBS || '').split(',').map(s => s.trim()).filter(Boolean);
+const ONLY = (process.env.JOBS === 'all' ? '' : process.env.JOBS || 'kept,fresh').split(',').map(s => s.trim()).filter(Boolean);
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
 const BASE = `http://localhost:${PORT}/`, REST = `paused&mute&quality=${QUALITY}&seed=7`, PLAYED = `mute&quality=${QUALITY}&seed=7`;   // (PLAYED: no `paused`, a page a person opened)

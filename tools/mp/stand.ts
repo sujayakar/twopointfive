@@ -87,6 +87,8 @@ export async function standRecipe(recipe: Recipe): Promise<Stood> {
   process.env.RH_QUIET = '1';   // (the host's quiet run is asked for by name, tools/blitz/rust-host.ts quietBegin: a networked game's machines step in them)
   const { recipeWhy } = await import(`${ROOT}/src/net/wire.ts`);
   { const why = recipeWhy(recipe) || levelWhy((recipe as { levelFile?: string }).levelFile); if (why) throw new Error(`no networked game can be stood from this recipe: ${why}`); }   // (…a recipe a server sent names its level the same way)
+  // (the men's dress follows the place, read off the address before the cast is loaded: main.ts's line, so every machine of one game stands the same men)
+  { const L = await import(`${ROOT}/src/scene/look.ts`); L.setLookPlace(L.placeOfQuery(new URLSearchParams((recipe as { search?: string }).search ?? ''))); }
   const { rerun } = await import('../qa/rerun.ts');
   const { TAPE_VERSION } = await import(`${ROOT}/src/replay/format.ts`);
   const tape: RunTape = { v: TAPE_VERSION, ticks: 0, recipe, dt: [], view: [], cam: [], input: [], lens: [], x: [] };

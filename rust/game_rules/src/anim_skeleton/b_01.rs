@@ -10,5 +10,5 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---- THE BRING-UP'S HAND-OVER OF rust/sim's MODULE-LEVEL TABLES. A game's block is not all of rust/sim's state: the knobs' values, the clip store, the
 // rig and the roles on the bench are statics of the module, written by the host as it goes, and the game's own state remembers THAT it wrote them
-// (pose_bench.rig, layers.roles, clip_side[..].at). A game imported into a fresh module remembers writes this module never had.
+// (pose_bench.rig, layers.roles). A game imported into a fresh module remembers writes this module never had.
 

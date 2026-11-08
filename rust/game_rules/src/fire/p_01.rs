@@ -179,7 +179,7 @@ pub fn wind_at(g: &mut crate::game::Game, mouth: V3) -> crate::fire::WindAt {
     crate::fire::WindAt { wv, wl, wind: [wv[0] * wk, wv[2] * wk] }
 }
 
-/// The same of the game as it stands, for whoever only reads it: no ask is counted.
+/// The same of the game as it stands, for whoever only reads it.
 pub fn flame_wind(g: &crate::game::Game, mouth: V3) -> crate::fire::WindAt {
     let (height, wind_max) = (g.k.fire.height, g.k.fire.wind_max);
     let wv = crate::wind::wind_sum(g, [mouth[0], mouth[1] + height * 0.6, mouth[2]]);

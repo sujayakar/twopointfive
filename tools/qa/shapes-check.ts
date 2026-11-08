@@ -279,7 +279,7 @@ export async function shapesCheck(): Promise<boolean> {
             // an outer wall taken on by the engine, what hangs under the charge the charge's), then as a bare burst
             const spots = [up, down].map(h => WC.wallAt(h.game, at, t.c)), W0 = spots[0]; if ((W0?.index ?? -1) !== (spots[1]?.index ?? -1)) wdiffer++; else if (W0 && W0.ok) charges++;
             for (const [k, h] of [up, down].entries()) { const c0 = h.game.tune.chaos, W = spots[k]; try { h.game.tune.chaos = 0.5; await hushed(() => {
-              if (W && W.ok) { const br = W.outer && WC.WALLCHARGE.outer && h.game.destr.walls.adopt(W.index) ? { breach: W.index } : {}; h.game.destr.blast(WC.wallPt(W, 0, 0.02, 1.0), { who: PLAYER_ID, chaos: false, ...br, ...(WC.WALLCHARGE.hung ? { hung: { wall: W.index, r: WC.WALLCHARGE.hungM } } : {}) }); for (let i = 0; i < 10; i++) h.step(DT); }
+              if (W && W.ok) { h.step(1 / 60); const br = W.outer && WC.WALLCHARGE.outer && h.game.destr.walls.adopt(W.index) ? { breach: W.index } : {}; h.game.destr.blast(WC.wallPt(W, 0, 0.02, 1.0), { who: PLAYER_ID, chaos: false, ...br, ...(WC.WALLCHARGE.hung ? { hung: { wall: W.index, r: WC.WALLCHARGE.hungM } } : {}) }); for (let i = 0; i < 10; i++) h.step(DT); }
               h.game.destr.blast(at, { who: PLAYER_ID, radius: 2.4 }); for (let i = 0; i < 20; i++) h.step(DT); }); } finally { h.game.tune.chaos = c0; } }
             let d1 = 0; for (let i = 0; i < nOwn; i++) if (hidden(A[i]) !== hidden(Bv[i])) d1++; if (d1) differ++; if (wallsOf(up.game) !== wallsOf(down.game)) wdiffer++; } }
           { const fresh: any[] = lived(d).boxes; for (let i = 0; i < nOwn; i++) if (hidden(A[i]) && !hidden(fresh[i] ?? A[i])) took++; }   // (not what the level was authored hidden)

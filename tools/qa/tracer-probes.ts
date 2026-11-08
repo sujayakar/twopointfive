@@ -7,7 +7,7 @@
 //                matched to the frame's tracer spawn); Sam's Five-seveN and a guard's 9 mm, twenty rounds each: none;
 //   (kinematics) a streak's head advances speed·dt a frame along muzzle → impact, never past the impact, is drawn AT it once and is gone the frame after; the
 //                streak is min(speed·shutter, distance flown) long and lies on the segment behind the head; a 3 m shot is slowed to show ≥ 2 frames; a round
-//                shorter than minPath shows nothing; the ember (sparks + a 60 ms glow) fires on arrival iff the round stopped in geometry — not in a man, not on a
+//                shorter than minPath shows nothing; the ember's 60 ms glow fires on arrival iff the round stopped in geometry — not in a man, not on a
 //                miss; a real carbine round's streak spans exactly the segment its guardShot event reports;
 //   (lights)     while a streak lives exactly one transient ('tracer') light per streak sits 5 cm behind its head in the row's colour at tracerFx intensity, none
 //                after it; the muzzle flash of the round is in the set the frame it fires (not evicted); three riflemen dumping boxes together never push the
@@ -150,19 +150,18 @@ export async function tracerRule(verbose = process.argv.includes('--verbose')) {
   return allPass;
 }
 
-/** per-frame record of one forced streak of length L flown to the end: head, streak length, box centre offset from the segment, light, sparks / flashes on arrival */
+/** per-frame record of one forced streak of length L flown to the end: head, streak length, box centre offset from the segment, light, flashes on arrival */
 async function fly(S: Awaited<ReturnType<typeof stageHeld>>, L: number, impact: 'solid' | 'flesh' | 'none') {
   const { W, game, engine, reyes } = S; const T = game.tracers;
   const from: Vec3 = [18.0, 1.3, 11.3], dir: Vec3 = [1, 0, 0];
   game.sparks.clear(); for (let f = 0; f < 8; f++) W.step(DT);   // nothing else in flight
-  const flashes0 = engine.lights.lights.filter((l: any) => l.name === 'flash').length; const sparks0 = game.sparks.live;
   const went = T.round(reyes.weapon, reyes.weapon.def, from, dir, L, impact, reyes.char.id, true);
   const t = liveList(game).find((x: any) => Math.abs(x.L - L) < 1e-9) ?? null;
   const v = t?.v ?? 0;
   const rec: { s: number; len: number; off: number; onSeg: boolean; arrived: boolean; light: Vec3 | null; lightColor: Vec3 | null; lightI: number; boxPushed: boolean; flags: number; owner: number }[] = [];
-  let emberSparks = 0, emberFlash = 0, frames = 0;
+  let emberFlash = 0, frames = 0;
   while (t && t.alive && frames < 200) {
-    const sp0 = game.sparks.live, fl0 = engine.lights.lights.filter((l: any) => l.name === 'flash').length;
+    const fl0 = engine.lights.lights.filter((l: any) => l.name === 'flash').length;
     W.step(DT); frames++;
     if (!t.alive) break;
     const b = t.box; const pushed = game.dynBoxes.includes(b);
@@ -170,13 +169,12 @@ async function fly(S: Awaited<ReturnType<typeof stageHeld>>, L: number, impact: 
     const len = b.h[2] * 2; const centreWant: Vec3 = [head[0] - dir[0] * len / 2, head[1] - dir[1] * len / 2, head[2] - dir[2] * len / 2];
     const off = v3.dist(b.c, centreWant);
     rec.push({ s: t.s, len, off, onSeg: off < 1e-6, arrived: t.arrived, light: t.light ? v3.copy(t.light.pos) : null, lightColor: t.light ? v3.copy(t.light.color) : null, lightI: t.light ? t.light.intensity : 0, boxPushed: pushed, flags: b.flags, owner: b.owner });
-    if (t.arrived) { emberSparks = game.sparks.live - sp0; emberFlash = engine.lights.lights.filter((l: any) => l.name === 'flash').length - fl0; }
+    if (t.arrived) emberFlash = engine.lights.lights.filter((l: any) => l.name === 'flash').length - fl0;
   }
   const after = { live: T.live, tracerLights: tracerLights(engine).length, alive: !!t?.alive };
   W.step(DT);   // one more: the retired streak's slot must not draw
   const drawnAfter = t ? game.dynBoxes.includes(t.box) : false;
-  void flashes0; void sparks0;
-  return { went, t, v, rec, frames: rec.length, emberSparks, emberFlash, after, drawnAfter };
+  return { went, t, v, rec, frames: rec.length, emberFlash, after, drawnAfter };
 }
 
 export async function tracerKinematics(verbose = process.argv.includes('--verbose')) {
@@ -221,10 +219,9 @@ export async function tracerKinematics(verbose = process.argv.includes('--verbos
     const fails: string[] = []; const notes: string[] = [];
     for (const imp of ['solid', 'flesh', 'none'] as const) {
       const R = await fly(S, 8, imp);
-      const wantSp = imp === 'solid' ? P.emberSparks : 0, wantFl = imp === 'solid' && P.emberIntensity > 0 ? 1 : 0;
-      if (wantSp === 0 ? R.emberSparks > 0 : R.emberSparks !== wantSp) fails.push(`${imp}: ${R.emberSparks} sparks on arrival, want ${wantSp}`);
+      const wantFl = imp === 'solid' && P.emberIntensity > 0 ? 1 : 0;
       if (R.emberFlash !== wantFl) fails.push(`${imp}: ${R.emberFlash} glow flash on arrival, want ${wantFl}`);
-      notes.push(`${imp}: +${R.emberSparks} sparks, +${R.emberFlash} flash on the arrival frame`);
+      notes.push(`${imp}: +${R.emberFlash} flash on the arrival frame`);
     }
     // the glow's numbers: colour = the row's, ttl 0.06, at the impact less 3 cm
     const R = await fly(S, 8, 'solid');
@@ -238,10 +235,10 @@ export async function tracerKinematics(verbose = process.argv.includes('--verbos
       notes.push(`glow: I ${glow.peakIntensity} over ${glow.range} m for ${glow.ttl} s in [${glow.color.join(', ')}] at ${glow.pos.map(f2).join(', ')}`);
     }
     void R;
-    verdict(fails.length === 0, '(b2) the ember fires on the arrival frame iff the round stopped in geometry: solid → tracerFx.emberSparks sparks + one glow flash (the row\'s colour, emberIntensity / emberRange / emberTtl, 3 cm off the surface); in a man or on a miss → nothing',
+    verdict(fails.length === 0, '(b2) the ember fires on the arrival frame iff the round stopped in geometry: solid → one glow flash (the row\'s colour, emberIntensity / emberRange / emberTtl, 3 cm off the surface); in a man or on a miss → nothing',
       (fails.length ? fails.join('; ') + ' · ' : '') + notes.join(' · '));
   }
-  // ---- a REAL carbine round: the streak spans the event's segment; into Sam → flesh, no ember
+  // ---- a REAL carbine round: the streak spans the event's segment; into Sam → flesh
   {
     const fails: string[] = []; const notes: string[] = [];
     const { W, game, reyes } = S; const w = reyes.weapon;
@@ -259,22 +256,21 @@ export async function tracerKinematics(verbose = process.argv.includes('--verbos
       notes.push(`round 3: event segment ${f2(segL)} m, streak L ${f2(t.L)} m, impact ${t.impact}, v ${f2(t.v)}`);
       while (t.alive) W.step(DT);
     }
-    // into Sam (god mode): flesh, and no ember on arrival
+    // into Sam (god mode): flesh
     game.teleportPlayer([23.5, 0, 11.3]); for (let f = 0; f < 30; f++) W.step(DT);
     w.rearm(); w.fire(); w.fire(); w.fire();
     const chest = game.player.char.bones.chest ?? v3.add(game.player.char.pos, [0, 1.2, 0]);
-    game.player.hitFlash = 0; game.sparks.clear();
+    game.player.hitFlash = 0;
     fireWeapon(game, reyes.char, v3.copy(chest), false, { spread: 0, steady: true });
     const hit = game.player.hitFlash > 0.9; const t2 = liveList(game).at(-1);
     if (!hit) fails.push('staging: the round at Sam\'s chest did not find him');
     if (!t2) fails.push('no streak for the round into Sam');
     else {
       if (t2.impact !== 'flesh') fails.push(`impact '${t2.impact}' for a round that found Sam (want flesh)`);
-      let sparksOnArrival = -1; while (t2.alive) { const s0 = game.sparks.live; W.step(DT); if (t2.arrived && sparksOnArrival < 0) sparksOnArrival = game.sparks.live - s0; }
-      if (sparksOnArrival > 0) fails.push(`${sparksOnArrival} ember sparks in Sam`);
-      notes.push(`into Sam: impact ${t2.impact}, L ${f2(t2.L)} m, ember sparks ${Math.max(0, sparksOnArrival)}`);
+      while (t2.alive) W.step(DT);
+      notes.push(`into Sam: impact ${t2.impact}, L ${f2(t2.L)} m`);
     }
-    verdict(fails.length === 0, '(b3) a real carbine round (the third of a box): its streak starts at the guardShot event\'s muzzle and ends at its impact, solid; one into Sam ends in him as flesh with no ember',
+    verdict(fails.length === 0, '(b3) a real carbine round (the third of a box): its streak starts at the guardShot event\'s muzzle and ends at its impact, solid; one into Sam ends in him as flesh',
       (fails.length ? fails.join('; ') + ' · ' : '') + notes.join(' · '));
   }
   if (verbose) console.log(`  tracerFx ${JSON.stringify(P)}`);

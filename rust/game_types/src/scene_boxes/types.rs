@@ -141,7 +141,6 @@ pub struct BoxWorld {
     pub mkey_prev: JsMap<crate::Num, f64>,
     pub mkey_cur: JsMap<crate::Num, f64>,
     pub mkey_stats: crate::scene_boxes::BoxWorldMkeyStats,
-    pub all: Vec<AnyBoxId>,
     pub max_boxes: f64,
     pub geo_data: crate::Opaque,
     pub geo_f32: Vec<f32>,
@@ -164,15 +163,11 @@ pub struct BoxWorld {
     pub info_data: Vec<u32>,
     pub glass_enabled: bool,
     pub glass_focus: V3,
-    pub glass_list: Vec<f64>,
-    pub glass_statics: Vec<f64>,
     pub glass_scratch: Vec<crate::scene_boxes::BoxWorldGlassScratchItem>,
-    pub glass_statics_n: f64,
     pub glass_cell_fill: Option<crate::FnField>,
     pub gb_data: Vec<f32>,
     pub gb_live: bool,
     pub gb_sent: Vec<u32>,
-    pub ground_on: bool,
     pub rows_stat_n: f64,
     pub visible_sent: Vec<u32>,
     pub capsule_data: Vec<f32>,
@@ -189,7 +184,6 @@ pub struct BoxWorld {
     pub draw_rank_n: f64,
     pub draw_waits: bool,
     pub draw_asked_undrawn: bool,
-    pub statics_dirty: bool,
     pub geom_serial: f64,
     pub stat_shadow: Vec<f64>,
     pub stat_shadow_marks: Vec<Option<Vec<crate::scene_markings::MarkingDef>>>,
@@ -211,14 +205,6 @@ pub struct BoxWorld {
     pub grid_last_globals: Vec<f64>,
     pub grid_live_n: f64,
     pub grid_builds: crate::scene_boxes::BoxWorldGridBuilds,
-    pub rg_start: Vec<u32>,
-    pub rg_items: Vec<u32>,
-    pub rg_globals: Vec<f64>,
-    pub rg_n: f64,
-    pub rg_shape: Vec<f64>,
-    pub rg_fill: Vec<u32>,
-    pub rg_ranges: Vec<i32>,
-    pub ray_grid_stats: crate::scene_boxes::BoxWorldRayGridStats,
     pub markings_enabled: bool,
     pub marking_texel: f64,
     pub mark_data: Vec<f32>,
@@ -242,7 +228,6 @@ pub struct BoxWorld {
     pub device: crate::Opaque,
     pub draw_ties: f64,
     pub draw_ranked: f64,
-    pub pack_behind: bool,
     pub stuff_of: Option<crate::FnField>,
     pub core_stuff_of: Option<crate::FnField>,
     pub glass_open: Option<crate::scene_collision::PaneRule>,
@@ -259,7 +244,6 @@ impl BoxWorld {
             mkey_prev: JsMap::new(),
             mkey_cur: JsMap::new(),
             mkey_stats: crate::scene_boxes::BoxWorldMkeyStats { matched: 0.0, fresh: 0.0, unkeyed: 0.0 },
-            all: Vec::new(),
             max_boxes: 0.0,
             geo_data: crate::Opaque,
             geo_f32: Vec::new(),
@@ -282,15 +266,11 @@ impl BoxWorld {
             info_data: alloc::vec![0; 640],
             glass_enabled: true,
             glass_focus: [20.0, 0.0, 14.0],
-            glass_list: Vec::new(),
-            glass_statics: Vec::new(),
             glass_scratch: Vec::new(),
-            glass_statics_n: -1.0,
             glass_cell_fill: None,
             gb_data: alloc::vec![0.0; 4608],
             gb_live: false,
             gb_sent: alloc::vec![0; 4608],
-            ground_on: false,
             rows_stat_n: -1.0,
             visible_sent: Vec::new(),
             capsule_data: alloc::vec![0.0; 1920],
@@ -307,7 +287,6 @@ impl BoxWorld {
             draw_rank_n: -1.0,
             draw_waits: false,
             draw_asked_undrawn: false,
-            statics_dirty: true,
             geom_serial: 0.0,
             stat_shadow: alloc::vec![0.0; 0],
             stat_shadow_marks: Vec::new(),
@@ -329,14 +308,6 @@ impl BoxWorld {
             grid_last_globals: Vec::new(),
             grid_live_n: -1.0,
             grid_builds: crate::scene_boxes::BoxWorldGridBuilds { built: 0.0, kept: 0.0 },
-            rg_start: alloc::vec![0; 1121],
-            rg_items: alloc::vec![0; 4096],
-            rg_globals: Vec::new(),
-            rg_n: -1.0,
-            rg_shape: alloc::vec![0.0; 0],
-            rg_fill: alloc::vec![0; 1120],
-            rg_ranges: alloc::vec![0; 0],
-            ray_grid_stats: crate::scene_boxes::BoxWorldRayGridStats { statics: 0.0, globals: 0.0, items: 0.0 },
             markings_enabled: true,
             marking_texel: 0.025,
             mark_data: alloc::vec![0.0; 24576],
@@ -360,7 +331,6 @@ impl BoxWorld {
             device: crate::Opaque,
             draw_ties: 0.0,
             draw_ranked: 0.0,
-            pack_behind: false,
             stuff_of: None,
             core_stuff_of: None,
             glass_open: None,
@@ -497,25 +467,6 @@ impl BoxWorldGridBuilds {
     }
 }
 impl Default for BoxWorldGridBuilds { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/scene/boxes.ts:441 BoxWorld.rayGridStats, src/scene/boxes.ts:441)
-#[derive(Clone, Copy, Debug)]
-pub struct BoxWorldRayGridStats {
-    pub statics: f64,
-    pub globals: f64,
-    pub items: f64,
-}
-impl BoxWorldRayGridStats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BoxWorldRayGridStats {
-            statics: 0.0,
-            globals: 0.0,
-            items: 0.0,
-        }
-    }
-}
-impl Default for BoxWorldRayGridStats { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/boxes.ts:451 BoxWorld.markByKey, src/scene/boxes.ts:451)
 #[derive(Clone, Debug)]

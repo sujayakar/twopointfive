@@ -14,13 +14,9 @@ fn now_of(was: &str) -> String {
 
 // ---------------------------------------------------------------- stats, the men
 
-/// a new stats row (gunHoldStats' literal: `freeT` starts at −1, which `GunHoldStats::zeroed` does not)
-fn stats_maker() -> GunHoldStats {
-    GunHoldStats { armed: 0.0, ran: 0.0, no_cover: 0.0, rounds: 0.0, no_way: 0.0, looks: 0.0, gone: 0.0, lines: 0.0, free_t: -1.0 }
-}
-/// This game's counters, the row itself. (gunhold.ts gunHoldStats)
+/// This game's counters, the row itself: a game holds it from the start (`GunholdMod::blank`, and the TypeScript's Game as it is built). (gunhold.ts gunHoldStats)
 pub fn gun_hold_stats<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::gunhold::GunHoldStats {
-    g.m.gunhold.stats_of.get_or_insert_with(stats_maker)
+    g.m.gunhold.stats_of.as_mut().expect("a game holds its gun-hold counters from the start")
 }
 
 /// Is the rule running now: never under a show or quiet utility. (gunhold.ts live)
@@ -699,7 +695,6 @@ fn feet(g: &mut Game, gd: GuardId, dt: f64, p: &crate::guards::Pair, s: GuardsSt
         return None;
     }
     let now = g.time;
-    gun_hold_stats(g); // the row is made here whether or not this frame counts anything (line 303)
     macro_rules! st {
         () => {
             g.m.gunhold.states.get_mut(s).unwrap()
@@ -1116,7 +1111,7 @@ mod tests {
 
     #[test]
     fn a_new_stats_row_has_no_free_round_yet() {
-        assert_eq!(stats_maker().free_t, -1.0);
+        assert_eq!(crate::gunhold::GunholdMod::blank().stats_of.unwrap().free_t, -1.0);
     }
 
     const FLAT_BITS: u64 = 0x40265f8d95065bd3;

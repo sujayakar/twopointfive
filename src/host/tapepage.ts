@@ -1,7 +1,7 @@
 // THE PAGE OF A TAPE (`?playtape=<shelf id | file>`): where the tape comes from, and the address it plays at: the run's own words, for a page reads its picture off its address.
 import { HAND } from '../draw/hand';
-import { PLAYTAPE, recipeSearch } from '../replay/address';
-import { HandWalk, TapeRefused } from '../replay/handtape';
+import { PLAYTAPE, recipeSearch } from '../tape/address';
+import { HandWalk, TapeRefused } from '../tape/handtape';
 import { shelfGet } from '../replay/shelf';
 
 async function opened(b: Uint8Array): Promise<Uint8Array> {

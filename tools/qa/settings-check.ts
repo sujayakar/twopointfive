@@ -42,14 +42,9 @@ let fails = 0; const line = (ok: boolean, what: string) => { console.log(`- ${ok
 type Row = [count: number, why: string];
 const KNOWN: Record<string, Record<string, Row>> = {
   'game/hours.ts': {
-    exposure: [3, 'PICTURE: what the hour found is kept (putIn) and handed back to the picture with the player\'s turn of Brightness (takeOut); the panel\'s line prints it'],
-    hazeDensity: [1, 'PICTURE: kept and handed back when the hour goes'],
-    skyZenith: [2, 'one PICTURE (kept, handed back), one TO MOVE (2026-11-05, with the hour\'s port, weather\'s owner): skyLum reads the sky\'s colours for the light on a point'],
-    skyHorizon: [2, 'as skyZenith'],
+    exposure: [2, 'PICTURE: the player\'s turn of Brightness under an hour carried back as it goes (nightPicture); the panel\'s line prints it'],
   },
   'game/lighting.ts': {
-    exposure: [1, 'PICTURE: what the show\'s day found, kept and handed back'],
-    hazeDensity: [1, 'PICTURE: as exposure'], skyZenith: [1, 'PICTURE: kept and handed back (the read that reaches a sum is hours.ts\'s)'], skyHorizon: [1, 'PICTURE: as skyZenith'],
     emissiveScale: [1, 'CARRIED, TO MOVE (2026-11-05): what a fixture gives a light question, as an argument of the lights\' step'],
   },
   'game/fogofwar.ts': { emissiveScale: [2, 'CARRIED, TO MOVE (2026-11-05, with lighting.ts\'s): the fog\'s lamps'] },
@@ -133,8 +128,9 @@ const walk = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }
 export async function settingsReads(): Promise<boolean> {
   const before = fails;
   const { ENV } = await import(`${ROOT}/src/game/env.ts`), { defaultSettings } = await import(`${ROOT}/src/settings.ts`);
+  const { NIGHT_HAZE } = await import(`${ROOT}/src/game/hours.ts`);
   const D = defaultSettings() as Record<string, unknown>, keys = new Set(Object.keys(D));
-  line(ENV.exposure === D.exposure && ENV.tubeGain === D.nvGain, `base: the game's own numbers are the picture's defaults (exposure ${ENV.exposure} against ${D.exposure}, tube gain ${ENV.tubeGain} against ${D.nvGain})`);
+  line(ENV.exposure === D.exposure && ENV.tubeGain === D.nvGain && NIGHT_HAZE === D.hazeDensity, `base: the game's own numbers are the picture's defaults (haze ${NIGHT_HAZE} against ${D.hazeDensity}, exposure ${ENV.exposure} against ${D.exposure}, tube gain ${ENV.tubeGain} against ${D.nvGain})`);
   // (the scan against forms it must read and forms it must not: a lint that reads nothing is green for ever)
   const T = (src: string) => usesOf('t.ts', src, keys).map(u => u.key).sort().join(' ');
   const forms: [string, string][] = [

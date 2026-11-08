@@ -20,7 +20,7 @@ process.env.QA_STAND_SAID = '1';
  *  raised or held off by name) and a check's own arm (QA_HOLD). Read once, here, before any tool's own line: a tool that sets a word itself, or a probe that
  *  writes one and deletes it, does not change what the run was started with. A run with any of them is not the stand as it opens. */
 export const BY_HAND: readonly string[] = handWords();
-/** …and the same question asked now (tools/qa/ident-pin.ts asks it after its tool has set its own words): `WORD=value` for every such word in the environment */
+/** …and the same question asked now: `WORD=value` for every such word in the environment */
 export function handWords(): string[] { return [...STAND_ENV, 'QA_HOLD'].filter(k => k !== 'TPS_PROFILE' && process.env[k] !== undefined).sort().map(k => `${k}=${process.env[k]}`); }
 /** THE BREAK WORDS THIS PROCESS WAS STARTED WITH: `WORD=value` for every `<NAME>_BREAK` of the environment that is neither empty nor 0, the spelling of a
  *  check's red path (one older word is spelt another way and named here: DOORPATH_OLD). Read once, as BY_HAND is. A run with one is some check's red path:

@@ -194,7 +194,8 @@ pub fn glass_impact(g: &mut crate::game::Game, pane: f64, point: V3, dir: Option
     let up: V3 = [0.0, 1.0, 0.0];
     let side = v3::normalize(v3::cross(up, n));
     let tangent: V3 = v3::add(v3::scale(side, m::cos(ang)), v3::scale(up, m::sin(ang)));   // the star's orientation in the pane's plane
-    if !res.live || !res.cracked || g.engine.glass_fracture != Some(true) {
+    // a blow the fracture model filed draws its own cracks from its site, wherever anything is drawn: a second, unrelated star over them would be a lie. A blow that only fed an old star, toughened glass that has not yet gone and every shot with the model off keep theirs
+    if !res.live || !res.cracked {
         let param = if cause == GlassImpactCause::Bang { 0.6 } else { 1.0 };
         let o = crate::render_decals::DecalOpts { tangent: Some(tangent), seed: Some(((word >> 8) & 0xfff) as f64), pane: Some(pane), param: Some(param), ..Default::default() };
         crate::render_decals::decals_add(g, crate::render_decals::DecalKind::GlassHit, pos, n, Some(radius), Some(o));

@@ -52,7 +52,7 @@ import { TapeWalk } from './tapewalk';
 import { RecipeStand, layFlags, put, plain, type Plain } from './recipestand';
 import { shelfGet, shelfList, shelfNotes, shelfPut } from './shelf';
 import { viewerUrl } from '../ui/replaykey';
-import { PLAYTAPE, SAYS_OFF, SENDING_WORDS, recipeSearch, visitPairs } from './address';
+import { PLAYTAPE, SAYS_OFF, SENDING_WORDS, recipeSearch, visitPairs } from '../tape/address';
 import { cloudCarries, cloudFile, cloudNotes, cloudSendsFiles } from '../cloud/cloud';
 import { keptStore } from './keptui';
 import { TEXT_EVENT, rectZoom, textZoom } from '../ui/textsize';
@@ -69,7 +69,7 @@ import * as K from '../game/knobs';
 import { tapePoses } from '../game/runtape';
 
 /** the URL's key */
-export { PLAYTAPE, SENDING_WORDS, recipeSearch } from './address';
+export { PLAYTAPE, SENDING_WORDS, recipeSearch } from '../tape/address';
 /** metres a man may stand from his traced place before the run is said to have parted (rerun.ts's own) */
 const TOL = 0.15;
 /** steps run and not drawn in one frame at most (a slow display plays slow, it does not spiral) · milliseconds of a frame a seek may take */

@@ -152,8 +152,6 @@ impl Play {
         }).collect();
         game::seats::show_seat(&mut self.g, seats[shown]);
         game::game::game_step_seats(&mut self.g, DT, &cmds);
-        let now = self.g.time;
-        game::render_lights::light_set_update(&mut self.g, DT, now);
         game::seats::show_seat(&mut self.g, seats[0]);
         self.g.out.clear();
         self.frames += 1;

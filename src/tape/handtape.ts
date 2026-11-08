@@ -77,6 +77,9 @@ export class HandTape {
   take(): Uint8Array { const out = this.b.slice(0, this.n); this.sent += this.n; this.n = 0; return out; }
 }
 
+/** where a walk is on its tape */
+export interface TapePlace { readonly at: number; readonly ticks: number; readonly hand: Float64Array; readonly keys: string; readonly dt: number }
+
 /** why a tape cannot be walked here, as the player is told it */
 export class TapeRefused extends Error { }
 /** … one of another build's making */
@@ -89,6 +92,10 @@ export class HandWalk {
   ticks = 0;
   private d: DataView; private at = 0; private dec = new TextDecoder();
   private hand: Float64Array; private keys = ''; private dt = 1 / 60;
+
+  /** this walk's place, to come back to (`back`) with the game's moment of the same tick */
+  place(): TapePlace { return { at: this.at, ticks: this.ticks, hand: this.hand.slice(), keys: this.keys, dt: this.dt }; }
+  back(p: TapePlace): void { this.at = p.at; this.ticks = p.ticks; this.hand.set(p.hand); this.keys = p.keys; this.dt = p.dt; }
 
   /** `count`: the numbers of this build's hand */
   constructor(private b: Uint8Array, count: number) {

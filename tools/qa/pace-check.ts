@@ -105,7 +105,7 @@ const span = (g: number[]) => `${Math.min(...g).toFixed(1)} to ${Math.max(...g).
   check(at > 0 && now > at && /if \(pace\.skip\(ts, !kitView && /.test(line) && /requestAnimationFrame\(frame\); return;/.test(line), "the frame loop passes a display frame over before it takes the time or steps anything, and holds no rate of its own under ?kitview");
   check(/measuring = quality\.calibrating \|\| tools,/.test(fr) && /!kitView && !measuring && \(quality\.adaptive \|\| quality\.auto\) \? quality\.bands\.target : 0/.test(line), "the rate asked for is the ladder's, and none while the boot measures the machine, in a benchmark, in a sweep, or with the ladder off");
   check(/fpsSm = rate\.push\(now\);/.test(fr) && !/fpsSm \* 0\.95/.test(main), 'the frame rate shown is the frames of the last second over their time, and the mean of rates is gone');
-  const prof = readFileSync(`${ROOT}/src/host/profile.ts`, 'utf8'), run = readFileSync(`${ROOT}/src/ui/benchrun.ts`, 'utf8'), key = readFileSync(`${ROOT}/src/replay/address.ts`, 'utf8');
+  const prof = readFileSync(`${ROOT}/src/host/profile.ts`, 'utf8'), run = readFileSync(`${ROOT}/src/ui/benchrun.ts`, 'utf8'), key = readFileSync(`${ROOT}/src/tape/address.ts`, 'utf8');
   check(/EVENPACE\.on = q\.get\('pace'\) !== '0';/.test(prof) && /'EVENPACE\.on': 'TPS_EVENPACE=1/.test(prof), "on in the page, ?pace=0 puts it off, and the stands' book has its row");
   check(['pace', 'giveway', 'flight'].every(w => new RegExp(`const CARRIED = new RegExp\\(\`\\^\\([^\`]*\\|${w}\\|`).test(run) && new RegExp(`VISIT_FLAGS = \\[[^\\]]*'${w}'`).test(key)), "a benchmark's scene pages keep the visitor's ?pace, ?giveway and ?flight words (no note says one was left behind), and a tape's player leaves them to the viewer"); }
 

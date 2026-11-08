@@ -11,9 +11,6 @@ pub struct DayState {
     pub hour_sun_given: bool,
     pub targets: JsMap<FixtureId, bool>,
     pub lights_off: Vec<LightId>,
-    pub sky: crate::lighting::DayStateSky,
-    pub haze: f64,
-    pub exposure: f64,
     pub sun: LightId,
     pub blackout: Option<crate::lighting::DayStateBlackout>,
 }
@@ -26,32 +23,12 @@ impl DayState {
             hour_sun_given: false,
             targets: JsMap::new(),
             lights_off: Vec::new(),
-            sky: crate::lighting::DayStateSky::zeroed(),
-            haze: 0.0,
-            exposure: 0.0,
             sun: LightId(0),
             blackout: None,
         }
     }
 }
 impl Default for DayState { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/lighting.ts:177 DayState.sky, src/game/lighting.ts:177)
-#[derive(Clone, Copy, Debug)]
-pub struct DayStateSky {
-    pub zenith: V3,
-    pub horizon: V3,
-}
-impl DayStateSky {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DayStateSky {
-            zenith: [0.0; 3],
-            horizon: [0.0; 3],
-        }
-    }
-}
-impl Default for DayStateSky { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/lighting.ts:177 DayState.blackout, src/game/lighting.ts:177)
 #[derive(Clone, Copy, Debug)]

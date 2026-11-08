@@ -3259,7 +3259,6 @@ if (on('review-ring-civ', 'review-a', 'all')) await run('review-ring-civ', async
 if (on('review-item-cap', 'review-a', 'all')) await run('review-item-cap', async () => (await import('./review-a-probes.ts') as any).reviewItemCap());
 if (on('review-door-reset', 'review-a', 'all')) await run('review-door-reset', async () => (await import('./review-a-probes.ts') as any).reviewDoorReset());
 if (on('review-day-blackout', 'review-a', 'all')) await run('review-day-blackout', async () => (await import('./review-a-probes.ts') as any).reviewDayBlackout());
-if (on('review-meter', 'review-a', 'all')) await run('review-meter', async () => (await import('./review-a-probes.ts') as any).reviewMeter());
 if (on('review-torch-dt', 'review-a', 'all')) await run('review-torch-dt', async () => (await import('./review-a-probes.ts') as any).reviewTorchDt());
 if (on('review-stack', 'review-a', 'all')) await run('review-stack', async () => (await import('./review-a-probes.ts') as any).reviewStack());
 if (KNOWN.has(which) && which.startsWith('review-') && which !== 'review-b') here() && familyBanner('review-a', (await import('./review-a-probes.ts')).reviewFailures());

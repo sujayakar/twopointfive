@@ -1751,8 +1751,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   flicker under the look (the maintainer saw it on a GPU on 10-25, on the look's page before the mend); `tools/qa/zfight-check.ts` lists the
   pairs in a level file.
   `hills` WAS ON EVERY PAGE FOR ONE STEP OF THE BUILD AND PARTED CO-OP (step 1906, the same day; mended the step after). The first cut kept it with
-  the picture as "the picture's alone". It is not: `groundRayConfig.on` is read by the game's own box world (`scene/boxes.ts groundOn`, in the Rust
-  game `scene_boxes ground_on`: the rays a sight line and the cursor's point use then meet the ground field) and `game/game.ts` builds the snow
+  the picture as "the picture's alone". It is not: `groundRayConfig.on` was read by the game's own box world (`scene/boxes.ts groundOn`; both are gone since 11-08, the table and the read: the rays a sight line and the cursor's point use then meet the ground field) and `game/game.ts` builds the snow
   field with its roll. A game server stands with no look, so a page had `on: true` beside its server's `false`: co-op's wider word (the parts of
   the whole game's state a page and a server agree on, `src/net/agreed.ts`, part `m.scene_ground_field`) held on 0 of 282 word ticks with one seat
   where the step before held 257 of 257. The alarm's narrow word did not part, the office being flat; on a snow level the two would have played

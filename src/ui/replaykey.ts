@@ -8,7 +8,7 @@ import { sessionId } from '../host/session';
 import type { Game } from '../game/game';
 import { reportWarning } from '../cloud/report';
 import { typedInto } from '../host/keymap';
-import { visitPairs } from '../replay/address';
+import { visitPairs } from '../tape/address';
 import { ReplayBuffer, REPLAY } from '../game/replaybuf';
 import type { ReplayMeta } from '../game/replaybuf';
 import type { RunTape, ReplayFile } from '../replay/format';
@@ -263,7 +263,7 @@ export function viewerUrl(id: number): string { return new URL(`replay.html#id=$
  *  a restart made INSIDE a step (Shift+Enter, Enter once down: on no tape row), and the tape's last restart row (one older than the trace's window), the step
  *  after it so the still it opens on is the new try's. null: no tape to play (format.ts tapeWhy: it ended
  *  early — another run's checkpoint loaded, a scenario started from a menu, past the tape's length) — the map viewer plays that file */
-export { VISIT_FLAGS, visitWord, visitPairs } from '../replay/address';
+export { VISIT_FLAGS, visitWord, visitPairs } from '../tape/address';
 export function engineUrl(id: number, file: ReplayFile): string | null {
   if (tapeWhy(file)) return null;
   const T = file.rerun as RunTape;

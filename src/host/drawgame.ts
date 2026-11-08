@@ -5,7 +5,7 @@ import { Drawn, drawRefused, type DrawFace } from '../draw/drawn';
 import { Man, Section, View, Want } from '../draw/sections';
 import { Commands } from '../draw/commands';
 import { HAND } from '../draw/hand';
-import { HandTape, MARKS, hashOf, type PartOf, type TapeMark, type TapeRow } from '../replay/handtape';
+import { HandTape, MARKS, hashOf, type PartOf, type TapeMark, type TapeRow } from '../tape/handtape';
 import type { SaveRow } from '../ui/runcard';
 import { CURSOR_DOUBLES, sampleCursor, type CursorAt, type CursorCanvas, type CursorLens } from '../view/cursor';
 import { readCursorView, readDebriefView, readRunView, readTickView, type CursorView, type DebriefView, type RunView, type TickView } from '../view/read';
@@ -24,8 +24,8 @@ export const partsOf = (o: Start): PartOf[] => (['mannequin', 'mannequinBin', 'c
 
 /** `face_start`'s: the rows that dress the picture are up */
 const DRESS = 1;
-/** `face_step`'s: the lights' envelopes · a rails level's view · the save controller */
-const LIGHTS = 2, VIEW = 4, SAVES = 8;
+/** `face_step`'s: a rails level's view · the save controller */
+const VIEW = 4, SAVES = 8;
 
 /** bytes a tape may be: it ends there (an hour and a half and more of play) */
 const TAPE_MOST = 48 * 1048576;
@@ -122,7 +122,7 @@ export class DrawGame {
   private tick(dt: number, keys: string): void {
     const n = this.enc.encodeInto(keys, new Uint8Array(this.memory.buffer, this.keys, DrawGame.KEYS)).written;
     this.X.face_hand(this.h, 0, this.hand, HAND.count * 8, this.keys, n);
-    this.X.face_step(this.h, dt, LIGHTS | VIEW | SAVES);
+    this.X.face_step(this.h, dt, VIEW | SAVES);
     this.ticks++; this.done++;
   }
   /** it is walked through a tape: nobody commands it but the tape */

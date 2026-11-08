@@ -449,9 +449,6 @@ pub fn set_daylight(g: &mut crate::game::Game, on: bool) {
                 i += 1;
             }
         }
-        let sky = crate::lighting::DayStateSky { zenith: g.engine.settings.sky_zenith, horizon: g.engine.settings.sky_horizon };
-        let haze = g.engine.settings.haze_density;
-        let exposure = g.engine.settings.exposure;
         let sun = crate::render_lights::light_from_def(g, &d.sun);
         let sun = crate::render_lights::light_set_add(g, sun);
         let mut st = crate::lighting::DayState {
@@ -460,9 +457,6 @@ pub fn set_daylight(g: &mut crate::game::Game, on: bool) {
             hour_sun_given,
             targets: JsMap::new(),
             lights_off: Vec::new(),
-            sky,
-            haze,
-            exposure,
             sun,
             blackout,
         };
@@ -507,10 +501,8 @@ pub fn set_daylight(g: &mut crate::game::Game, on: bool) {
             g.tab.light[l].enabled = true;
             crate::sim_lightshome::light_home_feed(g, l);
         }
-        g.engine.settings.sky_zenith = cur.sky.zenith;
-        g.engine.settings.sky_horizon = cur.sky.horizon;
-        g.engine.settings.haze_density = cur.haze;
-        g.engine.settings.exposure = cur.exposure;
+        let was = g.level.daylight.as_ref().map_or(g.k.env.exposure, |d| d.exposure);
+        crate::hours::night_picture(g, was);
         crate::render_lights::light_set_remove(g, cur.sun);
         if let Some(b) = cur.blackout {
             if !crate::sim_lightshome::mains_active(g) {
