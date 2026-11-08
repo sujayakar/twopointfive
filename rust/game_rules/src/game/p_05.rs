@@ -353,7 +353,7 @@ pub fn game_set_loadout(g: &mut crate::game::Game, with_rifle: bool) {
 }
 
 /// Was this fixture's switch on in the level as authored.   (game.ts authoredOn)
-pub fn game_authored_on(g: &mut crate::game::Game, t: FixtureId) -> bool { crate::sim_lightshome::fixture_authored(g, t) }
+pub fn game_authored_on(g: &crate::game::Game, t: FixtureId) -> bool { crate::sim_lightshome::fixture_authored(g, t) }
 
 /// The lights' rows stood on the list as it is: as the level is built, and again when a fixture is hung after that.   (game.ts standLights)
 pub fn game_stand_lights(g: &mut crate::game::Game) {

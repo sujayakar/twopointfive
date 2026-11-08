@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// A row's words for a watch on a way that is no door's: the place by the level's own name, else what it is. (roomfit.ts wayWords)
-pub fn way_words(g: &mut crate::game::Game, at: V3, to: V3, yaw: f64) -> String {
+pub fn way_words(g: &crate::game::Game, at: V3, to: V3, yaw: f64) -> String {
     match crate::dialogue::watched_place(g, at, to) {
         Some(p) if !p.is_empty() => alloc::format!("on the way to {}", p),
         _ => String::from("on the opening"),
@@ -16,7 +16,7 @@ pub fn way_words(g: &mut crate::game::Game, at: V3, to: V3, yaw: f64) -> String 
 }
 
 /// A row's words for a watch down a run of floor. (roomfit.ts runWords)
-pub fn run_words(g: &mut crate::game::Game, at: V3, to: V3, yaw: f64) -> String {
+pub fn run_words(g: &crate::game::Game, at: V3, to: V3, yaw: f64) -> String {
     match crate::dialogue::watched_place(g, at, to) {
         Some(p) if !p.is_empty() => alloc::format!("watching {}", p),
         _ => String::from("watching the far end"),

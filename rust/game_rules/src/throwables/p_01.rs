@@ -201,7 +201,7 @@ pub fn item_pbit(g: &mut crate::game::Game, id: ItemId, b: f64, on: bool) {
 }
 
 /// (throwables.ts Item.kind)
-pub fn item_kind(g: &mut crate::game::Game, id: ItemId) -> crate::throwables::ItemKind {
+pub fn item_kind(g: &crate::game::Game, id: ItemId) -> crate::throwables::ItemKind {
     ITEM_KINDS[item_w(g, id, ic::KIND) as usize]
 }
 
@@ -402,7 +402,7 @@ pub fn item_set_carried(g: &mut crate::game::Game, id: ItemId, v: Option<bool>) 
 }
 
 /// (throwables.ts Item.bounces)
-pub fn item_bounces(g: &mut crate::game::Game, id: ItemId) -> f64 {
+pub fn item_bounces(g: &crate::game::Game, id: ItemId) -> f64 {
     item_w(g, id, ic::BOUNCES)
 }
 
@@ -412,7 +412,7 @@ pub fn item_set_bounces(g: &mut crate::game::Game, id: ItemId, v: f64) {
 }
 
 /// Who threw or dropped it, an i32. (throwables.ts Item.who)
-pub fn item_who(g: &mut crate::game::Game, id: ItemId) -> f64 {
+pub fn item_who(g: &crate::game::Game, id: ItemId) -> f64 {
     js::to_i32(item_w(g, id, ic::WHO)) as f64
 }
 
@@ -422,7 +422,7 @@ pub fn item_set_who(g: &mut crate::game::Game, id: ItemId, v: f64) {
 }
 
 /// (throwables.ts Item.serial)
-pub fn item_serial(g: &mut crate::game::Game, id: ItemId) -> f64 {
+pub fn item_serial(g: &crate::game::Game, id: ItemId) -> f64 {
     item_w(g, id, ic::SERIAL)
 }
 
@@ -432,7 +432,7 @@ pub fn item_set_serial(g: &mut crate::game::Game, id: ItemId, v: f64) {
 }
 
 /// The thing of furniture it lies on: the column holds its id plus one, a place in `g.props.all` (the TypeScript's `things`). (throwables.ts Item.on)
-pub fn item_on(g: &mut crate::game::Game, id: ItemId) -> Option<PropId> {
+pub fn item_on(g: &crate::game::Game, id: ItemId) -> Option<PropId> {
     let k = item_w(g, id, ic::ON);
     if js::truthy(k) { g.props.all.get(k as usize - 1).copied() } else { None }
 }

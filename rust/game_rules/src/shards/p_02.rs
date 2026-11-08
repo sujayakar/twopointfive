@@ -41,7 +41,7 @@ fn to_landing(f: GlassShardsFallOf) -> GlassShardsLandingFall { GlassShardsLandi
 fn seam_box<'g>(g: &'g mut Game, b: impl Into<AnyBoxId>) -> &'g mut crate::scene_boxes::Box { &mut g.tab[b.into()] }
 
 /// The shards' books.   (shards.ts GlassShards.constructor)
-pub fn glass_shards_new(_g: &mut crate::game::Game) -> crate::shards::GlassShards {
+pub fn glass_shards_new(_g: &crate::game::Game) -> crate::shards::GlassShards {
     crate::shards::GlassShards::blank()
 }
 

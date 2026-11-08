@@ -33,7 +33,7 @@ fn home_first(g: &mut Game, q: EnemysquadsSquadId) -> Option<GuardId> {
     h.first().map(|&d| def_gd(g, d))
 }
 /// `Q.men.find(m => fit(g, m))`, with one man left out
-fn fit_man(g: &mut Game, q: EnemysquadsSquadId, but: Option<GuardId>) -> Option<GuardId> {
+fn fit_man(g: &Game, q: EnemysquadsSquadId, but: Option<GuardId>) -> Option<GuardId> {
     let men = g.tab.enemysquads_squad[q].men.clone();
     for x in men { if Some(x) != but && fit(g, x) { return Some(x); } }
     None

@@ -370,7 +370,7 @@ pub fn door_tools_to_slice(g: &mut crate::game::Game, op: DoorOpId) {
 }
 
 /// this door's leaf comes round onto face `side`: a one-way door worked from the face it opens toward   (doortools.ts DoorTools.leafOurs)
-pub fn door_tools_leaf_ours(g: &mut crate::game::Game, d: DoorId, side: f64) -> bool {
+pub fn door_tools_leaf_ours(g: &crate::game::Game, d: DoorId, side: f64) -> bool {
     if !crate::doors::doors_swing_of(g, d).one_way { return false; }
     let w = g.dr[d].def.width;
     let p = door_pt(g, d, w / 2.0, 0.6, side, None);
@@ -378,7 +378,7 @@ pub fn door_tools_leaf_ours(g: &mut crate::game::Game, d: DoorId, side: f64) -> 
 }
 
 /// a jamb man's holding spot and where the walk to it is asked from   (doortools.ts DoorTools.thrSpot)
-pub fn door_tools_thr_spot(g: &mut crate::game::Game, op: DoorOpId, sgn: f64, mark: V3) -> crate::doortools::DoorToolsThrSpot {
+pub fn door_tools_thr_spot(g: &crate::game::Game, op: DoorOpId, sgn: f64, mark: V3) -> crate::doortools::DoorToolsThrSpot {
     let (d, side) = (o!(g, op).door, o!(g, op).side);
     let w = g.dr[d].def.width;
     let back = g.k.doortools.slice_back;

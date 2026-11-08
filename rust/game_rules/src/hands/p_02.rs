@@ -33,7 +33,7 @@ pub fn team_door_hand(g: &mut crate::game::Game, gd: GuardId) -> Option<DoorId> 
 }
 
 /// The door tools' lead a step from the handle he was sent to, among the door work on Game: the seat this pass is about. (hands.ts:523)
-fn lead_at_handle(g: &mut Game, gd: GuardId, pos: V3) -> Option<DoorId> {
+fn lead_at_handle(g: &Game, gd: GuardId, pos: V3) -> Option<DoorId> {
     let mut i = 0;
     while i < g.door_tools.ops.len() {
         let row = &g.tab.doortools_door_op[g.door_tools.ops[i]];

@@ -80,7 +80,7 @@ pub fn book_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::rearwatch::Bo
 }
 
 /// A door off its hinges, or unlatched and far enough open. (rearwatch.ts isOpenWay)
-pub fn is_open_way(g: &mut crate::game::Game, d: DoorId) -> bool {
+pub fn is_open_way(g: &crate::game::Game, d: DoorId) -> bool {
     if crate::doors::door_off(g, d) {
         return true;
     }
