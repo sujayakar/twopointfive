@@ -241,18 +241,14 @@ const { WX_SIM } = await import(`${ROOT}/src/game/weather.ts`);   // --set '{"WX
 const { isWeatherKind } = await import(`${ROOT}/src/game/weatherKinds.ts`);   // --set '{"WEATHER":{"kind":"fog"}}' = the run started in that weather (the page's ?weather=)
 const { SQUADS, DRILL_AT = {}, squadsReport } = await import(`${ROOT}/src/game/enemysquads.ts`);   // (DRILL_AT: absent in an older checkout)
 const { CUES } = await import(`${ROOT}/src/game/cues.ts`);
-const { BUDDY, buddyStats } = await import(`${ROOT}/src/game/buddy.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
-// (the last defenders' switches: a build without the file is a build without them. Set by LASTSTAND=regroup,callout in the environment, or --set '{"LASTSTAND":{"regroup":true}}')
+// (the last defenders' switches: a build without the file is a build without them. Set by LASTSTAND=callout in the environment, or --set '{"LASTSTAND":{"callOut":true}}')
 const LASTM: any = await import(`${ROOT}/src/game/laststand.ts`).catch(() => null);
 const { DOORWAY } = await import(`${ROOT}/src/game/doors.ts`);
 const { DOORBLAST } = await import(`${ROOT}/src/game/doorblast.ts`);   // (a blast takes a door off its hinges: --set '{"DOORBLAST":{"on":false}}' = a charge flings the leaf in on its hinge, as before)
 const { HANDLE, HANDLE_STATS, HANDLE_DEBUG } = await import(`${ROOT}/src/game/handleside.ts`);
-// (a friend in a teammate's line of fire, game/clearline.ts: the same. CLEARLINE=1 in the environment, or --set '{"CLEARLINE":{"on":true}}')
-const CLM: any = await import(`${ROOT}/src/game/clearline.ts`).catch(() => null);
 const NVGM = await import(`${ROOT}/src/game/nvg.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
-const { WOUND, WOUND_STATS, resetWoundStats } = await import(`${ROOT}/src/game/wounds.ts`);   // TPS_WOUNDS=1 (env): wounds on (src/game/wounds.ts) — every run's JSON then carries `wounds`: who ended the run down wounded rather than dead, per side, and where the rounds landed
 const { hashStr, placeRects } = await import(`${ROOT}/src/game/dialogue.ts`);
 const { TACTICS_STATS, TACTICS_DEBUG } = await import(`${ROOT}/src/game/tactics.ts`);
 
@@ -302,7 +298,7 @@ export interface RunOut { /** taken rooms' other doors (Watcher.otherStats): ent
   /** every door the AI opened and where its opener stood (tools/qa/handle-watch.ts) */
   handle?: import('./handle-watch.ts').HandleOut;
   /** THE ENDGAME (EndWatch): see the head · PT_SEARCH=1: the searching commander's moves */
-  endgame?: EndgameOut; search?: SearchOut; /** clearline.ts's counts, when its switch is on */ clearLine?: Record<string, number>;
+  endgame?: EndgameOut; search?: SearchOut;
   /** laststand.ts's own report, when one of its switches is on */ lastStand?: { on: string; stats: Record<string, number>; room: string | null; in: number; out: number; named: string[]; said: { t: number; who: string; kind: string; text: string }[] };
   /** PT_TIMES=1: the frame's cost over the run, ms (this machine's) — and against the count of enemies up that frame: [frames, mean ms] */
   frameMs?: { n: number; mean: number; p50: number; p95: number; p99: number; max: number; byAlive: Record<string, [number, number]> } }
@@ -1543,7 +1539,7 @@ export async function play(scn: string, seed: number, cap = 300, verbose = false
 async function playRun(scn: string, seed: number, cap: number, verbose: boolean, set: Record<string, Record<string, unknown>>): Promise<RunOut & { trace: string[] }> {
   const E = entryOf(scn); if (!E) throw new Error(NO_SCN(scn));
   const out: RunOut & { trace: string[] } = { scn, seed, end: 'error', why: '', t: 0, team: 0, of: 0, hostiles: 0, hostilesOf: 0, orders: 0, refused: [], smells: [], rooms: 0, note: '', trace: [] };
-  let P: Player | null = null, cuesOn = true, clOn = false;
+  let P: Player | null = null, cuesOn = true;
   MAINS.length = 0; mainsOut = false;
   const { FRIENDLYFIRE_STATS: FF } = await import('../../src/game/friendlyfire.ts'); let ff0 = { ...FF }; const { FIRELINE_STATS: FL } = await import('../../src/game/fireline.ts'); let fl0 = { ...FL };   // (friendly fire: this run's own share of the tally, on `ff` below)
   // (--set reaches the feel tables, the rescue's own, and the harder defenders: THE SWITCH as the game's own row sets it — --set '{"DIFFICULTY":{"level":"hard"}}'
@@ -1552,8 +1548,7 @@ async function playRun(scn: string, seed: number, cap: number, verbose: boolean,
   const { DOORPATH } = await import('../../src/game/doorpath.ts');   // (the room entry's real paths: --set '{"DOORPATH":{"on":true}}', or TPS_DOORPATH=1)
   const T: Record<string, any> = knobRegistry();   // (THE list of knob tables — src/game/knobs.ts: --set takes any of them; play() puts every one back at the run's end)
   DOORWAY.frameHolds = true;   // (…and their frames hold a boot from the face they open toward, a wedge only a door that opens toward its man — --set '{"DOORWAY":{"frameHolds":false}}' plays without)
-  let dug = false, bud = false;
-  if (CLM?.CLEARLINE_STATS) for (const k of Object.keys(CLM.CLEARLINE_STATS)) CLM.CLEARLINE_STATS[k] = 0;
+  let dug = false;
   try {
     DOORWAY.oneWay = true; DOORWAY.exitsOut = false;   // (the doors as shipped — headless.ts stands every other tool up on the old double-acting leaves; --set '{"DOORWAY":{"oneWay":false}}' plays those, '{"DOORWAY":{"exitsOut":true}}' the outside doors opening outward, which ship off)
     const { HARD: hard, DIFFICULTY: diff, WEATHER: wx, ...rest } = set as Record<string, Record<string, unknown>>;
@@ -1573,7 +1568,7 @@ async function playRun(scn: string, seed: number, cap: number, verbose: boolean,
     }
     if (rest.OPENING) throw new Error('--set: OPENING is read while the game is built, which is before --set lands: TPS_OPENING=1 turns it on for the frozen stand, TPS_OPENING=0 off under TPS_PROFILE=shipped');
     for (const [name, o] of Object.entries(rest)) put(name, o);
-    dug = DIGIN.on; bud = BUDDY.on; clOn = !!CLM?.CLEARLINE?.on; out.difficulty = difficultyNow(); if (leversMixed()) (out as any).levers = leversLine(true); if (HOUR.id !== 'night') out.hour = HOUR.id;
+    dug = DIGIN.on; out.difficulty = difficultyNow(); if (leversMixed()) (out as any).levers = leversLine(true); if (HOUR.id !== 'night') out.hour = HOUR.id;
     Math.random = seeded(0x9137 + seed * 7919);   // (this run's counts — the JSON's `frag`, `teampace`, `noshove`, `picture`, `doorforce`, `holdfire` — begin level because every stand-up puts a tally back: tools/qa/fresh.ts)
     // THE MISSION'S ADDRESS IS THE STAND'S, as a page's is from its first line (headless.ts `address`): the weather a run is played in goes on it, and the game is born in it
     let q = scenarioQuery(E) as string; if (E.kind === 'roomclear' && process.env.PT_SAMEFLOOR !== '1') q = q.replace(/(^|[?&])roomclear(=\d+)?(?=&|$)/, `$1roomclear=${seed}`);   // (the flag itself, not a level file with the word in its name. PT_SAMEFLOOR=1 leaves the row's own flag: every seed then plays THE ONE FLOOR the row stands — with SAMESTART on, the level's first marks as written — and the seed is only the dice rolled in play; without it each seed pins a placement of its own, which no page deals any more)
@@ -1586,7 +1581,7 @@ async function playRun(scn: string, seed: number, cap: number, verbose: boolean,
     DOORSTAY.on = (rest.DOORSTAY?.on as boolean | undefined) ?? true;   // (the page's default too: doors stay where they are left — the harness stood the game up with the closers of old; --set '{"DOORSTAY":{"on":false}}' keeps them)
     T.DOORMANNERS.on = (rest.DOORMANNERS?.on as boolean | undefined) ?? true;   // (and the doorway manners as shipped: headless.ts stands every other tool up without them; --set '{"DOORMANNERS":{"on":false}}' plays without)
     DOORBLAST.on = (rest.DOORBLAST?.on as boolean | undefined) ?? true;   // (and a blast takes a leaf off its hinges, as shipped: --set '{"DOORBLAST":{"on":false}}' = a charge flings it in on its hinge)
-    for (const n of ['FRAG', 'MOVES', 'TURN', 'WOUND', 'AIM', 'GLASSPEN']) if (rest[n]) put(n, rest[n]);   // (standUp has just put the harness's own pins back over these — no defenders' frags, the movement pass, the turn weight, wounds and rounds through glass off, the old aim: src/host/standup.ts — so a --set row of theirs is put again; without this it was read and then silently lost)
+    for (const n of ['FRAG', 'MOVES', 'TURN', 'AIM', 'GLASSPEN']) if (rest[n]) put(n, rest[n]);   // (standUp has just put the harness's own pins back over these — no defenders' frags, the movement pass, the turn weight, wounds and rounds through glass off, the old aim: src/host/standup.ts — so a --set row of theirs is put again; without this it was read and then silently lost)
     if ((set as any).SILENT) put('SILENT', (set as any).SILENT);   // (… and the silent order off the menu: --set '{"SILENT":{"on":true,"start":true}}' = a squad that stands up SILENT, as the loadout screen's row starts it)
     const destr0 = { ...DESTR_STATS }, gb0 = { ...GB_STATS } as Record<string, number>; if (process.env.PT_DUST === '1' && DESTRUCTION.on) W.dust = installDustStandin(W);
     (out as any).destr0 = [destr0, gb0];
@@ -1598,7 +1593,7 @@ async function playRun(scn: string, seed: number, cap: number, verbose: boolean,
     if (rest.REARWATCH) put('REARWATCH', rest.REARWATCH);   // (and the rear man's watch on the door behind: standUp's frozen stand has just pinned it off — TPS_REARWATCH — over a --set row)
     if (rest.STACKLINE) put('STACKLINE', rest.STACKLINE);
     if (rest.HAULHOME) put('HAULHOME', rest.HAULHOME);   // (and the hauled furniture's last hand to the door: standUp's frozen stand has just pinned it off — TPS_HAULHOME — over a --set row)   // (and the brisk walk onto a stack mark at an open door: standUp's frozen stand has just pinned it off — TPS_STACKLINE — over a --set row)
-    resetWoundStats(); g.godMode = !MORTAL; g.tune.chaos = 0.5;   // (the page's default chaos; Sam cannot be hurt — the team is what is under test — but he is seen, heard and in the way)
+    g.godMode = !MORTAL; g.tune.chaos = 0.5;   // (the page's default chaos; Sam cannot be hurt — the team is what is under test — but he is seen, heard and in the way)
     const { why } = await quiet(!verbose, () => W.start()); if (why) throw new Error(`start refused — ${why}`);
     if (process.env.PT_METER === 'sky') { const { installSkyMeter } = await import('./hour-lib.ts'); installSkyMeter(g); } else if (process.env.PT_METER) throw new Error(`PT_METER=${process.env.PT_METER}: sky, or unset`);
     if (DOOR && !g.doors.byName(DOOR)) throw new Error(`PT_DOOR=${DOOR}: this level has no door of that name`);
@@ -1626,7 +1621,6 @@ async function playRun(scn: string, seed: number, cap: number, verbose: boolean,
   } catch (e) {
     if (e instanceof Done) { out.end = e.end; out.why = e.why; } else { out.end = 'error'; out.why = e instanceof Error ? `${e.message}\n${(e.stack ?? '').split('\n').slice(1, 6).join('\n')}` : String(e); }
   }
-  if (P && WOUND.on) out.wounds = { team: P.team.filter((m: any) => m.wound).length, hostiles: P.hostiles.filter((h: any) => h.wound).length, zones: { ...WOUND_STATS.byZone }, again: WOUND_STATS.again, finished: WOUND_STATS.finished };
   if (BREAKER) (out as any).breaker = [...MAINS];
   if (P) { if (P.g.level.scenarios?.par) { const R = P.g.par?.result(); (out as any).par = R ? { secs: +R.secs.toFixed(1), lost: R.lost, total: +R.total.toFixed(1), medal: R.medal } : { medal: null, on: !!P.g.par?.data }; }   // (a par level — game/par.ts: the run's time, its penalty and its medal; medal null = no time: wiped, stalled, or the par switched off)
     if (WALL) (out as any).wall = WALL.wallTally(P); out.t = +P.t.toFixed(1); out.team = P.atEnd?.team ?? P.upAll.length; out.hostiles = P.atEnd?.hostiles ?? P.hostiles.filter((h: any) => h.state !== 'dead').length; out.orders = P.orders; out.refused = P.refused; out.smells = P.watch.smells; out.deaths = P.watch.deaths; out.other = P.watch.otherStats; P.watch.aloneClose(); out.alone = P.watch.alone; out.upSecs = Math.round(P.watch.upSecs); out.aloneSecs = Math.round(P.watch.aloneSecs); out.rooms = P.rooms; out.entry = { ...P.g.entry.stats }; if (TOOL) out.thr = P.thr; if (TECH) (out as any).tech = TECH; out.entries = P.tally.close(); out.kills = P.tally.kills; out.losses = P.tally.losses; out.bangs = P.bangs0 - P.D.bangs; if (HOLD) out.told = P.told;
@@ -1640,8 +1634,7 @@ async function playRun(scn: string, seed: number, cap: number, verbose: boolean,
       (out as any).destr = { on: DESTRUCTION.on, ...d, dark, ...(Object.keys(fixWhy).length ? { fixWhy } : {}), debrisPeak: P.g.destr.debris.stats.peakLive, debrisRefused: P.g.destr.debris.stats.refused, inv: P.g.destr.inventory(), ...(Object.keys(gbs).length ? { glass: gbs } : {}), ...(dust ? { dust: { ...dust.stats, minT: +dust.stats.minT.toFixed(3) } } : {}) }; }
     out.endgame = P.endw.close(P.t, out.end); if (P.search) out.search = P.search.close();
     if (P.handw) out.handle = { ...P.handw.close(), stats: { ...HANDLE_STATS } };
-    if (clOn) out.clearLine = { ...CLM.CLEARLINE_STATS };
-    if (LASTM?.LASTSTAND && (LASTM.LASTSTAND.regroup || LASTM.LASTSTAND.callOut)) { const r = LASTM.lastStandReport(P.g); out.lastStand = { on: r.on, stats: r.stats, room: r.room, in: r.in.length, out: r.out.length, named: r.named, said: r.said }; }
+    if (LASTM?.LASTSTAND && LASTM.LASTSTAND.callOut) { const r = LASTM.lastStandReport(P.g); out.lastStand = { on: r.on, stats: r.stats, room: r.room, in: r.in.length, out: r.out.length, named: r.named, said: r.said }; }
     if (P.leaves.length) (out as any).leaves = P.leaves;   // (the commander's own: open leaves across his way he pulled to — absent when he never did)
     if (SHUT) (out as any).shut = P.shut.map(({ ref, ...x }) => ({ ...x, open: !ref.latched }));   // (open: that door stands open again as the run ends)
     out.trace = P.trace; (out as any).frag = { ...FRAG_STATS }; (out as any).condition = { ...CONDITION_STATS }; (out as any).holdfire = { ...HOLDFIRE_STATS, lifts: { ...HOLDFIRE_STATS.lifts } };
@@ -1652,7 +1645,7 @@ async function playRun(scn: string, seed: number, cap: number, verbose: boolean,
       (out as any).teampace = { on: TEAMPACE.on, ...TEAMPACE_STATS };   // (teampace.ts: runs taken by reason, and the seconds at a run)
       (out as any).noshove = { on: NOSHOVE.on, ...NOSHOVE_STATS };   // (noshove.ts: frames a follower was turned round the player, held short, let squeeze past, stepped back out; frames a shove was kept out of his pace)
       (out as any).doorforce = { on: DOORFORCE.on, ...DOORFORCE_STATS };   // (doorforce.ts: sounds and sightings kept of a shut door, doors a man took on, rounds through, frames held for a friend, boots thrown / that gave / not thrown)
-      if (P.lightw) (out as any).lightwall = P.lightw.out(); if (P.gunw) (out as any).gunwall = P.gunw.out(); if (P.fogw) (out as any).fogfire = P.fogw.out(); if (CUES.overheard) { const L = P.g.cues.heardLog as { text: string; drawn: boolean; why: string }[]; (out as any).overheard = { offered: P.g.cues.stats.shouts, drawn: P.g.cues.stats.shoutsDrawn, said: [...new Set(L.filter(r => r.drawn).map(r => r.text))], held: L.filter(r => !r.drawn).map(r => `${r.why}: ${r.text}`) }; } /* (cues.ts overheard: hidden defenders' shouts offered · of them rows on the strip · their words · the ones held back and why) */ if (RUBBLE.on) (out as any).rubble = { ...P.g.destr.debris.feetStats, heap: { ...(P.g.destr.edgeLook?.footBook?.stats ?? {}) }, pool: { ...P.g.destr.debris.stats } }; if (CUTW) (out as any).cut = { on: CUTW.on(), first: P.cutFirst, counts: cutCounts(P.g), table: { ...CUTW.B }, plates: { cutPlates: CUTW.S.cutPlates, cutSplit: CUTW.S.cutSplit, crumbled: CUTW.S.crumbled }, pool: { ...(P.g.destr?.debris?.stats ?? {}) } }; if (DIGF) { (out as any).digestFrames = P.digFrames; if (P.digFrameAt) (out as any).digestFrameAt = P.digFrameAt; } if (process.env.PT_DIGEST) { out.digest = P.digest; out.digestMove = P.digestMove; if (P.series.length) out.digestSeries = P.series; if (P.digestAt) out.digestAt = P.digestAt; } out.cover = { ...P.g.cover.stats }; out.coverfire = coverfireReport(P.g); if ((P.g as any).cleared) (out as any).cleared = { ...(P.g as any).cleared.stats, summary: (P.g as any).cleared.summary() }; out.cues = { on: cuesOn, ...P.g.cues.stats, kinds: { ...P.g.cues.kinds }, ...(SAY ? { log: P.g.cues.log } : {}) }; out.tools = { ...P.D.stats }; out.pressure = pressureStats(P.g); if (bud) out.buddy = buddyStats(P.g); Object.assign(out, P.defw.close(P.t)); if (P.sayw) (out as any).said = P.sayw.close(); if (P.ways) (out as any).ways = P.ways.close(); if (P.paths) (out as any).paths = P.paths.close(); if (DOORPATH.on) (out as any).doorpath = { ...(P.g as any).doorPath.stats }; if (P.linew) (out as any).line = P.linew.close(P.t); if (P.holes) (out as any).destr = { ...(out as any).destr, ...P.holes.close() };   // (beside the chaos lane's counts written above: one `destr` block, both parts' keys — none shared)
+      if (P.lightw) (out as any).lightwall = P.lightw.out(); if (P.gunw) (out as any).gunwall = P.gunw.out(); if (P.fogw) (out as any).fogfire = P.fogw.out(); if (CUES.overheard) { const L = P.g.cues.heardLog as { text: string; drawn: boolean; why: string }[]; (out as any).overheard = { offered: P.g.cues.stats.shouts, drawn: P.g.cues.stats.shoutsDrawn, said: [...new Set(L.filter(r => r.drawn).map(r => r.text))], held: L.filter(r => !r.drawn).map(r => `${r.why}: ${r.text}`) }; } /* (cues.ts overheard: hidden defenders' shouts offered · of them rows on the strip · their words · the ones held back and why) */ if (RUBBLE.on) (out as any).rubble = { ...P.g.destr.debris.feetStats, heap: { ...(P.g.destr.edgeLook?.footBook?.stats ?? {}) }, pool: { ...P.g.destr.debris.stats } }; if (CUTW) (out as any).cut = { on: CUTW.on(), first: P.cutFirst, counts: cutCounts(P.g), table: { ...CUTW.B }, plates: { cutPlates: CUTW.S.cutPlates, cutSplit: CUTW.S.cutSplit, crumbled: CUTW.S.crumbled }, pool: { ...(P.g.destr?.debris?.stats ?? {}) } }; if (DIGF) { (out as any).digestFrames = P.digFrames; if (P.digFrameAt) (out as any).digestFrameAt = P.digFrameAt; } if (process.env.PT_DIGEST) { out.digest = P.digest; out.digestMove = P.digestMove; if (P.series.length) out.digestSeries = P.series; if (P.digestAt) out.digestAt = P.digestAt; } out.cover = { ...P.g.cover.stats }; out.coverfire = coverfireReport(P.g); if ((P.g as any).cleared) (out as any).cleared = { ...(P.g as any).cleared.stats, summary: (P.g as any).cleared.summary() }; out.cues = { on: cuesOn, ...P.g.cues.stats, kinds: { ...P.g.cues.kinds }, ...(SAY ? { log: P.g.cues.log } : {}) }; out.tools = { ...P.D.stats }; out.pressure = pressureStats(P.g); Object.assign(out, P.defw.close(P.t)); if (P.sayw) (out as any).said = P.sayw.close(); if (P.ways) (out as any).ways = P.ways.close(); if (P.paths) (out as any).paths = P.paths.close(); if (DOORPATH.on) (out as any).doorpath = { ...(P.g as any).doorPath.stats }; if (P.linew) (out as any).line = P.linew.close(P.t); if (P.holes) (out as any).destr = { ...(out as any).destr, ...P.holes.close() };   // (beside the chaos lane's counts written above: one `destr` block, both parts' keys — none shared)
     if (P.doorw) { (out as any).doors = P.doorw.close(); const M = (P as any).doorM; if (M) (out as any).doors.manners = { ...M.DOORMANNERS_STATS }; }
     { const sq = squadsReport(P.g); if (sq.length) { out.squads = sq; if (verbose) for (const q of sq) for (const e of q.events) console.log(`${e.t.toFixed(1).padStart(6)}     squad · ${q.name} ${e.what} (${e.n} at home): ${e.why}`); } }
     if (dug || out.squads) { out.digin = { ...DIGIN_STATS }; (out as any).diginShut = { ...DIGIN_SHUT };   // (DIGIN.shutOpen's own counts: doors pushed home, held, pulled again, other doors gone to, let be)
@@ -1713,6 +1706,6 @@ if (import.meta.main) {
   runs.sort((a, b) => ids.indexOf(a.scn) - ids.indexOf(b.scn) || a.seed - b.seed);
   console.log(report(runs, argv.includes('--md')));
   console.log(`\n${runs.length} runs in ${Math.round((Date.now() - t0) / 1000)} s`);
-  if (flag('--json')) writeFileSync(flag('--json')!, JSON.stringify({ cap, set, ...(STACKWAIT > 0 ? { stackWait: STACKWAIT } : {}), ...(PAUSE > 0 ? { pause: PAUSE } : {}), ...(NOISE ? { noise: true } : {}), ...(SEARCH ? { search: true } : {}), ...(LASTM?.LASTSTAND && (LASTM.LASTSTAND.regroup || LASTM.LASTSTAND.callOut) ? { lastStand: { regroup: LASTM.LASTSTAND.regroup, callOut: LASTM.LASTSTAND.callOut } } : {}), runs }, null, 1));
+  if (flag('--json')) writeFileSync(flag('--json')!, JSON.stringify({ cap, set, ...(STACKWAIT > 0 ? { stackWait: STACKWAIT } : {}), ...(PAUSE > 0 ? { pause: PAUSE } : {}), ...(NOISE ? { noise: true } : {}), ...(SEARCH ? { search: true } : {}), ...(LASTM?.LASTSTAND && LASTM.LASTSTAND.callOut ? { lastStand: { regroup: LASTM.LASTSTAND.regroup, callOut: LASTM.LASTSTAND.callOut } } : {}), runs }, null, 1));
   process.exit(runs.some(r => r.end === 'error' || r.end === 'stalled') ? 1 : 0);
 }

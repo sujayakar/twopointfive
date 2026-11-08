@@ -13,6 +13,7 @@ import { appendFileSync } from 'node:fs';
 import type { Recipe, Outcome } from '../../src/net/wire.ts';
 import type { Headless } from '../qa/headless.ts';
 import type { PlayerCmd } from '../../src/game/cmd.ts';
+import type { RunTape } from '../../src/replay/format.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
 
@@ -87,7 +88,8 @@ export async function standRecipe(recipe: Recipe): Promise<Stood> {
   const { recipeWhy } = await import(`${ROOT}/src/net/wire.ts`);
   { const why = recipeWhy(recipe) || levelWhy((recipe as { levelFile?: string }).levelFile); if (why) throw new Error(`no networked game can be stood from this recipe: ${why}`); }   // (…a recipe a server sent names its level the same way)
   const { rerun } = await import('../qa/rerun.ts');
-  const tape = { v: 1, ticks: 0, recipe, dt: [], view: [], cam: [], input: [], lens: [], sens: { keys: [], rows: [] }, x: [] };
+  const { TAPE_VERSION } = await import(`${ROOT}/src/replay/format.ts`);
+  const tape: RunTape = { v: TAPE_VERSION, ticks: 0, recipe, dt: [], view: [], cam: [], input: [], lens: [], x: [] };
   const F = { v: 1, game: 'twopointsix', kind: 'replay', savedAt: '', why: 'net', level: { fp: '', boxes: 0 }, flags: {}, hz: 60, seconds: 0, samples: [], cast: [], notes: [], map: { doors: [] }, rerun: tape };
   // (`scan: false`: once it is stood NOTHING writes this game between two ticks. Every change comes as a seat's record through netStep, so the host of the
   //  Rust game does not walk the puppet for a tool's writes before a step or a look ahead: about 3 ms of each on a 4 core box)
@@ -99,7 +101,6 @@ export async function standRecipe(recipe: Recipe): Promise<Stood> {
   const R = await rerun(F as never, { toN: 0, scan: false, dress: true, draws: false });
   if (R.refuse || !R.W) throw new Error(`the game could not be stood from its recipe: ${R.refuse}`);
   const W = R.W, g = W.game;
-  { const S = g.sensors as object; if (Object.hasOwn(S, 'read')) delete (S as { read?: unknown }).read; }   // (the re-run serves the sensors off its tape; this game answers its own, SENSE.cpu)
   const { netStep, netStand, netWord, netWatch, netQuiet, netWhole, wordTick, NET_WORD_SEED } = await import(`${ROOT}/src/net/step.ts`), { activeScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`);
   if (activeScenario(g) !== recipe.scenario) throw new Error(`the recipe's mission (${recipe.scenario}) did not come up here (${activeScenario(g) ?? 'none'} is up): ${(R.report?.warnings ?? []).find((w: string) => w.includes('did not start')) ?? 'another build or level than the recipe\'s'}`);
   netStand(g);

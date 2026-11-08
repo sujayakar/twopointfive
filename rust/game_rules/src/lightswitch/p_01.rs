@@ -278,9 +278,10 @@ pub fn switch_lit(g: &crate::game::Game, sw: &crate::lightswitch::WallSwitch) ->
 }
 
 /// May Sam be planted at a plate for his hand's move: not from a wall hold. (lightswitch.ts plants)
-pub fn plants(g: &crate::game::Game, seat: &crate::seats::SeatRef, by: CharId) -> bool {
-    let pl = seat.player;
-    by == g.pl[pl].ch && g.puppet.is_none() && g.pl[pl].wall.is_none()
+pub fn plants(g: &crate::game::Game, by: CharId) -> bool {
+    let Some(s) = crate::seats::seat_of_char(g, Some(by)) else { return false };
+    let pl = crate::cmd::seat_man(g, s);
+    g.puppet.is_none() && g.pl[pl].wall.is_none()
 }
 
 /// The time his turn to the plate and his step in to it take. (lightswitch.ts turnSecs)
@@ -335,7 +336,7 @@ pub fn flip_switch(g: &mut crate::game::Game, sw: &crate::lightswitch::WallSwitc
     if !on { crate::audio_iface::game_audio_like_play(g, "lightOff", Some(sw.pos), Some(0.5), None); }
     if g.m.lightswitch.states.is_some() {
         g.m.lightswitch.states.as_mut().unwrap().hands.retain(|h| h.c != by);
-        let plant = plants(g, &crate::seats::here(g), by);
+        let plant = plants(g, by);
         let dur = g.k.lightswitch.hand_secs + (if plant { turn_secs(g, by, sw) } else { 0.0 });
         let hand = Hand { c: by, sw: sw.clone(), at: time, dir: if on { -1.0 } else { 1.0 }, dur, plant };
         g.m.lightswitch.states.as_mut().unwrap().hands.push(hand);
@@ -423,7 +424,6 @@ pub fn puts_back(g: &crate::game::Game, gd: GuardId) -> bool {
         && g.ch[man.ch].alive
         && man.held.is_none()
         && man.civ.is_none()
-        && man.wound.is_none()
         && man.script.is_none()
         && man.body_duty.is_none()
         && time >= man.dazzled_until
@@ -482,11 +482,13 @@ pub fn light_switch_tick(g: &mut crate::game::Game) {
     for i in 0..n {
         let h = g.m.lightswitch.states.as_ref().unwrap().hands[i].clone();
         let mut plant = h.plant;
-        if plant && plant_broken(g, &crate::seats::here(g), &h) {
+        // (a plant is a player's: his own seat's state says if it holds)
+        let seat = crate::seats::seat_of_char(g, Some(h.c));
+        if plant && crate::seats::on_seat(g, seat, &mut |g| plant_broken(g, &crate::seats::here(g), &h)) {
             g.m.lightswitch.states.as_mut().unwrap().hands[i].plant = false;
             plant = false;
         }
-        let hand = if plant { crate::handwork::sam_hand(g, &crate::seats::here(g)) } else { None };
+        let hand = if plant { let s = seat.unwrap_or(g.seat); crate::handwork::sam_hand(g, &crate::seats::seat(g, s)) } else { None };
         let more = crate::handwork::WorkAtMore { keys: None, hand, dir: Some(h.dir) };
         let t = g.time - h.at;
         crate::handwork::work_at(g, h.c, crate::character::WorkKind::Lever, h.sw.pos, h.sw.n, t, h.dur, Some(&more));

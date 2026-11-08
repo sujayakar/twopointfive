@@ -57,7 +57,7 @@ impl AirField {
 impl Default for AirField { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum AirFieldPipesKey {
     Curl,
     Advect,

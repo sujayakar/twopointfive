@@ -158,7 +158,7 @@ like that."
   something to shove or break. **check** `lived` (counts things, names bare rooms); the rest **by eye**
   (`lived-check.ts <name> --sheet` prints what each room got).
 - **A thing is asked of the library by name.** `docs/library.md` lists every piece of every kit with its arguments, its
-  size, what it costs and what it is to a man, and every named paint; the two showrooms (`levels/gwot-yard.json`,
+  size, what it costs and what it is to a man, and every named paint; the two showrooms (`tools/levels/gwot-yard.ts`,
   `levels/library-hall.json`) stand one of each, and a piece's line in a showroom's generator is the call to copy. A
   thing another level could use is never a stack of boxes in one generator: add it to a kit, stand it in a showroom.
   **check** `bun run tools/levels/library.ts --check`.

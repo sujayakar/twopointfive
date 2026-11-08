@@ -819,33 +819,10 @@ pub fn dig_in_order(g: &mut crate::game::Game, def: RoomfightDefId, know: V3, be
     true
 }
 
-/// laststand.ts: the stand is called off: a man it ORDERED to dig in lets go of whatever he was at   (digin.ts digInRelease)
-pub fn dig_in_release(g: &mut crate::game::Game, gd: GuardId) {
-    let mut m = match g.m.digin.states.as_ref().and_then(|s| s.men.get(gd)) { Some(x) if x.ordered => *x, _ => return };
-    m.ordered = false;
-    if m.phase != Phase::Idle { drop(g, &mut m, Some(gd)); }
-    state_of(g).men.set(gd, m);
-}
-
 /// laststand.ts: where his dig-in stands ('idle' = not at it)   (digin.ts digInPhase)
 pub fn dig_in_phase(g: &crate::game::Game, gd: GuardId) -> String {
     let phase = g.m.digin.states.as_ref().and_then(|s| s.men.get(gd)).map_or(Phase::Idle, |x| x.phase);
     String::from(phase.as_str())
-}
-
-/// laststand.ts: the team has been in this room since somebody dug in there   (digin.ts digInEntered)
-pub fn dig_in_entered(g: &crate::game::Game, room: RoomfightRoomId) -> bool {
-    match g.m.digin.states.as_ref().and_then(|s| s.rooms.get(room)) { Some(r) => !r.entered_at.is_nan(), None => false }
-}
-
-/// laststand.ts: this room's doors that stand wedged (not yet booted)   (digin.ts digInWedged)
-pub fn dig_in_wedged(g: &crate::game::Game, room: RoomfightRoomId) -> Vec<crate::digin::DigInWedgedItem> {
-    let s = match g.m.digin.states.as_ref() { Some(s) => s, None => return Vec::new() };
-    let mut out = Vec::new();
-    for e in g.tab.roomfight_room[room].entries.iter() {
-        if let Some(w) = s.wedges.get(e.door) { if !w.kicked { out.push(DigInWedgedItem { door: e.door, at: e.at }); } }
-    }
-    out
 }
 
 /// roomfight.ts applyWatch: a man set off the door's line rests his gun on the floor they must cross (writes `pt`)   (digin.ts digInLook)

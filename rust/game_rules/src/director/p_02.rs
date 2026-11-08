@@ -1156,11 +1156,6 @@ pub fn director_query_arrived(g: &crate::game::Game, r: DirectorRunId, u: &crate
 pub fn director_query_state(g: &crate::game::Game, r: DirectorRunId, u: &crate::director::UnitRef) -> Option<crate::game::GuardState> {
     director_guard_of(g, r, u).ok().map(|gd| g.gd[gd].state)
 }
-/// (director.ts Query.room, of 'sam')
-pub fn director_query_room_sam(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> String {
-    let p = g.ch[g.pl[seat.player].ch].pos;
-    crate::chronicle::room_of(g, p)
-}
 /// (director.ts Query.pos, of a man)
 pub fn director_query_pos_unit(g: &crate::game::Game, r: DirectorRunId, u: &crate::director::UnitRef) -> Result<V3, String> {
     let gd = director_guard_of(g, r, u)?;

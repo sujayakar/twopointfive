@@ -91,6 +91,8 @@ pub struct FogOfWar {
     pub known_t: JsMap<GuardId, f64>,
     pub told_step: JsMap<GuardId, f64>,
     pub call_n: f64,
+    /// what is filed now is the team's own doing: said on each particle record that goes out
+    pub filing_ours: bool,
     /// the fog is on and the pass has run: the team's rule is live (`ours_on`)
     pub live: bool,
     pub our_chunks: JsSet<crate::Num>,
@@ -135,6 +137,7 @@ impl FogOfWar {
             known_t: JsMap::new(),
             told_step: JsMap::new(),
             call_n: 0.0,
+            filing_ours: false,
             live: false,
             our_chunks: JsSet::new(),
             our_landed: JsSet::new(),

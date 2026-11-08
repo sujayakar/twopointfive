@@ -221,18 +221,16 @@ fn smoke_one(g: &mut Game, gd: GuardId, c: CharId, dt: f64, mn: &mut Man, t: &mu
         if h.gap <= 0.0 {
             h.gap += k.out / m::max(1.0, m::round(k.puffs.records));
             h.left -= 1.0;
-            if crate::particle_fx::gpu_fx(g) {
-                let q = k.puffs;
-                let a = mouth_of(g, c);
-                let seed = puff_seed(id, mn.outs, h.left, g.m.smokebreak.states.as_ref().unwrap().seed);
-                let n = crate::render_particles::particles_emit(g, crate::render_particles::PKind::Dust, a.pos, a.dir, m::max(1.0, m::round(q.count)), crate::render_particles::EmitOpts {
-                    shape: Some(crate::render_particles::EmitShape::Cone), speed: q.speed, speed_jit: Some(0.35), spread: Some(q.spread), life: q.life, life_jit: Some(0.25), size: q.size,
-                    size_jit: Some(0.3), pos_jit: Some(0.012), owner: Some(id), color: Some(k.color), steam: Some(v3::clamp(q.opacity, 0.0, 1.0)), seed: Some(seed),
-                    ..crate::render_particles::EmitOpts::zeroed()
-                });
-                if n > 0.0 {
-                    book(g).records += 1.0; // (the generated answer is 0.0: never counted on the Rust side. notes.md, Out)
-                }
+            let q = k.puffs;
+            let a = mouth_of(g, c);
+            let seed = puff_seed(id, mn.outs, h.left, g.m.smokebreak.states.as_ref().unwrap().seed);
+            let n = crate::render_particles::particles_emit(g, crate::render_particles::PKind::Dust, a.pos, a.dir, m::max(1.0, m::round(q.count)), crate::render_particles::EmitOpts {
+                shape: Some(crate::render_particles::EmitShape::Cone), speed: q.speed, speed_jit: Some(0.35), spread: Some(q.spread), life: q.life, life_jit: Some(0.25), size: q.size,
+                size_jit: Some(0.3), pos_jit: Some(0.012), owner: Some(id), color: Some(k.color), steam: Some(v3::clamp(q.opacity, 0.0, 1.0)), seed: Some(seed),
+                ..crate::render_particles::EmitOpts::zeroed()
+            });
+            if n > 0.0 {
+                book(g).records += 1.0; // (the generated answer is 0.0: never counted on the Rust side. notes.md, Out)
             }
         }
     }

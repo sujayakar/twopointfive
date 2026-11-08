@@ -29,6 +29,8 @@ export class PauseCard {
     addEventListener('keydown', e => { if (e.code === 'Escape' && !e.repeat) { e.preventDefault(); this.toggle(); } }, { capture: true });
   }
   toggle(): void { if (this.up) this.close(); else this.open(); }
+  /** a save's picture came after its tile was laid: the tile takes it */
+  pictured(save: string, url: string): void { for (const t of this.root.querySelectorAll<HTMLElement>('.saves .tile')) if (t.dataset.save === save) t.style.backgroundImage = `url("${url}")`; }
   /** the run's end card */
   end(): void { if (this.up) this.close(); this.ended = true; this.open(); }
   open(): void {

@@ -19,15 +19,20 @@ pub struct Opaque;
 #[derive(Clone, Copy, Debug, Default)]
 pub struct FnField;
 /// an object used as a key, until a hand decision gives it an ID
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ObjKey(pub u32);
 /// a number used as a key of a Map
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Num(pub f64);
-impl PartialEq for Num { fn eq(&self, o: &Self) -> bool { self.0.to_bits() == o.0.to_bits() } }
+impl Num {
+    /// the key this number is, as the language's Map has it: -0 is 0, and every NaN is one NaN
+    fn key(self) -> u64 { if self.0 == 0.0 { 0 } else if self.0.is_nan() { f64::NAN.to_bits() } else { self.0.to_bits() } }
+}
+impl PartialEq for Num { fn eq(&self, o: &Self) -> bool { self.key() == o.key() } }
 impl Eq for Num {}
+impl core::hash::Hash for Num { fn hash<H: core::hash::Hasher>(&self, h: &mut H) { h.write_u64(self.key()); } }
 impl PartialOrd for Num { fn partial_cmp(&self, o: &Self) -> Option<core::cmp::Ordering> { Some(self.cmp(o)) } }
-impl Ord for Num { fn cmp(&self, o: &Self) -> core::cmp::Ordering { self.0.total_cmp(&o.0) } }
+impl Ord for Num { fn cmp(&self, o: &Self) -> core::cmp::Ordering { f64::from_bits(self.key()).total_cmp(&f64::from_bits(o.key())) } }
 /// a value no rule could write for a blank (see the STOP list)
 pub fn skel_blank<T>() -> T { todo!() }
 /// A function a caller names and nobody has written: the call says which, in the panic the host shows.
@@ -51,7 +56,6 @@ pub mod blast_feel { pub mod types; pub use types::*; }
 pub mod blast_look { pub mod types; pub use types::*; }
 pub mod breach { pub mod types; pub use types::*; }
 pub mod break_table { pub mod types; pub use types::*; }
-pub mod buddy { pub mod types; pub use types::*; }
 pub mod calmtorch { pub mod types; pub use types::*; }
 pub mod camera { pub mod types; pub use types::*; }
 pub mod carlamps { pub mod types; pub use types::*; }
@@ -62,7 +66,6 @@ pub mod chronicle { pub mod types; pub use types::*; }
 pub mod civilians { pub mod types; pub use types::*; }
 pub mod cleanrestart { pub mod types; pub use types::*; }
 pub mod cleared { pub mod types; pub use types::*; }
-pub mod clearline { pub mod types; pub use types::*; }
 pub mod close { pub mod types; pub use types::*; }
 pub mod cloud_report { pub mod types; pub use types::*; }
 pub mod cmd { pub mod types; pub use types::*; }
@@ -156,6 +159,7 @@ pub mod kit { pub mod types; pub use types::*; }
 pub mod kitanim { pub mod types; pub use types::*; }
 pub mod kitload { pub mod types; pub use types::*; }
 pub mod kittree { pub mod types; pub use types::*; }
+pub mod kitstage;
 pub mod knobs_reg { pub mod types; pub use types::*; }
 pub mod lanes { pub mod types; pub use types::*; }
 pub mod laststand { pub mod types; pub use types::*; }
@@ -335,7 +339,6 @@ pub mod suppression { pub mod types; pub use types::*; }
 pub mod tactics { pub mod types; pub use types::*; }
 pub mod takecheck { pub mod types; pub use types::*; }
 pub mod takedown { pub mod types; pub use types::*; }
-pub mod tapstep { pub mod types; pub use types::*; }
 pub mod teamfeel { pub mod types; pub use types::*; }
 pub mod teampace { pub mod types; pub use types::*; }
 pub mod teams { pub mod types; pub use types::*; }
@@ -371,4 +374,3 @@ pub mod wind { pub mod types; pub use types::*; }
 pub mod words { pub mod types; pub use types::*; }
 pub mod workstow { pub mod types; pub use types::*; }
 pub mod workthings { pub mod types; pub use types::*; }
-pub mod wounds { pub mod types; pub use types::*; }

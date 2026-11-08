@@ -160,13 +160,6 @@ export const DOORTOOLS = {
    *  Else he waits up to `fragWayWait` s for it, then the grenade goes back on his belt and they go in without it (the rule a mate behind the door already had).
    *  Nothing of the blast, the aim or the fuse changes: a grenade that does come back still kills whoever it reaches. */
   fragWay: true, fragWayWait: 1.0, fragWayOpen: 1.15, fragWayAjar: 0.6,
-  /** the same look at the leaf for a STUN canister on a bang and clear (never a threshold's cans): off = thrown on the shove whatever the leaf did, as it was.
-   *  The can off a stopped leaf hurts nobody of the entry (they are off its list) but it goes off on their side of the door and the room behind is not flashed.
-   *  ON since 10-11: a door the squad PULLS open swings toward the stack, and a can thrown `tossAfterOpen` after it starts to move met the leaf every time and
-   *  burst outside (the maintainer: "the squad does waste a lot of bangs"). Toward the team the leaf is never 'well round and still going', so the can waits
-   *  for it to STAND OPEN (`fragWayOpen`): a pulled leaf is there about 0.15 s later. A SHOVED leaf's throw is the throw as it was, frame for frame; behind a BOOT
-   *  (`tossAfterKick`) the can leaves a tick or two later, once the flung leaf is past `fragWayAjar`. Beats: 'can waits: …' / 'can held' ('bang · …' is the burst) */
-  bangWay: true,
   /** a bang / frag order on a door that STANDS OPEN walks nobody across the front of the opening (the maintainer's replay, 10-12: "after being ordered to
    *  frag after externally clearing, blue one crosses across a dangerous threshold" — both men held the open door from either jamb, the new order filed the
    *  second man behind the lead on the lead's wall, and he walked 3.4 m through the doorway's own view to get there). With the leaf standing open
@@ -437,13 +430,6 @@ export const DOORTOOLS = {
    *  hand (he may have gone in since the row was given) and goes in without it, the same beat. Any squad size. A can HE throws, or one he watches go in
    *  from outside through the open door, blinds him as it did (samstun.ts SAMSTUN.ownSeen: not this rule's). */
   behindSam: false,
-  /** NO CAN INTO A ROOM OUR OWN MEN HOLD (the maintainer, 10-22: "the second team threw a flashbang when our guys were already on the inside"): a
-   *  bang and clear asks about TEAMMATES again as the can is about to leave the hand, as behindSam asks about Sam — a teammate outside this order
-   *  (and outside the orders that go on its word or its gate) beyond the door, inside the can's reach with a line from the opening: the can stays
-   *  in the kit ('no bang · Blue One is in there'), a man says so, and they step in. Any squad size (the row's own test at the time it is given —
-   *  `behind` — asks only a squad of four, and only then). false: the row is asked when it is given and never again, as it was. Off here; the
-   *  page raises it (`?tossmate=0` off) */
-  tossMate: false,
   /** A DOOR CHARGE ORDER IS CARRIED OUT OR ANSWERED (ON in the page — `?chargeanswer=0` — off here and on the frozen harness stand, `TPS_CHARGEANSWER=1`;
    *  a FROZEN_HOLDS row). Off the mission cards' dry run of the two hostage rescues (11-04): a charge ordered from the mission's start, a defender came
    *  through that door and locked it behind him with the pair twenty metres off, the order ended there on "door's open.", and the pair walked up to
@@ -496,17 +482,7 @@ export const DOORTOOLS = {
    *  door that shares a word with another (as under thrHand), and the step in behind a can of the order's own that has just gone off (a grenade landing
    *  while the can is in the air or its burst running is not read: they go behind their flash). The hold already waited for its LEAD to be back on his
    *  slice (he is `done` only there): this asks the same of every man. */
-  thrNoCan: false, thrFragHold: false,
-  /** `thrDoors` and `otherDoorM`, THE DOOR'S OWN LEAF: a man left on another door of the room is not put where that door's leaf, stood open, lies across
-   *  his line to it while there is a post where it does not, and a man is not taken as holding it from where he stands if it would. The posts were
-   *  tried with the leaf as it stood, which is shut: on the hinge side the door a man comes in by swings round between him and the opening and he is
-   *  holding a door he cannot see (the depot's store, the man left on `c_n` 3.5 to 3.9 m down its own wall). Asked of the leaf from where a pushed
-   *  leaf comes to rest, near square, to its stop, and only of one-way doors (a double-acting leaf can stand either way). It is a preference, never a
-   *  refusal: a post the leaf would hide the door from costs metres of walk beside one it would not (LEAF_COST, more the more of that sweep hides
-   *  it — where a door stands in a corner and every post is on its hinge side, the deep one that sees past a leaf stood square wins), and of the
-   *  men who could cover a door from where they stand (`otherDoorM`) the one it would hide it from least is taken first. A door is never left
-   *  unheld for it. Off = the posts as they were */
-  thrDoorsLeaf: false,
+  thrFragHold: false,
   /** A GRENADE SCATTERS THE MEN OF A DOOR ORDER: THE ORDER WAITS FOR THEM (the maintainer's answer, 10-16: 'pause until they're back at the door, then go').
    *  `fragHold` is what `thrFragHold` is to a held doorway, for EVERY door order while its door is still to be opened: with a man of the order who ran from a
    *  grenade (frag.ts fragRunning) not back on his mark (fragBack; a man down or given another order is not waited for) the stack is not called, the leaf is

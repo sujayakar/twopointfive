@@ -35,7 +35,6 @@ import { civilianSeated } from './civilians';
 import type { ReadyKind } from './character';
 import './handwork';
 import './stalk';
-import './tapstep';
 import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
 
 const DEGR = Math.PI / 180;
@@ -64,13 +63,6 @@ export const CLOSE = {
    *  light meter read, is about 0.19 m higher while the tell is up. ON in the page unless ?noreachup (src/host/profile.ts pageSwitches); off
    *  here and on the harness's frozen stand (src/host/standup.ts; TPS_REACHUP=1 turns it on there). Off = the tell as it was. */
   reachUp: false,
-  /** CROUCHED, HIS HANDS STAY LOW UNTIL THE MOVE (closeReady): crouched in reach behind a standing man the grab's tell held the open hand out for his neck, and
-   *  from the game's camera — above and behind — a hand held up over a kneeling man's own head, half a metre short of anybody, reads as a hand put up, not as a
-   *  reach (the maintainer, of a still from the pair's mission: 'the weirdness in this case was his hand'). Up: crouched, the tell is the hand on the knife
-   *  alone, as it is from a side; the grab's own rise carries the arm when he takes him. The rows, the reach and the grab itself are what they were; on his
-   *  feet the tell is the grab's, and a seated man's and the pistol's are untouched. With this up `reachUp` has nothing to raise. ON in the page unless
-   *  ?handslow=0 (src/host/profile.ts pageSwitches); off here and on the harness's frozen stand (src/host/standup.ts; TPS_HANDSLOW=1 turns it on there). */
-  handsLow: false,
   /** NO KNIFE (the maintainer: "remove the knife, only rmb for non lethal CQC when nothing equipped … then we also remove the knife from interrogation. you can
    *  still select nothing equipped or the pistol, but there's only rmb to choke out"): with empty hands the LEFT click is no blow at all (it is the stalk's hold,
    *  stalk.ts) and the RIGHT click is the knockout, from any side; with a man in the arm the left click does nothing and the right click chokes him out. Nothing

@@ -2635,6 +2635,7 @@ if (on('winbars', 'glass', 'all')) await run('winbars', async () => (await impor
 if (on('issue', 'kit', 'all')) await run('issue', async () => (await import('./issue-check.ts')).issueCheck());   // a kit issued by the level (src/game/kit.ts kitIssue, the level block scenarios.issue): the validator, the staging over a changed kept kit, a restart, your own counts, every squad size
 if (on('par', 'all')) await run('par', async () => (await import('./par-check.ts')).parCheck());   // a room clear against a par clock (src/game/par.ts, the level block scenarios.par, PAR.on / ?nopar): the arithmetic, the clock's start and stop, a man lost priced, on = off by digest, the checkpoint slice; PAR_BREAK=1 must fail
 if (on('verdict', 'all')) await run('verdict', async () => (await import('./verdict-check.ts')).verdictCheck());   // every run ends on a verdict (src/game/verdict.ts): when a try starts, each mission kind's end, the way a win was won, the end card on a fake document, the kept record; VERDICT_BREAK=1 must fail
+if (on('runbooks', 'verdict', 'all')) await run('runbooks', async () => (await import('./runbooks-check.ts')).runBooksCheck());   // what a machine keeps of a run (src/ui/runBooks.ts): a try as it begins, a win, a cheat's and a lesson's not, the course's best time. RUNBOOKS_BREAK=1 must fail
 if (on('teamtally', 'quiet', 'all')) await run('teamtally', async () => (await import('./teamtally-check.ts')).teamTallyCheck());   // a partner's men are on Sam's card on a quiet mission as two (src/game/teamtally.ts, TEAMTALLY.on settled on; the check writes no switch): his round a kill, his takedown a knockout, a defender's stray round nobody's, counted once. TEAMTALLY_BREAK=1 must fail
 if (on('wallissue', 'missions', 'all')) await run('wallissue', async () => (await import('./wallissue-check.ts')).wallIssueCheck());   // a mission issues its own wall charges (game/issue.ts, scenarios.roomClear.wallCharges; levels/mousehole.json): staged, restarts, a bigger kit count stands, a level without the field untouched; WALLISSUE_BREAK=1 must fail
 if (on('quickthrow', 'all')) await run('quickthrow', async () => (await import('./quickthrow-check.ts')).quickthrowCheck());   // the G quick throw is gone from the page (src/game/quickthrow.ts)
@@ -2683,7 +2684,6 @@ if (on('words-hostage', 'words', 'all')) await run('words-hostage', async () => 
 if (on('words-routes', 'words', 'all')) await run('words-routes', async () => (await import('./words-probes.ts')).wordsRoutes());   // every level's patrol routes are said as plain words
 if (on('words-doornames', 'words', 'all')) await run('words-doornames', async () => (await import('./words-probes.ts')).wordsDoorNames());   // a level names its own doors where the rooms cannot (scenarios.doorNames, WORDS.doors), and the list of doors still called by a bearing
 if (on('words-doors', 'words', 'all')) await run('words-doors', async () => (await import('./words-probes.ts')).wordsDoors());   // a shorthand door id is said by the rooms it joins, one name a door (doornames.ts)
-if (on('words-frag', 'words', 'all')) await run('words-frag', async () => (await import('./words-probes.ts')).wordsFrag());   // a refused squad frag says who is in it: hostages, a civilian
 if (on('words-log', 'words', 'all')) await run('words-log', async () => (await import('./words-probes.ts')).wordsLog());   // the log's own rows: a teammate by name, a line filed once, one CONTACT a second
 if (on('words-overheard', 'words', 'cues', 'all')) await run('words-overheard', async () => (await import('./overheard-check.ts')).wordsOverheard());   // CUES.overheard: a hidden defender's shout that reaches an ear is a quiet row on the strip, his words alone; never in a net row's place; off = no row, the same digests
 // ---------------------------------------------------------------- the FN2000's 40 mm round (he40-probes.ts; game/he40.ts — the launcher's second attachment: arms past a distance, bursts through frag.ts's blast, else a dud)
@@ -3259,7 +3259,6 @@ if (on('review-ring-civ', 'review-a', 'all')) await run('review-ring-civ', async
 if (on('review-item-cap', 'review-a', 'all')) await run('review-item-cap', async () => (await import('./review-a-probes.ts') as any).reviewItemCap());
 if (on('review-door-reset', 'review-a', 'all')) await run('review-door-reset', async () => (await import('./review-a-probes.ts') as any).reviewDoorReset());
 if (on('review-day-blackout', 'review-a', 'all')) await run('review-day-blackout', async () => (await import('./review-a-probes.ts') as any).reviewDayBlackout());
-if (on('review-meter', 'review-a', 'all')) await run('review-meter', async () => (await import('./review-a-probes.ts') as any).reviewMeter());
 if (on('review-torch-dt', 'review-a', 'all')) await run('review-torch-dt', async () => (await import('./review-a-probes.ts') as any).reviewTorchDt());
 if (on('review-stack', 'review-a', 'all')) await run('review-stack', async () => (await import('./review-a-probes.ts') as any).reviewStack());
 if (KNOWN.has(which) && which.startsWith('review-') && which !== 'review-b') here() && familyBanner('review-a', (await import('./review-a-probes.ts')).reviewFailures());
@@ -3361,7 +3360,6 @@ for (const [name, file, ...fams] of [
   ['backkeep', 'backkeep-check.ts', 'squadorders'],
   ['barracks', 'barracks-check.ts', 'level', 'squadorders'],
   ['cmdcheck', 'cmdcheck-check.ts', 'tools'],
-  ['kitnoise', 'kitnoise-check.ts', 'menus'],
   ['leaf-round', 'leaf-round-check.ts', 'doors'],
   ['lens', 'lens-check.ts', 'replay'],
   ['lived-stack', 'lived-stack-check.ts', 'level', 'squadorders'],

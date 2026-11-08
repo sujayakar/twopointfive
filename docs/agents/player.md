@@ -550,10 +550,10 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   DATA DOES: a stored or pasted card that says `shield` is a card without one — `kitSanitize` takes only what a row offers, and the next change of a row writes the store without
   the word; a save never named one; a level whose issue card says `shield` is REFUSED with the reason in words (`scene/levelData.ts`: 'the ballistic shield is out of the game:
   take the key out'; levels/hall.json and hall-gwot.json now issue nothing); an F10 session whose knobs carry the `SHIELD` table LOADS (the table is passed over) — where a shield
-  man was in it the replay parts from the file's digests and says the frame, since the file does not say who carried what; an F7 run tape made with a shield man is refused before
-  a re-run, in words (`replay/format.ts tapeShield`: the table on AND a teammate's card carrying it or the long hall's issue; the map viewer plays its samples as ever). QA:
+  man was in it the replay parts from the file's digests and says the frame, since the file does not say who carried what; a run tape that old is of
+  another version and is refused before a re-run, in words (`replay/format.ts tapeWhy`). QA:
   `bun run tools/qa/noshield-check.ts [gone|card|staged|tape]` (`probes.ts noshield`, in all-quick; the same 24 lines on BOTH stands; `NOSHIELD_BREAK=1` lies to the check — a
-  shield value on the big row, every tape waved through — and must fail a card line and the tape line). The `shield-*` probes, `shield-tally.ts` and `pellets-shield` went with it.
+  shield value on the big row — and must fail a card line). The `shield-*` probes, `shield-tally.ts` and `pellets-shield` went with it.
   `tools/qa/lived-check.ts` holds a level to its file at a base commit and loads that file with today's reader: a base whose issue block hands out the shield (the long hall's)
   has its issue block and the level's note read as today's, said in a line, and takes no new base revision; `tools/qa/level-needs.ts` reads a level's issue cards as written.
   LEFT AS IT IS: the riot shields stacked in the barracks' bunk room (`tools/levels/barracks.ts`: set dressing, nobody carries one). MEASURED, headless only: see the long hall's
@@ -981,7 +981,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   off the software-adapter page.
 - **The kit's column reads the game's record** (`game.view.kit`, `rust/game_rules/src/kit/b_01.rs kit_view`; drawn by `src/ui/handbox.ts`, which imports nothing of the game; 2026-11-08).
   One column is left: the old one `SLOTSETUP` off drew is deleted with the two-line box, the `leftBar` nothing set, the PACE row (his pace is 1 at the head of every update: it could not show), `?magboxes` and `MAGBOXES_BREAK`, and `slotsetup.ts`'s questions on the copy (the
-  rules and their words are `slotsetup::setup_view` and `setup_takes`; the host's carried aim and `Game.backable` read `kit.takes` and `kit.setup`). No switch: it moves no rule. Native:
+  rules and their words are `slotsetup::setup_view`; `Game.backable` reads `kit.setup`). No switch: it moves no rule. Native:
   `rust/game_start/tests/kit_view.rs` (three seeds, a control in each, the second seat shown). Set against the column before it on one scripted run, 62 steps over two seeds: the same. The
   kit screen before a mission still reads `kit.ts`'s tables (the cards'). NOBODY HAS seen it on a GPU or played it.
 - **Empty hands are a slot on backtick; E is spare; the debugger is on backslash** (`src/game/handslot.ts HANDSLOT {on}`, `HANDSLOT_KEY`, 10-22; the
@@ -1480,7 +1480,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   middle of the screen says nothing while the section has it, and says it again while the squad's menu is the panel; the diamond on the objective
   stays), then BLOCKS UNDER NO HEADING: of his own rows every line a key gives, each by itself (the highlighted row's, its key lit; on a man in
   reach both clicks), a row no key gives whole (a running verb's own words, how to stop it and its bar; a committed move's line; for a moment the
-  word an empty tap left, with how far), then every line of the squad's that a key gives (the keyed lines of `game.view.squad.notes` and `orders.quickLine()`: the quick
+  word an empty tap left, with how far), then every line of the squad's that a key gives (the keyed lines of `game.view.squad.notes` and `game.view.squad.quick`: the quick
   key's, a plan's go, a wall charge to blow; and `game.view.corner`, what the block and a door's heading said that the corner would
   lose: a set door charge as the squad's key's line while that key by itself blows it, with who it would catch; a set charge that key does not
   blow so (his own, or one that goes with the word) only while it would catch somebody, as a warning under no key, shown whatever a lesson's frame

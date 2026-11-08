@@ -24,6 +24,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   - **The expected reds are one short list** (`tools/qa/expected-red.ts`): faults of the game, placed or waiting for their owner's read. A check's own red is mended, cut or deleted,
     never listed; a row goes the day its check is green. (The five tables, `red-rows.ts`, `LIST_READ_ON`, the `on` / `bisect` / `rust` fields that older bullets name are gone.)
   - A check file that is a script of its own is a row of the runner's script table (`probes.ts`, [name, file, families]): a file nothing runs is not a check.
+- **THE PAGE SCRIPTS HAVE ONE RUNNER (`tools/qa/pages.ts`; 2026-11-08).** `bun run tools/qa/pages.ts [group | name …] [--list]`: its table is [script, group, what it guards, minutes when read], it starts its own dev server on a free port, hands
+  PORT, PLAYWRIGHT_MODULE, CHROMIUM and CHROME, runs one script at a time (a page takes the whole box), stops a script's whole process group at `QA_PAGE_CAP` minutes (10), and closes on a verdict: exit 0 green · 1 a red · 2 an unknown name. Groups:
+  boot · play · menus · coop · saves · cloud · replay, `all` for those; `tools` (measuring or picture tools, rigs, the sweeps too long to ask) are listed and run by name alone. `holds-check.ts` (10) is red on a `tools/qa/*.cjs` that is no row and is required by none.
+  A script with several long arms asks the first of them with no word (`JOBS=all`, or its arm by name, for the rest). cloud, `lobby-page`, `savedoor-page` want `npm ci` in cloud/, for the stand-in backend.
 - **THE HARNESS STANDS THE GAME AS THE PAGE OPENS IT (2026-11-05; the maintainer ruled that the frozen stand may be retired).** With no word in front a
   headless tool is on what the bullet below calls the SHIPPED stand. THE RULE IS ONE FUNCTION, `standOf` in the import-free `src/host/standEnv.ts`: no
   word or `TPS_PROFILE=shipped` = the page's stand, `TPS_PROFILE=frozen` = the old one, any other word stops the tool. `harnessProfile()`
@@ -33,14 +37,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`STAND_BREAK=1` is its red path; it reads text, so a tool that CLEARS the word for a child is not seen by it). A check is run ONCE.
   THE OLD STAND is one word, `TPS_PROFILE=frozen`: every newer rule held off as below, kept reachable for the switch cleanup until the off paths are gone
   (the retire tool's proofs, `stand-bisect.ts`); the process the word is given to says so once on stderr. A TOOL THAT WANTS THE OLD STAND OF A CHILD SAYS
-  THE WORD: giving a child no word asks for the page's (`rerun.ts` for a tape made on the old stand, `rust-check.ts`'s old-stand arms, `lesson-gate.ts`'s
+  THE WORD: giving a child no word asks for the page's (`rerun.ts` for a tape made on the old stand, `lesson-gate.ts`'s
   frozen runs, `ships.ts` / `kit-cells.ts` / `solo-night.ts` `--base`, `blast-frame.ts --arm round1` all say it). NO NEW FIXTURE IS RECORDED ON IT. What
-  that leaves: (1) the recordings that were made on it are taken again on the page's stand, each by its owner in a commit of its own: `ident-pin.ts`
-  records on the page's stand and on no other (its `RECORDED_ON`; a family names no stand: the glass's `pane-words.json`, the senses' `sense-words.json`
-  and the layers' `layer-words.json` were each taken again there by step 1576, and the first two keep the old stand's recording beside it, held and
-  never written again), and `rust-check.ts` asks a family's child on the page's stand (the glass's on the old one as well, which is what keeps that entry of `pane-words.json` held; the layers' file has no old entry, and a layers run on the old stand fails as NOT HELD). A RUN OF AN IDENT THAT IS HELD TO NOTHING FAILS, said as
-  NOT HELD, unless the tool or its caller says the word (`unpinned`, `--unpinned`: `docs/agents/rust.md`, "What holds a family once its TypeScript is
-  gone"); `threshold-identity` and `shotgun-identity`'s two frozen words are asked on the old stand only and
+  that leaves: (1) the recordings of the twin checks went with them (2026-11-08, `docs/agents/rust.md`);
+  `threshold-identity` and `shotgun-identity`'s two frozen words are asked on the old stand only and
   hold nothing on a run with no word, and say so; (2) a check that was green on the old stand and red on the page's is red in a plain run now:
   `tools/qa/expected-red.ts` is where each is named with its cause and whose it is (ONE list since 2026-11-06, the page's stand's: THE EXPECTED REDS ARE ONE LIST, below); (3) headers that say
   "frozen by default" or "run it on BOTH stands" are older than this: once, with no word. Proof of the flip itself: `stand-dump.ts` with no word after =
@@ -133,8 +133,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   red path: `1` a tool on 7 (the family's older word; red on both stands), `four` the door tools' fourth row on 6 (`orderkeys-high`; red on both), `free`
   every free row's deed refuses (`orderkeys-give`: 23 FAIL on the page's stand; green on the old one, where no free row is on a digit this walk presses, so
   the judgement it breaks is never asked there). `picker-start` boots three pages at a time, not its 42 at once (`PICKER_JOBS=n`):
-  `tools/qa/pool.ts` is the pool that `picker`, `dress-check`, `loadout-stage` and `weather-ident` share in place of a copy each (results in order;
-  after a case throws no further case is started; `jobsOf` reads a word or a flag the same way for all four: a number under one is one, no number is the
+  `tools/qa/pool.ts` is the pool that `picker`, `dress-check` and `loadout-stage` share in place of a copy each (results in order;
+  after a case throws no further case is started; `jobsOf` reads a word or a flag the same way for all of them: a number under one is one, no number is the
   tool's default). Other tools still keep a loop of their own.
   THE SOAK'S FOUR OLD KINDS on the page's stand were its own readings: the arm hold's knife is wanted only where the close-in rule has one (`closeBare`), a ring
   that stays stands by itself with the key up and no press in hand (`ring.free`), and the cancel row is the list's, never a ring's (`listOpen`). A ring is held
@@ -644,7 +644,8 @@ eight seconds on, then one drawn frame through the GPU in 32 s. What lives in th
 light meter's answers (and its asks queue up from the first stubbed ticks — draw a frame or two before reading it; read off render/probe.ts `put`, not measured).
 The start card has an idle **attract mode** (`src/game/attract.ts`, `__attract`): 6 s without input and the world starts running behind the card with the
 camera cutting round the level — never under `?paused`, `__testVisible`, or once any of `__runFrames/__mouse/__click` has been called, but a plain page left
-on the start card WILL start it (any key / click / mouse move puts the still view and a fresh encounter back; `__attract.start()/.stop()` by hand).
+on the start card WILL start it (any key / click / mouse move puts the still view and a fresh encounter back; `__attract.start()/.stop()` by hand). `draw.html`'s is `src/host/reel.ts` (`__draw.reel`): never on
+a page a script drives unless its address says `reel`.
 Synthetic input goes through `input.keys/pressed/clicked`; during the tour real input is locked (`Input.lockExcept`)
 but synthetic writes still work.
 

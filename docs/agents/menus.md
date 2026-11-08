@@ -95,6 +95,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   one arc, `kitloud`, the solo night, a loud mission as it was, no page error; `QUIETGEAR_BREAK=1` must fail). SEEN: stills of the real page's DOM at
   1440 × 900 with no picture behind it, looked at twice by a reviewer. NOT SEEN BY ANYONE: the panel over the real night picture, on a GPU, in a Mac's
   condensed face, with a pair (a teammate's card), in a window under 1180 px wide.
+- **The Team & kit picture on the new page is the Rust game's** (2026-11-08). draw.html in the kit screen's frame, on the very address Deploy would load plus `kitview` (`src/ui/kitView.ts` makes it, as
+  the old page does). The module starts that mission and STAGES it: `rust/game_start/src/kit_stage.rs` reads the words (way, set, `add`, dress) and makes the plan (`kit_plan.rs`, `kit_set.rs`, to the bit
+  the TypeScript's: `tools/blitz/kitplan-diff.ts`), `rust/game_rules/src/kitstage` stands the team, parks everybody else, hangs the lamps and pins the camera, round the tick (`game_step_seats`); no rule
+  reads it (`Game.kit_stage`, None in every other game). Commands 30 `KitStageCards`, 31 `KitStageOpen`, 32 `KitStageFrame`; the View section's `kit` (1 staged, 2 nothing to stage). The page's half is
+  `src/host/kitpage.ts` (messages to commands; a team staged again is staged under a copy of the last picture) and `src/host/kitguard.ts` (this window writes no store and hears no key). Checks:
+  `game_start --test kit_stage`, `game_run --test kit_commands`, `kitplan-diff.ts` (`KITPLAN_DIFF_BREAK=1`), `kitstage-diff.ts` against the old staging (`KITSTAGE_DIFF_BREAK=1`). `?stillkit` is the old picture's alone. STANDING ONLY so far: no
+  acts, no walk as another card opens (the team is staged again). Seen on a page on the software adapter; never on a GPU.
 - **Team & kit shows the team at the mission's way-in door** (2026-10-13, the owner's pick; `src/ui/kitView.ts` + `src/host/kitView.ts`). SWITCH, UI-ONLY:
   `KIT_VIEW.acts` / `?stillkit` (THE LOOP, 2026-10-14; off = the still picture: staged, warm, held, every
   kit change a plain restage, nothing played — the parent opens the child `&stillkit`, which is what the child reads), on in the page, in the UI module's table (with `kitMs` 150). No `src/game` code reads it, so
@@ -807,7 +814,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   throw release / startGrab; game.ts interrogate; mission.ts spotted / objectives / `tickChronicle`) through the SAME gate as the tallies (`missionLive`: nothing under
   the tour / puppet, nothing once done or failed). New verbs: call `chronicle` or add a `chron_x` helper there; a save's or a load's row is the game's own, written under the save's label (`face_checkpoint`, `face_loaded`). What the page's own books ask of a floor point (the autosave's 'first time in a room' and its label, the verdict's rows, the devices) is `src/game/rooms.ts`. Reading: the page asks ONCE, as the card is built, `face_debrief_view` → `view::debrief_view` (`game.debriefView()`, the record `src/view/debriefview.ts`): `debrief_of`
   → counts + `stealth_score` (100 minus SCORE's price list — every term only subtracts; `the_score_only_goes_down` holds it) + `rating_of` (bands: GHOST ≥ 90 · SHADOW ≥ 70 ·
-  OPERATIVE ≥ 40 · ASSAULT) + `badges_of` (BADGE knobs) + the summary line; `rows` = each row in words (`event_text`), `path`, `rooms`, `recap`. A tool reads it with `tools/qa/debrief-read.ts`. The card is `ui/debrief.ts renderDebrief(host, game, actions)`
+  OPERATIVE ≥ 40 · ASSAULT) + `badges_of` (BADGE knobs) + the summary line; `rows` = each row in words (`event_text`), `path`, `recap`. A tool reads it with `tools/qa/debrief-read.ts`. The card is `ui/debrief.ts renderDebrief(host, game, actions)`
   (menu.ts: mode 'debrief' on the game's out event EndCard — sent on exfil AND `DOWN_CARD_SECS` after Sam drops, `END_CARD.due` for the page's frame — plus the pause card's *Run so far* tab; CSS `#menu .db-*`);
   the map is a canvas at nav-grid resolution + percent-placed DOM pins (PIN table). QA: `rust/game_start/tests/debrief.rs` and chronicle's own tests natively, `probes.ts debrief` (run / rooms / loud / dom) for the card as the page reads it, soak's 'leak chronicle' invariant.
 
@@ -888,8 +895,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   dark, a man by a hole a blast made = walls, else doors — `clean` (nobody lost) and `void` (a cheat on during the try; its own latch — `m.stats.sandbox` latches before
   the try too). The mission's own card flag (`m.debrief`) raises the card where it has one; every other end is polled by main.ts `postUpdate` (`takeDue()`, a beat after).
   THE PAGE keeps what a machine has won (`src/ui/verdictStore.ts`, localStorage `twopointsix.verdicts`, key = mission id | difficulty: tries, the streak since the last
-  win, per way the fewest tries and whether clean): main.ts `vBooks()` counts a try the frame it starts (a checkpoint load is another try; never under a cheat or a
-  tape) and files the end BEFORE the card opens (`Verdict.kept`). The card: `src/ui/verdictCard.ts` (head, men, `verdictPanels` = the slot other goals' panels fill)
+  win, per way the fewest tries and whether clean): `src/ui/runBooks.ts` counts a try the frame it starts (a checkpoint load is another try; never under a cheat or a
+  tape) and files the end BEFORE the card opens (`Verdict.kept`); the game says what there is to keep (`face_run_view`, view `RunView`) and either page tells the books (`runbooks-check.ts`; `RUNBOOKS_BREAK=1` must fail). The card: `src/ui/verdictCard.ts` (head, men, `verdictPanels` = the slot other goals' panels fill)
   hosted by ui/debrief.ts (`.vd-squad` hides the stealth game's rating / numbers / timeline, `.vd-solo` keeps them), pips `src/ui/verdictPips.ts`; the START PAGE's
   mission rows get the same pips from `src/ui/verdictRows.ts` (`watchMissionRows()`, a MutationObserver on `#missions` — the list's own files are not edited; no pips on
   Training rows). QA: `bun run tools/qa/verdict-check.ts` (`probes.ts verdict`; `VERDICT_BREAK=1` must fail), `node tools/qa/verdict-look.cjs <dir> [win|down|solo|off|cards]`
@@ -916,7 +923,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **A Training lesson ends on the verdict card too, graded as a lesson** (`VERDICT`): lessons 5 and 6 are room clears, so their end is the
   room clear's `'taken'` / `'wiped'` and the card comes up a beat later like any squad mission's (before the verdict a room clear had no card at all: only the row 'structure taken
   — shift+enter stages it again'); lessons 1 to 4 and 7 end at the exfil on the stealth mission's own card. On a lesson's card NOTHING IS GRADED OR KEPT: no ways pips, no tries
-  ticks, no record under `twopointsix.verdicts` (`main.ts vBooks`: the running row's `group === 'training'` → `KeptNote.lesson`; `verdictCard.ts verdictHead` draws the word and the
+  ticks, no record under `twopointsix.verdicts` (`ui/runBooks.ts`, by `RunView.lesson`: the running row's group → `KeptNote.lesson`; `verdictCard.ts verdictHead` draws the word and the
   clock only; `verdictLine` leaves the approach out). A lesson WON leads with `Next: <the next Training row's title> ›` (`src/ui/verdictNext.ts nextLessonOf`, wired in
   `menu.ts debrief`: the first button, primary, the focus; the row's own page load by `missionHref`; none after lesson 7 or on a loss; since 2026-10-26 it is the next lesson the lists draw, a row cut from the list being skipped: `missions.md`, the two missions off the tutorial's list). The room can fall
   before the lesson's last step is done (lesson 5's scripted run: the card was due 5.7 s before the last line went by): the card wins, as the row already did. QA:

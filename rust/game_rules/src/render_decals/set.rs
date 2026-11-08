@@ -169,8 +169,7 @@ pub fn lay(g: &mut Game, kind: DecalKind, pos: V3, normal: V3, size: Option<f64>
     let (r0, p0) = defaults(kind);
     let param = o.param.unwrap_or(p0);
     let radius = if kind == DecalKind::Scuff { 0.5 * param + SCUFF_HALF_W + 0.06 } else { size.unwrap_or(r0) };
-    let on_cut = g.k.markcut.on;
-    let p = match o.clamp_to { Some(b) => clamp_to_face(&g.tab.boxes[b], pos, n, if kind == DecalKind::Scuff { 0.5 * param } else { radius }, on_cut), None => pos };
+    let p = match o.clamp_to { Some(b) => clamp_to_face(&g.tab.boxes[b], pos, n, if kind == DecalKind::Scuff { 0.5 * param } else { radius }, true), None => pos };
     let rides = o.attach.map(|b| { let x = &g.tab.boxes[b]; (b, DecalLocal { p: to_local(x, p, true), n: to_local(x, n, false), t: to_local(x, t, false) }) });
     let (time, lasts) = (g.time, m::max(1.0, g.k.wet.print_fade_secs));
     let s = mark_set_mut(g);

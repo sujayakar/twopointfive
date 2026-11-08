@@ -461,7 +461,7 @@ pub fn hands(g: &mut crate::game::Game, gd: GuardId) {
             g.stats.spotted.taken += 1;
             crate::takedown::partner_fall(g, h, true, Some(gd));
             let line = alloc::format!("{} — {} is out cold", g.gd[gd].callsign, g.gd[h].callsign);
-            crate::combat::kill_guard(g, h, [-dx / d, 0.0, -dz / d], Some(true), Some(crate::game::DownKind::Struck), Some(crate::game::DownBy::Guard), Some(&line), None);
+            crate::combat::kill_guard(g, h, [-dx / d, 0.0, -dz / d], Some(true), Some(crate::game::DownKind::Struck), Some(crate::game::DownBy::Guard), Some(&line));
             g.gd[h].killer_id = g.ch[g.gd[gd].ch].id;
             let mode = man(g, gd).mode;
             log(g, t, gd, mode, Some("taken"), Some(h));

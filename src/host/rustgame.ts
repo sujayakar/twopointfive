@@ -39,12 +39,11 @@ import { PUT_BACKS } from '../math/side';
 import { knobRegistry } from '../game/knobs';
 import { knobsToRust } from '../game/rustknobs';
 import { SETTLED, settledAt } from './settled';
-import { DC } from '../sim/doorshome';
 import { SNAPS, levelFingerprint, type SlotInfo } from '../game/savestate';
 import type { Snapshot } from '../game/rollback';
 import type { Game } from '../game/game';
 import { NO_VIEW, type TickView } from '../view/seatview';
-import { readCursorView, readDebriefView, readTickView, readUnder, type CursorView } from '../view/read';
+import { readCursorView, readDebriefView, readRunView, readTickView, readUnder, type CursorView } from '../view/read';
 import { CURSOR_DOUBLES, sampleCursor } from '../view/cursor';
 import { heardOf, wayOf, type WorldAsk } from '../view/worldask';
 import { pageSay } from '../view/pagesaid';
@@ -69,6 +68,8 @@ import { crossing, surfaceHost } from 'tps-bridge/surface';
 import { Drawn, drawRefused, type DrawFace } from '../draw/drawn';
 import { Want } from '../draw/sections';
 import { fogFrom } from '../draw/fog';
+import { smokeFrom } from '../draw/smoke';
+import type { SmokeSystem } from '../smoke/smoke';
 import LISTS from 'tps-bridge/puppet-lists.json';
 
 
@@ -297,7 +298,7 @@ export async function rustBoot(): Promise<void> {
   //  by the page's readers, are handed on as they are)
   { const raw = M.exports as unknown as Record<string, unknown>, W: Record<string, unknown> = {}; for (const k of Object.keys(raw)) { const f = raw[k]; W[k] = typeof f === 'function' && k.startsWith('face_') ? guard(k, f as (...a: number[]) => number) : f; } X = W as unknown as Face; }
   MEM = X.memory; BUF = MEM.buffer;
-  for (const n of ['face_new_at', 'face_show_seat', 'face_puppet', 'face_host_half', 'face_step', 'face_ask', 'face_tick_view', 'face_debrief_view', 'face_line', 'face_ray', 'face_hear', 'face_way', 'face_cursor_view', 'face_under', 'face_poke', 'face_write', 'face_keep', 'face_back', 'face_loaded', 'face_saves_in', 'face_saves_asked']) if (typeof X[n] !== 'function') throw new FaceError(`?rust=1: game_face.wasm has no ${n}: it was built from another tree (tools/blitz/face-build.ts builds this one's)`);
+  for (const n of ['face_new_at', 'face_show_seat', 'face_puppet', 'face_host_half', 'face_step', 'face_ask', 'face_tick_view', 'face_debrief_view', 'face_run_view', 'face_line', 'face_ray', 'face_hear', 'face_way', 'face_cursor_view', 'face_under', 'face_poke', 'face_write', 'face_keep', 'face_back', 'face_loaded', 'face_saves_in', 'face_saves_asked']) if (typeof X[n] !== 'function') throw new FaceError(`?rust=1: game_face.wasm has no ${n}: it was built from another tree (tools/blitz/face-build.ts builds this one's)`);
   { const no = drawRefused(X as unknown as DrawFace); if (no) throw new FaceError(`?rust=1: ${no} (tools/blitz/face-build.ts builds this checkout's)`); }
   // (the module and this page's half of the bridge must be of one generation: a module of another reads garbage)
   if ((X.face_layout?.() >>> 0) !== SCHEMA.layout) throw new FaceError(`?rust=1: game_face.wasm is of another generation than this page's bridge (its layout ${(X.face_layout?.() ?? 0) >>> 0}, the page's ${SCHEMA.layout}): the checkout's module is stale, tools/blitz/face-build.ts builds this one's`);
@@ -362,7 +363,7 @@ function grown(g: Game): void {
 export function rustAttach(g: Game): void {
   if (!X) throw new Error('rustAttach before rustBoot');
   const G = g as unknown as Record<string, any>;
-  H = { drawn: new Drawn(X as unknown as DrawFace, MEM!, Want.fog), moved: 0, viewAt: -1, view: NO_VIEW, told: -1, toolScan: false, inRun: false, g, lastCmds: null, kept: new Set(), startKept: 0, back: null, took: false, shelfSig: '', poke: null, watch: [], launch: null, putBacks: -1, loads: 0, h: 0, slot: -1, stale: 'the game was stood', ctx: { p: 0 }, rows: null, inStep: false, side: { list: [], of: null, base: 0 }, asks: null, quiet: false, owed: 0, quietDt: 1 / 60 };
+  H = { drawn: new Drawn(X as unknown as DrawFace, MEM!, Want.fog | (drawnSmoke(g) ? Want.smoke : 0)), moved: 0, viewAt: -1, view: NO_VIEW, told: -1, toolScan: false, inRun: false, g, lastCmds: null, kept: new Set(), startKept: 0, back: null, took: false, shelfSig: '', poke: null, watch: [], launch: null, putBacks: -1, loads: 0, h: 0, slot: -1, stale: 'the game was stood', ctx: { p: 0 }, rows: null, inStep: false, side: { list: [], of: null, base: 0 }, asks: null, quiet: false, owed: 0, quietDt: 1 / 60 };
   const held = H;
   G.stepSeats = (dt: number, cmds: readonly PlayerCmd[]) => step(held, dt, cmds);
   // (for a networked game, src/net/step.ts: a quiet run of steps, and the game's own words for its state, as `rustHashes` reads them by name for a check)
@@ -433,6 +434,9 @@ export function rustAttach(g: Game): void {
   g.debriefAsk = () => { if (!held.h || held.stale || RUST_PANIC.dead) return NO_DEBRIEF;
     try { settle(held); if (held.toolScan && !held.inRun && !held.inStep) scanFlush(held); tellShown(held); call('face_debrief_view', () => X!.face_debrief_view(held.h)); const r = readDebriefView(outBytes()); grown(g); return r; }
     catch (e) { if (!RUST_PANIC.dead) throw e; return NO_DEBRIEF; } };   // (a trap here is no throw of the frame's, or the panic card's key would never be read: as `viewAsk`)
+  g.runAsk = () => { if (!held.h || held.stale || RUST_PANIC.dead) return null;
+    try { settle(held); if (held.toolScan && !held.inRun && !held.inStep) scanFlush(held); call('face_run_view', () => X!.face_run_view(held.h)); const r = readRunView(outBytes()); grown(g); return r; }
+    catch (e) { if (!RUST_PANIC.dead) throw e; return null; } };
   // THE BOX WORLD ASKED (src/view/worldask.ts): the Rust game's, as its boxes stand. While none stands, or one is stopped, the page's own copy answers
   { const ask = rustAsk(held); Object.defineProperty(g, 'askHost', { configurable: true, enumerable: false, get: () => held.h && !held.stale && !RUST_PANIC.dead ? ask : null }); }
   // THE GAME'S OWN METHODS A TOOL OR A PANEL CALLS BETWEEN TICKS (`GAME_CROSSES`): run as TypeScript they move the puppet only, and the Rust game keeps
@@ -506,11 +510,15 @@ function start(S: Held): void {
   console.info(`rust=1: the Rust game started from the page's (${state.length} bytes of state, slot ${slot}) in ${RUST_GAME.startMs.toFixed(0)} ms${RUST_GAME.notCarried.length ? `; the bridge could not carry ${RUST_GAME.notCarried.length} kinds of value (window.__rust.notCarried)` : ''}`);
 }
 
+/** the picture's solver, where this host draws smoke (the harness's null one holds nothing to bend) */
+const drawnSmoke = (g: Game): SmokeSystem | null => { const s = g.smoke as Partial<SmokeSystem> | null; return s?.bent ? s as SmokeSystem : null; };
+
 /** WHAT STANDS ROUND EVERY APPLY, the filtered one and the whole one: the menu's questions for the rows an apply made, the doors' stand-in, and what the
  *  host's writes between ticks are told by */
 function after(S: Held): void {
   // (what the picture is told by section, src/draw: no field of it is on the bridge)
   call('face_draw', () => S.drawn.take(S.h)); fogFrom(S.g.fogOfWar.frame, S.drawn);
+  { const smoke = drawnSmoke(S.g); if (smoke) smokeFrom(smoke, S.drawn); }
   const g = S.g, G = g as unknown as Record<string, any>;
   if (S.toolScan && !S.inStep && !S.inRun) scanRebase(S);   // (an apply between a script's runs of frames, a crossing's or a load's: the puppet as it now stands is the Rust game's, and no tool's write)
   // THE MENU'S QUESTIONS (tools/blitz/ask.ts): every order row and the squad's posture have closures that ask the Rust game by the row's ID; a row or a
@@ -518,11 +526,6 @@ function after(S: Held): void {
   const PF = RUST_GAME.prof; let tp = PF.on ? performance.now() : 0;
   S.asks?.after();
   if (PF.on) { const n = performance.now(); PF.asks += n - tp; tp = n; }
-  // STAND-IN: A DOOR'S KEPT CENTRE is the Rust step's, in two halves: the angle it was made for and its x and z are columns of the block (sim/doorshome.ts
-  // posAngle, posX, posZ), the array `Door.posAt` an object's field that is on neither list of the filtered export. Nothing here reads the array; it is
-  // made from the columns after an apply, for a puppet that is handed over whole. Belongs in the filtered export (`doors::Door.pos_at`).
-  for (const dr of (G.doors?.list ?? []) as Record<string, any>[]) { const x = dr.g(DC.posX), z = dr.g(DC.posZ), at = dr.posAt; if (!Number.isNaN(dr.g(DC.posAngle)) && (at[0] !== x || at[2] !== z)) dr.posAt = [x, 1.0, z]; }
-  if (PF.on) { const n = performance.now(); PF.doors += n - tp; tp = n; }
   S.watch = watched(g); S.launch = G.player?.launchHeld ?? null;   // (what the page's panels write, as the Rust game has it now: what differs by the next step, the page wrote)
   S.putBacks = PUT_BACKS.n;   // (the apply counts itself as a put-back, for the box world's copy: any other count by the next step is a snapshot somebody put back)
   S.loads = G.chronicle?.counts?.loads | 0;   // (…and a checkpoint read from a file counts itself here: savestate.ts loadState)
@@ -713,9 +716,8 @@ function watched(g: Game): Watched[] {
   if (G.fogOfWar) L.push([g, ['fogOfWar', 'on'], G.fogOfWar.on]);
   // (a replay's viewer, or the kit's picture, may draw with the fog off: the tick then keeps the frame's list as it stood before the fog cut it. The picture's record is the other half of the page's fog object, named as the table names it)
   if (G.fogOfWar) L.push([g, ['fog_picture', 'viewer'], G.fogOfWar.viewer]);
-  if (G.engine?.settings) L.push([g, ['engine', 'settings', 'gpuParticles'], G.engine.settings.gpuParticles]);
   // (where the picture looks, set by the engine once a render: host/loop.ts. The wind picks the jets for the particles round it, wind.ts `update`)
-  { const vf = G.engine?.viewFocus; if (vf && vf.length === 3) L.push([g, ['engine', 'viewFocus'], [vf[0], vf[1], vf[2]]]); }   // (the options' particle row: particleFx.ts `gpuFx` reads it in the tick)
+  { const vf = G.engine?.viewFocus; if (vf && vf.length === 3) L.push([g, ['engine', 'viewFocus'], [vf[0], vf[1], vf[2]]]); }
   const P = G.player; if (P) L.push([P, ['wand'], P.wand], [P, ['bigKit'], P.bigKit]);
   return L;
 }

@@ -35,7 +35,7 @@ samples a record itself: the two-seat checks, and the scripted clients of a game
 reached by nothing from the TypeScript. 1062 rows are left.
 
 LEFT ON THE TABLE though their Rust body is empty, because the nothing is the game's own answer and not the picture's: `SnatchOut.switched` and
-`closeMarks` (a settled switch), `fogFlags` and `loadCivTune` (the address and the browser's storage are the host's; their TypeScript would read a page).
+`closeMarks` (a settled switch), and `fogFlags` (the address and the browser's storage are the host's; its TypeScript would read a page).
 
 How the class is found again: every `pub fn` under `rust/game/src` whose doc line says `BOUNDARY NO-OP`, joined to `calls.json` by its `rust` path.
 

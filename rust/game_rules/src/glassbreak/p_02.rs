@@ -346,26 +346,24 @@ pub fn glass_break_stand_in(g: &mut crate::game::Game, v: crate::glassbreak::Pan
         }
         k += 1.0;
     }
-    if crate::particle_fx::gpu_fx(g) {
-        let n_chips = m::round(m::max(if grains { 3.0 } else { g.k.glassbreak.chips_min }, f.area * (if grains { g.k.glassbreak.dice_chips_per_m2 } else { g.k.glassbreak.chips_per_m2 })));
-        let color = v3::copy(g.k.glassbreak.chip_color);
-        let o = crate::render_particles::EmitOpts {
-            shape: Some(crate::render_particles::EmitShape::Cone),
-            speed: 1.1,
-            speed_jit: Some(0.8),
-            spread: Some(1.2),
-            life: 30.0,
-            life_jit: Some(0.4),
-            size: if grains { 0.012 } else { 0.008 },
-            size_jit: Some(0.6),
-            aspect: Some(1.4),
-            pos_jit: Some(m::sqrt(f.area) * 0.45),
-            color: Some(color),
-            ..Default::default()
-        };
-        crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, f.centre, f.normal, n_chips, o);
-        g.m.glassbreak.gb_host.chips += n_chips;
-    }
+    let n_chips = m::round(m::max(if grains { 3.0 } else { g.k.glassbreak.chips_min }, f.area * (if grains { g.k.glassbreak.dice_chips_per_m2 } else { g.k.glassbreak.chips_per_m2 })));
+    let color = v3::copy(g.k.glassbreak.chip_color);
+    let o = crate::render_particles::EmitOpts {
+        shape: Some(crate::render_particles::EmitShape::Cone),
+        speed: 1.1,
+        speed_jit: Some(0.8),
+        spread: Some(1.2),
+        life: 30.0,
+        life_jit: Some(0.4),
+        size: if grains { 0.012 } else { 0.008 },
+        size_jit: Some(0.6),
+        aspect: Some(1.4),
+        pos_jit: Some(m::sqrt(f.area) * 0.45),
+        color: Some(color),
+        ..Default::default()
+    };
+    crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, f.centre, f.normal, n_chips, o);
+    g.m.glassbreak.gb_host.chips += n_chips;
 }
 
 // ---------------------------------------------------------------- which glass
@@ -431,12 +429,6 @@ pub fn glass_break_impact(g: &mut crate::game::Game, bi: f64, x: V3, dir: Option
     res.type_ = type_word((v >> 5) & 7);
     res.released = (v >> 8) as f64;
     res
-}
-
-/// the base's name for a round's impact at energy 1 (glassbreak.ts GlassBreak.hit)
-pub fn glass_break_hit(g: &mut crate::game::Game, bi: f64, x: V3, dir: Option<V3>, who: f64, energy: Option<f64>) {
-    let energy = energy.unwrap_or(1.0);
-    glass_break_impact(g, bi, x, dir, energy, who, None);
 }
 
 /// a pellet through glass its own shell has just broken: no blow filed, but a standing piece of an annealed pane goes with it; fragments let go (glassbreak.ts GlassBreak.widen)
@@ -769,22 +761,6 @@ pub fn glass_break_row_state(g: &mut crate::game::Game, s: f64, r: f64) -> crate
         walkable: st.walkable != 0,
         log: Vec::new(),
     }
-}
-
-/// a burst's reckoning, for a tool: is the glass of pane bi at x on its way out (glassbreak.ts GlassBreak.goingAt)
-pub fn glass_break_going_at(g: &mut crate::game::Game, bi: f64, x: V3) -> bool {
-    glass_break_see_through(g, GlassBreakSeeThroughView::Blown, [0.0, 0.0, 0.0], GlassBlastOpts::zeroed(), &mut |g| glass_break_rule_open(g, bi, x))
-}
-
-/// a burst's reckoning, for a tool: would a blast of this size at `at` take pane bi out of the way (glassbreak.ts GlassBreak.wouldGive)
-pub fn glass_break_would_give(g: &mut crate::game::Game, bi: f64, at: V3, opts: Option<crate::glassbreak::GlassBlastOpts>, x: Option<V3>) -> bool {
-    if !glass_break_live(g) { return false; }
-    let opts = opts.unwrap_or_default();
-    let view = if x.is_some() { GlassBreakSeeThroughView::Counted } else { GlassBreakSeeThroughView::Wary };
-    glass_break_see_through(g, view, at, opts, &mut |g| {
-        let p = match x { Some(x) => x, None => { let b = box_at(g, bi).unwrap(); seam_box(g, b).c } };
-        glass_break_rule_open(g, bi, p)
-    })
 }
 
 /// the record for the renderer, GB_RECORD_ROWS vec4 rows: reads the pane, writes nothing of it (glassbreak.ts GlassBreak.fill)

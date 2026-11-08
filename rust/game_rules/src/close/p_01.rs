@@ -448,8 +448,7 @@ pub fn close_tick(g: &mut crate::game::Game) {
     if r.is_some() { g.stats.close.ready_frames += 1; }
     let m_ = if g.pl[pl].takedown.is_some() { state_of(g).mode } else { mode_now(g, pl) };
     state_of(g).mode = m_;
-    g.ch[c].anim.creep = m_.is_some() || crate::tapstep::tap_held(g, &crate::seats::here(g));
-    if !crate::tapstep::tap_held(g, &crate::seats::here(g)) { g.ch[c].anim.tap_u = -1.0; }
+    g.ch[c].anim.creep = m_.is_some();
     if let Some(mm) = m_ {
         let mc = g.gd[mm].ch;
         let ch = g.ch[mc].bones.get(Bone::Chest).copied();

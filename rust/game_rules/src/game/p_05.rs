@@ -146,7 +146,6 @@ pub fn game_reset_guards(g: &mut crate::game::Game) {
     crate::seats::each_seat(g, &mut |v: &mut Game| {
         crate::close::close_reset(v);
         crate::stalk::stalk_reset(v);
-        crate::tapstep::tap_reset(v);
     });
     crate::roomfight::room_fight_reset(g);
     crate::cover::cover_reset(g);
@@ -173,11 +172,6 @@ pub fn game_escalate(g: &mut crate::game::Game) {
 /// Panel: straight back to calm. (game.ts Game.standDown)
 pub fn game_stand_down(g: &mut crate::game::Game) {
     crate::guards::stand_down_escalation(g);
-}
-
-/// Panel: the human shield's standoff. (game.ts Game.standoffSummary)
-pub fn game_standoff_summary(g: &mut crate::game::Game) -> String {
-    crate::guards::standoff_summary(g)
 }
 
 /// Panel: what each unfound body reads on the light meter. (game.ts Game.bodyLightSummary)

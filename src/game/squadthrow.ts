@@ -32,7 +32,7 @@
 // THE THROW is the door tools' own: the frag on FRAG.orderFuse from the hand, the canister on combat.ts flashFuse from its landing, the quick toss, his word
 // ('frag out!' / 'bang out!'). Each goes off by the game's own road (combat.ts updateItems → frag.ts / detonateStun) under the thrower's id: nothing borrowed.
 // SENSE, asked when the menu is read and again as the order is given (nothing is spent on a refusal):
-//   none left · no arc for anybody addressed · A FRAG NEVER ONTO ITS OWN: the player, any teammate still breathing (the thrower too; a man down wounded or out cold counts), a hostage, the man to take
+//   none left · no arc for anybody addressed · A FRAG NEVER ONTO ITS OWN: the player, any teammate still breathing (the thrower too; a man out cold counts), a hostage, the man to take
 //   alive or a civilian inside the reach the door tools ask of a frag (FRAG.woundM + 1, a line by frag.ts exposedTo) of where it would rest or of the spot
 //   itself = refused, naming who. A STUN is not refused for its own side — it is the player's call — but its row NAMES who of ours it would catch
 //   (' · too close: you, Red One'), by detonateStun's own tests asked from where it would rest and from the spot, each reach a metre long: it may over-warn.
@@ -82,8 +82,6 @@ export const SQUADTHROW = {
   tries: 12, keepSecs: 0.4,
   /** he gives the walk up after this long on it (s; time the fight has him is not counted) · on his spot he turns to the throw for this long at most (s) · the toss: he stays this long after it leaves his hand (s) */
   walkSecs: 16, turnSecs: 1.2, tossSecs: 0.5,
-  /** thrown, he walks back to where he stood and to the order he had (off: he holds where he threw from) */
-  back: true,
   /** A MAN WORKS HIS THROW OUT (rust throwplan; on with the switch, off = the one straight arc that rests on the spot, as it was; `?throwlob=0`): where the
    *  straight arc has no answer he flies a few throws before he makes one — straight at the spot at `lobPaces` (m/s over the ground: the solver's, flat and
    *  hard, a slow lob) and at up to `lobWalls` walls that stand within `lobWallM` of it (met `lobWallH` up; `lobBankPaces`) — and takes the one that GOES OFF

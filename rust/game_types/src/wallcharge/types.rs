@@ -186,7 +186,7 @@ impl WallChargeDoneItem {
 impl Default for WallChargeDoneItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum Phase {
     Wait,
     Place,

@@ -113,8 +113,6 @@ pub struct RailsView {
     /// (None: the run is over)
     pub prompt: Option<crate::view::RailPrompt>,
     pub card: Option<crate::view::RailCard>,
-    /// the place the step marks: a cursor on it is on the place, whatever stands between
-    pub mark: Option<V3>,
     /// the step's mark is an arrow, pointing here
     pub arrow: Option<V3>,
     /// the player's own men on the floor, by their characters' ids: the big line keeps clear of them
@@ -268,8 +266,6 @@ pub struct KitView {
     pub gun: Option<crate::view::KitGun>,
     /// the setup, while it is open
     pub setup: Option<crate::view::KitSetup>,
-    /// the codes of the keys the setup would take now
-    pub takes: Vec<String>,
     pub big: Option<crate::view::KitBig>,
     pub hits_left: f64,
     pub hits_max: f64,
@@ -537,6 +533,8 @@ pub struct SquadView {
     pub mates: Vec<crate::view::MateLine>,
     /// the block's notes, in its order: the door tools', the word's, the pair's mark, the smoke, the wall charges'
     pub notes: Vec<crate::view::Note>,
+    /// the quick key's line for what the cursor is on (None: it would give nothing, a menu is up, or the mission has not taught it)
+    pub quick: Option<crate::view::Note>,
 }
 
 /// what kind of thing an order would be about
@@ -605,17 +603,6 @@ pub struct DebriefRow {
 }
 impl Default for DebriefRow { fn default() -> Self { DebriefRow { t: 0.0, kind: crate::chronicle::ChronKind::Objective, room: String::new(), pos: [0.0; 3], text: String::new(), down: false } } }
 
-/// a room of the card's floor map, by the name it is drawn under
-#[derive(Clone, Debug, Default)]
-pub struct DebriefRoom {
-    pub name: String,
-    pub label: String,
-    pub x0: f64,
-    pub x1: f64,
-    pub z0: f64,
-    pub z1: f64,
-}
-
 /// WHAT THE END CARD SHOWS OF A RUN: asked once, as the card opens. Large, so it is no section of `TickView`.
 #[derive(Clone, Debug, Default)]
 pub struct DebriefView {
@@ -625,9 +612,32 @@ pub struct DebriefView {
     pub dropped: f64,
     /// where the seat's man went: x, z, t a point
     pub path: Vec<f32>,
-    pub rooms: Vec<crate::view::DebriefRoom>,
     /// who of ours fell and how (None: somebody still plays, or nobody of ours went down)
     pub recap: Option<crate::deathrecap::DeathRecap>,
+}
+
+/// WHAT A MACHINE KEEPS OF A RUN: asked as a try begins and as the run ends. The game says what there is to keep, and a page keeps it.
+#[derive(Clone, Debug, Default)]
+pub struct RunView {
+    /// the try has begun (an order, a stride, a round), on a run that may be kept
+    pub begun: bool,
+    /// the run is over
+    pub over: bool,
+    /// a cheat was on during it
+    pub void: bool,
+    /// a lesson: nothing of it is kept
+    pub lesson: bool,
+    /// the mission's id, as the list has it, and the level of difficulty
+    pub mission: String,
+    pub level: String,
+    /// how it ended: won, the way it was won (None: it was not), nobody of ours lost, its seconds
+    pub won: bool,
+    pub way: Option<crate::verdict::Approach>,
+    pub clean: bool,
+    pub secs: f64,
+    /// what its time is held against (the level's file, the way in, how many came, the difficulty), and the total on the par clock (None: no par, or not taken)
+    pub course: String,
+    pub par: Option<f64>,
 }
 
 /// a card's two weights: how readily its man moves, and how little of him is seen

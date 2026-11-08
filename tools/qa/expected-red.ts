@@ -16,12 +16,9 @@ const RUST = "the Rust game's";
 export const EXPECTED_RED: Record<string, RedRow> = {
   'pair-mark': { is: 'maybe', whose: RUST, line: "the only way to the marked man's back lies across his eyes: the partner should wait short of it and give up after a few seconds; he moves up at once, 36 s round, 'set', and is seen a second later (way.exposed comes out false; perhaps the eye change moved the walk's cost)" },
   'wallbreak-checkpoint': { is: 'maybe', whose: RUST, line: "two seconds after a load the list of marks holds the undone future's too: 114 against 86. A whole apply does not rebuild the picture's decals" },
-  'sneak-steps': { is: 'maybe', whose: RUST, line: "the partner's feet within 0.4 m of Sam's trail: 0.45 m, the same on two seeds" },
-  'pairup-feet': { is: 'maybe', whose: RUST, line: "spotted's slip: never a slip, 434 frames of freeze, lit 0.65; not sure the check reaches the game since the meter moved" },
   'glasshouse': { is: 'maybe', whose: "the senses' or the level's owner", line: "both starts under 0.1 of light: 0.27 and 0.27 to 0.28 by the TypeScript estimate; wants one read of the game's own meter" },
   'pass': { is: 'maybe', whose: "the senses' or the level's owner", line: "both starts under 0.1 of light: 0.21 and 0.14 to 0.21 by the TypeScript estimate; wants one read of the game's own meter" },
   'floodlit': { is: 'maybe', whose: "the senses' or the level's owner", line: "mains out: the yard 0.13 to 0.28 where under 0.2 is asked, the hall 0.27, the radio room's tube 0.94 against the moon's; wants one read of the game's own meter" },
   'depot-stage': { is: 'maybe', whose: "the senses' or the level's owner", line: "mains out: the open park 0.28 where under 0.25 is asked; wants one read of the game's own meter" },
   'checkpoint-identity': { is: 'maybe', whose: RUST, line: "save(load(s)) is the identity: a mark's radius 0.167 comes back 0.166, the digests equal" },
-  'scenario-levels-rescue': { is: 'real', whose: RUST, line: "'it can be won': the test rooms' rescue by a scripted bang and clear was a clean win in 41.4 s up to step 2207 and is lost on every seed from 2213 (one way of sensing): the bang at 16.7 s, the pair dead at the door at 17.2 (entry:lost), both hostages shot at 43.3 and 52.5. Before, the captor and the roamer learned of them 2.1 s after the order and the men entered 0.7 s after the bang; now both learn it at the bang" },
 };

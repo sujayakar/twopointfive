@@ -70,7 +70,6 @@ import './handleside';
 import './gunhold';
 import { teamAtWalk } from './teampace';   // (teampace.ts: a teammate's walk is a share of the player's, and he runs only for a reason — all read inside functions)
 import { loadSeen } from './kitload';   // what a man's card weighs: his pace, the notice he builds, his footfall (1 each with its switch off)
-import './tapstep';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import './rails';   // (a tutorial mission's spared teammate is a man down to the enemy's eye: asked inside acquireFoe only)
 import { LIGHT_IN, ROW_BIT } from '../sim/lightshome';
@@ -230,7 +229,7 @@ export function witnessKill(g: Game, victim: Guard, how: DownKind, by: DownBy) {
   const at = victim.char.bones.chest ?? v3.add(victim.char.pos, [0, 1.1, 0]);
   for (const o of g.guards) {
     if (o === victim || o.state === 'dead' || g.time < o.dazzledUntil || dozeAsleep(o)) continue;   // (doze.ts: a man asleep saw nothing)
-    if ((!g.playerInvisible && pointInView(g, o, at)) || o.sawPlayerThisFrame) o.witness.sawAct = { kind: how === 'wounded' ? 'shot' : how, victim: victim.callsign, t: g.time };   // (a man shot down WOUNDED was seen shot: the questions asked of the witness are the shooting's)
+    if ((!g.playerInvisible && pointInView(g, o, at)) || o.sawPlayerThisFrame) o.witness.sawAct = { kind: how, victim: victim.callsign, t: g.time };
   }
 }
 /** One compact line of a man's witness record for the panel / the QA probes ('' = nothing yet): peak awareness, what made him alert, what he heard, what he saw. */
@@ -432,9 +431,6 @@ export const GUARD_EYE = { range: 16, halfDeg: 58, nearM: 3.5, nearDeg: 100,
   /** A LIT MAN IS SEEN FROM FURTHER (eyeReach below): on in the page (?nofarsight), off here and on the frozen harness stand (TPS_FARSIGHT=1) = every eye stops
    *  at `range` whatever the light, as it was. One rule for every man's eye on every man: a guard's on Sam, a defender's on a teammate, a teammate's on a defender */
   far: false,
-  /** A FAR GLIMPSE IS NOT YET A PLACE TO WALK TO (farFaint below; nothing without `far`): on in the page (?nofarcalm), off here and on the frozen harness stand
-   *  (TPS_FARCALM=1) = every glimpse past `range` writes his fix the frame it lands, as `far` first shipped */
-  farCalm: false,
   /** …the awareness from which a WARY man's glimpse from past `range` is his fix (under it he has not watched long enough to know where) */
   farFixAt: 0.5,
   /** …how far the eye reaches for a man in full light (m); the light on him (his meter, 0‥1) under which the reach is `range` and nothing changes, and from which it is whole */

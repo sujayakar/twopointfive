@@ -56,7 +56,7 @@ pub fn empty_thing(g: &Game, seat: &crate::seats::SeatRef) -> Option<crate::inte
             for v in rows { if crate::rails::rails_offers(g, v) { offered = true; break; } }
             if !offered { why_of.held.as_str() } else if r == 1 { why_of.run.as_str() } else { why_of.far.as_str() }
         };
-        if why.is_empty() { other = m::min(other, d); continue; }   // (in reach with no row and no frame to blame: a wounded man)
+        if why.is_empty() { other = m::min(other, d); continue; }   // (in reach with no row and no frame to blame)
         if r > rank || (r == rank && best.as_ref().map_or(false, |b| d >= b.d)) { continue; }
         let skip = if r == 2 {
             let frame = g.dr[door.unwrap()].frame_centre;

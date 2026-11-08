@@ -13,7 +13,7 @@ pub fn lesson_new(g: &crate::game::Game) -> crate::lesson::Lesson {
 }
 
 /// The lesson in force (None: not live).   (lesson.ts Lesson.data)
-pub fn lesson_data(g: &crate::game::Game) -> Option<crate::scene_scenarios::LessonData> {
+pub fn lesson_data(g: &crate::game::Game) -> Option<&crate::scene_scenarios::LessonData> {
     let on_rails = match g.level.scenarios.as_ref().and_then(|s| s.lesson.as_ref()) {
         Some(l) if !l.steps.is_empty() => l.rails.is_some(),
         _ => return None,
@@ -22,7 +22,7 @@ pub fn lesson_data(g: &crate::game::Game) -> Option<crate::scene_scenarios::Less
         return None;
     }
     if g.quiet.active || crate::roomclear::room_clear_scenario_active(g) || g.night_breach.active || g.rescue.active {
-        g.level.scenarios.as_ref().and_then(|s| s.lesson.clone())
+        g.level.scenarios.as_ref().and_then(|s| s.lesson.as_ref())
     } else {
         None
     }
@@ -42,13 +42,13 @@ pub fn lesson_index(g: &crate::game::Game) -> f64 {
 pub fn lesson_step(g: &crate::game::Game) -> Option<crate::scene_scenarios::LessonStep> {
     let l = lesson_data(g)?;
     let at = lesson_at(g);
-    l.steps.into_iter().nth(at as usize)
+    l.steps.get(at as usize).cloned()
 }
 
 /// Once a frame, after updateMission: counts the frame's deeds, asks the step's test, moves on when it is done and settled.   (lesson.ts Lesson.tick)
 pub fn lesson_tick(g: &mut crate::game::Game, dt: f64) {
     let l = match lesson_data(g) {
-        Some(l) => l,
+        Some(l) => l.clone(),
         None => return,
     };
     if !run_is_mission(g) {
@@ -249,7 +249,7 @@ pub fn lesson_view(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Optio
         let t = l.steps.get(i as usize);
         (l.steps.len(), t.map(|t| t.id.clone()), t.map_or(false, |t| matches!(t.done, crate::scene_scenarios::LessonTestKind::View { .. })))
     };
-    let frame = crate::rails::RailsLesson { l, i: m::min(i, of as f64) };
+    let frame = crate::rails::LessonAt { l, i: m::min(i, of as f64) };
     Some(crate::view::LessonView {
         step: i as u32,
         of: of as u32,

@@ -1185,8 +1185,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   SECONDS AS SHOWN earns gold / silver / bronze / none (`medal_of`, `par_result`: pure). `par_tick` runs once a tick right after the mission's update, arms on a
   new mission, files the result and says the line once on the log; the wire carries `live`, `t0` and `res` every tick. `src/game/par.ts` is the page's READ of that
   record (no tick, no snapshot: a kept game carries the record with the rest), and the row with
-  the clock on it is the game's own (`par_objective`, in the mission's line of the view: `docs/agents/rust.md`, THE VIEW). There is no switch: a level without the block returns on the tick's first line. THE BEST TIME IS THE PAGE'S: main.ts files it the frame the result
-  first appears (`ui/parBest.ts`, localStorage, key = level file + way in + squad size + difficulty; never under god mode / no AI / unlimited ammo) and hands
+  the clock on it is the game's own (`par_objective`, in the mission's line of the view: `docs/agents/rust.md`, THE VIEW). There is no switch: a level without the block returns on the tick's first line. THE BEST TIME IS THE PAGE'S: the books (`ui/runBooks.ts`) file it the frame the run
+  ends (`ui/parBest.ts`, localStorage, key = the game's own `RunView.course`: level file + way in + squad size + difficulty; never on a run with a cheat on, as the verdict has it) and hands
   its words to `par.best()`: they ride the card and the debrief's 'par' cell (`par.shown`), and no longer reword the log's line, which is the
   game's and the same on every machine. A CHANGE OF PLAY, small: in a two-seat game the clock starts on EITHER seat's first move (each page used to time its own
   seat). Checks: `cargo test --test par` in `rust/game_start` (5 rules, 3 seeds each beside a control: armed and waiting, an order starts it, a stride does and
@@ -2492,6 +2492,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   their music rows, menu pictures, menu-art pins and menu-shot recipes; the eight recorded sound replays that were a lesson played (the seven, and `whip`,
   which was recorded on the hands lesson's yard), with `tools/qa/tapes/whip.ts`. `lesson-check` and `lesson-gate` with no name now walk the six tutorial
   missions; `verdict-lessons` too, on the page's stand only (a tutorial mission's scripted player is not run frozen; it exits 2 without the word). KEPT, AS
+  [2026-11-08: those three stage yards are deleted too, with `gwot-yard.json` (its generator stays, as the library's showroom, with no file), `office-relief.json` and `?level=`. Their checks stand on kept levels. See the commit.]
   STAGES FOR CHECKS: `levels/train-move.json`, `train-orders.json`, `train-silent.json` and their generators,
   with no lesson, no row and nothing on a menu that loads them, because checks owned elsewhere are staged on their floors (the hands probes,
   `thrpie-check`, `wordcuts-check`, `teamtally-check`, `takecheck-check`, `savetimeline-check`, `carlamps-check`, `keybinds-check`'s wall line, four page

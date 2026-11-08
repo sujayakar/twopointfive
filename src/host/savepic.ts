@@ -1,4 +1,4 @@
-// A SAVE'S PICTURE, WHICH ROAD (the switch; the pass itself is render/savepic.ts, the host that takes the picture main.ts takeSavePictures).
+// A SAVE'S PICTURE, WHICH ROAD (the switch; the pass itself is render/savepic.ts, the host that takes the picture host/savepics.ts).
 //
 // on = the host takes a save's picture WITHOUT WAITING for the GPU: the frame is boxed down on the GPU and read back a frame or a few later. off = the picture
 // as it was taken, by drawing the whole canvas into a 2D one in the save's own frame, which stalls the page while the GPU finishes and hands the frame back.

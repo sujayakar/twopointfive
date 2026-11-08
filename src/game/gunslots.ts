@@ -20,9 +20,6 @@ export const GUNSLOTS = {
   out: 0.7,
   /** seconds with nobody in front of him before the sidearm goes back, and the seconds that takes on top of the primary's own reload */
   lull: 1.6, back: 0.65,   // (as long as your own swap back to the long gun: no quicker hands than yours)
-  /** a TEAMMATE's round below the gunshot line (a suppressed pistol, the MP7) is the odd noise yours is to a man of the other side near enough to hear it
-   *  (guards.ts hearingCheck). Off: only your own quiet rounds were ever heard — a teammate's reached nobody, however near. */
-  heard: true,
   /** a pick with its suppressor off is THE SAME GUN without it (weapons.ts mk18bare, g19bare: its name, magazine, handling and look; the report and flame of
    *  a bare one). Off: the old card's meaning — a carbine with no suppressor was the defenders' AKS-74U row, a pistol with none their sidearm. */
   bare: true,

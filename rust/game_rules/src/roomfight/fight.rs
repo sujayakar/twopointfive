@@ -330,7 +330,7 @@ pub(super) fn hear_door(g: &mut Game, key: u32, e: crate::game::GameEvent) {
 
 /// every man as this module found him.   (roomfight.ts stop)
 pub fn room_fight_stop(g: &mut crate::game::Game) {
-    crate::pressure::press_stop(g); crate::buddy::buddy_stop(g); crate::laststand::last_stand_stop(g);
+    crate::pressure::press_stop(g); crate::laststand::last_stand_stop(g);
     let mut i = 0;
     while i < g.fight.ops.len() {
         let o = g.fight.ops[i]; i += 1;

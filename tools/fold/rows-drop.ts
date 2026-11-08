@@ -153,11 +153,21 @@ for (const [table, paths] of byTable) {
     const at: number[] = []; for (let m; (m = re.exec(s)); ) at.push(m.index + m[0].length - 1);
     for (const o of at.reverse()) cutRows(o, keys);
   }
-  files.set(f, s);
+  if (files.has(f)) files.set(f, s);
   const tf = 'src/game/teamfeel.ts'; let t = files.get(tf) ?? '';
   for (const [tb, keys] of gone) for (const k of keys) { const row = `\\b${k}: (?:null|\\[[^\\]]*\\]),? ?`; t = t.replace(new RegExp(`(KEPT\\.${tb}, \\{[^}]*?)${row}`), '$1').replace(new RegExp(`(\\n  ${tb}: \\{[^\\n]*?)${row}`), '$1'); }
-  files.set(tf, t); console.log(`panels: ${panelRows} rows`);
+  if (files.has(tf)) files.set(tf, t); console.log(`panels: ${panelRows} rows`);
 }
+// ---- the words that held a row on the old stand: its line of src/host/profile.ts's list, and standup.ts's pin of that word
+{ let p = files.get('src/host/profile.ts') ?? '', u = files.get('src/host/standup.ts') ?? '';
+  for (const r of taken) {
+    const m = new RegExp(`^\\s*'${r.replace(/\./g, '\\.')}': '(TPS_\\w+)=(?:[^'\\\\]|\\\\.)*',[^\\n]*\\n`, 'm').exec(p); if (!m) continue; p = p.replace(m[0], '');
+    // a pin may set many rows of its word: this row leaves its chain, and the pin goes with its last row
+    const pin = new RegExp(`^[ \\t]*if \\(pinned\\('${m[1]}'\\)\\) [^\\n]*\\n`, 'm').exec(u); if (!pin) continue;
+    const without = pin[0].replace(`${r} = `, ''), rest = [...without.split(' = String(')[0].matchAll(/[A-Z_0-9]+\.\w+/g)];
+    u = u.replace(pin[0], rest.length ? without : '');
+  }
+  files.set('src/host/profile.ts', p); files.set('src/host/standup.ts', u); }
 const goneRows = new Set(taken); const sw = readFileSync('tools/qa/switches.json', 'utf8').split('\n');
 const swKept = sw.filter(l => { const m = /^\s*\{"row":"([^"]+)"/.exec(l); if (!m) return true; return !(goneRows.has(m[1]) || [...goneRows].some(g => m[1].startsWith(g + '.'))); });
 let swOut = swKept.join('\n').replace(/,(\s*\])/, '$1');

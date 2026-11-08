@@ -269,7 +269,7 @@ impl SlotKind {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum GuardState {
     Patrol,
     Suspicious,
@@ -295,7 +295,6 @@ pub enum DownKind {
     Shot,
     Struck,
     Choked,
-    Wounded,
 }
 impl DownKind {
     pub const fn as_str(self) -> &'static str {
@@ -303,7 +302,6 @@ impl DownKind {
             DownKind::Shot => "shot",
             DownKind::Struck => "struck",
             DownKind::Choked => "choked",
-            DownKind::Wounded => "wounded",
         }
     }
 }
@@ -433,7 +431,6 @@ pub enum WitnessSawActKind {
     Shot,
     Struck,
     Choked,
-    Wounded,
     Grab,
 }
 impl WitnessSawActKind {
@@ -442,7 +439,6 @@ impl WitnessSawActKind {
             WitnessSawActKind::Shot => "shot",
             WitnessSawActKind::Struck => "struck",
             WitnessSawActKind::Choked => "choked",
-            WitnessSawActKind::Wounded => "wounded",
             WitnessSawActKind::Grab => "grab",
         }
     }
@@ -698,6 +694,8 @@ pub struct Game {
     pub stood: crate::game::StoodWith,
     /// the solo night's card: your own kit on the plain night's player and on every fresh one
     pub solo_card: bool,
+    /// the Team & kit picture's stage: a host's, round the tick, and read by no rule of the game. Only Rust uses it
+    pub kit_stage: Option<alloc::boxed::Box<crate::kitstage::KitStage>>,
     pub col: crate::scene_collision::StaticCollision,
     pub snow_field: Option<crate::render_snow_field::SnowField>,
     pub snow_tracks: Option<crate::snow_tracks::SnowTracks>,
@@ -887,6 +885,7 @@ impl Game {
         Game {
             stood: crate::game::StoodWith::blank(),
             solo_card: false,
+            kit_stage: None,
             col: crate::scene_collision::StaticCollision::blank(),
             snow_field: None,
             snow_tracks: None,
@@ -1451,7 +1450,7 @@ impl GameDoorHandRecsValue {
 impl Default for GameDoorHandRecsValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: a union)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Hash)]
 pub enum Foe {
     Guard(GuardId),
     Player,
@@ -1537,6 +1536,8 @@ pub struct Player {
     pub visibility: f64,
     pub irradiance: f64,
     pub hit_flash: f64,
+    /// his hands were on a man last frame (the partner's word goes as they first are)
+    pub pair_hands_was: bool,
     pub stagger_until: f64,
     pub dazzled_until: f64,
     pub dazzled_at: Option<V3>,
@@ -1647,6 +1648,7 @@ impl Player {
             visibility: 0.0,
             irradiance: 0.0,
             hit_flash: 0.0,
+            pair_hands_was: false,
             stagger_until: -1.0,
             dazzled_until: -1.0,
             dazzled_at: None,
@@ -2306,7 +2308,6 @@ pub struct Guard {
     pub found: bool,
     pub down_kind: Option<crate::game::DownKind>,
     pub down_by: Option<crate::game::DownBy>,
-    pub wound: Option<crate::wounds::Wound>,
     pub witness: crate::game::Witness,
     pub talk: GameTalkId,
     pub keys: JsSet<String>,
@@ -2449,7 +2450,6 @@ impl Guard {
             found: false,
             down_kind: None,
             down_by: None,
-            wound: None,
             witness: crate::game::Witness { heard: crate::game::WitnessHeard { shots: 0.0, last_shot_t: -1.0, kick: 0.0, bang: 0.0, small: 0.0, small_where: None, loud_at: None, last_t: -1.0 }, peak_awareness: 0.0, alerted_by: None, alert_t: -1.0, saw_act: None, saw_body: None, called_to_body: None, saw_held: None, was_held: 0.0, dazzled: 0.0 },
             talk: GameTalkId(0),
             keys: JsSet::new(),
@@ -3268,7 +3268,6 @@ pub struct Mods {
     pub stickycam: crate::stickycam::StickycamMod,
     pub quietfog: crate::quietfog::QuietfogMod,
     pub calmtorch: crate::calmtorch::CalmtorchMod,
-    pub buddy: crate::buddy::BuddyMod,
     pub powerout: crate::powerout::PoweroutMod,
     pub darkfoe: crate::darkfoe::DarkfoeMod,
     pub whistle: crate::whistle::WhistleMod,
@@ -3278,7 +3277,6 @@ pub struct Mods {
     pub gunwall: crate::gunwall::GunwallMod,
     pub lightswitch: crate::lightswitch::LightswitchMod,
     pub stalk: crate::stalk::StalkMod,
-    pub tapstep: crate::tapstep::TapstepMod,
     pub darkdoor: crate::darkdoor::DarkdoorMod,
     pub startle: crate::startle::StartleMod,
     pub flinch: crate::flinch::FlinchMod,
@@ -3295,7 +3293,6 @@ pub struct Mods {
     pub irlaser: crate::irlaser::IrlaserMod,
     pub gunhold: crate::gunhold::GunholdMod,
     pub air_sim: crate::air_sim::AirSimMod,
-    pub clearline: crate::clearline::ClearlineMod,
     pub unseen: crate::unseen::UnseenMod,
     pub squadsmoke: crate::squadsmoke::SquadsmokeMod,
     pub squad40: crate::squad40::Squad40Mod,
@@ -3440,7 +3437,6 @@ impl Mods {
             stickycam: crate::stickycam::StickycamMod::blank(),
             quietfog: crate::quietfog::QuietfogMod::blank(),
             calmtorch: crate::calmtorch::CalmtorchMod::blank(),
-            buddy: crate::buddy::BuddyMod::blank(),
             powerout: crate::powerout::PoweroutMod::blank(),
             darkfoe: crate::darkfoe::DarkfoeMod::blank(),
             whistle: crate::whistle::WhistleMod::blank(),
@@ -3450,7 +3446,6 @@ impl Mods {
             gunwall: crate::gunwall::GunwallMod::blank(),
             lightswitch: crate::lightswitch::LightswitchMod::blank(),
             stalk: crate::stalk::StalkMod::blank(),
-            tapstep: crate::tapstep::TapstepMod::blank(),
             darkdoor: crate::darkdoor::DarkdoorMod::blank(),
             startle: crate::startle::StartleMod::blank(),
             flinch: crate::flinch::FlinchMod::blank(),
@@ -3467,7 +3462,6 @@ impl Mods {
             irlaser: crate::irlaser::IrlaserMod::blank(),
             gunhold: crate::gunhold::GunholdMod::blank(),
             air_sim: crate::air_sim::AirSimMod::blank(),
-            clearline: crate::clearline::ClearlineMod::blank(),
             unseen: crate::unseen::UnseenMod::blank(),
             squadsmoke: crate::squadsmoke::SquadsmokeMod::blank(),
             squad40: crate::squad40::Squad40Mod::blank(),
@@ -3574,7 +3568,6 @@ pub struct Stats {
     pub digin: crate::digin::DiginStats,
     pub stickycam: crate::stickycam::StickycamStats,
     pub par: crate::par::ParStats,
-    pub wounds: crate::wounds::WoundsStats,
     pub aimweight: crate::aimweight::AimweightStats,
     pub calmtorch: crate::calmtorch::CalmtorchStats,
     pub darkfoe: crate::darkfoe::DarkfoeStats,
@@ -3586,7 +3579,6 @@ pub struct Stats {
     pub lightswitch: crate::lightswitch::LightswitchStats,
     pub samstun: crate::samstun::SamstunStats,
     pub stalk: crate::stalk::StalkStats,
-    pub tapstep: crate::tapstep::TapstepStats,
     pub darkdoor: crate::darkdoor::DarkdoorStats,
     pub startle: crate::startle::StartleStats,
     pub flinch: crate::flinch::FlinchStats,
@@ -3594,7 +3586,6 @@ pub struct Stats {
     pub seenwalk: crate::seenwalk::SeenwalkStats,
     pub wet: crate::wet::WetStats,
     pub he40: crate::he40::He40Stats,
-    pub clearline: crate::clearline::ClearlineStats,
     pub stackline: crate::stackline::StacklineStats,
     pub unseen: crate::unseen::UnseenStats,
     pub squadsmoke: crate::squadsmoke::SquadsmokeStats,

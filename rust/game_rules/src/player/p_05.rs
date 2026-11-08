@@ -413,10 +413,7 @@ pub fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
                 v3::clamp(g.tab.sim_lightshome_fixture[t].pos[1], 0.3, 2.95)
             } else {
                 match g.aim_guard {
-                    Some(a) if a != gd => match (g.gd[a].wound.is_some(), g.aim_snap) {
-                        (true, Some(snap)) => snap[1],
-                        _ => man_aim(g, &crate::seats::here(g), a, 1.2)[1],
-                    },
+                    Some(a) if a != gd => man_aim(g, &crate::seats::here(g), a, 1.2)[1],
                     _ => {
                         if level_on(g) {
                             g.ch[c].pos[1] + 1.5
@@ -1024,7 +1021,7 @@ pub fn choke_out(g: &mut crate::game::Game) {
     let at = v3::add(g.ch[hc].pos, [0.0, 1.4, 0.0]);
     crate::audio_iface::game_audio_like_play(g, "chokeLimp", Some(at), Some(0.35), None);
     crate::takedown::take_fall(g, gd, None, false, Some(crate::takedown::TakeFallHow::Choke));
-    crate::combat::kill_guard(g, gd, f, Some(true), Some(crate::game::DownKind::Choked), Some(crate::game::DownBy::Player), None, None);
+    crate::combat::kill_guard(g, gd, f, Some(true), Some(crate::game::DownKind::Choked), Some(crate::game::DownBy::Player), None);
     let pos = v3::copy(g.ch[hc].pos);
     prop_noise(g, pos, FOLD_NOISE);
     g.pl[p].holding = None;
@@ -1041,7 +1038,7 @@ pub fn kill_out(g: &mut crate::game::Game) {
     let at = v3::add(g.ch[hc].pos, [0.0, 1.4, 0.0]);
     crate::audio_iface::game_audio_like_play(g, "chokeLimp", Some(at), Some(0.35), None);
     crate::takedown::take_fall(g, gd, None, true, Some(crate::takedown::TakeFallHow::Kill));
-    crate::combat::kill_guard(g, gd, f, Some(true), Some(crate::game::DownKind::Shot), Some(crate::game::DownBy::Player), Some("knife — dead"), None);
+    crate::combat::kill_guard(g, gd, f, Some(true), Some(crate::game::DownKind::Shot), Some(crate::game::DownBy::Player), Some("knife — dead"));
     // startTakedown's own rewrite for the knife: a man who watched saw him DROPPED, not shot
     let time = g.time;
     let callsign = g.gd[gd].callsign.clone();
@@ -1074,7 +1071,7 @@ pub fn whip_out(g: &mut crate::game::Game) {
     };
     unhook(g, gd);
     crate::takedown::take_fall(g, gd, None, false, Some(crate::takedown::TakeFallHow::Whip));
-    crate::combat::kill_guard(g, gd, dir, Some(true), Some(crate::game::DownKind::Struck), Some(crate::game::DownBy::Player), Some("pistol-whipped — out cold, and that was not quiet"), None);
+    crate::combat::kill_guard(g, gd, dir, Some(true), Some(crate::game::DownKind::Struck), Some(crate::game::DownBy::Player), Some("pistol-whipped — out cold, and that was not quiet"));
     crate::audio_iface::game_audio_like_play(g, "whipThud", Some(head), Some(0.7), None);
     let pos = v3::copy(g.ch[hc].pos);
     prop_noise(g, pos, WHIP_NOISE);

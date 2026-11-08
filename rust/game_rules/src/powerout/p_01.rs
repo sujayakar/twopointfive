@@ -240,8 +240,8 @@ pub fn power_out_kept(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<St
     if crate::gunroles::gun_keeps_post(g, gd) || crate::owner::has(g, gd, holds) {
         return Some("holds a lane / the last man".into());
     }
-    let hands = crate::owner::by::PRESS | crate::owner::by::BUDDY;
-    if crate::owner::has(g, gd, hands) || crate::pressure::press_keeps_home(g, d, Some(false)) || crate::buddy::buddy_paired(g, d) {
+    let hands = crate::owner::by::PRESS;
+    if crate::owner::has(g, gd, hands) || crate::pressure::press_keeps_home(g, d, Some(false)) {
         return Some("the press's".into());
     }
     None

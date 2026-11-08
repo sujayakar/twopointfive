@@ -106,7 +106,6 @@ fn finish(g: &mut Game, b: &Burst, rep: &mut BlastReport, gd: GuardId) {
     let line = alloc::format!("{} — the {} reached him where he lay", callsign, b.name);
     let fresh = g.gd[gd].died_at == g.time;
     let had = g.gd[gd].down_by == Some(crate::game::DownBy::Player) || (!fresh && crate::teamtally::team_tallied(g, gd));
-    if g.gd[gd].wound.is_some() { g.gd[gd].wound = None; g.ch[c].anim.wound = None; }
     g.gd[gd].down_kind = Some(crate::game::DownKind::Shot);
     g.gd[gd].down_by = Some(down_by(b));
     if js::truthy(b.who) { g.gd[gd].killer_id = b.who; }
@@ -191,15 +190,12 @@ pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpe
     let side = if js::truthy(spec.who) { crate::teams::team_of_id(g, spec.who) } else { crate::teams::Team::Guard };
     let mine = crate::seats::is_man_id(g, spec.who);
     if spec.fx != Some(false) {
-        let gpu = crate::particle_fx::gpu_fx(g);
         let seed = g.fx_seed;
         g.fx_seed += 1.0;
-        let o = if gpu {
-            let (bang, flags) = (crate::effects::bang(), crate::effects::flags());
-            Some(crate::effects::SpawnBurstO { spark_count: Some(m::min(bang.spark_count, if flags.trails { bang.trail_count } else { 0.0 })) })
-        } else { None };
-        let l = crate::effects::spawn_burst(g, from, seed, o);
-        if gpu { crate::particle_fx::bang_fx(g, from); }
+        let (bang, flags) = (crate::effects::bang(), crate::effects::flags());
+        let o = crate::effects::SpawnBurstO { spark_count: Some(m::min(bang.spark_count, if flags.trails { bang.trail_count } else { 0.0 })) };
+        let l = crate::effects::spawn_burst(g, from, seed, Some(o));
+        crate::particle_fx::bang_fx(g, from);
         let flash = crate::render_lights::light_set_flash(g, l.pos, [1.0, 0.74, 0.42], l.intensity * 0.7, l.range, l.ttl, 0.0);
         let light = crate::fogofwar::fog_of_war_light_by(g, flash, Some(spec.who));
         if let Some(r) = l.radius { if js::truthy(r) { g.tab.light[light].radius = r; } }
@@ -286,7 +282,9 @@ pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpe
             rep.killed += 1.0;
             let line = alloc::format!("{} down — the {}", g.gd[gd].callsign, b.name);
             let dir = away(at, g.ch[c].pos);
-            crate::combat::kill_guard(g, gd, dir, Some(false), Some(crate::game::DownKind::Shot), Some(down_by(&b)), Some(&line), None);
+            // (on the thrower's seat: the debrief's row names the man himself)
+            let thrower = crate::seats::seat_of_id(g, spec.who);
+            crate::seats::on_seat(g, thrower, &mut |g| crate::combat::kill_guard(g, gd, dir, Some(false), Some(crate::game::DownKind::Shot), Some(down_by(&b)), Some(&line)));
             if js::truthy(spec.who) { g.gd[gd].killer_id = spec.who; }
         } else {
             if r == BlastResult::Wounded { rep.wounded += 1.0; }
@@ -551,11 +549,10 @@ pub fn rest_of_throw(a: &mut impl crate::ask::Asker, kind: crate::game::ThrowKin
 pub fn throw_reach(g: &crate::game::Game, pl: PlayerId, rest: Option<V3>) -> Option<crate::view::ThrowReachView> {
     use crate::game::ThrowKind;
     let sol = g.pl[pl].throw_preview.as_ref().filter(|s| !s.points.is_empty())?;
-    if !g.k.throwback.reach { return None; }
     let burst = |at: V3| crate::view::ThrowReachView { at, kill: g.k.frag.lethal_m, hurt: m::max(g.k.frag.lethal_m, g.k.frag.wound_m), stun: 0.0 };
     if g.pl[pl].throw_held || (!g.pl[pl].holstered && crate::game::player_canister_sel(g, pl).is_some()) {
         let kind = g.pl[pl].held_kind;
-        if kind != ThrowKind::Flash && !(kind == ThrowKind::Frag && g.k.frag.on) { return None; }
+        if kind != ThrowKind::Flash && !(kind == ThrowKind::Frag) { return None; }
         let at = rest?;
         return Some(if kind == ThrowKind::Frag { burst(at) } else { crate::view::ThrowReachView { at, kill: 0.0, hurt: 0.0, stun: crate::effects::bang().dazzle_radius } });
     }

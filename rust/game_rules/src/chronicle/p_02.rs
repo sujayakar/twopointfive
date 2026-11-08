@@ -88,15 +88,6 @@ fn put_out_how(g: &Game, d: &Data) -> String {
 /// is this row the floor's alarm going down (the card gives such a row no pin)
 pub fn alarm_down(e: &crate::chronicle::ChronEvent) -> bool { e.kind == ChronKind::Alarm && !on(&e.data, "up") }
 
-/// The card's floor map's rooms: the office's table, a level's own names, or none. The office's are shortened to fit; a level's names are drawn whole.
-pub fn map_rooms(g: &Game) -> Vec<crate::view::DebriefRoom> {
-    use crate::view::DebriefRoom;
-    if crate::dialogue::is_office(g) {
-        return rooms().into_iter().map(|r| { let label = String::from(r.name.trim_end_matches(" room").trim_end_matches(" office")); DebriefRoom { name: r.name, label, x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1 } }).collect();
-    }
-    crate::dialogue::level_rects(g).unwrap_or_default().into_iter().map(|r| { let name = String::from(r.name.strip_prefix("the ").unwrap_or(&r.name)); DebriefRoom { label: name.clone(), name, x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1 } }).collect()
-}
-
 /// A row's words: the debrief card's timeline.   (chronicle.ts eventText)
 pub fn event_text(g: &crate::game::Game, e: &crate::chronicle::ChronEvent) -> String {
     let d = &e.data;
@@ -177,13 +168,7 @@ pub fn event_text(g: &crate::game::Game, e: &crate::chronicle::ChronEvent) -> St
             }
         }
         ChronKind::KeyTaken => format!("took {}'s key", s("who")),
-        ChronKind::Ko => {
-            if is(d, "method", "wounded") {
-                format!("{} shot — down wounded, out of the fight", s("who"))
-            } else {
-                format!("{} out cold — {}", s("who"), put_out_how(g, d))
-            }
-        }
+        ChronKind::Ko => format!("{} out cold — {}", s("who"), put_out_how(g, d)),
         ChronKind::Kill => {
             if is(d, "weapon", "knife") {
                 format!("{} killed — the knife", s("who"))
@@ -194,7 +179,7 @@ pub fn event_text(g: &crate::game::Game, e: &crate::chronicle::ChronEvent) -> St
             }
         }
         ChronKind::BodyFound => {
-            let how = if on(d, "wounded") { "shot and breathing" } else if on(d, "breathing") { "out cold" } else { "dead" };
+            let how = if on(d, "breathing") { "out cold" } else { "dead" };
             format!("{} found {} {}{}", s("by"), s("who"), how, if on(d, "civilian") { " — the floor goes up hard" } else { "" })
         }
         ChronKind::DoorKicked => match door_written(g, &s("door")).filter(|w| !w.is_empty()) {
@@ -345,14 +330,12 @@ mod tests {
         (ChronKind::Interrogated, "hall", vec![("who", T("A")), ("gave", T("")), ("stage", N(4.0))], "questioned A — nothing left in him"),
         (ChronKind::Interrogated, "hall", vec![("who", T("A")), ("gave", T("")), ("stage", N(3.0))], "questioned A — nothing useful yet"),
         (ChronKind::KeyTaken, "hall", vec![("who", T("A"))], "took A's key"),
-        (ChronKind::Ko, "hall", vec![("who", T("A")), ("method", T("wounded"))], "A shot — down wounded, out of the fight"),
         (ChronKind::Ko, "hall", vec![("who", T("A")), ("method", T("choke"))], "A out cold — choked out"),
         (ChronKind::Ko, "hall", vec![("who", T("A")), ("method", T("whip"))], "A out cold — pistol-whipped"),
         (ChronKind::Ko, "hall", vec![("who", T("A")), ("method", T("charge"))], "A out cold — the wall charge"),
         (ChronKind::Ko, "hall", vec![("who", T("A")), ("method", T("hand"))], "A out cold — the takedown"),
         (ChronKind::Kill, "hall", vec![("who", T("A")), ("weapon", T("knife"))], "A killed — the knife"),
         (ChronKind::Kill, "hall", vec![("who", T("A")), ("weapon", T("a wall charge"))], "A killed — the wall charge"),
-        (ChronKind::BodyFound, "hall", vec![("by", T("A")), ("who", T("B")), ("wounded", B(true))], "A found B shot and breathing"),
         (ChronKind::BodyFound, "hall", vec![("by", T("A")), ("who", T("B")), ("breathing", B(true)), ("civilian", B(true))], "A found B out cold — the floor goes up hard"),
         (ChronKind::BodyFound, "hall", vec![("by", T("A")), ("who", T("B"))], "A found B dead"),
         (ChronKind::Hit, "hall", vec![("by", T("A"))], "hit — A's round"),
