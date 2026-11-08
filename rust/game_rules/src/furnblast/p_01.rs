@@ -185,19 +185,6 @@ fn ensure_index(g: &mut Game) {
 }
 /// the index made ahead of the blast, off the frame the wall goes on (furnblast.ts Furniture.warm)
 pub fn furniture_warm(g: &mut crate::game::Game) { if g.m.destruction_switch.blast_pace.on { ensure_index(g); } }
-/// counts for the panel and probes (furnblast.ts Furniture.inventory)
-pub fn furniture_inventory(g: &mut crate::game::Game) -> crate::furnblast::FurnitureInventory {
-    ensure_index(g);
-    let groups = g.destr.furn.groups.as_ref().unwrap();
-    let tab = &g.tab.furnblast_member;
-    FurnitureInventory {
-        groups: groups.len() as f64,
-        members: groups.iter().map(|x| x.members.len()).sum::<usize>() as f64,
-        hidden: g.destr.furn.hidden.len() as f64,
-        gone_props: g.destr.furn.gone_props,
-        list: groups.iter().map(|x| FurnitureInventoryListItem { id: x.id, members: x.members.iter().map(|&mi| tab[mi].i).collect(), a: x.a, heavy: x.heavy, surf: x.surf }).collect(),
-    }
-}
 /// does this part still stand; a cover panel, while any cell of it does (furnblast.ts Furniture.stands)
 pub fn furniture_stands(g: &mut crate::game::Game, m: FurnblastMemberId) -> bool {
     let i = g.tab.furnblast_member[m].i;

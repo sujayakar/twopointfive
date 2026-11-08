@@ -286,14 +286,6 @@ pub fn squad_orders_whole(g: &crate::game::Game, seat: &crate::seats::SeatRef) -
     seat.orders.cast.is_none()
 }
 
-/// The orders go to that one man until T is pressed again.   (orders.ts SquadOrders.address)
-pub fn squad_orders_address(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    let k = match squad_orders_squad(g, &crate::seats::here(g)).iter().position(|&x| x == gd) { Some(k) => k, None => return false };
-    if is_dead(g, gd) { return false; }
-    g.orders.who = Who::Num(k as f64);
-    true
-}
-
 /// Who these men are, in a word or two.   (orders.ts SquadOrders.whoWords)
 pub fn squad_orders_who_words(g: &crate::game::Game, seat: &crate::seats::SeatRef, men: Option<&[GuardId]>) -> String {
     let own;

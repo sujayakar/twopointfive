@@ -124,15 +124,6 @@ pub fn plant(g: &mut crate::game::Game, pl: PlayerId) {
     r.st = 2.0; r.t = t.settle; r.a = 0.0; r.v = 0.0; r.man = None;
 }
 
-/// A step in the air comes round toward (x, z). (tapTick's `bend`)
-fn bend(g: &mut Game, x: f64, z: f64, k: f64) {
-    let r = row!(g);
-    let a = r.dir[0] + (x - r.dir[0]) * k;
-    let b = r.dir[1] + (z - r.dir[1]) * k;
-    let l = m::hyp2(a, b);
-    if l > 1e-3 { r.dir = [a / l, b / l]; }
-}
-
 /// The key let go fixes where the step lands; `least_secs` is how long a step of `least` takes. (tapTick)
 fn key_let_go(s: &mut St, least_secs: f64) {
     s.set = true;
