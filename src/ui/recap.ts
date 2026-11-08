@@ -81,7 +81,7 @@ export function recapFit(T: RecapTake, W: number, H: number): RecapFit {
   return { s, ox: W / 2 - (x0 + x1) / 2 * s, oy: H / 2 - (z0 + z1) / 2 * s, w: W, h: H };
 }
 
-/** (replay/minimap.ts draws the same boxes for the F7 viewer, in that page's colours: this is its floor in the menu's — keep the two in step) */
+/** (tape/minimap.ts draws the same boxes for the F7 viewer, in that page's colours: this is its floor in the menu's — keep the two in step) */
 function drawFloor(ctx: CanvasRenderingContext2D, W: number, H: number, dpr: number, map: ReturnType<RunEnd['map']>, f: RecapFit): void {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = BASE; ctx.fillRect(0, 0, W, H);
   ctx.setTransform(dpr * f.s, 0, 0, dpr * f.s, dpr * f.ox, dpr * f.oy);

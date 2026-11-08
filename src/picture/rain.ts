@@ -4,7 +4,7 @@
 // record for the births. Drips: fat slow drops off the edges of whatever outdoors gets rained on and stands over a drop, found once from the statics, and again when a wall goes.
 // The drops ride the wind's records on the GPU; the lattice far off is handed the same air. Nothing here is read by a rule. Its dice are its own.
 import { clamp, type Vec3 } from '../math/vec';
-import type { FollowCamera } from '../game/camera';
+import type { FollowCamera } from '../host/camera';
 import type { Particles } from '../render/particles';
 import { RAIN_MAX_BIRTHS, RAIN_CAP } from '../render/particles';
 import { BoxFlag, type Box } from '../scene/boxes';

@@ -2,7 +2,7 @@
 // read and write the renderer; what rows a page's game has in them it adds itself (GraphicsGame.rows).
 import { FrameFlags, type Engine } from '../engine';
 import type { GltfCharacter } from '../anim/gltf';
-import type { FollowCamera } from '../game/camera';
+import type { FollowCamera } from '../host/camera';
 import type { SmokeSystem } from '../smoke/smoke';
 import { DEG } from '../math/vec';
 import { charMatsSummary, resetCharMats } from '../render/charMaterials';

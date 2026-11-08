@@ -18,7 +18,7 @@ export interface NotedRow { sid: string; lastAt: string; pieces: number; notes?:
 export interface ShelfNoted { id: number; savedAt: string; seconds: number; why: string; scenario: string; session?: string; n1?: number; notes: unknown[] }
 export interface NoteSource {
   rows(): Promise<NotedRow[]>;
-  /** the F7 shelf's rows with their notes (replay/shelf.ts shelfNoted), and one saved window whole (shelfGet) */
+  /** the F7 shelf's rows with their notes (tape/shelf.ts shelfNoted), and one saved window whole (shelfGet) */
   shelf?(): Promise<ShelfNoted[]>;
   shelfFile?(id: number): Promise<unknown | null>;
 }

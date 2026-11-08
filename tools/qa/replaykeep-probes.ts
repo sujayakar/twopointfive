@@ -1,4 +1,4 @@
-// EVERY RUN KEPT, AND READ BACK OUT — the probes (src/replay/keeper.ts · keepstore.ts · kept.ts; game/replaybuf.ts since()):   bun run tools/qa/replaykeep-probes.ts
+// EVERY RUN KEPT, AND READ BACK OUT — the probes (src/tape/keeper.ts · keepstore.ts · kept.ts; game/replaybuf.ts since()):   bun run tools/qa/replaykeep-probes.ts
 //   whole      a run kept in pieces, written out as one hand-over file (handover-file.ts) and put back together is the file F7 would have made at that moment: samples, events, lines, cast, head,
 //              run tape — and a fresh game walks its tape to the same digest
 // EXIT 0 all pass · 1 a failure.
@@ -6,10 +6,10 @@ import { gunzipSync } from 'node:zlib';
 import { standUp, ROOT } from './headless.ts';
 import { handOver } from './handover-file.ts';
 const { ReplayBuffer, REPLAY } = await import(`${ROOT}/src/game/replaybuf.ts`);
-const F = await import(`${ROOT}/src/replay/format.ts`);
-const KP = await import(`${ROOT}/src/replay/kept.ts`);
-const KS = await import(`${ROOT}/src/replay/keepstore.ts`);
-const { ReplayKeeper, ringSource } = await import(`${ROOT}/src/replay/keeper.ts`);
+const F = await import(`${ROOT}/src/tape/format.ts`);
+const KP = await import(`${ROOT}/src/tape/kept.ts`);
+const KS = await import(`${ROOT}/src/tape/keepstore.ts`);
+const { ReplayKeeper, ringSource } = await import(`${ROOT}/src/tape/keeper.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
 const { levelFingerprint } = await import(`${ROOT}/src/game/savestate.ts`);

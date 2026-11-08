@@ -6,7 +6,7 @@
 //                           hard landing — into smaller plates (two generations at most) and a burst of the particles below — unless it is laminated (it sags in one
 //                           piece) or tempered (it was never a plate: it is dice). Drawn the colour of what lies under them × the pane's tint (a pane is seen
 //                           THROUGH), polished (the reflection pass and the lights' glints find them), casting no shadow.
-//                  SPRAY    GPU particles of the 'shard' kind (render/particles.ts; game/shardModel.ts is the CPU reference of their flight): MID fragments (1–4 cm,
+//                  SPRAY    GPU particles of the 'shard' kind (render/particles.ts; render/shardModel.ts is the CPU reference of their flight): MID fragments (1–4 cm,
 //                           they carry and skitter), FINES (millimetres: thrown fast, stopped by the air, they hang near the pane and rain down), and from a round or
 //                           a blast a BACK SPRAY toward the shooter (spall comes off both faces: a sixth of the fines); a tempered clump is DICE — hundreds of small
 //                           cubes that pour straight down.
@@ -37,7 +37,7 @@ import type { Chunk } from './debris';
 import { hash01 } from './debris';
 import { gpuFx } from './particleFx';
 import { glassBreakLive } from './glassbreak';
-import { SHARD } from './shardModel';
+import { SHARD } from '../render/shardModel';
 import { NOBODY_ID } from './consts';
 import { fallOf } from './falling';
 import { FALL_UNHEARD, FALL_IF_SOUNDED, FALL_HEARD, type FallSound } from '../sim/fallshome';

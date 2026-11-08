@@ -17,7 +17,7 @@ import { FORESEE } from '../../src/net/foresee';
 import { NetClient } from '../../src/net/client';
 import { NetServer, type Conn } from '../../src/net/server';
 import { FIRST, type WireCmd } from '../../src/net/wire';
-import { FollowCamera } from '../../src/game/camera';
+import { FollowCamera } from '../../src/host/camera';
 import { Man, Section, View } from '../../src/draw/sections';
 
 const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.NET_BREAK === '1';

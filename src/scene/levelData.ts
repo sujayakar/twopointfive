@@ -19,7 +19,9 @@
 //   - numbers are stored at full double precision (JSON's shortest round-trip form): rounding even to 4 decimals moves wall slabs whose centres are
 //     sums like (x0 + x1) / 2, and the identity gate (tools/qa/level-probes.ts) is bit-for-bit.
 //   - versioned: `version` is bumped on any breaking change; the loader refuses versions it does not know.
-import type { Vec3, Quat } from '../math/vec';
+import type { Vec3 } from '../math/vec';
+import { AUTHORED_FLAGS, type BoxData, type DoorData, type FlagName, type LightData, type ShapeData, type ShapePieceData } from './levelRows';
+export { AUTHORED_FLAGS, type BoxData, type DoorData, type FlagName, type LightData, type ShapeData, type ShapePieceData };
 import type { WeaponId } from './weaponIds';
 import type { RoomClearPlan, BreachPlan, CivilianTask } from './level';
 import type { LevelScenarios } from './scenarios';
@@ -37,10 +39,6 @@ export const LEVEL_DATA_VERSION = 2 as const;
 /** what a file of another version is told: version 1 wrote a round thing as four slabs, and one program turns such a file into this version */
 const versionWord = (v: unknown): string => v === 1 ? 'version 1 writes a round thing as four slabs: bun run tools/levels/round-convert.ts <file> makes it version 2' : `expected ${LEVEL_DATA_VERSION}, got ${JSON.stringify(v)}`;
 
-/** Box flags by NAME as they appear in a level file. Only the authored subset: Dynamic / Emissive / AreaLit / Rot are set by the runtime (props, upload,
- *  game.ts area lights, Box.rot presence) and SoundSeal is a CPU-only door-leaf state — none of them is ever authored, and the validator rejects them. */
-export const AUTHORED_FLAGS = ['NoPrimary', 'NoShadow', 'Cutaway', 'Gloss', 'Glass'] as const;   // (Glass: experiment E3 — a pane; boxes.ts BoxFlag.Glass)
-export type FlagName = typeof AUTHORED_FLAGS[number];
 const FLAG_BITS: Record<FlagName, number> = { NoPrimary: BoxFlag.NoPrimary, NoShadow: BoxFlag.NoShadow, Cutaway: BoxFlag.Cutaway, Gloss: BoxFlag.Gloss, Glass: BoxFlag.Glass };
 /** flag names → the Box.flags bit word (unknown names throw: validate first) */
 export function flagsToBits(names: readonly string[] | undefined): number {
@@ -74,86 +72,14 @@ export interface MaterialData { albedo: Vec3; rough?: number; metal?: boolean; s
 export interface SurfacesData { building: Rect; grassEdge: number; inside: SurfaceMat; outside: SurfaceMat; verge: SurfaceMat; zones: { id: string; mat: SurfaceMat; x0: number; z0: number; x1: number; z1: number; notes?: string }[]; }
 export type SurfaceMat = 'carpet' | 'lino' | 'stone' | 'tile' | 'asphalt' | 'grass';
 
-/** One static box (scene/boxes.ts Box, minus everything the runtime owns: owner, the Emissive / AreaLit / Rot / Dynamic bits). */
-export interface BoxData {
-  id: string;
-  /** FloorData.id; absent = floors[0] */
-  floor?: string;
-  /** editor grouping only (the generator's section: 'lobby', 'walls.interior', 'doorframe.server', …) — no runtime meaning */
-  group?: string;
-  /** Box.name: a tag the game may look up ('breaker_panel') */
-  name?: string;
-  c: Vec3; h: Vec3;
-  /** rotation about +Y, radians; absent = 0 */
-  yaw?: number;
-  /** full orientation (unit quaternion x y z w) for the few tilted things (the bike's tubes); absent = yaw only */
-  rot?: Quat;
-  /** A ROUND THING (scene/round.ts): to every ray, eye, foot and to the picture this box is the cylinder about its own y, radius h[0] (which equals h[2]), half
-   *  height h[1]. Not a shape: a shape is cut from a box that still walks as the plain box. Says no yaw, rot, flags or shape. */
-  round?: true;
-  /** exactly one of material (a key of LevelData.materials) / albedo (inline linear rgb) */
-  material?: string; albedo?: Vec3;
-  /** emitted radiance (linear HDR); absent = none. Fixtures that switch (panels, screens, signs) are ALSO listed in `switchables` with their lit value. */
-  emissive?: Vec3;
-  /** the finish (see MaterialData): overrides the material's / gives an inline-albedo one-off one; absent = the material's, else matte / dielectric */
-  rough?: number; metal?: boolean;
-  /** Box.stuff: what the box is made of, where its material's row does not say it (scene/stuff.ts: a material of the look, 'plain', 'waits', 'glass' or
-   *  'rubber'); absent = what its material's row says, and plain for a box with an inline albedo. Nothing is read off the colour. The picture's alone (the
-   *  look, and what a round's hit looks like: game/particleFx.ts HITSTUFF): no rule of the game reads it. */
-  stuff?: string;
-  /** Box.does: what the box does, where its material's row does not say it (scene/materials.ts); absent = what its material's row says, and the default
-   *  row for a box with an inline albedo. 'unnamed' (the default row) is written only over a row that says something else. */
-  does?: string;
-  flags?: FlagName[];
-  /** Box.cutHeight (viewer stage back wall only); absent = never cut */
-  cutHeight?: number;
-  /** MARKINGS on the box's faces (scene/markings.ts MarkingDef: face, kind, rect from the face centre, res, palette a/b/c, emit, rough, p, id) — the pixel-art
-   *  signifiers (key caps, tape, seams, the vending window, text bars, LEDs, glyphs); ≤ MAX_MARKS_PER_BOX; absent = none */
-  markings?: MarkingDef[];
-  /** A SHAPE (scene/shapes.ts — read its head): how this box stands when shapes are on, said in the box's OWN frame so that it moves, turns and copies with
-   *  the box. `round` 1 | 3 = a twelve-sided prism about the box's own x or z; `arc` { axis, rise } = its top a round about its own x or z; `cut` = planes
-   *  [nx, ny, nz, d], each keeping n · p ≤ d (8 at most, 5 beside an arc, whose own facets give way to them); `old` = not a fresh break (the picture's word: the cut faces take the box's own
-   *  paint and lying snow); `with` = pieces of trim that are there only when shapes are on, drawn and nothing else. The box keeps its centre and half size: a shape is cut FROM the plain
-   *  box. With shapes off the box is the plain box above and nothing here is read. Not on a box with `rot`; no form on a box with `markings` or the Glass
-   *  flag (their readers — the mark painter, the pane engine — read the whole box). */
-  shape?: ShapeData;
-}
-
 export type PropKindName = 'chair' | 'cardboard' | 'bin' | 'plant';
-/** one piece of a shape (BoxData.shape.with): TRIM, drawn and nothing else — `off` (its centre from the box's, in the box's own frame), half size, yaw from
- *  the box's own, paint (exactly one of material / albedo), finish — and a form. It says no flags: a piece always stands NoShadow */
-export interface ShapePieceData extends ShapeForm { off: Vec3; h: Vec3; yaw?: number; /** at most one of material / albedo; neither = the box's own paint, finish and word */ material?: string; albedo?: Vec3; rough?: number; metal?: boolean; /** as BoxData.does */ does?: string; /** as BoxData.stuff: what the piece is made of where its paint's row does not say it */ stuff?: string }
-export interface ShapeData extends ShapeForm { with?: ShapePieceData[] }
 export interface PropPartData { off: Vec3; h: Vec3; /** relative to the prop's heading; absent = 0 */ yaw?: number; material?: string; albedo?: Vec3; /** as BoxData.stuff */ stuff?: string; /** as BoxData.does */ does?: string; /** markings on the part's faces (as BoxData.markings) */ markings?: MarkingDef[]; }
 /** Loose furniture (game/props.ts): a rigid group of parts standing on the floor at (x, z). `half` / `height` are normally FITTED from the parts by the loader
  *  (levelLoad.ts fitPropFootprint — the generator's own rule); store them only to override the fit (a plant's footprint is its foliage's flat sides). */
 export interface PropData { id: string; kind: PropKindName; /** PropDef.name; absent = id */ name?: string; floor?: string; x: number; z: number; /** heading; absent = 0 */ yaw?: number; mass: number; parts: PropPartData[]; half?: [number, number]; height?: number; }
 
-/** An analytic light (scene/level.ts LightDef, every field the renderer reads). `id` is the LightDef.name the game keys targets / panels on. */
-export interface LightData {
-  id: string;
-  kind: 'point' | 'spot' | 'dir';
-  pos: Vec3; dir: Vec3; color: Vec3;
-  /** point/spot: candela-ish; dir: irradiance on a surface square to it */
-  intensity: number; range: number; innerDeg: number; outerDeg: number;
-  /** light-target group for the Lights panel / OCP / daylight ('exterior', 'manager', …) */
-  group: string;
-  enabled: boolean;
-  /** haze scattering multiplier for beams */
-  volumetric: number;
-  /** emitter size (m) → penumbra; for 'dir' the angular radius (rad). absent = the renderer's default (0.05 / 0) */
-  radius?: number;
-  /** fed from the building breaker; absent = true (false: street lighting, moon, sun) */
-  mains?: boolean;
-  /** wide soft emitter → the direct pass's 'broad' denoise class */
-  broad?: boolean;
-  /** BoxData.id of the emissive glow card that represents the fixture (goes dark with the light) */
-  fixture?: string;
-}
 /** Emissive fixtures the OCP / panel / blackout can switch: the boxes glow `baseEmissive` when on. */
 export interface SwitchableData { id: string; boxes: string[]; group: string; on: boolean; baseEmissive: Vec3; flicker?: boolean; /** absent = true */ mains?: boolean; }
-/** A hinged leaf in a doorway gap (game/doors.ts DoorDef minus the runtime albedo). The FRAME (jambs, head, stops) is ordinary boxes, group 'doorframe.<id>'. */
-export interface DoorData { id: string; floor?: string; hinge: [number, number]; closedDir: number; width: number; angle?: number; exterior?: boolean; closer?: boolean; minAngle?: number; maxAngle?: number; locked?: boolean; /** which key turns it; absent = the floor key */ lock?: string; keySide?: 1 | -1; /** the side the leaf opens into, +1 = the CCW side of the closed leaf (doors.ts DoorDef.swing); absent = dealt from the level: into the room it serves (game/doorswing.ts) */ swing?: 1 | -1; /** a steel fire door: a boot only rings off it, no pick opens it (doors.ts DoorDef.steel — the QRF's west stair door) */ steel?: boolean; }
 /** One man's beat (scene/level.ts PatrolRoute). `id` doubles as the route name the radio uses unless `name` says otherwise. */
 export interface RouteData { id: string; name?: string; points: Vec3[]; wait: number[]; weapon?: WeaponId; keys?: string[]; }
 export interface ChokepointData { id: string; name?: string; floor?: string; pos: Vec3; yaw: number; }

@@ -1,4 +1,4 @@
-// THE CAMERA'S KEY IS THE SPACE BAR (src/host/keymap.ts KEYMAP.camSpace, camKey; game/input.ts). The page has it on
+// THE CAMERA'S KEY IS THE SPACE BAR (src/host/keymap.ts KEYMAP.camSpace, camKey; host/input.ts). The page has it on
 // (`?camspace=0` = Ctrl, as it was); the module's own stand has it off, so both of the harness's stands start with Ctrl and this check raises it itself.
 //   bun run tools/qa/probes.ts camspace        (family `player`)        CAMSPACE_BREAK=1 = the switch left off and the same lines asked: must FAIL (all but `off`)
 //
@@ -16,7 +16,7 @@ export async function camSpaceCheck(): Promise<boolean> {
   const BRK = process.env.CAMSPACE_BREAK === '1'; let all = true;
   const verdict = (ok: boolean, what: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };
   console.log(`\n=== camspace: the camera's key is the Space bar${BRK ? ' (the switch off: must fail)' : ''} ===`);
-  const K = await import(`${ROOT}/src/host/keymap.ts`); const { Input } = await import(`${ROOT}/src/game/input.ts`);
+  const K = await import(`${ROOT}/src/host/keymap.ts`); const { Input } = await import(`${ROOT}/src/host/input.ts`);
   const M = K.KEYMAP, was = { on: M.on, qFree: M.qFree, qCmd: M.qCmd, setFree: M.setFree, camSpace: M.camSpace, pinchOnly: M.pinchOnly, slotWhen: M.slotWhen, handWhen: M.handWhen };
   const G: any = globalThis, had = { window: G.window, ls: G.localStorage }, stubs: string[] = []; const store = new Map<string, string>();
   G.localStorage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => { store.set(k, String(v)); }, removeItem: (k: string) => { store.delete(k); } };
@@ -24,7 +24,7 @@ export async function camSpaceCheck(): Promise<boolean> {
   try {
     // the page's own board: the player's keys live, empty hands a slot, his actions a ring, and the camera's switch as asked
     const page = (cam: boolean, ring = true, slot = true) => { M.on = true; M.qFree = true; M.qCmd = true; M.setFree = true; M.slotWhen = () => slot; M.handWhen = () => ring; M.camSpace = cam && !BRK; K.resetKeys(); };
-    // game/input.ts's own listeners, on a window and a canvas that are lists of them
+    // host/input.ts's own listeners, on a window and a canvas that are lists of them
     const board = () => { const L: Record<string, ((e: any) => void)[]> = {}; const add = (t: string, f: (e: any) => void) => { (L[t] ??= []).push(f); };
       const win: any = { addEventListener: add }; win.top = win.self = win; const el = { addEventListener: add, getBoundingClientRect: () => ({ left: 0, top: 0 }) };
       G.window = win; let I: any; try { I = new Input(el as any); } finally { if (had.window === undefined) delete G.window; else G.window = had.window; }

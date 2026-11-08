@@ -1,5 +1,6 @@
 // A GAME IN THE MODULE, AS A PAGE THAT DRAWS IT HAS IT: started, handed a player's input, stepped, and read by what it leaves to be drawn (src/draw). The page
 // holds its number and nothing of it.
+import type { HandsOffPlan } from './benchScenes';
 import { FaceError, type Face, type Fetched } from './face';
 import { Drawn, drawRefused, type DrawFace } from '../draw/drawn';
 import { Heard, Man, Section, View, Want } from '../draw/sections';
@@ -11,8 +12,6 @@ import type { RunMark, RunVerdict } from '../view/runend';
 import { CURSOR_DOUBLES, sampleCursor, type CursorAt, type CursorCanvas, type CursorLens } from '../view/cursor';
 import { readCursorView, readDebriefView, readRunView, readTickView, type CursorView, type DebriefView, type RunView, type TickView } from '../view/read';
 
-/** a hands-off player's plan: the die his beats are rolled on, the seconds he plays, doors by name to take first, the breaker thrown before any */
-export interface HandsOffPlan { seed: number; cap?: number; route?: string[]; breaker?: boolean }
 export interface HandsOffSaid { t: number; end: 'taken' | 'sam' | 'cap' | 'spent' | null; given: number; shotAt: number; up: number; of: number; left: number }
 /** how a run ended, as the module's record of it says (game::verdict::verdict_lines) */
 export interface Verdict { won: boolean; word: string; why: string; secs: number; approach: string | null; lost: number; of: number; foesDown: number; foesOf: number; hostages: { alive: number; of: number } | null; void: boolean; clean: boolean }
@@ -156,7 +155,7 @@ export class DrawGame {
   /** A VIEWER'S OWN PICTURE of the run: with the fog off it, and through a tube or not whatever the run's was (null: as the run had it). The first call has the game keep what such a picture is made from */
   viewAs(bared: boolean, tube: boolean | null): void { this.as = [bared ? 1 : 0, tube === null ? 0 : tube ? 1 : 2]; if (this.lost) return; this.X.face_draw_as(this.h, ...this.as); this.draw(); }
   private as: [number, number] | null = null;
-  /** the floor as it stands, for a map of it (replay/minimap.ts), and who and what is on it now: everybody, seen or not */
+  /** the floor as it stands, for a map of it (tape/minimap.ts), and who and what is on it now: everybody, seen or not */
   floor(): { bounds: [number, number, number, number]; boxes: number[] } { this.X.face_floor(this.h); return JSON.parse(this.answer()); }
   map(): { men: { id: number; x: number; z: number; aim: number; team: string; kind: 'player' | 'man' | 'civ'; down: boolean; name: string; state: string }[]; doors: { hx: number; hz: number; ux: number; uz: number; width: number; locked: boolean; broken: boolean; off: boolean; name: string }[] } { this.X.face_map(this.h); return JSON.parse(this.answer()); }
   /** THE MOMENT THE GAME STANDS AT, whole, to come back to exactly (a walk of a tape's): its number, 0 where it cannot be held */

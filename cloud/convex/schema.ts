@@ -2,7 +2,7 @@
 // id it made and keeps (`pid`), a page visit by the name its kept tape already has (`sid`, src/ui/replaykey.ts). Four things are kept:
 //   players     one row a browser: when it was first and last seen
 //   prefs       one row a browser: its settings as the page keeps them (the `twopointsix.*` keys of its localStorage, as one JSON text)
-//   visits      one row a page visit that was played: the kept tape's own row (src/replay/keepstore.ts KeptRow) and how many of its pieces are here
+//   visits      one row a page visit that was played: the kept tape's own row (src/tape/keepstore.ts KeptRow) and how many of its pieces are here
 //   tapeChunks  the kept tape itself: a visit's head (seq -1) and its pieces, each a gzip member as the browser packed it, cut where one is past a document
 //   telemetry   small records of a visit: the machine, a run's outcome, a minute's frame times, an error
 //   files       one row a file the page saved for the player (a benchmark's report, a replay, a recording): its bytes are in the deployment's file storage
@@ -106,7 +106,7 @@ export default defineSchema({
     key: v.string(),
     /** the page's clock when the line last went, ms since 1970 */
     at: v.number(),
-    /** the line as the hand-over format has it (src/replay/kept.ts: `{k:'notes'}` · `{k:'f7'}`), as JSON text */
+    /** the line as the hand-over format has it (src/tape/kept.ts: `{k:'notes'}` · `{k:'f7'}`), as JSON text */
     text: v.string(),
   }).index("by_pid_key", ["pid", "key"]),
 

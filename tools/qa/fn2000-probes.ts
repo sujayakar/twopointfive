@@ -34,7 +34,7 @@ import { standUp, loadCharacter, ROOT } from './headless.ts';
 const { v3, quat } = await import(`${ROOT}/src/math/vec.ts`);
 const { fireWeapon, handProps } = await import(`${ROOT}/src/game/combat.ts`);
 const { SC20K_TAG, KNIFE_TAG, RIG, M4_BOXES, rifleM4, sc20kBoxes, sc20kGrip, sc20kMuzzleAhead } = await import(`${ROOT}/src/game/rigProps.ts`);
-const { GEAR, gearText, ringTag, shellTag } = await import(`${ROOT}/src/game/gear.ts`);   // (which rifle is drawn: the 2010s carbine is three boxes more than the bullpup's eleven — and the kit's words as issued: a line this family reads on the HUD or in the log is asked for through gearText / ringTag / shellTag, so it is the old kit's on the frozen stand and the issue kit's under TPS_GEAR=1)
+const { GEAR, gearText, ringTag, shellTag } = await import(`${ROOT}/src/host/gear.ts`);   // (which rifle is drawn: the 2010s carbine is three boxes more than the bullpup's eleven — and the kit's words as issued: a line this family reads on the HUD or in the log is asked for through gearText / ringTag / shellTag, so it is the old kit's on the frozen stand and the issue kit's under TPS_GEAR=1)
 const { Character, LONG_STEADY } = await import(`${ROOT}/src/game/character.ts`);
 const { castSuit } = await import(`${ROOT}/src/anim/gltf.ts`);   // (rifle-carry (3): the skin a back-slung rifle lies on, on the cast)
 const { RIFLE_SPREAD, RIFLE_EQUIP_SECS } = await import(`${ROOT}/src/game/player.ts`);

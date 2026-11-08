@@ -113,7 +113,7 @@ export const fake: (name?: string) => any = stubMod.fake;
 
 const { loadGltfCharacter, loadGltfCast, castFile } = await import(`${ROOT}/src/anim/gltf.ts`);
 const { saveState, loadState } = await import(`${ROOT}/src/game/savestate.ts`);
-const { Input } = await import(`${ROOT}/src/game/input.ts`);
+const { Input } = await import(`${ROOT}/src/host/input.ts`);
 const { WEATHER_BOOT, snowLevel, snowLevelOfQuery } = await import(`${ROOT}/src/game/weatherKinds.ts`), { HOUR } = await import(`${ROOT}/src/game/hours.ts`), { levelNameOf } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 // the movement pass (character.ts MOVES) is ON in the page and OFF under the harness — pinned here too, so tools that build a bare Character (gait.ts) and never

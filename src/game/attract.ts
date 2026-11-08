@@ -13,7 +13,7 @@
 import { openingStart } from './opening';
 import { Vec3, v3, DEG, smoothstep } from '../math/vec';
 import type { Game } from './game';
-import type { FollowCamera } from './camera';
+import type { FollowCamera } from '../host/camera';
 
 /** One framing: the floor point looked at (or a live getter — a man to follow), the yaw it is cut to (degrees, the tour's convention: 0 looks north, −90
  *  east; or a getter answered at the cut), the distance it opens at, and how long it holds. */

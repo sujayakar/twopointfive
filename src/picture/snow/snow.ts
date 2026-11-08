@@ -1,10 +1,9 @@
 // THE SNOW OF A LEVEL BUILT FOR IT, as the picture has it: the field it lies in, baked from the statics as told; the prints and marks pressed into it from the men's and the things' rows;
 // the craters of the blasts the game told of; the flakes, wisps and breath in the air. Every part is the page's own: a restart begins it again, and a load begins it on the level as it stands.
-import type { FollowCamera } from '../../game/camera';
+import type { FollowCamera } from '../../host/camera';
 import { buildSnowField, snowCfgRows, type SnowField } from '../../render/snowField';
 import type { Particles } from '../../render/particles';
 import type { SmokeSystemLike } from '../../smoke/types';
-import type { Level } from '../../scene/level';
 import type { Box } from '../../scene/boxes';
 import type { Engine } from '../../engine';
 import type { Drawn } from '../../draw/drawn';
@@ -54,7 +53,7 @@ export class SnowPicture {
   private say(): void { sayOf(this.D, this.boxes); }
   private bake(): void {
     const E = this.E;
-    this.field = SNOW_LOOK.on ? buildSnowField({ boxes: this.boxes } as unknown as Level, { wind: RIPPLE }) : null;
+    this.field = SNOW_LOOK.on ? buildSnowField({ boxes: this.boxes }, { wind: RIPPLE }) : null;
     this.tracks = SNOW_LOOK.tracks && this.field ? makeSnowTracks() : null;
     E.gbuffer.setSnowField(this.field, snowCfgRows(this.field, this.tracks ? TRACK_RES : 0));
     E.gbuffer.setSnowTracks(this.tracks);

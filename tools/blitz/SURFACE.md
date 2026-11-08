@@ -79,7 +79,7 @@ which stays a named panic: the orders' panel is built on the page by the TypeScr
 |---|---|---|
 | cueClass | src/game/cues.ts | crate::cues::cue_class |
 | floorAt | src/game/floor.ts | crate::floor::floor_at |
-| gearText | src/game/gear.ts | crate::gear::gear_text |
+| gearText | src/host/gear.ts | crate::gear::gear_text |
 | handlingOf | src/game/weapons.ts | crate::weapons::handling_of |
 | knobRegistry | src/game/knobs.ts | crate::knobs_reg::knob_registry |
 | packRect | src/game/weatherKinds.ts | crate::weather_kinds::pack_rect |
