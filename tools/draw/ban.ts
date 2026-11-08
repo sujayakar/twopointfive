@@ -7,7 +7,7 @@ import { dirname, join, resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..'), ENTRIES = ['src/host/drawpage.ts', 'src/ui/startpage.ts', 'src/ui/loadbrief.ts'].map(f => join(ROOT, f));
 const BANNED = /^(src\/(game|sim|replay)\/|src\/anim\/skeleton\.ts$|src\/host\/(rustgame|rustdress|standup|profile|loop|tween|ahead)\.ts$|tools\/)|^tps-bridge\//;
 /** leaves that stand in those folders and hold nothing of the game: each goes to a folder of its own when src/game does */
-const LEAVES = new Set(['src/game/camera.ts', 'src/game/input.ts', 'src/game/crossing.ts', 'src/game/sheetModel.ts', 'src/game/shardModel.ts',
+const LEAVES = new Set(['src/game/gear.ts', 'src/game/camera.ts', 'src/game/input.ts', 'src/game/crossing.ts', 'src/game/sheetModel.ts', 'src/game/shardModel.ts',
   // (the replays this browser keeps, as files: no game)
   'src/replay/shelf.ts', 'src/replay/format.ts', 'src/replay/kept.ts', 'src/replay/keptui.ts', 'src/replay/keepstore.ts', 'src/replay/keeper.ts']);
 
