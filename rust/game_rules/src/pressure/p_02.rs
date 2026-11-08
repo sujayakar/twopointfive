@@ -785,7 +785,7 @@ fn tick_man(g: &mut Game, p: &mut Press, mi: PressureManId, team_in: bool) {
     }
     if g.tab.pressure_man[mi].moving {   // a flanker off his leg: round at his door, or met on the way, or stopped short and he sets off again
         let contact = g.time - g.gd[gd].last_seen_t < 0.5;
-        let fc: Option<CharId> = match g.gd[gd].foe { Some(crate::game::Foe::Player) => Some(g.pl[g.player].ch), Some(crate::game::Foe::Guard(o)) => Some(g.gd[o].ch), None => None };
+        let fc: Option<CharId> = crate::teams::foe_char(g, gd);
         let spot = g.tab.pressure_man[mi].spot;
         let off = flat(pos_of(g, gd), spot);
         if !contact && off > 1.5 && { let x = &mut g.tab.pressure_man[mi]; x.tries += 1.0; x.tries < 3.0 } { run(g, d, spot, Some(door), None); return; }

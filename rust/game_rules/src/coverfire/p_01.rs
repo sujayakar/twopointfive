@@ -164,9 +164,9 @@ pub fn flat(a: V3, b: V3) -> f64 {
 }
 
 /// whose body (coverfire.ts charOf)
-pub fn char_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, who: crate::game::Foe) -> CharId {
+pub fn char_of(g: &crate::game::Game, gd: GuardId, who: crate::game::Foe) -> CharId {
     match who {
-        crate::game::Foe::Player => g.pl[seat.player].ch,
+        crate::game::Foe::Player => g.pl[crate::seats::faced_man(g, gd)].ch,
         crate::game::Foe::Guard(x) => g.gd[x].ch,
     }
 }
@@ -198,7 +198,7 @@ pub fn weight_of(g: &crate::game::Game, gd: GuardId) -> f64 {
 
 /// a sighting of `who` copied into what `gd` knows (coverfire.ts see)
 pub fn see(g: &mut crate::game::Game, gd: GuardId, who: crate::game::Foe, low: bool) {
-    let c = char_of(g, &crate::seats::here(g), who);
+    let c = char_of(g, gd, who);
     let (pos, vel) = (g.ch[c].pos, g.ch[c].vel);
     let trunk = match g.ch[c].bones.get(crate::character::Bone::Spine2) {
         Some(t) => *t,
@@ -581,7 +581,7 @@ pub fn cover_seen(g: &mut crate::game::Game, gd: GuardId, who: Option<crate::gam
         Some(who) => who,
     };
     state_of(g);
-    let c = char_of(g, &crate::seats::here(g), who);
+    let c = char_of(g, gd, who);
     let k = Know { who, at: to, y0: g.ch[c].pos[1], v: [0.0, 0.0], t: g.time, call: None };
     let cw = match choose(g, gd, k, false, true) {
         Some(cw) => cw,
@@ -938,7 +938,7 @@ pub fn coverfire_tick(g: &mut crate::game::Game, dt: f64) {
 pub fn coverfire_saw(g: &mut crate::game::Game, gd: GuardId, who: crate::game::Foe, age: Option<f64>) {
     let age = age.unwrap_or(0.0);
     state_of(g);
-    let c = char_of(g, &crate::seats::here(g), who);
+    let c = char_of(g, gd, who);
     let low = g.ch[c].anim.crouch > 0.5;
     see(g, gd, who, low);
     let t = g.time - age;
