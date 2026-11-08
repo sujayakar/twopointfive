@@ -7853,7 +7853,7 @@
 },
 {
 "key": "OrderDef.standsIn.when",
-"why": "its type holds what the bridge cannot read: crate::orders::OrderWhen"
+"why": "the order's own function: the host asks the row (tools/blitz/ask.ts)"
 },
 {
 "key": "OrderDef.valid",
