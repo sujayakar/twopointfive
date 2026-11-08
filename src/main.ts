@@ -128,7 +128,7 @@ import { quietFogForget } from './game/quietfog';
 import { WEATHER_PRESETS, snowLevelOfQuery } from './game/weatherKinds';
 import { SNOW_SURF, snowCfgRows } from './render/snowField';
 import { SNOWTRACKS, TRACK_RES } from './game/snowTracks';
-import { HOUR, HOURS, HOUR_IDS, applyHour, hourOf, hourSummary, hourLightAt, setSunStrength, sunStrength, sunToCloud, hourSun, hourWorldChanged } from './game/hours';
+import { HOUR, HOURS, HOUR_IDS, applyHour, hourOf, hourSummary, setSunStrength, sunStrength, sunToCloud, hourSun, hourWorldChanged } from './game/hours';
 import { lightEstimateAt } from './game/guards';
 import { STRESS, standExtra, stressTick, stressSummary, extraSpots } from './game/stress';
 import { Quality, ladderAimOf, rtVeto, sharpForce, gbaaForce, iqForce } from './ui/quality';
@@ -358,7 +358,7 @@ async function main() {
   if (engine.world.stuffOf) { const word = engine.world.stuffOf; for (const b of engine.world.statics) word(b, false); for (const d of game.doors.list) word(d.box, true); for (const p of game.props.all) for (const b of p.boxes) word(b, true);   // (the boxes the game made of each part: what they say, they say here too)
     lookMaps = timed('materials', engine.gbuffer.needLook()); lookMaps?.catch(() => { /* awaited below */ }); }
   if (q.has('noweather')) game.weather.setEnabled(false);   // ?noweather: the storm experiment off from boot (weather.ts) — the plain night, byte for byte
-  const probe = game.probe as IrradianceProbe;   // (the game holds a ProbeLike — src/game/sensors.ts; on this host it is the WebGPU kernel the Game built, whose encode / readback the frame drives)
+  const probe = game.probe as IrradianceProbe;   // (the game holds a ProbeLike — render/probe.ts; on this host it is the WebGPU kernel the Game built, whose encode / readback the frame drives)
   const probed = modelErrAsked(q);   // (the game asks the picture nothing: the probe is the error tool's, and is compiled and run under its word alone)
   if (probed) { engine.extraPasses.push((enc, sceneBG, diceView, ts) => { if (probe.hasPending) probe.encode(enc, sceneBG, diceView, ts('probe')); }); engine.afterSubmit.push(() => probe.afterSubmit()); }
   engine.afterSubmit.push(() => smoke.afterSubmit());
@@ -1116,19 +1116,17 @@ async function bootLevel(q: URLSearchParams, engine: Engine, tick: () => Promise
 /** __weather, __hour, __smoke */
 function weatherHourHooks(game: Game, smoke: SmokeSystem) {
   (window as any).__weather = game.weather;
-  // the hour (hours.ts): __hour.set('dusk') live, .sun(0.4) = the one number a cloud dims, .at([x,y,z]) = the hour's light the meter's stand-in adds there, .est(p, skipOwner) = that
-  // stand-in whole (guards.ts lightEstimateAt: what the harness and the team's rules read) — beside `__game.sensors.read('playerChest')` it is the stand-in against the renderer's own meter
+  // the hour (hours.ts): __hour.set('dusk') live, .sun(0.4) = the one number a cloud dims, .est(p, skipOwner) = the light the Rust game says stands on a point (guards.ts lightEstimateAt)
   (window as any).__hour = { ids: HOUR_IDS, table: HOURS, visit: HOUR, get id() { return hourOf(game); }, set: (id: string) => { applyHour(game, HOUR_IDS.includes(id as any) ? id as any : 'night'); return hourOf(game); },
     sun: (k?: number) => { if (k !== undefined) setSunStrength(game, k); return sunStrength(game); }, cloud: () => { sunToCloud(game); return sunStrength(game); },
     cover: (c?: number) => { const W = game.weather; if (!W?.kind) return null; if (c !== undefined && Number.isFinite(c)) { WEATHER_PRESETS[W.kind].cloud = Math.min(1, Math.max(0, c)); sunToCloud(game); game.engine.invalidateWorldCache?.(); } return W.cloud; },   // the picked weather's cloud cover for the VISIT (the look panel's Cloud row): the sun, its disc and the sky follow by hours.ts's own rule; null with no weather picked. Not carried by a save or a recording
-    light: () => hourSun(game), at: (p: [number, number, number]) => hourLightAt(game, p), est: (p: [number, number, number], skip = 0) => lightEstimateAt(game, p, skip ? (o: number) => o === skip : undefined), changed: () => hourWorldChanged(game), summary: () => hourSummary(game) };
+    light: () => hourSun(game), est: (p: [number, number, number], skip = 0) => lightEstimateAt(game, p, skip ? (o: number) => o === skip : undefined), changed: () => hourWorldChanged(game), summary: () => hourSummary(game) };
   // THE LOOK PROTOTYPE opens a snow level under BROKEN cloud (half cover: hours.ts leaves 0.70 of the hour's sun, its own small disc and the sky's colour) where the
   // game's snow falls from a deck (0.9: 0.09 of the sun, a wide disc, no shadows). The maintainer, 10-25, of the pass at midday on that page: "i'd still expect a
   // stronger directional light from the sun in midday". The night is not touched by cloud. The panel's Cloud row moves it.
   if (LOOK_LAB.on && game.weather?.kind === 'snow') (window as any).__hour.cover(LOOK_SNOW_COVER);   // (the lab's alone: the cover is the weather's own number, read by the light the game's men see by as well as by the picture)
   // the night's moon (the level's own steady directional light: hours.ts puts it out by day). __moon.set({ k, elev, bearing }) = its strength, how high it stands and
-  // where (degrees; bearing 0 = north = −z, 90 = east, the sun's convention) for the VISIT — the look panel's rows. Not carried by a save or a recording, and the
-  // light meter's CPU stand-in (guards.ts lightEstimateAt) reads no directional light but the hour's sun: a raised moon moves the picture and the GPU's meter only.
+  // where (degrees; bearing 0 = north = −z, 90 = east, the sun's convention) for the VISIT — the look panel's rows. Not carried by a save or a recording.
   const moonOf = () => { const sun = hourSun(game); return game.engine.lights.lights.find(l => l.kind === 2 && l.ttl < 0 && !l.transient && l !== sun) ?? null; };
   const DEG = Math.PI / 180;
   (window as any).__moon = {

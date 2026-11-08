@@ -136,7 +136,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 203 => { let a1: crate::debris::ChunkKind = Io::r(&mut i); let a2: BoxId = Io::r(&mut i); let a3: V3 = Io::r(&mut i); let a4: V3 = Io::r(&mut i); let a5: Option<f64> = Io::r(&mut i); let a6: Option<bool> = Io::r(&mut i); let r = crate::debris::debris_spawn_raw(g, a1, a2, a3, a4, a5, a6); r.w(&mut o);  }
 205 => { let mut a1: Vec<AnyBoxId> = Io::r(&mut i); crate::debris::debris_boxes(g, &mut a1); a1.w(&mut o); }
 208 => { let a1: f64 = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let r = crate::wind::wind_storm_share(g, a1, a2); r.w(&mut o);  }
-209 => {  let r = crate::wind::wind_storm_drift(g); r.w(&mut o);  }
 210 => { let a1: f64 = Io::r(&mut i); crate::wind::wind_update(g, a1);  }
 213 => { let a1: crate::devices::DevicesSnap = Io::r(&mut i); crate::devices::devices_restore(g, &a1);  }
 216 => { let a1: String = Io::r(&mut i); let a2: crate::devices::LearnCodeHow = Io::r(&mut i); let a3: Option<GuardId> = Io::r(&mut i); let r = crate::devices::learn_code(g, &a1, a2, a3); r.w(&mut o);  }
@@ -515,9 +514,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 790 => {  crate::hours::sun_to_cloud(g);  }
 791 => { let a1: crate::hours::HourId = Io::r(&mut i); let r = crate::hours::apply_hour(g, a1); r.w(&mut o);  }
 792 => {  crate::hours::hour_world_changed(g);  }
-793 => { let a1: V3 = Io::r(&mut i); let mut a2: Vec<f64> = Io::r(&mut i); crate::hours::hour_light(g, a1, &mut a2); a2.w(&mut o); }
-794 => { let a1: V3 = Io::r(&mut i); let mut a2: Vec<f64> = Io::r(&mut i); crate::hours::moon_light(g, a1, &mut a2); a2.w(&mut o); }
-795 => { let a1: V3 = Io::r(&mut i); let r = crate::hours::hour_light_at(g, a1); r.w(&mut o);  }
 796 => { let a1: crate::scene_scenario_list::ScenarioSpec = Io::r(&mut i); let r = crate::scenario_run::start_scenario(g, &a1); r.w(&mut o);  }
 797 => { let a1: Option<bool> = Io::r(&mut i); let r = crate::scenario_run::quit_scenario(g, a1); r.w(&mut o);  }
 800 => { let a1: crate::chronicle::ChronKind = Io::r(&mut i); let a2: Option<JsMap<String, Option<crate::chronicle::ChronicleDataValue>>> = Io::r(&mut i); let a3: Option<V3> = Io::r(&mut i); let r = crate::chronicle::chronicle(g, a1, a2.as_ref(), a3); r.w(&mut o);  }
@@ -608,7 +604,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 900 => { let a1: GuardId = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let a3: f64 = Io::r(&mut i); let r = crate::guards::follow_path(g, a1, a2, a3); r.w(&mut o);  }
 902 => { let a1: GuardId = Io::r(&mut i); let a2: Option<Vec<f32>> = Io::r(&mut i); crate::guards::score_spots(g, a1, a2.as_deref());  }
 904 => { let a1: GuardId = Io::r(&mut i); let a2: f64 = Io::r(&mut i); crate::guards::update_guard(g, a1, a2);  }
-905 => {  let r = crate::guards::steady_lamps(g); r.w(&mut o);  }
 907 => { let a1: GuardId = Io::r(&mut i); crate::guards::gun_back(g, a1);  }
 908 => { let a1: GuardId = Io::r(&mut i); crate::guards::start_reload_beat(g, a1);  }
 909 => { let a1: GuardId = Io::r(&mut i); let a2: f64 = Io::r(&mut i); crate::guards::tick_reload_beat(g, a1, a2);  }

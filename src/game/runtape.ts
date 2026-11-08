@@ -1,19 +1,19 @@
 // THE RUN TAPE: what a headless game needs to be walked through the same run a replay was saved from (tools/qa/rerun.ts) — the replay buffer's second half
 // (replaybuf.ts owns one). The TRACE says where everybody was; the tape holds what went INTO the simulation from the first step of the page's game: the recipe (the
 // game's die, the page's query, the knobs and sandbox switches as they stood), then per step its dt, the player's record (cmd.ts PlayerCmd, minus the two matrices —
-// the camera's pose is kept and they are rebuilt from it, as the session journal does) and every value the game READ off the GPU that step (Game.sensors). What
+// the camera's pose is kept and they are rebuilt from it, as the session journal does). What
 // reaches the game from OUTSIDE a step is taped where it can be seen: a restart from a card (the player is a new object between two steps), a sandbox switch, a
 // knob moved on the Tab panel, the player put somewhere (a 'pose' row: where he stands at the first step and after every restart — a page that stages its own scene,
 // a lab's page, stood him there — and wherever he was moved between two steps, a debug teleport; 'posein': where a restart made INSIDE a step, Shift+Enter,
-// left him once the page's own wrap of Game.restart had staged its scene — the game's restart is wrapped on this Game's instance to see it, as the sensors' read is).
+// left him once the page's own wrap of Game.restart had staged its scene — the game's restart is wrapped on this Game's instance to see it).
 // A control worked on the page between two steps (`touched()`: ui/replaykey.ts hears the document's input, change and click) has every table looked at before the
 // next step, so a number moved on a panel while playing is taped at the step it first acts on, not on the tables' slow round. A save of this run loaded from a card is taped by its slot: the walk has made the same save. What cannot be followed — a scenario started or quit from a menu, a file's checkpoint or another run's loaded — ends the tape with its reason (`dead`),
-// and the replay is then a trace only. It never touches the game: the sensors' read is WRAPPED on this Game's instance (the value passes through untouched).
+// and the replay is then a trace only. It never touches the game.
 // A re-run is exact as far as the page's arithmetic and bun's agree; the tool measures that against the trace instead of promising it.
 import type { Game } from './game';
 import type { PlayerCmd } from './cmd';
 import type { RunTape, TapeInput, TapeVal } from '../replay/format';
-import { tapeF32, tapeNum } from '../replay/format';
+import { tapeNum } from '../replay/format';
 import type { TapePiece } from '../replay/kept';
 import { envSnapshot, knobsSnapshot } from './journal';
 import { activeScenario } from './scenarioRun';
@@ -107,7 +107,6 @@ export class RunTapeRec {
   private input: [number, TapeInput][] = []; private keysKey = ''; private buttons = 0; private mx = NaN; private my = NaN;
   private keys: string[] = []; private keyIdx = new Map<string, number>();
   private sens: RunTape['sens']['rows'] = [];
-  private seq: number[] = []; private vals: (number | undefined)[] = []; private prevSeq: number[] = []; private prevVals: (number | undefined)[] = [];
   private x: RunTape['x'] = [];
   private playerRef: object | null = null; private timeEnd = 0; private loads = 0; private restarts = 0; private shelf = 0; private flagsKey = ''; private tuneKey = ''; private tableKeys: Record<string, string> = {}; private kitKey = ''; private pose: number[] = []; private poseNow: number[] = []; private lookAll = false; private reg: Record<string, Record<string, unknown>> | null = null; private tableNames: string[] | null = null; private tableAt = 0;
 
@@ -148,23 +147,13 @@ export class RunTapeRec {
       if (cmd.mx !== this.mx || cmd.my !== this.my) { this.mx = cmd.mx; this.my = cmd.my; rec.m = [cmd.mx, cmd.my]; any = true; }
       if (cmd.wheel) { rec.w = cmd.wheel; any = true; }
       if (any) this.input.push([f, rec]); }
-    this.seq.length = 0; this.vals.length = 0; this.inTick = true;
+    this.inTick = true;
   }
   /** the step has run */
   end(g: Game): void {
     if (this.dead || !this.inTick) return;
-    this.inTick = false; const f = this.ticks, S = this.seq, V = this.vals, P = this.prevSeq, Q = this.prevVals;
-    let same = S.length === P.length; for (let i = 0; same && i < S.length; i++) same = S[i] === P[i];
-    // (a renderer's answer is a 32-bit float: nine digits of it on the tape, not seventeen — most of a fight's tape is these; only what changed is put into text)
-    if (same) { let ch: (number | TapeVal)[] | null = null; for (let i = 0; i < V.length; i++) if (!Object.is(V[i], Q[i])) (ch ??= []).push(i, tapeF32(V[i])); if (ch) this.sens.push([f, null, ch]); }
-    else this.sens.push([f, S.slice(), V.map(v => tapeF32(v))]);
-    this.prevSeq = S.slice(); this.prevVals = V.slice();
+    this.inTick = false; const f = this.ticks;
     this.ticks = f + 1; this.playerRef = g.player; this.timeEnd = g.time; this.loads = loadsOf(g); this.restarts = restartsOf(g); this.shelf = g.saves?.shelfChanges ?? 0; poseOf(g, this.pose);
-  }
-  private sensed(key: string, v: number | undefined): void {
-    if (!this.inTick || this.dead) return;
-    let ki = this.keyIdx.get(key); if (ki === undefined) { ki = this.keys.length; this.keys.push(key); this.keyIdx.set(key, ki); }
-    this.seq.push(ki); this.vals.push(v);
   }
   private flagsOf(g: Game) { return { godMode: !!g.godMode, aiEnabled: g.aiEnabled !== false, infiniteAmmo: !!g.infiniteAmmo, playerInvisible: !!g.playerInvisible, autosave: g.saves?.enabled !== false }; }
   private begin(g: Game): boolean {
@@ -176,10 +165,8 @@ export class RunTapeRec {
     this.x.push([0, 'pose', poseOf(g, []).map(enc)]);
     this.flagsKey = JSON.stringify(this.flagsOf(g)); this.x.push([0, 'flags', JSON.parse(this.flagsKey)]); this.tuneKey = JSON.stringify(g.tune);
     this.tableKeys = tables;
-    if (!this.wrapped) {   // every value the game reads off the renderer passes through here on its way (sensors.ts read: its sugar calls it too)
-      const S = g.sensors as unknown as { read(key: string): number | undefined }, read = S.read, self = this;
-      S.read = function (this: unknown, key: string) { const v = read.call(this, key); self.sensed(key, v); return v; };
-      // …and a restart made INSIDE a step (Shift+Enter, the bare Enter once down) is followed to where it left the player: a page that wraps the restart to
+    if (!this.wrapped) { const self = this;
+      // a restart made INSIDE a step (Shift+Enter, the bare Enter once down) is followed to where it left the player: a page that wraps the restart to
       // stage its own scene (at boot — before this) has staged it by then, and nothing between two steps would show that it had
       afterRestart(g, () => { if (self.inTick && !self.dead) self.x.push([self.ticks, 'posein', poseOf(g, []).map(enc)]); });
       this.wrapped = true;

@@ -108,8 +108,7 @@ export interface ReplayMap {
 export type TapeVal = number | string | null | [number];
 /** a tape value read back (`f32`: the sensor values of a tape that says `sens.f32`; [x] = a double kept whole) */
 export const tapeNum = (e: TapeVal, f32 = false): number | undefined => e === null ? undefined : typeof e === 'number' ? (f32 ? Math.fround(e) : e) : typeof e !== 'string' ? e[0] : e === 'nan' ? NaN : e === '-0' ? -0 : e === 'inf' ? Infinity : e === '-inf' ? -Infinity : Number(e);
-/** a sensor value as a `sens.f32` tape writes it — THE SESSION JOURNAL'S OWN ENCODING (game/sensors.ts SensorEnc: either's reader reads the other's values, the
- *  replay probes hold it): a 32-bit float as nine significant digits (they name exactly one), any other number whole as [x]. Written straight at nine digits,
+/** a sensor value as a `sens.f32` tape writes it — a 32-bit float as nine significant digits (they name exactly one), any other number whole as [x]. Written straight at nine digits,
  *  with no search for a shorter text that would do: this runs inside the step, once per value that changed */
 export const tapeF32 = (v: number | undefined): TapeVal => { if (v === undefined) return null; if (v !== v) return 'nan'; if (v === 0) return Object.is(v, -0) ? '-0' : 0; if (!Number.isFinite(v)) return v > 0 ? 'inf' : '-inf';
   const q = +v.toPrecision(9); return Math.fround(q) === v ? q : [v]; };

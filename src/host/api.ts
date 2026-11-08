@@ -18,7 +18,7 @@ import type { SkinnedDrawable } from '../render/gbuffer';
 import type { MeshShadows } from '../render/meshShadows';
 import type { RigFit } from '../render/sdfrig';
 import type { Decals } from '../render/decals';
-import type { ProbeLike } from '../game/sensors';
+import type { ProbeLike } from '../render/probe';
 import type { BreathShown } from '../game/snowBreath';
 import type { Vec3 } from '../math/vec';
 import type { FireRecord } from '../render/passes';

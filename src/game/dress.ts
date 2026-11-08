@@ -6,7 +6,7 @@
 // Every row is true in the page and on both stands: this table is not a rule of play, so no recording carries it and no stand holds it.
 // What a dressing step may do: read anything; write what only the picture reads (the GPU's lists, a drawn box, a particle, a look's own side table).
 // What it may not: push a sound a man hears, draw from the game's die, move a clock a rule reads, write a field a rule reads (a pose, a light), or put
-// smoke where the senses read it (`smoke.emit` feeds the CPU's own smoke, sense.ts ownSmoke; `smoke.push` and the wind move only the solver's).
+// smoke where the senses read it (`smoke.emit` feeds the game's own smoke, rust/game_rules/src/sense; `smoke.push` and the wind move only the solver's).
 // A new row is a step READ for those and then passed by the check: the check alone sees only what its five missions do.
 export const DRESS = {
   air: true,        // the air as a simulated field handed to the engine (airSim.ts)

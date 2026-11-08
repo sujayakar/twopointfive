@@ -13,7 +13,7 @@
 // before and after the game is stood, round the mission's staging and once more at the first step (tools/qa/rerun.ts does the same headless: keep the two in step; the WALK over the tape's rows is one file
 // both take, tapewalk.ts).
 // While it plays nothing but the tape reaches the simulation: the game is handed an input and a camera OF THE TAPE'S (never the page's keyboard, mouse or view
-// size), and `Game.sensors.read` answers from the tape (the GPU is still asked, and not listened to). The picture is drawn through the page's own camera on the
+// size). The picture is drawn through the page's own camera on the
 // tape's pose with the window's own aspect.
 //
 // THE PICTURE'S CAMERA CAN BE TAKEN OFF THE PLAYER'S VIEW, paused or playing (`free`): a drag on the picture moves it over the floor, a right drag (or Shift +
@@ -172,7 +172,7 @@ export function recipeSearch(recipe: RunTape['recipe'], now: URLSearchParams, ow
   const out = new URLSearchParams();
   for (const [k, val] of new URLSearchParams(recipe.search ?? '')) if (SENDING_WORDS.includes(k) ? SAYS_OFF.test(val) : !NOT_THE_RUNS.includes(k) && !visitWord(k, val)) out.append(k, val);   // (a visit's word is never the run's, whichever list a goal put it on: a tape recorded under one does not put it on the page that replays it)
   out.set('seed', recipe.seed === null || recipe.seed === undefined ? 'off' : String(recipe.seed));
-  out.set('noreplay', '');   // (no tape of a tape: the page's own buffer stays off, and nothing else takes Game.sensors.read)
+  out.set('noreplay', '');   // (no tape of a tape: the page's own buffer stays off)
   for (const [k, v] of visitPairs(now)) out.append(k, v);   // (pair by pair: the dress's `look` word is the run's and stays as the recipe has it, ui/replaykey.ts visitWord)
   for (const k of SENDING_WORDS) if (now.has(k)) out.set(k, now.get(k) ?? '');
   for (const [k, val] of Object.entries(own)) out.set(k, val);
@@ -249,7 +249,6 @@ export class TapePlay {
     g.fogOfWar.pageLook();      // (…and is drawn under this page's fog look — colour kept, the soft edge — not the look the tape was recorded under: picture only)
     try { this.fp = h.fingerprint && this.F?.level.fp ? (h.fingerprint() === this.F.level.fp ? 'same' : 'differs') : 'unknown'; } catch { /* */ }
     const c = (this.tape.recipe.env as { canister?: Plain } | null)?.canister; if (c && h.smoke?.params) Object.assign(h.smoke.params, c);
-    const walk = this.walk!; g.sensors.read = (key: string): number | undefined => walk.read(key);   // (the tape's answer for this step's k-th read of the key; a read the tape never made = the last value, counted)
     this.build();
     try { const k = sessionStorage.getItem(CAM_KEEP); sessionStorage.removeItem(CAM_KEEP); const o = k ? JSON.parse(k) as { src: string; free?: Partial<TapeView>; nofog?: boolean; nv?: boolean; speed?: number } : null; if (o && o.src === this.src) { if (o.nofog) this.nofog = true; if (typeof o.speed === 'number') this.speedSet(o.speed); if (typeof o.nv === 'boolean') { this.nvView = o.nv; this.nvK = o.nv ? 1 : 0; this.nvTrack = false; } if (o.free) { this.camSet(o.free); if (new URLSearchParams(location.search).has('at')) this.ui?.big.remove(); } } } catch { /* no store, or not ours: the recording's camera */ }
     const at = Number(new URLSearchParams(location.search).get('at')); if (Number.isFinite(at) && at > 0) this.seekTo = Math.min(this.tape.ticks, Math.floor(at));

@@ -9063,14 +9063,11 @@ pub struct SenseKSmoke {
     pub sigma: f64,
     pub decay: f64,
     pub spread: f64,
-    pub widest: f64,
     pub rise: f64,
     pub rise_rate: f64,
     pub in_wind: f64,
     pub least: f64,
     pub gone: f64,
-    pub cap: f64,
-    pub emitters: f64,
     pub reserve: f64,
 }
 impl SenseKSmoke {
@@ -9080,14 +9077,11 @@ impl SenseKSmoke {
             sigma: 0.0,
             decay: 0.0,
             spread: 0.0,
-            widest: 0.0,
             rise: 0.0,
             rise_rate: 0.0,
             in_wind: 0.0,
             least: 0.0,
             gone: 0.0,
-            cap: 0.0,
-            emitters: 0.0,
             reserve: 0.0,
         }
     }
@@ -13199,7 +13193,7 @@ pub fn page_posemath() -> PosemathK {
 }
 
 pub fn page_sense() -> SenseK {
-    crate::knobs::SenseK { glow: crate::knobs::SenseKGlow { sweep: 32.0 }, smoke: crate::knobs::SenseKSmoke { sigma: 6.0, decay: 0.14, spread: 0.2, widest: 3.5, rise: 1.0, rise_rate: 0.3, in_wind: 0.15, least: 0.05, gone: 0.02, cap: 48.0, emitters: 64.0, reserve: 12.0 } }
+    crate::knobs::SenseK { glow: crate::knobs::SenseKGlow { sweep: 32.0 }, smoke: crate::knobs::SenseKSmoke { sigma: 6.0, decay: 0.14, spread: 0.2, rise: 1.0, rise_rate: 0.3, in_wind: 0.15, least: 0.05, gone: 0.02, reserve: 12.0 } }
 }
 
 pub fn page_cmdcheck() -> CmdcheckK {

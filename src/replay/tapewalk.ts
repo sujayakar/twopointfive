@@ -7,8 +7,8 @@
 //   const dt = walk.step(view, input);  walk.layCamera(camera);   …the tape's camera for this step, its matrices as the page's step read them…
 //   game.update(dt, input, cam, view); walk.done();
 //
-// `game.sensors.read = key => walk.read(key)` serves the tape's answers: inside a step the k-th read of a key gets the tape's k-th value for it, a read the
-// tape never made there gets the key's last value and is counted (`unjournaled`); outside a step every read is the last value.
+// A tape made since the game senses for itself keeps no sensor values. `read` serves those of an older tape: inside a step the k-th read of a key gets the tape's
+// k-th value for it, a read the tape never made there gets the key's last value and is counted (`unjournaled`); outside a step every read is the last value.
 import type { RunTape, TapeVal } from './format';
 import { tapeNum } from './format';
 
