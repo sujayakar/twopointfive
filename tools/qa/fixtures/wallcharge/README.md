@@ -19,6 +19,5 @@ source.
   line gives the count.
 - More places than the file holds is red too, and the line says what to write: slack in a file is room for a later loss to pass.
 - A file that is not one count, and a file for no level under `levels/`, are red.
-- A look twin (`<name>-gwot.json`) has no file. It has its level's boxes and is asked against its level's file: one fact is written once.
 - It is a count, not the set of places: a place lost and another gained in the same change is not seen.
 - `WALLPLACES_BREAK=1` reads the sweep as one place short on every level: every line must fail.

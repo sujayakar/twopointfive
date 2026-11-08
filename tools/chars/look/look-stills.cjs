@@ -3,7 +3,7 @@
 // sequence from a fresh boot.
 //   PORT=5311 OUT=/some/dir node look-stills.cjs
 //   env: PORT (the dev server serving the tree, default 5311) · OUT (where the PNGs + report.json go, default ./look-out) · SIZE (960x540) · QUALITY (high)
-//        · QUERY (more of the page's query on every boot, e.g. QUERY=look=plain for the cast as it was before the look: one served tree gives the before / after pair)
+//        · QUERY (more of the page's query on every boot)
 //        · SET=fast | yard (a smaller set: see below) · SEED (7) · FRAMES (drawn frames per still, default 20) · SETTLE (simulated seconds, undrawn, after each staging, default 1)
 //        · ONLY=name,name (draw only these stills; the page's other stills are still STAGED AND STEPPED, undrawn, so a still's simulation state does not depend
 //          on which of its neighbours were drawn) · PAGES=squad,staff,nocharmats (boot only these pages, in this order)

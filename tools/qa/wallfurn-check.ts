@@ -102,7 +102,7 @@ export async function wallfurnCheck(o: { levels?: string[]; cap?: number; baseli
     const R = await rig(file); const { g, C } = R;
     const P = sweep(R), added = uniq(P.filter(p => p.ok && !p.plain).map(p => ({ ...p.w, ask: p.ask }))), plain = uniq(P.filter(p => p.plain).map(p => ({ ...p.w, ask: p.ask })));   // (`ask`: the point of the wall the place was settled FROM — where a cursor must lie for the charge to settle there)
     console.log(`  ${P.length} asks · floor behind as the nav grid stands at ${P.filter(p => p.plain).length} (${plain.length} places), a charge taken at ${P.filter(p => p.ok).length} · places the rule adds ${added.length}`);
-    { const own = file.replace(/-gwot\.json$/, '.json'), name = `${held.dir}/${own.replace(/\.json$/, '.txt')}`, want = held.rows.get(own), n = plain.length - (held.broken ? 1 : 0), short = held.broken ? ' · WALLPLACES_BREAK: the sweep read as one place short' : '';
+    { const own = file, name = `${held.dir}/${own.replace(/\.json$/, '.txt')}`, want = held.rows.get(own), n = plain.length - (held.broken ? 1 : 0), short = held.broken ? ' · WALLPLACES_BREAK: the sweep read as one place short' : '';
       if (!held.asked) console.log(`  held: not asked · ${held.stand}`);
       else if (want === undefined) { if (!held.bad.some(b => b.startsWith(name + ' '))) verdict(false, 'held: the level has a file of its places for a wall charge', `${name} is not there · ${n} places on ${held.stand}: its line is that count${short}`); }
       else verdict(n === want, 'held: the level has the places for a wall charge that its file holds', `${n} places on ${held.stand} · ${name} holds ${want}${n < want ? ' · FEWER: something took a place where a charge could be set' : n > want ? ` · MORE: write ${n} there` : ''}${short}`); }
@@ -172,7 +172,6 @@ async function heldPlaces(): Promise<{ dir: string; rows: Map<string, number>; b
   if (existsSync(resolve(ROOT, dir))) for (const t of readdirSync(resolve(ROOT, dir)).filter(t => t.endsWith('.txt')).sort()) {
     const level = t.replace(/\.txt$/, '.json');
     if (!existsSync(resolve(ROOT, 'levels', level))) { bad.push(`${dir}/${t} is the count of no file under levels/`); continue; }
-    if (/-gwot\.txt$/.test(t)) { bad.push(`${dir}/${t} is a count for a look's second file: such a file is asked against its level's file and has none of its own`); continue; }
     const body = readFileSync(resolve(ROOT, dir, t), 'utf8').split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#')), m = body.length === 1 ? /^(\d+)$/.exec(body[0]) : null;
     if (!m) { bad.push(`${dir}/${t} is not one count (the places with floor behind them as the nav grid stands, the level with its lived-in rooms in: one whole number on a line; a line that starts with # is a note)`); continue; }
     rows.set(level, Number(m[1]));

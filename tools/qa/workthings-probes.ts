@@ -299,7 +299,7 @@ export const workFace = () => keep(async () => {
   { const W = await stand(null, RULE), E = quiet(() => breakerErrand(W.game)), bp = W.game.level.breaker.pos;
     verdict(!!E && E.goal[0] === bp[0] - 0.4 && E.goal[2] === bp[2] - 0.9 && E.mid[2] === bp[2] - 0.6, 'the office: the errand keeps the fixed spot and reach (a man has floor there and a line to the panel)', E ? `goal (${f2(E.goal[0])}, ${f2(E.goal[2])}) mid (${f2(E.mid[0])}, ${f2(E.mid[2])})` : 'no errand read'); }
   // --- every level with a panel: the errand's spot is floor a man can stand on with a line to it, inside the reach
-  { const names = readdirSync(`${ROOT}/levels`).filter((f: string) => f.endsWith('.json') && !f.endsWith('-gwot.json')).map((f: string) => f.slice(0, -5)).sort();
+  { const names = readdirSync(`${ROOT}/levels`).filter((f: string) => f.endsWith('.json')).map((f: string) => f.slice(0, -5)).sort();
     const bad: string[] = [], moved: string[] = [], wrong: string[] = [], skipped: string[] = []; let n = 0;
     for (const name of names) {
       let W: any; try { W = await stand(name, RULE); } catch { skipped.push(name); continue; }

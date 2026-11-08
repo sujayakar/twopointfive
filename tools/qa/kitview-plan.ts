@@ -10,8 +10,7 @@
 //      before the places are planned — a place "stepped over" on such a thing in one pass is said, never failed): the plan has no `problems`; five places on free floor, outside every box, the picture's
 //      spacing apart, nobody in a wall; the anchor a door of the level, a wall or a real gap; the block passes the level validator.
 //      THE CHILD'S TWO PASSES (kitViewPlanChild, the function `?kitview` plans a way with — first with the way's `hide` standing, then with what it sank named
-//      as out): on the level's own floor they say of no way that a piece of the building was sunk for the camera. And A LEVEL AND ITS LOOK TWIN CARRY THE
-//      SAME BLOCK (scene/look.ts LOOK_LEVELS: the start page reads `X.json`, the picture's page loads `X-gwot.json`) — a pair that disagrees FAILS.
+//      as out): on the level's own floor they say of no way that a piece of the building was sunk for the camera.
 //      EVERY CARD OPEN, EVERY SQUAD SIZE (C3): nobody's place within a body (KIT_PLAN.actClear) of anybody else's — the fourth man's acting place
 //      (kitPlanAct4, what the picture stages him on with his card open) on every way as the child plans it, and on bare anchors from a door's width to a
 //      yard gate's, where as written it fell 0.39 m from Sam's.
@@ -71,7 +70,7 @@
 //   In D also: THE ROOM BEHIND THE ANCHOR — its lamps go out with the room lights unless the way writes `litInside` (C prints a note where one does).
 //      …and in F: a level whose kitView block is BROKEN still parses for a mission to play (parseLevelData `kitView: 'drop'`), and is refused everywhere else.
 // Lines are `- PASS — …` / `- FAIL — …` (tools/qa/gate.sh counts them). Exit 0 = all pass · 1 = a row failed · 2 = an unknown level.
-// KITPLAN_BREAK=1: what is worked out is spoiled (the derived side flipped, a block's second place moved onto the wall's line, every way's door read as steel; a look twin's block read with
+// KITPLAN_BREAK=1: what is worked out is spoiled (the derived side flipped, a block's second place moved onto the wall's line, every way's door read as steel; a block read with
 // its first way gone; D's gap read as a wall, its porch lamp back over the opening's middle, the level handed over without its loose props, and without the names its stand left out, its pane out of the wall, the stepped place left to the line and another written, a hole in `slots` filled with a place on the wall's line, a quiet set's dress not said, a way judged by one pass alone, `litInside` not written, the devices left live, a generated id read as an authored name, a way's `add` not planned and laid into the mission, loaded without the loader's `laid` word, the other way's `add` left riding on the block, its records whole where broken ones are asked about, the child's way laid by id, the link's `way` read whatever the kind, a fourth man written on the stack's side not written; the child's plan taken from its second pass alone, an authored `hide` read as not written; the loaded set robbed of a
 // stand-in, given a box and a sky that are not its own, a way WITH a set asked to come back untouched, and the size the set's query says for a link that
 // carries none dropped) — rows of B, C, D and F must FAIL.
@@ -724,7 +723,7 @@ async function dayLamps(names: string[]) {
       const add: Data = { boxes: [{ id: 'kv_add_box', c: [p[0], p[1] + 0.3, p[2]], h: [0.17, 0.045, 0.05], material: 'concrete', emissive: [5, 4, 2], flags: ['NoShadow'] }], lamps: [lamp('kv_add_lamp', mate ?? 'kv_add', [p[0], p[1] + 0.2, p[2]], { fixture: 'kv_add_box' })] };
       const data: Data = { ...base, scenarios: { ...base.scenarios, kitView: { ...base.scenarios.kitView, ways: [{ ...Y0, add }, ...base.scenarios.kitView.ways.slice(1)] } } };
       cases.push({ w: `records' own way with an added lamp of the level's own group '${mate}' (and its glowing box)`, data, k: 0, made: kitViewAddLevel(data, 0), mate }); } }
-  for (const name of names) { if (name.endsWith('-gwot')) continue; const L = await levelOf(name), KB = L.data.scenarios?.kitView; if (!KB) continue;
+  for (const name of names) { const L = await levelOf(name), KB = L.data.scenarios?.kitView; if (!KB) continue;
     (KB.ways as Data[]).forEach((Y, k) => { if (!kitPlanOwnLamps(KB, Y).some(l => l.kind !== 'dir')) return; const data: Data = name === 'office' ? L.data : parseLevelData(L.text);
       cases.push({ w: `${name} way ${k} (${Y.set !== undefined ? 'its set ' + Y.set : 'its add'})`, data, k, made: Y.set !== undefined ? kitViewSetLevel(data, k) : kitViewAddLevel(data, k) }); }); }
   for (const C of cases) { const KB: Data = C.data.scenarios.kitView, Y: Data = KB.ways[C.k], st = starts(C.data.scenarios, 'roomclear').filter(Boolean); if (!st.length) st.push({ sam: C.data.mission.playerSpawn });
@@ -934,20 +933,6 @@ const unknown = asked.filter(a => !files.includes(a));
 if (unknown.length) { console.error(`unknown level${unknown.length === 1 ? '' : 's'}: ${unknown.join(', ')} (levels/*.json: ${files.join(', ')})`); process.exit(2); }
 const withBlock: string[] = []; for (const f of asked.length ? asked : files) { const L = await levelOf(f); if (L.data.scenarios?.kitView) withBlock.push(f); }
 console.log(`levels with a kitView block (${withBlock.length}${asked.length ? ' of those asked about' : ''}): ${withBlock.join(', ') || 'none'}`);
-/** A LEVEL AND ITS LOOK TWIN CARRY THE SAME BLOCK: the start page reads `X.json` (ui/missions.ts kitViewWays), the picture's own page loads the look's file
- *  (main.ts, scene/look.ts LOOK_LEVELS) — a block in one and not the other, or two that differ, is a picture the page promises and the child cannot stage (or
- *  stages otherwise). To the byte: a set's paint is already written once for both (`material: 'look|plain'`) */
-async function twins(names: string[]) {
-  say('\n=== C2. a level and its look twin carry the same block');
-  const { LOOK_LEVELS } = await import(`${ROOT}/src/scene/look.ts`) as { LOOK_LEVELS: Record<string, string> }; let n = 0;
-  for (const [base, twin] of Object.entries(LOOK_LEVELS).map(([a, b]) => [a.replace(/\.json$/, ''), b.replace(/\.json$/, '')])) {
-    if (!names.includes(base) && !names.includes(twin)) continue; if (!files.includes(base) || !files.includes(twin)) continue;
-    const A = (await levelOf(base)).data.scenarios?.kitView, B0 = (await levelOf(twin)).data.scenarios?.kitView; if (A === undefined && B0 === undefined) continue; n++;
-    const B = BREAK && B0 ? { ...B0, ways: (B0.ways as Data[]).slice(1) } : B0;   // (the break: the twin's first way gone)
-    const a = JSON.stringify(A ?? null), b = JSON.stringify(B ?? null), where = (() => { if (!A || !B) return ''; for (const k of new Set([...Object.keys(A), ...Object.keys(B)])) if (JSON.stringify(A[k]) !== JSON.stringify(B[k])) { if (k !== 'ways') return ` — they differ in \`${k}\``; const i = (A.ways as Data[]).findIndex((y, j) => JSON.stringify(y) !== JSON.stringify(B.ways?.[j])); return ` — they differ in way ${i < 0 ? (A.ways as Data[]).length : i}`; } return ''; })();
-    row(a === b, `${base} and ${twin}: the same \`scenarios.kitView\` in both files${a === b ? '' : !A ? ` — ONLY ${twin}.json has a block (the start page reads ${base}.json: no picture is ever asked for)` : !B ? ` — ONLY ${base}.json has a block (the picture's page loads ${twin}.json: it says \`none\`)` : where}`); }
-  if (!n) say('  (no level asked about has a look twin and a block)');
-}
 /** EVERY CARD OPEN, EVERY SIZE: nobody's place within a body of anybody else's. The stack's card switch only changes who stands on which place; the FOURTH
  *  man's card walks him to a place of its own by Sam's jamb (kitPlanAct4 — what the picture stages him on), and on a wide opening that place as written was
  *  0.39 m from Sam's. Every way of every level with a block, as the page plans it (the child's two passes), and bare anchors of every width on open floor */
@@ -1161,7 +1146,6 @@ if (BREAK) console.log('KITPLAN_BREAK=1: the derived side is flipped, a block\'s
 await seam(asked.length ? asked : files);
 if (!asked.length || asked.includes('records')) await parity();
 await generic(withBlock);
-await twins(asked.length ? asked : files);
 await acting(withBlock);
 await bespoke();
 await loader(asked.length ? asked : files);

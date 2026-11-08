@@ -315,8 +315,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `problem` (`__kitview.plan.problems`, warned once, a FAIL row in `kitview-levels`); a broken block no longer takes the real mission down
   (`parseLevelData(text, { kitView: 'drop' })` in `bootLevel` without `?kitview`; the child and the tools stay strict, and a child whose level will not parse
   says `none` instead of staging the office). WHICH LEVELS HAVE A BLOCK is not listed anywhere (a thread staging its own levels edits no shared list): `grep -l '"kitView"' levels/*.json`, or the first line of
-  `bun run tools/qa/kitview-plan.ts --quiet`; a level with a look twin carries the SAME block in both files (the parent reads `X.json`, the child loads
-  `X-gwot.json`) and the plan tool FAILS a pair that disagrees. CHECKS, both list the office beside `levels/*.json`:
+  `bun run tools/qa/kitview-plan.ts --quiet`. CHECKS, both list the office beside `levels/*.json`:
   `bun run tools/qa/kitview-plan.ts [level …]` (static; `KITPLAN_BREAK=1` must exit 1; `KITPLAN_OUT=<file>` writes the dry run's table — nothing is written by default);
   `PORT=… node tools/qa/kitview-levels.cjs` (the page, one level-way at a time; `LEVEL=`, `WAY=`, `LOOK=plain`, `KIND=`, `SQUAD=`; knows no level; `KITLEVELS_BREAK=1` must exit 1);
   `kitview-page.cjs` (the records office's own rows; + Sam stood on his row's firing post, `__kitview.beat.post`, at the first round after his charge is cut).
@@ -1633,8 +1632,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   level art"): beside the words is the mission list's own map sheet of the level (`ui/missions.ts drawMissionMap` → `drawPlan` / `ui/planArt.ts
   drawSheet`: the place as a model, a 10 m scale, the way in the address asks for marked as the list marks it — `wayOfLink`, one fold for the list
   and the brief), chosen over the flat plan and the maps of play because it is the one that shows the ground and where the team starts before a run
-  exists. It is the level AS THE PAGE LOADS IT (`scene/look.ts lookLevelFile`: the dressed file under the default look, the plain one under
-  `?look=plain`; the list's own sheet still draws the plain file), so the furniture on the map is the furniture of the run, and the file is the one
+  exists. It is the level AS THE PAGE LOADS IT, so the furniture on the map is the furniture of the run, and the file is the one
   the boot fetches anyway. It is drawn in the screen's own pixels (the canvas is its shown width × the text size factor × the device's pixel ratio,
   480 to 2880, redrawn on a resize or a text size step), so it is sharp on a dense screen where the 760 px picture was not; its box is the sheet's
   40 : 28 at the largest width the column and the window's height leave, so nothing of it is cut in a short window or letterboxed in a narrow one;
@@ -1764,7 +1762,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   on a won fight): 'weird that we show a score (and a low one) for loud missions'. The stealth game's rating prices every man shot and every time
   he was seen; a row of the list whose `lean` is `'loud'` but whose kind is the stealth game's (`tut-solo`, `train-kit` today) ended on that card.
   `game/verdict.ts loudRow(g)` = the key up, a quiet mission up, and its row leans loud. The game is not told the page's `levelFile`, so the row
-  is found off the level's own name (`rowFile`: `<name>.json`, or the file whose look that is — `scene/look.ts LOOK_LEVELS`). `chronicle.ts
+  is found off the level's own name (`rowFile`: `<name>.json`). `chronicle.ts
   debriefOf` carries it as `Debrief.scored` and `Debrief.grade` ('GHOST 94', '' when not scored). Not scored: the card (`ui/debrief.ts`, class
   `db-loud`, which nothing styles) builds no rating word, no score, no line of what was docked, no badges, and the sneak's cells (seen, alarms,
   floor up, bodies found, kills, doors kicked, called in, checkpoint loads, the civilians' saw / told) stand untoned — a hit taken and a civilian

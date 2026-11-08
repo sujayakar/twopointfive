@@ -15,12 +15,12 @@ import { Section, View } from '../../src/draw/sections';
 
 const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.HANDS_BREAK === '1', args = process.argv.slice(2), trace = args.includes('--trace'), at = args.indexOf('--seeds');
 const seeds = at >= 0 ? args[at + 1].split(',').map(Number) : null, only = args.filter((a, i) => !a.startsWith('--') && (at < 0 || i !== at + 1));
-const { lookLevelFile, LOOK } = await import(`${ROOT}/src/scene/look.ts`);
+const { LOOK } = await import(`${ROOT}/src/scene/look.ts`);
 LOOK.on = true;
 const wasm = faceHere(); if (!wasm) { console.error('hands-check: no module of these sources (tools/blitz/face-build.ts)'); process.exit(1); }
 const instance = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array(readFileSync(wasm))), { env: { face_roll: () => { throw new Error('the game asked a die'); } } });
 const [mannequin, mannequinBin, cast, castLook] = characterFiles(ROOT);
-const bytes = (f: string): Uint8Array => { try { return new Uint8Array(readFileSync(resolve(ROOT, 'levels', lookLevelFile(f)))); } catch { return new Uint8Array(readFileSync(resolve(ROOT, 'levels', f))); } };
+const bytes = (f: string): Uint8Array => new Uint8Array(readFileSync(resolve(ROOT, 'levels', f)));
 let fails = 0;
 { const stray = only.filter(id => !BENCH_SCENES.some(s => s.id === id)); if (stray.length) { console.error(`hands-check: no scene ${stray.join(', ')}`); process.exit(2); } }
 for (const S of BENCH_SCENES.filter(s => !only.length || only.includes(s.id))) for (const seed of seeds ?? [S.seed]) {
