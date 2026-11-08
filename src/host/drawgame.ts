@@ -141,6 +141,17 @@ export class DrawGame {
     else if (row.kind === 'order') { this.command(row.bytes); this.done++; if (seen) this.draw(); }
     else if (row.kind === 'hands') this.handsTo(row.plan);
   }
+  /** A TICK STEPPED BY ANOTHER HAND (a networked game's walk): what it left is taken (`seen` false: nobody is shown it; `over`: one after the first before a frame) */
+  stepped(seen: boolean, over: boolean): void { this.ticks++; this.done++; if (seen) { if (over) this.drawn.takeOver(this.h); else this.draw(); } this.X.face_out_clear(this.h); }
+  /** the shown seat's hand, for the picture's own view: a record handed for the seat after it is what is stepped */
+  shownHand(seat: number, keys: string): void { const n = this.enc.encodeInto(keys, new Uint8Array(this.memory.buffer, this.keys, DrawGame.KEYS)).written; this.X.face_hand(this.h, seat, this.hand, HAND.count * 8, this.keys, n); }
+  /** where the shown man is drawn ahead of the game, this tick of the page's (null: where the game has him); `still`: the game was not stepped in it */
+  lead(L: { id: number; from: { pos: ArrayLike<number>; yaw: number }; to: { pos: ArrayLike<number>; yaw: number } } | null, still: boolean): void {
+    if (still) this.X.face_draw_hold(this.h);
+    if (!L) { this.X.face_draw_lead(this.h, 0, 0); return; }
+    const N = new Float64Array([L.from.pos[0], L.from.pos[1], L.from.pos[2], L.from.yaw, L.to.pos[0], L.to.pos[1], L.to.pos[2], L.to.yaw]);
+    this.handed(new Uint8Array(N.buffer), p => this.X.face_draw_lead(this.h, L.id, p));
+  }
   /** THE MOMENT THE GAME STANDS AT, whole, to come back to exactly (a walk of a tape's): its number, 0 where it cannot be held */
   moment(): number { return this.X.face_moment(this.h); }
   /** the game stands there again, at tick `ticks` */

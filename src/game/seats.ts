@@ -16,6 +16,7 @@
 //   - State kept beside the game in a side table: a `GameSideMap` (math/side.ts) is the game's whoever asks; a plain `SideMap` keyed by the game keeps a row a
 //     view, which is right for what is one player's (SEAT_TABLES below lists them; the check is red on any other).
 // Imports: types, and values used inside functions only (src/game is one import cycle).
+import { SEAT_KINDS } from '../scene/seatkinds';
 import type { Game, Guard, Player } from './game';
 import type { Character } from './character';
 import type { SquadOrders, Assignment } from './orders';
@@ -41,8 +42,6 @@ export function seatsOfSearch(search: string | null | undefined): number {
   const m = /(?:^|[?&])seats=(\d+)(?:&|$)/.exec(search ?? ''), n = m ? parseInt(m[1], 10) : 1;
   return Math.max(1, Math.min(SEATS.max, n || 1));
 }
-/** the scenario kinds a game of two can start (seatsRefuse) */
-const SEAT_KINDS: readonly string[] = ['roomclear', 'nightbreach'];
 /** A CHECK'S WORDS AND COUNTS, nothing a rule reads. `strict`: the Game's own field of a seat's name, asked in a game of more than one seat, throws (off, it answers
  *  the first seat's and counts). `misses` / `missed`: those asks so far, and the fields asked. `sites`: every such ask by where it came from ('file:line' → count;
  *  null = not kept). `shared`: the break word, read once as a game is stood up — every seat's view answers the FIRST seat's record, which is one player in two bodies. */
@@ -122,10 +121,6 @@ export function menUp(g: Game): Player[] { return men(g).filter(p => !p.down); }
 /** is every player down (a game of one: its player is) */
 export function allDown(g: Game): boolean { const S = g.seats; if (S.length === 1) return g.player.down; for (const s of S) if (!s.view.player.down) return false; return true; }
 /** `f` for every seat, over its view — how the world runs a thing written for the one player (the Game it was handed, in a game of one) */
-/** WHICH MISSIONS SEAT TWO: the scenarios whose own rules have been taken through for more than one player. The others are written round one commander (the
- *  hostage rescue's word and its route flow, the quiet mission's one partner) and refuse a game of two until they are. */
-/** can a mission of this kind be played by two (the lobby asks before a game is made: ui/coop.ts) */
-export const seatsKind = (kind: string): boolean => SEAT_KINDS.includes(kind);
 export function seatsRefuse(g: Game, kind: string): string | null { return g.seats.length > 1 && !SEAT_KINDS.includes(kind) ? 'it takes one player today' : null; }
 /** the man whose eyes and ears this host's picture and speakers are (a host that plays no seat: the first) */
 export function hostMan(g: Game): Player { return g.seats.length === 1 ? g.player : g.hostSeat().view.player; }

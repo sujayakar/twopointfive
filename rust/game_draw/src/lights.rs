@@ -54,6 +54,7 @@ pub struct Lights {
 
 impl Lights {
     pub fn cut(&mut self) { self.have = 0; self.unseen.clear(); }
+    pub fn hold(&mut self) { self.have = self.have.min(1); }
 
     /// a tick has run (`again`: the tick already taken)
     pub fn take(&mut self, g: &Game, again: bool) {
@@ -76,6 +77,10 @@ impl Lights {
         self.before.sort_unstable_by_key(|b| b.key);
     }
 
+    /// the lights in the hands of a man drawn ahead of the tick
+    pub fn lead(&mut self, by: &crate::lead::Moved) {
+        for r in &mut self.rows { if by.carries(r.owner, r.ttl) { r.pos = by.pt32(r.pos); r.dir = by.dir(r.dir.map(|v| v as f64)).map(|v| v as f32); } }
+    }
     pub fn frame(&mut self, a: f64) {
         self.rows.clone_from(&self.now);
         self.unseen.clear();
