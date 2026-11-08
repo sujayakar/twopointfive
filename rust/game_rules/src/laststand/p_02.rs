@@ -11,18 +11,6 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// the module's state: every caller here runs with it made
 fn st(g: &mut Game) -> &mut State { g.m.laststand.states.as_mut().unwrap() }
-fn gd_of(g: &Game, d: RoomfightDefId) -> GuardId { g.tab.roomfight_def[d].gd }
-fn pos_of(g: &Game, d: RoomfightDefId) -> V3 { let c = g.gd[g.tab.roomfight_def[d].gd].ch; g.ch[c].pos }
-fn mode_of(g: &Game, d: RoomfightDefId) -> crate::roomfight::DefMode { g.tab.roomfight_def[d].mode }
-fn room_of(g: &Game, d: RoomfightDefId) -> Option<RoomfightRoomId> { g.tab.roomfight_def[d].room }
-
-/// a line's `{…}` values
-fn vars(pairs: &[(&str, &str)]) -> JsMap<String, String> {
-    let mut v = JsMap::new();
-    for &(k, x) in pairs { v.set(String::from(k), String::from(x)); }
-    v
-}
-
 /// the die's seed off the room clear's seed and attempt
 fn fresh_seed(seed: f64, attempt: f64) -> f64 {
     ((m::imul(js::to_i32(seed), 0x9E3779B1u32 as i32) ^ m::imul(js::to_i32(attempt), 0x85EBCA6Bu32 as i32) ^ 0x1A575A4D) as i32) as f64
