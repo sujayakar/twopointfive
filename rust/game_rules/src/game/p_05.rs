@@ -380,7 +380,6 @@ pub fn game_reset_level_state(g: &mut crate::game::Game) {
     crate::glassbreak::glass_break_reset(g);   // (before the destruction's: the walls' nav re-bake in there must see whole panes)
     crate::destruction::destruction_reset(g);
     crate::shards::glass_shards_reset(g);
-    crate::wet::clear_wet_prints(g);
     crate::snow_blast::clear_snow_blast(g);
     crate::snow_marks::clear_snow_marks(g);
     if let Some(mut t) = g.snow_tracks.take() {   // (the stub takes g and the tracks inside it: out of g for the call)

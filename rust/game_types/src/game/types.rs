@@ -884,6 +884,10 @@ pub struct Game {
     pub sim: usize,
     /// who has each man's body this tick, and who was asked (control/): written by the arbiter, read by the debugger's lines; not on the wire
     pub ctl: crate::owned::Owned,
+    /// the marks on the world (render_decals set.rs): what the picture draws of what happened; no rule reads them, and they are not on the wire
+    pub mark_set: crate::owned::Owned,
+    /// the stages to come of a wall charge's feel, the picture's half (blast_feel picture.rs)
+    pub feel: crate::owned::Owned,
     /// this tick's count of keyed draws a (site, man) (dice.rs): empty between ticks; not on the wire
     pub keyed: crate::dice::Keyed,
 }
@@ -1053,6 +1057,8 @@ impl Game {
             stats: Stats::blank(),
             sim: 0,
             ctl: crate::owned::Owned::new(),
+            mark_set: crate::owned::Owned::new(),
+            feel: crate::owned::Owned::new(),
             keyed: crate::dice::Keyed::default(),
         }
     }

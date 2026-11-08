@@ -75,12 +75,13 @@ pub mod events;
 pub mod fires;
 pub mod fog;
 pub mod lights;
+pub mod marks;
 pub mod men;
 pub mod rims;
 pub mod sky;
 pub mod view;
 
-groups! { fog view sky boxes lights men doorways rims events fires }
+groups! { fog view sky boxes lights men doorways rims events fires decals }
 
 sections! {
     fog: fog::Fog = fog;
@@ -116,6 +117,9 @@ sections! {
     rims: rims::Rim = rims;
     fires: fires::Fire = fires;
     fire_table: fires::FireTable = fire_table;
+    decals: boxes::Word = marks.words;
+    decal_keys: marks::DecalKey = marks.keys;
+    decal_head: marks::DecalHead = marks.head;
 }
 
 /// the numbers of a page's look (src/draw/look.ts writes them in this order): the boxes', then the men's
@@ -123,7 +127,7 @@ pub const LOOK: usize = boxes::LOOK + 4;
 
 /// what one host of one game draws it from
 #[derive(Default)]
-pub struct Drawn { pub fog: Vec<fog::Fog>, pub view: Vec<view::View>, pub sky: Vec<sky::Sky>, pub boxes: boxes::Boxes, pub lights: lights::Lights, pub men: men::Men, pub doorways: Vec<doorways::Doorway>, pub events: events::Events, pub rims: Vec<rims::Rim>, tick: Option<u32>, stood: u32,
+pub struct Drawn { pub fog: Vec<fog::Fog>, pub view: Vec<view::View>, pub sky: Vec<sky::Sky>, pub boxes: boxes::Boxes, pub lights: lights::Lights, pub men: men::Men, pub doorways: Vec<doorways::Doorway>, pub events: events::Events, pub marks: marks::Marks, pub rims: Vec<rims::Rim>, tick: Option<u32>, stood: u32,
     /// the distance the host's camera was on its way to as the step was handed it
     pub desired: f64, had: u32, want: u32, table: Vec<u32>, pub fires: Vec<fires::Fire>, pub fire_table: Vec<fires::FireTable> }
 impl Drawn {
@@ -151,9 +155,10 @@ impl Drawn {
         if self.want & want::boxes != 0 { self.boxes.frame(g, a, focus); }
         if self.want & want::lights != 0 { self.lights.frame(a); }
         if self.want & want::men != 0 { self.men.frame(a); }
+        if self.want & want::decals != 0 { self.marks.frame(g, &self.boxes); }
     }
     /// the game is another than the one last drawn (a start, a game put back, another seat): nothing is drawn through it
-    pub fn cut(&mut self) { self.boxes.cut(); self.lights.cut(); self.men.cut(); self.events.cut(); self.tick = None; self.stood += 1; }
+    pub fn cut(&mut self) { self.boxes.cut(); self.lights.cut(); self.men.cut(); self.events.cut(); self.marks.cut(); self.tick = None; self.stood += 1; }
     /// what the page says of its look
     pub fn look(&mut self, v: &[f64]) { let (boxes, men) = v.split_at(boxes::LOOK); self.boxes.set_look(boxes::Look::read(boxes)); self.men.swaps = core::array::from_fn(|i| men[i] as u32); }
     pub fn table(&mut self) -> &[u32] {
