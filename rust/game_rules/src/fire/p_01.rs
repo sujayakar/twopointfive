@@ -7,12 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Whether a fire's pieces are filed as one column.   (fire.ts fits)
-pub fn fits(g: &mut crate::game::Game) -> bool {
-    let c = &g.m.render_frame.look_config;
-    c.fire_smoke > 0.0 && c.fire_fit > 0.0
-}
-
 /// The flame's own middle `up` metres over its mouth: how far downwind (x, z) and its slope there.   (fire.ts axisAt)
 pub fn axis_at(g: &crate::game::Game, up: f64, wind: [f64; 2]) -> [f64; 4] {
     axis_with(&g.k.fire, up, wind)

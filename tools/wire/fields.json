@@ -7288,7 +7288,8 @@
 "weather::Weather.fog_spec",
 "weather::Weather.snow_rate",
 "weather::Weather.wind",
-"weather::Weather.wet_gloss"
+"weather::Weather.wet_gloss",
+"smoke_types::SmokeEmitter.fire"
 ],
 "everyTickNotCarried": [
 {
@@ -12389,7 +12390,8 @@
 "weather::Weather.fog_spec",
 "weather::Weather.snow_rate",
 "weather::Weather.wind",
-"weather::Weather.wet_gloss"
+"weather::Weather.wet_gloss",
+"smoke_types::SmokeEmitter.fire"
 ],
 "unsent": {
 "anim_characters::CharacterRenderer": "the page's renderer: the host fills its arrays and draws from them",

@@ -423,6 +423,33 @@
 "answer": null
 },
 {
+"call": "SmokeSystemLike.round",
+"rust": "crate::smoke_types::smoke_system_like_round",
+"sites": 2,
+"ts": "round",
+"of": "SmokeSystemLike",
+"file": "src/smoke/types.ts",
+"why": "this",
+"params": [
+{
+"ts": "from",
+"rust": "from"
+},
+{
+"ts": "dir",
+"rust": "dir"
+},
+{
+"ts": "len",
+"rust": "len"
+}
+],
+"sig": "pub fn smoke_system_like_round(g: &mut crate::game::Game, from: V3, dir: V3, len: f64)",
+"bodyFile": "smoke_types/base.rs",
+"mode": "push",
+"answer": null
+},
+{
 "call": "WallWear.reset",
 "rust": "crate::wallwear::wall_wear_reset",
 "sites": 1,
@@ -1169,27 +1196,6 @@
 "body": "crate::sense::smoke_budget(g)"
 },
 {
-"call": "SmokeSystemLike.drawing",
-"rust": "crate::smoke_types::smoke_system_like_drawing",
-"sites": 2,
-"why": "answers a value (bool)",
-"body": "false"
-},
-{
-"call": "SmokeSystemLike.inSmokeDomain",
-"rust": "crate::smoke_types::smoke_system_like_in_smoke_domain",
-"sites": 1,
-"why": "answers a value (bool)",
-"body": "false"
-},
-{
-"call": "SmokeSystemLike.round",
-"rust": "crate::smoke_types::smoke_system_like_round",
-"sites": 3,
-"why": "answers a value (bool)",
-"body": "false"
-},
-{
 "call": "SquadOrders.hover",
 "rust": "crate::orders::squad_orders_hover",
 "sites": 1,
@@ -1649,13 +1655,6 @@
 "rust": "crate::rustknobs::knobs_to_rust",
 "sites": 1,
 "why": "no Rust body"
-},
-{
-"call": "smokebreak#smokeShown",
-"rust": "crate::smokebreak::smoke_shown",
-"sites": 3,
-"why": "answers a value (Option<crate::smokebreak::SmokeShown2>)",
-"body": "let s = g.engine.host_books.as_ref()?.smoke_break.as_ref()?; Some(SmokeShown2 { "
 },
 {
 "call": "snowField#snowLayBare",

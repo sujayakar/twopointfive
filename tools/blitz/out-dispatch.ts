@@ -34,6 +34,7 @@ export const OUT: Record<string, (g: any, e: any) => void> = {
   SmokeSystemLikeKeepHot: (g, e) => { g.smoke?.keepHot?.(e.heat); },
   SmokeSystemLikeObstaclesChanged: (g, e) => { g.smoke?.obstaclesChanged?.(e.c2, e.r); },
   SmokeSystemLikePush: (g, e) => { g.smoke?.push?.(e.p); },
+  SmokeSystemLikeRound: (g, e) => { g.smoke?.round?.(e.from, e.dir, e.len); },
   WallWearReset: (g, e) => { g.destr.walls.wear?.reset?.(); },
   WallWearRound: (g, e) => { g.destr.walls.wear?.round?.(g, e.box_, e.surf, e.key, e.counted, e.frac, e.hitP, e.dir); },
   MessBurst: (g, e) => { messBurst(g, e.at, e.size); },

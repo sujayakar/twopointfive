@@ -9,6 +9,8 @@ pub enum Track {
     Muzzle { by: CharId },
     EjectPort { by: CharId },
     Spark { slot: usize, gen_: f64 },
+    /// the lit end of a man's cigarette, while he smokes and is seen
+    Cigarette { by: CharId },
 }
 
 /// (TypeScript: FxLight, src/game/effects.ts:36)

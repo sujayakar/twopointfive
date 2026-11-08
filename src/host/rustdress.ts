@@ -56,7 +56,7 @@ export function dressStep(g: Game, dt: number, side: SideList): void {
   if (DRESS.snow) run('snowLook', () => G.syncSnowLook());
   if (DRESS.rain) run('rain', () => updateRainFx(g, dt, me.cam));
   run('wetGround', () => G.wetGround.follow(g));
-  if (DRESS.fires) run('fires', () => fireDraws(g));
+  if (DRESS.fires) run('fires', () => fireDraws(g, dt));
   const men: Character[] = [...S.map(s => s.view.player.char), ...g.guards.map(x => x.char), ...civiliansShown(g).map(c => c.char)];
   const all = dt > 0 ? men : men.filter(c => c.bones.upperArmL);   // (the warm-up's step of no time: a man no tick has posed yet has no bones to be drawn by)
   // ---- stepFxAndDynBoxes: the picture's own boxes go to the side list

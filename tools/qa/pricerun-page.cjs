@@ -6,7 +6,7 @@
 //   node tools/qa/pricerun-page.cjs --real [--size 1920x1080] [--quality high] [--look "<the look page's words>"] [level …]
 //       THE RUN AS THE PAGE RUNS IT, for a machine with a GPU: no short turns, the run's own quality unless one is named, every level on the
 //       mission list unless some are named. The same checks; what it times is that machine's, named in the file. Files go to --out, or $OUT.
-//       --look "look=walls:0&firefit=0" = the look page's own words for the whole run (default `look`).
+//       --look "look=walls:0&longfoot=0" = the look page's own words for the whole run (default `look`).
 //       --play N = the mission is played N seconds of its own clock before its picture is held (the run's own: 4), to see what a longer stand-up changes.
 //       --live N = THE WORLD RUNS TO SECOND N of the game's clock before each page's running read (the run's own: PRICE.runS, 20; 0 = held pictures only, the walk as
 //       it was until 11-05: `pricelive` on the address). The running read about doubles a level's time on the walk.
