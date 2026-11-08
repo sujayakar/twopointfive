@@ -770,29 +770,6 @@ pub fn room_clear_scenario_adopt(g: &mut crate::game::Game, gd: GuardId, p: &cra
     g.room_clear.rooms[r].defenders.push(gd);
 }
 
-/// a defender who has made his stand in another room is THAT room's man from now on   (roomclear.ts RoomClearScenario.rehome)
-pub fn room_clear_scenario_rehome(g: &mut crate::game::Game, gd: GuardId, room: &str) {
-    let to = g.room_clear.rooms.iter().position(|r| r.def.id == room);
-    if !room_clear_scenario_active(g) {
-        return;
-    }
-    let to = match to {
-        Some(to) => to,
-        None => return,
-    };
-    if g.room_clear.rooms[to].defenders.contains(&gd) {
-        return;
-    }
-    for r in g.room_clear.rooms.iter_mut() {
-        if let Some(i) = r.defenders.iter().position(|h| *h == gd) {
-            r.defenders.remove(i);
-        }
-    }
-    g.room_clear.rooms[to].defenders.push(gd);
-    let line = format!("rehomed:{}>{}", g.gd[gd].callsign, room);
-    room_clear_scenario_note(g, &line);
-}
-
 /// an end, and what it is called   (roomclear.ts RoomClearScenario.finish)
 pub fn room_clear_scenario_finish(g: &mut crate::game::Game, end: crate::roomclear::RoomClearEnd, why: &str) {
     use crate::roomclear::RoomClearEnd::{Taken, Wiped};
