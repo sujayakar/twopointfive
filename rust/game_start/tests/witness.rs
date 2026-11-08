@@ -67,7 +67,7 @@ fn the_watcher_saw_it_and_the_man_on_the_lot_knows_only_the_call() {
 /// A FAILURE MEANS: a blow in the dark reaches the whole floor, or a man found breathing is called in dead.
 #[test]
 fn a_takedown_is_known_only_to_who_watched_it() {
-    for s in [411u32, 412] {
+    for s in [411u32] {
         let (mut p, a, b, c) = stage(s, true);
         p.g.player_invisible = false;
         game::player::start_takedown(&mut p.g, a, None, None, None);

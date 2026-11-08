@@ -4,7 +4,7 @@ mod world_ask;
 use game::orders::{squad_orders_give, squad_orders_target_at};
 use game_start::play::{dist, Opts, Play};
 
-const AWAY: [f64; 2] = [19.5, 11.2];
+const AWAY: [f64; 2] = [22.5, 11.2];
 const INSIDE: [f64; 2] = [25.75, 8.5];
 const CONFERENCE: [f64; 2] = [9.8, 8.0];
 const SHUT: &str = "holding on it";
@@ -27,11 +27,12 @@ fn floor(s: u32) -> Play {
 fn blind_all(p: &mut Play) { for m in p.hostiles() { p.blinded(m, 60.0); } }
 fn give(p: &mut Play, id: &str, at: [f64; 2]) -> Option<String> { let t = squad_orders_target_at(&mut p.g, [at[0], 0.0, at[1]]); squad_orders_give(&mut p.g, id, Some(&t), None, None) }
 
-/// THE RULE: a move whose only way in runs at a door locked against the team that nobody has tried is not refused with the door's name: the men walk up to it, the man on the jamb tries the handle, the order ends there as a door order ends: the same words, once, the men left on the door, on their own side of it. Only then does the team know, and the same order is refused. CONTROL: a room whose door stands open: they walk in, and nothing is said of a door.
+/// THE RULE: a move whose only way in runs at a door locked against the team that nobody has tried is not refused with the door's name: the men walk up to it, the man on the jamb tries the handle, the order ends there as a door order ends: the same words, once, the men left on the door, on their own side of it. Only then does the team know, and the same order is refused.
 /// A FAILURE MEANS: the menu reads a lock the men have not touched, or a move walks into a locked door for ever.
 #[test]
 fn a_move_tries_a_door_nobody_tried_and_stops_there() {
-    for s in [5u32] {
+    {
+        let s = 5u32;
         let mut p = floor(s);
         let d = game::doors::doors_by_name(&p.g, "manager").expect("the manager's door");
         assert!(game::doors::door_locked(&p.g, d), "seed {s}: the staging: the door is not locked");
@@ -45,8 +46,14 @@ fn a_move_tries_a_door_nobody_tried_and_stops_there() {
         let again = give(&mut p, "move", INSIDE);
         assert!(again.is_some(), "seed {s}: tried and found shut, and the same move is taken");
         assert!(game::doors::door_locked(&p.g, d), "seed {s}: the door gave");
-        drop(p);
+    }
+}
 
+/// THE CONTROL: a room whose door stands open: they walk in, and nothing is said of a door.
+#[test]
+fn a_move_to_an_open_room_says_nothing_of_a_door() {
+    {
+        let s = 5u32;
         let mut p = floor(s);
         assert_eq!(give(&mut p, "move", CONFERENCE), None, "seed {s}: the open room's move was refused");
         let n = p.said.len();
@@ -70,11 +77,12 @@ fn lock_toward_us(s: u32) -> (Play, game::ids::DoorId, [f64; 2]) {
     (p, d, [c[0], c[2]])
 }
 
-/// THE RULE (the maintainer, 10-08: "for doors just make it realistic"): a loud squad told "open and clear" at a cylinder lock on the face the door opens toward: nobody boots it; the lead says so, picks it, the keep is whole and they go in. CONTROL: locked by something no pick opens while they walked: the lead says it opens toward them and the order ends at the door, no boot.
+/// THE RULE (the maintainer, 10-08: "for doors just make it realistic"): a loud squad told "open and clear" at a cylinder lock on the face the door opens toward: nobody boots it; the lead says so, picks it, the keep is whole and they go in.
 /// A FAILURE MEANS: men kick a door against its own frame.
 #[test]
 fn a_lock_on_the_face_it_opens_toward_is_picked_and_not_booted() {
-    for s in [7u32] {
+    {
+        let s = 7u32;
         let (mut p, d, c) = lock_toward_us(s);
         assert!(game::doors::door_locked(&p.g, d), "seed {s}: the staging: not locked");
         assert_eq!(give(&mut p, "openClear", c), None, "seed {s}: refused");
@@ -82,8 +90,14 @@ fn a_lock_on_the_face_it_opens_toward_is_picked_and_not_booted() {
         p.until(50.0, |p| { kicks += p.g.events.iter().filter(|e| e.kind == game::director::EventKind::Kick && e.time == p.g.time).count(); !game::doors::door_locked(&p.g, d) && p.g.door_tools.stats.picks >= 1.0 }).unwrap_or_else(|| panic!("seed {s}: 50 s and it is not picked: {:?}", p.lines(p.mates()[0])));
         assert_eq!(kicks, 0, "seed {s}: boots");
         assert!(!game::doors::door_lock_broken(&p.g, d) && p.said.iter().any(|l| l.text.contains("opens toward us. picking it")), "seed {s}: keep broken {}, said {:?}", game::doors::door_lock_broken(&p.g, d), p.said.iter().map(|l| l.text.clone()).collect::<Vec<_>>());
-        drop(p);
+    }
+}
 
+/// THE CONTROL: locked by something no pick opens while they walked: the lead says it opens toward them and the order ends at the door, no boot.
+#[test]
+fn a_lock_no_pick_opens_ends_the_order_at_the_door() {
+    {
+        let s = 7u32;
         let (mut p, d, c) = lock_toward_us(s);
         game::doors::door_set_locked(&mut p.g, d, false);
         assert_eq!(give(&mut p, "openClear", c), None, "seed {s}: refused");

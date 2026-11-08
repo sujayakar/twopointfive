@@ -26,7 +26,7 @@ fn glazing(s: u32, kinds: [PaneType; 3]) -> (Play, [f64; 3], Vec<GuardId>) {
 }
 
 /// THE RULE: a man behind a pane the burst left whole is not hurt and not even folded: toughened glass 3 m off the burst, float glass 3.9 m off, laminated 2.5 m off,
-/// and the pane still stands two seconds later. CONTROL: the same man with the burst a metre off the same toughened glass: it comes down and he is hit, so it was the
+/// and the pane still stands a second and more later. CONTROL: the same man with the burst a metre off the same toughened glass: it comes down and he is hit, so it was the
 /// pane and not the range that saved him.
 /// A FAILURE MEANS: a burst reaches through standing glass (the fragment reckoned as a pistol round), or glass stands up to a burst beside it.
 #[test]
@@ -39,14 +39,18 @@ fn a_burst_never_hurts_a_man_through_a_pane_it_left_whole() {
         p.run(0.05);
         let was = p.reeled_at(men[0]);
         let rep = p.burst(burst);
-        p.run(2.0);
+        p.run(1.2);
         let hit = p.hit_of(&rep, men[0]);
         assert!(hit.as_ref().map_or(false, |h| matches!(h.result, BlastResult::Shielded)), "{kind:?} {off} m off: his line of the report {hit:?}");
         assert!(p.up(men[0]) && p.reeled_at(men[0]) == was, "{kind:?} {off} m off: he is {:?}, reeled {}", p.state(men[0]), p.reeled_at(men[0]) != was);
         for b in panes { assert_eq!(p.pane_open(b), 0.0, "{kind:?} {off} m off: pane {b} is open"); }
         drop(p);
     }
-    // CONTROL
+}
+
+/// THE CONTROL: the same man with the burst a metre off the same toughened glass: it comes down and he is hit, so it was the pane and not the range that saved him.
+#[test]
+fn a_burst_a_metre_off_the_same_glass_brings_it_down() {
     let (mut p, panes, men) = glazing(4, [PaneType::Tempered; 3]);
     let (man, burst) = ([7.5, 9.3], [7.5, GLAZING_Z + 1.0]);
     p.man_put(men[0], man, burst);

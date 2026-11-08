@@ -113,8 +113,23 @@ fn back_room(p: &Play) -> Vec<game::ids::GuardId> {
 /// A FAILURE MEANS: a whole wing can be emptied in silence and the floor never knows, or a silence empties the floor.
 #[test]
 fn squads_that_stay_in_their_rooms_still_miss_a_room_that_goes_silent() {
+    let (roll, ask, goes, left, said) = silent_wing(true);
+    let at = |t: Option<f64>, what: &str| t.unwrap_or_else(|| panic!("no {what}: {said:?}"));
+    let (roll, ask, goes) = (at(roll, "roll call"), at(ask, "ask by name"), at(goes, "man sent"));
+    assert!(roll < ask && ask <= goes && left == 1, "roll call {roll:.1} s, asked by name {ask:.1} s, one sent {goes:.1} s, {left} men off their posts: {said:?}");
+}
+
+/// THE CONTROL: the rule's own number at nobody to send: the same silence sends nobody.
+#[test]
+fn with_nobody_to_send_a_silence_moves_nobody() {
+    let (_, _, goes, left, said) = silent_wing(false);
+    assert!(goes.is_none() && left == 0, "nobody to send: one sent at {goes:?}, {left} off their posts: {said:?}");
+}
+
+/// the back room's men put down one a second without a sound, and the net's check come due: when it asked, when it asked by name, when it sent a man, how many left their posts, what was said
+fn silent_wing(on: bool) -> (Option<f64>, Option<f64>, Option<f64>, usize, Vec<String>) {
     use game::enemysquads::SquadEventWhat::{NetAsks, NetCheck, NetLooks};
-    let run = |on: bool| {
+    {
         let mut p = block(7, on);
         let victims = back_room(&p);
         let men: Vec<_> = p.hostiles().into_iter().filter(|m| !victims.contains(m)).collect();
@@ -125,11 +140,5 @@ fn squads_that_stay_in_their_rooms_still_miss_a_room_that_goes_silent() {
         if went.is_some() { p.run(3.0); }
         let left = men.iter().zip(&posts).filter(|(&m, q)| dist(p.at(m), **q) > 1.0).count();
         (p.net_event_at(NetCheck), p.net_event_at(NetAsks), p.net_event_at(NetLooks), left, p.said.iter().filter(|l| l.radio).map(|l| l.text.clone()).collect::<Vec<_>>())
-    };
-    let (roll, ask, goes, left, said) = run(true);
-    let at = |t: Option<f64>, what: &str| t.unwrap_or_else(|| panic!("no {what}: {said:?}"));
-    let (roll, ask, goes) = (at(roll, "roll call"), at(ask, "ask by name"), at(goes, "man sent"));
-    assert!(roll < ask && ask <= goes && left == 1, "roll call {roll:.1} s, asked by name {ask:.1} s, one sent {goes:.1} s, {left} men off their posts: {said:?}");
-    let (_, _, goes, left, said) = run(false);
-    assert!(goes.is_none() && left == 0, "nobody to send: one sent at {goes:?}, {left} off their posts: {said:?}");
+    }
 }

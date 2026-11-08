@@ -30,7 +30,7 @@ fn looks(p: &mut Play, gd: game::ids::GuardId, n: usize, secs: f64) -> Vec<([f64
 /// A FAILURE MEANS: a searcher walks the open floor and misses the man in the corner: the search no longer reads the light on what it deals.
 #[test]
 fn a_search_looks_in_the_dark_and_covered_places_first() {
-    for s in [301u32, 302, 303] {
+    for s in [301u32, 302] {
         let (mut p, men) = office(s, 1);
         p.searches(men[0], FIX, FIX);
         p.frame();

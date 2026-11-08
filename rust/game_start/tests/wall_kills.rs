@@ -27,7 +27,7 @@ fn charged(s: u32, men: &[(usize, [f64; 2])], foe: Option<[f64; 2]>, sam: [f64; 
 fn sam_down(p: &Play) -> bool { p.g.pl[p.g.player].down }
 fn sam_blind(p: &Play) -> bool { p.g.time < p.g.pl[p.g.player].dazzled_until }
 
-/// THE RULE (the maintainer, 10-19, 0.9 m from a charge he had set: "blowing a wall charge with me right next to it should kill me"): the player at the charge goes down. CONTROL: god mode keeps him up; past the near reach, inside the safety radius, he lives, blind.
+/// THE RULE (the maintainer, 10-19, 0.9 m from a charge he had set: "blowing a wall charge with me right next to it should kill me"): the player at the charge goes down. CONTROL: god mode keeps him up.
 /// A FAILURE MEANS: the charge is a thing to stand beside.
 #[test]
 fn a_charge_kills_the_player_who_stands_at_it() {
@@ -37,13 +37,20 @@ fn a_charge_kills_the_player_who_stands_at_it() {
         p.charge_blows(c);
         p.run(0.3);
         assert!(sam_down(&p), "seed {s}: 0.9 m from it and he stands");
-        let reach = p.g.k.wallkill.near_m;
         drop(p);
         let (mut p, c, _) = charged(s, &[], None, near, true);
         p.charge_blows(c);
         assert!(!sam_down(&p), "seed {s}: down in god mode");
-        drop(p);
-        let (mut p, c, _) = charged(s, &[], None, [AT[0], AT[2] - reach - 0.4], false);
+    }
+}
+
+/// THE CONTROL: past the near reach, inside the safety radius, he lives, blind.
+#[test]
+fn past_the_near_reach_the_player_lives_blind() {
+    for s in [1u32] {
+        let (mut p, c, _) = charged(s, &[], None, [AT[0], AT[2] - 1.9], false);
+        let reach = p.g.k.wallkill.near_m;
+        assert!(reach < 1.9, "the staging: 1.9 m is inside the near reach of {reach} m");
         p.charge_blows(c);
         p.frame();
         assert!(!sam_down(&p) && sam_blind(&p), "seed {s}: past {reach} m: down {}, blind {}", sam_down(&p), sam_blind(&p));
@@ -89,7 +96,7 @@ fn the_yard(s: u32, order: &str) -> (Play, WallSpot, Vec<GuardId>) {
 }
 fn in_blast(p: &mut Play, w: &WallSpot, m: GuardId) -> bool { let q = p.at(m); wall_charge_blast_share(&mut p.g, w, [q[0], 0.0, q[1]], None, Some(false)) > 0.0 }
 
-/// THE RULE (the maintainer, 10-16: "after i place a wall charge, my guys should move away with standoff"): with a charge of Sam's on the wall the men on fall in step out of its blast, each on a place of his own, and the row names nobody but Sam; Sam walks clear and they come with him. CONTROL: men told to hold where they stand stay in it, and the row names them.
+/// THE RULE (the maintainer, 10-16: "after i place a wall charge, my guys should move away with standoff"): with a charge of Sam's on the wall the men on fall in step out of its blast, each on a place of his own, and the row names nobody but Sam; Sam walks clear and they come with him.
 /// A FAILURE MEANS: his own charge kills the men who are following him.
 #[test]
 fn the_men_with_sam_step_back_from_his_charge() {
@@ -103,8 +110,12 @@ fn the_men_with_sam_step_back_from_his_charge() {
     p.sam_put(CLEAR);
     p.run(6.0);
     for &m in &men { assert!(dist(p.at(m), CLEAR) < 8.0, "Sam walked clear and a man stayed on his mark: {:?}", p.at(m)); }
-    drop(p);
-    let (mut p, _, _) = the_yard(s, "hold");
+}
+
+/// THE CONTROL: men told to hold where they stand stay in it, and the row names them.
+#[test]
+fn men_told_to_hold_stay_in_the_blast_and_the_row_says_so() {
+    let (mut p, _, _) = the_yard(1, "hold");
     let c = p.sam_sets_charge(CHARGE, [CHARGE[0], CHARGE[2] + 1.0]).expect("Sam sets the charge");
     p.run(3.0);
     assert!(wall_charge_too_close(&mut p.g, Some(c)).len() >= 3, "men told to hold stepped back");
