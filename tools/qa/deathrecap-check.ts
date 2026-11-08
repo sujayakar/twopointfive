@@ -5,14 +5,12 @@
 //       how far, and that it came from behind (degrees off Sam's gaze)
 //   (2) the record carries the floor's last seconds: every man in every frame, the shooter where he was staged, frames to just past the fall and no longer
 //       than the knobs say
-//   (3) one of ours lost while a player still plays (a civilian, by Sam's own round) is kept — and still nothing is handed out
 //   (4) the panel: the plan and the three labels (who · with what · how far) on the card when he is down; no panel while the run is on
 //   (7) a restart: that run's deaths are not the next run's
 //   (9) the playback (ui/recap.ts recapMenAt): every man drawn where he really was over the last seconds, the shooter coming in, Sam's gun line turning
 //       (RECAP_BREAK=snap = read off the last sample alone: must fail)
 //   (10) its clock on a frame clock of the check's own: real speed, a rest on the end, round again; nothing drawn while the card is put away
-//   (8) a man put out cold by a hand is not a death; a stun canister is not a killer, a fragmentation burst is; a hostage her captor shoots is his round;
-//       a run played on past its end shows nothing that happened after it
+//   what is kept while a player still plays and what is not a death to explain: natively, rust/game_start/tests/recap.rs
 //   (11) while the run is on (RECAP.live, deathrecap.ts lostLive): a teammate lost where nobody still up sees him go down or hears it has his row struck and
 //       nothing else, and a mate who finds him later changes nothing; heard = after a beat the way it came from, an eighth of the compass and no finer; seen
 //       by his mate = that and the mate's word for the side; seen by the player = no word; never the shooter's name or place, the card's record shut
@@ -25,7 +23,8 @@ const ROOT = resolve(import.meta.dir, '../..');
 export async function deathrecapCheck(): Promise<boolean> {
   const { rig } = await import('./frag-probes.ts');
   const M = await import(`${ROOT}/src/game/deathrecap.ts`);
-  const { RECAP, deathRecapOf, recapDeathsForChecks, MAN_STRIDE } = M;
+  const { RECAP, MAN_STRIDE } = M;
+  const deathRecapOf = (g: any) => g.debriefView().recap ?? null;
   const { fireWeapon, killGuard } = await import(`${ROOT}/src/game/combat.ts`);
   const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
   const { gearText } = await import(`${ROOT}/src/game/gear.ts`);
@@ -82,49 +81,8 @@ export async function deathrecapCheck(): Promise<boolean> {
         line(!!ui && ui.labels.join('|') === want.join('|') && ui.canvas, 'the card carries the plan and three labels: who · with what · how far', ui ? `[${ui.labels.join(' · ')}]${ui.canvas ? '' : ' · no canvas'}` : 'no panel on the card');
         // (7) a restart
         g.restartEncounter(); R.step(2);
-        line(deathRecapOf(g) === null && recapDeathsForChecks(g).length === 0, "a restart: that run's deaths are not the next run's");
+        line(deathRecapOf(g) === null, "a restart: that run's deaths are not the next run's");
       }
-    }
-    // (3) one of ours lost while the player still plays
-    { RECAP.on = true; const R = await rig(5); const g = R.game, pl = g.player; g.aiEnabled = false; R.step(10);
-      const civ = g.civilians[0];
-      if (!civ) line(false, 'a civilian stands on this floor to be lost (the stand has none: nothing was checked)');
-      else { pl.holstered = false; pl.slot = 'pistol'; let n = 0;
-        while (civ.state !== 'dead' && n < 8) { const k = n++ * 0.785, c = civ.char.pos; g.teleportPlayer([c[0] + Math.sin(k) * 1.8, 0, c[2] + Math.cos(k) * 1.8]); const y = Math.atan2(c[0] - pl.char.pos[0], c[2] - pl.char.pos[2]); pl.char.bodyYaw = y; pl.char.aimYaw = y; R.step(20);
-          if (Math.hypot(pl.char.pos[0] - civ.char.pos[0], pl.char.pos[2] - civ.char.pos[2]) > 2.6) continue; fireWeapon(g, pl.char, chest(civ.char), true); R.step(2); }
-        R.step(90); const ds = recapDeathsForChecks(g), d = ds[ds.length - 1];
-        line(civ.state === 'dead' && !!d && d.victim === civ.char.id && d.by === pl.char.id && d.byName === 'Player' && !d.player && deathRecapOf(g) === null && (await panel(g)) === null,
-          'one of ours lost while a player still plays is kept, by name — and nothing is handed out, no panel', d ? `${d.name} by ${d.byName} (${d.cause}) · handed out: ${deathRecapOf(g) ? 'YES' : 'no'}` : `no death kept (civilian ${civ.state})`); }
-    }
-    // (8) what is NOT a death to explain, what is one all the same, and what a run played on past its end may show
-    {
-      const fresh = async (seed: number) => { RECAP.on = true; const R = await rig(seed); const g = R.game; g.aiEnabled = false; R.step(10); return { R, g, pl: g.player, civ: g.civilians[0], civ2: g.civilians[1] }; };
-      const kept = (g: any) => { const ds = recapDeathsForChecks(g); return ds[ds.length - 1]; };
-      const away = (g: any, c: any) => g.teleportPlayer([c.pos[0] < 20 ? 34 : 6, 0, 14]);
-      { const A = await fresh(6); if (!A.civ) line(false, 'a civilian to put out cold');
-        else { killGuard(A.g, A.civ, [0, 0, 1], true, 'choked', 'player'); A.R.step(30);
-          line(A.civ.state === 'dead' && recapDeathsForChecks(A.g).length === 0, 'a civilian put out cold by a hand is not a death to explain', `${A.civ.callsign} ${A.civ.state} (${A.civ.downKind}) · kept ${recapDeathsForChecks(A.g).length}`); } }
-      { const A = await fresh(7); if (!A.civ) line(false, 'a civilian beside a stun canister');
-        else { away(A.g, A.civ.char); A.R.step(2); const at = [A.civ.char.pos[0] + 1, 0.2, A.civ.char.pos[2]];
-          A.g.events.push({ kind: 'bang', pos: at, time: A.g.time, loud: true }); killGuard(A.g, A.civ, [0, 0, 1], false, 'shot', 'world'); A.R.step(30); const d = kept(A.g);
-          const B = await fresh(7); away(B.g, B.civ.char); B.R.step(2); const at2 = [B.civ.char.pos[0] + 1, 0.2, B.civ.char.pos[2]];
-          B.g.events.push({ kind: 'bang', pos: at2, time: B.g.time, loud: true, level: 2, who: B.pl.char.id, frag: true }); killGuard(B.g, B.civ, [0, 0, 1], false, 'shot', 'world'); B.R.step(30); const e = kept(B.g);
-          line(!!d && d.cause === 'unknown' && !!e && e.cause === 'blast' && e.by === B.pl.char.id, 'a stun canister going off beside a man who drops is not named his killer; a fragmentation burst is', `stun: ${d?.cause} · frag: ${e?.cause} by ${e?.byName}`); } }
-      { const A = await fresh(8); const gd = A.g.guards[0]; let d: any = null, tried = 0;
-        if (A.civ && gd) { away(A.g, A.civ.char); const c = A.civ.char;
-          for (let k = 0; k < 8 && !d; k++) { const a = k * 0.785, p = [c.pos[0] + Math.sin(a) * 2.2, 0, c.pos[2] + Math.cos(a) * 2.2], face = Math.atan2(c.pos[0] - p[0], c.pos[2] - p[2]);
-            for (let i = 0; i < 20; i++) { A.R.put(gd, p, c.pos); A.R.step(1); }
-            if (Math.hypot(gd.char.pos[0] - p[0], gd.char.pos[2] - p[2]) > 0.3 || A.g.col.shotBlocked(gd.char.muzzle, chest(c), 0.05)) continue; tried++;
-            fireWeapon(A.g, gd.char, chest(c), false, { steady: true, spread: 0.01 });   // rescue.ts's execution, statement for statement: an AI round never tests a civilian, the game puts her down by hand
-            killGuard(A.g, A.civ, [Math.sin(face), 0, Math.cos(face)], false, 'shot', 'guard'); A.R.step(30); d = kept(A.g); } }
-        line(!!d && d.cause === 'round' && d.by === gd.char.id && d.byName === gd.callsign && !!d.from && !!d.weapon, 'a hostage shot the way a captor shoots one (his round through her, put down by the game) is his round, by name', d ? `${d.name} by ${d.byName} · ${d.weapon} · ${d.cause}` : `not kept (${tried} clear lines tried)`); }
-      { const A = await fresh(9); if (!A.civ || !A.civ2) line(false, 'two civilians: one lost before the run ends, one after');
-        else { away(A.g, A.civ.char); A.R.step(2); A.g.events.push({ kind: 'bang', pos: [A.civ.char.pos[0] + 1, 0.2, A.civ.char.pos[2]], time: A.g.time, loud: true, frag: true, who: A.pl.char.id }); killGuard(A.g, A.civ, [0, 0, 1], false, 'shot', 'world'); A.R.step(120);
-          const before = deathRecapOf(A.g); A.g.mission.stage = 'done'; A.R.step(5); const atEnd = deathRecapOf(A.g);
-          A.g.events.push({ kind: 'bang', pos: [A.civ2.char.pos[0] + 1, 0.2, A.civ2.char.pos[2]], time: A.g.time, loud: true, frag: true, who: A.pl.char.id }); killGuard(A.g, A.civ2, [0, 0, 1], false, 'shot', 'world'); A.R.step(120);
-          const on = deathRecapOf(A.g), n = recapDeathsForChecks(A.g).length;
-          line(before === null && !!atEnd && atEnd.takes.length === 1 && n === 2 && !!on && on.takes.length === 1 && on.takes[0].death.victim === A.civ.char.id,
-            'a run played on past its end shows what happened up to the end and nothing after it', `before the end: ${before ? 'handed out' : 'nothing'} · at the end: ${atEnd?.takes.length ?? 0} · played on, ${n} lost: ${on?.takes.length ?? 0} shown`); } }
     }
     // (9) the playback: where it draws the men is where they were
     { RECAP.on = true; let done = false; const ui = await import(`${ROOT}/src/ui/recap.ts`), { recapSpan, frameAt } = ui;

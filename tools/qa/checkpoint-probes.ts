@@ -33,7 +33,7 @@ const { spawnUnit, despawnUnit, rollcallState } = await import(`${ROOT}/src/game
 const { setDaylight } = await import(`${ROOT}/src/game/lighting.ts`);
 const { ambientState, hashStr } = await import(`${ROOT}/src/game/dialogue.ts`);
 const { HOLD, TURN } = await import(`${ROOT}/src/game/character.ts`);
-const { debriefOf } = await import(`${ROOT}/src/game/chronicle.ts`);
+const { debriefOf } = await import('./debrief-read.ts');;
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;

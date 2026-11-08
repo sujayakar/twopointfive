@@ -56,6 +56,7 @@ import { applyGame } from 'tps-bridge/import';
 import { classTable, valueTable } from 'tps-bridge/classes';
 import { puppetRows, SLOW, VALS } from 'tps-bridge/puppet-apply';
 import { OUT, OUT_HOST } from 'tps-bridge/out-dispatch';
+import { NO_DEBRIEF } from '../view/debriefview';
 import { END_CARD } from './endcard';
 import { makePoke } from 'tps-bridge/poke';
 import { makeScan } from 'tps-bridge/scan';
@@ -308,7 +309,7 @@ export async function rustBoot(): Promise<void> {
   //  by the page's readers, are handed on as they are)
   { const raw = inst.exports as unknown as Record<string, unknown>, W: Record<string, unknown> = {}; for (const k of Object.keys(raw)) { const f = raw[k]; W[k] = typeof f === 'function' && k.startsWith('face_') ? guard(k, f as (...a: number[]) => number) : f; } X = W as unknown as Face; }
   MEM = X.memory; BUF = MEM.buffer;
-  for (const n of ['face_new_at', 'face_show_seat', 'face_puppet', 'face_host_half', 'face_step', 'face_ask', 'face_tick_view', 'face_line', 'face_ray', 'face_hear', 'face_probe_asks', 'face_poke', 'face_write', 'face_keep', 'face_back', 'face_loaded', 'face_saves_in', 'face_saves_asked']) if (typeof X[n] !== 'function') throw new RustGameError(`?rust=1: game_face.wasm has no ${n}: it was built from another tree (tools/blitz/face-build.ts builds this one's)`);
+  for (const n of ['face_new_at', 'face_show_seat', 'face_puppet', 'face_host_half', 'face_step', 'face_ask', 'face_tick_view', 'face_debrief_view', 'face_line', 'face_ray', 'face_hear', 'face_probe_asks', 'face_poke', 'face_write', 'face_keep', 'face_back', 'face_loaded', 'face_saves_in', 'face_saves_asked']) if (typeof X[n] !== 'function') throw new RustGameError(`?rust=1: game_face.wasm has no ${n}: it was built from another tree (tools/blitz/face-build.ts builds this one's)`);
   // (the module and this page's half of the bridge must be of one generation: a module of another reads garbage)
   if ((X.face_layout?.() >>> 0) !== SCHEMA.layout) throw new RustGameError(`?rust=1: game_face.wasm is of another generation than this page's bridge (its layout ${(X.face_layout?.() ?? 0) >>> 0}, the page's ${SCHEMA.layout}): the checkout's module is stale, tools/blitz/face-build.ts builds this one's`);
   // STAND-IN: EVERY CLASS OF THE SIMULATION'S FOLDERS GETS ITS OWN NAME BACK (tools/blitz/page-plugin.ts keeps each beside its class). The bridge tells
@@ -326,7 +327,7 @@ export async function rustBoot(): Promise<void> {
 /** what a slot of the save controller holds here in a snapshot's place: the number of a game kept in the module */
 interface KeptGame { game: Game; rust: number }
 let SETTLED_SAID = false;
-interface Held { /** how many applies there have been, the count the view was asked at, and the view */ applies: number; viewAt: number; view: TickView; told: number; toolScan: boolean; inRun: boolean; settings?: { flush(): void; rebase(): void; stats(): { settledLeft: number } & Record<string, unknown> } | null; g: Game; lastCmds: readonly PlayerCmd[] | null; kept: Set<number>; startKept: number; back: { label: string; loads: number; saves: number } | null; took: boolean; saves: number; shelfSig: string; doorKept: number[]; poke: ((obj: unknown, path: string | (string | number)[], value: unknown) => void) | null; watch: Watched[]; launch: unknown; putBacks: number; loads: number; h: number; slot: number; stale: string; uploaded: boolean; ctx: { p: number }; rows: unknown; inStep: boolean; side: { list: unknown[]; of: unknown; base: number }; asks: { after(): void; give(S: any, id: string, t?: any, who?: any, o?: any): string | null; refused: { n: number; rows: Record<string, string> } } | null; quiet: boolean; owed: number; quietDt: number }
+interface Held { /** how many applies there have been, the count the view was asked at, and the view */ applies: number; viewAt: number; view: TickView; told: number; toolScan: boolean; inRun: boolean; settings?: { flush(): void; rebase(): void; stats(): { settledLeft: number } & Record<string, unknown> } | null; g: Game; lastCmds: readonly PlayerCmd[] | null; kept: Set<number>; startKept: number; back: { label: string; loads: number; saves: number } | null; took: boolean; shelfSig: string; doorKept: number[]; poke: ((obj: unknown, path: string | (string | number)[], value: unknown) => void) | null; watch: Watched[]; launch: unknown; putBacks: number; loads: number; h: number; slot: number; stale: string; uploaded: boolean; ctx: { p: number }; rows: unknown; inStep: boolean; side: { list: unknown[]; of: unknown; base: number }; asks: { after(): void; give(S: any, id: string, t?: any, who?: any, o?: any): string | null; refused: { n: number; rows: Record<string, string> } } | null; quiet: boolean; owed: number; quietDt: number }
 let H: Held | null = null;
 const REG = { v: null as Record<string, object> | null };
 const reg = (): Record<string, unknown> => (REG.v ??= knobRegistry()) as Record<string, unknown>;
@@ -372,7 +373,7 @@ function grown(g: Game): void {
 export function rustAttach(g: Game): void {
   if (!X) throw new Error('rustAttach before rustBoot');
   const G = g as unknown as Record<string, any>;
-  H = { applies: 0, viewAt: -1, view: NO_VIEW, told: -1, toolScan: false, inRun: false, g, lastCmds: null, kept: new Set(), startKept: 0, back: null, took: false, saves: 0, shelfSig: '', doorKept: [], poke: null, watch: [], launch: null, putBacks: -1, loads: 0, h: 0, slot: -1, stale: 'the game was stood', uploaded: true, ctx: { p: 0 }, rows: null, inStep: false, side: { list: [], of: null, base: 0 }, asks: null, quiet: false, owed: 0, quietDt: 1 / 60 };
+  H = { applies: 0, viewAt: -1, view: NO_VIEW, told: -1, toolScan: false, inRun: false, g, lastCmds: null, kept: new Set(), startKept: 0, back: null, took: false, shelfSig: '', doorKept: [], poke: null, watch: [], launch: null, putBacks: -1, loads: 0, h: 0, slot: -1, stale: 'the game was stood', uploaded: true, ctx: { p: 0 }, rows: null, inStep: false, side: { list: [], of: null, base: 0 }, asks: null, quiet: false, owed: 0, quietDt: 1 / 60 };
   const held = H;
   G.stepSeats = (dt: number, cmds: readonly PlayerCmd[]) => step(held, dt, cmds);
   // (for a networked game, src/net/step.ts: a quiet run of steps, and the game's own words for its state, as `rustHashes` reads them by name for a check)
@@ -399,7 +400,7 @@ export function rustAttach(g: Game): void {
   { const was = G.restart; G.restart = function (this: unknown, said?: string) { if (RUST_PANIC.dead && !held.inStep) { recover(held, true); return; } if (held.inStep || !held.h || held.stale || !held.startKept) return was.call(this, said); toStart(held, said); }; }
   // A SAVE AND A LOAD are the Rust game's (game/savestate.ts SNAPS): the controller's slot holds the number of a game kept in the module
   SNAPS.own = true;
-  SNAPS.take = gg => { if (gg !== g) throw new Error('rust=1: a save of another game than the one the Rust game steps'); return take(held) as unknown as Snapshot; };
+  SNAPS.take = (gg, _since, label) => { if (gg !== g) throw new Error('rust=1: a save of another game than the one the Rust game steps'); return take(held, label) as unknown as Snapshot; };
   SNAPS.put = s => { const k = s as unknown as KeptGame; if (k.game !== g || !k.rust) throw new Error('rust=1: that save is not a game kept by the Rust game'); put(held, k); };
   // THE BOX WORLD LISTED for the picture (engine.world.upload, between ticks) is also where the Rust game lists its own and frees the frame boxes gone by:
   // a listing since the last step is made there as the next step opens
@@ -440,6 +441,10 @@ export function rustAttach(g: Game): void {
       if (held.viewAt !== held.applies) { call('face_tick_view', () => X!.face_tick_view(held.h)); const r = readRecord(g, 'crate::view::TickView', outBytes()); grown(g); held.view = r; held.viewAt = held.applies; }
     } catch (e) { if (!RUST_PANIC.dead) throw e; }
     return held.view; };
+  // WHAT THE END CARD SHOWS (src/view/debriefview.ts): asked as the card is built, and kept by nobody
+  g.debriefAsk = () => { if (!held.h || held.stale || RUST_PANIC.dead) return NO_DEBRIEF;
+    try { settle(held); if (held.toolScan && !held.inRun && !held.inStep) scanFlush(held); tellShown(held); call('face_debrief_view', () => X!.face_debrief_view(held.h)); const r = readRecord(g, 'crate::view::DebriefView', outBytes()); grown(g); return r; }
+    catch (e) { if (!RUST_PANIC.dead) throw e; return NO_DEBRIEF; } };   // (a trap here is no throw of the frame's, or the panic card's key would never be read: as `viewAsk`)
   // THE BOX WORLD ASKED (src/view/worldask.ts): the Rust game's, as its boxes stand. While none stands, or one is stopped, the page's own copy answers
   { const ask = rustAsk(held); Object.defineProperty(g, 'askHost', { configurable: true, enumerable: false, get: () => held.h && !held.stale && !RUST_PANIC.dead ? ask : null }); }
   // THE GAME'S OWN METHODS A TOOL OR A PANEL CALLS BETWEEN TICKS (`GAME_CROSSES`): run as TypeScript they move the puppet only, and the Rust game keeps
@@ -537,7 +542,6 @@ function after(S: Held): void {
   S.watch = watched(g); S.launch = G.player?.launchHeld ?? null;   // (what the page's panels write, as the Rust game has it now: what differs by the next step, the page wrote)
   S.putBacks = PUT_BACKS.n;   // (the apply counts itself as a put-back, for the box world's copy: any other count by the next step is a snapshot somebody put back)
   S.loads = G.chronicle?.counts?.loads | 0;   // (…and a checkpoint read from a file counts itself here: savestate.ts loadState)
-  S.saves = G.chronicle?.counts?.saves | 0;   // (the chronicle's count of saves as the Rust game has it: one more on the puppet is the controller's row, not yet made there)
 }
 /** every optional field of a Box (scene/boxes.ts `boxOf`, which names them all) */
 /** THE HOST'S ROWS ARE THE HOST'S, AS THEY STAND NOW (its camera, its Input: the bridge's hand-over). An apply made BETWEEN two ticks would write the Rust
@@ -589,16 +593,13 @@ function sweep(S: Held): void {
   for (const k of [...S.kept]) if (!live.has(k)) { X!.face_kept_drop(k); S.kept.delete(k); }
   RUST_GAME.kept = S.kept.size;
 }
-/** A SAVE (savestate.ts writeMem, through SNAPS.take). The controller has just written the chronicle's row on the puppet; that row is made on the Rust
- *  side first (`face_checkpoint`: on a tutorial mission it also stops the level's program for the take and has the frame start it again, in the
+/** A SAVE (savestate.ts writeMem, through SNAPS.take). The chronicle's row is made on the Rust side first, under the save's label (`face_checkpoint`: on a tutorial mission it also stops the level's program for the take and has the frame start it again, in the
  *  controller's own order, savestate.ts:991), so the kept game holds it. No state is walked in TypeScript and nothing is applied whole. */
-function take(S: Held): KeptGame {
+function take(S: Held, label?: string): KeptGame {
   const g = S.g, G = g as unknown as Record<string, any>;
   if (S.stale || !S.h) start(S);
   settle(S);
-  const C = G.chronicle?.counts;
-  if (C && (C.saves | 0) !== S.saves) { const E = G.chronicle.events, e = E[E.length - 1], label = e?.kind === 'checkpoint' ? String(e.label ?? e.data?.label ?? '') : '';
-    call('face_checkpoint', () => hand(enc.encode(label), (p, n) => X!.face_checkpoint(S.h, p, n))); grown(g); S.took = true; }
+  if (label !== undefined) { call('face_checkpoint', () => hand(enc.encode(label), (p, n) => X!.face_checkpoint(S.h, p, n))); grown(g); S.took = true; }
   sweep(S);
   const k: KeptGame = { game: g, rust: keep(S) };
   if (S.took && !S.inStep) { S.took = false; apply(S, false); }   // (a save from a panel, between ticks: the row comes back to the puppet now)

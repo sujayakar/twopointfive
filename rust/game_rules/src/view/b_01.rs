@@ -14,3 +14,11 @@ use crate::game::Game;
 pub fn tick_view(g: &Game, seat: &crate::seats::SeatRef) -> TickView {
     TickView { mission: crate::mission::objective(g, seat) }
 }
+
+/// what the end card shows of a run, about `seat`: the chronicle's words and counts, the floor's rooms and the recap. Asked as the card opens
+pub fn debrief_view(g: &Game, seat: &crate::seats::SeatRef) -> DebriefView {
+    let c = &g.chronicle;
+    let rows = c.events.iter().map(|e| DebriefRow { t: e.t, kind: e.kind, room: e.room.clone(), pos: e.pos, text: crate::chronicle::event_text(g, e), down: crate::chronicle::alarm_down(e) }).collect();
+    let n = c.path_n as usize * 3;
+    DebriefView { debrief: crate::chronicle::debrief_of(g, seat), rows, dropped: c.dropped, path: c.path[..n.min(c.path.len())].to_vec(), rooms: crate::chronicle::map_rooms(g), recap: crate::deathrecap::recap_card(g) }
+}

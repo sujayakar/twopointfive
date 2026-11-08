@@ -503,49 +503,6 @@
 "gFirst": true
 },
 {
-"call": "deathrecap#recapRound",
-"rust": "crate::deathrecap::recap_round",
-"sites": 1,
-"ts": "recapRound",
-"of": null,
-"file": "src/game/deathrecap.ts",
-"why": "param",
-"params": [
-{
-"ts": "victim",
-"rust": "victim"
-},
-{
-"ts": "wasDown",
-"rust": "was_down"
-},
-{
-"ts": "shooter",
-"rust": "shooter"
-},
-{
-"ts": "muzzle",
-"rust": "muzzle"
-},
-{
-"ts": "hit",
-"rust": "hit"
-},
-{
-"ts": "def",
-"rust": "def"
-},
-{
-"ts": "blind",
-"rust": "blind"
-}
-],
-"sig": "pub fn recap_round(g: &mut crate::game::Game, victim: Option<CharId>, was_down: bool, shooter: CharId, muzzle: V3, hit: V3, def: &crate::weapons::WeaponDef, blind: Option<bool>)",
-"bodyFile": "deathrecap/b_01.rs",
-"mode": "body",
-"answer": null
-},
-{
 "call": "floormess#messBurst",
 "rust": "crate::floormess::mess_burst",
 "sites": 1,

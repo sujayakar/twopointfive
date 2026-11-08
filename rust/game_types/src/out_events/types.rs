@@ -28,7 +28,6 @@ pub enum OutEvent {
     SmokeSystemLikePush(crate::out_events::OutSmokeSystemLikePush),
     WallWearReset,
     WallWearRound(crate::out_events::OutWallWearRound),
-    RecapRound(crate::out_events::OutRecapRound),
     MessBurst(crate::out_events::OutMessBurst),
     MessOpened(crate::out_events::OutMessOpened),
     MessWall(crate::out_events::OutMessWall),
@@ -158,16 +157,6 @@ pub struct OutWallWearRound {
     pub dir: V3,
 }
 
-#[derive(Clone, Debug)]
-pub struct OutRecapRound {
-    pub victim: Option<CharId>,
-    pub was_down: bool,
-    pub shooter: CharId,
-    pub muzzle: V3,
-    pub hit: V3,
-    pub def: crate::weapons::WeaponId,
-    pub blind: Option<bool>,
-}
 
 #[derive(Clone, Debug)]
 pub struct OutMessBurst {

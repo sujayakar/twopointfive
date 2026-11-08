@@ -76,7 +76,7 @@ fn the_card_is_shut_while_he_plays_and_names_the_man_who_shot_him_when_he_is_dow
         assert!(p.recap_card().is_none(), "seed {}: nothing is handed out while he is up", seed);
         rounds_into_seat(&mut p, by, 0);
         let card = p.recap_card().expect("he is down: the card has his record");
-        let d = &card.takes[card.main].death;
+        let d = &card.takes[card.main as usize].death;
         assert!(d.player && d.victim == p.seat_id(0), "seed {}: the take it opens on is his: {:?}", seed, d);
         assert_eq!(d.cause, RecapCause::Round, "seed {}", seed);
         assert_eq!(d.by, p.id_of(by), "seed {}: it names the man", seed);
@@ -94,7 +94,7 @@ fn the_card_is_shut_while_he_plays_and_names_the_man_who_shot_him_when_he_is_dow
         q.seat_goes_down(0);
         q.frame();
         let card = q.recap_card().expect("he is down");
-        let d = &card.takes[card.main].death;
+        let d = &card.takes[card.main as usize].death;
         assert!(d.player && d.cause == RecapCause::Unknown && d.by == -1.0 && d.by_name.is_empty() && d.from.is_none(), "seed {}: nobody fired, nobody is named: {:?}", seed, d);
     }
 }
@@ -144,7 +144,7 @@ fn in_a_game_of_two_the_card_stays_shut_until_both_are_down() {
         p.frame();
         let card = p.recap_card().expect("both are down");
         assert_eq!(card.takes.len(), 2, "seed {}: a take a man", seed);
-        assert_eq!(card.takes[card.main].death.victim, second, "seed {}: it opens on the last player to go down", seed);
+        assert_eq!(card.takes[card.main as usize].death.victim, second, "seed {}: it opens on the last player to go down", seed);
         drop(card);
         drop(p);
         // CONTROL: with one seat the same fall opens it at once.

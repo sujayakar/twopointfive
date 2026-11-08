@@ -32,6 +32,12 @@ pub fn with_the(n: &str) -> String {
 /// THE LEVEL'S OWN NAMES for its floor, first match wins; null on the office and on a level that names nothing.   (dialogue.ts levelRects)
 pub fn level_rects(g: &mut crate::game::Game) -> Option<Vec<crate::dialogue::PlaceRect>> {
     if let Some(r) = g.m.dialogue.own_rects.as_ref() { return r.clone(); }
+    let r = level_rects_read(g);
+    g.m.dialogue.own_rects = Some(r.clone());
+    r
+}
+/// the same, worked out and kept nowhere, for whoever holds the game shared
+pub fn level_rects_read(g: &crate::game::Game) -> Option<Vec<crate::dialogue::PlaceRect>> {
     let mut r: Option<Vec<PlaceRect>> = None;
     if !is_office(g) {
         let mut out: Vec<PlaceRect> = Vec::new();
@@ -59,7 +65,6 @@ pub fn level_rects(g: &mut crate::game::Game) -> Option<Vec<crate::dialogue::Pla
         }
         if !out.is_empty() { r = Some(out); }
     }
-    g.m.dialogue.own_rects = Some(r.clone());
     r
 }
 /// ownPlace with the rectangle's place in the list, the identity watchedPlace compares   (dialogue.ts ownPlace)

@@ -28,7 +28,7 @@ import { standUp, ROOT } from './headless.ts';
 const { RESCUE } = await import(`${ROOT}/src/game/rescue.ts`), { RESCUEEND } = await import(`${ROOT}/src/game/rescueend.ts`);
 const { lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);
 const { sideOf } = await import(`${ROOT}/src/game/orders.ts`);
-const { roomOf } = await import(`${ROOT}/src/game/chronicle.ts`);
+const { roomOf } = await import(`${ROOT}/src/game/rooms.ts`);
 const { PLAYER_ID, INTERACT_KEY } = await import(`${ROOT}/src/game/consts.ts`);
 
 type Vec3 = [number, number, number];

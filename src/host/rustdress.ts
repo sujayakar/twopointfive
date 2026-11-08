@@ -32,7 +32,6 @@ import { gpuFx } from '../game/particleFx';
 import { WIND } from '../game/wind';
 import { blastFeelStages } from '../game/blastFeel';
 import { updateSnowBreath } from '../game/snowBreath';
-import { recapTick } from '../game/deathrecap';
 import { civiliansShown } from '../game/civilians';
 
 /** ms of the last dress step by line, and the lines that threw (each named once: a picture-only line that throws must not stop the game) */
@@ -73,7 +72,6 @@ export function dressStep(g: Game, dt: number, side: SideList): void {
   run('men', () => { G.menAll = all; G.menStatured = statured; G.menBare = false; G.drawMen(all, statured, false, DRESS.men); });
   run('snowBreath', () => updateSnowBreath(g, dt));
   if (DRESS.snow) run('snowTracks', () => G.stepSnowTracks(dt));
-  if (DRESS.recap) run('recap', () => recapTick(g));
   // ---- the side list onto the frame's list, past a filter of its own: with the fog of war off everything; else a box with no thing's key where the team
   // sees its cell, and a keyed one as it is (the moths). STAND-IN: a fixture's piece is treated as unkeyed, so one that fell unseen is not kept where it
   // was last seen. Belongs in the Rust tick (these boxes made there, before its own fog pass), with WallSkin's boxes, which nothing here makes.

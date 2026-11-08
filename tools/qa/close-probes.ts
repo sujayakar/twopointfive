@@ -93,7 +93,7 @@ const markerOf = (g: any, A: any) => g.interactables.find((x: any) => x.kind ===
 /** sit A down where he stands and run the frames it takes; → frames (−1 = never inside `max`) */
 function seatDown(S: any, max = 150): number { const { W, g, A } = S; if (!closeSeat(g, A)) return -1; for (let i = 1; i <= max; i++) { W.step(DT); g.player.visibility = 0.02; if (closeSeated(g, A)) return i; } return -1; }
 const { sightGain, lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);
-const { fmtEvent } = await import(`${ROOT}/src/game/chronicle.ts`);
+const { rowsOf: cardRows } = await import('./debrief-read.ts');;
 /** what the animator agent still owes character.ts when a check that reads it fails */
 const WAIT = 'WAITING ON THE ANIMATOR (character.ts)';
 /** the bearings the ask is held at: every 30° round him */
@@ -309,7 +309,7 @@ function blow(S: any, bDeg: number, d: number, button: 1 | 4, who: any = S.A, pr
     if (deadAt < 0 && A.state === 'dead') { deadAt = f; yawErr = wrapAngle(Math.atan2(p0[0] - pl.char.pos[0], p0[2] - pl.char.pos[2]) - pl.char.bodyYaw); } };
   look(); for (f = 1; f <= 100; f++) { W.step(DT); pl.visibility = 0.02; look(); }
   const takes: Record<string, number> = {}; for (const k of Object.keys(takes0)) takes[k] = (CLOSE_STATS.takes as any)[k] - (takes0 as any)[k];
-  const rows = g.chronicle.events.slice(ev0).map((e: any) => ({ kind: e.kind as string, weapon: e.data?.weapon as string | undefined, text: fmtEvent(e) as string }));
+  const said = cardRows(g), rows = g.chronicle.events.slice(ev0).map((e: any, i: number) => ({ kind: e.kind as string, weapon: e.data?.weapon as string | undefined, text: `${said[ev0 + i]?.text ?? ''}` }));
   return { at, row, td0, p0, minD, deadAt, yawErr, slid: distXZ(pl.char.pos, sam0), endD: distXZ(pl.char.pos, p0), ev, takes, rows, knife0, knife1,
     kills: g.mission.stats.kills - st0.kills, kos: g.mission.stats.knockouts - st0.knockouts, knifeBlows: CLOSE_STATS.blows.knife - bl0.knife, koBlows: CLOSE_STATS.blows.knockout - bl0.knockout,
     dead: A.state === 'dead', breathing: isBreathing(A), down: A.downKind as string | null, over: !pl.takedown };

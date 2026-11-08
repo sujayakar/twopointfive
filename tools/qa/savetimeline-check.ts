@@ -32,7 +32,7 @@ const { rollcallState } = await import(`${ROOT}/src/game/guards.ts`);
 const { ambientState } = await import(`${ROOT}/src/game/dialogue.ts`);
 const { MOVES, TURN } = await import(`${ROOT}/src/game/character.ts`);
 const { takeSnapshot, snapshotBytes, stateHash, restoreSnapshot } = await import(`${ROOT}/src/game/rollback.ts`);
-const { roomOf } = await import(`${ROOT}/src/game/chronicle.ts`);
+const { roomOf } = await import(`${ROOT}/src/game/rooms.ts`);
 const { hostileTo } = await import(`${ROOT}/src/game/teams.ts`);
 
 const DT = 1 / 60, BREAK = process.env.SAVETIMELINE_BREAK === '1', VERBOSE = !!process.env.SAVETIMELINE_VERBOSE, P = 'twopointsix.save.';

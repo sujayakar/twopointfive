@@ -114,7 +114,7 @@ async function bridge(): Promise<any> {
 interface KeptGame { game: any; rustKept: number; host: RustHost }
 let OWN = 0;
 function snaps(SS: any): void { const N = SS.SNAPS, take = N.take, put = N.put; let own: boolean = N.own;
-  N.take = (g: any, since?: any) => { const H: RustHost | undefined = g?.rustHost; return H?.keeps() ? H.snapTake() : take(g, since?.rustKept ? undefined : since); };
+  N.take = (g: any, since?: any, label?: string) => { const H: RustHost | undefined = g?.rustHost; return H?.keeps() ? H.snapTake(label) : take(g, since?.rustKept ? undefined : since); };
   N.put = (k: any) => { if (k?.rustKept) (k.host as RustHost).snapPut(k); else put(k); };
   Object.defineProperty(N, 'own', { configurable: true, enumerable: true, get: () => own || OWN > 0, set: (v: boolean) => { own = v; } }); }
 /** the tool's line that asked: the first frame of the stack under tools/ that is not the harness's or the bridge's own */
@@ -274,13 +274,13 @@ export class RustHost {
     if (o.die !== null && !g.dice) g.dice = B.newDice(o.die ?? 20942);
     // (hung as fields no walk of the game's own keys meets: rollback.ts `stateHash` walks them, and a stand's word must not change for being a puppet)
     hang(g, 'stepSeats', function (dt: number, cmds: readonly any[]) { H.step(dt, cmds); });
-    hang(g, 'rustHost', H); hang(g, 'rustSurface', H); hang(g, 'stateWords', () => ({ die: H.dieN(), parts: H.hashes() })); hang(g, 'wholeWords', () => H.wholeWords()); hang(g, 'wholeNames', () => H.wholeNames()); hang(g, 'verdictNow', () => H.verdict()); hang(g, 'viewAsk', () => H.view()); Object.defineProperty(g, 'askHost', { configurable: true, enumerable: false, get: () => H.ask() }); hang(g, 'quietRun', (on: boolean) => { if (on) H.quietBegin(); else H.quietEnd(); }); B.surfaceHost(H); (globalThis as any).__tpsCall.inHook = () => H.inHook(); { const up = g.update; hang(g, 'update', function (this: any, ...a: any[]) { H.busy++; BUSY.n++; try { return up.apply(this, a); } finally { H.busy--; BUSY.n--; H.auditGap = SCAN_AUDIT > 0 && H.k % SCAN_AUDIT === 0; H.scanRebase(); if (STALE_EVERY && process.env.RH_STALE && H.k > 0 && H.k % STALE_EVERY === 0 && H.busy === 0) H.staleLook(); } }); } H.taps(g);
+    hang(g, 'rustHost', H); hang(g, 'debriefAsk', () => H.debriefView()); hang(g, 'rustSurface', H); hang(g, 'stateWords', () => ({ die: H.dieN(), parts: H.hashes() })); hang(g, 'wholeWords', () => H.wholeWords()); hang(g, 'wholeNames', () => H.wholeNames()); hang(g, 'verdictNow', () => H.verdict()); hang(g, 'viewAsk', () => H.view()); Object.defineProperty(g, 'askHost', { configurable: true, enumerable: false, get: () => H.ask() }); hang(g, 'quietRun', (on: boolean) => { if (on) H.quietBegin(); else H.quietEnd(); }); B.surfaceHost(H); (globalThis as any).__tpsCall.inHook = () => H.inHook(); { const up = g.update; hang(g, 'update', function (this: any, ...a: any[]) { H.busy++; BUSY.n++; try { return up.apply(this, a); } finally { H.busy--; BUSY.n--; H.auditGap = SCAN_AUDIT > 0 && H.k % SCAN_AUDIT === 0; H.scanRebase(); if (STALE_EVERY && process.env.RH_STALE && H.k > 0 && H.k % STALE_EVERY === 0 && H.busy === 0) H.staleLook(); } }); } H.taps(g);
     if (process.env.TPS_GAME_SAY) process.on('exit', () => { const L = [...H.calls].sort((a, b) => b[1] - a[1]).slice(0, 60); process.stderr.write(`rust-host: ${H.k} ticks; scan ${(H.T.scan / Math.max(1, H.k)).toFixed(2)} ms a tick; ${H.pokeSyncs} exports after a walk that poked; ${H.scan?.stats?.().deepMissed ?? 0} WRITES THE WALK'S CHEAP WORD DID NOT SEE (found by its audit: ${(H.scan?.stats?.().missed ?? []).join(', ')}); ${H.asksRefused} asks refused; ${H.scan?.stats?.().refused ?? 0} WRITES NOT SENT (a leaf that named a row the Rust game has not got: ${(H.scan?.stats?.().refusedLeaves ?? []).join(', ')}); ${JSON.stringify(H.scan?.stats?.() ?? null)}\n` + L.map(([n, c]) => `  ${c} ${n}\n`).join('')); });
     if (o.out) for (const f of ['writeback.txt', 'gives.txt']) writeFileSync(`${o.out}/${f}`, '');
     return H; }
   private startDue = false;
   /** the Rust game is let go (its slot is free for another) and the game steps in TypeScript again */
-  detach(): void { this.unkeepAll(); letGo(this.cell); if (RustHost.last === this) RustHost.last = null; delete this.g.stepSeats; delete this.g.rustHost; delete this.g.stateWords; delete this.g.wholeWords; delete this.g.wholeNames; delete this.g.verdictNow; delete this.g.viewAsk; delete this.g.askHost; delete this.g.quietRun; delete this.g.rustSurface; delete this.g.update; delete this.g.restartEncounter; this.B.surfaceHost(null, this); }
+  detach(): void { this.unkeepAll(); letGo(this.cell); if (RustHost.last === this) RustHost.last = null; delete this.g.stepSeats; delete this.g.rustHost; delete this.g.debriefAsk; delete this.g.stateWords; delete this.g.wholeWords; delete this.g.wholeNames; delete this.g.verdictNow; delete this.g.viewAsk; delete this.g.askHost; delete this.g.quietRun; delete this.g.rustSurface; delete this.g.update; delete this.g.restartEncounter; this.B.surfaceHost(null, this); }
   /** the hosts whose Rust game stands in a slot, and when each last stepped */
   private static clock = 0; private static last: RustHost | null = null; private stamp = 0; evicted = 0;
   /** this game's slot goes to another: the puppet takes the whole state, the Rust game is let go; a later step starts a new one from the puppet */
@@ -312,9 +312,9 @@ export class RustHost {
     CELLS.add(this.cell); this.stamp = ++RustHost.clock; this.giveList(); if (!this.audit) { this.tapsOn ??= B.makeTaps(g, B.hooks.classes, (id: number, on: boolean) => { X.face_tap(this.h, id, on ? 1 : 0); }); this.tapsOn.reset(); }
     this.slot = X.face_slot(this.h); }
   /** what a later step holds the puppet to, to tell a game the TypeScript put in the puppet's place from the one the Rust game steps */
-  private refs(): void { const g = this.g; this.missionRef = g.mission; this.t0Ref = g.mission?.t0; this.loadsRef = g.chronicle?.counts?.loads ?? 0; this.putRef = this.B.PUT_BACKS.n; this.clockRef = this.clock(); this.stageRef = this.endMark(); this.downRef = this.downCount(); this.savesRef = g.chronicle?.counts?.saves ?? 0; }
+  private refs(): void { const g = this.g; this.missionRef = g.mission; this.t0Ref = g.mission?.t0; this.loadsRef = g.chronicle?.counts?.loads ?? 0; this.putRef = this.B.PUT_BACKS.n; this.clockRef = this.clock(); this.stageRef = this.endMark(); this.downRef = this.downCount(); }
   private clock(): string { const g = this.g; return `${g.time}|${g.eventSeq}|${g.dice?.n}`; }
-  private t0Ref: unknown = undefined; private putRef = 0; private clockRef = ''; private savesRef = 0; private dueWhy = '';
+  private t0Ref: unknown = undefined; private putRef = 0; private clockRef = ''; private dueWhy = '';
   /** IS A NEW START OWED as a tick opens, and why (null: the Rust game goes on; 'back': it stands again from its own kept bytes).
    *  A START IS WHAT THE STAGE SAYS BEGAN: the mission's clock began again (`mission.t0`), a checkpoint's file was loaded on the puppet, a snapshot was put
    *  back on it. A mission RECORD swapped for a copy of itself (the old tour, src/game/demo.ts: `g.mission = { ...saved }` for a beat, the saved one back
@@ -347,23 +347,18 @@ export class RustHost {
     // moment's, which is what parted the scripted player's first round after a load on a squad mission). `snapTake` hands them in before the keep.
     // (What may go on differing in the host's half afterwards is the lens's serial, the bridge's own count of the camera's `desired` arrays. No rule reads it.)
     this.told = -1; this.hostNow = OFF.has('backcam'); try { this.applyWhole(why); } finally { this.hostNow = true; } this.tellShown(); X.face_puppet(this.h, 1); this.refs(); this.scanRebase(); this.shelfSig = ''; this.backs++; if (this.rec) this.rec.backs = this.backs; }
-  /** A SAVE (savestate.ts writeMem, through SNAPS.take). The controller has just written the chronicle's row on the puppet; the row is made on the Rust
-   *  side first (`face_checkpoint`), so the kept game holds it. No state is walked in TypeScript and nothing is applied whole. */
+  /** A SAVE (savestate.ts writeMem, through SNAPS.take). The chronicle's row is made on the Rust side first, under the save's label (`face_checkpoint`), so the kept game holds it. No state is walked in TypeScript and nothing is applied whole. */
   /** THE START MADE NOW, by whoever stood the game, where its first tick must cost a tick: a networked game's machine (tools/mp/stand.ts `begin`),
    *  whose server's clock runs from the first record. Left to the first step it is paid there: the whole export, the Rust start and the puppet's
    *  first apply, over a second on a small box. A start that is not owed is not made */
   startNow(): void { const why = this.startWhy(); if (why === 'back') this.restep(); else if (why !== null) this.start(why); }
-  snapTake(): KeptGame { const g = this.g, X = this.F.X;
+  snapTake(label?: string): KeptGame { const g = this.g, X = this.F.X;
     { const why = this.startWhy(); if (why === 'back') this.restep(); else if (why !== null) this.start(why); }
-    // (the row the controller has just written on the puppet is held out of the walk: carried by name AND made by `face_checkpoint` it stood twice in
-    // the Rust game's chronicle, wherever the walk had met the list before. Found by the squad fuzz's whole states, never by a tick's line.)
-    { const C0 = g.chronicle?.counts, Ev0 = g.chronicle?.events, mine = !!C0 && (C0.saves | 0) !== this.savesRef && Ev0?.[Ev0.length - 1]?.kind === 'checkpoint', row = mine && !OFF.has('saverow') ? Ev0.pop() : null;
-      try { if (!this.inStep) this.scanFlush(); } finally { if (row) Ev0.push(row); } }
+    if (!this.inStep) this.scanFlush();
     // (A SAVE BETWEEN TWO TICKS keeps the host's camera and Input as the host has moved them since the tick: the TypeScript's snapshot walks them as they
     // stand, so the kept game takes them first. Inside a tick they are the rows the tick opened with on both sides.)
     if (!OFF.has('backcam')) this.handHalf();
-    const C = g.chronicle?.counts; if (C && (C.saves | 0) !== this.savesRef) { const Ev = g.chronicle.events, e = Ev[Ev.length - 1], label = e?.kind === 'checkpoint' ? String(e.label ?? e.data?.label ?? '') : '';
-      this.F.hand(enc.encode(label), (p, n) => X.face_checkpoint(this.h, p, n)); this.savesRef = C.saves | 0; this.tookRow = true; }
+    if (label !== undefined) { this.F.hand(enc.encode(label), (p, n) => X.face_checkpoint(this.h, p, n)); this.tookRow = true; }
     // (every kept game no slot of the controller's names any more is let go: a ring's slot taken again, a new run's shelf)
     { const sh = g.saves?.shelf, live = new Set<number>(); if (sh?.all) { for (const e of sh.all()) live.add(e.snap?.rustKept | 0); live.add(sh.last?.rustKept ?? 0); for (const k of [...this.keptShelf]) if (!live.has(k)) { X.face_kept_drop(k); this.keptShelf.delete(k); } } }
     const k = this.keep(); this.keptShelf.add(k); this.count('a save: the Rust game kept in the module (face_keep)');
@@ -379,7 +374,7 @@ export class RustHost {
    *  host's switches and the tune's rows as they stand now, which the controller lays over the saved moment's on the puppet (savestate.ts:1129). */
   private settle(): boolean { const X = this.F.X; if (!this.h) return false;
     if (this.backDue) { const b = this.backDue; this.backDue = null; this.tookRow = false; this.F.hand(enc.encode(b.label), (p, n) => X.face_loaded(this.h, p, n, b.loads, b.saves)); this.applyStep(); this.refs(); return true; }
-    if (this.tookRow) { this.tookRow = false; this.applyStep(); this.savesRef = this.g.chronicle?.counts?.saves ?? 0; return true; }
+    if (this.tookRow) { this.tookRow = false; this.applyStep(); return true; }
     return false; }
   private cutDue = false; private shelfSig = '';
   /** THE CONTROLLER'S SHELF AS THE TICK READS IT (Enter once down asks for this run's newest save, player.ts:493; the Rust game's `g.saves` is no part of
@@ -434,6 +429,9 @@ export class RustHost {
    *  the same record). Blank while no Rust game of this host stands: before the first tick, with a new start due, after this game's slot was given up */
   view(): any { if (!this.h || this.startDue || this.audit) return { mission: null }; if (!this.inApply && !this.inStep && !this.quietOn && this.busy === 0) this.scanFlush(); this.tellShown();
     try { this.F.X.face_tick_view(this.h); } catch (e) { throw new Error(`the Rust game's view panicked: ${this.F.panicText() || String(e)}`); } return this.B.readRecord(this.g, 'crate::view::TickView', this.F.outView().slice()); }
+  /** WHAT THE END CARD SHOWS OF THE RUN, asked of the Rust game as it stands (src/view/debriefview.ts: the page draws the same record) */
+  debriefView(): any { if (!this.h || this.startDue || this.audit) return null; if (!this.inApply && !this.inStep && !this.quietOn && this.busy === 0) this.scanFlush(); this.tellShown();
+    try { this.F.X.face_debrief_view(this.h); } catch (e) { throw new Error(`the Rust game's debrief panicked: ${this.F.panicText() || String(e)}`); } return this.B.readRecord(this.g, 'crate::view::DebriefView', this.F.outView().slice()); }
   /** THE BOX WORLD ASKED of the Rust game (src/view/worldask.ts), with whatever the tool has written since the tick sent first; null while no Rust game of this host stands */
   ask(): any { if (!this.h || this.startDue || this.audit || this.inApply) return null; const X = this.F.X, out = (n: number) => new Float64Array(this.F.outView().slice().buffer, 0, n);
     const ask = <T>(f: () => T): T => { if (this.askedAt !== this.stamp && !this.inStep && !this.quietOn && this.busy === 0) { this.askedAt = this.stamp; this.scanFlush(); } try { return f(); } catch (e) { throw new Error(`a question of the Rust game's boxes panicked: ${this.F.panicText() || String(e)}`); } };   /* (a tool's writes are sent once a step: a walk a question would be a walk a line) */
@@ -527,7 +525,7 @@ export class RustHost {
   // holds it to the list by identity (the soak's `selector-highlight`; the scripted player's own highlight). The bridge carries `Game.hover` as a value,
   // so the apply leaves a row of its own beside the list. Put back on the list's row here. Belongs in the schema: `hover` a reference into `nearby`.
   private hoverRow(): void { const g = this.g, hv = g.hover, N = g.nearby; if (!hv || !Array.isArray(N) || N.includes(hv) || OFF.has('hoverrow')) return; const r = N[g.player?.nearSel ?? 0]; if (r && r.kind === hv.kind && r.verb === hv.verb) g.hover = r; }
-  private after(R: any): void { this.asks?.after(); this.took(R); this.hoverRow(); this.visApplied = this.g.player?.visibility; this.hoverApplied = this.g.hover; this.dieRef = this.g.dice?.n; this.clockRef = this.clock(); this.putRef = this.B.PUT_BACKS.n; if (!this.startDue) this.loadsRef = this.g.chronicle?.counts?.loads ?? 0; if (!this.tookRow) this.savesRef = this.g.chronicle?.counts?.saves ?? 0; }
+  private after(R: any): void { this.asks?.after(); this.took(R); this.hoverRow(); this.visApplied = this.g.player?.visibility; this.hoverApplied = this.g.hover; this.dieRef = this.g.dice?.n; this.clockRef = this.clock(); this.putRef = this.B.PUT_BACKS.n; if (!this.startDue) this.loadsRef = this.g.chronicle?.counts?.loads ?? 0; }
   private copyBlock(): void { const t = now(), mine = this.tsBlock(), theirs = this.rustBlock(); mine.set(theirs.subarray(0, mine.length)); if (this.audit) this.lastBlock = mine.slice(); this.T.block += now() - t; }
   /** THE FILTERED APPLY: the listed fields of what changed since the last one, and the step's out events */
   applyStep(): void {
@@ -822,10 +820,9 @@ export class RustHost {
       // `R.drills`). The Rust side stops it first and the puppet takes that, so the controller finds no program running and keeps the floor as it is.
       if (S?.authored && X.face_stop_program?.(this.h)) { this.count('an authored checkpoint: the level\'s program stopped on the Rust side before the take'); this.applyStep(); if (this.audit) rust = this.applyWhole('audit'); }
       if (S && !this.audit && !this.wholeNow && !this.keeps() && (S.authored || S.hand || S.due)) this.applyWhole('a save is due');
-      const s0 = g.chronicle.counts.saves; try { S?.tick(g, dt); } catch (e) { this.count(`saves.tick THREW on the puppet: ${String((e as any)?.message ?? e).slice(0, 120)}`); }
-      if (g.chronicle.counts.saves !== s0) { const Ev = g.chronicle.events, e = Ev[Ev.length - 1], label = e?.kind === 'checkpoint' ? String(e.label ?? e.data?.label ?? '') : ''; this.count('saves.tick took a checkpoint (made on the Rust side by face_checkpoint)'); this.wrote.push(`${k} chron_save ${JSON.stringify(e?.kind === 'checkpoint' ? (e.label ?? e.data?.label ?? '') : 'NOT-LAST')}`);
-        // (a save kept as a Rust game made the row on the Rust side as it was taken, before the clone: `snapTake`)
-        if (this.tookRow) this.tookRow = false; else this.F.hand(enc.encode(label), (p, n) => X.face_checkpoint(this.h, p, n)); this.applyStep(); if (this.audit) rust = this.applyWhole('audit'); this.dispatch(); }
+      try { S?.tick(g, dt); } catch (e) { this.count(`saves.tick THREW on the puppet: ${String((e as any)?.message ?? e).slice(0, 120)}`); }
+      // (a save kept as a Rust game made the row on the Rust side as it was taken, before the clone: `snapTake`)
+      if (this.tookRow) { this.tookRow = false; this.count('saves.tick took a checkpoint (made on the Rust side by face_checkpoint)'); this.applyStep(); if (this.audit) rust = this.applyWhole('audit'); this.dispatch(); }
       // (a load inside the controller's tick, Enter once down: the kept game stands again and the puppet took it whole; the controller's lines after it)
       if (this.backDue) { this.settle(); this.dispatch(); } }
     this.T.dress += now() - t - (this.nest - nest0);
