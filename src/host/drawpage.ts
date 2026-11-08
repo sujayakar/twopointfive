@@ -29,11 +29,14 @@ import { EVENPACE, FLIGHT_PAGE, pacer, pageRoom, rateMeter } from './pace';
 import { PLAN_PACE } from '../render/planPace';
 import { RENDER_PASSES } from '../gpu/timer';
 import { DrawGame, GameLost } from './drawgame';
+import { knobPanel } from './knobpanel';
 import { lostCard } from './lostcard';
 import { camKey, keysBoot } from './keymap';
 import { Section, Sky, View } from '../draw/sections';
 import { AudioEngine } from '../audio/audio';
 import { askOf } from '../draw/ask';
+import { rimsFrom } from '../draw/rims';
+import { makeOutlineFrame } from '../render/outline';
 import { DrawEvents } from '../draw/events';
 import { Particles } from '../render/particles';
 import { DrawReach, doorways } from '../draw/reach';
@@ -108,7 +111,7 @@ async function main(): Promise<void> {
   const fog = makeFogFrame(), ask = askOf(game), audio = new AudioEngine(ask), events = new DrawEvents(D, engine.particles, smoke, audio, i => game.nameOf(i));
   if (q.has('mute')) { audio.volume.master = 0; audio.start = () => { /* silent */ }; }
   for (const ev of ['pointerdown', 'keydown'] as const) window.addEventListener(ev, () => audio.start(), { capture: true });   // (a browser's sound begins with a hand on the page)
-  engine.fogFrame = fog; engine.beams = world.beams;
+  engine.fogFrame = fog; const rims = engine.outline = makeOutlineFrame(); engine.beams = world.beams;
   const lights = new DrawLights(engine.lights, D); lights.from();   // (the lights stand too: their reach is worked out of the level as it opens)
   const reach = new DrawReach(engine, world, gaps);
 
@@ -172,7 +175,7 @@ async function main(): Promise<void> {
     cam.frame();
     for (let i = 0; i < plan.ticks; i++) { if (i) input.endTick(); tick(1 / FIXEDSTEP.hz); }
     D.fresh();
-    skyFrom(engine, D); fogFrom(fog, D);
+    skyFrom(engine, D); fogFrom(fog, D); rimsFrom(rims, D, dt);
     { const o = view(); engine.settings.nvAmount = D.f[o + View.night]; engine.settings.hitFlash = D.f[o + View.hit]; }
     game.look(lookNumbers(engine.settings, engine.world, !!ch.cast));
     const t1 = performance.now();
@@ -218,7 +221,7 @@ async function main(): Promise<void> {
       if (e instanceof GameLost) { lostCard(document.getElementById('app')!, e, { kept: () => game.kept(), back: standAgain }, e.tick - backAt < 120); return; }
       console.error(e); showFatal(`The frame loop threw and has been stopped:\n\n${(e as Error)?.stack ?? e}`); }
   };
-  loading.style.display = 'none';
+  loading.style.display = 'none'; knobPanel(document.getElementById('app')!, game);
   // (for a tool: the page's parts, and frames stepped by hand)
   Object.assign(window, { __draw: { game, engine, world, audio, cam, input, quality, told, fog, get held() { return held; }, set held(v: boolean) { held = v; last = performance.now(); }, run: (n: number, keys: string[] = [], drawn: 'none' | 'last' | 'all' = 'last') => { for (const k of keys) input.keys.add(k); try { for (let i = 0; i < n; i++) frame(1 / 60, 1, drawn === 'all' || (drawn === 'last' && i === n - 1)); } finally { for (const k of keys) input.keys.delete(k); } } } });
   requestAnimationFrame(loop);
