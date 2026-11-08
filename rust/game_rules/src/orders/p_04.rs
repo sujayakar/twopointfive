@@ -502,7 +502,7 @@ pub fn squad_orders_all_in(g: &mut crate::game::Game) {
         if !fell_in { every = false; break; }
     }
     if every { return; }
-    squad_orders_give(g, "fallIn", Some(&t), None, Some(&opts_men(men, None)));
+    squad_orders_give(g, crate::orders::rows::fallin::ORDER.id, Some(&t), None, Some(&opts_men(men, None)));
 }
 
 /// The quick key's own order on `t`, given by hand: the entry the men pick, else the target's first row. (orders.ts quickGive)
@@ -525,13 +525,13 @@ pub fn squad_orders_quick_for(g: &mut crate::game::Game, men: &[GuardId], t: &cr
     let to: Vec<GuardId> = a.men.clone().unwrap_or_else(|| men.to_vec());
     if a.why == Why::Set {
         let lines = crate::autopilot::restack_lines();
-        squad_orders_again(g, "stack", t, &to, &lines);
+        squad_orders_again(g, crate::orders::rows::stack::ORDER.id, t, &to, &lines);
         g.stats.autopilot.again += 1;
         return None;
     }
     let here = at_sam(g, &crate::seats::here(g));
     if a.word {
-        squad_orders_give(g, "go", Some(&here), None, Some(&opts_men(to, None)));
+        squad_orders_give(g, crate::orders::rows::go::ORDER.id, Some(&here), None, Some(&opts_men(to, None)));
     } else if text(&a.id) {
         let ack = crate::squadnet::why_words(g, &a).map(|w| w.ack);
         squad_orders_give(g, a.id.as_deref().unwrap(), Some(t), None, Some(&opts_men(to, ack)));
@@ -548,7 +548,7 @@ pub fn squad_orders_quick_for(g: &mut crate::game::Game, men: &[GuardId], t: &cr
 pub fn squad_orders_cover_for(g: &mut crate::game::Game, men: &[GuardId], at: V3) -> bool {
     let n = g.orders.group;
     let t = OrderTarget::Floor(OrderTargetFloor { at, wall: None, thing: None, serial: 0 });
-    squad_orders_give(g, "cover", Some(&t), None, Some(&opts_men(men.to_vec(), None)));
+    squad_orders_give(g, crate::orders::rows::cover::ORDER.id, Some(&t), None, Some(&opts_men(men.to_vec(), None)));
     g.orders.group != n
 }
 

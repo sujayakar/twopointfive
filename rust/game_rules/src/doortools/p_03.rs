@@ -463,7 +463,7 @@ pub fn door_tools_stack_left(g: &mut crate::game::Game, d: DoorId, post: &JsMap<
     for &m in left {
         let p = post.get(m).unwrap();
         let a = crate::orders::SquadOrdersAssignA {
-            order: String::from("stack"),
+            order: String::from(crate::orders::rows::stack::ORDER.id),
             post: Some(p.pos),
             face: Some(p.face),
             watch: Some([c[0], 1.05, c[2]]),

@@ -259,11 +259,11 @@ pub fn rescue_start_clock(g: &mut crate::game::Game, why: &str) {
         for &o in &up { if !crate::orders::squad_orders_has(g, &crate::seats::here(g), o) { idle.push(o); } }
         let target = crate::orders::OrderTarget::None(crate::orders::OrderTargetNone { at: [p[0], 0.0, p[2]], man: None });
         if idle.len() == up.len() {
-            crate::orders::squad_orders_give(g, "fallIn", Some(&target), Some(crate::orders::Who::All), None);
+            crate::orders::squad_orders_give(g, crate::orders::rows::fallin::ORDER.id, Some(&target), Some(crate::orders::Who::All), None);
         } else {
             for &o in &idle {
                 let at = match crate::orders::squad_orders_squad(g, &crate::seats::here(g)).iter().position(|&x| x == o) { Some(i) => i as f64, None => -1.0 };
-                crate::orders::squad_orders_give(g, "fallIn", Some(&target), Some(crate::orders::Who::Num(at)), None);
+                crate::orders::squad_orders_give(g, crate::orders::rows::fallin::ORDER.id, Some(&target), Some(crate::orders::Who::Num(at)), None);
             }
         }
         if !idle.is_empty() { g.rescue.last_order = last_log_order(g, &crate::seats::here(g)); }
@@ -827,7 +827,7 @@ pub fn rescue_post(g: &mut crate::game::Game, op: GuardId, look: Option<V3>, doo
     };
     let words = match door { Some(door) if !door.is_empty() => format!("covering {}", door), _ => String::from("holding") };
     crate::orders::squad_orders_assign(g, op, &crate::orders::SquadOrdersAssignA {
-        order: String::from("cover"), post: Some([p[0], 0.0, p[2]]), face: Some(y), watch: Some(watch),
+        order: String::from(crate::orders::rows::cover::ORDER.id), post: Some([p[0], 0.0, p[2]]), face: Some(y), watch: Some(watch),
         stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim),
         going: words.clone(), there: words,
         ..Default::default()

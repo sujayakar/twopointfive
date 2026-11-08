@@ -203,7 +203,7 @@ pub fn hold_fire_drill(g: &mut crate::game::Game, by: Option<PlayerId>) {
         Some(by) => by,
         None => lead_of(g, &crate::seats::here(g)),
     };
-    lift(g, LiftWhy::Drill, "go", by, None);
+    lift(g, LiftWhy::Drill, crate::orders::rows::go::ORDER.id, by, None);
 }
 
 /// Is this loud teammate under the hold this frame.   (holdfire.ts held)

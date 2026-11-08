@@ -158,7 +158,7 @@ pub fn rails_note_given(g: &mut crate::game::Game, o: &str) {
     let t = match step_at(&s.l, s.i) { Some(t) => t, None => return };
     let a = match &t.after { Some(a) => a, None => return };
     if g.rails.gave_step != s.i { g.rails.gave_step = s.i; g.rails.gave = 0.0; }
-    if o == "go" {
+    if o == crate::orders::rows::go::ORDER.id {
         if word_of(&a.word) { g.rails.gave = 2.0; g.rails.gave0 = g.time; g.rails.gave_t = g.time; }
         return;
     }
@@ -271,7 +271,7 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId, cam: CameraId, dt: 
     // (a word that sends nobody is still the step's word given)
     if word {
         let go = rails_lesson(g).map_or(false, |s| step_at(&s.l, s.i).and_then(|t| t.after.as_ref()).map_or(false, |w| word_of(&w.word) && !word_of(&w.line)));
-        if go { rails_note_given(g, "go"); }
+        if go { rails_note_given(g, crate::orders::rows::go::ORDER.id); }
     }
 }
 
@@ -510,7 +510,7 @@ pub fn rails_hold_here(g: &mut crate::game::Game, gd: GuardId, low: Option<bool>
     let c = g.gd[gd].ch;
     let (p, yaw) = (g.ch[c].pos, g.ch[c].body_yaw);
     let a = crate::orders::SquadOrdersAssignA {
-        order: String::from("hold"),
+        order: String::from(crate::orders::rows::hold::ORDER.id),
         post: Some([p[0], 0.0, p[2]]),
         face: Some(yaw),
         stance: Some(crate::character::Stance::LowReady),
