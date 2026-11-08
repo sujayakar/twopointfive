@@ -105,45 +105,76 @@ fn a_walls_menu_copies_no_row() {
     }
 }
 
-/// THE RULE: the quick key's words on the panel are the row its press gives, for what that seat's cursor is on; none while a menu is up.
-/// A FAILURE MEANS: the panel and the press have gone back to asking apart.
+/// the line the key's press on `t` must have shown: the row's words, then what it is on, unless it is on nothing and no man
+fn line_of(p: &Play, row: String, t: &game::orders::OrderTarget) -> String {
+    if matches!(t, game::orders::OrderTarget::None(n) if n.man.is_none()) { return row; }
+    format!("{} · {}", row, game::orders::squad_orders_hover_words(&p.g, Some(t)))
+}
+/// the quick key's line on this player's panel
+fn panel(p: &Play, seat: usize) -> Option<String> { p.view_of(seat).squad.and_then(|s| s.quick).map(|n| n.text) }
+
+/// THE RULE: the quick key's line on the panel is what its press gives (the row's own words, on what that seat's cursor is on), for a door, the floor and a
+/// teammate; none while a menu is up. A FAILURE MEANS: the panel and the press have gone back to asking apart.
 #[test]
-fn the_quick_keys_words_are_the_order_it_gives() {
+fn the_quick_keys_line_is_the_order_it_gives() {
     for s in SEEDS {
-        let mut p = yard(s);
-        p.run(1.0);
-        let (mut said, mut none) = (Vec::new(), 0);
-        for at in [[13.4, 16.0], [21.4, 16.0], [16.0, 24.0], [20.0, 22.0]] {
+        let mate_at = { let p = yard(s); p.at(p.mates()[1]) };
+        for (what, at) in [("a door", [13.4, 16.0]), ("the floor", [20.0, 22.0]), ("a teammate", mate_at)] {
+            let mut p = yard(s);
+            p.run(1.0);
             p.point_at(at);
             p.run(0.2);
-            let Some(words) = p.g.orders.shown.quick.clone() else { none += 1; continue };
+            let line = panel(&p, 0).unwrap_or_else(|| panic!("seed {s}: nothing on the panel on {what}"));
+            assert_eq!(p.g.orders.shown.quick.as_deref(), Some(line.as_str()), "seed {s}: the panel reads what the tick keeps");
+            // (what the press takes: the cursor's own target. A teammate under it, with the whole squad addressed, is the squad's: "fall in", on nobody)
+            let now = game::view::host_now(&p.g, p.host.input, p.host.cam, p.host.canvas);
+            let t = game::orders::hover(&p.g, &game::seats::seat(&p.g, p.g.seats[0]), &now).expect("the key is live");
             let n = p.g.orders.log.len();
-            let t = game::orders::squad_orders_target_at(&mut p.g, [at[0], 0.0, at[1]]);
             game::orders::squad_orders_quick_give(&mut p.g, &t);
-            assert!(p.g.orders.log.len() > n, "seed {s}: '{words}' is on the panel at {at:?} and the key gives nothing");
+            assert!(p.g.orders.log.len() > n, "seed {s}: '{line}' is on the panel on {what} and the key gives nothing");
             let id = p.g.orders.log.last().unwrap().order.clone();
             let d = p.g.orders.defs.iter().copied().find(|&d| p.g.tab.orders_order_def[d].id == id).unwrap();
             let row = game::orders::squad_orders_label_of(&mut p.g, d, &t);
-            assert_eq!(row, words, "seed {s}: the panel says '{words}' and the key gave '{id}'");
-            said.push(words);
+            assert_eq!(line, line_of(&p, row, &t), "seed {s}: on {what} the key gave '{id}'");
         }
-        assert!(said.len() >= 3, "seed {s}: the panel said {said:?}, and nothing on {none} of four");
+    }
+}
+
+/// THE CONTROL: with a menu up the key gives nothing of its own, and no line is kept or told.
+#[test]
+fn no_quick_line_with_a_menu_up() {
+    for s in SEEDS {
+        let mut p = yard(s);
+        p.run(1.0);
+        p.point_at([16.0, 24.0]);
+        p.run(0.2);
+        assert!(panel(&p, 0).is_some(), "seed {s}: the floor has a line");
         let t = game::orders::squad_orders_target_at(&mut p.g, [16.0, 0.0, 24.0]);
         game::orders::squad_orders_open(&mut p.g, Some(&t), None, None);
         p.run(0.1);
         assert_eq!(p.g.orders.shown.quick, None, "seed {s}: a menu is up");
+        assert_eq!(panel(&p, 0), None, "seed {s}: a menu is up");
     }
 }
 
-/// THE RULE: two players' panels are two: each seat keeps the words for its own cursor, whichever seat stands.
+/// THE RULE: two players' panels are two: each seat is told the line for its own cursor, whichever seat stands. A FAILURE MEANS: the second player reads the first's.
 #[test]
-fn each_seat_keeps_its_own_quick_words() {
+fn each_seat_keeps_its_own_quick_line() {
     for s in SEEDS {
         let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed: s, seats: 2, ..Default::default() });
         p.run(1.0);
         let (a, b) = (p.g.seats[0], p.g.seats[1]);
-        let g = &*p.g;
-        let (sa, sb) = (game::seats::seat(g, a).orders.shown.clone(), game::seats::seat(g, b).orders.shown.clone());
-        assert!(sa.quick.is_some() && sb.quick.is_some(), "seed {s}: {sa:?} and {sb:?}");
+        {
+            let g = &*p.g;
+            let (sa, sb) = (game::seats::seat(g, a).orders.shown.clone(), game::seats::seat(g, b).orders.shown.clone());
+            assert!(sa.quick.is_some() && sb.quick.is_some(), "seed {s}: {sa:?} and {sb:?}");
+            assert_eq!((panel(&p, 0), panel(&p, 1)), (sa.quick, sb.quick), "seed {s}: each panel reads its own seat's");
+        }
+        // the first player's menu takes his line and leaves the second's
+        let t = { let at = p.at(p.mates()[0]); game::orders::squad_orders_target_at(&mut p.g, [at[0] + 1.0, 0.0, at[1]]) };
+        game::orders::squad_orders_open(&mut p.g, Some(&t), None, None);
+        p.run(0.1);
+        assert_eq!(panel(&p, 0), None, "seed {s}: his menu is up");
+        assert!(panel(&p, 1).is_some(), "seed {s}: the other player has no menu up");
     }
 }

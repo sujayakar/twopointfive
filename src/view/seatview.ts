@@ -12,7 +12,7 @@ export type { BubbleView, EmptyView, HandRingView, KitGun, KitSetup, KitSlot, Ki
 
 /** what a game no host steps is told */
 export const NO_VIEW: TickView = { mission: null, lesson: null, radio: [], bubbles: [], me: -1, place: '',
-  kit: { slots: [], gun: null, setup: null, takes: [], big: null, hitsLeft: 0, hitsMax: 0, down: false, god: false, nightVision: null, keyTag: null },
+  kit: { slots: [], gun: null, setup: null, big: null, hitsLeft: 0, hitsMax: 0, down: false, god: false, nightVision: null, keyTag: null },
   marks: { men: [], seen: [], cams: [], frags: [], blind: 0, light: 0, irradiance: 0, noise: 0, stalk: null, stalkWaits: false },
   aim: { ring: null, dot: null, tooClose: false, throw: null },
   worn: [], squad: null, corner: [], throws: [], ring: null, hand: null, empty: null, plan: null, live: false, quiet: null };

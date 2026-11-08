@@ -9017,7 +9017,8 @@
 "view::TickView.empty",
 "view::TickView.plan",
 "view::TickView.live",
-"view::TickView.quiet"
+"view::TickView.quiet",
+"view::SquadView.quick"
 ],
 "pageTick": [
 "aim::AimState.bearing_rate",
