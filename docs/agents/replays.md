@@ -656,8 +656,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   to a panic; `{k:'hands'}` lines, base64 of the tape's bytes and where in it they go), so it goes to a build's backend on the tapes' own rounds and its notes on theirs. There is no shelf
   and no trace: `?playtape=<visit>` plays it, a killed page's run plays up to its last piece, F7 says it is kept, Shift+F7 and the end card's Replay leave to watch it from the try that is on
   (`run.ts`). `bar.ts` is the bar (the line with the tries and the notes on it, the pace, the run's own view, notes), `freecam.ts` the picture's camera off the run's view, `pace.ts` the paces (the
-  old player's too). A tape of another build whose mannequin, cast or hand is another is refused in words; else it is played and the bar says the second it is not the run any more. Replays
-  (`replay.html`) lists them with the rest and opens them there. READ ONE: `tools/draw/walk.ts <tape | kept lines>` walks it with no page; `replay-dump.ts` writes a hand-over's as `<visit>.tape`.
+  old player's too). A tape of another build whose mannequin, cast or hand is another is refused in words; else it is played and the bar says the second it is not the run any more. The title lists them (`ui/replays.ts`). READ ONE: `tools/draw/walk.ts <tape | kept lines>` walks it with no page; `replay-dump.ts` writes a hand-over's as `<visit>.tape`.
   CHECKS: `tools/draw/tape-check.ts` (every mission, a hands-off player and a hand that does anything, with saves, a load and a restart, walked by a module that is asked nothing to the same
   die, parts and whole state; `TAPE_BREAK=1`), `keep-check.ts` (`KEEP_BREAK=1`), `walk-check.ts` and the page's, `tape-page.cjs`. MEASURED: 17 to 348 KB a minute packed, 500 to 2,000 ticks a
   second unseen in bun. `map.ts` is its map (`face_floor`, `face_map`), Fog (F) and NV (V) are the picture's own (`face_draw_as`). NOT THERE YET: a Send button, the sounds' lanes, the rounds and orders on the line. Never seen on a GPU, never played by a person.
+- **The map viewer's page is out** (2026-11-08: `replay.html`, `src/replay/viewer.ts`, its Send and its checks). What it did: drew any file's trace as a map with its log, what a man was doing, notes, on any
+  build. WHERE IT IS NOW: the list of kept runs is on the title (Extras, Replays: `ui/replays.ts`; a row plays it, its cross lets it go); the run itself plays on the page with its map, notes, fog and
+  night vision; what a man is at is the debugger's labels. NOT KEPT: a replay of the old kind (shelf or trace) opens nowhere, and one of another build is refused; a replay from a file on disk is
+  opened by `?playtape=<address>` alone; the log of a run by itself. The old player (`engineplay.ts`, `tapewalk.ts`, `recipestand.ts`, `shelf.ts`, `game/replaybuf.ts`, `game/runtape.ts`,
+  `ui/replaykey.ts`) goes with the old page's code.

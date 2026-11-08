@@ -36,7 +36,7 @@ Pick a mission, pick who comes and what they carry, deploy. Every key is also li
 | `Ctrl` + mouse | orbit the camera · `Ctrl` + wheel zooms |
 | `Esc` · `\` | pause and settings · the debugger, with every knob |
 
-`F7` saves a replay of the last five minutes and `Shift+F7` opens it in the viewer at `/replay`.
+Every run you play is kept as a replay. `F7` saves it right away, `Shift+F7` watches it, and Extras ▸ Replays on the title lists them.
 
 ## What is in it
 
@@ -54,7 +54,6 @@ Pick a mission, pick who comes and what they carry, deploy. Every key is also li
 
 | | |
 |---|---|
-| `/replay` | scrub a saved replay on a map and leave notes on it |
 | `/?bench`, or Extras ▸ Benchmark on the title | hands off, about seven minutes: three floors played by the game itself (night snow, a block with the lights out, a storm), then every quality level and heavy feature timed on your machine. It ends on a short text to copy (your GPU, load times, frames a second) with no file saved. A build with a backend also sends the numbers to the developer, which you can turn off in Options; a build with none sends nothing |
 | `cargo test -p game_start` (in `rust/`) | the game's rules, asked of the game itself |
 | `bun run tools/qa/checks.ts` | the picture's code, the page, the menus, the sounds and the level files, without a GPU |
@@ -70,7 +69,7 @@ src/render   passes, WGSL shaders, lights      src/game    the simulation: playe
 src/smoke    the smoke solver                  src/scene   level format, loader, collision, sound paths
 src/anim     glTF loader, skinning             src/audio   mixer, score, synthesized effects
 src/ui       menus, HUD, the debugger          src/host    one stand-up and frame order for page and harness
-src/replay   the replay file and its viewer
+src/tape     replays: the tape, its bar, the map
 levels/      every level as JSON               tools/      dev server, build, level generators, qa/
 public/      models and animations             docs/       level format, notes, captures
 ```
