@@ -482,6 +482,19 @@ fn cover_fall(g: &mut Game, kept_open: Option<V3>, as_was: Option<V3>) -> Option
     kept_open.or(as_was)
 }
 
+/// A man under fire does not stop to open a door: floor behind a shut one is no cover to him.
+fn through_a_shut_door(g: &mut crate::game::Game, from: V3, path: &[V3]) -> bool {
+    let mut a = from;
+    for &b in path {
+        for i in 0..g.doors.list.len() {
+            let d = g.doors.list[i];
+            if crate::doors::door_latched(g, d) && crate::guards::crosses_door(g, a, b, d).is_some() { return true; }
+        }
+        a = b;
+    }
+    false
+}
+
 /// Where a pinned man shifts to: first fit in the preference order, a dozen path plans at most.   (suppression.ts coverFrom)
 pub fn cover_from(g: &mut crate::game::Game, gd: GuardId, threat: V3) -> Option<V3> {
     let all = crate::picture::ideas_of(g, gd).len() > 1;
@@ -503,6 +516,7 @@ pub fn cover_from(g: &mut crate::game::Game, gd: GuardId, threat: V3) -> Option<
             let a = away + da;
             let p: V3 = [from[0] + m::sin(a) * r, 0.0, from[2] + m::cos(a) * r];
             if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { continue; }
+            if g.gd[gd].stays_in_rooms && !crate::enemysquads::in_squad_rooms(g, gd, p) { continue; }
             if v3::dist_xz(p, threat) < m::max(d0 - 1.5, min_travel + 0.5) { continue; }
             let chest: V3 = [p[0], 0.9, p[2]];
             if !crate::scene_collision::segment_blocked(g, t, chest, None, None, None) { continue; }
@@ -539,6 +553,7 @@ pub fn cover_from(g: &mut crate::game::Game, gd: GuardId, threat: V3) -> Option<
                 if v3::dist_xz(w, threat) < d0 - 1.5 { toward = true; }
             }
             if l > 2.5 * r + 2.0 || toward { continue; }
+            if through_a_shut_door(g, from, &path) { continue; }
             let end = path[path.len() - 1];
             if v3::dist_xz(end, p) > 0.6 { continue; }
             if thin {
