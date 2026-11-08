@@ -31,7 +31,7 @@ function see(B: Bot, p: number[], what: string) {
   if (!shown(B, p)) B.fail(`${what} at (${p[0].toFixed(1)}, ${p[2].toFixed(1)}) never came onto the picture: he stands at (${B.pos()[0].toFixed(1)}, ${B.pos()[2].toFixed(1)})`);
   B.say(`  he walked ${Math.hypot(B.pos()[0] - s0[0], B.pos()[2] - s0[2]).toFixed(1)} m to have ${what} on the picture`);
 }
-/** the cursor on a step's own mark: the ring the line points at (the frame puts an order given on the ring on the thing itself: rails.ts markUnder) */
+/** the cursor on a step's own mark: the ring the line points at (the frame puts an order given on the ring on the thing itself: rust/game_rules/src/rails rails_mark_under) */
 function onMark(B: Bot, id: string, what: string): number[] { const at = stepOf(B, id).at as number[]; see(B, at, what); B.aim(at); B.step(2); return at; }
 /** the command key tapped where the cursor is, Shift held or not, as a hand presses it */
 function key(B: Bot, shift: boolean) {

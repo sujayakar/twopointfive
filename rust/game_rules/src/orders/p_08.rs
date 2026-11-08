@@ -502,7 +502,7 @@ pub fn off_line(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
 }
 
 /// Which face of the door's frame a point is on (+1 = the CCW side of the closed leaf).   (orders.ts sideOf)
-pub fn side_of(g: &mut crate::game::Game, d: DoorId, p: V3) -> f64 {
+pub fn side_of(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
     let (th, h) = (g.dr[d].def.closed_dir, g.dr[d].def.hinge);
     if m::cos(th) * (p[2] - h[1]) - m::sin(th) * (p[0] - h[0]) >= 0.0 { 1.0 } else { -1.0 }
 }

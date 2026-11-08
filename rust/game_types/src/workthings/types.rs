@@ -52,7 +52,6 @@ pub struct WorkThings {
     pub jobs: JsMap<GuardId, crate::workthings::Job>,
     pub hands: JsMap<CharId, crate::workthings::WorkThingsHandsValue>,
     pub cache: Option<crate::workthings::WorkThingsCache>,
-    pub asking: bool,
     pub log: Vec<crate::workthings::WorkThingsLogItem>,
 }
 impl WorkThings {
@@ -63,7 +62,6 @@ impl WorkThings {
             jobs: JsMap::new(),
             hands: JsMap::new(),
             cache: None,
-            asking: false,
             log: Vec::new(),
         }
     }
@@ -269,21 +267,6 @@ impl PanelFace {
     }
 }
 impl Default for PanelFace { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/workthings.ts:165 askAside(own), src/game/workthings.ts:165)
-#[derive(Clone, Debug)]
-pub struct WorkThingsAskAsideOwn {
-    pub c: Option<crate::workthings::WorkThingsCache>,
-}
-impl WorkThingsAskAsideOwn {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WorkThingsAskAsideOwn {
-            c: None,
-        }
-    }
-}
-impl Default for WorkThingsAskAsideOwn { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/workthings.ts:227 near ->, src/game/workthings.ts:227)
 #[derive(Clone, Debug)]

@@ -623,12 +623,12 @@ fn seed_mix_gust(key: f64) -> f64 { (js::to_i32(0x61A55 as f64) ^ m::imul(js::to
 
 // ---------------------------------------------------------------- queries
 /// nothing of a pane's is in the block: the panes part's first word, `used` (glassbreak.ts GlassBreak.untouched; `panes_untouched` takes no slot)
-pub fn glass_break_untouched(g: &mut crate::game::Game) -> bool {
+pub fn glass_break_untouched(g: &crate::game::Game) -> bool {
     ::sim::state::state_read(g.sim).panes.used == 0
 }
 
 /// is world point x on pane bi where a piece has fallen out (glassbreak.ts GlassBreak.openAt)
-pub fn glass_break_open_at(g: &mut crate::game::Game, bi: f64, x: V3) -> bool {
+pub fn glass_break_open_at(g: &crate::game::Game, bi: f64, x: V3) -> bool {
     !glass_break_untouched(g) && ::sim::panes::open_at(g.sim, js::to_u32(bi), x[0], x[1], x[2])
 }
 
