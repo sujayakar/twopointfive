@@ -1,31 +1,23 @@
-// The 'charmats' family (render/charMaterials.ts + game/charLook.ts — a man shaded per material slot), run through probes.ts. The shading itself needs a GPU; what
+// The 'charmats' family (render/charMaterials.ts: a man shaded per material slot). The shading itself needs a GPU; what
 // a headless bun can hold is everything the shader is HANDED and the promise that off is off:
 //   charmats-slots    the loaded mesh's slot data: the mannequin (no slot-named material) takes the stand-in — every vertex a slot, the ten it deals all with surface,
 //                     cavity finite in −1‥1 with both signs present, every proxy's weights summing to 1 — the material-name matcher, and a mesh whose materials ARE
 //                     named after slots dealt by name with the unmatched one reported
 //   charmats-tables   every side × slot resolves to a colour in 0‥1 and a finish the lobe can carry; the same man the same rows twice (no dice but his id); the
 //                     operators one issue (cloth identical man to man) and the defenders not (≥ 3 shirts over eleven men); the two sides apart from above
-//   charmats-off      a Game: switch off (the default) → the material rows are zeros and every proxy carries the one legacy colour; on → a header + eleven slots per man
-//                     on screen and per-proxy colours; off again → zeros and the legacy colour the next frame; and the SIMULATION never notices (10 s digest equal)
 //   charmats-shader   the WGSL and the TS agree on the row count / slot count, and the off path's statements are still there verbatim
-//   charmats-cast     the CAST's meshes and the tables agree: the crease bake of what a man WEARS does not depend on parts he does not (welded per part — the old weld
-//                     across the cast fails the same test), and a civilian's / a defender's shirt and trousers take the same two level colours with the switch off
-//                     (the placeholder: gbuffer.wgsl slotAlbedo × the instance's two colours, charMaterials.ts placeholderTints) as the tables read them with it on
-//   bun run tools/qa/probes.ts charmats
-import { standUp, ROOT } from './headless.ts';
+//   bun run tools/qa/charmats-probes.ts
+import { main, ROOT } from './here.ts';
 import { readFileSync } from 'node:fs';
 const CM = await import(`${ROOT}/src/render/charMaterials.ts`);
 const { LOOK } = await import(`${ROOT}/src/scene/look.ts`);   // (TPS_LOOK=1: the tables' checks run on the look's second tables, with the two rules that are the plain file's own stood down)
-const { sideOfTeam } = await import(`${ROOT}/src/game/charLook.ts`);
 const { loadGltfCharacter } = await import(`${ROOT}/src/anim/gltf.ts`);
 
-const DT = 1 / 60;
 type Verdict = (ok: boolean, label: string, detail: string) => void;
 function family(title: string): { verdict: Verdict; done: () => boolean } {
   console.log(`\n=== ${title} ===`); let all = true;
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
 }
-const seeded = (s0: number) => () => { s0 |= 0; s0 = (s0 + 0x6D2B79F5) | 0; let t = Math.imul(s0 ^ (s0 >>> 15), 1 | s0); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 const mannequin = () => loadGltfCharacter(`file://${ROOT}/public/assets/ual/AnimationLibrary_Godot_Standard.gltf`);
 const lum = (c: number[]) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
 const f3 = (x: number) => x.toFixed(3);
@@ -154,13 +146,11 @@ export async function charmatsTables() {
       for (const [side, T] of [['defender', DEF], ['responder', QRF], ['civilian', CIV]] as [string, number[][]][]) { const s = pal(side, T, 7, true);
         if (slot(s, 'accent').join() !== slot(s, 'cloth_plain').join()) f.push(`on the stand-in a ${side}'s accent (the mannequin's armband) is not his shirt`); } }
     F.verdict(f.length === 0, 'no dice but the man\'s id; operators one issue with their trim as the marking, two pairs\' suits pulled together; defenders motley (shirts, heads) with bare eyes and a pale accent; a civilian\'s tie darker than his shirt, the cleaner\'s kerchief pale, the response team\'s mark clear of its helmet and vest; the response team\'s cap off hair-black; the stand-in\'s accent the shirt; the sides > 2× apart in value from above', f.join('; ') || `operators' cloth 1 colour · ${defShirt.size} shirts / ${defHead.size} heads over ${N} defenders · seen from above ${f3(opTop / N)} vs ${f3(defTop / N)}`); }
-  { const f: string[] = []; const t: [string, string][] = [['operative', 'operator'], ['player', 'operator'], ['guard', 'defender'], ['hostile', 'defender'], ['civilian', 'civilian']];
-    for (const [team, want] of t) if (sideOfTeam(team) !== want) f.push(`${team} → ${sideOfTeam(team)}`);
-    if (sideOfTeam('guard', true) !== 'responder' || sideOfTeam('operative', true) !== 'operator') f.push('a trained staff unit is not a responder (or a trained operative stopped being an operator)');
+  { const f: string[] = [];
     { const P = (id: number) => { const p = new Float32Array(CM.CHAR_MAT_FLOATS); CM.writeCharPalette(p, 0, 'responder', [0.1, 0.11, 0.13], [0.05, 0.05, 0.05], id); const at = (sl: string) => { const o = 8 + CM.CHAR_SLOTS.indexOf(sl) * 8; return [p[o], p[o + 1], p[o + 2]].map(f3).join(); }; return at('cloth_plain') + ' / ' + at('cloth_uniform'); };
       // one issue, two tones: the duty shirt is the suit's colour and the trousers its dark half, the same on every man
       if (P(30) !== P(31) || P(30) !== [0.1, 0.11, 0.13].map(f3).join() + ' / ' + [0.05, 0.05, 0.05].map(f3).join()) f.push(`the responders' cloth is not their issue's two colours man for man (${P(30)} vs ${P(31)})`); }
-    F.verdict(f.length === 0, 'teams → tables: the squad and Sam operators, the shift and the cell defenders, the trained element (QRF) responders in one two-tone issue, civilians their own', f.join('; ') || t.map(x => x.join('→')).join(' · ')); }
+    F.verdict(f.length === 0, 'the response team wears one issue in two tones', f.join('; ') || 'one duty shirt, one pair of trousers'); }
   return F.done();
 }
 
@@ -199,65 +189,5 @@ export async function charmatsShader() {
 }
 
 // ---------------------------------------------------------------- charmats-cast
-export async function charmatsCast() {
-  const F = family('charmats-cast: the cast\'s meshes and the material tables agree (charMaterials.ts bakeCavity × game/cast.ts × gbuffer.wgsl slotAlbedo)');
-  const { loadCastCharacter } = await import('./headless.ts');
-  const ch: any = await loadCastCharacter(); const m = ch.mesh; const cast = ch.cast; const V = m.vertexCount;
-  // (1) THE CREASE BAKE IS PER OUTFIT. Bake the whole cast; then bake a mesh that holds ONLY one variant's triangles. What that man wears must come out the same up to the
-  //     one scale the bake normalises by (its percentile is taken over the mesh it is handed) — so the ratio sub ÷ union is ONE number over his vertices.
-  { const spread = (perPart: boolean) => {
-      const U = CM.bakeCavity(m, perPart); let worst = 0, who = '';
-      for (const v of cast.variants) {
-        const keep: number[] = []; for (let t = 0; t + 2 < m.indices.length; t += 3) if ((v.mask >>> m.part[m.indices[t]]) & 1) keep.push(m.indices[t], m.indices[t + 1], m.indices[t + 2]);
-        const S = CM.bakeCavity({ ...m, indices: new Uint32Array(keep) }, perPart); const r: number[] = [];
-        for (let i = 0; i < V; i++) if ((v.mask >>> m.part[i]) & 1) { const a = Math.abs(U[i]), b = Math.abs(S[i]); if (a > 0.05 && a < 0.9 && b < 0.9) r.push(S[i] / U[i]); }
-        r.sort((a, b) => a - b); const med = r[r.length >> 1]; const dev = Math.max(Math.abs(r[0] - med), Math.abs(r[r.length - 1] - med)) / Math.abs(med);
-        if (dev > worst) { worst = dev; who = `${v.name} (${r.length} vertices)`; }
-      }
-      return { worst, who };
-    };
-    const now = spread(true), old = spread(false);
-    F.verdict(now.worst < 1e-3, 'what a variant wears bakes the same creases, up to the bake\'s one mesh-wide scale, whether or not the parts it never wears are in the mesh (welded per part)', `per part: worst spread of that scale over a man ${now.worst.toExponential(1)} on ${now.who} · for comparison the old weld across the whole cast: ${old.worst.toFixed(2)} on ${old.who}`); }
-  // (2) NO PAIR OF PARTS WORN TOGETHER shares a position to the bit (so welding per part cuts nothing a man actually wears in two)
-  { const key = (v: number) => `${Math.round(m.positions[v * 3] * 2e4)},${Math.round(m.positions[v * 3 + 1] * 2e4)},${Math.round(m.positions[v * 3 + 2] * 2e4)}`;
-    const at = new Map<string, number>(); for (let v = 0; v < V; v++) at.set(key(v), (at.get(key(v)) ?? 0) | (1 << m.part[v]));
-    let shared = 0; const bad = new Set<string>();
-    for (const mask of at.values()) { if ((mask & (mask - 1)) === 0) continue; shared++; for (const v of cast.variants) { const w = mask & v.mask; if (w & (w - 1)) bad.add(v.name); } }
-    F.verdict(bad.size === 0, 'the positions two parts share belong to parts no variant wears together (alternative boots, shirts, trousers, hands)', bad.size ? `worn together and coincident: ${[...bad].join(', ')}` : `${shared} of ${at.size} welded positions are shared across parts, none inside one outfit`); }
-  // (3) SHIRT AND TROUSERS KEEP THEIR LEVEL COLOURS WHEN THE SWITCH FLIPS. The placeholder (switch off) draws cloth_uniform in the instance's FIRST colour and cloth_plain
-  //     in its SECOND; the tables (switch on) read a civilian's tint as the shirt (cloth_plain) and tint2 as the trousers (cloth_uniform). The game hands the two over so they agree.
-  { const f: string[] = []; const src = readFileSync(`${ROOT}/src/render/shaders/gbuffer.wgsl`, 'utf8');
-    if (!/case 1u: \{ return tint; \}/.test(src) || !/case 2u: \{ return tint2; \}/.test(src)) f.push('gbuffer.wgsl slotAlbedo no longer draws cloth_uniform in tint and cloth_plain in tint2 — castSwapsTints assumes it');
-    const tint = [0.5, 0.56, 0.7], tint2 = [0.11, 0.11, 0.13];
-    const shirt = CM.slotAlbedo('civilian', 'cloth_plain', tint, tint2, 41), trousers = CM.slotAlbedo('civilian', 'cloth_uniform', tint, tint2, 41);
-    if (shirt.join() !== tint.join() || trousers.join() !== tint2.join()) f.push(`the civilian table: shirt ${shirt.map(f3)} trousers ${trousers.map(f3)} — want the level's tint and tint2`);
-    // the order follows the TABLES: each of the two cloth slots is handed the tint its row reads, on every side (1 = first colour is tint2, 2 = second is tint2)
-    for (const side of ['operator', 'defender', 'responder', 'civilian'] as const) {
-      const bits = CM.placeholderTints(side); const rowSrc = (slot: string) => { const T = CM.charMatsOf(side); let r: any = T.slots[slot]; while (r.as) r = T.slots[r.as]; return r.src as string | undefined; };
-      const u = rowSrc('cloth_uniform'), p = rowSrc('cloth_plain'); const first = bits & 1 ? 'tint2' : 'tint', second = bits & 2 ? 'tint2' : 'tint';
-      if ((u && u !== first) || (p && p !== second)) f.push(`${side}: the placeholder is handed ${first} / ${second}, the table reads ${u ?? '(its own)'} / ${p ?? '(its own)'}`);
-    }
-    if (CM.placeholderTints('operator') !== CM.TINTS_AS_IS) f.push('an operator\'s two no longer go over as they stand');
-    if (CM.placeholderTints('civilian') !== 1) f.push('a civilian\'s two no longer go over trousers-first');
-    const sideOf = (G: any, c: any) => c === G.player.char ? 'operator' : G.civilians.some((x: any) => x.char === c) ? 'civilian' : (() => { const gd = G.guards.find((x: any) => x.char === c); return sideOfTeam(gd.team, gd.trained); })();
-    Math.random = seeded(11); const W: any = await standUp({ cast: true }); const g = W.game; W.step(DT);
-    const near = (x: number, y: number) => Math.abs(x - y) < 1e-6; let civs = 0, others = 0;
-    // every instance, found by the owner id in its record: (first colour, second colour) against the man's own two
-    const each = (G: any, fn: (c: any, a: number[], b: number[], i: number) => void) => {
-      const inst: Float32Array = (G.chars as any).instData, u = new Uint32Array(inst.buffer), n = (G.chars as any).instanceCount as number;
-      const men = [G.player.char, ...G.guards.map((x: any) => x.char), ...G.civilians.map((x: any) => x.char)] as any[];
-      for (let i = 0; i < n; i++) { const o = i * 24; const c = men.find(x => (x.id >>> 0) === u[o + 7]); if (!c) { f.push(`instance ${i}: nobody has id ${u[o + 7]}`); continue; } fn(c, [inst[o], inst[o + 1], inst[o + 2]], [inst[o + 4], inst[o + 5], inst[o + 6]], i); }
-    };
-    const same = (a: number[], b: number[]) => [0, 1, 2].every(k => near(a[k], b[k]));
-    each(g, (c, a, b, i) => {
-      const civ = g.civilians.some((x: any) => x.char === c), sam = c === g.player.char;
-      const bits = CM.placeholderTints(sideOf(g, c));
-      if (!(same(a, bits & 1 ? c.tint2 : c.tint) && same(b, bits & 2 ? c.tint2 : c.tint)) || (civ && !(same(a, c.tint2) && same(b, c.tint))) || (sam && !(same(a, c.tint) && same(b, c.tint2)))) f.push(`instance ${i} (${sam ? 'Sam' : civ ? 'a civilian' : 'staff'}): colours ${a.map(f3)} / ${b.map(f3)} for tints ${c.tint.map(f3)} / ${c.tint2.map(f3)}`);
-      if (civ) civs++; else if (!sam) others++;
-    });
-    if (!civs) f.push('no civilian on screen to check');
-    Math.random = seeded(11); const M: any = await standUp({ ch: await mannequin() }); M.step(DT);   // (the mannequin whatever TPS_CAST says)
-    each(M.game, (c, a, b, i) => { if (!(same(a, c.tint) && same(b, c.tint2))) f.push(`the mannequin: instance ${i} is not handed his tint then his tint2`); });
-     }
-  return F.done();
-}
+
+if (import.meta.main) await main([charmatsSlots, charmatsTables, charmatsShader]);

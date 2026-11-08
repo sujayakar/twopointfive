@@ -60,7 +60,7 @@ function standIn(fake: (name?: string) => any) {
 
 // ---- one arm: this process's rows are the environment's
 async function arm(name: Arm, dump: string | null) {
-  const { fake } = await import('./headless.ts');
+  const { fake } = await import('./here.ts');
   (globalThis as Record<string, unknown>).window ??= globalThis; (globalThis as Record<string, unknown>).devicePixelRatio ??= 1;
   const { SHADER_ROWS } = await import(`${ROOT}/src/ui/shaderrows.ts`) as typeof import('../../src/ui/shaderrows');
   (await import(`${ROOT}/src/gpu/wgslTrim.ts`) as typeof import('../../src/gpu/wgslTrim')).SHADER_FOLD.on = false;   // (which writing of a kernel reaches the device is read off declarations as written and off the switches' own lines: the fold of constant switches cuts both and changes neither answer; its own check is shaderfold-check.ts)

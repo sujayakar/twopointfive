@@ -5,7 +5,7 @@
 //                   owner + albedo bits untouched, padding records left alone, the cull sphere fitted and holding every cone, idempotent, and rig = null (no fit attached) leaves the
 //                   list as written
 //   bun run tools/qa/probes.ts sdfrig
-import { ROOT, fake } from './here.ts';
+import { ROOT, fake, main } from './here.ts';
 
 const { loadGltfCharacter } = await import(`${ROOT}/src/anim/gltf.ts`);
 const { fitRig, rigTable, RIG_SLOTS, RIG_SLOT_NAMES, RB_QUANT, RIG_KPAD, RIG_OVERRIDES } = await import(`${ROOT}/src/render/sdfrig.ts`);
@@ -74,3 +74,5 @@ export async function sdfrigPack() {
   const oPad = 13 * 8; verdict(world.capsuleData[oPad + 3] === 0 && (world.capsuleU32[oPad + 7] >>> 24) === 0, 'a padding record (radius 0, y −100) keeps radius 0 and no r1 byte');
   verdict(world.capsuleData[3] === fit.r0[0] && (world.capsuleU32[7] >>> 24) > 0 && world.infoF32[27] < 1.5, 'and the real records of that shorter list are fitted, its sphere too');
 }
+
+if (import.meta.main) await main([sdfrigFit, sdfrigPack], sdfrigFailures);

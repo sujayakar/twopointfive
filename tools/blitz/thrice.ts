@@ -10,7 +10,7 @@
 import { mkdirSync, writeFileSync, appendFileSync } from 'node:fs';
 const A = process.argv.slice(2), arg = (k: string, d: string) => { const i = A.indexOf(k); return i >= 0 && A[i + 1] !== undefined ? A[i + 1] : d; };
 const GAMES = +arg('--games', '3'), SECS = +arg('--secs', '40'), QUERY = arg('--query', 'roomclear&squad4'), SEED = +arg('--seed', '9'), ONE = A.includes('--one');
-const TICKS = arg('--ticks', ''), DUMP = arg('--dump', ''), AT = new Set(arg('--at', '').split(',').filter(Boolean).map(Number)), WORD = process.env.TPS_GAME ?? 'none';
+const TICKS = arg('--ticks', ''), DUMP = arg('--dump', ''), AT = new Set(arg('--at', '').split(',').filter(Boolean).map(Number)), WORD = process.env.TPS_GAME ?? 'rust';
 const { standTwo, DT } = await import('../qa/seats-run.ts');
 const { standUp, ROOT } = await import('../qa/headless.ts');
 const { cmdText, cmdFromText } = await import(`${ROOT}/src/game/cmd.ts`);
