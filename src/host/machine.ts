@@ -8,6 +8,8 @@ import { autosaveKept, sandboxKept } from './sandbox';
 const LEVERS: readonly (readonly [string, string])[] = [['fog', 'fog'], ['ai', 'enemyai'], ['kit', 'enemykit'], ['told', 'told']];
 /** this machine keeps difficulty levers of its own */
 export const leversKept = (): boolean => Object.keys(json('twopointsix.levers')).length > 0;
+/** the levers this machine keeps, each as its address word says it (a word that is no rung is the rules' to refuse) */
+export const leversSaid = (): [string, string][] => { const mine = json('twopointsix.levers'); return LEVERS.flatMap(([key, word]) => typeof mine[key] === 'string' ? [[word, mine[key]] as [string, string]] : []); };
 const kept = (key: string): string | null => { try { return localStorage.getItem(key); } catch { return null; } };
 function json(key: string): Record<string, unknown> { try { const o: unknown = JSON.parse(kept(key) ?? 'null'); return typeof o === 'object' && o !== null ? o as Record<string, unknown> : {}; } catch { return {}; } }
 

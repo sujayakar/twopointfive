@@ -73,8 +73,9 @@ pub struct Men {
     pub caps: Vec<Cap>,
     now: Vec<Bones>,
     now_caps: Vec<Cap>,
-    /// each man's head, as the last tick left it
+    /// each man's head, as the last tick left it, and the sphere round his proxies
     heads: Vec<[f32; 3]>,
+    bounds: Vec<[f32; 4]>,
     /// … and as the tick before left him: his id, his bones, his feet, his head
     before: Vec<(u32, Bones, [f32; 3], [f32; 3])>,
     before_caps: Vec<Cap>,
@@ -83,6 +84,7 @@ pub struct Men {
 
 impl Men {
     pub fn cut(&mut self) { self.have = 0; }
+    pub fn hold(&mut self) { self.have = self.have.min(1); }
 
     /// a tick has run (`again`: the tick already taken)
     pub fn take(&mut self, g: &Game, again: bool) {
@@ -96,6 +98,7 @@ impl Men {
         self.insts.clear();
         self.now.clear();
         self.heads.clear();
+        self.bounds.clear();
         self.now_caps.clear();
         for c in shown(g).into_iter().take(MOST) { self.man(g, c); }
     }
@@ -119,6 +122,7 @@ impl Men {
             id: c.id as u32, side: side as u32, suit: suit as u32, parts: c.parts as u32, alive: c.alive as u32, tint: f3(c.tint), tint2: f3(c.tint2), stature: s as f32,
             dry: if g.engine.settings.wet_chars && c.wet > 0.0 { 1.0 - 0.35 * c.wet } else { 1.0 } as f32, at: f3(c.pos), feet: f3(c.pos), head: f3(head), bound: [bc[0] as f32, bc[1] as f32, bc[2] as f32, (b[3] * s) as f32],
         });
+        self.bounds.push(self.men[at].bound);
         // ---- his instance
         let w = |v: f64| (v as f32).to_bits();
         let swap = self.swaps[side as usize];
@@ -158,10 +162,23 @@ impl Men {
         }
     }
 
+    /// … and where the host's own man is drawn ahead of the tick, his bones and proxies with him
+    pub fn lead(&mut self, by: &crate::lead::Moved) {
+        let Some(k) = self.men.iter().position(|r| r.id == by.id) else { return };
+        let r = &mut self.men[k];
+        (r.feet, r.head) = (by.pt32(r.feet), by.pt32(r.head));
+        for m in self.bones[k].w.chunks_exact_mut(16) { by.mat(m); }
+        for c in &mut self.caps[k * CAPS..(k + 1) * CAPS] {
+            if c.w[3] <= 0.0 { continue; }
+            for at in [0, 4] { let p = by.pt32([c.w[at], c.w[at + 1], c.w[at + 2]]); c.w[at..at + 3].copy_from_slice(&p); }
+        }
+        let b = by.pt32([r.bound[0], r.bound[1], r.bound[2]]);
+        r.bound[..3].copy_from_slice(&b);
+    }
     pub fn frame(&mut self, a: f64) {
         self.bones.clone_from(&self.now);
         self.caps.clone_from(&self.now_caps);
-        for (r, h) in self.men.iter_mut().zip(&self.heads) { (r.feet, r.head) = (r.at, *h); }
+        for ((r, h), b) in self.men.iter_mut().zip(&self.heads).zip(&self.bounds) { (r.feet, r.head, r.bound) = (r.at, *h, *b); }
         if a >= 1.0 || self.have < 2 { return; }
         let a = a as f32;
         for (k, r) in self.men.iter_mut().enumerate() {

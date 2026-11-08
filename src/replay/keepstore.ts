@@ -23,6 +23,8 @@ export interface KeptRow {
   /** seconds of play kept, pieces written, bytes they take */
   seconds: number; pieces: number; bytes: number;
   notes?: ReplayNote[];
+  /** its tape is one of hands (tape/keep.ts): the page that draws plays it, and it has no trace to draw a map of */
+  hands?: boolean;
   /** its page said it was going (pagehide): nobody is playing it. NEVER STORED ON THE ROW — `rows()` reads it off the store's own mark (`left` below), which a
    *  going page can write without reading the row back, and so without laying an old row over a note another tab wrote since */
   left?: boolean;
@@ -168,7 +170,7 @@ export async function keptSummary(store: KeptStore): Promise<KeptSummary> {
 }
 
 /** a piece's body as its text (a gzip member where the browser packed it) */
-async function textOf(b: Body): Promise<string> {
+export async function bodyText(b: Body): Promise<string> {
   if (typeof b === 'string') return b;
   const u = new Uint8Array(await b.arrayBuffer());
   if (u[0] === 0x1f && u[1] === 0x8b) return new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
@@ -178,7 +180,7 @@ async function textOf(b: Body): Promise<string> {
 export async function readVisit(store: KeptStore, sid: string): Promise<Visit | null> {
   const head = await store.head(sid), bodies = await store.bodies(sid); if (!head || !bodies.length) return null;
   const lines: KeptLine[] = []; parseLines(head, lines);
-  for (const b of bodies) { try { parseLines(await textOf(b), lines); } catch (e) { reportWarning('replay.keep.piece', e); /* a piece that does not unpack is a missing piece */ } }
+  for (const b of bodies) { try { parseLines(await bodyText(b), lines); } catch (e) { reportWarning('replay.keep.piece', e); /* a piece that does not unpack is a missing piece */ } }
   const V = visitsOf(lines).get(sid) ?? null;
   if (V) { const row = (await store.rows()).find(r => r.sid === sid); if (row?.notes) V.notes = row.notes.slice(); }
   return V;

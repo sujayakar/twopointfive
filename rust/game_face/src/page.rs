@@ -18,6 +18,7 @@
 //!   face_draw(h, want) -> p            WHAT THE LAST TICK LEFT TO BE DRAWN (the crate game_draw): the sections of `want` made again from the game as it
 //!                                      stands, which is not written. `p` is a table of two words a section, its address and its rows; they lie here
 //!                                      until the next call. Once a tick.
+//!   face_draw_over(h, want) -> p       …the same, of a tick that is not the first a host steps before it draws a frame: what moves is blended over them all
 //!   face_frame(h, a, x, y, z) -> p     A FRAME IS DRAWN, `a` of the way from the tick before to the last (1 = where the last left everything), looking at
 //!                                      x y z: the rows that move stand there, and the table again
 //!   face_saves(h)                      this run's saves as a card lays them out, at face_out: the mission's clock (f64), would one by hand be made now (u32), the key of the one to go back to (text), how many,
@@ -26,6 +27,8 @@
 //!   face_knobs(h)                      every knob a person may turn, at face_out: its name's length (its top bit: a yes or no), the name, what it is turned to (f64)
 //!   face_draw_name(h, i)               a name that crosses by its number (a sound's), at face_out
 //!   face_draw_look(h, p, n)                 what the page says of its look (game_draw::LOOK numbers), once and when it changes
+//!   face_draw_lead(h, id, p)           once a tick, of a networked host: its own man's place ahead of the tick (game_draw::lead); id 0 = nobody is ahead
+//!   face_draw_hold(h)                  a tick of the host's in which the game was not stepped: what moves stands where the last tick left it
 //!   face_draw_cut(h)                   the picture goes on from where the game stands now, and blends from nothing before it (ticks were stepped that were not drawn)
 //!   face_draw_layout() -> stamp        the stamp of the sections' declarations (and their text at face_out): a page whose offsets are of another is refused
 //!   face_poke(h, what, v) -> 1 | 0     a host's switch written between ticks, by number: 0 god mode · 1 the AI on · 2 infinite ammunition · 3 the
@@ -99,8 +102,7 @@ pub unsafe extern "C" fn face_start(p: *const u8, n: usize, slot: i32, seed: u32
     let slot = if slot < 0 { match super::free_slot() { Some(s) => s, None => return 0 } } else { slot as usize };
     if slot >= sim::state::GAMES { return 0; }
     let o = game_start::stand::StartOpts { seed, seats, slot, dress: flags & 1 != 0, ..Default::default() };
-    let mut stood = game_start::handed::stand_handed(super::bytes(p, n), &o, &mut |g, b| if let Err(why) = game_run::command::apply(g, b) { panic!("face_start: {why}") });
-    game::scene_collision::light_ready(&mut stood.game);
+    let stood = game_start::handed::stand_handed(super::bytes(p, n), &o, &mut |g, b| if let Err(why) = game_run::command::apply(g, b) { panic!("face_start: {why}") });
     let h = super::put(super::Held::new(stood.game));
     crate::memo::forget(h);
     h
@@ -115,8 +117,7 @@ pub unsafe extern "C" fn face_new_at(state: *const u8, n: usize, slot: usize) ->
     // (the start's own lines take a block as bytes and write it into the slot: handed the slot's own bytes, the block stands as it stood)
     let len = core::mem::size_of::<sim::state::State>();
     let block = std::slice::from_raw_parts(sim::state::addr(slot) as *const u8, len).to_vec();
-    let (mut g, said) = game_run::start(super::bytes(state, n), &block, slot);
-    game::scene_collision::light_ready(&mut g);
+    let (g, said) = game_run::start(super::bytes(state, n), &block, slot);
     super::out(said.join("\n").into_bytes());
     let h = super::put(super::Held::new(g));
     crate::memo::forget(h);
@@ -163,10 +164,7 @@ pub unsafe extern "C" fn face_hand(h: u32, seat: usize, p: *const f64, pn: usize
             game::scene_box_mirror::box_mirror_things(&mut x.g);
             if let Some((_, h)) = &mut x.hands { h.hand(&x.g, &mut cmd, 1.0 / 60.0); }
         }
-        let still = |s: game::ids::SeatId| { let c = x.g.tab.cmd_seat[s].cmd.as_ref().unwrap_or(&cmd); PlayerCmd { keys: Vec::new(), pressed: Vec::new(), buttons: 0.0, clicked: 0.0, wheel: 0.0, ..c.clone() } };
-        let mut cmds = x.cmds.take().unwrap_or_else(|| x.g.seats.iter().map(|&s| still(s)).collect());
-        cmds[seat] = cmd;
-        x.cmds = Some(cmds);
+        x.hand_over(seat, cmd);
     });
 }
 /// NOBODY'S HANDS ARE ON A SEAT (game_run hands_off): the hands it is handed from here are his own. `p`, `n`: his plan, a word a line: the seed, the seconds he plays, 1 to throw the breaker
@@ -203,6 +201,10 @@ pub extern "C" fn face_draw(h: u32, want: u32) -> *const u32 {
     super::with(h, |x| { x.drawn.take(&x.g, want); x.drawn.table().as_ptr() })
 }
 #[no_mangle]
+pub extern "C" fn face_draw_over(h: u32, want: u32) -> *const u32 {
+    super::with(h, |x| { x.drawn.over(&x.g, want); x.drawn.table().as_ptr() })
+}
+#[no_mangle]
 pub extern "C" fn face_frame(h: u32, a: f64, x: f64, y: f64, z: f64) -> *const u32 {
     super::with(h, |k| { k.drawn.frame(&k.g, a, [x, y, z]); k.drawn.table().as_ptr() })
 }
@@ -214,6 +216,15 @@ pub unsafe extern "C" fn face_draw_look(h: u32, p: *const f64, n: usize) {
     let v = std::slice::from_raw_parts(p, n);
     super::with(h, |k| k.drawn.look(v));
 }
+/// # Safety
+/// `p` names eight numbers the host wrote into memory from face_alloc: where the tick has the man (his feet, the way he aims), and where he is drawn.
+#[no_mangle]
+pub unsafe extern "C" fn face_draw_lead(h: u32, id: u32, p: *const f64) {
+    let stand = |v: &[f64]| game_draw::lead::Stand { pos: [v[0], v[1], v[2]], yaw: v[3] };
+    super::with(h, |x| if id == 0 { x.drawn.lead.rest() } else { let v = std::slice::from_raw_parts(p, 8); x.drawn.lead.tick(id, stand(&v[..4]), stand(&v[4..])) });
+}
+#[no_mangle]
+pub extern "C" fn face_draw_hold(h: u32) { super::with(h, |x| x.drawn.hold()); }
 #[no_mangle]
 pub extern "C" fn face_draw_cut(h: u32) { super::with(h, |x| x.drawn.cut()); }
 #[no_mangle]

@@ -81,7 +81,8 @@ pub fn fill(g: &Game, stood: u32, desired: f64, out: &mut Vec<View>) {
         // (the hand's own view, as the step was handed it: what the row says otherwise, a rule wrote)
         else if let Some(h) = g.tab.cmd_seat[seat].cmd.as_ref() {
             let v = &h.view;
-            r.turned = (c.yaw != v.yaw) as u32 | ((c.pitch != v.pitch) as u32) << 1 | ((c.distance != v.distance || c.desired_distance != desired) as u32) << 2 | ((c.target != v.target) as u32) << 3;
+            // (a seat of a networked game is handed records older than the view is now: what differs is the hand's own)
+            r.turned = if g.tab.cmd_seat[seat].remote { 0 } else { (c.yaw != v.yaw) as u32 | ((c.pitch != v.pitch) as u32) << 1 | ((c.distance != v.distance || c.desired_distance != desired) as u32) << 2 | ((c.target != v.target) as u32) << 3 };
             r.target = f3(c.target);
             (r.yaw, r.pitch, r.distance) = (c.yaw as f32, c.pitch as f32, c.desired_distance as f32);
         }
