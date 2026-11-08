@@ -275,6 +275,9 @@ pub fn door_charge_at(g: &mut crate::game::Game, at: V3, dt: f64) -> Option<crat
 /// charge's the way the blast goes, a thrown can's along its axis); false = not this module's, and the caller throws its own.
 /// (blastLook.ts:246 blastSparks)
 pub fn blast_sparks(g: &mut crate::game::Game, at: V3) -> bool {
+    crate::seats::first_of(g, &mut |v: &mut crate::game::Game| if blast_sparks_of(v, at) { Some(true) } else { None }).is_some()   // (whichever seat's charge it is)
+}
+fn blast_sparks_of(g: &mut crate::game::Game, at: V3) -> bool {
     if !live(g) { return false; }
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     let seen = state_mut(g).seen.clone();
