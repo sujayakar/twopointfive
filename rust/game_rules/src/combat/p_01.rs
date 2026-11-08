@@ -282,7 +282,7 @@ fn shoot_out(g: &mut Game, t: FixtureId, muzzle: V3) {
 }
 
 /// `live` of the real-hit search: a target a round can put out.
-fn lamp_live(g: &mut Game, t: FixtureId) -> bool {
+fn lamp_live(g: &Game, t: FixtureId) -> bool {
     !(crate::sim_lightshome::fixture_broken(g, t)
         || !g.tab.sim_lightshome_fixture[t].interactive
         || crate::sim_lightshome::fixture_factor(g, t) <= 0.0 && !crate::sim_lightshome::fixture_on(g, t) && !crate::carlamps::lamp_glass(g, t)

@@ -69,7 +69,7 @@ pub fn shut(g: &mut crate::game::Game) -> bool {
 }
 
 /// The gate game.ts puts on a grab: not folded by a blast, no hand on a breaker's lever. (stalk.ts able)
-pub fn able(g: &mut crate::game::Game) -> bool {
+pub fn able(g: &crate::game::Game) -> bool {
     let me = g.player;
     !crate::samstun::sam_staggered(g, None) && g.pl[me].breaker_move.is_none()
 }

@@ -159,7 +159,7 @@ pub fn devices_reset(g: &mut crate::game::Game) {
 }
 
 /// Powered, unbroken, not knocked out: the device works this frame.   (devices.ts alive)
-pub fn alive(g: &mut crate::game::Game, t: FixtureId) -> bool {
+pub fn alive(g: &crate::game::Game, t: FixtureId) -> bool {
     crate::sim_lightshome::fixture_factor(g, t) > 0.05 && !crate::sim_lightshome::fixture_broken(g, t)
 }
 /// Live play: devices sense.   (devices.ts sensing)
@@ -507,7 +507,7 @@ pub fn pad_door_name(g: &crate::game::Game, k: &crate::devices::KeypadRt) -> Str
     if name == "server_manager" { String::from("side door") } else { format!("{} door", name.replace('_', " ")) }
 }
 /// Is `d` a keypad door locked against the player where he stands, and does he know its code.   (devices.ts padState)
-pub fn pad_state(g: &mut crate::game::Game, d: DoorId, from: V3) -> Option<crate::devices::PadState> {
+pub fn pad_state(g: &crate::game::Game, d: DoorId, from: V3) -> Option<crate::devices::PadState> {
     let pad = devices_pad_of(g, d)?;
     if !crate::doors::doors_locked_out(g, d, from, None) { return None; }
     let pl = g.player;

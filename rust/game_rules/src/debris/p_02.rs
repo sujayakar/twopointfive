@@ -69,7 +69,7 @@ fn lay_axis_row(row: &mut crate::scene_boxes::Box, bi: usize, n: V3, k: f64) {
 fn seam_box(g: &mut crate::game::Game, b: impl Into<AnyBoxId>) -> &mut crate::scene_boxes::Box { &mut g.tab[b.into()] }
 
 /// Any change of a prop's pose changes this (exact float compare: 'did it move', not a hash).   (debris.ts poseKey)
-pub fn pose_key(g: &mut crate::game::Game, p: PropId) -> f64 {
+pub fn pose_key(g: &crate::game::Game, p: PropId) -> f64 {
     crate::props::prop_x(g, p) * 7919.0 + crate::props::prop_z(g, p) * 104729.0 + crate::props::prop_yaw(g, p)
 }
 

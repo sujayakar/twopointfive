@@ -389,7 +389,7 @@ pub fn hear(g: &mut crate::game::Game) {
 }
 
 /// are two men on one net: a's call reaches b. Each is his picture's owner, None = Sam's: one picture a man, so `a === b` is owner against owner (picture.ts onNet)
-pub fn on_net(g: &mut crate::game::Game, a: Option<GuardId>, b: Option<GuardId>) -> bool {
+pub fn on_net(g: &crate::game::Game, a: Option<GuardId>, b: Option<GuardId>) -> bool {
     let bo = match b {
         Some(bo) if a != b => bo,
         _ => return false,
