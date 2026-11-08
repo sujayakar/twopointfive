@@ -7,11 +7,14 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum SceneLookModSuitAsked {
     Quiet,
+    /// the men are dressed as no mission's: Sam alone in the suit
+    NoMission,
 }
 impl SceneLookModSuitAsked {
     pub const fn as_str(self) -> &'static str {
         match self {
             SceneLookModSuitAsked::Quiet => "quiet",
+            SceneLookModSuitAsked::NoMission => "none",
         }
     }
 }

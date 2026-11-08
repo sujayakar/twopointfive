@@ -5,6 +5,7 @@ extern crate alloc;
 pub mod json;
 pub mod kit_plan;
 pub mod kit_set;
+pub mod kit_stage;
 pub mod gltf;
 pub mod level;
 pub mod passes;

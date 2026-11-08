@@ -131,6 +131,10 @@ pub fn stand(data: &Json, assets: Assets, o: &StartOpts) -> Stood { stand_with(d
 pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn FnMut(&mut Game)) -> Stood {
     let mut g = Box::new(Game::blank());
     before(&mut g);
+    // (THE KIT PICTURE: an address that carries `kitview` builds the level the way needs and dresses the men before they are made; no other start reads a word of it)
+    let kit = crate::kit_stage::of_link(o.link.as_deref(), data);
+    let data: &Json = kit.as_ref().map_or(data, |k| &k.data);
+    if let Some(k) = kit.as_ref() { crate::kit_stage::dress(&mut g, k); }
     // THE ADDRESS, BEFORE THE GAME IS MADE, as every host that starts a game from one reads it (src/host/standup.ts addressBeforeGame): the row's
     // own hour and weather onto its words, the weather the game is born in, and the difficulty it asks for
     let mut address = o.link.as_deref().map(game::query::Query::parse);
@@ -172,9 +176,12 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
     { let hour = g.stood.hour; if hour != game::hours::HourId::Night { game::hours::apply_hour(&mut g, hour); } }
     let host = host_new(&mut g);
     if let Some(q) = address.as_ref() {
-        let r = game::scenario_run::start_at_address(&mut g, q);
-        if let Some(why) = r.why { panic!("the game refused the start from '{}': {}", o.link.as_deref().unwrap_or(""), why); }
+        let words = kit.as_ref().map(crate::kit_stage::mission_words);
+        let r = game::scenario_run::start_at_address(&mut g, words.as_ref().unwrap_or(q));
+        // (a picture of a mission that refused is a picture of nothing, never a stop)
+        if let (Some(why), None) = (r.why, kit.as_ref()) { panic!("the game refused the start from '{}': {}", o.link.as_deref().unwrap_or(""), why); }
         settle(&mut g);
+        if let Some(k) = kit.as_ref() { crate::kit_stage::begin(&mut g, k); settle(&mut g); }
     } else if let Some(spec) = o.scenario.as_ref() {
         if let Some(why) = game::scenario_run::start_scenario(&mut g, spec) { panic!("the game refused the {}: {}", spec.kind.as_str(), why); }
         settle(&mut g);   // (the men the mission made: their poses go home as a tick's opening would take them)
@@ -186,7 +193,7 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
 /// envelopes, the Input's frame ended. Answers WHAT THE STEP TOLD ITS HOST (tools/blitz/OUT-EVENTS.md: the sounds to
 /// play, the marks to draw, the lines said): the list is a step's output and the host drains it, or it grows for the life of the game.
 pub fn frame(g: &mut Game, h: &Host, dt: f64) -> Vec<game::out_events::OutEvent> {
-    game::game::game_update(g, dt, h.input, h.cam, h.canvas);
+    if g.kit_stage.is_some() { game::kitstage::update(g, dt, h.input, h.cam, h.canvas); } else { game::game::game_update(g, dt, h.input, h.cam, h.canvas); }
     let me = game::game::game_host_seat(g);
     let (follow, aim) = game::seats::with_seat(g, me, &mut |g| (game::game::game_follow_pos(g, None), g.aim_point));
     let aim = if g.spectate >= 0.0 { None } else { Some(aim) };
