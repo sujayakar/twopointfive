@@ -22,9 +22,12 @@ const ROOT = resolve(import.meta.dir, '../..');
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const quiet = async <T>(fn: () => Promise<T> | T): Promise<T> => { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => {}; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
 
+/** what the HUD is told of each held attention, a man the fog hides left out as it draws them; the man found by the id it names him by */
+const attentionMarks = (g: any): any[] => g.view.attention.filter((l: any) => !l.hidden).map((l: any) => { const gd = g.guards.find((m: any) => m.char.id === l.man); return { ...l, gd, from: [gd.char.pos[0], 0.05, gd.char.pos[2]] }; });
+
 export async function attentionCheck(): Promise<boolean> {
   const { standUp } = await import('./headless.ts');
-  const { ATTENTION, ATTENTION_STATS, ATTENTION_LOG, attentionOf, attentionOffDeg, attentionMarks, attentionLend, attentionLines } = await import(`${ROOT}/src/game/attention.ts`);
+  const { ATTENTION, ATTENTION_STATS, ATTENTION_LOG, attentionOf, attentionOffDeg, attentionLend, attentionLines } = await import(`${ROOT}/src/game/attention.ts`);
   const { sightGain, canSee } = await import(`${ROOT}/src/game/guards.ts`);
   const { RING } = await import(`${ROOT}/src/game/launcher.ts`);
   const { tryWhistle } = await import(`${ROOT}/src/game/whistle.ts`);
@@ -61,7 +64,7 @@ export async function attentionCheck(): Promise<boolean> {
       line(Math.abs(dwell - ATTENTION.noiseSecs) < 0.06 && walk > 0.5, `whole while he walks, then exactly noiseSecs at the thing`, `walked ${walk.toFixed(2)} s, at it ${dwell.toFixed(2)} s (noiseSecs ${ATTENTION.noiseSecs})`);
       line(toldAt > 0 && Math.abs((endAt - toldAt) - ATTENTION.tellSecs) < 0.06 && nothings === 1 && ATTENTION_STATS.released === 1, 'he says he is done tellSecs before his eye widens, and says it once', `told ${(endAt - toldAt).toFixed(2)} s before the end (tellSecs ${ATTENTION.tellSecs}); said: ${lines.join(' / ')}; 'must have been nothing' × ${nothings}`);
       line(marked === frames && frames > 0 && !leftUp && leftMax > 0.999 && lastLeft < 0.02 && ending > 0 && Math.abs(ending * DT - ATTENTION.tellSecs) < 0.06, '(g) the mark stands from the taking to the end, its clock only runs down, and it flags the last beat', `${marked} of ${frames} frames marked, the clock ${leftMax.toFixed(2)} → ${lastLeft.toFixed(2)}, ${ending} frames flagged`);
-      const fog = g.fogOfWar.hidden; let hidden = -1; { const s2 = await stand(3), at2 = ahead(s2.A, 5); clack(s2.g, at2); s2.step(30); const shown = attentionMarks(s2.g).length; s2.g.fogOfWar.hidden = () => true; hidden = attentionMarks(s2.g).length; line(shown === 1 && hidden === 0, '(g) a man the fog of war hides has no mark', `${shown} shown, ${hidden} with every man hidden`); } void fog;
+      { const { attentionShown } = await import(`${ROOT}/src/ui/attentionviz.ts`), s2 = await stand(3), at2 = ahead(s2.A, 5); clack(s2.g, at2); s2.step(30); const L = s2.g.view.attention, shown = attentionShown(L, false).length, forced = L.map((l: any) => ({ ...l, hidden: true })), hidden = attentionShown(forced, false).length, bared = attentionShown(forced, true).length; line(shown === 1 && hidden === 0 && bared === 1, '(g) a man the fog of war hides has no mark (the view saying so: rust/game_start/tests/hud.rs), but on a viewer\'s own picture with the fog lifted', `${shown} shown, ${hidden} with every man hidden, ${bared} with the fog lifted`); }
       const u = await stand(3); zero(); const at4 = ahead(u.A, 5); u.g.events.push({ kind: 'prop', pos: at4, time: u.g.time, loud: false, level: RING.clackNoise, who: 0 }); let peakU = 0, susU = false; for (let i = 0; i < 300; i++) { u.step(1); peakU = Math.max(peakU, u.A.awareness); susU ||= u.A.state !== 'patrol'; }
       line(!susU && peakU < 0.3 && ATTENTION_STATS.taken === 0, 'a knock as faint that nobody made to be looked at (a chair a door swept) lures nobody: only the lure does', `awareness peaked at ${peakU.toFixed(2)}, ${ATTENTION_STATS.taken} taken`); }
 

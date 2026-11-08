@@ -132,9 +132,19 @@
       "behind": "a tape's page"
     },
     {
-      "id": "src/main.ts:main › briefSettle › settleStep",
+      "id": "src/ui/startwait.ts:startWaits › step",
       "why": "the loading brief settles the picture before play starts",
       "behind": "a start"
+    },
+    {
+      "id": "src/ui/menu.ts:Menu.title",
+      "why": "the title's screen and its settings",
+      "behind": "a hand"
+    },
+    {
+      "id": "src/host/capture.ts:frameCapture › {save}",
+      "why": "a frame captured by hand is written out",
+      "behind": "a hand"
     },
     {
       "id": "src/game/attract.ts:Attract.opening",

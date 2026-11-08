@@ -325,7 +325,7 @@ async function playLessonAs(name: string, o: LessonRunOpts = {}, loud = false): 
     const ended = script.ended ?? ((gg: any) => gg.mission.stage === 'done');
     if (!ended(g)) script.finish?.(B);
     if (!until(() => ended(g), 5)) throw new Stop(`the run did not end after the script's finish (stage ${g.mission.stage}, player at ${at(pos())}${g.player.down ? ', DOWN' : ''})`);
-    say(`ended: ${g.objectiveText()}`);
+    say(`ended: ${(g.view.mission?.text ?? '')}`);
   } catch (e) {
     unhush();
     if (!(e instanceof Stop)) { out.code = 1; out.why = `threw: ${(e as Error).stack ?? e}`; }

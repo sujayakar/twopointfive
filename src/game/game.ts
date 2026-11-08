@@ -179,8 +179,6 @@ import { carLampTargets } from './carlamps';   // a parked vehicle's lamps are l
 import { setBlackout, endBlackout, lightEvent, ocp, setGroup, repairLights, freshLights } from './lighting';
 import { gunWallFresh } from './gunwall';   // (called inside cleanSlate only)
 import { CLEANRESTART, CLEANRESTART_STATS } from './cleanrestart';   // a restart gives a clean level (a leaf: the switch and its tally)
-import { stepMat } from './floor';
-import type { FloorMat } from './floor';
 import * as dialogue from './dialogue';
 import type { DialoguePick } from './dialogue';
 import { Sup, suppressionSummary } from './suppression';
@@ -1340,8 +1338,6 @@ export class Game {
   /** Camera follow position (player or spectated guard). */
   followPos(at?: Vec3): Vec3 { const g = this.spectate >= 0 ? this.guards[this.spectate] : null; return g ? g.char.pos : this.view.lesson?.rails?.sky ?? at ?? this.player.char.pos; }   // (`at`: where his man is — a look ahead asks with where he will be, walkahead.ts)
   teleportPlayer(p: Vec3) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.teleportPlayer', this, [p]); if (__r !== RUST_PASS) return __r as any; } } return teleportPlayer(this, p); }
-  /** HUD / panel: what the player's feet are on as the hearing model has it (floor.ts — lino everywhere with tune.floorMaterials off) */
-  get floorUnderPlayer(): FloorMat { return stepMat(this, this.player.char.pos); }
 
   repairLights() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.repairLights', this, []); if (__r !== RUST_PASS) return __r as any; } } return repairLights(this); }
   /** Everything still in the air / in the sound queue from what just happened: fused canisters, sparks, the last half second of noises, a wind-up.
@@ -1662,8 +1658,6 @@ export class Game {
   /** what the cursor is on, through a camera as it stands, and what a point is, as an order would be about them (src/view/read.ts): the host's, asked of the Rust game */
   cursorAsk: ((input: CursorAt, cam: CursorLens, canvas: { clientWidth: number; clientHeight: number }, seat?: number) => CursorView) | null = null;
   underAsk: ((p: Vec3, seat?: number) => Under | null) | null = null;
-  objectivePos(): Vec3 | null { return this.view.mission?.pos ?? null; }
-  objectiveText(): string { return this.view.mission?.text ?? ''; }
 
 }
 
