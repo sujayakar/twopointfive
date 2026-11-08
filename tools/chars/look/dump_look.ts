@@ -16,40 +16,25 @@ const OUT = resolve(process.env.OUT ?? './look-out');
 mkdirSync(OUT, { recursive: true });
 type V3 = [number, number, number];
 
-const H = await import(`${REPO}/tools/qa/headless.ts`);
+const { LOOK } = await import(`${REPO}/src/scene/look.ts`); LOOK.on = process.env.TPS_LOOK !== '0';   // (as the page opens: the look is up)
+const { loadGltfCharacter, loadGltfCast, castFile, castSide } = await import(`${REPO}/src/anim/gltf.ts`);
 const CM = await import(`${REPO}/src/render/charMaterials.ts`);
-const { sideOfTeam } = await import(`${REPO}/src/game/charLook.ts`);
-const { castSide } = await import(`${REPO}/src/anim/gltf.ts`);
-const { PLAYER_ID } = await import(`${REPO}/src/game/consts.ts`);
-const src = (p: string) => readFileSync(`${REPO}/${p}`, 'utf8');
 const notes: string[] = [];
 
-// ---- the sources of each man's tints / id (read from the tree, so a changed tree gives its own)
-const vecs = (s: string): V3[] => [...s.matchAll(/\[\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\]/g)].map(m => [+m[1], +m[2], +m[3]] as V3);
-function teamTable(name: string): Record<string, V3> {
-  const m = src('src/game/guards.ts').match(new RegExp(`const ${name}:[^=]*=\\s*\\{([^}]*)\\}`)); if (!m) throw new Error(`guards.ts: no ${name}`);
-  const out: Record<string, V3> = {}; for (const e of m[1].matchAll(/(\w+):\s*\[\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\]/g)) out[e[1]] = [+e[2], +e[3], +e[4]];
-  return out;
-}
-const TEAM_TINT = teamTable('TEAM_TINT'), TEAM_TINT2 = teamTable('TEAM_TINT2');
-let SQUAD4: { name: string; tint: V3; tint2: V3 }[];
-try { SQUAD4 = (await import(`${REPO}/src/game/nightbreach.ts`)).SQUAD4; } catch { SQUAD4 = []; }
-if (!SQUAD4?.length) { notes.push('SQUAD4 not importable: operative team tints used for operator_2..5'); SQUAD4 = [0, 1, 2, 3].map(i => ({ name: `operative ${i + 1}`, tint: TEAM_TINT.operative, tint2: TEAM_TINT2.operative })); }
-const qrfLine = src('src/game/qrf.ts').split('\n').find(l => l.includes('spawnUnit(') && l.includes('M.tag') && l.includes('tint:'));
-const qrfT = qrfLine ? vecs(qrfLine.slice(qrfLine.indexOf('tint:'))) : [];
-const C: any = await import(`${REPO}/src/game/consts.ts`);   // a tree that names the suit (QRF_TINT / QRF_TINT2) instead of writing it on the spawn line
-const QRF = { tint: qrfT[0] ?? (C.QRF_TINT ? [...C.QRF_TINT] as V3 : TEAM_TINT.guard), tint2: qrfT[1] ?? (C.QRF_TINT2 ? [...C.QRF_TINT2] as V3 : TEAM_TINT2.guard) };
-if (!qrfLine) notes.push('qrf.ts: no QRF spawn line with tints found; the guard team tints used for the responders');
-const shiftLine = src('src/game/game.ts').split('\n').find(l => /const tints: Vec3\[\] = /.test(l));
-const SHIFT = shiftLine ? vecs(shiftLine) : [TEAM_TINT.guard];
-const office = JSON.parse(src('levels/office.json'));
+// ---- who the game stands up: the tints and ids of its rules (rust/game_types: guards team_tint, team_tint2 and UNIT_ID0, consts QRF_TINT, nightbreach SQUAD4, civilians CIV_ID0)
+const PLAYER_ID = 1, UNIT_ID0 = 20, CIV_ID0 = 40;
+const TEAM_TINT: Record<string, V3> = { guard: [0.42, 0.36, 0.25], operative: [0.07, 0.09, 0.1], hostile: [0.36, 0.33, 0.24], player: [0.05, 0.06, 0.07], civilian: [0.75, 0.62, 0.08] };
+const TEAM_TINT2: Record<string, V3> = { guard: [0.02, 0.02, 0.025], operative: [0.05, 0.07, 0.06], hostile: [0.09, 0.08, 0.05], player: [0.1, 0.32, 0.18], civilian: [0.05, 0.06, 0.1] };
+const RED: { tint: V3; tint2: V3 } = { tint: [0.2, 0.085, 0.075], tint2: [0.55, 0.07, 0.05] }, BLUE: { tint: V3; tint2: V3 } = { tint: [0.06, 0.075, 0.13], tint2: [0.07, 0.2, 0.6] };
+const SQUAD4 = [{ name: 'Red One', ...RED }, { name: 'Red Two', ...RED }, { name: 'Blue One', ...BLUE }, { name: 'Blue Two', ...BLUE }];
+const QRF: { tint: V3; tint2: V3 } = { tint: [0.1, 0.11, 0.13], tint2: [0.05, 0.055, 0.06] };
+const SHIFT: V3[] = [[0.42, 0.36, 0.25], [0.3, 0.34, 0.4], [0.38, 0.28, 0.28]];
+const sideOfTeam = (team: string, trained = false): string => team === 'operative' || team === 'player' ? 'operator' : team === 'civilian' ? 'civilian' : trained ? 'responder' : 'defender';
+const office = JSON.parse(readFileSync(`${REPO}/levels/office.json`, 'utf8'));
 const civDefs: { name: string; kind: string; tint: V3; tint2?: V3 }[] = office.civilians ?? [];
-const idOf = (file: string, name: string, was: number) => { const m = src(file).match(new RegExp(`const ${name} = (\\d+)`)); if (!m) notes.push(`${file}: no \`const ${name} = N\` found, ${was} assumed`); return +(m?.[1] ?? was); };
-const CIV_ID0 = idOf('src/game/civilians.ts', 'CIV_ID0', 40);
-const UNIT_ID0 = idOf('src/game/guards.ts', 'UNIT_ID0', 20);
 
 // ---- the cast, as the game loads it
-const ch = await H.loadCastCharacter();
+const ch = await loadGltfCast(`file://${REPO}/public/assets/chars/${castFile()}`, await loadGltfCharacter(`file://${REPO}/public/assets/ual/AnimationLibrary_Godot_Standard.gltf`));
 const cast = ch.cast; const m = ch.mesh; const V: number = m.vertexCount;
 const sd = CM.charSlots(ch);
 if (!sd.authored) notes.push('charSlots: the mesh did NOT read as authored (stand-in split)');
@@ -117,32 +102,12 @@ for (const v of cast.variants as any[]) {
     palette: desc, slotShare: share, picks, aliases: Object.fromEntries(SLOTS.map(n => [n, ((CM.charMatsOf ? CM.charMatsOf(side) : CM.CHAR_MATS[side]).slots[n] as any).as ?? null]).filter(e => e[1])) });
 }
 
-// ---- a live cross-check where it is cheap: the stood-up game's own Sam / shift / civilians, and four operatives through spawnUnit
-const live: any[] = [];
-try {
-  const W = await H.standUp({ cast: true }); const g = W.game;
-  const { castVariantOf } = await import(`${REPO}/src/game/cast.ts`);
-  const row = (who: string, c: any, team: string, trained: boolean) => live.push({ who, id: c.id, tint: [...c.tint], tint2: [...c.tint2], variant: castVariantOf(g, c)?.name ?? null, side: team === 'player' ? 'operator' : sideOfTeam(team, trained) });
-  row('Sam', g.player.char, 'player', false);
-  for (const gd of g.guards) row(gd.name ?? `guard ${gd.char.id}`, gd.char, gd.team, !!gd.trained);
-  for (const gd of g.civilians) row(gd.name ?? `civ ${gd.char.id}`, gd.char, gd.team, false);
-  try {
-    const { spawnUnit } = await import(`${REPO}/src/game/guards.ts`); const p = g.player.char.pos;
-    SQUAD4.forEach((s, i) => { const gd = spawnUnit(g, { team: 'operative', pos: [p[0] + 0.8 * (i + 1), 0, p[2]], name: s.name, tint: s.tint, tint2: s.tint2, budget: 10, light: false }); row(s.name, gd.char, 'operative', false); });
-  } catch (e) { notes.push(`live spawnUnit of the four refused: ${String(e).slice(0, 160)}`); }
-  for (const L of live) {
-    const mine = variants.find(x => x.who.startsWith(L.who) || (L.who === 'Sam' && x.who === 'Sam') || x.id === L.id && x.side === L.side);
-    if (mine && (mine.name !== L.variant || mine.id !== L.id || mine.tint.some((x: number, k: number) => Math.abs(x - L.tint[k]) > 1e-6) || mine.tint2.some((x: number, k: number) => Math.abs(x - L.tint2[k]) > 1e-6)))
-      notes.push(`LIVE MISMATCH ${L.who}: live id ${L.id} ${L.variant} tint ${L.tint} tint2 ${L.tint2} vs dumped ${mine.name} id ${mine.id} tint ${mine.tint} tint2 ${mine.tint2}`);
-  }
-} catch (e) { notes.push(`live cross-check not run: ${String(e).slice(0, 200)}`); }
-
 let commit = ''; try { commit = execSync(`git -C "${REPO}" rev-parse --short HEAD`).toString().trim(); } catch { /* not a checkout */ }
 const bin = new Float32Array(V * 3 + blocks.length * V * 5); bin.set(m.positions, 0); blocks.forEach((b, k) => bin.set(b, V * 3 + k * V * 5));
 writeFileSync(`${OUT}/look.bin`, new Uint8Array(bin.buffer));
 writeFileSync(`${OUT}/look.json`, JSON.stringify({ repo: REPO, commit, vertexCount: V, slots: SLOTS, parts: cast.parts, authored: sd.authored,
   bin: { file: 'look.bin', positions: [0, V * 3], perVariant: V * 5, layout: 'r g b rough gain (linear albedo; dry lobe roughness and gain before the per-pixel AA term)' },
-  variants, live, notes }, null, 1));
+  variants, notes }, null, 1));
 console.log(`look: ${variants.length} variants x ${V} vertices from ${REPO} @ ${commit} -> ${OUT}/look.json (+ look.bin ${(bin.byteLength / 1e6).toFixed(1)} MB)`);
 for (const v of variants) console.log(`  ${v.name.padEnd(12)} ${v.side.padEnd(9)} id ${String(v.id).padStart(3)}  tint ${JSON.stringify(v.tint)} tint2 ${JSON.stringify(v.tint2)}  ${v.who}`);
 for (const n of notes) console.log('  NOTE ' + n);
