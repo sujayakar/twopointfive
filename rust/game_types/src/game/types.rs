@@ -694,6 +694,8 @@ pub struct Game {
     pub stood: crate::game::StoodWith,
     /// the solo night's card: your own kit on the plain night's player and on every fresh one
     pub solo_card: bool,
+    /// the Team & kit picture's stage: a host's, round the tick, and read by no rule of the game. Only Rust uses it
+    pub kit_stage: Option<alloc::boxed::Box<crate::kitstage::KitStage>>,
     pub col: crate::scene_collision::StaticCollision,
     pub snow_field: Option<crate::render_snow_field::SnowField>,
     pub snow_tracks: Option<crate::snow_tracks::SnowTracks>,
@@ -883,6 +885,7 @@ impl Game {
         Game {
             stood: crate::game::StoodWith::blank(),
             solo_card: false,
+            kit_stage: None,
             col: crate::scene_collision::StaticCollision::blank(),
             snow_field: None,
             snow_tracks: None,

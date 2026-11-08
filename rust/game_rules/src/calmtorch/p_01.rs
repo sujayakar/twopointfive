@@ -7,11 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Skip every light with an owner: the place's own lights only. (calmtorch.ts carried)
-pub fn carried() -> bool {
-    true
-}
-
 /// The place's steady light at a point of floor, on the meter's scale. (calmtorch.ts placeLight)
 pub fn place_light(g: &mut crate::game::Game, x: f64, z: f64) -> f64 {
     let mut skip = |_: &mut Game, _: f64| true;

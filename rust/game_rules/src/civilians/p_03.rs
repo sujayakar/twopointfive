@@ -464,7 +464,7 @@ pub fn civilian_comply(g: &mut crate::game::Game) -> bool {
 }
 
 /// how she went, by whose hand; her state is 'dead' either way (civilians.ts civilianDown)
-pub fn civilian_down(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: bool, how: crate::game::DownKind, by: crate::game::DownBy, line: Option<&str>) {
+pub fn civilian_down(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: bool, how: crate::game::DownKind, by: crate::game::DownBy, line: Option<&str>, by_weapon: Option<&str>) {
     let cid = g.gd[gd].civ.unwrap(); let c = g.gd[gd].ch;
     if g.gd[gd].state == GuardState::Dead { return; }
     if bubble_within(g, gd, 0.8) {
@@ -485,9 +485,10 @@ pub fn civilian_down(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: boo
         if dead {
             g.stats.civilians.killed += 1;
             let pl = g.player;
-            let weapon = match crate::game::player_gun_in_hand(g, pl) {
-                Some(fa) => crate::gear::plain_short(g.m.weapons.weapons.get(g.fa[fa].def).unwrap()),
-                None => String::from("a round"),
+            let weapon = match (by_weapon, crate::game::player_gun_in_hand(g, pl)) {
+                (Some(w), _) => String::from(w),
+                (None, Some(fa)) => crate::gear::plain_short(g.m.weapons.weapons.get(g.fa[fa].def).unwrap()),
+                (None, None) => String::from("a round"),
             };
             let d = data_n(vec![("who", Dv::T(name.clone())), ("label", Dv::T(label.clone())), ("weapon", Dv::T(weapon))]);
             let pos = g.ch[c].pos;

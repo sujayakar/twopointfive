@@ -45,8 +45,6 @@ import * as m42 from '../../src/game/rescueflow';
 import * as m43 from '../../src/game/rescueflush';
 import * as m44 from '../../src/game/roomclear';
 import * as m45 from '../../src/game/roomfight';
-import * as m46 from '../../src/game/sense';
-import * as m47 from '../../src/game/sensors';
 import * as m48 from '../../src/game/shards';
 import * as m51 from '../../src/game/sparks';
 import * as m52 from '../../src/game/squad';
@@ -94,7 +92,6 @@ export const classTable = (): Record<string, { prototype: object }> => { nameCla
   [(m10 as any).ClearedRooms, "ClearedRooms"],
   [(m52 as any).Clearing, "Clearing"],
   [(m12 as any).Cover, "Cover"],
-  [(m46 as any).CpuSmoke, "CpuSmoke"],
   [(m13 as any).Cues, "Cues"],
   [(m14 as any).Debris, "Debris"],
   [(m16 as any).Destruction, "Destruction"],
@@ -153,10 +150,8 @@ export const classTable = (): Record<string, { prototype: object }> => { nameCla
   [(m44 as any).RoomClearScenario, "RoomClearScenario"],
   [(m45 as any).RoomFight, "RoomFight"],
   [(m11 as any).Seat, "Seat"],
-  [(m47 as any).Sensors, "Sensors"],
   [(m63 as any).SimDice, "SimDice"],
   [(m74 as any).SlabStore, "SlabStore"],
-  [(m46 as any).SmokeGrid, "SmokeGrid"],
   [(m68 as any).SoundPaths, "SoundPaths"],
   [(m51 as any).Sparks, "Sparks"],
   [(m33 as any).SquadOrders, "SquadOrders"],
@@ -242,9 +237,6 @@ export const classTable = (): Record<string, { prototype: object }> => { nameCla
   "scene_collision::NavGrid": (m68 as any).NavGrid,
   "scene_collision::SoundPaths": (m68 as any).SoundPaths,
   "scene_collision::StaticCollision": (m68 as any).StaticCollision,
-  "sense::CpuSmoke": (m46 as any).CpuSmoke,
-  "sense::SmokeGrid": (m46 as any).SmokeGrid,
-  "sensors::Sensors": (m47 as any).Sensors,
   "shards::GlassShards": (m48 as any).GlassShards,
   "sim_doorshome::DoorStore": (m69 as any).DoorStore,
   "sim_fallshome::FallStore": (m70 as any).FallStore,

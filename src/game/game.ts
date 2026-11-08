@@ -100,7 +100,6 @@ import './sprintdoor';
 import './deathrecap';
 import './planmode';   // (its tables are on the wire)
 import { bodyLightSummary, groundFresh } from './guards';
-import { CpuSmoke } from './sense';
 import { DRESS } from './dress';
 import { say, resetGuards, tension, escalationSummary, raiseEscalation, standDownEscalation, clearingSummary, clearQueueSummary, forceClear } from './guards';
 import type { SearchPlan, Pieing, Standoff } from './guards';
@@ -150,6 +149,7 @@ import { RoomClearScenario } from './roomclear';
 import { SquadOrders } from './orders';
 import { leversFog } from './difficulty';   // (called in the constructor only: the fog lever's rung over the kept feel rows)
 import { FogOfWar, fogFlags } from './fogofwar';
+import { senseTool } from './sense';
 import { RoomFight } from './roomfight';
 import { Cues } from './cues';
 import { SquadNet } from './squadnet';
@@ -189,8 +189,7 @@ import { AimState, aimSummary } from './aim';
 import { Qrf, resetQrf } from './qrf';
 import { openingStart } from './opening';
 import { Checkpoints } from './savestate';
-import { Sensors } from './sensors';
-import type { ProbeLike } from './sensors';
+import type { ProbeLike } from '../render/probe';
 import { Devices, learnCode, DEVICE_TUNE_DEFAULTS } from './devices';
 import { Destruction } from './destruction';
 import './fixtureBreak';   // the look of a fixture breaking and hanging broken (picture only)
@@ -801,21 +800,8 @@ export class Game {
   targets: LightTarget[] = [];
   events: GameEvent[] = [];
   probe: ProbeLike;
-  /** THE seam between the GPU and the simulation (sensors.ts): every value the game takes off the renderer — the light meters, the smoke sight lines — is asked
-   *  and read through this, by key; live it is the probe verbatim, a recording journals what it delivered, a replay serves that back without a GPU (journal.ts) */
-  sensors: Sensors = new Sensors(() => this.probe);
-  /** THE SENSES ON THE CPU (sense.ts SENSE.cpu; off = nothing below runs): the game's own smoke, fed by every emitter handed to the solver while the switch is on,
-   *  and the solver as it was before the game's tee was put in front of it (null = no tee) */
-  cpuSmoke = new CpuSmoke(); private smokeOwned: { solver: SmokeSystemLike; undo: () => void } | null = null;
   /** THE REPLAY BUFFER's tap (replaybuf.ts): called as a step's first statement with the record it is about to run on, and as its last with none — it only reads. null (a game nobody gave a buffer) = nothing */
   replayTap: ((dt: number, cmd?: PlayerCmd) => void) | null = null;
-  /** The AI's window on the renderer's light, by key — the same GPU irradiance queries the light meter is made of (1–2 frames' latency, read back by key):
-   *  lightQuery asks for the irradiance at a world point under `key`, lightAt returns the latest answer for it (max-axis irradiance, W/m² — what the meter maps
-   *  to visibility) or undefined while there is none. Through the sensors by default; the QA harness (whose fake GPU never answers) swaps in a table to test the logic. */
-  lightQuery: (key: string, pos: Vec3, skipOwner?: number) => void = (key, pos, skipOwner = 0) => this.sensors.ask(key, pos, skipOwner);   // (skipOwner: a reading INSIDE a man's chest must not be shadowed by his own capsules — the AI targets' meter, guards.ts unitLightMeter, as Sam's passes his id)
-  lightAt: (key: string) => number | undefined = key => this.sensors.read(key);
-  /** drop a stale answer for `key` (a search plan re-using its keys for new spots): the probe keeps the last value per key for ever otherwise */
-  lightForget: (key: string) => void = key => this.sensors.forget(key);
   /** irradiance queries the searching guards queued THIS frame (guards.ts searchProbes keeps them inside a budget well under the probe's 32; the QA soak asserts it) */
   searchProbeN = 0;
   time = 0;
@@ -1416,7 +1402,7 @@ export class Game {
   }
   /** Restart the encounter: a fresh Player at the insertion point with full kit, fresh Guards on their routes, lights repaired, the level as authored. */
   restartEncounter() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.restartEncounter', this, []); if (__r !== RUST_PASS) return __r as any; } }
-    useDice(this.dice); this.sensors.ownReset(); this.quiet?.current();
+    useDice(this.dice); this.quiet?.current();
     const clean = CLEANRESTART.on;   // (cleanrestart.ts: nothing of the try that ended stands, sounds or plays on in this one — off, every line below as it was)
     if (clean) { CLEANRESTART_STATS.restarts++; CLEANRESTART_STATS.lines += this.messages.length; this.messages.length = 0; }   // (the lines of the encounter that ended go before anything below speaks: a staging's own line is this one's)
     this.quiet?.beforeRestart();   // the quiet mission, while it is up, deals this encounter's start / spot / patrol and writes them into the level BEFORE the fresh Player and Guards read it (quiet.ts) — a return on its first line otherwise
@@ -1430,7 +1416,7 @@ export class Game {
     // anything still in the air or still venting belongs to the encounter that just ended: an armed stun canister landing into the new one would
     // dazzle the fresh guards and alert the floor from a throw the restarted player never made, and a deployed can's 30 s screen would go on
     // degrading their line of sight (its emitter tracks the item and is priority-pinned, so dropping the item alone does not stop it)
-    this.clearAftermath(); this.smoke.clearAll?.(); this.cpuSmoke.grid?.renew(); this.engine.hostBooks = undefined;   // (… and with that solver's smoke, every host book of what was filed with it and asked of the mixer, host/api.ts HostBooks: the open fires', fire.ts FireShown, and a smoke break's, whose rows are by a man's id and would be the fresh man's — asked for afresh on the next frame)
+    this.clearAftermath(); this.smoke.clearAll?.(); this.engine.hostBooks = undefined;   // (… and with that solver's smoke, every host book of what was filed with it and asked of the mixer, host/api.ts HostBooks: the open fires', fire.ts FireShown, and a smoke break's, whose rows are by a man's id and would be the fresh man's — asked for afresh on the next frame)
     for (const s of this.seats) { const v = s.view; v.hover = null; v.interactables = []; v.nearby = []; v.act = null; }   // (like useDoor above) this frame's cursor state still names the guards / bodies of the encounter that just ended: when the restart
                                                   // came from updatePlayer (Shift+Enter), the Space handlers later in the same update() must not grab, take down or drag any of them
     if (clean) this.cleanSlate();
@@ -1668,6 +1654,8 @@ export class Game {
     ray: (o, d, max) => this.askHost ? this.askHost.ray(o, d, max) : this.col.raycast(o, d, max),
     hear: (from, to) => this.askHost ? this.askHost.hear(from, to) : this.col.sound.propagate(from, to),
     way: (a, b, maxIter) => this.askHost ? this.askHost.way(a, b, maxIter) : this.col.nav.findPath(a, b, maxIter) as Vec3[] | null,
+    // (no copy of the light stands here: with no Rust game under it a tool's starts, and a page's throws by name)
+    light: (p, owners, steady, leave) => this.askHost ? this.askHost.light(p, owners, steady, leave) : senseTool(this, 0, [steady ? 1 : 0, leave, owners.length, ...owners, p[0], p[1], p[2]])[0],
     together: f => this.askHost ? f() : this.col.window(f),
   };
   askHost: WorldAsk | null = null;

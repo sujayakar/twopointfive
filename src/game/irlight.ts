@@ -21,8 +21,7 @@
 //     frame and off the walls. The renderer's light meter has that bounce (probe.wgsl: shadowed direct light + the radiance cache) and is given nothing by
 //     an infrared light, so it still cannot answer its own question. So the CPU's rule stays the FIRST word — where it calls a place light nothing more is
 //     asked — and the renderer gets the LAST one on what the CPU calls dark: the floor under him (Sam's and a teammate's own meters, asked every frame as
-//     it is; the wand's lens asks its own) and a spread of up to IRL_METER.slots of the dark points his fan found, asked through the sensors' seam
-//     (Game.lightQuery) on his beat and read every frame. A point is dark when the PICTURE of it is under IRLIGHT.show of the tube's range: the CPU's
+//     it is; the wand's lens asks its own) and a spread of up to IRL_METER.slots of the dark points his fan found, read on his beat. A point is dark when the PICTURE of it is under IRLIGHT.show of the tube's range: the CPU's
 //     direct light + the meter's bounce × settings.indirectScale (the meter's bounce is physical; the picture's is scaled — fgather.wgsl) through the
 //     tube's curve (nvg.ts tubeSig). A line of its own, and higher than NVG.blackAt: that one is where a MAN is lost to a goggled eye, about 0.035 of
 //     the range, and direct light is either well over it or nothing; bounce is every value between, and floor at 0.05 of the range is grain to the

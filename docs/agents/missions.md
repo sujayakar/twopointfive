@@ -691,8 +691,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     no rule of the game's). WHAT MY RUNS HAD MISSED, AND WHY: THE MOON. The post is played at night under a clear sky and its street is open to it: the page's meter reads about 55 of 100
     on anybody standing in it. Headless, `guards.ts lightEstimateAt` leaves every directional light out, for the player AND for every man an AI eye looks at, so every fight in the
     open had been measured in the dark (the scripted player's log said `lit 0.00` at the blocks, the window and the bags; his HUD said 55 to 59 there). The scripted player now puts the
-    moon on every meter: `mode.moon` for the player's own (the runner's `--moon`) and, for everybody else, `tools/qa/hour-lib.ts installSkyMeter` (the game's light hooks answered as the
-    page's meter would for direct light; `tools/qa/lessons/tut-squad.ts sky()`, `TUT_SQUAD_SKY=0` = as it was). It has no
+    moon on every meter: `mode.moon` for the player's own (the runner's `--moon`; `tools/qa/lessons/tut-squad.ts sky()`, `TUT_SQUAD_SKY=0` = as it was). It has no
     bounce and no bodies' shadows, and it did NOT by itself reproduce his notes 2, 5 and 6 below: those mends are from reading the code and are measured not to break the run, no more.
     - *"was confused that it's really 'Q again on the door' not elsewhere".* The three lines are 'Press [B] on the door again to send them in' (twice) and '… to go in behind him', and
       the card 'Two ways in' says "that door" (all four in the voice of `docs/agents/writing.md`). The key anywhere else is still a move order, the game's own rule; a step key that drops
@@ -2367,10 +2366,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **The scripted players play in the page's own direct light, and the plain lesson check walks the tutorial too** (2026-10-22; tools only: `lesson-run.ts`,
   `lesson-gate.ts`, `lesson-check.ts`; A CHANGED BAR for all six tutorial missions). THREE GAPS between a scripted run and the page. (1) The CPU's light
   estimate has an authored hour's sun and sky (`hours.ts hourLight`) and nothing of the NIGHT's moon (`guards.ts lightEstimateAt` skips directional
-  lights), and the page's meter has both: `--moon` put it on the player's own meter alone, and only where a script asked. So by night the squad mission's
+  lights; both are history since the game senses for itself, rust.md ONE WAY OF SENSING), and the page's meter has both: `--moon` put it on the player's own meter alone, and only where a script asked. So by night the squad mission's
   men "never saw what the page's shot", and the pair's partner followed down a lane in runs that the page's meter called lit. NOW `lesson-run --sky` is ON
   BY DEFAULT FOR A TUTORIAL MISSION (`--nosky`, or the script's `mode.sky: false` with why, puts it off; a Training row asks for it): `--moon` for the
-  player, and ONE hook on `g.lightQuery` / `g.lightAt` / `g.lightForget` that answers every other man's meter (a unit's own, a body's, a held man's, a
+  player, and (until the game sensed for itself) ONE hook that answered every other man's meter (a unit's own, a body's, a held man's, a
   civilian's) by the SAME SUM as the player's: the estimate where he is, plus the moon where nothing solid is up its direction (an hour's own sun is
   never added again: at midday that lit a man twice). `--floor N` (the pair mission's, `mode.floor`) is the same hook's lower bound: the bounce neither
   has; with `--nosky` it is the floor alone. Two models of one floor would let a man be lit to the squad and dark to himself. This is also what every
@@ -2492,6 +2491,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   their music rows, menu pictures, menu-art pins and menu-shot recipes; the eight recorded sound replays that were a lesson played (the seven, and `whip`,
   which was recorded on the hands lesson's yard), with `tools/qa/tapes/whip.ts`. `lesson-check` and `lesson-gate` with no name now walk the six tutorial
   missions; `verdict-lessons` too, on the page's stand only (a tutorial mission's scripted player is not run frozen; it exits 2 without the word). KEPT, AS
+  [2026-11-08: those three stage yards are deleted too, with `gwot-yard.json` (its generator stays, as the library's showroom, with no file), `office-relief.json` and `?level=`. Their checks stand on kept levels. See the commit.]
   STAGES FOR CHECKS: `levels/train-move.json`, `train-orders.json`, `train-silent.json` and their generators,
   with no lesson, no row and nothing on a menu that loads them, because checks owned elsewhere are staged on their floors (the hands probes,
   `thrpie-check`, `wordcuts-check`, `teamtally-check`, `takecheck-check`, `savetimeline-check`, `carlamps-check`, `keybinds-check`'s wall line, four page

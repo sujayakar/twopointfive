@@ -339,7 +339,7 @@ export class ModelErr {
     if (this.move) { this.move = false; this.next(); if (this.phase === 'end') return; }   // (the tick after the last age: the very place in the plan's clock the walk always moved at, less the wait in `frame`)
     if (this.phase === 'settle') {
       if (this.left-- > 0) return;
-      const lit = senseTool(g, 0, [g.player.char.id, ...this.pts.flat()]); this.pts.forEach((p, i) => this.ask({ k: 'light', s: this.at, p, o: this.open(p[0], p[2]), pic: null, m: { light: lit[i] ?? null } }, false));
+      const lit = senseTool(g, 0, [0, 0, 1, g.player.char.id, ...this.pts.flat()]); this.pts.forEach((p, i) => this.ask({ k: 'light', s: this.at, p, o: this.open(p[0], p[2]), pic: null, m: { light: lit[i] ?? null } }, false));
       this.phase = 'gap'; this.left = GAP; return;   // (the picture reads its light before there is any smoke in it: the canister waits half a second)
     }
     if (this.phase === 'gap') {

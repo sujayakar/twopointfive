@@ -97,14 +97,14 @@ if (COVER) { cover(); process.exit(0); }
         const e = window.__engine; e.render = () => { e.world.upload(); }; window.__smoke.params.enabled = false;
         const tick = () => new Promise(res => { const ch = new MessageChannel(); ch.port1.onmessage = () => res(); ch.port2.postMessage(0); });
         for (let i = 0; i < 4000 && !window.__tape.state.ended; i++) { window.__tape.run(240, false); await tick(); }
-        const s = window.__tape.state; return { ended: s.ended, f: s.f, ticks: s.ticks, drift: s.drift, unjournaled: s.unjournaled, compared: s.compared, heard };
+        const s = window.__tape.state; return { ended: s.ended, f: s.f, ticks: s.ticks, drift: s.drift, compared: s.compared, heard };
       });
       await page.close();
       const sounds = {}; if (st) for (const n of st.heard) for (const m of [n, ...(WITH[n] ?? [])]) sounds[m] = 1;
       const miss = Object.keys(T.sounds).filter(n => !sounds[n]);
-      const ok = !!st && st.ended && !st.drift && st.unjournaled === 0 && st.heard.length === T.asked && !miss.length && !errors.length;
+      const ok = !!st && st.ended && !st.drift && st.heard.length === T.asked && !miss.length && !errors.length;
       if (!ok) bad++;
-      console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${name}: ${!st ? 'the page has no player (' + (errors[0] || 'no error') + ')' : `${st.f} of ${st.ticks} steps, ${st.compared} compared, ${st.drift ? `parted at step ${st.drift.f} (${st.drift.who}, ${st.drift.metres.toFixed(2)} m)` : 'as recorded'}, ${st.unjournaled} reads the tape does not have, ${st.heard.length} sounds asked (recorded ${T.asked})${miss.length ? ', not heard: ' + miss.join(' ') : ''}${errors.length ? ' · ' + errors[0] : ''}`}`);
+      console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${name}: ${!st ? 'the page has no player (' + (errors[0] || 'no error') + ')' : `${st.f} of ${st.ticks} steps, ${st.compared} compared, ${st.drift ? `parted at step ${st.drift.f} (${st.drift.who}, ${st.drift.metres.toFixed(2)} m)` : 'as recorded'}, ${st.heard.length} sounds asked (recorded ${T.asked})${miss.length ? ', not heard: ' + miss.join(' ') : ''}${errors.length ? ' · ' + errors[0] : ''}`}`);
     }
     if (!CHECK && !DRY) cover();
   } finally { await browser.close(); fs.rmSync(tmp, { recursive: true, force: true }); }

@@ -46,7 +46,7 @@ const CENSUS: Record<string, [number, number, number]> = {
   'tut-team': [0, 8, 0],   // (the same station, box for box)
   'tut-road': [0, 1, 0],   // (the road post's hut: one sill window on the gateway's side)
 };
-const baseOf = (file: string) => file.replace(/\.json$/, '').replace(/-gwot$/, '').replace(/^office-relief$/, 'office');
+const baseOf = (file: string) => file.replace(/\.json$/, '').replace(/-gwot$/, '');
 
 /** the office with a Particles attached, everyone parked, Sam in the corridor, the fracture live. */
 async function stage() {

@@ -358,11 +358,7 @@ export function squadsStage(g: Game, S: StructureData | null, hostiles: Guard[],
 }
 /** the staging is gone (roomclear.ts clear) */
 export function squadsStop(g: Game) {
-  // (radioCheck: its body tests ask the light meter and the smoke about the squad's own men by id, and unit ids are dealt again — the next cast is not read by
-  // the light, or through the smoke, the last one's bodies lay in. Only a staging the switch ran in: with it off these keys are left as they always were)
   const st0 = STATES.get(g);
-  for (const Q of st0?.squads ?? []) if (Q.rc) for (const a of Q.men) { g.lightForget(`bodyL${a.char.id}`); for (const b of Q.men) if (b !== a) g.lightForget(`bodyS${b.char.id}_${a.char.id}`); }
-  if (st0?.nc) for (const Q of st0.squads) for (const a of Q.men) { g.lightForget(`bodyL${a.char.id}`); for (const X of st0.squads) if (X !== Q) for (const b of X.men) g.lightForget(`bodyS${b.char.id}_${a.char.id}`); }   // (netAsk: a man sent to another squad's posts asked the same of ITS bodies)
   squadsLetGo(g, st0); STATES.delete(g); CTX = null;
 }
 /** squads are on the floor in this game right now */

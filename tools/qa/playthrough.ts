@@ -110,8 +110,6 @@
 //                                          mean / p50 / p95 / p99 / max in ms, and `byAlive`: frames and mean ms against how many enemies were up that frame
 //   PT_SAY=1 (env)                         every run's JSON carries `said` (tools/qa/say-watch.ts): every line a guard says with its call site and what became of it on the
 //                                          player's side (bubble / radio strip / neither, the fog of war asked), every defender decision the fight's modules note, state changes
-//   PT_METER=sky (env)                    the light meter answered AS THE PAGE'S WOULD for direct light (tools/qa/hour-lib.ts installSkyMeter): the harness's own
-//                                          estimate leaves the moon, a sun and lightning out; the page's meter counts them. Off = the harness as it always was
 //   PT_MORTAL=1 (env)                      Sam can be seen and hurt (no god mode, his light meter at PT_LIT, 0.5): a player who dies ends the room clear 'wiped' (and the
 //                                          rescue 'lost'; the night breach has no end for it and runs to the cap) — for PT_AFTER
 //   PT_AFTER=90 (env, with PT_SAY)         the game stepped that many seconds past the run's end with nobody at the keys, a row a second per living defender in `said.after`;
@@ -1595,7 +1593,6 @@ async function playRun(scn: string, seed: number, cap: number, verbose: boolean,
     if (rest.HAULHOME) put('HAULHOME', rest.HAULHOME);   // (and the hauled furniture's last hand to the door: standUp's frozen stand has just pinned it off — TPS_HAULHOME — over a --set row)   // (and the brisk walk onto a stack mark at an open door: standUp's frozen stand has just pinned it off — TPS_STACKLINE — over a --set row)
     g.godMode = !MORTAL; g.tune.chaos = 0.5;   // (the page's default chaos; Sam cannot be hurt — the team is what is under test — but he is seen, heard and in the way)
     const { why } = await quiet(!verbose, () => W.start()); if (why) throw new Error(`start refused — ${why}`);
-    if (process.env.PT_METER === 'sky') { const { installSkyMeter } = await import('./hour-lib.ts'); installSkyMeter(g); } else if (process.env.PT_METER) throw new Error(`PT_METER=${process.env.PT_METER}: sky, or unset`);
     if (DOOR && !g.doors.byName(DOOR)) throw new Error(`PT_DOOR=${DOOR}: this level has no door of that name`);
     if (EXTRA > 0) { const { uncap, spawnPast } = await import('./uncapped.ts'); const { standExtra } = await import(`${ROOT}/src/game/stress.ts`); uncap(W); const r = await quiet(!verbose, () => standExtra(g, EXTRA, spawnPast)); out.note = `PT_EXTRA: ${r.stood} of ${EXTRA} extra enemies stood${r.why ? ` (${r.why})` : ''}`; }
     P = new Player(W, E.kind, cap, verbose); cuesOn = !!CUES.on; P.handw = new HandleWatch(g, verbose ? (x: string) => P!.say(x) : null); for (const k in HANDLE_STATS) HANDLE_STATS[k] = 0; HANDLE_DEBUG.log = verbose ? (x: string) => P!.say(`   ▯ ${x}`) : null;   // (as this run has it: the tables are put back before the tally is written)

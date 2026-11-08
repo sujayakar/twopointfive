@@ -485,7 +485,7 @@ export function knobRegistry(): Record<string, object> {
     RESCUEEND, RESCUEFLUSH,
     // a pose's bulk arithmetic in singles (anim/skeleton.ts POSEMATH.singles: blendPose and sampleClip's step, in both languages)
     POSEMATH,
-    // the senses on the CPU (sense.ts SENSE.cpu, and its smoke model's numbers)
+    // the senses' numbers (sense.ts)
     SENSE,
     // a record from anyone (cmd.ts checkCmd: the switch and its bounds)
     CMDCHECK,

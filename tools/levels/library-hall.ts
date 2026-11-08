@@ -2,7 +2,7 @@
 // the office's kit (src/scene/officeGen.ts officeKit), the loud levels' lived kit (livedKit.ts), the furniture of the records levels (livedPieces.ts), the
 // quiet pair's pen (lived-quiet.ts) and the training furniture (lived-train.ts), so each can be exported, looked at on the page
 // (?levelFile=library-hall.json&solo&hour=midday) and drawn into the catalogue (docs/library.md, tools/levels/library.ts). The look's own kit stands in its
-// own showroom, levels/gwot-yard.json (the pieces that one does not stand are here, by the car and on a stretch of their own): between the two, every piece of the library stands once, and `library.ts --check` is red when one does not.
+// own showroom, tools/levels/gwot-yard.ts (the pieces that one does not stand are here, by the car and on a stretch of their own): between the two, every piece of the library stands once, and `library.ts --check` is red when one does not.
 // It is also the worked example of each call: a level task reads a piece's line here and copies it.
 //
 //        x 0   4          11                                    40
@@ -81,7 +81,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   K.ceilingPanel(7.5, 3.5, true, 'hut');
   grp('yard.office');
   K.bench(13.6, 2.2, 0); K.car(18.6, 3.6, 0.08, C.partBlue);
-  // THE LOOK'S KIT: the pieces its own showroom does not stand (gwot-yard's kept part is held as it is by lived-check, so a piece the look's kit gains is
+  // THE LOOK'S KIT: the pieces its own showroom does not stand (gwot-yard's kept part stays as it is, so a piece the look's kit gains is
   // stood HERE): three by the car, the newer ground pieces a bay each on their own stretch, and its yard lamp with the hall's own lamps below
   grp('yard.gwot');
   G.drum(22.6, 2.2, 'drumRed', 0.3); G.van(28.4, 3.6, 0, 'truckWhite'); G.partX(3.6, 32.6, 36.6, 'whitewash');

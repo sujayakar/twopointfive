@@ -192,7 +192,7 @@ export function resetCivilians(g: Game) { { const __s = RUST_SURFACE; if (__s) {
     if (pl.dragging?.civ) s.view.toggleDrag();
     if (pl.takedown?.g.civ) pl.takedown = null;
   }
-  for (const cv of g.civilians) { forgetMeter(g, cv); manLeaves(cv.char, cv); }
+  for (const cv of g.civilians) manLeaves(cv.char, cv);
   const F = floorOf(g); F.evacTold = false; F.greetAt = -1e9; F.pending.length = 0;   // (a word due from a man of the old shift is nobody's now)
   spawnCivilians(g);
 }
@@ -376,7 +376,6 @@ export function hostageSay(g: Game, gd: Guard, moment: HostageMoment, other: Gua
   if (moment === 'aimed' || moment === 'shot' || moment === 'entry') g.audio.play('heldProtest', gd.char.bones.head ?? v3.add(gd.char.pos, [0, 0.4, 0]), 0.5, { rate: C.def.kind === 'worker' ? 1.15 : 1.5 });   // (the one voice buffer the game has for a cry: scream()'s, lower)
   return true;
 }
-function forgetMeter(g: Game, gd: Guard) { const id = gd.char.id; g.lightForget(`civC${id}`); g.lightForget(`civH${id}`); }
 
 // ================================================================ gates
 /** are the civilians on the floor at all right now: not under the showcase tour / the attract loop's tour flag / a puppet beat, not in the breach's daylight */
@@ -594,7 +593,6 @@ export function civilianDown(g: Game, gd: Guard, dir: Vec3, quiet: boolean, how:
   if (gd.held) { gd.held = null; c.anim.heldPose = null; }
   c.anim.act = null; C.target = null; C.reportTo = null;
   c.ragdollize(g.col, dir, quiet);
-  forgetMeter(g, gd);
   const dead = how === 'shot';
   const hostage = WORDS.on && !!g.rescue?.isHostage(gd);   // (a hostage down is the rescue's to word — rescue.ts outcome: who shot her, and what it ends — not 'the cleaner … they will find her')
   if (by === 'player') {

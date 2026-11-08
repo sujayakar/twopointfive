@@ -39,8 +39,7 @@ The price: a module in `play` is about a megabyte larger (25.7 to 26.7 MB), beca
 **THE WHOLE TICK IS IN RUST AND THE PAGE PLAYS IT (2026-11-07).** `rust/game` is the game's tick in Rust (hand-written bodies over a generated skeleton),
 `rust/game_face` its WebAssembly face, `rust/game_run` a native runner. The page's game is the Rust game with no address word (`src/host/rustgame.ts`,
 `tools/blitz/PAGE.md`): the TypeScript `Game` stays as a puppet that the picture, the sound, the HUD and the menus read, and the TypeScript tick is not called.
-`?rust=0` is the TypeScript game for as long as it is still in the tree; a page with `?net=`, `?join=` or `?playtape=` stays with it until those have been
-played on the Rust game. A headless tool plays the Rust game under `TPS_GAME=rust` (`tools/blitz/PLAY.md`, `rust.sh`); with no word a tool still stands the
+`?rust=0` is the TypeScript game for as long as it is still in the tree; a page with `?net=`, `?join=` or `?playtape=` is the Rust game too. A headless tool plays the Rust game under `TPS_GAME=rust` (`tools/blitz/PLAY.md`, `rust.sh`); with no word a tool still stands the
 TypeScript game (`tools/blitz/word.ts DEFAULT_WORD`). A built module is checked in (`rust/game_face/prebuilt/`, with a hash of its sources; ANY change under
 `rust/` stales it: `bun run tools/blitz/face-build.ts --prebuilt`, then `--where` must say it is of these sources); a hosted build compiles its own
 (`tools/host/build.sh`) and fails if it cannot. Checked: every tick of 159 scripted runs held to the TypeScript tick (`tools/blitz/run.sh`), a differential
@@ -83,7 +82,8 @@ it sets an `OptionsGame` (`src/ui/options.ts`), the old page's Menu handing it t
 `Aside`; not on a page a script drives, unless its address says `reel`), a save has its picture (`src/host/savepics.ts`, both pages), and Options ▸ Show frame rate is a read-out of the picture's own
 (`src/ui/readout.ts`). The measuring tools (F9, F8, F6, the Benchmark, `?pricelevels`) and the debugger
 (backslash) run there too (`measure.ts`, `drawbench.ts`, `debugger.ts`, `ui/graphicspanel.ts`); the Benchmark's player is Rust (`rust/game_run/src/hands_off.rs`: a seat's player, his script async code polled once a tick;
-`tools/draw/hands-check.ts`, `HANDS_BREAK=1` fails). Never seen on a GPU. Not on the new page yet: the HUD, co-op; the Team & kit picture is the old page in a frame (`KIT_VIEW.page`). The weather, the air, the fires and the snow are the picture's own there (`src/picture/`: `weather.ts` holds them), reading the sections `fires`, `winds`, `gusts`, `heat`, `air`, `roofs`, `feet`, `things`, `blasts`, `snow_words` and `resets`: the rain's disc and drips, the air's field, the fire's flame records and its gas, the snow's field, prints, marks, craters, flakes, wisps and breath. Wet ground is `game_draw::wet`, in the boxes' rows. A blast over the snow reaches both pages by the out event `SnowBlast` (`snow_blast_at`, a no-op since the swap). To add a section: a file, a line in `sections!`, the generator, a line in `hold draw`'s parts.
+`tools/draw/hands-check.ts`, `HANDS_BREAK=1` fails). A hosted build's records go up from there too
+(`drawcloud.ts`; no kept tape yet). Never seen on a GPU. Not on the new page yet: the HUD, co-op; the Team & kit picture is this page in a frame, standing only (menus.md). The weather, the air, the fires and the snow are the picture's own there (`src/picture/`: `weather.ts` holds them), reading the sections `fires`, `winds`, `gusts`, `heat`, `air`, `roofs`, `feet`, `things`, `blasts`, `snow_words` and `resets`: the rain's disc and drips, the air's field, the fire's flame records and its gas, the snow's field, prints, marks, craters, flakes, wisps and breath. Wet ground is `game_draw::wet`, in the boxes' rows. A blast over the snow reaches both pages by the out event `SnowBlast` (`snow_blast_at`, a no-op since the swap). To add a section: a file, a line in `sections!`, the generator, a line in `hold draw`'s parts.
 
 **THE MARKS ARE THE GAME'S (2026-11-07).** Bullet holes, scorches, scuffs, chips, cracks in glass, dust and rubble on a floor, wall wear and wet prints are one list kept for the game in a slot (`Game.mark_set`, `render_decals/set.rs`): 512 at most, the oldest going first and a mark laid only for the picture before any of play's, each with the key of what made it, a mark that rides a box kept as that box's id and a place in its frame, a print's strength worked out from when it was made. A rule asks (`bullet_mark`, `mess_burst`, `decals_add` …); the asks are answered in their order as the tick's last step, with the world where the tick left it (`marks_settle`); no rule reads a mark, and `hold` holds that. `rust/game_draw/src/marks.rs` writes the buffer `decals.wgsl` reads, and the page sends it when a word moved (`src/draw/marks.ts`): a clone of the game holds its marks, so a load or a rollback is another buffer with nobody told. The list is not on the wire, so a game kept as a file's bytes (`face_keep(h, 1)`) comes back with none. The page with a copy still lays its own from the same out events, and `tools/draw/marks-check.ts` holds the two to each other word for word (four levels, a fight of 15 s with bullets, cans and door work: every word, 18 to 130 marks, a chip, a scuff or a print seen only by the native tests `tests/marks.rs`), but for what the copy lost when its tick went: a print's drying and look. No switch: the page's rule is the only one. Never seen on a GPU, and a mark drawn from this buffer has not been looked at on any adapter. The level's own look is rows too: `traffic.rs` (the traffic map, made once a level, its ways asked of a copy of the game; always the look's rules, walked ways and the band along long faces: `?look=old` does not reach it), `dust.rs` (the dust's table). `tools/draw/look-check.ts` holds them to the copy's on seven levels: the map to the byte, every leaf's words. A level's leaves are painted as the game is stood (`doors/paint.rs`, called where the doors are made, and `src/scene/leafPaint.ts` at the same place): the paint is the box's own colour and word from its first moment, so a breach's pieces and a round's chips take it. Its switch is the look's: `k.look.on` is on in the page, and an address with `look=plain` puts it down. `tools/blitz/start-levels.ts` holds the rule to the TypeScript's, mission by mission (`look-check` cannot: its Rust game is made from the stand's export), and `tests/marks.rs` holds the pieces. Measured: 229 leaves on 19 levels, each the same to the digit as the rows drew it before; `hold` on one seed, 14 runs of 40 s on seven levels, with the bangs and door hands: only `tab.boxes` moved, and with the colour and word of every box masked out of that part nothing did. `hold` runs with the picture's rows down, so a dressed piece and a chip's colour are held by that native test and not by `hold`. Never seen on a GPU. A wall charge's picture half (`blast_feel/picture.rs`: the fireball, the ring, the pushes, the ceiling's dust) is worked out by the game a stage at its time, its queue kept with the game, and reaches the page as the tick's particles (`MarkSet.thrown`). Its numbers are held by a native test only: the copy's own half needs a particle system the headless host has none of. Never seen on a GPU.
 Checks: `tools/draw/weather-check.ts` (the numbers against the copy: fires, winds, the air's map, roofs, drip lines, the snow field, every print's bytes; `WEATHER_BREAK=1` fails), `tools/draw/weather-page.cjs` (`draw.html` on the software adapter: snow, a crater, a downpour; stills with `--out`), `tools/draw/rows-check.ts` runs both packers on one tick of one game and compares every word (462 ticks of six levels, all equal; `ROWS_BREAK=1` fails; it goes when the
@@ -401,8 +401,8 @@ one stops the tool by name, on an address one does nothing and says so in the co
       each that passed and whose reach can hold the point, and asks once; the hour's sun and
       sky and a stroke of lightning are added to the same six faces in TypeScript afterwards, as they were (`hours.ts hourLight` keeps its own memory of
       rays, which is state of the host's). `?rustlight`, `TPS_RUSTLIGHT=1`.
-    - `smoke` — the game's own smoke along a line (`game/sense.ts CpuSmoke.trans`, what `SENSE.cpu` sees through; now asked as `CpuSmoke.along(col, a, b)`)
-      from `smoke.rs`: the live blobs are written for the one question and the sum, the erf and the wall test of each blob are the module's.
+    - `smoke` — the game's own smoke along a line (`sim::bricks::trans`)
+      from `bricks.rs`.
       `?rustsmoke`, `TPS_RUSTSMOKE=1`. Idle where the senses are the renderer's (nothing asks it).
     - `sound` — how a sound reaches a listener (`collision.ts SoundPaths.propagate`) from `hear.rs`, in two questions with the TypeScript's half-second
       memory of routed answers between them: the straight lines (clear, grazed, over the top, walled off, too far), then the way round by the floor (the
@@ -1214,8 +1214,9 @@ one stops the tool by name, on an address one does nothing and says so in the co
 - **ONE WAY OF SENSING** (`rust/game_rules/src/sense`, `guards::light_estimate_at`, `guards::light_on`; `rust/sim/src/bricks.rs`, `glow.rs`, `light.rs`; the
   maintainer, 2026-11-07: "we should make one way for sensing"). The rules ask the simulation how lit a point is and how much smoke is on a line, in the tick that
   wants to know, the same on a page, a server and a bare machine. NOTHING IS READ OF THE PICTURE: `Sensors`, its keys, its record and replay, the probe's table and
-  the queues made for its 64 places are gone from Rust, and the five switches (`SENSE.cpu`, `grid`, `bounce`, `moon`, `drift`) with them; where a bullet below or in
-  replays.md says one of them, it is history. No off-word and no journal key: a recording made on the picture's answers parts from its run.
+  the queues made for its 64 places are gone, and the five switches with them. No off-word and no journal key: a recording made on the picture's answers parts from its run.
+  A page asks the light for a preview through `g.ask.light` (`src/view/worldask.ts`, `face_light`, `game::sense::light_asked`), which applies nothing and writes nothing
+  (`game_start/tests/senses.rs asking_the_light_writes_nothing`): a throw preview asks it a block of floor at a time, and a crossing with its whole apply cost 5.5 ms a question.
   - THE SMOKE IS ALL IN THE BLOCK (cells, emitters, beat). 512 bricks, a place each, so none is refused. A source too small to hide anybody (`SENSE.smoke.least`) and a
     `look` source are the picture's alone and take no room of `smoke_system_like_budget`, so a fire fight's wisps do not starve the dust.
   - A TABLE KEPT BESIDE A BLOCK goes by `sim::state::stamp`; `sim::state::put` is the one way a block is written whole (a start, a put-back, a move between slots).
@@ -1254,313 +1255,11 @@ one stops the tool by name, on an address one does nothing and says so in the co
     the Rust game through the one tools' row `senseTool`: against the M4 Max's kept picture, light decides the other way on 1.1 % under a roof and 1.1 % under the sky,
     smoke at 1.5 m on 9.7 % and 2.7 %. MEASURED, 12 seeds, the same grid before and after: a guard 7 m from a lit man notices in 0.53 s and 0.53 s, through thinning
     smoke at 20.43 s and 20.43 s; a room fight's first shot after smoke 22.62 s and 22.48 s. Never seen on a GPU, and nobody has played it.
-- **The game's own smoke on a coarse grid** (`src/game/sense.ts SENSE.grid`, `SmokeGrid`; `rust/sim/src/bricks.rs`; the maintainer, 2026-11-02: "rework
-  smoke to be on a much simpler simulation on CPU (coarser grid with bricks?) and then have the visuals driven by the current pipeline"). A NEW RULE, not a
-  moved one: there is no TypeScript twin and no row of `RUST`. Read only under `SENSE.cpu`. DEFAULT OFF everywhere: the page's `?smokegrid` (with
-  `?cpusense`), the harness's `TPS_SMOKEGRID=1` on either stand; off is the blobs, the build as it was. No `FROZEN_HOLDS` row while it is down in the
-  plain page too (the `STALK.drag` precedent); the journal carries `SENSE` whole and a file from before the key replays with it off.
-  - WHAT IT IS. Density in half-metre cells, held in bricks of 4 × 4 × 8 cells (2 m square, floor to 4 m), 160 bricks a game, stepped ten times a
-    second inside the tick (`Game.senseStep`). Fed by the emitters the picture's solver is handed (`CpuSmoke.emit` passes each on: its place, its
-    width, what it lets out) and by nothing else of the solver: no velocity, no pressure, no wind, so `smoke.push` and the wind stay dressing. Smoke
-    passes between two cells only where nothing solid and no leaf stands between their centres (the box world's lines, asked both ways), so a canister
-    fills its room, stops at a shut door and goes out by an open one. It decays at the solver's rate and spreads at the blobs' rate. A sight line's
-    transmittance is the density of the cell each quarter metre of it lies in (`grid_trans`, read from the state alone: it answers outside a tick too).
-  - THE PICTURE IS NOT DRIVEN BY IT AND DOES NOT DRIVE IT. The GPU solver and its renderer are untouched. How far the two are apart is what
-    `?modelerr` measures (the next bullet); the grid's numbers (`SENSE.smoke`: spread, decay, rise) have NOT been tuned against a GPU, and a doorway's
-    haze after nine seconds is thinner than the picture's is likely to be.
-  - STATE IS A PART OF THE GAME'S BLOCK (`bricks.rs Smoke`, the part `smoke` of `state.rs State`; 2026-11-03, it was an array of the game's own with a
-    proven copy in the module before a game had a block). One row of doubles after the part's first word: a head with the plan in bricks, the emitters
-    letting out, which brick is where, the light model's columns, and LAST the cells, a brick after another. The part is a POOL: its first word is the
-    row up to the end of the highest brick that stands (`relive`), so a snapshot of a game with one canister out carries 92 KB of the part's 236 KB
-    and an empty grid 72 KB, and what lies past is read by nobody (a brick's cells are written zeros when it is made). Nothing is copied in or out:
-    a step, a sight line and a lamp's shadow name the block's slot (`st.bind()`), and TypeScript reads the row where the block stands
-    (`SmokeGrid.at`, `row`, `glowAt`: `game.sim.d`, bound or parked). `SmokeGrid` keeps the game's `SimState` and never a view of it; what else it
-    keeps is the host's half of the beat (the seconds owed, the emitters handed over since the last step, which go to the step itself in the
-    scratch: one that finds no grid standing has taken none).
-    AT HOME by the tenant in `sense.ts` (bit 16): `wants` is the rule's own switches, `SENSE.cpu && SENSE.grid` and a module that runs. It
-    has no TypeScript copy, so `into` is an empty grid and `outOf` is zeros (`grid_reset`), as a tick opens; a new encounter and the senses coming
-    to the game `renew` the grid where it stands. ONE THING PLAYS DIFFERENTLY FOR IT, with the switch up: an emitter handed over between
-    `restartEncounter` and the next tick's `senseStep` used to reach the blobs alone (the game had no grid object until that step made one) and now
-    waits for the grid's first step too, as it does for the blobs. No scripted mission has such an emitter: sixty runs with the switch up (below)
-    are the same games by digest. A TOOL'S OWN GRID (`SmokeGrid.make`: the error tool's, a check's) is in a block of its own, a `SimState` nobody
-    settles; it holds one of the module's four slots while it stands there, so its maker gives it back (`SmokeGrid.free`, as `ModelErr` does when
-    its walk ends).
-    WHAT THE MODULE KEEPS BESIDE IT is derived, a set of tables A SLOT OF THE BLOCKS: where each brick is (`INDEX`), which faces between cells are
-    open (`FACES`), the leaves as the last step found them. WHOSE THEY ARE is three numbers (`MADE`) a call names as they stand now: the block's
-    `stamp` (`SimState.stamp`: another number whenever a block was put back, parked, brought into a slot or born) and, for the faces, the box world
-    and the NUMBER OF ITS COPY (`boxMirror.ts gridCopy`: another whenever every row is written afresh). Where one differs the tables are made again
-    before anything is read. So a put-back, another game in the slot and a block parked and brought back need no line of the grid's. The faces are
-    asked once and kept, asked again round every leaf that has moved since the last step and wherever the host rewrites a static's row (`statics()`
-    says the rectangle to every set of tables asked of that world; a row past the end of the list as it was is always written), so they are at
-    every step what asking them all afresh gives: a game put back from a snapshot and one that never was step alike. NOT DONE, and a cost: a
-    put-back, and a block parked and brought back, ask every face again (which brick a cell's faces are kept under goes with the block). Measured
-    here at 21 bricks: a tick that steps the grid goes from 0.75 ms to 3.6 ms when its block was parked since the last one, and a sight line or a
-    lamp's shadow asked between ticks brings a parked block in (`bind`) and costs the same. It was so before the move too (a world's copy made
-    afresh forgot them). Faces kept by their place on the plan would outlive both, which a client that rolls back every tick with smoke out will
-    want. A FILE checkpoint keeps no smoke in the air (`savestate.ts`, as ever): a load clears the
-    grid with the blobs. A clear of a grid nothing was let out into does nothing at all, and no clear moves the steps' beat (a page's warm-up clears,
-    a tape of it played again does not, and the two step alike).
-    THE ORDER OF THE PARTS IS THE PARKED BLOCK'S COST (`state.rs PARTS`): the host keeps a parked block as one run of bytes to its last word in
-    use, so the room a pool does not use is paid for by every part after it. Fixed parts first, then the pools, the largest last: the smoke stands
-    BEFORE the pose pool. THE COST, measured on the layout of module version 14 (head, dice, doors, falls, smoke, poses): every parked block is now at least 314,536
-    bytes where it was 78,936 (the fixed parts, the doors' columns and the falls' store among them, are carried whole either way; the 235,600 more
-    are the smoke grid's part), and one with poses is that much longer than it was (`simstate-check` `parked poses`: 318,944 bytes where it was
-    83,344; its bar follows the layout: the fixed parts, plus the pools that stand before the last, which have a budget of their own of a quarter
-    megabyte, plus the 16 KB the last pool's own use had; `slots` there parks 2,700 blocks and so allocates some 850 MB over its run where the
-    fixed parts alone made it 210 MB). Only a process with more games than slots parks at all: checks, and never a
-    page or a game server. A HELD BAR, agreed with the state's owner (the game rules' task), not the end state: a parked block kept as each
-    part's live words back to back, so that an empty pool takes no room, is that task's to do in `state.ts`, and the bar goes back to under 16 KB
-    with it. MENDED WITH THE MOVE, at that owner's asking: `SimState.take` matched an earlier take's pieces by one count over all the parts, so
-    when the smoke's part grew by a piece every piece of the poses after it was copied anew; it now walks the earlier take a part at a time by
-    its own lengths, as `put` does (`simstate-check` `pieces`: two pools at home, the smoke's part grown by a piece between two takes, the poses'
-    eleven pieces all shared; none were with the one count).
-    KNOBS: the step is still handed `SENSE.smoke` and `SENSE.glow` as arguments by the host. When the list of knobs Rust code reads lands
-    (`rust/sim/src/knobs.rs`, the game rules' task), the step reads them there.
-    WHAT RAN FOR THE MOVE (2026-11-03, a cloud box, bun, no GPU). THE SAME GAMES: the five missions of `rust-check --missions`, seeds 1 to 6, on the
-    server's stand with `TPS_SMOKEGRID=1` and with `TPS_CPULIGHT=1` beside it (`tools/qa/playthrough.ts`), on the build before the move and after
-    it: sixty runs, each the same digest, end and second. With the switches down, `tickcost --each --list --compare` against the build: 38,634
-    ticks to the bit (2.16 → 2.14 ms a tick, nothing). `rust-check` quick and `--missions`; `smokegrid-check` and `cpulight-check` on both stands
-    with their red paths; `simstate-check` on both stands; `modelerr`; `sense-check`, `shipped-check`, `seats-check`; `dress-check` with both
-    switches up; `rollback-check` whole on both stands plain and with `TPS_CPUSENSE=1 TPS_SMOKEGRID=1 TPS_CPULIGHT=1` (8 scenarios each), and two
-    scenarios with the die, the poses, the grid and the light all at home in the block. A PAGE AGAINST A SERVER (`mpclient-page.cjs`, headless
-    Chromium on the software adapter, knobs `SENSE` cpu, grid, bounce): 27 of 27 state words over 818 ticks, the smoke's part of the block among
-    what a word folds, so V8 and bun keep the same bytes there. `rust-page.cjs`, every job. THE PAGE BY ITSELF with `?cpusense&smokegrid&cpulight`:
-    no page error, the grid in the game's own block (slot 0), a plan of 40 × 28 metres with the lamps' light in 757 and the bounce in 1,101, and a
-    canister at Sam's feet in 15 bricks a few seconds on, the metre beyond it letting through a ten-millionth.
-    AGAIN ON THE BUILD THAT HAS THE DOORS AND THE FALLS IN THE MODULE (module version 14, the same day and box): the sixty runs against that
-    build, each the same digest, end and second; the switches down, 38,634 ticks to the bit; `rust-check` quick, `--missions` and its red path;
-    `smokegrid-check` and `cpulight-check` on both stands with their red paths; `simstate-check` on both stands and its red path; `rollback-check`
-    whole on both stands, plain and with the three switches up, and two scenarios with the die, the poses, the doors, the falls, the grid and the
-    light all at home; `modelerr`, `sense-check`, `sense-ident`, `shipped-check`, `seats-check`, `dress-check` plain and with both switches up,
-    `door-ident`, `falls-ident`, `glassfall-check`, `debrisfall-check`, `mpserver-check`; the page against a server with the three knobs, 32 of 32
-    state words over 968 ticks and a watcher on bun 20 of 20; `rust-page.cjs`, every job; the page by itself, the same figures (slot 0, 757, 1,101, 15 bricks, a ten-millionth) and no
-    page error. Nobody has played it. Never seen on a GPU.
-  - THE BOOK. The head keeps three sums that thin at the cells' own rate: all that was let out, what thin bricks held when they were given back, and
-    what an emitter could not let out because every brick was taken. What the cells hold + given back + refused = let out, at every step, to
-    rounding: passing smoke between cells makes none and loses none. A brick is MADE where a cell at a neighbour's edge holds smoke and the way out of
-    that cell is open (a wall along a brick's edge costs no brick behind it) and GIVEN BACK when it is thin, no emitter stands in or beside it and no
-    neighbour holds smoke at the shared edge: the same test, so a brick is never made and given back in one step. A thin canister's fringe is given
-    back as it goes (with no decay a tenth-strength canister has given back 28 % of itself after four minutes, a full one 4 %; with the game's decay
-    the smoke is gone long before).
-  - THE COPY IS THE GRID'S TO STAND UP (`collision.ts gridStep`): where no row of `RUST` has the box world's copy standing for the tick, the step makes
-    it the boxes as they are, steps, and lets it go, with no question of the game's sent to it. Nobody who opens a tick has to know a grid is there.
-  - WHERE NO GRID STANDS the blobs answer, as they did: a runtime with no WebAssembly (`simWhyNot()`), a level whose plan is over 8,192 bricks, a tick
-    with more leaves than a list holds, and WHILE THERE IS MORE SMOKE THAN BRICKS (the last step wanted a brick there was no slot for, or what was
-    refused is still more than nothing: `grid_trans` answers −1, and the grid answers again when it holds everything it was asked to). The blobs are
-    still stepped beside the grid (they hold the emitter budget's count), so the fall back is whole.
-  - `tools/qa/smokegrid-check.ts` holds it, on both stands: `stands` (and `sense.ts GRID`, the numbers this side reads the state by, against
-    `bricks.rs` name for name), `mass` (the book balances to a part in 10⁹: a full canister and a tenth of one, no decay and the game's, at 14 s and
-    at four minutes), `full` (sixty canisters: every brick taken, the grid says it cannot answer and the game's smoke along a line is the blobs'; one
-    more where no brick is lets nothing out and the book says how much), `door` (a shut door holds, an opened one lets through), `block` (the part is in use up to the highest brick,
-    the grid's object keeps no typed array, the snapshot met no view of the module's memory), `put back`, `another game`, `faces` and `parked` (the
-    same state word straight · put back from a snapshot · the snapshot put into a fresh game · with the box world's copy another copy before every
-    tick · stepped turn about with four other games over four slots, 386 blocks parked on the way; a door swinging and a wall moved and said on the
-    way; `parked` is a fresh game handed the snapshot, so it is never put back while it plays). `SMOKEGRID_BREAK=1` is two breaks, each also a
-    word of its own: `=leaves` asks the grid with no leaves (`door` must fail, and nothing else does) and `=stamp` pins every block's stamp, so
-    the tables are never made again (`put back` and `parked` must fail, `door` must pass; `faces` goes with them). The check judges its own red
-    path: exit 1 when every line a break must reach failed and none it must not, exit 3 naming the line otherwise.
-  - Measured 2026-11-03 on a cloud box (bun, no GPU), ONE SEED A MISSION, the five missions of `rust-check --missions`. With the switch down every
-    mission is the game it was, to the bit. With it up on the frozen stand (`TPS_SMOKEGRID=1`) three of the five are still the same game to the bit
-    (the pass, the hostage rescue, the block: no line through smoke changed an answer in them); the compound is another game (taken at 10,870 ticks
-    where the blobs' game is wiped at 8,060) and the warehouse another with the same end (taken, 12,611 ticks both). One seed says the rule moves a
-    fight where smoke is thrown, not which way it moves fights: the tally over seeds is under the light model, below. A tick costs the same within
-    the noise of a run (3.54 ms over the five with the grid, 3.60 without; the three missions of equal bits 3.73 / 3.43 / 3.62 against 3.80 / 3.47 /
-    3.53), and the check's own `cost` line reads 1.12 ms a tick while a canister burns against 0.92 quiet. Nobody has played it. Never seen on a GPU,
-    and the picture does not read it: the smoke drawn is the solver's, as it was.
-- **The light model** (`src/game/sense.ts SENSE.bounce`, `SENSE.glow`; `rust/sim/src/glow.rs`, `light.rs`; `guards.ts lightEstimateAt`, `lightField`,
-  `steadyLamps`; the maintainer, 2026-11-02, of the coarse smoke grid: "same goes for lighting too, right?"). A NEW RULE, not a moved one: no TypeScript
-  twin, no row of `RUST`. It stands on the coarse grid, so it is read only where `SENSE.cpu` and `SENSE.grid` have one standing. DEFAULT OFF everywhere:
-  the page's `?cpulight` (with `?cpusense&smokegrid`), the harness's `TPS_CPULIGHT=1` on either stand; off is the estimate as it was, the build as it
-  was. No `FROZEN_HOLDS` row while it is down in the plain page too; the journal carries `SENSE` whole and a file from before the key replays with it off.
-  - WHAT IT IS: the two things the estimate of the light on a man never had. THE SMOKE'S SHADOW: a lamp no wall hides is dimmed by the grid's smoke
-    along the very line the wall test took: the game's own smoke on that line, one answer (`CpuSmoke.along`: the grid's cells, the blobs while the
-    grid holds more smoke than bricks; the module hands such a question back). A grid nothing was let out into is not asked. THE LIGHT THAT COMES ROUND: one
-    number A SQUARE METRE OF THE PLAN, in four columns after the grid's cells (the lamps' light at the metre's middle at chest height, the bounce, and
-    whether the way to the next metre toward +x and toward +z is open: a clear line between the two middles, asked both ways, leaves and all; a
-    pane lets light by, as the lamps' own lines and a reader's do). A thirty-second of the plan is asked again every step of the grid (ten a second),
-    so a door that opens or a lamp that moves is in the field within 3.2 s; and THE WHOLE PLAN in the step that finds other lamps than it was last
-    swept whole under (`light.rs word`: which lamps and how strong, nothing of where: a new field, a lamp shot out, a breaker thrown), so the light
-    that comes round does not outlast its lamp (about 12 ms, once, on the office). Then two passes of one rule over the whole plan: a metre's bounce is `albedo` of what it keeps of its own light and what each open side
-    hands it (`share` a side). At rest that is the rule's own fixed point, and no metre holds more than a closed room of the brightest lamp would.
-    A POINT reads the nearest metre whose middle it SEES (its own; else across the nearer edge, the other, the corner), so a man against a wall reads
-    his own room and never the one behind it; `lightEstimateAt` adds that to the brightest face.
-  - WHICH LAMPS. `steadyLamps`: every lamp that is on, has no owner and is not a flash, a beacon or the moon, at its steady strength. A torch a man
-    carries, a muzzle flash and lightning light a man directly (the estimate has them) and bounce nothing. A lamp that sweeps (the office has two)
-    is followed a sweep behind.
-  - WHAT IT LEAVES OUT, named: colour (one number), height (the plan is flat: a mezzanine reads the floor's bounce), the sun's and the sky's bounce,
-    bodies' shadows, and any tuning against a GPU: `SENSE.glow` (albedo 0.3, share 0.1) is two numbers picked against ONE software-adapter picture.
-    Every level's plan today is within 2,048 square metres; a larger one has no bounce (the smoke's shadow still stands).
-  - STATE. The four columns and the lamps' word are in the grid's row, before the cells (64 KB; the part `smoke` of the game's block, above), so a
-    snapshot takes them and a put-back writes them with the cells; a clear of the smoke keeps them, they are the level's and not the smoke's. A NEW
-    ENCOUNTER TAKES A NEW GRID (`Game.restartEncounter`, and whenever the senses come to the game: `SmokeGrid.renew`): its beat and the sweep's turn
-    start with the encounter, so a file loaded into a game that has run an hour and into a fresh one go on alike (this holds the smoke grid's beat
-    too). A step with the model down zeroes a field that was swept: nothing old is read the day it is raised again. `glow.rs NEXT` is scratch.
-  - `tools/qa/cpulight-check.ts` holds it, on both stands: `stands` (up, the plan is swept and the estimate has the bounce in it; a new encounter starts a new
-    grid; down, or with no grid, the columns stay zeros and the estimate is the plain one to the bit; `sense.ts GRID` against the Rust sources), `rest` (the rule worked out
-    in TypeScript from the columns, and the bound), `rooms` (light comes round by an open way, a metre with no open way holds its own alone, and
-    over the whole floor a point reads exactly the metre the rule says, worked out in the check), `lamp` (the lamps a switch holds put out: a
-    quarter of a second on no metre keeps their light), `door` (no open way joins the two sides of a shut door; opened, within a sweep, one does),
-    `shadow`, `put back` (straight on against put back), `cost`. `CPULIGHT_BREAK=1` sweeps with no leaves and `door` must fail. `rust-check --both` with the switch up asks
-    every light question of the module and of `lampsHere` and they agree to the bit (below).
-  - Measured 2026-11-03 on a cloud box (bun, no GPU), ONE SEED A MISSION. With the switch down the five missions of `rust-check --missions` are the
-    game they were, to the bit. With it up over the grid (`tickcost --each --list`, `TPS_SMOKEGRID=1 TPS_CPULIGHT=1` against `TPS_SMOKEGRID=1`)
-    ALL FIVE ARE ANOTHER GAME WITH THE SAME END: the compound taken at 6,733 ticks where the grid alone takes it at 10,870, the warehouse taken at
-    13,195 against 12,611, the pass taken at 5,537 against 5,616, the hostage rescued at 3,781 against 3,766, the block wiped at 4,501 against 8,581.
-    That is the rule doing what it says (men in a room lit round a corner are seen sooner) and one seed does not say which way it moves a fight: a
-    tally over seeds is the next line. A TICK: other fights do not compare tick for tick, and the two tables were made side by
-    side on a busy box (the pass 5.17 ms against 5.90, the hostage rescue 5.16 against 4.69: noise both ways); the check's own `cost` line on the
-    still office reads 1.01 ms a tick up against 0.89 down, and the whole plan swept at once (a lamp shot out) is 11 to 17 ms, once. BOTH WAYS
-    (`TPS_RUSTLIGHT=1 TPS_RUSTSIGHT=1 TPS_RUSTSMOKE=1 TPS_SMOKEGRID=1 TPS_CPULIGHT=1 rust-check --both`, the compound, the hostage rescue and the
-    block): 306,585 light questions answered by the module and by `lampsHere`, none differ, no stale row; that run is red on its own fairness floor
-    for `smoke` and should be, since with a grid standing a sight line's smoke is the grid's and the blobs' row is asked nothing. Against the one
-    kept picture (the software adapter, the office, 24 light points): `lit` is off by 0.025 of the meter at the middle where the plain estimate is
-    off by 0.055, 0.107 at the 95th (0.105), leaning 0.027 darker (0.075), 0.77 stops at the 95th (1.23), the other side of the lit bar on the same
-    4.2 %. `BUDGET.lit` is that with room, provisional as the others. THE PAGE (headless Chromium on the software adapter, the office,
-    `?cpusense&smokegrid&cpulight`): it boots with no page error or warning, five seconds in the field stands on 40 × 28 metres (lamps' light in
-    756, bounce in 1,101), Sam's meter reads 0.150 where the same page with the model down reads 0.077, and with a canister at his feet 0 where
-    down it reads 0.081. Nobody has played it. Never seen on a GPU.
-  - THE TALLY OVER SEEDS, the grid and the light (2026-11-03, a cloud box, bun, no GPU; the game code of the step that brought the light model). The
-    server's stand (shipped, `TPS_CPUSENSE=1`), `tools/qa/playthrough.ts` and its scripted commander, the five missions of `rust-check --missions`,
-    seeds 1 to 16, the 300 s cap, three arms: the blobs · `TPS_SMOKEGRID=1` · `TPS_SMOKEGRID=1 TPS_CPULIGHT=1`. 80 runs an arm, on each difficulty.
-    STANDARD, blobs / grid / light: missions the squad won 51 / 53 / 58 of 80, its men lost 172 / 167 / 156 of 288, theirs left standing 155 / 155 /
-    125 of 704; won of 16 by mission, the compound 8 / 12 / 13, the warehouse 8 / 10 / 11, the pass 15 / 13 / 16, the hostage rescue 16 / 16 / 16, the
-    block's three squads 4 / 2 / 2. HARD (`--set '{"DIFFICULTY":{"level":"hard"}}'`): 54 / 60 / 55 won (one stall at the cap among the blobs' losses,
-    one hostage lost among the light's), men lost 167 / 163 / 168, theirs left 158 / 122 / 141; the compound 12 / 14 / 11, the warehouse 10 / 11 / 10,
-    the pass 13 / 16 / 16, the rescue 16 / 16 / 15, the block 3 / 3 / 3. SEED BY SEED. Blobs to grid: the same game by digest on 36 of 80 on each
-    difficulty (no line through smoke changed an answer there); an end turned for the squad on 7 seeds and against it on 5 (standard), 7 and 1
-    (hard). Grid to light: never the same game (every meter reads another number); an end turned for the squad on 9 and against on 4 (standard), 5
-    and 10 (hard). WHAT IT SAYS: the grid leans to the squad, 14 ends for and 6 against over both difficulties, which a fair coin does about one
-    time in nine; the light leans NEITHER way, 14 for and 14 against, its lean on standard undone on hard. Neither rule moves who wins a mission by
-    more than sixteen seeds can tell from chance, so neither is a rule that makes the game harder or easier that this can see. What the light does
-    move is pace where men are seen sooner: the pass, won, takes 74 s on standard where the grid alone takes 89 (81 against 89 on hard). WHAT IT DOES
-    NOT SAY: anything of a person commanding, of the page (its senses are the renderer's), or of the watcher's smells, which were counted (340 / 352 /
-    341 standard, 368 / 382 / 393 hard) and not read. Both switches stay down: the light has no TypeScript twin, and what it should weigh against
-    the picture waits for a report from a real GPU.
-- **The night's light from the sky in the estimate** (`src/game/sense.ts SENSE.moon`; `src/game/hours.ts moonLight`, `skyLight`, `skyLampOf`,
-  `inEstimate`; `guards.ts lightEstimateAt`). THE SWITCH: OFF everywhere today (the page's `?moonlight`, the harness's `TPS_MOONLIGHT=1`; carried
-  by the knob registry in `SENSE`, a recording from before the key replays with it off). Off = the estimate as it was, to the bit. AN EXCEPTION TO
-  "A NEW RULE IS ON IN THE PAGE", SAID: it has no row of `FROZEN_HOLDS` because both stands have it off, as `SENSE.cpu`, `grid` and `bounce` are,
-  and it is to come on with them. On by itself it would move every tally of the shipped stand at night and change what men do on the page (below).
-  - WHAT IT IS. The estimate of the light on a man had no moon ("unshadowed it would light everybody"). The first run of the error tool on a GPU
-    (the next bullet) read what that costs: under the open sky the picture's meter had a man lit and the estimate had nothing, the other side of the
-    lit bar on 42 % of the points. ONE READING FOR THE LIGHT FROM THE SKY, AN HOUR OR NONE: `hours.ts skyLight` is what `hourLight` did for an hour —
-    its one directional light where a point has a line to it past the statics and the door leaves, on the meter's cosine; the sky through whatever
-    is open above the point's half-metre cell; one bounce off ground they light — and `moonLight` hands it the level with no hour laid over it: the
-    level's own light from the sky (`skyLampOf`: its brightest steady directional light that is up — the moon as authored, or the sun a show put in
-    its place, `lighting.ts setDaylight`) and THE LEVEL'S OWN SKY (`level.sky`, a show's `level.daylight.sky`), never the engine's settings: the
-    page writes the level's sky there and a headless stand does not, and a rule may not differ by host. With the moon turned out, the sky alone.
-    Nothing at another hour: the moon is out and the hour's sun has the same reading. Nothing of the level is touched. What it keeps a game
-    (`nights`: the box and the rays of the cells asked) is made again when the lamp, its direction, the sky or the casters change (counted once a
-    tick) and dropped by `hourWorldChanged` / `hourAfterReset` as an hour's cells are. It is state a snapshot carries, as an hour's is.
-  - NOT IN IT: the edge of a shadow is hard here and soft in the picture (the points left over are in the building's moon shadow, where the picture
-    reads 0.2 to 0.4 W/m² and this 0.08); a second bounce; glass is whatever `segmentBlocked` makes of a pane. The light that comes round
-    (`SENSE.bounce`) does not carry the moon.
-  - IT ACTS WHEREVER THE ESTIMATE IS READ, ON EVERY HOST, the page with the picture's senses too: the meter's stand-in (the senses on the CPU, the
-    headless stand, the page's first frames) and every rule that asks what a PLACE lights — the team's weapon lights (`guards.ts LIGHTS`), the
-    goggles and the IR illuminator (`nvg.ts`, `irlight.ts`), the calm torch, a search in the dark (`darkfoe.ts`), `pressure.ts`, the pair's
-    orders, the lights-out mission. NOBODY ADDS THE MOON TWICE: `hours.ts inEstimate(g, lamp)` says whether a directional light is already in the
-    estimate (an hour's sun; the night's under the switch), and whoever adds one on top asks it (`nvg.ts nvgPlaceLight`, `tools/qa/lesson-run.ts`
-    `--moon`). OTHER STAND-INS OF THE MOON IN THE TOOLS ARE NOT GATED: `PT_METER=sky` (`hour-lib.ts meterAt`, its own sum from the lamps up),
-    `pair-sneak.ts PS_MOON`, `vault-run.ts` and `lights-out-run.ts --moon` add theirs whatever the switch says, so a run with `TPS_MOONLIGHT=1`
-    takes none of them. They were written because the estimate had no moon; when the switch comes on they go.
-  - AGAINST THE GPU'S PICTURE (`tools/qa/modelerr.ts` row `moonlit` = the estimate with the light that comes round and the night's sky, asked on
-    the SHIPPED stand of the kept report's questions; the frozen stand asks other questions and judges no `moonlit` row): under the open sky off by
-    0.010 of the meter at the middle (0.355 without), 0.214 at the 95th, the other side of the lit bar on 1.1 % (42.0 %); under a roof 0.027, 0.113
-    and 1.1 % (the worst roofed point was moonlight through an opening: 0.565 without, 0.175 with); 1.49 stops at the 95th over all 176 points
-    where it was 15.70. `BUDGET` rows `moonlit:roof`, `moonlit:sky` and plain `moonlit` hold it there. The picture is one run on one adapter (Apple
-    Metal), one level whose sky is the engine's default, one night.
-  - THE CHECK: `bun run tools/qa/moonlight-check.ts` on both stands (the office, 81 points round the error tool's stations): `switch` (down = the
-    estimate asked with no moon, to the bit; up = asked with it), `sky` (a point with a line to the moon is never under the moon's luminance ×
-    intensity × the best face's cosine, 0.459), `shadow` (ON THE OFFICE: behind a wall or under a roof the switch adds under a quarter of that, at
-    most 0.084 and 0.017 — a level with a dim moon under a bright sky would want another bar), `twice` (up, the goggles' light of a place is the
-    estimate's own at every point and the moon is said to be in the estimate; down, the goggles add their own as ever), `hour` (at dusk the switch
-    adds nothing; the night put back, what it added), `put back` (a snapshot put back reads every point as it did, the state's word the same).
-    `MOONLIGHT_BREAK=1` (nothing stands in anything's way while the moon is asked) fails `shadow`. THAT DOWN IS THE BUILD AS IT WAS is held by
-    the missions: the five of `rust-check --missions` with the switch down against the tree before it, 36,859 ticks, every run to the bit
-    (`tickcost --each --list --compare`).
-  - MEASURED (2026-11-04, a cloud box, bun, no GPU; the server's stand with the smoke grid and the light model up, `TPS_PROFILE=shipped TPS_CPUSENSE=1
-    TPS_SMOKEGRID=1 TPS_CPULIGHT=1`, the five squad missions, seeds 1 to 16, `tools/qa/playthrough.ts`, with and without `TPS_MOONLIGHT=1`): won
-    57 of 80 either way; men lost 154 of 288 without and 166 with; theirs left 125 and 116 of 704; a mean 96 s and 100 s. By mission (won · men
-    lost, without → with): compound 12 → 12 · 34 → 37, warehouse 11 → 11 · 41 → 41, pass 16 → 16 · 15 → 21 (72 s → 83 s), rescue 16 → 16 ·
-    3 → 6, block 2 → 2 · 61 → 61. Seed by seed 26 of 80 are the same game by digest (warehouse 10 of 16 and block 13 of 16; compound none), 76
-    end the same way, 2 better, 2 worse. So where a fight crosses open ground at night the men in the moon are seen, on both sides, and it costs
-    the squad a man more here and there; no mission is won or lost by it. `rollback-check` whole with the switch up on both stands (with the
-    senses on the CPU, the grid and the light model on the shipped one): all pass. `probes.ts hours`, `nvg`, `hourwx` and `breach-daylight` with
-    the switch down: as on the tree before (two of them red there already on the shipped stand: `breach-daylight`'s round trip and
-    `hourwx-sheet`). WITH THE SWITCH UP `probes.ts hours` is red on `hours-light` and `hours-team`, which say what a night reads with no moon in
-    it: they are to be told the night's sky when the switch comes on. The quiet missions, the lessons and the solo night have NOT been tallied
-    with it, and they are where it matters most (Sam in a moonlit yard): that is the tally the switch owes before it comes on. Nobody has
-    played it. Never seen on a GPU: the only picture it has been held against is the one kept report.
-- **The coarse grid's smoke drifts with the wind and stays low in it** (`src/game/sense.ts SENSE.drift`; `rust/sim/src/bricks.rs` steps 3b and 4,
-  `K.wind`, the scratch table `WIND`; `src/game/wind.ts stormDrift`; `src/scene/collision.ts gridStep`, `GridWind`). THE SWITCH: OFF everywhere
-  today (the page's `?smokedrift`, the harness's `TPS_SMOKEDRIFT=1`; carried by the knob registry in `SENSE`, a recording from before the key
-  replays with it off; it is the grid's, so it acts only with `?cpusense&smokegrid`). Off, a level with no wind, or under a roof = the step as it
-  was, to the bit. No row of `FROZEN_HOLDS`, as `SENSE.grid`, `bounce` and `moon` have none: both stands have it off and it is to come on with
-  them. A rule NEW in Rust: no TypeScript twin.
-  - WHY. The first run of the error tool on a GPU (the next bullet) read the grid against the picture under the open sky: off by 0.883 of the light
-    at the middle, deciding the other way on 64.8 % of the lines. The picture's solver pulls the smoke's whole velocity toward the storm's flat
-    wind about three times a second (`smoke/wind_force.wgsl windForce`), the rise too: out of doors its smoke blows along and stays under head
-    height (on the page's software adapter a canister's smoke stood 1.3, 1.8 and 2.6 m tall at 1, 3 and 6 s under a roof and 1.3, 1.3 and 1.8 m
-    under the sky). The grid's stood over the canister and rose as it does in a room. THE MAINTAINER'S CALL, 2026-11-04, asked whether smoke out
-    of doors should rise instead: "let's just leave it as is and have a smoke tuning pass before the release". So the grid follows the picture as
-    it is, and if that pass lets outdoor smoke rise, step 4's damping is what to take out again.
-  - WHAT IT IS, two things by one share. THE DRIFT (3b): before the spread, each step carries smoke across the open faces in plan out of the cell
-    upwind (a donor's own density, so nothing is made), at the wind's speed at that height times the share of it the two squares have. IT DOES
-    LITTLE OF ITS OWN (4): a face passes less of the smoke's own spread by that share. Upward, none in the open (the wind is flat), so out of
-    doors the smoke stays in the layers it was let out into; sideways, down to `SENSE.smoke.inWind` of it (0.15), enough to get round what the
-    wind pushes it against, as the picture's does by its pressure. (With the same 0.15 kept upward the grid was off again against the picture:
-    0.213 at the middle and 20.5 % the other way.) THE WIND is the weather's own vector as the game holds it (`weather.ts wind`), wherever `Wind.blows()`
-    says the weather blows at all — the one test the picture's storm uses too — and NONE OF A MACHINE'S OWN WIND SETTINGS (the master,
-    `WIND.storm`, `WIND.stormK`, and the weather's own on / off, `?noweather` and the panel's box, which is the session's and which no snapshot
-    or recording carries: what a player turns down is his picture, and with the storm switched off on his page the game's smoke still drifts),
-    no gust, no vent, no draught at a door. So it reads the hour, the kind and the weather's numbers and nothing else. NOTE: the rest of the
-    weather acts on the simulation only under a picked kind (`weather.ts simLive`); this acts under the office's unpicked night storm too,
-    because that storm moves the picture's smoke and the picture's smoke is what the page's senses read. THE SHARE of a square metre is
-    `stormShare` (0 under a roof, easing to 1 over the lee off it), from the footprints as the weather's roofs and `WX_OWN.wind` give them at the
-    moment of asking, not from the storm's record (which the frame's dressing step keeps fresh, and a host with the wind turned down or no
-    picture does not take). ITS RISE WITH HEIGHT is the storm field's (`WIND_FIELD.stormLow`, `stormGain`, `stormFullAt`: 0.55 of it at the
-    ground, all of it by 2.5 m; `wind-probes.ts` holds the shader's own three numbers to them). A pass carries at most a quarter of a cell across
-    a face, so a faster wind takes more passes of the step (eight at most: 10 m/s along an axis; faster than that it is slowed whole, both axes by
-    one number, never bent). What goes over the plan's edge has left the level and is in the book as given back (`H_GIVEN` now holds both). The
-    host writes the shares, a number a square metre, into the module's scratch table before a step, and only while there is smoke to move
-    (`SmokeGrid.smoky`, read off the game's block).
-  - THE CHECK: `bun run tools/qa/smokedrift-check.ts` on both stands (`SMOKEDRIFT_BREAK=1` tells the game a wind of nothing and must fail `switch`,
-    `drift`, `calm`, `low`, `mass`, `bearing` and `back`). On the office: the switch, the drift downwind, no change in a room or with no wind in the weather, the same
-    drift with the weather switched off in the session, the book with what went over the edge, a put-back and a fresh game handed the snapshot. On `gwot-yard.json`: the dust's wind (past one pass a step)
-    carries the smoke on its own bearing (1.9° off; with each axis capped by itself, as it was first written, it went 20° to the side), of one of
-    the game's canisters in the rain's wind none is above 1.5 m at 8 s where 17 % is in still air, a wind toward −x and −z goes its way and over
-    the near edges, and the bricks are said.
-  - THE BRICKS, SAID. In still air one of the game's canisters takes about 15 bricks. In the rain's wind (1.1, 0.45 m/s) on the yard it takes 62
-    and three take 92 of the 160, because a plume is long; nothing was refused in 45 s. A level with more open ground or more canisters can still
-    take them all: the grid then says it cannot answer and the blobs do (`smokegrid-check.ts full`), which neither drift nor stay low nor know
-    walls, so a line's answer would jump between two smokes: this is not to come on before there are bricks enough that it does not happen. More
-    bricks (the index is a byte: 255 at most without widening it) is a change to the state's layout and the Rust goal's to place.
-  - AGAINST THE PICTURE (the kept report; `adrift` in the tool's rows, `adrift:roof@1.5` and `adrift:sky@1.5` in `BUDGET`: rows of the 1.5 m
-    lines, the only height that report has): under the open sky 0.000 at the
-    middle, 0.250 at the 95th and 2.7 % deciding the other way on 443 lines, where the grid in still air has 0.883, 1.000 and 64.8 %; under a
-    roof the two are one smoke (0.019, 0.526, 10.3 %). WHAT THAT DOES NOT SAY: every line of that report runs at 1.5 m, and out of doors the
-    picture's smoke stays under it, so the agreement is that neither hides a standing man, and smoke gone
-    altogether or blown the wrong way would read as well (the check above is what holds those). AND IT IS AN AGREEMENT ON A KNIFE'S EDGE (found
-    2026-11-05): 1.5 m is a face between two layers of the grid's half-metre cells, a level line on it reads the layer above alone, and this
-    smoke fills the layer below — the same lines asked one centimetre lower let 0.21 of the light through at 8 s, not 0.93, and hide 74 % of
-    them, not 4 %. So the 2.7 % says the grid's smoke stops at 1.5 m and nothing about whether the picture's is there under it. What a line
-    at a standing man's chest or a crouching man's eye reads through the plume in the picture, nobody has measured: the plan now asks those
-    heights (the model against the picture, LINES AT FOUR HEIGHTS), and a run of it on a GPU is wanted before this comes on. The report is one
-    machine's (Apple Metal), made before the walk waited for its last reading.
-  - MEASURED (2026-11-04, a 4-core cloud box, headless). THE SWITCH DOWN IS THE BUILD AS IT WAS: `tickcost.ts --each --list` over five missions,
-    36,859 ticks, every run to the bit against the tree before, and the same 80 games by digest on the server's stand (below). WITH IT UP, the
-    server's stand with the grid and the light model (`TPS_PROFILE=shipped TPS_CPUSENSE=1 TPS_SMOKEGRID=1 TPS_CPULIGHT=1`), compound-four,
-    warehouse-four, pass-four, hostage-rescue and block-squads, 16 seeds each: 76 of the 80 games are the same game; won 57 → 56, men lost 154 →
-    156 of 288. The four that moved are two on the compound and two on the pass, where smoke is thrown out of doors in a wind (one squad that
-    lost three came through whole, one that came through whole was wiped): too few to say it helps or hurts. `rollback-check` whole with the
-    switch up on both stands: all pass. `smokegrid-check`, `cpulight-check`, `modelerr.ts`, `rust-check`, `simstate-check`, `knobs-check`,
-    `dice-check`, `rollback-check --static` on the tree: pass; `probes.ts wind` is red on `wind-identity` on both stands, as on the tree before.
-    THE PAGE, headless Chromium on the software adapter, frames not drawn: it boots plain, with the grid, and with the switch up, with no page
-    error, and six seconds after one of the game's canisters is let out in the office's north strip the grid's smoke has its middle 0.25 m from
-    the canister with the switch down and 2.0 m downwind with it up; `modelerr-page.cjs` walks its smallest plan with the new row in the report.
-    NOT MEASURED: the quiet missions and the lessons with it up; a level under the dust or the downpour in play; what a step costs with a long
-    plume standing; smoke meeting a wall in the wind (it has a sideways spread to get round by, and nobody has looked at what it does there).
-    Nobody has played it. Never seen on a GPU: the only picture it has been held against is the one kept report.
+- **THE GRID'S SMOKE AND THE LIGHT UNDER A ROOF, AS THEY STAND** (`rust/sim/src/bricks.rs`, `glow.rs`, `light.rs`; `rust/game_rules/src/sense`). Smoke is density in half-metre cells held in bricks, a part of the
+  game's block: stepped ten times a second, fed by the emitters the picture's solver is handed, passing from cell to cell only where nothing solid and no leaf stands between them, drifting with the wind under the open sky
+  (`wind::wind_storm_drift`, `Wind.stormShare` for where). A level's plan too large for a grid, or more smoke than bricks, is clear air to a sight line. The light under a roof is swept from the steady lamps a tenth of the
+  plan a step (`SENSE.glow.sweep`); the moon and the sky are read the same way by day and by night (`hours::sun_light`, `dome_light`). The numbers are `SENSE` (`src/game/sense.ts`). Held by `rust/game_start/tests/senses.rs`
+  and `tools/qa/modelerr.ts`; a tool asks through `senseTool` or `guards.ts lightEstimateAt`, both between ticks and of the Rust game.
 - **The model against the picture** (`src/host/modelerr.ts`; the page's `?modelerr`, `tools/qa/modelerr.ts`, `tools/qa/modelerr-page.cjs`; the
   maintainer, 2026-11-02: "we'd want some way during development of bounding the error between the two but then just let them proceed independently
   when actually running the game"). A DEVELOPMENT TOOL: nothing of it is made without the word and the game never reads it. The senses' CPU models
@@ -2142,18 +1841,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
     table, sends it as a PART and begins it again, and `light.rs estimate` sums a later part (`more`) onto the six faces the one before left: one
     sum in `lampsHere`'s order, its bits, for any number of lamps. The faces are kept from part to part in a static of the light's own (`light.rs
     SUM`, a `STATICS` row), not in the shared scratch, so a question a caller's gate asks of the module between two parts cannot spoil the sum;
-    the grid's block is bound again a part. `LAMPS.parts` counts the parts sent ahead. THE SHADOW (`SENSE.bounce`): where the smoke grid could not answer a lamp's line (more smoke
-    than bricks; no grid standing) the module handed the question back and `lampsHere` asked the blobs. Now the host writes the field's blobs
-    before the question and `light.rs` asks `smoke.rs` over them inside the lamp loop, under the model's numbers, told whether a grid stands
-    (`sense.ts SmokeGrid.along`'s own first test). THE BLOBS ARE NOT CONTENT: a game keeps `SENSE.smoke.cap` of them (48) and never more than
-    the module's table holds (`smoke.rs MAX_BLOBS` 64, `FACE.MAX_BLOBS`: `CpuSmoke.emit` takes the smaller), because a question carries every
-    blob at once; a list longer than the table is somebody else's doing and an error by name (`collision.ts blobsFit`), and `rust-check` is red if the knob
-    as it ships is past the table. The knob registry keeps no most for a knob and the debugger shows no row of `SENSE`. HELD by `sense-ident`
-    (a level's last line): some six hundred lamps put in reach of forty points, the module in three parts a point against the TypeScript's one
-    loop, the same to the bit; then twenty-four points through smoke with the grid answering, with no grid standing, and with more smoke than
-    bricks, every point to the module, dimmed, the same to the bit. `LAMPS_BREAK=1` = every part begins its sum again: the lamps in parts must
-    differ and no sense of the questions may. `LAMPS_BREAK=shade` = the module is handed no blobs: the two cases where the grid cannot answer
-    must differ, and neither the parts with no smoke nor the grid that answers may (`rust-check`'s senses line runs both). NEVER ASKED: a
+    the grid's block is bound again a part. `LAMPS.parts` counts the parts sent ahead. NEVER ASKED: a
     question handed back in a LATER part (a line too long to be one, after a part has summed): the caller's loop then runs from the start and
     reads nothing of the module's sum, by the code and by no check. NOT A HAND-BACK AND STILL A LIMIT: THE GRID'S SWEEP OF THE
     LIGHT THAT COMES ROUND writes the level's steady lamps into the same table (`guards.ts steadyLamps`) and takes no more than 256: past that

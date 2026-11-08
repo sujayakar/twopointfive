@@ -458,7 +458,55 @@ fn a_blast_kill_is_the_man_who_set_it_off() {
             let row = p.g.chronicle.events[n0..].iter().find(|e| e.kind == game::chronicle::ChronKind::Kill).cloned();
             let Some(row) = row else { panic!("seed {s}: CONTROL: a grenade at his feet and no kill row: {:?}", p.g.gd[t1].state) };
             let said = format!("{:?}", row.data);
-            assert!(!said.contains("a round"), "seed {s}: seat {seat}'s blast is written with the other man's empty hands: {said}");
+            assert!(said.contains("grenade"), "seed {s}: seat {seat}'s blast is written with what is in somebody's hands: {said}");
+            assert_eq!(game::chronicle::event_text(&p.g, &row), format!("{} killed — the grenade", p.g.gd[t1].callsign), "seed {s}: seat {seat}");
         }
+    }
+}
+
+/// THE RULE: a kill by a blast names what went off, not the gun in the hand, for one player as for two.
+/// A failure means the debrief says "shot dead (FN2000)" of a man a grenade killed.
+#[test]
+fn a_blast_kill_names_what_went_off_with_one_player() {
+    for s in SEEDS {
+        let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed: s, ..Default::default() });
+        p.g.god_mode = true;
+        p.run(0.3);
+        let t1 = p.g.guards.iter().copied().find(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).expect("a defender");
+        let pl = p.g.player;
+        p.g.pl[pl].holstered = false;
+        assert!(game::game::player_gun_in_hand(&p.g, pl).is_some(), "seed {s}: CONTROL: a gun in his hand");
+        let c = p.g.gd[t1].ch;
+        let (who, at) = (p.g.ch[p.g.pl[pl].ch].id, p.g.ch[c].pos);
+        let n0 = p.g.chronicle.events.len();
+        let spec = game::frag::BlastSpec { who, name: Some(String::from("grenade")), fx: Some(false), ..Default::default() };
+        game::frag::blast(&mut p.g, [at[0] + 0.1, 0.05, at[2]], &spec);
+        let row = p.g.chronicle.events[n0..].iter().find(|e| e.kind == game::chronicle::ChronKind::Kill).cloned();
+        let Some(row) = row else { panic!("seed {s}: CONTROL: a grenade at his feet and no kill row") };
+        assert_eq!(game::chronicle::event_text(&p.g, &row), format!("{} killed — the grenade", p.g.gd[t1].callsign), "seed {s}");
+    }
+}
+
+/// THE RULE: a civilian killed by a blast is written down under what went off.
+/// A failure means the debrief says she was killed by the gun in his hand.
+#[test]
+fn a_civilian_killed_by_a_blast_names_what_went_off() {
+    for s in SEEDS {
+        let mut p = Play::level("office.json", false, &Opts { seed: s, ..Default::default() });
+        p.g.god_mode = true;
+        p.run(0.2);
+        let her = *p.g.civilians.first().expect("CONTROL: the office has a civilian");
+        let pl = p.g.player;
+        p.g.pl[pl].holstered = false;
+        assert!(game::game::player_gun_in_hand(&p.g, pl).is_some(), "seed {s}: CONTROL: a gun in his hand");
+        let c = p.g.gd[her].ch;
+        let (who, at) = (p.g.ch[p.g.pl[pl].ch].id, p.g.ch[c].pos);
+        let n0 = p.g.chronicle.events.len();
+        let spec = game::frag::BlastSpec { who, name: Some(String::from("grenade")), fx: Some(false), ..Default::default() };
+        game::frag::blast(&mut p.g, [at[0] + 0.1, 0.05, at[2]], &spec);
+        let row = p.g.chronicle.events[n0..].iter().find(|e| e.kind == game::chronicle::ChronKind::CivilianKilled).cloned();
+        let Some(row) = row else { panic!("seed {s}: CONTROL: a grenade at her feet and no row") };
+        let said = game::chronicle::event_text(&p.g, &row);
+        assert!(said.contains("(grenade)"), "seed {s}: {said}");
     }
 }

@@ -1,8 +1,7 @@
 # The page plays the Rust game
 
 The Rust game is the page's game: no address word is needed. `?rust=0` opens the TypeScript game for as long as that is still in the tree, and a page that
-is a game server's client or its door (`?net=`, `?join=`) or that plays a tape (`?playtape=`) stays with the TypeScript game until those have been played on the
-Rust one (`?rust=1` asks it of them all the same; `src/main.ts` holds the rule). The words below that say "under the word" or `?rust=1` were written while the
+is a game server's client or its door (`?net=`, `?join=`) or that plays a tape (`?playtape=`) is the Rust game too. The words below that say "under the word" or `?rust=1` were written while the
 Rust game was behind that word, and read the same for the page with no word.
 
 On the Rust game, the game's tick is the Rust game's (`rust/game`, in the module `rust/game_face` builds) and the TypeScript `Game` stays as a puppet that the

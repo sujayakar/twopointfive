@@ -1,75 +1,27 @@
 {
  "what": "tools/qa/sense-ident.ts: every name's count of calls and word over its run on the shipped stand (tools/qa/ident-pin.ts; --record writes it)",
  "stands": {
-  "frozen": {
-   "run": "made-up world · seed 1 · 3000 questions a kind",
-   "end": "206 statics, 15 re-shaped, 81 cells of the floor's grid changed, 14 leaves (9 swung), 14 panes gone a quarter of the way in, 460 lamps, 24 and 30 blobs",
-   "tree": "the commit that brings this file: every question of the run asked both ways, the two languages the same to the bit",
-   "stood": "",
-   "words": {
-    "fog · made": {
-     "asked": 6000,
-     "word": "df870add5d6b747b"
-    },
-    "light · made": {
-     "asked": 6000,
-     "word": "07e29426274b5b3f"
-    },
-    "paths · made": {
-     "asked": 103465,
-     "word": "e9fc611dc68d6b46"
-    },
-    "shaded · made": {
-     "asked": 6000,
-     "word": "19bf1231f9e1f24f"
-    },
-    "sight · made": {
-     "asked": 6000,
-     "word": "bf815c05521b91c6"
-    },
-    "smoke · made": {
-     "asked": 6000,
-     "word": "e0070fe9e2747b0c"
-    },
-    "sound · made": {
-     "asked": 8068,
-     "word": "4ad573b34b6dd383"
-    }
-   }
-  },
   "shipped": {
-   "run": "made-up world · seed 1 · 3000 questions a kind",
-   "end": "206 statics, 15 re-shaped, 81 cells of the floor's grid changed, 14 leaves (9 swung), 14 panes gone a quarter of the way in, 460 lamps, 24 and 30 blobs",
-   "tree": "step 1572 with the ident mend, recorded on the page's stand as the old stand was retired: six of the seven words are the first recording's to the bit, and the fog's is the word the old stand gives with FOG.thin raised and nothing else",
+   "run": "made-up world \u00b7 seed 1 \u00b7 3000 questions a kind",
+   "end": "206 statics, 26 re-shaped, 151 cells of the floor's grid changed, 14 leaves (9 swung), 14 panes gone a quarter of the way in",
+   "tree": "recorded when the light and the smoke left this check, with the module as the game senses for itself",
    "stood": "",
    "words": {
-    "fog · made": {
+    "fog \u00b7 made": {
      "asked": 6000,
-     "word": "1947531d266213e8"
+     "word": "60e044659b8b816e"
     },
-    "light · made": {
+    "paths \u00b7 made": {
+     "asked": 111390,
+     "word": "730ce655486f3322"
+    },
+    "sight \u00b7 made": {
      "asked": 6000,
-     "word": "07e29426274b5b3f"
+     "word": "8be3818d80d1c87a"
     },
-    "paths · made": {
-     "asked": 103465,
-     "word": "e9fc611dc68d6b46"
-    },
-    "shaded · made": {
-     "asked": 6000,
-     "word": "19bf1231f9e1f24f"
-    },
-    "sight · made": {
-     "asked": 6000,
-     "word": "bf815c05521b91c6"
-    },
-    "smoke · made": {
-     "asked": 6000,
-     "word": "e0070fe9e2747b0c"
-    },
-    "sound · made": {
-     "asked": 8068,
-     "word": "4ad573b34b6dd383"
+    "sound \u00b7 made": {
+     "asked": 8037,
+     "word": "513e911545a7e41d"
     }
    }
   }

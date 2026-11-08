@@ -24,7 +24,9 @@ const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { SCENARIOS, pickSearch } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
-const { HOUR, HOURS, applyHour, hourOf, hourSun, hourLightAt, sunStrength, sunGiven, setSunStrength, sunToCloud, cloudSun, cloudSoft, cloudLight } = HR;
+const { HOUR, HOURS, applyHour, hourOf, hourSun, sunStrength, sunGiven, setSunStrength, sunToCloud, cloudSun, cloudSoft, cloudLight } = HR;
+/** what the hour and the place's own steady lights put on a point, nothing anybody carries (the Rust game's light has no part that is the hour's alone) */
+const hourLightAt = (g: any, p: any): number => lightEstimateAt(g, p, () => true, true);
 const { WEATHER_BOOT, WEATHER_KINDS, WEATHER_PRESETS } = WK;
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;

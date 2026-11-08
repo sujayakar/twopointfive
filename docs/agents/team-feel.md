@@ -442,17 +442,17 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   nothing is asked — and the renderer's light meter (the probe pass: shadowed direct light + the radiance cache; it refuses the infrared bit, so no
   light of this file answers its own question) gets the LAST word on what the CPU calls dark: the floor under him by the meter key that already reads
   it every frame (`playerChest`, a teammate's `unitC<id>`; the wand's lens asks its own) and a spread of up to five (`IRL_METER.slots`) of the dark
-  points his fan found, asked through `Game.lightQuery` on his beat under his own keys (`irl<id>:<slot>`) and read every frame (one read sequence a
+  points his fan found, read on his beat (one read sequence a
   frame: the sensors' journal writes its key list at every change of it). A point is dark when the PICTURE of it is under `IRLIGHT.show` (0.1 of the
   tube's range; row 'IR light ▸ floor min' (a slider's label is cut at about nineteen characters)): the CPU's direct light + the meter's bounce × `settings.indirectScale` (0.35 — the meter's
   bounce is physical, the picture's is scaled in fgather.wgsl) through the tube's curve (`nvg.ts tubeSig`). A line of its own, higher than
   `NVG.blackAt` (where a MAN is lost to a goggled eye, about 0.035 of the range): direct light is well over that or nothing, bounce is every value
   between, and floor at 0.05 of the range is grain to the player; the maintainer's strongroom read about 0.3 in his shot. Under this branch the
   CPU's first word is asked by the same line. The same count decides (his own floor, or two of the points). A point not yet answered waits `IRL_METER.wait` (0.25 s, no light), then takes the CPU's word; the first reading that
-  is decided still puts his light at full or out at once. WHERE NO RENDERER ANSWERS — headless, `SENSE.cpu`, a page before its first frame (Sam's own
+  is decided still puts his light at full or out at once. WHERE NO RENDERER ANSWERS — headless, a page before its first frame (Sam's own
   meter has no answer) — the CPU's rule is the whole rule at once, so HEADLESS NOTHING MOVES on either stand: every tally and digest is the build's.
   The question 'does the renderer answer' is one read of `playerChest` a frame, made only when somebody's goggles are down (10-18: read every frame it
-  made eleven sensor reads a step of a goggles-up run on the shipped stand, and `replaybuf-probes.ts`, which plants 'no answer' on every eleventh read,
+  made eleven sensor reads a step of a goggles-up run on the shipped stand, and `replaybuf-probes.ts`, which planted 'no answer' on every eleventh read,
   then wrote that kind once in 1,800 steps and went red on its 'every kind' line; with nobody's goggles down this file reads no sensor).
   KNOWN EDGES: the meter also has carried white light, so a torch on the floor he looks at puts his light out a hold later; `irShowsAt` and nvg.ts
   `readPlace` still go by the CPU (a man in a bounce-lit room is read by his own meter, which has the bounce); up to five more probe places a
@@ -461,7 +461,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   QA `probes.ts irl-meter` (21 scenarios; no renderer headless, so its answers are PLANTED through the swapped `Game.lightAt`: on floor the CPU calls
   black with Sam's goggles brought down afresh — answered lit: not one frame of his light or a teammate's, and with the switch off it burns; answered
   dark: burning the frame his goggles are down, at full; 0.015 W/m²: dark at the picture's bounce scale, light with the scale at 1; the fan's points
-  never answered: light 0.27 s after his question; nothing answered at all, or `SENSE.cpu`: nothing asked, light at once; floor the CPU calls light:
+  never answered: light 0.27 s after his question; nothing answered at all: nothing asked, light at once; floor the CPU calls light:
   nothing asked; at most ten points asked in a frame; forgotten with his goggles; the stand, the row, a recording without the key): black floor in
   11 scenarios, light in 7 (8 shipped). ALL PASS on both stands; `IRMETER_BREAK=1` (the switch held off) RED on both, 11 lines each. The family: 112
   verdicts on each stand, the three of the frozen stand with all three words raised 50; `nvg` 188 on each; `IRAUTO_BREAK=1` and `IRLIGHT_BREAK=1`

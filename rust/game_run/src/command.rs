@@ -114,4 +114,13 @@ commands! {
         if on == 0 { game::game::game_restart(g, None); }
         else { game::game::game_clear_aftermath(g); game::game::game_teleport_player(g, [x, 0.0, z]); }
     };
+    /// the kit picture: the team's cards (as Kit's text) and how many come (under 0: as it stands), staged again
+    30 KitStageCards { kept: &str, size: i32 } = |g, kept, size| { crate::kept::read(g, kept); game::kitstage::cards(g, size); };
+    /// whose card is open (0 the player) and the row under its highlight
+    31 KitStageOpen { who: u32, field: &str } = |g, who, field| game::kitstage::open(g, who, field);
+    /// where the picture's men should sit in the view: its shape, then their middle, their share of its height and width and a man's, the door's line and the edges it is hung between, and the column's top and
+    /// foot (a number that is none: not said)
+    32 KitStageFrame { aspect: f64, cx: f64, cy: f64, h: f64, w: f64, man: f64, door: f64, left: f64, right: f64, keep: f64, top: f64, bottom: f64 } = |g, aspect, cx, cy, h, w, man, door, left, right, keep, top, bottom| {
+        game::kitstage::frame(g, aspect, game::kitstage::frame_ask(cx, cy, h, w, man, [door, left, right, keep], [top, bottom]));
+    };
 }

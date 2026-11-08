@@ -89,15 +89,25 @@ pub fn under_roof(g: &crate::game::Game, p: V3) -> Option<sim::glow::Field> {
     sim::bricks::under_roof(g.sim, g.sim, p)
 }
 
-/// FOR A TOOL THAT HOLDS THE SENSES TO THE PICTURE (src/host/modelerr.ts), between ticks; no rule asks it. `what` 0: the light on points (`xs`: whose carried
-/// lamps are left out, then x y z each) · 1: how much of the light along lines the smoke lets through (six numbers each) · 2: a canister's smoke let out
+/// THE LIGHT THAT STANDS ON A POINT, asked from outside a tick (src/view/worldask.ts `light`): a page's preview asks it a block of floor at a time. `owners`: whose carried
+/// lamps are left out · `steady`: what the place lights, with nothing that passes · `leave`: lamps of the level's own left out, by what feeds them. The game is as it was
+/// (`game_start/tests/senses.rs`), so no host takes its state again after it.
+pub fn light_asked(g: &mut crate::game::Game, p: V3, owners: &[f64], steady: bool, leave: f64) -> f64 {
+    if crate::ask::WorldAsk::try_of(g).is_err() { crate::scene_collision::stands(g); }
+    crate::scene_box_mirror::box_mirror_things(g);
+    crate::guards::light_at(g, p, Some(&mut |_: &mut Game, o: f64| owners.contains(&o)), Some(steady), Some(leave)).0
+}
+
+/// ASKING THE SENSES FROM OUTSIDE A TICK (src/game/sense.ts senseTool); no rule asks it. `what` 0: the light on points (`xs`: 1 for what the place lights with nothing that
+/// passes, the level's lamps left out by what feeds them, how many owners follow, the owners whose carried lamps are left out, then x y z each) · 1: how much of the light along lines the smoke lets through (six numbers each) · 2: a canister's smoke let out
 /// at x y z, to the game and to the picture alike · 3: the smoke cleared, the same.
 pub fn sense_tool(g: &mut crate::game::Game, what: f64, xs: &[f64]) -> Vec<f64> {
     let at = |p: &[f64]| -> V3 { [p[0], p[1], p[2]] };
     match what as i32 {
         0 => {
-            let Some((&owner, points)) = xs.split_first() else { return Vec::new() };
-            points.chunks_exact(3).map(|p| crate::guards::light_at(g, at(p), Some(&mut |_: &mut Game, o: f64| o == owner), None, None).0).collect()
+            let [steady, leave, n, rest @ ..] = xs else { return Vec::new() };
+            let (owners, points) = rest.split_at(*n as usize);
+            points.chunks_exact(3).map(|p| crate::guards::light_at(g, at(p), Some(&mut |_: &mut Game, o: f64| owners.contains(&o)), Some(*steady != 0.0), Some(*leave)).0).collect()
         }
         1 => xs.chunks_exact(6).map(|l| smoke_between(g, at(l), at(&l[3..]))).collect(),
         2 if xs.len() == 3 => {
