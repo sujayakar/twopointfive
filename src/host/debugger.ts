@@ -11,6 +11,7 @@ import { buildGraphics, graphicsSystems } from '../ui/graphicspanel';
 import { buildLookPanel } from '../ui/lookpanel';
 import { Panel } from '../ui/panel';
 import type { DrawGame } from './drawgame';
+import type { DrawHud } from './drawhud';
 import { gameCode, typedInto } from './keymap';
 
 /** rows shown at once: a word narrows them */
@@ -43,15 +44,18 @@ function knobRows(panel: Panel, sec: HTMLElement, game: DrawGame): void {
   panel.keep(() => { if (reads.length && !game.lost) { const m = now(); for (const r of reads) r(m); } }, row);
 }
 
-export interface DebuggerDeps { game: DrawGame; engine: Engine; smoke: SmokeSystem; cam: FollowCamera; quality: Quality; input: Input; chars: GltfCharacter; marks: Decals; hud(): { fps: number; union: number } }
+export interface DebuggerDeps { game: DrawGame; engine: Engine; smoke: SmokeSystem; cam: FollowCamera; quality: Quality; input: Input; chars: GltfCharacter; marks: Decals; over: DrawHud | null; /** a key that is a card's over the game, before the panel's or the game's */ card(e: KeyboardEvent): boolean; hud(): { fps: number; union: number } }
 export function debuggerPanel(d: DebuggerDeps): Panel {
   const panel = new Panel();
   panel.system('Rules', { icon: '⚑', short: 'Rules', title: 'every knob of the rules, by its name' });
   knobRows(panel, panel.section('Knobs', { open: true }), d.game);
+  { const o = d.over; if (o) { const s = panel.section('HUD', { open: true });
+    panel.toggleBox(s, 'show AI debug labels', () => o.page.debug, v => { d.game.commands.labels(v ? 1 : 0); d.game.tell(); o.told(); }, 'state / awareness tags over the guards');
+    panel.toggleBox(s, 'light fixture dots', () => o.overlay.showLightDots, v => { o.overlay.showLightDots = v; }); } }
   graphicsSystems(panel);
   buildGraphics(panel, d.engine, d.smoke, d.cam, d.quality, { chars: d.chars, marks: d.marks }, d.hud);
   buildLookPanel(panel, d.engine, () => d.hud().fps, false, false);
-  d.input.keyVeto = e => panel.onKey(e);
+  d.input.keyVeto = e => d.card(e) || panel.onKey(e);
   addEventListener('keydown', e => { if (e.repeat || e.metaKey || e.ctrlKey || e.altKey || gameCode(e.code) !== 'Backquote' || typedInto(e.target)) return; e.preventDefault(); panel.toggle(); }, true);
   (window as unknown as { __panel: Panel }).__panel = panel;
   return panel;

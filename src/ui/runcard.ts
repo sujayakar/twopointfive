@@ -33,8 +33,8 @@ export function checkpointButton(run: RunSaves, p: Press, cls = ''): HTMLElement
   return button(`Restart from checkpoint (${run.age(info)})`, () => back(run, info.key, p), cls);
 }
 /** THE STRIP: this run's saves in the order they were made, each a tile — its picture, how long ago, a mark on the ones made by hand, a regretted autosave dimmed. A
- *  click, or Enter on the tile the arrows (A D too) have walked to, goes back to it. Null with fewer than two (one save is the button above it) unless one is asked for on this card. */
-export function saveStrip(run: RunSaves, p: Press): HTMLElement | null {
+ *  click, or Enter on the tile the arrows (A D too) have walked to, goes back to it. Null with fewer than two (one save is the button above it) unless one is asked for on this card. `on` = the save the keys stand on (else the one offered). */
+export function saveStrip(run: RunSaves, p: Press, on?: string): HTMLElement | null {
   const due = run.due(), line = run.timeline(); if (line.length < 2 && !due) return null;
   const now = run.elapsed(), offered = run.offer();
   const strip = el('div', 'saves'); strip.setAttribute('role', 'group'); strip.setAttribute('aria-label', 'saves of this run');
@@ -49,7 +49,7 @@ export function saveStrip(run: RunSaves, p: Press): HTMLElement | null {
   });
   if (due) { const t = el('div', 'tile hand due'); t.appendChild(el('i')); t.setAttribute('aria-label', 'a save by hand, written as play goes on'); strip.insertBefore(t, tiles[line.findIndex(x => x.missionT > now + 0.5)] ?? null); }   // (before the saves a load has left ahead of this moment)
   if (!tiles.length) return strip;
-  let cur = Math.max(0, offered ? line.findIndex(x => x.key === offered.key) : line.length - 1); tiles[cur].tabIndex = 0;   // (one stop for W S and Tab: the tile the button above would load)
+  let cur = on === undefined ? -1 : tiles.findIndex(t => t.dataset.save === on); if (cur < 0) cur = Math.max(0, offered ? line.findIndex(x => x.key === offered.key) : line.length - 1); tiles[cur].tabIndex = 0;   // (one stop for W S and Tab: the tile the button above would load)
   strip.addEventListener('keydown', e => {
     const d = e.code === 'ArrowLeft' || e.code === 'KeyA' ? -1 : e.code === 'ArrowRight' || e.code === 'KeyD' ? 1 : 0; if (!d || e.ctrlKey || e.metaKey || e.altKey) return;
     tiles[cur].tabIndex = -1; cur = Math.max(0, Math.min(tiles.length - 1, cur + d)); tiles[cur].tabIndex = 0; tiles[cur].focus(); e.preventDefault(); e.stopPropagation();
@@ -57,6 +57,12 @@ export function saveStrip(run: RunSaves, p: Press): HTMLElement | null {
   return strip;
 }
 
+/** A SAVE BY HAND WAS ASKED FOR ON THE CARD: the strip alone is laid again (`strip`), with the tile to come, and where the keys had walked on it stays; with none laid yet it goes before `before` */
+export function layStripAgain(card: HTMLElement, strip: (on?: string) => HTMLElement | null, before: HTMLElement | null): void {
+  const old = card.querySelector('.saves'), at = old?.querySelector<HTMLElement>('.tile[tabindex="0"]'), held = !!old?.contains(document.activeElement), made = strip(at?.dataset.save); if (!made) return;
+  if (old) old.replaceWith(made); else if (before?.parentNode) before.parentNode.insertBefore(made, before); else return;
+  if (held) (made.querySelector('.tile[tabindex="0"]') as HTMLElement | null)?.focus();
+}
 /** a save's age on its tile: '40 s', '3 min' — '+40 s' for one AHEAD of the clock (a later save of this run, after going back past it) */
 function tileAge(d: number): string { const a = Math.abs(d), w = a < 90 ? `${Math.round(a)} s` : `${Math.round(a / 60)} min`; return d < -0.5 ? `+${w}` : w; }
 /** how long ago on the mission's clock, in the words of a card */

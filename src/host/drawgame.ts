@@ -24,6 +24,9 @@ const DRESS = 1;
 /** `face_step`'s: the lights' envelopes · a rails level's view · the save controller */
 const LIGHTS = 2, VIEW = 4, SAVES = 8;
 
+/** the save controller with nothing to tell */
+const QUIET = { tag: '', lines: [] as string[] };
+
 /** the calls a lost game may still be asked, or is stood again by */
 const STILL = new Set(['face_alloc', 'face_free', 'face_out_ptr', 'face_out_len', 'face_panic_ptr', 'face_panic_len', 'face_panic_clear', 'face_mem', 'face_recover', 'face_recover_what', 'face_drop', 'face_start']);
 
@@ -39,6 +42,8 @@ export class DrawGame {
   readonly commands = new Commands();
   /** ticks stepped since the start, and ms of the last one by part */
   ticks = 0;
+  /** moves with everything done to the game: what was asked of it before is asked again */
+  private done = 0;
   readonly ms = { step: 0, draw: 0 };
   private hand = 0; private keys = 0; private numbers = new Float64Array(0);
   private static readonly KEYS = 2048;
@@ -53,12 +58,12 @@ export class DrawGame {
 
   private handed<T>(b: Uint8Array, f: (p: number, n: number) => T): T { const p = this.X.face_alloc(b.length) >>> 0; new Uint8Array(this.memory.buffer, p, b.length).set(b); try { return f(p, b.length); } finally { this.X.face_free(p, b.length); } }
   private answer(): string { const p = this.X.face_out_ptr() >>> 0, n = this.X.face_out_len() >>> 0; return this.dec.decode(new Uint8Array(this.memory.buffer, p, n)); }
-  /** every call of the face: a trap (a panic, the stack run out) loses the game of that call, and nothing else of it is called until it stands again */
+  /** every call of the face: its memory may have grown, so the sections' views are made again where it has; a trap (a panic, the stack run out) loses the game of that call, and nothing else of it is called until it stands again */
   private guarded(raw: Face): Face {
     const out: Face = {};
     for (const k of Object.keys(raw)) { const f = raw[k]; out[k] = typeof f !== 'function' || !k.startsWith('face_') ? f : (...a: number[]): number => {
       if (this.lost && !STILL.has(k)) throw this.lost;
-      try { return f(...a); } catch (e) { if (!(e instanceof WebAssembly.RuntimeError) && !(e instanceof RangeError)) throw e;
+      try { const n = f(...a); this.drawn?.fresh(); return n; } catch (e) { if (!(e instanceof WebAssembly.RuntimeError) && !(e instanceof RangeError)) throw e;
         let words = ''; try { const p = raw.face_panic_ptr() >>> 0, n = raw.face_panic_len() >>> 0; words = this.dec.decode(new Uint8Array(this.memory.buffer, p, n)); raw.face_panic_clear(); } catch { /* the trap's own words, then */ }
         throw this.lost = new GameLost(words || String((e as Error).message), k, this.ticks); } }; }
     return out;
@@ -70,7 +75,7 @@ export class DrawGame {
   /** A GAME LOST TO A PANIC STANDS AGAIN, from the best save of it or from its run's first step: the save's label, '' for the start, null where nothing of it is kept */
   recover(newest: boolean): string | null {
     const h = this.X.face_recover(this.h, newest ? 1 : 0); if (!h) return null;
-    this.lost = null; this.h = h; this.between = 1; const label = this.answer(); this.said = null; this.draw(); return label;
+    this.lost = null; this.h = h; this.between = 1; const label = this.answer(); this.said = null; this.done++; this.draw(); return label;
   }
 
   /** A GAME, from its start; what has been commanded by now is done to it before it is made */
@@ -83,7 +88,7 @@ export class DrawGame {
     if (this.h) { this.X.face_drop(this.h); this.h = 0; }
     try { this.h = this.X.face_start(at, n, -1, o.seed, o.seats ?? 1, DRESS); } finally { this.X.face_free(at, n); }
     if (!this.h) throw new FaceError('no room for another game in this module');
-    this.ticks = 0; this.said = null; this.between = 1;
+    this.ticks = 0; this.done++; this.said = null; this.between = 1;
     // (room asked for and given back: the allocator keeps it, and a step seldom has to grow the memory)
     this.X.face_reserve(64 * 1048576);
     this.draw();
@@ -98,7 +103,7 @@ export class DrawGame {
     const n = this.enc.encodeInto(keys, new Uint8Array(this.memory.buffer, this.keys, DrawGame.KEYS)).written;
     this.X.face_hand(this.h, 0, this.hand, HAND.count * 8, this.keys, n);
     this.X.face_step(this.h, dt, LIGHTS | VIEW | SAVES);
-    this.ticks++;
+    this.ticks++; this.done++;
     const t1 = performance.now();
     this.draw();
     this.X.face_out_clear(this.h);   // (what the tick told its host is in its sections now)
@@ -106,7 +111,7 @@ export class DrawGame {
   }
   private order(): void { if (this.commands.length) this.handed(this.commands.take(), (p, m) => { if (!this.X.face_commands(this.h, p, m)) throw new Error(this.answer()); }); }
   /** what has been commanded is done now, between two ticks, and what it changed is there to be read: the next step would do the same things first */
-  tell(): void { this.order(); this.draw(); }
+  tell(): void { this.order(); this.done++; this.draw(); }
   /** A FRAME IS DRAWN, `a` of the way from the tick before to the last */
   frame(a: number, focus: ArrayLike<number>): void { this.drawn.frame(this.h, a, focus); this.between = a; }
   private between = 1;
@@ -131,17 +136,17 @@ export class DrawGame {
   private said: Float64Array | null = null;
   /** the last answer's bytes, kept */
   private bytes(): Uint8Array { const p = this.X.face_out_ptr() >>> 0, n = this.X.face_out_len() >>> 0; return new Uint8Array(this.memory.buffer.slice(p, p + n)); }
-  private told = { tick: -1, h: 0, view: null as TickView | null };
-  /** WHAT A HUD IS TOLD of the game as its last tick left it (src/view): read once a tick, however often it is asked */
+  private told = { done: -1, view: null as TickView | null };
+  /** WHAT A HUD IS TOLD of the game as it stands (src/view): read once a tick, or after what is done between two, however often it is asked */
   view(): TickView {
-    const T = this.told; if (!T.view || T.tick !== this.ticks || T.h !== this.h) { this.X.face_tick_view(this.h); T.view = readTickView(this.bytes()); T.tick = this.ticks; T.h = this.h; }
+    const T = this.told; if (!T.view || T.done !== this.done) { this.X.face_tick_view(this.h); T.view = readTickView(this.bytes()); T.done = this.done; }
     return T.view;
   }
-  private cursorN = new Float64Array(CURSOR_DOUBLES); private pointed = { tick: -1, h: 0, view: { under: null } as CursorView };
+  private cursorN = new Float64Array(CURSOR_DOUBLES); private pointed = { done: -1, view: { under: null } as CursorView };
   /** WHAT THE CURSOR IS ON, through the camera as it stands: asked again when the cursor, the camera or the game has moved */
   cursor(input: CursorAt, cam: CursorLens, canvas: CursorCanvas): CursorView {
     const T = this.pointed, moved = sampleCursor(this.cursorN, input, cam, canvas);
-    if (moved || T.tick !== this.ticks || T.h !== this.h) { T.view = this.handed(new Uint8Array(this.cursorN.buffer), p => { this.X.face_cursor_view(this.h, -1, p); return readCursorView(this.bytes()); }); T.tick = this.ticks; T.h = this.h; }
+    if (moved || T.done !== this.done) { T.view = this.handed(new Uint8Array(this.cursorN.buffer), p => { this.X.face_cursor_view(this.h, -1, p); return readCursorView(this.bytes()); }); T.done = this.done; }
     return T.view;
   }
   /** what the end card shows of the run, asked as it opens */
@@ -155,28 +160,30 @@ export class DrawGame {
     return { won: r === 2, word, why, secs: Number(secs), approach: way === '-' ? null : way, lost, of, foesDown, foesOf, hostages: kept === '-' ? null : { alive, of: held }, void: voided === 'true', clean: clean === 'true' };
   }
   /** nobody's hands are on the seat: a hands-off player takes it (rust/game_run hands_off.rs), or with no plan it is the host's again */
-  handsOff(plan: HandsOffPlan | null): void { const b = this.enc.encode(plan ? [plan.seed, plan.cap ?? 240, plan.breaker ? 1 : 0, ...plan.route ?? []].join('\n') : ''); this.handed(b, (p, n) => this.X.face_hands_off(this.h, 0, p, n)); this.handsKept.tick = -1; }
+  handsOff(plan: HandsOffPlan | null): void { const b = this.enc.encode(plan ? [plan.seed, plan.cap ?? 240, plan.breaker ? 1 : 0, ...plan.route ?? []].join('\n') : ''); this.handed(b, (p, n) => this.X.face_hands_off(this.h, 0, p, n)); this.handsKept.done = -1; }
   /** how he stands, null where nobody is hands off */
   hands(): HandsOffSaid | null {
-    const K = this.handsKept; if (K.tick === this.ticks && K.h === this.h) return K.said;
-    this.X.face_hands_said(this.h); const s = this.answer(); K.tick = this.ticks; K.h = this.h; return K.said = s ? JSON.parse(s) as HandsOffSaid : null;
+    const K = this.handsKept; if (K.done === this.done) return K.said;
+    this.X.face_hands_said(this.h); const s = this.answer(); K.done = this.done; return K.said = s ? JSON.parse(s) as HandsOffSaid : null;
   }
-  private handsKept = { tick: -1, h: 0, said: null as HandsOffSaid | null };
+  private handsKept = { done: -1, said: null as HandsOffSaid | null };
   /** his timeline */
   handsTrace(): string { this.X.face_hands_trace(this.h); return this.answer(); }
-  private tallied: { tick: number; h: number; t: Tally } | null = null;
+  private tallied: { done: number; t: Tally } | null = null;
   /** what a measuring take notes of the game as its last tick left it */
   tally(): Tally {
-    const T = this.tallied; if (T && T.tick === this.ticks && T.h === this.h) return T.t;
-    this.X.face_tally(this.h); const t = JSON.parse(this.answer()) as Tally; this.tallied = { tick: this.ticks, h: this.h, t }; return t;
+    const T = this.tallied; if (T && T.done === this.done) return T.t;
+    this.X.face_tally(this.h); const t = JSON.parse(this.answer()) as Tally; this.tallied = { done: this.done, t }; return t;
   }
-  /** this run's saves as a card lays them out, the one to go back to, and the mission's clock now */
-  saves(): { elapsed: number; offer: string; rows: SaveRow[] } {
-    this.X.face_saves(this.h); const p = this.X.face_out_ptr() >>> 0, n = this.X.face_out_len() >>> 0, b = this.memory.buffer.slice(p, p + n), d = new DataView(b); let at = 8;
+  /** what the save controller tells the player: its tag while it is up, and each thing it has said since this was last asked */
+  savesTold(): { tag: string; lines: string[] } { if (!this.X.face_saves_told(this.h)) return QUIET; const [tag, ...lines] = this.answer().split('\n'); return { tag, lines }; }
+  /** this run's saves as a card lays them out, the one to go back to, would one by hand be made, and the mission's clock now */
+  saves(): { elapsed: number; hand: boolean; offer: string; rows: SaveRow[] } {
+    this.X.face_saves(this.h); const p = this.X.face_out_ptr() >>> 0, n = this.X.face_out_len() >>> 0, b = this.memory.buffer.slice(p, p + n), d = new DataView(b); let at = 12;
     const text = (): string => { const len = d.getUint32(at, true); at += 4 + len; return this.dec.decode(new Uint8Array(b, at - len, len)); };
     const offer = text(), count = d.getUint32(at, true), rows: SaveRow[] = []; at += 4;
     for (let i = 0; i < count; i++) { const key = text(), label = text(), says = d.getUint32(at, true); rows.push({ key, label, slot: says & 1 ? 'manual' : 'auto', regret: says & 2 ? 'regretted' : null, missionT: d.getFloat64(at + 4, true), savedAt: d.getFloat64(at + 12, true) }); at += 20; }
-    return { elapsed: d.getFloat64(0, true), offer, rows };
+    return { elapsed: d.getFloat64(0, true), hand: d.getUint32(8, true) !== 0, offer, rows };
   }
   /** every knob a person may turn (`commands.knob` turns one) */
   knobs(): { name: string; yes: boolean; value: number }[] {

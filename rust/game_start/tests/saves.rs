@@ -5,11 +5,11 @@ use game::savestate::control::{self, Do};
 use game_start::play::{Opts, Play};
 use std::collections::BTreeMap;
 
-struct Host { p: Play, kept: BTreeMap<String, (Box<Game>, Vec<u8>)>, saved: Vec<String>, backs: usize }
+struct Host { p: Play, kept: BTreeMap<String, (Box<Game>, Vec<u8>)>, saved: Vec<String>, said: Vec<String>, backs: usize }
 fn block(slot: usize) -> Vec<u8> { unsafe { std::slice::from_raw_parts(sim::state::addr(slot) as *const u8, std::mem::size_of::<sim::state::State>()).to_vec() } }
 
 impl Host {
-    fn office(seed: u32) -> Host { Host { p: Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed, ..Default::default() }), kept: BTreeMap::new(), saved: Vec::new(), backs: 0 } }
+    fn office(seed: u32) -> Host { Host { p: Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed, ..Default::default() }), kept: BTreeMap::new(), saved: Vec::new(), said: Vec::new(), backs: 0 } }
     fn frame(&mut self) {
         self.p.frame();
         match control::tick(&mut self.p.g, 1.0 / 60.0) {
@@ -21,9 +21,11 @@ impl Host {
                 self.p.g = g.clone();
                 game::scene_collision::unstand(&mut self.p.g);
                 game::scene_collision::stands(&mut self.p.g);
-                control::put_back(&mut self.p.g, &key, was);
+                let told = control::put_back(&mut self.p.g, &key, was);
+                self.said.push(told);
                 self.backs += 1;
             }
+            Some(Do::Say(words)) => self.said.push(words),
             None => {}
         }
     }
@@ -50,6 +52,7 @@ fn a_save_by_hand_goes_back() {
     assert_eq!(control::ask_load(&mut h.p.g, "manual.0"), None);
     h.frame();
     assert_eq!(h.backs, 1);
+    assert_eq!(h.said, ["checkpoint loaded \u{2014} by hand"], "and says so");
     let back = h.p.sam_at();
     assert!((back[0] - there[0]).hypot(back[1] - there[1]) < 0.05, "the load stands him where he saved: {there:?}, {back:?}");
     assert_eq!((h.p.g.saves.stats.manual, h.p.g.saves.stats.loads, h.p.g.chronicle.counts.saves), (1.0, 1.0, h.p.g.chronicle.counts.saves));
@@ -68,6 +71,9 @@ fn a_restart_begins_with_no_saves() {
     h.run(0.2);
     assert!(control::timeline(&h.p.g).is_empty(), "the fresh run has the old one's save");
     assert!(control::ask_load(&mut h.p.g, "manual.0").is_some(), "and it can be loaded");
+    h.p.g.saves.due = Some(String::from("manual.0"));
+    h.frame();
+    assert_eq!((h.backs, &h.said[..]), (0, &[String::from("checkpoint: that checkpoint is gone")][..]), "one asked for as a card does is refused in words");
 }
 
 /// THE RULE: the ring of saves by hand holds its number and takes the oldest's place; a save refused (he is down) keeps nothing and says why.
@@ -82,6 +88,6 @@ fn the_ring_rolls_and_a_man_down_saves_nothing() {
     h.p.g.pl[pl].down = true;
     let before = h.saved.len();
     control::ask_save(&mut h.p.g);
-    let _ = control::tick(&mut h.p.g, 1.0 / 60.0).map(|_| panic!("a man down was saved"));
+    match control::tick(&mut h.p.g, 1.0 / 60.0) { Some(Do::Say(words)) => assert!(words.starts_with("not saved: "), "{words}"), _ => panic!("a man down was saved, or nothing was said") }
     assert_eq!((h.saved.len(), h.p.g.saves.stats.refused), (before, 1.0));
 }

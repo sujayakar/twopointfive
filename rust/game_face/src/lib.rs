@@ -80,8 +80,10 @@ struct Held {
     drawn: game_draw::Drawn,
     /// the seat nobody's hands are on, and who plays it
     hands: Option<(usize, game_run::hands_off::HandsOff)>,
+    /// what the save controller has said to the player, until the host asks
+    said: Vec<String>,
 }
-impl Held { fn new(g: Box<Game>) -> Held { Held { g, cmd: None, cmds: None, after: Vec::new(), drawn: Default::default(), hands: None } } }
+impl Held { fn new(g: Box<Game>) -> Held { Held { g, cmd: None, cmds: None, after: Vec::new(), drawn: Default::default(), hands: None, said: Vec::new() } } }
 
 thread_local! {
     static GAMES: RefCell<Vec<Option<Held>>> = const { RefCell::new(Vec::new()) };
