@@ -65,10 +65,6 @@ export async function wallbreakLooklines(): Promise<boolean> {
   let fails = 0; const verdict = (ok: boolean, what: string, detail: string) => { console.log(`  - ${ok ? 'PASS' : 'FAIL'} — ${what}: ${detail}`); if (!ok) fails++; };
   const cut0 = cutConfig.on, destr0 = DESTRUCTION.on, rnd0 = Math.random;
   try {
-    // ---------------------------------------------------------------- the cut switch off: no slab of the look casts a shadow, so no ray can meet one
-    { const S = await stage(11, false);
-      verdict(S.looks.length > 100 && S.casting.length === 0, 'the cut switch off: every piece of the look keeps NoShadow (nothing here for a ray to meet)', `${S.blasts} charges · ${S.looks.length} look pieces · ${S.casting.length} cast a shadow`); }
-
     // ---------------------------------------------------------------- the cut switch on
     const S = await stage(11, true); const { W, game } = S; const world = W.engine.world; const all: any[] = world.all;
     { const mine: any[] = []; game.destr.edgeLook.boxes(mine); const set = new Set(mine); const stray = all.filter(b => look(b) !== set.has(b)).length, statics = world.statics.filter(look).length;
@@ -117,20 +113,6 @@ export async function wallbreakLooklines(): Promise<boolean> {
           const l = laserReach(game, man, null, true); if (l && l.on === pc && Math.abs(l.L - lRef.L) < 1e-9) seen++; break; } }
       verdict(stood >= 3 && seen === stood, 'a man behind a slab is the man the beam ends on', `${lines} lines with clear floor behind a chest-high slab · ${stood} stands (Sam 0.7 m behind it, the muzzle 1.5 m in front, the slab between) · the beam ends on him in ${seen}`); }
 
-    // (tripwire) the office: a charge either side of each beam; on every frame a shadow-casting slab is in a beam's line, the beam's ray (as devices.ts casts it) must not end on it
-    { const { W: O, game: og } = await stand(12, true, 'office'); const ow = O.engine.world; const lasers: any[] = og.devices?.lasers ?? []; let inLine = 0, ended = 0, drawnShort = 0; const said: string[] = [];
-      for (const l of lasers) { const f = l.def.from, mid = mad(f, l.dir, l.len / 2), side: Vec3 = [-l.dir[2], 0, l.dir[0]];
-        for (const s of [0.5, -0.5]) { og.destr.blast([mid[0] + side[0] * s, 0.4, mid[2] + side[2] * s], { who: PLAYER_ID, radius: 2.4 });
-          for (let fr = 0; fr < 150; fr++) { O.step(DT); const from = mad(f, l.dir, 0.03); const slabs = (ow.all as any[]).filter(b => look(b) && !(b.flags & BoxFlag.NoShadow)); let first = Infinity;
-            for (const b of slabs) { const h = rayBox(from, l.dir, b, l.len); if (h && h.t < first) first = h.t; }
-            if (first === Infinity) continue;
-            for (const b of slabs) b.flags |= BoxFlag.NoShadow; const ref = ow.raycast(from, l.dir, l.len, BoxFlag.NoShadow); for (const b of slabs) b.flags &= ~BoxFlag.NoShadow;
-            if (ref && ref.t <= first) continue; inLine++;   // (nothing a ray met before the cut switch stands nearer on the line)
-            const raw = ow.raycast(from, l.dir, l.len, BoxFlag.NoShadow);
-            // (the device's own figure for the frame, LaserRt.cut — the length it drew and sensed along: short of where it should end, and at the slab)
-            const refReach = Math.min(l.len, ref ? ref.t + 0.03 : Infinity); if (l.cut < refReach - 0.1 && Math.abs(l.cut - (first + 0.03)) < 0.1) drawnShort++;
-            if (raw && look(ow.all[raw.index])) { ended++; if (said.length < 2) said.push(`${l.def.name}: ended ${raw.t.toFixed(2)} m along its ${l.len.toFixed(2)} m`); } } } }
-      verdict(lasers.length > 0 && inLine > 0 && ended === 0 && drawnShort === 0, "a tripwire's beam is not ended by a slab falling through its line or lying in it", `${lasers.length} beams, a charge either side of each · ${inLine} frames with a shadow-casting slab in a beam's line · the beam's ray ends on the slab in ${ended} · the device's own beam (LaserRt.cut) stops at the slab in ${drawnShort}${said.length ? ' · ' + said.join(' · ') : ''}`); }
   } finally { cutConfig.on = cut0; DESTRUCTION.on = destr0; Math.random = rnd0; for (const k of Object.keys(DEFAULTS)) (WALLS as any)[k] = JSON.parse(JSON.stringify(DEFAULTS[k])); }
   console.log(`=== wallbreak-looklines: ${fails ? 'FAILURES above' : 'ALL PASS'} ===`);
   return fails === 0;

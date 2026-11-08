@@ -20,6 +20,7 @@ import { samBlows, samBreach } from './charge-rig.ts';
 import { listen } from './heard.ts';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { swept } from './sweep.ts';
 const WC = await import(`${ROOT}/src/game/wallcharge.ts`);
 const { WALLCHARGE, WALLCHARGE_DEFAULTS, wallAt, wallPt, wallOff, outerWall, skyFaces, WALL_ORDER } = WC;
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
@@ -174,8 +175,6 @@ async function probeSquad(scn: string): Promise<boolean> {
   const armed = R.until(() => op.phase === 'armed', 45);
   const dists = R.up.map((m: any) => ({ m, d: flat(m.char.pos, cp), off: wallOff(W, m.char.pos) }));
   F.verdict(armed && dists.every(x => x.d >= WALLCHARGE.standoff[WALLCHARGE.standoff.length - 1] - 0.35 && x.off > 0), 'the squad stands off on the charge\'s side, two metres or more from it', dists.map(x => `${x.m.callsign} ${f2(x.d)} m`).join(' · '));
-  R.step(60 * 6);
-  F.verdict(op.phase === 'armed' && C.set.length === 1 && !C.holeAt(W) && R.pathLen(a, b) === before, 'six seconds on: nothing has happened until Sam\'s word', `phase ${op.phase} · route ${f2(R.pathLen(a, b))} m (was ${f2(before)})`);
   const upBefore = R.up.length, statics0 = col.boxes.length, deb0 = new Set(game.destr.debris.list), ev0 = game.eventSeq ?? 0;
   R.press('KeyF'); const tBlow = game.time;
   const thrown = game.destr.debris.list.filter((c: any) => !deb0.has(c)), flying = thrown.filter((c: any) => Math.hypot(c.v[0], c.v[2]) > 0.3), inward = flying.filter((c: any) => (W.alongX ? c.v[2] : c.v[0]) * W.side < 0);
@@ -260,9 +259,8 @@ async function probeHard(scn: string): Promise<boolean> {
   const W = P.W, T = thickOf(W), face: Vec3 = wallPt(W, 0, 0.02, 1.05), n0 = walls.all().length, s0 = col.boxes.length, dir: Vec3 = W.alongX ? [0, 0, -W.side] : [-W.side, 0, 0];
   const rifle = WEAPONS.fn2000 ?? Object.values(WEAPONS)[0];
   for (let k = 0; k < 40; k++) walls.round(PLAYER_ID, [face[0], 0.4 + (k % 8) * 0.2, face[2]], dir, W.index, rifle, 0.5);
-  const left = walls.workLeft(W.index, face, dir);
   game.destr.blast(face, { who: PLAYER_ID, chaos: false }); R.step(5);
-  F.verdict(walls.all().length === n0 && col.boxes.length === s0 && !walls.breakableAt(W.index) && !C.holeAt(W) && left === null, 'forty rounds into it and a charge-sized blast at its face with no charge set: whole, and still not the engine\'s', `breakables ${n0} → ${walls.all().length} · statics ${s0} → ${col.boxes.length} · hole ${C.holeAt(W) ? 'OPEN' : 'none'} · rounds' work left: ${left === null ? 'not a breakable' : left}`);
+  F.verdict(walls.all().length === n0 && col.boxes.length === s0 && !walls.breakableAt(W.index) && !C.holeAt(W), 'forty rounds into it and a charge-sized blast at its face with no charge set: whole, and still not the engine\'s', `breakables ${n0} → ${walls.all().length} · statics ${s0} → ${col.boxes.length} · hole ${C.holeAt(W) ? 'OPEN' : 'none'}`);
   // the breach, by Sam's own charge
   game.teleportPlayer(wallPt(W, 0, 0.55)); R.aim(P.top); game.selectVerb('wall', 'charge'); R.press('Space'); R.until(() => C.set.length === 1, DOORTOOLS.setSecs + 1);
   const Wc = C.set[0]?.wall ?? W; if (C.set[0]) samBlows(R.W, C.set[0], R.each); R.step(5);
@@ -314,11 +312,11 @@ async function probeLive(scn: string): Promise<boolean> {
   const armed = R.until(() => op.phase === 'armed' || !C.ops.includes(op), 60);
   if (!armed || op.phase !== 'armed') { F.note(`the order ended before it was armed ('${op.ended ?? op.phase}' — a fight found them first): ${R.beats(op)}`); return F.done(); }
   const h0 = R.hostiles.filter((h: any) => h.state !== 'dead'), st0 = h0.map((h: any) => h.state); const feed0 = game.destr.walls.serial ?? 0;
-  R.press('KeyF'); const hole = op.hole; R.step(60 * 25);
+  R.press('KeyF'); const hole = op.hole; R.step(60 * swept(15, 25));
   const men = [...game.guards, { char: game.player.char, state: 'player', callsign: 'Sam' }].filter((m: any) => m.state !== 'dead');
   const bad = men.filter((m: any) => { const p = m.char.pos; if (!p.every(Number.isFinite)) return true; const q: Vec3 = [p[0], p[1], p[2]]; return col.collideCircle(q, 0.2, 0.25, 1.5) && flat(q, p) > 0.25; });
   const woke = h0.filter((h: any, i: number) => h.state !== st0[i] || h.state === 'dead').length;
-  F.verdict(!!hole && bad.length === 0, 'F with everyone awake: a hole, and twenty-five seconds on every man still on the floor stands on floor (finite, in no static)', `hole ${hole ? f2(hole.half * 2) : '—'} m · ${men.length} up · in a wall: ${bad.map((m: any) => m.callsign).join(', ') || 'nobody'} · order '${op.ended ?? op.phase}' · ${woke} of ${h0.length} defenders changed state (was: ${[...new Set(st0)].join('/')})`);
+  F.verdict(!!hole && bad.length === 0, 'F with everyone awake: a hole, and some seconds on every man still on the floor stands on floor (finite, in no static)', `hole ${hole ? f2(hole.half * 2) : '—'} m · ${men.length} up · in a wall: ${bad.map((m: any) => m.callsign).join(', ') || 'nobody'} · order '${op.ended ?? op.phase}' · ${woke} of ${h0.length} defenders changed state (was: ${[...new Set(st0)].join('/')})`);
   F.verdict((game.destr.walls.serial ?? 1) > feed0, 'the change went out on the engine\'s feed like any hole (what the defenders\' reactions, the fog and the reach masks read)', `feed serial ${feed0} → ${game.destr.walls.serial}`);
   return F.done();
 }

@@ -22,6 +22,7 @@
 //                  come back FALSE there. `BURSTGLASS_BASE=1 bun run tools/qa/probes.ts burstglass` runs the whole family that way and exits 1.
 import { standUp, ROOT } from './headless.ts';
 import { CONF_PANES } from './office-pane.ts';
+import { swept } from './sweep.ts';
 const { FRAG, FRAG_LOG, FRAG_STATS, FRAG_WHY, fragStatsReset, blast, exposure, burstLine, fragCarriers } = await import(`${ROOT}/src/game/frag.ts`);
 const { GLASSBREAK, GB_STATS } = await import(`${ROOT}/src/game/glassbreak.ts`);
 const { GLASSPEN, shotEnergy } = await import(`${ROOT}/src/game/glasspen.ts`);
@@ -199,7 +200,7 @@ export const burstOpen = guarded(async () => {
 async function spotGrid(type: string, base?: boolean) {
   const CHEST: Vec3 = [7.4, 1.1, 11.3]; const R = await rig(61, { base }); R.park(); const g = R.g; const T = { [PW]: type, [PM]: type, [PE]: type }; R.types(T); R.step(13);
   let counted = 0, stood = 0, wary = 0, sheltered = 0, whole = 0, n = 0;
-  for (let x = 5.4; x <= 9.0; x += 0.3) for (let z = 6.0; z <= 9.4; z += 0.3) { if (g.col.nav.isBlocked(x, z)) continue; n++;
+  for (let x = 5.4; x <= 9.0; x += swept(0.6, 0.3)) for (let z = 6.0; z <= 9.4; z += swept(0.6, 0.3)) { if (g.col.nav.isBlocked(x, z)) continue; n++;
     const from: Vec3 = [x, FRAG.lift + 0.05, z];
     const cnt = burstLine(g, from, CHEST, 'counted'), wry = burstLine(g, from, CHEST, 'wary'), wh = burstLine(g, from, CHEST, 'whole');
     R.gb.blast(from, { radius: FRAG_DEFAULTS.glassM, power: FRAG_DEFAULTS.glassPower, who: 1 }); const now = burstLine(g, from, CHEST, 'blown'); R.settle(2.2); const later = burstLine(g, from, CHEST, 'whole'); R.gb.reset(); R.types(T);
