@@ -24,14 +24,14 @@ fn only(g: &mut Game, men: &[GuardId], t: &OrderTarget) -> Vec<GuardId> {
 }
 
 fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
-    match crate::wandorder::pick(g, men, &t.clone()) {
+    match crate::wandorder::pick(g, men, t) {
         crate::wandorder::Pick::Text(w) => Err(Some(w)),
         crate::wandorder::Pick::Arm1(_) => Ok(()),
     }
 }
 
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
-    match crate::wandorder::issue(g, men, &t.clone()) {
+    match crate::wandorder::issue(g, men, t) {
         crate::wandorder::Issue::Text(w) => Some(w),
         crate::wandorder::Issue::Arm1(()) => None,
     }
