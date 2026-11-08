@@ -22,7 +22,7 @@ What a rule does that the host has to show or play, as a list the host drains af
 - **The events run after the step.** A function of the game (`recapRound`, `messBurst`, `bulletMark`...) that reads the game reads the end of the step, not the moment of the call. In TypeScript it ran mid-tick. None is known to matter; none has been compared.
 - **Rollback.** Resimulated ticks push their events again. Co-op's host has to drop them. Nothing here does that.
 - **An answer the rule reads, two places.** `break_table/p_02.rs:408` hands `decals_add`'s answer to `look_decal`; with `None` that chip mark loses its look. `particle_fx/p_01.rs:484` adds up `particles_emit`'s answers; it now adds zeros.
-- **Particles stay silent until a host sets a stand-in.** `gpu_fx` asks `g.engine.particles.is_some()`, and the bridge's engine list has no particles.
+- **A particle is an out event on every host.** No rule asks whether a host draws them: one that has nothing to draw drops the record.
 - **Chair voices.** `PlayOpts::ChairRoll { tok }` becomes game.ts's `follow` closure again in the dispatcher, by finding the roll whose `voice` is `tok`. That is the one closure that crosses.
 - **The fire's bed.** fire.ts:379 plays `fireBed` with a `follow` closure. The Rust fire has no such call, so no event carries it, and a fire has no held voice on the Rust side.
 - **Null.** Three parameters are `T | null` in TypeScript and `Option` in Rust (`audio.play`'s `pos`, `reach.changed`'s `rect`, a mark's `s`): the dispatcher writes `?? null`. The rest are optional and take `undefined`.

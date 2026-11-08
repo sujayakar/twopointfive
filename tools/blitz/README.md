@@ -233,9 +233,8 @@ outside the pool: the runner hands none of those over.
 
 Without a word both sides stand with every row of `DRESS` (src/game/dress.ts) down: the stand of a host that draws nothing. `--dress` raises all 18 rows
 on both sides from the first tick, as the page has them (`--dress-rows "moths,wind"` raises only those); the bridge carries the table, so the Rust tick
-reads the same rows. Every row CAN be raised on this stand. What its step then does with no GPU is less than in the page: there is no particle pool
-(`engine.particles` is made only for a recording that had one, tools/qa/headless.ts), no smoke solver and no renderer, so a step's particles, its
-pushes on the solver and its draws go nowhere and only what it writes into the game's own state is compared.
+reads the same rows. Every row CAN be raised on this stand. What its step then does with no GPU is less than in the page: there is no smoke solver and
+no renderer, so a step's particle records, its pushes on the solver and its draws go nowhere and only what it writes into the game's own state is compared.
 
 The rule the split follows: a dressing body that writes something the tick later reads runs IN THE RUST TICK under its row (the moths' and a broken
 fixture's keyed boxes, which the fog of war remembers; a man's drawn scale on his own boxes; the wind the moths read; the cues' and the net's books,

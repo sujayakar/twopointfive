@@ -1675,8 +1675,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
     is up in the page and on both stands. It is not a rule of play: no `FROZEN_HOLDS` line, not a knob table, no recording carries it. The rows: `air`
     (airSim), `moths`, `snow` (the lying snow's surface, prints, marks, a blast's dig), `rain` (rainFx), `wetGround` (the open ground a rain wets, as the renderer's words of the statics: `docs/agents/weather.md`), `fires` (fireDraws; the lamp's flicker is a light and
     is gameplay), `wake` (men pushing the solver's smoke), `men` (skin instances, materials, shadow proxies), `cues`, `recap`, `blastFeel`, `fixtures`, `fx`,
-    `stature`, `cases`, `net`, `wind`, and `debris` (the pool of rigid pieces: dressing only under `DEBRIS.dress`, `docs/agents/destruction.md`; without
-    that switch the pool is the game's and is kept whatever the row says): eighteen. `dressAll(false)` puts them all down: a host that draws nothing may. NOBODY
+    `stature`, `net` and `wind`: sixteen. The pool of rigid pieces and a spent case's landing have no row: every host runs them (below). `dressAll(false)` puts them all down: a host that draws nothing may. NOBODY
     DOES YET: the game server still takes every step (measured below; its owner's call).
   - **`tools/qa/dress-check.ts` holds it**: the five comparison missions of `rust-check --missions` (the server's stand: shipped, the senses on the CPU), each
     played with every row down and with every row up, and the chained raw bits after EVERY update (`game/digest.ts rawBits`), the end and the run digest are
@@ -1708,6 +1707,12 @@ one stops the tool by name, on an address one does nothing and says so in the co
     the stun flash's light, and the meter drops a light by its brightest channel). And inside `drawMen`: WHAT A MAN WEARS
     (`c.parts`, `cast.ts castParts`) is dealt there, to the men the fog lets be drawn, and his kit's boxes are placed off it (`rigProps.ts packOf`); so that
     one statement stays with the `men` row down. That a man's kit depends on whether he was drawn is found, not changed.
+  - **NO RULE ASKS WHETHER A HOST DRAWS (2026-11-08).** `gpu_fx`, `engine.particles` and `engine.reach` are gone. A chip, spark, crumb or dust that only the
+    picture evolves is an out event with its values on every host, and a host with nothing to draw drops it; no box is made for it anywhere. The debris pool
+    and a case's landing run on every host, so what a server and a page hold of them is equal. No switch: nothing moves on a page. On the harness's dress-down
+    stand the digests move (it now runs the pool and hears the cases). CHECK: `rust/game_start/tests/no_host_in_rules.rs` (red before the change: a frag sent
+    no record) and `hosts_agree.rs` (two seats, shown seat 1 against shown seat 0, frags and a wall charge, every state part read for 90 seconds). Held on the
+    page's stand: 110 of 110 runs equal over 22 levels and 5 hands. Nobody has seen it on a GPU.
   - **Found, for the maintainer's call** (the page of this work puts them to him; nothing changed): debris (`debris.ts`) is gameplay three ways today: a
     landing files a `'prop'` sound the men hear, the pool's size is `settings.debrisCap` (64 on the two top graphics tiers, 32 below: two machines on different
     tiers do not play the same game), and its chunks are in the raw bits. Glass: where shards land becomes the litter that makes a footstep louder
