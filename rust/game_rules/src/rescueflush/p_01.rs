@@ -89,8 +89,7 @@ fn fight_def_of(g: &Game, h: GuardId) -> Option<RoomfightDefId> {
 
 /// May he be sent now? (the closure `free` of ts:136)
 fn free(g: &mut Game, h: GuardId, b: Option<crate::scene_level::BreachPlanBounds>, in_room: bool) -> bool {
-    if g.gd[h].state == crate::game::GuardState::Dead || g.gd[h].held.is_some() || crate::control::man::blind(g, h) || crate::control::man::staggered(g, h)
-        || crate::owner::has(g, h, crate::owner::by::RUNNER) || crate::owner::has(g, h, crate::owner::by::MORALE) || crate::owner::has(g, h, crate::owner::by::WALK) { return false; }
+    if crate::owner::kept(g, h, crate::owner::by::MISSION).is_some() || crate::owner::has(g, h, crate::owner::by::WALK) { return false; }
     if crate::squad::in_bounds(g.ch[g.gd[h].ch].pos, b, None) && in_room { return false; }
     if g.time - g.gd[h].last_seen_t < g.k.rescueflush.busy_secs || g.gd[h].saw_foe_this_frame { return false; }
     let f = fight_def_of(g, h);
