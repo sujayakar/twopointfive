@@ -76,24 +76,27 @@ line).
     page `__net.state`, in a scripted client's MPBOT line): no alarm, nothing said to the player or the server. It becomes one when real pages on
     real GPUs have held it. A PART COMES ONTO THE LIST as its picture fields leave the game's record and its rows are numbered alike on every host;
     THE END STATE IS "THE GAME'S RECORD HOLDS NOTHING A HOST DRAWS WITH", and then the list is every part and the wider word is the alarm. THE LIST
-    TODAY: 268 of 307 parts, made on the Rust goal's fourth batch (step 1905, 2026-11-07, software adapter) from five games whose whole-words files
-    are in the Library (`rebuild/multiplayer/coop-on-rust/agreed-runs-1905/`): four bun machines of a game of two, a page beside its server on the
-    office and on the depot in a downpour, a page as SECOND player with a frag thrown, and `mpclient-page`'s own one-seat game. It was 237 of 310 one batch earlier (eleven games,
-    `agreed-runs/`): that batch numbered a game's rows the same on every machine (the second seat's machine had differed in 36 parts; four bun
-    machines of a game of two now agree on EVERY part), took the look ahead's scratch off the words and kept addresses out of the box mirror. The 39
-    still off are the work list (`tools/mp/agreed.ts` prints them with the games they differed in): the picture's own in the record (`engine.world`,
-    `tab.boxes`, `chars`, `mesh_shadows`, `m.anim_gltf`, `weather`, `wind`, `m.scene_look` …), and what a page's START does otherwise than the
-    harness's (three camera rows and two Input rows against two and one, so `m.cmd`; `thrWord` twice in bun's order rows, so
-    `tab.orders_order_def` and `seats.orders`; `m.kit`, `director`, `m.weather_kinds`; `chronicle` after a tab has slept). THE SECOND PLAYER'S
-    PAGE, read by a probe on that batch: it shows its own man (the camera 4 cm from him), its own pair in its order book, and when the seat it
+    TODAY: 274 of 306 parts, made on the Rust goal's eighth batch (2026-11-08, software adapter) from four games whose whole-words files are in the Library
+    (`rebuild/multiplayer/coop-on-rust/agreed-runs-eighth/`): a page as SECOND player throwing frags on the office, on the night breach and on the depot in
+    a downpour, and `mpclient-page`'s own one-seat game, each beside its server and a bun client. It was 237 of 310 on the third batch, 268 of 307 on the
+    fourth and 265 of 304 on the fifth (`agreed-runs/`, `agreed-runs-1905/`, `two-seat-1911/`, `agreed-runs-1962/`); the orders, the kit, the director, the
+    work and wall charge of a seat and the weather's boot came on as one stand for every host landed. Four bun machines of a game of two agreed on EVERY part
+    (1905). The 32 still off are the work list (`tools/mp/agreed.ts` prints them with the games they differed in): the picture's own in the record
+    (`engine.world`, `chars`, `mesh_shadows`, `m.anim_gltf`, `weather`, `wind`, `fog_of_war`, `m.scene_look` …); `chronicle` after a tab has slept; and WHAT HOLDS
+    A BOX'S ROW NUMBER (`tab.boxes`, `tab.debris_chunk`, `destr`; `col` and `m.frag` after a burst has made new boxes, in about a third of the games
+    of two, the state word holding throughout): the world's boxes and the frame's are rows of one table and a frame row is freed by the host's listing, so a new
+    box's number depends on what its host has drawn. `col` and `m.frag` come back when the frame's boxes have a table of their own (the Rust goal's
+    ruling, the boundary's statics-and-boxes step): until then the collision list is NOT watched by the wider word. A LIST MADE ON A HEAD WHERE A PART
+    DIFFERS FOR A REAL REASON HIDES THE REASON: `m.scene_ground_field` parted on step 1906 because the look's hill rays were on in a page and off on a
+    server, and the rules read them; the list was left alone and the look was mended (1911). THE SECOND PLAYER'S
+    PAGE, read by a probe on step 1905: it shows its own man (the camera 4 cm from him), its own pair in its order book, and when the seat it
     shows is changed in mid-game (`g.localSeat = g.seats[0]`, then back) the camera, `g.player` and the order book follow at once while every
     state word and wider word still matches the server's, with no page error. Held: `mpserver-check` `wider word` (two scripted clients
-    of a two-seat game, every word tick) and `mpclient-page` `wider word` (a page beside its server; with `--seats 2` it says its count and does not
-    hold it until a two-seat page run with this list has been read). On the box a page had it on every word tick as first player (144 of 144, 164 of
+    of a two-seat game, every word tick) and `mpclient-page` `wider word` (a page beside its server, one seat and `--seats 2`). On the box a page had it on every word tick as first player (144 of 144, 164 of
     164 in a downpour) and as second (100 of 100); the merge's box read 257 of 257 and, the page second, 1,328 of 1,328 with the older list.
     `MPSERVER_BREAK=1` / `MPCLIENT_BREAK=1` part it with the state word. MAKING THE LIST AGAIN (after a batch that moves fields out of the record,
     or renames a part: a name the module has not got is passed over): `mpclient-page --words DIR` writes every machine's whole words of its game
-    into DIR (so does `MP_WORDS` in front of anything stood through `tools/mp/stand.ts`), one folder a game, then
+    (and the alarm's own parts beside them, as `block.<part>`: when the alarm fires they say which) into DIR (so does `MP_WORDS` in front of anything stood through `tools/mp/stand.ts`), one folder a game, then
     `bun run tools/mp/agreed.ts <folders> --write`. A LIST MADE FROM RUNS IS ONLY AS WIDE AS THE RUNS, which is why it is watched and not an alarm.
     A cheat set on one page cannot part two machines: the page lays the recipe's flags (god mode, the AI, ammunition, invisibility) over its game
     before every confirmed tick, so in a co-op game they are the server's.
