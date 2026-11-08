@@ -23,7 +23,7 @@
   var n = 0.0; var o = c; var mom = vec4f(lum(c.rgb), lum(c.rgb) * lum(c.rgb), 0.0, 0.0); if (NARROW == 0) { mom.w = c.a * c.a; }
   if (ws > 0.02) {
     h /= ws; mo /= ws; let st = steady(p.x); let cap = mix(3.0, f32(CAP), st) * select(1.0, 0.5, aux.w > 0.5 || p.leaf); n = min(mo.z, cap - 1.0);
-    var se = sd; if (KIND == 1) { let q = (clamp(m1, vec4f(0.0), vec4f(1.0)) * wn + 1.0) / (wn + 2.0); se = max(sd, sqrt(q * (1.0 - q))); } let e = se * SPREAD + abs(m1) * 0.04 + 1e-4; let hc = clamp(h, m1 - e, m1 + e); let moved = select(length((hc - h).rgb) / (length(e.rgb) + 1e-4), length((hc - h).xyw) / (length(e.xyw) + 1e-4), KIND == 1); n *= 1.0 / (1.0 + moved * 0.35);
+    var se = sd; if (KIND == 1) { let q = (clamp(m1, vec4f(0.0), vec4f(1.0)) * wn + 1.0) / (wn + 2.0); let doubt = sqrt(q * (1.0 - q)); se = vec4f(max(sd.xy, doubt.xy), sd.z, sd.w + 0.04); }   // (the sun's share is a fraction already: what moves in it should be let go) let e = se * SPREAD + abs(m1) * 0.04 + 1e-4; let hc = clamp(h, m1 - e, m1 + e); let moved = select(length((hc - h).rgb) / (length(e.rgb) + 1e-4), length((hc - h).xyw) / (length(e.xyw) + 1e-4), KIND == 1); n *= 1.0 / (1.0 + moved * 0.35);
     var k = 1.0 / (n + 1.0); o = mix(hc, c, k); mom = vec4f(mix(mo.x, mom.x, max(k, 0.06)), mix(mo.y, mom.y, max(k, 0.06)), 0.0, mix(mo.w, mom.w, max(k, 0.06)));
     if (NARROW == 1) { o.a = mix(h.a, c.a, max(k, 0.2)); }
   }

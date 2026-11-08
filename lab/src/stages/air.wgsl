@@ -11,7 +11,7 @@ fn steamAt(x: vec3f) -> f32 {
   return s * frame.weather.z;
 }
 /** scattering per metre of everything but steam */
-fn airAt(x: vec3f) -> f32 { return frame.misc.w * (0.0015 * exp(-max(x.y + 12.0, 0.0) * 0.045) + 0.022 * roomAir(x)) + frame.weather.y * 0.0026 * (1.0 - roomAir(x)); }
+fn airAt(x: vec3f) -> f32 { return frame.misc.w * (0.0015 * exp(-max(x.y + 12.0, 0.0) * 0.045) + 0.009 * roomAir(x)) + frame.weather.y * 0.0026 * (1.0 - roomAir(x)); }
 fn hg(mu: f32, g: f32) -> f32 { return (1.0 - g * g) / (4.0 * PI * pow(1.0 + g * g - 2.0 * g * mu, 1.5)); }
 @compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) {
   let dim = textureDimensions(outA); if (id.x >= dim.x || id.y >= dim.y) { return; }

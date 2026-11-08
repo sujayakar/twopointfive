@@ -33,9 +33,9 @@ fn lum(c: vec3f) -> f32 { return dot(c, vec3f(0.2126, 0.7152, 0.0722)); }
   set(lab: Lab, snap = false) { exposeKnobs(lab, this.bias, this.lift, this.hold, snap); }
   /** `pre` = the method's prefix for its glow and fused levels; `plain` = show a signal as it is */
   run(e: GPUCommandEncoder, lab: Lab, src: GPUTexture, to: GPUTextureView, format: GPUTextureFormat, pre: string, o: { plain?: number; grain?: number; sharpen?: number } = {}) {
-    const d = this.g.device; d.queue.writeBuffer(this.knob, 0, new Float32Array([this.bias, lab.frameNo, 0.06, o.grain ?? 0.6, o.plain ? 1 : 0, o.plain ?? 1, o.sharpen ?? 0.12, 0]));
+    const d = this.g.device; d.queue.writeBuffer(this.knob, 0, new Float32Array([this.bias, lab.frameNo, 0.035, o.grain ?? 0.6, o.plain ? 1 : 0, o.plain ?? 1, o.sharpen ?? 0.12, 0]));
     let pipe = this.pipes.get(format); if (!pipe) this.pipes.set(format, pipe = d.createRenderPipeline({ layout: 'auto', vertex: { module: this.mod, entryPoint: 'vs' }, fragment: { module: this.mod, entryPoint: 'fs', targets: [{ format }] } }));
     const t = (n: string) => ({ resource: (o.plain ? this.dummy : lab.graph.texture(n)).createView() }), p = e.beginRenderPass({ colorAttachments: [{ view: to, loadOp: 'clear', storeOp: 'store' }] }); p.setPipeline(pipe);
-    p.setBindGroup(0, d.createBindGroup({ layout: pipe.getBindGroupLayout(0), entries: [{ binding: 0, resource: src.createView() }, { binding: 1, resource: { buffer: lab.graph.buffers.get('exposure')! } }, { binding: 2, resource: { buffer: this.knob } }, { binding: 3, ...t(pre + 'Glow3') }, { binding: 4, resource: this.sampler }, { binding: 5, ...t(pre + 'Fuse0') }] })); p.draw(3); p.end();
+    p.setBindGroup(0, d.createBindGroup({ layout: pipe.getBindGroupLayout(0), entries: [{ binding: 0, resource: src.createView() }, { binding: 1, resource: { buffer: lab.graph.buffers.get('exposure')! } }, { binding: 2, resource: { buffer: this.knob } }, { binding: 3, ...t(pre + 'Bloom') }, { binding: 4, resource: this.sampler }, { binding: 5, ...t(pre + 'Fuse0') }] })); p.draw(3); p.end();
   }
 }
