@@ -18,7 +18,7 @@ fn guard_mark(g: &Game, gd: GuardId) -> (String, HeadTone) {
     let (mut text, mut tone) = (String::new(), HeadTone::Calm);
     let zz = crate::doze::doze_mark(g, gd);
     match m.state {
-        GuardState::Dead => if crate::game::is_breathing(g, gd) { text = String::from(if m.wound.is_some() { "✚" } else { "zz" }); tone = HeadTone::Ko; } else { text = String::from("✕"); tone = HeadTone::Dead; },
+        GuardState::Dead => if crate::game::is_breathing(g, gd) { text = String::from("zz"); tone = HeadTone::Ko; } else { text = String::from("✕"); tone = HeadTone::Dead; },
         GuardState::Alert => { text = String::from(if !own && crate::aim::guard_acquired(g, gd) { "◎!" } else { "!" }); tone = HeadTone::Alert; }
         GuardState::Suspicious | GuardState::Search => if !own { text = String::from("?"); tone = HeadTone::Sus; },
         GuardState::Patrol => if !zz.is_empty() { text = String::from(zz); } else if !own { let d = wary_dots(m.awareness); if !d.is_empty() { text = d; tone = HeadTone::Sus; } },

@@ -186,7 +186,6 @@ pub fn run_shell_late(g: &mut crate::game::Game, late: &crate::shotgun::ShellLat
 /// The man the round found: where it landed decides, then the log's line, the sound, whose round it was. (fireWeapon's manDown)
 fn man_down(g: &mut Game, hit_guard: GuardId, sg: Option<GuardId>, shooter: CharId, is_player: bool, ff_ours: bool, hostage_hit: bool, muzzle: V3, dir: V3, t_hit: f64, hit_p: V3) {
     use crate::game::{DownBy, DownKind, GuardState};
-    use crate::wounds::RoundDoes;
     let was_up = g.gd[hit_guard].state != GuardState::Dead;
     let team = g.gd[hit_guard].team;
     let foe = match sg { Some(s) => { let st = g.gd[s].team; crate::teams::is_hostile(g, st, team) } None => false };
@@ -195,29 +194,15 @@ fn man_down(g: &mut Game, hit_guard: GuardId, sg: Option<GuardId>, shooter: Char
     let by = by_sign.as_deref().unwrap_or("");
     let foe_line = if foe { Some(alloc::format!("{} down — {}'s round", sign, by)) } else { None };
     let own_hit = ff_ours && g.gd[hit_guard].civ.is_none() && !crate::teams::is_hostile(g, crate::teams::Team::Player, team);
-    let ro = if v3::dist(v3::mad(muzzle, dir, t_hit), hit_p) < 1e-6 { muzzle } else { v3::mad(hit_p, dir, -t_hit) };
-    let does = crate::wounds::round_does(g, hit_guard, ro, dir, t_hit, hostage_hit, is_player);
-    if does != RoundDoes::None {
-        let line: Option<String> = if does != RoundDoes::Shot {
-            Some(if foe_line.is_some() {
-                alloc::format!("{} hit, down and breathing — {}'s round", sign, by)
-            } else if own_hit {
-                if is_player { alloc::format!("{} hit, down and breathing — your round", sign) } else { alloc::format!("{} hit, down and breathing — {}'s round", sign, by) }
-            } else {
-                alloc::format!("{} down — wounded, out of the fight", sign)
-            })
-        } else if foe_line.is_some() {
-            foe_line
-        } else if own_hit && !is_player {
-            Some(alloc::format!("{} down — {}'s round", sign, by))
-        } else {
-            None
-        };
-        let zone = match does { RoundDoes::Side => Some(KillGuardZone::Side), RoundDoes::Leg => Some(KillGuardZone::Leg), _ => None };
-        let how = if does == RoundDoes::Shot { DownKind::Shot } else { DownKind::Wounded };
-        let by_who = if is_player { DownBy::Player } else { DownBy::Guard };
-        kill_guard(g, hit_guard, dir, Some(false), Some(how), Some(by_who), line.as_deref(), zone);
-    }
+    let line: Option<String> = if foe_line.is_some() {
+        foe_line
+    } else if own_hit && !is_player {
+        Some(alloc::format!("{} down — {}'s round", sign, by))
+    } else {
+        None
+    };
+    let by_who = if is_player { DownBy::Player } else { DownBy::Guard };
+    kill_guard(g, hit_guard, dir, Some(false), Some(DownKind::Shot), Some(by_who), line.as_deref());
     crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(hit_p), Some(0.8), None);
     if was_up { g.gd[hit_guard].killer_id = g.ch[shooter].id; }
     if hostage_hit {

@@ -9,7 +9,7 @@ use game::out_events::OutEvent;
 use game_start::play::{dist, Opts, Play};
 use game_start::scene::{Axis, Scene};
 
-fn hostile_down(p: &mut Play) { for gd in p.g.guards.clone() { if p.g.gd[gd].team == game::teams::Team::Hostile && p.up(gd) { game::combat::kill_guard(&mut p.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, None, None); } } }
+fn hostile_down(p: &mut Play) { for gd in p.g.guards.clone() { if p.g.gd[gd].team == game::teams::Team::Hostile && p.up(gd) { game::combat::kill_guard(&mut p.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, None); } } }
 
 // ---------------------------------------------------------------- a round into a wall
 

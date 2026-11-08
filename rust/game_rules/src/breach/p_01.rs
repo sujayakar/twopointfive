@@ -716,7 +716,7 @@ pub fn breach_drill_room_clear(g: &mut crate::game::Game, te: f64) -> bool {
         for (k, h) in hs.iter().copied().enumerate() {
             if !dead(g, h) && dr!(g).guarantee_downs && !g.gd[h].fled {
                 breach_drill_beat(g, &alloc::format!("guaranteed:{}", k));
-                crate::combat::kill_guard(g, h, [1.0, 0.0, 0.0], Some(false), Some(crate::game::DownKind::Shot), Some(crate::game::DownBy::Guard), Some("hostile down"), None);
+                crate::combat::kill_guard(g, h, [1.0, 0.0, 0.0], Some(false), Some(crate::game::DownKind::Shot), Some(crate::game::DownBy::Guard), Some("hostile down"));
             }
         }
         return true;
@@ -815,7 +815,7 @@ pub fn breach_drill_staged_exchange(g: &mut crate::game::Game, i: usize, dt: f64
             if dr!(g).flows[i].n >= 2.0 {
                 if !dead(g, h) && dr!(g).guarantee_downs && !g.gd[h].fled {
                     breach_drill_beat(g, &alloc::format!("guaranteed:{}", on));
-                    crate::combat::kill_guard(g, h, dir, Some(false), Some(crate::game::DownKind::Shot), Some(crate::game::DownBy::Guard), Some("hostile down"), None);
+                    crate::combat::kill_guard(g, h, dir, Some(false), Some(crate::game::DownKind::Shot), Some(crate::game::DownBy::Guard), Some("hostile down"));
                 }
                 let f = &mut dr!(g).flows[i];
                 f.q.retain(|k| *k != on as usize);

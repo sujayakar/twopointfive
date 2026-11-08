@@ -423,7 +423,7 @@ fn men_getting_off_a_grenade_leave_by_a_door_that_stands_open_and_not_a_shut_one
         for &m in &ours { p.g.gd[m].god = false; }
         let theirs: Vec<_> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team == game::teams::Team::Hostile && p.up(gd)).collect();
         let (thrower, rest) = theirs.split_first().unwrap();
-        for &x in rest { kill_guard(&mut p.g, x, [0.0, 0.0, 1.0], Some(true), None, None, None, None); }
+        for &x in rest { kill_guard(&mut p.g, x, [0.0, 0.0, 1.0], Some(true), None, None, None); }
         p.sam_put([9.0, 26.2]);
         p.run(0.1);
         let d = game::doors::doors_by_name(&p.g, "foot_gate").unwrap();
