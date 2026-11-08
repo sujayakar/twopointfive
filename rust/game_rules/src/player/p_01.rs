@@ -169,7 +169,7 @@ pub fn rifle_name(g: &crate::game::Game, pl: PlayerId) -> String {
     let mode = g.fa[rifle].mode.as_str().to_uppercase();
     let att = crate::weapons::rifle_attachment(g, rifle);
     let tail = match att {
-        Some(crate::weapons::RifleAttachment::Ring) => { let tag = crate::gear::ring_tag(g); format!(" · {} ×{}", tag, js::num_str(g.fa[rifle].rings)) }
+        Some(crate::weapons::RifleAttachment::Ring) => { format!(" · SPONGE ×{}", js::num_str(g.fa[rifle].rings)) }
         Some(crate::weapons::RifleAttachment::He40) => format!(" · 40 MM ×{}", js::num_str(g.fa[rifle].shells)),
         Some(crate::weapons::RifleAttachment::Cam) => format!(" · CAM ×{}", js::num_str(g.fa[rifle].cams)),
         None => String::new(),

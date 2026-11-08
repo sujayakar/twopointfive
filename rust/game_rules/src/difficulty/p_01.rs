@@ -473,18 +473,10 @@ pub fn write(g: &mut crate::game::Game, fog_only: Option<bool>) {
 }
 
 
-/// the kept rungs this visit's switches hide; with both switches settled on, none. (difficulty.ts keptHidden)
-pub fn kept_hidden(g: &crate::game::Game) -> crate::difficulty::KeptHidden {
-    KeptHidden { fog: None, ai: None, kit: None, told: None }
-}
-
 /// the machine's store keeps the moved levers, with the kept rungs this visit hides unless `all`. (difficulty.ts storeLevers)
 pub fn store_levers(g: &crate::game::Game, all: Option<bool>) {
     let s = g.m.difficulty.set;
-    let (fog, ai, kit, told) = if all.unwrap_or(false) { (s.fog, s.ai, s.kit, s.told) } else {
-        let h = kept_hidden(g);
-        (s.fog.or(h.fog), s.ai.or(h.ai), s.kit.or(h.kit), s.told.or(h.told))
-    };
+    let (fog, ai, kit, told) = (s.fog, s.ai, s.kit, s.told);
     match levers_json(&[("fog", fog.map(|r| r.as_str())), ("ai", ai.map(|r| r.as_str())), ("kit", kit.map(|r| r.as_str())), ("told", told.map(|r| r.as_str()))]) {
         Some(line) => { crate::savestate::save_store_set(g, LS_LEVERS, &line); }
         None => crate::savestate::save_store_remove(g, LS_LEVERS),
