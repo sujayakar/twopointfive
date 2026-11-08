@@ -129,7 +129,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     crate::cover::cover_tick(g);
     for &s in &seats { in_seat(g, s, |g| crate::silent::silent_tick(g)); }
     crate::pairorders::pair_orders_tick(g, dt);
-    crate::spotted::spotted_tick(g);
+    for &s in &seats { in_seat(g, s, |g| crate::spotted::spotted_tick(g)); }
     for &s in &seats { in_seat(g, s, |g| crate::orders::squad_orders_tick(g)); }
     crate::doorpath::door_path_tick(g, dt);
     crate::powerout::power_out_tick(g, dt);
