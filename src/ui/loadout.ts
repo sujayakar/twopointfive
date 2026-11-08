@@ -54,8 +54,6 @@ export interface LoadoutOpts {
   keys(): boolean;
   /** a key, before any row of the screen has it: true = it was the host's (the map sheet — ui/kitBrief.ts) */
   key?(code: string, repeat: boolean): boolean;
-  /** a key the highlighted row did not take, before the screen's own Enter / Esc / W A S D: true = it was the host's (the walkthrough — ui/kitGuide.ts: an open pop-up's Esc is the card's first) */
-  rest?(code: string, repeat: boolean): boolean;
   /** Deploy is about to load `search` with `n` teammates (told before the load or `deploy`; nothing is replaced) */
   onDeploy?: (search: string, n: SquadSize) => void;
   /** told at the end of every paint (the one starting page's picture of the team follows it: ui/kitView.ts) */
@@ -243,7 +241,6 @@ export function openLoadout(entry: Mission, opts: LoadoutOpts): LoadoutScreen {
       if (code && opts.key?.(code, repeat)) return true;
       const row = S.rows[S.sel];
       if (row?.key?.(code, repeat)) return true;
-      if (code && opts.rest?.(code, repeat)) return true;
       if (repeat && (code === 'Enter' || code === 'NumpadEnter' || code === 'Space' || code === 'Escape')) return true;   // (a held Enter or Esc acts once)
       switch (code) {
         case 'KeyW': case 'ArrowUp': S.move(-1); return true;
