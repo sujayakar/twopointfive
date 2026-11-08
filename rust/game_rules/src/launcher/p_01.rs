@@ -190,10 +190,11 @@ pub fn update_rings(g: &mut crate::game::Game, dt: f64) {
                 let c = g.gd[cv].ch;
                 try_char(g, &r, radius, dir, reach, c, Some(cv), &mut best, &mut hit_c, &mut hit_g);
             }
-            let pl = g.player;
-            if !g.pl[pl].down {
-                let c = g.pl[pl].ch;
-                try_char(g, &r, radius, dir, reach, c, None, &mut best, &mut hit_c, &mut hit_g);
+            for pl in crate::seats::men(g) {
+                if !g.pl[pl].down {
+                    let c = g.pl[pl].ch;
+                    try_char(g, &r, radius, dir, reach, c, None, &mut best, &mut hit_c, &mut hit_g);
+                }
             }
             let st = crate::scene_collision::raycast(g, r.pos, dir, reach);
             let ph = crate::props::prop_system_raycast(g, r.pos, dir, reach);
@@ -302,7 +303,7 @@ pub fn ring_hits_character(g: &mut crate::game::Game, r: crate::launcher::Ring, 
             }
             let (pos, level) = (v3::copy(g.ch[c].pos), g.k.ring.hit_noise);
             prop_event(g, pos, level, shooter_id, None);
-            if by_player { let pl = g.player; g.pl[pl].noise = m::max(g.pl[pl].noise, level); }
+            if let Some(pl) = crate::seats::man_by_id(g, shooter_id) { g.pl[pl].noise = m::max(g.pl[pl].noise, level); }
         }
         Some(gd) if high => {
             play_rate(g, "bodyHit", at, 0.6, 0.75);
@@ -313,7 +314,7 @@ pub fn ring_hits_character(g: &mut crate::game::Game, r: crate::launcher::Ring, 
             crate::combat::kill_guard(g, gd, [dir[0], 0.0, dir[2]], Some(true), Some(crate::game::DownKind::Struck), Some(if by_player { crate::game::DownBy::Player } else { crate::game::DownBy::Guard }), Some(&line), None);
             let (pos, level) = (v3::copy(g.ch[c].pos), g.k.ring.ko_noise);
             prop_event(g, pos, level, shooter_id, None);
-            if by_player { let pl = g.player; g.pl[pl].noise = m::max(g.pl[pl].noise, level); }
+            if let Some(pl) = crate::seats::man_by_id(g, shooter_id) { g.pl[pl].noise = m::max(g.pl[pl].noise, level); }
         }
         Some(gd) => stagger_guard(g, gd, dir, r.shooter),
     }

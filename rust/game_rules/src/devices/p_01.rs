@@ -292,6 +292,7 @@ pub fn update_laser(g: &mut crate::game::Game, l: LaserRtId, dt: f64, live: bool
     }
     let end = v3::mad(d.from, dir, sense);
     let mut who: Option<&'static str> = None;
+    let mut by: Option<PlayerId> = None;
     let mut at: Option<V3> = None;
     let mut cut = reach;
     for pl in crate::seats::men(g) {
@@ -299,7 +300,7 @@ pub fn update_laser(g: &mut crate::game::Game, l: LaserRtId, dt: f64, live: bool
         if !g.pl[pl].down && !g.player_invisible {
             let c = g.pl[pl].ch;
             at = body_breaks(g, c, d.from, end);
-            if at.is_some() { who = Some("player"); }
+            if at.is_some() { who = Some("player"); by = Some(pl); }
         }
         if who.is_none() {
             if let Some(dg) = g.pl[pl].dragging {
@@ -334,7 +335,7 @@ pub fn update_laser(g: &mut crate::game::Game, l: LaserRtId, dt: f64, live: bool
     }
     let now = g.time;
     if has(crate::sim_lightshome::light_home_laser_close(g, slot, now, live, cut, sense, who.is_some()), bit.trip) {
-        laser_trip(g, l, who.unwrap(), at.unwrap());
+        laser_trip(g, l, who.unwrap(), by, at.unwrap());
     }
 }
 /// Does any capsule of `c` cross the beam a→b: the point on the beam where it does.   (devices.ts bodyBreaks)
@@ -350,12 +351,12 @@ pub fn body_breaks(g: &crate::game::Game, c_2: CharId, a: V3, b: V3) -> Option<V
     None
 }
 /// A beam broken: the chirp, the radio, a man sent, by the beam's level.   (devices.ts laserTrip)
-pub fn laser_trip(g: &mut crate::game::Game, l: LaserRtId, who: &str, at: V3) {
+pub fn laser_trip(g: &mut crate::game::Game, l: LaserRtId, who: &str, by: Option<PlayerId>, at: V3) {
     let d = g.tab.devices_laser_rt[l].def.clone();
     let where_ = crate::chronicle::room_of(g, at);
     let level: String = match d.alarm { Some(x) => String::from(x.as_str()), None => crate::scene_level_data::device_defaults().alarm };
     crate::audio_iface::game_audio_like_play(g, "alarmChirp", Some(d.from), Some(0.7), None);
-    if who == "player" { let pl = g.player; g.pl[pl].noise = m::max(g.pl[pl].noise, 0.3); }
+    if let Some(pl) = by { g.pl[pl].noise = m::max(g.pl[pl].noise, 0.3); }
     let sent: Option<GuardId>;
     if level == "alarm" {
         control(g, &format!("beam broken in the {} — that's an intruder. weapons out", where_));
