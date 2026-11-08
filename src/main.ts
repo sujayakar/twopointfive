@@ -23,7 +23,8 @@ import * as boot from './ui/boot';
 import { rigTable } from './render/sdfrig';
 import { Engine } from './engine';
 import type { HostApi } from './host/api';
-import { SAVED, SAVE_UP, saveFile, savedWords } from './host/savefile';
+import { SAVE_UP, saveFile, savedWords } from './host/savefile';
+import { doorTo } from './cloud/door';
 import type { IrradianceProbe } from './render/probe';
 import { buildLevel, OFFICE_DATA } from './scene/level';
 import { loadLevel, levelFileOf } from './scene/levelLoad';
@@ -93,7 +94,8 @@ import { HandsOff } from './host/handsoff';
 import { oneAirFlip, wispMotesFlip } from './ui/sweepSnow';
 import { ReplayKey } from './ui/replaykey';
 import { keptStore } from './replay/keptui';
-import { cloudAdopt, cloudBoot, cloudFatal, cloudReports, cloudUrl } from './cloud/cloud';   // (the hosted build's backend: nothing of it is made on a build that was given no address — src/cloud/cloud.ts)
+import { cloudAdopt, cloudBoot, cloudReports } from './cloud/cloud';   // (the hosted build's backend: nothing of it is made on a build that was given no address — src/cloud/cloud.ts)
+import { tellRedCards } from './cloud/redcards';
 import { endStage } from './cloud/telemetry';   // (a run's end for the records: the verdict's, where it has one)
 import { keepPageBoot } from './host/keeppage';   // (the kept page: the tab's page keeps the GPU device, the game loads in its frame — gpu/keep.ts)
 import { keptRecord, keptFreeze, startCallClock, CALLS } from './gpu/keep';
@@ -738,12 +740,7 @@ async function main() {
   if (cloud) {   // a lost device is one of the visit's error records (a device let go because the page is leaving is not a loss); a GPU error is printed by gpu/device.ts's own listener and reaches the records by the tapped console
     void gpu.device.lost.then(info => { if (info.reason !== 'destroyed') void cloud.telemetry.flush(true); });   // (gpu/device.ts prints the loss; the reporter's net makes that line the visit's record, and this sends it while the page still can)
   }
-  // THE SAVE DOOR'S LISTENER (host/savefile.ts): a file the page saves goes to the backend's file intake (cloud/files.ts: it returns at once, never throws,
-  // and sends only where this browser sends) and nowhere else, so its whole answer goes back to whoever saved the file: going up now, held until the notice
-  // has been read, or not going (the switch off, too large), and later whether it arrived (`done`). The file's short facts go beside it. A benchmark's take
-  // goes up under a kind of its own, so it can be told from a plain recording. (`off` and `no` both read
-  // as not sent: the saver's words are the same.)
-  SAVED.sink = cloud ? (f, done) => { const took = cloud.save(f.name, f.blob, f.kind === 'perf' && f.meta?.of === 'bench' ? 'benchperf' : f.kind, f.meta, done); return took === 'sent' || took === 'held' ? took : false; } : null;
+  doorTo(cloud);   // (a file the page saves goes to the backend's file intake: cloud/door.ts)
   (window as any).__saveUp = SAVE_UP;   // (a developer's way to a file after the fact: `__saveUp.on = false`, then `__perfrec.deliver(__lastPerfDump)` downloads it — docs/agents/qa.md)
   (window as any).__cloud = cloud?.hook() ?? null;
   if (cloud?.tapes) { const tapes = cloud.tapes; replaykey.onEndKept = () => { void tapes.round(); }; }   // (a run's end is in the browser's store: the tape's last pieces go up now, not at the next beat 20 s on — cloud/tapes.ts round)
@@ -1493,24 +1490,7 @@ tapConsole();   // (src/cloud/report.ts: before main() runs, so the boot's own c
 window.addEventListener('error', ev => { if (/ResizeObserver loop/.test(ev.message)) return; fatalOnce('Uncaught error:', ev.error ?? ev.message); });
 window.addEventListener('unhandledrejection', ev => fatalOnce('Unhandled promise rejection:', ev.reason));
 
-// THE BACKEND IS TOLD OF EVERY RED CARD (gpu/device.ts FATAL.tell; cloud/cloud.ts cloudFatal), set before main() runs so a start that never got a GPU is one
-// of them: no request on a build with no backend, under ?cloud=0 or ?cloudstats=0, or in the kit's small view. A browser that has not been shown what the
-// game sends is shown it on the card itself, on top, and the record goes once the line has been read (ui/cloudnote.ts: two seconds in view).
-FATAL.tell = (r, card) => {
-  if (kitViewOn) return;
-  const q = new URLSearchParams(location.search); if (!cloudUrl(q)) return;
-  const data = { ...(r.where ? { where: r.where } : {}), ...(r.adapter ? { adapter: r.adapter } : {}), ...(r.data !== undefined ? { facts: r.data } : {}) };
-  const say = (build?: string): void => {
-    const s = cloudFatal(q, { message: r.message, stack: r.stack, stage: r.stage ?? (r.where ? 'boot' : 'run'), ...(Object.keys(data).length ? { data } : {}), ...(build ? { build } : {}) });
-    if (!s?.waits) return;
-    card.style.flexDirection = 'column'; card.style.gap ||= '16px'; cloudNote(card, undefined, { told: s.told });
-    const line = card.lastElementChild; if (line?.classList.contains('cloudnote')) card.prepend(line);
-  };
-  // (a visit that is up knows its build. A page that died before that asks for the one small file a build carries, and waits a second and a half for it)
-  if ((window as any).__cloud) { say(); return; }
-  let said = false; const once = (c?: string): void => { if (said) return; said = true; try { say(c && /^[0-9a-f]{7,40}$/.test(c) ? c : undefined); } catch { /* the card is up */ } };
-  try { setTimeout(once, 1500); void fetch('/qa/commit', { cache: 'no-store' }).then(x => x.ok ? x.text() : '').then(t => once(t.trim()), () => once()); } catch { once(); }
-};
+tellRedCards(() => kitViewOn);
 
 main().catch(e => { console.error(e); if (kitViewOn) kitViewFatal(); if ((e as Error)?.name === 'NoGameHere') showFatal("This link opens a replay, and this build can't play those yet. You can still play every mission from the title."); else if (e instanceof NoWasmError) showFatal(NO_WASM_WORDS, { report: { message: e.message.slice(0, 400), stage: 'wasm' } }); else if ((e as Error)?.name === 'RustGameError') showFatal((e as Error).message, { report: { message: (e as Error).message.slice(0, 400), stage: 'rust game' } });   // (?rust=1: the Rust game's own failure, in its plain words: host/rustgame.ts)
   else showFatalError(e); readyReject(e); });

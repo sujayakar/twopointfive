@@ -16,7 +16,7 @@ import type { DrawGame } from './drawgame';
 import { leversKept } from './machine';
 import type { Measure } from './measure';
 
-export interface DrawBenchDeps { gpu: Gpu; engine: Engine; smoke: SmokeSystem; quality: Quality; input: Input; game: DrawGame; settings: OptionsGame; measure: Measure; say(words: string): void }
+export interface DrawBenchDeps { gpu: Gpu; engine: Engine; smoke: SmokeSystem; quality: Quality; input: Input; game: DrawGame; settings: OptionsGame; measure: Measure; /** every saved file that may go has gone */ idle(capMs: number): Promise<unknown>; say(words: string): void }
 export function drawBench(d: DrawBenchDeps): { bench: Bench; begin: () => void; go: () => void } {
   const { game, input, quality, measure } = d, page = benchLegOfPage(), covered = (): boolean => missionsBusy() || optionsOpen(), hz = (): number => quality.displayHzPin || quality.displayHz;
   let held = false, god = false, away = false;
@@ -32,7 +32,7 @@ export function drawBench(d: DrawBenchDeps): { bench: Bench; begin: () => void; 
     said: () => { const h = game.hands(); return h ? `${h.end === 'taken' ? 'taken in' : h.end === 'sam' ? 'Sam down at' : 'fighting at'} ${Math.round(h.t)} s, ${h.up} of ${h.of} up` : ''; },
   } : null;
   const blocked = (): string | null => measure.sweep.active ? 'the sweep is running' : covered() ? 'a screen is open' : null;
-  const bench = new Bench(d.engine, quality, measure.rec, { boot: () => boot.summary(), rows: shaderRowsOn, machine: () => machineFacts(d.gpu.adapterInfo, d.gpu.adapterFallback, hz()), hz, view: benchView(covered), smoke: d.smoke,
+  const bench = new Bench(d.engine, quality, measure.rec, { idle: d.idle, boot: () => boot.summary(), rows: shaderRowsOn, machine: () => machineFacts(d.gpu.adapterInfo, d.gpu.adapterFallback, hz()), hz, view: benchView(covered), smoke: d.smoke,
     blocked, covered: () => covered() ? 'a screen came up over it' : null, scene, away: () => { const a = away; away = false; return a; },
     sweep: { start: o => measure.sweep.start(o), active: () => measure.sweep.active, flipped: () => measure.sweep.flipped, progress: () => measure.sweep.progress, stop: why => measure.sweep.stop(why), settled: () => measure.sweep.settled } });
   measure.bench = bench;
