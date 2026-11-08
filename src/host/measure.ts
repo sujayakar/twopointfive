@@ -9,6 +9,7 @@ import type { Quality } from '../ui/quality';
 import type { DrawGame } from './drawgame';
 import { PerfRecorder, type MeasuredGame } from '../ui/perfrec';
 import { PerfSweep } from '../ui/perfsweep';
+import type { Bench } from '../ui/bench';
 import { FRAMECAP, type FrameCap } from '../render/framecap';
 import { pageSay } from '../view/pagesaid';
 import { Fog, Section } from '../draw/sections';
@@ -16,7 +17,7 @@ import { FOG_HELD } from '../draw/fog';
 import { typedInto } from './keymap';
 import { captureKey, frameCapture } from './capture';
 
-export interface MeasureDeps { gpu: Gpu; engine: Engine; smoke: SmokeSystem; quality: Quality; cam: FollowCamera; input: Input; canvas: HTMLCanvasElement; game: DrawGame; marks(): number; /** why not now */ blocked(): string | null; say(words: string): void }
+export interface MeasureDeps { gpu: Gpu; engine: Engine; smoke: SmokeSystem; quality: Quality; cam: FollowCamera; input: Input; canvas: HTMLCanvasElement; game: DrawGame; marks(): number; /** why not now */ blocked(benchSweep: boolean): string | null; say(words: string): void }
 
 /** the game as a take reads it */
 function measured(game: DrawGame, engine: Engine, smoke: SmokeSystem, marks: () => number): MeasuredGame {
@@ -32,26 +33,30 @@ function measured(game: DrawGame, engine: Engine, smoke: SmokeSystem, marks: () 
 }
 
 export class Measure {
+  /** the benchmark, where the page has one, and what follows each frame of it */
+  bench: Bench | null = null; after: (() => void) | null = null;
   readonly rec: PerfRecorder; readonly sweep: PerfSweep; readonly cap: FrameCap;
   constructor(d: MeasureDeps) {
     const g = measured(d.game, d.engine, d.smoke, d.marks), note = (s: string): void => { d.say(s); pageSay(s); };
     this.rec = new PerfRecorder(d.engine, g, d.cam, d.quality, note);
-    this.sweep = new PerfSweep(d.engine, g, d.quality, d.smoke, this.rec, note, d.blocked);
+    this.sweep = new PerfSweep(d.engine, g, d.quality, d.smoke, this.rec, note, () => (this.bench?.active && !this.bench.sweeping ? 'the benchmark is running' : d.blocked(!!this.bench?.sweeping)));
     this.cap = frameCapture(d.gpu, d.engine, d.quality, note);
-    captureKey(shift => this.cap.start({ whole: !shift, at: [d.input.mouseX / Math.max(1, d.canvas.clientWidth), d.input.mouseY / Math.max(1, d.canvas.clientHeight)] }));
-    window.addEventListener('keydown', e => { if (e.repeat || e.metaKey || e.ctrlKey || e.altKey || typedInto(e.target)) return; if (e.code === 'F8') { e.preventDefault(); this.sweep.toggle(e.shiftKey); } else if (e.code === 'F9') { e.preventDefault(); this.rec.toggle(); } });
+    captureKey(shift => { if (!this.bench?.active) this.cap.start({ whole: !shift, at: [d.input.mouseX / Math.max(1, d.canvas.clientWidth), d.input.mouseY / Math.max(1, d.canvas.clientHeight)] }); });
+    window.addEventListener('keydown', e => { if (e.repeat || e.metaKey || e.ctrlKey || e.altKey || typedInto(e.target) || this.bench?.active) return; if (e.code === 'F8') { e.preventDefault(); this.sweep.toggle(e.shiftKey); } else if (e.code === 'F9') { e.preventDefault(); this.rec.toggle(); } });
     Object.assign(window, { __perfrec: this.rec, __perfsweep: this.sweep });
   }
   /** the world holds still for a take */
-  get freezing(): boolean { return this.sweep.freezing; }
+  get freezing(): boolean { return this.sweep.freezing || !!this.bench?.freezing; }
   /** a take is on: the picture is held, no ladder is fed */
-  get active(): boolean { return this.sweep.active; }
+  get active(): boolean { return this.sweep.active || !!this.bench?.active; }
+  /** auto quality may measure the machine */
+  calibrates(engine: Engine): boolean { const b = this.bench; return !b || (!b.timing && !(b.active && engine.standsIn)); }
   /** a display frame begins */
   begins(): void { this.rec.cpuFrameStart = performance.now(); }
   /** … and has been drawn */
   drawn(dt: number, fps: number, update: number, render: number): void {
     this.rec.cpuUpdate = update; this.rec.cpuRender = render;
     if (FRAMECAP.on) this.cap.frame(performance.now() - render, render);
-    this.rec.frame(dt, fps); this.sweep.tick();
+    this.rec.frame(dt, fps); this.sweep.tick(); this.bench?.tick(dt); this.after?.();
   }
 }

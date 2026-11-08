@@ -77,8 +77,10 @@ struct Held {
     after: Vec<(usize, String)>,
     /// what the last tick left to be drawn (a host that draws)
     drawn: game_draw::Drawn,
+    /// the seat nobody's hands are on, and who plays it
+    hands: Option<(usize, game_run::hands_off::HandsOff)>,
 }
-impl Held { fn new(g: Box<Game>) -> Held { Held { g, cmd: None, cmds: None, after: Vec::new(), drawn: Default::default() } } }
+impl Held { fn new(g: Box<Game>) -> Held { Held { g, cmd: None, cmds: None, after: Vec::new(), drawn: Default::default(), hands: None } } }
 
 thread_local! {
     static GAMES: RefCell<Vec<Option<Held>>> = const { RefCell::new(Vec::new()) };
@@ -157,7 +159,7 @@ pub extern "C" fn face_tally(h: u32) {
         let g = &x.g;
         let men: Vec<String> = g.guards.iter().map(|&gd| { let m = &g.gd[gd]; format!("[\"{}\",{}]", m.state.as_str(), g.tab.light[m.flashlight].enabled as u32) }).collect();
         let s = &g.saves.stats;
-        format!("{{\"men\":[{}],\"qrf\":\"{}\",\"escalation\":{},\"autosaves\":{},\"manual\":{},\"loads\":{}}}", men.join(","), g.qrf.state.as_str(), g.escalation, s.autosaves, s.manual, s.loads)
+        format!("{{\"men\":[{}],\"qrf\":\"{}\",\"escalation\":{},\"autosaves\":{},\"manual\":{},\"loads\":{},\"stage\":\"{}\",\"alarm\":{},\"alerts\":{},\"clear\":{}}}", men.join(","), g.qrf.state.as_str(), g.escalation, s.autosaves, s.manual, s.loads, g.mission.stage.as_str(), g.mission.alarm_on, g.mission.stats.alerts, game::roomclear::room_clear_scenario_active(g))
     });
     out(s.into_bytes());
 }

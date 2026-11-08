@@ -13,8 +13,6 @@ import { menuTheme } from './theme';
 export const TITLE = {
   /** two players (it fills the column; null: not on this page) */
   coop: null as (() => ((host: HTMLElement, back: () => void, focus: boolean) => void) | null) | null,
-  /** Extras' rows that are keys of this page (the benchmark) */
-  ownKeys: true,
 };
 
 /** the title screen's head and its main menu (the boot card and the real start card build the same screen) */
@@ -48,7 +46,7 @@ function titleActions(onClose?: () => void, shows?: TitleShows): { actions: HTML
     if (titleCoop && coop && !titleExtras) { coop(actions, () => { titleCoop = false; fill('coop'); }, !!focus); play = actions.querySelector('.btn') as HTMLElement; return; }
     if (titleExtras) {
       for (const sec of EXTRAS) {
-        const rows = sec.rows.filter(r => TITLE.ownKeys || r.href[0] !== '?'); if (!rows.length) continue;
+        const rows = sec.rows; if (!rows.length) continue;
         const h = el('div', 'xhead'); h.textContent = sec.head; actions.appendChild(h);
         for (const r of rows) {
           const a = el('a', 'btn xrow') as HTMLAnchorElement; a.href = showHref(r.href); a.dataset.extra = r.id; a.innerHTML = `<b>${r.label}</b>`; a.title = r.line;   // (show, not tell: a row is its name; its sentence is the tooltip)
