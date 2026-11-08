@@ -43,6 +43,7 @@ export async function loadbriefCheck(): Promise<boolean> {
   // (what the brief says of an address is the module's: rust/game_run/tests/desk.rs. Here a desk stood in says it, for the depot's four and the solo night)
   const said = (search: string) => { const q = new URLSearchParams(search), depot = q.get('levelFile') === 'depot.json'; return { id: depot ? 'depot-four' : q.has('solo') ? 'solo-night' : '', title: depot ? 'The depot' : 'Solo night', kind: depot ? 'roomclear' : 'solo', groupTitle: 'Raids', place: 'The depot', blurb: 'The job in one line.', leanWords: 'loud', team: 'you + four', level: depot ? 'depot.json' : 'office.json', scene: '', teaches: [], way: q.get('way') === '2' ? 2 : 0 }; };
   setDesk({ brief: said, leave: quitSearch } as any);
+  LOADBRIEF.options = { open() { }, close() { }, up: () => false };   // (the options layer is the page's to hand over)
   const { lookLevelFile } = await import(`${ROOT}/src/scene/look.ts`);
   const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
   const was = LOADBRIEF.on;
@@ -68,7 +69,7 @@ export async function loadbriefCheck(): Promise<boolean> {
     // (1) pressed while it boots
     let started = 0; const B1 = loadBrief(Q), root1 = doc.getElementById('brief');
     const text = root1?.textContent ?? '', go1 = root1?.find(cls('bgo')) ?? null, fill = go1?.find(e => e.tag === 'I') ?? null;
-    line(!!B1 && !!root1 && root1.parent === app && cls('on')(root1) && root1.getAttribute('data-mission') === 'depot-four' && /The depot/.test(text) && text.includes(B1.words.mission.place) && text.includes(B1.words.mission.blurb) && /Start/.test(text) && /Controls/.test(text) && /Back/.test(text)
+    line(!!B1 && !!root1 && root1.parent === app && cls('on')(root1) && root1.getAttribute('data-mission') === 'depot-four' && /The depot/.test(text) && text.includes(B1.words.place) && text.includes(B1.words.blurb) && /Start/.test(text) && /Controls/.test(text) && /Back/.test(text)
       && !root1.find(cls('controls')) && !/W A S D|Shift sprint/.test(text) && !!doc.getElementById('brief-style') && winL.filter(l => l.ev === 'keydown').length === 1,
       'screen: on, the brief is up at once in a layer of its own — the mission\'s title, place and line, Start, Controls, Back — and no list of keys');
     B1?.status('compiling shaders 40 / 97 …'); const w40 = fill?.style.width, s40 = root1?.find(cls('bstatus'))?.textContent; B1?.status('97 shaders ready — setting up'); const w100 = fill?.style.width;
