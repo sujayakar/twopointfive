@@ -162,7 +162,7 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/game/friendlyfire.ts FRIENDLYFIRE_STATS': 'TALLY · counted in friendlyfire.ts; no read in src/game, src/scene or src/anim',
   'src/game/furnblast.ts FURN_LOG': 'TALLY · counted in furnblast.ts; no read in src/game, src/scene or src/anim',
   'src/game/furnblast.ts FURN_STATS': 'TALLY · counted in furnblast.ts; read in the simulation\'s folders only by a summary / reset / max-of-itself (game/furnblast.ts:342, game/furnblast.ts:674)',
-  'src/game/glass.ts fxForced': 'CONST · written by two top-level statements at module load (glass.ts:44-45: ?glassfx, env GLASSFX); read by glassFxForced',
+  'src/game/glass.ts fxForced': 'CONST · written by a top-level statement at module load (glass.ts: env GLASSFX); read by glassFxForced',
   'src/game/glassbreak.ts GB_HOST': 'TALLY · what the host counts beside the module\'s own tally; read by a summary and a reset, shown by main.ts',
   'src/game/glassbreak.ts F': 'CONST · where a row\'s fields stand in the module, asked once',
   'src/game/glasspen.ts GLASSPEN_STATS': 'TALLY · counted in glasspen.ts; read by its summary (396-397) and copied / put back round a trial ask in orders.ts:1398/1466',

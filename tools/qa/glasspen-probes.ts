@@ -62,6 +62,9 @@ function officePanes(game: any) {
 }
 const lastOf = (game: any, ev0: number, kind: string) => game.events.slice(ev0).filter((e: any) => e.kind === kind).pop();
 const stars = (game: any) => game.decals.list.filter((d: any) => d.kind === 'glassHit');
+/** the game's blows on glass, counted over every pane, not one pane's: a blow the fracture model files draws its own cracks and has no star */
+const hitsOn = (game: any): number => glassStateOf(game).hits;
+const { glassState: glassStateOf } = await import(`${ROOT}/src/game/glass.ts`);
 
 
 // ================================================================ (b) an AI shooter
@@ -136,10 +139,10 @@ export async function glasspenRule(): Promise<boolean> {
     verdict(game.col.shotBlocked(from, near, 0.02, e9) && !game.col.shotBlocked(from, near, 0.02, eR) && game.col.shotBlocked(from, near) && !game.col.segmentBlocked(from, near), 'the line of FIRE across that sidelight: blocked for the 9 mm (and for a question asked with no gun: the cautious default), clear for the rifle; sight passes as ever', `shotBlocked 9 mm ${game.col.shotBlocked(from, near, 0.02, e9)} · rifle ${game.col.shotBlocked(from, near, 0.02, eR)} · no gun ${game.col.shotBlocked(from, near)} · sight blocked ${game.col.segmentBlocked(from, near)}`);
     // a round spent in a pane through the real fireWeapon: the pane keeps its star, nothing flies on
     const gd = game.guards[0]; placeGuard(gd, nz ? [b.c[0], 0, b.c[2] + 1.6] : [b.c[0] + 1.6, 0, b.c[2]], nz ? [b.c[0], 0, b.c[2] - 2] : [b.c[0] - 2, 0, b.c[2]]); gd.char.anim.upper = 'aim'; for (let i = 0; i < 20; i++) W.step(DT);
-    const ev0 = game.events.length, s0 = stars(game).length, spent0 = GLASSPEN_STATS.spent; const m = gd.char.muzzle; const aim: Vec3 = v3.mad(b.c, v3.normalize(v3.sub(b.c, m)), 2);   // (through the middle of the pane, from wherever his muzzle rides)
+    const ev0 = game.events.length, s0 = hitsOn(game), spent0 = GLASSPEN_STATS.spent; const m = gd.char.muzzle; const aim: Vec3 = v3.mad(b.c, v3.normalize(v3.sub(b.c, m)), 2);   // (through the middle of the pane, from wherever his muzzle rides)
     fireWeapon(game, gd.char, aim, false, { steady: true }); const shot = lastOf(game, ev0, 'guardShot');
     const stopD = shot ? Math.abs(nz ? shot.to[2] - b.c[2] : shot.to[0] - b.c[0]) : 9;
-    verdict(gd.weapon.def.id === 'guard9mm' && stopD < 0.03 && stars(game).length === s0 + 1 && GLASSPEN_STATS.spent === spent0 + 1, 'a guard\'s 9 mm fired at it for real: stopped IN the laminated sheet (within 3 cm of its plane), one star, counted as spent', `gun ${gd.weapon.def.id} · stopped ${f3(stopD)} m from the pane's plane at (${shot?.to.map(f2)}) · stars +${stars(game).length - s0}`);
+    verdict(gd.weapon.def.id === 'guard9mm' && stopD < 0.03 && hitsOn(game) === s0 + 1 && GLASSPEN_STATS.spent === spent0 + 1, 'a guard\'s 9 mm fired at it for real: stopped IN the laminated sheet (within 3 cm of its plane), one blow on the pane, counted as spent', `gun ${gd.weapon.def.id} · stopped ${f3(stopD)} m from the pane's plane at (${shot?.to.map(f2)}) · blows +${hitsOn(game) - s0}`);
   });
   return all();
 }
@@ -156,8 +159,8 @@ export async function glasspenNear(): Promise<boolean> {
       verdict(gd.state === 'dead' && !!shot && shot.to[2] > 10.2 && stars(game).length === s0 && GLASSPEN_STATS.crossed === x0 && !lastOf(game, ev0, 'glass'), 'the man stands in FRONT of the pane on the round\'s line: he takes it, and the pane behind him has no star, no crack event, no hole', `stopped (${shot?.to.map(f2)}) · guard ${gd.state} · stars +${stars(game).length - s0}`); }
     // far side, pressed to the glass
     { const W = await floor(7302, [7.5, 0, 11.6]); const { game } = W; parkFrom(game, 1); const gd = game.guards[0]; dummy(gd, [7.5, 0, 9.82], [7.5, 0, 11.6]); for (let i = 0; i < 5; i++) W.step(DT); gunUp(W, 'pistol');
-      const ev0 = game.events.length, s0 = stars(game).length; fireWeapon(game, game.player.char, chestOf(gd.char), true); const shot = lastOf(game, ev0, 'shot');
-      verdict(gd.state === 'dead' && stars(game).length === s0 + 1 && !!shot && shot.to[2] < 10.0 && shot.to[2] > 9.4, 'a man standing AGAINST the far face (18 cm off the glass): the round stars the pane and is in him as it leaves it — it does not pass through him', `stopped (${shot?.to.map(f2)}) · guard ${gd.state} · stars +${stars(game).length - s0}`); }
+      const ev0 = game.events.length, s0 = hitsOn(game); fireWeapon(game, game.player.char, chestOf(gd.char), true); const shot = lastOf(game, ev0, 'shot');
+      verdict(gd.state === 'dead' && hitsOn(game) === s0 + 1 && !!shot && shot.to[2] < 10.0 && shot.to[2] > 9.4, 'a man standing AGAINST the far face (18 cm off the glass): the round marks the pane and is in him as it leaves it — it does not pass through him', `stopped (${shot?.to.map(f2)}) · guard ${gd.state} · blows +${hitsOn(game) - s0}`); }
     // …and a round that leaves the glass OVER the head of a man backed onto it passes him (the contact column's crown pad is for a muzzle pressed down on a crouched man)
     { const W = await floor(7304, [7.5, 0, 11.6]); const { game } = W; parkFrom(game, 1); const gd = game.guards[0]; dummy(gd, [7.5, 0, 9.74], [7.5, 0, 6]); for (let i = 0; i < 5; i++) W.step(DT); gunUp(W, 'pistol');
       const top = gd.char.bones.headTop?.[1] ?? 1.8; const m = game.player.char.muzzle; const over: Vec3 = [7.5, top + 0.15, 9.99]; const aim = v3.mad(m, v3.normalize(v3.sub(over, m)), 6);
@@ -169,8 +172,8 @@ export async function glasspenNear(): Promise<boolean> {
       const pc = game.player.char; let poked = armThrough(game, pc); let z = 10.42;
       for (let k = 0; k < 12 && !poked; k++) { z -= 0.03; game.teleportPlayer([7.5, 0, z]); game.puppet = { goal: [7.5, 0, z], aim: [7.5, 1.3, 6.8] }; for (let i = 0; i < 12; i++) W.step(DT); poked = armThrough(game, pc); }
       if (!poked) console.log(`    (could not stage a muzzle past the glass: muzzle z ${f2(pc.muzzle[2])} with Sam at z ${f2(pc.pos[2])} — the collision keeps him off the sheet; the rule is covered by the unit call below)`);
-      const ev0 = game.events.length, s0 = stars(game).length, a0 = GLASSPEN_STATS.viaArm; if (poked) fireWeapon(game, pc, chestOf(gd.char), true); const shot = lastOf(game, ev0, 'shot');
-      verdict(!poked || (!!shot && shot.to[2] < 9.0 && stars(game).length === s0 + 1 && GLASSPEN_STATS.viaArm === a0 + 1 && gd.state === 'dead'), poked ? 'Sam pressed to the glazing, muzzle past the sheet: the round is NOT put into the panel at the muzzle — the pane is starred at the arm and the round flies on into the man in the room' : 'muzzle-past-the-glass: not stageable on this floor (collision keeps the muzzle short of the sheet) — skipped', poked ? `Sam z ${f2(pc.pos[2])} muzzle z ${f2(pc.muzzle[2])} · stopped (${shot?.to.map(f2)}) · stars +${stars(game).length - s0} · guard ${gd.state}` : '');
+      const ev0 = game.events.length, s0 = hitsOn(game), a0 = GLASSPEN_STATS.viaArm; if (poked) fireWeapon(game, pc, chestOf(gd.char), true); const shot = lastOf(game, ev0, 'shot');
+      verdict(!poked || (!!shot && shot.to[2] < 9.0 && hitsOn(game) === s0 + 1 && GLASSPEN_STATS.viaArm === a0 + 1 && gd.state === 'dead'), poked ? 'Sam pressed to the glazing, muzzle past the sheet: the round is NOT put into the panel at the muzzle — the pane is starred at the arm and the round flies on into the man in the room' : 'muzzle-past-the-glass: not stageable on this floor (collision keeps the muzzle short of the sheet) — skipped', poked ? `Sam z ${f2(pc.pos[2])} muzzle z ${f2(pc.muzzle[2])} · stopped (${shot?.to.map(f2)}) · stars +${stars(game).length - s0} · guard ${gd.state}` : '');
       // …and with a man standing against the far face, the muzzle inside him: the contact shot counts (the panel between the two chests is the glass the muzzle is through)
       if (poked) { const g2 = game.guards[1]; const mz = pc.muzzle; dummy(g2, [mz[0], 0, mz[2] - 0.1], [mz[0], 0, 12]); const a1 = GLASSPEN_STATS.viaArm; fireWeapon(game, pc, [mz[0], mz[1], 6.8], true);
         verdict(g2.state === 'dead' && GLASSPEN_STATS.viaArm === a1 + 1, 'muzzle through the glass and pressed into a man standing against its far face: he is hit where he stands', `2nd man ${g2.state} at (${g2.char.pos.map(f2)}) · muzzle (${mz.map(f2)})`); }

@@ -10,7 +10,8 @@ import { chronBlackout } from './chronicle';
 import type { Game, Guard, LightTarget } from './game';
 import { lightFromDef } from '../render/lights';
 import type { RtLight } from '../render/lights';
-import { hourOf, applyHour, sunStrength, sunGiven, setSunStrength, type HourId } from './hours';
+import { hourOf, applyHour, nightPicture, sunStrength, sunGiven, setSunStrength, type HourId } from './hours';
+import { ENV } from './env';
 import { isHostile } from './teams';
 import { WORDS, wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { breakerErrand, workNotHis, workStaysPut } from './workthings';   // (a teammate neither takes the breaker errand nor re-arms it on his own, with that module's switch on)
@@ -136,7 +137,7 @@ export function setGroup(g: Game, group: string, on: boolean) { for (const t of 
 // ------------------------------------------------------------ daylight (the breach showcase's variant: level.ts DaylightDef)
 /** What setDaylight(true) found and must put back: every target's switch, the level lights it disabled, the sky, the haze, a PERMANENT blackout it lifted for the
  *  show (the breaker SHOT is mains gone for good, not until ten in the morning: review A6.8 — a timed trip it lifted stays lifted) — and the sun it added. */
-interface DayState { hour: HourId; hourSunK: number; hourSunGiven: boolean; targets: Map<LightTarget, boolean>; lightsOff: RtLight[]; sky: { zenith: Vec3; horizon: Vec3 }; haze: number; exposure: number; sun: RtLight; blackout: { active: boolean; permanent: boolean; until: number; since: number } | null; }
+interface DayState { hour: HourId; hourSunK: number; hourSunGiven: boolean; targets: Map<LightTarget, boolean>; lightsOff: RtLight[]; sun: RtLight; blackout: { active: boolean; permanent: boolean; until: number; since: number } | null; }
 const dayStates = new GameSideMap<Game, DayState>('lighting.dayStates');   // (the WORLD's: a seat's view asking the hour, hours.ts exposureOf under a man's tube, finds the Game's row)
 /** Is the daytime variant in (setDaylight)? */
 export function isDaylight(g: Game): boolean { return dayStates.has(g); }
@@ -153,7 +154,7 @@ export function setDaylight(g: Game, on: boolean) { { const __s = RUST_SURFACE; 
     const hour = hourOf(g), hourSunK = sunStrength(g), hourSunGiven = sunGiven(g); if (hour !== 'night') applyHour(g, 'night');   // a level started at another hour (hours.ts): the show's day is laid over the level's own night, and that hour comes back with it below
     const bo = g.blackout; const blackout = bo.active && bo.permanent ? { active: true, permanent: true, until: bo.until, since: bo.since } : null;   // (recorded BEFORE it is lifted, and only the PERMANENT one — the breaker shot to scrap: nothing the show does can mend that, so Off puts it back; a timed trip lifted here is simply over, as if the man sent to the panel had got there — tools/qa breach-daylight holds that half)
     if (bo.active) { g.endBlackout(); g.lightHome.in(LIGHT_IN.mains, null, 0, bo.until, bo.since, -100); for (const t of g.targets) g.lightHome.in(LIGHT_IN.blind, t, -1); }   // (an INSTANT restore for the show: no staggered restrike, no beacons sweeping the 'every fluorescent on' establishing shot — review 08-10 #8)
-    const st: DayState = { targets: new Map(), lightsOff: [], sky: { zenith: v3.copy(S.skyZenith), horizon: v3.copy(S.skyHorizon) }, haze: S.hazeDensity, exposure: S.exposure, sun: L.add(lightFromDef(D.sun)), blackout, hour, hourSunK, hourSunGiven };
+    const st: DayState = { targets: new Map(), lightsOff: [], sun: L.add(lightFromDef(D.sun)), blackout, hour, hourSunK, hourSunGiven };
     g.engine.reach?.dir(st.sun);   // the sun's directional reach mask (which indoor cells see the sky its way): the ReSTIR estimator's candidate domain
     for (const t of g.targets) st.targets.set(t, t.on);
     for (const grp of D.groupsOn) setGroup(g, grp, true);
@@ -166,7 +167,7 @@ export function setDaylight(g: Game, on: boolean) { { const __s = RUST_SURFACE; 
     if (!cur) return;
     for (const [t, was] of cur.targets) g.lightHome.in(LIGHT_IN.on, t, was ? 1 : 0);
     for (const l of cur.lightsOff) { l.enabled = true; g.lightHome.feed(l); }
-    S.skyZenith = v3.copy(cur.sky.zenith); S.skyHorizon = v3.copy(cur.sky.horizon); S.hazeDensity = cur.haze; S.exposure = cur.exposure;
+    nightPicture(g, D?.exposure ?? ENV.exposure);
     L.remove(cur.sun);
     const B = cur.blackout;
     if (B && !g.blackout.active) { g.lightHome.in(LIGHT_IN.mains, null, MAINS.active | MAINS.permanent, B.until, B.since, g.blackout.restoredAt); g.lightHome.in(LIGHT_IN.fix, null, 0); }   // a destroyed breaker is still destroyed: the blackout back quietly (no second power-down thump, no man sent again — the round that did that already happened); a restart straight after (the breach's restore, a checkpoint load) mends it as a restart always did

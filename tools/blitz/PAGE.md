@@ -245,7 +245,7 @@ The rule: what the simulation's own code computes from the game's state for the 
 | smoke sources (a shot's gas, a stun's jets and trails, the can, a holed wall's puff) | `effects`, `combat`, `destruction`, `fire`, `smokebreak` | out event `SmokeSystemLikeEmit`, with its kind, grid and what it rides (`tools/blitz/track.ts`) |
 | a burst's fragments: a wall charge's, a door charge's, a thrown can's | `blast_look/b_01.rs blast_sparks` | out events |
 | which boxes are a laser's beam, a tracer's streak, an infrared line | `thinline thin_note / thin_air`, `irlaser ir_note` | the filtered export, into the page's own side tables (`thinline.ts` THIN and AIR, `irlaser.ts` IR_MADE) |
-| the wind's two lists (the sources that blow; the ones for the particles) and each source's record (speed, direction, place, reach) | `wind/p_01.rs wind_update` | the filtered export (`Wind.active`, `to_pool`, the source's rows); `windOut` hands them to the |
+| the sources that blow and each source's record (speed, direction, place, reach) | `wind/p_01.rs wind_update` | the filtered export (`Wind.active`, the source's rows; the ones for the particles are made from them on the page, `Wind.forParticles`); `windOut` hands them to the |
 | the weather frame, the sky's two colours, the haze, the exposure, the gloss, the box world's geometry serial | `weather`, `lighting`, `hours`, `wallbreak` | the filtered export (`HostApi.weather`, `RenderSettings`, `BoxWorld.geom_serial`). A row moves on the page only when the Rust game's moved, so what a panel set stays until the tick changes it |
 
 The tick is told nothing of the host's particle pool or its reach keeper: no rule asks. Particles and a breached wall's news are out events, and a host

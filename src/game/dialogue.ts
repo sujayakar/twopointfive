@@ -507,6 +507,8 @@ export interface DialogueCtx {
   recent: Map<string, number> | null;              // line id → game time anybody last said it (floor-wide staleness), null for synthetic contexts
 }
 const recentByGame = new SideMap<object, Map<string, number>>('dialogue.recentByGame');
+/** what a line was last said at stands from the start, on every host (Game's constructor): a page's own asking must not be what makes it */
+export function recentStands(g: object): void { if (!recentByGame.get(g)) recentByGame.set(g, new Map()); }
 /** seconds within which a line another man said counts as stale for everybody (× RECENT_W) */
 const RECENT_SECS = 90, RECENT_W = 0.25;
 
@@ -1932,7 +1934,7 @@ export function dialogueSnapshot(g: Game): DialogueSnap {
 /** …after the file's mission object is in place (the radio state is bound to it) */
 export function dialogueRestore(g: Game, s: DialogueSnap | null | undefined) {
   recentByGame.delete(g); samMemByGame.delete(g); radioByGame.delete(g); ambientByGame.delete(g);
-  if (!s) return;
+  if (!s) { recentStands(g); return; }
   const fin = (x: number, d = 0) => Number.isFinite(x) ? x : d;
   recentByGame.set(g, new Map((s.recent ?? []).map(([k, t]) => [String(k), fin(t)] as [string, number])));
   { const m = samMemoryOf(g); for (const [k, t] of s.sam?.said ?? []) m.said.set(String(k), fin(t)); m.last = s.sam?.last ?? null; }

@@ -49,8 +49,6 @@ export interface EnvSnap { emissiveScale: number; markings: boolean; particlesOn
   /** recorded under the game page's HUD (main.ts). The HUD used to null an expired speech bubble on its speaker after each update, and a replay of such a
    *  file did the same; it writes nothing of the game now (a line is over when its time is), and the field only says where the file was made */
   hud: boolean;
-  /** HostApi.glassFracture where the recording's engine said either way (the page: were its shaders compiled with the fracture's cracks; native: false): glass.ts files a pane's star decal — which the digest counts — only where the renderer does NOT draw the fracture's own cracks, so a replay must stand on the same answer. Absent = the engine did not say (the headless stub; every file from before the new glass) */
-  glassFracture?: boolean;
   /** scene/cut.ts cutConfig.on as the recording ran (absent = off): rayBox / lineBox answer a box's CUT solid only under it — the harness raises it before its BoxWorld exists */
   cutBoxes?: boolean;
   canister: { canisterDuration: number; canisterDensity: number; canisterRadius: number; canisterTemp: number; canisterSpeed: number } | null; stagger: Record<string, number>;
@@ -62,10 +60,10 @@ export interface KnobsSnap { tune: Record<string, unknown>; flags: { godMode: bo
 // ================================================================================================================================ env / knobs (both directions)
 export function envSnapshot(g: Game): EnvSnap {
   const S = g.engine.settings as unknown as Record<string, unknown>; const num = (k: string, d: number) => typeof S[k] === 'number' && Number.isFinite(S[k] as number) ? S[k] as number : d;
-  const E = g.engine as unknown as { particles?: unknown; glassFracture?: unknown; settings: { gpuParticles?: boolean } };
+  const E = g.engine as unknown as { particles?: unknown; settings: { gpuParticles?: boolean } };
   const P = (g.smoke as { params?: Record<string, number> }).params;
   const stagger: Record<string, number> = {}; for (const t of g.targets) stagger[t.name] = t.stagger;
-  return { emissiveScale: num('emissiveScale', 1), markings: S.markings !== false, particlesOn: !!(E.particles && E.settings.gpuParticles), hud: false, ...(typeof E.glassFracture === 'boolean' ? { glassFracture: E.glassFracture } : {}),
+  return { emissiveScale: num('emissiveScale', 1), markings: S.markings !== false, particlesOn: !!(E.particles && E.settings.gpuParticles), hud: false,
     canister: P ? { canisterDuration: P.canisterDuration, canisterDensity: P.canisterDensity, canisterRadius: P.canisterRadius, canisterTemp: P.canisterTemp, canisterSpeed: P.canisterSpeed } : null, stagger, ...(DESTRUCTION.on ? { destruction: { on: true } } : {}), ...(LIVED.on ? { lived: true } : {}), ...(cutConfig.on ? { cutBoxes: true } : {}) };
 }
 /** the settings half of an env, onto an engine's settings BEFORE the Game is built on it (the marking lights are registered in the constructor) */

@@ -56,10 +56,6 @@ export interface HostApi {
   airWind?: [number, number]; airOn?: boolean;
   /** SHARP DIRECT live this frame (the WebGPU decoupled-resolution path; false / absent natively and headless) — game.ts mPerPx */
   readonly sharpOn?: boolean;
-  /** GLASS FRACTURE (game/glassbreak.ts): true = this renderer draws the model's cracks and holes (the WebGPU engine booted with the GLASS_BREAK const); false = it cannot
-   *  — the const was off at boot, or the host has no port of the per-piece rule (native) — and the model stays INERT so the picture and the AI agree; absent (the harness
-   *  stub) = nothing is drawn at all and the model runs */
-  readonly glassFracture?: boolean;
   /** internal rows ÷ (CSS rows × dpr): the true pixel ratio — game.ts:1107 mPerPx depends on it (1 headless / at output resolution) */
   readonly effectiveScale: number;
   /** the view's look-at point as of the last render (the smoke solver spends its pool by distance from it; wind.ts reads it) */
