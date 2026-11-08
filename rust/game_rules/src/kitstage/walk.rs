@@ -20,13 +20,15 @@ pub(super) fn out_of(st: &KitStage, p: V2) -> f64 { (p[0] - st.foot[0]) * st.n[0
 /// a point by [along the wall toward the stack, out on the team's side, up] from the anchor's middle
 pub(super) fn at(st: &KitStage, o: V3) -> V3 { [st.mid[0] + st.s[0] * o[0] + st.n[0] * o[1], o[2], st.mid[1] + st.s[1] * o[0] + st.n[1] * o[1]] }
 
+/// HOW A MAN IS TURNED, wherever he is put: to the middle of the way in, which is what he covers. One rule for every man of every way
+pub(super) fn faces(st: &KitStage, p: V2) -> f64 { m::atan2(st.foot[0] - p[0], st.foot[2] - p[1]) }
 /// where a man lives between rows and how he is turned there: his place; the fourth man's, while his card is open, a place at Sam's jamb; the quiet picture's partner, behind Sam, until his card is open
 pub fn home_of(g: &Game, st: &KitStage, x: GuardId) -> (V2, f64) {
     let k = st.order.iter().position(|&o| o == x);
-    if k == Some(0) { if let Some((p, y)) = st.mate { if actor(g, st) != Some(x) { return (p, y); } } }
+    if k == Some(0) { if let Some(p) = st.mate { if actor(g, st) != Some(x) { return (p, faces(st, p)); } } }
     let c = g.gd[x].ch;
     let spot = match k { Some(3) if st.four => Some(st.act4), Some(k) => st.spots.get(k).copied(), None => None };
-    (spot.unwrap_or(v2(g.ch[c].pos)), k.and_then(|k| st.yaws.get(k).copied()).unwrap_or(g.ch[c].body_yaw))
+    match spot { Some(p) => (p, faces(st, p)), None => (v2(g.ch[c].pos), g.ch[c].body_yaw) }
 }
 /// the quiet picture: the partner rests on a knee behind Sam
 pub(super) fn low_at(g: &Game, st: &KitStage, x: GuardId) -> bool { st.quiet && st.mate.is_some() && st.order.first() == Some(&x) && actor(g, st) != Some(x) }
@@ -115,6 +117,8 @@ pub(super) fn arriving(g: &Game, st: &KitStage) -> bool {
         w.dealt && now - w.t0 < K.swap_secs && (w.k + 1 < w.pts.len() || flat(g.ch[g.gd[x].ch].pos, *w.pts.last().unwrap()) > K.on_slot + 0.1)
     }))
 }
+/// a hand more than two bodies, so that nobody is shouldered
+const ROOM: f64 = 0.2;
 /// THE CARD SWITCH: no restage, the SAME men walk. The man whose card opened steps out a lane, walks up and cuts in at the head place; the men ahead of his old place each step back one, rearmost first. Sam never moves;
 /// the fourth man (behind Sam, across the door) does not cross it: he steps round Sam's yard side to `act4` and back when his card shuts.
 pub(super) fn rotate(g: &mut Game, st: &mut KitStage, who: Option<GuardId>) {
@@ -125,8 +129,8 @@ pub(super) fn rotate(g: &mut Game, st: &mut KitStage, who: Option<GuardId>) {
         if st.four != act {
             st.four = act;
             // (round Sam on the yard side, and past him on the door's: a straight line from the yard to `act4` runs through him)
-            let round = pp(st.sam, 0.0, K.round);
-            let past = pp(st.sam, m::sign(along(st, st.act4) - along(st, st.sam)) * K.round, 0.0);
+            let round = pp(st.sam, 0.0, K.round + ROOM);
+            let past = pp(st.sam, m::sign(along(st, st.act4) - along(st, st.sam)) * (K.round + ROOM), 0.0);
             let mut pts = Vec::new();
             if act { if free(g, round) { pts.push(round); if free(g, past) { pts.push(past); } } pts.push(st.act4); }
             else { if free(g, round) { if free(g, past) { pts.push(past); } pts.push(round); } pts.push(st.spots[3]); }

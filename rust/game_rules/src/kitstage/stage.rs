@@ -235,10 +235,10 @@ fn home_men(g: &mut Game, st: &mut KitStage) {
     for k in 0..st.order.len() {
         let x = st.order[k];
         let is_open = acts::actor(g, st) == Some(x);
-        let (p, yaw, low) = match st.mate { Some((p, y)) if k == 0 && !is_open => (p, y, st.quiet), _ => (st.spots[k], st.yaws[k], false) };
+        let (p, low) = match st.mate { Some(p) if k == 0 && !is_open => (p, st.quiet), _ => (st.spots[k], false) };
         let mine = crate::orders::squad_orders_of(g, &crate::seats::here(g), x).map_or(false, |a| g.tab.orders_assignment[a].order == crate::orders::rows::cover::ORDER.id);
         if mine && st.sent.contains(&x) { continue; }
-        super::walk::send(g, x, p, yaw, None, K.pace, true, low);
+        super::walk::send(g, x, p, super::walk::faces(st, p), None, K.pace, true, low);
         if !st.sent.contains(&x) { st.sent.push(x); }
     }
 }
@@ -377,7 +377,8 @@ let (intensity, emissive) = (home::fixture_base_intensity(g, t), g.tab.sim_light
     let sam_ch = g.pl[pl].ch;
     crate::game::game_teleport_player(g, [slots[0][0], 0.0, slots[0][1]]);
     g.ch[sam_ch].aim_pitch = 0.0;
-    let mut chars: Vec<(CharId, f64)> = alloc::vec![(sam_ch, slots[0][2] * R)];
+    st.foot = at_of(&plan, [0.0, 0.0, 0.0]);
+    let mut chars: Vec<(CharId, f64)> = alloc::vec![(sam_ch, super::walk::faces(st, [slots[0][0], slots[0][1]]))];
     for (i, &x) in order.iter().enumerate() {
         let p = if i == 0 { mate0.unwrap_or(slots[i + 1]) } else { slots[i + 1] };
         let c = g.gd[x].ch;
@@ -385,7 +386,7 @@ let (intensity, emissive) = (home::fixture_base_intensity(g, t), g.tab.sim_light
         g.ch[c].aim_pitch = 0.0;
         crate::control::set_hold(g, x, true, "the kit picture");
         crate::control::set_pinned(g, x, true, "the kit picture");
-        chars.push((c, p[2] * R));
+        chars.push((c, super::walk::faces(st, [p[0], p[1]])));
     }
     let shut0 = door.map_or(0.0, |d| crate::doors::door_angle(g, d));
     let (rifle, pistol) = (g.pl[pl].rifle, g.pl[pl].pistol);
@@ -506,13 +507,10 @@ let (intensity, emissive) = (home::fixture_base_intensity(g, t), g.tab.sim_light
     st.pitch = plan.cam.pitch;
     st.dist = plan.cam.dist;
     st.fit = if q { let lamp = match st.fixture { Some(f) => g.tab.boxes[f].c, None => g.tab.light[st.porch.unwrap()].pos }; Some((lamp, sam_rest.unwrap_or([slots[0][0], slots[0][1]]))) } else { None };
-    st.foot = at_of(&plan, [0.0, 0.0, 0.0]);
     st.s = plan.s; st.n = a.n; st.mid = a.mid;
     st.sam = [slots[0][0], slots[0][1]];
-    st.sam_yaw = slots[0][2] * R;
     st.spots = (0..order.len()).map(|i| [slots[i + 1][0], slots[i + 1][1]]).collect();
-    st.yaws = (0..order.len()).map(|i| slots[i + 1][2] * R).collect();
-    st.mate = match places.as_ref().and_then(|x| x.mate) { Some(p) if !order.is_empty() => Some(([p[0], p[1]], p[2] * R)), _ => None };
+    st.mate = match places.as_ref().and_then(|x| x.mate) { Some(p) if !order.is_empty() => Some([p[0], p[1]]), _ => None };
     aim_stage(g, st);
     {
         // (the way in as the acts read it. How far in a can or a round may go: the plan's free floor behind the anchor's line; a blank wall: what a hole opens onto)
