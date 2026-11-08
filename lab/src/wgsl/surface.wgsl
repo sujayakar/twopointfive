@@ -139,7 +139,8 @@ fn lampE(i: u32, x: vec3f, n: vec3f) -> vec3f {
   let l = &lamps[i]; if ((*l).on <= 0.0) { return vec3f(0.0); } let d = (*l).at - x; let dist = length(d); if (dist > (*l).reach) { return vec3f(0.0); } let leaf = all(n == vec3f(0.0));
   let win = sat(1.0 - pow(dist / (*l).reach, 4.0));
   if ((*l).kind != 0u || leaf) { let a = aimLamp(i, x, vec2f(0.5)); let c = dot(n, a.dir); return a.E * select(max(c, 0.0), 0.5, leaf) * win; }
-  if (dot(d, (*l).n) >= 0.0) { return vec3f(0.0); }
+  let face = dot(d, (*l).n); if (face >= 0.0) { return vec3f(0.0); }
+  if (dist * dist > 14.0 * (*l).area) { return (*l).radiance * ((*l).on * max(dot(n, d), 0.0) * -face * (*l).area * win / (dist * dist * dist * dist)); }     // (far off, a rectangle is a point: to a hundredth)
   let b = basis(n); var v: array<vec3f, 6>; var m = 0u; var q: array<vec3f, 4>;
   for (var k = 0u; k < 4u; k++) { let c = d + (*l).u * select(-1.0, 1.0, k == 1u || k == 2u) + (*l).v * select(-1.0, 1.0, k >= 2u); q[k] = vec3f(dot(c, b[0]), dot(c, b[1]), dot(c, n)); }
   for (var k = 0u; k < 4u; k++) { let a = q[k]; let e = q[(k + 1u) & 3u]; if (a.z > 0.0) { v[m] = a; m++; } if ((a.z > 0.0) != (e.z > 0.0)) { v[m] = mix(a, e, a.z / (a.z - e.z)); m++; } }
@@ -157,7 +158,7 @@ fn lampCoat(i: u32, s: Surf, V: vec3f) -> vec3f {
 fn lampWeight(i: u32, x: vec3f, n: vec3f) -> f32 {
   let l = &lamps[i]; let d = (*l).at - x; let dist = length(d); if (dist > (*l).reach || (*l).on <= 0.0) { return 0.0; }
   let a = aimLamp(i, x, vec2f(0.5)); let c = dot(n, a.dir);
-  return lum(a.E) * select(max(c, 0.0) + 0.12 * select(0.0, 1.0, (*l).kind == 0u && c > -0.6), abs(c), all(n == vec3f(0.0)));
+  return lum(a.E) * select(max(c, 0.0) + 0.12 * select(0.0, 1.0, (*l).kind == 0u && c > -0.6), 0.5, all(n == vec3f(0.0)));
 }
 /** one lamp drawn in proportion to what it would send: its number and 1 / chance, or none */
 fn drawLamp(x: vec3f, n: vec3f) -> vec2f {

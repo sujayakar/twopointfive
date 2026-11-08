@@ -10,6 +10,7 @@ import { type V3, add, apply } from '../math';
 import signals from '../wgsl/signals.wgsl' with { type: 'text' };
 import cacheLib from '../wgsl/cache.wgsl' with { type: 'text' };
 import surf from './surf.wgsl' with { type: 'text' };
+import lampsPlain from './lampsplain.wgsl' with { type: 'text' };
 import lamps from './lamps.wgsl' with { type: 'text' };
 import bounceLib from '../wgsl/bounce.wgsl' with { type: 'text' };
 import waterpx from './waterpx.wgsl' with { type: 'text' };
@@ -91,7 +92,7 @@ export const bilinear: UpscalePart = { name: 'bilinear', stages(g) { g.signal('p
 export const noDenoise: DenoisePart = { name: 'none', stages: ({ signal, div }, g) => { for (const k of ['H', 'M']) g.signal(signal + k, 'rgba16float', div === 2 ? 'half' : 'render', true); return { stages: [], result: signal }; } };
 export const taauUp: UpscalePart = { name: 'taau', stages(g) { g.signal('picture', 'rgba16float', 'output', true); return { result: 'picture', stages: [{ name: 'upscale', over: 'output', reads: { color: 'color', 'picture@prev': 'hist', aux: 'auxT' }, writes: { outT: 'picture' }, buffers: { taauK: ['taauK', 'vec4f', 'uniform'] }, code: taau }] }; } };
 
-export function realtime(o: { name?: string; cache?: CachePart; denoise?: DenoisePart; upscale?: UpscalePart } = {}): Method & { glow: string } {
+export function realtime(o: { name?: string; cache?: CachePart; denoise?: DenoisePart; upscale?: UpscalePart; lamps?: 'lists' | 'plain' } = {}): Method & { glow: string } {
   const cache = o.cache ?? hashCache(), dn = o.denoise ?? svgf, up = o.upscale ?? taauUp; let last = '', lastHour = -1, quiet = 0, fresh = true, prevOn = new Float32Array(64);
   const m: Method & { glow: string; warm?: Promise<void> } = {
     name: o.name ?? 'realtime', result: 'picture', glow: 'rt',
@@ -111,7 +112,7 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
         S('first hit', surf, 'render', { id: 'idT', idClear: 'idC', depth: 'depthT' }, { outSurf: 'surf', outAux: 'aux', outEmit: 'emit', outFront: 'front' }, { past: ['past', 'array<vec4f>', 'read'], pastLeaves: ['pastLeaves', 'array<vec4f>', 'read'] }),
         S('water', waterpx, 'render', { idClear: 'idC', depth: 'depthT' }, { outSurf: 'surf', outAux: 'aux', outEmit: 'emit', outFront: 'front' }),
         ...cache.stages,
-        S('lamps', lamps, 'render', { surf: 'surf', front: 'frontT', aux: 'auxT', 'surf@prev': 'surfPrev', 'visH@prev': 'hist', 'visM@prev': 'momPrev', sunLeaves: 'sunLeaves' }, { outVis: 'vis', outU: 'lampU' }),
+        S('lamps', o.lamps === 'plain' ? lampsPlain : lamps, 'render', { surf: 'surf', front: 'frontT', ...(o.lamps === 'plain' ? {} : { aux: 'auxT', 'surf@prev': 'surfPrev', 'visH@prev': 'hist', 'visM@prev': 'momPrev' }), sunLeaves: 'sunLeaves' }, { outVis: 'vis', outU: 'lampU' }),
         S('gather', cache.lib + bounceLib + gather, 'half', { surf: 'surf', front: 'frontT' }, { outE: 'bounce' }, { ...c, hits: ['hits', 'array<vec4u>', 'read_write'] }, { HITS }),
         S('mirror', cache.lib + bounceLib + mirror, 'half', { surf: 'surf', front: 'frontT' }, { outM: 'mirror' }, c, { DIV: 2 }),
         ...dVis.stages, ...dB.stages, ...dM.stages,
