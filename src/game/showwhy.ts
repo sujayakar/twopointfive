@@ -44,7 +44,6 @@ import './character';
 import { isHurt } from './condition';
 import { roomKept } from './rearwatch';
 import './doorway';
-import './clearline';
 import './unseen';
 import './silent';
 import './holdfire';

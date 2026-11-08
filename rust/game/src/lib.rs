@@ -34,7 +34,6 @@ pub use game_rules::chronicle;
 pub use game_rules::civilians;
 pub use game_rules::cleanrestart;
 pub use game_rules::cleared;
-pub use game_rules::clearline;
 pub use game_rules::close;
 pub use game_rules::cloud_report;
 pub use game_rules::cmd;
