@@ -1,7 +1,7 @@
 //! The desk as a page has it: asks by their bytes, answers read off the wire's shape.
 use game::io::{Io, R};
 use game::kit::{MemberKit, TrimId};
-use game::view::{CardRow, CardView, Pressed};
+use game::view::{CardRow, CardView, Pressed, TeamView};
 use game_run::command::apply;
 use game_run::desk::Desk;
 use game_run::kept;
@@ -35,6 +35,8 @@ fn desk_with(kept: &str) -> Desk {
     d
 }
 fn members(d: &Desk) -> Vec<MemberKit> { d.g.m.kit.kit.members.clone() }
+/// the five cards, as words to hold to each other
+fn written(d: &Desk) -> Vec<String> { d.g.m.kit.kit.members.iter().map(kept::written).collect() }
 
 #[test]
 fn asked_twice_a_card_is_the_same_and_the_kept_text_has_not_moved() {
@@ -91,4 +93,110 @@ fn the_copied_card_goes_onto_another_man_fitted_to_his_rows() {
     let c = card(&mut d, 1);
     assert_eq!(row(&c, "smoke").n, 2.0);
     assert!(c.copied && c.clip && c.paste_why.is_empty());
+}
+
+const FOR: u32 = 6;
+const DONE: u32 = 7;
+const TEAM: u32 = 8;
+const SIZE: u32 = 9;
+const NAMED: u32 = 10;
+
+fn go(d: &mut Desk, mission: &str, link: &str, issue: &str, walls: u32) -> Pressed {
+    let mut b = FOR.to_le_bytes().to_vec();
+    text(&mut b, mission);
+    text(&mut b, link);
+    text(&mut b, issue);
+    b.extend_from_slice(&walls.to_le_bytes());
+    press(d, &b)
+}
+fn team_bytes(d: &mut Desk) -> Vec<u8> { d.ask(&TEAM.to_le_bytes()).expect("an ask the desk has") }
+fn team(d: &mut Desk) -> TeamView { TeamView::r(&mut R::new(&team_bytes(d))) }
+fn size(d: &mut Desk, n: u32) -> Pressed { press(d, &head(SIZE, n)) }
+fn named(d: &mut Desk, id: &str) -> Pressed {
+    let mut b = NAMED.to_le_bytes().to_vec();
+    text(&mut b, id);
+    press(d, &b)
+}
+
+#[test]
+fn a_stealth_mission_stands_its_card_for_yours_and_leaving_puts_yours_back() {
+    let mut d = desk_with(r#"{"members":[{"weapon":"pistol","smoke":2,"bangs":0,"trim":"red"}]}"#);
+    let (yours, kept_before) = (written(&d), kept::write(&mut d.g));
+    let p = go(&mut d, "bazaar-quiet", "?levelFile=bazaar.json&quiet", "", 0);
+    assert!(p.ok);
+    let c = card(&mut d, 0);
+    assert_eq!(row(&c, "rings").n, 5.0, "the stealth card carries the launcher's rounds");
+    assert_eq!(row(&c, "primary").icon, "rifle");
+    assert_eq!(members(&d)[0].trim, TrimId::Red, "your colours go with you");
+    assert_eq!(p.kept, kept_before, "what is kept is your own card");
+    let p = press(&mut d, &DONE.to_le_bytes());
+    assert_eq!(written(&d), yours);
+    assert_eq!(p.kept, kept_before);
+}
+
+#[test]
+fn a_size_the_mission_cannot_take_is_refused_with_its_words_and_changes_nothing() {
+    let mut d = Desk::new();
+    assert_eq!(team(&mut d).size, 4.0);
+    go(&mut d, "bazaar-quiet", "?levelFile=bazaar.json&quiet", "", 0);
+    let t = team(&mut d);
+    assert!(t.size <= 1.0, "the mission's own size stands in for four: {}", t.size);
+    assert!(!t.sizes[2].ok);
+    let (before, cards) = (team_bytes(&mut d), all_cards(&mut d));
+    let p = size(&mut d, 3);
+    assert!(!p.ok);
+    assert_eq!(p.why, t.sizes[3].note);
+    assert!(p.why.starts_with("A quiet mission is for one or two"), "{}", p.why);
+    assert_eq!(before, team_bytes(&mut d));
+    assert_eq!(cards, all_cards(&mut d));
+}
+
+#[test]
+fn a_named_kit_goes_on_five_cards_and_going_alone_on_yours_only() {
+    let kit = {
+        let mut d = Desk::new();
+        team(&mut d).kits.iter().find(|k| k.id != "issued").expect("a kit beside the issue").id.clone()
+    };
+    let mut d = Desk::new();
+    let was = written(&d);
+    assert!(named(&mut d, &kit).ok);
+    let on_all = written(&d);
+    assert!(team(&mut d).kits.iter().any(|k| k.id == kit && k.now), "the row lights the kit that is on");
+    assert!((1..5).any(|i| on_all[i] != was[i]), "a team's teammates change");
+
+    let mut d = Desk::new();
+    assert!(size(&mut d, 0).ok);
+    let alone = written(&d);
+    assert!(named(&mut d, &kit).ok);
+    let now = written(&d);
+    assert_eq!(now[1..], alone[1..], "going alone leaves the others' cards");
+    assert_eq!(now[0], on_all[0]);
+    assert!(!named(&mut d, "no such kit").ok);
+}
+
+#[test]
+fn asked_twice_the_team_is_the_same_and_the_kept_text_has_not_moved() {
+    let issue = r#"{"members":{"1":{"weapon":"shotgun","bangs":1,"frags":2}}}"#;
+    for (mission, link, issue) in [("depot-four", "?levelFile=depot.json&roomclear&squad4", ""), ("hall-four", "?levelFile=hall.json&roomclear&squad4", issue), ("solo-night", "?solo", ""), ("no such mission", "?x", "")] {
+        let mut d = desk_with(r#"{"members":[{"weapon":"pistol","smoke":2},{"primary":"mk12","bangs":0},{},{"trim":"red"},{"big":"hammer"}]}"#);
+        go(&mut d, mission, link, issue, 0);
+        let kept_before = kept::write(&mut d.g);
+        let first = team_bytes(&mut d);
+        assert_eq!(first, team_bytes(&mut d), "{mission}");
+        assert_eq!(kept_before, kept::write(&mut d.g), "{mission}");
+    }
+}
+
+#[test]
+fn a_mission_that_issues_its_own_kit_has_no_cards_and_says_who_carries_what() {
+    let issue = r#"{"members":{"1":{"weapon":"shotgun","bangs":1,"frags":2}}}"#;
+    let mut d = Desk::new();
+    go(&mut d, "hall-four", "?levelFile=hall.json", issue, 0);
+    let t = team(&mut d);
+    assert!(!t.cards && t.kits.is_empty());
+    assert!(t.note.ends_with("This mission issues its own kit, whatever this machine keeps: Red One carries the shotgun."), "{}", t.note);
+    assert_eq!(t.men[1].words, "shotgun · 1 stun · 2 frags");
+    assert_eq!(t.men[0].words, "as issued");
+    go(&mut d, "hall-four", "?levelFile=hall.json&noissue", issue, 0);
+    assert!(team(&mut d).cards, "a link with noissue wears the kept cards");
 }
