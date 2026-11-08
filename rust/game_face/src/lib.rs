@@ -51,6 +51,7 @@
 //!   face_debrief_view(h)                      what the end card shows of the run (a DebriefView at face_out); a read, nothing kept
 //!   face_run_view(h)                          what a machine keeps of the run (a RunView at face_out); a read, nothing kept
 //!   face_line(h, what, a…, b…) -> 0 | 1 · face_ray(h, o…, d…, max) -> 0 | 1 · face_hear(h, s…, d…) · face_way(h, ax, az, bx, bz, iters) -> corners | -1
+//!   · face_light(h, p…, steady, leave, owners) -> f64
 //!                                             the box world asked of the game shared: the camera's, the sound's, the cursor's questions; nothing is kept
 //!   face_die_n(h) -> f64 · face_time(h) -> f64 · face_rows(h) -> usize
 //!                                             the die's count of draws (in the game's block), the game's clock, the rows of the box table
@@ -207,6 +208,14 @@ pub extern "C" fn face_ray(h: u32, ox: f64, oy: f64, oz: f64, dx: f64, dy: f64, 
     let Some(r) = asked(h, |w| w.ray([ox, oy, oz], [dx, dy, dz], max)) else { return 0 };
     out([r.t, r.n[0], r.n[1], r.n[2], r.index].iter().flat_map(|v| v.to_le_bytes()).collect());
     1
+}
+/// the light that stands on a point (game::sense::light_asked): `p`, `n` name the owners whose carried lamps are left out, as doubles. Nothing is kept and no apply follows.
+/// # Safety
+/// `p`, `n` name bytes the host wrote into memory from face_alloc.
+#[no_mangle]
+pub unsafe extern "C" fn face_light(h: u32, x: f64, y: f64, z: f64, steady: u32, leave: f64, p: *const u8, n: usize) -> f64 {
+    let owners: Vec<f64> = bytes(p, n).chunks_exact(8).map(|b| f64::from_le_bytes(b.try_into().unwrap())).collect();
+    with(h, |w| game::sense::light_asked(&mut w.g, [x, y, z], &owners, steady != 0, leave))
 }
 /// how a sound at `s` reaches a listener at `d`: at face_out ten doubles: how far it comes, through where (x y z), from where it seems to come (x y z), how muffled (0 1),
 /// how much of it carries, and 2 direct + 1 routed. A way round is searched for once a tick between the same two places of the floor; the game remembers none of it.

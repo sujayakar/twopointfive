@@ -149,6 +149,7 @@ import { RoomClearScenario } from './roomclear';
 import { SquadOrders } from './orders';
 import { leversFog } from './difficulty';   // (called in the constructor only: the fog lever's rung over the kept feel rows)
 import { FogOfWar, fogFlags } from './fogofwar';
+import { senseTool } from './sense';
 import { RoomFight } from './roomfight';
 import { Cues } from './cues';
 import { SquadNet } from './squadnet';
@@ -1653,6 +1654,8 @@ export class Game {
     ray: (o, d, max) => this.askHost ? this.askHost.ray(o, d, max) : this.col.raycast(o, d, max),
     hear: (from, to) => this.askHost ? this.askHost.hear(from, to) : this.col.sound.propagate(from, to),
     way: (a, b, maxIter) => this.askHost ? this.askHost.way(a, b, maxIter) : this.col.nav.findPath(a, b, maxIter) as Vec3[] | null,
+    // (no copy of the light stands here: with no Rust game under it a tool's starts, and a page's throws by name)
+    light: (p, owners, steady, leave) => this.askHost ? this.askHost.light(p, owners, steady, leave) : senseTool(this, 0, [steady ? 1 : 0, leave, owners.length, ...owners, p[0], p[1], p[2]])[0],
     together: f => this.askHost ? f() : this.col.window(f),
   };
   askHost: WorldAsk | null = null;
