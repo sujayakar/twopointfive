@@ -499,7 +499,6 @@ fn pose(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed, acts: Acts) {
     g.gd[gd].step_phase = g.ch[c].anim.phase;
     if move_speed > 0.4 && ((prev_phase < 0.5) != (g.gd[gd].step_phase < 0.5)) {
         let pos = g.ch[c].pos;
-        if g.k.tapstep.on { crate::tapstep::tap_hears(g, &pos); }
         let base = crate::teampace::team_tread(g, gd, move_speed, 0.33);
         let loud = crate::floor::tread(g, pos, base, false);
         if !staff {

@@ -625,7 +625,7 @@ pub fn tick_check(g: &mut crate::game::Game) {
         st.next_at = m::min(st.next_at, time + 5.0);
         return;
     }
-    if g.k.laststand.regroup { decide(g, caller, &heard); } else { tell_only(g, caller); }
+    tell_only(g, caller);
 }
 
 /// nobody answers him: true the first time (laststand.ts lone)

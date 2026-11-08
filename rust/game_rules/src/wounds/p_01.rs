@@ -78,7 +78,7 @@ pub fn hit_zone(g: &crate::game::Game, c_2: CharId, ro: V3, rd: V3, t_hit: f64) 
 
 /// What the round does to the man it stopped in. (wounds.ts roundDoes)
 pub fn round_does(g: &mut crate::game::Game, gd: GuardId, ro: V3, rd: V3, t_hit: f64, hostage: bool, by_player: bool) -> crate::wounds::RoundDoes {
-    if !g.k.wound.on && g.gd[gd].wound.is_none() { return RoundDoes::Shot; }
+    if g.gd[gd].wound.is_none() { return RoundDoes::Shot; }
     let c = g.gd[gd].ch;
     if g.gd[gd].wound.is_some() {
         let z = hit_zone(g, c, ro, rd, t_hit).zone;
