@@ -351,8 +351,8 @@ line).
   mission's address to `coop.ts host` instead of loading it (one game a press). WHAT THE HOST HANDS OVER (`coopScenario`): that address — level, hour,
   weather, way in, difficulty — without this visit's own words (`VISIT_FLAGS`, the sending words), with `squad=4&seats=2` on it (each player brings two
   teammates: `seats.ts dealSeats`) and the difficulty levers this machine keeps written out (the server keeps nothing), and a fresh die. THE SERVER
-  READS THE ADDRESS'S DIFFICULTY (`tools/mp/stand.ts freshRecipe` calls `initDifficulty` as the page does at boot; before this a host's Hard was the
-  server's Standard). NOT CARRIED: the kit this machine keeps (both play the kit as issued) and knob tables changed in the debugger (Team feel rows).
+  READS THE ADDRESS'S DIFFICULTY (the harness's addressed stand does, `tools/qa/headless.ts standUp({ address })` by `standup.ts difficultyOfAddress`, with the
+  setup's tables laid over it as `tables`; before this a host's Hard was the server's Standard). NOT CARRIED: the kit this machine keeps (both play the kit as issued) and knob tables changed in the debugger (Team feel rows).
   The control plane takes a scenario up to 400 characters (`games.ts MP.scenarioMax`; it was a word of 120). THE HOST'S PAGE LOADS THE MISSION AT ONCE
   and stands in the first seat while the server waits (its rule: no tick until every seat's client has stood its game); `coopInvite` shows the code,
   the link and Copy link until the fight starts, and 'Your friend is joining' once the control plane says the second seat is connected. REFUSALS are
