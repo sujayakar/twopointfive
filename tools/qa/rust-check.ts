@@ -1,7 +1,7 @@
 // THE SIMULATION'S MODULE (rust/sim → src/sim/built.ts, loaded by src/sim/sim.ts): is it the build of its sources, does it load, and is its arithmetic the game's own?
 //   bun run tools/qa/rust-check.ts                   seconds; exit 0 = all pass, 1 = one failed (named)
-//   RUST_BREAK=1 bun run tools/qa/rust-check.ts      the red path: the Rust side is handed the ENGINE's cosine where the game's own belongs. `maths` must FAIL
-//                                                    (RED_SECTIONS). Exit 1 = red as it must · exit 3 = one of them stayed green, named: it holds nothing until that is mended
+//   RUST_BREAK=1 bun run tools/qa/rust-check.ts      the red path: the Rust side is handed the ENGINE's cosine where the game's own belongs. `maths` and `engines` must
+//                                                    FAIL (RED_SECTIONS). Exit 1 = red as it must · exit 3 = one of them stayed green, named: it holds nothing until that is mended
 // What a system of the simulation answers is held by the crates' own tests (cargo) and by the game's digest.
 // WHAT IS HELD:
 //   built     src/sim/built.ts is the build of rust/sim as it stands (the hash of the sources; where there is a Rust compiler, the bytes built again), is
@@ -9,6 +9,7 @@
 //   face      the module's exports are the ones src/sim/sim.ts names, no more and no fewer, at the version it was written against; it starts in one step
 //   maths     one fixed stream of inputs through the fourteen functions of src/math/exact.ts and through the Rust ones (rust/sim/src/maths.rs): every single
 //             answer the same bits (zeros by sign, NaN as NaN), the decimal powers log10 leans on among them
+//   engines   the Rust functions fold that stream to the same word under bun and under node — and it is the word the TypeScript functions fold to
 //   switch    RUST.maths with the game's own maths on puts the Rust functions in Math's place and under the lengths of math/hyp.ts; off puts the TypeScript
 //             ones back; with the game's own maths off the engine's stay whatever the row says
 //   stand     both stands have the rows of src/sim/sim.ts RUST_ON on, and the game's own maths, as the page, and NO WORD moves either: a retired word
@@ -47,8 +48,13 @@ const rust: Fns = { ...S.mathsOfRust() };   // (the set the row installs, not on
 if (BREAK) rust.cos = SYS.cos;
 const N = FOLD_N;
 
+if (args[0] === '--hash') {   // the child: this engine's word for the Rust functions
+  console.log('RUST-HASH ' + JSON.stringify({ engine, word: fold(rust, N).word }));
+  process.exit(0);
+}
+
 /** the sections the red path must turn red */
-const RED_SECTIONS = ['maths'];
+const RED_SECTIONS = ['maths', 'engines'];
 const said: Record<string, boolean> = {};   // (said: every verdict of a section, all of them PASS?)
 let fails = 0;
 const verdict = (ok: boolean, label: string, detail: string) => { if (!ok) fails++; const k = label.split(':')[0]; said[k] = (said[k] ?? true) && ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
@@ -58,6 +64,7 @@ const child = (cmd: string[], env: Record<string, string | undefined> = {}): { o
   return { out: r.stdout ?? '', err: r.stderr ?? '', status: r.status, missing: !!r.error && (r.error as { code?: string }).code === 'ENOENT' };
 };
 const marked = (out: string, mark: string): any => { const l = out.split('\n').find(x => x.startsWith(mark)); return l ? JSON.parse(l.slice(mark.length)) : null; };
+const NODE = ['node', '--no-warnings', '--import', './tools/qa/framecost-v8.mjs'];
 console.log(`the simulation in Rust · ${engine} · module ${S.sim().memory.buffer.byteLength / 65536} pages of memory, started in ${S.simBootMs.toFixed(1)} ms${BREAK ? ' · RUST_BREAK=1 (the red path)' : ''}`);
 
 // ---- built
@@ -92,6 +99,16 @@ let wordOwn = '', wordRust = '';
   //  stands a few 1e-9 off the exponent — so does Rust's, to the bit: the port keeps what the game has, it does not mend it)
   let bad = 0, off = 0, at = 0; for (let k = -323; k <= 308; k++) { const x = Number(`1e${k}`), r = rust.log10(x), t = own.log10(x); if (!sameBits(r, t)) { bad++; at = k; } else if (k >= -307 && !sameBits(r, k)) { off++; at = k; } }
   verdict(bad === 0 && off === 0, 'maths: log10 of every decimal power the language can write is the same in both, and its exponent wherever the power is a normal double', bad || off ? `${bad} differ between the two, ${off} of 1e-307 … 1e308 are not their exponent (the last: 1e${at} → ${rust.log10(Number(`1e${at}`))} in Rust, ${own.log10(Number(`1e${at}`))} in TypeScript)` : '1e-323 … 1e308: 632 of 632 the same bits · 1e-307 … 1e308: 616 of 616 exactly the exponent');
+}
+
+// ---- engines
+{
+  const node = child([...NODE, 'tools/qa/rust-check.ts', '--hash']);
+  const there = marked(node.out, 'RUST-HASH ');
+  const label = 'engines: the Rust functions fold the stream to one word under bun and under node, the TypeScript functions\' word';
+  if (node.missing) verdict(false, label, `no node on this machine: ${engine} folds ${wordRust}, and nothing was compared`);
+  else if (!there) verdict(false, label, `the node child did not answer (exit ${node.status}): ${node.err.trim().split('\n').slice(-2).join(' / ')}`);
+  else verdict(there.word === wordRust && wordRust === wordOwn, label, `${engine}: ${wordRust} · ${there.engine}: ${there.word} · TypeScript here: ${wordOwn}`);
 }
 
 // ---- switch
