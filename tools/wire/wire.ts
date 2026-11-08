@@ -50,6 +50,14 @@ function stateWords(io: string): string { const fieldsOf = (path: string): strin
   return L.join('\n'); }
 /** each table's length by its ID's name: what an ID from outside the game is measured against */
 function idTables(S: any): string { return ['//! How long each table is, by the name of its ID. Written by tools/wire from the schema; a value from outside the game is measured against this (io.rs, `R::measured`).', '#![allow(unused_imports)]', 'use alloc::vec::Vec;', 'pub fn id_tables(g: &crate::game::Game) -> Vec<(&\'static str, usize)> { alloc::vec![', ...S.tables.map((t: any) => `    ("${t.id}", g.${t.table}.len()),`), '] }', ''].join('\n'); }
+/** A WRITE BY PATH NAMES A FIELD BY ITS PLACE IN THE TABLE (tools/blitz: a tool's write to one field of a Rust game), so every arm of a struct's `Poke` line is
+ *  numbered by the table here, whatever an add, a drop or a pick of two cuts left in it. Found by two arms numbered four places late after two cuts met:
+ *  a write to the two fields added after them went to the wrong fields, and the module read past the bytes. */
+function pokeArms(io: string, S: { types: Record<string, { k: string; fields: { rust: string }[] }> }): string {
+  return io.split('\n').map(l => { const path = /^impl Poke for (crate::[A-Za-z_0-9:]+) \{/.exec(l)?.[1], T = path && S.types[path]; if (!T || T.k !== 'struct') return l;
+    const at = new Map(T.fields.map((f, i) => [f.rust, i]));
+    return l.replace(/ \d+ => self\.([a-z_0-9]+)\.poke\(i\),/g, (_, f) => { if (!at.has(f)) die(`${path}.${f} has an arm in io.rs and is not in the table`); return ` ${at.get(f)} => self.${f}.poke(i),`; }); }).join('\n');
+}
 /** every generated file, and the stamp both halves carry */
 function gen(check: boolean): void { const T = mkdtempSync(join(tmpdir(), 'wire-')); mkdirSync(join(T, 'bridge'));
   const S0 = read(SCHEMA); writeFileSync(join(T, 'bridge/schema.json'), S0);
@@ -59,7 +67,7 @@ function gen(check: boolean): void { const T = mkdtempSync(join(tmpdir(), 'wire-
   const settled = S.knobSettled; delete S.knobSettled;
   const O = { 'bridge/puppet-apply.ts': join(BLITZ, 'puppet-apply.ts'), 'bridge/puppet-lists.json': join(BLITZ, 'puppet-lists.json'), 'bridge/out-dispatch.ts': join(BLITZ, 'out-dispatch.ts'), 'puppet.rs': rustFile('puppet.rs') } as Record<string, string>;
   const words = JSON.stringify(S) + Object.keys(O).map(k => read(join(T, k))).join(''); const layout = fnv(words); S.layout = layout; S.knobSettled = settled;
-  const ioP = rustFile('io.rs'), io0 = read(ioP), io1 = io0.replace(/\npub const LAYOUT: u32 = \d+;\n?/, '').trimEnd() + `\npub const LAYOUT: u32 = ${layout};\n`;
+  const ioP = rustFile('io.rs'), io0 = read(ioP), io1 = pokeArms(io0, S).replace(/\npub const LAYOUT: u32 = \d+;\n?/, '').trimEnd() + `\npub const LAYOUT: u32 = ${layout};\n`;
   const swP = join(ROOT, 'rust/game/src/state_words.rs'); const idP = join(ioP, '../id_tables.rs'); const out: [string, string][] = [[SCHEMA, JSON.stringify(S)], [ioP, io1], [swP, stateWords(io1)], [idP, idTables(S)], ...Object.entries(O).map(([k, p]) => [p, read(join(T, k))] as [string, string])];
   // THE TOOL NEVER WRITES A TYPE. The game's types are source a person edits (each module's types.rs, knobs.rs, ids.rs); this list of files is all gen touches, and the two Rust files it makes in whole declare none.
   const made = new Set([SCHEMA, ioP, swP, idP, ...Object.values(O)]); for (const [p, t] of out) { if (!made.has(p)) die(`${p.slice(ROOT.length + 1)}: gen writes no file off its list`); if (p.endsWith('.rs') && p !== ioP && /^\s*(pub(\([a-z]+\))?\s+)?(struct|enum|union)\s/m.test(t)) die(`${p.slice(ROOT.length + 1)}: a generated file declares a type; the game's types are written by hand`); }
