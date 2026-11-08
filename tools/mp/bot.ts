@@ -1,4 +1,4 @@
-// A SCRIPTED CLIENT OF A GAME SERVER (bun; a process of its own: it stands a game). It connects, stands its game from the server's recipe, sends a seat's records
+// A SCRIPTED CLIENT OF A GAME SERVER (bun; a process of its own: it stands a game). It connects, stands its game from the server's start, sends a seat's records
 // when it has a seat's key, walks every confirmed tick and holds its state word against the server's. What tools/qa/mpserver-check.ts runs two and three of.
 //   bun run tools/mp/bot.ts --url ws://127.0.0.1:5300 --game local --key k0 --ticks 1200
 //   --key K        sit in the seat with that key (none: watch)            --ticks N     leave once N ticks are walked (default 600)
@@ -14,17 +14,17 @@
 //                  millimetre, `fixes` and `fixMax` the corrections, `records` the records a look played (mean), `ms` what one cost
 //   --no-ahead     (the red path of that) the look ahead plays no record
 //   --why          with --predict: every clean look that was off by a millimetre or more, a line each on stderr (where, by how much, his state)
-// Prints one line: MPBOT {seat, confirmed, heard, wordsOk, bad, word, watchOk, watchOff, watchFirst (the wider word, watched: src/net/step.ts netWatch), sent, holds, skips, margin, lead, moved, shots, bye, stoodMs, tickMs}. Exit 0 = it walked its ticks.
+// Prints one line: MPBOT {seat, confirmed, heard, wordsOk, bad, word, watchOk, watchOff, watchFirst (the whole game's word, watched: src/net/words.ts foldWhole), sent, holds, skips, margin, lead, moved, shots, bye, stoodMs, tickMs}. Exit 0 = it walked its ticks.
 // (`moved`: the length of the way its man went, m, tick by tick.)
-import { resolve } from 'node:path';
-import type { WireCmd } from '../../src/net/wire.ts';
-import { buildName, type Stood } from './stood.ts';
+import { NET, type WireCmd } from '../../src/net/wire.ts';
+import { NetClient } from '../../src/net/client.ts';
+import { Foresee, FORESEE } from '../../src/net/foresee.ts';
+import { onWay, wayOff } from '../../src/net/delay.ts';
+import { buildName, standStart, type Stood } from './stand.ts';
 
-const ROOT = resolve(import.meta.dir, '../..');
 const A = process.argv.slice(2), arg = (k: string, d = ''): string => { const i = A.indexOf(k); return i >= 0 ? A[i + 1] ?? '' : d; };
 const url = arg('--url', 'ws://127.0.0.1:5300'), game = arg('--game', 'local'), key = A.includes('--key') ? arg('--key') : undefined, want = Number(arg('--ticks', '600'));
 const lag = Number(arg('--lag', '0')), jitter = Number(arg('--jitter', '0')), loss = Number(arg('--loss', '0')), stall = Number(arg('--stall', '0')), after = Number(arg('--after', '0')), BREAK = A.includes('--break'), PREDICT = A.includes('--predict'), WHY = A.includes('--why');
-const { NetClient } = await import(`${ROOT}/src/net/client.ts`), { NET } = await import(`${ROOT}/src/net/wire.ts`), { Foresee, FORESEE } = await import(`${ROOT}/src/net/foresee.ts`), { onWay, wayOff } = await import(`${ROOT}/src/net/delay.ts`);
 FORESEE.on = PREDICT; if (A.includes('--no-ahead')) FORESEE.max = 0;
 
 let die = 0x2545f491; const roll = () => { die = (Math.imul(die, 1664525) + 1013904223) >>> 0; return die / 4294967296; };
@@ -36,11 +36,9 @@ const ws = new WebSocket(url);
 const client = new NetClient(onWay(WAY, (text: string) => { if (ws.readyState === 1) ws.send(text); }, roll), { game, build: A.includes('--build') ? arg('--build') : buildName(), ...(key !== undefined ? { key } : {}), ...(A.includes('--name') ? { name: arg('--name') } : {}) });
 let stood: Stood | null = null, standing = false, stoodMs = 0, closed = false;
 const down: (f: () => void) => void = onWay(WAY, (f: () => void) => f(), roll);   // (what comes down the socket, its close too, in the order it came)
-/** the game this client plays, from whichever of the two the server's welcome carries */
-const stand = async (w: { start?: unknown; recipe?: unknown }): Promise<Stood> => w.start ? (await import('./modstand.ts')).standStart(w.start as never) : (await import('./stand.ts')).standRecipe(w.recipe as never);
 /** the longest wait between two messages down once the game ran (ms), and when the last one came */
 let gapMax = 0, gapAt = 0, stalledOnce = false;
-const take = (text: string): void => down(() => { const t = performance.now(); if (gapAt && client.confirmed > 60) gapMax = Math.max(gapMax, t - gapAt); gapAt = t; client.message(text, t); if (client.welcome && !stood && !standing) { standing = true; const t0 = performance.now(); stand(client.welcome).then(s => { stood = s; stoodMs = performance.now() - t0; if (client.seat >= 0) s.show(client.seat); s.begin(); stoodMs = performance.now() - t0; if (client.seat >= 0) client.ready(); }, e => { console.error(`bot.ts: ${(e as Error).message}`); process.exit(1); }); } });
+const take = (text: string): void => down(() => { const t = performance.now(); if (gapAt && client.confirmed > 60) gapMax = Math.max(gapMax, t - gapAt); gapAt = t; client.message(text, t); if (client.welcome && !stood && !standing) { standing = true; const t0 = performance.now(); standStart(client.welcome.start).then(s => { stood = s; stoodMs = performance.now() - t0; if (client.seat >= 0) { s.show(client.seat); client.ready(); } }, e => { console.error(`bot.ts: ${(e as Error).message}`); process.exit(1); }); } });
 ws.onopen = () => client.hello();
 ws.onmessage = (ev: { data: unknown }) => take(String(ev.data));
 ws.onclose = () => down(() => { closed = true; });
@@ -84,12 +82,9 @@ const t0 = performance.now(); let beats = 0, broke = false, walked = 0, at: numb
 const fore = new Foresee(), said = new Map<number, { pos: number[]; heard: number; from: number }>(), heldBy: number[] = [], lostBy: number[] = [];   // (…and lostBy[t]: ticks up to and with t that ended with his legs not his own, or with him down)   // (heldBy[t]: ticks up to and with t the server ran on a held record for this seat)
 const seen = { first: -1, gameMoved: false, sentAt: -1, n: 0, sum: 0, max: 0, exact: 0, looks: 0, recs: 0, unfree: 0, clean: 0, cleanSum: 0, cleanMax: 0, cleanExact: 0, worst: null as null | { t: number; mm: number; records: number; near: number } };
 const APART = 1.5;
-function met(S: Stood, ran: number[]): void {   // (after a walk: the game has run the ticks `ran`, and this process's copy of it stands at the last of them)
-  // (A WALK OF SEVERAL TICKS is one quiet run, stand.ts `quiet`: the game inside it was never this process's to read. So his legs count for each of its
-  //  ticks as the walk left them, and only a look that ends on the walk's last tick is held against the game)
-  const t = ran[ran.length - 1];
+function met(S: Stood, t: number): void {   // (the game has just run tick t)
   const me = S.ahead(seatN(), []);
-  { const lost = !me.down && me.free ? 0 : 1; for (const u of ran) { lostBy[u] = (lostBy[u - 1] ?? 0) + lost; if (u !== t) said.delete(u + 1); } }
+  lostBy[t] = (lostBy[t - 1] ?? 0) + (!me.down && me.free ? 0 : 1);
   const was = said.get(t + 1); if (!was) return; said.delete(t + 1);
   const want = was.pos, p = me.at, e = Math.hypot(p[0] - want[0], p[1] - want[1], p[2] - want[2]);
   seen.n++; seen.sum += e; if (e > seen.max) seen.max = e; if (e < 0.001) seen.exact++;
@@ -121,16 +116,12 @@ const loop = setInterval(() => {
   if (due > 2) beats += due - 2;
   const a = performance.now();
   const led = () => { const F = PREDICT ? fore.last : null; target = F ? F.to.pos : S.ahead(seatN(), []).at; };   // (its camera is on its man where he is drawn, as the page's is: host/loop.ts `lead`)
-  // (ONE QUIET RUN A WALK, as the page walks: stand.ts `quiet`. What this process reads of its game, it reads as the walk ends.)
   // (--break, the red path: ONE record stepped with another walk key than the server ran, after tick 90. The man here is then a hair from where the
-  //  server has him, and nothing but the state word can say so. A write to this process's copy of the game would say nothing: the copy is not the game)
-  const ran: number[] = [];
-  S.quiet(true);
-  const n = client.walk({ step: (cmds: WireCmd[]) => { const t = client.confirmed; heldBy[t] = client.heldRun; ran.push(t);
+  //  server has him, and nothing but the state word can say so)
+  const n = client.walk({ step: (cmds: WireCmd[]) => { const t = client.confirmed; heldBy[t] = client.heldRun;
     if (BREAK && !broke && t >= 90) { broke = true; const i = Math.max(0, client.seat), c = cmds[i]; cmds[i] = { ...c, k: c.k.includes('KeyA') ? ['KeyD'] : ['KeyA'] }; }
-    S.step(cmds); }, word: () => S.word(), watch: () => S.watch() }, Math.min(8, want - client.confirmed));   // (never past the tick asked for: two bots' last words are held against each other)
-  S.quiet(false);
-  if (n) { { const p = S.ahead(seatN(), []).at; if (at) walked += Math.hypot(p[0] - at[0], p[2] - at[2]); at = [p[0], p[1], p[2]]; } if (PREDICT) met(S, ran); led(); }
+    S.step(cmds); if (PREDICT) met(S, t); }, word: () => S.word(), watch: () => S.watch() }, Math.min(8, want - client.confirmed));   // (never past the tick asked for: two bots' last words are held against each other)
+  if (n) { { const p = S.ahead(seatN(), []).at; if (at) walked += Math.hypot(p[0] - at[0], p[2] - at[2]); at = [p[0], p[1], p[2]]; } led(); }
   if (n) { tickMs += performance.now() - a; tickN += n; }
   if (PREDICT && due > 0) { lookAhead(S); if (!n) led(); }
   if (stall > 0 && !stalledOnce && client.confirmed >= 150) { stalledOnce = true; WAY.stallUntil = performance.now() + stall; }

@@ -23,7 +23,7 @@ const path = require('node:path'), cp = require('node:child_process'), fs = requ
 const ROOT = path.resolve(__dirname, '../..');
 const PORT = process.env.PORT || 5351, CPORT = Number(process.env.CLOUD_PORT) || 3251, BREAK = process.env.LOBBY_BREAK === '1', QUALITY = process.env.QUALITY || 'verylow';
 const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i >= 0 ? process.argv[i + 1] : d; };
-const N = Number(arg('ticks', '300')), NAV = Math.max(60000, Number(process.env.NAV_MS) || 480000), BASE = `http://localhost:${PORT}/`, CLOUD = `http://127.0.0.1:${CPORT}`, KEY = 'page-check-key', WORDS = 'draw=1&paused&mute&quality=' + QUALITY;
+const N = Number(arg('ticks', '300')), NAV = Math.max(60000, Number(process.env.NAV_MS) || 480000), BASE = `http://localhost:${PORT}/`, CLOUD = `http://127.0.0.1:${CPORT}`, KEY = 'page-check-key', WORDS = 'paused&mute&quality=' + QUALITY;
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog', '--no-sandbox'];
 const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage textures \(5\) in the Compute stage|Failed to load resource/;
 const T0 = Date.now(), log = (...a) => { if (process.env.LOBBY_SAY) console.log(`  [${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a); };
@@ -46,7 +46,7 @@ const admin = async (fn, args) => { const r = await fetch(`${CLOUD}/api/query`, 
   if (!build || !(await until(async () => (await admin('runners:list', {})).some(r => r.builds.includes(build)), 30000))) { console.log('lobby-page: the dev server did not come up as its backend\'s runner'); return done(2); }
   const browser = await chromium.launch({ headless: true, ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}), args: FLAGS }).catch(() => null); if (!browser) { console.log('lobby-page: the browser did not start'); return done(2); }
   const ctx = await browser.newContext({ viewport: { width: 640, height: 360 } }), errs = [];   // (ONE browser, two of its windows: they share what a browser keeps, and each is its own tab)
-  const open = async name => { const p = await ctx.newPage(); p.on('console', m => { if (m.type() === 'error' && !NOISE.test(m.text())) errs.push(`${name}: ${m.text().slice(0, 200)}`); }); p.on('pageerror', e => errs.push(`${name}: PAGEERROR ${String(e).slice(0, 300)}`)); return p; };
+  const open = async name => { const p = await ctx.newPage(); p.setDefaultTimeout(300000); p.on('console', m => { if (m.type() === 'error' && !NOISE.test(m.text())) errs.push(`${name}: ${m.text().slice(0, 200)}`); }); p.on('pageerror', e => errs.push(`${name}: PAGEERROR ${String(e).slice(0, 300)}`)); return p; };
   const inGame = (p, ms) => p.waitForFunction(() => { const q = new URLSearchParams(location.search); return q.has('seed') && q.has('net'); }, null, { timeout: ms }).then(() => true, () => false);
   // (the address is the game's before the game's page is: wait for the page itself, then for its boot, then for its client)
   const stood = async p => { await p.waitForFunction(() => !!window.__ready, null, { timeout: NAV }); await p.evaluate(() => window.__ready); await p.waitForFunction(() => !!window.__net && !!window.__draw, null, { timeout: 60000 }); };

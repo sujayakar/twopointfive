@@ -1,4 +1,4 @@
-// A GAME OF TWO ON THE PAGE THAT DRAWS (host/drawnet.ts), with no page and no socket: the server's core and a second player stand the module's game (tools/mp/modstand.ts), the first player is the page's own half over
+// A GAME OF TWO ON THE PAGE THAT DRAWS (host/drawnet.ts), with no page and no socket: the server's core and a second player stand the module's game (tools/mp/stand.ts), the first player is the page's own half over
 // a door with a wire of a check's, on a clock of a check's. The words of the whole game are the server's at every word tick, through a restart, a stretch asleep and bunched ticks; his man is drawn where the
 // look ahead has him, stands still where nothing was confirmed, and is blended over every tick of a walk.
 //   bun run tools/draw/net-check.ts        exit 0 · 1
@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { faceHere } from '../blitz/face-build.ts';
 import { characterFiles } from '../blitz/start-pack.ts';
-import { freshStart, standStart } from '../mp/modstand.ts';
+import { freshStart, standStart } from '../mp/stand.ts';
 import { drawEnd } from '../../src/host/drawend';
 import { DrawGame } from '../../src/host/drawgame';
 import { sampleHand } from '../../src/draw/hand';
