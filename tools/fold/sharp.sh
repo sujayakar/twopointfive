@@ -20,6 +20,8 @@ while :; do
   : > "$S/diag-$n.json"; : > "$S/check-$n.log"; ok=1
   for c in $("$FOLD" layout bodies); do
     ( cd "$S/rust/$c" && CARGO_TARGET_DIR="$S/target" cargo check $CHK --message-format=json > "$S/diag-one.json" 2>> "$S/check-$n.log" ) || ok=
+    # (only this crate's own messages: a body crate that uses another is told that one's words again, read without its tests)
+    grep -F "/rust/$c/Cargo.toml\"" "$S/diag-one.json" > "$S/diag-own.json"; mv "$S/diag-own.json" "$S/diag-one.json"
     "$FOLD" diag-from-root --diag "$S/diag-one.json" --in "rust/$c" --base "$S" || exit 3
     cat "$S/diag-one.json" >> "$S/diag-$n.json"
     [ -n "$ok" ] || break
