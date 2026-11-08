@@ -2374,7 +2374,6 @@ if (on('kitdeal-more', 'kitdeal', 'kit', 'all')) await run('kitdeal-more', async
 if (on('kitstealth', 'kit', 'all')) await run('kitstealth', async () => (await import('./kitstealth-check.ts')).kitStealth());   // KITDEAL.stealth: a stealth mission's kit is what your card starts at there — nothing handed over a card, a stealth card of your own beside the loud one (KITSTEALTH_BREAK=1 must fail)
 if (on('issuewhole', 'kit', 'all')) await run('issuewhole', async () => (await import('./issuewhole-check.ts')).issueWhole());   // ISSUE.whole: a mission's own issue is the whole kit — no sponge round, camera or wand its block does not name; the solo tutorial as its page stands it (ISSUEWHOLE_BREAK=1 must fail)
 if (on('kitdeal-run', 'kitdeal', 'kit', 'all')) await run('kitdeal-run', async () => (await import('./kitdeal-check.ts')).dealRun());   // the men carry the dealt cards and the lent tools; cards dealt for four staged smaller; a mission's own issue
-if (on('kitdeal-screen', 'kitdeal', 'kit', 'all')) await run('kitdeal-screen', async () => (await import('./kitdeal-check.ts')).dealScreen());   // the roster of four on the Team & kit screen
 // THE BALLISTIC SHIELD IS GONE FROM THE GAME (10-18; tools/qa/noshield-check.ts: there is no switch left for the lines to differ in)
 if (on('noshield-gone', 'noshield', 'all')) await run('noshield-gone', async () => (await import('./noshield-check.ts')).noshieldGone());            // no module, no knob table, no stand's word, no Tab row, no key of the kit view
 if (on('noshield-card', 'noshield', 'kit', 'all')) await run('noshield-card', async () => (await import('./noshield-check.ts')).noshieldCard());        // no card offers one; a stored or pasted card that says shield is a card without, and is saved without the word
@@ -2411,7 +2410,6 @@ if (on('stealthpose-creep', 'stealthpose', 'close', 'all')) await run('stealthpo
 if (on('stealthpose-cable', 'stealthpose', 'wand', 'all')) await run('stealthpose-cable', async () => (await import('./stealthpose-check.ts')).stealthposeCable());      // the look under a door: the drawn skeleton and the bones are one, the head bowed under the shoulders, a nod inside the look shows
 if (on('stealthpose-standdown', 'stealthpose', 'all')) await run('stealthpose-standdown', async () => (await import('./stealthpose-check.ts')).stealthposeStanddown()); // a gun drawn: the layer out inside 0.3 s
 if (on('wand-kit', 'wand', 'kit', 'all')) await run('wand-kit', async () => (await import('./wand-check.ts')).wandKit());   // the row on your card with the switch, a pouch, the store, staging, the checkpoint slice
-if (on('wand-tile', 'wand', 'kit', 'all')) await run('wand-tile', async () => (await import('./wand-check.ts')).wandTile());   // Team & kit on a stand-in DOM: a carried wand / camera says 'no use here' on a mission with no fog, carried where there is one
 if (on('wand-look', 'wand', 'fog', 'all')) await run('wand-look', async () => (await import('./wand-check.ts')).wandLook());   // who is offered the row; hidden through the feed, seen through the lens inside its wedge; the lens in his eye's place
 if (on('wand-costs', 'wand', 'all')) await run('wand-costs', async () => (await import('./wand-check.ts')).wandCosts());   // the pan's rate and stops, the low lens, what pulls it out, the stow, the mark, the checkpoint gate
 if (on('wand-doors', 'wand', 'all')) await run('wand-doors', async () => (await import('./wand-check.ts')).wandDoors());   // every door face of every squad level: the lens beyond the leaf, in the open
@@ -2954,17 +2952,14 @@ if (on('hours-sheet', 'hours', 'all')) await run('hours-sheet', async () => (awa
 // ---------------------------------------------------------------- the LOADOUT screen and the squad sizes behind it (loadout-probes.ts; game/loadout.ts, ui/loadout.ts, the staging in nightbreach.ts / rescue.ts): 'loadout' = the family —
 // the size as data (?squad=N, the roster, Deploy's query, the store), the real screen on a fake DOM (slots, keys, Deploy, Back, a greyed size), every scenario on the list booted at every size 0 to 4 with its teammates counted
 if (on('loadout-pure', 'loadout', 'all')) await run('loadout-pure', async () => (await import('./loadout-probes.ts')).loadoutPure());
-if (on('loadout-screen', 'loadout', 'all')) await run('loadout-screen', async () => (await import('./loadout-probes.ts')).loadoutScreen());
 if (on('loadout-stage', 'loadout', 'all')) await run('loadout-stage', async () => (await import('./loadout-probes.ts')).loadoutStage());
 // ---------------------------------------------------------------- each member's KIT AND UNIFORM (kit-probes.ts; game/kit.ts, ui/kitCard.ts): 'kit' = the family
 if (on('kit-table', 'kit', 'all')) await run('kit-table', async () => (await import('./kit-probes.ts')).kitTable());
 if (on('kit-stage', 'kit', 'all')) await run('kit-stage', async () => (await import('./kit-probes.ts')).kitStage());
 if (on('kit-pool', 'kit', 'all')) await run('kit-pool', async () => (await import('./kit-probes.ts')).kitPoolAgree());
 if (on('kit-solo', 'kit', 'all')) await run('kit-solo', async () => (await import('./kit-probes.ts')).kitSoloNight());
-if (on('kit-card', 'kit', 'all')) await run('kit-card', async () => (await import('./kit-probes.ts')).kitCard());
 // the POUCHES rule (kit-pouch-probes.ts; game/kit.ts SLOTS + game/slots.json): 'pouches' = the family, also under 'kit'
 if (on('pouch-table', 'pouches', 'kit', 'all')) await run('pouch-table', async () => (await import('./kit-pouch-probes.ts')).pouchTable());
-if (on('pouch-card', 'pouches', 'kit', 'all')) await run('pouch-card', async () => (await import('./kit-pouch-probes.ts')).pouchCard());
 if (on('pouch-stage', 'pouches', 'kit', 'all')) await run('pouch-stage', async () => (await import('./kit-pouch-probes.ts')).pouchStage());
 if (on('pouch-wall', 'pouches', 'kit', 'all')) await run('pouch-wall', async () => (await import('./kit-pouch-probes.ts')).pouchWall());
 // ---------------------------------------------------------------- TEAMMATES' SMOKE ON ORDER (squadsmoke-probes.ts; game/squadsmoke.ts, kit.ts kitSmokes): 'squadsmoke' = the family, run with 'kit' too

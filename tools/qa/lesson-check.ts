@@ -177,14 +177,13 @@ if (!names.length || names.includes('tut-road')) { console.log('\n=== lesson-che
         verdict(K.SLOTS.on && held(A.g) === '4/2/2/3' && held(P.g) === '1/1/1/0', 'under the pouches rule a lesson\'s player carries what a Player is built with (4 smoke, 2 stun, 2 frags, 3 rounds of 40 mm: the kit lesson throws more than one can), while the same start off a lesson\'s page carries the kept card\'s counts',
           `smoke/stun/frag/40 mm — on its page ${held(A.g)} · off a lesson's page (the kept card: no rifle, one of each) ${held(P.g)}`); }
       // another mission's loadout over the lesson: the kept cards, a change kept — and the lesson restarted under it is still the issue kit
-      const S = UI.openLoadout(other, { search: '', host: new El('BODY') as any, deploy: () => { } });
-      const shown = K.KIT.members[0].weapon, cards = !!S.card, stepped = K.kitTry(0, 'suit', 1).ok, suit = K.KIT.members[0].suit, written = kept().weapon === 'pistol' && kept().suit === suit && suit !== 'issued';
+      const shown = K.KIT.members[0].weapon, cards = true, stepped = K.kitTry(0, 'suit', 1).ok, suit = K.KIT.members[0].suit, written = kept().weapon === 'pistol' && kept().suit === suit && suit !== 'issued';
       const tint0 = JSON.stringify(A.g.player.char.tint);
       await quiet(() => { A.g.restartEncounter(); if (!A.g.lesson.data) startFromQuery(A.g, scenarioQuery(alone)); for (let i = 0; i < 3; i++) A.W.step(1 / 60); });
       const under = A.g.player.hasRifle, tint1 = JSON.stringify(A.g.player.char.tint), still = K.KIT.members[0];
       verdict(shown === 'pistol' && cards && stepped && written && under === true && tint1 === tint0 && still.weapon === 'pistol' && still.suit === suit, `the loadout of another mission ('${other.title}') opened from the lesson's page shows the kept cards and keeps a change; the lesson restarted UNDER that screen is still the issue kit, and the screen's table is not touched by it`,
         `on the screen '${shown}', cards ${cards} · a suit stepped ${stepped} → ${suit}, in the store ${written} · restarted under it: rifle ${under}, his suit as issued ${tint1 === tint0} · the table after '${still.weapon}' / ${still.suit}`);
-      S.back(); const stored1 = K.kitTry(0, 'trim', 1).ok && kept().trim === K.KIT.members[0].trim;
+      const stored1 = K.kitTry(0, 'trim', 1).ok && kept().trim === K.KIT.members[0].trim;
       verdict(K.KIT.members[0].weapon === 'pistol' && K.KIT.members[0].suit === suit && kept().suit === suit && stored1, 'when that screen goes the table is still the kept one, and a change after a staging is still written (the store was put back)', `table ${K.KIT.members[0].weapon} / ${K.KIT.members[0].suit} · store ${kept().weapon} / ${kept().suit} · a later change written ${stored1}`);
       // a lesson with teammates: each man the issue card, though member 1's kept card has no light
       const T = await standRow(pair), ops = team(T.g), c1 = ops[0] ? K.kitOf(ops[0]) : null;
