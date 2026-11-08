@@ -147,7 +147,6 @@ pub fn default_settings() -> RenderSettings {
     s.particle_rain_drips = true;
     s.particle_rain_lattice = -1.0;
     s.particle_rain_react = 6.0;
-    s.gpu_particles = true;
     s.air_sim = true;
     s.air_every = 1.0;
     s.rt_reflect = false;

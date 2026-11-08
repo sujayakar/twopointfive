@@ -4,12 +4,13 @@
 // THE STAND: the mission teaches the page's rules — the right button on a held man (game/close.ts), a teammate sent to work a thing (game/workthings.ts).
 // The shipped stand has both on by itself; the frozen stand pins them off while the game is stood up, so the FIRST statement of the first step turns them
 // on (nothing has been pressed yet).
+import { doing } from '../squadwords';
 import type { Bot } from '../lesson-run';
 import { CLOSE } from '../../../src/game/close';
 import { WORK } from '../../../src/game/workthings';
 import { RAILS } from '../../../src/game/rails';
-import { floorPlan } from '../../../src/game/floorplan';
 import { TP } from '../../levels/tut-pair';
+import { locked } from '../../../src/view/seatview.ts';
 
 export const query = '?quiet&squad=1';
 // the moon on his meter (lesson-run's --moon): the CPU's light estimate leaves it out. And a FLOOR under every meter (--floor), the partner's own too:
@@ -79,47 +80,47 @@ function onGround(B: Bot) {
 /** the frame's line once an order is out: what the partner is doing, drawn as a thing to watch — never the ask a second time */
 function watchLine(B: Bot, when: string) {
   if (!RAILS.on) return;
-  const p = B.g.rails.prompt(); if (!p) B.fail(`no line ${when}`);
+  const p = B.g.view.lesson?.rails?.prompt; if (!p) B.fail(`no line ${when}`);
   if (!p!.watch || /\[/.test(p!.line)) B.fail(`${when} the line is still an ask: "${p!.line}"`);
   B.say(`  the line ${when}: "${p!.line}" (a thing to watch)`);
 }
-function together(B: Bot, by: number, secs: number, what: string) { if (!B.until(() => flat(mate(B).char.pos, B.pos()) < by, secs)) B.fail(`the partner did not ${what} (${B.g.orders.statusOf(mate(B))}, ${flat(mate(B).char.pos, B.pos()).toFixed(1)} m off)`); }
+function together(B: Bot, by: number, secs: number, what: string) { if (!B.until(() => flat(mate(B).char.pos, B.pos()) < by, secs)) B.fail(`the partner did not ${what} (${doing(B.g, mate(B))}, ${flat(mate(B).char.pos, B.pos()).toFixed(1)} m off)`); }
 function waitSet(B: Bot, gd: any) {
   const m = mate(B), n0 = seen(B), t0 = B.t();
-  if (!B.until(() => !!B.g.pair.jobOf(m)?.set || gd.state === 'dead', 70)) B.fail(`the partner never got set behind ${gd.callsign} (${B.g.orders.statusOf(m)}, at ${at(m.char.pos)})`);
+  if (!B.until(() => !!B.g.pair.jobOf(m)?.set || gd.state === 'dead', 70)) B.fail(`the partner never got set behind ${gd.callsign} (${doing(B.g, m)}, at ${at(m.char.pos)})`);
   B.say(`  "set" ${(B.t() - t0).toFixed(1)} s on: the partner at ${at(m.char.pos)}, ${flat(m.char.pos, gd.char.pos).toFixed(2)} m from ${gd.callsign} (he stands at ${at(gd.char.pos)}, facing ${gd.char.bodyYaw.toFixed(2)})`);
   calm(B, n0, `while the partner worked round to ${gd.callsign}`);
 }
 
-/** the word's key as the floor plan marks it by a man of the pair who waits on it (game/floorplan.ts: the overlay draws exactly this list) */
-const pairKey = (B: Bot) => floorPlan(B.g).doors.filter(d => d.why === 'pair');
+/** the word's key as the floor plan marks it by a man of the pair who waits on it (`view.plan`: the overlay draws exactly this list); a check with no view fails */
+const pairKey = (B: Bot) => { const P = B.g.view.plan; if (!P) B.fail('no plan in the view'); return P!.own.doors.filter((d: any) => d.why === 'pair'); };
 
 export const steps: Record<string, (B: Bot) => void> = {
   // (the mission's lines name the right button for the man in his arm: close.ts heldClicks, on in the page and held off on the frozen stand — raised here with
   //  the two parts the pair's rules stand on, or the frozen run would be of a mission whose own line is false)
   crouch: B => { CLOSE.on = true; CLOSE.heldClicks = true; WORK.on = true; B.say(`  at the start: lit ${lit(B)}; the partner ${flat(mate(B).char.pos, B.pos()).toFixed(1)} m off`); B.crouch(true); },
   // a few strides in, the partner behind
-  lead: B => { const n0 = seen(B); B.go(TP.first, 20, { near: 0.3 }); together(B, 4.2, 20, 'follow to the first mark'); B.wait(0.5); B.say(`  on the first mark: lit ${lit(B)}; the partner at ${mate(B).char.pos[0].toFixed(1)}, ${mate(B).char.pos[2].toFixed(1)} (${B.g.orders.statusOf(mate(B))})`);
+  lead: B => { const n0 = seen(B); B.go(TP.first, 20, { near: 0.3 }); together(B, 4.2, 20, 'follow to the first mark'); B.wait(0.5); B.say(`  on the first mark: lit ${lit(B)}; the partner at ${mate(B).char.pos[0].toFixed(1)}, ${mate(B).char.pos[2].toFixed(1)} (${doing(B.g, mate(B))})`);
     if (!mate(B).char.anim.crouch) B.fail('the partner is on his feet behind a player who is low'); calm(B, n0, 'on the way to the first mark'); },
   // (one step: the order, then the line is what he is doing until he says "set")
   // (…and until the word is taught nothing on the floor names its key: the maintainer's play, "what is F here", was the key's mark by the partner at this step)
   mark: B => { const A = man(B, 'pickup'); onMan(B, A); B.step(4); watchLine(B, 'after the order on the first man');
-    if (B.g.rails.locks('word') && pairKey(B).length) B.fail('the word\'s key is marked by the partner while the lesson still holds the word shut');
+    if (locked(B.g.view, 'word') && pairKey(B).length) B.fail('the word\'s key is marked by the partner while the lesson still holds the word shut');
     waitSet(B, A); },
   word: B => { const A = man(B, 'pickup'), n0 = seen(B);
-    { const K = pairKey(B); if (K.length !== 1 || !K[0].ready || !K[0].now) B.fail(`the partner is set and the word is taught, and its key is not marked ready by him (${K.length} mark(s)${K[0] ? `, ready ${K[0].ready}, now ${K[0].now}` : ''})`);
+    { const K = pairKey(B); if (K.length !== 1 || K[0].cap !== 'lit' || !K[0].now) B.fail(`the partner is set and the word is taught, and its key is not marked ready by him (${K.length} mark(s)${K[0] ? `, ready ${K[0].ready}, now ${K[0].now}` : ''})`);
       B.say('  the word\'s key is marked by the partner, ready'); }
     B.wait(REACT); B.press('KeyF');
-    if (!B.until(() => A.state === 'dead', 15)) B.fail(`the word was given and ${A.callsign} is still up (${B.g.orders.statusOf(mate(B))})`);
+    if (!B.until(() => A.state === 'dead', 15)) B.fail(`the word was given and ${A.callsign} is still up (${doing(B.g, mate(B))})`);
     B.wait(1); calm(B, n0, 'when the first man went down'); },
   // to the gap: both men of the truck park in view through it. He comes back by himself (no order asks for it). The step is done by the player's feet
   // (it used to wait on the partner, and was a dead end the day he judged the way lit); THIS run still fails if he does not come up, here and past the wall
-  gap: B => { const n0 = seen(B); B.crouch(true); B.go(TP.gap, 20, { near: 0.3 }); together(B, 4.2, 30, 'fall in again by himself after his man went down'); B.wait(0.4); B.say(`  at the gap: lit ${lit(B)}; the partner at ${at(mate(B).char.pos)} (${B.g.orders.statusOf(mate(B))})`); calm(B, n0, 'at the gap'); },
+  gap: B => { const n0 = seen(B); B.crouch(true); B.go(TP.gap, 20, { near: 0.3 }); together(B, 4.2, 30, 'fall in again by himself after his man went down'); B.wait(0.4); B.say(`  at the gap: lit ${lit(B)}; the partner at ${at(mate(B).char.pos)} (${doing(B.g, mate(B))})`); calm(B, n0, 'at the gap'); },
   // (TUTPAIR_NEAR=1: the squad's key on the NEAR man first, as a player who misread the card would. The step must still be up and still asking; then the far man)
-  far: B => { if (process.env.TUTPAIR_NEAR === '1') { onMan(B, man(B, 'near')); B.wait(1.0); const p = RAILS.on ? B.g.rails.prompt() : null;
-      if (B.g.lesson.step?.id !== 'far') B.fail(`the squad's key on the near man passed the step that asks for the far one (now '${B.g.lesson.step?.id}')`);
+  far: B => { if (process.env.TUTPAIR_NEAR === '1') { onMan(B, man(B, 'near')); B.wait(1.0); const p = RAILS.on ? B.g.view.lesson?.rails?.prompt : null;
+      if (B.g.view.lesson?.id !== 'far') B.fail(`the squad's key on the near man passed the step that asks for the far one (now '${B.g.view.lesson?.id}')`);
       B.say(`  the near man given first: the step is still 'far'${p ? `, its line "${p.line}"` : ''}`); }
-    onMan(B, man(B, 'far')); B.wait(1.5); B.say(`  1.5 s on: the partner at ${at(mate(B).char.pos)} (${B.g.orders.statusOf(mate(B))})`); },
+    onMan(B, man(B, 'far')); B.wait(1.5); B.say(`  1.5 s on: the partner at ${at(mate(B).char.pos)} (${doing(B.g, mate(B))})`); },
   // through the gap to the near man's back, a stride off, and there until the partner is set behind the far one
   near: B => { const n0 = seen(B); B.go(TP.behindB, 15, { near: 0.2 }); B.say(`  behind the near man: lit ${lit(B)}, ${flat(B.pos(), man(B, 'near').char.pos).toFixed(2)} m off`);
     waitSet(B, man(B, 'far')); calm(B, n0, 'behind the near man'); },
@@ -129,7 +130,7 @@ export const steps: Record<string, (B: Bot) => void> = {
     if (!closeIn(B, b)) B.fail(`could not get behind the near man (${flat(B.pos(), b.char.pos).toFixed(2)} m off, ${b.state})`);
     if (!tap(B, 'guard', 'grab', [b.char.pos[0], 1.35, b.char.pos[2]])) B.fail('no grab row behind the near man');
     const t0 = B.t();
-    if (!B.until(() => c.state === 'dead', 15)) B.fail(`the grab did not send the partner (${B.g.orders.statusOf(mate(B))})`);
+    if (!B.until(() => c.state === 'dead', 15)) B.fail(`the grab did not send the partner (${doing(B.g, mate(B))})`);
     B.say(`  the far man down ${(B.t() - t0).toFixed(1)} s after the grab; the near man ${B.g.player.holding ? 'in the arm' : `NOT held (${b.state})`}`);
     if (b.state === 'alert') B.fail('the near man was roused by the double'); },
   sleep: B => { const b = man(B, 'near');
@@ -153,7 +154,7 @@ export const steps: Record<string, (B: Bot) => void> = {
     const l = last(B); if (l?.order !== 'work') B.fail(`the squad's key on the fuse box gave ${l ? `${l.order} on ${l.target}` : 'nothing'}`);
     B.say(`  the squad's key on the fuse box: ${l.order} on ${l.target}`); B.step(4); watchLine(B, 'after the order on the fuse box');
     const t0 = B.t();
-    if (!B.until(() => B.g.blackout.active, 40)) B.fail(`the partner did not throw the mains (${B.g.orders.statusOf(mate(B))}, at ${at(mate(B).char.pos)})`);
+    if (!B.until(() => B.g.blackout.active, 40)) B.fail(`the partner did not throw the mains (${doing(B.g, mate(B))}, at ${at(mate(B).char.pos)})`);
     B.say(`  the mains went ${(B.t() - t0).toFixed(1)} s after the order; the man ${B.g.player.holding ? 'still held' : 'NOT held'}`); },
   drop: B => { const d = man(B, 'gate');
     B.wait(REACT);

@@ -1,8 +1,7 @@
 # The page plays the Rust game
 
 The Rust game is the page's game: no address word is needed. `?rust=0` opens the TypeScript game for as long as that is still in the tree, and a page that
-is a game server's client or its door (`?net=`, `?join=`) or that plays a tape (`?playtape=`) stays with the TypeScript game until those have been played on the
-Rust one (`?rust=1` asks it of them all the same; `src/main.ts` holds the rule). The words below that say "under the word" or `?rust=1` were written while the
+is a game server's client or its door (`?net=`, `?join=`) or that plays a tape (`?playtape=`) is the Rust game too. The words below that say "under the word" or `?rust=1` were written while the
 Rust game was behind that word, and read the same for the page with no word.
 
 On the Rust game, the game's tick is the Rust game's (`rust/game`, in the module `rust/game_face` builds) and the TypeScript `Game` stays as a puppet that the
@@ -95,7 +94,6 @@ Left: saves do not outlive the page (the store is the browser's, a few megabytes
   apply left through the generated write by path (`tools/blitz/poke.ts` → `face_write` → `io::poke`): no call of the face a field. A tool writes with
   `window.__rust.poke(obj, path, value)`, which answers null or the reason. `window.__rust.poked` counts them by path; `pokeRefused` names a write that
   has no way there.
-- **The options' particle row** (`engine.settings.gpuParticles`) is among the watched writes: the tick reads it (`gpuFx`).
 - **Not covered:** a panel's row that calls a method (it runs a rule on the puppet only), and a write to a field outside the list in
   `src/host/rustgame.ts` `watched` (the next apply may put the Rust game's value back over it).
 
@@ -247,12 +245,11 @@ The rule: what the simulation's own code computes from the game's state for the 
 | smoke sources (a shot's gas, a stun's jets and trails, the can, a holed wall's puff) | `effects`, `combat`, `destruction`, `fire`, `smokebreak` | out event `SmokeSystemLikeEmit`, with its kind, grid and what it rides (`tools/blitz/track.ts`) |
 | a burst's fragments: a wall charge's, a door charge's, a thrown can's | `blast_look/b_01.rs blast_sparks` | out events |
 | which boxes are a laser's beam, a tracer's streak, an infrared line | `thinline thin_note / thin_air`, `irlaser ir_note` | the filtered export, into the page's own side tables (`thinline.ts` THIN and AIR, `irlaser.ts` IR_MADE) |
-| the wind's two lists (the sources that blow; the ones for the particles) and each source's record (speed, direction, place, reach) | `wind/p_01.rs wind_update` | the filtered export (`Wind.active`, `to_pool`, the source's rows); `windOut` hands them to the |
+| the sources that blow and each source's record (speed, direction, place, reach) | `wind/p_01.rs wind_update` | the filtered export (`Wind.active`, the source's rows; the ones for the particles are made from them on the page, `Wind.forParticles`); `windOut` hands them to the |
 | the weather frame, the sky's two colours, the haze, the exposure, the gloss, the box world's geometry serial | `weather`, `lighting`, `hours`, `wallbreak` | the filtered export (`HostApi.weather`, `RenderSettings`, `BoxWorld.geom_serial`). A row moves on the page only when the Rust game's moved, so what a panel set stays until the tick changes it |
 
-What the tick has to be TOLD of the host, because a rule asks it: whether there is a particle pool (`particleFx.ts gpuFx`: with one, embers and
-fragments go to it and the sparks' own pool of streak boxes stays empty), the pool's two switches a door charge's fragments go by, and whether there is
-a reach keeper (a breached wall tells it). They ride in the host's half.
+The tick is told nothing of the host's particle pool or its reach keeper: no rule asks. Particles and a breached wall's news are out events, and a host
+with nothing to draw drops them.
 
 A wall charge's feel is in two halves. The report and the camera's kick are the Rust tick's (`blast_feel`). Its particles (the fireball, the dust
 ring, the three pushes, the ceiling's dust) are queued closures in the TypeScript and stay the page's: the host starts them on the report's own out

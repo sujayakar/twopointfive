@@ -21,7 +21,7 @@ pub enum LaterRedo {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum LineKind {
     Set,
     Go,
@@ -78,91 +78,6 @@ impl LineKind {
         }
     }
 }
-
-/// (TypeScript: Mover, src/game/laststand.ts:138)
-#[derive(Clone, Copy, Debug)]
-pub struct Mover {
-    pub d: RoomfightDefId,
-    pub phase: crate::laststand::MoverPhase,
-    pub go_at: f64,
-    pub spot: V3,
-    pub tries: f64,
-    pub step_t: f64,
-    pub t0: f64,
-    pub quiet: bool,
-}
-impl Mover {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Mover {
-            d: RoomfightDefId(0),
-            phase: crate::laststand::MoverPhase::Run,
-            go_at: 0.0,
-            spot: [0.0; 3],
-            tries: 0.0,
-            step_t: 0.0,
-            t0: 0.0,
-            quiet: false,
-        }
-    }
-}
-impl Default for Mover { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum MoverPhase {
-    Run,
-    Beat,
-}
-impl MoverPhase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            MoverPhase::Run => "run",
-            MoverPhase::Beat => "beat",
-        }
-    }
-}
-
-/// (TypeScript: Stand, src/game/laststand.ts:139)
-#[derive(Clone, Debug)]
-pub struct Stand {
-    pub room: Option<RoomfightRoomId>,
-    pub id: Option<String>,
-    pub the: String,
-    pub anchor: V3,
-    pub t: f64,
-    pub in_: JsSet<RoomfightDefId>,
-    pub out: JsSet<RoomfightDefId>,
-    pub movers: Vec<crate::laststand::Mover>,
-    pub set_said: bool,
-    pub set_t: f64,
-    pub thump_at: f64,
-    pub look_t: f64,
-    pub orders: JsMap<RoomfightDefId, f64>,
-    pub homed: JsSet<RoomfightDefId>,
-}
-impl Stand {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Stand {
-            room: None,
-            id: None,
-            the: String::new(),
-            anchor: [0.0; 3],
-            t: 0.0,
-            in_: JsSet::new(),
-            out: JsSet::new(),
-            movers: Vec::new(),
-            set_said: false,
-            set_t: 0.0,
-            thump_at: 0.0,
-            look_t: 0.0,
-            orders: JsMap::new(),
-            homed: JsSet::new(),
-        }
-    }
-}
-impl Default for Stand { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Check, src/game/laststand.ts:144)
 #[derive(Clone, Debug)]
@@ -266,7 +181,6 @@ pub struct State {
     pub check: Option<crate::laststand::Check>,
     pub known: JsSet<RoomfightDefId>,
     pub named: JsMap<RoomfightDefId, String>,
-    pub stand: Option<crate::laststand::Stand>,
     pub spots: JsMap<RoomfightDefId, crate::laststand::Spot>,
     pub at: JsMap<RoomfightDefId, crate::laststand::Said>,
     pub lone_said: bool,
@@ -290,7 +204,6 @@ impl State {
             check: None,
             known: JsSet::new(),
             named: JsMap::new(),
-            stand: None,
             spots: JsMap::new(),
             at: JsMap::new(),
             lone_said: false,

@@ -81,22 +81,20 @@ pub fn destruction_knock_off(g: &mut crate::game::Game, d: &crate::destruction::
     destruction_hide(g, d);
     if c.is_none() {   // the pool is full of moving chunks: it still goes, as a burst of chips of its colour
         g.stats.destruction.destr_knocks_demoted += 1;
-        if crate::particle_fx::gpu_fx(g) {
-            let (bc, bh, albedo) = (seam_box(g, b).c, seam_box(g, b).h, seam_box(g, b).albedo);
-            crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, v3::copy(bc), v3::normalize([hz[0], 1.0, hz[2]]), 24.0, crate::render_particles::EmitOpts {
-                speed: 2.5,
-                speed_jit: Some(0.7),
-                spread: Some(1.2),
-                life: 16.0,
-                life_jit: Some(0.3),
-                size: m::max(0.008, m::min_n(&[bh[0], bh[1], bh[2]]) * 0.6),
-                size_jit: Some(0.5),
-                aspect: Some(1.5),
-                pos_jit: Some(m::min(bh[0], bh[2])),
-                color: Some(v3::copy(albedo)),
-                ..Default::default()
-            });
-        }
+        let (bc, bh, albedo) = (seam_box(g, b).c, seam_box(g, b).h, seam_box(g, b).albedo);
+        crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, v3::copy(bc), v3::normalize([hz[0], 1.0, hz[2]]), 24.0, crate::render_particles::EmitOpts {
+            speed: 2.5,
+            speed_jit: Some(0.7),
+            spread: Some(1.2),
+            life: 16.0,
+            life_jit: Some(0.3),
+            size: m::max(0.008, m::min_n(&[bh[0], bh[1], bh[2]]) * 0.6),
+            size_jit: Some(0.5),
+            aspect: Some(1.5),
+            pos_jit: Some(m::min(bh[0], bh[2])),
+            color: Some(v3::copy(albedo)),
+            ..Default::default()
+        });
     }
     if kind == crate::debris::ChunkKind::Housing {
         if let Some(t) = d.target { destruction_break_target(g, t); }   // (chunk or chip burst, the light is off the desk either way)
@@ -194,39 +192,37 @@ pub fn destruction_tile_drop(g: &mut crate::game::Game, p: V3, chaos: f64, force
     g.destr.tile_count += 1.0;
     g.stats.destruction.destr_tiles += 1;
     dlog(g, &format!("tile {} dropped", key));
-    if crate::particle_fx::gpu_fx(g) {
-        crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, [cx, y - 0.05, cz], [0.0, -1.0, 0.0], 18.0, crate::render_particles::EmitOpts {   // crumbs of the tile's edge
-            speed: 1.2,
-            speed_jit: Some(0.8),
-            spread: Some(1.3),
-            life: 20.0,
-            life_jit: Some(0.3),
-            size: 0.009,
-            size_jit: Some(0.6),
-            pos_jit: Some(0.25),
-            color: Some([0.8, 0.79, 0.75]),
-            ..Default::default()
-        });
-        crate::particle_fx::emit_dust(g, [cx, y - 0.12, cz], [0.0, -1.0, 0.0], 10.0, crate::render_particles::EmitOpts {
-            shape: Some(crate::render_particles::EmitShape::Puff),
-            speed: 0.7,
-            speed_jit: Some(0.5),
-            lift: Some(-0.3),
-            life: 2.2,
-            life_jit: Some(0.3),
-            size: 0.2,
-            size_jit: Some(0.35),
-            pos_jit: Some(0.3),
-            color: Some([0.78, 0.76, 0.72]),
-            ..Default::default()
-        });
-    }
+    crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, [cx, y - 0.05, cz], [0.0, -1.0, 0.0], 18.0, crate::render_particles::EmitOpts {   // crumbs of the tile's edge
+        speed: 1.2,
+        speed_jit: Some(0.8),
+        spread: Some(1.3),
+        life: 20.0,
+        life_jit: Some(0.3),
+        size: 0.009,
+        size_jit: Some(0.6),
+        pos_jit: Some(0.25),
+        color: Some([0.8, 0.79, 0.75]),
+        ..Default::default()
+    });
+    crate::particle_fx::emit_dust(g, [cx, y - 0.12, cz], [0.0, -1.0, 0.0], 10.0, crate::render_particles::EmitOpts {
+        shape: Some(crate::render_particles::EmitShape::Puff),
+        speed: 0.7,
+        speed_jit: Some(0.5),
+        lift: Some(-0.3),
+        life: 2.2,
+        life_jit: Some(0.3),
+        size: 0.2,
+        size_jit: Some(0.35),
+        pos_jit: Some(0.3),
+        color: Some([0.78, 0.76, 0.72]),
+        ..Default::default()
+    });
     destruction_dust_puff(g, [cx, y - 0.2, cz], [0.0, -1.0, 0.0], 1.4, crate::scene_materials::Surf::Drywall);
     true
 }
 
 /// A fixture a stray round, a blast or a shaken ceiling can put out: a lit, interactive lamp or panel, not one already dead or one a fire holds.   (destruction.ts fixtureLive)
-pub fn destruction_fixture_live(g: &mut crate::game::Game, t: FixtureId) -> bool {
+pub fn destruction_fixture_live(g: &crate::game::Game, t: FixtureId) -> bool {
     use crate::sim_lightshome::{fixture_broken, fixture_factor, fixture_on, FixtureKind};
     !fixture_broken(g, t)
         && g.tab.sim_lightshome_fixture[t].interactive

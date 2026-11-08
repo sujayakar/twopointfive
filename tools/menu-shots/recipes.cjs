@@ -15,12 +15,6 @@ R['block-four'] = {      // the mess, a room that turns a corner: the point man 
   play: `ms.approach('m_s', 3.0, 30); ms.order('openClear', 'm_s');
          return ms.sim(25, () => ms.shotNow() && ms.ops().some(o => o.char.pos[2] < 8 && o.char.pos[0] < 15.5));`,
   cam: { look: [14.7, 1, 7.4], yaw: -2.5, pitch: 1.1, dist: 11.5 } };
-R['block-squads'] = {    // night; the workshop taken through its second door behind a can: the first two men through the tool crib's door, a round going, seen from the corner its men held
-  query: 'levelFile=block-squads.json&roomclear&squad4' + Q, quality: 'medium', frames: 8,
-  play: `ms.order('fallIn', [8.6, 0, 13.9]); ms.go([9.4, 0, 21.2]); ms.sim(25, () => ms.arrived());
-         ms.order('bangClear', 'w_c'); const t0 = g.time; ms.must(ms.sim(40, () => ms.bangBy('w_c', t0)), 'the can');
-         return ms.sim(8, () => ms.shotNow() && ms.ops().some(o => o.char.pos[0] > 17.05 && o.char.pos[2] > 18.6));`,
-  cam: { look: [17.7, 1.1, 22.5], yaw: 2.4, pitch: 0.3, dist: 3.4 } };
 R['pass-four'] = {       // night, snow; in by the gate and round the lorry's tail, a can through the tea room's door: the flash in the doorway and out of its windows, the door man black against it, the brazier, seen from the yard past the lorry's cab
   query: 'levelFile=pass.json&roomclear&squad4' + Q, quality: 'medium', frames: 8,
   play: `for (const w of [[19.8, 0, 23.6], [21.6, 0, 20.4]]) { ms.go(w); ms.must(ms.sim(25, () => ms.arrived()), 'the walk in by the gate'); }
@@ -126,22 +120,6 @@ R['rescue-consulate'] = { // dusk; the four in by the suite's side door behind a
          return ms.sim(8, () => ms.ops().filter(x => x.char.pos[0] > 29.3).length >= 2);`,
   cam: { look: [30.7, 1.0, 17.0], yaw: Math.PI / 2 - 0.25, pitch: 0.16, dist: 4.6 } };
 
-R['snatch-four'] = {    // dawn; Sam's rounds at the hut wake the house, the man runs for the side door and meets the stack coming in: on his knees in their lights
-  query: 'levelFile=snatch.json&roomclear&squad4&hour=dawn' + Q, quality: 'medium', frames: 8,
-  play: `const sn = g.snatch, d = ms.door('side'); ms.approach('side', 3.5, 45); ms.go([27.8, 0, 10.6]); ms.sim(6, () => ms.arrived());
-         const t8 = ms.man('Tango 8'); let n = 0; ms.sim(10, () => { ms.aim([t8.char.pos[0], 1.2, t8.char.pos[2]]); if (n++ % 9 === 4) ms.fire(); return false; });
-         ms.go([28.4, 0, 12.2]); ms.order('openClear', 'side');
-         return ms.sim(14, () => Math.abs(d.angle) > 0.9 && ms.ops().some(x => x.char.pos[0] < 26.3) && !!sn.tied);`,
-  cam: { look: [25.3, 1.05, 10.8], yaw: -1.3, pitch: 0.3, dist: 5.3 } };
-
-R['defuse-four'] = {    // grey day; the west shop taken by its back door, Sam's hands on the charge at the bench with the clock running, a teammate's gun on the room beside him
-  query: 'levelFile=defuse.json&roomclear&squad4&hour=overcast' + Q, quality: 'medium', frames: 8,
-  play: `ms.approach('back_1', 3.4, 45); ms.order('bangClear', 'back_1'); const t0 = g.time; ms.must(ms.sim(25, () => ${bang('back_1')}), 'the can');
-         const t3 = ms.man('Tango 3'), t4 = ms.man('Tango 4'); ms.sim(12, () => t3.state === 'dead' && t4.state === 'dead');
-         ms.go([8.5, 0, 8.6]); ms.sim(12, () => ms.arrived());
-         ms.order('move', [9.4, 0, 10.4]); ms.sim(4.5, () => ms.ops().filter(x => x.char.pos[0] > 6.3).length >= 2);
-         ms.aim([8.5, 0.9, 7.65]); ms.sim(0.2); ms.verb('objective', 'defuse'); ms.sim(3.0); return { hit: !!g.defuse.sam };`,
-  cam: { look: [8.9, 0.95, 8.1], yaw: -0.6, pitch: 0.4, dist: 4.3 } };
 R['killhouse-four'] = { // midday; both pairs set on facing doors of the plywood hall, the word given: the first man through the tyre room's door fires
   query: 'levelFile=killhouse.json&roomclear&squad4&hour=midday' + Q, quality: 'medium', frames: 8,
   play: `ms.order('fallIn', ms.sam()); ms.go([13.6, 0, 13.3]); ms.sim(14, () => ms.arrived());

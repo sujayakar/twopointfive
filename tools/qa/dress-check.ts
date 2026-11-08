@@ -11,16 +11,16 @@
 //   DRESS_BREAK=1 bun run tools/qa/dress-check.ts         THE RED PATH: a gameplay step (the doors) is put down with the rows, and the check must fail
 // Exit 0 = every set is the same game · 1 = a run differs, or left nothing. Under DRESS_BREAK=1 it is the other way about, as every <NAME>_BREAK is: 1 = the
 // red path is red (every pair played and parted), 0 = it is NOT (the check is blind, or a run left nothing).
-// The stand is the server's unless the caller names another: shipped, the senses on the CPU (TPS_PROFILE / TPS_CPUSENSE in front, as rust-check.ts's missions).
+// The stand is the server's unless the caller names another: shipped, the page's (TPS_PROFILE in front, as rust-check.ts's missions).
 import { spawn } from 'node:child_process';
 import { pool, jobsOf } from './pool.ts';
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir ?? '.', '../..'), args = process.argv.slice(2), BREAK = process.env.DRESS_BREAK === '1';
 const flag = (n: string) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
-const RUNS = ['compound-four:1', 'warehouse-four:1', 'pass-four:1', 'hostage-rescue:1', 'block-squads:1'];
+const RUNS = ['compound-four:1', 'warehouse-four:1', 'pass-four:1', 'hostage-rescue:1'];
 
 if (args[0] === '--run') {
-  process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.PT_DIGEST ??= '1';
+  process.env.TPS_PROFILE ??= 'shipped'; process.env.PT_DIGEST ??= '1';
   const [scn, seed] = args[1].split(':'), down = (args[2] ?? '').split(',').filter(Boolean);
   const { Game } = await import(`${ROOT}/src/game/game.ts`);
   const PT: any = await import(`${ROOT}/tools/qa/playthrough.ts`);
@@ -38,14 +38,14 @@ if (args[0] === '--run') {
   const t0 = performance.now();
   const r = await PT.play(scn, Number(seed), 300, false, WX ? { WEATHER: { kind: WX } } : {});
   if (TRACE) (await import('node:fs')).writeFileSync(TRACE, JSON.stringify(trace));
-  console.log('DRESS-RUN ' + JSON.stringify({ run: args[1], down: down.length, ticks, held, wet, profile: process.env.TPS_PROFILE, cpu: process.env.TPS_CPUSENSE, end: String(r.end), digest: String(r.digest), bits: h.toString(36), secs: Math.round((performance.now() - t0) / 100) / 10 }));
+  console.log('DRESS-RUN ' + JSON.stringify({ run: args[1], down: down.length, ticks, held, wet, profile: process.env.TPS_PROFILE, end: String(r.end), digest: String(r.digest), bits: h.toString(36), secs: Math.round((performance.now() - t0) / 100) / 10 }));
   process.exit(0);
 }
 
 interface Run { run: string; down: number; ticks: number; held: number; wet: number; profile: string; cpu: string; end: string; digest: string; bits: string; secs: number }
 const WEATHER = flag('--weather');
 const one = (run: string, down: string[]): Promise<Run | string> => new Promise(done => {
-  const env = { ...process.env, TPS_PROFILE: process.env.TPS_PROFILE ?? 'shipped', TPS_CPUSENSE: process.env.TPS_CPUSENSE ?? '1', PT_DIGEST: '1', ...(WEATHER ? { DRESS_WEATHER: WEATHER } : {}) } as Record<string, string>;
+  const env = { ...process.env, TPS_PROFILE: process.env.TPS_PROFILE ?? 'shipped', PT_DIGEST: '1', ...(WEATHER ? { DRESS_WEATHER: WEATHER } : {}) } as Record<string, string>;
   const p = spawn('bun', ['run', 'tools/qa/dress-check.ts', '--run', run, down.join(',')], { cwd: ROOT, env }); let out = '', err = '';
   p.stdout.on('data', (d: unknown) => { out += d; }); p.stderr.on('data', (d: unknown) => { err += d; });
   p.on('close', code => { const l = out.split('\n').find(x => x.startsWith('DRESS-RUN ')); done(l ? JSON.parse(l.slice(10)) as Run : `left nothing (exit ${code}): ${err.trim().split('\n').slice(-3).join(' / ').slice(0, 300)}`); });

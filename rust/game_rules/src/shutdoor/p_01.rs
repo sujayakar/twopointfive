@@ -38,12 +38,12 @@ pub fn note(g: &mut crate::game::Game, gd: GuardId, d: DoorId, what: &str) {
 }
 
 /// Does d stand open (off its hinges it reads wide open: its row is there, greyed). (shutdoor.ts standsOpen)
-pub fn stands_open(g: &mut crate::game::Game, d: DoorId) -> bool {
+pub fn stands_open(g: &crate::game::Game, d: DoorId) -> bool {
     !crate::doors::door_latched(g, d) && m::abs(crate::doors::door_angle(g, d)) >= k().open
 }
 
 /// The floor the leaf crosses on its way shut from where it stands now, with `pad` m of slack. (shutdoor.ts inShutSwing)
-pub fn in_shut_swing(g: &mut crate::game::Game, d: DoorId, x: f64, z: f64, pad: Option<f64>) -> bool {
+pub fn in_shut_swing(g: &crate::game::Game, d: DoorId, x: f64, z: f64, pad: Option<f64>) -> bool {
     let pad = pad.unwrap_or(0.0);
     let f = crate::guards::frame_of(g, d);
     let (px, pz) = (x - f.hx, z - f.hz);
@@ -190,7 +190,7 @@ pub fn plan(g: &mut crate::game::Game, d: DoorId, men: &[GuardId]) -> crate::shu
 }
 
 /// inTheWay's `body`: a body lying in the leaf's way (the particles a leaf feels).
-fn body_in_swing(g: &mut Game, d: DoorId, c: CharId) -> bool {
+fn body_in_swing(g: &Game, d: DoorId, c: CharId) -> bool {
     let rag = match g.ch[c].ragdoll { Some(rag) => rag, None => return false };
     if flat(g.ch[c].pos, g.dr[d].frame_centre) > 4.0 { return false; }
     let r = crate::ragdoll::rag();
@@ -300,7 +300,7 @@ pub fn finish(g: &mut crate::game::Game, gd: GuardId, j: Option<crate::shutdoor:
     let p = g.ch[c].pos;
     if j.map_or(false, |j| j.back) {
         let a = crate::orders::SquadOrdersAssignA {
-            order: String::from("fallIn"),
+            order: String::from(crate::orders::rows::fallin::ORDER.id),
             post: None,
             follow: Some(99.0),
             face: None,
@@ -317,7 +317,7 @@ pub fn finish(g: &mut crate::game::Game, gd: GuardId, j: Option<crate::shutdoor:
         None => String::from("holding"),
     };
     let a = crate::orders::SquadOrdersAssignA {
-        order: String::from("hold"),
+        order: String::from(crate::orders::rows::hold::ORDER.id),
         post: Some([p[0], 0.0, p[2]]),
         face: Some(g.ch[c].body_yaw),
         going: String::from("holding"),
@@ -472,18 +472,12 @@ pub fn order_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders
 
 /// The row, on the door tools' page in the charge's place while the door stands open. (shutdoor.ts registerShutDoor)
 pub fn register_shut_door(g: &mut crate::game::Game) {
-    let def = crate::orders::OrderDef {
-        id: String::from(SHUT_ID),
-        label: crate::orders::OrderLabel::Text { text: String::from("shut that door") },
+    let def = crate::orders::rows::def(&crate::orders::rows::shutdoor::ORDER, crate::orders::OrderDef {
         targets: vec![crate::orders::TargetKind::Door],
         ack: Some(vec![String::from("shutting it."), String::from("got the door.")]),
-        stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from(STOOD), when: crate::orders::OrderWhen::ShutDoor }),
-        only: Some(crate::orders::OrderOnly::ShutDoor),
-        valid: Some(crate::orders::OrderValid::ShutDoor),
-        issue: crate::orders::OrderIssue::ShutDoor,
-        tick: Some(crate::orders::OrderTick::ShutDoor),
+        stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from(crate::orders::rows::charge::ORDER.id) }),
         ..crate::orders::OrderDef::zeroed()
-    };
+    });
     let id = crate::orders::squad_orders_row(g, def);
     crate::orders::squad_orders_register(g, id, None);
 }

@@ -75,7 +75,7 @@ pub fn fog_of_war_on_team(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 fn fresh_rec() -> crate::fogofwar::Rec {
-    crate::fogofwar::Rec { seen: false, framed: None, t: -1e9, at: None, wand_t: None, body: false, smoked: false, smoke_f: -1e9 }
+    crate::fogofwar::Rec { seen: false, framed: None, t: -1e9, at: None, wand_t: None, body: false}
 }
 
 fn bone_or(g: &crate::game::Game, c: CharId, b: crate::character::Bone, y: f64) -> V3 {
@@ -92,16 +92,6 @@ fn players(g: &mut crate::game::Game) -> Vec<PlayerId> { crate::seats::men(g) }
 
 fn is_dead(g: &crate::game::Game, gd: GuardId) -> bool { g.gd[gd].state == crate::game::GuardState::Dead }
 
-/// `fow…` key of one eye's smoke line to one man: 'W' for the player's lens, 'W' + id for a teammate's ordered one. (fogofwar.ts:539)
-fn smoke_key(e: &crate::fogofwar::FogEye, pid: f64, man: f64) -> String {
-    if e.wand == Some(true) {
-        if e.id == pid { alloc::format!("fowW_{}", man) } else { alloc::format!("fowW{}_{}", e.id, man) }
-    } else { alloc::format!("fow{}_{}", e.id, man) }
-}
-
-/// One man's lines waiting on the smoke (update()'s jobs).
-struct Job { gd: GuardId, chest: V3, pairs: Vec<(String, crate::fogofwar::FogEye)> }
-
 /// Once a frame after everybody has moved; asked outside a tick, the pass stands the copy of the box world for itself. (FogOfWar.update)
 pub fn fog_of_war_update(g: &mut crate::game::Game, dt: f64) {
     if crate::scene_collision::standing(g) { fog_of_war_pass(g, dt); } else { crate::scene_collision::window(g, &mut |g| fog_of_war_pass(g, dt)); }
@@ -114,7 +104,7 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
         if g.fog_of_war.live || g.fog_of_war.loaded {
             crate::fogofwar::picture::off(g);
             let f = &mut g.fog_of_war;
-            f.loaded = false; f.props_loaded = false; f.eyes = Vec::new(); f.hidden_chars.clear(); f.pending.clear(); f.door_recs.clear(); f.doors_held = 0.0; f.thing_recs.clear();
+            f.loaded = false; f.props_loaded = false; f.eyes = Vec::new(); f.hidden_chars.clear(); f.door_recs.clear(); f.doors_held = 0.0; f.thing_recs.clear();
             f.fired_n = JsMap::new(); f.fired_at = JsMap::new(); f.fire_clock = 0.0; f.lamp_recs.clear();
             f.live = false;
             g.engine.lights.fog_team.on = false;
@@ -135,7 +125,7 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
             if g.seats.len() != 1 && eyes.len() as f64 >= cap { return; }   // (v !== g: only a view differs, and a game of one lends itself)
             let c = g.pl[g.player].ch;
             let own = fog_of_war_eye_of(g, c);
-            let e = match crate::wand::wand_eye(g) {
+            let e = match crate::wand::wand_eye(g, &crate::seats::here(g)) {
                 Some(e) => e,
                 None => crate::peeksight::peek_eye(g, own).unwrap_or(own),
             };
@@ -165,7 +155,7 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
         });
     }
     crate::seats::each_seat(g, &mut |g| {
-        for e in crate::stickycam::sticky_eyes(g) {
+        for e in crate::stickycam::sticky_eyes(g, &crate::seats::here(g)) {
             if eyes.len() as f64 >= cap { g.stats.stickycam.blind += 1; break; }
             eyes.push(e);
         }
@@ -231,7 +221,6 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
         }
     }
     // ---- everybody else: seen by any of them?
-    g.fog_of_war.pending.clear();
     g.fog_of_war.hidden_chars.clear();
     g.fog_of_war.stats.tested = 0.0; g.fog_of_war.stats.seen = 0.0; g.fog_of_war.stats.hidden = 0.0; g.fog_of_war.stats.smoke_hid = 0.0; g.fog_of_war.stats.by_fire = 0.0;
     let pl = players(g);
@@ -250,7 +239,6 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
         if !fog_of_war_on_team(g, cv) && !gone { men.push(cv); }
     }
     let mut lines: JsMap<GuardId, bool> = JsMap::new();
-    let mut jobs: Vec<Job> = Vec::new();
     fog_of_war_hand_eyes(g, &eyes);
     for &gd in men.iter() {
         let dead = is_dead(g, gd);
@@ -262,12 +250,13 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
         }
         let c = g.gd[gd].ch;
         let chest = chest_of(g, c);
-        if g.k.fog.smoke <= 0.0 {
+        if g.k.fog.smoke <= 0.0 || !crate::sense::smoky(g) {
             let seen = fog_of_war_sees(g, &eyes, IN_ORDER, 1.0, gd, Some(chest)) >= ONE_EYE;
             lines.set(gd, seen);
             continue;
         }
-        // the eyes with a clear line, nearest first (positions in `eyes`: the TypeScript's indexOf of the object)
+        // there is smoke somewhere: he is in view of any eye with a clear line to him that the smoke lets through, the nearest asked first, and the rest only
+        // where that one has smoke before it
         let mut near: Vec<usize> = Vec::with_capacity(eyes.len());
         let mut near_d: Vec<f64> = Vec::with_capacity(eyes.len());
         for (ei, e) in eyes.iter().enumerate() {
@@ -277,61 +266,18 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
             while k > 0 && near_d[k - 1] > d { near[k] = near[k - 1]; near_d[k] = near_d[k - 1]; k -= 1; }
             near[k] = ei; near_d[k] = d;
         }
-        let mut clear: Vec<usize> = Vec::new();
         let mut order: i32 = 0;
         for (k, &ei) in near.iter().enumerate() { order |= (ei as i32).wrapping_shl(4 * k as u32); }
-        let r = js::to_u32(fog_of_war_sees(g, &eyes, order as f64, SMOKE_EYES, gd, Some(chest)));
-        let c_n = r >> 28;
-        for k in 0..c_n { clear.push(((r >> (4 * k)) & 15) as usize); }
-        lines.set(gd, !clear.is_empty());
-        if !clear.is_empty() {
-            let man = g.ch[c].id;
-            let pairs = clear.iter().map(|&ei| (smoke_key(&eyes[ei], pid, man), eyes[ei])).collect();
-            jobs.push(Job { gd, chest, pairs });
+        let (mut clear, mut seen) = (0, false);
+        for want in [1.0, eyes.len() as f64] {
+            let r = js::to_u32(fog_of_war_sees(g, &eyes, order as f64, want, gd, Some(chest)));
+            let had = clear;
+            clear = r >> 28;
+            seen = (had..clear).any(|k| crate::sense::smoke_between(g, eyes[((r >> (4 * k)) & 15) as usize].pos, chest) >= g.k.fog.smoke);
+            if seen || clear == 0 { break; }
         }
-    }
-    // (2) the smoke along those lines, through the sensors
-    if !jobs.is_empty() {
-        g.fog_of_war.turn = js::rem(g.fog_of_war.turn + 1.0, jobs.len() as f64);
-        let turn = g.fog_of_war.turn as usize;
-        for round in 0..SMOKE_EYES as usize {
-            for i in 0..jobs.len() {
-                if g.fog_of_war.pending.len() as f64 >= SMOKE_ASKS { break; }
-                let j = (i + turn) % jobs.len();
-                if round >= jobs[j].pairs.len() { continue; }
-                let at = js::rem(round as f64 + frame + j as f64, jobs[j].pairs.len() as f64) as usize;
-                let (key, e) = jobs[j].pairs[at].clone();
-                let last = g.fog_of_war.asked.get(key.clone()).copied();
-                if match last { None => true, Some(l) => frame - l > SMOKE_FRESH } { crate::sensors::sensors_forget(g, &key); }
-                g.fog_of_war.asked.set(key.clone(), frame);
-                let chest = jobs[j].chest;
-                g.fog_of_war.pending.push(crate::fogofwar::FogOfWarPendingItem { key, a: e.pos, b: chest });
-            }
-        }
-        g.fog_of_war.stats.smoke_asks += g.fog_of_war.pending.len() as f64;
-        for jb in jobs.iter() {
-            g.fog_of_war.recs.get_or_insert_with(jb.gd, fresh_rec);
-            let (mut known, mut open) = (0, false);
-            for (key, _) in jb.pairs.iter() {
-                let last = g.fog_of_war.asked.get(key.clone()).copied();
-                match last { None => continue, Some(l) => if frame - l > SMOKE_FRESH { continue; } }
-                let t = match crate::sensors::sensors_read(g, key) { Some(t) => t, None => continue };
-                known += 1;
-                if t >= g.k.fog.smoke { open = true; }
-            }
-            let r = g.fog_of_war.recs.get_mut(jb.gd).unwrap();
-            if known != 0 { r.smoked = !open; r.smoke_f = frame; }
-            if r.smoked && frame - r.smoke_f <= SMOKE_KEEP {
-                lines.set(jb.gd, false);
-                g.fog_of_war.stats.smoke_hid += 1.0;
-            }
-        }
-        if g.fog_of_war.asked.len() > 256 {
-            for k in g.fog_of_war.asked.keys() {
-                let f = g.fog_of_war.asked.get(k.clone()).copied().unwrap_or(frame);
-                if frame - f > SMOKE_KEEP { g.fog_of_war.asked.delete(k); }
-            }
-        }
+        if clear > 0 && !seen { g.fog_of_war.stats.smoke_hid += 1.0; }
+        lines.set(gd, seen);
     }
     // (3) the verdicts
     for &gd in men.iter() { judge(g, gd, &lines, view.as_deref()); }
@@ -609,25 +555,12 @@ pub fn fog_of_war_in_field(g: &crate::game::Game, e: crate::fogofwar::FogEye, p:
     (dx * e.look[0] + dz * e.look[2]) / (d * l) > m::cos(fov * 0.5 * DEG)
 }
 
-/// The frame's smoke segments, queued for the probe after everybody else's. (FogOfWar.flushAsks)
-pub fn fog_of_war_flush_asks(g: &mut crate::game::Game) {
-    if g.fog_of_war.pending.is_empty() { return; }
-    let pending = core::mem::take(&mut g.fog_of_war.pending);
-    for p in pending.iter() {
-        let room = if g.sensors.own.is_some() { None } else { Some(crate::sensors::probe_like_room(g)) };
-        let full = match room { Some(r) => r <= 0.0, None => false };
-        crate::sensors::sensors_ask_segment(g, &p.key, p.a, p.b);
-        if full { crate::sensors::sensors_forget(g, &p.key); }
-    }
-    g.fog_of_war.pending.clear();
-}
-
 /// A fresh encounter: nobody has been seen, no pair asked. (FogOfWar.reset)
 pub fn fog_of_war_reset(g: &mut crate::game::Game) {
     crate::fogofwar::picture::reset(g);
     let f = &mut g.fog_of_war;
     f.lamp_recs.clear(); f.door_recs.clear(); f.doors_held = 0.0; f.thing_recs.clear(); f.props_loaded = false; f.loaded = false; f.our_landed.clear(); f.thing_since = -1.0;
-    f.recs = JsMap::new(); f.asked.clear(); f.pending.clear(); f.turn = 0.0; f.frame_no = 0.0; f.hidden_chars.clear(); f.fired_n = JsMap::new(); f.fired_at = JsMap::new(); f.shown = JsSet::new(); f.fire_clock = 0.0;
+    f.recs = JsMap::new(); f.frame_no = 0.0; f.hidden_chars.clear(); f.fired_n = JsMap::new(); f.fired_at = JsMap::new(); f.shown = JsSet::new(); f.fire_clock = 0.0;
     f.call_clock = 0.0; f.last_call = -1e9; f.called_t = JsMap::new(); f.known_t = JsMap::new(); f.told_step = JsMap::new(); f.call_n = 0.0; f.call_log = Vec::new(); f.call_stats = crate::fogofwar::FogOfWarCallStats { contact: 0.0, heard: 0.0 };
 }
 
@@ -735,13 +668,13 @@ pub fn fog_of_war_door_seen(g: &mut crate::game::Game, d: DoorId, shown: f64) ->
 }
 
 /// Is this door drawn where the team last saw it rather than where it stands. (FogOfWar.doorHeld)
-pub fn fog_of_war_door_held(g: &mut crate::game::Game, d: DoorId) -> bool {
+pub fn fog_of_war_door_held(g: &crate::game::Game, d: DoorId) -> bool {
     let shown = match g.fog_of_war.door_recs.get(d) { Some(r) => r.shown, None => return false };
     fog_of_war_active(g) && m::abs(crate::doors::door_angle(g, d) - shown) > DOOR_EPS
 }
 
 /// The angle the picture has this door at. (FogOfWar.doorShown)
-pub fn fog_of_war_door_shown(g: &mut crate::game::Game, d: DoorId) -> f64 {
+pub fn fog_of_war_door_shown(g: &crate::game::Game, d: DoorId) -> f64 {
     if let Some(s) = g.fog_of_war.door_recs.get(d).map(|r| r.shown) {
         if fog_of_war_active(g) { return s; }
     }
@@ -840,14 +773,6 @@ mod tests {
 
     fn eye(id: f64, wand: Option<bool>) -> crate::fogofwar::FogEye {
         crate::fogofwar::FogEye { id, pos: [0.0; 3], look: [0.0, 0.0, 1.0], at: [0.0; 3], fov: Some(90.0), near: Some(1.0), wand }
-    }
-
-    /// JavaScript's text of a whole number, under the three shapes of line 539: a key the sensors and the TypeScript's journal agree on.
-    #[test]
-    fn smoke_keys_read_as_the_typescripts() {
-        assert_eq!(smoke_key(&eye(5.0, None), 5.0, 9.0), "fow5_9");
-        assert_eq!(smoke_key(&eye(5.0, Some(true)), 5.0, 9.0), "fowW_9");
-        assert_eq!(smoke_key(&eye(7.0, Some(true)), 5.0, 9.0), "fowW7_9");
     }
 
     /// inField's three ways in: all round, the near field, the wedge (cos 45 degrees either side of the look).

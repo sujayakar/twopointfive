@@ -116,7 +116,6 @@ impl Default for Track { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum ManState {
     Dead,
-    Wounded,
     Out,
     Up,
 }
@@ -124,7 +123,6 @@ impl ManState {
     pub const fn as_str(self) -> &'static str {
         match self {
             ManState::Dead => "dead",
-            ManState::Wounded => "wounded",
             ManState::Out => "out",
             ManState::Up => "up",
         }

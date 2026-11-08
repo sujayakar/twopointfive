@@ -1,9 +1,13 @@
-// WHAT THIS MACHINE KEEPS OF HOW IT PLAYS, as the commands a game is handed: the difficulty and its levers before it is made, the sandbox row once it stands. The
+// WHAT THIS MACHINE KEEPS OF HOW IT PLAYS, as the commands a game is handed: the difficulty, its levers and the men's cards before it is made, the sandbox row and the autosave switch once it stands. The
 // address's words win over what is kept, for the visit.
 import type { Commands } from '../draw/commands';
+import { KIT_KEPT } from '../view/desk';
+import { autosaveKept, sandboxKept } from './sandbox';
 
 /** the levers' keys and the address's word for each (game/difficulty.ts) */
 const LEVERS: readonly (readonly [string, string])[] = [['fog', 'fog'], ['ai', 'enemyai'], ['kit', 'enemykit'], ['told', 'told']];
+/** this machine keeps difficulty levers of its own */
+export const leversKept = (): boolean => Object.keys(json('twopointsix.levers')).length > 0;
 const kept = (key: string): string | null => { try { return localStorage.getItem(key); } catch { return null; } };
 function json(key: string): Record<string, unknown> { try { const o: unknown = JSON.parse(kept(key) ?? 'null'); return typeof o === 'object' && o !== null ? o as Record<string, unknown> : {}; } catch { return {}; } }
 
@@ -18,14 +22,18 @@ export function machineBefore(q: URLSearchParams, level: string, C: Commands): v
     for (const [key] of LEVERS) if (typeof mine[key] === 'string') C.lever(key, mine[key]);
     for (const [key, said] of LEVERS) { const rung = q.get(said); if (rung) C.lever(key, rung); }
   }
+  { const cards = kept(KIT_KEPT); if (cards !== null && !q.has('nokit')) C.kit(cards); }
+  { const rung = kept('twopointsix.quietfog'), cams = kept('twopointsix.quietcams'); if (rung !== null) C.quietFog(rung); if (cams === '1' || cams === '0') C.quietCams(cams === '1' ? 1 : 0); }
   if (q.has('digin')) C.digIn(1);
   if (q.has('pressure')) C.pressure(q.get('pressure') !== '0' ? 1 : 0);
   if (q.has('fogcone')) C.fogCone(q.get('fogcone') !== '0' ? 1 : 0);
 }
 /** once it stands */
-export function machineAfter(C: Commands): void {
-  const s = json('twopointsix.sandbox');
-  if (s.god === true) C.god(1);
-  if (s.noAi === true) C.ai(0);
-  if (s.ammo === true) C.ammo(1);
+/** `sandbox`: the sandbox row too (a run's page stands it off: its fight is the set's) */
+export function machineAfter(C: Commands, sandbox = true): void {
+  const s = sandbox ? sandboxKept() : {};
+  if (s.god) C.god(1);
+  if (s.noAi) C.ai(0);
+  if (s.ammo) C.ammo(1);
+  if (!autosaveKept()) C.autosave(0);
 }

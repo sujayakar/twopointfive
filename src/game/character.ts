@@ -18,7 +18,7 @@ import { feedPath, feedLive } from './gunreload';   // (read inside methods only
 import type { GunModelId } from './weapons';
 import { INHAND, BELT_TORCH, InHandWord } from './inhand';   // (a leaf: the switch and its numbers)
 import { GUNHAND } from './gunhand';   // (a leaf: the switch and its keys)
-import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { simDraw, simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 export type UpperMode = 'none' | 'relaxed' | 'aim' | 'torch';
@@ -738,8 +738,7 @@ export const MOVES = { on: 1, recoil: 1, toss: 1, dazzle: 1, flinch: 1, gait: 1,
    *  as if it were not dipped (`sightsLift`). The weapon light stays down with the muzzle, as a real one does. */
   reload: 1, bound: 1, clutch: 1, entry: 0, entryEyes: 0,
   /** the clutch's FOLD: a man knocked about and still up stays doubled over the hurt, swaying, for as long as the game roots him — the TRUNK and head, so not
-   *  arms-only (his hit columns and a lowered gun move with it; he fires nothing while rooted). NOT on with the pass: 0 = it comes up with the wounds switch and
-   *  only with it (FOLD_WITH below — wounds off, the trunk of a staggered man is the base's), 1 = on by itself (`?fold`), -1 = never (`?fold=0`). */
+   *  arms-only (his hit columns and a lowered gun move with it; he fires nothing while rooted). NOT on with the pass: 0 = off (the trunk of a staggered man is the base's), 1 = on by itself (`?fold`), -1 = never (`?fold=0`). */
   fold: 0,
   /** THE SNAP SHOT (a pistol fired from the relaxed carry; the same trade when the aim is raised or let go by hand). The carry and the two-hand aim are two
    *  layers eased on two clocks (9 and 14 a second), so while they traded neither had the arm and the base clip's HANGING arm came through from under both: a
@@ -780,8 +779,7 @@ export const MOVES = { on: 1, recoil: 1, toss: 1, dazzle: 1, flinch: 1, gait: 1,
    *  with a rifle in both hands that is the player: a teammate tops out under the jog's speed and his run is the old hold to the bit. */
   steadyRun: 1 };
 /** who else raises the fold while MOVES.fold is 0: wounds.ts hands its switch in (this file reads no game table) */
-export const FOLD_WITH = { on: (): boolean => false };
-const foldOn = (too = false) => MOVES.on > 0.5 && MOVES.clutch > 0.5 && (MOVES.fold > 0.5 || (MOVES.fold === 0 && (too || FOLD_WITH.on())));   // (`too`: the figure's own `foldToo` — condition.ts raises the fold with its switch as wounds.ts does with its own)
+const foldOn = (too = false) => MOVES.on > 0.5 && MOVES.clutch > 0.5 && (MOVES.fold > 0.5 || (MOVES.fold === 0 && too));   // (`too`: the figure's own `foldToo` — condition.ts raises the fold with its switch as wounds.ts does with its own)
 export function setMoves(on: boolean) { MOVES.on = on ? 1 : 0; }
 try { const q = new URLSearchParams(location.search); if (q.has('moves')) MOVES.on = q.get('moves') !== '0' ? 1 : 0; if (q.has('nomoves')) MOVES.on = 0; if (q.has('entry')) { MOVES.entry = q.get('entry') !== '0' ? 1 : 0; MOVES.entryEyes = q.get('entry') === 'eyes' ? 1 : 0; } if (q.has('fold')) MOVES.fold = q.get('fold') !== '0' ? 1 : -1; if (q.has('snap')) MOVES.snap = q.get('snap') !== '0' ? 1 : 0; if (q.has('steady')) MOVES.steady = q.get('steady') === '0' ? 0 : q.get('steady') === '2' ? 2 : 1; } catch { /* no page (the harness) */ }
 const mvOn = (k: keyof typeof MOVES) => MOVES.on > 0.5 && MOVES[k] > 0.5;
@@ -1431,7 +1429,6 @@ export class CharacterAnimator {
   aimYawOffset = 0;          // chest yaw relative to body (rad)
   aimPitch = 0;              // rad, positive = up
   lookYawExtra = 0;          // additional head/neck yaw (looking around)
-  lookPitchExtra = 0;        // additional head/neck pitch, + = chin down (nothing sets it, and 0 adds no twist: the field goes when the wire drops it)
   /** TURN (Character.turnWeigh): how far his wish is ahead of where his gun has got to, eased — the neck carries it, so the head is on a new point before the muzzle (rad; 0 with the weight off) */
   turnLead = 0;
   /** Ready posture layered under the aim layer (aim / firing still win): 'highReady' pistol up under the eye line, elbows in, leaning into it — pieing a corner,
@@ -1686,8 +1683,6 @@ export class CharacterAnimator {
   low = 0; private lowS = 0; /** its shape as fed: [drop m, back m, lean °] */ lowShape: [number, number, number] = [0, 0, 0];
   /** STALK.wide (fed by close.ts with the sink, closing on a man from behind): his arms out wide and low, 0‥1, and the shape as fed [out, down, ahead m] — the share shown is eased */
   wide = 0; wideShape: [number, number, number, number] = [0, 0, 0, 0]; widePole: Vec3 | null = null; private wideS = 0;
-  /** TAP TO STEP (tapstep.ts): how far through this step the legs are, −1 = no steps · the step's count · the way the cycle runs. The legs go from wherever they stand to the next plant, and in between stand where they are: taken over from a creep let go of, they do not move at all */
-  tapU = -1; tapN = 0; tapWay: 1 | -1 = 1; private tapSeen = -1; private tapFrom = 0; private tapTo = 0; private tapWas = -1;
   heft = 0; /** its shape as fed: [twist °, swing m, weight over the foot m, lean °, dip m, surge] */ heftShape: [number, number, number, number, number, number] = [0, 0, 0, 0, 0, 0]; private hf = { s: 0, sv: 0, a: 0, av: 0, w: 0, wv: 0, v: 0, vv: 0, t: 0 };
   /** …and with it (STALK.low): this share of the carriage's raised hands is given up, at any distance — his hands stay down by his knees, the crouch's own (0 = the carriage as it was) */ handsDown = 0;
   /** …and the SPRING out of it (close.ts closeTick, through a stalk's grab): the rate he comes up out of the crouch at (0 = the animator's own 10) */ spring = 0;
@@ -1910,7 +1905,7 @@ export class CharacterAnimator {
       if (zmax > zmin) this.sprintMid = (zmin + zmax) / 2; if (ymin < 1e8) this.sprintFloorY = ymin;
       this.runGait.sprint = this.stanceOf(ty, tz) ?? this.runGait.sprint; }
     } finally { POSEMATH.singles = poseRule; }
-    this.phase = simRandom();
+    this.phase = simDraw('character::anim_new#1');
   }
   /** every named node of the rig this animator has no number for yet (the rig says each; a table that came over the bridge with one missing is made whole) */
   private nodeTable(): void { const ch = this.ch, T = this.nodes as Record<string, number>;
@@ -2225,11 +2220,6 @@ export class CharacterAnimator {
     if (s < 0.05) rate = 0;
     if (gH > 0) rate = lerp(rate, lerp((wWalk / (P.walkSpeed * c.Walk_Loop.duration) + wJog / (P.jogSpeed * c.Jog_Fwd_Loop.duration * Kj) + wSprint / (P.sprintSpeed * c.Sprint_Loop.duration)) / wsum, 1 / (P.crouchSpeed * c.Crouch_Fwd_Loop.duration * strideD), this.crouch) * this.crV, gH);   // (cycles per metre × the metres a second the root really made: the stride moves on with the ground and stops with it)
     this.phase = (this.phase + dt * rate * (this.reverse ? -1 : 1) + 100) % 1;
-    if (this.tapU >= 0 && gH > 0) {   // (tapstep.ts: the stride belongs to the step)
-      if (this.tapWas < 0) { this.tapSeen = this.tapN; this.tapFrom = this.tapTo = this.phase; }
-      else if (this.tapN !== this.tapSeen) { this.tapSeen = this.tapN; const p = this.creepPlant()[1], w = this.tapWay, off = ((this.phase - p) % 0.5 + 0.5) % 0.5, go = w > 0 ? 0.5 - off : off; this.tapFrom = this.phase; this.tapTo = this.phase + w * (go < 0.2 ? go + 0.5 : go); }   // (a short way to the next plant is no step: the one after)
-      this.phase = (this.tapFrom + (this.tapTo - this.tapFrom) * clamp(this.tapU, 0, 1) + 100) % 1; }
-    this.tapWas = gH > 0 ? this.tapU : -1;
     if (WALLSNAP.on && WALLSNAP.pose) {   // the wall hold's own step clock (wallBody: WALL_POSE.gait) — SIGNED along the wall (his right +), so a reversal walks the same soles back; parked it rests where the lead foot is just down and the other about to leave
       if (this.stance === 'wall') this.wallGait = (this.wallGait + dt * s * this.stackSide * (this.reverse ? -1 : 1) / (2 * lerp(WALL_POSE.gait.step[0], WALL_POSE.gait.step[1], clamp(this.crouch, 0, 1))) + 100) % 1;
       else this.wallGait = WALL_GAIT_REST;   // (stopped ON the wall it stands where it stopped until the parked spots have the feet whole — wallBody puts it back to rest then: no sole jumps under a stop)
@@ -2583,7 +2573,6 @@ export class CharacterAnimator {
     this.twists.push({ node: nd.spine2, yaw: y * 0.35, pitch: 0 });
     this.twists.push({ node: nd.spine3, yaw: y * 0.40, pitch: -p * 0.35 });
     if (Math.abs(look) > 1e-3) { this.twists.push({ node: nd.neck, yaw: look * 0.4, pitch: 0 }); this.twists.push({ node: nd.head, yaw: look * 0.6, pitch: 0 }); }
-    if (this.lookPitchExtra !== 0) { this.twists.push({ node: nd.neck, yaw: 0, pitch: this.lookPitchExtra * 0.4 }); this.twists.push({ node: nd.head, yaw: 0, pitch: this.lookPitchExtra * 0.6 }); }
     if (this.nv || this.smoke !== null) {   // (KIT.nv, and a smoke: what turns the head after the layers, kept for the hand's reach next frame)
       const w = this.nvTw; w[0] = w[1] = w[2] = w[3] = 0;
       for (const t of this.twists) { if (t.node === nd.neck) { w[0] += t.yaw; w[1] += t.pitch; } else if (t.node === nd.head) { w[2] += t.yaw; w[3] += t.pitch; } }
@@ -4373,7 +4362,7 @@ export class Character extends ManCols {
   update(dt: number) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Character.update', this, [dt]); if (__r !== RUST_PASS) return __r as any; } } const lent = stageOpen(this.anim.poses); try { this.updateStanding(dt); } finally { if (lent) stageShut(this.anim.poses); } }
   private updateStanding(dt: number) {
     if (this.ragdoll) { this.updateRagdoll(dt); return; }
-    if (this.turn.on && TURN.on > 0.5 && dt > 0 && !this.anim.wound) this.turnWeigh(dt);   // (a man down wounded turns to nothing: wounds.ts dropped his turn as he went)
+    if (this.turn.on && TURN.on > 0.5 && dt > 0 && !this.anim.wound) this.turnWeigh(dt);
     else {   // not weighed — or a dt-0 bake: a RE-BAKE in place (game.ts updateProps, a frozen clock: his yaws untouched since they were handed back, or put back to the wish by turnBegin and not rewritten) keeps his turn going; a staging (yaws rewritten, or moved) takes them as written and the next frame starts from them
       const T = this.tn;
       if (T && dt <= 0 && this.turn.on && TURN.on > 0.5 && (this.bodyYaw === T.body || this.bodyYaw === T.ib) && (this.aimYaw === T.aim || this.aimYaw === T.ia) && hyp2(this.pos[0] - T.x, this.pos[2] - T.z) <= TURN.jump) { this.bodyYaw = T.body; this.aimYaw = T.aim; }
@@ -4535,7 +4524,6 @@ export class Character extends ManCols {
     if (!this.tn) this.update(0);   // (the bake read the turn as a staging — he stands further from where it was weighed than a turn is carried: no turn, and he is posed at the yaws he is left with)
   }
   /** TURN let go of (wounds.ts: a man going down wounded stays a posed figure): his yaws become the ones that were drawn, and no turn is carried on */
-  turnDrop() { if (this.tn) { this.bodyYaw = this.tn.body; this.aimYaw = this.tn.aim; this.tn = null; } }
   /** where his GUN is in yaw — for a fire gate that runs inside his own AI update (guards.ts, aim.ts), where aimYaw reads as the wish: he may not fire down a line his
    *  gun has not reached. aimYaw itself with the weight off, and wherever aimYaw is already the turned yaw (everything outside his update). */
   get gunYaw(): number { const T = this.tn; return T && !this.ragdoll ? T.aim : this.aimYaw; }

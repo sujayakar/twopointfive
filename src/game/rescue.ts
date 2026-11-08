@@ -111,12 +111,7 @@ export const RESCUE = {
   /** dynamic tempo (rescueflow.ts): once the clock runs the last man in the file covers each opening Sam passes, unasked, and catches up (off = the pair only
    *  follow — the build as it was: the tally's A/B); a lone man still peels off to cover (off = he stays on Sam); the strips on the floor across each opening
    *  and the objective line's 'behind you' */
-  flow: true, flowSolo: true, marks: true,
-  /** true = the man covering an opening with one of theirs known behind it stays on it for as long as the room is HOT (rescueflow.ts: until it has been seen
-   *  empty, the man is seen elsewhere or down, or FLOW.hotSecs after the last sign of him) — or until Sam calls him on. Ships OFF = as it was (FLOW.hotHold,
-   *  6 s after the last sight: 'lost him — moving.'): over 24 seeds of the scripted rescue it bought nothing with the team's goggles on (24 won, nobody lost,
-   *  either way) and with them off it cost men — 13 of 48 teammates lost against 3: the pair split for longer, and the man left behind met the roamer alone */
-  holdHot: false,
+  flow: true, marks: true,
   /** F with a man posted in the server room (or pressed from in there with both men free): he takes the side door, the other the corridor door, on one signal;
    *  a man Sam has put on a cover of his own is left on it. Off = F takes whoever is up to the corridor door — but for one fix that has no switch: a man sent
    *  there from inside the server room goes round by the corridor (roundBy), not through the side door and the hostage room */
@@ -134,8 +129,6 @@ export const RESCUE = {
    *               team's noise is at the hostage door and nobody is in his sights
    *  Each off = that much of Standard back (all three off = Hard on a rescue as it was: nothing) */
   crewDoor: true, crewCross: true, crewBehind: true, crewCallSecs: 1.5,
-  /** in the hostage room with a man of theirs still up in it, the team's men pan their lights across it instead of standing on their sectors (search()) */
-  roomSearch: true,
   /** the HUD line shows the captor's clock in seconds (tuning) instead of its three steps */
   clockAsSeconds: false,
   /** how many teammates are staged (game/loadout.ts — the page's ?squad=N; scenarioRun.ts writes it): 2 = the pair, exactly as it always was · 0 / 1 = nobody /
@@ -337,10 +330,10 @@ export class Rescue {
     (S.guards ?? []).forEach((m, i) => cast.push({ role: 'guard', inRoom: true, mark: m, name: `Room guard ${i + 1}` }));   // (the level's own: more guns that never leave the room — in no crew, not the door man)
     if (S.cast) {   // THE LEVEL'S OWN CAST: so many of its roamer marks manned, which ones drawn here (a partial shuffle off the staging's dice — no room is known empty)
       const idx = MARKS.roamers.map((_, i) => i), n = Math.max(0, Math.min(idx.length, Math.round(S.cast.roamers)));
-      if (K.seedRoamers) for (let i = 0; i < n; i++) { const j = i + Math.floor(simRandom() * (idx.length - i)); if (!SAMESTART.on) [idx[i], idx[j]] = [idx[j], idx[i]]; }   // (seedRoamers off, or samestart.ts on: the first n marks, as written — the die is drawn either way, here and twice below, so a run with the switch on rolls the same stream as the run with it off)
+      if (K.seedRoamers && !SAMESTART.on) for (let i = 0; i < n; i++) { const j = i + Math.floor(simRandom() * (idx.length - i)); [idx[i], idx[j]] = [idx[j], idx[i]]; }   // (seedRoamers off, or samestart.ts on: the first n marks, as written, and nothing drawn, here and twice below)
       idx.slice(0, n).sort((a, b) => a - b).forEach((m, i) => cast.push({ role: 'roamer', inRoom: false, mark: MARKS.roamers[m], name: `Roamer ${i + 1}` }));
     } else {
-    const swap = K.seedRoamers && simRandom() < 0.5 && !SAMESTART.on ? 1 : 0;   // (a staging-time draw, like the clock's length below)
+    const swap = K.seedRoamers && !SAMESTART.on && simRandom() < 0.5 ? 1 : 0;   // (a staging-time draw, like the clock's length below)
     for (let i = 0; i < Math.max(0, Math.min(MARKS.roamers.length, Math.round(K.roamers))); i++) cast.push({ role: 'roamer', inRoom: false, mark: MARKS.roamers[(i + swap) % MARKS.roamers.length], name: `Roamer ${i + 1}` });
     }
     cast.forEach((c, k) => {
@@ -364,7 +357,7 @@ export class Rescue {
       const cd = defs[i];
       this.hostages.push(spawnHostage(g, { name: cd?.name ?? (['Marta', 'Owen', 'Ines'][i] ?? `Hostage ${i + 1}`), kind: cd?.kind ?? (i === 0 ? 'cleaner' : 'worker'), tint: cd?.tint ?? (i === 0 ? [0.3, 0.42, 0.5] : i === 1 ? [0.5, 0.48, 0.42] : [0.46, 0.33, 0.36]), tint2: cd?.tint2, pos: m.pos, face: m.face }));
     });
-    this.resolve = 0; this.resolveSecs = Math.max(5, K.resolveSecs + (simRandom() * 2 - 1) * (SAMESTART.on ? 0 : K.resolveSpread)); this.t0 = NaN;   // (samestart.ts on: the clock is the knob's to the second; else a staging-time draw, as every Guard's construction draws: nothing is drawn while it runs)
+    this.resolve = 0; this.resolveSecs = Math.max(5, K.resolveSecs + (SAMESTART.on ? 0 : (simRandom() * 2 - 1) * K.resolveSpread)); this.t0 = NaN;   // (samestart.ts on: the clock is the knob's to the second; else a staging-time draw, as every Guard's construction draws: nothing is drawn while it runs)
     this.doorOrders = 0; this.blindRounds = 0; this.result = null;
     this.act = null; this.capBy = null; this.executed.clear(); this.counted.clear(); this.securedAt = NaN; this.step = 'waiting'; this.barkAt = 0; this.noise = null; this.alarmAt = NaN; this.way = null; this.lastOrder = g.orders.log[g.orders.log.length - 1] ?? null;
     const pl = g.player;

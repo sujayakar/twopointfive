@@ -317,7 +317,6 @@ impl Default for UnstickLeg { fn default() -> Self { Self::zeroed() } }
 pub struct SearchSpot {
     pub pos: V3,
     pub cell: f64,
-    pub key: String,
     pub kind: crate::guards::SearchSpotKind,
     pub hidden: bool,
     pub cover: f64,
@@ -337,7 +336,6 @@ impl SearchSpot {
         SearchSpot {
             pos: [0.0; 3],
             cell: 0.0,
-            key: String::new(),
             kind: crate::guards::SearchSpotKind::Wall,
             hidden: false,
             cover: 0.0,
@@ -1463,8 +1461,6 @@ pub struct GuardsMod {
     pub ground_track: JsMap<PlayerId, crate::guards::GuardsModGroundTrackValue>,
     /// (src/game/guards.ts:370 bodyMeters)
     pub body_meters: JsMap<GuardId, crate::guards::GuardsModBodyMetersValue>,
-    /// (src/game/guards.ts:375 bodyProbeN)
-    pub body_probe_n: Option<crate::guards::GuardsModBodyProbeNValue>,
     /// (src/game/guards.ts:874 holdsCalled)
     pub holds_called: JsSet<u32>,
     /// (src/game/guards.ts:874 floorBarkT)
@@ -1507,7 +1503,6 @@ impl GuardsMod {
         GuardsMod {
             ground_track: JsMap::new(),
             body_meters: JsMap::new(),
-            body_probe_n: None,
             holds_called: JsSet::new(),
             floor_bark_t: None,
             last_bark: JsMap::new(),
@@ -1568,9 +1563,6 @@ pub const MOTION_HUNT_FLOOR: f64 = 0.7;
 
 /// (src/game/guards.ts:368 BODY_LIGHT_DEFAULTS: a table nothing writes)
 pub fn body_light_defaults() -> crate::guards::BODYLIGHTDEFAULTS { crate::guards::BODYLIGHTDEFAULTS { lit: 0.22, lit_near: 0.04, near_m: 2.0, far_m: 5.0, smoke: 0.3 } }
-
-/// (src/game/guards.ts:374 BODY_PROBE_BUDGET)
-pub const BODY_PROBE_BUDGET: f64 = 6.0;
 
 /// (src/game/guards.ts:403 BODY_LIGHT_LS)
 pub const BODY_LIGHT_LS: &str = "twopointsix.bodyLight";

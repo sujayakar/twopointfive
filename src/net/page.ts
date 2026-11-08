@@ -28,7 +28,9 @@ import type { Input } from '../game/input';
 import type { View } from '../host/hud';
 import type { PlayerCmd } from '../game/cmd';
 import { sampleCmd } from '../game/cmd';                    // (game exports are called inside functions only: src/game is one import cycle)
+import { irMade, irViewer } from '../game/irlaser';
 import { activeScenario } from '../game/scenarioRun';
+import type { Box } from '../scene/boxes';
 import type { Stand } from '../host/ahead';
 import { RecipeStand } from '../replay/recipestand';
 import { recipeSearch, unseenDone } from '../replay/engineplay';
@@ -89,7 +91,7 @@ export interface NetHost {
   audio: { enabled: boolean; setVolumes(): void };
   loop: { tween?: { stale: boolean; rest(): void } | null };
   /** the picture's half of the prediction (host/ahead.ts AheadDraw): told, each page tick, where the game has the player's man and where his records take him */
-  ahead?: { capture(id: number, from: Stand, to: Stand): void; rest(): void; last?: unknown; readonly draws: number } | null;
+  ahead?: { capture(id: number, from: Stand, to: Stand): void; rest(): void; last?: unknown; readonly draws: number; hides: (() => ((b: Box) => boolean) | null) | null } | null;
 }
 export interface NetPageState { seat: number; state: string; confirmed: number; heard: number; behind: number; far: boolean; wordsOk: number; bad: { t: number; server: string; mine: string } | null; word: string;
   /** the wider word, watched (client.ts): word ticks it was the server's, was not, and the first that was not */ watchOk: number; watchOff: number; watchFirst: number | null;
@@ -196,6 +198,9 @@ export class NetPlay {
     if (activeScenario(g) !== this.recipe?.scenario || g.seats.length !== c.welcome?.seats) { this.alone = h; this.refuse = CANT_PLAY; this.close(); this.say(this.refuse); return; }   // (…and plays on as its own game under the words: tick below)
     this.host = h; netStand(g);
     if (c.seat >= 0) g.localSeat = g.seats[c.seat];   // (the seat this page plays is the one it shows — game/seats.ts: its man under the camera, its HUD, its record sampled; a watcher keeps the first. The simulation never reads it)
+    // (another player's goggles: an infrared line is in the frame's list on EVERY machine of a game once any player wears his — the Rust tick's ir_viewer asks
+    //  every seat's man, so that the machines hold one game. A page whose own man's eyes are bare leaves them out of what it draws)
+    if (h.ahead) h.ahead.hides = () => g.seats.length > 1 && !irViewer(g) ? irMade : null;
     const restart = g.restart.bind(g);   // (the player's restart: inside a tick — a key in a record — it is every machine's; from OUTSIDE one — a card's button — it is this page's alone, so not this page's to do)
     g.restart = said => { if (this.stepping) restart(said); else this.pass('You can’t restart a co-op game from here.'); };
     const load = g.saves.load.bind(g.saves);   // (…and a checkpoint's load, the same: the words are the card's own 'why it would not load')

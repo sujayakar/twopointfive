@@ -65,7 +65,7 @@ pub fn in_line(g: &mut crate::game::Game, h: GuardId, q: &[f64], low: bool) -> b
 
 /// the meter's reading for a man knelt at `q` (spotted.ts litAt)
 pub fn lit_at(g: &mut crate::game::Game, q: &[f64]) -> f64 {
-    let e = crate::guards::light_estimate_at(g, [q[0], 0.9, q[2]], None, None, None, None, None);
+    let e = crate::guards::light_estimate_at(g, [q[0], 0.9, q[2]], None, None, None);
     crate::game::game_visibility_of(g, e)
 }
 
@@ -93,6 +93,21 @@ pub fn live(g: &mut crate::game::Game, gd: GuardId) -> bool {
 pub fn spotted_mode(g: &mut crate::game::Game, gd: GuardId) -> crate::spotted::SpottedMode {
     if !live(g, gd) { return crate::spotted::SpottedMode::Calm; }
     match g.m.spotted.men.get(gd) { Some(r) => r.mode, None => crate::spotted::SpottedMode::Calm }
+}
+
+/// the squad line's word while a silent squad is not yet compromised: any man caught, else any man wary; None: nothing to add (spotted.ts spottedWord)
+pub fn spotted_word(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<&'static str> {
+    if !g.k.spotted.on || !crate::silent::squad_silent(g, seat) { return None; }
+    let mut wary = false;
+    for gd in crate::orders::squad_orders_squad(g, seat) {
+        if g.gd[gd].state == crate::game::GuardState::Dead { continue; }
+        match g.m.spotted.men.get(gd).map_or(crate::spotted::SpottedMode::Calm, |r| r.mode) {
+            crate::spotted::SpottedMode::Caught => return Some("SILENT · contact"),
+            crate::spotted::SpottedMode::Wary => wary = true,
+            crate::spotted::SpottedMode::Calm => {}
+        }
+    }
+    wary.then_some("SILENT · low")
 }
 
 /// the alert man who has them, while this teammate is caught (spotted.ts spottedBy)
@@ -446,7 +461,7 @@ pub fn hands(g: &mut crate::game::Game, gd: GuardId) {
             g.stats.spotted.taken += 1;
             crate::takedown::partner_fall(g, h, true, Some(gd));
             let line = alloc::format!("{} — {} is out cold", g.gd[gd].callsign, g.gd[h].callsign);
-            crate::combat::kill_guard(g, h, [-dx / d, 0.0, -dz / d], Some(true), Some(crate::game::DownKind::Struck), Some(crate::game::DownBy::Guard), Some(&line), None);
+            crate::combat::kill_guard(g, h, [-dx / d, 0.0, -dz / d], Some(true), Some(crate::game::DownKind::Struck), Some(crate::game::DownBy::Guard), Some(&line));
             g.gd[h].killer_id = g.ch[g.gd[gd].ch].id;
             let mode = man(g, gd).mode;
             log(g, t, gd, mode, Some("taken"), Some(h));

@@ -36,18 +36,12 @@
 // (No top-level statement here uses another game module's export: src/game is one import cycle.)
 import { SideMap } from '../math/side';
 import type { Vec3 } from '../math/vec';
-import { v3, wrapAngle } from '../math/vec';
-import type { Character } from './character';
+
 import type { Game, Guard } from './game';
 import type { ThrowSolution } from './throwables';
-import { HE40, arcLength, shellSolve } from './he40';
-import { civilianBodies } from './civilians';
-import { FRAG } from './frag';
-import { LAUNCHER40 } from './weapons';
-import { squadHandFree } from './squadsmoke';
-import { handsAtWork, mayWalk, squadFragCatches, type Lent } from './squadthrow';
-import { isHostile } from './teams';
-import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
+
+import { type Lent } from './squadthrow';
+
 import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 export const SQUAD40 = {
@@ -66,8 +60,6 @@ export const SQUAD40 = {
   aimSecs: 2, raiseSecs: 0.35, afterSecs: 0.4,
   /** the squad block names the shot this long (s) */
   shownSecs: 2.5,
-  /** the picture on the overlay (ui/squadthrowviz.ts): who fires, the arc, where it goes off and the burst's two radii */
-  draw: true,
 };
 /** `SQUAD40_BREAK=1` (the check's): the order is not there — no row, no round — whatever the switch says */
 const BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.SQUAD40_BREAK ?? '') === '1'; } catch { return false; } })();
@@ -79,7 +71,7 @@ export const SHELL_THERE = 'shellThere';
 interface Shot { gd: Guard; from: Vec3; to: Vec3; sol: ThrowSolution; burst: Vec3; aimed: boolean }
 /** a man turning to his shot: lent from his order (squadthrow.ts), the spot, since when, when the round went (−1: not yet), the arc as planned (the picture's) */
 interface Turn extends Lent { at: Vec3; t0: number; firedT: number; shot: Shot }
-interface State { rounds: Map<Guard, number>; brought: number; last: Map<Guard, number>; turns: Map<Guard, Turn>; noted: unknown;
+interface State { rounds: Map<Guard, number>; brought: number; last: Map<Guard, number>; turns: Map<Guard, Turn>;
   shown: { t: number; text: string } | null; kept: Map<Asker, { key: string; t: number; a: Shot | string; who: string | null }>; }
 /** who re-reads a plan inside a third of a second, each with an answer of his own: the row's two questions (the picture keeps none — its reads are a drawn
  *  frame's, and nothing a drawn frame does may be in the Game's state) */
@@ -89,7 +81,6 @@ export const SQUAD40_STATS = { staged: 0, fired: 0, turned: 0, refused: 0, gaveU
 /** every round fired on the order, newest last (QA; capped) */
 export const SQUAD40_LOG: { t: number; who: string; from: Vec3; at: Vec3; burst: Vec3; left: number; turned: boolean }[] = [];
 
-const flat = v3.distXZ;
 /** the launcher is under the gun in his hands: a long gun whose row has one (not his sidearm, not a shotgun — the big slot's or his own) */
 const tubeUp = (gd: Guard): boolean => { const d = gd.weapon.def; return d.cls !== 'pistol' && !d.pellets && d.launcher !== false; };
 /** the rounds the squad's men on their feet have between them (0: none brought, or all fired) · what this staging brought */
@@ -104,86 +95,10 @@ export function squad40Stage(g: Game, carried: readonly (readonly [Guard, number
   const rounds = new Map<Guard, number>(); let n = 0;
   for (const [gd, c] of carried) { const k = tubeUp(gd) ? Math.max(0, Math.floor(c) || 0) : 0; if (k) { rounds.set(gd, k); n += k; } }
   let s = states.get(g);
-  if (!s) { if (!n) return; states.set(g, s = { rounds, brought: 0, last: new Map(), turns: new Map(), noted: null, shown: null, kept: new Map() }); }
+  if (!s) { if (!n) return; states.set(g, s = { rounds, brought: 0, last: new Map(), turns: new Map(), shown: null, kept: new Map() }); }
   s.rounds = rounds; s.brought = n; s.last = new Map(); s.turns = new Map(); s.shown = null; s.kept.clear(); SQUAD40_STATS.staged++;
 }
 
-/** the bodies a round stops on, as far as the player can see them (he40.ts shellBodies' own rule of the fog): `friends` it must never meet — the player, the
- *  unarmed, a hostage, the man to take alive — `foes`, on whom it may go off — and `mates`: a round in flight passes a teammate (he40.ts), but nobody
- *  fires one through a friend's back, so to the plan a teammate in the line is a body like any other */
-function bodies(g: Game): { friends: Character[]; foes: Character[]; mates: Character[] } {
-  const friends: Character[] = [], foes: Character[] = [], mates: Character[] = [], wanted = g.snatch?.man ?? null, hostages = g.rescue?.hostages ?? [];
-  if (!g.player.down) friends.push(g.player.char);
-  for (const gd of g.guards) if (gd.team === 'operative') { if (gd.state !== 'dead' && gd.char.alive) mates.push(gd.char); }
-    else if (gd.state !== 'dead' && gd.char.alive && !g.fogOfWar.hidden(gd)) (isHostile('operative', gd.team) && !gd.civ && gd !== wanted && !hostages.includes(gd) ? foes : friends).push(gd.char);
-  for (const cv of civilianBodies(g)) if (cv.char.alive && !g.fogOfWar.hidden(cv)) friends.push(cv.char);
-  return { friends, foes, mates };
-}
-/** he faces the spot */
-const onIt = (gd: Guard, at: Vec3) => Math.abs(wrapAngle(gd.char.aimYaw - v3.yawTo(gd.char.pos, at))) < SQUAD40.aimRad;
-/** his gun is UP and on the spot: in a fight, or under an order that has it at his shoulder (a man at the low ready who merely faces it is turned to it) */
-const gunOn = (g: Game, gd: Guard, at: Vec3) => onIt(gd, at) && (gd.state === 'alert' || !!g.fight.opOf(gd)?.tgt || g.orders.of(gd)?.upper === 'aim');
-/** ONE MAN'S SHOT to a spot, from where he stands with his gun turned to it ('close': the round would not be armed there · null: he has none — his tube
- *  would be in a wall, or the arc meets a wall, a leaf, a desk or somebody it must not, short of the spot) */
-function shotOf(g: Game, gd: Guard, at: Vec3, B = bodies(g)): Shot | 'close' | null {
-  const K = SQUAD40, p = gd.char.pos, d = flat(p, at); if (d < 1e-3) return 'close';
-  const head = gd.char.bones.head, up = Math.max(0.6, Math.min(K.muzzleUp, head ? head[1] - p[1] - K.headDrop : K.muzzleUp)), k = K.muzzleAhead / d;
-  const from: Vec3 = [p[0] + (at[0] - p[0]) * k, p[1] + up, p[2] + (at[2] - p[2]) * k], to: Vec3 = [at[0], at[1] + 0.03, at[2]];
-  if (g.col.solidBlocked([p[0], p[1] + up, p[2]], from)) return null;   // (his tube would be in the wall he stands against)
-  const short = d < HE40.armM ? 'close' as const : null;
-  const friends = [...B.friends, ...B.mates.filter(c => c !== gd.char)];
-  const sol = shellSolve(g, from, to, [...friends, ...B.foes]);
-  // (stopped short of the spot: by a man of the other side — the arc with him out of it reaches — it goes off on him; by anything else it is no shot)
-  if (v3.dist(sol.land, to) > K.nearM && !(B.foes.length && v3.dist(shellSolve(g, from, to, friends).land, to) <= K.nearM)) return short;
-  if (arcLength(sol) < HE40.armM + K.armSlack) return 'close';
-  return { gd, from, to, sol, burst: v3.copy(sol.land), aimed: gunOn(g, gd, at) };
-}
-/** who of ours the burst would have in it (null: nobody), in the row's words — asked of where it goes off AND of the spot it is sent at: a man of the
- *  other side it would stop on may be out of its line by the time it is there */
-function caught(g: Game, a: Shot, at: Vec3): string | null {
-  return squadFragCatches(g, a.burst, at, { gd: a.gd, at: a.gd.char.pos }, true, false, { reach: FRAG.woundM + SQUAD40.reachSlack, no: 'no 40 mm.' });
-}
-const none = 'no 40 mm left.';
-/** THE SHOT AS IT WOULD BE ORDERED NOW: the man of `men` who would fire it, with his shot — one whose gun is on the spot first, then the nearest; a man
- *  whose round would have one of ours in it is passed over for the next, and named (`who`: a refusal, in the row's words) only when nobody's is clean — or
- *  why nobody has one. An `asker`'s re-reads are kept a third of a second; the order itself (null) asks the floor as it stands. */
-function plan(g: Game, men: Guard[], at: Vec3, asker: Asker | null): { a: Shot; who: string | null } | string {
-  const s = states.get(g); if (!s || squad40Left(g) <= 0) return none;
-  // (kept while the spot, the men asked — where each stands, his gun, his hands, his rounds — and everybody of ours stay as they were)
-  const ready = (gd: Guard) => { const t = s.last.get(gd) ?? -1e9; return tubeUp(gd) && squadHandFree(g, gd) && !handsAtWork(g, gd) && !s.turns.has(gd) && !(g.time >= t && g.time - t < LAUNCHER40.cd); };   // (the last: the tube still open on his last round)
-  const q = (p: Vec3) => `${Math.round(p[0] * 4)},${Math.round(p[2] * 4)}`;
-  const key = `${at[0].toFixed(2)},${at[2].toFixed(2)}|${men.map(m => `${m.char.id}:${q(m.char.pos)},${gunOn(g, m, at) ? 1 : 0}${ready(m) ? 1 : 0}${s.rounds.get(m) ?? 0}`).join(';')}|${g.player.down ? '' : q(g.player.char.pos)}|${g.guards.map(m => m.team === 'operative' ? q(m.char.pos) : '').join(';')}`;
-  const c = asker && s.kept.get(asker);
-  if (c && c.key === key && g.time >= c.t && g.time - c.t < 0.3) return typeof c.a === 'string' ? c.a : { a: c.a, who: c.who };
-  const keep = (a: Shot | string, who: string | null = null) => { if (asker) s.kept.set(asker, { key, t: g.time, a, who }); return typeof a === 'string' ? a : { a, who }; };
-  const B = bodies(g); let any = false, asked = false, close = false, dirty: { a: Shot; who: string } | null = null;
-  for (const gd of [...men].sort((x, y) => (gunOn(g, y, at) ? 1 : 0) - (gunOn(g, x, at) ? 1 : 0) || flat(x.char.pos, at) - flat(y.char.pos, at))) {
-    if (gd.state === 'dead' || !(s.rounds.get(gd)! > 0)) continue; any = true;
-    if (!ready(gd)) continue;
-    if (!gunOn(g, gd, at) && !mayWalk(g, gd)) continue;   // (his gun is elsewhere and he is not ours to turn: a drill, a door tool or the fight has him)
-    asked = true;
-    const a = shotOf(g, gd, at, B); if (a === 'close') { close = true; continue; } if (!a) continue;
-    const who = caught(g, a, at); if (who) { dirty ??= { a, who }; continue; }
-    return keep(a);
-  }
-  // (the words: these men carry none · the men who do have no launcher in a free hand, or are not ours to turn · the round would not arm · no arc)
-  return dirty ? keep(dirty.a, dirty.who) : keep(!any ? wg("nobody's carrying one.", 'none with them.') : !asked ? 'not ready.' : close ? 'too close to arm.' : 'no shot from here.');
-}
-
-
-
-
-/** WHAT THE PICTURE DRAWS (ui/squadthrowviz.ts): `gd` who fires, `points` the arc, `land` where it goes off — for a man turning to his shot until it goes,
- *  and a `preview` for the highlighted row while its page is up. Empty otherwise. Reads only: it asks the floor afresh and keeps nothing. */
-export interface Squad40Plan { gd: Guard; from: Vec3; points: Vec3[]; land: Vec3; kind: 'shell'; preview?: true; walk?: undefined }
-export function squad40Plans(g: Game): Squad40Plan[] { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('squad40Plans', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
-  const s = states.get(g), out: Squad40Plan[] = []; if (!s || !squad40Here()) return out;
-  const of = (a: Shot, preview?: true): Squad40Plan => ({ gd: a.gd, from: [a.gd.char.pos[0], 0, a.gd.char.pos[2]], points: a.sol.points, land: a.burst, kind: 'shell', preview });
-  for (const W of s.turns.values()) if (W.firedT < 0 && W.gd.state !== 'dead' && g.orders.of(W.gd) === W.A) out.push(of(W.shot));
-  const M = g.orders.menu;
-  if (M && M.target.kind === 'floor' && M.rows[M.sel]?.id === SHELL_THERE) { const a = plan(g, M.men, M.target.at, null); if (typeof a !== 'string' && !a.who) out.push(of(a.a, true)); }
-  return out;
-}
 export function squad40Summary(g: Game): string {
   const s = states.get(g); if (!squad40Here()) return 'off';
   return s && s.brought ? `${squad40Left(g)} of ${s.brought} left · X on a spot of floor, G, then 3 · fired ${SQUAD40_STATS.fired}` : 'none brought (no teammate\'s card carries a 40 mm grenade)';

@@ -20,24 +20,13 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
     g.seats = crate::seats::seats_stand(g, n_seats);
     g.local_seat = Some(g.seats[0]);
     // what this machine kept. A load is called where the skeleton has it, and its storage is its own module's or the host's
-    crate::qrf::load_qrf_tune(g);
-    crate::difficulty::levers_fog(g, &mut |v: &mut Game| crate::teamfeel::load_team_feel(v));
+    crate::difficulty::levers_fog(g);
     crate::fogofwar::fog_flags(g);
     crate::irlight::ir_flags(g);
-    crate::needs::load_needs(g);
     crate::destruction::load_chaos(g);
     g.tune.wind = g.k.wind.def;   // (loadWind's first line; the rest of it is storage and it left the game)
-    crate::glass::load_glass_fx(g);
-    let mut gb = crate::glassbreak::GbTune { glass_break: Some(g.tune.glass_break) };   // (lent and written back: `tune` is this.tune)
-    crate::glassbreak::load_glass_break(g, &gb);
-    if let Some(on) = gb.glass_break { g.tune.glass_break = on; }
-    crate::particle_fx::load_dust(g);
-    crate::devices::load_device_tune(g);
-    crate::civilians::load_civ_tune(g);
-    crate::guards::load_body_light(g);
     let name = crate::scene_level_load::level_name_of(g);
     g.col = crate::scene_collision::new(g, &ids, name.as_deref());
-    crate::particle_fx::apply_dust_look(g);   // the dust LOOK table onto the kind the host attached, whether or not the switch is on yet; no system = nothing to do (game.ts:1108)
     let (men, fn2000) = (g.men, g.fn2000);
     let spawn = level.player_spawn;
     g.player = crate::game::player_new(g, men, ch, spawn, Some(fn2000), None);   // (first.player: g.seat is seats[0] all through the constructor)
@@ -216,14 +205,10 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
         let light = add_light(g, &name, &group, 1.0, b.pos, [1.0, 0.0, 0.0], [1.0, 0.22, 0.06], 55.0, 14.0, 9.0, 24.0, 0.06, 1.0, false, 55.0, false, None);
         g.beacons.push(crate::game::GameBeaconsItem { light, phase: i as f64 * 1.7, target });
     }
-    // the cells under a roof (the game's own rules read them), and the lights' reach masks, made where there is a picture to read them
+    // the cells under a roof (the game's own rules read them)
     let statics: Vec<BoxId> = g.engine.world.statics.clone();
     let interior = crate::render_reach::build_interior_cells(g, &statics);
-    g.reach_interior = Some(interior.clone());
-    if g.engine.reach.is_some() {
-        let reach_doors: Vec<crate::render_reach::ReachDoor> = level.doors.iter().map(|d| crate::render_reach::ReachDoor { hinge: d.hinge, closed_dir: d.closed_dir, width: d.width }).collect();
-        crate::render_reach_keep::reach_keep_boot(g, &reach_doors, &interior);
-    }
+    g.reach_interior = Some(interior);
     // doors: leaves are dynamic occluders for sight / sound / projectiles
     let door_defs: Vec<crate::doors::DoorDef> = level.doors.iter().map(|d| crate::doors::DoorDef {
         name: d.name.clone(),
@@ -245,6 +230,7 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
         thickness: None,
     }).collect();
     g.doors = crate::doors::doors_new(g, &door_defs, &mut game_on_door_event);
+    crate::doors::paint_leaves(g);   // (a level's leaves wear its paint from their first moment: doors/paint.rs)
     let list: Vec<DoorId> = g.doors.list.clone();
     g.props.doorways = list.iter().map(|&d| {
         let (cc, dir, width) = (g.dr[d].frame_centre, g.dr[d].def.closed_dir, g.dr[d].def.width);
@@ -286,8 +272,6 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
     g.quiet = crate::quiet::quiet_mission_new(g);
     g.rails = crate::rails::rails_new(g);
     g.lesson = crate::lesson::lesson_new(g);
-    g.snatch = crate::snatch::snatch_new(g);
-    g.defuse = crate::defuse::defuse_new(g);
     g.night_breach = crate::nightbreach::night_breach_new(g);
     g.room_clear = crate::roomclear::room_clear_scenario_new(g);
     stand_each_seat(g, &mut |v: &mut Game| { v.orders = crate::orders::squad_orders_new(v, None); });
@@ -300,7 +284,7 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
     g.rescue = crate::rescue::rescue_new(g);
     stand_each_seat(g, &mut |v: &mut Game| { v.door_tools = crate::doortools::door_tools_new(v); });   // after the orders: its rows are registered on their menu
     crate::pairup::pair_up_apply(g, None);
-    g.pair = crate::pairorders::pair_orders_new(g);
+    stand_each_seat(g, &mut |v: &mut Game| { v.pair = crate::pairorders::pair_orders_new(v); });   // (the people and the note are each seat's; the jobs are one book)
     stand_each_seat(g, &mut |v: &mut Game| { v.work = crate::workthings::work_things_new(v); });
     stand_each_seat(g, &mut |v: &mut Game| { v.wall_charge = crate::wallcharge::wall_charge_new(v); });   // after the door tools: it spends their charges
     stand_each_seat(g, &mut |v: &mut Game| { crate::shutdoor::register_shut_door(v); });
@@ -420,7 +404,7 @@ fn light_def_mains(level: &crate::scene_level::Level, name: &str) -> bool {
 /// (game.ts constructor, staggerOf) A contactor group's restrike stagger: the die is drawn at the group's first appearance.
 fn stagger_of(g: &mut Game, stagger: &mut JsMap<String, f64>, grp: &str) -> f64 {
     if !stagger.has(String::from(grp)) {
-        let v = stagger.len() as f64 * 0.45 + crate::math_dice::sim_random(g) * 0.5;
+        let v = stagger.len() as f64 * 0.45 + crate::dice::draw_world(g, "game::stagger_of#1") * 0.5;
         stagger.set(String::from(grp), v);
     }
     *stagger.get(String::from(grp)).unwrap()

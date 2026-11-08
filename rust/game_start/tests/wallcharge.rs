@@ -71,3 +71,72 @@ fn a_man_the_warning_named_is_caught() {
         assert!(blow.sam > 0.0 && p.sam_blind(), "seed {s}: Sam was named and took {:.2}, blind {}", blow.sam, p.sam_blind());
     }
 }
+
+/// the pass's file with every box's `shape` taken out: the level as it is with the shapes down
+fn plain_pass() -> std::path::PathBuf {
+    use game_start::json::{self, Json};
+    let mut level = json::parse(&game_start::files::level_text("pass.json")).unwrap();
+    let Json::Obj(members, _) = &mut level else { panic!("a level is an object") };
+    let (_, boxes) = members.iter_mut().find(|(k, _)| k == "boxes").expect("the pass has boxes");
+    let Json::Arr(boxes) = boxes else { panic!("boxes is a list") };
+    for b in boxes.iter_mut() { if let Json::Obj(m, _) = b { m.retain(|(k, _)| k != "shape"); } }
+    let path = std::env::temp_dir().join(format!("pass-plain-{}.json", std::process::id()));
+    std::fs::write(&path, json::to_text(&level)).unwrap();
+    path
+}
+
+/// half a metre off each side of the first boxes on the pass that wear trim, with the box each is beside
+fn beside_trim() -> Vec<([f64; 3], [f64; 3])> {
+    let p = Play::level("pass.json", false, &Opts { seed: 1, ..Default::default() });
+    let mut owners: Vec<usize> = p.g.col.boxes.iter().filter_map(|&b| p.g.tab.boxes[b].of.filter(|_| p.g.tab.boxes[b].piece == Some(true))).map(|o| o as usize).collect();
+    owners.sort();
+    owners.dedup();
+    assert!(owners.len() >= 16, "the pass's boxes that wear trim: {}", owners.len());
+    let mut out = Vec::new();
+    for &o in &owners[..16] {
+        let t = &p.g.tab.boxes[p.g.col.boxes[o]];
+        for (dx, dz) in [(1.0, 0.0), (-1.0, 0.0), (0.0, 1.0), (0.0, -1.0)] { out.push(([t.c[0] + dx * (t.h[0] + 0.55), 0.6, t.c[2] + dz * (t.h[2] + 0.55)], t.c)); }
+    }
+    out
+}
+
+/// Each point in turn: a charge on the wall there if a wall takes one, then a bare burst. After each, the boxes of the level that are out of the
+/// picture and what the walls have told, one line a point.
+fn blown(level: &str, points: &[([f64; 3], [f64; 3])]) -> Vec<String> {
+    let mut p = Play::level(level, false, &Opts { seed: 1, ..Default::default() });
+    p.g.god_mode = true;
+    p.g.tune.chaos = 0.5;
+    p.drop_all_but(&[]);
+    let own = p.g.col.boxes.iter().position(|&b| p.g.tab.boxes[b].piece == Some(true)).unwrap_or(p.g.col.boxes.len());
+    let hidden = game::js::to_i32(game::scene_boxes::box_flag().no_primary);
+    let mut out = Vec::new();
+    for &(at, from) in points {
+        if let Some(w) = game::wallcharge::wall_at(&mut p.g, at, Some(from)).filter(|w| w.ok) {
+            let breach = if w.outer == Some(true) && game::wallbreak::wall_break_adopt(&mut p.g, w.index) { Some(w.index) } else { None };
+            let hung = Some(game::wallbreak::BlastOptsHung { wall: w.index, r: p.g.k.wallcharge.hung_m });
+            let pt = game::wallcharge::wall_pt(&p.g, &w, 0.0, 0.02, Some(1.0));
+            game::destruction::destruction_blast(&mut p.g, pt, Some(game::wallbreak::BlastOpts { who: Some(1.0), chaos: Some(false), breach, hung, ..Default::default() }));
+            p.run(1.0 / 6.0);
+        }
+        game::destruction::destruction_blast(&mut p.g, at, Some(game::wallbreak::BlastOpts { who: Some(1.0), radius: Some(2.4), ..Default::default() }));
+        p.run(1.0 / 3.0);
+        let gone: Vec<usize> = (0..own).filter(|&i| game::js::to_i32(p.g.tab.boxes[p.g.col.boxes[i]].flags) & hidden != 0).collect();
+        let told: Vec<String> = p.g.destr.walls.changes.iter().map(|c| format!("{:?} {}", c.kind, c.id)).collect();
+        out.push(format!("{gone:?} | {told:?}"));
+    }
+    out
+}
+
+/// THE RULE: a blast plays the same whether the level's drawn shapes stand or not: a charge opens the same wall and takes the same boxes on the pass
+/// with its shapes up and with them taken out of the file.
+/// A FAILURE MEANS: a rule of the blast reads the trim, so what a level is dressed in decides what breaks.
+#[test]
+fn a_blast_takes_the_same_with_the_shapes_down() {
+    let points = beside_trim();
+    let plain = plain_pass();
+    let (up, down) = (blown("pass.json", &points), blown(plain.to_str().unwrap(), &points));
+    std::fs::remove_file(&plain).ok();
+    let holes = up.last().unwrap().matches("Hole").count();
+    assert!(holes >= 1, "no hole opened, so this asked nothing: {}", up.last().unwrap());
+    for (i, (a, b)) in up.iter().zip(down.iter()).enumerate() { assert_eq!(a, b, "point {i} at {:?}", points[i].0); }
+}

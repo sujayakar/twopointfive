@@ -186,9 +186,7 @@ pub fn run_shell_late(g: &mut crate::game::Game, late: &crate::shotgun::ShellLat
 /// The man the round found: where it landed decides, then the log's line, the sound, whose round it was. (fireWeapon's manDown)
 fn man_down(g: &mut Game, hit_guard: GuardId, sg: Option<GuardId>, shooter: CharId, is_player: bool, ff_ours: bool, hostage_hit: bool, muzzle: V3, dir: V3, t_hit: f64, hit_p: V3) {
     use crate::game::{DownBy, DownKind, GuardState};
-    use crate::wounds::RoundDoes;
     let was_up = g.gd[hit_guard].state != GuardState::Dead;
-    if was_up && g.gd[hit_guard].civ.is_some() { crate::snatch::snatch_round_on(g, hit_guard, sg); }
     let team = g.gd[hit_guard].team;
     let foe = match sg { Some(s) => { let st = g.gd[s].team; crate::teams::is_hostile(g, st, team) } None => false };
     let sign = g.gd[hit_guard].callsign.clone();
@@ -196,29 +194,15 @@ fn man_down(g: &mut Game, hit_guard: GuardId, sg: Option<GuardId>, shooter: Char
     let by = by_sign.as_deref().unwrap_or("");
     let foe_line = if foe { Some(alloc::format!("{} down — {}'s round", sign, by)) } else { None };
     let own_hit = ff_ours && g.gd[hit_guard].civ.is_none() && !crate::teams::is_hostile(g, crate::teams::Team::Player, team);
-    let ro = if v3::dist(v3::mad(muzzle, dir, t_hit), hit_p) < 1e-6 { muzzle } else { v3::mad(hit_p, dir, -t_hit) };
-    let does = crate::wounds::round_does(g, hit_guard, ro, dir, t_hit, hostage_hit, is_player);
-    if does != RoundDoes::None {
-        let line: Option<String> = if does != RoundDoes::Shot {
-            Some(if foe_line.is_some() {
-                alloc::format!("{} hit, down and breathing — {}'s round", sign, by)
-            } else if own_hit {
-                if is_player { alloc::format!("{} hit, down and breathing — your round", sign) } else { alloc::format!("{} hit, down and breathing — {}'s round", sign, by) }
-            } else {
-                alloc::format!("{} down — wounded, out of the fight", sign)
-            })
-        } else if foe_line.is_some() {
-            foe_line
-        } else if own_hit && !is_player {
-            Some(alloc::format!("{} down — {}'s round", sign, by))
-        } else {
-            None
-        };
-        let zone = match does { RoundDoes::Side => Some(KillGuardZone::Side), RoundDoes::Leg => Some(KillGuardZone::Leg), _ => None };
-        let how = if does == RoundDoes::Shot { DownKind::Shot } else { DownKind::Wounded };
-        let by_who = if is_player { DownBy::Player } else { DownBy::Guard };
-        kill_guard(g, hit_guard, dir, Some(false), Some(how), Some(by_who), line.as_deref(), zone);
-    }
+    let line: Option<String> = if foe_line.is_some() {
+        foe_line
+    } else if own_hit && !is_player {
+        Some(alloc::format!("{} down — {}'s round", sign, by))
+    } else {
+        None
+    };
+    let by_who = if is_player { DownBy::Player } else { DownBy::Guard };
+    kill_guard(g, hit_guard, dir, Some(false), Some(DownKind::Shot), Some(by_who), line.as_deref());
     crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(hit_p), Some(0.8), None);
     if was_up { g.gd[hit_guard].killer_id = g.ch[shooter].id; }
     if hostage_hit {
@@ -283,7 +267,7 @@ fn shoot_out(g: &mut Game, t: FixtureId, muzzle: V3) {
 }
 
 /// `live` of the real-hit search: a target a round can put out.
-fn lamp_live(g: &mut Game, t: FixtureId) -> bool {
+fn lamp_live(g: &Game, t: FixtureId) -> bool {
     !(crate::sim_lightshome::fixture_broken(g, t)
         || !g.tab.sim_lightshome_fixture[t].interactive
         || crate::sim_lightshome::fixture_factor(g, t) <= 0.0 && !crate::sim_lightshome::fixture_on(g, t) && !crate::carlamps::lamp_glass(g, t)
@@ -329,9 +313,9 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
     let mut dir = v3::normalize(v3::sub(target, muzzle));
     if !is_player && !steady { spread += ai_wide(g, &crate::seats::here(g), sg, shooter, &def); }
     if spread > 0.0 {
-        let rx = crate::math_dice::sim_random(g);
-        let ry = crate::math_dice::sim_random(g);
-        let rz = crate::math_dice::sim_random(g);
+        let rx = crate::dice::draw_body(g, "combat::fire_weapon_raw#1", shooter);
+        let ry = crate::dice::draw_body(g, "combat::fire_weapon_raw#2", shooter);
+        let rz = crate::dice::draw_body(g, "combat::fire_weapon_raw#3", shooter);
         dir = v3::normalize([dir[0] + (rx - 0.5) * spread, dir[1] + (ry - 0.5) * spread, dir[2] + (rz - 0.5) * spread]);
     }
     if lead { if let Some(p) = &mut pel { p.dir = Some(dir); } }
@@ -353,7 +337,6 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
         g.fx.push(crate::game::GameFxItem { box_: b, ttl: card.ttl });
     }
     // gas, light and powder: the shot from effects.ts
-    let gpu = crate::particle_fx::gpu_fx(g);
     if lead {
         let seed = g.fx_seed;
         g.fx_seed += 1.0;
@@ -366,12 +349,12 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
             track: Some(crate::effects::Track::Muzzle { by: shooter }),
             eject: Some(crate::effects::Track::EjectPort { by: shooter }),
             gas: Some(gas),
-        }, !gpu);
+        });
         for l in lights {
             crate::render_lights::light_set_flash(g, l.pos, l.color, l.intensity, l.range, l.ttl, who);
         }
     }
-    if gpu && lead { crate::particle_fx::muzzle_sparks_fx(g, muzzle, dir, shooter); crate::particle_fx::casing_fx(g, shooter, &def); }
+    if lead { crate::particle_fx::muzzle_sparks_fx(g, muzzle, dir, shooter); crate::particle_fx::casing_fx(g, shooter, &def); }
     if lead { let voice = crate::gunlook::voice_of(g, &def); crate::audio_iface::game_audio_like_play(g, &voice, Some(muzzle), Some(1.0), None); }
 
     // --- hit scan

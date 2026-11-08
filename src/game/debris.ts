@@ -15,7 +15,6 @@ import type { Prop } from './props';
 import { impulseKick, type ImpulseLike, type ImpulseResponse } from './sheetModel';
 import { NOBODY_ID } from './consts';
 import { DEBRIS } from './destructionSwitch';
-import { DRESS } from './dress';
 import { flightOf } from './falling';
 import { FALL_PIECES, FALL_HEARD, FALL_MAXP } from '../sim/fallshome';
 import type { PlateMeta } from './shards';
@@ -92,7 +91,6 @@ export class Debris {
   /** A chunk of `kind` = the box `box` (taken over as is: centre, half extents, yaw / rot, albedo) thrown at `v` (m/s) turning at `w` (rad/s), its landing blamed on
    *  `who`. null when the pool is full of chunks still moving — the caller demotes it to particles. */
   spawn(kind: ChunkKind, box: Box, v: Vec3, w: Vec3, who: number = NOBODY_ID, level = 0): Chunk | null {
-    if (kind === 'shard' && this.glass) { const r = this.glass.take(box, v, w, who); if (r !== undefined) return r; }   // glass after it lets go is game/shards.ts's (undefined = not live: as it always was)
     if (!DEBRIS.dress) return this.spawnRaw(kind, box, v, w, who);
     if (this.fling) v = v3.add(v, this.fling);
     this.thrown(kind, box, v, level, who);   // the game's half, decided before the pool is asked: whether it takes the piece changes nothing of it
@@ -115,10 +113,9 @@ export class Debris {
   /** (DEBRIS.dress) a speed added to every piece thrown through spawn() while it is set: a caller that used to throw a thing by another rule's road and then
    *  shove the chunks that appeared (furnblast.ts: a blast on the lane's own destructible) says the shove BEFORE, so the simulation's landing has it too */
   fling: Vec3 | null = null;
-  /** GLASS HOOKS (game/shards.ts sets them; null = this pool exactly as it was): `take` is offered every 'shard' spawn first (a Chunk / null = it placed the fragment
-   *  itself, undefined = not its business), `landed` a glass plate's first hard touch (true = it made the sound and filed the hearing event), `rested` a glass plate
+  /** GLASS HOOKS (game/shards.ts sets them; null = this pool exactly as it was): `landed` a glass plate's first hard touch (true = it made the sound and filed the hearing event), `rested` a glass plate
    *  going to sleep, `gone` (optional) a glass plate the POOL has just dropped — evicted at rest to make room, or retired by age. Only chunks carrying `glass` reach the last three. */
-  glass: { take(box: Box, v: Vec3, w: Vec3, who: number): Chunk | null | undefined; landed(c: Chunk, speed: number): boolean; rested(c: Chunk): void; gone?(c: Chunk): void;
+  glass: { landed(c: Chunk, speed: number): boolean; rested(c: Chunk): void; gone?(c: Chunk): void;
     /** (optional) are the glass plates dressing now (shards.ts SHARDS.byFall)? */
     dress?(): boolean } | null = null;
   /** THE BREAK TABLE'S HOOKS (game/breakTable.ts sets them; each is nothing while the cut switch is off — null or off = this pool exactly as it was): every chunk
@@ -132,7 +129,6 @@ export class Debris {
   /** spawn() without the glass door (what spawn() always did; shards.ts places its plates through this) */
   spawnRaw(kind: ChunkKind, box: Box, v: Vec3, w: Vec3, who: number = NOBODY_ID, told = false): Chunk | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Debris.spawnRaw', this, [kind, box, v, w, who, told]); if (__r !== RUST_PASS) return __r as any; } }
     const dress = DEBRIS.dress && (told || kind !== 'shard' || !this.glass || !!this.glass.dress?.());   // (is this piece dressing? every piece under DEBRIS.dress whose landing the simulation has — `told`: spawn()'s — and the pool's own; but a glass plate that still lays its litter where it rests, SHARDS.byFall off, is the game's)
-    if (dress && !DRESS.debris) { this.stats.refused++; return null; }   // (dress.ts: a host that draws nothing holds no pool, where the pool is dressing)
     while (this.list.length >= this.cap()) {   // (while: the cap can drop mid-run — the auto ladder hopping a preset — and the pool must come back under it, not hover one over)
       const i = this.breaks?.pick ? this.breaks.pick(this.list, evictable) : this.list.findIndex(evictable);
       if (i < 0) { this.stats.refused++; return null; }

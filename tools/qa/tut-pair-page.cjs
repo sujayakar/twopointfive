@@ -31,10 +31,10 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));
   const run = n => page.evaluate(n => window.__runFrames(n, 1 / 60, [], 'none'), n);   // (stepped, never drawn: a drawn frame is half a minute here)
   const read = () => page.evaluate(() => { const g = window.__game, el = document.getElementById('railprompt'), P = g.player, mate = g.guards.find(x => x.unit && x.team === 'operative');
-    return { i: g.lesson.i, id: g.lesson.step?.id ?? null, done: g.lesson.finished, line: el?.querySelector('.line')?.textContent ?? '', keys: [...(el?.querySelectorAll('kbd') ?? [])].map(k => k.textContent), up: !!el && getComputedStyle(el).display !== 'none',
-      note: el?.querySelector('.note')?.textContent ?? '', row: document.getElementById('objective')?.textContent ?? '', fatal: document.getElementById('fatal')?.textContent || '', rails: g.rails.live, sum: g.rails.summary(), script: !!g.director.running,
+    return { i: g.lesson.i, id: g.view.lesson?.id ?? null, done: g.view.lesson?.finished, line: el?.querySelector('.line')?.textContent ?? '', keys: [...(el?.querySelectorAll('kbd') ?? [])].map(k => k.textContent), up: !!el && getComputedStyle(el).display !== 'none',
+      note: el?.querySelector('.note')?.textContent ?? '', row: document.getElementById('objective')?.textContent ?? '', fatal: document.getElementById('fatal')?.textContent || '', rails: !!g.view.lesson?.rails, sum: (g.view.lesson?.rails?.open ?? []).join(' '), script: !!g.director.running,
       at: [+P.char.pos[0].toFixed(2), +P.char.pos[2].toFixed(2)], crouch: !!P.crouch, holding: !!P.holding, nv: !!P.nv, lit: +P.visibility.toFixed(2), dark: !!g.blackout.active,
-      mate: mate ? [+mate.char.pos[0].toFixed(1), +mate.char.pos[2].toFixed(1)] : null, mateSays: mate ? g.orders.statusOf(mate) : '', men: g.guards.filter(x => !x.unit && x.state !== 'dead').length,
+      mate: mate ? [+mate.char.pos[0].toFixed(1), +mate.char.pos[2].toFixed(1)] : null, mateSays: mate ? (g.view.squad?.mates.find(x => x.man === mate.char.id)?.doing ?? '') : '', men: g.guards.filter(x => !x.unit && x.state !== 'dead').length,
       roused: g.guards.filter(x => !x.unit && x.state !== 'dead' && x.state !== 'patrol' && !x.held).map(x => `${x.callsign} ${x.state}`).join(', '),
       orders: g.orders.log.length, last: g.orders.log.length ? `${g.orders.log[g.orders.log.length - 1].order}@${g.orders.log[g.orders.log.length - 1].target}` : '', menu: !!window.__orders?.menu, stage: g.mission.stage, t: +g.time.toFixed(1) }; });
   // (a picture, as tut-page.cjs takes one: the frame is drawn and read back in the page and stood under the HUD as a still)
@@ -145,7 +145,7 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
     if (R.id !== s.id) { check(false, `step ${n + 1} '${s.id}' is the one up`, `up: ${R.id} (${R.i}) · line "${R.line}"`); break; }
     // A CARD on the step (its `explain`, ui/railcard.ts): up with its words, and Enter closes it
     if (s.explain) {
-      const card = () => page.evaluate(() => { const e = document.getElementById('railcard'); return { on: !!e && e.classList.contains('on'), h: e?.querySelector('h2')?.textContent || '', p: [...(e?.querySelectorAll('p') ?? [])].map(x => x.textContent).join(' / '), owed: !!window.__game.rails.card() }; });
+      const card = () => page.evaluate(() => { const e = document.getElementById('railcard'); return { on: !!e && e.classList.contains('on'), h: e?.querySelector('h2')?.textContent || '', p: [...(e?.querySelectorAll('p') ?? [])].map(x => x.textContent).join(' / '), owed: !!window.__game.view.lesson?.rails?.card }; });
       const Cd = await card(); log('picture', await shot(`${n + 1}-${s.id}-card`));
       await page.waitForTimeout(450); await page.keyboard.press('Enter'); await run(2); const Dd = await card();
       check(Cd.on && Cd.owed && !!Cd.p && !Dd.on, `step ${n + 1} '${s.id}' opens on a card: up with its words, and Enter closes it`, `"${Cd.h}": ${Cd.p} · Enter: card ${Dd.on ? 'up' : 'gone'}`);

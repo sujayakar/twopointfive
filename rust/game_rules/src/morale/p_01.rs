@@ -42,7 +42,7 @@ pub fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::morale::LineKin
     pool.extend_from_slice((if st.dark { l.dark } else { l.lit }).unwrap_or(&[]));
     pool.extend_from_slice((if g.gd[gd].team != crate::teams::Team::Guard { l.they } else { l.he }).unwrap_or(&[]));
     let n = pool.len() as f64;
-    let i = js::rem(m::floor(crate::math_dice::sim_random(g) * n), n);
+    let i = js::rem(m::floor(crate::dice::draw_of(g, "morale::bark#1", gd) * n), n);
     crate::game::game_say(g, gd, pool[i as usize], Some(radio), None, None);
     g.m.morale.state_of.get_mut(gd).unwrap().bark = 0.0;
     if radio { g.stats.morale.calls += 1; } else { g.stats.morale.shouts += 1; }
@@ -99,9 +99,9 @@ pub fn in_the_dark(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let id = g.ch[c].id;
     let mut own = |_g: &mut Game, owner: f64| owner == id;
     let chest = chest_of(g, c);
-    let a = crate::guards::light_estimate_at(g, chest, Some(&mut own), Some(true), None, None, None);
+    let a = crate::guards::light_estimate_at(g, chest, Some(&mut own), Some(true), None);
     let head = head_of(g, c);
-    let b = crate::guards::light_estimate_at(g, head, Some(&mut own), Some(true), None, None, None);
+    let b = crate::guards::light_estimate_at(g, head, Some(&mut own), Some(true), None);
     m::max(a, b) < g.tune.vis_floor
 }
 

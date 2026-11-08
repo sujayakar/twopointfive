@@ -205,8 +205,7 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   /** GROUND MELTED ROUND A FIRE: the same two paints as `cleared`, each laid ROUND — a square of slush about a round drum read as a tile once the fire lit it from
    *  its middle. Each is a regular ten-sided patch: five slabs through one centre, 36° apart, each tan 18° as deep as it is long (their union is the decagon
    *  exactly), the earth turned half a side from the slush. Tops stepped 0.7 mm so no two lie in one plane; the earth's lowest is 2 mm over the slush's highest.
-   *  NOT the kit's octagon on purpose: four slabs 45° apart is how a round THING is written (scene/round.ts takes it for a cylinder and draws a drum's rim on
-   *  its lid). `r` = the earth's inner radius, `ring` = the slush past it. Its footsteps are earth's over the square the slush fits in */
+   *  `r` = the earth's inner radius, `ring` = the slush past it. Its footsteps are earth's over the square the slush fits in */
   const melted = (id: string, x: number, z: number, r: number, ring = 0.3) => {
     const r5 = (v: number) => Math.round(v * 1e5) / 1e5;
     const disc = (a: number, y: number, yaw0: number, m: Mat) => { for (let k = 0; k < 5; k++) { const hy = r5((y - k * 0.0007) / 2); add({ c: [x, hy, z], h: [a, hy, r5(a * Math.tan(Math.PI / 10))], yaw: r5(yaw0 + k * Math.PI / 5), ...m }); } };

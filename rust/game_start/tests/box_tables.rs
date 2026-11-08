@@ -1,35 +1,24 @@
-//! THE WORLD'S BOXES HAVE THE SAME NUMBERS ON EVERY HOST (`g.tab.boxes`, `scene_boxes::box_new`).
+//! THE TICK LISTS THE BOX WORLD ITSELF (`game_step_seats` → `scene_boxes::box_world_listed`).
 //!
-//! What this holds. A host lists the box world when it likes: a page as it draws, a server far less often. The listing frees the rows of the frames gone by,
-//! so a host that lists seldom needs more rows of the frame than one that lists every frame. The frame's boxes have a table of their own for that reason: when
-//! they shared one table with the world's, the first box the world made after that (a wall's piece, a chunk of debris) took a number that said how many frame
-//! rows this host had ever needed, and `col.boxes`, the debris rows and everything else that names a world box parted between a page and a server.
+//! What this holds. What a tick's rays meet, and which rows of the frame's table are free again, are the game's: they used to wait for a host to call the
+//! listing, so a host that drew seldom kept frame rows longer than one that drew every frame, and the numbers of every box dealt after that parted between them.
+//! Here a game is stepped with nothing round the step at all: no listing, no lights, no camera.
 use game_start::play::{Opts, Play};
-use game::ids::BoxId;
 
 const DT: f64 = 1.0 / 60.0;
 /// on the office's partition, where the level's wall 131 takes a charge (tests/wallcharge.rs)
 const WALL: [f64; 3] = [12.06, 0.0, 13.78];
 
-/// one frame of a host that lists the box world only when `list` says (stand::frame's lines, with the listing asked)
-fn frame(p: &mut Play, list: bool) {
-    game::game::game_update(&mut p.g, DT, p.host.input, p.host.cam, p.host.canvas);
-    let me = game::game::game_host_seat(&mut p.g);
-    let (follow, aim) = game::seats::with_seat(&mut p.g, me, &mut |g| (game::game::game_follow_pos(g, None), g.aim_point));
-    game::camera::follow_camera_update(&mut p.g, p.host.cam, DT, follow, Some(aim));
-    let now = p.g.time;
-    game::render_lights::light_set_update(&mut p.g, DT, now);
-    if list { game::host_api::b_01::host_world_upload(&mut p.g); }
-    game::input::input_end_frame(&mut p.g, p.host.input);
-    p.g.out.clear();
-}
+/// the game's update alone: what a host that only steps calls
+fn step(p: &mut Play, n: usize) { for _ in 0..n { game::game::game_update(&mut p.g, DT, p.host.input, p.host.cam, p.host.canvas); p.g.out.clear(); } }
 
-/// The office's room clear, a wall charge blown at once, some seconds of debris after it, listed by a host of this cadence. What the game has made of the world.
-fn played(every: usize) -> (Vec<BoxId>, usize, Vec<String>) {
+/// THE RULE: with no host round it, a tick opens on the list of what stands as it opens, a game that has no list yet included, and the frame's table holds no
+/// more rows than the frames need.
+/// A FAILURE MEANS: something of the box world waits for a host again; a host that never called it would keep every frame box as a row for good.
+#[test]
+fn a_step_lists_the_box_world_itself() {
     let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed: 5, ..Default::default() });
     p.sam_unhurt();
-    let mut k = 0;
-    let mut step = |p: &mut Play, n: usize| for _ in 0..n { k += 1; frame(p, k % every == 0); };
     step(&mut p, 6);
     game::wallcharge::wall_charge_raise_carried(&mut p.g, 2.0);
     p.sam_put([14.6, 15.2]);
@@ -38,19 +27,12 @@ fn played(every: usize) -> (Vec<BoxId>, usize, Vec<String>) {
     for _ in 0..3600 { step(&mut p, 1); if !p.g.wall_charge.set.is_empty() { break; } }
     let c = *p.g.wall_charge.set.first().expect("a minute and no charge is on the wall");
     game::wallcharge::wall_charge_blow(&mut p.g, Some(c), Some(true));
-    step(&mut p, 240);
-    // (a chunk that has a piece of rubble for its box names a row of the frame's table, whose number is the host's own: tests/box_tables.rs's head)
-    let kept: Vec<String> = p.g.tab.debris_chunk.iter().map(|(_, c)| format!("{:?}", c.box_)).filter(|b| !b.contains("Frame")).collect();
-    (p.g.col.boxes.clone(), p.g.tab.boxes.len(), kept)
-}
-
-/// THE RULE: a host that lists every fourth frame numbers the world's boxes as one that lists every frame.
-/// A FAILURE MEANS: a row of the world is being dealt by something that follows the host's listing.
-#[test]
-fn a_host_that_lists_seldom_numbers_the_world_alike() {
-    let (often, rows_often, chunks_often) = played(1);
-    let (seldom, rows_seldom, chunks_seldom) = played(4);
-    assert_eq!(rows_often, rows_seldom, "the world's table is not the same length on the two hosts");
-    assert_eq!(often, seldom, "`col.boxes` names other rows on the two hosts");
-    assert_eq!(chunks_often, chunks_seldom, "a chunk of debris names another box on the two hosts");
+    step(&mut p, 120);
+    let at_two_seconds = p.g.tab.frame_boxes.len();
+    step(&mut p, 600);
+    // the tick brings the ray grid up with no host's call: a grid thrown away is there again after one tick
+    p.g.ray_grid = Default::default();
+    step(&mut p, 1);
+    assert!(p.g.ray_grid.get::<game::scene_boxes::RayGrid>().is_some(), "the tick brought no grid up");
+    assert!(p.g.tab.frame_boxes.len() < at_two_seconds + 200, "the frame's table grew from {} to {} rows in ten seconds: nothing freed them", at_two_seconds, p.g.tab.frame_boxes.len());
 }

@@ -51,7 +51,7 @@
 //   of the state's own (PRICE.lateMs): the lag in frames cannot see that, because the page waits for the GPU and its frames slow with the answer.
 //   THE WORDS. `?pricelevels` = every level; `?pricelevels=pass,block` = these; `&pricesecs=N` = N seconds measured a turn (default 3); `&quality=<preset>` =
 //   the preset every page stands at (default high: the budget is said for High; `auto` lets each page settle its own, and the row says where it settled);
-//   `&pricelive=N` = the world runs to second N before its read (default PRICE.runS; 0 = held pictures only). THE LOOK'S OWN WORDS on the address that asked (`look=walls:0`, `geo=0` …) ride on every page
+//   `&pricelive=N` = the world runs to second N before its read (default PRICE.runS; 0 = held pictures only). THE LOOK'S OWN WORDS on the address that asked (`look=walls:0`, `firefit=0` …) ride on every page
 //   of the run, with the trials this machine's look panel keeps off, as the benchmark carries them (ui/benchrun.ts): the file says which look was priced.
 //   A reload in the middle does not start it again (the page finds its own mark and is a plain mission page); Esc stops a run.
 // THE PAGE'S HALF IS ONE LINE (main.ts, before the boot): `if (priceLevelsPage(q)) return;`. Everything else is asked of what the page already puts on `window`
@@ -186,15 +186,15 @@ export function priceLevels(): { level: string; mission: string; title: string; 
  *  words that page reads once at boot, and the trials this machine's look panel keeps off said as the address would say them (scene/look.ts; the benchmark
  *  carries the same, ui/benchrun.ts) */
 export function priceLookWords(search: string): string[] {
-  const q = new URLSearchParams(search), own = search.replace(/^\?/, '').split('&').filter(p => !!p && lookWord(p));   // (with or without a `look` word beside them: every look page of a run is one, so `?pricelevels&geo=0` prices the look without that trial)
+  const q = new URLSearchParams(search), own = search.replace(/^\?/, '').split('&').filter(p => !!p && lookWord(p));   // (with or without a `look` word beside them: every look page of a run is one, so `?pricelevels&firefit=0` prices the look without that trial)
   return [...(own.some(p => /^look(=|$)/.test(p)) ? [] : ['look']), ...own, ...lookTrialsKept(q)];
 }
-/** the address a step is priced on: its mission's own words on the look's page with that page's words, the die pinned, no verdict kept of
- *  the try and no replay filed (the run is nobody's play: as a benchmark's scene, ui/benchrun.ts), no sound, the preset, and its place in the run */
+/** the address a step is priced on: its mission's own words on the look's page with that page's words, the die pinned, no replay filed, no sound, the preset,
+ *  and its place in the run (that word makes it a run's page: the run is nobody's play, so main.ts `offBooks` keeps no try of it, as of a benchmark's scene) */
 export function priceSearch(level: string, i: number, quality: string, look: string[] = ['look'], keep: string[] = []): string {
   const L = priceLevels().find(l => l.level === level); if (!L) throw new Error(`no level '${level}' on the mission list`);
   // (the page's own words for a held picture: the preset pinned and the ladder off, the window giving way to nobody. `auto` leaves the ladder to the page)
-  const own = `${L.query.slice(1)}&seed=1&noverdict&nokeep&mute${quality === 'auto' ? '' : `&quality=${quality}&${HELD_LADDER_WORD}`}&${HELD_WINDOW_WORD}&${PRICE_RUN_KEY}=${i}`, has = new URLSearchParams(own);
+  const own = `${L.query.slice(1)}&seed=1&nokeep&mute${quality === 'auto' ? '' : `&quality=${quality}&${HELD_LADDER_WORD}`}&${HELD_WINDOW_WORD}&${PRICE_RUN_KEY}=${i}`, has = new URLSearchParams(own);
   return `?${[...[...look, ...keep].filter(p => !has.has(p.split('=')[0])), own].join('&')}`;   // (a word the page's own address says for itself — its preset, no sound — is not said twice)
 }
 

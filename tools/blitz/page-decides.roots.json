@@ -42,16 +42,6 @@
       "behind": "a start"
     },
     {
-      "id": "src/game/demo.ts:Demo.goto",
-      "why": "the tour stages its next stop: the level set again from outside a tick",
-      "behind": "a start"
-    },
-    {
-      "id": "src/game/demo.ts:Demo.stop",
-      "why": "the tour ends: the level set back from outside a tick",
-      "behind": "a start"
-    },
-    {
       "id": "src/game/director.ts:Director.stop",
       "why": "a show ends: its cast taken off, the level handed back",
       "behind": "a start"
@@ -79,11 +69,6 @@
     {
       "id": "src/ui/startpage.ts:openStartPage",
       "why": "the start page: a menu",
-      "behind": "a hand"
-    },
-    {
-      "id": "src/ui/picks.ts:picksBlock",
-      "why": "the start page's picks: a menu",
       "behind": "a hand"
     },
     {
@@ -147,9 +132,19 @@
       "behind": "a tape's page"
     },
     {
-      "id": "src/main.ts:main › briefSettle › settleStep",
+      "id": "src/ui/startwait.ts:startWaits › step",
       "why": "the loading brief settles the picture before play starts",
       "behind": "a start"
+    },
+    {
+      "id": "src/ui/menu.ts:Menu.title",
+      "why": "the title's screen and its settings",
+      "behind": "a hand"
+    },
+    {
+      "id": "src/host/capture.ts:frameCapture › {save}",
+      "why": "a frame captured by hand is written out",
+      "behind": "a hand"
     },
     {
       "id": "src/game/attract.ts:Attract.opening",
@@ -179,6 +174,31 @@
     {
       "id": "src/host/handsoff.ts:HandsOff.tick",
       "why": "a script's hands on the Input (the tour, a check)",
+      "behind": "a hand"
+    },
+    {
+      "id": "src/ui/panel.ts:Panel.buttons",
+      "why": "a panel's rows are made, and what a row does is for the hand that presses it",
+      "behind": "a hand"
+    },
+    {
+      "id": "src/ui/panel.ts:Panel.section",
+      "why": "a panel's rows are made, and what a row does is for the hand that presses it",
+      "behind": "a hand"
+    },
+    {
+      "id": "src/game/kit.ts:kitSolo",
+      "why": "the kit of a game with no mission is dealt as a card opens: once, for the hand at the menu",
+      "behind": "a hand"
+    },
+    {
+      "id": "src/game/kit.ts:SLOTS",
+      "why": "the pouches rule's knob table: the closure in it carries the kit screen's cards across only when the switch is written (the page's boot, the panel, knobs put back). Naming the table each step (knobRegistry) runs nothing of it. The kit screen before a mission is the cards'",
+      "behind": "a hand"
+    },
+    {
+      "id": "src/game/kit.ts:BIGSLOT",
+      "why": "the big slot's knob table: the closure in it carries the kit screen's cards across only when the switch is written (the page's boot, the panel, knobs put back). Naming the table each step (knobRegistry) runs nothing of it. The kit screen before a mission is the cards'",
       "behind": "a hand"
     }
   ]

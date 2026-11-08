@@ -26,8 +26,7 @@ export interface GeneratorTrace { groups: string[]; }
  *  cartons, cabinets, papers, whiteboards, the vending machines, racks…; `demote` = FACE RELIEF that used to be modelled as thin sub-part boxes (drawer pulls,
  *  LED nubs, the vending machines' glowing front slabs, clock faces and hands, screen sheets, door-gap strips, deck boards…) is removed and drawn as markings
  *  on the parent face instead — never a free-standing object (papers, notes, books, trays keep their boxes: the sheet's edge is what makes it a thing on the
- *  table). Both default ON; both off = the office exactly as it was before the lane (levels/office-relief.json, ?level=relief — the ray-cost A/B's 'before'
- *  and the identity reference). `texel` = the base lattice the bitmaps are generated for (the page's world-resolution strip: 2 / 2.5 / 4 cm). */
+ *  table). Both default ON. `texel` = the base lattice the bitmaps are generated for (the page's world-resolution strip: 2 / 2.5 / 4 cm). */
 export interface GeneratorOpts { markings?: boolean; demote?: boolean; texel?: number;
   /** the office's lived tier (the hand pass's drawn-only things, groups `lived.<room>` at the tail): laid or left out. Absent = as the level is loaded here
    *  (scene/lived.ts LIVED.on), so the generator and the loaded file are the same Level on either stand; the exporter asks for it, since the FILE carries it */
@@ -316,12 +315,12 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
     for (let u = a + 0.4; u < b - 0.2; u += 1.5) F(u - 0.03, u + 0.03, y - 0.02, y + 0.05, 0, 0.04, clip, false);
     if (drop !== undefined) { F(b - 0.03, b, drop, y, 0, 0.03, paint, false); F(b - 0.14, b + 0.11, drop - 0.3, drop, 0, 0.09, paint, solid); }
   };
-  /** a PIPE standing at (x, z) from y0 to y1, radius r: four slabs turned an eighth each. SOLID, the game stands it up as one round (scene/round.ts);
-   *  drawn only, it stays the eight-sided post the four slabs make (the round rule takes plain boxes). `rings` = what is round it, each [y0, y1, r]: a
-   *  flange at its foot, a collar half way */
+  /** a PIPE standing at (x, z) from y0 to y1, radius r. SOLID, one box that says it is round (scene/round.ts); drawn only, the eight-sided post of four slabs turned
+   *  an eighth each. `rings` = what is round it, each [y0, y1, r]: a flange at its foot, a collar half way */
   const pipe = (x: number, z: number, y0: number, y1: number, r: number, paint: Vec3, rings: readonly (readonly [number, number, number])[] = [], solid = false) => {
     const round = (y0: number, y1: number, r: number) => { const a = r * 0.96, w = a * 0.4142;
-      for (let k = 0; k < 4; k++) add({ c: [x, (y0 + y1 - 0.002 * k) / 2, z], h: [a, (y1 - 0.002 * k - y0) / 2, w], yaw: k * Math.PI / 4, albedo: paint, ...(solid ? {} : { flags: BoxFlag.NoShadow }) }); };
+      if (solid) { const R = a * 1.026; add({ c: [x, (y0 + y1) / 2, z], h: [R, (y1 - y0) / 2, R], round: true, albedo: paint }); return; }
+      for (let k = 0; k < 4; k++) add({ c: [x, (y0 + y1 - 0.002 * k) / 2, z], h: [a, (y1 - 0.002 * k - y0) / 2, w], yaw: k * Math.PI / 4, albedo: paint, flags: BoxFlag.NoShadow }); };
     round(y0, y1, r); for (const [ry0, ry1, rr] of rings) round(ry0, ry1, rr);
   };
   // ---- paint on what is there (markings: scene/markings.ts; the recipes and the painter's tins: scene/markingDefaults.ts) ----

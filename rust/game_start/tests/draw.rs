@@ -93,3 +93,108 @@ fn the_boxes_say_what_they_hold() {
     one.frame(&p.g, 1.0, [0.0; 3]);
     assert!(!one.lights.rows.is_empty() && one.boxes.geo.is_empty() && one.men.men.is_empty());
 }
+
+/// THE RULE: the smoke the picture is bent toward is the smoke eyes see through: read through its rows, a line lets through what the game says it does; a game put back says nothing of it until its ways are known again, and then the smoke that stands there.
+/// A FAILURE MEANS: the drawn smoke follows something no eye looks through.
+#[test]
+fn the_smoke_drawn_is_bent_toward_the_smoke_eyes_see_through() {
+    use game::smoke_types::SmokeEmitter;
+    let mut p = office(5);
+    p.sam_unhurt();
+    p.run(0.2);
+    let mut d = Drawn::default();
+    d.take(&p.g, want::smoke);
+    assert!(d.smoke.bricks.is_empty(), "no smoke, and a brick of it is told");
+    let [x, z] = p.sam_at();
+    let can = SmokeEmitter { pos: [x, 0.2, z], dir: [0.0, 1.0, 0.0], speed: 1.9, radius: 0.2, density: 95.0, temperature: 1.6, ttl: 20.0, ..Default::default() };
+    game::smoke_types::smoke_system_like_emit(&mut p.g, &can);
+    let lines = |x: f64, z: f64| (0..60).map(move |i| { let (a, y) = (i as f64 * 0.7, 0.3 + 0.35 * (i % 8) as f64); let (c, s) = (game::m::cos(a), game::m::sin(a)); ([x - 4.0 * c, y, z - 4.0 * s], [x + 4.0 * c, y, z + 4.0 * s]) });
+    // the game's answer: the cell each quarter metre lies in, read from the rows
+    let read = |d: &Drawn, a: [f64; 3], b: [f64; 3]| {
+        let h = d.smoke.head[0];
+        let len = game::v3::len(game::v3::sub(b, a));
+        let n = (len * 4.0).ceil();
+        let sum: f64 = (0..n as usize).map(|i| {
+            let q: [f64; 3] = core::array::from_fn(|k| (a[k] + (b[k] - a[k]) * ((i as f64 + 0.5) / n)) / 0.5);
+            let [cx, cy, cz] = q.map(|v| v.floor() as i64);
+            if cx < 0 || cz < 0 || !(0..8).contains(&cy) || cx >= 4 * h.wide as i64 || cz >= 4 * h.deep as i64 { return 0.0; }
+            let row = d.smoke.at[(cz / 4 * h.wide as i64 + cx / 4) as usize].w as usize;
+            if row == 0 { 0.0 } else { d.smoke.bricks[row - 1].rho[((cy * 4 + cz % 4) * 4 + cx % 4) as usize] as f64 }
+        }).sum();
+        (-6.0 * sum * len / n).exp()
+    };
+    let agree = |d: &Drawn, p: &Play, when: &str| {
+        let mut hidden = 0;
+        for (a, b) in lines(x, z) {
+            let (told, game) = (read(d, a, b), game::sense::smoke_between(&p.g, a, b));
+            assert!((told - game).abs() < 1e-4, "{when}: the rows let {told:.4} through {a:?} {b:?} and the game {game:.4}");
+            hidden += (game < 0.3) as u32;
+        }
+        hidden
+    };
+    p.run(2.0);
+    let then = p.g.clone();
+    let kept = game_start::block::bytes(p.g.sim).to_vec();
+    d.take(&p.g, want::smoke);
+    let early = agree(&d, &p, "two seconds in");
+    let ways = |d: &Drawn| { let n = |bit: u32| d.smoke.bricks.iter().map(|b| b.open.iter().map(|w| (w & (bit * 0x0101_0101)).count_ones()).sum::<u32>()).sum::<u32>(); [n(1), n(2), n(4), n(8)] };
+    let of = 128 * d.smoke.bricks.len() as u32;
+    let told = ways(&d);
+    assert!(told[3] == of && told[..3].iter().all(|n| *n > of / 4 && *n < of), "an office of rooms, and of {of} cells these ways are open: {told:?}");
+    p.run(6.0);
+    d.take(&p.g, want::smoke);
+    let late = agree(&d, &p, "eight seconds in");
+    assert!(late > early, "the scene: the cloud was to grow ({early} of 60 lines hidden, then {late})");
+    p.g = then;
+    sim::state::put(p.g.sim, &kept);
+    d.cut();
+    d.take(&p.g, want::smoke);
+    assert!(d.smoke.head.is_empty(), "put back, and its ways are told before they were asked");
+    p.run(0.1);
+    d.take(&p.g, want::smoke);
+    assert!(agree(&d, &p, "put back").abs_diff(early) < late - early, "the cloud put back is not the one of two seconds in");
+    let of = 128 * d.smoke.bricks.len() as u32;
+    assert!(ways(&d)[3] == of && ways(&d)[0] > of / 4, "put back, and the ways are not told");
+}
+
+/// THE RULE: a source says whether the game holds its smoke, and the game holds what it says.
+#[test]
+fn a_source_says_whether_the_game_holds_its_smoke() {
+    use game::smoke_types::SmokeEmitter;
+    let mut p = office(5);
+    p.run(0.2);
+    let can = SmokeEmitter { pos: [8.0, 0.2, 8.0], dir: [0.0, 1.0, 0.0], speed: 1.9, radius: 0.2, density: 95.0, temperature: 1.6, ttl: 20.0, ..Default::default() };
+    for (e, held, what) in [
+        (can.clone(), true, "a canister"),
+        (SmokeEmitter { look: Some(true), ..can.clone() }, false, "a look of one"),
+        (SmokeEmitter { radius: 0.08, density: 24.0, ttl: 0.08, ..can.clone() }, false, "a shot's gas"),
+    ] {
+        let before = sim::bricks::emitting(p.g.sim);
+        game::smoke_types::smoke_system_like_emit(&mut p.g, &e);
+        game::out_events::push_smoke_system_like_emit(&mut p.g, &e);
+        assert_eq!(sim::bricks::emitting(p.g.sim) > before, held, "{what}: the game's own smoke");
+        let mut d = Drawn::default();
+        d.take(&p.g, want::events);
+        assert_eq!(d.events.sources.last().expect("the source is told").says & 8 != 0, held, "{what}: what the picture is told");
+    }
+}
+
+/// THE RULE: a tracer's head that stops in something solid throws its ember, once, as it arrives: the sparks the table asks for. In a man, or on nothing, it just ends.
+#[test]
+fn a_tracer_that_stops_in_something_solid_throws_its_ember() {
+    use game::tracers::TracerImpact;
+    for (impact, solid) in [(TracerImpact::Solid, true), (TracerImpact::Flesh, false), (TracerImpact::None, false)] {
+        let mut p = office(6);
+        p.run(0.2);
+        let want_sparks = p.g.tracers.params.ember_sparks;
+        assert!(want_sparks > 0.0, "the table asks for no ember");
+        game::tracers::tracers_spawn(&mut p.g, [8.0, 1.4, 8.0], [1.0, 0.0, 0.0], 6.0, impact, [1.0, 0.6, 0.3], 0.0);
+        let mut out = Vec::new();
+        for _ in 0..4 { game::tracers::tracers_update(&mut p.g, 0.1, &mut out, None); }
+        let mut d = Drawn::default();
+        d.take(&p.g, want::events);
+        let spark = game::render_particles::PKind::Spark as u32;
+        let (sparks, thrown) = d.events.emits.iter().filter(|e| e.kind == spark).fold((0.0, 0), |(n, k), e| (n + e.count as f64, k + 1));
+        assert_eq!((sparks, thrown), if solid { (want_sparks, 1) } else { (0.0, 0) }, "{impact:?}");
+    }
+}

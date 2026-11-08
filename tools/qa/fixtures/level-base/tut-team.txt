@@ -1,2 +1,3 @@
 # 11-05, a gate's posts stand 6 mm fatter each way along the wall they close and a van's bay sides end at its tail lamps: solid boxes move by millimetres, none added or removed; before it: 11-05, three kit pieces no longer flicker: a handcart's shafts end at its bed, a van's bumper and step begin at its body, a wash line's cloths do not lap; no box added or removed, and no solid thing is anywhere it was not; before it: the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
-ce19f34ea11f9ba15a0694130effd3eb06c5d228
+# version 2: a round thing is one box, the file converted by tools/levels/round-convert.ts: no box moved
+695c746375da9cc911538bf9ccdc11d04fe9451d

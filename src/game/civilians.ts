@@ -31,7 +31,7 @@ import type { Game, DownKind, DownBy } from './game';
 import { Guard } from './game';
 import type { PatrolRoute, CivilianDef, CivilianTask } from '../scene/level';
 import type { DialoguePick } from './dialogue';
-import { CIV_LINES, CIV_COUNT, HOSTAGE_LINES, SNATCH_LINES, hashStr, roomName, isOffice } from './dialogue';
+import { CIV_LINES, CIV_COUNT, HOSTAGE_LINES, hashStr, roomName, isOffice } from './dialogue';
 import type { HostageMoment } from './dialogue';
 import { WORDS, w, wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { civMost, levelTooBig } from './levelfit';
@@ -44,7 +44,7 @@ import './glass';
 import { RAG_COUNT } from './ragdoll';
 import type { Character } from './character';
 import { hearPath } from './weather';
-import { simRandom, mulberry32, rollOn } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { simRandom, rollOn } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { RUST_PASS, RUST_SURFACE, crossToRust } from './crossing';
 
 // ================================================================ authored spots (TODO(LevelData): the phones and the ways off the floor belong in the level file beside the
@@ -66,8 +66,6 @@ export const CIV_SPOTS = {
  *  QuietData; a level with a quiet mission says which its floor has, and one it leaves out is simply not there: she runs for a guard, or hides) reads them;
  *  every other level reads the office's table above, as it always has. */
 export function civSpots(g: Game): { phones: CivSpot[]; exits: CivSpot[] } {
-  const N = g.level.scenarios?.snatch;   // (game/snatch.ts: the one man of a snatch level runs for the block's own ways out; no phone, nobody to tell)
-  if (N) { let o = ownSpots.get(N); if (!o) ownSpots.set(N, o = { phones: [], exits: N.exits.map(e => ({ name: e.name, pos: e.pos, face: 0 })) }); return o; }
   const Q = g.level.scenarios?.quiet; if (!Q) return CIV_SPOTS;
   let o = ownSpots.get(Q); if (!o) ownSpots.set(Q, o = { phones: (Q.phones ?? []).map(s => ({ name: s.name, pos: s.pos, face: s.face })), exits: (Q.wayouts ?? []).map(s => ({ name: s.name, pos: s.pos, face: s.face })) });
   return o;
@@ -107,8 +105,6 @@ export const CIV = {
   outsideCallSecs: 18,
   /** passing pleasantries with a calm man inside greetM (a clear line between them): at most one per pair per pairSecs and one on the floor per floorSecs — off = never */
   greet: true, greetM: 3.0, greetPairSecs: 240, greetFloorSecs: 70,
-  /** the response team on its way: control clears them off the floor (they run for the doors) */
-  evacuateOnQrf: true,
 };
 
 /** the price list's civilian terms live in chronicle.ts SCORE (civReported / civKO / civKilled) with the rest of the card's */
@@ -120,9 +116,6 @@ const CIV_ID0 = 40;
 // her own dice (line picks, the frozen beat) are mulberry32 (math/dice.ts) off her name — never Math.random, so a floor with her on it and unprovoked is the seeded floor without her
 // (the same die with its state kept ON the record — `dice`, rolled by `rnd` = math/dice.ts rollOn, which captures nothing — so a checkpoint carries it, a loaded
 //  civilian draws on exactly where she was, and a record a rollback snapshot puts into another game rolls its own die, not the first game's)
-/** run `fn` with Math.random swapped for a private seeded die: the Guard / Character constructors draw from Math.random (the idle phase, the look clock) and a civilian's
- *  construction must not move the game's own sequence by one draw (every seeded QA run, every frozen identity digest, is of the floor WITHOUT her) */
-function withDice<T>(seed: number, fn: () => T): T { const R = Math.random; Math.random = mulberry32(seed); try { return fn(); } finally { Math.random = R; } }
 
 // ================================================================ the record (Guard.civ)
 export type CivState = 'work' | 'startled' | 'alarmed' | 'flee' | 'report' | 'phone' | 'cower' | 'held' | 'evacuate' | 'gone';
@@ -153,8 +146,6 @@ export interface Civ {
   /** a rescue's hostage told to get up and come (hostageLead — rescueend.ts): whom she follows (null: nobody — she is down where she was put), and how far behind
    *  him she stops. Not in the civilians' own snapshot: no checkpoint is reachable with a rescue staged, and rescueend.ts restore() gives the word again */
   lead: Character | null; leadGap: number;
-  /** led, and sent the last steps to a spot by herself (civilianLedTo — snatchout.ts: the van's doors): she walks there in place of to the leader's heels */
-  leadTo: Vec3 | null;
   /** her voice: when she last screamed (what the men and the other civilian hear), whimper clock, greeting clocks */
   screamAt: number; whimperAt: number; greetAt: number; lastLineAt: number;
   /** the men told of THIS fright already (a scream heard, her seen running), by alarm serial */
@@ -180,11 +171,11 @@ export const CIV_DEBUG: { log: ((s: string) => void) | null } = { log: null };
 function log(g: Game, gd: Guard, what: string) { const C = gd.civ!; C.log.push(`${g.time.toFixed(1)} ${what}`); if (C.log.length > 40) C.log.splice(0, 10); CIV_LOG.push({ t: g.time, who: C.name, what }); if (CIV_LOG.length > 200) CIV_LOG.splice(0, 50); CIV_DEBUG.log?.(`${g.time.toFixed(2)}s ${C.name}: ${what}`); }
 
 // ================================================================ standing them up / down
-/** A CIVILIAN COMES INTO A GAME HERE AND NOWHERE ELSE (the level's own as it is stood up, a rescue's hostages, the man a snatch is for). A game holds as
+/** A CIVILIAN COMES INTO A GAME HERE AND NOWHERE ELSE (the level's own as it is stood up, a rescue's hostages). A game holds as
  *  many as one step of the doors can be handed beside every other man it may hold (levelfit.ts civMost), and one more is a level too big for the game,
  *  said by name as he would join: so "more men than a step is handed" stays arithmetic whoever adds a civilian, and when. */
 function join(g: Game, gd: Guard): Guard {
-  const most = civMost(); if (g.civilians.length >= most) throw new Error(levelTooBig(g.level, `more than ${most} civilians at once (its own, a rescue's hostages, the man a snatch is for), and a game holds no more men than one step of its doors can be handed (game/levelfit.ts civMost)`));
+  const most = civMost(); if (g.civilians.length >= most) throw new Error(levelTooBig(g.level, `more than ${most} civilians at once (its own, a rescue's hostages), and a game holds no more men than one step of its doors can be handed (game/levelfit.ts civMost)`));
   g.civilians.push(gd); return gd;
 }
 /** Fresh civilians on their first marks (game.ts: at construction after the shift, and resetCivilians). Nothing with the switch off or none authored. */
@@ -201,7 +192,7 @@ export function resetCivilians(g: Game) { { const __s = RUST_SURFACE; if (__s) {
     if (pl.dragging?.civ) s.view.toggleDrag();
     if (pl.takedown?.g.civ) pl.takedown = null;
   }
-  for (const cv of g.civilians) { forgetMeter(g, cv); manLeaves(cv.char, cv); }
+  for (const cv of g.civilians) manLeaves(cv.char, cv);
   const F = floorOf(g); F.evacTold = false; F.greetAt = -1e9; F.pending.length = 0;   // (a word due from a man of the old shift is nobody's now)
   spawnCivilians(g);
 }
@@ -345,7 +336,7 @@ function makeCivilian(g: Game, def: CivilianDef, i: number): Guard {
   const fl = torchLightDef(`civlight${id}`, id, 0, 10, 20); fl.enabled = false; fl.intensity = 0;                            // a light record for the plumbing that reads one (the grab asks was it lit): never in the engine, never lit
   const p0 = route.points[0], p1 = route.points[1 % route.points.length];
   const yaw = def.face?.[0] ?? (route.points.length > 1 ? v3.yawTo(p0, p1) : 0);
-  const gd = withDice(hashStr(`civ:${def.name}:${i}`), () => new Guard(g.men, g.ch, id, route, -1, fl, v3.copy(def.tint), { tint2: def.tint2 ? v3.copy(def.tint2) : [0.06, 0.06, 0.08], yaw, name: def.name, team: 'civilian' }));
+  const gd = new Guard(g.men, g.ch, id, route, -1, fl, v3.copy(def.tint), { tint2: def.tint2 ? v3.copy(def.tint2) : [0.06, 0.06, 0.08], yaw, name: def.name, team: 'civilian' });
   gd.foe = null; gd.drawn = false; gd.heardUpTo = g.eventSeq;   // (deaf to what was in the air before she existed)
   const worker = def.kind === 'worker';
   gd.civ = {
@@ -355,7 +346,7 @@ function makeCivilian(g: Game, def: CivilianDef, i: number): Guard {
     target: null, retargetAt: -1, badTargets: new Set(), freezeUntil: -1, pinTarget: false,
     reportTo: null, talkT: 0, reported: false, phoned: false, acked: false,
     cowerAt: null, complied: false, complyUntil: -1, refled: false, foundT: 0, foundBy: null, foundLineAt: -1, foundTold: false,
-    lead: null, leadGap: 0, leadTo: null,
+    lead: null, leadGap: 0,
     screamAt: -1e9, whimperAt: -1e9, greetAt: -1e9, lastLineAt: -1e9, told: new SideMap(), knownBodies: new SideSet(), intelN: 0, outsideCallAt: -1, vis: 0,
     dice: hashStr(`civdice:${def.name}`) | 0, rnd: rollOn, log: [],   // (the sequence mulberry32(dice) gives)
   };
@@ -373,21 +364,6 @@ export function spawnHostage(g: Game, def: { name: string; kind: CivilianDef['ki
   if (WORDS.on) gd.civ!.label = 'hostage';   // (what a row or a message calls her: no cleaner, no late worker — the dialogue pass)
   return gd;
 }
-/** THE MAN A SNATCH IS FOR (game/snatch.ts — nobody else calls these four): a civilian of the usual make at his own marks, working them like the late worker
- *  until something frightens him; then the civilians' own fright, run and corner are his (civSpots hands him the level's ways out). */
-export function spawnTarget(g: Game, def: { name: string; pos: Vec3; face: number; tint: Vec3; tint2?: Vec3; points?: Vec3[]; wait?: number[] }): Guard {
-  const pts = def.points?.length ? def.points : [def.pos];
-  const gd = makeCivilian(g, { name: def.name, kind: 'worker', tint: def.tint, tint2: def.tint2, points: pts.map(p => v3.copy(p)), wait: pts.map((_, i) => def.wait?.[i] ?? 30), face: pts.map(() => def.face) }, g.civilians.length);
-  join(g, gd);
-  gd.civ!.label = 'man you came for';   // (no article: its readers write 'the ' in front of the label)
-  return gd;
-}
-/** tied where he is (the pose is updateOne's, asked of g.snatch): the promise with no end, whatever state the tie found him in */
-export function civilianTie(g: Game, gd: Guard) {
-  const C = gd.civ!; if (gd.state === 'dead' || C.state === 'gone') return;
-  if (C.state !== 'cower') toCower(g, gd, true);
-  C.complied = true; C.complyUntil = Infinity;
-}
 /** A HOSTAGE'S VOICE (the dialogue pass — words.ts; the words are dialogue.ts HOSTAGE_LINES): rescue.ts names the moment and she says a line of it, off her own
  *  die, never the one over her head now; `other` = the hostage the line is about (a line that names one is left out without). A bubble (and, unseen, a log row for the moments that happen once) and nothing else: no
  *  scream's stamp, no event — nobody's ears are moved by it (the cry under the loud moments is the mixer's alone). False: she is down / held / has no such line. */
@@ -400,7 +376,6 @@ export function hostageSay(g: Game, gd: Guard, moment: HostageMoment, other: Gua
   if (moment === 'aimed' || moment === 'shot' || moment === 'entry') g.audio.play('heldProtest', gd.char.bones.head ?? v3.add(gd.char.pos, [0, 0.4, 0]), 0.5, { rate: C.def.kind === 'worker' ? 1.15 : 1.5 });   // (the one voice buffer the game has for a cry: scream()'s, lower)
   return true;
 }
-function forgetMeter(g: Game, gd: Guard) { const id = gd.char.id; g.lightForget(`civC${id}`); g.lightForget(`civH${id}`); }
 
 // ================================================================ gates
 /** are the civilians on the floor at all right now: not under the showcase tour / the attract loop's tour flag / a puppet beat, not in the breach's daylight */
@@ -422,7 +397,6 @@ interface Pending { at: number; kind: PendKind; cv: Guard; o: Guard | null; key?
 // ================================================================ her voice
 /** she says it: a bubble over her head (ui/bubbles.ts draws the civilians' too), and the log under her name when she is off screen — like guards.ts say, in her name */
 function civSay(g: Game, gd: Guard, text: string, hold = 0, unheard = false) {
-  if (g.snatch?.isMan(gd)) { const own = g.snatch.voice(gd, text); if (own === null) return; text = own; }   // (a snatch's man is not the office's late worker: his own lines by what he is doing, or nothing — game/snatch.ts voice)
   const C = gd.civ!; const t = fill(g, gd, text);
   gd.bubble = { text: t, t: g.time, dur: Math.min(4.5, Math.max(2, 1.5 + t.length * 0.055 + hold)), radio: false };
   C.lastLineAt = g.time;
@@ -563,16 +537,14 @@ function toCower(g: Game, gd: Guard, complied: boolean) {
   CIV_STATS.cowered++; if (complied) CIV_STATS.complied++;
   setState(g, gd, 'cower');
 }
-/** A RESCUE'S HOSTAGE ON HER FEET (rescueend.ts; and a snatch's man once tied — snatchout.ts): she follows `lead` on the civilians' own legs, stopping `gap` behind him, or
+/** A RESCUE'S HOSTAGE ON HER FEET (rescueend.ts): she follows `lead` on the civilians' own legs, stopping `gap` behind him, or
  *  (null) goes down again where she stands. Her state stays the told cower it was (nothing frightens her off it, nobody grabs her, she reports to nobody):
  *  the one branch in updateOne walks her instead of keeping her in the corner. */
 export function hostageLead(g: Game, gd: Guard, lead: Character | null, gap: number) {
   const C = gd.civ; if (!C || gd.state === 'dead' || C.state !== 'cower') return;
-  C.lead = lead; C.leadGap = gap; C.leadTo = null; gd.path = []; gd.pathGoal = null; gd.stallRef = null;
+  C.lead = lead; C.leadGap = gap; gd.path = []; gd.pathGoal = null; gd.stallRef = null;
   if (!lead) C.cowerAt = v3.copy(gd.char.pos);   // (down where she stands: cower() scuttles nobody back to the room)
 }
-/** a led civilian is sent the last steps to `to` by herself (snatchout.ts: the van's doors), or (null) follows her leader again */
-export function civilianLedTo(gd: Guard, to: Vec3 | null) { const C = gd.civ; if (!C || !C.lead) return; C.leadTo = to ? v3.copy(to) : null; gd.path = []; gd.pathGoal = null; gd.stallRef = null; }
 
 // ================================================================ HELD: the arm (player.ts has the hold; these are her rows' doings)
 /** player.ts startGrab, the frame the arm goes round her: whatever she was doing stops (the fright itself waits until she is out of it — she cannot scream) */
@@ -589,7 +561,6 @@ export function civilianAnswer(g: Game, gd: Guard, rnd: () => number = simRandom
   const C = gd.civ!; const T = gd.talk; T.stage++; T.presses++; T.lastT = g.time;
   const worker = C.def.kind === 'worker';
   const base = { kind: null as DialoguePick['kind'], cell: `civ:${C.def.kind}`, k: 'saw' as const, band: 'high' as const, t: 'nervy' as const, lineK: '*' as const, widened: '' as const, after: null, script: null, shape: null };
-  if (g.snatch?.isMan(gd)) return T.stage <= 1 ? { ...base, text: pick(gd, SNATCH_LINES.held), id: 'civ:fear', stage: 1, stageN: T.stage } : { ...base, text: pick(gd, SNATCH_LINES.dry), id: 'civ:dry', stage: 'x', stageN: T.stage };   // (a snatch's man: his own two lines, and he has nothing to tell)
   if (T.stage <= 1) return { ...base, text: pick(gd, worker ? CIV_LINES.heldFearWorker : away(g) ? CIV_LINES.heldFear.map(t => /CLEAN here/.test(t) ? CIV_LINES.own.heldFear : t) : CIV_LINES.heldFear), id: 'civ:fear', stage: 1, stageN: T.stage };
   const own = away(g), men = own ? g.guards.filter(x => !x.unit && x.team === 'guard').length : 0;   // (words.ts: off the office what she knows is the keypad's digits, where there is one, and how many walk the place — the roster as she saw it come on, whoever is down since; nobody on it: not that)
   const pool = own ? [...(g.devices?.padNear(gd.char.pos) ? [CIV_LINES.own.intelPad] : []), ...(men ? wg(CIV_LINES.guide.own.intel, CIV_LINES.own.intel) : [])] : CIV_LINES.intel[C.def.kind] ?? [];
@@ -622,16 +593,14 @@ export function civilianDown(g: Game, gd: Guard, dir: Vec3, quiet: boolean, how:
   if (gd.held) { gd.held = null; c.anim.heldPose = null; }
   c.anim.act = null; C.target = null; C.reportTo = null;
   c.ragdollize(g.col, dir, quiet);
-  forgetMeter(g, gd);
   const dead = how === 'shot';
-  const mark = !!g.snatch?.isMan(gd);   // (a snatch's man: out cold by Sam's hands is how he is taken, not a civilian hurt — snatch.ts words both ways he goes down)
   const hostage = WORDS.on && !!g.rescue?.isHostage(gd);   // (a hostage down is the rescue's to word — rescue.ts outcome: who shot her, and what it ends — not 'the cleaner … they will find her')
   if (by === 'player') {
     if (dead) { CIV_STATS.killed++; chronicleN(g, 'civilianKilled', 'civKilled', { who: C.name, label: C.label, weapon: g.player.gunInHand() ? plainShort(g.player.gunInHand()!.def) : 'a round' }, c.pos); }
-    else if (!mark) { CIV_STATS.ko++; chronicleN(g, 'civilianKO', 'civKO', { who: C.name, label: C.label, method: how === 'choked' ? 'choke' : /whip/.test(line ?? '') ? 'whip' : /^ring/.test(line ?? '') ? 'ring' : /behind the wall when it went$/.test(line ?? '') ? 'charge' : 'takedown' }, c.pos); }
+    else { CIV_STATS.ko++; chronicleN(g, 'civilianKO', 'civKO', { who: C.name, label: C.label, method: how === 'choked' ? 'choke' : /whip/.test(line ?? '') ? 'whip' : /^ring/.test(line ?? '') ? 'ring' : /behind the wall when it went$/.test(line ?? '') ? 'charge' : 'takedown' }, c.pos); }
     if (dead && g.tune.civilianKillFails && missionLive(g)) { const m = g.mission; m.stage = 'failed'; m.driveT = -1; m.downCardAt = g.missionInTour ? -1 : g.time + DOWN_CARD_SECS; g.msg(`MISSION FAILED — you killed ${C.name}, the ${C.label}. press Enter to restart`); }
-    else if (!hostage && !mark) g.msg(line ?? (dead ? `CIVILIAN CASUALTY — ${C.name}, the ${C.label}, is dead. that is on your record, and they will find ${C.her}` : how === 'choked' ? `${C.name} choked out — breathing. a civilian: that costs, and they may find ${C.her}` : `${C.name} out cold — breathing. a civilian: that costs, and they may find ${C.her}`));
-  } else if (!hostage && !mark) g.msg(line ?? `${C.name}, the ${C.label}, is down`);
+    else if (!hostage) g.msg(line ?? (dead ? `CIVILIAN CASUALTY — ${C.name}, the ${C.label}, is dead. that is on your record, and they will find ${C.her}` : how === 'choked' ? `${C.name} choked out — breathing. a civilian: that costs, and they may find ${C.her}` : `${C.name} out cold — breathing. a civilian: that costs, and they may find ${C.her}`));
+  } else if (!hostage) g.msg(line ?? `${C.name}, the ${C.label}, is down`);
   log(g, gd, `DOWN — ${how} by ${by}`);
   // the other civilian, if it happened in front of her
   const at = c.bones.chest ?? v3.add(c.pos, [0, 1.1, 0]);
@@ -657,15 +626,12 @@ function hearScream(g: Game, gd: Guard) {
 
 
 
-// ================================================================ persistence (one key per machine: the switch and the fail rule)
-const LS_KEY = 'twopointsix.civilians';
-export function saveCivTune(g: Game) { try { localStorage.setItem(LS_KEY, JSON.stringify({ on: g.tune.civilians, killFails: g.tune.civilianKillFails, greet: CIV.greet })); } catch { /* no storage */ } }
-export function loadCivTune(g: Game) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('loadCivTune', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
-  try { const j = JSON.parse(localStorage.getItem(LS_KEY) ?? 'null'); if (j && typeof j === 'object') { if (typeof j.on === 'boolean') g.tune.civilians = j.on; if (typeof j.killFails === 'boolean') g.tune.civilianKillFails = j.killFails; if (typeof j.greet === 'boolean') CIV.greet = j.greet; } } catch { /* nothing stored, or not readable */ }   // (no early return: a FRESH profile has no record and must still read the URL flag below)
-  try { if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('nocivilians')) g.tune.civilians = false; } catch { /* no location (the harness) */ }   // ?nocivilians: nobody but the shift from boot — the frame and the floor byte for byte as before them — whatever the stored switch says
+/** ?nocivilians: nobody but the shift, read off the page's address */
+export function civiliansAddressWord(g: Game) {
+  try { if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('nocivilians')) g.tune.civilians = false; } catch { /* no location (the harness) */ }
 }
 /** the switch flipped live (Tab panel / console): off = they leave the floor this frame (a held / dragged one let go of first); on = fresh ones on their marks */
-export function setCivilians(g: Game, on: boolean) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('setCivilians', undefined, [g, on]); if (__r !== RUST_PASS) return __r as any; } } g.tune.civilians = on; saveCivTune(g); resetCivilians(g); }
+export function setCivilians(g: Game, on: boolean) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('setCivilians', undefined, [g, on]); if (__r !== RUST_PASS) return __r as any; } } g.tune.civilians = on; resetCivilians(g); }
 
 // ================================================================ panel / QA
 /** 'civilians ▸ Marta WORK wipe @wp3 (14 s) aw 0.00 | Owen FLEE → Novak [gun, armed] aw 1.00' */

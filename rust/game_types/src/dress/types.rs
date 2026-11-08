@@ -11,19 +11,15 @@ pub struct DressModDRESS {
     pub snow: bool,
     pub rain: bool,
     pub wet_ground: bool,
-    pub fires: bool,
     pub wake: bool,
     pub men: bool,
     pub cues: bool,
-    pub recap: bool,
     pub blast_feel: bool,
     pub fixtures: bool,
     pub fx: bool,
     pub stature: bool,
-    pub cases: bool,
     pub net: bool,
     pub wind: bool,
-    pub debris: bool,
 }
 impl DressModDRESS {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -34,19 +30,15 @@ impl DressModDRESS {
             snow: false,
             rain: false,
             wet_ground: false,
-            fires: false,
             wake: false,
             men: false,
             cues: false,
-            recap: false,
             blast_feel: false,
             fixtures: false,
             fx: false,
             stature: false,
-            cases: false,
             net: false,
             wind: false,
-            debris: false,
         }
     }
 }
@@ -61,7 +53,7 @@ pub struct DressMod {
 impl DressMod {
     pub fn blank() -> Self {
         DressMod {
-            dress: crate::dress::DressModDRESS { air: true, moths: true, snow: true, rain: true, wet_ground: true, fires: true, wake: true, men: true, cues: true, recap: true, blast_feel: true, fixtures: true, fx: true, stature: true, cases: true, net: true, wind: true, debris: true },
+            dress: crate::dress::DressModDRESS { air: true, moths: true, snow: true, rain: true, wet_ground: true, wake: true, men: true, cues: true, blast_feel: true, fixtures: true, fx: true, stature: true, net: true, wind: true },
         }
     }
 }

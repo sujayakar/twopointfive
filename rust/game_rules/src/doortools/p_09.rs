@@ -45,7 +45,7 @@ pub fn door_tools_blow_raw(g: &mut crate::game::Game, c_2: Option<ChargeId>) -> 
     let into = -side;
     let at = g.door_tools.set.iter().position(|x| *x == c)?;
     g.door_tools.set.remove(at);
-    crate::holdfire::hold_fire_order(g, "charge", Some(crate::holdfire::HoldFireOrderO { blown: Some(true), ..Default::default() }));
+    crate::holdfire::hold_fire_order(g, crate::orders::rows::charge::ORDER.id, Some(crate::holdfire::HoldFireOrderO { blown: Some(true), ..Default::default() }));
     let out = door_pt(g, d, w / 2.0, 0.5, side, Some(1.1));
     let inn = door_pt(g, d, w / 2.0, 0.45, into, Some(1.1));
     let who = sam_id(g, &crate::seats::here(g));
@@ -98,7 +98,7 @@ pub fn door_tools_blow_raw(g: &mut crate::game::Game, c_2: Option<ChargeId>) -> 
         if dist < g.k.doortools.knock_m {
             let dir = v3::normalize([p[0] - fc[0], 0.15, p[2] - fc[2]]);
             let line = format!("{} down — behind the door when it went", callsign_or(g, gd));
-            crate::combat::kill_guard(g, gd, dir, Some(false), Some(crate::game::DownKind::Struck), Some(crate::game::DownBy::Player), Some(&line), None);
+            crate::combat::kill_guard(g, gd, dir, Some(false), Some(crate::game::DownKind::Struck), Some(crate::game::DownBy::Player), Some(&line));
             knocked += 1.0;
         } else {
             let (s0, s1, stun_m) = (g.k.doortools.stun_secs[0], g.k.doortools.stun_secs[1], g.k.doortools.stun_m);
@@ -370,7 +370,7 @@ pub fn door_tools_to_slice(g: &mut crate::game::Game, op: DoorOpId) {
 }
 
 /// this door's leaf comes round onto face `side`: a one-way door worked from the face it opens toward   (doortools.ts DoorTools.leafOurs)
-pub fn door_tools_leaf_ours(g: &mut crate::game::Game, d: DoorId, side: f64) -> bool {
+pub fn door_tools_leaf_ours(g: &crate::game::Game, d: DoorId, side: f64) -> bool {
     if !crate::doors::doors_swing_of(g, d).one_way { return false; }
     let w = g.dr[d].def.width;
     let p = door_pt(g, d, w / 2.0, 0.6, side, None);
@@ -378,7 +378,7 @@ pub fn door_tools_leaf_ours(g: &mut crate::game::Game, d: DoorId, side: f64) -> 
 }
 
 /// a jamb man's holding spot and where the walk to it is asked from   (doortools.ts DoorTools.thrSpot)
-pub fn door_tools_thr_spot(g: &mut crate::game::Game, op: DoorOpId, sgn: f64, mark: V3) -> crate::doortools::DoorToolsThrSpot {
+pub fn door_tools_thr_spot(g: &crate::game::Game, op: DoorOpId, sgn: f64, mark: V3) -> crate::doortools::DoorToolsThrSpot {
     let (d, side) = (o!(g, op).door, o!(g, op).side);
     let w = g.dr[d].def.width;
     let back = g.k.doortools.slice_back;
@@ -815,7 +815,7 @@ pub fn door_tools_cuts_owe(g: &mut crate::game::Game, op: DoorOpId) -> bool {
     if !th.jamb.iter().any(|m_| r.slice.get(*m_).map_or(false, |s| s.pie.is_some())) { return false; }
     if th.cut_owed == Some(true) && g.time - th.owed_t.unwrap_or(-1e9) >= g.k.doortools.word_cuts_cap { return false; }
     for c in g.door_tools.set.clone() {   // (a set charge goes on this same word: they go in behind its blast)
-        if !door_tools_on_pending_word(g, &crate::seats::here(g), c) && door_tools_key_is(g, c) { return false; }
+        if !door_tools_on_pending_word(g, &crate::seats::here(g), c) && door_tools_key_is(g, &crate::seats::here(g), c) { return false; }
     }
     if last_held(g, op) { return false; }
     let d = o!(g, op).door;

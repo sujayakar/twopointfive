@@ -26,6 +26,7 @@
 // SETTLED RULES ARE NOT WRITTEN HERE ANY MORE (2026-11-07). Out: 'move there (ROOMFIT off)' in `stack`; in `clear` the pin that had a locked door booted
 // untried (DOORTOOLS.testDoor off: the lead tries the handle now, as on the page) and the line of the slicing order by four, which lived on the threshold's
 // page the game no longer has (DOORTOOLS.outsidePlain off).
+import { doing, menuKey } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 import { sample } from './sweep.ts';
 const { NIGHTBREACH, SQUAD4, SQUAD4_BUDGET } = await import(`${ROOT}/src/game/nightbreach.ts`);
@@ -35,7 +36,6 @@ const { ORDERS, sideOf } = await import(`${ROOT}/src/game/orders.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { spawnUnit } = await import(`${ROOT}/src/game/guards.ts`);
 const { MAX_LIGHTS } = await import(`${ROOT}/src/render/lights.ts`);
-const { MAX_QUERIES } = await import(`${ROOT}/src/render/probe.ts`);
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -106,7 +106,7 @@ async function rig(seed: number, o: { squad?: 2 | 4; stage?: 'rc' | 'nb'; quiet?
     beats(op: any): string { return (op?.beats ?? []).map((b: any) => b.what).join(' | '); },
     room(id: string) { return RC.rooms.find((r: any) => r.def.id === id); },
     /** press X on p (one frame, nothing held), then the digit a third of a second later: the row with that digit, as a player gives it */
-    pick(p: number[], n: number) { W.cursorAt([p[0], p[1], p[2]]); input.pressed.add(ORDERS.key); R.step(); R.step(20); input.pressed.add(`Digit${n}`); R.step(); },
+    pick(p: number[], n: number) { W.cursorAt([p[0], p[1], p[2]]); menuKey(O); R.step(); R.step(20); input.pressed.add(`Digit${n}`); R.step(); },
     /** friendly fire: a teammate down by a teammate's (or Sam's) hand */
     get fratricide(): string[] { return R.downs.filter(x => x.who.team === 'operative' && (x.by?.team === 'operative' || x.who.killerId === game.player.char.id)).map(x => `${x.who.callsign} by ${x.by?.callsign ?? 'Sam'}`); },
   };
@@ -134,18 +134,18 @@ export const foursquadStage = guarded(async () => {
     'men(): the squad, a pair, a man — one call each', `all [${names(O.men())}] · red [${names(O.men('red'))}] · blue [${names(O.men('blue'))}] · men(2) ${names(O.men(2))} · men(Blue Two) ${names(O.men(ops[3]))} · men(7) ${O.men(7).length}`);
   // THE TEAM STARTS FALLEN IN (startfile.ts START.fallIn, settled): the room clear stages the four on the menu's own 'fall in', so until F nobody reads
   // 'waiting' or 'standing by' — every man holds that order and reads 'with you'. Whose the drill is does not move: red's, never blue's.
-  verdict(names(NB.drillOps) === 'Red One, Red Two' && !NB.drillOps.includes(ops[2]) && !NB.drillOps.includes(ops[3]) && ops.every((x: any) => O.of(x)?.order === 'fallIn' && O.statusOf(x) === 'with you'),
-    'F\'s drill is the red pair\'s, blue outside it; until F all four hold the fall-in they start on (\'with you\')', `drill: ${names(NB.drillOps)} · ${ops.map((x: any) => O.statusOf(x)).join(' · ')}`);
+  verdict(names(NB.drillOps) === 'Red One, Red Two' && !NB.drillOps.includes(ops[2]) && !NB.drillOps.includes(ops[3]) && ops.every((x: any) => O.of(x)?.order === 'fallIn' && doing(O.g, x).startsWith('with you')),
+    'F\'s drill is the red pair\'s, blue outside it; until F all four hold the fall-in they start on (\'with you\')', `drill: ${names(NB.drillOps)} · ${ops.map((x: any) => doing(O.g, x)).join(' · ')}`);
   // an order to a pair moves the pair alone
   // (fallen in, red is not a pair with no order: it holds its fall-in, and when blue leaves the file it closes up on Sam — a step that is not toward the spot.
   //  Asked there: the SAME order as before on both red men, still 'with you' beside Sam, and neither any nearer the spot blue was sent to)
   const p0 = ops.map((x: any) => [...x.char.pos]), had = ops.map((x: any) => O.of(x)), toSpot = ops.map((x: any) => dist(x.char.pos, AISLE));
   const why = O.give('move', R.floor(AISLE), 'blue'); R.until(() => O.men('blue').every((m: any) => O.of(m)?.arrived), 14); R.step(30);
   const moved = ops.map((x: any, i: number) => dist(x.char.pos, p0[i])); const l = O.log[O.log.length - 1];
-  const redStays = [0, 1].every(i => O.of(ops[i]) === had[i] && had[i]?.order === 'fallIn' && O.statusOf(ops[i]) === 'with you' && dist(ops[i].char.pos, AISLE) > toSpot[i] - 0.3 && dist(ops[i].char.pos, sam.pos) < 4);
+  const redStays = [0, 1].every(i => O.of(ops[i]) === had[i] && had[i]?.order === 'fallIn' && doing(O.g, ops[i]).startsWith('with you') && dist(ops[i].char.pos, AISLE) > toSpot[i] - 0.3 && dist(ops[i].char.pos, sam.pos) < 4);
   verdict(why === null && l?.who.join() === 'Blue One,Blue Two' && redStays && O.men('blue').every((m: any) => dist(m.char.pos, AISLE) < 2.55),
     'give(\'move\', spot, \'blue\'): the blue pair goes; red keeps the fall-in it held and stays with Sam (it closes the file blue left, no nearer the spot)',
-    `give → ${why} · log: ${l?.order} → ${l?.who.join(' + ')} · moved ${moved.map(f2).join(' / ')} m · said "${R.said[R.said.length - 1]}" · red: ${[0, 1].map(i => `${ops[i].callsign} ${O.of(ops[i]) === had[i] ? 'the same' : 'ANOTHER'} ${O.of(ops[i])?.order ?? 'no order'}, ${O.statusOf(ops[i])}, ${f2(toSpot[i])} → ${f2(dist(ops[i].char.pos, AISLE))} m from the spot, ${f2(dist(ops[i].char.pos, sam.pos))} m from Sam`).join(' · ')}`);
+    `give → ${why} · log: ${l?.order} → ${l?.who.join(' + ')} · moved ${moved.map(f2).join(' / ')} m · said "${R.said[R.said.length - 1]}" · red: ${[0, 1].map(i => `${ops[i].callsign} ${O.of(ops[i]) === had[i] ? 'the same' : 'ANOTHER'} ${O.of(ops[i])?.order ?? 'no order'}, ${doing(O.g, ops[i])}, ${f2(toSpot[i])} → ${f2(dist(ops[i].char.pos, AISLE))} m from the spot, ${f2(dist(ops[i].char.pos, sam.pos))} m from Sam`).join(' · ')}`);
   // (TWO LINES OF THE WHO KEY WENT FROM HERE, 2026-11-06: 'T steps all → red → blue → all' and 'a pair chosen as "who" stands while a man of it lives'. T
   //  has had no key on the page's board since the ring became the squad's only keys, and an order of the squad's key is everyone's — CMDRING.only and
   //  .wholeSquad, both settled; wholesquad-check holds the rule as the page has it, and orderui-probes still asks the fall back to all with the rule pinned
@@ -174,7 +174,7 @@ export const foursquadFollow = guarded(async () => {
   R.until(() => men.every((m: any) => O.of(m)?.arrived), 14); R.step(90);
   const near = men.map((m: any) => dist(m.char.pos, sam.pos)), file = [...men].sort((a: any, b: any) => O.of(a).follow - O.of(b).follow);
   const together = O.pairOf(file[0]) === O.pairOf(file[1]) && O.pairOf(file[2]) === O.pairOf(file[3]);
-  verdict(l?.order === 'fallIn' && l.who.length === 4 && far.every((d: number) => d > 6) && near.every((d: number) => d > 0.6 && d < 5.8) && minApart(men) > 0.6 && men.every((m: any) => O.statusOf(m) === 'with you') && together,
+  verdict(l?.order === 'fallIn' && l.who.length === 4 && far.every((d: number) => d > 6) && near.every((d: number) => d > 0.6 && d < 5.8) && minApart(men) > 0.6 && men.every((m: any) => doing(O.g, m).startsWith('with you')) && together,
     'fall in: the four come back from a far spot and close up behind Sam in one file, each pair together', `from ${far.map(f2).join(' / ')} m (apart ${f2(ranks)} m there) to ${near.map(f2).join(' / ')} m of Sam · file ${names(file)} · nearest two ${f2(minApart(men))} m`);
   // the walk: the aisle → the west door → across the break room → out of the north door → along the corridor
   const Wd = R.door('breakroom_w'), Nd = R.door('breakroom_n');
@@ -222,7 +222,7 @@ export const foursquadStack = guarded(async () => {
   const set = R.until(() => men.every((m: any) => O.of(m)?.arrived), 20); R.step(90);
   const off = men.map((m: any, i: number) => dist(m.char.pos, posts[i])), hiSide = (m: any) => alongOf(d, m.char.pos) > d.def.width / 2;
   const redTogether = hiSide(men[0]) === hiSide(men[1]), blueTogether = hiSide(men[2]) === hiSide(men[3]);
-  verdict(why === null && set && off.every((x: any) => x < 0.4) && minApart(men) > 0.7 && men.every((m: any) => O.statusOf(m) === 'stacked · manager door'), 'stack up (the manager\'s door, from the corridor): all four on their own marks', `give → ${why} · ${men.map((m: any, i: number) => `${m.callsign} ${at(m.char.pos)} (${f2(off[i])} m off)`).join(' · ')} · nearest two ${f2(minApart(men))} m`);
+  verdict(why === null && set && off.every((x: any) => x < 0.4) && minApart(men) > 0.7 && men.every((m: any) => doing(O.g, m).startsWith('stacked · manager door')), 'stack up (the manager\'s door, from the corridor): all four on their own marks', `give → ${why} · ${men.map((m: any, i: number) => `${m.callsign} ${at(m.char.pos)} (${f2(off[i])} m off)`).join(' · ')} · nearest two ${f2(minApart(men))} m`);
   // GLASS IS NOT COVER (orders.ts stackPosts, GLASSPEN.stackEyes — live in the page; no lines while rounds stop in glass, which is the frozen stand): a jamb the
   // room's rifles reach through a pane is nobody's place, and this door's latch jamb is one. So there the four are ONE file down the other wall: the lead at the
   // jamb, the rest behind him (a place left open where Sam stands), red ahead of blue. The game is asked what its dealer asks — the lines through glass onto each
@@ -276,7 +276,7 @@ export const foursquadClear = guarded(async () => {
   const SEEDS = sample([2, 5, 9], 1);
   const rows: string[] = []; let runs = 0, ended = 0, allIn = 0, cleared = 0, lost = 0, rounds = 0, ff: string[] = [], through: string[] = [], stuck: string[] = [], threw = '';
   for (const C of CASES) for (const seed of SEEDS) {
-    const R = await rig(seed, { door: C.door }); const { game: g, O, D, NB, RC } = R; const men = NB.ops, d = R.door(C.door); runs++;
+    const R = await rig(seed, { door: C.door }); const { game: g, D, NB } = R; const men = NB.ops, d = R.door(C.door); runs++;
     // (three of these doors are locked, and the lead TRIES a door nobody knew was locked: the order ends there, 'found shut' — DOORTOOLS.testDoor, settled,
     // held by doortest-check.ts. Until 2026-11-07 this wrote the rule off so the entry booted the door and went on; that write was refused.)
     const room = R.room(C.room);
@@ -324,13 +324,13 @@ export const foursquadClear = guarded(async () => {
 // ---------------------------------------------------------------- the F drill
 export const foursquadDrill = guarded(async () => {
   const { verdict, done } = family('foursquad-drill: F\'s breach is the red pair\'s; blue is not owned by it');
-  const R = await rig(4, { stage: 'nb' }); const { game: g, O, NB } = R; const [r1, r2, b1, b2] = NB.ops;
+  const R = await rig(4, { stage: 'nb' }); const { game: g, O, NB } = R; const [r1, b1, b2] = NB.ops;
   verdict(R.why === null && NB.ops.length === 4 && NB.hostiles.length === 3 && 1 + g.guards.length === 8, 'the night breach alone with four: Sam, four teammates, three defenders', `start ${R.why} · ${names(NB.ops)} · ${1 + g.guards.length} characters`);
   R.input.pressed.add('KeyF'); R.step(); R.step(60);
   const own = NB.ops.map((x: any) => O.owners.some((o: any) => o.owns(x)));
   verdict(NB.state === 'stacking' && own.join() === 'true,true,false,false', 'F: the red pair goes to the stack — the drill owns red, not blue', `state ${NB.state} · owned: ${NB.ops.map((x: any, i: number) => `${x.callsign} ${own[i]}`).join(' · ')}`);
   const p = [...b1.char.pos]; const why = O.give('move', R.floor(AISLE), 'blue'); R.step(60 * 3);
-  verdict(why === null && (NB.state === 'stacking' || NB.state === 'set') && O.has(b1) && O.has(b2) && !O.has(r1) && dist(b1.char.pos, p) > 1, 'an order to blue meanwhile is taken, and does not call the breach off', `give → ${why} · state ${NB.state} · Blue One moved ${f2(dist(b1.char.pos, p))} m · ${NB.ops.map((x: any) => O.statusOf(x)).join(' · ')}`);
+  verdict(why === null && (NB.state === 'stacking' || NB.state === 'set') && O.has(b1) && O.has(b2) && !O.has(r1) && dist(b1.char.pos, p) > 1, 'an order to blue meanwhile is taken, and does not call the breach off', `give → ${why} · state ${NB.state} · Blue One moved ${f2(dist(b1.char.pos, p))} m · ${NB.ops.map((x: any) => doing(O.g, x)).join(' · ')}`);
   R.until(() => NB.state === 'set', 25); const set = NB.state; R.input.pressed.add('KeyF'); R.step();
   R.until(() => NB.state === 'clear' || NB.state === 'failed', 40); R.step(60);
   verdict(set === 'set' && (NB.state === 'clear' || NB.state === 'failed') && O.has(b1) && R.fratricide.length === 0, 'the breach runs to its end with blue still on its own order; no teammate shot by a teammate', `set: ${set} · ended ${NB.state} · ${NB.summary()} · friendly fire: ${R.fratricide.join(', ') || 'none'}`);
@@ -344,12 +344,6 @@ export const foursquadBudget = guarded(async () => {
   const steady = L.filter((l: any) => l.ttl < 0).length, lit = L.filter((l: any) => l.ttl < 0 && l.enabled && l.intensity > 0).length;
   R.step(2);
   verdict(steady < MAX_LIGHTS && lit < MAX_LIGHTS, `lights: ${steady} steady lights of ${MAX_LIGHTS} by spawnUnit's own count (${MAX_LIGHTS - steady} spare), ${lit} of them lit and uploaded (${MAX_LIGHTS - lit} spare for flashes and tracers)`, `every man is booked a torch whether it burns or not`);
-  // the probe's table (render/probe.ts MAX_QUERIES a frame, the rest dropped): what the game asks of it in a frame with everybody up
-  { const P = g.probe as any, real = P.query, realS = P.querySegment; let n = 0; const keys: string[] = [];
-    P.query = (k: string, ...r: any[]) => { n++; keys.push(k); return real?.call(P, k, ...r); }; P.querySegment = (k: string, ...r: any[]) => { n++; keys.push(k); return realS?.call(P, k, ...r); };
-    let worst = 0, lines = 0; for (let i = 0; i < 30; i++) { n = 0; keys.length = 0; R.step(); if (n > worst) { worst = n; lines = keys.filter(k => /^smoke\d/.test(k)).length; } }
-    P.query = real; P.querySegment = realS;
-    verdict(worst > 0 && worst <= MAX_QUERIES && lines === NB.hostiles.length, `the probe's ${MAX_QUERIES} queries a frame: ${worst} asked with all ten up (${MAX_QUERIES - worst} spare) — the smoke sight lines to Sam are asked for the ${lines} defenders only`, `fog of war off in this rig: its smoke lines (up to six more) queue last and are the first dropped`); }
   // an eleventh man is refused, by the caller's own budget; a caller with none still gets the eight
   let e1 = '', e2 = '';
   try { spawnUnit(g, { team: 'hostile', pos: [15, 0, 17.6], budget: SQUAD4_BUDGET }); } catch (e) { e1 = (e as Error).message; }

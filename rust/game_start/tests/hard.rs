@@ -40,13 +40,13 @@ fn after_a_shot(words: &str, seed: u32) -> Vec<[f64; 2]> {
 }
 
 /// A FAILURE MEANS: the tables read hard and the men do not play it: nobody of the floor goes anywhere else than he goes on standard. The control is the standard game played twice, which
-/// is one game: what parts the two is the word.
+/// is one game to the bit: what parts the two is the word, however far. (A quarter of a metre, said so that a foot's rounding is not it.)
 #[test]
 fn the_men_of_a_hard_game_do_otherwise() {
     for seed in SEEDS {
         let (std_a, std_b, hard) = (after_a_shot("", seed), after_a_shot("", seed), after_a_shot("&hard", seed));
         assert_eq!(std_a, std_b, "seed {}: the standard game played twice is one game", seed);
-        let moved = std_a.iter().zip(hard.iter()).filter(|(a, b)| dist(**a, **b) > 1.0).count();
+        let moved = std_a.iter().zip(hard.iter()).filter(|(a, b)| dist(**a, **b) > 0.25).count();
         assert!(moved >= 1 || std_a.len() != hard.len(), "seed {}: on hard somebody stands somewhere else than on standard, twenty seconds on: {:?} against {:?}", seed, hard, std_a);
     }
 }

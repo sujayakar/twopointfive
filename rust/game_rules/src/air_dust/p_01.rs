@@ -18,13 +18,6 @@ fn air_read(g: &Game) -> &'static ::sim::air::Air {
     &::sim::weather::of_read(g.sim).air
 }
 
-/// The slot's tables, made if they are owed. (rust/sim/src/lib.rs air_of)
-fn plan(g: &mut Game) -> &'static mut ::sim::air::Plan {
-    let stamp = g.sim_stamp;
-    let wx = ::sim::weather::of_read(g.sim);
-    ::sim::air::plan(g.sim, stamp, &wx.air, &wx.roofs, wx.roofs_n as usize)
-}
-
 /// The knobs current for a question asked of the module now. WX_KNOBS.here is set by rustknobs.ts:59 and reads the knobs; the skeleton's `here()` has no g (notes, ## Skeleton).
 fn knobs_here(g: &mut Game) {
     if !g.m.rustknobs.rust_knobs.tick {
@@ -49,19 +42,8 @@ pub fn air_dust_ready(g: &mut crate::game::Game) {
 }
 
 /// The module's switch. (airDust.ts AirDust.on)
-pub fn air_dust_on(g: &mut crate::game::Game) -> bool {
+pub fn air_dust_on(g: &crate::game::Game) -> bool {
     air_read(g).on != 0.0
-}
-
-/// The module's leak. (airDust.ts AirDust.leak)
-pub fn air_dust_leak(g: &mut crate::game::Game) -> f64 {
-    air_read(g).leak
-}
-
-/// The roofed cells, a copy for the asker. (airDust.ts AirDust.cells)
-pub fn air_dust_cells(g: &mut crate::game::Game) -> Vec<u32> {
-    let n = air_read(g).n_cells as usize;
-    plan(g).cells[..n].to_vec()
 }
 
 /// A new one, against the game as it stands; the caller stores it at `g.air_dust`. (airDust.ts AirDust.constructor)
@@ -78,25 +60,6 @@ pub fn air_dust_new(g: &mut crate::game::Game) -> crate::air_dust::AirDust {
         air_dust_ensure(g);
     }
     core::mem::replace(&mut g.air_dust, was)
-}
-
-/// The share at a spot of the plan; off the grid = the open air. (airDust.ts AirDust.shareAt)
-pub fn air_dust_share_at(g: &mut crate::game::Game, x: f64, z: f64) -> f64 {
-    if g.air_dust.dirty {
-        air_dust_ensure(g);
-    }
-    let min = crate::scene_world::world().min;
-    let (w, h) = (crate::scene_air_grid::air_w(), crate::scene_air_grid::air_h());
-    let ix = m::floor((x - min[0]) / AIR_CELL);
-    let iz = m::floor((z - min[2]) / AIR_CELL);
-    if ix < 0.0 || iz < 0.0 || ix >= w || iz >= h {
-        return 1.0;
-    }
-    // (a NaN spot passes the test above; the TypeScript's read is then undefined, a NaN to every reader)
-    if ix.is_nan() || iz.is_nan() {
-        return m::NAN;
-    }
-    air_read(g).s[(ix + iz * w) as usize]
 }
 
 /// The roofs or the weather changed: marks the field stale, the first reader builds it. (airDust.ts AirDust.reseed)
@@ -127,7 +90,7 @@ pub fn air_dust_build(g: &mut crate::game::Game) {
     let fog = crate::weather::weather_fog(g);
     let has = crate::weather::weather_kind(g).is_some() && fog.is_some();
     let on = has; // (AIRDUST.on is settled true on the page)
-    let stamp = g.sim_stamp;
+    let stamp = ::sim::state::stamp(g.sim);
     ::sim::air_begin(g.sim, stamp, if on { 1 } else { 0 });
     g.air_dust.drift = 0.0;
     let leak = match (has, fog) {
@@ -135,7 +98,7 @@ pub fn air_dust_build(g: &mut crate::game::Game) {
         _ => {
             if g.air_dust.seeded {
                 g.air_dust.seeded = false;
-                let stamp = g.sim_stamp;
+                let stamp = ::sim::state::stamp(g.sim);
                 ::sim::air_clear(g.sim, stamp);
             }
             return;
@@ -143,7 +106,7 @@ pub fn air_dust_build(g: &mut crate::game::Game) {
     };
     g.air_dust.seeded = true;
     crate::weather::weather_roofs_now(g);
-    let stamp = g.sim_stamp;
+    let stamp = ::sim::state::stamp(g.sim);
     ::sim::air_seed(g.sim, stamp, leak);
     g.air_dust.stats.roofed = air_read(g).n_cells;
     g.air_dust.stats.edges = air_read(g).n_edges;
@@ -152,7 +115,7 @@ pub fn air_dust_build(g: &mut crate::game::Game) {
         crate::scene_collision::rule(g, &mut |g: &mut Game| {
             crate::scene_collision::rule_open(g);
             let (w, set, ask) = rule_args(g);
-            let stamp = g.sim_stamp;
+            let stamp = ::sim::state::stamp(g.sim);
             ::sim::air_settle(g.sim, stamp, w, set, ask);
             let t = said();
             air_dust_tally(g, &t);
@@ -176,7 +139,7 @@ pub fn air_dust_update(g: &mut crate::game::Game, dt: f64) {
     crate::scene_collision::rule(g, &mut |g: &mut Game| {
         crate::scene_collision::rule_open(g);
         let (w, set, ask) = rule_args(g);
-        let stamp = g.sim_stamp;
+        let stamp = ::sim::state::stamp(g.sim);
         ::sim::air_update(g.sim, stamp, w, set, ask, dt);
         let t = said();
         g.air_dust.drift += t[0];
@@ -213,32 +176,4 @@ fn copy_to_gpu(g: &mut Game) {
 }
 
 
-
-/// One line for the debugger. (airDust.ts AirDust.summary)
-pub fn air_dust_summary(g: &mut crate::game::Game) -> String {
-    air_dust_ensure(g);
-    if !g.air_dust.seeded {
-        return String::from("no weather in the air");
-    }
-    let c = air_dust_cells(g);
-    let s = &air_read(g).s;
-    let mut mx = 0.0;
-    let mut sum = 0.0;
-    for &i in &c {
-        let v = s[i as usize];
-        sum += v;
-        if v > mx {
-            mx = v;
-        }
-    }
-    let len = c.len();
-    alloc::format!(
-        "moving · {} roofed cells · mean share {} (leak {}, max {}) · {} open ways",
-        len,
-        js::to_fixed(sum / m::max(1.0, len as f64), 3),
-        js::to_fixed(air_dust_leak(g), 3),
-        js::to_fixed(mx, 3),
-        js::num_str(g.air_dust.stats.open)
-    )
-}
 

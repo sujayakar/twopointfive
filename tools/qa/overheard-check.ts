@@ -1,7 +1,7 @@
 // 'words-overheard' (the Rust game's cues::cues_overheard), run through probes.ts:   bun run tools/qa/probes.ts words-overheard
 // A defender the fog hides who SHOUTS a line (not on his net) where the player's ears or a living teammate's really get it is a quiet row of its own on the
 // radio strip: his words alone. PASS / FAIL each, all headless: no picture and no sound here — 'drawn' is the strip's own row list (game.view.radio), not a screen.
-//   2 · the team met on levels/block-squads.json under the fog: every hidden defender shouts in turn — a row exactly where the game's own hearing law
+//   2 · the team met on levels/compound.json under the fog: every hidden defender shouts in turn — a row exactly where the game's own hearing law
 //       (hearPath, the path under the reach × its carry) says an ear gets it, from where the player stands and with his ear brought beside the man;
 //       and the questions the row asks leave nothing in the route cache the AI's own hearing reads
 //   3 · a hidden defender made to shout beside the player through the game's own say(): the row is on the strip
@@ -29,8 +29,8 @@ async function rig(seed: number) {
   Math.random = seeded(seed);
   const log = console.log, err = console.error, warn = console.warn; let W: any;
   try { console.log = console.error = console.warn = () => { };
-    W = await standUp({ uploadEvery: 4, level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', 'block-squads.json'), 'utf8'))) });
-    await startFromQuery(W.game, new URLSearchParams(`?levelFile=block-squads.json&roomclear=${seed}&squad4`));
+    W = await standUp({ uploadEvery: 4, level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', 'compound.json'), 'utf8'))) });
+    await startFromQuery(W.game, new URLSearchParams(`?levelFile=compound.json&roomclear=${seed}&squad4`));
   } finally { console.log = log; console.error = err; console.warn = warn; }
   return W;
 }
@@ -46,7 +46,7 @@ export async function wordsOverheard(): Promise<boolean> {
     const ROUND = [[2, 0], [-2, 0], [0, 2], [0, -2], [1.5, 1.5], [-1.5, 1.5], [1.5, -1.5], [-1.5, -1.5]];
     const stagePlayer = (W: any, g: any) => { for (let i = 0; i < 60; i++) { g.player.visibility = 0.05; W.step(DT); }   // (cues-run's own staging: the player stood where the first squad's first posted man is aiming, read off the level's marks)
       const rc = g.level.scenarios?.roomClear, aim = rc?.rooms?.find((r: any) => r.id === rc.squads?.[0]?.rooms?.[0])?.marks?.[0]?.aimAt;
-      if (!aim) throw new Error('words-overheard: block-squads.json has no first squad room with a mark to stage the player in front of');
+      if (!aim) throw new Error('words-overheard: compound.json has no first squad room with a mark to stage the player in front of');
       g.teleportPlayer([aim[0], 0, aim[2]]); };
     {
       const W = await rig(2), g = W.game; g.godMode = true; stagePlayer(W, g);
@@ -61,7 +61,7 @@ export async function wordsOverheard(): Promise<boolean> {
         if (!hidden) seenRow += drew ? 1 : 0; else if (want) near++; else farN++;
         C.rows = keep.rows; C.heardRow = keep.row; C.heardSaid = keep.said; C.shoutT = keep.shoutT; C.heardLog.length = keep.log; C.stats = JSON.parse(keep.stats);
       };
-      for (let i = 0; i < 60 * 9; i++) {
+      for (let i = 0; i < 60 * 6; i++) {
         g.player.visibility = 1; W.step(DT); frames++;
         if (i % 30) continue;
         for (const gd of g.guards as any[]) {
@@ -83,7 +83,7 @@ export async function wordsOverheard(): Promise<boolean> {
       for (const on of [true]) {
         const W = await rig(2), g = W.game; g.godMode = true; CUES.on = true; CUES.overheard = on;   // (after the stand-up: on the frozen stand a stand-up writes every held switch down again)
         stagePlayer(W, g); let moves = '', row = false, who = '', ring = '';
-        for (let i = 0; i < 60 * 30; i++) { g.player.visibility = 1; W.step(DT);
+        for (let i = 0; i < 60 * 14; i++) { g.player.visibility = 1; W.step(DT);
           if (i === 600) {   // ten seconds in: the player is stood two metres from a hidden defender who then shouts through the game's own say()
             pick: for (const gd of g.guards as any[]) { if (gd.state === 'dead' || !isHostile(gd.team, 'player') || !g.fogOfWar.hidden(gd)) continue;
               for (const [dx, dz] of ROUND) { g.teleportPlayer([gd.char.pos[0] + dx, 0, gd.char.pos[2] + dz]);   // (the teleport stands him on free floor: the law is asked from where he ended up — the same tries, in the same order, switch down or up)

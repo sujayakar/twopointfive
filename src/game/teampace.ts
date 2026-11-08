@@ -48,7 +48,7 @@ export const TEAMPACE = {
   /** a follower off his place closes at up to this × the player's walk (at 1 a file strings out behind a walking player: nobody closes on a man at his own pace) */
   followK: 1.3,
   /** followers run while the player sprints; `behindM`: how far off his place a man starts to */
-  follow: true, behindM: 1.0,
+  behindM: 1.0,
   /** a man who lost his man this long ago still moves at the fight's pace (s) */
   fightSecs: 2,
   /** … and a man a grenade took off his place goes back to it at the fight's pace, this long after he stopped running from it (s; 0 = at the walk) */
@@ -88,7 +88,7 @@ export const TEAMPACE = {
    *  muzzle leads him round to — are as they were, and so is every drill (squad.ts is not touched). doorpath.ts hands the same kind of point, the way he
    *  goes, for a gun that would cross an open leaf. `walkAimOff` / `walkAimOn`: how long the line must have been shut before the watch is given up, and clear before it is
    *  his again (s). Off = the gun on the order's watch from the first step, as it was (walkLead answers null) */
-  walkAim: false, walkAimOff: 0.25, walkAimOn: 0.5,
+  walkAimOff: 0.25, walkAimOn: 0.5,
   /** m/s from which a teammate is running: the gun goes low, nothing is fired, the boots are a sprinter's (character.ts BLEND.jogAt) */
   runAt: 2.7,
   /** m/s² a man with leave to run picks pace up at (guards.ts PACE.accel is 2.6: a walker leaning into a walk) */

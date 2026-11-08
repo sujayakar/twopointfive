@@ -15,16 +15,11 @@ import { crossToRust, goneWithTick } from './crossing';
 
 export const GUNSLOTS = {
   on: false,
-  /** a teammate whose primary runs dry on a man within `near` metres goes to his sidearm (off: he stands and reloads, as he always has) */
-  dry: true,
   near: 10,
   /** seconds from the dry click to the sidearm on his man: the long gun let go onto its sling, the pistol out of the holster and up */
   out: 0.7,
   /** seconds with nobody in front of him before the sidearm goes back, and the seconds that takes on top of the primary's own reload */
   lull: 1.6, back: 0.65,   // (as long as your own swap back to the long gun: no quicker hands than yours)
-  /** a TEAMMATE's round below the gunshot line (a suppressed pistol, the MP7) is the odd noise yours is to a man of the other side near enough to hear it
-   *  (guards.ts hearingCheck). Off: only your own quiet rounds were ever heard — a teammate's reached nobody, however near. */
-  heard: true,
   /** a pick with its suppressor off is THE SAME GUN without it (weapons.ts mk18bare, g19bare: its name, magazine, handling and look; the report and flame of
    *  a bare one). Off: the old card's meaning — a carbine with no suppressor was the defenders' AKS-74U row, a pistol with none their sidearm. */
   bare: true,
@@ -58,8 +53,6 @@ export function gunPicks(slot: GunSlot): string[] { const ids = PICKS.filter(p =
 export function pickRow(id: unknown, suppressed: boolean): WeaponId | null { const p = gunPick(id); if (!p) return null; const bare = GUNSLOTS.bare ? p.bare : p.bareWas ?? p.bare; return (suppressed ? [p.can, bare] : [bare, p.can]).find(w => w && WEAPONS[w].enabled) ?? null; }
 /** the pick's name on its tile: its row's short name, as the card would hand it to him */
 export function pickWord(id: unknown, suppressed = true): string { if (id === NO_PRIMARY) return 'none'; const w = pickRow(id, suppressed); return w ? WEAPONS[w].short : String(id); }
-/** which of the card's gun drawings stands for a pick (ui/kitIcons.ts), by its row's class — null: none carried */
-export function pickIcon(id: unknown): 'rifle' | 'pistol' | 'shotgun' | null { const w = pickRow(id, true) ?? pickRow(id, false); if (!w) return null; const c = WEAPONS[w].cls; return c === 'pistol' ? 'pistol' : c === 'shotgun' ? 'shotgun' : 'rifle'; }
 
 // ------------------------------------------------------------ a teammate's second gun
 /** kit.ts kitStage: he is handed the gun that is not in his hands (null row: none — the pistol alone is his whole kit) */

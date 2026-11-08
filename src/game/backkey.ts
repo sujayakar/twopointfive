@@ -10,7 +10,5 @@
 // on the loop (host/loop.ts) hands the first tick after a frozen frame the one-tick code 'Paused', as Input hands it 'Blur': interact.ts shuts a held list
 // with its press spent, player.ts lets go of a held arc unsent. It is a press in the tick's keys, so a recording carries it and a replay does the same; nothing
 // of the game is changed between ticks for it. The order menu and a running verb are still there after the pause.
-// Tab's trial choices (ui/tabkey.ts) keep the key whenever there is nothing to back out of (Game.backable). Imports nothing.
+// The objectives card (ui/tabcard.ts) has the key whenever there is nothing to back out of (Game.backable). Imports nothing.
 export const BACKKEY = { tab: false };
-/** the name a hint row shows */
-export function backName(): string { return BACKKEY.tab ? 'Tab' : 'Esc'; }

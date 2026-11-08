@@ -16,7 +16,7 @@
 // door icon, a wall icon, etc on the cursor"): with the switch on, wherever the key would open a ring now (orders.ts ringFree: no menu up, Shift not down,
 // nothing the key backs out of instead), a small glyph rides beside the cursor for what the ring would open on — a door, a wall a charge can go on, a man,
 // a thing to work, the floor, or the squad itself where the cursor is on nothing an order goes to — and that thing is outlined on the floor, in the colour
-// the ring would open in (`hint`; orders.ts hintView). With the ring up the glyph sits in its middle. Words are not put on the cursor: the panel's line
+// the ring would open in (`hint`; the drawing is gone, under the settled `bareHint`). With the ring up the glyph sits in its middle. Words are not put on the cursor: the panel's line
 // has them.
 //
 // THE RING'S SIZE FOLLOWS THE WINDOW (`ref`, ringZoom): its px — the flick, the edge it stands in from, a click near a man's feet — and its picture grow
@@ -33,7 +33,7 @@
 //
 // WHAT IS WHOSE. The ring IS the order menu (orders.ts `menu`), opened and picked through that file's own `open` / `turn` / `pick` — so every row, refusal
 // and reason is the menu's — with `SquadOrders.cmdRing` beside it saying where it was opened and which wedge is lit; `ringInput` (orders.ts) reads the keys,
-// ahead of the menu's own input, and `ringView` hands the picture to ui/cmdring.ts. A wedge is a row on a digit, 1 to `wedges`; a row on a letter of its own
+// ahead of the menu's own input, and `view.ring` hands the picture to ui/cmdring.ts. A wedge is a row on a digit, 1 to `wedges`; a row on a letter of its own
 // (the throw page, 'go') is not drawn on the ring yet. 'Wait for my word' is not the ring's: an order from it goes at once.
 //
 // IT STAYS UP WITHOUT THE KEY (`stay`, on in the page since 10-22; the maintainer: "longer press for Q opens up squad, doesn't require holding it"): a
@@ -52,7 +52,7 @@ export const CMDRING = {
   on: false,
   /** the key: the squad's command key — the quick order's own code (orders.ts ORDERS.quickKey), which the page's board has on Q (host/keymap.ts; the
    *  maintainer, 10-21: "let's move the squad command button to Q then too", "from tab"). It was Tab until then: a recording carries its own table, so
-   *  one made on Tab replays on Tab. Tab itself is the page's again — the way back (backkey.ts) and what ui/tabkey.ts has it do */
+   *  one made on Tab replays on Tab. Tab itself is the page's again — the way back (backkey.ts) and the objectives card (ui/tabcard.ts) */
   key: 'KeyB',
   /** wedges on the ring, clockwise from the top: the digits 1 … this (never above ORDER_DIGITS) */
   wedges: 5,
@@ -119,13 +119,13 @@ export const CMDRING = {
    *  stand (`TPS_RINGFLAT=1` beside `TPS_QRING=1 TPS_QONLY=1`); the page raises it with `only` (`?ringflat=0` off) */
   flat: false,
   /** NO GLYPH AT THE CURSOR (the maintainer, 10-23: "let's remove the icons on mouse position from squad orders entirely"): the mark of what the
-   *  key orders on is the thing's own outline on the floor and nothing else — no glyph beside the cursor, none in the ring's middle (orders.ts
-   *  hintView `glyph`; a picture only). false: the glyph, as built. Off here and on the frozen stand (`TPS_PLAINHINT=1`); the page raises it
+   *  key orders on is the thing's own outline on the floor and nothing else — no glyph beside the cursor, none in the ring's middle
+   *  (a picture only, gone with the mark). false: the glyph, as built. Off here and on the frozen stand (`TPS_PLAINHINT=1`); the page raises it
    *  (`?plainhint=0` off) */
   plainHint: false,
   /** … AND NO OUTLINE EITHER (the maintainer, 10-23, at a wall with the ring up: "the line and circle are weird, don't need them"): the squad's
    *  cursor mark is not drawn at all — no line along a wall or a door, no circle on a spot or a man, before the key, with it down or under an open
-   *  ring (orders.ts hintView answers null; a picture only). What a tap would order, and on what, is the corner's line on the key. false: the
+   *  ring (a picture only, and the drawing is gone with it). What a tap would order, and on what, is the corner's line on the key. false: the
    *  outline, as built. Off here and on the frozen stand (`TPS_BAREHINT=1`); the page raises it (`?barehint=0` off) */
   bareHint: false,
   /** THE WHEEL WITH THE RING UP STEPS NOBODY (orders.ts ringInput; the maintainer, 10-24, after a two-finger scroll with the ring still up: "got into a
@@ -205,17 +205,12 @@ export interface RingState { ax: number; ay: number; z: number; t0: number; lit:
   at?: Vec3; ox?: number; oy?: number; mx?: number; my?: number;
   /** (ringWant `shapes`) the cursor has been off every wedge's shape since the ring last changed under it: on a shape now, it lights it */ clear?: boolean;
   /** (interact.ts, a ring on its thing) the wedge the hand last put the cursor on: a ring that slides under a resting cursor points at no other */ pt?: number }
-/** what a ring shows (orders.ts ringView, interact.ts handRingView → ui/cmdring.ts): where, how much larger than its px, the lit wedge, whose colour, the
+/** what a ring shows (`view.ring`, `view.hand` → ui/cmdring.ts): where, how much larger than its px, the lit wedge, whose colour, the
  *  words under it, and the wedge on each digit */
 export interface RingView { x: number; y: number; zoom: number; lit: number; tone: string | undefined; caption: string; wedges: { key: number; text: string; off: boolean; opens: boolean }[] }
 /** how much larger than CMDRING's px a ring stands in a view this size (1 up to `ref`) */
 export function ringZoom(w: number, h: number): number { return Math.max(1, Math.min(w / CMDRING.ref[0], h / CMDRING.ref[1])); }
 
-/** (CMDRING.pin) the ring put back over its place — `sx, sy`: where that place is in the view now — whole inside the view's edge, as it was opened */
-export function ringPin(R: RingState, sx: number, sy: number, w: number, h: number): void { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('ringPin', undefined, [R, sx, sy, w, h]); if (__r !== RUST_PASS) return __r as any; } }
-  const C = CMDRING, cl = (v: number, m: number, max: number) => max > 2 * m ? Math.max(m, Math.min(max - m, v)) : v;
-  R.ax = cl(sx + (R.ox ?? 0), C.edgeX * R.z, w); R.ay = cl(sy + (R.oy ?? 0), C.edgeY * R.z, h);
-}
 /** The wedge this frame asks for (0: none): a digit's own — which disarms the cursor — else the one the cursor is out of the ring's middle toward, once
  *  the key has been down `tapSecs` and the cursor has been in the middle since the ring last changed under it (a page, a digit, a man, new rows).
  *  `lone`: the digit of the ring's one row where it has one and is drawn as a pill (ringlone.ts loneKey; 0 = the wheel) — the cursor on that pill's
@@ -286,8 +281,6 @@ export function flatSeats(rows: readonly FlatRow[], kind: string, wordKey: strin
 /** how long the key is kept down before its ring goes up (s): `stayHoldSecs` for a ring that stays, `holdSecs` for one that goes with its key */
 export function ringHoldSecs(): number { return CMDRING.stay ? CMDRING.stayHoldSecs : CMDRING.holdSecs; }
 
-/** what a ring would open on, as the hint names it (orders.ts hintView) */
-export type RingHint = 'door' | 'wall' | 'man' | 'floor' | 'thing' | 'foe' | 'squad';
 
 /** the wedge a direction points at: 1 at the top, clockwise, `n` of them */
 export function wedgeAt(dx: number, dy: number, n: number): number { return goneWithTick('wedgeAt') as any; }

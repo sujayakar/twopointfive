@@ -381,20 +381,7 @@ pub fn body_seen(g: &mut crate::game::Game, gd: GuardId, o: GuardId, around: Opt
     true
 }
 
-/// One of the frame's budget of probe queries for the body tests, or none left. (guards.ts bodyProbeSlot)
-pub fn body_probe_slot(g: &mut crate::game::Game) -> bool {
-    let now = g.time;
-    let mut b = match g.m.guards.body_probe_n {
-        Some(b) if b.t == now => b,
-        _ => crate::guards::GuardsModBodyProbeNValue { t: now, n: 0.0 },
-    };
-    let free = b.n < BODY_PROBE_BUDGET;
-    b.n += 1.0;
-    g.m.guards.body_probe_n = Some(b);
-    free
-}
-
-/// What the meter reads at this body now (0‥1): the probe at its trunk, the CPU estimate until answered, eased at the meter's rate. (guards.ts bodyVisibility)
+/// How lit this body reads now (0‥1): the light at its trunk, eased at the meter's rate. (guards.ts bodyVisibility)
 pub fn body_visibility(g: &mut crate::game::Game, o: GuardId) -> f64 {
     let was = g.m.guards.body_meters.get(o).copied();
     let now = g.time;
@@ -404,18 +391,9 @@ pub fn body_visibility(g: &mut crate::game::Game, o: GuardId) -> f64 {
         }
     }
     let c = g.gd[o].ch;
-    let id = g.ch[c].id;
     let hp = bone_or(g, c, crate::character::Bone::Hips, g.ch[c].pos);
     let at: V3 = [hp[0], m::max(hp[1], 0.12) + 0.22, hp[2]];
-    let key = alloc::format!("bodyL{}", id);
-    if crate::guards::body_probe_slot(g) {
-        crate::game::game_light_query(g, &key, at, Some(id));
-    }
-    let r = crate::game::game_light_at(g, &key);
-    let e = match r {
-        Some(x) if x.is_finite() => x,
-        _ => crate::guards::light_estimate_at(g, at, None, None, None, None, None),
-    };
+    let e = crate::guards::light_estimate_at(g, at, None, None, None);
     let dt = match was {
         Some(row) => m::min(0.1, m::max(0.0, now - row.t)),
         None => 0.0,
@@ -432,12 +410,9 @@ pub fn body_visibility(g: &mut crate::game::Game, o: GuardId) -> f64 {
 /// Is body `o`, `dist` off `gd`'s eye at `eye`, lit enough for him to make out, and not behind smoke? (guards.ts bodyLit)
 pub fn body_lit(g: &mut crate::game::Game, gd: GuardId, o: GuardId, eye: V3, dist: f64) -> bool {
     let oc = g.gd[o].ch;
-    let sk = alloc::format!("bodyS{}_{}", g.ch[g.gd[gd].ch].id, g.ch[oc].id);
     let hp = bone_or(g, oc, crate::character::Bone::Hips, g.ch[oc].pos);
     let at: V3 = [hp[0], hp[1] + 0.25, hp[2]];
-    let ask = crate::guards::body_probe_slot(g);
-    let seg = crate::sensors::sensors_segment(g, &sk, eye, at, Some(ask)).unwrap_or(1.0);
-    let trans = seg * crate::weather::air_trans(g, eye, at);
+    let trans = crate::sense::smoke_between(g, eye, at) * crate::weather::air_trans(g, eye, at);
     let b = g.k.body_light;
     if trans < b.smoke {
         return false;
@@ -451,8 +426,6 @@ pub fn body_lit(g: &mut crate::game::Game, gd: GuardId, o: GuardId, eye: V3, dis
     vis >= bar
 }
 
-/// The switch and its numbers as this machine kept them: no storage on this side of the host, so the shipped values stand, the TypeScript's own path with none. (guards.ts loadBodyLight)
-pub fn load_body_light(g: &crate::game::Game) {}
 
 /// Panel and QA: what each unfound body on the floor reads now. It eases the meters, as the TypeScript's does. (guards.ts bodyLightSummary)
 pub fn body_light_summary(g: &mut crate::game::Game) -> String {

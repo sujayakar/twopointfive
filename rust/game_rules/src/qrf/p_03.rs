@@ -11,7 +11,8 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 fn man_pos(g: &Game, m: GuardId) -> V3 { g.ch[g.gd[m].ch].pos }
 fn man_yaw(g: &Game, m: GuardId) -> f64 { g.ch[g.gd[m].ch].body_yaw }
 fn man_arrived(g: &Game, m: GuardId) -> bool { g.gd[m].script.as_ref().map_or(false, |s| s.arrived == Some(true)) }
-fn player_pos(g: &Game, seat: &crate::seats::SeatRef) -> V3 { g.ch[g.pl[seat.player].ch].pos }
+/// where a man with no foe named looks: the player nearest him
+fn near_man_pos(g: &Game, gd: GuardId) -> V3 { let pl = crate::seats::nearest_or_first(g, &g.ch[g.gd[gd].ch].pos); g.ch[g.pl[pl].ch].pos }
 fn say(g: &mut Game, m: GuardId, text: &str) { crate::game::game_say(g, m, text, None, None, None) }
 /// `Q.target!.plan!`
 fn target_plan(g: &Game) -> crate::scene_level::RoomClearPlan { g.qrf.target.as_ref().unwrap().plan.clone().unwrap() }
@@ -119,7 +120,7 @@ pub fn start_stack(g: &mut crate::game::Game, el: &[GuardId]) {
 }
 
 /// The stack forms; planted (or out of time) the point man steps to the lock. (qrf.ts phaseStack)
-pub fn phase_stack(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
+pub fn phase_stack(g: &mut crate::game::Game, el: &Vec<GuardId>) {
     for &man in el.iter() { advance(g, man); }
     let planted = el.iter().filter(|&&man| man_arrived(g, man)).count() as f64;
     if (planted >= m::min(el.len() as f64, 3.0) && g.qrf.phase_t > 1.2) || g.qrf.phase_t > STACK_CAP {
@@ -468,7 +469,7 @@ pub fn phase_drill(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
 
 /// Contact: every man off his script and onto the AI, on the seer's fix; the entry let go of. (qrf.ts toFight)
 pub fn to_fight(g: &mut crate::game::Game, el: &[GuardId], seer: GuardId) {
-    let fix = match g.gd[seer].last_known { Some(k) => v3::copy(k), None => v3::copy(player_pos(g, &crate::seats::here(g))) };
+    let fix = match g.gd[seer].last_known { Some(k) => v3::copy(k), None => v3::copy(near_man_pos(g, seer)) };
     for &man in el {
         if g.gd[man].script.is_some() { crate::squad::end_guard_script(g, man, Some(crate::squad::EndGuardScriptState::Alert)); }
         let is_seer = man == seer;
@@ -478,7 +479,7 @@ pub fn to_fight(g: &mut crate::game::Game, el: &[GuardId], seer: GuardId) {
         crate::mind::raise(g, man, if is_seer { 1.0 } else { 0.95 }, "qrf");
         let known = match g.gd[man].last_known { Some(k) if is_seer => k, _ => fix };
         crate::belief::word(g, man, known);
-        let react = if is_seer { 0.12 } else { 0.2 + crate::math_dice::sim_random(g) * 0.25 };
+        let react = if is_seer { 0.12 } else { 0.2 + crate::dice::draw_of(g, "qrf::to_fight#1", seer) * 0.25 };
         g.gd[man].react_t = react;
         g.gd[man].fire_cd = m::max(g.gd[man].fire_cd, 0.35);
         g.gd[man].search_t = 0.0;
@@ -640,7 +641,7 @@ pub fn call_perimeter(g: &mut crate::game::Game, why: Option<&str>) -> bool {
     if crate::mission::mission_live(g) { g.mission.stats.qrf = 2.0; }
     // who mans it
     let mut outside: Vec<V3> = Vec::new();   // (a mark an enemy stands by stands nobody up: the rear men go out instead)
-    for &o in mk.outside.iter() { if clear_of_foes(g, &crate::seats::here(g), o) { outside.push(o); } }
+    for &o in mk.outside.iter() { if clear_of_foes(g, o) { outside.push(o); } }
     let room = room_for(g);
     let most = most_men(g);
     let up = alive(g).len() as f64;
@@ -745,7 +746,7 @@ pub fn tick_perimeter(g: &mut crate::game::Game, dt: f64) {
                 g.gd[gd].script.as_mut().unwrap().aim_at = Some([a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u]);
             }
             let eyes = perceive_scripted(g, gd, dt);
-            let him = match crate::teams::foe_char(g, gd) { Some(c) => g.ch[c].pos, None => player_pos(g, &crate::seats::here(g)) };   // (the man he has made out: perceiveScripted names him)
+            let him = match crate::teams::foe_char(g, gd) { Some(c) => g.ch[c].pos, None => near_man_pos(g, gd) };   // (the man he has made out: perceiveScripted names him)
             if eyes && arrived_at < 0.0 && flat(man_pos(g, gd), him) > WALKOUT_ENGAGE_M && g.gd[gd].sup.v < 0.3 {
                 // on his way out and Sam not on top of him: he calls it (the element's fix) and keeps going: the post is the order
                 crate::mind::cap(g, gd, 0.84, "qrf");

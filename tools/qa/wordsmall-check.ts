@@ -10,10 +10,10 @@
 // the orders to one man with the who key under a hold on CMDRING.wholeSquad (settled: an order is the whole squad's, and that hold was refused).
 // WORDSMALL_BREAK=1, the red path: the stack is never ordered, so there is no word to offer and every line must fail (it was: the switch left off).
 // Headless: the lines are the game's own state. Never seen on a GPU; nobody has played it.
+import { blockOf } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 const { ORDERS, sideOf } = await import(`${ROOT}/src/game/orders.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
-const { floorPlan } = await import(`${ROOT}/src/game/floorplan.ts`);
 
 const DT = 1 / 60, F = 'KeyF';
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -35,9 +35,9 @@ async function rig(squad: number) {
       for (const y of [c[1], 0.05, 1.0, 1.8]) for (const k of [0, 0.35, -0.35]) { const p = [c[0] + nx * k, y, c[2] + nz * k]; const h = R.aim(p); if (h?.kind === 'door' && h.door === d) return p; } return null; },
     press(k: string) { I.keys.add(k); I.pressed.add(k); R.step(); I.keys.delete(k); },
     /** the panel's lines that carry a key, and the notes among them */
-    lines(): string[] { return O.hud().status.flatMap((s: any) => s.opts.map((o: any) => `${o.key ? `[${o.key}] ` : ''}${o.text}`)); },
+    lines(): string[] { return blockOf(O).flatMap((s: any) => s.opts.map((o: any) => `${o.key ? `[${o.key}] ` : ''}${o.text}`)); },
     wordLine(): string | null { return R.lines().find((l: string) => l.startsWith('[F] go · ')) ?? null; },
-    mark(): any { return floorPlan(g).doors.find((x: any) => x.door === R.door && x.why === 'stack') ?? null; },
+    mark(): any { if (!g.view.plan) throw new Error('no plan in the view'); return g.view.plan.own.doors.find((x: any) => x.door === R.door.def.name && x.why === 'stack') ?? null; },
     filed(): string[] { return O.log.slice(R.n0).map((r: any) => `${r.order} ${r.who.join('+')}`); },
     op(): any { return D.ops.find((o: any) => o.door === R.door) ?? null; },
     stacked() { return R.team.every((m: any) => m.state === 'dead' || (O.of(m)?.order === 'stack' && O.of(m)?.arrived)); },

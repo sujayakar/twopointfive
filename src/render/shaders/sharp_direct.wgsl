@@ -16,7 +16,7 @@
 // trace (ranked in lane order — deterministic); the rest keep the conservative remainder rule for the whole class. The fallback CODE rides out in outE0.a for the harness to count
 // (0 = the 2×2 had on-surface taps, 1 = only the outer ring had, 2 = sliver, +4 = its rays were traced, +8 = a class read 'unshadowed' for want of any tap holding its light, +16 / +32 =
 // the ray found dark / lit what the neighbours would have lent the other way by over a quarter of the pixel's live U — the census of leaks the old rule drew) — composite
-// reads .rgb only. sharpCfgC.z >> 4 & 3 = diagnostic PAINT: 1 = slivers magenta / ring pixels yellow in the direct term, 2 = only the slivers whose ray overturned the borrowed ratio.
+// reads .rgb only.
 // HIDDEN LIGHT (frame.sharpCfgC.z bit 15 = settings.dnShadowOccl, the shadow denoiser's occluded-light reading carried up to the output raster; off = the pass as it was): U counts a carried
 // light the surface does not see (a guard's torch beyond a wall), so across the outer edge of ITS cone the taps' ratio S ∕ U falls a hundredfold while their S stands still — and
 // U_out × Σw·S ∕ Σw·U draws that edge as a thin line on the far side of the wall (the taps' mean U is not this pixel's U where the cone's onset curves between them). The taps
@@ -61,9 +61,9 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
   let live = onScreen && depth < 1.0 && (frame.flags & FLAG_DIRECT) != 0u;
   let pix = vec2f(gxy) + 0.5;
   let P = worldFromDepth(pix, depth);
-  // ---- SLIVER config (frame.sharpCfgC.z: rule | paint << 4 | per-tile ray cap << 8 — an exact small integer) ----
+  // ---- SLIVER config (frame.sharpCfgC.z: rule | per-tile ray cap << 8 — an exact small integer) ----
   let cfgZ = u32(frame.sharpCfgC.z + 0.5);
-  let sliverRule = cfgZ & 3u; let sliverPaint = (cfgZ >> 4u) & 3u; let sliverCap = (cfgZ >> 8u) & 127u;
+  let sliverRule = cfgZ & 3u; let sliverCap = (cfgZ >> 8u) & 127u;
   let occlFit = ((cfgZ >> 15u) & 1u) != 0u;                    // HIDDEN LIGHT (header; settings.dnShadowOccl)
   if (lidx < 2u) { atomicStore(&wgSliver[lidx], 0u); }   // (ordered before any lane's vote by the light-list barriers below)
   // ---- the tile's light list: direct.wgsl's lossless cull, statement for statement (a light off the list scores !ok at every live pixel of the tile) ----
@@ -181,7 +181,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
     }
   }
   // ---- SLIVER rays (rule 1, the traced pipeline): the tile's ballot in uniform control flow, then per class one deterministic ray to the strongest live emitter's centre ----
-  var overturn = 0.0; var sliverNow = false;                                          // paint 2: how far the ray moved the class off the borrowed ratio (signed: + = the ray found light the neighbours called dark)
+  var overturn = 0.0; var sliverNow = false;                                          // the census: how far the ray moved the class off the borrowed ratio (signed: + = the ray found light the neighbours called dark)
   if (SLIVER_RAYS) {
     if (wantsRays) { atomicOr(&wgSliver[lidx >> 5u], 1u << (lidx & 31u)); }
     workgroupBarrier();
@@ -211,8 +211,6 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
   }
   { let ou = 0.25 * max(luminance(U0 + U1 - Uw0 - Uw1), 1e-4); if (overturn < -ou) { code |= 16u; } else if (overturn > ou) { code |= 32u; } }   // census bits: 16 = the ray found DARK what the neighbours would have lent lit (a leak under rule 0), 32 = the reverse
   if (look) { E0 *= clamp(Us0 / max(U0 - Uw0, vec3f(1e-5)), vec3f(0.0), vec3f(4.0)); E1 *= clamp(Us1 / max(U1 - Uw1, vec3f(1e-5)), vec3f(0.0), vec3f(4.0)); }   // THE LOOK PROTOTYPE: each class's light as the relief takes it, over as the face took it (the live lights' sums)
-  if (sliverPaint == 1u && (code & 3u) != 0u) { E0 = select(vec3f(5.0, 5.0, 0.0), vec3f(6.0, 0.0, 6.0), (code & 3u) == 2u); E1 = vec3f(0.0); }   // paint 1: slivers magenta, ring-only pixels yellow
-  if (sliverPaint == 2u && (code & 48u) != 0u) { E0 = select(vec3f(0.0, 5.0, 6.0), vec3f(7.0, 0.0, 0.0), (code & 16u) != 0u); E1 = vec3f(0.0); }   // paint 2: red = the ray found DARK what the neighbours lent lit (a leak the old rule drew), cyan = the reverse
   if (onScreen) {
     textureStore(outE0, gxy, vec4f(E0, f32(code)));
     textureStore(outE1, gxy, vec4f(E1, 0.0));

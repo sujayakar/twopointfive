@@ -44,6 +44,7 @@ const { KIT: KIT_HANDS } = await import(`${ROOT}/src/game/character.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const SAVE = await import(`${ROOT}/src/game/savestate.ts`);
+const lastSeen = (g: any): any[] => g.view.marks.seen.map((m: any) => ({ ...m, gd: g.guards.find((x: any) => x.char.id === m.man) }));   // (what the HUD is told)
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
 function family(title: string): { verdict: Verdict; done: () => boolean } {
@@ -125,8 +126,10 @@ export async function wandKit(): Promise<boolean> {
       const staged = g.player.wand, cans = g.player.canisters;
       await hushed(() => { g.restartEncounter(); steps(W, 10); });
       const again = g.player.wand;
-      K.kitSet(0, 'wand', false); await hushed(() => { g.restartEncounter(); steps(W, 10); }); const none = g.player.wand;
-      F.verdict(staged === true && again === true && none === false, 'a mission staged with the wand on your card puts it on the Player, a restart keeps it, a card without it stages none', `staged ${staged} (smokes ${cans}) · after a restart ${again} · card without ${none}`);
+      // (a card changed reaches a game by Deploy: a restart does not read it again, a start of the mission does; the card is the game's that stands when it is changed)
+      K.kitSet(0, 'wand', false); await hushed(() => { g.restartEncounter(); steps(W, 10); }); const stays = g.player.wand;
+      const W3 = await stand(3), g3 = W3.game; K.kitSet(0, 'wand', false); await hushed(() => { startFromQuery(g3, 'roomclear&squad4'); steps(W3, 10); }); const none = g3.player.wand;
+      F.verdict(staged === true && again === true && stays === true && none === false, 'a mission staged with the wand on your card puts it on the Player, a restart keeps it even with the card changed, a Deploy with a card without it stages none', `staged ${staged} (smokes ${cans}) · after a restart ${again} · card changed, restarted ${stays} · deployed with a card without ${none}`);
 
       const W2 = await stand(2), g2 = W2.game; await hushed(() => steps(W2, 10));
       g2.player.wand = true; const s = SAVE.saveState(g2, { kind: 'harness', force: true }); const inFile = s.player.wand;
@@ -143,34 +146,6 @@ export async function wandKit(): Promise<boolean> {
   return F.done();
 }
 
-// ───────────────────────────────────────────────────────────── tile
-/** the maintainer, 10-12, on Team & kit of the solo night: "wand greyed out" — the tile was dimmed whole on a mission with no fog of war and still read CARRIED */
-export async function wandTile(): Promise<boolean> {
-  const F = family('wand-tile: a carried wand or sticky camera says so itself where the mission has no fog of war for it to look into');
-  const G = globalThis as any, hadLS = 'localStorage' in G, prevLS = G.localStorage;
-  try {
-    await keepKit(async () => { await withDom('?quality=high&mute', async () => {
-      G.localStorage = memStore(); G.location.pathname = '/'; G.location.hash = ''; G.location.assign = () => { }; G.location.reload = () => { };
-      const M = await import(`${ROOT}/src/ui/missions.ts`), UI = await import(`${ROOT}/src/ui/loadout.ts`);
-      K.kitLoad(null, ''); for (const f of ['smoke', 'bangs', 'frags', 'shells']) K.kitSet(0, f, 0);
-      if (!BREAK) K.kitTry(0, 'wand', 1); K.kitTry(0, 'cams', 2);
-      const SEARCH = '?quality=high&mute', list: any[] = M.missionList(), pickWas = M.MISSIONS.onPick, up: any[] = []; M.MISSIONS.onPick = null;
-      try {
-      const tiles = (root: El) => Object.fromEntries(root.all(e => e.cls.has('kc-row')).map(r => [r.attrs['data-field'], { idle: r.cls.has('idle'), val: r.all(e => e.cls.has('kc-val'))[0]?.textContent ?? '', title: r.title, dimIco: !!r.all(e => e.cls.has('kc-ico'))[0]?.cls.has('none') }])) as Record<string, { idle: boolean; val: string; title: string; dimIco: boolean }>;
-      const open = (id: string) => { const m = list.find(x => x.id === id); const host = new El('DIV') as any; const L = UI.openLoadout(UI.entryOfMission(m), { host, search: M.missionHref(m, SEARCH), deploy: () => { }, back: () => { } }); up.push(L); return { L, root: L.root as unknown as El }; };
-      const say = (t: Record<string, { idle: boolean; val: string }>) => Object.entries(t).map(([f, r]) => `${f} '${r.val}'${r.idle ? ' idle' : ''}`).join(' · ');
-
-      // a squad mission: its own fog
-      const four = open('room-clear-four'), t1 = tiles(four.root);
-      F.verdict(!!t1.wand && !t1.wand.idle && /carried/i.test(t1.wand.val) && !t1.wand.title && !t1.cams.idle && t1.cams.val === '2', 'a squad mission (its own fog of war): the same card reads carried and 2, nothing idle', say({ wand: t1.wand, cams: t1.cams }));
-
-      } finally { for (const L of up) L.close?.(); M.MISSIONS.onPick = pickWas; }
-    }); });
-  } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
-  finally { if (hadLS) G.localStorage = prevLS; else delete G.localStorage; }
-  return F.done();
-}
-
 // ───────────────────────────────────────────────────────────── look
 export async function wandLook(): Promise<boolean> {
   const F = family('wand-look: at a shut door under the fog, the wand shows the room behind it — after the feed, inside its wedge, through his own eye\'s place');
@@ -183,7 +158,7 @@ export async function wandLook(): Promise<boolean> {
 
     const before = fog.hidden(T);
     const started = begin(W);
-    let hidFeed = true; const FEED = STEALTHPOSE.on && STEALTHPOSE.cable ? STEALTHPOSE.cableIn : WAND.quickSecs, half = Math.floor(FEED / DT * 0.5);   // (the wait as the keys stand: the 1.5 s on his knee, or with `quick` — the page — the animation's time from the start of the look)
+    let hidFeed = true; const FEED = STEALTHPOSE.on ? STEALTHPOSE.cableIn : WAND.quickSecs, half = Math.floor(FEED / DT * 0.5);   // (the wait as the keys stand: the 1.5 s on his knee, or with `quick` — the page — the animation's time from the start of the look)
     steps(W, half, () => { W.cursorAt(T.char.pos); }); hidFeed &&= fog.hidden(T) && !fog.eyes[0]?.wand;
     const n = feed(W, T.char.pos), took = !pl.wanding ? -1 : WAND.quick ? (half + n) * DT : pl.wanding.t, crouched = pl.crouch, hands = pl.char.anim.lockpick;
     steps(W, 60, () => { W.cursorAt(T.char.pos); });
@@ -261,12 +236,12 @@ export async function wandCosts(): Promise<boolean> {
       W.input.pressed.add('KeyS'); W.input.keys.add('KeyS'); W.step(DT); W.input.keys.delete('KeyS');
       const out = !pl.wanding, lock = pl.equipT, pick = pl.char.anim.lockpick, byHand = KITANIM.on;   // (kit handling on — the page — the gun comes back up BY HAND and the lock-out is that draw's own; off, the wand's stow)
       steps(W, 120);
-      const hid = fog.hidden(T), marks = fog.lastSeen().filter((m: any) => m.gd === T), life = marks[0]?.life, age = marks[0]?.age;
+      const hid = fog.hidden(T), marks = lastSeen(g).filter((m: any) => m.gd === T), life = marks[0]?.life, age = marks[0]?.age;
       F.verdict(sawHim && out && !pick && (byHand ? lock > 0.3 && lock <= kitLockMax(KIT_HANDS) : lock > WAND.stowSecs - 2 * DT && lock <= WAND.stowSecs) && hid && marks.length === 1 && life === WAND.markSecs && age > 1.5 && age < 3,
         'a step pulls it out: no round for the stow, the room goes back to fog, and the man he saw keeps a mark where he stood', `out ${out} · lock-out ${lock.toFixed(2)} s (${byHand ? 'the gun drawn by hand' : `stow ${WAND.stowSecs}`}) · hidden again ${hid} · mark ${marks.length} aged ${age?.toFixed(1)} s of ${life}`);
       steps(W, Math.ceil((WAND.markSecs - 1.5) / DT));
-      const after = fog.lastSeen().filter((m: any) => m.gd === T).length;
-      WAND.markSecs = 0; const none = fog.lastSeen().length; WAND.markSecs = mark;
+      const after = lastSeen(g).filter((m: any) => m.gd === T).length;
+      WAND.markSecs = 0; const none = lastSeen(g).length; WAND.markSecs = mark;
       F.verdict(after === 0 && none === 0, 'the mark is gone after its time, and with its time at nothing there is none', `after ${WAND.markSecs} s: ${after} · markSecs 0: ${none}`);
     }
     // the other ways out
@@ -443,7 +418,7 @@ export async function wandMate(): Promise<boolean> {
       await run(60, () => {});
       const fell = S.give('fallIn', tgt, 'all'); W.step(DT); W.step(DT);
       const g1 = { jobs: jobs().length, knelt: !!him.char.anim.lockpick, order: S.of(him)?.order, eyes: wandEyes().length };
-      const lost = await until(900, () => !fog.drawn(T)), mk = fog.lastSeen().filter((m: any) => m.gd === T)[0];
+      const lost = await until(900, () => !fog.drawn(T)), mk = lastSeen(g).filter((m: any) => m.gd === T)[0];
       F.verdict(fell === null && !g1.jobs && !g1.knelt && g1.order === 'fallIn' && !g1.eyes && lost < 900 && !!mk && mk.life === WAND.markSecs,
         '\'fall in\' ends it on the frame: he is up, the lens is out of the fog\'s eyes; the man he saw goes out of the picture and keeps the wand\'s own fading mark', `given: ${fell ?? 'yes'} · jobs ${g1.jobs}, knelt ${g1.knelt}, his order ${g1.order}, lens eyes ${g1.eyes} · out of the picture after ${(lost * DT).toFixed(1)} s · mark ${mk ? `life ${mk.life} s` : 'none'}`);
 
@@ -492,5 +467,5 @@ export async function wandMate(): Promise<boolean> {
 
 
 /** the file's probes, by the names the runner calls them */
-const PROBES = { 'wand-kit': wandKit, 'wand-tile': wandTile, 'wand-look': wandLook, 'wand-costs': wandCosts, 'wand-doors': wandDoors, 'wand-mate': wandMate,  };
+const PROBES = { 'wand-kit': wandKit, 'wand-look': wandLook, 'wand-costs': wandCosts, 'wand-doors': wandDoors, 'wand-mate': wandMate,  };
 if (import.meta.main) process.exit(exitCode(await asProbes(PROBES, wanted())));

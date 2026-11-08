@@ -2,7 +2,6 @@
 // (Split out of game.ts mechanically: plain functions taking the Game as their first argument; Game keeps one-line delegators for
 //  anything other files call.)
 import { eachSeat, hostMan, viewOfBody, men } from './seats';
-import { railsSpare } from './rails';   // (asked inside killGuard only)
 import { rollbackVar } from '../math/side';
 import { Vec3, v3, clamp, lerp, quat } from '../math/vec';
 import { lookConfig } from '../render/frame';
@@ -57,12 +56,10 @@ import { gpuFx, impactFx, muzzleSparksFx, casingFx, bangFx, fixtureShatterFx, le
 import { fireHolds, fireStir, fireStruck } from './fire';   // a round does not put a fire out (FIRE.hardy)
 import { lampGlass, deadLamp, CARLAMPS_STATS } from './carlamps';   // a vehicle's lamp is glass a round breaks, lit or not (a leaf)
 import { civilianDown, civilianBodies, civiliansShown } from './civilians';
-import { roundDoes, woundDown } from './wounds';
 import { fireShell, pelletDrops, pelletEnd, type Shell } from './shotgun';
 import { fragInFist, FRAG } from './frag';
 import { GUNHAND } from './gunhand';
 import { SAMSTUN, staggerPlayer, dazzlePlayer } from './samstun';
-import { recapRound } from './deathrecap';
 import { wallReport } from './blastFeel';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { ffLive, ffBody, ffSide, ffUnpressed, ffNote, ffPast } from './friendlyfire';   // (called inside fireWeapon only)
@@ -253,14 +250,11 @@ function fireWeaponRaw(g: Game, shooter: Character, target: Vec3, isPlayer: bool
   if (def.tracer && g.tune.tracers) g.tracers.round(firearmOf(g, shooter, isPlayer), def, muzzle, pen ? v3.normalize(v3.sub(hitP, muzzle)) : dir, pen ? v3.dist(muzzle, hitP) : tHit, hitGuard || playerHit ? 'flesh' : st || ph || through ? 'solid' : 'none', shooter.id);   // tracers (R6, tracers.ts): the row lights every third round and the last three of the box, counted off the gun that fired it — a streak travelling this same segment over the next few frames with a small light on its head, an ember where it stopped in geometry. A pistol row never asks (tracer null: not one instruction more than before); the flag off, nobody does
   if (ffOurs && (playerHit || (hitGuard && !hitGuard.civ && !isHostile('player', hitGuard.team)))) ffNote(sg, isPlayer, playerHit);
   if (ffOn && isPlayer && lead) ffPast(g, muzzle, hitP, hitGuard?.char ?? null);
-  recapRound(g, playerHit ? hitView.player.char : hitGuard?.char, playerHit ? hitView.player.down : hitGuard?.state === 'dead', shooter, muzzle, hitP, def, o.blind);   // deathrecap.ts: the round about to land on a man, for the end card (reads only)
   const manDown = !hitGuard ? null : () => {   // (by 'guard': the held man, above — the only colleague a guard's round ever tests — or, teams, an enemy AI man)
     const wasUp = hitGuard.state !== 'dead';
-    if (wasUp && hitGuard.civ) g.snatch?.roundOn(hitGuard, sg);   // (snatch.ts: whose round found the man the team came for — the tally's, nothing else reads it)
     const foeLine = sg && isHostile(sg.team, hitGuard.team) ? `${hitGuard.callsign} down — ${sg.callsign}'s round` : undefined;   // (teams: not 'hit by his own side' — he was the other side's to hit)
     const ownHit = ffOurs && !hitGuard.civ && !isHostile('player', hitGuard.team);   // (friendlyfire.ts: a man of Sam's side by a round of Sam's side — the log says whose)
-    const does = roundDoes(g, hitGuard, v3.dist(v3.mad(muzzle, dir, tHit), hitP) < 1e-6 ? muzzle : v3.mad(hitP, dir, -tHit), dir, tHit, hostageHit, isPlayer);   // WOUNDS (wounds.ts): where it landed decides — 'shot' is the only answer with the switch off. (Its line is the muzzle's for a straight round, as ever; for a round that has changed direction on its way — through glass, in a build where one can: `dir` and `tHit` are then its last leg's and its whole path's — it is taken BACK from where the round stopped, so the stretch of the man that is measured is the one it went into)
-    if (does !== 'none') killGuard(g, hitGuard, dir, false, does === 'shot' ? 'shot' : 'wounded', isPlayer ? 'player' : 'guard', does !== 'shot' ? (foeLine ? `${hitGuard.callsign} hit, down and breathing — ${sg!.callsign}'s round` : ownHit ? `${hitGuard.callsign} hit, down and breathing — ${isPlayer ? 'your' : `${sg!.callsign}'s`} round` : `${hitGuard.callsign} down — wounded, out of the fight`) : foeLine ?? (ownHit && !isPlayer ? `${hitGuard.callsign} down — ${sg!.callsign}'s round` : undefined), does === 'shot' ? undefined : does);
+    killGuard(g, hitGuard, dir, false, 'shot', isPlayer ? 'player' : 'guard', foeLine ?? (ownHit && !isPlayer ? `${hitGuard.callsign} down — ${sg!.callsign}'s round` : undefined));
     g.audio.play('bodyHit', hitP, 0.8);
     if (wasUp) hitGuard.killerId = shooter.id;   // (whose round it was, for the engagement's record — guards.ts tickEngagement)
     if (hostageHit) { const sh = sg; if (sh && sh.state !== 'dead') hostageHitBark(g, sh, hitGuard); }   // '…christ — I hit him': whoever fired it says so (the shot itself has everybody's ears; the hold drops from under Sam next frame — updateHold — and the men watching find the body there and then)
@@ -385,12 +379,11 @@ export function bodyHit(c: Character, ro: Vec3, rd: Vec3, tmax: number, contact:
  *  TODO (docs/internal/grab-interrogate-design.md §6, item 9b): a breathing man could come round after a few minutes — there is no way back from a ragdoll today
  *  (Character.ragdollize is one-way, no get-up clip), so nobody wakes; and a body on the floor cannot be shot (Character.rayHit skips the fallen), so a knockout
  *  cannot be finished off by a round either (a burst can: frag.ts FRAG.downKill). */
-export function killGuard(g: Game, gd: Guard, dir: Vec3, quiet = false, how: DownKind = quiet ? 'struck' : 'shot', by: DownBy = 'player', line?: string, zone?: 'side' | 'leg') { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('killGuard', undefined, [g, gd, dir, quiet, how, by, line, zone]); if (__r !== RUST_PASS) return __r as any; } }
+export function killGuard(g: Game, gd: Guard, dir: Vec3, quiet = false, how: DownKind = quiet ? 'struck' : 'shot', by: DownBy = 'player', line?: string) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('killGuard', undefined, [g, gd, dir, quiet, how, by, line]); if (__r !== RUST_PASS) return __r as any; } }
   // (below: state checks come first everywhere, but a corpse should not carry choreography around)
   if (gd.civ) { civilianDown(g, gd, dir, quiet, how, by, line); return; }   // a CIVILIAN (the cleaner, the late worker — every path that puts a 'Guard' down comes through here: the round, the cross, the choke, the whip, the ring): her own record, her own price on the card, nothing in her hands to fall (civilians.ts)
   if (gd.bubble && g.time - gd.bubble.t < 0.8 && !w(g.messages.some(m => m.t === gd.bubble!.t && m.text.endsWith(gd.bubble!.text)), false)) g.msg(w(gd.unit ? `${gd.callsign}: ` : 'guard: ', 'guard: ') + gd.bubble.text);   // he did not get to finish saying it on screen (a unit's cut-off line goes under his own name, as guards.ts say files it: a teammate's 'man down.' is not a guard's) — and a line say already put in the log (out of sight, or over the net: its row carries the bubble's own stamp) is not put there a second time
   if (gd.state === 'dead') return;
-  if (railsSpare(g, gd)) return;   // (rails.ts: on a tutorial mission that says so a teammate is on a knee for a few seconds instead, and up again — a return with no rails record)
   gd.script = null;   // (his lockdown role — leader / post — deliberately stays on the corpse: the others only re-deal once they KNOW, see superviseLockdown)
   const held = inHand(gd);   // what is in the hand as he goes (guards.ts): the torch on a calm patrol, his drawn weapon otherwise (alarmed floor, or any other state) — nothing if the torch already went at the grab
   if (by === 'player') { if (!(ffLive(g) && !isHostile('player', gd.team))) tally(g, how === 'shot' ? 'kills' : 'knockouts'); chronDown(g, gd, how, line); }   // (a man dropped by his own side's round or by the world is on nobody's card — nor on the debrief's timeline)
@@ -404,8 +397,7 @@ export function killGuard(g: Game, gd: Guard, dir: Vec3, quiet = false, how: Dow
   if (held) gd.dropped = dropFromHand(g, gd.char, held === 'torch' ? 'torch' : W.drop, held === 'torch' ? gd.beamDir : gd.char.gunDir, quiet ? [0, 0, 0] : dir, held === 'weapon' && W.suppressed, quiet);   // it leaves the hand — the row says as what (the holstered one stays on the thigh); a takedown lays it down quietly; an empty hand has nothing more to let go of
   // hand him to the ragdoll: thrown along the round (falls away from the shooter) or, for a takedown, folding forward where he stood; it collides with the
   // walls / furniture / door leaves itself, and the thud plays when the trunk actually lands (updateGuard → bodyThud)
-  if (how === 'wounded') woundDown(g, gd, dir, zone);   // (wounds.ts: no ragdoll — he sinks to a knee or onto his back, holding it)
-  else gd.char.ragdollize(g.col, dir, quiet);
+  gd.char.ragdollize(g.col, dir, quiet);
   g.msg(line ?? (how === 'choked' ? 'choked out — he\'ll keep, breathing' : how === 'struck' ? 'takedown — out cold, breathing (a knockout, not a kill)' : by === 'guard' ? w(gd.unit ? `${gd.callsign} down — hit by his own side` : 'guard down — hit by his own side', 'guard down — hit by his own side') : w(gd.unit && gd.team === 'hostile' ? `${gd.callsign} down` : gd.unit && gd.team === 'operative' ? `${gd.callsign} down${by === 'player' ? ' — your round' : ''}` : 'guard down — dead', 'guard down — dead')));   // (a TEAMMATE is never 'guard': by the player's own round he is '<callsign> down — your round', as a mate's kill reads '— Red One's round'; hit by his own side he keeps his name too) (a squad mission's defender dropped by the PLAYER reads as one a teammate dropped does — 'Tango 3 down'; 'guard' is the night watch's word)
 }
 
@@ -520,7 +512,7 @@ export function irBeams(g: Game, out: Box[]) {
   });
 }
 
-/** WHETHER AN ENEMY CARRIES A VISIBLE WEAPON LASER (Tab ▸ Sandbox ▸ Team feel ▸ 'enemies carry visible lasers', kept per machine by teamfeel.ts; ?enemylasers
+/** WHETHER AN ENEMY CARRIES A VISIBLE WEAPON LASER (?enemylasers
  *  for a visit; the maintainer after playing: 'the enemies having super visible lasers is a bit much', then 'we should probably just remove them for realism,
  *  not just tone them down'). false, the default: a man hostile to Sam has no laser — no line and no dot, in any state, in every game and both showcases.
  *  true = the game as it was: every hunting man's red line from muzzle to dot. Nothing else changes with it either way: the laser was only ever a picture

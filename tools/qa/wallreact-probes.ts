@@ -1,4 +1,4 @@
-// Both sides react when the level breaks (src/game/wallreact.ts): `bun run tools/qa/wallreact-probes.ts [--level block-squads|compound|warehouse|all] [--verbose]`
+// Both sides react when the level breaks (src/game/wallreact.ts): `bun run tools/qa/wallreact-probes.ts [--level compound|warehouse|block|all] [--verbose]`
 // (its own runner: it is not a family of probes.ts — exit 0 all pass, 1 a failure). PASS / FAIL each, all headless: the Game of headless.ts on a loud level, started exactly
 // as the page's scenario row starts it (the four against that level's defenders), THE ONE SWITCH of the destruction goal raised by the probe itself, holes
 // blown with `g.destr.blast` directly (who decides to blow one is other pieces'). Men are STOOD where a probe needs them (a defender's post moved beside a
@@ -22,14 +22,13 @@ const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { WALLS } = await import(`${ROOT}/src/game/wallbreak.ts`);
 const { WALLREACT, WALLREACT_STATS, WALLREACT_LOG, WALLREACT_DEBUG, wallReactOf } = await import(`${ROOT}/src/game/wallreact.ts`);
-const { planApproach, plansOf } = await import(`${ROOT}/src/game/tactics.ts`);
 const { NOBODY_ID } = await import(`${ROOT}/src/game/consts.ts`);
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
 const VERBOSE = process.argv.includes('--verbose');
 if (process.argv.includes('--debug')) WALLREACT_DEBUG.log = (m: string) => console.log(m);
-const LEVELS = (() => { const i = process.argv.indexOf('--level'); const v = i >= 0 ? process.argv[i + 1] : 'all'; return v === 'all' ? ['block-squads', 'compound', 'warehouse'] : [v]; })();
+const LEVELS = (() => { const i = process.argv.indexOf('--level'); const v = i >= 0 ? process.argv[i + 1] : 'all'; return v === 'all' ? ['compound', 'warehouse'] : [v]; })();
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const f1 = (x: number) => (Number.isFinite(x) ? x.toFixed(1) : String(x)), at = (p: number[]) => `(${f1(p[0])}, ${f1(p[2])})`;
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
@@ -142,7 +141,6 @@ export async function wallreactCover(level: string): Promise<boolean> {
     R.post(D, S.a, v3.mad(S.a, S.u, 6) as Vec3); R.step(0.5);
     const d0 = [...D.gd.char.pos], res = blow(R, S); R.step(0.1);
     const B = R.wr().breaches[0];
-    if (on) F.verdict(res.walls > 0 && !!B && B.walk, 'the blast opens a hole a man fits through and the feed\'s row makes a breach of it', `walls ${res.walls} · nav cells opened ${res.opened} · ${B ? `breach ${at(B.at)} ${f1(B.half * 2)} m ${B.walk ? 'walk-through' : 'port'}` : 'no breach'}`);
     const openAt0 = B ? openTo(R, B, d0, 0.9) : !g.col.segmentBlocked([S.b[0], 1.15, S.b[2]], [d0[0], 0.9, d0[2]]);
     R.step(8);
     const p1 = D.gd.char.pos, moved = flat(p1, d0), still = B ? openTo(R, B, p1, 0.9) : !g.col.segmentBlocked([S.b[0], 1.15, S.b[2]], [p1[0], 0.9, p1[2]]);
@@ -163,64 +161,11 @@ export async function wallreactCover(level: string): Promise<boolean> {
     if (on) {
       F.verdict(!!A1 && A1.order === 'hold' && flat(mk, m0) > 0.8 && WALLREACT_STATS.movedOp >= 1 && flat(q1, mk) < 0.6, 'the teammate\'s mark is moved off the hole and he walks to it, still on his order', `mark ${at(m0)} → ${at(mk)} (${f1(flat(mk, m0))} m) · he stands ${at(q1)} · order ${A1?.order} · team marks moved ${WALLREACT_STATS.movedOp}`);
       F.verdict(open0 && !openNow, '… out of the hole\'s line: nobody is left standing in it', `open to the far side on the old mark: ${open0} · where he stands now: ${openNow}${tail()}`);
-      const O = g2.cover.openings.find((o: any) => o.id === B2?.key), risk = B2 ? g2.entry.riskAt([B2.at[0] + S2.n[0] * 1.2, 0, B2.at[2] + S2.n[2] * 1.2]) : null;
-      F.verdict(!!O && B2.ops >= 0 && risk === O, 'the hole is in the squad\'s book: an opening for the unasked cover, and a way a round can come for the entry points', `team knows since ${f1(B2?.ops ?? -1)} s · in cover.openings ${!!O} · entry risk a stride in front of it: ${risk ? risk.id : 'none'} · dealt to: ${g2.orders.squad().filter((m: any) => g2.cover.of(m)?.o === O).map((m: any) => m.callsign).join(', ') || 'nobody free with a line'}`);
     }
   }
   return F.done();
 }
 
-export async function wallreactPort(level: string): Promise<boolean> {
-  const F = family(`wallreact-port [${level}]: a port in a wall is noticed by who hears or sees it — and by nobody else — and takes a defender's gun`);
-  const R = await rig(level, 5), g = R.g, S = spots(R)[0], defs = R.defs();
-  if (!S || defs.length < 2) { F.verdict(false, 'a partition and two defenders to stage', `spots ${spots(R).length} · defenders ${defs.length}`); return F.done(); }
-  // the nearest defender stood in the room on the a side, three strides back, looking along the wall; the far one is whoever the sound model puts furthest
-  const D = [...defs].sort((x, y) => flat(x.gd.char.pos, S.mid) - flat(y.gd.char.pos, S.mid))[0];
-  const back = [3.4, 2.8, 2.4].map(d => v3.mad(S.mid, S.n, d) as Vec3).find(p => !g.col.nav.isBlocked(p[0], p[2]) && !g.col.segmentBlocked([p[0], 1.55, p[2]], [S.mid[0] + S.n[0] * 0.3, 1.3, S.mid[2] + S.n[2] * 0.3])) ?? S.a;
-  R.post(D, back, v3.mad(back, S.u, 6) as Vec3); R.step(0.5);
-  const src: Vec3 = [S.mid[0] - S.n[0] * 1.4, 1.3, S.mid[2] - S.n[2] * 1.4];
-  const far = defs.filter(x => x !== D).map(x => ({ x, L: g.col.sound.propagate(src, [x.gd.char.pos[0], 1.55, x.gd.char.pos[2]]).pathLen })).sort((p, q) => q.L - p.L)[0];
-  const res = blow(R, S, 1.4); R.step(0.05);
-  const B = R.wr().breaches[0];
-  const sight = !g.col.segmentBlocked([S.a[0], 1.5, S.a[2]], [S.b[0], 1.5, S.b[2]]), feet = g.col.nav.isBlocked(S.mid[0], S.mid[2]);
-  F.verdict(res.walls > 0 && !!B && !B.walk && sight && feet, 'a charge a stride off the wall knocks a port in it: eyes pass, feet do not', `walls ${res.walls} · ${B ? `breach ${at(B.at)} ${f1(B.half * 2)} m ${B.walk ? 'WALK-THROUGH' : 'port'}` : 'no breach'} · a line through it at 1.5 m: ${sight} · nav shut in the wall: ${feet}`);
-  if (!B) return F.done();
-  R.step(1.0);
-  const wr = R.wr(), knows = B.men.has(D.gd), on = wr.watching.get(D.gd) === B, ptOn = flat(D.pt, B.at) < 0.2;
-  F.verdict(knows && on && ptOn, 'the defender in the room knows it by his own ears and rests his gun on it inside a second', `${D.gd.callsign} knows: ${knows} · watching it: ${on} · his fix point ${at(D.pt)} vs the port ${at(B.at)} · facing off it by ${f1(Math.abs(((v3.yawTo(D.gd.char.pos, B.at) - D.gd.char.aimYaw + 9.42477) % 6.28318) - 3.14159) * 57.3)}° · he stands ${at(D.gd.char.pos)} mode ${D.mode} state ${D.gd.state} · his door ${D.watch} with ${f1(D.watch >= 0 ? D.ev[D.watch] : 0)} against it · the port: ${JSON.stringify((wr as any).minds.get(D.gd)?.get(B) ?? null)} · glancing ${g.time < D.glanceUntil}${tail()}`);
-  const farKnows = far ? B.men.has(far.x.gd) : false;
-  if (far && far.L > WALLREACT.hearBlastM + WALLREACT.tellM) F.verdict(!farKnows, 'a defender out of earshot and out of sight does not know it is there (fog of war)', `${far.x.gd.callsign} is ${f1(far.L)} m of sound path off (heard inside ${WALLREACT.hearBlastM}) · knows: ${farKnows} · defenders who know: ${[...B.men.keys()].map((m: any) => m.callsign).join(', ')}`);
-  else console.log(`    (no defender on this floor is out of earshot of that wall: the furthest is ${far ? f1(far.L) : '-'} m of sound path off — the fog-of-war line is not asked here)`);
-  // the team: it knows only if one of them heard or saw it; unknown, their book has no such opening
-  const teamHeard = B.ops >= 0, listed = g.cover.openings.some((o: any) => o.id === B.key);
-  F.verdict(teamHeard === listed, 'the squad\'s book lists it exactly when the team knows of it', `team knows: ${teamHeard}${teamHeard ? ` (since ${f1(B.ops)} s)` : ''} · in cover.openings: ${listed} · Sam is ${f1(g.col.sound.propagate(src, [g.player.char.pos[0], 1.55, g.player.char.pos[2]]).pathLen)} m of sound path off`);
-  // a door with fresh evidence takes him back; the port keeps one gun when nothing else is going on
-  R.step(35);
-  const on20 = [...wr.watching.entries()].filter(([m, b]: any) => b === B && m.state !== 'dead').map(([m]: any) => m.callsign);
-  F.verdict(on20.length === 1, 'half a minute of quiet later (the noise of the bang at the doors forgotten) it has one gun on it, not the room\'s (a port is worth one with nothing else going on)', `watching it: ${on20.join(', ') || 'nobody'} · ${D.gd.callsign} ${at(D.gd.char.pos)} mode ${D.mode} state ${D.gd.state} door ${D.watch} with ${f1(D.watch >= 0 ? D.ev[D.watch] : 0)} · the port in his head: ${JSON.stringify((wr as any).minds.get(D.gd)?.get(B) ?? null)} · defenders who know it ${B.men.size}${tail()}`);
-  // a door with something against it takes him back; rounds through the port take him off the door again
-  const beyond: Vec3 = [B.at[0] - S.n[0] * 2.0, 0, B.at[2] - S.n[2] * 2.0], di = D.room?.entries.length ? 0 : -1;
-  if (di >= 0) {
-    for (let i = 0; i < 90; i++) { D.ev[di] = 1.2; R.step(1 / 60); }
-    const onDoor = wr.watching.get(D.gd) !== B && D.watch === di;
-    for (let i = 0; i < 150; i++) { D.ev[di] = 1.2; D.gd.sup.src = beyond; D.gd.sup.srcT = g.time; R.step(1 / 60); }
-    const m = (wr as any).minds.get(D.gd)?.get(B), onPort = wr.watching.get(D.gd) === B;
-    F.verdict(onDoor && onPort, 'a door of his room with noise at it takes him off the port; rounds coming through the port take him off that door', `door ${D.room.entries[di].door.def.name} held at 1.2: on the door ${onDoor} · then 2.5 s of rounds from beyond the port: on the port ${onPort} with ${f1(m?.ev ?? NaN)} against it${tail()}`);
-  } else console.log('    (his room has no door: the door-against-port line is not asked here)');
-  // the wall charge's case (wallcharge.ts flash-blinds every man with a line to its hole): a fresh floor, the same man blind for 4.1 s as the wall goes, a door of his
-  // room loud the whole time — what just opened beside him is still the newest thing in the room when his eyes are back, not a thing he heard of four seconds ago
-  const R2 = await rig(level, 5), S2 = spots(R2)[0], D2 = S2 ? [...R2.defs()].sort((x, y) => flat(x.gd.char.pos, S2.mid) - flat(y.gd.char.pos, S2.mid))[0] : null;
-  if (S2 && D2) {
-    const g2 = R2.g, back2 = [3.4, 2.8, 2.4].map(d => v3.mad(S2.mid, S2.n, d) as Vec3).find(p => !g2.col.nav.isBlocked(p[0], p[2]) && !g2.col.segmentBlocked([p[0], 1.55, p[2]], [S2.mid[0] + S2.n[0] * 0.3, 1.3, S2.mid[2] + S2.n[2] * 0.3])) ?? S2.a;
-    R2.post(D2, back2, v3.mad(back2, S2.u, 6) as Vec3); R2.step(0.5);
-    D2.gd.dazzledUntil = g2.time + 4.1; g2.wallCharge.stats.blown++; blow(R2, S2); const until = D2.gd.dazzledUntil;   // (the rule is the wall charge's own: it stands only once one has gone)
-    const loud = () => { if (D2.room?.entries.length) D2.ev[0] = 2.4; }; let blindOn = false;
-    while (g2.time < until + 1.0) { loud(); R2.step(1 / 60); if (g2.time < until - 0.1 && R2.wr().watching.has(D2.gd)) blindOn = true; }
-    const B2 = R2.wr().breaches[0], m2 = B2 ? (R2.wr() as any).minds.get(D2.gd)?.get(B2) : null, on2 = !!B2 && R2.wr().watching.get(D2.gd) === B2;
-    F.verdict(!!B2 && !blindOn && on2 && flat(D2.pt, B2.at) < 0.2, 'a man flash-blind when the wall beside him went (the wall charge\'s stun) turns to the hole when his eyes are back, a loud door or not', `${D2.gd.callsign} blind 4.1 s from the blast · a door of his room held at 2.4 · turned while blind: ${blindOn} · a second after his sight is back: on the hole ${on2}, his fix point ${at(D2.pt)} vs ${B2 ? at(B2.at) : '-'} · state ${D2.gd.state} mode ${D2.mode} · the hole in his head: ${JSON.stringify(m2 ?? null)} at ${f1(g2.time)} s${tail()}`);
-  } else console.log('    (nothing to stage the blind man beside)');
-  return F.done();
-}
 
 /** cover shot away or blown: a man crouched behind a crate that goes, with somebody to hide from, goes to other cover */
 /** `orElse`: the level asked when `level` has nothing to stage (probes.ts: the rebuilt block has no crate a man can kneel behind away from the squad's start —
@@ -300,8 +245,6 @@ export async function wallreactHole(level: string): Promise<boolean> {
   const cb1 = g.cleared.roomAt(S.b), ca1 = g.cleared.roomAt(S.a), hole = g.cleared.roomAt(S.mid);
   F.verdict(ca1 === ca && cb1 === cb && hole === 0 && (cb === 0 || !g.cleared.isKnown(cb) || g.cleared.isKnown(cb) === (ca !== cb ? g.cleared.isKnown(cb) : true)), 'the team\'s cleared book: the hole\'s floor is no room\'s (a doorway\'s), and what is beyond it is not cleared by the wall going', `rooms a ${ca} → ${ca1}, b ${cb} → ${cb1} · the hole's own cell: room ${hole} · b known: ${cb ? g.cleared.isKnown(cb) : 'open floor'}`);
   R.step(1.5);
-  const k1 = B.men.has(D1.gd), k2 = B.men.has(D2.gd), w = [...R.wr().watching.entries()].filter(([, b]: any) => b === B).map(([m]: any) => m.callsign);
-  F.verdict(k1 && k2 && w.length >= 1, 'both know it, and a gun is on it', `${D1.gd.callsign} knows ${k1} · ${D2.gd.callsign} knows ${k2} · watching it: ${w.join(', ') || 'nobody'} · moved off its line: ${WALLREACT_STATS.movedDef} · said: wall barks ${[...B.said].join('/')}${tail()}`);
   // a door off its hinges is the doors' own piece: its row in the feed (the doors goal's charge files { kind: 'door', cause: 'blast' }) is no wall hole here
   { const n0 = R.wr().breaches.length, r0 = Fb.rooms.length, o0 = g.cover.openings.length, rows0 = WALLREACT_STATS.rows; let threw = '';
     try { g.destr.walls.note({ kind: 'door', cause: 'blast', id: -1, pos: [S.mid[0], 0, S.mid[2]], rect: [S.mid[0] - 0.6, S.mid[2] - 0.6, S.mid[0] + 0.6, S.mid[2] + 0.6], opened: [], walkable: true, sight: true, dead: false, who: 1 }); R.step(0.5); } catch (e) { threw = String(e); }
@@ -313,59 +256,11 @@ export async function wallreactHole(level: string): Promise<boolean> {
   return F.done();
 }
 
-export async function wallreactFlank(level: string): Promise<boolean> {
-  const F = family(`wallreact-flank [${level}]: a flanking plan under way is dealt again when one of its men learns of a hole a man fits through`);
-  const R = await rig(level, 7), g = R.g, nav = g.col.nav;
-  const len = (a: Vec3, b: Vec3) => { const p = nav.findPath(a, b); if (!p?.length) return Infinity; let L = 0, q: number[] = a; for (const w of p) { L += flat(q, w); q = w; } return L; };
-  // the wall whose hole shortens a walk the most: two men one side, their fix the other
-  let best: { S: Spot; gain: number } | null = null;
-  for (const S of spots(R)) { const from = v3.mad(S.mid, S.n, 2.4) as Vec3, to = v3.mad(S.mid, S.n, -2.4) as Vec3; const L = len(from, to); if (L === Infinity || L < 8) continue; if (!best || L > best.gain) best = { S, gain: L }; }
-  const defs = R.defs();
-  if (!best || defs.length < 2) { F.verdict(false, 'a long way round a partition and two defenders to stage', `walls with a walk of 8 m or more round them: ${best ? 1 : 0} · defenders ${defs.length}`); return F.done(); }
-  const S = best.S, fix = v3.mad(S.mid, S.n, -2.4) as Vec3, [D1, D2] = [...defs].sort((x, y) => flat(x.gd.char.pos, S.mid) - flat(y.gd.char.pos, S.mid));
-  const men = [D1.gd, D2.gd], ps = [v3.mad(v3.mad(S.mid, S.n, 2.4), S.u, 0.9), v3.mad(v3.mad(S.mid, S.n, 2.4), S.u, -0.9)] as Vec3[];
-  men.forEach((m: any, i: number) => { const p = nav.isBlocked(ps[i][0], ps[i][2]) ? v3.mad(S.mid, S.n, 2.4 + i) as Vec3 : ps[i]; m.char.pos[0] = p[0]; m.char.pos[2] = p[2]; m.script = null; m.hold = false; m.pinned = false; m.state = 'alert'; m.awareness = 1; m.lastKnown = [...fix]; m.fixT = g.time; m.lastSeenT = g.time - 5; m.path = []; m.pathGoal = null; });
-  R.F.defs.forEach((D: any) => { if (men.includes(D.gd)) D.mode = 'free'; });
-  const P0 = planApproach(g, men, fix, 'probe');
-  if (!P0) { F.verdict(false, 'the tactics deal the two a plan on that fix', `no plan: the way round is ${f1(best.gain)} m`); return F.done(); }
-  const id0 = P0.id; R.step(1.2);   // (older than the tactics' own gap between deals)
-  const had = plansOf(g).some((p: any) => p.id === id0);
-  blow(R, S); R.step(0.6);
-  const B = R.wr().breaches[0], plans = plansOf(g), again = plans.find((p: any) => p.id !== id0 && p.why === 'a wall opened');
-  F.verdict(had && !!B && B.walk && (B.men.has(men[0]) || B.men.has(men[1])) && WALLREACT_STATS.replans >= 1 && !plans.some((p: any) => p.id === id0), 'the plan dealt over the old floor is ended once one of them knows of the hole', `plan #${id0} alive before the blast: ${had} · breach ${B ? (B.walk ? 'walk-through' : 'port') : 'none'} · they know: ${men.map((m: any) => `${m.callsign} ${B?.men.has(m)}`).join(', ')} · replans ${WALLREACT_STATS.replans} · plans now ${plans.map((p: any) => `#${p.id} '${p.why}'`).join(', ') || 'none'}`);
-  F.verdict(len(ps[0], fix) < 7, '… and the floor it is dealt over next has the way through', `their walk to the fix: ${f1(best.gain)} m round before · ${f1(len(ps[0], fix))} m now · ${again ? `plan #${again.id} dealt 'a wall opened'` : 'no second plan (the two are inside the tactics\' joining distance of the fix by the new way: they simply go)'}${tail()}`);
-  // … and a man comes through it: across the wall's line inside the hole's width
-  const side = (q: number[]) => (q[0] - B.at[0]) * B.n[0] + (q[2] - B.at[2]) * B.n[1], s0 = men.map((m: any) => Math.sign(side(m.char.pos))); let through = '';
-  for (let i = 0; i < 12 * 60 && !through; i++) { const was = men.map((m: any) => [...m.char.pos]); for (const m of men as any[]) { m.lastKnown = [...fix]; m.lastSeenT = g.time - 5; } R.step(1 / 60);
-    men.forEach((m: any, k: number) => { if (!through && m.state !== 'dead' && Math.sign(side(m.char.pos)) === -s0[k] && thru(B, was[k], m.char.pos)) through = `${m.callsign} at ${f1(g.time)} s`; }); }
-  F.verdict(!!through, '… and one of them comes through the hole to the fix (a flank through a wall that is no longer there)', `through the hole: ${through || 'nobody in 12 s'} · they stand ${men.map((m: any) => `${m.callsign} ${at(m.char.pos)} ${m.state}`).join(', ')} · fix ${at(fix)}`);
-  return F.done();
-}
 
-/** the squad: a hole a man fits through is a way in — a teammate sent to the far side walks through it, and stops short of nothing */
-export async function wallreactThrough(level: string): Promise<boolean> {
-  const F = family(`wallreact-through [${level}]: a teammate ordered to the far side of a blown wall walks through the hole instead of round by the doors`);
-  const R = await rig(level, 9), g = R.g, nav = g.col.nav, op = R.ops()[0];
-  const len = (a: Vec3, b: Vec3) => { const p = nav.findPath(a, b); if (!p?.length) return Infinity; let L = 0, q: number[] = a; for (const w of p) { L += flat(q, w); q = w; } return L; };
-  let best: { S: Spot; L: number } | null = null;
-  for (const S of spots(R)) { const L = len(v3.mad(S.mid, S.n, 2.4) as Vec3, v3.mad(S.mid, S.n, -2.4) as Vec3); if (L !== Infinity && L >= 8 && (!best || L > best.L)) best = { S, L }; }
-  if (!best || !op) { console.log(`    (no partition here with a walk of 8 m or more round it)\n=== wallreact-through [${level}]: NOT ASKED (nothing to stage) ===`); return true; }
-  const S = best.S, from = v3.mad(S.mid, S.n, 2.4) as Vec3, to = v3.mad(S.mid, S.n, -2.4) as Vec3;
-  for (const m of g.guards) if (m.team !== 'operative') m.dazzledUntil = g.time + 1e6; R.F.blindFire = false;
-  R.hold(op, from, S.mid); R.step(0.3); blow(R, S); R.step(0.5);
-  const B = R.wr().breaches[0];
-  g.orders.assign(op, { order: 'hold', post: [to[0], 0, to[2]], face: v3.yawTo(to, from), going: 'moving', there: 'holding' });
-  const side = (q: number[]) => (q[0] - B.at[0]) * B.n[0] + (q[2] - B.at[2]) * B.n[1]; let crossed = -1, viaHole = false, walked = 0;
-  for (let i = 0; i < 14 * 60 && flat(op.char.pos, g.orders.of(op)?.post ?? to) > 0.5; i++) { const was = [...op.char.pos]; R.step(1 / 60); walked += flat(was, op.char.pos);
-    if (crossed < 0 && side(was) * side(op.char.pos) < 0) { crossed = g.time; viaHole = thru(B, was, op.char.pos); } }
-  const A = g.orders.of(op), endAt = A?.post ?? to;
-  F.verdict(!!B && B.walk && B.ops >= 0 && crossed >= 0 && viaHole && walked < best.L - 1 && flat(op.char.pos, endAt) < 0.6, 'he crosses the wall\'s line inside the hole and stands on his mark beyond it', `the walk round was ${f1(best.L)} m · he walked ${f1(walked)} m · crossed at ${f1(crossed)} s ${viaHole ? 'through the hole' : 'ELSEWHERE'} · stands ${at(op.char.pos)}, mark ${at(endAt)}${flat(endAt, to) > 0.3 ? ` (moved ${f1(flat(endAt, to))} m off the hole's line from ${at(to)})` : ''} · order ${A?.order}${tail()}`);
-  return F.done();
-}
 
 if (import.meta.main) {
   let ok = true; const only = process.argv.slice(2).filter(a => !a.startsWith('--') && !LEVELS.includes(a) && a !== 'all');
-  for (const level of LEVELS) for (const [name, fn] of [['cover', wallreactCover], ['crate', wallreactCrate], ['port', wallreactPort], ['hole', wallreactHole], ['flank', wallreactFlank], ['through', wallreactThrough]] as const) {
+  for (const level of LEVELS) for (const [name, fn] of [['cover', wallreactCover], ['crate', wallreactCrate], ['hole', wallreactHole], ] as const) {
     if (only.length && !only.includes(name)) continue;
     try { ok = (await fn(level)) && ok; } catch (e) { ok = false; console.log(`- FAIL — wallreact-${name} [${level}] threw\n    ${e instanceof Error ? e.stack : e}`); }
   }

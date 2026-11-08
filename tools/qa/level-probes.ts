@@ -120,7 +120,8 @@ export async function levelValidate() {
   plant('two vents with one id', d => { d.vents[2].id = d.vents[1].id; }, /vents\[2\]: duplicate id/);
   plant('a vent with a typo\'d key ("reech")', d => { d.vents[3].reech = 2; }, /unknown key 'reech'/);
   plant('a stair connector (G2 stub) to an unknown floor', d => { d.connectors.push({ id: 'st0', kind: 'stair', from: { floor: 'f0', c: [1, 0, 1], h: [1, 1, 1] }, to: { floor: 'mezz', c: [1, 3, 1], h: [1, 1, 1] } }); }, /connectors\[0\]\.to/);
-  plant('version 2 handed to the v1 loader', d => { d.version = 2; }, /version: expected 1/);
+  plant('version 3 handed to the v2 loader', d => { d.version = 3; }, /version: expected 2/);
+  plant('a file of version 1 is told the command that converts it', d => { d.version = 1; }, /version: version 1 writes a round thing as four slabs: bun run tools\/levels\/round-convert\.ts/);
   // hand-edit typos and prototype tricks: an unknown key anywhere is data that would be ignored on load and dropped on save — reported, per record
   plant('a typo\'d key on a box ("emmisive")', d => { d.boxes[7].emmisive = [1, 1, 1]; }, /boxes\[7\] 'box_0007': unknown key 'emmisive'/);
   plant('a typo\'d key on a light ("colour")', d => { d.lights[1].colour = [1, 1, 1]; }, /lights\[1\] 'storage_bulb': unknown key 'colour'/);
@@ -304,7 +305,7 @@ export async function levelServe() {
     r = await handleLevels(req('/levels/nothing.json'), dir); const r2 = await handleLevels(req('/levels/nothing.lint.json'), dir); verdict(r.status === 404 && r2.status === 404, 'a level, or a sidecar, that is not there → 404');
     const bad = ['../x.json', 'a/b.json', 'x.txt', '.json', 'x..json', 'x.lint.json/y', encodeURIComponent('../package') + '.json']; const got: number[] = [];
     for (const b of bad) got.push((await handleLevels(req(`/levels/${b}`), dir))?.status ?? 0);
-    verdict(got[0] === 0 && got.slice(1).every(s => s === 400) && !NAME_RE.test('a.b') && !NAME_RE.test('../x') && NAME_RE.test('office-relief'), `a name that is a path, has a dot or is not .json is refused, and ../ is no longer a /levels path at all (${got.join(' ')})`);
+    verdict(got[0] === 0 && got.slice(1).every(s => s === 400) && !NAME_RE.test('a.b') && !NAME_RE.test('../x') && NAME_RE.test('office-t20'), `a name that is a path, has a dot or is not .json is refused, and ../ is no longer a /levels path at all (${got.join(' ')})`);
     r = await handleLevels(req('/levels/probe_office.json', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }), dir); const d = await handleLevels(req('/levels/probe_office.json', { method: 'DELETE' }), dir);
     verdict(r.status === 405 && d.status === 405 && readFileSync(join(dir, 'levels', 'probe_office.json'), 'utf8') === text, 'POST and DELETE → 405, and the file is as it was: nothing writes through the server');
     r = await handleLevels(req('/levels/probe_office.json', { headers: { host: '192.168.1.20:5173' } }), dir); verdict(r.status === 200, 'a page opened by the machine\'s own address (HOST=0.0.0.0) is answered as localhost is: the files are the repo\'s own');

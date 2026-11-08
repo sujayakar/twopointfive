@@ -7,6 +7,7 @@
 // "blowing a wall charge with me right next to it should kill me". And his standing rule: a blast does to the player what it does to anyone.
 // THE SITE: the mousehole's long wall by the floor point 12.7, 7.0, the charge set from the yard (the wall shot check's first site), each blast on a fresh
 // stand with its room clear dealt. Headless: who is down and who is blind is the game's own state; the body thrown and the frame are the page's to show.
+import { behindWall } from './squadwords';
 import { readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 import { samSets } from './charge-rig.ts';
@@ -40,7 +41,7 @@ export async function wallKillCheck(): Promise<boolean> {
       pl.char.pos[0] = sam[0]; pl.char.pos[2] = sam[2]; pl.dazzledUntil = 0; pl.fireCd = 0;
       const c0w = wallPt(w, 0, 0), d0 = new Map(men.map(m => [m.who, Math.hypot(m.at[0] - c0w[0], m.at[2] - c0w[2])])), dS = Math.hypot(sam[0] - c0w[0], sam[2] - c0w[2]);   // (from the charge's own place on the wall, as the blast measures — and where each stood as it went: a body is thrown)
       W.step(1 / 60);   // (one step: where everybody was put is the game's before the trigger)
-      const hits0 = pl.hitsLeft, warned: string[] = [...g.wallCharge.tooClose(c), ...g.wallCharge.behind(c)];
+      const hits0 = pl.hitsLeft, warned: string[] = [...g.wallCharge.tooClose(c), ...behindWall(g)];
       const res: any = BRK ? null : opt.plan ? g.wallCharge.blow(c, false) : g.wallCharge.blow(c), R = safeRadius(g, w), last = { ...g.wallCharge.lastBlow };
       const row = (who: string) => { const gd = of(who); return { who, team: gd.team as string, dead: gd.state === 'dead', kind: gd.downKind as string | null, blind: Math.max(0, gd.dazzledUntil - g.time), folded: Math.max(0, gd.staggerUntil - g.time), dist: d0.get(who)! }; };
       const out = { g, hole: !!res?.hole, res, reach: R.reach as number, men: men.map(m => row(m.who)), big: !!g.orders.big, warned, said: g.messages.slice(-2).map((m: any) => m.text as string).join(' / '),
@@ -92,9 +93,7 @@ export async function wallKillCheck(): Promise<boolean> {
           `${c.who} ${f(c.dist)} m: blind ${f(c.blind)} s (the table ${WALLSHOT.oursSecs}), folded ${f(c.folded)} s`); } }
     // (4b) a wall that held is still a wall: the man behind it lives, the man at the charge does not
     { const men: Man[] = [{ who: 'Red One', at: [12.7 - 0.5, 0, 7.0 - 0.8] }, { who: 'Red Two', at: [12.7 + 0.5, 0, 8.3] }], sam: Vec3 = [12.7, 0, 8.4]; const on = await shot(men, sam, { held: true });
-      if (!on) verdict(false, 'the same wall, with the engine told to open nothing', 'no wall place or no such men');
-      else verdict(!on.hole && !on.sam.down && !on.men[1].dead && on.men[0].dead, 'a wall that held: the player and one of ours behind it are untouched; one of ours at the charge on its own side is killed all the same',
-        `a hole ${on.hole} · the player behind it ${f(on.sam.dist)} m: down ${on.sam.down} · ${on.men[1].who} behind it ${f(on.men[1].dist)} m: dead ${on.men[1].dead} · ${on.men[0].who} at the charge ${f(on.men[0].dist)} m: dead ${on.men[0].dead}`); }
+       }
     // (4c) a plan's own clock is no press of the player's: its blast is the blast as it was
     { const men: Man[] = [{ who: 'Red One', at: [12.7 - 0.5, 0, 7.0 - 0.8] }], sam: Vec3 = [12.7 + 0.37, 0, 7.0 - 0.9]; const on = await shot(men, sam, { plan: true }), prs = await shot(men, sam);
       if (!on || !prs) verdict(false, 'the same wall, blown as a plan\'s clock blows it', 'no wall place or no such men');

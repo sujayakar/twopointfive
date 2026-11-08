@@ -45,8 +45,8 @@ pub fn big_broken() -> bool {
 }
 
 /// The big slot's tool that opens this door from where you stand.   (bigkit.ts samBig)
-pub fn sam_big(g: &mut crate::game::Game, d: DoorId, p: Option<V3>) -> Option<crate::bigkit::SamBig> {
-    let pid = g.player;
+pub fn sam_big(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId, p: Option<V3>) -> Option<crate::bigkit::SamBig> {
+    let pid = seat.player;
     let kit = g.pl[pid].big_kit;
     if !g.k.bigslot.on
         || kit == crate::kit::BigKit::None
@@ -181,7 +181,7 @@ pub fn sam_big_far(g: &mut crate::game::Game, d: DoorId, p: V3) -> Option<crate:
     if m::min(v3::dist_xz(door, p), v3::dist_xz(g.dr[d].frame_centre, p)) >= g.k.bigslot.reach {
         return None;
     }
-    let tool = sam_big(g, d, Some(p))?;
+    let tool = sam_big(g, &crate::seats::here(g), d, Some(p))?;
     let (asked, answer) = match tool {
         SamBig::Shotgun => (SamBigSpotTool::Shotgun, SamBigFar::Shotgun),
         SamBig::Hammer => (SamBigSpotTool::Hammer, SamBigFar::Hammer),
@@ -233,11 +233,6 @@ pub fn sam_big_pose(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Opti
     let windup = big_wind(g);
     let stow = big_stow(g);
     Some(crate::character::AnimBigTool { kind, t: t_now, equip, windup, stow, blows, end, at, snug: Some(true) })
-}
-
-/// The tool changes hands with the weight of a gun swap: on, on the page.   (bigkit.ts weighed)
-pub fn weighed(g: &crate::game::Game) -> bool {
-    true
 }
 
 /// Seconds from the hand leaving for the tool to the tool in his hands.   (bigkit.ts bigEquip)
@@ -374,7 +369,7 @@ pub fn sam_big_tail_tick(g: &mut crate::game::Game, dt: f64) {
 
 /// The row performed: the beat begins, the kick's verb with the tool in the boot's place.   (bigkit.ts samBigStart)
 pub fn sam_big_start(g: &mut crate::game::Game, d: DoorId) {
-    let tool = match sam_big(g, d, None) {
+    let tool = match sam_big(g, &crate::seats::here(g), d, None) {
         Some(SamBig::Shotgun) => crate::player::StartKickTool::Shotgun,
         Some(SamBig::Hammer) => crate::player::StartKickTool::Hammer,
         None => return,
@@ -536,7 +531,7 @@ pub fn sam_big_tick(g: &mut crate::game::Game, dt: f64) -> bool {
 }
 
 /// The blows the hammer needs on d from p.   (bigkit.ts hammerBlows)
-pub fn hammer_blows(g: &mut crate::game::Game, d: DoorId, p: &[f64]) -> f64 {
+pub fn hammer_blows(g: &crate::game::Game, d: DoorId, p: &[f64]) -> f64 {
     if crate::doors::door_locked(g, d) && crate::doors::doors_boot_holds(g, d, [p[0], p[1], p[2]]) {
         m::max(1.0, g.k.bigslot.swings)
     } else {

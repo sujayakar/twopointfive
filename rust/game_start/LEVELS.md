@@ -32,7 +32,7 @@ What a row does NOT hold:
 - Nothing here has been seen on a GPU: both games stand on a host that draws nothing, with the rows that only dress the picture down.
 
 <!-- table -->
-33 of 33 missions start in Rust equal to the TypeScript start (die seed 20942, 300 frames).
+30 of 30 missions start in Rust equal to the TypeScript start (die seed 20942, 300 frames).
 
 | mission | the file the page loads | starts in Rust | paths not known at the start | 300 frames beside the TypeScript start | paths not known as they end | what the start lacks |
 |---|---|---|---|---|---|---|
@@ -40,34 +40,31 @@ What a row does NOT hold:
 | `tut-team` | `tut-team.json` | yes | 0 | 300 in step | 0 |  |
 | `tut-kit` | `tut-kit.json` | yes | 0 | 300 in step | 0 |  |
 | `tut-queue` | `tut-queue.json` | yes | 0 | 300 in step | 0 |  |
-| `tut-quiet` | `tut-quiet.json` | yes | 0 | 300 in step | 0 |  |
-| `tut-pair` | `tut-pair.json` | yes | 0 | 300 in step | 0 |  |
+| `tut-quiet` (off the list) | `tut-quiet.json` | yes | 0 | 300 in step | 0 |  |
+| `tut-pair` (off the list) | `tut-pair.json` | yes | 0 | 300 in step | 0 |  |
 | `night-breach` (off the list) | `office.json` | yes | 0 | 300 in step | 0 |  |
 | `room-clear-pair` | `office.json` | yes | 0 | 300 in step | 0 |  |
 | `room-clear-four` (off the list) | `office.json` | yes | 0 | 300 in step | 0 |  |
 | `hostage-rescue` | `office.json` | yes | 0 | 300 in step | 0 |  |
-| `records-pair` | `records-gwot.json` | yes | 0 | 300 in step | 0 |  |
+| `records-pair` (off the list) | `records-gwot.json` | yes | 0 | 300 in step | 0 |  |
 | `depot-four` | `depot-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `block-four` | `block-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `block-squads` (off the list) | `block-squads-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `warehouse-four` | `warehouse-gwot.json` | yes | 0 | 300 in step | 0 |  |
+| `block-four` (off the list) | `block-gwot.json` | yes | 0 | 300 in step | 0 |  |
+| `warehouse-four` (off the list) | `warehouse-gwot.json` | yes | 0 | 300 in step | 0 |  |
 | `compound-four` | `compound-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `barracks-four` | `barracks-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `rescue-registry` | `registry-gwot.json` | yes | 0 | 300 in step | 0 |  |
+| `barracks-four` (off the list) | `barracks-gwot.json` | yes | 0 | 300 in step | 0 |  |
+| `rescue-registry` (off the list) | `registry-gwot.json` | yes | 0 | 300 in step | 0 |  |
 | `rescue-consulate` | `consulate-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `snatch-four` | `snatch.json` | yes | 0 | 300 in step | 0 |  |
-| `defuse-four` | `defuse-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `floodlit-four` | `floodlit-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `killhouse-four` | `killhouse-gwot.json` | yes | 0 | 300 in step | 0 |  |
+| `floodlit-four` (off the list) | `floodlit-gwot.json` | yes | 0 | 300 in step | 0 |  |
+| `killhouse-four` (off the list) | `killhouse-gwot.json` | yes | 0 | 300 in step | 0 |  |
 | `mousehole-four` | `mousehole-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `hall-four` | `hall-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `glasshouse-four` | `glasshouse.json` | yes | 0 | 300 in step | 0 |  |
+| `hall-four` (off the list) | `hall-gwot.json` | yes | 0 | 300 in step | 0 |  |
+| `glasshouse-four` (off the list) | `glasshouse.json` | yes | 0 | 300 in step | 0 |  |
 | `pass-four` | `pass.json` | yes | 0 | 300 in step | 0 |  |
 | `bazaar-quiet` | `bazaar.json` | yes | 0 | 300 in step | 0 |  |
-| `police-post-quiet` | `police-post.json` | yes | 0 | 300 in step | 0 |  |
+| `police-post-quiet` (off the list) | `police-post.json` | yes | 0 | 300 in step | 0 |  |
 | `vault-quiet` | `vault.json` | yes | 0 | 300 in step | 0 |  |
-| `quiet-crossing-two` | `crossing.json` | yes | 0 | 300 in step | 0 |  |
-| `quiet-relay-two` | `quiet-relay.json` | yes | 0 | 300 in step | 0 |  |
+| `quiet-crossing-two` (off the list) | `crossing.json` | yes | 0 | 300 in step | 0 |  |
+| `quiet-relay-two` (off the list) | `quiet-relay.json` | yes | 0 | 300 in step | 0 |  |
 | `lights-out-two` | `lights-out.json` | yes | 0 | 300 in step | 0 |  |
 <!-- /table -->
 
@@ -78,7 +75,7 @@ one a host hands a seat it has none for. What two players DO is not held here, o
 TypeScript start makes for two, and that the two stay in step while nobody moves.
 
 <!-- table seats=2 -->
-21 of 21 missions the game stages for 2 players start in Rust equal to the TypeScript start (die seed 20942, 300 frames, 2 seats); 12 the game refuses for 2 players.
+18 of 18 missions the game stages for 2 players start in Rust equal to the TypeScript start (die seed 20942, 300 frames, 2 seats); 12 the game refuses for 2 players.
 
 | mission | the file the page loads | starts in Rust | paths not known at the start | 300 frames beside the TypeScript start | paths not known as they end | what the start lacks |
 |---|---|---|---|---|---|---|
@@ -86,33 +83,30 @@ TypeScript start makes for two, and that the two stay in step while nobody moves
 | `tut-team` | `tut-team.json` | yes | 0 | 300 in step | 0 |  |
 | `tut-kit` | `tut-kit.json` | yes | 0 | 300 in step | 0 |  |
 | `tut-queue` | `tut-queue.json` | yes | 0 | 300 in step | 0 |  |
-| `tut-quiet` | `tut-quiet.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
-| `tut-pair` | `tut-pair.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
+| `tut-quiet` (off the list) | `tut-quiet.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
+| `tut-pair` (off the list) | `tut-pair.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
 | `night-breach` (off the list) | `office.json` | yes | 0 | 300 in step | 0 |  |
 | `room-clear-pair` | `office.json` | yes | 0 | 300 in step | 0 |  |
 | `room-clear-four` (off the list) | `office.json` | yes | 0 | 300 in step | 0 |  |
 | `hostage-rescue` | `office.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
-| `records-pair` | `records-gwot.json` | yes | 0 | 300 in step | 0 |  |
+| `records-pair` (off the list) | `records-gwot.json` | yes | 0 | 300 in step | 0 |  |
 | `depot-four` | `depot-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `block-four` | `block-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `block-squads` (off the list) | `block-squads-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `warehouse-four` | `warehouse-gwot.json` | yes | 0 | 300 in step | 0 |  |
+| `block-four` (off the list) | `block-gwot.json` | yes | 0 | 300 in step | 0 |  |
+| `warehouse-four` (off the list) | `warehouse-gwot.json` | yes | 0 | 300 in step | 0 |  |
 | `compound-four` | `compound-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `barracks-four` | `barracks-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `rescue-registry` | `registry-gwot.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
+| `barracks-four` (off the list) | `barracks-gwot.json` | yes | 0 | 300 in step | 0 |  |
+| `rescue-registry` (off the list) | `registry-gwot.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
 | `rescue-consulate` | `consulate-gwot.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
-| `snatch-four` | `snatch.json` | yes | 0 | 300 in step | 0 |  |
-| `defuse-four` | `defuse-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `floodlit-four` | `floodlit-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `killhouse-four` | `killhouse-gwot.json` | yes | 0 | 300 in step | 0 |  |
+| `floodlit-four` (off the list) | `floodlit-gwot.json` | yes | 0 | 300 in step | 0 |  |
+| `killhouse-four` (off the list) | `killhouse-gwot.json` | yes | 0 | 300 in step | 0 |  |
 | `mousehole-four` | `mousehole-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `hall-four` | `hall-gwot.json` | yes | 0 | 300 in step | 0 |  |
-| `glasshouse-four` | `glasshouse.json` | yes | 0 | 300 in step | 0 |  |
+| `hall-four` (off the list) | `hall-gwot.json` | yes | 0 | 300 in step | 0 |  |
+| `glasshouse-four` (off the list) | `glasshouse.json` | yes | 0 | 300 in step | 0 |  |
 | `pass-four` | `pass.json` | yes | 0 | 300 in step | 0 |  |
 | `bazaar-quiet` | `bazaar.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
-| `police-post-quiet` | `police-post.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
+| `police-post-quiet` (off the list) | `police-post.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
 | `vault-quiet` | `vault.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
-| `quiet-crossing-two` | `crossing.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
-| `quiet-relay-two` | `quiet-relay.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
+| `quiet-crossing-two` (off the list) | `crossing.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
+| `quiet-relay-two` (off the list) | `quiet-relay.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
 | `lights-out-two` | `lights-out.json` | not for this many players |  |  |  | the game refuses it for 2 players (it takes one player today) |
 <!-- /table seats=2 -->

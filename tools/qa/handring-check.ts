@@ -2,7 +2,7 @@
 // player.ts buildInteractables) and the page's board for it (src/host/keymap.ts `handWhen`, HAND). ON in the page (?handring=0 = the list on a held Space,
 // the whistle on its key, as it was), OFF in the module and on the frozen stand (TPS_HANDRING=1).
 //   bun run tools/qa/probes.ts handring        (family `player`)        HANDRING_BREAK=1 = the rule and the board's layer left off and the same lines asked: must FAIL
-//                                                                         HANDRING_BREAK=lone | loneWrap | bare | onThing | turn | corner = that one rule left off with the rest on: its own block must FAIL
+//                                                                         HANDRING_BREAK=lone | loneWrap | bare | turn | corner = that one rule left off with the rest on: its own block must FAIL
 // the maintainer, 10-22: "radial menu for our own actions, remove existing menu in top left and awkward scrolling thing", "move whistle to our actions and
 // remove v binding", "move our actions to E", "i think same would go for our actions (1-5 with the ring open)".
 // WHAT IS ASKED:
@@ -15,7 +15,6 @@
 //                 reach'; `near` off, the old word everywhere
 //   the ring      the key kept down: nothing before HANDRING.holdSecs, then the ring with a wedge for the door's row and the whistle on the LAST wedge; let
 //                 go in the middle and it stays with no key held; his feet are his own under it
-//   early         a digit pressed with the key down and the ring not yet up (inside the hold) is its wedge at once, never the slot or the gun's setup
 //   a digit       standing, the last wedge's digit whistles at once and the ring is gone — and it was no weapon slot; a digit with no wedge does nothing
 //                 and the ring stays; the whistle's digit, or a click, before the breath is back lights it and the ring stays
 //   a click       standing, with the pistol up: a left click does the lit wedge and no round leaves the gun
@@ -32,27 +31,28 @@
 //                 lesson's line for the whistle reads in the ring's words
 //   recordings    a recording carries the switch; one from before it replays with it off; the frozen stand holds it off by name
 // Headless: rows, the ring's view, what was done. The corner's one line and the ring as drawn are the page's (never seen on a GPU). NOBODY HAS PLAYED IT.
+import { cornerOf, notesOf } from './squadwords';
 import { ROOT } from './headless.ts';
 import { world } from './wallsnap-probes.ts';
 export async function handRingCheck(): Promise<boolean> {
   const BRK = process.env.HANDRING_BREAK === '1', ONE = process.env.HANDRING_BREAK ?? '', left = (k: string) => BRK || ONE === k; let all = true;
-  if (ONE && !BRK && !['lone', 'loneWrap', 'bare', 'onThing', 'turn', 'corner'].includes(ONE)) { console.log(`HANDRING_BREAK=${ONE}: not 1 and not a rule's name (lone, loneWrap, bare, onThing, turn, corner)`); return false; }   // (HANDRING_BREAK=lone|loneWrap|bare|onThing|turn|corner: that one rule left off, the rest on — its own block must fail; `lone` fails the long label's block too, whose cursor is read on a pill)
+  if (ONE && !BRK && !['lone', 'loneWrap', 'bare', 'turn', 'corner'].includes(ONE)) { console.log(`HANDRING_BREAK=${ONE}: not 1 and not a rule's name (lone, loneWrap, bare, turn, corner)`); return false; }   // (HANDRING_BREAK=lone|loneWrap|bare|onThing|turn|corner: that one rule left off, the rest on — its own block must fail; `lone` fails the long label's block too, whose cursor is read on a pill)
   const verdict = (ok: boolean, what: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };
   console.log(`\n=== handring: his own actions are a ring that stays${BRK ? ' (the rule and the board\'s layer off: must fail)' : ONE ? ` (HANDRING.${ONE} off, the rest on: its block must fail)` : ''} ===`);
   const { HANDRING } = await import(`${ROOT}/src/game/handring.ts`); const { HANDSLOT } = await import(`${ROOT}/src/game/handslot.ts`); const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
-  const { WALLSNAP } = await import(`${ROOT}/src/game/wallsnap.ts`); const { handRingView } = await import(`${ROOT}/src/game/interact.ts`);
+  const { WALLSNAP } = await import(`${ROOT}/src/game/wallsnap.ts`); const handRingView = (g: any) => g.view.hand;
   const { WHISTLE_STATS, WHISTLE } = await import(`${ROOT}/src/game/whistle.ts`); const { BACKKEY } = await import(`${ROOT}/src/game/backkey.ts`);
   const { knobsSnapshot, applyKnobs } = await import(`${ROOT}/src/game/journal.ts`); const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
   const K = await import(`${ROOT}/src/host/keymap.ts`); const { TWOGEARS } = await import(`${ROOT}/src/game/player.ts`);
   const { playerBusy } = await import(`${ROOT}/src/game/savestate.ts`);
-  const was = { on: HANDRING.on, early: HANDRING.early, empty: HANDRING.empty, near: HANDRING.near, lone: HANDRING.lone, loneWrap: HANDRING.loneWrap, onThing: HANDRING.onThing, bare: HANDRING.bare, turn: HANDRING.turn, corner: HANDRING.corner, back: BACKKEY.tab, slot: HANDSLOT.on, cmd: CMDRING.on, hands: CMDRING.hands, ws: WALLSNAP.on, press: WALLSNAP.press, kOn: K.KEYMAP.on, slotWhen: K.KEYMAP.slotWhen, handWhen: K.KEYMAP.handWhen, qFree: K.KEYMAP.qFree, qCmd: K.KEYMAP.qCmd };
+  const was = { on: HANDRING.on, empty: HANDRING.empty, near: HANDRING.near, lone: HANDRING.lone, loneWrap: HANDRING.loneWrap, bare: HANDRING.bare, turn: HANDRING.turn, corner: HANDRING.corner, back: BACKKEY.tab, slot: HANDSLOT.on, cmd: CMDRING.on, hands: CMDRING.hands, ws: WALLSNAP.on, press: WALLSNAP.press, kOn: K.KEYMAP.on, slotWhen: K.KEYMAP.slotWhen, handWhen: K.KEYMAP.handWhen, qFree: K.KEYMAP.qFree, qCmd: K.KEYMAP.qCmd };
   const log = console.log, err = console.error, warn = console.warn;
   const quiet = async <T>(f: () => T | Promise<T>): Promise<T> => { console.log = console.error = console.warn = () => { }; try { return await f(); } finally { console.log = log; console.error = err; console.warn = warn; } };
   const G: any = globalThis, hadLS = G.localStorage; const store = new Map<string, string>();
   G.localStorage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => { store.set(k, String(v)); }, removeItem: (k: string) => { store.delete(k); } };
   try {
     const S = await quiet(() => world(true)); const { pl, g, step, tap, place, input, click, keys, setCursor } = S as any; WALLSNAP.press = false; CMDRING.on = false; CMDRING.hands = false; BACKKEY.tab = true;   // (the back key is Tab, as the page has it)
-    const rule = (on: boolean) => { HANDRING.on = HANDRING.early = HANDRING.empty = HANDRING.near = on && !BRK; HANDRING.lone = on && !left('lone'); HANDRING.loneWrap = on && !left('loneWrap'); HANDRING.onThing = on && !left('onThing'); HANDRING.bare = on && !left('bare'); HANDRING.turn = on && !left('turn'); HANDRING.corner = on && !left('corner'); };
+    const rule = (on: boolean) => { HANDRING.on = HANDRING.empty = HANDRING.near = on && !BRK; HANDRING.lone = on && !left('lone'); HANDRING.loneWrap = on && !left('loneWrap'); HANDRING.bare = on && !left('bare'); HANDRING.turn = on && !left('turn'); HANDRING.corner = on && !left('corner'); };
     const KEY = 'Space', LAST = CMDRING.wedges, HOLD = Math.ceil(HANDRING.holdSecs * 60);
     const door = g.doors.list.find((d: any) => d.def.name === 'conference'), fc = door.frameCentre;
     const rows = () => g.nearby.map((r: any) => `${r.kind}:${r.verb ?? '-'}`).join(' | ') || 'none';
@@ -78,7 +78,7 @@ export async function handRingCheck(): Promise<boolean> {
     // ---- a digit inside the hold
     { rule(true); floor('pistol'); breath(); const s0 = pl.slot, b0 = WHISTLE_STATS.blown; down(6); const notYet = !up(); tap(`Digit${LAST}`); step(2); const blew = WHISTLE_STATS.blown - b0, kept = pl.slot === s0 && !pl.holstered && !pl.setup, gone = !up(); lift(); step(4);
       atDoor(); place(fc[0], fc[2] + 1.0, 180, 'pistol'); step(4);  down(6); tap('Digit1'); step(2);  lift(); step(4); tap('Tab'); step(2);
-      HANDRING.early = false; floor('pistol'); breath();  down(6); tap(`Digit${LAST}`); step(2);  lift(); step(4); tap('Tab'); step(2);
+      floor('pistol'); breath();  down(6); tap(`Digit${LAST}`); step(2);  lift(); step(4); tap('Tab'); step(2);
        }
     // ---- a digit
     { rule(true); floor('pistol'); breath(); stand(); const s0 = pl.slot, b0 = WHISTLE_STATS.blown; tap('Digit3'); step(3); const none = up() && WHISTLE_STATS.blown === b0 && pl.slot === s0;
@@ -134,27 +134,24 @@ export async function handRingCheck(): Promise<boolean> {
       slot = true; hand = false; const offCodes = codes(), off = !BRK && K.gameCode('KeyE') === '' && K.gameCode('Space') === 'Space' && K.gameCode('KeyV') === 'KeyV' && K.keyText('Space  pull it shut') === 'Space  pull it shut';
       verdict(on && words && bound && reset && plain && off, 'the page\'s board: his own actions on E, Space and V give nothing, the words follow; the whistle can be given a key; without the slot the ring is on Space; rule off, as it was',
         `on: ${seenOn}, the rest themselves ${on} · words ${words} ("${w1}", "${w3.slice(27)}") · the whistle put on G ${bound}, Reset ${reset} · no slot: ${noSlot} ${plain} · rule off: ${offCodes} ${off}`); }
-    // ---- the lesson's line
-    { const { lessonLine } = await import(`${ROOT}/src/game/lesson.ts`), LINE = 'V whistles the cook out. Then hide at once, at the mark';
-      rule(true); const on = `▸ ${lessonLine(LINE)}`; rule(false); const off = `▸ ${lessonLine(LINE)}`;
-       }
+    // (the lesson's line that names the whistle's old key: rust/game_rules/src/lesson, line_on_page and its tests)
     // ---- recordings
     { HANDRING.on = true; const snap: any = JSON.parse(JSON.stringify(knobsSnapshot(g)));
       const old = JSON.parse(JSON.stringify(snap)); delete old.tables.HANDRING;
       const offOld = await quiet(() => { applyKnobs(g, old); const off = HANDRING.on === false; applyKnobs(g, snap); return off && HANDRING.on === true; });
        }
-    // ---- on its thing (HANDRING.onThing: where it stands and what the cursor lights · HANDRING.bare: no line under it)
+    // ---- no line under it (HANDRING.bare)
     
     // ---- turned to the switch (HANDRING.turn: lightswitch.ts, handwork.ts — the row's own call, as a tap or a ring's wedge makes it)
     
     // ---- the corner panel (HANDRING.corner: ui/corner.ts — the reduction; the panel as drawn is the page's, never seen here)
-    { const { cornerRows, objectiveParts, cornerOn } = await import(`${ROOT}/src/ui/corner.ts`), PROFILE = await import(`${ROOT}/src/host/profile.ts`), OV = await import(`${ROOT}/src/ui/overlay.ts`);
+    { const { cornerRows, objectiveParts } = await import(`${ROOT}/src/ui/corner.ts`), PROFILE = await import(`${ROOT}/src/host/profile.ts`), OV = await import(`${ROOT}/src/ui/overlay.ts`);
       rule(true); const soft = (o: any) => o.gone ? `~${o.text}~` : o.text;
       const show = (R: any[]) => R.map((r: any) => (r.sec ? `{${r.label}${r.note ? ` (${r.note})` : ''}: ${r.opts[0].text}}` : r.opts.length ? r.opts.map((o: any) => o.key ? `[${o.key}] ${o.text}` : soft(o)).join(' / ') : `'${r.label}'`) + (r.dist !== undefined ? ` ${r.dist}m` : '') + (r.progress !== undefined ? ' ▬' : '')).join(' | ') || 'nothing';
-      // (a row as the page makes it: the thing's name and state over what parseOpts reads off the row's own second line — player.ts buildInteractables)
-      const made = (kind: string, label: string, line2: string, over: any = {}) => ({ kind, label, opts: OV.parseOpts(line2), inReach: true, off: false, ...over });
+      // (rows as the view hands them: the thing's name and state over its lines, a key and its words or a line no key gives — held to the row's authored line in rust/game_start/tests/hud.rs)
+      const K_ = (key: string, text: string) => ({ key, text }), made = (kind: string, label: string, opts: any[], over: any = {}) => ({ kind, label, opts, inReach: true, off: false, ...over });
       // (the panel of his picture: a door's row under its heading, the squad's title, four men — one lost — what they carry, the quick key's line)
-      const door = made('door', 'door · open', 'Space  push it shut  ·  or sprint into it');
+      const door = made('door', 'door · open', [K_('Space', 'push it shut'), K_('', 'or sprint into it')]);
       const men = ['Gold 1 · stacked on the lobby door', 'Gold 2 · stacked on the lobby door', 'Blue 1 · covering the hall', 'Blue 2 · down'].map((text, i) => ({ key: '', text, gone: i === 3 }));
       const squad = [{ kind: 'objective', label: 'squad · loud · orders to gold', inReach: true, off: false, tone: 'gold', opts: [...men, { key: '', text: 'charges 2 · bangs 3' }, { key: '', text: 'frags 2' }, { key: '', text: 'charge set · lobby door — press F to blow it' }, { key: 'Q', text: 'move there · that spot' }] }];
       const A = cornerRows([door], 0, squad, 'par 1:00 / 1:30 / 2:00 · objective ▸ clear the back office · 2 left', [{ key: 'F', text: 'blow the charge · lobby door' }], 'infiltrate'), a = show(A.rows), flat = JSON.stringify(A.rows);
@@ -163,7 +160,7 @@ export async function handRingCheck(): Promise<boolean> {
       const B = cornerRows([], -1, [{ ...squad[0], opts: men.slice(0, 3) }], ''), C = cornerRows([], -1, [{ ...squad[0], opts: squad[0].opts.filter((o: any) => !o.gone) }], 'objective ▸ reach the server room'), D = cornerRows([door], 0, [], '');
       // (a man in reach: both clicks · a verb running: its own words and its bar, no heading · one with no bar · a committed move's line · the word an
       //  empty tap left, with how far · the old list's cancel row is not one — each second line as player.ts words it)
-      const man = made('guard', 'guard', 'LMB  knock him out  ·  RMB  grab him'), pick = made('door', 'door · locked', 'picking… 40%  ·  Space or a step breaks off', { progress: 0.4 }), wand = made('door', 'door · shut', 'looking under it — the cursor turns the lens  ·  Space or a step pulls it out');
+      const man = made('guard', 'guard', [K_('LMB', 'knock him out'), K_('RMB', 'grab him')]), pick = made('door', 'door · locked', [K_('', 'picking… 40%'), K_('', 'Space or a step breaks off')], { progress: 0.4 }), wand = made('door', 'door · shut', [K_('', 'looking under it — the cursor turns the lens'), K_('', 'Space or a step pulls it out')]);
       const word = { kind: 'door', label: 'door · step closer', opts: [], inReach: false, off: false, dist: 1.4 }, cancel = { kind: 'cancel', label: '', opts: [], inReach: true, off: false };
       const E = cornerRows([man, cancel], -1, [], ''), F = cornerRows([pick], 0, [], ''), W = cornerRows([wand], 0, [], ''), H = cornerRows([word], -1, [], '');
       const shapes = show(E.rows) === '[LMB] knock him out | [RMB] grab him' && E.primary === -1 && show(F.rows) === 'picking… 40% / Space or a step breaks off ▬' && show(W.rows) === 'looking under it — the cursor turns the lens / Space or a step pulls it out' && show(H.rows) === "'door · step closer' 1.4m";
@@ -171,21 +168,20 @@ export async function handRingCheck(): Promise<boolean> {
       const P1 = objectiveParts('training 2/7 ▸ press the key at the door'), P2 = objectiveParts('structure taken · 3:21 · GOLD — press shift+enter to restart'), P3 = objectiveParts('objective ▸ 0:42 · the charge in the vault');
       const parts = P1?.label === 'training 2/7' && P1.note === '' && P1.text === 'press the key at the door' && P2?.label === '' && P2.text.startsWith('structure taken') && P3?.label === 'objective' && P3.text === '0:42 · the charge in the vault' && objectiveParts('  ') === null;
       // (the page's own feed, asked with no page: what the panel is handed here, at a door with the squad — the three things; with the rule off the list as it was)
-      const fed = (on: boolean, here = false) => { rule(on); HANDRING.on = !BRK; if (!here) { atDoor(); breath(); } const D = OV.Overlay.prototype['deriveInteractions'].call({}, g); return { rows: D.rows as any[], primary: D.primary as number, top: !D.rows.some((r: any) => r.sec) }; };   // (`top`: no section in what the panel is handed, so the line at the top still says it — setInteractions blanks that line only for a section it drew)
-      const line = g.objectiveText(), on = fed(true), off = fed(false); rule(true);
+      const fed = (on: boolean, here = false) => { rule(on); HANDRING.on = !BRK; if (!here) { atDoor(); breath(); } const D = OV.Overlay.prototype.deriveInteractions.call({}, g.view); return { rows: D.rows as any[], primary: D.primary as number, top: !D.rows.some((r: any) => r.sec) }; };   // (`top`: no section in what the panel is handed, so the line at the top still says it — setInteractions blanks that line only for a section it drew)
+      const line = (g.view.mission?.text ?? ''), on = fed(true), off = fed(false); rule(true);
       const wired = on.rows.every((r: any) => r.sec || r.one) && on.rows.some((r: any) => r.one && r.opts[0]?.key) && on.primary >= 0 && !!on.rows[on.primary]?.one && (!line || (on.rows[0].sec === true && !on.top)) && off.rows.every((r: any) => !r.sec && !r.one) && off.rows[0]?.label.length > 0 && off.top;
       // (a charge set on this door by hand, him a stride from it and then well away: whatever the block's line says of a key, or of who it would catch,
       //  the corner's notes say — a key's line under that key, a warning under none, nothing where the block's line says neither — and the panel has it)
       const DT: any = g.doorTools, leafD = g.doors.list.find((d: any) => d.def.name === 'conference'), { SAM_BY } = await import(`${ROOT}/src/game/ownblow.ts`), set0 = DT.set.length;
       const chargeAt = (near: boolean) => { rule(true); if (near) atDoor(); else floor(); step(20);
-        const hn: string = (DT.hudNotes() as any[]).map((n: any) => typeof n === 'string' ? n : n.text).find((t: string) => /^charge set/.test(t)) ?? '', cn: any[] = DT.cornerNotes(), key = /press \w+ to blow it/.test(hn), warn = (hn.match(/(TOO CLOSE|BEHIND THE DOOR):.*$/) ?? [''])[0];
+        const hn: string = notesOf(g).find((t: string) => /^charge set/.test(t)) ?? '', cn: any[] = cornerOf(g), key = /press \w+ to blow it/.test(hn), warn = (hn.match(/(TOO CLOSE|BEHIND THE DOOR):.*$/) ?? [''])[0];
         const notes = key ? cn.length === 1 && cn[0].key.length > 0 && /^blow the charge/.test(cn[0].text) && cn[0].text.endsWith(warn) : warn ? cn.length === 1 && cn[0].key === '' && /^charge set/.test(cn[0].text) && cn[0].text.endsWith(warn) : cn.length === 0;
         const want = cn.filter((o: any) => !o.key || g.orders.active).map((o: any) => o.text), got = fed(true, true).rows.filter((r: any) => r.one).flatMap((r: any) => r.opts.map((o: any) => o.text)), panel = want.every((t: string) => got.includes(t)) && (want.length > 0 || !got.some((t: string) => /^charge set|TOO CLOSE|BEHIND THE DOOR/.test(t)));   // (his own charge's row, 'blow the charge' on his key, is his list's and stands either way)
         return { ok: notes && panel, say: `the block '${hn}' → ${cn.length ? cn.map((o: any) => `[${o.key}] ${o.text}`).join(' | ') : 'nothing'}, the panel ${panel ? 'has it so' : `HAS [${got.join(' | ')}] FOR [${want.join(' | ')}]`}${notes ? '' : ' (THE NOTES ARE NOT THE BLOCK\'S)'}` }; };
-      DT.set.push({ door: leafD, side: 1, t: g.time, by: SAM_BY }); const cNear = chargeAt(true), cFar = chargeAt(false); DT.set.length = set0; step(20); const cNone = DT.cornerNotes().length === 0; rule(true);
+      DT.set.push({ door: leafD, side: 1, t: g.time, by: SAM_BY }); const cNear = chargeAt(true), cFar = chargeAt(false); DT.set.length = set0; step(20); const cNone = cornerOf(g).length === 0; rule(true);
       
-      // (the panel's own gate: the three things with the rule on, the list as it was under the tour's puppet, with his ring's rule off, with this one off)
-      const gate = cornerOn(false), gatePup = !cornerOn(true); HANDRING.on = false; const gateRing = !cornerOn(false); rule(true); HANDRING.corner = false; const gateOff = !cornerOn(false); rule(true);
+      // (the panel's own gate is the view's `interact.corner`, held in rust/game_start/tests/hud.rs)
       const all: any = JSON.parse(JSON.stringify(knobsSnapshot(g))), km = { ...K.KEYMAP };
       const page = await quiet(() => { PROFILE.pageSwitches(new URLSearchParams('')); const on = HANDRING.corner; PROFILE.pageSwitches(new URLSearchParams('corner=0')); const off = HANDRING.corner, rest = HANDRING.on && HANDRING.lone; applyKnobs(g, all); Object.assign(K.KEYMAP, km); return `${on ? 'on' : 'OFF'} as the page opens, ${off ? 'STILL ON' : 'off'} under ?corner=0${rest ? '' : ' (AND THE REST WITH IT)'}`; });
       const old = JSON.parse(JSON.stringify(all)); delete old.tables.HANDRING.corner;
@@ -193,7 +189,7 @@ export async function handRingCheck(): Promise<boolean> {
        }
     // ---- beside a thing (last: the mission stood up here puts every switch on its stand, and they are put back after it)
     
-  } finally { HANDRING.on = was.on; HANDRING.early = was.early; HANDRING.empty = was.empty; HANDRING.near = was.near; HANDRING.lone = was.lone; HANDRING.loneWrap = was.loneWrap; HANDRING.onThing = was.onThing; HANDRING.bare = was.bare; HANDRING.corner = was.corner; HANDRING.turn = was.turn; BACKKEY.tab = was.back; HANDSLOT.on = was.slot; CMDRING.on = was.cmd; CMDRING.hands = was.hands; WALLSNAP.on = was.ws; WALLSNAP.press = was.press; K.setKeys({}); K.KEYMAP.on = was.kOn; K.KEYMAP.slotWhen = was.slotWhen; K.KEYMAP.handWhen = was.handWhen; K.KEYMAP.qFree = was.qFree; K.KEYMAP.qCmd = was.qCmd; G.localStorage = hadLS; console.log = log; console.error = err; console.warn = warn; }
+  } finally { HANDRING.on = was.on; HANDRING.empty = was.empty; HANDRING.near = was.near; HANDRING.lone = was.lone; HANDRING.loneWrap = was.loneWrap; HANDRING.bare = was.bare; HANDRING.corner = was.corner; HANDRING.turn = was.turn; BACKKEY.tab = was.back; HANDSLOT.on = was.slot; CMDRING.on = was.cmd; CMDRING.hands = was.hands; WALLSNAP.on = was.ws; WALLSNAP.press = was.press; K.setKeys({}); K.KEYMAP.on = was.kOn; K.KEYMAP.slotWhen = was.slotWhen; K.KEYMAP.handWhen = was.handWhen; K.KEYMAP.qFree = was.qFree; K.KEYMAP.qCmd = was.qCmd; G.localStorage = hadLS; console.log = log; console.error = err; console.warn = warn; }
   console.log(`\n=== handring: ${all ? 'ALL PASS' : 'FAIL'} ===`);
   return all;
 }

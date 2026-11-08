@@ -29,7 +29,7 @@
 //       opening a couple of metres back in four steps, muzzle into the room, a quarter second a step — then both cross fast and split (the plan's entry legs,
 //       else a stride and a half in and sixty degrees either way); alone after the wait, he slices and goes in at a run. Nobody kneels by a body in that
 //       funnel meanwhile (bodyAftermath → bodyDutyBlocked drops the duty). A doorway banged AND entered is plain again at once; entered, soon; else it decays.
-// Sites (the whole seam): game.ts update() → tacticsTick, its constructor → loadTactics; guards.ts: the alert branch's chase → tacticsAlert (else chaseFix, the
+// Sites (the whole seam): game.ts update() → tacticsTick; guards.ts: the alert branch's chase → tacticsAlert (else chaseFix, the
 // old lines), followPath → doorGate, goTo → tacticsPenalty, the aim block → tacticsLook, the body discovery → tacticsBodyFound, bodyAftermath → bodyDutyBlocked;
 // combat.ts killGuard → tacticsManDown. The radio lines go through Game.say like everybody's (so the debrief's chronicle has them). Everything readable from
 // above is the point: the presser kneeling at his corner, the flanker jogging the long way round, the pair on the jamb slicing the opening before they cross.
@@ -57,23 +57,6 @@ import './rails';   // (nobody is handed a colleague's man who is on his knee, s
 import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
 
 // ---------------------------------------------------------------- knobs (Game.tune carries them; these are the shipped values and the per-machine copy)
-type TacticsTune = { tactics: boolean; flankWait: number; loneWait: number; doorDanger: number; doorWait: number };
-export const TACTICS_DEFAULTS = { flankWait: 6, loneWait: 8, doorDanger: 25, doorWait: 6 };
-const LS_KEY = 'twopointsix.tactics';
-const KEPT = ['flankWait', 'loneWait', 'doorDanger', 'doorWait'] as const;
-/** read the kept knobs into `tune` (game.ts constructor, once): finite numbers in a sane range only; the on/off switch is not kept (an A/B seam boots ON) */
-export function loadTactics(tune: TacticsTune) {
-  try {
-    const j = JSON.parse(localStorage.getItem(LS_KEY) ?? 'null'); if (!j || typeof j !== 'object') return;
-    for (const k of KEPT) { const v = (j as Record<string, unknown>)[k]; if (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 600) tune[k] = v; }
-  } catch { /* no storage (the harness, a locked-down page): the shipped values stand */ }
-}
-/** write them (the panel calls it on every change) */
-export function saveTactics(tune: TacticsTune) {
-  try { const out: Record<string, number> = {}; for (const k of KEPT) out[k] = tune[k]; localStorage.setItem(LS_KEY, JSON.stringify(out)); } catch { /* nothing to keep it in */ }
-}
-/** the four back to the shipped values, the stored copy dropped */
-export function resetTactics(tune: TacticsTune) { Object.assign(tune, TACTICS_DEFAULTS); try { localStorage.removeItem(LS_KEY); } catch { /* none */ } }
 
 // ---------------------------------------------------------------- constants
 /** (A): men further than JOIN_M from the fix are dealt roles (nearer, the fight / chase as it was); a fix within SHARE_M of another man's is the same fix; the

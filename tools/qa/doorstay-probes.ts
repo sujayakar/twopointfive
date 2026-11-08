@@ -39,7 +39,7 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
 const guarded = (fn: () => Promise<boolean>) => async () => { try { return await fn(); } catch (e) { console.log(`- FAIL — the probe threw\n    ${e instanceof Error ? e.stack : String(e)}`); return false; } };
 const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return loadLevel(data); };
 /** every level a mission is played on, and the two yards (undefined = the office the harness stands by default) */
-const ALL_LEVELS: (string | undefined)[] = [undefined, 'records.json', 'depot.json', 'block.json', 'block-squads.json', 'barracks.json', 'compound.json', 'warehouse.json', 'registry.json', 'kit-yard.json', 'test-rooms.json'];
+const ALL_LEVELS: (string | undefined)[] = [undefined, 'records.json', 'depot.json', 'block.json', 'barracks.json', 'compound.json', 'warehouse.json', 'registry.json', 'kit-yard.json', 'test-rooms.json'];
 /** STAY_LEVELS=office,depot (env): the wait over those levels only */
 const LEVELS = process.env.STAY_LEVELS ? ALL_LEVELS.filter(f => process.env.STAY_LEVELS!.split(',').includes((f ?? 'office.json').replace('.json', ''))) : ALL_LEVELS;
 
@@ -189,7 +189,7 @@ export const stayOpenSave = guarded(async () => {
 });
 
 // ---------------------------------------------------------------- a man past a leaf on its stop
-// (the four cases are probes.ts leafWedge's own — the soak's commonest wedges; a level edit that moves one of these doors moves both tables)
+// (the four cases are the soak's commonest wedges; a level edit that moves one of these doors moves this table)
 const WEDGE: { door: string; angle: number; guardAt: V3; goal: V3; note: string }[] = [
   { door: 'breakroom_ext', angle: 1.92, guardAt: [31.5, 0, 24.8], goal: [19.4, 0, 24.64], note: 'the exterior break-room door swung out into the lot, the chase west along the south wall' },
   { door: 'breakroom_w', angle: 1.92, guardAt: [27.1, 0, 17.3], goal: [27.6, 0, 15.6], note: 'the break-room side door at its stop, folded into the cubicle aisle, the man going north past it' },

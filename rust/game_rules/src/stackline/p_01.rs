@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// A leaf that stands open (or is off its hinges): what is beyond it sees through it now.   (stackline.ts stackLineOpen)
-pub fn stack_line_open(g: &mut crate::game::Game, d: DoorId) -> bool {
+pub fn stack_line_open(g: &crate::game::Game, d: DoorId) -> bool {
     if crate::doors::door_off(g, d) { return true; }
     !crate::doors::door_latched(g, d) && m::abs(crate::doors::door_angle(g, d)) >= g.k.stackline.ajar
 }
@@ -34,7 +34,7 @@ pub fn stack_line_pace(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignme
     let on_mark = g.k.stackline.on_mark;
     let (shy, post) = {
         let row = &g.tab.orders_assignment[a];
-        if row.order != "stack" { return None; }
+        if !crate::orders::rows::id_is(&row.order, crate::orders::Is::Stacks) { return None; }
         let Some(shy) = row.shy else { return None; };
         if row.door != Some(shy) { return None; }
         let Some(post) = row.post else { return None; };

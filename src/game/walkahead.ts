@@ -24,7 +24,6 @@ import { aimWeighs, aimTop, aimSwing } from './aimweight';
 import { noShoveBegin } from './noshove';
 import { samRooted } from './samstun';
 import { isHurt } from './condition';
-import { TAPSTEP } from './tapstep';
 import { RUST_PASS, RUST_SURFACE } from './crossing';
 
 /** where he would be: copies, the caller's to keep */
@@ -64,8 +63,7 @@ export function walkAhead(seat: Seat, cmds: readonly PlayerCmd[], dt: number, pa
       if (r.pressed.includes('KeyC')) crouchKey(v, m);
       const wantSprint = !isHurt(v, pl, now) && (has('ShiftLeft') || has('ShiftRight')) && ml > 0;
       sprintStance(v, m, wantSprint, false);
-      if (TAPSTEP.on && m.crouch && !wantSprint) { c.vel = [0, 0, 0]; m.speedSm = 0; }   // (tapstep.ts: a crouch that begins inside the records — his keys are steps from here, not walked)
-      else strideStep(v, m, mx, mz, ml, null, null, dt, now);
+      strideStep(v, m, mx, mz, ml, null, null, dt, now);
       // his facing: the run's in a sprint, else the aim's swing to the cursor and the hips after it
       if (m.sprinting) { sprintFacing(v, m, dt, now); weighed = false; }
       else { const dx = aim[0] - c.pos[0], dz = aim[2] - c.pos[2], d = Math.hypot(dx, dz);

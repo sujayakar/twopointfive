@@ -2,11 +2,10 @@
 // worked out here is where that falls on this page's screen, by its own camera and the men as the picture drew them.
 // One absolutely-positioned element per speaker inside the overlay root; projection matches the state markers so the bubble sits
 // just above the ! / ? glyph. Kept deliberately small and monochrome — a caption, not a comic balloon.
-import type { Game } from '../game/game';
-import type { FollowCamera } from '../game/camera';
 import type { Vec3 } from '../math/vec';
+import type { HudCam, HudSource } from '../view/hud';
 import type { BubbleView } from '../view/seatview';
-import { NET_ROW, SQUADNET, netPlace } from '../game/squadnet';
+import { NET_ROW, netPlace } from './netplace';
 import type { BubblesLike } from '../host/hud';
 import { rectZoom, textZoom } from './textsize';
 
@@ -52,7 +51,7 @@ export class Bubbles implements BubblesLike {
 
   /** where a point BEHIND the eye's plane lies on the screen's plane, for a way to it only: the undivided clip direction pushed far off the view
    *  (dividing by a w below zero would mirror it) — as ui/overlay.ts pins the objective's mark */
-  private behind(cam: FollowCamera, p: Vec3, w: number, h: number): [number, number] {
+  private behind(cam: HudCam, p: Vec3, w: number, h: number): [number, number] {
     const vp = cam.viewProj, nx = vp[0] * p[0] + vp[4] * p[1] + vp[8] * p[2] + vp[12], ny = vp[1] * p[0] + vp[5] * p[1] + vp[9] * p[2] + vp[13], l = Math.hypot(nx, ny) || 1;
     return [(nx / l * 9 * 0.5 + 0.5) * w, (1 - (ny / l * 9 * 0.5 + 0.5)) * h];
   }
@@ -64,14 +63,11 @@ export class Bubbles implements BubblesLike {
     const x = parseFloat(e.style.left), y = parseFloat(e.style.top); return Number.isFinite(x) && Number.isFinite(y) ? [{ left: x - 26, right: x + 26, top: y - 10, bottom: y + 24 }] : [];
   }
 
-  update(game: Game, cam: FollowCamera, canvas: HTMLCanvasElement) {
+  update(src: HudSource, cam: HudCam, canvas: HTMLCanvasElement) {
     const tz = textZoom(), w = canvas.clientWidth / tz, h = canvas.clientHeight / tz;   // (the layer's own pixels: ui/textsize.ts)
     // screen rects the bubbles must dodge this frame (canvas-relative): the tour caption while it is up, the interaction panel while it lists something, the kit column, the meters, the objective line, the radio strip
     const blockers = this.blockerRects(canvas, w, h);
-    const V = game.view;
-    /** the men as the picture drew them, by the id the game names them by */
-    const men = new Map<number, Game['player']['char']>();
-    if (V.bubbles.length) { men.set(game.player.char.id, game.player.char); for (const gd of game.guards) men.set(gd.char.id, gd.char); for (const gd of game.civilians) men.set(gd.char.id, gd.char); }
+    const V = src.view, net = V.look.net;
     /** draw `el` as bubble `b` over `head` in the tone class `tone`; false = off screen this frame (the caller hides it) */
     const place = (el: HTMLElement, b: BubbleView, head: Vec3): boolean => {
       const { age } = b, tone = b.tone === 'own' ? 'sam' : b.tone;
@@ -93,23 +89,23 @@ export class Bubbles implements BubblesLike {
       el.style.display = 'block'; el.style.left = `${Math.round(x)}px`; el.style.top = `${Math.round(y - (1 - aIn) * 6)}px`; el.style.opacity = a.toFixed(2);
       return true;
     };
-    // A TEAMMATE'S LINE FROM OFF THE SCREEN (game/squadnet.ts): drawn at the edge of the view on the side he is on (SQUADNET.edge — off: a short way out
+    // A TEAMMATE'S LINE FROM OFF THE SCREEN (game/squadnet.ts): drawn at the edge of the view on the side he is on (`net.edge` — off: a short way out
     // from you on that side), under his name, with an arrow his way: `line` = the words with his name. Where you are not on the screen yourself (the
-    // plan's camera, a tutorial's, a man watched) the way to him is laid from the middle of the view instead. squadnet.ts netPlace says where, and
+    // plan's camera, a tutorial's, a man watched) the way to him is laid from the middle of the view instead. netplace.ts says where, and
     // keeps it off the lines already drawn this frame and the HUD's cards; at the edge it is kept off your own figure and the objective's mark too.
     // False = he stands where the line would be drawn from (no side to draw it on).
     const nearAt: [number, number, number][] = [];   // (the far lines drawn so far this frame: x, y, width)
     const near = (el: HTMLElement, b: BubbleView, at: Vec3): boolean => {
-      const pl = men.get(V.me)?.pos ?? at, [sx0, sy0, sOn] = cam.project([pl[0], pl[1] + 1.1, pl[2]], w, h, 0.9), px = sOn ? sx0 : w / 2, py = sOn ? sy0 : h / 2;
+      const pl = src.at(V.me) ?? at, [sx0, sy0, sOn] = cam.project([pl[0], pl[1] + 1.1, pl[2]], w, h, 0.9), px = sOn ? sx0 : w / 2, py = sOn ? sy0 : h / 2;
       let [mx, my, front] = cam.project(at, w, h, Infinity); const { age } = b, bh = 22;
-      if (!front) { if (!SQUADNET.edge) return false; [mx, my] = this.behind(cam, at, w, h); }   // (behind the eye's plane, far down the screen with the view zoomed in: at the edge his way, not dropped)
+      if (!front) { if (!net.edge) return false; [mx, my] = this.behind(cam, at, w, h); }   // (behind the eye's plane, far down the screen with the view zoomed in: at the edge his way, not dropped)
       const sx = mx - px, sy = my - py;
       const text = `${'→↘↓↙←↖↑↗'[((Math.round(Math.atan2(sy, sx) / (Math.PI / 4)) % 8) + 8) % 8]} ${b.radio ? '·)) ' : ''}${b.edge}`, bw = 14 + text.length * 5.8;
-      const keep: { left: number; right: number; top: number; bottom: number }[] = SQUADNET.edge ? this.objRect() : [];
-      if (SQUADNET.edge && sOn) keep.push({ left: px - 16, right: px + 16, top: py - 30, bottom: py + 30 });   // (your own figure, about)
+      const keep: { left: number; right: number; top: number; bottom: number }[] = net.edge ? this.objRect() : [];
+      if (net.edge && sOn) keep.push({ left: px - 16, right: px + 16, top: py - 30, bottom: py + 30 });   // (your own figure, about)
       const over = (r: { left: number; right: number; top: number; bottom: number }, x: number, y: number) => x + bw / 2 > r.left && x - bw / 2 < r.right && y > r.top && y - bh < r.bottom + 4;
-      const hits = (x: number, y: number) => nearAt.some(q => Math.abs(q[1] - y) < NET_ROW - (SQUADNET.edge ? 0.5 : 0) && Math.abs(q[0] - x) < (q[2] + bw) / 2 + 4) || blockers.some(r => over(r, x, y)) || keep.some(r => over(r, x, y));
-      const spot = netPlace(w, h, px, py, mx, my, bw, bh, hits); if (!spot) return false;
+      const hits = (x: number, y: number) => nearAt.some(q => Math.abs(q[1] - y) < NET_ROW - (net.edge ? 0.5 : 0) && Math.abs(q[0] - x) < (q[2] + bw) / 2 + 4) || blockers.some(r => over(r, x, y)) || keep.some(r => over(r, x, y));
+      const spot = netPlace(net, w, h, px, py, mx, my, bw, bh, hits); if (!spot) return false;
       const [x, y] = spot;
       nearAt.push([x, y, bw]);
       const aIn = Math.min(1, age / 0.12), aOut = Math.min(1, (b.dur - age) / Math.max(0.05, Math.min(0.35, 0.25 * b.dur))), a = Math.max(0, Math.min(aIn, aOut));
@@ -121,10 +117,10 @@ export class Bubbles implements BubblesLike {
     const rows = V.bubbles;
     while (this.els.length < rows.length) this.els.push(this.make());
     for (let i = rows.length; i < this.els.length; i++) this.els[i].style.display = 'none';
-    rows.forEach((b, i) => { const el = this.els[i], c = b.man === null ? undefined : men.get(b.man);
-      const at = c?.pos ?? b.at, head = c?.bones.head ?? (b.man === null ? [at[0], at[1] + 0.9, at[2]] as Vec3 : at);
+    rows.forEach((b, i) => { const el = this.els[i], man = b.man, feet = man === null ? null : src.at(man), bone = man === null || !feet ? null : src.head(man);
+      const at = feet ?? b.at, head = bone ?? (man === null ? [at[0], at[1] + 0.9, at[2]] as Vec3 : at);
       // (the point a man's line is on or off the screen by: his head, or where it would be)
-      const onScreen = () => inView(cam.viewProj, c?.bones.head ?? (b.man === null ? head : [at[0], at[1] + 1.7, at[2]]));
+      const onScreen = () => inView(cam.viewProj, bone ?? (man === null ? head : [at[0], at[1] + 1.7, at[2]]));
       const drawn = b.place === 'over' ? place(el, b, head) : b.place === 'overOrEdge' && onScreen() ? place(el, b, head) : near(el, b, at);
       if (!drawn) el.style.display = 'none'; });
   }

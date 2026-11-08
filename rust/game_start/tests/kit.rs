@@ -62,8 +62,8 @@ fn a_burst_on_a_man_out_cold_moves_him_from_knockout_to_kill() {
     use game::chronicle::ChronKind::Kill;
     for (seed, by, sams, name, row) in [
         (3, DownBy::Player, false, None, "a teammate's frag grenade"),
-        (4, DownBy::Guard, true, Some("40 mm grenade"), "40 mm grenade"),
-        (5, DownBy::Player, true, None, "frag grenade"),
+        (4, DownBy::Guard, true, Some("40 mm grenade"), "the 40 mm grenade"),
+        (5, DownBy::Player, true, None, "the frag grenade"),
         (6, DownBy::Guard, false, None, "a teammate's frag grenade"),
     ] {
         let (mut p, man) = one_down(seed, by);
@@ -73,6 +73,9 @@ fn a_burst_on_a_man_out_cold_moves_him_from_knockout_to_kill() {
         assert_eq!(p.g.gd[man].down_kind, Some(DownKind::Shot), "{by:?}, thrown by Sam {sams}: the burst did not reach him");
         assert_eq!(card(&p), (1.0, 0.0), "{by:?}, thrown by Sam {sams}: kills, knockouts");
         assert!(timeline_has(&p, Kill, row), "{by:?}, thrown by Sam {sams}: no row names {row}");
+        let e = p.g.chronicle.events.iter().find(|e| e.kind == Kill).unwrap();
+        let said = game::chronicle::event_text(&p.g, e);
+        assert!(said.ends_with(&format!("killed — {row}")), "{by:?}, thrown by Sam {sams}: the row reads {said}");
     }
 }
 
@@ -146,7 +149,7 @@ fn each_run_wears_its_own_card() {
     assert_eq!((loud.0, loud.1, loud.2), (0.0, 0.0, false), "a loud run has no sponge rounds, no cameras and no wand");
     assert!(loud.5 > 0.0 && loud.6 > 0.0, "a loud run carries frags and 40 mm: {loud:?}");
     let stealth = (5.0, 2.0, true, 0.0, 0.0, 0.0, 0.0);
-    for n in ["vault.json", "bazaar.json", "police-post.json", "quiet-yard.json"] {
+    for n in ["vault.json", "bazaar.json", "police-post.json"] {
         assert_eq!(read(n, &format!("?levelFile={n}&quiet")), stealth, "{n}, alone");
     }
     assert_eq!(read("crossing.json", "?levelFile=crossing.json&quiet&squad=1"), stealth, "as two");
@@ -423,7 +426,7 @@ fn men_getting_off_a_grenade_leave_by_a_door_that_stands_open_and_not_a_shut_one
         for &m in &ours { p.g.gd[m].god = false; }
         let theirs: Vec<_> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team == game::teams::Team::Hostile && p.up(gd)).collect();
         let (thrower, rest) = theirs.split_first().unwrap();
-        for &x in rest { kill_guard(&mut p.g, x, [0.0, 0.0, 1.0], Some(true), None, None, None, None); }
+        for &x in rest { kill_guard(&mut p.g, x, [0.0, 0.0, 1.0], Some(true), None, None, None); }
         p.sam_put([9.0, 26.2]);
         p.run(0.1);
         let d = game::doors::doors_by_name(&p.g, "foot_gate").unwrap();

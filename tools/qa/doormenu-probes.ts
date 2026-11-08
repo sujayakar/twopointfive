@@ -25,6 +25,7 @@
 // `open`, the threshold's page behind row 4 in `rows`, and the off pick `man` used to tell a hidden man from a shown one (now read off the scene's own boxes).
 // The family's own red path: DOORMENU_BREAK=1 bun run tools/qa/probes.ts doormenu-drawn must FAIL (the cursor read a quarter of the screen off every sample).
 // And of the door a reading is taken on: DOORMENUFIND_BREAK=1 bun run tools/qa/probes.ts doormenu-rows must FAIL (find, below: a leaf that moved under the stand).
+import { listedOf, menuKey } from './squadwords';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
@@ -38,7 +39,6 @@ const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`);
 const { RESCUE } = await import(`${ROOT}/src/game/rescue.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
 const { ORDERS, WORD_HEAD } = await import(`${ROOT}/src/game/orders.ts`);
-const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
 const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
@@ -123,12 +123,12 @@ async function rig(scn: Scn, seed = 33) {
     },
     /** what X would open on with the cursor at that pixel */
     pick(sx: number, sy: number): any { input.mouseX = sx; input.mouseY = sy; return O.targetUnder(input, W.cam, W.canvas); },
-    /** The same read before whole-squad orders fold a teammate into the squad: it still names the man under the cursor. */
-    under(sx: number, sy: number): any { input.mouseX = sx; input.mouseY = sy; return (O as any).targetUnderOf(input, W.cam, W.canvas); },
+    /** a teammate stands where the target says and his body is on that pixel: the squad itself, picked on him */
+    bodyAt(sx: number, sy: number, at: number[]): boolean { const ray = W.cam.ray(sx / CW, sy / CH); return O.squad().some((gd: any) => gd.state !== 'dead' && Math.hypot(gd.char.pos[0] - at[0], gd.char.pos[2] - at[2]) < 1e-3 && gd.char.rayHit(ray.ro, ray.rd, 200) >= 0); },
     /** every door of the level stood open and held there (the closer off, as the Director's doors.open(…, {hold}) does it) */
     openAll() { for (const d of game.doors.list) standOpen(d); R.step(4); },
     /** X pressed with the cursor at that pixel, a few frames with every key up: the panel's menu (or null) */
-    openX(sx: number, sy: number): any { if (O.menu) O.close(); input.mouseX = sx; input.mouseY = sy; R.press(ORDERS.key); R.step(3); return O.hud().menu; },
+    openX(sx: number, sy: number): any { if (O.menu) O.close(); input.mouseX = sx; input.mouseY = sy; (menuKey(O), R.step()); R.step(3); return listedOf(O); },
   };
   R.step(30);
   return R;
@@ -150,8 +150,8 @@ function sweep(R: Rig): Sweep {
         const L = R.look(d, q); if (!L) continue; if (!L.drawn) { S.hidden++; continue; }
         const t = R.pick(L.sx + SHIFT * R.CW, L.sy), ok = t.kind === 'door' && t.door === d;
         // what the rule gives to something else, each counted apart: a teammate under the cursor, Sam's own body, a door nearer the landing point
-        // (with whole-squad orders, CMDRING.wholeSquad, a teammate under the cursor is the squad itself and the target names no man, so the man is read a step earlier: orders.ts targetUnder)
-        if (!ok && L.man && t.kind === 'none' && (t.man || (CMDRING.wholeSquad && R.under(L.sx, L.sy).man))) { S.onMan++; continue; }
+        // (with orders going to the whole squad, a teammate under the cursor is the squad itself and the target names no man: it is still at his feet, and it is his only where his body is on the pixel picked)
+        if (!ok && L.man && t.kind === 'none' && (t.man || R.bodyAt(L.sx + SHIFT * R.CW, L.sy, t.at))) { S.onMan++; continue; }
         if (!ok && L.sam && t.kind !== 'door') { S.atSam++; continue; }
         if (!ok && t.kind === 'door' && L.at && R.O.targetAt(L.at).door === t.door) { S.other++; continue; }   // (nearer the landing point by doorPickM, as ever — a wrong door off the ray is a miss)
         if (!ok && t.kind === 'door' && L.leafOf === t.door) { S.leaf++; continue; }   // (another door's own leaf shows through this doorway and the cursor is on it: the leaf under the cursor is its door, before any doorway — orders.ts targetUnder)
@@ -185,9 +185,9 @@ export const doormenuOpen = guarded(() => drawnFamily('doormenu-open: the cursor
 /** the panel's rows of an open menu: [the who row, one row an order …, (the four's wait row), the cancel row] */
 interface PanelRow { id: string; key: string; text: string; off: boolean; why: string | null; opens: string | null }
 function panel(R: Rig): { rows: PanelRow[]; wait: boolean; page: string | null } {
-  const M = R.O.menu, hud = R.O.hud().menu, body = (hud?.rows ?? []).slice(1, 1 + M.rows.length);
+  const M = R.O.menu, hud = listedOf(R.O), body = (hud?.rows ?? []).slice(0, M.rows.length);
   const rows: PanelRow[] = M.rows.map((d: any, i: number) => ({ id: d.id, key: String(body[i]?.opts?.[0]?.key ?? ''), text: String(body[i]?.opts?.[0]?.text ?? ''), off: !!body[i]?.off, why: M.why[i] ?? null, opens: d.opens ?? null }));
-  return { rows, wait: !!M.wordRow && hud?.rows?.[1 + M.rows.length]?.label === WORD_HEAD, page: M.page ?? null };
+  return { rows, wait: !!M.wordRow && hud?.rows?.[M.rows.length]?.label === WORD_HEAD, page: M.page ?? null };
 }
 const shape = (rows: PanelRow[]) => rows.map(r => `${r.key} ${r.id}${r.opens ? ' ▸' : ''}`).join(' · ');
 /** a door of the rig with a spot and a pixel where the cursor is on it as asked: `through` an open doorway, or on the shut leaf */

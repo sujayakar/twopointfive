@@ -2,8 +2,9 @@
 //   bun run tools/qa/autopilot-check.ts            (also `probes.ts autopilot`, in family squadorders)
 // PASS / FAIL each: the room clear on the office with its squad of four, everybody under god mode (the lines are about what is ORDERED, not who wins).
 // Every B is a one-frame press of the quick key with the harness cursor on the thing; what is read back is the order book, the door tools' ops and the
-// plan the overlay is handed (`floorPlan(g)`).
+// plan the overlay is handed (`view.plan`).
 //   exit 0 = all hold · 1 = one does not
+import { blockOf } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 
 const AP: any = await import(`${ROOT}/src/game/autopilot.ts`);
@@ -11,7 +12,7 @@ const FP: any = await import(`${ROOT}/src/game/floorplan.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { AUTOPILOT, AUTOPILOT_STATS, autoPick } = AP;
-const { PLAN, floorPlan } = FP;
+const { PLAN } = FP;
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -36,9 +37,9 @@ async function rig(seed: number, squad = 4) {
     /** B, one frame, with the cursor on p — and what the cursor was on, as the game's own input reads it */
     quick(p: number[]) { W.cursorAt([p[0], p[1], p[2]]); R.step(2); const on = O.hover?.() ?? null; input.pressed.add(ORDERS.quickKey); R.step(); return on; },
     /** the HUD's B line with the cursor on p */
-    hudB(p: number[]): string { W.cursorAt([p[0], p[1], p[2]]); R.step(2); return (O.hud().status?.[0]?.opts ?? []).find((o: any) => o.key === 'B')?.text ?? ''; },
+    hudB(p: number[]): string { W.cursorAt([p[0], p[1], p[2]]); R.step(2); return (blockOf(O)?.[0]?.opts ?? []).find((o: any) => o.key === 'B')?.text ?? ''; },
     tail() { return O.log[O.log.length - 1]; },
-    listed() { return (floorPlan(game).men as any[]).length; },
+    listed() { const P = game.view.plan; if (!P) throw new Error('no plan in the view'); return P.own.men.length; },
     stacked() { return R.team.filter((m: any) => m.state !== 'dead').every((m: any) => O.of(m)?.order === 'stack' && O.of(m)?.arrived); },
     /** everybody back on Sam, nothing of the door tools running */
     home() { O.give('fallIn', O.targetAt(game.player.char.pos), 'all'); R.until(() => game.doorTools.ops.length === 0, 40); R.step(60); },

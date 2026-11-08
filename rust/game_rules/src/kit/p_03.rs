@@ -37,7 +37,7 @@ fn cans_row_read() -> KitRow {
 }
 
 /// `a === b` of two row values.
-fn same_value(a: &KitValue, b: &KitValue) -> bool {
+pub(super) fn same_value(a: &KitValue, b: &KitValue) -> bool {
     match (a, b) {
         (KitValue::Text(x), KitValue::Text(y)) => x == y,
         (KitValue::Num(x), KitValue::Num(y)) => x == y,
@@ -61,7 +61,7 @@ fn value_truthy(v: &KitValue) -> bool {
 }
 
 /// `String(v)`.
-fn value_text(v: &KitValue) -> String {
+pub(super) fn value_text(v: &KitValue) -> String {
     match v {
         KitValue::Text(s) => s.clone(),
         KitValue::Num(n) => js::num_str(*n),
@@ -99,7 +99,7 @@ fn amount_of(g: &mut Game, item: &str, m: &MemberKit) -> f64 {
 
 /// `row.word(v)` (kit.ts KitRow.word): the closures are gone from a row, and its field and the card's owner decide which one it was. A gun slot's is
 /// the tree's (kit.ts:916): KITTREE.on is settled on, and the two rows are only ever built with the big slot on.
-fn row_word(g: &Game, i: f64, r: &KitRow, v: &KitValue) -> String {
+pub fn row_word(g: &Game, i: f64, r: &KitRow, v: &KitValue) -> String {
     match r.field {
         KitField::Weapon if i == 0.0 => {
             let t = value_text(v);
@@ -137,7 +137,7 @@ fn row_word(g: &Game, i: f64, r: &KitRow, v: &KitValue) -> String {
 }
 
 /// `row.fixed?.(m)` (kit.ts:905): why a suppressor's row cannot be stepped, '' = it can. Only the tree's two suppressor rows have one.
-fn row_fixed(g: &Game, r: &KitRow, m: &MemberKit) -> String {
+pub fn row_fixed(g: &Game, r: &KitRow, m: &MemberKit) -> String {
     let slot = match r.field {
         KitField::SideCan => crate::gunslots::GunSlot::Secondary,
         KitField::Suppressed if tree_up(g) => crate::gunslots::GunSlot::Primary,
@@ -425,6 +425,10 @@ fn gun_short_words(g: &Game, w: crate::weapons::WeaponId) -> String {
 /// A card in a line.   (kit.ts kitWords)
 pub fn kit_words(g: &mut crate::game::Game, i: f64, m: Option<&crate::kit::MemberKit>) -> String {
     let m = match m { Some(c) => c.clone(), None => kit_shown(g, i) };
+    kit_card_words(g, i, &m)
+}
+/// A card he has been handed, in a line
+pub fn kit_card_words(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKit) -> String {
     let suit = if m.suit != SuitId::Issued { suits().get(String::from(m.suit.as_str())).map(|s| s.label.clone()).unwrap_or_default() } else { String::new() };
     let trim = if m.trim != TrimId::Issued { alloc::format!("{} trim", trims().get(String::from(m.trim.as_str())).map(|s| s.label.clone()).unwrap_or_default()) } else { String::new() };
     let look = line_of(&[suit, trim], ", ");

@@ -29,54 +29,6 @@ pub enum FirePass {
     Bars,
 }
 
-/// (TypeScript: BlobRow, src/scene/collision.ts:115)
-#[derive(Clone, Copy, Debug)]
-pub struct BlobRow {
-    pub x: f64,
-    pub y0: f64,
-    pub z: f64,
-    pub r2: f64,
-    pub age: f64,
-    pub mass: f64,
-}
-impl BlobRow {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BlobRow {
-            x: 0.0,
-            y0: 0.0,
-            z: 0.0,
-            r2: 0.0,
-            age: 0.0,
-            mass: 0.0,
-        }
-    }
-}
-impl Default for BlobRow { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: SmokeNumbers, src/scene/collision.ts:116)
-#[derive(Clone, Copy, Debug)]
-pub struct SmokeNumbers {
-    pub sigma: f64,
-    pub spread: f64,
-    pub widest: f64,
-    pub rise: f64,
-    pub rise_rate: f64,
-}
-impl SmokeNumbers {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SmokeNumbers {
-            sigma: 0.0,
-            spread: 0.0,
-            widest: 0.0,
-            rise: 0.0,
-            rise_rate: 0.0,
-        }
-    }
-}
-impl Default for SmokeNumbers { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: LampRows, src/scene/collision.ts:122)
 #[derive(Clone, Copy, Debug)]
 pub struct LampRows {
@@ -159,7 +111,7 @@ impl StaticCollision {
             pane_rows: None,
             glass_walkable: None,
             dynamic_boxes: Vec::new(),
-            lamp_q: crate::scene_collision::StaticCollisionLampQ { on: false, p: None, sim: None, stands: 0.0, k: None, nb: 0.0, parts: 0.0, rows: None },
+            lamp_q: crate::scene_collision::StaticCollisionLampQ { on: false, p: None, sim: None, stands: 0.0, parts: 0.0, rows: None },
             fire_pass: None,
         }
     }
@@ -257,8 +209,6 @@ pub struct StaticCollisionLampQ {
     pub p: Option<V3>,
     pub sim: Option<crate::Opaque>,
     pub stands: f64,
-    pub k: Option<crate::scene_collision::SmokeNumbers>,
-    pub nb: f64,
     pub parts: f64,
     pub rows: Option<crate::scene_collision::LampRows>,
 }
@@ -270,8 +220,6 @@ impl StaticCollisionLampQ {
             p: None,
             sim: None,
             stands: 0.0,
-            k: None,
-            nb: 0.0,
             parts: 0.0,
             rows: None,
         }
@@ -707,40 +655,6 @@ impl EyeContactAsk {
 }
 impl Default for EyeContactAsk { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:634 lampsBegin(shade), src/scene/collision.ts:634)
-#[derive(Clone, Debug)]
-pub struct LampsBeginShade {
-    pub grid: crate::scene_collision::LampsBeginShadeGrid,
-    pub blobs: Vec<crate::scene_collision::BlobRow>,
-}
-impl LampsBeginShade {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LampsBeginShade {
-            grid: crate::scene_collision::LampsBeginShadeGrid::zeroed(),
-            blobs: Vec::new(),
-        }
-    }
-}
-impl Default for LampsBeginShade { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/scene/collision.ts:634 LampsBeginShade.grid, src/scene/collision.ts:634)
-#[derive(Clone, Copy, Debug)]
-pub struct LampsBeginShadeGrid {
-    pub sim: crate::Opaque,
-    pub stands: bool,
-}
-impl LampsBeginShadeGrid {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LampsBeginShadeGrid {
-            sim: crate::Opaque,
-            stands: false,
-        }
-    }
-}
-impl Default for LampsBeginShadeGrid { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum SenseForRow {
@@ -797,42 +711,6 @@ impl GridStepK {
     }
 }
 impl Default for GridStepK { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/scene/collision.ts:695 gridStep(glow), src/scene/collision.ts:695)
-#[derive(Clone, Copy, Debug)]
-pub struct GridStepGlow {
-    pub k: crate::scene_collision::GridStepGlowK,
-}
-impl GridStepGlow {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GridStepGlow {
-            k: crate::scene_collision::GridStepGlowK::zeroed(),
-        }
-    }
-}
-impl Default for GridStepGlow { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/scene/collision.ts:695 GridStepGlow.K, src/scene/collision.ts:695)
-#[derive(Clone, Copy, Debug)]
-pub struct GridStepGlowK {
-    pub albedo: f64,
-    pub share: f64,
-    pub passes: f64,
-    pub sweep: f64,
-}
-impl GridStepGlowK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GridStepGlowK {
-            albedo: 0.0,
-            share: 0.0,
-            passes: 0.0,
-            sweep: 0.0,
-        }
-    }
-}
-impl Default for GridStepGlowK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/collision.ts:721 segmentBlockedHere(panes), src/scene/collision.ts:721)
 #[derive(Clone, Copy, Debug)]

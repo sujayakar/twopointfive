@@ -14,13 +14,9 @@ fn now_of(was: &str) -> String {
 
 // ---------------------------------------------------------------- stats, the men
 
-/// a new stats row (gunHoldStats' literal: `freeT` starts at −1, which `GunHoldStats::zeroed` does not)
-fn stats_maker() -> GunHoldStats {
-    GunHoldStats { armed: 0.0, ran: 0.0, no_cover: 0.0, rounds: 0.0, no_way: 0.0, looks: 0.0, gone: 0.0, lines: 0.0, free_t: -1.0 }
-}
-/// This game's counters, the row itself. (gunhold.ts gunHoldStats)
+/// This game's counters, the row itself: a game holds it from the start (`GunholdMod::blank`, and the TypeScript's Game as it is built). (gunhold.ts gunHoldStats)
 pub fn gun_hold_stats<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::gunhold::GunHoldStats {
-    g.m.gunhold.stats_of.get_or_insert_with(stats_maker)
+    g.m.gunhold.stats_of.as_mut().expect("a game holds its gun-hold counters from the start")
 }
 
 /// Is the rule running now: never under a show or quiet utility. (gunhold.ts live)
@@ -612,7 +608,7 @@ pub fn bark(g: &mut crate::game::Game, gd: GuardId, k: &mut crate::gunhold::Know
     };
     let pool = gun_hold_pool(g, gd, kind);
     let n = pool.len() as f64;
-    let was = &pool[js::rem(m::floor(crate::math_dice::sim_random(g) * n), n) as usize];
+    let was = &pool[js::rem(m::floor(crate::dice::draw_of(g, "gunhold::bark#1", gd) * n), n) as usize];
     let said = now_of(was);
     crate::game::game_say(g, gd, &said, Some(radio), None, None);
     true
@@ -673,7 +669,7 @@ fn drop_path(g: &mut Game, gd: GuardId) {
 /// `now + GUNHOLD.peekEvery * (0.6 + 0.8 * simRandom())`
 fn next_peek(g: &mut Game, who: crate::dice::Who, now: f64) -> f64 {
     let every = g.k.gunhold.peek_every;
-    now + every * (0.6 + 0.8 * crate::math_dice::sim_random(g))
+    now + every * (0.6 + 0.8 * crate::dice::draw_for(g, "gunhold::next_peek#1", who))
 }
 
 /// This man's feet while the pistol is known in the hold; None = the ring as ever. (gunhold.ts gunHoldFeet)
@@ -699,7 +695,6 @@ fn feet(g: &mut Game, gd: GuardId, dt: f64, p: &crate::guards::Pair, s: GuardsSt
         return None;
     }
     let now = g.time;
-    gun_hold_stats(g); // the row is made here whether or not this frame counts anything (line 303)
     macro_rules! st {
         () => {
             g.m.gunhold.states.get_mut(s).unwrap()
@@ -713,7 +708,7 @@ fn feet(g: &mut Game, gd: GuardId, dt: f64, p: &crate::guards::Pair, s: GuardsSt
     if !g.m.gunhold.states.has(s) {
         let r0 = g.k.gunhold.react[0];
         let r1 = g.k.gunhold.react[1];
-        let go_t = now + r0 + crate::math_dice::sim_random(g) * (r1 - r0);
+        let go_t = now + r0 + crate::dice::draw_of(g, "gunhold::feet#1", gd) * (r1 - r0);
         g.m.gunhold.states.set(
             s,
             St {
@@ -1116,7 +1111,7 @@ mod tests {
 
     #[test]
     fn a_new_stats_row_has_no_free_round_yet() {
-        assert_eq!(stats_maker().free_t, -1.0);
+        assert_eq!(crate::gunhold::GunholdMod::blank().stats_of.unwrap().free_t, -1.0);
     }
 
     const FLAT_BITS: u64 = 0x40265f8d95065bd3;

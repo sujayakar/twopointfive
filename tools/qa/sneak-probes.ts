@@ -24,6 +24,7 @@
 // into the light, waiting in the door's line, the posted walk upright, a loud squad upright beside a low Sam (that one is unseen.ts's on the page), and
 // sneak-door's arm with SNEAK.door off. Those lines asked a build from before settled rules: out by ruling.
 // The men's gaze is written as their yaw every frame (`stare`), and the probes that ask of the door at the corridor's end start in the corridor (`putInCorridor`).
+import { sneakWordOf } from './squadwords';
 import { ROOT } from './headless.ts';
 import { Run, squadUp } from './pairsneak.ts';
 const SNM: any = await import(`${ROOT}/src/game/sneak.ts`);
@@ -49,27 +50,19 @@ const at = (p: number[]) => `(${p[0].toFixed(1)}, ${p[2].toFixed(1)})`;
 
 /** the pair stood up on the office's room clear (placement 10: two men in the break room, three behind locked doors), squadded up and silent */
 async function rig(dice: number, sneak: boolean, set: Record<string, unknown> = {}): Promise<Run> {
-  reset(); const R = await Run.start('roomclear=10&squad=1', dice, { sneak, set: Object.keys(set).length ? { SNEAK: set } : undefined });
-  R.stopOnNotice = false; squadUp(R); if (sneak) leanStep(R); return R;
+  reset(); const R = await Run.start('roomclear=10&squad=1', dice, { sneak, lean: sneak, set: Object.keys(set).length ? { SNEAK: set } : undefined });
+  R.stopOnNotice = false; squadUp(R); if (sneak) stareEachFrame(R); return R;
 }
-/** Run.step as these probes need it: Sam's keys, his meter every sixth frame (it asks the game's light twice), the gazes written (see `stare`). Left out, being
- *  four fifths of a probe's CPU for tallies nothing here reads: the run's watcher, which asks the game's eyes ten times a frame, and its digest. */
-function leanStep(R: Run) { const g = R.g, I = R.I, c = () => g.player.char; let k = 0; (R as any).watch = () => { };
-  (R as any).step = (n = 1) => { for (let i = 0; i < n; i++) {
-    for (const code of ['KeyW', 'KeyA', 'KeyS', 'KeyD']) I.keys.delete(code);
-    const goal = R.goal;
-    if (goal && !g.player.down) { const dx = goal[0] - R.pos[0], dz = goal[2] - R.pos[2], d = Math.hypot(dx, dz);
-      if (d > 0.12) { const { fwd, right } = R.cam.planarBasis(), a = (dx * fwd[0] + dz * fwd[2]) / d, b = (dx * right[0] + dz * right[2]) / d, T = 0.3827; if (a > T) I.keys.add('KeyW'); if (a < -T) I.keys.add('KeyS'); if (b > T) I.keys.add('KeyD'); if (b < -T) I.keys.add('KeyA'); } }
-    if (k++ % 6 === 0) { const b = c().bones, pc = b.chest ?? [c().pos[0], 1.2, c().pos[2]], ph = b.head ?? [c().pos[0], 1.6, c().pos[2]], own = (o: number) => o === PLAYER_ID; g.player.visibility = g.visibilityOf(Math.max(GDM.lightEstimateAt(g, pc, own), GDM.lightEstimateAt(g, ph, own))); }
-    for (const h of R.hostiles) { const t = gaze.get(h.char); if (!t || h.state === 'dead') continue; const y = Math.atan2(t[0] - h.char.pos[0], t[2] - h.char.pos[2]); h.char.aimYaw = h.char.bodyYaw = y; if ('headYaw' in h.char) h.char.headYaw = y; }
-    R.W.step(DT); R.t += DT; (R as any).watch();
-    if (g.player.down) throw new Error('Sam is down'); if (R.t >= R.cap) throw new Error('time cap'); } }; }
+/** the gazes written every frame (see `stare`), on a lean run */
+const stareEachFrame = (R: Run) => { R.beforeFrame = () => { for (const h of R.hostiles) { const t = gaze.get(h.char); if (!t || h.state === 'dead') continue; const y = Math.atan2(t[0] - h.char.pos[0], t[2] - h.char.pos[2]); h.char.aimYaw = h.char.bodyYaw = y; if ('headYaw' in h.char) h.char.headYaw = y; } }; };
 /** from now on, what the partner is seen for: the one tally of the watcher's that these probes read, asked of the two men in the break room alone (the other
  *  three are behind locked doors). Returns the tally as it stands, to read a difference from. */
 const watchEyes = (R: Run): number => {
-  (R as any).watch = () => { const m = R.mate; if (!m) return;
+  R.watch = () => { const m = R.mate; if (!m) return;
     for (const h of R.hostiles.slice(0, 2)) { if (h.state === 'dead') continue; const v = GDM.canSeeChar(R.g, h, m.char, false); if (v?.visible && GDM.sightGainOn(R.g, h, m, v.dist) > 0.05) R.mateSeenS += DT; } };
   return R.mateSeenS; };
+/** Sam within 1.8 m of a shut door: a partner on lit floor stands out of its line then, off Sam's trail as meant */
+const atShutDoor = (R: Run): boolean => R.g.doors.list.some((d: any) => d.latched && flat(d.frameCentre, R.pos) < 1.8);
 /** what a walk made of the partner: seconds moving low / upright, his top speed, the most his feet were off Sam's trail, his pace against Sam's while both moved */
 function walkStats(R: Run, fn: () => void) {
   const m = R.mate, trail: number[][] = []; let low = 0, up = 0, top = 0, off = 0, stops = 0, wasMoving = false, lightOn = 0, gogglesDown = 0, n = 0;
@@ -77,7 +70,7 @@ function walkStats(R: Run, fn: () => void) {
   (R as any).step = (k = 1) => { for (let i = 0; i < k; i++) { step0(1); n++;
     const sp = Math.hypot(m.char.vel[0], m.char.vel[2]); top = Math.max(top, sp);
     if (!trail.length || flat(trail[trail.length - 1], R.pos) > 0.1) trail.push([R.pos[0], 0, R.pos[2]]);
-    const moving = sp > 0.3; if (moving) { if (m.char.anim.crouch > 0.5) low += 1 / 60; else up += 1 / 60; let d = 1e9; for (const q of trail) d = Math.min(d, flat(q, m.char.pos)); if (trail.length > 20) off = Math.max(off, d); }
+    const moving = sp > 0.3; if (moving) { if (m.char.anim.crouch > 0.5) low += 1 / 60; else up += 1 / 60; let d = 1e9; for (const q of trail) d = Math.min(d, flat(q, m.char.pos)); if (trail.length > 20 && !atShutDoor(R)) off = Math.max(off, d); }
     if (wasMoving && !moving && R.g.orders.samV > 0.5) stops++; wasMoving = moving;
     if (m.flashlight?.enabled) lightOn++; if (NVM.nvgDown(R.g, m)) gogglesDown++; } };
   try { fn(); } finally { (R as any).step = step0; }
@@ -111,7 +104,13 @@ const EAST_SIDE = (R: Run) => { R.crouch(true); R.go(R.free([24.6, 0, 11.2]), 60
  *  his awareness stay his own. (Until 2026-11-07 this replaced `chestDir` and `headDir` on the copy, which the Rust game neither reads nor is sent: no man's
  *  eyes moved.) */
 const gaze = new WeakMap<object, number[]>();
-const stare = (_R: Run, h: any, to: number[]) => { gaze.set(h.char, [to[0], 0, to[2]]); };
+const stare = (_R: Run, h: any, to: number[]) => { if (process.env.STARE_BREAK !== '1') gaze.set(h.char, [to[0], 0, to[2]]); };
+/** wait `secs` and say how far off `to` the men's bodies stood at the worst, in radians, the first second, which is the turn, aside: a wait 'under eyes' is one the
+ *  men really looked through. `STARE_BREAK=1` pins nobody's gaze: the staged lines of sneak-waits must fail */
+function waitUnder(R: Run, secs: number, to: (h: any) => number[]): number {
+  let worst = 0; for (let i = 0; i < Math.round(secs * 60); i++) { R.step(); if (i < 60) continue;
+    for (const h of R.hostiles.slice(0, 2)) { if (h.state === 'dead') continue; const t = to(h), e = Math.atan2(t[0] - h.char.pos[0], t[2] - h.char.pos[2]) - h.char.bodyYaw; worst = Math.max(worst, Math.abs(Math.atan2(Math.sin(e), Math.cos(e)))); } }
+  return worst; }
 
 export const sneakSteps = guarded(async () => {
   const F = family("sneak-steps: he walks Sam's own steps");
@@ -142,15 +141,17 @@ const sideOf = (R: Run, name: string, p: number[]) => { const d = R.door(name), 
 export const sneakWaits = guarded(async () => {
   const F = family('sneak-waits: he stops short of a lit doorway a defender is looking at, says so, and crosses when the eyes are off it');
   { const { R, T1, fc, seen0, mateAt, look, cues0, cross0 } = await doorway(2, true);
-    R.wait(SNEAK.nagSecs + 3);
-    const m = R.mate, word = SNM.sneakWord(R.g, m), mySide = Math.sign(sideOf(R, 'breakroom_n', R.pos)), his = sideOf(R, 'breakroom_n', m.char.pos) * mySide;
+    const off = waitUnder(R, SNEAK.nagSecs + 3, () => [fc[0], 0, fc[2]]);
+    F.verdict(off < 0.4, 'staged: both men look at the lit doorway the whole wait', `${(off * 180 / Math.PI).toFixed(0)}° off it at the worst`);
+    const m = R.mate, word = sneakWordOf(R.g, m), mySide = Math.sign(sideOf(R, 'breakroom_n', R.pos)), his = sideOf(R, 'breakroom_n', m.char.pos) * mySide;
     F.verdict(word === 'waiting on eyes' && Math.hypot(m.char.vel[0], m.char.vel[2]) < 0.05, 'the man looking at the lit doorway: the partner waits, still', `after ${SNEAK.nagSecs + 3} s: '${word}', at ${at(m.char.pos)} (he was at ${at(mateAt)} when the man turned), ${f2(flat(m.char.pos, fc))} m from the frame, Sam at ${at(R.pos)}, T1 at ${at(T1.char.pos)}`);
     F.verdict(his < -0.3, "… on the corridor's side of the door, not in it", `${f2(-his)} m short of the frame's line`);
     F.verdict(m.char.anim.crouch > 0.5, '… low', `crouch ${f2(m.char.anim.crouch)}`);
     F.verdict(R.mateSeenS - seen0 < 0.35, "… and the man's eyes barely have him (the moment he turned, at most)", `eyes on the partner since the man turned: ${f2(R.mateSeenS - seen0)} s; T1 awareness ${f2(T1.awareness)}`);
     F.verdict(SNM.SNEAK_STATS.cues - cues0 >= 1 && /still on it/.test(m.bubble?.text ?? ''), `he says so over the net — and what he is waiting for after ${SNEAK.nagSecs} s (never chattier than a line every ${SNEAK.cueGap} s but for that one)`, `lines since the man turned: ${SNM.SNEAK_STATS.cues - cues0} · his bubble now: ${m.bubble ? `“${m.bubble.text}”${m.bubble.radio ? ' (radio)' : ''}` : '—'}`);
     // the eyes come off it
-    look(h => [h.char.pos[0] + 1, 0, h.char.pos[2] + 8]); R.wait(1.2);
+    look(h => [h.char.pos[0] + 1, 0, h.char.pos[2] + 8]); const back = waitUnder(R, 1.2, h => [h.char.pos[0] + 1, 0, h.char.pos[2] + 8]);
+    F.verdict(back < 0.4, 'staged: both men look the other way', `${(back * 180 / Math.PI).toFixed(0)}° off it at the worst`);
     const seen1 = R.mateSeenS, ok = R.until(() => flat(m.char.pos, R.pos) < 2.6, 12);
     F.verdict(ok, 'the man turned away: he crosses and is back at Sam’s shoulder', `${ok ? 'rejoined' : 'NOT back'}: ${f2(flat(m.char.pos, R.pos))} m from Sam at ${at(m.char.pos)}; eyes on him in the crossing ${f2(R.mateSeenS - seen1)} s; T1 awareness ${f2(T1.awareness)}`);
     F.verdict(SNM.SNEAK_STATS.crossings - cross0 >= 1, '… counted as a crossing', `crossings since the man first turned: ${SNM.SNEAK_STATS.crossings - cross0}`); }
@@ -160,7 +161,7 @@ export const sneakWaits = guarded(async () => {
 export const sneakLight = guarded(async () => {
   const F = family('sneak-light: the light put out, he comes on with the man still looking');
   const { R, T1 } = await doorway(4, true); R.wait(4); const m = R.mate;
-  F.verdict(SNM.sneakWord(R.g, m) === 'waiting on eyes', 'he is waiting on the lit doorway', `'${SNM.sneakWord(R.g, m)}' at ${at(m.char.pos)}`);
+  F.verdict(sneakWordOf(R.g, m) === 'waiting on eyes', 'he is waiting on the lit doorway', `'${sneakWordOf(R.g, m)}' at ${at(m.char.pos)}`);
   const t = R.g.targets.find((x: any) => x.name === 'panel_corridor_20'); R.g.lightHome.stage(t, null, null, R.g.time + 30);   // (staged: the panel out for the length of the probe — Sam's OCP holds it nine seconds)
   const seen0 = R.mateSeenS, ok = R.until(() => flat(m.char.pos, R.pos) < 2.6, 10);
   F.verdict(ok && R.mateSeenS - seen0 < 0.05, 'the panel out: he crosses in the dark, unseen, the man still looking at the door', `${ok ? 'rejoined' : 'NOT back'} (${f2(flat(m.char.pos, R.pos))} m from Sam); eyes on him ${f2(R.mateSeenS - seen0)} s; T1 awareness ${f2(T1.awareness)}`);
@@ -183,11 +184,11 @@ export const sneakFallIn = guarded(async () => {
   look(() => [fc[0], 0, fc[2]]); const seen0 = watchEyes(R);
   const why2 = R.g.orders.give('fallIn', { kind: 'none', at: [R.pos[0], 0, R.pos[2]] }); R.wait(6);
   const mySide = Math.sign(sideOf(R, 'breakroom_n', R.pos)), side = () => sideOf(R, 'breakroom_n', m.char.pos) * mySide;
-  F.verdict(!why2 && flat(m.char.pos, held) > 2 && side() < -0.3 && SNM.sneakWord(R.g, m) === 'waiting on eyes', 'fall in: he comes up the corridor and waits short of the watched doorway', why2 ? `fall in refused — ${why2}` : `'${SNM.sneakWord(R.g, m)}' at ${at(m.char.pos)}, ${f2(flat(m.char.pos, held))} m from his hold, ${f2(-side())} m short of the frame's line; eyes on him ${f2(R.mateSeenS - seen0)} s; door ${d.isClosed() ? 'shut' : 'open'}`);
+  F.verdict(!why2 && flat(m.char.pos, held) > 2 && side() < -0.3 && sneakWordOf(R.g, m) === 'waiting on eyes', 'fall in: he comes up the corridor and waits short of the watched doorway', why2 ? `fall in refused — ${why2}` : `'${sneakWordOf(R.g, m)}' at ${at(m.char.pos)}, ${f2(flat(m.char.pos, held))} m from his hold, ${f2(-side())} m short of the frame's line; eyes on him ${f2(R.mateSeenS - seen0)} s; door ${d.isClosed() ? 'shut' : 'open'}`);
   // the door let go: it swings to between them — he does not take the shut door for the man having looked away
   // (where leaves stay as they are left — the page's stand — no closer does it: the leaf is pulled to, as a hand lets it go shut)
   d.def.closer = true; d.quietT = 3; if (!R.g.doors.hasCloser(d)) R.g.doors.pullTo(d, d.lastWho); R.until(() => d.isClosed(), 6); const shutAt = R.t; R.wait(4);
-  F.verdict(d.isClosed() && side() < -0.3 && SNM.sneakWord(R.g, m) === 'waiting on eyes', 'the door swung shut between them: four seconds on he is still waiting (he remembers who was looking)', `door ${d.isClosed() ? 'shut' : 'OPEN'} at ${f2(shutAt)} s; '${SNM.sneakWord(R.g, m)}' at ${at(m.char.pos)}`);
+  F.verdict(d.isClosed() && side() < -0.3 && sneakWordOf(R.g, m) === 'waiting on eyes', 'the door swung shut between them: four seconds on he is still waiting (he remembers who was looking)', `door ${d.isClosed() ? 'shut' : 'OPEN'} at ${f2(shutAt)} s; '${sneakWordOf(R.g, m)}' at ${at(m.char.pos)}`);
   look(h => [h.char.pos[0] + 1, 0, h.char.pos[2] + 8]);
   const ok = R.until(() => flat(m.char.pos, R.pos) < 2.6, SNEAK.memory + 8);
   F.verdict(ok && T1.state === 'patrol', `… and comes on once that has gone stale (${SNEAK.memory} s): through the door and at Sam’s shoulder, nobody the wiser`, `${ok ? `rejoined ${f2(R.t - shutAt)} s after it shut` : 'NOT back'} (${f2(flat(m.char.pos, R.pos))} m from Sam at ${at(m.char.pos)}); eyes on him since the order ${f2(R.mateSeenS - seen0)} s; T1 ${T1.state}, awareness ${f2(T1.awareness)}`);

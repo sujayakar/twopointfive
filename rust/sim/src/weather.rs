@@ -1,6 +1,6 @@
 //! THE WEATHER THAT PLAY READS — src/game/weather.ts's rules over a table of its own, a part of the game's block: what is under a roof, the rain's bed at a place and
 //! what it does to an ear (`hear_mask`), the fog and the dust along a line (`air_trans`), the storm's own die with what is thrown off it, thunder on its way, how wet
-//! the lot is, and how wet a man is. Statement for statement. Who is asked and who draws it stays TypeScript: `sound.rs` and `smoke.rs` answer the box world and the
+//! the lot is, and how wet a man is. Statement for statement. Who is asked and who draws it stays TypeScript: `sound.rs` and `bricks.rs` answer the box world and the
 //! smoke and know nothing of weather, and the PRODUCT of their answer with this one is taken by whoever asks.
 //!
 //! WHAT IS NOT HERE, AND WHY: rain, snow and wet as they are drawn (rainFx.ts, snowFx.ts, wetGround.ts and the rest: dressing, reading this); the kinds' tables

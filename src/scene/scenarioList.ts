@@ -8,7 +8,7 @@
 // Types and pure functions: nothing here imports the game (but game/loadout.ts — itself types and pure functions, importing nothing at run time: keep it so) or
 // touches the DOM.
 import { scenarioQuery, type ScenarioEntry } from './scenarios';
-import { squadOfQuery, sizeWords, sizeTag, type SquadSize } from '../game/loadout';   // (pure: the loadout's size, its words and its query key — nothing of the game)
+import { squadOfQuery, sizeWords, sizeTag, type SquadSize } from './squadsize';   // (pure: the loadout's size, its words and its query key — nothing of the game)
 import { HELD_PAGE_WORDS, PRICE_ASK_WORDS, RUN_PAGE_WORDS, heldPage } from '../host/runpage';   // (a leaf: the words of a run's page)
 
 // THE LIST'S GROUPS (scenarios.ts MISSION_GROUPS, ui/missions.ts groupOf): a row may name its own; without one a quiet mission is 'quiet alone' / 'quiet as
@@ -42,9 +42,6 @@ export const SCENARIOS: ScenarioEntry[] = [
   { id: 'block-four', title: 'The block', kind: 'roomclear', squad: 4, level: 'block.json', ways: ['the loading hall, on the main hall', 'the loading hall, on the tool crib'], untuned: true, group: 'strongholds', offList: true,
     place: 'Four rooms off one hall, a turn in each', lean: 'loud', defenders: 8, squads: true,
     blurb: 'Every held room turns a corner, so the enemies wait in the dark past a lit doorway. Each has a second door from the small room beside it.' },
-  { id: 'block-squads', title: 'The block, three squads', kind: 'roomclear', squad: 4, level: 'block-squads.json', ways: ['the loading hall, on the main hall', 'the loading hall, on the tool crib'], untuned: true, offList: true, group: 'strongholds',
-    place: 'The block again, held by squads', lean: 'loud', defenders: 11, squads: true,
-    blurb: 'The enemies hold the block in squads, and each squad has its own rooms. Hit one squad and listen to what the others do.' },
   { id: 'warehouse-four', title: 'The warehouse', kind: 'roomclear', squad: 4, level: 'warehouse.json', ways: ['the south-west corner', 'the south-east corner'], untuned: true, group: 'strongholds', offList: true,
     place: 'A racked hall, a loading dock, a ring of small rooms', lean: 'loud', defenders: 11, squads: true,
     blurb: 'The building is laid out as a ring, so whichever door you fight at, someone can walk around behind you.' },
@@ -62,15 +59,6 @@ export const SCENARIOS: ScenarioEntry[] = [
     blurb: 'Three hostages are behind two doors, and you\'ll want to hit both at once. There\'s no time to clear the four rooms you pass, so cover them.' },
   // NEW IDEAS: small missions, each built on one idea (group 'ideas'), each on a level made for it. The group is drawn in this table's order: the order to play them in
   // ---- new ideas, one a mission (group 'ideas'): a room clear with one overlay module keyed on a block of the level file
-  { id: 'snatch-four', title: 'The snatch', kind: 'roomclear', squad: 4, level: 'snatch.json', group: 'clock', untuned: true, offList: true,
-    place: 'A small walled house, four rooms, a hut on the back gate', lean: 'loud', defenders: 8,
-    blurb: 'Take one unarmed man alive and walk him out to your van. He\'ll run for the back gate at the first shot or the moment he sees you.' },   // (the van: how a snatch ends since game/snatchout.ts; with that switch off the house taken is still the end and the van only stands there)
-  // ONE IDEA (group 'ideas'): two timed charges on one clock (game/defuse.ts, the level's scenarios.defuse block), a wing apart, each workshop with a door
-  // from its wing and a back door from outside. The blurb is the premise, not the answer (how to split is the player's to find). Four only (`only`): the mission IS two pairs' worth of work.
-  { id: 'defuse-four', title: 'The two charges', kind: 'roomclear', squad: 4, level: 'defuse.json', group: 'clock', untuned: true, offList: true,
-    place: 'Two wings off one hall, a workshop at the end of each', lean: 'loud', defenders: 8,
-    only: 'With two timed charges and one short clock, this one is played with the full squad of four.',
-    blurb: 'Two charges share one 1:15 clock, one at the end of each wing. Each takes six seconds to make safe. The clock starts on your first move.' },
   { id: 'floodlit-four', title: 'The floodlit yard', kind: 'roomclear', squad: 4, level: 'floodlit.json', untuned: true, group: 'raids', offList: true,
     place: 'A walled fuel post, eleven metres of lit yard to its door', lean: 'either', defenders: 7,
     blurb: 'The yard is floodlit, with guns in two open windows. The breaker is in a shed outside the wall, and the enemies don\'t have night vision.' },
@@ -187,8 +175,7 @@ export function listedLevels(): { level: string; rows: ScenarioEntry[] }[] {
 }
 
 /** the query keys a scenario owns: a pick replaces them, a quit drops them, everything else on the URL (?quality=, ?mute, ?hud …) rides along.
- *  (`?level=` is NOT: a scenario on the
- *  relief office is a thing to want.) `solo` is the mission list's flag for the plain night straight in (ui/missions.ts): a pick or
+ *  `solo` is the mission list's flag for the plain night straight in (ui/missions.ts): a pick or
  *  a quit drops it like the rest. */
 export const SCENARIO_KEYS = ['levelFile', 'nightbreach', 'roomclear', 'rescue', 'quiet', 'squad4', 'squad', 'loadout', 'solo'];   // (`squad=N`: the loadout's size, game/loadout.ts; `loadout=<id>`: its screen, ui/loadout.ts)
 

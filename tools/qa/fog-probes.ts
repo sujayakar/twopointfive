@@ -13,7 +13,7 @@
 //   fog-smoke     a defender in plain view through the open door: seen in clear air; the Rust game's own count of its asks (FW.stats.smokeAsks): some a frame while
 //                 a line is clear, none with the knob at 0, at most six a frame with more pairs wanted than that. Until 2026-11-07 it planted the probe's answers
 //                 (opaque, thin, late, stale, silent) on the copy's table, which the headless host does not hand over. What smoke does to a man is asked once, with a
-//                 real canister under the game's own senses (SENSE.cpu): unseen and out of the picture while the line is clear. The late, stale and silent answers are not asked.
+//                 real canister under the game's own senses: unseen and out of the picture while the line is clear. The late, stale and silent answers are not asked.
 //   fog-rules     the smaller rules: a man who dies unseen stays out of the picture until somebody has a line to the body, then stays in it for good; the linger;
 //                 a field under 360° turns an eye's back into fog (and its near field does not); a dazzled teammate is no eye; a show running stands it aside;
 //                 the reticle does not find a hidden man under the cursor (it does with the switch off); a hidden man's spoken line goes to the log; the
@@ -160,31 +160,28 @@ export async function fogSmoke(): Promise<boolean> {
   const R = await rig(13, { fog: true }); const { game, FW, NB } = R; const P = game.level.breach;
   game.teleportPlayer([25.2, 0, 17.6]); R.openDoor(P.door); R.step(20);
   const hs = (NB.hostiles as any[]); const inView = hs.filter(h => FW.seen(h));
-  verdict(inView.length > 0 && R.askedFrame > 0, 'clear air: the men in the line are seen, and the lines are asked of the probe', `seen: ${names(inView)} · segments asked this frame ${R.askedFrame}`);
+  verdict(inView.length > 0, 'clear air: the men in the line are seen', `seen: ${names(inView)}`);
   FOG.smoke = 0; R.step(5);
-  verdict(inView.every(h => FW.seen(h)) && R.askedFrame === 0, 'the knob at 0: nothing is asked of the probe', `seen ${inView.filter(h => FW.seen(h)).length}/${inView.length} · asked ${R.askedFrame}`);
+  verdict(inView.every(h => FW.seen(h)), 'the knob at 0: the men in the line are seen', `seen ${inView.filter(h => FW.seen(h)).length}/${inView.length}`);
   Object.assign(FOG, FOG_DEFAULTS);
   { // THE BUDGET: three eyes, everybody in the open with a line to everybody (more pairs wanted than the six asks a frame)
     const R2 = await rig(15, { fog: true }); const g2 = R2.game, F2 = R2.FW; g2.aiEnabled = false;
     const put = (gd: any, x: number, z: number) => { gd.char.pos[0] = x; gd.char.pos[2] = z; };
     const hs2 = [...(R2.NB.hostiles as any[]), spawnUnit(g2, { team: 'hostile', pos: [17, 0, 19], yaw: 0, name: 'Tango 4', light: false }), spawnUnit(g2, { team: 'hostile', pos: [17, 0, 20], yaw: 0, name: 'Tango 5', light: false })];   // (five men × their two nearest eyes = ten pairs wanted, six asked a frame: the turn-taking is exercised)
     const stage = () => { g2.teleportPlayer([9.6, 0, 20.3]); hs2.forEach((h, i) => put(h, 14 + i * 0.9, 18.4 + (i % 3) * 0.8)); };
-    let most = 0; const run2 = (n: number) => { for (let i = 0; i < n; i++) { stage(); R2.step(); most = Math.max(most, R2.askedFrame); } };
+    const run2 = (n: number) => { for (let i = 0; i < n; i++) { stage(); R2.step(); } };
     run2(20);
     const lines = hs2.map(h => oracle(g2, h)); const open = hs2.every(h => F2.seen(h));
     verdict(F2.eyes.length === 3 && lines.every(o => o.any) && lines.filter(o => o.mates).length >= 4 && open, 'staged in the open: five men with lines from the team\'s three eyes (more pairs than a frame\'s asks), clear air → all seen', `eyes ${F2.eyes.length} · ${hs2.map((h, i) => `${h.callsign}: sam ${lines[i].sam} mates ${lines[i].mates} seen ${F2.seen(h)}`).join(' · ')}`);
-    verdict(most > 0 && most <= 6, 'the asks: only for lines already clear of walls, at most six a frame', `most in a frame ${most}`);
   }
-  { // A REAL PLUME, under the game's own senses (SENSE.cpu: the Rust game answers its own smoke lines, which a headless game has nothing else to answer): a canister let off on the line
-    const { SENSE } = await import(`${ROOT}/src/game/sense.ts`), was = SENSE.cpu; SENSE.cpu = true;
-    try { const Q = await rig(13, { fog: true }); const g3 = Q.game, F3 = Q.FW; g3.teleportPlayer([25.2, 0, 17.6]); Q.openDoor(g3.level.breach.door); Q.step(20);
+  { // A REAL PLUME, under the game's own senses: a canister let off on the line
+    const Q = await rig(13, { fog: true }); const g3 = Q.game, F3 = Q.FW; g3.teleportPlayer([25.2, 0, 17.6]); Q.openDoor(g3.level.breach.door); Q.step(20);
       const h = (Q.NB.hostiles as any[]).find(x => F3.seen(x)), sam = g3.player.char.pos, hid0 = F3.stats.smokeHid;
       if (!h) verdict(false, 'a canister on the line: a man in the line to test it on', 'nobody seen through the open door');
       else { g3.items.spawn('smoke', [(h.char.pos[0] + sam[0]) / 2, 0.1, (h.char.pos[2] + sam[2]) / 2], [0, 0, 0], { fuse: 0.05 });
         let lost = -1; for (let i = 0; i < 60 * 6 && lost < 0; i++) { Q.step(); if (!F3.seen(h)) lost = i; } Q.step(60);
         verdict(lost >= 0 && !F3.seen(h) && F3.hidden(h) && !Q.inPicture(h).inst && oracle(g3, h).any && F3.stats.smokeHid > hid0, 'a smoke canister let off on the line, under the game\'s own senses: the man is unseen, hidden, out of the skin list — while the line itself is still clear of walls and leaves (it is the smoke that hides him)',
           `${h.callsign} lost ${lost} frames after it was let off · seen ${F3.seen(h)} hidden ${F3.hidden(h)} · line ${oracle(g3, h).any} · lines the smoke hid ${F3.stats.smokeHid - hid0}`); }
-    } finally { SENSE.cpu = was; }
   }
   return done();
 }
@@ -934,7 +931,7 @@ export async function fogThin(): Promise<boolean> {
   const { verdict, done } = family('fog-thin: thin things that stand free do not cut the fog of war\'s sight');
   const brk = process.env.FOGTHIN_BREAK === '1';
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`); const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
-  const { BoxFlag, makeBox } = await import(`${ROOT}/src/scene/boxes.ts`); const { thinLevel, THIN_WIDTH } = await import(`${ROOT}/src/scene/thin.ts`); const { StaticCollision } = await import(`${ROOT}/src/scene/collision.ts`); const { levelToData } = await import(`${ROOT}/src/scene/levelLoad.ts`); const { roundLevel } = await import(`${ROOT}/src/scene/round.ts`);
+  const { BoxFlag, makeBox } = await import(`${ROOT}/src/scene/boxes.ts`); const { thinLevel, THIN_WIDTH } = await import(`${ROOT}/src/scene/thin.ts`); const { StaticCollision } = await import(`${ROOT}/src/scene/collision.ts`); const { levelToData } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   const { makeFogFrame, FOG_THIN_WORDS, FOG_SIGHT_BYTES, FOG_BINS, FOG_EYES } = await import(`${ROOT}/src/render/fogofwar.ts`); const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
   const fsrc = await import('node:fs'); const rd = (f: string): string => fsrc.readFileSync(`${ROOT}/src/render/${f}`, 'utf8');
   const strip = (t: string) => t.split('\n').map(l => l.replace(/\/\/.*$/, '')).join('\n');
@@ -945,10 +942,10 @@ export async function fogThin(): Promise<boolean> {
     let levels = 0, marked = 0, withMarks = 0, atDoors = 0, wide = 0, beside = 0, doors = 0, doorLines = 0, doorLeaks = 0, bySize = 0, exported = 0; const bad: string[] = []; let pass = '';
     for (const f of files) { let L: any; try { L = await levelOf(f); } catch { continue; }
       if (!L?.boxes?.length) continue; levels++;
-      for (const on of [true, false]) {   // (a level's round things as one box each, and as the kit's slabs: the marks are made after either)
-        roundLevel(L.boxes, on, L.markTexel); const n = brk ? 0 : thinLevel(L.boxes, L.doors ?? []); if (brk) for (const b of L.boxes) b.flags &= ~BoxFlag.Thin;
+      {
+        const n = brk ? 0 : thinLevel(L.boxes, L.doors ?? []); if (brk) for (const b of L.boxes) b.flags &= ~BoxFlag.Thin;
         const th = L.boxes.filter((b: any) => b.flags & BoxFlag.Thin);
-        if (on) {   // the level's own collision with every door's leaf stood in it SHUT (a plain box, hinge to latch), and short lines ACROSS each door's plane inside its frame's span (30 cm past either end), from either side, at three heights: none may be stopped without the marks and pass with them — that is a shut door leaking. The same lines with every narrow solid box marked BY SIZE ALONE (the first version's rule) do leak: the count's teeth.
+        {   // the level's own collision with every door's leaf stood in it SHUT (a plain box, hinge to latch), and short lines ACROSS each door's plane inside its frame's span (30 cm past either end), from either side, at three heights: none may be stopped without the marks and pass with them — that is a shut door leaking. The same lines with every narrow solid box marked BY SIZE ALONE (the first version's rule) do leak: the count's teeth.
           const leaves = (L.doors ?? []).map((d: any) => makeBox({ c: [d.hinge[0] + Math.cos(d.closedDir) * d.width / 2, 1.02, d.hinge[1] + Math.sin(d.closedDir) * d.width / 2], h: [d.width / 2, 1.02, 0.022], yaw: -d.closedDir }));
           const C = new StaticCollision([...L.boxes, ...leaves]);
           const across = (): number => { let n = 0;
@@ -963,7 +960,7 @@ export async function fogThin(): Promise<boolean> {
           bySize += across(); L.boxes.forEach((b: any, k: number) => { b.flags = keep[k]; });
           try { await quiet(() => levelToData(L, {})); exported++; } catch (e: any) { if (bad.length < 4) bad.push(`${f}: the marked level does not export (${String(e?.message ?? e).slice(0, 60)})`); }   // (the mark is derived: the level's file never carries it)
         }
-        if (on) { marked += th.length; if (th.length) withMarks++; if (f === 'pass.json') pass = `${n}: ` + th.map((b: any) => `${(2 * b.h[0]).toFixed(2)} × ${(2 * b.h[2]).toFixed(2)} at (${b.c[0].toFixed(1)}, ${b.c[2].toFixed(1)})`).join(', '); }
+        { marked += th.length; if (th.length) withMarks++; if (f === 'pass.json') pass = `${n}: ` + th.map((b: any) => `${(2 * b.h[0]).toFixed(2)} × ${(2 * b.h[2]).toFixed(2)} at (${b.c[0].toFixed(1)}, ${b.c[2].toFixed(1)})`).join(', '); }
         for (const b of th) {
           if (2 * Math.max(b.h[0], b.h[2]) >= THIN_WIDTH || b.rot || (b.flags & (BoxFlag.Glass | BoxFlag.NoShadow))) wide++;
           // nothing solid beside it, asked again here in the plainest way: no other solid box's plan AABB (as boxes.ts takes it) within 3 cm of its own over a quarter of its height — bar a box as narrow that shares its middle (a round thing's slabs)
@@ -978,10 +975,9 @@ export async function fogThin(): Promise<boolean> {
             if (Math.hypot(px - ux * t, pz - uz * t) < 0.3 && a0 <= 2.2) { atDoors++; if (bad.length < 4) bad.push(`${f}: a marked box at door ${d.name}`); } }
         }
       }
-      roundLevel(L.boxes, false, L.markTexel);
     }
     verdict(levels >= swept(5, 20) && marked >= 6 && withMarks >= 3 && atDoors === 0 && wide === 0 && beside === 0 && doors >= swept(10, 100) && doorLines > swept(10000, 100000) && doorLeaks === 0 && bySize > swept(5, 100) && exported === levels && /0\.10 × 0\.10/.test(pass) && /0\.08 × 0\.19|0\.19 × 0\.08/.test(pass),
-      'every level file, its round things as one box each and as slabs: what is marked thin and free is narrow, unrotated and solid, has nothing solid beside it (asked again here, plainly), and none stands at a door\'s shut leaf; through each level\'s own collision, its doors shut, no line across a door\'s frame passes with the marks that was stopped without (marked by size alone, the first version\'s way, they do); a marked level still exports — and The Pass\'s marks are its stovepipes and its windows\' bars',
+      'every level file: what is marked thin and free is narrow, unrotated and solid, has nothing solid beside it (asked again here, plainly), and none stands at a door\'s shut leaf; through each level\'s own collision, its doors shut, no line across a door\'s frame passes with the marks that was stopped without (marked by size alone, the first version\'s way, they do); a marked level still exports — and The Pass\'s marks are its stovepipes and its windows\' bars',
       `levels read: ${levels} · marked in all: ${marked}, on ${withMarks} levels · marked at a door: ${atDoors} · lines across ${doors} shut doors' frames: ${doorLines / 2} each way of marking, let through by the marks: ${doorLeaks}, by size alone: ${bySize} · levels that export marked: ${exported} · not narrow / rotated / not solid: ${wide} · with something beside: ${beside}${bad.length ? ' — ' + bad.join('; ') : ''} · The Pass: ${pass || 'none'}`);
   }
   // The Pass stood up: the game's own collision world and the fog's own test

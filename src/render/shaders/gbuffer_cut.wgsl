@@ -124,14 +124,14 @@ fn cutEdgeTake(s0: f32, g: vec2f, best: ptr<function, f32>, d: ptr<function, vec
   // toward a grazing view (a sheet seen edge-on mirrors) — inside a rim, which with the cut faces and the box's side faces shows the core: the bright edge of sheet
   // glass. The pattern is per pixel, stepped along the TAAU jitter's cycle when asked, so the resolve averages the door to a tint. Picture only.
   let core = cutCoreRow(bi); let cw = u32(max(core.w, 0.0));
-  // ROUND (a ROUND THING, scene/round.ts, about the box's own y; or Box.cutRound, a geometry trial, scene/geoTry.ts): the prism's faces round its axis are ONE round face to the picture. Their normal turns with the
+  // ROUND (a ROUND THING, scene/round.ts, about the box's own y; or Box.cutRound, scene/shapes.ts): the prism's faces round its axis are ONE round face to the picture. Their normal turns with the
   // point (the silhouette and every ray keep the flat faces); marks and the look's paint read them as the box face that normal leans to (flatN: a rule that
   // runs ALONG a face is asked a quarter of the round at a time, and what it leans the normal by is turned back onto the round), the look with the distance
   // round the box unrolled; the end face gets the rolled rim of a drum's lid. Picture only. (The snow hook below knows a round about y only.)
   let rax = cutRoundAxis(bi); var side = false; var lcS = v.lc; var hfS = v.hf; var flatN = n; var arc = 0.0;
   if (rax >= 0 && !cap) {
     let q = boxRot(bi); let ln = quatRotate(vec4f(-q.xyz, q.w), n);
-    // AN ARC (Box.cutArc; a trial, scene/lorryTry.ts): the round's axis lies `arc` metres under the box's centre (it rides in the record's unused last row: cut.ts
+    // AN ARC (Box.cutArc, scene/shapes.ts): the round's axis lies `arc` metres under the box's centre (it rides in the record's unused last row: cut.ts
     // packCut), so a box cut to a few facets of a wide circle turns its normal about THAT axis: a bowed roof, a fender. Its paint is read straight down each
     // quarter (no unrolling: the arc is shallow); only its facets and its top turn (the box's own upright faces and its underside stay flat) and its ends get no
     // drum's rim.

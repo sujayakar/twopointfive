@@ -141,7 +141,7 @@ fn static_at(g: &Game, ix: f64) -> Option<BoxId> {
 }
 
 /// Where the fire's mouth is and how wide: the glowing box hung on the lamp, or a hand under the lamp.   (fire.ts mouthOf)
-pub fn mouth_of(g: &mut crate::game::Game, t: FixtureId) -> crate::fire::MouthOf {
+pub fn mouth_of(g: &crate::game::Game, t: FixtureId) -> crate::fire::MouthOf {
     let first = g.tab.sim_lightshome_fixture[t].boxes.first().copied();
     let b = match first {
         Some(i) => static_at(g, i),
@@ -149,7 +149,7 @@ pub fn mouth_of(g: &mut crate::game::Game, t: FixtureId) -> crate::fire::MouthOf
     };
     let mouth = g.k.fire.mouth;
     if let Some(b) = b {
-        let (c, h) = { let x = seam_box(g, b); (x.c, x.h) };
+        let (c, h) = { let x = &g.tab.boxes[b]; (x.c, x.h) };
         return crate::fire::MouthOf { pos: [c[0], c[1] + h[1], c[2]], r: m::min(h[0], h[2]) * mouth, lid: m::min(h[0], h[2]) };
     }
     let p = g.tab.sim_lightshome_fixture[t].pos;
@@ -157,12 +157,12 @@ pub fn mouth_of(g: &mut crate::game::Game, t: FixtureId) -> crate::fire::MouthOf
 }
 
 /// How hot a fire burns, 0 to 1: its lamp's share of its authored strength.   (fire.ts heatOf)
-pub fn heat_of(g: &mut crate::game::Game, t: FixtureId) -> f64 {
+pub fn heat_of(g: &crate::game::Game, t: FixtureId) -> f64 {
     m::max(0.0, m::min(1.0, crate::sim_lightshome::fixture_factor(g, t)))
 }
 
 /// Whether it burns at all.   (fire.ts burns)
-pub fn burns(g: &mut crate::game::Game, t: FixtureId) -> bool {
+pub fn burns(g: &crate::game::Game, t: FixtureId) -> bool {
     if !(heat_of(g, t) > 0.001) {
         return false;
     }
@@ -174,6 +174,15 @@ pub fn burns(g: &mut crate::game::Game, t: FixtureId) -> bool {
 pub fn wind_at(g: &mut crate::game::Game, mouth: V3) -> crate::fire::WindAt {
     let (height, wind_max) = (g.k.fire.height, g.k.fire.wind_max);
     let wv = crate::wind::wind_at(g, [mouth[0], mouth[1] + height * 0.6, mouth[2]], None);
+    let wl = m::hyp2(wv[0], wv[2]);
+    let wk = if wl > wind_max { wind_max / wl } else { 1.0 };
+    crate::fire::WindAt { wv, wl, wind: [wv[0] * wk, wv[2] * wk] }
+}
+
+/// The same of the game as it stands, for whoever only reads it.
+pub fn flame_wind(g: &crate::game::Game, mouth: V3) -> crate::fire::WindAt {
+    let (height, wind_max) = (g.k.fire.height, g.k.fire.wind_max);
+    let wv = crate::wind::wind_sum(g, [mouth[0], mouth[1] + height * 0.6, mouth[2]]);
     let wl = m::hyp2(wv[0], wv[2]);
     let wk = if wl > wind_max { wind_max / wl } else { 1.0 };
     crate::fire::WindAt { wv, wl, wind: [wv[0] * wk, wv[2] * wk] }

@@ -67,7 +67,8 @@ import { setDaylight, isDaylight, setGroup } from './lighting';
 import { cancelActions, teleportPlayer } from './player';
 import './combat';
 import { learnCode as devicesLearnCode } from './devices';
-import { chronicle, chronRadio, chronObjective, roomOf } from './chronicle';
+import { chronicle, chronRadio, chronObjective } from './chronicle';
+import { roomOf } from './rooms';
 import { radioHand } from './handwork';
 import { runnerBreak } from './runner';   // (asked inside the drill's ending check and a beat's `rout` / `routed` only: false with its switch off)
 import { hasHim, OWN } from './owner';
@@ -273,7 +274,7 @@ export interface DirectorApi {
 }
 /** the character budget a script's spawn is held to on a tutorial mission (rails.ts): every character the engine skins — Sam, the four and eleven more —
  *  since a beat's men come on top of the men the staging dealt. Anywhere else: none (spawnUnit's own eight) */
-function liftedBudget(g: Game): number | undefined { return g.rails?.live ? 16 : undefined; }
+function liftedBudget(g: Game): number | undefined { return g.view.lesson?.rails ? 16 : undefined; }
 /** the module shape of a level script: levels/<name>.script.ts `const script: LevelScriptFn = D => { … }; export default script;` */
 export type LevelScriptFn = (D: DirectorApi) => void;
 
@@ -468,7 +469,7 @@ export class Director {
   blocksSave(): string | null { const R = this.run; return R && !R.ended ? `the level script's program '${R.name}' is running` : null; }
   get running(): string | null { const R = this.run; return R && !R.ended ? R.name : null; }
   /** a tutorial mission's own program is running (roomfight.ts, lanes.ts: a man of the floor's roster that it has in hand is left to it until it lets him go) */
-  get lessonRuns(): boolean { const R = this.run; return !!R && !R.ended && !!this.g.rails?.live; }
+  get lessonRuns(): boolean { const R = this.run; return !!R && !R.ended && !!this.g.view.lesson?.rails; }
   /** frag.ts: the level's script put the defenders' own grenades off (`D.systems.theirFrags(false)`): for the level, whatever program is or is not running */
   get theirFragsOff(): boolean { return this.armed && this.manifest?.systems.theirFrags === false; }
   get objective(): { text: string; pos: Vec3 | null } | null { return this.run && !this.run.ended ? this.run.objective : null; }

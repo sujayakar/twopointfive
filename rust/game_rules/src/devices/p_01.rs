@@ -30,8 +30,8 @@ fn bits_or(a: f64, b: f64) -> f64 { (js::to_i32(a) | js::to_i32(b)) as f64 }
 
 // ---------------------------------------------------------------- runtime records
 /// A camera of the level: its machine is rust/sim's row `slot`.   (devices.ts CameraRt)
-pub fn camera_rt_new(g: &mut crate::game::Game, slot: f64, st: crate::Opaque, def: &crate::devices::CameraDef2, index: f64, target: FixtureId, cone: LightId, smoke_key: &str) -> CameraRtId {
-    g.tab.devices_camera_rt.push(CameraRt { smoke_trans: 1.0, def: def.clone(), index, target, cone, smoke_key: String::from(smoke_key), slot, st })
+pub fn camera_rt_new(g: &mut crate::game::Game, slot: f64, st: crate::Opaque, def: &crate::devices::CameraDef2, index: f64, target: FixtureId, cone: LightId) -> CameraRtId {
+    g.tab.devices_camera_rt.push(CameraRt { def: def.clone(), index, target, cone, slot, st })
 }
 /// A tripwire of the level: its machine is rust/sim's row `slot`.   (devices.ts LaserRt)
 pub fn laser_rt_new(g: &mut crate::game::Game, slot: f64, st: crate::Opaque, def: &crate::devices::LaserDef2, index: f64, target: FixtureId, dir: V3, len: f64) -> LaserRtId {
@@ -76,7 +76,7 @@ pub fn devices_new(g: &mut crate::game::Game) -> crate::devices::Devices {
                 let cone = lamp;
                 let slot = crate::sim_lightshome::light_home_camera(g, target, d.yaw, d.sweep, d.sweep_period.unwrap_or(dd.sweep_period), d.pitch.unwrap_or(dd.pitch), d.pos);
                 ci += 1.0;
-                let rt = camera_rt_new(g, slot, crate::Opaque, d, ci, target, cone, &format!("smokeCam{}", ci));
+                let rt = camera_rt_new(g, slot, crate::Opaque, d, ci, target, cone);
                 this.cameras.push(rt);
             }
             crate::scene_level::DeviceDef::Laser(d) => {
@@ -159,7 +159,7 @@ pub fn devices_reset(g: &mut crate::game::Game) {
 }
 
 /// Powered, unbroken, not knocked out: the device works this frame.   (devices.ts alive)
-pub fn alive(g: &mut crate::game::Game, t: FixtureId) -> bool {
+pub fn alive(g: &crate::game::Game, t: FixtureId) -> bool {
     crate::sim_lightshome::fixture_factor(g, t) > 0.05 && !crate::sim_lightshome::fixture_broken(g, t)
 }
 /// Live play: devices sense.   (devices.ts sensing)
@@ -197,24 +197,25 @@ pub fn update_camera(g: &mut crate::game::Game, c_2: CameraRtId, dt: f64, live: 
     if has(pan, bit.down) && live { device_down(g, &d.name, &format!("camera {}", index), d.pos); }
     if !has(pan, bit.ok) || !live { return; }
     let dd = crate::scene_level_data::device_defaults();
-    let pl = if g.seats.len() == 1 { g.player } else {
-        match crate::seats::nearest_man(g, &d.pos) { Some(p) => p, None => crate::seats::men(g)[0] }
-    };
-    let pc = g.pl[pl].ch;
     let range = d.range.unwrap_or(dd.range);
     let half = d.fov_deg.unwrap_or(dd.fov_deg) / 2.0;
     let look = lens_dir(crate::sim_lightshome::camera_machine_yaw(g, c), d.pitch.unwrap_or(dd.pitch));
     let e = crate::guards::Eye { pos: d.pos, look, range, half_deg: half, near_m: 0.0, near_deg: half, v_half_deg: Some(half) };
-    let key = g.tab.devices_camera_rt[c].smoke_key.clone();
-    if let Some(tr) = crate::sensors::sensors_read(g, &key) { g.tab.devices_camera_rt[c].smoke_trans = tr; }
-    let chest = bone_or(g, pc, crate::character::Bone::Chest, [0.0, 1.1, 0.0]);
-    let smoke = g.tab.devices_camera_rt[c].smoke_trans;
-    let air = smoke * crate::weather::air_trans(g, d.pos, chest);
-    let vis = crate::guards::eye_contact(g, e, pc, true, false, air, None);
-    if vis.in_cone { let chest = bone_or(g, pc, crate::character::Bone::Chest, [0.0, 1.1, 0.0]); crate::sensors::sensors_ask_segment(g, &key, d.pos, chest); }
-    let gain = if vis.visible { lens_gain(g, &crate::seats::here(g), vis.dist, range, air) } else { 0.0 };
+    // (every player the lens can see: the feed goes by the one it sees best; none in sight, by the nearest, as a lens with nobody in it)
+    let first = crate::seats::nearest_or_first(g, &d.pos);
+    let (mut pc, mut seen, mut gain) = (g.pl[first].ch, false, 0.0);
+    for pl in crate::seats::men(g) {
+        if g.pl[pl].down { continue; }
+        let c = g.pl[pl].ch;
+        let chest = bone_or(g, c, crate::character::Bone::Chest, [0.0, 1.1, 0.0]);
+        let air = crate::sense::smoke_between(g, d.pos, chest) * crate::weather::air_trans(g, d.pos, chest);
+        let vis = crate::guards::eye_contact(g, e, c, true, false, air, None);
+        if !vis.visible { continue; }
+        let got = lens_gain(g, &crate::seats::seat(g, crate::seats::seat_of_man(g, pl)), vis.dist, range, air);
+        if !seen || got > gain { (pc, seen, gain) = (c, true, got); }
+    }
     let (now, at, sus, alarm) = (g.time, g.ch[pc].pos, g.tune.camera_suspicion_secs, g.tune.camera_alarm_secs);
-    let r = crate::sim_lightshome::light_home_camera_see(g, slot, now, dt, vis.visible, gain, at, sus, alarm);
+    let r = crate::sim_lightshome::light_home_camera_see(g, slot, now, dt, seen, gain, at, sus, alarm);
     if has(r, bit.suspect) { camera_suspect(g, c); }
     if has(r, bit.alarm) { camera_alarm(g, c); }
 }
@@ -292,6 +293,7 @@ pub fn update_laser(g: &mut crate::game::Game, l: LaserRtId, dt: f64, live: bool
     }
     let end = v3::mad(d.from, dir, sense);
     let mut who: Option<&'static str> = None;
+    let mut by: Option<PlayerId> = None;
     let mut at: Option<V3> = None;
     let mut cut = reach;
     for pl in crate::seats::men(g) {
@@ -299,7 +301,7 @@ pub fn update_laser(g: &mut crate::game::Game, l: LaserRtId, dt: f64, live: bool
         if !g.pl[pl].down && !g.player_invisible {
             let c = g.pl[pl].ch;
             at = body_breaks(g, c, d.from, end);
-            if at.is_some() { who = Some("player"); }
+            if at.is_some() { who = Some("player"); by = Some(pl); }
         }
         if who.is_none() {
             if let Some(dg) = g.pl[pl].dragging {
@@ -334,7 +336,7 @@ pub fn update_laser(g: &mut crate::game::Game, l: LaserRtId, dt: f64, live: bool
     }
     let now = g.time;
     if has(crate::sim_lightshome::light_home_laser_close(g, slot, now, live, cut, sense, who.is_some()), bit.trip) {
-        laser_trip(g, l, who.unwrap(), at.unwrap());
+        laser_trip(g, l, who.unwrap(), by, at.unwrap());
     }
 }
 /// Does any capsule of `c` cross the beam a→b: the point on the beam where it does.   (devices.ts bodyBreaks)
@@ -350,12 +352,12 @@ pub fn body_breaks(g: &crate::game::Game, c_2: CharId, a: V3, b: V3) -> Option<V
     None
 }
 /// A beam broken: the chirp, the radio, a man sent, by the beam's level.   (devices.ts laserTrip)
-pub fn laser_trip(g: &mut crate::game::Game, l: LaserRtId, who: &str, at: V3) {
+pub fn laser_trip(g: &mut crate::game::Game, l: LaserRtId, who: &str, by: Option<PlayerId>, at: V3) {
     let d = g.tab.devices_laser_rt[l].def.clone();
     let where_ = crate::chronicle::room_of(g, at);
     let level: String = match d.alarm { Some(x) => String::from(x.as_str()), None => crate::scene_level_data::device_defaults().alarm };
     crate::audio_iface::game_audio_like_play(g, "alarmChirp", Some(d.from), Some(0.7), None);
-    if who == "player" { let pl = g.player; g.pl[pl].noise = m::max(g.pl[pl].noise, 0.3); }
+    if let Some(pl) = by { g.pl[pl].noise = m::max(g.pl[pl].noise, 0.3); }
     let sent: Option<GuardId>;
     if level == "alarm" {
         control(g, &format!("beam broken in the {} — that's an intruder. weapons out", where_));
@@ -483,6 +485,12 @@ pub fn learn_code(g: &mut crate::game::Game, lock_id: &str, how: crate::devices:
 }
 /// A man has just said the code aloud: the player learns it iff it carried to him; whether he now knows it.   (devices.ts overhear)
 pub fn overhear(g: &mut crate::game::Game, speaker: GuardId, lock_id: &str) -> bool {
+    let mut any = false;
+    crate::seats::each_seat(g, &mut |g| { if overhear_here(g, speaker, lock_id, any) { any = true; } });
+    any
+}
+/// … by the man of the seat that stands; `told`: another man has already learnt it just now, and the telling is not said again
+fn overhear_here(g: &mut crate::game::Game, speaker: GuardId, lock_id: &str, told: bool) -> bool {
     let pl = g.player;
     if g.pl[pl].down || g.pl[pl].codes.has(String::from(lock_id)) { return g.pl[pl].codes.has(String::from(lock_id)); }
     let mouth = bone_or(g, g.gd[speaker].ch, crate::character::Bone::Head, [0.0, 1.6, 0.0]);
@@ -490,6 +498,7 @@ pub fn overhear(g: &mut crate::game::Game, speaker: GuardId, lock_id: &str) -> b
     let ear = bone_or(g, g.pl[pl].ch, crate::character::Bone::Head, [0.0, ear_up, 0.0]);
     let prop = crate::weather::hear_path(g, mouth, ear, None);
     if prop.path_len > g.k.overhear.path_m || prop.carry < g.k.overhear.carry { return false; }
+    if told { g.pl[pl].codes.add(String::from(lock_id)); return true; }
     learn_code(g, lock_id, LearnCodeHow::Overheard, Some(speaker)) || g.pl[pl].codes.has(String::from(lock_id))
 }
 /// The digits as said ('7-3-9-1').   (devices.ts spell)
@@ -507,10 +516,10 @@ pub fn pad_door_name(g: &crate::game::Game, k: &crate::devices::KeypadRt) -> Str
     if name == "server_manager" { String::from("side door") } else { format!("{} door", name.replace('_', " ")) }
 }
 /// Is `d` a keypad door locked against the player where he stands, and does he know its code.   (devices.ts padState)
-pub fn pad_state(g: &mut crate::game::Game, d: DoorId, from: V3) -> Option<crate::devices::PadState> {
+pub fn pad_state(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId, from: V3) -> Option<crate::devices::PadState> {
     let pad = devices_pad_of(g, d)?;
     if !crate::doors::doors_locked_out(g, d, from, None) { return None; }
-    let pl = g.player;
+    let pl = seat.player;
     let known = g.pl[pl].codes.has(g.dr[d].lock_id.clone());
     Some(PadState { pad, known })
 }
@@ -518,7 +527,7 @@ pub fn pad_state(g: &mut crate::game::Game, d: DoorId, from: V3) -> Option<crate
 pub fn start_coding(g: &mut crate::game::Game, d: DoorId) -> bool {
     let pl = g.player;
     let here = g.ch[g.pl[pl].ch].pos;
-    let st = pad_state(g, d, here);
+    let st = pad_state(g, &crate::seats::here(g), d, here);
     let p = &mut g.pl[pl];
     match st {
         Some(s) if s.known && p.coding.is_none() && !p.down => {}
@@ -650,8 +659,6 @@ pub fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
 }
 
 // ---------------------------------------------------------------- the panel's knobs (their storage is the host's: lights.md trap 12)
-/// `localStorage` is the host's: what it keeps arrives written in `g.tune`, so nothing here reads.   (devices.ts loadDeviceTune)
-pub fn load_device_tune(g: &crate::game::Game) {}
 // ---------------------------------------------------------------- geometry
 /// Closest points between segments p and b: the distance and the point on b.   (devices.ts segSegClosest)
 pub fn seg_seg_closest(p0: V3, p1: V3, b0: V3, b1: V3) -> crate::devices::SegSegClosest {

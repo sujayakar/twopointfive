@@ -294,7 +294,7 @@ pub fn tut_queue_gun_step(g: &mut crate::game::Game, r: DirectorRunId, b: Direct
 }
 
 /// The 'gun' beat's c.until tests. (tut-queue.script.ts:44-82)
-pub fn tut_queue_gun_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_queue::TutQueueGunFrame, id: u32) -> Result<bool, String> {
+pub fn tut_queue_gun_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_queue::TutQueueGunFrame, id: u32) -> Result<bool, String> {
     let (front, back) = {
         let v = crate::script_tut_queue::tut_queue_vars(g, r);
         (v.front.clone().unwrap(), v.back.clone().unwrap())
@@ -478,7 +478,7 @@ pub fn tut_queue_gates_step(g: &mut crate::game::Game, r: DirectorRunId, b: Dire
 }
 
 /// The 'gates' beat's c.until tests. (tut-queue.script.ts:88-124)
-pub fn tut_queue_gates_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_queue::TutQueueGatesFrame, id: u32) -> Result<bool, String> {
+pub fn tut_queue_gates_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_queue::TutQueueGatesFrame, id: u32) -> Result<bool, String> {
     match id {
         GATES_INSIDE | GATES_OPEN => {
             for u in left(g, r, &f.men).iter() {

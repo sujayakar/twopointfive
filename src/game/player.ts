@@ -20,7 +20,6 @@ import './quiet';   // (called inside buildInteractables only)
 import './workthings';   // (called inside buildInteractables only)
 import { chronKey, chronGrab } from './chronicle';
 import { killGuard, dropFromHand } from './combat';
-import { restOfThrow } from './frag';
 import { hammerBlows } from './bigkit';
 import { BIGSLOT } from './kit';   // (the two asked at the two keys and each frame beside them: a card that left your light or your goggles at home — kittree.ts)
 import { lockPoint } from './shotgun';
@@ -37,7 +36,6 @@ import { AIM_HOOKS } from './aim';
 import './aimcost';
 import './lighting';
 import './carlamps';
-import { GUNWALL, gunWallIs, woodBetween } from './gunwall';
 import './friends';
 import { fallingInYields, noShoveBack, noShoveNote, type Shoved } from './noshove';
 import './samstun';
@@ -45,7 +43,6 @@ import { sprintDoorPace, sprintDoorLean, type DoorStamps } from './sprintdoor';
 import './doorblast';
 import './aimweight';
 import { HOLD } from './character';
-import { WALLSNAP } from './wallsnap';
 import { THROWBACK } from './throwback';
 import type { HoldPhase, HoldVariant } from './character';
 import type { Game, Guard, Player, ThrowKind, Interactable } from './game';
@@ -54,7 +51,6 @@ import { resetChase, inHand, gunBack } from './guards';
 import './whistle';
 import { wandDrop } from './wand';
 import './wallcharge';
-import './defuse';
 import { STALK, stalkOn } from './stalk';
 import { closeLive, closeAt, closeKindOf, closeStation, closeTook, closeSeated, closeUnseat } from './close';
 import './kitanim';
@@ -223,7 +219,7 @@ function cancelReloads(pl: Player) { pl.pistol.cancelReload(); pl.rifle.cancelRe
 export function legsOwn(g: Game): boolean {
   const pl = g.player;
   return !(pl.down || pl.takedown || pl.holding || pl.kick || pl.picking || pl.wanding || pl.coding || pl.wall || pl.dragging || pl.haul || pl.doorMove || g.puppet || g.touring
-    || samWork(g) || (STALK.on && stalkOn(g)) || g.rails?.allowed());   // (rails.ts: a lesson's gate takes keys out of the tick)
+    || samWork(g) || (STALK.on && stalkOn(g)) || g.view.lesson?.rails);   // (rails.ts: a lesson's gate takes keys out of the tick)
 }
 /** THE TOP PACE OF A WALK OF HIS OWN this tick, before a tap step, a creep or a door in his hand have their say: by what his legs are doing (`m`: the
  *  player's own flags in the tick; a look ahead's scratch flags — walkahead.ts) and what his card weighs. One working for both. */
@@ -259,7 +255,7 @@ export function sprintStance(g: Game, m: Legs, wantSprint: boolean, stalk: boole
   m.dash = dashes && wantSprint && m.crouch && !m.dragging && !stalk;   // (CROUCHRUN: Shift in a crouch stays down and goes quickly)
 }
 /** ONE STRIDE: his pace taken up or let go, his place moved by it, the walls and then the men he meets given their say. `tap` / `stalk`: the step or the creep
- *  that has his legs this tick (tapstep.ts, stalk.ts) — null for a plain walk. `now`: the clock the tick runs at. */
+ *  that has his legs this tick (stalk.ts) — null for a plain walk. `now`: the clock the tick runs at. */
 export function strideStep(g: Game, m: Legs, mx: number, mz: number, ml: number, tap: { speed: number } | null, stalk: { pace: number; keep?: boolean } | null, dt: number, now = g.time): void {
   const c = m.char;
   let maxSpeed = freePace(g, m, ml);
@@ -445,7 +441,7 @@ const wsPend = new SideMap<Player, { t: number; at: number; blocked: boolean }>(
  *  there the wall is his as he arrives and the row is there from the hold; a body's row, and any row in the crouched dash, is in reach and has the long
  *  wait.) The hold it takes carries the keys of that run (WallHold.ran): while they are held as they were, Shift is not a way off it (wallRanOn). */
 const wsPress = new SideMap<Player, { t: number; at: number; n: Vec3 | null; dx: number; dz: number; held: boolean; until: number }>('player.wsPress');
-/** the things that stand where they are and are worked by hand (the wall press's touch; interact.ts emptyThing: what an empty tap can be beside) */
+/** the things that stand where they are and are worked by hand (the wall press's touch; the view's `empty`: what an empty tap can be beside) */
 export const PRESS_THINGS: ReadonlySet<string> = new Set(['door', 'switch', 'breaker', 'objective', 'cam', 'body']);
 
 // ---- the hold in a checkpoint (savestate.ts SaveState.wallHold, under SAVETIMELINE.holds). No file held a hold before the wall could be taken by walking: a
@@ -502,35 +498,7 @@ export function wallHoldRestore(g: Game, raw: unknown): void {
 
 
 /** Esc with the launcher's button down: the gesture is let go of, nothing sent (Game.escape; the button still down afterwards begins nothing — only a fresh press does) */
-/** WHERE THE CAN HE IS AIMING WILL COME TO REST (THROWBACK.restMark; overlay.ts draws the preview's ring there): the arc's own first touch is not where a can
- *  stays — it bounces and rolls on a metre or two — and the maintainer could not put a smoke on a gap by it. frag.ts restOfThrow on the arc being shown.
- *  `path`: the floor it crosses from that touch to there. Null with the mark off, with no arc up, and for the launcher's arc (its round bursts or sticks
- *  where it lands). Read only. */
-export function throwRest(g: Game): { at: Vec3; path: Vec3[] } | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('throwRest', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
-  const pl = g.player, sol = pl.throwPreview; if (!THROWBACK.restMark || !sol || !sol.points.length || !(pl.throwHeld || (!pl.holstered && pl.canisterSel))) return null;
-  return restOfThrow(g, pl.heldKind, sol.points[0], sol.v0);
-}
 export function launchCancel(g: Game): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('launchCancel', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } } const pl = g.player; if (!pl.launchHeld) return false; pl.launchHeld = null; pl.throwPreview = null; return true; }
-/** Stacked on the wall: is the rifle UP this frame? A click (or the trigger held; the right button too with an attachment on it) brings it into the shoulder and
- *  keeps it there WALLSNAP.upSecs; stepped out round the end it is up for as long as he is out. Never while the first WALLSNAP.bore of its line is in a wall
- *  (pointing through the wall he is stacked on): then it stays low and no round leaves — held off through equipT, the 'still coming into the hands' beat every
- *  fire site already honours. Nothing leaves the low ready either: for WALLSNAP.upRise after it starts up the click is held (equipT again) and given to the
- *  fire sites on the frame the rise is over — the first round leaves with the rifle most of the way to the shoulder, a sixth of a second after the click, not level from the thigh. */
-function stackInWay(g: Game): boolean {
-  const pl = g.player, c = pl.char, ap = g.aimPoint, dx = ap[0] - c.pos[0], dz = ap[2] - c.pos[2], d = Math.hypot(dx, dz);
-  const hit = d > 0.25 ? g.col.raycast([c.pos[0], pl.crouch ? 0.85 : 1.3, c.pos[2]], [dx / d, 0, dz / d], WALLSNAP.bore) : null;
-  return !!hit && hit.index < 1e6;
-}
-/** HIS GUN CANNOT GET A ROUND OUT THIS FRAME (GUNWALL.mark; overlay.ts bars the aim ring with it — the words a dead click files are in no list the page
- *  draws): held down by a wall (gunwall.ts), kept low on the stack with the wall he is on in its line (stackUp), or up with its muzzle the far side of a
- *  jamb from its shoulder (combat.ts armThrough: that round stops in the wood). Read only: nothing of the game's is written, nothing counted. */
-export function gunShut(g: Game): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('gunShut', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
-  const pl = g.player, c = pl.char; if (!GUNWALL.mark || pl.holstered) return false;
-  if (gunWallIs(g, c)) return true;
-  const w = pl.wall;   // (not through a step-out: from his station the point he steps out FOR is behind his wall, and the ring would flash barred each time)
-  if (w?.kind === 'stack') { if (w.leanWant || w.lean! > 0 || w.leanDwell! > 0) { if (w.lean! < 1) return false; } else if (w.settle >= 1 && stackInWay(g)) return true; }
-  return (c.anim.upper === 'aim' || (pl.rifleUp && c.anim.longStance === 'shoulder')) && woodBetween(g, c.bones.upperArmR ?? v3.add(c.pos, [0, 1.4, 0]), c.muzzle);   // (combat.ts armThrough's own two points; a sheet his rounds go through is no wood: gunwall.ts)
-}
 
 
 
@@ -811,8 +779,6 @@ export function pickHover(g: Game) { { const __s = RUST_SURFACE; if (__s) { cons
  *  Lower = higher up the list. Within one thing its verbs keep the order buildInteractables gave them; MAX_NEAR rows in all, so a man to grab beside a shut
  *  door reads [grab · push · ease] and the door's third verb (if it had one) would be the row that falls off. */
 export const INTERACT_PRIORITY: Record<Interactable['kind'], number> = { guard: 0, held: 0, body: 1, objective: 2, door: 3, light: 9, breaker: 2.5, switch: 3.2, charge: 9.4, wall: 9.5, cam: 9.6, cancel: 10 };   // (wall: a partition's 'breach with a charge' row ranks last — it never takes one of the MAX_NEAR rows from a door, a body or a switch · charge: ownblow.ts's row is put after the capped rows by hand and is never ordered by this — its rank is only the table's)
-/** how far a thing is from him, as its reach is measured: a door by its leaf or its doorway's centre, whichever is nearer */
-export function thingDist(it: Interactable, p: Vec3): number { const d = v3.distXZ(it.pos, p); return it.door ? Math.min(d, v3.distXZ(it.door.frameCentre, p)) : d; }
 export function interactOrder(p: Vec3): (a: Interactable, b: Interactable) => number { return goneWithTick('interactOrder') as any; }
 /** the most verb rows the interaction list ever holds (the highest-priority available ones; the cancel row while the selector is open is extra) */
 export const MAX_NEAR = 3;
@@ -834,7 +800,7 @@ export function toggleDrag(g: Game, which?: Guard) { { const __s = RUST_SURFACE;
   if (pl.dragging) { releaseBody(g); g.msg('body dropped'); return; }
   if (pl.down || pl.sprinting) return;
   let best: Guard | null = which && which.state === 'dead' ? which : null;
-  if (!best) { let bd = 1.3; for (const gd of [...g.guards, ...civiliansShown(g)]) { if (gd.state !== 'dead' || gd.wound) continue; const d = bodyDist(g, gd, 1.3); if (d < bd) { bd = d; best = gd; } } }   // (a civilian on the floor is a body to haul like any)
+  if (!best) { let bd = 1.3; for (const gd of [...g.guards, ...civiliansShown(g)]) { if (gd.state !== 'dead') continue; const d = bodyDist(g, gd, 1.3); if (d < bd) { bd = d; best = gd; } } }   // (a civilian on the floor is a body to haul like any)
   if (!best || !best.char.ragdoll) { g.msg('no body within reach'); return; }
   releaseWall(g);   // (you take hold of a body off the wall, crouched to it)
   pl.dragging = best; pl.crouch = true; pl.dragNoiseT = 0.3; pl.dragStuckT = 0; best.char.ragdoll.wake(); haulBegin(g, best); g.msg(pl.haul?.carry ? 'picking him up — Space puts him down, sprint drops him' : pl.haul?.end === 'head' ? 'got him under the arms — Space lets go, sprint drops him' : 'dragging the body — Space lets go, sprint drops it');

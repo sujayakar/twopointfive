@@ -12,6 +12,7 @@
 //                       spot nobody can reach is refused in the row's words; a silent squad stays silent; the throw is on the order log
 //   squadsmoke-restart  a restart puts the count back and the row on the menu once; the cards back as issued (or the table off) and a restart takes the row
 //                       and the HUD line away; the pair's count is its two men's
+import { blockOf, listedOf, menuKey } from './squadwords';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
@@ -19,13 +20,12 @@ import { asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each p
 
 const K: any = await import(`${ROOT}/src/game/kit.ts`);
 /** slots.json as shipped (no squad limit since v7), and the same table with the squad limit it had through v6: the trade lines are held on that one */
-const SHIPPED = JSON.parse(readFileSync(resolve(ROOT, 'src/game/slots.json'), 'utf8')), LIMIT7 = { ...SHIPPED, squad: { pouches: 7 } };
+const SHIPPED = JSON.parse(readFileSync(resolve(ROOT, 'src/game/slots.json'), 'utf8'));
 const SM: any = await import(`${ROOT}/src/game/squadsmoke.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const SLM: any = await import(`${ROOT}/src/game/silent.ts`);
-const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { KIT, KIT_LS } = K, { SQUADSMOKE, SMOKE_ORDER } = SM;
 
 const DT = 1 / 60;
@@ -69,11 +69,11 @@ async function rig(seed: number, o: { squad?: 2 | 4; empty?: boolean; silent?: b
     cursor(p: number[]) { W.cursorAt([p[0], p[1], p[2]]); },
     press(code: string) { input.pressed.add(code); R.step(); },
     /** X with the cursor on p: the menu's order rows as the panel draws them (the who row and the cancel row left out) — the menu left UP */
-    menu(p: number[]): { kind: string | undefined; rows: Row[] } { R.cursor(p); R.press(ORDERS.key); R.step(2);
-      const hud = O.hud().menu; return { kind: O.menu?.target.kind, rows: (hud?.rows ?? []).slice(1).filter((r: any) => r.kind !== 'cancel').map((r: any) => ({ head: r.label, key: r.opts[0]?.key, text: r.opts[0]?.text, off: !!r.off })) }; },
+    menu(p: number[]): { kind: string | undefined; rows: Row[] } { R.cursor(p); (menuKey(O), R.step()); R.step(2);
+      const hud = listedOf(O); return { kind: O.menu?.target.kind, rows: (hud?.rows ?? []).map((r: any) => ({ head: r.label, key: r.opts[0]?.key, text: r.opts[0]?.text, off: !!r.off })) }; },
     esc() { for (let i = 0; i < 3 && O.menu; i++) R.press('Escape'); },
     /** the squad block's lines (the HUD's status rows' texts) */
-    notes(): string[] { return (O.hud().status ?? []).flatMap((r: any) => r.opts.map((x: any) => x.text as string)); },
+    notes(): string[] { return (blockOf(O) ?? []).flatMap((r: any) => r.opts.map((x: any) => x.text as string)); },
     cans(): any[] { return game.items.items.filter((x: any) => x.kind === 'smoke'); },
     restart() { const log = console.log; console.log = () => {}; try { game.restartEncounter(); } finally { console.log = log; } R.step(30); },
   };

@@ -1,4 +1,4 @@
-// EACH MAN WALKS A REAL PATH THROUGH THE DOOR (`DOORPATH.on`; ON in the page — `?nodoorpath` puts it off, `?doorpath=gun` adds the gun rule —, off in the
+// EACH MAN WALKS A REAL PATH THROUGH THE DOOR (`DOORPATH.on`; ON in the page — `?nodoorpath` puts it off, off in the
 // harness unless TPS_DOORPATH=1[,knob=value…]; off: the entry exactly as it was).
 //
 // What a room entry did (doortools.ts, the 'enter' stage): every man was let go a quarter second after the one before, each handed his point of domination and
@@ -17,18 +17,12 @@
 //   THE FILE    the men go in the order the door order dealt, one at a time: a man is let go when the man before him will be `gapM` ahead of him as he
 //               reaches the frame line (0: the moment that man will be first at the line — the second gun is through half a second behind the first); and a man who comes within `shortM` of one sent before him, with that man in front of him, eases off until there is
 //               room. Nobody is ever kept longer than `cap` seconds either way — a file that cannot form goes as the old one did
-//   THE GUN     (`gun` — SHIPS OFF, see the knob) a barrel is not carried, and a weapon light not shone, through a door. A teammate WALKING on an order whose aim point lies across a
-//               leaf standing off its frame, inside the gun's reach of him, carries the gun up along the way he goes until the leaf is behind it (never
-//               onto the back of one of his own in that line: `gunLane`), then onto his point; where the gun as it lies is in a leaf, or he stands with his point across one, it comes down to the
-//               low ready until the line is clear (Guard.muzzleDown: the pose, the hysteresis and the fire gate a friend in the line already has). Any
-//               man under one of Sam's orders with his long gun at the shoulder, on a walk of this module or not — but never a man with an enemy in
-//               his sights (`gunOver`, off), nor a drill's or a show's cast
 // The walk itself is the runner's own (squad.ts → guards.ts followPath): this module only keeps the man's path two points long — a point `look` metres ahead
 // of him on his line, then his goal — so his legs, his pace, his lean and his collisions are everybody's. followPath's stuck watchdog still has him: when it
 // side-steps or re-plans, the walk stands back for a moment and is re-laid from where that left him; twice, and the nav has him for good (`gaveUp`).
 // But for a point moved out from behind a leaf it changes no point of domination, and it changes no order and no gun: where the men end up and what they
 // do there is the door order's — but for the gun lowered at a leaf.
-import { SideMap, SideSet } from '../math/side';
+import { SideMap } from '../math/side';
 import type { Game, Guard } from './game';
 import type { Door } from './doors';
 import type { DoorOp } from './doortools';
@@ -58,24 +52,6 @@ export const DOORPATH = {
   cap: 2.5,
   /** a point behind a leaf is moved at most this far · and stays this far from another man's point */
   moveM: 0, apartM: 0.7,   // (moveM 0 since the doors rules share this tree: where a body rests behind a leaf is theirs; 1.8 = the walk moving a point by itself)
-  /** the gun comes down where its line would cross an open leaf · how far that line is taken from his chest (the shouldered muzzle stands ~0.8 m out) · a leaf this
-   *  near its frame (rad) is the wall's: the stack's own carriage is for that · the line is also tried where he will stand this many seconds on ·
-   *  and this far either side of his centre · with an enemy in his sights the rule leaves him alone unless this is set.
-   *  THE GUN RULE SHIPS OFF, set by its tally (144 seeds a mission, the page's settings, the same seeds with and without it): with it on the office
-   *  kept 23 fewer teammates of 576 (interval 0 to 47) and the depot 12 fewer (inside the scatter) — a gun at the low ready has no sights and takes its
-   *  light off the room, 2.7 s an entry in the office. What it buys is real: in the office two men carry rifle and light through the server door's leaf
-   *  for half a second in every run without it (rifle spells of 0.2 s and over 370 → 175, weapon light 339 → 17; the depot 27 → 0). Wanted in its
-   *  place: a carry that pulls the rifle in and keeps eyes and light up — no such pose exists */
-  gun: false, gunM: 0.95, gunAjar: 0.12, gunLead: 0.3, gunSide: 0.15, gunOver: false,
-  /** the gun rule also has a man who STANDS (on his mark, in the stack, holding his point): off, only a man on his way somewhere is touched — a standing man
-   *  keeps his gun where his order has it, through a leaf or not (a lowered gun takes his sights and his light off the room) */
-  gunStill: true,
-  /** the gun rule may bring a gun DOWN to the low ready: off, it only ever carries the gun up along a walking man's way (nothing is lowered: a gun at the
-   *  low ready sees nothing, lights nothing and fires nothing, and a contested doorway is where that costs men) */
-  gunDown: true,
-  /** the gun is carried along his way only while nobody of his own stands in that line (a gun turned onto the back of the man ahead in the file is a gun
-   *  the room fight then lowers for him): with a friend there it stays where his order has it */
-  gunLane: true,
   /** a man down within this of a point still being walked to: the point is moved off him (0: never — a man walks onto the fallen as before) · the new
    *  point stands this far from where any man down lies · and at most this far from the point as dealt */
   bodyM: 0, bodyOff: 0.6, bodyMove: 1.2,
@@ -115,14 +91,10 @@ export class DoorPath {
   walks = new Map<Guard, Walk>();
   /** per door order: the walk last let go, how many so far */
   private lastOf = new SideMap<DoorOp, { W: Walk | null; n: number; t: number }>();
-  stats = { sent: 0, walked: 0, round: 0, noRound: 0, noLane: 0, late: 0, heldS: 0, capped: 0, yields: 0, gaveUp: 0, taken: 0, relaid: 0, turned: 0, moved: 0, waitS: 0, nav: 0, gunS: 0, guns: 0, gunAhead: 0, stepped: 0 };
+  stats = { sent: 0, walked: 0, round: 0, noRound: 0, noLane: 0, late: 0, heldS: 0, capped: 0, yields: 0, gaveUp: 0, taken: 0, relaid: 0, turned: 0, moved: 0, waitS: 0, nav: 0, stepped: 0 };
   constructor(private g: Game) {}
-  reset() { this.walks.clear(); this.lent.length = 0; }
+  reset() { this.walks.clear(); }
 
-  /** THE GUN: every teammate under one of Sam's orders, his long gun up at the shoulder — its line across an open leaf has it carried along his walk, or
-   *  brought down (and kept down while it would cross). What it writes on his script is his for THIS frame's pose only: `after()` puts it back */
-  private low = new SideSet<Guard>();
-  private lent: { gd: Guard; s: NonNullable<Guard['script']>; mine: Vec3; aimAt: Vec3 | null | undefined; face: number | null | undefined; strafe: boolean | undefined }[] = [];
 
   /** the leaf as it stands: hinge → free tip */
   private leaf(d: Door): [Vec3, Vec3] { const u = d.dir(), h = d.def.hinge; return [[h[0], 0, h[1]], [h[0] + u[0] * d.def.width, 0, h[1] + u[1] * d.def.width]]; }

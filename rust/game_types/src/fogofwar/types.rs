@@ -81,9 +81,6 @@ pub struct FogOfWar {
     pub span_z: f64,
     pub cell_seen: JsMap<crate::Num, bool>,
     pub frame_no: f64,
-    pub asked: JsMap<String, f64>,
-    pub pending: Vec<crate::fogofwar::FogOfWarPendingItem>,
-    pub turn: f64,
     pub door_from: f64,
     pub door_n: f64,
     pub call_log: Vec<crate::fogofwar::FogOfWarCallLogItem>,
@@ -94,6 +91,8 @@ pub struct FogOfWar {
     pub known_t: JsMap<GuardId, f64>,
     pub told_step: JsMap<GuardId, f64>,
     pub call_n: f64,
+    /// what is filed now is the team's own doing: said on each particle record that goes out
+    pub filing_ours: bool,
     /// the fog is on and the pass has run: the team's rule is live (`ours_on`)
     pub live: bool,
     pub our_chunks: JsSet<crate::Num>,
@@ -128,9 +127,6 @@ impl FogOfWar {
             span_z: 0.0,
             cell_seen: JsMap::new(),
             frame_no: 0.0,
-            asked: JsMap::new(),
-            pending: Vec::new(),
-            turn: 0.0,
             door_from: 0.0,
             door_n: 0.0,
             call_log: Vec::new(),
@@ -141,6 +137,7 @@ impl FogOfWar {
             known_t: JsMap::new(),
             told_step: JsMap::new(),
             call_n: 0.0,
+            filing_ours: false,
             live: false,
             our_chunks: JsSet::new(),
             our_landed: JsSet::new(),
@@ -210,8 +207,6 @@ pub struct Rec {
     pub at: Option<V3>,
     pub wand_t: Option<f64>,
     pub body: bool,
-    pub smoked: bool,
-    pub smoke_f: f64,
 }
 impl Rec {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -223,8 +218,6 @@ impl Rec {
             at: None,
             wand_t: None,
             body: false,
-            smoked: false,
-            smoke_f: 0.0,
         }
     }
 }
@@ -553,18 +546,6 @@ pub const EYE_STAND: f64 = 1.55;
 
 /// (src/game/fogofwar.ts:406 EYE_CROUCH)
 pub const EYE_CROUCH: f64 = 0.95;
-
-/// (src/game/fogofwar.ts:409 SMOKE_ASKS)
-pub const SMOKE_ASKS: f64 = 6.0;
-
-/// (src/game/fogofwar.ts:409 SMOKE_EYES)
-pub const SMOKE_EYES: f64 = 2.0;
-
-/// (src/game/fogofwar.ts:411 SMOKE_FRESH)
-pub const SMOKE_FRESH: f64 = 8.0;
-
-/// (src/game/fogofwar.ts:411 SMOKE_KEEP)
-pub const SMOKE_KEEP: f64 = 30.0;
 
 /// (src/game/fogofwar.ts:412 DEG)
 pub const DEG: f64 = 0.017453292519943295;

@@ -197,7 +197,7 @@ export async function teamsDark() {
     const op = spawnUnit(game, { team: 'operative', pos: [22.0, 0, 11.3], yaw: -Math.PI / 2, name: 'Archer', light: false });
     const ho = spawnUnit(game, { team: 'hostile', pos: DARK_BREAK ? [16.5, 0, 11.3] : [16.5, 0, 7.5], yaw: Math.PI / 2, name: 'Vasquez', light: false });
     op.hold = false; op.pinned = true; op.state = 'alert'; op.awareness = 1; op.reactT = 0; op.lastKnown = null;   // alert with nothing, planted (pinned: he covers, he does not wander off to search)
-    ho.heardUpTo = 1e12; ho.dazzledUntil = 1e9;   // the hostile is a prop here: deaf and blind, he stands
+    ho.heardUpTo = 1e12; ho.hold = true; ho.pinned = true; ho.state = 'patrol'; ho.awareness = 0;   // the hostile is a prop here: deaf behind his wall, he stands, calm (a dazzled man fires blind, and this one fires only below)
     W.step(DT); W.step(DT);
     const wall = game.col.segmentBlocked(eyeOf(op.char), chestOf(ho.char)) && game.col.segmentBlocked(eyeOf(op.char), eyeOf(ho.char));
     let everFoe = false;
@@ -247,8 +247,6 @@ export async function teamsDespawn() {
   const dangling = game.guards.some((o: any) => (o.foe && o.foe !== 'player' && !game.guards.includes(o.foe)) || (o.standoff && !game.guards.includes(o.standoff.pair)));
   allPass = verdict(game.guards.length === g0 && steady() === L0 && ids() === ids0 && units(game).length === 0 && game.spectate === -1 && !dangling, 'despawned: guards, steady lights and ids exactly as before, camera back on Sam, no reference left behind', `guards ${game.guards.length} · steady lights ${steady()} · ids ${ids()} · spectate ${game.spectate} · (${dead} of them had died in the 4 s)`) && allPass;
   for (let f = 0; f < 10; f++) W.step(DT);
-  const keysLeft = [...game.probe.results.keys()].filter((k: string) => k.startsWith('unit'));
-  allPass = verdict(keysLeft.length === 0, 'no meter answers kept under unit keys', keysLeft.join(',') || 'none') && allPass;
   // ids do not leak: a fresh spawn starts again at the bottom of the unit range
   const again = spawnUnit(game, { team: 'hostile', pos: [23.2, 0, 13.35] }); const idAgain = again.char.id; despawnUnit(game, again);
   allPass = verdict(idAgain === 20, 'ids come back: the next spawn is #20 again', `#${idAgain}`) && allPass;

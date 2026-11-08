@@ -34,8 +34,8 @@ fn last_order(g: &Game) -> Option<u32> {
 }
 
 /// Is the team in more than one pair.   (seats.ts teamPaired)
-fn team_paired(g: &Game) -> bool {
-    if crate::seats::one_book(g) { return crate::orders::squad_orders_paired(g, &crate::seats::here(g)); }
+pub fn team_paired(g: &Game, seat: &crate::seats::SeatRef) -> bool {
+    if crate::seats::one_book(g) { return crate::orders::squad_orders_paired(g, seat); }
     let (mut red, mut blue) = (false, false);
     for &gd in g.guards.iter() {
         if g.gd[gd].team != crate::teams::Team::Operative { continue; }
@@ -89,7 +89,7 @@ fn roster(g: &mut Game) {
         let name = crate::seats::player_name(g, pl);
         g.verdict.tracks.set(crate::Num(id), track(id, name, Some(tone), true, None));
     }
-    let paired = team_paired(g);
+    let paired = team_paired(g, &crate::seats::here(g));
     for gd in crate::scenario_run::team_of(g) {
         let id = g.ch[g.gd[gd].ch].id;
         if g.verdict.tracks.has(crate::Num(id)) { continue; }
@@ -102,7 +102,7 @@ fn roster(g: &mut Game) {
 /// A man put down by hand with no name on it is the partner's where the team has ONE AI man; with more it is nobody's.   (verdict.ts Verdict.onlyMate)
 fn only_mate(g: &Game, h: GuardId) -> Option<crate::Num> {
     let x = &g.gd[h];
-    if x.killer_id >= 0.0 || x.down_by != Some(crate::game::DownBy::Guard) || x.down_kind == Some(crate::game::DownKind::Shot) || x.down_kind == Some(crate::game::DownKind::Wounded) { return None; }
+    if x.killer_id >= 0.0 || x.down_by != Some(crate::game::DownBy::Guard) || x.down_kind == Some(crate::game::DownKind::Shot) { return None; }
     let (mut one, mut n) = (None, 0);
     for (k, t) in g.verdict.tracks.iter() { if !t.human { one = Some(k); n += 1; } }
     if n == 1 { one } else { None }
@@ -157,7 +157,7 @@ fn watch(g: &mut Game) {
         if down {
             let state = match pl {
                 Some(_) => ManState::Dead,
-                None => { let x = &g.gd[gd.unwrap()]; if x.wound.is_some() { ManState::Wounded } else if x.down_kind.is_some() && x.down_kind != Some(crate::game::DownKind::Shot) { ManState::Out } else { ManState::Dead } }
+                None => { let x = &g.gd[gd.unwrap()]; if x.down_kind.is_some() && x.down_kind != Some(crate::game::DownKind::Shot) { ManState::Out } else { ManState::Dead } }
             };
             let room = crate::chronicle::room_of(g, p);
             let by = match pl {
@@ -211,7 +211,7 @@ fn close(g: &mut Game, end: (bool, &'static str, String)) {
         foes: RunVerdictFoes { down: foes_down, of: g.verdict.foes.keys().len() as f64, fell: g.verdict.fell_at.clone() },
         hostages, start: [g.verdict.origin[0], g.verdict.origin[2]],
     };
-    // the stealth mission raises its own card (the exfil, a player down, a snatch lost); every other end is this module's to announce
+    // the stealth mission raises its own card (the exfil, a player down); every other end is this module's to announce
     let stage = g.mission.stage;
     let all_down = { let mut a = true; for i in 0..g.seats.len() { let p = crate::cmd::seat_man(g, g.seats[i]); if !g.pl[p].down { a = false; break; } } a };
     let own = stage == crate::game::MissionStage::Done || (stage == crate::game::MissionStage::Failed && g.mission.down_card_at > 0.0) || (stage != crate::game::MissionStage::Failed && all_down);
@@ -219,7 +219,7 @@ fn close(g: &mut Game, end: (bool, &'static str, String)) {
     g.verdict.res = Some(res);
 }
 
-/// THE VERDICT'S TICK, after the scenarios, the mission and the snatch and defuse overlays have had this tick, so every end they wrote is in. The first
+/// THE VERDICT'S TICK, after the scenarios, and the mission have had this tick, so every end they wrote is in. The first
 /// end of a run is latched in `g.verdict.res` and nothing after it changes it; a new mission is a new run.   (verdict.ts Verdict.tick)
 pub fn verdict_tick(g: &mut crate::game::Game) {
     if !live(g) { return; }
@@ -260,4 +260,34 @@ pub fn verdict_lines(g: &crate::game::Game) -> Option<(bool, String)> {
     let men: Vec<String> = r.men.iter().map(|x| format!("{} {} {} {} {} {}", x.id, x.state.as_str(), x.down_at, if x.down_by.is_empty() { "-" } else { x.down_by.as_str() }, x.drops.len(), x.path.len())).collect();
     Some((r.won, format!("{}\n{}\n{}\n{}\n{} {}\n{} {}\n{}\n{}\n{}\n{}", r.word, r.why, r.secs, r.approach.map_or("-", |a| a.as_str()), r.lost, r.of, r.foes.down, r.foes.of,
         r.hostages.as_ref().map_or(String::from("-"), |h| format!("{} {}", h.alive, h.of)), r.void, r.clean, men.join(";"))))
+}
+
+/// Has this run's try begun, and is it over: a run a machine may keep.
+pub fn run_on(g: &crate::game::Game) -> (bool, bool) {
+    if !live(g) || g.verdict.run != Some(g.mission.serial) { return (false, false); }
+    (started(g), g.verdict.res.is_some())
+}
+
+/// What a machine keeps of this run. A read: asked as the try begins and as the run ends.
+pub fn run_view(g: &crate::game::Game) -> crate::view::RunView {
+    let (begun, over) = run_on(g);
+    let file = row_file(g);
+    let entry = crate::scenario_run::running_scenario(g, file.as_deref(), None).and_then(|r| r.entry);
+    let level = String::from(crate::difficulty::difficulty_now(g).as_str());
+    let res = if over { g.verdict.res.as_ref() } else { None };
+    let name = file.as_deref().unwrap_or("office");
+    crate::view::RunView {
+        begun,
+        over,
+        void: res.map_or(g.verdict.cheat, |r| r.void),
+        lesson: entry.as_ref().map_or(false, |e| e.group == Some(crate::scene_scenarios::MissionGroup::Tutorial)),
+        mission: match (&entry, &file) { (Some(e), _) => e.id.clone(), (None, Some(f)) => format!("night:{}", f), (None, None) => String::from(crate::scene_scenario_list::SOLO_ID) },
+        won: res.map_or(false, |r| r.won),
+        way: res.and_then(|r| r.approach),
+        clean: res.map_or(false, |r| r.clean),
+        secs: res.map_or(0.0, |r| r.secs),
+        course: format!("{}|way{}|squad{}|{}", name, g.room_clear.way + 1.0, g.night_breach.ops.len(), level),
+        level,
+        par: crate::par::par_result_now(g).map(|r| r.shown),
+    }
 }

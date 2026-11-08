@@ -185,9 +185,7 @@ pub fn breaks_pick(g: &mut crate::game::Game, list: &[DebrisChunkId], ok: &mut d
 
 /// An evicted piece gone where it lay, by its size. (breakTable.ts Breaks.dissolve)
 pub fn breaks_dissolve(g: &mut crate::game::Game, c_2: DebrisChunkId) {
-    let has_fx = crate::particle_fx::gpu_fx(g);
     g.stats.break_table.crumbled += 1;
-    if !has_fx { return; }
     let me = meta_of(g, c_2);
     let row = break_row(me.mat);
     let b = g.tab.debris_chunk[c_2].box_;
@@ -246,7 +244,7 @@ pub fn breaks_tint(g: &crate::game::Game, inside: crate::break_table::Inside, pa
 /// `n` chips of the row's small debris at `at`. (breakTable.ts Breaks.chips)
 pub fn breaks_chips(g: &mut crate::game::Game, row: &crate::break_table::BreakRow, inside: crate::break_table::Inside, paint: V3, at: V3, dir: V3, n: f64, speed: f64, pos_jit: f64, who: f64, size_k: Option<f64>) {
     let size_k = size_k.unwrap_or(1.0);
-    if !crate::particle_fx::gpu_fx(g) || n <= 0.0 { return; }
+    if n <= 0.0 { return; }
     let s = row.small;
     let chip_tint = g.k.breaks.chip_tint;
     let color = breaks_tint(g, inside, paint, chip_tint);
@@ -263,7 +261,6 @@ pub fn breaks_chips(g: &mut crate::game::Game, row: &crate::break_table::BreakRo
 /// The row's dust and sparks at `at`. (breakTable.ts Breaks.fines)
 pub fn breaks_fines(g: &mut crate::game::Game, row: &crate::break_table::BreakRow, inside: crate::break_table::Inside, paint: V3, at: V3, dir: V3, k: Option<f64>) {
     let k = k.unwrap_or(1.0);
-    if !crate::particle_fx::gpu_fx(g) { return; }
     let (dust_speed, dust_life, dust_size) = (g.m.particle_fx.pfx.dust_speed, g.m.particle_fx.pfx.dust_life, g.m.particle_fx.pfx.dust_size);
     if row.dust > 0.0 {
         let color = v3::lerp3(breaks_tint(g, inside, paint, 0.6), [0.8, 0.79, 0.76], 0.4);
@@ -394,8 +391,7 @@ pub fn breaks_break_again(g: &mut crate::game::Game, c_2: DebrisChunkId) {
     if row.mark > 0.0 && bc[1] - crate::debris::support_along(g, b, [0.0, 1.0, 0.0]) < 0.06 {
         let opts = if dressing { crate::render_decals::DecalOpts { look: Some(true), ..Default::default() } } else { Default::default() };
         let pos = [bc[0], bc[1] - crate::debris::support_along(g, b, [0.0, 1.0, 0.0]) + 0.002, bc[2]];
-        let d = crate::render_decals::decals_add(g, crate::render_decals::DecalKind::Chip, pos, [0.0, 1.0, 0.0], Some(row.mark * (0.7 + 0.6 * r(20.0))), Some(opts));
-        if dressing { crate::look_decals::look_decal(g, d.as_ref()); }
+        crate::render_decals::decals_add(g, crate::render_decals::DecalKind::Chip, pos, [0.0, 1.0, 0.0], Some(row.mark * (0.7 + 0.6 * r(20.0))), Some(opts));
     }
     g.stats.break_table.again += 1;
 }

@@ -35,8 +35,8 @@
 //                  (F), the rescue's flow sending him to a mark, the fight AI having him: he is not free and his job goes that deal — and he is dealt to again
 //                  when he is handed back ('fall in'), with no word from Sam.
 //
-// The seam is in orders.ts tick() (poseFor: the watch point, the facing, whether he back-pedals) and one line in its hud() (the squad block says what each man is
-// on: 'Red One · with you · on the server door'; statusOf itself is the base's). Off (COVER.on false, ?nocover): tick() returns on its first line, poseFor
+// The seam is in orders.ts tick() (poseFor: the watch point, the facing, whether he back-pedals) and the view's squad line (the block says what each man is
+// on: 'Red One · with you · on the server door'; a man's line in the view: its base, then this tail). Off (COVER.on false, ?nocover): tick() returns on its first line, poseFor
 // answers null and the men are the base's, frame for frame.
 //   A STEP TO SEE  the one place the cover moves a man's FEET (COVER.step): stood still, dealt an open door he has no line through (its leaf is between him and
 //                  the doorway) or nothing with such a door near him, he takes a step or two to where he sees through it, never into an opening, and the
@@ -102,9 +102,6 @@ export const COVER = {
    *  of where orders.ts's own muzzle lane lets a gun back up, laneOut 0.7, and kept clear of where it brings one down, laneIn 0.45) · a man STOOD on his opening
    *  keeps it this long with a mate crossing his line (s: his muzzle dips and comes back; he does not turn away and back) */
   lane: 0.7, laneKeep: 0.5, laneSecs: 0.6,
-  /** a WALKING man keeps his opening through a mate crossing his line for `laneSecs` too (false = only a man stood still did: in a file on the move every
-   *  crossing dropped the job and the next deal handed it back, the gun going to and fro) */
-  laneWalk: true,
   /** Sam's gun within this of an opening he has a line to: his · what such an opening, and one a posted man has, still weighs (a spare man doubles up on it) */
   samDeg: 35, samK: 0.2, heldK: 0.1,
   /** the weights: a shut door against an open way · the rear · how fast nearness tells (m) */
@@ -169,7 +166,7 @@ export const COVER = {
  *  twitches too, but depot-four loses teammates with it on every seed set tried.
  *  Measured (tools/qa/playthrough.ts, the two four-man scenarios × 72 seeds, off → on): a stack's rear men's twitches 151 → 8, all twitches 397 → 214,
  *  won 113 → 116 of 144, teammates up 365 → 376 of 576 (inside the scatter). With `file` on as well: 10, 149, 117 and 335 (depot-four 207 → 180 of 288). */
-export const REAR = { settle: true, secs: 0.75, file: false };
+export const REAR = { settle: true, secs: 0.75, };
 
 export type OpeningKind = 'door' | 'gap' | 'mouth' | 'rear';
 /** One opening. `at`: its middle, chest high (a door: its frame's centre) · `n`: the unit line THROUGH it in plan (which way is beyond depends on who asks) ·
@@ -349,9 +346,6 @@ export class Cover {
   has(gd: Guard): boolean { const J = this.onOf(gd); return !!J && !J.off; }
   /** the opening his gun is on: dealt, or let go of and still his for the moment (REAR.settle) */
   private onOf(gd: Guard): CoverJob | undefined { return this.jobs.get(gd) ?? this.kept.get(gd)?.J; }
-  /** what he is on, in words ('' with nothing dealt) · the same as the tail of his row in the squad block (orders.ts: 'Red One · with you · on the server door') */
-  words(gd: Guard): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Cover.words', this, [gd]); if (__r !== RUST_PASS) return __r as any; } } const J = this.onOf(gd); return J && !J.off ? `on ${this.nameOf(J.o, gd.char.pos)}` : ''; }
-  tail(gd: Guard): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Cover.tail', this, [gd]); if (__r !== RUST_PASS) return __r as any; } } const w = this.words(gd); return w ? ` · ${w}` : ''; }
   /** one line for the console */
   summary(): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Cover.summary', this, []); if (__r !== RUST_PASS) return __r as any; } }
     if (!COVER.on) return 'cover: off';

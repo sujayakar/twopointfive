@@ -1,9 +1,11 @@
 // Written by tools/draw/gen.ts from rust/game_draw. To change a section, change it there.
 
 /** the stamp of the sections this was made from: a module of another stamp is refused (drawn.ts) */
-export const LAYOUT = 1841663473;
-/** each section's place: in the table the module answers with, and its bit in what a host asks for */
-export const enum Section { fog = 0, view = 1, sky = 2, head = 3, geo = 4, mat = 5, cut = 6, visible = 7, marks = 8, cells = 9, items = 10, info = 11, panes = 12, leaves = 13, lights = 14, men = 15, insts = 16, bones = 17, caps = 18, doorways = 19, emits = 20, kicks = 21, pushes = 22, sources = 23, anchors = 24, beams = 25, sounds = 26, footfalls = 27, rolls = 28, heard = 29, rims = 30, count = 31 }
+export const LAYOUT = 2093614525;
+/** what a host may ask for: what is made together is asked for together */
+export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, air = 2048, levelLook = 4096, snow = 8192, smoke = 16384, all = 32767 }
+/** each section's place in the table the module answers with */
+export const enum Section { fog = 0, view = 1, sky = 2, head = 3, geo = 4, mat = 5, cut = 6, visible = 7, marks = 8, cells = 9, items = 10, info = 11, panes = 12, leaves = 13, lights = 14, men = 15, insts = 16, bones = 17, caps = 18, doorways = 19, emits = 20, kicks = 21, pushes = 22, sources = 23, anchors = 24, beams = 25, sounds = 26, footfalls = 27, rolls = 28, heard = 29, rims = 30, fires = 31, fireTable = 32, decals = 33, decalKeys = 34, decalHead = 35, winds = 36, gusts = 37, heat = 38, air = 39, windRoofs = 40, roofs = 41, ceilings = 42, doorBoxes = 43, openPanes = 44, resets = 45, traffic = 46, dust = 47, feet = 48, things = 49, blasts = 50, snowWords = 51, smoke = 52, smokeAt = 53, smokeBricks = 54, count = 55 }
 
 /** the fog: one row */
 export const enum Fog {
@@ -77,50 +79,72 @@ export const enum View {
   at = 3,
   /** f32 × 3 */
   follow = 6,
-  /** f32: which way he aims, on the plan */
-  aimYaw = 9,
   /** f32 × 3: where his aim meets the world */
-  aim = 10,
+  aim = 9,
   /** u32: the view is another man's: nothing leans on the cursor */
-  spectating = 13,
+  spectating = 12,
   /** f32 × 3: the view is held off the follow point by this much (a peek round a wall's end), and kicked for this frame's picture by that much */
-  peek = 14,
+  peek = 13,
   /** f32 × 3 */
-  kick = 17,
+  kick = 16,
   /** u32: the tick cut the view to here: once each time the count moves */
-  cuts = 20,
+  cuts = 19,
   /** f32 × 3 */
-  cut = 21,
+  cut = 20,
   /** u32: a show or a level's script holds the view here: where it looks, and from how far and which way (0: nobody does) */
-  pinned = 24,
+  pinned = 23,
   /** f32 × 3 */
-  pin = 25,
+  pin = 24,
   /** f32 */
-  pinYaw = 28,
+  pinYaw = 27,
   /** f32 */
-  pinPitch = 29,
+  pinPitch = 28,
   /** f32 */
-  pinDistance = 30,
+  pinDistance = 29,
   /** u32: the tick turned the host's own view: 1 its yaw · 2 its pitch · 4 its distance · 8 where it looks, to these */
-  turned = 31,
+  turned = 30,
   /** f32 */
-  yaw = 32,
+  yaw = 31,
   /** f32 */
-  pitch = 33,
+  pitch = 32,
   /** f32 */
-  distance = 34,
+  distance = 33,
   /** f32 × 3 */
-  target = 35,
+  target = 34,
   /** u32: what a lesson does not let the hand do to the view: 1 turn it · 2 zoom it */
-  locks = 38,
+  locks = 37,
+  /** u32: the back key is the game's now: 1 it would put something away (a list, an open order menu, a running verb, a held throw, a gun's setup) · 2 a level's script has the view */
+  backs = 38,
+  /** u32: saves made of this game so far: moves when there is another */
+  saves = 39,
+  /** u32: what the game is set to, for a screen that sets it: hits do nothing to him, the men think, unlimited ammunition, it saves by itself, the wall hold's feel, walking into a wall takes it, the command key tapped twice calls the squad in */
+  god = 40,
+  /** u32 */
+  thinks = 41,
+  /** u32 */
+  ammo = 42,
+  /** u32 */
+  autosave = 43,
+  /** u32 */
+  wallFeel = 44,
+  /** u32 */
+  wallPress = 45,
+  /** u32 */
+  fallIn = 46,
+  /** u32: what each man is thinking is said over him */
+  labels = 47,
   /** u32: the run's end card is due: 1 it was lost, 2 won (0: not yet) */
-  ended = 39,
+  ended = 48,
+  /** u32: this run, for whoever keeps what was won: 1 its try has begun · 2 it is over (what there is to keep is asked: face_run_view) */
+  run = 49,
   /** f32: night vision's amount, and how hard he has just been hit */
-  night = 40,
+  night = 50,
   /** f32 */
-  hit = 41,
+  hit = 51,
+  /** u32: this game is the Team & kit picture: 1 staged, 2 nothing to stage (0: it is no picture) */
+  kit = 52,
   /** words a row */
-  row = 42,
+  row = 53,
 }
 
 /** the sky: one row */
@@ -359,10 +383,14 @@ export const enum Man {
   dry = 12,
   /** f32 × 3 */
   at = 13,
+  /** f32 × 3: where he is drawn standing: between the last two ticks, as his bones are */
+  feet = 16,
+  /** f32 × 3: … and where his head is drawn */
+  head = 19,
   /** f32 × 4: the sphere round his proxies */
-  bound = 16,
+  bound = 22,
   /** words a row */
-  row = 20,
+  row = 26,
 }
 
 /** a man's instance, as the skinning reads it: tint, bones' place · tint2, owner · wet coat · its knobs · the waterline, the parts he wears */
@@ -635,8 +663,12 @@ export const enum Heard {
   time = 0,
   /** f32: the rain's level where the listener stands */
   rain = 1,
+  /** f32: how tense the floor is, by the nerves of those who are not the player's own: what the score follows */
+  tension = 2,
+  /** u32: which run this is (a fresh one is the score's cue) */
+  run = 3,
   /** words a row */
-  row = 2,
+  row = 4,
 }
 
 /** a man of the team: the first row is the shown player's own */
@@ -645,14 +677,304 @@ export const enum Rim {
   id = 0,
   /** u32: 0 the first player's, 1 the red pair's, 2 the blue pair's, 3 the second player's */
   hue = 1,
-  /** u32: he is on his feet */
-  up = 2,
-  /** f32 */
-  light = 3,
   /** f32 × 3 */
-  at = 4,
+  at = 2,
   /** words a row */
-  row = 7,
+  row = 5,
+}
+
+/** a fire that burns, or that the fog's picture has burning still */
+export const enum Fire {
+  /** u32: its place among the level's fires, which is who it is */
+  ix = 0,
+  /** u32: it burns (else it is out, and only the fog's picture has it) */
+  lit = 1,
+  /** u32: its class under the fog: 0 drawn anywhere · 1 only where the team sees · 2 only where it does not */
+  fog = 2,
+  /** f32: its own number 0‥1 off where it stands */
+  seed = 3,
+  /** f32 × 3: its mouth and how wide: the middle of the glowing box's top, the flame's radius, the bed of coals' */
+  pos = 4,
+  /** f32 */
+  r = 7,
+  /** f32 */
+  bed = 8,
+  /** f32: how high a calm flame stands, how hot it burns, the clock it is drawn at, how its lamp stands to the authored one */
+  h = 9,
+  /** f32 */
+  heat = 10,
+  /** f32 */
+  time = 11,
+  /** f32 */
+  flick = 12,
+  /** f32 × 2: what leans the flame (capped), and the air at it as it blows */
+  wind = 13,
+  /** f32 × 3 */
+  blows = 15,
+  /** words a row */
+  row = 18,
+}
+
+/** the numbers every fire is drawn by: one row, on a level that has a fire */
+export const enum FireTable {
+  /** f32 × 16: fire.wgsl FireLook, in its order */
+  look = 0,
+  /** f32: how far off the view a flame is drawn, how many, the flame's height and how far the wind leans it */
+  drawR = 16,
+  /** f32 */
+  max = 17,
+  /** f32 */
+  height = 18,
+  /** f32 */
+  tall = 19,
+  /** f32 */
+  lean = 20,
+  /** f32 × 12: its smoke: on, up, radius, cells, density, temp, speed, push, jitter, every, view_r, lean */
+  smoke = 21,
+  /** f32 × 13: the flame as gas: on, up, radius, cells, density, temp, speed, push, jitter, every, view_r, keep, ease */
+  gas = 33,
+  /** f32 × 14: one column: up, radius, density, soot_ease, puff_every, puff_secs, puff_up, puff_radius, puff_off, puff_density, puff_temp, puff_speed, puff_push, puff_expand */
+  column = 46,
+  /** f32 × 3 */
+  soot = 60,
+  /** words a row */
+  row = 63,
+}
+
+/** who a record is, in the same order: the id of what made it (its tick; the arm in the top byte and its place among that tick's) */
+export const enum DecalKey {
+  /** u32 */
+  tick = 0,
+  /** u32 */
+  made = 1,
+  /** words a row */
+  row = 2,
+}
+
+/** what the page is told of the marks' buffer this frame: one row */
+export const enum DecalHead {
+  /** u32: a word of it moved: send it */
+  moved = 0,
+  /** u32: marks in the list, and of them drawn this frame */
+  count = 1,
+  /** u32 */
+  drawn = 2,
+  /** u32: entries of the cells' lists, and left out of them by their caps */
+  listed = 3,
+  /** u32 */
+  dropped = 4,
+  /** words a row */
+  row = 5,
+}
+
+/** a source of moving air */
+export const enum Wind {
+  /** u32: 0 a jet, 1 the storm */
+  kind = 0,
+  /** u32: 1 the storm is a field cut roof by roof · 2 the air of a fire */
+  says = 1,
+  /** u32: which particles it moves, a bit a kind (0: the usual) */
+  kinds = 2,
+  /** u32: the roofs it blows between: its first row in `wind_roofs`, and how many (0: its two rectangles) */
+  roofsAt = 3,
+  /** u32 */
+  roofs = 4,
+  /** f32 × 3 */
+  pos = 5,
+  /** f32 × 3 */
+  dir = 8,
+  /** f32 */
+  speed = 11,
+  /** f32 */
+  reach = 12,
+  /** f32 */
+  tanSpread = 13,
+  /** f32 */
+  r0 = 14,
+  /** f32 */
+  dMax = 15,
+  /** f32: NaN: not said */
+  floorY = 16,
+  /** f32 × 4 */
+  interior = 17,
+  /** f32 × 4 */
+  annex = 21,
+  /** f32 × 4: the sphere it reaches: middle, radius */
+  bound = 25,
+  /** words a row */
+  row = 29,
+}
+
+/** the weather's air: one row */
+export const enum Air {
+  /** f32: the wind's master (0: still air), how fast the solver's air answers it, and the particles' three numbers */
+  master = 0,
+  /** f32 */
+  relax = 1,
+  /** f32 × 3 */
+  knobs = 2,
+  /** f32: the storm: how fast it blows now, which way, its gust, and the share of its speed at the ground (0: no storm source) */
+  stormSpeed = 5,
+  /** f32 × 3 */
+  stormDir = 6,
+  /** f32 */
+  stormGust = 9,
+  /** f32: how far from a roof the storm's field has come in whole (m) */
+  stormLee = 10,
+  /** u32: a rain falls by the level's own roofs (`roofs`), else by the two rectangles */
+  levelRoofs = 11,
+  /** f32 × 4: the two rectangles */
+  interior = 12,
+  /** f32 × 4 */
+  annex = 16,
+  /** words a row */
+  row = 20,
+}
+
+/** the corners of a rectangle on the plan: x0 z0 x1 z1 */
+export const enum Rect {
+  /** f32 × 4 */
+  r = 0,
+  /** words a row */
+  row = 4,
+}
+
+/** the tick began a part of the picture again */
+export const enum Reset {
+  /** u32 */
+  tick = 0,
+  /** u32 */
+  serial = 1,
+  /** u32: 1 the level: every history · 2 the smoke · 4 the snow's blasts · 8 the things' marks · 16 the prints */
+  what = 2,
+  /** words a row */
+  row = 3,
+}
+
+/** peak opacity at its centre · × radius over its life · seconds to full opacity · × the softening where it meets a surface · the share of a crossing beam scattered toward the eye · × the cache's ambient on it */
+export const enum DustLook {
+  /** f32 */
+  opacity = 0,
+  /** f32 */
+  growth = 1,
+  /** f32 */
+  fadeIn = 2,
+  /** f32 */
+  soft = 3,
+  /** f32 */
+  wrap = 4,
+  /** f32 */
+  ambient = 5,
+  /** words a row */
+  row = 6,
+}
+
+/** a man, as what stands on the snow and breathes over it */
+export const enum Foot {
+  /** u32 */
+  id = 0,
+  /** u32 */
+  says = 1,
+  /** f32 × 3 */
+  pos = 2,
+  /** f32 × 3 */
+  vel = 5,
+  /** f32 */
+  yaw = 8,
+  /** f32 × 3 */
+  hips = 9,
+  /** f32 × 3 */
+  head = 12,
+  /** f32 × 3 */
+  chest = 15,
+  /** f32 × 3 */
+  footL = 18,
+  /** f32 × 3 */
+  footR = 21,
+  /** f32 × 3 */
+  toeL = 24,
+  /** f32 × 3 */
+  toeR = 27,
+  /** f32 × 3: where his head faces */
+  facing = 30,
+  /** words a row */
+  row = 33,
+}
+
+/** a part of a thing that moves over the ground: each of a prop's parts, a thrown thing, a chunk of debris */
+export const enum Thing {
+  /** u32: 0 a prop's part · 1 a thrown thing · 2 a chunk */
+  kind = 0,
+  /** u32 */
+  key = 1,
+  /** u32 */
+  part = 2,
+  /** u32: 1 at rest · 2 lying on something that is not the ground */
+  says = 3,
+  /** f32 × 3 */
+  c = 4,
+  /** f32 × 3 */
+  h = 7,
+  /** f32 */
+  yaw = 10,
+  /** f32 × 2: where the whole thing stands, its velocity and its turn (a prop's) */
+  at = 11,
+  /** f32 × 3 */
+  vel = 13,
+  /** f32 */
+  spin = 16,
+  /** f32: the whole thing's radius and weight, and how far over the floor this part's underside hangs */
+  radius = 17,
+  /** f32 */
+  mass = 18,
+  /** f32 */
+  foot = 19,
+  /** words a row */
+  row = 20,
+}
+
+/** a blast went off */
+export const enum SnowBlast {
+  /** u32 */
+  tick = 0,
+  /** u32 */
+  serial = 1,
+  /** f32 × 3 */
+  at = 2,
+  /** f32 */
+  radius = 5,
+  /** words a row */
+  row = 6,
+}
+
+/** what snow a static is, by its place: 0 none · 1 snow · 2 trodden · 3 old */
+export const enum SnowWord {
+  /** u32 */
+  w = 0,
+  /** words a row */
+  row = 1,
+}
+
+/** the grid's plan: one row, on a level that has one and knows its ways */
+export const enum SmokeHead {
+  /** u32: how many times the rows were made */
+  made = 0,
+  /** u32: the plan in bricks, along x and along z */
+  wide = 1,
+  /** u32 */
+  deep = 2,
+  /** words a row */
+  row = 3,
+}
+
+/** a brick that stands: four half-metre cells along x, then along z, then eight up */
+export const enum SmokeBrick {
+  /** f32 × 128: how much smoke is in each cell, in the solver's own unit as it is drawn */
+  rho = 0,
+  /** u32 × 32: a byte a cell: 1 = open toward +x · 2 = up · 4 = toward +z · 8 = asked */
+  open = 128,
+  /** words a row */
+  row = 160,
 }
 
 /** what a box may say it is made of, by its number in Rust */

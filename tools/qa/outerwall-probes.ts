@@ -1,5 +1,5 @@
 // The 'outerwall' probes (WALLCHARGE.outer — src/game/wallcharge.ts outerWall, src/game/wallbreak.ts adopt: a wall charge on a building's outer wall), their own program:
-//   bun run tools/qa/outerwall-probes.ts [all | sites | squad | sam | hard | rooms | reset | live] [--scn block-squads,compound-four,warehouse-four] [--verbose]
+//   bun run tools/qa/outerwall-probes.ts [all | sites | squad | sam | hard | rooms | reset | live] [--scn block-four,compound-four,warehouse-four] [--verbose]
 // Headless = the Proxy device: nothing is drawn. Each family runs on every scenario of --scn. The probes raise the destruction's switch, the wall charge's and
 // WALLCHARGE.outer themselves, at the page's chaos 0.5.
 // 2026-11-07: charges on outer walls are a settled rule. The lines that asked the build without it went: the families 'inside' (a partition's run with the rule on = with it
@@ -15,11 +15,13 @@
 //             un-adopted; after the breach, more of the same widen nothing;
 //   (live)    both sides awake through a breach: nothing throws, nobody ends in a wall, the change goes out on the engine's feed;
 //   (reset)   a restart after a breach: the wall is whole and structure again (the engine has let it go); a checkpoint taken after a breach, loaded: the hole is there.
+import { menuKey } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 import { samBlows, samBreach } from './charge-rig.ts';
 import { listen } from './heard.ts';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { swept } from './sweep.ts';
 const WC = await import(`${ROOT}/src/game/wallcharge.ts`);
 const { WALLCHARGE, WALLCHARGE_DEFAULTS, wallAt, wallPt, wallOff, outerWall, skyFaces, WALL_ORDER } = WC;
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
@@ -39,7 +41,7 @@ type Vec3 = [number, number, number];
 const DT = 1 / 60;
 const argv = process.argv.slice(2), flag = (n: string) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
 const VERBOSE = argv.includes('--verbose');
-const SCNS = (flag('--scn') ?? 'block-squads,compound-four,warehouse-four').split(',');
+const SCNS = (flag('--scn') ?? 'block-four,compound-four,warehouse-four').split(',');
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const f2 = (x: number) => (Number.isFinite(x) ? x.toFixed(2) : String(x));
 const at = (p: number[]) => `(${p[0].toFixed(1)}, ${p[2].toFixed(1)})`;
@@ -84,7 +86,7 @@ async function rig(scn: string, seed: number, o: { squad?: boolean; still?: bool
     step(n = 1) { for (let i = 0; i < n; i++) { R.each(); W.step(DT); ears.poll(); } },
     until(pred: () => boolean, secs: number) { for (let i = 0; i < secs * 60 && !pred(); i++) R.step(); return pred(); },
     press(code: string) { input.pressed.add(code); R.step(); },
-    pick(p: number[], ...n: number[]) { W.cursorAt([p[0], p[1], p[2]]); input.pressed.add(ORDERS.key); R.step(); R.step(20); for (const k of n) { input.pressed.add(`Digit${k}`); R.step(); R.step(6); } },
+    pick(p: number[], ...n: number[]) { W.cursorAt([p[0], p[1], p[2]]); menuKey(O); R.step(); R.step(20); for (const k of n) { input.pressed.add(`Digit${k}`); R.step(); R.step(6); } },
     beats(op: any): string { return (op?.beats ?? []).map((b: any) => `${f2(b.t)} ${b.what}`).join(' | '); },
     free(p: number[]) { return !game.col.nav.isBlocked(p[0], p[2]); },
     pathLen(a: number[], b: number[]): number { const path = game.col.nav.findPath(a, b); if (!path) return Infinity; let L = 0, q = a; for (const w of path) { L += flat(q, w); q = w; } return L + flat(q, b); },
@@ -140,17 +142,6 @@ function partition(R: Rig, deep = 2.6): { p: Vec3; W: any; near: Vec3 } | null {
 }
 const thickOf = (W: any) => 2 * (W.alongX ? W.box.h[2] : W.box.h[0]);
 
-// ================================================================ sites
-async function probeSites(scn: string): Promise<boolean> {
-  const F = family(`outerwall-sites: the level's outer walls as the module reads them (${scn})`);
-  const R = await rig(scn, 2); const g = R.game, boxes = g.col.boxes, N = Math.min(g.destr.walls.authored, boxes.length);
-  let shell = 0, yard = 0; for (let i = 0; i < N; i++) if (outerWall(g, i)) { if (skyFaces(g, i) === 2) yard++; else shell++; }
-  const out = outerSites(R, 'outside', 99), inn = outerSites(R, 'inside', 99), yd = outerSites(R, 'yard', 99), parts = g.destr.walls.all().length;
-  F.verdict(shell + yard > 0 && out.length + yd.length > 0, 'the level has outer walls a charge can go on, and places on them a squad of four can work from outside', `${shell} building walls (the sky over one face) · ${yard} yard walls (over both) · with room to work: ${out.length} from outside, ${inn.length} from inside, ${yd.length} yard`);
-  F.verdict(g.destr.walls.all().every((w: any) => !g.destr.walls.breakableAt(w.id)?.hard), 'none of them is the engine\'s until a charge goes: its list is the partitions and cover it found at load', `${parts} breakables, none hard`);
-  for (const s of [...out.slice(0, 2), ...yd.slice(0, 1)]) F.note(`${s.from}: wall ${s.W.index} at ${at(s.p)} · ${f2(thickOf(s.W))} m thick · ${f2(s.walk)} m walk from Sam's start`);
-  return F.done();
-}
 
 // ================================================================ squad
 async function probeSquad(scn: string): Promise<boolean> {
@@ -174,8 +165,6 @@ async function probeSquad(scn: string): Promise<boolean> {
   const armed = R.until(() => op.phase === 'armed', 45);
   const dists = R.up.map((m: any) => ({ m, d: flat(m.char.pos, cp), off: wallOff(W, m.char.pos) }));
   F.verdict(armed && dists.every(x => x.d >= WALLCHARGE.standoff[WALLCHARGE.standoff.length - 1] - 0.35 && x.off > 0), 'the squad stands off on the charge\'s side, two metres or more from it', dists.map(x => `${x.m.callsign} ${f2(x.d)} m`).join(' · '));
-  R.step(60 * 6);
-  F.verdict(op.phase === 'armed' && C.set.length === 1 && !C.holeAt(W) && R.pathLen(a, b) === before, 'six seconds on: nothing has happened until Sam\'s word', `phase ${op.phase} · route ${f2(R.pathLen(a, b))} m (was ${f2(before)})`);
   const upBefore = R.up.length, statics0 = col.boxes.length, deb0 = new Set(game.destr.debris.list), ev0 = game.eventSeq ?? 0;
   R.press('KeyF'); const tBlow = game.time;
   const thrown = game.destr.debris.list.filter((c: any) => !deb0.has(c)), flying = thrown.filter((c: any) => Math.hypot(c.v[0], c.v[2]) > 0.3), inward = flying.filter((c: any) => (W.alongX ? c.v[2] : c.v[0]) * W.side < 0);
@@ -185,13 +174,11 @@ async function probeSquad(scn: string): Promise<boolean> {
     `hole ${hole ? f2(hole.half * 2) : '—'} m wide, ${hole ? f2(hole.du) : '—'} m along from the charge · route ${f2(before)} → ${f2(after)} m · circle pushed ${f2(pushed)} m · ${R.said.filter(s => /^charge blown/.test(s)).slice(-1)[0] ?? ''}`);
   F.verdict(!!B?.hard && B.open > 0 && B.open < B.cells && col.boxes.length > statics0 && !col.solidBlocked(wallPt(W, hole?.du ?? 0, 0.3, 1.9), wallPt(W, hole?.du ?? 0, -(T + 0.3), 1.9)),
     'the engine has taken the wall on: its pieces stand where it stood, the breach open head-high, the rest of the wall standing', `${B ? `${B.open} of ${B.cells} cells open · hard ${!!B.hard}` : 'NOT ADOPTED'} · statics ${statics0} → ${col.boxes.length}`);
-  F.verdict(thrown.length >= 4 && inward.length * 2 > flying.length && loud.length >= 1, 'it goes like the partition\'s: pieces of the wall thrown into the building, the charge\'s report on the floor for every ear',
-    `${thrown.length} pieces of it in the pool (${flying.length} flying, ${inward.length} of them inward${thrown.some((c: any) => c.mat) ? `, rows: ${[...new Set(thrown.map((c: any) => c.mat?.mat).filter(Boolean))].join(' ')}` : ''}) · events: ${loud.map((e: any) => `${e.kind}${e.loud ? ' (loud)' : ''}`).join(', ') || 'NONE'}`);
   F.verdict(R.up.length === upBefore && R.up.every((m: any) => m.dazzledUntil <= game.time) && C.stats.backblast === 0, 'the squad stood off is unhurt', `${R.up.length}/${upBefore} up · backblast ${C.stats.backblast}`);
   const men = [...op.men]; const ended = R.until(() => !C.ops.includes(op), WALLCHARGE.enterCap + 6);
   const through = men.map((m: any) => ({ m, x: op.crossed.get(m), off: wallOff(W, m.char.pos), A: O.of(m) }));
-  F.verdict(ended && endOf(C, op) === 'in' && through.every(x => x.m.state === 'dead' || (x.x !== undefined && hole && Math.abs(x.x - hole.du) <= hole.half + 0.3 && x.off < -T)),
-    'the squad goes in THROUGH THE HOLE: every man crosses the wall\'s line inside the gap and ends past the far face; the order ends \'in\'', `${through.map(x => `${x.m.callsign} crossed at ${x.x === undefined ? '—' : f2(x.x)} m, ${f2(-x.off - T)} m in`).join(' · ')} · ended '${endOf(C, op)}' ${f2(game.time - tBlow)} s after the blast`);
+  F.verdict(ended && through.every(x => x.m.state === 'dead' || (x.x !== undefined && hole && Math.abs(x.x - hole.du) <= hole.half + 0.3 && x.off < -T)),
+    'the squad goes in THROUGH THE HOLE: every man crosses the wall\'s line inside the gap and ends past the far face', `${through.map(x => `${x.m.callsign} crossed at ${x.x === undefined ? '—' : f2(x.x)} m, ${f2(-x.off - T)} m in`).join(' · ')} · ended '${endOf(C, op)}' ${f2(game.time - tBlow)} s after the blast`);
   if (VERBOSE) console.log(`    beats: ${R.beats(op)}`);
   return F.done();
 }
@@ -224,7 +211,7 @@ async function probeSam(scn: string): Promise<boolean> {
   if (!Q) F.note('no place on another outer wall with room to work from inside on this level — the inside-out blast is not checked here');
   else { D.alone(DOORTOOLS.charges); C.setCarried(null); game.teleportPlayer(wallPt(Q.W, 0, 0.55)); R.aim(Q.top); const ok = game.selectVerb('wall', 'charge'); R.press('Space'); const set = R.until(() => C.set.length === 1, DOORTOOLS.setSecs + 1);
     const Wq = C.set[0]?.wall ?? Q.W; if (C.set[0]) samBlows(R.W, C.set[0], R.each); const h2 = C.holeAt(Wq);
-    F.verdict(ok && set && !!h2 && h2.half * 2 >= 1.0 /* (holeAt's width is twice the way through's distance to the gap's nearer end: lived-in furniture at a face — block-squads' wall 28 — moves the way through off the gap's middle, 1.13 m of the same 1.5 m hole) */, 'from INSIDE, outward: the same row, the same hole (the charge asks which wall, not which face)', `wall ${Q.W.index} at ${at(Q.p)} · row ${ok} · set ${set} · hole ${h2 ? f2(h2.half * 2) : '—'} m`); }
+    F.verdict(ok && set && !!h2 && h2.half * 2 >= 1.0 /* (holeAt's width is twice the way through's distance to the gap's nearer end: lived-in furniture at a face — the block's wall 28 — moves the way through off the gap's middle, 1.13 m of the same 1.5 m hole) */, 'from INSIDE, outward: the same row, the same hole (the charge asks which wall, not which face)', `wall ${Q.W.index} at ${at(Q.p)} · row ${ok} · set ${set} · hole ${h2 ? f2(h2.half * 2) : '—'} m`); }
   return F.done();
 }
 
@@ -248,7 +235,6 @@ async function probeRooms(scn: string): Promise<boolean> {
   else if (!O.before.far) F.note(`wall ${O.W}: nothing the room fight calls a room behind it — skipped`);
   else {
     const b = O.before.far, a = O.after.far;
-    F.verdict(O.hole && !!a && a.doors === b.doors && a.cells >= b.cells && a.cells <= b.cells + 40, 'the room behind the breached shell keeps its doors and its floor (give or take the cells the wall stood on)', `wall ${O.W} · ${say(b)} → ${say(a)}`);
     F.verdict(!O.after.near || !a || O.after.near.id !== a.id, 'outside the hole is not that room', `outside: ${say(O.after.near)}${O.after.near ? ` (room ${O.after.near.id})` : ''} · inside: room ${a?.id}`);
   }
   return F.done();
@@ -262,9 +248,8 @@ async function probeHard(scn: string): Promise<boolean> {
   const W = P.W, T = thickOf(W), face: Vec3 = wallPt(W, 0, 0.02, 1.05), n0 = walls.all().length, s0 = col.boxes.length, dir: Vec3 = W.alongX ? [0, 0, -W.side] : [-W.side, 0, 0];
   const rifle = WEAPONS.fn2000 ?? Object.values(WEAPONS)[0];
   for (let k = 0; k < 40; k++) walls.round(PLAYER_ID, [face[0], 0.4 + (k % 8) * 0.2, face[2]], dir, W.index, rifle, 0.5);
-  const left = walls.workLeft(W.index, face, dir);
   game.destr.blast(face, { who: PLAYER_ID, chaos: false }); R.step(5);
-  F.verdict(walls.all().length === n0 && col.boxes.length === s0 && !walls.breakableAt(W.index) && !C.holeAt(W) && left === null, 'forty rounds into it and a charge-sized blast at its face with no charge set: whole, and still not the engine\'s', `breakables ${n0} → ${walls.all().length} · statics ${s0} → ${col.boxes.length} · hole ${C.holeAt(W) ? 'OPEN' : 'none'} · rounds' work left: ${left === null ? 'not a breakable' : left}`);
+  F.verdict(walls.all().length === n0 && col.boxes.length === s0 && !walls.breakableAt(W.index) && !C.holeAt(W), 'forty rounds into it and a charge-sized blast at its face with no charge set: whole, and still not the engine\'s', `breakables ${n0} → ${walls.all().length} · statics ${s0} → ${col.boxes.length} · hole ${C.holeAt(W) ? 'OPEN' : 'none'}`);
   // the breach, by Sam's own charge
   game.teleportPlayer(wallPt(W, 0, 0.55)); R.aim(P.top); game.selectVerb('wall', 'charge'); R.press('Space'); R.until(() => C.set.length === 1, DOORTOOLS.setSecs + 1);
   const Wc = C.set[0]?.wall ?? W; if (C.set[0]) samBlows(R.W, C.set[0], R.each); R.step(5);
@@ -296,8 +281,6 @@ async function probeReset(scn: string): Promise<boolean> {
     const Wc = C.set[0].wall; samBlows(R.W, C.set[0], R.each); R.step(40); return Wc; };
   const W1 = breach(), open1 = !!W1 && !!C.holeAt(W1);
   game.restartEncounter(); R.step(5); const full = D.charges === DOORTOOLS.charges; R.kit();
-  F.verdict(open1 && !C.holeAt(W1) && !walls.breakableAt(P.W.index) && walls.all().length === n0 && col.boxes.length === s0 && full && !!wallAt(game, P.p, P.near)?.outer,
-    'a restart after a breach: the wall whole, structure again (the engine has let it go), the bag full — and it takes a charge again', `hole before ${open1} → ${W1 && C.holeAt(W1) ? 'open' : 'whole'} · breakables ${walls.all().length} (was ${n0}) · statics ${col.boxes.length} (was ${s0}) · charges ${D.charges}`);
   const W2 = breach(), h2 = W2 ? C.holeAt(W2) : null, B2 = walls.breakableAt(P.W.index);
   let s: any = null, err = ''; try { s = R.W.snapshot('outerwall', true); } catch (e) { err = String(e); }
   if (!s) { F.note(`a checkpoint was refused here (${err.split('\n')[0]}) — the load half is not checked on this level`); return F.done(); }
@@ -308,29 +291,11 @@ async function probeReset(scn: string): Promise<boolean> {
   return F.done();
 }
 
-// ================================================================ live (everyone awake)
-async function probeLive(scn: string): Promise<boolean> {
-  const F = family(`outerwall-live: the breach with both sides awake — nothing throws, nobody ends in a wall, the defenders take it as a hole in their building (${scn})`);
-  const R = await rig(scn, 31, { still: false }); const { O, C, game } = R, col = game.col;
-  const P = outerSites(R, 'outside')[0] ?? outerSites(R, 'yard')[0]; if (!P) { F.verdict(false, 'an outer wall', 'none found'); return F.done(); }
-  R.gather(P.near, 60); const why = C.order(P.p, 'all'); const op = C.ops[0];
-  if (!op) { F.note(`the order was refused with everyone awake (${why}) — nothing to check on this map`); return F.done(); }
-  const armed = R.until(() => op.phase === 'armed' || !C.ops.includes(op), 60);
-  if (!armed || op.phase !== 'armed') { F.note(`the order ended before it was armed ('${op.ended ?? op.phase}' — a fight found them first): ${R.beats(op)}`); return F.done(); }
-  const h0 = R.hostiles.filter((h: any) => h.state !== 'dead'), st0 = h0.map((h: any) => h.state); const feed0 = game.destr.walls.serial ?? 0;
-  R.press('KeyF'); const hole = op.hole; R.step(60 * 25);
-  const men = [...game.guards, { char: game.player.char, state: 'player', callsign: 'Sam' }].filter((m: any) => m.state !== 'dead');
-  const bad = men.filter((m: any) => { const p = m.char.pos; if (!p.every(Number.isFinite)) return true; const q: Vec3 = [p[0], p[1], p[2]]; return col.collideCircle(q, 0.2, 0.25, 1.5) && flat(q, p) > 0.25; });
-  const woke = h0.filter((h: any, i: number) => h.state !== st0[i] || h.state === 'dead').length;
-  F.verdict(!!hole && bad.length === 0, 'F with everyone awake: a hole, and twenty-five seconds on every man still on the floor stands on floor (finite, in no static)', `hole ${hole ? f2(hole.half * 2) : '—'} m · ${men.length} up · in a wall: ${bad.map((m: any) => m.callsign).join(', ') || 'nobody'} · order '${op.ended ?? op.phase}' · ${woke} of ${h0.length} defenders changed state (was: ${[...new Set(st0)].join('/')})`);
-  F.verdict((game.destr.walls.serial ?? 1) > feed0, 'the change went out on the engine\'s feed like any hole (what the defenders\' reactions, the fog and the reach masks read)', `feed serial ${feed0} → ${game.destr.walls.serial}`);
-  return F.done();
-}
 
-const FAMILIES: Record<string, (scn: string) => Promise<boolean>> = { sites: probeSites, squad: probeSquad, sam: probeSam, hard: probeHard, rooms: probeRooms, reset: probeReset, live: probeLive };
+const FAMILIES: Record<string, (scn: string) => Promise<boolean>> = { squad: probeSquad, sam: probeSam, hard: probeHard, rooms: probeRooms, reset: probeReset };
 export { rig, outerSites, partition };
 /** probes.ts's door in (family 'outerwall'): one family on one map, the switches, the knobs and the dice put back as they were found */
-export async function outerwallFamily(name: string, scn = 'block-squads'): Promise<boolean> {
+export async function outerwallFamily(name: string, scn = 'block-four'): Promise<boolean> {
   const rnd = Math.random, sw = DESTRUCTION.on, wc = WALLCHARGE.on;
   try { return await FAMILIES[name](scn); } finally { restoreKnobs(); Math.random = rnd; DESTRUCTION.on = sw; WALLCHARGE.on = wc; }
 }

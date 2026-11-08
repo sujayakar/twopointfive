@@ -21,7 +21,7 @@ import { goneWithTick } from './crossing';
  *  full magazine under an empty chamber that R refused ('no spare magazines') and nothing restarted — a gun that never fired again. On, R and the rule above
  *  take it: the magazine comes out, goes back in and the handle is racked (weapons.ts startReload). Off in the module and on the frozen stand
  *  (TPS_LASTMAG=1), on in the page (?nolastmag = the build as it was). */
-export const RELOAD = { auto: false, delay: 0.25, lastMag: false };
+export const RELOAD = { delay: 0.25, };
 
 /** would THIS player's `gun` (the one in his hands: the caller's own test) start its reload by itself this frame? */
 export function autoReloadDue(g: Game, pl: Player, gun: Firearm): boolean { return goneWithTick('autoReloadDue') as any; }

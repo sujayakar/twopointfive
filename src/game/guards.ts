@@ -10,8 +10,7 @@ import { Character, HOLD } from './character';
 import { manLeaves } from '../sim/men/store';
 import './character';
 import { BoxFlag } from '../scene/boxes';
-import { BAKE_Y, type StaticCollision, type LampRows } from '../scene/collision';
-import { SENSE, type LightField } from './sense';   // (read inside functions only: the light model's switch and its field)
+import { BAKE_Y } from '../scene/collision';
 import { FOG, fogThrough } from './fogofwar';
 import { Door } from './doors';
 import { rigLightPose, rigTorchPos, torchCarryDir, torchCarryWant, torchLightDef, RIG, sc20kLightPose } from './rigProps';
@@ -50,7 +49,7 @@ import { calmTorchDark, TORCH } from './calmtorch';
 import { darkFoeLit } from './darkfoe';
 import { powerOutLit } from './powerout';
 import { whistleSoft } from './whistle';
-import { hearPath, strokeLight } from './weather';
+import { hearPath } from './weather';
 import { attentionSideK } from './attention';
 import { tacticsPenalty } from './tactics';
 import { lanePenalty } from './lanes';
@@ -65,12 +64,10 @@ import './glass';
 import { shotEnergy } from './glasspen';
 import { kitPistol } from './kit';
 import './gunslots';   // (called inside startReloadBeat only)
-import { hourLight, moonLight } from './hours';
 import './handleside';
 import './gunhold';
 import { teamAtWalk } from './teampace';   // (teampace.ts: a teammate's walk is a share of the player's, and he runs only for a reason — all read inside functions)
 import { loadSeen } from './kitload';   // what a man's card weighs: his pace, the notice he builds, his footfall (1 each with its switch off)
-import './tapstep';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import './rails';   // (a tutorial mission's spared teammate is a man down to the enemy's eye: asked inside acquireFoe only)
 import { LIGHT_IN, ROW_BIT } from '../sim/lightshome';
@@ -78,7 +75,7 @@ import { RUST_PASS, RUST_SURFACE, crossToRust, goneWithTick } from './crossing';
 
 /** A/B switches for the AI passes (the QA probes flip them to print before / after off the same build; play never touches them): motion acuity in the sight
  *  gain, the search that deals hide spots and reads the renderer's light (off: the old sweep-and-wander), threshold discipline at doorways (off: straight through). */
-export const AI_TUNE = { motionAcuity: true, darkSearch: true, pieing: true };
+export const AI_TUNE = { motionAcuity: true, pieing: true };
 
 // ------------------------------------------------------------ guards
 /** HOW A 'glass' EVENT REACHES AN EAR (hearingCheck below, civilians.ts): the usual propagation from the event's own point — and, where the event carries the
@@ -182,39 +179,19 @@ export function bodySeen(g: Game, gd: Guard, o: Guard, around: boolean | number 
  *  torch beam squarely on it reads 0.7+, open floor between two panels at night ~0.35, a dark office 0); inside NEAR_M he all but trips on it — found in any light
  *  — and from NEAR to FAR the bar eases up from LIT_NEAR to LIT; SMOKE: eye → body transmittance under which the plume hides it (canSee's own line for a standing man) */
 export const BODY_LIGHT = { lit: 0.22, litNear: 0.04, nearM: 2.0, farM: 5.0, smoke: 0.3 };
-export const BODY_LIGHT_DEFAULTS = { ...BODY_LIGHT };
 /** the body's light meter, per body (the light ON it is whoever's-looking-independent): eased reading + when; and the last irradiance behind it for the panel */
 const bodyMeters = new SideMap<Guard, { vis: number; E: number; t: number }>('guards.bodyMeters');
-/** probe queries these tests may spend a frame between them (light points + smoke segments): they run inside the guards' update, AHEAD of Sam's own two meter
- *  queries in the probe's 32-slot frame, and a floor of bodies under three pairs of eyes must never crowd those out — past it a body keeps its eased reading /
- *  the CPU estimate and a pair its last transmittance for the frame */
-const BODY_PROBE_BUDGET = 6;
-const bodyProbeN = new SideMap<Game, { t: number; n: number }>('guards.bodyProbeN');
-function bodyProbeSlot(g: Game): boolean { let b = bodyProbeN.get(g); if (!b || b.t !== g.time) { b = { t: g.time, n: 0 }; bodyProbeN.set(g, b); } return b.n++ < BODY_PROBE_BUDGET; }
-/** What the meter reads at this body now (0‥1): probe query `bodyL<id>` at its trunk (its own capsules skipped), the CPU estimate until answered, eased at the meter's rate. */
+/** What the meter reads at this body now (0‥1): the light at its trunk, eased at the meter's rate. */
 export function bodyVisibility(g: Game, o: Guard): number {
   let m = bodyMeters.get(o); const now = g.time;
   if (m && m.t === now) return m.vis;
-  const c = o.char, id = c.id; const hp = c.bones.hips ?? c.pos;
+  const c = o.char; const hp = c.bones.hips ?? c.pos;
   const at: Vec3 = [hp[0], Math.max(hp[1], 0.12) + 0.22, hp[2]];   // the trunk of a man lying down: a hand's height over the pelvis (a query flush with the floor reads the floor's own shadow terminator)
-  const key = `bodyL${id}`; if (bodyProbeSlot(g)) g.lightQuery(key, at, id);
-  const r = g.lightAt(key);
-  const E = r !== undefined && Number.isFinite(r) ? r : lightEstimateAt(g, at);
+  const E = lightEstimateAt(g, at);
   const dt = m ? Math.min(0.1, Math.max(0, now - m.t)) : 0;
   const target = g.visibilityOf(E); const vis = m && dt > 0 ? damp(m.vis, target, 6, dt) : target;   // (first look: the reading as it stands — a torch swung onto it a frame ago has already lit it)
   m = { vis, E, t: now }; bodyMeters.set(o, m); return vis;
 }
-/** the switch + its numbers kept per machine (Tab ▸ Sandbox ▸ 'bodies found by light'), like the tactics' clocks */
-const BODY_LIGHT_LS = 'twopointsix.bodyLight';
-export function loadBodyLight(tune: { bodyLight: boolean }) {
-  try {
-    const j = JSON.parse(localStorage.getItem(BODY_LIGHT_LS) ?? 'null'); if (!j || typeof j !== 'object') return;
-    if (typeof j.on === 'boolean') tune.bodyLight = j.on;
-    for (const k of ['lit', 'litNear', 'nearM', 'farM'] as const) { const v = j[k]; if (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 20) BODY_LIGHT[k] = v; }
-  } catch { /* no storage (the harness, a locked-down page): the shipped values stand */ }
-}
-export function saveBodyLight(tune: { bodyLight: boolean }) { try { localStorage.setItem(BODY_LIGHT_LS, JSON.stringify({ on: tune.bodyLight, lit: BODY_LIGHT.lit, litNear: BODY_LIGHT.litNear, nearM: BODY_LIGHT.nearM, farM: BODY_LIGHT.farM })); } catch { /* nothing to keep it in */ } }
-export function resetBodyLight(tune: { bodyLight: boolean }) { tune.bodyLight = true; Object.assign(BODY_LIGHT, BODY_LIGHT_DEFAULTS); try { localStorage.removeItem(BODY_LIGHT_LS); } catch { /* none */ } }
 /** Panel / QA: what each unfound body on the floor reads right now — 'bodies ▸ Reyes 0.61 (E 0.412) · Novak 0.02 (E 0.001)' */
 export function bodyLightSummary(g: Game): string { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('bodyLightSummary', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } }
   const parts: string[] = [];
@@ -242,7 +219,7 @@ export function witnessKill(g: Game, victim: Guard, how: DownKind, by: DownBy) {
   const at = victim.char.bones.chest ?? v3.add(victim.char.pos, [0, 1.1, 0]);
   for (const o of g.guards) {
     if (o === victim || o.state === 'dead' || g.time < o.dazzledUntil || dozeAsleep(o)) continue;   // (doze.ts: a man asleep saw nothing)
-    if ((!g.playerInvisible && pointInView(g, o, at)) || o.sawPlayerThisFrame) o.witness.sawAct = { kind: how === 'wounded' ? 'shot' : how, victim: victim.callsign, t: g.time };   // (a man shot down WOUNDED was seen shot: the questions asked of the witness are the shooting's)
+    if ((!g.playerInvisible && pointInView(g, o, at)) || o.sawPlayerThisFrame) o.witness.sawAct = { kind: how, victim: victim.callsign, t: g.time };
   }
 }
 /** One compact line of a man's witness record for the panel / the QA probes ('' = nothing yet): peak awareness, what made him alert, what he heard, what he saw. */
@@ -430,20 +407,12 @@ export function standoffSummary(g: Game): string { return crossToRust('standoffS
 export function canSee(g: Game, gd: Guard): { visible: boolean; dist: number; inCone: boolean } { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('canSee', undefined, [g, gd]); if (__r !== RUST_PASS) return __r as any; } } g = viewOfBody(g, gd.char); return canSeeChar(g, gd, g.player.char, true); }   // (the player he has in mind: seats.ts)
 /** canSee against any man `pc` — Sam (`isPlayer`: his sandbox invisibility, his down flag, the smoke marched between this man's eye and HIS chest) or an AI man of a
  *  side hostile to this one (teams: alive; the same cone, near field, range and line of sight off the same bones; no smoke term — the probe's segment is to Sam
- *  only — and the magnesium in his eyes hides everybody). One test, so an operative sees a hostile exactly as a guard sees Sam — but for one thing, in a room
- *  fight only: a man with his long gun in the shoulder ALSO sees an AI man through the same eye laid along his aim, its cone ROOMFIGHT.sightsDeg (roomfight.ts
- *  ROOMFIGHT.sights for the teammates, on; sightsFoe for every other side, off). Sam is never read through it. */
+ *  only — and the magnesium in his eyes hides everybody). One test, so an operative sees a hostile exactly as a guard sees Sam. */
 export function canSeeChar(g: Game, gd: Guard, pc: Character, isPlayer: boolean): { visible: boolean; dist: number; inCone: boolean } { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('canSeeChar', undefined, [g, gd, pc, isPlayer]); if (__r !== RUST_PASS) return __r as any; } }
   const eye = gd.char.bones.head ?? v3.add(gd.char.pos, [0, 1.65, 0]);
   const look = v3.normalize(v3.lerp(gd.char.chestDir, gd.char.headDir(), 0.5)), E: Eye = { pos: eye, look, range: reachFor(g, gd, pc, isPlayer, eye), halfDeg: GUARD_EYE.halfDeg, nearM: GUARD_EYE.nearM, nearDeg: GUARD_EYE.nearDeg };   // (reachFor: a man standing in light is seen from past `range`; `range` itself otherwise)
   const through = eyeThrough(gd);   // (FOG.mates: a teammate's eye passes the thin things the fog's lines pass)
-  let r = eyeContact(g, E, pc, isPlayer, g.time < gd.dazzledUntil || pairGripped(g, gd) || dozeAsleep(gd), gd.smokeTrans, through);   // dazzled: eyes full of magnesium (pairorders.ts: or a teammate's hands on him; doze.ts: or asleep in his chair)
-  if (!r.inCone && r.dist < E.range && !isPlayer && (gd.team === 'operative' ? ROOMFIGHT.sights : ROOMFIGHT.sightsFoe) && fightLive(g)) {   // (roomfight.ts ROOMFIGHT.sights: a long gun in the shoulder and level along his aim — he ALSO sees what is along his sights, the same eye laid on the aim)
-    const c = gd.char, ax = Math.sin(c.gunYaw), az = Math.cos(c.gunYaw);   // (gunYaw: aimYaw — or, turning under weight, where the gun has got to)
-    let lv = c.gunDir[0] * ax + c.gunDir[2] * az;   // how level along his aim the bore lies, in plan
-    const lift = c.anim.sightsLift; if (lift > 0) { const gh = Math.hypot(c.gunDir[0], c.gunDir[2]); if (gh > 1e-6) lv *= Math.cos(lift) - c.gunDir[1] / gh * Math.sin(lift); }   // (character.ts MOVES.entryEyes: the entry dip's own pitch put back — the question asked of his gun line as if it were not down past a friend; 0 unless that switch is on and he is dipped)
-    if (c.anim.longShown === 'shoulder' && !c.anim.atWell && lv > SIGHTS_COS) { E.look = [ax, 0, az]; E.halfDeg = Math.min(E.halfDeg, ROOMFIGHT.sightsDeg); r = eyeContact(g, E, pc, false, g.time < gd.dazzledUntil || pairGripped(g, gd) || dozeAsleep(gd), gd.smokeTrans, through); }
-  }
+  const r = eyeContact(g, E, pc, isPlayer, g.time < gd.dazzledUntil || pairGripped(g, gd) || dozeAsleep(gd), gd.smokeTrans, through);   // dazzled: eyes full of magnesium (pairorders.ts: or a teammate's hands on him; doze.ts: or asleep in his chair)
   if (!isPlayer && r.visible && pairSmoke(g, gd.char, pc) < 0.3) r.visible = false;   // an AI man lost in a plume, by the same line as Sam (roomfight.ts marches the pair's segment; 1 = clear wherever it does not)
   return r;
 }
@@ -452,9 +421,6 @@ export const GUARD_EYE = { range: 16, halfDeg: 58, nearM: 3.5, nearDeg: 100,
   /** A LIT MAN IS SEEN FROM FURTHER (eyeReach below): on in the page (?nofarsight), off here and on the frozen harness stand (TPS_FARSIGHT=1) = every eye stops
    *  at `range` whatever the light, as it was. One rule for every man's eye on every man: a guard's on Sam, a defender's on a teammate, a teammate's on a defender */
   far: false,
-  /** A FAR GLIMPSE IS NOT YET A PLACE TO WALK TO (farFaint below; nothing without `far`): on in the page (?nofarcalm), off here and on the frozen harness stand
-   *  (TPS_FARCALM=1) = every glimpse past `range` writes his fix the frame it lands, as `far` first shipped */
-  farCalm: false,
   /** …the awareness from which a WARY man's glimpse from past `range` is his fix (under it he has not watched long enough to know where) */
   farFixAt: 0.5,
   /** …how far the eye reaches for a man in full light (m); the light on him (his meter, 0‥1) under which the reach is `range` and nothing changes, and from which it is whole */
@@ -490,8 +456,6 @@ export function eyeThrough(gd: Guard): number { return gd.team === 'operative' ?
 /** …and that man's own line to a point, asked bare (roomfight.ts: which teammate has a line to the man who fired, to a mate's target; the lost-behind-
  *  something line below): is anything his eye stops at between `a` and `b`. With the row off this is col.segmentBlocked(a, b), as each caller had it. */
 export function eyeBlocked(g: Game, gd: Guard, a: Vec3, b: Vec3): boolean { return crossToRust('eyeBlocked', undefined, [g, gd, a, b]) as any; }
-/** cos 30°: how level along his aim (in plan, the bore's own pitch counted) a shouldered long gun must lie for its owner's eyes to be on its sights */
-const SIGHTS_COS = 0.866;
 /** An eye — a man's (canSeeChar fills it off his bones) or a device's (devices.ts: a camera's lens): where it is, the unit direction it looks along, how far it
  *  reaches, its half-angle in plan (and the wider near-field one inside `nearM`), and — a lens only — the half-angle in ELEVATION about the look direction's
  *  own pitch (`vHalfDeg`; a man's cone is a flat wedge, floor to ceiling, and leaves it undefined). */
@@ -662,8 +626,8 @@ export const LIGHTS = { on: true, afterSecs: 2.5, hotSecs: 5, stepSecs: 4, tail:
   /** a man on his mark with his gun up who stands LIT himself (his own meter ≥ lookLit) and looks into the DARK (the floor along his gun, out to lookM or the
    *  first wall, under lookDark with the team's own lights left out) burns his light: the dark hides only the other side. Off = dark on every hold, as it was —
    *  four men holding a lit room were shot from a dark doorway eight metres off by a man none of them could see. SHIPS OFF, a row to try: it keeps a man
-   *  holding a taken room lit for as long as he holds (the hold is meant to be dark, and a lit man is seen), it reads the floor by the CPU's direct-light
-   *  estimate (no bounce, no moon unless sense.ts SENSE.moon) where everything else a man does by light goes by the meter, and two lit mates can keep each other's lights on */
+   *  holding a taken room lit for as long as he holds (the hold is meant to be dark, and a lit man is seen), it reads the floor by the game's light
+   *  on it (lightEstimateAt) where everything else a man does by light goes by the meter, and two lit mates can keep each other's lights on */
   lookDark: false, lookLit: 0.25, lookBelow: 0.12, lookM: 10,
   /** THE PLACE DECIDES (the footage: lights off in lit halls and rooms whatever the men are doing, on in the dark): a man who stands on lit floor with lit
    *  floor all along his gun — every metre out to `litM` (his light's reach) or the first wall, and every third metre down both edges of its cone — whose man,
@@ -682,7 +646,7 @@ export const LIGHTS = { on: true, afterSecs: 2.5, hotSecs: 5, stepSecs: 4, tail:
    *  an order that takes him away from him is walked) instead of carrying him, gun lowered, up into the man's light. The rule above (`litOff`) wants his own floor lit too; this is the other side of it: a man in a dark room with an enemy under a
    *  lamp outside the door shoots from the dark. Asked four times a second per man with a man in his eyes (or, for the light alone, out of them for under a
    *  second and a half: the blink roomfight.ts keeps his aim through — the walk is held only with the man in his eyes); the light is the other
-   *  rules' again the frame he has no such man, the walk within a quarter of a second. The estimate is the CPU's direct light with no bounce and no moon (unless sense.ts SENSE.moon): it errs toward calling HIM dark. No range limit, by measurement: held to the nine metres `litAt` is a sighting at, his light came up from the dark on the far man and the lens gave him away (624 against 653 of 864 teammates up over 432 night breaches). false = as it was: sent on
+   *  rules' again the frame he has no such man, the walk within a quarter of a second. No range limit, by measurement: held to the nine metres `litAt` is a sighting at, his light came up from the dark on the far man and the lens gave him away (624 against 653 of 864 teammates up over 432 night breaches). false = as it was: sent on
    *  past Sam at a man under a lamp, his light came up with the word and he walked at him with his gun down (the night breach's last hunt) */
   litMan: true,
   /** NOT INTO THE WALL AT HIS MUZZLE (wallDark, below, has the rule): `wallOff` the switch — off here, on in the page (host/profile.ts; ?walllight=0 puts it
@@ -925,77 +889,13 @@ export function crossesDoor(a: Vec3, b: Vec3, d: Door): { t: number; side: 1 | -
 
 
 
-/** The CPU's estimate of the renderer's light meter at world point P (probe.wgsl: the best, over the six axis normals, of the luminance of the SHADOWED DIRECT
- *  irradiance) — every enabled analytic light the engine holds this frame (fixtures' area lights, lamps, torches and weapon lights, the beacons, muzzle flashes)
- *  through the shader's own terms (evalLight: 1/max(d², r²), the range window, the spot cone's smoothstep, the panel's emitter cosine, the receiving cosine),
- *  shadowed by one segment test against the statics and the door leaves (collision.ts — the CPU's stand-in for occluded()). What it has not got, named: no
- *  bounce (the probe adds the radiance cache's; a room lit only round a corner reads darker here than on screen), no moon unless sense.ts SENSE.moon says
- *  (kind 2: unshadowed it would light everybody — hours.ts moonLight gives it the sun's one shadow test), no bodies' shadows (capsules are GPU-side), no smoke, no fixture flicker. Used for one thing: how lit
- *  an AI TARGET is to an AI eye (unitLightMeter) when the renderer has not answered — headless always, the browser's first frame or two. Sam's meter reads it
- *  only with the senses on the CPU (sense.ts SENSE.cpu, game.ts lightMeter). ~one segment test per light in range: a few dozen per target per frame.
- *  `field` = the light model (sense.ts SENSE.bounce), where one stands: each lamp is then dimmed by the grid's smoke on its way, and the bounce of the
- *  square metre the point stands in is added. null = the estimate as above, whatever the switch says (the error tool asks both). `moon` = the level's
- *  moon is in it too (the switch's word unless the asker says). `leave` = lamps of the level's own the asker leaves out, by what feeds them
- *  (sim/lightshome.ts ROW_BIT: a sleeper's face leaves the screens'). */
-export function lightEstimateAt(g: Game, P: Vec3, skipOwner?: (owner: number) => boolean, steadyOnly = false, field: LightField | null = lightField(g), moon: boolean = SENSE.moon, leave = 0): number {
-  // (the lamps are one question in several calls, and the sun's, the moon's and the stroke's lines follow it: asked outside a tick — an order given
-  //  between ticks prices its walk by the light of the floor — the whole of it stands in one window over the module's copy, scene/collision.ts window)
-  return g.col.mirror.live ? lightEstimateIn(g, P, skipOwner, steadyOnly, field, moon, leave) : g.col.window(() => lightEstimateIn(g, P, skipOwner, steadyOnly, field, moon, leave));
-}
-function lightEstimateIn(g: Game, P: Vec3, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean, field: LightField | null, moon: boolean, leave: number): number {
-  const acc = [0, 0, 0, 0, 0, 0];
-  lampsOn(g, P, skipOwner, steadyOnly, acc, field, leave);   // (the lamps: one question a point to the Rust module, rust/sim/src/light.rs)
-  hourLight(g, P, acc);   // the level started at another hour (hours.ts): its sun and its sky on the same six faces — nothing at night
-  if (moon) moonLight(g, P, acc);   // …and at night the moon where it has a line to P (sense.ts SENSE.moon; the error tool asks both ways)
-  if (!steadyOnly) strokeLight(g, P, acc);   // a stroke of lightning under a picked weather (weather.ts): the renderer's meter reads it, so its stand-in does — nothing with no weather picked
-  const direct = Math.max(acc[0], acc[1], acc[2], acc[3], acc[4], acc[5]);
-  return field ? direct + field.grid.glowAt(g.col, P) : direct;   // (the light that comes round reaches every face alike: it is added to the brightest)
-}
-/** THE LIGHT MODEL'S FIELD for this game (sense.ts SENSE.bounce): its own smoke, where the senses are the game's, the switch is up and a grid stands.
- *  With it the estimate above has the smoke's shadow on every lamp and the light that comes round; null = the estimate as it always was. */
-export function lightField(g: Game): LightField | null { const C = g.cpuSmoke; return SENSE.cpu && SENSE.grid && SENSE.bounce && C.grid && C.grid.stands ? C as LightField : null; }
-type Lamp = Game['engine']['lights']['lights'][number];
-/** WHICH OF THE LAMPS NO FIXTURE FEEDS IS ONE OF A LIGHT QUESTION'S (a man's torch, a flash, a tracer's lamp): on, not the moon,
- *  not one of an owner the asker leaves out, and, to who asks what the PLACE lights (`steadyOnly`, LIGHTS.litMan), nobody's passing flash: a round's
- *  impact, a tracer's lamp, a stun charge. The level's own lamps have these gates where they stand, in the module (rust/sim/src/light.rs `row`: a
- *  blackout beacon sweeping past is passing by its row's own bit). */
-function lampAsked(l: Lamp, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean): boolean {
-  if (!l.enabled || l.intensity <= 0 || l.kind === 2 || (skipOwner && l.owner && skipOwner(l.owner))) return false;
-  return !(steadyOnly && (l.ttl >= 0 || l.transient));
-}
-/** what a light question says of the level's own lamps (collision.ts LampRows): this game's rows, less the passing ones and each as its steady self to
- *  who asks what the PLACE lights (a fixture somebody flickers is its authored self there), less whatever else the asker leaves out */
-const rowsOf = (g: Game, steadyOnly: boolean, leave: number): LampRows => ({ st: g.lightHome.block, leave: steadyOnly ? leave | ROW_BIT.passing : leave, steady: steadyOnly });
-/** A LIGHT QUESTION'S OWN LAMPS written to the module (collision.ts lamp), each as the question takes it and with how many of the level's rows stand
- *  before it in the list: the module reads those where they stand and takes the two as one list in the list's order (light.rs `each`). The rows are
- *  the rows' in that order (sim/lightshome.ts stand), and a list that is not is a mistake thrown by name.
- *  `P`: a lamp whose reach cannot hold that point is not sent (a lamp further off along one axis than its range is further off than its range: the
- *  sum's own first test would pass it by). False = no question stands and the table is full: the sweep's (steadyLamps). */
-function writeLamps(g: Game, col: StaticCollision, P: Vec3 | null, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean): boolean {
-  const lights = g.engine.lights.lights; let rows = 0;
-  for (let i = 0; i < lights.length; i++) {
-    const l = lights[i];
-    if (l.row !== undefined) { if (l.row !== rows) throw new Error(`light: the lamp '${l.name}' is row ${l.row} of the level's lights and stands after ${rows} of them in the engine's list: the rows are that list's order (sim/lightshome.ts stand)`); rows++; continue; }
-    if (!lampAsked(l, skipOwner, steadyOnly)) continue;
-    const sp = steadyOnly ? l.steady : undefined, lp = sp ? sp.pos : l.pos, R = l.range;
-    if (P) { const dx = lp[0] - P[0], dy = lp[1] - P[1], dz = lp[2] - P[2]; if (dx > R || -dx > R || dy > R || -dy > R || dz > R || -dz > R) continue; }
-    if (!col.lamp(lp, R, sp ? sp.radius : l.radius, l.kind, l.dir, l.outerDeg, l.innerDeg, l.color, sp ? sp.intensity : l.intensity, rows)) return false;
-  }
-  return true;
-}
-const CARRIED = (): boolean => true;
-/** THE LAMPS THE LIGHT THAT COMES ROUND IS SWEPT FROM (glow.rs): what the PLACE lights, less every lamp somebody carries (it moves faster than a sweep,
- *  and lights a man directly in the estimate). The level's own are its rows, read by the module where they stand: this writes the few of nobody's
- *  fixture and answers with how the rows are read. False = more of those than the module's table holds: the field stands as it was. */
-export function steadyLamps(g: Game, col: StaticCollision): LampRows | false { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('steadyLamps', undefined, [g, col]); if (__r !== RUST_PASS) return __r as any; } } return writeLamps(g, col, null, CARRIED, true) && rowsOf(g, true, 0); }
-/** THE LAMPS' PART OF lightEstimateAt: the shadowed direct light of every lamp, onto the six faces in `acc`. The Rust module's (rust/sim/src/light.rs):
- *  the level's own lamps are read where they stand and the question's own are written, and the module sums the two as one list in the engine's order, in
- *  as many parts as the written ones need (collision.ts lamp). A lamp there: the shader's own terms (1/max(d², r²), the range window, the spot
- *  cone's smoothstep, the panel's emitter cosine, the probe's floor for a light worth a shadow ray), then one line to it — a wall, a partition, a desk,
- *  a shut leaf between him and it: dark from that one — and the receiving cosine on each face. The smoke's shadow (`field`, SENSE.bounce) is the grid's
- *  cells along that very line and, where the grid cannot answer, the field's own blobs (smoke.rs). A grid nothing was let out into dims nothing: not asked. */
-function lampsOn(g: Game, P: Vec3, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean, acc: number[], field: LightField | null, leave: number): void {
-  const col = g.col; col.lampsBegin(P, field !== null && field.grid.fed ? field : null, SENSE.smoke, rowsOf(g, steadyOnly, leave)); writeLamps(g, col, P, skipOwner, steadyOnly); col.lampsOn(acc);
+/** THE LIGHT THAT STANDS ON A POINT, as the Rust game has it (rust/game_rules/src/guards light_at): for a preview on the page and for a tool, between ticks; no rule
+ *  asks it here. `skipOwner`: whose carried lamps are left out · `steadyOnly`: what the PLACE lights, with nothing that passes · `leave`: lamps of the level's own left
+ *  out, by what feeds them (sim/lightshome.ts ROW_BIT). It applies nothing. With no Rust game under it, it throws by name (sense.ts senseTool). */
+export function lightEstimateAt(g: Game, P: Vec3, skipOwner?: (owner: number) => boolean, steadyOnly = false, leave = 0): number {
+  const owners: number[] = [];
+  if (skipOwner) for (const l of g.engine.lights.lights) if (l.owner && !owners.includes(l.owner) && skipOwner(l.owner)) owners.push(l.owner);
+  return g.ask.light(P, owners, steadyOnly, leave);
 }
 
 // ------------------------------------------------------------ the right hand: what his state puts in it, what is actually there, and the reload beat
@@ -1403,7 +1303,6 @@ export function spawnUnit(g: Game, o: UnitOpts): Guard { { const __s = RUST_SURF
 /** everything of a unit that lives outside the Guard object, taken back (despawnUnit / resetGuards): his weapon light out of the engine's list, his meter keys forgotten */
 function releaseUnit(g: Game, gd: Guard) {
   g.engine.lights.remove(gd.flashlight);
-  g.lightForget(`unitC${gd.char.id}`); g.lightForget(`unitH${gd.char.id}`);
 }
 export function despawnUnit(g: Game, gd: Guard): boolean { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('despawnUnit', undefined, [g, gd]); if (__r !== RUST_PASS) return __r as any; } }
   if (!gd.unit) return false;

@@ -28,7 +28,7 @@ pub fn game_on_door_event(g: &mut crate::game::Game, e: crate::doors::DoorEvent)
             if e.level < 1.0 { audio_play_rate(g, "doorBash", e.pos, 0.6, 1.15); } else { audio_play(g, "doorBash", e.pos, 0.9); }
         }
         DoorSound::Rattle => audio_play(g, "doorRattle", e.pos, 0.35 + 2.0 * e.level),
-        DoorSound::Pick => { let rate = 0.9 + crate::math_dice::sim_random(g) * 0.25; audio_play_rate(g, "lockPick", e.pos, 0.5, rate); }
+        DoorSound::Pick => { let rate = 0.9 + crate::dice::draw_world(g, "game::game_on_door_event#1") * 0.25; audio_play_rate(g, "lockPick", e.pos, 0.5, rate); }
         DoorSound::Unlock => audio_play(g, "lockOpen", e.pos, 0.4 + 1.3 * e.level),
         DoorSound::Kick => {
             audio_play_rate(g, "doorBash", e.pos, 1.0, 0.9);
@@ -118,7 +118,7 @@ pub fn game_on_prop_event(g: &mut crate::game::Game, e: crate::props::PropEvent)
     }
     if let Some(pl) = crate::seats::man_by_id(g, e.who) { g.pl[pl].noise = m::max(g.pl[pl].noise, e.level); }
     let (thud_rate, scrape_rate) = { let t = &g.tab.props_prop[e.prop].tune; (t.thud_rate, t.scrape_rate) };
-    let jitter = 0.95 + crate::math_dice::sim_random(g) * 0.1;
+    let jitter = 0.95 + crate::dice::draw_world(g, "game::game_on_prop_event#1") * 0.1;
     if e.sound == PropEventSound::Thud {
         audio_play_rate(g, "propThud", e.pos, v3::clamp(0.35 + 0.15 * e.speed, 0.3, 1.0), thud_rate * jitter);
         crate::destruction::destruction_thud(g, e.pos, Some(0.4 + 0.3 * e.speed), Some(e.who));
@@ -146,7 +146,6 @@ pub fn game_reset_guards(g: &mut crate::game::Game) {
     crate::seats::each_seat(g, &mut |v: &mut Game| {
         crate::close::close_reset(v);
         crate::stalk::stalk_reset(v);
-        crate::tapstep::tap_reset(v);
     });
     crate::roomfight::room_fight_reset(g);
     crate::cover::cover_reset(g);
@@ -173,11 +172,6 @@ pub fn game_escalate(g: &mut crate::game::Game) {
 /// Panel: straight back to calm. (game.ts Game.standDown)
 pub fn game_stand_down(g: &mut crate::game::Game) {
     crate::guards::stand_down_escalation(g);
-}
-
-/// Panel: the human shield's standoff. (game.ts Game.standoffSummary)
-pub fn game_standoff_summary(g: &mut crate::game::Game) -> String {
-    crate::guards::standoff_summary(g)
 }
 
 /// Panel: what each unfound body reads on the light meter. (game.ts Game.bodyLightSummary)
@@ -291,7 +285,7 @@ pub fn game_clear_nearest_room(g: &mut crate::game::Game) { crate::guards::force
 pub fn game_follow_pos(g: &mut crate::game::Game, at: Option<V3>) -> V3 {
     let gd = if g.spectate >= 0.0 { g.guards.get(g.spectate as usize).copied() } else { None };
     if let Some(gd) = gd { let c = g.gd[gd].ch; return g.ch[c].pos; }
-    if let Some(p) = crate::rails::rails_look(g) { return p; }
+    if let Some(p) = crate::rails::rails_look(g, &crate::seats::here(g)) { return p; }
     if let Some(a) = at { return a; }
     let c = g.pl[g.player].ch;
     g.ch[c].pos
@@ -353,7 +347,7 @@ pub fn game_set_loadout(g: &mut crate::game::Game, with_rifle: bool) {
 }
 
 /// Was this fixture's switch on in the level as authored.   (game.ts authoredOn)
-pub fn game_authored_on(g: &mut crate::game::Game, t: FixtureId) -> bool { crate::sim_lightshome::fixture_authored(g, t) }
+pub fn game_authored_on(g: &crate::game::Game, t: FixtureId) -> bool { crate::sim_lightshome::fixture_authored(g, t) }
 
 /// The lights' rows stood on the list as it is: as the level is built, and again when a fixture is hung after that.   (game.ts standLights)
 pub fn game_stand_lights(g: &mut crate::game::Game) {
@@ -380,13 +374,9 @@ pub fn game_reset_level_state(g: &mut crate::game::Game) {
     crate::glassbreak::glass_break_reset(g);   // (before the destruction's: the walls' nav re-bake in there must see whole panes)
     crate::destruction::destruction_reset(g);
     crate::shards::glass_shards_reset(g);
-    crate::wet::clear_wet_prints(g);
     crate::snow_blast::clear_snow_blast(g);
     crate::snow_marks::clear_snow_marks(g);
-    if let Some(mut t) = g.snow_tracks.take() {   // (the stub takes g and the tracks inside it: out of g for the call)
-        crate::snow_tracks::clear_snow_tracks(g, &t);
-        g.snow_tracks = Some(t);
-    }
+    g.out.push(crate::out_events::OutEvent::ClearSnowTracks);   // (the prints are the picture's: the game says they go, on a level with them or not)
     crate::hours::hour_after_reset(g);
     crate::air_dust::air_dust_reset(g);
 }
@@ -430,7 +420,6 @@ pub fn game_restart(g: &mut crate::game::Game, said: Option<&str>) {
 /// Restart the encounter: a fresh Player at the insertion point with full kit, fresh Guards on their routes, lights repaired, the level as authored.   (game.ts restartEncounter)
 pub fn game_restart_encounter(g: &mut crate::game::Game) {
     crate::math_dice::use_dice(g);
-    crate::sensors::sensors_own_reset(g);
     crate::quiet::quiet_mission_current(g);
     g.stats.cleanrestart.restarts += 1;
     g.stats.cleanrestart.lines += g.messages.len() as i32;
@@ -478,7 +467,7 @@ pub fn game_restart_encounter(g: &mut crate::game::Game) {
     game_clear_aftermath(g);
     crate::smoke_types::smoke_system_like_clear_all(g);
     crate::out_events::push_smoke_system_like_clear_all(g);   // (game.ts:1505: the host's solver hears it too)
-    if g.cpu_smoke.grid.is_some() { crate::sense::smoke_grid_renew(g); }
+    crate::sense::smoke_renew(g);
     g.engine.host_books = None;
     for &s in &seats {
         crate::seats::with_seat(g, s, &mut |g| { g.hover = None; g.interactables = Vec::new(); g.nearby = Vec::new(); g.act = None; });
@@ -585,10 +574,9 @@ pub fn game_host_seat(g: &crate::game::Game) -> SeatId { g.local_seat.unwrap_or(
 
 /// The world asked aside: `fn_` leaves nothing on the game's scratch.   (game.ts aside)
 pub fn game_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
-    // (a fresh table each ask: game::AsideOwn kept only the lens. An empty table is a clean one, boxes.ts rayAside, collision.ts aside)
-    let mut ray_own = crate::scene_boxes::BoxWorldRayAsideOwn::zeroed();
+    // (a fresh table each ask: game::AsideOwn kept only the lens. An empty table is a clean one, collision.ts aside)
     let mut col_own = crate::scene_collision::AsideOwn::zeroed();
-    crate::scene_boxes::box_world_ray_aside(g, &mut ray_own, &mut |g| crate::scene_collision::aside(g, &mut col_own, &mut *fn_))
+    crate::scene_collision::aside(g, &mut col_own, fn_)
 }
 
 /// A lens of the host's to put a record's view on while it asks aside (cmd.ts loadLens): scratch, in no snapshot.   (game.ts asideLens)

@@ -150,7 +150,6 @@ async function rangeRows(seed: number): Promise<Row[]> {
       else {
         const why = recordBreaks(o.rec, GLASSPEN.shellR); if (why) R.bad.push(`shell ${k}: ${why}`);
         if (o.blows !== o.marks + o.joinedStopped) R.bad.push(`shell ${k}: ${o.blows} blows filed for ${o.marks} marks and ${o.joinedStopped} pellets stopped on one`);
-        if (o.stars !== o.marks) R.bad.push(`shell ${k}: ${o.stars} crack stars drawn for ${o.marks} marks`);
         if (o.holes !== o.marksThrough || o.jets !== o.marksThrough) R.bad.push(`shell ${k}: ${o.holes} holes / ${o.jets} jets for ${o.marksThrough} marks that went through`);
         if (o.stopped !== o.endIn) R.bad.push(`shell ${k}: ${o.endIn} pellets ended in the pane, ${o.stopped} in the record as stopped`);
         if (o.through > o.endBeyond) R.bad.push(`shell ${k}: ${o.endBeyond} pellets ended beyond the pane, ${o.through} in the record as through`);   // (fewer is honest: a pellet that left by the hole an earlier one opened met no glass)

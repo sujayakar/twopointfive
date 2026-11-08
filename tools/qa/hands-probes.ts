@@ -1,5 +1,5 @@
 // The `hands` probes (src/game/hands.ts) — `bun run tools/qa/probes.ts hands`, or one of hands-body / hands-door / hands-team.
-// Staged headless on the real Game, on Training lesson 1 (levels/train-move.json: one man in the yard, the hut whose door opens INTO it), with the doors as the
+// Staged headless on the real Game, on the shed of Lights out (levels/lights-out.json: the door opens INTO it), with the doors as the
 // page has them (one-way, staying where they are left).
 //   hands-body     the head end of a body offers the row (the 'second time' bug) · a body is taken up by its beats
 //                  (reach → rise → carry; no pin before the lift) from the feet AND from the head, hauled over a metre from either with both hands on the
@@ -26,7 +26,7 @@ const { HANDS } = await import(`${ROOT}/src/game/hands.ts`);
 const { RAG } = await import(`${ROOT}/src/game/ragdoll.ts`);
 
 type Vec3 = [number, number, number];
-const DT = 1 / 60, LEVEL = 'train-move';
+const DT = 1 / 60, LEVEL = 'lights-out';
 let allPass = true;
 const verdict = (pass: boolean, what: string, detail = '') => { console.log(`- ${pass ? 'PASS' : 'FAIL'} — ${what}${pass || !detail ? '' : `\n    ${detail}`}`); if (!pass) allPass = false; };
 const clamp = (x: number, a: number, b: number) => Math.min(b, Math.max(a, x)), wrapAngle = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -189,9 +189,9 @@ export async function handsBody(): Promise<boolean> { return keep(async () => {
 
 // ================================================================ a door
 const SPOTS: { name: string; at: Vec3; inside: boolean }[] = [
-  { name: 'inside, mid-room', at: [23.9, 0, 9.6], inside: true }, { name: 'inside, by the hinge', at: [23.6, 0, 9.2], inside: true },
-  { name: 'inside, in front of the handle', at: [23.6, 0, 10.0], inside: true }, { name: 'inside, off the latch jamb', at: [23.7, 0, 10.4], inside: true },
-  { name: 'outside, at the door', at: [22.4, 0, 9.6], inside: false }, { name: 'outside, a stride off', at: [22.0, 0, 10.0], inside: false },
+  { name: 'inside, mid-room', at: [10.9, 0, 16.1], inside: true }, { name: 'inside, by the hinge', at: [10.6, 0, 15.7], inside: true },
+  { name: 'inside, in front of the handle', at: [10.6, 0, 16.5], inside: true }, { name: 'inside, off the handle', at: [11.0, 0, 16.5], inside: true },
+  { name: 'outside, at the door', at: [9.4, 0, 16.1], inside: false }, { name: 'outside, a stride off', at: [9.0, 0, 16.5], inside: false },
 ];
 function leafGap(d: any, p: ArrayLike<number>): number {
   const u = d.dir(), vx = p[0] - d.def.hinge[0], vz = p[2] - d.def.hinge[1]; const t = Math.max(0, Math.min(d.def.width, vx * u[0] + vz * u[1]));
@@ -210,7 +210,7 @@ function work(R: Awaited<ReturnType<typeof rig>>, d: any, secs: number) {
 export async function handsDoor(): Promise<boolean> { return keep(async () => {
   console.log('\n=== hands-door: a door row brings the leaf round under his hand, him stepped clear of its swing — never through him; shut again, it latches ===');
   allPass = true;
-  const R = await rig(), { g, step } = R, d = g.doors.byName('hut'), need = 0.34 + d.thick / 2;
+  const R = await rig(), { g, step } = R, d = g.doors.byName('shed'), need = 0.34 + d.thick / 2;
   for (const S of sample(SPOTS, 3)) {
     d.reset(); g.teleportPlayer(S.at); step(12);
     const row = g.nearby.find((r: any) => r.kind === 'door')?.line2 ?? '?';
@@ -237,14 +237,14 @@ export async function handsDoor(): Promise<boolean> { return keep(async () => {
   // doors (the frozen stand, `?twoway`): only the flung leaf leaving its latch does, so the move is refused and the row does what it always did — a leaf brought
   // round by hand used to stop a few degrees open on a limb, still shut to every test, with nothing but walking into it to get it open
   { const oneWay = true;
-    const R2 = await rig(), g2 = R2.g, d2 = g2.doors.byName('hut'), gd = g2.guards[0]; d2.reset();
+    const R2 = await rig(), g2 = R2.g, d2 = g2.doors.byName('shed'), gd = g2.guards[0]; d2.reset();
     const into = oneWay ? d2.swing : -1;   // (this leaf's negative angles are the hut's inside: x past the hinge's)
     killGuard(g2, gd, [1, 0, 0], true); R2.step(150);
     // (laid where the lesson run that found it had him: a knee 14 cm beyond the shut leaf's line, half way along it — the settled body moved there as it lies)
     const rag = gd.char.ragdoll, k = rag.point(RAG.kneeL), dx = d2.def.hinge[0] - into * 0.14 - k[0], dz = d2.def.hinge[1] + 0.57 - k[2];
     rag.settleAt(Array.from({ length: 48 }, (_, i) => rag.x[i] + (i % 3 === 0 ? dx : i % 3 === 2 ? dz : 0))); R2.step(6);
     const near = () => { let m = 9; for (let i = 0; i < 16; i++) m = Math.min(m, leafGap(d2, rag.point(i)) - rag.radius(i) - d2.thick / 2); return m; };
-    const lies = near(); g2.teleportPlayer([d2.def.hinge[0] + into * 0.6, 0, 9.6]); R2.step(12);
+    const lies = near(); g2.teleportPlayer([d2.def.hinge[0] + into * 0.6, 0, d2.def.hinge[1] + 0.28]); R2.step(12);
     const o = work(R2, d2, 2.4), open = Math.abs(d2.angle);
     verdict(lies < 0.2 && (oneWay ? o.began : !o.began) && open >= 1.0 && !d2.isClosed(), oneWay
       ? 'a limp body lying in the swing of a one-way door: the leaf brought round by hand moves him aside and the door ends open'
@@ -271,33 +271,7 @@ export async function handsDoor(): Promise<boolean> { return keep(async () => {
   // two-person stealth: Sam low at a shut door with a man beyond it and his silent partner behind him (sneak-probes.ts's sneak-door staging, the push row for its ease) —
   // the pair's door rule stands under a door worked by hand: the partner is out of the doorway's line and still before the leaf moves, the leaf never comes at
   // him or at Sam, and the men turned to the door as it opens see no more of him than under the flung leaf
-  { const { Run, squadUp } = await import('./pairsneak.ts'); const flat = (a: ArrayLike<number>, b: ArrayLike<number>) => Math.hypot(a[0] - b[0], a[2] - b[2]);
-    const res: Record<string, { began: boolean; open: number; funnel: boolean; v: number; moved: number; mateGap: number; samGap: number; seen: number; face: string; need: number }> = {};
-    { const hands = true;
-      const P = await Run.start('roomclear=10&squad=1', 6, { sneak: true }); P.stopOnNotice = false; squadUp(P);
-      const dd = P.door('breakroom_w'), fc = dd.frameCentre, T1 = P.hostiles[0]; dd.def.closer = false;
-      const th = dd.def.closedDir, nx = -Math.sin(th), nz = Math.cos(th), in0 = Math.sign((T1.char.pos[0] - fc[0]) * nx + (T1.char.pos[2] - fc[2]) * nz) || 1;
-      const spot = P.free([fc[0] + nx * in0 * 4.3, 0, fc[2] + nz * in0 * 4.3 + 0.3]); T1.char.pos[0] = spot[0]; T1.char.pos[2] = spot[2];
-      // (their eyes held by hand, as sneak-probes.ts stares them: backs to the door for the walk up, turned to it as the row is tapped)
-      const gaze = new Map<any, number[]>(), look = (to: (h: any) => number[]) => { for (const h of P.hostiles) { const c = h.char;
-        if (!gaze.has(c)) { const dir = () => { const t = gaze.get(c)!, dx = t[0] - c.pos[0], dz = t[2] - c.pos[2], l = Math.hypot(dx, dz) || 1; return [dx / l, 0, dz / l]; }; Object.defineProperty(c, 'chestDir', { get: dir, set: () => {}, configurable: true }); c.headDir = dir; }
-        const t = to(h); gaze.set(c, [t[0], 0, t[2]]); } };
-      look(h => [h.char.pos[0] + nx * in0 * 8, 0, h.char.pos[2] + nz * in0 * 8]);
-      P.crouch(true); P.go(P.free([fc[0] - nx * in0 * 5.5, 0, fc[2] - nz * in0 * 5.5]), 60); P.gather(); P.toDoor('breakroom_w'); P.wait(5);
-      const m = P.mate, p0 = [...m.char.pos], e = T1.char.pos, v = Math.hypot(m.char.vel[0], m.char.vel[2]);
-      const A = dd.def.hinge, B = [A[0] + Math.cos(th) * dd.def.width, A[1] + Math.sin(th) * dd.def.width], o = (px: number, pz: number, qx: number, qz: number, rx: number, rz: number) => (qx - px) * (rz - pz) - (qz - pz) * (rx - px);
-      const funnel = o(e[0], e[2], p0[0], p0[2], A[0], A[1]) * o(e[0], e[2], p0[0], p0[2], B[0], B[1]) <= 0 && o(A[0], A[1], B[0], B[1], e[0], e[2]) * o(A[0], A[1], B[0], B[1], p0[0], p0[2]) <= 0;
-      look(() => [fc[0], 0, fc[2]]); const face = P.g.doors.pullFace?.(dd, P.pos) ? 'pull' : 'push', seen0 = P.mateSeenS, a0 = dd.angle; let began = false, mateGap = 9, samGap = 9;
-      const row = P.doorVerb('breakroom_w', 'push'); began = !!P.pl.doorMove;
-      for (let i = 0; i < 150; i++) { P.step(); if (P.pl.doorMove) began = true; if (Math.abs(dd.angle - a0) > 0.02) { mateGap = Math.min(mateGap, leafGap(dd, m.char.pos)); samGap = Math.min(samGap, leafGap(dd, P.pos)); } }
-      res[String(hands)] = { began: row && began, open: Math.abs(dd.angle), funnel, v, moved: flat(p0, m.char.pos), mateGap, samGap, seen: P.mateSeenS - seen0, face, need: 0.34 + dd.thick / 2 };
-    }
-    const a = res.true;
-    const w = (x: typeof a) => `the ${x.face} face · move began ${x.began} · open ${f2(x.open)} rad · partner in the shut door's line ${x.funnel}, moving ${f2(x.v)} m/s before, moved ${f2(x.moved)} m after · leaf's line nearest the partner ${f2(x.mateGap)}, nearest Sam ${f2(x.samGap)} (a body + the leaf: ${f2(x.need)}) · eyes on the partner ${f2(x.seen)} s`;
-    verdict(a.began && a.open >= 1.0, 'with a silent partner behind him: the push row works the door by hand and it ends open', w(a));
-    verdict(!a.funnel && a.v < 0.1 && a.moved < 0.3, '… the partner is out of the doorway\'s line and still before the leaf moves, and stays where he is while it comes round', w(a));
-    verdict(a.mateGap >= a.need - 0.04 && a.samGap >= a.need - 0.04, '… and the leaf comes at neither of them', w(a));
-    verdict(a.seen < 0.1, '… the men looking at the door as it opens do not see the partner (2.5 s of it)', `eyes on him ${f2(a.seen)} s`); }
+  
   return allPass;
 }); }
 

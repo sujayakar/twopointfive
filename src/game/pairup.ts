@@ -44,9 +44,8 @@
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load — the three tables are only touched inside
 //  pairUpApply, which the Game's constructor calls.)
 import { PAIR } from './pairorders';
-import { saveTeamFeel } from './teamfeel';
-import { SNEAK, saveSneak } from './sneak';
-import { SPOTTED, saveSpotted } from './spotted';
+import { SNEAK } from './sneak';
+import { SPOTTED } from './spotted';
 
 export const PAIRUP = {
   /** THE switch: the three parts on, and the rules below */
@@ -61,28 +60,22 @@ export const PAIRUP = {
 export type PairUpRule = 'oneEye' | 'hunted' | 'rejoin' | 'stay' | 'word' | 'hands';
 export const PAIRUP_DEFAULTS = { ...PAIRUP };
 export const PAIRUP_STATS = { eyeAsks: 0, waysKept: 0, rejoins: 0, caughtOff: 0, stays: 0, handoffs: 0, finishes: 0 };
-/** what a part's own store holds for its `on` (its own row's word, which a save made under the switch must not rewrite) */
-export function keptOn(ls: string): boolean | undefined { try { const o = JSON.parse(globalThis.localStorage?.getItem(ls) ?? 'null'); return typeof o?.on === 'boolean' ? o.on : undefined; } catch { return undefined; } }
 /** a rule is in force: the switch, and its own row */
 export function pairUp(k: PairUpRule): boolean { return PAIRUP.on && PAIRUP[k]; }
 
-const LS = 'twopointsix.pair';
-/** a run that holds the switch on for its own length (quiet.ts: a quiet mission with a partner): `row` is the switch's own word while it is held, and that is
- *  what a save made meanwhile keeps — the run's hold is never written to the store. null = nobody holds it */
+/** a quiet mission's hold on the switch (quiet.ts): the Rust game's state still carries it (g.m.pairup.pair_held), and the bridge walks this name; nothing here reads it */
 export const PAIR_HELD: { row: boolean | null } = { row: null };
 const RULES = ['oneEye', 'hunted', 'rejoin', 'stay', 'word', 'hands'] as const, KEPT = ['on', ...RULES] as const;
-export function savePairUp() { try { const o: Record<string, boolean> = {}; for (const k of KEPT) { const v = k === 'on' && PAIR_HELD.row !== null ? PAIR_HELD.row : PAIRUP[k]; if (v !== PAIRUP_DEFAULTS[k]) o[k] = v; } if (Object.keys(o).length) globalThis.localStorage?.setItem(LS, JSON.stringify(o)); else globalThis.localStorage?.removeItem(LS); } catch { /* no store */ } }
-try { const o = JSON.parse(globalThis.localStorage?.getItem(LS) ?? 'null'); if (o) for (const k of KEPT) if (typeof o[k] === 'boolean') PAIRUP[k] = o[k]; } catch { /* no store, or not ours */ }
 try { const q = new URLSearchParams(location.search); if (q.has('pair')) PAIRUP.on = q.get('pair') !== '0'; } catch { /* no page (the harness) */ }
 try { const e = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.PAIR; if (e) { PAIRUP.on = e !== '0' && e.toLowerCase() !== 'off';
   for (const w of e.toLowerCase().split(/[\s,+]+/)) { const m = w.match(/^(no)?([a-z]+)$/); const k = m && KEPT.find(x => x.toLowerCase() === m[2]); if (k && k !== 'on') PAIRUP[k] = !m![1]; } } } catch { /* no process (the page) */ }   // (PAIR=1 · PAIR=nooneeye,nohunted: the switch on with those rules put back)
 
 /** The switch reaches the three parts: on → all three on (their own rows can still put one back afterwards); `off` (the panel's row turned off) → all three
- *  off. With the switch off and no `off`, nothing is touched: each part is as its own flag, stored row or environment has it. Called by the Game's
- *  constructor (after the stored team feel is read back, before the pair's order rows are seated) and by the panel's row. */
+ *  off. With the switch off and no `off`, nothing is touched: each part is as its own flag or environment has it. Called by the Game's
+ *  constructor (before the pair's order rows are seated), by a quiet mission and by __pairup. */
 export function pairUpApply(off = false) {
   if (PAIRUP.on) { if (!putBack('pairorders')) PAIR.on = true; if (!putBack('sneak')) SNEAK.on = true; if (!putBack('spotted')) SPOTTED.on = true; }
-  else if (off) { PAIR.on = SNEAK.on = SPOTTED.on = false; saveTeamFeel('PAIR.on'); saveSneak(); saveSpotted(); }   // (… and out of the three parts' own stores: the row turned off is 'all three off', on the next visit too)
+  else if (off) PAIR.on = SNEAK.on = SPOTTED.on = false;
 }
 /** this visit's own word against one part (`?sneak=0`, SNEAK=off / =0 in the harness) stands under the switch: it is how one part is put back for an A/B */
 function putBack(name: string): boolean {

@@ -81,7 +81,7 @@ declare global {
     /** THE list of knob tables (game/knobs.ts): `registry()` every switch table by name (the live objects), `copy()` a deep copy, `back(copy)` puts one back */
     __knobs?: { registry(): Record<string, object>; copy(names?: readonly string[]): Record<string, Record<string, unknown>>; back(copy: Record<string, Record<string, unknown>>): void };
     /** staging: drop guard i as if shot / struck (killGuard through the real path); false if he is already down */
-    __killGuard?: (i: number, how?: 'shot' | 'struck' | 'wounded', zone?: 'side' | 'leg', dir?: [number, number, number]) => boolean;
+    __killGuard?: (i: number, how?: 'shot' | 'struck', dir?: [number, number, number]) => boolean;
     /** the animation's life-layer / foot-lock constant tables (character.ts LIFE, FEET) — noise measurements zero their `on` */
     __anim?: { LIFE: Record<string, unknown>; FEET: Record<string, unknown> };
     /** warm the smoke + particle pipelines behind the start card once (false when it already ran) */
@@ -90,7 +90,6 @@ declare global {
     __qrf?: { request(why?: string): unknown; perimeter(why?: string): unknown; standDown(): void; readonly state: unknown };
     /** the civilians by hand: list, panic(i, 'panic' | 'phone'), set(on), knobs, stats, log, spots, check, summary */
     __civ?: KnobHook & { panic(i?: number, what?: 'panic' | 'phone'): unknown; set(on: boolean): unknown };
-    /** wounds (game/wounds.ts, ?wounds): on, knobs, stats, men() */
     __wallsnap?: { on: boolean; [k: string]: unknown };
     /** the 2010s issue kit (game/gear.ts, ?oldgear = off): the switch, live */
     __gear?: { on: boolean };

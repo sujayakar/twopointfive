@@ -397,7 +397,6 @@ pub struct GuardSnap {
     pub down_kind: Option<crate::game::DownKind>,
     pub down_by: Option<crate::game::DownBy>,
     pub keys: Vec<String>,
-    pub wound: Option<crate::savestate::GuardSnapWound>,
     pub missed_at: f64,
     pub missing_raised: bool,
     pub muzzle_down: bool,
@@ -500,7 +499,6 @@ impl GuardSnap {
             down_kind: None,
             down_by: None,
             keys: Vec::new(),
-            wound: None,
             missed_at: 0.0,
             missing_raised: false,
             muzzle_down: false,
@@ -581,57 +579,6 @@ impl GuardSnap {
     }
 }
 impl Default for GuardSnap { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/savestate.ts:205 GuardSnap.wound, src/game/savestate.ts:205 GuardSnap.wound)
-#[derive(Clone, Copy, Debug)]
-pub struct GuardSnapWound {
-    pub zone: crate::savestate::GuardSnapWoundZone,
-    pub pose: crate::savestate::GuardSnapWoundPose,
-    pub t: f64,
-    pub clock: Option<f64>,
-}
-impl GuardSnapWound {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GuardSnapWound {
-            zone: crate::savestate::GuardSnapWoundZone::Side,
-            pose: crate::savestate::GuardSnapWoundPose::Knee,
-            t: 0.0,
-            clock: None,
-        }
-    }
-}
-impl Default for GuardSnapWound { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum GuardSnapWoundZone {
-    Side,
-    Leg,
-}
-impl GuardSnapWoundZone {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GuardSnapWoundZone::Side => "side",
-            GuardSnapWoundZone::Leg => "leg",
-        }
-    }
-}
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum GuardSnapWoundPose {
-    Knee,
-    Back,
-}
-impl GuardSnapWoundPose {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GuardSnapWoundPose::Knee => "knee",
-            GuardSnapWoundPose::Back => "back",
-        }
-    }
-}
 
 /// (TypeScript: inline at src/game/savestate.ts:210 GuardSnap.bodyDuty, src/game/savestate.ts:210)
 #[derive(Clone, Copy, Debug)]
@@ -1022,8 +969,6 @@ pub struct SaveState {
     pub fog: Option<crate::fogofwar::FogSnap>,
     pub quiet: Option<crate::quiet::QuietSnap>,
     pub lesson: Option<crate::lesson::LessonSnap>,
-    pub snatch: Option<crate::snatch::SnatchSnap>,
-    pub defuse: Option<crate::defuse::DefuseSnap>,
     pub player: crate::savestate::PlayerSnap,
     pub guards: Vec<crate::savestate::GuardSnap>,
     pub items: Vec<crate::savestate::ItemSnap>,
@@ -1100,8 +1045,6 @@ impl SaveState {
             fog: None,
             quiet: None,
             lesson: None,
-            snatch: None,
-            defuse: None,
             player: crate::savestate::PlayerSnap::zeroed(),
             guards: Vec::new(),
             items: Vec::new(),

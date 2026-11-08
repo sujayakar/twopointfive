@@ -180,7 +180,7 @@ pub fn needs_live(g: &crate::game::Game) -> bool {
 }
 
 /// Would a man leave his route on this floor? (needs.ts floorCalm)
-pub fn floor_calm(g: &mut crate::game::Game) -> bool {
+pub fn floor_calm(g: &crate::game::Game) -> bool {
     crate::guards::escalation_of(g) == 0.0 && !g.alarm.episode && !crate::sim_lightshome::mains_active(g)
 }
 
@@ -201,7 +201,7 @@ pub fn man_calm(g: &crate::game::Game, gd: GuardId, awareness: f64) -> bool {
 }
 
 /// Why a trip under way must be broken off now, or None. (needs.ts interruptOf)
-pub fn interrupt_of(g: &mut crate::game::Game, gd: GuardId) -> Option<String> {
+pub fn interrupt_of(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     if !g.tune.needs {
         return Some(key("switched off"));
     }
@@ -220,7 +220,7 @@ pub fn interrupt_of(g: &mut crate::game::Game, gd: GuardId) -> Option<String> {
     if g.qrf.state != crate::qrf::QrfState::Idle {
         return Some(key("the response team"));
     }
-    if g.pl[g.player].down {
+    if crate::seats::all_down(g) {
         return Some(key("target down"));
     }
     if crate::guards::escalation_of(g) > 0.0 {
@@ -862,8 +862,6 @@ pub fn needs_set_level(g: &mut crate::game::Game, gd: GuardId, kind: crate::need
     }
 }
 
-/// Read back what `save_needs` kept. Nothing is stored here: the TypeScript's "nothing stored, the shipped values stand". (needs.ts loadNeeds)
-pub fn load_needs(g: &crate::game::Game) {}
 
 #[cfg(test)]
 mod tests {

@@ -38,7 +38,7 @@
 // walls' own tune.wallBreak, never under a show) at chaos > 0. Off — either of them — the rows are not registered, no target carries a wall, Sam's list has
 // no wall row, input() and tick() return on their first line: the build is its base. Nothing here draws from Math.random.
 //
-// SEAMS (one line each, in files this module does not own): orders.ts targetAt (wallTarget: a floor target under a wall carries it), rowsFor (wallRows),
+// SEAMS (one line each, in files this module does not own): rust/game_rules/src/orders target_at (a floor target under a wall carries it), rowsFor (wallRows),
 // hoverWords ('that wall') and OrderTarget's floor variant (`wall?`); game.ts the field, its construction after the door tools, input() ahead of the door
 // tools' and tick() after theirs, Interactable's kind 'wall' and Verb 'charge'; player.ts buildInteractables (wallChargeRows) and INTERACT_PRIORITY.wall.
 // NOT here: a charge on a door (doortools.ts, and the doors goal's own blast), the frag (the gear goal), what either side makes of a hole afterwards.
@@ -49,7 +49,7 @@ import { SideMap } from '../math/side';
 import { holdFireOrder } from './holdfire';   // (called inside blow only)
 import { Vec3, v3, clamp, lerp } from '../math/vec';
 import type { Game, Guard, Interactable, Player } from './game';
-import type { OrderDef, OrderTarget, OrderNote, SquadOrders, Assignment } from './orders';
+import type { OrderDef, OrderTarget, SquadOrders, Assignment } from './orders';
 import type { Box } from '../scene/boxes';
 import { BoxFlag } from '../scene/boxes';
 import { DOORTOOLS } from './doortools';
@@ -58,7 +58,7 @@ import { chaosOf } from './destruction';
 import { FURN, chargeSource, type BlastFirst } from './furnblast';
 import { doesOf } from '../scene/materials';
 import { killGuard, detonateStun, hitPlayer } from './combat';
-import { OWNBLOW, SAM_BY, blowKeyWord } from './ownblow';   // (called inside rows, notes and the key's press only: his own charge is his own actions' to set off — ownblow.ts)
+import { OWNBLOW, SAM_BY } from './ownblow';   // (called inside rows, notes and the key's press only: his own charge is his own actions' to set off — ownblow.ts)
 import { chronHit } from './chronicle';
 import { civiliansShown } from './civilians';   // (called inside blow only)
 import './nightbreach';
@@ -117,8 +117,6 @@ export const WALLCHARGE = {
    *  teammates up 147 → 176, aim-snap flags 831 → 546. `hole` stays OFF: 24 block seeds, 37 teammates up with it against 48 without (and as first
    *  shipped, hole dealt before the doors and both taken together at the end: 11 up of 96 on the warehouse against 17 with neither). */
   hole: false, doors: true,
-  /** with `hole` / `doors` on: they are taken up once the room is theirs (the entry's last act), not on the way in */
-  holdLate: true,
   /** THE TRADE: what one wall charge takes out of the squad's breaching bag (doortools.ts DoorTools.charges, 2 a run): 2 = the whole bag, so a run is one wall OR
    *  two doors, chosen at the wall — the row is offered only while the bag holds it, and all of it comes back if the charge comes off the wall unblown.
    *  1 = a wall costs what a door costs (the build before this knob, by digest) */
@@ -129,7 +127,7 @@ export const WALLCHARGE = {
   carried: null as number | null,
   /** … and each man takes his up by himself, once HE has been on his point `holdSecs` with his gun on the room (false: all of them together, when the last
    *  man is on his — a mate held up in the hole left every door of the room unwatched until he was through) */
-  holdEach: true, holdSecs: 1.5,
+  holdSecs: 1.5,
   /** m: no door is given to a man whose line to it passes this near a mate's point inside (he would hold it with a friend down his muzzle) */
   mateLine: 0.6,
   /** m: none of this order's marks is in a DOORWAY — a stand-off post or the setter's spot within `offFrame` of a door frame's centre is passed over for
@@ -297,7 +295,6 @@ export function wallChargeOn(g: Game): boolean { return WALLCHARGE.on && wallBre
 /** how high the open-sky test looks (m) · the samples it takes off each face: metres out, and along the wall as a share of its half length */
 const SKY_TOP = 12, SKY_OFF = [0.5, 1.0, 1.6], SKY_ALONG = [-0.5, 0, 0.5];
 const skyMemo = new SideMap<object, Map<number, number>>('wallcharge.skyMemo');
-const standIns = new SideMap<OrderDef, OrderDef>('wallcharge.standIns'); standIns.asMemo();   // (a pure function of the row, and a row is one game's own; the HUD's row list asks it before any menu is opened, so it is no part of the state)
 /** THE FACES OF A WALL THE OPEN SKY IS OVER: 0 = neither (a wall inside), 1 = one (a building's outer wall), 2 = both (a yard wall). Asked of the level's own
  *  geometry as the glass asks it of a pane (glassbreak.ts skySide): upward solid rays from chest height at nine places off each face — a canopy or a lamp head
  *  over part of one side does not flip the majority. Kept per static (the authored statics do not move; a hole in the wall changes nothing over it). */
@@ -309,13 +306,6 @@ export function skyFaces(g: Game, index: number): number { { const __s = RUST_SU
     for (const off of SKY_OFF) for (const t of SKY_ALONG) { const d = sg * (ht + off), p: Vec3 = alongX ? [b.c[0] + t * hu, 1.5, b.c[2] + d] : [b.c[0] + d, 1.5, b.c[2] + t * hu]; if (!g.col.solidBlocked(p, [p[0], SKY_TOP, p[2]], 0.02)) sky++; }
     if (sky * 2 > SKY_OFF.length * SKY_ALONG.length) n++; }
   memo.set(index, n); return n;
-}
-/** `fn` asked aside (a question of the picture's — orders.ts hover): what it adds to the game's memo of sky faces is taken out again, so a wall is in it only
- *  once the simulation has asked of it (the answer is the same: the asker pays for it again) */
-export function skyAside<T>(g: Game, fn: () => T): T {
-  const memo = skyMemo.get(g.col), n = memo ? memo.size : 0;
-  try { return fn(); }
-  finally { const now = skyMemo.get(g.col); if (!memo) { if (now) skyMemo.delete(g.col); } else if (now === memo && memo.size > n) { let i = 0; for (const k of [...memo.keys()]) if (i++ >= n) memo.delete(k); } }
 }
 /** IS STRUCTURE STATIC `index` AN OUTER WALL A CHARGE CUTS (WALLCHARGE.outer; wallAt has already found it a full-height unrotated wall in a wall's stuff):
  *  not steel, no thicker than outerThick, at least outerMinLen long, something the engine can take on (wallbreak.ts adoptable: it lights nothing, carries no
@@ -385,7 +375,7 @@ export function wallTarget(g: Game, at: Vec3, base: OrderTarget): OrderTarget { 
 export function wallRows(g: Game, t: OrderTarget, page: string | null, rows: OrderDef[]): OrderDef[] {
   const WC = g.wallCharge; if (t.kind !== 'floor' || !t.wall || !WC || !wallChargeOn(g) || !WC.seated) return rows;
   const direct = WALLCHARGE.menu === 'direct';
-  if (page === null) return [...rows.filter(d => d.key !== 5), direct ? WC.row : WC.opener, ...rows.filter(d => d.key === 5).map(d => WC.undigit(d))];   // (the floor's own fifth row — 'go silent' — stays on the wall's menu, below, with no digit: the wheel reaches it, as any row past the fifth)
+  if (page === null) return [...rows.filter(d => d.key !== 5), direct ? WC.row : WC.opener, ...rows.filter(d => d.key === 5)];   // (the floor's own fifth row — 'go silent' — stays on the wall's menu, below: a digit is the first row's that has it, and the wheel reaches the other)
   return page === WALL_PAGE && !direct ? [WC.row] : rows;
 }
 
@@ -407,10 +397,9 @@ export class WallCharge {
 
   constructor(private g: Game) {
     this.opener = { id: WALL_PAGE, label: 'wall tools', targets: ['floor'], listed: [], opens: WALL_PAGE, key: 5, issue: () => { } };
-    this.row = { id: WALL_ORDER, label: t => { const c = this.chargeOnTarget(t); return c ? `blow the charge${this.closeWords(c)}` : this.rowWords(); }, targets: ['floor'], listed: [], ack: ['copy.', 'on it.'],
+    this.row = { id: WALL_ORDER, label: t => { const c = this.chargeOnTarget(t); return c ? 'blow the charge' : this.rowWords(); }, targets: ['floor'], listed: [], ack: ['copy.', 'on it.'],
       gone: (_S, t) => this.brought === 0 && !this.chargeOnTarget(t),   // (orders.ts OrderDef.gone: the squad never carried one — the flat ring does not offer it)
       can: (_S, gd, t) => this.canOf(gd, t), valid: (_S, t, men) => this.valid(t, men), issue: (_S, men, t) => this.issue(men, t) };
-    g.orders.notes.push(() => this.hudNotes());
   }
 
   // ------------------------------------------------------------ the run, the switch, the rows
@@ -429,8 +418,6 @@ export class WallCharge {
     if (mode !== this.mode) { this.mode = mode; this.seat(); if (!live) this.stop(); }
     return live;
   }
-  /** a row the wall's fifth has taken the digit of: itself, digitless (one stand-in a row, so the menu's highlight rides it by identity) */
-  undigit(d: OrderDef): OrderDef { let x = standIns.get(d); if (!x) standIns.set(d, x = Object.create(d, { key: { value: undefined, writable: true, enumerable: true } }) as OrderDef); return x; }
   private seat() {
     const S = this.g.orders; S.unregister(WALL_PAGE); S.unregister(WALL_ORDER); this.seated = false; if (!this.mode) return;
     const page = this.mode === 'page';
@@ -472,18 +459,6 @@ export class WallCharge {
   private giveBack(c: SetWallCharge, why: string) {
     if (c.free) { /* (nothing was spent on it) */ } else if (c.paid <= 0) { if (this.carried !== null) this.carried++; } else { for (let i = 0; i < c.paid; i++) this.g.doorTools.refund('charge'); if (!this.roster.length) this.alone = Math.max(0, this.alone - c.paid); }
     this.stats.back++; this.note(`charge off wall ${c.wall.index}: ${why}`); }
-  /** the squad block's lines: what is CARRIED, while this run brought wall charges of its own (a kit card's, a mission's issue) — the door tools' count line beside it
-   *  is the breaching bag, which a carried wall charge never touches, so without this the player learned of them only at a wall's menu row; nothing under the
-   *  cost rule (the bag's own line is the count) nor on a run that brought none — and a charge waiting for the trigger. The count is read as it stands: the HUD is the page's alone, so a read here never
-   *  re-syncs the roster (that writes state the simulation reads) */
-  private hudNotes(): OrderNote[] { const n = this.set.length; if (!wallChargeOn(this.g)) return [];
-    const out: OrderNote[] = this.carried !== null && (this.brought ?? 0) > 0 ? [{ key: '', text: `wall charges ${this.carried}` }] : []; if (!n) return out;
-    const mark = ((this.g as any).pair?.waiting?.().length ?? 0) > 0;   // (a build with the pair's orders in it: while his partner waits on a mark, F is the mark first — the note says so)
-    // (ownblow.ts: the squad's key for the charges that are its to blow, the interaction's for his own — a note each, counted apart)
-    for (const own of [false, true]) { const of = (c: SetWallCharge) => this.keyIs(c) !== own, k = this.set.filter(of).length; if (!k) continue;
-      out.push({ key: blowKeyWord(!own, DOORTOOLS.blowKey.replace('Key', '')), text: `blow the charge · the wall${k > 1 ? ` (${k})` : ''}${mark && !own ? ' · after the mark' : ''}${this.closeWords(this.nearest(of), true)}` }); }
-    return out; }
-
   // ------------------------------------------------------------ the place
   chargeOn(W: WallSpot): SetWallCharge | null { return this.set.find(c => sameWall(c.wall, W)) ?? null; }
   private chargeOnTarget(t: OrderTarget): SetWallCharge | null { return t.kind === 'floor' && t.wall ? this.chargeOn(t.wall) : null; }
@@ -696,23 +671,6 @@ export class WallCharge {
     for (const gd of g.orders.men()) if (this.blastShare(c.wall, gd.char.pos, R, false) > 0) out.push(gd.callsign);
     return out;
   }
-  /** WHO THE BLAST WOULD CATCH BEYOND THE WALL right now (WALLCHARGE.safe): the far-side half of blow()'s own test, asked BEFORE the wall has gone — past
-   *  the wall's middle, inside the stun's reach of the charge, and a line to him from the far face. blow() asks that line from the hole's own middle with the
-   *  leaves where the blast left them; neither is known yet, so the warning asks from the far face at the charge and a step either side of it with the door
-   *  leaves out (noLeaves, as tooClose asks: the blast flings a leaf) and names him if any is clear — it may name a man the blast then spares, never the other
-   *  way where the level lets it know. A teammate who walked round; and 'you' where the blast does to the player what it does to a teammate standing there
-   *  (samstun.ts, live play only, as blow() has it — off, nothing reaches him through the wall and nothing is said). [] = nobody, or the switch off */
-  behind(c: SetWallCharge | null): string[] {
-    if (!c || !WALLCHARGE.safe) return []; const g = this.g, W = c.wall, T = thick(W), at = wallPt(W, 0, 0), out: string[] = [];
-    const lined = (p: Vec3) => this.noLeaves(() => [0, 0.4, -0.4].some(du => !g.col.solidBlocked(wallPt(W, du, -(T + 0.45), 1.1), [p[0], 1.1, p[2]])));
-    const beyond = (p: Vec3) => wallOff(W, p) < -T / 2;
-    { const p = g.player.char.pos; if (SAMSTUN.on && !g.player.down && !g.puppet && !g.touring && beyond(p) && flat(p, at) < DOORTOOLS.stunM && lined(p)) out.push('you'); }
-    for (const gd of g.orders.men()) { const p = gd.char.pos; if (beyond(p) && flat(p, at) <= DOORTOOLS.stunM && lined(p)) out.push(gd.callsign); }
-    return out;
-  }
-  /** the trigger's warning in words: who is inside the radius on the charge's side, then who stands beyond the wall where it will open ('' = nobody) */
-  private closeWords(c: SetWallCharge | null, caps = false): string { const near = this.tooClose(c), far = this.behind(c);
-    return (near.length ? `${caps ? ' · TOO CLOSE: ' : ' · too close: '}${near.join(', ')}` : '') + (far.length ? `${caps ? ' · BEHIND THE WALL: ' : ' · behind the wall: '}${far.join(', ')}` : ''); }
   /** a teammate OUTSIDE the order in the blast: past the wall in the charge's open reach once it is a hole, or too near it on its own side (the word for it; null: none) */
   private inBlast(W: WallSpot, men: Guard[]): string | null {
     const g = this.g, at = wallPt(W, 0, 0), out = wallPt(W, 0, 0.5, 1.1), inn = wallPt(W, 0, -(thick(W) + 0.45), 1.1);

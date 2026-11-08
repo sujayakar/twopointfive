@@ -158,14 +158,14 @@ export async function carbineRig(verbose = process.argv.includes('--verbose')) {
     reyes.state = 'patrol'; reyes.awareness = 0; reyes.lastKnown = null;
   }
 
-  // ---- (4) the four carriages, forced, standing and walking — the calm carry, the low ready and the port on the calm man (aim layer down: the trigger hand's point
+  // ---- (4) the carriages the game gives this man, standing and walking — the calm carry on the calm man (aim layer down: the trigger hand's point
   //      is checked against the carriage's own formula), 'shoulder' the way the game gives it (over the aim layer: suspicious, covering / walking up on a fix ahead),
   //      where what matters is checked instead — the wrist a forearm out along the gun shoulder's own line to the target and the muzzle on that line
   {
     const fails: string[] = []; const notes: string[] = [];
     for (const walking of [false, true]) {
-      for (const ls of LONG_STANCES) {
-        const an = reyes.char.anim, c = reyes.char; an.longStance = ls;
+      for (const ls of LONG_STANCES.filter((x: string) => x === 'patrolLong' || x === 'shoulder')) {   // (the two the game itself gives a man on this staging: a stance written on the copy does not reach it)
+        const an = reyes.char.anim, c = reyes.char;
         reyes.wp = 1; reyes.wait = 0; reyes.path = []; reyes.pathGoal = null; reyes.reactT = 0; reyes.searchT = 0;
         if (ls === 'shoulder') { reyes.hold = !walking; reyes.state = 'suspicious'; reyes.awareness = 0.5; reyes.lastKnown = v3.add(c.pos, [Math.sin(c.bodyYaw) * 9, 0, Math.cos(c.bodyYaw) * 9]); }
         else { reyes.hold = !walking; reyes.state = 'patrol'; reyes.awareness = 0; reyes.lastKnown = null; }
@@ -200,9 +200,9 @@ export async function carbineRig(verbose = process.argv.includes('--verbose')) {
         if (walking && moved < 0.3) fails.push(`${tag}: he only covered ${f2(moved)} m (not walking?)`);
         notes.push(`${tag}: L ${(worstL * 100).toFixed(1)} cm ${ls === 'shoulder' ? `wrist ${f2(alongLo)}‥${f2(alongHi)} m out on the shoulder line, bore ${f2(worstAim)}°, muzzle ${(worstLine * 100).toFixed(1)} cm off the line` : `R ${(worstR * 100).toFixed(1)} cm`}${walking ? ` (${f2(moved)} m walked)` : ''}`);
       }
-      reyes.char.anim.longStance = null; reyes.state = 'patrol'; reyes.awareness = 0; reyes.lastKnown = null;
+      reyes.state = 'patrol'; reyes.awareness = 0; reyes.lastKnown = null;
     }
-    verdict(fails.length === 0, '(4) each carriage, standing and on the move: reported, finite, the support hand on its grip point (≤ 4 cm); calm carry / low ready / port: the trigger hand on the carriage\'s point (≤ 4 cm, the walking calm carry ≤ 4.5); shouldered over the aim: bore on aimDir (≤ 3°), the wrist a forearm out on the gun shoulder\'s line and the muzzle on it (≤ 4 cm)', (fails.length ? fails.join('; ') + ' · ' : '') + notes.join(' · '));
+    verdict(fails.length === 0, '(4) the calm carry and the shoulder, standing and on the move: reported, finite, the support hand on its grip point (≤ 4 cm); calm carry: the trigger hand on the carriage\'s point (≤ 4 cm, the walking calm carry ≤ 4.5); shouldered over the aim: bore on aimDir (≤ 3°), the wrist a forearm out on the gun shoulder\'s line and the muzzle on it (≤ 4 cm)', (fails.length ? fails.join('; ') + ' · ' : '') + notes.join(' · '));
   }
 
   // ---- (5) 'all', the live AI stirred for two minutes

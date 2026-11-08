@@ -26,6 +26,7 @@
 //
 // Off (the module's default, the frozen stand) = the build as it was. On in the page (host/profile.ts pageSwitches; ?norescueflush) and on the shipped
 // stand; TPS_RESCUEFLUSH=1 raises it on a frozen run. UNTUNED by play.
+import { senseTool } from './sense';
 import type { Vec3 } from '../math/vec';
 import { v3 } from '../math/vec';
 import type { Game, Guard } from './game';
@@ -48,9 +49,6 @@ export const RESCUEFLUSH = {
   smokeK: 0.3,
   /** a man sent round has reached a mark of his way inside this many metres of it: on to the next, and from the side door in */
   atDoorM: 1.8,
-  /** the covered lanes only CHOOSE a man's door, and only a man they hold at a corridor's mouth waits (false = the build before: a man the lanes warned
-   *  off where he was sent was kept back, and where he is sent is at the team's own guns — so nobody came once a lane was known) */
-  lanesChoose: true,
 };
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
@@ -72,14 +70,13 @@ export class RescueFlush {
   private alive(): Guard[] { return this.R.hostages.filter(h => h.state !== 'dead'); }
 
   /** HIS LINE ON HER: inside `reachM`, nothing that stops a round between his eyes and her chest (a pane that would stop it is a wall to this: collision.ts
-   *  shotBlocked), and no smoke of the team's hiding her (the renderer's own answer through Game.sensors; headless nothing answers and the air is clear).
+   *  shotBlocked), and no smoke of the team's hiding her (the Rust game's: sense.ts senseTool).
    *  The distance, or Infinity. His facing and the light on her are not asked: he came knowing where she was kept. */
   private line(by: Guard, v: Guard): number {
     const g = this.g, K = RESCUEFLUSH, d = flat(v.char.pos, by.char.pos); if (d >= K.reachM) return Infinity;
     const e: Vec3 = [by.char.pos[0], 1.5, by.char.pos[2]], c = v.char.bones.chest ?? v3.add(v.char.pos, [0, 0.6, 0]);
     if (g.col.shotBlocked(e, c)) return Infinity;
-    const T = g.sensors.segment(`rescueS${by.char.id}_${v.char.id}`, e, c);
-    return T !== undefined && T < K.smokeK ? Infinity : d;
+    return senseTool(g, 1, [...e, ...c])[0] < K.smokeK ? Infinity : d;
   }
   /** THE GUN ON HER: the man of theirs, outside the hostage room, with a clear line to a living hostage inside `reachM` — the nearest to one (rescue.ts
    *  captor(), after the room's own men; `keep`: the man who has the clock keeps it while this still holds for him). Null with the switch off. */

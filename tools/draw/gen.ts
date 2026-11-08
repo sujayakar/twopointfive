@@ -25,16 +25,18 @@ for (const f of (readdirSync(DIR, { recursive: true }) as string[]).filter(f => 
   }
 }
 const list = (readFileSync(join(DIR, 'lib.rs'), 'utf8').match(/^sections! \{\n([\s\S]*?)^\}/m) ?? die('no sections! in lib.rs'))[1].split('\n').map(l => l.replace(/\/\/.*/, '').trim()).filter(Boolean)
-  .map((l, i) => { const m = l.match(/^(\d+) (\w+): ([\w:]+) = [\w.]+;$/) ?? die(`sections!: ${l}`); if (Number(m[1]) !== i) die(`sections!: ${m[2]} is line ${i} and says ${m[1]}`); return { name: m[2], row: rows.get(m[3]) ?? die(`sections!: no section! ${m[3]}`) }; });
+  .map(l => { const m = l.match(/^(\w+): ([\w:]+) = [\w.]+;$/) ?? die(`sections!: ${l}`); return { name: m[1], row: rows.get(m[2]) ?? die(`sections!: no section! ${m[2]}`) }; });
+const groups = (readFileSync(join(DIR, 'lib.rs'), 'utf8').match(/^groups! \{([\s\S]*?)\}/m) ?? die('no groups! in lib.rs'))[1].trim().split(/\s+/); if (groups.length > 32) die('a want has 32 bits, and there are more groups than that');
 
 // the layout as the module says it (lib.rs `layout`), and its stamp
-const text = list.map(s => `${s.name}${s.row.fields.map(f => ` ${f.name}:${f.ty}`).join('')}\n`).join('');
+const text = `want ${groups.join(' ')}\n` + list.map(s => `${s.name}${s.row.fields.map(f => ` ${f.name}:${f.ty}`).join('')}\n`).join('');
 let stamp = 0x811c9dc5; for (let i = 0; i < text.length; i++) stamp = Math.imul(stamp ^ text.charCodeAt(i), 0x01000193) >>> 0;
 
 const camel = (s: string) => s.replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase());
 const L: string[] = ['// Written by tools/draw/gen.ts from rust/game_draw. To change a section, change it there.', '',
   '/** the stamp of the sections this was made from: a module of another stamp is refused (drawn.ts) */', `export const LAYOUT = ${stamp};`,
-  '/** each section\'s place: in the table the module answers with, and its bit in what a host asks for */', `export const enum Section { ${list.map((s, i) => `${camel(s.name)} = ${i}`).join(', ')}, count = ${list.length} }`];
+  '/** what a host may ask for: what is made together is asked for together */', `export const enum Want { ${groups.map((g, i) => `${camel(g)} = ${2 ** i}`).join(', ')}, all = ${2 ** groups.length - 1} }`,
+  '/** each section\'s place in the table the module answers with */', `export const enum Section { ${list.map((s, i) => `${camel(s.name)} = ${i}`).join(', ')}, count = ${list.length} }`];
 for (const r of new Set(list.map(s => s.row))) { let at = 0;
   L.push('', ...(r.doc ? [`/** ${r.doc} */`] : []), `export const enum ${r.name} {`);
   for (const f of r.fields) { const kind = f.ty.replace(/^\[/, '').slice(0, 3); L.push(`  /** ${kind}${f.words > 1 ? ` × ${f.words}` : ''}${f.doc ? `: ${f.doc}` : ''} */`, `  ${camel(f.name)} = ${at},`); at += f.words; }
@@ -43,15 +45,28 @@ for (const r of new Set(list.map(s => s.row))) { let at = 0;
 const WORDS: [string, string, string, string][] = [['STUFFS', 'scene_stuff', 'BoxStuff', 'what a box may say it is made of'], ['PKINDS', 'render_particles', 'PKind', 'what a particle is'], ['EMIT_SHAPES', 'render_particles', 'EmitShape', 'how particles are thrown'], ['SMOKE_KINDS', 'smoke_types', 'SmokeEmitterKind', 'what smoke comes from'], ['FLOORS', 'floor', 'FloorMat', 'what a floor is']];
 for (const [name, mod, en, doc] of WORDS) { const text = readFileSync(join(ROOT, `rust/game_types/src/${mod}/types.rs`), 'utf8'), arms = (text.match(new RegExp(`pub enum ${en} \\{\\n([\\s\\S]*?)\\n\\}`)) ?? die(`no enum ${en}`))[1].split('\n').map(l => l.trim().replace(/,$/, '')).filter(l => /^\w+$/.test(l));
   L.push('', `/** ${doc}, by its number in Rust */`, `export const ${name} = [${arms.map(a => `'${(text.match(new RegExp(`${en}::${a} => "([^"]+)"`)) ?? [0, a[0].toLowerCase() + a.slice(1)])[1]}'`).join(', ')}] as const;`); }
+/** a declared thing's fields, each by how it is written */
+const fieldsOf = (list: string, of: string): { name: string; k: string }[] => list.split(',').map(x => x.trim()).filter(Boolean).map(x => { const [name, ty] = x.split(':').map(y => y.trim()); const k = ({ u32: 'u32', i32: 'i32', f64: 'f64', '&str': 'text' } as Record<string, string>)[ty] ?? die(`${of}: ${ty}`); return { name: camel(name), k }; });
 // ---- what goes the other way: the commands' writer, from their declaration
 const COMMANDS = join(ROOT, 'src/draw/commands.ts'), C: string[] = ['// Written by tools/draw/gen.ts from rust/game_run/src/command.rs. To change a command, change it there.', "import { Writer } from './writer';", '',
   '/** what a player or a panel does that is not input, in its order, until a step takes it */', 'export class Commands extends Writer {'];
 { const src = (readFileSync(join(ROOT, 'rust/game_run/src/command.rs'), 'utf8').match(/^commands! \{\n([\s\S]*?)^\}/m) ?? die('no commands! in command.rs'))[1]; let doc = '', n = 0;
   for (const l of src.split('\n')) { const t = l.trim(); if (t.startsWith('///')) { doc = t.replace(/^\/\/\/ ?/, ''); continue; }
-    const m = t.match(/^(\d+) (\w+) \{([^}]*)\} = /); if (!m) continue; if (Number(m[1]) !== n++) die(`commands!: ${m[2]} says ${m[1]}`);
-    const F = m[3].split(',').map(x => x.trim()).filter(Boolean).map(x => { const [name, ty] = x.split(':').map(y => y.trim()); const k = ({ u32: 'u32', i32: 'i32', f64: 'f64', '&str': 'text' } as Record<string, string>)[ty] ?? die(`commands!: ${ty}`); return { name: camel(name), k }; });
+    const m = t.match(/^(\d+) (\w+) \{([^}]*)\} = /); if (!m) continue; if (Number(m[1]) < n) die(`commands!: ${m[2]} says ${m[1]}, and the numbers only go up`); n = Number(m[1]) + 1;
+    const F = fieldsOf(m[3], m[2]);
     C.push(`  /** ${doc} */`, `  ${m[2][0].toLowerCase()}${m[2].slice(1)}(${F.map(f => `${f.name}: ${f.k === 'text' ? 'string' : 'number'}`).join(', ')}): void { this.u32(${m[1]});${F.map(f => ` this.${f.k}(${f.name});`).join('')} }`); doc = ''; }
   C.push('}', ''); }
+// ---- what a page asks the desk, from its declaration: the answers' readers are the wire's (src/view/read.ts)
+const ASKS = join(ROOT, 'src/draw/asks.ts'), A: string[] = [], answers = new Set<string>(); let answersWord = false, answersNumber = false;
+{ const src = (readFileSync(join(ROOT, 'rust/game_run/src/desk.rs'), 'utf8').match(/^asks! \{\n([\s\S]*?)^\}/m) ?? die('no asks! in desk.rs'))[1]; let doc = '', n = 0;
+  for (const l of src.split('\n')) { const t = l.trim(); if (t.startsWith('///')) { doc = t.replace(/^\/\/\/ ?/, ''); continue; }
+    const m = t.match(/^(\d+) (\w+) \{([^}]*)\} -> (\w+) = /); if (!m) continue; if (Number(m[1]) !== n++) die(`asks!: ${m[2]} says ${m[1]}`);
+    const F = fieldsOf(m[3], m[2]), word = m[4] === 'String', num = m[4] === 'u32'; if (word) answersWord = true; else if (num) answersNumber = true; else answers.add(m[4]);
+    A.push(`  /** ${doc} */`, `  ${m[2][0].toLowerCase()}${m[2].slice(1)}(${F.map(f => `${f.name}: ${f.k === 'text' ? 'string' : 'number'}`).join(', ')}): ${word ? 'string' : num ? 'number' : m[4]} { this.u32(${m[1]});${F.map(f => ` this.${f.k}(${f.name});`).join('')} return ${m[4] === 'Pressed' ? 'this.told(' : ''}${word ? 'readWord' : num ? 'readNumber' : `read${m[4]}`}(this.answer(this.take()))${m[4] === 'Pressed' ? ')' : ''}; }`); doc = ''; }
+  const names = [...answers].sort();
+  A.unshift('// Written by tools/draw/gen.ts from rust/game_run/src/desk.rs. To change an ask, change it there.', "import { Writer } from './writer';", `import { ${names.map(x => `read${x}`).join(', ')}, ${names.map(x => `type ${x}`).join(', ')} } from '../view/read';`, '', ...(answersWord ? ['/** an answer that is one word: its length, then its bytes */', 'const readWord = (b: Uint8Array): string => new TextDecoder().decode(b.subarray(4));', ''] : []), ...(answersNumber ? ['/** an answer that is one number */', 'const readNumber = (b: Uint8Array): number => new DataView(b.buffer, b.byteOffset, b.byteLength).getUint32(0, true);', ''] : []),
+    '/** what the cards before a game show and press; `answer` is the module\'s, to the bytes of an ask */', 'export class Asks extends Writer {', '  constructor(private readonly answer: (asked: Uint8Array) => Uint8Array) { super(); }', '  /** a press, as it went */', '  protected told(p: Pressed): Pressed { return p; }');
+  A.push('}', ''); }
 // ---- every number a person may turn while the game plays, by its name: where it lies in the knobs, from the wire's table (a settled row is the build's own)
 const KNOBS = join(ROOT, 'rust/game_run/src/knobs_list.rs'); let knobText = '';
 { const S = JSON.parse(readFileSync(join(ROOT, 'tools/blitz/schema.json'), 'utf8')), T = S.types as Record<string, { k: string; fields: { rust: string; ty: string }[] }>, settled = new Set<string>(S.knobSettled), rows: string[] = [], typed: string[] = [];
@@ -66,7 +81,7 @@ const KNOBS = join(ROOT, 'rust/game_run/src/knobs_list.rs'); let knobText = '';
 const PAGE = join(ROOT, 'draw.html'), index = readFileSync(join(ROOT, 'index.html'), 'utf8'), swapped = index.replace('src="./src/main.ts"', 'src="./src/host/drawpage.ts"').replace(/  <script>\/\* the page that draws a game it does not hold[^\n]*\n/, '').replace('<head>', '<head>\n  <!-- Written by tools/draw/gen.ts from index.html: the page that draws a game it does not hold (src/host/drawpage.ts). -->');
 if (/location\.replace\('draw/.test(swapped)) die('index.html\'s own way to draw.html is still in draw.html');
 if (swapped === index || swapped.includes('src/main.ts')) die('index.html has no main script to put the page that draws in the place of');
-const files: [string, string][] = [[PAGE, swapped], [KNOBS, knobText], [OUT, L.join('\n') + '\n'], [COMMANDS, C.join('\n')]];
+const files: [string, string][] = [[PAGE, swapped], [KNOBS, knobText], [OUT, L.join('\n') + '\n'], [COMMANDS, C.join('\n')], [ASKS, A.join('\n')]];
 if (process.argv.includes('--check')) { const off = files.filter(([p, t]) => !existsSync(p) || readFileSync(p, 'utf8') !== t).map(([p]) => p.slice(ROOT.length + 1)); console.log(off.length ? `draw: ${off.join(', ')} would change` : `draw: the page's half is of these declarations (stamp ${stamp})`); process.exit(off.length ? 1 : 0); }
 for (const [p, t] of files) writeFileSync(p, t);
 console.log(`draw: ${list.length} sections, stamp ${stamp}; src/draw/sections.ts and commands.ts written`);

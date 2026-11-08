@@ -43,17 +43,6 @@ fn data_string(d: &RowData, k: &str) -> String {
         None => String::from("undefined"),
     }
 }
-fn data_from_add(d: &JsMap<String, Option<ChronicleAddDataValue>>) -> RowData {
-    let mut o = JsMap::new();
-    for (k, v) in d.iter() {
-        o.set(k, v.as_ref().map(|v| match v {
-            ChronicleAddDataValue::Text(s) => ChronEventDataValue::Text(s.clone()),
-            ChronicleAddDataValue::Num(x) => ChronEventDataValue::Num(*x),
-            ChronicleAddDataValue::Bool(b) => ChronEventDataValue::Bool(*b),
-        }));
-    }
-    o
-}
 fn data_from_generic(d: &JsMap<String, Option<ChronicleDataValue>>) -> RowData {
     let mut o = JsMap::new();
     for (k, v) in d.iter() {
@@ -233,11 +222,6 @@ pub fn indoors(p: V3) -> bool {
 }
 
 // ------------------------------------------------------------ the record
-
-/// The core append; `None` when the caps refuse it, else the row's place in `events`.   (chronicle.ts Chronicle.add)
-pub fn chronicle_add(g: &mut crate::game::Game, t: f64, kind: crate::chronicle::ChronKind, pos: V3, data: &JsMap<String, Option<crate::chronicle::ChronicleAddDataValue>>) -> Option<usize> {
-    add_row(g, t, kind, pos, data_from_add(data))
-}
 
 /// The row a hearing event made, as its place in `events`.   (chronicle.ts Chronicle.heardRow)
 pub fn chronicle_heard_row<'g>(g: &'g mut crate::game::Game, e: u32) -> Option<&'g mut usize> {
@@ -541,15 +525,19 @@ pub fn chron_key(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::chroni
 
 /// A man put down by the player's hand: shot dead ('kill') or out cold ('ko').   (chronicle.ts chronDown)
 pub fn chron_down(g: &mut crate::game::Game, gd: GuardId, how: crate::game::DownKind, line: Option<&str>) -> Option<crate::chronicle::ChronEvent> {
+    chron_down_by(g, gd, how, line, None)
+}
+
+/// `chron_down`, with what did it when that is not the gun in the hand.
+pub fn chron_down_by(g: &mut crate::game::Game, gd: GuardId, how: crate::game::DownKind, line: Option<&str>, by: Option<&str>) -> Option<crate::chronicle::ChronEvent> {
     use crate::game::DownKind;
     let l = line.unwrap_or("");
     let callsign = man_callsign(g, gd);
     let p = man_pos(g, gd);
     if how == DownKind::Shot {
+        if let Some(w) = by { return live_row(g, ChronKind::Kill, row_data(vec![("who", tx(&callsign)), ("weapon", tx(&format!("the {w}"))), ("blast", yes(true))]), Some(p)); }
         let weapon = if l.starts_with("knife") {
             String::from("knife")
-        } else if l.ends_with("at the charge when it went") {
-            String::from("a wall charge")
         } else {
             let man = crate::seats::man_here(g, &crate::seats::here(g));
             match crate::game::player_gun_in_hand(g, man) {
@@ -561,9 +549,7 @@ pub fn chron_down(g: &mut crate::game::Game, gd: GuardId, how: crate::game::Down
         };
         return live_row(g, ChronKind::Kill, row_data(vec![("who", tx(&callsign)), ("weapon", ChronEventDataValue::Text(weapon))]), Some(p));
     }
-    let method = if how == DownKind::Wounded {
-        "wounded"
-    } else if how == DownKind::Choked {
+    let method = if how == DownKind::Choked {
         "choke"
     } else if l.starts_with("ring") {
         "ring"
@@ -582,8 +568,7 @@ pub fn chron_body_found(g: &mut crate::game::Game, body: GuardId, by: GuardId) -
     let c = g.gd[body].ch;
     let h = match g.ch[c].bones.get(crate::character::Bone::Hips) { Some(b) => *b, None => g.ch[c].pos };
     let breathing = match g.gd[body].down_kind { Some(k) => k != crate::game::DownKind::Shot, None => false };
-    let mut pairs = vec![("who", tx(&man_callsign(g, body))), ("by", tx(&man_callsign(g, by))), ("breathing", yes(breathing))];
-    if g.gd[body].wound.is_some() { pairs.push(("wounded", yes(true))); }
+    let pairs = vec![("who", tx(&man_callsign(g, body))), ("by", tx(&man_callsign(g, by))), ("breathing", yes(breathing))];
     live_row(g, ChronKind::BodyFound, row_data(pairs), Some([h[0], 0.0, h[2]]))
 }
 
@@ -908,6 +893,39 @@ mod tests {
         assert_eq!(c.path[3], 2.0_f32);
         assert_eq!(c.path[4].to_bits(), (2.1_f64 as f32).to_bits());
         assert_eq!(c.path[2000 * 3], 9.0_f32);
+    }
+
+    #[test]
+    fn the_score_only_goes_down() {
+        // A FAILURE MEANS: something a player can do makes the run score better for doing more of it, or a band's edge moved.
+        let s = crate::knobs::page_score();
+        let bump: [fn(&mut RunCounts) -> &mut f64; 17] = [|c| &mut c.devices, |c| &mut c.seen, |c| &mut c.seen_up, |c| &mut c.alarms, |c| &mut c.esc1, |c| &mut c.esc2, |c| &mut c.bodies, |c| &mut c.kills, |c| &mut c.kos, |c| &mut c.shots_near_men, |c| &mut c.lights_shot, |c| &mut c.hits, |c| &mut c.loads, |c| &mut c.civ_seen, |c| &mut c.civ_reported, |c| &mut c.civ_ko, |c| &mut c.civ_killed];
+        let mut die = 77u32;
+        let mut roll = move || { die = die.wrapping_mul(1664525).wrapping_add(1013904223); (die >> 16) as f64 / 65536.0 };
+        for _ in 0..300 {
+            let mut base = blank_counts();
+            for f in bump.iter() { *f(&mut base) = (roll() * roll() * 6.0).floor(); }
+            base.elapsed = roll() * 2400.0;
+            base.down = roll() < 0.2;
+            let s0 = score_of(&s, &base).score;
+            for f in bump.iter() { let mut c = base.clone(); *f(&mut c) += 1.0; assert!(score_of(&s, &c).score <= s0); }
+            let mut c = base.clone(); c.elapsed += 600.0; assert!(score_of(&s, &c).score <= s0);
+            let mut c = base.clone(); c.down = true; assert!(score_of(&s, &c).score <= s0);
+        }
+        for (i, f) in bump.iter().enumerate() { if i == 13 { continue; } let mut c = blank_counts(); *f(&mut c) = 1.0; assert!(score_of(&s, &c).score < 100.0, "term {} costs nothing", i); }   // (13, civ_seen: a civilian who saw you is free until she tells)
+        let one = |f: fn(&mut RunCounts) -> &mut f64| { let mut c = blank_counts(); *f(&mut c) = 1.0; score_of(&s, &c).score };
+        assert!(one(|c| &mut c.kills) < one(|c| &mut c.kos));
+        assert!(one(|c| &mut c.civ_killed) < one(|c| &mut c.civ_ko) && one(|c| &mut c.civ_killed) < one(|c| &mut c.kills) && one(|c| &mut c.civ_ko) < one(|c| &mut c.kos));
+        let mut worst = blank_counts();
+        worst.seen = 9.0; worst.alarms = 9.0; worst.esc1 = 3.0; worst.esc2 = 3.0; worst.bodies = 5.0; worst.kills = 6.0; worst.down = true; worst.elapsed = 3600.0;
+        assert_eq!(score_of(&s, &worst).score, 0.0);
+        let clean = score_of(&s, &blank_counts());
+        assert!(clean.score == 100.0 && clean.lines.is_empty());
+        for (n, word) in [(90.0, "GHOST"), (89.0, "SHADOW"), (70.0, "SHADOW"), (69.0, "OPERATIVE"), (40.0, "OPERATIVE"), (39.0, "ASSAULT"), (0.0, "ASSAULT")] { assert_eq!(rating_of(n).word, word, "{}", n); }
+        let mut done = blank_counts(); done.done = true; done.stage = String::from("done"); done.elapsed = 200.0;
+        let mut lit: Vec<String> = badges_for(&crate::knobs::page_badge(), &done).into_iter().filter(|b| b.on).map(|b| b.id).collect();
+        lit.sort();
+        assert_eq!(lit.join(","), "nokills,pacifist,quiet,speedrun,unseen,unseenStaff");
     }
 
     #[test]

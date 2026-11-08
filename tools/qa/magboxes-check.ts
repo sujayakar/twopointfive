@@ -5,10 +5,10 @@
 //   box       the rifle up at a mission's start: the count is the rounds in the gun over the magazine's size and a box stands for each spare, full. Rounds
 //             fired come off the first number alone. After a reload the fullest spare is in the gun, the magazine that came out is a box as full as it was,
 //             and the boxes are still one a magazine. The pistol's box reads the same way.
-//             A gun fed a shell at a time keeps its two numbers.
 // SINCE 2026-11-07 the key and the slot setup's own switches are settled on and nothing here writes them: the two-line box (the setup's panel put off),
 // "the key off: the box as it was", the recording from before the key and the whole of `harness` (the stands, the page's ?magboxes=0) are out.
-// MAGBOXES_BREAK=1 = the box draws the old count: box must FAIL.   exit 0 = all hold · 1 = one does not
+// The rule itself is held natively, red where it breaks: rust/game_start/tests/kit_view.rs, the_box_counts_the_rounds_over_the_magazine_and_a_box_a_spare. This reads what
+// the page draws of it.   exit 0 = all hold · 1 = one does not
 // THE HARNESS HAS NO PAGE: the box is drawn by the real overlay code on the probes' stand-in elements (fn2000-probes.ts hudText) and read as text, each
 // box's drawn height with it. How it looks is not seen here.
 import { ROOT } from './headless.ts';
@@ -20,7 +20,7 @@ function hudText(game: any): string {
   const mkEl = (tag: string): any => { const el: any = { tag, className: '', kids: [] as any[], text: '', style: {}, title: '', appendChild(c: any) { el.kids.push(c); return c; } }; Object.defineProperty(el, 'textContent', { get() { return el.text + el.kids.map((k: any) => k.textContent).join(''); }, set(v: string) { el.text = v ?? ''; el.kids = []; } }); return el; };
   const ser = (el: any): string => `${el.tag}${el.className.trim() ? '.' + el.className.trim().split(/\s+/).join('.') : ''}${el.style.height ? `[${el.style.height}]` : ''}${el.text ? `{${el.text}}` : ''}${el.kids.length ? `(${el.kids.map(ser).join(' ')})` : ''}`;
   const G = globalThis as any, had = 'document' in G, prev = G.document; G.document = { createElement: (t: string) => mkEl(t) };
-  try { const ctx = { equip: mkEl('div'), equipKey: '' }; (Overlay.prototype as any).updateEquip.call(ctx, game); return ctx.equip.kids.map(ser).join(' | '); }
+  try { const ctx = { equip: mkEl('div'), equipKey: '' }; (Overlay.prototype as any).updateEquip.call(ctx, game.view.kit); return ctx.equip.kids.map(ser).join(' | '); }
   finally { if (had) G.document = prev; else delete G.document; }
 }
 const DT = 1 / 60, AHEAD: [number, number, number] = [15, 1.2, 11.5];
@@ -46,8 +46,6 @@ async function box() {
     verdict(!!R && gone > 0 && R.inGun === rf.roundsReady && R.over === cap && same(R.drawn, Array(n0).fill(100)), 'rounds fired come off the first number alone: the magazine\'s size and the boxes stand', R ? `${gone} fired: ${R.inGun}/${R.over} · boxes ${R.drawn?.join(' ') ?? 'none'}` : 'no count read'); }
   { const was = rf.mag; await quiet(() => { key(W, 'KeyR'); let n = 0; while ((rf.reloading || n < 5) && n++ < 400) wait(W, DT); wait(W, 0.2); }); const R = read(g), part = Math.round((was / cap) * 100);
     verdict(!!R && R.inGun === cap + 1 && R.over === cap && same(R.drawn, want(rf)) && R.drawn!.length === n0 && R.drawn![0] === 100 && R.drawn![n0 - 1] === part && part < 100, 'after a reload the full magazine is in the gun and the one that came out is still a box, drawn as full as it was, the fullest first', R ? `${R.inGun}/${R.over} · boxes ${R.drawn?.join(' ') ?? 'none'} (the one that came out held ${was} of ${cap})` : `no count read (reloading ${rf.reloading})`); }
-  { const D = rf.def.reload, had = D.shell; D.shell = { lead: 0.4, each: 0.35, tail: 0.7, bolt: 0.4 }; let R: ReturnType<typeof read>; try { R = read(g); } finally { if (had === undefined) delete D.shell; else D.shell = had; } const sum = rf.spare.reduce((a: number, b: number) => a + b, 0);
-    verdict(!!R && !R.of && R.over === sum && R.drawn === null, 'a gun fed a shell at a time keeps its two numbers: what it carries is loose shells, and the count of them stays (this rifle\'s row marked as one for the reading)', R ? `${R.inGun} / ${R.over} · boxes ${R.drawn ? R.drawn.join(' ') : 'none'}` : 'no count read'); }
   { await quiet(() => { key(W, 'Digit1', 90); wait(W, 0.4); }); const R = read(g), p = pl.pistol;
     verdict(pl.slot === 'pistol' && !!R && R.of && R.inGun === p.roundsReady && R.over === p.def.magCapacity && same(R.drawn, want(p)) && p.spare.length > 0, 'the pistol\'s box reads the same way', R ? `${R.inGun}/${R.over} · boxes ${R.drawn?.join(' ') ?? 'none'} (he carries ${p.spare.length})` : `no count read (slot ${pl.slot})`); }
 }

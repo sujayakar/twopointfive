@@ -121,7 +121,6 @@ pub fn debris_landings(g: &mut crate::game::Game) {
 pub fn debris_spawn_raw(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, box_: BoxId, v: V3, w: V3, who: Option<f64>, told: Option<bool>) -> Option<DebrisChunkId> {
     let who = who.unwrap_or(crate::consts::NOBODY_ID);
     let told = told.unwrap_or(false);
-    if !g.m.dress.dress.debris { g.destr.debris.stats.refused += 1.0; return None; }
     while (g.destr.debris.list.len() as f64) >= DEBRIS_CAP {
         let list = g.destr.debris.list.clone();
         let mut ok = |g: &mut Game, c: DebrisChunkId| evictable(g, c);

@@ -1,4 +1,4 @@
-# The level format (LevelData v1)
+# The level format (LevelData v2)
 
 The office is **data**: `levels/office.json`. This note is for whoever edits it by hand or from a generator, and for the lanes that extend it (G2 floors + stairs, G4 cameras / keypads / lasers).
 
@@ -18,6 +18,18 @@ levels/office.json ──import──▶ src/scene/level.ts buildLevel() ──�
 * **Prove**: `bun run tools/qa/probes.ts level` — `level-identity` (generator vs loaded JSON: 0 structural diffs, one digest, file
   not stale, file canonical), `level-validate` (validator clean + 12 planted faults caught + surface map ≡ `game/floor.ts`),
   `level-roundtrip` (data → level → data exact, serializer a fixed point, key-order independent, no shared state between loads).
+
+## Round things
+
+`"round": true` on a box says it is a ROUND THING (`src/scene/round.ts`): to every ray, eye and foot and to the picture it is the cylinder about its own y, radius `h[0]`,
+half height `h[1]`. A drum, a tyre, a stove, the oven. It is not a shape: a shape is cut from a box that still walks as the plain box, and a round thing does not.
+
+Refused by the lint: `h[0]` that differs from `h[2]`, and `yaw`, `rot`, `flags` or `shape` on the same box. Marks are drawn as they are written: a band on each side
+face, a disc on the lid. A drawn-only round thing is plain boxes, since nothing meets it (`drawnRoundSlabs`, `src/scene/gwotKit.ts`).
+
+Version 2 is the version that says this. A file of version 1 wrote a round thing as four slabs through one centre, 45 degrees apart, and the loader refuses it by its
+version: `bun run tools/levels/round-convert.ts <file>` rewrites it. Unnamed boxes are named by their place in the file, so a generator that names one (`box_0132`, a kit
+view's `hide`) names a place: count it, as `tools/levels/crossing.ts` does, or find it, as `tools/levels/blocksquads.ts` does.
 
 ## Editing by hand
 
@@ -90,8 +102,7 @@ its centre and half size, so to the simulation a shaped level is the plain level
 | `with` | pieces of TRIM that are there only when shapes are on: each `{ off, h, yaw?, material? \| albedo?, rough?, metal?, stuff?, does?, round? \| arc?, cut?, old? }` (`off` from the box's centre, `yaw` from the box's own), painted and finished by the reader a box is, and made of what a box is: its own `stuff`, else its material row's. A piece that says NO paint wears its box's paint, finish and word, and says none of its own. A piece is drawn and nothing else: it says no flags and stands `NoShadow`, so no ray, eye, round or body meets it and it casts no shadow. What must stop a round or a man is a box of the level. Pieces follow the level's last box when it is stood up, so no box changes its number. |
 
 Refused: a shape on a box with `rot`; a form (`round`, `arc`, `cut`) on a box with `markings` or the `Glass` flag (the mark painter and the pane engine
-read the whole box: give the marks a box of their own, or say the form of a piece); a shape on a kit view's box; a shape on a slab of one of the kit's
-octagons (a round thing). A window's bar that says a form is left plain as the level is stood up, and `shapes-check` is red on a level file with a
+read the whole box: give the marks a box of their own, or say the form of a piece); a shape on a kit view's box; a shape on a round thing (see Round things). A window's bar that says a form is left plain as the level is stood up, and `shapes-check` is red on a level file with a
 shape that does not stand.
 
 - **The data names the shape**; the engine's cut record is built from it by `cut.ts cutRecord` as the level is stood up, and every ray meets the shaped
@@ -125,8 +136,7 @@ The office authors (officeGen.ts → office.json): `cam_corridor` (east end over
 outside its sweep), `pad_side` on `server_manager` (the QUIET way into the server room; the front door keeps its key / pick / kick),
 `laser_corridor` (shin height across the corridor at x 14.5 — the straight walk from the lobby arch to the server door breaks it; round
 through the cubicles, the OCP, or the breaker), `laser_storage` (chest height across the storage DOORWAY on its corridor face, battery —
-in on your knees; the breaker is through that door). Knobs: `Game.tune.devices / lasers / cameraSuspicionSecs / cameraAlarmSecs / deviceCones` (debugger ▸ Sandbox — the game page's tweak panel, on the backtick key —, persisted
-`twopointsix.devices`; 'all codes' / 'forget codes' buttons); `game.devices.summary()` / `.log` for the panel and QA; `probes.ts devices`.
+in on your knees; the breaker is through that door). Knobs: `Game.tune.devices / lasers / cameraSuspicionSecs / cameraAlarmSecs / deviceCones` (debugger ▸ Sandbox — the game page's tweak panel, on the backtick key —; 'all codes' / 'forget codes' buttons); `game.devices.summary()` / `.log` for the panel and QA; `probes.ts devices`.
 
 ## Civilians (`game/civilians.ts`)
 
@@ -249,18 +259,6 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   there is no way to play the level untimed (`?nopar` is gone). Set
   the bars from measured runs (`tools/qa/ships.ts --scn <row> --seeds 1-24 --json f`: each run's `par` = secs, lost, total, medal). Today:
   `levels/killhouse.json`. Check: `bun run tools/qa/par-check.ts` (`probes.ts par`).
-- `defuse` — TIMED CHARGES on one clock over this level's room clear (`game/defuse.ts`, `Game.defuse`; `levels/defuse.json`, row `defuse-four` 'The two
-  charges', `group: 'clock'`): `{ secs, workSecs?, devices: [{ id, name, pos, n }], blast?: { lethalM?, woundM?, radius?, power? } }`. `secs` = the one
-  clock, counted from the team's first move or first order and shown in the objective row; a device is a small box on a face — `pos` its centre, `n` the unit
-  [x, z] normal out of the face a man works it from, `name` what the row and the order call it ('charge 1': a name the level itself shows, never a compass
-  word — the HUD has none). A charge is made safe by `workSecs` seconds (absent: `DEFUSE.workSecs`) at it — Sam's own Space row 'make it safe', or a teammate
-  sent through the squad's work order (`game/workthings.ts`, thing kind `'device'`: X on it, 1). The clock at zero sets off every charge still live through
-  `frag.ts blast()` with the block's radii (absent: `DEFUSE`'s) — a real blast in that room — and the mission is FAILED, and stays so if the house is taken
-  afterwards; won = every charge safe AND the room clear taken. The level needs a `roomClear` block; a level without `defuse` is the room clear alone
-  (`DEFUSE.on` false = the same on this level, by digest).
-  Checks: `bun run tools/qa/defuse-check.ts` (`probes.ts defuse`; `DEFUSE_BREAK=1` must fail), `TPS_PROFILE=shipped bun run tools/qa/defuse-run.ts
-  [--arm split|whole|split-back|whole-back|sam|both|backs|all] [--seeds 1-24] [--secs 100 --clocks 60,75,90]` (a scripted commander: two pairs at once
-  against the whole squad to one charge then the other, by the wings or by the workshops' back doors, and the player's own hands on one).
 - `issue` — a KIT ISSUED BY THE LEVEL (`game/kit.ts kitIssue`): `{ members: { '<place>': { …card fields } } }`, place `'0'` = the player, `'1'`‥`'4'` the
   teammates in roster order; each entry lists only the fields that differ from the issue card (`weapon` rifle | pistol | shotgun, `suppressed`, `light`,
   `nvg`, and the counts `bangs charges smoke frags walls shells`, whole numbers 0‥9; `charges walls` on your own card (`'0'`) are read only where your own charges are switched on, `shells` is
@@ -390,14 +388,6 @@ A NEW LEVEL is a generator, like the office: `tools/levels/<name>.ts` exports `N
 `levels/<name>.json` (refused unless it validates and reloads to the same Level; `--check` = stale test). `tools/levels/test-rooms.ts` is the worked example.
 Play it with `?levelFile=<name>.json&roomclear[=seed][&squad4]` or `&rescue` (the dev server), headless with
 `standUp({ level })`.
-
-**`scenarios.snatch`** (`SnatchData`, read by `src/game/snatch.ts` and by nothing else; a level without it is the room clear as it was): one unarmed man the
-team has to take alive, laid over the level's room clear. `man {name, pos, face, tint, tint2?, points?, wait?}` = who he is and the marks he keeps to while the
-floor is quiet; `exits [{name, pos}]` = the ways off the floor he runs for once it is loud, his NEAREST by walking first (the export's check says so if it is
-not) — on one, he is gone and the mission is failed. At least two, so one can be covered while the team goes in by another. `levels/snatch.json` is the level
-built for it; `bun run tools/qa/snatch-check.ts` holds the rules. `van? {name, pos}` = the team's own vehicle by its way in, `pos` the spot at its open doors:
-while `SNATCHOUT.on` (`src/game/snatchout.ts`) the man, once tied, is led there by the player and the mission is won when he is in it, the house taken or
-not (`bun run tools/qa/snatchout-check.ts`). Without the key the snatch ends as it did.
 
 ## Working on a level from code
 

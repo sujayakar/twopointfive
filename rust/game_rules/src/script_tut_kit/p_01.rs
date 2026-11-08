@@ -106,7 +106,7 @@ fn set_flag_true(g: &mut Game, r: DirectorRunId, n: &str) {
 /// `q.inside(v, who)` of a volume the frame or the vars hold
 fn inside(g: &mut Game, r: DirectorRunId, v: &Option<crate::director::VolumeRef>, who: crate::director::DirectorInsideVolumeWho) -> bool {
     let id = &v.as_ref().unwrap().id;
-    crate::director::director_inside_volume(g, r, id, &who)
+    crate::director::director_inside_volume(g, &crate::seats::here(g), r, id, &who)
 }
 
 /// `yield c.wait(secs)`'s condition
@@ -337,7 +337,7 @@ pub fn tut_kit_shop_step(g: &mut crate::game::Game, r: DirectorRunId, b: Directo
 }
 
 /// (tut-kit.script.ts:108-114) the c.until tests of 'shop'
-pub fn tut_kit_shop_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_kit::TutKitShopFrame, id: u32) -> Result<bool, String> {
+pub fn tut_kit_shop_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_kit::TutKitShopFrame, id: u32) -> Result<bool, String> {
     match id {
         SHOP_IN_LINE => {
             let (line, room) = { let v = tut_kit_vars(g, r); (v.shop_line.clone(), v.shop_in.clone()) };
@@ -387,7 +387,7 @@ pub fn tut_kit_room_step(g: &mut crate::game::Game, r: DirectorRunId, b: Directo
 }
 
 /// (tut-kit.script.ts:118-126) the c.until tests of 'room'
-pub fn tut_kit_room_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_kit::TutKitRoomFrame, id: u32) -> Result<bool, String> {
+pub fn tut_kit_room_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_kit::TutKitRoomFrame, id: u32) -> Result<bool, String> {
     match id {
         ROOM_HIT => Ok(f.pair.iter().any(|u| !crate::director::director_query_alive(g, r, u))),
         ROOM_INSIDE => {
@@ -675,7 +675,7 @@ pub fn tut_kit_yard_step(g: &mut crate::game::Game, r: DirectorRunId, b: Directo
 }
 
 /// (tut-kit.script.ts:171-185) the c.until tests of 'yard'
-pub fn tut_kit_yard_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_kit::TutKitYardFrame, id: u32) -> Result<bool, String> {
+pub fn tut_kit_yard_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_kit::TutKitYardFrame, id: u32) -> Result<bool, String> {
     match id {
         YARD_BEHIND_BAGS => {
             for m in &f.two {
@@ -730,7 +730,7 @@ pub fn tut_kit_room_helper_step(g: &mut crate::game::Game, r: DirectorRunId, b: 
 }
 
 /// (tut-kit.script.ts:55-63) the c.until tests of the helper `room`, reached through `director::beat_test`'s arms for bunkroom and fuelroom
-pub fn tut_kit_room_helper_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &mut crate::script_tut_kit::TutKitRoomHelperFrame, id: u32) -> Result<bool, String> {
+pub fn tut_kit_room_helper_test(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_kit::TutKitRoomHelperFrame, id: u32) -> Result<bool, String> {
     match id {
         HELPER_HIT => Ok(f.held.iter().any(|u| !crate::director::director_query_alive(g, r, u))),
         HELPER_IN_ROOM => Ok(inside(g, r, &f.inside, crate::director::DirectorInsideVolumeWho::Team)),

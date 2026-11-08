@@ -29,6 +29,7 @@
 // since 'clear from outside' became one plain order: doortest-check.ts and threshold-probes.ts hold today's order); the F drill's lines no longer put the
 // night breach's blind fire off; the two lines at the locked manager's door give their order twice (the first is halted at the handle, as the game has it);
 // doortools-firstman runs on the floor as the page deals it (it held the squads from the rooms off).
+import { blockOf, listedOf, menuKey } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 import { asProbe, asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
@@ -105,9 +106,9 @@ export async function rig(seed: number, o: { stage?: 'rc' | 'nb' | false; door?:
     room(id: string) { return RC.rooms.find((r: any) => r.def.id === id); },
     /** press X with the cursor on p (the order menu comes up and stays, nothing held), read its order rows, Esc */
     menuOn(p: number[]) {
-      W.cursorAt([p[0], p[1], p[2]]); input.pressed.add(ORDERS.key); R.step(); R.step(24);
-      const read = () => { const M = O.menu, hud = O.hud().menu; return M ? { ids: M.rows.map((r: any) => r.id).join(' '), why: [...M.why] as (string | null)[], kind: M.target.kind as string,
-        rows: (hud?.rows ?? []).slice(1).filter((r: any) => r.kind !== 'cancel').map((r: any) => ({ key: r.opts[0]?.key, text: r.opts[0]?.text, off: r.off })) } : null; };   // (row 0 = who the order goes to)
+      W.cursorAt([p[0], p[1], p[2]]); menuKey(O); R.step(); R.step(24);
+      const read = () => { const M = O.menu, hud = listedOf(O); return M ? { ids: M.rows.map((r: any) => r.id).join(' '), why: [...M.why] as (string | null)[], kind: M.target.kind as string,
+        rows: (hud?.rows ?? []).map((r: any) => ({ key: r.opts[0]?.key, text: r.opts[0]?.text, off: r.off })) } : null; };   // (row 0 = who the order goes to)
       const first = read(); if (!first) { input.pressed.add('Escape'); R.step(); return null; }
       // the door tools are a page of the door's menu, behind its row 5: read by that key, then Esc back to the first page (and Esc again: the menu away)
       const opener = O.menu.rows.find((r: any) => r.opens); let tools: ReturnType<typeof read> = null, back = true;
@@ -116,7 +117,7 @@ export async function rig(seed: number, o: { stage?: 'rc' | 'nb' | false; door?:
       return { ...first, tools, back, gone: O.menu === null };
     },
     /** press X on p, then the digit a third of a second later — more digits walk the menu's pages (5, 1 = the door tools' page, its first row) */
-    pick(p: number[], ...n: number[]) { W.cursorAt([p[0], p[1], p[2]]); input.pressed.add(ORDERS.key); R.step(); R.step(20); for (const k of n) { input.pressed.add(`Digit${k}`); R.step(); } },
+    pick(p: number[], ...n: number[]) { W.cursorAt([p[0], p[1], p[2]]); menuKey(O); R.step(); R.step(20); for (const k of n) { input.pressed.add(`Digit${k}`); R.step(); } },
   };
   R.step(30);
   if (o.door) { game.teleportPlayer(SAM[o.door]); R.step(5); }
@@ -132,7 +133,7 @@ export const doortoolsMenu = guarded(async () => {
   const { verdict, done } = family('doortools-menu: the four rows of the door tools\' page, their digits, their counts, and nothing at all with no squad');
   { const R = await rig(3, { stage: false, door: 'breakroom_w' }); const { O, D } = R;
     const m = R.menuOn(R.door('breakroom_w').frameCentre); const w = R.give('bangClear', 'breakroom_w'); R.step(30);
-    verdict(!O.active && m === null && !!w && D.ops.length === 0 && D.log.length === 0 && D.set.length === 0 && O.hud().status.length === 0,
+    verdict(!O.active && m === null && !!w && D.ops.length === 0 && D.log.length === 0 && D.set.length === 0 && blockOf(O).length === 0,
       'with no squad on the floor: no list on X, the order refused, nothing under way, nothing logged, no HUD block', `orders active ${O.active} · menu ${m} · give: ${w} · ops ${D.ops.length} · log ${D.log.length} · ${D.summary()}`); }
   const R = await rig(3, { door: 'breakroom_w' }); const { O, D } = R; const Wd = R.door('breakroom_w');
   const m = R.menuOn(Wd.frameCentre);
@@ -144,7 +145,7 @@ export const doortoolsMenu = guarded(async () => {
   const fl = R.menuOn(AISLE);
   const floorIds = `move cover fallIn hold${SQUADTHROW.on ? ' throwThere' : ''}${SILENT.on ? ' silent' : ''}`;
   verdict(!!fl && fl.kind === 'floor' && fl.ids === floorIds && fl.tools === null, 'a floor\'s list is as it was (the four orders, then only the rows whose own switches are on): no door tool is offered off a door, and no page', `rows: ${fl?.ids} · held to: ${floorIds}`);
-  const notes = O.hud().status.flatMap((r: any) => r.opts.map((o: any) => o.text));
+  const notes = blockOf(O).flatMap((r: any) => r.opts.map((o: any) => o.text));
   verdict(notes.includes(`charges ${DOORTOOLS.charges} · bangs ${DOORTOOLS.bangs}`) && D.charges === DOORTOOLS.charges && D.bangs === DOORTOOLS.bangs, 'the counts stand on the squad\'s HUD block', notes.join(' / '));
   { R.game.teleportPlayer(SAM.stairwell); R.step(5); const st = R.door('stairwell'); const w = R.give('charge', 'stairwell'); R.step(2);
     verdict(!!st?.def.steel && /steel/.test(w ?? '') && D.charges === DOORTOOLS.charges && D.ops.length === 0 && D.set.length === 0,
@@ -171,7 +172,7 @@ export const doortoolsCharge = guarded(async () => {
   verdict(armed && off.every(d => d > K.backblastM) && quietNow(), 'armed: the pair is off the door past the backblast, the leaf is shut, no blast, nobody touched', `pair ${off.map(f2).join(' / ')} m from the door (backblast ${K.backblastM}) · latched ${Wd.latched} · blasts ${R.bangs.length}`);
   let still = true; for (let i = 0; i < 5 * 60; i++) { R.step(); still &&= quietNow() && op.phase === 'armed' && D.set.length === 1; }
   verdict(still, 'and NOTHING happens for five more seconds: it waits on Sam', `phase ${op.phase} · set ${D.set.length} · latched ${Wd.latched} · blasts ${R.bangs.length} · over the line ${op.crossed.size}`);
-  const row = R.menuOn(Wd.frameCentre)?.tools?.rows.find((r: any) => r.key === '3'); const hud = O.hud().status.flatMap((r: any) => r.opts.map((o: any) => o.text));
+  const row = R.menuOn(Wd.frameCentre)?.tools?.rows.find((r: any) => r.key === '3'); const hud = blockOf(O).flatMap((r: any) => r.opts.map((o: any) => o.text));
   verdict(row?.text === 'blow the charge' && !row.off && hud.some((t: string) => /charge set/.test(t)), 'the row on that door now reads "blow the charge", and the HUD says a charge is set and which key blows it', `tools row 3: ${row?.text} · hud: ${hud.join(' / ')}`);
   // the trigger. One of the room's men is stood a stride inside the door first (the probe's staging, at the last moment: where a man IS when it goes is the rule)
   const near = room.defenders[0], far = room.defenders[1]; near.char.pos[0] = Wd.frameCentre[0] + 1.3; near.char.pos[2] = Wd.frameCentre[2]; R.step(2);
@@ -201,7 +202,7 @@ export const doortoolsCharge = guarded(async () => {
 // ---------------------------------------------------------------- the bang
 export const doortoolsBang = guarded(async () => {
   const { verdict, done } = family('doortools-bang: a stun in the room before the first man is over the threshold');
-  const K = DOORTOOLS; const R = await rig(7, { door: 'breakroom_w' }); const { O, D, game } = R; const Wd = R.door('breakroom_w'); const room = R.room('breakroom');
+  const K = DOORTOOLS; const R = await rig(7, { door: 'breakroom_w' }); const { O, D, game } = R; const room = R.room('breakroom');
   let blindAtBang = -1; R.post = () => { const op = D.ops[0]; if (blindAtBang < 0 && op && !isNaN(op.bangT)) blindAtBang = room.defenders.filter((h: any) => h.dazzledUntil > game.time).length; };
   const w = R.give('bangClear', 'breakroom_w'); const op = D.ops[0];
   R.until(() => D.ops.length === 0, 40);

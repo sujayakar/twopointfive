@@ -10,17 +10,6 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// A box's row. Every box read or written in this file goes through here, so this one body is all that changes when the table of Box rows is back.
 fn bx<'g>(g: &'g mut Game, b: impl Into<AnyBoxId>) -> &'g mut crate::scene_boxes::Box { &mut g.tab[b.into()] }
 
-/// The live GPU particle system or None, as a place to write `ours`: `gpu_fx` answers only whether there is one.   (fogofwar.ts `gpuFx(this.g)`, particleFx.ts:25)
-fn gpu_particles(g: &mut Game) -> Option<&mut crate::render_particles::Particles> {
-    if !crate::particle_fx::gpu_fx(g) { return None; }
-    g.engine.particles.as_mut()
-}
-
-
-
-
-
-
 /// Is the fixture lit, as it stands.   (fogofwar.ts FogOfWar.lampLit)
 pub fn fog_of_war_lamp_lit(g: &crate::game::Game, t: FixtureId) -> bool {
     let on = crate::sim_lightshome::fixture_on(g, t);
@@ -111,22 +100,6 @@ pub fn fog_of_war_span(g: &mut crate::game::Game, list: &[AnyBoxId], i: f64, j: 
             g.fog_of_war.span_z = z;
         }
     }
-}
-
-/// Does the team see this thing (its boxes as a list)?   (fogofwar.ts FogOfWar.seesThing)
-pub fn fog_of_war_sees_thing(g: &mut crate::game::Game, boxes: &[AnyBoxId]) -> bool {
-    let mut x = 0.0;
-    let mut z = 0.0;
-    for &b in boxes {
-        let c = bx(g, b).c;
-        x += c[0];
-        z += c[2];
-    }
-    x /= boxes.len() as f64;
-    z /= boxes.len() as f64;
-    fog_of_war_span(g, boxes, 0.0, boxes.len() as f64);
-    let (ox, oz) = (g.fog_of_war.span_x, g.fog_of_war.span_z);
-    fog_of_war_thing_seen(g, x, z, ox, oz)
 }
 
 /// `take` of `things`: the picture has boxes i‥j of the list as they stand.   (fogofwar.ts FogOfWar.things `take`)
@@ -417,7 +390,26 @@ pub fn fog_of_war_fired_on(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// Left out of the picture this frame; false for everybody while the fog is off.   (fogofwar.ts FogOfWar.hidden)
-#[doc(hidden)] pub fn fog_of_war_hidden__body(g: &crate::game::Game, gd: GuardId) -> bool {
+#[doc(hidden)] pub fn fog_of_war_hidden__body(g: &crate::game::Game, gd: GuardId) -> bool { fog_of_war_hides(g, gd) }
+/// The last sightings: each living enemy out of the picture now, and in it recently enough: where he stood, and how long ago. Nobody's AI reads it. (fogofwar.ts FogOfWar.lastSeen)
+pub fn fog_of_war_last_seen(g: &crate::game::Game) -> Vec<crate::view::SeenMark> {
+    let told = match crate::told::told_now(g) { crate::told::ToldRung::Guided => m::max(0.0, g.k.told.guided), crate::told::ToldRung::Standard => m::max(0.0, g.k.told.standard), _ => 0.0 };
+    let secs = if g.k.fog.last_seen > 0.0 { g.k.fog.last_seen } else { told };
+    let wand = g.k.wand.mark_secs > 0.0;
+    let mut out = Vec::new();
+    if !fog_of_war_active(g) || !(secs > 0.0 || wand) { return out; }
+    for &gd in g.guards.iter() {
+        if g.gd[gd].state == crate::game::GuardState::Dead || !crate::teams::is_hostile(g, g.gd[gd].team, crate::teams::Team::Player) || !fog_of_war_hides(g, gd) { continue; }
+        let Some(r) = g.fog_of_war.recs.get(gd) else { continue };
+        let Some(at) = r.at else { continue };
+        let age = g.time - r.t;
+        let life = if wand && r.wand_t.map_or(false, |w| m::abs(r.t - w) < 0.5) { m::max(secs, g.k.wand.mark_secs) } else { secs };
+        if age >= 0.0 && age < life { out.push(crate::view::SeenMark { man: g.ch[g.gd[gd].ch].id, at, age, life }); }
+    }
+    out
+}
+/// does the team not see this man (asked of the game shared: no tool's tap is told)
+pub fn fog_of_war_hides(g: &crate::game::Game, gd: GuardId) -> bool {
     g.fog_of_war.hidden_chars.len() > 0 && g.fog_of_war.hidden_chars.has(g.gd[gd].ch)
 }
 
@@ -443,16 +435,16 @@ pub fn fog_of_war_light_by(g: &mut crate::game::Game, l: LightId, who: Option<f6
 /// What is filed from here to `done` is `who`'s doing. Returns what `done` puts back (−1: nothing).   (fogofwar.ts FogOfWar.begin)
 pub fn fog_of_war_begin(g: &mut crate::game::Game, who: Option<f64>) -> f64 {
     if !who.map_or(false, js::truthy) { return -1.0; }
-    let was = match gpu_particles(g) { Some(p) => p.ours, None => return -1.0 };
+    let was = g.fog_of_war.filing_ours;
     let ours = fog_of_war_ours_id(g, who);
-    if let Some(p) = gpu_particles(g) { p.ours = ours; }
+    g.fog_of_war.filing_ours = ours;
     if was { 1.0 } else { 0.0 }
 }
 
 /// Puts back what `begin` returned.   (fogofwar.ts FogOfWar.done)
 pub fn fog_of_war_done(g: &mut crate::game::Game, was: f64) {
     if was < 0.0 { return; }
-    if let Some(p) = gpu_particles(g) { p.ours = was == 1.0; }
+    g.fog_of_war.filing_ours = was == 1.0;
 }
 
 /// `begin` / `done` round `fn_`.   (fogofwar.ts FogOfWar.doing)
@@ -465,7 +457,7 @@ pub fn fog_of_war_doing<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, 
 
 /// The rest of this doing is not shown; the `done` that closes it puts the mark back.   (fogofwar.ts FogOfWar.hush)
 pub fn fog_of_war_hush(g: &mut crate::game::Game) {
-    if let Some(p) = gpu_particles(g) { p.ours = false; }
+    g.fog_of_war.filing_ours = false;
 }
 
 /// What a hidden man puts into the air is not filed: true = `c` is out of the picture.   (fogofwar.ts FogOfWar.airHides)

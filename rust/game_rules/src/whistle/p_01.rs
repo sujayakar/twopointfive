@@ -47,6 +47,11 @@ pub fn whistle_ready_in(g: &mut crate::game::Game) -> f64 {
     m::max(0.0, blower(g).ready_at - g.time)
 }
 
+/// …of any seat: a breath nobody has drawn yet is ready
+pub fn whistle_ready_in_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> f64 {
+    g.m.whistle.blower_of.get(seat.player).map_or(0.0, |b| m::max(0.0, b.ready_at - g.time))
+}
+
 /// V pressed this frame.   (whistle.ts whistleKey)
 pub fn whistle_key(g: &mut crate::game::Game, input: InputId) {
     if crate::input::input_hit(g, input, "KeyV") { try_whistle(g); }
@@ -247,7 +252,7 @@ fn pick_i(r: f64, len: f64, last: f64) -> f64 {
 
 /// A line from the pool, and the place it had written in the man's row.   (whistle.ts pick)
 pub fn pick(g: &mut crate::game::Game, pool: &[String], gd: GuardId, key: crate::whistle::PickKey) -> String {
-    let r = crate::math_dice::sim_random(g);
+    let r = crate::dice::draw_of(g, "whistle::pick#1", gd);
     let row = mem(g, gd);
     let last = match key { PickKey::LastLook => row.last_look, PickKey::LastTwice => row.last_twice };
     let i = pick_i(r, pool.len() as f64, last);

@@ -609,7 +609,7 @@ pub fn blocked_over(w: usize, v: &Over, a0: f64, a1: f64, a2: f64, b0: f64, b1: 
     s.panes as i32
 }
 
-// ---- a line asked from inside the module (the senses: sight.rs, light.rs, smoke.rs, hear.rs, nav.rs), from its two ends
+// ---- a line asked from inside the module (the senses: sight.rs, light.rs, hear.rs, nav.rs), from its two ends
 /// A LINE'S LENGTH as the game works it out — or what a line answers with no walk at all: nothing is between two points that are one (Some(false)), and a
 /// length that is no length of this world's is the host's to judge (None).
 #[inline]
@@ -715,7 +715,7 @@ fn face_of(axis: i32, sgn: f64) -> (f64, f64, f64) {
 /// boxes.ts rayBox, whole (a round box, a cut one, a fully rotated one, a plain yawed one, asked in that order): where the ray enters the box within tmax
 /// and the normal of the face it enters by. None = it does not, or it starts inside (the rule rayBox documents).
 #[allow(clippy::too_many_arguments)]
-fn ray_box_n(cut: &[f64], a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, b: &[f64], tmax: f64) -> Option<(f64, f64, f64, f64)> {
+pub(crate) fn ray_box_n(cut: &[f64], a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, b: &[f64], tmax: f64) -> Option<(f64, f64, f64, f64)> {
     let kind = b[R_KIND] as u32;
     if kind & K_ROUND != 0 {
         // rayBoxRound: face 0 = none entered (the origin is inside), 1 = an end, 2 = the side

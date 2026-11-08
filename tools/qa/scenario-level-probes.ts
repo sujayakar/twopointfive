@@ -23,7 +23,7 @@
 //   load (game/samestart.ts), and 1 to 3 are three dealt floors of the same file. The rescue keeps 1, 2, 3 (its seed is the roamers' and the clock's die).
 //   --seeds, when given, is taken by both. A seed is the placement AND the run's die, so the page's floor is ONE run here: 'it can be won' can still pass on a
 //   dealt floor alone (the seed lines say which). The page's floor over many dice is a tally's job: PT_SAMEFLOOR=1 tools/qa/playthrough.ts.
-//   THE EXCEPTION, by a table of five files (TRAPPED below: depot, block, block-squads, mousehole, pass): floors authored so that the plan this commander walks is the trap. There
+//   THE EXCEPTION, by a table of four files (TRAPPED below: depot, block, mousehole, pass): floors authored so that the plan this commander walks is the trap. There
 //   WALKED asks that the team left its marks (where it fell is printed) and the room clear's 'it can be won' is not asked of this plan.
 //   THE FLOOR'S TEAM: 'it can be won' is not asked of the PAIR on a level the mission list plays only with the four (fourManRowsOf below reads the list;
 //   the pair's count is still printed, and it still has to stage, walk and finish). A level with a pair row, or with no row, keeps the line.
@@ -216,7 +216,6 @@ class Clear {
 const TRAPPED: Record<string, string> = {
   'depot.json': "the lit yard, between the signals hut's slit and the store's hatch",
   'block.json': 'the lit near leg of each held room, its men round the turn',
-  'block-squads.json': 'the lit near leg of each held room, its men round the turn',
   'mousehole.json': "the lit corridor every door opens on, under the duty room's hatch gun; ward, exam room and store have one door each, wedged from inside, and are reached by their walls",
   'pass.json': 'the white, lit yard between the lorry and the doors, watched through glass from two sides',
 };
@@ -423,7 +422,8 @@ export async function scenarioRescue(file: string, o: Opts = {}): Promise<boolea
   const noOrder = runs.filter(r => r.state !== 'error' && !/^order:(bang|go|stack)/.test(r.order));
   F.verdict(!errors.length && !noOrder.length, 'F is taken as the order on the hostage room', noOrder.length ? noOrder.map(r => `seed ${r.seed}: ${r.order}`).join(' · ') : runs.map(r => r.order).join(' / '));
   F.verdict(ended.length === n, "finished: every seed ran to the scenario's own result inside the cap, no exception", `rescued ${won.length} (${runs.filter(r => r.grade === 'clean').length} clean, ${runs.filter(r => r.grade === 'costly').length} costly) · lost ${ended.length - won.length} · stalled ${runs.filter(r => r.state === 'stalled').length} · error ${errors.length} — seconds: ${runs.map(r => f1(r.t)).join(' / ')}`);
-  F.verdict(won.length > 0, 'it can be won: at least one seed ends with a hostage brought out', won.length ? `seed${won.length > 1 ? 's' : ''} ${won.map(r => `${r.seed} (${r.grade}, hostages ${r.hostages}, pair ${r.pair})`).join(', ')}` : 'no seed was rescued — look at --trace');
+  // (EVERY MISSION STARTS THE SAME WAY, samestart.ts: its seeds are one run of this commander, so the line is the demo's own question and not one die's luck)
+  F.verdict(won.length > 0, 'it can be won: the bang and the two men through the door bring a hostage out', won.length ? `won on seed${won.length > 1 ? 's' : ''} ${won.map(r => `${r.seed} (${r.grade}, hostages ${r.hostages}, pair ${r.pair})`).join(', ')}` : `lost on every one of ${n}: ${runs[0]?.why} at ${f1(runs[0]?.t ?? NaN)} s`);
   return F.done();
 }
 

@@ -39,7 +39,6 @@
 //     the hall door bursts in the near leg with the corner between it and him: he is not blinded. He stands in a leg whose lamp is out (0.00 on the headless
 //     meter) and the men coming to the turn are in the near leg's (0.25‥0.35 at the mess's and the comms room's turn, 0.3 short of the workshop's mouth, 1.0 mid-leg).
 //   B stands in the far leg too, out of the turn's line, with his gun on the HEEL door.
-//   (the squads file's third man, blocksquads.ts) stands in the near leg's dead corner on the hall door: the one man a can through that door does catch.
 //   A room has exactly as many marks as men, so the fresh deal of every visit is this placement.
 //   THE EIGHT ARE FOUR SQUADS, one a room, and none leaves its room or wedges a door (BLOCK_SQUADS_HOLD below). As one pool most of them left their marks
 //   for the first fight on Hard and every plan became one fight in the hall; as a squad over two rooms the store's pair crossed the hall to the workshop.
@@ -122,13 +121,6 @@ export const BLOCK_MOUTHS: { x: boolean; line: number; a: number; b: number }[] 
   { x: true, line: 18.6, a: 18.3, b: 20.34 }, { x: false, line: 30.74, a: 20.46, b: 23.88 },
 ];
 
-/** THE SQUADS FILE'S THREE (scene/scenarios.ts SquadData; blocksquads.ts stands its eleven in them): Alpha the mess, Bravo the workshop and the store,
- *  Charlie the comms room with the drive — Charlie never leaves it. Each rallies in the far leg of a room of its own. */
-export const BLOCK_SQUADS = (): NonNullable<NonNullable<LevelScenarios['roomClear']>['squads']> => [
-  { id: 'alpha', name: 'Alpha', rooms: ['mess'], rally: [17.6, 0, 5.8] },
-  { id: 'bravo', name: 'Bravo', rooms: ['shop', 'store'], rally: [33.0, 0, 22.2] },
-  { id: 'charlie', name: 'Charlie', rooms: ['comms'], rally: [29.4, 0, 6.0], barricade: ['b_s'], mayLeave: false },
-];
 /** THIS FILE'S EIGHT: one squad a room, and none leaves its room or wedges a door — a squad over two rooms sends its men across the hall to the room under
  *  attack, which unmakes the placement as surely as the one pool did. */
 export const BLOCK_SQUADS_HOLD = (): NonNullable<NonNullable<LevelScenarios['roomClear']>['squads']> => [
@@ -365,8 +357,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   {
     const P = livedPieces({ add: K.add, grp: K.grp, prop: K.prop }, C as unknown as Parameters<typeof livedPieces>[1]), A = P.at(0, 0, 0), Q = Math.PI / 4;
     // ROUND THINGS that stand still are the kits' (livedPieces.ts at().round, over src/scene/gwotKit.ts roundSlabs), by how far ACROSS they are: `oct` a small one
-    // (two squares s across; from 0.37 m the kit makes it an octagon), `oct8` a larger one as the octagon whose slabs are s long — the shape the round rule
-    // (src/scene/round.ts) makes one round box of
+    // (two squares s across; from 0.37 m the kit makes it one round box), `oct8` a larger one, s long across its middle before the kit's radius takes it
+    // (src/scene/gwotKit.ts ROUND_FROM)
     const oct = (x: number, y0: number, z: number, s: number, h: number, col: Vec3) => A.round(x, y0, z, s / 1.86, h, col);
     // (a LOOSE thing's body: a prop's part cannot say it is round, so these two stay parts written by hand — the two squares, the octagon stepped 3 mm)
     const octParts = (y0: number, s: number, h: number, col: Vec3) => [P.part(0, y0, 0, s, h, s, col), P.part(0, y0, 0, s, h - 0.004, s, col, Q)];
@@ -570,9 +562,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // ---------------- what the room clear takes from this level ----------------
   // Eight defenders, two to a room (maxMen: the room clear's five lifted for this structure; with Sam and the four that is thirteen characters). A room has
   // EXACTLY TWO marks, so every deal of every visit (ROOMCLEAR.fresh deals the marks afresh) is the placement made by hand (the head comment): A at the far
-  // leg's end on the turn, B in the far leg on the heel door. The squads file (blocksquads.ts) adds its third men's marks: the near leg's dead corner. A room's `bounds` is its L's bounding
-  // box, the notch room included. Each room's first door is its hall door: the one a commander with no plan tries first. The eight are THREE SQUADS (BLOCK_SQUADS,
-  // above): the squads file's, man for man less its third men.
+  // leg's end on the turn, B in the far leg on the heel door. A room's `bounds` is its L's bounding
+  // box, the notch room included. Each room's first door is its hall door: the one a commander with no plan tries first. The eight are four squads (BLOCK_SQUADS_HOLD, above).
   const scenarios: LevelScenarios = {
     roomClear: {
       name: 'the block', maxMen: 8,

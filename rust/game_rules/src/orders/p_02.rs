@@ -9,15 +9,6 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ------------------------------------------------------------ small words
 
-/// `t.at`, whichever kind of target it is
-fn target_pos(t: &OrderTarget) -> V3 {
-    match t {
-        OrderTarget::Floor(x) => x.at,
-        OrderTarget::Door(x) => x.at,
-        OrderTarget::None(x) => x.at,
-        OrderTarget::Foe(x) => x.at,
-    }
-}
 /// `a === b` of two `Who`s (ring.indexOf)
 fn same_who(a: Who, b: Who) -> bool {
     match (a, b) {
@@ -47,165 +38,21 @@ fn sel_of_who(w: Who) -> SquadOrdersMenSel {
     }
 }
 /// `a === b` of two marks of one deal: pair() hands the spots back unchanged, so their bits are the same, a NaN's too
-fn same_bits(a: V3, b: V3) -> bool {
+pub(crate) fn same_bits(a: V3, b: V3) -> bool {
     a[0].to_bits() == b[0].to_bits() && a[1].to_bits() == b[1].to_bits() && a[2].to_bits() == b[2].to_bits()
 }
 fn is_dead(g: &Game, gd: GuardId) -> bool {
     g.gd[gd].state == crate::game::GuardState::Dead
 }
 /// a string as a condition
-fn truthy_str(s: &Option<String>) -> bool {
+pub(crate) fn truthy_str(s: &Option<String>) -> bool {
     s.as_deref().map_or(false, |x| !x.is_empty())
 }
 
-// ------------------------------------------------------------ the built-in rows' functions (orders.ts:581-627)
-// The arms of OrderLabel, OrderCan, OrderValid, OrderIssue and OrderTick: order_can, order_valid, order_issue, order_tick and the label's match call these.
-// `can`: None is true, Some the word why not. `valid`: Ok is true, Err(None) false, Err(Some) the word. `issue`: the reason it cannot be done.
+// (the order's own functions are its file in orders/rows/. 'fallIn' sorts by this, which the tests below read too)
 
-/// 'move'.can (orders.ts:581)
-pub fn row_move_can(g: &mut crate::game::Game, gd: GuardId, t: &crate::orders::OrderTarget) -> Option<String> {
-    let at = target_pos(t);
-    if squad_orders_walk_try(g, gd, at).is_some() { return None; }
-    squad_orders_reach(g, gd, at)
-}
-/// 'move'.valid: a door nobody has tried is walked up to, where it has room for them (orders.ts:582)
-pub fn row_move_valid(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
-    match squad_orders_walk_stacks(g, men, target_pos(t)) {
-        Some(SquadOrdersWalkStacks::Text(w)) => Err(Some(w)),
-        _ => Ok(()),
-    }
-}
-/// 'move'.issue: a place and a watch each that fit the room, or the line abreast (orders.ts:583)
-pub fn row_move_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> {
-    let t_at = target_pos(t);
-    let pc = g.pl[g.player].ch;
-    let sam = g.ch[pc].pos;
-    let face = if v3::dist_xz(sam, t_at) > 0.3 { v3::yaw_to(sam, t_at) } else { g.ch[pc].body_yaw };
-    // (the room kept: Sam's, and every other man's mark: where he is walking to, not where he is)
-    let rest: Vec<GuardId> = squad_orders_men(g, &crate::seats::here(g), None, None).into_iter().filter(|m| !men.contains(m)).collect();
-    let mut bodies: Vec<V3> = vec![sam];
-    let mut held: Vec<String> = Vec::new();
-    for &m in &rest {
-        let of = squad_orders_of(g, &crate::seats::here(g), m);
-        let post = of.and_then(|a| g.tab.orders_assignment[a].post);
-        bodies.push(match post { Some(p) => p, None => g.ch[g.gd[m].ch].pos });
-    }
-    for &m in &rest {
-        let of = squad_orders_of(g, &crate::seats::here(g), m);
-        let key = of.and_then(|a| g.tab.orders_assignment[a].fit.as_ref().and_then(|f| f.key.clone()));
-        if let Some(k) = key { if !k.is_empty() { held.push(k); } }
-    }
-    let fits = crate::roomfit::fit_spots(g, t_at, men.len() as f64, face, sam, Some(&bodies), Some(&held));
-    let deal: Vec<(GuardId, V3)> = match &fits {
-        Some(f) => {
-            let spots: Vec<V3> = f.iter().map(|x| x.pos).collect();
-            let groups = crate::roomfit::fit_groups(f);
-            squad_orders_pair(g, men, &spots, Some(&groups), None)
-        }
-        None => {
-            let spots = squad_orders_spots_at(g, t_at, face, men.len() as f64);
-            let groups: Vec<f64> = (0..spots.len()).map(|i| (i >> 1) as f64).collect();
-            squad_orders_pair(g, men, &spots, Some(&groups), None)
-        }
-    };
-    let at = match squad_orders_walk_stacks(g, men, t_at) {
-        Some(SquadOrdersWalkStacks::Text(w)) => return Some(w),
-        Some(SquadOrdersWalkStacks::Map(m)) => Some(m),
-        None => None,
-    };
-    for (gd, p) in deal {
-        let fit = fits.as_ref().and_then(|f| f.iter().find(|x| v3::dist_xz(x.pos, p) < 1e-6).cloned());
-        let walk = at.as_ref().and_then(|m| m.get(gd).copied());
-        let on = SquadOrdersAssignA {
-            order: String::from("move"), post: Some(p), face: Some(face),
-            stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim),
-            going: String::from("moving"), there: String::from("in position"), set_line: Some(String::from("set.")), fit,
-            ..Default::default()
-        };
-        if let Some(w) = walk {
-            squad_orders_walk_send(g, gd, SquadOrdersWalkSendT { door: w.door, side: w.side, post: w.post }, t_at, &on);
-        } else {
-            squad_orders_assign(g, gd, &on);
-        }
-    }
-    None
-}
-/// 'stack'.valid (orders.ts:592)
-pub fn row_stack_valid(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
-    let (door, side) = match t { OrderTarget::Door(x) => (x.door, x.side), _ => return Err(None) };
-    let posts = match squad_orders_stack_posts_wait(g, door, side, men) {
-        Some(p) => p,
-        None => return Err(Some(squad_orders_no_room_words(g, "no room on that door.", &mut |g| squad_orders_stack_posts_wait(g, door, side, men).is_some()))),   // (ORDERS.inWay: … or that it is Sam who is in the way, where it is)
-    };
-    let spots: Vec<V3> = posts.iter().map(|x| x.pos).collect();
-    let groups: Vec<f64> = posts.iter().map(|x| x.group.unwrap_or(0.0)).collect();
-    let front = g.dr[door].frame_centre;
-    for (gd, p) in squad_orders_pair(g, men, &spots, Some(&groups), Some(front)) {
-        if let Some(w) = squad_orders_reach(g, gd, p) { if !w.is_empty() { return Err(Some(w)); } }
-    }
-    Ok(())
-}
-/// 'stack'.issue (orders.ts:597)
-pub fn row_stack_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> {
-    let (door, side) = match t { OrderTarget::Door(x) => (x.door, x.side), _ => return Some(String::from("no door")) };
-    let posts = match squad_orders_stack_posts_wait(g, door, side, men) {
-        Some(p) => p,
-        None => return Some(squad_orders_no_room_words(g, "no room to stack on that door", &mut |g| squad_orders_stack_posts_wait(g, door, side, men).is_some())),
-    };
-    let name = door_words(g, door);
-    let spots: Vec<V3> = posts.iter().map(|p| p.pos).collect();
-    let groups: Vec<f64> = posts.iter().map(|p| p.group.unwrap_or(0.0)).collect();
-    let fc = g.dr[door].frame_centre;
-    for (gd, p) in squad_orders_pair(g, men, &spots, Some(&groups), Some(fc)) {
-        // (`x.pos === p` in the TypeScript: the very mark dealt. Marks of one stack are never at one spot, so the first of the same bits is that one)
-        let post = *posts.iter().find(|x| same_bits(x.pos, p)).unwrap();
-        let a = SquadOrdersAssignA {
-            order: String::from("stack"), post: Some(post.pos), face: Some(post.face),
-            watch: Some([fc[0], 1.05, fc[2]]), door: Some(door), shy: Some(door),
-            stance: Some(if post.lead { crate::character::Stance::Stack } else { crate::character::Stance::HighReady }),
-            upper: Some(crate::character::UpperMode::None),
-            move_: Some(crate::doortools::DoorToolsDoneItemLaneBackMove { stance: crate::character::Stance::None, upper: crate::character::UpperMode::Aim }),
-            stack_side: Some(post.stack_side),
-            going: format!("stacking · {}", name), there: format!("stacked · {}", name), set_line: Some(String::from("set.")),
-            ..Default::default()
-        };
-        squad_orders_assign(g, gd, &a);
-    }
-    squad_orders_spare_rear(g, men, door, None, None);
-    None
-}
-/// 'cover'.label (orders.ts:605)
-pub fn row_cover_label(g: &crate::game::Game, t: &crate::orders::OrderTarget) -> String {
-    String::from(if matches!(t, OrderTarget::Door(_)) { "cover this door" } else { "cover that way" })
-}
-/// 'cover'.can (orders.ts:606)
-pub fn row_cover_can(g: &mut crate::game::Game, gd: GuardId, t: &crate::orders::OrderTarget) -> Option<String> {
-    if squad_orders_has_line(g, gd, t) { None } else { Some(String::from("no line from here.")) }
-}
-/// 'cover'.issue (orders.ts:606)
-pub fn row_cover_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> {
-    let t_at = target_pos(t);
-    let watch: V3 = [t_at[0], 1.1, t_at[2]];
-    for &gd in men {
-        let p = g.ch[g.gd[gd].ch].pos;
-        let yaw = v3::yaw_to(p, watch);
-        let (place, door) = match t {
-            OrderTarget::Door(x) => (door_words(g, x.door), Some(x.door)),
-            _ => (crate::dialogue::watched_place(g, p, watch).unwrap_or_else(|| String::from("that way")), None),
-        };
-        let words = format!("covering {}", place);
-        let a = SquadOrdersAssignA {
-            order: String::from("cover"), post: Some([p[0], 0.0, p[2]]), face: Some(yaw), watch: Some(watch), door,
-            stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim),
-            going: words.clone(), there: words,
-            ..Default::default()
-        };
-        squad_orders_assign(g, gd, &a);
-    }
-    None
-}
 /// 'fallIn'.issue's sort of one man against another: pair_near, near, pair (orders.ts:615)
-fn fall_in_cmp(many: bool, a: (f64, f64, Option<crate::game::PairId>), b: (f64, f64, Option<crate::game::PairId>)) -> f64 {
+pub(crate) fn fall_in_cmp(many: bool, a: (f64, f64, Option<crate::game::PairId>), b: (f64, f64, Option<crate::game::PairId>)) -> f64 {
     let pair = if many && a.2 != b.2 {
         let (x, y) = (a.2.map_or("", |p| p.as_str()), b.2.map_or("", |p| p.as_str()));   // (localeCompare of '', 'blue', 'red': the same order as bytes)
         match x.cmp(y) {
@@ -217,89 +64,6 @@ fn fall_in_cmp(many: bool, a: (f64, f64, Option<crate::game::PairId>), b: (f64, 
         0.0
     };
     js::or(js::or(a.0 - b.0, pair), a.1 - b.1)
-}
-/// 'fallIn'.issue: a man already in the file keeps his place; three or more file by pairs, the pair with the nearer man first (orders.ts:611)
-pub fn row_fall_in_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> {
-    let mut taken: Vec<f64> = Vec::new();
-    for (gd, a) in g.orders.asg.iter() {
-        let row = &g.tab.orders_assignment[*a];
-        if row.post.is_none() && !men.contains(&gd) { taken.push(row.follow); }
-    }
-    let sam = g.ch[g.pl[g.player].ch].pos;
-    let nears: Vec<f64> = men.iter().map(|&m| v3::dist_xz(g.ch[g.gd[m].ch].pos, sam)).collect();
-    let pair_ids: Vec<Option<crate::game::PairId>> = men.iter().map(|&m| squad_orders_pair_of(g, m)).collect();
-    let many = men.len() > 2;
-    let mut sorted: Vec<(GuardId, (f64, f64, Option<crate::game::PairId>))> = Vec::with_capacity(men.len());
-    for (i, &gd) in men.iter().enumerate() {
-        let id = pair_ids[i];
-        let pair_near = if many && id.is_some() {
-            let of_pair: Vec<f64> = (0..men.len()).filter(|&j| pair_ids[j] == id).map(|j| nears[j]).collect();
-            m::min_n(&of_pair)
-        } else {
-            nears[i]
-        };
-        sorted.push((gd, (pair_near, nears[i], id)));
-    }
-    js::sort_by(&mut sorted, |a, b| fall_in_cmp(many, a.1, b.1));
-    let mut k = 0.0;
-    for (gd, _) in sorted {
-        while taken.contains(&k) { k += 1.0; }
-        taken.push(k);
-        let a = SquadOrdersAssignA {
-            order: String::from("fallIn"), post: None, follow: Some(k), face: None,
-            stance: Some(crate::character::Stance::LowReady), upper: Some(crate::character::UpperMode::None),
-            going: String::from("falling in"), there: String::from("with you"),
-            ..Default::default()
-        };
-        squad_orders_assign(g, gd, &a);
-    }
-    None
-}
-/// 'hold'.issue: a running man plants a stride on; the squad of four take an approach each (orders.ts:618)
-pub fn row_hold_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> {
-    let mut posts: Vec<V3> = Vec::with_capacity(men.len());
-    for &gd in men {
-        let c = g.gd[gd].ch;
-        let (p, v, k) = (g.ch[c].pos, g.ch[c].vel, g.k.orders.hold_stride);
-        let on: V3 = [p[0] + v[0] * k, 0.0, p[2] + v[2] * k];
-        let ok = !crate::scene_collision::nav_grid_is_blocked(g, on[0], on[2]) && !crate::scene_collision::solid_blocked(g, [p[0], 0.45, p[2]], [on[0], 0.45, on[2]], None);
-        posts.push(if ok { on } else { [p[0], 0.0, p[2]] });
-    }
-    let arcs = if squad_orders_big(g, &crate::seats::here(g)) && men.len() > 1 { Some(squad_orders_hold_arcs(g, &posts)) } else { None };
-    for (i, &gd) in men.iter().enumerate() {
-        let arc = arcs.as_ref().and_then(|a| a.get(i).copied().flatten());
-        let a = match arc {
-            Some(SquadOrdersHoldArcsItem { yaw, door: Some(door), .. }) => {   // (a door close by in his arc: the gun, and the light on it, is ON it)
-                let fc = g.dr[door].frame_centre;
-                let there = format!("holding · {}", door_words(g, door));
-                SquadOrdersAssignA {
-                    order: String::from("hold"), post: Some(posts[i]), face: Some(yaw), watch: Some([fc[0], 1.1, fc[2]]), door: Some(door),
-                    stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim), light: Some(true),
-                    going: String::from("holding"), there,
-                    ..Default::default()
-                }
-            }
-            Some(arc) => {   // (… else out along his arc)
-                let watch: V3 = [posts[i][0] + m::sin(arc.yaw) * arc.reach, 1.1, posts[i][2] + m::cos(arc.yaw) * arc.reach];
-                let pl = crate::dialogue::watched_place(g, posts[i], [posts[i][0] + m::sin(arc.yaw) * arc.reach, 0.0, posts[i][2] + m::cos(arc.yaw) * arc.reach]);
-                let there = if truthy_str(&pl) { format!("holding · {}", pl.unwrap()) } else { String::from("holding") };
-                SquadOrdersAssignA {
-                    order: String::from("hold"), post: Some(posts[i]), face: Some(arc.yaw), watch: Some(watch),
-                    stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim), light: Some(true),
-                    going: String::from("holding"), there,
-                    ..Default::default()
-                }
-            }
-            None => SquadOrdersAssignA {
-                order: String::from("hold"), post: Some(posts[i]), face: Some(g.ch[g.gd[gd].ch].body_yaw),
-                stance: Some(crate::character::Stance::LowReady), upper: Some(crate::character::UpperMode::None),
-                going: String::from("holding"), there: String::from("holding"),
-                ..Default::default()
-            },
-        };
-        squad_orders_assign(g, gd, &a);
-    }
-    None
 }
 
 // ------------------------------------------------------------ the night breach's owner (orders.ts:630-637)
@@ -348,36 +112,31 @@ pub fn squad_orders_new(g: &mut crate::game::Game, cast: Option<&crate::orders::
     s.cast = cast.cloned();
     let words = |w: &[&str]| -> Option<Vec<String>> { Some(w.iter().map(|x| String::from(*x)).collect()) };
     let rows = [
-        OrderDef {
-            id: String::from("move"), key: Some(1.0), label: OrderLabel::Text { text: String::from("move there") }, targets: vec![TargetKind::Floor],
+        rows::def(&rows::movethere::ORDER, OrderDef {
+            key: Some(1.0), targets: vec![TargetKind::Floor],
             ack: words(&["moving.", "on it."]),
-            can: Some(OrderCan::Move), valid: Some(OrderValid::Move), issue: OrderIssue::Move, tick: Some(OrderTick::Move),
             ..Default::default()
-        },
-        OrderDef {
-            id: String::from("stack"), key: Some(1.0), label: OrderLabel::Text { text: String::from("stack up") }, targets: vec![TargetKind::Door],
+        }),
+        rows::def(&rows::stack::ORDER, OrderDef {
+            key: Some(1.0), targets: vec![TargetKind::Door],
             ack: words(&["stacking up.", "on the door."]),
-            valid: Some(OrderValid::Stack), issue: OrderIssue::Stack,
             ..Default::default()
-        },
-        OrderDef {
-            id: String::from("cover"), key: Some(2.0), label: OrderLabel::Cover, targets: vec![TargetKind::Floor, TargetKind::Door],
+        }),
+        rows::def(&rows::cover::ORDER, OrderDef {
+            key: Some(2.0), targets: vec![TargetKind::Floor, TargetKind::Door],
             ack: words(&["covering.", "i've got it."]),
-            can: Some(OrderCan::Cover), issue: OrderIssue::Cover,
             ..Default::default()
-        },
-        OrderDef {
-            id: String::from("fallIn"), key: Some(3.0), label: OrderLabel::Text { text: String::from("fall in") }, targets: vec![TargetKind::Floor, TargetKind::Door, TargetKind::None],
+        }),
+        rows::def(&rows::fallin::ORDER, OrderDef {
+            key: Some(3.0), targets: vec![TargetKind::Floor, TargetKind::Door, TargetKind::None],
             ack: words(&["on you.", "with you."]),
-            issue: OrderIssue::FallIn,
             ..Default::default()
-        },
-        OrderDef {
-            id: String::from("hold"), key: Some(4.0), label: OrderLabel::Text { text: String::from("hold position") }, targets: vec![TargetKind::Floor, TargetKind::Door, TargetKind::None],
+        }),
+        rows::def(&rows::hold::ORDER, OrderDef {
+            key: Some(4.0), targets: vec![TargetKind::Floor, TargetKind::Door, TargetKind::None],
             ack: words(&["holding."]),
-            issue: OrderIssue::Hold,
             ..Default::default()
-        },
+        }),
     ];
     for row in rows {   // (rows of its own: a menu newly stood has none yet, whoever's orders stand on the game while it is made)
         let (id, d) = (row.id.clone(), new_row(g, row));
@@ -525,14 +284,6 @@ pub fn squad_orders_cycle_who(g: &mut crate::game::Game, dir: Option<f64>) -> cr
 /// CMDRING.wholeSquad, the player's own squad: every order of his is everyone's.   (orders.ts SquadOrders.whole)
 pub fn squad_orders_whole(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     seat.orders.cast.is_none()
-}
-
-/// The orders go to that one man until T is pressed again.   (orders.ts SquadOrders.address)
-pub fn squad_orders_address(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    let k = match squad_orders_squad(g, &crate::seats::here(g)).iter().position(|&x| x == gd) { Some(k) => k, None => return false };
-    if is_dead(g, gd) { return false; }
-    g.orders.who = Who::Num(k as f64);
-    true
 }
 
 /// Who these men are, in a word or two.   (orders.ts SquadOrders.whoWords)
@@ -696,13 +447,12 @@ fn new_row(g: &mut Game, def: OrderDef) -> OrdersOrderDefId { g.tab.orders_order
 
 /// THE ROWS OF A MENU THAT CAME OFF THE WIRE, which carries the table and each menu's list but not whose the rest of the rows are: a game read from
 /// bytes finds its own again. Of an id, the row on this menu; else the first that no other seat has, counting the seats in order, since a
-/// start makes its rows seat after seat. The wall tools' digitless copies are nobody's.
+/// start makes its rows seat after seat.
 fn adopt_rows(g: &mut Game) {
-    let copies: Vec<OrdersOrderDefId> = g.m.wallcharge.stand_ins.keys().into_iter().filter_map(|k| g.m.wallcharge.stand_ins.get(k).copied()).collect();
     let mut ids: Vec<String> = Vec::new();
-    for (d, r) in g.tab.orders_order_def.iter() { if !copies.contains(&d) && !ids.contains(&r.id) { ids.push(r.id.clone()); } }
+    for (_, r) in g.tab.orders_order_def.iter() { if !ids.contains(&r.id) { ids.push(r.id.clone()); } }
     for id in ids {
-        let rows: Vec<OrdersOrderDefId> = g.tab.orders_order_def.iter().filter(|(d, r)| r.id == id && !copies.contains(d)).map(|(d, _)| d).collect();
+        let rows: Vec<OrdersOrderDefId> = g.tab.orders_order_def.iter().filter(|(_, r)| r.id == id).map(|(d, _)| d).collect();
         let mut left = rows.clone();
         let mine: Option<OrdersOrderDefId> = rows.iter().copied().find(|d| g.orders.defs.contains(d));
         let mut ahead = 0;   // (the seats before this one that have none of it listed: each takes the next)
@@ -739,9 +489,9 @@ pub fn squad_orders_clear(g: &mut crate::game::Game, men: Option<&[GuardId]>) {
 }
 
 /// `this.people?.near(at) ?? null`: the man of the other side nearest the point, with how near; None while g.orders.people is None.   (orders.ts:742, the closure at pairorders.ts:159)
-pub fn squad_orders_people_near(g: &mut crate::game::Game, at: V3) -> Option<(GuardId, f64)> {
-    if g.orders.people.is_none() { return None; }
-    if !crate::pairorders::pair_orders_up(g, &crate::seats::here(g)) { return None; }
+pub fn squad_orders_people_near(g: &crate::game::Game, seat: &crate::seats::SeatRef, at: V3) -> Option<(GuardId, f64)> {
+    if seat.orders.people.is_none() { return None; }
+    if !crate::pairorders::pair_orders_up(g, seat) { return None; }
     let mut best: Option<GuardId> = None;
     let mut bd = g.k.pair.pick_m;
     let mut i = 0;
@@ -757,8 +507,21 @@ pub fn squad_orders_people_near(g: &mut crate::game::Game, at: V3) -> Option<(Gu
 
 /// What a point in the world is, as a target: the nearest of a door, a teammate and Sam himself; else the free floor at or nearest it; else nothing.   (orders.ts SquadOrders.targetAt)
 pub fn squad_orders_target_at(g: &mut crate::game::Game, p: V3) -> crate::orders::OrderTarget {
+    pointed(g);
+    let mut asked = Vec::new();
+    let t = target_at(g, &crate::seats::here(g), p, &mut asked);
+    crate::wallcharge::sky_kept(g, asked);
+    t
+}
+/// what a question of a point wants standing (before the first tick: the seat's list of things to work, which a tick keeps)
+fn pointed(g: &mut Game) {
+    if g.work.cache.is_none() { crate::workthings::work_things_keep(g); }
+    crate::scene_collision::stands(g);
+}
+/// …asked of the game shared, the copy of the boxes standing (`asked` = the walls whose sky was asked, for a rule to keep)
+pub fn target_at(g: &Game, seat: &crate::seats::SeatRef, p: V3, asked: &mut Vec<(f64, f64)>) -> crate::orders::OrderTarget {
     let (door_pick_m, man_m, self_m) = (g.k.orders.door_pick_m, g.k.orders.man_m, g.k.orders.self_m);
-    let sam = g.ch[g.pl[g.player].ch].pos;
+    let sam = g.ch[g.pl[seat.player].ch].pos;
     let at: V3 = [p[0], 0.0, p[2]];
     let mut door: Option<DoorId> = None;
     let mut dd = door_pick_m;
@@ -773,19 +536,19 @@ pub fn squad_orders_target_at(g: &mut crate::game::Game, p: V3) -> crate::orders
     }
     let mut man: Option<GuardId> = None;
     let mut dm = man_m;
-    for gd in squad_orders_squad(g, &crate::seats::here(g)) {
+    for gd in squad_orders_squad(g, seat) {
         let x = v3::dist_xz(g.ch[g.gd[gd].ch].pos, at);
         if !is_dead(g, gd) && x < dm { dm = x; man = Some(gd); }
     }
     let ds = v3::dist_xz(sam, at);
-    let fo = squad_orders_people_near(g, at);   // (pairorders.ts: a man of the other side nearer the point than a door, a teammate or Sam himself)
+    let fo = squad_orders_people_near(g, seat, at);   // (pairorders.ts: a man of the other side nearer the point than a door, a teammate or Sam himself)
     if let Some((foe, fd)) = fo {
         if !(door.is_some() && dd < fd) && !(man.is_some() && dm < fd) && !(ds < self_m && ds < fd) {
             let fp = g.ch[g.gd[foe].ch].pos;
             return OrderTarget::Foe(OrderTargetFoe { at: [fp[0], 0.0, fp[2]], foe });
         }
     }
-    let wk = crate::workthings::work_near(g, at);   // (workthings.ts: a thing a teammate can work, nearer the point than a door, a teammate or Sam himself)
+    let wk = crate::workthings::work_near(g, seat, at);   // (workthings.ts: a thing a teammate can work, nearer the point than a door, a teammate or Sam himself)
     if let Some(wk) = wk {
         if !(door.is_some() && dd < wk.d) && !(man.is_some() && dm < wk.d) && !(ds < self_m && ds < wk.d) { return wk.target; }
     }
@@ -800,11 +563,11 @@ pub fn squad_orders_target_at(g: &mut crate::game::Game, p: V3) -> crate::orders
         }
     }
     if ds < self_m { return OrderTarget::None(OrderTargetNone { at, man: None }); }
-    let base = match squad_orders_free_spot(g, &crate::seats::here(g), at) {
+    let base = match squad_orders_free_spot(g, seat, at) {
         Some(spot) => OrderTarget::Floor(OrderTargetFloor { at: spot, wall: None, thing: None, serial: 0 }),   // (serial 0: no menu's yet; orders.ts:937 stamps the one a menu keeps)
         None => OrderTarget::None(OrderTargetNone { at, man: None }),
     };
-    crate::wallcharge::wall_target(g, at, &base)   // (wallcharge.ts: a floor target under a wall carries the wall)
+    crate::wallcharge::wall_target(g, seat, at, &base, asked)   // (wallcharge.ts: a floor target under a wall carries the wall)
 }
 
 /// How far along the ray it crosses one door's doorway rectangle, nearer than `bt` and with nothing of the scene short of the frame line (orders.ts:757-763)
@@ -840,9 +603,18 @@ pub fn squad_orders_door_on_ray(g: &crate::game::Game, ro: V3, rd: V3, t_scene: 
 
 /// What the cursor is on, for the menu; with CMDRING.wholeSquad a teammate under it is the squad itself.   (orders.ts SquadOrders.targetUnder)
 pub fn squad_orders_target_under(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) -> crate::orders::OrderTarget {
-    let t = squad_orders_target_under_of(g, input, cam, canvas);
+    pointed(g);
+    let now = crate::view::host_now(g, input, cam, canvas);
+    let mut asked = Vec::new();
+    let t = target_under(g, &crate::seats::here(g), &now, &mut asked);
+    crate::wallcharge::sky_kept(g, asked);
+    t
+}
+/// …asked of the game shared, by a cursor and a camera as they stand
+pub fn target_under(g: &Game, seat: &crate::seats::SeatRef, now: &crate::view::HostNow, asked: &mut Vec<(f64, f64)>) -> crate::orders::OrderTarget {
+    let t = target_under_of(g, seat, now, asked);
     if let OrderTarget::None(x) = &t {
-        if x.man.is_some() && squad_orders_whole(g, &crate::seats::here(g)) { return OrderTarget::None(OrderTargetNone { at: x.at, man: None }); }
+        if x.man.is_some() && squad_orders_whole(g, seat) { return OrderTarget::None(OrderTargetNone { at: x.at, man: None }); }
     }
     t
 }

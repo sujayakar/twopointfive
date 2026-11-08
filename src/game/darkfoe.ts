@@ -46,7 +46,6 @@ import { hasHim, OWN } from './owner';
 import { gunKeepsPost } from './gunroles';
 import './lanes';
 import { pressKeepsHome } from './pressure';
-import { buddyPaired } from './buddy';
 import { RUST_PASS, RUST_SURFACE, crossToRust } from './crossing';
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?nodarkfoe = defenders leave their lights alone and stand
@@ -59,14 +58,10 @@ export const DARKFOE = {
   litAt: 0.3, lookM: 12, stepM: 2, fanRad: 0.3, seeShare: 0.34, askSecs: 0.25,
   onSecs: 0.6, onJitter: 2.5, offSecs: 15, offJitter: 0.4, holdSecs: 2,
   /** a mate's lamp coming on in his plain view within `lampM` is the word */
-  byLamp: true, lampM: 16,
-  /** true = a man who is only SUSPICIOUS (heard something, has found nobody) has the word too, as the first cut had it; off, the lamp waits until he is alerted */
-  suspect: false,
+  lampM: 16,
   /** a man with no light walks to where he can see */
   seek: true, blindSecs: 3, seekM: 10, walkM: 12, edgeM: 3, stumbleK: 0.75, againSecs: 20, moves: 2, quietSecs: 4, calmSecs: 6,
   roam: false,   // true = he may leave his room for it, by its doorways (the lean as first put: "stumble around to somewhere with light"); false = only inside the room he defends
-  /** he stops at the dark edge of the light (floor still dark, lit floor in plain view) where there is one in reach; false = the nearest floor he can see from, lit or not */
-  edge: true,
 };
 export const DARKFOE_STATS = { asks: 0, clicksOn: 0, clicksOff: 0, walks: 0, toMate: 0, noSpot: 0 };
 
@@ -135,7 +130,7 @@ export function darkFoeKept(g: Game, gd: Guard, D: Def | undefined = g.fight.def
   if (digInPhase(g, gd) !== 'idle') return 'dug in';
   if (hasHim(gd, OWN.squadWord)) return 'his squad\'s';
   if (gunKeepsPost(gd) || hasHim(gd, OWN.lane)) return 'holds a lane';
-  if (hasHim(D.gd, OWN.press | OWN.buddy) || pressKeepsHome(g, D, false) || buddyPaired(g, D)) return 'the press\'s';
+  if (hasHim(D.gd, OWN.press) || pressKeepsHome(g, D, false)) return 'the press\'s';
   if (g.rescue.captor() === gd || hasHim(gd, OWN.stand)) return 'the captor / last stand';
   return null;
 }

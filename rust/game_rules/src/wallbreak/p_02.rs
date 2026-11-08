@@ -351,9 +351,7 @@ pub fn wall_break_fall(g: &mut crate::game::Game, j: f64, a: crate::wallbreak::A
         } else {
             g.stats.wallbreak.chunks_demoted += 1;
             let albedo = seam_box(g, b).albedo;
-            if crate::particle_fx::gpu_fx(g) {
-                crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, c, [0.0, 1.0, 0.0], 8.0, crate::render_particles::EmitOpts { speed: 1.8, speed_jit: Some(0.7), spread: Some(1.2), life: 16.0, life_jit: Some(0.3), size: 0.012, size_jit: Some(0.6), color: Some(albedo), owner: Some(who), ..Default::default() });
-            }
+            crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, c, [0.0, 1.0, 0.0], 8.0, crate::render_particles::EmitOpts { speed: 1.8, speed_jit: Some(0.7), spread: Some(1.2), life: 16.0, life_jit: Some(0.3), size: 0.012, size_jit: Some(0.6), color: Some(albedo), owner: Some(who), ..Default::default() });
         }
     }
     true
@@ -694,10 +692,7 @@ pub fn wall_break_reset(g: &mut crate::game::Game, silent: Option<bool>) {
     for i in g.destr.walls.owner.keys() { if i.0 >= authored { g.destr.walls.owner.delete(i); } }
     let_go(g);
     crate::scene_collision::truncate_statics(g, authored);
-    if g.engine.world.statics.len() as f64 > authored {
-        g.engine.world.statics.truncate(authored as usize);
-        g.engine.world.statics_dirty = true;
-    }
+    if g.engine.world.statics.len() as f64 > authored { crate::scene_boxes::box_world_keep_statics(g, authored as usize); }
     g.destr.walls.dirty = false;
     wall_break_bump(g);
     if !any { return; }
@@ -705,7 +700,7 @@ pub fn wall_break_reset(g: &mut crate::game::Game, silent: Option<bool>) {
     crate::scene_collision::nav_grid_rebake(g, world.min[0], world.min[2], world.max[0], world.max[2]);
     crate::scene_collision::sound_paths_invalidate(g);
     crate::smoke_types::smoke_system_like_obstacles_changed(g, [(world.min[0] + world.max[0]) / 2.0, 1.0, (world.min[2] + world.max[2]) / 2.0], 60.0);
-    if g.engine.reach.is_some() { crate::render_reach_keep::reach_keep_changed(g, None, None); }
+    crate::render_reach_keep::reach_keep_changed(g, None, None);
     if !silent {
         wall_break_note(g, &WallBreakNoteC {
             dead: false,

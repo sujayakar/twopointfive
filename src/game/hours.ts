@@ -6,7 +6,7 @@
 //
 //   ?hour=dawn | midday | overcast | dusk | night        the page (host/standup.ts addressBeforeGame → hourAsked); the mission sheet's Hour row puts it on the link it loads (ui/missions.ts)
 //   applyHour(g, id)                                      live, both ways, any number of times (Tab ▸ Frame ▸ Hour; `__hour.set('dusk')`)
-//   Game.stood.sun 0‥1 / setSunStrength(g, k)                   THE ONE NUMBER for whoever has clouds: the sun's strength on the picture AND in the meter's stand-in
+//   Game.stood.sun 0‥1 / setSunStrength(g, k)                   THE ONE NUMBER for whoever has clouds: the sun's strength on the picture and in the game's light
 //
 // WHAT AN HOUR DOES, all of it reversible (applyHour(g, 'night') puts back exactly what it found — the light list, every switch, the sky, the storm):
 //   · the level's moon out, the hour's sun in at the moon's place in the light list (never last: a loud minute's flashes must not push it past the 64 a frame draws)
@@ -17,13 +17,9 @@
 //   · the night's STORM held off (Game.stood.dry — its own switch, put back with the night). A weather PICKED for the level (weather.ts `kind`) is not the night's
 //     storm: it runs at every hour, and its cloud dims this sun (THE WEATHER OVER THE HOUR, below).
 //
-// ONE MODEL. What an AI eye makes of a man is the light ON him. In the page that is the renderer's own meter (render/probe.ts: shadowed direct light — the sun is
-// one of the lights — plus the bounce, which carries the sky), so it follows the hour by itself. Everything the game computes on the CPU — guards.ts
-// lightEstimateAt: the meter's stand-in until the probe answers and ALWAYS under the headless harness, and what the team's light and goggle rules read on every
-// host — gets the hour here: hourLight() adds the SUN (one shadow test against the statics and the door leaves, the meter's own cosine) and the SKY with one
-// bounce off sunlit ground (a handful of rays per half-metre cell, cached; a door leaf in the way is asked every time, so a room lights when its door opens).
-// So by day a man in a yard is plain to see from across it, the team's weapon lights go out and its goggles come up outdoors, and a shut room is still a dark
-// room. No AI-only shortcut: nothing here reads a side, a state or a difficulty.
+// ONE MODEL. What an AI eye makes of a man is the light ON him, and the Rust game works that out (rust/game_rules/src/guards light_at; hours sky_now): so by day a man in
+// a yard is plain to see from across it, the team's weapon lights go out and its goggles come up outdoors, and a shut room is still a dark room. No AI-only
+// shortcut: nothing here reads a side, a state or a difficulty.
 //
 // SEAMS. Weather: weather.ts calls hourWeatherChanged(g) when its kind changes; this file holds the level's own storm switch and reads Weather.kind / .cloud
 // (the stand-in reads the live sky, so the greyed sky is followed). Destruction: a wall that goes changes what the sky reaches — call
@@ -33,11 +29,9 @@ import { GameSideMap } from '../math/side';
 import { Vec3, v3, clamp, smoothstep } from '../math/vec';
 import type { Game, LightTarget } from './game';
 import type { RtLight } from '../render/lights';
-import { rayBox, BoxFlag, type Box } from '../scene/boxes';
 import type { WeatherSnap } from './weather';
 import { isDaylight } from './lighting';
 import { ENV } from './env';
-import { SENSE } from './sense';
 import { LIGHT_IN } from '../sim/lightshome';
 import { RUST_PASS, RUST_SURFACE } from './crossing';
 
@@ -79,15 +73,11 @@ export const HOURS: Record<Exclude<HourId, 'night'>, HourDef> = {
 };
 const NIGHT = { label: 'Night', clock: '02:00', words: 'the level as it was built, with the moon, the lights outside and the storm' };
 export function hourLabel(id: HourId): string { return id === 'night' ? NIGHT.label : HOURS[id].label; }
-export function hourClock(id: HourId): string { return id === 'night' ? NIGHT.clock : HOURS[id].clock; }
-export function hourWords(id: HourId): string { return id === 'night' ? NIGHT.words : HOURS[id].words; }
 
 /** THE VISIT'S PICK (the page's ?hour=, the harness's PT_HOUR): what a game stood with nothing said for it is stood at (stood.ts stoodOfPick), and what a page's screens
  *  ask. No rule reads it and the bridge does not carry it: a game's own is Game.stood. `sun` is the one number a weather dims under cloud (1 = the hour's own sun; picture and
  *  meter stand-in alike). `dry`: hold the night's storm off while an hour other than night is in. */
-export const HOUR: { id: HourId; sun: number; /** `sun` was SET for the visit (?sun=, PT_SUN): it stands whatever cloud a picked weather brings; not set = the cloud dims the sun (THE WEATHER OVER THE HOUR, below) */ sunGiven: boolean; dry: boolean; /** the page's running game's hour, for screens that hold no Game (main.ts sets it; the mission sheet's no-load shortcut asks) */ live: (() => HourId) | null } = { id: 'night', sun: 1, sunGiven: false, dry: true, live: null };
-/** the hour the page is standing at right now: the running game's where a page has one (a checkpoint or the panel may have moved it off the visit's), else the visit's */
-export function hourLive(): HourId { return HOUR.live?.() ?? HOUR.id; }
+export const HOUR: { id: HourId; sun: number; /** `sun` was SET for the visit (?sun=, PT_SUN): it stands whatever cloud a picked weather brings; not set = the cloud dims the sun (THE WEATHER OVER THE HOUR, below) */ sunGiven: boolean; dry: boolean } = { id: 'night', sun: 1, sunGiven: false, dry: true };
 
 const ALIAS: Record<string, HourId> = { day: 'midday', noon: 'midday', afternoon: 'overcast', sunrise: 'dawn', sunset: 'dusk', evening: 'dusk' };
 /** a word → an hour ('' / unknown = night) */
@@ -112,17 +102,8 @@ export function hourHref(href: string, id: HourId = HOUR.id): string {
 }
 
 // ================================================================================================================================ the hour on a Game
-interface Ray { d: Vec3; c6: number[]; }
-interface Open { ray: number; len: number; /** a sky ray: 0; a ground ray: the sunlit and sky-lit shares of the floor point it ends on */ sunK: number; skyK: number }
-/** what the light from the sky at a point is worked out from (`skyLight`): the one directional light and where it stands, the casters as one number, the
- *  box they stand in, and the rays kept a cell. An hour's state is one; the night's is made for the stand-in alone (`nights`) */
-interface SkyState { sun: RtLight | null; toSun: Vec3; casters: number; box: { x0: number; x1: number; z0: number; z1: number; top: number }; cells: Map<number, Open[]>; fine: Map<number, Open[]>;
-  /** the sky the ambient is read off: null = the engine's LIVE sky (an hour writes it there itself, on every host, and a weather greys it); the night's is
-   *  the LEVEL's own, as authored — the page puts that into the engine's settings and a headless stand does not, and a rule may not differ by host */
-  dome: { zenith: Vec3; horizon: Vec3 } | null;
-  /** (the night's alone) the game's clock when the casters were last counted: once a tick is enough */
-  at?: number }
-interface HourState extends SkyState {
+interface HourState {
+  toSun: Vec3;
   sun: RtLight; def: HourDef; sunK: number;
   /** sunK was set by hand (?sun=, the panel's slider, a file that says so): a picked weather's cloud leaves it alone */
   given: boolean;
@@ -132,17 +113,11 @@ interface HourState extends SkyState {
   skyK: number;
   /** the level's own storm was found OFF when the hour came in (the panel, ?noweather): a picked weather leaving puts it off again, and the night does not bring it back */
   wasOff: boolean;
-  moons: RtLight[]; lamps: Map<LightTarget, boolean>; sky: { zenith: Vec3; horizon: Vec3 }; haze: number; exposure: number;
+  moons: RtLight[]; lamps: Map<LightTarget, boolean>;
   /** the night's storm as it stood when this hour held it off (weather.ts's own checkpoint slice: its dice, the stroke it had scheduled, thunder still due) — null: not held */
   storm: WeatherSnap | null;
-  // (SkyState's: `casters` — which statics cast shadows, as one number: a wall gone or a thing knocked flat since the cells were asked is seen by the next
-  //  reading; `box` — the box the shadow casters stand in: a ray that has left it meets nothing more)
 }
 const states = new GameSideMap<Game, HourState>('hours.states');
-/** THE NIGHT AS THE STAND-IN READS IT (`moonLight`): what `skyLight` needs of an hour, for the hour that has no record — the level's own moon in the sun's
- *  place. Made when first asked and made again when the moon is another lamp, points another way, or the casters have changed. Nothing of the level is
- *  touched by it and nothing but the stand-in reads it: the night is still the level exactly as it is. */
-const nights = new GameSideMap<Game, SkyState>('hours.nights');
 export const SUN_NAME = 'sun', SUN_GROUP = 'hour';
 /** the hour this game stands at ('night' = the level as authored) */
 export function hourOf(g: Game): HourId { return states.get(g)?.def.id ?? 'night'; }
@@ -156,12 +131,10 @@ export function exposureOf(g: Game): number {
 /** the hour's sun in this game's light set (null at night) */
 export function hourSun(g: Game): RtLight | null { return states.get(g)?.sun ?? null; }
 export function isHourSun(g: Game, l: RtLight): boolean { return states.get(g)?.sun === l; }
-/** IS THIS DIRECTIONAL LIGHT ALREADY IN THE ESTIMATE (guards.ts lightEstimateAt): an hour's sun always, and under sense.ts SENSE.moon the night's own light
- *  from the sky (`skyLampOf`). Whoever adds a directional light on top of the estimate — the goggles' place light, a tool's moon — asks this first, so that
- *  no light is counted twice whichever way the switch stands */
-export function inEstimate(g: Game, l: RtLight): boolean { return isHourSun(g, l) || (SENSE.moon && !states.get(g) && skyLampOf(g) === l); }
+/** IS THIS DIRECTIONAL LIGHT ALREADY IN WHAT THE GAME SAYS OF A POINT (guards.ts lightEstimateAt): the hour's sun, or the night's own light from the sky (`skyLampOf`) */
+export function inEstimate(g: Game, l: RtLight): boolean { return isHourSun(g, l) || (!states.get(g) && skyLampOf(g) === l); }
 /** THE LEVEL'S OWN LIGHT FROM THE SKY when no hour is laid over it: its brightest steady directional light that is up — the moon of every level as authored,
- *  or the sun a show has put in its place (lighting.ts setDaylight). null: none (the moon turned out; an hour, whose sun `hourLight` has) */
+ *  or the sun a show has put in its place (lighting.ts setDaylight). null: none (the moon turned out; an hour, which has its own sun) */
 export function skyLampOf(g: Game): RtLight | null {
   if (states.get(g)) return null;
   let moon: RtLight | null = null, best = 0.002;
@@ -189,7 +162,7 @@ export function setSunStrength(g: Game, k: number, given = true) { { const __s =
 //       the sky's share of it          d(c) = d0 + (1 − d0) · c²                           (d0 = the hour's own share under its own sky, off its own numbers)
 //     so the SUN stands at (1 − c²) × cloudSun(c) of the hour's own — the ONE NUMBER above: midday's is 0.93 in dust, 0.40 in fog, 0.09 under an
 //     overcast, 0.04 in rain and NOTHING in a downpour — and the SKY at d(c) ∕ d0 × cloudSun(c) of its own luminance (it brightens as the deck closes: cloud is
-//     brighter than blue). Both are the lights the picture is drawn with AND the ones the meter's stand-in reads (hourLight: the sun's RtLight, the live sky),
+//     brighter than blue). Both are the lights the picture is drawn with AND the ones the meter's stand-in reads (the sun's RtLight, the live sky),
 //     so they dim together. A sun strength set by hand (?sun=, the slider) stands; the sky still follows the cloud. sunToCloud() hands it back.
 //     An hour that is ITSELF a weather (the grey day: HourDef.cloud 0.9) already has that much cloud in its numbers: a picked weather moves it only by what it
 //     adds past that (a clear, dusty, foggy or overcast grey day is the grey day; rain and a downpour darken it — c² and cloudSun both taken from the hour's
@@ -206,10 +179,21 @@ const SOFT_RADIUS = 0.25;   // (the grey day's own disc)
 const GREY: Vec3 = [0.948, 1, 1.086], GREY_LUM = 0.2126 * 0.948 + 0.7152 + 0.0722 * 1.086;   // a cloud deck's cool grey (the grey day's own sky)
 /** colour c drained toward that grey by w and scaled by k, its luminance otherwise kept */
 export function greyed(c: Vec3, w: number, k = 1): Vec3 { const l = lum(c) / GREY_LUM; return [(c[0] + (l * GREY[0] - c[0]) * w) * k, (c[1] + (l * GREY[1] - c[1]) * w) * k, (c[2] + (l * GREY[2] - c[2]) * w) * k]; }
-/** the sky's share of the light on open ground at an hour AS AUTHORED (its sun on a level face against its sky's dome on it — the stand-in's own sum) */
+/** the sky's dome in three bands (zenith cap above 70°, six at 50°, eight at 16°, each weighted by its band's solid angle): how high a direction stands, and how much of it
+ *  falls on a level face */
+const SKY: { y: number; up: number }[] = [];
+function skyDome(): void {
+  if (SKY.length) return;
+  const add = (elev: number, n: number, w: number) => { const y = Math.sin(elev); for (let i = 0; i < n; i++) SKY.push({ y, up: Math.max(0, y) * w }); };
+  const s = (deg: number) => Math.sin(deg * DEG);
+  add(90 * DEG, 1, 2 * Math.PI * (1 - s(70)));
+  add(50 * DEG, 6, 2 * Math.PI * (s(70) - s(32)) / 6);
+  add(16 * DEG, 8, 2 * Math.PI * s(32) / 8);
+}
+/** the sky's share of the light on open ground at an hour AS AUTHORED (its sun on a level face against its sky's dome on it) */
 function skyShare(d: HourDef): number {
-  rays(); const zen = lum(d.sky.zenith), hor = lum(d.sky.horizon); let K = 0;
-  for (const q of SKY) K += (hor + (zen - hor) * clamp(q.d[1] * 2.5, 0, 1)) * q.c6[2];
+  skyDome(); const zen = lum(d.sky.zenith), hor = lum(d.sky.horizon); let K = 0;
+  for (const q of SKY) K += (hor + (zen - hor) * clamp(q.y * 2.5, 0, 1)) * q.up;
   const S = lum(d.sun.color) * d.sun.intensity * Math.max(0, Math.sin(d.sun.elevDeg * DEG));
   return K + S > 0 ? K / (K + S) : 1;
 }
@@ -262,8 +246,8 @@ export function applyHour(g: Game, id: HourId): boolean { { const __s = RUST_SUR
 function putIn(g: Game, def: HourDef, from?: HourState) {
   const S = g.engine.settings, L = g.engine.lights, toSun = toSunOf(def), W = g.weather, kind = !!W?.kind;
   const st: HourState = { def, toSun, sunK: from ? from.sunK : clamp(g.stood.sun, 0, 1), given: from ? from.given : g.stood.sunGiven || g.stood.sun !== 1, soft: 0, skyK: 1,
-    wasOff: kind ? from?.wasOff ?? false : !!W && !W.enabled, moons: [], lamps: new Map(), sky: { zenith: v3.copy(S.skyZenith), horizon: v3.copy(S.skyHorizon) }, haze: S.hazeDensity, exposure: S.exposure, storm: kind ? from?.storm ?? null : null, casters: castersOf(g),
-    sun: null as unknown as RtLight, box: boxOf(g), cells: new Map(), fine: new Map(), dome: null };
+    wasOff: kind ? from?.wasOff ?? false : !!W && !W.enabled, moons: [], lamps: new Map(), storm: kind ? from?.storm ?? null : null,
+    sun: null as unknown as RtLight };
   // the moon out (every steady directional light of the level: it has no switch of its own), the sun in where the moon stood
   let at = 0;
   L.lights.forEach((l, i) => { if (l.kind === 2 && l.ttl < 0 && !l.transient && l.enabled) { l.enabled = false; st.moons.push(l); at = i + 1; } });
@@ -277,13 +261,18 @@ function putIn(g: Game, def: HourDef, from?: HourState) {
   g.engine.reach?.sun(st.sun, st.sun.radius);   // which indoor cells see the sky its way (the direct estimator's candidate domain): the picture's to keep (render/reachKeep.ts), asked once, for the disc the cloud left it
   lampsOut(g, st);
 }
+/** what the picture's settings hold on a level's own night (src/settings.ts, held equal by tools/qa/settings-check.ts) */
+export const NIGHT_HAZE = 0.035;
+/** THE PICTURE TOLD THE LEVEL'S OWN NIGHT, once the hour or the show's day taken off was at this exposure: the level's sky, the night's haze and exposure, with a turn of the player's Brightness under it
+ *  carried back (untouched = exactly the night's). What the settings held before is the picture's, so the game keeps none of it. */
+export function nightPicture(g: Game, wasExposure: number): void {
+  const S = g.engine.settings; S.skyZenith = v3.copy(g.level.sky.zenith); S.skyHorizon = v3.copy(g.level.sky.horizon); S.hazeDensity = NIGHT_HAZE; S.exposure = ENV.exposure * (S.exposure / wasExposure);
+}
 function takeOut(g: Game, st: HourState) {
-  const S = g.engine.settings;
   for (const [t, was] of st.lamps) if (!t.on) g.lightHome.in(LIGHT_IN.on, t, was ? 1 : 0);   // (a lamp somebody switched ON under the hour — the perimeter's call for the lot lights — stays as they left it)
   for (const l of st.moons) l.enabled = true;
   g.engine.lights.remove(st.sun);
-  S.skyZenith = v3.copy(st.sky.zenith); S.skyHorizon = v3.copy(st.sky.horizon); S.hazeDensity = st.haze;
-  S.exposure = st.exposure * (S.exposure / st.def.exposure);   // (the Brightness slider moved under the hour: the same turn of it carried back; untouched = exactly what was found)
+  nightPicture(g, st.def.exposure);
   states.delete(g); if (g.weather) g.weather.fogGlow = 1;
   if (st.storm && g.weather && !g.weather.enabled) { g.weather.setEnabled(true); g.weather.restore(st.storm); }   // the storm back where it stood: its dice, its next stroke, the thunder it still owed
 }
@@ -294,135 +283,13 @@ function lampsOut(g: Game, st: HourState) {
 }
 /** game.ts resetLevelState, last: the level's switches are back as authored — the hour's are made again over them, and what the sky reaches is asked afresh
  *  (the destruction's hidden statics are back) */
-export function hourAfterReset(g: Game) { nights.delete(g); const st = states.get(g); if (!st) return; st.lamps.clear(); lampsOut(g, st); st.cells.clear(); st.fine.clear(); st.casters = castersOf(g); }
+export function hourAfterReset(g: Game) { const st = states.get(g); if (!st) return; st.lamps.clear(); lampsOut(g, st); }
 /** the statics changed under a running game (a wall gone, a cover knocked flat): what the sky reaches is asked afresh */
-export function hourWorldChanged(g: Game) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('hourWorldChanged', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } } nights.delete(g); const st = states.get(g); if (st) { st.cells.clear(); st.fine.clear(); st.box = boxOf(g); st.casters = castersOf(g); } }
-/** which statics cast shadows right now, folded to one number (destruction.ts hides a static by raising NoShadow; a wall that breaks changes the list): cheap
- *  enough to ask at every reading, so the cells never outlive the walls they were asked of — whoever changes the statics need not know this file exists */
-function castersOf(g: Game): number { const S = g.engine.world.statics; let h = S.length * 7919; for (let i = 0; i < S.length; i++) if (S[i].flags & BoxFlag.NoShadow) h = (h + (i + 1) * 31) | 0; return h; }
-
-// ================================================================================================================================ the meter's stand-in
-const N6: Vec3[] = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];   // (probe.wgsl's six: the faces the lamps' sum is on too, rust/sim/src/light.rs)
-/** the sample directions of the ambient: the sky's dome in three bands (zenith cap above 70°, six at 50°, eight at 16° — each weighted by its band's solid
- *  angle) and eight just under the horizon, which end on the floor some six metres out: the ground's one bounce (a sunlit yard through a doorway) */
-const SKY: Ray[] = [], GND: Ray[] = [];
-const GND_ELEV = -12 * DEG, CELL = 0.5, CELL_Y = 1.3, DOOR_M = 7, GROUND_ALBEDO = 0.25;
-function rays() {
-  if (SKY.length) return;
-  const add = (to: Ray[], elev: number, n: number, w: number, turn = 0) => { for (let i = 0; i < n; i++) { const a = (i + turn) / n * 2 * Math.PI; const d: Vec3 = [Math.cos(a) * Math.cos(elev), Math.sin(elev), Math.sin(a) * Math.cos(elev)]; to.push({ d, c6: N6.map(N => Math.max(0, v3.dot(N, d)) * w) }); } };
-  const s = (deg: number) => Math.sin(deg * DEG);
-  add(SKY, 90 * DEG, 1, 2 * Math.PI * (1 - s(70)));
-  add(SKY, 50 * DEG, 6, 2 * Math.PI * (s(70) - s(32)) / 6);
-  add(SKY, 16 * DEG, 8, 2 * Math.PI * s(32) / 8, 0.5);
-  add(GND, GND_ELEV, 8, 2 * Math.PI * s(25) / 8, 0.25);
-}
-/** common.wgsl skyRadiance's luminance, off the LIVE sky (a weather that greys it is read here too) */
-function skyLum(g: Game, y: number, sky: SkyState['dome'] = null): number {
-  const S = g.engine.settings, zen = lum(sky ? sky.zenith : S.skyZenith), hor = lum(sky ? sky.horizon : S.skyHorizon); const t = clamp(y * 2.5, 0, 1), below = clamp(-y * 8, 0, 1);
-  return (hor + (zen - hor) * t) * (1 - below) + hor * 0.15 * below;
-}
-function boxOf(g: Game): SkyState['box'] {
-  const b = { x0: Infinity, x1: -Infinity, z0: Infinity, z1: -Infinity, top: 0 };
-  for (const s of g.engine.world.statics) {
-    if (s.flags & BoxFlag.NoShadow) continue;
-    const r = Math.hypot(s.h[0], s.h[2]);   // (a yawed box: its circle)
-    b.x0 = Math.min(b.x0, s.c[0] - r); b.x1 = Math.max(b.x1, s.c[0] + r); b.z0 = Math.min(b.z0, s.c[2] - r); b.z1 = Math.max(b.z1, s.c[2] + r); b.top = Math.max(b.top, s.c[1] + s.h[1]);
-  }
-  if (!(b.x1 > b.x0)) return { x0: 0, x1: 40, z0: 0, z1: 28, top: 8 };
-  b.top += 0.1; return b;
-}
-/** how far a ray from P along d runs before it is out of the casters' box (≤ 60 m) */
-function reachOf(B: SkyState['box'], P: Vec3, d: Vec3): number {
-  let t = 60;
-  if (d[1] > 1e-4) t = Math.min(t, (B.top - P[1]) / d[1]);
-  if (d[0] > 1e-4) t = Math.min(t, (B.x1 - P[0]) / d[0]); else if (d[0] < -1e-4) t = Math.min(t, (B.x0 - P[0]) / d[0]);
-  if (d[2] > 1e-4) t = Math.min(t, (B.z1 - P[2]) / d[2]); else if (d[2] < -1e-4) t = Math.min(t, (B.z0 - P[2]) / d[2]);
-  return Math.max(t, 0);
-}
-const NO_BOXES: Box[] = [];
-/** the statics alone between a and b (the door leaves are asked apart, every time: a cell's rays are kept, a door is not) */
-function staticBlocked(g: Game, a: Vec3, b: Vec3): boolean {
-  const col = g.col, dyn = col.dynamicBoxes; col.dynamicBoxes = NO_BOXES;
-  try { return col.segmentBlocked(a, b); } finally { col.dynamicBoxes = dyn; }
-}
-/** the ambient's rays that leave point C unblocked by the statics: sky rays out of the casters' box, ground rays to the floor point they end on with that
- *  point's own sun and sky */
-function openRays(g: Game, st: SkyState, C: Vec3): Open[] {
-  rays(); const out: Open[] = [], B = st.box;
-  SKY.forEach((r, i) => { const len = reachOf(B, C, r.d); if (len > 0.05 && !staticBlocked(g, C, v3.mad(C, r.d, len))) out.push({ ray: i, len, sunK: 0, skyK: 0 }); });
-  GND.forEach((r, i) => {
-    const len = Math.min((C[1] - 0.03) / -r.d[1], reachOf(B, C, r.d)); if (len < 0.3) return;
-    const G = v3.mad(C, r.d, len); if (G[1] > 0.2 || staticBlocked(g, C, G)) return;   // (it left the box before it came down: open ground nobody models)
-    const sunK = st.toSun[1] > 0 && !staticBlocked(g, G, v3.mad(G, st.toSun, reachOf(B, G, st.toSun))) ? st.toSun[1] : 0;
-    const skyK = staticBlocked(g, G, [G[0], B.top, G[2]]) ? 0 : 1;
-    if (sunK > 0 || skyK > 0) out.push({ ray: SKY.length + i, len, sunK, skyK });
-  });
-  return out;
-}
-/** The hour's light at world point P, added to the meter stand-in's six faces (guards.ts lightEstimateAt, before it takes its best face): the SUN where the
- *  statics and the door leaves leave P a line to it, and the AMBIENT — the sky through whatever is open above and beside P, and one bounce off lit ground —
- *  from the rays of P's half-metre cell (asked once of the statics, kept; taken at P itself where the cell's centre is behind something P is not). A door
- *  leaf within DOOR_M is tested against every kept ray, each call. Nothing at night. What it has not got, named: bounce off walls, a second bounce (a room
- *  two doors in from the day is black here and merely dim on screen), bodies' shadows, smoke. */
-export function hourLight(g: Game, P: Vec3, acc: number[]): void { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('hourLight', undefined, [g, P, acc]); if (__r !== RUST_PASS) return __r as any; } }
-  const st = states.get(g); if (!st) return;
-  if (castersOf(g) !== st.casters) hourWorldChanged(g);
-  skyLight(g, P, acc, st);
-}
-/** THE NIGHT'S OWN LIGHT FROM THE SKY at world point P, added to the meter stand-in's six faces (guards.ts lightEstimateAt under sense.ts SENSE.moon): what
- *  `hourLight` reads for an hour, read for the level with no hour laid over it — its own directional light (`skyLampOf`: the moon) where the statics and the
- *  door leaves leave P a line to it, on the meter's cosine; the level's own sky through whatever is open above and beside P; one bounce off ground they
- *  light. With the moon turned out, the sky alone. Nothing at another hour: the moon is out and `hourLight` has the sun in its place. The estimate left the
- *  moon out ("unshadowed it would light everybody"), and the first run of the error tool on a GPU read what that costs: under the open sky the picture's
- *  meter said a man was lit and the estimate said nothing at all. */
-export function moonLight(g: Game, P: Vec3, acc: number[]): void { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('moonLight', undefined, [g, P, acc]); if (__r !== RUST_PASS) return __r as any; } }
-  if (states.get(g)) return;
-  const moon = skyLampOf(g), day = isDaylight(g) ? g.level.daylight : undefined, sky = day ? day.sky : g.level.sky; let N = nights.get(g);
-  const same = !!N && N.sun === moon && N.dome === sky && (!moon || (N.toSun[0] === -moon.dir[0] && N.toSun[1] === -moon.dir[1] && N.toSun[2] === -moon.dir[2]));
-  if (!N || !same || N.at !== g.time) {   // (the casters are counted once a tick: a wall that goes says so itself — hourWorldChanged)
-    const c = castersOf(g);
-    if (!N || !same || N.casters !== c) nights.set(g, N = { sun: moon, toSun: moon ? [-moon.dir[0], -moon.dir[1], -moon.dir[2]] : [0, 1, 0], casters: c, box: boxOf(g), cells: new Map(), fine: new Map(), dome: sky, at: g.time });
-    else N.at = g.time;
-  }
-  skyLight(g, P, acc, N);
-}
-/** what `moonLight` keeps of this game is dropped (a tool that asked with the switch down leaves the game as it found it) */
-export function moonForget(g: Game): void { nights.delete(g); }
-/** the light from the sky at P by `st`: its one directional light where P has a line to it, and the ambient of P's cell (hourLight's words) */
-function skyLight(g: Game, P: Vec3, acc: number[], st: SkyState): void {
-  const sun = st.sun, Isun = sun && sun.enabled && sun.intensity > 0 ? lum(sun.color) * sun.intensity : 0;
-  if (Isun > 0.002) {
-    const t = reachOf(st.box, P, st.toSun);
-    if (t <= 0.05 || !g.col.segmentBlocked(P, v3.mad(P, st.toSun, t))) for (let k = 0; k < 6; k++) { const cs = v3.dot(N6[k], st.toSun); if (cs > 0) acc[k] += Isun * cs; }
-  }
-  // the cell's rays stand for P while nothing — a wall, a shut leaf — is between P and the point they were asked from: else the quarter-cell's, else P's own, unkept
-  const ix = Math.floor(P[0] / CELL), iz = Math.floor(P[2] / CELL), C: Vec3 = [(ix + 0.5) * CELL, CELL_Y, (iz + 0.5) * CELL];
-  let from = C, open: Open[];
-  if (!g.col.segmentBlocked(P, C)) { const key = (iz + 2048) * 4096 + (ix + 2048); let o = st.cells.get(key); if (!o) { o = openRays(g, st, C); st.cells.set(key, o); } open = o; }
-  else {
-    const jx = Math.floor(P[0] / (CELL / 2)), jz = Math.floor(P[2] / (CELL / 2)), C2: Vec3 = [(jx + 0.5) * CELL / 2, CELL_Y, (jz + 0.5) * CELL / 2];
-    if (!g.col.segmentBlocked(P, C2)) { from = C2; const k2 = (jz + 4096) * 8192 + (jx + 4096); let o = st.fine.get(k2); if (!o) { o = openRays(g, st, C2); st.fine.set(k2, o); } open = o; }
-    else { from = P; open = openRays(g, st, P); }
-  }
-  if (!open.length) return;
-  let leaves: Box[] | null = null;
-  for (const db of g.col.dynamicBoxes) if (Math.hypot(db.c[0] - P[0], db.c[2] - P[2]) < DOOR_M) (leaves ??= []).push(db);
-  let Eup = -1;   // the sky's irradiance on open ground (what a floor point in the yard sends back, with the sun's) — asked only when a ground ray is open
-  for (const o of open) {
-    const sky = o.ray < SKY.length, r = sky ? SKY[o.ray] : GND[o.ray - SKY.length];
-    if (leaves) { let hit = false; for (const db of leaves) { const h = rayBox(from, r.d, db, o.len); if (h && h.t >= 0) { hit = true; break; } } if (hit) continue; }
-    if (!sky && Eup < 0) { Eup = 0; for (const q of SKY) Eup += skyLum(g, q.d[1], st.dome) * q.c6[2]; }
-    const Lr = sky ? skyLum(g, r.d[1], st.dome) : GROUND_ALBEDO / Math.PI * (Isun * o.sunK + Eup * o.skyK);
-    if (Lr <= 0) continue;
-    for (let k = 0; k < 6; k++) acc[k] += Lr * r.c6[k];
-  }
-}
-/** the hour's light alone at P, as the meter would report it (the best of the six faces, W/m²) — for the panel, the probes and the page's read-out */
-export function hourLightAt(g: Game, P: Vec3): number { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('hourLightAt', undefined, [g, P]); if (__r !== RUST_PASS) return __r as any; } } const acc = [0, 0, 0, 0, 0, 0]; hourLight(g, P, acc); return Math.max(...acc); }
+export function hourWorldChanged(g: Game) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('hourWorldChanged', undefined, [g]); if (__r !== RUST_PASS) return __r as any; } } }
 
 /** one line for the panel / `__hour.summary()` */
 export function hourSummary(g: Game): string {
   const st = states.get(g); if (!st) return 'night (the level as authored)';
   const d = st.def, out = [...st.lamps.keys()].length;
-  return `${d.label} ${d.clock} · sun ${d.sun.elevDeg}° up at ${(st.sun.intensity).toFixed(2)} (×${st.sunK.toFixed(2)}${st.given ? ' set' : g.weather?.kind ? ` under ${g.weather.kind}'s cloud` : ''}${st.skyK !== 1 ? `, sky ×${st.skyK.toFixed(2)}` : ''}) · exposure ${g.engine.settings.exposure.toFixed(2)} · outside lamps ${d.lamps ? 'as authored' : `out (${out})`}${st.storm ? ' · storm held' : ''} · ${st.cells.size} cells`;
+  return `${d.label} ${d.clock} · sun ${d.sun.elevDeg}° up at ${(st.sun.intensity).toFixed(2)} (×${st.sunK.toFixed(2)}${st.given ? ' set' : g.weather?.kind ? ` under ${g.weather.kind}'s cloud` : ''}${st.skyK !== 1 ? `, sky ×${st.skyK.toFixed(2)}` : ''}) · exposure ${g.engine.settings.exposure.toFixed(2)} · outside lamps ${d.lamps ? 'as authored' : `out (${out})`}${st.storm ? ' · storm held' : ''}`;
 }

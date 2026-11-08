@@ -31,12 +31,12 @@ fn uniq_plus(words: Vec<String>) -> String {
     seen.join(" + ")
 }
 /// the key's letter: `DOORTOOLS.blowKey.replace('Key', '')`
-fn blow_letter(g: &Game) -> String {
+pub fn blow_letter(g: &Game) -> String {
     g.k.doortools.blow_key.replacen("Key", "", 1)
 }
 /// `closeWords(c)` with the warning's head in capitals (OWNCHARGE.on)
-fn close_caps(g: &mut Game, c: ChargeId) -> String {
-    door_tools_close_words(g, c).replacen("too close:", "TOO CLOSE:", 1).replacen("behind the door:", "BEHIND THE DOOR:", 1)
+fn close_caps(g: &crate::game::Game, seat: &crate::seats::SeatRef, c: ChargeId) -> String {
+    door_tools_close_words_of(g, seat, c).replacen("too close:", "TOO CLOSE:", 1).replacen("behind the door:", "BEHIND THE DOOR:", 1)
 }
 /// every other cell each way: `!((floor(x / cell) | floor(z / cell)) & 1)`, a metre's lattice of the room
 fn on_lattice(x: f64, z: f64, cell: f64) -> bool {
@@ -197,7 +197,7 @@ pub fn door_tools_thr_lit_cell(g: &mut crate::game::Game, t_key: DoorOpId, sr: D
         return c == 1;
     }
     let mut every = |_: &mut Game, _: f64| true;
-    let e = crate::guards::light_estimate_at(g, [q[0], 1.2, q[2]], Some(&mut every), None, None, None, None);
+    let e = crate::guards::light_estimate_at(g, [q[0], 1.2, q[2]], Some(&mut every), None, None);
     let c = if crate::game::game_visibility_of(g, e) >= g.k.lights.lit_at { 1 } else { 0 };
     g.tab.doortools_door_op[t_key].thr.as_mut().unwrap().lit_c.as_mut().unwrap()[i] = c;
     c == 1
@@ -496,36 +496,36 @@ pub fn door_tools_step_in(g: &mut crate::game::Game, op: DoorOpId) {
 // ---------------------------------------------------------------- the HUD, the console
 
 /// The squad's HUD block: what is left, and a charge waiting for the trigger. (doortools.ts DoorTools.hudNotes)
-pub fn door_tools_hud_notes(g: &mut crate::game::Game) -> Vec<String> {
-    let mut out = vec![format!("charges {} · bangs {}", g.door_tools.charges, g.door_tools.bangs)];
+pub fn door_tools_hud_notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<String> {
+    let mut out = vec![format!("charges {} · bangs {}", seat.door_tools.charges, seat.door_tools.bangs)];
     let f = blow_letter(g);
     if g.k.frag.squad > 0.0 {
-        out.push(format!("frags {}", g.door_tools.frags));
+        out.push(format!("frags {}", seat.door_tools.frags));
     }
-    let word = crate::orders::squad_orders_big(g, &crate::seats::here(g)) && {
-        let men = door_tools_word_men(g);
-        !door_tools_waiting_any(g, &men).is_empty()
+    let word = crate::orders::squad_orders_big(g, seat) && {
+        let men = door_tools_word_men(g, seat);
+        !door_tools_waiting_any(g, seat, &men).is_empty()
     };
-    for c in g.door_tools.set.clone() {
+    for c in seat.door_tools.set.clone() {
         let door = g.tab.doortools_set_charge[c].door;
         let name = crate::orders::door_words(g, door);
-        let tail = if door_tools_on_pending_word(g, &crate::seats::here(g), c) {
+        let tail = if door_tools_on_pending_word(g, seat, c) {
             String::from(" — on the word")
         } else if word {
             String::new()
         } else {
-            let key_is = door_tools_key_is(g, c);
+            let key_is = door_tools_key_is(g, seat, c);
             crate::ownblow::blow_tail(key_is, &f, Some(" — "))
         };
-        let close = close_caps(g, c);
+        let close = close_caps(g, seat, c);
         out.push(format!("charge set · {}{}{}", name, tail, close));
     }
-    let ops = g.door_tools.ops.clone();
+    let ops = seat.door_tools.ops.clone();
     for &op in &ops {
         let o = &g.tab.doortools_door_op[op];
         if o.on_word && o.phase == Phase::Ready {
             let (men, door) = (o.men.clone(), o.door);
-            let who = crate::orders::squad_orders_who_words(g, &crate::seats::here(g), Some(&men));
+            let who = crate::orders::squad_orders_who_words(g, seat, Some(&men));
             let name = crate::orders::door_words(g, door);
             out.push(format!("{} ready on your word · {}", who, name));
         }
@@ -534,20 +534,20 @@ pub fn door_tools_hud_notes(g: &mut crate::game::Game) -> Vec<String> {
         let o = &g.tab.doortools_door_op[op];
         if o.thr.as_ref().is_some_and(|t| t.hold) && o.phase == Phase::Thr {
             let (men, door, told) = (o.men.clone(), o.door, o.thr.as_ref().unwrap().told);
-            let who = crate::orders::squad_orders_who_words(g, &crate::seats::here(g), Some(&men));
+            let who = crate::orders::squad_orders_who_words(g, seat, Some(&men));
             let name = crate::orders::door_words(g, door);
-            let goes = if crate::orders::squad_orders_big(g, &crate::seats::here(g)) { String::new() } else { format!(" — {} goes", f) };
+            let goes = if crate::orders::squad_orders_big(g, seat) { String::new() } else { format!(" — {} goes", f) };
             out.push(format!("{} {} · {}{}", who, if told { "holding on your word" } else { "working the threshold" }, name, goes));
         }
     }
-    for w in g.door_tools.words.clone() {
+    for w in seat.door_tools.words.clone() {
         if g.tab.doortools_word[w].go1.is_nan() {
             let late: Vec<DoorOpId> = ops.iter().copied().filter(|&o| g.tab.doortools_door_op[o].word == Some(w) && g.tab.doortools_door_op[o].hold < 1.0).collect();
             if !late.is_empty() {
                 let mut words = Vec::new();
                 for o in late {
                     let men = alive(g, &g.tab.doortools_door_op[o].men);
-                    words.push(crate::orders::squad_orders_who_words(g, &crate::seats::here(g), Some(&men)));
+                    words.push(crate::orders::squad_orders_who_words(g, seat, Some(&men)));
                 }
                 out.push(format!("word given · waiting for {}", uniq_plus(words)));
             }
@@ -558,36 +558,69 @@ pub fn door_tools_hud_notes(g: &mut crate::game::Game) -> Vec<String> {
 
 /// What hudNotes and a door's heading say that the corner panel would otherwise lose, each as a key and what a press of it does now.
 /// (doortools.ts DoorTools.cornerNotes)
-pub fn door_tools_corner_notes(g: &mut crate::game::Game) -> Vec<crate::doortools::DoorToolsCornerNotesItem> {
-    let mut out: Vec<DoorToolsCornerNotesItem> = Vec::new();
+pub fn door_tools_corner_notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::view::Note> {
+    use crate::view::Note;
+    let mut out: Vec<Note> = Vec::new();
     let f = blow_letter(g);
-    let word = crate::orders::squad_orders_big(g, &crate::seats::here(g)) && {
-        let men = door_tools_word_men(g);
-        !door_tools_waiting_any(g, &men).is_empty()
+    let word = crate::orders::squad_orders_big(g, seat) && {
+        let men = door_tools_word_men(g, seat);
+        !door_tools_waiting_any(g, seat, &men).is_empty()
     };
-    for c in g.door_tools.set.clone() {
-        let close = close_caps(g, c);
+    for c in seat.door_tools.set.clone() {
+        let close = close_caps(g, seat, c);
         let door = g.tab.doortools_set_charge[c].door;
-        if !word && !door_tools_on_pending_word(g, &crate::seats::here(g), c) && door_tools_key_is(g, c) {
+        if !word && !door_tools_on_pending_word(g, seat, c) && door_tools_key_is(g, seat, c) {
             let name = crate::orders::door_words(g, door);
-            out.push(DoorToolsCornerNotesItem { key: f.clone(), text: format!("blow the charge · {}{}", name, close) });
+            out.push(Note { key: f.clone(), text: format!("blow the charge · {}{}", name, close) });
         } else if !close.is_empty() {
             let name = crate::orders::door_words(g, door);
-            out.push(DoorToolsCornerNotesItem { key: String::new(), text: format!("charge set · {}{}", name, close) });
+            out.push(Note { key: String::new(), text: format!("charge set · {}{}", name, close) });
         }
     }
-    if !crate::orders::squad_orders_big(g, &crate::seats::here(g)) {
-        for op in g.door_tools.ops.clone() {
+    if !crate::orders::squad_orders_big(g, seat) {
+        for op in seat.door_tools.ops.clone() {
             let o = &g.tab.doortools_door_op[op];
             if o.thr.as_ref().is_some_and(|t| t.hold) && o.phase == Phase::Thr && o.thr.as_ref().unwrap().told {
                 let (men, door) = (o.men.clone(), o.door);
-                let who = crate::orders::squad_orders_who_words(g, &crate::seats::here(g), Some(&men));
+                let who = crate::orders::squad_orders_who_words(g, seat, Some(&men));
                 let name = crate::orders::door_words(g, door);
-                out.push(DoorToolsCornerNotesItem { key: f.clone(), text: format!("go · {} waiting · {}", who, name) });
+                out.push(Note { key: f.clone(), text: format!("go · {} waiting · {}", who, name) });
             }
         }
     }
     out
+}
+
+/// The word, while somebody is waiting on it: the key that gives it, to whom; with the orders going to somebody else, who is waiting (a set charge is left out of that: it has its own line, and its own key). (doortools.ts DoorTools.wordNote)
+pub fn door_tools_word_note(g: &Game, seat: &crate::seats::SeatRef) -> Vec<crate::view::Note> {
+    use crate::view::Note;
+    let f = blow_letter(g);
+    let word_men = door_tools_word_men(g, seat);
+    let all = crate::orders::squad_orders_men(g, seat, None, None);
+    if !crate::orders::squad_orders_big(g, seat) {   // (the small squad's: its plain stacks, under wordSmall: the key is always the word's there)
+        let mine = door_tools_stack_words(g, seat, &word_men);
+        if !mine.is_empty() { return vec![Note { key: f, text: format!("go · {} waiting", mine) }]; }
+        let rest = door_tools_stack_words(g, seat, &all);
+        return if rest.is_empty() { Vec::new() } else { vec![Note { key: String::new(), text: format!("{} waiting", rest) }] };
+    }
+    let mine = door_tools_waiting_words(g, seat, &word_men);
+    if !mine.is_empty() {
+        return vec![Note { key: f, text: format!("go · {} waiting", mine) }];
+    }
+    let mut words = Vec::new();
+    for x in door_tools_waiting_any(g, seat, &all) {
+        let of = match &x {
+            DoorToolsWaitingAnyItem::Arm1(s) => s.men.clone(),
+            DoorToolsWaitingAnyItem::DoorOp(op) => {
+                if door_tools_charge_on(g, seat, g.tab.doortools_door_op[*op].door).is_some() { continue; }
+                g.tab.doortools_door_op[*op].men.clone()
+            }
+        };
+        let living = alive(g, &of);
+        words.push(crate::orders::squad_orders_who_words(g, seat, Some(&living)));
+    }
+    let rest = uniq_plus(words);
+    if rest.is_empty() { Vec::new() } else { vec![Note { key: String::new(), text: format!("{} waiting", rest) }] }
 }
 
 #[cfg(test)]

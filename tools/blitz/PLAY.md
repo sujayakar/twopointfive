@@ -142,23 +142,6 @@ tables the Rust game keeps otherwise. `fuzz-dumps.ts` holds a pair with these ru
 game's kept clone has the saved moment's. A run that parts in the block's `panes` alone after a load is held again with the panes left out
 (`fuzz-diff.ts --but-panes`; exit 4).
 
-### Kept runs: the three games of two seats
-
-`tools/blitz/kept/two-lock0-9.tar.zst`, `two-lock1-9.tar.zst` and `two-full-3.tar.zst` are the games of two players that the co-op check plays
-(`coop-check.ts`: each seat's pair sent through a locked door; the barracks with every seat counted). Their records (the host's half of every tick and
-the orders given) were written by the TypeScript tick while it stood, and nothing can write them again, so they are kept whole: the records, the
-Rust game's own series (the die's count and a hash of each part of the block after every tick) and the run's `coop.json`. No start is kept: the
-start's bytes are bound to the wire, and `hold.sh` stands it again from this tree (`seats.ts --start-only`).
-
-```sh
-tools/blitz/hold.sh tools/blitz/kept                              # each: "the same over N ticks", exit 0
-HOLD_DIRS=DIR tools/blitz/hold.sh tools/blitz/kept                # … and leaves each run's folder in DIR, start and all
-rust/game_run/target/debug/mission DIR/two-lock0-9 1800 --keep 960,990,1020   # the Rust game's whole states at those ticks: DIR/two-lock0-9/n<k>.bin
-```
-
-The lock games' series is the Rust game's alone: the TypeScript's was another from ticks 1082 and 1056 on purpose, where a seat's door tools first
-kept to their own men. The barracks' is both games', in step for 7200 ticks.
-
 ### Kept runs: the fuzz with no TypeScript tick
 
 A run that is EQUAL by all three measures is worth keeping: its Rust side IS what the TypeScript tick did. Keep the folder's `cmd.txt` (the command),
@@ -255,7 +238,7 @@ as a call when it is made:
 | a lesson's player feeds the light meter (`player.visibility`) | `face_meter`, when the number differs from what the last apply left |
 | the autosave takes a checkpoint (the dress step's `saves.tick`) | `face_checkpoint`; an authored one on a level on rails: `face_stop_program` first |
 | a question floods a room (`fight.roomAt`) | `face_room_at`, asked of the Rust game FIRST; where it flooded, the puppet takes the whole state and the TypeScript's own ask floods nothing |
-| the host lists the box world (`engine.world.upload`) | `face_upload`, and the TypeScript's own listing runs too (the list of every box and the ray grid are the TypeScript's own on the filtered path) |
+| the host lists the box world (`engine.world.upload`) | the TypeScript's own listing, for the picture (the list of every box and the ray grid are the TypeScript's own on the filtered path); the Rust game lists its own as a tick ends |
 | the host's camera asks the game where to look | `face_follow` after every step |
 | a checkpoint put back, a restart (the TypeScript puts another game in the puppet's place) | A NEW START: the puppet exported whole once, a new Rust game made from it |
 
@@ -295,7 +278,7 @@ says NOTHING COMPARED and exits 3. Exit: 0 equal to the end and ended the same w
 
 1. The scripted player presses its keys and steps its world (`headless.ts W.step` → `Game.update`); its own lines run, the step is `RustHost.step`.
 2. The light meter, if the lesson's player wrote it. The check's hook (the driver's calls and the host's half held to the reference).
-3. `hostHalf` → `face_host_half`. `face_step`. The check's hook (the die, the block's hashes). `face_lights`, `face_view`, `face_follow`.
+3. `hostHalf` → `face_host_half`. `face_step`. The check's hook (the die, the block's hashes). `face_view`, `face_follow`. (A flash's envelope is the tick's own last line.)
 4. `face_puppet(0)` → the filtered apply; the block copied; `asks.after()` (a row or a posture the apply made gets the closures that ask the Rust game).
 5. A whole apply if one is owed. The out events dispatched (`out-dispatch.ts`) on the puppet's host objects, in the order the rules made them.
 6. The dress step: `Verdict.tick` (in a `try`: it is the debrief's; the par clock is the Rust tick's), the autosave (`saves.tick`), whose checkpoint is made on the
@@ -461,7 +444,6 @@ have a probe on the Rust game by the table. They are not converted: the census a
 | `tour.ts --runs 1 --seed 1 --quiet` | 22 s PASS | 52 s, 9 FAIL | kind iii: the showcase's own Demo (src/game/demo.ts, host-side) calls rules and writes fields on the puppet between ticks; first: `stop2-hand` (Sam's hand never on the fire exit's leaf), then the takedown, the hold, the firefight, the room clear's drill. By the table (its row `ts`): PASS |
 | `soak.ts --seeds 1 --minutes 3 --quiet` | 34 s ALL PASS | 62 s, dies at 2.5 min | kind iii / iv-a: its stimuli call rules on the puppet: first `f2530 exception (stim:mission-step): Attempted to assign to readonly property` (player.ts:1107 `w.cam.peekOffset = null` under `teleportPlayer`: an object the apply left frozen), then `S.u` and `h.where` undefined (a `PoseSet.home` the apply left undefined, skeleton.ts:203), the last one uncaught. By the table (its row `ts`): ALL PASS |
 | `knobs-check.ts` | PASS | PASS | stands no game |
-| `tools/blitz/coop-check.ts` | 430 s, its 3 lines red as its header expects | | stands no game through the harness and reads no word |
 
 The gate's forms of the tour and the soak (`--runs 3`; three seeds, twelve minutes) were not run under `rust`: the short forms are not clean.
 
@@ -475,6 +457,14 @@ The gate's forms of the tour and the soak (`--runs 3`; three seeds, twelve minut
   the digest of every second, and with `--ticks` every tick, to the first game's: three games, one digest, each equal to the `ts` game on all 2,400
   ticks; `--weave` stands the later games together and steps them in turn. The modules' own logs and tallies (`destr_log`, `holdfire_log`, `scene_collision.sensed` …) are still a process's, on both sides: they grow from
   game to game and no rule reads them.
+
+- **A game's first start reads the modules' tops.** They are the process's: the next stand-up writes them for its own game and another game's step writes them with
+  its rows. So a game stood and not started takes its start before another game is stood or steps (`RustHost.startWaiting`). A LATER start (a mission begun again, a
+  checkpoint loaded) of a game that shares a process with another that steps still reads what that game left there: `--weave` does not cover it. From a stand-up to the
+  next start no call crosses to any game, as in the process's first stand: a stand asks about what a process shares (the cast's rig, in the book of the game that met it
+  first), and the answer's apply wrote the older game's rows over what the stand had just put back. After that start such a call still names the older game. Checks:
+  `thrice.ts --weave` (red under `RH_OFF=waiting`), `tools/blitz/stand-after.ts` (red under `RH_OFF=standing`). Under `--weave` three tallies (`g.stats.picture.lost`,
+  `doorway.held`, `netquiet.last`) read double in the later games: another game's apply moved the module's tally and the scan took that for a tool's write. No rule reads them.
 
 - **The slots.** rust/sim has four. A tool that stands a fifth game in one process (the probe runner stands hundreds) gets the slot of the game stepped
   longest ago: that game's puppet takes the whole state first, and if the tool steps it again it starts anew from its puppet.
@@ -537,7 +527,6 @@ The gate's forms of the tour and the soak (`--runs 3`; three seeds, twelve minut
   question the Rust game has not got. Belongs in ask.ts: one reader of the number for both hosts.
 - **The game's die seeded on the Rust side by a write into the block** (rust-host.ts `seedDie`: the `dice` part found by its name, the count and the word
   by their offsets). Belongs in the face: one call that seeds the die of the game in a slot.
-- **The list-alone call tapped by hand** (rust-host.ts: `world.relist` → `face_upload`, beside the tap on `upload`). Belongs with the generated taps.
 - **The bridge's own tools known by their path** (word.ts: a tool of tools/blitz with no row gets no word). Belongs in the table, a row a tool.
 - **A box whose markings went is `marks: null`** after an apply; scene/boxes.ts:841 tests `!== undefined`. Made undefined before the puppet's own listing
   (rust-host.ts). Belongs in import.ts.
@@ -610,7 +599,7 @@ A tally's tick is the step, the every-tick export and its apply in about equal t
 THE GAME SERVER'S TICK was something else: a networked game's tick lists the box world by `world.relist()` (src/net/step.ts), the host tapped only
 `upload()`, and so the Rust game never listed its world: every tick's frame boxes stayed in its tables (the whole state 10.7 MB at tick 100, 28.4 MB at
 tick 600), the every-tick walk met them all (its time 9, 17, 27, 25, 38, 41 ms over the first six hundred ticks; its size a steady 185 KB) and the step
-and the apply slowed with it. `relist` is tapped now (`face_upload`): 4.0, 2.9, 4.4, 7.2, 4.9, 2.3 ms at the same load, and the chained raw-bits word
+and the apply slowed with it. `relist` was tapped (the Rust game lists as a tick ends since): 4.0, 2.9, 4.4, 7.2, 4.9, 2.3 ms at the same load, and the chained raw-bits word
 of the server's game after 600 ticks is the `ts` game's before and after the mend. `mpserver-check.ts` under `rust` after it: 199 s where 473, a tick
 27 to 45 ms in each of its three processes where 120 to 175, 13 lines PASS and 2 red, `lag` and `ahead`, the two that are red under `ts` too
 (`same fight` and `late joiner` are green: every game stepped its 1,200 ticks).

@@ -65,37 +65,25 @@ export const DIGIN = {
    *  go at once, far men get ready, then come): by itself it only takes the hunters away. AS BUILT the way is measured ONCE, when he first hears them, to the
    *  noise (or the net's fix) that told him: a fight that later moves next door does not release a man judged far, nor claim one judged near */
   reachM: 0,
-  /** WITH THE PRESS (pressure.ts) ON TOO: a man SET on his door does not give his room up at the sound of the team's boots outside it (the press's `outEarly`
-   *  — he is waiting for exactly that); a man still at his furniture, or who never dug in, goes as that rule has him. Off: the press's rule for everybody */
-  holdSet: true,
   /** WITH THE PRESS ON TOO: the man a press leaves to KEEP his room (pressure.ts keepRoom) digs in. Off (hard — difficulty.ts HARD.keeperDigs): he does not,
    *  from the moment he is left until the fight is reset — he is the press's keeper and nothing more, and its last-man rules send him out by another door when
    *  the team's boots reach his. MEASURED (The block, the depot, the records building): the keeper is a man who at standard came hunting; dug in he is behind
    *  the one door a stun canister comes through, and costs the team less than the hunter he was. A man the press has left nowhere (no fight he could go to) still digs in, as ever; a man
    *  already at his furniture when he is made the keeper carries on with it */
   keeper: true,
-  /** WITH THE PRESS ON TOO: a man of theirs who gives ground (a failed push, a last man leaving his room) falls back INTO a room of his side's that has dug in
-   *  and the team has not reached, when there is one near enough — instead of to the far side of the door he left by. Off: the press's own answer */
-  refuge: true,
   /** move to a covered spot that holds the door they will come by (off: he turns to that door from where he stands) */
   cover: true,
-  /** haul furniture against that door and wedge it */
-  brace: true,
   /** WHERE HE MAY GO FOR IT: the spot he pushes the furniture from is in HIS OWN ROOM and so is the way to it. 'Behind the prop' is a point 0.7 m past it from
    *  the door: for a bin or a carton against a wall that point is IN the wall, and the nearest free floor to it can be the far side — the warehouse's dock men
    *  walked out into the lot for a carton by the east wall and held the building from outside it. On: such a prop is pushed from the best spot behind it inside
    *  the room (within reach of it, nothing solid between, and the haul from there to the door inside the room too), else the next nearest prop is tried, else no furniture (he shuts the door and takes cover, as a man with nothing to haul does). Off = as it was:
    *  only a last-stand man is refused a goal outside his room */
   braceInRoom: true,
-  /** pull to a door of his room that stands open toward them */
-  doors: true,
-  /** the first man of a room to see the team calls it on his side's net: the other rooms learn from it too */
-  radio: true,
   /** … once HE has noticed them (on; off = on his first glimpse, as it was — the 10-13 tapes: a calm man at 1–20 % awareness radioing 'they're on us. watch
    *  your doors!' half a second before his own 'huh?', and a man dropped 0.18 s after his first glimpse having told every room). Noticed = roused (alert or
    *  searching: the line the squads' net draws for a man's eyes, enemysquads.ts) AND `noticedSecs` of them in his eyes without a break: this tick runs
    *  before the room fight hands a man his own start, so 'past his own start' alone let a roused man's word out on the very frame of the glimpse */
-  noticed: true, noticedSecs: 0.35,
+  noticedSecs: 0.35,
   /** WHERE DOORS STAY AS THEY ARE LEFT (doors.ts DOORSTAY — nothing below runs where every leaf has its closer, or with this off: the 2.5 s wait and his own
    *  door only, as it was): a man who has pulled a door of his room to keeps his hand on it until the latch has it — a leaf with no closer takes four or five
    *  seconds from its stop, not the moment a sprung one had left, and he used to walk off from his furniture before it was home, the wedge never placed. He
@@ -108,22 +96,11 @@ export const DIGIN = {
   shutOpen: false,
   /** …seconds he gives a pulled leaf to latch before he lets it be · how near home (rad) his hand pushes it the rest · the other doors one man goes to at most */
   shutSecs: 7, shutHomeRad: 0.3, shutDoors: 2,
-  /** DEPTH: every second man of a room digs in OFF the line of the door — a spot the doorway and the floor just inside it cannot see (a can thrown in at the
-   *  door does not reach his eyes), looking onto the floor the team must cross further in. The first man's gun is on the doorway (off: everybody's is) */
-  deep: true,
-  /** FAR: a man covering a door holds it from as far back as the room lets him see it (in a long room: past a stun canister's eight metres from the doorway);
-   *  off: from four or five metres, as the first cut had it */
-  far: true,
-  /** LEARN (default off): once his side has heard a stun canister go off (his own ears, or the word on the net), EVERY man digging in keeps off the door's line */
-  learn: false,
   /** DOUBLE UP (off as shipped: measured, it puts two men under one flashbang and the team loses fewer): a man alone in his room, who hears them coming, runs to
    *  a room of his side's that still has men in it and digs in THERE (said on the net) — the team finds his room empty and the next one full */
   gather: false,
   /** … no further than this by the floor (m), and never by a way that passes this near the noise (m) */
   gatherM: 24, gatherShyM: 6,
-  /** a man SET on a door his room wedged is waiting for the boot: he does not flinch when that door is booted in (off: the room fight's startle as ever — the
-   *  one place a reaction beat is touched, and only to take away a surprise that is none) */
-  steady: true,
   /** seconds between hearing it and moving [min, max] — his own, drawn per man */
   think: [2, 5] as [number, number],
   /** seconds of work at the door to wedge the furniture under it [min, max] — bumps heard the whole time; a door opened meanwhile is not wedged */
@@ -158,7 +135,7 @@ export const DIGIN = {
    *  the lanes are off, so the frozen stand is as it was). The spot he takes to cover his door is never one in such a lane's line, and a man already set whose
    *  spot comes to lie in one — nobody in his own sights — picks again, at most every `laneSecs`: another spot of HIS room on the same door, out of the line.
    *  No such spot = he stays where he is, as before; he still does not give the room up (holdSet). false = spots as they were dealt before the rule */
-  lanes: true, laneSecs: 2,
+  laneSecs: 2,
 };
 export const DIGIN_DEFAULTS = JSON.parse(JSON.stringify(DIGIN)) as typeof DIGIN;
 /** THE FURNITURE COMES HOME (10-13). A hauling man was asked whether it had made it the frame he stopped at his stand by the door — and furniture that had
@@ -192,7 +169,7 @@ export const DIGIN_LOG: { t: number; who: string; what: string }[] = [];
 export const DIGIN_SHUT = { home: 0, held: 0, again: 0, more: 0, left: 0 };
 
 const LS_KEY = 'twopointsix.digin';
-const KEPT = ['on', 'stay', 'cover', 'brace', 'doors', 'radio', 'deep', 'far', 'learn', 'gather', 'steady', 'holdSet', 'refuge', 'keeper', 'shutOpen'] as const;
+const KEPT = ['on', 'stay', 'cover', 'gather', 'keeper', 'shutOpen'] as const;
 const KEPT_NUM = ['wedges', 'pace', 'reachM'] as const;   // (the sliders the panel has)
 const NUM_MAX = { wedges: 3, pace: 3, reachM: 60 } as const;
 export function saveDigIn() { try { const out: Record<string, boolean | number> = {}; for (const k of KEPT) out[k] = DIGIN[k]; for (const k of KEPT_NUM) out[k] = DIGIN[k]; localStorage.setItem(LS_KEY, JSON.stringify(out)); } catch { /* no storage: nothing to keep */ } }

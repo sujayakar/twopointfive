@@ -46,7 +46,7 @@ fn say(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, tex
 pub fn line(g: &mut crate::game::Game, gd: GuardId, pool: &[String]) {
     let last = mem(g, gd).line;
     let n = pool.len() as f64;
-    let mut i = js::rem(m::floor(crate::math_dice::sim_random(g) * n), n) as i32;
+    let mut i = js::rem(m::floor(crate::dice::draw_of(g, "attention::line#1", gd) * n), n) as i32;
     if pool.len() > 1 && i == last { i = (i + 1) % pool.len() as i32; }
     mem(g, gd).line = i;
     say(g, gd, &pool[i as usize]);
@@ -661,4 +661,29 @@ mod tests {
         assert_eq!(g.m.attention.attention_log.len(), 48);
         assert_eq!(g.m.attention.attention_log[0].secs, 2.0);
     }
+}
+
+/// Each held attention as the floor shows it: the place, how much of its clock is left, and whether the thread to it is the way he will walk: his own path where he has one for this place (a one-point side step
+/// to get unstuck is not his way); else the floor is asked by whoever draws. (attention.ts attentionMarks, attentionWay)
+pub fn attention_view(g: &crate::game::Game) -> Vec<crate::view::AttentionLine> {
+    let k = &g.k.attention;
+    if !k.on || !k.marks || g.touring { return Vec::new(); }
+    let mut out = Vec::new();
+    for &gd in &g.guards {
+        let m = &g.gd[gd];
+        let Some(h) = attention_of(g, gd) else { continue };
+        if m.state == crate::game::GuardState::Dead { continue; }
+        use crate::attention::HoldMode::*;
+        let left = if h.mode == Lent { 1.0 } else { m::min(1.0, m::max(0.0, (if h.until < 0.0 { h.secs } else { h.until - g.time }) / m::max(1e-3, h.full))) };
+        let (at, walking) = ([h.at[0], 0.05, h.at[2]], h.mode == Go && h.until < 0.0);
+        let walks = k.way && walking;
+        let mine = |g0: crate::V3| v3::dist_xz(g0, at) < 0.9 && m.path.last().is_some_and(|&e| v3::dist_xz(e, g0) < 1.2);
+        let own = if walks && m.path_i < m.path.len() && m.path_goal.is_some_and(mine) { Some(m.path[m.path_i..].to_vec()) } else { None };
+        out.push(crate::view::AttentionLine {
+            man: g.ch[m.ch].id, at, left, mode: match h.mode { Go => crate::view::AttentionMode::Go, Look => crate::view::AttentionMode::Look, Lent => crate::view::AttentionMode::Lent },
+            ending: h.mode != Lent && h.until >= 0.0 && h.until - g.time <= k.tell_secs,
+            worn: h.nth > 1, walking, hidden: crate::fogofwar::fog_of_war_hides(g, gd), walks, own,
+        });
+    }
+    out
 }

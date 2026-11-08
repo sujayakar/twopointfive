@@ -335,14 +335,14 @@ goes to cover to change magazine), the line `reload_in_cover: "changing magazine
    posture alone was green on an order that got two of four men killed (the pose trap, below).
 
 Worked examples: a whole small order is printed below ("take a knee", in this page only). In the
-build: `orders/rows/shell40.rs` ("put a 40 mm shell there") with the two tests of `tests/orders.rs`; it shows
-the `Row` and the list but hands its three functions on to an older module, so it is not the one to copy.
+build: `orders/rows/cover.rs`, whose functions are all in its file (it names itself to `squad_orders_assign`, as it
+did before it moved; a new order says `rows::assign`); `orders/rows/shell40.rs` ("put a 40 mm shell there"), with the
+two tests of `tests/orders.rs`, hands its three functions on to a module of its own.
 
 **Before either lands** (none of this is in the file or the line):
 - `bun run tools/sim/build.ts` after any change under `rust/`.
-- An order's id also goes into `dealtRows` of `tools/blitz/schema.json`, or the page's export of a game that
-  holds the row stops with "no closures by id for the row" (`tools/blitz/export.ts`). Reading a game back is
-  already by the list (`rows::by_id`).
+- Reading a game back deals a row its functions by the list (`rows::by_id`), so an order needs no line in the
+  wire, and a row with an id on no line stops the import, by name.
 - A dozen modules know orders BY ID and a new order is in none of their lists: `silent` (loud rows),
   `holdfire` (lift and blow orders), `sneak` and `unseen` (posted), `orders::lane_orders`, `squadthrow`
   (resumed), `rails` (a lesson's list of rows hides a row it does not name), `cmdring` (the ring's seats),
@@ -377,9 +377,7 @@ list. A reaction can take a man
 whole, not his legs alone while he goes on shooting. A reaction's file is longer than its idea, because it must
 ask for itself whether a man is on a post, kept to his rooms or somebody's (a third of the worked example).
 A reaction that draws from the die re-deals the rest of the mission until the keyed draws land. An order that
-shows a line in the squad's HUD block still needs an arm of `OrderNoteFn`, which the page reads over the wire,
-and an order that keeps state of its own still needs a field on the game. About thirty older orders are still
-arms of six enums. The rest of this section is the detail of each of these.
+shows a line in the squad's HUD block says so in its file (`notes` of its `Row`, a function of the game shared and the seat; the block comes in the list's order and its words reach the page in `TickView.squad.notes`, and the page words nothing), and an order that keeps state of its own still needs a field on the game. The rest of this section is the detail of each of these.
 
 ### The pieces in detail
 
@@ -499,7 +497,8 @@ fn issue(g: &mut Game, men: &[GuardId], _: &OrderTarget, _: Option<&GiveOpts>) -
 
 /// its row goes on the menu once there is a squad to give it to
 fn frame(g: &mut Game) {
-    if rows::listed(g, &ORDER) || !crate::orders::squad_orders_active(g) { return; }
+    let seat = crate::seats::here(g);
+    if rows::listed(g, &seat, &ORDER) || !crate::orders::squad_orders_active(g, &seat) { return; }
     rows::list(g, &ORDER, OrderDef { targets: vec![TargetKind::Floor, TargetKind::Door, TargetKind::None],
                                      ack: Some(Vec::from([String::from("taking a knee.")])), ..Default::default() });
 }
@@ -517,11 +516,10 @@ Two things about an order that its file does not show:
   contact; and the fight drops the order's crouch while it has him.
 
 `frame` runs once a frame after the menu's input and is where an order puts its row on the menu or takes it off
-(`rows::list(g, &ORDER, data)` makes the row from what only it knows: its page, its targets, its key). The older
-orders are still arms of six enums in `orders/types.rs` with bodies in the matches of `orders/p_03.rs`; each
-enum has ONE arm, `Row`, through which every order written this way is called, so moving an older order
-deletes its arms and adds none. The 40 mm shell is moved (its five arms, six bodies, its line of the frame and
-its row of the read-a-game table are gone); its fight test is `rust/game_start/tests/orders.rs`.
+(`rows::list(g, &ORDER, data)` makes the row from what only it knows: its page, its targets, its key). Every
+order is written this way: `OrderDef.row` is its `Row`, and the menu and the tick call through it. The module
+that keeps an order's state may make the row itself with `rows::def(&rows::<name>::ORDER, data)`. The fight test
+of the first moved is `rust/game_start/tests/orders.rs`.
 
 **The test of a rule is a fight.** `rust/game_start/tests/control.rs` stands a room, a guard and the player's
 men, runs the fight, and asserts the rule had the man (`cargo test` in `rust/game_start`, no page, no
@@ -539,10 +537,7 @@ TypeScript). The pilot's test: a guard who runs dry in the open kneels to change
   re-deals every mission once, so it lands alone with the mission tallies before and after. Until it lands, a
   new rule that draws moves every later draw of the mission, and a tally cannot judge it. The pilot waits on it.
 - A rule's rows are cloned with the game (a kept game keeps them) but are not in a checkpoint written to a file.
-- Orders: one is moved, about thirty are not. The one long-hand left for an order that has a line in the
-  squad's HUD block: that line is still an arm of `OrderNoteFn`, an enum the page reads by its tag over the
-  wire. It ends when a `Row` has a `notes` function and the page is handed the lines as text, which is a change
-  of the wire's table and of the HUD's reader, not of the game. An order's own state is still a field of the
+- Orders: every order is a file of `orders/rows/`, and what a rule that does not know it by name needs of it is its `Row`'s `is`. An order's own state is still a field of the
   game's `Mods` (`g.m.squad40`).
 - No-change proofs are native now (`rust/game_start`, `hold keep` / `hold check`: 24 levels by three scripted
   hands, every part of the game hashed every frame), but the hands reach three things: a pushed fight, cans
@@ -671,11 +666,11 @@ tallies before and after.
   mission once, so it lands alone, after the no-change steps, with the 84 tallies before and after.
 - NEXT, in this order: (1) F lands; the pilot's tallies. (2) rule rows in file saves. (3) the list grants a
   channel (legs alone), so head-down and the pilot stop silencing the gun by a floor on its clock. (4) the
-  other orders moved to `orders/rows/`, door tools first (twelve of the arms are theirs).
+  other orders moved to `orders/rows/`: done, every order is a file and the six enums are gone.
 - NOT YET: running every rule's transition every tick so that losers show. `startle_transition` ends a run
   whenever he has a script, and its stuck clock would run while a grenade has him: it needs "paused" first.
 - Pilot order (E, BUILT): the 40 mm shell as `orders/rows/shell40.rs` and one line of `rows!`, with a fight
-  test. One `Row` arm in each of six enums is the seam for the rest.
+  test. It was the seam for the rest, which followed it (`OrderDef.row`).
 - G (P) the tasker list decides; the has_him lists go, one disagreement at a time.
 - H (P) body-found, contact and the other inline reports become percepts and events; every man senses.
 - I (E) `Foe(ManId)`, a squad's lead, sense by parameter; then a squad as a value.

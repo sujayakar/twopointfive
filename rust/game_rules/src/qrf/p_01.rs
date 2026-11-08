@@ -42,18 +42,12 @@ pub fn response_of(g: &crate::game::Game) -> Option<crate::scene_scenarios::Resp
 /// A squad's room clear under way on a level whose block carries `raid`.   (qrf.ts raid)
 pub fn raid(g: &crate::game::Game) -> bool {
     if !g.night_breach.active || g.rescue.active { return false; }
-    if !response_of(g).map_or(false, |r| r.raid.is_some()) { return false; }
-    let snatch_level = g.level.scenarios.as_ref().map_or(false, |s| s.snatch.is_some());
-    !snatch_level || crate::snatchout::snatch_out_on(g)
+    response_of(g).map_or(false, |r| r.raid.is_some())
 }
 
-/// The raid is over: the room clear ended, or on a snatch that ends in the van, the snatch did.   (qrf.ts raidOver)
+/// The raid is over: the room clear ended.   (qrf.ts raidOver)
 pub fn raid_over(g: &crate::game::Game) -> bool {
-    if crate::snatchout::snatch_out_ruled(g) {
-        g.snatch.end.is_some() || g.room_clear.end == Some(crate::roomclear::RoomClearEnd::Wiped)
-    } else {
-        g.room_clear.end.is_some()
-    }
+    g.room_clear.end.is_some()
 }
 
 /// The side the team stands on: the shift's, or in a raid the defenders'.   (qrf.ts sideOfTeam)
@@ -62,7 +56,7 @@ pub fn side_of_team(g: &crate::game::Game) -> crate::qrf::SideOfTeam {
 }
 
 /// A raid: the men who can call it in.   (qrf.ts callers)
-pub fn callers(g: &mut crate::game::Game) -> Vec<GuardId> {
+pub fn callers(g: &crate::game::Game) -> Vec<GuardId> {
     let id = response_of(g).and_then(|r| r.raid).and_then(|a| a.room).filter(|s| !s.is_empty());
     let of: Vec<GuardId> = match &id {
         Some(id) => match g.room_clear.rooms.iter().find(|r| r.def.id == *id) {
@@ -81,7 +75,7 @@ pub fn callers(g: &mut crate::game::Game) -> Vec<GuardId> {
 }
 
 /// A raid: the caller who heard gunfire and has lived `callSecs` since.   (qrf.ts raidVoice)
-pub fn raid_voice(g: &mut crate::game::Game) -> Option<GuardId> {
+pub fn raid_voice(g: &crate::game::Game) -> Option<GuardId> {
     for x in callers(g) {
         let heard = g.qrf.heard_at.get(x).copied().unwrap_or(f64::INFINITY);
         if g.time - heard >= g.k.response.call_secs { return Some(x); }
@@ -161,184 +155,6 @@ pub fn qrf_owns(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 // ---------------------------------------------------------------- knobs kept per machine
-
-/// `?qrfsquad=0` on the page's address. The skeleton has no row for the address: the TypeScript's answer with no word.   (qrf.ts ownDrillAsked)
-pub fn own_drill_asked() -> bool { false }
-
-/// storeName's shape: `stored_tune` with what it needs, the store being reached through `g`. Nothing kept or junk in it: None.   (qrf.ts storedTune)
-fn stored_tune_in(g: &Game) -> Option<JsMap<String, crate::qrf::StoredTuneRow>> {
-    let raw = crate::savestate::save_store_get(g, TUNE_KEY)?;
-    if raw.is_empty() { return None; }
-    tune_rows(&raw)
-}
-
-/// `JSON.parse` as far as the two readers can tell: an object's booleans and numbers. Not JSON, or JSON of another shape (which reads no row): None.
-fn tune_rows(raw: &str) -> Option<JsMap<String, crate::qrf::StoredTuneRow>> {
-    let mut i = 0;
-    json_ws(raw, &mut i);
-    if raw.as_bytes().get(i) != Some(&b'{') { return None; }
-    let rows = json_object(raw, &mut i)?;
-    json_ws(raw, &mut i);
-    if i != raw.len() { return None; }
-    let mut out = JsMap::new();
-    for (k, v) in rows {
-        // (a later row of a name replaces the earlier, whatever its kind)
-        match v { Some(v) => { out.set(k, v); } None => { out.delete(k); } }
-    }
-    Some(out)
-}
-
-fn json_ws(s: &str, i: &mut usize) {
-    while matches!(s.as_bytes().get(*i), Some(b' ' | b'\t' | b'\n' | b'\r')) { *i += 1; }
-}
-
-/// At a `{`: its rows in order, a row of another kind than boolean or number as None. None = not JSON.
-fn json_object(s: &str, i: &mut usize) -> Option<Vec<(String, Option<crate::qrf::StoredTuneRow>)>> {
-    *i += 1;
-    let mut rows = Vec::new();
-    json_ws(s, i);
-    if s.as_bytes().get(*i) == Some(&b'}') { *i += 1; return Some(rows); }
-    loop {
-        json_ws(s, i);
-        let k = json_string(s, i)?;
-        json_ws(s, i);
-        if s.as_bytes().get(*i) != Some(&b':') { return None; }
-        *i += 1;
-        let v = json_value(s, i)?;
-        rows.push((k, v));
-        json_ws(s, i);
-        match *s.as_bytes().get(*i)? {
-            b',' => *i += 1,
-            b'}' => { *i += 1; return Some(rows); }
-            _ => return None,
-        }
-    }
-}
-
-/// One value: Some(Some(row)) a boolean or a number, Some(None) any other. None = not JSON.
-fn json_value(s: &str, i: &mut usize) -> Option<Option<crate::qrf::StoredTuneRow>> {
-    json_ws(s, i);
-    let b = s.as_bytes();
-    match *b.get(*i)? {
-        b'"' => json_string(s, i).map(|_| None),
-        b'{' => json_object(s, i).map(|_| None),
-        b'[' => {
-            *i += 1;
-            json_ws(s, i);
-            if b.get(*i) == Some(&b']') { *i += 1; return Some(None); }
-            loop {
-                json_value(s, i)?;
-                json_ws(s, i);
-                match *b.get(*i)? {
-                    b',' => *i += 1,
-                    b']' => { *i += 1; return Some(None); }
-                    _ => return None,
-                }
-            }
-        }
-        b't' => json_word(s, i, "true").map(|_| Some(crate::qrf::StoredTuneRow::Bool { v: true })),
-        b'f' => json_word(s, i, "false").map(|_| Some(crate::qrf::StoredTuneRow::Bool { v: false })),
-        b'n' => json_word(s, i, "null").map(|_| None),
-        _ => json_number(s, i).map(|v| Some(crate::qrf::StoredTuneRow::Num { v })),
-    }
-}
-
-fn json_word(s: &str, i: &mut usize, w: &str) -> Option<()> {
-    if s[*i..].starts_with(w) { *i += w.len(); Some(()) } else { None }
-}
-
-fn json_digits(b: &[u8], i: &mut usize) -> bool {
-    let at = *i;
-    while matches!(b.get(*i), Some(b'0'..=b'9')) { *i += 1; }
-    *i > at
-}
-
-/// JSON's number grammar, read to the nearest double as `JSON.parse` does (1e999 is Infinity, which `row_num` passes over).
-fn json_number(s: &str, i: &mut usize) -> Option<f64> {
-    let b = s.as_bytes();
-    let at = *i;
-    if b.get(*i) == Some(&b'-') { *i += 1; }
-    if b.get(*i) == Some(&b'0') { *i += 1; } else if !json_digits(b, i) { return None; }
-    if b.get(*i) == Some(&b'.') { *i += 1; if !json_digits(b, i) { return None; } }
-    if matches!(b.get(*i), Some(b'e' | b'E')) {
-        *i += 1;
-        if matches!(b.get(*i), Some(b'+' | b'-')) { *i += 1; }
-        if !json_digits(b, i) { return None; }
-    }
-    s[at..*i].parse::<f64>().ok()
-}
-
-/// At a `"`: the text, in JavaScript's UTF-16 units so a pair written as two escapes joins. None = not JSON.
-fn json_string(s: &str, i: &mut usize) -> Option<String> {
-    let b = s.as_bytes();
-    if b.get(*i) != Some(&b'"') { return None; }
-    *i += 1;
-    let mut out: Vec<u16> = Vec::new();
-    loop {
-        match *b.get(*i)? {
-            b'"' => { *i += 1; return Some(String::from_utf16_lossy(&out)); }
-            0..=0x1f => return None,
-            b'\\' => {
-                let e = *b.get(*i + 1)?;
-                *i += 2;
-                out.push(match e {
-                    b'"' => 34, b'\\' => 92, b'/' => 47, b'b' => 8, b'f' => 12, b'n' => 10, b'r' => 13, b't' => 9,
-                    b'u' => {
-                        let h = s.get(*i..*i + 4)?;
-                        if !h.bytes().all(|x| x.is_ascii_hexdigit()) { return None; }
-                        *i += 4;
-                        u16::from_str_radix(h, 16).ok()?
-                    }
-                    _ => return None,
-                });
-            }
-            _ => {
-                let c = s[*i..].chars().next()?;
-                *i += c.len_utf8();
-                let mut unit = [0u16; 2];
-                out.extend_from_slice(c.encode_utf16(&mut unit));
-            }
-        }
-    }
-}
-
-/// `typeof o[key] === 'boolean'`
-fn row_bool(o: &JsMap<String, crate::qrf::StoredTuneRow>, key: &str) -> Option<bool> {
-    match o.get(String::from(key)) { Some(crate::qrf::StoredTuneRow::Bool { v }) => Some(*v), _ => None }
-}
-
-/// `Number.isFinite(o[key])`
-fn row_num(o: &JsMap<String, crate::qrf::StoredTuneRow>, key: &str) -> Option<f64> {
-    match o.get(String::from(key)) { Some(crate::qrf::StoredTuneRow::Num { v }) if v.is_finite() => Some(*v), _ => None }
-}
-
-/// The response's knobs from the machine's memory, and the address's word over the squad row.   (qrf.ts loadQrfTune)
-pub fn load_qrf_tune(g: &mut crate::game::Game) {
-    if let Some(o) = stored_tune_in(g) {
-        if let Some(v) = row_bool(&o, "qrf") { g.tune.qrf = v; }
-        if let Some(v) = row_bool(&o, "perimeter") { g.tune.perimeter = v; }
-        if let Some(v) = row_bool(&o, "qrfSilent") { g.tune.qrf_silent = v; }
-        if let Some(v) = row_bool(&o, "qrfSquad") { g.tune.qrf_squad = v; }
-        if let Some(v) = row_num(&o, "qrfEta") { g.tune.qrf_eta = crate::v3::clamp(v, 15.0, 240.0); }
-        if let Some(v) = row_num(&o, "perimeterEta") { g.tune.perimeter_eta = crate::v3::clamp(v, 10.0, 180.0); }
-        if let Some(v) = row_num(&o, "qrfSize") { g.tune.qrf_size = crate::v3::clamp(m::round(v), 2.0, 4.0); }
-        if let Some(v) = row_num(&o, "perimeterSize") { g.tune.perimeter_size = crate::v3::clamp(m::round(v), 2.0, 4.0); }
-    }
-    if own_drill_asked() { g.tune.qrf_squad = false; }
-}
-
-/// A number as `JSON.stringify` writes it: as the template string does, and null if it is not finite.
-fn json_num(x: f64) -> String {
-    if x.is_finite() { js::num_str(x) } else { String::from("null") }
-}
-
-/// The row `saveQrfTune` stores, as `JSON.stringify` writes it.
-fn tune_json(t: &crate::game::GameTune, qrf_squad: bool) -> String {
-    alloc::format!(
-        "{{\"qrf\":{},\"qrfEta\":{},\"qrfSize\":{},\"perimeter\":{},\"perimeterEta\":{},\"perimeterSize\":{},\"qrfSilent\":{},\"qrfSquad\":{}}}",
-        t.qrf, json_num(t.qrf_eta), json_num(t.qrf_size), t.perimeter, json_num(t.perimeter_eta), json_num(t.perimeter_size), t.qrf_silent, qrf_squad
-    )
-}
 
 // ---------------------------------------------------------------- small shared helpers
 
@@ -471,7 +287,7 @@ pub fn best_fix(g: &crate::game::Game) -> Option<crate::qrf::BestFix> {
 }
 
 /// Is this man on the defenders' net?   (qrf.ts onTheirNet)
-pub fn on_their_net(g: &mut crate::game::Game, x: GuardId) -> bool {
+pub fn on_their_net(g: &crate::game::Game, x: GuardId) -> bool {
     let side = team_of(side_of_team(g));
     if g.gd[x].team != side || g.gd[x].civ.is_some() || g.gd[x].state == crate::game::GuardState::Dead || g.gd[x].held.is_some() || crate::owner::has(g, x, crate::owner::by::RUNNER) { return false; }
     !raid(g) || g.qrf.men.contains(&x) || callers(g).contains(&x)
@@ -528,7 +344,7 @@ pub fn fix_of(g: &crate::game::Game) -> Option<crate::qrf::FixOf> {
 }
 
 /// The brief as control gives it with the ETA.   (qrf.ts brief)
-pub fn brief(g: &mut crate::game::Game) -> String {
+pub fn brief(g: &crate::game::Game) -> String {
     let w = net_word(g);
     let f = match fix_of(g) { Some(f) => f, None => return String::from("no word on where") };
     let age = g.time - f.t;
@@ -646,9 +462,9 @@ pub fn request_qrf(g: &mut crate::game::Game, reason: crate::qrf::QrfReason) -> 
 }
 
 /// Staging: no enemy of theirs stands within `clearM` of this mark.   (qrf.ts clearOfFoes)
-pub fn clear_of_foes(g: &crate::game::Game, seat: &crate::seats::SeatRef, p: V3) -> bool {
+pub fn clear_of_foes(g: &crate::game::Game, p: V3) -> bool {
     let clear_m = g.k.response.clear_m;
-    if flat(g.ch[g.pl[seat.player].ch].pos, p) < clear_m { return false; }
+    if crate::seats::men_left(g).into_iter().any(|pl| flat(g.ch[g.pl[pl].ch].pos, p) < clear_m) { return false; }
     for &x in &g.guards {
         if g.gd[x].team == crate::teams::Team::Operative && g.gd[x].state != crate::game::GuardState::Dead && flat(g.ch[g.gd[x].ch].pos, p) < clear_m { return false; }
     }
@@ -663,50 +479,6 @@ pub fn response_words(g: &crate::game::Game) -> Option<crate::qrf::ResponseWords
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn a_row_of_the_wrong_kind_is_not_read() {
-        let mut o: JsMap<String, crate::qrf::StoredTuneRow> = JsMap::new();
-        o.set(String::from("qrf"), crate::qrf::StoredTuneRow::Num { v: 1.0 });
-        o.set(String::from("qrfEta"), crate::qrf::StoredTuneRow::Bool { v: true });
-        o.set(String::from("qrfSize"), crate::qrf::StoredTuneRow::Num { v: f64::INFINITY });
-        o.set(String::from("perimeter"), crate::qrf::StoredTuneRow::Bool { v: false });
-        o.set(String::from("perimeterEta"), crate::qrf::StoredTuneRow::Num { v: 30.0 });
-        assert_eq!(row_bool(&o, "qrf"), None);
-        assert_eq!(row_num(&o, "qrfEta"), None);
-        assert_eq!(row_num(&o, "qrfSize"), None);
-        assert_eq!(row_bool(&o, "perimeter"), Some(false));
-        assert_eq!(row_num(&o, "perimeterEta"), Some(30.0));
-        assert_eq!(row_bool(&o, "absent"), None);
-    }
-
-    #[test]
-    fn the_kept_row_reads_back_as_json_parse_reads_it() {
-        let o = tune_rows(r#" {"qrf":false, "qrfEta":37.5,"perimeterEta":null,"qrfSize":1e999,"qrfSilent":"yes","perimeter":[1,{"a":2}],"\u0071rfSquad":true} "#).unwrap();
-        assert_eq!(row_bool(&o, "qrf"), Some(false));
-        assert_eq!(row_num(&o, "qrfEta"), Some(37.5));
-        assert_eq!(row_num(&o, "perimeterEta"), None);
-        assert_eq!(row_num(&o, "qrfSize"), None);
-        assert_eq!(row_bool(&o, "qrfSilent"), None);
-        assert_eq!(row_bool(&o, "perimeter"), None);
-        assert_eq!(row_bool(&o, "qrfSquad"), Some(true));
-        // what the writer writes comes back
-        let d = qrf_tune_defaults();
-        let mut t = crate::game::GameTune::zeroed();
-        t.qrf_eta = d.qrf_eta;
-        let o = tune_rows(&tune_json(&t, true)).unwrap();
-        assert_eq!(row_num(&o, "qrfEta"), Some(75.0));
-        assert_eq!(row_bool(&o, "qrfSquad"), Some(true));
-    }
-
-    #[test]
-    fn junk_and_other_shapes_read_no_row() {
-        for raw in ["", "{", "{\"qrf\":tru}", "{\"qrf\":true,}", "{\"qrf\":01}", "{\"qrf\":true} x", "{'qrf':true}", "5", "null", "[true]", "\"qrf\""] {
-            assert!(tune_rows(raw).is_none(), "{}", raw);
-        }
-        let o = tune_rows(r#"{"qrf":true,"qrf":null}"#).unwrap();
-        assert_eq!(row_bool(&o, "qrf"), None);
-    }
 
     #[test]
     fn a_long_line_is_clipped_in_utf16_units() {

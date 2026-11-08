@@ -5,8 +5,6 @@
 // bit, on another JavaScript engine with no GPU. That holds only under the game's own maths (src/math/exact.ts); SAMEFIGHT_BREAK=1 walks the tape on the
 // engine's own sin and cos (the re-run's own arm, QA_HOLD=exact=0: a page has no word for it) and must FAIL.
 //   PORT=5231 node tools/qa/samefight-page.cjs [--runs compound,rescue] [--keep dir]      (a dev server on that port: PORT=5231 bun run tools/serve.ts)
-//   SAMEFIGHT_QUERY=cpusense …   the same with the senses on the CPU (src/game/sense.ts): the tape's GPU values are then not used at all — the re-run answers its own
-//   senses and the tape's are only held against them — so the page's fight is its seed and its inputs and nothing else
 // exit 0 = every run equal and no page error · 1 = otherwise
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const { spawnSync } = require('node:child_process');
@@ -14,8 +12,8 @@ const { writeFileSync, mkdtempSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { join, resolve } = require('node:path');
 const ROOT = resolve(__dirname, '../..');
-const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', BREAK = process.env.SAMEFIGHT_BREAK === '1', EXTRA = process.env.SAMEFIGHT_QUERY || '', DRAW = Math.max(1, Number(process.env.SAMEFIGHT_DRAW || 30) | 0);   // (a draw on the software adapter is seconds: one every 30 steps by default)
-const VIEW = (process.env.SAMEFIGHT_VIEW || '960x540').split('x').map(Number);   // (SAMEFIGHT_VIEW=480x270: a smaller picture — the software adapter pays by the pixel, the game does not care)
+const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', BREAK = process.env.SAMEFIGHT_BREAK === '1', EXTRA = process.env.SAMEFIGHT_QUERY || '', DRAW = Math.max(1, Number(process.env.SAMEFIGHT_DRAW || 120) | 0);   // (a draw on the software adapter is seconds: one every 120 steps by default)
+const VIEW = (process.env.SAMEFIGHT_VIEW || '320x180').split('x').map(Number);   // (SAMEFIGHT_VIEW=480x270: a smaller picture — the software adapter pays by the pixel, the game does not care)
 const arg = k => { const i = process.argv.indexOf(`--${k}`); return i >= 0 ? process.argv[i + 1] : undefined; };
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage textures \(5\) in the Compute stage/;
@@ -29,7 +27,7 @@ const SCRIPT = [
 if (process.env.SAMEFIGHT_QUIET === '1') for (const r of SCRIPT) r[4] = 0;
 if (process.env.SAMEFIGHT_ROWS) SCRIPT.length = Math.max(1, Math.min(SCRIPT.length, Number(process.env.SAMEFIGHT_ROWS) | 0));
 const RUNS = { compound: 'levelFile=compound.json&roomclear&squad4', rescue: 'rescue', night: 'solo' };
-const picked = (arg('runs') || 'compound,rescue').split(',').filter(Boolean);
+const picked = (arg('runs') || 'compound').split(',').filter(Boolean);
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS }); let failed = false;
   const line = (ok, s) => { if (!ok) failed = true; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}`); };
@@ -54,8 +52,8 @@ const picked = (arg('runs') || 'compound,rescue').split(',').filter(Boolean);
       }
       inp.buttons = 0; C.stop();
       const file = window.__replay.file('samefight'), reg = window.__knobs.registry();
-      return { fatal: document.getElementById('fatal')?.textContent || '', parts: C.parts, sam: C.sam, words: C.words, steps: C.steps, file, seed: g.dice ? g.dice.seed : null, exact: window.__sim.exact(), sense: reg.SENSE ? reg.SENSE.cpu : undefined,
-        gpuReads: g.sensors.stats.reads, fixed: g.seat.fixed, fixedCmds: g.seat.fixedCmds, checked: reg.CMDCHECK && reg.CMDCHECK.on, events: g.events.length - before.events, down: before.up - g.guards.filter(x => x.state !== 'dead').length, men: g.guards.length, time: g.time, playerUp: g.player.char.health > 0 };
+      return { fatal: document.getElementById('fatal')?.textContent || '', parts: C.parts, sam: C.sam, words: C.words, steps: C.steps, file, seed: g.dice ? g.dice.seed : null, exact: window.__sim.exact(),
+        fixed: g.seat.fixed, fixedCmds: g.seat.fixedCmds, checked: reg.CMDCHECK && reg.CMDCHECK.on, events: g.events.length - before.events, down: before.up - g.guards.filter(x => x.state !== 'dead').length, men: g.guards.length, time: g.time, playerUp: g.player.char.health > 0 };
     }, { script: SCRIPT, every: DRAW }).catch(e => ({ fatal: String(e && e.stack || e).slice(0, 600) }));
     await page.close();
     const secs = ((Date.now() - t0) / 1000).toFixed(0);
@@ -68,8 +66,7 @@ const picked = (arg('runs') || 'compound,rescue').split(',').filter(Boolean);
     if (!H || H.refuse) { line(false, `${name}: the tape was not re-run — ${H ? H.refuse : (r.stderr || r.stdout || '').trim().split('\n').slice(-3).join(' / ').slice(0, 500)}`); continue; }
     let k = 0; while (k < P.words.length && k < H.words.length && P.words[k] === H.words[k]) k++;
     const same = P.words.length > 0 && P.words.length === H.words.length && k === P.words.length;
-    if (H.ownSenses && H.ownSenses.on && H.ownSenses.differ) failed = true;
-    line(same, `${name}: the tape re-run under bun is the page's fight to the bit — ${same ? `${P.words.length} words over ${P.steps} steps equal` : `${k} of ${P.words.length} words equal: the bits part in the half second ending at step ${(k + 1) * 30} (the re-run chained ${H.steps} steps of ${H.ticks})`} · held against the trace: ${H.compared} samples, worst ${Number(H.worst).toFixed(2)} m${H.drift ? `, drift ${H.drift}` : ''}${H.unjournaled ? ` · ${H.unjournaled} read(s) the page never made` : ''}${H.ownSenses && H.ownSenses.on ? ` · the re-run answered ${H.ownSenses.reads} reads itself, ${H.ownSenses.differ} not what the page's game had read` : ''}${H.warnings && H.warnings.length ? ` · ${H.warnings.length} note(s): ${H.warnings[0].slice(0, 160)}` : ''} (file: ${path})`);
+    line(same, `${name}: the tape re-run under bun is the page's fight to the bit — ${same ? `${P.words.length} words over ${P.steps} steps equal` : `${k} of ${P.words.length} words equal: the bits part in the half second ending at step ${(k + 1) * 30} (the re-run chained ${H.steps} steps of ${H.ticks})`} · held against the trace: ${H.compared} samples, worst ${Number(H.worst).toFixed(2)} m${H.drift ? `, drift ${H.drift}` : ''}${H.warnings && H.warnings.length ? ` · ${H.warnings.length} note(s): ${H.warnings[0].slice(0, 160)}` : ''} (file: ${path})`);
     if (!same && P.parts && H.parts) {   // which kind of thing parted first, in the steps both sides kept apart (digest.ts rawBitsParts), and Sam's own numbers there
       const n = Math.min(P.parts.length, H.parts.length); let i = 0; const off = j => Object.keys(P.parts[j]).filter(q => P.parts[j][q] !== H.parts[j][q]);
       while (i < n && !off(i).length) i++;

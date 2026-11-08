@@ -21,9 +21,10 @@
 //   shutdoor-never   five minutes of a played room clear (stack, open and clear, fall in, room after room) on doors that stay open, the order never given:
 //                    the row is never assigned, its counters and log stay empty, teammates open leaves and none they touched last comes to its latch. The
 //                    same five minutes with the order given once move all of those (so the lines can go red)
+import { listedOf, menuKey } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 import { listen } from './heard.ts';
-import { leftKey, toolsRow4 } from './order-keys.ts';
+import { leftKey } from './order-keys.ts';
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
 const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
@@ -103,9 +104,9 @@ async function rig(seed: number, o: { fight?: boolean; squad?: 2 | 4; keep?: boo
     stand(places: number[][]) { R.ops.forEach((x: any, i: number) => { const p = places[i]; if (!p) return; x.char.pos[0] = p[0]; x.char.pos[2] = p[2]; x.char.vel[0] = x.char.vel[2] = 0; }); R.step(2); O.give('hold', nowhere(O), 'all'); R.step(20); },
     /** X pressed on p: the first page's rows, then the door tools' page behind its opener (ids, digits, words, greyed, reasons), Esc, Esc */
     menuOn(p: number[]) {
-      W.cursorAt([p[0], p[1], p[2]]); input.pressed.add(ORDERS.key); R.step(); R.step(24);
-      const read = () => { const M = O.menu, hud = O.hud().menu; return M ? { ids: M.rows.map((r: any) => r.id) as string[], why: [...M.why] as (string | null)[],
-        rows: (hud?.rows ?? []).slice(1).filter((r: any) => r.kind !== 'cancel').map((r: any) => ({ key: String(r.opts[0]?.key), text: String(r.opts[0]?.text), off: !!r.off })) } : null; };
+      W.cursorAt([p[0], p[1], p[2]]); menuKey(O); R.step(); R.step(24);
+      const read = () => { const M = O.menu, hud = listedOf(O); return M ? { ids: M.rows.map((r: any) => r.id) as string[], why: [...M.why] as (string | null)[],
+        rows: (hud?.rows ?? []).map((r: any) => ({ key: String(r.opts[0]?.key), text: String(r.opts[0]?.text), off: !!r.off })) } : null; };
       const first = read(); if (!first) { input.pressed.add('Escape'); R.step(); return null; }
       const opener = O.menu.rows.find((r: any) => r.opens); let tools: ReturnType<typeof read> = null;
       if (opener) { input.pressed.add(`Digit${opener.key}`); R.step(); R.step(4); tools = O.menu?.page === opener.opens ? read() : null; input.pressed.add('Escape'); R.step(); }
@@ -113,7 +114,7 @@ async function rig(seed: number, o: { fight?: boolean; squad?: 2 | 4; keep?: boo
       return { first, tools };
     },
     /** X on p, then the digits a third of a second later, as a player gives a row behind a page */
-    pick(p: number[], ...n: number[]) { W.cursorAt([p[0], p[1], p[2]]); input.pressed.add(ORDERS.key); R.step(); R.step(20); for (const k of n) { input.pressed.add(`Digit${k}`); R.step(); R.step(4); } },
+    pick(p: number[], ...n: number[]) { W.cursorAt([p[0], p[1], p[2]]); menuKey(O); R.step(); R.step(20); for (const k of n) { input.pressed.add(`Digit${k}`); R.step(); R.step(4); } },
     said(who: any, since: number) { return R.lines.filter(l => l.who === who.callsign && l.t >= since).map(l => l.text); },
   };
   R.step(30);
@@ -265,7 +266,7 @@ export const shutdoorWho = guarded(async () => {
 // ---------------------------------------------------------------- back to the file
 export const shutdoorFile = guarded(async () => {
   const { verdict, done } = family(`shutdoor-file: a man taken from fall in goes back into the file, and shuts it from Sam's side`);
-  { const x = await oneShut(11, 'breakroom_w', WEST, SAM_W, { fallIn: true }); const { R, O, man } = x;
+  { const x = await oneShut(11, 'breakroom_w', WEST, SAM_W, { fallIn: true }); const { R, man } = x;
     const was = man ? x.before[R.ops.indexOf(man)] : null; R.step(60 * 2);
     verdict(x.why === null && !!man && was?.order === 'fallIn' && was.post === null && x.latched && x.after?.order === 'fallIn' && x.after.post === null && SHUTDOOR_STATS.toFile === 1 && SHUTDOOR_STATS.stayed === 0,
       'the four on fall in, the order given: the man who shut it is on fall in again', `${man?.callsign}: ${was?.order} → ${SHUT_ID} → ${x.after?.order} · latched ${x.latched} in ${f2(x.secs)} s · toFile ${SHUTDOOR_STATS.toFile} · stayed ${SHUTDOOR_STATS.stayed}`);

@@ -55,7 +55,7 @@ import type { Game, Guard } from './game';
 import './teams';
 import { underSilence, squadSilent } from './silent';
 import { lightEstimateAt } from './guards';
-import { PAIRUP, keptOn } from './pairup';
+
 import './combat';
 import './sneak';
 import './takedown';   // the partner's takedown as a move, and the man it lands on (takedown.ts): poses only
@@ -65,14 +65,10 @@ export const SPOTTED = {
   /** THE switch (off = the build as it was; ?spotted on the URL, SPOTTED=1 in the harness's environment, Tab ▸ Sandbox ▸ Spotted) */
   on: false,
   // ---- suspicious
-  /** no round at a man who is only suspicious */
-  hold: true,
-  /** on a knee while a suspicious man has a line to him or is in earshot */
-  low: true,
   /** … and still (following only), while Sam is within `leashM` */
-  freeze: true, leashM: 7,
+  leashM: 7,
   /** lit (the meter at `litAt` or over) and in his line: the nearest spot within `slipM` out of the line, or dark */
-  slip: true, slipM: 3.2, litAt: 0.3,
+  slipM: 3.2, litAt: 0.3,
   /** … but a moving shape draws the eye: he holds still first, and moves off the line only once a man has been turned his way this long (s; 0 = at once) */
   slipWait: 1.5,
   /** how far off a suspicious man is his business (m, straight) · and inside which a boot is (a silent step carries about 3.6 m) */
@@ -82,20 +78,14 @@ export const SPOTTED = {
   /** (off as shipped) a man dropped: for `braceSecs` every unroused defender within `braceM` of the body is his business as if he had already turned to the noise */
   brace: false, braceSecs: 3, braceM: 7,
   /** a roused man who has turned to him inside `takeM` is taken by hand: `takeSecs` with his hands on him inside `takeReach` (m) */
-  close: true, takeM: 2.2, takeReach: 1.05, takeSecs: 0.6,
+  takeM: 2.2, takeReach: 1.05, takeSecs: 0.6,
   // ---- caught
   /** an alert man's sighting of one of them counts for this long (s) · within this of the teammate (m) · and 'caught' lasts this long past the last one (s) */
   freshSecs: 2.5, caughtM: 30, lastSecs: 6,
-  /** he shoots on a sighting while caught */
-  keen: true,
-  /** his gun goes onto the man: the one who has them (caught), the one whose line he is in (suspicious) */
-  gun: true,
   /** following with no line to the man who has them: the nearest spot within `stepM` that has one */
   step: true, stepM: 3.2,
   /** before anything loud: an alert / searching man with no eyes on them, not turned their way (`faceDeg`) and not within `closeM` is not fired on */
   holdUnaware: true, faceDeg: 35, closeM: 6,
-  /** the lines and the HUD's word */
-  cue: true,
 };
 export const SPOTTED_DEFAULTS = { ...SPOTTED };
 export type SpottedMode = 'calm' | 'wary' | 'caught';
@@ -207,11 +197,8 @@ export function spottedOf(gd: Guard): { mode: SpottedMode; what: string | null; 
   const M = men.get(gd); return M ? { mode: M.mode, what: M.what, exposed: M.exposed, spot: M.spot, by: M.by?.callsign ?? null, wary: M.wary.map(h => h.callsign) } : null;
 }
 
-// ------------------------------------------------------------ the switch: per machine, the URL, the harness's environment
-const LS = 'twopointsix.spotted';
-const KEPT = ['on', 'hold', 'low', 'freeze', 'slip', 'brace', 'close', 'keen', 'gun', 'step', 'holdUnaware', 'cue'] as const;   // (the panel's rows)
-export function saveSpotted() { try { const o: Record<string, boolean | number> = {}; for (const k of KEPT) if (SPOTTED[k] !== SPOTTED_DEFAULTS[k] && !(k === 'on' && PAIRUP.on)) o[k] = SPOTTED[k];   /* (on by pairup.ts's switch is that switch's to keep, not this row's: what the store held stands) */ if (PAIRUP.on) { const was = keptOn(LS); if (was !== undefined && was !== SPOTTED_DEFAULTS.on) o.on = was; } if (Object.keys(o).length) globalThis.localStorage?.setItem(LS, JSON.stringify(o)); else globalThis.localStorage?.removeItem(LS); } catch { /* no store */ } }
-try { const o = JSON.parse(globalThis.localStorage?.getItem(LS) ?? 'null'); if (o) for (const k of KEPT) if (typeof o[k] === typeof SPOTTED[k]) (SPOTTED as Record<string, unknown>)[k] = o[k]; } catch { /* no store, or not ours */ }
+// ------------------------------------------------------------ the switch: the URL, the harness's environment
+const KEPT = ['on', 'hold', 'brace', 'close', 'step', 'holdUnaware', ] as const;   // (the panel's rows)
 try { const q = new URLSearchParams(location.search); if (q.has('spotted')) SPOTTED.on = q.get('spotted') !== '0'; if (q.has('nospotted')) SPOTTED.on = false; } catch { /* no page (the harness) */ }
 try { const e = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.SPOTTED; if (e) { SPOTTED.on = e !== '0' && e.toLowerCase() !== 'off';
   for (const w of e.toLowerCase().split(/[\s,+]+/)) { const m = w.match(/^(no)?([a-z]+)$/); const k = m && KEPT.find(x => x.toLowerCase() === m[2]); if (k && k !== 'on') (SPOTTED as Record<string, unknown>)[k] = !m![1];

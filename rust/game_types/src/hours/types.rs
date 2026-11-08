@@ -137,34 +137,22 @@ impl Open {
 }
 impl Default for Open { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SkyState, src/game/hours.ts:118)
+/// WHAT OF THE SKY REACHES THE LEVEL'S CELLS, asked of a cell when a point in it is first asked about and kept until a static is written or the sun (or the
+/// moon) stands elsewhere. Made again from the world, so it is no state: it is on no wire and in no word
 #[derive(Clone, Debug)]
-pub struct SkyState {
-    pub sun: Option<LightId>,
+pub struct SkyReach {
+    /// the box world's count of its statics' writes these were asked at
+    pub wrote: f64,
     pub to_sun: V3,
-    pub casters: f64,
     pub box_: crate::hours::SkyStateBox,
     pub cells: JsMap<crate::Num, Vec<crate::hours::Open>>,
     pub fine: JsMap<crate::Num, Vec<crate::hours::Open>>,
-    pub dome: Option<crate::hours::SkyStateDome>,
-    pub at: Option<f64>,
 }
-impl SkyState {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SkyState {
-            sun: None,
-            to_sun: [0.0; 3],
-            casters: 0.0,
-            box_: crate::hours::SkyStateBox::zeroed(),
-            cells: JsMap::new(),
-            fine: JsMap::new(),
-            dome: None,
-            at: None,
-        }
-    }
+impl SkyReach {
+    /// of no world yet
+    pub fn blank() -> Self { SkyReach { wrote: -1.0, to_sun: [0.0; 3], box_: crate::hours::SkyStateBox::zeroed(), cells: JsMap::new(), fine: JsMap::new() } }
 }
-impl Default for SkyState { fn default() -> Self { Self::zeroed() } }
+impl Default for SkyReach { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/game/hours.ts:118 SkyState.box, src/game/hours.ts:118)
 #[derive(Clone, Copy, Debug)]
@@ -218,17 +206,8 @@ pub struct HourState {
     pub was_off: bool,
     pub moons: Vec<LightId>,
     pub lamps: JsMap<FixtureId, bool>,
-    pub sky: crate::hours::HourStateSky,
-    pub haze: f64,
-    pub exposure: f64,
     pub storm: Option<crate::weather::WeatherSnap>,
     pub to_sun: V3,
-    pub casters: f64,
-    pub box_: crate::hours::SkyStateBox,
-    pub cells: JsMap<crate::Num, Vec<crate::hours::Open>>,
-    pub fine: JsMap<crate::Num, Vec<crate::hours::Open>>,
-    pub dome: Option<crate::hours::SkyStateDome>,
-    pub at: Option<f64>,
 }
 impl HourState {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -243,38 +222,12 @@ impl HourState {
             was_off: false,
             moons: Vec::new(),
             lamps: JsMap::new(),
-            sky: crate::hours::HourStateSky::zeroed(),
-            haze: 0.0,
-            exposure: 0.0,
             storm: None,
             to_sun: [0.0; 3],
-            casters: 0.0,
-            box_: crate::hours::SkyStateBox::zeroed(),
-            cells: JsMap::new(),
-            fine: JsMap::new(),
-            dome: None,
-            at: None,
         }
     }
 }
 impl Default for HourState { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/hours.ts:134 HourState.sky, src/game/hours.ts:134)
-#[derive(Clone, Copy, Debug)]
-pub struct HourStateSky {
-    pub zenith: V3,
-    pub horizon: V3,
-}
-impl HourStateSky {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HourStateSky {
-            zenith: [0.0; 3],
-            horizon: [0.0; 3],
-        }
-    }
-}
-impl Default for HourStateSky { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/hours.ts:79 NIGHT, src/game/hours.ts:79)
 #[derive(Clone, Debug)]
@@ -300,14 +253,13 @@ impl Default for NIGHT { fn default() -> Self { Self::zeroed() } }
 pub struct HoursMod {
     /// (src/game/hours.ts:140 states)
     pub states: Option<crate::hours::HourState>,
-    /// (src/game/hours.ts:144 nights)
-    pub nights: Option<crate::hours::SkyState>,
+    pub reach: crate::hours::SkyReach,
 }
 impl HoursMod {
     pub fn blank() -> Self {
         HoursMod {
             states: None,
-            nights: None,
+            reach: crate::hours::SkyReach::blank(),
         }
     }
 }

@@ -22,6 +22,7 @@ import { withDom, El } from './scenario-picker-probes.ts';
 
 const D = await import(`${ROOT}/src/game/difficulty.ts`);
 const T = await import(`${ROOT}/src/game/told.ts`);
+const lastSeen = (g: any): any[] => g.view.marks.seen.map((m: any) => ({ ...m, gd: g.guards.find((x: any) => x.char.id === m.man) }));   // (what the HUD is told)
 const RUN = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const QF = await import(`${ROOT}/src/game/quietfog.ts`);
 const { PRESSURE } = await import(`${ROOT}/src/game/pressure.ts`);
@@ -32,6 +33,7 @@ const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 
 const TOLD = T.TOLD, BREAK = process.env.TOLD_BREAK === '1';
+const CROSSING = await import(`${ROOT}/src/game/crossing.ts`);
 const J = (o: unknown) => JSON.stringify(o);
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const tables = () => J({ P: PRESSURE, D: DIGIN, cone: FOG.cone, own: FOG.own });
@@ -53,12 +55,12 @@ async function sighting(rung: string) {
   for (const m of R.team) m.dazzledUntil = 1e9;   // (the team's own eyes shut: Sam's is the only one, where the probe puts it)
   const start = [...g.player.char.pos], hostiles = g.guards.filter((x: any) => x.team === 'hostile' && x.state !== 'dead');
   await quiet(() => R.step(30)); const h = hostiles.find((x: any) => g.fogOfWar.hidden(x)); if (!h) return { ok: false, why: 'no defender out of the picture at the start' } as any;
-  const hp = [...h.char.pos], before = g.fogOfWar.lastSeen().length;
+  const hp = [...h.char.pos], before = lastSeen(g).length;
   let near: number[] | null = null; for (const [dx, dz] of [[1.2, 0], [-1.2, 0], [0, 1.2], [0, -1.2], [0.9, 0.9], [-0.9, -0.9], [0.9, -0.9], [-0.9, 0.9]]) { const p = [hp[0] + dx, 0, hp[2] + dz]; if (!g.col.nav.isBlocked(p[0], p[2]) && !g.col.solidBlocked([p[0], 1.5, p[2]], [hp[0], 1.5, hp[2]])) { near = p; break; } }
   if (!near) return { ok: false, why: 'no floor beside the defender' } as any;
-  R.aim = [hp[0], 1.0, hp[2]]; if (!BREAK) g.teleportPlayer(near); await quiet(() => R.step(20)); const seen = g.fogOfWar.seen(h), during = g.fogOfWar.lastSeen().length;   // (TOLD_BREAK: he is never put there)
+  R.aim = [hp[0], 1.0, hp[2]]; if (!BREAK) g.teleportPlayer(near); await quiet(() => R.step(20)); const seen = g.fogOfWar.seen(h), during = lastSeen(g).length;   // (TOLD_BREAK: he is never put there)
   R.aim = null; g.teleportPlayer(start); const lostAt = g.time; await quiet(() => R.step(45)); const lost = g.fogOfWar.hidden(h);
-  const mark = () => g.fogOfWar.lastSeen().find((x: any) => x.gd === h), m0 = mark(), early = !!m0, off = m0 ? flat(m0.at, hp) : -1, life = m0?.life ?? 0, age0 = m0?.age ?? -1;
+  const mark = () => lastSeen(g).find((x: any) => x.gd === h), m0 = mark(), early = !!m0, off = m0 ? flat(m0.at, hp) : -1, life = m0?.life ?? 0, age0 = m0?.age ?? -1;
   const until = async (age: number) => { await quiet(() => R.step(Math.max(0, Math.round((lostAt + age - g.time) * 60)))); return !!mark(); };   // (stepped until Sam has been gone `age` seconds: the same frames on every rung)
   FOG.lastSeen = 3; const byRow = mark()?.life ?? 0; FOG.lastSeen = 0;   // (the debugger's own row turned up is the seconds on every rung; at 0 the lever decides)
   const mid = await until(TOLD.standard + 1), late = await until(TOLD.guided + 1);
@@ -80,14 +82,14 @@ export async function toldCheck(): Promise<boolean> {
     // ───────────────────────────── the rules
     await withStore(null, async () => {
       fresh();
-      const t0 = tables(), std = `${T.toldNow()} ${T.toldLastSeen()}`; D.setDifficulty('hard', false); const hard = `${T.toldNow()} ${T.toldLastSeen()} ${D.difficultyNow()}`; D.setDifficulty('standard', false);
-      D.setLever('told', 'guided', false); const moved = { now: T.toldNow(), secs: T.toldLastSeen(), level: D.difficultyNow(), mixed: D.leversMixed(), line: D.leversLine(), all: D.leversLine(true), tables: tables() === t0, least: `${T.toldAtLeast('guided')}/${T.toldAtLeast('standard')}` };
-      D.setLever('told', 'bare', false); const bare = `${T.toldAtLeast('guided')}/${T.toldAtLeast('standard')}/${T.toldAtLeast('bare')} ${T.toldLastSeen()}`;
+      const t0 = tables(), std = T.toldNow(); D.setDifficulty('hard', false); const hard = `${T.toldNow()} ${D.difficultyNow()}`; D.setDifficulty('standard', false);
+      D.setLever('told', 'guided', false); const moved = { now: T.toldNow(), level: D.difficultyNow(), mixed: D.leversMixed(), line: D.leversLine(), all: D.leversLine(true), tables: tables() === t0, least: `${T.toldAtLeast('guided')}/${T.toldAtLeast('standard')}` };
+      D.setLever('told', 'bare', false); const bare = `${T.toldAtLeast('guided')}/${T.toldAtLeast('standard')}/${T.toldAtLeast('bare')}`;
       D.setDifficulty('standard', false); const back = `${T.toldNow()} ${J(D.leversSet())} ${D.difficultyNow()}`;
-      verdict(keys() === 'fog:off|team|cones|own ai:standard|hard kit:none|stuns told:guided|standard|bare' && std === `standard ${TOLD.standard}` && hard === 'bare 0 hard' && moved.now === 'guided' && moved.secs === TOLD.guided && TOLD.guided > TOLD.standard && TOLD.standard > 0
-        && moved.level === 'custom' && moved.mixed && /told: guided$/.test(moved.line) && /^fog of war: all round · enemy AI: standard · enemy kit: guns · /.test(moved.all) && moved.tables && moved.least === 'true/true' && bare === 'false/false/true 0' && back === 'standard {} standard',
+      verdict(keys() === 'fog:off|team|cones|own ai:standard|hard kit:none|stuns told:guided|standard|bare' && std === 'standard' && hard === 'bare hard' && moved.now === 'guided' && TOLD.guided > TOLD.standard && TOLD.standard > 0
+        && moved.level === 'custom' && moved.mixed && /told: guided$/.test(moved.line) && /^fog of war: all round · enemy AI: standard · enemy kit: guns · /.test(moved.all) && moved.tables && moved.least === 'true/true' && bare === 'false/false/true' && back === 'standard {} standard',
         'a fourth lever after the three; standard puts it on Standard and hard on Bare; moved to Guided alone it is a mix of your own, the mark stays longer, and the defenders\' tables and the fog\'s rows are untouched; a level puts it back',
-        `${keys()}\n    standard: ${std} s · hard: ${hard} · guided: ${moved.secs} s, reads ${moved.level}, '${moved.line}', tables untouched ${moved.tables} · bare: ${bare} · standard again: ${back}`);
+        `${keys()}\n    standard: ${std} · hard: ${hard} · guided, reads ${moved.level}, '${moved.line}', tables untouched ${moved.tables} · bare: ${bare} · standard again: ${back}`);
 
       D.setLever('fog', 'cones', false); D.setLever('ai', 'hard', false); const three = `${D.difficultyNow()} ${T.toldNow()} ${J(D.leversSet())}`; D.setLever('told', 'standard', false, ''); const four = `${D.difficultyNow()} ${T.toldNow()}`; D.setLever('told', 'bare', false, ''); const back3 = `${D.difficultyNow()} ${T.toldNow()} ${J(D.leversSet())}`; /* (a press on the rung it follows the three to lets it go, as a press on a level's own rung does) */ D.setLever('told', null, false); D.setLever('ai', 'standard', false); const two = `${D.difficultyNow()} ${T.toldNow()}`; D.setDifficulty('standard', false);
       verdict(three === 'hard bare {"fog":"cones","ai":"hard"}' && four === 'custom standard' && back3 === 'hard bare {"fog":"cones","ai":"hard"}' && two === 'custom standard', 'hard\'s three rungs set lever by lever over standard are still Hard: the fourth, left alone, follows the level the three stand on (Bare); moved back to Standard by hand it is a mix, and pressed onto Bare again it is let go of (Hard, nothing pinned); with the three on no level it is the level\'s under them',
@@ -139,43 +141,6 @@ export async function toldCheck(): Promise<boolean> {
       verdict(std.digest === gui.digest && gui.digest === bare.digest, 'the three runs digest the same: the mark is the HUD\'s alone, a run is the same run on every rung', `standard ${std.digest} · guided ${gui.digest} · bare ${bare.digest}`);
     });
 
-    // ───────────────────────────── the screens
-    await withStore({}, async store => { await withDom('?quality=high&mute', async () => {
-      G.location.pathname = '/'; G.location.hash = ''; G.location.assign = () => { }; G.location.reload = () => { };
-      const M = await import(`${ROOT}/src/ui/missions.ts`);
-      const rowsOf = (root: El) => root.all(e => !!e.attrs['data-lever'] && e.attrs['data-lever'] !== 'cams').map(r => ({ key: r.attrs['data-lever'], na: r.cls.has('na'), moved: r.cls.has('moved'),
-        btns: r.all(e => e.tagName === 'BUTTON'), shown: r.all(e => e.tagName === 'BUTTON' && (e as any).style.display !== 'none').map(b => b.attrs['data-rung']).join('|'), lit: r.all(e => e.tagName === 'BUTTON' && e.cls.has('on')).map(b => b.attrs['data-rung']).join(','), note: r.all(e => e.tagName === 'SPAN').at(-1)?.textContent ?? '' }));
-      const press = (root: El, key: string, rung: string) => { const b = rowsOf(root).find(r => r.key === key)?.btns.find(b => b.attrs['data-rung'] === rung); if (!b?.onclick) throw new Error(`no ${key}:${rung} button`); b.onclick(); };
-      const sheet = () => { QF.quietFogForget(); fresh(); M.MISSIONS.onPick = null; const host = new El('DIV') as any, list: any[] = M.missionList();
-        const S = M.openMissions({ root: host, select: 'room-clear-four', search: '?quality=high&mute', onPick: () => { } }); return { S, root: S.root as unknown as El, list }; };
-      const said = (rows: ReturnType<typeof rowsOf>) => rows.map(r => `${r.key} [${r.shown}] lit ${r.lit}${r.na ? ' greyed' : ''}${r.moved ? ' moved' : ''}`).join(' · ');
-      const { S, root, list } = sheet(), r0 = rowsOf(root), four = list.find(m => m.id === 'room-clear-four');
-      verdict(r0.map(x => `${x.key} [${x.shown}]`).join(' ') === 'fog [off|team|cones|own] ai [standard|hard] kit [none|stuns] told [guided|standard|bare]' && r0.map(x => x.lit).join('/') === 'team/standard/none/standard' && r0.every(x => !x.na && !x.moved && x.note.length > 20),
-        'the sheet of a squad mission: a fourth row under Enemy kit lit on Standard, and the fog row has its bottom rung', `${said(r0)}\n    told: '${r0[3]?.note}'`);
-      press(root, 'told', 'guided'); const r1 = rowsOf(root), dn1 = root.all(e => !!e.attrs['data-difficulty'] && e.cls.has('on')).length, mix1 = root.all(e => e.cls.has('dn'))[0]?.textContent ?? '';
-      verdict(r1[3]?.lit === 'guided' && r1[3].moved && !r1[0].moved && dn1 === 0 && /^your own mix: .*told: guided$/.test(mix1) && store.get('twopointsix.levers') === '{"told":"guided"}' && T.toldNow() === 'guided',
-        'Guided pressed: that row alone is moved and kept on this machine, neither Standard nor Hard is lit, and the Difficulty row says your own mix', `${said(r1)} · kept ${store.get('twopointsix.levers')} · '${mix1}'`);
-      press(root, 'fog', 'off'); const r2 = rowsOf(root), go2 = root.all(e => e.cls.has('mgo'))[0]?.attrs.href ?? '';
-      verdict(r2[0].lit === 'off' && r2[0].moved && !r2[0].na && /you and your team always know where every enemy is/.test(r2[0].note) && !r2[3].na && r2[3].lit === 'guided' && D.fogOffNow() && !RUN.fogOfQuery(Q(go2)) && store.get('twopointsix.levers') === '{"told":"guided","fog":"off"}',
-        'the fog row\'s bottom rung pressed: lit, still live, its line says the team knows every enemy too, the mission\'s link would start with no fog, and the fourth row stays live beside it (the lever is for more signs than the fog\'s mark)', `${said(r2)}\n    '${r2[0].note}' · go '${go2}'`);
-      const quietM = list.find(m => m.scenario?.kind === 'quiet' && m.scenario.group !== 'training' && m.scenario.group !== 'tutorial'), lessonM = list.find(m => m.scenario?.group === 'training');
-      if (quietM) S.select(quietM.id); const rq = quietM ? rowsOf(root) : []; const qHref = quietM ? S.hrefOf(quietM) : ''; if (lessonM) S.select(lessonM.id); const rl = lessonM ? rowsOf(root) : []; S.select(four.id);
-      verdict((!quietM || (rq[0].lit === QF.quietFog() && !rq[0].na && !rq[3].na && rq[1].na && RUN.fogOfQuery(Q(qHref)) === (QF.quietFog() !== 'off'))) && rl.every(x => x.na),
-        'a quiet mission\'s row: its fog lever is its own pick (the squad\'s off is not put on it) and the fourth row is live there; a lesson greys all four', `${quietM ? `${quietM.id}: ${said(rq)} · its link's fog ${RUN.fogOfQuery(Q(qHref))}` : '(no quiet mission)'}\n    ${lessonM ? `${lessonM.id}: ${said(rl)}` : '(no lesson)'}`);
-      root.all(e => e.attrs['data-difficulty'] === 'standard')[0].onclick!(); const r3 = rowsOf(root);
-      if (lessonM) S.select(lessonM.id); const rl3 = lessonM ? rowsOf(root) : []; S.select(four.id);
-      verdict(r3.map(x => x.lit).join('/') === 'team/standard/none/standard' && r3.every(x => !x.moved) && !D.fogOffNow() && T.toldNow() === 'standard' && store.get('twopointsix.levers') === undefined && (!lessonM || rl3[0].shown === 'team|cones|own'),
-        'Standard pressed: all four rows back on standard\'s rungs and nothing kept; a Training lesson\'s fog row then offers no off', `${said(r3)} · kept ${store.get('twopointsix.levers') ?? '(none)'}${lessonM ? `\n    ${lessonM.id}: ${said(rl3)}` : ''}`);
-      root.all(e => e.attrs['data-difficulty'] === 'hard')[0].onclick!(); const r4 = rowsOf(root), hardLit = root.all(e => e.attrs['data-difficulty'] === 'hard')[0]?.cls.has('on');
-      verdict(r4[3]?.lit === 'bare' && !r4[3].moved && !!hardLit && T.toldLastSeen() === 0, 'Hard pressed: the fourth row is on Bare, its own rung there, and no mark is left', said(r4));
-      root.all(e => e.attrs['data-difficulty'] === 'standard')[0].onclick!(); S.close();
-      // (d) the loadout screen of the same mission: the same four rows, the fourth live beside the fog's whatever its rung
-      { D.setLever('told', 'guided'); D.setLever('fog', 'off'); const UI = await import(`${ROOT}/src/ui/loadout.ts`), e4 = SCENARIOS.find((e: any) => e.id === 'room-clear-four'), L = UI.openLoadout(e4, { host: new El('DIV') as any, search: M.missionHref(four, '?quality=high&mute'), deploy: () => { }, back: () => { } }), lroot = L.root as unknown as El;
-        const l0 = rowsOf(lroot); press(lroot, 'fog', 'team'); const l1 = rowsOf(lroot); L.close(); D.setDifficulty('standard');
-        verdict(l0.map(x => x.key).join(',') === 'fog,ai,kit,told' && l0[0].lit === 'off' && !l0[0].na && !l0[3].na && l0[3].lit === 'guided' && !l1[3].na && l1[0].lit === 'team', 'the loadout screen of that mission: the same four rows, the fourth live beside the fog\'s on its off rung and on another', `${said(l0)}\n    fog put on all round: ${said(l1)}`); }
-      const words = [D.TOLD_LEVER.label, ...D.TOLD_LEVER.rungs.map((x: any) => `${x.label} ${x.words}`), D.FOG_OFF_RUNG.words].join(' ');
-      verdict(!/[6-9]|\d\d/.test(words) && !/\b(north|south|east|west)/i.test(words) && !/hit points|\bHP\b/i.test(words), 'the new rows\' words: no digit above 5, no compass word, nothing about hit points', words);
-    }); });
 
   } catch (e) { verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
   finally {

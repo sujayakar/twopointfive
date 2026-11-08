@@ -138,7 +138,7 @@ pub fn who(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> PlayerId { se
 /// the door a teammate is on a plain 'stack up' on, by name; None: none (lesson.ts onStack)
 pub fn on_stack(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: GuardId) -> Option<String> {
     let a = crate::orders::squad_orders_of(g, seat, m)?;
-    if g.tab.orders_assignment[a].order != "stack" { return None; }
+    if !crate::orders::rows::is(g, a, crate::orders::Is::Stacks) { return None; }
     let d = g.tab.orders_assignment[a].door?;
     Some(g.dr[d].def.name.clone())
 }
@@ -222,7 +222,7 @@ fn test_ok(g: &mut Game, t: &LessonTest, s: &mut StepSeen) -> Option<bool> {
     })
 }
 
-fn ok_door(g: &mut Game, door: &str, state: &str) -> bool {
+fn ok_door(g: &Game, door: &str, state: &str) -> bool {
     use crate::doors::{door_is_closed, door_lock_broken, door_locked, doors_by_name};
     let Some(d) = doors_by_name(g, door) else { return false };
     match state {
@@ -234,7 +234,7 @@ fn ok_door(g: &mut Game, door: &str, state: &str) -> bool {
     }
 }
 
-fn ok_target(g: &mut Game, name: &str, on: bool) -> bool {
+fn ok_target(g: &Game, name: &str, on: bool) -> bool {
     use crate::sim_lightshome::{fixture_broken, fixture_factor, fixture_on};
     let Some(x) = g.targets.iter().copied().find(|&y| g.tab.sim_lightshome_fixture[y].name == name) else { return false };
     (fixture_on(g, x) && !fixture_broken(g, x) && fixture_factor(g, x) > 0.05) == on
@@ -280,13 +280,13 @@ fn ok_loaded(g: &mut Game, s: &mut StepSeen) -> bool {
     mag >= m::min(most, crate::weapons::firearm_mag_room(g, w))
 }
 
-fn ok_reload(g: &mut Game) -> bool {
+fn ok_reload(g: &Game) -> bool {
     let p = who(g, &crate::seats::here(g));
     let (pistol, rifle) = (g.pl[p].pistol, g.pl[p].rifle);
     (crate::game::player_pistol_up(g, p) && crate::weapons::firearm_reloading(g, pistol)) || (crate::game::player_rifle_up(g, p) && crate::weapons::firearm_reloading(g, rifle))
 }
 
-fn ok_launcher(g: &mut Game, on: &str, fired: bool) -> bool {
+fn ok_launcher(g: &Game, on: &str, fired: bool) -> bool {
     let p = who(g, &crate::seats::here(g));
     let r = g.pl[p].rifle;
     let up = crate::weapons::rifle_attachment(g, r).map_or("none", |a| a.as_str());
@@ -361,7 +361,7 @@ fn ok_taken(g: &Game, room: &str) -> bool {
 fn ok_following(g: &Game, seat: &crate::seats::SeatRef) -> bool {
     if !crate::orders::squad_orders_active(g, seat) { return false; }
     let men = squad_men(g, seat, crate::orders::SquadOrdersMenSel::All);
-    !men.is_empty() && men.iter().all(|&m| crate::orders::squad_orders_of(g, seat, m).map_or(false, |a| g.tab.orders_assignment[a].order == "fallIn"))
+    !men.is_empty() && men.iter().all(|&m| crate::orders::squad_orders_of(g, seat, m).map_or(false, |a| crate::orders::rows::is(g, a, crate::orders::Is::Follows)))
 }
 
 fn ok_mate(g: &Game, seat: &crate::seats::SeatRef, area: Option<crate::scene_scenarios::Rect>, at: Option<V3>, r: Option<f64>, by: Option<f64>, away: Option<f64>) -> bool {
@@ -408,7 +408,7 @@ fn ok_watching(g: &Game, seat: &crate::seats::SeatRef, a: V3, r: Option<f64>, n:
     let hits = men.iter().filter(|&&m| {
         let Some(id) = crate::orders::squad_orders_of(g, seat, m) else { return false };
         let row = &g.tab.orders_assignment[id];
-        row.order == "cover" && row.watch.map_or(false, |w| m::hyp2(w[0] - a[0], w[2] - a[2]) < r)
+        crate::orders::rows::id_is(&row.order, crate::orders::Is::Covers) && row.watch.map_or(false, |w| m::hyp2(w[0] - a[0], w[2] - a[2]) < r)
     }).count();
     hits as f64 >= n.unwrap_or(1.0)
 }

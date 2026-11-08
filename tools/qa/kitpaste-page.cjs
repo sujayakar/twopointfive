@@ -3,11 +3,10 @@
 // The REAL page in headless Chromium, no WebGPU adapter (the start page is plain DOM, live from the first tick), with five cards planted in the store by
 // the big slot's own fields: a man's kit is copied by the key and pasted onto another by the key, onto you by the button, the kit of a man with nothing in his big slot
 // onto you by Ctrl+C / Ctrl+V (your big slot is emptied with the rest: a paste hands over the whole card); each time the store holds the kit, written ONCE, the tiles that moved flash, the men who wear the copied kit are marked on the roster,
-// Copy is lit and Paste dim on their cards, and the tile the highlight was on has not moved. Then `?nokitcopy`: no buttons, and the keys do nothing.
+// Copy is lit and Paste dim on their cards, and the tile the highlight was on has not moved.
 // And a mission whose level file issues its own kit: no cards, and the key line stops naming the two keys.
-//   node tools/qa/kitpaste-page.cjs [outDir]      env: PORT (the dev server's, default 5199) · KITPASTE_BREAK=1 (the page opened ?nokitcopy throughout: must FAIL)
-// Then the Cmd key of a Mac (no keyup for the letter) and a Dvorak board, by key events built by hand. (A Deploy with a pasted kit, end to end, is the
-// slow tools/qa/kitpaste-deploy-page.cjs.)
+//   node tools/qa/kitpaste-page.cjs [outDir]      env: PORT (the dev server's, default 5199)
+// Then the Cmd key of a Mac (no keyup for the letter) and a Dvorak board, by key events built by hand.
 // PASS / FAIL lines, exit 1 on a FAIL or a page error. Nothing here needs a GPU, and nothing here has been seen on one: the door picture behind the tiles
 // (ui/kitView.ts) is not up on this adapter.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
@@ -15,7 +14,6 @@ const fs = require('fs');
 const path = require('path');
 const outDir = process.argv[2] || '';
 const PORT = process.env.PORT || 5199;
-const BREAK = process.env.KITPASTE_BREAK === '1';
 const KEY = 'twopointsix.kit';
 const CARDS = { v: 2, members: [
   { smoke: 1, bangs: 1, frags: 1, shells: 1 },
@@ -46,19 +44,17 @@ async function open(browser, extra, mission = 'depot-four') {
       big: document.querySelector(`${lo} .kc-row[data-field="big"] .kc-val`)?.textContent ?? '', said: document.querySelector(`${lo} .kc-words.refused`)?.textContent ?? '', legend: document.querySelector(`${lo} [data-row="actions"]`)?.getAttribute('data-what') ?? '', head: box(document.querySelector(`${lo} .kc-head`)) }; }, KEY);
   const pick = async i => { await page.click(`#missions.one #loadout .lo-slot[data-slot="${i}"]`); await page.waitForTimeout(80); };
   const key = async k => { await page.keyboard.press(k); await page.waitForTimeout(120); };
-  const shot = async name => { if (outDir) await page.screenshot({ path: path.join(outDir, `${name}${BREAK ? '-break' : ''}.png`) }).catch(() => {}); };
+  const shot = async name => { if (outDir) await page.screenshot({ path: path.join(outDir, `${name}.png`) }).catch(() => {}); };
   return { ctx, page, read, pick, key, shot };
 }
 const kitOf = m => ({ bangs: m?.bangs, charges: m?.charges, frags: m?.frags, smoke: m?.smoke, shells: m?.shells, big: m?.big, walls: m?.walls });
 // A TOOL EACH PAIR (game/kit.ts KITDEAL.more, on as the page opens): of four, Blue Two is LENT the hammer. So on his card the hammer is worn before a paste of
 // Red One's kit and after it, its tile does not move, and the store leaves his slot to the deal: a tool a man is only lent is never written, by a paste either.
-// `?nokitmore` (the first part is run a second time on it): nobody is lent one, the hammer is written with the rest and four tiles move.
 const counted = m => J({ ...kitOf(m), big: '' });
 
 (async () => {
   const browser = await chromium.launch({ headless: true, args: ['--disable-gpu'] });
-  for (const more of [true, false]) { const P = await open(browser, (BREAK ? '&nokitcopy' : '') + (more ? '' : '&nokitmore')), chk = (ok, label, detail) => check(ok, label + (more ? '' : ' [?nokitmore]'), detail);
-    if (!more) P.shot = async () => {};
+  { const P = await open(browser, ''), chk = check;
     const a = await P.read(); await P.shot('paste-0-open');
     const N = a.tree ? 1 : 3;   // (the card laid out as a tree — src/game/kittree.ts KITTREE, on in the page — has the one reset where the three sets stood: the named kits are the screen's row)
     chk(!!a.copy && !!a.paste && a.sets.length === N && a.sets3 === N && a.copy.top === a.sets[0].top && a.paste.top === a.sets[0].top && a.copy.left > a.sets[N - 1].right && a.paste.left >= a.copy.right && (!a.head || a.paste.right <= a.head.left + 1 || (await P.page.evaluate(() => !!document.querySelector('#loadout .lo-kit .kc.kc-dense')) && Math.abs(a.head.top - a.copy.top) > 30) /* (the dense card — ui/kitDense.ts: the pouches are a line of their own over the tiles) */),
@@ -72,11 +68,10 @@ const counted = m => J({ ...kitOf(m), big: '' });
     // paste onto Blue Two by the key
     await P.pick(4); const c0 = await P.read(); await P.key('KeyV'); const c = await P.read(); await P.shot('paste-2-pasted');
     chk(!!c0.copy && !c0.copy.on && !c0.paste.off, 'on Blue Two\'s card, before: Copy is not lit and Paste is live', `copy on ${c0.copy?.on} · paste off ${c0.paste?.off}`);
-    chk(counted(c.kit[4]) === counted(c.kit[1]) && c.kit[4].big === (more ? 'none' : 'hammer') && /hammer/i.test(c.big) && (more ? /hammer/i.test(c0.big) : !/hammer/i.test(c0.big)) && c.kit[4].bangs === 2 && c.writes - c0.writes === 1,
-      (more ? 'V on Blue Two: he wears Red One\'s kit, the hammer in his big slot as before the paste; the store holds the counts, in ONE write, and leaves his slot to the deal that lends him that hammer'
-        : 'V on Blue Two: the store holds Red One\'s kit on him, the hammer in his big slot, in ONE write'), `Blue Two ${J(kitOf(c.kit[4]))} · his Big slot tile '${c0.big}' → '${c.big}' · writes +${c.writes - c0.writes}`);
-    chk(J([...c.flash].sort()) === J(more ? ['bangs', 'charges', 'frags'] : ['bangs', 'big', 'charges', 'frags']) && J(c.marks) === '[1,4]' && c.copy.on && c.paste.off && c.member === 4 && c.sel === c0.sel,
-      (more ? 'the three tiles that moved flash (his Big slot tile read the hammer already)' : 'the four tiles that moved flash') + ', his chip is marked beside Red One\'s, Copy is lit and Paste dim, and the highlight is where it was', `flash ${c.flash.join(' ')} · marks ${J(c.marks)} · highlighted tile ${c0.sel} → ${c.sel}`);
+    chk(counted(c.kit[4]) === counted(c.kit[1]) && c.kit[4].big === 'none' && /hammer/i.test(c.big) && /hammer/i.test(c0.big) && c.kit[4].bangs === 2 && c.writes - c0.writes === 1,
+      'V on Blue Two: he wears Red One\'s kit, the hammer in his big slot as before the paste; the store holds the counts, in ONE write, and leaves his slot to the deal that lends him that hammer', `Blue Two ${J(kitOf(c.kit[4]))} · his Big slot tile '${c0.big}' → '${c.big}' · writes +${c.writes - c0.writes}`);
+    chk(J([...c.flash].sort()) === J(['bangs', 'charges', 'frags']) && J(c.marks) === '[1,4]' && c.copy.on && c.paste.off && c.member === 4 && c.sel === c0.sel,
+      'the three tiles that moved flash (his Big slot tile read the hammer already), his chip is marked beside Red One\'s, Copy is lit and Paste dim, and the highlight is where it was', `flash ${c.flash.join(' ')} · marks ${J(c.marks)} · highlighted tile ${c0.sel} → ${c.sel}`);
     await P.key('KeyV'); const c2 = await P.read();
     chk(c2.writes === c.writes && J(c2.kit) === J(c.kit), 'V again: nothing to change, nothing written', `writes +${c2.writes - c.writes}`);
     // paste onto you by the button
@@ -90,7 +85,7 @@ const counted = m => J({ ...kitOf(m), big: '' });
       'Ctrl+C on Blue One (two door charges, nothing in his big slot), Ctrl+V on you: his two door charges and his empty big slot (the hammer you had goes); you are marked as wearing it',
       `his Big slot tile reads '${e0.big}', yours after '${e.big}' · marks after copy ${J(e0.marks)} · you ${J(kitOf(e.kit[0]))} · writes +${e.writes - e0.writes} · marks ${J(e.marks)}`);
     await P.ctx.close(); }
-  { const P = await open(browser, BREAK ? '&nokitcopy' : '');   // the Cmd key of a Mac, and a board whose letters are not where QWERTY's are (events made by hand: no such board here)
+  { const P = await open(browser, '');   // the Cmd key of a Mac, and a board whose letters are not where QWERTY's are (events made by hand: no such board here)
     const down = init => P.page.evaluate(i => { (document.activeElement || document.body).dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...i })); }, init).then(() => P.page.waitForTimeout(120));
     // Cmd+C, Cmd+V: macOS sends no keyup for a letter let go under Cmd, so none is sent here — and the plain keys must still be live after
     await P.pick(1); await down({ key: 'c', code: 'KeyC', metaKey: true }); const a = await P.read();
@@ -104,12 +99,6 @@ const counted = m => J({ ...kitOf(m), big: '' });
     await P.pick(3); await down({ key: 'v', code: 'Period' }); const f = await P.read();
     check(J(d.marks) === '[2]' && J(e.marks) === '[1,4]' && J(kitOf(f.kit[3])) === J(kitOf(f.kit[1])) && f.writes - e.writes === 1 && J(f.marks) === '[1,3,4]',
       'a Dvorak board: the key that types j (QWERTY\'s C) copies nothing; the keys that type c and v copy Red One and paste him onto Blue One', `marks after j ${J(d.marks)} · after c ${J(e.marks)} · after v ${J(f.marks)} · Blue One ${J(kitOf(f.kit[3]))} · writes +${f.writes - e.writes}`);
-    await P.ctx.close(); }
-  { const P = await open(browser, '&nokitcopy');
-    const a = await P.read(); await P.pick(1); await P.key('KeyC'); await P.pick(4); await P.key('KeyV'); const b = await P.read();
-    const N = a.tree ? 1 : 3;
-    check(!a.copy && !a.paste && a.sets.length === N && a.sets3 === N && b.writes === a.writes && b.marks.length === 0 && J(b.kit) === J(a.kit) && !/copy/.test(a.legend),
-      '?nokitcopy: no Copy, no Paste, the sets as they were; C and V write nothing and mark nobody; the key line as it was', `buttons ${a.copy ? 'there' : 'none'} · writes +${b.writes - a.writes} · marks ${J(b.marks)} · ${a.legend}`);
     await P.ctx.close(); }
   { const P = await open(browser, '', 'hall-four');   // (its level file issues its own kit: the cards go once the file has come)
     await P.page.waitForFunction(() => !document.querySelector('#missions.one #loadout .kc'), null, { timeout: 20000 }).catch(() => {}); await P.page.waitForTimeout(200);

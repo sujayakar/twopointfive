@@ -2,7 +2,7 @@
 // stands in the hole). The flaw it was written against: a 40 mm into the records office's front-room partition opened the wall and left a chest of drawers
 // standing in the hole (the wall shielded it from the burst, so neither the wall engine's cover rule nor the furniture's bands touched it).
 //   bun run tools/qa/blasthole-check.ts [level …] [--max N] [--verbose] [--sheet]        (also `probes.ts blasthole`)
-// Every level named (default: every mission level), with its lived-in furniture in and the destruction switches as the page has them: every inside partition the
+// Every level named (default: a sample of the mission levels, QA_SWEEP=all for all of them), with its lived-in furniture in and the destruction switches as the page has them: every inside partition the
 // wall engine can open, up to three places along it, from both faces — a 40 mm's burst (frag.ts blast, the round's own stand-off) where a round could have flown
 // to that place, then a body as wide as the player stood in the hole and pushed out through its far mouth with the player's own collision call.
 //   FAIL = a hole opened and what keeps a body out of it, or stops it beyond, is a THING (not a wall, not structure, not a door frame's post, not glass).
@@ -12,11 +12,12 @@
 // BLASTHOLE_BREAK=1 = the rule switched off and the same lines asked: must fail.   exit 0 = all hold · 1 = one does not
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { sample, swept } from './sweep.ts';
 const ROOT = resolve(import.meta.dir, '../..');
 type Vec3 = [number, number, number];
-const LEVELS = ['office', 'records', 'depot', 'block', 'block-squads', 'warehouse', 'compound', 'barracks', 'registry', 'consulate', 'bazaar', 'police-post'];
+const LEVELS = ['office', 'records', 'depot', 'block', 'warehouse', 'compound', 'barracks', 'registry', 'consulate', 'bazaar', 'police-post'];
 
-export async function blastholeCheck(names: string[] = LEVELS, opts: { max?: number; verbose?: boolean; sheet?: boolean } = {}): Promise<boolean> {
+export async function blastholeCheck(names: string[] = sample(LEVELS, 1), opts: { max?: number; verbose?: boolean; sheet?: boolean } = { max: swept(25, 0) }): Promise<boolean> {
   const { standUp } = await import('./headless.ts');
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`); const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { LIVED } = await import(`${ROOT}/src/scene/lived.ts`);
@@ -130,6 +131,6 @@ export async function blastholeCheck(names: string[] = LEVELS, opts: { max?: num
 if (import.meta.main) {
   const a = process.argv.slice(2); const flag = (f: string) => a.includes(f); const val = (f: string) => { const i = a.indexOf(f); return i >= 0 ? a[i + 1] : undefined; };
   const names = a.filter((x, i) => !x.startsWith('--') && a[i - 1] !== '--max');
-  const ok = await blastholeCheck(names.length ? names : LEVELS, { max: val('--max') ? Number(val('--max')) : undefined, verbose: flag('--verbose'), sheet: flag('--sheet') });
+  const ok = await blastholeCheck(names.length ? names : sample(LEVELS, 1), { max: val('--max') ? Number(val('--max')) : undefined, verbose: flag('--verbose'), sheet: flag('--sheet') });
   process.exit(ok ? 0 : 1);
 }

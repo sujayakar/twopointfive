@@ -32,16 +32,14 @@ import { gpuFx } from '../game/particleFx';
 import { WIND } from '../game/wind';
 import { blastFeelStages } from '../game/blastFeel';
 import { updateSnowBreath } from '../game/snowBreath';
-import { recapTick } from '../game/deathrecap';
 import { civiliansShown } from '../game/civilians';
 
 /** ms of the last dress step by line, and the lines that threw (each named once: a picture-only line that throws must not stop the game) */
 export const DRESS_MS = { last: {} as Record<string, number>, sum: {} as Record<string, number>, n: 0, threw: {} as Record<string, string> };
 export interface SideList { list: unknown[]; of: unknown; base: number }
 
-/** THE WIND'S HAND-OVER (wind.ts `update`, its last lines): the sources that blow go to the smoke's solver, and the ones the tick picked for the
- *  particles (the jets near the view, then the storm) to the particle pool. Both lists are the Rust tick's, as the host put them on the puppet
- *  (the filtered export); nothing is chosen here. */
+/** THE WIND'S HAND-OVER the sources that blow go to the smoke's solver, as the Rust tick left them on the puppet, and the particle pool is handed what
+ *  `Wind.forParticles` makes of the standing game: the jets near the view, then the storm. It is the host's list, so it is made here and no record holds it. */
 function windOut(g: Game): void {
   const W = g.wind as unknown as { active: unknown[]; forParticles: unknown[] }, P = gpuFx(g), Sm = g.smoke as unknown as { setWind?: (a: unknown[], relax: number) => void };
   P?.setWind(W.forParticles as never, [WIND.sheetWake, WIND.sheetKick, WIND.debrisK]);
@@ -73,7 +71,6 @@ export function dressStep(g: Game, dt: number, side: SideList): void {
   run('men', () => { G.menAll = all; G.menStatured = statured; G.menBare = false; G.drawMen(all, statured, false, DRESS.men); });
   run('snowBreath', () => updateSnowBreath(g, dt));
   if (DRESS.snow) run('snowTracks', () => G.stepSnowTracks(dt));
-  if (DRESS.recap) run('recap', () => recapTick(g));
   // ---- the side list onto the frame's list, past a filter of its own: with the fog of war off everything; else a box with no thing's key where the team
   // sees its cell, and a keyed one as it is (the moths). STAND-IN: a fixture's piece is treated as unkeyed, so one that fell unseen is not kept where it
   // was last seen. Belongs in the Rust tick (these boxes made there, before its own fog pass), with WallSkin's boxes, which nothing here makes.

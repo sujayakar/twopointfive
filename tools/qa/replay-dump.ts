@@ -23,7 +23,10 @@ import { closeSync, createReadStream, existsSync, mkdirSync, openSync, readFileS
 import { createGunzip, gzipSync, gunzipSync } from 'node:zlib';
 import { basename, join } from 'node:path';
 import type { ReplayFile, ReplayNote, ManAt, ManDo } from '../../src/replay/format.ts';
-import { checkReplay, decode, clock, errorMarks } from '../../src/replay/format.ts';
+import { checkReplay, decode, clock, errorMarks, TAPE_VERSION } from '../../src/replay/format.ts';
+
+/** what the index adds to a tape's steps where this checkout cannot walk it (tools/qa/rerun.ts refuses another version's) */
+const otherVersion = (F: ReplayFile): string => F.rerun && 'v' in F.rerun && F.rerun.v !== TAPE_VERSION ? ' (another version: not walked here)' : '';
 import type { KeptLine, Visit } from '../../src/replay/kept.ts';
 import { assemble, visitsOf } from '../../src/replay/kept.ts';
 
@@ -110,8 +113,8 @@ export function momentsOf(F: ReplayFile, f7: { r: number; why?: string }[] = [])
   // (A QUIET MISSION'S FOUR STAGES are four chronicle rows that read alike, 'objective (<room>)': the trace keeps a row's kind and room, not its words. What each
   //  was is on the HUD's line of the same instant where the game says one ('taking the vehicle log — stay on it', 'exfiltrated — 2:31 · GHOST 94'). So rows
   //  of one room inside OBJ_FOLD of each other, in one run, are ONE row carrying those lines, and the run's end is a row of its own, said in the game's words.
-  //  THE END LINES are the game's own (roomclear.ts, rescue.ts, snatch.ts, defuse.ts, nightbreach.ts, mission.ts): every one but the quiet game's 'exfiltrated —'
-  //  and the defuse win says how to restart (a file from before the lines were reworded says 'stages it again': both are read). NOT an end, though they read like one: 'structure taken — …. it's not over yet: <the man still loose / the charges>',
+  //  THE END LINES are the game's own (roomclear.ts, rescue.ts, nightbreach.ts, mission.ts): every one but the quiet game's 'exfiltrated —'
+  //  (a file from before the lines were reworded says 'stages it again', and one from before the two charges left has their lines: all are read). NOT an end, though they read like one: 'structure taken — …. it's not over yet: …',
   //  'the house is taken, but the charges are still live', 'breach called off, and …', '<who> is down, so you'll have to take the room yourself'.)
   const OBJ_FOLD = 20, ENDS = /to restart$|stages it again|^exfiltrated —|mission failed|every charge is safe and the house is yours|every charge safe, the house is yours/i, LIVE = /not over(?: yet)?:|still live|called off|have to take the|yours to take/i;
   const WON = /^(structure taken|exfiltrated|MISSION COMPLETE|CLEAN —|COSTLY —|room clear\.)|every charge is safe and the house is yours|every charge safe, the house is yours/i, LOST = /^(sam|player) down/i;
@@ -288,7 +291,7 @@ if (import.meta.main) {
     const first = [...V.pieces.entries()].sort((a, b) => a[0] - b[0])[0][1], name = had?.name ?? fileName(A.file, first.at);
     writeFileSync(join(out, `${name}.json.gz`), gzipSync(JSON.stringify(A.file)));
     IX.entries[V.sid] = { id: V.sid, name, from: [...new Set([...(had?.from ?? []), from])], kept: true, startedAt: first.at, savedAt: A.file.savedAt, scenario: scenarioWords(A.file), url: A.file.url ?? '', commit: A.file.commit ?? '', seed: A.file.seed ?? null,
-      seconds: A.file.seconds, pieces: V.pieces.size, missing: A.missing, n0: A.n0, n1: A.n1, tape: A.tapeTicks ? `${A.tapeTicks} steps${A.tapeEnd ? ` — ends: ${A.tapeEnd}` : ''}` : `none${A.tapeEnd ? ` — ${A.tapeEnd}` : ''}`, flags: switchWords(A.file), notes: A.file.notes.length, f7: had?.f7 ?? [], moments: 0, top: [], runs: [] };
+      seconds: A.file.seconds, pieces: V.pieces.size, missing: A.missing, n0: A.n0, n1: A.n1, tape: A.tapeTicks ? `${A.tapeTicks} steps${otherVersion(A.file)}${A.tapeEnd ? ` — ends: ${A.tapeEnd}` : ''}` : `none${A.tapeEnd ? ` — ${A.tapeEnd}` : ''}`, flags: switchWords(A.file), notes: A.file.notes.length, f7: had?.f7 ?? [], moments: 0, top: [], runs: [] };
     touched.add(V.sid); if (had) report.visitsGrown++; else report.visitsNew++;
     say(`  visit ${V.sid}: ${had ? `grown ${had.pieces} → ` : ''}${V.pieces.size} pieces, ${clock(A.file.seconds)} of play${A.missing.length ? `, ${A.missing.length} piece(s) lost` : ''} → ${name}.json.gz`);
   };
@@ -355,7 +358,7 @@ if (import.meta.main) {
       const old = IX.entries[id] ?? Object.values(IX.entries).find(e => !e.kept && e.id.startsWith(`file:${k}:`) && e.n0 <= a0 && e.n1 >= a1);
       if (inside || old) { report.looseDup++; const into = inside ? IX.entries[inside.id] : old!; const a = addNotes(into, l.F.notes); if (!into.from.includes(l.from)) into.from.push(l.from); say(`  ${l.from}: the same play as ${into.name} (steps ${a0}–${a1})${a ? ` · ${a} note(s) moved over` : ''} — dropped`); continue; }
       const whole = l.F.why === 'kept' /* a whole kept visit as one file (the viewer's 'Download with notes' made these until 2026-10-27): no key was pressed */, name = fileName(l.F, l.F.savedAt) + (whole ? '-visit' : '-f7'); writeFileSync(join(out, `${name}.json.gz`), gzipSync(JSON.stringify(l.F)));
-      const tape = l.F.rerun && 'ticks' in l.F.rerun ? `${l.F.rerun.ticks} steps` : `none${l.F.rerun ? ` — ${(l.F.rerun as { dead: string }).dead}` : ''}`;
+      const tape = l.F.rerun && 'ticks' in l.F.rerun ? `${l.F.rerun.ticks} steps${otherVersion(l.F)}` : `none${l.F.rerun ? ` — ${(l.F.rerun as { dead: string }).dead}` : ''}`;
       IX.entries[id] = { id, name, from: [l.from], kept: false, startedAt: l.F.savedAt, savedAt: l.F.savedAt, scenario: scenarioWords(l.F), url: l.F.url ?? '', commit: l.F.commit ?? '', seed: l.F.seed ?? null, seconds: l.F.seconds, pieces: 0, missing: [], n0: a0, n1: a1, tape, flags: switchWords(l.F), notes: l.F.notes.length, f7: whole ? [] : [{ n: a1, savedAt: l.F.savedAt, why: l.F.why }], moments: 0, top: [], runs: [] };
       keepers.push({ ...l, id }); patched.set(id, l.F); touched.add(id); report.loose++; say(`  ${l.from}: a file with no kept visit → ${name}.json.gz`);
     }

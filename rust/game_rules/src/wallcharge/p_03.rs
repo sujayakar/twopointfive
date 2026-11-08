@@ -423,14 +423,14 @@ pub fn wall_charge_input(g: &mut crate::game::Game, input: InputId) {
     let foot = wall_pt(g, &wall, 0.0, 0.0, None);
     let mine = v3::dist_xz(foot, sam);
     for x in g.door_tools.set.clone() {
-        if crate::doortools::door_tools_key_is(g, x) {
+        if crate::doortools::door_tools_key_is(g, &crate::seats::here(g), x) {
             let d = g.tab.doortools_set_charge[x].door;
             if v3::dist_xz(g.dr[d].frame_centre, sam) < mine { return; }
         }
     }
     wall_charge_blow(g, Some(c), None);
     let mut word = false;
-    for x in g.door_tools.set.clone() { if crate::doortools::door_tools_key_is(g, x) { word = true; break; } }
+    for x in g.door_tools.set.clone() { if crate::doortools::door_tools_key_is(g, &crate::seats::here(g), x) { word = true; break; } }
     if word { g.tab.input[input].pressed.delete(key.clone()); } else { g.wall_charge.pressed = true; }   // (men waiting at a door get the word on this same press)
 }
 
@@ -919,7 +919,7 @@ pub fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>
     let i = g.wall_charge.set.iter().position(|&x| x == c)?;
     let w = g.tab.wallcharge_set_wall_charge[c].wall.clone();
     g.wall_charge.set.remove(i);
-    crate::holdfire::hold_fire_order(g, "wallCharge", Some(crate::holdfire::HoldFireOrderO { blown: Some(true), ..Default::default() }));   // (a charge starts the fight when it GOES)
+    crate::holdfire::hold_fire_order(g, WALL_ORDER, Some(crate::holdfire::HoldFireOrderO { blown: Some(true), ..Default::default() }));   // (a charge starts the fight when it GOES)
     let tk = thick(g, &w);
     let at = charge_at(g, &w);
     let outer = w.outer.unwrap_or(false);
@@ -992,7 +992,7 @@ pub fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>
             if !near.iter().any(|&(x, _)| x == gd) { continue; }
             if wk && dist < near_m {
                 let line = format!("{} down — at the charge when it went", callsign_or(g, gd, "a man"));
-                crate::combat::kill_guard(g, gd, away_from(p, xz), Some(false), Some(DownKind::Shot), Some(DownBy::Player), Some(&line), None);
+                crate::combat::kill_guard_by(g, gd, away_from(p, xz), Some(false), Some(DownKind::Shot), Some(DownBy::Player), Some(&line), Some("wall charge"));
                 if !ours { knocked += 1.0; } else if !crate::rails::rails_is_spared(g, gd) { lost += 1.0; }
             } else {
                 let secs = near_secs(g, dist, r.reach);
@@ -1013,7 +1013,7 @@ pub fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>
         }
         if dist < knock_m {
             let line = format!("{} down — behind the wall when it went", callsign_or(g, gd, "a man"));
-            crate::combat::kill_guard(g, gd, away_from(p, xz), Some(false), Some(DownKind::Struck), Some(DownBy::Player), Some(&line), None);
+            crate::combat::kill_guard(g, gd, away_from(p, xz), Some(false), Some(DownKind::Struck), Some(DownBy::Player), Some(&line));
             if !(ours && wk) { knocked += 1.0; } else if !crate::rails::rails_is_spared(g, gd) { lost += 1.0; }
         } else {
             wall_charge_dazzle(g, gd, v3::lerp(ss[0], ss[1], v3::clamp(dist / stun_m, 0.0, 1.0)), inn);
@@ -1033,7 +1033,7 @@ pub fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>
             let struck = if far { has_hole && dist < knock_m && !crate::scene_collision::solid_blocked(g, inn, [p[0], 1.1, p[2]], None) } else { dist < near_m && near.iter().any(|&(x, _)| x == cv) };
             if !struck { continue; }
             let line = format!("{} down — {} when it went", callsign_or(g, cv, "a civilian"), if far { "behind the wall" } else { "at the charge" });
-            crate::combat::kill_guard(g, cv, away_from(p, xz), Some(false), Some(if far { DownKind::Struck } else { DownKind::Shot }), Some(DownBy::Player), Some(&line), None);
+            crate::combat::kill_guard(g, cv, away_from(p, xz), Some(false), Some(if far { DownKind::Struck } else { DownKind::Shot }), Some(DownBy::Player), Some(&line));
             knocked += 1.0;
         }
     }

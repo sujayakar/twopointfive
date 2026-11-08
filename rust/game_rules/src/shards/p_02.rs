@@ -40,17 +40,9 @@ fn to_landing(f: GlassShardsFallOf) -> GlassShardsLandingFall { GlassShardsLandi
 /// `b.x` of a Box: the row of a box. Skeleton 5 has `g.col.boxes` as a `Vec<BoxId>` and no table of rows.
 fn seam_box<'g>(g: &'g mut Game, b: impl Into<AnyBoxId>) -> &'g mut crate::scene_boxes::Box { &mut g.tab[b.into()] }
 
-/// The shards' books; the ghost is a chunk in no pool (the pool's glass hook is calls by name).   (shards.ts GlassShards.constructor)
-pub fn glass_shards_new(g: &mut crate::game::Game) -> crate::shards::GlassShards {
-    let bf = crate::scene_boxes::box_flag();
-    let ghost_box = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
-        c: [0.0, -100.0, 0.0], h: [0.01, 0.01, 0.01], yaw: Some(0.0), albedo: Some([0.0, 0.0, 0.0]), flags: Some(flags_or(bf.no_primary, bf.no_shadow)),
-        ..Default::default()
-    });
-    let ghost = g.tab.debris_chunk.push(crate::debris::Chunk { box_: ghost_box.into(), ..crate::debris::Chunk::zeroed() });
-    let mut s = crate::shards::GlassShards::blank();
-    s.ghost = ghost;
-    s
+/// The shards' books.   (shards.ts GlassShards.constructor)
+pub fn glass_shards_new(_g: &crate::game::Game) -> crate::shards::GlassShards {
+    crate::shards::GlassShards::blank()
 }
 
 /// One fragment lets go: its plates, its spray, its landing. False = the model is not live.   (shards.ts GlassShards.release)
@@ -250,7 +242,6 @@ pub fn glass_shards_plate(g: &mut crate::game::Game, box_: BoxId, v: V3, w: V3, 
         g.stats.shards.cut_dropped += cut.dropped as i32;
     }
     g.stats.shards.plates += 1;
-    g.shards.last_plate = Some(ch);
     g.stats.shards.peak_plates = g.stats.shards.peak_plates.max(mine as i32 + 1);
     Some(ch)
 }
@@ -548,13 +539,11 @@ pub fn glass_shards_send(g: &mut crate::game::Game, pos: V3, dir: V3, count: f64
     g.stats.shards.emits += 1;
     g.stats.shards.born += count as i32;
     g.stats.shards.peak_live = g.stats.shards.peak_live.max(g.shards.live_est as i32);
-    if crate::particle_fx::gpu_fx(g) {
-        use crate::render_particles::{EmitOpts, EmitShape, PKind};
-        crate::render_particles::particles_emit(g, PKind::Shard, pos, dir, count, EmitOpts {
-            shape: Some(EmitShape::Cone), speed: o.speed, speed_jit: Some(o.speed_jit), spread: Some(o.spread), life: o.life, life_jit: Some(o.life_jit), size: o.size, size_jit: Some(o.size_jit),
-            aspect: Some(o.aspect), tumble: Some(o.tumble), nrm_jit: Some(o.nrm_jit), pos_jit: Some(o.pos_jit), vadd: o.vadd, color: Some(o.color), seed: Some(seed), ..EmitOpts::zeroed()
-        });
-    }
+    use crate::render_particles::{EmitOpts, EmitShape, PKind};
+    crate::render_particles::particles_emit(g, PKind::Shard, pos, dir, count, EmitOpts {
+        shape: Some(EmitShape::Cone), speed: o.speed, speed_jit: Some(o.speed_jit), spread: Some(o.spread), life: o.life, life_jit: Some(o.life_jit), size: o.size, size_jit: Some(o.size_jit),
+        aspect: Some(o.aspect), tumble: Some(o.tumble), nrm_jit: Some(o.nrm_jit), pos_jit: Some(o.pos_jit), vadd: o.vadd, color: Some(o.color), seed: Some(seed), ..EmitOpts::zeroed()
+    });
 }
 
 /// Where and when a fragment let go at `c` with velocity `v` reaches what is under it.   (shards.ts GlassShards.fallOf)
@@ -617,23 +606,9 @@ pub fn glass_shards_step(g: &mut crate::game::Game, pos: V3, level: f64) -> f64 
     r.level
 }
 
-/// The release hook follows the model: while it is live the fragments are its own. Asked each frame and by the glass's rule before it can let
-/// anything go, so a pane that breaks before the first frame's update goes the way every other pane goes.
-pub fn glass_shards_hook(g: &mut crate::game::Game) -> bool {
-    let live = shards_live(g);
-    use crate::glassbreak::GlassBreakOnRelease as Hook;
-    let ours = matches!(g.glass_break.on_release, Some(Hook::Shards));
-    if live && !g.shards.was_live && g.glass_break.on_release.is_none() { g.glass_break.on_release = Some(Hook::Shards); }
-    else if !live && g.shards.was_live && ours { g.glass_break.on_release = None; }
-    g.shards.hooked = matches!(g.glass_break.on_release, Some(Hook::Shards));
-    g.shards.was_live = live;
-    live
-}
-
-/// Per frame: the release hook's edges, waiting records, the live estimate, breaks, landings due.   (shards.ts GlassShards.update)
+/// Per frame: waiting records, the live estimate, breaks, landings due.   (shards.ts GlassShards.update)
 pub fn glass_shards_update(g: &mut crate::game::Game, _dt: f64) {
-    let live = glass_shards_hook(g);
-    if !live {
+    if !shards_live(g) {
         if js::truthy(crate::sim_fallshome::fall_store_waiting(g)) { crate::sim_fallshome::fall_store_clear(g, Some(true), None); }
         g.shards.deferred.clear();
         g.shards.deferred_n = 0.0;
@@ -673,8 +648,6 @@ pub fn glass_shards_update(g: &mut crate::game::Game, _dt: f64) {
     g.shards.sounds_this_frame = 0.0;
 }
 
-/// The fracture part's release hook.   (shards.ts GlassShards.onRelease)
-pub fn glass_shards_on_release(g: &mut crate::game::Game, f: &crate::shards::GlassFragmentLike) { glass_shards_release(g, f); }
 
 /// A restart: nothing pending, no litter.   (shards.ts GlassShards.reset)
 pub fn glass_shards_reset(g: &mut crate::game::Game) {
@@ -691,11 +664,9 @@ pub fn glass_shards_clear(g: &mut crate::game::Game) {
     crate::sim_fallshome::fall_store_clear(g, None, None);
     g.shards.deferred.clear();
     g.shards.deferred_n = 0.0;
-    g.shards.pane_mem.clear();
     g.shards.lives.clear();
     g.shards.live_est = 0.0;
     g.shards.breaks.clear();
-    g.shards.last_plate = None;
     g.shards.recs_this_frame = 0.0;
     g.shards.sounds_this_frame = 0.0;
 }

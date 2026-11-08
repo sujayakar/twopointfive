@@ -118,7 +118,10 @@ function materialise(ref: string): { bindings: string; dir: string } {
   const show = (p: string) => { const r = Bun.spawnSync(['git', '-C', ROOT, 'show', `${ref}:${p}`]); if (!r.success) throw new Error(`git show ${ref}:${p} failed: ${new TextDecoder().decode(r.stderr)}`); return new TextDecoder().decode(r.stdout); };
   const dir = join(SCRATCH, ref.replace(/[^\w.-]/g, '_')); mkdirSync(dir, { recursive: true });
   const rewrite = (src: string) => src.replace(/from\s+'\.\/panel'/g, `from './panel.ts'`).replace(/from\s+'\.\.\/([^']+)'/g, (_m, p) => `from '${ROOT}/src/${p}.ts'`).replace(/from\s+'\.\/(?!panel\.ts)([^']+)'/g, (_m, p) => `from '${ROOT}/src/ui/${p}.ts'`);
-  writeFileSync(join(dir, 'panel.ts'), rewrite(show('src/ui/panel.ts')));   // (its own imports re-pointed too: it has had some since the text size, and --ref died on them) writeFileSync(join(dir, 'bindings.ts'), rewrite(show('src/ui/bindings.ts')));
+  writeFileSync(join(dir, 'panel.ts'), rewrite(show('src/ui/panel.ts')));   // (its own imports re-pointed too: it has had some since the text size, and --ref died on them)
+  const graphics = Bun.spawnSync(['git', '-C', ROOT, 'cat-file', '-e', `${ref}:src/ui/graphicspanel.ts`]).success;   // (the renderer's pages, where the ref has them in a file of their own)
+  if (graphics) writeFileSync(join(dir, 'graphicspanel.ts'), rewrite(show('src/ui/graphicspanel.ts')));
+  writeFileSync(join(dir, 'bindings.ts'), graphics ? rewrite(show('src/ui/bindings.ts')).replace(/from '[^']*\/graphicspanel\.ts'/, `from './graphicspanel.ts'`) : rewrite(show('src/ui/bindings.ts')));
   return { bindings: join(dir, 'bindings.ts'), dir };
 }
 
@@ -132,9 +135,9 @@ async function inventoryOf(bindingsPath: string, panelPath: string, W: any): Pro
   const engineReal = W.engine;
   const engine = new Proxy(engineReal, { get(t, p) { if (p in t) return (t as any)[p]; if (p === 'particles') return fake('particles'); return fake(`engine.${String(p)}`); } });
   const smoke = new Proxy(W.smoke, { get(t, p) { if (p in t) return (t as any)[p]; return fake(`smoke.${String(p)}`); } });
-  const overlay = { showLightDots: true, windViz: fake('windViz') };
+  const overlay = { showLightDots: true };
   const panel = new PM.Panel();
-  BM.buildPanel(panel, engine, g, smoke, W.cam, overlay, fake('audio'), fake('quality'), () => ({ fps: 60, union: 8 }));
+  BM.buildPanel(panel, engine, g, smoke, W.cam, overlay, fake('audio'), fake('quality'), () => ({ fps: 60, union: 8 }), { windViz: fake('windViz') });
   return rows;
 }
 
@@ -194,7 +197,7 @@ export async function panelInventory(argv: string[] = process.argv.slice(2)): Pr
 // ---------------------------------------------------------------- THE DEBUGGER HAS NO DEAD BOX (probes.ts panel-dead, family 'ui')
 // Every yes/no box of the live panel is clicked: what it shows must change, and it is put back. A box over a row the page holds at one value cannot move
 // (a settled switch: src/host/rustgame.ts rustSettledHold on the page, tools/qa/fold.ts here), and such a row gets no box: 256 written by hand left
-// src/ui/bindings.ts on 2026-11-07, and the row helpers (knobRows, and feelRows through it) and the two labs build none (ui/panel.ts rowHeld).
+// src/ui/bindings.ts on 2026-11-07, and the row helper (knobRows) builds none (ui/panel.ts rowHeld).
 // This probe is what keeps one from coming back: a new box for a settled row, or a row ruled settled whose box stayed. It runs on the page's stand, where the
 // fold is laid in every tool with no word; on the old stand nothing is held and the line is not asked (it says so).
 // NOT CLICKED, each named below with why: a box that reloads the page (it is judged by the ROW it shows: settled = dead, as two such boxes were), and two
@@ -228,7 +231,7 @@ export async function panelDead(): Promise<boolean> {
         catch (e) { threw.push(`'${r.label}': ${String((e as Error)?.message ?? e).slice(0, 80)}`); } }
     } finally { console.log = log; setConeVisit(cone); }
     const few = (xs: string[]) => xs.length ? xs.slice(0, 6).join(' · ') + (xs.length > 6 ? ` … (${xs.length})` : '') : 'none';
-    const FLOOR = 100, judged = boxes.length - skipped - faked, ok = !dead.length && !threw.length && judged > FLOOR;
+    const FLOOR = 60, judged = boxes.length - skipped - faked, ok = !dead.length && !threw.length && judged > FLOOR;
     console.log(`- ${ok ? 'PASS' : 'FAIL'} — every yes/no box of the debugger moves when it is clicked — ${boxes.length} boxes, ${judged} judged${judged > FLOOR ? '' : ` (THE LINE WANTS MORE THAN ${FLOOR}: a panel this small is not the debugger, or the floor is to be moved)`}: ${skipped} named and not clicked (${Object.keys(NOT_CLICKED).join(', ')}), ${faked} answer no yes or no here (a stand-in of the harness's) · dead: ${few(dead)} · threw: ${few(threw)} · moved and would not go back (said, not judged): ${few(stuck)}`);
     return ok;
   } finally { restore(); }

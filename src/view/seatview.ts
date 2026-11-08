@@ -1,28 +1,31 @@
 // THE VIEW: what the HUD is told of the game beside what it draws. It is the Rust game's answer (rust/game_rules/src/view `tick_view`), asked by the host that
-// steps the game and read here by name: `game.view.mission.text`. Nothing in this file works anything out, and nothing of it is kept by the game: a host
+// steps the game and read here by name: `game.view.mission.text`. Nothing in this folder works anything out, and nothing of it is kept by the game: a host
 // asks again after a tick (or after anything else that moved the Rust game) and hands over the new record.
 //
-// Each section's fields are the Rust structs' (game_types view/types.rs), by the bridge's names. A game no host steps (a workbench's floor, the moment before
-// the first start) has the blank one.
+// Its types are the Rust structs' (rust/game_types/src/view), and read.ts, written from them, reads their bytes: no table and no book at run time. A game no
+// host steps (a workbench's floor, the moment before the first start) has the blank one.
 //
 // NOTHING UNDER src/view IMPORTS THE GAME (src/game, src/sim, src/scene, src/anim, the bridge): a page that holds no game reads the same record
 // (tools/qa/view-check.ts). So a man is named by his character's id, a door by its name, and never by an object of the page's.
-import type { Vec3 } from '../math/vec';
-
-/** whose words the mission's line is */
-export type MissionOf = 'stages' | 'script' | 'lesson' | 'defuse' | 'snatch' | 'roomclear' | 'rescue' | 'nightbreach';
-/** the mission's one line and the place its marker stands on */
-export interface MissionView { of: MissionOf; text: string; pos: Vec3 | null }
-/** a row of the radio strip: a line on a net, or a shout that reached an ear of the team's (his words alone) */
-export interface RadioRow { kind: 'net' | 'heard'; text: string; /** seconds since it was said */ age: number }
-/** a line being said on the floor. A man is named by his character's id; null: a man who went down, called from `at` */
-export interface BubbleView { man: number | null; text: string; /** the words at the edge of the view, with whose they are */ edge: string; /** seconds since it was said · seconds it stands */ age: number; dur: number; /** it went over the net */ radio: boolean;
-  tone: 'calm' | 'sus' | 'alert' | 'own';
-  /** over: over him, and nowhere while that is off the screen · overOrEdge: over him while that is on the screen, else at the edge of the view on his side · edge: at the edge, wherever he is */
-  place: 'over' | 'overOrEdge' | 'edge';
-  /** where he stands (or fell) */ at: Vec3 }
-export interface TickView { /** null: a show runs */ mission: MissionView | null; /** the radio strip, oldest first */ radio: RadioRow[]; /** what is being said on the floor */ bubbles: BubbleView[];
-  /** the seat's own man (his character's id) */ me: number; /** the room the seat's man stands in, by the level's own name for it */ place: string }
+import type { TickView, WornView } from './read';
+export type { BubbleView, EmptyView, HandRingView, KitGun, KitSetup, KitSlot, KitThing, KitView, LessonView, ManMark, MateLine, MissionOf, MissionView, Note, Pair, PlanView, RadioRow, RailCard, RailPrompt, RailsView, RingView, SquadView, ThrowLine, TickView } from './read';
 
 /** what a game no host steps is told */
-export const NO_VIEW: TickView = { mission: null, radio: [], bubbles: [], me: -1, place: '' };
+export const NO_VIEW: TickView = { mission: null, lesson: null, radio: [], bubbles: [], me: -1, place: '',
+  kit: { slots: [], gun: null, setup: null, big: null, hitsLeft: 0, hitsMax: 0, down: false, god: false, nightVision: null, keyTag: null },
+  marks: { men: [], seen: [], cams: [], frags: [], blind: 0, light: 0, irradiance: 0, noise: 0, stalk: null, stalkWaits: false, floor: null },
+  aim: { ring: null, dot: null, tooClose: false, throw: null },
+  worn: [], squad: null, corner: [], throws: [], ring: null, hand: null, empty: null, plan: null, live: false, quiet: null,
+  interact: { rows: [], lit: -1, more: 0, open: false, corner: true, ring: null, dots: [] }, alarm: null, stage: 'infiltrate', attention: [],
+  look: { ring: { places: 0, hole: 0, rim: 0, boxX: 0, boxY: 0, lone: { r: 0, h: 0, pad: 0, letter: 0, max: 0, lead: 0 } }, plan: { freshSecs: 0, walkDim: 0, restDim: 0, ringM: 0, sectorM: 0, sectorDeg: 0, reaskSecs: 0, others: 0 }, net: { edge: false, near: 0, edgeIn: 0 }, attention: { ringM: 0, wayReask: 0 }, lineClear: false, markClear: false, back: 'Esc' } };
+
+/** what this man wears or carries that the drawer draws */
+export function wornBy(v: TickView, man: number): WornView | undefined { return v.worn.find(w => w.man === man); }
+
+/** the fog hides this man from the seat's team */
+export function fogHides(v: TickView, man: number): boolean { return v.marks.men.some(m => m.man === man && m.hidden); }
+
+/** is this action shut on the mission that is up: the press does nothing, and the HUD names no key of it (nothing is locked off a tutorial mission) */
+export function locked(v: TickView, action: string): boolean { const R = v.lesson?.rails; return !!R && !R.open.includes(action); }
+/** does the interaction key offer rows of this verb (every verb off a tutorial mission) */
+export function offered(v: TickView, verb: string): boolean { const R = v.lesson?.rails?.rows; return !R || R.includes(verb); }

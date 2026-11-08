@@ -3,159 +3,6 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// OrderDef.label: the row's words, written out or read off the target (returns the String). The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
-#[derive(Clone, Debug)]
-pub enum OrderLabel {
-    Text { text: String },
-    Cover,
-    DoorOpenClear,
-    DoorBangClear,
-    DoorCharge,
-    DoorFragClear,
-    DoorThresholdHold,
-    DoorGoSmall,
-    DoorGoBig,
-    DoorBigClear,
-    WallRow,
-    ThrowRow { kind: crate::squadthrow::SquadThrowKind },
-    ThrowOpen,
-    Work,
-    Smoke,
-    PairGo,
-    DoorThrWord,
-    /// an order written as a module (orders/rows/): its own function
-    Row(&'static crate::orders::Row),
-}
-/// OrderDef.can: this man can do his part (true in the TypeScript), or the word for why not. The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
-#[derive(Clone, Copy, Debug)]
-pub enum OrderCan {
-    Move,
-    Cover,
-    WallRow,
-    Work,
-    PairTake,
-    PairWatch,
-    PairDark,
-    /// an order written as a module (orders/rows/): its own function
-    Row(&'static crate::orders::Row),
-}
-/// OrderDef.only: the men among those addressed this order is for. The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
-#[derive(Clone, Debug)]
-pub enum OrderOnly {
-    DoorHeldOrAll,
-    DoorGoSmall,
-    DoorGoBig,
-    SilentAll,
-    ShutDoor,
-    ThrowRow { kind: crate::squadthrow::SquadThrowKind },
-    Wand,
-    Work,
-    Smoke,
-    PairTake,
-    PairGo,
-    DoorThrWord,
-    /// an order written as a module (orders/rows/): its own function
-    Row(&'static crate::orders::Row),
-}
-/// OrderDef.valid: these men together can carry it out here (true), or not (false, or the word for why). The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
-#[derive(Clone, Debug)]
-pub enum OrderValid {
-    Move,
-    Stack,
-    DoorOpenClear,
-    DoorBangClear,
-    DoorCharge,
-    DoorFragClear,
-    DoorThresholdHold,
-    DoorGoSmall,
-    DoorGoBig,
-    DoorBigClear,
-    WallRow,
-    ShutDoor,
-    ThrowRow { kind: crate::squadthrow::SquadThrowKind },
-    Wand,
-    Work,
-    Smoke,
-    PairTake,
-    PairWatch,
-    PairGo,
-    DoorThrWord,
-    /// an order written as a module (orders/rows/): its own function
-    Row(&'static crate::orders::Row),
-}
-/// OrderDef.issue: hand each man his assignment; a String back is a refusal. Nothing: a row that only opens a page (give() refuses it at orders.ts:862, so it is never run). The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
-#[derive(Clone, Debug)]
-pub enum OrderIssue {
-    Nothing,
-    Move,
-    Stack,
-    Cover,
-    FallIn,
-    Hold,
-    DoorOpenClear,
-    DoorBangClear,
-    DoorCharge,
-    DoorFragClear,
-    DoorThresholdHold,
-    DoorGoSmall,
-    DoorGoBig,
-    DoorBigClear,
-    WallRow,
-    Silent,
-    Loud,
-    ShutDoor,
-    ThrowRow { kind: crate::squadthrow::SquadThrowKind },
-    Wand,
-    Work,
-    Smoke,
-    PairTake { mode: crate::pairorders::JobMode },
-    PairWatch,
-    PairDark,
-    PairGo,
-    DoorThrWord,
-    /// an order written as a module (orders/rows/): its own function
-    Row(&'static crate::orders::Row),
-}
-/// OrderDef.tick: once a frame for each man under the order, before he is posed. The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
-#[derive(Clone, Copy, Debug)]
-pub enum OrderTick {
-    Move,
-    ShutDoor,
-    ThrowRow,
-    Wand,
-    Work,
-    PairTake,
-    PairWatch,
-    PairDark,
-    /// an order written as a module (orders/rows/): its own function
-    Row(&'static crate::orders::Row),
-}
-/// OrderDef.standsIn.when: the row stands in for the other one now. The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
-#[derive(Clone, Copy, Debug)]
-pub enum OrderWhen {
-    ShutDoor,
-    Loud,
-    PairDark,
-    DoorHeld,
-}
-/// OrderDef.gone: the flat ring does not offer the row on this target at all. The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
-#[derive(Clone, Copy, Debug)]
-pub enum OrderGone {
-    DoorCharge,
-    DoorBigClear,
-    WallRow,
-}
-/// SquadOrders.notes: who has a line for the squad's HUD block, in the order they were pushed. Read only by hud() (triage: dress).
-#[derive(Clone, Copy, Debug)]
-pub enum OrderNoteFn {
-    DoorToolsHud,
-    DoorToolsWord,
-    WallCharge,
-    Pair,
-    Squad40,
-    SquadThrow,
-    SquadSmoke,
-}
 /// what marksKeep took, to put back once: the makers' counters, the room rule's book, the leaf's answer (orders.ts marksKeep). Not kept past the one trial.
 #[derive(Clone, Debug)]
 pub enum MarksKeep {
@@ -202,8 +49,9 @@ pub struct SquadOrders {
     pub defs: Vec<OrdersOrderDefId>,
     /// the row of the table this seat's menu has for an order's id, on the menu or off it (`squad_orders_row`; Rust's own: not on the wire)
     pub made: JsMap<String, OrdersOrderDefId>,
+    /// what the squad's panel says of this seat, as its last tick left it (orders/shown.rs; Rust's own: not on the wire, so blank after a load until the next tick)
+    pub shown: crate::orders::Shown,
     pub owners: Vec<crate::orders::SquadOwner>,
-    pub notes: Vec<crate::orders::OrderNoteFn>,
     pub posture: Option<crate::orders::SquadOrdersPosture>,
     pub people: Option<crate::orders::SquadOrdersPeople>,
     pub who: crate::orders::Who,
@@ -251,11 +99,11 @@ impl SquadOrders {
     /// what a new one holds: the TypeScript's field initialisers, before its constructor
     pub fn blank() -> Self {
         SquadOrders {
-            knobs: crate::knobs::OrdersK { key: String::from("KeyX"), mouse_opens: true, click_gives: false, who_key: String::from("KeyT"), quick_key: String::from("KeyB"), wheel_element: false, wait_key: String::from("Digit5"), wait_alt: String::from("KeyF"), refresh_secs: 1.0, door_pick_m: 1.0, self_m: 1.0, man_m: 0.8, door_ray: true, door_ray_pad: 0.08, door_ray_reach_m: 3.0, self_body: false, floor_snap_m: 1.0, jamb_out: 0.55, jamb_past: 0.45, file_gap: 0.9, seam_m: 0.03, second_floor: true, work_out: true, work_seen_m: 4.0, hall_file: true, follow_back: alloc::vec![1.3, 2.4], crumb: 0.4, trail_m: 10.0, run: 2.2, walk: 1.5, gain: 1.5, near_m: 0.6, band_m: 0.6, word_far_m: 2.0, word_hold_s: 2.5, file_hold: false, file_spread: false, file_apart: 0.9, file_tight: 0.75, off_door: 0.8, back_end: false, in_way: false, retake_goal: false, walk_tries: false, aside_m: 2.6, aside_lane: 0.8, aside_off: 0.95, aside_clear: false, file_queue: false, file_queue_gap: 1.3, file_queue_cost: 500.0, prop_round: false, prop_round_pad: 0.25, prop_round_cost: 6.0, prop_round_more: 2.0, prop_round_door: 2.5, aside_hold: 1.5, brisk: 2.0, brisk_in: 1.8, onto: 1.3, entry: 2.2, move_spread: 0.9, cold_secs: 2.5, pin_posted: true, lane_in: 0.45, lane_out: 0.7, hold_stride: 0.15, stuck_secs: 4.0, hold_group_m: 4.0, hold_door_m: 2.0, cleared: true, cleared_dear: 20.0, known_face: true, own_door: true, round_cap: 0.0, round_own: true, same_way: false, same_near_m: 5.0, same_apart_m: 6.0, same_long: 1.5, trail_doors: false, trail_reach_m: 3.0, trail_long: 1.5 },
+            knobs: crate::knobs::OrdersK { key: String::from("KeyX"), mouse_opens: true, click_gives: false, who_key: String::from("KeyT"), quick_key: String::from("KeyB"), wheel_element: false, wait_key: String::from("Digit5"), wait_alt: String::from("KeyF"), refresh_secs: 1.0, door_pick_m: 1.0, self_m: 1.0, man_m: 0.8, door_ray: true, door_ray_pad: 0.08, door_ray_reach_m: 3.0, floor_snap_m: 1.0, jamb_out: 0.55, jamb_past: 0.45, file_gap: 0.9, seam_m: 0.03, second_floor: true, work_out: true, work_seen_m: 4.0, hall_file: true, follow_back: alloc::vec![1.3, 2.4], crumb: 0.4, trail_m: 10.0, run: 2.2, walk: 1.5, gain: 1.5, near_m: 0.6, band_m: 0.6, word_far_m: 2.0, word_hold_s: 2.5, file_hold: false, file_spread: false, file_apart: 0.9, file_tight: 0.75, off_door: 0.8, back_end: false, in_way: false, retake_goal: false, walk_tries: false, aside_m: 2.6, aside_lane: 0.8, aside_off: 0.95, aside_clear: false, file_queue: false, file_queue_gap: 1.3, file_queue_cost: 500.0, prop_round: false, prop_round_pad: 0.25, prop_round_cost: 6.0, prop_round_more: 2.0, prop_round_door: 2.5, aside_hold: 1.5, brisk: 2.0, brisk_in: 1.8, onto: 1.3, entry: 2.2, move_spread: 0.9, cold_secs: 2.5, lane_in: 0.45, lane_out: 0.7, hold_stride: 0.15, stuck_secs: 4.0, hold_group_m: 4.0, hold_door_m: 2.0, cleared: true, cleared_dear: 20.0, known_face: true, own_door: true, round_cap: 0.0, round_own: true, same_way: false, same_near_m: 5.0, same_apart_m: 6.0, same_long: 1.5, trail_doors: false, trail_reach_m: 3.0, trail_long: 1.5 },
             defs: Vec::new(),
             made: JsMap::new(),
+            shown: crate::orders::Shown::default(),
             owners: Vec::new(),
-            notes: Vec::new(),
             posture: None,
             people: None,
             who: crate::orders::Who::All,
@@ -371,6 +219,10 @@ pub struct Menu {
     pub men_side: Option<f64>,
     pub side_key: String,
     pub flat: Option<bool>,
+    /// each row's words, read beside its why (orders/words.rs): no part of the wire
+    pub words: Vec<String>,
+    /// the first wedge's word, the quick key's there (the same)
+    pub quick: Option<String>,
 }
 impl Menu {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -391,6 +243,8 @@ impl Menu {
             men_side: None,
             side_key: String::new(),
             flat: None,
+            words: Vec::new(),
+            quick: None,
         }
     }
 }
@@ -824,44 +678,6 @@ impl SquadOrdersReachedValueLock {
 }
 impl Default for SquadOrdersReachedValueLock { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: HoverKept, src/game/orders.ts:347)
-#[derive(Clone, Debug)]
-pub struct HoverKept {
-    pub hov: Option<crate::orders::HoverKeptHov>,
-    pub cam: Vec<f64>,
-}
-impl HoverKept {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoverKept {
-            hov: None,
-            cam: Vec::new(),
-        }
-    }
-}
-impl Default for HoverKept { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/orders.ts:347 HoverKept.hov, src/game/orders.ts:347)
-#[derive(Clone, Debug)]
-pub struct HoverKeptHov {
-    pub x: f64,
-    pub y: f64,
-    pub t: f64,
-    pub v: crate::orders::OrderTarget,
-}
-impl HoverKeptHov {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoverKeptHov {
-            x: 0.0,
-            y: 0.0,
-            t: 0.0,
-            v: crate::orders::OrderTarget::Floor(crate::orders::OrderTargetFloor::zeroed()),
-        }
-    }
-}
-impl Default for HoverKeptHov { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum TargetKind {
@@ -904,7 +720,8 @@ impl Default for GiveOpts { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Debug)]
 pub struct OrderDef {
     pub id: String,
-    pub label: crate::orders::OrderLabel,
+    /// what it does: its label, who it is for, what it asks and hands out (orders/rows/)
+    pub row: &'static crate::orders::Row,
     pub targets: Vec<crate::orders::TargetKind>,
     pub key: Option<f64>,
     pub page: Option<String>,
@@ -912,25 +729,19 @@ pub struct OrderDef {
     pub listed: Option<Vec<crate::orders::TargetKind>>,
     pub hot_key: Option<String>,
     pub page_only: Option<bool>,
-    pub can: Option<crate::orders::OrderCan>,
-    pub only: Option<crate::orders::OrderOnly>,
-    pub valid: Option<crate::orders::OrderValid>,
-    pub issue: crate::orders::OrderIssue,
-    pub tick: Option<crate::orders::OrderTick>,
     pub ack: Option<Vec<String>>,
     pub ack_now: Option<Vec<String>>,
     pub on_word: Option<bool>,
     pub free: Option<bool>,
     pub head: Option<String>,
     pub stands_in: Option<crate::orders::OrderDefStandsIn>,
-    pub gone: Option<crate::orders::OrderGone>,
 }
 impl OrderDef {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         OrderDef {
             id: String::new(),
-            label: crate::orders::OrderLabel::Text { text: String::new() },
+            row: &crate::orders::Row::NONE,
             targets: Vec::new(),
             key: None,
             page: None,
@@ -938,18 +749,12 @@ impl OrderDef {
             listed: None,
             hot_key: None,
             page_only: None,
-            can: None,
-            only: None,
-            valid: None,
-            issue: crate::orders::OrderIssue::Nothing,
-            tick: None,
             ack: None,
             ack_now: None,
             on_word: None,
             free: None,
             head: None,
             stands_in: None,
-            gone: None,
         }
     }
 }
@@ -966,14 +771,12 @@ pub enum OrderDefLabel {
 #[derive(Clone, Debug)]
 pub struct OrderDefStandsIn {
     pub for_: String,
-    pub when: crate::orders::OrderWhen,
 }
 impl OrderDefStandsIn {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         OrderDefStandsIn {
             for_: String::new(),
-            when: crate::orders::OrderWhen::ShutDoor,
         }
     }
 }
@@ -1215,30 +1018,6 @@ impl OrderHudMenu {
     }
 }
 impl Default for OrderHudMenu { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: a union)
-#[derive(Clone, Debug)]
-pub enum OrderNote {
-    Text(String),
-    Arm1(crate::orders::OrderNoteArm1),
-}
-
-/// (TypeScript: inline at src/game/orders.ts:503 OrderNote, src/game/orders.ts:503)
-#[derive(Clone, Debug)]
-pub struct OrderNoteArm1 {
-    pub key: String,
-    pub text: String,
-}
-impl OrderNoteArm1 {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        OrderNoteArm1 {
-            key: String::new(),
-            text: String::new(),
-        }
-    }
-}
-impl Default for OrderNoteArm1 { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: FightLease, src/game/orders.ts:520)
 #[derive(Clone, Copy, Debug)]
@@ -1566,39 +1345,6 @@ impl SquadOrdersGoalPart {
     }
 }
 impl Default for SquadOrdersGoalPart { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/orders.ts:1225 hintView ->, src/game/orders.ts:1225)
-#[derive(Clone, Copy, Debug)]
-pub struct SquadOrdersHintView {
-    pub kind: crate::cmdring::RingHint,
-    pub x: f64,
-    pub y: f64,
-    pub zoom: f64,
-    pub held: bool,
-    pub press: bool,
-    pub tone: Option<crate::orders::Tone>,
-    pub seg: Option<[V3; 2]>,
-    pub ring: Option<crate::orders::SquadOrdersHintViewRing>,
-    pub glyph: bool,
-}
-impl SquadOrdersHintView {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SquadOrdersHintView {
-            kind: crate::cmdring::RingHint::Door,
-            x: 0.0,
-            y: 0.0,
-            zoom: 0.0,
-            held: false,
-            press: false,
-            tone: None,
-            seg: None,
-            ring: None,
-            glyph: false,
-        }
-    }
-}
-impl Default for SquadOrdersHintView { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:1225 SquadOrdersHintView.ring, src/game/orders.ts:1225)
 #[derive(Clone, Copy, Debug)]
@@ -2035,23 +1781,6 @@ pub enum SquadOrdersHoverWordsT {
     Foe(crate::orders::OrderTargetFoe),
 }
 
-/// (TypeScript: inline at src/game/orders.ts:2583 hud ->, src/game/orders.ts:2583)
-#[derive(Clone, Debug)]
-pub struct SquadOrdersHud {
-    pub menu: Option<crate::orders::OrderHudMenu>,
-    pub status: Vec<crate::orders::OrderHudRow>,
-}
-impl SquadOrdersHud {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SquadOrdersHud {
-            menu: None,
-            status: Vec::new(),
-        }
-    }
-}
-impl Default for SquadOrdersHud { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/game/orders.ts:2619 mark ->, src/game/orders.ts:2619)
 #[derive(Clone, Debug)]
 pub struct SquadOrdersMark {
@@ -2135,9 +1864,6 @@ pub fn low() -> crate::orders::LOW { crate::orders::LOW { stance: crate::charact
 /// (src/game/orders.ts:2630 AIM: a table nothing writes)
 pub fn aim() -> crate::orders::AIM { crate::orders::AIM { stance: crate::character::Stance::None, upper: crate::character::UpperMode::Aim } }
 
-/// (src/game/orders.ts:2631 LANE_ORDERS: a table nothing writes)
-pub fn lane_orders() -> &'static [&'static str] { &["cover", "stack", "move", "hold"] }
-
 /// (src/game/orders.ts:2634 OFF_M)
 pub const OFF_M: f64 = 0.3;
 
@@ -2184,21 +1910,73 @@ use crate::game::Game;
 pub struct Row {
     /// its id on the menu and in a man's assignment
     pub id: &'static str,
+    /// what the rules that do not know it by name need to know of it
+    pub is: &'static [Is],
     pub label: fn(&mut Game, &OrderTarget) -> String,
     pub can: Option<fn(&mut Game, GuardId, &OrderTarget) -> Option<String>>,
     pub only: Option<fn(&mut Game, &[GuardId], &OrderTarget) -> Vec<GuardId>>,
     pub valid: Option<fn(&mut Game, &OrderTarget, &[GuardId]) -> Result<(), Option<String>>>,
     pub issue: fn(&mut Game, &[GuardId], &OrderTarget, Option<&GiveOpts>) -> Option<String>,
+    /// the flat ring does not offer the row on this target at all
+    pub gone: Option<fn(&Game, &crate::seats::SeatRef, &OrderTarget, &[GuardId]) -> bool>,
+    /// it stands in for the row its data names (`stands_in`) now
+    pub when: Option<fn(&Game, &crate::seats::SeatRef, &OrderTarget, &[GuardId]) -> bool>,
     pub tick: Option<fn(&mut Game, GuardId, OrdersAssignmentId)>,
     pub frame: Option<fn(&mut Game)>,
+    /// its lines in the squad's HUD block, for this seat: whether it has anything to say is its own to answer
+    pub notes: Option<fn(&Game, &crate::seats::SeatRef) -> Vec<crate::view::Note>>,
 }
 impl Row {
     /// An order with the three things every order has. The rest are `None` until its file says otherwise:
     /// `Row { frame: Some(frame), ..Row::new(ID, label, issue) }`.
     pub const fn new(id: &'static str, label: fn(&mut Game, &OrderTarget) -> String, issue: fn(&mut Game, &[GuardId], &OrderTarget, Option<&GiveOpts>) -> Option<String>) -> Row {
-        Row { id, label, can: None, only: None, valid: None, issue, tick: None, frame: None }
+        Row { id, is: &[], label, can: None, only: None, valid: None, issue, gone: None, when: None, tick: None, frame: None, notes: None }
     }
+}
+fn none_label(_g: &mut Game, _t: &OrderTarget) -> String { String::new() }
+fn none_issue(_g: &mut Game, _men: &[GuardId], _t: &OrderTarget, _o: Option<&GiveOpts>) -> Option<String> { Some(String::from("no such order.")) }
+impl Row {
+    /// The row a blank OrderDef holds until it is dealt its own: it says nothing and refuses.
+    pub const NONE: Row = Row::new("", none_label, none_issue);
+}
+/// WHAT AN ORDER IS, to a rule that has no reason to know it by name. An order says these of itself (`Row.is`); a rule asks
+/// (`rows::is`, of a man's assignment; `rows::id_is`, of an id).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Is {
+    /// he follows the player: after a throw he falls in again, and a rule that looks for a free man counts him
+    Follows,
+    /// he stays where he was told: after a throw he comes back to the spot alone, and with no mark to watch he is walked to where he sees
+    Holds,
+    /// he watches a side from a post: the room fight and the rescue read him as watching it
+    Covers,
+    /// he is on a door, waiting for the word: the door's tools and the room fight read his place in the stack
+    Stacks,
+    /// a man under it who is sent to throw goes back to it afterwards
+    Resumed,
+    /// once he has arrived he goes low when a man of the other pair stands in his line
+    KeepsLane,
+    /// his walk to a mark goes low while the player is low
+    WalksLow,
+    /// giving it starts the fight: the squad's held fire lifts (at the word if it waits, when it goes off if it `Blows`)
+    LiftsFire,
+    /// it lifts the held fire only when it goes off, not when it is given
+    Blows,
+    /// it gives a silent squad away, so its row says so and giving it spends the quiet
+    Loud,
+    /// he is going in by a door: the rescue reads a man at his post for one as standing to it
+    Enters,
+    /// it is one of the two pairs' rows: they come and go with the pairs
+    Pair,
+    /// a man under it has a marked man for his own
+    Take,
 }
 impl core::fmt::Debug for Row {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result { write!(f, "Row({})", self.id) }
+}
+
+/// WHAT THE SQUAD'S PANEL SAYS OF A SEAT BESIDE ITS MENU: kept by the tick, read by whoever draws it (orders/shown.rs).
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Shown {
+    /// the quick key's line for what the seat's cursor is on: the row it would give, and what it is on. None: a menu is up, or the key gives nothing there
+    pub quick: Option<String>,
 }

@@ -21,7 +21,7 @@
 // Nothing fits: the first choice is given all the same, so a man says why in the row's own words. It never throws a frag, never goes through a wall,
 // never sends a second element to a second door: those need the player's intent and are the menu's.
 //
-// THE PLAN IT SHOWS: a quick-key order's row in the order book is stamped `auto`, and floorplan.ts draws its men for `showSecs` where the menu's own
+// THE PLAN IT SHOWS: a quick-key order's row in the order book is stamped `auto`, and the plan (`view.plan`) draws its men for `showSecs` where the menu's own
 // order has PLAN.freshSecs — the player did not pick the entry, so he is given longer to read it. `replan`: the squad's own change of plan with nobody
 // asking (doortools.ts haltAt: a door found shut — they stop and stack on it) is drawn the same way (SquadOrders.shows; the module says so the frame it
 // re-assigns them). THE HUD'S B LINE (autoHint) is the squad's FIRST choice in the row's own words, asked every frame, so it runs no path search and
@@ -29,15 +29,11 @@
 //
 // PER SEAT, for a second player: the press, its cursor and `who` are the seat's (orders.ts input); nothing here keeps state.
 // Off (the module's default, the frozen stand): the quick key is the first row, no row is stamped, nothing more is drawn — the build as it was.
-import type { Vec3 } from '../math/vec';
-import { v3 } from '../math/vec';
+
 import type { Game, Guard } from './game';
-import type { OrderDef, OrderTarget } from './orders';
-import { sideOf } from './orders';   // (these three are called inside functions only: src/game is one import cycle)
-import { squadSilent } from './silent';
-import { offOf } from './doortools';
-import { isHostile } from './teams';
-import { RUST_PASS, RUST_SURFACE, crossToRust } from './crossing';
+import type { OrderTarget } from './orders';
+
+import { crossToRust } from './crossing';
 
 export const AUTOPILOT = {
   /** the quick key on a door the addressed men wait on sends them in by the entry they pick (false: it is the target's first row, as it was) */
@@ -75,65 +71,23 @@ type DoorTarget = OrderTarget & { kind: 'door' };
  *  else to the standing choice. Neither: nothing (a charge on a word still gathering). */
 export interface AutoPick { id: string | null; men: Guard[] | null; word: boolean; why: 'first' | 'silent' | 'contact' | 'unknown' | 'known' | 'shut' | 'blow' | 'word' | 'pending' | 'set'; t: OrderTarget; /** a room nobody has been in is opened plain because the last stun is kept back (squadnet.ts says so) */ kept?: boolean }
 
-const flat = v3.distXZ;
-
 /** the team has that man in sight (the fog of war's answer where it runs, the room fight's otherwise) */
 export function inSight(g: Game, o: Guard): boolean { const F = g.fogOfWar; return F.active ? F.seen(o) : !!g.fight?.teamSees(o); }
 
-/** an enemy the team has in sight in the room beyond that door (nothing here reads a man nobody of the team sees) */
-function contactBehind(g: Game, t: DoorTarget, far: number): boolean {
-  const c: Vec3 = t.door.frameCentre;
-  const seen = (o: Guard) => inSight(g, o);
-  const there = (p: Vec3) => (far ? g.cleared.roomAt(p) === far : offOf(t.door, p, t.side) < 0 && flat(p, c) < AUTOPILOT.contactM);
-  return g.guards.some(o => o.state !== 'dead' && isHostile('operative', o.team) && there(o.char.pos) && seen(o));
-}
-
 /** The entries in the order the squad would take them on a door it is stacked on (`t.side`: the men's face): the first is its choice, the rest what it
  *  falls back to. `shut`: with the charge a door known shut ends on (it asks the door tools what the team knows of the lock — the press; never the HUD). */
-export function autoEntries(g: Game, t: DoorTarget, shut = true): { ids: string[]; why: AutoPick['why']; kept?: boolean } { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('autoEntries', undefined, [g, t, shut]); if (__r !== RUST_PASS) return __r as any; } }
-  const DT = g.doorTools;
-  if (squadSilent(g)) return { ids: ['openClear'], why: 'silent' };
-  if (AUTOPILOT.plain) return { ids: ['openClear'], why: 'known' };   // (the key never picks a tool: the plain entry, as the word's key gives it — no reason to say)
-  const far = g.cleared.roomBy(t.door, t.side > 0 ? -1 : 1), unknown = !!far && !g.cleared.isKnown(far);
-  const contact = DT.bangs > 0 && contactBehind(g, t, far), bang = contact || (unknown && DT.bangs > AUTOPILOT.keepBangs);
-  const ids = bang ? ['bangClear', 'openClear'] : ['openClear'], known = shut && DT.knownShut(t.door, t.side);
-  if (known) ids.push('charge');
-  return { ids, why: contact ? 'contact' : bang ? 'unknown' : known ? 'shut' : 'known', kept: unknown && !bang && DT.bangs > 0 };
-}
+export function autoEntries(g: Game, t: DoorTarget, shut = true): { ids: string[]; why: AutoPick['why']; kept?: boolean } { return crossToRust('autoEntries', undefined, [g, t, shut]) as any; }
 
 /** What the quick key does on `t` for the men it would go to. `check`: the entry is the first its row's `valid` takes (a path search per man: the press);
  *  without, the first choice unasked (the HUD's line, every frame: no path search, nothing written). */
-export function autoPick(g: Game, t: OrderTarget, check = true, men?: Guard[]): AutoPick { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('autoPick', undefined, [g, t, check, men]); if (__r !== RUST_PASS) return __r as any; } }
-  const S = g.orders, first = (): AutoPick => ({ id: S.defaultFor(t)?.id ?? null, men: null, word: false, why: 'first', t });
-  if (t.kind !== 'door') return first();
-  const DT = g.doorTools, R = men ?? S.recipients(t), W = DT.waitsOn(R, t.door);   // (`men`: planmode.ts asks for a goal's own men)
-  if (!W) { const c = DT.chargeOn(t.door); return !c ? first() : DT.wordPending(c) ? { id: null, men: null, word: false, why: 'pending', t } : { id: 'charge', men: null, word: false, why: 'blow', t }; }
-  if (W.kind === 'word') {
-    if (S.big || DT.thresholdHeld(W.men, t.door).length) return { id: null, men: W.men, word: true, why: 'word', t };
-    return DT.chargeOn(t.door) ? { id: 'charge', men: W.men, word: false, why: 'blow', t } : first();   // (the pair has no word but a held threshold's: its own set charge is blown by the row)
-  }
-  if (!W.set) return first();   // (still walking to their marks: 'stack up' again — a second tap is not an entry)
-  // … and on their marks it is 'stack up' again too (AUTOPILOT.restack), answered and not walked: the word's key is the way in. Two cases are not that:
-  // some of the men the key speaks to are somewhere else (the key is 'stack up' for all of them, given), and a stack the word's key would not take
-  // (a pair with DOORTOOLS.wordSmall off, a charge on their door: the key is their entry there, as it was — a stack no key sends in is no rule)
-  if (AUTOPILOT.restack) { if (W.men.length < R.length) return first(); if (S.big || DT.stackWaits(W.men).length) return { id: 'stack', men: W.men, word: false, why: 'set', t }; }
-  // the men's own face of the door, off the marks they stand on (the word's fromStack reads the same): no path search to find it
-  const A = S.of(W.men[0]), tm: DoorTarget = A?.post ? { ...t, side: sideOf(t.door, A.post) } : t, E = autoEntries(g, tm, check);
-  if (check) for (const id of E.ids) { const d = S.defs.find(x => x.id === id); if (d && S.whyNot(d, tm, W.men) === null) return { id, men: W.men, word: false, why: id === 'charge' ? 'shut' : E.why, t: tm, kept: E.kept }; }
-  return { id: E.ids[0], men: W.men, word: false, why: E.why, t: tm, kept: E.kept };   // (nothing fits: given all the same — a man says why, in the row's words)
-}
+export function autoPick(g: Game, t: OrderTarget, check = true, men?: Guard[]): AutoPick { return crossToRust('autoPick', undefined, [g, t, check, men]) as any; }
 
 /** The quick key, pressed on `t`: true when the press was the autopilot's (an order given and stamped as its own in the order book, or refused aloud, or
  *  a charge left alone on its word). False: nothing was there to give. */
 export function autoQuick(g: Game, t: OrderTarget): boolean { return crossToRust('autoQuick', undefined, [g, t]) as any; }
 
 /** the quick key's line on the HUD: the row's own words for the squad's first choice on what the cursor is on (null: nothing) */
-export function autoHint(g: Game, t: OrderTarget, P = autoPick(g, t, false)): string | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('autoHint', undefined, [g, t, P]); if (__r !== RUST_PASS) return __r as any; } }
-  const S = g.orders;
-  if (P.word && !S.big) return 'go';
-  const id = P.word ? 'go' : P.id, d: OrderDef | undefined = id ? S.defs.find(x => x.id === id) : undefined;
-  return d ? (typeof d.label === 'string' ? d.label : d.label(P.t)) : null;
-}
+export function autoHint(g: Game, t: OrderTarget, P = autoPick(g, t, false)): string | null { return crossToRust('autoHint', undefined, [g, t, P]) as any; }
 
 /** seconds the plan of that order-book row is drawn outside the order mode */
 export function showSecsOf(row: { auto?: boolean }, fresh: number): number { return row.auto ? Math.max(0.2, AUTOPILOT.showSecs) : fresh; }

@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// A man of the defenders or the night staff, no civilian. (flinch.ts staff)
-pub fn staff(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn staff(g: &crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].civ.is_none() && (g.gd[gd].team == crate::teams::Team::Hostile || g.gd[gd].team == crate::teams::Team::Guard)
 }
 

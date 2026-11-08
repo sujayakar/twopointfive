@@ -4,7 +4,7 @@ use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum WeatherKind {
     Clear,
     Overcast,
@@ -79,13 +79,6 @@ impl WeatherPreset {
     }
 }
 impl Default for WeatherPreset { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: a union)
-#[derive(Clone, Debug)]
-pub enum WeatherOfSearchSearch {
-    Text(String),
-    URLSearchParams(crate::query::Query),
-}
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]

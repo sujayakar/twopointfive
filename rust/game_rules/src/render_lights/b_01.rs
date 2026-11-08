@@ -26,6 +26,18 @@ pub fn pack_light(row: &RtLight, pos: V3, radius: f64, inten: f64, kind_word: u3
 // ---- THE LIGHTS' LIST IS THE GAME'S (render/lights.ts LightSet: "this set is the game's and goes into every checkpoint"): its add / remove / flash and the fog's class
 // are translated, not no-ops. Round one made `remove` a boundary no-op: a light taken off the list went on lighting the estimate.
 
+/// WHAT A LIGHT IS BESIDE AN HOUR'S (sim/light.rs by_day), by what it is called and how it burns. (render/photometry.ts lightClass)
+pub fn light_by_day(l: &crate::render_lights::RtLight) -> u32 {
+    use sim::light::{DAY_FACE, DAY_FIXTURE, DAY_FLASH, DAY_HAND, DAY_NONE, DAY_VEHICLE};
+    if l.kind == 2.0 || l.transient == Some(true) || l.group == "devices" || l.group == "sky" || l.name.starts_with("kitview") { return DAY_NONE; }
+    if l.kind == 3.0 { return DAY_FACE; }
+    if l.ttl >= 0.0 || l.group == "tracer" || l.steady.is_some() { return DAY_FLASH; }
+    if l.card || l.group == "flashlights" { return DAY_HAND; }
+    let body: &str = l.name.split("_lamp").next().unwrap_or("");
+    let car = l.name.contains("_lamp") && ["van", "gun_truck", "truck", "pickup", "lorry", "jeep", "car"].iter().any(|v| body.starts_with(v) && body[v.len()..].chars().all(|c| c.is_ascii_alphanumeric() || c == '_'));
+    if car { DAY_VEHICLE } else { DAY_FIXTURE }
+}
+
 /// (lights.ts LightSet.add)
 pub fn light_set_add(g: &mut crate::game::Game, l: LightId) -> LightId { g.engine.lights.lights.push(l); l }
 /// (lights.ts LightSet.remove)
@@ -51,7 +63,7 @@ pub fn light_set_fog_class(g: &crate::game::Game, l: LightId) -> f64 {
     if t.on && row.kind != 2.0 && !t.lights.has(l) && other { 1.0 } else { 0.0 }
 }
 
-/// A flash's envelope for the frame, and its retirement once a frame has shown it. THE HOST calls it between ticks (headless.ts:226, the page's frame), and the
+/// A flash's envelope for the frame, and its retirement once a frame has shown it. The tick's last line (`game_tick_end`), and the next
 /// tick's light estimate reads what it left: room-clear-four tick 1622, the stun's flash stood at 1600 for good and two men's irradiance was off.
 /// `time` is not read (lights.ts:187 `void time`).   (render/lights.ts:174 LightSet.update)
 pub fn light_set_update(g: &mut crate::game::Game, dt: f64, time: f64) {

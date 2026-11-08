@@ -4,7 +4,7 @@ use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what a civilian has given up on (TypeScript: a Set of objects, compared by identity): a man, or a CivSpot of the level by its place in the level's list
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum CivBadTarget { Guard(GuardId), Spot(u32) }
 
 /// (TypeScript: CivSnap, src/game/civilians.ts:236)
@@ -552,7 +552,6 @@ pub struct Civ {
     pub found_told: bool,
     pub lead: Option<CharId>,
     pub lead_gap: f64,
-    pub lead_to: Option<V3>,
     pub scream_at: f64,
     pub whimper_at: f64,
     pub greet_at: f64,
@@ -611,7 +610,6 @@ impl Civ {
             found_told: false,
             lead: None,
             lead_gap: 0.0,
-            lead_to: None,
             scream_at: 0.0,
             whimper_at: 0.0,
             greet_at: 0.0,

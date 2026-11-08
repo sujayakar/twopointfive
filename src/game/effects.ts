@@ -21,7 +21,7 @@
 //                                           fall under one cell (their own "honest lie": the shape survives, the scale does not)
 //   effect-internal lengths (standoff, can half-length)   × 0.6   with the radii, so proportions survive
 //   lattice               3.125 cm theirs;  shot → our fine 2.2 cm domains (bore jet 3.6 cells, wisp 1.9 — their "two cells across"),
-//                                           canister effects → our coarse 5.5 cm domains (burst core 4.2 cells, trails floored to 1 cell)
+//                                           canister effects → our coarse 6.25 cm domains (burst core 3.7 cells, trails floored to 1 cell)
 //   light power           not derivable     (their raymarch takes power/d² at its own exposure); set against what was here: the old muzzle pair
 //                                           summed to 92 × 0.45 for the player, torches are 55–70, and a stun charge should out-blast all of it
 //   spark kinematics      1 : 1             metres and seconds, no lattice involved; only the COUNTS shrink (they are boxes here, pool of 96)
@@ -170,7 +170,7 @@ export const tracerFx = {
 
 /** Smoke hung off the first `bang.trailCount` sparks: inherits each fragment's direction, arc and bounce, so the cloud's arms are irregular for free. */
 export const trail = {
-  radius: 0.036, minVoxels: 1,                        // ref 0.06 m = 0.65 coarse cells → floored to one cell (0.055) or it deposits nothing
+  radius: 0.036, minVoxels: 1,                        // ref 0.06 m, under a coarse cell → floored to one (0.0625) or it deposits nothing
   density: 8.6, temp: 45, life: 0.9, attack: 0.01,    // ref 95 /s, 30 /s; life matched to the sparks so the trail draws the fall, not just the throw
 };
 

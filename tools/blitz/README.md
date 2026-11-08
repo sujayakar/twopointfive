@@ -111,36 +111,16 @@ The host lists the box world after every tick and updates the lamps, as `seats-r
 bare Game for a seat's field (seats.ts SEAT_ASKS) and the first tick it did: from that tick a path under `g.m.guards.ground_track` is the TypeScript's
 third row (the bare Game's own memo of "the player's" ground speed), which the Rust game does not keep.
 
-### The co-op check
+### The co-op rules
 
-```sh
-bun run tools/blitz/coop-check.ts [--only held,lock,full] [--no-build]      # about four minutes with the runner built; ALL PASS since 2026-11-07
-```
-
-A game of two players held to the kinds of fault a game of two had on the TypeScript game and the translation copied (needs 12 and 13 of the Library's
-blitz/coop-needs.md, mended in rust/game on 2026-11-07). NO TypeScript tick is run: the three games are the kept runs `tools/blitz/kept/two-*.tar.zst`
-(PLAY.md, "Kept runs: the three games of two seats"); `hold.sh` stands each start again from this tree, the native runner steps the Rust game through
-the kept records, and the check reads the whole states the runner keeps.
-
-- `held`: each of the three plays the series kept with it.
-- `lock` (`two-lock0-9`, `two-lock1-9`): the hands idle; that seat's pair is given `stack` on the locked server door before tick 2 and `openClear` before
-  tick 961 through the seat's OWN order book (a line of gives.txt that ends `seat<N>` is given as that seat: `game_run::give` → `seats::with_seat`). Both
-  men are across the frame line within 5 s of the order, read off the states every half second: 3.5 s and 4.5 s for seat 0's pair, 3.5 s and 3.0 s for
-  seat 1's. (On the TypeScript game seat 0's pair took 9.3 s and 10.1 s: seat 1's door tools slung seat 0's breaching shotgun every tick.)
-- `full` (`two-full-3`, the barracks, 120 s of the scripted fight): the men the game holds against what the picture holds, at ticks 1, 3600 and 7200
-  (16 against 16; it was 17). It cannot see the hand-over to the picture: the runner draws nobody.
-
-Gone: `asks` (the TypeScript tick's own count of asks of the bare Game for a seat's field).
-
-**The barracks game parts on purpose, and it is the first place a seat need shows.** At tick 5499 a man of seat 1 is sent through a door with two corners
-left on his order. The TypeScript's door walk asks the bare Game's order book (the first seat's, which has no order of his) and does not take the way
-round; the Rust door walk is stepped as his seat and finds his own order (`g.door_path.walks{…}.via.len` 0 against 2). The game's own state differs from
-there, the block from tick 5781, the die from 6349.
+The kinds of fault a game of two players had are held by the native tests: `cargo test --test coop` in rust/game_start (each player's pair through a locked
+door; no more men than the picture draws; a burst and one player's goggles part no two machines). They stand their own scenes, so no recorded run goes
+stale under them; the kept runs and the check that read them are deleted.
 
 ## Intended differences
 
 The TypeScript is frozen and has faults a game of two seats shows. Where the Rust game copies such a fault it stays in step, and that is right for
-now. (The nets of `slingTick` and `hammerOutTick` and the budgets that count one player were such faults until 2026-11-07: they are mended, and `coop-check.ts` holds them.) Where the Rust game is RIGHT BY
+now. (The nets of `slingTick` and `hammerOutTick` and the budgets that count one player were such faults until 2026-11-07: they are mended, and rust/game_start/tests/coop.rs holds them.) Where the Rust game is RIGHT BY
 CONSTRUCTION and the TypeScript is not, the Rust stays right and the loop parts there on purpose. `run.sh` names such a game (exit 4) when it first parts
 at the tick written in its `intended` list and nowhere before. One so far:
 
@@ -222,7 +202,7 @@ the runner or a change to the loop, say so separately: that is not part of a men
 ## What the runner stands in for
 
 The Rust game is the tick alone. What the TypeScript's host does round a tick is not translated (`BRIDGE.md`, "What a Rust host calls round a step").
-Each of these is a few lines of `rust/game_run/src/bin/mission.rs`; `BLITZ_SKIP=lights` or `upload` leaves that call out, to see by a run what it is for.
+Each of these is a few lines of `rust/game_run/src/bin/mission.rs`; `BLITZ_SKIP=view` leaves that call out, to see by a run what it is for.
 
 | stand-in | name | why |
 |---|---|---|
@@ -232,19 +212,16 @@ Each of these is a few lines of `rust/game_run/src/bin/mission.rs`; `BLITZ_SKIP=
 | the test driver's orders (`gives.txt`) | (always) | the scripted player calls `orders.give` between ticks |
 | the driver's `roomAt` that floods a room (`hostwrites.txt room_at`) | (always) | a question of the driver's that writes the game |
 | the commander's blow of a set wall charge (`hostwrites.txt wall_blow`, with `--wall`) | (always) | the scripted commander calls the module's `blow` between ticks |
-| the box world listed again | `upload` | where the headless host uploaded between two ticks; the listing also frees the rows of frame boxes of the frames before it |
 | `rails_host_view` after each tick | `view` | on a tutorial mission the host sets the first view again with its own camera (game.ts hostAfter) |
 | a tutorial's authored checkpoint (`chron_save` on rails) | (always) | the save controller stops the level's program for the take; the frame starts it again |
 | a lesson player's meter (`meter.txt`) and `selectVerb` (`hostwrites.txt select_verb`) | (always) | the scripted player of a tutorial feeds the player's light meter and picks a row between ticks |
-| the scripted player's word to the hostages or the man in hand (`hostwrites.txt rescue_word`, `snatch_word`) | (always) | the driver calls the module's own `word` between ticks |
+| the scripted player's word to the hostages (`hostwrites.txt rescue_word`) | (always) | the driver calls the module's own `word` between ticks |
 | the scripted player's pick of a row of the nearby list (`hostwrites.txt near_sel`) | (always) | the driver writes `player.nearSel` and calls `pickHover` between ticks |
 | the scripted player's ask before every step (`between.txt`: `call frag_step_off`) | `BLITZ_NO_BETWEEN=frag_step_off` leaves it out | the driver asks where a player who read a grenade's cue would go (`fragStepOff`); the ask makes the flee's guess of the grenade's rest and fills the memo of walls its burst opens, which the next tick's flee reads |
-| a lesson player's ask of a set door charge's words (`between.txt`: `call door_close_words <i>`) | `BLITZ_NO_BETWEEN=door_close_words` | the answer is kept a quarter second and answers the tick's own ask |
 | a mission player's meter (`meter.txt`, every mission) | (always) | the scripted player writes `player.visibility` before every tick |
 | the autosave's chronicle row (`hostwrites.txt chron_save`) | (always) | the save controller is the host's and writes one row into the game |
 | `game_follow_pos` for each seat after each tick | `follow` | the host's camera asks the game where to look; on a tutorial's sky seat the ask eases and stamps the view's centre (rails.ts look) |
 | a checkpoint PUT BACK (`hostwrites.txt chron_load`, the state in `L<k>.bin`) | (always) | the host's save controller replaces the whole game between two ticks; the runner takes the TypeScript's state as the next tick opens as a new start, and says so |
-| `light_set_update(dt)` after each tick | `lights` | the host retires flashes between ticks, and the next tick's light reads it |
 
 The Rust game writes a man's row of the block itself (`sim_men_store`), and the bridge carries the level's name, the dress table and the floats of a pose
 outside the pool: the runner hands none of those over.
@@ -253,9 +230,8 @@ outside the pool: the runner hands none of those over.
 
 Without a word both sides stand with every row of `DRESS` (src/game/dress.ts) down: the stand of a host that draws nothing. `--dress` raises all 18 rows
 on both sides from the first tick, as the page has them (`--dress-rows "moths,wind"` raises only those); the bridge carries the table, so the Rust tick
-reads the same rows. Every row CAN be raised on this stand. What its step then does with no GPU is less than in the page: there is no particle pool
-(`engine.particles` is made only for a recording that had one, tools/qa/headless.ts), no smoke solver and no renderer, so a step's particles, its
-pushes on the solver and its draws go nowhere and only what it writes into the game's own state is compared.
+reads the same rows. Every row CAN be raised on this stand. What its step then does with no GPU is less than in the page: there is no smoke solver and
+no renderer, so a step's particle records, its pushes on the solver and its draws go nowhere and only what it writes into the game's own state is compared.
 
 The rule the split follows: a dressing body that writes something the tick later reads runs IN THE RUST TICK under its row (the moths' and a broken
 fixture's keyed boxes, which the fog of war remembers; a man's drawn scale on his own boxes; the wind the moths read; the cues' and the net's books,

@@ -39,8 +39,6 @@ export const SPRINTDOOR = { on: false,
   lean: 0.45, leanSecs: 0.25,
   /** the face it opens toward: the share of the sprint he is checked to, for how long, the rad/s the leaf comes round at and how loud that is (a bash is 1) */
   ripPace: 0.3, ripSecs: 0.3, ripVel: 6, ripLevel: 0.55,
-  /** the face it opens toward, shut in its frame: a boot at the run takes it off its hinges (false = the handle, whatever the door) */
-  kick: true,
   /** how hard the boot throws the slab, 0‥1 of DOORBLAST.speed (a charge set on the leaf is 0.55) · the m/s INTO the leaf under which a run is no kick ·
    *  seconds into the one-second kick at which his legs are his own again (1 = the whole kick, as a kick at a locked door) */
   kickK: 0.25, kickInto: 2.5, kickFree: 0.8,

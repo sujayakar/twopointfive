@@ -1,6 +1,6 @@
 // GWOT-YARD: the GWOT kit's SHOWROOM (src/scene/gwotKit.ts) — NOT a level to play for its own sake and not in the missions list. A walled family compound with
 // a two-room guest house, a rendered store, a yard and the road outside, with EVERY piece of the kit stood in it once, so the kit can be exported, linted,
-// loaded and looked at (?levelFile=gwot-yard.json&solo). It is also the kit's worked example: a map thread reads this file next to the guide
+// looked at once. It has no file of its own now. It is the kit's worked example: a map thread reads this file next to the guide
 // (rebuild/play-style-levels/look/read-first.md) and copies the calls.
 //
 //        x 8  10             15.5        20                    32
@@ -23,7 +23,7 @@ import { BoxFlag } from '../../src/scene/boxes';
 import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'gwot-yard';
-export const NOTES = 'The GWOT kit\'s showroom: a walled compound with every piece of src/scene/gwotKit.ts in it once. Regenerate: bun run tools/levels/export.ts gwot-yard';
+export const NOTES = 'The GWOT kit\'s showroom: a walled compound with every piece of src/scene/gwotKit.ts in it once. It has no file: the library asks this generator';
 /** the kit's palette goes into the file's `materials` (tools/levels/export.ts) */
 export const MATERIALS = GWOT_MATERIALS;
 

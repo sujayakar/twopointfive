@@ -176,7 +176,8 @@ export const rescueClock = guarded(async () => {
 
 export const rescueOrders = guarded(async () => {
   const F = family('rescue-orders: F bangs and clears the hostage room (the door tools\' order, given for Sam); the order menu has the pair otherwise; the quiet start\'s two words');
-  { const T = await rig(11, { setSecs: 30 }); const R = T.R; T.secs(0.5); T.press('KeyF'); T.secs(46.5, () => R.state === 'secured' || !!R.result);
+  { const T = await rig(11, { setSecs: 30, roamers: 0, doorMan: 'inside' }); const R = T.R; T.secs(0.5); T.press('KeyF');   // (no man abroad: whether one meets the pair on their way to the door, and how that goes, is the dice's)
+ T.secs(46.5, () => R.state === 'secured' || !!R.result);
     F.verdict(T.at('order:bang') !== undefined && R.dynamic, 'one F on a hot start: the order itself starts the clock, so it is bang and clear in one word', R.log.slice(0, 4).map((l: any) => l.what).join(' '));
     F.verdict(T.order(['order:bang', 'stacked', 'kick', 'door-flung', 'toss', 'bang', 'enter1']) && T.game.doorTools.bangs === 2 && T.game.doorTools.log.some((l: any) => /^bangClear manager: ordered/.test(l.what)),
       'the door tools take them at the door (the order menu\'s own bang and clear, one can out of the squad\'s three): stack → boot → door → can → bang → entry, in order',

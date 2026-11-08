@@ -37,6 +37,9 @@ fn set_pin(c: &mut FollowCamera, p: Option<FollowCameraSetPinP>) -> Option<Follo
     c.pin
 }
 
+/// Hold the view (none: let it go). (camera.ts FollowCamera.setPin)
+pub fn follow_camera_set_pin(g: &mut Game, id: CameraId, p: Option<FollowCameraSetPinP>) -> Option<FollowCameraPin> { set_pin(&mut g.tab.camera[id], p) }
+
 /// A drawn frame and a tick's follow, together. (camera.ts FollowCamera.update)
 pub fn follow_camera_update(g: &mut Game, id: CameraId, dt: f64, follow: V3, aim_point: Option<V3>) {
     update(&mut g.tab.camera[id], dt, follow, aim_point)
@@ -237,12 +240,12 @@ pub fn follow_camera_rotate(g: &mut Game, id: CameraId, d_yaw: f64) {
 
 /// World point to CSS pixels of a w×h view, and whether it is showable. (camera.ts FollowCamera.project)
 pub fn follow_camera_project(g: &Game, id: CameraId, p: V3, w: f64, h: f64, margin: Option<f64>, min_w: Option<f64>) -> (f64, f64, bool) {
-    project(&g.tab.camera[id], p, w, h, margin, min_w)
+    project(&g.tab.camera[id].view_proj, p, w, h, margin, min_w)
 }
-fn project(c: &FollowCamera, p: V3, w: f64, h: f64, margin: Option<f64>, min_w: Option<f64>) -> (f64, f64, bool) {
+/// where a point of the world is in a picture `w` by `h`, and whether it is in front
+pub fn project(vp: &crate::v3::m4::Mat4, p: V3, w: f64, h: f64, margin: Option<f64>, min_w: Option<f64>) -> (f64, f64, bool) {
     let margin = margin.unwrap_or(f64::INFINITY);
     let min_w = min_w.unwrap_or(0.0);
-    let vp = &c.view_proj;
     let cw = vp[3] as f64 * p[0] + vp[7] as f64 * p[1] + vp[11] as f64 * p[2] + vp[15] as f64;
     let d = js::or(cw, 1.0);
     let nx = (vp[0] as f64 * p[0] + vp[4] as f64 * p[1] + vp[8] as f64 * p[2] + vp[12] as f64) / d;
@@ -257,22 +260,24 @@ fn project(c: &FollowCamera, p: V3, w: f64, h: f64, margin: Option<f64>, min_w: 
 
 /// World-space ray through a pixel in [0,1]² UV, origin top-left. (camera.ts FollowCamera.ray)
 pub fn follow_camera_ray(g: &Game, id: CameraId, u: f64, v: f64) -> FollowCameraRay {
-    ray(&g.tab.camera[id], u, v)
+    ray(&g.tab.camera[id].inv_view_proj, u, v)
 }
-fn ray(c: &FollowCamera, u: f64, v: f64) -> FollowCameraRay {
+/// the ray through a point of the picture (u, v from its top left)
+pub fn ray(inv_view_proj: &crate::v3::m4::Mat4, u: f64, v: f64) -> FollowCameraRay {
     let (ndc_x, ndc_y) = (u * 2.0 - 1.0, 1.0 - v * 2.0);
-    let p0 = v3::m4::transform_point(&c.inv_view_proj, [ndc_x, ndc_y, 0.0]);
-    let p1 = v3::m4::transform_point(&c.inv_view_proj, [ndc_x, ndc_y, 1.0]);
+    let p0 = v3::m4::transform_point(inv_view_proj, [ndc_x, ndc_y, 0.0]);
+    let p1 = v3::m4::transform_point(inv_view_proj, [ndc_x, ndc_y, 1.0]);
     FollowCameraRay { ro: p0, rd: v3::normalize(v3::sub(p1, p0)) }
 }
 
 /// A UV ray against the plane y = h. (camera.ts FollowCamera.groundPoint)
 pub fn follow_camera_ground_point(g: &Game, id: CameraId, u: f64, v: f64, h: Option<f64>) -> Option<V3> {
-    ground_point(&g.tab.camera[id], u, v, h)
+    ground_point(&g.tab.camera[id].inv_view_proj, u, v, h)
 }
-fn ground_point(c: &FollowCamera, u: f64, v: f64, h: Option<f64>) -> Option<V3> {
+/// that ray against the plane y = h
+pub fn ground_point(inv_view_proj: &crate::v3::m4::Mat4, u: f64, v: f64, h: Option<f64>) -> Option<V3> {
     let h = h.unwrap_or(0.0);
-    let FollowCameraRay { ro, rd } = ray(c, u, v);
+    let FollowCameraRay { ro, rd } = ray(inv_view_proj, u, v);
     if m::abs(rd[1]) < 1e-5 {
         return None;
     }
@@ -362,19 +367,19 @@ mod tests {
         same(&c.forward, &FORWARD); same(&c.pos, &POS);
         same32(&c.view, &VIEW); same32(&c.proj, &PROJ); same32(&c.view_proj, &VP); same32(&c.inv_view_proj, &IVP);
 
-        let r = project(&c, [4.0, 1.0, -6.0], 1280.0, 720.0, None, None);
+        let r = project(&c.view_proj, [4.0, 1.0, -6.0], 1280.0, 720.0, None, None);
         same(&[r.0, r.1], &P1); assert_eq!(r.2, P1_F);
-        let r = project(&c, [4.0, 1.0, -6.0], 1280.0, 720.0, Some(0.01), Some(1e-3));
+        let r = project(&c.view_proj, [4.0, 1.0, -6.0], 1280.0, 720.0, Some(0.01), Some(1e-3));
         same(&[r.0, r.1], &P2); assert_eq!(r.2, P2_F);
         let behind = [c.pos[0] - c.forward[0] * 3.0, c.pos[1] - c.forward[1] * 3.0, c.pos[2] - c.forward[2] * 3.0];
-        let r = project(&c, behind, 1280.0, 720.0, None, None);
+        let r = project(&c.view_proj, behind, 1280.0, 720.0, None, None);
         same(&[r.0, r.1], &P3); assert_eq!(r.2, P3_F);
 
-        let r = ray(&c, 0.3, 0.6);
+        let r = ray(&c.inv_view_proj, 0.3, 0.6);
         same(&r.ro, &RO); same(&r.rd, &RD);
-        same(&ground_point(&c, 0.3, 0.6, Some(0.9)).unwrap(), &GP);
-        same(&ground_point(&c, 0.3, 0.6, None).unwrap(), &GP0);
-        assert_eq!(ground_point(&c, 0.3, 0.6, Some(100.0)).is_none(), GP_ABOVE_NONE);
+        same(&ground_point(&c.inv_view_proj, 0.3, 0.6, Some(0.9)).unwrap(), &GP);
+        same(&ground_point(&c.inv_view_proj, 0.3, 0.6, None).unwrap(), &GP0);
+        assert_eq!(ground_point(&c.inv_view_proj, 0.3, 0.6, Some(100.0)).is_none(), GP_ABOVE_NONE);
         let b = planar_basis(&c);
         same(&b.fwd, &FWD); same(&b.right, &RIGHT);
 

@@ -116,12 +116,12 @@ async function gunBeside() {
 }
 
 async function gunBand() {
-  console.log('\n=== gun-band: carried to the wall and back two millimetres at a time — down once, up once, and up further out than down ===');
-  const W = await stage(35, true), gd = manAt(W, 'operative', 'fn2000', 2.6);
+  console.log('\n=== gun-band: carried across the band and back two millimetres at a time — down once, up once, and up further out than down ===');
+  const BAND0 = NEAR - 0.88, BAND1 = NEAR - 0.58, W = await stage(35, true), gd = manAt(W, 'operative', 'fn2000', BAND0);
   let downs = 0, ups = 0, downAt = 0, upAt = 0, was = false;
   const go = (z: number) => { gd.char.pos[2] = z; gd.script.goal = [X, 0, z]; for (let i = 0; i < 6; i++) W.step(DT); const low = gd.muzzleDown; if (low && !was) { downs++; downAt = NEAR - z; } if (!low && was) { ups++; upAt = NEAR - z; } was = low; };
-  for (let z = 2.6; z <= PRESS + 1e-9; z += 0.002) go(z);   // (2 mm a step, six frames a step: the rule leads by his feet's own speed, and this is a crawl)
-  for (let z = PRESS; z >= 2.6 - 1e-9; z -= 0.002) go(z);
+  for (let z = BAND0; z <= BAND1 + 1e-9; z += 0.002) go(z);   // (2 mm a step, six frames a step, across the band and no further: the rule leads by his feet's own speed, and this is a crawl)
+  for (let z = BAND1; z >= BAND0 - 1e-9; z -= 0.002) go(z);
   verdict(downs === 1 && ups === 1 && upAt > downAt + 0.03, 'the gun went down once on the way in and came up once on the way out, further from the wall than it went down', `down at ${f2(downAt)} m off the face (${downs}×) · up at ${f2(upAt)} m (${ups}×)`);
 }
 
@@ -136,7 +136,7 @@ async function gunLock() {
 
 async function gunHot() {
   console.log('\n=== gun-hot: a man in his sights — the gun is down only while it IS in the wall, not for the room a calm man keeps ===');
-  const W = await stage(37, true), g = W.game, gd = manAt(W, 'operative', 'fn2000', NEAR - 0.5);
+  const W = await stage(37, true), g = W.game, gd = manAt(W, 'guard', 'aks74u', NEAR - 0.5);   // (a defender: the room fight restores any `over` of an operative's as its own)
   const put = (off: number, n: number) => { gd.char.pos[2] = NEAR - off; gd.script.goal = [X, 0, NEAR - off]; for (let i = 0; i < n; i++) W.step(DT); };
   put(0.7, 30); const calm = gd.muzzleDown;   // back out, inside the band: a calm man keeps it down
   gd.script.over = { aimAt: [X, 1.35, 12], face: null }; put(0.7, 60); const hotUp = !gd.muzzleDown && gd.char.anim.upper === 'aim' && !gunThrough(g.col, gd.char), short = NEAR - gd.char.muzzle[2];

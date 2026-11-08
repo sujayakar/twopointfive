@@ -9,8 +9,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// `s.view` handed to `f`. A game of one seat has no view: its seat's view IS the Game (seats.ts seatsStand).
 fn in_seat<R>(g: &mut Game, s: SeatId, mut f: impl FnMut(&mut Game) -> R) -> R {
-    if g.seats.len() == 1 { return f(g); }
-    crate::seats::with_seat(g, s, &mut f)
+    crate::seats::on_seat(g, Some(s), &mut f)
 }
 
 /// the character of a seat's man
@@ -28,11 +27,33 @@ fn bone_or(g: &Game, c: CharId, b: crate::character::Bone, up: f64) -> V3 {
 pub fn game_step_seats(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::PlayerCmd]) {
     let n = g.seats.len();
     if cmds.len() != n { panic!("stepSeats: {} record(s) for {} seat(s)", cmds.len(), n); }
+    // (the kit picture's stage, where one is up, has the hand before the tick and what it left after it)
+    if g.kit_stage.is_some() {
+        let mut held = cmds.to_vec();
+        crate::kitstage::before(g, &mut held[0]);
+        step_listed(g, dt, &held);
+        crate::kitstage::after(g);
+        return;
+    }
+    step_listed(g, dt, cmds);
+}
+fn step_listed(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::PlayerCmd]) {
+    let n = g.seats.len();
     // (inside a tick the Game's own fields of a seat's name answer the FIRST seat's, whoever this host shows: seats.ts seatsStand)
     // (bare: no seat's view is open while the world's own lines run)
     // (the verdict's tick comes last, with the first seat still standing, so the end it latches is the same on every machine: verdict.ts tick)
-    if n == 1 { step_seats_on_first(g, dt, cmds); crate::verdict::verdict_tick(g); return; }
-    crate::seats::on_first_bare(g, &mut |g| { step_seats_on_first(g, dt, cmds); crate::verdict::verdict_tick(g); });
+    // (the tick opens by listing the box world, on every host at the same moment: this tick's rays meet the last tick's boxes and whatever was written since, and
+    // the rows of the frames gone by are free again, after whoever showed the last frame has read it)
+    crate::scene_boxes::box_world_listed(g);
+    if n == 1 { step_seats_on_first(g, dt, cmds); crate::verdict::verdict_tick(g); game_tick_end(g, dt); return; }
+    crate::seats::on_first_bare(g, &mut |g| { step_seats_on_first(g, dt, cmds); crate::verdict::verdict_tick(g); game_tick_end(g, dt); });
+}
+
+/// THE TICK'S LAST LINE: every flash's envelope for the frame, and its retirement. The next tick's light reads what it leaves, so it is a rule's state and the tick steps it, on every host at
+/// the same moment, with no host's call round it.
+fn game_tick_end(g: &mut crate::game::Game, dt: f64) {
+    let now = g.time;
+    crate::render_lights::light_set_update(g, dt, now);
 }
 
 /// The tick's lines, with the first seat on Game.   (game.ts stepSeats)
@@ -46,8 +67,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     // (game.ts:1591 `this.sim.settle(this)`: the die's move is use_dice below; the pool's tenant tends it: a man who left the lists is out of it, one who
     //  arrived is in)
     crate::posehome::pose_home_tend(g);
-    // (…and the smoke grid's tenant, sense.ts:172: under SENSE.cpu and SENSE.grid the grid comes, empty, as a tick opens, and goes when either is put down)
-    crate::sense::settle_grid(g);
+    crate::sense::smoke_home(g);
     crate::rustknobs::knobs_to_rust(g);
     g.m.rustknobs.rust_knobs.tick = true;
     // a record from anyone made one an honest seat could have sent, before anything reads it
@@ -61,7 +81,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     }
     crate::math_dice::use_dice(g);
     crate::quiet::quiet_mission_current(g);
-    crate::game::game_sense_step(g, dt);
+    crate::sense::smoke_step(g, dt);
     for i in 0..n { crate::cmd::seat_load(g, seats[i], &checked[i]); }
     let (input, cam) = (g.tab.cmd_seat[seats[0]].input, g.tab.cmd_seat[seats[0]].cam);   // (what a ONE-PLAYER part of the tick reads is the first seat's)
     crate::rails::rails_gate(g, input, cam, dt);
@@ -89,6 +109,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
             crate::doortools::door_tools_big_key(g, input);
             if crate::squadthrow::squad_throw_key(g, input) { let pl = g.player; g.pl[pl].throw_eaten = true; }
             crate::orders::rows::frame(g);
+            crate::orders::shown::keep(g, input, cam, canvas);
             crate::interact::update_interact(g, dt, input, Some(canvas), Some(cam));
             crate::aim::track_player(g, dt);
             crate::game::game_threat_tick(g);
@@ -108,7 +129,10 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     g.search_probe_n = 0.0;
     crate::game::game_deal_weapons(g, Some(dt));
     crate::director::director_tick(g, dt, None, None);
-    crate::pairorders::pair_orders_input(g, input);
+    for &s in &seats {
+        let input = g.tab.cmd_seat[s].input;
+        in_seat(g, s, |g| crate::pairorders::pair_orders_input(g, input));
+    }
     for &s in &seats {
         let input = g.tab.cmd_seat[s].input;
         in_seat(g, s, |g| {
@@ -129,7 +153,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     crate::cover::cover_tick(g);
     for &s in &seats { in_seat(g, s, |g| crate::silent::silent_tick(g)); }
     crate::pairorders::pair_orders_tick(g, dt);
-    crate::spotted::spotted_tick(g);
+    for &s in &seats { in_seat(g, s, |g| crate::spotted::spotted_tick(g)); }
     for &s in &seats { in_seat(g, s, |g| crate::orders::squad_orders_tick(g)); }
     crate::doorpath::door_path_tick(g, dt);
     crate::powerout::power_out_tick(g, dt);
@@ -154,11 +178,10 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     let mut i = 0;
     while i < g.guards.len() {
         let gd = g.guards[i];
-        if n == 1 { crate::guards::update_guard(g, gd, dt); } else { let v = crate::seats::view_for(g, gd); crate::seats::with_seat(g, v, &mut |g| crate::guards::update_guard(g, gd, dt)); }
+        crate::seats::standing_for(g, gd, &mut |g| crate::guards::update_guard(g, gd, dt));
         i += 1;
     }
     crate::picture::picture_tick(g, dt);
-    crate::doorpath::door_path_after(g);
     crate::doorforce::door_force_tick(g, dt);
     crate::coverfire::coverfire_tick(g, dt);
     crate::civilians::update_civilians(g, dt);
@@ -171,8 +194,6 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     crate::par::par_tick(g);   // (right after the mission's update: this tick's orders and the room clear's end are in)
     crate::lesson::lesson_tick(g, dt);
     crate::rails::rails_tick(g, dt);
-    crate::snatch::snatch_tick(g, dt);
-    crate::defuse::defuse_tick(g, dt);
     crate::game::game_update_props(g, dt);
     crate::destruction::destruction_update(g, dt);
     crate::air_dust::air_dust_update(g, dt);
@@ -199,7 +220,6 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     crate::glassbreak::glass_break_update(g, dt);
     crate::shards::glass_shards_update(g, dt);
     crate::fogofwar::fog_of_war_update(g, dt);
-    if g.m.dress.dress.fires { crate::fire::fire_draws(g); }   // (game.ts:1709: the fires' draws again behind the fog's turn; the Rust body makes only its asks of the wind)
     // characters: the seats' men, the guards, civilians last
     let mut all: Vec<CharId> = Vec::new();
     for &s in &seats { let c = man_char(g, s); all.push(c); }
@@ -210,6 +230,8 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     crate::game::game_draw_characters(g, &all, statured);
     crate::smokebreak::update_smoke_break(g, dt);
     crate::game::game_light_meter(g, dt);
+    // (every seat's list of things its men can work, before anybody's orders are read: what a point or a cursor is on is asked of it, inside a tick and between two)
+    for &s in &seats { in_seat(g, s, |g| crate::workthings::work_things_keep(g)); }
     for &s in &seats {
         let pl = crate::cmd::seat_man(g, s);
         g.pl[pl].hit_flash = m::max(0.0, g.pl[pl].hit_flash - dt * 3.0);
@@ -221,6 +243,8 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     if g.m.dress.dress.cues { crate::cues::cues_tick(g); }
     crate::teamtally::team_tally_tick(g);
     crate::deathrecap::recap_tick(g);   // (last: it reads the frame as it ended, and moves nothing a rule reads)
+    crate::render_decals::marks_settle(g);   // (the marks' arms ask the world as the tick left it)
+    crate::rails::rails_ease_mid(g);
     g.ticking = false;
     crate::scene_collision::tick_shut(g);
     g.m.rustknobs.rust_knobs.tick = false;   // (game.ts:1727, the finally)
@@ -366,7 +390,7 @@ pub fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
         }
         // (MOVES.on, page 1)
         let dip = g.k.moves.entry > 0.5 && cb && !show && g.gd[gd].held.is_none() && !dead && team == Team::Operative
-            && !crate::roomfight::room_fight_busy(g, gd, 1.5) && !crate::roomfight::room_fight_contact(g, gd) && crate::game::friend_before_muzzle(g, &crate::seats::here(g), gd);
+            && !crate::roomfight::room_fight_busy(g, gd, 1.5) && !crate::roomfight::room_fight_contact(g, gd) && crate::game::friend_before_muzzle(g, gd);
         g.ch[c].anim.dip = if dip { 1.0 } else { 0.0 };
         if !dead && now < g.gd[gd].dazzled_until {
             // (trap: the TypeScript's `from` may be his own position array, which follows him; here it is this moment's copy: notes.md)
@@ -422,7 +446,7 @@ pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt:
         while i > 0 { i -= 1; out.push(g.fx[i].box_.into()); g.fx[i].ttl -= dt; if g.fx[i].ttl <= 0.0 { let gone = g.fx.remove(i); crate::scene_boxes::box_let_go(g, gone.box_); } }
     } else { for gone in core::mem::take(&mut g.fx) { crate::scene_boxes::box_let_go(g, gone.box_); } }
     // (A ROW OF `g.fx` IS THE ONLY HOLDER OF ITS BOX: the TypeScript drops the object with the row. Here the box is a row of the table, so as the fx row
-    //  goes its box joins the frame's rows, and the host's next listing frees it once it is on no list: boxes_frame_reset. Most fx rows live one frame
+    //  goes its box joins the frame's rows, and the next listing frees it once it is on no list: box_world_listed. Most fx rows live one frame
     //  (a charge's slab being placed, a stack's marker), so without this every such frame left a row for good.)
     // (game.ts:1818: his rig and a can in his fist are drawn where his drawn hands are: Box.dc / dh; the boxes themselves stay the simulation's)
     if statured { crate::stature::drawn_boxes(g, all, &out, rig0 as f64); }
@@ -432,7 +456,7 @@ pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt:
     crate::sparks::sparks_update(g, dt);
     crate::sparks::sparks_boxes(g, &mut out);
     // (game.ts:1822: spent cases heard landing when they are due: the list is the tick's own (a shot adds to it), so the step that empties it is here too)
-    if g.m.dress.dress.cases { crate::particle_fx::update_particle_fx(g); }
+    crate::particle_fx::update_particle_fx(g);
     for &s in seats.iter() { in_seat(g, s, |g| crate::blast_look::blast_look_tick(g, &mut out)); }
     // (game.ts:1824: the feel of a wall charge going off; what of it is the tick's is blast_feel's own head)
     if g.m.dress.dress.blast_feel { for &s in seats.iter() { let cam = g.tab.cmd_seat[s].cam; in_seat(g, s, |g| crate::blast_feel::blast_feel_tick(g, cam)); } }

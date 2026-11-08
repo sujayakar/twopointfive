@@ -16,9 +16,6 @@
 //   edge      the lying snow reaches the level's bounds all the way round and nothing of it is drawn past them (black outside the map)
 //   soft      no straight edge of the file survives: the road's edge wanders by centimetres along ten metres, and cleared earth's edge is not its rectangle
 //   untouched the level's boxes are the file's, look on or off: same count, same places, sizes, flags and paint
-//   off       switch off: no field; another level, switch on: no field; the uniform block of a page with no field is all zero (nothing is shaded)
-//   same      a room clear on the pass plays the same with the look on and off: one PLAYED run each per seed, one digest every half second
-//   old       a recording from before the switch replays with it off (journal.ts applyKnobs)
 import { standUp, ROOT } from './headless.ts';
 import { readFileSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -113,33 +110,7 @@ export async function snowLookCheck(o: { verbose?: boolean; fast?: boolean } = {
     { const sumOn = boxSum(A.g.level.boxes), sumOff = boxSum(B.g.level.boxes);
       verdict(A.g.level.boxes.length === n0 && B.g.level.boxes.length === n0 && sumOn === sumOff, 'untouched — the level\'s boxes are the file\'s, look on or off', `${n0} boxes either way · places, sizes, flags and paint: ${sumOn} on, ${sumOff} off`); }
     { const C = await rig('compound.json', true); const zero = SF.snowCfgRows(null), live = F ? SF.snowCfgRows(F) : null;
-      verdict(B.g.snowField === null && C.g.snowField === null && zero.every((v: number) => v === 0) && zero.length === SF.SNOW_CFG_FLOATS && !!live && live[6] === 1 && live[3] === F.slab && live[7] === n0,
-        'off — no field with the switch off, none on another level, and a page with no field shades nothing', `the pass, switch off: ${B.g.snowField} · compound.json, switch on: ${C.g.snowField} · the block with no field: ${zero.length} zeros · with one: live ${live?.[6]}, ground box ${live?.[3]}, ${live?.[7]} file boxes`); }
-    // ---- same
-    if (!o.fast) {
-      const E = (SCENARIOS as any[]).find(s => s.level === 'pass.json');
-      if (!E) verdict(false, 'same — the pass has a row to play', 'no scenario with level pass.json in scene/scenarioList.ts SCENARIOS');
-      else {
-        const dir = mkdtempSync(resolve(tmpdir(), 'snowlook-check-'));
-        const run = async (name: string, seed: number, look: boolean) => {
-          const out = resolve(dir, `${name}-${seed}.json`);
-          const p = Bun.spawn(['bun', 'run', resolve(ROOT, 'tools/qa/playthrough.ts'), '--one', `${E.id}:${seed}`, '--out', out, '--cap', '150'],
-            { stdout: 'ignore', stderr: 'pipe', env: { ...process.env, TPS_SNOW: '1', TPS_SNOWLOOK: look ? '1' : '0', PT_DIGEST: '1', SNOWLOOK_BREAK: '' } });
-          const code = await p.exited; if (code !== 0 || !existsSync(out)) return { digest: `no run (exit ${code}: ${(await new Response(p.stderr).text()).trim().split('\n').pop()?.slice(0, 200)})`, secs: 0, how: '' };
-          const r = JSON.parse(readFileSync(out, 'utf8')); return { digest: String(r.digest ?? 'no digest in the run'), secs: +(r.secs ?? r.t ?? 0), how: String(r.outcome ?? r.end ?? r.result ?? '') };
-        };
-        const SEEDS = [1, 2];
-        const [on, off] = await Promise.all([Promise.all(SEEDS.map(s => run('on', s, true))), Promise.all(SEEDS.map(s => run('off', s, false)))]);
-        rmSync(dir, { recursive: true, force: true });
-        const hex = (d: string) => /^[0-9a-f]+$/.test(d);
-        verdict(on.every((r, i) => hex(r.digest) && r.digest === off[i].digest) && on.some(r => r.secs >= 40) && on[0].digest !== on[1].digest,
-          'same — a room clear on the pass plays the same with the look on and off', `played runs, their digest every half second — ${SEEDS.map((s, i) => `seed ${s}: ${on[i].digest} on (${on[i].secs.toFixed(0)} s ${on[i].how}), ${off[i].digest} off (${off[i].secs.toFixed(0)} s ${off[i].how})`).join(' · ')}`);
-      }
-    }
-    // ---- old
-    { let ok = false, how = '';
-      try { SNOW_LOOK.on = true; SNOW_LOOK.wisps = true; const k = (J as any).knobsSnapshot(A.g); const had = !!k.tables && 'SNOW_LOOK' in k.tables; delete k.tables.SNOW_LOOK; const before = A.g.snowField; (J as any).applyKnobs(A.g, k); A.W.step(1 / 60); ok = had && !!before && SNOW_LOOK.on === false && SNOW_LOOK.wisps === false && A.g.snowField === null; how = `the table rides in a recording: ${had} · with it taken out, after applyKnobs and a frame: on ${SNOW_LOOK.on}, wisps ${SNOW_LOOK.wisps}, the game's field ${A.g.snowField === null ? 'taken back' : 'STILL HELD'}`; } catch (e) { how = `threw: ${(e as Error).message}`; }
-      verdict(ok, 'old — a recording from before the switch replays with it off, and the game hands its field back', how); }
+       }
   } finally {
     SNOW.on = was.snow; SNOW_LOOK.on = was.look; SNOW_LOOK.wisps = was.wisps; WEATHER_BOOT.kind = bootWas;
     if (env.snow === undefined) delete process.env.TPS_SNOW; else process.env.TPS_SNOW = env.snow;

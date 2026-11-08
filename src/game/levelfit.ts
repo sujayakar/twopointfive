@@ -41,7 +41,7 @@ import { BODY_DOOR_PARTICLES } from './game';
 import { WALLS } from './wallbreak';
 
 /** MEN A GAME HOLDS AT ONCE, AT MOST: the first seat's man and the guards and units (guards.ts spawnUnit refuses one more than MAX_SKINNED of those, the
- *  picture's own budget, whoever asks), its `civilians` (the level's own night people, a rescue's hostages, the man a snatch is for: each joins the game
+ *  picture's own budget, whoever asks), its `civilians` (the level's own night people, a rescue's hostages: each joins the game
  *  in one place, which holds them to `civMost`) and every other seat's man */
 export const menMost = (civilians: number): number => MAX_SKINNED + civilians + SEATS.max - 1;
 /** MEN ONE STEP CAN BE HANDED: the doors' hand-over in contacts, by the contacts one man is at most (`handOverMost`), and the furniture's in men. Infinity
@@ -50,7 +50,7 @@ export const menHeld = (): number => simWhyNot() ? Infinity : Math.min(Math.floo
 /** CIVILIANS A GAME HOLDS AT ONCE, AT MOST: what a step's hand-over leaves after every other man a game may hold. civilians.ts `join`, the one place a
  *  civilian comes into a game, refuses one more — so the arithmetic holds whoever adds a civilian, and when. */
 export const civMost = (): number => menHeld() - menMost(0);
-/** WHAT ONE STEP IS HANDED OF THEM, AT MOST. At the doors a man is one contact, two while he lies wounded, and — his body near a doorway — a few of his
+/** WHAT ONE STEP IS HANDED OF THEM, AT MOST. At the doors a man is one contact, and — his body near a doorway — a few of his
  *  ragdoll's particles (game.ts BODY_DOOR_PARTICLES): never more than those and his own. At the furniture a man is one. */
 export const handOverMost = (civilians: number): { doorMen: number; propMen: number } => ({ doorMen: menMost(civilians) * (BODY_DOOR_PARTICLES.length + 1), propMen: menMost(civilians) });
 import { LIGHT_CAPS } from '../sim/lightshome';
@@ -145,7 +145,7 @@ export function fitRows(g: Stood, tables: Readonly<Record<string, number>>): Fit
     { row: 'men', what: 'a man a seat and the guards as the level is stood up (what guards.ts spawnUnit counts against the picture\'s budget of characters)', has: (g.seats?.length ?? 1) + (g.guards?.length ?? 0), cap: MAX_SKINNED, table: null },
     { row: 'manrows', what: 'rows of the men\'s columns against every man a game can hold (menMost: at most what a step\'s hand-over holds, by civMost; a man who has left keeps no row)', has: menMost(civs), cap: MEN_ROWS, table: null },
     { row: 'poses', what: 'singles of the pool the men\'s poses stand in, against every man a game can hold (menMost with civMost), each with every pose an animator can make', has: held ? menMost(civMost()) * manSingles(g) : 0, cap: held ? posePoolRoom() : Infinity, table: null },
-    { row: 'civilians', what: 'civilians: the level\'s own, or those in the game as it stands (a rescue\'s hostages and the man a snatch is for join in play; civilians.ts join holds every one to this number as he joins)', has: civs, cap: civMost(), table: null },
+    { row: 'civilians', what: 'civilians: the level\'s own, or those in the game as it stands (a rescue\'s hostages join in play; civilians.ts join holds every one to this number as he joins)', has: civs, cap: civMost(), table: null },
     { row: 'doormen', what: 'contacts one step of the doors is handed at most (every man a game holds: himself, and his body\'s particles near a doorway)', has: most.doorMen, cap: dio?.maxContacts ?? Infinity, table: null },
     { row: 'propmen', what: 'men one step of the furniture is handed at most', has: most.propMen, cap: pio?.maxContacts ?? Infinity, table: null },
     { row: 'frames', what: 'door frames one step of the furniture is handed (a frame a door)', has: L.doors, cap: pio?.maxWays ?? Infinity, table: null },

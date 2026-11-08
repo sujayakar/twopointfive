@@ -10,7 +10,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // THE BOX TABLES' MAKERS. Invented by the skeleton, so they have no TypeScript line: written here. A box of the world is a row of `g.tab.boxes` and is never
 // dealt again, so its number is the same on every host. A box of the frame, or one its maker keeps a while, is a row of `g.tab.frame_boxes`: a row is freed by
-// the host's listing, so its number says how often that host has listed.
+// the tick's own listing, not by a host's drawing, but a freed row is dealt again: it names a box only while its holder holds it.
 
 /// WHAT THE PICTURE'S TABLE (`WORLD.max_boxes`) KEEPS FOR THE FRAME'S OWN BOXES: the men, the props, what is in flight. A level's walls and what is shed of them
 /// stay out of it. It is a number of the game and not a count of this frame's list, so that what the game makes of a broken wall is the same on every host.
@@ -24,13 +24,16 @@ pub fn box_frame(g: &mut Game, b: crate::scene_boxes::Box) -> FrameBoxId {
     g.box_frame_rows.push(id);
     id
 }
-/// THE ROWS OF FRAMES GONE BY ARE FREE AGAIN. Two lists hold a frame box's ID: the frame's own (`g.dyn_boxes`, made again every tick) and the engine's
-/// (`g.engine.world`, made again when the host lists the box world, which a headless host does every few frames). So this is called by the host's listing,
-/// straight after it: a row is freed when it is not one of the frame that was just listed. A host that never lists keeps every row.
-pub fn boxes_frame_reset(g: &mut Game) {
+/// THE BOX WORLD LISTED AS A TICK OPENS, AND THE ROWS OF THE FRAMES GONE BY FREE AGAIN. Two lists hold a frame box's ID: the frame's own (`g.dyn_boxes`, made
+/// again every tick) and the engine's (`g.engine.world`, made again here). A row is freed when it is not one of the frame that was just listed.
+pub fn box_world_listed(g: &mut Game) {
+    crate::scene_boxes::box_world_list(g);
+    boxes_frame_reset(g);
+}
+fn boxes_frame_reset(g: &mut Game) {
     let rows = core::mem::take(&mut g.box_frame_rows);
     let mut live = vec![false; g.tab.frame_boxes.len()];
-    for b in g.dyn_boxes.iter() { if let AnyBoxId::Frame(f) = *b { live[f.ix()] = true; } }
+    for b in g.dyn_boxes.iter().chain(g.engine.world.dynamics.iter()) { if let AnyBoxId::Frame(f) = *b { live[f.ix()] = true; } }
     for id in rows {
         if live[id.ix()] { g.box_frame_rows.push(id); continue; }
         // (what a maker noted beside the box that stood in this row, a thin line's width or an infrared mark, goes with the box)
@@ -46,7 +49,7 @@ pub fn box_kept(g: &mut Game, b: crate::scene_boxes::Box) -> FrameBoxId {
     match g.box_frame_free.pop() { Some(id) => { g.tab.frame_boxes[id] = b; id } None => g.tab.frame_boxes.push(b) }
 }
 /// The holder of a kept box has dropped it (the TypeScript drops the object). The frame's list or the engine's may still name it, so it is not free at
-/// once: it joins the frame's rows, and the host's next listing frees it once it is on no list (`boxes_frame_reset`).
+/// once: it joins the frame's rows, and the next listing frees it once it is on no list (`box_world_listed`).
 pub fn box_let_go(g: &mut Game, id: FrameBoxId) { g.box_frame_rows.push(id); }
 
 /// makeBox for a box pushed straight onto the frame's list: a row for this frame (boxes.ts makeBox, where its caller keeps nothing of it)

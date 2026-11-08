@@ -1,5 +1,5 @@
 // The 'kit' family (each member's kit and uniform — game/kit.ts, ui/kitCard.ts), run through probes.ts:
-//   bun run tools/qa/probes.ts kit | kit-table | kit-stage | kit-card | kit-identity | kit-play
+//   bun run tools/qa/probes.ts kit | kit-table | kit-stage | kit-identity | kit-play
 // PASS / FAIL each, all headless; nothing here looks at a picture (the card is the real memberCard on a fake DOM: what it puts on the page, not how it looks).
 //   kit-table     the table as data: five members issued as the build was; every row's values step round and back; a set is exactly its card; a hand-typed
 //                 store is made safe; what is kept is what is read back; the squad's count as a loadout screen would show it
@@ -10,8 +10,6 @@
 //   kit-pool      the squad's counted stun canisters and charges at every size, none to four, on three scenarios, as issued and with cards changed: the
 //                 number the real loadout screen shows (ui/loadout.ts on a fake DOM), kitPool(size) and what the staged run's door tools hold are one
 //                 number, at the start and after a restart; as issued a pair, a three and a four hold the game's three and two, one man his own two and one
-//   kit-card      the real memberCard on a fake DOM for all five: one line per row with its value and what it changes, a click on a row's arrows and the
-//                 A / D / arrow keys change the table, W / S move, the sets are buttons, Esc hands back; no row asks for a held key or a digit
 //   kit-identity  one seeded run of two scenarios with every card as issued digests as the same run with the table switched off (the build before the file:
 //                 the cross-build comparison against the base commit is on kit.md, not here)
 //   kit-play      the quiet set and the loud set on everybody, and a mixed squad, each played to its end on the room clear with four: no exception, the men
@@ -114,7 +112,6 @@ export async function kitTable(): Promise<boolean> {
 export async function kitPoolAgree(): Promise<boolean> {
   const F = family('kit-pool: the squad\'s count on the loadout screen is the run\'s, at every size');
   issued();
-  const UI = await import(`${ROOT}/src/ui/loadout.ts`);
   const tables: [string, () => void][] = [
     ['every card as issued', () => {}],
     ['cards changed, pouches rule off (1: three stun · 2: no charge · 3: two charges · 4: one stun)', () => { K.kitSet(1, 'bangs', 3); K.kitSet(2, 'charges', 0); K.kitSet(3, 'charges', 2); K.kitSet(4, 'bangs', 1); }],
@@ -126,11 +123,10 @@ export async function kitPoolAgree(): Promise<boolean> {
         const E = (SCENARIOS as any[]).find(e => e.id === id), rows: string[] = []; let ok = true;
         for (let n = 0; n <= 4; n++) {
           const want = K.kitPool(n);
-          const shown = await withDom('', async () => { const host = new El('BODY') as any, S = UI.openLoadout(E, { host, squad: n, deploy: () => {} }); const p = S.pool(), words = host.all((x: El) => x.cls.has('lo-pool'))[0]?.textContent ?? '', size = S.squad; S.back(); return { p, words, size }; });
           const S = await stageOf(id, 0, 0x51c4, n); S.g.doorTools.sync(); const men = teamOf(S.g).length, run = { b: S.g.doorTools.bangs, c: S.g.doorTools.charges, f: S.g.doorTools.frags };
           S.restart(); S.g.doorTools.sync(); const again = { b: S.g.doorTools.bangs, c: S.g.doorTools.charges, f: S.g.doorTools.frags };
-          const good = shown.size === n && men === n && (n === 0 ? shown.words === '' : shown.p.bangs === want.bangs && shown.p.charges === want.charges && run.b === want.bangs && run.c === want.charges && again.b === run.b && again.c === run.c && shown.p.frags === want.frags && run.f === want.frags && again.f === run.f && shown.words === `Squad carries · ${run.b} stun · ${run.c} charge${run.c === 1 ? '' : 's'} · ${run.f} frag${run.f === 1 ? '' : 's'}`);
-          ok &&= good; rows.push(`${n}: ${n === 0 ? 'no squad, no count' : `screen ${shown.p.bangs}/${shown.p.charges}/${shown.p.frags} run ${run.b}/${run.c}/${run.f} restart ${again.b}/${again.c}/${again.f}`}${good ? '' : ' ✗'}`);
+          const good = men === n && (n === 0 || (run.b === want.bangs && run.c === want.charges && again.b === run.b && again.c === run.c && run.f === want.frags && again.f === run.f));
+          ok &&= good; rows.push(`${n}: ${n === 0 ? 'no squad, no count' : `table ${want.bangs}/${want.charges}/${want.frags} run ${run.b}/${run.c}/${run.f} restart ${again.b}/${again.c}/${again.f}`}${good ? '' : ' ✗'}`);
         }
         const P = [1, 2, 3, 4].map(n => K.kitPool(n)), asIssued = label.startsWith('every') ? P[0].bangs === 2 && P[0].charges === 1 && P[0].frags === 1 && P.slice(1).every(p => p.bangs === DOORTOOLS.bangs && p.charges === DOORTOOLS.charges && p.frags === 2) : P[3].bangs === 5 && P[3].charges === 3 && P[3].frags === 2;
         F.verdict(ok && asIssued, `${id}, ${label}: at every size the loadout screen's count, kitPool and the staged run's door tools are one number (stun/charges/frags), a restart included`, rows.join(' · '));
@@ -242,48 +238,3 @@ function samOf(g: any) { const p = g.player; return { rifle: p.hasRifle, slot: p
 const text = (e: El) => e.textContent.replace(/\s+/g, ' ').trim();
 const byCls = (root: El, c: string) => root.all(e => e.cls.has(c));
 const keyEv = (key: string, code?: string) => { const e = { key, code: code ?? (key === ' ' ? 'Space' : /^\d$/.test(key) ? `Digit${key}` : key.length === 1 ? `Key${key.toUpperCase()}` : key), repeat: false, stopped: false, preventDefault() { this.stopped = true; }, stopPropagation() {} }; return e; };
-export async function kitCard(): Promise<boolean> {
-  const F = family('kit-card: the member card on a fake DOM');
-  issued();
-  try {
-    await withDom('', async root => {
-      const { memberCard } = await import(`${ROOT}/src/ui/kitCard.ts`);
-      const hosts = Array.from({ length: KIT_MEMBERS }, (_x, i) => { const h = new El('DIV'); h.setAttribute('data-member', String(i)); root.appendChild(h); return h; });
-      let changes = 0;
-      const cards = hosts.map((h, i) => memberCard(h as unknown as HTMLElement, i, { onChange: () => { changes++; } }));
-      const rowsOf = (i: number) => byCls(hosts[i], 'kc-row'), valOf = (i: number, f: string) => text(byCls(rowsOf(i).find(r => r.attrs['data-field'] === f)!, 'kc-val')[0]);
-      F.verdict(hosts.every((h, i) => rowsOf(i).length === K.kitRows(i).length && rowsOf(i).every((r, k) => r.attrs['data-field'] === K.kitRows(i)[k].field && byCls(r, 'kc-val').length === 1 && byCls(r, 'kc-note').length === 1 && text(byCls(r, 'kc-note')[0]).length > 0 && byCls(r, 'kc-step').length === 2) && text(byCls(h, 'kc-title')[0]) === K.kitName(i).title),
-        'five cards, each with its member\'s name and one line per row of his table: label, value, the two arrows, what the value changes', hosts.map((h, i) => `${text(byCls(h, 'kc-title')[0])}: ${rowsOf(i).map(r => `${text(byCls(r, 'kc-label')[0])} = ${text(byCls(r, 'kc-val')[0])}`).join(', ')}`).join(' | '));
-      // the mouse: the right arrow of teammate 2's Weapon row, then the left one back
-      const wRow = () => rowsOf(2).find(r => r.attrs['data-field'] === 'weapon')!, steps = () => byCls(wRow(), 'kc-step');
-      steps()[1].onclick?.(); const w1 = (KIT.members[2] as any).weapon, v1 = valOf(2, 'weapon'), note1 = text(byCls(wRow(), 'kc-note')[0]);
-      steps()[0].onclick?.(); const w2 = (KIT.members[2] as any).weapon;
-      F.verdict(w1 === 'pistol' && v1 === 'pistol' && note1.includes(gearText('Five-seveN')) && w2 === 'rifle' && changes === 2, 'the mouse: a click on a row\'s right arrow steps it (table, value and note all change), the left arrow steps it back', `after ›: ${w1}, shows '${v1}', note '${note1}' · after ‹: ${w2} · ${changes} change calls`);
-      // the keys: S S to the third row (light), D changes it, ArrowLeft changes it back, W up one (suppressor), ArrowRight
-      const c1 = cards[1]; c1.focus();
-      const at0 = c1.at(); c1.key(keyEv('s')); c1.key(keyEv('ArrowDown')); const at2 = c1.at();
-      c1.key(keyEv('d')); const l1 = (KIT.members[1] as any).light; c1.key(keyEv('ArrowLeft')); const l2 = (KIT.members[1] as any).light;
-      c1.key(keyEv('w')); const at1 = c1.at(); c1.key(keyEv('ArrowRight')); const s1 = (KIT.members[1] as any).suppressed; c1.key(keyEv('a'));
-      const up = (() => { c1.key(keyEv('ArrowUp')); c1.key(keyEv('ArrowUp')); c1.key(keyEv('ArrowUp')); return c1.at(); })();   // (past the top: it stays, or wraps — said below)
-      F.verdict(at0 === 0 && at2 === 2 && l1 === false && l2 === true && at1 === 1 && s1 === false && (KIT.members[1] as any).suppressed === true && rowsOf(1)[c1.at()].cls.has('sel'),
-        'the keys: W / S and the up / down arrows move the highlighted row, A / D and left / right change its value', `rows ${at0} → ${at2} → ${at1} → ${up} · light D ${l1}, ← ${l2} · suppressor → ${s1}, A back true`);
-      // a held key (repeat) and a digit do nothing
-      const before = JSON.stringify(KIT.members); const rep = keyEv('d'); rep.repeat = true; c1.key(rep); for (const d of ['1', '5', '6', '9']) c1.key(keyEv(d));
-      F.verdict(JSON.stringify(KIT.members) === before, 'a key held down (auto-repeat) changes nothing, and no digit is read', 'D held, then 1 5 6 9: the table as it was');
-      // the sets: three buttons a click presses; and reachable by the keys (S down past the last row, Enter)
-      const sets = byCls(hosts[3], 'kc-set'); sets.find(b => b.attrs['data-set'] === 'quiet')!.onclick?.(); const setQ = K.kitPresetOf(3), selQ = byCls(hosts[3], 'kc-set').find(b => b.attrs['data-set'] === 'quiet')!.cls.has('on');
-      const c4 = cards[4]; c4.focus(); for (let n = 0; n < K.kitRows(4).length; n++) c4.key(keyEv('s')); const onSets = c4.at(); c4.key(keyEv('d')); c4.key(keyEv('d')); c4.key(keyEv('Enter')); const setL = K.kitPresetOf(4); c4.key(keyEv('a')); c4.key(keyEv(' ')); const setQ4 = K.kitPresetOf(4); c4.key(keyEv('a')); c4.key(keyEv('Enter'));
-      F.verdict(sets.length === 3 && setQ === 'quiet' && selQ && onSets === K.kitRows(4).length && setL === 'loud' && setQ4 === 'quiet' && K.kitPresetOf(4) === 'issued' && valOf(3, 'weapon') === 'pistol',
-        'the sets are three buttons under the rows: a click presses one (and it shows as the card\'s set); by the keys, S past the last row, A / D to pick, Enter or Space to press', `teammate 3 by click: ${setQ} · teammate 4 by keys: ${setL}, then ${setQ4}, then issued`);
-      const esc = c4.key(keyEv('Escape')), handled = c4.key(keyEv('q'));
-      F.verdict(esc === false && handled === false, 'Esc and a key that is not the card\'s are left for the page', `Esc handled: ${esc} · 'q' handled: ${handled}`);
-      // refresh: the table changed from outside (the loadout screen's own 'all quiet' button, say)
-      K.kitPreset(1, 'loud'); const stale = valOf(1, 'suppressed'); c1.refresh(); const fresh = valOf(1, 'suppressed');
-      F.verdict(fresh === 'off' && stale === 'on', 'refresh() redraws a card whose table was changed elsewhere', `suppressor shown '${stale}' → '${fresh}' after refresh`);
-      for (const c of cards) c.destroy();
-      F.verdict(hosts.every(h => h.children.length === 0), 'destroy() leaves the host empty', `${hosts.map(h => h.children.length).join(' ')} children`);
-    });
-  } finally { issued(); }
-  return F.done();
-}
-

@@ -480,49 +480,6 @@
 "gFirst": true
 },
 {
-"call": "deathrecap#recapRound",
-"rust": "crate::deathrecap::recap_round",
-"sites": 1,
-"ts": "recapRound",
-"of": null,
-"file": "src/game/deathrecap.ts",
-"why": "param",
-"params": [
-{
-"ts": "victim",
-"rust": "victim"
-},
-{
-"ts": "wasDown",
-"rust": "was_down"
-},
-{
-"ts": "shooter",
-"rust": "shooter"
-},
-{
-"ts": "muzzle",
-"rust": "muzzle"
-},
-{
-"ts": "hit",
-"rust": "hit"
-},
-{
-"ts": "def",
-"rust": "def"
-},
-{
-"ts": "blind",
-"rust": "blind"
-}
-],
-"sig": "pub fn recap_round(g: &mut crate::game::Game, victim: Option<CharId>, was_down: bool, shooter: CharId, muzzle: V3, hit: V3, def: &crate::weapons::WeaponDef, blind: Option<bool>)",
-"bodyFile": "deathrecap/b_01.rs",
-"mode": "body",
-"answer": null
-},
-{
 "call": "floormess#messBurst",
 "rust": "crate::floormess::mess_burst",
 "sites": 1,
@@ -833,6 +790,27 @@
 "sig": "pub fn end_card(g: &mut crate::game::Game)",
 "mode": "push",
 "hostArm": "endCard"
+},
+{
+"call": "snowBlast#snowBlastAt",
+"rust": "crate::out_events::snow_blast",
+"sites": 1,
+"ts": "snowBlastAt",
+"of": null,
+"file": "src/game/snowBlast.ts",
+"why": "param",
+"params": [
+{
+"ts": "at",
+"rust": "at"
+},
+{
+"ts": "radius",
+"rust": "radius"
+}
+],
+"sig": "pub fn snow_blast(g: &mut crate::game::Game, at: V3, radius: f64)",
+"mode": "push"
 }
 ],
 "listed": [
@@ -1171,18 +1149,11 @@
 "body": "if let Some(i) = g.engine.lights.lights.iter().position(|x| *x == l) { g.engine."
 },
 {
-"call": "Sensors.diverge",
-"rust": "crate::sensors::sensors_diverge",
-"sites": 1,
-"why": "a short body: it forwards or answers",
-"body": "diverge(&mut g.sensors.s, d)"
-},
-{
 "call": "SmokeSystemLike.budget",
 "rust": "crate::smoke_types::smoke_system_like_budget",
 "sites": 3,
 "why": "answers a value (Option<f64>)",
-"body": "if g.smoke_owned { Some(crate::sense::cpu_smoke_budget(g)) } else { None }"
+"body": "crate::sense::smoke_budget(g)"
 },
 {
 "call": "SmokeSystemLike.drawing",

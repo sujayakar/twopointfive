@@ -79,16 +79,9 @@ export interface SimExports {
   pose_new(g: number, nodes: number): number;
   /** game g's pool empty again */
   pose_clear(g: number): void;
-  // the senses (rust/sim/src/sight.rs, light.rs, smoke.rs, hear.rs, nav.rs — asked through src/scene/collision.ts, THE SENSES: the module's alone). 0xffffffff (−1 here) = a question that is a mistake (a line too long to be one, a point that is no number): the host throws it by name.
+  // the senses (rust/sim/src/sight.rs, hear.rs, nav.rs — asked through src/scene/collision.ts, THE SENSES: the module's alone). 0xffffffff (−1 here) = a question that is a mistake (a line too long to be one, a point that is no number): the host throws it by name.
   /** guards.ts eyeContact: 1 visible + 2 in the cone; the distance → scratch 0 */
   sight_contact(w: number, set: number, through: number, q: number, e0: number, e1: number, e2: number, l0: number, l1: number, l2: number, range: number, halfDeg: number, nearM: number, nearDeg: number, vHalfDeg: number, c0: number, c1: number, c2: number, h0: number, h1: number, h2: number): number;
-  light_lamps(): number; light_cap(): number;
-  /** guards.ts lightEstimateAt's lamps, a part of them: the six faces → scratch 0‥5. `lg`, `leave`, `how`: the level's rows the question reads where
-   *  they stand (the slot of the block that holds them, the rows' bits it leaves out, and 1 they are read · 2 as their steady selves · 4 the last part) */
-  light_estimate(w: number, set: number, n: number, p0: number, p1: number, p2: number, sigma: number, g: number, stamp: number, stands: number, more: number, nb: number, spread: number, widest: number, rise: number, riseRate: number, lg: number, leave: number, how: number): number;
-  smoke_blobs(): number; smoke_cap(): number;
-  /** sense.ts CpuSmoke.blobsAlong over the blobs written: the transmittance → scratch 0 */
-  smoke_trans(w: number, set: number, n: number, a0: number, a1: number, a2: number, b0: number, b1: number, b2: number, sigma: number, spread: number, widest: number, rise: number, riseRate: number): number;
   nav_addr(table: number): number; nav_cap(table: number): number;
   /** collision.ts NavGrid.findPath with no penalty: the waypoints written (x z each) · −1 no way · −2 a mistake of the asker's (the host throws it) */
   nav_path(w: number, set: number, ask: number, gw: number, gh: number, cell: number, a0: number, a2: number, b0: number, b2: number, maxIter: number): number;
@@ -107,13 +100,8 @@ export interface SimExports {
   men_fold(g: number, row: number): number;
   // the game's own die, in its block (rust/sim/src/dice.rs — src/math/dice.ts simRandom)
   dice_roll(g: number): number;
-  // the game's own smoke on the coarse grid (rust/sim/src/bricks.rs; game/sense.ts SmokeGrid): its state is a part of the game's block (state.ts), so a call
-  // names the block's slot `g` (`st.bind()`), with the block's `stamp` where it reads the tables made from the state, and a step the box world and its copy
-  grid_reset(g: number, home: number): void; grid_clear(g: number): void; grid_dirty(w: number, x0: number, z0: number, x1: number, z1: number): void;
-  grid_step(g: number, stamp: number, w: number, copy: number, set: number, n: number, emits: number, decay: number, spread: number, rise: number, riseRate: number, gone: number, lamps: number, albedo: number, share: number, passes: number, sweep: number, windX: number, windZ: number, windLow: number, windGain: number, windFullAt: number, windKeep: number, lg: number, leave: number, how: number): number;
-  /** where the wind's share of each square metre of the plan is written before a step that has wind, and how many doubles it holds (bricks.rs WIND) */
-  grid_wind(): number; grid_wind_cap(): number;
-  grid_trans(g: number, stamp: number, a0: number, a1: number, a2: number, b0: number, b1: number, b2: number, sigma: number): number;
+  // an empty smoke grid in a game's block (rust/sim/src/bricks.rs), for a check of the block's layout
+  grid_reset(g: number, home: number): void;
   // the doors' step (rust/sim/src/doors.rs — src/game/doors.ts Doors.update, over the hand-over src/sim/doorshome.ts names)
   doors_addr(table: number): number; doors_cap(table: number): number;
   /** every leaf of the game in slot g stepped and placed, over world w: the noises listed */
@@ -175,9 +163,9 @@ export const SIM_EXPORTS: readonly (keyof SimExports)[] = ['memory', 'sim_abi', 
   'maths_exp', 'maths_log', 'maths_log2', 'maths_log10', 'maths_pow', 'maths_tanh', 'maths_hypot2', 'maths_hypot3', 'maths_hypot4', 'maths_hypot_n',
   'world_addr', 'world_cap', 'world_shape', 'world_leaves', 'world_things', 'world_glass', 'world_view', 'glass_open', 'lines_blocked', 'lines_leaves', 'lines_ray', 'lines_ray_things', 'collide_circle', 'collide_touches', 'collide_gather', 'fog_eyes', 'fog_see',
   'pose_addr', 'pose_rig', 'pose_blend', 'pose_run', 'pose_parent_rot', 'pose_turn', 'pose_ik', 'pose_sample', 'clip_begin', 'clip_track', 'clip_end', 'knob_addr', 'knob_len', 'layer_mv_trunk', 'layer_long_body', 'layer_life', 'layer_mv_pre', 'layer_stance_body', 'layer_stand_pose', 'layer_crouch_pose', 'layer_soft_knees', 'layer_run_arms', 'layer_run_plant', 'layer_sneak_body', 'layer_steady', 'layer_creep_body', 'layer_kick_body', 'layer_toes_up', 'layer_wall_body', 'layer_watch_slip', 'layer_watch_look', 'layer_mv_post_body', 'layer_turn_weigh', 'layer_lean_body', 'layer_gaze_keep', 'layer_sneak_arms', 'layer_carry_arms', 'layer_wall_arms', 'layer_act_pose', 'layer_wound_body', 'layer_wound_limbs', 'layer_long_arms', 'layer_mv_post_arms', 'layer_watch_arm', 'layer_creep_arms', 'layer_clutch_arm', 'layer_bound_arms', 'layer_reload_arm', 'layer_pistol_reload_arm', 'layer_hands_pass', 'layer_throw_layer', 'layer_big_layer', 'layer_hold_layer', 'layer_held_layer', 'layer_catch_arm', 'layer_door_layer', 'layer_work_layer', 'layer_ready_layer', 'layer_kit_layer', 'layer_taken_layer', 'layer_blow_legs', 'layer_blow_trunk', 'layer_blow_arms', 'layer_knife_pose', 'layer_cable_pose', 'layer_stealth_layer', 'layer_swap_pose', 'layer_lockpick_layer', 'layer_haul_layer', 'layer_torch_up', 'layer_radio_pose', 'layer_smoke_pose', 'layer_nv_pose', 'layer_signal_layer', 'layer_tell_layer',
-  'sight_contact', 'light_lamps', 'light_cap', 'light_estimate', 'smoke_blobs', 'smoke_cap', 'smoke_trans', 'nav_addr', 'nav_cap', 'nav_path', 'nav_priced', 'nav_need', 'nav_resume', 'nav_drop', 'hear_direct', 'hear_route',
+  'sight_contact', 'nav_addr', 'nav_cap', 'nav_path', 'nav_priced', 'nav_need', 'nav_resume', 'nav_drop', 'hear_direct', 'hear_route',
   'state_addr', 'state_len', 'state_games', 'state_layout', 'state_parts', 'state_part', 'dice_roll', 'men_schema', 'men_col', 'men_fold',
-  'grid_reset', 'grid_clear', 'grid_dirty', 'grid_step', 'grid_wind', 'grid_wind_cap', 'grid_trans',
+  'grid_reset',
   'pose_new', 'pose_clear', 'doors_addr', 'doors_cap', 'doors_update', 'props_addr', 'props_cap', 'props_update', 'props_settle', 'slabs_addr', 'slabs_cap', 'slabs_step', 'items_addr', 'items_cap', 'items_update',
   'falls_schedule', 'falls_deposit', 'falls_due', 'falls_step', 'falls_heard', 'falls_clear', 'falls_cap',
   'lights_cap', 'lights_ids', 'lights_in', 'lights_flip', 'lights_step', 'camera_pan', 'camera_see', 'laser_open', 'laser_close',
@@ -295,7 +283,7 @@ let doorsOn = true, fallsOn = true, propsOn = true, slabsOn = true, itemsOn = tr
  *          die has to be there before any rule that rolls it is. A game takes the row as its next tick opens.
  *
  *  THE SENSES ARE NO ROWS: an eye on a man, the light on a point, the smoke along a line, a sound's way, a way across the floor and the fog of war's
- *  sight pass are the module's alone (rust/sim/src/sight.rs, light.rs, smoke.rs, hear.rs, nav.rs, fog.rs, asked through src/scene/collision.ts, THE
+ *  sight pass are the module's alone (rust/sim/src/sight.rs, light.rs, hear.rs, nav.rs, fog.rs, asked through src/scene/collision.ts, THE
  *  SENSES). Their TypeScript is gone, so there is nothing to put one down to: a check holds them to their own earlier answers (tools/qa/sense-ident.ts).
  *
  *  THE THINGS of a level, a row a family (each keeps its state in the game's block from the moment the game is made — sim/state.ts — and, while its row

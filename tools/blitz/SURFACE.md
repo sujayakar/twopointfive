@@ -4,7 +4,7 @@ Written by surface.py. 1095 rows of `io::call`, 803 with a guard at load. What i
 
 - **the host's own, or the host already answers it** (104): `BoxMirror.followLeaf`, `BoxMirror.followRow`, `BoxMirror.gridDrop`, `BoxMirror.open`, `BoxWorld.addCharacterCapsules`, `BoxWorld.addStatic`, `BoxWorld.rayAside`, `BoxWorld.raycast`, `BoxWorld.relist`, `BoxWorld.repackMarkings`, `BoxWorld.resetCapsules`, `CharacterRenderer.finish`, `CharacterRenderer.setInstance`, `CharacterRenderer.setMaterials`, `Checkpoints.load`, `Checkpoints.loadInStep`, `Checkpoints.tick`, `Checkpoints.write`, `CpuSmoke.along`, `CpuSmoke.blobsAlong`, `CpuSmoke.clear`, `CpuSmoke.emit`, `CpuSmoke.step`, `FollowCamera.autoYaw`, `FollowCamera.drawIn`, `FollowCamera.drawOut`, `FollowCamera.easeYaw`, `FollowCamera.frame`, `FollowCamera.kickIn`, `FollowCamera.kickOut`, `FollowCamera.rebuild`, `FollowCamera.rotate`, `FollowCamera.setPin`, `FollowCamera.step`, `FollowCamera.update`, `FollowCamera.zoom`, `Game.followPos`, `Game.msg`, `Game.step`, `Game.stepSeats`, `Game.update`, `Input.detached`, `Input.endFrame`, `Input.endTick`, `NavGrid.findPath`, `NavGrid.nearestFreePoint`, `NavGrid.rebake`, `PoseFK.run`, `Seat.hand`, `Seat.handed`, `Seat.load`, `Seat.swallow`, `Seat.takeCut`, `Sensors.ask`, `Sensors.askSegment`, `Sensors.beginFrame`, `Sensors.endFrame`, `Sensors.forget`, `Sensors.lightAt`, `Sensors.live`, `Sensors.read`, `Sensors.record`, `Sensors.replay`, `Sensors.segment`, `SessionRecorder.cut`, `SessionRecorder.frameEnd`, `SessionRecorder.frameStart`, `SkeletonInstance.update`, `SmokeGrid.clear`, `SmokeGrid.emit` and more
 - **no Rust function** (95): `Attract.poke`, `Attract.stop`, `Attract.tick`, `Attract.update`, `BoxWorld.ensurePacked`, `BoxWorld.forgetSent`, `BoxWorld.markRecordsOf`, `BoxWorld.resetMarkTable`, `BoxWorld.setStuffOf`, `BoxWorld.upload`, `CharacterRenderer.drawRuns`, `CharacterRenderer.forgetSent`, `Checkpoints.importText`, `Checkpoints.offer`, `Demo.goto`, `Demo.jump`, `Demo.start`, `Demo.stop`, `Demo.update`, `Doors.onTorn`, `Doors.updateBoth`, `PoseFK.parentRot`, `PoseFK.runFrom`, `PropSystem.updateBoth`, `ReplayBuffer.top`, `RunTapeRec.top`, `SessionPlayer.applyFrame`, `SessionRecorder.stop`, `SmokeGrid.free`, `applyKnobs`, `attentionWay`, `blastFeelStages`, `buildBundledLevel`, `buildLevel`, `calmTorchRestore`, `castWear`, `chainBits`, `darkFoeRestore`, `doing`, `dryAll`, `engage`, `extraSpots`, `floorPlan`, `holdFireRestore`, `hudExpireBubbles`, `inRain`, `initCutSwitch`, `initDifficulty`, `initHour`, `kitAddLaid`, `kitLoad`, `kitSave`, `lanesRestore`, `layRestore`, `levelToData`, `loadCharacterSet`, `loadGltfCast`, `loadGltfCharacter`, `loadLevel`, `manLeaves`, `moraleRestore`, `namePaint`, `namePaints`, `netQuietRestore`, `ownSmoke`, `pictureRestore`, `plainLevel`, `powerOutRestore`, `rainDripPoints`, `recipeOf` and more
-- **takes a closure** (30): `Debris.impulse`, `Defuse.samRows`, `Destruction.withWallsOpen`, `Door.posAside`, `DoorTools.samRows`, `Doors.posAside`, `EntryPoints.clearOf`, `Game.aside`, `GlassBreak.asking`, `GlassBreak.seeThrough`, `RescueEnd.rows`, `SnatchOut.rows`, `SquadOrders.askAside`, `SquadOrders.noRoomWords`, `WallCharge.clearOf`, `WallCharge.samRows`, `WorkThings.askAside`, `coverNear`, `hearWhistle`, `holdFireHolds`, `leversFog`, `lightEstimateAt`, `ownerWitness`, `pictureQuiet`, `pictureStep`, `quietFogAside`, `skyAside`, `sneakWalk`, `stickyRows`, `switchRows`
+- **takes a closure** (27): `Debris.impulse`, `Defuse.samRows`, `Destruction.withWallsOpen`, `DoorTools.samRows`, `EntryPoints.clearOf`, `Game.aside`, `GlassBreak.asking`, `GlassBreak.seeThrough`, `RescueEnd.rows`, `SnatchOut.rows`, `SquadOrders.askAside`, `SquadOrders.noRoomWords`, `WallCharge.clearOf`, `WallCharge.samRows`, `coverNear`, `hearWhistle`, `holdFireHolds`, `leversFog`, `lightEstimateAt`, `ownerWitness`, `pictureQuiet`, `pictureStep`, `quietFogAside`, `skyAside`, `sneakWalk`, `stickyRows`, `switchRows`
 - **no body yet** (15): 
 - **takes no game: nothing to write** (7): `AimState.clear`, `Ocp.update`, `Ocp.use`, `RateCap.reset`, `RateCap.take`, `gpFragments`, `manifestOf`
 - **answers what its Rust function does not** (5): `Destruction.onBlast`, `Pose.copy`, `WallBreak.onChange`, `searchPlanFor`, `wallReactOf`
@@ -35,7 +35,7 @@ samples a record itself: the two-seat checks, and the scripted clients of a game
 reached by nothing from the TypeScript. 1062 rows are left.
 
 LEFT ON THE TABLE though their Rust body is empty, because the nothing is the game's own answer and not the picture's: `SnatchOut.switched` and
-`closeMarks` (a settled switch), `fogFlags` and `loadCivTune` (the address and the browser's storage are the host's; their TypeScript would read a page).
+`closeMarks` (a settled switch), and `fogFlags` (the address and the browser's storage are the host's; its TypeScript would read a page).
 
 How the class is found again: every `pub fn` under `rust/game/src` whose doc line says `BOUNDARY NO-OP`, joined to `calls.json` by its `rust` path.
 
@@ -97,9 +97,6 @@ A replacement that answers for the function does not change the Rust tick: a tap
 | file:line | replaces |
 |---|---|
 | tools/qa/attention-check.ts:70 | s2.g.fogOfWar.hidden |
-| tools/qa/autocam-check.ts:173 | fog.hidden |
-| tools/qa/autocam-check.ts:256 | fog.hidden |
-| tools/qa/autocam-check.ts:431 | g.fogOfWar.hidden |
 | tools/qa/breathsteam-check.ts:131 | fog.hidden |
 | tools/qa/breathsteam-check.ts:149 | fog.hidden |
 | tools/qa/burstglass-probes.ts:141 | R.g.destr.blast |

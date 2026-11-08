@@ -468,7 +468,7 @@ pub fn may_walk(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId
         Some(a) => {
             if g.tab.orders_assignment[a].spare == Some(true) { return false; }
             let order = g.tab.orders_assignment[a].order.as_str();
-            resumed().iter().any(|r| r == order)
+            crate::orders::rows::id_is(order, crate::orders::Is::Resumed)
         }
         None => true,
     }
@@ -638,16 +638,7 @@ pub fn frag_catches(g: &mut crate::game::Game, rest: V3, at: V3, moved: Option<c
         let o = g.rescue.hostages[i];
         if live_in(g, o, &pts, reach) { hostage = true; break; }
     }
-    let man = g.snatch.man;
-    let wanted = match man {
-        Some(o) if live_in(g, o, &pts, reach) => Some(o),
-        _ => None,
-    };
     if hostage { return Some(format!("hostages. {}", no)); }
-    if let Some(o) = wanted {
-        let name = match g.gd[o].civ { Some(c) => g.cv[c].name.clone(), None => String::from("our man") };
-        return Some(format!("{} is in it. {}", name, no));
-    }
     for i in 0..g.civilians.len() {
         let o = g.civilians[i];
         if live_in(g, o, &pts, reach) { return Some(format!("a civilian is in it. {}", no)); }

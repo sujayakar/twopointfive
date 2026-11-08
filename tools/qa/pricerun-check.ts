@@ -144,13 +144,13 @@ check(/THE PAGES STOOD ON 2 RUNGS though the ladder was off/.test(priceReport({ 
 // ---- the addresses a run builds, and the words it names as left out
 const first = priceLevels()[0]?.level ?? '';
 check(priceLevels().length > 1 && new Set(priceLevels().map(l => l.level)).size === priceLevels().length, `the levels a run walks are the list's, none twice (${priceLevels().length})`);
-{ const s = priceSearch(first, 3, 'high', ['look', 'geo=0'], ['mute', 'downloads=1', 'quality=low']), q = new URLSearchParams(s);
-  check(q.has('look') && q.get('geo') === '0' && q.get('downloads') === '1' && q.get('quality') === 'high' && q.get('adapt') === '0' && q.get('giveway') === '0' && q.getAll('mute').length === 1 && q.getAll('quality').length === 1 && q.get('pricerun') === '3' && q.get('seed') === '1' && q.has('noverdict') && q.has('nokeep'),
+{ const s = priceSearch(first, 3, 'high', ['look', 'firefit=0'], ['mute', 'downloads=1', 'quality=low']), q = new URLSearchParams(s);
+  check(q.has('look') && q.get('firefit') === '0' && q.get('downloads') === '1' && q.get('quality') === 'high' && q.get('adapt') === '0' && q.get('giveway') === '0' && q.getAll('mute').length === 1 && q.getAll('quality').length === 1 && q.get('pricerun') === '3' && q.get('seed') === '1' && q.has('nokeep'),
     `a page's address carries the look page's words and the visitor's flags once each, and its own preset wins (${s})`); }
 { const a = new URLSearchParams(priceSearch(first, 0, 'auto', ['look'], ['adapt=0', 'giveway=1']));
   check(!a.has('quality') && a.getAll('adapt').length === 1 && a.get('giveway') === '0' && a.getAll('giveway').length === 1, `asked at auto, a page pins no preset, and the window's word is the run's own whatever the visitor's (${a.toString()})`); }
-{ const w = priceLookWords('?pricelevels&geo=0'), w2 = priceLookWords('?look=walls:0&pricelevels');
-  check(w.includes('look') && w.includes('geo=0') && w2.includes('look=walls:0') && !w2.includes('look'), `the look page's words ride with or without a look word beside them (${w.join('&')} · ${w2.join('&')})`); }
+{ const w = priceLookWords('?pricelevels&firefit=0'), w2 = priceLookWords('?look=walls:0&pricelevels');
+  check(w.includes('look') && w.includes('firefit=0') && w2.includes('look=walls:0') && !w2.includes('look'), `the look page's words ride with or without a look word beside them (${w.join('&')} · ${w2.join('&')})`); }
 { const search = '?look&pricelevels=pass&pricesecs=2&pricelive=20&nosharp&hour=dusk&mute&downloads=1', left = priceLeft(search, first, 'high', priceLookWords(search), ['mute', 'downloads=1']);
   check(left.join(',') === 'nosharp,hour', `the words of the asking address that no page carries are named, the run's own are not (${left.join(', ')})`); }
 { const search = '?look&pricelevels&adapt=1&giveway=1&seed=7&mute', over = priceOverruled(search, first, 'high', priceLookWords(search), ['mute']);

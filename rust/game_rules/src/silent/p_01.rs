@@ -7,9 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// `LOUD_ROWS.includes(id)`   (silent.ts:248, :249)
-fn is_loud_row(id: &str) -> bool { loud_rows().iter().any(|r| r == id) }
-
 /// a state as the TypeScript's literal makes it   (silent.ts:123, :259)
 fn new_state(cast: Vec<GuardId>, since: f64) -> State {
     State { cast, silent: false, since, hot: false, was: None, booted: None }
@@ -216,33 +213,28 @@ pub fn silent_compromised(g: &crate::game::Game, seat: &crate::seats::SeatRef) -
     match g.m.silent.states.get(key) { Some(s) => s.hot, None => false }
 }
 
+/// `only` of the posture's two rows: the whole squad, whoever was addressed
+pub fn row_whole_squad(g: &mut crate::game::Game, _men: &[GuardId], _t: &crate::orders::OrderTarget) -> Vec<GuardId> { crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None) }
+
 /// the posture's two rows on the menu: made anew at each call, as the TypeScript's literals are   (silent.ts rows)
 pub fn rows(g: &mut crate::game::Game) -> [OrdersOrderDefId; 2] {
-    let silent = crate::orders::squad_orders_row(g, crate::orders::OrderDef {
-        id: String::from("silent"),
+    let silent = crate::orders::squad_orders_row(g, crate::orders::rows::def(&crate::orders::rows::silent::ORDER, crate::orders::OrderDef {
         head: Some(String::from(HEAD)),
-        label: crate::orders::OrderLabel::Text { text: String::from("go silent") },
         targets: targets(),
         listed: listed(),
         free: Some(true),
-        only: Some(crate::orders::OrderOnly::SilentAll),
         ack: Some(vec![String::from("going quiet."), String::from("copy. silent.")]),
-        issue: crate::orders::OrderIssue::Silent,
         ..Default::default()
-    });
-    let loud = crate::orders::squad_orders_row(g, crate::orders::OrderDef {
-        id: String::from("loud"),
+    }));
+    let loud = crate::orders::squad_orders_row(g, crate::orders::rows::def(&crate::orders::rows::loud::ORDER, crate::orders::OrderDef {
         head: Some(String::from(HEAD)),
-        label: crate::orders::OrderLabel::Text { text: String::from("go loud") },
         targets: targets(),
         listed: listed(),
         free: Some(true),
-        only: Some(crate::orders::OrderOnly::SilentAll),
         ack: Some(vec![String::from("going loud."), String::from("copy. loud.")]),
-        stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from("silent"), when: crate::orders::OrderWhen::Loud }),
-        issue: crate::orders::OrderIssue::Loud,
+        stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from(crate::orders::rows::silent::ORDER.id) }),
         ..Default::default()
-    });
+    }));
     [silent, loud]
 }
 
@@ -256,7 +248,7 @@ pub fn loud_word(w: Option<&str>) -> String {
 
 /// the rows on the menu, off it with the switch off; work only when that changes   (silent.ts seat)
 pub fn seat(g: &mut crate::game::Game) {
-    let go = g.orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == "go");
+    let go = g.orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == crate::orders::rows::go::ORDER.id);
     let go_digit = match go {
         Some(d) => match &g.tab.orders_order_def[d].hot_key { Some(k) => k.is_empty(), None => true },
         None => false,
@@ -267,34 +259,34 @@ pub fn seat(g: &mut crate::game::Game) {
         if was.on == on && was.go_digit == go_digit { return; }
     }
     g.m.silent.seats.set(key, SilentModSeatsValue { on, go_digit });
-    crate::orders::squad_orders_unregister(g, "loud");
-    crate::orders::squad_orders_unregister(g, "silent");
+    crate::orders::squad_orders_unregister(g, crate::orders::rows::loud::ORDER.id);
+    crate::orders::squad_orders_unregister(g, crate::orders::rows::silent::ORDER.id);
     if !on { g.orders.posture = None; return; }
     if let Some(go) = go {
         if go_digit { crate::orders::squad_orders_register(g, go, None); }
     }
     let [silent, loud] = rows(g);
-    crate::orders::squad_orders_register(g, silent, Some("go"));
+    crate::orders::squad_orders_register(g, silent, Some(crate::orders::rows::go::ORDER.id));
     crate::orders::squad_orders_register(g, loud, None);
     g.orders.posture = Some(seam_posture(g));
 }
 
 /// `posture.word`   (silent.ts:247): what the posture's seam should call
-pub fn posture_word(g: &mut crate::game::Game) -> Option<String> {
-    if !crate::orders::squad_orders_active(g, &crate::seats::here(g)) { return None; }
-    if squad_silent(g, &crate::seats::here(g)) {
-        return Some(String::from(if silent_compromised(g, &crate::seats::here(g)) { "SILENT · compromised" } else { "SILENT" }));
+pub fn posture_word(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<String> {
+    if !crate::orders::squad_orders_active(g, seat) { return None; }
+    if squad_silent(g, seat) {
+        return Some(String::from(if silent_compromised(g, seat) { "SILENT · compromised" } else { crate::spotted::spotted_word(g, seat).unwrap_or("SILENT") }));
     }
-    let w = crate::unseen::unseen_word(g);
+    let w = crate::unseen::unseen_word(g, seat);
     Some(loud_word(w.as_deref()))
 }
 /// `posture.mark`   (silent.ts:248): what the posture's seam should call
 pub fn posture_mark(g: &crate::game::Game, seat: &crate::seats::SeatRef, def: OrdersOrderDefId) -> &'static str {
-    if squad_silent(g, seat) && is_loud_row(&g.tab.orders_order_def[def].id) { " · LOUD" } else { "" }
+    if squad_silent(g, seat) && crate::orders::rows::id_is(&g.tab.orders_order_def[def].id, crate::orders::Is::Loud) { " · LOUD" } else { "" }
 }
 /// `posture.given`   (silent.ts:249): what the posture's seam should call
 pub fn posture_given(g: &mut crate::game::Game, def: OrdersOrderDefId) {
-    let loud = is_loud_row(&g.tab.orders_order_def[def].id);
+    let loud = crate::orders::rows::id_is(&g.tab.orders_order_def[def].id, crate::orders::Is::Loud);
     silent_tool(g, loud);
 }
 fn seam_posture(g: &mut Game) -> crate::orders::SquadOrdersPosture { crate::orders::SquadOrdersPosture {} }   // (the one maker of a posture is this module: a posture that is Some IS these three functions, and p_orders_03 calls silent_tool on that reading)

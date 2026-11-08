@@ -1,7 +1,7 @@
 // THE DENSE KIT CARD (the maintainer on Team & kit, 10-20, beside a loadout card of Door Kickers 2: "this menu is pretty unwieldy … we shouldn't copy it
 // but maybe we have a popup menu per gun, more information density, etc."). The picked man's card on the one starting page (ui/startpage.ts), laid out
 // to be read at a glance and to fit the window with nothing scrolled:
-//   · THE TWO GUNS SIDE BY SIDE, each one tile: its drawing large, its name, the four bars of what it is good at (ui/gunStats.ts), and in the tile's corner
+//   · THE TWO GUNS SIDE BY SIDE, each one tile: its drawing large, its name, the four bars of what it is good at (ui/kitCard.ts), and in the tile's corner
 //     what rides on it as CHIPS — its suppressor, the light, what the launcher fires — lit where fitted or carried (a count beside a round), faint where not;
 //   · A GUN'S TILE OPENS ITS OWN POP-UP (a click on it; Enter with the keys on it): the guns the tile could be, side by side, each with its drawing, its
 //     name and the same four bars under one another so two guns are compared by eye, and under them that gun's fittings and rounds as the tiles they
@@ -9,21 +9,16 @@
 //     tiles and ends over the screen's foot: in a window too short for that it is drawn that much higher, over the foot of the tiles (kitCard.ts fit);
 //   · THE REST OF THE KIT IS ONE LINE OF SMALL TILES — the thing drawn, how many, its name —, the big slot among them;
 //   · THE COLOURS AND THE SETS (suit, trim; Reset, Copy, Paste) are a strip under the kit, and the pouches with the two weight bars one line over it.
-// It is the kit card itself (ui/kitCard.ts memberCard with `dense`: the same rows, values, refusals, lent and idle tiles, copy and paste) in another
+// It is the kit card itself (ui/kitCard.ts memberCard: the same rows, values, refusals, lent and idle tiles, copy and paste) in another
 // lay-out, so nothing of the kit's rules is here. THE KEYS are the card's: W S walk the tiles as they lie — the guns, the kit, the colours, the sets —,
 // A D change the tile the keys are on (a gun's tile: the next gun), and inside a pop-up W S walk the gun and its things, A D change, Esc shuts.
-// THE SWITCH: `KITDENSE.on`, on in the module; `?kitdense=0` on the address = the card as it was. UI only: nothing in the game reads it, nothing of it
-// is in a recording, and the card it lays out is a tree card (game/kittree.ts) — with the tree off the card is the older one whatever this says.
 // Plain strings: nothing at module level uses another module's exports.
-export const KITDENSE = { on: true };
-try { if (new URLSearchParams(location.search).get('kitdense') === '0') KITDENSE.on = false; } catch { /* no page (the harness) */ }
-
 const STYLE_ID = 'kc-dense-style';
 // (`.kc.kc-tree.kc-dense`: one class more than any rule of the start page's for the tree's tiles, so none of these wins by the order of the two sheets)
 const P = '#missions.one #loadout .lo-kit .kc.kc-tree.kc-dense', PL = '#missions.one.pane-loadout #loadout .lo-kit .kc.kc-tree.kc-dense';
 /** a quiet mission's gear screen (ui/startpage.ts QUIET_CSS), the row the keys are on */
 const QS = '#missions.one.quiet.pane-loadout #loadout .lo-kit .kc.kc-tree.kc-dense.focus';
-export const DENSE_CSS = `
+const DENSE_CSS = `
 ${P} { display: grid; grid-template-columns: minmax(0, 1fr) !important; row-gap: 6px; padding: 0 0 24px; }
 /* the pouches and the two weight bars: one line over the tiles */
 ${P} .kc-head { grid-column: 1; grid-row: auto; justify-content: flex-start; margin: 0 0 2px; }

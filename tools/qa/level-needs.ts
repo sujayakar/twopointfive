@@ -79,7 +79,7 @@ interface Bounds { x0: number; x1: number; z0: number; z1: number }
 type Card = Record<string, unknown>;
 interface LevelFile { meta?: { generator?: string }; materials?: Record<string, Paint>; boxes: Box[]; props?: { id: string; x: number; z: number; yaw?: number; half?: number[]; parts?: { off: [number, number, number]; h: [number, number, number]; yaw?: number }[] }[]; lights: Light[]; switchables?: { id: string; group?: string; boxes?: string[]; on?: boolean; baseEmissive?: number[] }[]; doors: Door[]; surfaces?: unknown;
   scenarios?: { roomClear?: { starts?: unknown[]; squads?: unknown[]; wallCharges?: number; rooms?: { name: string; bounds?: Bounds }[] }; rescue?: { room?: { name: string; bounds?: Bounds } };
-    quiet?: { starts?: unknown[]; spots?: { place: string; area?: Bounds }[] }; places?: { areas?: { name: string; bounds: Bounds }[] }; lesson?: unknown; snatch?: unknown; kitView?: unknown; response?: { why?: unknown; team?: unknown; raid?: unknown }; issue?: { members: Record<string, Card> } } }
+    quiet?: { starts?: unknown[]; spots?: { place: string; area?: Bounds }[] }; places?: { areas?: { name: string; bounds: Bounds }[] }; lesson?: unknown; kitView?: unknown; response?: { why?: unknown; team?: unknown; raid?: unknown }; issue?: { members: Record<string, Card> } } }
 interface Row { id: string; hour?: string; title: string; kind: 'nightbreach' | 'roomclear' | 'rescue' | 'quiet'; squad: number; level?: string; group?: string; only?: string; place?: string; blurb?: string;
   untuned?: boolean; offList?: boolean; defenders?: number; ways?: readonly string[]; squads?: boolean }
 /** the tables a level is registered in, as the tree has them (the red path hands a level its own, with every row taken out) */
@@ -350,9 +350,9 @@ const startsOf = (o: unknown): number[][] => !o || typeof o !== 'object' ? [] : 
  *  `hall` are in neither on purpose: either would suit a team and has none yet, the maintainer's call. */
 export const NOBODY_COMES: Record<string, string> = {
   'quiet-relay': 'a hilltop, nobody within reach, and its wired spot brings its own men', vault: 'private hired guards who call nobody', 'lights-out': 'its one idea is the mains',
-  'block-squads': 'at eleven, nobody is left to come', warehouse: 'at eleven, nobody is left to come', compound: 'at eleven, nobody is left to come',
+  warehouse: 'at eleven, nobody is left to come', compound: 'at eleven, nobody is left to come',
   barracks: 'at eleven, nobody is left to come', registry: 'the hostage clock is the pressure', consulate: 'the hostage clock is the pressure',
-  defuse: 'it has its own clock', killhouse: 'it has its own clock', floodlit: 'one idea, and it is not this', mousehole: 'one idea, and it is not this',
+  killhouse: 'it has its own clock', floodlit: 'one idea, and it is not this', mousehole: 'one idea, and it is not this',
   glasshouse: 'one idea, and it is not this', pass: 'a snowed-in road' };
 /** a `why` shorter than this is not a sentence (the same 40 as response-check.ts's file line) */
 const WHY_MIN = 40;
@@ -462,7 +462,7 @@ export function ask(name: string, L: LevelFile, twin: LevelFile | null, rows: Ro
     // …and what the issue is FOR on this floor, to be said by whoever makes the level: none of it fails
     const worn = T.cards(e.squad, issueOf(L)), own = Array.from({ length: e.squad }, (_, k) => kitCost(k + 1, worn[k + 1]).lines as { item: string; n: number }[]), sum = (item: string) => own.reduce((s, l) => s + (l.find(x => x.item === item)?.n ?? 0), 0);
     if (e.kind === 'quiet' && e.squad > 0 && own[0]?.length) say('kit', 'note', `${e.id}: a quiet mission whose partner comes as issued for a loud one (${own[0].map(l => `${l.n} ${l.item}`).join(', ')}): nothing in the level says otherwise`);
-    if ((e.kind === 'rescue' || S.snatch) && sum('frags')) say('kit', 'note', `${e.id}: ${sum('frags')} frags are issued where a frag on order is refused near ${S.snatch ? 'the man to take' : 'a hostage'}: say what the squad throws instead`); }
+    if (e.kind === 'rescue' && sum('frags')) say('kit', 'note', `${e.id}: ${sum('frags')} frags are issued where a frag on order is refused near a hostage: say what the squad throws instead`); }
   { const locked = L.doors.filter(d => d.locked).length, steel = L.doors.filter(d => d.steel).length, squad = rows.filter(e => e.kind !== 'quiet' && mates(e));
     if (squad.length && (locked || steel)) { const charges = Math.max(...squad.map(e => { const worn = T.cards(e.squad, issueOf(L)); return Array.from({ length: e.squad }, (_, k) => (kitCost(k + 1, worn[k + 1]).lines as { item: string; n: number }[]).find(x => x.item === 'charges')?.n ?? 0).reduce((a, n) => a + n, 0); }));
       say('kit', 'note', `${locked} locked and ${steel} steel of ${L.doors.length} doors, against ${charges} door charge${charges === 1 ? '' : 's'} as issued (steel takes no charge, hammer or shotgun): say how each is meant to be opened`); } }

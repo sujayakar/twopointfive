@@ -2,6 +2,7 @@
 // always stood up on the shipped stand): what each line asks, through the input only, in the order a new player would do it. He is mortal in his own half:
 // the fights are the level's script's (levels/tut-kit.script.ts) and none of them is aimed at a man who does what the line says. In the squad's half he
 // gives the orders the lines ask for (the command key tapped on a thing, held for its ring and a digit, the word) and shoots only on the last line.
+import { cornerOf } from '../squadwords';
 import { OWNBLOW } from '../../../src/game/ownblow';
 import type { Bot } from '../lesson-run';
 import { AXIS, JAMB, INNER_X, INNER_Z, INNER_FROM, BAGS_END, GAP, BARRIER, BACK, NEST, LAMP, SHOP_DOOR, STORE_DOORWAY, STUN_AT, ARCH_MOUTH, LAUNCH_FROM, LAST_MEN, BREAKER, BUNK_DOOR, WALL_MARK, FRAG_AT, YARD_FROM, COURT, INSIDE } from '../../levels/tut-kit';
@@ -11,7 +12,7 @@ const pageOn = (name: string, here: boolean): boolean => (globalThis as { __knob
 const blowOn = (): boolean => pageOn('OWNBLOW', OWNBLOW.on);
 
 export const query = '?roomclear=1&squad4';
-export const ended = (g: any) => g.lesson.finished;
+export const ended = (g: any) => g.view.lesson?.finished;
 /** the level's fights are its script's, which the tutorial frame starts: on a stand without the frame this lesson cannot be played */
 /** the run wears what the mission's page deals (lesson-run.ts): his card as the level names it, one of each can and the launcher on its grenade */
 export const pageKit = true;
@@ -62,7 +63,7 @@ const fight = (B: Bot, n: number, secs: number, move?: () => void, who?: any[]) 
 const take = (B: Bot, code: string) => { B.press(code, 5); B.until(() => B.g.player.equipT <= 0, 3); B.step(3); };
 /** the can in the air, until it has gone off (or `secs`) */
 const landed = (B: Bot, kind: string, secs: number) => { let seen = false; for (let i = 0; i < secs * 60; i++) { const it = B.g.items.items.some((x: any) => x.kind === kind && !x.fired); if (seen && !it) break; seen = seen || it; B.step(); } B.step(20); };
-const stepIs = (B: Bot, id: string) => B.g.lesson.step?.id === id;
+const stepIs = (B: Bot, id: string) => B.g.view.lesson?.id === id;
 const inRect = (p: number[], R: { x0: number; x1: number; z0: number; z1: number }) => p[0] > R.x0 && p[0] < R.x1 && p[2] > R.z0 && p[2] < R.z1;
 const taken = (B: Bot, id: string) => { const r = B.g.roomClear.rooms.find((x: any) => x.def.id === id); if (!r) return false; if (r.cleared) return true; return squad(B).filter(m => inRect(m.char.pos, r.def.bounds)).length >= 3; };
 /** his own ring is up */
@@ -73,7 +74,7 @@ const command = (B: Bot, p: number[]) => { B.aim(p); B.step(2); B.aim(p); B.pres
 const ring = (B: Bot, p: number[]) => {
   B.aim(p); B.step(2); B.aim(p); B.I.pressed.add('KeyB'); B.hold(['KeyB'], 0.45); B.step(2);
   if (!B.g.orders.menu) { B.say('  the squad\'s ring did not come up'); return false; }
-  const T = B.g.lesson.step, said = (B.g.orders.menu.flat ? T?.flatLine : T?.menuLine) ?? '', digits = [...said.matchAll(/\[(\d)\]/g)].map(m => m[1]);
+  const T = B.g.level.scenarios.lesson?.steps[B.g.lesson.i], said = (B.g.orders.menu.flat ? T?.flatLine : T?.menuLine) ?? '', digits = [...said.matchAll(/\[(\d)\]/g)].map(m => m[1]);
   B.say(`  the ring is up: '${said}' → ${digits.join(', ') || 'no digit named'}`);
   const rows = () => { const M = B.g.orders.menu; return M ? `${M.target?.kind ?? '?'}: ${M.rows.map((r: any, k: number) => `${k + 1} ${r.id}${M.why?.[k] ? ` (${M.why[k]})` : ''}`).join(' · ')}` : 'no ring'; };
   B.say(`    ${rows()}`);
@@ -145,7 +146,7 @@ export const steps: Record<string, (B: Bot) => void> = {
   back: B => { B.go(BACK, 10, { near: 0.5 }); B.step(20); },
   // (the page's way: his own charge is a row of his own list — ownblow.ts — and stood clear it is the only one, so a tap gives it; the frozen stand's: the squad's key)
   blow: B => {
-    const T = B.g.doorTools, c = T.set[0]; if (c && /too close:[^·]*\byou\b/.test(T.closeWords(c))) B.fail('the mark that says stand clear is inside his own charge\'s backblast');
+    const T = B.g.doorTools, c = T.set[0]; if (c && cornerOf(B.g).some(n => /TOO CLOSE:[^·]*\byou\b/.test(n.text))) B.fail('the mark that says stand clear is inside his own charge\'s backblast');
     B.press(blowOn() ? 'Space' : 'KeyF', 30); },
   // out from beside the door, square to the doorway (from its edge the rounds go into the jamb), and the pistol
   shop: B => {

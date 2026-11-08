@@ -1034,30 +1034,11 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("stalk.heft_pole.0", offset_of!(Knobs, stalk.heft_pole), false),
     ("stalk.heft_pole.1", offset_of!(Knobs, stalk.heft_pole) + 8, false),
     ("stalk.heft_pole.2", offset_of!(Knobs, stalk.heft_pole) + 16, false),
-    ("stalk.drag_dead", offset_of!(Knobs, stalk.drag_dead), false),
-    ("stalk.drag_full", offset_of!(Knobs, stalk.drag_full), false),
     ("stalk.orbit_k", offset_of!(Knobs, stalk.orbit_k), false),
     ("stalk.orbit_edge", offset_of!(Knobs, stalk.orbit_edge), false),
     ("stalk.orbit_snap", offset_of!(Knobs, stalk.orbit_snap), false),
     ("stalk.low_begin_m", offset_of!(Knobs, stalk.low_begin_m), false),
     ("stalk.low_out_m", offset_of!(Knobs, stalk.low_out_m), false),
-    ("tapstep.tap_m", offset_of!(Knobs, tapstep.tap_m), false),
-    ("tapstep.beat_m", offset_of!(Knobs, tapstep.beat_m), false),
-    ("tapstep.reach_m", offset_of!(Knobs, tapstep.reach_m), false),
-    ("tapstep.secs", offset_of!(Knobs, tapstep.secs), false),
-    ("tapstep.rushed", offset_of!(Knobs, tapstep.rushed), false),
-    ("tapstep.settle", offset_of!(Knobs, tapstep.settle), false),
-    ("tapstep.beat", offset_of!(Knobs, tapstep.beat), false),
-    ("tapstep.quiet", offset_of!(Knobs, tapstep.quiet), false),
-    ("tapstep.scuff", offset_of!(Knobs, tapstep.scuff), false),
-    ("tapstep.mask_secs", offset_of!(Knobs, tapstep.mask_secs), false),
-    ("tapstep.mask_m", offset_of!(Knobs, tapstep.mask_m), false),
-    ("tapstep.mask", offset_of!(Knobs, tapstep.mask), false),
-    ("tapstep.land_m", offset_of!(Knobs, tapstep.land_m), false),
-    ("tapstep.land_cos", offset_of!(Knobs, tapstep.land_cos), false),
-    ("tapstep.follow", offset_of!(Knobs, tapstep.follow), false),
-    ("tapstep.turn", offset_of!(Knobs, tapstep.turn), false),
-    ("tapstep.legs", offset_of!(Knobs, tapstep.legs), false),
     ("overhear.path_m", offset_of!(Knobs, overhear.path_m), false),
     ("overhear.carry", offset_of!(Knobs, overhear.carry), false),
     ("score.seen", offset_of!(Knobs, score.seen), false),
@@ -1221,11 +1202,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("turn.aim_acc", offset_of!(Knobs, turn.aim_acc), false),
     ("turn.body", offset_of!(Knobs, turn.body), false),
     ("turn.body_acc", offset_of!(Knobs, turn.body_acc), false),
-    ("wound.centre", offset_of!(Knobs, wound.centre), false),
-    ("wound.head", offset_of!(Knobs, wound.head), false),
-    ("wound.lead", offset_of!(Knobs, wound.lead), false),
-    ("wound.depth", offset_of!(Knobs, wound.depth), false),
-    ("wound.back_room", offset_of!(Knobs, wound.back_room), false),
     ("doorpath.at", offset_of!(Knobs, doorpath.at), false),
     ("doorpath.out_m", offset_of!(Knobs, doorpath.out_m), false),
     ("doorpath.in_m", offset_of!(Knobs, doorpath.in_m), false),
@@ -1237,10 +1213,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("doorpath.cap", offset_of!(Knobs, doorpath.cap), false),
     ("doorpath.move_m", offset_of!(Knobs, doorpath.move_m), false),
     ("doorpath.apart_m", offset_of!(Knobs, doorpath.apart_m), false),
-    ("doorpath.gun_m", offset_of!(Knobs, doorpath.gun_m), false),
-    ("doorpath.gun_ajar", offset_of!(Knobs, doorpath.gun_ajar), false),
-    ("doorpath.gun_lead", offset_of!(Knobs, doorpath.gun_lead), false),
-    ("doorpath.gun_side", offset_of!(Knobs, doorpath.gun_side), false),
     ("doorpath.body_m", offset_of!(Knobs, doorpath.body_m), false),
     ("doorpath.body_off", offset_of!(Knobs, doorpath.body_off), false),
     ("doorpath.body_move", offset_of!(Knobs, doorpath.body_move), false),
@@ -2644,40 +2616,16 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("rescueflush.busy_secs", offset_of!(Knobs, rescueflush.busy_secs), false),
     ("rescueflush.smoke_k", offset_of!(Knobs, rescueflush.smoke_k), false),
     ("rescueflush.at_door_m", offset_of!(Knobs, rescueflush.at_door_m), false),
-    ("snatchout.marker_m", offset_of!(Knobs, snatchout.marker_m), false),
-    ("snatchout.reach_m", offset_of!(Knobs, snatchout.reach_m), false),
-    ("snatchout.gap_m", offset_of!(Knobs, snatchout.gap_m), false),
-    ("snatchout.send_m", offset_of!(Knobs, snatchout.send_m), false),
-    ("snatchout.send_him_m", offset_of!(Knobs, snatchout.send_him_m), false),
-    ("snatchout.in_m", offset_of!(Knobs, snatchout.in_m), false),
-    ("snatchout.carry_m", offset_of!(Knobs, snatchout.carry_m), false),
-    ("snatchout.trail_m", offset_of!(Knobs, snatchout.trail_m), false),
-    ("snatchout.close_m", offset_of!(Knobs, snatchout.close_m), false),
-    ("snatchout.turn_secs", offset_of!(Knobs, snatchout.turn_secs), false),
-    ("snatchout.lane_m", offset_of!(Knobs, snatchout.lane_m), false),
-    ("snatchout.off_m", offset_of!(Knobs, snatchout.off_m), false),
-    ("snatchout.spot_m", offset_of!(Knobs, snatchout.spot_m), false),
     ("posemath.singles", offset_of!(Knobs, posemath.singles), true),
-    ("sense.cpu", offset_of!(Knobs, sense.cpu), true),
-    ("sense.grid", offset_of!(Knobs, sense.grid), true),
-    ("sense.bounce", offset_of!(Knobs, sense.bounce), true),
-    ("sense.drift", offset_of!(Knobs, sense.drift), true),
-    ("sense.moon", offset_of!(Knobs, sense.moon), true),
-    ("sense.glow.albedo", offset_of!(Knobs, sense.glow.albedo), false),
-    ("sense.glow.share", offset_of!(Knobs, sense.glow.share), false),
-    ("sense.glow.passes", offset_of!(Knobs, sense.glow.passes), false),
     ("sense.glow.sweep", offset_of!(Knobs, sense.glow.sweep), false),
     ("sense.smoke.sigma", offset_of!(Knobs, sense.smoke.sigma), false),
     ("sense.smoke.decay", offset_of!(Knobs, sense.smoke.decay), false),
     ("sense.smoke.spread", offset_of!(Knobs, sense.smoke.spread), false),
-    ("sense.smoke.widest", offset_of!(Knobs, sense.smoke.widest), false),
     ("sense.smoke.rise", offset_of!(Knobs, sense.smoke.rise), false),
     ("sense.smoke.rise_rate", offset_of!(Knobs, sense.smoke.rise_rate), false),
     ("sense.smoke.in_wind", offset_of!(Knobs, sense.smoke.in_wind), false),
     ("sense.smoke.least", offset_of!(Knobs, sense.smoke.least), false),
     ("sense.smoke.gone", offset_of!(Knobs, sense.smoke.gone), false),
-    ("sense.smoke.cap", offset_of!(Knobs, sense.smoke.cap), false),
-    ("sense.smoke.emitters", offset_of!(Knobs, sense.smoke.emitters), false),
     ("sense.smoke.reserve", offset_of!(Knobs, sense.smoke.reserve), false),
     ("cmdcheck.keys", offset_of!(Knobs, cmdcheck.keys), false),
     ("cmdcheck.key_len", offset_of!(Knobs, cmdcheck.key_len), false),
@@ -3035,11 +2983,9 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("roomfight.door_look_secs", offset_of!(Knobs, roomfight.door_look_secs), false),
     ("roomfight.door_shot_m", offset_of!(Knobs, roomfight.door_shot_m), false),
     ("roomfight.hold_short_secs", offset_of!(Knobs, roomfight.hold_short_secs), false),
-    ("roomfight.pairs", offset_of!(Knobs, roomfight.pairs), false),
     ("roomfight.move_engage_m", offset_of!(Knobs, roomfight.move_engage_m), false),
     ("roomfight.lamp", offset_of!(Knobs, roomfight.lamp), false),
     ("roomfight.preaim_deg", offset_of!(Knobs, roomfight.preaim_deg), false),
-    ("roomfight.sights_deg", offset_of!(Knobs, roomfight.sights_deg), false),
     ("orders.refresh_secs", offset_of!(Knobs, orders.refresh_secs), false),
     ("orders.door_pick_m", offset_of!(Knobs, orders.door_pick_m), false),
     ("orders.self_m", offset_of!(Knobs, orders.self_m), false),
@@ -3433,18 +3379,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("cues.still_quiet", offset_of!(Knobs, cues.still_quiet), false),
     ("cues.stay_secs", offset_of!(Knobs, cues.stay_secs), false),
     ("cues.overheard_gap", offset_of!(Knobs, cues.overheard_gap), false),
-    ("buddy.loud_secs", offset_of!(Knobs, buddy.loud_secs), false),
-    ("buddy.beat.0", offset_of!(Knobs, buddy.beat), false),
-    ("buddy.beat.1", offset_of!(Knobs, buddy.beat) + 8, false),
-    ("buddy.quiet", offset_of!(Knobs, buddy.quiet), false),
-    ("buddy.calm", offset_of!(Knobs, buddy.calm), false),
-    ("buddy.calm_m", offset_of!(Knobs, buddy.calm_m), false),
-    ("buddy.answer.0", offset_of!(Knobs, buddy.answer), false),
-    ("buddy.answer.1", offset_of!(Knobs, buddy.answer) + 8, false),
-    ("buddy.max_m", offset_of!(Knobs, buddy.max_m), false),
-    ("buddy.clear_m", offset_of!(Knobs, buddy.clear_m), false),
-    ("buddy.again", offset_of!(Knobs, buddy.again), false),
-    ("buddy.calls", offset_of!(Knobs, buddy.calls), false),
     ("wx_sim.rain_k", offset_of!(Knobs, wx_sim.rain_k), false),
     ("wx_sim.thunder_k", offset_of!(Knobs, wx_sim.thunder_k), false),
     ("wx_sim.thunder_secs", offset_of!(Knobs, wx_sim.thunder_secs), false),
@@ -3490,21 +3424,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("laststand.thump.0", offset_of!(Knobs, laststand.thump), false),
     ("laststand.thump.1", offset_of!(Knobs, laststand.thump) + 8, false),
     ("laststand.thump_level", offset_of!(Knobs, laststand.thump_level), false),
-    ("clearline.after", offset_of!(Knobs, clearline.after), false),
-    ("clearline.reach_m", offset_of!(Knobs, clearline.reach_m), false),
-    ("clearline.pace", offset_of!(Knobs, clearline.pace), false),
-    ("clearline.body_m", offset_of!(Knobs, clearline.body_m), false),
-    ("clearline.spare_m", offset_of!(Knobs, clearline.spare_m), false),
-    ("clearline.cover_secs", offset_of!(Knobs, clearline.cover_secs), false),
-    ("clearline.again", offset_of!(Knobs, clearline.again), false),
-    ("clearline.lose", offset_of!(Knobs, clearline.lose), false),
-    ("clearline.hold_max", offset_of!(Knobs, clearline.hold_max), false),
-    ("clearline.rest", offset_of!(Knobs, clearline.rest), false),
-    ("clearline.stale", offset_of!(Knobs, clearline.stale), false),
-    ("clearline.after_edge", offset_of!(Knobs, clearline.after_edge), false),
-    ("clearline.hold_behind", offset_of!(Knobs, clearline.hold_behind), false),
-    ("clearline.still", offset_of!(Knobs, clearline.still), false),
-    ("clearline.still_far", offset_of!(Knobs, clearline.still_far), false),
     ("stackroom.apart", offset_of!(Knobs, stackroom.apart), false),
     ("stackroom.squeeze", offset_of!(Knobs, stackroom.squeeze), false),
     ("stackroom.round_m", offset_of!(Knobs, stackroom.round_m), false),
@@ -3593,23 +3512,6 @@ pub static KNOBS: &[(&str, usize, bool)] = &[
     ("nightbreach.squad", offset_of!(Knobs, nightbreach.squad), false),
     ("roomclear.seed", offset_of!(Knobs, roomclear.seed), false),
     ("roomclear.way", offset_of!(Knobs, roomclear.way), false),
-    ("snatch.give_up_m", offset_of!(Knobs, snatch.give_up_m), false),
-    ("snatch.halt_m", offset_of!(Knobs, snatch.halt_m), false),
-    ("snatch.see_m", offset_of!(Knobs, snatch.see_m), false),
-    ("snatch.see_rate", offset_of!(Knobs, snatch.see_rate), false),
-    ("snatch.cuff_m", offset_of!(Knobs, snatch.cuff_m), false),
-    ("snatch.cuff_secs", offset_of!(Knobs, snatch.cuff_secs), false),
-    ("snatch.bolt_secs", offset_of!(Knobs, snatch.bolt_secs), false),
-    ("defuse.work_secs", offset_of!(Knobs, defuse.work_secs), false),
-    ("defuse.reach", offset_of!(Knobs, defuse.reach), false),
-    ("defuse.marker_m", offset_of!(Knobs, defuse.marker_m), false),
-    ("defuse.shift", offset_of!(Knobs, defuse.shift), false),
-    ("defuse.start_m", offset_of!(Knobs, defuse.start_m), false),
-    ("defuse.lethal_m", offset_of!(Knobs, defuse.lethal_m), false),
-    ("defuse.wound_m", offset_of!(Knobs, defuse.wound_m), false),
-    ("defuse.radius", offset_of!(Knobs, defuse.radius), false),
-    ("defuse.power", offset_of!(Knobs, defuse.power), false),
-    ("defuse.warn_secs", offset_of!(Knobs, defuse.warn_secs), false),
     ("verdict.win_secs", offset_of!(Knobs, verdict.win_secs), false),
     ("verdict.loss_secs", offset_of!(Knobs, verdict.loss_secs), false),
     ("unseen.pace_at", offset_of!(Knobs, unseen.pace_at), false),
@@ -4529,30 +4431,11 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.stalk.heft_fwd;
     let _: &f64 = &k.stalk.heft_lead;
     let _: &[f64; 3] = &k.stalk.heft_pole;
-    let _: &f64 = &k.stalk.drag_dead;
-    let _: &f64 = &k.stalk.drag_full;
     let _: &f64 = &k.stalk.orbit_k;
     let _: &f64 = &k.stalk.orbit_edge;
     let _: &f64 = &k.stalk.orbit_snap;
     let _: &f64 = &k.stalk.low_begin_m;
     let _: &f64 = &k.stalk.low_out_m;
-    let _: &f64 = &k.tapstep.tap_m;
-    let _: &f64 = &k.tapstep.beat_m;
-    let _: &f64 = &k.tapstep.reach_m;
-    let _: &f64 = &k.tapstep.secs;
-    let _: &f64 = &k.tapstep.rushed;
-    let _: &f64 = &k.tapstep.settle;
-    let _: &f64 = &k.tapstep.beat;
-    let _: &f64 = &k.tapstep.quiet;
-    let _: &f64 = &k.tapstep.scuff;
-    let _: &f64 = &k.tapstep.mask_secs;
-    let _: &f64 = &k.tapstep.mask_m;
-    let _: &f64 = &k.tapstep.mask;
-    let _: &f64 = &k.tapstep.land_m;
-    let _: &f64 = &k.tapstep.land_cos;
-    let _: &f64 = &k.tapstep.follow;
-    let _: &f64 = &k.tapstep.turn;
-    let _: &f64 = &k.tapstep.legs;
     let _: &f64 = &k.overhear.path_m;
     let _: &f64 = &k.overhear.carry;
     let _: &f64 = &k.score.seen;
@@ -4701,11 +4584,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.turn.aim_acc;
     let _: &f64 = &k.turn.body;
     let _: &f64 = &k.turn.body_acc;
-    let _: &f64 = &k.wound.centre;
-    let _: &f64 = &k.wound.head;
-    let _: &f64 = &k.wound.lead;
-    let _: &f64 = &k.wound.depth;
-    let _: &f64 = &k.wound.back_room;
     let _: &f64 = &k.doorpath.at;
     let _: &f64 = &k.doorpath.out_m;
     let _: &f64 = &k.doorpath.in_m;
@@ -4717,10 +4595,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.doorpath.cap;
     let _: &f64 = &k.doorpath.move_m;
     let _: &f64 = &k.doorpath.apart_m;
-    let _: &f64 = &k.doorpath.gun_m;
-    let _: &f64 = &k.doorpath.gun_ajar;
-    let _: &f64 = &k.doorpath.gun_lead;
-    let _: &f64 = &k.doorpath.gun_side;
     let _: &f64 = &k.doorpath.body_m;
     let _: &f64 = &k.doorpath.body_off;
     let _: &f64 = &k.doorpath.body_move;
@@ -6002,40 +5876,16 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.rescueflush.busy_secs;
     let _: &f64 = &k.rescueflush.smoke_k;
     let _: &f64 = &k.rescueflush.at_door_m;
-    let _: &f64 = &k.snatchout.marker_m;
-    let _: &f64 = &k.snatchout.reach_m;
-    let _: &f64 = &k.snatchout.gap_m;
-    let _: &f64 = &k.snatchout.send_m;
-    let _: &f64 = &k.snatchout.send_him_m;
-    let _: &f64 = &k.snatchout.in_m;
-    let _: &f64 = &k.snatchout.carry_m;
-    let _: &f64 = &k.snatchout.trail_m;
-    let _: &f64 = &k.snatchout.close_m;
-    let _: &f64 = &k.snatchout.turn_secs;
-    let _: &f64 = &k.snatchout.lane_m;
-    let _: &f64 = &k.snatchout.off_m;
-    let _: &f64 = &k.snatchout.spot_m;
     let _: &bool = &k.posemath.singles;
-    let _: &bool = &k.sense.cpu;
-    let _: &bool = &k.sense.grid;
-    let _: &bool = &k.sense.bounce;
-    let _: &bool = &k.sense.drift;
-    let _: &bool = &k.sense.moon;
-    let _: &f64 = &k.sense.glow.albedo;
-    let _: &f64 = &k.sense.glow.share;
-    let _: &f64 = &k.sense.glow.passes;
     let _: &f64 = &k.sense.glow.sweep;
     let _: &f64 = &k.sense.smoke.sigma;
     let _: &f64 = &k.sense.smoke.decay;
     let _: &f64 = &k.sense.smoke.spread;
-    let _: &f64 = &k.sense.smoke.widest;
     let _: &f64 = &k.sense.smoke.rise;
     let _: &f64 = &k.sense.smoke.rise_rate;
     let _: &f64 = &k.sense.smoke.in_wind;
     let _: &f64 = &k.sense.smoke.least;
     let _: &f64 = &k.sense.smoke.gone;
-    let _: &f64 = &k.sense.smoke.cap;
-    let _: &f64 = &k.sense.smoke.emitters;
     let _: &f64 = &k.sense.smoke.reserve;
     let _: &f64 = &k.cmdcheck.keys;
     let _: &f64 = &k.cmdcheck.key_len;
@@ -6391,11 +6241,9 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.roomfight.door_look_secs;
     let _: &f64 = &k.roomfight.door_shot_m;
     let _: &f64 = &k.roomfight.hold_short_secs;
-    let _: &f64 = &k.roomfight.pairs;
     let _: &f64 = &k.roomfight.move_engage_m;
     let _: &f64 = &k.roomfight.lamp;
     let _: &f64 = &k.roomfight.preaim_deg;
-    let _: &f64 = &k.roomfight.sights_deg;
     let _: &f64 = &k.orders.refresh_secs;
     let _: &f64 = &k.orders.door_pick_m;
     let _: &f64 = &k.orders.self_m;
@@ -6775,16 +6623,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.cues.still_quiet;
     let _: &f64 = &k.cues.stay_secs;
     let _: &f64 = &k.cues.overheard_gap;
-    let _: &f64 = &k.buddy.loud_secs;
-    let _: &[f64; 2] = &k.buddy.beat;
-    let _: &f64 = &k.buddy.quiet;
-    let _: &f64 = &k.buddy.calm;
-    let _: &f64 = &k.buddy.calm_m;
-    let _: &[f64; 2] = &k.buddy.answer;
-    let _: &f64 = &k.buddy.max_m;
-    let _: &f64 = &k.buddy.clear_m;
-    let _: &f64 = &k.buddy.again;
-    let _: &f64 = &k.buddy.calls;
     let _: &f64 = &k.wx_sim.rain_k;
     let _: &f64 = &k.wx_sim.thunder_k;
     let _: &f64 = &k.wx_sim.thunder_secs;
@@ -6823,21 +6661,6 @@ fn typed(k: &Knobs) {
     let _: &[f64; 2] = &k.laststand.dig;
     let _: &[f64; 2] = &k.laststand.thump;
     let _: &f64 = &k.laststand.thump_level;
-    let _: &f64 = &k.clearline.after;
-    let _: &f64 = &k.clearline.reach_m;
-    let _: &f64 = &k.clearline.pace;
-    let _: &f64 = &k.clearline.body_m;
-    let _: &f64 = &k.clearline.spare_m;
-    let _: &f64 = &k.clearline.cover_secs;
-    let _: &f64 = &k.clearline.again;
-    let _: &f64 = &k.clearline.lose;
-    let _: &f64 = &k.clearline.hold_max;
-    let _: &f64 = &k.clearline.rest;
-    let _: &f64 = &k.clearline.stale;
-    let _: &f64 = &k.clearline.after_edge;
-    let _: &f64 = &k.clearline.hold_behind;
-    let _: &f64 = &k.clearline.still;
-    let _: &f64 = &k.clearline.still_far;
     let _: &f64 = &k.stackroom.apart;
     let _: &f64 = &k.stackroom.squeeze;
     let _: &f64 = &k.stackroom.round_m;
@@ -6924,23 +6747,6 @@ fn typed(k: &Knobs) {
     let _: &f64 = &k.nightbreach.squad;
     let _: &f64 = &k.roomclear.seed;
     let _: &f64 = &k.roomclear.way;
-    let _: &f64 = &k.snatch.give_up_m;
-    let _: &f64 = &k.snatch.halt_m;
-    let _: &f64 = &k.snatch.see_m;
-    let _: &f64 = &k.snatch.see_rate;
-    let _: &f64 = &k.snatch.cuff_m;
-    let _: &f64 = &k.snatch.cuff_secs;
-    let _: &f64 = &k.snatch.bolt_secs;
-    let _: &f64 = &k.defuse.work_secs;
-    let _: &f64 = &k.defuse.reach;
-    let _: &f64 = &k.defuse.marker_m;
-    let _: &f64 = &k.defuse.shift;
-    let _: &f64 = &k.defuse.start_m;
-    let _: &f64 = &k.defuse.lethal_m;
-    let _: &f64 = &k.defuse.wound_m;
-    let _: &f64 = &k.defuse.radius;
-    let _: &f64 = &k.defuse.power;
-    let _: &f64 = &k.defuse.warn_secs;
     let _: &f64 = &k.verdict.win_secs;
     let _: &f64 = &k.verdict.loss_secs;
     let _: &f64 = &k.unseen.pace_at;

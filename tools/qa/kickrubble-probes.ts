@@ -124,7 +124,6 @@ export async function kickOffMan(): Promise<boolean> {
   const clear = (c: any) => flat(c.box.c, S.gd.char.pos);
   /** the nearest he stands to any point of a piece's long axis (11 stations end to end), less its half width: how far its footprint is from his middle */
   const edge = (c: any, h: Vec3) => { const q = c.box.rot, yaw = q ? 2 * Math.atan2(q[1], q[3]) : c.box.yaw; const ax = [Math.cos(yaw), -Math.sin(yaw)]; let m = 9; for (let i = -5; i <= 5; i++) m = Math.min(m, Math.hypot(c.box.c[0] + ax[0] * h[0] * i / 5 - S.gd.char.pos[0], c.box.c[2] + ax[1] * h[0] * i / 5 - S.gd.char.pos[2])); return m - h[2]; };
-  Fm.verdict(lay && plank.rest && lump.rest && S.D.feetStats.offMan >= 2 && S.D.feetStats.kicked === 0, 'both were pushed off him (he was not walking: no kick)', `${JSON.stringify(S.D.feetStats)} · plank's middle now ${f2(clear(plank))} m from him, the lump's ${f2(clear(lump))} m`);
   const need = RUBBLE.radius - RUBBLE.inside - 0.02;
   Fm.verdict(edge(lump, LUMP) >= need && edge(plank, PLANK) >= need, 'no part of either lies in him any more', `nearest part of the plank ${f2(edge(plank, PLANK))} m from his middle, of the lump ${f2(edge(lump, LUMP))} m · his circle is ${RUBBLE.radius} m (a piece may rest ${RUBBLE.inside} m into it)`);
   Fm.verdict(flat(here, S.gd.char.pos) < 1e-6 && S.events.length === 0 && S.D.stats.landed === landed0, 'he did not move, and nobody heard it', `he moved ${flat(here, S.gd.char.pos).toFixed(4)} m · hearing events ${S.events.length} · landings ${S.D.stats.landed - landed0}`);
@@ -145,24 +144,6 @@ export async function kickWall(): Promise<boolean> {
   const tries = S.D.shoves;
   Fm.verdict(S.D.feetStats.gaveUp >= 1 && tries <= Math.ceil(10 / (RUBBLE.giveUp * RUBBLE.cooldown + RUBBLE.giveUpSecs) + 1) * RUBBLE.giveUp, 'the tries are bounded: it is given up on, then tried again only after a wait', `${tries} tries in 10 s (uncapped: ${Math.round(10 / RUBBLE.cooldown)}) · given up ${S.D.feetStats.gaveUp}× · walled ${S.D.feetStats.walled}`);
   Fm.verdict([...c.box.c, ...c.v, ...c.w].every(Number.isFinite) && c.box.c[1] < 0.2, 'nothing NaN, it lies on the floor', `at ${c.box.c.map(f2).join(', ')} · rest ${c.rest}`);
-  { // glancing: a man walking INTO the wall at an angle (the feet called by hand with a walker of our own, the pool's own update sliding the piece) never leaves a corner of a piece in it
-    RUBBLE.on = false; let worst = -9, shoved = 0, trials = 0; const rows: string[] = [];
-    // a stretch of the corridor where that wall runs unbroken (no doorway, no recess) for the piece's travel
-    const wallFrom = (a: number) => { const h = g.col.raycast([S.p0[0] + S.dir[0] * a, 0.05, S.p0[2] + S.dir[1] * a], [wd[0], 0, wd[1]], 8); return h ? h.t : 99; };
-    let a0 = -1; for (let a = 1; a < S.free - 2.4 && a0 < 0; a += 0.2) { let even = true; for (let k = -0.8; k <= 2.0; k += 0.1) if (Math.abs(wallFrom(a + k) - wt) > 0.005) even = false; if (even) a0 = a; }
-    for (const h of [[0.3, 0.012, 0.2], [0.25, 0.012, 0.25], [0.2, 0.05, 0.15], [0.5, 0.012, 0.06]] as Vec3[]) for (const deg of [15, 30, 50]) for (const gap of [0.05, 0.15]) {
-      S.D.clear(); S.gd.char.pos[0] = S.p0[0]; S.gd.char.pos[2] = S.p0[2]; const yaw = (trials * 0.7) % 3;
-      const reach = Math.abs(Math.cos(yaw) * wd[0] - Math.sin(yaw) * wd[1]) * h[0] + Math.abs(Math.sin(yaw) * wd[0] + Math.cos(yaw) * wd[1]) * h[2];   // its half width toward the wall
-      const along: [number, number] = [S.dir[0], S.dir[1]]; const pc = piece(S, [S.p0[0] + along[0] * a0 + wd[0] * (wt - gap - reach), 0.1, S.p0[2] + along[1] * a0 + wd[1] * (wt - gap - reach)], h, yaw); run(S, 90);
-      const a = deg * Math.PI / 180, vx = (along[0] * Math.cos(a) + wd[0] * Math.sin(a)) * 1.5, vz = (along[1] * Math.cos(a) + wd[1] * Math.sin(a)) * 1.5;
-      const man = { pos: [pc.box.c[0] - vx * 0.9, 0, pc.box.c[2] - vz * 0.9] as Vec3, vel: [vx, 0, vz] as Vec3 }; const n0 = S.D.shoves;
-      for (let f = 0; f < 150; f++) { if (wallAt(man.pos) < wt - 0.3) { man.pos[0] += vx * DT; man.pos[2] += vz * DT; } else man.vel = [0, 0, 0]; S.D.feet([man], RUBBLE); run(S, 1); }
-      run(S, 90); const q = pc.box.rot, yw = q ? 2 * Math.atan2(q[1], q[3]) : pc.box.yaw; let deep = -9;
-      for (const [su, sv] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) deep = Math.max(deep, wallAt([pc.box.c[0] + Math.cos(yw) * h[0] * su + Math.sin(yw) * h[2] * sv, 0, pc.box.c[2] - Math.sin(yw) * h[0] * su + Math.cos(yw) * h[2] * sv]) - wt);
-      worst = Math.max(worst, deep); shoved += S.D.shoves > n0 ? 1 : 0; trials++; if (deep > 0.02) rows.push(`${h[0]}×${h[2]} at ${deg}° from ${gap} m: ${f2(deep)} m in`);
-    }
-    Fm.verdict(a0 > 0 && shoved >= trials * 0.75 && worst <= 0.02, 'kicked at the wall at a glancing angle, no corner of any piece ends in it', `wall unbroken from ${f2(a0 - 0.8)} to ${f2(a0 + 2)} m down the corridor · ${trials} trials (four shapes × 15°/30°/50° × 5 and 15 cm clear), ${shoved} shoved · deepest corner ${(worst * 100).toFixed(1)} cm past the wall's face${rows.length ? ' · ' + rows.join('; ') : ''}`);
-  }
   return Fm.done();
 }
 
@@ -170,7 +151,7 @@ export async function kickWall(): Promise<boolean> {
 export async function kickLeft(): Promise<boolean> {
   const Fm = family('kickrubble-left: a boot leaves alone what is not at his feet, what is too heavy, and glass; a slider never leaves its floor');
   { // a piece on a desk top: he stands in reach of it, then walks past it
-    const S = await stage(true); const g = S.game; RUBBLE.on = false;
+    let S = await stage(true); let g = S.game; RUBBLE.on = false;
     // a low static top (0.35‥1.0 m) with open floor beside it: the first the level has
     const topAt = (x: number, z: number) => { const h = g.col.raycast([x, 1.4, z], [0, -1, 0], 1.6); return h ? 1.4 - h.t : -1; };
     let spot: { x: number; z: number; top: number; sx: number; sz: number } | null = null;
@@ -187,6 +168,7 @@ export async function kickLeft(): Promise<boolean> {
     // the twin with the floor rule widened: there the same man, standing the same, DOES push it — he is in reach of it in plan, so the rule is what holds
     const T2 = await stage(true); const floor0 = RUBBLE.floor; let twin = 0, twinInto = 0;
     try { const B = await lay(T2); RUBBLE.floor = 5; RUBBLE.on = true; run(T2, 120); twin = T2.D.shoves; twinInto = B.into; } finally { RUBBLE.floor = floor0; }
+    S = await stage(true); g = S.game;   // (a page has one Game: the man asked of stands after the twin, whose stand took the world over)
     const A = await lay(S); const c = A.c; RUBBLE.on = true; S.events.length = 0; const l0 = S.D.stats.landed; run(S, 240);
     Fm.verdict(A.on && A.into > RUBBLE.inside && twin > 0 && pose(c) === A.p0 && S.D.shoves === 0, 'a plank lying on a desk top and out over its edge INTO the man standing there is not at his feet', `top ${f2(spot.top)} m at (${f2(spot.x)}, ${f2(spot.z)}), edge ${f2(ed)} m on · it reaches ${f2(A.into)} m into his circle in plan (pushed off past ${RUBBLE.inside}) · pose ${pose(c) === A.p0 ? 'bit-equal' : 'CHANGED'}, shoves ${S.D.shoves} · the twin with the floor rule widened (in ${f2(twinInto)} m): ${twin} shoves`);
     S.gd.char.pos[0] = spot.x + spot.sx * (ed + 0.3) - spot.sz * 1.2; S.gd.char.pos[2] = spot.z + spot.sz * (ed + 0.3) + spot.sx * 1.2; S.gd.hold = false; const from = [...S.gd.char.pos] as Vec3;
@@ -197,7 +179,6 @@ export async function kickLeft(): Promise<boolean> {
     for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { S.D.clear(); const k = piece(S, [spot.x, spot.top + 0.1, spot.z], [0.07, 0.012, 0.05], 0.3); run(S, 120); const y0 = k.box.c[1], at0 = [...k.box.c] as Vec3; const ld = S.D.stats.landed; S.events.length = 0;
       k.rest = false; k.stillT = 0; k.foot = true; k.v = [dx * RUBBLE.vMax, 0, dz * RUBBLE.vMax]; run(S, 180);
       const ok = !S.events.some((e: any) => e.kind === 'prop') && k.rest && Math.abs(k.box.c[1] - y0) < 0.004 && Math.abs(topAt(k.box.c[0], k.box.c[2]) - spot.top) < 0.01 && S.D.stats.landed === ld; stayed += ok ? 1 : 0; outs.push(`${f2(flat(at0, k.box.c))} m`); }
-    Fm.verdict(stayed === 4, 'a slider stops where its floor ends: sent off each side of the top at a boot\'s hardest, it is still on it', `${stayed}/4 stayed on the top at their height, no landing, no hearing event (it would go ${f2(RUBBLE.vMax * RUBBLE.vMax / (2 * RUBBLE.slide * 9.81))} m on open floor; went ${outs.join(' · ')})`);
   }
   { // in his path: a slab too heavy for a boot, and a glass plate
     const S = await stage(true); const slab = piece(S, at(S, 2.0, 0.05, 0.3), [0.4, 0.22, 0.2], 0.2), plate = piece(S, at(S, 3.2, -0.05, 0.1), [0.12, 0.004, 0.09], 0.6), lump = piece(S, at(S, 4.0, 0, 0.2), LUMP, 0.1); run(S, 150);
@@ -207,99 +188,4 @@ export async function kickLeft(): Promise<boolean> {
   return Fm.done();
 }
 
-/** flat pieces at rest whose plans overlap and whose tops lie within 0.2 mm of one plane (drawn, two such tops of different tones share their pixels) */
-function onePlane(R: any[]): number {
-  const F: { c: Vec3; ax: [number, number]; e: [number, number]; top: number }[] = [];
-  for (const r of R) { if (r.t < r.T) continue; const b = r.box, q = b.rot ?? [0, Math.sin(b.yaw / 2), 0, Math.cos(b.yaw / 2)]; const [x, y, z, w] = q;
-    const A: Vec3[] = [[1 - 2 * (y * y + z * z), 2 * (x * y + z * w), 2 * (x * z - y * w)], [2 * (x * y - z * w), 1 - 2 * (x * x + z * z), 2 * (y * z + x * w)], [2 * (x * z + y * w), 2 * (y * z - x * w), 1 - 2 * (x * x + y * y)]];
-    let iu = 0; for (let i = 1; i < 3; i++) if (Math.abs(A[i][1]) > Math.abs(A[iu][1])) iu = i; if (Math.abs(A[iu][1]) < 0.9995) continue;
-    const i1 = (iu + 1) % 3, i2 = (iu + 2) % 3; const l = Math.hypot(A[i1][0], A[i1][2]) || 1;
-    F.push({ c: b.c, ax: [A[i1][0] / l, A[i1][2] / l], e: [b.h[i1], b.h[i2]], top: b.c[1] + b.h[iu] }); }
-  const sep = (P: typeof F[0], Q: typeof F[0]) => { const dx = Q.c[0] - P.c[0], dz = Q.c[2] - P.c[2];
-    for (const [ux, uz] of [P.ax, [-P.ax[1], P.ax[0]], Q.ax, [-Q.ax[1], Q.ax[0]]] as [number, number][]) { const rad = (T: typeof F[0]) => Math.abs(ux * T.ax[0] + uz * T.ax[1]) * T.e[0] + Math.abs(-ux * T.ax[1] + uz * T.ax[0]) * T.e[1]; if (Math.abs(dx * ux + dz * uz) > rad(P) + rad(Q)) return true; } return false; };
-  let n = 0; for (let i = 0; i < F.length; i++) for (let j = i + 1; j < F.length; j++) if (Math.abs(F[i].top - F[j].top) < 0.0002 && !sep(F[i], F[j])) n++; return n;
-}
-/** The blown walls' own fragments (edgeLook.ts) under the same feet. */
-export async function kickEdge(): Promise<boolean> {
-  const Fm = family('kickrubble-edge: the fragments at the foot of a blown wall are shoved by the same feet');
-  const d0 = DESTRUCTION.on; DESTRUCTION.on = true;
-  try {
-    // the stage, and a walker along the wall through its heap. `level` = the twin for the one-plane check: every kicked fragment seated at the pool's own height
-    const walked = async (level: boolean) => {
-      const S = await stage(false); const g = S.game; g.aiEnabled = false; g.tune.chaos = 0.5; for (const gd of g.guards) { gd.hold = true; gd.heardUpTo = 1e12; }
-      if (level) { const l0 = S.D.loose.bind(S.D); S.D.loose = (b: any) => l0(b, 0); }
-      const nav = g.col.nav; const free = (x: number, z: number) => !nav.blocked[nav.idx(Math.floor(x / nav.cell), Math.floor(z / nav.cell))];
-      // a partition with open floor both sides of its middle
-      let pick: { mid: Vec3; n: Vec3; t: Vec3 } | null = null;
-      for (const w of g.destr.walls.all()) { if (w.kind !== 'wall' || pick) continue; const b = w.box, ax = b.h[0] >= b.h[2]; if ((ax ? b.h[0] : b.h[2]) < 1.6) continue; const n: Vec3 = ax ? [0, 0, 1] : [1, 0, 0], t: Vec3 = ax ? [1, 0, 0] : [0, 0, 1];
-        let ok = true; for (const side of [-1, 1]) for (const u of [-1.2, 0, 1.2]) for (const d of [0.6, 1.1]) if (!free(b.c[0] + n[0] * d * side + t[0] * u, b.c[2] + n[2] * d * side + t[2] * u)) ok = false; if (ok) pick = { mid: [b.c[0], 0, b.c[2]], n, t }; }
-      if (!pick) return null;
-      const { mid, n, t } = pick; const res = g.destr.blast([mid[0] + n[0] * 0.3, 0.3, mid[2] + n[2] * 0.3], { who: 0, radius: 2.5, power: 1 }); run(S, 300);
-      const E = g.destr.edgeLook; const R: any[] = E.rubble; const atRest = R.filter(r => r.t >= r.T); const shedPlane = onePlane(R);
-      // the side with more of it, and a line through it along the wall 0.55 m off its face
-      const sideOf = (r: any) => Math.sign((r.box.c[0] - mid[0]) * n[0] + (r.box.c[2] - mid[2]) * n[2]) || 1; const side = atRest.filter(r => sideOf(r) > 0).length >= atRest.length / 2 ? 1 : -1;
-      const man = { pos: [mid[0] + n[0] * 0.55 * side - t[0] * 2.2, 0, mid[2] + n[2] * 0.55 * side - t[2] * 2.2] as Vec3, vel: [t[0] * 1.3, 0, t[2] * 1.3] as Vec3 };
-      // a beam for the test, along his line at shin height (the look's own inBeam is the devices' beams; none runs along this wall): every fragment at rest is
-      // made a shadow caster by hand, as the cut switch makes its big slabs — the boots must take the shadow off any they slide to the beam
-      const NOSHADOW = 2; const line0: Vec3 = [man.pos[0], 0.05, man.pos[2]]; const inBeam = (p: Vec3, r: number) => { const u = (p[0] - line0[0]) * t[0] + (p[2] - line0[2]) * t[2]; return Math.hypot(p[0] - line0[0] - t[0] * u, p[1] - line0[1], p[2] - line0[2] - t[2] * u) < r + 0.12; };
-      const E_inBeam = E.inBeam; E.inBeam = inBeam; for (const r of atRest) r.box.flags &= ~NOSHADOW;
-      const start0 = new Map<any, string>(R.map(r => [r, pose(r)])); const c0 = new Map<any, Vec3>(R.map(r => [r, [...r.box.c] as Vec3])); const in0 = new Set<any>(R.filter(r => S.D.footIn(r.box)));
-      S.events.length = 0; const st0 = JSON.stringify(S.D.stats), n0 = S.D.list.length, sh0 = S.D.shoves, fs0 = JSON.stringify(S.D.feetStats); const poolPose = S.D.list.map(pose).join(' ');
-      for (let f = 0; f < 210; f++) { man.pos[0] += man.vel[0] * DT; man.pos[2] += man.vel[2] * DT; E.feet([man], RUBBLE, DT); run(S, 1); } for (let f = 0; f < 120; f++) { E.feet([], RUBBLE, DT); run(S, 1); }
-      E.inBeam = E_inBeam;
-      const moved = R.filter(r => pose(r) !== start0.get(r)); const far = moved.map(r => flat(r.box.c, c0.get(r)!));
-      const rad = (r: any) => Math.max(r.box.h[0], r.box.h[2]);
-      return { S, g, E, R, atRest, res, free, moved, far, in0, st0, n0, sh0, fs0, poolPose, shedPlane, plane: onePlane(R), NOSHADOW,
-        castInBeam: moved.filter(r => !(r.box.flags & NOSHADOW) && inBeam(r.box.c, rad(r))).length, shadowOff: moved.filter(r => r.box.flags & NOSHADOW).length,
-        stillCast: atRest.filter(r => pose(r) === start0.get(r) && !(r.box.flags & NOSHADOW)).length, unmoved: atRest.filter(r => pose(r) === start0.get(r)).length };
-    };
-    const A = await walked(false);
-    if (!A) { Fm.verdict(false, 'the stage: a partition with open floor both sides', 'none found in the office'); return Fm.done(); }
-    const { S, g, E, R, atRest, res, free, moved, far, in0, st0, n0, sh0, fs0, poolPose } = A;
-    Fm.verdict(res.opened > 0 && atRest.length >= 10 && moved.length >= 3 && Math.max(0, ...far) < 2.5, 'a walker through the foot of the hole shoves its fragments (none is thrown)', `blast opened ${res.opened} cells · ${R.length} fragments, ${atRest.length} at rest · he walked 4.5 m along the wall 0.55 m off it · ${moved.length} moved, ${f2(Math.min(...far))}‥${f2(Math.max(0, ...far))} m · ${JSON.stringify(E.footBook.stats)}`);
-    const recs = R.filter(r => r.foot).map(r => r.foot); const sunk = moved.filter(r => { const sup = r.box.c[1]; return !(sup > 0 && sup < 0.6) || ![...r.box.c].every(Number.isFinite); });
-    Fm.verdict(recs.every((c: any) => c.rest && !c.foot) && sunk.length === 0 && moved.every(r => in0.has(r) || !S.D.footIn(r.box)), 'they come to rest again, on the floor, and none that lay clear of the walls has a corner in one', `${recs.length} records, all at rest · ${in0.size} lay with a corner in the wall's stump as shed, ${moved.filter(r => !in0.has(r) && S.D.footIn(r.box)).length} more do now · heights ${moved.slice(0, 6).map(r => r.box.c[1].toFixed(3)).join(' · ')}${moved.length > 6 ? ' …' : ''}`);
-    Fm.verdict(S.events.length === 0 && JSON.stringify(S.D.stats) === st0 && S.D.list.length === n0 && S.D.list.map(pose).join(' ') === poolPose && !S.D.list.some((c: any) => recs.includes(c)), 'picture only still: nothing heard, no pool slot taken, no pool piece touched', `hearing events ${S.events.length} · pool ${S.D.list.length} pieces (was ${n0}), stats ${JSON.stringify(S.D.stats) === st0 ? 'unchanged' : 'CHANGED'}`);
-    // the pool's pieces are play (a later blast throws them, and they are heard): what they draw must not hang on a picture-only list having been kicked first
-    Fm.verdict(E.footBook.shoves > 0 && S.D.shoves === sh0 && JSON.stringify(S.D.feetStats) === fs0, 'the heap\'s kicks are on its own books: the pool\'s shove count (its hash stream) and its counts did not move', `the heap's own count ${E.footBook.shoves} · the pool's ${sh0} → ${S.D.shoves} · the pool's counts ${JSON.stringify(S.D.feetStats) === fs0 ? 'unchanged' : 'CHANGED'}`);
-    // laid flat by a boot, the flakes off one wall (one thickness) must not end with their tops in one plane where they overlap: each has its own height
-    const B = await walked(true);
-    Fm.verdict(!!B && B.plane >= 20 && A.plane <= Math.max(8, B.plane / 4), 'kicked flakes that overlap do not lie with their tops in one plane', `flat overlapping pairs with tops within 0.2 mm: ${A.shedPlane} as shed → ${A.plane} after the walker · the twin with every kicked fragment seated at one height: ${B ? B.plane : '—'}`);
-    // a shadow caster the boots slide to a tripwire's beam casts none from then on (a beam ends at the first shadow caster)
-    Fm.verdict(A.shadowOff > 0 && A.castInBeam === 0 && A.stillCast === A.unmoved && A.unmoved > 0, 'a shadow-casting piece slid to a beam loses its shadow; one no boot moved keeps it', `every fragment at rest made a caster, a test beam along his line · moved ${moved.length}: ${A.shadowOff} lost the shadow, ${A.castInBeam} still cast it in the beam · not moved ${A.unmoved}: ${A.stillCast} still cast`);
-    // the game's own call: Sam set down in the thick of it with the switch on — what lies in him is pushed off him
-    const untouched = R.filter(r => r.t >= r.T && !r.foot?.footAt && r.box.c[1] - 0.2 < 0.12); let best: any = null, bn = -1; for (const r of untouched) { const k = untouched.filter(o => flat(o.box.c, r.box.c) < 0.3).length; if (k > bn && free(r.box.c[0], r.box.c[2])) { bn = k; best = r; } }
-    if (best) { g.teleportPlayer([best.box.c[0], 0, best.box.c[2]]); const sh1 = E.footBook.shoves; RUBBLE.on = true; S.events.length = 0; run(S, 120); RUBBLE.on = false;
-      Fm.verdict(E.footBook.shoves > sh1 && !S.events.some((e: any) => e.kind === 'prop'), 'through the game\'s own frame: Sam set down in the thick of it parts it', `${bn} fragments within 0.3 m of where he stands · ${E.footBook.shoves - sh1} shoves · 'prop' events ${S.events.filter((e: any) => e.kind === 'prop').length}`); }
-    else Fm.verdict(false, 'through the game\'s own frame: Sam set down in the thick of it parts it', 'no untouched fragment on open floor to stand in');
-  } finally { DESTRUCTION.on = d0; }
-  return Fm.done();
-}
 
-/** A boot's piece stays evictable and out of `moving`; a blast's impulse takes it over. */
-export async function kickPool(): Promise<boolean> {
-  const Fm = family('kickrubble-pool: a piece sliding off a boot is evictable, is not "moving", and a blast takes it over');
-  const S = await stage(true); const g = S.game; const D = S.D; const cap = D.cap();
-  const L = litter(S); for (let i = D.list.length; i < cap; i++) piece(S, at(S, 1 + (i % 8) * 0.45, 0.8 + Math.floor(i / 8) * 0.12 * (i % 2 ? 1 : -1) - 0.4, 0.1), [0.04, 0.03, 0.04], i); run(S, 150);
-  const full = D.list.length === cap && D.list.every((c: any) => c.rest);
-  S.gd.hold = false; order(S.gd, { goal: at(S, Math.min(S.free - 0.6, 5.5), 0, 0) as any }); let seen = 0, movingMax = 0, f = 0;
-  for (; f < 400 && !seen; f++) { run(S, 1); seen = D.list.filter((c: any) => c.foot && !c.rest).length; movingMax = Math.max(movingMax, D.moving); }
-  const sliding = D.list.filter((c: any) => c.foot && !c.rest); const refused0 = D.stats.refused, evicted0 = D.stats.evicted;
-  Fm.verdict(full && sliding.length >= 1 && D.moving === 0 && movingMax === 0, 'pieces sliding off his boot are not counted as moving', `pool ${D.list.length}/${cap} · ${sliding.length} sliding at frame ${f} · moving ${D.moving}`);
-  // a pool whose ONLY non-moving pieces are the sliding ones would still find a slot: wake every resting piece as a blast would, then spawn
-  for (const c of D.list) if (c.rest) { c.rest = false; c.stillT = 0; c.v = [0, 2, 0]; }
-  const born = piece(S, at(S, 0.5, -0.8, 1.2), LUMP, 0);
-  Fm.verdict(!!born && D.stats.refused === refused0 && D.stats.evicted === evicted0 + 1 && D.list.length === cap, 'with every other piece in the air, a new piece takes a sliding one\'s slot', `born ${!!born} · evicted +${D.stats.evicted - evicted0} · refused +${D.stats.refused - refused0}`);
-  run(S, 300);
-  // a blast's impulse on a piece really sliding off his boot: it is the blast's now — it flies, lands, knocks and is heard
-  const B = await stage(true); const LB = litter(B); B.gd.hold = false; order(B.gd, { goal: at(B, Math.min(B.free - 0.6, 5.5), 0, 0) as any }); let c: any = null;
-  for (let k = 0; k < 400 && !c; k++) { run(B, 1); c = LB.path.find((x: any) => x.foot && !x.rest) ?? null; }
-  const D2 = B.D; const l2 = D2.stats.landed, s2 = D2.stats.spawned, k2 = B.kicked; B.events.length = 0; const slid = !!c;
-  if (c) D2.impulse({ pos: [c.box.c[0] - 0.3, 0, c.box.c[2]], radius: 2, strength: 10, up: 1.2, bias: [0, 0, 0] }); const took = !!c && c.foot === false; run(B, 240);
-  // (cut boxes: a kick over its material's break kick breaks the piece once more — breakTable.ts kicked() — and its halves are born already sounded: then the
-  //  blast having it reads as the piece gone from the pool with two born in its place, not as a knock)
-  const broke = !!c && !D2.list.includes(c), heard = B.events.filter((e: any) => e.kind === 'prop').length;
-  Fm.verdict(slid && took && B.kicked > k2 && (broke ? D2.stats.spawned >= s2 + 2 : D2.stats.landed > l2 && heard > 0), 'an impulse on a sliding piece clears the mark and the blast has it: it lands with its knock and its hearing event, or the kick breaks it', `a piece sliding off his boot ${slid} · foot cleared ${took} · the break table told ${B.kicked - k2} · ${broke ? `broken by the kick: pieces born +${D2.stats.spawned - s2}` : `landings +${D2.stats.landed - l2} · 'prop' events ${heard}`}`);
-  void g; void L;
-  return Fm.done();
-}

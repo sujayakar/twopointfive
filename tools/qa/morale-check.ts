@@ -1,7 +1,7 @@
 // SHAKEN — the check behind src/game/morale.ts (MORALE.on: on in the page, ?nomorale; off on the frozen stand, TPS_MORALE=1). Standalone and through probes.ts:
 //   bun run tools/qa/morale-check.ts          bun run tools/qa/probes.ts morale
 // The compound's room clear, the guard hut's man 2.4 m behind his door (doorstun-check's staging: where the maintainer's replay had its man), the 40 mm's burst
-// on the door's outside face as he40.ts asks it, the player off in the yard, wide of the door's line and too dim to be made out. The hut's own two lamps are
+// on the door's outside face as he40.ts asks it, the player off in the yard, wide of the door's line and too dim to be made out. Every lamp on the level is
 // put out for 'dark' and left burning for 'lit'; the rest of the garrison stands across the yard. Headless, PASS / FAIL each, on sim state:
 //   (1) alone in the dark: BROKEN. While the blast's own stagger has him he is down, and neither steps nor fires; then the call goes out on the net BEFORE he
 //       has moved and before any round (he says it, then he does it); inside 3.5 s of the stagger's end he is at least a metre further from the hole and still
@@ -55,7 +55,7 @@ export async function moraleCheck(): Promise<boolean> {
   /** the hut, its man behind his door, the rest across the yard: `dark` = the hut's own lamps put out, `mate` = a second man two metres from him */
   const stage = async (seed: number, dark: boolean, mate = false) => {
     Math.random = seeded(seed);
-    const W: any = await quiet(() => standUp({ level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', 'compound.json'), 'utf8'))) }));
+    const W: any = await quiet(() => standUp({ uploadEvery: 4, level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', 'compound.json'), 'utf8'))) }));
     const g = W.game; DOORBLAST.on = true; DESTRUCTION.on = true; FRAG.doorStun = true; g.tune.chaos = 0.5; MORALE.training = 'none'; MORALE.nerve = 'normal';
     if (BREAK) { MORALE.alone = 0; MORALE.dark = 0; }
     startFromQuery(g, 'levelFile=compound.json&roomclear&squad4'); g.godMode = true;
@@ -71,8 +71,8 @@ export async function moraleCheck(): Promise<boolean> {
     const p = doorPt(d, d.def.width / 2, 2.4, inside, 0);
     men.forEach((o: any, i: number) => { if (o !== T) put(o, [4.8 + (i % 4) * 0.9, 0, 5.8 + Math.floor(i / 4) * 0.9]); });
     put(T, p); if (mate) { const q = doorPt(d, d.def.width / 2 + 1.6, 3.4, inside, 0); put(T2, q); }
-    if (dark) for (const t of g.targets) if (t.on && flat(t.pos, p) < 5) toggleTarget(g, t);
-    step(40);
+    if (dark) for (const t of g.targets) if (t.on) toggleTarget(g, t);   // (every lamp: what the yard's and the next room's lamps send round lights a dark hut past the floor)
+    step(40); if (dark) for (let i = 0; i < 300 && !(inTheDark(g, T) && moraleOf(T)?.dark); i++) step();   // (the place's light eases down over a couple of seconds, and he reads where he stands on his own beat)
     const hole = doorPt(d, d.def.width / 2, HE40.standoff + 0.03, side, 1.0) as V3;
     const shell = () => blast(g, [hole[0], hole[1] - FRAG.lift, hole[2]], { who: PLAYER_ID, name: '40 mm grenade' });
     /** a spent magazine lobbed in through the hole from the yard, by the player's hand */
@@ -137,7 +137,7 @@ export async function moraleCheck(): Promise<boolean> {
         '(2) a second blast a second later: shock is capped and neither man of a pair breaks — nobody calls the net with a mate at his shoulder',
         `rungs ${rungs2.join(' / ')} · shock ${shock.map(f2).join(' / ')} (cap ${MORALE.shockCap}) · calls ${calls.length} · rounds ${fired(T) - n0[0]} / ${fired(T2) - n0[1]}`); }
     // (4) (5) the bait, on (1)'s man: first with a man in it, seen a stride inside the door off the hole's line; then two things thrown through the hole; then the sighting that ends it
-    { const { R, T } = L, g = R.g; R.step(150); const S = () => moraleOf(T), act0 = S()?.act, onHole = T.char.anim.crouch > 0.7 && facing(T, R.hole) < 0.5, mag0 = T.weapon.roundsReady, n0 = fired(T);
+    { const { R, T } = L, g = R.g; for (let i = 0; i < 150 && !(moraleOf(T)?.act === 'hold' && T.char.anim.crouch > 0.7 && facing(T, R.hole) < 0.5); i++) R.step(); const S = () => moraleOf(T), act0 = S()?.act, onHole = T.char.anim.crouch > 0.7 && facing(T, R.hole) < 0.5, mag0 = T.weapon.roundsReady, n0 = fired(T);
       const him = doorPt(R.d, R.d.def.width / 2 + 1.5, 0.8, R.inside, 0), away = [...g.player.char.pos]; g.teleportPlayer([him[0], 0, him[2]]);   // (he leaves as the change starts: a team that followed him in would end the hold)
       const dHole = flat(him, R.hole), hits = rounds(T, () => R.hole), hitsHim = rounds(T, () => him), said: { text: string; radio: boolean; t: number }[] = []; let heard = T.bubble?.t, seenAt = NaN, reloadAt = NaN, magAtOut = NaN, shotsAtOut = NaN, endAt = NaN, n = n0;
       for (let i = 1; i <= 720 && (Number.isNaN(endAt) || S()?.act !== 'hold'); i++) { const t = i * DT; g.player.visibility = Number.isNaN(reloadAt) ? 1 : 0.05; R.W.step(DT); hits.frame(); hitsHim.frame();
@@ -169,7 +169,7 @@ export async function moraleCheck(): Promise<boolean> {
       const staff = g.guards.filter((x: any) => !x.unit && x.team === 'guard'), T = staff[0], name = T.callsign;
       for (const o of staff) if (o !== T) { o.hold = true; o.pinned = true; }   // (the rest of the shift held on their marks: nobody comes to the bang with a torch)
       for (const t of g.targets) if (t.on && t.kind !== 'breaker') toggleTarget(g, t);
-      step(60); const p = [...T.char.pos], f = T.char.forward(), at: V3 = [p[0] + f[0] * 6.5, 0, p[2] + f[2] * 6.5];
+      step(60); for (let i = 0; i < 120 && !inTheDark(g, T); i++) step(); const p = [...T.char.pos], f = T.char.forward(), at: V3 = [p[0] + f[0] * 6.5, 0, p[2] + f[2] * 6.5];
       const clear = !g.col.segmentBlocked([at[0], 0.6, at[2]], [p[0], 1.2, p[2]]), dark0 = inTheDark(g, T), alone0 = !!moraleOf(T)?.alone, n0 = fired(T), state0 = T.state;
       blast(g, at, { who: PLAYER_ID, name: 'frag grenade', fx: false });
       let alertAt = NaN, firstShot = NaN, calm = 0, undrawn = 0, contact = false;

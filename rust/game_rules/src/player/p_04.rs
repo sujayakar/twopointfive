@@ -45,16 +45,16 @@ fn lose_path(g: &mut Game, gd: GuardId) {
 }
 
 /// Stacked: is the first WALLSNAP.bore of the rifle's line in a wall?   (player.ts stackInWay)
-pub fn stack_in_way(g: &mut crate::game::Game) -> bool {
-    let p = g.player;
+pub fn stack_in_way(a: &mut impl crate::ask::Asker, p: PlayerId, ap: V3) -> bool {
+    let g = a.game();
     let c = g.pl[p].ch;
-    let (ap, pos) = (g.aim_point, g.ch[c].pos);
+    let pos = g.ch[c].pos;
     let (dx, dz) = (ap[0] - pos[0], ap[2] - pos[2]);
     let d = m::hyp2(dx, dz);
     let hit = if d > 0.25 {
         let h = if g.pl[p].crouch { 0.85 } else { 1.3 };
         let bore = g.k.wallsnap.bore;
-        crate::scene_collision::raycast(g, [pos[0], h, pos[2]], [dx / d, 0.0, dz / d], bore)
+        a.ray([pos[0], h, pos[2]], [dx / d, 0.0, dz / d], bore)
     } else {
         None
     };
@@ -65,8 +65,9 @@ pub fn stack_in_way(g: &mut crate::game::Game) -> bool {
 }
 
 /// His gun cannot get a round out this frame (the aim ring's bar). Read only.   (player.ts gunShut)
-pub fn gun_shut(g: &mut crate::game::Game) -> bool {
-    let p = g.player;
+pub fn gun_shut(world: &mut crate::ask::WorldAsk, seat: &crate::seats::SeatRef) -> bool {
+    let g = world.shared();
+    let p = seat.player;
     let c = g.pl[p].ch;
     if g.pl[p].holstered { return false; }
     if crate::gunwall::gun_wall_is(g, c) { return true; }
@@ -74,7 +75,7 @@ pub fn gun_shut(g: &mut crate::game::Game) -> bool {
         if w.kind == Some(WallHoldKind::Stack) {
             if yes(w.lean_want) || un(w.lean) > 0.0 || un(w.lean_dwell) > 0.0 {
                 if un(w.lean) < 1.0 { return false; }
-            } else if w.settle >= 1.0 && stack_in_way(g) {
+            } else if w.settle >= 1.0 && stack_in_way(world, p, seat.aim_point) {
                 return true;
             }
         }
@@ -87,7 +88,7 @@ pub fn gun_shut(g: &mut crate::game::Game) -> bool {
         None => v3::add(g.ch[c].pos, [0.0, 1.4, 0.0]),
     };
     let muzzle = g.ch[c].muzzle;
-    crate::gunwall::wood_between(g, a, muzzle)
+    crate::gunwall::wood_between(world, a, muzzle)
 }
 
 /// `hold()` of stackUp: the fire sites' 'still coming into the hands' beat.
@@ -107,7 +108,7 @@ pub fn stack_up(g: &mut crate::game::Game, dt: f64, input: InputId) -> bool {
         stack_hold(g, p);
         return false;
     }
-    if crate::samstun::sam_staggered(g, None) {
+    if crate::samstun::sam_staggered(g, &crate::seats::here(g), None) {
         let w = w!(g, p);
         w.up = Some(0.0);
         w.rise = Some(0.0);
@@ -123,7 +124,7 @@ pub fn stack_up(g: &mut crate::game::Game, dt: f64, input: InputId) -> bool {
             let w = g.pl[p].wall.unwrap();
             truthy_opt(w.owed) && !(un(w.up) > 0.0)
         };
-    if stack_in_way(g) {
+    if { let ap = g.aim_point; stack_in_way(g, p, ap) } {
         let w = w!(g, p);
         w.up = Some(0.0);
         w.rise = Some(0.0);
@@ -170,7 +171,7 @@ pub fn stack_lean(g: &mut crate::game::Game, dt: f64, cam: CameraId, pl: PlayerI
     if w0.lean.is_none() { return 0.0; }
     let ws = g.k.wallsnap;
     let (t, n) = (w0.along, w0.n);
-    if crate::samstun::sam_rooted(g, None) {
+    if crate::samstun::sam_rooted(g, &crate::seats::here(g), None) {
         let l = un(w0.lean);
         return un(w0.lean_dir) * (ws.lean_along + w0.lean_more.unwrap_or(0.0)) * l * l * (3.0 - 2.0 * l);
     }
@@ -667,7 +668,7 @@ pub fn update_takedown(g: &mut crate::game::Game, dt: f64) {
         crate::takedown::take_fall(g, gd, td.kind, yes(td.lethal), None);
         let way: V3 = [m::sin(yaw), 0.0, m::cos(yaw)];
         if yes(td.lethal) {
-            crate::combat::kill_guard(g, gd, way, Some(true), Some(crate::game::DownKind::Shot), Some(crate::game::DownBy::Player), Some("knife — dead"), None);
+            crate::combat::kill_guard(g, gd, way, Some(true), Some(crate::game::DownKind::Shot), Some(crate::game::DownBy::Player), Some("knife — dead"));
             let now = g.time;
             let victim = g.gd[gd].callsign.clone();
             for i in 0..g.guards.len() {
@@ -679,7 +680,7 @@ pub fn update_takedown(g: &mut crate::game::Game, dt: f64) {
                 }
             }
         } else {
-            crate::combat::kill_guard(g, gd, way, Some(true), None, None, None, None);
+            crate::combat::kill_guard(g, gd, way, Some(true), None, None, None);
         }
         crate::close::close_blow(g, yes(td.lethal));
         let ev = crate::game::GameEvent {

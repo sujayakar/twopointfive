@@ -28,7 +28,7 @@ import { TWEEN, type TweenHost, type TweenSkin } from './tween';
 interface AheadSkin extends TweenSkin { drawJointsOf(i: number, data: Float32Array): void }
 /** a man the outline pass rims (render/outline.ts OutlineMan): whose pixels, and where it looks for them */
 interface Rimmed { on: boolean; owner: number; at: ArrayLike<number> & { [i: number]: number } }
-/** the host: the tween's, and the outline's frame once it has one (ui/findme.ts lays it from the game before every draw) */
+/** the host: the tween's, and the outline's frame once it has one (ui/findmeviz.ts lays it from the game before every draw) */
 export type AheadHost = TweenHost & { outline?: (Rimmed & { mates: Rimmed[] }) | null };
 /** a box a man wears or carries: the rig's own motion key with his id in it (game/combat.ts: MKEY.rig + his id << 8 + the box's ordinal). NOT his owner byte
  *  alone — that says whose rays skip a thing, and a tracer in flight and a charge he has laid carry it too: those are where the tick left them */
@@ -49,6 +49,11 @@ export class AheadDraw {
   last = { on: false, move: 0, turn: 0, boxes: 0, lights: 0, men: 0, caps: 0 };
   /** draws so far (every `pose()`, moved or not): a host that runs a tick after one packs the world again first — the render packed the boxes as it DREW them */
   draws = 0;
+  /** WHAT THIS PLAYER'S PICTURE LEAVES OUT of the frame's list, asked at every draw (null = nothing). The list is the game's and one on every machine, so a
+   *  box only another player's picture shows (an infrared line: net/page.ts) is in it here too; for the length of the draw it is not, and then the tick's own
+   *  list stands again, by reference */
+  hides: (() => ((b: Box) => boolean) | null) | null = null;
+  private whole: Box[] | null = null;
   private id = -1; private have = 0;
   // a tick's pair: from(3) yaw · to(3) yaw
   private prev = new Float64Array(8); private cur = new Float64Array(8);
@@ -80,7 +85,9 @@ export class AheadDraw {
    *  some of his things: whoever reads the game after it, a scripted page's next step or the record of the crash, must find the tick's own). The pair lives
    *  HERE and not at the host's call, so that a check can hold it (tools/qa/aheaddraw-check.ts); the host calls this and never the two below by hand.
    *  NOT PUT BACK after a throw: his cull sphere where a rig fit is set (unpose leaves it to the next upload, which rebuilds it; only the GPU reads it) */
-  around(a: number, blended: Float32Array | null, draw: () => void): void { try { this.pose(a, blended); draw(); } finally { this.unpose(); } }
+  around(a: number, blended: Float32Array | null, draw: () => void): void { try { this.leaveOut(); this.pose(a, blended); draw(); } finally { this.unpose(); this.listBack(); } }
+  private leaveOut(): void { const out = this.hides?.(), W = this.host.world; if (!out || !W.dynamics.some(out)) return; this.whole = W.dynamics; W.dynamics = this.whole.filter(b => !out(b)); }
+  private listBack(): void { if (this.whole) { this.host.world.dynamics = this.whole; this.whole = null; } }
 
   /** RIGHT BEFORE THE HOST'S RENDER, after the tween's pose: `a` = the tween's factor this frame (1 = the last tick as it is), `blended` = the palette the tween
    *  handed the GPU this frame (null: it handed none, the tick's own is there). Always paired with `unpose()`: `around()` is the pair. */

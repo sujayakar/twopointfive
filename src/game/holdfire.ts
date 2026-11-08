@@ -48,16 +48,10 @@ export const HOLDFIRE = {
   on: false,
   /** how long his shot or his order keeps the hold off after the last of them (s; ROOMFIGHT.teamHot's 45) */
   liftSecs: 45,
-  /** … and through standing glass the round is held until the man is alert or searching, as the sneak holds it */
-  glass: true,
-  /** a quiet gun is held too (off: only a gun the floor would hear, as the sneak's hold has it) */
-  quiet: true,
   /** 'go loud' told to a SILENT squad is an order that means fire (off: it ends the silent posture and this hold takes over, until his shot or a door order) */
   loud: true,
   /** a man on his stack mark with his round held on a man counts as arrived, and the lead keeps his hand off the handle while his own is (off: 'stacking' until his gun is the door's, and the handle tried, as it was) */
   stackSet: true,
-  /** … and the handle waits while ANY man of that door's stack is so held, by the stamp of the orders' last tick (off: the lead's own fresh answer only; nothing without `stackSet`) */
-  stackWait: true,
 };
 /** the orders that mean fire, by id (doortools.ts, wallcharge.ts, squadthrow.ts — by NAME: a row from a part not in the tree lifts the day it lands) */
 export const LIFT_ORDERS: readonly string[] = ['openClear', 'bigClear', 'bangClear', 'fragClear', 'charge', 'threshold', 'thresholdHold', 'outside', 'thrStep', 'thrBang', 'thrWord', 'go', 'wallCharge', 'fragThere', 'stunThere', 'shellThere'];

@@ -37,11 +37,10 @@
 // column it fades out under the tiles by the mask alone (the card's own ground shows: a third of its strength at the first tile's left edge, gone one
 // column's width on; no rule of a tile is touched) and runs on further right below them. It never takes a click or the keys. No
 // words, no colours of its own.
-import { KIT, kitRows, kitWorn } from '../game/kit';
 import { kitViewWays } from './missions';
 import { rectZoom, uiMatch } from './textsize';
 import { KEEP_PAGE, keeperAbove } from '../gpu/keep';   // (a leaf: the picture's seat on the kept page's device)
-import { kitViewQuietKind } from '../host/kitViewSet';   // (pure: the mission's kind, read off its link — the quiet picture's)
+import { kitViewQuietKind } from '../host/kitViewQuiet';   // (pure: the mission's kind, read off its link — the quiet picture's)
 
 /** the picture is LIVE and the open card's man acts in it (`?stillkit` = off: the still picture, every change a plain restage) · ms after a kit message in which further changes are folded into ONE more */
 export const KIT_VIEW = { acts: true, kitMs: 150, quiet: true };
@@ -85,8 +84,10 @@ function styles() { if (document.getElementById?.('kitview-css')) return; const 
 /** what the page asks to be shown: the loadout's own query (what Deploy would load), the mission's kind and level file, the way in as the PAGE has it
  *  (ui/missions.ts MissionsScreen.way: 0 = the level's own, N = the Nth, −1 = dealt), the team's size */
 export interface KitViewAsk { search: string; kind: string; level?: string; way: number; squad: number;
-  /** whose card is open (0 = you) and the row its highlight is on (ui/kitCard.ts MemberCard.at: past the last row = the sets) — absent: you, no tile */
-  member?: number; row?: number }
+  /** each place's card as the team wears it, as a kept text ('' for a man who stays): TeamView.men's `worn` */
+  worn: string[];
+  /** whose card is open (0 = you) and the field of the row its highlight is on (null: the sets) — absent: you, no tile */
+  member?: number; field?: string | null }
 export interface KitViewFrame {
   /** show the picture for `ask` (null: off the step — put away, the instance kept). The column is the picture's: shown, waited for (empty), or none to be had here (empty) */
   show(ask: KitViewAsk | null): void;
@@ -110,9 +111,10 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
   const onDisk = () => location.protocol === 'file:' || location.origin === 'null', postTo = () => (onDisk() ? '*' : location.origin);
   const from = (origin: string) => origin === location.origin || (onDisk() && origin === 'null');
   const tell = (m: object) => { try { frame?.contentWindow?.postMessage(m, postTo()); } catch { /* */ } };
-  const kitNow = (squad: number) => JSON.stringify({ members: kitWorn(squad), squad });   // (the cards as the team of that size wears them — game/kit.ts KITDEAL — which the picture's own table then wears as written: main.ts kitCards)
+  let wornNow: string[] = [];
+  const kitNow = (squad: number) => JSON.stringify({ worn: wornNow, squad });   // (the cards as the team of that size wears them, which the picture's own table then wears as written: main.ts kitCards)
   /** the kit and the size, when they are not what the instance last had */
-  const kit = () => { want = ''; if (!frame || !up) return; const now = kitNow(squadNow); if (now === sent) return; sent = now; tell({ kv: 'kit', members: kitWorn(squadNow), squad: squadNow }); };
+  const kit = () => { want = ''; if (!frame || !up) return; const now = kitNow(squadNow); if (now === sent) return; sent = now; tell({ kv: 'kit', members: wornNow.map(t => (t ? JSON.parse(t) as unknown : null)), squad: squadNow }); };
   /** whose card is open and the tile under the highlight · off the step or on it — each told when it is not what the child last had */
   const says = () => { if (!frame || !up) return;
     if (KIT_VIEW.acts && sel && sel !== selSent) { selSent = sel; tell({ kv: 'sel', ...JSON.parse(sel) as object }); }
@@ -174,14 +176,14 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
       // the way in as the page's own row has it; one past the level's ways is the game's to fold (any of them must then have a picture); a dealt one is no picture
       const way = ask.way < 0 ? -1 : ask.way ? ask.way - 1 : 0;
       if (!W || failed.has(k) || way < 0 || !(way < W.length ? W[way] : W.length > 0 && W.every(Boolean))) { hide(); drop(); root.setAttribute('data-kv-none', ''); return; }   // (no picture to be had here: the column is empty — nobody stands in)
-      squadNow = ask.squad; paused = false;
-      { const who = ask.member ?? 0; sel = JSON.stringify({ who, field: kitRows(who)[ask.row ?? -1]?.field ?? null }); }
+      squadNow = ask.squad; wornNow = ask.worn; paused = false;
+      sel = JSON.stringify({ who: ask.member ?? 0, field: ask.field ?? null });
       if (!frame || k !== key) {   // another mission, way in, hour …: a new element, on exactly what Deploy would load
         hide(); drop(); styles();
         const f = frame = document.createElement('iframe'); f.className = 'kv'; f.tabIndex = -1; f.setAttribute('aria-hidden', 'true');
         key = k; sent = born = kitNow(ask.squad);
         const tier = (window as unknown as { __quality?: { current?: unknown } }).__quality?.current;   // (drawn at the tier this page stands at: no calibration of its own beside this one)
-        const raw = ask.search.replace(/^[^?]*\?/, '').split('&').filter(w => !/^adapt(=|$)/.test(w)).join('&');   // (the visit's `adapt` word stays behind: this frame is pinned to a tier, so the word would switch its whole ladder off, and its pacer counts on the ladder — ui/quality.ts visit)
+        const raw = ask.search.replace(/^[^?]*\?/, '').split('&').filter(w => !/^(adapt|draw)(=|$)/.test(w)).join('&');   // (the visit's `adapt` word stays behind: this frame is pinned to a tier, so the word would switch its whole ladder off, and its pacer counts on the ladder — ui/quality.ts visit; `draw` would send it to a page that draws no kit)
         f.addEventListener('error', () => { if (frame === f) fail(k); });
         f.src = `${location.pathname}?${raw ? raw + '&' : ''}kitview&mute&noreplay${KIT_VIEW.acts ? '' : '&stillkit'}${KIT_VIEW.quiet || q.has('kitloud') ? '' : '&kitloud'}${typeof tier === 'string' && !q.has('quality') ? '&quality=' + encodeURIComponent(tier) : ''}`;
         body.appendChild(f); place();

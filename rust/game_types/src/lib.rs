@@ -19,15 +19,20 @@ pub struct Opaque;
 #[derive(Clone, Copy, Debug, Default)]
 pub struct FnField;
 /// an object used as a key, until a hand decision gives it an ID
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ObjKey(pub u32);
 /// a number used as a key of a Map
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Num(pub f64);
-impl PartialEq for Num { fn eq(&self, o: &Self) -> bool { self.0.to_bits() == o.0.to_bits() } }
+impl Num {
+    /// the key this number is, as the language's Map has it: -0 is 0, and every NaN is one NaN
+    fn key(self) -> u64 { if self.0 == 0.0 { 0 } else if self.0.is_nan() { f64::NAN.to_bits() } else { self.0.to_bits() } }
+}
+impl PartialEq for Num { fn eq(&self, o: &Self) -> bool { self.key() == o.key() } }
 impl Eq for Num {}
+impl core::hash::Hash for Num { fn hash<H: core::hash::Hasher>(&self, h: &mut H) { h.write_u64(self.key()); } }
 impl PartialOrd for Num { fn partial_cmp(&self, o: &Self) -> Option<core::cmp::Ordering> { Some(self.cmp(o)) } }
-impl Ord for Num { fn cmp(&self, o: &Self) -> core::cmp::Ordering { self.0.total_cmp(&o.0) } }
+impl Ord for Num { fn cmp(&self, o: &Self) -> core::cmp::Ordering { f64::from_bits(self.key()).total_cmp(&f64::from_bits(o.key())) } }
 /// a value no rule could write for a blank (see the STOP list)
 pub fn skel_blank<T>() -> T { todo!() }
 /// A function a caller names and nobody has written: the call says which, in the panic the host shows.
@@ -51,7 +56,6 @@ pub mod blast_feel { pub mod types; pub use types::*; }
 pub mod blast_look { pub mod types; pub use types::*; }
 pub mod breach { pub mod types; pub use types::*; }
 pub mod break_table { pub mod types; pub use types::*; }
-pub mod buddy { pub mod types; pub use types::*; }
 pub mod calmtorch { pub mod types; pub use types::*; }
 pub mod camera { pub mod types; pub use types::*; }
 pub mod carlamps { pub mod types; pub use types::*; }
@@ -62,7 +66,6 @@ pub mod chronicle { pub mod types; pub use types::*; }
 pub mod civilians { pub mod types; pub use types::*; }
 pub mod cleanrestart { pub mod types; pub use types::*; }
 pub mod cleared { pub mod types; pub use types::*; }
-pub mod clearline { pub mod types; pub use types::*; }
 pub mod close { pub mod types; pub use types::*; }
 pub mod cloud_report { pub mod types; pub use types::*; }
 pub mod cmd { pub mod types; pub use types::*; }
@@ -78,7 +81,6 @@ pub mod darkdoor { pub mod types; pub use types::*; }
 pub mod darkfoe { pub mod types; pub use types::*; }
 pub mod deathrecap { pub mod types; pub use types::*; }
 pub mod debris { pub mod types; pub use types::*; }
-pub mod defuse { pub mod types; pub use types::*; }
 pub mod destruction { pub mod types; pub use types::*; }
 pub mod destruction_switch { pub mod types; pub use types::*; }
 pub mod devices { pub mod types; pub use types::*; }
@@ -157,6 +159,7 @@ pub mod kit { pub mod types; pub use types::*; }
 pub mod kitanim { pub mod types; pub use types::*; }
 pub mod kitload { pub mod types; pub use types::*; }
 pub mod kittree { pub mod types; pub use types::*; }
+pub mod kitstage;
 pub mod knobs_reg { pub mod types; pub use types::*; }
 pub mod lanes { pub mod types; pub use types::*; }
 pub mod laststand { pub mod types; pub use types::*; }
@@ -220,7 +223,6 @@ pub mod render_meshbvh { pub mod types; pub use types::*; }
 pub mod render_particles { pub mod types; pub use types::*; }
 pub mod render_passes { pub mod types; pub use types::*; }
 pub mod render_place_field { pub mod types; pub use types::*; }
-pub mod render_probe { pub mod types; pub use types::*; }
 pub mod render_reach { pub mod types; pub use types::*; }
 pub mod render_reach_keep { pub mod types; pub use types::*; }
 pub mod render_sdfrig { pub mod types; pub use types::*; }
@@ -264,7 +266,6 @@ pub mod scene_marking_defaults { pub mod types; pub use types::*; }
 pub mod scene_markings { pub mod types; pub use types::*; }
 pub mod scene_materials { pub mod types; pub use types::*; }
 pub mod scene_place_plan { pub mod types; pub use types::*; }
-pub mod scene_round { pub mod types; pub use types::*; }
 pub mod scene_scenario_list { pub mod types; pub use types::*; }
 pub mod scene_scenarios { pub mod types; pub use types::*; }
 pub mod scene_shapes { pub mod types; pub use types::*; }
@@ -277,10 +278,9 @@ pub mod script_tut_queue { pub mod types; pub use types::*; }
 pub mod script_tut_quiet { pub mod types; pub use types::*; }
 pub mod script_tut_road { pub mod types; pub use types::*; }
 pub mod script_tut_team { pub mod types; pub use types::*; }
-pub mod seats { pub mod types; pub use types::*; }
+pub mod seats { pub mod types; pub use types::*; pub mod seat_ref; pub use seat_ref::*; }
 pub mod seenwalk { pub mod types; pub use types::*; }
 pub mod sense { pub mod types; pub use types::*; }
-pub mod sensors { pub mod types; pub use types::*; }
 pub mod shard_model { pub mod types; pub use types::*; }
 pub mod shards { pub mod types; pub use types::*; }
 pub mod sheet_model { pub mod types; pub use types::*; }
@@ -307,8 +307,6 @@ pub mod slotsetup { pub mod types; pub use types::*; }
 pub mod smoke_smoke_grid { pub mod types; pub use types::*; }
 pub mod smoke_types { pub mod types; pub use types::*; }
 pub mod smokebreak { pub mod types; pub use types::*; }
-pub mod snatch { pub mod types; pub use types::*; }
-pub mod snatchout { pub mod types; pub use types::*; }
 pub mod sneak { pub mod types; pub use types::*; }
 pub mod snow_blast { pub mod types; pub use types::*; }
 pub mod snow_bog { pub mod types; pub use types::*; }
@@ -340,7 +338,6 @@ pub mod suppression { pub mod types; pub use types::*; }
 pub mod tactics { pub mod types; pub use types::*; }
 pub mod takecheck { pub mod types; pub use types::*; }
 pub mod takedown { pub mod types; pub use types::*; }
-pub mod tapstep { pub mod types; pub use types::*; }
 pub mod teamfeel { pub mod types; pub use types::*; }
 pub mod teampace { pub mod types; pub use types::*; }
 pub mod teams { pub mod types; pub use types::*; }
@@ -376,4 +373,3 @@ pub mod wind { pub mod types; pub use types::*; }
 pub mod words { pub mod types; pub use types::*; }
 pub mod workstow { pub mod types; pub use types::*; }
 pub mod workthings { pub mod types; pub use types::*; }
-pub mod wounds { pub mod types; pub use types::*; }

@@ -68,14 +68,8 @@ const LEVEL_BASE: Record<string, string> = {
   // the ground melted round the brazier laid round: two ten-sided patches of five slabs each where two squares lay (eight boxes more, in the level's own part)
   'pass.json': '5d2bfc3f0',
 
-  // the lesson taken out of the yard (the seven Training lessons went 2026-10-23; the yard stays as a stage for checks)
-  'train-move.json': 'd5893130e',
 
-  // Training 5's kitchen step is done by 'bang and clear' given at the held door too (the word spends no can: the lesson asks for the can)
-  'train-orders.json': '18d63085f',
 
-  // the lesson taken out of the yard, as train-move's
-  'train-silent.json': 'd5893130e',
 
   // the pair mission's gate yard re-laid with ruts and stones, the partner's ways out of every line
   'tut-pair.json': '9048a2e01',
@@ -395,7 +389,7 @@ export async function livedCheck(argv: string[]): Promise<boolean | null> {
           for (let i = 0; i <= 8; i++) { const sx = d.hinge[0] + ux * d.width * i / 8, sz = d.hinge[1] + uz * d.width * i / 8, n = nearOnBox(x.B, sx, sz), r = Math.hypot(n[0] - sx, n[1] - sz); if (r < best) best = r, q = n; }
           // (seen from the doorway by ANY of: the nearest point, the centre, a corner — a cabinet flush to the door's wall has its nearest point behind the frame's own return)
           const B = x.B, cy = Math.cos(B.yaw || 0), sy = Math.sin(B.yaw || 0), probe: [number, number][] = [q, [B.c[0], B.c[2]]];
-          for (const [a, b] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) probe.push([B.c[0] + a * B.h[0] * cy + b * B.h[2] * sy, B.c[2] - a * B.h[0] * sy + b * B.h[2] * cy]);
+          if (!B.round) for (const [a, b] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) probe.push([B.c[0] + a * B.h[0] * cy + b * B.h[2] * sy, B.c[2] - a * B.h[0] * sy + b * B.h[2] * cy]);   // (a round thing is asked at its middle: the square round it has no corners, and the grid's half-metre cells shut by their centres)
           if (best < ZONE && probe.some(t => sees(t[0], t[1]))) bad.push(`${x.d.id} (${x.d.group}) ${f2(best)} m from door ${d.id ?? d.name}`); }
         for (const x of livedProps) { const px = x.d.x, pz = x.d.z, r = near(px, pz)[0]; if (r < ZONE + 0.3 && sees(px, pz)) bad.push(`prop ${x.d.id} ${f2(r)} m from door ${d.id ?? d.name}`); } }
       if (bad.length) fail(`${name}: ${bad.length} lived thing${bad.length > 1 ? 's' : ''} inside ${ZONE} m of a door's line — ${bad.slice(0, 6).join(' · ')}`);
@@ -440,7 +434,7 @@ export async function livedCheck(argv: string[]): Promise<boolean | null> {
     { const bad: string[] = [];
       for (const x of livedBoxes) { const B = x.B, top = B.c[1] + B.h[1]; if ((B.flags & (BoxFlag.NoShadow | BoxFlag.Dynamic)) || top < 0.2 - 1e-9 || top >= 0.25 || B.c[1] - B.h[1] >= 1.5) continue;
         const cy = Math.cos(B.yaw || 0), sy = Math.sin(B.yaw || 0), probe: [number, number][] = [[B.c[0], B.c[2]]];
-        for (const [a, b] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) probe.push([B.c[0] + a * B.h[0] * cy + b * B.h[2] * sy, B.c[2] - a * B.h[0] * sy + b * B.h[2] * cy]);
+        if (!B.round) for (const [a, b] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) probe.push([B.c[0] + a * B.h[0] * cy + b * B.h[2] * sy, B.c[2] - a * B.h[0] * sy + b * B.h[2] * cy]);   // (a round thing is asked at its middle: the square round it has no corners, and the grid's half-metre cells shut by their centres)
         if (probe.some(t => !nav1.isBlocked(t[0], t[1]))) bad.push(`${x.d.id} (${x.d.group}) top ${top.toFixed(3)} at ${at([B.c[0], B.c[2]])}`); }
       if (bad.length) fail(`${name}: ${bad.length} lived solid${bad.length > 1 ? 's top' : ' tops'} out between 0.20 and 0.25 m on floor the nav grid calls free (a man is stopped where his path says walk: make it 0.19 or under, or 0.26 or over) — ${bad.slice(0, 6).join(' · ')}`);
       else pass(`${name}: no lived solid in the 0.20‥0.25 m band the nav grid cannot see`);
@@ -448,7 +442,7 @@ export async function livedCheck(argv: string[]): Promise<boolean | null> {
       const high: string[] = [];
       for (const x of livedBoxes) { const B = x.B, bot = B.c[1] - B.h[1]; if ((B.flags & (BoxFlag.NoShadow | BoxFlag.Dynamic)) || bot < 1.5 - 1e-9 || bot >= 1.7) continue;
         const cy = Math.cos(B.yaw || 0), sy = Math.sin(B.yaw || 0), probe: [number, number][] = [[B.c[0], B.c[2]]];
-        for (const [a, b] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) probe.push([B.c[0] + a * B.h[0] * cy + b * B.h[2] * sy, B.c[2] - a * B.h[0] * sy + b * B.h[2] * cy]);
+        if (!B.round) for (const [a, b] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) probe.push([B.c[0] + a * B.h[0] * cy + b * B.h[2] * sy, B.c[2] - a * B.h[0] * sy + b * B.h[2] * cy]);   // (a round thing is asked at its middle: the square round it has no corners, and the grid's half-metre cells shut by their centres)
         if (probe.some(t => !nav1.isBlocked(t[0], t[1]))) high.push(`${x.d.id} (${x.d.group}) underside ${bot.toFixed(3)} at ${at([B.c[0], B.c[2]])}`); }
       if (high.length) fail(`${name}: ${high.length} lived solid${high.length > 1 ? 's hang' : ' hangs'} with the underside between 1.50 and 1.70 m over floor the nav grid calls free (a standing player is stopped where every guard walks under: make it drawn only, or lower / raise it) — ${high.slice(0, 6).join(' · ')}`);
       else pass(`${name}: no lived solid hangs in the 1.50‥1.70 m band only a standing player meets`); }

@@ -181,7 +181,7 @@ pub fn set_blackout(g: &mut crate::game::Game, seconds: f64, cause: crate::light
         }
         if g.gd[gd].state == crate::game::GuardState::Patrol {
             crate::mind::raise(g, gd, 0.34, "lighting");
-            g.gd[gd].react_t = 1.0 + crate::math_dice::sim_random(g);
+            g.gd[gd].react_t = 1.0 + crate::dice::draw_of(g, "lighting::set_blackout#1", gd);
         }
         let d = v3::dist(g.ch[g.gd[gd].ch].pos, g.level.breaker.pos);
         if d < bd
@@ -449,9 +449,6 @@ pub fn set_daylight(g: &mut crate::game::Game, on: bool) {
                 i += 1;
             }
         }
-        let sky = crate::lighting::DayStateSky { zenith: g.engine.settings.sky_zenith, horizon: g.engine.settings.sky_horizon };
-        let haze = g.engine.settings.haze_density;
-        let exposure = g.engine.settings.exposure;
         let sun = crate::render_lights::light_from_def(g, &d.sun);
         let sun = crate::render_lights::light_set_add(g, sun);
         let mut st = crate::lighting::DayState {
@@ -460,15 +457,9 @@ pub fn set_daylight(g: &mut crate::game::Game, on: bool) {
             hour_sun_given,
             targets: JsMap::new(),
             lights_off: Vec::new(),
-            sky,
-            haze,
-            exposure,
             sun,
             blackout,
         };
-        if g.engine.reach.is_some() {
-            crate::render_reach_keep::reach_keep_dir(g, st.sun, None);
-        }
         let mut i = 0;
         while i < g.targets.len() {
             let t = g.targets[i];
@@ -510,10 +501,8 @@ pub fn set_daylight(g: &mut crate::game::Game, on: bool) {
             g.tab.light[l].enabled = true;
             crate::sim_lightshome::light_home_feed(g, l);
         }
-        g.engine.settings.sky_zenith = cur.sky.zenith;
-        g.engine.settings.sky_horizon = cur.sky.horizon;
-        g.engine.settings.haze_density = cur.haze;
-        g.engine.settings.exposure = cur.exposure;
+        let was = g.level.daylight.as_ref().map_or(g.k.env.exposure, |d| d.exposure);
+        crate::hours::night_picture(g, was);
         crate::render_lights::light_set_remove(g, cur.sun);
         if let Some(b) = cur.blackout {
             if !crate::sim_lightshome::mains_active(g) {

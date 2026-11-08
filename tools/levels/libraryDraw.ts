@@ -1,6 +1,6 @@
 // A PICTURE OF A LIBRARY PIECE, drawn from its boxes (tools/levels/library.ts): a small software rasteriser, because the catalogue is written where there is no
 // GPU and has to be the same file on every machine. It is a DRAWING OF THE BOXES, not the game's picture: flat paint, the markings on the faces, one fixed light,
-// no shadow, no material maps. What a piece looks like in the game is the showroom's business (levels/gwot-yard.json on the page).
+// no shadow, no material maps. What a piece looks like in the game is the showroom's business (the page's levels).
 // The view is the play camera's kind of view: from above and a little to one side, parallel (no perspective), so a face maps to the screen by one 2 × 2 matrix
 // and a pixel finds its place on the face, and its marking cell, by the inverse.
 import type { Vec3 } from '../../src/math/vec';

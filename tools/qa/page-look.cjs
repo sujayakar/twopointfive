@@ -143,7 +143,7 @@ const PLAY = (secs) => {
           th.svgMenu = await page.evaluate(() => document.querySelector('#traj .squadthrow')?.innerHTML.length ?? -1);
           await page.evaluate(() => window.__input.pressed.add('Digit1'));
           threw = await page.evaluate(PLAY, 1.5); if (threw) R.errors.push('play threw: ' + threw);
-          th.going = await page.evaluate(() => ({ plans: window.__squadthrow.plans().map(p => ({ who: p.gd.callsign, preview: !!p.preview, walk: p.walk?.length ?? 0 })), status: JSON.stringify(window.__orders.hud().status ?? null).slice(0, 400), stats: { ...window.__squadthrow.stats } }));
+          th.going = await page.evaluate(() => ({ plans: window.__squadthrow.plans().map(p => ({ who: p.man, preview: !!p.preview, walk: p.walk?.length ?? 0 })), status: JSON.stringify(window.__game.view.squad).slice(0, 400), stats: { ...window.__squadthrow.stats } }));
           await save('throwwalk', await page.evaluate(DRAW, 2));
           for (let i = 0; i < 40; i++) { threw = await page.evaluate(PLAY, 0.5); if (threw) { R.errors.push('play threw: ' + threw); break; } if (await page.evaluate(() => window.__squadthrow.stats.walked + window.__squadthrow.stats.gaveUp > 0)) break; }
           th.thrown = await page.evaluate(() => ({ stats: { ...window.__squadthrow.stats }, plans: window.__squadthrow.plans().length, items: (window.__game.items.list ?? window.__game.items.items ?? []).length }));
@@ -162,7 +162,7 @@ const PLAY = (secs) => {
           return { door: d.def.name, angle: +d.angle.toFixed(2), opener: opener?.id ?? null };
         });
         threw = await page.evaluate(PLAY, 0.3); if (threw) R.errors.push('play threw: ' + threw);
-        sh.page = await page.evaluate(() => { const O = window.__orders, M = O.menu; return M ? { page: M.page, rows: M.rows.map((r, i) => `${r.key} ${r.id}${M.why[i] ? ' — ' + M.why[i] : ''}`), hud: (O.hud().menu?.rows ?? []).map(r => r.opts.map(o => `${o.key} ${o.text}`).join(' / ')) } : null; });
+        sh.page = await page.evaluate(() => { const O = window.__orders, M = O.menu; return M ? { page: M.page, rows: M.rows.map((r, i) => `${r.key} ${r.id}${M.why[i] ? ' — ' + M.why[i] : ''}`), hud: (O.menu ? O.menu.rows.map((d, i) => ({ kind: 'row', opts: [{ key: d.key ? String(d.key) : (d.hotKey || '').replace(/^Key|^Digit/, ''), text: `${O.labelOf(d, O.menuTarget())}${d.opens ? ' ▸' : ''}${O.menu.why[i] ? ` — ${O.menu.why[i]}` : ''}` }], off: !!O.menu.why[i] })) : []).map(r => r.opts.map(o => `${o.key} ${o.text}`).join(' / ')) } : null; });
         R.shut = sh; log(job.name, 'shut', JSON.stringify(sh));
         await save('shutmenu', await page.evaluate(DRAW, 1));
         await page.evaluate(() => window.__orders.close());
@@ -177,8 +177,8 @@ const PLAY = (secs) => {
         threw = await page.evaluate(PLAY, 0.6); if (threw) R.errors.push('play threw: ' + threw);
         Object.assign(ord, await page.evaluate(() => {
           const g = window.__game, O = window.__orders, h = g.guards.find(x => x.team === 'hostile');
-          const t = O.targetAt([h.char.pos[0], 0, h.char.pos[2]]), given = t ? O.give('pairMark', t, 'all') : 'no target'; O.open(t); const hud = O.hud().menu;   // (the order first: a loud teammate shoots a defender he sees in the open)
-          return { kind: t && t.kind, given, menu: !!O.menu, rows: (hud?.rows ?? []).map(r => `${r.opts?.[0]?.key ?? ''} ${r.opts?.[0]?.text ?? r.label}${r.off ? ' (greyed)' : ''}`) };
+          const t = O.targetAt([h.char.pos[0], 0, h.char.pos[2]]), given = t ? O.give('pairMark', t, 'all') : 'no target'; O.open(t);   // (the order first: a loud teammate shoots a defender he sees in the open)
+          return { kind: t && t.kind, given, menu: !!O.menu, rows: (O.menu ? O.menu.rows.map((d, i) => ({ kind: 'row', opts: [{ key: d.key ? String(d.key) : (d.hotKey || '').replace(/^Key|^Digit/, ''), text: `${O.labelOf(d, O.menuTarget())}${d.opens ? ' ▸' : ''}${O.menu.why[i] ? ` — ${O.menu.why[i]}` : ''}` }], off: !!O.menu.why[i] })) : []).map(r => `${r.opts?.[0]?.key ?? ''} ${r.opts?.[0]?.text ?? r.label}${r.off ? ' (greyed)' : ''}`) };
         }));
         log(job.name, 'foe menu', JSON.stringify(ord));
         threw = await page.evaluate(PLAY, 0.2); if (threw) R.errors.push('play threw: ' + threw);
@@ -186,7 +186,7 @@ const PLAY = (secs) => {
         const took = {}; await page.evaluate(() => window.__orders.close());
         for (let i = 0; i < 40 && !took.set; i++) { threw = await page.evaluate(PLAY, 0.5); if (threw) { R.errors.push('play threw: ' + threw); break; }
           took.set = await page.evaluate(() => { const P = window.__pair, m = window.__orders.squad()[0]; return !!P.jobOf(m)?.set; }); }
-        took.hud = await page.evaluate(() => JSON.stringify(window.__orders.hud().status).slice(0, 600)).catch(() => null);
+        took.hud = await page.evaluate(() => JSON.stringify(window.__game.view.squad).slice(0, 600)).catch(() => null);
         await save('foeset', await page.evaluate(DRAW, FRAMES));
         await page.evaluate(() => window.__pair.mark('F'));
         threw = await page.evaluate(PLAY, 2.5); if (threw) R.errors.push('play threw: ' + threw);

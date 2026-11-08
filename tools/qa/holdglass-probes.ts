@@ -18,6 +18,7 @@
 //
 //   bun run tools/qa/holdglass-probes.ts [name…]         (also `probes.ts holdglass`)
 // On the build before the rule (no SILENT.glass) the noticed-man and quiet-gun lines of holdglass-quiet are the red ones.
+import { blockOf } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { MOVES } = await import(`${ROOT}/src/game/character.ts`);
@@ -85,7 +86,7 @@ async function stage(seed: number, o: Stage = {}) {
   const chest = (c: any): Vec3 => [c.pos[0], c.pos[1] + 1.25, c.pos[2]];
   const panes: { bi: number; t: number }[] = []; game.col.segmentBlocked(chest(team[0].char), chest(foe.char), 0.02, 0, panes);
   const R = { W, game, team, foe, other, hostiles, said, crossed, mode, step, fired, err, watch, panesOnLine: panes.length, solid: game.col.solidBlocked(chest(team[0].char), chest(foe.char)) as boolean,
-    guns: team.map((m: any) => m.weapon.def.id as string), silent: () => SLM.squadSilent(game) as boolean, label: () => (O.hud().status[0]?.label ?? '') as string };
+    guns: team.map((m: any) => m.weapon.def.id as string), silent: () => SLM.squadSilent(game) as boolean, label: () => (blockOf(O)[0]?.label ?? '') as string };
   o.then?.(R);
   const f0 = fired(), h0 = SLM.SILENT_STATS.held, g0 = SLM.SILENT_STATS.heldGlass ?? 0;
   watch.switches = 0; let secondT = -1;

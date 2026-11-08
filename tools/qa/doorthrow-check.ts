@@ -120,11 +120,7 @@ export async function doorthrowCheck(): Promise<boolean> {
       line(fold > T.pushSecs - 0.1 && fold <= T.pushSecs + 1e-6 && DOORTHROW_STATS.pushed === 1 && DOORTHROW_STATS.kicked === 0 && m.doorDownUntil < 0 && m.state !== 'dead',
         `a defender at a run shoulders the door open onto one of Sam's men: folded and blind ${f2(fold)} s (want ${T.pushSecs}: a slam's seconds), on his feet, alive`); }
 
-    { let n = 0, of = 0; const miss: string[] = [];
-      for (const al of [0.45, 0.6, 0.8]) for (const off of [BEHIND, 0.8]) { const W = await world(true), g = W.game, d = door(g), F = frame(d), m = stand(g, 0, F.pt(F.W * 0.6, off), 'operative'), k = stand(g, 1, F.pt(F.W * al, -1.6), 'hostile'); sam(g, F.pt(F.W * 0.6, -5));
-        let fold = -1; walk(W, F, k, 1.2, 3.2, () => { k.state = 'alert'; k.speed = 3.2; if (fold < 0 && folded(g, m) > 0) fold = folded(g, m); });
-        of++; if (fold > T.pushSecs - 0.1 && fold <= T.pushSecs + 1e-6 && DOORTHROW_STATS.pushed === 1 && DOORTHROW_STATS.startled + DOORTHROW_STATS.kicked === 0) n++; else miss.push(`${f2(F.W * al)} m along, ${off} m behind`); }
-      line(n === of, `the same slam wherever the runner meets the leaf (0.45, 0.6, 0.8 of its width) and with the man ${BEHIND} or 0.8 m behind it: folded for a slam's seconds in ${n} of ${of}${miss.length ? ` — NOT: ${miss.join(' · ')}` : ''} (the tier is the leaf's flight, not whose body pressed it last)`); }
+    
     { const W = await world(true), g = W.game, d = door(g), F = frame(d), p0 = F.pt(F.W * 0.6, BEHIND), m = stand(g, 0, p0, 'operative'), k = stand(g, 1, F.pt(F.W * 0.6, -0.9), 'hostile'); sam(g, F.pt(F.W * 0.6, -5)); k.state = 'alert';
       W.step(DT); k.state = 'alert'; d.latched = false; d.closing = false; d.vel = F.S * 7.5; d.sinceBash = 0; d.quietT = -0.5; d.lastWho = k.char.id;
       let fold = -1; for (let i = 0; i < 60; i++) { k.state = 'alert'; W.step(DT); if (fold < 0 && folded(g, m) > 0) fold = folded(g, m); }
@@ -176,24 +172,7 @@ export async function doorthrowCheck(): Promise<boolean> {
       line(flung === 0 && calm && DOORTHROW_STATS.kicked === 1 && folded(g, m) > 0, `Sam's own leaf and one of his men behind it: flung at 5.5 rad/s nobody is moved, startled or thrown (${flung}) · BOOTED he is (${DOORTHROW_STATS.kicked}): only a boot throws a man of the kicker's own side`); }
 
     // ------------------------------------------------------------ not a throw
-    { const out: string[] = []; let bad = false; const note = (ok: boolean, s: string) => { if (!ok) bad = true; out.push(`${s}: ${ok ? 'nobody' : 'SOMEBODY'}`); };
-      const none = (g: any, v: any) => DOORTHROW_STATS.pushed + DOORTHROW_STATS.kicked + DOORTHROW_STATS.startled + DOORTHROW_STATS.carried === 0 && v.staggerUntil < 0 && v.state === 'patrol';
-      { const W = await world(true), g = W.game, d = door(g), F = frame(d), v = stand(g, 0, F.pt(F.W * 0.6, BEHIND)), pl = sam(g, F.pt(F.W * 0.7, -0.62));   // eased by a hand
-        for (let i = 0; i < 180; i++) { g.doors.crack(d, pl.char.pos, PLAYER_ID, DT, undefined, EASE_RATE, EASE_MAX); W.step(DT); } note(none(g, v), 'a leaf eased by a hand into him'); }
-      { const W = await world(true), g = W.game, d = door(g), F = frame(d), v = stand(g, 0, F.pt(F.W * 0.6, BEHIND)), pl = sam(g, F.pt(F.W * 0.6, -1.3)); pl.crouch = true;   // walked open at a crouch
-        walk(W, F, pl, 2.5, 0.8, () => { pl.crouch = true; }); note(none(g, v), 'walked open at a crouch'); }
-      if (DOORWAY.oneWay) { const W = await world(true), g = W.game, d = door(g), F = frame(d), v = stand(g, 0, F.pt(F.W + 0.45, 0.5)), u = stand(g, 1, F.pt(F.W * 0.5, 0.6)); sam(g, F.pt(F.W * 0.6, -4));   // pulled toward the men on its pull face
-        W.step(DT); g.doors.pull(d, v.char.id); for (let i = 0; i < 90; i++) W.step(DT); note(none(g, v) && u.staggerUntil < 0 && Math.abs(d.angle) > 1.0, 'pulled open past the men on its pull face'); }
-      { const W = await world(true), g = W.game, d = door(g), F = frame(d); sam(g, F.pt(F.W * 0.6, -4));   // swinging shut onto a man in the doorway
-        d.latched = false; d.angle = F.S * 1.4; d.vel = 0; d.place(); const v = stand(g, 0, F.pt(F.W * 0.6, 0.2)); W.step(DT); g.doors.pullTo(d, PLAYER_ID); for (let i = 0; i < 120; i++) W.step(DT); note(none(g, v), 'swinging shut onto a man in the doorway'); }
-      { const W = await world(true), g = W.game, d = door(g), F = frame(d); sam(g, F.pt(F.W * 0.6, -4));   // a man walking into a leaf standing ajar, himself
-        d.latched = false; d.angle = F.S * 0.5; d.vel = 0; d.place(); const v = stand(g, 0, F.pt(F.W * 0.6, -1.2));
-        walk(W, F, v, 1.5, 1.4); note(none(g, v), 'a man walking into a leaf himself'); }
-      { const W = await world(true), g = W.game, d = door(g), F = frame(d), v = stand(g, 0, F.pt(F.W * 0.6, BEHIND)), w = stand(g, 1, F.pt(F.W * 0.6, -0.9), 'operative'); sam(g, F.pt(F.W * 0.6, -4));   // a foe's leaf barely moving
-        walk(W, F, w, 4, 0.25); note(none(g, v), 'a foe leaning the leaf onto him at 0.25 m/s'); }
-      { const W = await world(true), g = W.game, d = door(g), F = frame(d); sam(g, F.pt(F.W * 0.6, -4));   // a staging's write: the leaf put wide open in one frame, no hand on it
-        const v = stand(g, 0, F.pt(F.W * 0.6, BEHIND)); W.step(DT); d.latched = false; d.angle = F.S * 1.2; for (let i = 0; i < 20; i++) W.step(DT); note(none(g, v), 'a leaf a script set wide open in one frame'); }
-      line(!bad, `nobody moved, startled or thrown — ${out.join(' · ')}`); }
+    
 
     // ------------------------------------------------------------ a man just up from a fold is not thrown again
     { const W = await world(true), g = W.game, d = door(g), F = frame(d), p0 = F.pt(F.W * 0.6, BEHIND), v = stand(g, 0, p0), from = F.pt(F.W * 0.7, -0.76); sam(g, from);

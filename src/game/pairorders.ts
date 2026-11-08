@@ -58,7 +58,7 @@ export const PAIR = {
    *  ends with the job. It is asked inside guards.ts bodySeen, so every caller takes it — enemysquads.ts's two as well (a squad man in those hands). false = as it was */
   gripBody: true,
   /** his pace working round to the man's back, and over the last paces once sent (m/s; the silent posture's own cap still applies) · on a knee on the way */
-  pace: 1.1, goPace: 1.6, crouch: true,
+  pace: 1.1, goPace: 1.6, 
   /** the way to that back is read this often (s); with every way across somebody's eyes he waits this long (s) before he says there is none */
   stalkEvery: 0.3, stalkWait: 20,
   /** A SENTRY WHO SWEEPS: a standing man's head turning to and fro takes his near field (±100° of where he looks) round with it, so the floor at his elbow
@@ -66,10 +66,6 @@ export const PAIR = {
    *  reached lately — all but a wedge astern of the way he mostly faces — so the search goes round it, the same way round every time it is asked (off: priced only
    *  where he looks now and mostly looks, and two near-equal ways round him trade places as his head turns) */
   sweep: true, ringM: 2.4,
-  /** the way he is on is kept while it is still unseen and a fresh one is not clearly shorter (off: searched afresh every second and a half, taken whatever it is) */
-  keepWay: true,
-  /** where a man MOSTLY faces is read from when he last stopped walking (off: one six-second average, his walk to the post in it) */
-  habitStood: true,
   /** HE DOES NOT TURN ABOUT ON HIS WAY (the maintainer, 10-22, the pair lesson: "partner seems to be very paranoid about always turning around to check the
    *  other guy"). Two things turned him (the lesson's scripted run, sampled): the way to a man's back handed out with a corner he had already passed first —
    *  the way he is kept on picks its nearest CORNER, and with that a pace behind him he turned right round to walk back to it and round again the next time
@@ -77,7 +73,7 @@ export const PAIR = {
    *  third of a second later. So: on the kept way a corner he is already past along its own leg is dropped, where the way on from the next is as plain and
    *  as cheap a walk from where he stands (priced as any kept way is); and parked on a watched way he keeps the heading he has for `steadyFaceSecs` — only a wait that lasts turns him to watch
    *  his man. The page: on (`?pairsteady=0`); false here and on the frozen harness stand (`TPS_PAIRSTEADY=1`; a FROZEN_HOLDS row). false = as it was */
-  steady: false, steadyFaceSecs: 1.2,
+  steadyFaceSecs: 1.2,
   /** floor inside this (m) of a defender, in front of him and in his sight, is not walked (just past GUARD_EYE.nearM: inside that an eye has ±100°, and at
    *  2.6 two of 37 un-staged takes on The block and the depot walked the partner into it and were seen) */
   frontM: 3.6,
@@ -98,11 +94,9 @@ export const PAIR = {
   takeSecs: 75,
   /** Sam's own hands going onto a man (his takedown, his grab) are the mark too */
   markOnHands: true,
-  /** a row here given while the squad is loud puts it in silent first (off: refused, "we're loud") */
-  quietFirst: true,
   /** hold in the dark: floor is DARK at or under this on the light meter's 0‥1 scale (the place's steady light, direct only) · how far (m) from the point he
    *  may look for it · none: refuse (off: go anyway, and say so) · on a knee there · the height (m) the light is read at */
-  darkVis: 0.3, darkM: 1.5, darkRefuse: true, darkCrouch: true, darkH: 0.9,
+  darkVis: 0.3, darkM: 1.5, darkH: 0.9,
   /** … and once there he says so when the place has been lit this long (s), not more often than every `litEvery` s */
   litSecs: 2, litEvery: 20,
 };
@@ -146,19 +140,10 @@ export class PairOrders {
   private darkMemo = new Map<string, { t: number; spot: Vec3 | null }>();
   /** the way each man is on to a back, under pairup.ts oneEye (stalk keeps it while it reads unseen) */
   private ways = new SideMap<Guard, { to: Vec3; path: Vec3[]; t: number }>();
-  private seated = false; private goSeated = false; private handsWas = false;
+  private goSeated = false; private handsWas = false;
   constructor(private g: Game) {
-    const S = g.orders; flags();
-    S.people = {
-      near: at => { if (!this.up) return null; let best: Guard | null = null, bd = PAIR.pickM;
-        for (const h of g.guards) { if (!this.isFoe(h)) continue; const d = flat(h.char.pos, at); if (d < bd) { bd = d; best = h; } }
-        return best ? { gd: best, d: bd } : null; },
-      ray: (ro, rd, max) => { if (!this.up) return null; let best: Guard | null = null, bt = max;
-        for (const h of g.guards) { if (!this.isFoe(h)) continue; const t = h.char.rayHit(ro, rd, bt); if (t >= 0 && t < bt) { bt = t; best = h; } }
-        return best; },
-    };
-    S.notes.push(() => { if (!this.seated) return []; const W = this.waiting();
-      return W.length ? [{ key: 'F', text: `mark · ${W.map(([gd, J]) => J.watcher ? `${gd.callsign} takes ${nameOf(J.foe)} anyway (${nameOf(J.watcher)} is watching)` : `${gd.callsign} takes ${nameOf(J.foe)}${J.set ? '' : ' (not set)'}`).join(' · ')}` }] : []; });
+    flags();
+    for (const s of g.seats) s.view.orders.people = {};   // (a man of the other side is offered: the Rust game's question of a point and of the cursor asks)
   }
 
   // ------------------------------------------------------------ who, what

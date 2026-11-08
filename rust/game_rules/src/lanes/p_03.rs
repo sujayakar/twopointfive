@@ -292,7 +292,7 @@ pub fn lane_gate(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if g.time - last_look < 0.2 { return false; }
     let now = g.time;
     s(g).look.set(gd, now);
-    if close_fight(g, &crate::seats::here(g), gd) || crate::control::man::blind(g, gd) || crate::frag::frag_flee(g, gd).is_some() { return false; }
+    if close_fight(g, gd) || crate::control::man::blind(g, gd) || crate::frag::frag_flee(g, gd).is_some() { return false; }
     let here = in_mask(g, Some(&m), pos_of(g, gd));
     let Some(mut first) = ahead(g, &m, gd, here) else { return false };
     if !here {
@@ -464,7 +464,7 @@ pub fn lane_covers(g: &mut crate::game::Game, gd: GuardId, p: V3) -> bool {
 pub fn lane_exposed(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if g.m.lanes.states.is_none() || !live(g) || !mine(g, gd) { return false; }
     if pushing(g, gd) || flanking(g, gd) { return false; }
-    if no_lanes(g) || close_fight(g, &crate::seats::here(g), gd) { return false; }
+    if no_lanes(g) || close_fight(g, gd) { return false; }
     let p = pos_of(g, gd);
     lane_on(g, p, gd).is_some()
 }

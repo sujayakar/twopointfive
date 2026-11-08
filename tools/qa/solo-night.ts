@@ -67,7 +67,7 @@ async function one(seed: number, plan: Plan, cap: number, verbose: boolean, leve
   if (!BASE && process.env.SOLO_DESTR !== '0') { try { (await import(`${ROOT}/src/game/destructionSwitch.ts`)).DESTRUCTION.on = DESTR = true; } catch { /* a build from before the destruction goal: no such switch */ } }
   if (process.env.SOLO_CLEAR_M) { try { (await import(`${ROOT}/src/game/opening.ts`)).OPENING.clearM = Number(process.env.SOLO_CLEAR_M); } catch { /* a build from before the opening rule */ } }   // (the opening's clear radius, for a sweep: SOLO_CLEAR_M=8 — before the Game exists, its constructor places the men)
   const { lightEstimateAt, escalationOf } = await import(`${ROOT}/src/game/guards.ts`);
-  const { debriefOf, fmtEvent } = await import(`${ROOT}/src/game/chronicle.ts`);
+  const { debriefOf, rowsOf, rowLine } = await import('./debrief-read.ts');;
   const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
@@ -100,7 +100,7 @@ async function one(seed: number, plan: Plan, cap: number, verbose: boolean, leve
       for (const m of g.messages as { text: string }[]) { if (heardMsg.has(m)) continue; heardMsg.add(m); if (m.text.startsWith('radio: CONTROL')) { out.qrfLog.push(`${f1(t)} ${m.text.slice(7)}`); say(`   ${m.text}`); } }   // (control's own lines on the net — the cue a player hears: the HUD draws exactly these)
       { const q = g.qrf?.state ?? 'idle'; if (q !== qrfWas) { say(`   QRF: ${qrfWas} → ${q}`); out.qrfLog.push(`${f1(t)} ${q}`); qrfWas = q; out.qrf = q; } }
       { const h = g.player.hitFlash ?? 0; if (h > 0 && lastHit <= 0) { out.hits++; say(`   !! Sam is hit at ${at(pos())}`); } lastHit = h; }
-      { const ev = g.chronicle.events as any[]; for (; chronSeen < ev.length; chronSeen++) { const line = fmtEvent(ev[chronSeen]); out.timeline.push(line); say(`   · ${line}`); } }
+      if (chronSeen < g.chronicle.events.length) { const ev = rowsOf(g); for (; chronSeen < ev.length; chronSeen++) { const line = rowLine(ev[chronSeen]); out.timeline.push(line); say(`   · ${line}`); } }
       out.chars = Math.max(out.chars, everyone().length + 1);
       for (const x of [g.player, ...everyone()]) { const p = x.char.pos; if (!Number.isFinite(p[0] + p[1] + p[2])) throw new Error(`NaN position on ${x.callsign ?? 'Sam'}`); }
     };

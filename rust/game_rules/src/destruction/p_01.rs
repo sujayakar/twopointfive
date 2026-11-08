@@ -494,10 +494,10 @@ pub fn destruction_update(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// THE MEN DOWN, as the places a piece may not lie: a place under each of a lying man's main bones, at his floor's height (below him: `debris_feet` asks a place's height of what lies there).
-fn destruction_bodies(g: &mut Game, out: &mut Vec<crate::debris::FootMan>) {
+fn destruction_bodies(g: &Game, out: &mut Vec<crate::debris::FootMan>) {
     use crate::character::Bone;
     const BONES: [Bone; 9] = [Bone::Head, Bone::Chest, Bone::Hips, Bone::ThighL, Bone::ThighR, Bone::ShinL, Bone::ShinR, Bone::FootL, Bone::FootR];
-    let mut men: Vec<CharId> = g.guards.iter().filter(|&&gd| g.gd[gd].wound.is_some() || g.ch[g.gd[gd].ch].ragdoll.is_some()).map(|&gd| g.gd[gd].ch).collect();
+    let mut men: Vec<CharId> = g.guards.iter().filter(|&&gd| g.ch[g.gd[gd].ch].ragdoll.is_some()).map(|&gd| g.gd[gd].ch).collect();
     for cv in crate::civilians::civilians_shown(g) {
         if g.ch[g.gd[cv].ch].ragdoll.is_some() { men.push(g.gd[cv].ch); }
     }

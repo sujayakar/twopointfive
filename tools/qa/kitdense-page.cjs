@@ -1,4 +1,4 @@
-// THE DENSE KIT CARD, ON THE PAGE (src/ui/kitDense.ts KITDENSE; ui/kitCard.ts `dense`). The maintainer, 10-20, on Team & kit beside a loadout card of
+// THE DENSE KIT CARD, ON THE PAGE (src/ui/kitDense.ts; ui/kitCard.ts). The maintainer, 10-20, on Team & kit beside a loadout card of
 // Door Kickers 2: "this menu is pretty unwieldy … maybe we have a popup menu per gun, more information density".
 // The REAL page in headless Chromium, no WebGPU adapter (the start page is plain DOM, live from the first tick):
 //   · the two guns are tiles side by side, each with its name whole, four bars, and what rides on it as chips (lit where carried, a count on a round);
@@ -8,16 +8,15 @@
 //     fittings and rounds as tiles inside it; a click on another gun puts it on the card (tile, bars, chips, the kept kit); a click off it shuts it;
 //   · by the keys alone: S walks the tiles as they lie, Enter on a gun opens its pop-up, A D change, W S stay inside it, Esc shuts it and the screen stays,
 //     and S walks on through the kit, the colours and the sets to Deploy;
-//   · a quiet mission's lent rounds read whole in the pop-up and are counted on the tile's chips;
+//   · a quiet mission's sponge rounds read whole in the pop-up and are counted on the tile's chips;
 //   · at the largest text size nothing on the card is cut and the pop-up still ends over the foot.
-//   node tools/qa/kitdense-page.cjs [outDir]      env: PORT (the dev server's, default 5199) · KITDENSE_BREAK=1 (the page with ?kitdense=0: must FAIL)
+//   node tools/qa/kitdense-page.cjs [outDir]      env: PORT (the dev server's, default 5199)
 // PASS / FAIL lines, exit 1 on a FAIL or a page error. Software adapter: nothing here has been seen on a GPU.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs');
 const path = require('path');
 const outDir = process.argv[2] || '';
 const PORT = process.env.PORT || 5199;
-const BREAK = process.env.KITDENSE_BREAK === '1';
 let fails = 0; const errors = [];
 const check = (ok, label, detail) => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
 if (outDir) fs.mkdirSync(outDir, { recursive: true });
@@ -33,7 +32,7 @@ const read = () => {
   const guns = [...kc.querySelectorAll('.kc-gun')].map(g => { const t = tile(g), pop = g.querySelector('.kc-pop');
     return { slot: g.getAttribute('data-gun'), name: t?.querySelector('.kc-val')?.textContent ?? '', tile: t ? box(t) : null, sel: !!t?.classList.contains('sel'),
       bars: [...(t?.querySelectorAll('.kc-stats .kc-stat') ?? [])].filter(shown).map(b => Number(b.getAttribute('data-score'))),
-      chips: [...(t?.querySelectorAll('.kc-chip') ?? [])].map(c => ({ f: c.getAttribute('data-chip'), on: !c.classList.contains('off'), lent: c.classList.contains('lent'), n: c.querySelector('b')?.textContent ?? '', shown: shown(c) })),
+      chips: [...(t?.querySelectorAll('.kc-chip') ?? [])].map(c => ({ f: c.getAttribute('data-chip'), on: !c.classList.contains('off'), n: c.querySelector('b')?.textContent ?? '', shown: shown(c) })),
       pop: pop && shown(pop) ? { ...box(pop), picks: [...pop.querySelectorAll('.kc-pick')].map(p => ({ v: p.getAttribute('data-pick'), name: p.querySelector('.kc-pick-name')?.textContent ?? '', on: p.classList.contains('on'), bars: [...p.querySelectorAll('.kc-pick-bars:not(.off) .fill')].map(f => f.getBoundingClientRect().width), ...box(p) })),
         kids: [...pop.querySelectorAll('.kc-kids > .kc-row')].filter(shown).map(k => ({ f: k.getAttribute('data-field'), val: k.querySelector('.kc-val')?.textContent ?? '', sel: k.classList.contains('sel'), ...box(k) })) } : null }; });
   const rows = (sel) => [...kc.querySelectorAll(sel)].filter(shown).map(r => ({ f: r.getAttribute('data-field'), val: r.querySelector('.kc-val')?.textContent ?? '', sel: r.classList.contains('sel'), ...box(r) }));
@@ -52,11 +51,11 @@ const read = () => {
       addEventListener('DOMContentLoaded', () => { const s = document.createElement('style'); s.textContent = '#fatal { display: none !important; }'; document.head.appendChild(s); }); }, textStep);
     const page = await ctx.newPage();
     page.on('pageerror', e => { if (/WebGPU|adapter/i.test(String(e))) return; errors.push(String(e).slice(0, 200)); });
-    await page.goto(`http://localhost:${PORT}/?loadout=${mission}&paused&mute${BREAK ? '&kitdense=0' : ''}`, { waitUntil: 'domcontentloaded', timeout: 180000 });
+    await page.goto(`http://localhost:${PORT}/?loadout=${mission}&paused&mute`, { waitUntil: 'domcontentloaded', timeout: 180000 });
     await page.waitForSelector(`#missions.one.on #loadout .lo-kit .kc`, { timeout: 60000 }); await page.waitForTimeout(600);
     return { ctx, page };
   };
-  const shot = async (page, name) => { if (outDir) await page.screenshot({ path: path.join(outDir, `${name}${BREAK ? '-break' : ''}.png`) }).catch(() => {}); };
+  const shot = async (page, name) => { if (outDir) await page.screenshot({ path: path.join(outDir, `${name}.png`) }).catch(() => {}); };
   const gun = (c, slot) => c?.guns.find(g => g.slot === slot);
   const click = async (page, sel) => { await page.click(sel, { timeout: 5000 }).catch(() => {}); await page.waitForTimeout(150); };
   const key = async (page, k) => { await page.keyboard.press(k); await page.waitForTimeout(90); };
@@ -119,12 +118,12 @@ const read = () => {
       [['you', you, yo], ['teammate', mate, mo]].map(([w, c, o]) => `${w}: card to ${c?.card.b.toFixed(0)}, pop-up to ${gun(o, 'primary')?.pop?.b.toFixed(0) ?? '—'}, foot at ${c?.footTop.toFixed(0)}${c?.scroller ? ' · scrolls ' + c.scroller : ''}${[...(c?.cut ?? []), ...(o?.cut ?? [])].length ? ' · cut ' + [...c.cut, ...o.cut].join(' | ') : ''}`).join(' · '));
     await ctx.close(); }
 
-  // a quiet mission: what the mission lends
+  // a quiet mission: its rounds are on your stealth card (kit.ts KITDEAL.stealth: no tile is the mission's)
   { const { ctx, page } = await open('police-post-quiet', 1317, 775);
     const c = await page.evaluate(read), rings = gun(c, 'primary')?.chips.find(x => x.f === 'rings');
     await click(page, TILE('primary')); const o = await page.evaluate(read), kid = gun(o, 'primary')?.pop?.kids.find(k => k.f === 'rings'); await shot(page, 'kitdense-quiet-pop');
-    check(!!rings?.on && rings.lent && rings.n === '5' && !!kid && /5/.test(kid.val) && !o.cut.length && gun(o, 'primary').pop.b <= o.footTop + 0.5, 'a quiet mission\'s sponge rounds are counted on the gun\'s chip and read whole in its pop-up',
-      `chip ${rings ? `${rings.on ? 'lit' : 'faint'} ${rings.n}${rings.lent ? ' lent' : ''}` : 'none'} · tile '${kid?.val ?? ''}'${o.cut.length ? ' · cut ' + o.cut.join(' | ') : ''}`);
+    check(!!rings?.on && rings.n === '5' && !!kid && /5/.test(kid.val) && !o.cut.length && gun(o, 'primary').pop.b <= o.footTop + 0.5, 'a quiet mission\'s sponge rounds are counted on the gun\'s chip and read whole in its pop-up',
+      `chip ${rings ? `${rings.on ? 'lit' : 'faint'} ${rings.n}` : 'none'} · tile '${kid?.val ?? ''}'${o.cut.length ? ' · cut ' + o.cut.join(' | ') : ''}`);
     await ctx.close(); }
 
   // a quiet mission in a small window (the maintainer's own is about 1000 × 673): its cursor moves no tile, and a pop-up of two lines of things still ends over the foot
@@ -148,6 +147,6 @@ const read = () => {
 
   await browser.close();
   if (errors.length) { fails++; console.log(`- FAIL — page errors\n    ${errors.slice(0, 5).join('\n    ')}`); }
-  console.log(`\n${fails ? `${fails} FAILED` : 'all passed'}${BREAK ? ' (KITDENSE_BREAK=1: the page with ?kitdense=0 — this run must fail)' : ''}`);
+  console.log(`\n${fails ? `${fails} FAILED` : 'all passed'}`);
   process.exit(fails ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

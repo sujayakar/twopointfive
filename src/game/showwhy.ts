@@ -2,7 +2,7 @@
 // there; FROZEN_HOLDS has the row). tools/qa/showwhy-check.ts (probes.ts showwhy; SHOWWHY_BREAK=1 fails it), run on both stands.
 //
 // What it answers: a teammate who was not doing the plain thing looked exactly like one who was idle. His gun went down because the player stood in his
-// line and nothing said so (the lines for it are clearline.ts's, whose switch is off); a stack that was made and waiting on the word stood like one still
+// line and nothing said so; a stack that was made and waiting on the word stood like one still
 // walking up; a man a blast had hurt fell behind with nothing but a hunch; a man kept on a taken room's far door after 'fall in' (rearwatch.ts) read as a
 // man who had not heard the order. The only standing read of any of it was a row of words in the corner panel.
 //
@@ -13,7 +13,7 @@
 //           is on; once more `waveEvery` s later, then only every `waveLater` s. "you're in my line." stands over him for as long as it is true — one
 //           voice at a time, and `lineSayGap` s before another man takes it up. His eyes stay on his man: a head is what a man sees with (guards.ts,
 //           fogofwar.ts), so nothing here turns it. Not while a fire hold has the round anyway (a silent squad, a squad nobody has found, the sneak): no
-//           round is wanted, so none is masked. With clearline.ts on, its own lines say what he does about it and this one is not said (the wave still is).
+//           round is wanted, so none is masked.
 //   STACK   a door order that is MADE AND WAITING (doortools.ts: 'ready' on the word, stacked behind a gate, a charge armed, the jambs or the outside held):
 //           the squeeze goes up the file from the last man (each man who faces a mate in reach ahead of him, `squeezeGap` apart; a man with his back to
 //           the file on rear security keeps his hands; none with the animator's squeeze off — it would play as a fist), then the lead's fist goes up — and again after `holdEvery` s, twice that the next time, `holdMax`
@@ -44,7 +44,6 @@ import './character';
 import { isHurt } from './condition';
 import { roomKept } from './rearwatch';
 import './doorway';
-import './clearline';
 import './unseen';
 import './silent';
 import './holdfire';
@@ -53,9 +52,7 @@ export const SHOWWHY = {
   /** the switch (false = the build as it was, run for run) */
   on: false,
   /** each case by itself, for an A/B (all true as shipped) */
-  line: true, stack: true, door: true, hurt: true, keep: true,
-  /** the lines (false = the hands alone) */
-  say: true,
+  stack: true, hurt: true, keep: true,
   /** LINE. s the player has masked his round without a break before he shows it · a break shorter than this is no break · s from his first wave to his
    *  second · s between waves after that · the line stands at least this long once said · s after one man's line before another man says it · m either
    *  side of his line a mate counts as standing in it */

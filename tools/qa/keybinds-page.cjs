@@ -33,7 +33,7 @@ const still = async (page, name) => { if (!outDir) return; const ok = await page
 // backslash, and gives the orders menu's row and the who row no key (Q and F are the squad's only keys: the ring is the menu).
 // &slotsetup=0 on every line: the selector and the light on Z and L and the kit column as it was — the rows a gun's setup frees and its box are
 // slotsetup-page.cjs's)
-const url = (more = '', board = '&qfree=0&handslot=0&handring=0&qonly=0') => `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&slotsetup=0${board}${more ? '&' + more : ''}`;
+const url = (more = '', board = '&qfree=0&qonly=0') => `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&slotsetup=0${board}${more ? '&' + more : ''}`;
 const openControls = async page => { await page.waitForSelector('#menu .actions button', { timeout: 60000 });
   await page.evaluate(() => [...document.querySelectorAll('#menu .actions button')].find(b => /^Options/.test(b.textContent))?.click()); await page.waitForSelector('#options.on', { timeout: 10000 });
   await page.evaluate(() => document.querySelector('#options .op-tab[data-tab="controls"]').click()); await page.waitForTimeout(150); };   // (a click by the page's own hand: under the software adapter the frame is seconds late and a pointer waits for it)
@@ -42,14 +42,15 @@ const CAPS = () => Object.fromEntries([...document.querySelectorAll('#options bu
 const KEPT = () => localStorage.getItem('twopointsix.keys');
 const SCREEN = () => ({ up: !!document.querySelector('#options.on'), tab: document.querySelector('#options .op-tab.on')?.dataset.tab, desc: document.querySelector('#options .op-desc')?.textContent ?? '', plain: [...document.querySelectorAll('#options .op-caps kbd')].map(k => k.textContent) });
 
+const marksOf = c => c.replace(/\b(sel|none)\b/g, '').trim();   // (a marked cap's classes: a row the build gives no key reads `none`, unmarked)
 async function screen(browser) {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 }), page = await ctx.newPage(); watch(page, 'screen', false);
   await page.goto(url(), { waitUntil: 'domcontentloaded' }); await openControls(page);
   const key = async k => { await page.keyboard.press(k); await page.waitForTimeout(60); };
-  { const caps = await page.evaluate(CAPS), S = await page.evaluate(SCREEN), want = { KeyW: 'W', KeyA: 'A', KeyS: 'S', KeyD: 'D', ShiftLeft: 'Shift', KeyC: 'C', KeyQ: 'Q', Space: 'Space', KeyV: 'V', KeyN: 'N', KeyR: 'R', KeyZ: 'Z', KeyL: 'L', KeyE: 'E', Digit1: '1', Digit2: '2', Digit3: '3', Digit4: '4', Digit5: '5', KeyX: 'X', KeyB: 'B', KeyT: 'T', KeyF: 'F', KeyG: 'G', KeyH: 'H', Backquote: '`' };
-    const off = Object.keys(want).filter(k => caps[k]?.t !== want[k] || caps[k].c.replace('sel', '').trim()), fixed = ['Ctrl', 'Mouse', 'Wheel', 'LMB', 'RMB', 'Esc', 'Enter', 'F7'].filter(k => !S.plain.includes(k));
-    check(!off.length && Object.keys(caps).length === Object.keys(want).length && !fixed.length && await page.evaluate(KEPT) === null, 'Options ▸ Controls: every key that can move is a cap to click, reading the build\'s key and unmarked; the mouse, the camera\'s Ctrl and the page\'s own keys are plain caps',
-      `${Object.keys(caps).length} caps to click${off.length ? `, wrong: ${off.join(' ')}` : ''} · plain caps missing: ${fixed.join(' ') || 'none'}`); await still(page, 'controls-as-built.png'); }
+  { const caps = await page.evaluate(CAPS), S = await page.evaluate(SCREEN), want = { KeyW: 'W', KeyA: 'A', KeyS: 'S', KeyD: 'D', ShiftLeft: 'Shift', KeyC: 'C', KeyQ: 'Q', Space: 'E', KeyV: '—', KeyN: 'N', KeyR: 'R', KeyZ: 'Z', KeyL: 'L', Digit0: '`', Digit1: '1', Digit2: '2', Digit3: '3', Digit4: '4', Digit5: '5', KeyB: 'B', KeyT: 'T', KeyF: 'F', Backquote: '\\' };
+    const off = Object.keys(want).filter(k => caps[k]?.t !== want[k] || marksOf(caps[k].c)), fixed = ['Mouse', 'Wheel', 'LMB', 'RMB', 'Esc', 'Enter', 'F7'].filter(k => !S.plain.includes(k));
+    check(!off.length && Object.keys(caps).length === Object.keys(want).length && !fixed.length && await page.evaluate(KEPT) === null, 'Options ▸ Controls: every key that can move is a cap to click, reading the build\'s key and unmarked; the mouse and the page\'s own keys are plain caps',
+      `${Object.keys(caps).length} caps to click${off.length ? `, wrong: ${off.map(k => `${k} '${caps[k]?.t}' [${caps[k]?.c}]`).join(' · ')}` : ''} · plain caps missing: ${fixed.join(' ') || 'none'}`); await still(page, 'controls-as-built.png'); }
   { await page.click('#options button.op-key[data-key="KeyC"]'); await page.waitForTimeout(80); const w = (await page.evaluate(CAPS)).KeyC, d = (await page.evaluate(SCREEN)).desc; await still(page, 'controls-waiting.png');
     await key('k'); const c = (await page.evaluate(CAPS)).KeyC, kept = await page.evaluate(KEPT), S = await page.evaluate(SCREEN);
     check(w.t === '…' && /wait/.test(w.c) && /Press its new key/.test(d) && c.t === 'K' && /moved/.test(c.c) && !/wait/.test(c.c) && kept === '{"KeyC":"KeyK"}' && S.up && S.tab === 'controls',
@@ -71,7 +72,7 @@ async function screen(browser) {
   { await page.goto(url('keybinds=0'), { waitUntil: 'domcontentloaded' }); await openControls(page); const n = Object.keys(await page.evaluate(CAPS)).length, S = await page.evaluate(SCREEN), kept = await page.evaluate(KEPT), reset = await page.evaluate(() => !!document.querySelector('#options [data-act="reset"]'));
     check(n === 0 && S.plain.includes('C') && S.plain.includes('Q') && S.plain.includes('R') && !reset && /KeyQ/.test(kept || ''), '?keybinds=0: the plain list of the build\'s keys, nothing to click and no Reset, and the kept table left as it was', `caps to click ${n} · C Q R plain: ${['C', 'Q', 'R'].map(k => S.plain.includes(k))} · Reset ${reset} · kept ${kept}`); }
   { await page.goto(url(), { waitUntil: 'domcontentloaded' }); await openControls(page); await page.click('#options [data-act="reset"]'); await page.waitForTimeout(80);
-    const caps = await page.evaluate(CAPS), off = Object.entries(caps).filter(([, v]) => v.c.replace('sel', '').trim()).map(([k]) => k), kept = await page.evaluate(KEPT);
+    const caps = await page.evaluate(CAPS), off = Object.entries(caps).filter(([, v]) => marksOf(v.c)).map(([k]) => k), kept = await page.evaluate(KEPT);
     check(caps.KeyC.t === 'C' && caps.KeyQ.t === 'Q' && caps.KeyR.t === 'R' && caps.Digit2.t === '2' && !off.length && kept === null, 'Reset: every cap is the build\'s again, none marked, and nothing is kept', `C Q R 2: ${caps.KeyC.t} ${caps.KeyQ.t} ${caps.KeyR.t} ${caps.Digit2.t} · still marked: ${off.join(' ') || 'none'} · kept ${kept}`); }
   { await page.goto(url('bkey', ''), { waitUntil: 'domcontentloaded' }); await openControls(page);   // (the wall hold's rule by itself, the squad's command left on B: with it on Q, as the page opens, Q given to the wall is a swap — tools/qa/qkey-check.ts)
     const row = () => page.evaluate(() => { const b = document.querySelector('#options button.op-key[data-key="KeyQ"]'), r = b?.closest('.op-krow'); return { t: b?.textContent ?? '', c: (b?.className ?? '').replace('op-key', '').replace('sel', '').trim(), what: r?.querySelector('.op-what')?.firstChild?.textContent ?? '', small: r?.querySelector('small')?.textContent ?? '' }; });
@@ -85,16 +86,10 @@ async function screen(browser) {
   { await page.goto(url('', ''), { waitUntil: 'domcontentloaded' }); await openControls(page);   // (a row no list shows must hold no key: a key put on it would be a swap nobody sees — host/keymap.ts LETTERS, the menu's G and H)
     const unseen = await page.evaluate(() => window.__keys.keyRows().filter(a => window.__keys.keysOf(a.id).length && !document.querySelector(`#options button.op-key[data-key="${a.id}"]`)).map(a => a.id)), gh = await page.evaluate(() => ['KeyG', 'KeyH'].map(k => window.__keys.gameCode(k)).join('|'));
     check(!unseen.length && gh === '|', 'the page\'s own board: every row that holds a key has its cap on the list, and G and H, the old menu\'s letters, are spare keys that give the game nothing', `rows with a key and no cap: ${unseen.join(' ') || 'none'} · G and H give '${gh}'`); }
-  { await page.goto(url('', ''), { waitUntil: 'domcontentloaded' }); await openControls(page);   // (Q and F are the squad's only keys, KEYMAP.qOnly: the orders menu's row and the who row have no key and are not listed; a key kept from before keeps its row)
+  { await page.goto(url('', ''), { waitUntil: 'domcontentloaded' }); await openControls(page);   // (Q and F are the squad's only keys, KEYMAP.qOnly: the who row has no key and is not listed)
     const row = id => page.evaluate(id => { const b = document.querySelector(`#options button.op-key[data-key="${id}"]`); return { t: b?.textContent ?? '', c: (b?.className ?? '').replace('op-key', '').replace('sel', '').trim() }; }, id);
     const x0 = await row('KeyX'), t0 = await row('KeyT'), kept0 = await page.evaluate(KEPT);
-    await page.evaluate(() => { localStorage.setItem('twopointsix.keys', '{"KeyX":"KeyX"}'); }); await page.goto(url('', ''), { waitUntil: 'domcontentloaded' }); await openControls(page);   // (a machine that kept the menu on X: the row is listed only with a key, ui/options.ts squadRows)
-    const x1 = await row('KeyX'), t1 = await row('KeyT'), kept = await page.evaluate(KEPT);
-    await page.click('#options [data-act="reset"]'); await page.waitForTimeout(80); const x2 = await row('KeyX'), kept2 = await page.evaluate(KEPT);
-    check(x0.t === '' && t0.t === '' && kept0 === null
-      && x1.t === 'X' && /moved/.test(x1.c) && t1.t === '' && kept === '{"KeyX":"KeyX"}' && x2.t === '' && kept2 === null,
-      'the page\'s own board: the orders menu\'s row and the who row are not listed (the squad\'s keys are the command key and the word\'s: tools/qa/squadkeys-page.cjs and tabwho-page.cjs have the rows both ways); a machine that kept the menu on X has its row on X (marked, kept); Reset takes the row off the list again and nothing is kept',
-      `as it opens: orders '${x0.t}' [${x0.c}], who '${t0.t}' [${t0.c}] kept ${kept0} · after X: orders '${x1.t}' [${x1.c}], who '${t1.t}' kept ${kept} · after Reset '${x2.t}' [${x2.c}] kept ${kept2}`); }
+    check(x0.t === '' && t0.t === '' && kept0 === null, 'the page\'s own board: no row for the orders menu (it is gone) and the who row not listed', `as it opens: orders \'${x0.t}\' [${x0.c}], who \'${t0.t}\' [${t0.c}] kept ${kept0}`); }
   { await page.goto(url('wallpress=0&bkey', ''), { waitUntil: 'domcontentloaded' }); await openControls(page);
     const r = await page.evaluate(() => { const b = document.querySelector('#options button.op-key[data-key="KeyQ"]'), row = b?.closest('.op-krow'); return { t: b?.textContent ?? '', c: (b?.className ?? '').replace('op-key', '').replace('sel', '').trim(), small: row?.querySelector('small')?.textContent ?? '' }; });
     check(r.t === 'Q' && !r.c && /press Q or step away/.test(r.small), 'the page\'s own board with the walk-in switched off (?wallpress=0): the wall hold is on Q again, its cap and its words as they were', `'${r.t}' [${r.c}] '${r.small}'`); }
@@ -126,9 +121,10 @@ async function game(browser) {
   { const c0 = await page.evaluate(() => !!window.__game.player.crouch), k = await tap('k'), c = await tap('c'), k2 = await tap('k');
     check(!fatal && !c0 && k.filed === 'KeyC' && k.crouch && c.filed === '' && c.crouch && !k2.crouch, 'in play, at once: K is filed as the game\'s crouch key and he crouches; C, which crouch left, files nothing and does nothing; K again and he stands',
       `standing ${!c0} · K: filed '${k.filed}', crouched ${k.crouch} · C: filed '${c.filed}', crouched ${c.crouch} · K: crouched ${k2.crouch}`); }
+  await tap('2', 120); await tap('o');   // (the rifle up and its light on: the box names the light's key only while it is on)
   { const hud = await page.evaluate(() => { const g = window.__game; g.teleportPlayer([30.6, 0, 11.45]); g.player.char.bodyYaw = 0; window.__runFrames(12);
-      return { gad: [...document.querySelectorAll('#equip .gadgets .g')].map(e => e.textContent), ia: [...document.querySelectorAll('#interact kbd')].map(e => e.textContent), keys: [...document.querySelectorAll('#equip .slot .key')].map(e => e.textContent) }; });
-    check(hud.gad.includes('O LIGHT') && !hud.gad.includes('L LIGHT') && hud.ia.includes('M') && !hud.ia.includes('SPACE') && hud.keys[0] === '1', 'the HUD names the keys as bound: the kit column\'s light is on O, a door\'s row is on M where it said Space, a key not moved reads as ever',
+      return { gad: [...document.querySelectorAll('#equip .hb-st .o.on')].map(e => e.textContent), ia: [...document.querySelectorAll('#interact kbd')].map(e => e.textContent), keys: [...document.querySelectorAll('#equip .slot .key')].map(e => e.textContent) }; });
+    check(hud.gad.includes('O LIGHT') && !hud.gad.includes('L LIGHT') && hud.ia.includes('M') && !hud.ia.includes('SPACE') && hud.keys[1] === '1', 'the HUD names the keys as bound: the kit column\'s light is on O, a door\'s row is on M where it said Space, a key not moved reads as ever',
       `kit column: ${hud.gad.join(' · ')} · the door's caps: ${hud.ia.join(' ')} · slots: ${hud.keys.join(' ')}`); }   // (no still of the play: a screenshot of the game does not come on the software adapter)
   // the page load: a fresh page of the same machine (the same store). The one that played is shut without waiting for it: under the software adapter it answers a reload late
   { const was = page; page = await ctx.newPage(); watch(page, 'game, loaded again', true); was.close().catch(() => { }); await page.goto(url(), { waitUntil: 'domcontentloaded', timeout: 180000 }); }

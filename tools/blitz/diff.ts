@@ -45,7 +45,7 @@ const KEYED_BY_SERIAL = new Set(opt('--keyed-by-serial', 'gunhold::GunholdMod.kn
 // STAND-IN (belongs in schema.json's `serial`, as `dialogue::RadioState.run` is there): fields that hold an object's identity serial as a plain number.
 // A mission's own module keeps the mission it last saw (`this.run === g.mission`; the Rust keeps the mission's serial), and each side deals serials by
 // its own count of objects, so the number is not compared; whether one is held still is.
-const SERIAL_COPIES = new Set(opt('--serial-copies', 'rails::Rails.run,defuse::Defuse.run,lesson::Lesson.run,snatch::Snatch.run').split(','));
+const SERIAL_COPIES = new Set(opt('--serial-copies', 'rails::Rails.run,lesson::Lesson.run').split(','));
 /** --live: the entries of maps and sets keyed by a canon row, met by the reach walk and held back until their key is live */
 type Held = { K: Node; V: Node | null; kp: number; vp: number; done: boolean };
 let HELD: Held[] | null = null;

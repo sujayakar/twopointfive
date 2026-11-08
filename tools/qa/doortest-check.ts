@@ -1,14 +1,12 @@
 // Three door rules from the 10-11 play notes on barricaded doors (all three settled on; this file writes none of them since 2026-11-07):
 //   DOORTOOLS.testDoor      an entry order HALTS at a door that turns out locked or wedged — the lead tries the handle, says what he found, the men stay
 //                           stacked — and the same row again (worded 'kick and clear · …' from then on) boots it; a plain 'stack up' tries the handle too
-//   DOORWAY.sideKick        a boot is thrown from beside the latch jamb: the squad's lead, and the player when he stands there
-//   DOORTOOLS.outsidePlain  'clear from outside' is ONE order on the door tools' row 4 (hold the door from outside); going in is a second order — rows 1 / 2
-//                           of the same page — with one can at most
+//   DOORWAY.sideKick        the squad's boot is thrown from beside the latch jamb
+//   DOORTOOLS.outsidePlain  'clear from outside' is ONE order on the door tools' row 4 (hold the door from outside); going in is a second order on row 1 of
+//                           the same page, with no can; 'wait for my word' on, row 1 waits for F
 //   bun run tools/qa/doortest-check.ts            (probes.ts doortest; DOORTEST_BREAK=1 must FAIL — the door of lines 1 and 2 is never wedged, so nothing halts)
-// Headless, everything given by KEYS (X on the door, one-frame digits) on thresholdmenu-probes.ts's rig: the office room clear with the four and with the
-// pair, the defenders taken off the floor so that a door's own story is all that plays. Each line stages afresh. Nothing here says how any of it LOOKS.
-// OUT 2026-11-07 (the other side of settled switches): 'switch off: no halt, the boot as it was' (5, the order given by code is kept), 'switch off = from in
-// front of the leaf' (6), 'switch off = the threshold's page on row 4' (7), the player's kick 'beside, off' (8).
+// Headless, everything given by KEYS (X on the door, one-frame digits) on thresholdmenu-probes.ts's rig: the office room clear with the pair (the four for
+// 'wait for my word'), the defenders taken off the floor so that a door's own story is all that plays. Each line stages afresh. Nothing here says how any of it LOOKS.
 import { ROOT } from './headless.ts';
 import { asProbe } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 import { stage, spotOf, quiet, guarded, family, textOf } from './thresholdmenu-probes.ts';
@@ -108,7 +106,7 @@ export const doortestCheck = guarded(async () => {
             `a held door, 'wait for my word' on, row 1: they keep the jambs until F, and F then steps them in with no can`,
             `held ${held} · row 1 '${r1?.text}' · after 1: ${waited ? 'still on the jambs' : `NOT WAITING (${T.across().length} across, phase ${op?.phase ?? 'gone'})`} · after F: ${went ? 'in' : 'NOBODY IN'}, cans spent ${b0 - T.R.D.bangs}`);
         }
-      }
+      } else F.verdict(false, 'wait for my word: a door to stage it on', spot);
     }
   }
   return F.done();

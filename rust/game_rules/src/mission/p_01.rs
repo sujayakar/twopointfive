@@ -329,7 +329,7 @@ pub fn send_rack_check(g: &mut crate::game::Game) {
 }
 
 /// THE MISSION'S ONE LINE AND ITS PLACE, as they stand now, and whose they are: a level's program while it runs, a lesson's step over its own scenario,
-/// a charge's overlay, the man to take alive, the room clear, the rescue, the night breach by itself, and else the stealth mission's own stages.
+/// the room clear, the rescue, the night breach by itself, and else the stealth mission's own stages.
 /// None while a show runs. A read: the HUD's view of it is `view::MissionView`, and nothing of it is kept.
 pub fn objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::view::MissionView> {
     use crate::view::{MissionOf, MissionView};
@@ -337,8 +337,6 @@ pub fn objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<
     let of = |of: MissionOf, text: String, pos: Option<V3>| Some(MissionView { of, text, pos });
     if let Some(o) = crate::director::director_objective(g) { return of(MissionOf::Script, format!("objective ▸ {}", o.text), o.pos); }
     if let Some(o) = crate::lesson::lesson_objective(g, seat) { return of(MissionOf::Lesson, o.text, o.pos); }
-    if let Some(o) = crate::defuse::defuse_objective(g, seat) { return of(MissionOf::Defuse, o.text, o.pos); }
-    if let Some(o) = crate::snatch::snatch_objective(g, seat) { return of(MissionOf::Snatch, o.text, o.pos); }
     if let Some(o) = crate::roomclear::room_clear_scenario_objective(g, seat) { return of(MissionOf::Roomclear, crate::par::par_objective(g, &o.text), o.pos); }
     if let Some(o) = crate::rescue::rescue_objective(g, seat) { return of(MissionOf::Rescue, o.text, o.pos); }
     if let Some(o) = crate::nightbreach::night_breach_objective(g) { return of(MissionOf::Nightbreach, o.text, o.pos); }

@@ -193,14 +193,12 @@ pub fn to_gone(g: &mut crate::game::Game, gd: GuardId, evac: bool) {
     let cid = g.gd[gd].civ.unwrap(); let c = g.gd[gd].ch;
     g.ch[c].anim.act = None; crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None); g.cv[cid].target = None;
     if evac { g.stats.civilians.evacuated += 1; log(g, gd, "off the floor (evacuated)"); }
-    else if crate::snatch::snatch_is_man(g, gd) { log(g, gd, "off the floor — gone"); }
     else if !g.cv[cid].reported {
         g.cv[cid].reported = true; g.stats.civilians.outside_calls += 1;
         log(g, gd, "out of the building — control will ring the floor");
         let secs = g.k.civ.outside_call_secs;
         later(g, secs, &LaterP { kind: PendKind::OutsideCall, cv: gd, o: None, ..LaterP::zeroed() });
     }
-    forget_meter(g, gd);
     set_state(g, gd, CivState::Gone);
 }
 
@@ -255,25 +253,9 @@ pub fn to_cower(g: &mut crate::game::Game, gd: GuardId, complied: bool) {
 pub fn hostage_lead(g: &mut crate::game::Game, gd: GuardId, lead: Option<CharId>, gap: f64) {
     let Some(cid) = g.gd[gd].civ else { return; };
     if g.gd[gd].state == GuardState::Dead || g.cv[cid].state != CivState::Cower { return; }
-    g.cv[cid].lead = lead; g.cv[cid].lead_gap = gap; g.cv[cid].lead_to = None;
+    g.cv[cid].lead = lead; g.cv[cid].lead_gap = gap;
     crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None); g.gd[gd].stall_ref = None;
     if lead.is_none() { g.cv[cid].cower_at = Some(g.ch[g.gd[gd].ch].pos); }
-}
-
-/// a led civilian is sent the last steps to `to`, or (none) follows her leader again (civilians.ts civilianLedTo)
-pub fn civilian_led_to(g: &mut crate::game::Game, gd: GuardId, to: Option<V3>) {
-    let Some(cid) = g.gd[gd].civ else { return; };
-    if g.cv[cid].lead.is_none() { return; }
-    g.cv[cid].lead_to = to; crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None); g.gd[gd].stall_ref = None;
-}
-
-/// taken off the floor by the team: gone, nobody told (civilians.ts civilianOff)
-pub fn civilian_off(g: &mut crate::game::Game, gd: GuardId) {
-    let Some(cid) = g.gd[gd].civ else { return; };
-    if g.gd[gd].state == GuardState::Dead || g.cv[cid].state == CivState::Gone { return; }
-    let c = g.gd[gd].ch;
-    g.cv[cid].lead = None; g.cv[cid].lead_to = None; g.ch[c].anim.act = None; crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None); g.cv[cid].target = None;
-    log(g, gd, "off the floor — in the team's hands"); forget_meter(g, gd); set_state(g, gd, CivState::Gone);
 }
 
 /// the half-second tick her path search is asked again on
@@ -283,15 +265,6 @@ fn half_second_tick(g: &Game, dt: f64) -> bool { m::floor(g.time * 2.0) != m::fl
 pub fn follow(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> crate::civilians::Follow {
     let cid = g.gd[gd].civ.unwrap(); let c = g.gd[gd].ch; let l = g.cv[cid].lead.unwrap(); let mut move_ = 0.0;
     g.ch[c].anim.act = None; g.ch[c].anim.look_yaw_extra = 0.0;
-    if let Some(to) = g.cv[cid].lead_to {
-        if v3::dist_xz(to, g.ch[c].pos) > 0.3 {
-            if !g.gd[gd].path.is_empty() || half_second_tick(g, dt) { go_to(g, gd, to, None); }
-            follow_path(g, gd, dt, 1.6); move_ = g.gd[gd].speed;
-        } else {
-            crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None); g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 10.0, dt); g.ch[c].vel = [0.0, 0.0, 0.0];
-        }
-        return Follow { move_, crouch: 0.0 };
-    }
     let lp = g.ch[l].pos;
     let d = v3::dist_xz(lp, g.ch[c].pos); let going = !g.gd[gd].path.is_empty();
     let gap = g.cv[cid].lead_gap;
@@ -390,16 +363,6 @@ pub fn civilian_answer(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut 
     let def_kind = g.cv[cid].def.kind;
     let worker = def_kind == CivilianDefKind::Worker;
     let cell = format!("civ:{}", def_kind.as_str());
-    if crate::snatch::snatch_is_man(g, gd) {
-        let s = crate::dialogue::snatch_lines_table();
-        return Some(if stage <= 1.0 {
-            let text = pick(g, gd, &s.held);
-            answer_base(&cell, text, "civ:fear", StageKey::Num(1.0), stage, None)
-        } else {
-            let text = pick(g, gd, &s.dry);
-            answer_base(&cell, text, "civ:dry", StageKey::X, stage, None)
-        });
-    }
     let lines = crate::dialogue::civ_lines();
     if stage <= 1.0 {
         let pool: Vec<String> = if worker { lines.held_fear_worker.clone() }
@@ -501,7 +464,7 @@ pub fn civilian_comply(g: &mut crate::game::Game) -> bool {
 }
 
 /// how she went, by whose hand; her state is 'dead' either way (civilians.ts civilianDown)
-pub fn civilian_down(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: bool, how: crate::game::DownKind, by: crate::game::DownBy, line: Option<&str>) {
+pub fn civilian_down(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: bool, how: crate::game::DownKind, by: crate::game::DownBy, line: Option<&str>, by_weapon: Option<&str>) {
     let cid = g.gd[gd].civ.unwrap(); let c = g.gd[gd].ch;
     if g.gd[gd].state == GuardState::Dead { return; }
     if bubble_within(g, gd, 0.8) {
@@ -515,23 +478,22 @@ pub fn civilian_down(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: boo
     if g.gd[gd].held.is_some() { g.gd[gd].held = None; g.ch[c].anim.held_pose = None; }
     g.ch[c].anim.act = None; g.cv[cid].target = None; g.cv[cid].report_to = None;
     crate::character::character_ragdollize(g, c, true, dir, quiet);
-    forget_meter(g, gd);
     let dead = how == DownKind::Shot;
-    let mark = crate::snatch::snatch_is_man(g, gd);
     let hostage = crate::rescue::rescue_is_hostage(g, gd);
     let (name, label, her) = (g.cv[cid].name.clone(), g.cv[cid].label.clone(), g.cv[cid].her.clone());
     if by == DownBy::Player {
         if dead {
             g.stats.civilians.killed += 1;
             let pl = g.player;
-            let weapon = match crate::game::player_gun_in_hand(g, pl) {
-                Some(fa) => crate::gear::plain_short(g.m.weapons.weapons.get(g.fa[fa].def).unwrap()),
-                None => String::from("a round"),
+            let weapon = match (by_weapon, crate::game::player_gun_in_hand(g, pl)) {
+                (Some(w), _) => String::from(w),
+                (None, Some(fa)) => crate::gear::plain_short(g.m.weapons.weapons.get(g.fa[fa].def).unwrap()),
+                (None, None) => String::from("a round"),
             };
             let d = data_n(vec![("who", Dv::T(name.clone())), ("label", Dv::T(label.clone())), ("weapon", Dv::T(weapon))]);
             let pos = g.ch[c].pos;
             crate::chronicle::chronicle_n(g, ChronKind::CivilianKilled, ChronCountKey::CivKilled, Some(&d), Some(pos));
-        } else if !mark {
+        } else {
             g.stats.civilians.ko += 1;
             let l = line.unwrap_or("");
             let method = if how == DownKind::Choked { "choke" } else if l.contains("whip") { "whip" } else if l.starts_with("ring") { "ring" } else if l.ends_with("behind the wall when it went") { "charge" } else { "takedown" };
@@ -544,7 +506,7 @@ pub fn civilian_down(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: boo
             g.mission.stage = MissionStage::Failed; g.mission.drive_t = -1.0; g.mission.down_card_at = at;
             let text = format!("MISSION FAILED — you killed {}, the {}. press Enter to restart", name, label);
             crate::game::game_msg(g, &text);
-        } else if !hostage && !mark {
+        } else if !hostage {
             let text = match line {
                 Some(l) => String::from(l),
                 None => if dead { format!("CIVILIAN CASUALTY — {}, the {}, is dead. that is on your record, and they will find {}", name, label, her) }
@@ -553,7 +515,7 @@ pub fn civilian_down(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: boo
             };
             crate::game::game_msg(g, &text);
         }
-    } else if !hostage && !mark {
+    } else if !hostage {
         let text = match line { Some(l) => String::from(l), None => format!("{}, the {}, is down", name, label) };
         crate::game::game_msg(g, &text);
     }
@@ -830,7 +792,7 @@ pub fn evacuation_check(g: &mut crate::game::Game) {
         let cv = g.civilians[i];
         if g.gd[cv].state == GuardState::Dead || g.gd[cv].held.is_some() { continue; }
         let st = g.cv[g.gd[cv].civ.unwrap()].state;
-        if st == CivState::Gone || st == CivState::Evacuate || crate::snatch::snatch_is_man(g, cv) { continue; }
+        if st == CivState::Gone || st == CivState::Evacuate { continue; }
         movable.push(cv);
     }
     if !floor_of(g).evac_told {
@@ -857,8 +819,6 @@ pub fn evacuation_check(g: &mut crate::game::Game) {
 /// the switch and the fail rule, kept on the machine: the browser's storage is the host's, and with no storage the TypeScript's own try does nothing (civilians.ts saveCivTune)
 pub fn save_civ_tune(g: &crate::game::Game) {}
 
-/// the stored switch and `?nocivilians`: the browser's storage and the address are the host's, which sets g.tune; with neither the TypeScript's own tries do nothing (civilians.ts loadCivTune)
-pub fn load_civ_tune(g: &crate::game::Game) {}
 
 /// the switch flipped live (civilians.ts setCivilians)
 pub fn set_civilians(g: &mut crate::game::Game, on: bool) {

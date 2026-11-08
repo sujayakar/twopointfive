@@ -4,7 +4,7 @@
 // PLAYS: its clock was started when the card was built, and three moments of it (a quarter in, past the middle, the end) are three different pictures. (The
 // moments are asked for with `__recap.seek(k)`: on the software adapter the page's frame clock does not run at all — 0 animation frames in 1.5 s once the
 // game is up — so the clock itself is held headless, by tools/qa/deathrecap-check.ts on a frame clock of its own.)
-// Then the same under ?norecap: the card comes up with no panel. `look` after the outDir adds a page that is no verdict, only stills: a squad's room clear on
+// `look` after the outDir adds a page that is no verdict, only stills: a squad's room clear on
 // the compound, Sam stood in front of a defender — four teammates and the defenders all on the plan.
 // Then two pages of a squad's room clear for what is shown WHILE THE RUN IS ON (the block before them says what is held).
 //   PORT=5261 node tools/qa/deathrecap-page.cjs [outDir]      (a dev server on that port: PORT=5261 bun run tools/serve.ts; outDir = stills of the card and the panel)
@@ -26,7 +26,7 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
     return true;
   };
   let failed = false;
-  for (const [name, q, want] of ONLY && ONLY !== 'card' ? [] : [['recap', 'solo', true], ['norecap', 'solo&norecap', false], ...(LOOK && OUT ? [['look', 'levelFile=compound.json&roomclear&squad4&freshstart=0', true]] : [])]) {
+  for (const [name, q, want] of ONLY && ONLY !== 'card' ? [] : [['recap', 'solo', true], ...(LOOK && OUT ? [['look', 'levelFile=compound.json&roomclear&squad4&freshstart=0', true]] : [])]) {
     const browser = await launch(), page = await browser.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 }); const errors = [];
     page.on('console', m => { if (m.type() === 'error' && !NOISE.test(m.text()) && !/Failed to load resource/.test(m.text())) errors.push(m.text().slice(0, 300)); });
     page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));
@@ -70,12 +70,10 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
     }
     await browser.close();
   }
-  // WHILE THE RUN IS ON (deathrecap.ts lostLive): a squad's room clear on the compound, Sam unhurt and away; one teammate held reeling with his back to a defender
+  // WHILE THE RUN IS ON (the game's `g.recap.lostLive`): a squad's room clear on the compound, Sam unhurt and away; one teammate held reeling with his back to a defender
   // until that defender shoots him, a second teammate a few steps behind (the squad hears it: that is how it knows the way). Then Sam is brought near, so the
-  // body is on the screen. As the page ships (RECAP.liveArrows off): the squad block's line for the man is struck, the squad knows the way, and NOTHING is drawn for it
-  // — no arrow on his row, no stroke on the ground. Under &recaparrows=1: the arrow on the row (the game's own direction, projected by this camera here and
-  // compared with what the HUD drew) and one stroke on the ground at him. Either way the panel names no defender and no card is up. Under &recaplive=0: his line as it was.
-  for (const [name, q, want] of [['live', 'levelFile=compound.json&roomclear&squad4&freshstart=0', 'plain'], ['livearrows', 'levelFile=compound.json&roomclear&squad4&freshstart=0&recaparrows=1', 'arrows'], ['liveoff', 'levelFile=compound.json&roomclear&squad4&freshstart=0&recaplive=0', 'off']].filter(c => !ONLY || ONLY === 'live' || ONLY === c[0])) {
+  // body is on the screen. The squad block's line for the man is struck, the squad knows the way, and nothing is drawn for it. The panel names no defender and no card is up.
+  for (const [name, q] of [['live', 'levelFile=compound.json&roomclear&squad4&freshstart=0']].filter(c => !ONLY || ONLY === 'live' || ONLY === c[0])) {
     const browser = await launch(), page = await browser.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 }); const errors = [];
     page.on('console', m => { if (m.type() === 'error' && !NOISE.test(m.text()) && !/Failed to load resource/.test(m.text())) errors.push(m.text().slice(0, 300)); });
     page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));
@@ -98,27 +96,16 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
       const at = A.char.pos, body = [at[0], 0.4, at[2]]; let sam = null;
       for (let k = 0; k < 16 && !sam; k++) { const a = k * Math.PI / 8, p = [at[0] + Math.sin(a) * 3, 0, at[2] + Math.cos(a) * 3]; g.teleportPlayer(p); const c = g.player.char.pos; if (Math.hypot(c[0] - p[0], c[2] - p[2]) < 0.3 && !g.col.segmentBlocked([c[0], 1.65, c[2]], body)) sam = p; }
       for (let i = 0; i < 45; i++) { await window.__runFrames(1, 1 / 60); frames++; }
-      const opt = g.orders.hud().status.flatMap(r => r.opts).find(o => o.text.includes(A.callsign)), L = opt && opt.lost;
-      const el = document.querySelector('#interact .hint.lost'), s = el && el.querySelector('s'), b = el && el.querySelector('b');
-      let want = [];   // the turns this camera's own projection allows: the nearest eighth, and its neighbour when the line lies near the seam between two
-      if (L && L.from) { const w = window.innerWidth, h = window.innerHeight, cam = window.__cam, p0 = cam.project([L.at[0], 0.05, L.at[1]], w, h), p1 = cam.project([L.at[0] + L.from[0], 0.05, L.at[1] + L.from[1]], w, h);
-        const a = Math.atan2(p1[1] - p0[1], p1[0] - p0[0]) / (Math.PI / 4), i = Math.round(a), f = a - i, deg = k => (((k % 8) + 8) % 8) * 45;
-        want = [deg(i)].concat(Math.abs(f) > 0.3 ? [deg(i + Math.sign(f))] : []); }
-      const turn = b ? parseInt((b.style.transform.match(/rotate\((-?\d+)deg\)/) || [])[1], 10) : NaN;
-      const marks = [...document.querySelectorAll('.lostfrom')].filter(x => x.style.display !== 'none');
+      const L = g.recap.lostLive.find(x => x.id === A.char.id);
+      const el = document.querySelector('#interact .hint.lost'), s = el && el.querySelector('s');
       const panel = document.getElementById('interact').textContent || '';
-      return { fatal: document.getElementById('fatal')?.textContent || '', lost: true, frames, who: A.callsign, sam: !!sam, before, known: !!(L && L.from), want,
-        struck: !!s && s.textContent.includes(A.callsign) && /line-through/.test(getComputedStyle(s).textDecorationLine), arrow: b ? b.textContent : '', turn, colour: b ? getComputedStyle(b).color : '',
-        marks: marks.length, mark: marks[0] ? { w: marks[0].style.width, t: marks[0].style.transform, o: marks[0].style.opacity } : null,
+      return { fatal: document.getElementById('fatal')?.textContent || '', lost: true, frames, who: A.callsign, sam: !!sam, before, known: !!(L && L.from),
+        struck: !!s && s.textContent.includes(A.callsign) && /line-through/.test(getComputedStyle(s).textDecorationLine),
         corner: document.getElementById('interact').classList.contains('corner'), names: hs.map(x => x.callsign).filter(n => panel.includes(n)), card: !!document.querySelector('#menu.on .db'), samDown: g.player.down, plain: rowHtml().find(x => x.includes(A.callsign)) || '' };
     });
-    const ok = !R.fatal && !errors.length && R.lost && !R.card && !R.samDown && R.names.length === 0 && (want === 'arrows'
-      ? R.before === 0 && R.sam && R.known && R.struck && R.arrow === '→' && R.want.includes(R.turn) && /240, 145, 46/.test(R.colour) && R.marks === 1
-      : want === 'plain' ? R.before === 0 && R.sam && R.known && R.struck && !R.arrow && R.marks === 0
-      : !R.struck && !R.arrow && R.marks === 0 && (R.corner ? !R.plain : /class="hint( t-[a-z]+)?"/.test(R.plain)));   // (the corner panel — ui/corner.ts — has no line per man: with the live rule off a lost man has none either)
+    const ok = !R.fatal && !errors.length && R.lost && !R.card && !R.samDown && R.names.length === 0 && R.before === 0 && R.sam && R.known && R.struck;
     if (!ok) failed = true;
-    console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${name}: ${!R.lost ? `no teammate was lost in ${R.frames} frames (${R.why})` : `${R.who} lost after ${R.frames} frames, Sam ${R.samDown ? 'DOWN' : 'up'}${R.sam ? ' and looking at him' : ''} · his line ${R.struck ? 'struck' : 'not struck'}, ${R.arrow ? `arrow "${R.arrow}" turned ${R.turn}° (the game's direction on this camera: ${R.want.join('° or ')}°, ${R.colour})` : `no arrow (the way ${R.known ? 'known' : 'NOT known'})`} · ${R.marks} stroke(s) on the ground${R.mark ? ` (${R.mark.w}, ${R.mark.t}, opacity ${R.mark.o})` : ''} · defenders named in the panel: ${R.names.length} · card ${R.card ? 'UP' : 'not up'}`}${R.fatal ? ` · FATAL ${R.fatal.slice(0, 200)}` : ''}${errors.length ? ` · ${errors.length} console error(s): ${errors[0]}` : ''}`);
-    if (want === 'off') console.log(`    his line with the rule off: ${R.plain}`);
+    console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${name}: ${!R.lost ? `no teammate was lost in ${R.frames} frames (${R.why})` : `${R.who} lost after ${R.frames} frames, Sam ${R.samDown ? 'DOWN' : 'up'}${R.sam ? ' and looking at him' : ''} · his line ${R.struck ? 'struck' : 'not struck'}, the way ${R.known ? 'known' : 'NOT known'} · defenders named in the panel: ${R.names.length} · card ${R.card ? 'UP' : 'not up'}`}${R.fatal ? ` · FATAL ${R.fatal.slice(0, 200)}` : ''}${errors.length ? ` · ${errors.length} console error(s): ${errors[0]}` : ''}`);
     if (OUT) { try { await page.screenshot({ path: `${OUT}/deathrecap-${name}-hud.png`, timeout: 90000 }); } catch (x) { console.log(`  (no still of the HUD: ${String(x.message || x).split('\n')[0]})`); } }
     await browser.close();
   }

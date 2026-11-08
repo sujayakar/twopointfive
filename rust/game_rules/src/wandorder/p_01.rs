@@ -45,14 +45,14 @@ pub fn fought(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) -> 
 }
 
 /// A point half a metre off the frame on face `side`: what Doors.workSpot is asked from. (wandorder.ts onFace)
-pub fn on_face(g: &mut crate::game::Game, d: DoorId, side: f64) -> V3 {
+pub fn on_face(g: &crate::game::Game, d: DoorId, side: f64) -> V3 {
     let u = crate::doors::door_dir(g, d);
     let c = g.dr[d].frame_centre;
     [c[0] - u[1] * side * 0.5, 0.0, c[2] + u[0] * side * 0.5]
 }
 
 /// His kneeling spot on that face of the leaf. (wandorder.ts spotOn)
-pub fn spot_on(g: &mut crate::game::Game, d: DoorId, side: f64) -> crate::doors::DoorsWorkSpot {
+pub fn spot_on(g: &crate::game::Game, d: DoorId, side: f64) -> crate::doors::DoorsWorkSpot {
     let from = on_face(g, d, side);
     let along = g.dr[d].def.width * 0.5;
     crate::doors::doors_work_spot(g, d, from, Some(0.5), Some(along))
@@ -134,7 +134,7 @@ pub fn settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::
             g,
             gd,
             &crate::orders::SquadOrdersAssignA {
-                order: String::from("hold"),
+                order: String::from(crate::orders::rows::hold::ORDER.id),
                 post: Some(to.pos),
                 face: Some(to.yaw),
                 watch: Some([fc[0], 1.1, fc[2]]),
@@ -155,7 +155,7 @@ pub fn settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::
             g,
             gd,
             &crate::orders::SquadOrdersAssignA {
-                order: String::from("hold"),
+                order: String::from(crate::orders::rows::hold::ORDER.id),
                 post: Some([p[0], 0.0, p[2]]),
                 face: Some(face),
                 stance: Some(crate::character::Stance::LowReady),
@@ -308,18 +308,12 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
 
 /// The order's row on the menus. (wandorder.ts row)
 pub fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
-    let def = crate::orders::OrderDef {
-        id: String::from(WAND_ORDER),
+    let def = crate::orders::rows::def(&crate::orders::rows::wand::ORDER, crate::orders::OrderDef {
         hot_key: Some(g.k.wand.order_key.clone()),
-        label: crate::orders::OrderLabel::Text { text: String::from("look under it · wand") },
         targets: vec![crate::orders::TargetKind::Door],
         ack: Some(vec![String::from("on it."), String::from("moving.")]),
-        only: Some(crate::orders::OrderOnly::Wand),
-        valid: Some(crate::orders::OrderValid::Wand),
-        issue: crate::orders::OrderIssue::Wand,
-        tick: Some(crate::orders::OrderTick::Wand),
         ..Default::default()
-    };
+    });
     crate::orders::squad_orders_row(g, def)
 }
 
@@ -344,7 +338,7 @@ pub fn wand_order_key(g: &mut crate::game::Game, input: InputId) -> bool {
     }
     let listed = g.orders.defs.iter().any(|&d| g.tab.orders_order_def[d].id == WAND_ORDER);
     if want && !listed {
-        let after = g.orders.defs.iter().position(|&d| g.tab.orders_order_def[d].id == "hold");
+        let after = g.orders.defs.iter().position(|&d| g.tab.orders_order_def[d].id == crate::orders::rows::hold::ORDER.id);
         let r = row(g);
         let before = after.and_then(|i| g.orders.defs.get(i + 1)).map(|&d| g.tab.orders_order_def[d].id.clone());
         crate::orders::squad_orders_register(g, r, before.as_deref());

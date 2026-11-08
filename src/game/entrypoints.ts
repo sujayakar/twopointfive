@@ -33,7 +33,7 @@ import type { Opening } from './cover';
 import { wallBetween } from './roomclear';
 import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
-/** The knobs (__game.entry.knobs; Team feel rows: teamfeel.ts ENTRY). */
+/** The knobs (__game.entry.knobs). */
 export const ENTRY = {
   /** a point of domination / a search point that is risky (below) is moved off the opening where the room has the floor · false = the points as they were */
   offOpenings: true,

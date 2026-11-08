@@ -20,12 +20,13 @@
 import { ROOT } from './headless.ts';
 import { stage, stageRing, family, eventTap, listen, rmbTap } from './fn2000-probes.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
-const { HE40, HE40_LOG, HE40_STATS, he40StatsReset, fireShell, shellSolve, arcArmed, arcLength, previewTooClose } = await import(`${ROOT}/src/game/he40.ts`);
+const { HE40, HE40_LOG, HE40_STATS, he40StatsReset, fireShell, shellSolve, arcArmed, arcLength } = await import(`${ROOT}/src/game/he40.ts`);
 const { RING, ringSolve, arcSolve } = await import(`${ROOT}/src/game/launcher.ts`);
 const { FRAG, FRAG_LOG, fragStatsReset } = await import(`${ROOT}/src/game/frag.ts`);
 const { LAUNCHER, LAUNCHER40 } = await import(`${ROOT}/src/game/weapons.ts`);
 const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
-const { aimGunOn } = await import(`${ROOT}/src/game/aimweight.ts`);   // (the player's aim has weight on the shipped stand: a tap waits for the gun to be on the cursor)
+const previewTooClose = (g: any): boolean => g.view.aim.throw?.short ?? false, aimGunOn = (g: any): boolean => !g.view.aim.ring?.trail;   // (what the HUD is told)
+//   // (the player's aim has weight on the shipped stand: a tap waits for the gun to be on the cursor)
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;

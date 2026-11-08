@@ -197,7 +197,7 @@ pub fn update_wanding(g: &mut crate::game::Game, dt: f64) {
         stop_wand(g, None);
     } else if !crate::wand::wand_fits(g, d) || crate::doors::doors_side(g, d, pos) != w.side {
         stop_wand(g, Some("the door moved — the wand is out"));
-    } else if crate::samstun::sam_staggered(g, None) || g.time < g.pl[pl].dazzled_until {
+    } else if crate::samstun::sam_staggered(g, &crate::seats::here(g), None) || g.time < g.pl[pl].dazzled_until {
         stop_wand(g, None);
     } else {
         let along = g.dr[d].def.width * 0.5;
@@ -333,7 +333,6 @@ fn work_at_walked(g: &mut crate::game::Game, pl: PlayerId, kind: crate::handwork
     let at = match kind {
         crate::handwork::SamWorkKind::Wall => g.wall_charge.sam.as_mut().map(|s| &mut s.at),
         crate::handwork::SamWorkKind::Door => g.pl[pl].charging.as_mut().map(|s| &mut s.at),
-        crate::handwork::SamWorkKind::Defuse => g.defuse.sam.as_mut().map(|s| &mut s.at),
         _ => None,
     };
     if let Some(at) = at {
@@ -709,30 +708,6 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
             g.aim_snap = Some(com);
         }
     }
-    // a man down WOUNDED takes the reticle only with the cursor ON him
-    if g.aim_guard.is_none() {
-        let mut i = 0;
-        while i < g.guards.len() {
-            let gd = g.guards[i];
-            i += 1;
-            if g.gd[gd].wound.is_none() || Some(gd) == held || crate::fogofwar::fog_of_war_hidden(g, gd) || crate::friends::friend_no_snap(g, gd) {
-                continue;
-            }
-            let com = chest_or(g, gd, 0.6);
-            let (sx, sy, front) = crate::camera::follow_camera_project(g, cam,com, w, h, None, None);
-            if !front {
-                continue;
-            }
-            let d = m::hyp2(sx - mx, sy - my);
-            let eye = v3::add(g.ch[me].pos, [0.0, 1.3, 0.0]);
-            if d < m::min(best_px, WOUNDED_SNAP_PX) && !crate::scene_collision::segment_blocked(g, eye, com, None, None, None) {
-                best_px = d;
-                g.aim_guard = Some(gd);
-                g.aim_target = None;
-                g.aim_snap = Some(com);
-            }
-        }
-    }
     // the exact ray still counts when it lands ON a man the loose test missed; the NEAREST body on the ray decides
     if g.aim_guard.is_none() {
         let mut best_t = hit_t.unwrap_or(1e9);
@@ -776,7 +751,7 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
             }
         }
     }
-    if crate::samstun::sam_blind(g, None) > 0.5 {
+    if crate::samstun::sam_blind(g, &crate::seats::here(g), None) > 0.5 {
         g.aim_guard = None;
         g.aim_target = None;
         g.aim_snap = None;

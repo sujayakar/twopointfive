@@ -4,7 +4,7 @@ use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum Why {
     Door,
     Near,
@@ -25,7 +25,7 @@ impl Why {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum Mode {
     Cross,
     Back,
@@ -52,8 +52,6 @@ pub struct Crumb {
     pub lit: f64,
     pub t: f64,
     pub low: bool,
-    pub amb: f64,
-    pub cpu0: f64,
 }
 impl Crumb {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -63,8 +61,6 @@ impl Crumb {
             lit: 0.0,
             t: 0.0,
             low: false,
-            amb: 0.0,
-            cpu0: 0.0,
         }
     }
 }
@@ -154,7 +150,6 @@ pub struct State {
     pub t: f64,
     pub men: JsMap<GuardId, crate::sneak::Man>,
     pub live: bool,
-    pub amb: f64,
 }
 impl State {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -165,7 +160,6 @@ impl State {
             t: 0.0,
             men: JsMap::new(),
             live: false,
-            amb: 0.0,
         }
     }
 }
@@ -207,15 +201,7 @@ pub struct SneakWalk {
     /// INVENTED by a review: see the proposals
     pub reach: f64,
     /// INVENTED by a review: see the proposals
-    pub amb: f64,
-    /// INVENTED by a review: see the proposals
-    pub cpu0: f64,
-    /// INVENTED by a review: see the proposals
-    pub open0: bool,
-    /// INVENTED by a review: see the proposals
     pub men: Vec<crate::sneak::SneakWalkMan>,
-    /// INVENTED by a review: see the proposals
-    pub roofs: JsMap<crate::Num, bool>,
     /// INVENTED by a review: see the proposals
     pub memo: JsMap<crate::Num, bool>,
 }
@@ -229,11 +215,7 @@ impl SneakWalk {
             keen: 0.0,
             card: 0.0,
             reach: 0.0,
-            amb: 0.0,
-            cpu0: 0.0,
-            open0: false,
             men: Vec::new(),
-            roofs: JsMap::new(),
             memo: JsMap::new(),
         }
     }
@@ -541,9 +523,6 @@ pub fn lines_now() -> crate::sneak::LINESNOW { crate::sneak::LINESNOW { wait: cr
 
 /// (src/game/sneak.ts:195 DEG)
 pub const DEG: f64 = 0.017453292519943295;
-
-/// (src/game/sneak.ts:217 POSTED: a table nothing writes)
-pub fn posted() -> Vec<String> { alloc::vec![String::from("move"), String::from("cover")] }
 
 /// (src/game/sneak.ts:251 LOW_Y: a table nothing writes)
 pub fn low_y() -> Vec<f64> { alloc::vec![0.81, 0.98] }

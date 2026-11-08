@@ -134,7 +134,7 @@ fn posted(g: &Game, seat: &crate::seats::SeatRef, o: GuardId) -> bool {
 fn posted_cover(g: &Game, seat: &crate::seats::SeatRef, o: GuardId) -> bool {
     if !posted(g, seat, o) { return false; }
     let a = crate::orders::squad_orders_of(g, seat, o).unwrap();
-    g.tab.orders_assignment[a].order == "cover"
+    crate::orders::rows::is(g, a, crate::orders::Is::Covers)
 }
 /// The man of `l` in the room nearest the side door. (rescue.ts Rescue.pick, its `near`)
 fn near(g: &Game, l: &[GuardId], sb: Option<crate::scene_scenarios::Rect>, sd: DoorId) -> Option<GuardId> {
@@ -259,11 +259,11 @@ pub fn rescue_start_clock(g: &mut crate::game::Game, why: &str) {
         for &o in &up { if !crate::orders::squad_orders_has(g, &crate::seats::here(g), o) { idle.push(o); } }
         let target = crate::orders::OrderTarget::None(crate::orders::OrderTargetNone { at: [p[0], 0.0, p[2]], man: None });
         if idle.len() == up.len() {
-            crate::orders::squad_orders_give(g, "fallIn", Some(&target), Some(crate::orders::Who::All), None);
+            crate::orders::squad_orders_give(g, crate::orders::rows::fallin::ORDER.id, Some(&target), Some(crate::orders::Who::All), None);
         } else {
             for &o in &idle {
                 let at = match crate::orders::squad_orders_squad(g, &crate::seats::here(g)).iter().position(|&x| x == o) { Some(i) => i as f64, None => -1.0 };
-                crate::orders::squad_orders_give(g, "fallIn", Some(&target), Some(crate::orders::Who::Num(at)), None);
+                crate::orders::squad_orders_give(g, crate::orders::rows::fallin::ORDER.id, Some(&target), Some(crate::orders::Who::Num(at)), None);
             }
         }
         if !idle.is_empty() { g.rescue.last_order = last_log_order(g, &crate::seats::here(g)); }
@@ -827,7 +827,7 @@ pub fn rescue_post(g: &mut crate::game::Game, op: GuardId, look: Option<V3>, doo
     };
     let words = match door { Some(door) if !door.is_empty() => format!("covering {}", door), _ => String::from("holding") };
     crate::orders::squad_orders_assign(g, op, &crate::orders::SquadOrdersAssignA {
-        order: String::from("cover"), post: Some([p[0], 0.0, p[2]]), face: Some(y), watch: Some(watch),
+        order: String::from(crate::orders::rows::cover::ORDER.id), post: Some([p[0], 0.0, p[2]]), face: Some(y), watch: Some(watch),
         stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim),
         going: words.clone(), there: words,
         ..Default::default()
@@ -954,7 +954,7 @@ pub fn rescue_search(g: &mut crate::game::Game) {
         let stands = match a {
             Some(a) => {
                 let row = &g.tab.orders_assignment[a];
-                alive(g, o) && g.m.rescue.door_orders.has(row.order.clone()) && match row.post { Some(post) => !(flat(p, post) > 0.6), None => false }
+                alive(g, o) && crate::orders::rows::id_is(&row.order, crate::orders::Is::Enters) && match row.post { Some(post) => !(flat(p, post) > 0.6), None => false }
                     && in_rect(p, b) && !g.door_tools.ops.iter().any(|&x| g.tab.doortools_door_op[x].men.contains(&o))
             }
             None => false,
@@ -1058,10 +1058,10 @@ pub fn rescue_let_go(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// The floor just outside the hostage room's main door. (rescue.ts Rescue.outsidePoint)
-pub fn rescue_outside_point(g: &mut crate::game::Game) -> V3 { rescue_room_point(g, RescueRoomPointWhich::Outside) }
+pub fn rescue_outside_point(g: &crate::game::Game) -> V3 { rescue_room_point(g, RescueRoomPointWhich::Outside) }
 
 /// The floor a metre outside the hostage room's side door. (rescue.ts Rescue.sideOutside)
-pub fn rescue_side_outside(g: &mut crate::game::Game) -> Option<V3> {
+pub fn rescue_side_outside(g: &crate::game::Game) -> Option<V3> {
     let n = rescue_data(g)?.side?.door;
     let d = crate::doors::doors_by_name(g, &n)?;
     let b = rescue_bounds(g);
@@ -1069,7 +1069,7 @@ pub fn rescue_side_outside(g: &mut crate::game::Game) -> Option<V3> {
 }
 
 /// The way round to the side door. (rescue.ts Rescue.sideWay)
-pub fn rescue_side_way(g: &mut crate::game::Game) -> Vec<V3> {
+pub fn rescue_side_way(g: &crate::game::Game) -> Vec<V3> {
     let o = match rescue_side_outside(g) { Some(o) => o, None => return Vec::new() };
     let mut way: Vec<V3> = Vec::new();
     if let Some(out) = g.rescue.server_out { way.push(v3::copy(out)); }

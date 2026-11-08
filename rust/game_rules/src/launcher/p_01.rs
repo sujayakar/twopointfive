@@ -131,7 +131,7 @@ pub fn ring_aim_point(g: &crate::game::Game, seat: &crate::seats::SeatRef, from:
 /// Let one ring go: in the air from this frame, the launcher's sound at the tube, a 'prop' noise at the shooter. (launcher.ts fireRing)
 pub fn fire_ring(g: &mut crate::game::Game, shooter: CharId, from: V3, target: V3) -> crate::launcher::Ring {
     let vel = launch_vel(from, target, ballistics_of(&g.k.ring));
-    let spin = crate::math_dice::sim_random(g) * m::PI;
+    let spin = crate::dice::draw_body(g, "launcher::fire_ring#1", shooter) * m::PI;
     let ring = Ring { pos: v3::copy(from), vel, age: 0.0, shooter, spin };
     g.rings.push(ring);
     crate::audio_iface::game_audio_like_play(g, "launcher", Some(from), Some(0.8), None);
@@ -190,10 +190,11 @@ pub fn update_rings(g: &mut crate::game::Game, dt: f64) {
                 let c = g.gd[cv].ch;
                 try_char(g, &r, radius, dir, reach, c, Some(cv), &mut best, &mut hit_c, &mut hit_g);
             }
-            let pl = g.player;
-            if !g.pl[pl].down {
-                let c = g.pl[pl].ch;
-                try_char(g, &r, radius, dir, reach, c, None, &mut best, &mut hit_c, &mut hit_g);
+            for pl in crate::seats::men(g) {
+                if !g.pl[pl].down {
+                    let c = g.pl[pl].ch;
+                    try_char(g, &r, radius, dir, reach, c, None, &mut best, &mut hit_c, &mut hit_g);
+                }
             }
             let st = crate::scene_collision::raycast(g, r.pos, dir, reach);
             let ph = crate::props::prop_system_raycast(g, r.pos, dir, reach);
@@ -302,7 +303,7 @@ pub fn ring_hits_character(g: &mut crate::game::Game, r: crate::launcher::Ring, 
             }
             let (pos, level) = (v3::copy(g.ch[c].pos), g.k.ring.hit_noise);
             prop_event(g, pos, level, shooter_id, None);
-            if by_player { let pl = g.player; g.pl[pl].noise = m::max(g.pl[pl].noise, level); }
+            if let Some(pl) = crate::seats::man_by_id(g, shooter_id) { g.pl[pl].noise = m::max(g.pl[pl].noise, level); }
         }
         Some(gd) if high => {
             play_rate(g, "bodyHit", at, 0.6, 0.75);
@@ -310,17 +311,17 @@ pub fn ring_hits_character(g: &mut crate::game::Game, r: crate::launcher::Ring, 
                 Some(cv) => format!("ring to the head — {}, the {}, is out cold. breathing — but a civilian: that costs, and they may find {}", g.cv[cv].name, g.cv[cv].label, g.cv[cv].her),
                 None => format!("ring to the head — {} is out cold", g.gd[gd].callsign),
             };
-            crate::combat::kill_guard(g, gd, [dir[0], 0.0, dir[2]], Some(true), Some(crate::game::DownKind::Struck), Some(if by_player { crate::game::DownBy::Player } else { crate::game::DownBy::Guard }), Some(&line), None);
+            crate::combat::kill_guard(g, gd, [dir[0], 0.0, dir[2]], Some(true), Some(crate::game::DownKind::Struck), Some(if by_player { crate::game::DownBy::Player } else { crate::game::DownBy::Guard }), Some(&line));
             let (pos, level) = (v3::copy(g.ch[c].pos), g.k.ring.ko_noise);
             prop_event(g, pos, level, shooter_id, None);
-            if by_player { let pl = g.player; g.pl[pl].noise = m::max(g.pl[pl].noise, level); }
+            if let Some(pl) = crate::seats::man_by_id(g, shooter_id) { g.pl[pl].noise = m::max(g.pl[pl].noise, level); }
         }
         Some(gd) => stagger_guard(g, gd, dir, r.shooter),
     }
     let drop_at = v3::mad(at, dir, -0.05);
-    let vx = -dir[0] * 1.5 + (crate::math_dice::sim_random(g) - 0.5);
-    let vy = 1.0 + crate::math_dice::sim_random(g);
-    let vz = -dir[2] * 1.5 + (crate::math_dice::sim_random(g) - 0.5);
+    let vx = -dir[0] * 1.5 + (crate::dice::draw_body(g, "launcher::ring_hits_character#1", c_2) - 0.5);
+    let vy = 1.0 + crate::dice::draw_body(g, "launcher::ring_hits_character#2", c_2);
+    let vz = -dir[2] * 1.5 + (crate::dice::draw_body(g, "launcher::ring_hits_character#3", c_2) - 0.5);
     spend(g, r, drop_at, [vx, vy, vz]);
 }
 
@@ -364,7 +365,7 @@ pub fn stagger_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, shooter: C
     let all = stagger_lines_table();
     let now: Vec<String> = if g.gd[gd].state == GuardState::Alert { all.iter().filter(|t| !t.contains("who's there")).cloned().collect() } else { all.clone() };
     let pool = crate::words::w(g, &now, &all);
-    let roll = m::floor(crate::math_dice::sim_random(g) * pool.len() as f64);
+    let roll = m::floor(crate::dice::draw_of(g, "launcher::stagger_guard#1", gd) * pool.len() as f64);
     let line = &pool[js::rem(roll, pool.len() as f64) as usize];
     crate::game::game_say(g, gd, line, None, None, None);
     let shooter_id = g.ch[shooter].id;

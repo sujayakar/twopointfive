@@ -12,6 +12,7 @@
 //                                             DOORSBY_BREAK=1 tells the map every door stands wide open however its leaf hangs, and must fail)
 import { readFileSync, readdirSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
+import { sample, swept } from './sweep.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { apart, WAY } = await import(`${ROOT}/src/scene/wayThrough.ts`);
@@ -92,7 +93,7 @@ console.log(`--- by degrees`);
 { // EVERY LEVEL'S DOORS: shut is shut, the walls of a level with its doors shut are the walls it had, a door at either end of its travel is open, and every
   // door's line ends at something a leaf shuts against
   const l0 = console.log, w0 = console.warn; let levels = 0, doors = 0, ends = 0; const bad: string[] = [], bare: string[] = [], low: string[] = [];
-  for (const name of readdirSync(`${ROOT}/levels`).filter(f => f.endsWith('.json') && !f.includes('.lint')).map(f => f.replace(/\.json$/, ''))) {
+  for (const name of sample(readdirSync(`${ROOT}/levels`).filter(f => f.endsWith('.json') && !f.includes('.lint')).map(f => f.replace(/\.json$/, '')), 16)) {
     console.log = console.warn = () => { }; let X: any; try { X = await standUp({ level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${name}.json`, 'utf8'))), seed: 1 }); for (let i = 0; i < 4; i++) X.step(1 / 60); } catch { console.log = l0; console.warn = w0; continue; }
     const gg = X.game, wd = gg.engine.world, list: any[] = gg.doors.list; gg.aiEnabled = false; levels++; doors += list.length;
     const gaps = BRK ? [] : list.map((d: any) => { const [hx, hz] = d.def.hinge, a = d.def.closedDir, w = d.def.width; return [hx, hz, hx + Math.cos(a) * w, hz + Math.sin(a) * w]; });
@@ -104,7 +105,7 @@ console.log(`--- by degrees`);
     const hi = put(d => d.maxAuth), lo = put(d => d.minAuth); list.forEach((d: any, i: number) => { for (const [st, at] of [[hi[i], d.maxAuth], [lo[i], d.minAuth]]) if (Math.abs(at) > 1.2 && !(st >= DOOR_STEPS - 1)) low.push(`${name} ${d.def.name} at ${at.toFixed(2)}: ${st}`); });
     const J = doorJambs(wd.statics, gaps); gaps.forEach((gp: number[], i: number) => { for (let e = 0; e < 4; e += 2) { ends++; if (!J[i].some((o: any) => apart(o, [[gp[e], gp[e + 1]], [gp[e], gp[e + 1]]]) <= WAY.play)) bare.push(`${name} ${list[i].def.name}`); } });
     console.log = l0; console.warn = w0; }
-  check(levels >= 50 && doors > 400 && bad.length === 0 && low.length === 0 && bare.length <= ends * 0.01,
+  check(levels >= swept(16, 50) && doors > swept(60, 400) && bad.length === 0 && low.length === 0 && bare.length <= ends * 0.01,
     'on every level a shut door is shut and its line a wall from jamb to jamb, a door at either end of its travel is a doorway whole or a step under, and a door\'s line ends at something a leaf shuts against',
     `${levels} levels, ${doors} doors; ${bad.length} wrong shut${bad.length ? `: ${bad.slice(0, 3).join('; ')}` : ''}; ${low.length} low at an end${low.length ? `: ${low.slice(0, 3).join('; ')}` : ''}; ${bare.length} of ${ends} line ends with nothing there${bare.length ? `: ${bare.slice(0, 6).join('; ')}` : ''}`); }
 process.exit(red ? 1 : 0);

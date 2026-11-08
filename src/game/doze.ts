@@ -70,7 +70,7 @@ export const DOZE = { on: false, minWait: 20, maxWait: 90, chairM: 4.5, nodSecs:
    *  this long he is at work · `ears` / `noises`: headphones on — a footfall and every other small noise at his
    *  ear, as shares · `sayFirst` / `sayEvery` [from, to] s: his first mutter at the screen, and the gap to each one after · `idleSecs`: a screen a man was got up from, or hauled away from, stays lit this long with nobody at it, then blanks ·
    *  `lend`: at work his attention is lent to the screen (attention.ts: the narrowed eye, the thread, the ring) — off = his eyes whole, as before the wiring */
-  screen: true, screenM: 1.5, pullM: 0.5, napWait: 40, settleSecs: 1.2, ears: 0.5, noises: 0.6, sayFirst: [5, 11], sayEvery: [16, 30], idleSecs: 60, lend: true };
+  screen: true, screenM: 1.5, pullM: 0.5, napWait: 40, settleSecs: 1.2, ears: 0.5, noises: 0.6, sayFirst: [5, 11], sayEvery: [16, 30], idleSecs: 60, };
 
 export type DozeWhy = 'noise' | 'light' | 'bump' | 'alarm' | 'net' | 'time' | 'taken';
 type Phase = 'no' | 'going' | 'down' | 'asleep' | 'work' | 'stir' | 'up' | 'spent';
@@ -132,11 +132,6 @@ export function dozeAt(gd: Guard): 'asleep' | 'screen' | null { const p = REC.ge
 /** for the neighbours: was he woken out of a doze inside the last `secs` seconds, and by what (null = no). A man shaken awake in the dark is the one man a
  *  rule about suspicious lamps may want to treat apart. */
 export function dozeWoke(g: Game, gd: Guard, secs = 6): DozeWhy | null { const D = REC.get(gd); return D && D.why && D.why !== 'time' && D.wokeAt >= 0 && g.time - D.wokeAt < secs ? D.why : null; }
-/** where he is in his breath, 0‥1 (the 'z'; a sound's clock when he is given one), or −1 awake */
-export function dozeBreath(g: Game, gd: Guard): number { const D = REC.get(gd); return D && D.phase === 'asleep' ? (D.t % DOZE.breathSecs) / DOZE.breathSecs : -1; }
-/** THE HUD's mark over a sleeping man: a 'z' that grows with each breath ('' = none) */
-export function dozeMark(g: Game, gd: Guard): string { if (REC.get(gd)?.phase === 'work') return gd.awareness > 0.05 ? '' : '♪';   // (a man at his screen is awake: once something has reached him the HUD's own dots say how much)
-  const b = dozeBreath(g, gd); return b < 0 ? '' : b < 1 / 3 ? 'z' : b < 2 / 3 ? 'zZ' : 'zZz'; }
 /** QA / the panel: what the rule has of a man */
 export function dozeOf(gd: Guard): Readonly<{ phase: Phase; why: DozeWhy | null; secs: number; wp: number }> | null { const D = REC.get(gd); return D ? { phase: D.phase, why: D.why, secs: D.t, wp: D.wp } : null; }
 /** 'dozing ▸ Novak asleep 41 s · Reyes woken (noise)' */

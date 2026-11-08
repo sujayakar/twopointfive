@@ -11,7 +11,7 @@ const { BoxFlag } = await import(`${ROOT_DIR}/src/scene/boxes.ts`);
 export interface CountedBox { flags: number; emissive?: ArrayLike<number>; cut?: readonly unknown[]; cutRound?: unknown; round?: boolean; rot?: unknown; marks?: unknown }
 export interface BoxCount {
   /** every box · the ones the camera draws (not NoPrimary) · the ones that stand in light's way (not NoShadow) */ boxes: number; drawn: number; castShadow: number;
-  /** cut boxes and the planes they carry · boxes that are round (a cut prism, or the round rule's cylinder) */ cut: number; planes: number; round: number;
+  /** cut boxes and the planes they carry · boxes that are round (a cut prism, or a round box) */ cut: number; planes: number; round: number;
   /** tilted boxes (they get no material map) · panes of glass · boxes that carry markings · drawn boxes that emit */ tilted: number; glass: number; marked: number; glowing: number;
 }
 export function countBoxes(boxes: readonly CountedBox[]): BoxCount {

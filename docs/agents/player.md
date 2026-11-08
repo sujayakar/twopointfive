@@ -69,7 +69,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   'wounded' player — written whatever the switch says, under `FRAG.samStun` — and a defender's stun canister in a room fight) = feet rooted (`samRooted` before the walk keys), the gun at the low
   ready through player.ts's `walled` seam, no round or throw, `anim.clutch`; `dazzledUntil` (combat.ts `detonateStun`, the guards' own rule copied for his eyes: the night game's line of sight inside
   `bang.dazzleRadius`, or the room fight's `FLASH` — A CAN HE HAS A LINE TO is a defender's count on him whoever threw it, the full `secs` + `stagger` (`SAMSTUN.ownSeen`, on; the maintainer: "it should totally be possible to flash yourself with a bad entry" — a teammate is spared his own side's can because the drill turns his head, nobody turns the player's; off = the own-side rule his teammates get: only inside `ownM` for `ownSecs`, no stagger); with no line his own side's can is that own-side rule and a defender's the concussion's half) = the picture white (`#blind`,
-  overlay.ts `samBlind`, clearing over `fade`), the reticle takes nobody, `sup.v` held up, `anim.dazzle`; his FEET AND TRIGGER STAY HIS while blind (`blindRoots` = rooted too, as a blinded AI man is).
+  overlay.ts `game.view.marks.blind`, clearing over `fade`), the reticle takes nobody, `sup.v` held up, `anim.dazzle`; his FEET AND TRIGGER STAY HIS while blind (`blindRoots` is settled off and nothing reads it).
   FOLDED, HIS HANDS DO NOTHING: no Space row is performed (interact.ts), no takedown or grab starts (game.ts updateDoors), a man in his arm goes loose (`freeHeld`), Q neither takes nor leaves a wall, and
   on the rifle stack (player.ts `stackUp` / `stackLean`) the rifle stays at the low ready and he neither steps out round the corner nor back in — he stands where it caught him (`samstun-check` line 13) —, and `foldCancels` (also called by frag.ts while the switch is on) puts a can in the wind-up back on his belt and stops every sustained verb (`cancelSustained`). `samStunPose` runs right after the down test
   in EVERY player state and takes its pose off when the stun ends or the switch is thrown (`Player.stunPosed`). WHOSE CAN: `detonateStun(g, it, borrowed, sam?: { side, spare })` — a caller that swaps the
@@ -137,11 +137,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   under the ring's own flags, as the ring's three slats; the flight, rule, counts, item kind and the `'ring to the head'` log line the chronicle keys on are
   untouched), and the kit column's second launcher tag reads `HE ×3` for `40MM ×3` (`shellTag()`; the reticle's and the draw line's '40 MM' are as they were). A chronicle row WRITES a weapon by its old name whichever kit is issued (`plainShort(def)`: saves and recordings read the same
   on and off) and is worded where it is shown. The OCP stays. Every player-facing line that names the kit goes through `gearText()` WHERE IT IS SHOWN (kit card, HUD column and
-  reticle word, controls list, captions, the debrief's rows) — a new line that says FN2000 / Five-seveN / ring airfoil needs the same. QA: `bun run
+  reticle word, controls list, captions, the debrief's rows; Options, which holds no game, says the issued kit's words in its one line that names it) — a new line that says FN2000 / Five-seveN / ring airfoil needs the same. QA: `bun run
   tools/qa/gear-check.ts` (`GEAR_BREAK=1` must fail; it holds the fifteen, the Mk 18 and the slug both ways); the fn2000 family's WORD checks ask for their lines
   through `gearText` / `ringTag`, so `TPS_GEAR=1 probes.ts fn2000` and `he40` are green as the frozen stand's are; rifle-slot, nvg-rig and the soak's rifle-box
   count follow the switch. Not seen on a GPU; `RIG.m4` / the tubes are first-pass numbers for the viewer.
-- **The player's aim has weight** (`src/game/aimweight.ts`, table `AIMWEIGHT {on, rate 11, smooth 0.05, heft 1.5, bare 1.25, onM 0.3, reach 18, launchWait 0.5}`; `AIMWEIGHT.on` — ON in the page, `?noaimweight` = the gun eased onto the cursor as it was; OFF in the module and on the frozen stand, `TPS_AIMWEIGHT=1`; a `FROZEN_HOLDS` row, in the knob registry and a journal's tables, a recording from before the table replays with it off; Tab ▸ Player & weapons ▸ Player, doors & props ▸ 'aim has weight' + 'aim ▸ turn rad/s' / 'aim ▸ settle s', under all knobs 'aim ▸ on cursor m' / 'aim ▸ gun weight' / 'aim ▸ launcher s' / 'aim ▸ empty hands ×'). The maintainer, 10-12: "we should have limited turning rate + the aiming circle can lag behind the cursor (like helldivers 2)". TWO MARKS, TWO MEANINGS: the CURSOR is where he wants to aim (`g.aimPoint`, moved the frame the mouse does; the camera's lead, the order menu and the wall hold's step-out still read it), the CIRCLE is where the gun points. `aimWeighTurn` (the plain aim branch of player.ts, in place of its exponential ease) steps `Character.aimYaw` toward the cursor's bearing by a critically damped spring with a TOP RATE = `rate` rad/s × the handling of what is in his hands (weapons.ts `handlingOf`: pistol 1, rifle 0.8) raised to `heft`, empty hands `bare`; stepped in slices of 1/240 s at most (the same swing at 60, 120 and 144 frames a second), never past the point. A half turn: rifle 0.47 s, pistol 0.37 s, empty hands 0.33 s; a 7° correction lands in 0.12 s. WHAT LEAVES THE GUN MID-SWING GOES WHERE THE CIRCLE IS (`aimWeighShot` at the pistol's and the rifle's round sites and the launcher's, whichever load is up — ring, 40 mm or sticky camera: the target turned about him by what the gun still owes, range, height and a launcher's lead kept); once the circle is within `onM` across the line of the cursor every shot is the one the build fired before, to the bit. A LAUNCHER'S LOAD WAITS FOR THE GUN (`launchWait` 0.5 s; 0 = sent on the release frame; a recording whose AIMWEIGHT table lacks the key replays with 0): the right button let go of mid-swing keeps the load (`Player.launchHeld`), its arc drawn, and sends it the frame the circle is on the cursor or when the wait runs out (`aimWeighLaunch`); a frame the gun is down for a wall or a friend sends and draws nothing but keeps the load, the wait's clock running on (`aimWeighLaunchKeep`), and at the wait's end with the gun still down it is dropped unsent. THE HUD (overlay.ts off `aimGunPoint` / `aimGunOn`): the aim ring `.reticle.aim` is drawn at the circle, class `trail` (quieter) while it is off the cursor, with a small dot `.aimwish` on what the reticle snapped to (or the circle small, `.aimwish.gun`, while the ring is busy on a row's thing). LEFT AS THEY WERE: the pistol's OCP (takes the snapped light at once), a thrown can (goes to the cursor), the wall hold and the rifle stack, a man in his arm, a sprint (each drives his facing itself: `aimWeighBegin`, first in his update, marks the frame unweighed and the next weighted frame starts from rest), every other man's turning (TURN is theirs), the camera's lead. On hard the fog's cone follows his gaze, which follows the gun: a flick behind opens that view only as the gun comes round (the half-turn times above). Never under a puppet or a show, never with Sam down; the player only. No dice, no camera, no pixels: radians, seconds and metres off `Player.aimw` (`AimWeight`), which rides a checkpoint's player slice (`aw`) only while a swing runs. On = NOT the off game by digest wherever the player turns (its owner's reading, not re-run since: shipped-stand runs with a scripted commander move; the frozen stand's do not). `bun run tools/qa/aimweight-check.ts` (`probes.ts aimweight`, also under `player`; ten checks; passes on both stands; `AIMWEIGHT_BREAK=1` must fail), `PORT=<dev server> node tools/qa/aimweight-page.cjs [outDir]` (the real page on the software adapter: the HUD's circle trails a flicked cursor and lands on it, and under `?noaimweight` sits on it the frame it moves; about 35 min). Never seen on a GPU or played by anybody: the rate, the settle and the wait are first-pass numbers.
+- **The player's aim has weight** (`src/game/aimweight.ts`, table `AIMWEIGHT {on, rate 11, smooth 0.05, heft 1.5, bare 1.25, onM 0.3, reach 18, launchWait 0.5}`; `AIMWEIGHT.on` — ON in the page, `?noaimweight` = the gun eased onto the cursor as it was; OFF in the module and on the frozen stand, `TPS_AIMWEIGHT=1`; a `FROZEN_HOLDS` row, in the knob registry and a journal's tables, a recording from before the table replays with it off; Tab ▸ Player & weapons ▸ Player, doors & props ▸ 'aim has weight' + 'aim ▸ turn rad/s' / 'aim ▸ settle s', under all knobs 'aim ▸ on cursor m' / 'aim ▸ gun weight' / 'aim ▸ launcher s' / 'aim ▸ empty hands ×'). The maintainer, 10-12: "we should have limited turning rate + the aiming circle can lag behind the cursor (like helldivers 2)". TWO MARKS, TWO MEANINGS: the CURSOR is where he wants to aim (`g.aimPoint`, moved the frame the mouse does; the camera's lead, the order menu and the wall hold's step-out still read it), the CIRCLE is where the gun points. `aimWeighTurn` (the plain aim branch of player.ts, in place of its exponential ease) steps `Character.aimYaw` toward the cursor's bearing by a critically damped spring with a TOP RATE = `rate` rad/s × the handling of what is in his hands (weapons.ts `handlingOf`: pistol 1, rifle 0.8) raised to `heft`, empty hands `bare`; stepped in slices of 1/240 s at most (the same swing at 60, 120 and 144 frames a second), never past the point. A half turn: rifle 0.47 s, pistol 0.37 s, empty hands 0.33 s; a 7° correction lands in 0.12 s. WHAT LEAVES THE GUN MID-SWING GOES WHERE THE CIRCLE IS (`aimWeighShot` at the pistol's and the rifle's round sites and the launcher's, whichever load is up — ring, 40 mm or sticky camera: the target turned about him by what the gun still owes, range, height and a launcher's lead kept); once the circle is within `onM` across the line of the cursor every shot is the one the build fired before, to the bit. A LAUNCHER'S LOAD WAITS FOR THE GUN (`launchWait` 0.5 s; 0 = sent on the release frame; a recording whose AIMWEIGHT table lacks the key replays with 0): the right button let go of mid-swing keeps the load (`Player.launchHeld`), its arc drawn, and sends it the frame the circle is on the cursor or when the wait runs out (`aimWeighLaunch`); a frame the gun is down for a wall or a friend sends and draws nothing but keeps the load, the wait's clock running on (`aimWeighLaunchKeep`), and at the wait's end with the gun still down it is dropped unsent. THE HUD (overlay.ts off `game.view.aim`: `aimweight::aim_gun_point` / `aim_gun_on`): the aim ring `.reticle.aim` is drawn at the circle, class `trail` (quieter) while it is off the cursor, with a small dot `.aimwish` on what the reticle snapped to (or the circle small, `.aimwish.gun`, while the ring is busy on a row's thing). LEFT AS THEY WERE: the pistol's OCP (takes the snapped light at once), a thrown can (goes to the cursor), the wall hold and the rifle stack, a man in his arm, a sprint (each drives his facing itself: `aimWeighBegin`, first in his update, marks the frame unweighed and the next weighted frame starts from rest), every other man's turning (TURN is theirs), the camera's lead. On hard the fog's cone follows his gaze, which follows the gun: a flick behind opens that view only as the gun comes round (the half-turn times above). Never under a puppet or a show, never with Sam down; the player only. No dice, no camera, no pixels: radians, seconds and metres off `Player.aimw` (`AimWeight`), which rides a checkpoint's player slice (`aw`) only while a swing runs. On = NOT the off game by digest wherever the player turns (its owner's reading, not re-run since: shipped-stand runs with a scripted commander move; the frozen stand's do not). `bun run tools/qa/aimweight-check.ts` (`probes.ts aimweight`, also under `player`; ten checks; passes on both stands; `AIMWEIGHT_BREAK=1` must fail), `PORT=<dev server> node tools/qa/aimweight-page.cjs [outDir]` (the real page on the software adapter: the HUD's circle trails a flicked cursor and lands on it, and under `?noaimweight` sits on it the frame it moves; about 35 min). Never seen on a GPU or played by anybody: the rate, the settle and the wait are first-pass numbers.
 - **Kit handling = Sam's hands carry his kit** (`src/game/kitanim.ts` = the game's half, `character.ts KIT` + `kitSwap / kitLayer / pistolReloadArm` = the hands, `rigProps.ts KitDraw` = the
   drawer; `KITANIM.on` — ON in the page, `?nokitanim` = the kit jumping between hand and holster on the key's frame as it was; OFF on the harness's frozen stand, `TPS_KITANIM=1`; Tab ▸ Kit
   handling). EQUIP: `kitTick(g)` (updatePlayer, right after the keys — so the lock-out lands on the key's frame — and AGAIN at its end, `kitTick(g, true)`, for what the
@@ -352,7 +352,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   door's line says ' · charge set · F blows it', and F is the door tools' own trigger: `blow()` is the one a teammate's charge goes through and asks nothing of who set it. THE SQUAD ON YOUR
   CHARGE: the door tools' charge row (X, 5, 3) on a door carrying a charge set by hand, from the charge's own face, reads 'stand off · in behind the charge' (`looseOn` → `startCharge(men, t, true)`: the
   charge order from its stand-off stage — its marks, deal and words, nobody at the lock, nothing spent) and F then sends them in behind it as behind their own; whoever is inside the blast is
-  named on the row that offers the trigger (`closeWords`: ' · too close: you, Red One · behind the door: …', blow()'s own reach and line tests, kept a quarter second a charge; a warning: beyond the door a pair's man inside `knockM` is felled, anybody else of ours dazzled). The squad block's own line for a set charge (`hudNotes`) carries the same names in capitals (' · TOO CLOSE: you'): it wraps, where the door's header is one line the HUD cuts short on a locked door — so on the door's own line the names come AHEAD of ' · charge set · F blows it' (what the cut takes is the hint). A WALL CHARGE by hand
+  named on the row that offers the trigger (`closeWords`: ' · too close: you, Red One · behind the door: …', blow()'s own reach and line tests, as things stand: it was kept a quarter second a charge; a warning: beyond the door a pair's man inside `knockM` is felled, anybody else of ours dazzled). The squad block's own line for a set charge (`hudNotes`) carries the same names in capitals (' · TOO CLOSE: you'): it wraps, where the door's header is one line the HUD cuts short on a locked door — so on the door's own line the names come AHEAD of ' · charge set · F blows it' (what the cut takes is the hint). A WALL CHARGE by hand
   was already the wall charge's own row (wallcharge.ts `samRows`); with the switch on it is paid from what the cards — yours among them — carry. Enemies hear and are hit by a blast, never
   by who set it: nothing was added for them. A plain save is refused while he sets one (`playerBusy` 'setting a charge'); a checkpoint's player slice carries `own {charges, walls, doors?, spent?}` only while
   the switch is on and he is alone (a door charge that stands set is put back on its door by a load; a wall charge set and not blown goes back in the count). A MAN ALONE'S NEW RUN is a fresh
@@ -550,10 +550,10 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   DATA DOES: a stored or pasted card that says `shield` is a card without one — `kitSanitize` takes only what a row offers, and the next change of a row writes the store without
   the word; a save never named one; a level whose issue card says `shield` is REFUSED with the reason in words (`scene/levelData.ts`: 'the ballistic shield is out of the game:
   take the key out'; levels/hall.json and hall-gwot.json now issue nothing); an F10 session whose knobs carry the `SHIELD` table LOADS (the table is passed over) — where a shield
-  man was in it the replay parts from the file's digests and says the frame, since the file does not say who carried what; an F7 run tape made with a shield man is refused before
-  a re-run, in words (`replay/format.ts tapeShield`: the table on AND a teammate's card carrying it or the long hall's issue; the map viewer plays its samples as ever). QA:
+  man was in it the replay parts from the file's digests and says the frame, since the file does not say who carried what; a run tape that old is of
+  another version and is refused before a re-run, in words (`replay/format.ts tapeWhy`). QA:
   `bun run tools/qa/noshield-check.ts [gone|card|staged|tape]` (`probes.ts noshield`, in all-quick; the same 24 lines on BOTH stands; `NOSHIELD_BREAK=1` lies to the check — a
-  shield value on the big row, every tape waved through — and must fail a card line and the tape line). The `shield-*` probes, `shield-tally.ts` and `pellets-shield` went with it.
+  shield value on the big row — and must fail a card line). The `shield-*` probes, `shield-tally.ts` and `pellets-shield` went with it.
   `tools/qa/lived-check.ts` holds a level to its file at a base commit and loads that file with today's reader: a base whose issue block hands out the shield (the long hall's)
   has its issue block and the level's note read as today's, said in a line, and takes no new base revision; `tools/qa/level-needs.ts` reads a level's issue cards as written.
   LEFT AS IT IS: the riot shields stacked in the barracks' bunk room (`tools/levels/barracks.ts`: set dressing, nobody carries one). MEASURED, headless only: see the long hall's
@@ -624,7 +624,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   your card's (the next bullet). No checkpoint slice: a floor with a spawned unit on it takes no
   checkpoint (`savestate.ts canSave`), and every teammate is one.
   UI: the two rows are drawn as their class of gun (`ui/kitIcons.ts` by `pickIcon`: the same three drawings; no long gun = an empty board), wear the can by
-  `kit.ts kitRowCan`, carry their own noise mark (`ui/kitNoise.ts`), and the kit view plays the gun's demo for either (`host/kitView.ts TILES`).
+  `CardRow.can`, carry their own noise mark (`CardRow.noise`), and the kit view plays the gun's demo for either (`host/kitView.ts TILES`).
   Check: `bun run tools/qa/gunslots-check.ts` (families `gunslots-card -mate -fight -guns -off` in `probes.ts`, in `all-quick`), ALL PASS on both stands;
   `GUNSLOTS_BREAK=1` fails every family. Probes written against the one gun row (`bigslot- kitpaste- kitlent- kitcan- sticky-`) run with the
   switch held off (`tools/qa/holds.ts GUN_ROW_AS_IT_WAS`); the card family has its own paste, set, issue-card and old-row verdicts under it. `gunslots-fight` is the measure: two teammates with a round each and three men five metres in front of them —
@@ -979,6 +979,11 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   stand-in elements: the rifle at the start, six rounds fired, a reload (the magazine that came out is a box as full as it was), the pistol, the key
   off, the journal, the stands. NOBODY HAS seen it on a GPU or in play; the picture handed to the maintainer is the box's own elements and styles
   off the software-adapter page.
+- **The kit's column reads the game's record** (`game.view.kit`, `rust/game_rules/src/kit/b_01.rs kit_view`; drawn by `src/ui/handbox.ts`, which imports nothing of the game; 2026-11-08).
+  One column is left: the old one `SLOTSETUP` off drew is deleted with the two-line box, the `leftBar` nothing set, the PACE row (his pace is 1 at the head of every update: it could not show), `?magboxes` and `MAGBOXES_BREAK`, and `slotsetup.ts`'s questions on the copy (the
+  rules and their words are `slotsetup::setup_view`; `Game.backable` reads `kit.setup`). No switch: it moves no rule. Native:
+  `rust/game_start/tests/kit_view.rs` (three seeds, a control in each, the second seat shown). Set against the column before it on one scripted run, 62 steps over two seeds: the same. The
+  kit screen before a mission still reads `kit.ts`'s tables (the cards'). NOBODY HAS seen it on a GPU or played it.
 - **Empty hands are a slot on backtick; E is spare; the debugger is on backslash** (`src/game/handslot.ts HANDSLOT {on}`, `HANDSLOT_KEY`, 10-22; the
   maintainer: "having backtick be the empty state", "when holding a guy, we can just have picking empty hands or pistol as the way to change
   equipment", "we can move the debug menu to \ or something like that", "if we have an empty equipment state, we can keep that lmb is knife, rmb is
@@ -1107,19 +1112,15 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   touchpad drivers, some mice) cannot be told from the chord and is nothing: `?pinchonly=0`, there is no Options row; (3) Ctrl held and the wheel
   turned over a page that never saw the key go down (another frame, the address bar or devtools has the keys) still zooms until the mouse moves; (4) Safari sends a
   pinch as its own gesture events and no wheel, so a pinch there was never the zoom (not checked here). NOBODY HAS TRIED IT ON A TRACKPAD.
-  TWICE (`host/findme.ts watchCtrlTaps(win, idle, key)`; main.ts hands it `camKey`): the "Double tap" option of Options, Game (off unless he turns
-  it on) is two taps of the camera's key, wherever it is. findme.ts still imports nothing.
-  A tap of Space with Shift held counts (Shift is his sprint; with Ctrl it is a browser chord and still does not). With a text box focused (the
-  debugger's search) Space types a space and turns nothing, where Ctrl still turned: left so.
+  With a text box focused (the debugger's search) Space types a space and turns nothing, where Ctrl still turned: left so.
   THE WORDS: Options, Controls draws the two camera rows' cap plain (`ui/options.ts camCapEl`: Ctrl or Space; never keyCapEl's 'Space', which is the
   action's row and reads "E"); Options,
-  Game says "Double tap Space" and "hold Space and move the mouse" (`ui/findme.ts`, `camCap()`).
+  Game says "hold Space and move the mouse" (`ui/findme.ts`, `camCap()`).
   NOT A ROW (a reviewer's note, left as it is): the camera's key cannot be moved in Options, and a row put on Space takes Space from it with no
-  swap shown. Making the camera hold a row of the board would give it caps, words and a swap by the board's own machinery. `tools/qa/findme-page.cjs`
-  (the settings thread's) reads "Double tap Ctrl" and presses Control: it needs `&camspace=0` or the new words. The engine replay's own view still
+  swap shown. Making the camera hold a row of the board would give it caps, words and a swap by the board's own machinery. The engine replay's own view still
   turns on Ctrl (`replay/engineplay.ts`). A laptop touchpad that goes dead while a key is held would not turn the view under Space: not tried.
-  CHECK: `bun run tools/qa/probes.ts camspace` (family `player`), 6 lines: the board, held, Ctrl, the wheel (above), twice, off; on game/input.ts's own listeners and
-  the double tap's, stood on a window and a canvas that are lists of them. `CAMSPACE_BREAK=1` fails 5 (the `off` line is the build as it was).
+  CHECK: `bun run tools/qa/probes.ts camspace` (family `player`), 5 lines: the board, held, Ctrl, the wheel (above), off; on game/input.ts's own listeners,
+  stood on a window and a canvas that are lists of them. `CAMSPACE_BREAK=1` fails 4 (the `off` line is the build as it was).
   `tools/qa/keybinds-page.cjs` reads the camera's cap in its last line.
   Never seen on a GPU; nobody has felt Space held under a thumb while the same hand walks.
 - **A can in the wind-up goes back on the belt when his hands start something else** (`src/game/throwback.ts THROWBACK.on`, 10-22; the deep
@@ -1139,7 +1140,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   the pick are begun by the game's own starts a few frames in. NOT in the check: the wand, hands at work and the keypad (the same
   line; read, not run). Headless only; nobody has played it.
 - **A rifle beside a jamb fires, or the ring says it cannot** (`WALLSNAP.leanGun`, wallsnap.ts + player.ts `stackLean`; `GUNWALL.mark`, gunwall.ts +
-  player.ts `gunShut`; the maintainer, 10-22, off the solo tutorial mission: "shooting the sentry doesn't work since the rifle is on the right hand side
+  `player::gun_shut`, `game.view.aim`; the maintainer, 10-22, off the solo tutorial mission: "shooting the sentry doesn't work since the rifle is on the right hand side
   and the bullets are hitting the doorframe?"). WHAT IT WAS, reproduced headless on that mission's gate and on the conference doorway: stacked on a wall,
   the cursor round its end steps him out `leanAlong` 0.6 m — measured for his eyes. The rifle rides a hand's width to his right, so round an end on
   that side his head was clear, the reticle had the man, and the rifle as drawn lay IN the jamb: every round ended at its own muzzle (combat.ts
@@ -1157,7 +1158,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   out, stacked and free along the doorway (17 places: barred exactly where a click sends no round into the room) / the stands and the journal. The
   old `wallsnap` family pins `leanGun` 0 (its lines ask for 0.6 m) and passes on both stands; `lesson-run tut-solo` passes. One level's doorway and
   one gate, no seeds (nothing here draws from the die). NOT MENDED: free beside a jamb the gun still comes down — he has to step; the ring now shows
-  it. The pistol's line of `gunShut` is not run by the check. If no place within `leanGun` is clear he steps 0.6 m as before, and the ring is barred.
+  it. The pistol's line of `player::gun_shut` is not run by the check. If no place within `leanGun` is clear he steps 0.6 m as before, and the ring is barred.
   `probes.ts gunwall` is red on the page's stand at the build head this was cut from (its standUp line), the same with and without this change.
   `tools/qa/hudmarks-page.cjs` reads the ring's classes on the real page (software adapter). NEVER SEEN ON A GPU: the bar, the longer step-out.
 - **His own charge goes off from his own actions, not from the squad's key** (`src/game/ownblow.ts OWNBLOW.on`, 10-22; the maintainer on the solo
@@ -1207,6 +1208,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   rest, writes `--railshift` on it: down past the ring if the window has the room, else up over it (index.html: the line's transform, eased). The
   line stays readable: it is often what says which wedge to press. The older `ringover` (the status column faint under the squad's ring) is as it
   was. Page-only: no headless check sees it; read on the software adapter by the boxes' places, never seen on a GPU, no picture taken.
+- (Since 2026-11-08 `emptyThing`, `emptyWord` and `handRingView` below are `rust/game_rules/src/interact`'s and `view/rings.rs`'s: the HUD reads `view.empty` and `view.hand`.)
 - **A tap that finds no row beside a thing names the thing and why** (`HANDRING.near`, handring.ts; interact.ts `emptyThing` / `emptyWord`; on and off
   with `on`, as `empty` is: `?handring=0`, `TPS_HANDRING=1`, a `FROZEN_HOLDS` row, a recording from before the key replays with it off). The
   maintainer, 10-22, on the stealth tutorial with the back door open at his elbow: "nothing in reach to close the door?". THE CAUSE was not reach:
@@ -1217,7 +1219,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   game knows exactly (`emptyThing`, in this order, the nearest of each): a thing worked by hand (player.ts `PRESS_THINGS`) in reach whose every
   row the frame kept back (buildInteractables marks its marker `framed`) says 'not in this mission'; a door in his hand's reach with no row while
   his hands are not his (a leaf already in his hand) 'not now'; a door his sprint alone keeps from him 'stop sprinting' (never one locked against
-  him: its own line there is the boot's); a door a step off, within `EMPTY_NEAR_M` (2.2 m, as its reach is measured: `thingDist`) and in sight (a
+  him: its own line there is the boot's); a door a step off, within `EMPTY_NEAR_M` (2.2 m, as its reach is measured: `thing_dist`) and in sight (a
   level line from his eye to `EMPTY_SHY_M` short of the leaf or the doorway: the door markers are the whole level's) 'step closer'. A door's reach
   is read as its distance and his feet (`Doors.USE_REACH`; the marker's `inReach` is also true from a stack's distance when the big slot's tool
   has a row). A door of the last two that the frame offers NO door row for (`SHUT_ROWS` / `OPEN_ROWS`, interact.ts: tut-quiet's open back door
@@ -1234,7 +1236,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   'not now' is asserted on the page's stand alone; a recording from before; `HANDRING_BREAK=1` fails it). Nothing in it turns on a die: one
   stand-up of each level, the rig's seed and seed 1. NOT CHECKED: a body or a switch nearer than the door (a ragdoll does not land where it is
   put), the corner's row (read on the page by the DOM, on the software adapter). Never seen on a GPU; nobody has played it.
-- **The throw preview's ring is where the can comes to rest** (`THROWBACK.restMark`, throwback.ts; player.ts `throwRest`, frag.ts `restOfThrow`; the
+- **The throw preview's ring is where the can comes to rest** (`THROWBACK.restMark`, throwback.ts; `player::throw_rest`, `frag::rest_of_throw`, `game.view.aim.throw`; the
   maintainer, 10-22: "hard to toss the smoke to precisely hit the gap … maybe we just need to update the UI to show roughly where it'll end up").
   WHAT IT WAS: the arc and its ring ended at the can's FIRST TOUCH (throwables.ts `solve`), which is where the cursor is; the can then bounces and
   rolls on — measured on the corridor's open floor 4.8 to 5.6 m further for a smoke or a stun and 3.7 to 4.0 m for a frag, 1.0 to 1.6 m off a wall
@@ -1248,7 +1250,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   IS STILL THE FIRST TOUCH: the ring now sits metres past it, and aiming the throw so the can RESTS under the cursor would be a rule of the game
   (every throw, the scripted ones too) — asked of the maintainer, not built. `tools/qa/hudmarks-page.cjs` reads the ring, the tick and the roll on
   the real page (software adapter). NEVER SEEN ON A GPU: the tick, the dots, the ring's place on the screen.
-- **The throw preview shows what the thing will reach** (`THROWBACK.reach`, throwback.ts; `src/game/throwreach.ts throwReach`, `ui/overlay.ts
+- **The throw preview shows what the thing will reach** (`THROWBACK.reach`, throwback.ts; `frag::throw_reach`, `game.view.aim.throw.reach`, `ui/overlay.ts
   drawReach`, 10-23; the maintainer off a GPU shot of a grenade's arc: "we should also have kill radius / stun radius when throwing grenades"). While a
   throw is aimed the overlay draws, flat on the floor round the point the can comes to REST (`frag.ts restOfThrow`: where its fuse finds it, whatever
   the rest mark's own switch says): for a FRAG a solid red-orange KILL ring at `FRAG.lethalM` (4 m) and a dotted, fainter ring at `FRAG.woundM` (8 m,
@@ -1393,13 +1395,13 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   `HANDRING`, handring.ts, each with its own page word and all four off under `?handring=0` too; all four off in the module and on the frozen stand and raised there by the hands ring's own
   word, `TPS_HANDRING=1` (no new stand word), each a `FROZEN_HOLDS` row, each off for a recording from before its key). CHECK: `handring`, both
   stands, a line for each of rules 1, 3 + 2 and 4; `HANDRING_BREAK=1` fails all three. The maintainer's words are in handring.ts.
-  1. `lone`, `?lonepill=0` (`game/ringlone.ts` the shape, `ui/cmdring.ts RingDraw` draws it, `index.html .cmdring .lone / .ch`): a ring with ONE row
+  1. `lone`, `?lonepill=0` (`ui/ringlone.ts` the shape, `ui/cmdring.ts RingDraw` draws it, `index.html .cmdring .lone / .ch`): a ring with ONE row
      draws no slice: a small ring round the middle (the wheel's hole) and a pill out the way that row's wedge lay, the digit at the end by the
      middle, the words inside, set to the width counted for them (6.6 px a letter, `textLength`; never measured). BOTH RINGS (the squad's is the
      same drawing). And the pointing, both rings (`cmdring.ts ringWant`'s `lone`): the cursor anywhere on the pill is that row. A wedge is a fifth
      of a turn and a pill over the middle is wider, so its digit lay in the next wedge's fifth and a key let go there gave nothing. No other way
      out lights it: a row is still chosen, never fallen into. THE GAME READS NO WORDS OF A RING: it reads which digits have a wedge (`ringKeys`,
-     orders.ts and interact.ts, a bit each) and, for a pill, a PLACE as long as the longest pill (`pillBox`, `LONE.max` 20 letters) whatever the
+     orders.ts and interact.ts, a bit each) and, for a pill, a PLACE as long as the longest pill (`pill_box` in rust/game_rules/src/ringlone, `lone().max` 20 letters, told in `view.look.ring.lone`) whatever the
      row says, so a recorded cursor lights the same row after a label is reworded. The pill drawn is always inside that place (a longer label takes two lines under `loneWrap`, the bullet
      below; without it, it is drawn tighter); a cursor just past a short pill's end is still on its row. WHERE ONE ROW COMES UP (read
      headless on the page's stand, each tutorial mission at its first and last step): on tut-sky EVERY squad ring ('1 stack up' on a door, '1 go'
@@ -1418,7 +1420,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
      `ui/cmdring.ts pinned`). On his body it GOES WITH HIM as he walks under it (a frame behind his feet); a thing that moves (a man in his arm,
      a body he drags) takes it along; and when its rows change under it (he walked up to a thing, or off it) it stands on what the top row is
      now about. The cursor may be anywhere when it comes up, so (`ringWant`'s `shapes`, `RingState.clear`) the cursor ON a drawn wedge, its
-     fifth of the wheel from the hole out over its words to the ring's own box (`RING_BOX`: pointing at a row's words is pointing at the row)
+     fifth of the wheel from the hole out over its words to the ring's own box (``ring_box``: pointing at a row's words is pointing at the row)
      or the pill's place, lights it with no visit to the middle, but only once it has been off every drawn wedge since the ring last changed
      under it (a place of the wheel with no wedge is not one), and never while the hand is still: a cursor resting where a slice came up
      lights nothing and the key let go there leaves the ring standing, and only a wedge the HAND put the cursor on is pointed at
@@ -1445,15 +1447,15 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
 - **A lone pill's long label takes two lines** (2026-10-23; `HANDRING.loneWrap`, `?lonewrap=0`, off with `?lonepill=0` and `?handring=0`; off in
   the module and on the frozen stand, raised there by `TPS_HANDRING=1` with the rest of the ring (no new stand word); a `FROZEN_HOLDS` row; off for
   a recording from before the key). The maintainer, 10-23, with a shot of a wall's second ring in plan mode, one row, 'breach with a wall charge ·
-  3 left': "weird after hitting 5". A pill is drawn for at most `LONE.max` 20 letters and a longer label was set to that width (`textLength`), so
-  34 letters stood in the room of 20 and ran into each other. THE RULE (`game/ringlone.ts loneLines`, `lonePill`; `ui/cmdring.ts RingDraw.place`
+  3 left': "weird after hitting 5". A pill is drawn for at most `max` 20 letters and a longer label was set to that width (`textLength`), so
+  34 letters stood in the room of 20 and ran into each other. THE RULE (`ui/ringlone.ts loneLines`, `lonePill`; `ui/cmdring.ts RingDraw.place`
   writes the lines as two `tspan`s, once): a label longer than 20 letters takes two lines. It breaks at its ' · ' where both halves then fit in 20
   ('BANG AND CLEAR' / '3 LEFT', 'STAND OFF' / 'IN BEHIND THE CHARGE'; the dot is dropped, the line break says it), else at the space that leaves
   its longer line shortest ('BREACH WITH A WALL' / 'CHARGE · 3 LEFT'), never leaving the '▸' by itself. The pill is two lines tall (34
   px: `LONE.lead` 12 px taller, its lines that far apart) and grows AWAY from the middle, so its edge by the middle's ring is where a one-line pill's is. Each line is
   set to its own counted width: a letter is squeezed only where the best break still leaves a line over 20 (no space at all, over 40 letters, or
   words that will not split evenly: 'support hand grip' / 'point (arrows only) ▸' is 17 and 21). A label of 20 letters or fewer is the pill as it
-  was, to the last figure. WHAT THE GAME READS: the pill's place (`pillBox`) is two lines tall under the rule whatever the row says, so the pill
+  was, to the last figure. WHAT THE GAME READS: the pill's place (``pill_box``) is two lines tall under the rule whatever the row says, so the pill
   drawn is still always inside it and a recorded cursor never turns on a label's wording. So a SHORT pill's place gains a 12 px band too, away
   from the middle, where the cursor is on the row (less than the room the place already keeps past a short pill's end). CHECK: `handring`, its line
   'a lone pill's label longer than the pill…', both stands: 19 labels on five wedges (the lines, the door tools' own long rows by name, every word
@@ -1478,8 +1480,8 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   middle of the screen says nothing while the section has it, and says it again while the squad's menu is the panel; the diamond on the objective
   stays), then BLOCKS UNDER NO HEADING: of his own rows every line a key gives, each by itself (the highlighted row's, its key lit; on a man in
   reach both clicks), a row no key gives whole (a running verb's own words, how to stop it and its bar; a committed move's line; for a moment the
-  word an empty tap left, with how far), then every line of the squad's that a key gives (the keyed lines of `orders.hud().status`: the quick
-  key's, a plan's go, a wall charge to blow; and `doortools.ts cornerNotes`, what the block and a door's heading said that the corner would
+  word an empty tap left, with how far), then every line of the squad's that a key gives (the keyed lines of `game.view.squad.notes` and `game.view.squad.quick`: the quick
+  key's, a plan's go, a wall charge to blow; and `game.view.corner`, what the block and a door's heading said that the corner would
   lose: a set door charge as the squad's key's line while that key by itself blows it, with who it would catch; a set charge that key does not
   blow so (his own, or one that goes with the word) only while it would catch somebody, as a warning under no key, shown whatever a lesson's frame
   keeps back; the small squad held at a threshold, only once the men have called it), then A MAN LOST, struck as he was
@@ -1492,7 +1494,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   made as they were, so a lesson's frame that keeps a row back still keeps it back, and a key's line of `cornerNotes` is kept back where the frame
   keeps the squad's notes back. CHECK: `handring`, its 'corner panel' line, both stands; `HANDRING_BREAK=1` red, and `HANDRING_BREAK=corner` (this rule
   off, the rest on; likewise `lone`, `bare`, `onThing`, `turn`) red on that line alone. The line asks the reduction with rows shaped as the page
-  makes them (parseOpts on player.ts's second lines) and asks the page's own feed (`Overlay.deriveInteractions`, called with no page) at a door:
+  makes them (the view's rows, `row_opts` in interact/hud.rs on a row's second line) and asks the page's own feed (`Overlay.deriveInteractions` of the view, called with no page) at a door:
   the three things with the rule on, the list as it was with it off; and a charge set on that door by hand, him at it and away: what the
   block's line says of a key or of who it would catch is in `cornerNotes` and in the panel. The panel AS DRAWN is the page's: driven on the real page on the software
   adapter with the rule on and under `?corner=0` (the classes, the rows' text, the size, the top line, no console error). Two page checks read

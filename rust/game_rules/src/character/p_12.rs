@@ -244,7 +244,7 @@ pub fn character_pack_side_pass(g: &mut crate::game::Game, id: CharId) {
     g.ch[id].in_hand_ov = Some(ov);
 }
 /// An arm re-solved so its wrist is at `t`, the hand's rotation `rot`, into `ov` and not the pose. (Character.reachOv)
-pub fn character_reach_ov(g: &mut crate::game::Game, id: CharId, ov: &mut Vec<Option<crate::anim_skeleton::NodeOverride>>, right: bool, t: V3, rot: Quat) {
+pub fn character_reach_ov(g: &crate::game::Game, id: CharId, ov: &mut Vec<Option<crate::anim_skeleton::NodeOverride>>, right: bool, t: V3, rot: Quat) {
     let n = g.ch[id].anim.nodes;
     let (i_s, i_e, i_h) = if right { (n.upper_arm_r, n.forearm_r, n.hand_r) } else { (n.upper_arm_l, n.forearm_l, n.hand_l) };
     let (s, e, h) = (node_pos(g, id, i_s), node_pos(g, id, i_e), node_pos(g, id, i_h));
@@ -414,11 +414,6 @@ pub fn character_turn_weigh_ask(g: &mut crate::game::Game, id: CharId, dt: f64) 
     ch.tn = if js::truthy(c[0]) { Some(CharacterTn { body: c[1], aim: c[2], wb: c[3], wa: c[4], ib: c[5], ia: c[6], x: c[7], z: c[8] }) } else { None };
     ch.anim.turn_lead = c[9]; ch.body_yaw = c[10]; ch.aim_yaw = c[11];
 }
-/// His yaws become the ones that were drawn, and no turn is carried on. (Character.turnDrop)
-pub fn character_turn_drop(g: &mut crate::game::Game, id: CharId) {
-    let c = &mut g.ch[id];
-    if let Some(t) = c.tn { c.body_yaw = t.body; c.aim_yaw = t.aim; c.tn = None; }
-}
 /// His AI is about to ease his yaws: they read back as it left them; one written since is the new wish. (Character.turnBegin)
 pub fn character_turn_begin(g: &mut crate::game::Game, id: CharId) {
     let c = &mut g.ch[id];
@@ -545,11 +540,11 @@ pub fn character_ragdollize(g: &mut crate::game::Game, id: CharId, world: bool, 
     let rag = crate::ragdoll::ragdoll_new(g, &pts, vel.as_deref(), if world { Some(&in_world) } else { None });
     // the shove: carried along `dir` and pitched top-first the same way, then the knees kicked out
     let f = character_forward(g, id);
-    let j = 0.85 + crate::math_dice::sim_random(g) * 0.3;
-    let twist = (crate::math_dice::sim_random(g) - 0.5) * (if quiet { 0.8 } else { 1.6 });
+    let j = 0.85 + crate::dice::draw_body(g, "character::character_ragdollize#1", id) * 0.3;
+    let twist = (crate::dice::draw_body(g, "character::character_ragdollize#2", id) - 0.5) * (if quiet { 0.8 } else { 1.6 });
     let h = v3::normalize([dir[0], 0.0, dir[2]]);
     let pitch_axis: V3 = [h[2], 0.0, -h[0]];
-    let fall = if !quiet && mv_on(g, MvOnK::Fall) { crate::math_dice::sim_random(g) } else { 0.6 };   // (the one extra draw only with the switch on)
+    let fall = if !quiet && mv_on(g, MvOnK::Fall) { crate::dice::draw_body(g, "character::character_ragdollize#3", id) } else { 0.6 };   // (the one extra draw only with the switch on)
     use_shove(g, id, rag, &rg, quiet, fall, f, h, j, twist, pitch_axis);
     clear_fall(g, id);
     // what the mesh drive needs from the moment of death

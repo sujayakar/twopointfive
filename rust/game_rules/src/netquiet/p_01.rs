@@ -79,7 +79,7 @@ pub fn on_net(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// gone to his mates, whether or not they know it yet (netquiet.ts lostTo)
-pub fn lost_to(g: &mut crate::game::Game, m: GuardId) -> bool {
+pub fn lost_to(g: &crate::game::Game, m: GuardId) -> bool {
     g.gd[m].state == crate::game::GuardState::Dead
         || g.gd[m].held.is_some()
         || crate::owner::has(g, m, crate::owner::by::RUNNER)
@@ -159,7 +159,7 @@ pub fn owe(n: &mut crate::netquiet::Mind, kind: crate::netquiet::LineKind, name:
 pub fn speak(g: &mut crate::game::Game, gd: GuardId, kind: crate::netquiet::LineKind, name: &str, radio: bool) {
     let pool: Vec<String> = lines_of(kind).into_iter().map(|t| line_now(&t).unwrap_or(t)).collect();
     let len = pool.len() as f64;
-    let at = js::rem(m::floor(crate::math_dice::sim_random(g) * len), len) as usize;
+    let at = js::rem(m::floor(crate::dice::draw_of(g, "netquiet::speak#1", gd) * len), len) as usize;
     let text = pool[at].replace("{name}", name);
     crate::game::game_say(g, gd, &text, Some(radio), None, None);
     let n = mind(g, gd);
@@ -369,8 +369,7 @@ pub fn foe_in_view(g: &mut crate::game::Game, gd: GuardId) -> bool {
         return true;
     }
     let team = g.gd[gd].team;
-    let player = g.player;
-    if crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !g.pl[player].down && !g.player_invisible && crate::guards::can_see(g, gd).visible {
+    if crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !g.player_invisible && crate::guards::sees_a_man(g, gd) {
         return true;
     }
     let mut i = 0;

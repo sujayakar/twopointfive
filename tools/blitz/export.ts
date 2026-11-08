@@ -233,7 +233,6 @@ export function hostRowsText(g: any): string { const bk: any = BOOKS.get(g)!; re
 export function hostHalfParts(g: any, cmds: readonly any[]): [string, any][] { const bk = BOOKS.get(g)!, P: [string, any][] = [['u32', cmds.length]]; for (const c of cmds) P.push(['crate::cmd::PlayerCmd', c]);
   for (const [id, ty] of [['CameraId', 'crate::camera::FollowCamera'], ['InputId', 'crate::input::Input']]) { const L: any[] = bk.listOf(id); P.push(['u32', L.length]); for (const row of L) P.push([ty, row]); }
   { const L: any[] = bk.listOf('SeatId'); P.push(['u32', L.length]); for (const s of L) P.push(['u32', seatMark(s)]); }
-  { const E = g.engine, Pt = E?.particles; P.push(['u32', (Pt ? 1 : 0) | (E?.reach ? 2 : 0) | (Pt?.collide ? 4 : 0) | (Pt?.sparkBounce ? 8 : 0)]); }
   return P; }
 export const hostHalf = (g: any, knobs: Record<string, unknown>, cmds: readonly any[]): Uint8Array => exportPart(g, knobs, hostHalfParts(g, cmds));
 /** a field of the game by its Rust path (['m', 'dialogue', 'room_rects']): its schema type and its value now */
@@ -253,7 +252,6 @@ function exportGameNow(g: any, knobs: Record<string, unknown>): Uint8Array {
   const buf = new Map<string, Out>(), done = new Map<string, number>(); for (const t of SCHEMA.tables) { buf.set(t.id, new Out()); done.set(t.id, 0); }
   for (let grew = true; grew;) { grew = false; for (const t of SCHEMA.tables) { const L = BK.listOf(t.id); let i = done.get(t.id)!; const o = buf.get(t.id)!; const N = parse(t.ty); while (i < L.length) { AT = `${t.id}[row]`; ROWAT = BK.first.get(L[i]) ?? ''; wr(N, L[i], o); i++; grew = true; } ROWAT = ''; done.set(t.id, i); } }
   for (const t of SCHEMA.tables) { const b = buf.get(t.id)!; if (b.n > 4096) SIZES.set(`table ${t.table}`, b.n); }
-  // an order row the import has no closures for (rust's io::deal_closures): it would stand at its blank there
   // a beat under way whose place Rust never wrote: rust's import refuses this state by name (io::refuse_mid_script), because a generator's place cannot be read
   for (const r of BK.listOf('DirectorLiveBeatId') as any[]) if (r.state === 'running' && !hasEcho(r, 'director::LiveBeat.it')) { AT = 'director::LiveBeat'; miss(`the beat ${r.name} is running: this state cannot be imported`, r.name); }
   const out = new Out(); out.bytes(main.view());

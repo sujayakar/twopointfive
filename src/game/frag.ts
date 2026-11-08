@@ -129,10 +129,6 @@ export const FRAG = {
    *  `lethalM` the rule gives way if it would leave him no leg at all (a mate shouldered beats a man dead). false = as
    *  it was (the module's and the frozen stand's; ON in the page, ?nofleemates puts both off; TPS_FLEEMATES=1 raises both — they need TPS_FLEEWISE=1). */
   restProps: false, fleeApart: false, fleeApartM: 1.0, fleeLaneM: 0.9,
-  /** `fleeOnto` (the same word): a man who has 'arrived' (the script's 0.3 m) but is still coming onto his mark is not dealt again for being in its line there —
-   *  he was, a stride short of the corner the burst has no line to, and with no ring of spots nearer than 1.2 m was told to get down where he was: in the open,
-   *  0.27 m from cover (the thrower of an ordered frag, wounded at 6.6 m). A man stopped short (a mate in the corner) is dealt again as before. */
-  fleeOnto: false,
   /** `fleeSam` (the same word again; 10-17, a kicker killed by his own squad's ordered grenade at a door): SAM IS A MATE WHO IS STAYING. The lists above were
    *  made of the AI's men only, so a leg was dealt onto the floor the player stood on or past his shoulder — and the man stalled against him, still in its
    *  line, until the one-second 'no ground made' deal came or the fuse ran out first (a matter of a twentieth of a second which). With it Sam's place is in
@@ -367,7 +363,6 @@ function blastRaw(g: Game, at: Vec3, spec: BlastSpec): BlastReport {
     // the card: `had` = his knockout is on it (the player's own, or a partner's that teamtally.ts counted); `fresh` = put down this very step, which that
     // module has not read yet and will, as he is when the step ends — so a partner's burst leaves the kill itself to it
     const st = g.mission.stats, fresh = gd.diedAt === g.time, had = gd.downBy === 'player' || (!fresh && teamTallied(g, gd));
-    if (gd.wound) { gd.wound = null; c.anim.wound = null; }
     gd.downKind = 'shot'; gd.downBy = mine ? 'player' : spec.who ? 'guard' : 'world'; if (spec.who) gd.killerId = spec.who;
     const team = !mine && teamTallied(g, gd);
     if (missionLive(g) && (mine || team)) { if (had && st.knockouts > 0) st.knockouts--; if (mine || !fresh) st.kills++; }
@@ -485,7 +480,7 @@ function rollOn(g: Game, it: Item, touchFuse?: number, props = FRAG.restProps, h
   }
   return { at: [p[0], props ? Math.max(0.05, p[1]) : restY(p[1]), p[2]], path };
 }
-/** WHERE A CAN THROWN FROM `from` AT `v0` WILL BE WHEN IT IS DONE MOVING — or when its fuse finds it, if that is sooner (player.ts throwRest: the throw
+/** WHERE A CAN THROWN FROM `from` AT `v0` WILL BE WHEN IT IS DONE MOVING — or when its fuse finds it, if that is sooner (rust: frag::rest_of_throw; the throw
  *  preview's rest mark): rollOn on a body that was never spawned. A frag: its fuse from the hand. A stun canister: its fuse from its first touch (combat.ts
  *  updateItems), and never more than bang.maxAir in the air. A smoke: until it lies still. Loose furniture is in it as it stands (a chair it strikes is
  *  not pushed here). `path`: what it crosses from its first touch to there, at the height it lies. Nothing of the simulation's is written and nothing
@@ -637,11 +632,6 @@ export function fragFlee(g: Game, gd: Guard): GuardScript | null { { const __s =
 /** is he on his legs off a live grenade this frame (silent.ts: a silent squad's walk is not the pace a man leaves a grenade at) */
 export function fragRunning(g: Game, gd: Guard): boolean { const B = books.get(g); if (!B || !B.length) return false; for (const L of B) { const s = L.flee.get(gd); if (s && s.goal) return true; } return false; }
 
-/** the overlay's: every hostile grenade Sam has been cued on — where it lies and the seconds left on it */
-export function fragMarks(g: Game): { at: Vec3; left: number }[] {
-  const B = books.get(g); if (!B || !B.length) return [];
-  const out: { at: Vec3; left: number }[] = []; for (const L of B) if (L.cued && !L.it.fired) out.push({ at: L.it.pos, left: L.it.fuse }); return out;
-}
 /** QA's scripted commander (tools/qa/playthrough.ts) and anything else that walks Sam for him: where a player who has read the cue would go — the spot fleeSpot
  *  gives a man with Sam's legs (`speed`) off the nearest cued grenade that has a line to him, null when there is none or he is as well off where he stands. */
 export function fragStepOff(g: Game, speed = 3.2): Vec3 | null { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('fragStepOff', undefined, [g, speed]); if (__r !== RUST_PASS) return __r as any; } }

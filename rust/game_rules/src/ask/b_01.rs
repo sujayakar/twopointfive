@@ -71,6 +71,8 @@ pub struct WorldAsk<'g> {
     over: Over,
 }
 impl<'g> WorldAsk<'g> {
+    /// the game it asks of
+    pub fn shared(&self) -> &'g Game { self.g }
     pub fn of(g: &'g Game) -> WorldAsk<'g> { WorldAsk::try_of(g).unwrap_or_else(|why| panic!("a question of the box world asked of the game shared: {}", why)) }
     /// …or why it may not be asked
     pub fn try_of(g: &'g Game) -> Result<WorldAsk<'g>, &'static str> {
@@ -97,6 +99,41 @@ impl<'g> WorldAsk<'g> {
             r
         })
     }
+    /// the way on the floor from a to b, as a man would be walked it, with what the module's search has as its scratch (None: the floor has none)
+    pub fn way(&self, a: crate::V3, b: crate::V3, max_iter: u32) -> Option<alloc::vec::Vec<crate::V3>> { crate::scene_collision::way_shared(self.g, a, b, max_iter) }
     /// how a sound at `src` reaches `dst`, of the level as it stands
     pub fn hear(&self, src: crate::V3, dst: crate::V3) -> crate::scene_collision::Propagation { crate::scene_collision::heard_shared(self.g, src, dst) }
+}
+
+/// WHO ASKS A RULE'S QUESTIONS OF THE BOX WORLD. One body for a rule that the tick runs and a HUD is told (a can's roll, a panel between two points): the tick asks as
+/// itself, paying what the copy owes as it goes; a question of the game shared asks through `WorldAsk`, the copy standing. A rule takes `impl Asker` and reads the game
+/// by `a.game()`.
+pub trait Asker {
+    fn game(&self) -> &Game;
+    /// the nearest thing along a ray
+    fn ray(&mut self, o: crate::V3, d: crate::V3, max: f64) -> Option<crate::scene_collision::Raycast>;
+    /// a door leaf across a→b; with `need`, one carrying those flags
+    fn leaf_across(&mut self, a: crate::V3, b: crate::V3, need: Option<f64>) -> bool;
+    /// the statics in a span: how many, their places in `out`
+    fn gather(&mut self, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f64, out: &mut Vec<i32>) -> f64;
+    /// the nearest part of the furniture along a ray: how far, and the face
+    fn thing_ray(&mut self, o: crate::V3, d: crate::V3, max: f64) -> Option<(f64, crate::V3)>;
+    /// how boggy the ground is at a place, 0 to 1
+    fn bog_at(&mut self, x: f64, y: f64, z: f64) -> f64;
+}
+impl Asker for Game {
+    fn game(&self) -> &Game { self }
+    fn ray(&mut self, o: crate::V3, d: crate::V3, max: f64) -> Option<crate::scene_collision::Raycast> { crate::scene_collision::raycast(self, o, d, max) }
+    fn leaf_across(&mut self, a: crate::V3, b: crate::V3, need: Option<f64>) -> bool { crate::scene_collision::segment_blocked_dynamic(self, a, b, need) }
+    fn gather(&mut self, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f64, out: &mut Vec<i32>) -> f64 { crate::scene_collision::gather(self, x0, z0, x1, z1, y0, y1, out) }
+    fn thing_ray(&mut self, o: crate::V3, d: crate::V3, max: f64) -> Option<(f64, crate::V3)> { crate::props::prop_system_raycast(self, o, d, max).map(|x| (x.t, x.n)) }
+    fn bog_at(&mut self, x: f64, y: f64, z: f64) -> f64 { crate::snow_bog::snow_bog_at(self, x, y, z) }
+}
+impl<'g> Asker for WorldAsk<'g> {
+    fn game(&self) -> &Game { self.g }
+    fn ray(&mut self, o: crate::V3, d: crate::V3, max: f64) -> Option<crate::scene_collision::Raycast> { WorldAsk::ray(self, o, d, max) }
+    fn leaf_across(&mut self, a: crate::V3, b: crate::V3, need: Option<f64>) -> bool { crate::scene_collision::leaf_shared(self.g, a, b, need) }
+    fn gather(&mut self, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f64, out: &mut Vec<i32>) -> f64 { crate::scene_collision::gather_here(self.g, x0, z0, x1, z1, y0, y1, out) }
+    fn thing_ray(&mut self, o: crate::V3, d: crate::V3, max: f64) -> Option<(f64, crate::V3)> { crate::scene_collision::things_shared(self.g, o, d, max) }
+    fn bog_at(&mut self, x: f64, y: f64, z: f64) -> f64 { crate::snow_bog::snow_bog_shared(self.g, x, y, z) }
 }

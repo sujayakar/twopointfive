@@ -11,10 +11,6 @@ pub struct Need {
     pub k: f64,
     pub t: f64,
     pub fresh: bool,
-    pub t0: f64,
-    pub own: f64,
-    pub pts: Vec<f64>,
-    pub since: Vec<f64>,
 }
 impl Need {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -25,10 +21,6 @@ impl Need {
             k: 0.0,
             t: 0.0,
             fresh: false,
-            t0: 0.0,
-            own: 0.0,
-            pts: Vec::new(),
-            since: Vec::new(),
         }
     }
 }
@@ -92,23 +84,6 @@ impl KitNearValue {
     }
 }
 impl Default for KitNearValue { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/irlight.ts:148 IRL_METER, src/game/irlight.ts:148)
-#[derive(Clone, Copy, Debug)]
-pub struct IRLMETER {
-    pub slots: f64,
-    pub wait: f64,
-}
-impl IRLMETER {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        IRLMETER {
-            slots: 0.0,
-            wait: 0.0,
-        }
-    }
-}
-impl Default for IRLMETER { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/irlight.ts:306 irLightState ->, src/game/irlight.ts:306)
 #[derive(Clone, Debug)]
@@ -181,9 +156,6 @@ pub const FADE_IN: f64 = 0.15;
 
 /// (src/game/irlight.ts:137 FADE_OUT)
 pub const FADE_OUT: f64 = 0.5;
-
-/// (src/game/irlight.ts:148 IRL_METER: a table nothing writes)
-pub fn irl_meter() -> crate::irlight::IRLMETER { crate::irlight::IRLMETER { slots: 5.0, wait: 0.25 } }
 
 /// (src/game/irlight.ts:220 NEAR_YAW: a table nothing writes)
 pub fn near_yaw() -> Vec<f64> { alloc::vec![0.0, -0.17, 0.17] }

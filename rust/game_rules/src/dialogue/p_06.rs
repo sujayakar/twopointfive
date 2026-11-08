@@ -7,110 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-fn needs_lines_of(callsigns: &[String]) -> Vec<String> {
-    let l = crate::dialogue::needs_lines_table();
-    let mut out: Vec<String> = Vec::new();
-    for (_, pool) in l.announce.iter() { out.extend(pool.iter().cloned()); }
-    for (_, pool) in l.announce_own.iter() { out.extend(pool.iter().cloned()); }
-    out.extend(l.now.values().cloned());
-    out.extend(l.reply.iter().cloned());
-    out.extend(l.back.iter().cloned());
-    for o in callsigns {
-        for r in &l.reply_other { out.push(r.replace("{other}", o)); }
-    }
-    for w in callsigns {
-        for s in l.short.values().chain(l.short_own.values()) {
-            out.push(l.radio.replacen("{who}", w, 1).replacen("{short}", s, 1));
-        }
-    }
-    out
-}
-
-fn civilian_lines_all() -> Vec<String> {
-    let l = crate::dialogue::civ_lines();
-    let count = crate::dialogue::civ_count();
-    let flat = |t: &[String]| -> Vec<String> { t.iter().flat_map(|t| count.iter().map(move |n| t.replacen("{n}", n, 1))).collect() };
-    let mut out: Vec<String> = Vec::new();
-    out.extend(l.glimpse.iter().cloned());
-    out.extend(l.shrug.iter().cloned());
-    for (_, pool) in l.gasp.iter() { out.extend(pool.iter().cloned()); }
-    out.extend(l.flee.iter().cloned());
-    for (_, pool) in l.report.iter() { out.extend(pool.iter().cloned()); }
-    out.extend(l.guard_ack.someone.iter().cloned());
-    out.extend(l.guard_ack.armed.iter().cloned());
-    out.extend(l.guard_radio.values().cloned());
-    out.extend(l.phone.iter().cloned());
-    out.extend(l.phone_armed.iter().cloned());
-    out.extend(l.control.values().cloned());
-    out.extend(l.cower.iter().cloned());
-    out.extend(l.held_fear.iter().cloned());
-    out.extend(l.held_fear_worker.iter().cloned());
-    for (_, pool) in l.intel.iter() { out.extend(pool.iter().cloned()); }
-    out.extend(l.dry.iter().cloned());
-    out.extend(l.comply.sam.iter().cloned());
-    out.extend(l.comply.civ.iter().cloned());
-    out.extend(l.sam_ask.iter().cloned());
-    out.extend(l.found.iter().cloned());
-    out.push(l.found_down.cold.clone());
-    out.push(l.found_down.dead.clone());
-    out.push(l.outrage.clone());
-    out.extend(l.greet.civ.iter().cloned());
-    out.extend(l.greet.guard.iter().cloned());
-    out.extend(l.settle.iter().cloned());
-    out.push(l.qrf.clone());
-    out.extend(l.evac.iter().cloned());
-    let o = &l.own;
-    out.push(o.phone.clone());
-    out.push(o.phone_armed.clone());
-    out.extend(o.control.values().cloned());
-    out.push(o.held_fear.clone());
-    out.push(o.intel_pad.clone());
-    out.extend(flat(&o.intel));
-    out.push(o.sam_ask.clone());
-    out.push(o.found_cold.clone());
-    out.push(l.now.guard_ack.clone());
-    out.push(l.now.qrf.clone());
-    // the guide's variants: all worked out against `out` as it stands, then added (a repeat among them stays)
-    let g2 = &l.guide;
-    let mut variants: Vec<String> = Vec::new();
-    for (_, pool) in g2.report.iter() { variants.extend(pool.iter().cloned()); }
-    variants.extend(g2.control.values().cloned());
-    variants.extend(g2.greet_civ.iter().cloned());
-    variants.extend(g2.greet_guard.iter().cloned());
-    variants.extend(g2.own.control.values().cloned());
-    variants.extend(flat(&g2.own.intel));
-    variants.push(g2.own.found_cold.clone());
-    variants.retain(|t| !out.contains(t));
-    out.extend(variants);
-    out
-}
-
-/// Every hostage line and the team's word to them. (dialogue.ts hostageLines)
-pub fn hostage_lines() -> Vec<String> {
-    let l = crate::dialogue::hostage_lines_table();
-    let mut out = l.wait;
-    out.extend(l.threat);
-    out.extend(l.aimed);
-    out.extend(l.shot);
-    out.extend(l.entry);
-    out.extend(l.alone);
-    out.extend(l.secured);
-    out.extend(l.team);
-    out
-}
-
-/// Every line of the man a snatch is for; snatch.ts asks it of a line about to be said. (dialogue.ts snatchLines)
-pub fn snatch_lines() -> Vec<String> {
-    let l = crate::dialogue::snatch_lines_table();
-    let mut out = l.running;
-    out.extend(l.cornered);
-    out.extend(l.hands_up);
-    out.extend(l.tied);
-    out.extend(l.held);
-    out.extend(l.dry);
-    out
-}
-
 /// What a new row holds: next is -1, which AmbientState::zeroed() is not. (dialogue.ts:2002)
 fn ambient_fresh() -> AmbientState {
     AmbientState { next: -1.0, run: None, played: JsMap::new(), count: 0.0 }
@@ -132,7 +28,7 @@ pub fn ambient_live(g: &mut crate::game::Game) -> bool {
 }
 
 /// A calm patrolling staff man with nothing on his hands or mind, not talking, not held by a script. (dialogue.ts chatty)
-pub fn chatty(g: &mut crate::game::Game, x: GuardId) -> bool {
+pub fn chatty(g: &crate::game::Game, x: GuardId) -> bool {
     let time = g.time;
     let m = &g.gd[x];
     let calm = m.team == crate::teams::Team::Guard && m.unit.is_none() && m.state == crate::game::GuardState::Patrol
@@ -313,21 +209,6 @@ mod tests {
             for b in l.as_bytes() { h ^= *b as u64; h = h.wrapping_mul(0x100000001b3); }
         }
         h
-    }
-
-    // each pair is the TypeScript's own: its count and the FNV-1a of its lines joined by \n, under bun with WORDS.on and WORDS.guide on
-    #[test]
-    fn line_pools_are_the_typescripts() {
-        let got = needs_lines_of(&[]);
-        assert_eq!((got.len(), fnv(&got)), (33, 0xa3cad49332398a49));
-        let got = needs_lines_of(&[String::from("Novak"), String::from("Reyes")]);
-        assert_eq!((got.len(), fnv(&got)), (47, 0x60856ff288239cd4));
-        let got = civilian_lines_all();
-        assert_eq!((got.len(), fnv(&got)), (171, 0xafb2f0666b466e78));
-        let got = hostage_lines();
-        assert_eq!((got.len(), fnv(&got)), (32, 0x4f3202ed4c2bf9b2));
-        let got = snatch_lines();
-        assert_eq!((got.len(), fnv(&got)), (16, 0x2939817da6025187));
     }
 
     #[test]

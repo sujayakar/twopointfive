@@ -80,7 +80,7 @@ pub fn book_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::rearwatch::Bo
 }
 
 /// A door off its hinges, or unlatched and far enough open. (rearwatch.ts isOpenWay)
-pub fn is_open_way(g: &mut crate::game::Game, d: DoorId) -> bool {
+pub fn is_open_way(g: &crate::game::Game, d: DoorId) -> bool {
     if crate::doors::door_off(g, d) {
         return true;
     }
@@ -412,7 +412,7 @@ pub fn rear_watch_tick(g: &mut crate::game::Game) {
         };
         let (is_stack, door, post) = {
             let r = &g.tab.orders_assignment[a];
-            (r.order == "stack", r.door, r.post)
+            (crate::orders::rows::id_is(&r.order, crate::orders::Is::Stacks), r.door, r.post)
         };
         let (door, post) = match (is_stack, door, post) {
             (true, Some(d), Some(q)) => (d, q),

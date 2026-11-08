@@ -1,7 +1,7 @@
-//! THE GAME'S OWN SMOKE ON A COARSE GRID — what `SENSE.grid` puts where the blobs stood (src/game/sense.ts): the smoke the SENSES see through, as density in
+//! THE GAME'S OWN SMOKE ON A COARSE GRID: the smoke the SENSES see through, as density in
 //! half-metre cells held in bricks (a brick is 2 m square in plan and 4 m high: floor to ceiling), stepped ten times a second. It is fed by the very emitters
 //! the picture's solver is handed and knows nothing else of that solver: no velocity and no pressure, and of the wind only a drift under the open sky
-//! (`K.wind`, where sense.ts SENSE.drift says). What it has that the blobs had not is THE WALLS:
+//! (`K.wind`). What it has is THE WALLS:
 //! smoke passes from a cell to its neighbour only where nothing solid and no leaf stands between their centres, so a canister fills the room it is in, goes
 //! out by the open door and stops at the shut one.
 //!
@@ -21,7 +21,7 @@
 
 use crate::lines;
 use crate::maths::{exp, hypot3};
-use crate::state::{state, GAMES};
+use crate::state::{state, state_read, GAMES};
 use crate::world::{js_max, js_min, world, ASK_HOST, K_ROT, LEAF_SETS, MAX_LEAVES, REC, R_C, R_H, R_KIND};
 use core::mem::size_of;
 use prim::floor;
@@ -41,27 +41,29 @@ pub const MAX_EMIT: usize = 64;
 pub const EMIT: usize = 7;
 /// the head: emitters live · steps taken · the plan in bricks, x then z (0 = no step has been taken on any level yet) · THE BOOK OF THE SMOKE, two
 /// sums in unit·m³ that thin at the cells' own rate, so that at every step what the cells hold + what was given back = what was let out: all that was let
-/// out · what thin bricks held when they were given back, and what the wind carried over the plan's edge (K.wind)
-pub const HEAD: usize = 6;
+/// out · what thin bricks held when they were given back, and what the wind carried over the plan's edge (K.wind) · seconds owed toward the next step · a word of nothing (a block is whole vectors long)
+pub const HEAD: usize = 8;
 const H_EMIT: usize = 0;
 pub const H_STEPS: usize = 1;
 const H_NBX: usize = 2;
 const H_NBZ: usize = 3;
 pub const H_OUT: usize = 4;
 pub const H_GIVEN: usize = 5;
+const H_CLOCK: usize = 6;
 pub const O_EMIT: usize = HEAD;
 /// which brick is where: its place in plan, x then z, EACH PLUS ONE (0 = the slot is free: a row of zeros is an empty grid)
 pub const O_KEYS: usize = O_EMIT + MAX_EMIT * EMIT;
-/// THE LIGHT THAT COMES ROUND (glow.rs), a number a square metre of the plan in four columns: the lamps' light at its middle · the bounced light there ·
-/// is the way open to the metre toward +x · and toward +z (1 or 0). Zeros where nothing has swept: no light.
+/// THE LIGHT UNDER A ROOF (glow.rs), a number a square metre of the plan in five columns: the best of the six faces at its middle · their mean · the mean
+/// with the lamps', which is what leaves its surfaces · the face that looks up · the level of the place it is in (a logarithm). Zeros where nothing has swept: no light.
 pub const MAX_GLOW: usize = MAX_BRICKS * (SIDE * SIDE) as usize;
-pub const O_GLOW_D: usize = O_KEYS + MAX_BRICKS * 2;
-pub const O_GLOW_B: usize = O_GLOW_D + MAX_GLOW;
-pub const O_GLOW_X: usize = O_GLOW_B + MAX_GLOW;
-pub const O_GLOW_Z: usize = O_GLOW_X + MAX_GLOW;
+pub const O_GLOW_MAX: usize = O_KEYS + MAX_BRICKS * 2;
+pub const O_GLOW_MEAN: usize = O_GLOW_MAX + MAX_GLOW;
+pub const O_GLOW_A: usize = O_GLOW_MEAN + MAX_GLOW;
 /// …and the word of the lamps it is swept under (glow.rs; 0 = never, or not since the light model was last down) · which metre the sweep comes to next ·
 /// how many it has still to go through at the quick pace
-pub const O_GLOW_LAMPS: usize = O_GLOW_Z + MAX_GLOW;
+pub const O_GLOW_UP: usize = O_GLOW_A + MAX_GLOW;
+pub const O_GLOW_PLACE: usize = O_GLOW_UP + MAX_GLOW;
+pub const O_GLOW_LAMPS: usize = O_GLOW_PLACE + MAX_GLOW;
 pub const O_GLOW_AT: usize = O_GLOW_LAMPS + 1;
 pub const O_GLOW_LEFT: usize = O_GLOW_AT + 1;
 /// THE CELLS, last: brick b's are the `CELLS` doubles from `O_RHO + b * CELLS`, so the row is in use up to the end of the highest brick that stands
@@ -142,6 +144,51 @@ fn dims(st: &[f64; LEN]) -> (usize, usize) {
     } else {
         (0, 0)
     }
+}
+/// a cell's faces in four bytes a word
+pub const WORDS: usize = CELLS / 4;
+/// THE GRID AS IT STANDS, for whoever draws it: the plan in bricks, the steps taken, and each brick
+pub struct Stands {
+    pub wide: usize,
+    pub deep: usize,
+    pub steps: f64,
+    g: usize,
+}
+/// a brick: its place in plan, what is in each cell, and the faces each is open by (bits 1, 2, 4; 8 = asked)
+pub struct Stood {
+    pub x: usize,
+    pub z: usize,
+    pub rho: &'static [f64],
+    pub open: [u32; WORDS],
+}
+/// …none before its first step, or where no step has asked the faces of the state that stands there (a game put back: up to a tenth of a second)
+pub fn stands(g: usize, stamp: f64) -> Option<Stands> {
+    let st = &state_read(g).smoke.st;
+    let (wide, deep) = dims(st);
+    let m = made(g);
+    if wide == 0 || m[M_STAMP] != stamp || m[M_COPY] == 0.0 {
+        return None;
+    }
+    Some(Stands { wide, deep, steps: st[H_STEPS], g })
+}
+impl Stands {
+    pub fn brick(&self, b: usize) -> Option<Stood> {
+        let st = &state_read(self.g).smoke.st;
+        let (x, z) = (st[O_KEYS + b * 2], st[O_KEYS + b * 2 + 1]);
+        if !(x >= 1.0 && z >= 1.0 && x <= self.wide as f64 && z <= self.deep as f64) {
+            return None;
+        }
+        let faces = unsafe { &(*core::ptr::addr_of!(FACES))[self.g] };
+        let face = |c: usize| (faces[b * CELLS + c] & (F_X | F_Y | F_Z | F_ASKED)) as u32;
+        let open = core::array::from_fn(|w| (0..4).fold(0, |o, j| o | face(w * 4 + j) << (8 * j)));
+        Some(Stood { x: x as usize - 1, z: z as usize - 1, rho: &st[O_RHO + b * CELLS..O_RHO + (b + 1) * CELLS], open })
+    }
+}
+/// THE LIGHT UNDER A ROOF at a point, of the game in slot `g` over box world `w` (glow.rs at)
+pub fn under_roof(g: usize, w: usize, p: [f64; 3]) -> Option<crate::glow::Field> {
+    let st = &state_read(g).smoke.st;
+    let (x, z) = dims(st);
+    crate::glow::at(w, st, x, z, p)
 }
 /// THE PLAN A GAME'S GRID STANDS ON, in metres along x and z (0 by 0 before its first step)
 pub fn plan(g: usize) -> (f64, f64) {
@@ -322,11 +369,11 @@ pub fn reset(g: usize, home: bool) {
 pub fn empty(g: usize) {
     let mut gr = grid(g);
     for h in 0..HEAD {
-        if h != H_NBX && h != H_NBZ {
+        if h != H_NBX && h != H_NBZ && h != H_CLOCK {
             gr.st[h] = 0.0;
         }
     }
-    for v in gr.st[O_EMIT..O_GLOW_D].iter_mut() {
+    for v in gr.st[O_EMIT..O_GLOW_MAX].iter_mut() {
         *v = 0.0;
     }
     for v in gr.st[O_RHO..].iter_mut() {
@@ -364,7 +411,7 @@ pub struct K {
     pub rise: f64,
     pub rise_rate: f64,
     pub gone: f64,
-    /// THE WIND the smoke drifts by under the open sky, m/s along x and z (sense.ts SENSE.drift; 0 and 0 = still air, and no statement of the drift
+    /// THE WIND the smoke drifts by under the open sky, m/s along x and z (0 and 0 = still air, and no statement of the drift
     /// is reached: the step as it was). What share of it a square metre of the plan has is in `WIND`, written by the host before the step.
     pub wind_x: f64,
     pub wind_z: f64,
@@ -409,47 +456,88 @@ fn shares(share: &[f64; MAX_GLOW], wide: usize, gx: usize, gz: usize, x: usize, 
     let sz = if z + 1 < BX || south { unit(share[(gz + z + 1) / 2 * wide + (gx + x) / 2]) } else { s };
     (s, sx, sz)
 }
-/// LET OUT: an emitter joins the list. When the list is full the one with the least still to let out gives way, and that may be the newcomer.
-fn emit(g: &mut Grid, x: f64, y: f64, z: f64, radius: f64, rate: f64, ttl: f64) {
+/// LET OUT: an emitter joins the list of the game in slot `g` (where, how wide, what it lets out a second, for how long). When the list is full the one
+/// with the least still to let out gives way, and that may be the newcomer.
+pub fn emit(g: usize, x: f64, y: f64, z: f64, radius: f64, rate: f64, ttl: f64) {
     // (an emitter that is no number lets nothing out, and must not sit in the list as one)
     if !(x - x == 0.0 && y - y == 0.0 && z - z == 0.0 && radius >= 0.0 && radius < 1e6 && rate > 0.0 && ttl > 0.0 && rate * ttl < 1e12) {
         return;
     }
-    let n = js_min(g.st[H_EMIT], MAX_EMIT as f64) as usize;
+    let p = &mut state(g).smoke;
+    if p.live == 0 {
+        return;
+    }
+    let st = &mut p.st;
+    let n = emitters(st);
     let mut at = n;
     if n >= MAX_EMIT {
         let left = |st: &[f64; LEN], i: usize| st[O_EMIT + i * EMIT + 3] * js_max(0.0, st[O_EMIT + i * EMIT + 4] - st[O_EMIT + i * EMIT + 5]);
         let mut k = 0;
         for i in 1..n {
-            if left(g.st, i) < left(g.st, k) {
+            if left(st, i) < left(st, k) {
                 k = i;
             }
         }
-        if left(g.st, k) >= rate * ttl {
+        if left(st, k) >= rate * ttl {
             return;
         }
         at = k;
     } else {
-        g.st[H_EMIT] = (n + 1) as f64;
+        st[H_EMIT] = (n + 1) as f64;
     }
     let o = O_EMIT + at * EMIT;
-    g.st[o] = x;
-    g.st[o + 1] = y;
-    g.st[o + 2] = z;
-    g.st[o + 3] = rate;
-    g.st[o + 4] = ttl;
-    g.st[o + 5] = 0.0;
-    g.st[o + 6] = radius;
+    st[o] = x;
+    st[o + 1] = y;
+    st[o + 2] = z;
+    st[o + 3] = rate;
+    st[o + 4] = ttl;
+    st[o + 5] = 0.0;
+    st[o + 6] = radius;
+}
+fn emitters(st: &[f64; LEN]) -> usize {
+    js_min(st[H_EMIT], MAX_EMIT as f64) as usize
+}
+/// how many emitters are letting out in the game in slot `g`
+pub fn emitting(g: usize) -> usize {
+    emitters(&state_read(g).smoke.st)
+}
+/// is there smoke in the game in slot `g`: an emitter, or a brick standing
+pub fn smoky(g: usize) -> bool {
+    emitting(g) > 0 || state_read(g).smoke.live as usize > ROW + O_RHO * 8
+}
+/// `dt` SECONDS OF THE GAME in slot `g` → how many steps have come due: four at most (a game that stood still does not owe a hundred)
+pub fn beat(g: usize, dt: f64) -> u32 {
+    let p = &mut state(g).smoke;
+    if p.live == 0 || !(dt > 0.0) {
+        return 0;
+    }
+    let mut left = p.st[H_CLOCK] + dt;
+    let mut n = 0;
+    while left >= SUB && n < 4 {
+        left -= SUB;
+        n += 1;
+    }
+    p.st[H_CLOCK] = if left >= SUB { 0.0 } else { left };
+    n
 }
 
-/// `n` STEPS of a tenth of a second each of the grid of the game in slot `g` (its block's `stamp`), over the copy `copy` of box world `w` as it stands
-/// and the leaves of list `set`; the emitters handed over since the last step (`emits`: x y z, how wide, what it lets out a second, for how long, six
-/// doubles each) join the list first. 0, or ASK_HOST = no grid stands on this level (its plan is larger than a grid can be), or the game has none: the
-/// state is as it was, and no emitter was taken.
-pub fn step(g: usize, stamp: f64, w: usize, copy: f64, set: i32, n: u32, emits: &[f64], k: &K, glow: Option<&crate::glow::K>) -> u32 {
+/// the plan of box world `w`, in squares
+fn plan_of(w: usize) -> (f64, f64) {
     let o = world(w);
-    let (mx, mz) = (o.w as f64 * o.cs, o.h as f64 * o.cs);
-    let (nbx, nbz) = (-floor(-mx / SIDE), -floor(-mz / SIDE));
+    (-floor(-(o.w as f64 * o.cs) / SIDE), -floor(-(o.h as f64 * o.cs) / SIDE))
+}
+/// the light's tables of box world `w` made before a step asks for them (glow.rs ready)
+pub fn light_ready(w: usize, to_sun: [f64; 3]) {
+    let (x, z) = plan_of(w);
+    if x >= 1.0 && z >= 1.0 && x * z <= MAX_BRICKS as f64 {
+        crate::glow::ready(w, x as usize, z as usize, to_sun);
+    }
+}
+/// `n` STEPS of a tenth of a second each of the grid of the game in slot `g` (its block's `stamp`), over the copy `copy` of box world `w` as it stands
+/// and the leaves of list `set`. 0, or ASK_HOST = no grid stands on this level (its plan is larger than a grid can be), or the game has none: the
+/// state is as it was.
+pub fn step(g: usize, stamp: f64, w: usize, copy: f64, set: i32, n: u32, k: &K, glow: Option<&crate::glow::K>) -> u32 {
+    let (nbx, nbz) = plan_of(w);
     if !(nbx >= 1.0 && nbz >= 1.0 && nbx * nbz <= MAX_BRICKS as f64) || set >= LEAF_SETS as i32 || state(g).smoke.live == 0 {
         return ASK_HOST;
     }
@@ -460,15 +548,12 @@ pub fn step(g: usize, stamp: f64, w: usize, copy: f64, set: i32, n: u32, emits: 
         // (the first step on this level: a state from any other plan holds nothing that is anywhere here)
         g.st[H_NBX] = nbx;
         g.st[H_NBZ] = nbz;
-        for v in g.st[O_GLOW_D..O_RHO].iter_mut() {
+        for v in g.st[O_GLOW_MAX..O_RHO].iter_mut() {
             *v = 0.0;
         }
         g.nbx = nbx as usize;
         g.nbz = nbz as usize;
         g.remake();
-    }
-    for e in emits.chunks_exact(6) {
-        emit(&mut g, e[0], e[1], e[2], e[3], e[4], e[5]);
     }
     for _ in 0..n {
         substep(w, set, &mut g, k);
@@ -482,6 +567,8 @@ pub fn step(g: usize, stamp: f64, w: usize, copy: f64, set: i32, n: u32, emits: 
     0
 }
 
+/// how much of its rise a plume in the whole of the wind loses (the drawn one, in a storm's yard, tops out at about 1.1 m)
+const LAID: f64 = 0.4;
 fn substep(w: usize, set: i32, g: &mut Grid, k: &K) {
     // 0. the faces round every leaf that is not as the last step found it (a door swings; one is new, one is gone) are asked again: where it stood and
     //    where it stands. A leaf that has not moved keeps the answers it had.
@@ -516,7 +603,10 @@ fn substep(w: usize, set: i32, g: &mut Grid, k: &K) {
 
     // 1. the emitters let out, each up the column it stands under (from its own foot to the top of its plume: its width, and the rise the blobs had),
     //    and the spent ones leave the list
-    let n = js_min(g.st[H_EMIT], MAX_EMIT as f64) as usize;
+    let windy = k.wind_x != 0.0 || k.wind_z != 0.0;
+    let share = unsafe { &*core::ptr::addr_of!(WIND) };
+    let wide = g.nbx * 2;
+    let n = emitters(g.st);
     let mut kept = 0;
     for i in 0..n {
         let o = O_EMIT + i * EMIT;
@@ -524,9 +614,14 @@ fn substep(w: usize, set: i32, g: &mut Grid, k: &K) {
         if age < ttl {
             let amount = rate * js_min(SUB, ttl - age);
             let top = (BY - 1) as f64;
-            let lo = js_min(js_max(floor((y0 - radius) / CELL), 0.0), top);
-            let hi = js_min(js_max(floor((y0 + radius + js_min(k.rise, k.rise_rate * age)) / CELL), lo), top);
+            // (its foot and the top of its plume, in cells: each cell between takes what of the plume is in it)
+            let foot = js_min(js_max((y0 - radius) / CELL, 0.0), top);
             let (fx, fz) = (floor(x / CELL), floor(z / CELL));
+            // (the wind lays a plume over: in all of it, it rises LAID less)
+            let (mx, mz) = (floor(x), floor(z));
+            let blown = if windy && mx >= 0.0 && mz >= 0.0 && mx < wide as f64 && mz < (g.nbz * 2) as f64 { unit(share[mz as usize * wide + mx as usize]) } else { 0.0 };
+            let rise = js_min(k.rise, k.rise_rate * age) * (1.0 - LAID * blown);
+            let head = js_min(js_max((y0 + radius + rise) / CELL, foot + 0.1), top + 1.0);
             // (a point off the plan lets out nowhere)
             if fx >= 0.0 && fz >= 0.0 && fx < (g.nbx * BX) as f64 && fz < (g.nbz * BX) as f64 {
                 // the column: the one it stands in if what it lets out can reach that cell's middle, else the first of those round it that it can reach (a
@@ -548,10 +643,10 @@ fn substep(w: usize, set: i32, g: &mut Grid, k: &K) {
                 let (ux, uz) = (cx as usize, cz as usize);
                 g.st[H_OUT] += amount;
                 if let Some(b) = g.brick_or_new((ux / BX) as i32, (uz / BX) as i32) {
-                    let each = amount / VOL / (hi - lo + 1.0);
-                    let mut y = lo;
-                    while y <= hi {
-                        g.st[O_RHO + b * CELLS + cell_at(ux % BX, y as usize, uz % BX)] += each;
+                    let each = amount / VOL / (head - foot);
+                    let mut y = floor(foot);
+                    while y < head {
+                        g.st[O_RHO + b * CELLS + cell_at(ux % BX, y as usize, uz % BX)] += each * (js_min(head, y + 1.0) - js_max(foot, y));
                         y += 1.0;
                     }
                 }
@@ -644,9 +739,6 @@ fn substep(w: usize, set: i32, g: &mut Grid, k: &K) {
     //     step, each from the densities the one before left; a wind faster than MAX_PASSES carry is slowed WHOLE, both axes by one number, never
     //     bent. A brick the smoke is blown toward is made by 2, at the next step. No statement of this is reached in still air.
     let mut blown = 0.0;
-    let windy = k.wind_x != 0.0 || k.wind_z != 0.0;
-    let share = unsafe { &*core::ptr::addr_of!(WIND) };
-    let wide = g.nbx * 2;
     if windy {
         let fast = js_max(js_max(k.wind_x, -k.wind_x), js_max(k.wind_z, -k.wind_z)) * SUB / CELL * (k.wind_low + js_max(k.wind_gain, 0.0));
         let passes = js_max(1.0, js_min(MAX_PASSES, -floor(-fast / DRIFT_MAX)));
@@ -832,7 +924,7 @@ fn substep(w: usize, set: i32, g: &mut Grid, k: &K) {
                 })
             })
         });
-        for i in 0..js_min(g.st[H_EMIT], MAX_EMIT as f64) as usize {
+        for i in 0..emitters(g.st) {
             let o = O_EMIT + i * EMIT;
             let (ex, ez) = (floor(g.st[o] / SIDE) - bx as f64, floor(g.st[o + 2] / SIDE) - bz as f64);
             fed |= ex >= -1.0 && ex <= 1.0 && ez >= -1.0 && ez <= 1.0;

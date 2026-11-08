@@ -23,6 +23,21 @@ pub fn arc_armed(g: &crate::game::Game, sol: &crate::throwables::ThrowSolution) 
     arc_length(sol) >= g.k.he40.arm_m
 }
 
+/// The rifle is up with rounds in its 40 mm under it. (he40.ts, the arc's own gate)
+pub fn he40_ready(g: &crate::game::Game, pl: PlayerId) -> bool {
+    let r = g.pl[pl].rifle;
+    crate::game::player_rifle_up(g, pl) && crate::weapons::rifle_attachment(g, r) == Some(crate::weapons::RifleAttachment::He40) && g.fa[r].shells > 0.0
+}
+
+/// The arc he has up is the launcher's, and too short to arm. (he40.ts previewTooClose)
+pub fn preview_too_close(g: &crate::game::Game, pl: PlayerId) -> bool {
+    let r = g.pl[pl].rifle;
+    match &g.pl[pl].throw_preview {
+        Some(sol) => crate::game::player_rifle_up(g, pl) && crate::weapons::rifle_attachment(g, r) == Some(crate::weapons::RifleAttachment::He40) && !arc_armed(g, sol),
+        None => false,
+    }
+}
+
 /// The living man under the reticle a round can meet, never one of Sam's own side. (he40.ts shellMan)
 pub fn shell_man(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<GuardId> {
     let puppet_target = match &g.puppet {
@@ -314,10 +329,11 @@ pub fn update_shells(g: &mut crate::game::Game, dt: f64) {
                 let c = g.gd[cv].ch;
                 try_char(g, shooter, c, Some(cv), pos, dir, reach, &mut best, &mut hit_c, &mut hit_g);
             }
-            let pl = g.player;
-            if !g.pl[pl].down {
-                let c = g.pl[pl].ch;
-                try_char(g, shooter, c, None, pos, dir, reach, &mut best, &mut hit_c, &mut hit_g);
+            for pl in crate::seats::men(g) {
+                if !g.pl[pl].down {
+                    let c = g.pl[pl].ch;
+                    try_char(g, shooter, c, None, pos, dir, reach, &mut best, &mut hit_c, &mut hit_g);
+                }
             }
             let st = crate::scene_collision::raycast(g, pos, dir, reach);
             let ph = crate::props::prop_system_raycast(g, pos, dir, reach);

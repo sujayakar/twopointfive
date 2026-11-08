@@ -43,7 +43,7 @@ impl Known {
 impl Default for Known { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum Phase {
     Back,
     Run,
@@ -339,7 +339,8 @@ impl GunholdMod {
         GunholdMod {
             knowns: JsMap::new(),
             states: JsMap::new(),
-            stats_of: None,
+            // (there from the start, with `free_t` at −1, on every host: asking for it, a HUD's asking included, must not be what makes it)
+            stats_of: Some(crate::gunhold::GunHoldStats { armed: 0.0, ran: 0.0, no_cover: 0.0, rounds: 0.0, no_way: 0.0, looks: 0.0, gone: 0.0, lines: 0.0, free_t: -1.0 }),
             planned: None,
         }
     }

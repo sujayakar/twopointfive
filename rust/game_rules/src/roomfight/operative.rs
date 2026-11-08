@@ -128,8 +128,7 @@ fn calls_mate_down(g: &mut Game, o: RoomfightOpId) {
         let xp = g.ch[g.gd[x].ch].pos;
         if crate::scene_collision::segment_blocked(g, e, [xp[0], 0.4, xp[2]], None, None, None) { continue; }
         g.fight.down_called.add(x);
-        let text = if g.gd[x].wound.is_some() { alloc::format!("{}'s hit — breathing.", g.gd[x].callsign) } else { String::from("man down.") };
-        room_fight_speak(g, o, &text, Some(0.0));
+        room_fight_speak(g, o, "man down.", Some(0.0));
     }
 }
 
@@ -275,9 +274,7 @@ fn muzzle_to(g: &mut Game, o: RoomfightOpId, best: Option<GuardId>, sk: &FightSk
         let fell = was.map_or(false, |t| g.gd[t].state == crate::game::GuardState::Dead);
         if let (Some(t), true) = (was, fell) {
             let mine = g.gd[t].killer_id == g.ch[c].id;
-            let text: &str = if g.gd[t].wound.is_some() {
-                if mine { crate::words::wg(g, &"he's hit — he's down and out of the fight.", &"he's hit — down, gun's out of it.") } else { "he's down, breathing." }
-            } else if mine { "tango down." } else { "he's down." };
+            let text: &str = if mine { "tango down." } else { "he's down." };
             room_fight_speak(g, o, text, Some(0.6));
         }
         g.tab.roomfight_op[o].fell = Some(fell);
@@ -444,7 +441,7 @@ fn fires(g: &mut Game, o: RoomfightOpId, h: GuardId, to: V3, dt: f64, speed: f64
         g.tab.roomfight_op[o].line_by = Some(line_by(f));
         g.tab.roomfight_op[o].line_at = g.time;
         if matches!(f, RoomFightFriendInLine::Player) { room_fight_hold_short(g, o); }
-        if !crate::clearline::clear_line_blocked(g, gd, h, to, clear_by(f)) { room_fight_side_step(g, o, to, speed, None, None); }
+        room_fight_side_step(g, o, to, speed, None, None);
         room_fight_let_go(g, o);
         return;
     }
@@ -540,7 +537,7 @@ pub fn room_fight_cue(g: &mut crate::game::Game, o: RoomfightOpId) {
     let arc = match a {
         Some(id) => {
             let row = &g.tab.orders_assignment[id];
-            match row.watch { Some(w) if row.order == "hold" && row.arrived => Some(v3::yaw_to(g.ch[c].pos, w)), _ => None }
+            match row.watch { Some(w) if crate::orders::rows::id_is(&row.order, crate::orders::Is::Holds) && row.arrived => Some(v3::yaw_to(g.ch[c].pos, w)), _ => None }
         }
         None => None,
     };

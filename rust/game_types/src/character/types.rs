@@ -5,7 +5,7 @@ use alloc::{string::String, vec::Vec};
 
 /// THE NAMES OF A BODY'S JOINTS, in the order a real game's `bones` has them (read off a running game: `for k in b` walks this order)
 pub const BONE_ORDER: [Bone; 22] = [Bone::Hips, Bone::Spine2, Bone::Chest, Bone::Neck, Bone::Head, Bone::UpperArmL, Bone::ForearmL, Bone::HandL, Bone::UpperArmR, Bone::ForearmR, Bone::HandR, Bone::ThighL, Bone::ShinL, Bone::FootL, Bone::ToeL, Bone::ThighR, Bone::ShinR, Bone::FootR, Bone::ToeR, Bone::FingerR, Bone::FingerL, Bone::HeadTop];
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum Bone { Hips, Spine2, Chest, Neck, Head, UpperArmL, ForearmL, HandL, UpperArmR, ForearmR, HandR, ThighL, ShinL, FootL, ToeL, ThighR, ShinR, FootR, ToeR, FingerR, FingerL, HeadTop }
 impl Bone {
     pub const fn as_str(self) -> &'static str {
@@ -13,7 +13,7 @@ impl Bone {
     }
 }
 /// whose body this is
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub enum Who { Guard(GuardId), Player(PlayerId) }
 
 /// THE BLOW'S HANDS FOLLOW HIS MEN (takedown.ts: `live: () => marks(by, vic, style)`): the only closure ever given to it
@@ -77,7 +77,7 @@ pub enum Untwist {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum KitItem {
     Pistol,
     Rifle,
@@ -956,7 +956,6 @@ pub struct Anim {
     pub aim_yaw_offset: f64,
     pub aim_pitch: f64,
     pub look_yaw_extra: f64,
-    pub look_pitch_extra: f64,
     pub turn_lead: f64,
     pub stance: crate::character::Stance,
     pub stack_side: f64,
@@ -1094,13 +1093,6 @@ pub struct Anim {
     pub wide_shape: [f64; 4],
     pub wide_pole: Option<V3>,
     pub wide_s: f64,
-    pub tap_u: f64,
-    pub tap_n: f64,
-    pub tap_way: f64,
-    pub tap_seen: f64,
-    pub tap_from: f64,
-    pub tap_to: f64,
-    pub tap_was: f64,
     pub heft: f64,
     pub heft_shape: [f64; 6],
     pub hf: crate::character::AnimHf,
@@ -1278,7 +1270,6 @@ impl Anim {
             aim_yaw_offset: 0.0,
             aim_pitch: 0.0,
             look_yaw_extra: 0.0,
-            look_pitch_extra: 0.0,
             turn_lead: 0.0,
             stance: crate::character::Stance::None,
             stack_side: 1.0,
@@ -1416,13 +1407,6 @@ impl Anim {
             wide_shape: [0.0, 0.0, 0.0, 0.0],
             wide_pole: None,
             wide_s: 0.0,
-            tap_u: -1.0,
-            tap_n: 0.0,
-            tap_way: 1.0,
-            tap_seen: -1.0,
-            tap_from: 0.0,
-            tap_to: 0.0,
-            tap_was: -1.0,
             heft: 0.0,
             heft_shape: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
             hf: crate::character::AnimHf { s: 0.0, sv: 0.0, a: 0.0, av: 0.0, w: 0.0, wv: 0.0, v: 0.0, vv: 0.0, t: 0.0 },

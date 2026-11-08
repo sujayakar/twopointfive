@@ -42,6 +42,7 @@
 //                 delete-census.json, taken on an older tree, joined by file and name: it only ADDS). THESE ARE THE ROWS A PERSON SORTS, in
 //                 tools/blitz/page-decides.rows.tsv (a line a row or a pattern of rows: pattern, sort, kind, reason, rows when last read), as one of:
 //                   decides  to move into the Rust game             moving   its move is already under way (the line says which)
+//                   leaves   goes with the page that holds a game: the page that draws the Rust game has no copy and never asks it
 //                   picture  the picture's or the sound's own       host     the host's own plumbing (the bridge, saves, the frame's loop)
 //                   hand     the player's or the developer's own hand, on a timer
 //                 A row nothing sorts is UNSORTED. A pattern sorts a whole file where the file is of one nature, so a line that is not `decides` is
@@ -234,7 +235,7 @@ const noteWrite = (u: Unit, key: string, node: any, loose = false, f?: { key: st
   else if (how) u.acts.push({ kind: 'overwrites', what: `${key} (${how})`, line: lineOf(node), loose });
   else u.acts.push({ kind: 'keeps', what: key, line: lineOf(node), loose }); };
 
-/** A CLOSURE KEPT IN A FIELD (`S.notes.push(() => this.hudNotes())`, `x.hook = () => …`) runs when whoever reads the field calls it, not where it was
+/** A CLOSURE KEPT IN A FIELD (`x.hook = () => …`) runs when whoever reads the field calls it, not where it was
  *  written: it is a unit of its own, and a function that reads the field reaches it */
 const STORED = new Map<string, Unit[]>();
 for (const sf of files) { const file = rel(sf.fileName); const v = (n: any) => {
@@ -350,9 +351,11 @@ if (flag('--hubs')) { /* which functions the frame's reach hangs on: how many it
 const when = (u: Unit): string => { const id = u.id.replace(/#\d+$/, ''), c = CENSUS.get(id); if (reachFrame.has(u.id)) return c ? `every frame (the frame reaches it; seen ${c} a frame)` : 'every frame (the frame reaches it)'; if (c) return `every frame (seen ${c} a frame)`; { const b = BEHINDS.filter(b => reachBehind.get(b)!.has(u.id)); if (b.length) return `behind ${b.join(', ')}`; } if (reachPage.has(u.id)) return 'start or hand'; if (reachOther.has(u.id)) return 'other page'; return 'dead'; };
 
 // ---- rows
-const HAND_FILE = join(import.meta.dir, 'page-decides.rows.tsv');
+const HAND_FILE = opt('--rows') ?? join(import.meta.dir, 'page-decides.rows.tsv');   // (--rows: another file of sorts, for the check's red path)
 const HAND = existsSync(HAND_FILE) ? readFileSync(HAND_FILE, 'utf8').split('\n').filter(l => l && !l.startsWith('#')).map(l => l.split('\t')).map(c => ({ pat: c[0], sort: c[1], kind: c[2] ?? '', reason: c[3] ?? '', pin: c[4] === undefined || c[4] === '' ? -1 : +c[4], used: 0 })) : [];
-const SORTS = new Set(['decides', 'moving', 'picture', 'hand', 'host']);
+const SORTS = new Set(['decides', 'moving', 'leaves', 'picture', 'hand', 'host']);
+/** the sorts of a rule worked out on the copy: one to move, or one that leaves with the page that holds a game */
+const judged = (sort: string | undefined): boolean => sort === 'decides' || sort === 'leaves';
 for (const h of HAND) if (!SORTS.has(h.sort) || !h.reason) { console.error(`page-decides.rows.tsv: ${h.pat}: "${h.sort}" is no sort (${[...SORTS].join(', ')}), or the line has no reason`); process.exit(2); }
 const glob = (pat: string) => new RegExp('^' + pat.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$');
 const HANDRE = HAND.map(h => ({ h, re: glob(h.pat) }));
@@ -375,10 +378,10 @@ for (const u of UNITS.values()) { if (u.file === 'src/game/crossing.ts') continu
 // { return this.g(DC.locked) !== 0; }`, `pairOf(gd) { return gd.unit?.pair ?? null; }`) and calls nothing that decides. It is how the page reads the game's
 // record, and it stays when the page only draws. Found by the program (never by a line of the sorts' file), and only among rows that judge: a row that acts
 // is never one. A row that calls a deciding row is that row's pass-through and goes with it.
-{ const READ_WORKS = 2, cand = new Map(rows.filter(r => r.sort === 'decides' && !r.unit.acts.length && r.judges && r.unit.lines <= 1 && r.unit.works <= READ_WORKS).map(r => [r.unit.id, r])), deciding = new Set(rows.filter(r => r.sort === 'decides' || r.sort === 'UNSORTED' || r.sort === 'throws').map(r => r.unit.id));
+{ const READ_WORKS = 2, cand = new Map(rows.filter(r => judged(r.sort) && !r.unit.acts.length && r.judges && r.unit.lines <= 1 && r.unit.works <= READ_WORKS).map(r => [r.unit.id, r])), deciding = new Set(rows.filter(r => judged(r.sort) || r.sort === 'UNSORTED' || r.sort === 'throws').map(r => r.unit.id));
   for (let again = true; again;) { again = false; for (const [id, r] of cand) if ([...r.unit.callsOut.keys()].some(t => t !== id && deciding.has(t) && !cand.has(t))) { cand.delete(id); again = true; } }
   for (const r of cand.values()) { r.sort = 'reads'; r.reason = 'a one-line read of the game\'s record (a field handed on with at most a default or one comparison, calling nothing that decides): how the page reads what the game keeps'; } }
-const ORDER = ['UNSORTED', 'throws', 'decides', 'moving', 'reads', 'hand', 'host', 'picture', 'networked page', 'save', 'start or hand', 'other page', 'dead'];
+const ORDER = ['UNSORTED', 'throws', 'decides', 'moving', 'leaves', 'reads', 'hand', 'host', 'picture', 'networked page', 'save', 'start or hand', 'other page', 'dead'];
 rows.sort((a, b) => ORDER.indexOf(a.sort) - ORDER.indexOf(b.sort) || a.kind.localeCompare(b.kind) || a.unit.id.localeCompare(b.unit.id));
 const actsText = (r: Row, max = 6) => { const by = new Map<string, Set<string>>(); for (const a of r.unit.acts) { if (!by.has(a.kind)) by.set(a.kind, new Set()); by.get(a.kind)!.add((a.loose ? '~' : '') + a.what); } const parts = [...by].map(([k, v]) => `${k} ${[...v].slice(0, max).join(', ')}${v.size > max ? `, +${v.size - max}` : ''}`); if (r.judges) parts.push(`judges (${r.unit.reads.size ? `reads ${r.unit.reads.size} carried fields` : 'reads carried state through what it calls'}; Rust has ${r.judges})`); if (r.unit.stub) parts.push(`THROWS on the page (${r.unit.stub})`); return parts.join(' · ') + (r.twin && !r.judges ? ` · [Rust has ${r.twin}]` : ''); };
 
@@ -412,13 +415,13 @@ if (flag('--freed')) { /* WHAT THE PAGE NEED NOT BE SENT: the fields on the page
    checker cannot place, so a person has to look). Beside either: HOLDERS (a struct held plainly, or a list, an option or a map of one: the table walks through it) are
    named apart, since what is under them may be read. What no static reading sees: a walk of every key of an object (`--freed` prints the functions that make one). */
   const F = JSON.parse(readFileSync(join(ROOT, 'tools/wire/fields.json'), 'utf8')) as { pageTick: string[] }, sortOf = new Map(rows.map(r => [r.unit.id, r.sort])), by = new Map<string, Set<string>>(), loose = new Set<string>();
-  for (const u of UNITS.values()) { const w = when(u); for (const x of u.names) loose.add(x); const who = w === 'dead' || w === 'other page' ? 'dead' : sortOf.get(u.id) === 'decides' ? 'decides' : w.startsWith('every frame') ? 'frame' : 'else'; for (const k of u.readsQ) { const W = WIRE_OF.get(k); if (!W) continue; if (!by.has(W.q)) by.set(W.q, new Set()); by.get(W.q)!.add(who); } }
+  for (const u of UNITS.values()) { const w = when(u); for (const x of u.names) loose.add(x); const who = w === 'dead' || w === 'other page' ? 'dead' : judged(sortOf.get(u.id)) ? 'decides' : w.startsWith('every frame') ? 'frame' : 'else'; for (const k of u.readsQ) { const W = WIRE_OF.get(k); if (!W) continue; if (!by.has(W.q)) by.set(W.q, new Set()); by.get(W.q)!.add(who); } }
   const fieldAt = new Map<string, any>(); for (const [q, T] of Object.entries(SCHEMA.types) as [string, any][]) for (const x of T.fields ?? []) fieldAt.set(`${q.replace(/^crate::/, '')}.${x.rust}`, x);
   const holds = (ty: string): boolean => [...ty.matchAll(/crate::[A-Za-z_0-9:]+/g)].some(m => ['struct', 'data', 'handEnum'].includes(SCHEMA.types[m[0]]?.k));
   const kind = (q: string): string => { const t = tableOf(q); if (t) { const S = topBy.get(t) ?? new Set<string>(); return `a module's table: ${S.has('frame') ? 'named by a frame function' : S.has('decides') || S.has('else') ? 'named only off the frame or by rows that decide' : S.has('dead') ? 'named only by code no page runs' : 'named by nobody'}`; } const S = by.get(q), x = fieldAt.get(q); if (S?.has('frame')) return 'read by a frame function that does not decide'; if (S?.has('decides') && !S.has('else')) return 'read only by rows that decide'; if (S?.has('decides')) return 'read by rows that decide and, off the frame, by a start, a hand or a save'; if (S?.has('else')) return 'read only off the frame';
     const tag = S?.has('dead') ? 'read only by code no page runs' : x && !loose.has(x.ts ?? x.rust) && !/\bB\./.test(x.expr ?? '') ? 'nobody, by no name' : 'nobody placed, by a common name'; return x && holds(x.ty) ? `${tag} (a holder)` : tag; };
   // (a module's own table, written by name (`B.top(file, name).field`): read by whoever names the table)
-  const topBy = new Map<string, Set<string>>(); for (const u of UNITS.values()) { const w = when(u), who = w === 'dead' || w === 'other page' ? 'dead' : sortOf.get(u.id) === 'decides' ? 'decides' : w.startsWith('every frame') ? 'frame' : 'else'; for (const id of u.tops) { if (!topBy.has(id)) topBy.set(id, new Set()); topBy.get(id)!.add(who); } }
+  const topBy = new Map<string, Set<string>>(); for (const u of UNITS.values()) { const w = when(u), who = w === 'dead' || w === 'other page' ? 'dead' : judged(sortOf.get(u.id)) ? 'decides' : w.startsWith('every frame') ? 'frame' : 'else'; for (const id of u.tops) { if (!topBy.has(id)) topBy.set(id, new Set()); topBy.get(id)!.add(who); } }
   const tableOf = (q: string): string | null => { const m = /^B\.top\(['"]([^'"]+)['"], ['"]([^'"]+)['"]/.exec(fieldAt.get(q)?.expr ?? ''); return m ? `${m[1]}:${m[2]}` : null; };
   const of = new Map<string, string[]>(); for (const q of F.pageTick) { const k = kind(q); if (!of.has(k)) of.set(k, []); of.get(k)!.push(q); }
   console.log(`${F.pageTick.length} fields on the page's list: ${[...of].sort((a, b) => b[1].length - a[1].length).map(([k, L]) => `${L.length} ${k}`).join(' · ')}`); for (const [k, L] of of) for (const q of L) console.log(`${k}\t${q}\t${fieldAt.get(q)?.ty ?? ''}`); process.exit(0); }
@@ -437,9 +440,9 @@ if (flag('--fresh')) { /* WHERE THE PAGE READS, OFF THE FRAME, A FIELD NO FRAME 
   console.log(`${offBy.size} fields of the page's list are read off the frame and by no frame function, through ${doors.size} doors`); for (const [d, D] of [...doors].sort((x, y) => y[1].fields.size - x[1].fields.size)) console.log(`${D.fields.size}\t${D.readers.size} readers\t${d.replace(/^src\//, '')}\t${D.how}\t${[...D.fields].slice(0, 4).join(', ')}`); process.exit(0); }
 if (flag('--doors')) { /* THE DOORS: of the rows that decide, the ones the page's own code walks in through (its caller on the frame's road is no deciding row),
    each with how many deciding rows stand behind it. A door is one question the page asks: what a view of the game has to answer in its place. */
-  const dec = new Map(rows.filter(r => r.sort === 'decides').map(r => [r.unit.id, r])), behind = new Map<string, number>();
+  const bySortOf = (k: string) => rows.filter(r => r.sort === k).length, dec = new Map(rows.filter(r => judged(r.sort)).map(r => [r.unit.id, r])), behind = new Map<string, number>();
   for (const id of dec.keys()) { let d = id; for (let up = reachFrame.get(d); up && dec.has(up); up = reachFrame.get(d)) d = up; behind.set(d, (behind.get(d) ?? 0) + 1); }
-  console.log(`${dec.size} rows decide, behind ${behind.size} doors:`); for (const [d, n] of [...behind].sort((x, y) => dec.get(x[0])!.kind.localeCompare(dec.get(y[0])!.kind) || y[1] - x[1])) { const r = dec.get(d)!; console.log(`  ${String(n).padStart(4)}  ${r.kind}\t${d.replace(/^src\//, '')}\t← ${String(reachFrame.get(d) ?? 'seen in the frame').replace(/^src\//, '')}\t${r.unit.acts.length ? 'acts' : 'judges'}`); } process.exit(0); }
+  console.log(`${dec.size} rows decide (${bySortOf('leaves')} leave with the page that holds a game), behind ${behind.size} doors:`); for (const [d, n] of [...behind].sort((x, y) => dec.get(x[0])!.kind.localeCompare(dec.get(y[0])!.kind) || y[1] - x[1])) { const r = dec.get(d)!; console.log(`  ${String(n).padStart(4)}  ${r.kind}\t${d.replace(/^src\//, '')}\t← ${String(reachFrame.get(d) ?? 'seen in the frame').replace(/^src\//, '')}\t${r.unit.acts.length ? 'acts' : 'judges'}`); } process.exit(0); }
 const bySort = new Map<string, number>(); for (const r of rows) bySort.set(r.sort, (bySort.get(r.sort) ?? 0) + 1);
 console.log(`page-decides: ${rows.length} functions under src/ act on the game's copy, judge it again or would throw · ` + ORDER.filter(s => bySort.has(s)).map(s => `${s} ${bySort.get(s)}`).join(' · '));
 if (flag('--kinds') || !(opt('--tsv') || opt('--md'))) { for (const s of ORDER) { const R = rows.filter(r => r.sort === s); if (!R.length) continue; const k = new Map<string, number>(); for (const r of R) k.set(r.kind, (k.get(r.kind) ?? 0) + 1); const all = flag('--kinds') || s === 'UNSORTED' || s === 'decides' || s === 'throws'; console.log(`  ${s}: ${[...k].sort((a, b) => b[1] - a[1]).slice(0, all ? 1000 : 12).map(([n, c]) => `${n} ${c}`).join(', ')}${k.size > 12 && !all ? `, … (${k.size} kinds)` : ''}`); } }

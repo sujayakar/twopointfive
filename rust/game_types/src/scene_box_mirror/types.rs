@@ -3,48 +3,6 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Furniture, src/scene/boxMirror.ts:68)
-#[derive(Clone, Debug)]
-pub struct Furniture {
-    pub all: Vec<crate::scene_box_mirror::FurnitureThing>,
-    pub props: Vec<crate::scene_box_mirror::FurnitureThing>,
-}
-impl Furniture {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Furniture {
-            all: Vec::new(),
-            props: Vec::new(),
-        }
-    }
-}
-impl Default for Furniture { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: FurnitureThing, src/scene/boxMirror.ts:69)
-#[derive(Clone, Debug)]
-pub struct FurnitureThing {
-    pub id: f64,
-    pub x: f64,
-    pub z: f64,
-    pub yaw: f64,
-    pub radius: f64,
-    pub boxes: Vec<BoxId>,
-}
-impl FurnitureThing {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FurnitureThing {
-            id: 0.0,
-            x: 0.0,
-            z: 0.0,
-            yaw: 0.0,
-            radius: 0.0,
-            boxes: Vec::new(),
-        }
-    }
-}
-impl Default for FurnitureThing { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: PaneSite, src/scene/boxMirror.ts:72)
 #[derive(Clone, Debug)]
 pub struct PaneSite {
@@ -230,13 +188,10 @@ pub struct BoxMirror {
     pub list_cap: f64,
     pub scratch_len: f64,
     pub lamp_cap: f64,
-    pub blob_cap: f64,
     pub wind_cap: f64,
     pub nav_cap: f64,
     pub lamp_set: f64,
     pub lamp_n: f64,
-    pub blob_set: f64,
-    pub blob_n: f64,
     pub rule_set: f64,
     pub rule_panes: f64,
     pub copy: f64,
@@ -246,7 +201,6 @@ pub struct BoxMirror {
     pub used: f64,
     pub caps: crate::scene_box_mirror::BoxMirrorCaps,
     pub things_at: f64,
-    pub things_of: Option<crate::scene_box_mirror::Furniture>,
     pub things_ok: bool,
     pub things_all: bool,
     pub snow_len: f64,
@@ -292,13 +246,10 @@ impl BoxMirror {
             list_cap: 0.0,
             scratch_len: 0.0,
             lamp_cap: 0.0,
-            blob_cap: 0.0,
             wind_cap: 0.0,
             nav_cap: 0.0,
             lamp_set: -2.0,
             lamp_n: 0.0,
-            blob_set: -2.0,
-            blob_n: 0.0,
             rule_set: -1.0,
             rule_panes: 0.0,
             copy: 0.0,
@@ -308,7 +259,6 @@ impl BoxMirror {
             used: 0.0,
             caps: crate::scene_box_mirror::BoxMirrorCaps { boxes: 0.0, leaves: 0.0, cuts: 0.0, panes: 0.0, cells: 0.0, items: 0.0, tilted: 0.0, things: 0.0, glass: 0.0, view: 0.0 },
             things_at: -1.0,
-            things_of: None,
             things_ok: false,
             things_all: true,
             snow_len: -1.0,

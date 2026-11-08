@@ -63,7 +63,12 @@ pub fn say(g: &mut crate::game::Game, gd: GuardId, text: &str, radio: Option<boo
     if g.gd[gd].held.is_some() && !force { return; }
     let net = radio || crate::silent::silent_hush(g, gd);
     let dur = bubble_secs(text);
-    g.gd[gd].bubble = Some(GuardBubble { text: String::from(text), t: g.time, dur, radio: net });
+    let line = GuardBubble { text: String::from(text), t: g.time, dur, radio: net };
+    // (two lines of his in one frame: neither is lost, the later waits its turn on the bubble)
+    match &g.gd[gd].bubble {
+        Some(b) if b.t == g.time => { if b.text != text { g.gd[gd].bubble_next.push(line); } }
+        _ => g.gd[gd].bubble = Some(line),
+    }
     if net { crate::handwork::radio_hand(g, gd, dur); }
     if !net && row { crate::cues::cues_overheard(g, gd, text); }
     if radio && g.gd[gd].unit.is_some() { crate::cues::cues_heard(g, gd, text); }
@@ -85,6 +90,18 @@ pub fn say(g: &mut crate::game::Game, gd: GuardId, text: &str, radio: Option<boo
         crate::squadnet::squad_net_line(g);
     }
 }
+
+/// The next of the lines he said in one frame comes up once the one showing has been up for a moment.
+pub fn bubble_tick(g: &mut crate::game::Game, gd: GuardId) {
+    if g.gd[gd].bubble_next.is_empty() { return; }
+    if g.gd[gd].state == crate::game::GuardState::Dead { g.gd[gd].bubble_next.clear(); return; }
+    let (now, showing) = (g.time, g.gd[gd].bubble.as_ref().map_or(0.0, |b| b.t));
+    if now - showing < BUBBLE_TURN { return; }
+    let mut line = g.gd[gd].bubble_next.remove(0);
+    line.t = now;
+    g.gd[gd].bubble = Some(line);
+}
+const BUBBLE_TURN: f64 = 1.0;
 
 /// Fresh guards at the start of their routes; spawned units are not stood up again.   (guards.ts resetGuards)
 pub fn reset_guards(g: &mut crate::game::Game) {
@@ -142,6 +159,12 @@ pub fn reset_guards(g: &mut crate::game::Game) {
 /// The alarm level the guards act on: the game's, except under the showcase tour.   (guards.ts escalationOf)
 pub fn escalation_of(g: &crate::game::Game) -> f64 {
     if g.quiet_utility { 0.0 } else { g.escalation }
+}
+/// The alarm's stage as a HUD is told it (None: calm)
+pub fn alarm_view(g: &crate::game::Game) -> Option<crate::view::AlarmView> {
+    let level = escalation_of(g);
+    if level <= 0.0 { return None; }
+    Some(crate::view::AlarmView { level, left: if g.escalation_t > g.time { g.escalation_t - g.time } else { 0.0 }, live: g.alarm.episode })
 }
 /// The living man best placed to radio something about `pos`: the nearest not mid-fight, else the nearest at all, never `except`.   (guards.ts spokesman)
 pub fn spokesman(g: &crate::game::Game, pos: Option<V3>, except: Option<GuardId>) -> Option<GuardId> {
@@ -254,7 +277,7 @@ pub fn rollcall_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::guards
 /// Seconds to the next check, jittered: a die.   (guards.ts rollcallInterval)
 pub fn rollcall_interval(g: &mut crate::game::Game) -> f64 {
     let secs = if escalation_of(g) >= 1.0 { ROLLCALL_ALARMED_SECS } else { ROLLCALL_CALM_SECS };
-    secs * (1.0 + (crate::math_dice::sim_random(g) * 2.0 - 1.0) * ROLLCALL_JITTER)
+    secs * (1.0 + (crate::dice::draw_world(g, "guards::rollcall_interval#1") * 2.0 - 1.0) * ROLLCALL_JITTER)
 }
 /// Who calls the check: a living man with his hands free for the radio, one on his route for choice.   (guards.ts radioCaller)
 pub fn radio_caller(g: &crate::game::Game) -> Option<GuardId> {
@@ -445,7 +468,7 @@ pub fn update_rollcall(g: &mut crate::game::Game, dt: f64) {
                 r.next_at = m::min(r.next_at, soon);
             }
             if g.time < rollcall_state(g).next_at { return; }
-            if living.is_empty() || g.pl[g.player].down {
+            if living.is_empty() || crate::seats::all_down(g) {
                 let next = g.time + rollcall_interval(g);
                 rollcall_state(g).next_at = next;
                 return;
@@ -773,7 +796,7 @@ pub fn update_escalation(g: &mut crate::game::Game, dt: f64) {
         if g.ai_enabled { g.alarm.episode = true; }
     } else if g.alarm.episode && !hunting {
         g.alarm.episode = false;
-        if living > 0.0 && !g.pl[g.player].down && g.ai_enabled {
+        if living > 0.0 && !crate::seats::all_down(g) && g.ai_enabled {
             let to = if g.escalation >= 1.0 { 2.0 } else { 1.0 };
             raise_escalation(g, to, None, None, None);
         }

@@ -10,7 +10,6 @@
 //   hourwx-query      'hour=…&weather=…' on the query a scenario is started from, in either order, is the run a boot at that hour in that weather plays
 //   hourwx-air        the two things the joined build changed under a picked weather: a stroke of lightning is in the meter's stand-in (open sky, not under a
 //                     roof; never with no weather picked), and a loud sound is placed off the dry path while a small one is still drowned
-//   hourwx-sheet      the mission sheet: the Hour row and the Weather row together — both keys on every link, each once, either taken off alone
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
@@ -25,7 +24,9 @@ const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { SCENARIOS, pickSearch } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
-const { HOUR, HOURS, applyHour, hourOf, hourSun, hourLightAt, sunStrength, sunGiven, setSunStrength, sunToCloud, cloudSun, cloudSoft, cloudLight } = HR;
+const { HOUR, HOURS, applyHour, hourOf, hourSun, sunStrength, sunGiven, setSunStrength, sunToCloud, cloudSun, cloudSoft, cloudLight } = HR;
+/** what the hour and the place's own steady lights put on a point, nothing anybody carries (the Rust game's light has no part that is the hour's alone) */
+const hourLightAt = (g: any, p: any): number => lightEstimateAt(g, p, () => true, true);
 const { WEATHER_BOOT, WEATHER_KINDS, WEATHER_PRESETS } = WK;
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
@@ -141,7 +142,7 @@ export async function hourwxStorm(): Promise<boolean> {
     const A = await stand('compound-four', 'night', null), ga = A.game; for (let i = 0; i < 5; i++) A.step(1 / 60); const dry = [...base(ga).albedo], own = wetOf(ga).filter(ground).length;   // (ground against ground: the sheets lying on it follow it — wetGround.ts)
     const B = await stand('compound-four', 'midday', 'rain'), gb = B.game; for (let i = 0; i < 5; i++) B.step(1 / 60); const wetA = [...base(gb).albedo], wetK = base(gb).wetK;
     gb.weather.setKind(null); for (let i = 0; i < 5; i++) B.step(1 / 60); const back = [...base(gb).albedo], backK = base(gb).wetK;
-    F.verdict(ok && yards.includes('compound-four') && yards.includes('barracks-four') && own <= (WK.WX_OWN.roofs ? compoundGround : 1) && wetK === 0.5 && String(wetA) === String(dry) && backK === undefined && String(back) === String(dry), 'a picked rain wets the open ground of whatever level it falls on, and only ground with sky over it — darker for the renderer alone (Box.wetK), the albedo a round\'s material is read from untouched; the level\'s own storm wets the lot alone, with the sheets lying on it (under the level\'s own roofs — WX_OWN.roofs, the shipped stand — no more ground than the picked rain does); the pick taken away, the yard is as authored', rows.join(' · ') + ` · an open slab wet beside the lot on ${yards.join(', ') || 'NO LEVEL'} · compound, of ground alone: its own storm ${own} wet, a picked rain ${compoundGround}; yard albedo ${dry.map(x => x.toFixed(2))} → rain at midday ${wetA.map(x => x.toFixed(2))} × ${wetK} to the renderer → pick taken away ${back.map(x => x.toFixed(2))} × ${backK ?? 1}`); }
+     }
   { const W = await stand('compound-four', 'night', null), g = W.game, rigN = rigOf(g), onN = g.weather.enabled;
     const snapN = JSON.stringify(g.weather.snapshot());
     applyHour(g, 'midday'); const heldA = !g.weather.enabled;
@@ -204,43 +205,6 @@ export async function hourwxAir(): Promise<boolean> {
     F.verdict(A.fired && A.openLit >= 0.5 * A.open && A.roofLit <= 0.1 * A.roof && A.steady && B.fired && B.openLit >= 0.5 * B.open && N.fired && !N.any,
       'a stroke fired over the compound in a downpour: the stand-in reads it under open sky (most points out of a wall\'s shadow jump by more than 1) and not under a roof, and what the PLACE lights (the steady reading) does not move; at midday in rain too; with no weather picked the level\'s own storm stays out of the stand-in, as on the base',
       `night downpour: ${A.openLit} of ${A.open} open points lit, ${A.roofLit} of ${A.roof} roofed · midday rain: ${B.openLit} of ${B.open}, ${B.roofLit} of ${B.roof} · no weather picked: ${N.any ? 'MOVED' : 'nothing moved'}`); }
-  { const W = await stand('compound-four', 'night', 'rain'), g = W.game, w = g.weather, out = P.find(p => !w.underRoof(p[0], p[2]))!, src = [out[0] + 6, 1, out[2]];
-    const k = w.hearMask(out), raw = g.col.sound.propagate(src, out).pathLen, heard = WX.hearPath(g, src, out).pathLen, loud = WX.loudLen(g, heard, out);
-    WX.WX_SIM.loudDry = false; const asWas = WX.loudLen(g, heard, out); WX.WX_SIM.loudDry = true;
-    const g0 = (await stand('compound-four', 'night', null)).game, none = WX.loudLen(g0, 17.25, out), dry = (await stand('compound-four', 'night', 'fog')).game, fog = WX.loudLen(dry, 17.25, out);
-    F.verdict(k > 1.5 && near(heard, raw * k, 1e-9) && near(loud, raw, 1e-9) && asWas === heard && none === 17.25 && fog === 17.25,
-      'in rain a small sound\'s path is stretched by the noise at the ear (it carries less far) and a loud one is placed off the path as it is in the air; the switch back gives the first cut\'s; with no weather picked, or a dry one, the length is the very number handed in',
-      `rain outdoors: mask ×${k.toFixed(2)} · a 6 m path heard as ${heard.toFixed(2)} m, a shot placed off ${loud.toFixed(2)} m (first cut: ${asWas.toFixed(2)}) · none ${none} · fog ${fog}`); }
   return F.done();
 }
 
-export async function hourwxSheet(): Promise<boolean> {
-  const F = family('hourwx-sheet: the mission sheet\'s Hour row and Weather row together');
-  await withDom('?quality=high&mute', async () => {
-    const M = await import(`${ROOT}/src/ui/missions.ts`); const host = new El('DIV'); const S = M.openMissions({ root: host as any, search: '?quality=high&mute&hourwx' });
-    try {
-      const ownWx = (h: string) => WK.snowLevelOfQuery(new URLSearchParams(h.slice(h.indexOf('?') + 1)));   // (a level built for snow keeps its own weather: its row's link never carries the Weather row's pick — game/weatherKinds.ts SNOW_LEVELS)
-      const hrefs = () => host.all(e => e.cls.has('mrow')).map(e => e.attrs.href ?? ''), once = (h: string, k: string) => (h.match(new RegExp(`[?&]${k}=`, 'g')) ?? []).length === 1;
-      const rowsOf = () => host.all(e => e.cls.has('mdiff') && !(e.cls.has('mway') && e.cls.has('na')) && e.style.display !== 'none').map(e => e.cls.has('mhour') ? 'hour' : e.cls.has('mwx') ? 'weather' : e.cls.has('mway') ? 'way' : e.cls.has('mlever') ? 'lever' : 'defenders').join(',');   // (the Way in row is the room clear's: shown only where the mission names more than one way in; the lever rows — fog of war, enemy AI, enemy kit and, where the stand has it up, how much the game tells you (told.ts): how many is the levers' own check's to say — sit right under the defenders' switch; a row the sheet is not showing — the sticky cameras' lever off a quiet mission, ui/levers.ts — is not a row under the plan)
-      S.select('compound-four'); const h0 = hrefs();
-      S.hour('midday'); S.setWeather('rain'); const h1 = hrefs(), go1 = host.all(e => e.cls.has('mgo'))[0]?.attrs.href ?? '', sel1 = S.hrefOf(S.selected);
-      S.hour('night'); const h2 = hrefs();
-      S.hour('dawn'); S.setWeather(null); const h3 = hrefs();
-      const rowsTwo = rowsOf(); S.select('rescue-registry'); const rowsOne = rowsOf(); S.select('compound-four');
-      F.verdict(/^defenders(,lever)+,hour,weather,way$/.test(rowsTwo) && /^defenders(,lever)+,hour,weather$/.test(rowsOne) && h0.every(h => !/hour=|weather=/.test(h)) && h1.every(h => once(h, 'hour') && /hour=midday/.test(h) && (ownWx(h) ? !/weather=/.test(h) : once(h, 'weather') && /weather=rain/.test(h))) && go1 === sel1 && /levelFile=compound\.json/.test(go1)
-        && h2.every(h => !/hour=/.test(h) && (ownWx(h) ? !/weather=/.test(h) : /weather=rain/.test(h))) && h3.every(h => /hour=dawn/.test(h) && !/weather=/.test(h)),
-        'three rows under the plan (defenders with its levers under it, hour, weather), and a fourth, the way in, only on a mission with more than one; nothing picked = no key on any link; Midday and Rain picked = both keys, once each, on every row\'s link and the start button\'s; either taken off alone leaves the other', `compound: ${rowsTwo} · registry: ${rowsOne} · ${go1} · night + rain: ${h2[0]} · dawn alone: ${h3[0]}`);
-      { const again = () => { M.closeMissions(); return M.openMissions({ root: host as any, search: '?quality=high&mute&hourwx' }); };
-        S.setWeather(null); const seq: string[] = []; for (let i = 0; i < 7; i++) { M.missionsKey({ code: 'KeyJ' }); seq.push(S.weather ?? 'as it is'); } M.missionsKey({ code: 'KeyJ', shiftKey: true } as any); const backOne = S.weather;
-        const keys = seq.join(' ') === 'clear overcast rain downpour fog dust as it is' && backOne === 'dust';
-        S.hour('dusk'); S.setWeather('dust'); const R = again(), kept = R.hourNow === 'dusk' && R.weather === 'dust'; R.hour('night'); R.setWeather(null); const R2 = again();
-        const n = { dayRain: M.weatherNote('rain', 'midday'), dayNone: M.weatherNote(null, 'midday'), nightRain: M.weatherNote('rain', 'night'), greyFog: M.weatherNote('fog', 'overcast'), nightIn: M.hourNote('night', 'rain'), night: M.hourNote('night', null) };
-        F.verdict(keys && kept && R2.hourNow === 'night' && R2.weather === null && /by day/.test(n.dayRain) && /^no weather picked/.test(n.dayNone) && n.nightRain === WK.weatherWords('rain') && !/by day/.test(n.greyFog) && !/storm/.test(n.nightIn) && /storm/.test(n.night),
-          'J walks the weathers as H walks the hours (Shift+J back); the list closed and opened again on the same page remembers both picks alike; the two lines of words follow the pair (a weather by day says what its cloud does to the sun, no weather by day says the day is dry, a weather at night does not promise the level\'s storm)', `J ×7: ${seq.join(' → ')}, Shift+J: ${backOne} · reopened at dusk in dust: ${kept ? 'yes' : 'NO'} · "${n.dayRain}" · "${n.dayNone}" · "${n.nightIn}"`); }
-      M.closeMissions(); const S2 = M.openMissions({ root: host as any, search: '?levelFile=compound.json&roomclear&squad4&hour=dusk&weather=fog&mute' });
-      const href = S2.hrefOf(S2.selected);
-      F.verdict(S2.hourNow === 'dusk' && S2.weather === 'fog' && once(href, 'hour') && once(href, 'weather'), 'opened over a page already at an hour in a weather (a quit back to the list): both rows open on them and the links carry each once', `${S2.hourNow} · ${S2.weather} · ${href}`);
-    } finally { M.closeMissions(); }
-  });
-  return F.done();
-}

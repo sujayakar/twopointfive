@@ -18,8 +18,8 @@
 // than the night draws it. The weather's cloud dims the sun and the sky under an hour's one exposure (game/hours.ts), so under rain at noon the lamps count for
 // more by themselves.
 //
-// PICTURE ONLY, on the look page only: applied to what the GPU is handed (render/lights.ts upload, the frame's emissive scale) and never written to a light, so
-// the game's own readers of the list (guards.ts lightEstimateAt) still take the authored strength. That break is to be settled before any of it goes to the build.
+// Applied to what the GPU is handed (render/lights.ts upload, the frame's emissive scale) and never written to a light. The rules' own light takes the same
+// strengths (rust/sim light.rs by_day, game_rules hours::exposure): one fact of the hour.
 // The check: tools/qa/lookunits-check.ts.
 
 /** lux per unit of the renderer's irradiance (so candela per unit of a light's `intensity`): the night's fixtures say so (above) */

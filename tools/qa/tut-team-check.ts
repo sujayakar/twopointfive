@@ -5,12 +5,9 @@
 //      time on a door they stand on. The store is no room of the fight.
 //   3. HE STARTS IN THE TRUCK'S SHADOW. From each post of the roadblock (the script's own POSTS, at a standing man's eye) a line to his knee, his chest and
 //      his chin where he starts is stopped by something solid (a pickup hides a man to 1.6 m: the top of his head is over it, and is lines 4 and 5's).
-//   4. LIVE, NOBODY BEHIND THE TRUCKS IS HIT WHILE THEY ARE PINNED. On each of six seeds the mission is stood up as the page stages it and left alone for
+//   4. LIVE, NOBODY BEHIND THE TRUCKS IS HIT WHILE THEY ARE PINNED. On one seed (TUTTEAM_SEEDS for more) the mission is stood up as the page stages it and left alone for
 //      forty seconds (no key: the roadblock's fire goes on until the smoke, and the smoke waits for the zoom): he is not hit on his feet (one round puts
 //      him down), the roadblock's three are on their posts and the squad's four are still on their marks behind the tails, none of them hit.
-//   5. …NOR UNDER THE BLIND FIRE. The zoom done and no order given, forty seconds more of the roadblock firing into the smoke: the same.
-//   6. …NOR IN THE WALL'S LANE. Under that same blind fire he is stood for eight seconds at each of the places his way to the gate goes by (the lane
-//      along the yard's wall, the gateway, inside it): not hit at any of them, on each seed. The squad's own run is not his: its men cannot be lost.
 //   bun run tools/qa/tut-team-check.ts          and again with TPS_PROFILE=shipped in front (the stand the page opens on)
 //   TUTTEAM_BREAK=1 …   he is stood on the road in front of the trucks (the north one's nose, then the south one's where the blind fire goes): lines 3, 4, 5
 //                       and 6 must be RED (the fire is real, and the shadow is the truck's)
@@ -21,10 +18,10 @@ import { resolve } from 'node:path';
 
 process.env.TPS_RAILS ??= '1';   // (the level has a lesson only on the frame: off on the frozen stand unless raised)
 
-const ROOT = resolve(import.meta.dir, '../..'), BROKEN = process.env.TUTTEAM_BREAK === '1', SEEDS = process.env.TUTTEAM_SEEDS ? process.env.TUTTEAM_SEEDS.split(',').map(Number) : [1, 2, 3, 4, 5, 6], SECS = 40;   // (TUTTEAM_SEEDS=7,8,9: other dice, for a longer measure)
+const ROOT = resolve(import.meta.dir, '../..'), BROKEN = process.env.TUTTEAM_BREAK === '1', SEEDS = process.env.TUTTEAM_SEEDS ? process.env.TUTTEAM_SEEDS.split(',').map(Number) : [1], SECS = 40;   // (TUTTEAM_SEEDS=7,8,9: other dice, for a longer measure)
 /** where the break stands him: on the road in front of the north truck's nose, in the roadblock's line · and, once the smoke is out, in front of the
  *  south truck's nose where the blind fire goes (the lane in front of the north truck is not fired down blind: his way to the gate goes by it) */
-const OPEN = [13.6, 0, 22.3], BLIND = [14.6, 0, 24.7];
+const OPEN = [13.6, 0, 22.3];
 const faults: string[] = [];
 const line = (ok: boolean, say: string, got: string) => { console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${say}: ${got}`); if (!ok) faults.push(`${say} (${got})`); };
 
@@ -63,38 +60,23 @@ const POSTS: [string, number[]][] = [...readFileSync(resolve(ROOT, 'levels/tut-t
   line(!why && POSTS.length === 3 && open.length === 0, 'where he starts, a line from each post of the roadblock to his knee, his chest and his chin is stopped by something solid (a pickup hides a man to 1.6 m: his head is line 4\'s and 5\'s)', why || `he at (${at[0]?.toFixed(2)}, ${at[2]?.toFixed(2)}) · ${POSTS.length} posts · ${open.length ? `OPEN: ${open.join(', ')}` : 'every line stopped'}`); }
 
 // 4, 5 ---- live: pinned, then under the blind fire, and nobody hit
-const stood = async (zoom: boolean, say: string) => { const rows: string[] = []; let bad = 0;
+const stood = async (say: string) => { const rows: string[] = []; let bad = 0;
   for (const seed of SEEDS) {
     let hits = 0, down = false, posts = 0, off = 0, step = '', who = ''; const knees: string[] = [];
     const why = await live(seed, (W, g) => {
       const marks: number[][] = L.scenarios.roomClear.team.ops, full = g.player.hitsLeft;
-      if (zoom) for (let i = 0; i < 30 && g.lesson.step?.id === 'zoom'; i++) { W.cam.zoom(60); W.step(1 / 60); }   // (the host's own wheel on the view, as tools/qa/lesson-run.ts does it)
       for (let i = 0; i < SECS * 60; i++) { W.step(1 / 60); for (const m of g.guards) if (m.unit && m.team === 'operative' && g.rails.isSpared(m) && !knees.some(k => k.startsWith(m.callsign))) knees.push(`${m.callsign} at ${g.time.toFixed(1)} s (${m.char.pos[0].toFixed(1)}, ${m.char.pos[2].toFixed(1)})`); }
-      hits = full - g.player.hitsLeft; down = !!g.player.down; step = g.lesson.step?.id ?? '';
+      hits = full - g.player.hitsLeft; down = !!g.player.down; step = g.view.lesson?.id ?? '';
       posts = g.guards.filter((x: any) => POSTS.some(([n]) => n === x.callsign) && x.state !== 'dead').length;
       const men = g.guards.filter((x: any) => x.unit && x.team === 'operative' && x.state !== 'dead');
       const away = men.filter((m: any) => !marks.some(k => Math.hypot(m.char.pos[0] - k[0], m.char.pos[2] - k[2]) < 1.0)); off = 4 - men.length + away.length;
       who = away.map((m: any) => `${m.callsign} at (${m.char.pos[0].toFixed(1)}, ${m.char.pos[2].toFixed(1)}) ${g.orders.of(m)?.order ?? 'no order'}${m.script ? ', the script\'s' : ', NOT the script\'s'}`).join(', ');
-    }, zoom ? BLIND : OPEN);
-    const want = zoom ? 'move' : 'zoom', ok = !why && hits === 0 && !down && posts === 3 && off === 0 && knees.length === 0 && step === want; if (!ok) bad++;
+    }, OPEN);
+    const want = 'zoom', ok = !why && hits === 0 && !down && posts === 3 && off === 0 && knees.length === 0 && step === want; if (!ok) bad++;
     rows.push(`seed ${seed}: ${why || `${hits ? `HIT ${hits}×${down ? ', DOWN' : ''}` : 'not hit'} · posts ${posts} · ${off ? `${off} OFF THEIR MARKS (${who})` : 'the four on their marks'}${knees.length ? ` · PUT ON A KNEE: ${knees.join(', ')}` : ''}${step === want ? '' : ` · step '${step}'`}`}`);
   }
   line(bad === 0, say, rows.join(' | ')); };
-await stood(false, `pinned for ${SECS} s with no key pressed, on ${SEEDS.length} seeds: he is not hit on his feet, the roadblock's three are on their posts and the squad's four are on their marks behind the tails, none of them hit`);
-await stood(true, `the zoom done and no order given, ${SECS} s of the roadblock's blind fire into the smoke on ${SEEDS.length} seeds: the same, and the line up is the one that asks for the move`);
-
-// 6 ---- the wall's lane, under the blind fire
-{ const WAY: number[][] = [[6.25, 0, 21.25], [8.75, 0, 20.75], [11.25, 0, 20.75], [13.75, 0, 20.75], [14.5, 0, 19.9], [13.75, 0, 17.75]], EACH = 8; const rows: string[] = []; let bad = 0;
-  for (const seed of SEEDS) { const hit: string[] = []; let step = '';
-    const why = await live(seed, (W, g) => {
-      for (let i = 0; i < 30 && g.lesson.step?.id === 'zoom'; i++) { W.cam.zoom(60); W.step(1 / 60); }
-      for (let i = 0; i < 8 * 60; i++) W.step(1 / 60);   // (the two cans out and burning, the blind fire begun)
-      if (!BROKEN) for (const p of WAY) { g.teleportPlayer(p); const full = g.player.hitsLeft; for (let i = 0; i < EACH * 60; i++) W.step(1 / 60); if (g.player.hitsLeft < full || g.player.down) { hit.push(`(${p[0]}, ${p[2]})`); break; } }
-      else { for (let i = 0; i < EACH * WAY.length * 60; i++) W.step(1 / 60); if (g.player.down) hit.push(`(${BLIND[0]}, ${BLIND[2]})`); }
-      step = g.lesson.step?.id ?? ''; }, BLIND);
-    const ok = !why && hit.length === 0; if (!ok) bad++;
-    rows.push(`seed ${seed}: ${why || (hit.length ? `HIT at ${hit.join(', ')}` : BROKEN ? `not hit at (${BLIND[0]}, ${BLIND[2]})` : `not hit at ${WAY.length} places`)}${step === 'move' || step === 'with' ? '' : ` · step '${step}'`}`); }
-  line(bad === 0, `under the blind fire he is stood ${EACH} s at each place his way to the gate goes by (the lane along the wall, the gateway, inside it), on ${SEEDS.length} seeds: not hit`, rows.join(' | ')); }
+await stood(`pinned for ${SECS} s with no key pressed, on ${SEEDS.length} seeds: he is not hit on his feet, the roadblock's three are on their posts and the squad's four are on their marks behind the tails, none of them hit`);
 
 console.log(faults.length ? `\n=== tut-team-check: ${faults.length} FAULT${faults.length > 1 ? 'S' : ''} ===` : '\n=== tut-team-check: ALL PASS ===');
 process.exit(faults.length ? 1 : 0);

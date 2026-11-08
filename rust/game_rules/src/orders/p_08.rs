@@ -47,16 +47,6 @@ pub fn squad_orders_asked(g: &mut crate::game::Game, gd: GuardId, to: V3) -> cra
     SquadOrdersAsked { why: r.why, lock: r.lock.map(|l| SquadOrdersAskedLock { door: l.door, side: l.side }) }
 }
 
-/// A question asked by the picture: `fn_` with the walks it asks about kept in the asker's own table, not in `reached`.   (orders.ts SquadOrders.askAside)
-pub fn squad_orders_ask_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, own: &mut crate::orders::SquadOrdersAskAsideOwn, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
-    let mine = core::mem::take(&mut g.orders.reached);
-    g.orders.reached = own.r.take().unwrap_or_default();
-    let out = fn_(g);
-    own.r = Some(core::mem::take(&mut g.orders.reached));
-    g.orders.reached = mine;
-    out
-}
-
 /// Has he a line to cover it from where he stands: to a door, the way to it clear at eye height; 'that way', nothing in his face for two metres.   (orders.ts SquadOrders.hasLine)
 pub fn squad_orders_has_line(g: &mut crate::game::Game, gd: GuardId, t: &crate::orders::OrderTarget) -> bool {
     let p = man_pos(g, gd);
@@ -281,26 +271,12 @@ pub fn squad_orders_pair(g: &mut crate::game::Game, men: &[GuardId], spots: &[V3
 
 // ------------------------------------------------------------ the HUD's words
 
-/// The squad's orders in one line, for a panel or a log: who the next order goes to, what the menu is up on, each man with what he is doing.
-/// (src/game/orders.ts:2626 SquadOrders.summary)
-pub fn squad_orders_summary(g: &mut crate::game::Game) -> String {
-    if !squad_orders_active(g, &crate::seats::here(g)) { return String::from("no squad"); }
-    let who = squad_orders_who_words(g, &crate::seats::here(g), None);
-    let menu = match g.orders.menu.as_ref().map(|m| m.target.clone()) {
-        Some(t) => format!("menu up on {} · ", squad_orders_hover_words(g, Some(&t))),
-        None => String::new(),
-    };
-    let mut men: Vec<String> = Vec::new();
-    for gd in squad_orders_squad(g, &crate::seats::here(g)) { let s = squad_orders_status_of(g, gd); men.push(format!("{}: {}", g.gd[gd].callsign, s)); }
-    format!("orders to {} · {}{}", who, menu, men.join(" · "))
-}
-
 /// What one man is doing, in a few words.   (orders.ts SquadOrders.statusOf)
-pub fn squad_orders_status_of(g: &mut crate::game::Game, gd: GuardId) -> String {
+pub fn squad_orders_status_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> String {
     if g.gd[gd].state == crate::game::GuardState::Dead {
-        return String::from(if g.gd[gd].wound.is_some() { "wounded" } else { "down" });
+        return String::from("down");
     }
-    if let Some(a) = g.orders.asg.get(gd).copied() {
+    if let Some(a) = seat.orders.asg.get(gd).copied() {
         let w = if g.tab.orders_assignment[a].post.is_none() && crate::pairup::pair_up(g, crate::pairup::PairUpRule::Word) {
             crate::sneak::sneak_word(g, gd)
         } else { None };
@@ -313,7 +289,7 @@ pub fn squad_orders_status_of(g: &mut crate::game::Game, gd: GuardId) -> String 
     }
     for own in [true, false] {
         let mut i = 0;
-        while i < g.orders.owners.len() {
+        while i < seat.orders.owners.len() {
             if nightbreach_owns(g, gd) == own {
                 if let Some(s) = nightbreach_status(g, gd) {
                     if !s.is_empty() { return s; }
@@ -410,10 +386,10 @@ pub fn prop_way(g: &crate::game::Game, from: V3, plain: &[V3], round: Option<&[V
 }
 
 /// The cells about every movable thing made dear, for a teammate only. None: `pen` itself, untouched (guards.ts:1491 `round !== pen`), and the one search is the search it was.   (orders.ts propPenalty)
-pub fn prop_penalty(g: &mut crate::game::Game, gd: GuardId, pen: Option<&crate::lanes::LanePenalty>) -> Option<crate::orders::PropPenalty> {
+pub fn prop_penalty(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, pen: Option<&crate::lanes::LanePenalty>) -> Option<crate::orders::PropPenalty> {
     if g.gd[gd].team != crate::teams::Team::Operative || g.props.props.is_empty() { return None; }
     let mut i = 0;
-    while i < g.orders.owners.len() {
+    while i < seat.orders.owners.len() {
         if nightbreach_owns(g, gd) { return None; }
         i += 1;
     }
@@ -502,7 +478,7 @@ pub fn off_line(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
 }
 
 /// Which face of the door's frame a point is on (+1 = the CCW side of the closed leaf).   (orders.ts sideOf)
-pub fn side_of(g: &mut crate::game::Game, d: DoorId, p: V3) -> f64 {
+pub fn side_of(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
     let (th, h) = (g.dr[d].def.closed_dir, g.dr[d].def.hinge);
     if m::cos(th) * (p[2] - h[1]) - m::sin(th) * (p[0] - h[0]) >= 0.0 { 1.0 } else { -1.0 }
 }

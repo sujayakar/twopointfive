@@ -13,19 +13,19 @@ pub fn slab_row_new(g: &crate::game::Game, door: f64) -> SlabRowId {
 }
 
 /// One double of the slab's row, as it stands now.   (doors.ts SlabRow.g)
-pub fn slab_row_g(g: &mut crate::game::Game, id: SlabRowId, k: crate::doors::SlabRowGK) -> f64 {
+pub fn slab_row_g(g: &crate::game::Game, id: SlabRowId, k: crate::doors::SlabRowGK) -> f64 {
     let r = row_now(g, id);
     slab_col(&::sim::state::state_read(g.sim).slabs, k, r)
 }
 
 /// The slab row's word of truths.   (doors.ts SlabRow.f)
-pub fn slab_row_f(g: &mut crate::game::Game, id: SlabRowId) -> f64 {
+pub fn slab_row_f(g: &crate::game::Game, id: SlabRowId) -> f64 {
     let r = row_now(g, id);
     ::sim::state::state_read(g.sim).slabs.flags[r] as f64
 }
 
 /// Its centre.   (doors.ts SlabRow.p)
-pub fn slab_row_p(g: &mut crate::game::Game, id: SlabRowId) -> [f64; 3] {
+pub fn slab_row_p(g: &crate::game::Game, id: SlabRowId) -> [f64; 3] {
     let x = slab_row_g(g, id, SlabRowGK::Px);
     let y = slab_row_g(g, id, SlabRowGK::Py);
     let z = slab_row_g(g, id, SlabRowGK::Pz);
@@ -33,7 +33,7 @@ pub fn slab_row_p(g: &mut crate::game::Game, id: SlabRowId) -> [f64; 3] {
 }
 
 /// Its velocity.   (doors.ts SlabRow.v)
-pub fn slab_row_v(g: &mut crate::game::Game, id: SlabRowId) -> [f64; 3] {
+pub fn slab_row_v(g: &crate::game::Game, id: SlabRowId) -> [f64; 3] {
     let x = slab_row_g(g, id, SlabRowGK::Vx);
     let y = slab_row_g(g, id, SlabRowGK::Vy);
     let z = slab_row_g(g, id, SlabRowGK::Vz);
@@ -41,37 +41,37 @@ pub fn slab_row_v(g: &mut crate::game::Game, id: SlabRowId) -> [f64; 3] {
 }
 
 /// The world angle of its width axis.   (doors.ts SlabRow.a)
-pub fn slab_row_a(g: &mut crate::game::Game, id: SlabRowId) -> f64 {
+pub fn slab_row_a(g: &crate::game::Game, id: SlabRowId) -> f64 {
     slab_row_g(g, id, SlabRowGK::A)
 }
 
 /// Its turn.   (doors.ts SlabRow.spin)
-pub fn slab_row_spin(g: &mut crate::game::Game, id: SlabRowId) -> f64 {
+pub fn slab_row_spin(g: &crate::game::Game, id: SlabRowId) -> f64 {
     slab_row_g(g, id, SlabRowGK::Spin)
 }
 
 /// 0 upright to π/2 flat.   (doors.ts SlabRow.tip)
-pub fn slab_row_tip(g: &mut crate::game::Game, id: SlabRowId) -> f64 {
+pub fn slab_row_tip(g: &crate::game::Game, id: SlabRowId) -> f64 {
     slab_row_g(g, id, SlabRowGK::Tip)
 }
 
 /// How fast it is tipping.   (doors.ts SlabRow.tipV)
-pub fn slab_row_tip_v(g: &mut crate::game::Game, id: SlabRowId) -> f64 {
+pub fn slab_row_tip_v(g: &crate::game::Game, id: SlabRowId) -> f64 {
     slab_row_g(g, id, SlabRowGK::TipV)
 }
 
 /// The slab's own clock.   (doors.ts SlabRow.t)
-pub fn slab_row_t(g: &mut crate::game::Game, id: SlabRowId) -> f64 {
+pub fn slab_row_t(g: &crate::game::Game, id: SlabRowId) -> f64 {
     slab_row_g(g, id, SlabRowGK::T)
 }
 
 /// The angle the door reads as while off.   (doors.ts SlabRow.ang)
-pub fn slab_row_ang(g: &mut crate::game::Game, id: SlabRowId) -> f64 {
+pub fn slab_row_ang(g: &crate::game::Game, id: SlabRowId) -> f64 {
     slab_row_g(g, id, SlabRowGK::Ang)
 }
 
 /// The clock before which a slab with no clear spot is not searched for again.   (doors.ts SlabRow.wedged)
-pub fn slab_row_wedged(g: &mut crate::game::Game, id: SlabRowId) -> f64 {
+pub fn slab_row_wedged(g: &crate::game::Game, id: SlabRowId) -> f64 {
     slab_row_g(g, id, SlabRowGK::Wedged)
 }
 
@@ -94,7 +94,7 @@ pub fn slab_row_landed(g: &mut crate::game::Game, id: SlabRowId) -> bool {
 }
 
 /// Whose doing it was.   (doors.ts SlabRow.who)
-pub fn slab_row_who(g: &mut crate::game::Game, id: SlabRowId) -> f64 {
+pub fn slab_row_who(g: &crate::game::Game, id: SlabRowId) -> f64 {
     let r = row_now(g, id);
     ::sim::state::state_read(g.sim).slabs.who[r] as f64
 }
@@ -118,7 +118,7 @@ pub fn drive_cols_new(g: &crate::game::Game, i: f64) -> DriveColsId {
 }
 
 /// One column of this door.   (doors.ts DriveCols.g)
-pub fn drive_cols_g(g: &mut crate::game::Game, id: DriveColsId, k: f64) -> f64 {
+pub fn drive_cols_g(g: &crate::game::Game, id: DriveColsId, k: f64) -> f64 {
     ::sim::state::state_read(g.sim).doors.c[k as usize][id.0 as usize]
 }
 
@@ -200,7 +200,7 @@ pub fn drive_cols_set_hit(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
 }
 
 /// `T.rowOf(this.door)`, for a read of the row: a SlabRow is good only while its door has a slab (Door.slab answers null otherwise).
-fn row_now(g: &mut crate::game::Game, id: SlabRowId) -> usize {
+fn row_now(g: &crate::game::Game, id: SlabRowId) -> usize {
     let r = crate::sim_slabshome::slab_store_row_of(g, id.0 as f64);
     debug_assert!(r >= 0.0, "a SlabRow read with no slab on its door");
     r as usize

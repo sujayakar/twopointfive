@@ -25,8 +25,7 @@ fn head_at(g: &Game, c: CharId) -> f64 {
 
 /// Once a tick, after the weather has written this tick's rain: soak / dry everybody. The rule is rust/sim's `weather::wet_step`, a man's coat handed in and
 /// back. A man's coat is the picture's, but the call is the game's: it stands the rule's copy of the box world (`rule_open`), asks the roofs and may cast the
-/// sky's rays, and what it leaves on the copy the next rule finds. Sam's drips and prints after it (samAftermath) tell the host; agePrints has nothing to age
-/// while `decals_add` answers no decal. (src/game/wet.ts:96 updateWetness)
+/// sky's rays, and what it leaves on the copy the next rule finds. Sam's drips and prints after it (samAftermath) tell the host. (src/game/wet.ts:96 updateWetness)
 pub fn update_wetness(g: &mut crate::game::Game, dt: f64) {
     if dt <= 0.0 { return; }
     crate::weather::weather_roofs_now(g);
@@ -61,7 +60,6 @@ pub fn update_wetness(g: &mut crate::game::Game, dt: f64) {
         }
     });
     crate::seats::each_seat(g, &mut |v: &mut Game| sam_aftermath(v, dt));
-    age_prints(g);
 }
 
 /// is `c` standing under the open sky: the module's rule, his sky's memory handed in and back (it holds a quarter of a second a man). (src/game/wet.ts:75 openSky)
@@ -86,10 +84,6 @@ fn open_sky_of(g: &mut Game, c: CharId) -> bool {
 /// Is `c` under the open sky, asked from outside the tick (a panel's line, a check). The same ask as the tick's, so it moves his sky's memory as the
 /// TypeScript's did. (src/game/wet.ts:75 openSky)
 pub fn open_sky(g: &mut Game, c_2: CharId) -> bool { open_sky_of(g, c_2) }
-
-/// Is `p` under one of the roofs the rain is cut by: the weather's own footprints in force. (src/game/wet.ts:64 underRoofRect; its arm for a caller with
-/// no game, the office's two fixed rectangles, has no caller here: a Rust game always has its weather)
-pub fn under_roof_rect(g: &mut Game, p: V3) -> bool { crate::weather::weather_under_roof(g, p[0], p[2]) }
 
 /// Sam indoors after the rain: his print budget and his drip clock. The drops themselves are GPU particles (`drip` below: nothing with no particle
 /// system), but the ask of the sky is the rule's and moves his sky's memory, which the next soak reads. (src/game/wet.ts:115 samAftermath)
@@ -123,7 +117,6 @@ const DRIP_FROM: [crate::character::Bone; 5] = [crate::character::Bone::HandL, c
 
 /// One drop off him: from a hand, the chin or the hem of the jacket. With no particle system nothing moves, as in the TypeScript. (src/game/wet.ts:129 drip)
 pub fn drip(g: &mut crate::game::Game, c_2: CharId) {
-    if !crate::particle_fx::gpu_fx(g) { return; }
     let n = g.m.wet.drip_n;
     g.m.wet.drip_n = n + 1.0;
     let k = DRIP_FROM[js::rem(n, 5.0) as usize];
@@ -171,26 +164,16 @@ pub fn wet_footfall(g: &mut crate::game::Game, left_hint: bool) {
     let hit = crate::scene_collision::raycast(g, [centre[0], 0.4, centre[2]], [0.0, -1.0, 0.0], 0.8);
     let y = match hit { Some(h) => 0.4 - h.t, None => 0.0 };
     centre[1] = y + 0.003;
-    // seed bit 0 = which foot (the sole is mirrored), the rest = look
-    let seed = (if left { 0 } else { 1 }) | (js::to_i32(g.stats.wet.prints as f64 * 37.0) & 0xffe);
-    let added = crate::render_decals::decals_add(g, crate::render_decals::DecalKind::Wetprint, centre, [0.0, 1.0, 0.0], Some(0.17), Some(crate::render_decals::DecalOpts {
+    // seed bit 0 = which foot (the sole is mirrored); a print's look, and how it dries, are the mark's own (render_decals set.rs)
+    let seed = if left { 0 } else { 1 };
+    crate::render_decals::decals_add(g, crate::render_decals::DecalKind::Wetprint, centre, [0.0, 1.0, 0.0], Some(0.17), Some(crate::render_decals::DecalOpts {
         tangent: Some(dir),
         param: Some(k),
         look: Some(true),
         seed: Some(seed as f64),
         ..crate::render_decals::DecalOpts::zeroed()
     }));
-    let Some(d) = crate::look_decals::look_decal(g, added.as_ref()) else { return; };
-    let t0 = g.time;
-    g.m.wet.prints.get_or_insert_with(|| crate::wet::WetModPrintsValue { list: Vec::new(), age_t: 0.0 }).list.push(crate::wet::PrintRec { d, t0, k0: k });
-    g.stats.wet.prints += 1;
 }
-
-/// BOUNDARY NO-OP: the list it ages is empty while `decals_add` answers no decal, and the TypeScript with an empty list does nothing. (src/game/wet.ts:158 agePrints)
-pub fn age_prints(g: &crate::game::Game) {}
-
-/// BOUNDARY NO-OP (the picture's / the host's): (src/game/wet.ts:179 clearWetPrints)
-pub fn clear_wet_prints(g: &crate::game::Game) {}
 
 /// BOUNDARY: the host's debug panel and `__wet.summary()` write this line (coats, prints, drips) at the swap; a headless run has no panel, so no line.   (src/game/wet.ts:204 wetSummary)
 pub fn wet_summary(g: &crate::game::Game) -> String { String::new() }

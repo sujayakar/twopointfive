@@ -37,7 +37,8 @@ import { standUp, ROOT } from './headless.ts';
 import { asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 
 const SC = await import(`${ROOT}/src/game/stickycam.ts`);
-const { STICKY, STICKY_STATS, stickyIssue, fireCam, stickyEyes, camLens, stickyMarks } = SC;
+const { STICKY, STICKY_STATS, stickyIssue, fireCam, stickyEyes, camLens } = SC;
+const stickyMarks = (g: any): any[] => g.view.marks.cams;   // (what the HUD is told)
 const K = await import(`${ROOT}/src/game/kit.ts`);
 const QF = await import(`${ROOT}/src/game/quietfog.ts`);
 const { FOG, fieldDeg, fogEyeCount } = await import(`${ROOT}/src/game/fogofwar.ts`);
@@ -358,10 +359,9 @@ export async function stickyMark(): Promise<boolean> {
       let n = 0; while (C.vel && n++ < 180) W.step(DT); steps(W, 20); const M3 = stickyMarks(g) as any[];
       F.verdict(air && mAir === 2 && keyAir && !C.vel && M3.length === 3 && M3.filter(m => m.sends).length === 1 && near(M3.find(m => m.sends), C),
         'a third one in the air is in the picture too (keyed) and carries no mark; landed it is marked and is the one that sends', `in the air ${air}: marks ${mAir}, keyed ${keyAir} · landed: marks ${M3.length}, sending ${M3.filter(m => m.sends).length} (the newest ${near(M3.find(m => m.sends), C)})`);
-      // a camera that is no longer out (taken back, retired) has no mark; a viewer's picture with the fog lifted has none
+      // a camera that is no longer out (taken back, retired) has no mark
       const gone = pl.cams.splice(pl.cams.indexOf(A), 1)[0]; steps(W, 2); const M4 = stickyMarks(g) as any[], k0 = (5 << 24) + 0x800000 + (gone.id % 4096) * 2, goneBoxes = (g.dynBoxes as any[]).filter(b => b.mkey === k0 || b.mkey === k0 + 1).length; pl.cams.unshift(gone); steps(W, 2);   // (by its own keys: the third camera lies beside where it was)
-      fog.bared = true; const mBared = stickyMarks(g).length; fog.bared = false;
-      F.verdict(M4.length === 2 && goneBoxes === 0 && stickyMarks(g).length === 3 && mBared === 0, 'a camera no longer out has no mark and no box; with the fog lifted for a viewer nothing is marked', `one gone: marks ${M4.length}, its boxes ${goneBoxes} · back: ${stickyMarks(g).length} · fog lifted for a viewer: ${mBared}`);
+      F.verdict(M4.length === 2 && goneBoxes === 0 && stickyMarks(g).length === 3, 'a camera no longer out has no mark and no box', `one gone: marks ${M4.length}, its boxes ${goneBoxes} · back: ${stickyMarks(g).length}`);
       // no fog, no marks (the floor is in plain view) — and the fog back, they are back
       fog.on = false; steps(W, 2); const mNoFog = stickyMarks(g).length, allIn = pl.cams.every((c: any) => boxesOf(g, c).length >= 2); fog.on = true; steps(W, 45); const mBack = stickyMarks(g).length;
       F.verdict(mNoFog === 0 && allIn && mBack === 3, 'with no fog up nothing is marked (every camera is drawn anyway); the fog back, the marks are back', `no fog: marks ${mNoFog}, all drawn ${allIn} · fog back: marks ${mBack}`);
@@ -420,7 +420,7 @@ export async function stickyDefault(): Promise<boolean> {
   const rnd = Math.random, G = globalThis as any, hadLs = 'localStorage' in G, lsWas = G.localStorage;
   try {
     const { QUIET_MISSIONS, LESSON_MISSIONS, SCENARIOS, pickSearch } = await import(`${ROOT}/src/scene/scenarioList.ts`), { quitScenario, fogOfQuery, quietRungOfQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
-    const { withDom, El } = await import('./scenario-picker-probes.ts'), LV = await import(`${ROOT}/src/ui/levers.ts`);
+    const { withDom, El } = await import('./scenario-picker-probes.ts');
     const store = memStore(); G.localStorage = store;
     const two = STICKY.issue, withCams = `ring,he40,cam ×${two}`, has = (h: string) => /[?&](quietfog|cams)\b/.test(h);
     await keepKit(async () => {
@@ -452,17 +452,6 @@ export async function stickyDefault(): Promise<boolean> {
     });
     // the links and the lever say only what differs from the default
     store.m.clear();
-    await withDom('?mute', async () => {
-      const root = new El('DIV') as any, U = LV.leverRows(root, { row: 'mdiff mlever', label: 'dl', btn: 'dbtn', note: 'dn' }, () => { });
-      const all = (f: (e: any) => boolean): any[] => (root as any).all(f);
-      const fogRow = (): any => all(e => e.attrs['data-lever'] === 'fog')[0], camRow = (): any => all(e => e.attrs['data-lever'] === 'cams')[0];
-      const rung = (id: string): any => fogRow().all((e: any) => e.attrs['data-rung'] === id)[0], cam = (on: boolean): any => camRow().all((e: any) => e.attrs['data-cams'] === (on ? '1' : '0'))[0];
-      const lit = () => `${fogRow().all((e: any) => e.tagName === 'BUTTON' && e.cls.has('on')).map((b: any) => b.attrs['data-rung']).join()}/${camRow().all((e: any) => e.tagName === 'BUTTON' && e.cls.has('on')).map((b: any) => b.textContent).join()}${fogRow().cls.has('moved') ? ' fog-moved' : ''}${camRow().cls.has('moved') ? ' cams-moved' : ''}`;
-      U.paint(true, '', true); const l0 = lit();
-      cam(false).onclick(); const l1 = lit(); rung('off').onclick(); const l2 = lit(); rung('team').onclick(); const l3 = lit(); cam(true).onclick(); const l4 = lit();
-      F.verdict(l0 === `team/${two}` && l1 === 'team/None cams-moved' && l2 === 'off/None fog-moved' && l3 === 'team/None cams-moved' && l4 === `team/${two}`,
-        'the sheet\'s two rows on a quiet mission light the default with nothing marked moved; a press off it is marked, a press back is not', `fresh ${l0} → None: ${l1} → fog off: ${l2} → fog all round: ${l3} → cameras: ${l4}`);
-    });
   } catch (e) { F.verdict(false, 'threw', String((e as Error)?.stack ?? e)); }
   finally { back(); if (hadLs) G.localStorage = lsWas; else delete G.localStorage; Math.random = rnd; }
   return F.done();

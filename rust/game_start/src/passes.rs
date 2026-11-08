@@ -1,8 +1,8 @@
-//! WHAT A STAND-UP DOES TO A LEVEL'S BOXES before they go to the world (`src/host/standup.ts populateHost`), in its order: the kit's octagons made
-//! one round box each (`src/scene/round.ts`), the thin things that stand free marked (`src/scene/thin.ts`), a window's bars marked
+//! WHAT A STAND-UP DOES TO A LEVEL'S BOXES before they go to the world (`src/host/standup.ts populateHost`), in its order: the thin things that
+//! stand free marked (`src/scene/thin.ts`), a window's bars marked
 //! (`src/scene/bars.ts`), and each box that says a shape given its record and its pieces of trim (`src/scene/shapes.ts`). Line for line from the
 //! TypeScript. A level is stood ONCE here, on boxes fresh from its file, so the passes' "put back what an earlier stand-up gave" halves
-//! (roundLevel's first loop, plainLevel, thinClear, barClear) have nothing to do and are not written.
+//! (plainLevel, thinClear, barClear) have nothing to do and are not written.
 use alloc::vec::Vec;
 use game::game::Game;
 use game::ids::*;
@@ -10,10 +10,8 @@ use game::m;
 use game::scene_boxes::{box_flag, Box};
 use game::scene_cut::{cut_plane, cut_record, cut_to_world, CutPlane};
 use game::scene_level::LevelDoorDef;
-use game::scene_markings::{MarkFace, MarkRes, MarkingDef, MARKING_TEXEL};
 use game::scene_shapes::ShapeFormArc;
 use game::V3;
-use alloc::string::String;
 
 fn has(b: &Box, bits: f64) -> bool { (b.flags as u32) & (bits as u32) != 0 }
 fn set(b: &mut Box, bit: f64, on: bool) { let f = b.flags as u32; b.flags = (if on { f | bit as u32 } else { f & !(bit as u32) }) as f64; }
@@ -135,77 +133,6 @@ pub fn bar_level(g: &mut Game, ids: &[BoxId]) -> usize {
     bars.len()
 }
 
-// ---- round.ts
-const R_OF_SLAB: f64 = 1.026;
-const MAX_MARKS_PER_BOX: usize = 4;   // (markings.ts)
-fn near(a: f64, b: f64, e: f64) -> bool { m::abs(a - b) < e }
-fn same_paint(a: &Box, b: &Box) -> bool { a.albedo[0] == b.albedo[0] && a.albedo[1] == b.albedo[1] && a.albedo[2] == b.albedo[2] }
-/// an octagon of slabs, as the kit writes a round thing: boxes[i‥i+3] are four plain slabs through one centre, 45° apart (round.ts octagonAt)
-fn octagon_at(bx: &[Box], i: usize, tan8: f64) -> bool {
-    let a = &bx[i];
-    if i + 3 >= bx.len() || a.rot.is_some() || a.cut.is_some() || a.round == Some(true) || a.flags != 0.0 || !near(a.h[2], a.h[0] * tan8, a.h[0] * 0.01) { return false; }
-    let top = a.c[1] + a.h[1];
-    let step = top - (bx[i + 1].c[1] + bx[i + 1].h[1]);
-    if !(step > 0.0005 && step < 0.0045) { return false; }
-    for k in 1..4 {
-        let b = &bx[i + k];
-        if b.rot.is_some() || b.cut.is_some() || b.round == Some(true) || b.flags != 0.0 || !near(b.c[0], a.c[0], 1e-4) || !near(b.c[2], a.c[2], 1e-4) || !near(b.h[0], a.h[0], 1e-4) || !near(b.h[2], a.h[2], 1e-4) { return false; }
-        if !near(b.yaw - a.yaw, k as f64 * m::PI / 4.0, 1e-3) || !near(b.c[1] - b.h[1], a.c[1] - a.h[1], 1e-3) || !near(b.c[1] + b.h[1], top - step * k as f64, 2e-4) { return false; }
-        if !same_paint(a, b) { return false; }
-    }
-    true
-}
-/// (markings.ts texelOf)
-fn texel_of(res: Option<MarkRes>, base: f64) -> f64 { base * match res.unwrap_or(MarkRes::Base) { MarkRes::Fine => 0.5, MarkRes::Base => 1.0, MarkRes::Coarse => 2.0 } }
-/// a round patch on a lid (a tyre's hole, an oven's mouth), drawn again as a disc of radius r (round.ts discMark)
-fn disc_mark(like: &MarkingDef, r: f64, texel: f64) -> MarkingDef {
-    let t = texel_of(like.res, texel);
-    let n = m::min(32.0, 2.0 * m::ceil(r / t) + 2.0);
-    let mut cells: Vec<String> = Vec::new();
-    let mut j = n - 1.0;
-    while j >= 0.0 {
-        let mut row = String::new();
-        let mut i = 0.0;
-        while i < n { row.push(if m::hyp2(i + 0.5 - n / 2.0, j + 0.5 - n / 2.0) * t < r { 'a' } else { '.' }); i += 1.0; }
-        cells.push(row);
-        j -= 1.0;
-    }
-    MarkingDef { face: MarkFace::Y, res: like.res, at: [-n / 2.0, -n / 2.0], size: [n, n], pal: alloc::vec![like.pal[0].clone()], cells }
-}
-/// the octagons of a box list, as the index of each one's first slab (round.ts findOctagons)
-pub fn find_octagons(bx: &[Box]) -> Vec<usize> {
-    let tan8 = m::tan(m::PI / 8.0);
-    let mut out = Vec::new();
-    let mut i = 0;
-    while i + 3 < bx.len() { if octagon_at(bx, i, tan8) { out.push(i); i += 3; } i += 1; }
-    out
-}
-/// A LEVEL'S ROUND THINGS (round.ts roundLevel with the switch up): every octagon becomes one round box and its other three slabs specks nothing
-/// meets; what each box was is kept on it. Answers how many.
-pub fn round_level(g: &mut Game, ids: &[BoxId], texel: Option<f64>) -> usize {
-    let texel = texel.unwrap_or(MARKING_TEXEL);
-    let f = box_flag();
-    let boxes: Vec<Box> = ids.iter().map(|&b| g.tab.boxes[b].clone()).collect();
-    let found = find_octagons(&boxes);
-    for &i in found.iter() {
-        let a = &boxes[i];
-        let r = a.h[0] * R_OF_SLAB;
-        let all = (0..4).flat_map(|k| boxes[i + k].marks.iter().flatten());
-        let band = { let mut all = all; all.find(|mk| mk.face == MarkFace::Z || mk.face == MarkFace::Z2).cloned() };   // a slab's long face carries the whole band (a drum's ribs)
-        let lid = a.marks.iter().flatten().find(|mk| mk.face == MarkFace::Y);
-        let mut marks: Vec<MarkingDef> = Vec::new();
-        if let Some(lid) = lid { if lid.pal.len() == 1 { marks.push(disc_mark(lid, r * 0.5, texel)); } }   // (a lid of two paints is a drum's: its rim is the shader's)
-        if let Some(band) = band { for face in [MarkFace::X, MarkFace::X2, MarkFace::Z, MarkFace::Z2] { if marks.len() < MAX_MARKS_PER_BOX { marks.push(MarkingDef { face, ..band.clone() }); } } }
-        for k in 0..4 { let b = &mut g.tab.boxes[ids[i + k]]; b.was = Some(game::scene_boxes::BoxWas { c: b.c, h: b.h, yaw: b.yaw, flags: b.flags, marks: b.marks.clone() }); }
-        let c = a.c;
-        let b = &mut g.tab.boxes[ids[i]];
-        b.h = [r, b.h[1], r]; b.yaw = 0.0; b.round = Some(true);   // (yaw 0: whoever reads only the box gets the tightest square round the circle)
-        b.marks = if marks.is_empty() { None } else { Some(marks) };
-        for k in 1..4 { let b = &mut g.tab.boxes[ids[i + k]]; set(b, f.no_primary, true); set(b, f.no_shadow, true); b.c = c; b.h = [0.01, 0.01, 0.01]; b.marks = None; }
-    }
-    found.len()
-}
-
 // ---- shapes.ts
 const ARC_PLANES: usize = 5;
 fn arc_facets(n_cut: usize) -> f64 { if n_cut <= 1 { 6.0 } else if n_cut <= 3 { 4.0 } else { 2.0 } }
@@ -253,7 +180,7 @@ fn form_box(b: &mut Box, f: &Form) {
     if f.old == Some(true) { b.cut_old = Some(true); }
 }
 /// A LEVEL'S SHAPES (shapes.ts shapeLevel with the switch up): each box that says a shape is given its record, and its pieces of trim follow the
-/// level's last box, so no box changes its number. Never a tilted box, a box cut already, a round thing's slab or a window's bar. Answers how many
+/// level's last box, so no box changes its number. Never a tilted box, a box cut already or a window's bar. Answers how many
 /// boxes are shaped; `ids` grows by the pieces.
 pub fn shape_level(g: &mut Game, ids: &mut Vec<BoxId>) -> usize {
     let f = box_flag();
@@ -261,7 +188,7 @@ pub fn shape_level(g: &mut Game, ids: &mut Vec<BoxId>) -> usize {
     for (i, &id) in ids.iter().enumerate() {
         let b = &g.tab.boxes[id];
         let Some(s) = b.shape.clone() else { continue; };
-        if b.rot.is_some() || b.was.is_some() || b.cut.is_some() || has(b, f.bar) { continue; }
+        if b.rot.is_some() || b.cut.is_some() || has(b, f.bar) { continue; }
         let b = &mut g.tab.boxes[id];
         form_box(b, &Form { round: s.round, arc: s.arc, cut: s.cut.as_deref(), old: s.old });
         b.shaped = Some(true);

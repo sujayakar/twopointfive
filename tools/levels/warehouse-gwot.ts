@@ -34,6 +34,7 @@ const SKIN: Skin = {
   pick: c => { const a = c.b.albedo;
     if (c.name === undefined && a[2] > 0.4 && a[0] < 0.15) return 'rust';
     if (c.name === undefined && a[0] > 0.6 && a[1] < 0.4 && a[2] < 0.1) return 'woodGrey';   // (the racking's orange beams — not the forklift's yellow body: that is the shed's yellow, OWN below)
+    if (c.name === 'cardboard' && c.group === 'lived.hall' && c.y1 - c.y0 > 0.5) return 'sandbag';   // (the lived hall's load: its place in the list no longer deals it)
     if (c.name === 'cardboard' && c.y1 - c.y0 > 0.5) { const m = LOADS[(c.i * 7 + 3) % LOADS.length]; return m === 'sandbag' && c.group === 'exterior.yard' ? 'tarpBlue' : m; }   // (sacks left out on the apron are under a tarp)
     if (c.name === 'wood' && c.y1 - c.y0 > 0.8 && c.thin > 0.7) return 'ply';
     // THE LIVED THINGS IN AN OFFICE PAINT the shared rules leave be or take for something else

@@ -20,7 +20,7 @@
 //   silent-set     told to stack beside men who have not noticed them, a silent pair on its marks with its rounds held on those men is SET ('set.', the
 //                  row's 'stacked') and no hand goes to the handle while the guns are on them;
 //                  SILENTSET_BREAK=1 = the pair is never told silent: the lines about SET must fail
-//   silent-hush    a silent teammate's line is a radio line; a loud one's is called out; a hostile's is never touched
+//   silent-hush    a silent teammate's line is a radio line; a loud one's is called out
 //   silent-start   SILENT.start stands a fresh squad up silent (and a restart again); the order still takes it out
 //   silent-off     never given, the switch on or off: the same scripted minute digests the same every frame; with the switch off there is no row, no word
 //                  on the HUD and no rule — even with the state left silent
@@ -28,6 +28,7 @@
 // here turns it on, as it ships.
 // The rig runs on the page's door rules: an entry halts at a door found shut and 'clear from outside' is one order.
 // The cross-commit identity (the order never given = the base build) is the play-throughs, run here and in a checkout of the base: the same lines.
+import { blockOf, doing, listedOf, menuKey } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 import { asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
@@ -89,10 +90,10 @@ async function rig(seed: number, o: RigOpts = {}) {
     last(): any { return O.log[O.log.length - 1] ?? null; },
     /** the newest posture change (silent.ts's own log: the order is not one of the orders' log's) */
     turn(): any { return SLM.SILENT_LOG[SLM.SILENT_LOG.length - 1] ?? null; },
-    label(): string { return O.hud().status[0]?.label ?? ''; },
+    label(): string { return blockOf(O)[0]?.label ?? ''; },
     /** X with the cursor on p: the menu's order rows as the panel draws them (the who row and the cancel row left out) — the menu left UP */
-    menu(p: number[]) { R.cursor(p); R.press(ORDERS.key); R.step(2);
-      const hud = O.hud().menu; return { kind: O.menu?.target.kind as string | undefined, rows: (hud?.rows ?? []).slice(1).filter((r: any) => r.kind !== 'cancel').map((r: any) => ({ head: r.label as string, key: r.opts[0]?.key as string, text: r.opts[0]?.text as string, off: !!r.off })) }; },
+    menu(p: number[]) { R.cursor(p); (menuKey(O), R.step()); R.step(2);
+      const hud = listedOf(O); return { kind: O.menu?.target.kind as string | undefined, rows: (hud?.rows ?? []).map((r: any) => ({ head: r.label as string, key: r.opts[0]?.key as string, text: r.opts[0]?.text as string, off: !!r.off })) }; },
     esc() { for (let i = 0; i < 3 && O.menu; i++) R.press('Escape'); },
     give(id: string, at: number[], who: any = 'all'): string | null { return O.give(id, O.targetAt(at), who); },
     giveDoor(id: string, name: string): string | null { return O.give(id, O.targetAt(R.door(name).frameCentre)); },
@@ -245,7 +246,7 @@ export const silentPick = guarded(async () => {
   { const P = A;
     verdict(P.locked && P.w === null && P.R.D.stats.halted === 0 && P.R.kicks === 0 && P.picked === 1 && P.crossed > 0 && P.R.silent(),
       'with the door tried before entry (as the page ships): the silent lead finds it locked and picks it on the same order — no halt, no boot, and they go in silent', `halted ${P.R.D.stats.halted} · kicks ${P.R.kicks} · picked ${P.picked} · over the line ${P.crossed} · ${P.R.beats(P.op)}`);
-    const R = await rig(7, {}); const { D, game } = R; const St = R.door('stairwell'); R.give('silent', AISLE); const w = R.giveDoor('openClear', 'stairwell'); const op = D.ops[0]; R.until(() => D.ops.length === 0, 45);
+    const R = await rig(7, {}); const { D } = R; const St = R.door('stairwell'); R.give('silent', AISLE); const w = R.giveDoor('openClear', 'stairwell'); const op = D.ops[0]; R.until(() => D.ops.length === 0, 45);
     verdict(St.locked && w === null && /steel/.test(op?.ended ?? '') && R.said.some((t: string) => /it's steel\. no way through/.test(t)) && D.stats.picks === 0 && St.pick === 0 && R.kicks === 0 && R.silent(),
       'and steel nobody has tried: the order is taken, the lead says it is steel at the door and the order ends there — nobody kneels, no boot, still silent', `given: ${w ?? 'ok'} · ended: ${op?.ended ?? '—'} · picks ${D.stats.picks} · kicks ${R.kicks} · said: ${R.said.filter((t: string) => /steel/.test(t)).join(' / ')}`); }
   // the fight has him mid-pick (blinded): hands off, then back on, and it still gives
@@ -326,7 +327,7 @@ export const silentTools = guarded(async () => {
 export const silentFire = guarded(async () => {
   const { verdict, done } = family('silent-fire: fire held on a man who has not noticed — and what changes once the squad is compromised');
   // the break room's two, kept unaware (state and awareness written back every frame) while the four go in on them
-  const run = async (silent: boolean, o: RigOpts = {}) => { const R = await rig(7, o); const { game } = R; let frozen = true; const h0 = SLM.SILENT_STATS.held, c0 = SLM.SILENT_STATS.compromised;
+  const run = async (silent: boolean, o: RigOpts = {}) => { const R = await rig(7, o); let frozen = true; const h0 = SLM.SILENT_STATS.held, c0 = SLM.SILENT_STATS.compromised;
     R.post = () => { if (frozen) for (const h of R.hostiles) if (h.state !== 'dead') { h.state = 'patrol'; h.awareness = 0; } };
     if (silent) R.give('silent', AISLE); R.giveDoor('openClear', 'breakroom_w'); R.step(60 * 25);
     const a = { shots: R.opShots, held: SLM.SILENT_STATS.held - h0, label: R.label(), eyesOn: R.said.filter((t: string) => /eyes on\. holding/.test(t)).length, down: R.hostiles.filter((h: any) => h.state === 'dead').length };
@@ -352,13 +353,12 @@ export const silentFire = guarded(async () => {
 // ---------------------------------------------------------------- lines
 export const silentHush = guarded(async () => {
   const { verdict, done } = family('silent-hush: what he would have called out goes over the net');
-  const R = await rig(7); const { game } = R; const man = R.team[0], foe = R.hostiles.find((h: any) => h.state !== 'dead');
-  game.say(man, 'probe line one.'); const b0 = { ...man.bubble };
-  R.give('silent', AISLE); const ack = R.team.map((x: any) => x.bubble).find((b: any) => b && /going quiet|copy\. silent/.test(b.text));
-  game.say(man, 'probe line two.'); const b1 = { ...man.bubble }; game.say(foe, 'probe line three.'); const b2 = { ...foe.bubble };
-  verdict(b0.radio === false && b1.radio === true && b2.radio === false && !!ack && ack.radio === true,
-    'loud: called out · silent: a radio line (the order\'s own answer included) · a hostile\'s line is his own',
-    `loud ${b0.radio} · silent ${b1.radio} · ack '${ack?.text}' ${ack?.radio} · hostile ${b2.radio}`);
+  const R = await rig(7); const { game } = R;
+  // (a line said by hand on the copy never reaches the game's own say: the lines asked are the men's answers to orders)
+  const answer = (id: string, at: number[]) => { const t0 = game.time; R.give(id, at); let b: any = null; for (let i = 0; i < 120 && !b; i++) { R.step(1); b = R.team.map((x: any) => x.bubble).find((x: any) => x && x.t >= t0 - 0.02) ?? null; } const got = b && { ...b }; R.step(180); return got; };
+  const loud = answer('hold', AISLE), ack = answer('silent', AISLE), after = answer('hold', AISLE_FAR);
+  verdict(!!loud && loud.radio === false && !!ack && ack.radio === true && !!after && after.radio === true, 'loud: called out · silent: a radio line (the order\'s own answer included)',
+    `loud '${loud?.text}' ${loud?.radio} · ack '${ack?.text}' ${ack?.radio} · silent '${after?.text}' ${after?.radio}`);
   return done();
 });
 
@@ -412,7 +412,7 @@ export const silentSet = guarded(async () => {
     const all = () => men().length === 2 && men().every((x: any) => O.of(x)?.order === 'stack' && O.of(x).arrived);
     let secs = 0; for (; secs < 30 && !all(); secs++) R.step(60);
     let left = 0, n = 0; for (let i = 0; i < 60 * 8; i++) { R.step(); for (const x of men()) { n++; if (!O.of(x)?.arrived) left++; } }
-    const rows = men().map((x: any) => { const A = O.of(x), t = game.fight.opOf(x)?.tgt; return { cs: x.callsign as string, arrived: !!A?.arrived, mark: A?.post ? dist(x.char.pos, A.post) : NaN, man: t ? off(x, t.char.pos) : NaN, door: off(x, d.frameCentre), tgt: (t?.callsign ?? 'nobody') as string, calm: t?.state === 'patrol', rule: silentHoldsTarget(game, x) as boolean, word: O.statusOf(x) as string }; });
+    const rows = men().map((x: any) => { const A = O.of(x), t = game.fight.opOf(x)?.tgt; return { cs: x.callsign as string, arrived: !!A?.arrived, mark: A?.post ? dist(x.char.pos, A.post) : NaN, man: t ? off(x, t.char.pos) : NaN, door: off(x, d.frameCentre), tgt: (t?.callsign ?? 'nobody') as string, calm: t?.state === 'patrol', rule: silentHoldsTarget(game, x) as boolean, word: doing(O.g, x) as string }; });
     const out = { R, w, set: all(), secs, left, n, rows, rounds: R.opShots, held: SLM.SILENT_STATS.held - h0, tested: D.stats.tested - t0, sets: said.filter(x => x === 'set.').length, lockedSaid: said.filter(x => /locked/.test(x)).length, leaf: Math.abs(d.angle), silent: R.silent(), up0, up: R.hostiles.filter((h: any) => h.state !== 'dead').length };
     game.say = say0; return out; };
   const show = (a: Awaited<ReturnType<typeof run>>) => `${a.w ? `refused: ${a.w}` : 'given'} · set ${a.set} after ${a.secs} s · man-frames not arrived in the 8 s after ${a.left}/${a.n} · 'set.' said ${a.sets} · team rounds ${a.rounds} · frames a round was held ${a.held} · handles tried ${a.tested} · 'locked' said ${a.lockedSaid} · leaf ${f2(a.leaf)} · still silent ${a.silent} · defenders up ${a.up}/${a.up0} · ${a.rows.map(m => `${m.cs}: ${f2(m.mark)} m off his mark, gun ${f2(m.man)} rad off ${m.tgt} and ${f2(m.door)} rad off the doorway, held on him by the order ${m.rule}, "${m.word}"`).join(' · ')}`;

@@ -47,16 +47,17 @@ pub fn arm_through(g: &mut crate::game::Game, c_2: CharId) -> bool {
 }
 
 /// A panel between `from` and `to`: a static, or a leaf standing shut or as good as (SoundSeal). Short segments only.   (combat.ts solidBetween)
-pub fn solid_between(g: &mut crate::game::Game, from: V3, to: V3) -> bool {
-    if crate::scene_collision::segment_blocked_dynamic(g, from, to, Some(crate::scene_boxes::box_flag().sound_seal)) { return true; }
+pub fn solid_between(a: &mut impl crate::ask::Asker, from: V3, to: V3) -> bool {
+    if a.leaf_across(from, to, Some(crate::scene_boxes::box_flag().sound_seal)) { return true; }
     let d = v3::sub(to, from);
     let l = v3::len(d);
     if l < 1e-3 { return false; }
     let rd = v3::scale(d, 1.0 / l);
     let mut scratch: Vec<i32> = solid_scratch();
-    let n = crate::scene_collision::gather(g, m::min(from[0], to[0]) - 0.1, m::min(from[2], to[2]) - 0.1, m::max(from[0], to[0]) + 0.1, m::max(from[2], to[2]) + 0.1, m::min(from[1], to[1]) - 0.1, m::max(from[1], to[1]) + 0.1, &mut scratch);
+    let n = a.gather(m::min(from[0], to[0]) - 0.1, m::min(from[2], to[2]) - 0.1, m::max(from[0], to[0]) + 0.1, m::max(from[2], to[2]) + 0.1, m::min(from[1], to[1]) - 0.1, m::max(from[1], to[1]) + 0.1, &mut scratch);
     let mut i = 0usize;
     while (i as f64) < n {
+        let g = a.game();
         let b = g.col.boxes[scratch[i] as usize];   // gather answers places in g.col.boxes, not IDs
         if crate::scene_boxes::ray_box(g, from, rd, b.into(), l).is_some() { return true; }
         i += 1;
@@ -100,12 +101,17 @@ pub fn body_hit(g: &mut crate::game::Game, c_2: CharId, ro: V3, rd: V3, tmax: f6
 // ---------------------------------------------------------------- a man goes down
 
 /// A man goes down: `how` he went and `by` whose hand; `quiet` is the physical side.   (combat.ts killGuard)
-pub fn kill_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: Option<bool>, how: Option<crate::game::DownKind>, by: Option<crate::game::DownBy>, line: Option<&str>, zone: Option<crate::combat::KillGuardZone>) {
+pub fn kill_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: Option<bool>, how: Option<crate::game::DownKind>, by: Option<crate::game::DownBy>, line: Option<&str>) {
+    kill_guard_by(g, gd, dir, quiet, how, by, line, None)
+}
+
+/// `kill_guard`, with what did it when that is not the gun in the man's hand (a blast names what went off).
+pub fn kill_guard_by(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: Option<bool>, how: Option<crate::game::DownKind>, by: Option<crate::game::DownBy>, line: Option<&str>, weapon: Option<&str>) {
     use crate::game::{DownBy, DownKind, GuardState};
     let quiet = quiet.unwrap_or(false);
     let how = how.unwrap_or(if quiet { DownKind::Struck } else { DownKind::Shot });
     let by = by.unwrap_or(DownBy::Player);
-    if g.gd[gd].civ.is_some() { crate::civilians::civilian_down(g, gd, dir, quiet, how, by, line); return; }
+    if g.gd[gd].civ.is_some() { crate::civilians::civilian_down(g, gd, dir, quiet, how, by, line, weapon); return; }
     if let Some(b) = g.gd[gd].bubble.clone() {
         if g.time - b.t < 0.8 && !g.messages.iter().any(|m| m.t == b.t && m.text.ends_with(b.text.as_str())) {
             let head = if g.gd[gd].unit.is_some() { alloc::format!("{}: ", g.gd[gd].callsign) } else { String::from("guard: ") };
@@ -122,7 +128,7 @@ pub fn kill_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: Option
         if !(crate::friendlyfire::ff_live(g) && !crate::teams::is_hostile(g, crate::teams::Team::Player, team)) {
             crate::mission::tally(g, if how == DownKind::Shot { crate::mission::TallyK::Kills } else { crate::mission::TallyK::Knockouts });
         }
-        crate::chronicle::chron_down(g, gd, how, line);
+        crate::chronicle::chron_down_by(g, gd, how, line, weapon);
     }
     crate::guards::witness_kill(g, gd, how, by);
     crate::morale::morale_man_down(g, gd);
@@ -146,12 +152,7 @@ pub fn kill_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: Option
         let it = drop_from_hand(g, c, kind, along, if quiet { [0.0, 0.0, 0.0] } else { dir }, Some(suppressed), Some(quiet), None);
         g.gd[gd].dropped = Some(it);
     }
-    if how == DownKind::Wounded {
-        let z = zone.map(|z| match z { KillGuardZone::Side => crate::wounds::WoundDownZone::Side, KillGuardZone::Leg => crate::wounds::WoundDownZone::Leg });
-        crate::wounds::wound_down(g, gd, dir, z);
-    } else {
-        crate::character::character_ragdollize(g, c, true, dir, quiet);
-    }
+    crate::character::character_ragdollize(g, c, true, dir, quiet);
     let text: String = match line {
         Some(l) => String::from(l),
         None => {
@@ -180,11 +181,11 @@ pub fn drop_from_hand(g: &mut crate::game::Game, c_2: CharId, kind: crate::comba
         None => { let or = v3::add(g.ch[c_2].pos, [0.0, 1.0, 0.0]); bone_or(g, c_2, crate::character::Bone::HandR, or) }
     };
     let vel = g.ch[c_2].vel;
-    let r0 = crate::math_dice::sim_random(g);
+    let r0 = crate::dice::draw_body(g, "combat::drop_from_hand#1", c_2);
     let v0 = vel[0] * 0.6 + dir[0] * 1.1 + (r0 - 0.5) * 0.6;
-    let r1 = crate::math_dice::sim_random(g);
+    let r1 = crate::dice::draw_body(g, "combat::drop_from_hand#2", c_2);
     let v1 = 0.9 + r1 * 0.6;
-    let r2 = crate::math_dice::sim_random(g);
+    let r2 = crate::dice::draw_body(g, "combat::drop_from_hand#3", c_2);
     let v2 = vel[2] * 0.6 + dir[2] * 1.1 + (r2 - 0.5) * 0.6;
     let item_kind = match kind {
         DropFromHandKind::Pistol => crate::throwables::ItemKind::Pistol,
@@ -583,23 +584,6 @@ pub fn hidden_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
         if tied && crate::fogofwar::fog_of_war_hidden(g, cv) { crate::rig_props::wrist_tie_boxes(g, c, out); }
     }
     rig_keys(g, out, n0);
-}
-
-/// The infrared lines the run's men really have on, for a viewer's picture through a tube the run's own picture did not have. Never part of a step.   (combat.ts irBeams)
-pub fn ir_beams(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
-    crate::irlaser::ir_view_as(g, true, &mut |g| {
-        let mut i = 0usize;
-        while i < g.guards.len() {
-            let gd = g.guards[i];
-            i += 1;
-            if g.gd[gd].state == crate::game::GuardState::Dead || crate::fogofwar::fog_of_war_hidden(g, gd) { continue; }
-            if crate::irlaser::laser_band(g, gd) != crate::irlaser::LaserBand::Ir { continue; }
-            let rule = crate::guards::in_hand(g, gd).map(|r| match r { crate::guards::InHand::Torch => crate::handwork::SwapHeldHeld::Torch, crate::guards::InHand::Weapon => crate::handwork::SwapHeldHeld::Weapon });
-            if crate::handwork::swap_held(g, gd, rule).is_none() || !crate::irlaser::laser_on(g, gd) { continue; }
-            laser_boxes(g, gd, out);
-        }
-        crate::irlaser::sam_laser_boxes(g, out);
-    });
 }
 
 /// A hunting man's weapon laser: a thin emissive line from the muzzle to what it meets, and a dot there. LASER.enemy is off on the page: a man hostile to the player has none.   (combat.ts laserBoxes)

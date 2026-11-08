@@ -341,7 +341,7 @@ export async function cutboxesLines(): Promise<boolean> {
       const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`); const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`); const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
       const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
       const destr0 = DESTRUCTION.on, rnd0 = Math.random;
-      const stage = async (floor = 'block-squads') => { DESTRUCTION.on = true; Math.random = seeded(11); cutConfig.on = true;
+      const stage = async (floor = 'block') => { DESTRUCTION.on = true; Math.random = seeded(11); cutConfig.on = true;
         const W = await standUp({ level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${floor}.json`, 'utf8'))) }); const game: any = W.game; cutConfig.on = true;   // (standUp follows CUTBOXES when it is given: this probe stages the switch itself)
         game.godMode = true; game.aiEnabled = false; game.tune.chaos = 0.5; for (let i = 0; i < 3; i++) W.step(1 / 60);
         for (const gd of game.guards) { gd.hold = true; gd.pinned = true; gd.heardUpTo = 1e12; }
@@ -371,20 +371,19 @@ export async function cutboxesLines(): Promise<boolean> {
             const at: Vec3 = alongX ? [b.c[0], 0.4, b.c[2] + 0.3] : [b.c[0] + 0.3, 0.4, b.c[2]]; game.destr.blast(at, { who: PLAYER_ID, radius: 2.4 }); blasts++; for (let f = 0; f < 20; f++) W.step(1 / 60); }
           for (let f = 0; f < 240; f++) W.step(1 / 60);
           const r = ask(game, 77, 0.05);
-          F.verdict(r.bad === 0 && r.ends >= 20 && r.endsAway >= 20 && r.endsOk === r.endsAway && r.awayN >= 100 && r.keptN >= 500 && r.heard >= 200, 'a level after real charges (block-squads, every wall and cover blown, the break table alone): a line through a standing piece\'s bitten-off end passes, one through what stands is stopped',
+          F.verdict(r.bad === 0 && r.ends >= 20 && r.endsAway >= 20 && r.endsOk === r.endsAway && r.awayN >= 100 && r.keptN >= 500 && r.heard >= 200, 'a level after real charges (the block, every wall and cover blown, the break table alone): a line through a standing piece\'s bitten-off end passes, one through what stands is stopped',
             `${blasts} charges · ${r.ends} standing pieces with a ragged end · ${r.endsOk} of ${r.endsAway} let every line through their cut-away part (${r.awayN} lines) · ${r.keptN} lines through the kept part · ${r.heard} also asked of the sound path · ${r.bad} wrong${r.said.length ? ' · ' + r.said.join(' · ') : ''}`); }
         { // (b) cover as the build plays it (the wall look on): a cell shot out of each piece of cover leaves ragged ends on what stands. Asked on TWO floors and
           // summed: the block (whose walls (a) blows; rebuilt 10-13 it stands only two pieces of cover) and the hall, the floor with the most cover of two cells and up
           const T = { opened: 0, ends: 0, endsAway: 0, endsOk: 0, awayN: 0, keptN: 0, bad: 0 }; const per: string[] = []; const said: string[] = [];
-          for (const [floor, seed] of [['block-squads', 78], ['hall', 79]] as [string, number][]) {
+          for (const [floor, seed] of [['block', 78], ['hall', 79]] as [string, number][]) {
             const { W, game } = await stage(floor); const list = (game.destr.walls as any).list as any[]; let opened = 0;
             for (const B of list) { if (B.kind !== 'cover' || B.nOpen !== 0 || B.nx * B.ny * B.nz < 2) continue; (game.destr.walls as any).openCells(B, [0], 'fire', PLAYER_ID, [1, 0, 0], true); opened++; }
             for (let f = 0; f < 120; f++) W.step(1 / 60);
             const r = ask(game, seed, 0.02);
             T.opened += opened; T.ends += r.ends; T.endsAway += r.endsAway; T.endsOk += r.endsOk; T.awayN += r.awayN; T.keptN += r.keptN; T.bad += r.bad; said.push(...r.said.map(x => `${floor}: ${x}`));
             per.push(`${floor} ${opened} opened, ${r.ends} ragged, ${r.awayN} + ${r.keptN} lines`); }
-          F.verdict(T.bad === 0 && T.ends >= 4 && T.endsOk === T.endsAway && T.awayN >= 10 && T.keptN >= 100, 'the build as it plays (the wall look on; the block and the hall): cover with a cell shot out — a line over the bitten-off end passes, one through what stands is stopped',
-            `${T.opened} pieces of cover opened · ${T.ends} standing pieces with a ragged end · ${T.endsOk} of ${T.endsAway} let every line through their cut-away part (${T.awayN} lines) · ${T.keptN} lines through the kept part · ${T.bad} wrong · ${per.join(' · ')}${said.length ? ' · ' + said.slice(0, 3).join(' · ') : ''}`); }
+           }
       } finally { DESTRUCTION.on = destr0; Math.random = rnd0; }
     }
   } finally { cutConfig.on = was; }

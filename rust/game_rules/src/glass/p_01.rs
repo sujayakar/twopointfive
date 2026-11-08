@@ -51,8 +51,6 @@ fn blast_step(s: u32) -> u32 {
 
 // ---- the part ----
 
-/// the choice kept on this machine: the browser's storage is the host's, which sets g.k.glassfx and g.k.glass.crack_gap; with no storage the TypeScript's own try does nothing (glass.ts loadGlassFx)
-pub fn load_glass_fx(g: &crate::game::Game) {}
 
 /// per-Game glass bookkeeping, made at first asking: the row itself (glass.ts glassState)
 pub fn glass_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::glass::GlassState {
@@ -83,9 +81,9 @@ pub fn glass_panes(g: &mut crate::game::Game) -> Vec<f64> {
 }
 
 /// a box flagged Glass (glass.ts isPane)
-pub fn is_pane(g: &mut crate::game::Game, b: Option<BoxId>) -> bool {
+pub fn is_pane(g: &crate::game::Game, b: Option<BoxId>) -> bool {
     match b {
-        Some(b) => glass_flagged(seam_box(g, b).flags),
+        Some(b) => glass_flagged(g.tab.boxes[b].flags),
         None => false,
     }
 }
@@ -196,7 +194,8 @@ pub fn glass_impact(g: &mut crate::game::Game, pane: f64, point: V3, dir: Option
     let up: V3 = [0.0, 1.0, 0.0];
     let side = v3::normalize(v3::cross(up, n));
     let tangent: V3 = v3::add(v3::scale(side, m::cos(ang)), v3::scale(up, m::sin(ang)));   // the star's orientation in the pane's plane
-    if !res.live || !res.cracked || g.engine.glass_fracture != Some(true) {
+    // a blow the fracture model filed draws its own cracks from its site, wherever anything is drawn: a second, unrelated star over them would be a lie. A blow that only fed an old star, toughened glass that has not yet gone and every shot with the model off keep theirs
+    if !res.live || !res.cracked {
         let param = if cause == GlassImpactCause::Bang { 0.6 } else { 1.0 };
         let o = crate::render_decals::DecalOpts { tangent: Some(tangent), seed: Some(((word >> 8) & 0xfff) as f64), pane: Some(pane), param: Some(param), ..Default::default() };
         crate::render_decals::decals_add(g, crate::render_decals::DecalKind::GlassHit, pos, n, Some(radius), Some(o));

@@ -23,15 +23,15 @@ fn pos_of(g: &Game, gd: GuardId) -> V3 {
     g.ch[g.gd[gd].ch].pos
 }
 /// `bo.active`: a getter over the mains' columns, read live every time as the TypeScript's `bo` is
-fn bo_active(g: &mut Game) -> bool {
+fn bo_active(g: &Game) -> bool {
     crate::sim_lightshome::mains_active(g)
 }
 /// `bo.since`, read live
-fn bo_since(g: &mut Game) -> f64 {
+fn bo_since(g: &Game) -> f64 {
     crate::sim_lightshome::mains_since(g)
 }
 /// `bo.permanent`, read live
-fn bo_permanent(g: &mut Game) -> bool {
+fn bo_permanent(g: &Game) -> bool {
     crate::sim_lightshome::mains_permanent(g)
 }
 /// `g.guards[i]` for an index kept in `seen` (−1 or off the end of the list: nobody)
@@ -156,7 +156,7 @@ pub fn saw_them_die(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// the meter's reading of a point of floor, by the place's own light. (powerout.ts floorWatched's `at`)
 fn floor_at(g: &mut Game, x: f64, z: f64) -> f64 {
-    let e = crate::guards::light_estimate_at(g, [x, 1.2, z], Some(&mut |_g: &mut Game, _owner: f64| true), Some(true), None, None, None);
+    let e = crate::guards::light_estimate_at(g, [x, 1.2, z], Some(&mut |_g: &mut Game, _owner: f64| true), Some(true), None);
     crate::game::game_visibility_of(g, e)
 }
 
@@ -204,11 +204,6 @@ pub fn floor_watched(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     best
 }
 
-/// every carried lamp is left out of the reading. (powerout.ts carried)
-pub fn carried() -> bool {
-    true
-}
-
 /// why a defender is not free to go (None = he is): calm, on a post the room fight gave him, and nobody else's. (powerout.ts powerOutKept)
 pub fn power_out_kept(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<String> {
     let gd = g.tab.roomfight_def[d].gd;
@@ -240,8 +235,8 @@ pub fn power_out_kept(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<St
     if crate::gunroles::gun_keeps_post(g, gd) || crate::owner::has(g, gd, holds) {
         return Some("holds a lane / the last man".into());
     }
-    let hands = crate::owner::by::PRESS | crate::owner::by::BUDDY;
-    if crate::owner::has(g, gd, hands) || crate::pressure::press_keeps_home(g, d, Some(false)) || crate::buddy::buddy_paired(g, d) {
+    let hands = crate::owner::by::PRESS;
+    if crate::owner::has(g, gd, hands) || crate::pressure::press_keeps_home(g, d, Some(false)) {
         return Some("the press's".into());
     }
     None
@@ -501,7 +496,7 @@ pub fn power_out_rules(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// guards.ts poseFlashlight: a man out for the lights burns his own while the mains are down. (powerout.ts powerOutLit)
-pub fn power_out_lit(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn power_out_lit(g: &crate::game::Game, gd: GuardId) -> bool {
     if !bo_active(g) {
         return false;
     }
@@ -513,7 +508,7 @@ pub fn power_out_lit(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// darkfoe.ts hasWord: their side holds this dark for the team's doing. (powerout.ts powerOutWord)
-pub fn power_out_word(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn power_out_word(g: &crate::game::Game, gd: GuardId) -> bool {
     if !bo_active(g) || !g.m.powerout.states.as_ref().map_or(false, |s| s.word) {
         return false;
     }

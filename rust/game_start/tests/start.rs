@@ -30,7 +30,7 @@ fn a_game_stood_again_is_the_same_game() {
 /// A FAILURE MEANS: the plain start of a real level (the constructor, the solo night's card, the host's first frames) no longer runs.
 #[test]
 fn a_level_stands_as_its_file_has_it() {
-    let mut p = Play::level("kit-yard.json", false, &Opts { cpu_senses: false, ..Default::default() });
+    let mut p = Play::level("kit-yard.json", false, &Opts::default());
     assert!(p.mates().is_empty(), "no mission was started, so nobody was staged: {}", p.roll());
     p.run(10.0);
     assert!((p.time() - 10.0).abs() < 1e-6 && p.frames == 600);
@@ -52,23 +52,23 @@ fn a_mission_starts_from_its_link_as_the_page_starts_it() {
 }
 
 /// Three of the game's levels that between them hold every kind of record beyond a plain floor: they stand, and what the file says is on the floor.
-/// A FAILURE MEANS: the start stopped making something a level file says (a round thing from the kit's four slabs, a box's shape and its trim, a
+/// A FAILURE MEANS: the start stopped making something a level file says (a round thing, a box's shape and its trim, a
 /// civilian, a camera, a laser, a keypad, the vents, the daylight), or stopped standing such a level at all. (That what it makes is what the
 /// TypeScript start makes is the compare's to hold, `tools/blitz/start.sh`: this only holds that it is made.)
 #[test]
 fn what_a_level_file_says_is_on_the_floor() {
     use game_start::play::Floor;
-    let plain = Opts { cpu_senses: false, ..Default::default() };
+    let plain = Opts::default();
     // the pass: 89 boxes say a shape, 12 of them tilted (a tilted box keeps its plain shape and has no trim), and they say 134 pieces of trim
     let mut p = Play::level("pass.json", false, &plain);
     let f = p.floor();
-    assert!(f.shaped > 60 && f.shaped <= 89 && f.trim > 100 && f.trim <= 134 && f.boxes == 754 + f.trim, "the pass's shapes and their trim: {:?}", f);
+    assert!(f.shaped > 60 && f.shaped <= 89 && f.trim > 100 && f.trim <= 134 && f.boxes == 682 + f.trim, "the pass's shapes and their trim: {:?}", f);
     p.run(1.0);
     drop(p);
-    // the long hall in the look's dress: drums and tyres, each four slabs in the file and one round box on the floor
+    // the long hall in the look's dress: drums and tyres, each one round box in the file and on the floor
     let p = Play::level("hall-gwot.json", false, &plain);
     let f = p.floor();
-    assert!(f.round > 0 && f.boxes == 465, "the long hall's round things (and no box added or lost for them): {:?}", f);
+    assert!(f.round > 0 && f.boxes == 435, "the long hall's round things (and no box added or lost for them): {:?}", f);
     drop(p);
     // the office: two civilians, three cameras, two lasers and a keypad, six vents, a daylight
     let mut p = Play::level("office.json", false, &plain);
@@ -98,11 +98,16 @@ fn every_level_file_is_read_whole_and_a_stranger_is_refused() {
     let mut later = json::parse(&files::level_text("kit-yard.json")).unwrap();
     if let json::Json::Obj(m, _) = &mut later {
         let beam = json::obj(vec![("kind", json::s("laser")), ("id", json::s("beam")), ("from", json::nums(&[0.0, 1.0, 0.0])), ("to", json::nums(&[1.0, 1.0, 0.0])), ("colour", json::s("red"))]);
-        for (k, v) in m.iter_mut() { if k == "version" { *v = json::n(2.0); } if k == "devices" { *v = json::arr(vec![beam.clone()]); } }
+        for (k, v) in m.iter_mut() { if k == "version" { *v = json::n(3.0); } if k == "devices" { *v = json::arr(vec![beam.clone()]); } }
     }
     let lacks = level::lacks_of(&later);
     assert!(lacks.iter().any(|l| l.starts_with("version")), "a file of another version is named: {:?}", lacks);
     assert!(lacks.iter().any(|l| l == "devices[0].colour"), "a member no field takes is named by its place: {:?}", lacks);
+    // a file of the version before, whose round things are four slabs: refused by its version, and told the command
+    let mut old = json::parse(&files::level_text("kit-yard.json")).unwrap();
+    if let json::Json::Obj(m, _) = &mut old { for (k, v) in m.iter_mut() { if k == "version" { *v = json::n(1.0); } } }
+    let lacks = std::panic::catch_unwind(|| level::lacks_of(&old)).unwrap_or_else(|_| panic!("a file of version 1 could not be read"));
+    assert!(lacks.iter().any(|l| l.starts_with("version 1") && l.contains("round-convert")), "a file of version 1 is named, with the command: {:?}", lacks);
     // …and of a record the loader reads by hand, and at the top of the file
     let mut grown = json::parse(&files::level_text("kit-yard.json")).unwrap();
     if let json::Json::Obj(m, _) = &mut grown {

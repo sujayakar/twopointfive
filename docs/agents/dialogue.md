@@ -30,9 +30,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   player lines. A new row or line about this can takes the word of the place it stands in. `tools/qa/squadthrow-check.ts` asserts the rows' text. Never seen on a GPU; nobody has
   played the renamed rows.
 - **The end card's verdict is one or two words in capitals, never a sentence** (`src/game/verdict.ts`; the card and its switch are the 'Every run ends on a verdict' bullet in menus.md):
-  won — CLEAR · RESCUED · TAKEN ALIVE · DEFUSED · OUT (a solo mission walked out of); lost — DOWN (every player down; the why is 'by <who>') · WIPED (the team) · DEAD (the man who was
+  won — CLEAR · RESCUED · OUT (a solo mission walked out of); lost — DOWN (every player down; the why is 'by <who>') · WIPED (the team) · DEAD (the man who was
   to be taken alive) · GOT AWAY (he left the floor) · LOST (the hostages) · BLOWN (the charge went off) · FAILED (a mission stage failed). The why under it is the mission's own end
-  line (`roomclear.endWhy`, `rescue.result.why`, the snatch's `why`), not a new sentence. Small words: the tag 'cheats' (a cheat was on: nothing is kept of the try), the count rows
+  line (`roomclear.endWhy`, `rescue.result.why`), not a new sentence. Small words: the tag 'cheats' (a cheat was on: nothing is kept of the try), the count rows
   'defenders' and 'hostages' — the game's own nouns (never 'enemies', 'tangos', 'civilians' for a hostage). A new end takes a word of this kind: what happened, in the past, no verb
   of blame, no compass word, no number.
 - **A man out on a look does not say he is coming AT anybody** (`tactics.ts flankCall`, 10-13; the hard-defenders goal's claim, mended as an after-close step of the dialogue pass). The
@@ -163,10 +163,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   'break room west door' of a door nobody wrote a name for — there is none left on the office. On the real page (headless Chromium, the software adapter, the office's room clear, the orders' menu opened on that door, the page's text read): 'ON
   CUBICLES-SIDE BREAK ROOM DOOR', and with `?doornames=0` 'ON BREAK ROOM WEST DOOR'; no console or page error on either. Its text, not its pixels: never seen on a GPU.
 - **The same rule's two other lists (10-19, in `words-doornames`).** With every door named, the check holds two more lists that must shrink, and a level
-  file that gets a new name of either kind is red: `PLACES_OWED` — a quiet mission's or a snatch's EXIT and a level's AREA still named by a bearing
-  ('the east gate', 'north gallery'): an exit's name is on the objective's line and the debrief's map (`quiet.ts` brief `outs`, `snatch.ts`,
+  file that gets a new name of either kind is red: `PLACES_OWED` — a quiet mission's EXIT and a level's AREA still named by a bearing
+  ('the east gate', 'north gallery'): an exit's name is on the objective's line and the debrief's map (`quiet.ts` brief `outs`,
   `ui/debrief.ts`), an area's is in the men's lines the strip prints and on the debrief's timeline (`dialogue.ts roomName`, `chronicle.ts`). 56 names in 20
-  files; they are the level files' own words (`scenarios.quiet.exits` / `.snatch.exits` / `.places.areas`), renamed in each level's generator. Not on the
+  files; they are the level files' own words (`scenarios.quiet.exits` / `.places.areas`), renamed in each level's generator. Not on the
   list: a start's name (printed nowhere but a debug summary), a `from` (only ever read to make a door's name, and a bearing there is dropped), a civilian's
   way out and a need's stand (looked up by name, not shown). `LETTERS_OWED` — a door still called by its id's letters because nothing names it ('p back
   door', 'n1 door', 'lb door'): 23 doors in 10 files, a `scenarios.doorNames` row each. `DOORNAMES_CENSUS=1` in front of the check prints all three lists
@@ -201,7 +201,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   is up. cues.ts `CLASSES` knows the new words beside the old (going around, moving around, get around, coming up behind, ready for them);
   the last-stand answer is "here — I'm after them, {at}." so that no tool reads it as a claim to be on them. A refusal an order returns is
   said by a man AND printed on its greyed menu row: both follow the key. HELD for the maintainer: the office night staff's British voice
-  (the held man's lines, his scripts, the pairs) and `SNATCH_LINES`. Checks that named old words take both wordings.
+  (the held man's lines, his scripts, the pairs). Checks that named old words take both wordings.
   Check: `bun run tools/qa/guidewords-check.ts` (`probes.ts guidewords`, in the `words` and `dialogue` families), `GUIDEWORDS_BREAK=1` (the
   key left up where it is asked down) must fail. With the key off, every line the game can list (about 2,950: the staff, needs, hostage,
   snatch, net-quiet, morale, whistle and small bark lists, the defender net with its classes, every interrogation answer plain and as each
@@ -218,5 +218,5 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **What is said reaches the HUD as the game tells it (2026-11-07).** `game.view.radio` (the strip's rows: `cues::radio_rows`) and `game.view.bubbles` (each line on the floor with who says it,
   how it sounds and where it goes: `cues::bubbles_view`; `over`, `overOrEdge`, `edge`; a man is named by his character's id) replace `stripRows`, `Cues.bubbleOf` as the HUD asked it and
   `bubbleTone`. `src/ui/bubbles.ts` asks only its own camera whether a man is on the screen and the men as drawn where his head is; `src/ui/overlay.ts` draws the rows. No switch: `CUES.on`, `CUES.overheard`, `SQUADNET.on` are settled rows that the Rust rules never read, and with this the page's `?nocues`, `?overheard=0`, `?squadnet=0` do nothing any more. A place's name (`dialogue::level_rects`, `room_name`) keeps no memo.
-  Left on the copy, each for the move that owns it: the death recap's witness (`Cues.aside`: its word over a man is not drawn until the recap is the tick's); `roomName`, `watchedPlace` under `Cover.tail` (the squad block's row); `whyWords` (the pick under the cursor); `ownPlace`, `isOffice` under the verdict's watch; `levelRects` under the debrief's map.
+  Left on the copy, each for the move that owns it: the death recap's witness (`Cues.aside`: its word over a man is not drawn until the recap is the tick's); `roomName`, `watchedPlace` under `Cover.tail` (the squad block's row); `ownPlace`, `isOffice` under the verdict's watch; `levelRects` under the debrief's map.
   **WHAT THE PAGE ITSELF SAYS IS NOT THE GAME'S LOG:** `src/view/pagesaid.ts pageSay`: a save's word, a capture's or a recorder's, a panel's answer, drawn under the radio's rows on the page's clock (three rows, six seconds; class `said`). The page writes nothing to `game.messages` now. NEW TO THE PLAYER: these lines were never drawn before (`checkpoint loaded`, `hands-off tour — P to stop`, a recorder's notes, a panel's answer); no switch. Native tests `rust/game_start/tests/radio.rs` (the strip's ranking from the old `cues-strip`, three seeds, a second seat). Looked at on the real page, software adapter: the strip's rows and the lines drawn, held to the view for 1,230 frames. Never seen on a GPU, nobody has played it.

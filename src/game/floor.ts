@@ -10,7 +10,7 @@ import type { SurfacesData } from '../scene/levelData';
 import { crossToRust } from './crossing';
 
 export { FLOOR, type FloorMat } from '../audio/floors';
-import { FLOOR, type FloorMat } from '../audio/floors';
+import type { FloorMat } from '../audio/floors';
 
 /** the building's footprint inside its exterior walls (level.ts: walls on x 4 / 36, z 4 / 24); outside it is ground */
 export const BUILDING = { x0: 4, x1: 36, z0: 4, z1: 24 };
@@ -42,9 +42,6 @@ export function floorAt(p: Vec3, S?: SurfacesData): FloorMat {
   return 'carpet';
 }
 
-/** The material a footfall at `pos` is ON as far as everyone who listens is concerned: the map's — or lino everywhere with `tune.floorMaterials` off (the A/B
- *  seam: every floor then behaves exactly as the corridor always has). */
-export function stepMat(g: Game, pos: Vec3): FloorMat { return g.tune.floorMaterials ? floorOf(g, pos) : 'lino'; }
 /** the material under a point on THIS game's level: its own `surfaces` block; without one, the office's map — but a level that carries a quiet mission and
  *  declares no surfaces (scene/scenarios.ts QuietData: a floor that is none of the office's, whose patrols and whose player are heard by their footsteps) is
  *  plain lino everywhere rather than the office's carpet and stone laid over another building */

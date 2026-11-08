@@ -3,23 +3,6 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: inline at src/scene/groundField.ts:16 groundRayConfig, src/scene/groundField.ts:16)
-#[derive(Clone, Copy, Debug)]
-pub struct SceneGroundFieldModGroundRayConfig {
-    pub on: bool,
-    pub roll: f64,
-}
-impl SceneGroundFieldModGroundRayConfig {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SceneGroundFieldModGroundRayConfig {
-            on: false,
-            roll: 0.0,
-        }
-    }
-}
-impl Default for SceneGroundFieldModGroundRayConfig { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/scene/groundField.ts:27 packGroundField(f), src/scene/groundField.ts:27)
 #[derive(Clone, Debug)]
 pub struct PackGroundFieldF {
@@ -40,20 +23,6 @@ impl PackGroundFieldF {
     }
 }
 impl Default for PackGroundFieldF { fn default() -> Self { Self::zeroed() } }
-
-/// the state this module keeps at its top level
-#[derive(Clone, Debug)]
-pub struct SceneGroundFieldMod {
-    /// (src/scene/groundField.ts:16 groundRayConfig)
-    pub ground_ray_config: crate::scene_ground_field::SceneGroundFieldModGroundRayConfig,
-}
-impl SceneGroundFieldMod {
-    pub fn blank() -> Self {
-        SceneGroundFieldMod {
-            ground_ray_config: crate::scene_ground_field::SceneGroundFieldModGroundRayConfig { on: false, roll: 0.0 },
-        }
-    }
-}
 
 /// (src/scene/groundField.ts:17 GH_RES)
 pub const GH_RES: f64 = 10.0;

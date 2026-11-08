@@ -1,9 +1,7 @@
 // THE KIT'S SILHOUETTES: one small flat drawing per row of a member's card (ui/kitCard.ts) — the gun, a canister, a charge, the goggles — so a card reads as
 // kit laid out on a table and not as a list of words. Each is an inline SVG in the page's own colour (`currentColor`), drawn here from plain shapes on a
 // 64 × 32 board: the game has no art files and these are no more than a sign for the thing. Keyed by the card's field (game/kit.ts KitField) and, for the
-// gun, its value. Pure strings: nothing at module level uses another module's exports.
-import { pickIcon } from '../game/gunslots';   // (called inside kitIcon only: a slot's pick → which gun drawing)
-import { gunLookOn } from '../game/gunlook';   // (called inside kitIcon / gunIcon only: a gun with a look of its own has a drawing of its own)
+// gun, its id. Pure strings: this file imports nothing, and what kind of gun a pick is drawn as is the card's to say (src/view/read.ts CardRow.icon).
 const BOARD = (body: string) => `<svg viewBox="0 0 64 32" aria-hidden="true" focusable="false" fill="currentColor" stroke="none">${body}</svg>`;
 const line = (d: string, w = 1.6) => `<path d="${d}" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
 
@@ -31,8 +29,7 @@ const CAM = '<path d="M12 6h4v20h-4z" opacity="0.6"/><path d="M16 9h15a3 3 0 0 1
 const SPONGE = '<path d="M19 9h14v14H19z"/><path d="M33 9h3c4.6 0 8 3.2 8 7s-3.4 7-8 7h-3z" opacity="0.55"/><path d="M15 8h3v16h-3z" opacity="0.6"/>';
 const BY_FIELD: Record<string, string> = { rings: SPONGE, sideCan: SUPPRESSOR, cams: CAM, wand: WAND, shells: SHELL, smoke: SMOKE, bangs: STUN, frags: FRAG, cans: CANS, suppressed: SUPPRESSOR, light: LIGHT, nvg: NVG, charges: CHARGE, walls: WALL, suit: SUIT, trim: TRIM };
 const BY_GUN: Record<string, string> = { rifle: RIFLE, pistol: PISTOL, shotgun: SHOTGUN };
-// THE GUNS WITH A LOOK OF THEIR OWN (game/gunlook.ts GUNLOOK; keyed by the pick's id — game/gunslots.ts PICKS — which is also its row's id): each drawn as itself, the
-// suppressor it always wears already on it. With that switch off each is its class's drawing above, as it was.
+// THE GUNS WITH A LOOK OF THEIR OWN (keyed by the pick's id, which is also its row's id): each drawn as itself, the suppressor it always wears already on it.
 const dark = (d: string, o = 0.5) => `<path d="${d}" fill="#0c0b09" opacity="${o}"/>`;
 const OWN_GUN: Record<string, string> = {
   // Mk 12: a fixed stock, a short magazine, a long tube with the bipod folded under it, a scope the length of the receiver, the can at the end of a long barrel
@@ -54,7 +51,7 @@ const OWN_GUN: Record<string, string> = {
   // Glock 18: the pistol, bare, with the long magazine standing out of the foot of its grip
   g18: '<g transform="translate(0 -5)">' + PISTOL + '</g><path d="M16.9 24.6h8l-1.9 6.8h-8z"/>' + dark('M16.6 24.6h8.3l-0.3 1.2h-8.3z', 0.45),
 };
-// (a gun that wears a suppressor is drawn with it — ui/kitCard.ts KIT_CAN: the can on the muzzle, one dark band where it screws on; no can fits the shotgun)
+// (a gun that wears a suppressor is drawn with it: the can on the muzzle, one dark band where it screws on; no can fits the shotgun)
 const GUN_CAN: Record<string, string> = {
   rifle: '<path d="M52.4 11.6h10a1.2 1.2 0 0 1 1.2 1.2v3.6a1.2 1.2 0 0 1-1.2 1.2H52.4z"/><path d="M54.2 11.6h1.2v6h-1.2z" fill="#0c0b09" opacity="0.5"/>',
   pistol: '<path d="M51 9.4h11.4a1.2 1.2 0 0 1 1.2 1.2v4.8a1.2 1.2 0 0 1-1.2 1.2H51z"/><path d="M52.8 9.4h1.2v7.2h-1.2z" fill="#0c0b09" opacity="0.5"/>',
@@ -64,14 +61,13 @@ const HAMMER = '<path d="M5 7h9v4h2.4v3H14v4H5l-1.4-2.2V9.2z"/><path d="M16 11h3
 const EMPTY = '<path d="M6 6h52v20H6zM8 8v16h48V8z" fill-rule="evenodd" opacity="0.5"/>';
 const BY_BIG: Record<string, string> = { none: EMPTY, shotgun: SHOTGUN, hammer: HAMMER, wall: WALL };
 
-/** the drawing for a card's row at its value ('' where the row has none), and whether the value means he carries none of it (drawn faint); `can` = the gun
- *  of the weapon row wears a suppressor */
-export function kitIcon(field: string, value: unknown, can = false): { svg: string; none: boolean } {
-  if ((field === 'primary' || field === 'secondary') && gunLookOn() && Object.hasOwn(OWN_GUN, String(value))) return { svg: BOARD(OWN_GUN[String(value)]), none: false };
-  if (field === 'primary' || field === 'secondary') { const k = pickIcon(value); return { svg: BOARD(k ? gunBody(k, can) : EMPTY), none: !k }; }   // (game/gunslots.ts: a slot's pick, drawn as its class of gun — an empty board for no long gun)
-  const body = field === 'weapon' ? gunBody(String(value), can) : field === 'big' ? BY_BIG[String(value)] ?? EMPTY : BY_FIELD[field];
-  return { svg: body ? BOARD(body) : '', none: value === 0 || value === false || value === 'none' };
+/** the drawing for a card's row at its value ('' where the row has none). A gun's row: `value` is its id, `icon` the kind of gun the card says it is ('' = no gun: the empty
+ *  board), `can` = it wears a suppressor */
+export function kitIcon(field: string, value: string, icon = '', can = false): string {
+  if (field === 'primary' || field === 'secondary') return BOARD(Object.hasOwn(OWN_GUN, value) ? OWN_GUN[value] : icon ? gunBody(icon, can) : EMPTY);
+  const body = field === 'big' ? BY_BIG[value] ?? EMPTY : BY_FIELD[field];
+  return body ? BOARD(body) : '';
 }
-const gunBody = (weapon: string, can: boolean) => { const w = Object.hasOwn(BY_GUN, weapon) ? weapon : 'rifle'; return BY_GUN[w] + (can && Object.hasOwn(GUN_CAN, w) ? GUN_CAN[w] : ''); };
-/** a gun's drawing by itself (the roster's cards), with its suppressor where it wears one */
-export function gunIcon(weapon: string, can = false, row = ''): string { return BOARD(gunLookOn() && Object.hasOwn(OWN_GUN, row) ? OWN_GUN[row] : gunBody(weapon, can)); }   // (`row`: its weapons.ts row's id — a gun with a look of its own is drawn as itself)
+const gunBody = (kind: string, can: boolean) => { const w = Object.hasOwn(BY_GUN, kind) ? kind : 'rifle'; return BY_GUN[w] + (can && Object.hasOwn(GUN_CAN, w) ? GUN_CAN[w] : ''); };
+/** a gun's drawing by itself (the roster's cards), by the kind of gun it is and its row's id, with its suppressor where it wears one */
+export function gunIcon(kind: string, can = false, row = ''): string { return BOARD(Object.hasOwn(OWN_GUN, row) ? OWN_GUN[row] : gunBody(kind, can)); }

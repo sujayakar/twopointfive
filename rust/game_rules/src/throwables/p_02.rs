@@ -57,11 +57,11 @@ pub fn throwables_spawn(g: &mut crate::game::Game, kind: crate::throwables::Item
     let restitution = if can { c.restitution } else if frag { f.restitution } else if kind == ItemKind::Mag { 0.25 } else if rifle { r.restitution } else if ring { rg.restitution } else if shell { s.restitution } else { 0.22 };
     let friction = if can { c.friction } else if kind == ItemKind::Pistol || kind == ItemKind::Torch { 0.5 } else if rifle { r.friction } else if ring { rg.friction } else if frag { f.friction } else if shell { s.friction } else { 0.35 };
     // the dice, one at a time and in this order
-    let yaw = crate::math_dice::sim_random(g) * m::PI;
-    let spin = (crate::math_dice::sim_random(g) - 0.5) * 14.0;
-    let tumble = crate::math_dice::sim_random(g) * 6.28;
-    let way = if crate::math_dice::sim_random(g) < 0.5 { -1.0 } else { 1.0 };
-    let tumble_rate = way * (7.0 + crate::math_dice::sim_random(g) * 9.0);
+    let yaw = crate::dice::draw_world(g, "throwables::throwables_spawn#1") * m::PI;
+    let spin = (crate::dice::draw_world(g, "throwables::throwables_spawn#2") - 0.5) * 14.0;
+    let tumble = crate::dice::draw_world(g, "throwables::throwables_spawn#3") * 6.28;
+    let way = if crate::dice::draw_world(g, "throwables::throwables_spawn#4") < 0.5 { -1.0 } else { 1.0 };
+    let tumble_rate = way * (7.0 + crate::dice::draw_world(g, "throwables::throwables_spawn#5") * 9.0);
     let life = if kind == ItemKind::Mag { 40.0 } else if ring { rg.life } else if shell { s.life } else { 60.0 };
     let heading = v3::yaw_of(vel);
     let serial = g.items.serial;
@@ -223,25 +223,9 @@ pub fn throwables_world(g: &mut crate::game::Game) {
     let dyn_ = g.col.dynamic_boxes.clone();
     crate::scene_collision::rules_world(g, &dyn_);
     debug_assert!(crate::scene_collision::rules_panes(g) >= 0.0, "the pane's rule is not the module's to ask");
-    let p = furniture(g);
-    if !crate::scene_box_mirror::box_mirror_things(g, &p) {
+    if !crate::scene_box_mirror::box_mirror_things(g) {
         panic!("the box world's copy would not take the level's furniture: more things, or more boxes of them, than its tables hold, and a level of more is not loaded (game/levelfit.ts levelOver)");
     }
-}
-
-/// `this.props` as the copy reads it: every thing by its id, and the ones in the level in the furniture's own order (throwables.ts:318 hands the PropSystem itself).
-fn furniture(g: &mut Game) -> crate::scene_box_mirror::Furniture {
-    let (all, props) = (g.props.all.clone(), g.props.props.clone());
-    crate::scene_box_mirror::Furniture { all: things_of(g, &all), props: things_of(g, &props) }
-}
-fn things_of(g: &mut Game, ids: &[PropId]) -> Vec<crate::scene_box_mirror::FurnitureThing> {
-    let mut out = Vec::with_capacity(ids.len());
-    for &p in ids {
-        let (id, radius, boxes) = { let r = &g.tab.props_prop[p]; (r.id, r.radius, r.boxes.clone()) };
-        let (x, z, yaw) = (crate::props::prop_x(g, p), crate::props::prop_z(g, p), crate::props::prop_yaw(g, p));
-        out.push(crate::scene_box_mirror::FurnitureThing { id, x, z, yaw, radius, boxes });
-    }
-    out
 }
 
 /// One number of the walk's hand-over (rust/sim items.rs PAR, by its address as the TypeScript has it: never a reference kept across the walk).

@@ -19,9 +19,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **Squad orders** (`src/game/orders.ts`, `Game.orders: SquadOrders`, `__orders`; records rebuild/room-clear/orders.md and — the press menu + who takes an order — rebuild/four-squad/orders.md): Sam's LIVE orders to the operative
   units on his side (any `gd.unit && gd.team === 'operative'` in `Game.guards` — the night breach's pair, or four in two pairs under `?squad4`), a Ready or Not style command menu.
   NOTHING IS HELD: a PRESS of `X` (or the middle mouse button, `ORDERS.mouseOpens`) puts the menu up on what the CURSOR was on at the press and it STAYS UP, frozen on that target
-  (`orders.mark()` = the ring both overlays draw there), until a row is picked or it is dismissed (`X` again, Esc, a right click, the cancel row, `'Blur'`, Sam down, the men it was for all down — and THE TRIGGER, below);
+  (as a ring on the place itself: the menu is only ever a ring), until a row is picked or it is dismissed (`X` again, Esc, a right click, the cancel row, `'Blur'`, Sam down, the men it was for all down — and THE TRIGGER, below);
   `open(target) / close() / pick(i)` are the same from code. The target (`targetUnder`: the cursor's own ray, never the auto-aim's snapped `aimPoint`; WHAT IS DRAWN UNDER THE CURSOR FIRST — a teammate's
-  body the ray lands on, else (`ORDERS.doorRay`) a door whose own LEAF is under it or whose DOORWAY it looks through (`doorOnRay`: the ray crosses the doorway's rectangle with nothing of the scene in
+  body the ray lands on, else (`ORDERS.doorRay`) a door whose own LEAF is under it or whose DOORWAY it looks through (the ray crosses the doorway's rectangle with nothing of the scene in
   front and lands within `doorRayReachM`) unless Sam's own body is under it or another door is by the landing point — then what is NEAR the landing point: door within `ORDERS.doorPickM` / teammate / Sam
   himself, else free floor. Without `doorRay` an open doorway mostly got the floor's menu and a teammate a step from the landing point his own: neither has door rows. `probes.ts doormenu` holds it for
   every door of every start-card scenario), rows = the `OrderDef`s whose `targets` fit, one that cannot be carried out there (per man `can`, together `valid` → the reason:
@@ -50,9 +50,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   stages, `newGroup()`);
   `owners: SquadOwner[]` = drills that move the squad themselves (the night breach: an order while it is stacking / set calls it off, while it is going is refused, once
   inside recalls — `NightBreach.ownsPair / callOff()`, state `'recalled'`); F there takes the pair back. Inert (a pass over the guard list) with no squad, under any show /
-  `quietUtility` / puppet. The HUD: `orders.hud()` → the interaction panel's rows (the open menu replaces them: a WHO row, the orders under 'on <target>', a cancel row, + its own hint line; else one
-  'squad · orders to …' block: every man and what he is doing, the addressed ones marked, what B / X would do on what the cursor is on, T's choices), read by both
-  overlays' `deriveInteractions`. QA: `probes.ts squadorders` (orders-off / menu / move / cover / stack / fallin / one / nightbreach / seams / edges — every order through the
+  `quietUtility` / puppet. The HUD: `game.view.squad` (the Rust game's words, once a tick: `rust/game_rules/src/orders/hud.rs`: who the orders go to, every man and what he is doing, the addressed ones marked, the notes, the corner's) and `orders.quickLine()`, what the quick key would do on what the cursor is on, read by the overlay's `deriveInteractions`. The listed panel of an open menu, its mark in the world and its hint before the key are gone (settled: the ring). THE MENU'S KEY IS GONE TOO, A CHANGE OF PLAY (2026-11-08): the Rust input no longer opens a menu with no ring on `ORDERS.key`, Options and the keymap have no such row, a key kept on it from before is dropped, and a check that wants a menu up asks `O.open` (`tools/qa/squadwords.ts menuKey`). The middle button's road went with it. The knobs `ORDERS.key` and `mouseOpens` are read by nobody. QA: `probes.ts squadorders` (orders-off / menu / move / cover / stack / fallin / one / nightbreach / seams / edges — every order through the
   harness cursor and one-frame presses) + `probes.ts orderui` (the four: one order to gold / red / blue / one man with no key held, the HUD's words, a door tool to one pair). NOT arbitrated: a Director play program / the QRF scripting an operative who is under one of Sam's orders.
 - **B is the squad's autopilot** (`src/game/autopilot.ts`, `AUTOPILOT.on`, `__autopilot`; ON in the page, `?noautopilot` / Tab ▸ Squad ▸ Order menu & keys ▸ 'B ▸ the squad picks the entry' = B is the target's first row as it was; OFF in the module and on the frozen stand, `TPS_AUTOPILOT=1` raises it, FROZEN_HOLDS row `AUTOPILOT.on`; in JOURNAL_KNOBS, a recording with no AUTOPILOT table replays with it off; page rebuild/commanding/read-first.md; the maintainer 10-13: '"B" is the "autopilot" mode where the squad does the reasonable thing (and then maybe briefly shows their plan and then fades out), while X is the sweatier mode'). orders.ts `input()` hands the quick key to `autoQuick(g, t)`: floor / nothing / a teammate / a door nobody of the addressed men waits on = the first row, as ever; a door they STAND on a plain 'stack up' at (`DoorTools.waitsOn` → `set`: every man on his mark — a second tap while they walk is 'stack up' again) = they go in by the entry `autoPick` takes, given to the men on the door and nobody else (`GiveOpts.men`); a door something else of theirs waits on (on the word, a held threshold, a charge set or being set) = the word to the men on that door (the pair: its held threshold's word, or its set charge blown by the row); a set charge nobody waits on = blown, never one on a word still gathering (`wordPending`). THE ENTRY (`autoEntries`, the first whose row's `valid` takes it): silent squad → open and clear only (never made loud); an enemy the team has in sight in the room beyond (the fog's picture where it is on, else `fight.teamSees`) and a stun left, or a room nobody has stood in (cleared.ts) and more than `keepBangs` 1 left → bang and clear; else open / kick / pick and clear; none of those and the door known shut → a charge, which is set and WAITS. Never a frag, a wall, or a second door: those are the menu's. THE PLAN: a quick-key row in the order book is stamped `auto` and floorplan.ts draws its men for `showSecs` 4 (the menu's own order: `PLAN.freshSecs` 2.5), the newest thing that names a man deciding; `AUTOPILOT.replan`: doortools.ts `haltAt` (a door found shut — they stop and stack) calls `orders.show(men)` the frame it re-assigns them and they are drawn the same way (`SquadOrders.shows`, picture only, in no digest). The HUD's B line (`autoHint`) is the FIRST choice in the row's words with no path search; the press may fall back. QA: `probes.ts autopilot` (tools/qa/autopilot-check.ts, in `squadorders`; nine lines, both stands; `AUTOPILOT_BREAK=1` fails eight and must): B through the game's input on the office room clear, four and the pair. MEASURED since (10-14): 'Who commands best: the three-hands tally' below. NEVER seen on a GPU, never played; the contact rule is checked with a STAGED sight only; the halt's own call of `show` is not staged (the picture path is, by a direct call).
 - **The plan laid for the word is removed** (2026-11-07, cut with his list): `src/game/planlay.ts` went on both sides, with its check and `tools/qa/command-tally.ts` (which held the solo, `b` and `plan` hands: the last commit with them is the parent of the commit that removed the plan). The word itself stays: a second door and the word sends both in (`F`).
@@ -74,7 +72,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   nothing on the way. BEFORE THE KEY (`CMDRING.hint`: off in the module and on both stands, raised by the page with the ring, `?nocmdhint` or the debugger's tick
   'Tab ▸ the ring ▸ a hint at the cursor' leaves it off, and a recording from before the key replays without it; a picture only; the maintainer, 10-20: "we
   should some visual indication of what type of menu will open when you hit tab on the cursor. this could be a door icon, a wall icon, etc on the cursor"):
-  `SquadOrders.hintView` names what the cursor is on as the ring would take it (door, wall, man, floor, thing, foe, or the squad itself where the cursor is
+  (REMOVED with the listed panel, under the settled `bareHint`.) `SquadOrders.hintView` named what the cursor is on as the ring would take it (door, wall, man, floor, thing, foe, or the squad itself where the cursor is
   on nothing an order goes to) and `ui/cmdring.ts updateHint` draws a glyph for it up and right of the cursor (the other way at the view's edge) and the
   thing's outline on the floor (a doorway's line, a stretch of wall never past the wall's ends, a ring at a man's feet or on the spot; the squad's menu has
   a glyph alone), in the colour the ring would open in. It is drawn only where the key would open a ring (`ringFree`, shared with `ringInput`: no menu up,
@@ -99,7 +97,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   a menu, a Space list, a running verb or the launcher's arc to back out of, the press is theirs and no ring opens; on the page Esc is the pause, and a ring
   held under the pause card is gone, nothing given, when play comes back (the 'Paused' tick). NOT ON THE RING YET: rows on letters (the
   throw page on G, 'go'), the 'wait for my word' row (a ring's order goes at once), picking several men (one click is one man). B, X and T work beside it;
-  with the ring on, Tab is not the debug tools' key (`main.ts`; `TABKEY.does` is 'off' in the page anyway). A load, or the tick put off, puts a held ring away
+  with the ring on, Tab is not the debug tools' key (`main.ts`). A load, or the tick put off, puts a held ring away
   (`ringRestore`). CHECK: `bun run tools/qa/cmdring-check.ts` (`probes.ts cmdring`, family squadorders), 17 lines through the game's own input on the office
   room clear, the check raising the switch itself (22 lines since the tap's own rule, the next bullet); `CMDRING_BREAK=1` (the switch left off) fails 18 of the 22 on both stands (the four that hold are the ones that say 'as it was'). SEEN: the first 17 lines on both
   stands, one seed; the page on the software adapter with `?cmd` through real key and mouse events (the ring draws at the cursor and whole at the view's
@@ -155,11 +153,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   as he set it, like a freed row, and Reset is Q again. THE RING'S KEY (`CMDRING.key`) is the command's own code and no longer Tab: under `?cmd` a tap
   of Q gives the order as the key comes up (inside `holdSecs`, the one way it differs from the plain key, which gives it as the key goes down), Q kept
   down opens the ring, and plan mode's toggle (`?cmd&cmdplan`) is Shift + Q. Where the bullets above say Tab for the ring's key, read the command key;
-  `main.ts` gives Tab back to `ui/tabkey.ts` and the back key. THE MARK AT THE CURSOR IS A GAME SETTING (`CMDRING.hint`; the maintainer of the glyph
-  and outline that were always there with the ring on: "I don't really like the always on icon", "we can make the always on icon a game setting"): OFF
-  unless chosen, a row in Options ▸ Game ('Order mark at the cursor') kept on the machine (`twopointsix.options`, `cmdhint`), `?cmdhint` for a visit,
-  with the ring or without (`hintView` no longer waits on `CMDRING.on`). Off, the outline and glyph show only while the ring's key is down and in the
-  ring's middle. HIS QUESTION, whether overlays stay longer after a tap: the plan a quick order draws is the same stamped row either way
+  `main.ts` gives Tab back to the objectives card and the back key. THE MARK AT THE CURSOR IS GONE (`CMDRING.hint` was a game setting; nothing draws it now, so its debugger toggle, its kept option and `?cmdhint` are removed; the knob's row is read by nobody). HIS QUESTION, whether overlays stay longer after a tap: the plan a quick order draws is the same stamped row either way
   (`AUTOPILOT.showSecs`, `floorplan.ts showSecsOf`), 4.0 s after the quick key and 4.0 s after a tap by `cmdring-check.ts` line 21; what stayed was
   that always-on mark under a resting cursor. CHECKS: `tools/qa/qkey-check.ts` (`probes.ts qkey`, families squadorders and player; `QKEY_BREAK=1` =
   the board as it was, every line fails), 5 of 5 on both stands: the boot and its three words · Q gives 'KeyB', B gives '', no other key moved, the
@@ -172,7 +166,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   lines of `keybinds-page.cjs` were given `bkey` the same way and that page tool was NOT rerun. ON THE PAGE, real keys, headless Chromium on the
   software adapter, three loads of the four-man room clear with no console or GPU error: plain, Tab and B give nothing, Q down is 'move' in the order
   book on that frame, no mark at the cursor, the HUD's cap reads Q · `?cmd`, Q down shows the pressed mark and gives nothing, Q up gives 'move', Q kept
-  down opens the ring and gives the lit wedge · `?cmdhint`, the mark is at the cursor with no ring. NOT DONE: nobody has played it; never seen on a
+  down opens the ring and gives the lit wedge. NOT DONE: nobody has played it; never seen on a
   GPU; the Options row was not clicked in a browser.
 - **Q on a door, then F, with one or two teammates** (`DOORTOOLS.wordSmall`, `?wordsmall=0`): the word's key sends a small squad in from a plain
   stack as it does the four — the rule, its edges and its check are the door tools' bullet "The word sends a small squad in from its stack"
@@ -321,7 +315,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **An order's line starts on the leg he is on** (`floorplan.ts wayOf`; picture only, no switch). A way kept from a stride ago starts behind the
   man, so its line began "from the corner nearest him" of its first six: on a way that doubles back that skipped the corners between and the line cut
   the wall. Now from the end of the leg he is nearest on, looked for over the way's first two metres (`Leg.from` is where it was asked), the same way
-  `attention.ts attentionWay` draws a guard's thread. Checked by `probes.ts plan` on both stands; the doubling-back case itself has no line of its own
+  `ui/attentionviz.ts attentionWay` draws a guard's thread. Checked by `probes.ts plan` on both stands; the doubling-back case itself has no line of its own
   here (the attention thread's check plays it for its copy). THE KEPT LEGS ARE THE ASKER'S (2026-10-23): `floorplan.legs` was a side table of the game and its search ran on the
   grid's own tables, so a game drawn and one not drawn differed in the full state hash. Now `floorPlan(g, kept)` takes the asker's own store
   (`PlanKept`: the overlay's in `ui/planfloor.ts`, a check's own from `planKept()`; with none, nothing is kept past the one ask) and searches with
@@ -381,7 +375,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   drawn, at rest, with the key down or under a ring; ON in the page, `?barehint=0`; off in the module and on the frozen stand, `TPS_BAREHINT=1`;
   a tick; the journal; ringflat lines 9 and 9b; `cmdring-check` holds it off in its rig; the Options row "Order mark at the cursor" is not
   listed while it is on. What a tap orders, and on what, is then only the corner's line on the key. THE SQUAD'S CORNER cut down to its key lines (his same notes) is NOT here:
-  it is the page's own layer's, which reads `orders.hud()` whole, so the order book's lines are as they were. CHECK `probes.ts ringflat`
+  it is the page's own layer's, which reads the block whole, so the order book's lines are as they were. CHECK `probes.ts ringflat`
   (family squadorders; 12 lines, both stands, one deal seed 3: the rules have no die in them; `RINGFLAT_BREAK=1` fails lines 1 to 6 and 9 on
   both). `qonly-check` holds `flat` off in its rig (its lines ask the ring by the menu's pages). Neighbours' files touched for it:
   `wallcharge.ts`, `doortools.ts` (the `gone` rows), `squadthrow.ts` (the throw's arc on a flat ring), `ui/cmdring.ts` (one line, the glyph),
@@ -423,7 +417,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   CHECK: `probes.ts wholesquad` (family squadorders; `tools/qa/wholesquad-check.ts`), eight lines on plan mode's rig on both stands;
   `WHOLESQUAD_BREAK=1` fails lines 1 to 5 on both. HELD OFF in the rigs of the checks that step who outside plan mode on purpose: `cmdring-check`,
   `wheelidle-check`, `orders-probes`, `orderui-probes` (and `pressorders-probes`, deleted 2026-11-06). MEASURED: one deal of the office room clear, squad of four; the rule has no die in it. OPTIONS
-  no longer offers "Order who" for the Tab key or a keyless "who" row on its Controls page while the rule is on (`menus.md`, "Options offers no dead order who control").
+  no longer offers a keyless "who" row on its Controls page while the rule is on (`menus.md`, "Options offers no dead order who control").
   Nobody has played it; no part of it is a picture.
 - **Plan mode's reach is the same at any zoom** (2026-10-25; `CMDRING.planNearFlat`, `planmode.ts pan`). The maintainer: "max distance for plan
   mode seems to be based on the zoom level? should be zoom invaraitn". The box `planNear` holds the view's point in (6.5 m to either side of him,
@@ -479,7 +473,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   because they ask what the key gave before it. NOBODY HAS HEARD OR SEEN IT: the two lines are text on the panel here, never on a GPU, never
   played. The tactics mission 'A harder fight' (cut from the lists, opened by its address) asked for the key again at three doors: those steps ask
   for the go key now (`docs/agents/missions.md`).
-- **The cursor on himself is himself, with a door a pace behind him too** (2026-10-26; `ORDERS.selfBody`, `orders.ts targetUnderOf`). Found by two
+- **The cursor on himself is himself, with a door a pace behind him too** (2026-10-26; `ORDERS.selfBody`, `rust/game_rules/src/orders target_under_of`). Found by two
   tutorial missions the same day (a scripted player headless on the page's stand, and a thread on the real page): the squad's key "on himself", the
   cursor on his chest and a door a pace behind him, gave that door (a stack) and not fall in. The cursor's ray through his chest lands on the floor
   some 0.7 m PAST him, and what was near that point was the target (`targetAt`: the door where the point is nearer it than him; plain floor, a
@@ -491,8 +485,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the door. OFF (`?selfbody=0`; Tab ▸ Squad ▸ 'the cursor on yourself is yourself'): the point past him, as it was. Off in the module and on the
   frozen stand (`TPS_SELFBODY=1`; a `FROZEN_HOLDS` row); a recording from before the key replays with it off. CHECK: `tools/qa/selfbody-check.ts`
   (probe `selfbody`, family squadorders), six lines on both stands, one deal (no die in it): he is stood 0.7 m in front of the office's conference
-  door, where the rule off gives the door and a stack and the rule on gives himself and fall in for the four; `SELFBODY_BREAK=1` fails line 2 on
-  both. NOT SEEN: on a GPU or by a player; the page draws nothing for it (the HUD's line for the key reads 'fall in' where it read 'stack up').
+  door, where the point past his chest is the door and a stack could be given, and the cursor on him is himself and fall in for the four; `SELFBODY_BREAK=1` (the check's cursor put beside him) fails line 2.
+  The Rust game has the rule always on: `?selfbody=0` and the module's `ORDERS.selfBody` no longer reach it. NOT SEEN: on a GPU or by a player; the page draws nothing for it (the HUD's line for the key reads 'fall in' where it read 'stack up').
   KNOWN: a player who wants the door directly behind his own body on the screen points at the doorway beside him.
 - **Shift + the key adds a goal, and there is no plan mode: a PROTOTYPE** (2026-10-26; `CMDRING.goals`, `planmode.ts planGoal` / `goalsOn`,
   `orders.ts ringInput`). The maintainer: "i think the RTS like plan mode is cool but it does really slow the tempo of the game and is quite
@@ -599,7 +593,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `autopilot-check`, `squadnet-check`, `onesignal-check` (a chain's men with a can for each door) and one line of `rails-check` (the
   entry the squad would pick as its window on what the squad knows). MEASURED: one deal. NOT MEASURED: whether a soak or a
   tour's tally moves on the page's stand (the squad spends fewer stuns when the player taps the key twice). The squad's lines that say WHY
-  it picked a stun (`squadnet.ts whyWords`) are never said by the key now. Nobody has played it; never seen on a GPU.
+  it picked a stun are gone with the page's words for them: the key never picks a tool. Nobody has played it; never seen on a GPU.
 - **Plan mode: a click on bare ground deselects** (2026-10-25; `CMDRING.planClear`, `planmode.ts planInput`). The maintainer, with the digits
   picking the men and the ground click doing nothing: "clicking on the ground to deselect is pretty key". ON, with `planDigits`: a left click on
   bare ground leaves NOBODY picked (`plan.pick = []`, an empty set that `tick` lets stand): no circle is drawn as picked, a right click orders
@@ -631,17 +625,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   line, both stands (one deal, the conference door: dark with feet on the jambs, lit 3.5 to 4.5 s later at the call; `THRTOLD_BREAK=1` red on
   both). NOT covered: the HUD's own word line (`doortools.ts wordNote`, "go · … waiting") still shows from the stack, and several doors on one
   word (`planOne`) wait for every stack to FORM, not for a call. Never seen on a GPU.
-- **What the cursor is on is kept by whoever reads the HUD** (2026-10-23; `orders.ts hover / hud / hintView`, `HoverKept`, `ui/hoverkept.ts`; picture
-  only, no switch). `hover()`'s answer, kept a tenth of a second while the cursor rests, and the camera it was asked under were fields of the order
-  book (`orders.hov`, `orders.hovCam`): a game whose HUD was read each frame differed in the whole state from one never read. Now `hud(kept)` and
-  `hintView(kept)` take the asker's store (the page's one store for both, `ui/hoverkept.ts`); with none nothing is kept and every ask looks again.
-  CHECK `probes.ts cmdring`, the last line, both stands: read every frame against never read, digest equal, the answer in the store, and no field of
-  the order book another value after a read than before it; `HOVERKEPT_BREAK=1` (the book handed in as the store, so kept on it again) is red on
-  both. The store is outside the rollback snapshot (after a restore it can hold the other time line's answer for its tenth of a second). The page's
-  own wiring (`overlay.ts`, `ui/cmdring.ts` passing the one store) is held by no check and the page was not driven. STILL OPEN, not held by that line and not this module's: a HUD read
-  still writes the room clear drill's memo of its two men (`nightbreach.ts drillOf`, a getter that keeps its answer) and the collision world's query
-  stamps under the cursor's pick (`game.col.stamp`, `world.rgStamp`), so the whole state still differs (the line prints where). Never seen on a GPU.
-  (Both since mended: the drill's memo by its own module, the pick's stamps by the last bullet of this file.)
+- **The quick key's line is the tick's** (`rust/game_rules/src/orders/shown.rs` `quick`, kept each tick for each seat: the row's words, then ` · ` and what the cursor is on, unless that is nothing and no man; `orders/hud.rs quick_note`, `game.view.squad.quick`: none where the lesson holds `order` back or teaches the ring's hold). The page keeps no pick of its own: `autopilot.ts` `autoPick` / `autoHint` are crossings a tool or the hands-off driver asks. Test `rust/game_start/tests/menu.rs`: on three seeds the line is what the press then gives, on a door, the floor and a teammate. Never seen on a GPU.
+- **What the cursor is on is a read** (`orders.ts hover`, `src/game/under.ts`, `src/view/cursor.ts`; `rust/game_rules/src/view cursor_view`, orders `target_under`; picture
+  only, no switch). The Rust game says what the cursor is on, asked once a cursor, camera and moment of the game, and nothing of it is kept on the order book. Before the first tick (no Rust game
+  standing) `hover()` answers null and `targetAt` / `targetUnder` `{kind:'none'}`, so a check steps once before it asks.
+  What a point or the cursor is on reads the tick's list of things to work, kept every tick for every seat.
+  CHECK `probes.ts cmdring`, the last line: read every frame against never read, digest equal, an answer on most frames, and no field of
+  the order book another value after a read than before it; `HOVERREAD_BREAK=1` (the answer kept on the book) must be red. Never seen on a GPU.
 - **One word is one signal** (`CMDRING.planOne`: ON in the page with the mode, `?planone=0`; off in the module and on the frozen stand,
   `TPS_PLANONE=1` beside `TPS_QPLAN=1`; the journal carries it, a recording without the key replays with it off; debugger: 'Tab ▸ plan mode ▸ one word,
   one signal'). The maintainer, 10-22, of a plan with a pair on each of a room's two doors: "simultaneous breach on mission 2 didn't really work. and
@@ -1018,7 +1008,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `detonateStun`), so it does to the player what it does to anybody. SENSE, asked when the menu is read and again as the order is given: none left ('no frags left.' / 'no frags in this kit.' /
   'no bangs left.'), no arc for anybody addressed ('no throw from here.'), and A FRAG IS NEVER THROWN ONTO ITS OWN — the player, any teammate still breathing (the thrower too; a man down wounded or out cold where he lies), a rescue's hostage, the
   man to take alive or a civilian within `FRAG.woundM` + 1 m, with a line, of where it would rest or of the spot asked for = the row greyed naming who ('you are in it.' / 'Red Two is in it.' /
-  'hostages. no frag.'; with the dialogue pass on, the man a snatch came for by his own name — '<name> is in it. no frag.' — and anybody else unarmed 'a civilian is in it. no frag.': neither is a hostage). A STUN is the player's call: never refused for its own side, but its row NAMES who of ours it would catch (' · too close: you, Red One': `detonateStun`'s own tests asked
+  'hostages. no frag.'; with the dialogue pass on, anybody else unarmed 'a civilian is in it. no frag.': not a hostage). A STUN is the player's call: never refused for its own side, but its row NAMES who of ours it would catch (' · too close: you, Red One': `detonateStun`'s own tests asked
   with each reach `slackM` 1 m long, so it may over-warn). A SILENT squad: both rows are silent.ts `LOUD_ROWS` (marked ' · LOUD'; giving one takes the squad out of silent). The squad block
   names the throw for `shownSecs` 2.5 ('Red Two · frag out'); the order is on `orders.log` under its own id. G ON A DOOR's menu is still that door's frag row, G again with the throw page up is eaten (it never falls through to a quick throw), and the frozen stand's G quick throw
   is not also taken by the press (`player.throwEaten`). State per Game in a WeakMap (each man's last throw, what the block shows, the stun row's warning), no dice, not in a checkpoint (none is
@@ -1122,7 +1112,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   open and clear, bang and clear, and the threshold page's three (its opener on the tools page says '· on my word: ON') — read 'wait · …' and are given with `{ onWord: true }`; off again on every new menu; only on a door); the menu
   greys and words its rows for the MEN's face of the door (`Menu.menSide` ← `sideFor`, asked when the menu opens and again only when `Menu.sideKey` changes — the
   men, or one of them or Sam crossing to the door's other face — never on the `refreshSecs` re-read; the header says '· far side' when it is not Sam's); bang and
-  clear is refused with a teammate behind the door, like the charge; `orders.notes` may return keyed lines (`OrderNote`): the squad block shows '[F] go · red + blue
+  clear is refused with a teammate behind the door, like the charge; an order's `notes` (its `Row`) may return keyed lines (`Note`): the squad block shows '[F] go · red + blue
   waiting' or 'blue waiting · T, then F', 'word given · waiting for blue', and says 'F blows it' of a set charge only while F would.
   A cursor on a door picks it only where the camera can SEE the doorway (a wall in front hides its foot: point at the visible part, or turn the camera).
   QA: `probes.ts squadplay` (go / wait / try / side / key / off — every order a one-frame press, nothing held). (2026-11-07: the `squadplay` family is
@@ -1130,8 +1120,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 
 <!-- was CLAUDE.md lines 2550–2563 -->
 - **A teammate works a thing** (`src/game/workthings.ts`, `Game.work: WorkThings`; `WORK.on` — on in the page, `?noworkthings` = as it was; the frozen stand holds it off,
-  `TPS_WORKTHINGS=1`): the orders' menu opened on the BREAKER (its own panel under the cursor — `workOn` in targetUnder — or the floor at its foot on its own side of
-  the wall — `workNear` in targetAt) or on the MISSION'S THING once the objective is to take it (stage 'drive': the rack's drive, a quiet mission's thing in its holder)
+  `TPS_WORKTHINGS=1`): the orders' menu opened on the BREAKER (its own panel under the cursor, or the floor at its foot on its own side of
+  the wall: `rust/game_rules/src/orders target_under` and `target_at`, which read the tick's list of things to work, kept every tick for every seat) or on the MISSION'S THING once the objective is to take it (stage 'drive': the rack's drive, a quiet mission's thing in its holder)
   is a floor target carrying `thing: WorkThing` (`at` = the cell a man stands on to work it, `standFor`, re-read once a second), and `workRows` puts its own order
   (`'work'`, digit 1: 'throw the breaker' / 're-arm the mains' / 'pull the drive' / 'take <thing>') where 'move there' is — so B and the button twice give it. `only`:
   the nearest man who can get there works it, his partner (the other of his pair) covers from a mark behind him on a plain 'move' with `spare` eyes, everybody else is
@@ -1143,10 +1133,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   A MAN AT HIS THING PASSES OVER A MAN HE MAY NOT SHOOT (`WORK.heldPass`, on with the switch; false = as it was; `workPasses(g, gd, h)`, asked by roomfight.ts where it picks a teammate's target and in `cue()` — a mate's call, a footfall, a look already standing — beside `pairPasses`): with the squad's fire held (silent.ts `silentHoldsRound`: the silent order, the sneak, the hold nobody has lifted, which is the page's own state until the team is found) and a defender who has noticed nobody in his sight, the man sent kept his muzzle on that man, the room fight turned his chest to him, the order turned it back to the panel, and the thing was never worked for as long as the hold stood (seen as `work-breaker` red on the shipped stand once a deal stood a defender in view of the office's panel). Now, stood on the spot his thing is worked from (`atThing`: arrived, within 0.45 m of the stand), that man is not his target and neither a mate's call nor his footfalls turn him: he works the thing, and a man who covers him has the defender (a man sent alone turns his back on him: that is the order). The frame `silentHoldsRound` no longer holds his round (the man is alert or searching or past the `noticed` bar, the hold is lifted) it is false and the fight has him as ever, the hand coming off. NOT passed, by design: a man held only by spotted.ts's rule (suspicious, or roused and no danger yet) or only for a pane in the way (`silentHoldsGlass`) — he has noticed something, the gun stays on him, and the thing waits. A door an enemy opens in his sight is still looked at. On the walk there nothing changes. With the key on `silentHoldsRound` is asked in the target pick for the man at his thing, so the holds' own `held` counts rise there. A recording from before the key replays with it off. `probes.ts work-held` on both stands (the fault shown with the key off: 45 s at the panel, muzzle on the man, mains on; key on: mains out, no round, the cover's gun on the man for every frame the hand is out, the hand out once; the same with the man's footfalls in their ears; the man made to notice with the hand out is the worker's target and is shot; `WORKHELD_BREAK=1` must fail). Measured on the office's room clear, one seed, the breaker only: a drive or a charge (several seconds of hand) was not staged. Nobody has seen or played it; nothing here was drawn on a GPU.
   SAM'S OWN ROW AT THE BREAKER TAKES THE PANEL'S OWN FACE TOO (`WORK.samFace`, on with the switch, so `?noworkthings` puts it off and the frozen stand holds it off, `TPS_WORKTHINGS=1`; false = as it was; `samPanelPoint(g, from)`, asked by player.ts `buildInteractables` for his row and by lighting.ts `ocp` for the pistol's OCP at it; 10-29, from play on the two charges: stood at the panel in the hall, only the squad's 'throw the breaker' was on offer). player.ts asked for a clear line to a point 0.18 m toward -z of the panel's mark: right where the panel faces that way or hangs on a wall that runs that way, inside the wall where it faces +z. Now that line is asked first, as before, and only where it is blocked the line to a point 5 cm off the panel's real face, from in front of that face (the far side of its wall is still not the breaker). Swept headless over every level file with a breaker, Sam stood in front of the panel, the plain night: 43 of 57 offered the row before and offer it the same; 14 never did and do now (defuse and defuse-gwot, glasshouse, gwot-yard, kit-yard, mousehole and mousehole-gwot, quiet-yard, sneak-lab, train-orders, tut-kit, tut-road, tut-sky, tut-team). A recording without the key replays with it off (journal.ts). QA: `probes.ts samface` (tools/qa/samface-check.ts, both stands, it raises the work switch itself; `SAMFACE_BREAK=1` must fail). Never seen on a GPU, never played; the OCP's own press is not driven by the check, only the point it asks for.
   A FOLLOWER IS NOT LEFT STANDING ON THE WALK OF THE MAN WHO COMES TO THE BREAKER (`WORK.offWalk`, `walkM` 2.5, on with the switch; false = as it was; `workComing(g, gd, h)`, asked by sneak.ts `sneakFollow` and by spotted.ts `hide`; 10-18, from a replay of play on lights out as two, hard: the partner threw the breaker on order, 'fall in' came 1.2 s later, Sam walked on past the man sent to the panel, and the partner — the sneak's follower, 'holding. it's lit and he's looking.' — waited 4 m from the panel for that man's back, ON that man's walk, for five seconds until the man reached him: 'he's made me! contact!', the alarm 11.8 s after the throw; a headless re-run of the tape matched the page to 0.01 m and named the rule). True of a defender who carries the mains errand (lighting.ts `task.kind 'breaker'`, said on the net: 'power's out — checking the breaker') and is walking it (suspicious, his route's end the errand's own spot: not a patrol leg he has yet to leave, not a noise he turned off to) when the teammate is within `walkM` of what is left of that walk — where the man stands, the corners of his route still ahead, the errand's spot — with nothing solid between him and it. For THAT man, while Sam is going on (Sam moving, or the follower not yet at his place), the follower does not wait short of a stretch the man is looking at, does not keep him as a remembered looker, does not back off down the way he is coming (sneak.ts: he crosses after Sam, as low as Sam), and is not stood still by spotted.ts's freeze (he is still on a knee whenever the man has a line to him). Once the man is past him (the walk left no longer passes within `walkM`) every one of those rules is his again: on the tape's run he then knelt still 2 to 3 m off while the man went by, and followed on. NOT changed: a suspicious man on any other business; ANOTHER man's eyes on the stretch, or the line of a shut door Sam is at (those waits stand); Sam stood still on the walk with the follower at his place (the back-off and the freeze are his as before); a partner POSTED at the panel (he holds there until moved: the maintainer's call of 10-13 stands). KNOWN, not built: the crossing follows Sam's steps whatever they do — a trail that runs up the man's own route meets him head on (it is Sam's lead; on the tape he passed 2.0 m off); no hysteresis at `walkM`; the same hole stands for any suspicious man who walks to a noise where the follower waits (a claim for the sneak's owner; since mended behind `SNEAK.noiseWalk`, team-feel.md). Measured headless, the men's own senses (nobody dazzled, Sam not kept dark), one seed, the level's own mission, Sam moved along the taped way at 1.4 m/s: key off, still on the walk 2.6 s (frozen stand with SNEAK and SPOTTED raised) / 3.5 s (shipped), the man alert at 11.2 / 11.7 s; key on, nobody roused, the man put the mains back at 16.0 s, the follower passed 2.0 m from him in the dark and ended at Sam's shoulder, low on 581 of the 585 frames of that walk, fastest 1.45 m/s. The tape re-run with the key raised by hand: the partner crossed at 40.9 s, passed 2.5 m from the man, the man re-armed the mains and went back to his patrol, nobody alert up to 61 s (past the point the re-run parts from the tape the page's GPU reads are served stale: an indication, not a proof). QA `probes.ts work-walk` (six lines, green on both stands, the neighbours' `sneak`, `spotted`, `pair`, `pairup`, `lights-out`, `journal`, `shipped` families green beside it; `WORKWALK_BREAK=1` fails three of them). A recording from before the key replays with it off (journal.ts). Nothing drawn on a GPU, never played.
-  A job on a thing of the RUN's (`drive`, `defuse`) ends with no word when the run ends under the man's hand (Sam down: `tick` asks `g.player.down` ahead of `moot`, whose "it's already gone." would be false of a thing still in its holder), and 'charge is safe.' is said only once `defuse.states[i]` reads safe after `makeSafe` (which has its own reasons to do nothing); a breaker job goes on, the mains being the level's.
+  A job on a thing of the RUN's (`drive`) ends with no word when the run ends under the man's hand (Sam down: `tick` asks `g.player.down` ahead of `moot`, whose "it's already gone." would be false of a thing still in its holder); a breaker job goes on, the mains being the level's.
   No save slice (a checkpoint is refused with a unit on the floor); a recording without the table replays with it off (journal.ts). QA: `probes.ts workthings`
-  (work-breaker / work-four / work-objective / work-edges / work-posted / work-face / work-held / work-walk / work-defuse / work-off (deleted 2026-11-06 with the off side: qa.md) / work-harness). A pose layer reads `workHand(g, c)` (where and when: the
-  thing's face point, its normal, weight) and `workJob(g, c)` (what: verb `breakerOff | breakerOn | drive | defuse`, seconds in, seconds it takes) — reads only; the pose is not this file's.
+  (work-breaker / work-four / work-objective / work-edges / work-posted / work-face / work-held / work-walk / work-off (deleted 2026-11-06 with the off side: qa.md) / work-harness). A pose layer reads `workHand(g, c)` (where and when: the
+  thing's face point, its normal, weight) and `workJob(g, c)` (what: verb `breakerOff | breakerOn | drive`, seconds in, seconds it takes) — reads only; the pose is not this file's.
+- **Since 2026-11-08 what the plan, the throws and the rings list is the Rust game's** (`view.plan`, `view.throws`, `view.ring`, `view.hand`: `rust/game_rules/src/view/plan.rs`, `throws.rs`, `rings.rs`; `src/game/floorplan.ts` keeps only the `PLAN` table, and `src/ui/planfloor.ts`, `squadthrowviz.ts`, `cmdring.ts` read the view). Older bullets below name `floorPlan`, `waitsOnKey`, `squadThrowPlans`, `ringView`: their rules are those files' now.  nobody has seen any of it on a GPU.
 - **The squad's plan is drawn on the floor** (`src/game/floorplan.ts` = WHAT, `src/ui/planfloor.ts` = the drawing, index.html `.plan …` = the look; `PLAN.on` ON on every stand — it is picture only —
   `?noplan` = nothing drawn; Tab ▸ Squad ▸ Order menu & keys ▸ 'plan drawn on the floor' + three part rows, this visit only; page rebuild/plan-on-floor/read-first.md).
   `floorPlan(g)` ONLY READS: the squad's assignments as they stand (`orders.of(gd)`), each man's own nav path (`gd.path` from `gd.pathI` where `gd.pathGoal` is this order's and the path runs
@@ -1262,9 +1253,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   list does its row, the launcher sends its round), so with the rule on the loop (`host/loop.ts`) hands the first tick after a frozen frame the one-tick code
   `'Paused'`, as Input hands it `'Blur'`: interact.ts shuts a held list with its press spent, player.ts lets go of a held arc unsent. It is a press in the
   tick's keys: a recording carries it, a replay does the same, and nothing of the game changes between ticks for it (the start card is a frozen frame too:
-  a run's first tick holds one, and it is nothing to that tick). The order menu and a running verb are still there after the pause. TAB'S TRIAL
-  (`ui/tabkey.ts`) keeps the key whenever there is nothing to back out of (`Game.backable`, which counts a verb that cannot be taken back, the knife in the
-  hold and the breaker's lever, for the half second it runs); with its 'who' choice Tab no longer steps who while the order menu is up (T does).
+  a run's first tick holds one, and it is nothing to that tick). The order menu and a running verb are still there after the pause. THE OBJECTIVES CARD
+  (`ui/tabcard.ts`) has the key whenever there is nothing to back out of (`Game.backable`, which counts a verb that cannot be taken back, the knife in the
+  hold and the breaker's lever, for the half second it runs).
   WHAT SHOWS: the order menu's line and the Space list's line name `tab` where they named `esc`; Options ▸ Controls gains a Tab row under Esc. NOT TOUCHED:
   the screens outside the fight (the pause card and its options, the mission list, team and kit: Esc is still back there), the showcases (Esc ends one),
   a focused field of the debugger (Esc lets go of it). Check: `tabback` (family `orders`; each of the four staged as play stages it, rule on and off, then
@@ -1287,34 +1278,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   duck memo were mended from a review's reading and were never seen writing in a run. A NEW cache a
   search fills in turns `state` red on the stand that has the rule, and the line prints the table's name: add it to `TICK_KEPT`, or to
   `Collision.aside` when it is the collision's own. NOT COVERED: `squad40Plans` (the 40 mm's picture) was not looked at; `orders.hud()` read with no
-  menu up writes `orders.hov` (a drawn game differs from an undrawn one there too, digest equal). Never seen in a page.
+  menu up: the bullet below says what a read is now. Never seen in a page.
 - **The cursor's pick, read for the picture, writes nothing of the game's** (no switch: nothing a player reads, and the run digest never moved).
-  `SquadOrders.hover(kept?)` is what the HUD's lines and the ring's hint read every frame. Its answer was already kept in the asker's store; the
-  pick under it (`targetUnder`) still wrote the game's own state, so a game whose cursor is read and the same game never read differed in whole
-  state on EVERY frame, run digest equal. Measured writers: `world.rgStamp`, `rgRay`, `rcBest`, `rcBi`, `rcBn` (frozen stand); on the shipped
-  stand also `game.col.stamp`, `stampId`, `cellStamp`, `game.work.cache.t`, and with a leaf swinging `doors.list[].posAngle` / `posAt`. Found by
-  a review's reading, never seen written in a run: `wallcharge.skyMemo` (the simulation's own ask of the aim point usually fills it first).
-  Now the read runs the pick inside five wrappers, on `HoverKept.pick` (made anew for another game), or on a throwaway store when none is handed
-  in: `Collision.aside` (the collision's query stamps, cell caches and path scratch, as for the throw page); the new `BoxWorld.rayAside`
-  (`src/scene/boxes.ts`: the world's ray grid stamps and counter swapped, its last-hit scratch put back); the new `WorkThings.askAside`
-  (`workthings.ts`: the list of things to be worked is kept in the asker's store for its second, the game's own kept list put back, no hand
-  record dropped); the new `Door.posAside` / `Doors.posAside` (`doors.ts`: each leaf's kept centre put back); the new `skyAside`
-  (`wallcharge.ts`: what the ask adds to the memo of sky faces taken out again). ONLY the read is aside: the pick the simulation makes for
-  itself on a key or a click (`orders.ts` update, `planmode.ts`) is the game's own and unchanged; `host/handsoff.ts` (the hands-off driver)
-  still asks it straight. IN THE PAGE this changes two small things nobody has looked at: a key press no longer finds a list of things to be
-  worked that the HUD made up to a second before (it makes its own), and stale hand records are dropped only on the simulation's own asks.
-  CHECK `probes.ts hoverpick` (`tools/qa/hoverpick-check.ts`; families squadorders), the squad mission on the office, seed 11, eight seconds,
-  the cursor carried round Sam, onto a teammate, onto a door and (shipped stand) onto a wall a charge might go on, moved after the step so the
-  read comes before the simulation's own ask of the point, a door swung twice; the cursor's points are found on a game of their own. Lines: ask
-  (ONE game, the state hashed before and after each read, with the store and with none, and the module variables looked at: 0 of 480 frames),
-  state (read every frame against never read: whole state and digest equal), same (the pick aside on the kept store is the pick straight on all
-  480 frames: kind, place, door and side, man, wall, thing). `HOVERPICK_BREAK=1` (the pick asked straight) fails ask and state on both stands:
-  one break for all five wrappers, it does not prove each apart. One seed, one level. NOT ON THE CURSOR'S WAY: a man of the other side, a
-  thing to be worked, a leaf drawn in the fog of war, the room seen through a doorway. THE HUD'S ROW LIST IS HELD TOO (10-23): on the
-  shipped stand `SquadOrders.hud` filled the wall charge's memo of digitless rows (`wallcharge.ts standIns`) the first time it listed a
-  floor's rows; that memo is a module `SideMap` marked `asMemo()` now (the charges' own mend), and the check's read asks `hud(kept)` every
-  frame after the pick, so `ask` and `state` stand for the whole HUD read. The store is outside the rollback snapshot (scratch and a list a
-  second old). Never seen in a page.
+  What the HUD's lines and the ring's hint read every frame is the Rust game's answer to what the cursor is on, and asking changes nothing. CHECK: the native test
+  `rust/game_start/tests/cursor.rs` (`any_cursor_is_answered_and_pointing_changes_nothing`); the page's half is the last line of `probes.ts cmdring`. Never seen in a page.
 - **The squad reaches you, and the quick key says why** (`src/game/squadnet.ts`, table `SQUADNET`, one `SquadNet` on the Game as `game.squadNet`;
   drawn by `src/ui/bubbles.ts`; Tab ▸ 'Squad net'). The maintainer picked it from the AI legibility doc: "The squad reaches you, and Q says why.
   Off-screen teammate lines arrive near you with a radio click, a man down has its own sound, the Q row says 'Bang and clear. Nobody's been in
@@ -1332,7 +1299,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   checkpoint loads is not called; a roster stood up again under the same names is. NOT DONE: a line said on the screen whose man the camera
   then leaves moves to the near place with no click; a cue's own bubble (`cues.aside`) on a far teammate is drawn near and does not click.
   AT THE EDGE (`SQUADNET.edge`, `?netedge=0`, `TPS_NETEDGE=1`): his note on playing the first rule, "the off screen 'red two: moving' is nice,
-  but it should be more towards the edge of the screen". `squadnet.ts netPlace()` is the one place `bubbles.ts` asks where a far line goes:
+  but it should be more towards the edge of the screen". `ui/netplace.ts netPlace()` is the one place `bubbles.ts` asks where a far line goes:
   with the rule, where the straight way from you (the middle of the view while you are off it) to the man leaves the view, `SQUADNET.edgeIn`
   (0.04 of the view's shorter side, a slider under Tab ▸ 'Squad net') inside the border with the line's own box kept whole, or at him where
   he is inside that; off, `near` out from you and up a row from a taken one, as it was. Where you stand out by the border yourself the way is
@@ -1345,7 +1312,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   reads it. A man-down row off the screen goes by it too. NOT SEEN: any of it on a GPU or in play; the objective's mark and a far line
   together; a line for a man behind the eye; a view zoomed by the text size setting. A line whose edge place is under a wide card can end
   several rows or a line's width from where the way to him leaves the view.
-  WHY (`SQUADNET.why`, `?qwhy=0`, `TPS_QWHY=1`): `squadnet.ts whyWords(pick)` gives the reason when the autopilot's pick on a door the men wait
+  WHY (`SQUADNET.why`, `?qwhy=0`, `TPS_QWHY=1`; since the key never picks a tool the row carries no reason: the words below are the history, and the page's `whyWords` is gone): the reason came when the autopilot's pick on a door the men wait
   on is not a plain open: at the end of the quick key's row (`orders.ts hud()`, one `autoPick` a frame for the words and the reason) and in the
   answer of the man who takes the order (`GiveOpts.ack`, in place of the row's own; `autoQuick` and a plan's `quickFor` both pass it):
   `nobody's been in there` / `banging it. nobody's been in there.` · `they see one inside` / `banging it. i see one in there.` · `they're saving
@@ -1393,3 +1360,20 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   man down are guesses. The words are lower case like the rows and answers beside them. OPEN: where the reason sits on the quick key's row is
   the commanding work's to settle (its flat wheel and the corner panel draw that row); the reason for a charge is not on the HUD's line (the
   hint does not ask the lock, so it shows the open it will not do).
+- **The silent partner's words (2026-11-07).** The squad line says 'SILENT · low' with a suspicious man about and 'SILENT · contact' once an alert man has them (`spotted_word`, read by `silent posture_word`), as it did before the TypeScript tick went; 'SILENT · compromised' still wins. Seen where the partner is on: a quiet mission with a squad, and `?pair`. Native: `rust/game_start/tests/pair.rs`, red before.
+- **Each seat's squad line (2026-11-08).** The partner's rule (`spotted_tick`) runs for every seat's men, so in a game of two the second player's line says 'SILENT · low' and 'SILENT · contact' too, and his men slip, cover and call as the first player's do. No switch. Check: `tests/pair.rs in_a_game_of_two_each_squad_line_says_low_for_its_own_men` (three seeds, each seat in turn; red for the second seat before). Nobody has played it, and two people have never played a silent squad.
+- **Two lines a man says in one frame are both shown (2026-11-07; every man in every game).** `guards say` used to overwrite the bubble, so of "he's down. on you." and the fight's "tango down." in one frame the player saw only the second. The later line now waits on `bubble_next` and comes up a second on (`bubble_tick`); the log row and everything else of the line happen when it is said. A line of a LATER frame still replaces the bubble at once. No switch; `hold` before and after on three squad levels is in the Rust goal's report for this. Never seen on a GPU, never played.
+- **A squad throw is one plan (2026-11-07; `squadthrow/plan.rs ThrowPlan`).** Who throws it, from where, whom it would catch and the walk to it are worked out once and kept on the open menu; the row's
+  `only`, `valid` and `label`, the picture and the order read that one. What is cheap (the nearest man's straight throw, whom it catches) is asked each time; a throw somebody has to work out or walk to
+  is searched again when one of ours comes into another half metre of floor, and by the menu's own reading. A press makes the kept throw again as things are, the same man and spot, and searches only if
+  it no longer goes off. With no menu up nothing outlives the frame. Before, up to a second could stand between what was shown and what was thrown (4 of 337 presses differed, never in the man). No
+  switch. CHECK: native, `rust/game_start/tests/throw.rs`, six levels by two seeds: shown is given, 70 presses of 70 (66 of 66 before: not a fault mended; two simpler forms failed it, 33 of 84 and 7 of
+  76). Never seen on a GPU, never played.
+- **Is this way seen has one answer** (2026-11-08; `pairorders pair_orders_stalk`, `sneak seen_along`). The way to a man's back is priced and read by the sneak's own eye (`sneak_walk`,
+  `sneak_walk_cost`) whether `PAIRUP.on` is thrown or not: the second test of the floor (`front`, `frontM`, `coneM`, `coneLit`) is gone. A quiet mission always threw the switch, so the page
+  plays as it did; only `?pairorders` alone changes: its row now names who has him ("waiting · Tango 1 is facing this way") and dark floor 2.1 to 3.6 m in front of a man no longer reads as seen.
+  A way round is a way: on the office's placement 10 the man faces the aisle door, the floor behind him is dark, and the partner goes round by the corridor door and sets up, so `pair-mark`'s last
+  line ("the only way lies across his eyes") stages a place where it does not. Check: `tests/pair.rs a_way_across_his_eyes_is_waited_on_by_one_eye`, `a_dark_way_round_is_a_way`, one seed each. Never seen on a GPU.
+- **A 40 mm shell is one plan (2026-11-08; `squad40/p_01.rs plan` → `ShellPlan`).** The man, his shot and why it may not be given are asked each time they are wanted (0.016 ms with one carrier) by the row's
+  `only` and `valid`, the order and, once a frame while its row is lit, by the menu (`follow` → `states[seat].plan`), which is what is drawn. Gone: the answers two askers kept for 0.3 s each. A change of
+  play only where one of those was stale; no switch. CHECK: native, `rust/game_start/tests/orders.rs the_shell_shown_is_the_shell_given`, three seeds. Never seen on a GPU, never played.
