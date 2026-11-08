@@ -99,7 +99,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   a menu, a Space list, a running verb or the launcher's arc to back out of, the press is theirs and no ring opens; on the page Esc is the pause, and a ring
   held under the pause card is gone, nothing given, when play comes back (the 'Paused' tick). NOT ON THE RING YET: rows on letters (the
   throw page on G, 'go'), the 'wait for my word' row (a ring's order goes at once), picking several men (one click is one man). B, X and T work beside it;
-  with the ring on, Tab is not the debug tools' key (`main.ts`; `TABKEY.does` is 'off' in the page anyway). A load, or the tick put off, puts a held ring away
+  with the ring on, Tab is not the debug tools' key (`main.ts`). A load, or the tick put off, puts a held ring away
   (`ringRestore`). CHECK: `bun run tools/qa/cmdring-check.ts` (`probes.ts cmdring`, family squadorders), 17 lines through the game's own input on the office
   room clear, the check raising the switch itself (22 lines since the tap's own rule, the next bullet); `CMDRING_BREAK=1` (the switch left off) fails 18 of the 22 on both stands (the four that hold are the ones that say 'as it was'). SEEN: the first 17 lines on both
   stands, one seed; the page on the software adapter with `?cmd` through real key and mouse events (the ring draws at the cursor and whole at the view's
@@ -155,7 +155,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   as he set it, like a freed row, and Reset is Q again. THE RING'S KEY (`CMDRING.key`) is the command's own code and no longer Tab: under `?cmd` a tap
   of Q gives the order as the key comes up (inside `holdSecs`, the one way it differs from the plain key, which gives it as the key goes down), Q kept
   down opens the ring, and plan mode's toggle (`?cmd&cmdplan`) is Shift + Q. Where the bullets above say Tab for the ring's key, read the command key;
-  `main.ts` gives Tab back to `ui/tabkey.ts` and the back key. THE MARK AT THE CURSOR IS A GAME SETTING (`CMDRING.hint`; the maintainer of the glyph
+  `main.ts` gives Tab back to the objectives card and the back key. THE MARK AT THE CURSOR IS A GAME SETTING (`CMDRING.hint`; the maintainer of the glyph
   and outline that were always there with the ring on: "I don't really like the always on icon", "we can make the always on icon a game setting"): OFF
   unless chosen, a row in Options ▸ Game ('Order mark at the cursor') kept on the machine (`twopointsix.options`, `cmdhint`), `?cmdhint` for a visit,
   with the ring or without (`hintView` no longer waits on `CMDRING.on`). Off, the outline and glyph show only while the ring's key is down and in the
@@ -423,7 +423,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   CHECK: `probes.ts wholesquad` (family squadorders; `tools/qa/wholesquad-check.ts`), eight lines on plan mode's rig on both stands;
   `WHOLESQUAD_BREAK=1` fails lines 1 to 5 on both. HELD OFF in the rigs of the checks that step who outside plan mode on purpose: `cmdring-check`,
   `wheelidle-check`, `orders-probes`, `orderui-probes` (and `pressorders-probes`, deleted 2026-11-06). MEASURED: one deal of the office room clear, squad of four; the rule has no die in it. OPTIONS
-  no longer offers "Order who" for the Tab key or a keyless "who" row on its Controls page while the rule is on (`menus.md`, "Options offers no dead order who control").
+  no longer offers a keyless "who" row on its Controls page while the rule is on (`menus.md`, "Options offers no dead order who control").
   Nobody has played it; no part of it is a picture.
 - **Plan mode's reach is the same at any zoom** (2026-10-25; `CMDRING.planNearFlat`, `planmode.ts pan`). The maintainer: "max distance for plan
   mode seems to be based on the zoom level? should be zoom invaraitn". The box `planNear` holds the view's point in (6.5 m to either side of him,
@@ -1257,9 +1257,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   list does its row, the launcher sends its round), so with the rule on the loop (`host/loop.ts`) hands the first tick after a frozen frame the one-tick code
   `'Paused'`, as Input hands it `'Blur'`: interact.ts shuts a held list with its press spent, player.ts lets go of a held arc unsent. It is a press in the
   tick's keys: a recording carries it, a replay does the same, and nothing of the game changes between ticks for it (the start card is a frozen frame too:
-  a run's first tick holds one, and it is nothing to that tick). The order menu and a running verb are still there after the pause. TAB'S TRIAL
-  (`ui/tabkey.ts`) keeps the key whenever there is nothing to back out of (`Game.backable`, which counts a verb that cannot be taken back, the knife in the
-  hold and the breaker's lever, for the half second it runs); with its 'who' choice Tab no longer steps who while the order menu is up (T does).
+  a run's first tick holds one, and it is nothing to that tick). The order menu and a running verb are still there after the pause. THE OBJECTIVES CARD
+  (`ui/tabcard.ts`) has the key whenever there is nothing to back out of (`Game.backable`, which counts a verb that cannot be taken back, the knife in the
+  hold and the breaker's lever, for the half second it runs).
   WHAT SHOWS: the order menu's line and the Space list's line name `tab` where they named `esc`; Options ▸ Controls gains a Tab row under Esc. NOT TOUCHED:
   the screens outside the fight (the pause card and its options, the mission list, team and kit: Esc is still back there), the showcases (Esc ends one),
   a focused field of the debugger (Esc lets go of it). Check: `tabback` (family `orders`; each of the four staged as play stages it, rule on and off, then

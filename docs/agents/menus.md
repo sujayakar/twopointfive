@@ -17,10 +17,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   layer of its own (`src/ui/options.ts`, `#options`: tabs GRAPHICS · AUDIO · GAME · CONTROLS on 1‥4, W S rows, A D change, Esc back), opened from the title and from the
   pause card (which is a narrow card: Resume · Restart · Options · Run so far · Missions · Quit); it took the place of the pause card's Settings and Controls tabs, so
   an older 'pause card ▸ Settings ▸ …' path in this file is Options ▸ that tab. The three cheats live on Options ▸ Game (a 'Cheats on: …' chip on the title while one is
-  on); the four volumes and the hints switch are kept per machine in localStorage `twopointsix.options` (never the 0 a `?mute` page pins the master at). TAB IS ON TRIAL (`src/ui/tabkey.ts`, the
-  maintainer: "maybe try a few things and see what works. i do hesitate to add more concepts though"): Options ▸ Game ▸ 'Tab key (trying out)' / `?tab=run|who|keys|off`, kept with the
-  options — nothing (the default; WHILE TAB IS THE BACK KEY, `BACKKEY.tab` in docs/agents/squad.md, the row's words follow it through `tabChoices`: the first choice reads 'Nothing more' with the line 'In the fight Tab backs out: a list, the order menu, a thing under way. Nothing more.', and each other choice's line ends 'Backing out comes first.'; `?tabback=0` / the frozen stand = 'Nothing', 'Tab does nothing.' as before; no switch of its own, words only; held by a line of `tools/qa/tabback-check.ts`, which fails under `TABBACK_BREAK=1`; read on the real page in headless Chromium on the software adapter with and without `?tabback=0`, never seen on a GPU, never read by the maintainer) · `run` = the pause card on 'Run so far' and back (main.ts `tabKey`) · `who` = Tab steps who takes the next order AS WELL AS T (main.ts hands a Tab press to the tick as a press of `ORDERS.whoKey`, so the HUD's, the lessons' and a tape's T all still hold) · `keys` =
-  Options ▸ Controls over the paused game and back; each an existing thing, the losers come out when he has picked.
+  on); the four volumes and the hints switch are kept per machine in localStorage `twopointsix.options` (never the 0 a `?mute` page pins the master at). TAB IS THE OBJECTIVES CARD, every page (`ui/tabcard.ts`, `main.ts tabKey`; the trial of Nothing, Run so far, Order who and Controls, its Options row and `?tab=` went 2026-11-08), and Tab backs out first (`BACKKEY.tab`, docs/agents/squad.md).
 - **The fight screen wears the menus' look** (2026-10-16; the maintainer's "sure a" to the call "The fight screen in the menus' colours: move the mint green
   monospace over to the menus' sand and orange"; before it the two read as two games). NO SWITCH, on purpose: it is a look, not a rule of the game (STYLE.md: no
   player-facing switches for art constants), nothing of the simulation reads it, so a run's digest is the same on both stands. WHERE: every rule of the fight screen is
@@ -1363,6 +1360,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **Options ▸ Game ▸ 'Walk into a wall to take it'** (10-20; `ui/options.ts`, shown only with the wall hold's feel pass on): flips `WALLSNAP.press`, kept in
   `twopointsix.options` as `wallpress`, a `?wallpress` in the URL wins over the kept value, Reset puts it back on. The rule: `docs/agents/stealth.md`, the
   wall taken without the key. The Controls list and the Options key list do not mention it.
+- **THE OUTLINE IS SETTLED (2026-11-08; his card "Cut as marked").** One row stays: 'Outline in the dark', on as the page starts it. The rows Outline width, strength, fades by, shows under light, full under light, teammate width and colour are gone, a kept line that names them reads as if it did not (`findMeRead`), and the numbers are his hand's: `render/outline.ts OUTLINE` (`wide` 0.25, `opacity` 0.6, `lit` 0.3, `dark` 0.12) and `host/findme.ts OUTLINE_LOOK` (`mates` 0.8, `colour` 0.5). The light meter's mode is gone with `outlineWant`, the frame's `strength` and the shader's blank picture: the rim goes by the picture alone, and a frame with no copy of the composite (none but the first) draws none. A second player down still has his own rim (`findMeOutline`: the line that meant to take it out was read only by the meter, so nothing drawn moved). No switch: a cut. CHECKS: `findme` (`FINDME_BREAK=1` must fail), `teams`, `tools/qa/draw-equal.cjs` base against tip. The bullets below say how the rows came about, and every sentence in them that names a row is history.
 - **Finding your own man, and the camera under the hand: twelve rows on trial in Options > Game (10-19; six, cut to four and back to five 10-20; the outline's width row 10-21, its strength, two light rows, teammates and colour 10-22;
   `src/host/findme.ts` the table, `src/ui/findme.ts` the ring, the rows and the outline's frame, `src/render/outline.ts` the outline's pass).** From a play test: a new player kept losing his own man on the screen, in the dark and behind
   walls, and reached for a camera that turns the other way and one that snaps behind him. The maintainer asked for settings to play with, none a new
@@ -1528,7 +1526,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   second machine. WHAT IT COSTS, read not measured: by the picture the pass runs every frame the row is on, lit or dark (a scissored draw a
   man, five on a squad level), and where GBAA does not run (render resolution at 100 %) the renderer keeps a copy of the composite for it:
   one copy a frame and 8 bytes a pixel that a fresh machine did not pay before, and the Auto ladder and the benchmark now run with it.
-  Checks: `probes.ts findme` line (12), ALL PASS on both stands (`FINDTUNED_BREAK=1` = the boot leaves the starts as built: that line fails
+  Checks then: `probes.ts findme` line (12, gone with the cut of the checks and the rows 2026-11-08), ALL PASS on both stands (`FINDTUNED_BREAK=1` = the boot leaves the starts as built: that line failed
   on both; `FINDME_BREAK=1` still fails its seven); lines (1) to (11) are the rows' own and run on the built starts whatever the stand
   booted with. `tools/qa/findtuned-page.cjs` is the real page's word (software adapter, a squad of four: a browser that kept nothing, the
   word, a kept Off; the Options screen read off its own rows, a row put Off, Reset): RUN ONCE, 1024 × 576 on `verylow`, ALL PASS, six lines,
@@ -1571,7 +1569,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   CHECKS: `probes.ts findme` line (12) now also holds the camera handed over (lead none and 100 px turning the view −0.6 rad on a machine that
   kept nothing; lead 0.18 and +0.6 under the word), Normal and the full pan chosen by hand written and still the hand's on the visit after,
   an older line's pan none and reversed read under the word, and the copy of the knobs put back. ALL PASS on both stands, each plain and with
-  the word both ways (`TPS_FINDTUNED=1` frozen, `=0` shipped); `FINDTUNED_BREAK=1` fails that line on both. `tween-check` four ways,
+  the word both ways (`TPS_FINDTUNED=1` frozen, `=0` shipped); `FINDTUNED_BREAK=1` failed that line on both (word and line gone). `tween-check` four ways,
   `replayturn-check`, `autocam-check`, `camspace-check`, `probes.ts shipped` and the `ui` gate (143 lines) pass on both stands.
   `probes.ts all-quick` was NOT run through on either stand (the frozen run was stopped at forty minutes with no FAIL in what it had done).
   `findtuned-page.cjs`, the real page on the software adapter, RUN ONCE at 1024 × 576 on `verylow`: a browser that kept nothing has the
@@ -1997,7 +1995,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   fail). SEEN: those two runs and stills of the three screens, on the software adapter. NOBODY has seen it on a GPU or played it, and the pause
   card's intel tooltip was read in the code only.
 
-- **Tab shows the objectives and the squad** (2026-10-23; `ui/tabkey.ts` choice `brief`, `ui/tabcard.ts`, `index.html #tabcard`; the maintainer, with
+- **Tab shows the objectives and the squad** (2026-10-23; `ui/tabcard.ts`, `main.ts tabKey`, `index.html #tabcard`; the maintainer, with
   the corner panel cut down to what the two keys do: "if you don't have a menu open, tab opens up an objectives modal that also has your squad
   equipment?"). With nothing to back out of (Tab is the back key first: `game/backkey.ts`; the card also stays down over anything `game.backable()`
   names where `?tabback=0` has the back key off) and no menu open, Tab HOLDS THE GAME (`main.ts frozen`, as a pausing card does) on a card in the
@@ -2010,11 +2008,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   pool once the run is on and the live count is the note under the men. His own kit has no section (the slot bar shows it). Tab again or Esc goes back (Esc alone does not open the pause card over it); a menu,
   Options, a lesson's card or a script that steps the page puts it away. F5 under it puts it away and saves by hand, as on the pause card. Every word is one the game already makes, through `keyText`; the card lays them out once
   as it comes up (not a live readout) and scales with the text size (`textsize.ts LAYERS`). It is the home of what the corner panel stopped saying
-  (`docs/agents/player.md`, the corner panel). THE SWITCH is the Tab key's row on Options, Game (the row is 'Tab key' now, no longer '(trying out)'; 'Objectives', beside Nothing, Run so far, Order
-  who, Controls): it is what Tab does where nobody has chosen (`TABKEY.first`, set by the page before its menu is made), `?tab=off` = nothing for a visit, and a choice
-  made on Options stands, Nothing included (`picked`, kept with the choice: a kept 'off' from before this was written by every machine and is no
-  choice). OFF in the module, for anything headless and on a page a script drives (`navigator.webdriver`: the page tools press Tab for other
-  things; they pass `?tab=brief` to see it). No rule of the game reads it and nothing of it is in a recording: under a replay or a script that
+  (`docs/agents/player.md`, the corner panel). NO ROW AND NO WORD SINCE 2026-11-08: it is what Tab does on every page, a page a script drives too (a check that presses Tab with nothing to back out of gets the card, put away on the next `__runFrames`). A kept `tab` or `tabPicked` in `twopointsix.options` is read past and dropped when a row is next moved. No rule of the game reads it and nothing of it is in a recording: under a replay or a script that
   steps the page (`__runFrames`) the hold does not apply and the card is put away on the next frame. CHECK: `tabcard` (family `ui`), both
   stands, `TABCARD_BREAK=1` red: the choice, what settles it and what is kept, the list, the card of a room clear with the squad of four (a
   staged kit, a man lost), the page's wiring read as text. DRIVEN on the real page on the software adapter (`tut-squad`, a room clear, four men,
@@ -2051,21 +2045,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `PORT=<port> node tools/qa/unplayed-page.cjs` (no adapter under it: 31 cards, none the night breach's; 36 under `?offlist=0`; no page error) and its
   still of the Raids group, six cards. `startpage-look.cjs` and the verify
   notes list six. Nobody has opened the page on a GPU since.
-- **Options offers no dead order who control** (10-25; `src/ui/tabkey.ts` `TABKEY.whoGone` / `tabNow()`, `src/ui/options.ts` the who row). It
-  follows the squad's rule and has no switch of its own: `game/cmdring.ts` `wholeSquad` (the maintainer, 10-24: "quick Q mode should always do the
-  whole squad. you should only be able to issue commands to parts of the squad in plan mode"; `?wholesquad=0`, and off on the frozen stand, where
-  everything here is as it was). With the rule on the orders' who key steps nobody outside plan mode, so: THE TAB KEY's choices (Options ▸ Game)
-  no longer offer 'Order who'; a machine that kept it, or a `?tab=who` visit, gets what Tab does where nobody has chosen (the objectives card), and
-  the kept choice is not rewritten, so `?wholesquad=0` finds it again. Every reader asks `tabNow()`, never `TABKEY.does`; the page hands the
-  rule in as a question (`main.ts`: `TABKEY.whoGone = () => CMDRING.wholeSquad`), so `tabkey.ts` still imports nothing and the debugger's tick is
-  followed live. THE WHO ROW on Options ▸ Controls ("Who takes the next order", key id `KeyT`, a dashed cap since Q and F became the squad's only
-  keys) is not listed while it has no key: there is no cap to put a dead key on. A row the player gave a key earlier stays his to see and move,
-  and its small words say "this only works in plan mode" (the list is built again when the row loses its key: Reset, Backspace on its cap). CHECKS: `bun run tools/qa/tabwho-check.ts` (also `probes.ts tabwho`, family ui: the
-  choices with the rule off and on, a kept 'who', `?tab=who`, the others untouched, and the page's own wire read as text: `main.ts` hands the rule in and nothing under `src` reads `TABKEY.does` but `tabkey.ts`; `TABWHO_BREAK=1` must fail) and
-  `PORT=<dev server> node tools/qa/tabwho-page.cjs` (Options ▸ Controls on the real page: no row, a hand-bound row, the row under
-  `?wholesquad=0`; `TABWHO_BREAK=1` must fail); `tools/qa/keybinds-page.cjs` has one line brought up to date. SEEN: the Controls tab in headless
-  Chromium with no adapter. NOT SEEN: Options ▸ Game as drawn (it needs the game stood up, which this machine cannot do in useful time), a GPU, a
-  played game.
+- **Options offers no dead order who control** (10-25; `src/ui/options.ts` the who row). It follows the squad's rule and has no switch of its own: `game/cmdring.ts` `wholeSquad` (the maintainer, 10-24: "quick Q mode should always do the whole squad. you should only be able to issue commands to parts of the squad in plan mode"; `?wholesquad=0`). THE WHO ROW on Options ▸ Controls ("Who takes the next order", key id `KeyT`, a dashed cap since Q and F became the squad's only keys) is not listed while it has no key: there is no cap to put a dead key on. A row the player gave a key earlier stays his to see and move, and its small words say the key does nothing now (the list is built again when the row loses its key: Reset, Backspace on its cap). CHECK: `PORT=<dev server> node tools/qa/tabwho-page.cjs` (Options ▸ Controls on the real page: no row, a hand-bound row, the row under `?wholesquad=0`; `TABWHO_BREAK=1` must fail). SEEN: the Controls tab in headless Chromium with no adapter. NOT SEEN: a GPU, a played game.
 - **The menus name no plan mode, and the Controls list says the squad's keys as the page has them** (10-26; `src/ui/options.ts` `squadRows`,
   `listNow`). The maintainer, 10-26: "let's remove plan mode and update the tutorials accordingly". No switch of its own: it follows
   `game/cmdring.ts` `only` (`?qonly=0`: the Squad rows as they were) and `goals` (`?goals=0`: no row for a part of the squad, the "Plan mode
