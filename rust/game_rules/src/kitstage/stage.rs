@@ -213,9 +213,8 @@ fn or<T: Copy>(a: Option<T>, b: T) -> T { a.unwrap_or(b) }
 /// a hung lamp as the picture has it
 struct Hung { kind: f64, pos: V3, dir: V3, color: V3, intensity: f64, range: f64, inner: f64, outer: f64, radius: f64, volumetric: f64, broad: bool }
 fn hang(g: &mut Game, name: &str, h: &Hung, had: Option<LightId>) -> LightId {
-    let on_list = had.filter(|l| g.engine.lights.lights.contains(l));
-    let id = match on_list {
-        Some(l) => l,
+    let id = match had {
+        Some(l) => { if !g.engine.lights.lights.contains(&l) { crate::render_lights::light_set_add(g, l); } l }
         None => {
             let mut l = crate::render_lights::RtLight::zeroed();
             l.name = String::from(name); l.group = String::from("kitview"); l.fixture_box = -1.0; l.ttl = -1.0;
@@ -378,6 +377,7 @@ fn place(g: &mut Game, st: &mut KitStage) {
     }
 
     // THE MEN: the open card's man first, on the plan's places
+    st.who = if st.want >= 1 && (st.want as usize) <= team.len() { st.want } else { 0 };
     let head = open_man(g, st).filter(|h| team.contains(h));
     let order: Vec<GuardId> = match head { Some(h) => core::iter::once(h).chain(team.iter().copied().filter(|&x| x != h)).collect(), None => team.clone() };
     st.doorway = alloc::vec![a.a, a.b];
@@ -535,16 +535,14 @@ fn place(g: &mut Game, st: &mut KitStage) {
             st.pool = None;
         }
         let want_own = q && a.kind != "wall";
-        let hung = st.inside.filter(|l| g.engine.lights.lights.contains(l));
         if !want_own {
-            if let Some(l) = hung { crate::render_lights::light_set_remove(g, l); }
-            st.inside = None;
+            if let Some(l) = st.inside.take() { crate::render_lights::light_set_remove(g, l); }
         } else {
             // (which way along the wall the leaf's free edge is; a gap: its middle)
             let lt = match door { Some(d) => { let h = g.dr[d].def.hinge; if (a.mid[0] - h[0]) * plan.s[0] + (a.mid[1] - h[1]) * plan.s[1] >= 0.0 { 1.0 } else { -1.0 } } None => 0.0 };
             let oo = &QK.own;
             let p = at_of(&plan, [lt * (a.width / 2.0 + oo.side), plan.wall.back - oo.back, oo.up]);
-            st.inside = Some(hang(g, "kitview_inside", &Hung { kind: 0.0, pos: p, dir: [0.0, -1.0, 0.0], color: oo.color, intensity: oo.intensity, range: oo.range, inner: 0.0, outer: 180.0, radius: oo.radius, volumetric: 0.0, broad: false }, hung));
+            st.inside = Some(hang(g, "kitview_inside", &Hung { kind: 0.0, pos: p, dir: [0.0, -1.0, 0.0], color: oo.color, intensity: oo.intensity, range: oo.range, inner: 0.0, outer: 180.0, radius: oo.radius, volumetric: 0.0, broad: false }, st.inside));
         }
     }
     // THE CAMERA: the plan's pin, framed
@@ -580,16 +578,14 @@ fn place(g: &mut Game, st: &mut KitStage) {
 pub fn restage(g: &mut Game) {
     let Some(mut st) = take(g) else { return };
     unhang(g, &mut st);
-    st.porch = None;
-    st.fill = None;
-    st.inside = None;
+    st.due = false;
     let (input, cam) = (g.host_input, g.host_cam);
     if let Some(i) = input { hands_off(g, i); }
     crate::game::game_restart_encounter(g);
     if let Some(c) = cam { g.tab.camera[c].kick = None; }
-    // (the card asked for, if its man is on the team as it now stands)
-    if st.who > 0 && crate::scenario_run::team_of(g).get(st.who as usize - 1).is_none() { st.who = 0; }
     place(g, &mut st);
+    // (another picture than the last: nothing of it is blended into this one)
+    g.restart_cut = true;
     g.kit_stage = Some(st);
 }
 
@@ -692,11 +688,11 @@ pub fn before(g: &mut Game, cmd: &mut PlayerCmd) {
     cmd.buttons = 0.0;
     cmd.clicked = 0.0;
     cmd.wheel = 0.0;
-    if st.none { g.kit_stage = Some(st); return; }
     let pl = g.player;
-    // (a man down, a mission ended: nothing the picture shows, so it is staged again)
-    let down = g.pl[pl].down || st.order.iter().any(|&x| g.gd[x].state == GuardState::Dead) || staged_way_of(g, st.asks_none).ended;
-    if down { g.kit_stage = Some(st); restage(g); st = match take(g) { Some(s) => s, None => return }; if st.none { g.kit_stage = Some(st); return; } }
+    // (the cards, the size or the open card have moved; a man down, a mission ended: nothing the picture shows. Staged again)
+    let again = st.due || !st.none && (g.pl[pl].down || st.order.iter().any(|&x| g.gd[x].state == GuardState::Dead) || staged_way_of(g, st.asks_none).ended);
+    if again { g.kit_stage = Some(st); restage(g); st = match take(g) { Some(s) => s, None => return }; }
+    if st.none { g.kit_stage = Some(st); return; }
     let (men, alarms) = park(g);
     st.roused_men += men;
     st.roused_alarms += alarms;
@@ -715,7 +711,7 @@ pub fn before(g: &mut Game, cmd: &mut PlayerCmd) {
 }
 
 /// ROUND THE TICK, AFTER IT: what the step made of anything is not carried into the next, and what the game writes each step goes back as staged.
-pub fn after(g: &mut Game, _dt: f64) {
+pub fn after(g: &mut Game) {
     let Some(mut st) = take(g) else { return };
     if st.none { g.kit_stage = Some(st); return; }
     torches(g, &st);
@@ -775,12 +771,15 @@ fn stroke(g: &mut Game, list: &[LightId]) {
     }
 }
 
-/// a frame message's numbers, as the page may send them: what is out of its range falls back, a hung door or a column out of order is not asked for
-pub fn frame_ask(cx: f64, cy: f64, h: f64, w: f64, man: f64, hung: Option<[f64; 4]>, column: Option<[f64; 2]>) -> Option<FrameAsk> {
-    if !(cx.is_finite() && cy.is_finite() && h.is_finite()) || !(h > 0.02 && h <= 1.0) { return None; }
-    let hung = hung.filter(|x| { let [dr, l, r, _] = *x; dr.is_finite() && l.is_finite() && r.is_finite() && l >= -1.0 && r <= 1.0 && l < dr && dr < r }).map(|[dr, l, r, k]| [dr, l, r, if k > 0.0 && k <= 1.0 { k } else { 1.0 }]);
-    let column = column.filter(|x| { let [t, b] = *x; t.is_finite() && b.is_finite() && t <= 1.5 && b >= -1.5 && t - b > 0.2 });
-    Some(FrameAsk { cx: m::max(-1.0, m::min(1.0, cx)), cy: m::max(-1.0, m::min(1.0, cy)), h, w: if w > 0.02 && w <= 1.0 { w } else { 1.0 }, man: if man > 0.02 && man <= 1.0 { man } else { 1.0 }, hung, column })
+/// a frame message's numbers, NaN where one was not said: what is out of its range falls back, a hung door or a column out of order is not asked for
+pub fn frame_ask(cx: f64, cy: f64, h: f64, w: f64, man: f64, hung: [f64; 4], column: [f64; 2]) -> Option<FrameAsk> {
+    if !(cx.is_finite() && cy.is_finite() && h > 0.02 && h <= 1.0) { return None; }
+    let ([door, left, right, keep], [top, bottom]) = (hung, column);
+    let share = |x: f64| if x > 0.02 && x <= 1.0 { x } else { 1.0 };
+    let edge = |x: f64| m::max(-1.0, m::min(1.0, x));
+    let hung = if left >= -1.0 && right <= 1.0 && left < door && door < right { Some([door, left, right, if keep > 0.0 && keep <= 1.0 { keep } else { 1.0 }]) } else { None };
+    let column = if top <= 1.5 && bottom >= -1.5 && top - bottom > 0.2 { Some([top, bottom]) } else { None };
+    Some(FrameAsk { cx: edge(cx), cy: edge(cy), h, w: share(w), man: share(man), hung, column })
 }
 /// THE COMMANDS. Where the page wants the men in its view: `ask` none leaves it as it was.
 pub fn frame(g: &mut Game, aspect: f64, ask: Option<FrameAsk>) {
@@ -789,37 +788,20 @@ pub fn frame(g: &mut Game, aspect: f64, ask: Option<FrameAsk>) {
     if ask.is_some() { st.frame = ask; }
     aim(g);
 }
-/// whose card is open (0 the player) and the row under its highlight: the men stand again with that man first at the door
+/// whose card is open (0 the player) and the row under its highlight: the men stand again with that man first at the door, by the next tick. The card may be asked for before its man has come
 pub fn open(g: &mut Game, who: u32, field: &str) {
-    let team = crate::scenario_run::team_of(g).len();
     let Some(st) = g.kit_stage.as_mut() else { return };
-    let i = if who >= 1 && who as usize <= team { who } else { 0 };
     st.field = String::from(field);
-    if i == st.who { return; }
-    st.who = i;
-    restage(g);
+    if st.want == who { return; }
+    st.want = who;
+    st.due = true;
 }
-/// the cards are written (the caller's) and how many come (under 0: as it stands; a quiet or a solo mission's men are the mission's own): staged again
+/// the cards are written (the caller's) and how many come (under 0: as it stands; a quiet or a solo mission's men are the mission's own): staged again by the next tick
 pub fn cards(g: &mut Game, size: i32) {
     let Some(st) = g.kit_stage.as_ref() else { return };
-    if size >= 0 && size <= 4 && !staged_way_of(g, st.asks_none).fixed {
-        if g.rescue.active { g.k.rescue.squad = size as f64; } else { g.k.nightbreach.squad = size as f64; }
-        g.kit_stage.as_mut().unwrap().size = Some(size as u32);
-    }
-    restage(g);
-}
-
-/// ONE TICK OF A HOST THAT SAMPLES ITS OWN HAND (the host with no picture): `game_update`'s lines with the stage round the step.
-pub fn update(g: &mut Game, dt: f64, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
-    let me = crate::game::game_host_seat(g);
-    crate::math_dice::use_dice(g);
-    crate::director::director_inject_input(g, input);
-    let into = g.cmd_buf.take();
-    let c = crate::seats::with_seat(g, me, &mut |g| crate::cmd::sample_cmd(g, input, cam, canvas, into.as_ref()));
-    g.cmd_buf = Some(c.clone());
-    let mut staged = c;
-    before(g, &mut staged);
-    crate::game::game_step(g, dt, &staged);
-    crate::game::game_host_after(g, input, cam, canvas);
-    after(g, dt);
+    let size = if (0..=4).contains(&size) && !staged_way_of(g, st.asks_none).fixed { Some(size as u32) } else { None };
+    if let Some(n) = size { if g.rescue.active { g.k.rescue.squad = n as f64; } else { g.k.nightbreach.squad = n as f64; } }
+    let st = g.kit_stage.as_mut().unwrap();
+    if size.is_some() { st.size = size; }
+    st.due = true;
 }

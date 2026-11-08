@@ -24,6 +24,7 @@ use game::m;
 use crate::json::{self, Json};
 use crate::kit_plan::{self, Planned, Way, PlanBox, PlanOpts, PlanSet, V2, V3};
 use game::kitstage::KIT_PLAN;
+use game::query::Query;
 
 /// the stand-ins' names and numbers (the head)
 pub struct KitSetNumbers {
@@ -36,39 +37,6 @@ pub struct KitSetNumbers {
 pub const KIT_SET: KitSetNumbers = KitSetNumbers { panel: "kitset_breaker_panel", led: "kitset_breaker_led", door: "kitset_door", room: "kitset_room", sunk: -30.0, stub: 0.05, leaf: 0.86, corner: 2.0, room_half: 1.0, behind: 1.75, apart: 3.0 };
 const K: &KitSetNumbers = &KIT_SET;
 
-/// A LINK'S WORDS, as the page's own query reader has them: in order, a key as many times as it is written.
-#[derive(Clone, Debug, Default, PartialEq)]
-pub struct Query(pub Vec<(String, String)>);
-impl Query {
-    /// a link's search text, with or without its `?`: `+` is a space and %XX a byte, as the language's reader decodes them
-    pub fn parse(text: &str) -> Query {
-        let t = text.strip_prefix('?').unwrap_or(text);
-        Query(t.split('&').filter(|p| !p.is_empty()).map(|p| match p.split_once('=') { Some((k, v)) => (decode(k), decode(v)), None => (decode(p), String::new()) }).collect())
-    }
-    pub fn has(&self, k: &str) -> bool { self.0.iter().any(|(n, _)| n == k) }
-    pub fn get(&self, k: &str) -> Option<&str> { self.0.iter().find(|(n, _)| n == k).map(|(_, v)| v.as_str()) }
-    pub fn delete(&mut self, k: &str) { self.0.retain(|(n, _)| n != k); }
-    /// the first of the key takes the value and the others go; none: it joins the end
-    pub fn set(&mut self, k: &str, v: &str) {
-        match self.0.iter().position(|(n, _)| n == k) {
-            Some(i) => { self.0[i].1 = String::from(v); let mut j = 0; self.0.retain(|(n, _)| { let keep = n != k || j == i; j += 1; keep }); }
-            None => self.0.push((String::from(k), String::from(v))),
-        }
-    }
-}
-fn decode(s: &str) -> String {
-    let b = s.as_bytes();
-    let hex = |c: u8| (c as char).to_digit(16);
-    let (mut o, mut i) = (Vec::with_capacity(b.len()), 0);
-    while i < b.len() {
-        match b[i] {
-            b'+' => { o.push(b' '); i += 1; }
-            b'%' if i + 2 < b.len() && hex(b[i + 1]).is_some() && hex(b[i + 2]).is_some() => { o.push((hex(b[i + 1]).unwrap() * 16 + hex(b[i + 2]).unwrap()) as u8); i += 3; }
-            c => { o.push(c); i += 1; }
-        }
-    }
-    String::from_utf8_lossy(&o).into_owned()
-}
 /// `String.prototype.trim`: the language's white space and line ends, its list and not Unicode's
 fn js_trim(s: &str) -> &str {
     let white = |c: char| matches!(c, '\u{9}' | '\u{a}' | '\u{b}' | '\u{c}' | '\u{d}' | ' ' | '\u{a0}' | '\u{1680}' | '\u{2000}'..='\u{200a}' | '\u{2028}' | '\u{2029}' | '\u{202f}' | '\u{205f}' | '\u{3000}' | '\u{feff}');

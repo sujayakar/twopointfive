@@ -193,7 +193,7 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
 /// envelopes, the Input's frame ended. Answers WHAT THE STEP TOLD ITS HOST (tools/blitz/OUT-EVENTS.md: the sounds to
 /// play, the marks to draw, the lines said): the list is a step's output and the host drains it, or it grows for the life of the game.
 pub fn frame(g: &mut Game, h: &Host, dt: f64) -> Vec<game::out_events::OutEvent> {
-    if g.kit_stage.is_some() { game::kitstage::update(g, dt, h.input, h.cam, h.canvas); } else { game::game::game_update(g, dt, h.input, h.cam, h.canvas); }
+    game::game::game_update(g, dt, h.input, h.cam, h.canvas);
     let me = game::game::game_host_seat(g);
     let (follow, aim) = game::seats::with_seat(g, me, &mut |g| (game::game::game_follow_pos(g, None), g.aim_point));
     let aim = if g.spectate >= 0.0 { None } else { Some(aim) };

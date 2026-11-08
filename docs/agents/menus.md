@@ -97,10 +97,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   condensed face, with a pair (a teammate's card), in a window under 1180 px wide.
 - **The Team & kit picture on the new page is the Rust game's** (2026-11-08). draw.html in the kit screen's frame, on the very address Deploy would load plus `kitview` (`src/ui/kitView.ts` makes it, as
   the old page does). The module starts that mission and STAGES it: `rust/game_start/src/kit_stage.rs` reads the words (way, set, `add`, dress) and makes the plan (`kit_plan.rs`, `kit_set.rs`, to the bit
-  the TypeScript's: `tools/blitz/kitplan-diff.ts`), `rust/game_rules/src/kitstage` stands the team, parks everybody else, hangs the lamps and pins the camera, round the tick (`game_run::step`); no rule
+  the TypeScript's: `tools/blitz/kitplan-diff.ts`), `rust/game_rules/src/kitstage` stands the team, parks everybody else, hangs the lamps and pins the camera, round the tick (`game_step_seats`); no rule
   reads it (`Game.kit_stage`, None in every other game). Commands 30 `KitStageCards`, 31 `KitStageOpen`, 32 `KitStageFrame`; the View section's `kit` (1 staged, 2 nothing to stage). The page's half is
   `src/host/kitpage.ts` (messages to commands; a team staged again is staged under a copy of the last picture) and `src/host/kitguard.ts` (this window writes no store and hears no key). Checks:
-  `game_start --test kit_stage`, `game_run --test kit_commands`, `kitplan-diff.ts` (`KITPLAN_DIFF_BREAK=1`), `kitstage-diff.ts` against the old staging (`KITSTAGE_DIFF_BREAK=1`). STANDING ONLY so far: no
+  `game_start --test kit_stage`, `game_run --test kit_commands`, `kitplan-diff.ts` (`KITPLAN_DIFF_BREAK=1`), `kitstage-diff.ts` against the old staging (`KITSTAGE_DIFF_BREAK=1`). `?stillkit` is the old picture's alone. STANDING ONLY so far: no
   acts, no walk as another card opens (the team is staged again). Seen on a page on the software adapter; never on a GPU.
 - **Team & kit shows the team at the mission's way-in door** (2026-10-13, the owner's pick; `src/ui/kitView.ts` + `src/host/kitView.ts`). SWITCH, UI-ONLY:
   `KIT_VIEW.acts` / `?stillkit` (THE LOOP, 2026-10-14; off = the still picture: staged, warm, held, every
