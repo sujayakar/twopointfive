@@ -23,6 +23,7 @@
 // QLOAD_BREAK=1 = a loaded memory save puts nothing away (orders.ts `loaded` left out): line 10b must fail.
 //   exit 0 = all hold · 1 = one does not
 import { standUp, ROOT } from './headless.ts';
+import { ringDown } from './squadwords';
 
 const { CMDRING, CMDRING_STATS, ringHoldSecs } = await import(`${ROOT}/src/game/cmdring.ts`);
 const { AUTOPILOT } = await import(`${ROOT}/src/game/autopilot.ts`);
@@ -65,7 +66,7 @@ async function rig(set?: () => void) {
     open(p: number[]) { R.aim(p); R.down(ringHoldSecs() + 0.1); R.up(); R.step(5); return !!O.cmdRing; },
     tail() { return O.log[O.log.length - 1]; },
     rowOf(k: number) { return O.menu?.rows.find((r: any) => r.key === k); },
-    home() { I.keys.clear(); I.buttons = 0; O.cmdRing = null; O.cmdPress = null; O.close(); O.who = 'all'; O.give('fallIn', O.targetAt(g.player.char.pos), 'all'); R.until(() => g.doorTools.ops.length === 0, 40); R.until(() => R.team.every((m: any) => dist(m.char.pos, g.player.char.pos) < 4.5), 25); R.step(30); },
+    home() { I.keys.clear(); I.buttons = 0; ringDown(I); R.step(); O.who = 'all'; O.give('fallIn', O.targetAt(g.player.char.pos), 'all'); R.until(() => g.doorTools.ops.length === 0, 40); R.until(() => R.team.every((m: any) => dist(m.char.pos, g.player.char.pos) < 4.5), 25); R.step(30); },
   };
   R.step(30); for (const m of R.team) m.god = true;
   return R;
@@ -144,7 +145,7 @@ export async function qringCheck(): Promise<boolean> {
       const n0 = O.log.length, slot0 = pl.slot, set0 = !!pl.setup; I.keys.add(CMDRING.key); I.pressed.add(CMDRING.key); R.step(3); const before = !!O.cmdRing;
       I.pressed.add('Digit2'); R.step(); const row = R.tail(), k = O.log.length - n0, gone = !O.cmdRing && !O.menu, gun = pl.slot !== slot0 || !!pl.setup !== set0;
       R.step(frames(CMDRING.stayHoldSecs) + 4); const later = !!O.cmdRing; I.keys.delete(CMDRING.key); R.step(3); const k2 = O.log.length - n0;
-      I.keys.clear(); O.cmdRing = null; O.cmdPress = null; O.close(); pl.setup = null; R.step(20); R.home(); R.aim(spot);
+      ringDown(I); pl.setup = null; R.step(20); R.home(); R.aim(spot);
       const n1 = O.log.length, slot1 = pl.slot; R.tap(); const tapped = O.log.length - n1; I.pressed.add('Digit2'); R.step(); const a = pl.slot, sa = !!pl.setup; I.pressed.add('Digit1'); R.step(); const b = pl.slot, sb = !!pl.setup;
       const guns = a !== slot1 || b !== a || sa || sb, k3 = O.log.length - n1, ring = !!O.cmdRing; pl.setup = null;
       line(open && !!r2 && !before && k === 1 && row?.order === r2 && gone && !gun && k2 === 1 && tapped === 1 && k3 === 1 && guns && !ring,

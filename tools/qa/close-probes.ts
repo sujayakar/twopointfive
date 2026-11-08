@@ -45,6 +45,7 @@
 import { standUp, ROOT } from './headless.ts';
 import { asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 import { tapVerb } from './verbs.ts';
+import { ringUp } from './squadwords';
 const IK = 'Space';
 const { v3, wrapAngle } = await import(`${ROOT}/src/math/vec.ts`);
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
@@ -614,7 +615,7 @@ export async function closeDuo(): Promise<boolean> {
     // the grab: only from behind
     const f2s: string[] = []; pl.crouch = false; S.at(90, 0.8); const sideSel = g.selectVerb('guard', 'grab'); R.W.input.pressed.add(IK); R.step(); const sideHeld = !!pl.holding || !!pl.takedown; S.at(0, 0.8); const frontSel = g.selectVerb('guard', 'grab'); R.W.input.pressed.add(IK); R.step(); const frontHeld = !!pl.holding || !!pl.takedown;
     // the menu's right button, a defender in reach of Sam's empty hands
-    S.at(180, 0.8); const f4: string[] = [], inReach = g.nearby.some((x: any) => x.kind === 'guard' && x.inReach && x.guard === T1), opened = R.O.open(R.O.targetAt([pl.char.pos[0] - 1.2, 0, pl.char.pos[2] - 0.6])), up = !!R.O.menu, bl0 = { ...CLOSE_STATS.blows };
+    S.at(180, 0.8); const f4: string[] = [], inReach = g.nearby.some((x: any) => x.kind === 'guard' && x.inReach && x.guard === T1), opened = (R.W.cursorAt([pl.char.pos[0] - 1.2, 0, pl.char.pos[2] - 0.6]), ringUp(R.W.input, R), !!R.O.menu), up = !!R.O.menu, bl0 = { ...CLOSE_STATS.blows };
     R.W.input.clicked |= 4; R.step(); const menuAfter = !!R.O.menu, tdMenu = !!pl.takedown; for (let i = 0; i < 30; i++) R.step(); const stillUp = T1.state !== 'dead' && !pl.takedown && CLOSE_STATS.blows.knockout === bl0.knockout;
     if (!inReach || !opened || !up) f4.push(`staging: in reach ${inReach}, the menu opened ${opened} / up ${up}`); if (menuAfter) f4.push('the right click left the menu up'); if (tdMenu || !stillUp) f4.push(`the right click with the menu up started a knockout (takedown ${tdMenu}, he is ${T1.state})`);
     verdict(!f4.length, 'the order menu keeps the right button: the menu open, a defender in reach of Sam\'s empty hands — the right click puts the menu away and starts NO knockout', `in reach ${inReach} · menu up ${up} → ${menuAfter ? 'still up' : 'gone'} · takedown that frame ${tdMenu} · he is ${T1.state} 30 frames on${bad(f4)}`);

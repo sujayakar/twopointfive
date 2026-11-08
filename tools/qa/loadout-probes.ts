@@ -12,7 +12,8 @@
 //                    a breach plan, the pause card's words say the size, ten seconds of play throw nothing, a restart puts the same N back, a quit leaves the
 //                    knobs at the pair; with every defender dropped by the player's hand the scenario ends won at every size, alone too (the room clear: taken; the rescue: Sam holds the hostage room himself; the night breach with fewer than two: 'room clear' — with two or more that end is the F drill's, as ever); and at its OWN size the boot by `squad=N` stands the same men on the same marks as the row's own URL
 // The screen itself is walked by tools/qa/cards-page.ts, on the desk's module.
-import { menuKey } from './squadwords';
+import { ringDown } from './squadwords';
+import { CMDRING } from '../../src/game/cmdring';
 import { standUp, ROOT } from './headless.ts';
 import { pool, jobsOf } from './pool.ts';
 import { resolve } from 'node:path';
@@ -66,7 +67,7 @@ async function boot(query: string): Promise<BootReport> {
     const { why } = startFromQuery(g, q); R.why = why;
     R.start = shotOf(W, levelFile, line);
     // ten seconds of play with the keys a player presses first: F (the drill's word, or the rescue's), then X twice (the order menu up and away)
-    for (let i = 0; i < 600; i++) { g.player.visibility = 0.05; if (i === 60 || i === 200) W.input.pressed.add('KeyF'); if (i === 320 || i === 340) menuKey(g.orders); W.step(DT); if (i === 4) R.start5 = shotOf(W, levelFile); }
+    for (let i = 0; i < 600; i++) { g.player.visibility = 0.05; if (i === 60 || i === 200) W.input.pressed.add('KeyF'); if (i === 320) { W.input.keys.add(CMDRING.key); W.input.pressed.add(CMDRING.key); } if (i === 339) { W.input.keys.delete(CMDRING.key); ringDown(W.input); } W.step(DT); if (i === 4) R.start5 = shotOf(W, levelFile); }
     R.after = shotOf(W, levelFile);
     g.restartEncounter();
     for (let i = 0; i < 5; i++) { g.player.visibility = 0.05; W.step(DT); }

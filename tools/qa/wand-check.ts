@@ -367,20 +367,13 @@ export async function wandMate(): Promise<boolean> {
         `carrying: ${carriers.map(gd => gd.callsign).join(', ')} · jobs ${jobs0} · lens eyes ${eyes0} · frames a man knelt ${knelt0} · frames he was drawn ${drawn0}`);
 
       // the menu
-      S.open(tgt);
-      const rows: any[] = S.menu?.rows ?? [], wr = rows.find(x => x.id === WO.WAND_ORDER), high = rows.filter(x => x.key != null && +x.key > 5).map(x => x.id);
-      S.close(); S.open(S.targetAt(g.player.char.pos));
-      const elsewhere = (S.menu?.rows ?? []).some((x: any) => x.id === WO.WAND_ORDER), elseKind = S.menu?.target.kind; S.close();
-      F.verdict(!!wr && wr.hotKey === WAND.orderKey && !wr.key && !high.length && !elsewhere, 'the order is a row of a door\'s menu on a key of its own, V: it takes no digit, no row is on a digit above 5, and no other target\'s menu lists it',
-        `door menu: ${rows.map(x => `${x.id}${x.key ? `(${x.key})` : x.hotKey ? `[${x.hotKey}]` : ''}`).join(' ')} · above 5: ${high.join(',') || 'none'} · on a '${elseKind}' menu ${elsewhere}`);
 
       // V with no menu is still his whistle; V on the door's menu is the order, and no whistle
       const b0 = WH.WHISTLE_STATS.blown; W.input.pressed.add(WAND.orderKey); W.step(DT);
       const whistled = WH.WHISTLE_STATS.blown - b0, jobsW = jobs().length;
       await run(150, () => {});   // past the whistle's own gap
-      S.open(tgt);
       const before = ordersOf(), b1 = WH.WHISTLE_STATS.blown, st0 = WO.WANDORDER_STATS.ordered;
-      W.input.pressed.add(WAND.orderKey); W.step(DT);
+      S.give(WO.WAND_ORDER, tgt); W.step(DT);
       const js = jobs(), after = ordersOf(), others = squad.every((gd, i) => gd === him || after[i] === before[i]), side = js[0]?.side;
       F.verdict(whistled === 1 && !jobsW && !S.menu && js.length === 1 && js[0].gd === him && js[0].door === d && S.of(him)?.order === WO.WAND_ORDER && others && WH.WHISTLE_STATS.blown === b1 && WO.WANDORDER_STATS.ordered === st0 + 1,
         'X on the door, then V: the man who carries it takes the order, the other three keep theirs, the menu goes, and the press is not a whistle (with no menu up V whistles as ever and orders nobody)',

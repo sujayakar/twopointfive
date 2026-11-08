@@ -12,6 +12,7 @@
 // QONLY_BREAK=1 = the switch (and the board's) left off and the same lines asked: the lines that say what the rule does must fail.
 //   exit 0 = all hold · 1 = one does not
 import { standUp, ROOT } from './headless.ts';
+import { ringDown } from './squadwords';
 
 const { CMDRING, CMDRING_STATS, ringHoldSecs } = await import(`${ROOT}/src/game/cmdring.ts`);
 const { AUTOPILOT } = await import(`${ROOT}/src/game/autopilot.ts`);
@@ -48,7 +49,7 @@ async function rig(set?: () => void) {
     click(bit: number) { I.clicked |= bit; I.buttons |= bit; R.step(); I.buttons &= ~bit; R.step(); },
     /** the ring opened by the plain hold and left up: the key down past the hold, then up in the middle */
     open(p: number[]) { R.aim(p); R.down(ringHoldSecs() + 0.1); R.up(); R.step(5); return !!O.cmdRing; },
-    home() { I.keys.clear(); I.buttons = 0; O.cmdRing = null; O.cmdPress = null; O.close(); O.who = 'all'; O.give('fallIn', O.targetAt(g.player.char.pos), 'all'); R.until(() => g.doorTools.ops.length === 0, 40); R.until(() => R.team.every((m: any) => dist(m.char.pos, g.player.char.pos) < 4.5), 25); R.step(30); },
+    home() { I.keys.clear(); I.buttons = 0; ringDown(I); R.step(); O.who = 'all'; O.give('fallIn', O.targetAt(g.player.char.pos), 'all'); R.until(() => g.doorTools.ops.length === 0, 40); R.until(() => R.team.every((m: any) => dist(m.char.pos, g.player.char.pos) < 4.5), 25); R.step(30); },
   };
   R.step(30); for (const m of R.team) m.god = true;
   return R;
