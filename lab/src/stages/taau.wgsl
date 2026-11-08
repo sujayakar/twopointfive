@@ -15,7 +15,7 @@ fn cat(uv: vec2f, dim: vec2f) -> vec4f { let p = uv * dim; let c = floor(p - 0.5
   let mean = m1 / 9.0; let sd = sqrt(max(m2 / 9.0 - mean * mean, vec3f(0.0))); let cur = select(mean, acc / max(wa, 1e-6), wa > 1e-4);
   let aux = textureLoad(auxT, nq, 0); let uv = so / od + aux.xy; var o = cur; var n = 0.0;
   if (all(uv > vec2f(0.0)) && all(uv < vec2f(1.0)) && taauK.y < 0.5) {
-    let h0 = cat(uv, od); let lost = bad4(h0); let h = select(h0, vec4f(0.0), lost); let hy = ycc(tm(h.rgb)); let mv = length(aux.xy * od); n = min(h.a, mix(28.0, 9.0, sat(mv * 0.5)) * taauK.z); let ext = sd * mix(1.25, 1.0, sat(mv)) + vec3f(0.02, 0.01, 0.01) * mean.x; let dv = hy - mean; let rr = abs(dv) / max(ext, vec3f(1e-5)); let k = max(rr.x, max(rr.y, rr.z)); var hc = hy; if (k > 1.0) { hc = mean + dv / k; n = min(n, 28.0 / (0.6 + 0.4 * k)); }
+    let h0 = cat(uv, od); let lost = bad4(h0); let h = select(h0, vec4f(0.0), lost); let hy = ycc(tm(h.rgb)); let mv = length(aux.xy * od); n = min(h.a, mix(28.0, 9.0, sat(mv * 0.5)) * taauK.z); let ext = sd * mix(1.7, 1.0, sat(mv)) + vec3f(0.02, 0.01, 0.01) * mean.x; let dv = hy - mean; let rr = abs(dv) / max(ext, vec3f(1e-5)); let k = max(rr.x, max(rr.y, rr.z)); var hc = hy; if (k > 1.0) { hc = mean + dv / k; n = min(n, 28.0 / (0.6 + 0.4 * k)); }
     let a = sat(prox * prox + 0.02) / (n + 1.0); o = mix(hc, cur, select(max(a, 0.02), 1.0, lost)); n = min(n + prox, 40.0);
   }
   textureStore(outT, id.xy, vec4f(max(un(rgb(o)), vec3f(0.0)), max(n, 0.5)));
