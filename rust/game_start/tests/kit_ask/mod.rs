@@ -282,6 +282,47 @@ pub trait KitAsk {
     fn folded_by_a_blow(&self, gd: GuardId) -> bool;
     /// the tube of his rifle holds shells for the 40 mm
     fn sam_issued_the_forty(&mut self);
+    /// shoulders through a door, handles hauled at the run, boots at the run, since the game stood
+    fn sprint_door_counts(&self) -> (i32, i32, i32);
+    /// his sprint pace, off the table
+    fn sprint_pace(&self) -> f64;
+    /// the share of his speed a shoulder keeps
+    fn shoulder_keeps(&self) -> f64;
+    /// is a boot in the air
+    fn sam_kicking(&self) -> bool;
+    /// is the door off its hinges
+    fn door_off_hinges(&self, d: DoorId) -> bool;
+    /// is the lock of this door broken
+    fn door_broken(&self, d: DoorId) -> bool;
+    /// the door locked against the side he stands on
+    fn door_locked_to(&mut self, d: DoorId, at: [f64; 2]);
+    /// a pair on the floor, the room's rule silent: staged as a quiet mission with a squad does it
+    fn quiet_pair(&mut self);
+    /// the squad told 'take him now' on this man; None if it was given
+    fn take_him_now(&mut self, foe: GuardId) -> Option<String>;
+    /// blows from a partner, counted
+    fn partner_blows(&self) -> i32;
+    /// how long after the hands go on the blow lands
+    fn partner_hit_secs(&self) -> f64;
+    /// the lowest of a body's joints above the floor, the feet and toes not counted
+    fn lowest_joint(&self, c: game::ids::CharId) -> f64;
+    /// a man's body and Sam's
+    fn body_of(&self, gd: GuardId) -> game::ids::CharId;
+    fn body_of_sam(&self) -> game::ids::CharId;
+    /// where a body's hips are
+    fn hips_of(&self, c: game::ids::CharId) -> [f64; 3];
+    /// all a body's joints as they stand now
+    fn joints(&self, c: game::ids::CharId) -> Vec<[f64; 3]>;
+    /// the paces off the tables: the crouch walk, the fast crouch, a walk, a sprint, a patrol's walk
+    fn paces(&self) -> (f64, f64, f64, f64, f64);
+    /// footfalls filed since the list was last asked: their levels (a game event each)
+    fn footfalls_now(&self) -> Vec<f64>;
+    /// is he sprinting, as the game has it
+    fn sam_sprinting(&self) -> bool;
+    /// does he count as sneaking
+    fn sam_sneaking(&self) -> bool;
+    /// is he down in a crouch
+    fn sam_is_low(&self) -> bool;
     /// is he on a knee off a boot
     fn on_a_knee(&self, gd: GuardId) -> bool;
     /// has a man's belief in a door come to a boot on its way
@@ -607,6 +648,39 @@ impl KitAsk for Play {
     }
     fn folded_by_a_blow(&self, gd: GuardId) -> bool { self.g.gd[gd].stagger_until > self.g.time }
     fn sam_issued_the_forty(&mut self) { let r = self.g.pl[self.g.player].rifle; self.g.fa[r].shells = 3.0; }
+    fn sprint_door_counts(&self) -> (i32, i32, i32) { let t = &self.g.stats.sprintdoor; (t.bashes, t.rips, t.kicks) }
+    fn sprint_pace(&self) -> f64 { self.g.tune.player_sprint }
+    fn shoulder_keeps(&self) -> f64 { self.g.k.sprintdoor.keep }
+    fn sam_kicking(&self) -> bool { self.g.pl[self.g.player].kick.is_some() }
+    fn door_off_hinges(&self, d: DoorId) -> bool { game::doors::door_off(&self.g, d) }
+    fn door_broken(&self, d: DoorId) -> bool { game::doors::door_lock_broken(&self.g, d) }
+    fn door_locked_to(&mut self, d: DoorId, at: [f64; 2]) { game::doors::door_set_locked(&mut self.g, d, true); self.g.dr[d].key_side = game::doors::doors_side(&self.g, d, [at[0], 0.0, at[1]]); }
+    fn quiet_pair(&mut self) {
+        self.g.k.pairup.on = true;
+        game::pairup::pair_up_apply(&mut self.g, None);
+        self.g.k.silent.on = true;
+        self.run(0.3);
+        game::silent::set_silent(&mut self.g, true, None);
+    }
+    fn take_him_now(&mut self, foe: GuardId) -> Option<String> {
+        let at = self.at(foe);
+        let t = game::orders::OrderTarget::Foe(game::orders::OrderTargetFoe { at: [at[0], 0.0, at[1]], foe });
+        game::orders::squad_orders_give(&mut self.g, "pairTake", Some(&t), Some(game::orders::Who::All), None)
+    }
+    fn partner_blows(&self) -> i32 { self.g.stats.takedown.partner }
+    fn partner_hit_secs(&self) -> f64 { self.g.k.takedown.partner_hit }
+    fn lowest_joint(&self, c: game::ids::CharId) -> f64 {
+        self.g.ch[c].bones.iter().filter(|(b, _)| { let n = b.as_str(); !n.starts_with("foot") && !n.starts_with("toe") }).map(|(_, p)| p[1]).fold(f64::INFINITY, f64::min)
+    }
+    fn body_of(&self, gd: GuardId) -> game::ids::CharId { self.g.gd[gd].ch }
+    fn body_of_sam(&self) -> game::ids::CharId { self.g.pl[self.g.player].ch }
+    fn hips_of(&self, c: game::ids::CharId) -> [f64; 3] { self.g.ch[c].bones.get(game::character::Bone::Hips).copied().unwrap_or(self.g.ch[c].pos) }
+    fn joints(&self, c: game::ids::CharId) -> Vec<[f64; 3]> { self.g.ch[c].bones.iter().map(|(_, p)| *p).collect() }
+    fn paces(&self) -> (f64, f64, f64, f64, f64) { let t = &self.g.tune; (self.g.k.twogears.crouch, self.g.k.crouchrun.pace, t.player_walk, t.player_sprint, t.guard_walk) }
+    fn footfalls_now(&self) -> Vec<f64> { let now = self.g.time; self.g.events.iter().filter(|e| e.kind == game::director::EventKind::Step && e.time == now).filter_map(|e| e.level).collect() }
+    fn sam_sprinting(&self) -> bool { self.g.pl[self.g.player].sprinting }
+    fn sam_sneaking(&self) -> bool { game::unseen::sam_sneaks(&self.g, self.g.player) }
+    fn sam_is_low(&self) -> bool { self.g.pl[self.g.player].crouch }
     fn on_a_knee(&self, gd: GuardId) -> bool { self.g.gd[gd].door_down_until > self.g.time }
     fn walking_to_boot(&self, gd: GuardId) -> bool { self.g.m.doorforce.states.as_ref().and_then(|s| s.men.get(gd)).and_then(|m| m.kick.as_ref()).map_or(false, |k| k.phase == game::doorforce::KickPhase::Walk) }
     fn on_a_door(&self, gd: GuardId) -> bool { self.g.m.doorforce.states.as_ref().and_then(|s| s.men.get(gd)).map_or(false, |m| m.on.is_some()) }
