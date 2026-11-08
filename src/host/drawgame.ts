@@ -35,6 +35,10 @@ const QUIET = { tag: '', lines: [] as string[] };
 /** the calls a lost game may still be asked, or is stood again by */
 const STILL = new Set(['face_alloc', 'face_free', 'face_out_ptr', 'face_out_len', 'face_panic_ptr', 'face_panic_len', 'face_panic_clear', 'face_mem', 'face_recover', 'face_recover_what', 'face_drop', 'face_start', 'face_moment_back', 'face_moment_drop']);
 
+/** a row of the panel that does something to the game */
+export type ActionRow = { name: string; label: string; section: string; title: string } & ({ kind: 'press' } | { kind: 'each'; words: string[] } | { kind: 'choice'; words: string[]; now: string } | { kind: 'count'; lo: number; hi: number; step: number; start: number } | { kind: 'reload'; word: string; words: string[] });
+/** a row of the panel over a number of the game: `scale` is what the row shows the number at, `kept` stays turned on this machine, `adv` waits behind 'all knobs', `def` is the number as the game ships it (NaN: a number a level sets) */
+export interface ShownRow { name: string; label: string; section: string; title: string; lo: number; hi: number; step: number; scale: number; def: number; kept: boolean; adv: boolean }
 /** the game of a call was lost to a panic in it: its words, the call, and the tick */
 export class GameLost extends Error { constructor(readonly words: string, readonly what: string, readonly tick: number) { super(`the game stopped in ${what}, at tick ${tick}: ${words}`); this.name = 'GameLost'; } }
 
@@ -259,10 +263,34 @@ export class DrawGame {
     for (let at = 0; at < n;) { const w = d.getUint32(at, true), len = w & 0x7fffffff; out.push({ name: this.dec.decode(new Uint8Array(b, at + 4, len)), yes: w >>> 31 === 1, value: d.getFloat64(at + 4 + len, true) }); at += 12 + len; }
     return out;
   }
+  /** the panel's rows of the game's numbers, as the module lists them (game_run shown.rs) */
+  shown(): ShownRow[] {
+    this.X.face_shown(); const p = this.X.face_out_ptr() >>> 0, n = this.X.face_out_len() >>> 0, b = this.memory.buffer.slice(p, p + n), d = new DataView(b), out: ShownRow[] = []; let at = 0;
+    const text = (): string => { const len = d.getUint32(at, true), t = this.dec.decode(new Uint8Array(b, at + 4, len)); at += 4 + len; return t; }, num = (): number => { const v = d.getFloat64(at, true); at += 8; return v; };
+    while (at < n) { const name = text(), label = text(), section = text(), title = text(), lo = num(), hi = num(), step = num(), scale = num(), def = num(), bits = d.getUint32(at, true); at += 4; out.push({ name, label, section, title, lo, hi, step, scale, def, kept: (bits & 1) !== 0, adv: (bits & 2) !== 0 }); }
+    return out;
+  }
+  /** the panel's actions, as the module lists them (game_run actions.rs) */
+  actions(): ActionRow[] {
+    this.X.face_actions(this.h); const p = this.X.face_out_ptr() >>> 0, n = this.X.face_out_len() >>> 0, b = this.memory.buffer.slice(p, p + n), d = new DataView(b), out: ActionRow[] = []; let at = 0;
+    const u = (): number => { const v = d.getUint32(at, true); at += 4; return v; }, text = (): string => { const len = u(), t = this.dec.decode(new Uint8Array(b, at, len)); at += len; return t; }, num = (): number => { const v = d.getFloat64(at, true); at += 8; return v; }, words = (): string[] => { const k = u(), w: string[] = []; for (let i = 0; i < k; i++) w.push(text()); return w; };
+    while (at < n) { const name = text(), label = text(), section = text(), title = text(), kind = u(), head = { name, label, section, title };
+      if (kind === 0) out.push({ ...head, kind: 'press' });
+      else if (kind === 1) out.push({ ...head, kind: 'each', words: words() });
+      else if (kind === 2) { const all = words(); out.push({ ...head, kind: 'choice', words: all, now: text() }); }
+      else if (kind === 3) out.push({ ...head, kind: 'count', lo: num(), hi: num(), step: num(), start: num() });
+      else { const word = text(); out.push({ ...head, kind: 'reload', word, words: words() }); } }
+    return out;
+  }
+  /** what those rows stand at now, as a row shows it */
+  shownNow(): Float64Array { this.X.face_shown_now(this.h); const p = this.X.face_out_ptr() >>> 0, n = this.X.face_out_len() >>> 0; return new Float64Array(this.memory.buffer.slice(p, p + n)); }
   private turned = new Map<string, number>();
   /** turn a knob, for the visit: a load or a restart stands a game whose knobs are another moment's, and this is turned again (`turnAgain`) */
   turn(name: string, value: number): void { this.turned.set(name, value); this.commands.knob(name, value); }
-  turnAgain(): void { for (const [name, value] of this.turned) this.commands.knob(name, value); }
+  turnAgain(): void { for (const [name, value] of this.turned) this.commands.knob(name, value); for (const [name, word] of this.picked) this.commands.act(name, 0, word); }
+  private picked = new Map<string, string>();
+  /** one of the panel's picks, for the visit: a restart or a load stands a game that has another, and this is picked again */
+  pick(name: string, word: string): void { this.picked.set(name, word); this.commands.act(name, 0, word); }
   /** a name that crosses by its number */
   nameOf(i: number): string { this.X.face_draw_name(this.h, i); return this.answer(); }
   private draw(): void {

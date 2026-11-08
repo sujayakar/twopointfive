@@ -136,4 +136,8 @@ commands! {
     33 KitStageUnder {} = |g| game::kitstage::under(g);
     /// the kit picture: the page has shown its first picture: the acts may begin
     34 KitStageShown {} = |g| game::kitstage::shown(g);
+    /// one of the panel's actions, by its name (actions.rs), with what its row picked
+    35 Act { name: &str, value: f64, word: &str } = |g, name, value, word| crate::actions::act(g, name, value, word);
+    /// an address's words, on what stands no game yet: the desk, whose kit rules read the numbers they turn
+    36 Words { text: &str } = |g, text| crate::words::apply(g, text);
 }
