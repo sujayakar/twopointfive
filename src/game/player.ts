@@ -51,7 +51,6 @@ import { resetChase, inHand, gunBack } from './guards';
 import './whistle';
 import { wandDrop } from './wand';
 import './wallcharge';
-import './defuse';
 import { STALK, stalkOn } from './stalk';
 import { closeLive, closeAt, closeKindOf, closeStation, closeTook, closeSeated, closeUnseat } from './close';
 import './kitanim';

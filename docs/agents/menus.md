@@ -886,9 +886,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   so a row added to the table or taken off it moves nothing) — ALL PASS on both stands, `UNPLAYED_BREAK=1` fails on both. `missions-list`'s order line holds the switch off (it pins the order before this). LOOKED AT:
   `tools/qa/unplayed-page.cjs` on the software adapter at 1280 x 720 (classes, order, computed opacity, the list's rule; no page
   error) and stills taken with no GPU at all; the page script also holds the open group's cards to the SAME BOXES with the switch on and off. Never seen on a GPU, nobody has played with it.
-- **Every run ends on a verdict** (`src/game/verdict.ts`, `Game.verdict`, ticked in `Game.step` after `defuse.tick`; `VERDICT {on, winSecs, lossSecs}` in the knob registry,
+- **Every run ends on a verdict** (`src/game/verdict.ts`, `Game.verdict`, ticked in `Game.step` after the scenarios; `VERDICT {on, winSecs, lossSecs}` in the knob registry,
   ON, `?noverdict` = the game and the end card as they were; READS ONLY — on and off digest the same). A TRY starts at the par clock's rule (the first order logged, Sam
-  1 m off his mark, a round or a throw); `ended()` names each mission kind's end (CLEAR / RESCUED / TAKEN ALIVE / DEFUSED / OUT · DOWN / WIPED / LOST / GOT AWAY / BLOWN /
+  1 m off his mark, a round or a throw); `ended()` names each mission kind's end (CLEAR / RESCUED / OUT · DOWN / WIPED / LOST / GOT AWAY /
   FAILED); `result: RunVerdict` = word, clock, a row per man (path, where he fell, the defenders he dropped), the way a WON run was won — `Approach` doors / walls / dark /
   quiet, one a run, the rarest it earned: nobody ever hunted the team (the stealth game: no alarm, nothing spotted either) = quiet, the mains cut before it was found =
   dark, a man by a hole a blast made = walls, else doors — `clean` (nobody lost) and `void` (a cheat on during the try; its own latch — `m.stats.sandbox` latches before

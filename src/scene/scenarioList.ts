@@ -62,12 +62,6 @@ export const SCENARIOS: ScenarioEntry[] = [
     blurb: 'Three hostages are behind two doors, and you\'ll want to hit both at once. There\'s no time to clear the four rooms you pass, so cover them.' },
   // NEW IDEAS: small missions, each built on one idea (group 'ideas'), each on a level made for it. The group is drawn in this table's order: the order to play them in
   // ---- new ideas, one a mission (group 'ideas'): a room clear with one overlay module keyed on a block of the level file
-  // ONE IDEA (group 'ideas'): two timed charges on one clock (game/defuse.ts, the level's scenarios.defuse block), a wing apart, each workshop with a door
-  // from its wing and a back door from outside. The blurb is the premise, not the answer (how to split is the player's to find). Four only (`only`): the mission IS two pairs' worth of work.
-  { id: 'defuse-four', title: 'The two charges', kind: 'roomclear', squad: 4, level: 'defuse.json', group: 'clock', untuned: true, offList: true,
-    place: 'Two wings off one hall, a workshop at the end of each', lean: 'loud', defenders: 8,
-    only: 'With two timed charges and one short clock, this one is played with the full squad of four.',
-    blurb: 'Two charges share one 1:15 clock, one at the end of each wing. Each takes six seconds to make safe. The clock starts on your first move.' },
   { id: 'floodlit-four', title: 'The floodlit yard', kind: 'roomclear', squad: 4, level: 'floodlit.json', untuned: true, group: 'raids', offList: true,
     place: 'A walled fuel post, eleven metres of lit yard to its door', lean: 'either', defenders: 7,
     blurb: 'The yard is floodlit, with guns in two open windows. The breaker is in a shed outside the wall, and the enemies don\'t have night vision.' },

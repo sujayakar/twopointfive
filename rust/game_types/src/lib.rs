@@ -78,7 +78,6 @@ pub mod darkdoor { pub mod types; pub use types::*; }
 pub mod darkfoe { pub mod types; pub use types::*; }
 pub mod deathrecap { pub mod types; pub use types::*; }
 pub mod debris { pub mod types; pub use types::*; }
-pub mod defuse { pub mod types; pub use types::*; }
 pub mod destruction { pub mod types; pub use types::*; }
 pub mod destruction_switch { pub mod types; pub use types::*; }
 pub mod devices { pub mod types; pub use types::*; }

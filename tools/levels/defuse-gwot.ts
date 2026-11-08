@@ -1,9 +1,8 @@
-// THE TWO CHARGES IN THE DEFAULT LOOK (src/scene/look.ts): tools/levels/defuse.ts's level, box for box, in other clothes — tools/levels/gwotSkin.ts says what may
+// THE TWO WORKSHOPS IN THE DEFAULT LOOK (src/scene/look.ts): tools/levels/defuse.ts's level, box for box, in other clothes — tools/levels/gwotSkin.ts says what may
 // change (paint and finish, decals, the paint of a prop) and checks that nothing a round, a charge or a blast reads did. `bun run tools/levels/export.ts defuse`.
 // ITS OWN PLACE: a bomb maker's house — mud outside, whitewash in, bare slab in the two workshops. What it alone has: FIRING WIRE. A twin lead in copper runs
-// along the floor from each bench, out through its wing's two doors, to one battery plate in the middle of the hall (the level's idea — one clock, two charges,
-// a wing apart — read off the ground: two runs parting from one point), with a painted 1 and 2 at the workshop doors, inside and at the back doors (the charges'
-// names: game/defuse.ts says 'charge 1' / 'charge 2'). No accent paint on a wall.
+// along the floor from each bench, out through its wing's two doors, to one battery plate in the middle of the hall (two runs parting from one point), with a painted 1 and 2 at the workshop doors, inside and at the back doors (the rooms'
+// numbers). No accent paint on a wall.
 import { build as buildPlain, NOTES as PLAIN_NOTES, DEFUSE_ROOMS } from './defuse';
 import { GWOT_MATERIALS } from '../../src/scene/gwotKit';
 import { GWOT_PALETTE as P } from '../../src/scene/gwotPalette';
@@ -25,7 +24,7 @@ const SKIN: Skin = {
   wall: 'mud', house: 'mud', inner: 'whitewash', frameOut: 'woodGrey', frameIn: 'poplar', dado: null, ground: 'dust', verge: 'dirt', patches: 6,
   floor: { carpet: 'mudFloor', lino: 'slab' },
   // defuse.ts's own colours as the stuff they are: the workshops' sealed floor is the bare slab this file says it is, the hall's runner and the big mat are
-  // plain cloth, the two workshops' own mats keep their red and their blue as carpet (from above that is how the two charges' rooms are told apart; the
+  // plain cloth, the two workshops' own mats keep their red and their blue as carpet (from above that is how the two workshops are told apart; the
   // wire's copper stays this place's one accent), and the two cars in the lot wear car paint
   own: [[[0.2, 0.21, 0.24], 'slab'], [[0.3, 0.17, 0.14], 'blanketBrown'], [[0.3, 0.16, 0.13], 'rugRed'], [[0.16, 0.2, 0.3], 'rugNavy'], [[0.32, 0.2, 0.14], 'blanketBrown'],
     [[0.3, 0.27, 0.2], 'truckTan'], [[0.2, 0.22, 0.26], 'paintBlue']],
@@ -34,7 +33,7 @@ const SKIN: Skin = {
   dress: (G, _level, T) => {
     const M = lookMarks(T), paint = T.tone(P.stencil, 0.92), K = P.iron, W = 0.035, GAP = 0.09;
     // THE LOT'S GROUND, laid before any paint. WHEELS: the street along the south edge and each car's own way in off it. FEET: the walk up to the front door,
-    // and the beat that parts before the house and goes round each end to a workshop's back door: the level's two ways to each charge, worn into the ground.
+    // and the beat that parts before the house and goes round each end to a workshop's back door: the level's two ways to each workshop, worn into the ground.
     { const lot = T.floorAt(20, 22) ?? P.dust;
       /** a beat feet have worn: the lot's own earth darker down its middle, with a fainter shoulder either side (no edge to read as a painted line) */
       const beat = (pts: [number, number][]) => { M.path(pts, 1.2, T.tone(lot, 0.9)); M.path(pts, 0.5, T.tone(lot, 0.78)); };

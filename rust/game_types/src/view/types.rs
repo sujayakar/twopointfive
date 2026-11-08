@@ -11,7 +11,6 @@ pub enum MissionOf {
     /// a level's program while it runs
     Script,
     Lesson,
-    Defuse,
     Roomclear,
     Rescue,
     Nightbreach,

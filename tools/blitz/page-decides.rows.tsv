@@ -22,7 +22,6 @@ src/game/squadnet.ts:whyWords	decides	orders menu and hand ring	worded off the p
 src/game/mission.ts:*	decides	HUD mission lines	"is the mission live" and how far the rack is are worked out again on the copy
 src/game/nightbreach.ts:*	decides	HUD mission lines	the plain night's state is worked out again on the copy
 src/game/roomclear.ts:*	decides	HUD mission lines	whether the room clear is up and where it starts are worked out again on the copy
-src/game/defuse.ts:*	decides	HUD mission lines	whether the defuse is up, which charges are live and what Sam is working on are worked out again on the copy
 src/game/rescue*.ts:*	decides	HUD mission lines	who is a hostage is worked out again on the copy
 src/game/scenarioRun.ts:*	decides	HUD mission lines	which scenario is running and whose team a man is on are worked out again on the copy
 src/game/doors.ts:Doors.*	decides	HUD door and charge notes	which door is which by name, which side a man is on and whether he is locked out are worked out again on the copy

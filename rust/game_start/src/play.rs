@@ -297,8 +297,6 @@ impl Play {
     pub fn par_counts(&self) -> (i32, i32) { (self.g.stats.par.started, self.g.stats.par.finished) }
     /// … and the finished run (None: not taken yet, or wiped).
     pub fn par_result(&self) -> Option<game::par::ParResult> { game::par::par_result_now(&self.g).cloned() }
-    /// where a defuse level's charges are, in the file's order
-    pub fn charges(&self) -> Vec<[f64; 2]> { self.g.level.scenarios.as_ref().and_then(|s| s.defuse.as_ref()).map_or(Vec::new(), |d| d.devices.iter().map(|x| [x.pos[0], x.pos[2]]).collect()) }
     /// the objective row, as a HUD is given it
     pub fn objective(&self) -> String { self.view().mission.map_or(String::new(), |m| m.text) }
     /// WHAT A HUD IS TOLD of the game as it stands (`view::tick_view`: the record the page draws, asked of the game and never kept by it)
