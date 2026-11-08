@@ -541,7 +541,7 @@ fn pack_at(p: V3, cs: f64, sn: f64, lx: f64, y: f64) -> V3 { [p[0] + lx * cs, p[
 
 /// `g.fx.push({ box: makeBox(…), ttl: 1e-3 })`: one frame's drawn box.
 fn push_fx(g: &mut Game, p: crate::scene_boxes::MakeBoxP) {
-    let b = crate::scene_boxes::make_box(g, &p);
+    let b = crate::scene_boxes::make_box_kept(g, &p);
     g.fx.push(crate::game::GameFxItem { box_: b, ttl: 1e-3 });
 }
 

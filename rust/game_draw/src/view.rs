@@ -41,6 +41,8 @@ section! {
         pub target: [f32; 3],
         /// what a lesson does not let the hand do to the view: 1 turn it · 2 zoom it
         pub locks: u32,
+        /// the run's end card is due: 1 it was lost, 2 won (0: not yet)
+        pub ended: u32,
         /// night vision's amount, and how hard he has just been hit
         pub night: f32,
         pub hit: f32,
@@ -67,6 +69,7 @@ pub fn fill(g: &Game, stood: u32, desired: f64, out: &mut Vec<View>) {
             (r.yaw, r.pitch, r.distance) = (c.yaw as f32, c.pitch as f32, c.desired_distance as f32);
         }
     }
+    r.ended = ended(g);
     r.locks = game::rails::rails_locks(g, "camera") as u32 | (game::rails::rails_locks(g, "zoom") as u32) << 1;
     out.push(View {
         tick: crate::tick(g),
@@ -85,4 +88,18 @@ pub fn fill(g: &Game, stood: u32, desired: f64, out: &mut Vec<View>) {
         hit: g.pl[pl].hit_flash as f32,
         ..r
     });
+}
+
+/// is this run over, and its card due: the verdict's a beat after the end, the stealth mission's as it is done or, down, a beat after
+fn ended(g: &Game) -> u32 {
+    use game::game::MissionStage;
+    let (v, m) = (&g.verdict, &g.mission);
+    if v.run == Some(m.serial) && v.card_at >= 0.0 { return if g.time < v.card_at { 0 } else { v.res.as_ref().map_or(0, |r| if r.won { 2 } else { 1 }) }; }
+    if g.mission_in_tour { return 0; }
+    match m.stage {
+        MissionStage::Done => 2,
+        MissionStage::Failed if m.down_card_at > 0.0 => 0,
+        MissionStage::Failed => 1,
+        _ => 0,
+    }
 }

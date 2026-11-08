@@ -736,8 +736,7 @@ pub struct Game {
     pub aim_target: Option<FixtureId>,
     pub aim_guard: Option<GuardId>,
     pub aim_friend: Option<GuardId>,
-    pub dyn_boxes: Vec<BoxId>,
-    pub dyn_raw: f64,
+    pub dyn_boxes: Vec<AnyBoxId>,
     pub rings: Vec<crate::launcher::Ring>,
     pub shells: Vec<crate::he40::Shell>,
     pub fn2000: bool,
@@ -847,9 +846,9 @@ pub struct Game {
     /// INVENTED: a second cast of the squad is on Game (squadcast::with_cast): seats.ts:240 CAST_VIEW
     pub in_cast: bool,
     /// INVENTED: the rows box_frame has dealt since boxes_frame_reset
-    pub box_frame_rows: Vec<BoxId>,
+    pub box_frame_rows: Vec<FrameBoxId>,
     /// INVENTED: rows box_frame may deal again
-    pub box_frame_free: Vec<BoxId>,
+    pub box_frame_free: Vec<FrameBoxId>,
     /// INVENTED: what the bridge carries of poses that have no place in the pool: Pose.at is Pose::LOOSE + the row
     pub loose_poses: Vec<crate::anim_skeleton::LoosePose>,
     /// what this step did that the host shows: out-events.json. The host drains it (the face clears it before a step)
@@ -930,7 +929,6 @@ impl Game {
             aim_guard: None,
             aim_friend: None,
             dyn_boxes: Vec::new(),
-            dyn_raw: 0.0,
             rings: Vec::new(),
             shells: Vec::new(),
             fn2000: true,
@@ -1178,14 +1176,14 @@ impl Default for GameBeaconsItem { fn default() -> Self { Self::zeroed() } }
 /// (TypeScript: inline at src/game/game.ts:937 Game.fx, src/game/game.ts:937)
 #[derive(Clone, Copy, Debug)]
 pub struct GameFxItem {
-    pub box_: BoxId,
+    pub box_: FrameBoxId,
     pub ttl: f64,
 }
 impl GameFxItem {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         GameFxItem {
-            box_: BoxId(0),
+            box_: FrameBoxId(0),
             ttl: 0.0,
         }
     }
@@ -2313,6 +2311,8 @@ pub struct Guard {
     pub god: bool,
     pub held: Option<crate::game::GuardHeld>,
     pub bubble: Option<crate::game::GuardBubble>,
+    /// lines he said in the same frame as the one on his bubble, shown after it, oldest first
+    pub bubble_next: Vec<crate::game::GuardBubble>,
     pub found: bool,
     pub down_kind: Option<crate::game::DownKind>,
     pub down_by: Option<crate::game::DownBy>,
@@ -2455,6 +2455,7 @@ impl Guard {
             god: false,
             held: None,
             bubble: None,
+            bubble_next: Vec::new(),
             found: false,
             down_kind: None,
             down_by: None,
@@ -3085,6 +3086,7 @@ impl Game {
 #[derive(Clone, Debug)]
 pub struct Tabs {
     pub boxes: Tab<BoxId, crate::scene_boxes::Box>,
+    pub frame_boxes: Tab<FrameBoxId, crate::scene_boxes::Box>,
     pub clip: Tab<ClipId, crate::anim_gltf::Clip>,
     pub anim_gltf_mesh_data: Tab<AnimGltfMeshDataId, crate::anim_gltf::MeshData>,
     pub anim_gltf_cast_variant: Tab<AnimGltfCastVariantId, crate::anim_gltf::CastVariant>,
@@ -3135,10 +3137,18 @@ pub struct Tabs {
     pub guards_standoff: Tab<GuardsStandoffId, crate::guards::Standoff>,
     pub game_talk: Tab<GameTalkId, crate::game::Talk>,
 }
+impl core::ops::Index<AnyBoxId> for Tabs {
+    type Output = crate::scene_boxes::Box;
+    #[inline] fn index(&self, id: AnyBoxId) -> &Self::Output { match id { AnyBoxId::World(b) => &self.boxes[b], AnyBoxId::Frame(b) => &self.frame_boxes[b] } }
+}
+impl core::ops::IndexMut<AnyBoxId> for Tabs {
+    #[inline] fn index_mut(&mut self, id: AnyBoxId) -> &mut Self::Output { match id { AnyBoxId::World(b) => &mut self.boxes[b], AnyBoxId::Frame(b) => &mut self.frame_boxes[b] } }
+}
 impl Tabs {
     pub fn blank() -> Self {
         Tabs {
             boxes: Tab::new(),
+            frame_boxes: Tab::new(),
             clip: Tab::new(),
             anim_gltf_mesh_data: Tab::new(),
             anim_gltf_cast_variant: Tab::new(),

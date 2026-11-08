@@ -106,12 +106,12 @@ fn set_word(c: &mut sim::items::Items, at: usize, r: usize, v: u32) {
 }
 
 /// The sponge round's three boxes about `c_2`, its length along `rot`'s z, the nose toward +z. (throwables.ts spongeBoxes)
-pub fn sponge_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>, c_2: V3, rot: Quat, yaw: f64) {
+pub fn sponge_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, c_2: V3, rot: Quat, yaw: f64) {
     let s = sponge_item();
     let flag = crate::scene_boxes::box_flag();
     let flags = (js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64;
     for (z, h, albedo) in [(s.body.z, s.body.h, s.body.albedo), (s.nose.z, s.nose.h, s.nose.albedo), (s.band.z, s.band.h, s.band.albedo)] {
-        out.push(item_box(g, v3::add(c_2, v3::quat::rotate(rot, [0.0, 0.0, z])), h, yaw, rot, albedo, flags));
+        out.push(item_box(g, v3::add(c_2, v3::quat::rotate(rot, [0.0, 0.0, z])), h, yaw, rot, albedo, flags).into());
     }
 }
 
@@ -447,7 +447,7 @@ pub fn item_set_on(g: &mut crate::game::Game, id: ItemId, p: Option<PropId>) {
 }
 
 /// A box for an item's part. (throwables.ts itemBox)
-pub fn item_box(g: &mut crate::game::Game, c_2: V3, h: V3, yaw: f64, rot: Quat, albedo: V3, flags: f64) -> BoxId {
+pub fn item_box(g: &mut crate::game::Game, c_2: V3, h: V3, yaw: f64, rot: Quat, albedo: V3, flags: f64) -> FrameBoxId {
     crate::scene_boxes::box_of_frame(g, c_2, h, yaw, albedo, [0.0, 0.0, 0.0], flags, 0.0, Some(rot), None)
 }
 

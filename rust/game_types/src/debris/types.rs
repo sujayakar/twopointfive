@@ -153,7 +153,7 @@ impl ChunkKind {
 #[derive(Clone, Debug)]
 pub struct Chunk {
     pub kind: crate::debris::ChunkKind,
-    pub box_: BoxId,
+    pub box_: AnyBoxId,
     pub v: V3,
     pub w: V3,
     pub rest: bool,
@@ -182,7 +182,7 @@ impl Chunk {
     pub fn zeroed() -> Self {
         Chunk {
             kind: crate::debris::ChunkKind::Tile,
-            box_: BoxId(0),
+            box_: AnyBoxId::World(BoxId(0)),
             v: [0.0; 3],
             w: [0.0; 3],
             rest: false,

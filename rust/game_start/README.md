@@ -83,7 +83,7 @@ side by side with a door between them and a door each to the yard, a defender in
   `p.roll()` (every man in a line, for a failure's message).
 - **Ask:** `p.at(man)`, `p.state(man)`, `p.awareness(man)`, `p.fix(man)`, `p.facing(man)`, `p.speed(man)`, `p.low(man)`, `p.stacked(man)`,
   `p.up(man)`, `p.sam_at()`, `p.sam_light()`, `p.frag_fuse()`, `p.floor()` (what stands on the level: round things, shaped boxes, trim, civilians, devices); `p.lines(man)` and `p.said` are every line a man spoke (read off the speech
-  bubbles after each frame), `p.sounds` every sound the game asked its host to play, `p.end_cards` when it told its host to open the end card.
+  bubbles after each frame), `p.sounds` every sound the game asked its host to play, `p.end_cards` when it told its host to open the end card. `p.debrief_view(seat)` is what the end card shows that seat.
   The mission: `p.view()` and `p.view_of(seat)` (all a HUD is told), `p.objective()` (its row), `p.charges()`, `p.log()` (the lines on the game's log), `p.room_clear_end()`, `p.hostiles()`; the par
   clock: `p.par_live()`, `p.par_bars()`, `p.par_started()`, `p.par_result()`, `p.par_counts()`.
 - **Do:** `p.order("stack", place, Who::Red)` is the order menu's own call; `p.frag_lands(place)` the sandbox's; `p.sam_fires_at(place, settle)`,
@@ -123,7 +123,7 @@ and `cargo test`'s threads take turns. A test that stands a second game drops th
 | collision, the walk grid, sound paths, fixtures, doors, guards, civilians, orders, the fog, the room fight, every module | **the game's own constructor, `game_new`** (`rust/game/src/game/p_04.rs`), which had never run before this crate |
 | the moving state at home in the block | `settle` (the die, the pose pool, the smoke grid) |
 | the host's Input and camera | the game's `input_detached`, `FollowCamera`, `follow_camera_rebuild` |
-| the address's words, where one is handed (`StartOpts.link`), BEFORE the game is made | the game's `address_before_game`: the row's own hour and weather onto the words, the weather the game is born in, the visit's hour (`src/host/standup.ts addressBeforeGame`) |
+| the address's words, where one is handed (`StartOpts.link`), BEFORE the game is made | the game's `address_before_game`: the row's own hour and weather onto the words, the weather the game is born in, the visit's hour (`src/host/standup.ts addressBeforeGame`); then `difficulty_of_address`, the difficulty it asks for (`&hard`, `&difficulty=`, the levers, `&digin`, `&pressure`, `&fogcone`), on this game's own knob tables, unless `StartOpts.difficulty` is false: a host that handed its knob tables (`stand_handed`, part 6) has read its address onto them itself (`src/host/standup.ts difficultyOfAddress`) |
 | a mission, where asked | the game's `start_scenario`; or, from an address, `start_at_address`: `start_from_query` on its words, then the solo card's question, as a click on a row of the mission list starts it on a page |
 
 `frame(g, host, dt)` is one frame of that host: the game's `game_update` on the host's Input and camera, the camera after the man, the lights'
@@ -163,6 +163,8 @@ that the picture, the sound, the HUD and the menus read (`src/host/rustgame.ts`,
    gear's, the words'), and the one stand-in each module kept for `has` and `get` is gone, with three private copies of the text reader.
    `StartOpts.link` is the address's text and `stand` starts the mission by `start_from_query` on it; the compare starts every mission from
    its row's link on both sides (`LEVELS.md`).
+   The address's difficulty is read too, by one reader on each side (`difficulty_asked`, `difficultyAsked`): `start-levels.ts --words '&hard'` holds
+   every mission's hard start to the TypeScript's, the knob tables and the difficulty module's own record with it. `tests/hard.rs` holds the rule itself.
    What is left: the page hands `location.search` across once and the Rust game starts from it. Two things to know when that is written.
    An address's words are NOT on the wire (the table declares that arm of a `string | URLSearchParams` argument as holding nothing, and a
    `Query` writes nothing and reads back empty): a host hands the TEXT. And the page reads more off the address before the stand-up. THE
@@ -233,6 +235,7 @@ tools/blitz/start.sh --mission depot-four --frames 300               # a row of 
 tools/blitz/start.sh rust/game_start/target/scenes/two-rooms.json --scenario roomclear --cpu --frames 900
 bun run tools/blitz/start-levels.ts --write                          # every mission, and LEVELS.md written from the result (--seats 2: as games of two)
 bun run tools/blitz/start-levels.ts --again                          # every mission stood a SECOND time in one process, held to its first start (below)
+bun run tools/blitz/start-levels.ts --words '&hard'                  # every mission with those words on its link, both sides, in a folder of its own (never --write)
 ```
 
 1. `tools/blitz/start.ts` stands the file with the TypeScript start on the page's stand and exports the state over the bridge.

@@ -43,63 +43,79 @@ macro_rules! event {
     };
 }
 
-/// THE SECTIONS, declared: each with its place (its bit in a host's `want`), its row and where its rows are kept
+/// WHAT A HOST MAY ASK FOR, each with a bit of its `want`: what is made together is asked for together
+macro_rules! groups {
+    ($($name:ident)*) => {
+        #[allow(non_camel_case_types, dead_code)]
+        enum Group { $($name,)* }
+        #[allow(non_upper_case_globals)]
+        pub mod want { $(pub const $name: u32 = 1 << super::Group::$name as u32;)* }
+        const WANTS: &str = concat!("want" $(, " ", stringify!($name))*);
+    };
+}
+
+/// THE SECTIONS, declared: each with its row and where its rows are kept, in the order the table says where they lie
 macro_rules! sections {
-    ($($i:literal $name:ident: $t:ty = $($at:ident).+;)*) => {
+    ($($name:ident: $t:ty = $($at:ident).+;)*) => {
         /// where each section lies, in their order: its address and how many rows
         fn table(d: &Drawn, out: &mut Vec<u32>) { out.clear(); $({ let v: &Vec<$t> = &d.$($at).+; out.push(v.as_ptr() as usize as u32); out.push(v.len() as u32); })* }
         /// the declarations as text, a line a section: what the page's offsets were made from is held to it as the module is loaded
         pub fn layout() -> String {
-            let mut s = String::new();
+            let mut s = String::from(WANTS);
+            s.push('\n');
             $(s.push_str(stringify!($name)); for (f, t) in <$t as Row>::FIELDS { s.push(' '); s.push_str(f); s.push(':'); for c in t.chars() { if !c.is_whitespace() { s.push(c); } } } s.push('\n');)*
             s
         }
-        /// each section's bit
-        #[allow(non_upper_case_globals)]
-        pub mod want { $(pub const $name: u32 = 1 << $i;)* }
     };
 }
 
 pub mod boxes;
 pub mod doorways;
 pub mod events;
+pub mod fires;
 pub mod fog;
 pub mod lights;
 pub mod men;
+pub mod rims;
 pub mod sky;
 pub mod view;
 
+groups! { fog view sky boxes lights men doorways rims events fires }
+
 sections! {
-    0 fog: fog::Fog = fog;
-    1 view: view::View = view;
-    2 sky: sky::Sky = sky;
-    3 head: boxes::Head = boxes.head;
-    4 geo: boxes::Geo = boxes.geo;
-    5 mat: boxes::Mat = boxes.mat;
-    6 cut: boxes::Cut = boxes.cut;
-    7 visible: boxes::Word = boxes.visible;
-    8 marks: boxes::Row4 = boxes.marks.rows;
-    9 cells: boxes::Word = boxes.grid.cells;
-    10 items: boxes::Word = boxes.grid.items;
-    11 info: boxes::Word = boxes.grid.info;
-    12 panes: boxes::Row4 = boxes.glass.cells;
-    13 leaves: boxes::Leaf = boxes.leaves;
-    14 lights: lights::Light = lights.rows;
-    15 men: men::Man = men.men;
-    16 insts: men::Inst = men.insts;
-    17 bones: men::Bones = men.bones;
-    18 caps: men::Cap = men.caps;
-    19 doorways: doorways::Doorway = doorways;
-    20 emits: events::Emit = events.emits;
-    21 kicks: events::Kick = events.kicks;
-    22 pushes: events::AirPush = events.pushes;
-    23 sources: events::SmokeSource = events.sources;
-    24 anchors: events::Anchor = events.anchors;
-    25 beams: boxes::Beam = boxes.beams;
-    26 sounds: events::Sound = events.sounds;
-    27 footfalls: events::Footfall = events.footfalls;
-    28 rolls: events::Roll = events.rolls;
-    29 heard: events::Heard = events.heard;
+    fog: fog::Fog = fog;
+    view: view::View = view;
+    sky: sky::Sky = sky;
+    head: boxes::Head = boxes.head;
+    geo: boxes::Geo = boxes.geo;
+    mat: boxes::Mat = boxes.mat;
+    cut: boxes::Cut = boxes.cut;
+    visible: boxes::Word = boxes.visible;
+    marks: boxes::Row4 = boxes.marks.rows;
+    cells: boxes::Word = boxes.grid.cells;
+    items: boxes::Word = boxes.grid.items;
+    info: boxes::Word = boxes.grid.info;
+    panes: boxes::Row4 = boxes.glass.cells;
+    leaves: boxes::Leaf = boxes.leaves;
+    lights: lights::Light = lights.rows;
+    men: men::Man = men.men;
+    insts: men::Inst = men.insts;
+    bones: men::Bones = men.bones;
+    caps: men::Cap = men.caps;
+    doorways: doorways::Doorway = doorways;
+    emits: events::Emit = events.emits;
+    kicks: events::Kick = events.kicks;
+    pushes: events::AirPush = events.pushes;
+    sources: events::SmokeSource = events.sources;
+    anchors: events::Anchor = events.anchors;
+    beams: boxes::Beam = boxes.beams;
+    sounds: events::Sound = events.sounds;
+    footfalls: events::Footfall = events.footfalls;
+    rolls: events::Roll = events.rolls;
+    heard: events::Heard = events.heard;
+    rims: rims::Rim = rims;
+    fires: fires::Fire = fires;
+    fire_table: fires::FireTable = fire_table;
 }
 
 /// the numbers of a page's look (src/draw/look.ts writes them in this order): the boxes', then the men's
@@ -107,9 +123,9 @@ pub const LOOK: usize = boxes::LOOK + 4;
 
 /// what one host of one game draws it from
 #[derive(Default)]
-pub struct Drawn { pub fog: Vec<fog::Fog>, pub view: Vec<view::View>, pub sky: Vec<sky::Sky>, pub boxes: boxes::Boxes, pub lights: lights::Lights, pub men: men::Men, pub doorways: Vec<doorways::Doorway>, pub events: events::Events, tick: Option<u32>, stood: u32,
+pub struct Drawn { pub fog: Vec<fog::Fog>, pub view: Vec<view::View>, pub sky: Vec<sky::Sky>, pub boxes: boxes::Boxes, pub lights: lights::Lights, pub men: men::Men, pub doorways: Vec<doorways::Doorway>, pub events: events::Events, pub rims: Vec<rims::Rim>, tick: Option<u32>, stood: u32,
     /// the distance the host's camera was on its way to as the step was handed it
-    pub desired: f64, had: u32, want: u32, table: Vec<u32> }
+    pub desired: f64, had: u32, want: u32, table: Vec<u32>, pub fires: Vec<fires::Fire>, pub fire_table: Vec<fires::FireTable> }
 impl Drawn {
     /// A TICK HAS RUN: the sections of `want`, made again from the game as it stands
     pub fn take(&mut self, g: &Game, want: u32) {
@@ -121,16 +137,18 @@ impl Drawn {
         if want & want::fog != 0 { self.fog.clear(); fog::fill(g, &mut self.fog); }
         if want & want::view != 0 { self.view.clear(); view::fill(g, self.stood, self.desired, &mut self.view); }
         if want & want::sky != 0 { self.sky.clear(); sky::fill(g, &mut self.sky); }
-        if want & want::geo != 0 { let night = g.pl[game::seats::host_man(g)].nv_amount > 0.5; self.boxes.take(g, night, again && self.had & want::geo != 0); }
+        if want & want::boxes != 0 { let night = g.pl[game::seats::host_man(g)].nv_amount > 0.5; self.boxes.take(g, night, again && self.had & want::boxes != 0); }
         if want & want::lights != 0 { self.lights.take(g, again && self.had & want::lights != 0); }
         if want & want::men != 0 { self.men.take(g, again && self.had & want::men != 0); }
-        if want & want::emits != 0 { self.events.take(g); }
+        if want & want::rims != 0 { self.rims.clear(); rims::fill(g, &mut self.rims); }
+        if want & want::events != 0 { self.events.take(g); }
+        if want & want::fires != 0 { self.fires.clear(); fires::fill(g, &mut self.fires, &mut self.fire_table); }
         self.had = if again { self.had | want } else { want };
         if want & want::doorways != 0 && self.doorways.len() != g.level.doors.len() { self.doorways.clear(); doorways::fill(g, &mut self.doorways); }
     }
     /// A FRAME IS DRAWN, `a` of the way from the tick before to the last (1 = the last as it is), looking at `focus`
     pub fn frame(&mut self, g: &Game, a: f64, focus: [f64; 3]) {
-        if self.want & want::geo != 0 { self.boxes.frame(g, a, focus); }
+        if self.want & want::boxes != 0 { self.boxes.frame(g, a, focus); }
         if self.want & want::lights != 0 { self.lights.frame(a); }
         if self.want & want::men != 0 { self.men.frame(a); }
     }

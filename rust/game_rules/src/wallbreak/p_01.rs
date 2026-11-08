@@ -141,7 +141,7 @@ pub fn wall_break_index(g: &mut crate::game::Game) {
         let part = does.wall == Some(crate::scene_materials::DoesWall::Screen);
         let mut kind: Option<BKind> = None; let mut surf = crate::scene_materials::Surf::Drywall;
         if y0 <= 0.1 && y1 >= g.k.walls.wall_min_top && does.wall.is_some() {
-            if thin > g.k.walls.wall_max_thick || long < g.k.walls.wall_min_len || m::abs(m::sin(yaw)) > 1e-6 || crate::scene_boxes::shape_cut(g, b) { continue; }
+            if thin > g.k.walls.wall_max_thick || long < g.k.walls.wall_min_len || m::abs(m::sin(yaw)) > 1e-6 || crate::scene_boxes::shape_cut(g, b.into()) { continue; }
             let along_x = sx >= sz; let mut in2 = 0; let mut n = 0;
             for u in [-0.6, 0.0, 0.6] {
                 let px = c[0] + (if along_x { u * h[0] } else { 0.0 }); let pz = c[2] + (if along_x { 0.0 } else { u * h[2] });
@@ -167,7 +167,7 @@ pub fn wall_break_index(g: &mut crate::game::Game) {
             if sx >= sz { nx = m::min(32.0, div(sx, col)); } else { nz = m::min(32.0, div(sz, col)); }
             ny = 2.0;
             yb.insert(1, -h[1] + (g.k.walls.sill - y0));
-        } else if !round && !crate::scene_boxes::shape_cut(g, b) {
+        } else if !round && !crate::scene_boxes::shape_cut(g, b.into()) {
             nx = div(sx, col); nz = div(sz, col);
             while nx * nz > g.k.walls.cover_max_cells { if nx >= nz { nx -= 1.0; } else { nz -= 1.0; } }
         }
@@ -186,13 +186,13 @@ pub fn wall_break_breakable_at(g: &crate::game::Game, index: f64) -> Option<crat
 }
 
 /// Could authored static `index` be taken on as a hard wall: a breaching charge's wall, by shape. (WallBreak.adoptable)
-pub fn wall_break_adoptable(g: &mut crate::game::Game, index: f64) -> bool {
+pub fn wall_break_adoptable(g: &crate::game::Game, index: f64) -> bool {
     if index < 0.0 || index >= g.col.boxes.len() as f64 || index >= g.destr.walls.authored || g.destr.walls.owner.has(crate::Num(index)) || g.destr.walls.hidden.has(crate::Num(index)) { return false; }
     let b = at(g, index);
-    let (c, h, yaw, flags, em, rot) = { let x = seam_box(g, b); (x.c, x.h, x.yaw, js::to_i32(x.flags), x.emissive, x.rot.is_some()) };
+    let (c, h, yaw, flags, em, rot) = { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw, js::to_i32(x.flags), x.emissive, x.rot.is_some()) };
     let f = flag();
     if (flags & (js::to_i32(f.glass) | js::to_i32(f.no_primary) | js::to_i32(f.no_shadow) | js::to_i32(f.dynamic))) != 0 { return false; }
-    if rot || m::abs(m::sin(yaw)) > 1e-6 || em[0] + em[1] + em[2] > 0.0 || g.destr.walls.fixture_boxes.has(crate::Num(index)) || crate::destruction::destruction_item_of(g, index).is_some() || crate::scene_boxes::shape_cut(g, b) { return false; }
+    if rot || m::abs(m::sin(yaw)) > 1e-6 || em[0] + em[1] + em[2] > 0.0 || g.destr.walls.fixture_boxes.has(crate::Num(index)) || crate::destruction::destruction_item_of(g, index).is_some() || crate::scene_boxes::shape_cut(g, b.into()) { return false; }
     let world = crate::scene_world::world();
     if c[0] < world.min[0] || c[0] > world.max[0] || c[2] < world.min[2] || c[2] > world.max[2] { return false; }
     c[1] - h[1] <= 0.1 && c[1] + h[1] >= g.k.walls.wall_min_top && m::max(h[0], h[2]) * 2.0 >= g.k.walls.wall_min_len
@@ -398,7 +398,7 @@ pub fn wall_break_rebuild(g: &mut crate::game::Game, b: WallbreakBreakableId) ->
     let grid = grid_of(g, b);
     let studs = crate::break_table::breaks_studs(g, &grid);
     let need = rects.len() as f64 + studs.len() as f64 - g.tab.wallbreak_breakable[b].slots.len() as f64;
-    if need > 0.0 && (wall_break_over(g, b, need) || g.engine.world.statics.len() as f64 + need > g.engine.world.max_boxes - 768.0) { return false; }
+    if need > 0.0 && (wall_break_over(g, b, need) || g.engine.world.statics.len() as f64 + need > g.engine.world.max_boxes - crate::scene_boxes::FRAME_BOXES) { return false; }
     for k in 0..rects.len() {
         let WallBreakRectBox { c, h } = wall_break_rect_box(g, b, rects[k]);
         let cut = crate::break_table::breaks_ragged(g, &grid, &rects[k][..], h);

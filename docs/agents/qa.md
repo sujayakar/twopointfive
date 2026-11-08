@@ -62,7 +62,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   loader, `src/main.ts`) adds, up to a ceiling of fifteen minutes, one mission stood and played 45 s under real keys in headless Chromium
   (`PORT=<port> node tools/blitz/page-walk.cjs`). A red is placed by one run on the named head: the same red there is old, a new one goes back to its
   sender. A read with a memory kill beside it, a time cap or a lost browser is spoiled and is read again, not called. EVERYTHING ELSE IS ASYNC, after the
-  name, and its reds are fixed forward by their owners and told, never hidden: the page as it opens and the other page checks, the 84 mission tallies
+  name, and its reds are fixed forward by their owners and told, never hidden: the page as it opens and the other page checks, the read trap over a few missions (`tools/qa/readtrap-page.cjs`: a field the page reads that is neither on its list nor in `tools/wire/fields.json` `unsent`), the 84 mission tallies
   (seeds 1 to 4) against the named head, the check families read as a list of reds by kind (not a bar), tour, soak, the two-seat run and the co-op
   checks, rollback, a build of the Rust module compared with the checked-in one. What the short gate does not see: a page that does not boot (unless the
   change is of the kind above), a rule that breaks on one die in ten, any mission but one, co-op, a family's red, timing, and a real GPU (no tool has
@@ -1457,9 +1457,17 @@ but synthetic writes still work.
   has them). (6) NOT NEW, AND STILL SO: every other module table is the process's, so two games alive in one process share what a stand-up writes there, and a
   game whose start is made late takes such a table as the last game left it. (7) STILL THE PAGE'S ALONE, so three tutorial rows (the lessons that
   play the issue kit) and anything kept on a machine stand off the page on every other host: the lesson's kit line (`kitLessonPage`), the kit
-  the machine keeps, the difficulty, the look's place and cast, the page's own switches.
+  the machine keeps, the level and levers the machine keeps, the look's place and cast, the page's own switches. (8) THE DIFFICULTY THE ADDRESS ASKS FOR IS EVERY HOST'S (2026-11-07; `&hard`,
+  `&difficulty=`, `&fog= &enemyai= &enemykit= &told=`, `&digin`, `&pressure[=0]`, `&fogcone[=0]`). ONE READER: `difficulty.ts difficultyAsked(q, plain)` reads the words and writes nothing,
+  `difficultyLay` lays them; `initDifficulty` is the page's: what the machine keeps, through those two, its order unchanged. `standup.ts difficultyOfAddress(q)` is every other host's: the address's alone,
+  called by `standUp({ address })` after the address's reader and before the game is made; in Rust `scenario_run::difficulty_of_address`, called by `stand_with`. A lesson's address reads no lever
+  (`plain`) and does read a level. WHAT WRITES WHAT: in the TypeScript the knob tables and the difficulty module's own state are the PROCESS'S, so an address that names a level leaves the tables
+  on it, as a tool's own `setDifficulty` does, and one that names none leaves them as they stand; such a call names no game, so it runs the TypeScript's body and does not cross to a Rust game an older
+  stand left alive, which takes it by the scan if it is stepped again ((6): `surface.ts hostOf`, `scan.ts SETTING`). In Rust they are the game's own. A host's tables win: `standUp`'s new `tables` is laid right after the
+  address's reading (a co-op machine's `tools/mp/stand.ts`, a page's tape in `rerun.ts`, as a page lays `recipeTables`), and a Rust start HANDED knob tables (`stand_handed`, part 6) does not read the
+  address's difficulty at all (`StartOpts.difficulty`), because that host already has.
   THE CHECKS: `bun run tools/blitz/start-levels.ts` and `--seats 2` hold the Rust start to this one mission by mission; `--again` holds a second
-  start in one process to the first; `tools/qa/rowset-check.ts` reads the order of the address's reader off its source (`ROWSET_ORDER_BREAK=1`
+  start in one process to the first; `--words '&hard'` holds every mission's hard start, the knob tables and the difficulty module's record with it; `tests/hard.rs` and the probe `levers-address` (`LEVERS_ADDRESS_BREAK=1` must fail) hold the reading; `tools/qa/rowset-check.ts` reads the order of the address's reader off its source (`ROWSET_ORDER_BREAK=1`
   must fail its last line).
   READ 2026-11-07 (the module built from these sources; a 4-core cloud box): IT MOVES NO PLAY. Against the
   tree before it: `thrice` and `thrice --one` one digest each, the same as before; `night-breach` seed 1 the same on every tick; the six packed

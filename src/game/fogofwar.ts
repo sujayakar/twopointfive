@@ -757,8 +757,6 @@ export class FogOfWar {
   doorHeld(d: Door): boolean { const r = this.doorRecs.get(d); return !!r && this.active && FOG.doors && Math.abs(d.angle - r.shown) > DOOR_EPS; }
   /** the angle the picture has this door at */
   doorShown(d: Door): number { const r = this.doorRecs.get(d); return r && this.active && FOG.doors ? r.shown : d.angle; }
-  /** the door a box in the picture's list is the remembered leaf of (the order menu's cursor: a leaf as drawn is that door), or null */
-  doorOfBox(box: Box): Door | null { for (const [d, r] of this.doorRecs) if (r.ghost && r.ghost[0] === box) return d; return null; }
 
   // ---------------------------------------------------------------- 4f · the fog lit as the team last knew it
   /** HAS THE TEAM A LOOK AT FIXTURE t this frame: an eye has the floor under it (the mask's own test), or — inside its field — a line to the fixture itself (a

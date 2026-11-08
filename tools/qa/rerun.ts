@@ -105,9 +105,10 @@ export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; e
     if (rc.levelFile) { try { level = await levelOf(rc.levelFile); } catch (e) { return out(`the replay's level file ${rc.levelFile} could not be loaded here: ${(e as Error).message}`); } }
     if (rc.seed === null) Math.random = mulberry32(0x7e9a);
     // (A TAPE MADE ON A PAGE IS STOOD AS A PAGE STANDS: its address is the stand's from the first line, read before the game is made — headless.ts `address`.
-    //  A networked game's machines all come this way, tools/mp/stand.ts standRecipe. A tape a headless tool made on a game stood plain is walked as it was made)
+    //  A networked game's machines all come this way, tools/mp/stand.ts standRecipe. A tape a headless tool made on a game stood plain is walked as it was made.
+    //  `tables`: the stand reads the address's difficulty onto the knob tables, and the tape's own tables stand over that, as a page's recipe does)
     const paged = want === 'page' && !!rc.search && rc.search.length > 1;
-    W = await standUp({ seed: rc.seed, env: rc.env, search: rc.search ?? '', ...(paged ? { address: rc.search! } : {}), ...(level ? { level } : {}), ...(opts.scan === false ? { scan: false } : {}), ...(opts.dress ? { dress: true } : {}), ...(opts.draws === false ? { draws: false } : {}) });   // (`search`: the run's own address says how many seats it has — src/game/seats.ts)
+    W = await standUp({ seed: rc.seed, env: rc.env, search: rc.search ?? '', ...(paged ? { address: rc.search!, tables } : {}), ...(level ? { level } : {}), ...(opts.scan === false ? { scan: false } : {}), ...(opts.dress ? { dress: true } : {}), ...(opts.draws === false ? { draws: false } : {}) });   // (`search`: the run's own address says how many seats it has — src/game/seats.ts)
     g = W.game;
     { const fpo = levelFingerprint(g) as any, fp = typeof fpo === 'string' ? fpo : fpo?.fp; if (F.level.fp && fp !== F.level.fp && !opts.force) return out(`the replay was saved on another level than this checkout's (${F.level.file ?? 'the office'}: fingerprint ${F.level.fp} there, ${fp} here)${F.commit ? `. Check out ${F.commit} (git worktree add ../at-replay ${F.commit}) and run this there` : ''}; --force walks it anyway`); }
     knobsWere.push(knobShot()); J.applyKnobs(g, rc.knobs); knobsWere.push(knobShot()); tables(); J.applyEnvGame(g, rc.env);

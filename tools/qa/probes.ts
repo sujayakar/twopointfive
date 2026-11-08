@@ -2452,9 +2452,6 @@ if (on('teams-despawn', 'teams', 'all')) await run('teams-despawn', async () => 
 // ---------------------------------------------------------------- the run's chronicle + the debrief card made of it (debrief-probes.ts): 'debrief' = the family
 if (on('debrief-run', 'debrief', 'all')) await run('debrief-run', async () => (await import('./debrief-probes.ts')).debriefRun());
 if (on('debrief-rooms', 'debrief', 'all')) await run('debrief-rooms', async () => (await import('./debrief-probes.ts')).debriefRooms());
-if (on('debrief-doorname', 'debrief', 'words', 'all')) await run('debrief-doorname', async () => (await import('./debrief-probes.ts')).debriefDoorName());   // a kicked or picked door is called on the card what its level calls it (WORDS.doors)
-if (on('debrief-charge', 'debrief', 'all')) await run('debrief-charge', async () => (await import('./debrief-probes.ts')).debriefCharge());   // the rows a wall charge makes are worded as a charge's
-if (on('debrief-score', 'debrief', 'all')) await run('debrief-score', async () => (await import('./debrief-probes.ts')).debriefScore());
 if (on('debrief-dom', 'debrief', 'all')) await run('debrief-dom', async () => (await import('./debrief-probes.ts')).debriefDom());
 // ---------------------------------------------------------------- 'breach' = the family (breach-probes.ts): what stays of the removed daytime breach showcase's checks — the daylight variant's round trip (here) and clear-doctrine (below)
 if (on('breach-daylight', 'breach', 'all')) await run('breach-daylight', async () => (await import('./breach-probes.ts')).breachDaylight());
@@ -2952,6 +2949,7 @@ if (on('picks-boot', 'picks', 'all')) await run('picks-boot', async () => (await
 if (on('levers-rules', 'levers', 'ui', 'all')) await run('levers-rules', async () => (await import('./levers-probes.ts')).leversRules());
 if (on('levers-screens', 'levers', 'ui', 'all')) await run('levers-screens', async () => (await import('./levers-probes.ts')).leversScreens());
 if (on('levers-run', 'levers', 'all')) await run('levers-run', async () => (await import('./levers-probes.ts')).leversRun());   // (a minute or two: sixteen runs of the scripted commander)
+if (on('levers-address', 'levers', 'all')) await run('levers-address', async () => (await import('./levers-probes.ts')).leversAddress());   // (a mission's address names the difficulty, and the harness's addressed stand reads it where a page does)
 // ---------------------------------------------------------------- THE HOUR (hours-probes.ts; src/game/hours.ts): 'hours' = the family — night is no record (every hour laid over each squad
 // map and taken off leaves the rig as found), the sun / lamps / meter stand-in by the hour, a restart and a checkpoint keep it, the squad's lights and goggles follow it, ?hour= and the sheet's row
 if (on('hours-night', 'hours', 'all')) await run('hours-night', async () => (await import('./hours-probes.ts')).hoursNight());
@@ -2991,8 +2989,6 @@ if (on('squadthrow-walk', 'squadthrow', 'squadorders', 'all')) await run('squadt
 if (on('plan', 'squadorders', 'all')) await run('plan', async () => (await import('./plan-check.ts')).planCheck());
 // B is the squad's autopilot: on a door the men wait on they go in by the entry they pick; its plan is drawn for its own time (autopilot-check.ts; AUTOPILOT.on)
 if (on('autopilot', 'squadorders', 'all')) await run('autopilot', async () => (await import('./autopilot-check.ts')).autopilotCheck());
-// the orders ring, a prototype: the key down puts the menu up as a ring at the cursor, the key up gives the lit wedge; off unless asked for (cmdring-check.ts; CMDRING.on)
-// the cursor's pick, read for the picture, is asked aside: a game whose cursor is read and the same game never read hold the same whole state (hoverpick-check.ts; orders.ts hover, BoxWorld.rayAside)
 // the squad's command key is Q: the board gives the quick order's own code off the Q key, B gives nothing, and the game is as it was (qkey-check.ts; host/keymap.ts qCmd)
 if (on('qkey', 'squadorders', 'player', 'all')) await run('qkey', async () => (await import('./qkey-check.ts')).qkeyCheck());
 if (on('wordsmall', 'doortools', 'squadorders', 'all')) await run('wordsmall', async () => (await import('./wordsmall-check.ts')).wordsmallCheck());   // the word (F) sends one or two teammates in from a plain stack (DOORTOOLS.wordSmall, settled); WORDSMALL_BREAK=1 fails it
@@ -3234,7 +3230,6 @@ if (KNOWN.has(which) && which.startsWith('journal')) here() && familyBanner('jou
 if (on('rb-refuse-over', 'review-b', 'all')) await run('rb-refuse-over', async () => (await import('./review-b-probes.ts') as any).refuseOver());
 if (on('rb-tactics-reset', 'review-b', 'all')) await run('rb-tactics-reset', async () => (await import('./review-b-probes.ts') as any).tacticsResetProbe());
 if (on('rb-whistle-load', 'review-b', 'all')) await run('rb-whistle-load', async () => (await import('./review-b-probes.ts') as any).whistleLoad());
-if (on('rb-score-cap', 'review-b', 'all')) await run('rb-score-cap', async () => (await import('./review-b-probes.ts') as any).scoreCap());
 if (on('rb-glass-reset', 'review-b', 'all')) await run('rb-glass-reset', async () => (await import('./review-b-probes.ts') as any).glassReset());
 if (KNOWN.has(which) && (which === 'review-b' || which.startsWith('rb-'))) here() && familyBanner('review-b', (await import('./review-b-probes.ts')).reviewBFailures());
 // ---------------------------------------------------------------- weather kinds (weather-kinds-probes.ts — ?weather=<kind>, game/weatherKinds.ts): 'wxkinds' = the family

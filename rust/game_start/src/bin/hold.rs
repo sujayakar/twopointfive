@@ -156,7 +156,7 @@ fn kept_head(kept: &[u8], file: &str) -> Result<(Vec<String>, usize), String> {
 }
 
 /// the parts of a frame's drawing that are timed, by the sections they are asked with
-const DRAWN: [(&str, u32); 6] = [("fog", game_draw::want::fog), ("view", game_draw::want::view), ("sky", game_draw::want::sky), ("boxes", game_draw::want::geo), ("lights", game_draw::want::lights), ("men", game_draw::want::men)];
+const DRAWN: [(&str, u32); 9] = [("fog", game_draw::want::fog), ("view", game_draw::want::view), ("sky", game_draw::want::sky), ("boxes", game_draw::want::boxes), ("lights", game_draw::want::lights), ("men", game_draw::want::men), ("rims", game_draw::want::rims), ("events", game_draw::want::events), ("fires", game_draw::want::fires)];
 
 /// ONE RUN DRAWN, in this process
 fn drawn(dir: &str, r: &Run) -> Result<String, String> {

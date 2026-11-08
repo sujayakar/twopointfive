@@ -311,12 +311,12 @@ pub fn doors_thread_path(g: &mut crate::game::Game, path: &[V3], start: V3, is_f
 }
 
 /// Every leaf's box and its two handles, for the picture's list (the fog's doorBoxes asks it).   (doors.ts Doors.boxes)
-pub fn doors_boxes(g: &crate::game::Game, out: &mut Vec<BoxId>) {
+pub fn doors_boxes(g: &crate::game::Game, out: &mut Vec<AnyBoxId>) {
     for d in g.doors.list.iter() {
         let dr = &g.dr[*d];
-        out.push(dr.box_);
-        out.push(dr.handle_boxes[0]);
-        out.push(dr.handle_boxes[1]);
+        out.push(dr.box_.into());
+        out.push(dr.handle_boxes[0].into());
+        out.push(dr.handle_boxes[1].into());
     }
 }
 
@@ -324,13 +324,6 @@ pub fn doors_boxes(g: &crate::game::Game, out: &mut Vec<BoxId>) {
 pub fn doors_leaf_boxes(g: &crate::game::Game) -> Vec<BoxId> {
     g.doors.list.iter().map(|d| g.dr[*d].box_).collect()
 }
-
-/// `fn_` asked aside of every door here.   (doors.ts Doors.posAside)
-pub fn doors_pos_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
-    let mut list = g.doors.list.clone();
-    door_pos_aside(g, &mut list, fn_)
-}
-
 
 #[doc(hidden)] pub fn doors_blast(g: &mut crate::game::Game, at: V3, tear_m: f64, who: f64) -> Vec<DoorId> {
     use crate::io::Io;

@@ -6,9 +6,6 @@ import { LAYOUT, Section } from './sections';
 /** the module's calls this needs */
 export interface DrawFace { face_draw(h: number, want: number): number; face_frame(h: number, a: number, x: number, y: number, z: number): number; face_draw_layout(): number }
 
-/** every section */
-export const ALL = 2 ** Section.count - 1;
-
 /** why this module's sections are not the ones this page's offsets were made from, or '' */
 export function drawRefused(X: DrawFace): string {
   if (typeof X.face_draw !== 'function') return 'the module draws nothing: it was built from another tree';

@@ -25,16 +25,18 @@ for (const f of (readdirSync(DIR, { recursive: true }) as string[]).filter(f => 
   }
 }
 const list = (readFileSync(join(DIR, 'lib.rs'), 'utf8').match(/^sections! \{\n([\s\S]*?)^\}/m) ?? die('no sections! in lib.rs'))[1].split('\n').map(l => l.replace(/\/\/.*/, '').trim()).filter(Boolean)
-  .map((l, i) => { const m = l.match(/^(\d+) (\w+): ([\w:]+) = [\w.]+;$/) ?? die(`sections!: ${l}`); if (Number(m[1]) !== i) die(`sections!: ${m[2]} is line ${i} and says ${m[1]}`); return { name: m[2], row: rows.get(m[3]) ?? die(`sections!: no section! ${m[3]}`) }; });
+  .map(l => { const m = l.match(/^(\w+): ([\w:]+) = [\w.]+;$/) ?? die(`sections!: ${l}`); return { name: m[1], row: rows.get(m[2]) ?? die(`sections!: no section! ${m[2]}`) }; });
+const groups = (readFileSync(join(DIR, 'lib.rs'), 'utf8').match(/^groups! \{([\s\S]*?)\}/m) ?? die('no groups! in lib.rs'))[1].trim().split(/\s+/); if (groups.length > 32) die('a want has 32 bits, and there are more groups than that');
 
 // the layout as the module says it (lib.rs `layout`), and its stamp
-const text = list.map(s => `${s.name}${s.row.fields.map(f => ` ${f.name}:${f.ty}`).join('')}\n`).join('');
+const text = `want ${groups.join(' ')}\n` + list.map(s => `${s.name}${s.row.fields.map(f => ` ${f.name}:${f.ty}`).join('')}\n`).join('');
 let stamp = 0x811c9dc5; for (let i = 0; i < text.length; i++) stamp = Math.imul(stamp ^ text.charCodeAt(i), 0x01000193) >>> 0;
 
 const camel = (s: string) => s.replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase());
 const L: string[] = ['// Written by tools/draw/gen.ts from rust/game_draw. To change a section, change it there.', '',
   '/** the stamp of the sections this was made from: a module of another stamp is refused (drawn.ts) */', `export const LAYOUT = ${stamp};`,
-  '/** each section\'s place: in the table the module answers with, and its bit in what a host asks for */', `export const enum Section { ${list.map((s, i) => `${camel(s.name)} = ${i}`).join(', ')}, count = ${list.length} }`];
+  '/** what a host may ask for: what is made together is asked for together */', `export const enum Want { ${groups.map((g, i) => `${camel(g)} = ${2 ** i}`).join(', ')}, all = ${2 ** groups.length - 1} }`,
+  '/** each section\'s place in the table the module answers with */', `export const enum Section { ${list.map((s, i) => `${camel(s.name)} = ${i}`).join(', ')}, count = ${list.length} }`];
 for (const r of new Set(list.map(s => s.row))) { let at = 0;
   L.push('', ...(r.doc ? [`/** ${r.doc} */`] : []), `export const enum ${r.name} {`);
   for (const f of r.fields) { const kind = f.ty.replace(/^\[/, '').slice(0, 3); L.push(`  /** ${kind}${f.words > 1 ? ` × ${f.words}` : ''}${f.doc ? `: ${f.doc}` : ''} */`, `  ${camel(f.name)} = ${at},`); at += f.words; }
@@ -52,7 +54,21 @@ const COMMANDS = join(ROOT, 'src/draw/commands.ts'), C: string[] = ['// Written 
     const F = m[3].split(',').map(x => x.trim()).filter(Boolean).map(x => { const [name, ty] = x.split(':').map(y => y.trim()); const k = ({ u32: 'u32', i32: 'i32', f64: 'f64', '&str': 'text' } as Record<string, string>)[ty] ?? die(`commands!: ${ty}`); return { name: camel(name), k }; });
     C.push(`  /** ${doc} */`, `  ${m[2][0].toLowerCase()}${m[2].slice(1)}(${F.map(f => `${f.name}: ${f.k === 'text' ? 'string' : 'number'}`).join(', ')}): void { this.u32(${m[1]});${F.map(f => ` this.${f.k}(${f.name});`).join('')} }`); doc = ''; }
   C.push('}', ''); }
-const files: [string, string][] = [[OUT, L.join('\n') + '\n'], [COMMANDS, C.join('\n')]];
+// ---- every number a person may turn while the game plays, by its name: where it lies in the knobs, from the wire's table (a settled row is the build's own)
+const KNOBS = join(ROOT, 'rust/game_run/src/knobs_list.rs'); let knobText = '';
+{ const S = JSON.parse(readFileSync(join(ROOT, 'tools/blitz/schema.json'), 'utf8')), T = S.types as Record<string, { k: string; fields: { rust: string; ty: string }[] }>, settled = new Set<string>(S.knobSettled), rows: string[] = [], typed: string[] = [];
+  const PARTS: Record<string, number> = { f64: 1, bool: 1, V3: 3, '[f64; 2]': 2, '[f64; 3]': 3, '[f64; 4]': 4 };
+  const walk = (path: string, ty: string): void => { const t = T[ty];
+    if (t?.k === 'struct') { for (const f of t.fields) if (!settled.has(`${ty.replace('crate::', '')}.${f.rust}`)) walk(path ? `${path}.${f.rust}` : f.rust, f.ty); return; }
+    const n = PARTS[ty]; if (n) typed.push(`    let _: &${ty === 'V3' ? '[f64; 3]' : ty} = &k.${path};`);
+    if (n) for (let i = 0; i < n; i++) rows.push(`    ("${path}${n > 1 ? `.${i}` : ''}", offset_of!(Knobs, ${path})${i ? ` + ${8 * i}` : ''}, ${ty === 'bool'}),`); };
+  walk('', 'crate::knobs::Knobs');
+  knobText = `//! Written by tools/draw/gen.ts from tools/blitz/schema.json: every number of the knob tables that is not settled, by its name, where it lies, and whether it is a yes or no.\nuse core::mem::offset_of;\nuse game::knobs::Knobs;\n\npub static KNOBS: &[(&str, usize, bool)] = &[\n${rows.join('\n')}\n];\n\n/// each is of the type the list's reader takes it for\nfn typed(k: &Knobs) {\n${typed.join('\n')}\n}\nconst _: fn(&Knobs) = typed;\n`; }
+// ---- the page: index.html's own markup and style, with the other script
+const PAGE = join(ROOT, 'draw.html'), index = readFileSync(join(ROOT, 'index.html'), 'utf8'), swapped = index.replace('src="./src/main.ts"', 'src="./src/host/drawpage.ts"').replace(/  <script>\/\* the page that draws a game it does not hold[^\n]*\n/, '').replace('<head>', '<head>\n  <!-- Written by tools/draw/gen.ts from index.html: the page that draws a game it does not hold (src/host/drawpage.ts). -->');
+if (/location\.replace\('draw/.test(swapped)) die('index.html\'s own way to draw.html is still in draw.html');
+if (swapped === index || swapped.includes('src/main.ts')) die('index.html has no main script to put the page that draws in the place of');
+const files: [string, string][] = [[PAGE, swapped], [KNOBS, knobText], [OUT, L.join('\n') + '\n'], [COMMANDS, C.join('\n')]];
 if (process.argv.includes('--check')) { const off = files.filter(([p, t]) => !existsSync(p) || readFileSync(p, 'utf8') !== t).map(([p]) => p.slice(ROOT.length + 1)); console.log(off.length ? `draw: ${off.join(', ')} would change` : `draw: the page's half is of these declarations (stamp ${stamp})`); process.exit(off.length ? 1 : 0); }
 for (const [p, t] of files) writeFileSync(p, t);
 console.log(`draw: ${list.length} sections, stamp ${stamp}; src/draw/sections.ts and commands.ts written`);
