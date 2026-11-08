@@ -24,9 +24,11 @@ fn lead_run(s: u32, looker: usize, set: bool) -> (GuardId, Option<GuardId>, Stri
     hush(&mut p);
     let men = p.men();
     let (a, b) = (men[looker], men[1 - looker]);
+    let wall = [at[0] + 6.0, at[1] + 1.0];   // (off along the wall: the opening shows him next to nothing)
+    p.man_stands(b, wall);
+    p.order_floor("move", wall, Who::Num(1.0 - looker as f64));
     p.leaf_put_open(d, 1.5);
     p.order("move", [at[0], at[1] + 2.2], Who::Num(looker as f64));
-    p.order("move", [at[0] + 6.0, at[1] + 1.5], Who::Num(1.0 - looker as f64));
     p.until(12.0, |p| p.arrived(a) && p.arrived(b)).unwrap_or_else(|| panic!("seed {s}: not on their marks: {}", p.roll()));
     p.run(1.5);
     let (sa, sb) = (p.seen_of_room(a, [at[0], at[1] - 2.0]), p.seen_of_room(b, [at[0], at[1] - 2.0]));

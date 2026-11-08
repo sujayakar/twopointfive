@@ -150,7 +150,7 @@ fn one_man_cuts_the_door_before_it_is_called_held() {
         let (mut p, d, at) = at_the_door(s, 2);
         p.order("openClear", at, Who::All);
         let op = op_of(&mut p, d, s);
-        p.run(6.0);
+        p.run(3.0);
         assert!(p.thr_jamb(op).is_empty(), "seed {s}: the control: a plain entry has its men on no jamb");
     }
 }

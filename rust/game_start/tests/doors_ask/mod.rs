@@ -363,6 +363,8 @@ pub trait DoorsAsk {
     fn shotgun_rule(&mut self) -> (f64, f64, bool, Vec<bool>);
     /// has a man a line from his eyes to the doorway as he sees it
     fn sees_doorway(&mut self, m: GuardId, d: DoorId) -> bool;
+    /// has a door order been and gone on this door
+    fn op_ended_on(&self, d: DoorId) -> bool;
     /// is the squad's ring up, who is it for, what it says under it, its wedges
     fn ring_up(&self) -> bool;
     fn ring_part(&self) -> Vec<GuardId>;
@@ -810,6 +812,7 @@ impl DoorsAsk for Play {
         let at = [c[0] + (p[0] - c[0]) * q, 1.1, c[1] + (p[1] - c[1]) * q];
         !game::scene_collision::segment_blocked(&mut self.g, [p[0], 1.55, p[1]], at, None, None, None)
     }
+    fn op_ended_on(&self, d: DoorId) -> bool { self.ops_on(d).is_empty() && self.last_op(d).is_some() }
     fn ring_up(&self) -> bool { self.g.orders.cmd_ring.is_some() }
     fn ring_part(&self) -> Vec<GuardId> { self.g.orders.menu.as_ref().and_then(|m| m.part.clone()).unwrap_or_default() }
     fn ring_caption(&mut self) -> String { self.view().ring.map_or(String::new(), |r| r.caption) }
