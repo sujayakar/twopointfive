@@ -46,7 +46,7 @@ export class Overlay implements HudLike {
   private trajRoll: SVGPolylineElement; private trajTick: SVGCircleElement;   // (game.view.aim.throw.rest): the ring goes where the can comes to REST, a tick stays on its first touch, the floor between is dotted
   private squadThrow!: SquadThrowViz;
   private attention!: AttentionViz;
-  /** the layer and the floor's picture, where a page's own tools draw (ui/devhud.ts) */
+  /** the layer and the floor's picture, where a page's own tools draw */
   get layers(): { root: HTMLElement; floor: SVGSVGElement } { return { root: this.root, floor: this.traj }; }
   private equipKey = '';
   private equipKit: KitView | null = null;

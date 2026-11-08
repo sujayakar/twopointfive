@@ -1,6 +1,6 @@
 // NOTHING UNDER src/view, AND NOTHING UNDER THE HUD IN PLAY, IMPORTS THE GAME: the record a HUD is told (src/view/seatview.ts) and what draws it are read and run the same by a page that holds no game at all,
 // so their types name no class of the game's and their files import nothing that does, at any depth, not even as a type, and reach for no hook a page hangs on the window. A static check, no game stood. Developer
-// pictures that read what only the TypeScript holds are no part of the HUD (ui/devhud.ts: they stay on the page that holds a game).
+// pictures that read what only a TypeScript game held are no part of the HUD.
 //   bun run tools/qa/view-check.ts        exit 0 = it holds · 1 = a file imports what it may not
 //   VIEW_BREAK=1  every form of a forbidden import is planted, in memory, in a file the walk reaches at the far end of an import: the walk must FAIL
 // (vendor/typescript, or TS_LIB=<path to typescript.js>: imports are found by the TypeScript scanner)
