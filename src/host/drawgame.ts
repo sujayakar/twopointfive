@@ -4,6 +4,7 @@ import { FaceError, type Face, type Fetched } from './face';
 import { ALL, Drawn, drawRefused, type DrawFace } from '../draw/drawn';
 import { Commands } from '../draw/commands';
 import { HAND } from '../draw/hand';
+import type { SaveRow } from '../ui/runcard';
 
 /** what a start is handed beside the level (rust/game_start/src/handed.rs PARTS) */
 export interface Start { level: Uint8Array; words: string; mannequin: Uint8Array; mannequinBin: Uint8Array; cast: Uint8Array; castLook: Uint8Array; seed: number; seats?: number }
@@ -104,12 +105,26 @@ export class DrawGame {
     this.draw();
   }
   private said: Float64Array | null = null;
+  /** how the run ended, in a word, and why; null while it is being played */
+  verdict(): { won: boolean; word: string; why: string } | null { const r = this.X.face_verdict(this.h); if (!r) return null; const [word, ...why] = this.answer().split('\n'); return { won: r === 2, word, why: why.join(' ') }; }
+  /** this run's saves as a card lays them out, the one to go back to, and the mission's clock now */
+  saves(): { elapsed: number; offer: string; rows: SaveRow[] } {
+    this.X.face_saves(this.h); const p = this.X.face_out_ptr() >>> 0, n = this.X.face_out_len() >>> 0, b = this.memory.buffer.slice(p, p + n), d = new DataView(b); let at = 8;
+    const text = (): string => { const len = d.getUint32(at, true); at += 4 + len; return this.dec.decode(new Uint8Array(b, at - len, len)); };
+    const offer = text(), count = d.getUint32(at, true), rows: SaveRow[] = []; at += 4;
+    for (let i = 0; i < count; i++) { const key = text(), label = text(), says = d.getUint32(at, true); rows.push({ key, label, slot: says & 1 ? 'manual' : 'auto', regret: says & 2 ? 'regretted' : null, missionT: d.getFloat64(at + 4, true), savedAt: d.getFloat64(at + 12, true) }); at += 20; }
+    return { elapsed: d.getFloat64(0, true), offer, rows };
+  }
   /** every knob a person may turn (`commands.knob` turns one) */
   knobs(): { name: string; yes: boolean; value: number }[] {
     this.X.face_knobs(this.h); const p = this.X.face_out_ptr() >>> 0, n = this.X.face_out_len() >>> 0, b = this.memory.buffer.slice(p, p + n), d = new DataView(b), out: { name: string; yes: boolean; value: number }[] = [];
     for (let at = 0; at < n;) { const w = d.getUint32(at, true), len = w & 0x7fffffff; out.push({ name: this.dec.decode(new Uint8Array(b, at + 4, len)), yes: w >>> 31 === 1, value: d.getFloat64(at + 4 + len, true) }); at += 12 + len; }
     return out;
   }
+  private turned = new Map<string, number>();
+  /** turn a knob, for the visit: a load or a restart stands a game whose knobs are another moment's, and this is turned again (`turnAgain`) */
+  turn(name: string, value: number): void { this.turned.set(name, value); this.commands.knob(name, value); }
+  turnAgain(): void { for (const [name, value] of this.turned) this.commands.knob(name, value); }
   /** a name that crosses by its number */
   nameOf(i: number): string { this.X.face_draw_name(this.h, i); return this.answer(); }
   private draw(): void { this.drawn.take(this.h); }

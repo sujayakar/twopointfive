@@ -61,8 +61,12 @@ const KNOBS = join(ROOT, 'rust/game_run/src/knobs_list.rs'); let knobText = '';
     const n = PARTS[ty]; if (n) typed.push(`    let _: &${ty === 'V3' ? '[f64; 3]' : ty} = &k.${path};`);
     if (n) for (let i = 0; i < n; i++) rows.push(`    ("${path}${n > 1 ? `.${i}` : ''}", offset_of!(Knobs, ${path})${i ? ` + ${8 * i}` : ''}, ${ty === 'bool'}),`); };
   walk('', 'crate::knobs::Knobs');
-  knobText = `//! Written by tools/draw/gen.ts from tools/blitz/schema.json: every number of the knob tables that is not settled, by its name, where it lies, and whether it is a yes or no.\nuse core::mem::offset_of;\nuse game::knobs::Knobs;\n\npub static KNOBS: &[(&str, usize, bool)] = &[\n${rows.join('\n')}\n];\n\n/// each is of the type the list's reader takes it for\n#[cfg(test)]\n#[allow(dead_code)]\nfn typed(k: &Knobs) {\n${typed.join('\n')}\n}\n`; }
-const files: [string, string][] = [[KNOBS, knobText], [OUT, L.join('\n') + '\n'], [COMMANDS, C.join('\n')]];
+  knobText = `//! Written by tools/draw/gen.ts from tools/blitz/schema.json: every number of the knob tables that is not settled, by its name, where it lies, and whether it is a yes or no.\nuse core::mem::offset_of;\nuse game::knobs::Knobs;\n\npub static KNOBS: &[(&str, usize, bool)] = &[\n${rows.join('\n')}\n];\n\n/// each is of the type the list's reader takes it for\nfn typed(k: &Knobs) {\n${typed.join('\n')}\n}\nconst _: fn(&Knobs) = typed;\n`; }
+// ---- the page: index.html's own markup and style, with the other script
+const PAGE = join(ROOT, 'draw.html'), index = readFileSync(join(ROOT, 'index.html'), 'utf8'), swapped = index.replace('src="./src/main.ts"', 'src="./src/host/drawpage.ts"').replace(/  <script>\/\* the page that draws a game it does not hold[^\n]*\n/, '').replace('<head>', '<head>\n  <!-- Written by tools/draw/gen.ts from index.html: the page that draws a game it does not hold (src/host/drawpage.ts). -->');
+if (/location\.replace\('draw/.test(swapped)) die('index.html\'s own way to draw.html is still in draw.html');
+if (swapped === index || swapped.includes('src/main.ts')) die('index.html has no main script to put the page that draws in the place of');
+const files: [string, string][] = [[PAGE, swapped], [KNOBS, knobText], [OUT, L.join('\n') + '\n'], [COMMANDS, C.join('\n')]];
 if (process.argv.includes('--check')) { const off = files.filter(([p, t]) => !existsSync(p) || readFileSync(p, 'utf8') !== t).map(([p]) => p.slice(ROOT.length + 1)); console.log(off.length ? `draw: ${off.join(', ')} would change` : `draw: the page's half is of these declarations (stamp ${stamp})`); process.exit(off.length ? 1 : 0); }
 for (const [p, t] of files) writeFileSync(p, t);
 console.log(`draw: ${list.length} sections, stamp ${stamp}; src/draw/sections.ts and commands.ts written`);
