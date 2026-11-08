@@ -3,10 +3,11 @@
 // tries the handle, and the order ends there the way a door order ends 'found shut' — the same words, said once, the men left stacked on the door. Only
 // then does the team know, and the same order is refused as it always was. It acts where DOORTOOLS.testDoor is on; the probe sets that key itself.
 //   bun run tools/qa/probes.ts move-walktries       (family 'walktries'; TPS_PROFILE=shipped for the page's stand, TPS_WALKTRIES=1 raises the key on the frozen one)
-// Headless, staged the same on either stand; nothing here looks at a picture or hears a voice (the lines are read off Game.say, the menu off Orders.hud()).
+// Headless, staged the same on either stand; nothing here looks at a picture or hears a voice (the lines are read off Game.say, the menu off its rows).
 //   walk     key on, the same: not refused, not greyed; the men walk (never faster than a plain 'move' walks them); one man tries the leaf; the door
 //            orders' own words are said once and logged; every man of the order is left stacked on that door, on his mark three seconds on, on his own
 //            side of it, nobody inside the room, nobody moving after; the team knows, and the same order is now refused and greyed
+import { doing, listedOf } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`);
@@ -68,7 +69,7 @@ async function play(mode: 'locked' | 'known' | 'ring' | 'open', key: boolean, o:
   const team: any[] = O.men('all'), sent: any[] = O.men(who);
   const men = (l: any[] = team): Man[] => l.map((m: any) => { const A = O.of(m); return { c: m.callsign, order: String(A?.order ?? '-'), door: String(A?.door?.def.name ?? '-'), there: String(A?.there ?? '-'), post: A?.post ? [A.post[0], 0, A.post[2]] : null, pos: [m.char.pos[0], 0, m.char.pos[2]], side: sideOf(d, m.char.pos), tries: !!A?.tries, arrived: !!A?.arrived, dead: m.state === 'dead' }; });
   /** the menu opened on that spot as the player opens it: its 'move there' row — greyed or not, and its words */
-  const row = (): Row | null => { const was = O.who; O.who = who; try { if (!O.open(O.targetAt(spot))) return null; const r = O.hud().menu?.rows.find((x: any) => String(x.opts[0]?.text ?? '').startsWith('move there')); return r ? { off: !!r.off, text: String(r.opts[0].text) } : null; } finally { O.close(); O.who = was; } };
+  const row = (): Row | null => { const was = O.who; O.who = who; try { if (!O.open(O.targetAt(spot))) return null; const r = listedOf(O)?.rows.find((x: any) => String(x.opts[0]?.text ?? '').startsWith('move there')); return r ? { off: !!r.off, text: String(r.opts[0].text) } : null; } finally { O.close(); O.who = was; } };
   if (mode === 'known') await quiet(() => { O.give('stack', O.targetAt(d.frameCentre), who); for (let i = 0; i < 60 * 30 && !D.knownShut(d, samSide); i++) R.step(); R.step(60); });
   if (mode === 'ring') g.player.keys.add(d.lockId);
   o.before?.(R, d);
@@ -78,7 +79,7 @@ async function play(mode: 'locked' | 'known' | 'ring' | 'open', key: boolean, o:
   let secs = 0, top = 0, lied = 0; const walked = team.map(() => 0), last = team.map((m: any) => [...m.char.pos]);
   const going = () => mids.length > 0 || team.some((m: any) => { const A = O.of(m); return m.state !== 'dead' && A?.order === 'move' && !A.arrived; });
   await quiet(() => { for (let i = 0, still = 0; i < 60 * 30 && still < 30; i++) { while (mids.length && secs >= mids[0][0]) mids.shift()![1](R, d, sent); R.step(); secs += DT; still = going() ? 0 : still + 1;
-    for (const m of team) if (O.of(m)?.tries && O.statusOf(m) !== 'moving') lied++;
+    for (const m of team) if (O.of(m)?.tries && !doing(O.g, m).startsWith('moving')) lied++;
     team.forEach((m: any, k: number) => { const s = dist(m.char.pos, last[k]); walked[k] += s; if (sent.includes(m)) top = Math.max(top, s / DT); last[k] = [...m.char.pos]; }); } });
   const halt = men(); await quiet(() => { settle(() => R.step(), () => team.map((m: any) => [...m.char.pos])); }); const later = men(), heard = said.slice(n0);   // (settled, as the wedge's case reads its four: three seconds at the least)
   const knew1 = D.knownShut(d, samSide), row1 = row(), why2 = await quiet(() => O.give('move', O.targetAt(spot), who)); await quiet(() => R.step(120));

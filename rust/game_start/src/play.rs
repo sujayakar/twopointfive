@@ -299,6 +299,17 @@ impl Play {
     pub fn par_result(&self) -> Option<game::par::ParResult> { game::par::par_result_now(&self.g).cloned() }
     /// where a defuse level's charges are, in the file's order
     pub fn charges(&self) -> Vec<[f64; 2]> { self.g.level.scenarios.as_ref().and_then(|s| s.defuse.as_ref()).map_or(Vec::new(), |d| d.devices.iter().map(|x| [x.pos[0], x.pos[2]]).collect()) }
+    /// how many door charges a seat's squad has set and not blown
+    pub fn seat_door_charges(&self, seat: usize) -> usize { game::seats::seat(&self.g, self.g.seats[seat]).door_tools.set.len() }
+    /// how many wall charges the first player's squad has set and not blown
+    pub fn wall_charges(&self) -> usize { self.g.wall_charge.set.len() }
+    /// THE SQUAD IS TOLD TO SET A WALL CHARGE at a place of a wall, by the order's own call, carrying what it needs. An order the game refuses fails the test with the game's reason.
+    pub fn orders_wall_charge(&mut self, at: [f64; 3]) {
+        game::wallcharge::wall_charge_raise_carried(&mut self.g, 2.0);
+        if let Some(why) = game::wallcharge::wall_charge_order(&mut self.g, at, None) { panic!("the wall charge was refused: {}", why); }
+    }
+    /// a place of the floor `off` metres out from the first wall charge's face, on the side it was set from
+    pub fn off_the_wall_charge(&self, off: f64) -> [f64; 2] { let w = self.g.tab.wallcharge_set_wall_charge[self.g.wall_charge.set[0]].wall.clone(); let at = game::wallcharge::wall_pt(&self.g, &w, 0.0, off, None); [at[0], at[2]] }
     /// the objective row, as a HUD is given it
     pub fn objective(&self) -> String { self.view().mission.map_or(String::new(), |m| m.text) }
     /// WHAT A HUD IS TOLD of the game as it stands (`view::tick_view`: the record the page draws, asked of the game and never kept by it)

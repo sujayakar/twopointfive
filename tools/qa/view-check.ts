@@ -6,8 +6,8 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve, dirname, relative } from 'node:path';
 
 const ROOT = resolve(import.meta.dir, '../..'), HOME = join(ROOT, 'src/view');
-/** what a file of src/view may import: its own folder and the plain arithmetic types */
-const MAY = process.env.VIEW_BREAK === '1' ? [] : ['src/view/', 'src/math/'];
+/** what a file of src/view may import: its own folder, the plain arithmetic types, and src/draw (the page that holds no game: its own build rule keeps it so) */
+const MAY = process.env.VIEW_BREAK === '1' ? [] : ['src/view/', 'src/math/', 'src/draw/'];
 
 export function viewCheck(): boolean {
   const files: string[] = []; const walk = (d: string): void => { for (const e of readdirSync(d)) { const p = join(d, e); if (statSync(p).isDirectory()) walk(p); else if (/\.tsx?$/.test(e)) files.push(p); } }; walk(HOME);

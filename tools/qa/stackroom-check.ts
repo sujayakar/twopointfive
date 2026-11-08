@@ -21,6 +21,7 @@
 //           this file there: it runs without stackroom.ts) — the two files must be the same, byte for byte: the off switch IS the build as it was.
 //   WALK    (--walk) the furniture put home, the men put on the face's floor, Sam on a jamb, the order given, 14 s played: every man is ON his mark, and none went through a doorway on
 //           the way. A man the order gave up on within a stride of a mark he had open floor to is a note and a count, not a failure: the mark is good. The records office first, as he played it: the pair from the yard, Sam on the hall door's latch jamb.
+import { doing } from './squadwords';
 import { readFileSync, appendFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
@@ -178,7 +179,7 @@ async function walks(E: any, S: any, men: any[], T: Tally, fail: (s: string) => 
       const j = judge(g, d, side, from, posts[i]!, dear);
       if (j && j !== 'next') { T.walkBad++; fail(`WALK ${d.def.name}${side > 0 ? '+' : '−'}, ${where}: ${m.callsign}'s mark ${f2(posts[i]!)} is ${j} — he ends at ${f2(m.char.pos)}`); }
       else if (gap >= 0.6 && gap < 1.0 && inReach(g, m, posts[i]!)) { stalled++; console.log(`    note: WALK ${d.def.name}${side > 0 ? '+' : '−'}, ${where}: ${m.callsign} stalled ${gap.toFixed(1)} m short of his mark ${f2(posts[i]!)} with open floor between — the walk's, not the mark's`); }
-      else if (gap >= 0.6) { if (VERBOSE || process.env.WHY) console.log(`    why: ${m.callsign} ${O.statusOf(m)} arrived=${O.of(m)?.arrived} door angle ${d.angle?.toFixed?.(2)} latched ${d.latched} sneaking ${JSON.stringify(O.of(m)?.order)}`); T.walkBad++; fail(`WALK ${d.def.name}${side > 0 ? '+' : '−'}, ${where}: ${m.callsign} is ${gap.toFixed(1)} m off his mark ${f2(posts[i]!)} after ${secs} s, at ${f2(m.char.pos)}${nav.isBlocked(posts[i]![0], posts[i]![2]) ? ' (the mark is in a wall)' : ''}`); }
+      else if (gap >= 0.6) { if (VERBOSE || process.env.WHY) console.log(`    why: ${m.callsign} ${doing(O.g, m)} arrived=${O.of(m)?.arrived} door angle ${d.angle?.toFixed?.(2)} latched ${d.latched} sneaking ${JSON.stringify(O.of(m)?.order)}`); T.walkBad++; fail(`WALK ${d.def.name}${side > 0 ? '+' : '−'}, ${where}: ${m.callsign} is ${gap.toFixed(1)} m off his mark ${f2(posts[i]!)} after ${secs} s, at ${f2(m.char.pos)}${nav.isBlocked(posts[i]![0], posts[i]![2]) ? ' (the mark is in a wall)' : ''}`); }
       else if (sameRoom && !next[i] && crossed[i].length) { T.walkBad++; fail(`WALK ${d.def.name}${side > 0 ? '+' : '−'}, ${where}: ${m.callsign} went through ${crossed[i].join(', ')} on the way to a mark in the room he stood in`); } });
     O.clear();
   };

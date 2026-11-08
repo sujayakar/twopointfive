@@ -3,7 +3,7 @@
 //   · Options ▸ Controls, Squad, is three rows: the command key's ("Order the squad", its tap and its hold), then the sprint key with that key ("Send
 //     part of the squad to one more thing"), then the word's ("Send in everyone who's waiting"); no row for the orders menu, its two letters or who
 //     takes an order, and no word of the tab names plan mode; a who row given a key by hand says the key does nothing now; a machine that moved
-//     sprint to another key reads that key on the part's row, cap and words; a menu given a key by hand has its three rows back, with no middle button;
+//     sprint to another key reads that key on the part's row, cap and words;
 //   · `?goals=0`: no row for a part of the squad, and the hand-bound who row does not point at one;
 //   · `?qonly=0`: the six rows as they were;
 //   node tools/qa/squadkeys-page.cjs      env: PORT (the dev server's, default 5199) · SQUADKEYS_BREAK=1 (goals off on every page: must FAIL)
@@ -40,10 +40,6 @@ let fails = 0; const check = (ok, label, detail = '') => { if (!ok) fails++; con
   // ── sprint moved to another key: the part's row follows it ──
   { const { ctx, page } = await fresh({ 'twopointsix.keys': '{"ShiftLeft":"KeyK"}' }); await page.goto(url(), { waitUntil: 'domcontentloaded' }); const S = await squad(page), b = S.rows[1];
     check(!!b && b.caps === 'K + Q' && /hold K and tap Q/.test(b.small), "a machine that moved sprint to K reads K with the command key on the part's row, cap and words", b ? `[${b.caps}] "${b.small}"` : 'no second row');
-    await ctx.close(); }
-  // ── the orders menu given a key by hand ──
-  { const { ctx, page } = await fresh({ 'twopointsix.keys': '{"KeyX":"KeyX"}' }); await page.goto(url(), { waitUntil: 'domcontentloaded' }); const S = await squad(page), m = S.rows.find(r => /orders, on what/i.test(r.what));
-    check(!!m && m.caps === 'X' && !/middle/i.test(m.small) && S.rows.some(r => r.caps === 'H') && S.rows.some(r => r.caps === 'G'), 'a menu given a key by hand has its row and its two letters back, and its words leave the middle button out', `${say(S)} · "${m ? m.small : ''}"`);
     await ctx.close(); }
   // ── goals off: as it was since the whole-squad rule ──
   if (!BREAK) { const { ctx, page } = await fresh({ 'twopointsix.keys': '{"KeyT":"KeyT"}' }); await page.goto(url('goals=0'), { waitUntil: 'domcontentloaded' }); const S = await squad(page), who = S.rows.find(r => /who takes/i.test(r.what));

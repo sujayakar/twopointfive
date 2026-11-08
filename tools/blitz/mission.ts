@@ -308,10 +308,6 @@ Game.prototype.update = function (this: any, ...a: any[]) {
   // THE SCRIPTED PLAYER'S WORD TO THE HOSTAGES, given by the module's own call between ticks (playthrough.ts: `R.ending.word(g.player.char)`
   // once the room is held and men of theirs are still up): `<k> rescue_word player|none`.
   if (k === 1) for (const [name, E] of [['rescue_word', g.rescue?.ending]] as [string, any][]) if (E?.word) { const word = E.word; E.word = function (this: any, by: any) { if (!g.ticking) write1(`${k + 1} ${name} ${by === g.player.char ? 'player' : by ? 'UNSUPPORTED-man' : 'none'}`); return word.call(this, by); }; }
-  // A LESSON'S PLAYER ASKS THE WORDS OF A SET DOOR CHARGE between ticks (tools/qa/lessons/tut-kit.ts, tut-solo.ts: `doorTools.closeWords(c)`, who stands too
-  // close). The answer is KEPT, stamped with the time, and answers every ask of the next quarter second (doortools.ts closeAt), the tick's own among
-  // them: a call line of the ordered record, `<k> call door_close_words <the charge's place in the set list>`.
-  if (k === 1 && g.doorTools?.closeWords) { const D = g.doorTools, cw = D.closeWords; D.closeWords = function (this: any, c: any) { if (!g.ticking) between(`${k + 1} door_close_words ${D.set.indexOf(c)}`, 'call'); return cw.call(this, c); }; }
   if (k === 1 && LEVER) { const Df = await0d; for (const kv of LEVER.split(',')) { const [key, rung] = kv.split('=');
       if (!Df.leversNow().some((L: any) => L.key === key && L.rungs.some((r: any) => r.id === rung))) { say(`mission.ts: --lever knows ${Df.leversNow().map((L: any) => `${L.key}=${L.rungs.map((r: any) => r.id).join('|')}`).join(', ')}, not '${kv}'`); process.exit(64); }
       Df.setLever(key, rung, false); } say(`mission.ts: the levers before tick 1: ${Df.leversLine(true)}; TOLD.rung ${(knobRegistry() as any).TOLD?.rung}`); }

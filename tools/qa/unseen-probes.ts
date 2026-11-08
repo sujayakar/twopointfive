@@ -48,11 +48,11 @@ async function follow(tag: string, query: string, level?: string) {
   try {
     const up = phase(R, 3, D); console.log(`   upright: ${words(up)}`);
     check(up.live === 0 && up.low === 0, `${tag}: Sam walking upright at full pace — nobody sneaks, nobody crouches (as the build)`);
-    R.crouch(true); const lo = phase(R, 4, B); console.log(`   crouched: ${words(lo)} · HUD '${g.orders.posture.word()}'`);
+    R.crouch(true); const lo = phase(R, 4, B); console.log(`   crouched: ${words(lo)} · HUD '${g.view.squad?.posture}'`);
     check(lo.live === 1 && lo.low > 0.95, `${tag}: Sam crouched — every teammate goes low with him (${pc(lo.low)})`);
     check(lo.vmax <= U.UNSEEN.lowPace + 0.12, `${tag}: crouched teammates keep under ${U.UNSEEN.lowPace} m/s (fastest ${lo.vmax.toFixed(2)})`);
     check(lo.far < (n > 2 ? 7.5 : 4.5), `${tag}: they keep up (furthest ${lo.far.toFixed(1)} m)`);
-    check(/sneaking/.test(g.orders.posture.word()), `${tag}: the squad line says so ('${g.orders.posture.word()}')`);
+    check(/sneaking/.test(g.view.squad?.posture), `${tag}: the squad line says so ('${g.view.squad?.posture}')`);
     R.crouch(false); R.wait(U.UNSEEN.linger + 1); const up2 = phase(R, 2, D); console.log(`   upright again: ${words(up2)}`);
     check(up2.live === 0 && up2.low === 0, `${tag}: Sam stands and walks on — they stand too after the linger`);
     const gears = TWOGEARS.on; TWOGEARS.on = false;   // (the wheel's own rule — slow on the wheel, upright, they slow with him — is nobody's with two gears, player.ts TWOGEARS: held off for these two lines and put back)

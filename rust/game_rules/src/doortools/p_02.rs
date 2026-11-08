@@ -120,8 +120,8 @@ pub fn door_tools_new(g: &mut crate::game::Game) -> crate::doortools::DoorTools 
     core::mem::swap(&mut g.door_tools, &mut me);
     door_tools_thr_rows(g);
     core::mem::swap(&mut g.door_tools, &mut me);
-    g.orders.notes.push(crate::orders::OrderNoteFn::DoorToolsHud);
-    g.orders.notes.push(crate::orders::OrderNoteFn::DoorToolsWord);
+    crate::orders::squad_orders_voice(g, crate::orders::OrderNoteFn::DoorToolsHud);
+    crate::orders::squad_orders_voice(g, crate::orders::OrderNoteFn::DoorToolsWord);
     me
 }
 

@@ -49,7 +49,7 @@
 //! reading back
 //!   face_export(h)                            the whole state (`io::export`) at face_out
 //!   face_verdict(h) -> 0 | 1 | 2              how the mission ended, off the record the game's tick latches: 0 not yet, 1 lost, 2 won (then the record as lines at face_out)
-//!   face_tick_view(h)                         what a HUD is told of the game as its last tick left it (a TickView at face_out); a read, nothing kept
+//!   face_tick_view(h)                         what a HUD is told of the game as its last tick left it (a TickView at face_out); a read: no word of the state is written, and the copy of the boxes, which is none, is stood only for a view that will ask it
 //!   face_debrief_view(h)                      what the end card shows of the run (a DebriefView at face_out); a read, nothing kept
 //!   face_line(h, what, a…, b…) -> 0 | 1 · face_ray(h, o…, d…, max) -> 0 | 1 · face_hear(h, s…, d…)
 //!                                             the box world asked of the game shared: the camera's, the sound's, the cursor's questions; nothing is kept
@@ -152,7 +152,8 @@ pub extern "C" fn face_verdict(h: u32) -> i32 {
     }
 }
 /// WHAT A HUD IS TOLD of the game as its last tick left it (`view::tick_view`), about the seat this machine shows: a `TickView`'s bytes at face_out, read
-/// by the host with the table's own reader. A read: nothing of the game is written, and no seat is changed over.
+/// by the host with the table's own reader. A read: no word of the game's state is written and no seat is changed over; where a writer put the copy of the boxes down and
+/// this view will ask it (`view::asks_the_boxes`), it is stood first, as every question of it does.
 #[no_mangle]
 pub extern "C" fn face_tick_view(h: u32) {
     use game::io::Io;
@@ -384,13 +385,13 @@ pub unsafe extern "C" fn face_ask(h: u32, kind: u32, row: u32, seat: u32, p: *co
     let b = bytes(p, n);
     let (r, a) = with(h, |x| {
         let g = &mut x.g;
-        if kind > 10 { return (3, Vec::new()); }
+        if kind > 9 { return (3, Vec::new()); }
         let s = seat as usize;
         if s >= g.tab.cmd_seat.len() { return (2, Vec::new()); }
         let sid = <game::ids::SeatId as Id>::from_ix(s);
         if g.seat != sid && g.tab.cmd_seat[sid].own.is_none() { return (2, Vec::new()); }
-        // (the posture's word and an order by its id string name no row)
-        if kind != 6 && kind != 10 && (row as usize) >= g.tab.orders_order_def.len() { return (1, Vec::new()); }
+        // (an order by its id string names no row)
+        if kind != 9 && (row as usize) >= g.tab.orders_order_def.len() { return (1, Vec::new()); }
         (0, game::io::ask(g, kind, row, seat, b))
     });
     out(a);

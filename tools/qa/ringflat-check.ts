@@ -1,4 +1,4 @@
-// THE SQUAD'S RING IS TWO RINGS DEEP AND NOTHING RIDES THE CURSOR (src/game/cmdring.ts CMDRING.flat / plainHint / bareHint; orders.ts flatRows, seats, hintView). The maintainer, 10-23, at a wall with three rings between him and one greyed row: "radial menu tree needs
+// THE SQUAD'S RING IS TWO RINGS DEEP AND NOTHING RIDES THE CURSOR (src/game/cmdring.ts CMDRING.flat / plainHint / bareHint; orders.ts flatRows, seats). The maintainer, 10-23, at a wall with three rings between him and one greyed row: "radial menu tree needs
 // some work, way too nested"; "loud and quiet should be an option on squad wheel"; "let's remove the icons on mouse position from squad orders
 // entirely". (The squad's corner cut down to its key lines is the page's own layer's, not the order book's: no line here.)
 //   bun run tools/qa/ringflat-check.ts            (also `probes.ts ringflat`, in family squadorders)
@@ -8,8 +8,6 @@
 //      the squad's posture turns.
 //   2. a door's ring: the two entries are on the first ring where 'fall in' and 'hold position' were; the rest of its tools are the one ring behind
 //      'more', the posture row last; a wedge of the first ring gives its entry.
-//   9. the squad's cursor mark is not drawn at all (bareHint; the maintainer, at a wall with the ring up: "the line and circle are weird, don't need
-//      them"): at rest and under an open ring.
 //   exit 0 = all hold · 1 = one does not
 import { standUp, ROOT } from './headless.ts';
 
@@ -67,12 +65,6 @@ export async function ringflatCheck(): Promise<boolean> {
       O.give('fallIn', none, 'all'); for (let i = 0; i < 60 * 30 && g.doorTools.ops.length; i++) step(); step(60);
       line(ok0 && /^1:stack up/.test(first[0] ?? '') && /^2:cover this door/.test(first[1] ?? '') && /^3:open and clear/.test(first[2] ?? '') && /^4:bang and clear/.test(first[3] ?? '') && first[4] === '5:more' && !first.some((x: string) => /fall in|hold position/.test(x)) && page === null && second.length >= 2 && second.length <= K.wedges && /go silent$/.test(second[second.length - 1] ?? '') && !second.some((x: string) => /fall in|hold position|more/.test(x)) && gave === 'openClear',
         'a door\'s ring: its two entries are on the first ring, the rest of its tools one ring behind \'more\' with the posture row last, and wedge 3 gives its entry', `door ${shut?.def.name} · first ${first.join(' | ') || 'no ring'} · second ${second.join(' | ')} · page ${page} · rows ${has.length} · wedge 3 gave '${gave}'`); }
-    // ---- 9
-    { const say = (H: any) => H ? `${H.kind}, glyph ${H.glyph}, outline ${H.ring && H.seg ? 'a line and a circle' : H.ring ? 'a circle on the spot' : H.seg ? 'a line' : 'none'}` : 'nothing';
-      const hint0 = K.hint; K.hint = true; W.cursorAt([floor.at[0], 0.04, floor.at[2]]); step(3); const idle = O.hintView(); K.hint = hint0;   // (the cursor at rest, the mark asked for)
-      const ok0 = up(floor), H = O.hintView(); away();
-      line(ok0 && H === null && idle === null, 'the squad\'s cursor mark is not drawn at all: no glyph, no line, no circle — at rest or under an open ring', `at rest: ${say(idle)} · the ring up: ${say(H)}`);
-    }
   } finally { knobsBack(knobs0); Math.random = rnd0; Object.assign(NIGHTBREACH, { squad: squad0 }); }
   console.log(fails ? `ringflat-check: ${fails} FAIL` : 'ringflat-check: ALL PASS');
   return fails === 0;

@@ -57,9 +57,8 @@ const AUTO_WHAT = 'Tap twice for the auto camera';
 const WHO_WHAT = 'Who takes the next order', WHO_DEAD = "this key doesn't do anything now. hold Shift and tap B to send part of the squad";
 const whoRowGone = () => !keysOf('KeyT').length;
 /** THE SQUAD'S KEYS AS THE PAGE HAS THEM (game/cmdring.ts `only`: the command key and the word's are the squad's only keys, and the wheel carries every
- *  order). The command key's row says both of its presses and the word's row says what the word does. The orders menu's row (code 'KeyX') has no key
- *  and no middle button there, so with no key it is not listed, and neither are the two rows that are keys of that menu alone (H and G: with a wheel
- *  up the letters are nobody's, with nothing up they give nothing); a menu given a key by hand has all three back, without the middle button's words.
+ *  order). The command key's row says both of its presses and the word's row says what the word does. Neither letter of the wheel (H and G: with a wheel
+ *  up the letters are nobody's, with nothing up they give nothing) is listed.
  *  With `goals` (the sprint key with the command key gives one more thing to a part of the squad: nothing else picks a part of it) the list has
  *  that press as a row of its own, both caps following their keys, and the who key, which then steps nobody anywhere, says so. The codes are written
  *  in the words (Shift, B): the list names the keys as they are bound. `?qonly=0` = the rows as they were; `?goals=0` = no row for the part of the
@@ -68,18 +67,18 @@ const CMD_WHAT = 'Order the squad', CMD_TAP = 'tap it to give the usual order wh
 /** … and with the key tapped twice being 'fall in' (game/cmdring.ts `twice`; `?qtwice=0` = the row's words as they were) the command key's row says so */
 const CMD_TWICE = `${CMD_TAP}. tap it twice to call everyone back to you. ${CMD_HOLD}`;
 const PART_WHAT = 'Send part of the squad to one more thing', PART_SMALL = 'hold Shift and tap B. keep B down a moment to pick their order on the wheel';
-const WORD_WHAT = "Send in everyone who's waiting", WORD_SMALL = 'it also blows a charge the squad set', MENU_SMALL = 'then press 1 to 5 to pick an order';
+const WORD_WHAT = "Send in everyone who's waiting", WORD_SMALL = 'it also blows a charge the squad set';
 type KeyRow = [string[], string, string?];
 /** the Squad group's rows as the board has them (the note above). Pure: the three facts are handed in */
-export function squadRows(rows: KeyRow[], only: boolean, goals: boolean, menuKey: boolean, twice = false): KeyRow[] {
+export function squadRows(rows: KeyRow[], only: boolean, goals: boolean, twice = false): KeyRow[] {
   if (!only) return rows;
   return rows.flatMap((r): KeyRow[] => { const k = r[0][0];
-    return k === 'X' ? (menuKey ? [[r[0], r[1], MENU_SMALL]] : []) : k === 'H' || k === 'G' ? (menuKey ? [r] : []) : k === 'B' ? [[r[0], CMD_WHAT, twice ? CMD_TWICE : CMD_SMALL], ...(goals ? [[['Shift', 'B'], PART_WHAT, PART_SMALL] as KeyRow] : [])] : k === 'F' ? [[r[0], WORD_WHAT, WORD_SMALL]] : [r]; });
+    return k === 'H' || k === 'G' ? [] : k === 'B' ? [[r[0], CMD_WHAT, twice ? CMD_TWICE : CMD_SMALL], ...(goals ? [[['Shift', 'B'], PART_WHAT, PART_SMALL] as KeyRow] : [])] : k === 'F' ? [[r[0], WORD_WHAT, WORD_SMALL]] : [r]; });
 }
 /** what the Controls list is built from that can change under it (a key given or taken, a rule ticked in the debugger): the list is built once */
 /** is the key tapped twice 'fall in' in the game that is up (off on a tutorial mission until a step lists it: game/rails.ts `twice`) */
 const twiceNow = () => CMDRING.twice && !deps?.game.rails?.locks('twice');
-const listNow = () => `${whoRowGone()} ${twiceNow()} ${keysOf('KeyX').length > 0}`;
+const listNow = () => `${whoRowGone()} ${twiceNow()}`;
 const PACE_WHAT = 'Walking pace', SPRINT_WHAT = 'Sprint';
 /** the sprint's row while Shift in a crouch is a fast crouch walk (game/player.ts CROUCHRUN): what the same key does crouched, and that it is heard
  *  (each footfall louder than a walk's: it is no sneak) */
@@ -117,7 +116,6 @@ export const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
     [['5'], 'Frag'],
   ] },
   { group: 'Squad', rows: [
-    [['X'], 'Orders, on what the cursor is on', 'or use the middle mouse button, then press 1 to 5 to pick an order'],
     [['B'], 'The usual order for that spot, at once'],
     [['T'], WHO_WHAT, 'everyone, red, blue or one teammate'],
     [['F'], 'Go', 'tells a waiting squad to go, and blows a charge the squad set'],
@@ -197,14 +195,12 @@ let deps: OptionsDeps | null = null, open: Screen | null = null;
 let turned = 1, wrote: number | null = null;
 
 function el(tag: string, cls?: string, text?: string) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
-function kept(): { vol?: Partial<typeof VOLUME_DEFAULTS>; hints?: boolean; tab?: string; tabPicked?: boolean; wallpress?: boolean; cmdhint?: boolean } { try { const v = JSON.parse(globalThis.localStorage?.getItem(LS) ?? 'null'); return v && typeof v === 'object' ? v : {}; } catch { return {}; } }
+function kept(): { vol?: Partial<typeof VOLUME_DEFAULTS>; hints?: boolean; tab?: string; tabPicked?: boolean; wallpress?: boolean } { try { const v = JSON.parse(globalThis.localStorage?.getItem(LS) ?? 'null'); return v && typeof v === 'object' ? v : {}; } catch { return {}; } }
 /** a page held silent (`?mute`, or the automation profile's kept flag: main.ts pins the master bus at 0 there): that 0 is the rig's, never the player's level */
 function muted(): boolean { try { return new URLSearchParams(globalThis.location?.search ?? '').has('mute') || globalThis.localStorage?.getItem('twopointsix.testMute') === '1'; } catch { return false; } }
-function keep() { if (!deps) return; try { const v = deps.audio.volume, master = muted() ? kept().vol?.master ?? VOLUME_DEFAULTS.master : v.master; globalThis.localStorage?.setItem(LS, JSON.stringify({ vol: { master, sfx: v.sfx, ambience: v.ambience, music: v.music }, hints: deps.overlay.showLightDots, ...tabKept(), ...(pressKept !== null ? { wallpress: pressKept } : {}), ...(hintKept !== null ? { cmdhint: hintKept } : {}) })); } catch { /* no store */ } }
+function keep() { if (!deps) return; try { const v = deps.audio.volume, master = muted() ? kept().vol?.master ?? VOLUME_DEFAULTS.master : v.master; globalThis.localStorage?.setItem(LS, JSON.stringify({ vol: { master, sfx: v.sfx, ambience: v.ambience, music: v.music }, hints: deps.overlay.showLightDots, ...tabKept(), ...(pressKept !== null ? { wallpress: pressKept } : {}) })); } catch { /* no store */ } }
 /** the wall taken without Q (game/wallsnap.ts `press`): what this machine has kept (null = never chosen: the build's own), and whether this visit's `?wallpress=` chose */
 let pressKept: boolean | null = null, pressUrl = false;
-/** the order's mark at the cursor before the key (game/cmdring.ts `hint`): what this machine has kept (null = never chosen: off), and whether this visit's `?cmdhint` chose */
-let hintKept: boolean | null = null, hintUrl = false;
 
 /** ui/menu.ts hands the live objects over when its Menu is made (the boot is over): what this machine kept is put on them, and a screen that is up fills in */
 export function setOptionsDeps(d: OptionsDeps | null) {
@@ -215,8 +211,6 @@ export function setOptionsDeps(d: OptionsDeps | null) {
   if (moved) d.audio.setVolumes();
   if (typeof k.hints === 'boolean') d.overlay.showLightDots = k.hints;
   pressKept = typeof k.wallpress === 'boolean' ? k.wallpress : null; try { pressUrl = new URLSearchParams(globalThis.location?.search ?? '').has('wallpress'); } catch { pressUrl = false; }
-  hintKept = typeof k.cmdhint === 'boolean' ? k.cmdhint : null; try { const q = new URLSearchParams(globalThis.location?.search ?? ''); hintUrl = q.has('cmdhint') || q.has('nocmdhint'); } catch { hintUrl = false; }
-  if (hintKept !== null && !hintUrl) CMDRING.hint = hintKept;   // (a `?cmdhint` visit holds its own)
   if (pressKept !== null && !pressUrl) WALLSNAP.press = pressKept;   // (a `?wallpress=` visit holds its own, and is never written as this machine's choice)
   tabLoad(k);   // (what Tab does, on trial: ui/tabkey.ts — a `?tab=` visit holds its own; where nobody has chosen, the page's first choice)
   if (open) render(open);
@@ -346,7 +340,7 @@ function render(S: Screen) {
     flip(body, 'God mode', () => game.godMode, v => { game.godMode = v; saveSandbox(game, 'god'); }, 'Enemies still see you and shoot you, but hits don\'t hurt. This is saved on this machine.', ['On', 'Off']);
     flip(body, 'Enemies don\'t think', () => !game.aiEnabled, v => { game.aiEnabled = !v; saveSandbox(game, 'noAi'); }, 'Everybody stays where they are, and nobody patrols, hears or sees. This is saved on this machine.', ['On', 'Off']);
     flip(body, 'Unlimited ammunition', () => game.infiniteAmmo, v => { game.infiniteAmmo = v; saveSandbox(game, 'ammo'); }, gearText('Bottomless magazines, canisters, ring airfoils and wall charges. This is saved on this machine.'), ['On', 'Off']);
-    reset = () => { game.saves.setEnabled(true); overlay.showLightDots = true; WALLSNAP.press = true; pressKept = null; pressUrl = false; CMDRING.hint = false; hintKept = null; hintUrl = false; TABKEY.kept = 'off'; TABKEY.picked = false; TABKEY.url = false; tabSettle(); keep(); findReset();
+    reset = () => { game.saves.setEnabled(true); overlay.showLightDots = true; WALLSNAP.press = true; pressKept = null; pressUrl = false; TABKEY.kept = 'off'; TABKEY.picked = false; TABKEY.url = false; tabSettle(); keep(); findReset();
       if (game.godMode) { game.godMode = false; saveSandbox(game, 'god'); } if (!game.aiEnabled) { game.aiEnabled = true; saveSandbox(game, 'noAi'); } if (game.infiniteAmmo) { game.infiniteAmmo = false; saveSandbox(game, 'ammo'); } };
   }
   if (reset) { const run = reset, b = el('button', 'op-btn', 'Reset to defaults') as HTMLButtonElement; b.dataset.act = 'reset'; b.onclick = () => { run(); S.paint(); }; foot.appendChild(b); }
@@ -406,7 +400,7 @@ function controls(body: HTMLElement, host: KeyHost) {
     const geared = tabbed.flatMap(r => r[1] === PACE_WHAT ? [] : r[1] === 'Crouch' ? [[r[0], r[1], 'slower and quiet'] as typeof r] : [r]);   // (game/player.ts TWOGEARS: the wheel is nobody's pace, the crouch is the sneak)
     const low = sprintSmall(), paced = !low ? geared : geared.map(r => r[1] === SPRINT_WHAT ? [r[0], r[1], low] as typeof r : r);   // (CROUCHRUN: Shift is not only the sprint)
     const rows = !slotNow() ? paced : g.group === 'Kit' ? [SLOT_ROW, ...paced] : paced.filter(r => r[1] !== E_WHAT || keysOf('KeyE').length > 0);   // (E's row put on a key by hand is still his to see and move)
-    for (const [caps, what, small0] of g.group === 'Squad' ? squadRows(rows, true, true, keysOf('KeyX').length > 0, twiceNow()) : rows) {
+    for (const [caps, what, small0] of g.group === 'Squad' ? squadRows(rows, true, true, twiceNow()) : rows) {
       const small1 = what === WHO_WHAT ? WHO_DEAD : what === ACT_WHAT ? RING_SMALL : what === WHISTLE_WHAT ? WHISTLE_SMALL : small0;
       if (what === WHO_WHAT && whoRowGone()) continue;   // (quick orders are the whole squad's: game/cmdring.ts wholeSquad)
       const r = el('div', 'op-krow'), c = el('div', 'op-caps');

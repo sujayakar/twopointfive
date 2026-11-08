@@ -16,6 +16,7 @@
 // with Sam through the route and the partner back at his shoulder (within `joinM` inside `joinSecs`: a partner who is never seen because he never came is 'left').
 // WHAT IT IS NOT: no GPU (no bounce light, no smoke, no picture); one plan per route; nobody shoots and nobody is taken down (those are the orders' and the
 // compromise parts' — this is the walk).
+import { menuKey, sneakWordOf } from './squadwords';
 import { writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { standUp, ROOT } from './headless.ts';
@@ -125,7 +126,7 @@ export class Run {
       const vm = mate ? canSeeChar(g, h, mate.char, false) : null, gm = vm?.visible ? sightGainOn(g, h, mate, vm.dist) : 0;
       E.sam = E.sam * K + gs * DT; E.mate = E.mate * K + gm * DT;
       if (gs > 0.05) this.samSeenS += DT; if (gm > 0.05) this.mateSeenS += DT;
-      if (this.verbose && process.env.PS_EYES && gm > 0.05 && Math.round(this.t * 60) % 30 === 0) this.say(`   ~ ${h.callsign} on partner: gain ${gm.toFixed(2)} at ${at(mate!.char.pos)} lit ${mate!.visibility.toFixed(2)} crouch ${mate!.char.anim.crouch.toFixed(1)} d ${vm!.dist.toFixed(1)} · ${SNEAKM?.sneakWord(g, mate) ?? '-'} · sam ${at(this.pos)}`);
+      if (this.verbose && process.env.PS_EYES && gm > 0.05 && Math.round(this.t * 60) % 30 === 0) this.say(`   ~ ${h.callsign} on partner: gain ${gm.toFixed(2)} at ${at(mate!.char.pos)} lit ${mate!.visibility.toFixed(2)} crouch ${mate!.char.anim.crouch.toFixed(1)} d ${vm!.dist.toFixed(1)} · ${sneakWordOf(g, mate) ?? '-'} · sam ${at(this.pos)}`);
       this.peak = Math.max(this.peak, h.awareness);
       const was = this.wasState.get(h) ?? 'patrol'; this.wasState.set(h, h.state);
       const note = (what: string): Notice => {
@@ -183,7 +184,7 @@ export class Run {
   /** the order menu by presses: the cursor on the target, X, the row's digit(s). The row is checked by id: a menu whose digit means something else is a failed order. */
   order(target: () => void, digits: string[], id: string): boolean {
     const O = this.g.orders, n0 = O.log.length;
-    target(); this.step(); this.press(ORDERS.key); this.step();
+    target(); this.step(); (menuKey(O), this.step()); this.step();
     if (!O.menu) { this.say(`order ${id}: the menu did not open`); return false; }
     const M0 = O.menu, seen = `rows ${M0.rows.map((d: any) => `${d.key ?? '·'} ${d.id}`).join(', ')}`;
     for (const d of digits) { target(); this.press(d); this.step(); }

@@ -51,7 +51,7 @@
     #interact .opt:has(kbd) { display: flex; align-items: baseline; } #interact .opt kbd { flex: none; }   /* … and hangs under its own words, not under its key (whatever the key cap's width: 1, SPACE, LMB) */
     #interact .opt { font-size: 12px; line-height: 1.2; color: var(--h-hi); }
     #interact .hint { color: var(--h-soft); }
-    #interact .hint.lost s { opacity: 0.6; } #interact .hint.lost b { display: inline-block; color: var(--h-acc); margin-left: 7px; font-weight: 700; } #interact .hint.lost b.n { animation: lostin 0.5s ease-out; } @keyframes lostin { from { scale: 2.2; opacity: 0; } }   /* a squad man lost: his line struck, the way it came from */
+    #interact .hint.lost s { opacity: 0.6; }   /* a squad man down: his line struck */
     #interact kbd { display: inline-block; min-width: 9px; margin-right: 7px; padding: 1px 4px 0; border-radius: 2px; background: rgba(var(--h-edge),0.8); color: var(--h-on); font: 700 9px/1.25 var(--h-mono); letter-spacing: 0.06em; text-align: center; text-shadow: none; vertical-align: 1px; }
     #interact .it.primary > .what + .opt kbd { background: var(--h-acc); } #interact .it.primary.far > .what + .opt kbd { background: var(--h-faint); }
     #interact .it.far .opt { color: var(--h-dim); } #interact .it.far kbd { background: var(--h-faint); color: var(--h-on); }
@@ -166,8 +166,6 @@
     .marker { position: absolute; transform: translate(-50%, -100%); font-size: 13px; font-weight: 700; text-shadow: 0 1px 3px #000, 0 0 6px #000; white-space: nowrap; }
     .marker.sus { color: #fd6; } .marker.alert { color: #f54; } .marker.dead { color: #777; font-weight: 400; font-size: 10px; } .marker.ko { color: var(--h-dim); font-weight: 400; font-size: 10px; letter-spacing: -0.05em; } .marker.calm { color: var(--h-soft); font-weight: 400; font-size: 10px; }
     .marker.frag { color: #ff5a3c; font-weight: 700; font-size: 14px; letter-spacing: 0.04em; }   /* game.view.marks.frags: a defender's live grenade Sam has been cued on, with the seconds left */
-    .lostfrom { position: absolute; height: 3px; transform-origin: 0 50%; pointer-events: none; background: linear-gradient(90deg, rgba(var(--h-acc-rgb),0.35), var(--h-acc)); }   /* deathrecap.ts lostLive: the way the round came in at a squad man lost, on the ground at him */
-    .lostfrom::after { content: ''; position: absolute; right: -2px; top: -3.5px; border-left: 9px solid var(--h-acc); border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
     .marker.lastseen { color: #cbb98a; font-weight: 400; font-size: 12px; letter-spacing: 0.08em; }   /* fogofwar.ts lastSeen: '(?)' where an enemy was last seen, fading — thin and bracketed, never a live man's bold '?' */
     .marker.civ { font-style: italic; opacity: 0.9; } .marker.civ.alert { color: #f96; } .marker.civ.sus { color: #fe9; }   /* the civilians' (civilians.ts): the same glyphs, softer and slanted — a frightened cleaner is not a man onto you */
     /* the ring on the marker F acts on (what it offers is spelled out in the interaction panel, #interact); dimmer while the thing is out of reach */
@@ -281,12 +279,7 @@
     .cammark { position: absolute; width: 9px; height: 9px; margin: -6px 0 0 -6px; border: 1.5px solid rgba(var(--h-acc-rgb),0.6); border-radius: 50%; background: rgba(0,0,0,0.35); box-shadow: 0 0 4px rgba(0,0,0,0.9); pointer-events: none; }   /* his own stuck sticky camera under the fog of war (ui/overlay.ts): a small lens; the one that sends is brighter with a red pupil */
     .cammark.live { border-color: var(--h-acc); }
     .cammark.live::after { content: ''; position: absolute; left: 2px; top: 2px; width: 5px; height: 5px; border-radius: 50%; background: #ff5a4e; box-shadow: 0 0 5px rgba(255,90,78,0.8); }
-    /* the squad's order menu (orders.ts mark()): a dashed ring on what it is frozen on, a word under it, in the addressed element's colour */
-    .ordermark { position: absolute; transform: translate(-50%, -11px); pointer-events: none; text-align: center; color: var(--h-hi); }
-    .ordermark i { display: block; width: 20px; height: 20px; margin: 0 auto; border: 1.5px dashed currentColor; border-radius: 50%; box-shadow: 0 0 8px rgba(0,0,0,0.6); }
-    .ordermark span { display: block; margin-top: 5px; font: 700 11px/1 var(--h-head); letter-spacing: 0.14em; text-transform: uppercase; text-shadow: var(--h-shadow); white-space: nowrap; }
-    .ordermark.t-gold { color: #f2cf6b; } .ordermark.t-red { color: #ff9a8a; } .ordermark.t-blue { color: #9cc8ff; }
-    body.attract #equip, body.attract #meters, body.attract #interact, body.attract #objective, body.attract #hud, body.attract .marker, body.attract .reticle, body.attract .aimwish, body.attract .idot, body.attract .lostfrom { display: none !important; }   /* nobody is playing while the attract camera runs: no kit, meters, prompts, read-out, markers or interactable dots over the shots (nothing reads these elements' layout, so display:none is safe) */
+    body.attract #equip, body.attract #meters, body.attract #interact, body.attract #objective, body.attract #hud, body.attract .marker, body.attract .reticle, body.attract .aimwish, body.attract .idot { display: none !important; }   /* nobody is playing while the attract camera runs: no kit, meters, prompts, read-out, markers or interactable dots over the shots (nothing reads these elements' layout, so display:none is safe) */
     /* THE MENUS (ui/menu.ts): the title screen, the pause card, the debrief. Colours and type are ui/theme.ts's tokens (--m-…), shared with the starting page, the loadout and the options screen */
     #menu { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 55%, rgba(var(--m-base-rgb),0.4), rgba(var(--m-base-rgb),0.88) 70%); z-index: 20; color: var(--m-text); font: 13px/1.45 var(--m-font); }
     #menu.on { display: flex; }
@@ -564,7 +557,7 @@
     #timeline .seg:hover { color: #fff; border-top-color: rgba(var(--h-edge),0.9); }
     body.touring #log { bottom: 60px; }   /* keep the message lines clear of the timeline */
     #veil { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 6; }
-    body.blinded #bubbles, body.blinded .bubble, body.blinded .marker, body.blinded .lostfrom { visibility: hidden; }   /* blind: no word over a head and no mark gives a man's place away on the white */
+    body.blinded #bubbles, body.blinded .bubble, body.blinded .marker { visibility: hidden; }   /* blind: no word over a head and no mark gives a man's place away on the white */
     #blind { position: absolute; inset: 0; background: #f4f6f2; opacity: 0; pointer-events: none; z-index: 4; }   /* a stun canister in the player's eyes (game/samstun.ts, overlay.ts): the picture whites out and clears */
     .bar { position: absolute; left: 0; right: 0; height: 0; background: #000; z-index: 5; pointer-events: none; transition: height .6s ease; }
     .bar.top { top: 0; } .bar.bot { bottom: 0; }
@@ -585,14 +578,8 @@
     .cmdring .ch { fill: none; stroke: currentColor; stroke-width: 1.2; opacity: 0.5; }   /* a ring with one row (game/ringlone.ts): the middle's own ring, and the row a pill beside it with its words inside */
     .cmdring .lone .ct { stroke: none; } .cmdring .lone.lit .ct { fill: var(--h-base); }
     .cmdring .cc { font: 600 9.5px/1 var(--h-mono); letter-spacing: 0.08em; text-transform: uppercase; text-anchor: middle; fill: currentColor; opacity: 0.8; paint-order: stroke; stroke: rgba(var(--h-plate),0.8); stroke-width: 3px; stroke-linejoin: round; }
-    /* … and the hint before the key (ui/cmdring.ts updateHint): the thing the ring would open on outlined on the floor, a glyph for its kind beside the cursor */
-    .cmdhint { color: #f2cf6b; } .cmdhint.t-red { color: #ff9a8a; } .cmdhint.t-blue { color: #9cc8ff; } .cmdhint.k-foe { color: #ff7a6a; }
-    .cmdhint .hw { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; opacity: 0.7; }
-    .cmdhint.k-door .hw, .cmdhint.k-wall .hw { stroke-width: 2.6; }
-    .cmdhint .hg { fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linejoin: round; stroke-linecap: round; paint-order: stroke; filter: drop-shadow(0 0 2px rgba(0,0,0,0.9)); }
-    .cmdhint.held .hw { opacity: 0.9; }
     body.ringover #interact { opacity: 0.28; }   /* the status column under the ring's words (ui/cmdring.ts clear) */
-    body.attract .cmdring, body.blinded .cmdring, body.attract .cmdhint, body.blinded .cmdhint { display: none; }
+    body.attract .cmdring, body.blinded .cmdring { display: none; }
     body.kitview { cursor: none; }
     body.kitview::after { content: ''; position: fixed; left: 0; top: 0; right: 0; height: 15vh; z-index: 100000; pointer-events: none; background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent); }   /* the top of the picture held down: a lit wall there is the brightest thing on the start page */
     #traj { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
@@ -604,7 +591,7 @@
     .plan .pf { fill: currentColor; fill-opacity: 0.05; stroke: currentColor; stroke-opacity: 0.45; stroke-width: 1; stroke-dasharray: 2 3; stroke-linejoin: round; } .plan .pf.there { fill-opacity: 0.13; stroke-dasharray: none; }
     .plan .pl { stroke: currentColor; stroke-opacity: 0.4; stroke-width: 1; stroke-dasharray: 1 5; }
     .plan polygon { stroke-linejoin: round; }
-    .plan .pw, .plan .py { fill: none; stroke: currentColor; stroke-width: 1.5; }   /* (the order mark's own weight: `.ordermark i`) */
+    .plan .pw, .plan .py { fill: none; stroke: currentColor; stroke-width: 1.5; }   /* (a dashed line's own weight) */
     .plan .pw.thr { fill: currentColor; fill-opacity: 0.14; stroke-width: 2; }
     .plan .pa { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 5 6; }
     .plan .pe { fill: currentColor; fill-opacity: 0.2; stroke: currentColor; stroke-width: 1.5; }

@@ -14,6 +14,7 @@
 //              never throws, every man's place stays finite and inside the level, the clock runs, and the seat counts what it put right
 //   far        a seat marked remote that says it is looking from across the map is looking at its own man's surroundings by the time the tick reads it
 //   seats      Game.stepSeats takes one record for the one seat and refuses any other count before anything runs
+import { menuKey } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 const { CMDCHECK, checkCmd, cmdText, cmdFromText } = await import(`${ROOT}/src/game/cmd.ts`);
 const { Game } = await import(`${ROOT}/src/game/game.ts`);
@@ -28,7 +29,7 @@ console.log(`=== cmdcheck-check: a record from anyone (src/game/cmd.ts) · ${pro
 
 /** the scripted player of every run here: walks, sweeps the cursor, fires, opens the order menu */
 const script = (W: any, f: number) => { const I = W.input, s = f / 60; I.keys.clear(); if (s > 1 && s < 7) I.keys.add('KeyW'); if (s > 4 && s < 6) I.keys.add('KeyD');
-  I.mouseX = 800 + 300 * Math.sin(s * 0.7); I.mouseY = 420 + 150 * Math.cos(s * 0.5); if (f === 120 || f === 500) I.pressed.add('KeyB'); if (f === 240) I.pressed.add('KeyX');
+  I.mouseX = 800 + 300 * Math.sin(s * 0.7); I.mouseY = 420 + 150 * Math.cos(s * 0.5); if (f === 120 || f === 500) I.pressed.add('KeyB'); if (f === 240) menuKey(W.game.orders);
   const b = s > 8 && s < 11 ? 1 : 0; if (b && !I.buttons) I.clicked |= 1; I.buttons = b; if (f === 300) I.wheel = 120; };
 const stand = async (on: boolean) => { Math.random = mulberry32(0xc0de); const W: any = await standUp({ seed: 9 }); raise(on); const r = startFromQuery(W.game, 'roomclear&squad4'); if (r.why) throw new Error(r.why); return W; };
 const wholeGame = (g: any): string => { const bad: string[] = [], ok = (x: unknown) => typeof x === 'number' && Number.isFinite(x) && Math.abs(x as number) < 1e4;

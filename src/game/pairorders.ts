@@ -144,12 +144,10 @@ export class PairOrders {
   private darkMemo = new Map<string, { t: number; spot: Vec3 | null }>();
   /** the way each man is on to a back, under pairup.ts oneEye (stalk keeps it while it reads unseen) */
   private ways = new SideMap<Guard, { to: Vec3; path: Vec3[]; t: number }>();
-  private seated = false; private goSeated = false; private handsWas = false;
+  private goSeated = false; private handsWas = false;
   constructor(private g: Game) {
     const S = g.orders; flags();
     S.people = {};   // (a man of the other side is offered: the Rust game's question of a point and of the cursor asks)
-    S.notes.push(() => { if (!this.seated) return []; const W = this.waiting();
-      return W.length ? [{ key: 'F', text: `mark · ${W.map(([gd, J]) => J.watcher ? `${gd.callsign} takes ${nameOf(J.foe)} anyway (${nameOf(J.watcher)} is watching)` : `${gd.callsign} takes ${nameOf(J.foe)}${J.set ? '' : ' (not set)'}`).join(' · ')}` }] : []; });
   }
 
   // ------------------------------------------------------------ who, what

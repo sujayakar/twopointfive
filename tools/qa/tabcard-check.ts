@@ -13,6 +13,7 @@
 //                 the orders go to, the squad's counts, none of the keys' lines; a man lost is struck; the markup has the three sections and how to go back
 //   the page      main.ts holds the game while the card is up, puts it away under a menu, and never makes it the first choice on a driven page
 // NOT HERE: the card as drawn and the key on the real page (a page drive); nothing has been seen on a GPU.
+import { blockOf } from './squadwords';
 import { readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 
@@ -44,12 +45,12 @@ export async function tabCardCheck(): Promise<boolean> {
     { const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
       const W: any = await standUp({ seed: 31 }), g = W.game; g.godMode = true; g.playerInvisible = true;
       const why = BRK ? 'no mission (the break)' : startFromQuery(g, new URLSearchParams('roomclear&squad4')).why; for (let i = 0; i < 30; i++) { g.player.visibility = 0.05; W.step(DT); }
-      const S = g.orders.active ? g.orders.squad() : [], K = C.tabCardOf(g), html: string = C.tabCardHtml(K), keys = g.orders.hud().status.flatMap((r: any) => r.opts).filter((o: any) => o.key).map((o: any) => o.text);
+      const S = g.orders.active ? g.orders.squad() : [], K = C.tabCardOf(g), html: string = C.tabCardHtml(K), keys = blockOf(g.orders).flatMap((r: any) => r.opts).filter((o: any) => o.key).map((o: any) => o.text);
       const men = K.men.length === 4 && K.men.every((m: any, i: number) => m.name === S[i].callsign && m.doing.length > 0 && m.kit.length > 8 && !m.down), counts = K.carry.some((c: string) => /^charges \d · bangs \d$/.test(c)) && !K.carry.some((c: string) => keys.includes(c)), who = /orders to/.test(K.who) && !/^squad/.test(K.who);
       // (the kit is the card the man was staged with, not this machine's table: a table changed after the staging changes no line)
       const KT = await import(`${ROOT}/src/game/kit.ts`), b0 = KT.KIT.members[1].bangs; let staged = false; try { KT.KIT.members[1].bangs = b0 === 0 ? 2 : 0; staged = C.tabCardOf(g).men[0]?.kit === K.men[0]?.kit; } finally { KT.KIT.members[1].bangs = b0; }
       // (a man's line is the block's own past his name, what he covers included; his counted things are said as what he set out with, the squad's count being the pool's)
-      const lines = g.orders.hud().status[0]?.opts.slice(0, S.length).map((o: any) => o.text) ?? [], asBlock = K.men.every((m: any, i: number) => lines[i]?.endsWith(`${m.name} · ${m.doing}`)), setOut = K.men.every((m: any) => /· started with \d+ stun, \d+ charge/.test(m.kit) && !/· \d+ stun/.test(m.kit)) && C.staged('a · 1 stun, 0 charges · b') === 'a · started with 1 stun, 0 charges · b';
+      const lines = blockOf(g.orders)[0]?.opts.slice(0, S.length).map((o: any) => o.text) ?? [], asBlock = K.men.every((m: any, i: number) => lines[i]?.endsWith(`${m.name} · ${m.doing}`)), setOut = K.men.every((m: any) => /· started with \d+ stun, \d+ charge/.test(m.kit) && !/· \d+ stun/.test(m.kit)) && C.staged('a · 1 stun, 0 charges · b') === 'a · started with 1 stun, 0 charges · b';
       const secs = (html.match(/<section>/g) ?? []).length, you = !/<h4>you/.test(html), foot = /<footer>Press <kbd>Tab<\/kbd> to go back to the game\.<\/footer>$/.test(html), listed = K.label === 'objective' && K.items.length >= 2 && /<ul><li class="/.test(html);
       if (S[1]) { S[1].state = 'dead'; } const K2 = C.tabCardOf(g), struck = !!K2.men[1]?.down && /class="man down"/.test(C.tabCardHtml(K2));
       verdict(men && counts && who && staged && asBlock && setOut && you && secs === 2 && foot && listed && struck,

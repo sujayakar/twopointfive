@@ -31,6 +31,7 @@
 //     the door order' · 'no key or button was down on any frame' · 'blue stacked on the door (T twice, B), then "open and clear" (X, 5, 1) to red'
 // 2026-11-07: the rig no longer holds CMDRING.wholeSquad and CMDRING.only off (both settled on: the lines are asked of the menu as the page has it), and the
 // two lines behind knobs that are settled off went: 'ORDERS.wheelElement on' (orderui-hud) and 'ORDERS.clickGives on' (orderui-keys).
+import { blockOf, menuKey } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`);
@@ -84,7 +85,7 @@ async function rig(seed: number, o: { squad?: 2 | 4; sam?: number[] } = {}) {
     rclick() { input.clicked |= 4; R.step(); },
     wheel(d: number) { input.wheel += d; R.step(); },
     last(): any { return O.log[O.log.length - 1] ?? null; },
-    status(): any { return O.hud().status[0] ?? null; },
+    status(): any { return blockOf(O)[0] ?? null; },
   };
   R.step(30);
   if (o.sam) { game.teleportPlayer(o.sam); R.step(5); }
@@ -110,7 +111,7 @@ export const orderuiFour = guarded(async () => {
   const K = ORDERS;
   const CASES: { name: string; tag: string; tone: string; want: number[]; address(R: any): void; give(R: any): void; how: string }[] = [
     { name: 'the squad', tag: 'GOLD', tone: 'gold', want: [0, 1, 2, 3], how: 'X pressed on the spot, then 1',
-      address: () => {}, give: R => { R.cursor(SPOT); R.press(K.key); R.step(20); R.press('Digit1'); } },
+      address: () => {}, give: R => { R.cursor(SPOT); menuKey(R.O ?? R.game.orders); R.step(20); R.press('Digit1'); } },
   ];
   for (const c of CASES) {
     const R = await rig(21); const { O } = R; const ops = R.ops; const p0 = ops.map((m: any) => [...m.char.pos]);
@@ -151,7 +152,7 @@ export const orderuiBlock = guarded(async () => {
   verdict(ops.length === 4 && s0?.label === head('GOLD') && s0.tone === 'gold' && named(r0) && r0.map((o: any) => o.tone).join() === tones,
     'no ring up, everyone addressed: the header says the orders go to GOLD, in gold, and each of the four has a row in his pair\'s colour that names him and says what he is doing', txt(s0));
   const was = r0.map((o: any) => o.text);
-  if (!BREAK) { R.cursor(SPOT); R.press(K.key); R.step(20); R.press('Digit1'); } R.step(30);
+  if (!BREAK) { R.cursor(SPOT); menuKey(R.O ?? R.game.orders); R.step(20); R.press('Digit1'); } R.step(30);
   const s1 = R.status(), r1 = rows(s1), l = R.last();
   verdict(l?.order === 'move' && l.who.length === 4 && named(r1) && r1.every((o: any, i: number) => o.text !== was[i]) && r1.map((o: any) => o.tone).join() === tones && s1?.label === head('GOLD'),
     '"move there" given to everyone: each man\'s row now says something else than it did, in the same colour, and the header still says GOLD', `${line(l)} · before: ${was.join(' | ')} · after: ${txt(s1)}`);

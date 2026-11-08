@@ -16,7 +16,7 @@
 // door icon, a wall icon, etc on the cursor"): with the switch on, wherever the key would open a ring now (orders.ts ringFree: no menu up, Shift not down,
 // nothing the key backs out of instead), a small glyph rides beside the cursor for what the ring would open on — a door, a wall a charge can go on, a man,
 // a thing to work, the floor, or the squad itself where the cursor is on nothing an order goes to — and that thing is outlined on the floor, in the colour
-// the ring would open in (`hint`; orders.ts hintView). With the ring up the glyph sits in its middle. Words are not put on the cursor: the panel's line
+// the ring would open in (`hint`; the drawing is gone, under the settled `bareHint`). With the ring up the glyph sits in its middle. Words are not put on the cursor: the panel's line
 // has them.
 //
 // THE RING'S SIZE FOLLOWS THE WINDOW (`ref`, ringZoom): its px — the flick, the edge it stands in from, a click near a man's feet — and its picture grow
@@ -119,13 +119,13 @@ export const CMDRING = {
    *  stand (`TPS_RINGFLAT=1` beside `TPS_QRING=1 TPS_QONLY=1`); the page raises it with `only` (`?ringflat=0` off) */
   flat: false,
   /** NO GLYPH AT THE CURSOR (the maintainer, 10-23: "let's remove the icons on mouse position from squad orders entirely"): the mark of what the
-   *  key orders on is the thing's own outline on the floor and nothing else — no glyph beside the cursor, none in the ring's middle (orders.ts
-   *  hintView `glyph`; a picture only). false: the glyph, as built. Off here and on the frozen stand (`TPS_PLAINHINT=1`); the page raises it
+   *  key orders on is the thing's own outline on the floor and nothing else — no glyph beside the cursor, none in the ring's middle
+   *  (a picture only, gone with the mark). false: the glyph, as built. Off here and on the frozen stand (`TPS_PLAINHINT=1`); the page raises it
    *  (`?plainhint=0` off) */
   plainHint: false,
   /** … AND NO OUTLINE EITHER (the maintainer, 10-23, at a wall with the ring up: "the line and circle are weird, don't need them"): the squad's
    *  cursor mark is not drawn at all — no line along a wall or a door, no circle on a spot or a man, before the key, with it down or under an open
-   *  ring (orders.ts hintView answers null; a picture only). What a tap would order, and on what, is the corner's line on the key. false: the
+   *  ring (a picture only, and the drawing is gone with it). What a tap would order, and on what, is the corner's line on the key. false: the
    *  outline, as built. Off here and on the frozen stand (`TPS_BAREHINT=1`); the page raises it (`?barehint=0` off) */
   bareHint: false,
   /** THE WHEEL WITH THE RING UP STEPS NOBODY (orders.ts ringInput; the maintainer, 10-24, after a two-finger scroll with the ring still up: "got into a
@@ -286,8 +286,6 @@ export function flatSeats(rows: readonly FlatRow[], kind: string, wordKey: strin
 /** how long the key is kept down before its ring goes up (s): `stayHoldSecs` for a ring that stays, `holdSecs` for one that goes with its key */
 export function ringHoldSecs(): number { return CMDRING.stay ? CMDRING.stayHoldSecs : CMDRING.holdSecs; }
 
-/** what a ring would open on, as the hint names it (orders.ts hintView) */
-export type RingHint = 'door' | 'wall' | 'man' | 'floor' | 'thing' | 'foe' | 'squad';
 
 /** the wedge a direction points at: 1 at the top, clockwise, `n` of them */
 export function wedgeAt(dx: number, dy: number, n: number): number { return goneWithTick('wedgeAt') as any; }

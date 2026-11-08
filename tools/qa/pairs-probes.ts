@@ -26,6 +26,7 @@
 //                 CONTROLs, the key-off half of the no-charge CONTROL — and the journal. Out of the rest of the file with the same day: the
 //                 defenders' grenades held off in pairs-hold (a) and (b), and the plain-stack run of the tool under a charge, COVER.stacked off)
 //   pairs-lanes   lines of fire: a posted man lowers his muzzle while a man of the OTHER pair crosses his line (the fights' own lanes are asked in pairs-hold and pairs-go)
+import { doing, notesOf } from './squadwords';
 import { standUp, ROOT } from './headless.ts';
 import { sample, swept } from './sweep.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
@@ -95,7 +96,7 @@ async function rig(seed: number, sam: number[], o: { squad?: 2 | 4; quiet?: bool
     set(who: any = 'all', secs = 30) { return R.until(() => R.men(who).every((m: any) => O.of(m)?.arrived), secs); },
     lost(who: any = 'all'): any[] { return R.men(who, true).filter((m: any) => m.state === 'dead'); },
     killsBy(men: any[]): any[] { return NB.hostiles.filter((h: any) => h.state === 'dead' && men.some((m: any) => m.char.id === h.killerId)); },
-    where(who: any = 'all') { return R.men(who, true).map((m: any) => `${m.callsign} ${m.state === 'dead' ? 'DOWN' : at(m.char.pos)} [${O.statusOf(m)}]`).join(' · '); },
+    where(who: any = 'all') { return R.men(who, true).map((m: any) => `${m.callsign} ${m.state === 'dead' ? 'DOWN' : at(m.char.pos)} [${doing(O.g, m)}]`).join(' · '); },
     beats(op: any): string { return (op?.beats ?? []).map((b: any) => `${f2(b.t)} ${b.what}`).join(' | '); },
     beatT(op: any, what: string): number { return op?.beats.find((b: any) => b.what === what || b.what.startsWith(what))?.t ?? NaN; },
     /** friendly fire: a teammate down by a teammate's (or Sam's) hand */
@@ -190,7 +191,7 @@ export const pairsGo = guarded(async () => {
     for (const seed of SEEDS) { const R = await rig(seed, CORRIDOR, { tag: 'go-bang' }); const { O, D } = R;
       const w1 = R.give('bangClear', 'breakroom_n', 'red', { onWord: true }), w2 = R.give('openClear', 'breakroom_w', 'blue', { onWord: true });
       const ready = R.until(() => D.ops.length === 2 && D.ops.every((o: any) => o.phase === 'ready'), 45); R.step(180);
-      const still = D.ops.length === 2 && D.ops.every((o: any) => o.phase === 'ready'), notes = D.hudNotes().filter((s: string) => s.includes('on your word'));
+      const still = D.ops.length === 2 && D.ops.every((o: any) => o.phase === 'ready'), notes = notesOf(D.g).filter((s: string) => s.includes('on your word'));
       if (ready && still && w1 === null && w2 === null) waited++; if (notes.length === 2) noted++;
       R.W.input.pressed.add('KeyF'); R.step(); const said = null; const ops = [...D.ops], red = ops.find((o: any) => o.kind === 'bangClear'), blue = ops.find((o: any) => o.kind === 'openClear');
       R.until(() => !D.ops.length, 45); R.step(240); R.tally();
@@ -279,7 +280,7 @@ export const pairsHaltback = guarded(async () => {
     else if (mode === 'set') { R.set('red', 20); R.step(30); atBlow = snap(); const c = D.chargeOn(d); if (c) res = D.blow(c); R.step(180); }
     else R.step(600);
     const blue = cop ? [...cop.post.values()].map((P: any) => [...P.pos]) : []; R.step(180);
-    return { w1, w2, ended, said, halt, atBlow, blue, frame: [...d.frameCentre], res, chEnded: cop ? String(cop.ended) : gone ? String(gone.ended) : 'no charge', stale: R.men('all').filter((m: any) => O.statusOf(m) === 'setting the charge').map((m: any) => m.callsign),
+    return { w1, w2, ended, said, halt, atBlow, blue, frame: [...d.frameCentre], res, chEnded: cop ? String(cop.ended) : gone ? String(gone.ended) : 'no charge', stale: R.men('all').filter((m: any) => doing(O.g, m).startsWith('setting the charge')).map((m: any) => m.callsign),
       stepped: D.stats.steppedBack - was, notes: D.log.slice(log0).map((l: any) => l.what).filter((w: string) => /made room|no room to stand off/.test(w)), end: snap(), orphan };
   };
   const row = (r: Run, l: Man[] = r.halt) => l.map(m => `${m.c} ${at(m.post)} ${f2(dist(m.post, r.frame))} m off the frame [${m.there}]`).join(', ');

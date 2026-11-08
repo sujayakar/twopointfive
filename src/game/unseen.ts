@@ -159,6 +159,4 @@ export function unseenHush(g: Game, gd: Guard): boolean { g = viewOf(g, gd); ret
 export function unseenEase(g: Game, gd: Guard): boolean { g = viewOf(g, gd); return UNSEEN.doors && underUnseen(g, gd); }
 
 // ------------------------------------------------------------ the HUD's word, QA, the save's pair
-/** the squad line's word beside the posture (null: nothing to say) */
-export function unseenWord(g: Game): string | null { return crossToRust('unseenWord', undefined, [g]) as any; }
 export function unseenSummary(g: Game): string { return crossToRust('unseenSummary', undefined, [g]) as any; }

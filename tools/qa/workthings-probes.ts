@@ -22,6 +22,7 @@
 //                   walk and is walked into: the alarm) and the rule with it on (he goes on after Sam, low, nobody roused, the mains put back by the man
 //                   sent); WORKWALK_BREAK=1 leaves the rule off for the rule's own lines: must fail
 //   work-harness    the frozen stand holds it off, the page turns it on unless ?noworkthings, the table is a registered knob table a recording carries
+import { doing, listedOf, menuKey } from './squadwords';
 import { readFileSync, readdirSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -66,7 +67,7 @@ async function rig(stage: (g: any) => string | null | undefined, on = true, squa
     rows(): any[] { return O.menu ? O.menu.rows : []; },
     last(): any { return O.log[O.log.length - 1] ?? null; },
     /** the men called to Sam first (X on himself, 3), so an order finds them with a way to go, as in play */
-    gather(secs = 6) { const p = g.player.char.pos; R.aim = [p[0], 0.9, p[2]]; R.step(2); R.press('KeyX'); R.press('Digit3'); R.step(secs * 60); R.aim = null; },
+    gather(secs = 6) { const p = g.player.char.pos; R.aim = [p[0], 0.9, p[2]]; R.step(2); (menuKey(O), R.step()); R.press('Digit3'); R.step(secs * 60); R.aim = null; },
   };
   R.step(20);
   return R;
@@ -93,17 +94,17 @@ export const workBreaker = () => keep(async () => {
   verdict(!R.why && ops.length === 2, 'staged: the room clear on the office with its pair', `refusal ${R.why} · teammates ${ops.map(o => o.callsign).join(', ')}`);
   lookAtPanel(R);
   // the office keeps its breaker behind the storage room's LOCKED door: with it locked the row is there, greyed, in the man's own words
-  { R.aim = panel(g); R.step(2); R.press('KeyX'); const i = R.rows().findIndex((d: any) => d.id === 'work'), why = O.menu?.why[i] ?? null; O.close(); R.aim = null;
+  { R.aim = panel(g); R.step(2); (menuKey(O), R.step()); const i = R.rows().findIndex((d: any) => d.id === 'work'), why = O.menu?.why[i] ?? null; O.close(); R.aim = null;
     verdict(i === 0 && typeof why === 'string' && /locked/.test(why), 'behind a locked door the row is listed greyed, with why: the men cannot get to it', `row ${i} · "${why}"`); }
   unlock(g); R.step(70);
   const th = g.work.things().find((x: any) => x.kind === 'breaker');
   verdict(!!th && !!th.stand && flat(th.stand, bp) < 1.0 && !g.col.nav.isBlocked(th.stand[0], th.stand[2]), 'the breaker is a thing to work, with a free spot to stand on within arm\'s reach of its face', th ? `face ${th.face.map(f2)} · normal ${th.n.map(f2)} · stand ${th.stand?.map(f2)} (${th.stand ? f2(flat(th.stand, bp)) : '-'} m off)` : 'not listed');
   // --- the menu on it
-  R.aim = panel(g); R.step(2); R.press('KeyX');
+  R.aim = panel(g); R.step(2); (menuKey(O), R.step());
   const rows = R.rows(), t = O.menu?.target;
   verdict(!!O.menu && t.kind === 'floor' && t.thing?.kind === 'breaker' && rows[0]?.id === 'work' && rows[0].key === 1 && labelOf(R, rows[0]) === 'throw the breaker' && !rows.some((d: any) => d.id === 'move') && rows.every((d: any) => !d.key || d.key <= 5),
-    'X on the panel: the menu is the breaker\'s — "throw the breaker" on 1 where "move there" is on floor, no digit above 5', `${menuWords(R)} · "${rows[0] ? labelOf(R, rows[0]) : ''}" · hud "${O.hud().menu?.rows?.[1]?.label ?? ''}"`);
-  const hud = O.hud().menu; verdict(!!hud && JSON.stringify(hud.rows).includes('the breaker'), 'the panel names it: on the breaker', hud ? hud.rows.map((r: any) => r.label).filter(Boolean).join(' / ') : 'no menu');
+    'X on the panel: the menu is the breaker\'s — "throw the breaker" on 1 where "move there" is on floor, no digit above 5', `${menuWords(R)} · "${rows[0] ? labelOf(R, rows[0]) : ''}" · hud "${listedOf(O)?.rows?.[0]?.label ?? ''}"`);
+  const hud = listedOf(O); verdict(!!hud && JSON.stringify(hud.rows).includes('the breaker'), 'the panel names it: on the breaker', hud ? hud.rows.map((r: any) => r.label).filter(Boolean).join(' / ') : 'no menu');
   // --- given
   const posBefore = ops.map(o => [...o.char.pos]);
   R.press('Digit1'); R.aim = null;
@@ -113,7 +114,7 @@ export const workBreaker = () => keep(async () => {
   verdict(flat(worker.char.pos, th.stand) <= flat(mate.char.pos, th.stand) + 0.01, 'the nearer man is the one sent', `${worker.callsign} ${f2(flat(posBefore[ops.indexOf(worker)], th.stand))} m · ${mate.callsign} ${f2(flat(posBefore[ops.indexOf(mate)], th.stand))} m`);
   R.fastest = 0;
   const went = R.until(() => g.blackout.active, 60), tDark = g.time;
-  verdict(went && !g.blackout.permanent, 'he gets there and the mains go (a hand-thrown breaker: not for good)', `blackout ${g.blackout.active} after ${f2(g.time)} s on the clock · ${worker.callsign} ${f2(flat(worker.char.pos, bp))} m from the panel · ${O.statusOf(worker)}`);
+  verdict(went && !g.blackout.permanent, 'he gets there and the mains go (a hand-thrown breaker: not for good)', `blackout ${g.blackout.active} after ${f2(g.time)} s on the clock · ${worker.callsign} ${f2(flat(worker.char.pos, bp))} m from the panel · ${doing(O.g, worker)}`);
   verdict(flat(worker.char.pos, bp) < 1.15 && R.handUp.has(worker.callsign), 'he was at the panel, inside Sam\'s own reach of it, with his hand out to it', `${f2(flat(worker.char.pos, bp))} m · hand seen out: ${[...R.handUp].join(', ') || 'nobody'}`);
   { const J = R.jobs.get(worker.callsign);
     verdict(!!J && J.verb === 'breakerOff' && J.bad === 0 && Math.abs(J.need - (WORK.handSecs + WORK.breakerSecs)) < 1e-9 && J.secs > J.need - 0.05 && J.secs <= J.need + 0.05, 'the read beside the hand (workJob): throwing it, a clock that only runs forward, to the end of the time the work takes, and there whenever the hand is', J ? `${J.verb} · ${f2(J.secs)} of ${f2(J.need)} s · ${J.bad} bad frames` : 'never read'); }
@@ -122,10 +123,10 @@ export const workBreaker = () => keep(async () => {
   verdict(R.said.some((m: string) => /lights out/.test(m)), 'the man says it is done', R.said.filter((m: string) => /breaker|lights out/.test(m)).join(' | '));
   R.step(90);
   const A = O.of(worker), B = O.of(mate);
-  verdict(A?.order === 'hold' && !g.work.working(worker) && flat(worker.char.pos, bp) < 1.3, 'done, he holds by the panel on a plain hold', `${worker.callsign}: ${A?.order} · ${O.statusOf(worker)}`);
-  verdict(B?.order === 'move' && !!B.post && flat(B.post, th.stand) > 0.8 && flat(B.post, th.stand) < 2.4 && B.spare === true, 'his partner was sent to a mark behind him, eyes spare for the ways in', `${mate.callsign}: ${B?.order} · post ${B?.post?.map(f2)} (${B?.post ? f2(flat(B.post, th.stand)) : '-'} m from the man at work) · ${O.statusOf(mate)}`);
+  verdict(A?.order === 'hold' && !g.work.working(worker) && flat(worker.char.pos, bp) < 1.3, 'done, he holds by the panel on a plain hold', `${worker.callsign}: ${A?.order} · ${doing(O.g, worker)}`);
+  verdict(B?.order === 'move' && !!B.post && flat(B.post, th.stand) > 0.8 && flat(B.post, th.stand) < 2.4 && B.spare === true, 'his partner was sent to a mark behind him, eyes spare for the ways in', `${mate.callsign}: ${B?.order} · post ${B?.post?.map(f2)} (${B?.post ? f2(flat(B.post, th.stand)) : '-'} m from the man at work) · ${doing(O.g, mate)}`);
   // --- a wrecked breaker is nobody's
-  g.setBlackout(Infinity, 'shot'); R.step(2); R.aim = panel(g); R.step(2); R.press('KeyX');
+  g.setBlackout(Infinity, 'shot'); R.step(2); R.aim = panel(g); R.step(2); (menuKey(O), R.step());
   verdict(!R.rows().some((d: any) => d.id === 'work'), 'a breaker a round has wrecked is no thing to work (Sam has no row for it either)', menuWords(R));
   console.log(`    stats: ${JSON.stringify(WORK_STATS)} · ${g.work.summary()}`);
 });
@@ -193,17 +194,17 @@ export const workObjective = () => keep(async () => {
   verdict(g.mission.stage === 'drive' && !!th && !!th.stand, 'Sam in the place: the objective is to take it, and it is a thing to work with a spot to stand on', `stage ${g.mission.stage} · ${th ? `${th.name} · stand ${th.stand?.map(f2)} (${th.stand ? f2(flat(th.stand, rf)) : '-'} m off its face)` : 'not listed'}`);
   if (!th) return;
   R.gather(8);
-  R.aim = [rf[0], Math.max(0.9, rf[1] || 1.0), rf[2]]; R.step(2); R.press('KeyX');
+  R.aim = [rf[0], Math.max(0.9, rf[1] || 1.0), rf[2]]; R.step(2); (menuKey(O), R.step());
   const rows = R.rows(), lab = rows[0] ? labelOf(R, rows[0]) : '';
   verdict(rows[0]?.id === 'work' && rows[0].key === 1 && lab === `take ${Wd.thing}` && rows.every((d: any) => !d.key || d.key <= 5), 'X on the holder: "take …" in the level\'s own words on 1, no digit above 5', `${menuWords(R)} · "${lab}"`);
   R.press('Digit1'); R.aim = null;
   const worker = ops.find(o => g.work.working(o));
   const took = R.until(() => g.mission.stage === 'exfil', 60);
-  verdict(!!worker && took && g.mission.pulled === true && R.handUp.has(worker.callsign), 'he goes, puts a hand to it for as long as Sam\'s own would take, and the mission moves on to the way out', `stage ${g.mission.stage} · pulled ${g.mission.pulled} · ${worker ? `${worker.callsign} ${f2(flat(worker.char.pos, rf))} m off · ${O.statusOf(worker)}` : 'nobody at work'} · last line "${g.messages[g.messages.length - 1]?.text}"`);
+  verdict(!!worker && took && g.mission.pulled === true && R.handUp.has(worker.callsign), 'he goes, puts a hand to it for as long as Sam\'s own would take, and the mission moves on to the way out', `stage ${g.mission.stage} · pulled ${g.mission.pulled} · ${worker ? `${worker.callsign} ${f2(flat(worker.char.pos, rf))} m off · ${doing(O.g, worker)}` : 'nobody at work'} · last line "${g.messages[g.messages.length - 1]?.text}"`);
   { const J = worker ? R.jobs.get(worker.callsign) : null;
     verdict(!!J && J.verb === 'drive' && J.bad === 0 && J.secs > J.need - 0.05, 'the read beside the hand says he is taking it, to the end', J ? `${J.verb} · ${f2(J.secs)} of ${f2(J.need)} s · ${J.bad} bad frames` : 'never read'); }
   R.step(30);
-  verdict(!!worker && O.of(worker)?.order === 'hold' && !g.work.things().some((x: any) => x.kind === 'objective'), 'done, he holds there and the holder is plain floor again', worker ? O.statusOf(worker) : '');
+  verdict(!!worker && O.of(worker)?.order === 'hold' && !g.work.things().some((x: any) => x.kind === 'objective'), 'done, he holds there and the holder is plain floor again', worker ? doing(O.g, worker) : '');
 });
 
 export const workEdges = () => keep(async () => {
@@ -224,7 +225,7 @@ export const workEdges = () => keep(async () => {
     verdict(t.kind === 'none' && !t.thing && !!on.thing, 'Sam standing at the panel: the point at his own feet is himself (the orders he gives there are fall in / hold), the panel itself is still the breaker', `at his feet: ${t.kind}${t.thing ? ' (thing)' : ''} · on the face: ${on.thing ? 'the breaker' : on.kind}`);
     g.teleportPlayer(was); R.step(3); }
   // --- a man who cannot get to it does not work it from where he stops: the door is locked again once he is on his way
-  const n0 = O.log.length; R.aim = panel(g); R.step(2); R.press('KeyX'); R.press('Digit1'); R.aim = null;
+  const n0 = O.log.length; R.aim = panel(g); R.step(2); (menuKey(O), R.step()); R.press('Digit1'); R.aim = null;
   const worker = ops.find(o => g.work.working(o));
   verdict(O.log.length === n0 + 1 && !!worker, 'the order is given', `${JSON.stringify(R.last())} · worker ${worker?.callsign}`);
   if (!worker) return;
@@ -232,7 +233,7 @@ export const workEdges = () => keep(async () => {
   R.step(240); { const A = O.of(worker), p = worker.char.pos; A.there = 'stopped short'; A.post = [p[0], 0, p[2]]; A.goal = [p[0], 0, p[2]]; A.via.length = 0; A.arrived = true; }
   R.until(() => !g.work.working(worker), 10); R.step(120);
   const d = flat(worker.char.pos, th.stand);
-  verdict(!g.blackout.active && !g.work.working(worker) && O.of(worker)?.order === 'hold' && d > 1.5, 'stopped short of it (the orders bring his mark to him and call him arrived) he holds where he is, and the breaker is NOT thrown from there', `blackout ${g.blackout.active} · ${worker.callsign} ${f2(d)} m from his mark · ${O.statusOf(worker)} · said: ${R.said.filter((m: string) => m.startsWith(worker.callsign)).slice(-2).join(' | ')} · ${g.work.log.slice(-1).map((l: any) => l.what).join('')}`);
+  verdict(!g.blackout.active && !g.work.working(worker) && O.of(worker)?.order === 'hold' && d > 1.5, 'stopped short of it (the orders bring his mark to him and call him arrived) he holds where he is, and the breaker is NOT thrown from there', `blackout ${g.blackout.active} · ${worker.callsign} ${f2(d)} m from his mark · ${doing(O.g, worker)} · said: ${R.said.filter((m: string) => m.startsWith(worker.callsign)).slice(-2).join(' | ')} · ${g.work.log.slice(-1).map((l: any) => l.what).join('')}`);
   R.step(600);
   verdict(!g.blackout.active && !R.handUp.has(worker.callsign), 'ten seconds on it is still not thrown, and his hand never went out', `blackout ${g.blackout.active} · hands ${[...R.handUp].join(', ') || 'nobody'}`);
 });
