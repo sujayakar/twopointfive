@@ -406,9 +406,9 @@ mod tests {
         g.tab.roomfight_op[om].meters.set(h, fresh);
         g.tab.roomfight_op[os].meters.set(h, crate::roomfight::Meter { seen_t: 99.0, ..fresh });
         g.tab.roomfight_op[od].meters.set(h, fresh);
-        g.gd[by_eyes].foe = Some(crate::game::Foe::Guard(h));
+        crate::mind::foe(&mut g, by_eyes, Some(crate::game::Foe::Guard(h)), "roomfight");
         g.gd[by_eyes].last_seen_t = 99.9;
-        g.gd[stale].foe = Some(crate::game::Foe::Player);
+        crate::mind::foe(&mut g, stale, Some(crate::game::Foe::Player), "roomfight");
         g.gd[stale].last_seen_t = 99.9;
         assert_eq!(room_fight_seen_by(&mut g, h), vec![by_meter, by_eyes]);
         assert!(room_fight_team_sees(&mut g, h) && !room_fight_team_sees(&mut g, gone));

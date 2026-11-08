@@ -441,6 +441,8 @@ impl Play {
     /// Staging: his gun has this many rounds in it and no more, one of them in the chamber.
     pub fn gun_has(&mut self, gd: GuardId, rounds: f64) { let w = self.g.gd[gd].weapon; self.g.fa[w].chamber = 1.0; self.g.fa[w].mag = Some(rounds - 1.0); }
 
+    /// Staging: he cannot see for that many seconds.
+    pub fn blinded(&mut self, gd: GuardId, secs: f64) { self.g.gd[gd].dazzled_until = self.g.time + secs; }
     /// Staging: the gun in his hands is the only one he has.
     pub fn no_second_gun(&mut self, gd: GuardId) { self.g.gd[gd].second = None; }
     /// has he no hand for his gun: reeling, in somebody's arm, a hostage in his own, his hands on a job
