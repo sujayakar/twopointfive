@@ -34,6 +34,9 @@ def step(p, hist, hn, ctl=None):
 def feats(p, hist, hn):
     hy, n = past(p, hist, hn); m, s = p['mean'], p['sd']; e = lambda x: torch.log1p(x.clamp(min=0) * 8); mv = p['px'].norm(dim=1, keepdim=True)
     return F.avg_pool2d(torch.cat([e(m[:, :1]), m[:, 1:3], e(s[:, :1]), e((hy[:, :1] - m[:, :1]).abs()), ((hy[:, :1] - m[:, :1]) / (s[:, :1] + .02 * m[:, :1].abs() + 1e-3) * .2).clamp(-3, 3), hy[:, 1:3] - m[:, 1:3], e(hy[:, :1]), (mv * .25).clamp(max=3), n / 28, p['inside'].float()], 1), 4)
+class Const(torch.nn.Module):               # the best that four numbers alone could do: what a network must beat
+    def __init__(s): super().__init__(); s.k = torch.nn.Parameter(torch.zeros(1, 4, 1, 1))
+    def forward(s, f): return (torch.tanh(s.k) * 1.5).expand(f.shape[0], 4, f.shape[2], f.shape[3])
 class Net(torch.nn.Module):
     def __init__(s, c=12):
         super().__init__(); s.a = torch.nn.Conv2d(12, c, 3, padding=1); s.b = torch.nn.Conv2d(c, c, 3, padding=1); s.c = torch.nn.Conv2d(c, 4, 3, padding=1); torch.nn.init.normal_(s.c.weight, std=1e-3); torch.nn.init.zeros_(s.c.bias)
@@ -57,19 +60,23 @@ def score(net, which):
     return r
 def show(name, r): print(name, ' '.join(f'{k} {a:.2f}/{b:.2f}' for k, (a, b) in r.items()), ' mean %.3f / %.3f' % tuple(np.mean(list(r.values()), 0)), flush=True)
 show('by hand, seen   (error %/flicker %)', score(None, train)); show('by hand, unseen', score(None, test))
-net = Net().to(dev); opt = torch.optim.Adam(net.parameters(), 2e-3); t0 = time.time(); it = 0; best = 1e9; T = MIN * 60
-while time.time() - t0 < T:
-    s = random.choice(train); n = 7; f0 = random.randrange(0, s.n - n - 1); opt.param_groups[0]['lr'] = 2e-3 * max(.05, 1 - (time.time() - t0) / T); loss = 0; hist, hn = begin(s, f0)
-    if f0 and random.random() < .3: hist = hist + torch.randn_like(hist) * .03; hn = hn * random.random()
-    last = None
-    for f in range(f0 + 1, f0 + 1 + n):
-        p = frame(s, f); hist, hn = step(p, hist, hn, control(net, p, hist, hn, s.oh, s.ow)); d = rel(hist, truth(s, f)); loss = loss + d.abs().mean() + .5 * (d[..., 1:] - d[..., :-1]).abs().mean() + .5 * (d[..., 1:, :] - d[..., :-1, :]).abs().mean()
-        if last is not None: loss = loss + .5 * ((d - catmull(last, p['uv'])).abs() * p['inside']).mean()
-        last = d
-    opt.zero_grad(); (loss / n).backward(); torch.nn.utils.clip_grad_norm_(net.parameters(), 1.); opt.step(); it += 1
-    if it % 120 == 0:
-        r = score(net, test); print(f'{it} steps {time.time() - t0:.0f} s'); show('  unseen', r); m = np.mean([a + b for a, b in r.values()])
-        if m < best: best = m; torch.save(net.state_dict(), OUT + '/up.pt')
-if best < 1e9: net.load_state_dict(torch.load(OUT + '/up.pt'))
+def learn(net, minutes, lr, tag):
+    opt = torch.optim.Adam(net.parameters(), lr); t0 = time.time(); it = 0; best = 1e9; keep = None; T = minutes * 60
+    while time.time() - t0 < T:
+        s = random.choice(train); n = 7; f0 = random.randrange(0, s.n - n - 1); opt.param_groups[0]['lr'] = lr * max(.05, 1 - (time.time() - t0) / T); loss = 0; hist, hn = begin(s, f0)
+        if f0 and random.random() < .3: hist = hist + torch.randn_like(hist) * .03; hn = hn * random.random()
+        last = None
+        for f in range(f0 + 1, f0 + 1 + n):
+            p = frame(s, f); hist, hn = step(p, hist, hn, control(net, p, hist, hn, s.oh, s.ow)); d = rel(hist, truth(s, f)); loss = loss + d.abs().mean() + .5 * (d[..., 1:] - d[..., :-1]).abs().mean() + .5 * (d[..., 1:, :] - d[..., :-1, :]).abs().mean()
+            if last is not None: loss = loss + .5 * ((d - catmull(last, p['uv'])).abs() * p['inside']).mean()
+            last = d
+        opt.zero_grad(); (loss / n).backward(); torch.nn.utils.clip_grad_norm_(net.parameters(), 1.); opt.step(); it += 1
+        if it % 200 == 0:
+            r = score(net, train[::4]); m = np.mean([a + b for a, b in r.values()]); print(f'{tag} {it} steps {time.time() - t0:.0f} s, a quarter of the seen: {m:.3f}', flush=True)      # (chosen by what it has seen: the unseen is only for judging)
+            if m < best: best = m; keep = {k: v.clone() for k, v in net.state_dict().items()}
+    if keep: net.load_state_dict(keep)
+    return net
+cst = learn(Const().to(dev), 1.5, 3e-2, 'constants'); print('constants', (torch.tanh(cst.k) * 1.5).flatten().tolist()); show('best constants, seen  ', score(cst, train)); show('best constants, unseen', score(cst, test))
+net = learn(Net().to(dev), MIN, 2e-3, 'network')
 show('learned, seen  ', score(net, train)); show('learned, unseen', score(net, test)); sd = {k: v.detach().cpu().numpy().astype(np.float32) for k, v in net.state_dict().items()}
 json.dump({k: v.flatten().round(5).tolist() for k, v in sd.items()}, open(OUT + '/up.json', 'w')); print('weights', sum(v.size for v in sd.values()), 'steps', it)

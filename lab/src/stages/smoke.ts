@@ -175,7 +175,7 @@ export class Smoke {
       ...Array.from({ length: SMOKE.pairs * 2 }, (_, i) => S('smoke press', solveCode, { ...MR, W: ro('smokeW', U), P: rw('smokeP', F) }, BRICK, { PARITY: i & 1 })),
       S('smoke free', freedCode, { ...MR, W: ro('smokeW', U), Va: ro('smokeA', V2), P: ro('smokeP', F), Vb: rw('smokeB', V2), D: rw('smokeD', F) }),
       S('smoke page', doneCode, { ...MW, D: ro('smokeD', F) }, ONE),
-      { ...S('smoke light', '', {}), code: signals + cacheLib + bounceLib + head + lightCode, buffers: { keys: cacheBind.keys!, cand: cacheBind.cand!, cells: cacheBind.cells!, Vb: ro('smokeB', V2), G: rw('smokeG', V2), M: ro('smokeM', U), changes: ['changes', 'Changes', 'uniform'] } },
+      { ...S('smoke light', '', {}), code: signals + cacheLib + bounceLib + head + lightCode, buffers: { ...cacheBind, Vb: ro('smokeB', V2), G: rw('smokeG', V2), M: ro('smokeM', U), changes: ['changes', 'Changes', 'uniform'] } },
       { ...S('smoke show', publishCode, { ...MR, W: ro('smokeW', U), Vb: ro('smokeB', V2), G: ro('smokeG', V2), Q: ro('smokeQ', F), smokeK: ['smokeK3', 'vec4f', 'uniform'] }), writes: { atlas: 'smokeAtlas' }, alone: true },
       { ...S('smoke show', pageCode, MR, { groups: () => [Math.ceil(PG / 64), 1, 1] }), writes: { page: 'smokePage' }, alone: true },
       { name: 'smoke keep', over: BRICK, code: '', async make() { return enc => { if (go()) enc.copyBufferToBuffer(g.buffers.get('smokeB')!, 0, g.buffers.get('smokeA')!, 0, CELLS * 8); }; } },
