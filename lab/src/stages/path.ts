@@ -11,11 +11,11 @@ var<workgroup> t: array<vec2f, 128>;
 import { glowStages } from './glow';
 import { exposeStages } from './expose';
 /** the reference: `samples` so far; anything that changes the picture starts it over */
-export const pathTracer = (opts: { bounces: number; guided?: boolean; quasi?: boolean; name?: string } = { bounces: 40 }): Method & { samples: number; key: string } => ({
+export const pathTracer = (opts: { bounces: number; guided?: boolean; quasi?: boolean; name?: string; edit?: (code: string) => string } = { bounces: 40 }): Method & { samples: number; key: string } => ({
   name: opts.name ?? 'reference', result: 'hdr', samples: 0, key: '',
   signals(g) { g.signal('hdr', 'rgba16float', 'output'); },
   stages(lab: Lab) { const g = [...glowStages(lab.graph, 'hdr', 'ref'), ...exposeStages(lab, lab.graph, 'hdr', 'refGlow2', 'ref')]; lab.uniform('pathKnobs', new Uint32Array([0, opts.bounces, 0, 0])); lab.buffer('sums', 16 * 16); lab.buffer('gkeys', GSLOTS * 4, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST); lab.buffer('gtrain', GSLOTS * 128 * 8, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST); lab.buffer('guide', GSLOTS * 128 * 4, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST); const me = this, clear: import('../graph').Stage = { name: 'guide clear', over: { groups: () => [1, 1, 1] }, code: '', async make(gr) { return enc => { if (me.samples !== 1) return; for (const b of ['gkeys', 'gtrain', 'guide']) enc.clearBuffer(gr.buffers.get(b)!); }; } }, bake: import('../graph').Stage = { name: 'guide bake', over: { groups: () => [256, GSLOTS / 256, 1] }, code: bakeCode, buffers: { train: ['gtrain', 'array<u32>', 'read'], guide: ['guide', 'array<vec4f>', 'read_write'] }, when: () => opts.guided !== false && [2, 4, 8, 16, 32, 64].includes(me.samples) };
-    return [clear, { name: 'reference', over: 'output', quasi: opts.quasi !== false, writes: { outHdr: 'hdr' }, buffers: { sums: ['sums', 'array<vec4f>', 'read_write'], pathKnobs: ['pathKnobs', 'vec4u', 'uniform'], ...GUIDE }, code }, bake, ...g]; },
+    return [clear, { name: 'reference', over: 'output', quasi: opts.quasi !== false, writes: { outHdr: 'hdr' }, buffers: { sums: ['sums', 'array<vec4f>', 'read_write'], pathKnobs: ['pathKnobs', 'vec4u', 'uniform'], ...GUIDE }, code: (opts.edit ?? (c => c))(code) }, bake, ...g]; },
   frame(lab: Lab) {
     const [w, h] = lab.graph.output; lab.buffer('sums', w * h * 16);
     const c = lab.camera, key = [w, h, lab.tick, lab.hour, lab.cut, lab.lampsMode, ...c.look, c.yaw, c.pitch, c.dist].map(x => typeof x === 'number' ? x.toFixed(5) : x).join(); if (key !== this.key) { this.key = key; this.samples = 0; }

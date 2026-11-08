@@ -1,0 +1,44 @@
+[
+ {
+  "name": "ground night",
+  "w": 1280,
+  "h": 720,
+  "dist": 34,
+  "hour": 21.5,
+  "cut": 2.55,
+  "look": [
+   0,
+   0.6,
+   0
+  ],
+  "doors": 0.8,
+  "tick": 600
+ },
+ {
+  "name": "quiet ground",
+  "w": 1280,
+  "h": 720,
+  "dist": 34,
+  "hour": 23,
+  "cut": 2.55,
+  "look": [
+   0,
+   0.6,
+   0
+  ],
+  "doors": 0.8,
+  "tick": 600,
+  "groups": {
+   "atrium": 0.1,
+   "orange": 0,
+   "green": 0.06,
+   "blue": 0.25,
+   "gallery": 0,
+   "studio": 0,
+   "lounge": 0.12,
+   "landing": 0.08,
+   "terrace": 0.5,
+   "pool": 0.35
+  }
+ }
+]
