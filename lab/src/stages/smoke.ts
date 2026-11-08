@@ -25,7 +25,7 @@ fn gatherAt(c: vec3i, d0: vec3f) -> vec4f { let d = clamp(d0, vec3f(-0.999), vec
   for (var k = 0u; k < 8u; k++) { var q = c; var wt = 1.0; for (var a = 0u; a < 3u; a++) { let on = ((k >> a) & 1u) == 1u; wt *= select(1.0 - w[a], w[a], on); if (on && !shut(q, a, s[a])) { q[a] += s[a]; } } if (wt <= 0.0 || !inside(q)) { continue; } let j = ix(q); acc += a0[j] * wt; gHeat += h0[j] * wt; } return acc; }
 var<private> gHeat: f32;
 ${cell}
-  let dt = smokeK.x; let v = a0[i].xyz; let here = gatherAt(c, -v * (dt / H)); b0[i] = vec4f(here.xyz, here.w * exp(-dt / 70.0)); h1[i] = gHeat * exp(-dt / 5.0);
+  let dt = smokeK.x; let v = a0[i].xyz; let here = gatherAt(c, -v * (dt / H)); b0[i] = vec4f(here.xyz, here.w * exp(-dt / 70.0)); h1[i] = gHeat * exp(-dt / 2.5);
 }`;
 const pushCode = SHUT + `
 fn vel(c: vec3i, o: vec3i, me: vec3f) -> vec3f { let q = c + o; if (!inside(q)) { return me; } return b0[ix(q)].xyz; }
@@ -33,17 +33,20 @@ fn curl(c: vec3i) -> vec3f { if (!inside(c)) { return vec3f(0.0); } let m = b0[i
 ${cell}
   let dt = smokeK.x; var s = b0[i]; var heat = h1[i]; let x = mid(c); var v = s.xyz;
   // swirls that a coarse grid would lose are spun up again where there is smoke
-  if (s.w > 0.003) { let w = curl(c); let g = vec3f(length(curl(c + vec3i(1, 0, 0))) - length(curl(c - vec3i(1, 0, 0))), length(curl(c + vec3i(0, 1, 0))) - length(curl(c - vec3i(0, 1, 0))), length(curl(c + vec3i(0, 0, 1))) - length(curl(c - vec3i(0, 0, 1)))); let l = length(g); if (l > 1e-4) { v += cross(g / l, w) * (dt * 0.55 * H * 2.0); } }
-  v.y += dt * (heat * 2.6 - s.w * 0.012);
+  if (s.w > 0.003) { let w = curl(c); let g = vec3f(length(curl(c + vec3i(1, 0, 0))) - length(curl(c - vec3i(1, 0, 0))), length(curl(c + vec3i(0, 1, 0))) - length(curl(c - vec3i(0, 1, 0))), length(curl(c + vec3i(0, 0, 1))) - length(curl(c - vec3i(0, 0, 1)))); let l = length(g); if (l > 1e-4) { v += cross(g / l, w) * (dt * 0.9 * H * 2.0); } }
+  v.y += dt * (heat * 1.5 - s.w * 0.03);
   // the open air carries it off
-  let out = select(0.0, 1.0, openAir(x)); let wind = vec3f(cos(frame.weather.w), 0.0, sin(frame.weather.w)) * 1.1; v = mix(v, wind, out * (1.0 - exp(-dt * 1.2))); s.w *= 1.0 - out * (1.0 - exp(-dt * 0.22)); v *= exp(-dt * 0.12);
+  let out = select(0.0, 1.0, openAir(x)); let wind = vec3f(cos(frame.weather.w), 0.0, sin(frame.weather.w)) * 1.1; v = mix(v, wind, out * (1.0 - exp(-dt * 1.2))); s.w *= 1.0 - out * (1.0 - exp(-dt * 0.05)); v *= exp(-dt * 0.10);
   for (var k = 0u; k < u32(smokeK.w); k++) { let e = sources[k * 2u]; let f = sources[k * 2u + 1u]; let d = x - e.xyz; let r = length(d); if (r < e.w) { let q = 1.0 - r / e.w; let sp = hash33(vec3f(vec2f(c.xz), floor(frame.misc.x * 12.0) + f32(k))) - 0.5; s.w = min(s.w + f.x * q * dt, 9.0); heat = min(heat + f.y * q * dt, 2.5); v += (normalize(d + vec3f(0.0, 0.12, 0.0)) * 5.0 + sp * 9.0) * (q * dt * f.z); } }
   let sp = length(v); v *= min(1.0, (0.9 * H / dt) / max(sp, 1e-4)); a0[i] = vec4f(v, s.w); h0[i] = heat;
 }`;
 const FACE = SHUT + `
 /** the velocity through c's far face along a */
 fn face(c: vec3i, a: u32) -> f32 { var q = c; q[a] += 1; if (c[a] < 0) { return a0[ix(q)][a]; } if (q[a] >= N[a]) { return a0[ix(c)][a]; } if (shut(c, a, 1)) { return 0.0; } return 0.5 * (a0[ix(c)][a] + a0[ix(q)][a]); }`;
-const divCode = FACE + cell + ` var d = 0.0; for (var a = 0u; a < 3u; a++) { var q = c; q[a] -= 1; d += face(c, a) - face(q, a); } div[i] = d; press[i] *= 0.8; }`;
+const divCode = FACE + cell + ` var d = 0.0; for (var a = 0u; a < 3u; a++) { var q = c; q[a] -= 1; d += face(c, a) - face(q, a); }
+  // a canister makes room for what it makes: it pushes the air before it
+  for (var k = 0u; k < u32(smokeK.w); k++) { let e = sources[k * 2u]; let l = distance(mid(c), e.xyz); if (l < e.w) { d -= sources[k * 2u + 1u].w * (1.0 - l / e.w); } }
+  div[i] = d; press[i] *= 0.8; }`;
 const solveCode = SHUT + `
 @compute @workgroup_size(8, 4, 4) fn main(@builtin(global_invocation_id) id: vec3u) { var c = vec3i(id); c.x = c.x * 2 + ((c.y + c.z + PARITY) & 1); let i = ix(c); var s = 0.0; var n = 0.0;
   for (var a = 0u; a < 3u; a++) { for (var k = -1; k < 2; k += 2) { if (shut(c, a, k)) { continue; } n += 1.0; var q = c; q[a] += k; if (inside(q)) { s += press[ix(q)]; } } } if (n > 0.0) { let p = (s - div[i]) / n; press[i] = mix(press[i], p, 1.55); } }`;
@@ -73,7 +76,7 @@ export class Smoke {
     const lab = this.lab; if (!this.on) { this.dt = 0; return; } const d = Math.max(0, Math.min(4, lab.tick - this.lastTick)); this.dt = this.lastTick < 0 ? 1 / 60 : d / 60; this.lastTick = lab.tick;
     const key = lab.building.doors.map(x => x.open.toFixed(3)).join(); this.faceNow = this.init || key !== this.doorKey; this.doorKey = key;
     const boxes = lab.building.doors.map(x => x.leaf[0]!), f = new Float32Array(16 * 16); boxes.slice(0, 16).forEach((p, i) => { for (let k = 0; k < 3; k++) { const r = p.rot[k]!; f.set([r[0], r[1], r[2], -(r[0] * p.at[0] + r[1] * p.at[1] + r[2] * p.at[2])], i * 16 + k * 4); } f.set(p.half, i * 16 + 12); }); lab.uniform('smokeDoors', f);
-    const s = new Float32Array(64), live = this.sources.filter(q => lab.tick - q.born < q.last * 60); live.forEach((q, i) => { const age = (lab.tick - q.born) / 60, k = Math.min(1, age / 0.6) * Math.min(1, (q.last - age) / 2); s.set([...q.at, 0.5, 26 * q.rate * k, 2.2 * k, 1.2 * k, 0], i * 8); }); lab.uniform('smokeSources', s);
+    const s = new Float32Array(64), live = this.sources.filter(q => lab.tick - q.born < q.last * 60); live.forEach((q, i) => { const age = (lab.tick - q.born) / 60, k = Math.min(1, age / 0.6) * Math.min(1, (q.last - age) / 2); s.set([...q.at, 0.5, 170 * q.rate * k, 1.1 * k, 0.9 * k, 3.4 * q.rate * k], i * 8); }); lab.uniform('smokeSources', s);
     lab.uniform('smokeK', new Float32Array([this.dt, this.init ? 1 : 0, boxes.length, live.length])); this.init = false;
   }
   stages(g: Graph, cacheBind: NonNullable<Stage['buffers']>, cacheLib: string, bounceLib: string): Stage[] {
@@ -86,7 +89,7 @@ export class Smoke {
       { ...S('smoke faces', facesCode, { faces: rw('smokeFaces', 'array<u32>'), ...K, doors: ['smokeDoors', 'array<Box, 16>', 'uniform'] }), when: () => go() && this.faceNow },
       S('smoke move', moveCode, { a0: ro('smokeA'), h0: ro('smokeHeatA', 'array<f32>'), b0: rw('smokeB'), h1: rw('smokeHeatB', 'array<f32>'), ...faces, ...K }),
       S('smoke push', pushCode, { b0: ro('smokeB'), h1: ro('smokeHeatB', 'array<f32>'), a0: rw('smokeA'), h0: rw('smokeHeatA', 'array<f32>'), ...faces, ...K, sources: ['smokeSources', 'array<vec4f, 16>', 'uniform'] }),
-      S('smoke press', divCode, { a0: ro('smokeA'), div: rw('smokeDiv', 'array<f32>'), press: rw('smokePress', 'array<f32>'), ...faces }),
+      S('smoke press', divCode, { a0: ro('smokeA'), div: rw('smokeDiv', 'array<f32>'), press: rw('smokePress', 'array<f32>'), ...faces, ...K, sources: ['smokeSources', 'array<vec4f, 16>', 'uniform'] }),
       ...Array.from({ length: SMOKE.rounds * 2 }, (_, i) => S('smoke press', solveCode, { div: ro('smokeDiv', 'array<f32>'), press: rw('smokePress', 'array<f32>'), ...faces }, half, { PARITY: i & 1 })),
       S('smoke free', freeCode, { a0: ro('smokeA'), press: ro('smokePress', 'array<f32>'), b0: rw('smokeB'), ...faces }),
       { name: 'smoke clear', over: OVER, code: '', async make() { return enc => { if (go()) enc.clearBuffer(g.buffers.get('smokeOcc')!); }; } },
