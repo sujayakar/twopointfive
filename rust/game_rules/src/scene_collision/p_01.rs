@@ -1091,6 +1091,15 @@ pub fn grid_step(g: &mut crate::game::Game, n: f64, k: crate::scene_collision::G
     r != ASK_HOST
 }
 
+/// What the light under a roof is worked out from is made as a game stands, behind the loading, and not in its first step: the statics' lines, no state.
+pub fn light_ready(g: &mut crate::game::Game) {
+    let to_sun = crate::hours::sky_now(g).to_sun;
+    window(g, &mut |g: &mut Game| {
+        ready(g);
+        if standing(g) { sim::bricks::light_ready(slot(g), to_sun); }
+    });
+}
+
 // ---- how a sound reaches a listener
 
 /// (collision.ts SoundPaths.constructor)
