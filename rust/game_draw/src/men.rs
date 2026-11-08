@@ -66,6 +66,8 @@ pub type Swaps = [u32; 4];
 
 #[derive(Default)]
 pub struct Men {
+    /// drawn with the fog off: everybody
+    pub bared: bool,
     pub swaps: Swaps,
     pub men: Vec<Man>,
     pub insts: Vec<Inst>,
@@ -100,7 +102,7 @@ impl Men {
         self.heads.clear();
         self.bounds.clear();
         self.now_caps.clear();
-        for c in shown(g).into_iter().take(MOST) { self.man(g, c); }
+        for c in shown(g, self.bared).into_iter().take(MOST) { self.man(g, c); }
     }
 
     fn man(&mut self, g: &Game, id: CharId) {
@@ -201,9 +203,9 @@ impl Men {
 fn players(g: &Game) -> impl Iterator<Item = CharId> + '_ { g.seats.iter().map(|&s| g.pl[game::cmd::seat_man(g, s)].ch) }
 
 /// the men who are drawn, in the order they take the skinning's places
-fn shown(g: &Game) -> Vec<CharId> {
+fn shown(g: &Game, bared: bool) -> Vec<CharId> {
     let all: Vec<CharId> = players(g).chain(g.guards.iter().map(|&gd| g.gd[gd].ch)).chain(game::civilians::civilians_shown(g).iter().map(|&gd| g.gd[gd].ch)).collect();
-    let mut drawn = game::fogofwar::fog_of_war_filter(g, &all);
+    let mut drawn = if bared { all } else { game::fogofwar::fog_of_war_filter(g, &all) };
     // (from the sky nobody on the floor is the player)
     if game::rails::rails_sky_on(g) { let me = g.pl[game::seats::host_man(g)].ch; drawn.retain(|c| *c != me); }
     // (more men than have a mesh of their own to throw a shadow by: the men down give up their places first)

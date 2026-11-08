@@ -152,6 +152,11 @@ export class DrawGame {
     const N = new Float64Array([L.from.pos[0], L.from.pos[1], L.from.pos[2], L.from.yaw, L.to.pos[0], L.to.pos[1], L.to.pos[2], L.to.yaw]);
     this.handed(new Uint8Array(N.buffer), p => this.X.face_draw_lead(this.h, L.id, p));
   }
+  /** A VIEWER'S OWN PICTURE of the run: with the fog off it, and through a tube or not whatever the run's was (null: as the run had it). The first call has the game keep what such a picture is made from */
+  viewAs(bared: boolean, tube: boolean | null): void { this.X.face_draw_as(this.h, bared ? 1 : 0, tube === null ? 0 : tube ? 1 : 2); this.draw(); }
+  /** the floor as it stands, for a map of it (replay/minimap.ts), and who and what is on it now: everybody, seen or not */
+  floor(): { bounds: [number, number, number, number]; boxes: number[] } { this.X.face_floor(this.h); return JSON.parse(this.answer()); }
+  map(): { men: { id: number; x: number; z: number; aim: number; team: string; kind: 'player' | 'man' | 'civ'; down: boolean; name: string; state: string }[]; doors: { hx: number; hz: number; ux: number; uz: number; width: number; locked: boolean; broken: boolean; off: boolean }[] } { this.X.face_map(this.h); return JSON.parse(this.answer()); }
   /** THE MOMENT THE GAME STANDS AT, whole, to come back to exactly (a walk of a tape's): its number, 0 where it cannot be held */
   moment(): number { return this.X.face_moment(this.h); }
   /** the game stands there again, at tick `ticks` */
