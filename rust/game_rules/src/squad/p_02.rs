@@ -40,6 +40,9 @@ fn rank(r: Perceive) -> i32 {
 
 /// The senses updateGuard would have run for a man the runner drives: what they came to this frame. (squad.ts perceive)
 pub fn perceive(g: &mut crate::game::Game, gd: GuardId, dt: f64, before: f64) -> Option<crate::squad::Perceive> {
+    crate::seats::standing_for(g, gd, &mut |g| perceive_here(g, gd, dt, before))
+}
+fn perceive_here(g: &mut crate::game::Game, gd: GuardId, dt: f64, before: f64) -> Option<crate::squad::Perceive> {
     crate::guards::hearing_check(g, gd, None, None, None);
     let vis = crate::guards::can_see(g, gd);
     let mut seen = false;

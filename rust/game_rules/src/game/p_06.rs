@@ -156,7 +156,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     let mut i = 0;
     while i < g.guards.len() {
         let gd = g.guards[i];
-        if n == 1 { crate::guards::update_guard(g, gd, dt); } else { let v = crate::seats::view_for(g, gd); crate::seats::with_seat(g, v, &mut |g| crate::guards::update_guard(g, gd, dt)); }
+        crate::seats::standing_for(g, gd, &mut |g| crate::guards::update_guard(g, gd, dt));
         i += 1;
     }
     crate::picture::picture_tick(g, dt);
