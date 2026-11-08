@@ -226,9 +226,6 @@ export interface ReachOnly { prev: Uint32Array; rects: readonly (readonly [numbe
   boxes?: readonly (readonly [number, number, number, number])[] }
 /** the source points every cell of a mask was decided from (reachMaskFor), where that is one set */
 const SOURCES = new SideMap<Uint32Array, string>('reach.SOURCES');
-/** was every cell of this mask decided from one set of source points? (then, inside the light's range, it equals a whole re-derive from them on the raster it was last
- *  decided against; in the half metre between the range the game queues a light by and ReachOnly.maxDist a cell may hold an older level — floor the light does not light) */
-export function reachOneSource(mask: Uint32Array): boolean { return SOURCES.has(mask); }
 /** A mask decided over several calls (reachMaskSome): cells until `budget` sight-line steps are spent each call, where it stood kept in `st` — its source points too, so a light that turns
  *  between calls is still one mask from one set. The caller drops `st` if the raster or the ReachOnly changes under it. */
 export interface ReachJob { budget: number;
@@ -321,19 +318,6 @@ function derive(solid: Uint8Array, pos: Vec3, dir: Vec3, radius: number, interio
   return mask;
 }
 
-/** Reach mask of a DIRECTIONAL light (the moon; the breach's sun): every cell NOT under the ceiling slab reaches at full weight; a cell under it reaches (level 3)
- *  iff one of its looks — the five sub-cell points of SUBS at floor, desk and head height — has an unblocked 3D path toward the light through the level's
- *  statics (`blocked(from, dirToLight, dist)` is the caller's raycast: the window strips, the fire exit, the lobby's glazing), else 0. Only the ReSTIR estimator
- *  consumes it: scored unshadowed everywhere, the moon out-draws a dim desk lamp for the fresh candidate on every indoor floor and the
- *  ray then dies in the ceiling — wasted rays, a penumbra hint everywhere, and torch light indoors starving for fresh samples under a daytime sun. Errs toward
- *  'reaches' like the rest (three heights, five points; a strip between them stays dark — the moon through a 10 cm slit). ~1700 cells × ≤ 15 rays, once.
- *  A LOOK STANDS IN OPEN AIR (`free`, the caller's: the point itself, the nearest point of its own cell outside the solid it fell in, or null where the cell has none).
- *  The corner looks sit 9 cm inside the cell, and a wall on a cell's line is 12 cm to either side of it: such a look started INSIDE the wall, its ray left through
- *  the wall's outer face, and every cell along the inside of an outer wall read 'the sun reaches'. On the pass at midday that was the cells men stack in, with the
- *  hour's sun, thousands of times the room's bulb, in their fresh draw: a white speckle for every bulb pick (REACH_OPTS.solidLooks = the looks as they were). */
-export function reachMaskForDirectional(dirToLight: Vec3, interior: Uint8Array, blocked: (from: Vec3, dir: Vec3, dist: number) => boolean, only?: ReachOnly, free?: (p: Vec3) => Vec3 | null): Uint32Array {
-  return whole(reachMaskForDirectionalSteps(dirToLight, interior, blocked, only, free));
-}
 /** … IN STEPS (render/steps.ts), a stop after every cell that is decided by rays (up to 180 of them a cell; a cell that keeps its level or stands in the
  *  open costs nothing and is no stop): the same mask, for a caller that takes a few cells a frame (reachKeep.ts) */
 export function* reachMaskForDirectionalSteps(dirToLight: Vec3, interior: Uint8Array, blocked: (from: Vec3, dir: Vec3, dist: number) => boolean, only?: ReachOnly, free?: (p: Vec3) => Vec3 | null): Generator<void, Uint32Array, void> {
@@ -365,8 +349,3 @@ export function* reachMaskForDirectionalSteps(dirToLight: Vec3, interior: Uint8A
 /** Level 0..3 of cell ci in a mask (0 = cannot reach). */
 export function reachLevel(mask: Uint32Array, ci: number): number { return (mask[ci >> 4] >>> ((ci & 15) * 2)) & 3; }
 
-/** Fraction of the level's cells a mask reaches at all (for the panel / logs). */
-export function reachFraction(mask: Uint32Array): number {
-  let n = 0; for (let ci = 0; ci < WORLD.gridW * WORLD.gridH; ci++) if (reachLevel(mask, ci)) n++;
-  return n / (WORLD.gridW * WORLD.gridH);
-}
