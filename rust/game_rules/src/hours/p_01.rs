@@ -58,11 +58,6 @@ pub fn exposure_of(g: &crate::game::Game) -> f64 {
     if e > 0.0 { e } else { 1.0 }
 }
 
-/// (hours.ts isHourSun)
-pub fn is_hour_sun(g: &crate::game::Game, l: LightId) -> bool {
-    g.m.hours.states.as_ref().map(|st| st.sun) == Some(l)
-}
-
 /// The level's brightest steady directional light that is up, when no hour is laid over it. (hours.ts skyLampOf)
 pub fn sky_lamp_of(g: &crate::game::Game) -> Option<LightId> {
     if g.m.hours.states.is_some() { return None; }

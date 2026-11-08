@@ -29,9 +29,6 @@ pub fn tick_view(g: &Game, seat: &crate::seats::SeatRef) -> TickView {
     }
 }
 
-/// does `tick_view` ask the box world for this seat: only a set charge of its own has a line to one (who would it catch), and then the copy of the boxes must stand
-pub fn asks_the_boxes(g: &Game, seat: &crate::seats::SeatRef) -> bool { !seat.door_tools.set.is_empty() || !seat.wall_charge.set.is_empty() }
-
 /// what the game itself has of a host's now: a seat's cursor and camera as its last step left them (the tick's own questions of the cursor)
 pub fn host_now(g: &Game, input: crate::ids::InputId, cam: crate::ids::CameraId, canvas: crate::host_hud::View) -> HostNow {
     let (i, c) = (&g.tab.input[input], &g.tab.camera[cam]);

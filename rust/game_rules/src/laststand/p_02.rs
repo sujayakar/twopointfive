@@ -30,8 +30,6 @@ fn fresh_seed(seed: f64, attempt: f64) -> f64 {
 
 // ---------------------------------------------------------------- the stand
 
-fn dig_in_phase_is(g: &Game, gd: GuardId, word: &str) -> bool { crate::digin::dig_in_phase(g, gd) == word }
-
 // ---------------------------------------------------------------- the seams with the rest of the game
 
 /// A new state for the endgame: its own die off the room clear's seed and attempt, four draws spent; the posts as staged, kept if it is the same staging.   (laststand.ts fresh)
