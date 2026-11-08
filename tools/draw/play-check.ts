@@ -23,8 +23,10 @@ const bytes = (f: string): Uint8Array => { try { return new Uint8Array(readFileS
 { const stray = only.filter(id => !(ALL_MISSIONS as { id: string }[]).some(m => m.id === id)); if (stray.length) { console.error(`play-check: no mission ${stray.join(', ')}`); process.exit(2); } }
 /** from above nobody on the floor is the hand's to walk */
 const SKY = new Set(['tut-sky']);
-for (const m of ALL_MISSIONS as { id: string; title: string }[]) { if (only.length && !only.includes(m.id)) continue;
-  const words: string = pickSearch(m, ''), file = new URLSearchParams(words).get('levelFile') ?? 'office.json';
+/** …and every level's file with no mission named, as an address with nothing on it but the level opens it */
+const PLAIN = [...new Set((ALL_MISSIONS as { id: string }[]).map(m => new URLSearchParams(pickSearch(m, '')).get('levelFile') ?? 'office.json'))].map(f => ({ id: `${f.replace('.json', '')} (no mission)`, words: `?levelFile=${f}` }));
+for (const m of [...ALL_MISSIONS, ...(only.length ? [] : [{ id: 'the plain address', words: '?draw=1&seed=1' }, ...PLAIN])] as { id: string; words?: string }[]) { if (only.length && !only.includes(m.id)) continue;
+  const words: string = m.words ?? pickSearch(m, ''), file = new URLSearchParams(words).get('levelFile') ?? 'office.json';
   const game = new DrawGame({ exports: instance.exports, bytes: 0, fetchMs: 0, compileMs: 0 }), D = game.drawn, cam = new FollowCamera(), input = { keys: new Set<string>(), pressed: new Set<string>(), buttons: 0, clicked: 0, wheel: 0, mouseX: 640, mouseY: 300 }, canvas = { clientWidth: 1280, clientHeight: 720, width: 1280, height: 720 };
   let at = 'the start', worst = 0, sum = 0, n = 0, boxes = 0;
   const where = (): [number, number] => { const o = D.at[Section.view] + View.at; return [D.f[o], D.f[o + 2]]; }, stood = (): number => D.u[D.at[Section.view] + View.stood];
