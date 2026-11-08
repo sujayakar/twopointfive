@@ -11,6 +11,7 @@ import { Perf } from './perf';
 import { tourStep } from './tour';
 import { type V3, add, mul, sub, dot, clamp, norm } from './math';
 import { boundsOf } from './scene/world';
+import { QUIET } from './scene/building';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T, canvas = $<HTMLCanvasElement>('c'), Q = new URLSearchParams(location.search);
 const say = (t: string, k: number) => { $('what').textContent = t; $('bar').style.width = Math.round(k * 100) + '%'; };
@@ -33,9 +34,9 @@ async function main() {
     row('method', [['Real time', () => method === rt, () => act.method(rt)], ['Reference', () => method === ref, () => act.method(ref)]]);
     row('level', lab.building.levels.map((l, i) => [l.name, () => lab.level === i, () => act.level(i)] as [string, () => boolean, () => void]));
     row('doors', [['Doors open', () => false, () => act.doors(1)], ['shut', () => false, () => act.doors(0)], ['swing', () => lab.doorsAuto, () => act.doors(lab.doorsAuto ? 0 : 'auto')]]);
-    row('lamps', (['auto', 'on', 'off'] as const).map(k => ['Lamps ' + k, () => lab.lampsMode === k, () => { lab.lampsMode = k; }] as [string, () => boolean, () => void]));
+    row('lamps', (['auto', 'on', 'off'] as const).map(k => ['Lamps ' + k, () => lab.lampsMode === k, () => { lab.lampsMode = k; }] as [string, () => boolean, () => void]).concat([['Infiltration', () => lab.lampGroup === QUIET.groups, () => { if (lab.lampGroup === QUIET.groups) { lab.lampGroup = {}; lab.hour = 16.4; } else { lab.lampGroup = QUIET.groups; lab.hour = QUIET.hour; lab.lampsMode = 'auto'; } }]]));
     row('view', [['Step through the frame', () => teach.on, study], ['Performance', () => perf.shown, () => perf.toggle()]]);
-    row('groups', ['atrium', 'orange', 'green', 'blue', 'gallery', 'studio', 'lounge'].map(k => [k, () => (lab.lampGroup[k] ?? 1) > 0, () => { lab.lampGroup[k] = (lab.lampGroup[k] ?? 1) > 0 ? 0 : 1; }] as [string, () => boolean, () => void]));
+    row('groups', ['atrium', 'orange', 'green', 'blue', 'gallery', 'studio', 'lounge'].map(k => [k, () => (lab.lampGroup[k] ?? 1) > 0, () => { lab.lampGroup = { ...lab.lampGroup, [k]: (lab.lampGroup[k] ?? 1) > 0 ? 0 : 1 }; }] as [string, () => boolean, () => void]));
     row('weather', [['Clear', () => lab.rain === 0, () => { lab.rain = 0; }], ['Rain', () => lab.rain > 0, () => { lab.rain = 1; }], ['Steam', () => lab.steam > 0, () => { lab.steam = lab.steam > 0 ? 0 : 1; }], ['Smoke', () => lab.smoke.burning, () => { if (lab.smoke.burning) lab.smoke.clear(); else { toss([0.5, 0.02, 1.5]); toss([6.5, 0.02, -3.0]); } }]]);
     $('mode').textContent = method === rt ? 'Real time' : 'Reference, path traced';
     $<HTMLInputElement>('hour').value = String(lab.hour);

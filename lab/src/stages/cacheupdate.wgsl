@@ -33,6 +33,8 @@ fn oneMore(s: u32) {
     if (h.piece == NOTHING) { E += skyLod(w.xyz, 1.0) * h.thru * (w.w * sm.a); }
     else { let q = surfaceMean(x, w.xyz, h); let leaf = (h.piece & LEAF_HIT) != 0u; let own = !leaf && (pieces[h.piece].lamp & 255u) != 255u;
       let L = select(q.glow, vec3f(0.0), own) + sentBack(q, leaf, rnd2(), w.xyz);
+      // what it lands on is founded too, so that light deeper in is not read from the coarse cells, which are wider than walls are apart
+      if (a.w > 6.0) { let wn = select(q.ng, vec3f(0.0), leaf); let wants = cacheWants(q.x, wn, !leaf && (q.flags & MOVES) != 0u); if (wants != 0u) { let w0 = u32(HITS) + s; hits[w0] = vec4u(bitcast<vec3u>(q.x), select(octPack(q.ng), EVERY_WAY, leaf)); for (var l = 0u; l < 4u; l++) { if ((wants & (1u << l)) != 0u) { cacheFound(cacheKeyOf(q.x, wn, l & 1u, l >> 1u), w0); } } } }
       E += min(L * h.thru * (w.w * sm.a), vec3f(60.0)); }
   }
   let cap = mix(min(7.0, @tune.keep), @tune.keep, st); let m = min(a.w + 1.0, cap); let k = min(1.0, 2.0 / (m + 1.0));   // later samples weigh more: the first ones were lit by a table that was still dark

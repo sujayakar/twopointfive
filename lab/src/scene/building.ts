@@ -244,3 +244,5 @@ export function makeBuilding(): Building {
 export function poseDoor(d: Door) {
   const a = d.yaw + d.swing * d.open * 1.75, rt: Rot = rotY(a); d.leaf.forEach((p, i) => { const l = d.local[i]!; p.at = add(d.hinge, apply(rt, l.at)); p.rot = rt; p.half = l.half; });
 }
+/** the building as someone would break into it: nearly all of it dark, a pool of light here and there */
+export const QUIET: { hour: number; groups: Record<string, number> } = { hour: 23, groups: { atrium: 0.10, orange: 0, green: 0.06, blue: 0.25, gallery: 0, studio: 0, lounge: 0.12, landing: 0.08, terrace: 0.5, pool: 0.35 } };
