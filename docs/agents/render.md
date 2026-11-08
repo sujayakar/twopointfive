@@ -81,7 +81,7 @@ no smoke reads 14 to 17. The vault read as 60 until a smoke can was let off, the
 counts, the queue's answer timed from a page script (wrap the INSTANCE's `device.queue.submit` and `onSubmittedWorkDone`: the page keeps its own
 queue's methods, the prototype's are not called), and leaving one thing out of the frame at a time. Not the particles, their draw, the wind, the main
 thread (3 ms) or the picture's size: the solver, and of it only THE ABOUT TWENTY `dispatchWorkgroupsIndirect` CALLS A FRAME (per-brick kernels by a
-GPU-written count). The same kernels dispatched directly keep 60. THE GAME'S PAGE NOW OPENS ON THE WHOLE POOL (`main.ts` sets `sparse.indirect` by
+GPU-written count). The same kernels dispatched directly keep 60. THE GAME'S PAGE NOW OPENS ON THE WHOLE POOL (`src/host/pictureopens.ts` sets `sparse.indirect` by
 `smoke/dispatch.ts pageIndirect`; `smoke.ts encode` asks `byGpuCount`): a per-brick kernel is dispatched directly over all 4,096 workgroups. A
 workgroup past the step's own list returns at its guard, which is how the pool has always gone from `directAt` of it stepping, so the smoke is the
 same to the bit and no kernel runs that did not. The dispatches of fixed size are as they were; one pipeline set, the call is picked at encode time.

@@ -1,4 +1,4 @@
-// A RUN ON THE PAGE THAT DRAWS IS KEPT AND PLAYED AGAIN: draw.html on the software adapter, stepped by hand. A run with a save, a load and a restart is played, F7 keeps it, the page of it walks it to the same state,
+// A RUN ON THE PAGE THAT DRAWS IS KEPT AND PLAYED AGAIN: the page on the software adapter, stepped by hand. A run with a save, a load and a restart is played, F7 keeps it, the page of it walks it to the same state,
 // is sought both ways, its camera taken off and given back, its pace turned, a note kept on it. Never a GPU's judgement.
 //   PORT=<a dev server> node tools/draw/tape-page.cjs [--out dir]      exit 0 = every check passed, 1 = a FAIL, 2 = the script died
 const { chromium } = (() => { try { return require('playwright'); } catch { return require('/opt/node-tools/node_modules/playwright'); } })();
@@ -15,7 +15,7 @@ const same = (a, b) => a.die === b.die && a.parts === b.parts, whole = (a, b) =>
     const page = await ctx.newPage(), errors = []; page.setDefaultTimeout(600000);
     page.on('pageerror', x => errors.push(String(x && x.stack || x).slice(0, 500)));
     page.on('console', m => { const t = m.text(); if (m.type() === 'error' || /Invalid|error:/.test(t)) errors.push(t.slice(0, 300)); });
-    await page.goto(`http://localhost:${PORT}/draw.html?${words}`, { timeout: 300000 });
+    await page.goto(`http://localhost:${PORT}/?${words}`, { timeout: 300000 });
     if (ready) { await page.waitForFunction(() => !!window.__ready && !!window.__draw, null, { timeout: 600000 }); await page.evaluate(() => window.__ready); }
     return { page, errors };
   };
@@ -94,7 +94,7 @@ const same = (a, b) => a.die === b.die && a.parts === b.parts, whole = (a, b) =>
     check(s.lost && s.stood === 400 && Math.abs(s.back - 200) < 3 && s.up && !s.card && whole(s.m, s1.m), 'lost to a panic, it stands, is sought back and ends the same', s); await L.page.close(); }
   // ---- live: a person's page, its own frames
   { const small = await browser.newContext({ viewport: { width: 320, height: 180 }, deviceScaleFactor: 1, storageState: await ctx.storageState({ indexedDB: true }) }), page = await small.newPage(), errors = []; page.setDefaultTimeout(600000); page.on('pageerror', x => errors.push(String(x).slice(0, 300)));
-    await page.goto(`http://localhost:${PORT}/draw.html?quality=verylow&mute&playtape=${sid}`, { timeout: 300000 }); await page.waitForFunction(() => !!window.__ready && !!window.__draw && !!document.getElementById('tapebig'), null, { timeout: 600000 }); await page.evaluate(() => window.__ready);
+    await page.goto(`http://localhost:${PORT}/?quality=verylow&mute&playtape=${sid}`, { timeout: 300000 }); await page.waitForFunction(() => !!window.__ready && !!window.__draw && !!document.getElementById('tapebig'), null, { timeout: 600000 }); await page.evaluate(() => window.__ready);
     const still0 = await page.evaluate(() => window.__draw.played.at); await page.evaluate(() => document.getElementById('tapebig').click());
     const went = await page.waitForFunction(() => window.__draw.played.at >= 12, null, { timeout: 400000 }).then(() => true).catch(() => false), s = await page.evaluate(() => { const P = window.__draw.played; return { at: P.at, paused: P.paused, parted: P.parted, big: !!document.getElementById('tapebig'), frames: window.__draw.told.frames }; });
     check(still0 === 0 && went && !s.paused && s.parted === null && !s.big && errors.length === 0, 'on a person\'s page it waits under the play button, and plays by the page\'s own frames', { still0, ...s, errors: errors.slice(0, 3) }); await small.close(); }
