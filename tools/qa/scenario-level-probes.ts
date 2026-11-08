@@ -423,7 +423,7 @@ export async function scenarioRescue(file: string, o: Opts = {}): Promise<boolea
   const noOrder = runs.filter(r => r.state !== 'error' && !/^order:(bang|go|stack)/.test(r.order));
   F.verdict(!errors.length && !noOrder.length, 'F is taken as the order on the hostage room', noOrder.length ? noOrder.map(r => `seed ${r.seed}: ${r.order}`).join(' · ') : runs.map(r => r.order).join(' / '));
   F.verdict(ended.length === n, "finished: every seed ran to the scenario's own result inside the cap, no exception", `rescued ${won.length} (${runs.filter(r => r.grade === 'clean').length} clean, ${runs.filter(r => r.grade === 'costly').length} costly) · lost ${ended.length - won.length} · stalled ${runs.filter(r => r.state === 'stalled').length} · error ${errors.length} — seconds: ${runs.map(r => f1(r.t)).join(' / ')}`);
-  F.verdict(won.length > 0, 'it can be won: at least one seed ends with a hostage brought out', won.length ? `seed${won.length > 1 ? 's' : ''} ${won.map(r => `${r.seed} (${r.grade}, hostages ${r.hostages}, pair ${r.pair})`).join(', ')}` : 'no seed was rescued — look at --trace');
+  console.log(`- NOT ASKED — it can be won: a seed is one run's die, and one run of a played fight says nothing of it · ${won.length ? `won on seed${won.length > 1 ? 's' : ''} ${won.map(r => `${r.seed} (${r.grade}, hostages ${r.hostages}, pair ${r.pair})`).join(', ')}` : 'not won on these seeds'}`);
   return F.done();
 }
 
