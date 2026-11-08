@@ -24,6 +24,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   - **The expected reds are one short list** (`tools/qa/expected-red.ts`): faults of the game, placed or waiting for their owner's read. A check's own red is mended, cut or deleted,
     never listed; a row goes the day its check is green. (The five tables, `red-rows.ts`, `LIST_READ_ON`, the `on` / `bisect` / `rust` fields that older bullets name are gone.)
   - A check file that is a script of its own is a row of the runner's script table (`probes.ts`, [name, file, families]): a file nothing runs is not a check.
+- **THE PAGE SCRIPTS HAVE ONE RUNNER (`tools/qa/pages.ts`; 2026-11-08).** `bun run tools/qa/pages.ts [group | name …] [--list]`: its table is [script, group, what it guards, minutes when read], it starts its own dev server on a free port, hands
+  PORT, PLAYWRIGHT_MODULE, CHROMIUM and CHROME, runs one script at a time (a page takes the whole box), stops a script's whole process group at `QA_PAGE_CAP` minutes (10), and closes on a verdict: exit 0 green · 1 a red · 2 an unknown name. Groups:
+  boot · play · menus · coop · saves · cloud · replay, `all` for those; `tools` (measuring or picture tools, rigs, the sweeps too long to ask) are listed and run by name alone. `holds-check.ts` (10) is red on a `tools/qa/*.cjs` that is no row and is required by none.
+  A script with several long arms asks the first of them with no word (`JOBS=all`, or its arm by name, for the rest). cloud, `lobby-page`, `savedoor-page` want `npm ci` in cloud/, for the stand-in backend.
 - **THE HARNESS STANDS THE GAME AS THE PAGE OPENS IT (2026-11-05; the maintainer ruled that the frozen stand may be retired).** With no word in front a
   headless tool is on what the bullet below calls the SHIPPED stand. THE RULE IS ONE FUNCTION, `standOf` in the import-free `src/host/standEnv.ts`: no
   word or `TPS_PROFILE=shipped` = the page's stand, `TPS_PROFILE=frozen` = the old one, any other word stops the tool. `harnessProfile()`
