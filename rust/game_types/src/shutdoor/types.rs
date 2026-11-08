@@ -203,11 +203,5 @@ pub struct ShutdoorStats {
     pub stayed: i32,
 }
 
-/// (src/game/shutdoor.ts:33 SHUT_ID)
-pub const SHUT_ID: &str = "shutDoor";
-
-/// (src/game/shutdoor.ts:35 STOOD)
-pub const STOOD: &str = "charge";
-
 /// (src/game/shutdoor.ts:36 K: a table nothing writes)
 pub fn k() -> crate::shutdoor::K { crate::shutdoor::K { open: 0.6, body: 0.37, slack: 0.1, reach: 0.95, far_reach: 1.5, handle_in: 0.14, cross: 4.0, go_cap: 25.0, settle: 1.5, blocked_cap: 4.0, latch_cap: 6.0, again: 0.8, hand_to: 0.22 } }

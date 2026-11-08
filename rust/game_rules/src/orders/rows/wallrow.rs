@@ -10,7 +10,7 @@ pub const ORDER: Row = Row {
     can: Some(can),
     valid: Some(valid),
     gone: Some(gone),
-    ..Row::new(crate::wallcharge::WALL_ORDER, label, issue)
+    ..Row::new("wallCharge", label, issue)
 };
 
 fn label(g: &mut Game, t: &OrderTarget) -> String {

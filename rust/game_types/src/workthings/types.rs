@@ -342,6 +342,3 @@ pub struct WorkthingsStats {
     pub done: i32,
     pub moot: i32,
 }
-
-/// (src/game/workthings.ts:84 WORK_ORDER)
-pub const WORK_ORDER: &str = "work";

@@ -11,7 +11,7 @@ pub const ORDER: Row = Row {
     only: Some(only),
     valid: Some(valid),
     tick: Some(crate::squadthrow::walk_tick),
-    ..Row::new(crate::squadthrow::FRAG_THERE, label, issue)
+    ..Row::new("fragThere", label, issue)
 };
 
 fn label(g: &mut Game, t: &OrderTarget) -> String {

@@ -9,7 +9,7 @@ pub const ORDER: Row = Row {
     only: Some(only),
     valid: Some(valid),
     tick: Some(crate::wandorder::tick),
-    ..Row::new(crate::wandorder::WAND_ORDER, label, issue)
+    ..Row::new("wandLook", label, issue)
 };
 
 fn label(_g: &mut Game, _t: &OrderTarget) -> String { String::from("look under it · wand") }

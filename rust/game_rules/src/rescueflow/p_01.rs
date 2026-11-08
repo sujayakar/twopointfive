@@ -698,7 +698,7 @@ pub fn rescue_flow_tick(g: &mut crate::game::Game) {
                 g,
                 gd,
                 &crate::orders::SquadOrdersAssignA {
-                    order: String::from("cover"),
+                    order: String::from(crate::orders::rows::cover::ORDER.id),
                     post: Some(v3::copy(o.mark)),
                     face: Some(v3::yaw_to(o.mark, watch)),
                     watch: Some(watch),
@@ -770,7 +770,7 @@ pub fn rescue_flow_take(g: &mut crate::game::Game, gd: GuardId, o: &crate::scene
         g,
         gd,
         &crate::orders::SquadOrdersAssignA {
-            order: String::from("cover"),
+            order: String::from(crate::orders::rows::cover::ORDER.id),
             post: Some(v3::copy(o.mark)),
             face: Some(v3::yaw_to(o.mark, o.watch)),
             watch: Some(v3::copy(o.watch)),
@@ -801,7 +801,7 @@ pub fn rescue_flow_rejoin(g: &mut crate::game::Game, gd: GuardId, words: Option<
         g,
         gd,
         &crate::orders::SquadOrdersAssignA {
-            order: String::from("fallIn"),
+            order: String::from(crate::orders::rows::fallin::ORDER.id),
             post: None,
             follow: Some(9.0),
             face: None,
